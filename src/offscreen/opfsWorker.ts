@@ -15,6 +15,7 @@
 import { createEngine, setSqliteWasmUrlOverride } from './sqliteBoot.js';
 import type { SqliteEngine, SqliteValue } from './sqliteEngine.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import type { SleepFn } from '../utils/retryPredicate.js';
 import { bootSqliteEngine } from './sqliteBoot.js';
 import { DB_FILENAME } from './dbFilename.js';
 
@@ -381,13 +382,56 @@ let queueProcessing = false;
 /**
  * Hard cap on queued (not yet running) requests. Without it a message burst
  * faster than SQLite can drain grows this array — and the matching
- * `opfsPending` entry on the caller side — without limit. On shed, the
- * caller gets a synthetic error response (same shape as handleRequest
- * failures) so its pending entry resolves instead of lingering, plus a
- * worker-log line so the shed is visible. Steady-state traffic never
- * approaches this bound (one SQLite op at a time drains in ms).
+ * `opfsPending` entry on the caller side — without limit. Steady-state
+ * traffic never approaches this bound (one SQLite op at a time drains in ms).
  */
 const MAX_QUEUED_REQUESTS = 200;
+
+/**
+ * Bounded load-shed retry policy (PBI 2026-10-16-05). When the queue is full,
+ * `enqueue` waits for a slot instead of shedding immediately: at most
+ * `MAX_SHED_RETRIES` sleeps of `SHED_RETRY_DELAY_MS` each, so the added
+ * latency is bounded by `MAX_SHED_RETRIES * SHED_RETRY_DELAY_MS` (15ms) and
+ * the loop always terminates. When the budget is exhausted the request is
+ * shed with an explicit failure response plus a worker-log line, exactly as
+ * before — only the error text notes that retries were spent.
+ */
+const MAX_SHED_RETRIES = 3;
+const SHED_RETRY_DELAY_MS = 5;
+
+const realShedSleep: SleepFn = (ms) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+let shedSleep: SleepFn = realShedSleep;
+let maxQueuedRequestsOverride: number | null = null;
+
+function currentMaxQueuedRequests(): number {
+  return maxQueuedRequestsOverride ?? MAX_QUEUED_REQUESTS;
+}
+
+/**
+ * Test seam — replaces the shed-retry clock. Pass null to restore the real timer.
+ */
+export function __setShedSleepForTesting(fn: SleepFn | null): void {
+  shedSleep = fn ?? realShedSleep;
+}
+
+/**
+ * Test seam — overrides the queue cap so tests can fill the queue without
+ * allocating 200 tasks. Pass null to restore the production cap.
+ */
+export function __setMaxQueuedRequestsForTesting(limit: number | null): void {
+  maxQueuedRequestsOverride = limit;
+}
+
+/**
+ * Test seam — drops waiting tasks and stops the drain loop flag so each test
+ * starts from an empty queue. Callers must settle their own gated tasks first.
+ */
+export function __resetQueueForTesting(): void {
+  requestQueue.length = 0;
+  queueProcessing = false;
+  maxQueuedRequestsOverride = null;
+  shedSleep = realShedSleep;
+}
 
 async function processQueue(): Promise<void> {
   if (queueProcessing) return;
@@ -402,15 +446,20 @@ async function processQueue(): Promise<void> {
   }
 }
 
-function enqueue(task: QueueTask, req: WorkerRequestMessage): void {
-  if (requestQueue.length >= MAX_QUEUED_REQUESTS) {
-    postWorkerLog('warn', 'opfsWorker: request queue full, shedding load', { type: req.type });
-    (self as unknown as DedicatedWorkerGlobalScope).postMessage({
-      id: req.id,
-      success: false,
-      error: 'worker overloaded, request shed',
-    } satisfies WorkerResponseMessage);
-    return;
+export async function enqueue(task: QueueTask, req: WorkerRequestMessage): Promise<void> {
+  let shedRetries = 0;
+  while (requestQueue.length >= currentMaxQueuedRequests()) {
+    if (shedRetries >= MAX_SHED_RETRIES) {
+      postWorkerLog('warn', 'opfsWorker: request queue full, shedding load after bounded retries', { type: req.type, shedRetries });
+      (self as unknown as DedicatedWorkerGlobalScope).postMessage({
+        id: req.id,
+        success: false,
+        error: `worker overloaded, request shed after ${shedRetries} retries`,
+      } satisfies WorkerResponseMessage);
+      return;
+    }
+    shedRetries += 1;
+    await shedSleep(SHED_RETRY_DELAY_MS);
   }
   requestQueue.push(task);
   void processQueue();
@@ -421,7 +470,7 @@ function enqueue(task: QueueTask, req: WorkerRequestMessage): void {
 // ---------------------------------------------------------------------------
 
 self.onmessage = (e: MessageEvent<WorkerRequestMessage>) => {
-  enqueue(async () => {
+  void enqueue(async () => {
     const response = await handleRequest(e.data);
     // WHY: `self` is typed as `Window` in non-Worker contexts; cast is needed for Worker global scope
     (self as unknown as DedicatedWorkerGlobalScope).postMessage(response);

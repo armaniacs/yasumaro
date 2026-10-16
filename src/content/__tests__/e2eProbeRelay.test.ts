@@ -7,7 +7,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { queryProbeArmed, relayProbeState, markProbeVisitReported } from '../e2eProbeRelay.js';
 import type { MessageSender } from '../visitReporter.js';
-import type { OWTestState } from '../e2eTestState.js';
+import type { OWTestState } from '../../utils/e2eTestState.js';
 
 const STATE: OWTestState = {
     maxScrollPercentage: 80,

@@ -133,6 +133,30 @@ export default [
     },
   },
   {
+    // System Architect review 2026-10-15 (Phase 5): background → content の
+    // 静的 import を機械的に禁止。実例は e2eProbeHandlers → content/e2eTestState:
+    // service worker が content 前提のモジュールを import すると、それが
+    // SW では未定義になる処理（DOM / window）ごとバンドルに混入し得る。
+    // 共有ロジックは src/utils/ の中立層に配置すること。
+    // Form matches the messaging layer-ban block below (the TS variant, so the
+    // message text and the pattern style stay identical); type imports are
+    // banned too — the point of the gate is that no background → content edge
+    // exists at all, and the core rule in the block above could not be
+    // scoped to content without sharing its warn severity with the UI ban.
+    files: ['src/background/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
+    languageOptions: { parser: tsParser },
+    plugins: { '@typescript-eslint': tsPlugin },
+    rules: {
+      '@typescript-eslint/no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/content/*', '**/content/**', '**/content.js'],
+          message: 'background 層から content 層への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md.',
+        }],
+      }],
+    },
+  },
+  {
     files: ['src/messaging/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
     languageOptions: { parser: tsParser },

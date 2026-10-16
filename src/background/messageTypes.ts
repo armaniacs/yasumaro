@@ -166,9 +166,9 @@ export type OwE2eProbeQueryMessage = {
 
 export type OwE2EProbeStateMessage = {
     type: 'OW_PROBE_STATE';
-    // Inline shape (not `import type` from content/e2eTestState.ts): that
-    // would close a content→background→content type cycle. Drift is pinned
-    // by the runtime validator (validators.ts) and its tests instead.
+    // Inline copy of OWTestState (SSOT: src/utils/e2eTestState.ts) so the wire
+    // shape stays readable next to the type. Drift is pinned by the runtime
+    // validator (validators.ts six-key allowlist) and its tests.
     payload: {
         maxScrollPercentage: number;
         isValidVisitReported: boolean;

@@ -1,12 +1,15 @@
 // @vitest-environment jsdom
 /**
  * Unit tests for migrationBackup.ts (PBI-01 extraction).
- * Covers extractDomain and runMigrationRestore's count-comparison branch.
- * The backup path (wa-sqlite dynamic import) is covered end-to-end by
+ * Covers extractDomain, runMigrationRestore's count-comparison branch, and
+ * runMigrationBackup's fail-safe abort when the legacy close fails.
+ * The happy backup path (wa-sqlite read + snapshot) is covered end-to-end by
  * idb-migration.test.ts; not duplicated here.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { LEGACY_IDB_NAME } from '../../../messaging/sqliteMessages.js';
 
 const mockExecWithCache = vi.fn();
 vi.mock('../idbEngineLifecycle.js', () => ({
@@ -14,7 +17,43 @@ vi.mock('../idbEngineLifecycle.js', () => ({
   DB_FILENAME: 'yasumaro.db',
 }));
 
-const { extractDomain, runMigrationRestore } = await import('../migrationBackup.js');
+// Legacy wa-sqlite seam for runMigrationBackup's close-failure abort path
+// (the happy path stays in idb-migration.test.ts).
+const { mockLegacyExec, mockLegacyClose, mockLegacyVfsClose, mockLogError } = vi.hoisted(() => ({
+  mockLegacyExec: vi.fn(),
+  mockLegacyClose: vi.fn(),
+  mockLegacyVfsClose: vi.fn(),
+  mockLogError: vi.fn(),
+}));
+
+vi.mock('wa-sqlite/dist/wa-sqlite-async.mjs', () => ({
+  default: vi.fn().mockResolvedValue({}),
+}));
+
+vi.mock('wa-sqlite', () => ({
+  SQLITE_OPEN_READWRITE: 2,
+  Factory: vi.fn().mockImplementation(() => ({
+    vfs_register: vi.fn(),
+    open_v2: vi.fn().mockResolvedValue(1),
+    exec: (...args: unknown[]) => mockLegacyExec(...args),
+    close: (...args: unknown[]) => mockLegacyClose(...args),
+  })),
+}));
+
+vi.mock('wa-sqlite/src/examples/IDBBatchAtomicVFS.js', () => ({
+  IDBBatchAtomicVFS: class MockOldVfs {
+    constructor(_name: string) {}
+    close = (...args: unknown[]) => mockLegacyVfsClose(...args);
+  },
+}));
+
+// Spy on the abort log while keeping the real logger (and its other exports).
+vi.mock('../../../utils/logger/api.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../utils/logger/api.js')>()),
+  logError: (...args: unknown[]) => mockLogError(...args),
+}));
+
+const { extractDomain, runMigrationRestore, runMigrationBackup } = await import('../migrationBackup.js');
 
 describe('migrationBackup', () => {
   describe('extractDomain', () => {
@@ -63,6 +102,60 @@ describe('migrationBackup', () => {
 
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
       expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+    });
+  });
+
+  describe('runMigrationBackup', () => {
+    beforeEach(() => {
+      vi.clearAllMocks();
+      globalThis.chrome = {
+        storage: {
+          local: {
+            get: vi.fn().mockResolvedValue({}),
+            remove: vi.fn().mockResolvedValue(undefined),
+            set: vi.fn().mockResolvedValue(undefined),
+          },
+        },
+      } as unknown as typeof chrome;
+    });
+
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
+
+    it('aborts the migration, keeps the backup, and logs a structured error when the legacy VFS close fails', async () => {
+      vi.stubGlobal('indexedDB', {
+        databases: vi.fn().mockResolvedValue([{ name: LEGACY_IDB_NAME }]),
+      });
+      mockLegacyExec.mockImplementation(async (_db: unknown, sql: string, callback?: (row: unknown[]) => void) => {
+        if (sql.includes('SELECT') && callback) {
+          callback(['https://example.com/a']);
+        }
+      });
+      mockLegacyClose.mockResolvedValue(undefined);
+      mockLegacyVfsClose.mockRejectedValue(new Error('IDB connection busy'));
+
+      // The abort replaces "proceeding without backup": continuing would hang
+      // the new engine's indexedDB.open upgrade (documented hazard).
+      await expect(runMigrationBackup({ idbEngine: null })).rejects.toThrow(/close failed/i);
+
+      // The snapshot written before the failed close stays in storage (data preservation).
+      expect(chrome.storage.local.set).toHaveBeenCalledWith(
+        expect.objectContaining({
+          [StorageKeys.IDB_MIGRATION_BACKUP]: expect.stringContaining('https://example.com/a'),
+        })
+      );
+      // Fail-safe: the done flag is NOT written, so the next launch retries.
+      expect(chrome.storage.local.set).not.toHaveBeenCalledWith(
+        expect.objectContaining({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true })
+      );
+      // The abort is visible in the structured log with the migration error code.
+      expect(mockLogError).toHaveBeenCalledWith(
+        expect.stringContaining('aborted after legacy close failure'),
+        expect.objectContaining({ error: expect.stringContaining('IDB connection busy') }),
+        ErrorCode.STORAGE_MIGRATION_FAILURE,
+        'sqlite'
+      );
     });
   });
 });

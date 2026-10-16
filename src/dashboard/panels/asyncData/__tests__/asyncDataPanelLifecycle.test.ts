@@ -20,6 +20,15 @@ import { waitForMock, drainMacrotask } from '../../../../../testDir/waitPolicy.j
 import { createAsyncDataPanelLifecycle } from '../asyncDataPanelLifecycle.js';
 import { PanelNotices } from '../../PanelNotices.js';
 import { DAY_MS, presetToRange, type PeriodRange } from '../../../components/periodFilter.js';
+import { logError } from '../../../../utils/logger/api.js';
+import { ErrorCode } from '../../../../utils/logger/types.js';
+
+// 構造化ログ移行 (ログ指摘 2026-10-15): reload 失敗は console.error ではなく
+// logError セアムへ送られる。実ログの副作用を避けるため logError のみ差し替える。
+vi.mock('../../../../utils/logger/api.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../utils/logger/api.js')>()),
+  logError: vi.fn(),
+}));
 
 function makeContainer(filterHostSelector?: string): HTMLElement {
   const container = document.createElement('div');
@@ -256,8 +265,8 @@ describe('asyncDataPanelLifecycle — the ring', () => {
     expect(explicit.loads[0]!.range).toEqual({});
   });
 
-  it('a body throw is logged and does not reject the load', async () => {
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  it('a body throw is recorded through the structured-log seam and does not reject the load', async () => {
+    vi.mocked(logError).mockClear();
     const notices = [new PanelNotices()];
     const lifecycle = createAsyncDataPanelLifecycle({
       label: 'throwingPanel',
@@ -270,8 +279,14 @@ describe('asyncDataPanelLifecycle — the ring', () => {
     });
 
     await expect(lifecycle.reload()).resolves.toBeUndefined();
-    expect(consoleError).toHaveBeenCalledWith('[throwingPanel] reload failed:', expect.any(Error));
-    consoleError.mockRestore();
+    // PBI 2026-10-16-07: a local aggregation failure must not masquerade as
+    // an external API failure — the seam records STORAGE_READ_FAILURE.
+    expect(logError).toHaveBeenCalledWith(
+      '[throwingPanel] reload failed',
+      expect.objectContaining({ error: 'boom' }),
+      ErrorCode.STORAGE_READ_FAILURE,
+      'asyncDataPanelLifecycle',
+    );
   });
 
   /**

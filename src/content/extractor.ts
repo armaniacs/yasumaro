@@ -28,7 +28,8 @@ import type { VisitState, VisitGateThresholds } from './visitGate.js';
 import type { StorageKey } from '../utils/storage/types.js';
 
 // OWTestState + the Window.__OW_TEST_STATE global augmentation live in
-// ./e2eTestState.js (single owner of the E2E probe shape and publisher).
+// ../utils/e2eTestState.js (shape SSOT + session leg). The window leg is
+// written only by ./e2eProbeRelay.js.
 
 // 【状態管理】: Content Script単位の可変状態をPageStateインスタンスに集約
 const pageState = new PageState();

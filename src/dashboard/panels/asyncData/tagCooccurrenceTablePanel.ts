@@ -250,7 +250,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
       } catch (error) {
         // User notice stays; the cause now also goes through the
         // structured-log seam instead of console.
-        void logError('[tagCooccurrenceTablePanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagCooccurrenceTablePanel');
+        void logError('[tagCooccurrenceTablePanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'tagCooccurrenceTablePanel');
         if (isStale()) return;
         cachedGraph = null;
         clearOutput();

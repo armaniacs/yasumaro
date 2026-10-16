@@ -99,78 +99,9 @@ jobs:
           # item stays as an uploaded draft and is published manually from the dashboard.
           CWS_AUTO_PUBLISH: ${{ vars.CWS_AUTO_PUBLISH }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          ITEM_PATH="publishers/${CHROME_PUBLISHER_ID}/items/${CHROME_EXTENSION_ID}"
-
-          ACCESS_TOKEN=$(curl -sS --connect-timeout 10 --max-time 30 https://oauth2.googleapis.com/token \
-            --data-urlencode "client_id=${CHROME_CLIENT_ID}" \
-            --data-urlencode "client_secret=${CHROME_CLIENT_SECRET}" \
-            --data-urlencode "refresh_token=${CHROME_REFRESH_TOKEN}" \
-            --data-urlencode "grant_type=refresh_token" | jq -r '.access_token // empty')
-          if [ -z "${ACCESS_TOKEN}" ]; then
-            echo "OAuth token refresh failed"
-            exit 1
-          fi
-          echo "::add-mask::${ACCESS_TOKEN}"
-
-          UPLOAD_RESP=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
-            "https://chromewebstore.googleapis.com/upload/v2/${ITEM_PATH}:upload" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "X-Goog-Upload-Protocol: raw" \
-            -H "X-Goog-Upload-File-Name: extension.crx" \
-            -T "dist/yasumaro-${VERSION}-chrome.crx")
-          UPLOAD_STATE=$(echo "${UPLOAD_RESP}" | jq -r '.uploadState // "UNKNOWN"' 2>/dev/null || echo UNKNOWN)
-          echo "Upload: ${UPLOAD_STATE}"
-          if [ "${UPLOAD_STATE}" = "UNKNOWN" ]; then
-            echo "Upload response (error fields only):"
-            echo "${UPLOAD_RESP}" | jq -c '{error: (.error // null), status: .status, message: .message}' 2>/dev/null \
-              || echo "Non-JSON response (${#UPLOAD_RESP} bytes)"
-          fi
-
-          # NOT_FOUND is returned until the async upload is registered, so it is polled like IN_PROGRESS.
-          for i in $(seq 1 30); do
-            case "${UPLOAD_STATE}" in IN_PROGRESS|NOT_FOUND) ;; *) break ;; esac
-            sleep 10
-            UPLOAD_STATE=$(curl -sS --connect-timeout 10 --max-time 30 \
-              "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:fetchStatus" \
-              -H "Authorization: Bearer ${ACCESS_TOKEN}" | jq -r '.lastAsyncUploadState // "UNKNOWN"')
-            echo "Upload status check ${i}/30: ${UPLOAD_STATE}"
-          done
-
-          if [ "${UPLOAD_STATE}" != "SUCCEEDED" ]; then
-            echo "Upload failed with state: ${UPLOAD_STATE}"
-            exit 1
-          fi
-
-          if [ "${CWS_AUTO_PUBLISH}" != "true" ]; then
-            echo "CWS_AUTO_PUBLISH is not 'true'; skipping publish"
-            exit 0
-          fi
-
-          # Transport failures abort via set -e (curl exit code is not swallowed by a
-          # pipe); an API-level rejection is a non-200 response. The Edge step uses the
-          # same -w '%{http_code}' pattern.
-          PUBLISH_RESP_FILE="$(mktemp)"
-          trap 'rm -f "${PUBLISH_RESP_FILE}"' EXIT
-          PUBLISH_HTTP=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
-            "https://chromewebstore.googleapis.com/v2/${ITEM_PATH}:publish" \
-            -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d '{"publishType":"DEFAULT_PUBLISH"}' \
-            -o "${PUBLISH_RESP_FILE}" -w '%{http_code}')
-          if [ "${PUBLISH_HTTP}" != "200" ]; then
-            echo "Publish failed (HTTP ${PUBLISH_HTTP}):"
-            jq -c '{error: (.error // null), status: .status, message: .message}' "${PUBLISH_RESP_FILE}" 2>/dev/null \
-              || echo "Non-JSON response"
-            exit 1
-          fi
-          # Belt and suspenders: a 200 body that still carries an error object is a failure.
-          PUBLISH_ERROR=$(jq -r '.error.message // empty' "${PUBLISH_RESP_FILE}")
-          if [ -n "${PUBLISH_ERROR}" ]; then
-            echo "Publish failed: ${PUBLISH_ERROR}"
-            exit 1
-          fi
-          echo "Publish submitted"
+        # Inline shell moved to scripts/publish/cws.mjs (branches covered by
+        # scripts/__tests__/publish-stores.test.ts); inputs stay on env.
+        run: node scripts/publish/cws.mjs
       - name: Upload to Edge Add-ons
         # Independent of the Chrome step: a Chrome Web Store failure must not skip Edge.
         if: ${{ always() && hashFiles('dist/yasumaro-*-edge.zip') != '' }}
@@ -182,92 +113,42 @@ jobs:
           # the package stays in the draft submission.
           EDGE_AUTO_PUBLISH: ${{ vars.EDGE_AUTO_PUBLISH }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          API="https://api.addons.microsoftedge.microsoft.com/v1/products/${EDGE_PRODUCT_ID}"
-          AUTH=(-H "Authorization: ApiKey ${EDGE_API_KEY}" -H "X-ClientID: ${EDGE_CLIENT_ID}")
-          HEADERS_FILE="$(mktemp)"
-          trap 'rm -f "${HEADERS_FILE}"' EXIT
-
-          # Prints "Succeeded" once the operation finishes; any other terminal status fails the step.
-          wait_for_operation() {
-            local url="$1" label="$2" status resp
-            for i in $(seq 1 30); do
-              resp=$(curl -sS --connect-timeout 10 --max-time 30 "${AUTH[@]}" "${url}")
-              status=$(echo "${resp}" | jq -r '.status // "UNKNOWN"' 2>/dev/null || echo UNKNOWN)
-              echo "${label} status check ${i}/30: ${status}"
-              if [ "${status}" = "Succeeded" ]; then return 0; fi
-              if [ "${status}" != "InProgress" ]; then
-                echo "${label} failed:"
-                echo "${resp}" | jq -c '{status, errorCode, message}' 2>/dev/null || echo "Non-JSON response"
-                return 1
-              fi
-              sleep 10
-            done
-            echo "${label} did not finish in time"
-            return 1
-          }
-
-          operation_id() {
-            grep -i '^location:' "${HEADERS_FILE}" | tr -d '\r' | awk '{print $2}' | awk -F/ '{print $NF}'
-          }
-
-          HTTP=$(curl -sS --connect-timeout 10 --max-time 300 -X POST \
-            -D "${HEADERS_FILE}" -o /dev/null -w '%{http_code}' \
-            "${AUTH[@]}" -H "Content-Type: application/zip" \
-            -T "dist/yasumaro-${VERSION}-edge.zip" \
-            "${API}/submissions/draft/package")
-          echo "Upload: HTTP ${HTTP}"
-          if [ "${HTTP}" != "202" ]; then
-            echo "Edge upload was not accepted"
-            exit 1
-          fi
-          OP=$(operation_id)
-          [ -n "${OP}" ] || { echo "No operation id in Location header"; exit 1; }
-          wait_for_operation "${API}/submissions/draft/package/operations/${OP}" "Upload"
-
-          if [ "${EDGE_AUTO_PUBLISH}" != "true" ]; then
-            echo "EDGE_AUTO_PUBLISH is not 'true'; skipping publish"
-            exit 0
-          fi
-
-          HTTP=$(curl -sS --connect-timeout 10 --max-time 60 -X POST \
-            -D "${HEADERS_FILE}" -o /dev/null -w '%{http_code}' \
-            "${AUTH[@]}" -H "Content-Type: application/json" \
-            -d "{\"notes\":\"Automated release v${VERSION}\"}" \
-            "${API}/submissions")
-          echo "Publish: HTTP ${HTTP}"
-          if [ "${HTTP}" != "202" ]; then
-            echo "Edge publish was not accepted"
-            exit 1
-          fi
-          OP=$(operation_id)
-          [ -n "${OP}" ] || { echo "No operation id in Location header"; exit 1; }
-          wait_for_operation "${API}/submissions/operations/${OP}" "Publish"
-          echo "Publish submitted"
+        # Inline shell moved to scripts/publish/edge.mjs (operation polling
+        # branches covered by scripts/__tests__/publish-stores.test.ts);
+        # inputs stay on env. The always()/hashFiles() gate above still keeps
+        # a Chrome failure from skipping Edge.
+        run: node scripts/publish/edge.mjs
+      - name: Prepare AMO sources archive
+        # The AMO step below is guarded on dist/yasumaro-*-sources.zip, yet no step named
+        # that file: `npx wxt zip -b firefox` (Build for Firefox) writes it as a side effect,
+        # because wxt enables zipSources by default for firefox and emits
+        # dist/<name>-<packageVersion>-sources.zip (wxt.config.ts zip.excludeSources keeps it
+        # uploadable). Making the producer explicit means a wxt default change surfaces as a
+        # failed step with a message instead of a silent hashFiles() skip that never submits.
+        # Only runs when AMO submission is switched on, mirroring the gate of the step below.
+        if: ${{ vars.AMO_AUTO_SUBMIT == 'true' }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          # Same strip flag as the release builds, so a regenerated archive matches them.
+          OW_E2E_PROBE: '0'
+        # Inline shell moved to scripts/publish/amo-prepare-sources.mjs
+        # (covered by scripts/__tests__/publish-stores.test.ts); inputs stay on env.
+        run: node scripts/publish/amo-prepare-sources.mjs
       - name: Submit to Firefox Add-ons (AMO)
         # AMO has no draft state: a listed-channel upload is a submission for review, so the
         # whole step is gated on the repository variable. Independent of the other store steps.
+        # hashFiles() guard: the archive is produced by 'Prepare AMO sources archive' above,
+        # which fails loudly instead of leaving this guard to skip on its own.
         if: ${{ always() && hashFiles('dist/yasumaro-*-sources.zip') != '' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
           AMO_AUTO_SUBMIT: ${{ vars.AMO_AUTO_SUBMIT }}
           VERSION: ${{ steps.version.outputs.version }}
-        run: |
-          if [ "${AMO_AUTO_SUBMIT}" != "true" ]; then
-            echo "AMO_AUTO_SUBMIT is not 'true'; skipping AMO submission"
-            exit 0
-          fi
-          ARTIFACTS_DIR="$(mktemp -d)"
-          # The reviewer rebuilds from the sources archive, so it must travel with the bundle.
-          # --approval-timeout 0: review is manual and takes days; do not hold the runner.
-          npx --yes --package web-ext@10.7.0 web-ext sign \
-            --channel listed \
-            --source-dir dist/firefox-mv3 \
-            --artifacts-dir "${ARTIFACTS_DIR}" \
-            --upload-source-code "dist/yasumaro-${VERSION}-sources.zip" \
-            --approval-timeout 0 \
-            --no-input
+        # Inline shell moved to scripts/publish/amo-submit.mjs (the
+        # AMO_AUTO_SUBMIT gate and the web-ext sign invocation live there,
+        # covered by scripts/__tests__/publish-stores.test.ts); inputs stay on env.
+        run: node scripts/publish/amo-submit.mjs
 
   record-metrics:
     needs: release

@@ -24,10 +24,18 @@ afterEach(() => {
 });
 
 describe('publishE2eTestState', () => {
-    it('writes the state to the isolated window global', () => {
+    it('writes the session leg and leaves the window global to the relay owner', () => {
+        const set = vi.fn(() => Promise.resolve());
+        vi.stubGlobal('chrome', { storage: { session: { set } } });
+
         publishE2eTestState(STATE);
 
-        expect(window.__OW_TEST_STATE).toBe(STATE);
+        expect(set).toHaveBeenCalledTimes(1);
+        expect(set).toHaveBeenCalledWith({ [E2E_PROBE_STATE_KEY]: STATE });
+        // Single-owner split: the session leg is written here (service worker),
+        // the window leg belongs to src/content/e2eProbeRelay.ts — pinned by
+        // testDir/__tests__/e2eProbeContract.test.ts.
+        expect(window.__OW_TEST_STATE).toBeUndefined();
     });
 
     it('never writes page-shared DOM (PBI NN08)', () => {
@@ -37,26 +45,20 @@ describe('publishE2eTestState', () => {
         expect(document.documentElement.hasAttribute('data-ow-test-state')).toBe(false);
     });
 
-    it('mirrors the state into session storage when chrome is present', async () => {
-        const set = vi.fn(() => Promise.resolve());
-        vi.stubGlobal('chrome', { storage: { session: { set } } });
-
-        publishE2eTestState(STATE);
-
-        expect(window.__OW_TEST_STATE).toBe(STATE);
-        expect(set).toHaveBeenCalledTimes(1);
-        expect(set).toHaveBeenCalledWith({ [E2E_PROBE_STATE_KEY]: STATE });
-    });
-
-    it('still publishes the window global when the session write rejects', async () => {
+    it('does not throw and does not touch the window when the session write rejects', async () => {
         const set = vi.fn(() => Promise.reject(new Error('quota')));
         vi.stubGlobal('chrome', { storage: { session: { set } } });
 
-        publishE2eTestState(STATE);
-
-        expect(window.__OW_TEST_STATE).toBe(STATE);
+        expect(() => publishE2eTestState(STATE)).not.toThrow();
+        expect(window.__OW_TEST_STATE).toBeUndefined();
         // Rejection is swallowed — flush microtasks to prove no unhandled rejection.
         await Promise.resolve();
+    });
+
+    it('is a no-op when session storage is unavailable, leaving the window untouched', () => {
+        expect(() => publishE2eTestState(STATE)).not.toThrow();
+
+        expect(window.__OW_TEST_STATE).toBeUndefined();
     });
 });
 

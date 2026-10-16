@@ -173,3 +173,12 @@ export abstract class AIProviderStrategy {
         await recordUsage(sentTokens ?? 0, receivedTokens ?? 0);
     }
 }
+
+/**
+ * @deprecated Use AIProviderStrategy — kept so old custom providers that
+ * import `ProviderStrategy` keep type-checking for the promised deprecation
+ * window: 次メジャーで削除（再評価 2026-12-31）。
+ * New code must not import this alias (enforced by check-deprecated-aliases).
+ * See CHANGELOG.
+ */
+export type ProviderStrategy = AIProviderStrategy;

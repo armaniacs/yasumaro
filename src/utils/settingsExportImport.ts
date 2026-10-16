@@ -364,8 +364,15 @@ export async function importEncryptedSettings(
     // 復号されたJSONを解析してインポート
     const parsed = JSON.parse(decryptedJson) as ExportData;
 
-    // 構造検証
-    if (!validateExportData(parsed)) {
+    // 構造検証（拒否理由を記録して fail-closed）
+    const decryptedValidationError = getExportValidationError(parsed);
+    if (decryptedValidationError !== null) {
+      await logError(
+        'Encrypted import rejected: invalid export structure',
+        { ...decryptedValidationError },
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
+        'settingsExportImport.ts'
+      );
       return null;
     }
 
@@ -448,28 +455,118 @@ export async function saveEncryptedExportToFile(
 }
 
 /**
- * Validate export data structure
- * @param {unknown} data - data to validate
- * @returns {boolean} true if data is valid
+ * Export format versions produced by this codebase. The `version` field of an
+ * export payload is the schema stamp that lets an importer tell a newer
+ * (future) payload apart from a corrupt one — see `getExportValidationError`.
+ * No separate stamp field exists on purpose: adding one would change the
+ * signed export format and break existing backups/tests.
  */
-export function validateExportData(data: unknown): boolean {
+export const KNOWN_EXPORT_VERSIONS = [LEGACY_EXPORT_VERSION, EXPORT_VERSION] as const;
+
+/**
+ * Whether an export `version` stamp was never produced by a known release.
+ * An unknown stamp together with an unknown `privacy_mode` most likely means
+ * a future value; the same unknown value under a known stamp means corruption.
+ */
+export function isUnrecognizedExportVersion(version: unknown): boolean {
+  if (typeof version !== 'string') {
+    return true;
+  }
+  return version !== LEGACY_EXPORT_VERSION && version !== EXPORT_VERSION;
+}
+
+/** Machine-readable reason for a rejected settings export payload. */
+export type ExportValidationReason =
+  | 'not_an_object'
+  | 'missing_version'
+  | 'missing_exported_at'
+  | 'missing_settings'
+  | 'missing_required_key'
+  | 'missing_api_key'
+  | 'unknown_privacy_mode';
+
+export interface ExportValidationError {
+  /** Top-level field or `settings.<key>` that failed validation. */
+  field: string;
+  reason: ExportValidationReason;
+  /** `typeof` the offending value (`missing` when a required key is absent). */
+  receivedType: string;
+  /** Length of the offending string value, when applicable. */
+  receivedLength?: number;
+  /**
+   * Truncated preview (first 64 chars) of an offending string value.
+   * Deliberately not the full value: a corrupt payload can carry arbitrary
+   * text, and while log details pass through the central PII/sanitizer
+   * pipeline, bounding the size keeps the record safe by construction.
+   */
+  receivedPreview?: string;
+  /** Raw `version` stamp of the rejected payload, when present. */
+  exportVersion?: unknown;
+  /** True when the stamp itself was never produced by a known release. */
+  isUnrecognizedVersion: boolean;
+}
+
+/** Max chars of an offending string value kept in a validation error. */
+const INVALID_VALUE_PREVIEW_LIMIT = 64;
+
+function typeName(value: unknown): string {
+  if (value === null) {
+    return 'null';
+  }
+  if (value === undefined) {
+    return 'missing';
+  }
+  return typeof value;
+}
+
+/**
+ * Structured validation for export payloads. Returns `null` when the payload
+ * is valid, otherwise the first failure with field/reason details so callers
+ * can record *why* a backup was rejected (fail-closed is preserved: every
+ * non-null result still means rejection).
+ */
+export function getExportValidationError(data: unknown): ExportValidationError | null {
   if (typeof data !== 'object' || data === null) {
-    return false;
+    return {
+      field: '(root)',
+      reason: 'not_an_object',
+      receivedType: typeName(data),
+      isUnrecognizedVersion: true,
+    };
   }
 
   const obj = data as Record<string, unknown>;
+  const exportVersion = obj.version;
+  const isUnrecognizedVersion = isUnrecognizedExportVersion(exportVersion);
 
   // Check required fields
-  if (typeof obj.version !== 'string') {
-    return false;
+  if (typeof exportVersion !== 'string') {
+    return {
+      field: 'version',
+      reason: 'missing_version',
+      receivedType: typeName(exportVersion),
+      isUnrecognizedVersion,
+    };
   }
 
   if (typeof obj.exportedAt !== 'string') {
-    return false;
+    return {
+      field: 'exportedAt',
+      reason: 'missing_exported_at',
+      receivedType: typeName(obj.exportedAt),
+      exportVersion,
+      isUnrecognizedVersion,
+    };
   }
 
   if (typeof obj.settings !== 'object' || obj.settings === null) {
-    return false;
+    return {
+      field: 'settings',
+      reason: 'missing_settings',
+      receivedType: typeName(obj.settings),
+      exportVersion,
+      isUnrecognizedVersion,
+    };
   }
 
   const settings = obj.settings as Record<string, unknown>;
@@ -485,7 +582,13 @@ export function validateExportData(data: unknown): boolean {
 
   for (const key of requiredKeys) {
     if (!(key in settings)) {
-      return false;
+      return {
+        field: `settings.${key}`,
+        reason: 'missing_required_key',
+        receivedType: 'missing',
+        exportVersion,
+        isUnrecognizedVersion,
+      };
     }
   }
 
@@ -494,7 +597,13 @@ export function validateExportData(data: unknown): boolean {
     const apiKeyKeys = isCurrentFormat ? API_KEY_FIELDS : LEGACY_API_KEY_FIELDS;
     for (const key of apiKeyKeys) {
       if (!(key in settings)) {
-        return false;
+        return {
+          field: `settings.${key}`,
+          reason: 'missing_api_key',
+          receivedType: 'missing',
+          exportVersion,
+          isUnrecognizedVersion,
+        };
       }
     }
   }
@@ -505,10 +614,31 @@ export function validateExportData(data: unknown): boolean {
   // of being silently repaired, so the user learns the backup is damaged.
   const exportedPrivacyMode = settings['privacy_mode'];
   if (exportedPrivacyMode !== undefined && !isPrivacyMode(exportedPrivacyMode)) {
-    return false;
+    return {
+      field: 'settings.privacy_mode',
+      reason: 'unknown_privacy_mode',
+      receivedType: typeName(exportedPrivacyMode),
+      ...(typeof exportedPrivacyMode === 'string'
+        ? {
+            receivedLength: exportedPrivacyMode.length,
+            receivedPreview: exportedPrivacyMode.slice(0, INVALID_VALUE_PREVIEW_LIMIT),
+          }
+        : {}),
+      exportVersion,
+      isUnrecognizedVersion,
+    };
   }
 
-  return true;
+  return null;
+}
+
+/**
+ * Validate export data structure
+ * @param {unknown} data - data to validate
+ * @returns {boolean} true if data is valid
+ */
+export function validateExportData(data: unknown): boolean {
+  return getExportValidationError(data) === null;
 }
 
 /**
@@ -562,8 +692,15 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
       return null;
     }
 
-    // 構造検証（既存のvalidateExportDataを使用）
-    if (!validateExportData(parsed)) {
+    // 構造検証（拒否理由を記録して fail-closed）
+    const validationError = getExportValidationError(parsed);
+    if (validationError !== null) {
+      await logError(
+        'Import rejected: invalid export structure',
+        { ...validationError },
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
+        'settingsExportImport.ts'
+      );
       return null;
     }
 

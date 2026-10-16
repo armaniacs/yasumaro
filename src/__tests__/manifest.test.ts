@@ -145,6 +145,63 @@ const MAX_HOST_PERMISSIONS = 40;
 /** host_permissions + optional_host_permissions = 62 today. */
 const MAX_TOTAL_HOST_PERMISSIONS = 100;
 
+/* --------------------------------------- declared localhost removals (PBI 2026-10-16-10) */
+
+/**
+ * An intentional localhost permission removal, declared with its reason.
+ *
+ * The localhost "must exist" gate is relaxed only through this declaration:
+ * a removal listed here (with a non-empty reason) is accepted by the gate,
+ * while a removal without a declaration still fails (red-side preserved).
+ * Only localhost / 127.0.0.1 origins may be declared — AI provider domains
+ * stay mandatory. Empty today, so the declared manifest passes unchanged;
+ * a future least-privilege cut adds its entry here together with the reason.
+ */
+export type DeclaredPermissionRemoval = {
+  permission: string;
+  reason: string;
+};
+
+const DECLARED_LOCALHOST_REMOVALS: readonly DeclaredPermissionRemoval[] = [];
+
+function isLocalHostPermission(permission: string): boolean {
+  return /^https?:\/\/(localhost|127\.0\.0\.1):\d+\/\*$/.test(permission);
+}
+
+/**
+ * The SSOT host composition minus removals declared with a reason. Every
+ * declaration is validated: a non-empty reason, a localhost-only target that
+ * the SSOT currently grants, and no duplicates. A bad declaration throws, so
+ * a reason-less or out-of-scope "declaration" can never silently widen the gate.
+ */
+function expectedHostPermissionsAllowingDeclaredRemovals(
+  removals: readonly DeclaredPermissionRemoval[] = DECLARED_LOCALHOST_REMOVALS,
+): string[] {
+  const seen = new Set<string>();
+  for (const removal of removals) {
+    if (typeof removal.reason !== 'string' || removal.reason.trim().length === 0) {
+      throw new Error(
+        `declared localhost removal of "${removal.permission}" needs a non-empty reason — an unexplained removal is a red-side failure`,
+      );
+    }
+    if (!isLocalHostPermission(removal.permission)) {
+      throw new Error(
+        `declared removal of "${removal.permission}" is rejected — only localhost / 127.0.0.1 origins may be removed by declaration`,
+      );
+    }
+    if (!EXPECTED_HOST_PERMISSIONS.includes(removal.permission)) {
+      throw new Error(
+        `declared removal of "${removal.permission}" is not in the SSOT composition — declare only what the SSOT currently grants`,
+      );
+    }
+    if (seen.has(removal.permission)) {
+      throw new Error(`duplicate declared removal of "${removal.permission}"`);
+    }
+    seen.add(removal.permission);
+  }
+  return EXPECTED_HOST_PERMISSIONS.filter((permission) => !seen.has(permission));
+}
+
 /* ------------------------------------------------------- the permission gate */
 
 /**
@@ -153,7 +210,10 @@ const MAX_TOTAL_HOST_PERMISSIONS = 100;
  * "permission gate over the declared manifest" describe, so it stays
  * module-private: there are no external consumers to import it from.
  */
-function assertLeastPrivilegePermissions(manifest: UserManifest): void {
+function assertLeastPrivilegePermissions(
+  manifest: UserManifest,
+  declaredRemovals: readonly DeclaredPermissionRemoval[] = DECLARED_LOCALHOST_REMOVALS,
+): void {
   const host = manifest.host_permissions;
   const optional = manifest.optional_host_permissions;
   if (host === undefined || optional === undefined) {
@@ -162,10 +222,11 @@ function assertLeastPrivilegePermissions(manifest: UserManifest): void {
     );
   }
 
-  // The declared lists must be exactly the SSOT composition: a domain
-  // hard-coded into wxt.config.ts, or an SSOT entry the factory stops
-  // passing through, breaks the equality instead of drifting silently.
-  expect(host).toEqual([...EXPECTED_HOST_PERMISSIONS]);
+  // The declared lists must be exactly the SSOT composition minus removals
+  // declared with a reason (PBI 2026-10-16-10): a domain hard-coded into
+  // wxt.config.ts, an SSOT entry the factory stops passing through, or an
+  // undeclared removal breaks the equality instead of drifting silently.
+  expect(host).toEqual(expectedHostPermissionsAllowingDeclaredRemovals(declaredRemovals));
   expect(optional).toEqual([...EXPECTED_OPTIONAL_HOST_PERMISSIONS]);
 
   // 2026-09-05: <all_urls> was dropped from optional_host_permissions; least
@@ -271,8 +332,8 @@ function warResourceResolves(resource: string): boolean {
 
 describe('Manifest - Host Permissions Minimization', () => {
   describe('host_permissions', () => {
-    it('is exactly the SSOT composition — local service origins plus always-granted AI providers', () => {
-      expect(declaredHostPermissions()).toEqual([...EXPECTED_HOST_PERMISSIONS]);
+    it('is exactly the SSOT composition minus declared localhost removals — local service origins plus always-granted AI providers', () => {
+      expect(declaredHostPermissions()).toEqual(expectedHostPermissionsAllowingDeclaredRemovals());
     });
 
     it('contains the default AI provider domains', () => {
@@ -282,10 +343,18 @@ describe('Manifest - Host Permissions Minimization', () => {
       }
     });
 
-    it('contains every local service origin (localhost and 127.0.0.1, http and https)', () => {
+    it('contains every local service origin (localhost and 127.0.0.1, http and https) unless its removal is declared with a reason', () => {
+      // PBI 2026-10-16-10: the "must exist" assertion is relaxed into
+      // "must exist OR be declared removed". With DECLARED_LOCALHOST_REMOVALS
+      // empty this behaves exactly as before; a future least-privilege cut
+      // lists its origin there instead of fighting this gate.
       const host = declaredHostPermissions();
       for (const local of buildLocalHostPermissions()) {
-        expect(host).toContain(local);
+        if (DECLARED_LOCALHOST_REMOVALS.some((removal) => removal.permission === local)) {
+          expect(host).not.toContain(local);
+        } else {
+          expect(host).toContain(local);
+        }
       }
     });
 
@@ -400,6 +469,65 @@ describe('Manifest - Host Permissions Minimization', () => {
         host_permissions: host.filter((permission) => permission !== 'http://127.0.0.1:27123/*'),
       };
       expect(() => assertLeastPrivilegePermissions(tampered)).toThrow(/to deeply equal/);
+    });
+
+    describe('declared localhost removals', () => {
+      it('accepts a localhost origin removed with a declared reason', () => {
+        // BDD accept side (PBI 2026-10-16-10): an intentional least-privilege
+        // cut, declared with its reason, passes the gate instead of fighting it.
+        const host = declaredHostPermissions();
+        const removed = 'http://127.0.0.1:27123/*';
+        expect(host).toContain(removed);
+        const tampered: UserManifest = {
+          ...declared,
+          host_permissions: host.filter((permission) => permission !== removed),
+        };
+        expect(tampered.host_permissions).not.toContain(removed);
+        expect(() =>
+          assertLeastPrivilegePermissions(tampered, [
+            { permission: removed, reason: 'Obsidian Local REST on 27123 retired — 27124 is the only loopback port' },
+          ]),
+        ).not.toThrow();
+      });
+
+      it('rejects a localhost removal without a declaration', () => {
+        // BDD reject side: the same cut with no declaration must still fail,
+        // so undeclared deletions cannot drift through the relaxed gate.
+        const host = declaredHostPermissions();
+        const removed = 'http://localhost:27124/*';
+        expect(host).toContain(removed);
+        const tampered: UserManifest = {
+          ...declared,
+          host_permissions: host.filter((permission) => permission !== removed),
+        };
+        expect(() => assertLeastPrivilegePermissions(tampered, [])).toThrow(/to deeply equal/);
+      });
+
+      it('rejects a declared removal with an empty reason', () => {
+        // A declaration without a reason is an undeclared removal in disguise.
+        const host = declaredHostPermissions();
+        const removed = 'http://127.0.0.1:27123/*';
+        expect(host).toContain(removed);
+        const tampered: UserManifest = {
+          ...declared,
+          host_permissions: host.filter((permission) => permission !== removed),
+        };
+        expect(() =>
+          assertLeastPrivilegePermissions(tampered, [{ permission: removed, reason: '   ' }]),
+        ).toThrow(/non-empty reason/);
+      });
+
+      it('rejects a declared removal for a non-localhost permission', () => {
+        // The relaxation is localhost-scoped: AI provider domains stay
+        // mandatory and cannot be removed by declaration.
+        const removed = 'https://api.openai.com/*';
+        expect(declaredHostPermissions()).toContain(removed);
+        expect(() =>
+          expectedHostPermissionsAllowingDeclaredRemovals([
+            { permission: removed, reason: 'least privilege cut' },
+          ]),
+        ).toThrow(/only localhost/);
+      });
     });
   });
 });

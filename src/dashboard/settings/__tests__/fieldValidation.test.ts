@@ -49,6 +49,8 @@ import { GENERAL_SETTINGS_FIELDS, getDescriptorByElementId } from '../fieldDescr
 
 import * as urlWhitelist from '../../../utils/storage/urlWhitelist.js';
 const { isDomainInWhitelist } = vi.mocked(urlWhitelist);
+import { ALLOWED_AI_PROVIDER_DOMAINS } from '../../../utils/storage/urlWhitelist.js';
+import { getMessage } from '../../../utils/i18n.js';
 
 const descriptor = (elementId: string) => {
     const found = getDescriptorByElementId(elementId);
@@ -573,6 +575,97 @@ describe('fieldValidation', () => {
 
             expect(result).toBe(false);
             expect(el.getAttribute('aria-invalid')).toBe('true');
+        });
+    });
+
+    describe('validateBaseUrl domain allowlist message i18n', () => {
+        const ALLOWLIST_KEY = 'errorBaseUrlDomainNotAllowed';
+        const EN_TEMPLATE = 'This domain is not in the allowlist.\n\nMajor providers: {majorDomains}\nSakura Cloud: {sakuraDomains}\nOthers: LiteLLM-compatible providers ({domainCount} domains)';
+        const JA_TEMPLATE = 'このドメインは許可リストにありません。\n\n主要プロバイダー: {majorDomains}\nSakuraクラウド: {sakuraDomains}\nその他: LiteLLM対応プロバイダー（全{domainCount}ドメイン）';
+
+        // The shared getMessage mock returns the raw template without
+        // expanding {name} tokens. Install the production-equivalent
+        // expansion for this block only, then restore it afterwards so the
+        // other blocks keep their exact-pin behavior.
+        const mockedGetMessage = vi.mocked(getMessage);
+        let previousGetMessageImpl: ReturnType<typeof mockedGetMessage.getMockImplementation>;
+
+        beforeEach(() => {
+            previousGetMessageImpl = mockedGetMessage.getMockImplementation();
+            mockedGetMessage.mockImplementation((key: string, subs?: unknown) => {
+                const template = translations.get(key) ?? '';
+                if (subs && typeof subs === 'object' && !Array.isArray(subs)) {
+                    const record = subs as Record<string, string | number>;
+                    return template.replace(/\{(\w+)\}/g, (match: string, name: string) =>
+                        record[name] !== undefined ? String(record[name]) : match);
+                }
+                return template;
+            });
+        });
+
+        afterEach(() => {
+            if (previousGetMessageImpl) mockedGetMessage.mockImplementation(previousGetMessageImpl);
+        });
+
+        test('shows the English message with provider details for a rejected domain', async () => {
+            translations.set(ALLOWLIST_KEY, EN_TEMPLATE);
+            isDomainInWhitelist.mockReturnValue(false);
+
+            const el = input('baseUrl');
+            el.value = 'https://unknown-provider.example/v1';
+
+            expect(await validateBaseUrl(el)).toBe(false);
+
+            const text = errorEl('baseUrlError').textContent ?? '';
+            expect(text).toContain('This domain is not in the allowlist.');
+            expect(text).toContain('api.openai.com');
+            expect(text).toContain(String(ALLOWED_AI_PROVIDER_DOMAINS.length));
+            expect(text).not.toMatch(/[\u3040-\u30ff\u4e00-\u9fff]/);
+        });
+
+        test('keeps the legacy Japanese message for the Japanese locale', async () => {
+            translations.set(ALLOWLIST_KEY, JA_TEMPLATE);
+            isDomainInWhitelist.mockReturnValue(false);
+
+            const el = input('baseUrl');
+            el.value = 'https://unknown-provider.example/v1';
+
+            expect(await validateBaseUrl(el)).toBe(false);
+
+            const text = errorEl('baseUrlError').textContent ?? '';
+            expect(text).toContain('このドメインは許可リストにありません。');
+            expect(text).toContain('api.openai.com');
+            expect(text).toContain(`全${ALLOWED_AI_PROVIDER_DOMAINS.length}ドメイン`);
+        });
+
+        test('preserves the provider domains and domain count in both locales', async () => {
+            isDomainInWhitelist.mockReturnValue(false);
+
+            const el = input('baseUrl');
+            el.value = 'https://unknown-provider.example/v1';
+
+            translations.set(ALLOWLIST_KEY, EN_TEMPLATE);
+            await validateBaseUrl(el);
+            const enText = errorEl('baseUrlError').textContent ?? '';
+
+            translations.set(ALLOWLIST_KEY, JA_TEMPLATE);
+            await validateBaseUrl(el);
+            const jaText = errorEl('baseUrlError').textContent ?? '';
+
+            // Each locale renders its own dictionary entry: the English path
+            // must not leak Japanese (the NN06 defect) and vice versa.
+            expect(enText).toContain('This domain is not in the allowlist.');
+            expect(enText).not.toMatch(/[\u3040-\u30ff\u4e00-\u9fff]/);
+            expect(jaText).toContain('このドメインは許可リストにありません。');
+
+            for (const text of [enText, jaText]) {
+                expect(text).toContain('api.openai.com');
+                expect(text).toContain('api.anthropic.com');
+                expect(text).toContain(String(ALLOWED_AI_PROVIDER_DOMAINS.length));
+                expect(text).not.toContain('{majorDomains}');
+                expect(text).not.toContain('{sakuraDomains}');
+                expect(text).not.toContain('{domainCount}');
+            }
         });
     });
 

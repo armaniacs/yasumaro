@@ -258,8 +258,9 @@ describe('IPv6プライベートアドレス検知', () => {
   });
 
   describe('スペシャルなIPv6アドレス', () => {
-    test('treats :: (no address) as non-private', () => {
-      expect(isPrivateIpAddress('::')).toBe(false);
+    test('treats :: (unspecified address) as private', () => {
+      expect(isPrivateIpAddress('::')).toBe(true);
+      expect(isPrivateIpAddress('0:0:0:0:0:0:0:0')).toBe(true);
     });
 
     test('detects ::ffff:0.0.0.0 as private (this host 0.0.0.0)', () => {

@@ -60,13 +60,15 @@ describe('focusTrap', () => {
                 expect(() => manager.trap('#nonexistent')).toThrow('Modal element not found');
             });
 
-            test('returns a trap ID when no focusable elements exist', () => {
+            test('returns a trap ID and still registers the key handler when no focusable elements exist', () => {
                 document.body.innerHTML = '<div id="empty-modal"></div>';
                 const trapId = manager.trap('#empty-modal');
 
                 expect(trapId).toMatch(/^focusTrap_/);
-                // フォーカス可能な要素がないのでハンドラは登録されない
-                expect(manager.handlers.has(trapId)).toBe(false);
+                // フォーカス可能要素が0件でも Escape で離脱できるよう、
+                // keydown ハンドラは必ず登録される（release() の対象にもなる）
+                expect(manager.handlers.has(trapId)).toBe(true);
+                expect(manager.previousFocus.has(trapId)).toBe(true);
             });
 
             test('generates a different trap ID each time', () => {
@@ -91,6 +93,17 @@ describe('focusTrap', () => {
 
             test('is a no-op for a nonexistent trap ID', () => {
                 expect(() => manager.release('nonexistent')).not.toThrow();
+            });
+
+            test('releases a trap that had no focusable element', () => {
+                document.body.innerHTML = '<div id="empty-modal"></div>';
+                const modal = document.getElementById('empty-modal') as HTMLElement;
+                const trapId = manager.trap(modal);
+
+                manager.release(trapId);
+
+                expect(manager.handlers.has(trapId)).toBe(false);
+                expect(manager.previousFocus.has(trapId)).toBe(false);
             });
         });
 
@@ -141,6 +154,36 @@ describe('focusTrap', () => {
 
             const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
             expect(() => modal.dispatchEvent(event)).not.toThrow();
+        });
+
+        test('calls closeCallback on Escape even when the trap has no focusable element', () => {
+            // 全 disabled / 要素なしのモーダルでも Escape は唯一の離脱手段なので、
+            // ハンドラ未登録のまま Escape が無視される状態を作ってはいけない。
+            document.body.innerHTML = `
+                <div id="empty-modal">
+                    <button id="only" disabled>Disabled</button>
+                </div>
+            `;
+            const modal = document.getElementById('empty-modal') as HTMLElement;
+            const closeCallback = vi.fn();
+            const trapId = manager.trap(modal, closeCallback);
+
+            expect(manager.handlers.has(trapId)).toBe(true);
+
+            modal.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+            expect(closeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        test('leaves Tab alone when the trap has no focusable element', () => {
+            document.body.innerHTML = '<div id="empty-modal"></div>';
+            const modal = document.getElementById('empty-modal') as HTMLElement;
+            manager.trap(modal);
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            expect(() => modal.dispatchEvent(event)).not.toThrow();
+            // 空集合では循環対象が無いので preventDefault しない（無害）
+            expect(event.defaultPrevented).toBe(false);
         });
 
         test('moves focus to the first element when Tab is pressed on the last element', () => {

@@ -122,7 +122,7 @@ export function createTimeHeatmapPanel(): PanelLifecycle {
       } catch (error) {
         // User notice via notices.showError stays; the cause now also goes
         // through the structured-log seam instead of console.
-        void logError('[timeHeatmapPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'timeHeatmapPanel');
+        void logError('[timeHeatmapPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'timeHeatmapPanel');
         if (isStale()) return;
         notices.showError(
           'dashboardTimeHeatmapError',

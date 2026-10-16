@@ -109,7 +109,10 @@ describe('real-engine LIKE search (PBI 2026-09-12-38)', () => {
     const db = makeDb();
     // Prove the test is not tautological: feeding the qualified projection
     // into the LIKE SQL reproduces the historical failure.
-    const q = { text: 'ru' } as unknown as StorageQuery;
+    // PBI 2026-10-16-04 note: the qualified extra no longer carries
+    // `b.is_deleted = 0` (builders own the deleted predicate), so the fixture
+    // uses a domain filter to keep a `b.`-qualified column in the fragment.
+    const q = { text: 'ru', domain: 'a.com' } as unknown as StorageQuery;
     const qualifiedExtra = buildExtraWhereSql(q, { qualified: true });
     const stmts = buildLikeSearchStatements(qualifiedExtra, {
       likePattern: '%ru%',

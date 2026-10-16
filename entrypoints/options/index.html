@@ -718,6 +718,12 @@
           </div>
         </details>
 
+        <!-- uBlock操作のステータス表示。#domainStatus は hidden 属性＋dashboard.css の
+             [hidden]{display:none!important} で画面上に出ないため（UI指摘 2026-10-15）、
+             uBlock パネルの成功/エラーはこの可視要素へ書く。details の外に置くのは、
+             折りたたみ中でも結果が見えるようにするため。 -->
+        <div id="uBlockStatus" class="status-message" aria-live="polite"></div>
+
         <!-- hidden: domainFilter.ts が参照する既存要素（変更不可） -->
         <input type="radio" id="filterDisabled"   name="domainFilter" value="disabled"   hidden>
         <input type="radio" id="filterWhitelist"  name="domainFilter" value="whitelist"  hidden>

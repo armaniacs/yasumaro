@@ -329,7 +329,10 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'DASHBOARD_SQLITE' ? Record<string, unknown> :
   T extends 'LOG_FORWARD' ? { success: true } :
   T extends 'OW_PROBE_QUERY' ? { success: true; enabled: boolean } :
-  T extends 'OW_PROBE_STATE' ? { success: true } :
+  // The state handler refuses to write when the probe is disarmed (arming
+  // gate, Blue Team review 2026-10-15), so the failure shape is part of the
+  // contract — callers must not read `.success` as `true` unconditionally.
+  T extends 'OW_PROBE_STATE' ? { success: true } | { success: false; error: string } :
   SuccessResponse;
 
 /**

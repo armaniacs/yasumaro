@@ -17,7 +17,7 @@
  */
 
 import type { MessageSender } from './visitReporter.js';
-import type { OWTestState } from './e2eTestState.js';
+import type { OWTestState } from '../utils/e2eTestState.js';
 
 declare const __OW_E2E_PROBE__: boolean | undefined;
 const RELAY_COMPILED_IN: boolean =
@@ -44,6 +44,12 @@ export async function queryProbeArmed(sender: MessageSender): Promise<boolean> {
  * Report probe state through the service worker (fire-and-forget) and mirror
  * it to the isolated-world window global (invisible to page JS, pinned by
  * unit goldens). Never writes page-shared DOM. Never throws.
+ *
+ * This module is the SINGLE owner of the window leg: it is the only place in
+ * src/ that mutates window.__OW_TEST_STATE (the session leg belongs to
+ * publishE2eTestState in src/utils/e2eTestState.ts, which runs in the service
+ * worker where there is no window). Pinned by
+ * testDir/__tests__/e2eProbeContract.test.ts.
  */
 export function relayProbeState(sender: MessageSender, state: OWTestState): void {
     if (!RELAY_COMPILED_IN) return;

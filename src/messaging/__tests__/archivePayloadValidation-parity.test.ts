@@ -16,8 +16,9 @@
  *
  * Divergences that NN01 deliberately left open (cutoff-pair verification,
  * includeDeleted / yasumaroVersion presence, query length cap) were closed by
- * NN10 (PBI 2026-10-11-10): both gates now run the same spec row through
- * `evaluateSubtypeSpec`, and the bottom block asserts they agree.
+ * NN10 (PBI 2026-10-11-10): both gates now run the same spec row through the
+ * single interpreter (`interpretSubtypeSpec`, presented on the wire side as
+ * `evaluateSubtypeSpec`), and the bottom block asserts they agree.
  */
 import { describe, it, expect } from 'vitest';
 import { dashboardSqliteValidator } from '../validators.js';
@@ -150,7 +151,7 @@ describe('archive payload validation parity: envelope spec vs wire-table validat
 /**
  * Domain checks the wire rows used to skip (required-field presence, cutoff pair
  * verification, query text cap). PBI 2026-10-11-10 makes both paths run the same
- * DASHBOARD_SQLITE_SUBTYPE_SPECS row through `evaluateSubtypeSpec`, so these
+ * DASHBOARD_SQLITE_SUBTYPE_SPECS row through the shared spec interpreter, so these
  * payloads now get the same verdict on both sides; the old pin asserted the
  * divergence instead. Kept as an agreement test so a future re-fork fails here.
  */

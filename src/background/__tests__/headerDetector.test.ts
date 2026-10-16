@@ -57,7 +57,7 @@ vi.mock('../../utils/logger/api.js', async () =>
   }),
 );
 
-import { logError, logDebug } from '../../utils/logger/api.js';
+import { logError, logDebug, logWarn } from '../../utils/logger/api.js';
 
 describe('HeaderDetector', () => {
   let detector: HeaderDetector;
@@ -206,6 +206,35 @@ describe('HeaderDetector', () => {
             source: 'headerDetector'
           }),
           ErrorCode.UNKNOWN_ERROR
+        );
+      });
+    });
+
+    test('logs cache save failure at WARN severity', async () => {
+      vi.mocked(checkPrivacy).mockReturnValue({
+        isPrivate: false,
+        timestamp: Date.now(),
+        headers: {},
+      } as any);
+      vi.mocked(logWarn).mockClear();
+      vi.spyOn(detector as any, 'cachePrivacyInfo').mockRejectedValueOnce(new Error('cache boom'));
+
+      const details = {
+        url: 'https://example.com/warnfail',
+        type: 'main_frame' as chrome.webRequest.ResourceType,
+        responseHeaders: [
+          { name: 'Content-Type', value: 'text/html' }
+        ] as chrome.webRequest.HttpHeader[]
+      } as unknown as chrome.webRequest.OnHeadersReceivedDetails;
+
+      detector['onHeadersReceived'](details);
+
+      // onHeadersReceived is sync; the cache-save catch runs detached,
+      // so the logWarn call completion is the signal.
+      await waitForMock(() => {
+        expect(logWarn).toHaveBeenCalledWith(
+          'HeaderDetector: cache save failed',
+          expect.objectContaining({ error: 'cache boom' })
         );
       });
     });

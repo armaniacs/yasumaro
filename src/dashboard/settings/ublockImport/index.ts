@@ -8,7 +8,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { fetchFromUrl } from './urlFetcher.js';
 import { isValidUrl } from './validation.js';
 import { rebuildRulesFromSources, previewUblockFilter } from './rulesBuilder.js';
-import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings } from './sourceManager.js';
+import { loadAndDisplaySources, deleteSource, reloadSource, saveUblockSettings, UBLOCK_STATUS_ID } from './sourceManager.js';
 import { renderSourceList, updatePreviewUI, hidePreview, clearInput, exportSimpleFormat, copyToClipboard } from './uiRenderer.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { LogType } from '../../../utils/logger/types.js';
@@ -100,9 +100,9 @@ async function handleFileSelect(event: Event): Promise<void> {
     if (textarea) textarea.value = text;
     currentSourceUrl = null;
     handleTextInputPreview();
-    showStatus('domainStatus', getMessage('fileLoaded', { filename: file.name }), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
-    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -149,7 +149,7 @@ async function handleExport(): Promise<void> {
     const sources = settings[StorageKeys.UBLOCK_SOURCES] || [];
 
     if (sources.length === 0) {
-      showStatus('domainStatus', getMessage('nothingToExport'), 'error');
+      showStatus(UBLOCK_STATUS_ID, getMessage('nothingToExport'), 'error');
       return;
     }
 
@@ -158,9 +158,9 @@ async function handleExport(): Promise<void> {
     // (60s bounded delay); it also appends the anchor to document.body, which
     // the bare click here previously skipped.
     downloadBlob(new Blob([simpleFormat], { type: 'text/plain' }), `domain-list-${Date.now()}.txt`);
-    showStatus('domainStatus', getMessage('fileExported'), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('fileExported'), 'success');
   } catch (error: unknown) {
-    showStatus('domainStatus', `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('exportError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -173,14 +173,14 @@ async function handleCopy(): Promise<void> {
     const text = textarea ? textarea.value : '';
 
     if (!text.trim()) {
-      showStatus('domainStatus', getMessage('noTextToCopy'), 'error');
+      showStatus(UBLOCK_STATUS_ID, getMessage('noTextToCopy'), 'error');
       return;
     }
 
     await copyToClipboard(text);
-    showStatus('domainStatus', getMessage('copiedToClipboard'), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('copiedToClipboard'), 'success');
   } catch (error: unknown) {
-    showStatus('domainStatus', `${getMessage('copyError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('copyError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -194,7 +194,7 @@ async function handleUrlImport(): Promise<void> {
   const url = urlInput.value.trim();
 
   if (!url) {
-    showStatus('domainStatus', getMessage('loadEmptyUrl'), 'error');
+    showStatus(UBLOCK_STATUS_ID, getMessage('loadEmptyUrl'), 'error');
     return;
   }
 
@@ -211,9 +211,9 @@ async function handleUrlImport(): Promise<void> {
     currentSourceUrl = url;
     handleTextInputPreview();
 
-    showStatus('domainStatus', getMessage('loadedFromUrl', { url }), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('loadedFromUrl', { url }), 'success');
   } catch (error: unknown) {
-    showStatus('domainStatus', errorMessage(error), 'error');
+    showStatus(UBLOCK_STATUS_ID, errorMessage(error), 'error');
   } finally {
     if (importBtn) {
       importBtn.textContent = getMessage('importFromUrl');
@@ -239,7 +239,7 @@ async function handleDeleteSource(index: number): Promise<void> {
       );
     });
   } catch (error: unknown) {
-    showStatus('domainStatus', `${getMessage('deleteError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('deleteError')}: ${errorMessage(error)}`, 'error');
   }
 }
 
@@ -271,10 +271,10 @@ async function handleReloadSource(index: number): Promise<void> {
     const diff = newRuleCount - oldRuleCount;
     const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
 
-    showStatus('domainStatus', getMessage('sourceUpdatedWithDiff', { ruleCount: newRuleCount, diff: diffStr }), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('sourceUpdatedWithDiff', { ruleCount: newRuleCount, diff: diffStr }), 'success');
   } catch (error: unknown) {
     addLog(LogType.ERROR, getMessage('reloadError'), { error: errorMessage(error) });
-    showStatus('domainStatus', `${getMessage('reloadError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('reloadError')}: ${errorMessage(error)}`, 'error');
 
     // Use preserved currentSources for button state reset
     renderSourceList(
@@ -383,7 +383,7 @@ function handleDrop(event: DragEvent): void {
   if (file && file.type === 'text/plain') {
     processFile(file);
   } else {
-    showStatus('domainStatus', getMessage('textFileOnly'), 'error');
+    showStatus(UBLOCK_STATUS_ID, getMessage('textFileOnly'), 'error');
   }
 }
 
@@ -397,9 +397,9 @@ async function processFile(file: File): Promise<void> {
     if (textarea) textarea.value = text;
     currentSourceUrl = null;
     handleTextInputPreview();
-    showStatus('domainStatus', getMessage('fileLoaded', { filename: file.name }), 'success');
+    showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
-    showStatus('domainStatus', `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
+    showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
 

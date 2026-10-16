@@ -192,7 +192,7 @@ export function createWordClusterPanel(): PanelLifecycle {
         notices.hide('loading');
         // User notice via notices.showError stays; the cause now also goes
         // through the structured-log seam instead of console.
-        void logError('[wordClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'wordClusterPanel');
+        void logError('[wordClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'wordClusterPanel');
         if (isStale()) return;
         notices.showError('wordClusterError', 'Failed to load the word cluster. Try again.');
       }

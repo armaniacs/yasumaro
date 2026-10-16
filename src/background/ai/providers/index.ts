@@ -9,5 +9,6 @@ export type {
 } from './HttpProviderStrategy.js';
 export type { AISummaryResult } from './ProviderStrategy.js';
 export { GeminiProvider } from './GeminiProvider.js';
-export { GenericOpenAICompatibleProvider } from './OpenAIProvider.js';
+/** OpenAIProvider is @deprecated: kept until the next major (再評価 2026-12-31). */
+export { OpenAIProvider, GenericOpenAICompatibleProvider } from './OpenAIProvider.js';
 export { BuiltInAiProvider } from './BuiltInAiProvider.js';

@@ -126,14 +126,38 @@ function sanitizeParts(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdown
 }
 
 /**
- * Minute-bucket cache for resolveTimestamp below. The display resolution is
- * minutes, so every timestamp in the same minute formats identically — one ICU
- * call per distinct minute instead of one per row (PBI 2026-10-15-02: ~80% of
- * the 10k-row export render cost). The key space is naturally bounded (at most
- * 1440 distinct HH:MM values), so no TTL or eviction is needed. Keyed by
- * minute + locale so timestampLocale callers never cross-contaminate.
+ * Entry cap for the minute-bucket cache below. The display resolution is
+ * minutes, so one day holds at most 1440 distinct HH:MM values — the original
+ * key-space intent. The actual key includes the absolute epoch minute, so an
+ * export spanning multiple days (or several timestampLocale callers) would
+ * otherwise grow the module-level Map without bound; 1400 entries therefore
+ * evict the oldest one (Map preserves insertion order).
+ */
+export const TIMESTAMP_CACHE_MAX_ENTRIES = 1400;
+
+/**
+ * Minute-bucket cache for resolveTimestamp below. One ICU call per distinct
+ * minute instead of one per row (PBI 2026-10-15-02: ~80% of the 10k-row export
+ * render cost). Keyed by locale + absolute minute so timestampLocale callers
+ * never cross-contaminate. Bounded by TIMESTAMP_CACHE_MAX_ENTRIES: entries
+ * beyond the cap are dropped oldest-inserted first. The cache is pure
+ * memoization (a formatted value depends only on source + locale), so an
+ * evicted entry is recomputed on the next request — eviction can cost one
+ * extra ICU call, never a wrong value.
  */
 const timestampByMinute = new Map<string, string>();
+
+/** Insert a freshly formatted value, evicting the oldest entry past the cap. */
+function rememberTimestamp(key: string, formatted: string): string {
+  timestampByMinute.set(key, formatted);
+  if (timestampByMinute.size > TIMESTAMP_CACHE_MAX_ENTRIES) {
+    const oldest = timestampByMinute.keys().next();
+    if (!oldest.done) {
+      timestampByMinute.delete(oldest.value);
+    }
+  }
+  return formatted;
+}
 
 function resolveTimestamp(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdownOptions): string {
   if (input.timestamp !== undefined) return input.timestamp;
@@ -146,8 +170,7 @@ function resolveTimestamp(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkd
     hour: '2-digit',
     minute: '2-digit',
   });
-  timestampByMinute.set(key, formatted);
-  return formatted;
+  return rememberTimestamp(key, formatted);
 }
 
 /**

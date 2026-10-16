@@ -49,6 +49,10 @@
  *   the module immediately marks migration done and becomes a no-op.
  * - Backup is a JSON snapshot in chrome.storage.local (IDB_MIGRATION_BACKUP);
  *   restore uses INSERT OR IGNORE so it never duplicates.
+ * - A legacy handle/VFS close failure aborts the migration fail-safe
+ *   (MigrationCloseFailureError): the backup is kept, IDB_MIGRATION_V2_DONE
+ *   stays unset (next launch retries), and the host init stops before the
+ *   documented indefinite `indexedDB.open` hang instead of walking into it.
  * - `wa-sqlite` is loaded only via dynamic import when an old DB is detected, so
  *   it does not inflate the hot path; bundle cost is deferred to PBI 04.
  */
@@ -161,6 +165,25 @@ interface MigrationBackupPayload {
   records: BrowsingLogRecord[];
 }
 
+/**
+ * Fail-safe abort for the one failure class that must not be swallowed: a
+ * legacy handle/VFS close failure. After such a failure the old IDB
+ * connection may still be held open, and the new engine's
+ * `indexedDB.open(DB_FILENAME, N)` upgrade then hangs indefinitely (verified
+ * in the E2E spike for this PBI — see backupOldWaSqliteIdb's finally).
+ * runMigrationBackup rethrows only this class, so ordinary backup failures
+ * keep their "proceed without backup" degradation while a close failure
+ * aborts the migration before the hang point. The backup written to
+ * chrome.storage.local is kept and IDB_MIGRATION_V2_DONE is never written on
+ * this path, so the next launch retries the whole sequence (self-healing).
+ */
+class MigrationCloseFailureError extends Error {
+  constructor(causeMessage: string) {
+    super(`migrationBackup: legacy db close failed, migration aborted (${causeMessage})`);
+    this.name = 'MigrationCloseFailureError';
+  }
+}
+
 export interface MigrationBackupState {
   idbEngine: SqliteEngine | null;
 }
@@ -188,6 +211,21 @@ export async function runMigrationBackup(_state: MigrationBackupState): Promise<
 
     await backupOldWaSqliteIdb(OLD_IDB_NAME);
   } catch (error) {
+    if (error instanceof MigrationCloseFailureError) {
+      // Fail-safe abort: the legacy IDB connection may still be open, so
+      // continuing would send the init ladder into the indefinite
+      // indexedDB.open hang documented in backupOldWaSqliteIdb. Rethrow so
+      // the host stops before that hang point (fallback storage) instead of
+      // "proceeding without backup". The backup stays in chrome.storage.local
+      // and the done flag stays unset, so the next launch retries.
+      logError(
+        'SQLite: IDB migration aborted after legacy close failure (backup retained, retried next launch)',
+        { error: errorMessage(error) },
+        ErrorCode.STORAGE_MIGRATION_FAILURE,
+        'sqlite'
+      );
+      throw error;
+    }
     logWarn(
       'SQLite: IDB migration pre-check failed, proceeding without backup',
       { error: errorMessage(error) },
@@ -238,6 +276,7 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
   sqlite3.vfs_register(vfs as unknown as SQLiteVFS, true);
 
   let dbHandle: number | null = null;
+  let closeFailure: unknown = null;
   try {
     dbHandle = await sqlite3.open_v2(
       DB_FILENAME,
@@ -265,8 +304,10 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
     if (dbHandle !== null) {
       await sqlite3.close(dbHandle).catch((error: unknown) => {
         // Close failure risks the IDB-upgrade hang described below, so it
-        // must stay visible in diagnostic logs (was silent).
+        // must stay visible in diagnostic logs AND abort (was: WARN only,
+        // which still walked into the hang).
         void logWarn('migrationBackup: failed to close old db handle', { error: errorMessage(error) }, undefined, 'migrationBackup');
+        closeFailure ??= error;
       });
     }
     // Critical: the old VFS's IndexedDB connection MUST be closed, or the
@@ -275,7 +316,19 @@ async function backupOldWaSqliteIdb(oldIdbName: string): Promise<void> {
     // WHY: IDBBatchAtomicVFS `close()` not in TypeScript types; must close old IDB to prevent migration hang
     await (vfs as unknown as { close: () => Promise<void> }).close().catch((error: unknown) => {
       void logWarn('migrationBackup: failed to close old VFS connection', { error: errorMessage(error) }, undefined, 'migrationBackup');
+      closeFailure ??= error;
     });
+    if (closeFailure !== null) {
+      // Fail-safe abort: a close failure means the legacy IDB connection may
+      // still be held open, so returning normally would send the init ladder
+      // into the indefinite indexedDB.open hang above. Throwing from the
+      // finally is deliberate — the hang risk outranks any in-flight error
+      // from the try block (worst case here: a backup attempt that also
+      // failed, which is already logged). The backup written to
+      // chrome.storage.local is kept and IDB_MIGRATION_V2_DONE stays unset,
+      // so the next launch retries the whole sequence (self-healing).
+      throw new MigrationCloseFailureError(errorMessage(closeFailure));
+    }
   }
 }
 

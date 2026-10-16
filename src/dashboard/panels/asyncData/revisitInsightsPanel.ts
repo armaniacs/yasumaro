@@ -47,6 +47,9 @@ import {
   type RevisitVisit,
 } from '../../revisitInsightsAggregate.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 const SECTION_EMPTY_COLSPAN = 5;
 
@@ -383,7 +386,8 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
           notices.show('rowCap');
         }
       } catch (error) {
-        console.error('[revisitInsightsPanel] error:', error);
+        // 構造化ログ移行 (ログ指摘 2026-10-15): console.error → 標準の logError セアム
+        void logError('[revisitInsightsPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'revisitInsightsPanel');
         if (isStale()) return;
         notices.showError('revisitInsightsError', 'Failed to load revisit data.');
       }

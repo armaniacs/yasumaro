@@ -4,7 +4,7 @@ import { expect, type BrowserContext } from '@playwright/test';
  * E2E probe helpers (PBI 2026-10-11-08 NN08).
  *
  * The content-script probe is armed and read extension-side only, through
- * chrome.storage.session (SSOT: src/content/e2eTestState.ts). Page JS has no
+ * chrome.storage.session (SSOT: src/utils/e2eTestState.ts). Page JS has no
  * chrome API, so it can neither arm the probe nor read its output — the
  * former page-DOM channel (`data-ow-e2e-test` / `data-ow-test-state`) is
  * inert. The harness reaches session storage through the extension service
@@ -14,12 +14,12 @@ import { expect, type BrowserContext } from '@playwright/test';
  * resolves the flag once at init.
  */
 
-/** Mirrors E2E_PROBE_ENABLE_KEY in src/content/e2eTestState.ts. */
+/** Mirrors E2E_PROBE_ENABLE_KEY in src/utils/e2eTestState.ts. */
 export const E2E_PROBE_ENABLE_KEY = 'owE2eProbeEnabled';
-/** Mirrors E2E_PROBE_STATE_KEY in src/content/e2eTestState.ts. */
+/** Mirrors E2E_PROBE_STATE_KEY in src/utils/e2eTestState.ts. */
 export const E2E_PROBE_STATE_KEY = 'owE2eTestState';
 
-/** Mirrors OWTestState in src/content/e2eTestState.ts (field order matters). */
+/** Mirrors OWTestState in src/utils/e2eTestState.ts (field order matters). */
 export interface E2EProbeState {
   maxScrollPercentage: number;
   isValidVisitReported: boolean;

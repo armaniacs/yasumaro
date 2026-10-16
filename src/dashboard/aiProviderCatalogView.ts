@@ -13,7 +13,12 @@
  * page-level applyI18n ran at load, before these nodes existed.
  */
 
-import { PROVIDER_CATALOG, type ProviderCatalogEntry } from '../background/ai/providerCatalog.js';
+import {
+  PROVIDER_CATALOG,
+  PROVIDER_VIEW_METADATA,
+  type ProviderCatalogEntry,
+  type ProviderViewMetadata,
+} from '../background/ai/providerCatalog.js';
 import type { ProviderId } from '../utils/storage/types.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
@@ -70,7 +75,10 @@ export function renderProviderSettings(container: HTMLElement, providerId: Provi
 
   container.textContent = '';
   container.id = `${providerId}Settings`;
-  const cssClass = entry.cssClass ?? 'openai-settings';
+  // View-only values read from the canonical PROVIDER_VIEW_METADATA map
+  // (never from the catalog entry). Empty string opts out (gemini renders
+  // without a class); an id without metadata falls back to 'openai-settings'.
+  const cssClass = PROVIDER_VIEW_METADATA.get(providerId)?.cssClass ?? 'openai-settings';
   if (cssClass !== '') container.classList.add(cssClass);
 
   switch (entry.settingsBlockKind) {
@@ -81,7 +89,7 @@ export function renderProviderSettings(container: HTMLElement, providerId: Provi
       buildModelsDevBlock(container, entry);
       break;
     default:
-      buildGenericBlock(container, entry);
+      buildGenericBlock(container, entry, PROVIDER_VIEW_METADATA.get(providerId) ?? {});
   }
 
   applyI18n(container);
@@ -131,7 +139,11 @@ function helpText(i18nKey: string): HTMLParagraphElement {
   return p;
 }
 
-function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry): void {
+function buildGenericBlock(
+  container: HTMLElement,
+  entry: ProviderCatalogEntry,
+  meta: ProviderViewMetadata,
+): void {
   if (entry.baseUrlKey) {
     const id = storageKeyToInputId(entry.baseUrlKey);
     container.appendChild(formGroup(
@@ -154,9 +166,10 @@ function buildGenericBlock(container: HTMLElement, entry: ProviderCatalogEntry):
     ));
   }
 
-  // Extra fields driven by catalog (e.g. geminiApiVersion), no providerId branch
-  if (entry.extraFields) {
-    for (const field of entry.extraFields) {
+  // Extra fields driven by PROVIDER_VIEW_METADATA (e.g. geminiApiVersion),
+  // no providerId branch
+  if (meta.extraFields) {
+    for (const field of meta.extraFields) {
       const extraInput = input({ id: field.inputId, type: field.type, storageKey: field.storageKey });
       if (field.placeholder) extraInput.placeholder = field.placeholder;
       if (field.a11y) {

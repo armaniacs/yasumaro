@@ -41,11 +41,18 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
 /**
  * Shared Tab-cycle + Escape handling for focus traps.
  *
- * The caller owns its focusable set: `getFocusables` returns the current list,
- * so each component keeps its own selector and disabled-element policy
- * (focusTrap passes a list captured at trap() time; confirmDialog re-queries
- * per keydown). Escape is routed to `onEscape` when provided; Tab wraps focus
- * from last to first (and first to last with Shift). Does nothing for other keys.
+ * The caller owns its focusable set: `getFocusables` is called per keydown and
+ * returns the current list, so each component keeps its own selector and
+ * disabled-element policy — `trap()` re-queries the modal through
+ * `getFocusableElements()` (a control disabled after the trap was installed
+ * drops out of the cycle, PBI 2026-10-11-07), confirmDialog re-queries its
+ * dialog with `FOCUSABLE_SELECTOR`.
+ *
+ * Escape is routed to `onEscape` whenever provided, including when the set is
+ * empty: an empty trap (no focusable element, all disabled) must still be
+ * leaveable. Tab wraps focus from last to first (and first to last with Shift)
+ * and stays a no-op on an empty set — nothing to wrap, so the early return
+ * below is unchanged. Other keys are ignored.
  */
 export function handleFocusCycle(
   event: KeyboardEvent,
@@ -133,15 +140,10 @@ class FocusTrapManager {
     const trapId = this.generateId();
     this.previousFocus.set(trapId, document.activeElement);
 
-    // フォーカス可能な要素を取得（非表示要素は除外）
+    // フォーカス可能な要素を取得（非表示要素は除外）。0件でも後段の
+    // keydown ハンドラ登録は行う（下記コメント参照）。
     const focusableElements = getFocusableElements(modalElement);
     const firstFocusable = focusableElements[0];
-    const lastFocusable = focusableElements[focusableElements.length - 1];
-
-    if (!firstFocusable || !lastFocusable) {
-      this.previousFocus.delete(trapId);
-      return trapId;
-    }
 
     // PBI 2026-09-11-03 (round 6): tripwire — a missed release leaves both the
     // keydown handler and the map entry behind forever. Live traps above this
@@ -154,6 +156,10 @@ class FocusTrapManager {
     // キーボードハンドラ。フォーカス可能集合は keydown ごとに取り直す:
     // 開いた後に disabled 化された要素（保存中の submit 等）へ追随するため
     // （PBI 2026-10-11-07。固定取得だと末尾が disabled のとき折り返しが成立しない）。
+    // フォーカス可能要素が0件（要素なし／全 disabled）でも必ず登録する:
+    // 登録を省くと Escape が効かず、閉じる手段を持たないままモーダルに
+    // 閉じ込められる（Tab 循環は handleFocusCycle 側で空集合を無害に無視する）。
+    // previousFocus も残すため release() がフォーカスを元へ戻せる。
     const keydownHandler = (e: KeyboardEvent) => {
       handleFocusCycle(e, () => getFocusableElements(modalElement), closeCallback);
     };

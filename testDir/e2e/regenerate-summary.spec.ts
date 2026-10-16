@@ -59,7 +59,7 @@ const MARKER =
 const ERROR_URL = 'http://localhost:9/never.html';
 
 const FIXTURE_HTML = `<!DOCTYPE html>
-<html data-ow-e2e-test="true" lang="en">
+<html lang="en">
 <head><meta charset="utf-8"><title>${ENTRY_TITLE}</title></head>
 <body>
 <article>

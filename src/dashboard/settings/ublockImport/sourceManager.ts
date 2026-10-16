@@ -8,6 +8,7 @@ import { settingsRepository } from '../../../utils/storage/SettingsRepository.js
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
+import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { logWarn } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { rebuildRulesFromSources } from './rulesBuilder.js';
@@ -23,6 +24,16 @@ interface SaveResult {
   action: string;
   ruleCount: number;
 }
+
+/**
+ * uBlock パネルのステータス表示先（UI指摘 2026-10-15）。
+ *
+ * `#domainStatus` は entrypoints/options/index.html で `hidden` 属性付き、かつ
+ * dashboard.css の `[hidden]{display:none!important}` で常に非表示のため、
+ * そこに書いた成功/エラーはユーザーに届かない。uBlock 操作の結果は、同じ
+ * panel-domain 内の可視要素 `#uBlockStatus`（details の外側・aria-live）へ書く。
+ */
+export const UBLOCK_STATUS_ID = 'uBlockStatus';
 
 /**
  * Extract only the fields that storage consumers read from merged rules.
@@ -77,7 +88,7 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
   if (renderCallback) {
     renderCallback(sources);
   }
-  showStatus('domainStatus', getMessageOr('ublockSourceDeleted', 'ソースを削除しました'), 'success');
+  showStatus(UBLOCK_STATUS_ID, getMessageOr('ublockSourceDeleted', 'Source deleted'), 'success');
 }
 
 /**
@@ -91,13 +102,13 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
   const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
 
   if (index < 0 || index >= sources.length) {
-    throw new Error(getMessageOr('ublockInvalidIndex', '無効なインデックス'));
+    throw new Error(getMessageOr('ublockInvalidIndex', 'Invalid index'));
   }
 
   const source = sources[index];
-  if (!source) throw new Error(getMessageOr('ublockInvalidIndex', '無効なインデックス'));
+  if (!source) throw new Error(getMessageOr('ublockInvalidIndex', 'Invalid index'));
   if (source.url === 'manual') {
-    throw new Error(getMessageOr('ublockManualSourceNotReloadable', '手動入力のソースは更新できません'));
+    throw new Error(getMessageOr('ublockManualSourceNotReloadable', 'Manually entered sources cannot be reloaded'));
   }
 
   const filterText = await fetchFromUrlCallback(source.url);
@@ -107,7 +118,7 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    throw new Error(getMessageOr('ublockNoValidRulesAborted', 'エラーが見つかりました: 有効なルールが見つかりませんでした。更新を中止します。'));
+    throw new Error(getMessageOr('ublockNoValidRulesAborted', 'Errors found: no valid rules found. Update aborted.'));
   }
 
   // エラーがあっても、有効なルールが存在すれば更新を許可
@@ -150,15 +161,15 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
 export async function saveUblockSettings(text: string, url: string | null = null): Promise<SaveResult> {
   // 入力値検証: 空文字列は事前にチェック
   if (!isValidString(text)) {
-    throw new Error(getMessageOr('ublockNoValidRules', '有効なルールが見つかりませんでした'));
+    throw new Error(getMessageOr('ublockNoValidRules', 'No valid rules found'));
   }
 
   const result = parseUblockFilterListWithErrors(text);
 
   const ruleCount = result.rules?.metadata?.ruleCount ?? 0;
   if (ruleCount === 0) {
-    showStatus('domainStatus', getMessageOr('ublockNoValidRulesWithDetail', 'エラーが見つかりました: 有効なルールが見つかりませんでした'), 'error');
-    throw new Error(getMessageOr('ublockNoValidRulesWithDetail', 'エラーが見つかりました: 有効なルールが見つかりませんでした'));
+    showStatus(UBLOCK_STATUS_ID, getMessageOr('ublockNoValidRulesWithDetail', 'Errors found: no valid rules found'), 'error');
+    throw new Error(getMessageOr('ublockNoValidRulesWithDetail', 'Errors found: no valid rules found'));
   }
 
   // エラーがあっても、有効なルールが存在すれば保存を許可
@@ -201,10 +212,17 @@ export async function saveUblockSettings(text: string, url: string | null = null
   });
 
   const action = existingIndex >= 0 ? '更新' : '追加';
-  showStatus('domainStatus', getMessageWithSubstitutions(
+  // 複数形対応（i18n指摘 2026-10-15）: `{ruleCount} rules` だと英語で
+  // 「1 rules」になるため、i18nPlural の _one/_other キーで数に合わせる。
+  // 日本語は単数形を持たないため getPluralKey がベースキーを返す。
+  const savedMessageKey = getPluralKey(
     existingIndex >= 0 ? 'ublockSourceSavedUpdated' : 'ublockSourceSavedAdded',
+    ruleCount,
+  );
+  showStatus(UBLOCK_STATUS_ID, getMessageWithSubstitutions(
+    savedMessageKey,
     { ruleCount },
-    existingIndex >= 0 ? 'フィルターソースを更新しました（{ruleCount}ルール）' : 'フィルターソースを追加しました（{ruleCount}ルール）'
+    existingIndex >= 0 ? 'Filter source updated ({ruleCount} rules)' : 'Filter source added ({ruleCount} rules)'
   ), 'success');
 
   return {

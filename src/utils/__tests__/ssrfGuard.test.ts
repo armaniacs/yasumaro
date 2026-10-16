@@ -65,6 +65,13 @@ describe('ssrfGuard', () => {
       expect(isPrivateIpAddress('[::1]')).toBe(true);
     });
 
+    it('classifies the IPv6 unspecified address (::) as private', () => {
+      // IPv4 の 0.0.0.0 と同様に「このホスト」表現。許可すると SSRF 経路になる。
+      expect(isPrivateIpAddress('::')).toBe(true);
+      expect(isPrivateIpAddress('[::]')).toBe(true);
+      expect(isPrivateIpAddress('0:0:0:0:0:0:0:0')).toBe(true);
+    });
+
     it('resolves an IPv4-mapped IPv6 address to its embedded IPv4 classification', () => {
       expect(isPrivateIpAddress('::ffff:10.0.0.1')).toBe(true);
       expect(isPrivateIpAddress('::ffff:8.8.8.8')).toBe(false);
@@ -91,6 +98,13 @@ describe('ssrfGuard', () => {
       expect(isLocalhostAddress('localhost')).toBe(true);
       expect(isLocalhostAddress('127.0.0.1')).toBe(true);
       expect(isLocalhostAddress('::1')).toBe(true);
+    });
+
+    it('recognizes the IPv6 unspecified address (::) as localhost', () => {
+      expect(isLocalhostAddress('::')).toBe(true);
+      expect(isLocalhostAddress('[::]')).toBe(true);
+      // ポート許可リストは :: にも適用される（VULN-013 と同じ扱い）
+      expect(isLocalhostAddress('::', 9999)).toBe(false);
     });
 
     it('rejects a non-localhost hostname', () => {
@@ -183,6 +197,40 @@ describe('ssrfGuard', () => {
     });
 
     it('allows a public AI provider URL', () => {
+      expect(() => validateUrlForAIRequests('https://api.openai.com/v1/chat')).not.toThrow();
+    });
+  });
+
+  describe('IPv6 unspecified [::] blocking (SSRF regression)', () => {
+    it('rejects http://[::]:9999/ at validateUrl (blockLocalhost=true)', () => {
+      expect(() => validateUrl('http://[::]:9999/', { blockLocalhost: true })).toThrow(/private network/);
+    });
+
+    it('rejects http://[::]:9999/ at validateUrlForFilterImport', () => {
+      expect(() => validateUrlForFilterImport('http://[::]:9999/')).toThrow(/private network/);
+    });
+
+    it('rejects http://[::]:9999/ at validateUrlForAIRequests', () => {
+      expect(() => validateUrlForAIRequests('http://[::]:9999/')).toThrow(/private network/);
+    });
+
+    it('treats :: like 127.0.0.1 at validateUrlForAIRequests: port allowlist applies', () => {
+      expect(() => validateUrlForAIRequests('http://[::]:11434/api/generate')).not.toThrow();
+      expect(() => validateUrlForAIRequests('http://[::]:9999/api/generate')).toThrow(/private network/);
+    });
+
+    it('keeps the ::1 loopback handling intact at every entry point', () => {
+      // [0:0:0:0:0:0:0:1] は URL パーサにより [::1] に正規化される
+      expect(() => validateUrl('http://[0:0:0:0:0:0:0:1]:9999/', { blockLocalhost: true })).toThrow(/private network/);
+      expect(() => validateUrlForFilterImport('http://[0:0:0:0:0:0:0:1]:9999/')).toThrow(/private network/);
+      expect(() => validateUrlForAIRequests('http://[0:0:0:0:0:0:0:1]:9999/')).toThrow(/private network/);
+      // ::1 はローカルAI用途では許可ポートなら従来どおり許可される
+      expect(() => validateUrlForAIRequests('http://[::1]:11434/api/generate')).not.toThrow();
+    });
+
+    it('keeps public URLs allowed at every entry point', () => {
+      expect(() => validateUrl('https://example.com', { blockLocalhost: true })).not.toThrow();
+      expect(() => validateUrlForFilterImport('https://example.com/filters.txt')).not.toThrow();
       expect(() => validateUrlForAIRequests('https://api.openai.com/v1/chat')).not.toThrow();
     });
   });

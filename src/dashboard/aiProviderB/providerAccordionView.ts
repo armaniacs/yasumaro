@@ -1,6 +1,6 @@
 import { getMessageOr } from '../../utils/i18n.js';
 import { clearElement } from '../../utils/domClear.js';
-import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
+import { PROVIDER_CATALOG, PROVIDER_VIEW_METADATA } from '../../background/ai/providerCatalog.js';
 import { providerIdsInOrder, renderProviderSettings } from '../aiProviderCatalogView.js';
 
 export interface BProviderAccordionView {
@@ -32,7 +32,9 @@ export function createBProviderAccordionView(container: HTMLElement): BProviderA
     body.style.display = 'block';
 
     details.append(summary, body);
-    if (entry?.defaultOpen === true) details.open = true;
+    // Initial open state is view-only data: read from the canonical
+    // PROVIDER_VIEW_METADATA map, never from the catalog entry.
+    if (PROVIDER_VIEW_METADATA.get(id)?.defaultOpen === true) details.open = true;
     container.appendChild(details);
     created.push(details);
   }

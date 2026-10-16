@@ -1,6 +1,6 @@
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown, buildTemplateEntryData } from '../markdownFormatter.js';
+import { formatEntryToHeadingMarkdown, formatEntriesToObsidianList, buildEntryMarkdown, buildTemplateEntryData, TIMESTAMP_CACHE_MAX_ENTRIES } from '../markdownFormatter.js';
 import type { BrowsingLogEntry } from '../sqlite-types.js';
 
 const baseEntry: BrowsingLogEntry = {
@@ -308,5 +308,40 @@ describe('resolveTimestamp minute memoization (PBI 2026-10-15-02)', () => {
     ).timestamp;
     expect(ja2).toBe(ja1);
     expect(typeof en).toBe('string');
+  });
+
+  it('evicts the oldest minute once the cache exceeds TIMESTAMP_CACHE_MAX_ENTRIES', () => {
+    const spy = vi.spyOn(Date.prototype, 'toLocaleTimeString');
+    try {
+      // Dedicated minute window, stepped wider than its own span on the shared
+      // salt, so no key here can collide with another test's (or a --repeats
+      // run's) cached minutes — the module-level cache persists across it()
+      // bodies within one worker.
+      const spanMinutes = TIMESTAMP_CACHE_MAX_ENTRIES + 60;
+      const base = new Date(2026, 9, 1, 9, 5, 12).getTime() + minuteSalt * spanMinutes * 60_000;
+      minuteSalt += 1;
+      const overflow = 5;
+      const total = TIMESTAMP_CACHE_MAX_ENTRIES + overflow;
+      for (let i = 0; i < total; i++) {
+        entry(base + i * 60_000, `https://example.com/m${i}`);
+      }
+      // Every key was new: one ICU call each.
+      expect(spy).toHaveBeenCalledTimes(total);
+
+      // The oldest minute was evicted to stay under the cap: recomputing it
+      // misses the cache and costs one extra ICU call...
+      const evicted = entry(base, 'https://example.com/m0-revisit');
+      expect(spy).toHaveBeenCalledTimes(total + 1);
+      // ...and the recomputed value matches what memoization produced before
+      // (eviction costs a recompute, never a wrong value).
+      expect(evicted.timestamp).toBe(entry(base, 'https://example.com/m0-revisit').timestamp);
+      expect(spy).toHaveBeenCalledTimes(total + 1);
+
+      // The most recent minute is still cached: no additional ICU call.
+      entry(base + (total - 1) * 60_000, `https://example.com/m${total - 1}-revisit`);
+      expect(spy).toHaveBeenCalledTimes(total + 1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

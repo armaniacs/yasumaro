@@ -277,11 +277,11 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      document.body.innerHTML = '<div id="domainStatus"></div>';
+      document.body.innerHTML = '<div id="uBlockStatus"></div>';
       await deleteSource(0);
 
       // Test env resolves the en dictionary: EN users no longer see Japanese.
-      expect(document.getElementById('domainStatus')?.textContent).toBe('Source deleted');
+      expect(document.getElementById('uBlockStatus')?.textContent).toBe('Source deleted');
     });
 
     test('saveUblockSettings resolves the added message with the rule count', async () => {
@@ -293,10 +293,88 @@ describe('ublockImport - SourceManager Module', () => {
         }
       });
 
-      document.body.innerHTML = '<div id="domainStatus"></div>';
+      document.body.innerHTML = '<div id="uBlockStatus"></div>';
       await saveUblockSettings('||example.com^');
 
-      expect(document.getElementById('domainStatus')?.textContent).toBe('Filter source added (1 rules)');
+      // 英語の複数形対応: ruleCount=1 では `_one` キーが選ばれ「1 rules」にならない
+      expect(document.getElementById('uBlockStatus')?.textContent).toBe('Filter source added (1 rule)');
+    });
+
+    test('uses the plural variant when the rule count is greater than one', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [],
+          ublock_rules: {},
+          ublock_format_enabled: false
+        }
+      });
+
+      document.body.innerHTML = '<div id="uBlockStatus"></div>';
+      await saveUblockSettings('||example.com^\n||test.com^');
+
+      expect(document.getElementById('uBlockStatus')?.textContent).toBe('Filter source added (2 rules)');
+    });
+
+    test('writes to the visible uBlock status element, not the hidden #domainStatus', async () => {
+      // #domainStatus は index.html で hidden 属性＋[hidden]{display:none!important}
+      // により常に非表示なので、そこに書いた結果はユーザーに届かない（UI指摘）。
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [],
+          ublock_rules: {},
+          ublock_format_enabled: false
+        }
+      });
+
+      document.body.innerHTML = `
+        <div id="domainStatus" hidden aria-live="polite"></div>
+        <div id="uBlockStatus" class="status-message" aria-live="polite"></div>
+      `;
+      await saveUblockSettings('||example.com^');
+
+      expect(document.getElementById('uBlockStatus')?.textContent).toBe('Filter source added (1 rule)');
+      expect(document.getElementById('domainStatus')?.textContent).toBe('');
+    });
+
+    test('renders the delete result on the visible element too', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [
+            { url: 'https://example.com/filters.txt', ruleCount: 1, blockDomains: ['example.com'], exceptionDomains: [] }
+          ],
+          ublock_rules: {},
+          ublock_format_enabled: true
+        }
+      });
+
+      document.body.innerHTML = `
+        <div id="domainStatus" hidden aria-live="polite"></div>
+        <div id="uBlockStatus" class="status-message" aria-live="polite"></div>
+      `;
+      await deleteSource(0);
+
+      expect(document.getElementById('uBlockStatus')?.textContent).toBe('Source deleted');
+      expect(document.getElementById('domainStatus')?.textContent).toBe('');
+    });
+  });
+
+  // ========================================================================
+  // fallback language (NN02): a missing key must surface the English
+  // fallback, never Japanese
+  // ========================================================================
+
+  describe('fallback language', () => {
+    test('uses the English fallback instead of Japanese when the key is missing', async () => {
+      // Simulate a missing translation: real chrome.i18n returns '' for it,
+      // so getMessageOr must fall through to its (English) fallback argument.
+      vi.mocked(chrome.i18n.getMessage).mockReturnValueOnce('');
+
+      const error = await saveUblockSettings('').catch((e: unknown) => e);
+      expect(error).toBeInstanceOf(Error);
+      const message = (error as Error).message;
+
+      expect(message).toBe('No valid rules found');
+      expect(message).not.toMatch(/[\u3040-\u30ff\u4e00-\u9fff]/);
     });
   });
 

@@ -76,6 +76,23 @@ export function syncStatusToTop(): void {
 }
 
 /**
+ * Best-effort `#status` -> `#statusTop` mirror shared by showStatus/clearStatus.
+ *
+ * Owner of the mirror guard: callers writing to `#status` never hand-call
+ * syncStatusToTop. Other element IDs are untouched. Idempotent: a leftover
+ * hand call changes nothing.
+ */
+function mirrorStatusToTop(el: HTMLElement): void {
+  if (el.id !== 'status') return;
+  try {
+    syncStatusToTop();
+    // WHY (intentional silence, PBI 2026-09-22-01裁定): the mirror is
+    // cosmetic best-effort — a missed mirror self-heals on the next
+    // showStatus/clearStatus, and logging every DOM mismatch would spam per status.
+  } catch {}
+}
+
+/**
  * Single implementation of "show a status message" for the settings surfaces.
  *
  * The class list is written whole rather than patched with classList: patching
@@ -98,17 +115,7 @@ export function showStatus(
   el.textContent = message;
   el.className = `${STATUS_BASE_CLASS} ${type}`;
 
-  // Owner of the #status -> #statusTop mirror (PBI 2026-10-05-17): callers
-  // writing to #status never hand-call syncStatusToTop. Other element IDs
-  // are untouched. Idempotent: a leftover hand call changes nothing.
-  if (el.id === 'status') {
-    try {
-      syncStatusToTop();
-      // WHY (intentional silence, PBI 2026-09-22-01裁定): the mirror is
-      // cosmetic best-effort — a missed mirror self-heals on the next
-      // showStatus, and logging every DOM mismatch would spam per status.
-    } catch {}
-  }
+  mirrorStatusToTop(el);
 
   if (options.autoClear === false) return;
   // Progress messages are replaced by their result, never expired by a timer.
@@ -138,11 +145,5 @@ export function clearStatus(elementOrId: string | HTMLElement | null): void {
   el.textContent = '';
   el.className = STATUS_BASE_CLASS;
 
-  if (el.id === 'status') {
-    try {
-      syncStatusToTop();
-      // WHY (intentional silence, PBI 2026-09-22-01裁定): same cosmetic
-      // best-effort mirror as showStatus above — self-heals next update.
-    } catch {}
-  }
+  mirrorStatusToTop(el);
 }

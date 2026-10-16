@@ -136,7 +136,7 @@ export function createTagClusterPanel(): PanelLifecycle {
         loadingManager.cleanup();
         // User notice via notices.showError stays; the cause now also goes
         // through the structured-log seam instead of console.
-        void logError('[tagClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagClusterPanel');
+        void logError('[tagClusterPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'tagClusterPanel');
         // WHY: a persistent query failure must not render as an empty graph —
         // show a distinct error state (timeHeatmapPanel convention).
         if (isStale()) return;

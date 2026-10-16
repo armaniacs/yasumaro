@@ -28,7 +28,7 @@ import { VisitGating, applySettingsTable } from './visitGating.js';
 // chrome.storage.session, so arming/state travel as runtime messages via the
 // service worker. Only the state shape is imported (type-only, erased).
 import { queryProbeArmed, relayProbeState, markProbeVisitReported } from './e2eProbeRelay.js';
-import type { OWTestState } from './e2eTestState.js';
+import type { OWTestState } from '../utils/e2eTestState.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.

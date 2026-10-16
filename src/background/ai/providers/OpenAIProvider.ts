@@ -292,3 +292,20 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         return { success: true, summary: content, providerName: this.providerName, modelName: this.model, ...pickDefined({ sentTokens, receivedTokens }) };
     }
 }
+
+/**
+ * @deprecated Use GenericOpenAICompatibleProvider directly. Kept so importers
+ * of the public providers/index.js surface keep working for the promised
+ * deprecation window: 次メジャーで削除（再評価 2026-12-31）。
+ * New code must not reference this class (enforced by check-deprecated-aliases).
+ */
+export class OpenAIProvider extends GenericOpenAICompatibleProvider {
+    constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey) {
+        super(settings, providerName, contentCharsKey);
+    }
+
+    // Keep static helper for callers that reference OpenAIProvider.isLocalUrl
+    static override isLocalUrl(url: string): boolean {
+        return GenericOpenAICompatibleProvider.isLocalUrl(url);
+    }
+}

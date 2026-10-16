@@ -204,7 +204,7 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       } catch (error) {
         // User notice via notices.showError stays; the cause now also goes
         // through the structured-log seam instead of console.
-        void logError('[domainAnalysisPanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'domainAnalysisPanel');
+        void logError('[domainAnalysisPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'domainAnalysisPanel');
         if (isStale()) return;
         notices.showError(
           'domainAnalysisError',

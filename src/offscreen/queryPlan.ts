@@ -72,7 +72,7 @@ export type AlreadyCappedQuery = StorageQuery & { readonly [__capped]: true };
 export interface ExtraWhere {
   extraWhereSql: string;
   extraParams: SqliteValue[];
-  /** Whether the is_deleted filter rode on this WHERE (search builders drop their hardcoded base condition when false). */
+  /** Whether the search builders must emit their (per-path qualified) is_deleted predicate. The predicate itself lives in the builders, never in extraWhereSql (PBI 2026-10-16-04 single-source). */
   includeDeletedFilter: boolean;
 }
 
@@ -98,12 +98,19 @@ export interface FilterCondition {
   params: SqliteValue[];
 }
 
+/**
+ * Single spelling of the soft-delete predicate (PBI 2026-10-16-04).
+ * `buildFilterConditions` emits it; `buildExtraWhereSql` excludes it from the
+ * search fragment (the FTS/LIKE builders own the per-path qualified copy).
+ */
+const DELETED_CONDITION_SQL = 'is_deleted = 0';
+
 export function buildFilterConditions(
   query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>,
 ): FilterCondition[] {
   const conditions: FilterCondition[] = [];
   if (query.excludeDeleted !== false) {
-    conditions.push({ sql: 'is_deleted = 0', params: [] });
+    conditions.push({ sql: DELETED_CONDITION_SQL, params: [] });
   }
   if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', params: [query.dateFrom] });
   if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', params: [query.dateTo] });
@@ -131,7 +138,14 @@ export type ExtraWhereQuery = Pick<
 >;
 
 export function buildExtraWhereSql(query: ExtraWhereQuery, options: { qualified?: boolean } = {}): ExtraWhere {
-  const conditions = buildFilterConditions(query);
+  // PBI 2026-10-16-04: the shared is_deleted condition is EXCLUDED from the
+  // search fragment — buildFtsSearchStatements/buildLikeSearchStatements own
+  // the deleted predicate (deletedCond/baseConds, qualified per path) and
+  // switch it on includeDeletedFilter. Emitting it here too produced
+  // `... AND b.is_deleted = 0 AND b.is_deleted = 0 AND ...`. It carries no
+  // bind params, so extraParams is unaffected; the plain-listing path
+  // (buildWhereClause over buildFilterConditions) still carries it.
+  const conditions = buildFilterConditions(query).filter((c) => c.sql !== DELETED_CONDITION_SQL);
   const qualified = options.qualified === true;
   const projected = conditions
     .map((c) => (qualified ? qualifyCondition(c, 'b.') : c));
@@ -546,9 +560,11 @@ export function buildFtsSearchStatements(
   // the idb positional reader (row[0]) — one text serves both (PBI-34).
   // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
   // query emits `rank AS rank`, so the codec mappers never read bare names.
-  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (built from
-  // the shared condition set) instead of a hardcoded `b.is_deleted = 0` —
-  // `excludeDeleted: false` now reaches the FTS path like fallback/InMemory.
+  // PBI 2026-09-12-27 + PBI 2026-10-16-04: the deleted-row filter lives HERE
+  // (deletedCond), not in `extra` — buildExtraWhereSql excludes the shared
+  // is_deleted condition from the search fragment, so this is the single
+  // source. `excludeDeleted: false` drops it via includeDeletedFilter, like
+  // fallback/InMemory.
   const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
   return assembleSearchStatements({
     selectColumns: FTS_SEARCH_SELECT_COLUMNS,
@@ -572,9 +588,11 @@ export function buildLikeSearchStatements(
   extra: ExtraWhere,
   opts: { likePattern: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
 ): SearchStatements {
-  // PBI 2026-09-12-27: the deleted-row filter rides on `extra` (shared
-  // condition set) instead of a hardcoded base — `excludeDeleted: false`
-  // now reaches the LIKE path like fallback/InMemory.
+  // PBI 2026-09-12-27 + PBI 2026-10-16-04: the deleted-row filter lives HERE
+  // (baseConds), not in `extra` — buildExtraWhereSql excludes the shared
+  // is_deleted condition from the search fragment, so this is the single
+  // source. `excludeDeleted: false` drops it via includeDeletedFilter, like
+  // fallback/InMemory.
   const baseConds = extra.includeDeletedFilter
     ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
     : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';

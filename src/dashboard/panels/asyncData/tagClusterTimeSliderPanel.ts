@@ -50,6 +50,9 @@ import {
 } from './clusterGraphRenderer.js';
 import { type PanelLifecycle } from '../types.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 const DEFAULT_WINDOW_DAYS = 30;
 
@@ -183,7 +186,8 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       return { nodes: limited.nodes, edges: limited.edges, ok: true, empty: false };
     } catch (error) {
       loadingManager.cleanup();
-      console.error(`[${label}] error:`, error);
+      // 構造化ログ移行 (ログ指摘 2026-10-15): console.error → 標準の logError セアム
+      void logError(`[${label}] load failed`, { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'tagClusterTimeSliderPanel');
       if (isStale()) return null;
       sideNotices.showError(
         'tagClusterTimeSliderError',

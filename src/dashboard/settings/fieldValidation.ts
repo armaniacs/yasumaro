@@ -237,10 +237,11 @@ export async function validateBaseUrl(input: HTMLInputElement): Promise<boolean>
 
         // ホワイトリストチェック
         if (!isDomainInWhitelist(v)) {
-            const message = `このドメインは許可リストにありません。\n\n` +
-                `主要プロバイダー: ${MAJOR_PROVIDERS_HINT.join(', ')}\n` +
-                `Sakuraクラウド: ${SAKURA_DOMAINS_HINT.join(', ')}\n` +
-                `その他: LiteLLM対応プロバイダー（全${ALLOWED_AI_PROVIDER_DOMAINS.length}ドメイン）`;
+            const message = getMessage('errorBaseUrlDomainNotAllowed', {
+                majorDomains: MAJOR_PROVIDERS_HINT.join(', '),
+                sakuraDomains: SAKURA_DOMAINS_HINT.join(', '),
+                domainCount: ALLOWED_AI_PROVIDER_DOMAINS.length,
+            });
 
             setFieldError(input, 'baseUrlError', message);
             return false;

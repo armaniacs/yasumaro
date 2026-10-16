@@ -42,6 +42,9 @@ import {
   type SessionTreeNode,
 } from '../../sessionPathAggregate.js';
 import { type PanelLifecycle } from '../types.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 /** Fill a caller-owned <li> with one record line. */
 function populateRecord(
@@ -330,7 +333,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
         }
         render();
       } catch (error) {
-        console.error('[researchSessionsPanel] error:', error);
+        // 構造化ログ移行 (ログ指摘 2026-10-15): console.error → 標準の logError セアム
+        void logError('[researchSessionsPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'researchSessionsPanel');
         if (isStale()) return;
         lastRows = null;
         notices.showError('researchSessionsError', 'Failed to load sessions.');

@@ -29,10 +29,10 @@ function invalidQuery(extra: Record<string, string>): StorageQuery {
 describe('search-statement twins equivalence (unified skeleton)', () => {
   it('FTS statements keep the exact COUNT/rows text and bind order', () => {
     // Caller-realistic: the FTS path receives a b.-qualified extra
-    // (searchExecution per-path qualification). NOTE: both the builder's
-    // deletedCond and the qualified extra carry `b.is_deleted = 0`, so the
-    // filter textually repeats — a harmless pre-existing tautology, pinned
-    // here to prove the unification changed nothing.
+    // (searchExecution per-path qualification). PBI 2026-10-16-04: the
+    // deleted predicate is owned SOLELY by the builder's deletedCond —
+    // buildExtraWhereSql excludes the shared is_deleted condition — so the
+    // filter appears exactly once.
     const extra = buildExtraWhereSql({ domain: 'example.com' }, { qualified: true });
     const stmts = buildFtsSearchStatements(extra, {
       ftsQuery: '"hello"',
@@ -43,12 +43,12 @@ describe('search-statement twins equivalence (unified skeleton)', () => {
     expect(stmts.countSql).toBe(
       'SELECT COUNT(*) AS c FROM browsing_logs_fts ' +
         'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-        'WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.domain = ?',
+        'WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.domain = ?',
     );
     expect(stmts.rowsSql).toBe(
       `SELECT ${FTS_SEARCH_SELECT_COLUMNS} FROM browsing_logs_fts ` +
         'JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id ' +
-        'WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.is_deleted = 0 AND b.domain = ? ' +
+        'WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.domain = ? ' +
         'ORDER BY rank LIMIT ? OFFSET ?',
     );
     expect(stmts.countParams).toEqual(['"hello"', 'example.com']);
@@ -56,8 +56,8 @@ describe('search-statement twins equivalence (unified skeleton)', () => {
   });
 
   it('LIKE statements keep the exact COUNT/rows text and bind order', () => {
-    // Same note as FTS: the unqualified extra also carries `is_deleted = 0`,
-    // so it textually repeats after the LIKE base condition (pre-existing).
+    // Same ownership as FTS: the unqualified deleted predicate is owned solely
+    // by the LIKE builder's baseConds (PBI 2026-10-16-04) — single occurrence.
     const extra = buildExtraWhereSql({ domain: 'example.com' });
     const stmts = buildLikeSearchStatements(extra, {
       likePattern: '%hello%',
@@ -68,12 +68,12 @@ describe('search-statement twins equivalence (unified skeleton)', () => {
     expect(stmts.countSql).toBe(
       'SELECT COUNT(*) AS c FROM browsing_logs ' +
         'WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) ' +
-        'AND is_deleted = 0 AND domain = ?',
+        'AND domain = ?',
     );
     expect(stmts.rowsSql).toBe(
       `SELECT ${LIKE_SEARCH_SELECT_COLUMNS} FROM browsing_logs ` +
         'WHERE is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?) ' +
-        'AND is_deleted = 0 AND domain = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
+        'AND domain = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
     );
     expect(stmts.countParams).toEqual(['%hello%', '%hello%', '%hello%', '%hello%', 'example.com']);
     expect(stmts.rowsParams).toEqual(['%hello%', '%hello%', '%hello%', '%hello%', 'example.com', 20, 0]);

@@ -51,9 +51,13 @@ describe('buildExtraWhereSql — search projection honors excludeDeleted (PBI 20
   });
 
   it('qualifies columns for the FTS path without regex string-rewrite', () => {
+    // PBI 2026-10-16-04: the search fragment EXCLUDES is_deleted — the FTS/LIKE
+    // builders own the (per-path qualified) deleted predicate via
+    // includeDeletedFilter. The flag is still the signal; the text is not duplicated.
     const extra = buildExtraWhereSql({ domain: 'a.com', excludeDeleted: true }, { qualified: true });
     expect(extra.extraWhereSql).toContain('b.domain = ?');
-    expect(extra.extraWhereSql).toContain('b.is_deleted = 0');
+    expect(extra.extraWhereSql).not.toContain('is_deleted');
+    expect(extra.includeDeletedFilter).toBe(true);
   });
 });
 

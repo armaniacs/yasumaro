@@ -1,16 +1,30 @@
 /**
  * @vitest-environment jsdom
  * aiProviderCatalogView.catalog-driven.test.ts (PBI 2026-09-21-14)
- * Proves the views render provider variants from catalog fields alone: a
- * fixture entry with custom fields renders accordingly with no view change.
+ * Proves the views render provider variants from PROVIDER_VIEW_METADATA
+ * alone: a fixture row with custom view metadata renders accordingly with no
+ * view change, and every catalog id keeps the legacy rendering (equivalence
+ * with the pre-migration entry-field behavior).
  */
 import { describe, it, expect, afterEach } from 'vitest';
-import { PROVIDER_CATALOG, type ProviderCatalogEntry } from '../../background/ai/providerCatalog.js';
+import {
+  PROVIDER_CATALOG,
+  PROVIDER_VIEW_METADATA,
+  type ProviderCatalogEntry,
+  type ProviderViewMetadata,
+} from '../../background/ai/providerCatalog.js';
 import type { ProviderId } from '../../utils/storage/types.js';
 import { renderProviderSettings } from '../aiProviderCatalogView.js';
 import { createBProviderAccordionView } from '../aiProviderB/providerAccordionView.js';
 
 const FIXTURE_ID = '__catalog_fixture__' as ProviderId;
+
+// The registries export ReadonlyMap so production callers cannot mutate them,
+// but this test has to register a fixture row at runtime. Both hold plain
+// Maps, so the downcast describes the seam honestly instead of repeating a
+// per-call assertion the values cannot satisfy.
+const mutableCatalog = PROVIDER_CATALOG as Map<ProviderId, ProviderCatalogEntry>;
+const mutableViewMetadata = PROVIDER_VIEW_METADATA as Map<ProviderId, ProviderViewMetadata>;
 
 const FIXTURE_ENTRY: ProviderCatalogEntry = {
   baseUrlKey: 'fixture_base_url',
@@ -23,6 +37,11 @@ const FIXTURE_ENTRY: ProviderCatalogEntry = {
   supportsCustomPrompt: false,
   settingsBlockKind: 'generic',
   apiKeyLabelI18nKey: 'aiApiKey',
+};
+
+// View-only data for the fixture lives where it belongs after the migration:
+// PROVIDER_VIEW_METADATA (mirrors the PROVIDER_CATALOG.set test-seam poke).
+const FIXTURE_VIEW_META: ProviderViewMetadata = {
   cssClass: 'fixture-settings',
   defaultOpen: true,
   extraFields: [
@@ -43,37 +62,36 @@ const FIXTURE_ENTRY: ProviderCatalogEntry = {
 
 describe('catalog-driven provider UI', () => {
   afterEach(() => {
-    PROVIDER_CATALOG.delete(FIXTURE_ID);
+    mutableCatalog.delete(FIXTURE_ID);
+    mutableViewMetadata.delete(FIXTURE_ID);
     document.body.innerHTML = '';
   });
 
-  it('gemini catalog values encode the former branches', () => {
-    const gemini = PROVIDER_CATALOG.get('gemini' as ProviderId);
-    expect(gemini?.apiKeyLabelI18nKey).toBe('geminiApiKey');
-    expect(gemini?.cssClass).toBe('');
-    expect(gemini?.defaultOpen).toBe(true);
-    expect(gemini?.extraFields?.[0]?.a11y).toEqual({
+  it('gemini view values moved verbatim to PROVIDER_VIEW_METADATA', () => {
+    const meta = PROVIDER_VIEW_METADATA.get('gemini');
+    expect(meta?.cssClass).toBe('');
+    expect(meta?.defaultOpen).toBe(true);
+    expect(meta?.extraFields?.[0]?.a11y).toEqual({
       describedBy: 'geminiApiVersionNote geminiApiVersionError',
       noteId: 'geminiApiVersionNote',
       noteI18nKey: 'note_gemini_api_version',
       errorId: 'geminiApiVersionError',
     });
+    // The entry itself no longer carries view fields.
+    expect(Object.prototype.hasOwnProperty.call(PROVIDER_CATALOG.get('gemini'), 'cssClass')).toBe(false);
   });
 
-  it('non-gemini entries rely on view defaults (no per-provider values)', () => {
-    for (const [id, entry] of PROVIDER_CATALOG) {
+  it('non-gemini ids resolve empty view metadata (no per-provider values)', () => {
+    for (const [id, meta] of PROVIDER_VIEW_METADATA) {
       if (id === 'gemini') continue;
-      expect(entry.apiKeyLabelI18nKey).toBeUndefined();
-      expect(entry.cssClass).toBeUndefined();
-      expect(entry.defaultOpen ?? false).toBe(false);
-      for (const field of entry.extraFields ?? []) {
-        expect(field.a11y, `${id}:${field.storageKey}`).toBeUndefined();
-      }
+      expect(Object.keys(meta), `${id}`).toEqual([]);
     }
+    expect(PROVIDER_CATALOG.get('openai' as ProviderId)?.apiKeyLabelI18nKey).toBeUndefined();
   });
 
-  it('a fixture entry renders css class, label key, a11y block, and open state from fields alone', () => {
-    PROVIDER_CATALOG.set(FIXTURE_ID, FIXTURE_ENTRY);
+  it('a fixture row with view metadata renders css class, a11y block, and open state from the map alone', () => {
+    mutableCatalog.set(FIXTURE_ID, FIXTURE_ENTRY);
+    mutableViewMetadata.set(FIXTURE_ID, FIXTURE_VIEW_META);
 
     const c = document.createElement('div');
     document.body.appendChild(c);
@@ -102,7 +120,7 @@ describe('catalog-driven provider UI', () => {
   });
 
   it('default resolution matches legacy behavior (class present, aiApiKey, closed)', () => {
-    PROVIDER_CATALOG.set(FIXTURE_ID, { ...FIXTURE_ENTRY, cssClass: undefined, apiKeyLabelI18nKey: undefined, defaultOpen: undefined, extraFields: undefined });
+    mutableCatalog.set(FIXTURE_ID, FIXTURE_ENTRY);
     const c = document.createElement('div');
     document.body.appendChild(c);
     renderProviderSettings(c, FIXTURE_ID);
@@ -111,5 +129,34 @@ describe('catalog-driven provider UI', () => {
     expect(apiKeyLabel?.getAttribute('data-i18n')).toBe('aiApiKey');
     expect(c.querySelector('[aria-describedby]')).toBeNull();
     c.remove();
+  });
+
+  it('METADATA-driven rendering is equivalent to the legacy entry-field behavior for every id', () => {
+    for (const [id, meta] of PROVIDER_VIEW_METADATA) {
+      const c = document.createElement('div');
+      document.body.appendChild(c);
+      renderProviderSettings(c, id);
+      // cssClass: '' opts out (gemini), undefined falls back to 'openai-settings'.
+      expect(c.classList.contains('openai-settings'), `${id}`).toBe(meta.cssClass === undefined);
+      if (meta.cssClass !== undefined && meta.cssClass !== '') {
+        expect(c.classList.contains(meta.cssClass), `${id}`).toBe(true);
+      }
+      for (const field of meta.extraFields ?? []) {
+        expect(c.querySelector(`#${field.inputId}`), `${id}:${field.inputId}`).not.toBeNull();
+      }
+      c.remove();
+    }
+
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    const view = createBProviderAccordionView(container);
+    for (const [id, meta] of PROVIDER_VIEW_METADATA) {
+      const details = container.querySelector(
+        `details[data-provider="${id}Settings"]`,
+      ) as HTMLDetailsElement;
+      expect(details.open, `${id}`).toBe(meta.defaultOpen === true);
+    }
+    view.destroy();
+    container.remove();
   });
 });

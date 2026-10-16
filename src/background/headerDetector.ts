@@ -1,7 +1,7 @@
 import { checkPrivacy, PrivacyInfo } from '../utils/privacyChecker.js';
 import type { RecordingCacheInstance } from './recordingCache.js';
 import { ErrorCode } from '../utils/logger/types.js';
-import { logInfo, logDebug, logError } from '../utils/logger/api.js';
+import { logInfo, logDebug, logWarn, logError } from '../utils/logger/api.js';
 import { hashUrl } from '../utils/urlHash.js';
 import { normalizeUrlSafe } from '../utils/urlUtils.js';
 import { BADGE_COLORS } from '../constants/appConstants.js';
@@ -129,9 +129,10 @@ export class HeaderDetector {
         });
       }, 'Privacy detection result');
 
-      // キャッシュに保存（失敗は診断ログに残す。was silent）
+      // キャッシュに保存（失敗はWARNで残す。in-memoryが正本で非致命的だが、
+      // DEBUGでは運用ログで不可視になるため。sessionStore 緊急flush・migrationBackup と統一）
       this.cachePrivacyInfo(details.url, privacyInfo, details.tabId).catch((error: unknown) => {
-        void logDebug('HeaderDetector: cache save failed', {
+        void logWarn('HeaderDetector: cache save failed', {
           error: errorMessage(error),
         });
       });

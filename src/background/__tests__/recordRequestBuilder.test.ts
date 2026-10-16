@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { buildRecordRequest, extractOfflinePayload, buildOfflineRetryRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
 import type { RecordDiagnosticsSource } from '../recordRequestBuilder.js';
 import type { ContentResponse } from '../../messaging/types.js';
@@ -318,5 +319,39 @@ describe('buildRecordRequest regenerate source policy (PBI 2026-09-22-04)', () =
       pageBytes: 100,
       candidateBytes: 90,
     });
+  });
+});
+
+describe('SOURCE_POLICY never enables the alreadyProcessed kill-switch (fail-closed pin)', () => {
+  // privacyPipeline treats alreadyProcessed=true as "masking already ran":
+  // useMasking=false while cloud AI stays on. No production caller performs
+  // that masking pass, so a SOURCE_POLICY row that sets the flag would
+  // silently re-open the fail-open path this PBI closed (masking off +
+  // cloud send) with no type error and no test failure. Blue Team review
+  // 2026-10-15: the invariant was guarded by comment only.
+  const ALL_SOURCES = [
+    'manual',
+    'save',
+    'offline-retry',
+    'notification-confirm',
+    'valid-visit',
+    'regenerate',
+  ] as const;
+
+  it('builds every source request without an alreadyProcessed key', () => {
+    for (const source of ALL_SOURCES) {
+      const request = buildRecordRequest(source, {
+        title: 'T', url: 'https://example.com', content: 'c',
+      });
+      expect('alreadyProcessed' in request, `source=${source}`).toBe(false);
+    }
+  });
+
+  it('keeps the SOURCE_POLICY table free of alreadyProcessed assignments (covers future sources)', () => {
+    const source = readFileSync(new URL('../recordRequestBuilder.ts', import.meta.url), 'utf-8');
+    const tableStart = source.indexOf('const SOURCE_POLICY');
+    expect(tableStart).toBeGreaterThan(-1);
+    const tableBlock = source.slice(tableStart, source.indexOf('};', tableStart));
+    expect(tableBlock).not.toMatch(/alreadyProcessed\s*:/);
   });
 });

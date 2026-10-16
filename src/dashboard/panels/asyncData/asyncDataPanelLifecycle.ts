@@ -29,6 +29,9 @@ import {
 } from '../../components/periodFilter.js';
 import type { PanelNotices } from '../PanelNotices.js';
 import { ReloadGuard } from './reloadGuard.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 /** Per-load context handed to a panel's fetch/render body. */
 export interface AsyncDataPanelLoad {
@@ -146,7 +149,10 @@ export function createAsyncDataPanelLifecycle(
       // registry fires loads fire-and-forget, so a rejection would surface as
       // an unhandled rejection instead of a logged defect. The panel's own
       // catch still owns the user-visible error state.
-      console.error(`[${options.label}] reload failed:`, error);
+      // 構造化ログ移行 (ログ指摘 2026-10-15): console.error の代わりに
+      // 他 asyncData パネルと同じ `void logError(...)` 形式へ統一する。
+      // パネル名はメッセージに含め、source は本モジュール名にする。
+      void logError(`[${options.label}] reload failed`, { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'asyncDataPanelLifecycle');
     }
   }
 

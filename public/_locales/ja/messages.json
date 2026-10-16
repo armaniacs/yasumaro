@@ -299,8 +299,24 @@
   "ublockSourceSavedUpdated": {
     "message": "フィルターソースを更新しました（{ruleCount}ルール）"
   },
+  "ublockSourceSavedUpdated_one": {
+    "message": "フィルターソースを更新しました（{ruleCount}ルール）",
+    "description": "フィルターソース保存結果・単数形（日本語は単数形なし）"
+  },
+  "ublockSourceSavedUpdated_other": {
+    "message": "フィルターソースを更新しました（{ruleCount}ルール）",
+    "description": "フィルターソース保存結果・複数形"
+  },
   "ublockSourceSavedAdded": {
     "message": "フィルターソースを追加しました（{ruleCount}ルール）"
+  },
+  "ublockSourceSavedAdded_one": {
+    "message": "フィルターソースを追加しました（{ruleCount}ルール）",
+    "description": "フィルターソース保存結果・単数形（日本語は単数形なし）"
+  },
+  "ublockSourceSavedAdded_other": {
+    "message": "フィルターソースを追加しました（{ruleCount}ルール）",
+    "description": "フィルターソース保存結果・複数形"
   },
   "loadFromFile": {
     "message": "ファイルから読み込み (.txt)"
@@ -684,6 +700,9 @@
   },
   "errorInvalidUrl": {
     "message": "エラー: 無効なURL形式です"
+  },
+  "errorBaseUrlDomainNotAllowed": {
+    "message": "このドメインは許可リストにありません。\n\n主要プロバイダー: {majorDomains}\nSakuraクラウド: {sakuraDomains}\nその他: LiteLLM対応プロバイダー（全{domainCount}ドメイン）"
   },
   "domainListError": {
     "message": "ドメインリストのエラー:"

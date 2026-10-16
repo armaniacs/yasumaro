@@ -299,8 +299,24 @@
   "ublockSourceSavedUpdated": {
     "message": "Filter source updated ({ruleCount} rules)"
   },
+  "ublockSourceSavedUpdated_one": {
+    "message": "Filter source updated ({ruleCount} rule)",
+    "description": "Filter source save result, singular"
+  },
+  "ublockSourceSavedUpdated_other": {
+    "message": "Filter source updated ({ruleCount} rules)",
+    "description": "Filter source save result, plural"
+  },
   "ublockSourceSavedAdded": {
     "message": "Filter source added ({ruleCount} rules)"
+  },
+  "ublockSourceSavedAdded_one": {
+    "message": "Filter source added ({ruleCount} rule)",
+    "description": "Filter source save result, singular"
+  },
+  "ublockSourceSavedAdded_other": {
+    "message": "Filter source added ({ruleCount} rules)",
+    "description": "Filter source save result, plural"
   },
   "loadFromFile": {
     "message": "Load from file (.txt)"
@@ -726,6 +742,9 @@
   },
   "errorInvalidUrl": {
     "message": "Error: Invalid URL format"
+  },
+  "errorBaseUrlDomainNotAllowed": {
+    "message": "This domain is not in the allowlist.\n\nMajor providers: {majorDomains}\nSakura Cloud: {sakuraDomains}\nOthers: LiteLLM-compatible providers ({domainCount} domains)"
   },
   "domainListError": {
     "message": "Domain list errors:"

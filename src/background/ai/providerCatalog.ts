@@ -4,12 +4,11 @@
 //
 // View-specific fields (cssClass / defaultOpen / extraFields[].a11y) live in
 // the derived PROVIDER_VIEW_METADATA map below (PBI 2026-10-14-05), keyed by
-// providerId with keys derived from the catalog itself
-// (`Object.fromEntries(catalog keys)` — no parallel id list), so a
-// view-only change diffs in the view block, not in the domain rows. The same
-// three fields stay on ProviderCatalogEntry as @deprecated compat so the
-// existing dashboard views keep compiling untouched; new code must read the
-// derived map. Revisit only if the catalog grows non-provider concerns.
+// providerId with keys derived from the catalog itself (no parallel id list),
+// so a view-only change diffs in the view block, not in the domain rows. All
+// view code reads that map; ProviderCatalogEntry carries domain data only
+// (the former @deprecated compat fields were removed once every consumer had
+// migrated). Revisit only if the catalog grows non-provider concerns.
 
 import { StorageKeys } from '../../utils/storage/types.js';
 import type { ProviderId, StorageKey } from '../../utils/storage/types.js';
@@ -46,8 +45,9 @@ export interface ProviderViewExtraField {
 
 /**
  * View-only per-provider metadata. Canonical home is the derived
- * PROVIDER_VIEW_METADATA map below — new code must read that, never the
- * @deprecated compat fields on ProviderCatalogEntry.
+ * PROVIDER_VIEW_METADATA map below — all view code reads that map
+ * (aiProviderCatalogView / providerAccordionView); ProviderCatalogEntry
+ * carries no view fields.
  */
 export interface ProviderViewMetadata {
   readonly cssClass?: string;
@@ -76,27 +76,10 @@ export interface ProviderCatalogEntry {
   readonly settingsBlockKind?: 'generic' | 'models-dev' | 'built-in-ai';
   /** apiKey label i18n key; the view falls back to 'aiApiKey' when absent. */
   readonly apiKeyLabelI18nKey?: string;
-  /**
-   * @deprecated Canonical home is PROVIDER_VIEW_METADATA (view-only change
-   * diffs there, not in domain rows). Kept so existing dashboard views
-   * compile untouched: the view falls back to 'openai-settings'.
-   * Empty string opts out (gemini renders without it). Do not add new
-   * view fields here.
-   */
-  readonly cssClass?: string;
-  /**
-   * @deprecated Canonical home is PROVIDER_VIEW_METADATA. Kept so existing
-   * dashboard views compile untouched. B-layout accordion initial open
-   * state; defaults to closed. Do not add new view fields here.
-   */
-  readonly defaultOpen?: boolean;
-  /**
-   * @deprecated Canonical home is PROVIDER_VIEW_METADATA. Kept so existing
-   * dashboard views compile untouched. Extra fields beyond
-   * baseUrl/apiKey/model (e.g. geminiApiVersion). Do not add new view
-   * fields here.
-   */
-  readonly extraFields?: ReadonlyArray<ProviderViewExtraField>;
+  // View-only fields (cssClass / defaultOpen / extraFields) are NOT carried
+  // here: they live in PROVIDER_VIEW_METADATA below (removed from this
+  // interface once every view consumer had migrated off the @deprecated
+  // compat fields).
 }
 
 /**
@@ -155,9 +138,8 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
       apiKeyLabelI18nKey: 'geminiApiKey',
-      // Compat spread from the view block above: runtime values identical,
-      // source diff for view-only changes stays in GEMINI_VIEW_META.
-      ...GEMINI_VIEW_META,
+      // View-only values (cssClass/defaultOpen/extraFields) deliberately stay
+      // OFF this domain row: they are read from PROVIDER_VIEW_METADATA.
     },
   ],
   [
@@ -258,24 +240,21 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
 
 /**
  * Derived view-only metadata, keyed by providerId (PBI 2026-10-14-05).
- * Keys come from PROVIDER_CATALOG itself via Object.fromEntries — there is no
- * parallel id list to drift: adding a catalog row adds a view key
- * automatically ({} unless PROVIDER_VIEW_OVERRIDES names it). New view code
- * must read this map; the entry compat fields above are frozen.
+ * Keys come from PROVIDER_CATALOG itself — there is no parallel id list to
+ * drift: adding a catalog row adds a view key automatically ({}
+ * unless PROVIDER_VIEW_OVERRIDES names it). All view consumers read this map;
+ * ProviderCatalogEntry no longer carries view fields.
  */
 const PROVIDER_VIEW_OVERRIDES: Record<string, ProviderViewMetadata> = {
   gemini: GEMINI_VIEW_META,
 };
 
-export const PROVIDER_VIEW_METADATA: ReadonlyMap<ProviderId, ProviderViewMetadata> = new Map(
-  Object.entries(
-    Object.fromEntries(
-      [...PROVIDER_CATALOG.keys()].map(
-        (id): [string, ProviderViewMetadata] => [id, PROVIDER_VIEW_OVERRIDES[id] ?? {}],
-      ),
+export const PROVIDER_VIEW_METADATA: ReadonlyMap<ProviderId, ProviderViewMetadata> =
+  new Map<ProviderId, ProviderViewMetadata>(
+    [...PROVIDER_CATALOG.keys()].map(
+      (id): [ProviderId, ProviderViewMetadata] => [id, PROVIDER_VIEW_OVERRIDES[id] ?? {}],
     ),
-  ) as Array<[ProviderId, ProviderViewMetadata]>,
-);
+  );
 
 /**
  * The non-throwing catalog lookup: the table read itself, returning undefined

@@ -1,15 +1,28 @@
 /**
  * e2eTestState.ts
- * Single home + single publisher for the E2E test-probe state.
+ * Neutral-layer SSOT for the E2E test-probe: session keys, the OWTestState
+ * shape, the arming read, and the service-worker leg of the state publish.
  *
+ * Lives in src/utils/ (neutral layer), NOT src/content/: its only runtime
+ * consumer is the service worker (src/background/handlers/e2eProbeHandlers.ts)
+ * and background → content imports are banned by lint (eslint.config.js).
+ * src/content/ references it type-only, so the content bundle keeps no runtime
+ * edge to this module.
+ *
+ * The two output routes have one owner each, split by the context that can
+ * actually reach them:
+ * - session leg (this module): the `owE2eTestState` chrome.storage.session
+ *   key, written only from the service worker (content scripts cannot reach
+ *   session storage);
+ * - window leg (src/content/e2eProbeRelay.ts): the isolated-world
+ *   window.__OW_TEST_STATE global, written only from the content script.
  * PBI 2026-10-11-08 (NN08): the probe no longer touches the page-shared DOM.
  * Both former page-visible routes are closed:
  * - enablement moved from the page-writable `data-ow-e2e-test` attribute to
  *   the `owE2eProbeEnabled` chrome.storage.session flag (page JS has no
  *   chrome API, so it can neither set nor read it);
  * - output moved from the page-readable `data-ow-test-state` attribute to
- *   the `owE2eTestState` chrome.storage.session key, keeping only the
- *   isolated-world window.__OW_TEST_STATE global (invisible to page JS).
+ *   the extension-side routes above (both invisible to page JS).
  * The E2E harness enables the probe and reads state through the extension
  * service worker (`context.serviceWorkers()[0].evaluate(...)`); see
  * testDir/e2e/fixtures/e2eProbe.ts.
@@ -38,6 +51,11 @@ export interface OWTestState {
     duration: number;
 }
 
+/**
+ * Shape of the isolated-world window global (invisible to page JS). The
+ * shape lives here as the SSOT; the value is written only by
+ * src/content/e2eProbeRelay.ts.
+ */
 declare global {
     interface Window {
         __OW_TEST_STATE?: OWTestState;
@@ -73,35 +91,23 @@ export async function isE2EProbeEnabled(): Promise<boolean> {
 }
 
 /**
- * Publish the E2E test state to extension-side routes only: the
- * isolated-world window global (invisible to page JS) and session storage
- * (unreadable from page JS). Never writes page-shared DOM.
+ * Publish the E2E test state to the session leg: the `owE2eTestState`
+ * chrome.storage.session key the harness reads back through the service
+ * worker. Never writes page-shared DOM, and deliberately does not touch
+ * window.__OW_TEST_STATE — this function runs in the service worker (which
+ * has no `window`), so the window write that used to sit here was dead code
+ * as well as a second owner claim. The window leg belongs to
+ * src/content/e2eProbeRelay.ts (single owner, pinned by
+ * testDir/__tests__/e2eProbeContract.test.ts).
  * Fire-and-forget session write — probe output must not break the pipeline.
  */
 export function publishE2eTestState(state: OWTestState): void {
     if (!E2E_PROBE_COMPILED_IN) return;
-    if (typeof window !== 'undefined') {
-        window.__OW_TEST_STATE = state;
-    }
     const session = sessionArea();
     if (!session) return;
     try {
         void Promise.resolve(session.set({ [E2E_PROBE_STATE_KEY]: state })).catch(() => {});
     } catch {
-        // Non-fatal — the window global still carries the state for unit tests.
-    }
-}
-
-/**
- * Mark the latest published state as reported and republish it. Single owner
- * of the window-global mutation so callers never touch __OW_TEST_STATE
- * directly (keeps the probe's window route inside this module, which also
- * lets OW_E2E_PROBE=0 builds eliminate every probe string).
- */
-export function markE2eVisitReported(): void {
-    if (!E2E_PROBE_COMPILED_IN) return;
-    if (typeof window !== 'undefined' && window.__OW_TEST_STATE) {
-        window.__OW_TEST_STATE.isValidVisitReported = true;
-        publishE2eTestState(window.__OW_TEST_STATE);
+        // Non-fatal — a failed session write must never break the pipeline.
     }
 }

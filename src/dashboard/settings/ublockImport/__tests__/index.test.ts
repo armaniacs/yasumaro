@@ -41,6 +41,8 @@ vi.mock('../rulesBuilder.js', () => ({
 }));
 
 vi.mock('../sourceManager.js', () => ({
+  // showStatus の書込み先は uBlock 専用の可視要素（#domainStatus は hidden で非表示）
+  UBLOCK_STATUS_ID: 'uBlockStatus',
   loadAndDisplaySources: vi.fn((cb: Function) => {
     cb([]);
     return Promise.resolve();
@@ -473,7 +475,7 @@ describe('ublockImport/index.ts', () => {
       dropZone.dispatchEvent(dropEvent);
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.any(String), 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.any(String), 'error');
     });
 
     test('should process drop with text/plain file', async () => {
@@ -526,7 +528,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Read error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Read error'), 'error')
       );
     });
   });
@@ -587,7 +589,7 @@ describe('ublockImport/index.ts', () => {
       await new Promise(r => setTimeout(r, 0));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('URL'), 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('URL'), 'error');
     });
 
     test('should show error when URL is whitespace only', async () => {
@@ -604,7 +606,7 @@ describe('ublockImport/index.ts', () => {
       await new Promise(r => setTimeout(r, 0));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('URL'), 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('URL'), 'error');
     });
 
     test('should disable button during loading and re-enable after', async () => {
@@ -647,7 +649,7 @@ describe('ublockImport/index.ts', () => {
       await drainMacrotask();
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', 'Network error', 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', 'Network error', 'error');
     });
 
     test('should import URL successfully and populate textarea', async () => {
@@ -684,7 +686,7 @@ describe('ublockImport/index.ts', () => {
       await new Promise(r => setTimeout(r, 0));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Nothing'), 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Nothing'), 'error');
     });
 
     test('should show error when copying empty text', async () => {
@@ -701,7 +703,7 @@ describe('ublockImport/index.ts', () => {
       await new Promise(r => setTimeout(r, 0));
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('No text'), 'error');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('No text'), 'error');
     });
 
     test('should copy text to clipboard', async () => {
@@ -721,7 +723,7 @@ describe('ublockImport/index.ts', () => {
       expect(copyToClipboard).toHaveBeenCalledWith('||example.com^');
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Copied'), 'success');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Copied'), 'success');
     });
 
     test('should export sources when available', async () => {
@@ -759,7 +761,7 @@ describe('ublockImport/index.ts', () => {
         expect(revokeSpy).toHaveBeenCalledTimes(1);
 
         const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('exported'), 'success');
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('exported'), 'success');
       } finally {
         vi.restoreAllMocks();
         vi.useRealTimers();
@@ -779,7 +781,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Storage error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Storage error'), 'error')
       );
     });
 
@@ -799,7 +801,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Clipboard error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Clipboard error'), 'error')
       );
     });
   });
@@ -957,7 +959,7 @@ describe('ublockImport/index.ts', () => {
       );
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
-      expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('test-filters.txt'), 'success');
+      expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('test-filters.txt'), 'success');
     });
 
     test('should handle file select with no file', async () => {
@@ -1007,7 +1009,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('File read error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('File read error'), 'error')
       );
     });
   });
@@ -1020,7 +1022,7 @@ describe('ublockImport/index.ts', () => {
       document.body.innerHTML = `
         <div id="uBlockSourceItems"></div>
         <div id="uBlockNoSources" style="display: none;"></div>
-        <div id="domainStatus"></div>
+        <div id="uBlockStatus"></div>
       `;
     });
 
@@ -1067,7 +1069,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('5'), 'success')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('5'), 'success')
       );
     });
 
@@ -1100,7 +1102,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Reload error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Reload error'), 'error')
       );
 
       const { addLog } = await import('../../../../utils/logger/core.js');
@@ -1138,7 +1140,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('+3'), 'success')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('+3'), 'success')
       );
     });
   });
@@ -1151,7 +1153,7 @@ describe('ublockImport/index.ts', () => {
       document.body.innerHTML = `
         <div id="uBlockSourceItems"></div>
         <div id="uBlockNoSources" style="display: none;"></div>
-        <div id="domainStatus"></div>
+        <div id="uBlockStatus"></div>
       `;
     });
 
@@ -1189,7 +1191,7 @@ describe('ublockImport/index.ts', () => {
 
       const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
       await waitForMock(() =>
-        expect(showStatus).toHaveBeenCalledWith('domainStatus', expect.stringContaining('Delete error'), 'error')
+        expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Delete error'), 'error')
       );
     });
   });

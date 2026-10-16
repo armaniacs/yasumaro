@@ -69,10 +69,29 @@ describe('createE2EProbeQueryHandler', () => {
 
 describe('createE2EProbeStateHandler', () => {
     it('persists the payload into session storage for the harness and acks', async () => {
-        const store: Record<string, unknown> = {};
+        const store: Record<string, unknown> = { owE2eProbeEnabled: true };
         const { response, set } = await runState(store);
         expect(response).toEqual({ success: true });
         expect(set).toHaveBeenCalledWith({ owE2eTestState: STATE });
         expect(store['owE2eTestState']).toEqual(STATE);
+    });
+
+    it('refuses the write while the probe is disarmed (arming gate)', async () => {
+        const store: Record<string, unknown> = {};
+        const { response, set } = await runState(store);
+
+        expect(response).toEqual({ success: false, error: 'E2E probe is not armed' });
+        expect(set).not.toHaveBeenCalled();
+        expect(store['owE2eTestState']).toBeUndefined();
+    });
+
+    it('treats a non-exactly-true armed flag as disarmed', async () => {
+        for (const flag of [false, 'true', 1]) {
+            const store: Record<string, unknown> = { owE2eProbeEnabled: flag };
+            const { response, set } = await runState(store);
+
+            expect(response).toEqual({ success: false, error: 'E2E probe is not armed' });
+            expect(set).not.toHaveBeenCalled();
+        }
     });
 });

@@ -413,7 +413,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       } catch (error) {
         // User notice via notices.showError stays; the cause now also goes
         // through the structured-log seam instead of console.
-        void logError('[tagFrequencyTimelinePanel] load failed', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'tagFrequencyTimelinePanel');
+        void logError('[tagFrequencyTimelinePanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'tagFrequencyTimelinePanel');
         if (isStale()) return;
         notices.showError(
           'dashboardTagTimelineError',

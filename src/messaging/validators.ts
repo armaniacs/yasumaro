@@ -421,36 +421,81 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   },
 };
 
+/** First failure produced by `interpretSubtypeSpec`: either a field row that
+ *  rejected, or the error a domain guard threw. Both presentations read this
+ *  one result — see `interpretSubtypeSpec` below. */
+export interface SubtypeSpecFailure {
+  /** Rejection text — byte-identical on both presentations. */
+  message: string;
+  /** Field row that rejected. Guard rejections leave this undefined because
+   *  their own ValidationError carries the field via `cause`. */
+  field?: string;
+  /** The original guard throw, rethrown verbatim by the envelope path so its
+   *  validatorName / field / stack stay untouched. */
+  cause?: Error;
+}
+
 /**
- * Evaluate a subtype spec against a payload without throwing.
+ * The ONE interpretation of a subtype spec row (single interpreter for the
+ * envelope gate and the archive wire table): guardFirst → field rows →
+ * guardLast, first failure wins. Both presentations are thin renderers of the
+ * returned failure:
  *
- * Returns the first error message, or null when the payload passes. Single
- * evaluator shared by the envelope validator (which throws ValidationError) and
- * the archive wire table (PBI 2026-10-11-10): before this the wire rows
- * hand-wrote their own field checks, so the two paths accepted different
- * payloads and the divergence had to be pinned by a test instead of closed.
+ *   - `evaluateSubtypeSpec` (wire table, PBI 2026-10-11-10) renders `message`,
+ *   - `DashboardSqliteValidator.validate` (envelope gate) rethrows `cause`
+ *     verbatim, or wraps a field rejection in ValidationError.
+ *
+ * Before this existed, PBI 2026-10-11-10 had removed the wire rows' hand-
+ * written checks but the envelope validator kept its own copy-pasted
+ * interpretation of `spec.fields` — so every change to `optional` handling or
+ * field attachment had to be made twice or the two gates drifted again.
+ *
+ * Unknown subtype fails closed (no spec row): the envelope validator
+ * pre-gates subtypes against ALL_DASHBOARD_SQLITE_SUBTYPES, and the wire rows
+ * are fixed — but the wire presentation never passes through that pre-gate,
+ * so a pass-through here would be a fail-open on the wire path (PBI
+ * 2026-10-16-01). A known subtype with intentionally no checks (e.g. `query`
+ * accepts arbitrary extra fields) still passes; anything else is rejected.
  *
  * `subtype` is injected into the payload because the guards and messages read it.
  */
-export function evaluateSubtypeSpec(subtype: string, payload: Record<string, unknown>): string | null {
+export function interpretSubtypeSpec(
+  subtype: string,
+  payload: Record<string, unknown>,
+): SubtypeSpecFailure | null {
   const spec = DASHBOARD_SQLITE_SUBTYPE_SPECS[subtype];
-  if (!spec) return null;
+  if (!spec) {
+    if ((ALL_DASHBOARD_SQLITE_SUBTYPES as readonly string[]).includes(subtype)) return null;
+    return { message: `Unknown subtype: ${subtype}`, field: 'subtype' };
+  }
   const p: Record<string, unknown> = { ...payload, subtype };
   try {
     spec.guardFirst?.(p, subtype);
-  } catch (error) {
-    return error instanceof Error ? error.message : String(error);
-  }
-  for (const f of spec.fields ?? []) {
-    if (f.optional && p[f.field] === undefined) continue;
-    if (!f.test(p[f.field], p)) return f.message(subtype);
-  }
-  try {
+    for (const f of spec.fields ?? []) {
+      if (f.optional && p[f.field] === undefined) continue;
+      if (!f.test(p[f.field], p)) return { message: f.message(subtype), field: f.field };
+    }
     spec.guardLast?.(p, subtype);
   } catch (error) {
-    return error instanceof Error ? error.message : String(error);
+    if (error instanceof Error) return { message: error.message, cause: error };
+    return { message: String(error) };
   }
   return null;
+}
+
+/**
+ * Evaluate a subtype spec against a payload without throwing (wire-table
+ * presentation of the single interpreter).
+ *
+ * Returns the first error message, or null when the payload passes. Single
+ * evaluator shared by the envelope validator (which throws ValidationError) and
+ * the archive wire table (PBI 2026-10-11-10): before that the wire rows
+ * hand-wrote their own field checks, so the two paths accepted different
+ * payloads and the divergence had to be pinned by a test instead of closed.
+ */
+export function evaluateSubtypeSpec(subtype: string, payload: Record<string, unknown>): string | null {
+  const failure = interpretSubtypeSpec(subtype, payload);
+  return failure === null ? null : failure.message;
 }
 
 /** Subtypes whose payload carries a staging name — derived from the spec
@@ -483,21 +528,19 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
     const subtype = p.subtype as DashboardSqliteRequest['subtype'];
 
     // Per-subtype wire-field enforcement (PBI 2026-09-17-18): the schema lives
-    // in DASHBOARD_SQLITE_SUBTYPE_SPECS below — one row per required field,
+    // in DASHBOARD_SQLITE_SUBTYPE_SPECS above — one row per required field,
     // interpreted uniformly, so adding a subtype is a table row instead of a
     // new if-block. Domain-mapping guards (staging-name decode, cutoff pair
     // verification, import byte estimate) stay as dedicated functions and keep
-    // their original evaluation order.
-    const spec = DASHBOARD_SQLITE_SUBTYPE_SPECS[subtype];
-    if (spec) {
-      spec.guardFirst?.(p, subtype);
-      for (const f of spec.fields ?? []) {
-        if (f.optional && p[f.field] === undefined) continue;
-        if (!f.test(p[f.field], p)) {
-          throw new ValidationError('DashboardSqliteValidator', f.message(subtype), f.field);
-        }
-      }
-      spec.guardLast?.(p, subtype);
+    // their original evaluation order. The interpretation loop itself lives
+    // once, in interpretSubtypeSpec — this envelope gate and the archive wire
+    // table are two renderings of its result, never two implementations.
+    const failure = interpretSubtypeSpec(subtype, p);
+    if (failure !== null) {
+      // A guard's own ValidationError propagates verbatim (it already carries
+      // validatorName / field); only field-row rejections are wrapped here.
+      if (failure.cause !== undefined) throw failure.cause;
+      throw new ValidationError('DashboardSqliteValidator', failure.message, failure.field);
     }
 
     return payload as DashboardSqliteRequest;
@@ -739,6 +782,13 @@ const E2E_PROBE_STATE_NUMBER_FIELDS = [
   'duration',
 ] as const;
 
+/** The complete OWTestState payload key set (6 keys) — SSOT: the shape in
+ *  src/utils/e2eTestState.ts. Anything else is rejected, not stored. */
+const E2E_PROBE_STATE_KEYS: ReadonlySet<string> = new Set<string>([
+  ...E2E_PROBE_STATE_NUMBER_FIELDS,
+  'isValidVisitReported',
+]);
+
 export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateMessage> {
   validate(msg: unknown): OwE2EProbeStateMessage {
     if (!msg || typeof msg !== 'object') {
@@ -752,6 +802,19 @@ export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateM
       throw new ValidationError('E2EProbeStateValidator', 'payload is required', 'payload');
     }
     const p = m.payload as Record<string, unknown>;
+    // Unknown-key allowlist (Blue Team review 2026-10-15): the handler stores
+    // this payload verbatim into chrome.storage.session, so a key outside
+    // OWTestState would land in extension state unexamined. The six known keys
+    // are the whole contract; every other key is a rejection.
+    for (const key of Object.keys(p)) {
+      if (!E2E_PROBE_STATE_KEYS.has(key)) {
+        throw new ValidationError(
+          'E2EProbeStateValidator',
+          `payload.${key} is not a known probe-state key`,
+          key,
+        );
+      }
+    }
     // duration is fractional seconds — finite check, not integer.
     for (const field of E2E_PROBE_STATE_NUMBER_FIELDS) {
       if (typeof p[field] !== 'number' || !Number.isFinite(p[field])) {

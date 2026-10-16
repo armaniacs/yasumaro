@@ -147,6 +147,15 @@ export function isPrivateIpAddress(hostname: string): boolean {
     return true;
   }
 
+  // :: - IPv6 unspecified（全ゼロアドレス）。IPv4 の 0.0.0.0 と同様に「このホスト」を
+  // 表す表現で、接続先が自分自身へ解決されるため許可すると SSRF 経路になる。
+  // 0.0.0.0 と同じ扱い（プライベート判定でブロック）にする。
+  // URL パーサは [0:0:0:0:0:0:0:0] を [::] に正規化して返すが、ヘルパ直呼び出しでも
+  // 展開形で素通ししないよう両方の表記を同じ条件で見る（providerAllowlist.ts と同じ方針）。
+  if (ipv6Lower === '::' || ipv6Lower === '0:0:0:0:0:0:0:0') {
+    return true;
+  }
+
   // IPv4-mapped IPv6 (::ffff:0:0/96)。
   // この形式は IPv4 アドレスを IPv6 で表現するため、IPv4 部分を抽出して
   // プライベート判定にフォールバックする。攻撃者が SSRF 対策を迂回する
@@ -252,12 +261,15 @@ export const ALLOWED_LOCALHOST_PORTS = new Set<number>(LOOPBACK_PORTS);
 export function isLocalhostAddress(hostname: string, port?: number): boolean {
   const normalized = normalizeHostname(hostname);
 
-  // localhost / *.localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) / ::ffff:127.x.x.x (IPv4マップ)
+  // localhost / *.localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) /
+  // :: (IPv6 unspecified — 0.0.0.0 と同様に自分自身へ解決される) / ::ffff:127.x.x.x (IPv4マップ)
   const isLocalhost =
     normalized === 'localhost' ||
     normalized.endsWith('.localhost') ||
     /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(normalized) ||
     normalized === '::1' ||
+    normalized === '::' ||
+    normalized === '0:0:0:0:0:0:0:0' ||
     /^::ffff:127\./.test(normalized);
 
   if (!isLocalhost) {
