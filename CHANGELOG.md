@@ -35,6 +35,23 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.46] - 2026-10-16
+
+このリリースは前日のレビュー指摘を即座に反映したものです。Checking Team レビュー（総合 92.9/100・ランク S）の Medium 19 件を Phase 5 で全件修正し、残った Low 15 件のうち実測で残存を確認した 11 件を RICE 採点・PBI 化（checking-team-1016）して実装しました。詳細は `plans/2026-10-16-0457-review-main.md`。
+
+### 修正
+
+- SSRF ガードの例外経路を塞ぐ。IPv6 unspecified `::`（展開形 `0:0:0:0:0:0:0:0` を含む）が `isPrivateIpAddress` / `isLocalhostAddress` を素通りし、`http://[::]:9999/` が 3 エントリポイントすべてで許可されていた。両判定に `::` を追加し、3 経路の拒否を回帰テストで固定する。旧脆弱挙動を固定していた `fetch-ipv6.test.ts` のアサーションを反転する
+- E2E プローブ層のレイヤー逆辺・二重オーナー・arming 非対称を解消する。`src/content/e2eTestState.ts` を `src/utils/` へ移設し、`eslint.config.js` に background→content 禁止ブロックを error で新設する。`publishE2eTestState` の window 分岐と呼び出しゼロの `markE2eVisitReported` を削除して owner を relay 1 本化する。ハンドラ先頭で armed 判定を追加し、payload を既知 6 キーの allowlist 化する（WAR 変更不要を `manifest.test.ts` で裏取り）
+- fail-closed の kill-switch `alreadyProcessed` を pin テストで固定する。`SOURCE_POLICY` 全行のキー不在 pin＋将来 source 網羅のテキストガードを `recordRequestBuilder.test.ts` に追加する
+- `PROVIDER_VIEW_METADATA` の移行を完了する。view 2 ファイルを METADATA 経由の読みへ切り替え、旧 3 フィールドと二重変換 cast を削除する。deprecation 約束（次メジャーで削除・再評価 2026-12-31）より前倒しで削除されていた `OpenAIProvider`（サブクラス）と `ProviderStrategy`（型）の公開エイリアスを `@deprecated` 付きで復元し、固定テストを追加する
+- dashboard–SQLite の subtype 検証を fail-closed 化する。`interpretSubtypeSpec` を新設して wire / envelope を「1実装・2表現」に統合し、未知 subtype を拒否する。既知 specless（例 `query`）の正常系は不変。検索 SQL の `is_deleted = 0` 二重付与をビルダー側に一本化し、等価性テストの期待を単一化後の出力に更新する
+- ログ・表示系の指摘を解消する。asyncData 4 箇所の `console.error` を `void logError(...)` 形式へ統一し、ローカル SQLite 集計失敗の 10 箇所を `ErrorCode.API_REQUEST_FAILURE` から `STORAGE_READ_FAILURE` へ置換する。`headerDetector` のキャッシュ保存失敗を `logDebug` から `logWarn` へ上げる。uBlock パネルに可視の `#uBlockStatus`（`aria-live`）を新設し、19 箇所の書込み先を SSOT 定数へ移設する。focusTrap は要素 0 件でも keydown を登録して Escape 離脱を可能にする
+- i18n の指摘を解消する。`ublockSourceSavedAdded/Updated` に en/ja 双側の `_one` / `_other` を追加して `getPluralKey()` 経由にし、`1 rules` を `1 rule` にする。`sourceManager.ts` の日本語直書きフォールバック 9 箇所を英語化し、`fieldValidation.ts` のドメイン許可エラーを新キー `errorBaseUrlDomainNotAllowed`（ja/en 双側）へ移す。`check-i18n` 緑を維持する
+- ストレージ・マイグレーション系を堅牢化する。`markdownFormatter.ts` の分キャッシュに上限 1400 件＋FIFO evict を実装する。`migrationBackup` の VFS close 失敗を `MigrationCloseFailureError` 経由の fail-safe 中断にし、バックアップ保持・done 不書込で次回自己修復する。opfsWorker のキュー満杯時に最大 3 回×5ms の bounded 待機（注入可能 `SleepFn`）を導入する。未知 `privacy_mode` の拒否理由を `getExportValidationError()` の診断型で記録する（fail-closed 維持、既存 `version` を schema stamp として流用）
+- リリース基盤を整備する。AMO 提出の `sources.zip` 生成を `Prepare AMO sources archive` ステップとして明示化する。ストア公開の約 210 行インラインシェルを `scripts/publish/`（cws / edge / amo-prepare-sources / amo-submit / lib）へ移設して release.yml を 325→178 行にし、`publish-stores.test.ts` 22 件を追加する。`web-ext@10.7.0` を devDependencies 化して lockfile 経由で実行する。bench ベースライン再導出の経緯・変動表・理由併記ルールを `bench/README.md` に記録する（`micro.json` の値は不変）。PERMISSIONS.md を 6.9.45 に更新し履歴を追記で修正する。E2E フィクスチャの `data-ow-e2e-test` 残置 6 箇所を除去する。テスト内 manifest ゲートに理由付き localhost 削除宣言を導入し、宣言なし削除の検出を維持する。`settingsUiHelper` のミラー処理を `mirrorStatusToTop` に集約する
+- テスト型エラーのベースラインを 459 → 456 に下方修正する（ラウンド内の新規混入 3 件を返済）
+
 ## [6.9.45] - 2026-10-15
 
 ### 修正
