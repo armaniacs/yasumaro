@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { RECORDING_GATE_TABLE } from '../../../utils/recordingGateTable.js';
 import { RecordingOrchestrator } from '../RecordingOrchestrator.js';
 
 /**
@@ -37,25 +38,24 @@ describe('RecordingOrchestrator public surface', () => {
     }
   });
 
-  it('keeps the canonical pre-save gate order (PBI 2026-09-28-27)', () => {
-    // The hand-written preSaveSteps list is canonical (ADR
-    // 2026-09-28-recording-gate-order-canonical). Pin the order so a reorder
-    // is a deliberate, reviewed diff — not a silent drift.
-    const source = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'RecordingOrchestrator.ts'),
-      'utf-8',
-    );
-    const names = [...source.matchAll(/name: '([a-zA-Z]+)', errorStrategy/g)].map((m) => m[1]!);
-    expect(names.slice(0, 9)).toEqual([
-      'truncate',
-      'domainFilter',
-      'permission',
-      'trust',
-      'privacyHeaders',
-      'duplicate',
-      'privacyPipeline',
-      'extractSentences',
-      'formatMarkdown',
-    ]);
+  it('derives the pre-save gate order from RECORDING_GATE_TABLE (PBI 2026-10-16-07)', () => {
+    // Table-driven pin: the orchestrator's gate subsequence must equal the
+    // table order. A precedence change is a single table edit — this test
+    // fails on drift without pinning any literal order here.
+    const orchestrator = new RecordingOrchestrator({
+      getPrivacyInfoWithCache: async () => null,
+      getSettingsWithCache: async () => ({}) as never,
+      obsidian: {} as never,
+      aiService: null,
+      sqliteClient: null,
+    });
+    const names = (orchestrator as unknown as { preSaveSteps: Array<{ name: string }> })
+      .preSaveSteps.map((s) => s.name);
+    const tableNames = RECORDING_GATE_TABLE.map((row) => row.name);
+    const gateNames = names.filter((name) => (tableNames as readonly string[]).includes(name));
+    expect(gateNames).toEqual([...tableNames]);
+    // truncate stays first; gates follow it contiguously.
+    expect(names[0]).toBe('truncate');
+    expect(names.slice(1, 1 + tableNames.length)).toEqual([...tableNames]);
   });
 });

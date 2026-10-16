@@ -32,7 +32,7 @@ vi.mock('../../../utils/logger/api.js', async () =>
 );
 
 import { decideStepOutcome, finalizeSuccess, type OutcomeAdapters } from '../recordingOutcome.js';
-import { attachOfflineEnqueueInfo, ErrorStrategy, type RecordingContext } from '../types.js';
+import { StepFailureError, ErrorStrategy, type RecordingContext } from '../types.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import { DuplicateError } from '../steps/checkDuplicateStep.js';
 import { RegenerateUpdateError } from '../steps/saveSqliteStep.js';
@@ -276,8 +276,7 @@ describe('decideStepOutcome — regenerate AI failure (PBI 2026-09-22-04 review 
 describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('RETRY failure with a successfully enqueued offline job registers NO pending page', () => {
     const fakes = makeFakes();
-    const error = new Error('AI provider unreachable');
-    attachOfflineEnqueueInfo(error, { enqueued: true });
+    const error = new StepFailureError(new Error('AI provider unreachable'), true);
     const outcome = decideStepOutcome(
       error,
       { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
@@ -294,8 +293,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
 
   it('RETRY failure whose offline enqueue failed still registers the pending page (sole owner)', () => {
     const fakes = makeFakes();
-    const error = new Error('AI provider unreachable');
-    attachOfflineEnqueueInfo(error, { enqueued: false });
+    const error = new StepFailureError(new Error('AI provider unreachable'), false);
     const outcome = decideStepOutcome(
       error,
       { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, offlineRetry: { jobKind: 'ai_summary' } },
@@ -310,7 +308,6 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('finalizeSuccess with an enqueued obsidian_sync failure registers NO pending page', () => {
     const fakes = makeFakes();
     const error = new Error('Obsidian unreachable');
-    attachOfflineEnqueueInfo(error, { enqueued: true });
     const context = makeContext({
       errors: [{
         step: 'saveObsidian',
@@ -318,6 +315,7 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
         strategy: ErrorStrategy.BEST_EFFORT,
         timestamp: Date.now(),
         recoveryKind: 'obsidian_sync',
+        offlineEnqueued: true,
       }],
     });
     const result = finalizeSuccess(context, fakes);
@@ -328,7 +326,6 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
   it('finalizeSuccess with an obsidian_sync failure and a failed enqueue still registers the pending page', () => {
     const fakes = makeFakes();
     const error = new Error('Obsidian unreachable');
-    attachOfflineEnqueueInfo(error, { enqueued: false });
     const context = makeContext({
       errors: [{
         step: 'saveObsidian',
@@ -336,10 +333,42 @@ describe('recovery owner arbitration — PBI 2026-09-25-12', () => {
         strategy: ErrorStrategy.BEST_EFFORT,
         timestamp: Date.now(),
         recoveryKind: 'obsidian_sync',
+        offlineEnqueued: false,
       }],
     });
     const result = finalizeSuccess(context, fakes);
     expect(result.success).toBe(true);
     expect(fakes.pendings).toHaveLength(1);
+  });
+});
+
+describe('StepExecutor → decideStepOutcome handoff — PBI 2026-10-16-04', () => {
+  it('an enqueued carrier from the executor suppresses the pending page with no Error mutation', async () => {
+    const { StepExecutor } = await import('../stepExecutor.js');
+    const queue = { enqueue: vi.fn().mockResolvedValue(true) };
+    const executor = new StepExecutor(queue as never, undefined, async () => {});
+    const step = {
+      name: 'privacyPipeline',
+      errorStrategy: ErrorStrategy.RETRY,
+      maxRetries: 0,
+      offlineRetry: { jobKind: 'ai_summary' as const },
+      execute: vi.fn().mockRejectedValue(new Error('network timeout')),
+    };
+    const thrown: unknown = await executor
+      .executeWithStrategy(step, makeContext(), undefined as never)
+      .then(() => { throw new Error('expected executeWithStrategy to throw'); }, (e: unknown) => e);
+
+    expect(thrown).toBeInstanceOf(StepFailureError);
+    // The channel is the typed carrier, not a dynamic property on the error.
+    expect(thrown).not.toHaveProperty('offlineEnqueue');
+    expect((thrown as StepFailureError).causeError).toBeInstanceOf(Error);
+
+    const fakes = makeFakes();
+    const outcome = decideStepOutcome(thrown, step, makeContext(), fakes);
+    expect(outcome.done).toBe(true);
+    if (!outcome.done) throw new Error('expected terminal outcome');
+    expect(outcome.result.success).toBe(false);
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(1);
   });
 });

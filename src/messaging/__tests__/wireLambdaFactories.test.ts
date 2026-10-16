@@ -70,10 +70,9 @@ describe('messaging/wireLambdaFactories: shared references', () => {
     expect(maintain.get('restore')?.decodeGateway).toBe(voidDecode);
   });
 
-  it('archive rows share noValidate/stagingNameArg/emptyArgs', () => {
+  it('archive rows carry no validate column (PBI 2026-10-16-02: spec table is the only truth)', () => {
     for (const entry of ARCHIVE_WIRE_TABLE) {
-      if (entry.op === 'archivePreview' || entry.op === 'archiveCreate' || entry.op === 'archiveExport' || entry.op === 'archiveQuery' || entry.op === 'archiveUpdate') continue;
-      expect(entry.validate).toBe(noValidate);
+      expect(entry).not.toHaveProperty('validate');
     }
     const byOp = new Map(ARCHIVE_WIRE_TABLE.map((e) => [e.op, e]));
     expect(byOp.get('archiveRestore')?.backendArgs).toBe(stagingNameArg);

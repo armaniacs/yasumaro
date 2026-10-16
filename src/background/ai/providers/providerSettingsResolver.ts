@@ -86,6 +86,61 @@ export function resolveMaxContentChars(
 }
 
 /**
+ * ResolvedProviderSettings (PBI 2026-10-16-10: 値オブジェクト化)
+ *
+ * AdapterがSettings blobの代わりに読む解決済み値の単一形状。timeout・
+ * content上限・token上限の3ノブを構築時に確定させ、Adapterのhooks閉包が
+ * `this.settings` を都度読まないようにする。上限・timeoutの変更は
+ * resolveProviderSettings (+catalogの既定受渡し) だけで済む — 各Adapterの
+ * 解決呼出しを全部触る必要はない。凍結済みなのでAdapter側で書換え不可。
+ */
+export interface ResolvedProviderSettings {
+  /** 解決に使ったproviderId (bag参照の主体)。 */
+  readonly providerId: string;
+  /** 解決済みリクエストtimeout (ms)。 */
+  readonly timeoutMs: number;
+  /** 解決済み送信コンテンツ上限 (文字数)。 */
+  readonly maxContentChars: number;
+  /** 解決済み出力token上限。 */
+  readonly maxTokens: number;
+}
+
+/** resolveProviderSettings への既定受渡し。catalog側が所有する値をそのまま渡す。 */
+export interface ResolveProviderSettingsOptions {
+  /** ローカル配置か (timeout既定の分岐)。 */
+  readonly isLocal: boolean;
+  /** content上限のビルトイン既定 (catalogが知るprovider別既定)。 */
+  readonly defaultContentChars: number;
+  /** content上限のグローバルキー (catalogのcontentCharsKey)。 */
+  readonly contentCharsKey?: StorageKey;
+}
+
+/**
+ * Settings blobをResolvedProviderSettingsに一括解決する唯一の窓口。
+ * 各rungの順序・検証は既存の3関数に委譲し、ここでは束ねるだけ。
+ */
+export function resolveProviderSettings(
+  settings: Settings,
+  providerId: string,
+  options: ResolveProviderSettingsOptions,
+): ResolvedProviderSettings {
+  const storedTimeout = Number(
+    (settings as unknown as Record<string, unknown>)[StorageKeys.AI_TIMEOUT_MS] ?? 0,
+  );
+  return Object.freeze({
+    providerId,
+    timeoutMs: resolveTimeoutMs(storedTimeout, options.isLocal),
+    maxContentChars: resolveMaxContentChars(
+      settings,
+      providerId,
+      options.defaultContentChars,
+      options.contentCharsKey,
+    ),
+    maxTokens: resolveMaxTokens(settings, providerId),
+  });
+}
+
+/**
  * Output token budget. Every rung is validated against the provider id, so a
  * stored value above the provider's cap is clamped rather than sent.
  */

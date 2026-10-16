@@ -40,6 +40,13 @@ export interface PipelineError {
   strategy: ErrorStrategy;
   timestamp: number;
   recoveryKind?: OfflineJobKind;
+  /**
+   * Offline-enqueue result carried explicitly (PBI 2026-10-16-04): true when
+   * StepExecutor durably queued the job, making the offline job the sole
+   * recovery owner. Read by finalizeSuccess instead of the former dynamic
+   * Error attachment.
+   */
+  offlineEnqueued?: boolean;
   context?: {
     url: string;
     tabId?: number | undefined;
@@ -47,42 +54,71 @@ export interface PipelineError {
 }
 
 /**
- * Structured offline-queue enqueue result, attached to the thrown error by
- * StepExecutor so the outcome policy can decide the sole recovery owner
- * (PBI 2026-09-25-12): when `enqueued` is true the offline job is the only
- * owner and no pending page may be registered for the same recording.
+ * Sole recovery owner for a failed recording (PBI 2026-10-16-04).
+ * Exactly one owner exists so the 5-minute alarm retry and a manual re-run
+ * can never recover the same recording twice — or zero times.
  */
-export interface OfflineEnqueueInfo {
-  /**
-   * The job is durably queued — the offline job is the sole recovery owner.
-   * The only fact the outcome policy branches on: whether a slot was eligible
-   * is decided by the step itself, and the job kind is not needed after the
-   * job is in the queue.
-   */
-  enqueued: boolean;
+export type RecoveryOwner = 'offline' | 'pending' | 'none';
+
+/**
+ * Regenerate records (`targetEntryId` set) are UPDATE-only: the pending and
+ * offline replays both act as INSERTs by URL, which would duplicate the row
+ * being replaced. The `!== undefined` check lives here alone — every owner
+ * decision goes through {@link decideRecoveryOwner}.
+ */
+export function isRegenerateRecord(data: { targetEntryId?: unknown }): boolean {
+  return data.targetEntryId !== undefined;
 }
 
 /**
- * Reads the offline-enqueue result a step failure may carry. Absent when the
- * step never reached the offline-queue eligibility gate.
+ * Single pure owner decision. Truth table:
+ * - regenerate (targetEntryId set) → 'none' (UPDATE-only, no recovery queue)
+ * - enqueued → 'offline' (the queued job is the sole owner)
+ * - otherwise → 'pending' (the pending page is the sole owner)
  */
-export function readOfflineEnqueueInfo(thrown: unknown): OfflineEnqueueInfo | undefined {
-  if (thrown === null || typeof thrown !== 'object') {
-    return undefined;
+export function decideRecoveryOwner(input: {
+  targetEntryId?: number | undefined;
+  enqueued: boolean;
+}): RecoveryOwner {
+  if (isRegenerateRecord(input)) {
+    return 'none';
   }
-  const info = (thrown as { offlineEnqueue?: unknown }).offlineEnqueue;
-  if (info === null || typeof info !== 'object') {
-    return undefined;
-  }
-  return info as OfflineEnqueueInfo;
+  return input.enqueued ? 'offline' : 'pending';
 }
 
-/** Attaches the enqueue result to the original error without altering it. */
-export function attachOfflineEnqueueInfo(error: unknown, info: OfflineEnqueueInfo): void {
-  if (error === null || typeof error !== 'object') {
-    return;
+/**
+ * Typed failure carrier replacing the former dynamic `offlineEnqueue`
+ * property attachment on Error (PBI 2026-10-16-04).
+ *
+ * StepExecutor throws this instead of mutating the original error, so the
+ * outcome policy reads the enqueue result from a declared field. Orchestrator
+ * and SavePhase forward the thrown value opaquely and need no change.
+ * `message` mirrors the original so `toThrow(message)` assertions keep
+ * passing; the original carrier is available as `causeError`.
+ */
+export class StepFailureError extends Error {
+  readonly causeError: unknown;
+  readonly enqueued: boolean;
+
+  constructor(cause: unknown, enqueued: boolean) {
+    super(cause instanceof Error ? cause.message : String(cause));
+    this.name = 'StepFailureError';
+    this.causeError = cause;
+    this.enqueued = enqueued;
   }
-  (error as { offlineEnqueue?: OfflineEnqueueInfo }).offlineEnqueue = info;
+}
+
+/**
+ * Splits a step failure into the original error and its enqueue result.
+ * Raw (unwrapped) errors never reached the enqueue gate, so `enqueued` is
+ * false — matching the former `readOfflineEnqueueInfo(...)?.enqueued === true`
+ * check when no info was attached.
+ */
+export function unwrapStepFailure(thrown: unknown): { error: unknown; enqueued: boolean } {
+  if (thrown instanceof StepFailureError) {
+    return { error: thrown.causeError, enqueued: thrown.enqueued };
+  }
+  return { error: thrown, enqueued: false };
 }
 
 /**

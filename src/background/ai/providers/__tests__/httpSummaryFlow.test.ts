@@ -64,7 +64,7 @@ vi.mock('../../../../utils/logger/api.js', async () =>
 
 import {
   HttpProviderStrategy,
-  type HttpSummaryHooks,
+  type HttpProviderHooks,
 } from '../HttpProviderStrategy.js';
 import type { AISummaryResult, AIProviderConnectionResult } from '../ProviderStrategy.js';
 import type { Settings } from '../../../../utils/storage/types.js';
@@ -72,7 +72,7 @@ import type { Settings } from '../../../../utils/storage/types.js';
 class FlowProbe extends HttpProviderStrategy {
   constructor(
     settings: Settings,
-    private readonly hooks: HttpSummaryHooks,
+    private readonly hooks: HttpProviderHooks,
   ) {
     super(settings);
   }
@@ -87,9 +87,10 @@ class FlowProbe extends HttpProviderStrategy {
   }
 }
 
-function makeHooks(overrides: Partial<HttpSummaryHooks> = {}): HttpSummaryHooks {
+function makeHooks(overrides: Partial<HttpProviderHooks> = {}): HttpProviderHooks {
   return {
     providerName: 'flow-probe',
+    providerLabel: 'FlowProbe',
     timeoutMs: 30000,
     checkCredentials: () => null,
     contentLimit: () => 100,
@@ -98,7 +99,17 @@ function makeHooks(overrides: Partial<HttpSummaryHooks> = {}): HttpSummaryHooks 
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text: userPrompt }),
     }),
+    buildRequest: async () => ({
+      url: 'https://example.com/test',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ping: true }),
+    }),
     extractSummary: async (data) => ({ success: true, summary: `parsed:${JSON.stringify(data)}` }),
+    extractResponse: (data, ctx) => ({
+      success: true,
+      message: 'Connected.',
+      debug: { prompt: 'Reply with the single word: OK', endpoint: ctx.endpoint, statusCode: ctx.statusCode, hasContent: true },
+    }),
     ...overrides,
   };
 }
@@ -132,7 +143,13 @@ describe('executeHttpSummaryFlow', () => {
   it('credential failure short-circuits before any fetch', async () => {
     const probe = new FlowProbe(
       {} as Settings,
-      makeHooks({ checkCredentials: () => 'Error: API key is missing.' }),
+      makeHooks({
+        checkCredentials: () => ({
+          summaryMessage: 'Error: API key is missing.',
+          testMessage: 'FlowProbe API Key is not set.',
+          testError: 'API key is missing',
+        }),
+      }),
     );
     const result = await probe.generateSummary('hello');
 

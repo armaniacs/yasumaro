@@ -1,44 +1,15 @@
 /**
- * recordingDecision.ts — PBI 2026-09-19-08 純粋関数 seam
+ * recordingDecision.ts — background-tier verdicts (PBI 2026-09-19-08 seam,
+ * PBI 2026-10-16-07 shim removal).
  *
  * The admission gate table (order + verdict pure functions + evaluateGates)
- * lives in the neutral tier at src/utils/recordingGateTable.ts so the service
- * worker pipeline, the content visit gate, and the popup record flow share one
- * precedence owner. This module re-exports that table for backward
- * compatibility and keeps the background-tier verdicts that are outside the
- * admission precedence (trigger / header-detector / save-skip / L0).
+ * lives ONLY at src/utils/recordingGateTable.ts. Import it directly —
+ * this module no longer re-exports it. This module keeps the background-tier
+ * verdicts that are outside the admission precedence (trigger /
+ * header-detector / save-skip / L0).
  *
  * 判定順序の SSOT は src/utils/recordingGateTable.ts を参照。
  */
-
-export {
-  RECORDING_DECISION_ORDER,
-  type RecordingGate,
-  type GateVerdict,
-  decideDomainFilter,
-  decidePermission,
-  decideTrust,
-  type PrivacyAutoBehavior,
-  type PrivacyDecisionInput,
-  type PrivacyDecision,
-  decidePrivacy,
-  type DuplicateDecisionInput,
-  isSameUtcDay,
-  decideDuplicate,
-  evaluateAdmissionPrecedence,
-  type DomainFilterGateInput,
-  type PermissionGateInput,
-  type TrustGateInput,
-  type RecordingGateInputs,
-  type RecordingGateRow,
-  RECORDING_GATE_TABLE,
-  decideGate,
-  type GateEvaluation,
-  evaluateGates,
-  isHttpRecordableUrl,
-  type RecordableTabLike,
-  isRecordableTab,
-} from '../../utils/recordingGateTable.js';
 
 // ============================================================================
 // Recording trigger (RecordingTriggerManager.shouldRecord の純粋核):

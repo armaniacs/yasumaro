@@ -48,6 +48,18 @@ describe('queryPlanner — read policy composition', () => {
     expect(planned.text).toHaveLength(FTS_QUERY_MAX_LENGTH);
   });
 
+  it('planSearch has one text precedence: non-empty text wins, else query (PBI 2026-10-16-11)', () => {
+    // Gateway spelling (kind:search carries text, no query).
+    expect(planSearch({ kind: 'search', text: '研究所' }).text).toBe('研究所');
+    // Direct spelling (free-text query field).
+    expect(planSearch({ query: 'hello' }).text).toBe('hello');
+    // Both present: the non-empty text wins (was implicit spread order).
+    expect(planSearch({ query: 'a', text: 'b' }).text).toBe('b');
+    // Empty text falls back to query; both absent is the plain-listing ''.
+    expect(planSearch({ query: 'a', text: '' }).text).toBe('a');
+    expect(planSearch({}).text).toBe('');
+  });
+
   it('applyReadPolicy is idempotent (handler + repo both route through it)', () => {
     const once = applyReadPolicy({ limit: 7, tag: 'news', text: 'hi' });
     expect(applyReadPolicy(once)).toEqual(once);

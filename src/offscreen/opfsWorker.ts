@@ -192,6 +192,18 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       await initSqlite();
     }
 
+    // PBI 2026-10-16-08 decision — worker-switch folding: STAGED (not folded
+    // in this PBI). The 14 ARCHIVE_* cases below differ only in handler +
+    // payload type and could fold into a workerType-keyed adapter table fed
+    // from ARCHIVE_WIRE_TABLE (wire row + runner row per new op, same as the
+    // offscreen/backend folds). Deferred because the handlers keep
+    // heterogeneous positional signatures, this hop carries the
+    // queue/load-shed/INIT-gating semantics (a dispatch-table bug sheds or
+    // misroutes production writes), and the switch stays exhaustively pinned
+    // by the default unknown-type rejection plus archive dispatch tests.
+    // Next step when staged: unify adapters to (ctx, payload: unknown),
+    // dispatch via descriptor.workerType, and cover with a table-driven test
+    // over ARCHIVE_WIRE_TABLE (no per-op cases). Keep the default arm.
     switch (type) {
       case 'INIT': {
         // The container may carry an explicit wasm URL (Firefox: the bundled

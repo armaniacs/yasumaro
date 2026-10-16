@@ -10,9 +10,12 @@
  * - optimisticLock is chrome-specific inside Settings layer; InMemory does not mimic version
  */
 
-import type { StorageKey, Settings as SettingsType, SqliteHealthCheck } from './types.js';
+import { StorageKeys, type StorageKey, type Settings as SettingsType, type SqliteHealthCheck } from './types.js';
 import { STORAGE_KEY_VALUES, restoreLatestSettingsBackup } from './settingsBackup.js';
 import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './storagePort.js';
+// Static import (PBI 2026-10-16-12): no import cycle — none of
+// settingsMigration's transitive deps import SettingsRepository back.
+import { applyMigrationsAndDecryptWithReEncrypt, isSettingsBlobAuthoritative, API_KEY_FIELDS } from './settingsMigration.js';
 import { StorageTransaction } from './storageTransaction.js';
 import { ErrorCode } from '../logger/types.js';
 import { logError } from '../logger/api.js';
@@ -142,11 +145,13 @@ export class SettingsRepository {
     if (this.cached && this.cached.epoch === this.writeEpoch && (now - this.cached.timestamp) < this.CACHE_TTL) {
       return this.cached.data;
     }
-    const { applyMigrationsAndDecryptWithReEncrypt, isSettingsBlobAuthoritative } = await import('./settingsMigration.js');
     const keyProvider = await this.resolveKeyProvider();
 
-    // Unified read via Port (no direct chrome.storage)
-    const result = await this.port.get(['settings', 'settings_migrated']) as Record<string, unknown>;
+    // Unified read via Port (no direct chrome.storage). The master-password
+    // flag rides along in the same call so the decrypt fallback below never
+    // needs its own storage read.
+    const result = await this.port.get(['settings', 'settings_migrated', StorageKeys.MASTER_PASSWORD_ENABLED]) as Record<string, unknown>;
+    const masterFlag = { isMasterPasswordEnabled: Boolean(result[StorageKeys.MASTER_PASSWORD_ENABLED]) };
 
     let migratedResult: SettingsType;
     // A partial migration stage is truthy but not authoritative: reading the blob
@@ -162,7 +167,7 @@ export class SettingsRepository {
       for (const [k, v] of Object.entries(settings as Record<string, unknown>)) {
         if (STORAGE_KEY_VALUES.has(k)) (filtered as Record<string, unknown>)[k] = v;
       }
-      const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(filtered, { getEncryptionKey: keyProvider });
+      const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(filtered, { getEncryptionKey: keyProvider, ...masterFlag });
       if (Object.keys(reEncrypted).length > 0) {
         await this.persistReEncrypted(reEncrypted);
       }
@@ -184,12 +189,16 @@ export class SettingsRepository {
     rawSettings: SettingsType | undefined,
     keyProvider: () => Promise<CryptoKey>
   ): Promise<SettingsType> {
-    const { applyMigrationsAndDecryptWithReEncrypt } = await import('./settingsMigration.js');
-    // Scattered fallback (legacy pre-migration path) — also via Port
+    // Scattered fallback (legacy pre-migration path) — also via Port.
+    // STORAGE_KEY_VALUES covers every StorageKeys value, so the scattered
+    // read already carries the master-password flag: no extra storage read.
     const keysToGet: string[] = [...STORAGE_KEY_VALUES];
     let scattered = await this.port.get(keysToGet) as Record<string, unknown>;
     if (rawSettings) scattered = { ...scattered, ...(rawSettings as Record<string, unknown>) };
-    const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, { getEncryptionKey: keyProvider });
+    const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(scattered as SettingsType, {
+      getEncryptionKey: keyProvider,
+      isMasterPasswordEnabled: Boolean(scattered[StorageKeys.MASTER_PASSWORD_ENABLED]),
+    });
     if (Object.keys(reEncrypted).length > 0) {
       await this.persistReEncrypted(reEncrypted);
     }
@@ -219,7 +228,6 @@ export class SettingsRepository {
   }
 
   private async writeSettings(delta: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
-    const { API_KEY_FIELDS } = await import('./settingsMigration.js');
     const { encryptApiKey } = await import('../crypto/index.js');
     const { ensureStorageQuota } = await import('./storageMaintenance.js');
     let toSave: Record<string, unknown> = { ...(delta as Record<string, unknown>) };

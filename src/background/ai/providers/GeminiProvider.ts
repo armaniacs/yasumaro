@@ -4,11 +4,10 @@
  */
 
 import { AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
-import { HttpProviderStrategy } from './HttpProviderStrategy.js';
+import { HttpProviderStrategy, type HttpProviderHooks } from './HttpProviderStrategy.js';
 import {
-    resolveMaxContentChars,
-    resolveMaxTokens,
-    resolveTimeoutMs,
+    resolveProviderSettings,
+    type ResolvedProviderSettings,
 } from './providerSettingsResolver.js';
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
@@ -67,8 +66,16 @@ export class GeminiProvider extends HttpProviderStrategy {
      * 渡す。デフォルトは現行キーと同一のため、直接構築時の挙動は不変。
      */
     private readonly contentCharsKey: StorageKey;
+    /**
+     * 解決済み値オブジェクト (PBI 2026-10-16-10)。timeout・content上限・
+     * token上限はhooks閉包からここだけ読む。未注入時はblobから導出するため
+     * 既存の構築呼出しはそのまま動く。Hook形状・catalog・生成注入は不変。
+     */
+    public readonly resolvedSettings: ResolvedProviderSettings;
+    /** 構築時に確定したAPIバージョン。リクエスト毎のblob再読はしない。 */
+    private readonly apiVersion: string;
 
-    constructor(settings: Settings, contentCharsKey: StorageKey = StorageKeys.GEMINI_CONTENT_CHARS) {
+    constructor(settings: Settings, contentCharsKey: StorageKey = StorageKeys.GEMINI_CONTENT_CHARS, resolvedSettings?: ResolvedProviderSettings) {
         super(settings);
         // Same-shape baseUrl gate as the HTTP providers: the pinned origin
         // must pass the deny-only SSRF layer AND the origin-authorization
@@ -104,9 +111,16 @@ export class GeminiProvider extends HttpProviderStrategy {
         // WHY: Gemini has no local deployment today, so isLocal=false is
         // passed explicitly — the fixed 30000 default is intentional, not a
         // missing branch. A future local-Gemini variant can flip this flag.
-        const storedTimeout = Number(settings[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = resolveTimeoutMs(storedTimeout, false);
+        // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
+        // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。
         this.contentCharsKey = contentCharsKey;
+        this.resolvedSettings = resolvedSettings ?? resolveProviderSettings(
+            settings,
+            this.getProviderId(),
+            { isLocal: false, defaultContentChars: 30_000, contentCharsKey: this.contentCharsKey },
+        );
+        this.timeoutMs = this.resolvedSettings.timeoutMs;
+        this.apiVersion = GeminiProvider.resolveApiVersion(settings);
         // Diagnostics: record where the API key came from (SSOT on the base).
         this.logApiKeySource(this.apiKeySource, this.getName());
     }
@@ -131,20 +145,22 @@ export class GeminiProvider extends HttpProviderStrategy {
     }
 
     /**
-     * 要約を生成する
-     * @param {string} content - 要約対象のコンテンツ
-     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     * Gemini の癖1組。要約と接続テストはこの同じオブジェクトを共有する
+     * （PBI 2026-10-16-05）ため、資格文面の変更は1箇所で両フローに届く。
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
-        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
-        // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
-        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, {
+    private hooks(): HttpProviderHooks {
+        return {
             providerName: this.getName(),
+            providerLabel: 'Gemini',
             timeoutMs: this.timeoutMs,
             checkCredentials: () => !this.apiKey
-                ? "Error: API key is missing. Please check your settings."
+                ? {
+                    summaryMessage: "Error: API key is missing. Please check your settings.",
+                    testMessage: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
+                    testError: 'API key is missing',
+                }
                 : null,
-            contentLimit: () => resolveMaxContentChars(this.settings, this.getProviderId(), 30_000, this.contentCharsKey),
+            contentLimit: () => this.resolvedSettings.maxContentChars,
             prepareRequest: async (userPrompt, systemPrompt) => {
                 let modelSegment: string;
                 try {
@@ -160,7 +176,7 @@ export class GeminiProvider extends HttpProviderStrategy {
                         ),
                     };
                 }
-                const apiVersion = this._getApiVersion();
+                const apiVersion = this.apiVersion;
                 // Derived from the pinned origin, never re-spelled: the literal
                 // the constructor authorizes and the URL actually requested must
                 // not be able to drift apart.
@@ -178,7 +194,7 @@ export class GeminiProvider extends HttpProviderStrategy {
                     }],
                     generationConfig: {
                         temperature: 0.1,
-                        maxOutputTokens: resolveMaxTokens(this.settings, this.getProviderId()),
+                        maxOutputTokens: this.resolvedSettings.maxTokens,
                         // Gemini 2.5系以降は thinking がデフォルト有効で、思考トークンが
                         // maxOutputTokens に加算される。要約は思考を必要としないため
                         // 明示的に切り、枠をすべて本文に使う。これを入れないと
@@ -196,32 +212,6 @@ export class GeminiProvider extends HttpProviderStrategy {
                     body: JSON.stringify(payload),
                 };
             },
-            extractSummary: (data, tid) => this._extractSummary(data as GeminiApiResponse, tid),
-        });
-    }
-
-    private _getApiVersion(): string {
-        const fallback = DEFAULT_SETTINGS[StorageKeys.GEMINI_API_VERSION] as string;
-        const version = (this.settings[StorageKeys.GEMINI_API_VERSION] as string | undefined)?.trim();
-        if (version && /^(v\d+([a-z]+)?)$/.test(version)) {
-            return version;
-        }
-        return fallback;
-    }
-
-    async testConnection(): Promise<AIProviderConnectionResult> {
-        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
-        // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
-        return this.executeHttpTestFlow({
-            providerLabel: 'Gemini',
-            timeoutMs: this.timeoutMs,
-            checkCredentials: () => !this.apiKey
-                ? {
-                    success: false,
-                    message: 'Gemini API Key is not set. Please enter it in the AI provider settings.',
-                    debug: { error: 'API key is missing' },
-                }
-                : null,
             buildRequest: async () => {
                 // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
                 // APIキーの有効性やモデル名の妥当性、実際の応答内容が検証できないため。
@@ -241,7 +231,7 @@ export class GeminiProvider extends HttpProviderStrategy {
                         },
                     };
                 }
-                const testUrl = `${GEMINI_PINNED_ORIGIN}/${this._getApiVersion()}/models/${modelSegment}:generateContent`;
+                const testUrl = `${GEMINI_PINNED_ORIGIN}/${this.apiVersion}/models/${modelSegment}:generateContent`;
 
                 // BaseUrl SSRF対策 - テストURLの検証
                 try {
@@ -288,6 +278,7 @@ export class GeminiProvider extends HttpProviderStrategy {
                     modelName: cleanModelName,
                 };
             },
+            extractSummary: (data, tid) => this._extractSummary(data as GeminiApiResponse, tid),
             extractResponse: (data, ctx) => {
                 const typed = data as GeminiApiResponse;
                 const candidate = typed.candidates?.[0];
@@ -318,7 +309,38 @@ export class GeminiProvider extends HttpProviderStrategy {
                     },
                 };
             },
-        });
+        };
+    }
+
+    /**
+     * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     */
+    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
+        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
+        // 基底テンプレートが所有。ここには Gemini の癖だけを hooks として渡す。
+        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, this.hooks());
+    }
+
+    /**
+     * 構築時に確定するAPIバージョン解決。旧 `_getApiVersion()` の中身。
+     * インスタンスは `apiVersion` フィールドだけ読み、リクエスト毎に
+     * blobを再読しない (PBI 2026-10-16-10: Settings直読みの排除)。
+     */
+    private static resolveApiVersion(settings: Settings): string {
+        const fallback = DEFAULT_SETTINGS[StorageKeys.GEMINI_API_VERSION] as string;
+        const version = (settings[StorageKeys.GEMINI_API_VERSION] as string | undefined)?.trim();
+        if (version && /^(v\d+([a-z]+)?)$/.test(version)) {
+            return version;
+        }
+        return fallback;
+    }
+
+    async testConnection(): Promise<AIProviderConnectionResult> {
+        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
+        // 基底テンプレートが所有。癖は generateSummary と同じ1組の hooks。
+        return this.executeHttpTestFlow(this.hooks());
     }
 
     /**

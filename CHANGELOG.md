@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.48] - 2026-10-17
+
+このリリースはアーキテクチャ深掘りの反映です。improve-codebase-architecture の4領域並列探索で12候補（Strong 6・Worth 6）を抽出し、RICE 採点・PBI 化（arch-1016）して 12 件全件実装しました。
+
+### 修正
+
+- 設定 import の後処理を単一化する。merge→strip→保存を `finalizeImportedSettings` に集約し、repo と signer を注入可能にする。`importPipeline.ts` は汎用プリミティブに格下げし、暗号 flow が使わない旨を文書化する（PBI 2026-10-16-01）
+- archive 検証を spec 表に一本化する。wire 行の validate 欄を撤去し、handler 入口で `evaluateSubtypeSpec` に委譲して直叩きでも拒否できるようにする（PBI 2026-10-16-02）
+- AI 戦略の生成 seam を統一する。Remote 内 Map と public `registerProvider` を撤去し、生成関数 1 本注入（既定 `createProviderStrategy`）にする（PBI 2026-10-16-03）
+- 回復オーナー判定を純粋関数化する。`decideRecoveryOwner` に集約し、Error への動的付着を型付き `StepFailureError` に置換する（PBI 2026-10-16-04）
+- HTTP プロバイダ Hook を 1 組化する。要約・テストの二重 closure を単一 `HttpProviderHooks` に統一する（PBI 2026-10-16-05）
+- 暗号 export コーデックを別 module 化する。payload 構築→署名検証→復号 dispatch を `encryptedExportCodec.ts` に集約し、chrome なしの表テストを追加する（PBI 2026-10-16-06）
+- ゲート判定 shim を整理する。admission 再 export を撤去し、orchestrator の順序を `RECORDING_GATE_TABLE` 駆動にして順序 pin を表駆動化する（PBI 2026-10-16-07）
+- op 列挙を表導出化する。handlerRecord の 14 lambda と Backend の 14 proxy を wire 表由来ループに畳み、表駆動テストで被覆する。worker-switch 畳み込みは blast-radius のため STAGED（PBI 2026-10-16-08）
+- retry 経路を SavePhase に統一する。`saveRetry(): SaveReceipt` を新設し、3 旗を `RetryContext` 型に束ねる（PBI 2026-10-16-09）
+- AI 設定解決を値オブジェクト化する。`ResolvedProviderSettings` 窓口と `AiModelKey` を追加のみで導入し、Adapter に任意注入の受領口を付ける（PBI 2026-10-16-10）
+- purge/search 計画を一本化する。`planSettingsPurge` 正準契約と text 優先単一規則を planner に集約し、background 側は spec 表＋parity テストで拘束する（PBI 2026-10-16-11）
+- migration を Port 一本化する。storage 直叩きを引数・Port 注入に寄せ、Repository の動的 import を静的化する（PBI 2026-10-16-12）
+
 ## [6.9.47] - 2026-10-16
 
 このリリースは前日のレビュー指摘を即座に反映したものです。adversarial-code-review（7a3a39e0 差分対象）の発見 109 件を裏取りし、検証通過 21 件を RICE 採点・PBI 化（adversarial-1016）して 8 件全件実装しました。残り 88 件は反証で却下（本番到達不能・テスト pin 済み意図動作・URL パーサ正規化・MV3 制約）。

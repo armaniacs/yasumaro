@@ -307,6 +307,15 @@ function defaultProviderFactory(settings: Settings, providerId: string, entry: P
   return new GenericOpenAICompatibleProvider(settings, providerId, entry.contentCharsKey);
 }
 
+/**
+ * Single production seam for strategy creation (PBI 2026-10-16-03).
+ * RemoteAIService injects exactly this signature (defaulting to
+ * {@link createProviderStrategy}); tests replace the function itself instead
+ * of registering fake ids, so a missing catalog row throws
+ * UnknownProviderError through the same path production uses.
+ */
+export type CreateProviderStrategyFn = typeof createProviderStrategy;
+
 /** Register (or override) a protocol factory without touching creation code. */
 export function registerProviderFactory(providerId: string, factory: ProviderStrategyFactory): void {
   PROVIDER_STRATEGY_FACTORIES.set(providerId, factory);

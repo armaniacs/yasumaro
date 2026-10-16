@@ -13,31 +13,99 @@ export const MAINTENANCE_BATCH_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = n
   'migrate', 'import', 'restore_db', 'backup_db', 'backfill_metadata', 'resync_legacy', 'cleanup_legacy', 'purge_now', 'content_purge_now',
 ]);
 
+/**
+ * Settings-keys spec table for the two retention subtypes (PBI 2026-10-16-11).
+ * The twins differ only in keys and the deps call — adding a retention
+ * dimension is one row here, and a key rename cannot land on one twin and
+ * miss the other.
+ */
+const SETTINGS_PURGE_SPEC = {
+  purge_now: {
+    daysKey: StorageKeys.SQLITE_RETENTION_DAYS,
+    maxKey: StorageKeys.SQLITE_MAX_RECORDS,
+  },
+  content_purge_now: {
+    daysKey: StorageKeys.CONTENT_RETENTION_DAYS,
+    maxKey: StorageKeys.CONTENT_MAX_RECORDS,
+    starredKey: StorageKeys.CONTENT_PURGE_INCLUDE_STARRED,
+  },
+} as const;
+
+type SettingsPurgePlan =
+  | { skip: true }
+  | { ok: true; retentionDays?: number | undefined; maxRecords?: number | undefined; includeStarred?: boolean | undefined }
+  | { ok: false; error: string };
+
+const isPurgeAbsent = (raw: unknown): boolean => raw === undefined || raw === null;
+
+/**
+ * Layer-local mirror of offscreen `queryPlanner.planSettingsPurge`
+ * (PBI 2026-10-16-11). The background cannot statically import the planner
+ * (background→offscreen import ban, PBI 2026-09-21-20), so the same contract
+ * lives here: both-absent → skip, present sides checked as non-negative
+ * integers with `0` normalizing to "skip this dimension", garbage failing
+ * closed instead of being coerced through Number(). Parity with the planner
+ * is pinned by maintenanceBatchHandler-purge-plan.test.ts — change the rule
+ * in the planner first, then mirror it here.
+ */
+function planSettingsPurge(
+  settings: Record<string, unknown>,
+  daysKey: string,
+  maxKey: string,
+  includeStarredKey?: string,
+): SettingsPurgePlan {
+  const daysRaw = settings[daysKey];
+  const maxRaw = settings[maxKey];
+  if (isPurgeAbsent(daysRaw) && isPurgeAbsent(maxRaw)) {
+    return { skip: true };
+  }
+  const planDim = (raw: unknown, name: string): number | undefined | string => {
+    if (isPurgeAbsent(raw)) return undefined;
+    if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+      return `${name} must be a non-negative integer, got ${String(raw)}`;
+    }
+    return raw === 0 ? undefined : raw;
+  };
+  const days = planDim(daysRaw, 'retentionDays');
+  if (typeof days === 'string') return { ok: false, error: days };
+  const max = planDim(maxRaw, 'maxRecords');
+  if (typeof max === 'string') return { ok: false, error: max };
+  const starredRaw = includeStarredKey !== undefined ? settings[includeStarredKey] : undefined;
+  return {
+    ok: true,
+    retentionDays: days,
+    maxRecords: max,
+    ...(typeof starredRaw === 'boolean' ? { includeStarred: starredRaw } : {}),
+  };
+}
+
 export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
   /**
    * Shared settings-purge flow: the two retention subtypes differ only in the
-   * settings keys and the deps call, so the read -> both-null skip -> invoke ->
-   * toFailure -> response projection lives here once. Kept as a single seam so a
-   * guard or response-shape fix cannot land on one twin and miss the other.
+   * spec row and the deps call, so plan -> invoke -> toFailure -> response
+   * projection lives here once. Kept as a single seam so a guard or
+   * response-shape fix cannot land on one twin and miss the other.
    */
   const runSettingsPurge = async (
-    readKeys: readonly [string, string],
+    spec: { daysKey: string; maxKey: string; starredKey?: string },
     purge: (
       days: number | undefined,
       max: number | undefined,
-      settings: Record<string, unknown>,
+      includeStarred: boolean | undefined,
     ) => Promise<DepsResult<{ purged: number }>>,
   ): Promise<unknown> => {
     const settings = await deps.getSettings();
-    const days = settings[readKeys[0]] ?? null;
-    const max  = settings[readKeys[1]] ?? null;
-    if (days === null && max === null) {
+    const planned = planSettingsPurge(settings, spec.daysKey, spec.maxKey, spec.starredKey);
+    if ('skip' in planned) {
       return { success: true, purged: 0, skipped: true };
     }
+    if (!planned.ok) {
+      return { success: false, error: planned.error };
+    }
     const result = await purge(
-      days !== null ? Number(days) : undefined,
-      max  !== null ? Number(max)  : undefined,
-      settings,
+      planned.retentionDays,
+      planned.maxRecords,
+      spec.starredKey !== undefined ? (planned.includeStarred ?? false) : undefined,
     );
     if (!result.success) {
       return toFailure(result);
@@ -102,16 +170,16 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
       }
       case 'purge_now':
         return runSettingsPurge(
-          [StorageKeys.SQLITE_RETENTION_DAYS, StorageKeys.SQLITE_MAX_RECORDS],
+          SETTINGS_PURGE_SPEC.purge_now,
           (days, max) => deps.purgeOldRecords(days, max),
         );
       case 'content_purge_now':
         return runSettingsPurge(
-          [StorageKeys.CONTENT_RETENTION_DAYS, StorageKeys.CONTENT_MAX_RECORDS],
-          (days, max, settings) => deps.purgeContent(
+          SETTINGS_PURGE_SPEC.content_purge_now,
+          (days, max, includeStarred) => deps.purgeContent(
             days,
             max,
-            (settings[StorageKeys.CONTENT_PURGE_INCLUDE_STARRED] as boolean | undefined) ?? false,
+            includeStarred ?? false,
           ),
         );
       case 'backup_db': {

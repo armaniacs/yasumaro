@@ -26,7 +26,7 @@ import {
   purgeContent as sqlitePurgeContent,
 } from './dbMaintenance.js';
 import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
-import { ARCHIVE_DESCRIPTORS, pickProjectedFields } from '../messaging/archiveWireTable.js';
+import { ARCHIVE_DESCRIPTORS, ARCHIVE_WIRE_TABLE, pickProjectedFields } from '../messaging/archiveWireTable.js';
 import { sqliteWireFor, type SqliteWireDescriptor, type SqliteWireOp } from '../messaging/sqliteWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
@@ -311,8 +311,32 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
 }
 
 /**
+ * BY_MESSAGE-derived archive registry entries (PBI 2026-10-16-08).
+ *
+ * The 14 `SQLITE_ARCHIVE_*` lambdas used to be hand-written in handlerRecord
+ * below, duplicating the wire table op-for-op (same drift class ARCHIVE_DISPATCH
+ * already folded). Each entry is now built from its table row: the row owns the
+ * message type and the op, and the shared handleArchive runner owns the rest.
+ * The keys mirror the BY_MESSAGE map (archiveWireForMessage) — a table row
+ * without a registry entry, or a registry entry without a row, fails the
+ * table-driven tests in archiveOpEnumerationDerived.test.ts.
+ */
+export const archiveMessageHandlers = Object.fromEntries(
+  ARCHIVE_WIRE_TABLE.map((descriptor) => [
+    descriptor.messageType,
+    ((msg: SqliteMessage, sendResponse: (response: unknown) => void) =>
+      handleArchive(descriptor.op, msg, sendResponse)) as SqliteHandler,
+  ]),
+) as Record<(typeof ARCHIVE_WIRE_TABLE)[number]['messageType'], SqliteHandler>;
+
+/**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
+ *
+ * Archive entries come from `archiveMessageHandlers` below (PBI 2026-10-16-08):
+ * the 14 hand-written lambdas duplicated the wire table op-for-op, so they
+ * are now spread from the BY_MESSAGE-derived map — adding an op is one table
+ * row, and a stale hand entry cannot shadow the table.
  */
 const handlerRecord = {
   SQLITE_HEALTH_CHECK: handleHealthCheck,
@@ -335,20 +359,7 @@ const handlerRecord = {
   SQLITE_RESTORE: handleRestore,
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
-  SQLITE_ARCHIVE_PREVIEW: (msg, sendResponse) => handleArchive('archivePreview', msg, sendResponse),
-  SQLITE_ARCHIVE_CREATE: (msg, sendResponse) => handleArchive('archiveCreate', msg, sendResponse),
-  SQLITE_ARCHIVE_CLEANUP: (msg, sendResponse) => handleArchive('archiveCleanup', msg, sendResponse),
-  SQLITE_ARCHIVE_EXPORT: (msg, sendResponse) => handleArchive('archiveExport', msg, sendResponse),
-  SQLITE_ARCHIVE_PREPARE_INCOMING: (msg, sendResponse) => handleArchive('archivePrepareIncoming', msg, sendResponse),
-  SQLITE_ARCHIVE_RESTORE_PREVIEW: (msg, sendResponse) => handleArchive('archiveRestorePreview', msg, sendResponse),
-  SQLITE_ARCHIVE_RESTORE: (msg, sendResponse) => handleArchive('archiveRestore', msg, sendResponse),
-  SQLITE_ARCHIVE_DELETE_BY_STAGING: (msg, sendResponse) => handleArchive('archiveDeleteByStaging', msg, sendResponse),
-  SQLITE_ARCHIVE_OPEN: (msg, sendResponse) => handleArchive('archiveOpen', msg, sendResponse),
-  SQLITE_ARCHIVE_QUERY: (msg, sendResponse) => handleArchive('archiveQuery', msg, sendResponse),
-  SQLITE_ARCHIVE_UPDATE: (msg, sendResponse) => handleArchive('archiveUpdate', msg, sendResponse),
-  SQLITE_ARCHIVE_SAVE: (msg, sendResponse) => handleArchive('archiveSave', msg, sendResponse),
-  SQLITE_ARCHIVE_CLOSE: (msg, sendResponse) => handleArchive('archiveClose', msg, sendResponse),
-  SQLITE_ARCHIVE_STATUS: (msg, sendResponse) => handleArchive('archiveStatus', msg, sendResponse),
+  ...archiveMessageHandlers,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 
 /**

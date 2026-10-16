@@ -41,14 +41,9 @@ import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportR
 import {
   emptyArgs,
   emptyProject,
-  noValidate,
   stagingNameArg,
   voidDecode,
 } from './wireLambdaFactories.js';
-import {
-  evaluateSubtypeSpec,
-  isPositiveInteger,
-} from './validators.js';
 
 /** Dashboard subtypes owned by the archive group. */
 export type DashboardArchiveSubtype = Extract<DashboardSqliteSubtype, `archive_${string}`>;
@@ -82,8 +77,6 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
   emptyError: string;
   /** Dashboard fallback message when the failure carries no reason. */
   defaultError: string;
-  /** Background payload shape check; null means the payload is acceptable. */
-  validate: (payload: Record<string, unknown>) => string | null;
   /** Builds the MaintainOp the background deps send to SqliteClient. */
   encodeRequest: (...args: never[]) => MaintainOp;
   /** Decodes the wire success shape into the dashboard public value. */
@@ -120,7 +113,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['preview'],
     emptyError: 'Archive preview returned no data',
     defaultError: 'Archive preview failed',
-    validate: (p) => evaluateSubtypeSpec('archive_preview', p),
     encodeRequest: (
       cutoffDate: string,
       cutoffMs: number,
@@ -145,7 +137,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['stagingName', 'recordCount'],
     emptyError: 'Archive create returned no staging file',
     defaultError: 'Archive creation failed',
-    validate: (p) => evaluateSubtypeSpec('archive_create', p),
     encodeRequest: (params: {
       cutoffDate: string;
       cutoffMs: number;
@@ -179,7 +170,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['removed'],
     emptyError: 'Archive cleanup returned no data',
     defaultError: 'Archive cleanup failed',
-    validate: noValidate,
     encodeRequest: (): Extract<MaintainOp, { type: 'archiveCleanup' }> => ({ type: 'archiveCleanup' }),
     decodeResponse: (response) => ({ removed: response.removed as string[] }),
     backendArgs: emptyArgs,
@@ -195,7 +185,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['chunk', 'nextOffset', 'total', 'done'],
     emptyError: 'Archive export returned no data',
     defaultError: 'Archive export failed',
-    validate: (p) => evaluateSubtypeSpec('archive_export', p),
     encodeRequest: (
       stagingName: string,
       offset: number,
@@ -223,7 +212,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['stagingName'],
     emptyError: 'Archive prepare returned no staging name',
     defaultError: 'Archive preparation failed',
-    validate: noValidate,
     encodeRequest: (): Extract<MaintainOp, { type: 'archivePrepareIncoming' }> => ({ type: 'archivePrepareIncoming' }),
     decodeResponse: (response) => {
       const stagingName = response.stagingName as string | undefined;
@@ -245,7 +233,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['preview'],
     emptyError: 'Archive restore preview returned no data',
     defaultError: 'Archive restore preview failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveRestorePreview' }> => ({
       type: 'archiveRestorePreview',
       stagingName,
@@ -268,7 +255,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['restored', 'restoredDeleted', 'skipped', 'skippedInvalid'],
     emptyError: 'Archive restore returned no data',
     defaultError: 'Archive restore failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveRestore' }> => ({
       type: 'archiveRestore',
       stagingName,
@@ -295,7 +281,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['deleted', 'remaining', 'freelistBefore', 'freelistAfter', 'vacuumOk'],
     emptyError: 'Archive purge returned no data',
     defaultError: 'Archive purge failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveDeleteByStaging' }> => ({
       type: 'archiveDeleteByStaging',
       stagingName,
@@ -329,7 +314,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: [],
     emptyError: 'Archive open returned no data',
     defaultError: 'Archive open failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveOpen' }> => ({
       type: 'archiveOpen',
       stagingName,
@@ -348,7 +332,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['rows', 'total'],
     emptyError: 'Archive query returned no data',
     defaultError: 'Archive query failed',
-    validate: (p) => evaluateSubtypeSpec('archive_query', p),
     encodeRequest: (
       stagingName: string,
       query: string,
@@ -375,15 +358,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['dirty'],
     emptyError: 'Archive update returned no data',
     defaultError: 'Archive update failed',
-    validate: (p) => {
-      if (!isPositiveInteger(p.id)) {
-        return 'archive_update: id must be a positive integer';
-      }
-      if (!p.changes || typeof p.changes !== 'object' || Array.isArray(p.changes)) {
-        return 'archive_update: changes must be an object';
-      }
-      return null;
-    },
     encodeRequest: (
       stagingName: string,
       id: number,
@@ -403,7 +377,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['dirty'],
     emptyError: 'Archive save returned no data',
     defaultError: 'Archive save failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveSave' }> => ({
       type: 'archiveSave',
       stagingName,
@@ -422,7 +395,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['dirty'],
     emptyError: 'Archive close returned no data',
     defaultError: 'Archive close failed',
-    validate: noValidate,
     encodeRequest: (stagingName: string): Extract<MaintainOp, { type: 'archiveClose' }> => ({
       type: 'archiveClose',
       stagingName,
@@ -441,7 +413,6 @@ export const ARCHIVE_WIRE_TABLE = [
     projectFields: ['status'],
     emptyError: 'Archive status returned no data',
     defaultError: 'Archive status failed',
-    validate: noValidate,
     encodeRequest: (): Extract<MaintainOp, { type: 'archiveStatus' }> => ({ type: 'archiveStatus' }),
     decodeResponse: (response) => response.status as ArchiveSessionStatusData,
     backendArgs: emptyArgs,

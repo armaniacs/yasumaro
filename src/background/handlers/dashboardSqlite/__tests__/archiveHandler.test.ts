@@ -216,3 +216,40 @@ describe('archiveHandler — archive_cleanup', () => {
     expect(deps.archiveCleanup).toHaveBeenCalled();
   });
 });
+
+describe('archiveHandler — handler entry validates without the envelope gate (PBI 2026-10-16-02)', () => {
+  it('rejects an unknown stagingName direct call before deps (archive_open)', async () => {
+    const deps = makeDeps({
+      archiveOpen: vi.fn(async () => ({ success: true, data: undefined }) as never),
+    });
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_open', stagingName: 'yasumaro.db' } as never);
+    expect(result).toEqual({ success: false, error: 'archive_open: stagingName must be a valid staging name' });
+    expect(deps.archiveOpen).not.toHaveBeenCalled();
+  });
+
+  it('rejects a missing stagingName direct call before deps (archive_save)', async () => {
+    const deps = makeDeps({
+      archiveSave: vi.fn(async () => ({ success: true, data: { dirty: false } }) as never),
+    });
+    const handler = createArchiveHandler(deps);
+    const result = await handler({ subtype: 'archive_save' } as never);
+    expect(result).toEqual({ success: false, error: 'archive_save: stagingName must be a valid staging name' });
+    expect(deps.archiveSave).not.toHaveBeenCalled();
+  });
+
+  it('archive_update rejects with the spec-table text (no hand-written copy)', async () => {
+    const deps = makeDeps({
+      archiveUpdate: vi.fn(async () => ({ success: true, data: { dirty: true } }) as never),
+    });
+    const handler = createArchiveHandler(deps);
+    const result = await handler({
+      subtype: 'archive_update',
+      stagingName: 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db',
+      id: 0,
+      changes: { summary: 'x' },
+    } as never);
+    expect(result).toEqual({ success: false, error: 'archive_update: id must be a positive integer' });
+    expect(deps.archiveUpdate).not.toHaveBeenCalled();
+  });
+});

@@ -3,7 +3,8 @@
  *
  * Single seam: `save(context, deps) -> SaveReceipt` (bound via
  * `createSavePhase`). Owns the 4-sink fan-out ordering, the BEST_EFFORT
- * continuation policy, and the retry-subset projection (`retryProjection()`).
+ * continuation policy, the retry-subset projection (`retryProjection()`),
+ * and the retry entry point (`saveRetry() -> SaveReceipt`).
  *
  * Deletion test: deleting this module forces the 4-sink order, the
  * per-sink continuation mapping, and the retry subset to reappear as
@@ -32,7 +33,7 @@ import {
 } from './steps/index.js';
 import { saveSqliteStep } from './steps/saveSqliteStep.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
-import { createSaveSqliteParams } from './contextBuilder.js';
+import { createSaveSqliteParams, type RetryContext } from './contextBuilder.js';
 
 export type SaveSinkName = 'saveObsidian' | 'saveLocalMarkdown' | 'saveSqlite' | 'saveMetadata';
 
@@ -208,6 +209,19 @@ export interface SavePhase {
   steps(): PipelineStep[];
   retryProjection(): PipelineStep[];
   save(context: RecordingContext, deps: StepDeps): Promise<SaveReceipt>;
+  /**
+   * Retry-subset entry point (PBI 2026-10-16-09): the format head plus every
+   * retryable sink, run through the same executor driver as `save()`.
+   *
+   * Returns a SaveReceipt so the caller decides success from `outcomes`,
+   * never by re-reading context fields. A sink that skips silently (e.g.
+   * Obsidian disabled) is reported as `skipped`, not `ok`.
+   *
+   * Failure parity: step failures propagate to the caller exactly like the
+   * former orchestrator hand loop — there is no second sink to continue to,
+   * and the offline queue relies on the throw to keep the job.
+   */
+  saveRetry(context: RetryContext, deps: StepDeps): Promise<SaveReceipt>;
 }
 
 /** Bind the execution driver once; callers use `save(context, deps)` only. */
@@ -216,5 +230,39 @@ export function createSavePhase(env: SavePhaseEnv): SavePhase {
     steps: () => savePhaseSteps(),
     retryProjection: () => retryProjection(),
     save: (context, deps) => save(context, deps, env),
+    saveRetry: (context, deps) => saveRetry(context, deps, env),
   };
+}
+
+/**
+ * Run the retry projection (format head + retryable sinks) and report a
+ * SaveReceipt. Shares the executor driver — and the fan-out table the
+ * projection derives from — with `save()`, so the two paths cannot drift.
+ */
+export async function saveRetry(
+  context: RetryContext,
+  deps: StepDeps,
+  env: SavePhaseEnv
+): Promise<SaveReceipt> {
+  let ctx: RecordingContext = context;
+  const wroteBefore = ctx.obsidianDuration !== undefined;
+  for (const step of retryProjection()) {
+    ctx = await env.executor.executeWithStrategy(step, ctx, deps);
+  }
+  const outcomes: SaveSinkOutcome[] = [];
+  for (const sink of SAVE_FAN_OUT) {
+    if (!sink.retryable) continue;
+    if (sink.name === 'saveObsidian') {
+      // Write attestation owned by the seam: the sink stamps obsidianDuration
+      // only when it actually appends, so a silent skip reads as `skipped`
+      // and the caller returns false instead of dropping the job as synced.
+      const wrote = ctx.obsidianDuration !== undefined && !wroteBefore;
+      outcomes.push(
+        wrote ? { name: sink.name, status: 'ok' } : { name: sink.name, status: 'skipped', reason: 'no-write' }
+      );
+      continue;
+    }
+    outcomes.push({ name: sink.name, status: 'ok' });
+  }
+  return { terminated: false, context: ctx, outcomes };
 }

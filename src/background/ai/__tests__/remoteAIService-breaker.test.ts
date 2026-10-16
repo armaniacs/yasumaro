@@ -12,6 +12,8 @@ import { addLog } from '../../../utils/logger/core.js';
 import { LogType } from '../../../utils/logger/types.js';
 import type { AIProviderStrategy } from '../providers/index.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
+import type { Settings } from '../../../utils/storage/types.js';
+import { createProviderStrategy } from '../providerCatalog.js';
 import type { SessionStorePort } from '../../sessionStore.js';
 import type { FailureMetadata } from '../../../utils/failureTaxonomy.js';
 
@@ -56,9 +58,24 @@ function succeedingProvider(summary: string): AIProviderStrategy {
   } as unknown as AIProviderStrategy;
 }
 
+type FakeMap = Record<string, (settings: Settings) => AIProviderStrategy>;
+
+/**
+ * PBI 2026-10-16-03: fakes enter via the single injected generation seam.
+ * Ids absent from `fakes` fall through to the production createProviderStrategy.
+ */
+function dispatch(fakes: FakeMap): (providerId: string, settings: Settings) => AIProviderStrategy {
+  return (providerId: string, settings: Settings) => {
+    const fake = fakes[providerId];
+    if (fake) return fake(settings);
+    return createProviderStrategy(providerId, settings);
+  };
+}
+
 function createService(
   slots: Array<{ provider: string; model?: string }>,
   breaker: ProviderBreaker,
+  fakes: FakeMap = {},
 ) {
   const service = new RemoteAIService({
     repo: makeRepo({
@@ -67,6 +84,7 @@ function createService(
       summary_min_length: 0,
     }),
     breaker,
+    createStrategy: dispatch(fakes),
   });
   return service;
 }
@@ -119,6 +137,7 @@ function createGatedService(
   slots: Array<{ provider: string; model?: string }>,
   breaker: ProviderBreakerLike,
   gateEnabled: boolean,
+  fakes: FakeMap = {},
 ) {
   const repo = makeRepo({
     ai_provider_priority_list: slots,
@@ -126,7 +145,7 @@ function createGatedService(
     summary_min_length: 0,
     ai_provider_breaker_enabled: gateEnabled,
   });
-  const service = new RemoteAIService({ repo, breaker });
+  const service = new RemoteAIService({ repo, breaker, createStrategy: dispatch(fakes) });
   return { service, repo };
 }
 
@@ -145,11 +164,12 @@ describe('generateSummary with breaker', () => {
     await breaker.recordFailure('cold', undefined, networkFailure);
     await breaker.recordFailure('cold', undefined, networkFailure);
 
-    const service = createService([{ provider: 'cold' }, { provider: 'warm' }], breaker);
     const coldFactory = vi.fn(() => failingProvider(networkFailure));
     const warmFactory = vi.fn(() => succeedingProvider('warm summary'));
-    service.registerProvider('cold', coldFactory);
-    service.registerProvider('warm', warmFactory);
+    const service = createService([{ provider: 'cold' }, { provider: 'warm' }], breaker, {
+      cold: coldFactory,
+      warm: warmFactory,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -167,9 +187,10 @@ describe('generateSummary with breaker', () => {
     await breaker.recordFailure('cold', undefined, networkFailure);
     await breaker.recordFailure('cold', undefined, networkFailure);
 
-    const service = createService([{ provider: 'cold' }], breaker);
     const coldFactory = vi.fn(() => failingProvider(networkFailure));
-    service.registerProvider('cold', coldFactory);
+    const service = createService([{ provider: 'cold' }], breaker, {
+      cold: coldFactory,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -183,16 +204,17 @@ describe('generateSummary with breaker', () => {
   });
 
   it('records taxonomy failures into the breaker without reading messages', async () => {
-    const service = createService([{ provider: 'flaky' }], breaker);
-    // The message is deliberately misleading — the kind decides.
-    service.registerProvider('flaky', () => ({
-      generateSummary: vi.fn().mockResolvedValue({
-        success: false,
-        summary: 'definitely a success, trust me',
-        failure: { kind: 'timeout' } as FailureMetadata,
-      }),
-      testConnection: vi.fn(),
-    } as unknown as AIProviderStrategy));
+    const service = createService([{ provider: 'flaky' }], breaker, {
+      // The message is deliberately misleading — the kind decides.
+      flaky: () => ({
+        generateSummary: vi.fn().mockResolvedValue({
+          success: false,
+          summary: 'definitely a success, trust me',
+          failure: { kind: 'timeout' } as FailureMetadata,
+        }),
+        testConnection: vi.fn(),
+      } as unknown as AIProviderStrategy),
+    });
 
     await service.generateSummary('content');
 
@@ -201,11 +223,12 @@ describe('generateSummary with breaker', () => {
   });
 
   it('does not record failures that carry no taxonomy', async () => {
-    const service = createService([{ provider: 'vague' }], breaker);
-    service.registerProvider('vague', () => ({
-      generateSummary: vi.fn().mockResolvedValue({ success: false, summary: 'short' }),
-      testConnection: vi.fn(),
-    } as unknown as AIProviderStrategy));
+    const service = createService([{ provider: 'vague' }], breaker, {
+      vague: () => ({
+        generateSummary: vi.fn().mockResolvedValue({ success: false, summary: 'short' }),
+        testConnection: vi.fn(),
+      } as unknown as AIProviderStrategy),
+    });
 
     await service.generateSummary('content');
 
@@ -215,8 +238,9 @@ describe('generateSummary with breaker', () => {
 
   it('resets the breaker on success', async () => {
     await breaker.recordFailure('flaky', undefined, networkFailure);
-    const service = createService([{ provider: 'flaky' }], breaker);
-    service.registerProvider('flaky', () => succeedingProvider('recovered'));
+    const service = createService([{ provider: 'flaky' }], breaker, {
+      flaky: () => succeedingProvider('recovered'),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -226,20 +250,22 @@ describe('generateSummary with breaker', () => {
   });
 
   it('keeps MAX_PROVIDERS, order, fallback, dedupe and single-flight intact', async () => {
-    const service = createService(
-      Array.from({ length: 12 }, (_, i) => ({ provider: `p${i}` })),
-      breaker,
-    );
     const calls: string[] = [];
+    const fakes: FakeMap = {};
     for (let i = 0; i < 12; i++) {
-      service.registerProvider(`p${i}`, () => ({
+      fakes[`p${i}`] = () => ({
         generateSummary: vi.fn(async () => {
           calls.push(`p${i}`);
           return { success: false, summary: `fail${i}` };
         }),
         testConnection: vi.fn(),
-      } as unknown as AIProviderStrategy));
+      } as unknown as AIProviderStrategy);
     }
+    const service = createService(
+      Array.from({ length: 12 }, (_, i) => ({ provider: `p${i}` })),
+      breaker,
+      fakes,
+    );
 
     await service.generateSummary('content');
 
@@ -258,9 +284,12 @@ describe('testConnection reset (PBI 27-08)', () => {
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
     await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
 
-    const service = createService([{ provider: 'cold' }], breaker);
     const factory = vi.fn(() => succeedingProvider('recovered summary'));
-    service.registerProvider('cold', factory);
+    const summaryFactory = vi.fn(() => succeedingProvider('recovered summary'));
+    let current: (settings: Settings) => AIProviderStrategy = (s) => factory(s);
+    const service = createService([{ provider: 'cold' }], breaker, {
+      cold: (s) => current(s),
+    });
 
     const result = await service.testConnection();
 
@@ -270,8 +299,7 @@ describe('testConnection reset (PBI 27-08)', () => {
     // And now the cooldown is gone: the fixed credentials are actually usable.
     await expect(breaker.shouldAttempt('cold')).resolves.toBe(true);
 
-    const summaryFactory = vi.fn(() => succeedingProvider('recovered summary'));
-    service.registerProvider('cold', summaryFactory);
+    current = (s) => summaryFactory(s);
     const summary = await service.generateSummary('content');
 
     expect(summaryFactory).toHaveBeenCalledTimes(1);
@@ -287,8 +315,9 @@ describe('testConnection reset (PBI 27-08)', () => {
     await breaker.recordFailure('cold', 'gpt-4o', { kind: 'auth', status: 401 });
     await breaker.recordFailure('anthropic', 'claude', { kind: 'rate_limit', status: 429 });
 
-    const service = createService([{ provider: 'cold', model: 'gpt-4o' }], breaker);
-    service.registerProvider('cold', () => succeedingProvider('ok'));
+    const service = createService([{ provider: 'cold', model: 'gpt-4o' }], breaker, {
+      cold: () => succeedingProvider('ok'),
+    });
 
     await service.testConnection();
 
@@ -299,8 +328,9 @@ describe('testConnection reset (PBI 27-08)', () => {
   it('logs the reset once as INFO', async () => {
     const breaker = new ProviderBreaker(memoryStore());
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
-    const service = createService([{ provider: 'cold' }], breaker);
-    service.registerProvider('cold', () => succeedingProvider('plain summary'));
+    const service = createService([{ provider: 'cold' }], breaker, {
+      cold: () => succeedingProvider('plain summary'),
+    });
 
     const result = await service.testConnection();
 
@@ -317,9 +347,10 @@ describe('testConnection reset (PBI 27-08)', () => {
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
     const cooldownBefore = await breaker.cooldown('cold');
 
-    const service = createService([{ provider: 'cold' }], breaker);
     const factory = vi.fn(() => failingProvider({ kind: 'auth', status: 401 }));
-    service.registerProvider('cold', factory);
+    const service = createService([{ provider: 'cold' }], breaker, {
+      cold: factory,
+    });
 
     const result = await service.testConnection();
 
@@ -335,11 +366,12 @@ describe('testConnection reset (PBI 27-08)', () => {
     const breaker = new ProviderBreaker(store);
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
 
-    const service = createService([{ provider: 'cold' }], breaker);
-    service.registerProvider('cold', () => ({
-      generateSummary: vi.fn(),
-      testConnection: vi.fn().mockRejectedValue(new Error('probe exploded')),
-    } as unknown as AIProviderStrategy));
+    const service = createService([{ provider: 'cold' }], breaker, {
+      cold: () => ({
+        generateSummary: vi.fn(),
+        testConnection: vi.fn().mockRejectedValue(new Error('probe exploded')),
+      } as unknown as AIProviderStrategy),
+    });
 
     const result = await service.testConnection();
 
@@ -351,8 +383,9 @@ describe('testConnection reset (PBI 27-08)', () => {
     const store = memoryStore();
     const breaker = new ProviderBreaker(store);
     const setSpy = vi.spyOn(store, 'set');
-    const service = createService([{ provider: 'fine' }], breaker);
-    service.registerProvider('fine', () => succeedingProvider('ok'));
+    const service = createService([{ provider: 'fine' }], breaker, {
+      fine: () => succeedingProvider('ok'),
+    });
 
     const result = await service.testConnection();
 
@@ -377,9 +410,10 @@ describe('generateSummary with the breaker gate', () => {
 
   it('attempts a cooled-down slot and reports no suppression when the gate is off', async () => {
     const spy = spyBreaker(breaker);
-    const { service, repo } = createGatedService([{ provider: 'cold' }], spy, false);
     const coldFactory = vi.fn(() => succeedingProvider('recovered summary'));
-    service.registerProvider('cold', coldFactory);
+    const { service, repo } = createGatedService([{ provider: 'cold' }], spy, false, {
+      cold: coldFactory,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -400,8 +434,9 @@ describe('generateSummary with the breaker gate', () => {
 
   it('records nothing when the gate is off and the slot fails', async () => {
     const spy = spyBreaker(breaker);
-    const { service } = createGatedService([{ provider: 'cold' }], spy, false);
-    service.registerProvider('cold', () => failingProvider({ kind: 'timeout' }));
+    const { service } = createGatedService([{ provider: 'cold' }], spy, false, {
+      cold: () => failingProvider({ kind: 'timeout' }),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -413,9 +448,10 @@ describe('generateSummary with the breaker gate', () => {
 
   it('keeps the cooldown suppression when the gate is on', async () => {
     const spy = spyBreaker(breaker);
-    const { service } = createGatedService([{ provider: 'cold' }], spy, true);
     const coldFactory = vi.fn(() => succeedingProvider('never used'));
-    service.registerProvider('cold', coldFactory);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, true, {
+      cold: coldFactory,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -429,9 +465,10 @@ describe('generateSummary with the breaker gate', () => {
 
   it('runs testConnection as usual with the gate off, breaker untouched', async () => {
     const spy = spyBreaker(breaker);
-    const { service } = createGatedService([{ provider: 'cold' }], spy, false);
     const factory = vi.fn(() => succeedingProvider('ok'));
-    service.registerProvider('cold', factory);
+    const { service } = createGatedService([{ provider: 'cold' }], spy, false, {
+      cold: factory,
+    });
 
     const result = await service.testConnection();
 
@@ -446,8 +483,9 @@ describe('generateSummary with the breaker gate', () => {
 
   it('clears the cooldown on a successful testConnection with the gate on', async () => {
     const spy = spyBreaker(breaker);
-    const { service } = createGatedService([{ provider: 'cold' }], spy, true);
-    service.registerProvider('cold', () => succeedingProvider('ok'));
+    const { service } = createGatedService([{ provider: 'cold' }], spy, true, {
+      cold: () => succeedingProvider('ok'),
+    });
 
     const result = await service.testConnection();
 
@@ -457,8 +495,9 @@ describe('generateSummary with the breaker gate', () => {
   });
 
   it('notes the disabled gate once, not per summary request', async () => {
-    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), false);
-    service.registerProvider('cold', () => succeedingProvider('ok'));
+    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), false, {
+      cold: () => succeedingProvider('ok'),
+    });
 
     await service.generateSummary('one', { url: 'https://example.com/1' });
     await service.generateSummary('two', { url: 'https://example.com/2' });
@@ -470,8 +509,9 @@ describe('generateSummary with the breaker gate', () => {
   });
 
   it('logs nothing about the gate while it is on', async () => {
-    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), true);
-    service.registerProvider('cold', () => succeedingProvider('ok'));
+    const { service } = createGatedService([{ provider: 'cold' }], disabledSpy(), true, {
+      cold: () => succeedingProvider('ok'),
+    });
 
     await service.generateSummary('content');
 

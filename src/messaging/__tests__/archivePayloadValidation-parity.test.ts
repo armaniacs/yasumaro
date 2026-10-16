@@ -1,27 +1,24 @@
 /**
- * archivePayloadValidation-parity.test.ts (PBI 2026-10-09-01 / NN01)
+ * archivePayloadValidation-parity.test.ts (PBI 2026-10-09-01 / NN01, reworked
+ * by PBI 2026-10-16-02)
  *
  * The 5 archive subtypes with payload checks (preview / create / export /
- * query / update) cross TWO hand-written gates on the same request:
+ * query / update) used to cross TWO hand-written gates on the same request:
  *
  *   1. envelope gate — DASHBOARD_SQLITE_SUBTYPE_SPECS in validators.ts
  *      (MessageRouter runs it first in production)
  *   2. handler gate  — the `validate` lambda on each ARCHIVE_WIRE_TABLE row
  *
- * Both gates used to be typed out independently, so a bound could be added to
- * one gate and missed on the other (archive_export's 8MB length cap, archive_query's
- * limit literal). This test pins, per shared field/bound, the accept/reject
- * outcome of BOTH gates and that they agree — so a one-sided change to the
- * bound fails here instead of surviving unnoticed.
- *
- * Divergences that NN01 deliberately left open (cutoff-pair verification,
- * includeDeleted / yasumaroVersion presence, query length cap) were closed by
- * NN10 (PBI 2026-10-11-10): both gates now run the same spec row through the
- * single interpreter (`interpretSubtypeSpec`, presented on the wire side as
- * `evaluateSubtypeSpec`), and the bottom block asserts they agree.
+ * PBI 2026-10-16-02 removed the wire-table validate column: the handler entry
+ * (runArchive) now evaluates the same spec row via evaluateSubtypeSpec, so
+ * the spec table is the only truth and direct createArchiveHandler calls
+ * cannot bypass it. This file is kept as the coverage test pinning that both
+ * presentations (envelope validate vs handler-entry evaluateSubtypeSpec)
+ * agree per shared field/bound — plus the structural pin that no wire row
+ * carries a validate column anymore.
  */
 import { describe, it, expect } from 'vitest';
-import { dashboardSqliteValidator } from '../validators.js';
+import { dashboardSqliteValidator, evaluateSubtypeSpec } from '../validators.js';
 import { ARCHIVE_WIRE_TABLE, type DashboardArchiveSubtype } from '../archiveWireTable.js';
 import { cutoffMsFromLocalDate } from '../../utils/archiveGuards.js';
 import {
@@ -42,9 +39,9 @@ function envelopeGate(payload: Record<string, unknown>): Gate {
 }
 
 function wireResult(subtype: DashboardArchiveSubtype, payload: Record<string, unknown>): string | null {
-  const descriptor = ARCHIVE_WIRE_TABLE.find((entry) => entry.subtype === subtype);
-  if (!descriptor) throw new Error(`no archive wire row for ${subtype}`);
-  return descriptor.validate(payload);
+  // Handler-entry rendering: runArchive evaluates the spec row for the
+  // descriptor's subtype — the wire table itself carries no validate column.
+  return evaluateSubtypeSpec(subtype, payload);
 }
 
 function wireGate(subtype: DashboardArchiveSubtype, payload: Record<string, unknown>): Gate {
@@ -122,6 +119,11 @@ const PARITY_CASES: readonly ParityCase[] = [
 ];
 
 describe('archive payload validation parity: envelope spec vs wire-table validate (NN01)', () => {
+  it('no wire row carries a validate column (spec table is the only truth)', () => {
+    for (const entry of ARCHIVE_WIRE_TABLE) {
+      expect(entry).not.toHaveProperty('validate');
+    }
+  });
   for (const c of PARITY_CASES) {
     it(c.name, () => {
       const payload = { ...BASE[c.subtype], ...c.patch };

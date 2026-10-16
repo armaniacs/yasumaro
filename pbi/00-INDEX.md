@@ -14,6 +14,27 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-16 アーキテクチャ深掘りラウンド（arch-1016） — ✅ 12件完了・アーカイブ済み 🔧非機能追加
+
+improve-codebase-architecture の4領域並列探索で12候補（Strong 6・Worth 6）をRICE順に自律実装・検証してアーカイブ。B1（01/02/03/04）→B2（06/07/08/09）→B3（05/12＋11）→B4（10）の依存順バッチ。RICE詳細は [2026-10-16-00-backlog-arch-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-arch-1016.md)（アーカイブ済み）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ✅ 01 | [2026-10-16-01-refactor-import-postprocess-seam.md](../dev-docs/archived/pbi/2026-10-16-01-refactor-import-postprocess-seam.md) | refactor | 64 | 2.0 | ✅ 完了。finalize集約＋repo/signer注入。105件緑 |
+| ✅ 02 | [2026-10-16-02-refactor-archive-validate-singlesource.md](../dev-docs/archived/pbi/2026-10-16-02-refactor-archive-validate-singlesource.md) | refactor | 48 | 2.0 | ✅ 完了。wire validate撤去＋入口委譲。523件緑 |
+| ✅ 03 | [2026-10-16-03-refactor-provider-factory-singleseam.md](../dev-docs/archived/pbi/2026-10-16-03-refactor-provider-factory-singleseam.md) | refactor | 48 | 2.0 | ✅ 完了。生成関数1本注入。399件緑 |
+| ✅ 04 | [2026-10-16-04-refactor-recovery-owner-function.md](../dev-docs/archived/pbi/2026-10-16-04-refactor-recovery-owner-function.md) | refactor | 31.5 | 2.0 | ✅ 完了。decideRecoveryOwner＋StepFailureError。72件緑 |
+| ✅ 05 | [2026-10-16-05-refactor-http-hooks-unify.md](../dev-docs/archived/pbi/2026-10-16-05-refactor-http-hooks-unify.md) | refactor | 21 | 3.0 | ✅ 完了。Hook1組化。425件緑 |
+| ✅ 06 | [2026-10-16-06-refactor-encrypted-export-codec.md](../dev-docs/archived/pbi/2026-10-16-06-refactor-encrypted-export-codec.md) | refactor | 18.7 | 3.0 | ✅ 完了。codec別module＋表テスト29件 |
+| ✅ 07 | [2026-10-16-07-refactor-gate-decision-shim.md](../dev-docs/archived/pbi/2026-10-16-07-refactor-gate-decision-shim.md) | refactor | 12 | 1.0 | ✅ 完了。shim撤去＋表駆動pin。484件緑 |
+| ✅ 08 | [2026-10-16-08-refactor-op-enumeration-derived.md](../dev-docs/archived/pbi/2026-10-16-08-refactor-op-enumeration-derived.md) | refactor | 11.7 | 3.0 | ✅ 完了。2層ループ化＋表駆動48件。worker-switchはSTAGED |
+| ✅ 09 | [2026-10-16-09-refactor-retry-savephase-unify.md](../dev-docs/archived/pbi/2026-10-16-09-refactor-retry-savephase-unify.md) | refactor | 10 | 3.0 | ✅ 完了。saveRetry＋RetryContext。493件緑 |
+| ✅ 10 | [2026-10-16-10-refactor-ai-settings-valueobject.md](../dev-docs/archived/pbi/2026-10-16-10-refactor-ai-settings-valueobject.md) | refactor | 6.7 | 3.0 | ✅ 完了。Resolved値＋受領口。413件緑 |
+| ✅ 11 | [2026-10-16-11-refactor-purge-search-planner.md](../dev-docs/archived/pbi/2026-10-16-11-refactor-purge-search-planner.md) | refactor | 6.7 | 3.0 | ✅ 完了。planSettingsPurge正準＋入口fail-close。1411件緑 |
+| ✅ 12 | [2026-10-16-12-refactor-migration-port-unify.md](../dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md) | refactor | 5 | 3.0 | ✅ 完了。Port一本化＋静的import。509件緑 |
+
+実行順: B1→B2→B3→B4（依存順）。対象範囲テスト 301ファイル・3510テスト全緑、`type-check` clean、`lint` 0 errors。フルスイートは未接触領域の負荷flake（単独緑・実行毎に集合変動）のみ。
+
 ### 2026-10-16 adversarial-code-review ラウンド（adversarial-1016） — ✅ 8件完了・アーカイブ済み 🔧非機能追加
 
 adversarial-code-review（7a3a39e0 差分対象）の検証通過 21 件を RICE 順に PBI 化し自律実装・検証してアーカイブ。発見 109 件中 88 件は反証で却下（到達不能・pin 済み意図動作・パーサ正規化・MV3 制約）。RICE 採点・却下記録の詳細は [2026-10-16-00-backlog-adversarial-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-adversarial-1016.md)（アーカイブ済み）。

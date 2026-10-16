@@ -3,7 +3,7 @@ import type { SqliteEngineHost } from './sqliteEngineHost.js';
 import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import type { ArchiveStaging } from './archiveStaging.js';
-import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type DescriptorResponse } from '../messaging/archiveWireTable.js';
+import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type ArchiveOpType, type DescriptorResponse } from '../messaging/archiveWireTable.js';
 import { planQueryMode } from './queryPlan.js';
 
 /**
@@ -31,6 +31,48 @@ export const OPFS_DEGRADE_FAILURE_THRESHOLD = 3;
  * which is why the parameter is loose about its type.
  */
 export type OpfsDegradeSignal = () => unknown;
+
+/**
+ * Per-op worker-payload packers (PBI 2026-10-16-08): the positional→payload
+ * glue the 14 hand-written archive proxies used to inline per method.
+ *
+ * Keyed by descriptor.backendMethod; the install loop below pairs each pack
+ * with its ARCHIVE_DESCRIPTORS row, so adding an op is one wire-table row
+ * plus one pack here (the "runner実装"). The two compile-time asserts pin
+ * the pairing both ways: a row without a pack, or a pack without a row, is
+ * a type error — not a runtime drift.
+ */
+export const ARCHIVE_BACKEND_PACKS = {
+  archivePreview: (cutoffDate: string, cutoffMs: number, includeDeleted: boolean) => ({
+    cutoffDate,
+    cutoffMs,
+    includeDeleted,
+  }),
+  archiveCreate: (params: ArchiveCreateParams) => params,
+  archiveCleanup: () => undefined,
+  archiveExportChunk: (stagingName: string, offset: number, length: number) => ({ stagingName, offset, length }),
+  archivePrepareIncoming: () => undefined,
+  archiveRestorePreview: (stagingName: string) => ({ stagingName }),
+  archiveRestore: (stagingName: string) => ({ stagingName }),
+  archiveDeleteByStaging: (stagingName: string) => ({ stagingName }),
+  archiveOpen: (stagingName: string) => ({ stagingName }),
+  archiveQuery: (stagingName: string, query: string, limit: number, offset: number) => ({ stagingName, query, limit, offset }),
+  archiveUpdate: (stagingName: string, id: number, changes: Record<string, unknown>) => ({ stagingName, id, changes }),
+  archiveSave: (stagingName: string) => ({ stagingName }),
+  archiveClose: (stagingName: string) => ({ stagingName }),
+  archiveStatus: () => undefined,
+};
+
+export type ArchiveBackendPackMethod = keyof typeof ARCHIVE_BACKEND_PACKS;
+
+type _BackendPacksCovered = Exclude<ArchiveDescriptor['backendMethod'], ArchiveBackendPackMethod> extends never
+  ? true
+  : never;
+const _checkBackendPacksCovered: _BackendPacksCovered = true;
+type _BackendPacksLive = Exclude<ArchiveBackendPackMethod, ArchiveDescriptor['backendMethod']> extends never
+  ? true
+  : never;
+const _checkBackendPacksLive: _BackendPacksLive = true;
 
 export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
   #consecutiveFailures = 0;
@@ -198,60 +240,47 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     return this.callWorkerOk<Uint8Array, BackupResult>('BACKUP', undefined, (data) => ({ success: true, data }));
   }
 
-  async archivePreview(cutoffDate: string, cutoffMs: number, includeDeleted: boolean): Promise<BackendOrError<ArchivePreviewResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archivePreview, { cutoffDate, cutoffMs, includeDeleted });
-  }
+  declare archivePreview: (cutoffDate: string, cutoffMs: number, includeDeleted: boolean) => Promise<BackendOrError<ArchivePreviewResult>>;
+  declare archiveCreate: (params: ArchiveCreateParams) => Promise<BackendOrError<ArchiveCreateResult>>;
+  declare archiveCleanup: () => Promise<BackendOrError<ArchiveCleanupResult>>;
+  declare archiveExportChunk: (stagingName: string, offset: number, length: number) => Promise<BackendOrError<ArchiveExportChunkResult>>;
+  declare archivePrepareIncoming: () => Promise<BackendOrError<ArchivePrepareIncomingResult>>;
+  declare archiveRestorePreview: (stagingName: string) => Promise<BackendOrError<ArchiveRestorePreviewResult>>;
+  declare archiveRestore: (stagingName: string) => Promise<BackendOrError<ArchiveRestoreResult>>;
+  declare archiveDeleteByStaging: (stagingName: string) => Promise<BackendOrError<ArchiveDeleteByStagingResult>>;
+  declare archiveOpen: (stagingName: string) => Promise<BackendOrError<ArchiveOpenResult>>;
+  declare archiveQuery: (stagingName: string, query: string, limit: number, offset: number) => Promise<BackendOrError<ArchiveQueryResult>>;
+  declare archiveUpdate: (stagingName: string, id: number, changes: Record<string, unknown>) => Promise<BackendOrError<ArchiveUpdateResult>>;
+  declare archiveSave: (stagingName: string) => Promise<BackendOrError<ArchiveSaveResult>>;
+  declare archiveClose: (stagingName: string) => Promise<BackendOrError<ArchiveCloseResult>>;
+  declare archiveStatus: () => Promise<BackendOrError<ArchiveStatusResult>>;
 
-  async archiveCreate(params: ArchiveCreateParams): Promise<BackendOrError<ArchiveCreateResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveCreate, params);
-  }
-
-  async archiveCleanup(): Promise<BackendOrError<ArchiveCleanupResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveCleanup, undefined);
-  }
-
-  async archiveExportChunk(stagingName: string, offset: number, length: number): Promise<BackendOrError<ArchiveExportChunkResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveExport, { stagingName, offset, length });
-  }
-
-  async archivePrepareIncoming(): Promise<BackendOrError<ArchivePrepareIncomingResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archivePrepareIncoming, undefined);
-  }
-
-  async archiveRestorePreview(stagingName: string): Promise<BackendOrError<ArchiveRestorePreviewResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveRestorePreview, { stagingName });
-  }
-
-  async archiveRestore(stagingName: string): Promise<BackendOrError<ArchiveRestoreResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveRestore, { stagingName });
-  }
-
-  async archiveDeleteByStaging(stagingName: string): Promise<BackendOrError<ArchiveDeleteByStagingResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveDeleteByStaging, { stagingName });
-  }
-
-  async archiveOpen(stagingName: string): Promise<BackendOrError<ArchiveOpenResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveOpen, { stagingName });
-  }
-
-  async archiveQuery(stagingName: string, query: string, limit: number, offset: number): Promise<BackendOrError<ArchiveQueryResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveQuery, { stagingName, query, limit, offset });
-  }
-
-  async archiveUpdate(stagingName: string, id: number, changes: Record<string, unknown>): Promise<BackendOrError<ArchiveUpdateResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveUpdate, { stagingName, id, changes });
-  }
-
-  async archiveSave(stagingName: string): Promise<BackendOrError<ArchiveSaveResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveSave, { stagingName });
-  }
-
-  async archiveClose(stagingName: string): Promise<BackendOrError<ArchiveCloseResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveClose, { stagingName });
-  }
-
-  async archiveStatus(): Promise<BackendOrError<ArchiveStatusResult>> {
-    return this.proxyArchive(ARCHIVE_DESCRIPTORS.archiveStatus, undefined);
+  /**
+   * Descriptor-loop install (PBI 2026-10-16-08): every archive proxy is the
+   * same shape — pack positional args, proxyArchive through the descriptor —
+   * so the 14 methods are installed from ARCHIVE_DESCRIPTORS ×
+   * ARCHIVE_BACKEND_PACKS instead of hand-written. The `declare` fields above
+   * keep the precise per-op public signatures (call sites stay type-checked;
+   * cf. the deliberate hand-written delegates in
+   * background/handlers/dashboardSqlite/deps.ts which keep theirs for the same
+   * reason) while the runtime comes from this loop. A missing pack throws at
+   * class-definition time, before any instance exists.
+   */
+  static {
+    for (const op of Object.keys(ARCHIVE_DESCRIPTORS) as ArchiveOpType[]) {
+      const descriptor = ARCHIVE_DESCRIPTORS[op];
+      const pack = (ARCHIVE_BACKEND_PACKS as Record<string, (...args: never[]) => unknown>)[
+        descriptor.backendMethod
+      ];
+      if (typeof pack !== 'function') {
+        throw new Error(`OpfsWorkerBackend: missing archive pack for ${descriptor.backendMethod}`);
+      }
+      (OpfsWorkerBackend.prototype as unknown as Record<string, (...args: never[]) => Promise<unknown>>)[
+        descriptor.backendMethod
+      ] = async function (this: OpfsWorkerBackend, ...args: never[]): Promise<unknown> {
+        return this.proxyArchive(descriptor, pack(...args));
+      };
+    }
   }
 
   async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {

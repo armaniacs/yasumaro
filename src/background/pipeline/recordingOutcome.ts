@@ -29,7 +29,7 @@ import {
   notifyObsidianSaveSuccess,
 } from './resultBuilder.js';
 import { PrivatePageError, DuplicateError, RegenerateUpdateError } from './steps/index.js';
-import { ErrorStrategy, readOfflineEnqueueInfo, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
+import { ErrorStrategy, decideRecoveryOwner, unwrapStepFailure, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 
 /**
@@ -109,18 +109,22 @@ export function decideStepOutcome(
   context: RecordingContext,
   adapters: OutcomeAdapters = defaultOutcomeAdapters,
 ): StepOutcome {
-  if (thrown instanceof PrivatePageError) {
-    return { done: true, result: buildPrivatePageResult(context, thrown) };
+  // PBI 2026-10-16-04: the enqueue result arrives in a typed StepFailureError
+  // carrier (or an explicit PipelineError field), never as a dynamic property
+  // on the error. Unwrap first so every branch below sees the original error.
+  const { error: original, enqueued } = unwrapStepFailure(thrown);
+  if (original instanceof PrivatePageError) {
+    return { done: true, result: buildPrivatePageResult(context, original) };
   }
-  if (thrown instanceof DuplicateError) {
+  if (original instanceof DuplicateError) {
     const { data } = context;
     return {
       done: true,
-      result: { success: true, skipped: true, reason: thrown.reason, title: data.title, url: data.url },
+      result: { success: true, skipped: true, reason: original.reason, title: data.title, url: data.url },
     };
   }
-  const error = thrown as Error;
-  if (thrown instanceof RegenerateUpdateError) {
+  const error = original as Error;
+  if (original instanceof RegenerateUpdateError) {
     // Regenerate is UPDATE-only: the pending-recovery queue replays MANUAL
     // records as INSERTs by URL — recovering this failure that way would
     // duplicate the very row the update was replacing. Terminal error,
@@ -152,8 +156,9 @@ export function decideStepOutcome(
     // PBI 2026-09-25-12: when the offline enqueue succeeded, the offline job
     // is the sole recovery owner — a pending page for the same recording
     // would let the 5-minute alarm retry and a manual re-run run it twice.
-    const offlineEnqueued = readOfflineEnqueueInfo(thrown)?.enqueued === true;
-    if (context.data.targetEntryId === undefined && !offlineEnqueued) {
+    // PBI 2026-10-16-04: both rules live in decideRecoveryOwner alone.
+    const owner = decideRecoveryOwner({ targetEntryId: context.data.targetEntryId, enqueued });
+    if (owner === 'pending') {
       adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message));
     }
     const result = buildErrorResult(context, error);
@@ -166,6 +171,9 @@ export function decideStepOutcome(
     strategy: step.errorStrategy,
     timestamp: Date.now(),
     ...pickDefined({ recoveryKind: step.offlineRetry?.jobKind }),
+    // Explicit enqueue channel (PBI 2026-10-16-04): finalizeSuccess reads the
+    // owner from here instead of a dynamic Error attachment.
+    ...(enqueued ? { offlineEnqueued: true } : {}),
     context: { url: context.data.url, tabId: undefined },
   };
   return { done: false, pipelineError };
@@ -224,9 +232,13 @@ export function finalizeSuccess(
   // PBI 2026-09-25-12: BEST_EFFORT saveObsidian follows the same owner rule —
   // when the offline enqueue succeeded the queued obsidian_sync job is the
   // only recovery owner and no pending page is registered for the recording.
-  const obsidianOfflineEnqueued =
-    obsidianError !== undefined && readOfflineEnqueueInfo(obsidianError.error)?.enqueued === true;
-  if (obsidianError && !obsidianOfflineEnqueued) {
+  // PBI 2026-10-16-04: same decideRecoveryOwner as the FATAL/RETRY path, so a
+  // regenerate record (UPDATE-only) registers no pending here either.
+  const obsidianOwner = decideRecoveryOwner({
+    targetEntryId: context.data.targetEntryId,
+    enqueued: obsidianError?.offlineEnqueued === true,
+  });
+  if (obsidianError && obsidianOwner === 'pending') {
     adapters.pending.addPending(pendingEntry(context, 'obsidian-write-failed', obsidianError.error.message));
   }
 

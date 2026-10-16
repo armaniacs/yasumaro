@@ -4,12 +4,12 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { backoffDelayMs } from '../../utils/backoff.js';
 import {
   ErrorStrategy,
-  attachOfflineEnqueueInfo,
+  StepFailureError,
+  decideRecoveryOwner,
   type RecordingContext,
   type PipelineStep,
   type StepDeps,
   type OfflineJobKind,
-  type OfflineEnqueueInfo,
 } from './types.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { RetryPolicy, defaultRetryPolicy } from './retryPolicy.js';
@@ -65,11 +65,13 @@ export class StepExecutor {
         const failure = resolveFailure(error);
 
         if (this.offlineNetworkQueue && step.offlineRetry && this.retryPolicy.shouldEnqueueForOffline(error)) {
-          // PBI 2026-09-25-12: the enqueue result rides on the rethrown error as
-          // structured info — the original error propagation is untouched, while
-          // decideStepOutcome can resolve the sole recovery owner from it.
-          const info = await this.enqueueOfflineJob(step, context, failure?.kind);
-          attachOfflineEnqueueInfo(error, info);
+          // PBI 2026-09-25-12 / 2026-10-16-04: the enqueue result travels in
+          // a typed StepFailureError carrier — the original error is never
+          // mutated, and decideStepOutcome resolves the sole recovery owner
+          // from the carrier's `enqueued` field. Orchestrator/SavePhase
+          // forward the thrown value opaquely.
+          const enqueued = await this.enqueueOfflineJob(step, context, failure?.kind);
+          throw new StepFailureError(error, enqueued);
         }
 
         throw error;
@@ -81,23 +83,24 @@ export class StepExecutor {
     step: PipelineStep,
     context: RecordingContext,
     failureKind?: FailureKindValue
-  ): Promise<OfflineEnqueueInfo> {
-    const info: OfflineEnqueueInfo = { enqueued: false };
+  ): Promise<boolean> {
     if (!step.offlineRetry) {
-      return info;
+      return false;
     }
 
     // PBI 2026-09-22-04: regenerate is UPDATE-only — the offline replay
     // rebuilds via 'offline-retry' (an INSERT by URL without the side-effect
     // skips), which would duplicate the very row the update was replacing.
-    // The failure surfaces through the normal error path instead.
-    if (context.data.targetEntryId !== undefined) {
+    // The failure surfaces through the normal error path instead. The owner
+    // rule lives in decideRecoveryOwner; this gate only asks it whether this
+    // record has no recovery owner at all.
+    if (decideRecoveryOwner({ targetEntryId: context.data.targetEntryId, enqueued: false }) === 'none') {
       addLog(LogType.INFO, 'Skipping offline job for regenerate (update-only)', {
         url: context.data.url,
         step: step.name,
         traceId: context.traceId
       });
-      return info;
+      return false;
     }
 
     const type: OfflineJobKind = step.offlineRetry.jobKind;
@@ -109,14 +112,13 @@ export class StepExecutor {
     try {
       // enqueue は失敗時に false を返し throw しない（PBI 2026-09-17-15）。
       const queued = await this.offlineNetworkQueue!.enqueue({ type, payload });
-      info.enqueued = queued;
       if (!queued) {
         addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
           url: context.data.url,
           type,
           traceId: context.traceId,
         });
-        return info;
+        return false;
       }
       addLog(LogType.INFO, `RecordingPipeline: queued offline job for ${step.name}`, {
         url: context.data.url,
@@ -124,6 +126,7 @@ export class StepExecutor {
         traceId: context.traceId,
         ...(failureKind !== undefined ? { failureKind } : {}),
       });
+      return true;
     } catch (enqueueError) {
       addLog(LogType.ERROR, 'RecordingPipeline: failed to enqueue offline job', {
         url: context.data.url,
@@ -132,6 +135,6 @@ export class StepExecutor {
         traceId: context.traceId,
       });
     }
-    return info;
+    return false;
   }
 }
