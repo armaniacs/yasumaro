@@ -40,7 +40,7 @@ function makeFakeRepo(existing: Record<string, unknown>): {
   });
   const saved = (): Record<string, unknown> => {
     expect(setAll).toHaveBeenCalledTimes(1);
-    return setAll.mock.calls[0][0] as Record<string, unknown>;
+    return setAll.mock.calls[0]![0] as Record<string, unknown>;
   };
   return { repo: { getAll, setAll }, saved };
 }
@@ -130,7 +130,7 @@ describe('importSettings repo/signer注入 (PBI 2026-10-16-01)', () => {
     for (const field of API_KEY_FIELDS) {
       delete (settings as unknown as Record<string, unknown>)[field];
     }
-    const body = {
+    const body: Record<string, unknown> = {
       version: EXPORT_VERSION,
       exportedAt: new Date().toISOString(),
       settings,

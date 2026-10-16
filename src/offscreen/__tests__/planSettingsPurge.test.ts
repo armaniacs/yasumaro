@@ -40,7 +40,7 @@ describe('planSettingsPurge — settings-driven purge planning', () => {
     }
     const result = planSettingsPurge({ d: 30, m: '1000' }, 'd', 'm');
     expect(result).toMatchObject({ ok: false });
-    if (result.ok === false) expect(result.error).toContain('maxRecords');
+    if ('ok' in result && result.ok === false) expect(result.error).toContain('maxRecords');
   });
 
   it('reads includeStarred only when it is a boolean', () => {
@@ -48,7 +48,7 @@ describe('planSettingsPurge — settings-driven purge planning', () => {
       ok: true, includeStarred: true,
     });
     const omitted = planSettingsPurge({ d: 7, s: 'yes' }, 'd', 'm', 's');
-    expect(omitted.ok).toBe(true);
-    if (omitted.ok === true) expect('includeStarred' in omitted).toBe(false);
+    expect('ok' in omitted && omitted.ok).toBe(true);
+    if ('ok' in omitted && omitted.ok) expect('includeStarred' in omitted).toBe(false);
   });
 });

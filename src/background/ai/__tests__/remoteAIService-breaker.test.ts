@@ -284,8 +284,8 @@ describe('testConnection reset (PBI 27-08)', () => {
     await breaker.recordFailure('cold', undefined, { kind: 'auth', status: 401 });
     await expect(breaker.shouldAttempt('cold')).resolves.toBe(false);
 
-    const factory = vi.fn(() => succeedingProvider('recovered summary'));
-    const summaryFactory = vi.fn(() => succeedingProvider('recovered summary'));
+    const factory = vi.fn((_s: Settings) => succeedingProvider('recovered summary'));
+    const summaryFactory = vi.fn((_s: Settings) => succeedingProvider('recovered summary'));
     let current: (settings: Settings) => AIProviderStrategy = (s) => factory(s);
     const service = createService([{ provider: 'cold' }], breaker, {
       cold: (s) => current(s),

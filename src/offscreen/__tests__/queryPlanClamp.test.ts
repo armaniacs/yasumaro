@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clampLimit, buildQuerySpec, DEFAULT_QUERY_LIMIT } from '../queryPlan.js';
+import { clampLimit, buildQuerySpec, DEFAULT_QUERY_LIMIT, type AlreadyCappedQuery } from '../queryPlan.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
 
 describe('clampLimit', () => {
@@ -64,7 +64,7 @@ describe('buildQuerySpec limit clamp', () => {
   it.each([-1, 0, 0.5, NaN, Infinity, undefined])(
     'falls back to DEFAULT_QUERY_LIMIT for %p',
     (bad) => {
-      expect(buildQuerySpec({ limit: bad }).limit).toBe(DEFAULT_QUERY_LIMIT);
+      expect(buildQuerySpec({ limit: bad } as unknown as AlreadyCappedQuery).limit).toBe(DEFAULT_QUERY_LIMIT);
     },
   );
 });

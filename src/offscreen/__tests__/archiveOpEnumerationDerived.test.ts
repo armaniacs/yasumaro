@@ -103,7 +103,7 @@ describe('derived registry: one entry per wire-table row (BY_MESSAGE)', () => {
   });
 
   it('registers no archive message outside the table', () => {
-    const tabled = new Set(ARCHIVE_WIRE_TABLE.map((row) => row.messageType));
+    const tabled = new Set<string>(ARCHIVE_WIRE_TABLE.map((row) => row.messageType));
     for (const key of sqliteMessageHandlers.keys()) {
       if (key.startsWith('SQLITE_ARCHIVE_')) {
         expect(tabled.has(key)).toBe(true);
@@ -166,13 +166,16 @@ describe('derived backend proxies: one proxy per wire-table row', () => {
           }) as never,
         } as never,
       );
-      const method = (backend as unknown as Record<string, (...args: never[]) => Promise<unknown>>)[
-        row.backendMethod
-      ];
+      const method = (
+        backend as unknown as Record<
+          string,
+          ((this: OpfsWorkerBackend, ...args: never[]) => Promise<unknown>) | undefined
+        >
+      )[row.backendMethod];
       expect(typeof method).toBe('function');
       // Member-call contract: production dispatch binds before invoking
       // (see the `this`-binding regression test in archiveWireDispatch).
-      const result = await method.call(backend);
+      const result = await method!.call(backend);
       expect(seen).toHaveLength(1);
       expect(seen[0]!.type).toBe(row.workerType);
       expect(result).toEqual({ success: true, ...row.project(raw) });
@@ -180,10 +183,13 @@ describe('derived backend proxies: one proxy per wire-table row', () => {
 
     it(`${row.op}: null worker folds to the shared reason`, async () => {
       const backend = new OpfsWorkerBackend({ tryOpfsProxy: async () => null } as never);
-      const method = (backend as unknown as Record<string, (...args: never[]) => Promise<unknown>>)[
-        row.backendMethod
-      ];
-      await expect(method.call(backend)).resolves.toEqual({
+      const method = (
+        backend as unknown as Record<
+          string,
+          ((this: OpfsWorkerBackend, ...args: never[]) => Promise<unknown>) | undefined
+        >
+      )[row.backendMethod];
+      await expect(method!.call(backend)).resolves.toEqual({
         success: false,
         error: OPFS_WORKER_UNAVAILABLE_ERROR,
       });

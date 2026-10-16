@@ -329,7 +329,7 @@ describe('HeaderDetector', () => {
         ErrorCode.BADGE_UPDATE_FAILED,
         'headerDetector.ts'
       );
-      const payload = vi.mocked(logError).mock.calls[0][1] as Record<string, unknown>;
+      const payload = vi.mocked(logError).mock.calls[0]![1] as Record<string, unknown>;
       expect(payload).not.toHaveProperty('url');
       expect(JSON.stringify(payload)).not.toContain(rawUrl);
       expect(JSON.stringify(payload)).not.toContain('secret123');
@@ -373,7 +373,7 @@ describe('HeaderDetector', () => {
         'Session privacy cache save failed, using in-memory only',
         expect.objectContaining({ urlHash: 'HASHED-SESSION-URL' })
       );
-      const payload = vi.mocked(logDebug).mock.calls[0][1] as Record<string, unknown>;
+      const payload = vi.mocked(logDebug).mock.calls[0]![1] as Record<string, unknown>;
       expect(payload).not.toHaveProperty('url');
       expect(JSON.stringify(payload)).not.toContain(rawUrl);
       expect(JSON.stringify(payload)).not.toContain('secret456');

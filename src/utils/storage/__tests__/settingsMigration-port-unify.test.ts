@@ -61,8 +61,8 @@ async function generateKey(): Promise<CryptoKey> {
 function chromeStorageCallCounts(): Record<'get' | 'set' | 'remove', number> {
   const local = globalThis.chrome.storage.local as unknown as Record<string, { mock: { calls: unknown[] } }>;
   return {
-    get: local.get.mock.calls.length,
-    set: local.set.mock.calls.length,
+    get: (local.get as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
+    set: (local.set as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
     remove: (local.remove as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
   };
 }

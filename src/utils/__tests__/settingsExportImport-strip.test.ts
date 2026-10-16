@@ -9,7 +9,7 @@ const mockLogError = vi.hoisted(() => vi.fn(async () => {}));
 const mockLogInfo = vi.hoisted(() => vi.fn(async () => {}));
 const mockLogWarn = vi.hoisted(() => vi.fn(async () => {}));
 const mockRepoGetAll = vi.hoisted(() => vi.fn(async () => ({})));
-const mockRepoSetAll = vi.hoisted(() => vi.fn(async () => {}));
+const mockRepoSetAll = vi.hoisted(() => vi.fn(async (_patch: Record<string, unknown>) => {}));
 const mockSigner = vi.hoisted(() => {
   const sign = async (data: string) => `test-sig:${data}`;
   return {
@@ -73,7 +73,7 @@ async function signedJson(body: Record<string, unknown>): Promise<string> {
 
 function savedValue(): Record<string, unknown> {
   expect(mockRepoSetAll).toHaveBeenCalledTimes(1);
-  return mockRepoSetAll.mock.calls[0][0] as Record<string, unknown>;
+  return mockRepoSetAll.mock.calls[0]![0] as Record<string, unknown>;
 }
 
 beforeEach(() => {
