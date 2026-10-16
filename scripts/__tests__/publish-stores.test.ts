@@ -19,7 +19,7 @@ import { uploadAndPublishCws } from '../publish/cws.mjs';
 import { uploadAndPublishEdge } from '../publish/edge.mjs';
 import { prepareAmoSources } from '../publish/amo-prepare-sources.mjs';
 import { submitAmo } from '../publish/amo-submit.mjs';
-import { StepFailed, jqExtractOr, projectErrorFields } from '../publish/lib.mjs';
+import { StepFailed, defaultRun, jqExtractOr, projectErrorFields, requestOrAbort } from '../publish/lib.mjs';
 
 interface FetchInit {
   method?: string;
@@ -30,7 +30,11 @@ interface FetchInit {
 }
 
 interface Route {
-  match: string;
+  // Exact URL string (full equality) or a strict predicate (typically an
+  // endsWith suffix or anchored regex). Substring includes() is banned here:
+  // '/submissions' as a substring also matches '/submissions/draft/package',
+  // so routing silently depended on array order (P15).
+  match: string | ((url: string) => boolean);
   respond: (call: { url: string; init: FetchInit }) => {
     status?: number;
     body?: string;
@@ -43,7 +47,9 @@ function createFetch(routes: Route[]) {
   const fetchImpl = async (url: string | URL, init: FetchInit = {}) => {
     const urlStr = String(url);
     calls.push({ url: urlStr, init });
-    const route = routes.find((candidate) => urlStr.includes(candidate.match));
+    const route = routes.find((candidate) =>
+      typeof candidate.match === 'function' ? candidate.match(urlStr) : urlStr === candidate.match
+    );
     if (!route) throw new Error(`unrouted request: ${urlStr}`);
     const result = route.respond({ url: urlStr, init });
     const headerMap = Object.fromEntries(
@@ -93,10 +99,16 @@ const CWS_ENV = {
   VERSION: '1.2.3',
 };
 
+const TOKEN_URL = 'https://oauth2.googleapis.com/token';
+
 const TOKEN_ROUTE: Route = {
-  match: 'oauth2.googleapis.com/token',
+  match: TOKEN_URL,
   respond: () => ({ body: '{"access_token":"tok-abc"}' }),
 };
+
+// Strict suffix predicates: ':publish' must not match ':upload' etc. via
+// substring, so each branch pins its own endpoint (P15).
+const endsWith = (suffix: string) => (url: string) => url.endsWith(suffix);
 
 describe('cws', () => {
   describe('uploadAndPublishCws', () => {
@@ -105,9 +117,9 @@ describe('cws', () => {
       let fetchStatusCalls = 0;
       const { fetchImpl, calls } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"IN_PROGRESS"}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"IN_PROGRESS"}' }) },
         {
-          match: 'fetchStatus',
+          match: endsWith(':fetchStatus'),
           respond: () => ({
             body:
               fetchStatusCalls++ === 0
@@ -115,7 +127,7 @@ describe('cws', () => {
                 : '{"lastAsyncUploadState":"SUCCEEDED"}',
           }),
         },
-        { match: ':publish', respond: () => ({ body: '{}' }) },
+        { match: endsWith(':publish'), respond: () => ({ body: '{}' }) },
       ]);
       const harness = createHarness();
 
@@ -130,13 +142,13 @@ describe('cws', () => {
       ]);
       // 30 × 10s pacing, sleep injected (never real time).
       expect(harness.sleepCalls).toEqual([10_000, 10_000]);
-      const uploadCall = calls.find((call) => call.url.includes(':upload'));
+      const uploadCall = calls.find((call) => call.url.endsWith(':upload'));
       expect(uploadCall?.init.body).toEqual(expect.any(Buffer));
       expect(String(uploadCall?.init.body)).toBe('zip-payload');
       expect(uploadCall?.init.headers?.Authorization).toBe('Bearer tok-abc');
       // curl never passed -L: redirects must not be followed.
       expect(uploadCall?.init.redirect).toBe('manual');
-      const publishCall = calls.find((call) => call.url.includes(':publish'));
+      const publishCall = calls.find((call) => call.url.endsWith(':publish'));
       expect(publishCall?.init.method).toBe('POST');
       expect(publishCall?.init.body).toBe('{"publishType":"DEFAULT_PUBLISH"}');
       expect(publishCall?.init.headers?.['Content-Type']).toBe('application/json');
@@ -144,8 +156,8 @@ describe('cws', () => {
 
     it('stops before the upload when the token response carries no access_token', async () => {
       const { fetchImpl, calls } = createFetch([
-        { match: 'oauth2.googleapis.com/token', respond: () => ({ body: '{"error":"invalid_grant"}' }) },
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
+        { match: TOKEN_URL, respond: () => ({ body: '{"error":"invalid_grant"}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
       ]);
       const harness = createHarness();
 
@@ -160,7 +172,7 @@ describe('cws', () => {
     it('projects error fields for a non-JSON upload response, then fails the state check', async () => {
       const { fetchImpl } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '<html>oops</html>' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '<html>oops</html>' }) },
       ]);
       const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
       const harness = createHarness();
@@ -182,7 +194,7 @@ describe('cws', () => {
     it('fails with the terminal state when the upload never reaches SUCCEEDED', async () => {
       const { fetchImpl } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"FAILED"}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"FAILED"}' }) },
       ]);
       const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
       const harness = createHarness();
@@ -201,8 +213,8 @@ describe('cws', () => {
     it('skips publish and exits zero when CWS_AUTO_PUBLISH is not true', async () => {
       const { fetchImpl, calls } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
-        { match: ':publish', respond: () => ({ body: '{"error":"must not be called"}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
+        { match: endsWith(':publish'), respond: () => ({ body: '{"error":"must not be called"}' }) },
       ]);
       const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
       const harness = createHarness();
@@ -217,15 +229,15 @@ describe('cws', () => {
         'Upload: SUCCEEDED',
         "CWS_AUTO_PUBLISH is not 'true'; skipping publish",
       ]);
-      expect(calls.some((call) => call.url.includes(':publish'))).toBe(false);
+      expect(calls.some((call) => call.url.endsWith(':publish'))).toBe(false);
     });
 
     it('prints the HTTP status and jq projection when publish is rejected', async () => {
       const { fetchImpl } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
         {
-          match: ':publish',
+          match: endsWith(':publish'),
           respond: () => ({ status: 500, body: '{"error":{"message":"quota"},"status":"FAILED"}' }),
         },
       ]);
@@ -247,8 +259,8 @@ describe('cws', () => {
     it('fails a 200 publish response that still carries error.message', async () => {
       const { fetchImpl } = createFetch([
         TOKEN_ROUTE,
-        { match: ':upload', respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
-        { match: ':publish', respond: () => ({ body: '{"error":{"message":"item not found"}}' }) },
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
+        { match: endsWith(':publish'), respond: () => ({ body: '{"error":{"message":"item not found"}}' }) },
       ]);
       const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
       const harness = createHarness();
@@ -261,6 +273,135 @@ describe('cws', () => {
         '::add-mask::tok-abc',
         'Upload: SUCCEEDED',
         'Publish failed: item not found',
+      ]);
+    });
+
+    it('fails fast before any request when CHROME_EXTENSION_ID is missing (P5)', async () => {
+      const { fetchImpl, calls } = createFetch([TOKEN_ROUTE]);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws({ ...CWS_ENV, CHROME_EXTENSION_ID: '' }, { fetch: fetchImpl, ...harness, cwd: tmpdir() })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual(['CHROME_EXTENSION_ID is missing']);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('fails fast before any request when CHROME_PUBLISHER_ID is missing (P5)', async () => {
+      const { fetchImpl, calls } = createFetch([TOKEN_ROUTE]);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws({ ...CWS_ENV, CHROME_PUBLISHER_ID: '' }, { fetch: fetchImpl, ...harness, cwd: tmpdir() })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual(['CHROME_PUBLISHER_ID is missing']);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('counts bytes not characters for a non-JSON upload response (P3)', async () => {
+      const { fetchImpl } = createFetch([
+        TOKEN_ROUTE,
+        // '<html>あ</html>': 14 characters but 16 UTF-8 bytes.
+        { match: endsWith(':upload'), respond: () => ({ body: '<html>あ</html>' }) },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        '::add-mask::tok-abc',
+        'Upload: UNKNOWN',
+        'Upload response (error fields only):',
+        'Non-JSON response (16 bytes)',
+        'Upload failed with state: UNKNOWN',
+      ]);
+    });
+
+    it('says the upload did not finish in time when polling is exhausted (P4 Edge parity)', async () => {
+      let fetchStatusCalls = 0;
+      const { fetchImpl } = createFetch([
+        TOKEN_ROUTE,
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"IN_PROGRESS"}' }) },
+        {
+          match: endsWith(':fetchStatus'),
+          respond: () => {
+            fetchStatusCalls += 1;
+            return { body: '{"lastAsyncUploadState":"IN_PROGRESS"}' };
+          },
+        },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(fetchStatusCalls).toBe(30);
+      expect(harness.logs[0]).toBe('::add-mask::tok-abc');
+      expect(harness.logs[1]).toBe('Upload: IN_PROGRESS');
+      expect(harness.logs[harness.logs.length - 1]).toBe('Upload did not finish in time');
+      expect(harness.sleepCalls).toHaveLength(30);
+    });
+
+    it('fails when the fetchStatus response cannot be parsed as JSON (P13)', async () => {
+      const { fetchImpl } = createFetch([
+        TOKEN_ROUTE,
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"IN_PROGRESS"}' }) },
+        { match: endsWith(':fetchStatus'), respond: () => ({ body: '<html>oops</html>' }) },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        '::add-mask::tok-abc',
+        'Upload: IN_PROGRESS',
+        'fetchStatus response could not be parsed as JSON (jq parse error before the move)',
+      ]);
+      expect(harness.sleepCalls).toEqual([10_000]);
+    });
+
+    it('fails when the publish response cannot be read for .error.message (P13)', async () => {
+      const { fetchImpl } = createFetch([
+        TOKEN_ROUTE,
+        { match: endsWith(':upload'), respond: () => ({ body: '{"uploadState":"SUCCEEDED"}' }) },
+        { match: endsWith(':publish'), respond: () => ({ body: '<html>oops</html>' }) },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        '::add-mask::tok-abc',
+        'Upload: SUCCEEDED',
+        'Publish response could not be read for .error.message (jq parse error before the move)',
+      ]);
+    });
+
+    it('fails with the transport message when the token request fails (P14)', async () => {
+      const harness = createHarness();
+      const failingFetch = async () => {
+        throw new Error('socket hang up');
+      };
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: failingFetch, ...harness, cwd: tmpdir() })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        `Request failed (${TOKEN_URL}): socket hang up`,
       ]);
     });
   });
@@ -276,15 +417,16 @@ describe('edge', () => {
   };
 
   describe('uploadAndPublishEdge', () => {
+    // Strict predicates (P15): the operation-poll URL contains both
+    // '/submissions' and '/draft/package' as substrings, so substring
+    // matching made routing order-dependent. endsWith + anchored regex keep
+    // the three endpoints disjoint no matter the array order — operations is
+    // deliberately listed last to prove it.
     function edgeRoutes(operationStatuses: string[], uploadResponse?: Partial<{ status: number; body: string; headers: Record<string, string> }>) {
       const statusQueue = [...operationStatuses];
       return [
         {
-          match: '/operations/',
-          respond: () => ({ body: statusQueue.shift() ?? '{"status":"Succeeded"}' }),
-        },
-        {
-          match: '/draft/package',
+          match: endsWith('/draft/package'),
           respond: () => ({
             status: 202,
             headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-1' },
@@ -292,11 +434,15 @@ describe('edge', () => {
           }),
         },
         {
-          match: '/submissions',
+          match: endsWith('/submissions'),
           respond: () => ({
             status: 202,
             headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-1' },
           }),
+        },
+        {
+          match: (url: string) => /\/operations\/[^/?#]+(?:[?#].*)?$/.test(url),
+          respond: () => ({ body: statusQueue.shift() ?? '{"status":"Succeeded"}' }),
         },
       ] satisfies Route[];
     }
@@ -319,7 +465,7 @@ describe('edge', () => {
         'Publish submitted',
       ]);
       expect(harness.sleepCalls).toEqual([10_000]);
-      const uploadCall = calls.find((call) => call.url.includes('/draft/package'));
+      const uploadCall = calls.find((call) => call.url.endsWith('/draft/package'));
       expect(uploadCall?.init.headers?.Authorization).toBe('ApiKey edge-key');
       expect(uploadCall?.init.headers?.['X-ClientID']).toBe('edge-client');
       expect(uploadCall?.init.headers?.['Content-Type']).toBe('application/zip');
@@ -406,6 +552,60 @@ describe('edge', () => {
         "EDGE_AUTO_PUBLISH is not 'true'; skipping publish",
       ]);
       expect(calls.some((call) => call.url.endsWith('/submissions'))).toBe(false);
+    });
+
+    it('fails fast before any request when EDGE_PRODUCT_ID is missing (P5)', async () => {
+      const { fetchImpl, calls } = createFetch(edgeRoutes(['{"status":"Succeeded"}']));
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishEdge({ ...EDGE_ENV, EDGE_PRODUCT_ID: '' }, { fetch: fetchImpl, ...harness, cwd: tmpdir() })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual(['EDGE_PRODUCT_ID is missing']);
+      expect(calls).toHaveLength(0);
+    });
+
+    it('extracts the operation id despite query strings and trailing slashes (P8)', async () => {
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-edge.zip']);
+      const { fetchImpl, calls } = createFetch([
+        {
+          match: endsWith('/draft/package'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-9/?poll=true' },
+          }),
+        },
+        {
+          match: endsWith('/submissions'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-9?poll=true/' },
+          }),
+        },
+        {
+          match: (url: string) => /\/operations\/[^/?#]+(?:[?#].*)?$/.test(url),
+          respond: () => ({ body: '{"status":"Succeeded"}' }),
+        },
+      ]);
+      const harness = createHarness();
+
+      await uploadAndPublishEdge(EDGE_ENV, { fetch: fetchImpl, ...harness, cwd });
+
+      expect(harness.logs).toEqual([
+        'Upload: HTTP 202',
+        'Upload status check 1/30: Succeeded',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Succeeded',
+        'Publish submitted',
+      ]);
+      const polled = calls.map((call) => call.url);
+      expect(polled).toContain(
+        'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-9'
+      );
+      expect(polled).toContain(
+        'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-9'
+      );
     });
   });
 });
@@ -518,6 +718,7 @@ describe('amo-submit', () => {
     it('invokes web-ext sign with the pinned arguments and env credentials', () => {
       const runCalls: Array<{ command: string; args: string[]; options: Record<string, unknown> }> = [];
       const harness = createHarness();
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-2.0.0-sources.zip']);
 
       submitAmo(
         {
@@ -528,6 +729,7 @@ describe('amo-submit', () => {
         },
         {
           ...harness,
+          cwd,
           mkdtemp: () => '/tmp/amo-artifacts-fake',
           run: (command: string, args: string[], options: Record<string, unknown>) => {
             runCalls.push({ command, args, options });
@@ -558,15 +760,40 @@ describe('amo-submit', () => {
       expect(childEnv.WEB_EXT_API_SECRET).toBe('jwt-secret');
       expect(childEnv.AMO_AUTO_SUBMIT).toBe('true');
       expect(runCalls[0].options.stdio).toBe('inherit');
-      expect(harness.logs).toEqual([]);
+      expect(harness.logs).toEqual(['AMO submission submitted: dist/yasumaro-2.0.0-sources.zip']);
+    });
+
+    it('fails before spawning web-ext when the sources archive is missing (P17)', () => {
+      const runCalls: unknown[][] = [];
+      const cwd = createCwdWithArtifacts([]);
+      const harness = createHarness();
+
+      expect(() =>
+        submitAmo({ AMO_AUTO_SUBMIT: 'true', VERSION: '2.0.0' }, {
+          ...harness,
+          cwd,
+          mkdtemp: () => '/tmp/amo-artifacts-fake',
+          run: (...args: unknown[]) => {
+            runCalls.push(args);
+            return 0;
+          },
+        })
+      ).toThrow(StepFailed);
+
+      expect(harness.logs).toEqual([
+        'AMO sources archive dist/yasumaro-2.0.0-sources.zip is missing; run the Prepare AMO sources archive step first',
+      ]);
+      expect(runCalls).toEqual([]);
     });
 
     it('stops the step with web-ext exit code when sign fails', () => {
       const harness = createHarness();
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-2.0.0-sources.zip']);
 
       try {
         submitAmo({ AMO_AUTO_SUBMIT: 'true', VERSION: '2.0.0' }, {
           ...harness,
+          cwd,
           mkdtemp: () => '/tmp/amo-artifacts-fake',
           run: () => 2,
         });
@@ -603,6 +830,35 @@ describe('lib', () => {
       // jq fails on junk → the shell printed its Non-JSON fallback instead.
       expect(projectErrorFields('not json')).toBeNull();
       expect(projectErrorFields('42')).toBeNull();
+    });
+  });
+
+  describe('requestOrAbort', () => {
+    it('logs the transport error and fails the step without touching the network (P14)', async () => {
+      const logs: string[] = [];
+      const log = (message: unknown) => logs.push(String(message));
+      const failingFetch = async () => {
+        throw new Error('socket hang up');
+      };
+
+      await expect(
+        requestOrAbort(failingFetch, 'https://example.invalid/upload', { timeoutMs: 1000 }, log)
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(logs).toEqual(['Request failed (https://example.invalid/upload): socket hang up']);
+    });
+  });
+
+  describe('defaultRun', () => {
+    it('reports a spawn failure through the injected log instead of console.error (P12)', () => {
+      const logs: string[] = [];
+      const log = (message: unknown) => logs.push(String(message));
+
+      const exitCode = defaultRun('__definitely_missing_publish_cmd__', [], {}, log);
+
+      expect(exitCode).toBe(1);
+      expect(logs).toHaveLength(1);
+      expect(logs[0]).toContain('__definitely_missing_publish_cmd__');
     });
   });
 });

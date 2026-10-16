@@ -288,7 +288,7 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
     );
   });
 
-  it('restores from backup via INSERT OR IGNORE and leaves the backup in place on count mismatch', async () => {
+  it('restores from backup via INSERT OR IGNORE and terminates (backup cleared, done set) on count mismatch', async () => {
     vi.stubGlobal('indexedDB', {
       databases: vi.fn().mockResolvedValue([{ name: 'idb-batch-atomic', version: 5 }]),
     });
@@ -307,9 +307,10 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
 
     // execWithCache with INSERT_IGNORE_SQL should have been attempted via exec()
     expect(mockIdbExec).toHaveBeenCalled();
-    // Backup must remain (not cleared) since verification failed
-    expect(chromeMock.storage.local.remove).not.toHaveBeenCalledWith('idb_migration_backup');
-    expect(chromeMock.storage.local.set).not.toHaveBeenCalledWith(
+    // Terminal: the backup is cleared and done is set even though the counts
+    // never converged (uninsertable rows cannot converge by retrying).
+    expect(chromeMock.storage.local.remove).toHaveBeenCalledWith('idb_migration_backup');
+    expect(chromeMock.storage.local.set).toHaveBeenCalledWith(
       expect.objectContaining({ idb_migration_v2_done: true })
     );
   });

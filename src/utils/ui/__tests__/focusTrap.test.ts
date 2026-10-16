@@ -237,6 +237,44 @@ describe('focusTrap', () => {
             expect(() => modal.dispatchEvent(event)).not.toThrow();
             expect(closeCallback).not.toHaveBeenCalled();
         });
+
+        test('calls closeCallback on Escape even when focus is outside the modal', () => {
+            // Escape は activeElement に依らず onEscape へ回る。外側要素起点の
+            // keydown は modalElement 束縛には届かない（document 束縛で届く）。
+            const modal = document.getElementById('modal') as HTMLElement;
+            const outside = document.getElementById('outside') as HTMLElement;
+            const closeCallback = vi.fn();
+            manager.trap(modal, closeCallback);
+
+            outside.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+            expect(closeCallback).toHaveBeenCalledTimes(1);
+        });
+
+        test('moves focus back to the first element when Tab is pressed from outside the modal', () => {
+            // jsdom では trap 直後の activeElement は body（集合外＝外側起点と等価）。
+            // focusin 再捕捉を経由せず keydown 経路だけを検証するため .focus() は使わない。
+            const modal = document.getElementById('modal') as HTMLElement;
+            const outside = document.getElementById('outside') as HTMLElement;
+            manager.trap(modal);
+            expect(document.activeElement).not.toBe(document.getElementById('btn1'));
+
+            const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+            outside.dispatchEvent(event);
+
+            expect(event.defaultPrevented).toBe(true);
+            expect(document.activeElement).toBe(document.getElementById('btn1'));
+        });
+
+        test('recaptures focus into the modal on focusin from outside', () => {
+            const modal = document.getElementById('modal') as HTMLElement;
+            const outside = document.getElementById('outside') as HTMLElement;
+            manager.trap(modal);
+
+            outside.dispatchEvent(new FocusEvent('focusin', { bubbles: true }));
+
+            expect(document.activeElement).toBe(document.getElementById('btn1'));
+        });
     });
 });
 

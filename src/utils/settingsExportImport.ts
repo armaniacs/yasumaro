@@ -258,7 +258,7 @@ export async function importEncryptedSettings(
   try {
     // Size cap before any decode/KDF/decrypt work (VULN-034): a forged giant
     // file must not reach PBKDF2.
-    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
       await logError(
         'Import rejected: file exceeds size cap',
         {},
@@ -384,12 +384,14 @@ export async function importEncryptedSettings(
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
-      return merged;
+      const strippedMerged = stripDeviceLocalSecurityState(merged);
+      await settingsRepository.setAll(strippedMerged);
+      return strippedMerged;
     }
 
-    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
-    return parsed.settings;
+    const stripped = stripDeviceLocalSecurityState(parsed.settings);
+    await settingsRepository.setAll(stripped);
+    return stripped;
   } catch (error) {
     await logError(
       'Failed to import encrypted settings',
@@ -648,7 +650,7 @@ export function validateExportData(data: unknown): boolean {
  */
 export async function importSettings(jsonData: string): Promise<Settings | null> {
   try {
-    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
       await logError(
         'Import rejected: file exceeds size cap',
         {},
@@ -712,12 +714,14 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         'settingsExportImport.ts'
       );
       const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
-      return merged;
+      const strippedMerged = stripDeviceLocalSecurityState(merged);
+      await settingsRepository.setAll(strippedMerged);
+      return strippedMerged;
     }
 
-    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
-    return parsed.settings;
+    const stripped = stripDeviceLocalSecurityState(parsed.settings);
+    await settingsRepository.setAll(stripped);
+    return stripped;
   } catch (error) {
     await logError(
       'Failed to import settings',

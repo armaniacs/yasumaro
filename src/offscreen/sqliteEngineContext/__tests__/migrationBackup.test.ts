@@ -19,11 +19,12 @@ vi.mock('../idbEngineLifecycle.js', () => ({
 
 // Legacy wa-sqlite seam for runMigrationBackup's close-failure abort path
 // (the happy path stays in idb-migration.test.ts).
-const { mockLegacyExec, mockLegacyClose, mockLegacyVfsClose, mockLogError } = vi.hoisted(() => ({
+const { mockLegacyExec, mockLegacyClose, mockLegacyVfsClose, mockLogError, mockLogWarn } = vi.hoisted(() => ({
   mockLegacyExec: vi.fn(),
   mockLegacyClose: vi.fn(),
   mockLegacyVfsClose: vi.fn(),
   mockLogError: vi.fn(),
+  mockLogWarn: vi.fn(),
 }));
 
 vi.mock('wa-sqlite/dist/wa-sqlite-async.mjs', () => ({
@@ -51,6 +52,7 @@ vi.mock('wa-sqlite/src/examples/IDBBatchAtomicVFS.js', () => ({
 vi.mock('../../../utils/logger/api.js', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../../../utils/logger/api.js')>()),
   logError: (...args: unknown[]) => mockLogError(...args),
+  logWarn: (...args: unknown[]) => mockLogWarn(...args),
 }));
 
 const { extractDomain, runMigrationRestore, runMigrationBackup } = await import('../migrationBackup.js');
@@ -102,6 +104,65 @@ describe('migrationBackup', () => {
 
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
       expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+    });
+
+    it('discards an empty backup and sets the done flag without warning (terminal)', async () => {
+      const backup = JSON.stringify({ version: 1, createdAt: 0, records: [] });
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        [StorageKeys.IDB_MIGRATION_BACKUP]: backup,
+      });
+      mockExecWithCache.mockImplementation(async (_engine, _sql, _params, callback) => {
+        callback?.([0]);
+      });
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+      expect(mockLogWarn).not.toHaveBeenCalled();
+
+      // Second launch: the backup is gone, so no count query and no warn.
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      mockExecWithCache.mockClear();
+      mockLogWarn.mockClear();
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      expect(mockExecWithCache).not.toHaveBeenCalled();
+      expect(mockLogWarn).not.toHaveBeenCalled();
+    });
+
+    it('terminates after a mismatched restore so the next launch does not replay it', async () => {
+      const backup = JSON.stringify({
+        version: 1,
+        createdAt: 0,
+        records: [{ url: 'https://a.com' }, { url: 'https://b.com' }],
+      });
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        [StorageKeys.IDB_MIGRATION_BACKUP]: backup,
+      });
+      // Fake engine: COUNT stays below expected even after INSERTs succeed
+      // (uninsertable rows never converge, so retrying every launch is futile).
+      mockExecWithCache.mockImplementation(async (_engine, sql, _params, callback) => {
+        if (typeof sql === 'string' && sql.startsWith('SELECT COUNT')) {
+          callback?.([1]);
+        }
+      });
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+
+      // Second launch: the backup is gone, so no restore replay and no warn.
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
+      mockExecWithCache.mockClear();
+      mockLogWarn.mockClear();
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      expect(mockExecWithCache).not.toHaveBeenCalled();
+      expect(mockLogWarn).not.toHaveBeenCalled();
     });
   });
 

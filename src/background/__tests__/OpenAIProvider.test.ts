@@ -326,19 +326,13 @@ describe('GenericOpenAICompatibleProvider', () => {
             expect(result.receivedTokens).toBe(50);
         });
 
-        test('sends the request without Authorization when the API key is missing', async () => {
-            (fetchWithRetry as Mock).mockResolvedValue({
-                ok: true,
-                json: async () => ({
-                    choices: [{ message: { content: 'OK' } }]
-                })
-            });
-
+        test('refuses to send the request when the API key is missing', async () => {
             const p = new GenericOpenAICompatibleProvider({ ...baseSettings, openai_api_key: '' });
-            await p.generateSummary('content');
+            const result = await p.generateSummary('content');
 
-            const headers = (fetchWithRetry as Mock).mock.calls[0]![1].headers;
-            expect(headers['Authorization']).toBeUndefined();
+            expect(fetchWithRetry).not.toHaveBeenCalled();
+            expect(result.success).toBe(false);
+            expect(result.summary).toContain('API key');
         });
 
         test('returns an error message on an API error', async () => {

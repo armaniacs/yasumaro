@@ -35,6 +35,22 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.47] - 2026-10-16
+
+このリリースは前日のレビュー指摘を即座に反映したものです。adversarial-code-review（7a3a39e0 差分対象）の発見 109 件を裏取りし、検証通過 21 件を RICE 採点・PBI 化（adversarial-1016）して 8 件全件実装しました。残り 88 件は反証で却下（本番到達不能・テスト pin 済み意図動作・URL パーサ正規化・MV3 制約）。
+
+### 修正
+
+- エクスポート batch 経路の欠損を修正する。`formatEntriesToObsidianList` が `tags` を渡さずハッシュタグが黙って落ち、全行が単一 `appendedAt` で同一時刻になっていた。行ごとに `tags` と `created_at` を受け渡す。heading 組立の `.filter(Boolean)` が意図した空行まで消していたため条件付き展開にし、タグ改行除去を title/summary と同じ `LINE_TERMINATOR_PATTERN` に統一して U+2028 混入タグの行偽造を塞ぐ（PBI 2026-10-16-01）
+- OpenAI 互換プロバイダの API キー欠落送信を止める。`checkCredentials` が baseUrl のみを見てキーなしでも本文を POST していた。catalog の `requiresApiKey` で 2 箇所（要約・接続テスト）を gate し、Gemini と同等の文言にする。ローカル系（ollama/lm-studio）は無キー送信のまま（PBI 2026-10-16-02）
+- 移行バックアップに終端保証を付ける。0件バックアップが成功条件から外れて毎起動 warn で stuck していたため早期終端（破棄＋done）する。count 不一致復元経路にも再検証後の remove＋done 終端を付け、毎起動の全量リプレイを終わらせる（PBI 2026-10-16-03）
+- 設定インポートの単位不一致と返却・保存の不一致を直す。サイズ判定を `length` からバイト換算（`TextEncoder`）にし、非ASCII 多用の超過素通しを塞ぐ。`setAll` 保存値と返却値をどちらも strip 済みに統一する（PBI 2026-10-16-04）
+- 診断ログの生 URL を urlHash に寄せる。badge 失敗時と session 保存失敗時の 2 箇所だけが生 URL を `sanitization_logs` に永続化していた（他経路は全て urlHash）。両方を `hashUrl` 記録に統一する（PBI 2026-10-16-05）
+- `clampLimit` の直書き 100 を `DEFAULT_QUERY_LIMIT` 参照に一本化し、定数一致をテストで pin する（PBI 2026-10-16-06）
+- フォーカストラップのモーダル外 escape を塞ぐ。keydown 束縛を document へ移し、外側起点の Tab を先頭（Shift+Tab は末尾）へ戻し、focusin 再捕捉で programmatic な外側フォーカスを引き戻す。空集合 Escape・disabled 追随は維持（PBI 2026-10-16-07）
+- ストア公開スクリプト群の堅牢性 10 件を束ねて修正する。bytes 表示・poll 枯渇文言の Edge parity・ID 事前検証 fail-fast・operationId の URL 解析・`defaultRun` の log 注入・失敗分岐テスト追加・モック厳密マッチ・release.yml Prepare/Submit 対称化・AMO ソース存在確認＋成功ログ（PBI 2026-10-16-08）
+- バージョン関連ファイルを 6.9.47 に同期する（`docs/version.json` が 6.9.45 のまま drift していたのを回収）
+
 ## [6.9.46] - 2026-10-16
 
 このリリースは前日のレビュー指摘を即座に反映したものです。Checking Team レビュー（総合 92.9/100・ランク S）の Medium 19 件を Phase 5 で全件修正し、残った Low 15 件のうち実測で残存を確認した 11 件を RICE 採点・PBI 化（checking-team-1016）して実装しました。詳細は `plans/2026-10-16-0457-review-main.md`。

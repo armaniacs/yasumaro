@@ -126,7 +126,9 @@ jobs:
         # uploadable). Making the producer explicit means a wxt default change surfaces as a
         # failed step with a message instead of a silent hashFiles() skip that never submits.
         # Only runs when AMO submission is switched on, mirroring the gate of the step below.
-        if: ${{ vars.AMO_AUTO_SUBMIT == 'true' }}
+        # always(): a Chrome/Edge failure must not skip the AMO preparation —
+        # same failure policy as the Submit step below (P16).
+        if: ${{ always() && vars.AMO_AUTO_SUBMIT == 'true' }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
           # Same strip flag as the release builds, so a regenerated archive matches them.
@@ -139,7 +141,10 @@ jobs:
         # whole step is gated on the repository variable. Independent of the other store steps.
         # hashFiles() guard: the archive is produced by 'Prepare AMO sources archive' above,
         # which fails loudly instead of leaving this guard to skip on its own.
-        if: ${{ always() && hashFiles('dist/yasumaro-*-sources.zip') != '' }}
+        # Whole step is gated on the repository variable (mirroring the Prepare
+        # step above) plus the archive guard. always(): independent of the other
+        # store steps — a Chrome/Edge failure must not skip AMO (P16).
+        if: ${{ always() && vars.AMO_AUTO_SUBMIT == 'true' && hashFiles('dist/yasumaro-*-sources.zip') != '' }}
         env:
           WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
           WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}

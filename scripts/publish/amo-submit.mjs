@@ -19,7 +19,7 @@
  * store credentials in this environment.
  */
 
-import { mkdtempSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { StepFailed, defaultRun, isCliEntry, runCli } from './lib.mjs';
@@ -30,6 +30,7 @@ export function submitAmo(env, deps = {}) {
     run = defaultRun,
     cwd = process.cwd(),
     mkdtemp = () => mkdtempSync(join(tmpdir(), 'amo-artifacts-')),
+    exists = existsSync,
   } = deps;
 
   if (env.AMO_AUTO_SUBMIT !== 'true') {
@@ -37,10 +38,18 @@ export function submitAmo(env, deps = {}) {
     return;
   }
 
+  // The Prepare step owns producing this archive; submitting without it
+  // would hand web-ext a missing --upload-source-code file (P17).
+  const version = env.VERSION ?? '';
+  const sourcesZip = `dist/yasumaro-${version}-sources.zip`;
+  if (!exists(join(cwd, sourcesZip))) {
+    log(`AMO sources archive ${sourcesZip} is missing; run the Prepare AMO sources archive step first`);
+    throw new StepFailed();
+  }
+
   // ARTIFACTS_DIR="$(mktemp -d)" — kept as a real directory: web-ext writes
   // the signed xpi and the uploaded source archive copy there.
   const artifactsDir = mkdtemp();
-  const version = env.VERSION ?? '';
   const exitCode = run(
     'npx',
     [
@@ -53,7 +62,7 @@ export function submitAmo(env, deps = {}) {
       '--artifacts-dir',
       artifactsDir,
       '--upload-source-code',
-      `dist/yasumaro-${version}-sources.zip`,
+      sourcesZip,
       '--approval-timeout',
       '0',
       '--no-input',
@@ -61,6 +70,7 @@ export function submitAmo(env, deps = {}) {
     { cwd, env: { ...process.env, ...env }, stdio: 'inherit' }
   );
   if (exitCode !== 0) throw new StepFailed(exitCode);
+  log(`AMO submission submitted: ${sourcesZip}`);
 }
 
 if (isCliEntry(import.meta.url)) {

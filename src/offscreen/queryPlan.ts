@@ -371,7 +371,7 @@ export function buildQuerySpec(
   }
 
   const cap = useFts ? caps.fts : caps.plain;
-  const limit = clampLimit(query.limit, cap, 100);
+  const limit = clampLimit(query.limit, cap, DEFAULT_QUERY_LIMIT);
   const offset = clampOffset(query.offset ?? 0);
 
   // Tag filter condition (PBI 2026-09-11): partial-match semantics, built once

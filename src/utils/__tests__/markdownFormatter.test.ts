@@ -111,7 +111,7 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
   it('obsidianList delegates to the same output as formatEntriesToObsidianList', () => {
     const viaPublic = formatEntriesToObsidianList([baseEntry]);
     const viaSSOT = buildEntryMarkdown(
-      { title: baseEntry.title, url: baseEntry.url, summary: baseEntry.summary, appendedAt: FIXED_NOW },
+      { title: baseEntry.title, url: baseEntry.url, summary: baseEntry.summary, tags: baseEntry.tags, createdAt: baseEntry.created_at },
       'obsidianList',
     );
     expect(viaSSOT).toBe(viaPublic);
@@ -225,6 +225,37 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
       'heading',
     );
     expect(md.split('\n')[0]).toBe('# Evil # Forged heading');
+  });
+
+  // PBI 2026-10-16-01: batch path carries tags + per-entry created_at time.
+  it('batch rows carry tags and per-entry created_at times', () => {
+    const entry2 = { ...baseEntry, id: 2, title: 'Second Article', tags: 'news', created_at: baseEntry.created_at + 3_600_000 };
+    const md = formatEntriesToObsidianList([baseEntry, entry2]);
+    expect(md).toContain('#tech #ai');
+    expect(md).toContain('#news');
+    const row1 = md.split('\n').find((l) => l.includes('[Example Article]'))!;
+    const row2 = md.split('\n').find((l) => l.includes('[Second Article]'))!;
+    expect(row1.split(' ')[1]).not.toBe(row2.split(' ')[1]);
+  });
+
+  // PBI 2026-10-16-01: heading keeps intentional blank lines.
+  it('heading keeps blank lines between sections', () => {
+    const md = formatEntryToHeadingMarkdown(baseEntry);
+    const lines = md.split('\n');
+    expect(lines[1]).toBe('');
+    const summaryIdx = lines.indexOf('## Summary');
+    expect(lines[summaryIdx - 1]).toBe('');
+    expect(lines[summaryIdx + 1]).toBe('');
+  });
+
+  // PBI 2026-10-16-01: tags strip the full LINE_TERMINATOR_PATTERN set.
+  it('strips U+2028 in tags so no forged row appears', () => {
+    const md = buildEntryMarkdown(
+      { title: 'T', url: 'https://example.com', summary: 's', tags: ['a' + String.fromCharCode(0x2028) + '# forged'], timestamp: '09:30' },
+      'obsidianList',
+    );
+    expect(md).not.toContain(String.fromCharCode(0x2028));
+    expect(md.split('\n')).toHaveLength(2);
   });
 
   it('does not throw when a non-string title is passed with titleFallback false', () => {

@@ -164,6 +164,15 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     }
 
     /**
+     * catalog の requiresApiKey が真でキーが空なら true。Gemini 側の
+     * `!this.apiKey` gate と同条件。requiresApiKey=false（ollama /
+     * lm-studio 等）や catalog 未登録の legacy 直構築は gate しない。
+     */
+    private isApiKeyMissing(): boolean {
+        return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
+    }
+
+    /**
      * 要約を生成する
      * @param {string} content - 要約対象のコンテンツ
      * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
@@ -174,9 +183,11 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, {
             providerName: this.providerName,
             timeoutMs: this.timeoutMs,
-            checkCredentials: () => !this.baseUrl
-                ? "Error: Base URL is missing. Please check your settings."
-                : null,
+            checkCredentials: () => {
+                if (!this.baseUrl) return "Error: Base URL is missing. Please check your settings.";
+                if (this.isApiKeyMissing()) return "Error: API key is missing. Please check your settings.";
+                return null;
+            },
             contentLimit: () => this.isLocal
                 ? 4000
                 : this.getMaxContentLength(),
@@ -214,13 +225,23 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         return this.executeHttpTestFlow({
             providerLabel: this.providerName,
             timeoutMs: this.timeoutMs,
-            checkCredentials: () => !this.baseUrl
-                ? {
-                    success: false,
-                    message: 'Base URL is not set.',
-                    debug: { error: 'Base URL is missing' },
+            checkCredentials: () => {
+                if (!this.baseUrl) {
+                    return {
+                        success: false,
+                        message: 'Base URL is not set.',
+                        debug: { error: 'Base URL is missing' },
+                    };
                 }
-                : null,
+                if (this.isApiKeyMissing()) {
+                    return {
+                        success: false,
+                        message: `${this.providerName} API Key is not set. Please enter it in the AI provider settings.`,
+                        debug: { error: 'API key is missing' },
+                    };
+                }
+                return null;
+            },
             buildRequest: async () => {
                 const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
                 // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
