@@ -159,6 +159,50 @@ npm run bench:baseline
 git add bench/baselines/micro.json   # review the diff in the PR
 ```
 
+Every movement of a CI-gated counter must carry its reason — see
+[ベースライン再導出の記録](#ベースライン再導出の記録--baseline-re-derivation-record).
+
+## ベースライン再導出の記録 / Baseline re-derivation record
+
+`bench/baselines/micro.json` は CI 回帰ゲート（`bench/harness/report.mjs` の
+`gatesRegression`: `*.counter_*`、`counter_callback_ms` 除く）の物差しである。
+同一コードならこれらのカウンタは毎回同一の整数になるため、値の変更は
+アルゴリズム変更の契約変更にあたる。**このファイルを再導出・更新するときは、
+動かしたゲート対象カウンタとその理由をコミット本文に併記し、
+`bench/__tests__/microBaselineCounters.test.ts` のスナップショットを同じコミットで
+更新する。** wall / heap / scaling exponent（非ゲートの reference 値）だけが
+変わる再導出でも、その旨を書く。理由の確認なしに値を変えない。
+
+### 2026-10-12 / commit ac1c43a8 — TreeWalker カウンタの汚染除去
+
+`domEnv.mjs` の `createTreeWalker` パッチが jsdom のセレクタエンジン
+（`@asamuzakjp/dom-selector`）内部の走査を数えなくなったため、カウンタの意味が
+変わり `npm run bench:baseline` で全件を再導出した。前回のベースラインは
+2026-09-07（530b7283）で、その間（約 5 週間）に計測対象モジュールとハーネスに
+変更が蓄積していたため、除外パッチの影響以外にもゲート対象カウンタが再設定されている。
+コミット本文は TreeWalker の除外だけを説明しており、以下のようなその他のカウンタ変動の
+理由は記録されていなかった。本節はその補記である。
+
+| counter（S / M / L） | 旧 (2026-09-07) | 新 (2026-10-12) | 区分 |
+|---|---|---|---|
+| `c1.*.counter_encode` | 8 / 8 / 8 | 2 / 2 / 2 | 除外パッチでは説明できない変動 |
+| `c1.*.counter_treeWalker` | 2385 / 9129 / 36105 | 25 / 97 / 385 | 除外パッチ（エンジン走査を除外） |
+| `c2.*.counter_treeWalker` | 0 / 0 / 0 | 173 / 692 / 2768 | 旧基準時の計測対象コードとの差 |
+| `c3.*.counter_qsa` | 2 / 2 / 2 | 1 / 1 / 1 | 除外パッチでは説明できない変動 |
+| `c3.*.counter_treeWalker` | 131 / 483 / 1891 | 64 / 240 / 944 | 除外パッチ |
+| `c3-shadow.*.counter_qsa` | 6 / 18 / 66 | 3 / 9 / 33 | 除外パッチでは説明できない変動 |
+| `c3-shadow.*.counter_treeWalker` | 113 / 429 / 1693 | 39 / 149 / 589 | 除外パッチ |
+| `c4.*.counter_treeWalker` | 2385 / 9129 / 36105 | 25 / 97 / 385 | 除外パッチ |
+| `c5.*.counter_schedule_calls` | 11 / 31 / 121 | 1 / 1 / 1 | 除外パッチでは説明できない変動 |
+| `c6.*.counter_query_calls` | 7 / 21 / 56 | 4 / 4 / 4 | 除外パッチでは説明できない変動 |
+| `c6.*.counter_storage_set` | 2 / 6 / 16 | 0 / 0 / 0 | 除外パッチでは説明できない変動 |
+| `cleansing.*.counter_treeWalker` | 3150 / 16053 / 32325 | 0 / 0 / 0 | measured code は TreeWalker 未使用（probe 実測） |
+
+wall / heap / scaling exponent と `f3.*` も同時に再測定されているが、これらは
+非ゲートの reference 値である。現行のゲート対象値は
+`bench/__tests__/microBaselineCounters.test.ts`（2026-10-15 追加）に pin されている。
+このテストが赤いときは値をその場で書き換えず、まず上表の経緯と変動理由を確認する。
+
 ## Files
 
 ```

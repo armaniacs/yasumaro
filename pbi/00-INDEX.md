@@ -14,6 +14,28 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-16 checking-team Low 残課題ラウンド（checking-team-1016） — ✅ 11件完了・アーカイブ済み 🔧非機能追加
+
+Checking Team レビュー（2026-10-16、総合 92.9/100・ランク S）の Low 残課題 11 件を RICE 順に自律実装・検証してアーカイブ。
+RICE 採点・依存・バッチ計画の詳細は [2026-10-16-00-backlog-checking-team-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-checking-team-1016.md)（アーカイブ済み）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---:|---|
+| ✅ 01 | [2026-10-16-01-fix-unknown-subtype-fail-open.md](../dev-docs/archived/pbi/2026-10-16-01-fix-unknown-subtype-fail-open.md) | fix | 12.0 | 1.0 | ✅ 完了。interpretSubtypeSpec を fail-closed 化。messaging 454件緑・tsc clean |
+| ✅ 02 | [2026-10-16-02-fix-getmessageor-japanese-fallback.md](../dev-docs/archived/pbi/2026-10-16-02-fix-getmessageor-japanese-fallback.md) | fix | 6.0 | 0.5 | ✅ 完了。9文字列を英語化＋言語テスト。settings 792件緑・check-i18n 緑 |
+| ✅ 03 | [2026-10-16-03-fix-log-severity-unification.md](../dev-docs/archived/pbi/2026-10-16-03-fix-log-severity-unification.md) | fix | 6.0 | 0.25 | ✅ 完了。logDebug→logWarn＋新規1件。Red/Green 確認済み |
+| ✅ 04 | [2026-10-16-04-fix-is-deleted-double-predicate.md](../dev-docs/archived/pbi/2026-10-16-04-fix-is-deleted-double-predicate.md) | fix | 4.5 | 1.0 | ✅ 完了。所有権をビルダー側に一本化。offscreen 1255件緑 |
+| ✅ 05 | [2026-10-16-05-fix-opfs-load-shed-retry.md](../dev-docs/archived/pbi/2026-10-16-05-fix-opfs-load-shed-retry.md) | fix | 4.3 | 1.5 | ✅ 完了。bounded 待機（3回×5ms・注入SleepFn）。offscreen 1258件緑 |
+| ✅ 06 | [2026-10-16-06-fix-fieldvalidation-japanese-hardcode.md](../dev-docs/archived/pbi/2026-10-16-06-fix-fieldvalidation-japanese-hardcode.md) | fix | 4.0 | 1.0 | ✅ 完了。新キー双側追加＋ロケール別3件。settings 795件緑 |
+| ✅ 07 | [2026-10-16-07-fix-local-sqlite-error-code.md](../dev-docs/archived/pbi/2026-10-16-07-fix-local-sqlite-error-code.md) | fix | 4.0 | 0.5 | ✅ 完了。10箇所を STORAGE_READ_FAILURE へ。panels 929件緑 |
+| ✅ 08 | [2026-10-16-08-fix-privacy-mode-compat-info.md](../dev-docs/archived/pbi/2026-10-16-08-fix-privacy-mode-compat-info.md) | fix | 2.4 | 1.0 | ✅ 完了。getExportValidationError＋version 判定土台。88件緑 |
+| ✅ 09 | [2026-10-16-09-refactor-status-mirror-helper.md](../dev-docs/archived/pbi/2026-10-16-09-refactor-status-mirror-helper.md) | refactor | 2.0 | 0.5 | ✅ 完了。mirrorStatusToTop 集約。ui 112件緑 |
+| ✅ 10 | [2026-10-16-10-refactor-manifest-localhost-gate.md](../dev-docs/archived/pbi/2026-10-16-10-refactor-manifest-localhost-gate.md) | refactor | 1.6 | 1.0 | ✅ 完了。宣言付き削除の受理＋red-side 維持。21件緑 |
+| ✅ 11 | [2026-10-16-11-chore-remove-e2e-probe-attributes.md](../dev-docs/archived/pbi/2026-10-16-11-chore-remove-e2e-probe-attributes.md) | chore | 0.8 | 0.5 | ✅ 完了。6箇所除去。content 534件緑（headed E2E 未検証） |
+
+実行順: W1（01／03／04／09／11 並列）→ W2（02→06 直列／05／07／08／10 並列）。全 DoD（コードレビュー含む）完了。最終 `npm run validate` の結果は下記サマリー参照。
+
+
 ### 2026-10-15 rust-wasm-migration ラウンド（wasm-1015） — ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
 rust-wasm-migration skill による自律発見 (STEP 0: 棚卸し → 候補走査 → プローブ実測)。既存 4 クレートは移植・配線済み (sentence-dedup は content-script CSP で配線不能確定) のため、新規 Rust 移植は見送り、唯一の計算律速区間 (export render) は TS 側メモ化へ転換して実装した。RICE 採点・実測・却下理由の詳細は [2026-10-15-00-backlog-rustwasm-1015.md](../dev-docs/archived/pbi/2026-10-15-00-backlog-rustwasm-1015.md)（アーカイブ済み）。
