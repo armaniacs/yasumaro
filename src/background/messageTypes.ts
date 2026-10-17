@@ -160,7 +160,7 @@ export type PingMessage = {
  */
 export type PauseRecordingMessage = {
     type: 'PAUSE_RECORDING';
-    payload: { minutes: 30 | 60 | 180 };
+    payload: { minutes: 30 | 60 | 90 | 120 };
 };
 
 export type ResumeRecordingMessage = {

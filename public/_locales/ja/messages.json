@@ -5181,22 +5181,6 @@
     "message": "一時停止",
     "description": "ポップアップヘッダーの一時停止ボタンのaria-label"
   },
-  "pausePresetLabel": {
-    "message": "一時停止の時間",
-    "description": "ポップアップヘッダーの一時停止時間セレクトのaria-label"
-  },
-  "pausePreset30": {
-    "message": "30分",
-    "description": "一時停止プリセット: 30分"
-  },
-  "pausePreset60": {
-    "message": "1時間",
-    "description": "一時停止プリセット: 60分"
-  },
-  "pausePreset180": {
-    "message": "3時間",
-    "description": "一時停止プリセット: 180分"
-  },
   "pauseIdle": {
     "message": "記録中",
     "description": "記録中のときの一時停止状態ラベル"

@@ -3,13 +3,21 @@ import { CONTENT_SCRIPT_ALLOWED_TYPES } from '../../messageTypes.js';
 import { createGetPauseStateHandler, createPauseRecordingHandler, createResumeRecordingHandler } from '../pauseHandlers.js';
 
 describe('pauseHandlers', () => {
-  it('rejects minutes outside 30/60/180', async () => {
+  it('rejects minutes outside 30/60/90/120', async () => {
     const schedule = vi.fn(async () => 0);
     const handler = createPauseRecordingHandler({ schedulePause: schedule });
     const sendResponse = vi.fn();
     await handler({ type: 'PAUSE_RECORDING', payload: { minutes: 45 } } as never, {} as never, sendResponse);
     expect(schedule).not.toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'INVALID_PAUSE_MINUTES' });
+  });
+
+  it('accepts the 90-minute press step', async () => {
+    const schedule = vi.fn(async () => 99);
+    const sendResponse = vi.fn();
+    await createPauseRecordingHandler({ schedulePause: schedule })({ type: 'PAUSE_RECORDING', payload: { minutes: 90 } } as never, {} as never, sendResponse);
+    expect(schedule).toHaveBeenCalledWith(90);
+    expect(sendResponse).toHaveBeenCalledWith({ success: true, pausedUntil: 99 });
   });
 
   it('pauses and resumes through injected seams', async () => {

@@ -20,6 +20,7 @@ describe('badgeDisplay — the state table (PBI 2026-09-12-07)', () => {
     { state: { kind: 'no-consent' }, text: '!', color: '#F97316' },
     { state: { kind: 'excluded' }, text: '∉', color: '#10B981' },
     { state: { kind: 'recording' }, text: '●', color: '#10B981' },
+    { state: { kind: 'paused', minutes: 30 }, text: '30', color: '#F97316' },
     { state: { kind: 'clear' }, text: '', color: undefined },
   ];
 
@@ -50,5 +51,14 @@ describe('setBadge — scoping discipline', () => {
 
     expect(setBadgeText).toHaveBeenCalledWith(expect.objectContaining({ text: '', tabId: 7 }));
     expect(setBadgeBackgroundColor).not.toHaveBeenCalled();
+  });
+
+  it('paused countdown writes globally (no tabId) with text and color', async () => {
+    await setBadge({ kind: 'paused', minutes: 90 });
+
+    expect(setBadgeText).toHaveBeenCalledWith({ text: '90' });
+    expect(setBadgeBackgroundColor).toHaveBeenCalledWith(
+      expect.objectContaining({ color: '#F97316' }),
+    );
   });
 });

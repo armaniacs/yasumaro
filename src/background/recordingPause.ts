@@ -1,10 +1,21 @@
 // src/background/recordingPause.ts
 import { StorageKeys } from '../utils/storage/types.js';
+import { setBadge } from './badgePolicy.js';
 
 /** One-shot alarm armed per pause. install is a no-op (local-md immediate pattern). */
 export const PAUSE_ALARM_NAME = 'yasumaro-recording-resume';
-/** Preset choices shown in the popup. Fixed set (custom minutes: out of scope). */
-export const PAUSE_PRESETS_MINUTES = [30, 60, 180] as const;
+/** Periodic badge-countdown ticker, armed alongside the pause. */
+export const PAUSE_TICK_NAME = 'yasumaro-recording-pause-tick';
+/** Ticker granularity (minutes). Chrome's minimum repeat period. */
+export const PAUSE_TICK_PERIOD_MINUTES = 1;
+/**
+ * Press steps for the popup pause button (PBI follow-up 2026-10-17: each
+ * press extends the deadline by 30 min up to PAUSE_MAX_MINUTES). The popup
+ * snaps the computed minutes up into this set; the handler re-validates.
+ */
+export const PAUSE_PRESETS_MINUTES = [30, 60, 90, 120] as const;
+/** Hard cap for accumulated presses (4 presses × 30 min). */
+export const PAUSE_MAX_MINUTES = 120;
 
 export type PausePresetMinutes = (typeof PAUSE_PRESETS_MINUTES)[number];
 
@@ -49,6 +60,8 @@ export async function schedulePause(
   const until = now + minutes * 60_000;
   await deps.storage.setPausedUntil(until);
   await chrome.alarms.create(PAUSE_ALARM_NAME, { when: until });
+  await chrome.alarms.create(PAUSE_TICK_NAME, { periodInMinutes: PAUSE_TICK_PERIOD_MINUTES });
+  await setBadge({ kind: 'paused', minutes });
   return until;
 }
 
@@ -58,4 +71,6 @@ export async function clearPause(
   const storage = deps.storage ?? createChromePauseStorage();
   await storage.clearPausedUntil();
   await chrome.alarms.clear(PAUSE_ALARM_NAME);
+  await chrome.alarms.clear(PAUSE_TICK_NAME);
+  await setBadge({ kind: 'clear' });
 }

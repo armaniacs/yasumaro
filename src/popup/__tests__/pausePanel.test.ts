@@ -28,20 +28,16 @@ void _stateOk;
 
 const FIXED_NOW = 1_760_000_000_000;
 
-function setPanelDom(presetValue = '30'): void {
+function setPanelDom(): void {
   document.body.innerHTML =
     '<button id="pauseBtn" aria-label="Pause auto-save"></button>' +
-    `<select id="pausePreset" aria-label="Pause duration">` +
-    `<option value="30"${presetValue === '30' ? ' selected' : ''}>30 min</option>` +
-    `<option value="60"${presetValue === '60' ? ' selected' : ''}>1 hour</option>` +
-    `<option value="180"${presetValue === '180' ? ' selected' : ''}>3 hours</option>` +
-    '</select>' +
     '<button id="resumeBtn" class="hidden" aria-label="Resume now"></button>' +
     '<span id="pauseStateLabel" aria-live="polite"></span>';
-  (document.getElementById('pausePreset') as HTMLSelectElement).value = presetValue;
 }
 
 type SendFn = (message: Record<string, unknown>) => Promise<unknown>;
+
+const PRESS_STEPS = [30, 60, 90, 120];
 
 function createSend(initialState: number | null = null): SendFn & { calls: unknown[] } {
   const calls: unknown[] = [];
@@ -53,7 +49,7 @@ function createSend(initialState: number | null = null): SendFn & { calls: unkno
     }
     if (message.type === 'PAUSE_RECORDING') {
       const minutes = (message.payload as { minutes?: unknown }).minutes;
-      const mins = minutes === 60 || minutes === 180 ? minutes : 30;
+      const mins = PRESS_STEPS.includes(minutes as number) ? (minutes as number) : 30;
       pausedUntil = FIXED_NOW + mins * 60_000;
       return { success: true, pausedUntil };
     }
@@ -81,26 +77,8 @@ describe('pausePanel', () => {
       vi.restoreAllMocks();
     });
 
-    it('sends PAUSE_RECORDING with the chosen preset', async () => {
-      setPanelDom('60');
-      const send = createSend();
-      const { initPausePanel } = await import('../pausePanel.js');
-      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
-
-      (document.getElementById('pauseBtn') as HTMLButtonElement).click();
-
-      await waitForMock(() =>
-        expect(send.calls).toContainEqual({
-          type: 'PAUSE_RECORDING',
-          payload: { minutes: 60 },
-        }),
-      );
-    });
-
-    it('falls back to 30 minutes when the preset select is absent', async () => {
-      document.body.innerHTML =
-        '<button id="pauseBtn" aria-label="Pause auto-save"></button>' +
-        '<span id="pauseStateLabel" aria-live="polite"></span>';
+    it('pauses 30 minutes on the first press from idle', async () => {
+      setPanelDom();
       const send = createSend();
       const { initPausePanel } = await import('../pausePanel.js');
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
@@ -115,10 +93,9 @@ describe('pausePanel', () => {
       );
     });
 
-    it('falls back to 30 minutes for an unknown preset value', async () => {
-      setPanelDom('30');
-      (document.getElementById('pausePreset') as HTMLSelectElement).value = '999';
-      const send = createSend();
+    it('extends to 60 minutes on the second press', async () => {
+      setPanelDom();
+      const send = createSend(FIXED_NOW + 30 * 60_000);
       const { initPausePanel } = await import('../pausePanel.js');
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
 
@@ -126,6 +103,60 @@ describe('pausePanel', () => {
 
       await waitForMock(() =>
         expect(send.calls).toContainEqual({
+          type: 'PAUSE_RECORDING',
+          payload: { minutes: 60 },
+        }),
+      );
+    });
+
+    it('caps accumulated presses at 120 minutes', async () => {
+      setPanelDom();
+      const send = createSend(FIXED_NOW + 100 * 60_000);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+
+      (document.getElementById('pauseBtn') as HTMLButtonElement).click();
+
+      await waitForMock(() =>
+        expect(send.calls).toContainEqual({
+          type: 'PAUSE_RECORDING',
+          payload: { minutes: 120 },
+        }),
+      );
+    });
+
+    it('snaps a late press up without shortening the deadline', async () => {
+      setPanelDom();
+      const send = createSend(FIXED_NOW + 5 * 60_000);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+
+      (document.getElementById('pauseBtn') as HTMLButtonElement).click();
+
+      // 5 remaining + 30 = 35 → snaps up to 60 (never down to 30).
+      await waitForMock(() =>
+        expect(send.calls).toContainEqual({
+          type: 'PAUSE_RECORDING',
+          payload: { minutes: 60 },
+        }),
+      );
+    });
+
+    it('falls back to 30 minutes when the state query fails', async () => {
+      setPanelDom();
+      const send = vi.fn(async (message: Record<string, unknown>): Promise<unknown> => {
+        if (message.type === 'GET_PAUSE_STATE') {
+          return { success: false, error: 'STATE_FAILED' };
+        }
+        return { success: true, pausedUntil: FIXED_NOW + 30 * 60_000 };
+      });
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+
+      (document.getElementById('pauseBtn') as HTMLButtonElement).click();
+
+      await waitForMock(() =>
+        expect(send).toHaveBeenCalledWith({
           type: 'PAUSE_RECORDING',
           payload: { minutes: 30 },
         }),
@@ -146,7 +177,7 @@ describe('pausePanel', () => {
     });
 
     it('shows approximate remaining minutes after pausing, never exact seconds', async () => {
-      setPanelDom('30');
+      setPanelDom();
       const send = createSend();
       const { initPausePanel } = await import('../pausePanel.js');
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
@@ -267,13 +298,10 @@ describe('pausePanel', () => {
 
       const pauseBtn = document.getElementById('pauseBtn') as HTMLElement;
       const resumeBtn = document.getElementById('resumeBtn') as HTMLElement;
-      const preset = document.getElementById('pausePreset') as HTMLElement;
       expect(pauseBtn.tagName).toBe('BUTTON');
       expect(resumeBtn.tagName).toBe('BUTTON');
-      expect(preset.tagName).toBe('SELECT');
       expect(pauseBtn.getAttribute('aria-label')).toBeTruthy();
       expect(resumeBtn.getAttribute('aria-label')).toBeTruthy();
-      expect(preset.getAttribute('aria-label')).toBeTruthy();
       expect(document.getElementById('pauseStateLabel')?.getAttribute('aria-live')).toBe(
         'polite',
       );
@@ -286,6 +314,16 @@ describe('pausePanel', () => {
 
       expect(() => initPausePanel({ sendMessage: send, now: () => FIXED_NOW })).not.toThrow();
       await drainMacrotask();
+    });
+
+    it('snaps press targets up into 30/60/90/120 with a 120 cap', async () => {
+      const { snapPressMinutes } = await import('../pausePanel.js');
+      expect(snapPressMinutes(0)).toBe(30);
+      expect(snapPressMinutes(30 * 60_000)).toBe(30);
+      expect(snapPressMinutes(30 * 60_000 + 1)).toBe(60);
+      expect(snapPressMinutes(90 * 60_000)).toBe(90);
+      expect(snapPressMinutes(91 * 60_000)).toBe(120);
+      expect(snapPressMinutes(500 * 60_000)).toBe(120);
     });
   });
 });

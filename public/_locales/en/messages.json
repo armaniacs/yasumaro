@@ -5199,22 +5199,6 @@
     "message": "Pause auto-save",
     "description": "Pause button aria-label in the popup header"
   },
-  "pausePresetLabel": {
-    "message": "Pause duration",
-    "description": "Pause preset select aria-label in the popup header"
-  },
-  "pausePreset30": {
-    "message": "30 min",
-    "description": "Pause preset option: 30 minutes"
-  },
-  "pausePreset60": {
-    "message": "1 hour",
-    "description": "Pause preset option: 60 minutes"
-  },
-  "pausePreset180": {
-    "message": "3 hours",
-    "description": "Pause preset option: 180 minutes"
-  },
   "pauseIdle": {
     "message": "Recording",
     "description": "Pause state label when recording is active"
