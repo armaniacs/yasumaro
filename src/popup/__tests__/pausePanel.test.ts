@@ -167,12 +167,7 @@ describe('pausePanel', () => {
       const send = createSend(null);
       const { initPausePanel } = await import('../pausePanel.js');
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
-
-      await waitForMock(() =>
-        expect(
-          (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
-        ).not.toBe(''),
-      );
+      await drainMacrotask();
       expect((document.getElementById('pauseStateLabel') as HTMLElement).textContent).toBe(
         '記録中',
       );
@@ -190,12 +185,7 @@ describe('pausePanel', () => {
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
 
       (document.getElementById('pauseBtn') as HTMLButtonElement).click();
-
-      await waitForMock(() =>
-        expect(
-          (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
-        ).not.toBe(''),
-      );
+      await drainMacrotask();
       expect(
         (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
       ).not.toBe('記録中');
@@ -208,11 +198,7 @@ describe('pausePanel', () => {
       initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
 
       const resumeBtn = document.getElementById('resumeBtn') as HTMLButtonElement;
-      await waitForMock(() =>
-        expect(
-          (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
-        ).not.toBe(''),
-      );
+      await drainMacrotask();
       expect(resumeBtn.classList.contains('hidden')).toBe(true);
 
       (document.getElementById('pauseBtn') as HTMLButtonElement).click();
