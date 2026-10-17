@@ -348,6 +348,70 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     }).not.toThrow();
   });
 
+  describe('selection checkboxes (PBI-02 Task 2)', () => {
+    const base = Date.now() - 300 * MINUTE_MS;
+
+    /** Two sessions: an older flat pair, and a newer 3-page nav chain. */
+    function checkboxRows() {
+      return [
+        { id: 1, url: 'https://a.dev/1', title: 'A1', domain: 'a.dev', tags: null, is_starred: null, created_at: base },
+        { id: 2, url: 'https://a.dev/2', title: 'A2', domain: 'a.dev', tags: null, is_starred: null, created_at: base + 10 * MINUTE_MS },
+        { id: 3, url: 'https://s.dev/start', title: 'Start', domain: 's.dev', tags: null, is_starred: null, created_at: base + 200 * MINUTE_MS },
+        {
+          id: 4, url: 'https://s.dev/mid', title: 'Mid', domain: 's.dev', tags: null, is_starred: null,
+          created_at: base + 210 * MINUTE_MS, nav_source_url: 'https://s.dev/start',
+        },
+        {
+          id: 5, url: 'https://s.dev/leaf', title: 'Leaf', domain: 's.dev', tags: null, is_starred: null,
+          created_at: base + 220 * MINUTE_MS, nav_source_url: 'https://s.dev/mid',
+        },
+      ];
+    }
+
+    it('renders a session checkbox, page checkboxes, and subtree checkboxes', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      // One per session.
+      expect(document.querySelectorAll('.rsess-select-session')).toHaveLength(2);
+      // One per page: 2 flat rows + 3 tree nodes (populateRecord is shared).
+      expect(document.querySelectorAll('.rsess-select-page')).toHaveLength(5);
+      // One per intermediate tree node: Start and Mid have children, Leaf does not.
+      expect(document.querySelectorAll('.rsess-select-subtree')).toHaveLength(2);
+    });
+
+    it('labels every checkbox for assistive technology', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      const all = document.querySelectorAll(
+        '.rsess-select-session, .rsess-select-page, .rsess-select-subtree',
+      );
+      expect(all.length).toBeGreaterThan(0);
+      for (const box of all) {
+        expect(box.getAttribute('aria-label')).toBeTruthy();
+      }
+    });
+
+    it('toggling a checkbox does not throw (hooks wired, state lands in Task 3)', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load();
+      await flush();
+
+      const sessionBox = document.querySelector('.rsess-select-session') as HTMLInputElement;
+      sessionBox.checked = true;
+      expect(() => sessionBox.dispatchEvent(new Event('change'))).not.toThrow();
+    });
+  });
+
   describe('navigation trail display (PBI 03)', () => {
     const base = Date.now() - 60 * MINUTE_MS;
 

@@ -46,12 +46,35 @@ import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 
+/** Toggle hooks for the selection checkboxes (PBI-02). Task 3 wires real
+ *  selection state; until then the panel passes the inert set below. */
+export interface SelectionToggleHooks {
+  toggleSession: (index: number, checked: boolean) => void;
+  togglePage: (recordId: number, checked: boolean) => void;
+  toggleSubtree: (recordId: number, checked: boolean) => void;
+}
+
+/** Placeholder until Task 3 owns selection state — checkboxes render and fire, nothing listens yet. */
+const inertSelectionHooks: SelectionToggleHooks = {
+  toggleSession: () => {},
+  togglePage: () => {},
+  toggleSubtree: () => {},
+};
+
 /** Fill a caller-owned <li> with one record line. */
 function populateRecord(
   li: HTMLLIElement,
   record: SessionInput,
   options: { readonly showSearch: boolean },
+  hooks: Pick<SelectionToggleHooks, 'togglePage'>,
 ): void {
+  const pageCheck = document.createElement('input');
+  pageCheck.type = 'checkbox';
+  pageCheck.className = 'rsess-select-page';
+  pageCheck.dataset.recordId = String(record.id);
+  pageCheck.setAttribute('aria-label', `select page ${record.title || record.url}`);
+  pageCheck.addEventListener('change', () => hooks.togglePage(record.id, pageCheck.checked));
+  li.prepend(pageCheck);
 
   const time = document.createElement('time');
   time.textContent = new Date(record.created_at).toLocaleTimeString(undefined, {
@@ -112,23 +135,36 @@ function populateRecord(
   }
 }
 
-function renderTree(nodes: SessionTreeNode[]): HTMLUListElement {
+function renderTree(nodes: SessionTreeNode[], hooks: SelectionToggleHooks): HTMLUListElement {
   const list = document.createElement('ul');
   list.className = 'research-sessions-tree';
   for (const node of nodes) {
     const li = document.createElement('li');
     // PBI 04: the leading record's search term is shown once, above the tree,
     // so it is suppressed here to avoid printing it twice.
-    populateRecord(li, node.record, { showSearch: node !== nodes[0] });
+    populateRecord(li, node.record, { showSearch: node !== nodes[0] }, hooks);
     if (node.children.length > 0) {
-      li.appendChild(renderTree(node.children));
+      const subtreeCheck = document.createElement('input');
+      subtreeCheck.type = 'checkbox';
+      subtreeCheck.className = 'rsess-select-subtree';
+      subtreeCheck.dataset.recordId = String(node.record.id);
+      subtreeCheck.setAttribute('aria-label', 'select pages below this page');
+      subtreeCheck.addEventListener('change', () =>
+        hooks.toggleSubtree(node.record.id, subtreeCheck.checked),
+      );
+      li.prepend(subtreeCheck);
+      li.appendChild(renderTree(node.children, hooks));
     }
     list.appendChild(li);
   }
   return list;
 }
 
-function renderSession(session: ResearchSession): HTMLLIElement {
+function renderSession(
+  session: ResearchSession,
+  index: number,
+  hooks: SelectionToggleHooks,
+): HTMLLIElement {
   const item = document.createElement('li');
   item.className = 'research-sessions-item';
 
@@ -152,6 +188,12 @@ function renderSession(session: ResearchSession): HTMLLIElement {
   if (theme.length > 0) parts.push(theme);
 
   summary.textContent = parts.join(' · ');
+  const sessionCheck = document.createElement('input');
+  sessionCheck.type = 'checkbox';
+  sessionCheck.className = 'rsess-select-session';
+  sessionCheck.setAttribute('aria-label', `select session ${index + 1}`);
+  sessionCheck.addEventListener('change', () => hooks.toggleSession(index, sessionCheck.checked));
+  summary.prepend(sessionCheck);
   details.appendChild(summary);
 
   if (hasNavTrail(session)) {
@@ -164,13 +206,13 @@ function renderSession(session: ResearchSession): HTMLLIElement {
       query.textContent = msg('researchSessions_searchQuery', { q: rootQuery }, 'Search: {q}');
       details.appendChild(query);
     }
-    details.appendChild(renderTree(buildSessionTree(session)));
+    details.appendChild(renderTree(buildSessionTree(session), hooks));
   } else {
     const records = document.createElement('ol');
     records.className = 'research-sessions-records';
     for (const record of session.records) {
       const li = document.createElement('li');
-      populateRecord(li, record, { showSearch: true });
+      populateRecord(li, record, { showSearch: true }, hooks);
       records.appendChild(li);
     }
     details.appendChild(records);
@@ -225,7 +267,10 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     }
 
     clearElement(listEl);
-    for (const session of agg.sessions) listEl.appendChild(renderSession(session));
+    const target = listEl;
+    agg.sessions.forEach((session, index) => {
+      target.appendChild(renderSession(session, index, inertSelectionHooks));
+    });
 
     renderSearchToGoal(agg.sessions);
   }
