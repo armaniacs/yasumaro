@@ -43,6 +43,9 @@ describe('messaging parity: message type registry', () => {
             'LOG_FORWARD',
             'OW_PROBE_QUERY',
             'OW_PROBE_STATE',
+            'PAUSE_RECORDING',
+            'RESUME_RECORDING',
+            'GET_PAUSE_STATE',
         ]);
     });
 
@@ -70,6 +73,8 @@ describe('messaging parity: message type registry', () => {
             'CONSENT_STATE_CHANGED',
             'TEST_CONNECTIONS',
             'TEST_AI',
+            'RESUME_RECORDING',
+            'GET_PAUSE_STATE',
         ]);
     });
 

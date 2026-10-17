@@ -46,6 +46,9 @@ export const VALID_MESSAGE_TYPES = [
     'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
     'OW_PROBE_QUERY', // E2E probe arming query (content script cannot read chrome.storage.session)
     'OW_PROBE_STATE', // E2E probe state relay (content script cannot write chrome.storage.session)
+    'PAUSE_RECORDING', // Popup-initiated pause (PBI 2026-10-17-01)
+    'RESUME_RECORDING', // Popup-initiated early resume (PBI 2026-10-17-01)
+    'GET_PAUSE_STATE', // Popup pause-state query (PBI 2026-10-17-01)
 ] as const;
 
 /**
@@ -75,4 +78,6 @@ export const NO_PAYLOAD_TYPES = [
     'CONSENT_STATE_CHANGED',
     'TEST_CONNECTIONS',
     'TEST_AI',
+    'RESUME_RECORDING', // Bare envelope like PING (PBI 2026-10-17-01)
+    'GET_PAUSE_STATE', // Bare envelope like PING (PBI 2026-10-17-01)
 ] as const;

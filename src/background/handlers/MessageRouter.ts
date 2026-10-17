@@ -35,6 +35,12 @@ import {
   createE2EProbeStateHandler,
 } from './e2eProbeHandlers.js';
 import {
+  createPauseRecordingHandler,
+  createResumeRecordingHandler,
+  createGetPauseStateHandler,
+} from './pauseHandlers.js';
+import { schedulePause, clearPause, createChromePauseStorage } from '../recordingPause.js';
+import {
   createFetchUrlHandler,
   createContentCleansingExecutedHandler,
   createCheckDomainHandler,
@@ -219,6 +225,9 @@ export class MessageRouter {
       ACTIVITY_UPDATE: createActivityUpdateHandler({ updateActivity: deps.updateActivity }),
       SESSION_LOCK_REQUEST: createSessionLockRequestHandler({ lockSession: deps.lockSession }),
       PING: createPingHandler({}),
+      PAUSE_RECORDING: createPauseRecordingHandler({ schedulePause: (m) => schedulePause(m) }),
+      RESUME_RECORDING: createResumeRecordingHandler({ clearPause: () => clearPause() }),
+      GET_PAUSE_STATE: createGetPauseStateHandler({ getState: () => createChromePauseStorage().getPausedUntil() }),
       REFRESH_LOCAL_MARKDOWN_SCHEDULER: createRefreshLocalMarkdownSchedulerHandler({ initExportScheduler: deps.initExportScheduler }),
       CONSENT_STATE_CHANGED: createConsentStateChangedHandler({ updateConsentBadge: deps.updateConsentBadge }),
       GENERATE_REVIEW_SUMMARY: createGenerateReviewSummaryHandler({
