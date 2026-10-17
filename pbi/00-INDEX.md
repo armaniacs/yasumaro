@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） — ⬜ 未着手 2件 ✨機能追加 RICE順: 01 → 02
+
+壁打ちで2候補を確定し RICE 採点して PBI 化。依存なし・並列実装可だが着手順は RICE 順。採点・なぜなぜ分析の詳細は [2026-10-17-00-backlog-research-pause.md](2026-10-17-00-backlog-research-pause.md)。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ⬜ 01 | [2026-10-17-01-feat-pause-autosave-temporarily.md](2026-10-17-01-feat-pause-autosave-temporarily.md) | feat | 128 | 5.0 | ⬜ 未着手。ポップアップ停止ボタン＋プリセット（30分/1時間/3時間）＋自動復旧。deep-digで二層ゲート・Background所有アラーム・概算表示に確定 |
+| ⬜ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ⬜ 未着手。セッション/ページ/サブツリーのまとめて削除。履歴画面の2段階確認パターン流用、スター保護なし |
+
+実行順: 01 → 02（RICE順、依存なし）。
+
 ### 2026-10-16 アーキテクチャ深掘りラウンド（arch-1016） — ✅ 12件完了・アーカイブ済み 🔧非機能追加
 
 improve-codebase-architecture の4領域並列探索で12候補（Strong 6・Worth 6）をRICE順に自律実装・検証してアーカイブ。B1（01/02/03/04）→B2（06/07/08/09）→B3（05/12＋11）→B4（10）の依存順バッチ。RICE詳細は [2026-10-16-00-backlog-arch-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-arch-1016.md)（アーカイブ済み）。
