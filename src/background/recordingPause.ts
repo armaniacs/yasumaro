@@ -59,9 +59,11 @@ export async function schedulePause(
   const now = (deps.now ?? Date.now)();
   const until = now + minutes * 60_000;
   await deps.storage.setPausedUntil(until);
+  // Badge first: if a later alarm call ever throws, the countdown is still
+  // visible and the state round-trip (GET_PAUSE_STATE) stays truthful.
+  await setBadge({ kind: 'paused', minutes });
   await chrome.alarms.create(PAUSE_ALARM_NAME, { when: until });
   await chrome.alarms.create(PAUSE_TICK_NAME, { periodInMinutes: PAUSE_TICK_PERIOD_MINUTES });
-  await setBadge({ kind: 'paused', minutes });
   return until;
 }
 

@@ -100,10 +100,35 @@ async function refreshPauseState(
       return;
     }
     renderStateResponse(state, now());
+    assertToolbarBadge(state, now);
   } catch {
     // Fail-open display: a dead transport means the SW side cannot confirm
     // a pause, so fall back to the idle label instead of throwing.
     renderIdle();
+  }
+}
+
+/**
+ * Re-assert the toolbar countdown whenever the popup opens while paused.
+ * The background owns the badge (schedule/tick/clear), but if that write
+ * ever failed silently — or an older build armed the pause — the popup is
+ * the user-visible moment that must show the number. Display-only: never
+ * throws, never blocks the panel.
+ */
+function assertToolbarBadge(state: PauseStateResponse, now: () => number): void {
+  try {
+    const until =
+      state.success === true && typeof state.pausedUntil === 'number' ? state.pausedUntil : null;
+    if (until === null || until <= now()) return;
+    const mins = Math.max(1, Math.round((until - now()) / 60_000));
+    const action = (
+      globalThis as {
+        chrome?: { action?: { setBadgeText?: (details: { text: string }) => unknown } };
+      }
+    ).chrome?.action;
+    void action?.setBadgeText?.({ text: String(mins) });
+  } catch {
+    // Badge self-heal is best-effort by design.
   }
 }
 

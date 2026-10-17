@@ -307,6 +307,34 @@ describe('pausePanel', () => {
       );
     });
 
+    it('re-asserts the toolbar countdown when opening while paused', async () => {
+      setPanelDom();
+      const setBadgeText = vi.fn();
+      (globalThis as Record<string, unknown>).chrome = {
+        i18n: { getMessage: () => '' },
+        action: { setBadgeText },
+      };
+      const send = createSend(FIXED_NOW + 30 * 60_000);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+      await drainMacrotask();
+      expect(setBadgeText).toHaveBeenCalledWith({ text: '30' });
+    });
+
+    it('does not touch the toolbar badge when idle', async () => {
+      setPanelDom();
+      const setBadgeText = vi.fn();
+      (globalThis as Record<string, unknown>).chrome = {
+        i18n: { getMessage: () => '' },
+        action: { setBadgeText },
+      };
+      const send = createSend(null);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+      await drainMacrotask();
+      expect(setBadgeText).not.toHaveBeenCalled();
+    });
+
     it('does nothing when the pause button is absent', async () => {
       document.body.innerHTML = '<span id="pauseStateLabel"></span>';
       const send = createSend();
