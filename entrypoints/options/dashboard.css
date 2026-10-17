@@ -5088,6 +5088,20 @@ details[open] > .priority-details-summary {
   padding: var(--ym-space-1, 4px) 0 var(--ym-space-1, 4px) var(--ym-space-3, 12px);
 }
 
+/* Research sessions bulk-delete bar (PBI-02): count + delete + inline confirm. */
+.rsess-bulk-bar {
+  display: flex;
+  gap: var(--ym-space-2, 8px);
+  align-items: center;
+  margin: var(--ym-space-2, 8px) 0;
+}
+
+.rsess-select-session,
+.rsess-select-page,
+.rsess-select-subtree {
+  margin-right: 6px;
+}
+
 .research-sessions-domain,
 .research-sessions-query,
 .research-sessions-source,
