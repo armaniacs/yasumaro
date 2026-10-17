@@ -323,6 +323,9 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'SESSION_LOCK_REQUEST' ? { success: true } :
   T extends 'CONTENT_CLEANSING_EXECUTED' ? { success: true } :
   T extends 'PING' ? { success: true } :
+  T extends 'PAUSE_RECORDING' ? { success: true; pausedUntil: number } | { success: false; error: string } :
+  T extends 'RESUME_RECORDING' ? { success: true } :
+  T extends 'GET_PAUSE_STATE' ? { success: true; pausedUntil: number | null } :
   T extends 'REFRESH_LOCAL_MARKDOWN_SCHEDULER' ? { success: true } :
   T extends 'CONSENT_STATE_CHANGED' ? { success: true } :
   T extends 'GENERATE_REVIEW_SUMMARY' ? { success: true; generated: boolean } :

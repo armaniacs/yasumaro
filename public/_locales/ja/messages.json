@@ -5148,5 +5148,53 @@
   },
   "localMarkdownExportEmptyAll": {
     "message": "エクスポートする記録がありません。"
+  },
+  "pauseRecording": {
+    "message": "一時停止",
+    "description": "ポップアップヘッダーの一時停止ボタンのaria-label"
+  },
+  "pausePresetLabel": {
+    "message": "一時停止の時間",
+    "description": "ポップアップヘッダーの一時停止時間セレクトのaria-label"
+  },
+  "pausePreset30": {
+    "message": "30分",
+    "description": "一時停止プリセット: 30分"
+  },
+  "pausePreset60": {
+    "message": "1時間",
+    "description": "一時停止プリセット: 60分"
+  },
+  "pausePreset180": {
+    "message": "3時間",
+    "description": "一時停止プリセット: 180分"
+  },
+  "pauseIdle": {
+    "message": "記録中",
+    "description": "記録中のときの一時停止状態ラベル"
+  },
+  "pauseRemaining": {
+    "message": "約{mins}分停止中",
+    "description": "残り時間(概算分)付きの一時停止状態ラベル"
+  },
+  "pauseResume": {
+    "message": "再開する",
+    "description": "ポップアップヘッダーの再開ボタンのaria-label"
+  },
+  "pauseInvalidMinutes": {
+    "message": "無効な一時停止時間です",
+    "description": "一時停止時間が拒否されたときのエラー"
+  },
+  "pauseStarted": {
+    "message": "一時停止しました",
+    "description": "一時停止直後に表示する確認メッセージ"
+  },
+  "pauseResumed": {
+    "message": "再開しました",
+    "description": "再開直後に表示する確認メッセージ"
+  },
+  "pauseError": {
+    "message": "一時停止の操作に失敗しました",
+    "description": "一時停止・再開の操作が失敗したときのエラー"
   }
 }

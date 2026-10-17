@@ -37,6 +37,14 @@
       <h2 data-i18n="appTitle" aria-hidden="true">Yasumaro</h2>
       <button id="menuBtn" class="icon-btn" data-i18n-aria-label="openSettings" aria-label="Settings">⚙</button>
       <button id="historyBtn" class="icon-btn" data-i18n-aria-label="openHistory" aria-label="History">📋</button>
+      <button id="pauseBtn" class="icon-btn" data-i18n-aria-label="pauseRecording" aria-label="Pause auto-save">⏸</button>
+      <select id="pausePreset" class="pause-preset" data-i18n-aria-label="pausePresetLabel" aria-label="Pause duration">
+        <option value="30" data-i18n="pausePreset30">30 min</option>
+        <option value="60" data-i18n="pausePreset60">1 hour</option>
+        <option value="180" data-i18n="pausePreset180">3 hours</option>
+      </select>
+      <button id="resumeBtn" class="icon-btn hidden" data-i18n-aria-label="pauseResume" aria-label="Resume now">▶</button>
+      <span id="pauseStateLabel" class="pause-state" aria-live="polite"></span>
     </div>
 
     <div id="currentPage">

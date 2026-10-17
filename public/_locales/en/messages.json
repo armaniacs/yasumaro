@@ -5166,5 +5166,53 @@
   },
   "localMarkdownExportEmptyAll": {
     "message": "No records to export."
+  },
+  "pauseRecording": {
+    "message": "Pause auto-save",
+    "description": "Pause button aria-label in the popup header"
+  },
+  "pausePresetLabel": {
+    "message": "Pause duration",
+    "description": "Pause preset select aria-label in the popup header"
+  },
+  "pausePreset30": {
+    "message": "30 min",
+    "description": "Pause preset option: 30 minutes"
+  },
+  "pausePreset60": {
+    "message": "1 hour",
+    "description": "Pause preset option: 60 minutes"
+  },
+  "pausePreset180": {
+    "message": "3 hours",
+    "description": "Pause preset option: 180 minutes"
+  },
+  "pauseIdle": {
+    "message": "Recording",
+    "description": "Pause state label when recording is active"
+  },
+  "pauseRemaining": {
+    "message": "Paused for about {mins} min",
+    "description": "Pause state label with approximate remaining minutes"
+  },
+  "pauseResume": {
+    "message": "Resume now",
+    "description": "Resume button aria-label in the popup header"
+  },
+  "pauseInvalidMinutes": {
+    "message": "Invalid pause duration",
+    "description": "Error shown when the pause duration is rejected"
+  },
+  "pauseStarted": {
+    "message": "Paused",
+    "description": "Transient confirmation shown right after pausing"
+  },
+  "pauseResumed": {
+    "message": "Resumed",
+    "description": "Transient confirmation shown right after resuming"
+  },
+  "pauseError": {
+    "message": "Pause action failed",
+    "description": "Error shown when a pause or resume action fails"
   }
 }
