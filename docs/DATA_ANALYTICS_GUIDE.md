@@ -74,6 +74,16 @@
 - 既定の期間は「過去7日間」で、期間ボタンを押すとすぐ取り直します
 - 対象は最大 10,000 件、表示は最大 100 セッションです。上限に達すると通知が表示されます
 
+#### まとめて削除する
+
+セッション・ページ・流入元のまとまりを選んでまとめて消せます。試し調べや残したくない閲覧の痕跡を一括で片付けるときに使います。**削除した記録は戻せない**ため、必要なものは先にエクスポートしてください。
+
+- セッションの見出し行のチェックボックスは、そのセッション全体を選択します
+- ページ行のチェックボックスは、そのページだけを選択します
+- 流入元ツリーの中間ノードのチェックボックスは、その配下全体を選択します
+- 選ぶと一覧の上に件数と削除ボタンが出ます。削除ボタンを押すと確認文（件数・期間・代表ドメインと、残りはまとめ直される旨）が出るので、もう一度削除を選ぶと確定します
+- 削除後は対象期間を取り直してまとめ直すため、残りの表示が前後のセッションと結合されることがあります
+
 #### 遷移記録（セッションの「検索」「流入元」）
 
 リサーチ・セッションの各行に「検索: …」「流入元: …」を出すために使う、任意の機能です。記録経路そのものは変更しません。ダッシュボードの Privacy タブで確認ダイアログに同意したときだけ有効になり、既定は無効です。
@@ -222,6 +232,16 @@ Groups records that fall within a chosen time gap of each other into one "resear
 - Each section shows the start time, page count, minutes and the top tags (or top domains when tagging is off). The minutes are the span from the first to the last record, not actual reading time
 - The default period is "Last 7 days"; picking a period refetches immediately
 - Analyzes up to 10,000 records and displays at most 100 sessions, with a notice at either cap
+
+#### Bulk Delete
+
+Select sessions, pages, or referrer subtrees and delete them together. Use this to clean up trial searches or traces you don't want kept. **Deleted records cannot be restored**, so export anything you need first.
+
+- A session header checkbox selects the whole session
+- A page-row checkbox selects only that page
+- A navigation-tree node checkbox selects everything below it
+- Selecting shows a count and a delete button above the list. Pressing it reveals a confirmation (page count, date range, representative domains, plus a note that the rest will be regrouped); pressing delete again confirms
+- After deletion the period is refetched and regrouped, so the remaining display may merge with neighboring sessions
 
 #### Navigation Trail (the "Search" and "From" fields in a session)
 
