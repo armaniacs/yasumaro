@@ -78,6 +78,13 @@ export class RecordingAdmission {
       if (!(await this.deps.isRecordingAllowed())) {
         return { rejected: { success: false, reason: 'privacy_consent_required' } };
       }
+      if (kind === 'valid-visit') {
+        const { createChromePauseStorage, isPaused } = await import('./recordingPause.js');
+        const until = await createChromePauseStorage().getPausedUntil();
+        if (isPaused(until, Date.now())) {
+          return { rejected: { success: false, reason: 'recording_paused' } };
+        }
+      }
       return { settings: await this.deps.getSettings() };
     }
 

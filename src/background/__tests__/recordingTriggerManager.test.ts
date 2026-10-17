@@ -117,6 +117,13 @@ describe('RecordingTriggerManager', () => {
       manager.invalidateCache();
       expect(await manager.shouldRecord({ type: 'scroll_idle' })).toBe(false);
     });
+
+    it('returns false for scroll_idle while paused, true for manual_save', async () => {
+      mockStorage['recording_triggers'] = JSON.stringify({ scrollAndTime: true, manualSave: true });
+      mockStorage['recording_paused_until'] = Date.now() + 30 * 60_000;
+      expect(await manager.shouldRecord({ type: 'scroll_idle', scrollPercent: 90, visitDuration: 60_000 })).toBe(false);
+      expect(await manager.shouldRecord({ type: 'manual_save' })).toBe(true);
+    });
   });
 
   describe('validate', () => {
