@@ -243,6 +243,18 @@ describe('createAlarmRegistry', () => {
     });
   });
 
+  it('routes the recording-resume alarm to clearPause', async () => {
+    const clearSpy = vi.fn(async () => undefined);
+    vi.doMock('../recordingPause.js', () => ({
+      clearPause: clearSpy,
+      PAUSE_ALARM_NAME: 'yasumaro-recording-resume',
+    }));
+    const { createAlarmRegistry } = await import('../alarmRegistry.js');
+    const registry = createAlarmRegistry(makeDeps());
+    registry.handleAlarm(alarm('yasumaro-recording-resume'));
+    await vi.waitFor(() => expect(clearSpy).toHaveBeenCalledTimes(1));
+  });
+
   describe('review-summary run (pinned: deps-driven)', () => {
     it('routes weekly firing to deps.reviewSummaryGenerator.generateWeeklySummary', async () => {
       const generator = makeReviewGenerator();

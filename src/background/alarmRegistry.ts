@@ -84,6 +84,11 @@ async function installLocalMdScheduler(): Promise<void> {
 async function installLocalMdImmediate(): Promise<void> {
 }
 
+async function runRecordingResume(): Promise<void> {
+  const { clearPause } = await import('./recordingPause.js');
+  await clearPause();
+}
+
 async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   const offlineNetworkQueue = deps.getOfflineNetworkQueue();
   const processOfflineNetworkQueue = createOfflineQueueProcessor({
@@ -155,6 +160,7 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
     install: async () => { await deps.sessionAlarmService.startTimeoutChecker(); },
     run: async () => { await deps.sessionAlarmService.checkTimeout(); },
   },
+  { name: 'yasumaro-recording-resume', run: runRecordingResume },
 ];
 
 export interface AlarmRegistry {
