@@ -21,7 +21,7 @@
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
 | ⬜ 01 | [2026-10-17-01-feat-pause-autosave-temporarily.md](2026-10-17-01-feat-pause-autosave-temporarily.md) | feat | 128 | 5.0 | ⬜ 未着手。ポップアップ停止ボタン＋プリセット（30分/1時間/3時間）＋自動復旧。deep-digで二層ゲート・Background所有アラーム・概算表示に確定 |
-| ⬜ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ⬜ 未着手。セッション/ページ/サブツリーのまとめて削除。履歴画面の2段階確認パターン流用、スター保護なし |
+| ✅ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ✅ 完了。3階層チェック＋2段階確認＋再fetch再グループ。Task 5 gate: type-check/lint(0 errors)/67件/build PASS |
 
 実行順: 01 → 02（RICE順、依存なし）。
 
