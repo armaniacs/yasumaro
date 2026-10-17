@@ -14,16 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） — ⬜ 未着手 2件 ✨機能追加 RICE順: 01 → 02
+### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） — ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
 
-壁打ちで2候補を確定し RICE 採点して PBI 化。依存なし・並列実装可だが着手順は RICE 順。採点・なぜなぜ分析の詳細は [2026-10-17-00-backlog-research-pause.md](2026-10-17-00-backlog-research-pause.md)。
+壁打ちで2候補を確定し RICE 採点して PBI 化。依存なし・並列実装可だが着手順は RICE 順。採点・なぜなぜ分析の詳細は [2026-10-17-00-backlog-research-pause.md](../dev-docs/archived/pbi/2026-10-17-00-backlog-research-pause.md)（アーカイブ済み）。Subagent-Drivenで全13タスクを実装・レビューし、最終全体レビューの指摘2件（期限切れ表示・再開失敗分岐）を修正して最終validate緑（1094ファイル・16377テスト）でアーカイブ。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| ⬜ 01 | [2026-10-17-01-feat-pause-autosave-temporarily.md](2026-10-17-01-feat-pause-autosave-temporarily.md) | feat | 128 | 5.0 | ⬜ 未着手。ポップアップ停止ボタン＋プリセット（30分/1時間/3時間）＋自動復旧。deep-digで二層ゲート・Background所有アラーム・概算表示に確定 |
-| ✅ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ✅ 完了。3階層チェック＋2段階確認＋再fetch再グループ。Task 5 gate: type-check/lint(0 errors)/67件/build PASS |
+| ✅ 01 | [2026-10-17-01-feat-pause-autosave-temporarily.md](../dev-docs/archived/pbi/2026-10-17-01-feat-pause-autosave-temporarily.md) | feat | 128 | 5.0 | ✅ 完了。二層ゲート・Background所有アラーム・概算表示・ポップアップUI。最終validate緑 |
+| ✅ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](../dev-docs/archived/pbi/2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ✅ 完了。3階層チェック＋2段階確認＋再fetch再グループ。最終validate緑 |
 
-実行順: 01 → 02（RICE順、依存なし）。
+実行順: 01 → 02（RICE順、依存なし）。残フォローアップ: popup init-skip耐性（別タスク化）・onChanged refreshテスト・fail-open系logDebug（いずれも非ブロッカー）。
 
 ### 2026-10-16 アーキテクチャ深掘りラウンド（arch-1016） — ✅ 12件完了・アーカイブ済み 🔧非機能追加
 
