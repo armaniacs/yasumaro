@@ -246,6 +246,7 @@ export const StorageKeys = {
     SUMMARY_NORMALIZE_ENABLED: 'summary_normalize_enabled', // 日本語文末正規化（デフォルト: true）
     // Recording trigger settings
     RECORDING_TRIGGERS: 'recording_triggers', // 記録トリガー設定（JSON）
+    RECORDING_PAUSED_UNTIL: 'recording_paused_until', // 一時停止期限（ms epoch、PBI 2026-10-17-01）
     SNAPSHOT_INTERVAL_MINUTES: 'snapshot_interval_minutes', // 定期スナップショット間隔（分）
     // SQLite migration tracking
     YASUMARO_MIGRATION_STATUS: 'yasumaro_migration_status', // 'pending' | 'completed' | 'fresh_install' | 'failed_permanently' | null
@@ -496,6 +497,7 @@ export interface StorageKeyValues {
     [StorageKeys.CONTENT_DEDUP_THRESHOLD]: number;
     [StorageKeys.SUMMARY_NORMALIZE_ENABLED]: boolean;
     [StorageKeys.RECORDING_TRIGGERS]: string;
+    [StorageKeys.RECORDING_PAUSED_UNTIL]: number;
     [StorageKeys.SNAPSHOT_INTERVAL_MINUTES]: number;
     [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'pending' | 'completed' | 'fresh_install' | 'failed_permanently' | null;
     [StorageKeys.YASUMARO_MIGRATION_PROGRESS]: number;
