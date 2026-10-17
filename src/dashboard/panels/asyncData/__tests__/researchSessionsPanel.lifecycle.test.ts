@@ -392,7 +392,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       // One per session.
@@ -407,7 +407,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       const all = document.querySelectorAll(
@@ -423,7 +423,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       const sessionBox = document.querySelector('.rsess-select-session') as HTMLInputElement;
@@ -466,7 +466,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       mockQueryLogs.mockResolvedValue({ data: { rows: chainRows(), total: 3 } });
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       // One leaf page: its dataset.recordId must land in the selection.
@@ -508,7 +508,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     it('session checkbox clicks do not toggle the details disclosure', async () => {
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       const box = document.querySelector<HTMLInputElement>('.rsess-select-session')!;
@@ -528,7 +528,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     it('delete flow: select -> confirm -> entries removed and list refetched', async () => {
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
       expect(mockQueryLogs).toHaveBeenCalledTimes(1);
 
@@ -561,7 +561,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     it('cancel hides the inline confirm without deleting', async () => {
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       const page = document.querySelector<HTMLInputElement>(
@@ -582,7 +582,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     it('stops at the first delete failure and reports the partial run', async () => {      mockDeleteLog.mockResolvedValueOnce({ error: 'boom' });
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       for (const id of ['1', '2']) {
@@ -608,7 +608,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     it('drops the selection when a refetch returns zero rows', async () => {
       const { panel } = mountPanel();
 
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       const page = document.querySelector<HTMLInputElement>(
@@ -621,7 +621,7 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       // A period change to an empty window must not leave a live selection
       // pointing at rows that are no longer on screen.
       mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
-      await panel.load();
+      await panel.load?.();
       await flush();
 
       expect(selectionCount()).toContain('0 selected');
