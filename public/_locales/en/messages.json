@@ -2570,6 +2570,34 @@
     "message": "Failed to load sessions.",
     "description": "Load error"
   },
+  "researchSessions_selectionCount": {
+    "message": "{n} selected",
+    "description": "Bulk bar selection count"
+  },
+  "researchSessions_deleteSelected": {
+    "message": "Delete selected",
+    "description": "Bulk bar delete button"
+  },
+  "researchSessions_deleteConfirm": {
+    "message": "Really delete?",
+    "description": "Bulk bar inline confirm prompt"
+  },
+  "researchSessions_deleteConfirmYes": {
+    "message": "Delete",
+    "description": "Bulk bar inline confirm button"
+  },
+  "researchSessions_deleteConfirmNo": {
+    "message": "Cancel",
+    "description": "Bulk bar inline cancel button"
+  },
+  "researchSessions_deleteDetail": {
+    "message": "Delete {n} pages ({range}) from {domains}? The remaining pages will be regrouped.",
+    "description": "Bulk delete inline confirm detail"
+  },
+  "researchSessions_deleteError": {
+    "message": "Deleted {n} pages. Failed partway.",
+    "description": "Partial bulk delete error"
+  },
   "navTrailLabel": {
     "message": "Record navigation trail (source page and search terms)",
     "description": "Navigation trail opt-in checkbox label"

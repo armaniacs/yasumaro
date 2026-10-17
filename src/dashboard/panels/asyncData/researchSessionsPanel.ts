@@ -45,21 +45,21 @@ import { type PanelLifecycle } from '../types.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { deleteLog, isServiceError } from '../../dashboardSqliteService.js';
+import { removeSavedUrl } from '../../../utils/storageUrls.js';
+import {
+  expandSelectedIds,
+  summarizeSelection,
+  type SessionSelection,
+} from '../../researchSessionSelection.js';
 
-/** Toggle hooks for the selection checkboxes (PBI-02). Task 3 wires real
- *  selection state; until then the panel passes the inert set below. */
+/** Toggle hooks for the selection checkboxes (PBI-02). Task 3 wires the
+ *  panel-local selection state below. */
 export interface SelectionToggleHooks {
   toggleSession: (index: number, checked: boolean) => void;
   togglePage: (recordId: number, checked: boolean) => void;
   toggleSubtree: (recordId: number, checked: boolean) => void;
 }
-
-/** Placeholder until Task 3 owns selection state — checkboxes render and fire, nothing listens yet. */
-const inertSelectionHooks: SelectionToggleHooks = {
-  toggleSession: () => {},
-  togglePage: () => {},
-  toggleSubtree: () => {},
-};
 
 /** Fill a caller-owned <li> with one record line. */
 function populateRecord(
@@ -193,6 +193,10 @@ function renderSession(
   sessionCheck.className = 'rsess-select-session';
   sessionCheck.setAttribute('aria-label', `select session ${index + 1}`);
   sessionCheck.addEventListener('change', () => hooks.toggleSession(index, sessionCheck.checked));
+  // The checkbox lives inside <summary>: without this its click bubbles to
+  // the disclosure and toggles the <details> open/closed. No preventDefault —
+  // that would cancel the checkbox's own default check action.
+  sessionCheck.addEventListener('click', (event) => event.stopPropagation());
   summary.prepend(sessionCheck);
   details.appendChild(summary);
 
@@ -239,14 +243,166 @@ export function createResearchSessionsPanel(): PanelLifecycle {
   // only meaningful — and only rendered — when consent is on.
   let navTrailActive = false;
 
+  // --- Bulk delete selection (PBI-02 Task 3) -------------------------------
+  // Panel-local state (NOT model state): the selected record ids live here,
+  // next to lastRows, and are dropped on every re-render so a gap change or
+  // refetch never keeps a stale selection.
+  let selectedIds = new Set<number>();
+  let lastSessions: ResearchSession[] = [];
+  let bulkBar: HTMLElement | null = null;
+  let selectionCountEl: HTMLElement | null = null;
+  let deleteBtn: HTMLButtonElement | null = null;
+  let deleteConfirm: HTMLElement | null = null;
+  let confirmText: HTMLElement | null = null;
+  let deleteConfirmYes: HTMLButtonElement | null = null;
+  let deleteConfirmNo: HTMLButtonElement | null = null;
+
+  function toSelection(ids: Set<number>): SessionSelection[] {
+    return [...ids].map((recordId) => ({ kind: 'page', recordId }) as SessionSelection);
+  }
+
+  /** Drops the selection and repaints the bar (count 0, delete disabled,
+   *  inline confirm closed). Called on every re-render AND on the load()
+   *  paths that never reach render() (empty window, load failure), so a
+   *  period change can never leave a live selection pointing at rows that
+   *  are no longer on screen. */
+  function resetSelection(): void {
+    selectedIds = new Set<number>();
+    refreshBulkBar();
+  }
+
+  /** Full inline-confirm detail: pages, date range, representative domains,
+   *  and the regroup notice (i18n key researchSessions_deleteDetail). */
+  function currentDeleteDetail(): string {
+    const summary = summarizeSelection(lastSessions, toSelection(selectedIds));
+    const domainCounts = new Map<string, number>();
+    for (const row of lastRows ?? []) {
+      if (!selectedIds.has(row.id) || !row.domain) continue;
+      domainCounts.set(row.domain, (domainCounts.get(row.domain) ?? 0) + 1);
+    }
+    const domains = [...domainCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([domain]) => domain)
+      .join(', ');
+    const range =
+      summary.earliest !== null && summary.latest !== null
+        ? `${new Date(summary.earliest).toLocaleString()} – ${new Date(summary.latest).toLocaleString()}`
+        : '';
+    return msg(
+      'researchSessions_deleteDetail',
+      { n: summary.pages, range, domains },
+      `Delete ${summary.pages} pages (${range}) from ${domains}? The remaining pages will be regrouped.`,
+    );
+  }
+
+  function refreshBulkBar(): void {
+    if (!bulkBar || !selectionCountEl || !deleteBtn) return;
+    bulkBar.hidden = false;
+    // The count span doubles as the delete-error surface (registered as
+    // 'deleteError' in mount): unhiding here clears a stale error/SR text on
+    // every selection change or re-render.
+    selectionCountEl.hidden = false;
+    selectionCountEl.textContent = msg(
+      'researchSessions_selectionCount',
+      { n: selectedIds.size },
+      `${selectedIds.size} selected`,
+    );
+    deleteBtn.disabled = selectedIds.size === 0;
+    if (deleteConfirm) deleteConfirm.hidden = true;
+  }
+
+  const selectionHooks: SelectionToggleHooks = {
+    toggleSession: (index, checked) => {
+      const session = lastSessions[index];
+      if (!session) return;
+      for (const record of session.records) {
+        if (checked) selectedIds.add(record.id);
+        else selectedIds.delete(record.id);
+      }
+      refreshBulkBar();
+    },
+    togglePage: (recordId, checked) => {
+      if (checked) selectedIds.add(recordId);
+      else selectedIds.delete(recordId);
+      refreshBulkBar();
+    },
+    toggleSubtree: (recordId, checked) => {
+      // Rebuild the current trees (pure, cheap) and expand through the
+      // shared selector so a subtree check selects the whole branch below it.
+      const trees = lastSessions.map((session) => buildSessionTree(session));
+      const ids = expandSelectedIds(lastSessions, [{ kind: 'subtree', recordId }], trees);
+      for (const id of ids) {
+        if (checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+      }
+      refreshBulkBar();
+    },
+  };
+
+  // Step 1 (history-pattern 2-step): reveal the inline confirm with the
+  // selection detail. Controller ruling: inline ONLY, no modal — a modal on
+  // top would make it 3 steps.
+  function handleDeleteSelected(): void {
+    if (selectedIds.size === 0) return;
+    if (confirmText) confirmText.textContent = currentDeleteDetail();
+    if (deleteConfirm) deleteConfirm.hidden = false;
+  }
+
+  // Step 2: execute through the existing delete path only (deleteLog +
+  // removeSavedUrl, same as sqliteHistoryModel). First-failure-stops like
+  // history, then refetch so the remaining pages regroup.
+  async function handleDeleteSelectedConfirm(): Promise<void> {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (deleteConfirm) deleteConfirm.hidden = true;
+    let deletedCount = 0;
+    let error: string | null = null;
+    const urlById = new Map<number, string>();
+    for (const row of lastRows ?? []) {
+      if (selectedIds.has(row.id) && row.url) urlById.set(row.id, row.url);
+    }
+    for (const id of ids) {
+      const result = await deleteLog(id);
+      if (isServiceError(result)) {
+        error = result.error;
+        break; // 先行失敗で停止（履歴と同一政策）
+      }
+      const url = urlById.get(id);
+      if (url) {
+        try { await removeSavedUrl(url); } catch { /* best-effort（履歴と同一） */ }
+      }
+      deletedCount += 1;
+    }
+    selectedIds = new Set<number>();
+    await lifecycle.reload(); // 対象期間を再fetch→再グループ化
+    if (error !== null) {
+      notices.setMessage(
+        'deleteError',
+        msg(
+          'researchSessions_deleteError',
+          { n: deletedCount },
+          `Deleted ${deletedCount} pages. Failed partway.`,
+        ),
+      );
+      notices.show('deleteError');
+    }
+  }
+
   /** Re-groups the cached rows. Never refetches — the gap is a different cut
    *  of the same records, not a different question. */
   function render(): void {
+    // Gap change / refetch staleness: never keep a selection across a re-cut
+    // of the rows. The bar refresh runs after the notice reset below so a
+    // stale delete-error (shown on the count span) does not survive either.
+    selectedIds = new Set<number>();
     if (!lastRows || !listEl || !summaryEl) return;
     // Re-aggregation reset: the row cap describes the FETCH, so it survives.
     notices.resetForReaggregate();
+    resetSelection();
 
     const agg = groupResearchSessions(lastRows, gapMinutes);
+    lastSessions = [...agg.sessions];
 
     summaryEl.textContent = msg(
       'researchSessions_summary',
@@ -269,7 +425,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     clearElement(listEl);
     const target = listEl;
     agg.sessions.forEach((session, index) => {
-      target.appendChild(renderSession(session, index, inertSelectionHooks));
+      target.appendChild(renderSession(session, index, selectionHooks));
     });
 
     renderSearchToGoal(agg.sessions);
@@ -373,6 +529,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
 
         if (res.rows.length === 0) {
           clearElement(listEl);
+          lastSessions = [];
+          resetSelection();
           notices.showEmpty();
           return;
         }
@@ -382,6 +540,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
         void logError('[researchSessionsPanel] load failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'researchSessionsPanel');
         if (isStale()) return;
         lastRows = null;
+        lastSessions = [];
+        resetSelection();
         notices.showError('researchSessionsError', 'Failed to load sessions.');
       }
     },
@@ -400,6 +560,13 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       searchToGoalTable = container.querySelector('#researchSessionsSearchToGoalTable');
       searchToGoalBody = container.querySelector('#researchSessionsSearchToGoalBody');
       searchToGoalOff = container.querySelector('#researchSessionsSearchToGoalOff');
+      bulkBar = container.querySelector('#researchSessionsBulkBar');
+      selectionCountEl = container.querySelector('#researchSessionsSelectionCount');
+      deleteBtn = container.querySelector('#researchSessionsDeleteSelected');
+      deleteConfirm = container.querySelector('#researchSessionsDeleteConfirm');
+      confirmText = deleteConfirm?.querySelector('span') ?? null;
+      deleteConfirmYes = container.querySelector('#researchSessionsDeleteConfirmYes');
+      deleteConfirmNo = container.querySelector('#researchSessionsDeleteConfirmNo');
 
       notices.register('empty', emptyEl, {
         i18nKey: 'researchSessions_empty',
@@ -407,8 +574,17 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       });
       notices.register('rowCap', rowCapEl, { fetchScoped: true });
       notices.register('truncated', truncatedEl, { fetchScoped: true });
+      // The count span doubles as the partial-delete error surface: a
+      // dedicated error div is outside the brief's fixed bulk-bar markup.
+      notices.register('deleteError', selectionCountEl);
 
       lifecycle.mount(container);
+
+      deleteBtn?.addEventListener('click', () => handleDeleteSelected());
+      deleteConfirmYes?.addEventListener('click', () => void handleDeleteSelectedConfirm());
+      deleteConfirmNo?.addEventListener('click', () => {
+        if (deleteConfirm) deleteConfirm.hidden = true;
+      });
 
       if (gapSelect) {
         for (const minutes of SESSION_GAP_OPTIONS_MIN) {
@@ -441,6 +617,15 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       searchToGoalOff = null;
       navTrailActive = false;
       lastRows = null;
+      selectedIds = new Set<number>();
+      lastSessions = [];
+      bulkBar = null;
+      selectionCountEl = null;
+      deleteBtn = null;
+      deleteConfirm = null;
+      confirmText = null;
+      deleteConfirmYes = null;
+      deleteConfirmNo = null;
     },
   };
 }

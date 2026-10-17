@@ -2488,6 +2488,34 @@
     "message": "セッションの読み込みに失敗しました。",
     "description": "Load error"
   },
+  "researchSessions_selectionCount": {
+    "message": "{n} 件選択中",
+    "description": "Bulk bar selection count"
+  },
+  "researchSessions_deleteSelected": {
+    "message": "選択項目を削除",
+    "description": "Bulk bar delete button"
+  },
+  "researchSessions_deleteConfirm": {
+    "message": "本当に削除しますか？",
+    "description": "Bulk bar inline confirm prompt"
+  },
+  "researchSessions_deleteConfirmYes": {
+    "message": "削除",
+    "description": "Bulk bar inline confirm button"
+  },
+  "researchSessions_deleteConfirmNo": {
+    "message": "キャンセル",
+    "description": "Bulk bar inline cancel button"
+  },
+  "researchSessions_deleteDetail": {
+    "message": "{n} ページ（{range}、{domains}）を削除しますか？残りのページは再グループ化されます。",
+    "description": "Bulk delete inline confirm detail"
+  },
+  "researchSessions_deleteError": {
+    "message": "{n} ページ削除しました。途中で失敗しました。",
+    "description": "Partial bulk delete error"
+  },
   "navTrailLabel": {
     "message": "遷移記録（流入元ページと検索語）を記録する",
     "description": "Navigation trail opt-in checkbox label"
