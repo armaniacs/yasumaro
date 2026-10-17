@@ -307,6 +307,44 @@ describe('ContentKernel polling — one-shot deadline + scroll driven', () => {
         expect(kernel.pageState.isValidVisitReported).toBe(true);
     });
 
+    it('paused kernel never calls reportValidVisit on scroll reaching conditions', async () => {
+        const baseTime = 8_000_000;
+        const now = baseTime + 6000; // 6s elapsed (>5s duration threshold)
+        const clock = () => now;
+        const scheduler = new FakeScheduler();
+        const pageState = new PageState();
+        pageState.startTime = baseTime;
+        pageState.minVisitDuration = 5;
+        pageState.minScrollDepth = 50;
+        pageState.maxScrollPercentage = 0;
+
+        const { kernel, sender } = makeKernel({ baseTime, clock, scheduler, pageState });
+        await kernel.init();
+
+        // Pause engaged after init — direct pausedCache manipulation (no waits).
+        (kernel as unknown as { pausedCache: boolean }).pausedCache = true;
+
+        const reportSpy = vi.spyOn(kernel, 'reportValidVisit').mockImplementation(async () => {
+            kernel.pageState.isValidVisitReported = true;
+            return Promise.resolve();
+        });
+
+        // Scroll reaching 60% (>= 50% depth, duration met) — same geometry as Scenario 2.
+        Object.defineProperty(window, 'innerHeight', { value: 400, writable: true, configurable: true });
+        Object.defineProperty(document.documentElement, 'scrollHeight', { value: 1600, writable: true, configurable: true });
+        Object.defineProperty(window, 'scrollY', { value: 720, writable: true, configurable: true });
+
+        kernel.updateMaxScroll();
+
+        // Allow microtask for reportValidVisit (void)
+        await Promise.resolve();
+        await Promise.resolve();
+
+        expect(reportSpy).not.toHaveBeenCalled();
+        expect(sender.sendMessageWithRetry).not.toHaveBeenCalled();
+        expect(kernel.pageState.isValidVisitReported).toBe(false);
+    });
+
     it('keeps public API compatibility: startPeriodicCheck / stopPeriodicCheck / scheduleNextCheck exist', async () => {
         const scheduler = new FakeScheduler();
         const pageState = new PageState();
