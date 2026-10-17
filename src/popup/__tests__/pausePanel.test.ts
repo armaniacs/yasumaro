@@ -173,6 +173,56 @@ describe('pausePanel', () => {
       );
     });
 
+    it('renders idle when the stored pause has already expired', async () => {
+      setPanelDom();
+      const send = createSend(FIXED_NOW - 60_000);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+      await drainMacrotask();
+      expect((document.getElementById('pauseStateLabel') as HTMLElement).textContent).toBe(
+        '記録中',
+      );
+      expect(
+        (document.getElementById('resumeBtn') as HTMLButtonElement).classList.contains(
+          'hidden',
+        ),
+      ).toBe(true);
+
+      // Boundary: expiry exactly now agrees with the strict `now < until` gate.
+      setPanelDom();
+      const sendExact = createSend(FIXED_NOW);
+      initPausePanel({ sendMessage: sendExact, now: () => FIXED_NOW });
+      await drainMacrotask();
+      expect((document.getElementById('pauseStateLabel') as HTMLElement).textContent).toBe(
+        '記録中',
+      );
+    });
+
+    it('does not show Resumed when the resume request fails', async () => {
+      setPanelDom();
+      const send = vi.fn(async (message: Record<string, unknown>): Promise<unknown> => {
+        if (message.type === 'RESUME_RECORDING') {
+          return { success: false, error: 'RESUME_FAILED' };
+        }
+        return { success: true, pausedUntil: FIXED_NOW + 30 * 60_000 };
+      });
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+      await drainMacrotask();
+
+      (document.getElementById('resumeBtn') as HTMLButtonElement).click();
+      await drainMacrotask();
+      const label = (document.getElementById('pauseStateLabel') as HTMLElement);
+      expect(label.textContent).not.toBe('再開しました');
+      expect(label.textContent).toBe('一時停止の操作に失敗しました');
+      // Still paused — the resume button stays visible.
+      expect(
+        (document.getElementById('resumeBtn') as HTMLButtonElement).classList.contains(
+          'hidden',
+        ),
+      ).toBe(false);
+    });
+
     it('shows an error label when the pause request is rejected', async () => {
       setPanelDom();
       const send = vi.fn(async (message: Record<string, unknown>): Promise<unknown> => {

@@ -19,6 +19,7 @@ import type { ResponseForType } from '../messaging/types.js';
 export type PausePresetMinutes = 30 | 60 | 180;
 
 type PauseRecordingResponse = ResponseForType<'PAUSE_RECORDING'>;
+type ResumeRecordingResponse = ResponseForType<'RESUME_RECORDING'>;
 type PauseStateResponse = ResponseForType<'GET_PAUSE_STATE'>;
 
 export interface PausePanelDeps {
@@ -71,7 +72,9 @@ function renderStateResponse(state: PauseStateResponse | null, now: number): voi
     state !== null && state.success === true && typeof state.pausedUntil === 'number'
       ? state.pausedUntil
       : null;
-  if (until === null) {
+  if (until === null || until <= now) {
+    // An expired timestamp claims no protection: the background gates use
+    // strict `now < until`, so the label must agree and render idle.
     renderIdle();
     return;
   }
@@ -127,9 +130,14 @@ async function resumeNow(
   send: (message: Record<string, unknown>) => Promise<unknown>,
   now: () => number,
 ): Promise<void> {
+  let response: ResumeRecordingResponse;
   try {
-    await send({ type: 'RESUME_RECORDING' });
+    response = (await send({ type: 'RESUME_RECORDING' })) as ResumeRecordingResponse;
   } catch {
+    setLabel(getMessageOr('pauseError', '一時停止の操作に失敗しました'));
+    return;
+  }
+  if (response.success !== true) {
     setLabel(getMessageOr('pauseError', '一時停止の操作に失敗しました'));
     return;
   }
