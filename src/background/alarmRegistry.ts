@@ -84,6 +84,29 @@ async function installLocalMdScheduler(): Promise<void> {
 async function installLocalMdImmediate(): Promise<void> {
 }
 
+async function runRecordingResume(): Promise<void> {
+  const { clearPause } = await import('./recordingPause.js');
+  await clearPause();
+}
+
+/**
+ * Badge-countdown ticker (armed alongside the pause, period 1 min).
+ * Refreshes the global remaining-minutes badge; on expiry (or a missed
+ * resume alarm) it stands down via clearPause so no stale number lingers.
+ */
+async function runPauseTick(): Promise<void> {
+  const { createChromePauseStorage, isPaused, PAUSE_TICK_NAME } = await import('./recordingPause.js');
+  const { setBadge } = await import('./badgePolicy.js');
+  const until = await createChromePauseStorage().getPausedUntil().catch(() => null);
+  const now = Date.now();
+  if (until !== null && isPaused(until, now)) {
+    await setBadge({ kind: 'paused', minutes: Math.max(1, Math.ceil((until - now) / 60_000)) });
+    return;
+  }
+  await setBadge({ kind: 'clear' });
+  await chrome.alarms.clear(PAUSE_TICK_NAME);
+}
+
 async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   const offlineNetworkQueue = deps.getOfflineNetworkQueue();
   const processOfflineNetworkQueue = createOfflineQueueProcessor({
@@ -155,6 +178,8 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
     install: async () => { await deps.sessionAlarmService.startTimeoutChecker(); },
     run: async () => { await deps.sessionAlarmService.checkTimeout(); },
   },
+  { name: 'yasumaro-recording-resume', run: runRecordingResume },
+  { name: 'yasumaro-recording-pause-tick', run: runPauseTick },
 ];
 
 export interface AlarmRegistry {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { clampLimit, buildQuerySpec } from '../queryPlan.js';
+import { clampLimit, buildQuerySpec, DEFAULT_QUERY_LIMIT, type AlreadyCappedQuery } from '../queryPlan.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
 
 describe('clampLimit', () => {
@@ -39,15 +39,15 @@ describe('clampLimit', () => {
 });
 
 describe('buildQuerySpec limit clamp', () => {
-  it('clamps negative limit to the plain default (100)', () => {
+  it('clamps negative limit to the plain default (DEFAULT_QUERY_LIMIT)', () => {
     const spec = buildQuerySpec({ limit: -1 });
     expect(spec.limit).toBeGreaterThanOrEqual(1);
     expect(spec.limit).toBeLessThanOrEqual(QUERY_CAPS.plain);
-    expect(spec.limit).toBe(100);
+    expect(spec.limit).toBe(DEFAULT_QUERY_LIMIT);
   });
 
   it('clamps 0.5 to default', () => {
-    expect(buildQuerySpec({ limit: 0.5 }).limit).toBe(100);
+    expect(buildQuerySpec({ limit: 0.5 }).limit).toBe(DEFAULT_QUERY_LIMIT);
   });
 
   it('caps 1e9 at the plain cap', () => {
@@ -57,4 +57,14 @@ describe('buildQuerySpec limit clamp', () => {
   it('passes 50 through', () => {
     expect(buildQuerySpec({ limit: 50 }).limit).toBe(50);
   });
+
+  // PBI 2026-10-16-06: pin — invalid limit must fall back to
+  // DEFAULT_QUERY_LIMIT itself, not a hardcoded copy. Changing the constant
+  // must break this test until buildQuerySpec references the constant.
+  it.each([-1, 0, 0.5, NaN, Infinity, undefined])(
+    'falls back to DEFAULT_QUERY_LIMIT for %p',
+    (bad) => {
+      expect(buildQuerySpec({ limit: bad } as unknown as AlreadyCappedQuery).limit).toBe(DEFAULT_QUERY_LIMIT);
+    },
+  );
 });

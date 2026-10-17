@@ -15,6 +15,8 @@ vi.mock('../../../utils/logger/core.js', async () =>
 vi.mock('../../../utils/auditLog.js', () => ({ recordAuditLog: vi.fn() }));
 
 import { RemoteAIService } from '../RemoteAIService.js';
+import { createProviderStrategy } from '../providerCatalog.js';
+import type { Settings } from '../../../utils/storage/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { LogType } from '../../../utils/logger/types.js';
 import type { AIProviderStrategy } from '../providers/index.js';
@@ -27,7 +29,12 @@ function makeProvider(summary: string, success = true): AIProviderStrategy {
   } as unknown as AIProviderStrategy;
 }
 
-function createService(slots: Array<{ provider: string; model?: string }>): RemoteAIService {
+type FakeMap = Record<string, (settings: Settings) => AIProviderStrategy>;
+
+function createService(
+  slots: Array<{ provider: string; model?: string }>,
+  fakes: FakeMap = {},
+): RemoteAIService {
   const repo: SettingsReader = {
     getAll: vi.fn().mockResolvedValue({
       ai_provider_priority_list: slots,
@@ -36,14 +43,22 @@ function createService(slots: Array<{ provider: string; model?: string }>): Remo
     }),
     getMany: vi.fn(),
   };
-  return new RemoteAIService({ repo });
+  return new RemoteAIService({
+    repo,
+    createStrategy: (providerId: string, settings: Settings) => {
+      const fake = fakes[providerId];
+      if (fake) return fake(settings);
+      return createProviderStrategy(providerId, settings);
+    },
+  });
 }
 
 describe('RemoteAIService slot-failure logging (PBI 2026-09-22-04 follow-up)', () => {
   it('logs provider+model for a failed middle slot, then returns the next success', async () => {
-    const service = createService([{ provider: 'p1', model: 'm1' }, { provider: 'p2' }]);
-    service.registerProvider('p1', () => makeProvider('nope', false));
-    service.registerProvider('p2', () => makeProvider('yep'));
+    const service = createService([{ provider: 'p1', model: 'm1' }, { provider: 'p2' }], {
+      p1: () => makeProvider('nope', false),
+      p2: () => makeProvider('yep'),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -56,8 +71,9 @@ describe('RemoteAIService slot-failure logging (PBI 2026-09-22-04 follow-up)', (
   });
 
   it('logs nothing when the first slot succeeds', async () => {
-    const service = createService([{ provider: 'p1' }]);
-    service.registerProvider('p1', () => makeProvider('yep'));
+    const service = createService([{ provider: 'p1' }], {
+      p1: () => makeProvider('yep'),
+    });
 
     await service.generateSummary('content');
 
@@ -71,9 +87,10 @@ describe('RemoteAIService slot-failure logging (PBI 2026-09-22-04 follow-up)', (
 
 describe('RemoteAIService — attemptedProviders trail (PBI 2026-09-22-04 follow-up)', () => {
   it('total failure carries the tried provider ids in attempt order', async () => {
-    const service = createService([{ provider: 'fail1' }, { provider: 'fail2' }]);
-    service.registerProvider('fail1', () => makeProvider('nope1', false));
-    service.registerProvider('fail2', () => makeProvider('nope2', false));
+    const service = createService([{ provider: 'fail1' }, { provider: 'fail2' }], {
+      fail1: () => makeProvider('nope1', false),
+      fail2: () => makeProvider('nope2', false),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -82,25 +99,28 @@ describe('RemoteAIService — attemptedProviders trail (PBI 2026-09-22-04 follow
   });
 
   it('success path carries no trail (a provider produced the summary)', async () => {
-    const service = createService([{ provider: 'ok' }]);
-    service.registerProvider('ok', () => makeProvider('yep'));
+    const service = createService([{ provider: 'ok' }], {
+      ok: () => makeProvider('yep'),
+    });
 
     const result = await service.generateSummary('content');
 
+    expect(result.success).toBe(true);
     expect(result.attemptedProviders).toBeUndefined();
   });
 });
 
 describe('RemoteAIService — per-slot failure capture (PBI 2026-09-22-04 follow-up)', () => {
   it('captures each failed slot with its own error, even when a later slot succeeds', async () => {
-    const service = createService([{ provider: 'p1', model: 'm1' }, { provider: 'p2' }]);
-    service.registerProvider('p1', () => ({
-      generateSummary: vi.fn().mockResolvedValue({
-        success: false,
-        summary: 'Error: Content blocked due to potential security risk. (原因: x)',
-      }),
-    } as never));
-    service.registerProvider('p2', () => makeProvider('yep'));
+    const service = createService([{ provider: 'p1', model: 'm1' }, { provider: 'p2' }], {
+      p1: () => ({
+        generateSummary: vi.fn().mockResolvedValue({
+          success: false,
+          summary: 'Error: Content blocked due to potential security risk. (原因: x)',
+        }),
+      } as never),
+      p2: () => makeProvider('yep'),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -117,19 +137,20 @@ describe('RemoteAIService — per-slot failure capture (PBI 2026-09-22-04 follow
   });
 
   it('total failure carries attemptedProviders AND per-slot errors (no masking)', async () => {
-    const service = createService([{ provider: 'openai' }, { provider: 'built-in-ai' }]);
-    service.registerProvider('openai', () => ({
-      generateSummary: vi.fn().mockResolvedValue({
-        success: false,
-        summary: 'Error: Failed to generate summary. Please check your API settings.',
-      }),
-    } as never));
-    service.registerProvider('built-in-ai', () => ({
-      generateSummary: vi.fn().mockResolvedValue({
-        success: false,
-        summary: 'Prompt failed: An unknown error occurred: kErrorUnknown',
-      }),
-    } as never));
+    const service = createService([{ provider: 'openai' }, { provider: 'built-in-ai' }], {
+      openai: () => ({
+        generateSummary: vi.fn().mockResolvedValue({
+          success: false,
+          summary: 'Error: Failed to generate summary. Please check your API settings.',
+        }),
+      } as never),
+      'built-in-ai': () => ({
+        generateSummary: vi.fn().mockResolvedValue({
+          success: false,
+          summary: 'Prompt failed: An unknown error occurred: kErrorUnknown',
+        }),
+      } as never),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -143,7 +164,12 @@ describe('RemoteAIService — per-slot failure capture (PBI 2026-09-22-04 follow
   });
 
   it('a success-but-short summary is reported explicitly, not as the summary text', async () => {
-    const service = createService([{ provider: 'short' }, { provider: 'ok' }]);
+    const service = createService([{ provider: 'short' }, { provider: 'ok' }], {
+      short: () => ({
+        generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'tiny' }),
+      } as never),
+      ok: () => makeProvider('long enough summary'),
+    });
     // summary_min_length: 0 in createService — override to force the gate.
     const repo = (service as unknown as { repo: { getAll: ReturnType<typeof vi.fn> } }).repo;
     repo.getAll.mockResolvedValue({
@@ -151,10 +177,6 @@ describe('RemoteAIService — per-slot failure capture (PBI 2026-09-22-04 follow
       ai_provider: 'gemini',
       summary_min_length: 10,
     });
-    service.registerProvider('short', () => ({
-      generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'tiny' }),
-    } as never));
-    service.registerProvider('ok', () => makeProvider('long enough summary'));
 
     const result = await service.generateSummary('content');
 

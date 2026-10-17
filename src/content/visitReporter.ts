@@ -125,6 +125,12 @@ export interface VisitReporterDeps {
     getReasonLabel?: (messageKey: string, fallbackKey: string, fallback: string) => string;
     /** Injected clock for traceability, not required for send */
     stopPeriodicCheck?: () => void;
+    /**
+     * PBI 2026-10-17-01 (Task 5): content-side early suppression. When the
+     * recording pause is engaged, report() returns before extraction so no
+     * content-side trace (extract/send) is produced while paused.
+     */
+    isPaused?: () => boolean;
 }
 
 /** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
@@ -150,6 +156,7 @@ export class VisitReporter {
     private static readonly RETRY_DELAY_MS = 1_000;
 
     async report(): Promise<void> {
+        if (this.deps.isPaused?.() === true) return;
         if (this.attemptInFlight) return;
         this.attemptInFlight = true;
         try {

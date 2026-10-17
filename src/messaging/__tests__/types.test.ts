@@ -209,6 +209,7 @@ describe('messaging/types: isServiceWorkerRequest', () => {
             REGENERATE_SUMMARY: { id: 1, url: 'https://example.com', title: 't', cleanseMode: 'current' },
             CONTENT_CLEANSING_EXECUTED: { hardStripRemoved: 1, keywordStripRemoved: 1, totalRemoved: 2 },
             GENERATE_REVIEW_SUMMARY: { periodType: 'weekly' },
+            PAUSE_RECORDING: { minutes: 30 },
             LOG_FORWARD: { level: 'warn', message: 'test', source: 'offscreen' },
             OW_PROBE_STATE: {
                 maxScrollPercentage: 80,

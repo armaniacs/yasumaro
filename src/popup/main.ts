@@ -3,6 +3,7 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { loadCurrentTab, recordCurrentPage } from './recordCurrentPage.js';
 import { initStatusPanel, initAllUrlsPermissionBanner, getCleansedReasonText, renderSpecialUrlStatus } from './statusPanel.js';
+import { initPausePanel } from './pausePanel.js';
 import { getCurrentTab } from './tabUtils.js';
 
 export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecialUrlStatus };
@@ -10,6 +11,7 @@ export { loadCurrentTab, recordCurrentPage, getCleansedReasonText, renderSpecial
 async function loadCurrentTabAndInitStatus(): Promise<void> {
   await loadCurrentTab();
   await initStatusPanel();
+  initPausePanel();
 }
 
 async function clearActionBadge(): Promise<void> {

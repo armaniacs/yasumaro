@@ -120,6 +120,11 @@ export class RecordingTriggerManager {
    * （storage 読みの I/O はここに残す）。
    */
   async shouldRecord(event: RecordingEvent): Promise<boolean> {
+    const { createChromePauseStorage, isPaused } = await import('./recordingPause.js');
+    const pausedUntil = await createChromePauseStorage().getPausedUntil().catch(() => null);
+    if (pausedUntil !== null && isPaused(pausedUntil, Date.now()) && event.type !== 'manual_save') {
+      return false;
+    }
     const triggers = await this.loadTriggers();
 
     if (event.type === 'scroll_idle') {

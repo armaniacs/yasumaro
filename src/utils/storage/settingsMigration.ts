@@ -9,7 +9,7 @@ import { logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncryptionLockedError } from './encryptionLockedError.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
-import { withOptimisticLock, StorageTransaction, deepEqual } from './storageTransaction.js';
+import { StorageTransaction, deepEqual } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
 import { asStorageKeys } from './apiKeyFields.js';
@@ -187,10 +187,16 @@ function isPlainRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export interface MigrateSettingsOptions {
-    /** Storage seam; defaults to `chrome.storage.local`. */
+    /** Storage seam; defaults to a ChromeStoragePort (chrome.storage.local). */
     port?: StoragePort;
     /** Clock seam for the backup key suffix; defaults to `Date.now`. */
     now?: () => number;
+}
+
+/** Options for storage-adjacent one-shot migration helpers (port unification). */
+export interface MigrationStorageOptions {
+    /** Storage seam; defaults to a ChromeStoragePort (chrome.storage.local). */
+    port?: StoragePort;
 }
 
 /**
@@ -283,10 +289,17 @@ export async function migrateToSingleSettingsObject(
     const port = options.port ?? new ChromeStoragePort();
     const now = options.now ?? (() => Date.now());
     const tx = new StorageTransaction(port);
-    const remove = (keys: string[]): Promise<void> =>
-        port.remove
-            ? port.remove(keys)
-            : chrome.storage.local.remove(keys);
+    // Port unification (PBI 2026-10-16-12): removal goes through the Port.
+    // A Port without remove() used to fall back to chrome.storage.local
+    // directly; that backdoor is removed — fail loudly instead.
+    const remove = (keys: string[]): Promise<void> => {
+        if (!port.remove) {
+            throw new Error(
+                'migrateToSingleSettingsObject requires a StoragePort with remove()',
+            );
+        }
+        return port.remove(keys);
+    };
 
     const rawState = (await port.get(SETTINGS_MIGRATED_KEY))[SETTINGS_MIGRATED_KEY];
     if (isSettingsMigrationComplete(rawState)) return false;
@@ -370,10 +383,28 @@ export const API_KEY_FIELDS: StorageKey[] = asStorageKeys();
  */
 import { deriveLegacyKeyFromStoredSecret } from '../crypto/kdfNegotiator.js';
 
+/**
+ * Injected seams for the legacy-100k decryption fallback (PBI 2026-10-16-12).
+ *
+ * The fallback needs two storage-derived inputs: the master-password mode
+ * flag and the legacy key derived from the stored salt/secret. Both arrive as
+ * arguments (or injected callbacks) so the decrypt path runs on any
+ * StoragePort — including InMemoryStoragePort in tests — without touching
+ * chrome.storage.local. When omitted, the legacy storage-backed behavior is
+ * preserved (flag read + deriveLegacyKeyFromStoredSecret).
+ */
+export interface LegacyDecryptFallbackOptions {
+    /** Master-password mode flag (value or thunk). Read from storage when omitted. */
+    isMasterPasswordEnabled?: boolean | (() => boolean | Promise<boolean>);
+    /** Legacy-100k key derivation. Defaults to deriveLegacyKeyFromStoredSecret. */
+    deriveLegacyKey?: () => Promise<CryptoKey | null>;
+}
+
 async function tryDecryptWithLegacyFallback(
     encryptedValue: unknown,
     currentKey: CryptoKey,
     field: StorageKey,
+    fallback?: LegacyDecryptFallbackOptions,
 ): Promise<{ decrypted: string | null; legacySucceeded: boolean }> {
     try {
         const decrypted = await decryptApiKey(encryptedValue as never, currentKey, field);
@@ -381,10 +412,10 @@ async function tryDecryptWithLegacyFallback(
     } catch {
         // Try legacy 100k iteration fallback
         try {
-            const stored = await chrome.storage.local.get([
-                StorageKeys.MASTER_PASSWORD_ENABLED,
-            ]);
-            const isMasterEnabled = Boolean(stored[StorageKeys.MASTER_PASSWORD_ENABLED]);
+            const flag = fallback?.isMasterPasswordEnabled;
+            const isMasterEnabled = typeof flag === 'function'
+                ? Boolean(await flag())
+                : (flag ?? await readMasterPasswordEnabledFromStorage());
 
             if (isMasterEnabled) {
                 // Master-password mode: legacy fallback requires cached password which is not exposed.
@@ -396,7 +427,8 @@ async function tryDecryptWithLegacyFallback(
             // Anonymous mode: derive legacy 100k key from same secret/salt
             // PBI 2026-09-15-13: the hand-written PBKDF2 derive moved to
             // kdfNegotiator.deriveLegacyKeyFromStoredSecret.
-            const legacyKey = await deriveLegacyKeyFromStoredSecret();
+            const derive = fallback?.deriveLegacyKey ?? deriveLegacyKeyFromStoredSecret;
+            const legacyKey = await derive();
             if (!legacyKey) return { decrypted: null, legacySucceeded: false };
             const decrypted = await decryptApiKey(encryptedValue as never, legacyKey, field);
             return { decrypted, legacySucceeded: true };
@@ -406,7 +438,15 @@ async function tryDecryptWithLegacyFallback(
     }
 }
 
-export interface ApplyMigrationsOptions {
+/** Legacy storage-backed flag read — only used when no injected flag is given. */
+async function readMasterPasswordEnabledFromStorage(): Promise<boolean> {
+    const stored = await chrome.storage.local.get([
+        StorageKeys.MASTER_PASSWORD_ENABLED,
+    ]);
+    return Boolean(stored[StorageKeys.MASTER_PASSWORD_ENABLED]);
+}
+
+export interface ApplyMigrationsOptions extends LegacyDecryptFallbackOptions {
   /** Key provider for decrypt/re-encrypt; defaults to getOrCreateEncryptionKey (chrome path) */
   getEncryptionKey?: () => Promise<CryptoKey>;
 }
@@ -455,7 +495,7 @@ async function applyMigrationsCore(
         for (const field of API_KEY_FIELDS) {
             const value = merged[field];
             if (isEncrypted(value)) {
-                const attempt = await tryDecryptWithLegacyFallback(value, key, field);
+                const attempt = await tryDecryptWithLegacyFallback(value, key, field, opts);
                 if (attempt.decrypted !== null) {
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = attempt.decrypted as StorageKeyValues[StorageKey];
                     // If legacy fallback succeeded, re-encrypt with current key for migration
@@ -526,19 +566,24 @@ export async function applyMigrationsAndDecryptWithReEncrypt(
     return applyMigrationsCore(rawSettings, opts as ApplyMigrationsOptions);
 }
 
-export async function tryRestoreFromBackup(): Promise<Settings | null> {
-    return restoreLatestSettingsBackup(new ChromeStoragePort());
+export async function tryRestoreFromBackup(port: StoragePort = new ChromeStoragePort()): Promise<Settings | null> {
+    return restoreLatestSettingsBackup(port);
 }
 
-export async function cleanupExpiredSettingsBackups(): Promise<void> {
-    const all = await chrome.storage.local.get(null);
+export async function cleanupExpiredSettingsBackups(
+    port: StoragePort = new ChromeStoragePort(),
+): Promise<void> {
+    const all = await port.get(null);
     const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
     const expiredKeys = listSettingsBackupKeys(all).filter((k) => {
         const entry = all[k] as { createdAt?: number } | undefined;
         return typeof entry?.createdAt === 'number' && entry.createdAt < cutoff;
     });
     if (expiredKeys.length > 0) {
-        await chrome.storage.local.remove(expiredKeys);
+        if (!port.remove) {
+            throw new Error('cleanupExpiredSettingsBackups requires a StoragePort with remove()');
+        }
+        await port.remove(expiredKeys);
     }
 }
 
@@ -557,14 +602,20 @@ export async function cleanupExpiredSettingsBackups(): Promise<void> {
  * the deny layer blocked it before this change too, so there is nothing to
  * grandfather.
  */
-export async function migrateLoopbackProviderOriginConfirmations(): Promise<boolean> {
-    const done = await chrome.storage.local.get(PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY);
+export async function migrateLoopbackProviderOriginConfirmations(
+    options: MigrationStorageOptions = {},
+): Promise<boolean> {
+    const port = options.port ?? new ChromeStoragePort();
+    const done = await port.get(PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY);
     if (done[PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY]) {
         return false;
     }
 
     let seeded = 0;
-    await withOptimisticLock<Settings>('settings', (current) => {
+    // Port-scoped transaction (was the chrome-bound global
+    // withOptimisticLock). Same CAS semantics, injectable Port.
+    const tx = new StorageTransaction(port);
+    await tx.withLock<Settings>('settings', (current) => {
         const confirmedMap: Record<string, string[]> = {
             ...((current[StorageKeys.CONFIRMED_PROVIDER_ORIGINS] as Record<string, string[]> | undefined) ?? {}),
         };
@@ -595,6 +646,6 @@ export async function migrateLoopbackProviderOriginConfirmations(): Promise<bool
         };
     });
 
-    await chrome.storage.local.set({ [PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY]: true });
+    await port.set({ [PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY]: true });
     return seeded > 0;
 }

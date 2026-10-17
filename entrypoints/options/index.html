@@ -2069,6 +2069,15 @@
         <div id="researchSessionsRowCap" class="data-table-notice is-warning" hidden></div>
         <p id="researchSessionsSummary" aria-live="polite"></p>
         <div id="researchSessionsTruncated" class="data-table-notice is-warning" hidden></div>
+        <div id="researchSessionsBulkBar" class="rsess-bulk-bar" hidden>
+          <span id="researchSessionsSelectionCount" aria-live="polite"></span>
+          <button type="button" id="researchSessionsDeleteSelected" class="secondary-btn" data-i18n="researchSessions_deleteSelected">Delete selected</button>
+          <span id="researchSessionsDeleteConfirm" hidden>
+            <span data-i18n="researchSessions_deleteConfirm">Really delete?</span>
+            <button type="button" id="researchSessionsDeleteConfirmYes" class="secondary-btn" data-i18n="researchSessions_deleteConfirmYes">Delete</button>
+            <button type="button" id="researchSessionsDeleteConfirmNo" class="secondary-btn" data-i18n="researchSessions_deleteConfirmNo">Cancel</button>
+          </span>
+        </div>
         <ol id="researchSessionsList" class="research-sessions-list"></ol>
 
         <h3 class="data-table-heading" data-i18n="researchSessions_searchToGoalTitle">Topics that take the longest to resolve</h3>

@@ -81,8 +81,9 @@ import { resolveFailure } from '../../../utils/failureTaxonomy.js';
 import { useTimerClock } from '../../../../testDir/waitPolicy.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
 import { RemoteAIService } from '../../ai/RemoteAIService.js';
+import { createProviderStrategy } from '../../ai/providerCatalog.js';
 import { AIProviderStrategy, type AISummaryResult } from '../../ai/providers/ProviderStrategy.js';
-import { HttpProviderStrategy, type HttpSummaryHooks } from '../../ai/providers/HttpProviderStrategy.js';
+import { HttpProviderStrategy, type HttpProviderHooks } from '../../ai/providers/HttpProviderStrategy.js';
 import type { Settings } from '../../../utils/storage/types.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 import type { AIService, AISummaryOptions } from '../../ai/AIService.js';
@@ -193,7 +194,7 @@ describe('Obsidian boundary → RetryPolicy', () => {
 class FlowProbe extends HttpProviderStrategy {
   constructor(
     settings: Settings,
-    private readonly hooks: HttpSummaryHooks,
+    private readonly hooks: HttpProviderHooks,
   ) {
     super(settings);
   }
@@ -208,9 +209,10 @@ class FlowProbe extends HttpProviderStrategy {
   }
 }
 
-function makeHooks(): HttpSummaryHooks {
+function makeHooks(): HttpProviderHooks {
   return {
     providerName: 'flow-probe',
+    providerLabel: 'FlowProbe',
     timeoutMs: 30000,
     checkCredentials: () => null,
     contentLimit: () => 100,
@@ -219,7 +221,17 @@ function makeHooks(): HttpSummaryHooks {
       headers: { 'Content-Type': 'application/json' },
       body: '{}',
     }),
+    buildRequest: async () => ({
+      url: 'https://example.com/test',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    }),
     extractSummary: async () => ({ success: true, summary: 'ok' }),
+    extractResponse: (_data, ctx) => ({
+      success: true,
+      message: 'Connected.',
+      debug: { prompt: 'Reply with the single word: OK', endpoint: ctx.endpoint, statusCode: ctx.statusCode, hasContent: true },
+    }),
   };
 }
 /** Real RemoteAIService chain whose single slot runs the real summary template. */
@@ -232,8 +244,11 @@ function makeService(provider: AIProviderStrategy): RemoteAIService {
     })),
     getMany: vi.fn(),
   } as unknown as SettingsReader;
-  const service = new RemoteAIService({ repo });
-  service.registerProvider('probe', () => provider);
+  const service = new RemoteAIService({
+    repo,
+    createStrategy: (providerId: string, settings: Settings) =>
+      providerId === 'probe' ? provider : createProviderStrategy(providerId, settings),
+  });
   return service;
 }
 

@@ -21,9 +21,10 @@
  *      neither presentation carries an interpretation of its own, so a
  *      second interpreter cannot be typed out again unnoticed.
  *
- * Scope note: ARCHIVE_WIRE_TABLE's archive_update row predates the
- * interpreter and stays hand-written (no stagingName guard on that path); it
- * is excluded here and remains pinned by archivePayloadValidation-parity.
+ * Scope note: since PBI 2026-10-16-02 the archive wire rows carry no
+ * validate column — the handler entry evaluates the spec row via
+ * evaluateSubtypeSpec, so the cross-check below renders the same spec row
+ * the handler entry enforces.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -36,7 +37,7 @@ import {
   ValidationError,
   type SubtypeSpecFailure,
 } from '../validators.js';
-import { ARCHIVE_WIRE_TABLE, type DashboardArchiveSubtype } from '../archiveWireTable.js';
+import type { DashboardArchiveSubtype } from '../archiveWireTable.js';
 import { cutoffMsFromLocalDate } from '../../utils/archiveGuards.js';
 import {
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
@@ -48,12 +49,9 @@ const STAGING = 'archive_outgoing_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
 const CUTOFF_DATE = '2020-01-01';
 const CUTOFF_MS = cutoffMsFromLocalDate(CUTOFF_DATE);
 
-/** Wire-table row that delegates to evaluateSubtypeSpec (archive_update is
- *  hand-written by design and therefore not listed here). */
+/** Handler-entry rendering of the spec row (what runArchive enforces). */
 function wireResult(subtype: DashboardArchiveSubtype, payload: Record<string, unknown>): string | null {
-  const descriptor = ARCHIVE_WIRE_TABLE.find((entry) => entry.subtype === subtype);
-  if (!descriptor) throw new Error(`no archive wire row for ${subtype}`);
-  return descriptor.validate(payload);
+  return evaluateSubtypeSpec(subtype, payload);
 }
 
 function envelopeAccepts(payload: Record<string, unknown>): boolean {

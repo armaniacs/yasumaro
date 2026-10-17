@@ -58,21 +58,46 @@ export interface HttpSummaryRequest {
 }
 
 /**
- * HTTP要約フローのプロバイダー固有フック。順序・pre-flight・サニタイズ・
- * プロンプト・fetch・リトライ・timeout変換はテンプレートが所有し、ここには
- * 限度・資格文面・リクエスト構築・parse の癖だけを置く。
+ * 要約・接続テストの両フローで共有する資格不備の記述。文面はこの1箇所に
+ * だけ書き、要約 `summary`・テスト `message`/`debug.error` の3文面を
+ * まとめて持つ。PBI 2026-10-16-05: 旧 `HttpSummaryHooks`/`HttpTestHooks`
+ * の `checkCredentials` 戻り型違い（string vs ConnectionResult）が文面
+ * drift の典型だったため、両テンプレートが読む単一の形に統一した。
  */
-export interface HttpSummaryHooks {
+export interface HttpCredentialIssue {
+  /** 要約フローの `summary` 文面 */
+  summaryMessage: string;
+  /** 接続テストの `message` 文面 */
+  testMessage: string;
+  /** 接続テスト `debug.error` 文面 */
+  testError: string;
+}
+
+/**
+ * HTTP両フローのプロバイダー固有フック（1組）。順序・pre-flight・
+ * サニタイズ・プロンプト・fetch・リトライ・timeout変換・debug組み立ては
+ * テンプレートが所有し、ここには限度・資格文面・リクエスト構築・parse の
+ * 癖だけを置く。要約と接続テストは同じオブジェクトを共有するため、
+ * 資格文面の変更は1箇所で両フローに反映される。
+ */
+export interface HttpProviderHooks {
+  /** applyCustomPrompt/sanitize に渡すプロバイダー名 */
   providerName: string;
+  /** HTTP失敗写像に渡す表示ラベル */
+  providerLabel: string;
   timeoutMs: number;
-  /** 資格不備があればそのエラー文面、なければ null */
-  checkCredentials(): string | null;
+  /** 資格不備があればその記述、なければ null（両フロー共通） */
+  checkCredentials(): HttpCredentialIssue | null;
   /** 送信コンテンツの最大文字数 */
   contentLimit(): number;
-  /** リクエスト構築。構築に失敗したら { failure } を返す */
+  /** 要約リクエスト構築。構築に失敗したら { failure } を返す */
   prepareRequest(userPrompt: string, systemPrompt: string | undefined): Promise<HttpSummaryRequest | { failure: AISummaryResult }>;
-  /** 応答 JSON のプロバイダー固有 parse */
+  /** 接続テストリクエスト構築。構築に失敗したら { failure } を返す */
+  buildRequest(): Promise<HttpTestRequest | { failure: AIProviderConnectionResult }>;
+  /** 要約応答 JSON のプロバイダー固有 parse */
   extractSummary(data: unknown, traceId: string): Promise<AISummaryResult>;
+  /** 接続テスト応答 JSON のプロバイダー固有 parse */
+  extractResponse(data: unknown, ctx: HttpTestContext): Promise<AIProviderConnectionResult> | AIProviderConnectionResult;
 }
 
 /** HTTP接続テストリクエスト（hooks.buildRequest の成功形） */
@@ -90,23 +115,6 @@ export interface HttpTestContext {
   endpoint: string;
   statusCode: number;
   modelName?: string | undefined;
-}
-
-/**
- * HTTP接続テストフローのプロバイダー固有フック。順序・fetch・リトライ・
- * HTTPエラー変換・上限付き読み取り・例外変換・debug 組み立てはテンプレートが
- * 所有し、ここには資格文面・リクエスト構築・parse の癖だけを置く。
- */
-export interface HttpTestHooks {
-  /** Display label passed to both HTTP failure mappings */
-  providerLabel: string;
-  timeoutMs: number;
-  /** 資格不備があればその失敗結果、なければ null */
-  checkCredentials(): AIProviderConnectionResult | null;
-  /** リクエスト構築。構築に失敗したら { failure } を返す */
-  buildRequest(): Promise<HttpTestRequest | { failure: AIProviderConnectionResult }>;
-  /** 応答 JSON のプロバイダー固有 parse */
-  extractResponse(data: unknown, ctx: HttpTestContext): Promise<AIProviderConnectionResult> | AIProviderConnectionResult;
 }
 
 /**
@@ -195,14 +203,15 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
     content: string,
     tagSummaryMode: boolean,
     traceId: string,
-    hooks: HttpSummaryHooks,
+    hooks: HttpProviderHooks,
   ): Promise<AISummaryResult> {
-    const credentialError = hooks.checkCredentials();
-    if (credentialError) {
-      // A missing key is a configuration failure: no request will be made
-      // and no amount of retrying fixes it.
+    const credentialIssue = hooks.checkCredentials();
+    if (credentialIssue) {
+      // A missing credential is a configuration failure: no request will be
+      // made and no amount of retrying fixes it. The wording lives in the
+      // single shared hooks object, so it cannot drift from the test flow's.
       return withFailure(
-        { success: false, summary: credentialError },
+        { success: false, summary: credentialIssue.summaryMessage },
         createFailure(FailureKind.CONFIGURATION),
       );
     }
@@ -274,19 +283,20 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
    * 2 adapter が使う real seam。
    */
   protected async executeHttpTestFlow(
-    hooks: HttpTestHooks,
+    hooks: HttpProviderHooks,
   ): Promise<AIProviderConnectionResult> {
-    const credentialFailure = hooks.checkCredentials();
-    if (credentialFailure) {
+    const credentialIssue = hooks.checkCredentials();
+    if (credentialIssue) {
       // Same reading as the summary flow's own credential gate: no request is
       // made and no retry can fix a missing credential, so the test result
-      // carries the configuration kind. A hook that already knows better (a
-      // future provider with a structured reason) keeps its kind.
+      // carries the configuration kind. The wording is the same single issue
+      // object the summary flow reads.
       return {
-        ...credentialFailure,
+        success: false,
+        message: credentialIssue.testMessage,
         debug: {
-          ...credentialFailure.debug,
-          failure: credentialFailure.debug?.failure ?? createFailure(FailureKind.CONFIGURATION),
+          error: credentialIssue.testError,
+          failure: createFailure(FailureKind.CONFIGURATION),
         },
       };
     }

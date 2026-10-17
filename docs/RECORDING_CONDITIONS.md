@@ -67,6 +67,14 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 
 スマート検出の条件を満たしにくいページ（1画面に収まる短いページなど）は、ポップアップの「今すぐ記録」で手動記録するのが確実です。スクロールが発生しないページでは「Min Scroll Depth」を0に設定すると自動記録の対象になります。
 
+### 一時停止する（しばらく記録を止める）
+
+残したくない調べものをするときは、ポップアップの「⏸」ボタンで自動保存を一時停止できます。手動記録は停止中も使えます。
+
+- 押すたびに30分延長されます（1回で約30分、2回で約60分、上限120分）。残り分数はポップアップの表示とツールバーの赤い数字バッジで分かります
+- 期限が来ると自動で記録に戻ります。途中で戻したいときは「▶」ボタンを押します
+- ブラウザを再起動しても、期限までは停止が続きます
+
 ---
 
 ## English
@@ -131,3 +139,11 @@ Check the following:
 **Q. I want to record a short page that doesn't require scrolling**
 
 For pages unlikely to satisfy Smart Detection (e.g., short pages that fit on one screen), use the "Record Now" button in the popup for reliable manual recording. Setting "Min Scroll Depth" to 0 makes pages without scrolling eligible for automatic recording.
+
+### Pausing (stopping recording for a while)
+
+When you browse something you don't want kept, press the "⏸" button in the popup to pause auto-save. Manual recording still works while paused.
+
+- Each press extends the pause by 30 minutes (about 30 on the first press, about 60 on the second, capped at 120). The remaining minutes show in the popup and as a red number badge on the toolbar
+- Recording resumes automatically at expiry. Press "▶" to resume early
+- The pause survives a browser restart until its deadline

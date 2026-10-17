@@ -166,7 +166,7 @@ describe('createBackgroundServices', () => {
     expect(services).toHaveProperty('recordingPipeline');
     expect(services).toHaveProperty('recordingAdmission');
     expect(services).toHaveProperty('messageRouter');
-    expect(services.messageRouter.getHandlerCount()).toBe(22); // + REGENERATE_SUMMARY (PBI 2026-09-22-04) + OW_PROBE_QUERY/STATE (NN08 relay)
+    expect(services.messageRouter.getHandlerCount()).toBe(25); // + REGENERATE_SUMMARY (PBI 2026-09-22-04) + OW_PROBE_QUERY/STATE (NN08 relay) + PAUSE_RECORDING/RESUME_RECORDING/GET_PAUSE_STATE (PBI 2026-10-17-01)
     // dashboardSqliteHandler is internal wiring — reached via the router, not
     // exposed on the composition (PBI 04).
     expect(services).not.toHaveProperty('dashboardSqliteHandler');

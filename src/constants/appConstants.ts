@@ -16,6 +16,8 @@ export const BADGE_COLORS = {
   GREEN: '#10B981',
   /** 青 - 処理中/処理済み */
   BLUE: '#3B82F6',
+  /** 赤 - 一時停止カウントダウン（バッジ文字色はChrome固定の白のため背景で示す） */
+  RED: '#DC2626',
 } as const;
 
 /** UI状態表示用の文字色 */

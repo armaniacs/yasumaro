@@ -8,8 +8,11 @@
  * failure reason (see toFailure).
  *
  * Table-driven (PBI 2026-09-09-05): the 14 hand-written cases differed only
- * in validation, deps args, and response projection — all three now live in
- * the wire-table descriptor row, and runArchive executes the shared shape.
+ * in validation, deps args, and response projection. Deps args and response
+ * projection live in the wire-table descriptor row; validation lives once in
+ * DASHBOARD_SQLITE_SUBTYPE_SPECS and runArchive evaluates it at the handler
+ * entry (PBI 2026-10-16-02) — so a direct createArchiveHandler call without
+ * the envelope gate still rejects before deps. runArchive executes the shape.
  */
 
 import type { DashboardSqliteRequest } from '../../../messaging/dashboardSqliteProtocol.js';
@@ -17,6 +20,7 @@ import type { ArchiveDeps, DepsResult } from './deps.js';
 import { runTableDriven } from './deps.js';
 import { ARCHIVE_SUBTYPES } from './archiveSubtypes.js';
 import { ARCHIVE_WIRE_TABLE, type ArchiveDescriptor, type ArchiveOpDescriptor } from '../../../messaging/archiveWireTable.js';
+import { evaluateSubtypeSpec } from '../../../messaging/validators.js';
 
 export { ARCHIVE_SUBTYPES };
 
@@ -39,7 +43,10 @@ export async function runArchive<D extends ArchiveOpDescriptor>(
   // fills it from backendArgs), so fall back here too.
   const argsFn = descriptor.depsArgs ?? descriptor.backendArgs;
   const project = descriptor.projectDeps ?? descriptor.project;
-  return runTableDriven({ validate: descriptor.validate, depsArgs: argsFn }, raw, invoke, project);
+  // PBI 2026-10-16-02: the spec table is the only validation truth — the
+  // handler entry evaluates the descriptor's subtype row, so direct calls
+  // (no envelope gate) still reject before deps.
+  return runTableDriven({ validate: (raw) => evaluateSubtypeSpec(descriptor.subtype, raw), depsArgs: argsFn }, raw, invoke, project);
 }
 
 export function createArchiveHandler(deps: ArchiveHandlerDeps) {

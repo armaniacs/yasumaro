@@ -105,8 +105,10 @@ function sanitizeTagPrefix(input: BuildEntryMarkdownInput, opts?: BuildEntryMark
   )
     // WHY: tags must stay single-line — an AI-supplied `a\n[evil](u)` tag would
     // otherwise split the `#tags` line and inject Markdown rows (VULN-008面).
-    // Newlines are never legitimate tag content, so strip them (not unify).
-    .map(t => t.replace(/[\r\n]/g, ''))
+    // Line breaks are never legitimate tag content, so strip the same
+    // terminator set title/summary collapse (LINE_TERMINATOR_PATTERN), not just
+    // \r\n — U+2028/U+2029 break lines in Obsidian's editor too.
+    .map(t => t.replace(LINE_TERMINATOR_PATTERN, ''))
     .map(t => t.trim())
     .filter(Boolean);
   if (list.length === 0) return '';
@@ -211,18 +213,20 @@ export function buildEntryMarkdown(
     const sanitizedParts = sanitizeParts(input, opts);
     const date = new Date(input.createdAt ?? Date.now()).toLocaleString();
     const tagsLine = sanitizedParts.tagPrefix ? `- Tags: ${sanitizedParts.tagPrefix.trim()}` : '';
+    // NOTE: no .filter(Boolean) here — the '' entries are intentional blank
+    // lines between heading/meta/Summary; only the empty tagsLine is omitted.
     return [
       `# ${sanitizedParts.title}`,
       ``,
       `- URL: ${sanitizedParts.url}`,
       `- Date: ${date}`,
-      tagsLine,
+      ...(tagsLine ? [tagsLine] : []),
       ``,
       `## Summary`,
       ``,
       sanitizedParts.summary,
       '',
-    ].filter(Boolean).join('\n');
+    ].join('\n');
   }
   const sanitizedData = buildTemplateEntryData(input, opts);
   return `- ${sanitizedData.timestamp} [${sanitizedData.title}](${sanitizedData.url})\n    - ${sanitizedData.tags}${sanitizedData.summary}`;
@@ -250,10 +254,12 @@ export function formatEntriesToObsidianList(entries: BrowsingLogEntry[]): string
   if (!entries || entries.length === 0) {
     return '';
   }
-  const appendedAt = Date.now();
+  // WHY: each row carries its own tags and its own created_at-derived time —
+  // a single shared appendedAt made every row show the same HH:MM and dropped
+  // hashtags entirely. createdAt aligns with the heading path (created_at).
   return entries.map(entry =>
     buildEntryMarkdown(
-      { title: entry.title, url: entry.url, summary: entry.summary, appendedAt },
+      { title: entry.title, url: entry.url, summary: entry.summary, tags: entry.tags, createdAt: entry.created_at },
       'obsidianList',
     ),
   ).join('\n');

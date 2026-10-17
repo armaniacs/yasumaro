@@ -437,11 +437,12 @@ export interface SubtypeSpecFailure {
 
 /**
  * The ONE interpretation of a subtype spec row (single interpreter for the
- * envelope gate and the archive wire table): guardFirst → field rows →
+ * envelope gate and the archive handler entry): guardFirst → field rows →
  * guardLast, first failure wins. Both presentations are thin renderers of the
  * returned failure:
  *
- *   - `evaluateSubtypeSpec` (wire table, PBI 2026-10-11-10) renders `message`,
+ *   - `evaluateSubtypeSpec` (archive handler entry, PBI 2026-10-16-02)
+ *     renders `message`,
  *   - `DashboardSqliteValidator.validate` (envelope gate) rethrows `cause`
  *     verbatim, or wraps a field rejection in ValidationError.
  *
@@ -451,9 +452,10 @@ export interface SubtypeSpecFailure {
  * field attachment had to be made twice or the two gates drifted again.
  *
  * Unknown subtype fails closed (no spec row): the envelope validator
- * pre-gates subtypes against ALL_DASHBOARD_SQLITE_SUBTYPES, and the wire rows
- * are fixed — but the wire presentation never passes through that pre-gate,
- * so a pass-through here would be a fail-open on the wire path (PBI
+ * pre-gates subtypes against ALL_DASHBOARD_SQLITE_SUBTYPES, and the handler
+ * entry dispatches on fixed descriptor subtypes — but the handler-entry
+ * presentation never passes through that pre-gate,
+ * so a pass-through here would be a fail-open on the handler path (PBI
  * 2026-10-16-01). A known subtype with intentionally no checks (e.g. `query`
  * accepts arbitrary extra fields) still passes; anything else is rejected.
  *
@@ -489,7 +491,7 @@ export function interpretSubtypeSpec(
  *
  * Returns the first error message, or null when the payload passes. Single
  * evaluator shared by the envelope validator (which throws ValidationError) and
- * the archive wire table (PBI 2026-10-11-10): before that the wire rows
+ * the archive handler entry (PBI 2026-10-16-02): before that the wire rows
  * hand-wrote their own field checks, so the two paths accepted different
  * payloads and the divergence had to be pinned by a test instead of closed.
  */

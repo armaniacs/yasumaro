@@ -12,7 +12,7 @@ import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from './aiModelKey.js';
 import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
-import { PROVIDER_CATALOG, createProviderStrategy } from './providerCatalog.js';
+import { createProviderStrategy, UnknownProviderError, type CreateProviderStrategyFn } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -27,6 +27,13 @@ interface RemoteAIServiceConfig {
   repo?: SettingsReader;
   /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
   breaker?: ProviderBreakerLike;
+  /**
+   * PBI 2026-10-16-03: the single generation seam. Defaults to the production
+   * createProviderStrategy; tests inject a fake function instead of
+   * registering fake ids, so a missing catalog row throws UnknownProviderError
+   * through the same path production uses.
+   */
+  createStrategy?: CreateProviderStrategyFn;
 }
 
 /**
@@ -40,7 +47,7 @@ export function resolveBreakerGate(settings: Settings): boolean {
 }
 
 export class RemoteAIService implements AIService {
-  private providers: Map<string, (settings: Settings) => AIProviderStrategy>;
+  private createStrategy: CreateProviderStrategyFn;
   private inFlightSummaryRequests: Map<string, Promise<AISummaryResult>>;
   private repo: SettingsReader;
   private breaker: ProviderBreakerLike;
@@ -53,27 +60,16 @@ export class RemoteAIService implements AIService {
   private loggedBreakerGateDisabled: boolean;
 
   constructor(private config: RemoteAIServiceConfig = {}) {
-    this.providers = new Map();
+    this.createStrategy = config.createStrategy ?? createProviderStrategy;
     this.inFlightSummaryRequests = new Map();
     this.repo = config.repo ?? settingsRepository;
     this.breaker = config.breaker ?? disabledBreaker;
     this.loggedBreakerGateDisabled = false;
-    this.registerDefaultProviders();
   }
 
   /** Load the full settings snapshot via the injected repository seam. */
   private loadSettings(): Promise<Settings> {
     return this.repo.getAll();
-  }
-
-  private registerDefaultProviders(): void {
-    for (const [id] of PROVIDER_CATALOG) {
-      this.registerProvider(id, (settings: Settings) => createProviderStrategy(id, settings));
-    }
-  }
-
-  public registerProvider(name: string, factory: (settings: Settings) => AIProviderStrategy): void {
-    this.providers.set(name, factory);
   }
 
   /** Maximum number of provider slots to process. */
@@ -141,21 +137,39 @@ export class RemoteAIService implements AIService {
     traceId: string,
     url: string,
   ): Promise<AISummaryResult> {
-    const factory = this.providers.get(slot.provider);
-    if (!factory) {
-      addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
-      return {
+    const effectiveSettings = this.applySlotModel(settings, slot);
+    let providerInstance: AIProviderStrategy;
+    try {
+      providerInstance = this.createStrategy(slot.provider, effectiveSettings);
+    } catch (error: unknown) {
+      if (error instanceof UnknownProviderError) {
+        addLog(LogType.ERROR, `Unknown AI Provider: ${slot.provider}`, { traceId });
+        return {
+          success: false,
+          summary: "Error: AI provider configuration is missing. Please check your settings.",
+          failure: createFailure(FailureKind.CONFIGURATION),
+        };
+      }
+      if (isEncryptionLockedError(error)) {
+        addLog(LogType.WARN, 'AI provider slot skipped: API keys are locked', { traceId });
+        return {
+          success: false,
+          summary: `Error: ${errorMessage(error)}`,
+          failure: createFailure(FailureKind.CONFIGURATION),
+        };
+      }
+      addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
+      const result: AISummaryResult = {
         success: false,
-        summary: "Error: AI provider configuration is missing. Please check your settings.",
-        failure: createFailure(FailureKind.CONFIGURATION),
+        summary: "Error: Failed to generate summary. Please try again.",
       };
+      const failure = resolveFailure(error);
+      return failure ? { ...result, failure } : result;
     }
 
-    const effectiveSettings = this.applySlotModel(settings, slot);
     void recordAuditLog({ provider: slot.provider, url });
 
     try {
-      const providerInstance = factory(effectiveSettings);
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
       return result;
     } catch (error: unknown) {
@@ -346,23 +360,37 @@ export class RemoteAIService implements AIService {
         ...(runId !== undefined ? { runId } : {}),
       });
 
-      const factory = this.providers.get(slot.provider);
-      if (!factory) {
+      const effectiveSettings = this.applySlotModel(settings, slot);
+
+      let providerInstance: AIProviderStrategy;
+      try {
+        providerInstance = this.createStrategy(slot.provider, effectiveSettings);
+      } catch (error: unknown) {
+        if (error instanceof UnknownProviderError) {
+          providerResults.push({
+            provider: slot.provider,
+            success: false,
+            message: `Unknown provider: ${slot.provider}`,
+            elapsedMs: performance.now() - slotStart,
+            debug: { error: `Provider "${slot.provider}" is not registered` },
+            ...pickDefined({ model: effectiveModel }),
+          });
+          continue;
+        }
+        const msg = errorMessage(error);
+        addLog(LogType.ERROR, `Connection test failed for ${slot.provider}: ${msg}`);
         providerResults.push({
           provider: slot.provider,
           success: false,
-          message: `Unknown provider: ${slot.provider}`,
+          message: msg,
           elapsedMs: performance.now() - slotStart,
-          debug: { error: `Provider "${slot.provider}" is not registered` },
+          debug: { error: msg },
           ...pickDefined({ model: effectiveModel }),
         });
         continue;
       }
 
-      const effectiveSettings = this.applySlotModel(settings, slot);
-
       try {
-        const providerInstance = factory(effectiveSettings);
         const result = await providerInstance.testConnection();
         providerResults.push({
           provider: slot.provider,

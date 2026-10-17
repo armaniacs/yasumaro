@@ -26,7 +26,8 @@ export type BadgeState =
   | { kind: 'excluded' }
   | { kind: 'recording' }
   | { kind: 'no-consent' }
-  | { kind: 'clear' };
+  | { kind: 'clear' }
+  | { kind: 'paused'; minutes: number };
 
 export interface BadgeDisplay {
   text: string;
@@ -48,6 +49,12 @@ export function badgeDisplay(state: BadgeState): BadgeDisplay {
       return { text: '∉', color: BADGE_COLORS.GREEN as string };
     case 'recording':
       return { text: '●', color: BADGE_COLORS.GREEN as string };
+    case 'paused':
+      // Global countdown (no tabId): per-tab overrides keep precedence on
+      // their own tabs, every other tab falls back to this number.
+      // Red background: badge text color is fixed by Chrome, so the
+      // background carries the "paused" signal.
+      return { text: String(state.minutes), color: BADGE_COLORS.RED as string };
     case 'clear':
       return { text: '' };
   }

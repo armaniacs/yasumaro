@@ -354,6 +354,16 @@ export async function runMigrationRestore(state: MigrationBackupState): Promise<
     const payload = JSON.parse(backupJson) as MigrationBackupPayload;
     const expectedCount = payload.records.length;
 
+    // Terminal: an empty legacy DB has nothing to verify or restore.
+    // Without this, `expectedCount > 0` in the success check below misses
+    // it forever — every launch would warn and replay the empty restore.
+    if (expectedCount === 0) {
+      await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+      await setIdbMigrationDone();
+      logInfo('SQLite: IDB migration backup is empty, cleared without restore', {}, 'sqlite');
+      return;
+    }
+
     let actualCount = 0;
     await execWithCache(state.idbEngine!, 'SELECT COUNT(*) FROM browsing_logs', [], (row) => { actualCount = Number(row[0]); });
 
@@ -382,6 +392,30 @@ export async function runMigrationRestore(state: MigrationBackupState): Promise<
       ErrorCode.MIGRATION_ROLLBACK_FAILED,
       'sqlite'
     );
+    // Terminal guarantee: re-verify once after the restore, then set done.
+    // The backup is removed only when the re-verify read itself succeeded:
+    // if COUNT throws here the engine is unhealthy and the backup is kept
+    // for forensics (done still ends the replay loop; the error below keeps
+    // it visible instead of silently discarding the safety net).
+    let reverifyOk = true;
+    try {
+      await execWithCache(state.idbEngine!, 'SELECT COUNT(*) FROM browsing_logs', [], (row) => { actualCount = Number(row[0]); });
+    } catch (error) {
+      reverifyOk = false;
+      logError(
+        'SQLite: IDB migration re-verify failed, backup retained for forensics',
+        { error: errorMessage(error), expectedCount, actualCount, restored },
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
+    }
+    if (reverifyOk) {
+      await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+    }
+    await setIdbMigrationDone();
+    if (actualCount >= expectedCount && expectedCount > 0) {
+      logInfo('SQLite: IDB migration restored and verified, backup cleared', { expectedCount, actualCount, restored }, 'sqlite');
+    }
   } catch (error) {
     logError(
       'SQLite: failed to process IDB migration backup',

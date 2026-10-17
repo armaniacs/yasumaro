@@ -1,9 +1,9 @@
 export { AIProviderStrategy } from './ProviderStrategy.js';
 export { HttpProviderStrategy } from './HttpProviderStrategy.js';
 export type {
-    HttpSummaryHooks,
+    HttpCredentialIssue,
+    HttpProviderHooks,
     HttpSummaryRequest,
-    HttpTestHooks,
     HttpTestContext,
     HttpTestRequest,
 } from './HttpProviderStrategy.js';

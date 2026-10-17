@@ -49,6 +49,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 ## 受け入れ基準
 
 - [ ] 本 PBI は着手トリガー待ちであり、依存 PBI `dev-docs/archived/pbi/2026-09-25-01-fix-transport-replay-safety.md` の完了と同一 archive noRetry 契約の確定を確認するまでは production code を変更しない。
+  - 注記（2026-10-17 確認）: 依存 PBI は受入・DoD とも全 `[x]` で完了済み。残りは着手トリガー待ちのみ。
 - [ ] `ArchiveGateway` が14種の archive routing を所有し、`OffscreenGateway` に archive の routing 責務を残さない。
 - [ ] `OffscreenGateway` は query、getStatus、mutate、maintain の責務を維持する。
 - [ ] `ArchiveGateway` と `OffscreenGateway` は同じ `OffscreenTransport` を注入・共有する。

@@ -14,6 +14,55 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） — ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
+
+壁打ちで2候補を確定し RICE 採点して PBI 化。依存なし・並列実装可だが着手順は RICE 順。採点・なぜなぜ分析の詳細は [2026-10-17-00-backlog-research-pause.md](../dev-docs/archived/pbi/2026-10-17-00-backlog-research-pause.md)（アーカイブ済み）。Subagent-Drivenで全13タスクを実装・レビューし、最終全体レビューの指摘2件（期限切れ表示・再開失敗分岐）を修正して最終validate緑（1094ファイル・16377テスト）でアーカイブ。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ✅ 01 | [2026-10-17-01-feat-pause-autosave-temporarily.md](../dev-docs/archived/pbi/2026-10-17-01-feat-pause-autosave-temporarily.md) | feat | 128 | 5.0 | ✅ 完了。二層ゲート・Background所有アラーム・概算表示・ポップアップUI。最終validate緑 |
+| ✅ 02 | [2026-10-17-02-feat-research-session-bulk-delete.md](../dev-docs/archived/pbi/2026-10-17-02-feat-research-session-bulk-delete.md) | feat | 32 | 5.0 | ✅ 完了。3階層チェック＋2段階確認＋再fetch再グループ。最終validate緑 |
+
+実行順: 01 → 02（RICE順、依存なし）。残フォローアップ: popup init-skip耐性（別タスク化）・onChanged refreshテスト・fail-open系logDebug（いずれも非ブロッカー）。
+
+### 2026-10-16 アーキテクチャ深掘りラウンド（arch-1016） — ✅ 12件完了・アーカイブ済み 🔧非機能追加
+
+improve-codebase-architecture の4領域並列探索で12候補（Strong 6・Worth 6）をRICE順に自律実装・検証してアーカイブ。B1（01/02/03/04）→B2（06/07/08/09）→B3（05/12＋11）→B4（10）の依存順バッチ。RICE詳細は [2026-10-16-00-backlog-arch-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-arch-1016.md)（アーカイブ済み）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ✅ 01 | [2026-10-16-01-refactor-import-postprocess-seam.md](../dev-docs/archived/pbi/2026-10-16-01-refactor-import-postprocess-seam.md) | refactor | 64 | 2.0 | ✅ 完了。finalize集約＋repo/signer注入。105件緑 |
+| ✅ 02 | [2026-10-16-02-refactor-archive-validate-singlesource.md](../dev-docs/archived/pbi/2026-10-16-02-refactor-archive-validate-singlesource.md) | refactor | 48 | 2.0 | ✅ 完了。wire validate撤去＋入口委譲。523件緑 |
+| ✅ 03 | [2026-10-16-03-refactor-provider-factory-singleseam.md](../dev-docs/archived/pbi/2026-10-16-03-refactor-provider-factory-singleseam.md) | refactor | 48 | 2.0 | ✅ 完了。生成関数1本注入。399件緑 |
+| ✅ 04 | [2026-10-16-04-refactor-recovery-owner-function.md](../dev-docs/archived/pbi/2026-10-16-04-refactor-recovery-owner-function.md) | refactor | 31.5 | 2.0 | ✅ 完了。decideRecoveryOwner＋StepFailureError。72件緑 |
+| ✅ 05 | [2026-10-16-05-refactor-http-hooks-unify.md](../dev-docs/archived/pbi/2026-10-16-05-refactor-http-hooks-unify.md) | refactor | 21 | 3.0 | ✅ 完了。Hook1組化。425件緑 |
+| ✅ 06 | [2026-10-16-06-refactor-encrypted-export-codec.md](../dev-docs/archived/pbi/2026-10-16-06-refactor-encrypted-export-codec.md) | refactor | 18.7 | 3.0 | ✅ 完了。codec別module＋表テスト29件 |
+| ✅ 07 | [2026-10-16-07-refactor-gate-decision-shim.md](../dev-docs/archived/pbi/2026-10-16-07-refactor-gate-decision-shim.md) | refactor | 12 | 1.0 | ✅ 完了。shim撤去＋表駆動pin。484件緑 |
+| ✅ 08 | [2026-10-16-08-refactor-op-enumeration-derived.md](../dev-docs/archived/pbi/2026-10-16-08-refactor-op-enumeration-derived.md) | refactor | 11.7 | 3.0 | ✅ 完了。2層ループ化＋表駆動48件。worker-switchはSTAGED |
+| ✅ 09 | [2026-10-16-09-refactor-retry-savephase-unify.md](../dev-docs/archived/pbi/2026-10-16-09-refactor-retry-savephase-unify.md) | refactor | 10 | 3.0 | ✅ 完了。saveRetry＋RetryContext。493件緑 |
+| ✅ 10 | [2026-10-16-10-refactor-ai-settings-valueobject.md](../dev-docs/archived/pbi/2026-10-16-10-refactor-ai-settings-valueobject.md) | refactor | 6.7 | 3.0 | ✅ 完了。Resolved値＋受領口。413件緑 |
+| ✅ 11 | [2026-10-16-11-refactor-purge-search-planner.md](../dev-docs/archived/pbi/2026-10-16-11-refactor-purge-search-planner.md) | refactor | 6.7 | 3.0 | ✅ 完了。planSettingsPurge正準＋入口fail-close。1411件緑 |
+| ✅ 12 | [2026-10-16-12-refactor-migration-port-unify.md](../dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md) | refactor | 5 | 3.0 | ✅ 完了。Port一本化＋静的import。509件緑 |
+
+実行順: B1→B2→B3→B4（依存順）。対象範囲テスト 301ファイル・3510テスト全緑、`type-check` clean、`lint` 0 errors。フルスイートは未接触領域の負荷flake（単独緑・実行毎に集合変動）のみ。
+
+### 2026-10-16 adversarial-code-review ラウンド（adversarial-1016） — ✅ 8件完了・アーカイブ済み 🔧非機能追加
+
+adversarial-code-review（7a3a39e0 差分対象）の検証通過 21 件を RICE 順に PBI 化し自律実装・検証してアーカイブ。発見 109 件中 88 件は反証で却下（到達不能・pin 済み意図動作・パーサ正規化・MV3 制約）。RICE 採点・却下記録の詳細は [2026-10-16-00-backlog-adversarial-1016.md](../dev-docs/archived/pbi/2026-10-16-00-backlog-adversarial-1016.md)（アーカイブ済み）。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| ✅ 01 | [2026-10-16-01-fix-export-batch-tags-time.md](../dev-docs/archived/pbi/2026-10-16-01-fix-export-batch-tags-time.md) | fix | 108 | 0.5 | ✅ 完了。batch の tags/時刻受渡し＋空行保持＋U+2028統一。34件緑 |
+| ✅ 02 | [2026-10-16-02-fix-openai-missing-apikey-gate.md](../dev-docs/archived/pbi/2026-10-16-02-fix-openai-missing-apikey-gate.md) | fix | 96 | 0.5 | ✅ 完了。checkCredentials 2箇所を gate。ai 395件緑 |
+| ✅ 03 | [2026-10-16-03-fix-migration-backup-terminal-state.md](../dev-docs/archived/pbi/2026-10-16-03-fix-migration-backup-terminal-state.md) | fix | 64 | 1.0 | ✅ 完了。空終端＋不一致終端（remove+done）。41件緑 |
+| ✅ 04 | [2026-10-16-04-fix-settings-import-units-strip.md](../dev-docs/archived/pbi/2026-10-16-04-fix-settings-import-units-strip.md) | fix | 36 | 0.5 | ✅ 完了。バイト換算＋返却/保存一致。95件緑 |
+| ✅ 05 | [2026-10-16-05-fix-headerdetector-url-hash-log.md](../dev-docs/archived/pbi/2026-10-16-05-fix-headerdetector-url-hash-log.md) | fix | 32 | 0.25 | ✅ 完了。2箇所を urlHash 化。24件緑 |
+| ✅ 06 | [2026-10-16-06-fix-clamplimit-default-constant.md](../dev-docs/archived/pbi/2026-10-16-06-fix-clamplimit-default-constant.md) | fix | 20 | 0.25 | ✅ 完了。定数一本化＋pin。35件緑 |
+| ✅ 07 | [2026-10-16-07-fix-focustrap-outside-escape.md](../dev-docs/archived/pbi/2026-10-16-07-fix-focustrap-outside-escape.md) | fix | 10 | 1.0 | ✅ 完了。document 束縛＋focusin 再捕捉。29件緑 |
+| ✅ 08 | [2026-10-16-08-chore-publish-robustness-bundle.md](../dev-docs/archived/pbi/2026-10-16-08-chore-publish-robustness-bundle.md) | chore | 8 | 1.5 | ✅ 完了。10件束。34件緑（repeats=10 安定） |
+
+実行順: B1（01／05／06 並列）＋ B2・B3（02／04／07／03／08 並列、ファイル非重複）。旧挙動 pin 2件（OpenAIProvider・markdownJoinSafety）を新仕様に更新。最終 `npx vitest run` 1078ファイル・16205テスト全緑、`npm run type-check` clean、`npm run lint` 0 errors。
+
 ### 2026-10-16 checking-team Low 残課題ラウンド（checking-team-1016） — ✅ 11件完了・アーカイブ済み 🔧非機能追加
 
 Checking Team レビュー（2026-10-16、総合 92.9/100・ランク S）の Low 残課題 11 件を RICE 順に自律実装・検証してアーカイブ。

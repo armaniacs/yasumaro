@@ -24,6 +24,7 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
+import { StorageKeys } from '../utils/storage/types.js';
 // Probe relay (PBI 2026-10-11-08 follow-up): content scripts cannot reach
 // chrome.storage.session, so arming/state travel as runtime messages via the
 // service worker. Only the state shape is imported (type-only, erased).
@@ -58,6 +59,13 @@ export class ContentKernel {
     private readonly e2eSessionResolveNeeded: boolean;
     private readonly gating: VisitGating;
     private readonly deadlineTimer: DeadlineTimer;
+    /**
+     * PBI 2026-10-17-01 (Task 5): content-side early suppression cache. True
+     * while the recording pause is engaged. Read once in init() from
+     * chrome.storage.local and kept fresh via storage.onChanged. Both
+     * checkVisitConditions() and VisitReporter (via isPaused) consult it.
+     */
+    private pausedCache = false;
 
     constructor(
         private readonly storage: StoragePort,
@@ -85,6 +93,7 @@ export class ContentKernel {
             extractAndCommit: (c) => this.extractAndCommit(c),
             sender: this.sender,
             stopPeriodicCheck: () => this.stopPeriodicCheck(),
+            isPaused: () => this.pausedCache,
         });
         this.gating = new VisitGating({
             getPageState: () => this.pageState,
@@ -190,6 +199,48 @@ export class ContentKernel {
     }
 
     // -----------------------------------------------------------------------
+    // Recording pause — content-side early suppression (PBI 2026-10-17-01)
+    // -----------------------------------------------------------------------
+
+    /** Chrome global accessor — undefined outside the extension context (tests). */
+    private getChromeApi(): typeof chrome | undefined {
+        return (globalThis as unknown as { chrome?: typeof chrome }).chrome;
+    }
+
+    /** Pause-deadline fold: a finite ms epoch strictly in the future => paused. */
+    private refreshPausedCache(pausedUntil: unknown): void {
+        this.pausedCache =
+            typeof pausedUntil === 'number' && Number.isFinite(pausedUntil) && this.clock() < pausedUntil;
+    }
+
+    /** One-shot read of the pause deadline (content scripts read storage.local directly). */
+    private async loadPausedCache(): Promise<void> {
+        try {
+            const raw = await this.getChromeApi()?.storage?.local?.get(
+                StorageKeys.RECORDING_PAUSED_UNTIL,
+            );
+            this.refreshPausedCache(
+                (raw as Record<string, unknown> | undefined)?.[StorageKeys.RECORDING_PAUSED_UNTIL],
+            );
+        } catch {
+            // No chrome in unit tests — stays unpaused.
+        }
+    }
+
+    /** Keep the cache fresh when the popup/background (un)pauses mid-page. */
+    private subscribePauseChanges(): void {
+        try {
+            this.getChromeApi()?.storage?.onChanged?.addListener((changes, areaName) => {
+                if (areaName !== 'local') return;
+                const change = changes[StorageKeys.RECORDING_PAUSED_UNTIL];
+                if (change) this.refreshPausedCache(change.newValue);
+            });
+        } catch {
+            // No chrome — nothing to subscribe.
+        }
+    }
+
+    // -----------------------------------------------------------------------
     // Domain policy — single seam used by both loader and extractor
     // -----------------------------------------------------------------------
 
@@ -242,6 +293,11 @@ export class ContentKernel {
             relayProbeState(this.sender, state);
         }
 
+        // PBI 2026-10-17-01 (Task 5): second gate layer — never auto-report
+        // while paused. The VisitReporter isPaused backstop covers direct
+        // reportValidVisit() callers.
+        if (this.pausedCache) return;
+
         if (evaluation.reportable) {
             void logInfo(`[OWeave] 自動保存トリガー: 経過${duration.toFixed(1)}s, スクロール${visitState.maxScrollPercentage.toFixed(0)}%`, { duration, maxScrollPercentage: visitState.maxScrollPercentage }, 'contentKernel');
             void this.reportValidVisit();
@@ -289,12 +345,16 @@ export class ContentKernel {
     // -----------------------------------------------------------------------
 
     async init(): Promise<void> {
+        // PBI 2026-10-17-01 (Task 5): subscribe before the one-shot pause
+        // read so a pause change landing mid-init is not missed.
+        this.subscribePauseChanges();
         // PBI 2026-10-11-12 (NN12): settings load and probe-flag resolve are
         // independent — run them concurrently. loadSettings rejection still
         // rejects init (Promise.all); the flag resolve is fail-safe inside
         // queryProbeArmed (never rejects), so error semantics are unchanged.
         await Promise.all([
             this.loadSettings(),
+            this.loadPausedCache(),
             // Resolve the extension-side probe flag once before the gating caches
             // it — only when the caller did not inject an explicit decision.
             // The service worker reads the session flag on our behalf: content

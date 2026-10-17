@@ -121,7 +121,7 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
       created_at: FIXED_CREATED,
     } as unknown as BrowsingLogEntry;
     expect(formatEntriesToObsidianList([entry])).toBe(
-      `- ${tsFor(FIXED_NOW)} [Example Article](https://example.com/article)\n    - Line1 Line2 with spaces`,
+      `- ${tsFor(FIXED_CREATED)} [Example Article](https://example.com/article)\n    - Line1 Line2 with spaces`,
     );
   });
 
@@ -135,7 +135,7 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
     } as unknown as BrowsingLogEntry;
     const dateStr = new Date(FIXED_CREATED).toLocaleString();
     expect(formatEntryToHeadingMarkdown(entry)).toBe(
-      `# Example Article\n- URL: https://example.com/article\n- Date: ${dateStr}\n- Tags: #tech #ai\n## Summary\nThis is a summary.`,
+      `# Example Article\n\n- URL: https://example.com/article\n- Date: ${dateStr}\n- Tags: #tech #ai\n\n## Summary\n\nThis is a summary.\n`,
     );
   });
 

@@ -6,6 +6,19 @@
  * The fixed order matters for security: authentication (signature / HMAC) must
  * run before any resource-amplifying work (base64 decode, KDF, decrypt, JSON
  * parse of an attacker-sized payload). See VULN-023/034/035/036.
+ *
+ * PBI 2026-10-16-01 decision: DOWNGRADE (格下げ) — this module stays a generic
+ * ordering primitive for simple (non-encrypted) import paths; it is NOT the
+ * settings import flow. The encrypted settings flow cannot run through these
+ * four stages because decrypt must sit between authenticate and validate
+ * (HMAC over ciphertext -> KDF -> decrypt -> structural validation), and there
+ * is deliberately no decrypt stage here: forcing decrypt into `parse` would
+ * mislabel KDF/decrypt failures as parse errors and hide the amplification
+ * boundary the stage names exist to mark. `settingsExportImport.ts` therefore
+ * keeps its bespoke order and shares only the size-cap constant plus the
+ * post-processing seam (`finalizeImportedSettings`). Do not "migrate" the
+ * settings flow onto `runImportPipeline` without adding an explicit decrypt
+ * stage first.
  */
 
 /** Default read cap shared by import paths (10 MiB) — value lives in utils/limits.ts. */

@@ -154,6 +154,24 @@ export type PingMessage = {
 };
 
 /**
+ * PBI 2026-10-17-01 (pause autosave temporarily): popup-initiated pause
+ * controls. Extension-only (never in CONTENT_SCRIPT_ALLOWED_TYPES) —
+ * content scripts have no legitimate reason to pause recording.
+ */
+export type PauseRecordingMessage = {
+    type: 'PAUSE_RECORDING';
+    payload: { minutes: 30 | 60 | 90 | 120 };
+};
+
+export type ResumeRecordingMessage = {
+    type: 'RESUME_RECORDING';
+};
+
+export type GetPauseStateMessage = {
+    type: 'GET_PAUSE_STATE';
+};
+
+/**
  * PBI 2026-10-11-08 (NN08 follow-up): E2E probe relay. Content scripts
  * cannot reach chrome.storage.session (empirically confirmed: armed flag set
  * via SW, new code running, yet zero publishes), so arming queries and state
@@ -249,6 +267,9 @@ export type ExtensionMessage = (
     | SessionLockRequestMessage
     | ContentCleansingExecutedMessage
     | PingMessage
+    | PauseRecordingMessage
+    | ResumeRecordingMessage
+    | GetPauseStateMessage
     | OwE2eProbeQueryMessage
     | OwE2EProbeStateMessage
     | RefreshLocalMarkdownSchedulerMessage

@@ -190,7 +190,7 @@ export class HeaderDetector {
         // Session storage is auxiliary (in-memory cache is primary), so fall
         // back silently but leave a trace for diagnostics.
         await logDebug('Session privacy cache save failed, using in-memory only', {
-          url: normalizedUrl,
+          urlHash: await hashUrl(normalizedUrl),
           error: errorMessage(error),
         });
       }
@@ -205,7 +205,7 @@ export class HeaderDetector {
       } catch (error) {
         logError('Failed to set privacy badge', {
           tabId,
-          url: normalizedUrl,
+          urlHash: await hashUrl(normalizedUrl),
           error: errorMessage(error)
         }, ErrorCode.BADGE_UPDATE_FAILED, 'headerDetector.ts');
       }

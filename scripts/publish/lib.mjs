@@ -210,11 +210,12 @@ export function readFileOrAbort(path, log) {
 }
 
 /** spawnSync with inherit: `npx …` under set -e — non-zero stops the step. */
-export function defaultRun(command, args, options = {}) {
+export function defaultRun(command, args, options = {}, log = console.error) {
   const result = spawnSync(command, args, { stdio: 'inherit', ...options });
   if (result.error) {
     // bash: `npx: command not found` (127). Still a non-zero step failure.
-    console.error(`${command}: ${result.error.message}`);
+    // Via the injected log like every other helper (P12), so tests can pin it.
+    log(`${command}: ${result.error.message}`);
     return 1;
   }
   return result.status ?? 1;

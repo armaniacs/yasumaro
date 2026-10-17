@@ -2570,6 +2570,34 @@
     "message": "Failed to load sessions.",
     "description": "Load error"
   },
+  "researchSessions_selectionCount": {
+    "message": "{n} selected",
+    "description": "Bulk bar selection count"
+  },
+  "researchSessions_deleteSelected": {
+    "message": "Delete selected",
+    "description": "Bulk bar delete button"
+  },
+  "researchSessions_deleteConfirm": {
+    "message": "Really delete?",
+    "description": "Bulk bar inline confirm prompt"
+  },
+  "researchSessions_deleteConfirmYes": {
+    "message": "Delete",
+    "description": "Bulk bar inline confirm button"
+  },
+  "researchSessions_deleteConfirmNo": {
+    "message": "Cancel",
+    "description": "Bulk bar inline cancel button"
+  },
+  "researchSessions_deleteDetail": {
+    "message": "Delete {n} pages ({range}) from {domains}? The remaining pages will be regrouped.",
+    "description": "Bulk delete inline confirm detail"
+  },
+  "researchSessions_deleteError": {
+    "message": "Deleted {n} pages. Failed partway.",
+    "description": "Partial bulk delete error"
+  },
   "navTrailLabel": {
     "message": "Record navigation trail (source page and search terms)",
     "description": "Navigation trail opt-in checkbox label"
@@ -5166,5 +5194,37 @@
   },
   "localMarkdownExportEmptyAll": {
     "message": "No records to export."
+  },
+  "pauseRecording": {
+    "message": "Pause auto-save",
+    "description": "Pause button aria-label in the popup header"
+  },
+  "pauseIdle": {
+    "message": "Recording",
+    "description": "Pause state label when recording is active"
+  },
+  "pauseRemaining": {
+    "message": "Paused for about {mins} min",
+    "description": "Pause state label with approximate remaining minutes"
+  },
+  "pauseResume": {
+    "message": "Resume now",
+    "description": "Resume button aria-label in the popup header"
+  },
+  "pauseInvalidMinutes": {
+    "message": "Invalid pause duration",
+    "description": "Error shown when the pause duration is rejected"
+  },
+  "pauseStarted": {
+    "message": "Paused",
+    "description": "Transient confirmation shown right after pausing"
+  },
+  "pauseResumed": {
+    "message": "Resumed",
+    "description": "Transient confirmation shown right after resuming"
+  },
+  "pauseError": {
+    "message": "Pause action failed",
+    "description": "Error shown when a pause or resume action fails"
   }
 }

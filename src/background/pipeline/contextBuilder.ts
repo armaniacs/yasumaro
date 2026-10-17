@@ -41,10 +41,41 @@ export interface RetryJobInput {
 }
 
 /**
- * RetryContext is the narrow context for the 2-step retry pipeline
- * (formatMarkdown + saveToObsidian). It carries Input + PrivacyResults.
+ * The three retry-write flags as one bundle (PBI 2026-10-16-09).
+ *
+ * Retry correctness used to depend on three independent flags agreeing with
+ * each other: the `replayWrite` marker, the frozen pipeline-final `markdown`
+ * body, and the idempotent (`dedupe`) write option. They are now built once
+ * here and travel together — the retry path references this bundle, never
+ * the flags individually.
  */
-export type RetryContext = RecordingContext;
+export interface RetryWriteFlags {
+  /** Replay marker consumed by the saveObsidian sink. */
+  readonly replayWrite: true;
+  /**
+   * Idempotent-write option for the Obsidian client. Always pairs with
+   * `replayWrite`: a replay must never stack a second copy of identical
+   * section content.
+   */
+  readonly dedupe: true;
+  /**
+   * Frozen pipeline-final markdown. Absent for legacy payloads — those
+   * regenerate through the format head as before.
+   */
+  readonly markdown?: string | undefined;
+}
+
+/**
+ * RetryContext is the narrow context for the retry pipeline
+ * (formatMarkdown head + retryable save sinks, no AI re-run). It carries
+ * Input + PrivacyResults plus the single `retry` bundle above; `replayWrite`
+ * and `markdown` on the context itself derive from that bundle so the sink
+ * steps (which read the context fields) keep working unchanged.
+ */
+export type RetryContext = RecordingContext & {
+  readonly replayWrite: true;
+  readonly retry: RetryWriteFlags;
+};
 
 export function createRetryContext(
   job: RetryJobInput,
@@ -55,21 +86,30 @@ export function createRetryContext(
   // generic pickDefined spread, so the optional slice is visible in the type.
   const privacyResult: PrivacyPipelineResult = buildPrivacyResult(job.summary, job.tags);
 
-  const base: RecordingContext = {
+  // Single construction site for the 3 retry-write flags: replay marker,
+  // dedupe write option, and frozen markdown travel as one bundle, and the
+  // context fields below derive from it.
+  const retry: RetryWriteFlags =
+    job.markdown !== undefined
+      ? { replayWrite: true, dedupe: true, markdown: job.markdown }
+      : { replayWrite: true, dedupe: true };
+
+  const base: RetryContext = {
     data: { title: job.title, url: job.url, content: '' } as RecordingData,
     settings,
     force: true,
-    replayWrite: true,
+    replayWrite: retry.replayWrite,
+    retry,
     errors: [],
     privacyResult,
   };
 
-  if (job.markdown !== undefined) {
-    (base as RecordingContext).markdown = job.markdown;
+  if (retry.markdown !== undefined) {
+    base.markdown = retry.markdown;
   }
 
   if (traceId !== undefined) {
-    (base as RecordingContext).traceId = traceId;
+    base.traceId = traceId;
   }
 
   return base;

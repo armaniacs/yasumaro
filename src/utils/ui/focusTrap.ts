@@ -6,6 +6,7 @@
 interface TrapInfo {
   element: HTMLElement;
   handler: (e: KeyboardEvent) => void;
+  focusinHandler: (e: FocusEvent) => void;
 }
 
 /**
@@ -52,7 +53,10 @@ export function getFocusableElements(container: HTMLElement): HTMLElement[] {
  * empty: an empty trap (no focusable element, all disabled) must still be
  * leaveable. Tab wraps focus from last to first (and first to last with Shift)
  * and stays a no-op on an empty set — nothing to wrap, so the early return
- * below is unchanged. Other keys are ignored.
+ * below is unchanged. When focus is outside the set (trap escaped via
+ * programmatic focus, assistive tech, or a document-level keydown), Tab pulls
+ * focus back (first, or last with Shift) instead of letting it keep moving
+ * through the background (PBI 2026-10-16-07). Other keys are ignored.
  */
 export function handleFocusCycle(
   event: KeyboardEvent,
@@ -70,6 +74,16 @@ export function handleFocusCycle(
 
   const first = focusables[0]!;
   const last = focusables[focusables.length - 1]!;
+
+  // Focus sits outside the trap: pull it back instead of letting Tab walk the
+  // background page. `includes` is identity-based, so a re-queried set
+  // (disabled-element tracking, PBI 2026-10-11-07) still matches correctly.
+  const active = document.activeElement as HTMLElement | null;
+  if (active === null || !focusables.includes(active)) {
+    event.preventDefault();
+    (event.shiftKey ? last : first).focus();
+    return;
+  }
 
   if (event.shiftKey) {
     if (document.activeElement === first) {
@@ -122,6 +136,16 @@ class FocusTrapManager {
   }
 
   /**
+   * 多重 trap 時の所有権: 最後に trap() された live trap のみが document
+   * イベントに応答する (topmost-wins)。Map は挿入順のため末尾キーが最前面。
+   * 下層 trap のハンドラが生きたままだと Escape 一発で全モーダルが閉じる。
+   */
+  private isTopmost(trapId: string): boolean {
+    const keys = [...this.handlers.keys()];
+    return keys[keys.length - 1] === trapId;
+  }
+
+  /**
    * モーダルにフォーカストラップを設定
    * @param {HTMLElement|String} modal - モーダル要素またはセレクタ
    * @param {Function} closeCallback - ESCキー押下時に呼び出すコールバック
@@ -160,12 +184,28 @@ class FocusTrapManager {
     // 登録を省くと Escape が効かず、閉じる手段を持たないままモーダルに
     // 閉じ込められる（Tab 循環は handleFocusCycle 側で空集合を無害に無視する）。
     // previousFocus も残すため release() がフォーカスを元へ戻せる。
+    //
+    // PBI 2026-10-16-07: keydown は document に束縛する。modalElement 束縛
+    // だと外側フォーカス時の Tab/Escape が届かず、trap も closeCallback も
+    // 発動しなかった。document 束縛なら内外どちらの起点でも届き、
+    // handleFocusCycle が外側起点の Tab を先頭（Shift+Tab は末尾）へ戻す。
+    // focusin 再捕捉は Tab を介さない外側フォーカス（programmatic focus 等）
+    // をモーダルへ引き戻す。どちらも release() で解除する。
     const keydownHandler = (e: KeyboardEvent) => {
+      if (!this.isTopmost(trapId)) return;
       handleFocusCycle(e, () => getFocusableElements(modalElement), closeCallback);
     };
+    const focusinHandler = (e: FocusEvent) => {
+      if (!this.isTopmost(trapId)) return;
+      if (modalElement.contains(e.target as Node)) return;
+      const current = getFocusableElements(modalElement);
+      if (current.length === 0) return;
+      current[0]!.focus();
+    };
 
-    modalElement.addEventListener('keydown', keydownHandler);
-    this.handlers.set(trapId, { element: modalElement, handler: keydownHandler });
+    document.addEventListener('keydown', keydownHandler);
+    document.addEventListener('focusin', focusinHandler);
+    this.handlers.set(trapId, { element: modalElement, handler: keydownHandler, focusinHandler });
 
     // 最初のフォーカス可能要素にフォーカス
     if (firstFocusable && document.body.contains(firstFocusable) && firstFocusable.offsetParent !== null) {
@@ -183,8 +223,9 @@ class FocusTrapManager {
     const trapInfo = this.handlers.get(trapId);
     if (!trapInfo) return;
 
-    const { element, handler } = trapInfo;
-    element.removeEventListener('keydown', handler);
+    const { handler, focusinHandler } = trapInfo;
+    document.removeEventListener('keydown', handler);
+    document.removeEventListener('focusin', focusinHandler);
     this.handlers.delete(trapId);
 
     // 以前のフォーカスを復元

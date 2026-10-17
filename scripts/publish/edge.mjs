@@ -52,6 +52,22 @@ export async function uploadAndPublishEdge(env, deps = {}) {
     VERSION: version,
   } = env;
   const productId = edgeProductId ?? '';
+  // Fail fast like the CWS ID guards: an empty product ID would otherwise
+  // travel into the URL and fail far from the cause (P5).
+  if (productId === '') {
+    log('EDGE_PRODUCT_ID is missing');
+    throw new StepFailed();
+  }
+  // Same fail-fast for credentials: an empty ApiKey/ClientID would otherwise
+  // travel into the headers and fail far from the cause.
+  if ((edgeApiKey ?? '') === '') {
+    log('EDGE_API_KEY is missing');
+    throw new StepFailed();
+  }
+  if ((edgeClientId ?? '') === '') {
+    log('EDGE_CLIENT_ID is missing');
+    throw new StepFailed();
+  }
   const api = `https://api.addons.microsoftedge.microsoft.com/v1/products/${productId}`;
   const authHeaders = {
     Authorization: `ApiKey ${edgeApiKey ?? ''}`,
@@ -77,13 +93,24 @@ export async function uploadAndPublishEdge(env, deps = {}) {
     throw new StepFailed();
   }
 
-  // grep -i '^location:' "${HEADERS_FILE}" | tr -d '\r' | awk '{print $2}' |
-  // awk -F/ '{print $NF}' — the last path segment of the Location header.
+  // The Location header carries the operation URL, not a bare id — the old
+  // shell took the last '/'-separated token, which breaks on a trailing
+  // slash ('.../OP-1/' → '') or a query string ('.../OP-1?poll=true' →
+  // 'OP-1?poll=true'). Parse the path and take its last non-empty segment
+  // instead (P8).
   function operationId(response) {
     const location = response.headers.get('location');
     if (!location) return '';
     const firstToken = location.trim().split(/\s+/)[0] ?? '';
-    const segments = firstToken.split('/');
+    if (!firstToken) return '';
+    let path = firstToken;
+    try {
+      path = new URL(firstToken).pathname;
+    } catch {
+      // Relative Location or unparseable URL: strip query/fragment manually.
+      path = firstToken.split(/[?#]/)[0] ?? '';
+    }
+    const segments = path.split('/').filter((segment) => segment !== '');
     return segments[segments.length - 1] ?? '';
   }
 

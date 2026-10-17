@@ -58,6 +58,16 @@ export async function uploadAndPublishCws(env, deps = {}) {
   } = env;
   const extensionId = chromeExtensionId ?? '';
   const publisherId = chromePublisherId ?? '';
+  // Fail fast like the empty-token guard below: an empty ID would otherwise
+  // travel into the URL and fail far from the cause (P5).
+  if (extensionId === '') {
+    log('CHROME_EXTENSION_ID is missing');
+    throw new StepFailed();
+  }
+  if (publisherId === '') {
+    log('CHROME_PUBLISHER_ID is missing');
+    throw new StepFailed();
+  }
   const itemPath = `publishers/${publisherId}/items/${extensionId}`;
 
   // --- OAuth token refresh (curl + jq -r '.access_token // empty') ---
@@ -113,7 +123,7 @@ export async function uploadAndPublishCws(env, deps = {}) {
   log(`Upload: ${uploadState}`);
   if (uploadState === 'UNKNOWN') {
     log('Upload response (error fields only):');
-    log(projectErrorFields(upload.text) ?? `Non-JSON response (${[...upload.text].length} bytes)`);
+    log(projectErrorFields(upload.text) ?? `Non-JSON response (${Buffer.byteLength(upload.text, 'utf8')} bytes)`);
   }
 
   // NOT_FOUND is returned until the async upload is registered, so it is polled like IN_PROGRESS.
@@ -138,7 +148,13 @@ export async function uploadAndPublishCws(env, deps = {}) {
   }
 
   if (uploadState !== 'SUCCEEDED') {
-    log(`Upload failed with state: ${uploadState}`);
+    // Parity with the Edge wait loop: exhaustion ("did not finish in time")
+    // is told apart from a terminal failure state (P4).
+    if (uploadState === 'IN_PROGRESS' || uploadState === 'NOT_FOUND') {
+      log('Upload did not finish in time');
+    } else {
+      log(`Upload failed with state: ${uploadState}`);
+    }
     throw new StepFailed();
   }
 

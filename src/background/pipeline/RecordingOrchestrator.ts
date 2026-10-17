@@ -4,7 +4,7 @@
  * Interface is three entry points:
  * - record(data, opts) -> RecordingResult (full 13 steps)
  * - preview(data, opts) -> RecordingResult (previewBreakpoint short-circuit)
- * - retryObsidianWrite(job) -> boolean (2-step retry, no AI re-run)
+ * - retryObsidianWrite(job) -> boolean (SavePhase.saveRetry subset, no AI re-run)
  *
  * Deletion test: deleting this module forces 13 step registrations + mutex +
  * kernel to reappear in every caller. Deleting a shallow factory only moves one line.
@@ -35,6 +35,7 @@ import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor, type StepDelayFn } from './stepExecutor.js';
+import { RECORDING_GATE_TABLE, type RecordingGate } from '../../utils/recordingGateTable.js';
 
 export interface RecordingOrchestratorDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -63,7 +64,6 @@ export interface RecordOptions {
 export class RecordingOrchestrator {
   private steps: PipelineStep[];
   private preSaveSteps: PipelineStep[];
-  private retrySteps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private getSettingsWithCache: () => Promise<Settings>;
   private obsidian: ObsidianClient;
@@ -87,28 +87,34 @@ export class RecordingOrchestrator {
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
-    // Recording-allowance precedence: this hand-written list is canonical
-    // (ADR 2026-09-28-recording-gate-order-canonical). Only the hand list
-    // carries each step's errorStrategy / maxRetries / offlineRetry, so the
-    // name-only RECORDING_GATE_TABLE cannot drive execution.
-    // RECORDING_GATE_TABLE stays the gate-name registry for decideGate callers.
+    // Recording-allowance precedence: the gate rows derive from
+    // RECORDING_GATE_TABLE order (ADR 2026-09-28-recording-gate-order-canonical).
+    // Only this list carries each step's errorStrategy / maxRetries /
+    // offlineRetry; the table owns the gate ORDER, this list owns the
+    // EXECUTION metadata. Reordering the table reorders execution.
+    const gateExecutors: Record<RecordingGate, PipelineStep['execute']> = {
+      domainFilter: checkDomainFilterStep,
+      permission: checkPermissionStep,
+      trust: checkTrustDomainStep,
+      privacyHeaders: this.createPrivacyHeadersStep(),
+      duplicate: checkDuplicateStep,
+    };
+    const gateSteps: PipelineStep[] = RECORDING_GATE_TABLE.map((row) => ({
+      name: row.name,
+      errorStrategy: ErrorStrategy.FATAL,
+      execute: gateExecutors[row.name],
+    }));
     this.preSaveSteps = [
       { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
-      { name: 'domainFilter', errorStrategy: ErrorStrategy.FATAL, execute: checkDomainFilterStep },
-      { name: 'permission', errorStrategy: ErrorStrategy.FATAL, execute: checkPermissionStep },
-      { name: 'trust', errorStrategy: ErrorStrategy.FATAL, execute: checkTrustDomainStep },
-      { name: 'privacyHeaders', errorStrategy: ErrorStrategy.FATAL, execute: this.createPrivacyHeadersStep() },
-      { name: 'duplicate', errorStrategy: ErrorStrategy.FATAL, execute: checkDuplicateStep },
+      ...gateSteps,
       { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: createProcessPrivacyPipelineStep(deps.privacyPipelineFactory ?? defaultPrivacyPipelineFactory) },
       { name: 'extractSentences', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, execute: extractSentencesStep },
       { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
     ];
 
-    // Full 13-step introspection surface (SavePhase owns the tail rows).
+    // Full 13-step introspection surface (SavePhase owns the tail rows,
+    // including the retry-subset projection the retry entry point uses).
     this.steps = [...this.preSaveSteps, ...this.savePhase.steps()];
-
-    // Retry subset is a projection of the fan-out table, not a hand-written array.
-    this.retrySteps = this.savePhase.retryProjection();
   }
 
   private createPrivacyHeadersStep() {
@@ -133,20 +139,14 @@ export class RecordingOrchestrator {
     return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
   }
 
-  private async executeRetrySubset(context: RecordingContext, deps: StepDeps, traceId: string): Promise<RecordingContext> {
-    let ctx = { ...context, traceId } as RecordingContext;
-    for (const step of this.retrySteps) {
-      ctx = await this.executor.executeWithStrategy(step, ctx, deps);
-    }
-    return ctx;
-  }
-
   /**
    * Distinct entry point: retry Obsidian write only (no AI re-run).
-   * Uses the 2-step subset compiled at construction (`retrySteps`) via `executeRetrySubset`;
-   * `RecordingOrchestrator.steps` (13 elements) is not touched. The replay
-   * write marker is set by `createRetryContext` and consumed by the saveObsidian
-   * sink — this method stays unaware of the dedupe policy.
+   * Runs the retry subset through the SavePhase seam (`saveRetry`) and
+   * decides success from the SaveReceipt outcomes — the same receipt shape
+   * the normal path uses. The 3 retry-write flags travel in the RetryContext
+   * bundle built by `createRetryContext`; this method reads no flag itself.
+   * Step failures propagate to the caller (the offline queue keeps the job),
+   * matching the former hand loop.
    */
   async retryObsidianWrite(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
     return this.mutexMap.runExclusive(job.url, async () => {
@@ -159,12 +159,11 @@ export class RecordingOrchestrator {
         urlStore: this.urlStore,
         sqliteClient: this.sqliteClient,
       });
-      const retryResult = await this.executeRetrySubset(context, deps, traceId);
-      if ((retryResult as unknown as RecordingContext).obsidianDuration != null) {
-        this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
-        return true;
-      }
-      return false;
+      const receipt = await this.savePhase.saveRetry(context, deps);
+      if (receipt.terminated) return false;
+      if (receipt.outcomes.find((o) => o.name === 'saveObsidian')?.status !== 'ok') return false;
+      this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
+      return true;
     });
   }
 

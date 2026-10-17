@@ -3,6 +3,7 @@ import { waitForMock } from '../../../testDir/waitPolicy.js';
 import { HeaderDetector, sessionCacheKeysToEvict } from '../headerDetector.js';
 import { RecordingCache } from './helpers/recordingCache.js';
 import { checkPrivacy } from '../../utils/privacyChecker.js';
+import { hashUrl } from '../../utils/urlHash.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 
 vi.mock('../../utils/privacyChecker.js', () => ({
@@ -309,6 +310,31 @@ describe('HeaderDetector', () => {
       expect(logError).toHaveBeenCalled();
     });
 
+    test('badge failure log records urlHash instead of the raw URL', async () => {
+      vi.mocked(hashUrl).mockResolvedValueOnce('HASHED-BADGE-URL');
+      chrome.action.setBadgeText = vi.fn(() => Promise.reject(new Error('Badge error')));
+      chrome.action.setBadgeBackgroundColor = vi.fn(() => Promise.resolve());
+      vi.mocked(logError).mockClear();
+
+      const rawUrl = 'https://badge-hash.example/private?token=secret123';
+      await detector['cachePrivacyInfo'](rawUrl, {
+        isPrivate: true,
+        reason: 'set-cookie',
+        timestamp: Date.now()
+      }, 1);
+
+      expect(logError).toHaveBeenCalledWith(
+        'Failed to set privacy badge',
+        expect.objectContaining({ urlHash: 'HASHED-BADGE-URL', tabId: 1 }),
+        ErrorCode.BADGE_UPDATE_FAILED,
+        'headerDetector.ts'
+      );
+      const payload = vi.mocked(logError).mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload).not.toHaveProperty('url');
+      expect(JSON.stringify(payload)).not.toContain(rawUrl);
+      expect(JSON.stringify(payload)).not.toContain('secret123');
+    });
+
     test('falls back to in-memory cache when the session write fails', async () => {
       const setSpy = chrome.storage.session.set as unknown as ReturnType<typeof vi.fn>;
       const original = setSpy.getMockImplementation();
@@ -318,14 +344,39 @@ describe('HeaderDetector', () => {
       await detector['cachePrivacyInfo']('https://sessfail.com', info, -1);
 
       // Diagnostic trace recorded instead of silent swallowing (PBI 2026-09-19-02)
-      // normalizeUrl keeps the root trailing slash
+      // normalizeUrl keeps the root trailing slash; the URL is recorded as a
+      // hash (PBI 2026-10-16-05), never raw. hashUrl is identity-mocked here,
+      // so urlHash equals the normalized URL.
       expect(logDebug).toHaveBeenCalledWith(
         'Session privacy cache save failed, using in-memory only',
-        expect.objectContaining({ url: 'https://sessfail.com/' })
+        expect.objectContaining({ urlHash: 'https://sessfail.com/' })
       );
       // In-memory cache remains authoritative despite the session failure
       const memoryCache = detector['cache'].getPrivacyCache();
       expect(memoryCache?.has('https://sessfail.com/')).toBe(true);
+
+      if (original !== undefined) setSpy.mockImplementation(original);
+    });
+
+    test('session save failure log records urlHash instead of the raw URL', async () => {
+      vi.mocked(hashUrl).mockResolvedValueOnce('HASHED-SESSION-URL');
+      const setSpy = chrome.storage.session.set as unknown as ReturnType<typeof vi.fn>;
+      const original = setSpy.getMockImplementation();
+      setSpy.mockRejectedValueOnce(new Error('quota exceeded'));
+      vi.mocked(logDebug).mockClear();
+
+      const rawUrl = 'https://session-hash.example/account?token=secret456';
+      const info = { isPrivate: false, timestamp: Date.now() };
+      await detector['cachePrivacyInfo'](rawUrl, info, -1);
+
+      expect(logDebug).toHaveBeenCalledWith(
+        'Session privacy cache save failed, using in-memory only',
+        expect.objectContaining({ urlHash: 'HASHED-SESSION-URL' })
+      );
+      const payload = vi.mocked(logDebug).mock.calls[0]![1] as Record<string, unknown>;
+      expect(payload).not.toHaveProperty('url');
+      expect(JSON.stringify(payload)).not.toContain(rawUrl);
+      expect(JSON.stringify(payload)).not.toContain('secret456');
 
       if (original !== undefined) setSpy.mockImplementation(original);
     });

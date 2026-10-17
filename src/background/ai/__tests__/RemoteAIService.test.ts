@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { RemoteAIService } from '../RemoteAIService.js';
 import { AIProviderStrategy } from '../providers/index.js';
+import { createProviderStrategy } from '../providerCatalog.js';
+import type { Settings } from '../../../utils/storage/types.js';
 import { recordAuditLog } from '../../../utils/auditLog.js';
 import type { SettingsReader } from '../../../utils/storage/SettingsRepository.js';
 
@@ -20,19 +22,39 @@ function makeRepo(settings: Record<string, unknown>): SettingsReader {
   };
 }
 
-function createService(providerSlots: Array<{ provider: string; model?: string }>, settingsOverride?: Record<string, unknown>) {
+type FakeMap = Record<string, (settings: Settings) => AIProviderStrategy>;
+
+/**
+ * PBI 2026-10-16-03: fakes enter via the single injected generation seam.
+ * Ids absent from `fakes` fall through to the production createProviderStrategy,
+ * so an unknown id throws UnknownProviderError through the production path.
+ */
+function dispatch(fakes: FakeMap): (providerId: string, settings: Settings) => AIProviderStrategy {
+  return (providerId: string, settings: Settings) => {
+    const fake = fakes[providerId];
+    if (fake) return fake(settings);
+    return createProviderStrategy(providerId, settings);
+  };
+}
+
+function createService(
+  providerSlots: Array<{ provider: string; model?: string }>,
+  fakes: FakeMap = {},
+  settingsOverride?: Record<string, unknown>,
+) {
   const settings = settingsOverride ?? {
     ai_provider_priority_list: providerSlots,
     ai_provider: 'gemini',
     summary_min_length: 0,
   };
-  return new RemoteAIService({ repo: makeRepo(settings) });
+  return new RemoteAIService({ repo: makeRepo(settings), createStrategy: dispatch(fakes) });
 }
 
 describe('RemoteAIService', () => {
   it('delegates generateSummary to the first successful provider', async () => {
-    const service = createService([{ provider: 'test-provider' }]);
-    service.registerProvider('test-provider', () => makeProvider('test summary'));
+    const service = createService([{ provider: 'test-provider' }], {
+      'test-provider': () => makeProvider('test summary'),
+    });
 
     const result = await service.generateSummary('content', { url: 'https://example.com' });
 
@@ -41,9 +63,10 @@ describe('RemoteAIService', () => {
   });
 
   it('falls back to the next provider when the first fails', async () => {
-    const service = createService([{ provider: 'fail-provider' }, { provider: 'success-provider' }]);
-    service.registerProvider('fail-provider', () => makeProvider('fail', false));
-    service.registerProvider('success-provider', () => makeProvider('success'));
+    const service = createService([{ provider: 'fail-provider' }, { provider: 'success-provider' }], {
+      'fail-provider': () => makeProvider('fail', false),
+      'success-provider': () => makeProvider('success'),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -52,9 +75,10 @@ describe('RemoteAIService', () => {
   });
 
   it('returns the last provider result when all providers fail', async () => {
-    const service = createService([{ provider: 'fail1' }, { provider: 'fail2' }]);
-    service.registerProvider('fail1', () => makeProvider('fail1', false));
-    service.registerProvider('fail2', () => makeProvider('fail2', false));
+    const service = createService([{ provider: 'fail1' }, { provider: 'fail2' }], {
+      fail1: () => makeProvider('fail1', false),
+      fail2: () => makeProvider('fail2', false),
+    });
 
     const result = await service.generateSummary('content');
 
@@ -63,16 +87,17 @@ describe('RemoteAIService', () => {
   });
 
   it('deduplicates concurrent generateSummary calls for the same URL', async () => {
-    const service = createService([{ provider: 'test' }]);
     let callCount = 0;
-    service.registerProvider('test', () => {
-      callCount++;
-      return makeProvider(`call-${callCount}`);
+    const faked = createService([{ provider: 'test' }], {
+      test: () => {
+        callCount++;
+        return makeProvider(`call-${callCount}`);
+      },
     });
 
     const [result1, result2] = await Promise.all([
-      service.generateSummary('content', { url: 'https://example.com' }),
-      service.generateSummary('content', { url: 'https://example.com' }),
+      faked.generateSummary('content', { url: 'https://example.com' }),
+      faked.generateSummary('content', { url: 'https://example.com' }),
     ]);
 
     expect(callCount).toBe(1);
@@ -80,11 +105,12 @@ describe('RemoteAIService', () => {
   });
 
   it('treats empty URL as non-dedupeable', async () => {
-    const service = createService([{ provider: 'test' }]);
     let callCount = 0;
-    service.registerProvider('test', () => {
-      callCount++;
-      return makeProvider(`call-${callCount}`);
+    const service = createService([{ provider: 'test' }], {
+      test: () => {
+        callCount++;
+        return makeProvider(`call-${callCount}`);
+      },
     });
 
     await Promise.all([
@@ -96,11 +122,12 @@ describe('RemoteAIService', () => {
   });
 
   it('propagates provider exceptions as error results', async () => {
-    const service = createService([{ provider: 'throw' }]);
-    service.registerProvider('throw', () => ({
-      generateSummary: vi.fn().mockRejectedValue(new Error('provider error')),
-      testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }) as unknown as AIProviderStrategy);
+    const service = createService([{ provider: 'throw' }], {
+      throw: () => ({
+        generateSummary: vi.fn().mockRejectedValue(new Error('provider error')),
+        testConnection: vi.fn().mockResolvedValue({ success: true }),
+      }) as unknown as AIProviderStrategy,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -109,9 +136,10 @@ describe('RemoteAIService', () => {
   });
 
   it('propagates traceId to provider', async () => {
-    const service = createService([{ provider: 'test' }]);
     const provider = makeProvider('ok');
-    service.registerProvider('test', () => provider);
+    const service = createService([{ provider: 'test' }], {
+      test: () => provider,
+    });
 
     await service.generateSummary('content', { url: 'https://example.com', traceId: 'trace-123' });
 
@@ -128,9 +156,10 @@ describe('RemoteAIService', () => {
   });
 
   it('delegates testConnection to providers with progress callback', async () => {
-    const service = createService([{ provider: 'test' }]);
+    const service = createService([{ provider: 'test' }], {
+      test: () => makeProvider('ok'),
+    });
     const onProgress = vi.fn();
-    service.registerProvider('test', () => makeProvider('ok'));
 
     const result = await service.testConnection(onProgress, 'run-1');
 
@@ -156,10 +185,11 @@ describe('RemoteAIService', () => {
     expect(result.summary).toContain('check your settings');
   });
 
-  it('invokes a custom provider registered via registerProvider', async () => {
-    const service = createService([{ provider: 'custom' }]);
+  it('invokes a custom provider injected via createStrategy', async () => {
     const customProvider = makeProvider('custom summary');
-    service.registerProvider('custom', () => customProvider);
+    const service = createService([{ provider: 'custom' }], {
+      custom: () => customProvider,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -168,11 +198,12 @@ describe('RemoteAIService', () => {
   });
 
   it('calls the API independently for concurrent calls with different URLs', async () => {
-    const service = createService([{ provider: 'test' }]);
     let callCount = 0;
-    service.registerProvider('test', () => {
-      callCount++;
-      return makeProvider(`summary-${callCount}`);
+    const service = createService([{ provider: 'test' }], {
+      test: () => {
+        callCount++;
+        return makeProvider(`summary-${callCount}`);
+      },
     });
 
     await Promise.all([
@@ -184,11 +215,12 @@ describe('RemoteAIService', () => {
   });
 
   it('calls the API again for a new call with the same URL after completion', async () => {
-    const service = createService([{ provider: 'test' }]);
     let callCount = 0;
-    service.registerProvider('test', () => {
-      callCount++;
-      return makeProvider('ok');
+    const service = createService([{ provider: 'test' }], {
+      test: () => {
+        callCount++;
+        return makeProvider('ok');
+      },
     });
 
     const url = 'https://example.com/article';
@@ -200,15 +232,16 @@ describe('RemoteAIService', () => {
   });
 
   it('removes the in-flight entry on failure so the next call retries', async () => {
-    const service = createService([{ provider: 'fail' }]);
     let callCount = 0;
-    service.registerProvider('fail', () => ({
-      generateSummary: vi.fn().mockImplementation(() => {
-        callCount++;
-        return Promise.reject(new Error('API error'));
-      }),
-      testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }) as unknown as AIProviderStrategy);
+    const service = createService([{ provider: 'fail' }], {
+      fail: () => ({
+        generateSummary: vi.fn().mockImplementation(() => {
+          callCount++;
+          return Promise.reject(new Error('API error'));
+        }),
+        testConnection: vi.fn().mockResolvedValue({ success: true }),
+      }) as unknown as AIProviderStrategy,
+    });
 
     const url = 'https://example.com/article';
     await service.generateSummary('content', { url });
@@ -228,11 +261,12 @@ describe('RemoteAIService', () => {
   });
 
   it('testConnection returns an error result when a provider throws', async () => {
-    const service = createService([{ provider: 'throwing' }]);
-    service.registerProvider('throwing', () => ({
-      generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'ok' }),
-      testConnection: vi.fn().mockRejectedValue(new Error('Connection test internal error')),
-    }) as unknown as AIProviderStrategy);
+    const service = createService([{ provider: 'throwing' }], {
+      throwing: () => ({
+        generateSummary: vi.fn().mockResolvedValue({ success: true, summary: 'ok' }),
+        testConnection: vi.fn().mockRejectedValue(new Error('Connection test internal error')),
+      }) as unknown as AIProviderStrategy,
+    });
 
     const result = await service.testConnection();
 
@@ -241,9 +275,10 @@ describe('RemoteAIService', () => {
   });
 
   it('testConnection includes a non-negative elapsedMs in each provider result', async () => {
-    const service = createService([{ provider: 'a' }, { provider: 'b' }]);
-    service.registerProvider('a', () => makeProvider('ok-a'));
-    service.registerProvider('b', () => makeProvider('ok-b'));
+    const service = createService([{ provider: 'a' }, { provider: 'b' }], {
+      a: () => makeProvider('ok-a'),
+      b: () => makeProvider('ok-b'),
+    });
 
     const result = await service.testConnection();
 
@@ -266,8 +301,9 @@ describe('RemoteAIService', () => {
   });
 
   it('calls recordAuditLog with provider name and url before generateSummary', async () => {
-    const service = createService([{ provider: 'test' }]);
-    service.registerProvider('test', () => makeProvider('ok'));
+    const service = createService([{ provider: 'test' }], {
+      test: () => makeProvider('ok'),
+    });
 
     await service.generateSummary('content', { url: 'https://example.com/audit-test' });
 
@@ -275,9 +311,10 @@ describe('RemoteAIService', () => {
   });
 
   it('calls recordAuditLog for each attempted provider during fallback', async () => {
-    const service = createService([{ provider: 'fail' }, { provider: 'success' }]);
-    service.registerProvider('fail', () => makeProvider('fail', false));
-    service.registerProvider('success', () => makeProvider('success'));
+    const service = createService([{ provider: 'fail' }, { provider: 'success' }], {
+      fail: () => makeProvider('fail', false),
+      success: () => makeProvider('success'),
+    });
 
     await service.generateSummary('content', { url: 'https://example.com/fallback-test' });
 
@@ -286,11 +323,12 @@ describe('RemoteAIService', () => {
   });
 
   it('returns a generic message without internal error details when a provider throws', async () => {
-    const service = createService([{ provider: 'throwing' }]);
-    service.registerProvider('throwing', () => ({
-      generateSummary: vi.fn().mockRejectedValue(new Error('Provider internal error')),
-      testConnection: vi.fn().mockResolvedValue({ success: true }),
-    }) as unknown as AIProviderStrategy);
+    const service = createService([{ provider: 'throwing' }], {
+      throwing: () => ({
+        generateSummary: vi.fn().mockRejectedValue(new Error('Provider internal error')),
+        testConnection: vi.fn().mockResolvedValue({ success: true }),
+      }) as unknown as AIProviderStrategy,
+    });
 
     const result = await service.generateSummary('content');
 
@@ -301,11 +339,12 @@ describe('RemoteAIService', () => {
 
   it('truncates provider slots exceeding MAX_PROVIDERS (10)', async () => {
     const slots = Array.from({ length: 30 }, (_, i) => ({ provider: 'test', model: `model-${i}` }));
-    const service = createService(slots);
     let callCount = 0;
-    service.registerProvider('test', () => {
-      callCount++;
-      return makeProvider('ok');
+    const service = createService(slots, {
+      test: () => {
+        callCount++;
+        return makeProvider('ok');
+      },
     });
 
     const result = await service.testConnection();
@@ -320,9 +359,11 @@ describe('RemoteAIService', () => {
         ai_provider_priority_list: [{ provider: 'short' }, { provider: 'long' }],
         summary_min_length: 20,
       }),
+      createStrategy: dispatch({
+        short: () => makeProvider('短い'),
+        long: () => makeProvider('これは20文字以上ある十分な長さの要約結果テキストです。'),
+      }),
     });
-    service.registerProvider('short', () => makeProvider('短い'));
-    service.registerProvider('long', () => makeProvider('これは20文字以上ある十分な長さの要約結果テキストです。'));
 
     const result = await service.generateSummary('content');
 
@@ -337,8 +378,10 @@ describe('RemoteAIService', () => {
         ai_provider: 'legacy',
         summary_min_length: 0,
       }),
+      createStrategy: dispatch({
+        legacy: () => makeProvider('legacy summary'),
+      }),
     });
-    service.registerProvider('legacy', () => makeProvider('legacy summary'));
 
     const result = await service.generateSummary('content');
 
@@ -352,8 +395,10 @@ describe('RemoteAIService', () => {
         ai_provider_priority_list: [],
         summary_min_length: 0,
       }),
+      createStrategy: dispatch({
+        openai: () => makeProvider('openai summary'),
+      }),
     });
-    service.registerProvider('openai', () => makeProvider('openai summary'));
 
     const result = await service.generateSummary('content');
 
@@ -362,9 +407,10 @@ describe('RemoteAIService', () => {
   });
 
   it('calls onProgress in order when each provider in the priority list starts', async () => {
-    const service = createService([{ provider: 'a' }, { provider: 'b', model: 'model-b' }]);
-    service.registerProvider('a', () => makeProvider('ok-a'));
-    service.registerProvider('b', () => makeProvider('ok-b'));
+    const service = createService([{ provider: 'a' }, { provider: 'b', model: 'model-b' }], {
+      a: () => makeProvider('ok-a'),
+      b: () => makeProvider('ok-b'),
+    });
     const onProgress = vi.fn();
 
     await service.testConnection(onProgress);
@@ -380,8 +426,10 @@ describe('RemoteAIService', () => {
         ai_provider_priority_list: [{ provider: 'gemini' }],
         gemini_model: 'gemini-3.1-flash-lite',
       }),
+      createStrategy: dispatch({
+        gemini: () => makeProvider('ok'),
+      }),
     });
-    service.registerProvider('gemini', () => makeProvider('ok'));
     const onProgress = vi.fn();
 
     await service.testConnection(onProgress);
@@ -395,8 +443,9 @@ describe('RemoteAIService', () => {
   });
 
   it('works as before when onProgress is omitted', async () => {
-    const service = createService([{ provider: 'a' }]);
-    service.registerProvider('a', () => makeProvider('ok'));
+    const service = createService([{ provider: 'a' }], {
+      a: () => makeProvider('ok'),
+    });
 
     const result = await service.testConnection();
 

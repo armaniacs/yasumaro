@@ -19,6 +19,7 @@ Yasumaro は、ポップアップを開かなくても現在の状態が分か�
 | **●** | 緑 | 記録可能・監視中（タブ切替時に表示） |
 | **!** | オレンジ | プライベートページとして検出されました（銀行・メールなど）。または、プライバシー同意が未取得の状態です |
 | **∉** | 緑 | ドメインフィルターの設定により、現在のページは記録対象外です（許可リスト外、またはブロックリスト該当。タブごとに表示） |
+| **{分数}** | 赤 | 自動保存の一時停止中です。数字は残り分数（例: `30`）。1分ごとに減り、再開・期限切れで消えます |
 
 ### 「∉」バッジについて
 
@@ -32,6 +33,14 @@ Yasumaro は、ポップアップを開かなくても現在の状態が分か�
 2. **プライバシー同意が未取得の場合**: 拡張機能全体がまだデータ収集への同意を得ていない状態（初回起動時に同意を拒否した場合など）。この場合はどのページを開いてもバッジが表示され続けます。同意すると消えます
 
 どちらの意味かを見分ける目安は表示範囲です。特定のページでのみ表示される場合は1つ目、常に表示されている場合は2つ目です。常に表示されている場合はプライバシー同意の確認が必要です。ポップアップの「⚙」アイコンからダッシュボードを開き、プライバシー同意の状態を確認してください。
+
+### 一時停止中の数字バッジについて
+
+赤背景の数字バッジは、自動保存を一時停止している合図です。ポップアップの「⏸」ボタンで停止すると残り分数（例: `30`）が出て、1分ごとに減っていきます。
+
+- 数字はポップアップを開かなくても残り時間が分かるためのもので、再開するか期限が来ると消えます
+- タブごとの状態バッジ（◎・!など）が付いているタブでは、そちらが優先して表示されます
+- ブラウザを再起動しても停止期限までは停止が続き、バッジも1分以内に戻ります
 
 ### 用途
 
@@ -60,6 +69,7 @@ Yasumaro displays a small badge (colored symbol or text) on the extension icon s
 | **●** | Green | Recording is possible / monitoring (shown on tab activation) |
 | **!** | Orange | The page was detected as private (banking, email, etc.), OR privacy consent has not yet been granted |
 | **∉** | Green | The current page is excluded from recording by your domain filter settings (not in the allowlist, or matched by the blocklist; shown per tab) |
+| **{minutes}** | Red | Auto-save is paused. The number is the remaining minutes (e.g., `30`). It ticks down every minute and clears on resume or expiry |
 
 ### About the "∉" Badge
 
@@ -73,6 +83,14 @@ The orange "!" badge means different things depending on context.
 2. **Privacy consent not granted**: The extension as a whole has not yet received consent for data collection (e.g., if you declined the consent prompt on first launch). In this case, the badge persists no matter which page you open. It clears once you grant consent
 
 The easiest way to tell which case applies is whether the badge appears only on a specific page or persists everywhere. If it's always present, check your privacy consent status by opening the dashboard via the "⚙" icon in the popup.
+
+### About the Pause Countdown Badge
+
+The red number badge means auto-save is paused. Press the "⏸" button in the popup to pause; the remaining minutes (e.g., `30`) appear and tick down every minute.
+
+- The number lets you see the remaining time without opening the popup. It clears when you resume or when the pause expires
+- Tabs with their own per-tab badge (◎, !, etc.) keep showing that badge; every other tab falls back to the number
+- The pause survives a browser restart until its deadline, and the badge returns within a minute
 
 ### Use Cases
 

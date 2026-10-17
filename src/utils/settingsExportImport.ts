@@ -3,6 +3,7 @@
  * Settings export and import functionality
  */
 
+import type { HmacSigner } from './crypto/hmacSigner.js';
 import { exportHmacSigner } from './storage/encryptionSession.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
@@ -10,12 +11,28 @@ import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings, StorageKeys, isPrivacyMode } from './storage/types.js';
 import { encrypt, deriveKey } from './crypto/index.js';
 import { generateSalt, bytesToBase64 } from './crypto/index.js';
-import { decryptWithIterationCandidates } from './crypto/kdfNegotiator.js';
+import {
+  ENCRYPTED_EXPORT_VERSION,
+  buildEncryptedHmacPayload,
+  currentExportIterations,
+  decryptExportCiphertext,
+  verifyEncryptedExportHmac,
+  verifyLegacyPlaintextHmac,
+} from './crypto/encryptedExportCodec.js';
+// Compatibility re-export: the version stamps live in the codec (PBI
+// 2026-10-16-06). Existing importers keep working without touching numbers.
+export {
+  ENCRYPTED_EXPORT_VERSION,
+  LEGACY_ENCRYPTED_EXPORT_VERSION,
+} from './crypto/encryptedExportCodec.js';
 import { ErrorCode } from './logger/types.js';
 import { logError, logInfo, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { DEFAULT_IMPORT_SIZE_CAP_BYTES } from './importPipeline.js';
-import { CRYPTO_PARAMS } from './crypto/cryptoParams.js';
+// NOTE (PBI 2026-10-16-01): only the size-cap constant is shared with
+// importPipeline.ts. The settings flows do NOT run through runImportPipeline —
+// the encrypted flow needs decrypt between authenticate and validate, which
+// the four-stage pipeline has no stage for (see importPipeline.ts header).
 
 /** Current export format version (plaintext settings) */
 export const EXPORT_VERSION = '1.1.0';
@@ -26,25 +43,6 @@ export const EXPORT_VERSION = '1.1.0';
  * the frozen legacy contract instead of the full derived key set.
  */
 export const LEGACY_EXPORT_VERSION = '1.0.0';
-
-/** Encrypted export format version — v3 signs iterations along with ciphertext:iv:salt */
-export const ENCRYPTED_EXPORT_VERSION = '3';
-
-/** v2 signed only ciphertext:iv:salt; still accepted on import. */
-export const LEGACY_ENCRYPTED_EXPORT_VERSION = '2';
-
-/**
- * Single builder for the encrypted-export HMAC payload so export and import
- * cannot drift. v2 omits iterations, which lets a signed file carry a forged
- * KDF cost.
- */
-function buildEncryptedHmacPayload(
-  data: { ciphertext: string; iv: string; salt: string; iterations?: number },
-  version: typeof ENCRYPTED_EXPORT_VERSION | typeof LEGACY_ENCRYPTED_EXPORT_VERSION
-): string {
-  const base = `${data.ciphertext}:${data.iv}:${data.salt}`;
-  return version === ENCRYPTED_EXPORT_VERSION ? `${base}:${data.iterations}` : base;
-}
 
 export interface SettingsExportData {
   version: string;
@@ -99,10 +97,57 @@ function sanitizeSettingsForExport(settings: Settings): Settings {
 }
 
 /**
+ * Minimal repo seam for import post-processing (PBI 2026-10-16-01).
+ * Structural (not nominal): a fake `{ getAll, setAll }` satisfies it, so
+ * tests verify the import flow without mocking `settingsRepository`.
+ */
+export interface SettingsImportRepo {
+  getAll(): Promise<Settings>;
+  setAll(settings: Partial<Settings>): Promise<void>;
+}
+
+/** Verifier seam for import authentication (PBI 2026-10-16-01). */
+export type ImportHmacVerifier = Pick<HmacSigner, 'verify'>;
+
+export interface FinalizeImportedSettingsOptions {
+  apiKeyExcluded: boolean;
+  repo?: SettingsImportRepo | undefined;
+}
+
+export interface ImportSettingsOptions {
+  repo?: SettingsImportRepo;
+  signer?: ImportHmacVerifier;
+}
+
+/**
+ * Single owner of import post-processing: merge→strip→save (PBI 2026-10-16-01).
+ *
+ * Every import path (plaintext `importSettings`, encrypted
+ * `importEncryptedSettings`) funnels through here so the order can no longer
+ * drift per call site: when keys were excluded, existing API keys are merged
+ * back first; then device-local security state is stripped; then the SAME
+ * stripped object is both persisted and returned (save/return parity).
+ */
+export async function finalizeImportedSettings(
+  importedSettings: Settings,
+  opts: FinalizeImportedSettingsOptions
+): Promise<Settings> {
+  const repo: SettingsImportRepo = opts.repo ?? settingsRepository;
+  const toSave = opts.apiKeyExcluded
+    ? stripDeviceLocalSecurityState(await mergeWithExistingApiKeys(importedSettings, repo))
+    : stripDeviceLocalSecurityState(importedSettings);
+  await repo.setAll(toSave);
+  return toSave;
+}
+
+/**
  * インポート設定とAPIキーをマージする（APIキー除外時の共通処理）
  */
-async function mergeWithExistingApiKeys(importedSettings: Settings): Promise<Settings> {
-  const existingSettings = await settingsRepository.getAll();
+async function mergeWithExistingApiKeys(
+  importedSettings: Settings,
+  repo: SettingsImportRepo = settingsRepository
+): Promise<Settings> {
+  const existingSettings = await repo.getAll();
   const merged: Settings = { ...importedSettings };
   for (const field of API_KEY_FIELDS) {
     (merged as Record<string, unknown>)[field] = existingSettings[field];
@@ -206,8 +251,9 @@ export async function exportEncryptedSettings(
     const salt = generateSalt();
     const saltB64 = bytesToBase64(salt);
 
-    // パスワードからキーを派生（PBKDF2）— SSOT 600k
-    const key = await deriveKey(masterPassword, salt, CRYPTO_PARAMS.PBKDF2_ITERATIONS);
+    // パスワードからキーを派生（PBKDF2）— iteration数はcodecのSSOT参照
+    const iterations = currentExportIterations();
+    const key = await deriveKey(masterPassword, salt, iterations);
 
     // データを暗号化
     const encrypted = await encrypt(json, key);
@@ -219,7 +265,7 @@ export async function exportEncryptedSettings(
           ciphertext: encrypted.ciphertext,
           iv: encrypted.iv,
           salt: saltB64,
-          iterations: CRYPTO_PARAMS.PBKDF2_ITERATIONS,
+          iterations,
         },
         ENCRYPTED_EXPORT_VERSION
       )
@@ -233,7 +279,7 @@ export async function exportEncryptedSettings(
       iv: encrypted.iv,
       hmac: hmac,
       salt: saltB64,
-      iterations: CRYPTO_PARAMS.PBKDF2_ITERATIONS,
+      iterations,
     };
 
     return { success: true, encryptedData: encryptedExportData };
@@ -253,12 +299,13 @@ export async function exportEncryptedSettings(
  */
 export async function importEncryptedSettings(
   jsonData: string,
-  masterPassword: string
+  masterPassword: string,
+  opts?: ImportSettingsOptions
 ): Promise<Settings | null> {
   try {
     // Size cap before any decode/KDF/decrypt work (VULN-034): a forged giant
     // file must not reach PBKDF2.
-    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
       await logError(
         'Import rejected: file exceeds size cap',
         {},
@@ -281,40 +328,29 @@ export async function importEncryptedSettings(
       return null;
     }
 
-    // Version branching: v3 = ciphertext+iterations HMAC, v2 = ciphertext HMAC,
-    // v1 = legacy compat (plaintext HMAC, or none)
-    const versionText = String(encryptedData.version);
-    const isV3 = versionText === ENCRYPTED_EXPORT_VERSION;
-    const isV2 = versionText === LEGACY_ENCRYPTED_EXPORT_VERSION;
-    const hasCiphertextHmac = isV3 || isV2;
-
-    if (hasCiphertextHmac) {
-      // HMAC verification BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify
-      const hmacPayload = buildEncryptedHmacPayload(
-        encryptedData,
-        isV3 ? ENCRYPTED_EXPORT_VERSION : LEGACY_ENCRYPTED_EXPORT_VERSION
+    // Ciphertext HMAC BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify.
+    // Version branching lives in the codec; legacy versions defer to the
+    // plaintext check below.
+    const verifier: ImportHmacVerifier = opts?.signer ?? exportHmacSigner;
+    const ciphertextCheck = await verifyEncryptedExportHmac(encryptedData, verifier);
+    if (ciphertextCheck === 'mismatch') {
+      await logError(
+        'HMAC verification failed',
+        {},
+        ErrorCode.SETTINGS_SIGNATURE_FAILURE,
+        'settingsExportImport.ts'
       );
-      if (!(await exportHmacSigner.verify(hmacPayload, encryptedData.hmac))) {
-        await logError(
-          'HMAC verification failed',
-          {},
-          ErrorCode.SETTINGS_SIGNATURE_FAILURE,
-          'settingsExportImport.ts'
-        );
-        return null;
-      }
+      return null;
     }
 
     // PBI 2026-09-15-13: the iteration candidate loop (stored -> SSOT -> legacy)
-    // is centralized in kdfNegotiator.ts (salt decode moved there too).
+    // is centralized in kdfNegotiator.ts (salt decode moved there too),
+    // dispatched through the codec.
     let decryptedJson: string;
     try {
-        const result = await decryptWithIterationCandidates(
+        const result = await decryptExportCiphertext(
             masterPassword,
-            encryptedData.salt,
-            encryptedData.ciphertext,
-            encryptedData.iv,
-            typeof encryptedData.iterations === 'number' ? encryptedData.iterations : undefined,
+            encryptedData,
         );
         decryptedJson = result.text;
         if (result.needsRehash) {
@@ -339,18 +375,13 @@ export async function importEncryptedSettings(
     // If HMAC exists on v1, we still verify it against decryptedJson to preserve
     // integrity for existing tests that expect wrong-HMAC rejection.
     // For v2, HMAC was already verified over ciphertext before KDF, so no plaintext check.
-    if (!hasCiphertextHmac && !encryptedData.hmac) {
-      // Pre-signing exports carry no hmac and cannot be authenticated; they
-      // stay importable so existing backups are not orphaned.
-      await logWarn(
-        'Importing an unsigned legacy encrypted export',
-        { version: versionText },
-        undefined,
-        'settingsExportImport.ts'
+    if (ciphertextCheck === 'legacy-deferred') {
+      const legacyCheck = await verifyLegacyPlaintextHmac(
+        decryptedJson,
+        encryptedData.hmac,
+        verifier
       );
-    }
-    if (!hasCiphertextHmac && encryptedData.hmac) {
-      if (!(await exportHmacSigner.verify(decryptedJson, encryptedData.hmac))) {
+      if (legacyCheck === 'mismatch') {
         await logError(
           'HMAC verification failed',
           {},
@@ -358,6 +389,16 @@ export async function importEncryptedSettings(
           'settingsExportImport.ts'
         );
         return null;
+      }
+      if (legacyCheck === 'unsigned') {
+        // Pre-signing exports carry no hmac and cannot be authenticated; they
+        // stay importable so existing backups are not orphaned.
+        await logWarn(
+          'Importing an unsigned legacy encrypted export',
+          { version: String(encryptedData.version) },
+          undefined,
+          'settingsExportImport.ts'
+        );
       }
     }
 
@@ -383,13 +424,16 @@ export async function importEncryptedSettings(
         { apiKeyExcluded: true },
         'settingsExportImport.ts'
       );
-      const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
-      return merged;
+      return await finalizeImportedSettings(parsed.settings, {
+        apiKeyExcluded: true,
+        repo: opts?.repo,
+      });
     }
 
-    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
-    return parsed.settings;
+    return await finalizeImportedSettings(parsed.settings, {
+      apiKeyExcluded: false,
+      repo: opts?.repo,
+    });
   } catch (error) {
     await logError(
       'Failed to import encrypted settings',
@@ -646,9 +690,12 @@ export function validateExportData(data: unknown): boolean {
  * @param {string} jsonData - JSON string containing export data
  * @returns {Promise<Settings|null>} imported Settings or null if validation fails
  */
-export async function importSettings(jsonData: string): Promise<Settings | null> {
+export async function importSettings(
+  jsonData: string,
+  opts?: ImportSettingsOptions
+): Promise<Settings | null> {
   try {
-    if (jsonData.length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
+    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
       await logError(
         'Import rejected: file exceeds size cap',
         {},
@@ -680,7 +727,8 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
     const { signature, ...dataForVerification } = parsed;
     const dataJson = JSON.stringify(dataForVerification, null, 2);
 
-    if (!(await exportHmacSigner.verify(dataJson, signature))) {
+    const verifier: ImportHmacVerifier = opts?.signer ?? exportHmacSigner;
+    if (!(await verifier.verify(dataJson, signature))) {
       await logError(
         'Signature verification failed',
         {},
@@ -711,13 +759,16 @@ export async function importSettings(jsonData: string): Promise<Settings | null>
         { apiKeyExcluded: true },
         'settingsExportImport.ts'
       );
-      const merged = await mergeWithExistingApiKeys(parsed.settings);
-      await settingsRepository.setAll(stripDeviceLocalSecurityState(merged));
-      return merged;
+      return await finalizeImportedSettings(parsed.settings, {
+        apiKeyExcluded: true,
+        repo: opts?.repo,
+      });
     }
 
-    await settingsRepository.setAll(stripDeviceLocalSecurityState(parsed.settings));
-    return parsed.settings;
+    return await finalizeImportedSettings(parsed.settings, {
+      apiKeyExcluded: false,
+      repo: opts?.repo,
+    });
   } catch (error) {
     await logError(
       'Failed to import settings',

@@ -179,6 +179,19 @@ describe('VisitReporter policy matrix', () => {
     expect(deps.stopPeriodicCheck).toHaveBeenCalledTimes(1);
   });
 
+  it('does not send VALID_VISIT while paused', async () => {
+    const deps = makeDeps({ isPaused: () => true });
+    await new VisitReporter(deps).report();
+    expect(deps.sender.sendMessageWithRetry).not.toHaveBeenCalled();
+  });
+
+  it('leaves the visit unreported while paused (no extraction trace, gate stays open)', async () => {
+    const deps = makeDeps({ isPaused: () => true });
+    await new VisitReporter(deps).report();
+    expect(deps.extractAndCommit).not.toHaveBeenCalled();
+    expect(deps.pageState.isValidVisitReported).toBe(false);
+  });
+
   describe('commit rule — flag commits on success/terminal only (PBI 2026-09-12-18)', () => {
     it('commits the flag on success', async () => {
       const deps = makeDeps();

@@ -4,11 +4,10 @@
  */
 
 import { AIProviderConnectionResult, AISummaryResult, CONNECTION_TEST_PROMPT } from './ProviderStrategy.js';
-import { HttpProviderStrategy } from './HttpProviderStrategy.js';
+import { HttpProviderStrategy, type HttpProviderHooks } from './HttpProviderStrategy.js';
 import {
-    resolveMaxContentChars,
-    resolveMaxTokens,
-    resolveTimeoutMs,
+    resolveProviderSettings,
+    type ResolvedProviderSettings,
 } from './providerSettingsResolver.js';
 import { validateUrlForAIRequests } from '../../../utils/fetch.js';
 import { LogType } from '../../../utils/logger/types.js';
@@ -51,8 +50,14 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
      * OPENAI_CONTENT_CHARS に倒すため、挙動は不変。
      */
     protected readonly contentCharsKey: StorageKey;
+    /**
+     * 解決済み値オブジェクト (PBI 2026-10-16-10)。timeout・content上限・
+     * token上限はhooks閉包からここだけ読む。未注入時はblobから導出するため
+     * 既存の構築呼出しはそのまま動く。Hook形状・catalog・生成注入は不変。
+     */
+    public readonly resolvedSettings: ResolvedProviderSettings;
 
-    constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey) {
+    constructor(settings: Settings, providerName: string = 'openai', contentCharsKey?: StorageKey, resolvedSettings?: ResolvedProviderSettings) {
         super(settings);
         this.providerName = providerName;
 
@@ -137,9 +142,14 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
             }
         }
 
-        // タイムアウト設定: 0=自動（isLocal から導出）
-        const storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0);
-        this.timeoutMs = resolveTimeoutMs(storedTimeout, this.isLocal);
+        // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
+        // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。
+        this.resolvedSettings = resolvedSettings ?? resolveProviderSettings(
+            settings,
+            this.getProviderId(),
+            { isLocal: this.isLocal, defaultContentChars: 10_000, contentCharsKey: this.contentCharsKey },
+        );
+        this.timeoutMs = this.resolvedSettings.timeoutMs;
     }
 
     static isLocalUrl(url: string): boolean {
@@ -156,7 +166,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     }
 
     private getMaxContentLength(): number {
-        return resolveMaxContentChars(this.settings, this.getProviderId(), 10_000, this.contentCharsKey);
+        return this.resolvedSettings.maxContentChars;
     }
 
     getName(): string {
@@ -164,19 +174,40 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     }
 
     /**
-     * 要約を生成する
-     * @param {string} content - 要約対象のコンテンツ
-     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     * catalog の requiresApiKey が真でキーが空なら true。Gemini 側の
+     * `!this.apiKey` gate と同条件。requiresApiKey=false（ollama /
+     * lm-studio 等）や catalog 未登録の legacy 直構築は gate しない。
      */
-    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
-        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
-        // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
-        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, {
+    private isApiKeyMissing(): boolean {
+        return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
+    }
+
+    /**
+     * OpenAI互換の癖1組。要約と接続テストはこの同じオブジェクトを共有する
+     * （PBI 2026-10-16-05）ため、資格文面の変更は1箇所で両フローに届く。
+     */
+    private hooks(): HttpProviderHooks {
+        return {
             providerName: this.providerName,
+            providerLabel: this.providerName,
             timeoutMs: this.timeoutMs,
-            checkCredentials: () => !this.baseUrl
-                ? "Error: Base URL is missing. Please check your settings."
-                : null,
+            checkCredentials: () => {
+                if (!this.baseUrl) {
+                    return {
+                        summaryMessage: "Error: Base URL is missing. Please check your settings.",
+                        testMessage: 'Base URL is not set.',
+                        testError: 'Base URL is missing',
+                    };
+                }
+                if (this.isApiKeyMissing()) {
+                    return {
+                        summaryMessage: "Error: API key is missing. Please check your settings.",
+                        testMessage: `${this.providerName} API Key is not set. Please enter it in the AI provider settings.`,
+                        testError: 'API key is missing',
+                    };
+                }
+                return null;
+            },
             contentLimit: () => this.isLocal
                 ? 4000
                 : this.getMaxContentLength(),
@@ -195,7 +226,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                             content: userPrompt
                         }
                     ],
-                    max_tokens: resolveMaxTokens(this.settings, this.getProviderId()),
+                    max_tokens: this.resolvedSettings.maxTokens,
                     temperature: 0.1
                 };
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -204,23 +235,6 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 }
                 return { url, headers, body: JSON.stringify(payload) };
             },
-            extractSummary: (data, tid) => this._extractSummary(data as OpenAIApiResponse, tid),
-        });
-    }
-
-    async testConnection(): Promise<AIProviderConnectionResult> {
-        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
-        // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
-        return this.executeHttpTestFlow({
-            providerLabel: this.providerName,
-            timeoutMs: this.timeoutMs,
-            checkCredentials: () => !this.baseUrl
-                ? {
-                    success: false,
-                    message: 'Base URL is not set.',
-                    debug: { error: 'Base URL is missing' },
-                }
-                : null,
             buildRequest: async () => {
                 const trimmedBaseUrl = this.baseUrl.replace(/\/$/, '');
                 // モデル一覧(GET /models)ではなく実際に推論を走らせる。メタデータ取得では
@@ -240,6 +254,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 };
                 return { url, headers, body: JSON.stringify(payload), modelName: this.model };
             },
+            extractSummary: (data, tid) => this._extractSummary(data as OpenAIApiResponse, tid),
             extractResponse: (data, ctx) => {
                 const typed = data as OpenAIApiResponse;
                 const text = typed.choices?.[0]?.message?.content ?? '';
@@ -256,7 +271,24 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                     },
                 };
             },
-        });
+        };
+    }
+
+    /**
+     * 要約を生成する
+     * @param {string} content - 要約対象のコンテンツ
+     * @param {boolean} [tagSummaryMode=false] - タグ付き要約モード
+     */
+    async generateSummary(content: string, tagSummaryMode: boolean = false, traceId: string = ''): Promise<AISummaryResult> {
+        // 順序（資格→pre-flight→切り詰め→サニタイズ→プロンプト→fetch→timeout変換）は
+        // 基底テンプレートが所有。ここには OpenAI の癖だけを hooks として渡す。
+        return this.executeHttpSummaryFlow(content, tagSummaryMode, traceId, this.hooks());
+    }
+
+    async testConnection(): Promise<AIProviderConnectionResult> {
+        // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
+        // 基底テンプレートが所有。癖は generateSummary と同じ1組の hooks。
+        return this.executeHttpTestFlow(this.hooks());
     }
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {

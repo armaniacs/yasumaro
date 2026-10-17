@@ -59,15 +59,21 @@ export function planQuery(payload: Record<string, unknown>): AlreadyCappedQuery 
 }
 
 /**
- * Plan a text search from a wire payload: the free-text `query` field rides
- * alongside the normalized filters, then the read policy applies. The search
- * route owns the smaller page-size default (50) — only this planner passes it,
- * so a search sent without a limit lands here rather than inheriting the
- * listing default.
+ * Plan a text search from a wire payload: gateway spelling carries `text`
+ * (kind:'search'), the direct SQLITE_SEARCH spelling carries `query`.
+ * One precedence rule (PBI 2026-10-16-11): a non-empty `text` wins,
+ * otherwise `query` is the term (both absent is the plain-listing '').
+ * Previously the explicit `query` read and the normalize-spread overwrite
+ * each owned one spelling implicitly via object spread order; the rule is
+ * now stated once. The search route owns the smaller page-size default
+ * (50) — only this planner passes it, so a search sent without a limit
+ * lands here rather than inheriting the listing default.
  */
 export function planSearch(payload: Record<string, unknown>): AlreadyCappedQuery {
-  const text = String((payload as { query?: unknown }).query ?? '');
-  return applyReadPolicy({ text, ...normalizeStorageQuery(payload) }, DEFAULT_SEARCH_LIMIT);
+  const normalized = normalizeStorageQuery(payload);
+  const query = (payload as { query?: unknown }).query;
+  const text = normalized.text ?? (query != null ? String(query) : '');
+  return applyReadPolicy({ ...normalized, text }, DEFAULT_SEARCH_LIMIT);
 }
 
 /**
@@ -131,17 +137,35 @@ export type PlanPurgeResult =
   | { ok: true; retentionDays?: number | undefined; maxRecords?: number | undefined; includeStarred?: boolean | undefined }
   | { ok: false; error: string };
 
+/**
+ * Shared purge-dimension check (PBI 2026-10-16-11): one integer rule for
+ * both the wire path (planPurge) and the settings path (planSettingsPurge).
+ * Returns the number, or the fail-closed error message. `0` passes here —
+ * callers map it to "skip this dimension" (undefined), the same reading
+ * every backend applies via its `!= null && > 0` guard.
+ */
+function checkPurgeInt(raw: unknown, name: string): number | string {
+  if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
+    return `${name} must be a non-negative integer, got ${String(raw)}`;
+  }
+  return raw;
+}
+
+/** Map a checked dimension to the backend contract (`0` = skip). */
+function toPurgeDim(checked: number): number | undefined {
+  return checked === 0 ? undefined : checked;
+}
+
 export function planPurge(
   retentionDays: unknown,
   maxRecords: unknown,
   includeStarred: unknown = undefined,
 ): PlanPurgeResult {
-  const normalize = (raw: unknown, fallback: number, name: string): number | string => {
+  const normalize = (raw: unknown, fallback: number, name: string): number | undefined | string => {
     if (raw === undefined) return fallback;
-    if (typeof raw !== 'number' || !Number.isFinite(raw) || !Number.isInteger(raw) || raw < 0) {
-      return `${name} must be a non-negative integer, got ${String(raw)}`;
-    }
-    return raw;
+    const checked = checkPurgeInt(raw, name);
+    if (typeof checked === 'string') return checked;
+    return toPurgeDim(checked);
   };
 
   const days = normalize(retentionDays, DEFAULT_RETENTION_DAYS, 'retentionDays');
@@ -159,5 +183,55 @@ export function planPurge(
     retentionDays: days === 0 ? undefined : days,
     maxRecords: max === 0 ? undefined : max,
     ...(typeof includeStarred === 'boolean' ? { includeStarred } : {}),
+  };
+}
+
+/**
+ * Settings-driven purge plan (PBI 2026-10-16-11): the canonical planner
+ * for the background retention-keys path (`purge_now` / `content_purge_now`).
+ *
+ * The background handler cannot statically import this seam
+ * (background→offscreen import ban, PBI 2026-09-21-20), so it carries a
+ * layer-local mirror pinned by parity tests — but the contract lives here:
+ * absent (`undefined` or `null`, the shapes chrome.storage yields) on BOTH
+ * sides means "no retention configured" → skip; a present side is checked
+ * by the same `checkPurgeInt` rule as the wire path and `0` normalizes to
+ * "skip this dimension". Unlike planPurge, an absent side stays undefined —
+ * no per-side default is applied (a days-only setting must not gain a cap).
+ * Pure — safe to unit-test without a backend.
+ */
+export type PlanSettingsPurgeResult =
+  | { skip: true }
+  | { ok: true; retentionDays?: number | undefined; maxRecords?: number | undefined; includeStarred?: boolean | undefined }
+  | { ok: false; error: string };
+
+const isPurgeAbsent = (raw: unknown): boolean => raw === undefined || raw === null;
+
+export function planSettingsPurge(
+  settings: Record<string, unknown>,
+  daysKey: string,
+  maxKey: string,
+  includeStarredKey?: string,
+): PlanSettingsPurgeResult {
+  const daysRaw = settings[daysKey];
+  const maxRaw = settings[maxKey];
+  if (isPurgeAbsent(daysRaw) && isPurgeAbsent(maxRaw)) {
+    return { skip: true };
+  }
+  const planDim = (raw: unknown, name: string): number | undefined | string => {
+    if (isPurgeAbsent(raw)) return undefined;
+    const checked = checkPurgeInt(raw, name);
+    return typeof checked === 'string' ? checked : toPurgeDim(checked);
+  };
+  const days = planDim(daysRaw, 'retentionDays');
+  if (typeof days === 'string') return { ok: false, error: days };
+  const max = planDim(maxRaw, 'maxRecords');
+  if (typeof max === 'string') return { ok: false, error: max };
+  const starredRaw = includeStarredKey !== undefined ? settings[includeStarredKey] : undefined;
+  return {
+    ok: true,
+    retentionDays: days,
+    maxRecords: max,
+    ...(typeof starredRaw === 'boolean' ? { includeStarred: starredRaw } : {}),
   };
 }

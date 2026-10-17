@@ -9,6 +9,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockQueryLogs = vi.fn();
 const mockGetSqliteStatus = vi.fn();
 const mockGetNavTrailConsent = vi.fn();
+const mockDeleteLog = vi.fn();
+const mockRemoveSavedUrl = vi.fn();
 
 // navTrailConsent lives under src/utils, so the specifier needs one more
 // level than the src/dashboard/* mocks above.
@@ -22,6 +24,11 @@ vi.mock('../../../dashboardSqliteService.js', () => ({
   queryLogs: (...args: unknown[]) => mockQueryLogs(...args),
   getSqliteStatus: (...args: unknown[]) => mockGetSqliteStatus(...args),
   isServiceError: (result: object) => 'error' in result,
+  deleteLog: (...args: unknown[]) => mockDeleteLog(...args),
+}));
+
+vi.mock('../../../../utils/storageUrls.js', () => ({
+  removeSavedUrl: (...args: unknown[]) => mockRemoveSavedUrl(...args),
 }));
 
 vi.mock('../../../utils/retry.js', async (importOriginal) => {
@@ -46,6 +53,15 @@ function mountPanel() {
     <div id="researchSessionsRowCap" class="data-table-notice is-warning" hidden></div>
     <p id="researchSessionsSummary" aria-live="polite"></p>
     <div id="researchSessionsTruncated" class="data-table-notice is-warning" hidden></div>
+    <div id="researchSessionsBulkBar" class="rsess-bulk-bar" hidden>
+      <span id="researchSessionsSelectionCount" aria-live="polite"></span>
+      <button type="button" id="researchSessionsDeleteSelected" class="secondary-btn" data-i18n="researchSessions_deleteSelected">Delete selected</button>
+      <span id="researchSessionsDeleteConfirm" hidden>
+        <span data-i18n="researchSessions_deleteConfirm">Really delete?</span>
+        <button type="button" id="researchSessionsDeleteConfirmYes" class="secondary-btn" data-i18n="researchSessions_deleteConfirmYes">Delete</button>
+        <button type="button" id="researchSessionsDeleteConfirmNo" class="secondary-btn" data-i18n="researchSessions_deleteConfirmNo">Cancel</button>
+      </span>
+    </div>
     <ol id="researchSessionsList" class="research-sessions-list"></ol>
     <p id="researchSessionsSearchToGoalOff" hidden></p>
     <table id="researchSessionsSearchToGoalTable" hidden>
@@ -82,6 +98,10 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
     mockGetNavTrailConsent.mockReset();
     mockGetNavTrailConsent.mockResolvedValue({ enabled: false, consentedAt: null });
     mockQueryLogs.mockResolvedValue({ data: { rows: sampleRows(), total: 4 } });
+    mockDeleteLog.mockReset();
+    mockDeleteLog.mockResolvedValue({ data: undefined });
+    mockRemoveSavedUrl.mockReset();
+    mockRemoveSavedUrl.mockResolvedValue(undefined);
   });
 
   it('exposes the expected id and category', () => {
@@ -346,6 +366,267 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       panel.destroy();
       panel.destroy();
     }).not.toThrow();
+  });
+
+  describe('selection checkboxes (PBI-02 Task 2)', () => {
+    const base = Date.now() - 300 * MINUTE_MS;
+
+    /** Two sessions: an older flat pair, and a newer 3-page nav chain. */
+    function checkboxRows() {
+      return [
+        { id: 1, url: 'https://a.dev/1', title: 'A1', domain: 'a.dev', tags: null, is_starred: null, created_at: base },
+        { id: 2, url: 'https://a.dev/2', title: 'A2', domain: 'a.dev', tags: null, is_starred: null, created_at: base + 10 * MINUTE_MS },
+        { id: 3, url: 'https://s.dev/start', title: 'Start', domain: 's.dev', tags: null, is_starred: null, created_at: base + 200 * MINUTE_MS },
+        {
+          id: 4, url: 'https://s.dev/mid', title: 'Mid', domain: 's.dev', tags: null, is_starred: null,
+          created_at: base + 210 * MINUTE_MS, nav_source_url: 'https://s.dev/start',
+        },
+        {
+          id: 5, url: 'https://s.dev/leaf', title: 'Leaf', domain: 's.dev', tags: null, is_starred: null,
+          created_at: base + 220 * MINUTE_MS, nav_source_url: 'https://s.dev/mid',
+        },
+      ];
+    }
+
+    it('renders a session checkbox, page checkboxes, and subtree checkboxes', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      // One per session.
+      expect(document.querySelectorAll('.rsess-select-session')).toHaveLength(2);
+      // One per page: 2 flat rows + 3 tree nodes (populateRecord is shared).
+      expect(document.querySelectorAll('.rsess-select-page')).toHaveLength(5);
+      // One per intermediate tree node: Start and Mid have children, Leaf does not.
+      expect(document.querySelectorAll('.rsess-select-subtree')).toHaveLength(2);
+    });
+
+    it('labels every checkbox for assistive technology', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      const all = document.querySelectorAll(
+        '.rsess-select-session, .rsess-select-page, .rsess-select-subtree',
+      );
+      expect(all.length).toBeGreaterThan(0);
+      for (const box of all) {
+        expect(box.getAttribute('aria-label')).toBeTruthy();
+      }
+    });
+
+    it('toggling a checkbox does not throw (hooks wired, state lands in Task 3)', async () => {
+      mockQueryLogs.mockResolvedValue({ data: { rows: checkboxRows(), total: 5 } });
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      const sessionBox = document.querySelector('.rsess-select-session') as HTMLInputElement;
+      sessionBox.checked = true;
+      expect(() => sessionBox.dispatchEvent(new Event('change'))).not.toThrow();
+    });
+  });
+
+  describe('bulk delete (PBI-02 Task 3)', () => {
+    const base = Date.now() - 90 * MINUTE_MS;
+
+    /** One 3-page nav chain: search (10) -> a (11) -> b (12). */
+    function chainRows() {
+      return [
+        {
+          id: 10, url: 'https://www.google.com/search?q=wasm', title: 'search', domain: 'www.google.com',
+          tags: null, is_starred: null, created_at: base, search_query: 'wasm',
+        },
+        {
+          id: 11, url: 'https://a.dev/x', title: 'A', domain: 'a.dev', tags: null, is_starred: null,
+          created_at: base + 10 * MINUTE_MS, nav_source_url: 'https://www.google.com/search?q=wasm',
+        },
+        {
+          id: 12, url: 'https://b.dev/y', title: 'B', domain: 'b.dev', tags: null, is_starred: null,
+          created_at: base + 20 * MINUTE_MS, nav_source_url: 'https://a.dev/x',
+        },
+      ];
+    }
+
+    function selectionCount(): string {
+      return document.querySelector('#researchSessionsSelectionCount')!.textContent ?? '';
+    }
+
+    function deleteButton(): HTMLButtonElement {
+      return document.querySelector('#researchSessionsDeleteSelected') as HTMLButtonElement;
+    }
+
+    it('page and subtree checkbox changes flow recordIds into the selection', async () => {
+      mockGetNavTrailConsent.mockResolvedValue({ enabled: true, consentedAt: 1 });
+      mockQueryLogs.mockResolvedValue({ data: { rows: chainRows(), total: 3 } });
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      // One leaf page: its dataset.recordId must land in the selection.
+      const leaf = document.querySelector<HTMLInputElement>(
+        '.rsess-select-page[data-record-id="12"]',
+      )!;
+      expect(leaf.dataset.recordId).toBe('12');
+      leaf.checked = true;
+      leaf.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('1 selected');
+
+      // The root subtree covers all three pages; the union with {12} is 3.
+      const subtree = document.querySelector<HTMLInputElement>(
+        '.rsess-select-subtree[data-record-id="10"]',
+      )!;
+      expect(subtree.dataset.recordId).toBe('10');
+      subtree.checked = true;
+      subtree.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('3 selected');
+
+      // Unchecking the leaf drops just that id.
+      leaf.checked = false;
+      leaf.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('2 selected');
+
+      // The session checkbox re-selects everything below it.
+      const sessionBox = document.querySelector('.rsess-select-session') as HTMLInputElement;
+      sessionBox.checked = true;
+      sessionBox.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('3 selected');
+
+      // Unchecking the session clears the whole selection and disables delete.
+      sessionBox.checked = false;
+      sessionBox.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('0 selected');
+      expect(deleteButton().disabled).toBe(true);
+    });
+
+    it('session checkbox clicks do not toggle the details disclosure', async () => {
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      const box = document.querySelector<HTMLInputElement>('.rsess-select-session')!;
+      const details = box.closest('details')!;
+      let parentClicks = 0;
+      details.addEventListener('click', () => { parentClicks += 1; });
+
+      box.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+
+      // stopPropagation keeps the click off <summary>/<details>, so the
+      // disclosure never toggles. No preventDefault: that would break the
+      // checkbox's own default check action.
+      expect(parentClicks).toBe(0);
+      expect(details.open).toBe(false);
+    });
+
+    it('delete flow: select -> confirm -> entries removed and list refetched', async () => {
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+      expect(mockQueryLogs).toHaveBeenCalledTimes(1);
+
+      const page = document.querySelector<HTMLInputElement>(
+        '.rsess-select-page[data-record-id="1"]',
+      )!;
+      page.checked = true;
+      page.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('1 selected');
+      expect(deleteButton().disabled).toBe(false);
+
+      // Step 1: inline confirm appears with the selection detail.
+      deleteButton().click();
+      const confirm = document.querySelector('#researchSessionsDeleteConfirm') as HTMLElement;
+      expect(confirm.hidden).toBe(false);
+      expect(confirm.textContent).toContain('1 pages');
+
+      // Step 2: confirm executes the existing delete path and refetches.
+      (document.querySelector('#researchSessionsDeleteConfirmYes') as HTMLButtonElement).click();
+      await vi.waitFor(() => expect(mockDeleteLog).toHaveBeenCalledWith(1));
+      expect(mockRemoveSavedUrl).toHaveBeenCalledWith('https://a.dev/1');
+      await vi.waitFor(() => expect(mockQueryLogs).toHaveBeenCalledTimes(2));
+      await flush();
+
+      // The refetch re-renders, so the stale selection is gone.
+      expect(selectionCount()).toContain('0 selected');
+      expect(deleteButton().disabled).toBe(true);
+    });
+
+    it('cancel hides the inline confirm without deleting', async () => {
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      const page = document.querySelector<HTMLInputElement>(
+        '.rsess-select-page[data-record-id="1"]',
+      )!;
+      page.checked = true;
+      page.dispatchEvent(new Event('change', { bubbles: true }));
+
+      deleteButton().click();
+      expect((document.querySelector('#researchSessionsDeleteConfirm') as HTMLElement).hidden).toBe(false);
+
+      (document.querySelector('#researchSessionsDeleteConfirmNo') as HTMLButtonElement).click();
+      expect((document.querySelector('#researchSessionsDeleteConfirm') as HTMLElement).hidden).toBe(true);
+      expect(mockDeleteLog).not.toHaveBeenCalled();
+      expect(selectionCount()).toContain('1 selected');
+    });
+
+    it('stops at the first delete failure and reports the partial run', async () => {      mockDeleteLog.mockResolvedValueOnce({ error: 'boom' });
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      for (const id of ['1', '2']) {
+        const page = document.querySelector<HTMLInputElement>(
+          `.rsess-select-page[data-record-id="${id}"]`,
+        )!;
+        page.checked = true;
+        page.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      expect(selectionCount()).toContain('2 selected');
+
+      deleteButton().click();
+      (document.querySelector('#researchSessionsDeleteConfirmYes') as HTMLButtonElement).click();
+      await vi.waitFor(() => expect(mockDeleteLog).toHaveBeenCalledTimes(1));
+      await vi.waitFor(() => expect(mockQueryLogs).toHaveBeenCalledTimes(2));
+      await flush();
+
+      // First-failure-stops like history: the second id is never attempted.
+      expect(mockDeleteLog).toHaveBeenCalledTimes(1);
+      expect(selectionCount()).toContain('Failed partway');
+    });
+
+    it('drops the selection when a refetch returns zero rows', async () => {
+      const { panel } = mountPanel();
+
+      await panel.load?.();
+      await flush();
+
+      const page = document.querySelector<HTMLInputElement>(
+        '.rsess-select-page[data-record-id="1"]',
+      )!;
+      page.checked = true;
+      page.dispatchEvent(new Event('change', { bubbles: true }));
+      expect(selectionCount()).toContain('1 selected');
+
+      // A period change to an empty window must not leave a live selection
+      // pointing at rows that are no longer on screen.
+      mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+      await panel.load?.();
+      await flush();
+
+      expect(selectionCount()).toContain('0 selected');
+      expect(deleteButton().disabled).toBe(true);
+    });
   });
 
   describe('navigation trail display (PBI 03)', () => {

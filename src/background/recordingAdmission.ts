@@ -78,6 +78,13 @@ export class RecordingAdmission {
       if (!(await this.deps.isRecordingAllowed())) {
         return { rejected: { success: false, reason: 'privacy_consent_required' } };
       }
+      // Paused auto-recording gate: storage errors fail open (null => not
+      // paused) so admit() never throws out of its union contract.
+      const { createChromePauseStorage, isPaused } = await import('./recordingPause.js');
+      const until = await createChromePauseStorage().getPausedUntil().catch(() => null);
+      if (isPaused(until, Date.now())) {
+        return { rejected: { success: false, reason: 'recording_paused' } };
+      }
       return { settings: await this.deps.getSettings() };
     }
 
