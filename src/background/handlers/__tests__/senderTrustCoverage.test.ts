@@ -50,6 +50,11 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   DASHBOARD_SQLITE: 'extension-only',
   // PBI 2026-09-22-04: dashboard-only regenerate (explicit force opt-in path).
   REGENERATE_SUMMARY: 'extension-only',
+  // PBI 2026-10-17-01: pause controls are popup-only. A web page must never
+  // be able to pause recording (content reads the deadline from storage).
+  PAUSE_RECORDING: 'extension-only',
+  RESUME_RECORDING: 'extension-only',
+  GET_PAUSE_STATE: 'extension-only',
 };
 
 function makeDeps(): MessageRouterDeps {

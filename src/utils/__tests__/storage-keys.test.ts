@@ -37,6 +37,9 @@ describe('getSettings key refinement', () => {
       StorageKeys.MIGRATION_CATEGORY_B_DEFAULT_DONE,
       StorageKeys.RECORDING_TRIGGERS,
       StorageKeys.SNAPSHOT_INTERVAL_MINUTES,
+      // PBI 2026-10-17-01: pause deadline. Runtime state read top-level
+      // (createChromePauseStorage), deliberately not in DEFAULT_SETTINGS.
+      StorageKeys.RECORDING_PAUSED_UNTIL,
       StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
       StorageKeys.OPFS_FALLBACK_MODE,
       StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE,
