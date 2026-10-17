@@ -46,7 +46,11 @@ function setLabel(text: string): void {
 
 function setResumedVisible(paused: boolean): void {
   const resumeBtn = document.getElementById('resumeBtn') as HTMLButtonElement | null;
-  if (resumeBtn) resumeBtn.hidden = !paused;
+  if (!resumeBtn) return;
+  // The popup stylesheet hides via `.hidden{display:none!important}`, so the
+  // class must be toggled — the `hidden` property alone cannot override it.
+  resumeBtn.classList.toggle('hidden', !paused);
+  resumeBtn.hidden = !paused;
 }
 
 function renderIdle(): void {
@@ -80,6 +84,10 @@ async function refreshPauseState(
 ): Promise<void> {
   try {
     const state = (await send({ type: 'GET_PAUSE_STATE' })) as PauseStateResponse;
+    if (state === null || state === undefined) {
+      renderIdle();
+      return;
+    }
     renderStateResponse(state, now());
   } catch {
     // Fail-open display: a dead transport means the SW side cannot confirm

@@ -36,7 +36,7 @@ function setPanelDom(presetValue = '30'): void {
     `<option value="60"${presetValue === '60' ? ' selected' : ''}>1 hour</option>` +
     `<option value="180"${presetValue === '180' ? ' selected' : ''}>3 hours</option>` +
     '</select>' +
-    '<button id="resumeBtn" aria-label="Resume now"></button>' +
+    '<button id="resumeBtn" class="hidden" aria-label="Resume now"></button>' +
     '<span id="pauseStateLabel" aria-live="polite"></span>';
   (document.getElementById('pausePreset') as HTMLSelectElement).value = presetValue;
 }
@@ -199,6 +199,27 @@ describe('pausePanel', () => {
       expect(
         (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
       ).not.toBe('記録中');
+    });
+
+    it('toggles resume button visibility with pause state', async () => {
+      setPanelDom();
+      const send = createSend(null);
+      const { initPausePanel } = await import('../pausePanel.js');
+      initPausePanel({ sendMessage: send, now: () => FIXED_NOW });
+
+      const resumeBtn = document.getElementById('resumeBtn') as HTMLButtonElement;
+      await waitForMock(() =>
+        expect(
+          (document.getElementById('pauseStateLabel') as HTMLElement).textContent,
+        ).not.toBe(''),
+      );
+      expect(resumeBtn.classList.contains('hidden')).toBe(true);
+
+      (document.getElementById('pauseBtn') as HTMLButtonElement).click();
+      await waitForMock(() => expect(resumeBtn.classList.contains('hidden')).toBe(false));
+
+      resumeBtn.click();
+      await waitForMock(() => expect(resumeBtn.classList.contains('hidden')).toBe(true));
     });
 
     it('keeps keyboard-operable controls with accessible names', async () => {
