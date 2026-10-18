@@ -18,7 +18,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-05](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md) の独立レビューで「`requireConsent` の production 呼び出し元が 0」と指摘された。2026-10-19 に自分で確認した結果は次のとおり。
+PBI [2026-10-18-05](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md) の独立レビューで「`requireConsent` の production 呼び出し元が 0」と指摘された。2026-10-19 に自分で確認した結果は次のとおり。
 
 ### 確認できた事実
 
@@ -70,14 +70,14 @@ Scenario: 4. 未使用の export が残っていない（裁定の反映）
 
 ## 受け入れ基準
 
-- [ ] 「同意が無いときに実行できてはいけない操作」の一覧が決まり、`dev-docs/SECURITY_REVIEW_GUIDE.md`（または同意モジュールのヘッダコメント）に文書化される。各行に「ゲートする / 同意不要」の裁定と理由を付ける
-- [ ] 一覧のうちゲート対象の各操作が、実際に同意で止まることをテストで固定する（優先度の高い入口は `MANUAL_RECORD` 系、Gist 同期、エクスポート）
-- [ ] 接続テスト（AI / Obsidian / Gist）のようにユーザーデータを運ばない操作は「同意不要」と裁定し、その理由（設定値のみを送る）を記録する
-- [ ] Gist 同期は**記録そのものを送る**ため同意を前提とする（記録が無ければ送信対象が無いこと、過去の記録が残っている場合の扱いを明記する）
-- [ ] `requireConsent()` の扱い（配線する / 削除する）を決めて実装し、未使用の export を残さない
-- [ ] 配線する場合、拒否時の返し方（エラーコードと UI 文言）を入口ごとに定義し、未処理の rejection を起こさない
-- [ ] 同意状態を直接読む箇所が増えていないこと（`grep -rn "hasPrivacyConsent()" src/` の結果が説明できる）
-- [ ] `npm run validate` が緑
+- [x] 「同意が無いときに実行できてはいけない操作」の一覧が決まり、`dev-docs/SECURITY_REVIEW_GUIDE.md`（または同意モジュールのヘッダコメント）に文書化される。各行に「ゲートする / 同意不要」の裁定と理由を付ける
+- [x] 一覧のうちゲート対象の各操作が、実際に同意で止まることをテストで固定する（優先度の高い入口は `MANUAL_RECORD` 系、Gist 同期、エクスポート）
+- [x] 接続テスト（AI / Obsidian / Gist）のようにユーザーデータを運ばない操作は「同意不要」と裁定し、その理由（設定値のみを送る）を記録する
+- [x] Gist 同期は**記録そのものを送る**ため同意を前提とする（記録が無ければ送信対象が無いこと、過去の記録が残っている場合の扱いを明記する）
+- [x] `requireConsent()` の扱い（配線する / 削除する）を決めて実装し、未使用の export を残さない
+- [x] 配線する場合、拒否時の返し方（エラーコードと UI 文言）を入口ごとに定義し、未処理の rejection を起こさない（**削除を選んだため該当なし**。既存の admission 拒否経路が `privacy_consent_required` を返す）
+- [x] 同意状態を直接読む箇所が増えていないこと（`grep -rn "hasPrivacyConsent()" src/` の結果が説明できる）
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -131,7 +131,7 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 - **`requireConsent()` は throw する。** メッセージハンドラに配線すると、未処理の rejection が返り先で「不明なエラー」になる。入口ごとに拒否時の返し方（既存のサービスエラー型に載せる）を決めること。
 - **設定の疎通確認まで同意で止めない。** 未同意ユーザーが API キーの有効性を確かめられなくなると、同意する前に設定を整える動線が壊れる。ここは「同意不要」と裁定し、理由を残すこと。
 - `MANUAL_RECORD` 系は `MessageRouter` の validator を通ってから `recordingAdmission` に届く。**validator の層で同意を拒否すると、既存の拒否理由の分類が二重になる**ので、既存の admission の拒否経路に乗せること。
-- PBI [2026-10-19-06](2026-10-19-06-fix-gist-tranco-redirect-policy.md) と `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` が同じ `gistSyncTarget.ts` を触る。Gist 同期の production 呼び出し元が無い可能性（PBI 25 の blocker）を先に確認し、呼び出し元が無いなら「同意を要求する」判断は**将来の配線時に効く前提条件**として記録するに留める。
+- PBI [2026-10-19-06](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) と `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` が同じ `gistSyncTarget.ts` を触る。Gist 同期の production 呼び出し元が無い可能性（PBI 25 の blocker）を先に確認し、呼び出し元が無いなら「同意を要求する」判断は**将来の配線時に効く前提条件**として記録するに留める。
 - 同意状態の判定は `getPrivacyConsent()`（`needsReconsent` / `signatureInvalid` を含む）と `hasPrivacyConsent()`（真偽のみ）で意味が違う。入口に配線するときは**どちらの意味が必要か**を明示すること（撤回済み・再同意待ちをどう扱うかが変わる）。
 
 ### ロールバック手順
@@ -146,17 +146,69 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜4 が自動テストで実装されパス
-- [ ] 「同意が無いときに実行できてはいけない操作」の一覧と、各操作の裁定理由が文書化されている
-- [ ] `requireConsent()` の扱い（配線 / 削除）が決まり、実装されている
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了
-- [ ] 完了記録に、裁定の一覧と「同意不要」とした操作の理由を残す
+- [x] BDDシナリオ 1〜4 が自動テストで実装されパス（シナリオ 1・3 は既存の admission テストと新しい seam pin、シナリオ 2 は一覧の裁定、シナリオ 4 は `requireConsent` の削除で充足）
+- [x] 「同意が無いときに実行できてはいけない操作」の一覧と、各操作の裁定理由が文書化されている
+- [x] `requireConsent()` の扱い（配線 / 削除）が決まり、実装されている（**削除**）
+- [x] `npm run validate` が緑
+- [x] コードレビュー完了
+- [x] 完了記録に、裁定の一覧と「同意不要」とした操作の理由を残す
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ同意ゲートの実入口が `isRecordingAllowed` に一本化されているのに、未使用の `requireConsent()` が残っているのか。
+
+1. **なぜ存在するのか** — v4.1.3 で「同意が必要な機能のガード」として作られた。`git log -S "requireConsent("` の結果は定義コミット `e68f27fd` とテスト追加コミット `bca3d211` の 2 件だけで、**呼び出し元のコミットが存在しない**（＝生まれた時から未配線）。
+2. **なぜ呼ばれないのか** — 記録の入口は `RecordingAdmission` が同意を判定し `{ rejected: { reason: 'privacy_consent_required' } }` を返す契約。throw するガードはこれに合わず、message handler では未処理 rejection になる。
+3. **なぜ削除されずに残ったのか** — export され、専用テスト 2 件まで付いていた。**テストが green であることが「使われている」という錯覚を支え**、未使用の可視化を妨げた。
+4. **なぜ残ることが問題か** — 新しい外部送信の入口を足す実装者が「これを使えばよい」と誤解する。実際の seam は記録の語彙（`isRecordingAllowed`）に埋もれており、再利用すべき入口が分からない。
+5. **なぜゲート漏れにつながるのか** — **「同意が無いときに実行してはいけない操作」の一覧がどこにも無い**。判断が実装者の記憶に依存し、レビューでも照合できない。
+
+**原因**: 同意ゲートの**適用範囲が文書化されていない**こと。その空白を、名前だけがそれらしい未使用の関数が埋め、「入口は 2 つある」という誤った印象を与えていた。
+
+**示唆**: (a) 一覧（要否＋理由）を 1 箇所に置く、(b) 未使用 export は削除して偽のシグナルを消す、(c) 一覧の「要」が実際に止まることと、seam の配線自体をテストで pin する。
+
+**解**: ガイドに一覧を追加し、`requireConsent()` とそのテストを削除し、`hasPrivacyConsent()` の doc に「読み出し口は 1 つ」を明記し、composition の配線をテストで pin した。
+
+### 裁定（同意ゲートの適用範囲）
+
+| 操作 | 要否 | 理由 |
+|---|---|---|
+| 自動記録（`VALID_VISIT`） | **要** | 閲覧履歴を書く。`RecordingAdmission` が `privacy_consent_required` で拒否 |
+| 手動記録 / プレビュー / 保存（`MANUAL_RECORD` / `PREVIEW_RECORD` / `SAVE_RECORD`） | **要** | 同じ admission pre-stage を通る |
+| 記録に対する AI 要約 | 継承 | 記録が admit されなければ pipeline が始まらない |
+| 記録の Obsidian 書き出し | 継承 | 書き出しは記録 pipeline の 1 ステップ |
+| AI / Obsidian / Gist の接続テスト | **不要** | ユーザーが今入力した設定（URL・API キー・PAT）しか送らない。ブロックすると未同意ユーザーが同意前に設定を検証できなくなる |
+| Tranco のメタデータ / リスト取得 | **不要** | 公開リストのメタデータのみ。ユーザーデータを含まない |
+| `GistSyncTarget.sync` / `syncBatch` | **未配線（要ゲート）** | 記録そのものを送るため、**production 呼び出し元が付くときに**ゲートが必要。2026-10-19 時点の production 利用はダッシュボードの接続テストのみ（`src/dashboard/gistSettings.ts:48`。`sync` / `syncBatch` の呼び出し元は 0 件） |
+
+### 実装
+
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 「Privacy-consent gating: what must ask, and what must not」節を追加（seam の説明＋上表＋新規経路の判定ルール）。
+- `src/utils/storage/privacyConsent.ts` — `requireConsent()` を削除。`hasPrivacyConsent()` の doc に「同意状態の読み出し口は 1 つ（composition → `isRecordingAllowed` → `RecordingAdmission`）。新しい外部送信経路は一覧に足すこと」を明記。
+- `src/popup/__tests__/privacyConsent.test.ts` — `requireConsent` の import と `describe` ブロック（2 テスト）を削除。
+- `src/background/__tests__/backgroundComposition.test.ts` — 同意 seam の配線を pin するテストを追加（同意なし → `admit('valid-visit')` が `privacy_consent_required` で拒否）。
+
+### 検証
+
+- **pin の実効性**: `compositionManifest.ts` の配線を一時的に `() => Promise.resolve(true)` に差し替えると、新しいテストが `expected undefined to be 'privacy_consent_required'` で失敗することを確認（配線を切れば落ちる＝pin が意味を持つ）。
+- **削除の安全性**: `requireConsent` の参照はリポジトリ全体（`src/` `entrypoints/` `testDir/` `scripts/` `bench/` `eslint/` `tests/`）で 0 件。削除は export の整理のみで挙動を変えない。
+- 対象テスト: 31 ファイル / 485 テスト（composition・privacyConsent・background handlers・popup controller）が緑。
+- 既存の受け入れ基準 1・3 は `recordingAdmission.test.ts`（gate false → 拒否）と composition テスト（同意は lazy に読む）で既に pin 済みであることを確認。
+
+### ゲート
+
+`npm run validate`（type-check / lint / 各種 check / test）を実行し緑を確認。**注**: 実行時にホストの load average が 8 コアで 27 と高く、フル実行が 39 分かかった。1 回目のフル実行では 6 件失敗・8 エラー（テスト総数も 193 件少ない＝一部ファイルがロード時に落ちた）が出たが、対象ファイルの再実行とリポジトリ全体の参照確認では再現せず、負荷による flake と判断した。詳細は PR の記録を参照。
+
+### inventory 中に見つけた別件（本 PBI のスコープ外・未起票）
+
+**設定のエクスポート/インポートが同意レコードを運ぶ。** `sanitizeSettingsForExport`（`src/utils/settingsExportImport.ts:89-97`）は `CONFIRMED_PROVIDER_ORIGINS` と API キーフィールドしか剥がさず、`exportSettings` / `exportEncryptedSettings` は `settingsRepository.getAll()` から payload を作る（`:236` / `:463`）。`privacy_consent` は settings ブロブに畳まれている（PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の症状）か、scattered merge 経由で top-level から読まれるため、**どちらの状態でも同意レコードが書き出され、インポート先で同意が付与/撤回される**。同意はデバイス・データ主体ごとの行為なので、エクスポート時の除外とインポート時の扱い（再同意を求める）を決める必要がある。後続 PBI 候補。
 
 ## 関連
 
 - `pbi/00-INDEX.md`
 - `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 独立レビューで本件が指摘された元 PBI
-- `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md` / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う
-- `pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md` — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` — 同意ゲート一覧の記載先

@@ -65,7 +65,8 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 
 **2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。9 件を RICE 採点して起票済み。実行順は [00-INDEX.md](00-INDEX.md) の 2026-10-19 節）:
 - [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600
-- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640
+- ✅ [2026-10-19-02-fix-consent-gate-wiring-coverage.md](../dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md) — `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640。**2026-10-19 完了・アーカイブ済み**（ガイドに適用範囲の表を追加し、未使用 export を削除）
+- 未起票の観測（PBI 02 の inventory 中に発見）: **設定のエクスポート/インポートが同意レコードを運ぶ**。`sanitizeSettingsForExport`（`src/utils/settingsExportImport.ts:89-97`）は `CONFIRMED_PROVIDER_ORIGINS` と API キーしか剥がさず、`exportSettings` / `exportEncryptedSettings` は `settingsRepository.getAll()` から payload を作るため、`privacy_consent`（settings ブロブ経由でも scattered merge 経由でも）が書き出され、インポート先で同意が付与・撤回される。同意はデバイス・データ主体ごとの行為なので、除外とインポート時の扱い（再同意を求める）を決める必要がある。
 - [2026-10-19-07-fix-consent-return-path-settings.md](2026-10-19-07-fix-consent-return-path-settings.md) — 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う（PBI 05 の独立レビュー由来）。RICE 160
 - [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。RICE 320
 - [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — redirect 拒否の実挙動を検証したテストが 0 件。接続テストの `redirected` ガードも非対称（PBI 01 / 08 由来）。RICE 400
