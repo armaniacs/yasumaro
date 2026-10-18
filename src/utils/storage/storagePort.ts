@@ -79,44 +79,40 @@ export class ChromeStoragePort implements StoragePort {
   }
 }
 
+/**
+ * Test double for `chrome.storage.local`: a faithful key-value store.
+ *
+ * `*_version` note (2026-10-19): the name suffix carries two unrelated meanings
+ * in this codebase, and the port must not try to tell them apart.
+ *   1. `<key>_version` numeric CAS generation — written by
+ *      `StorageTransaction` as a plain sibling key (`{ [key]: v, [key_version]: n }`).
+ *   2. An ordinary key whose name happens to end in `_version` and whose value is
+ *      a string or `null` — every such `StorageKeys` value is this shape
+ *      (`privacy_consent_version` is `string | null` and `DEFAULT_SETTINGS` ships
+ *      `null`; `gemini_api_version` / `tranco_version` are strings).
+ * In both cases chrome stores whatever it is given under that exact key, so this
+ * port does the same. It previously kept a separate `versions` map for the
+ * numeric shape and dropped the string shape on `set`, which made tests read a
+ * store production never exposes.
+ */
 export class InMemoryStoragePort implements StoragePort {
   private store = new Map<string, unknown>();
-  private versions = new Map<string, number>();
   private listeners: Array<(changes: Record<string, unknown>) => void> = [];
 
   async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
     if (keys === null) {
       const all: Record<string, unknown> = {};
       for (const [k, v] of this.store) all[k] = cloneAtBoundary(v);
-      for (const [k, v] of this.versions) all[`${k}_version`] = v;
       return all;
     }
     if (Array.isArray(keys)) {
       const result: Record<string, unknown> = {};
       for (const k of keys) {
-        if (k.endsWith('_version')) {
-          const base = k.slice(0, -8);
-          if (this.versions.has(base)) result[k] = this.versions.get(base);
-        } else if (this.store.has(k)) {
-          result[k] = cloneAtBoundary(this.store.get(k));
-        } else if (this.versions.has(k)) {
-          // version key requested directly via base name fallback
-          result[`${k}_version`] = this.versions.get(k);
-        }
-      }
-      // also include version keys when base key is requested via version semantics
-      for (const k of keys) {
-        if (!k.endsWith('_version') && this.versions.has(k) && !keys.includes(`${k}_version`)) {
-          // do not auto-include; only when explicitly requested
-        }
+        if (this.store.has(k)) result[k] = cloneAtBoundary(this.store.get(k));
       }
       return result;
     }
     if (typeof keys === 'string') {
-      if (keys.endsWith('_version')) {
-        const base = keys.slice(0, -8);
-        return this.versions.has(base) ? { [keys]: this.versions.get(base) } : {};
-      }
       return this.store.has(keys) ? { [keys]: cloneAtBoundary(this.store.get(keys)) } : {};
     }
     return {};
@@ -124,12 +120,7 @@ export class InMemoryStoragePort implements StoragePort {
 
   async set(items: Record<string, unknown>): Promise<void> {
     for (const [k, v] of Object.entries(items)) {
-      if (k.endsWith('_version') && typeof v === 'number') {
-        const base = k.slice(0, -8);
-        this.versions.set(base, v);
-      } else if (!k.endsWith('_version')) {
-        this.store.set(k, cloneAtBoundary(v));
-      }
+      this.store.set(k, cloneAtBoundary(v));
     }
     const changes: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(items)) changes[k] = cloneAtBoundary(v);
@@ -138,7 +129,13 @@ export class InMemoryStoragePort implements StoragePort {
 
   async remove(keys: string | string[]): Promise<void> {
     const list = Array.isArray(keys) ? keys : [keys];
-    for (const k of list) this.store.delete(k);
+    const changes: Record<string, unknown> = {};
+    for (const k of list) {
+      // chrome fires onChanged only for keys that were actually present.
+      if (this.store.delete(k)) changes[k] = undefined;
+    }
+    if (Object.keys(changes).length === 0) return;
+    for (const cb of this.listeners) cb(changes);
   }
 
   onChanged(callback: (changes: Record<string, unknown>) => void): void {
@@ -154,15 +151,10 @@ export class InMemoryStoragePort implements StoragePort {
         : keys;
     let total = 0;
     for (const k of targetKeys) {
-      if (k.endsWith('_version')) continue;
       const v = this.store.get(k);
       if (v !== undefined) {
         try { total += JSON.stringify(v).length; } catch { total += 256; }
       }
-    }
-    // include version overhead
-    for (const k of targetKeys) {
-      if (!k.endsWith('_version') && this.versions.has(k)) total += 8;
     }
     return total;
   }
@@ -170,11 +162,7 @@ export class InMemoryStoragePort implements StoragePort {
   // Test helper to seed data
   seed(items: Record<string, unknown>): void {
     for (const [k, v] of Object.entries(items)) {
-      if (k.endsWith('_version') && typeof v === 'number') {
-        this.versions.set(k.slice(0, -8), v);
-      } else {
-        this.store.set(k, cloneAtBoundary(v));
-      }
+      this.store.set(k, cloneAtBoundary(v));
     }
   }
 
@@ -182,18 +170,24 @@ export class InMemoryStoragePort implements StoragePort {
   dump(): Record<string, unknown> {
     const all: Record<string, unknown> = {};
     for (const [k, v] of this.store) all[k] = cloneAtBoundary(v);
-    for (const [k, v] of this.versions) all[`${k}_version`] = v;
     return all;
   }
 
+  /**
+   * Test helper: reset state for isolation.
+   *
+   * Unlike `chrome.storage.local.clear()`, this also drops the registered
+   * listeners so a reused port starts clean. Build a fresh port when you need
+   * chrome's "clear keeps listeners" behaviour.
+   */
   clear(): void {
     this.store.clear();
-    this.versions.clear();
     this.listeners = [];
   }
 
-  // Test helper: read version for assertions
+  // Test helper: read a numeric CAS generation for assertions
   getVersion(key: string): number | undefined {
-    return this.versions.get(key);
+    const raw = this.store.get(`${key}_version`);
+    return typeof raw === 'number' ? raw : undefined;
   }
 }
