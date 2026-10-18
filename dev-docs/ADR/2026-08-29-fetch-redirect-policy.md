@@ -85,8 +85,10 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   追従する）。`api.github.com` は HSTS 付きの固定ホストで、GitHub 側か TLS が
   破られない限り到達しないため**優先度は低い**が、この経路にも
   `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。2026-10-19 に
-  PBI を起票した: `pbi/2026-10-19-02-fix-gist-tranco-redirect-policy.md`
-  (適用したら本節を「適用済み」へ更新すること)。
+  PBI を起票した: `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md`
+  (適用したら本節を「適用済み」へ更新すること)。実挙動の検証は
+  `pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`、宣言の一本化は
+  `pbi/2026-10-19-05-fix-redirect-single-declaration.md` で扱う。
 - `src/background/handlers/systemHandlers.ts` は今も `redirect: 'error'` を
   リテラルで書いており、上記の `NO_REDIRECT_FETCH_POLICY` を共有していない。
   FETCH_URL 経路の挙動は正しいが、「宣言は 1 箇所」という整理は厳密には

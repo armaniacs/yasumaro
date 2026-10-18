@@ -14,16 +14,23 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-19 security-audit run-2 のフォロー（2件） — ⬜ 2件未着手 🔧非機能追加 RICE順: 01 → 02
+### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（9件） — ⬜ 9件未着手 🔧非機能追加 RICE順: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09
 
-PBI 2026-10-18-01 / 05 / 08 の実装と独立レビューで見つかった残課題を PBI 化。どちらも run-2 の 25 件には含まれない**新規発見**で、25 件の進行とは独立に着手できる。
+PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。
 
-| NN | PBI | 種別 | RICE | SP | 備考 |
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---:|---:|---:|---|
-| ⬜ 01 | [2026-10-19-01-fix-consent-keys-settings-blob-relocation.md](2026-10-19-01-fix-consent-keys-settings-blob-relocation.md) | fix | 600 | 2.0 | 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳み、top-level 直読みの所有モジュールから見えなくする。**局所再現済み**（`isMigratableStorageKey`=true / 移行後 top-level 消滅）。storage key structure（high-risk） |
-| ⬜ 02 | [2026-10-19-02-fix-gist-tranco-redirect-policy.md](2026-10-19-02-fix-gist-tranco-redirect-policy.md) | fix | 320 | 0.5 | gist の 3 サイト（`Authorization: token <PAT>` 付き）と tranco の 2 サイトが redirect を追従。共通 seam `NO_REDIRECT_FETCH_POLICY` は既存 |
+| ⬜ 01 | [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) | fix | 800 | 0.5 | `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（実測）。56 箇所で使う test double の忠実性 |
+| ⬜ 02 | [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) | fix | 640 | 0.5 | `requireConsent` が未配線。同意ゲートの適用範囲が未文書化（実害は未確認・要裁定） |
+| ⬜ 03 | [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) | fix | 600 | 2.0 | 設定移行が同意レコードと拒否カウンタを `settings` ブロブへ畳む（**局所再現済み**）。storage key structure は high-risk |
+| ⬜ 04 | [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) | fix | 400 | 2.0 | redirect 拒否の**実挙動**を検証したテストが 0 件（機構 pin のみ）＋接続テストの `redirected` ガード非対称 |
+| ⬜ 05 | [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) | fix | 400 | 0.5 | 共通 seam が「単一宣言」になっていない（リテラル・後置上書き可能・テストが実定数を見ない） |
+| ⬜ 06 | [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) | fix | 320 | 0.5 | gist の 3 サイト（`Authorization: token <PAT>` 付き）と tranco の 2 サイトが redirect 追従 |
+| ⬜ 07 | [2026-10-19-07-fix-consent-return-path-settings.md](2026-10-19-07-fix-consent-return-path-settings.md) | fix | 160 | 1.0 | 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う |
+| ⬜ 08 | [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) | fix | 100 | 0.5 | `jsdomFileCount` の 360 → 362 に推移と原因が無い（予算コメント自身の規約違反） |
+| ⬜ 09 | [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](2026-10-19-09-fix-ledger-deep-mojibake-restore.md) | fix | 67 | 1.5 | 台帳に残る「意味が壊れた」文字化け断片（スクリプトでは検出できない） |
 
-進め方: **01** は consent lifecycle なので run-2 の PBI 04 と同じ期に扱うと検証が共有できる。**02** は `gistSyncTarget.ts` を共有する PBI 25 より先に実施すると競合が小さい（1 行追加のみ）。
+進め方: **redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。**consent 系（02/03/07）は run-2 の PBI 04 と同じ期**に扱うと検証条件を共有できる。01 と 08 は他と独立（各 0.5 SP）。
 
 ### 2026-10-18 security-audit run-2（25件） — 🔶 3件完了（01/05/08）・22件未着手 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
 
@@ -511,7 +518,7 @@ security-audit run-2（`d49d70a3`）の needs_validation 25件のうち 3件を�
 - **05-fix-privacy-consent-withdrawal-regrant**（fingerprint `privacyConsent.migrateLegacyPrivacyConsent::withdrawal-regrant-legacy-evidence-keys`）は撤回レコード判定に加え、独立レビューで判明した同根の 3 穴（明示拒否の保護 / settings ブロブ移設への耐性 / 撤回時の拒否猶予解除）まで含めて修正。`public/PRIVACY.md` と `docs/PRIVACY.md` を同期。
 - ゲート: `npm run validate` exit 0（1095 files / 16409 tests）。`test-perf` は jsdom files 362/362 でゲート内。3件とも「コードレビュー完了」を独立レビューで確認。
 - 同ラウンドの台帳 18 ファイルに残っていた中国語簡体字の混入（「注釈」を簡体字で書いていたもの 38 箇所、「契約」14 箇所、ほか計 118 行）と非 CJK 文字化け 1 件（韓国語の「呼び出し」が混入）を併せて修復。
-- 残課題（要フォロー PBI）: (1) 単一オブジェクト設定移行が `privacy_consent` / `privacy_consent_denied_count` / `privacy_consent_last_denial_time` を `settings` ブロブへ畳み、top-level を直読する所有モジュールから見えなくなる（詳細は 05 の完了記録）。(2) PBI 10 に深い文字化け断片（`_regexp 精装機器Jpa` 相当）が残る。
+- 残課題は同日中にすべて PBI 化した（9 件。上の 2026-10-19 節を参照）。内訳: 同意キーの置き場所（03）・同意ゲートの配線範囲（02）・同意へ戻る経路（07）・gist / tranco の redirect（06）・redirect の実挙動検証（04）・redirect 宣言の一本化（05）・`InMemoryStoragePort` の忠実性（01）・test-perf の jsdom ゲート改定の根拠不足（08）・台帳の深い文字化け断片（09）。
 
 ### 2026-10-15 PBI 台帳アーカイブ — ✅ 9台帳アーカイブ（内容PBIはいずれも既にアーカイブ済み・着手候補ゼロ）
 
@@ -2387,7 +2394,7 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **48 ファイル（INDEX 1 / 2026-10-19 のフォロー 2 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 実測）** |
+| **`pbi/` 残存 PBI 合計** | **55 ファイル（INDEX 1 / 2026-10-19 の 9 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 実測）** |
 | アーカイブ済みPBI | 1408（`00-backlog` 台帳を含む。2026-10-19 実測） |
 | アーカイブ済み実装計画 | 187 |
 

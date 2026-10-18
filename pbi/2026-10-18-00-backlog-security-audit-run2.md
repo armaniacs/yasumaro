@@ -63,10 +63,16 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - **B4（並列可）**: 03, 06, 10, 12, 15, 17, 19
 - **B5（単独・工数大）**: 18, 25
 
-**2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。詳細は各 PBI の完了記録）:
-- [2026-10-19-01-fix-consent-keys-settings-blob-relocation.md](2026-10-19-01-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。局所再現済み）。
-- [2026-10-19-02-fix-gist-tranco-redirect-policy.md](2026-10-19-02-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。
-- 未起票の観測: `InMemoryStoragePort` は `*_version` で終わるキーの**文字列値**を捨てる（数値のみ版数カウンタとして保持）。`privacy_consent_version` / `gemini_api_version` のような日付・文字列値のキーはこの test double では再現できず、テストが実挙動を取り逃す。PBI 01 の実装時に必ず踏むため同 PBI の落とし穴に記載済み。
+**2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。9 件を RICE 採点して起票済み。実行順は [00-INDEX.md](00-INDEX.md) の 2026-10-19 節）:
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640
+- [2026-10-19-07-fix-consent-return-path-settings.md](2026-10-19-07-fix-consent-return-path-settings.md) — 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う（PBI 05 の独立レビュー由来）。RICE 160
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。RICE 320
+- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — redirect 拒否の実挙動を検証したテストが 0 件。接続テストの `redirected` ガードも非対称（PBI 01 / 08 由来）。RICE 400
+- [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) — 共通 seam が「単一宣言」になっていない（PBI 01 / 08 の独立レビュー由来）。RICE 400
+- [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) — `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800
+- [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) — `jsdomFileCount` の 360 → 362 に推移と原因が無い（PBI 01 / 08 の独立レビュー由来。予算コメント自身の規約違反）。RICE 100
+- [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67
 
 ## ブロッカー調査結果（2026-10-18 実施）
 
