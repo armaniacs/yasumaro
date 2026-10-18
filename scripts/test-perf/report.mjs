@@ -182,10 +182,12 @@ if (failures > 0) {
 
 const budget = JSON.parse(readFileSync(BUDGET_PATH, 'utf8')).budget;
 
-// Both gates are counts, so both are machine-independent and are judged even
-// when the machine is busy (see the R4 note below).
+// ADR R4 (2026-10-18): only `jsdom files` gates. A total price would charge a
+// 40ms isolated/node file the same as a 147ms isolated/jsdom file, and under the
+// one-assertion-per-file rule the total only grows, so the gate ratcheted
+// continuously (930 -> 1060 -> 1062 -> 1093). The total is still measured and
+// printed as an advisory, so growth stays visible without stopping cheap tests.
 const loadIndependentGates = [
-  ['file count', measured.files, budget.gates.fileCount],
   ['jsdom files', measured.jsdomFiles, budget.gates.jsdomFileCount],
 ];
 
@@ -235,6 +237,7 @@ if (contendedBefore) {
 // adding a DOM file is a deliberate decision.
 const gates = loadIndependentGates;
 const advisories = [
+  ['file count', measured.files, budget.reference.fileCount],
   ['total test phase', measured.totalMs, budget.reference.totalFileMs],
   ['p95 per file', measured.p95Ms, budget.reference.p95FileMs],
   ['top 10 files', measured.top10Ms, budget.reference.top10Ms],

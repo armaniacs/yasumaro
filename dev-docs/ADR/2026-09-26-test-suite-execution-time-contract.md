@@ -323,3 +323,24 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
   1062 なのでどちらも通る。CI は 1061 / 1060 で赤（run `38315624155`）。
 - 原因は suite の成長であり、欠陥や追加ゲートの必要はない。`jsdomFileCount` は
   359 / 360 で余裕があるため据え置く。
+
+### 2026-10-18 の降格（`fileCount` をゲートから外す）
+
+- **再検討トリガー（「次に `fileCount` を引き上げる時」）に到達した。** CI は
+  `OVER file count: 1093 / 1062 (103%)` と `OVER jsdom files: 362 / 360 (101%)`
+  で赤だった（PR #180 / run `39123791697`）。`validate` 以外のジョブは緑で、
+  失敗は suite の成長のみが原因。
+- **決定**: `gates.fileCount` を削除し `reference.fileCount` へ降格する。
+  `gates.jsdomFileCount` は 360 → 362 に改定してゲートとして残す。
+- 理由: 決定 2 と R4 末尾の議論のとおり、総数は固定コストを誤って価格付け
+  する（isolated/node 40ms / isolated/jsdom 147ms）。1 ファイル 1 論点の規約の
+  下で総数は単調増加し、引き上げが常態化していた（930 → 1060 → 1062 → 今回）。
+  安い node/shared の追加を止める理由は無く、高い jsdom の追加だけを意図的な
+  判断にすればよい。
+- 効果: `file count` は advisory 行として表示され続けるので増加は可視のまま
+  である。ゲートは固定コストの支配要因（jsdom 構築 約 106ms/ファイル）に
+  直接対応する。
+- 実装: `scripts/test-perf/report.mjs` の `loadIndependentGates` から
+  `file count` を外し、`advisories` の先頭へ移した。
+- 今後の `jsdomFileCount` の引き上げは、決定 3 の手続き（本 ADR への追記と
+  同時に改定）に従う。
