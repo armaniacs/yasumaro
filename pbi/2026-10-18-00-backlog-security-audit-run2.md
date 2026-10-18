@@ -63,7 +63,10 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - **B4（並列可）**: 03, 06, 10, 12, 15, 17, 19
 - **B5（単独・工数大）**: 18, 25
 
-**2026-10-19 の完了で判明した追加の残課題**（下記 PBI の完了記録に詳細）: 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳み、top-level を直読する所有モジュールから見えなくなる（別 PBI 候補）。
+**2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。詳細は各 PBI の完了記録）:
+- [2026-10-19-01-fix-consent-keys-settings-blob-relocation.md](2026-10-19-01-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。局所再現済み）。
+- [2026-10-19-02-fix-gist-tranco-redirect-policy.md](2026-10-19-02-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。
+- 未起票の観測: `InMemoryStoragePort` は `*_version` で終わるキーの**文字列値**を捨てる（数値のみ版数カウンタとして保持）。`privacy_consent_version` / `gemini_api_version` のような日付・文字列値のキーはこの test double では再現できず、テストが実挙動を取り逃す。PBI 01 の実装時に必ず踏むため同 PBI の落とし穴に記載済み。
 
 ## ブロッカー調査結果（2026-10-18 実施）
 

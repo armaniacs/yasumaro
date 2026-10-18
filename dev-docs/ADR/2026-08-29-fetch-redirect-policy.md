@@ -84,8 +84,9 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   `Location` のホストへ再送される（tranco は資格情報を持たないが、やはり 30x を
   追従する）。`api.github.com` は HSTS 付きの固定ホストで、GitHub 側か TLS が
   破られない限り到達しないため**優先度は低い**が、この経路にも
-  `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。PBI 25
-  (Gist egress の CSP 宣言) と併せて扱うのが自然。
+  `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。2026-10-19 に
+  PBI を起票した: `pbi/2026-10-19-02-fix-gist-tranco-redirect-policy.md`
+  (適用したら本節を「適用済み」へ更新すること)。
 - `src/background/handlers/systemHandlers.ts` は今も `redirect: 'error'` を
   リテラルで書いており、上記の `NO_REDIRECT_FETCH_POLICY` を共有していない。
   FETCH_URL 経路の挙動は正しいが、「宣言は 1 箇所」という整理は厳密には
