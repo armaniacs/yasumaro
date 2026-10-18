@@ -7,7 +7,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { fetchWithTimeout, CONNECTION_TEST_CACHE_MODE } from '../utils/fetch.js';
+import { CONNECTION_TEST_CACHE_MODE, NO_REDIRECT_FETCH_POLICY, fetchWithTimeout } from '../utils/fetch.js';
 import {
     isRetryableNetworkError,
     isRetryableStatus,
@@ -273,9 +273,20 @@ export class ObsidianClient {
 
     async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
         const response = await fetchWithTimeout(url, {
+            ...NO_REDIRECT_FETCH_POLICY,
             method: 'GET',
             headers
         }, FETCH_TIMEOUT_MS);
+
+        if (response.redirected) {
+            // `redirect: 'error'` already aborts a 30x before this point, so this
+            // is defence in depth: a response the platform marked as redirected is
+            // never adopted as note content.
+            throw tagFailure(
+                new Error('Error: Failed to read daily note. Please check your Obsidian connection.'),
+                createFailure(FailureKind.NETWORK)
+            );
+        }
 
         if (response.ok) {
             return await this._readBodyWithTimeout(response);
@@ -304,10 +315,20 @@ export class ObsidianClient {
 
     async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
         const response = await fetchWithTimeout(url, {
+            ...NO_REDIRECT_FETCH_POLICY,
             method: 'PUT',
             headers,
             body: content
         }, FETCH_TIMEOUT_MS);
+
+        if (response.redirected) {
+            // Same defence in depth as the read path: a redirected response is
+            // never accepted as a successful write.
+            throw tagFailure(
+                new Error('Error: Failed to write to daily note. Please check your Obsidian connection.'),
+                createFailure(FailureKind.NETWORK)
+            );
+        }
 
         if (!response.ok) {
             // Cap the error body on actual bytes; Content-Length is not trusted.
@@ -346,6 +367,7 @@ export class ObsidianClient {
             retryableStatusCodes
         } = OBSIDIAN_CONNECTION_RETRY_POLICY;
         const requestOptions: RequestInit = {
+            ...NO_REDIRECT_FETCH_POLICY,
             method: 'GET',
             headers,
             cache: CONNECTION_TEST_CACHE_MODE

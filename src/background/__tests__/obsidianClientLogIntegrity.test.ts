@@ -9,6 +9,9 @@ import { getLogs, clearLogs, flushLogs } from '../../utils/logger/core.js';
 import { fetchWithTimeout } from '../../utils/fetch.js';
 
 vi.mock('../../utils/fetch.js', () => ({
+  // The client spreads the shared redirect policy into every fetch, so the mock
+  // must mirror that export or the access itself throws.
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithTimeout: vi.fn(),
   CONNECTION_TEST_CACHE_MODE: 'no-cache',
 }));
