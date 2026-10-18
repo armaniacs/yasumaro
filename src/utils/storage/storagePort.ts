@@ -87,8 +87,9 @@ export class ChromeStoragePort implements StoragePort {
  *   1. `<key>_version` numeric CAS generation — written by
  *      `StorageTransaction` as a plain sibling key (`{ [key]: v, [key_version]: n }`).
  *   2. An ordinary key whose name happens to end in `_version` and whose value is
- *      a string — every such `StorageKeys` value is this shape
- *      (`privacy_consent_version`, `gemini_api_version`, `tranco_version`).
+ *      a string or `null` — every such `StorageKeys` value is this shape
+ *      (`privacy_consent_version` is `string | null` and `DEFAULT_SETTINGS` ships
+ *      `null`; `gemini_api_version` / `tranco_version` are strings).
  * In both cases chrome stores whatever it is given under that exact key, so this
  * port does the same. It previously kept a separate `versions` map for the
  * numeric shape and dropped the string shape on `set`, which made tests read a
@@ -128,7 +129,13 @@ export class InMemoryStoragePort implements StoragePort {
 
   async remove(keys: string | string[]): Promise<void> {
     const list = Array.isArray(keys) ? keys : [keys];
-    for (const k of list) this.store.delete(k);
+    const changes: Record<string, unknown> = {};
+    for (const k of list) {
+      // chrome fires onChanged only for keys that were actually present.
+      if (this.store.delete(k)) changes[k] = undefined;
+    }
+    if (Object.keys(changes).length === 0) return;
+    for (const cb of this.listeners) cb(changes);
   }
 
   onChanged(callback: (changes: Record<string, unknown>) => void): void {
@@ -166,6 +173,13 @@ export class InMemoryStoragePort implements StoragePort {
     return all;
   }
 
+  /**
+   * Test helper: reset state for isolation.
+   *
+   * Unlike `chrome.storage.local.clear()`, this also drops the registered
+   * listeners so a reused port starts clean. Build a fresh port when you need
+   * chrome's "clear keeps listeners" behaviour.
+   */
   clear(): void {
     this.store.clear();
     this.listeners = [];

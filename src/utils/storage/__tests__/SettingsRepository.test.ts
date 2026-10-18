@@ -75,6 +75,22 @@ describe('SettingsRepository — deep module via StorageAdapter', () => {
     expect(received.length).toBe(1);
   });
 
+  // chrome fires storage.onChanged when a key is removed, and observe() relies on
+  // it to drop the cached snapshot. A test double that stays silent on remove
+  // makes the whole removal→invalidate path undetectable in tests.
+  it('observes a settings-key removal and drops the cached snapshot', async () => {
+    await repo.set(StorageKeys.OBSIDIAN_HOST, 'cached.host');
+    expect(await repo.get(StorageKeys.OBSIDIAN_HOST)).toBe('cached.host'); // fills the cache
+
+    const received: Array<unknown> = [];
+    repo.observe((c) => received.push(c));
+
+    await adapter.remove('settings');
+
+    expect(received.length).toBe(1);
+    expect(await repo.get(StorageKeys.OBSIDIAN_HOST)).not.toBe('cached.host');
+  });
+
   it('two adapters justify the seam — InMemory vs Chrome', async () => {
     const mem = new InMemoryStorageAdapter();
     mem.seed({ settings: { [StorageKeys.GEMINI_MODEL]: 'gemini-pro' } });

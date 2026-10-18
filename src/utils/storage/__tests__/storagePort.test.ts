@@ -141,7 +141,7 @@ describe('InMemoryStoragePort', () => {
     expect(port.dump()).toEqual({ foo: 'bar' });
   });
 
-  it('getBytesInUse always returns 0', async () => {
+  it('getBytesInUse returns 0 for keys that are not stored', async () => {
     expect(await port.getBytesInUse(null)).toBe(0);
     expect(await port.getBytesInUse('foo')).toBe(0);
     expect(await port.getBytesInUse(['foo'])).toBe(0);
@@ -187,6 +187,16 @@ describe('InMemoryStoragePort', () => {
       expect(await port.getBytesInUse('privacy_consent_version')).toBeGreaterThan(0);
     });
 
+    it('round-trips the null default of privacy_consent_version', async () => {
+      // DEFAULT_SETTINGS ships privacy_consent_version: null, and this is the
+      // exact array read SettingsRepository.__getAllScatteredFallback performs.
+      // Dropping it would make migrateLegacyPrivacyConsent re-prompt a user who
+      // already answered (its ack check is `typeof … === 'string'`).
+      await port.set({ privacy_consent_version: null });
+
+      expect(await port.get(['privacy_consent_version'])).toEqual({ privacy_consent_version: null });
+    });
+
     it('removes a *_version key of either shape', async () => {
       await port.set({ privacy_consent_version: '2026-09-08', settings: { theme: 'dark' }, settings_version: 3 });
 
@@ -198,6 +208,20 @@ describe('InMemoryStoragePort', () => {
       expect(all['settings']).toEqual({ theme: 'dark' });
     });
 
+    it('notifies listeners on remove, and only for keys that were present', async () => {
+      // chrome fires storage.onChanged for removals (SettingsRepository.observe
+      // depends on it to drop its cache), and stays silent when nothing changed.
+      const callback = vi.fn();
+      await port.set({ settings: { theme: 'dark' } });
+      port.onChanged(callback);
+
+      await port.remove('absent_key');
+      expect(callback).not.toHaveBeenCalled();
+
+      await port.remove('settings');
+      expect(callback).toHaveBeenCalledWith({ settings: undefined });
+    });
+
     it('keeps a numeric *_version key readable as a CAS generation (regression guard)', async () => {
       await port.set({ settings: { theme: 'dark' }, settings_version: 3 });
 
@@ -207,6 +231,9 @@ describe('InMemoryStoragePort', () => {
         settings_version: 3,
       });
       expect(await port.get(null)).toEqual({ settings: { theme: 'dark' }, settings_version: 3 });
+      // Discriminates against the removed `versions` map, which skipped
+      // `*_version` keys in the byte estimate.
+      expect(await port.getBytesInUse('settings_version')).toBeGreaterThan(0);
     });
   });
 });
