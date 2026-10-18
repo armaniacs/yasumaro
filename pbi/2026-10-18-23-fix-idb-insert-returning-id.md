@@ -9,7 +9,7 @@
 - 順位: 23 / 25
 - RICE: 333（Reach=100 / Impact=0.25 / Confidence=50% / Effort=0.3）
 - 根拠 / 種別: 🔧非機能追加（fix） / 難易度: 🟢低 / 副作用: 🟡軽微
-  - 種別・難度の根拠: 記録の保存そのものではなく「保存後に付ける行の識別子」の正しさの修正。atomic な `INSERT ... RETURNING` 形式をリポジトリが既に保持しており（`schema.ts:154`）、既存の引擎経路（`sqliteBoot.ts:84-86`）が `query()` も同じ `db.run()` に写すため、差し替えは 1 関数ぶんの変更で閉じる。スキーマ変更も移行も要らない。
+  - 種別・難度の根拠: 記録の保存そのものではなく「保存後に付ける行の識別子」の正しさの修正。atomic な `INSERT ... RETURNING` 形式をリポジトリが既に保持しており（`schema.ts:154`）、既存のエンジン経路（`sqliteBoot.ts:84-86`）が `query()` も同じ `db.run()` に写すため、差し替えは 1 関数ぶんの変更で閉じる。スキーマ変更も移行も要らない。
   - 副作用「🟡軽微」の根拠: 影響するのは Mirroring 済みノートの再送と、行の取り違えという Mirroring の対象選定のみ。行そのものの消失ではなく、予約履歴の実体（`browsing_logs` の行）もスキーマも変えない。RETURNING へ寄せたあとも単発の insert が返す番号は従来と同一である（`idbScalarRead-golden.test.ts:56-59` が 1 と 2 を固定しており、この固定がそのまま通る）。
 
 ## 背景（監査の出典）
@@ -20,7 +20,7 @@ security-audit run-2 の needs_validation リード。fingerprint: `IdbVfsBacken
 - claimed root cause: 番号の読み出しが insert と atomic でない（トランザクションも insert 経路の RETURNING も無い）。一方でリポジトリは atomic な RETURNING 形式（`schema.ts:154`）を既に持ち、batch 書き込みは `withTransaction` で包んでいる。
 - entrypoint: `src/offscreen/offscreen.ts:96` — メッセージ 1 件ごとに独立した async IIFE を立てる（`:96-128`）。同時 `SQLITE_INSERT` は直列化されず、mutex も共有しない。
 - propagation: `src/offscreen/sqliteMessageHandlers.ts:344` — `SQLITE_INSERT` は `handleSqliteWire('insert', …)` を通り `recordsRepo.insert`（`recordsRepo.ts:17-19`）経由で `backend.insert` に到達する。振り分け経路に直列化キューは無い（`offscreen.ts:34-59` の `dispatchSqliteMessage` はサイズ検査と Map 引きのみ）。
-- propagation: `src/offscreen/IdbVfsBackend.ts:100-101` — `await execWithCache(INSERT_SQL, params)` の後に `await this.scalar('SELECT last_insert_rowid()')` を別 await で実行し、その間にトランザクションが無い。対照的に `insertBatch` は `:111-119` で `withTransaction` に包んでいる。`execWithCache`（`idbEngineLifecycle.ts:55-69`）はキューを通さずそのまま wasm 引擎へ渡す。
+- propagation: `src/offscreen/IdbVfsBackend.ts:100-101` — `await execWithCache(INSERT_SQL, params)` の後に `await this.scalar('SELECT last_insert_rowid()')` を別 await で実行し、その間にトランザクションが無い。対照的に `insertBatch` は `:111-119` で `withTransaction` に包んでいる。`execWithCache`（`idbEngineLifecycle.ts:55-69`）はキューを通さずそのまま wasm エンジンへ渡す。
 - sink: `src/background/pipeline/steps/saveSqliteStep.ts:91` — 返された番号をキーにした `update { id: mutateResult.data.id, changes: { obsidian_synced } }` が走るため、同時挿入された行が `obsidian_synced=1` になり、実際に Mirroring した行は未マークのまま残る。
 
 補足（実ファイルで確認した事実）:
@@ -123,7 +123,7 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 1. **`INSERT_SQL` を `INSERT ... RETURNING id` へ差し替え、`SELECT last_insert_rowid()` を撤回して返却 id にする**
    - 変更量: `schema.ts` に `INSERT_RETURNING_SQL`（`INSERT_SQL` に `RETURNING id` を足したもの）を 1 定数追加し、`IdbVfsBackend.ts:100-102` を「コールバック付きの 1 回 exec」に書き換える。`insertAuditLog` 側（`:304-309`）も同様に `AUDIT_INSERT_RETURNING_SQL` で揃える。
    - 利点: **窓そのものが消える**（2 回の await が 1 回になる）。トランザクションの開始と終了が入らないので他クエリへの影響もない。`wrapDb` が `query` も `db.run()` に写す（`sqliteBoot.ts:84-86`）ため既存の経路でそのまま番号を取れる。`schema.ts:147-153` のコメントが既に RETURNING の正しさを論証している。`idbScalarRead-golden.test.ts:56-59` の番号 1 と 2 の固定が**期待値無変更で通る**。
-   - 難点: `RETURNING` は SQLite 3.35 以上が要る。`schema.ts:152` のコメントによれば同梱 wasm は 3.53.2 なので要件は満たすが、**テスト側の better-sqlite3 と実機の IDB 引擎で RETURNING が同じ形で返るかは下記のブロッカーで確認する**。
+   - 難点: `RETURNING` は SQLite 3.35 以上が要る。`schema.ts:152` のコメントによれば同梱 wasm は 3.53.2 なので要件は満たすが、**テスト側の better-sqlite3 と実機の IDB エンジンで RETURNING が同じ形で返るかは下記のブロッカーで確認する**。
    - **推奨: 選択肢 1。** 他の二つ（特に選択肢 3 の「今は使われていないから」で片付ける方針）を上回る。
 
 2. **INSERT と SELECT を `withTransaction` で包む（`insertBatch` と同じ形）**
@@ -131,19 +131,19 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
    - 利点: 実装パターンが既存の `insertBatch`（`:111-119`）と一致するので、レビュー時に「この関数は同じ形になった」と確認できる。
    - 難点: **1 回の記録保存ごとに BEGIN と COMMIT が 1 往復増える**（単発の insert のたびに）。wa-sqlite の `BEGIN IMMEDIATE` はロックを取得するため、**他の読み書きとの競合で `SQLITE_BUSY` が増える可能性がある**。窓が消える点は選択肢 1 と同じで、副作用だけが大きい。
 
-3. **`insertAuditLog` にも同じ組があるので一并して対応する**
+3. **`insertAuditLog` にも同じ組があるので併せて対応する**
    - 変更量: `:302-310` を選択肢 1 と同じ形に揃える（`AUDIT_INSERT_RETURNING_SQL` を `queryPlan.ts:668` 付近に追加）。
    - 現状の事実: 返された番号は**どこからも使われていない**（`auditLogGateway.ts:43-53` は参照しない。wire の `decodeGateway` だけが整形している）。
-   - **推奨: 選択肢 1 の範囲に含めて一并対応する。** 番号が未使用である理由が「現状では壊れる経路が無い」なら、**どこかで使われるようになった瞬間に同じ誤り方が復活する**。「今は使われていない」は「直す必要がない」の根拠にならないため、受け入れ基準にも明記した。
+   - **推奨: 選択肢 1 の範囲に含めて併せて対応する。** 番号が未使用である理由が「現状では壊れる経路が無い」なら、**どこかで使われるようになった瞬間に同じ誤り方が復活する**。「今は使われていない」は「直す必要がない」の根拠にならないため、受け入れ基準にも明記した。
 
 4. **（非推奨）OPFS 側の `handleInsert`（`crudHandlers.ts:22-28`）も同時に書き換える**
    - `opfsWorker.ts:386-392` の直列化キューが既に同じ保証を与えているため実害はない。書き換えは差分を膨らませ、本 PBI の主題（IDB ラング）から目を逸らす。**本 PBI では触らない**（キューが守っている旨のコメントだけ残す）。
 
-**総合推奨: 選択肢 1 と選択肢 3 を一并して適用（`insert` と `insertAuditLog` の両方を `RETURNING id` へ）。** 変更は `schema.ts`（定数追加）、`queryPlan.ts`（定数追加）、`IdbVfsBackend.ts`（2 関数の内部）、テスト 1〜2 ファイルに閉じる。
+**総合推奨: 選択肢 1 と選択肢 3 を併せて適用（`insert` と `insertAuditLog` の両方を `RETURNING id` へ）。** 変更は `schema.ts`（定数追加）、`queryPlan.ts`（定数追加）、`IdbVfsBackend.ts`（2 関数の内部）、テスト 1〜2 ファイルに閉じる。
 
 ### 既存テストが赤くなる可能性（先出し）
 
-- **`src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts:107`** — `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` は**完全一致**。`:44-49` の `queryMock` は既に `RETURNING` を分岐して `[{ id: 1 }]` を返すので `insertBatch`（`:113` の `INSERT_IGNORE_RETURNING_SQL`）は現状も緑。`insert` 側を RETURNING にしてもこのテストは `insertBatch` だけを実行している想定で、**基本は緑のはず**。赤になったら「`insert` も同じモックを通るようになった”中的の想定外の失敗である可能性が高いので、**期待値を書き換えて通すのではなく、モック側の不足を特定する**。
+- **`src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts:107`** — `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` は**完全一致**。`:44-49` の `queryMock` は既に `RETURNING` を分岐して `[{ id: 1 }]` を返すので `insertBatch`（`:113` の `INSERT_IGNORE_RETURNING_SQL`）は現状も緑。`insert` 側を RETURNING にしてもこのテストは `insertBatch` だけを実行している想定で、**基本は緑のはず**。赤になったら「`insert` も同じモックを通るようになった」ことによる想定外の失敗である可能性が高いので、**期待値を書き換えて通すのではなく、モック側の不足を特定する**。
 - **`src/offscreen/__tests__/schema-comprehensive.test.ts:116-131`** — `INSERT_SQL` 自体の 3 制約。選択肢 1 は `INSERT_SQL` を**書き換えず** `INSERT_RETURNING_SQL` を**追加**するなら、この 3 制約は緑のまま。**`INSERT_SQL` 自体に `RETURNING` を足す実装を選ぶと**、`crudHandlers.ts:24` や `rowCodec.test.ts:170` が参照する `INSERT_SQL` の意味が変わるため、`INSERT_SQL` は触らず新定数を追加する形を推奨する。
 - **`src/offscreen/__tests__/idbScalarRead-golden.test.ts:56-59` / `:89-92`** — `toEqual({ success: true, id: 1 })` と `id: 2`。RETURNING へ寄せても**同じ番号が返るため緑のまま**が正しい。ただしこのテストの `makeBackend`（`:30-49`）は `execWithCache` を better-sqlite3 に直接繋いでおり、`:40` は `/^\s*SELECT/i` で分岐している。`INSERT ... RETURNING` は `SELECT` で始まらないため `:44` の `db.prepare(sql).run(…)` に落ち、**コールバックが発火せず id が 0 になる**。つまりこのスタブは「RETURNING を読む」能力を持っていない。**実装前にこのスタブを RETURNING 対応に直すか、テストの分岐条件（`RETURNING` や `PRAGMA` など `SELECT` 以外の読み出し経路）にも広げる必要がある**。ここを直さないと「RETURNING に直したのに golden が赤くなる」という混乱が起きる。
 - **`src/offscreen/__tests__/search-sort-parametric.test.ts:31` / `query-backends-parametric.test.ts:34`** — Idb の `execWithCache` スタブが `/SELECT COUNT|SELECT changes|last_insert_rowid/i` に一致したときだけ `callback([0])` を呼ぶ。この正規表現は `INSERT ... RETURNING id` に一致しない。ただし現状この 2 ファイルで `insert()` を呼んでいるのは `FallbackStorage`（`search-sort-parametric.test.ts:61-63`）だけで、IdbVfsBackend の `insert()` は通っていないため**現状は緑のまま**。ただし **「RETURNING で id を取るスタブ」を書くとコールバックが発火せず id が黙って 0 になる**型の見えない罠なので、正規表現に `/RETURNING/i` を含めておくのが安全。
@@ -153,9 +153,9 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 
 **本 PBI の最大リスクは実装ではなく、事実未確定である。** 着手前に owner が次の 1 点を確定させること:
 
-> **実機の wa-sqlite engine（およびテスト側の better-sqlite3）で、2 つの `insert()` 呼び出しが `INSERT` と `SELECT last_insert_rowid()` の間で実際に交錯しうるか？ すなわち `execWithCache` の並行 await は引擎の接続上で交錯するのか？**
+> **実機の wa-sqlite engine（およびテスト側の better-sqlite3）で、2 つの `insert()` 呼び出しが `INSERT` と `SELECT last_insert_rowid()` の間で実際に交錯しうるか？ すなわち `execWithCache` の並行 await はエンジンの接続上で交錯するのか？**
 
-- 現状把握: `last_insert_rowid()` は**接続スコープ**の値であり、ソースからは「並行した JS 実行の下で引擎の接続が交錯するか」を確定できない。監査 blockers も同点を挙げている。`wrapDb`（`sqliteBoot.ts:74-103`）は `db.run()` に素通ししているが、`run()` の内側で wasm の呼び出しがどう直列化されるかは本 run の外にある。
+- 現状把握: `last_insert_rowid()` は**接続スコープ**の値であり、ソースからは「並行した JS 実行の下でエンジンの接続が交錯するか」を確定できない。監査 blockers も同点を挙げている。`wrapDb`（`sqliteBoot.ts:74-103`）は `db.run()` に素通ししているが、`run()` の内側で wasm の呼び出しがどう直列化されるかは本 run の外にある。
 - 解消手段（監査の validation plan 準拠）: `sqliteBackendParity.realEngine.test.ts` の fixture を使い、`insert()` の 2 つの promise を同時に開始して各返却 id を照合するテストを `--repeats=20` で回す。交錯が観測できれば本件は実在の欠陥として確定し、そのまま選択肢 1 の実装に進む。
 - **交錯が観測できなかった場合の方針**: 「再現できなかった」を「無害」の根拠にしない。`insert` と `SELECT last_insert_rowid()` の間にトランザクションも RETURNING もなく、その窓は**構文的に存在する**。このため **選択肢 1（`INSERT ... RETURNING id`）は、交錯の実測の如何にかかわらず採用する**（窓を構造的に消すことが目的であり、交錯の有無と修正の要否は独立している）。`RETURNING` が実機で 1 行を返すことの確認だけを、実装の合間に実エンジンテストで確かめる。
 - **なお、OPFS ラングは `opfsWorker.ts:386-392` の直列化キューが同じ窓を塞いでいる**ため、観測は IDB ラングについてのみ行う。
@@ -170,7 +170,7 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 
 2 SP（単位: ストーリーポイント）
 
-内訳の目安: `INSERT_RETURNING_SQL` と `AUDIT_INSERT_RETURNING_SQL` の定数追加 = 0.2 / `IdbVfsBackend.insert` の差し替え = 0.3 / `insertAuditLog` の一并対応 = 0.3 / 実エンジン fixture による並行 insert テスト = 0.6 / `saveSqliteStep` の後続 update に対する統合テスト = 0.3 / 既存テストのスタブ対応（`idbScalarRead-golden.test.ts:30-49` の分岐条件、`search-sort-parametric.test.ts:31` と `query-backends-parametric.test.ts:34` の正規表現）= 0.3。
+内訳の目安: `INSERT_RETURNING_SQL` と `AUDIT_INSERT_RETURNING_SQL` の定数追加 = 0.2 / `IdbVfsBackend.insert` の差し替え = 0.3 / `insertAuditLog` の同時対応 = 0.3 / 実エンジン fixture による並行 insert テスト = 0.6 / `saveSqliteStep` の後続 update に対する統合テスト = 0.3 / 既存テストのスタブ対応（`idbScalarRead-golden.test.ts:30-49` の分岐条件、`search-sort-parametric.test.ts:31` と `query-backends-parametric.test.ts:34` の正規表現）= 0.3。
 
 ※ owner 確認（実エンジンでの交錯観測）の待ち時間は**工数に含めない**。実装（選択肢 1）は交錯の実測と独立に進められるため、確認待ちで実装が止まらない。
 

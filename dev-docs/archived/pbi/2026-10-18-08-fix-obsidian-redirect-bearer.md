@@ -57,14 +57,14 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 ## 受け入れ基準
 
-- [ ] `_fetchExistingContent` の fetch が `redirect:'error'` を明示し、platform デフォルトの `follow` に依存しないこと
-- [ ] `_writeContent` の fetch が `redirect:'error'` を明示し、platform デフォルトの `follow` に依存しないこと
-- [ ] `_fetchConnectionResponse`（接続テスト経路）も同じ redirect 方針を共有すること。共有しない判断をする場合は理由をコードコメントに残すこと
-- [ ] FETCH_URL 経路と同様に `response.redirected` が true の場合、多層防御として body を採用しないこと（読み取り経路・書き込み経路の両方）
-- [ ] リダイレクトで中止された場合に、既存の failure taxonomy（`failureTaxonomy.ts`）の kind を持つエラーが送出され、ユーザ向け文言が status 数値を漏らさないこと
-- [ ] `appendToDailyNote` の mutex 解放が、リダイレクト abort・タイムアウト・部分失敗のいずれでも保証されること（例外経路でロックが残らない）
-- [ ] 既存テスト（`src/background/__tests__/obsidianClient*.test.ts`、`src/utils/__tests__/fetch*.test.ts`）が全て緑で、リダイレクト無関係的行为の非互換がないこと
-- [ ] ADR 2026-08-29 の適用範囲（适用范围）に Obsidian vault 経路が追記され、`redirect:'error'` を共通 seam に切り出した場合は ADR 本文と決定理由が更新されていること
+- [x] `_fetchExistingContent` の fetch が `redirect:'error'` を明示し、platform デフォルトの `follow` に依存しないこと
+- [x] `_writeContent` の fetch が `redirect:'error'` を明示し、platform デフォルトの `follow` に依存しないこと
+- [x] `_fetchConnectionResponse`（接続テスト経路）も同じ redirect 方針を共有すること。共有しない判断をする場合は理由をコードコメントに残すこと
+- [x] FETCH_URL 経路と同様に `response.redirected` が true の場合、多層防御として body を採用しないこと（読み取り経路・書き込み経路の両方）
+- [x] リダイレクトで中止された場合に、既存の failure taxonomy（`failureTaxonomy.ts`）の kind を持つエラーが送出され、ユーザ向け文言が status 数値を漏らさないこと
+- [x] `appendToDailyNote` の mutex 解放が、リダイレクト abort・タイムアウト・部分失敗のいずれでも保証されること（例外経路でロックが残らない）
+- [x] 既存テスト（`src/background/__tests__/obsidianClient*.test.ts`、`src/utils/__tests__/fetch*.test.ts`）が全て緑で、リダイレクトと無関係な挙動の非互換がないこと
+- [x] ADR 2026-08-29 の適用範囲に Obsidian vault 経路が追記され、`redirect:'error'` を共通 seam に切り出した場合は ADR 本文と決定理由が更新されていること
 
 ## テスト戦略
 
@@ -100,7 +100,7 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 - together 実装時の推奨 hunk 分割: fetch.ts の seam 追加を先に、本 PBI の呼び出し側変更を後に置く。
 - together 実装時の検証: `npx vitest run src/utils/__tests__/fetch.test.ts src/background/__tests__/obsidianClient.test.ts --repeats=20 --retries=0`。
-- together 実装時の記録: ADR 2026-08-29 の适用范围に「Obsidian vault read/write」と「AI provider fetch」の両方を追記。
+- together 実装時の記録: ADR 2026-08-29 の適用範囲に「Obsidian vault read/write」と「AI provider fetch」の両方を追記。
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
@@ -123,11 +123,11 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint を完了記録に残す（`ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put`）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ADR 2026-08-29 の适用范围を本経路にも拡大）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint を完了記録に残す（`ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put`）
+- [x] コードレビュー完了（独立レビュー。正確性・セキュリティの指摘なし。残った指摘は完了記録の残存リスクへ記録）
+- [x] ドキュメント更新済み（ADR 2026-08-29 の適用範囲を本経路にも拡大）
 
 ## 調査結果（2026-10-18）
 
@@ -135,10 +135,23 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 - 決め手: `_fetchExistingContent` / `_writeContent` / `_fetchConnectionResponse` が `redirect` なしで fetch することを呼び出し引数で pin。Authorization はクロスオリジンリダイレクトで剥がれるため **Bearer キー値の流出は起きにくい**が、307/308 で**ノート本文が保持・転送**され、リクエスト自体は loopback に届く
 - 影響: 重大度は「Bearer 流出」から「本文・リクエストの転送」に寄る。**Impact 1→0.5、Confidence 80→100（RICE 3000→1500）**。E2E 観測は本文転送の実測に差し替える
 
+## 完了記録（2026-10-19）
+
+- **判定**: 修正完了（PBI 01 と together 実装）。Obsidian の read / write / 接続テストの 3 経路が `redirect:'error'` を明示し、platform 既定の `follow` に依存しない。
+- **実装**: `src/background/obsidianClient.ts` の `_fetchExistingContent`（GET）/ `_writeContent`（PUT）/ `_fetchConnectionResponse`（接続テスト）が共通 seam `NO_REDIRECT_FETCH_POLICY`（`src/utils/fetch.ts`）を展開。read / write には多層防御として `if (response.redirected) throw tagFailure(..., FailureKind.NETWORK)` を追加（`redirect:'error'` が効かない実装差の保険）。
+- **監査 fingerprint**: `ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put` — verdict を **FIXED（2026-10-19）** へ更新。
+- **ADR**: `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` の適用範囲に Obsidian vault 経路を追記（AI 経路と同時）。
+- **テスト**: `src/background/__tests__/obsidianClient-secure-fetch.test.ts` に `describe('redirect policy')` を新設（5 テスト、実装前に Red を確認）。GET / PUT / 接続テストの 3 経路で fetch 引数を pin し、`response.redirected` の body 拒否も pin。
+- **ゲート**: `npm run validate` exit 0。PR #180 の CI すべて pass。`obsidianClient*.test.ts` の既存テストは非互換なし。
+- **レビュー**: PBI 01・08 のコミット列を独立レビューで確認（結果は本ファイルの「コードレビュー完了」に反映）。正確性・セキュリティの欠陥は無し。残存:
+  - **`response.redirected` の多層防御は実リダイレクトでは未検証**: `redirect:'error'` が有効な限り platform は Response を返す前に拒否するため、このガードは到達しない（テストは mock で `redirected:true` を注入して pin している）。実挙動の確認はブラウザ／E2E のみ可能。
+  - **接続テスト経路（`_fetchConnectionResponse`）には `redirected` ガードを置いていない**（read/write のみ）。`redirect:'error'` が主防御であり、接続テストは本文を採用しないため実害は無いが、対称性としては残る。
+  - PBI 01 の完了記録にある残存リスク（30x 実測の不在、定数の共有範囲、テストが実定数を見ない点、gist / tranco 未適用）は本 PBI にも同様に当てはまる。
+
 ## 関連
 
 - `pbi/00-INDEX.md`
 - PBI 01（同じ fetch.ts の別箇所）— 実装時に together 行うと効率的
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — 本 PBI が拡大する适用范围の原本
+- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — 本 PBI が拡大する適用範囲の原本
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` — SSRF / CWE-918 の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json / NEEDS-VALIDATION.md 22番）

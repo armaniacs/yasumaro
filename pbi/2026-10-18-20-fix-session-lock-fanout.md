@@ -47,7 +47,7 @@ security-audit run-2 の needs_validation リード。fingerprint: `session-auto
 
 **監査側の blocker（着手前に潰すべき owner 確認）**
 
-1. **MV3 service worker の `chrome.runtime.sendMessage` は、送信者自身の `onMessage` を起動しない。** したがって `service-worker.ts:226` のリスナは `SessionAlarmService.ts:164` の送信を決して受け取らない。これはプラットフォーム事実でありソースのみからは確定できない。`dev-docs` 内の `privacyConsent.ts:310-314` にも「chrome runtime メッセージは送信者自身のコンテキストへは配送されない（過去に onboarding が再表示されない退行を生んだ）」という**同じ事実の既に記録された記述**があり、これが本件 finding と整合する一次証拠でもある（実装時に同じ注释を `SessionAlarmService` 側にも残すこと）。
+1. **MV3 service worker の `chrome.runtime.sendMessage` は、送信者自身の `onMessage` を起動しない。** したがって `service-worker.ts:226` のリスナは `SessionAlarmService.ts:164` の送信を決して受け取らない。これはプラットフォーム事実でありソースのみからは確定できない。`dev-docs` 内の `privacyConsent.ts:310-314` にも「chrome runtime メッセージは送信者自身のコンテキストへは配送されない（過去に onboarding が再表示されない退行を生んだ）」という**同じ事実の既に記録された記述**があり、これが本件 finding と整合する一次証拠でもある（実装時に同じ注釈を `SessionAlarmService` 側にも残すこと）。
 2. **拡張ページのリスナが「存在するが応答しない」場合、`sendMessage` は reject するのか resolve するのか。** 「解決する（no receiver）」と「リスナはいるが無応答（resolve）」で挙動が分かれる。findings.json は「extension-page listeners exist but none responds → resolves (rather than rejects)」を blocker として挙げているが、これは**未観測**。owner が隔離プロファイルで確認すること（resolve の場合、現在のループは 1 回目で success になり、`:176-183` の失敗ログすら出ない）。
 3. **手動ロック経路の現況。** 「手動ロックは従来どおり全コンテキストに効くこと」を回帰ガードとして BDD に入れるには、UI から `SESSION_LOCK_REQUEST` を送る producer が存在するのか（＝手動ロックは dashboard 内で `encryptionSession.lockSession()` を直接呼んでいるのか、それとも SW 経由で飛んでいるのか）を実ファイルで確定する必要がある。監査 trace は producer が 1 箇所（`SessionAlarmService.ts:165`）のみと報告しており、**UI からの手動ロックが存在しない場合、BDD シナリオ 2 は「将来この経路を再構築したときの不変条件」として位置づける**。
 
@@ -98,7 +98,7 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 - [ ] 既存テストの期待値が本修正の挙動に合わせて**明示的に書き換えられ**、書き換えた理由が各テストにコメントで残る（`SessionAlarmService.test.ts:150-193` / `sessionAlarmsManager.test.ts:352-365` / `storage-security.test.ts:455-467` / `encryptionSession-branch.test.ts:137-156`）。特に「解決したら成功」の前提をしていたテストがあれば、それを「応答本文で判定する」期待値へ変更する
 - [ ] ロック済み時の UI・データ保護の挙動が owner によって確認され、結果が記録に残る（隔離プロファイル + ダミーデータ。BDD シナリオ 1〜4 の E2E 相当）。`settingsMigration.ts:538` / `obsidianClient.ts:148` / `RemoteAIService.ts:153,176` の `isEncryptionLockedError` 経路が想定どおり（パスワード入力の誘発／想定外の例外）に振る舞うこと
 - [ ] マスターパスワード未設定ユーザー（`SessionAlarmService.ts:125-127` のゲート、`authGuard.isLocked` の `MASTER_PASSWORD_ENABLED &&` ガード）の挙動が一切変わらない（`storage-security.test.ts:455-467` が引き続き緑）
-- [ ] `src/utils/storage/encryptionSession.ts` / `src/background/SessionAlarmService.ts` の VULN-017 注释が実挙動に更新される（現状 `:157-159` は「通知を 3 回リトライして暗号セッションにロックシグナルが届くことを保証する」前提だが、宛先と成功判定のどちらもそれを保証していない）。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で注释に残す
+- [ ] `src/utils/storage/encryptionSession.ts` / `src/background/SessionAlarmService.ts` の VULN-017 注釈が実挙動に更新される（現状 `:157-159` は「通知を 3 回リトライして暗号セッションにロックシグナルが届くことを保証する」前提だが、宛先と成功判定のどちらもそれを保証していない）。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で注釈に残す
 
 ## テスト戦略
 
@@ -117,22 +117,22 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 | `src/background/SessionAlarmService.ts` | 22-27 | `SESSION_TIMEOUT_MS`（30分）/ `LOCK_NOTIFICATION_RETRY_DELAY_MS`（100）/ `LOCK_NOTIFICATION_MAX_RETRIES`（3） |
 | `src/background/SessionAlarmService.ts` | 29-33 | `SendMessageFn` 型と `defaultSendMessage`（`:31` `chrome.runtime.sendMessage`）、`realStepDelay` |
 | `src/background/SessionAlarmService.ts` | 36-42 | コンストラクタ。`:41` で `stepDelay` 注入（実時間待ち禁止のため必ず注入経路を使う） |
-| `src/background/SessionAlarmService.ts` | 115 | `checkTimeout()` — 唯一の入口（`:110-114` に「onAlarm を足すと二重実行になる」注释） |
+| `src/background/SessionAlarmService.ts` | 115 | `checkTimeout()` — 唯一の入口（`:110-114` に「onAlarm を足すと二重実行になる」注釈） |
 | `src/background/SessionAlarmService.ts` | 125-127 / 129-135 / 136 | 未設定ユーザーの gate / 経過時間判定 / `lockSession()` 呼び出し |
 | `src/background/SessionAlarmService.ts` | 153-192 | 私有 `lockSession()`。`:155` `IS_LOCKED: true` |
-| `src/background/SessionAlarmService.ts` | **157-159** | VULN-017 注释（通知の目的を明記。実挙動と食い違っている） |
+| `src/background/SessionAlarmService.ts` | **157-159** | VULN-017 注釈（通知の目的を明記。実挙動と食い違っている） |
 | `src/background/SessionAlarmService.ts` | **160-175** | **リトライループ**。`:162` while 条件、`:164-167` 送信、**`:168` `success = true`（応答本文を捨てている）**、`:169-174` catch で `retries--` |
 | `src/background/SessionAlarmService.ts` | 176-183 | 3 回失敗時のログ。最後の防御線が `IS_LOCKED` 検査であると明記 |
 | `src/background/handlers/systemHandlers.ts` | 219-230 | `createSessionLockRequestHandler`。`:227` `await deps.lockSession()`、`:228` `sendResponse({ success: true })` |
 | `src/background/handlers/systemHandlers.ts` | 51 | `SessionLockRequestHandlerDeps.lockSession` |
 | `src/background/handlers/MessageRouter.ts` | 140 / **226** | deps 型 / `SESSION_LOCK_REQUEST: createSessionLockRequestHandler({ lockSession: deps.lockSession })`（**リポジトリ唯一の handler**） |
-| `src/background/service-worker.ts` | 153 / 226 | `handleSessionLockRequest` のエクスポート / `chrome.runtime.onMessage.addListener(createMessageHandler())`（**送信元と同じ SW。`:310-314` の privacyConsent 注释にある通り、自分宛ての send は届かない**） |
+| `src/background/service-worker.ts` | 153 / 226 | `handleSessionLockRequest` のエクスポート / `chrome.runtime.onMessage.addListener(createMessageHandler())`（**送信元と同じ SW。`:310-314` の privacyConsent 注釈にある通り、自分宛ての send は届かない**） |
 | `src/background/compositionManifest.ts` | 42 / 202 / **267** | `lockSession` の import / `factory: () => new SessionAlarmService()` / `lockSession: () => lockSession()` |
 | `src/offscreen/offscreen.ts` | 62-69 / 165 | `handleOffscreenMessage`。**`:67` `!('target' in message)` で即 `return false`**（送信側 envelope に `target` が無いので常に false）/ リスナ登録 |
 | `src/dashboard/aiTestProgressClient.ts` | 59-85 | `subscribeAiTestProgress`。`:69` `sender.id` チェック、`:70` `isAiTestProgressMessage(message) && runId` 一致で絞り込み。`SESSION_LOCK_REQUEST` はここを通らない |
 | `src/utils/storage/encryptionSession.ts` | 68 / 75-76 | `authGuard.isLocked` の import / `cachedEncryptionKey`・`cachedMasterPassword` の module state |
 | `src/utils/storage/encryptionSession.ts` | 158-174 | `deriveKeyFromMasterPassword`。`:162-164` `!cachedMasterPassword` で throw、`:173` `cachedMasterPassword` から PBKDF2 導出 |
-| `src/utils/storage/encryptionSession.ts` | **566-591** | `getOrCreateEncryptionKey`。`:567` VULN-017 注释、**`:568` `if (cachedEncryptionKey)` の中にだけ `:569` `authGuardIsLocked()` が居る**、`:570-572` クリア＋throw、`:578-588` は `IS_LOCKED` を読まない |
+| `src/utils/storage/encryptionSession.ts` | **566-591** | `getOrCreateEncryptionKey`。`:567` VULN-017 注釈、**`:568` `if (cachedEncryptionKey)` の中にだけ `:569` `authGuardIsLocked()` が居る**、`:570-572` クリア＋throw、`:578-588` は `IS_LOCKED` を読まない |
 | `src/utils/storage/encryptionSession.ts` | **606-609** | `isEncryptionLocked()` — `!cachedMasterPassword` のみを見るので、`cachedMasterPassword` 残存状態では false |
 | `src/utils/storage/encryptionSession.ts` | 619-650 | `setMasterPassword`。`:635` `cachedMasterPassword = null`、`:639` `cachedEncryptionKey = null`（ロック状態で開始する意図） |
 | `src/utils/storage/encryptionSession.ts` | 657-715 | `unlockWithPassword`。**`:706` `cachedMasterPassword = password` / `:707` `cachedEncryptionKey = null`** / `:708` `IS_LOCKED: false`（← 残存状態の発生源） |
@@ -157,7 +157,7 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 - **選択肢 3 だけを実装する**のが最小で確実な修正。理由は 3 点: (a) 変更が単一ファイルに閉じており、fan-out の受信者が発見できない問題（プラットフォーム依存・ブロッカー 2 が未確定）に依存しない。(b) 保証が「状態」ではなく「sink の検査」に落ちるため、通知が届かなくても・届くべきコンテキストが閉じていても同じ結果になる。(c) fan-out の宛先を足すと `privacyConsent.ts:325-332` と同種の「ページが生きている間だけ購読」という前提が 1 つ増え、テストとライフサイクルの複雑度の増分が本件の価値（Reach=50、Impact=0.5）に見合わない。
 - **選択肢 2 は選択肢 3 と併せて入れるのが妥当**（`:168` の 1 行変更＋応答型を見ないによる「無音」の解消）。単独で「緊急度を上げる」効果はない。
 - **選択肢 1 は「開いているコンテキストを能動的にロックする」UX 要件として別 PBI 相当**。「ダッシュボードを開いたままロックしたら、そのタブのパスワード入力を求める」という UI 挙動（副作用 🔴）を伴うため、本 PBI の実装中に勝手に混ぜない。TODO として `pbi/00-INDEX.md` に残す。
-- **選択肢 3 の実装上の注意点**: `authGuard.isLocked` を `getOrCreateEncryptionKey` の先頭で呼ぶと、`MASTER_PASSWORD_ENABLED` 未設定ユーザーにも 1 回 storage 読みが増える（`SessionAlarmService.ts:125-127` の注释が参照している「未設定ユーザーの IS_LOCKED は無意味」という guard なので**挙動は変わらないが、`storage-security.test.ts:455-467` が「`IS_LOCKED: true` でも鍵を返す」ことを pin している以上、そのケースでは `MASTER_PASSWORD_ENABLED` が false なので依然 true を返す**）。また `rotateToNewMasterPassword`（`:629` / `:805` から `getOrCreateEncryptionKey` を `resolvePrevious` として呼ぶ経路）がロック中に走ると失敗しうるため、**「回転中は IS_LOCKED を無視する」ガードが既存コードにあるか**を実装前に確認すること（`withRotationLock` / `isMasterPasswordRotationInProgress` が該当する可能性がある）。
+- **選択肢 3 の実装上の注意点**: `authGuard.isLocked` を `getOrCreateEncryptionKey` の先頭で呼ぶと、`MASTER_PASSWORD_ENABLED` 未設定ユーザーにも 1 回 storage 読みが増える（`SessionAlarmService.ts:125-127` の注釈が参照している「未設定ユーザーの IS_LOCKED は無意味」という guard なので**挙動は変わらないが、`storage-security.test.ts:455-467` が「`IS_LOCKED: true` でも鍵を返す」ことを pin している以上、そのケースでは `MASTER_PASSWORD_ENABLED` が false なので依然 true を返す**）。また `rotateToNewMasterPassword`（`:629` / `:805` から `getOrCreateEncryptionKey` を `resolvePrevious` として呼ぶ経路）がロック中に走ると失敗しうるため、**「回転中は IS_LOCKED を無視する」ガードが既存コードにあるか**を実装前に確認すること（`withRotationLock` / `isMasterPasswordRotationInProgress` が該当する可能性がある）。
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
@@ -183,7 +183,7 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 - [ ] `npm run validate` が緑（type-check + テスト）
 - [ ] 監査 fingerprint を完了記録に残す（`session-auto-lock:fanout-no-receiver-response-discarded`）
 - [ ] コードレビュー完了（owner の UI 確認結果をレビュー記録に添付）
-- [ ] ドキュメント更新済み（`SessionAlarmService.ts` の VULN-017 注释（`:157-159`）を実挙動に合わせる。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で `SessionAlarmService` / `encryptionSession` 側にも注释として残す）
+- [ ] ドキュメント更新済み（`SessionAlarmService.ts` の VULN-017 注釈（`:157-159`）を実挙動に合わせる。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で `SessionAlarmService` / `encryptionSession` 側にも注釈として残す）
 - [ ] ブロッカー 1-4 の owner 確認結果が PR に記録されている（`findings.json` の `validation_plan` に従った隔離プロファイル観測。ダミーデータのみ）
 
 ## 調査結果（2026-10-18）

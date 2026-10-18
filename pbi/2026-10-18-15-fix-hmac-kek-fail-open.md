@@ -2,7 +2,7 @@
 
 ## ユーザーストーリー
 
-個人データ処理に同意し、設定・ログの署名付きバックアップを粮食にしているユーザーとして、**ブラウザが KEK（鍵暗号化鍵）を失ったときでも、同意記録や以前のエクスポートが「理由を添えられずに黙って失効」にならないこと**がほしい、なぜなら privacy consent が `hasConsented:false` へ暗黙にリセットされると、ユーザーは同意が失効した理由の説明を受けられず GDPR Art.7 の説明義務（撤回・再同意の理由告知）を満たせず、さらに回転前に署名した設定/ログエクスポートが検証 hard-fail して輸入できず、バックアップが**静かに恒久的に読めなくなる**から。加えて暗号化鍵の失効はユーザーが良いか悪いか判断できる性質のものなので、「静かな再生成」ではなく「ユーザーに見える再同意/再設定フロー」として扱う必要がある。
+個人データ処理に同意し、設定・ログの署名付きバックアップを糧にしているユーザーとして、**ブラウザが KEK（鍵暗号化鍵）を失ったときでも、同意記録や以前のエクスポートが「理由を添えられずに黙って失効」にならないこと**がほしい、なぜなら privacy consent が `hasConsented:false` へ暗黙にリセットされると、ユーザーは同意が失効した理由の説明を受けられず GDPR Art.7 の説明義務（撤回・再同意の理由告知）を満たせず、さらに回転前に署名した設定/ログエクスポートが検証 hard-fail して輸入できず、バックアップが**静かに恒久的に読めなくなる**から。加えて暗号化鍵の失効はユーザーが良いか悪いか判断できる性質のものなので、「静かな再生成」ではなく「ユーザーに見える再同意/再設定フロー」として扱う必要がある。
 
 ## 優先度
 
@@ -18,7 +18,7 @@
 
 security-audit run-2 の needs_validation リード（run-1 持ち越し）。fingerprint: `e24dc390002ac5bb3a808a15787462b0dd56584867f35d820db92c5c9b4a72dc`。監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` / `NEEDS-VALIDATION.md:156`〜「## 6. fail-open KEK chain + unwrap-failure self-heal silently rotate every HMAC signing key」）。
 
-判定は `needs_validation`。run-2 での到達範囲の確認: durable IndexedDB KEK ストアは驱逐（eviction）を含む実際の永続ストアの損失にトリガを限定し、ページコンテキストからの到達性はソースから解消済み（`externally_connectable` なし、`web_accessible_resources` は `content-extractor.js` + `icon48.png` のみ → `wxt.config.ts:288`）。残る未検証事項は fail-open チェーン終端と unwrap 失敗 self-heal の2経路、およびブラウザ側の IDB 保持事実。
+判定は `needs_validation`。run-2 での到達範囲の確認: durable IndexedDB KEK ストアはエビクション（eviction）を含む実際の永続ストアの損失にトリガを限定し、ページコンテキストからの到達性はソースから解消済み（`externally_connectable` なし、`web_accessible_resources` は `content-extractor.js` + `icon48.png` のみ → `wxt.config.ts:288`）。残る未検証事項は fail-open チェーン終端と unwrap 失敗 self-heal の2経路、およびブラウザ側の IDB 保持事実。
 
 **再現経路（trace）**
 
@@ -177,6 +177,6 @@ Scenario: 4. 新規インストール（初回 ever）では KEK チェーン終
 ## 関連
 
 - `pbi/00-INDEX.md`
-- consent lifecycle 領域の PBI 05（migration 再付与阻止）と合わせて設計する（`2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — `needsReconsent` 判定が交差する）
+- consent lifecycle 領域の PBI 05（migration 再付与阻止。2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — `needsReconsent` 判定が交差する）
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` / `NEEDS-VALIDATION.md:156`〜）
 - PBI 2026-09-14-09（durableKeyStore 導入の元 PBI。ヘッダコメントが本件の前提を記述している）

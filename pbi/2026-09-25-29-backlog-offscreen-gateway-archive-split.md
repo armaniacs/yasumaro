@@ -65,7 +65,7 @@ Scenario: archive dispatch と noRetry 契約を維持する
 
 ### E2Eテスト
 
-- 既存の production 入口から `SqliteClient` façade を経由して、archive operation と query/getStatus/mutate/maintain の代表的な呼び出しを同じ transport 上で実行し、既存 호출の観測可能な結果が変わらないことを確認する。
+- 既存の production 入口から `SqliteClient` façade を経由して、archive operation と query/getStatus/mutate/maintain の代表的な呼び出しを同じ transport 上で実行し、既存の呼び出しの観測可能な結果が変わらないことを確認する。
 - archive operation の送信が `ArchiveGateway` を経由し、同じ transport の message serialization を使うことを production wiring で確認する。
 - 別 transport を作っていないこと、archive dispatch の noRetry 契約が production wiring でも維持されることを確認する。
 

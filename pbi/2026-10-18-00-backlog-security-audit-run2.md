@@ -25,14 +25,14 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 
 | NN | PBI | 種別 | RICE | SP | 難易度 | 副作用 | 依存・備考 |
 |---|---|---|---:|---:|---|---|---|
-| 01 | [fix-ai-fetch-redirect-policy](2026-10-18-01-fix-ai-fetch-redirect-policy.md) | fix | 16800 | 0.5 | 🟢 | 🟡 | PBI 08 と同一ファイル（`src/utils/fetch.ts`）。redirect:'error' を共通 seam に切り出せば together 実装可 |
+| ✅ 01 | [fix-ai-fetch-redirect-policy](../dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md) | fix | 16800 | 0.5 | 🟢 | 🟡 | ✅ 2026-10-19 完了（PR #180）。PBI 08 と共通 seam `NO_REDIRECT_FETCH_POLICY` で together 実装 |
 | 02 | [fix-alarm-daily-purge-recreate](2026-10-18-02-fix-alarm-daily-purge-recreate.md) | fix | 5600 | 0.5 | 🟢 | 🟡 | run-1 持ち越し。既存ガード `ensureDailyFlushArmed` と共通化 |
 | 03 | [fix-npm-mirror-lockfile-registry](2026-10-18-03-fix-npm-mirror-lockfile-registry.md) | fix | 4800 | 3.0 | 🟡 | 🔴 | 発生機構を特定済み（`~/.npmrc` + npm 9+ `replace-registry-host`）。lockfile 書換＋再発防止宣言＋静的ゲート |
 | 04 | [fix-notification-consent-prestage](2026-10-18-04-fix-notification-consent-prestage.md) | fix | 4800 | 1.0 | 🟢 | 🟡 | consent 領域。PBI 05 と窗口整合 |
-| 05 | [fix-privacy-consent-withdrawal-regrant](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md) | fix | 4800 | 3.0 | 🟡 | 🔴 | consent 領域。PRIVACY.md（public/ と docs/ の両方）更新が DoD |
+| ✅ 05 | [fix-privacy-consent-withdrawal-regrant](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md) | fix | 4800 | 3.0 | 🟡 | 🔴 | ✅ 2026-10-19 完了。撤回＋拒否の保全・PRIVACY.md 同期済み |
 | 06 | [fix-trust-db-merge-union-removals](2026-10-18-06-fix-trust-db-merge-union-removals.md) | fix | 4000 | 5.0 | 🟡 | 🔴 | merge 方針再設計。既存 lockContract の期待値避け |
 | 07 | [fix-buffer-key-retention-sweep-noop](2026-10-18-07-fix-buffer-key-retention-sweep-noop.md) | fix | 3000 | 0.5 | 🟢 | 🟡 | 再発コミット 195ff96 あり。テストモックの偽セマンティクス解消が本体 |
-| 08 | [fix-obsidian-redirect-bearer](2026-10-18-08-fix-obsidian-redirect-bearer.md) | fix | 3000 | 0.1 | 🟢 | 🟡 | PBI 01 と同一ファイル。接続テスト経路も対象 |
+| ✅ 08 | [fix-obsidian-redirect-bearer](../dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md) | fix | 3000 | 0.1 | 🟢 | 🟡 | ✅ 2026-10-19 完了（PR #180）。read / write / 接続テストの 3 経路＋`redirected` 多層防御 |
 | 09 | [fix-fallback-migration-partial-wipe](2026-10-18-09-fix-fallback-migration-partial-wipe.md) | fix | 1500 | 1.0 | 🟢 | 🔴 | 既存テストが壊れた挙動を pin（書き換え必須） |
 | 10 | [fix-opfs-v2-verify-before-delete](2026-10-18-10-fix-opfs-v2-verify-before-delete.md) | fix | 1500 | 3.0 | 🟢 | 🔴 | 件数一致ガードは不成立（skip≠failure）。ROLLBACK 済みトランザクションの counter 過大報告を発見 |
 | 11 | [fix-logger-pii-size-gate](2026-10-18-11-fix-logger-pii-size-gate.md) | fix | 1500 | 1.0 | 🟢 | 🟡 | 3 sink のみに閉じれば低リスク。`logTruncate` 再利用可 |
@@ -53,13 +53,17 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 
 ## 推奨実行順（依存とファイル競合）
 
-- **B1（並列可・ファイル非重複）**: 01, 08, 14, 16, 23
+**進捗（2026-10-19）**: ~~01~~ / ~~08~~（PR #180 でマージ）と ~~05~~ は完了・アーカイブ済み。残り 22 件は下表のとおり。
+
+- **B1（並列可・ファイル非重複）**: ~~01~~, ~~08~~, 14, 16, 23
   - 01 と 08 は `src/utils/fetch.ts` なので、redirect:'error' を共通 seam に切り出して together 実装すると efficiency 的
 - **B2（並列可）**: 02, 04, 07, 09, 11, 24
-- **B3（並列可・データ消失リスクあり・慎重なロールバック計画のもとで）**: 05, 13, 20, 21, 22
+- **B3（並列可・データ消失リスクあり・慎重なロールバック計画のもとで）**: ~~05~~, 13, 20, 21, 22
   - 21 と 22 は同一関数（`localMarkdownExportRetention.ts:123-137`）を触るため直列化
 - **B4（並列可）**: 03, 06, 10, 12, 15, 17, 19
 - **B5（単独・工数大）**: 18, 25
+
+**2026-10-19 の完了で判明した追加の残課題**（下記 PBI の完了記録に詳細）: 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳み、top-level を直読する所有モジュールから見えなくなる（別 PBI 候補）。
 
 ## ブロッカー調査結果（2026-10-18 実施）
 

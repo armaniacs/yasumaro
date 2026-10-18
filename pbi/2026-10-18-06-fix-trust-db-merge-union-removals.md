@@ -96,13 +96,13 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 
 ### 統合
 
-- `src/dashboard/settings/trustSettings.ts` の `removeWhitelistDomain` から `getTrustDbAdmin()` → `TrustDbAdmin.removeFromWhitelist` → `ManagedCollections` → `ManagedStringList.remove` → kernel `save()` → ストレージ読み戻しまでを通し、UI が `db.getWhitelist()`（in-memory）で再描画した表示と**ストレージ上の実体が一致する**ことを assert する。現状 `trustSettings.ts:319` は in-memory 由来だけを描画するので、この二致が崩れる構造をテストで暴く。
+- `src/dashboard/settings/trustSettings.ts` の `removeWhitelistDomain` から `getTrustDbAdmin()` → `TrustDbAdmin.removeFromWhitelist` → `ManagedCollections` → `ManagedStringList.remove` → kernel `save()` → ストレージ読み戻しまでを通し、UI が `db.getWhitelist()`（in-memory）で再描画した表示と**ストレージ上の実体が一致する**ことを assert する。現状 `trustSettings.ts:319` は in-memory 由来だけを描画するので、この一致が崩れる構造をテストで暴く。
 - `_resetTrustDbAdminForTest()`（`TrustDbAdmin.ts:143`）を使い、kernel 初期化 → 2 コンテキスト相当の 2 kernel を同一ストレージに対して並行 write し、並行追加（Scenario 3）と add/remove 競合（Scenario 4）を再現。
 
 ### E2E
 
 - 展開済み拡張で (1) 信頼設定にドメインを追加 → (2) 削除 → (3) ダッシュボードを再オープンし、パネルに再登場しないこと、さらに (4) `chrome://extensions` から service worker を停止・再開し、SW 側の kernel が再初期化されても消えたままであること。
-- 実ブラウザでは cross-context の verify→set window（PBI 18 / 監査25件目）が同時に開いているため、E2E は再現不成の観測用であり、決定的な Red の根拠にはしない。
+- 実ブラウザでは cross-context の verify→set window（PBI 18 / 監査25件目）が同時に開いているため、E2E は再現不能の観測用であり、決定的な Red の根拠にはしない。
 
 ## 実装メモ（実装者向け）
 
@@ -149,7 +149,7 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 ### 既存テストへの追加項目
 
 - `trustDb.test.ts:443` の 'removes a domain' — **改変せず**、隣に populated `trust_db` を返す describe を新設。`removeSensitiveDomain` / `removeUserTld` の 3 系統それぞれに「書き戻し値に含まれない」assert 1 件ずつ。
-- `lockContract.test.ts:133` — 「並行追加」既存 1 件は**そのまま残す**（選択肢 1 の契約）。追加: (a) remove intent が current に含まれる要素を消す、(b) remove が current に無い要素に対して no-op かつ冪等、(c) add と remove の競合で結果が一意かつ union 复活なし。`mergeTrustDatabase` の引数が増えるため `:100-129` の「両引数を mutate しない」「current undefined で fresh object」「tranco は新しい側」も更新が必要。
+- `lockContract.test.ts:133` — 「並行追加」既存 1 件は**そのまま残す**（選択肢 1 の契約）。追加: (a) remove intent が current に含まれる要素を消す、(b) remove が current に無い要素に対して no-op かつ冪等、(c) add と remove の競合で結果が一意かつ union 復活なし。`mergeTrustDatabase` の引数が増えるため `:100-129` の「両引数を mutate しない」「current undefined で fresh object」「tranco は新しい側」も更新が必要。
 - AGENTS.md の test rule に従い、**実時間 sleep を追加しない**。並行は `vi.doMock` の直列化 fake か、`Promise.all` で in-flight な Promise 同士を競合させ、結果を見る形にする。
 
 ### ロールバック手順

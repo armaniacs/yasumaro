@@ -120,10 +120,10 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 ## テスト戦略
 
 - 単体:
-  - `mock chrome.storage.local` で `SQLITE_STATUS` を reject／失敗応答にして、`needsMigration()` の fail-closed を pin する。**注意**: 既存テスト `migrationService-opfs.test.ts:128-134`（`getStatus.mockRejectedValue`）は `opfsRecovery.ts:108-111` の **catch** を覆盖しているだけで、本 PBI の fail-open 経路（`getStatus` が reject ではなく `{initialized:false, fallback:false}` を**返す**）は未 pin である。実 gateway（`offscreenGateway.ts:206-210`）は throw せず値返すので、mock も throw ではなく値を返す形にすること
+  - `mock chrome.storage.local` で `SQLITE_STATUS` を reject／失敗応答にして、`needsMigration()` の fail-closed を pin する。**注意**: 既存テスト `migrationService-opfs.test.ts:128-134`（`getStatus.mockRejectedValue`）は `opfsRecovery.ts:108-111` の **catch** をカバーしているだけで、本 PBI の fail-open 経路（`getStatus` が reject ではなく `{initialized:false, fallback:false}` を**返す**）は未 pin である。実 gateway（`offscreenGateway.ts:206-210`）は throw せず値返すので、mock も throw ではなく値を返す形にすること
   - `migrate()` が `migrated: 0` で fallback 行が消えることを pin する（現状の壊れた挙動の固定）。snapshot 後に1件書き込んでから remove を走らせ、その行が消えることを pin
   - `mutate` の `mockImplementation` の中で `storageMock['FALLBACK_STORAGE_DATA']` にレコードを追記すれば、バッチループ中の追加書き込みを実時間待ちなしで再現できる（`migrationService-opfs.test.ts:206-212` の書式で十分）
-  - 「全件着地したのに再読差分が空なら削除する」正常系と、「差分に残。既然る行があれば削除しない」異常系の両方向を pin する
+  - 「全件着地したのに再読差分が空なら削除する」正常系と、「差分に残る行があれば削除しない」異常系の両方向を pin する
 - 統合:
   - `deferredMigrations` の1回限りランナー（`src/background/__tests__/deferredMigrations.test.ts`、全182行）。現状は `vi.mock('../migrationService.js')`（`:50-59`）でサービス全体をモックしているため、OPFS 復旧経路の実挙動は見えていない。fail-closed 化により「status が不明なら `migrateOpfsRecovery` が呼ばれない」ことを、この層で1つ pin すると多層防御として価値がある
   - `migrationService` の委譲（`src/background/migrationService.ts:79-81` と `:84-86`）は薄いので、追加テストは不要
@@ -178,7 +178,7 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 - **`src/background/__tests__/migrationService-opfs.test.ts`（全287行）— 主な追加先**
   - `:12-36` の `vi.stubGlobal('chrome', ...)` がファイル内で `storageMock` プレーンオブジェクトを実装している（`get`/`set`/`remove`）。追加 pin はこの書式にそのまま足せる
-  - `:83` `describe('needsOpfsRecoveryMigration')` に、**fail-closed** の pin を追加する。既存の `:104-110`（`fallback: true` で false）と `:128-134`（`getStatus` が reject で false）は別経路を既に覆盖している
+  - `:83` `describe('needsOpfsRecoveryMigration')` に、**fail-closed** の pin を追加する。既存の `:104-110`（`fallback: true` で false）と `:128-134`（`getStatus` が reject で false）は別経路を既にカバーしている
   - `:137` `describe('migrateOpfsRecovery')` に、**削除前再読＋差分**の pin を追加する。`:206-212` の `mockImplementation` の中で `storageMock` に追記すれば、バッチループ中の追加書き込みを実時間待ちなしで再現できる
   - **要変更の既存 pin**: `:138-155`（`count: 2` → 両キー削除。判定基準が変わると期待値も変更が必要になる）、`:244-264`（remove 順序の pin。データ→フラグの順は維持する）、`:266-285`（remove が例外を投げたとき両方残る pin）
   - `:74` の既定 mock（`{ fallback: false, initialized: true }`）は健全系の既定としてそのまま使える

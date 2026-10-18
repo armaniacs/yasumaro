@@ -76,8 +76,20 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   いたが、**この整理は誤りだった**。AI プロバイダの OpenAI 互換 `baseUrl` と
   Obsidian の vault URL はユーザーが設定できる。2026-10-18 に AI 経路
   (要約・接続テスト) と Obsidian 経路 (日次ノートの read/write と接続テスト) へ
-  同じ `redirect: 'error'` を適用した。tranco / gist は固定ホストのままで
-  挙動不変。
+  同じ `redirect: 'error'` を適用した。
+- **残る fetch サイトと残存リスク（2026-10-19 追記）**: tranco と gist は初期 URL が
+  固定ホストだが、**「ホストが固定だから挙動不変」は言えない**。`gistSyncTarget.ts`
+  の 3 サイトは `Authorization: token <PAT>` を付けて platform 既定の
+  `redirect: 'follow'` のまま fetch するため、`api.github.com` が 30x を返すと PAT が
+  `Location` のホストへ再送される（tranco は資格情報を持たないが、やはり 30x を
+  追従する）。`api.github.com` は HSTS 付きの固定ホストで、GitHub 側か TLS が
+  破られない限り到達しないため**優先度は低い**が、この経路にも
+  `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。PBI 25
+  (Gist egress の CSP 宣言) と併せて扱うのが自然。
+- `src/background/handlers/systemHandlers.ts` は今も `redirect: 'error'` を
+  リテラルで書いており、上記の `NO_REDIRECT_FETCH_POLICY` を共有していない。
+  FETCH_URL 経路の挙動は正しいが、「宣言は 1 箇所」という整理は厳密には
+  まだ成り立っていない。
 - ホップ毎再検証ヘルパーが将来の fetch 追加のための規約として存在する。
 
 ## 参照
@@ -85,5 +97,5 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
 - `src/utils/fetch.ts` — `fetchWithRedirectGuard`
 - `src/utils/ssrfGuard.ts` — `validateUrlForFilterImport` / `isPrivateIpAddress`
 - PBI: `pbi/2026-08-29-09-fix-fetch-redirect-ssrf.md`
-- PBI: `pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` (AI 経路への適用)
-- PBI: `pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` (Obsidian 経路)
+- PBI: `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` (AI 経路への適用)
+- PBI: `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` (Obsidian 経路)
