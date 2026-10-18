@@ -199,7 +199,19 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 ### ゲート
 
-`npm run validate` exit 0（1095 files / 16416 tests）。`src/utils/storage/` の 61 ファイル・549 テストが緑。
+`npm run validate` exit 0（1095 files / 16419 tests）。`src/utils/storage/` の 61 ファイル・549 テストが緑。CAS / race の 4 ファイルは `--repeats=10` で安定。
+
+### 独立レビューの反映（2026-10-19）
+
+レビューの verdict は「根因に対して正しく完全」。指摘 5 件（いずれも同じファイルの忠実性ギャップ）をすべて反映した。
+
+1. **MEDIUM: `remove()` が listener に通知していなかった** — chrome は削除でも `storage.onChanged` を発火し、`ChromeStoragePort` は `{key: undefined}` として配送する。`SettingsRepository.observe` はこれでキャッシュを捨てるため、double が黙っていると「削除 → 無効化」経路がテストで検出できない（`CACHE_TTL` 内の `getAll` が削除前のスナップショットを返す）。**実際に存在したキーだけ**を `{key: undefined}` で通知する形に修正（chrome は変化が無ければ発火しない）。`SettingsRepository.test.ts` にキャッシュ無効化までの統合テストを追加。
+2. **数値 CAS の回帰ガードが判別力なし**（修正前でも通っていた）— `getBytesInUse` の計上（修正前は `*_version` を飛ばして 0）を assert に加え、判別する形にした。
+3. **`privacy_consent_version` は `string | null`** で `DEFAULT_SETTINGS` は `null` を積む。修正で新たに保持されるようになった `null` をテストで固定し、コメントの「a string」を「a string or null」に訂正（ack の `null` が消えると、回答済みユーザーに再同意を求める経路に戻る）。
+4. **stale なテスト名** `'getBytesInUse always returns 0'` を、同 describe の新テストと矛盾しない名前に変更。
+5. **`clear()` が listener も落とす**のは chrome と違う。テスト隔離のための仕様であることを doc に明記（挙動は変えない）。
+
+**判別力の実測**: main の `storagePort.ts`（真の修正前）に対しては新規・更新テスト **8 件すべてが失敗**する。本増分（指摘 1）だけを revert した場合は 2 件が失敗する。つまり各層の Red を観測済み。
 
 ## 関連
 
