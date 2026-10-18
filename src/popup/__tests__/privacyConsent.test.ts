@@ -8,7 +8,6 @@ import {
     getPrivacyConsent,
     savePrivacyConsent,
     hasPrivacyConsent,
-    requireConsent,
     migrateLegacyPrivacyConsent,
     withdrawPrivacyConsent,
     getConsentWithdrawalHistory,
@@ -247,17 +246,6 @@ describe('hasPrivacyConsent', () => {
         expect(result).toBe(false);
         const state = await getPrivacyConsent();
         expect(state.needsReconsent).toBe(true);
-    });
-});
-
-describe('requireConsent', () => {
-    it('throws nothing when consented', async () => {
-        storageMock['privacy_consent'] = { hasConsented: true, consentVersion: PRIVACY_POLICY_VERSION };
-        await expect(requireConsent()).resolves.not.toThrow();
-    });
-
-    it('throws when not consented', async () => {
-        await expect(requireConsent()).rejects.toThrow('Privacy consent required');
     });
 });
 

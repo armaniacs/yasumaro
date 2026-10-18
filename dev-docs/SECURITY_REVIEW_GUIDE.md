@@ -129,6 +129,33 @@ that is a design question, not a guard change.
 - All API keys encrypted in storage (PBKDF2 + AES-GCM)
 - API-key ciphertext is AAD-bound to the settings field it lives under (`EncryptedData.version: 2`), so moving an envelope between fields fails to decrypt instead of sending the key to the wrong provider. The binding is passed by the reader, never stored in the envelope; AAD-less envelopes (v1) stay readable until rewritten.
 
+### Privacy-consent gating: what must ask, and what must not
+
+`hasPrivacyConsent()` is the single source of truth, and it is consumed through
+exactly one seam: `createBackgroundServices()` wires
+`isRecordingAllowed: () => hasPrivacyConsent()`
+(`src/background/compositionManifest.ts`, `src/background/service-worker.ts`), and
+`RecordingAdmission` calls that gate before every record path
+(`src/background/recordingAdmission.ts` → `reason: 'privacy_consent_required'`).
+Reading the consent module from a new call site is a review red flag: add the
+operation to the table below instead.
+
+| Operation | Gated? | Why |
+|---|---|---|
+| Automatic recording (`VALID_VISIT`) | Yes | Writes browsing history; `RecordingAdmission` rejects it |
+| Manual record / preview / save (`MANUAL_RECORD`, `PREVIEW_RECORD`, `SAVE_RECORD`) | Yes | Same admission pre-stage (`src/background/handlers/recordingHandlers.ts`) |
+| AI summarization of a record | Inherited | Runs only downstream of an admitted record |
+| Obsidian export of a record | Inherited | Export is a step inside the recording pipeline |
+| AI / Obsidian / Gist connection tests | No | Send only the configuration the user just typed (URL, API key, PAT). No browsing data — and blocking them would stop an unconsented user from validating settings before deciding |
+| Tranco metadata / list download | No | Public list metadata; no user data |
+| `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
+
+Rule for a new outbound path: if it can carry a recorded row, a page body, or a
+derived summary, it needs the gate; if it carries only configuration the user
+typed, it does not. `requireConsent()` used to exist as an unused "guard the
+caller" helper (`privacyConsent.ts`); it was removed on 2026-10-19 because
+nothing called it and its name implied a second seam that does not exist.
+
 ## Regular Audits
 
 - Review API endpoint configurations

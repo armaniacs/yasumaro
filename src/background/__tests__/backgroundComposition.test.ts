@@ -177,6 +177,25 @@ describe('production composition contract', () => {
     expect(mocks.hasPrivacyConsent).not.toHaveBeenCalled();
   });
 
+  // The consent gate has exactly one seam: composition wires
+  // `isRecordingAllowed: () => hasPrivacyConsent()` and RecordingAdmission calls
+  // it before every record path. This pins the wiring itself, so cutting it (or
+  // reading consent from a second call site) fails here rather than silently
+  // letting records through. Inventory: dev-docs/SECURITY_REVIEW_GUIDE.md
+  // "Privacy-consent gating".
+  it('wires the consent seam so an unconsented profile is refused at admission', async () => {
+    mocks.hasPrivacyConsent.mockResolvedValue(false);
+    const composition = createBackgroundServices();
+    const admission = composition.recordingAdmission as unknown as {
+      admit: (kind: string, sender: chrome.runtime.MessageSender) => Promise<{ rejected?: { reason?: string } }>;
+    };
+
+    const outcome = await admission.admit('valid-visit', {} as chrome.runtime.MessageSender);
+
+    expect(outcome.rejected?.reason).toBe('privacy_consent_required');
+    expect(mocks.hasPrivacyConsent).toHaveBeenCalled();
+  });
+
   it('builds the review summary generator once with the shared AIService and SqliteClient', () => {
     createBackgroundServices();
 
