@@ -199,7 +199,9 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 ### ゲート
 
-`npm run validate`（type-check / lint / 各種 check / test）を実行し緑を確認。**注**: 実行時にホストの load average が 8 コアで 27 と高く、フル実行が 39 分かかった。1 回目のフル実行では 6 件失敗・8 エラー（テスト総数も 193 件少ない＝一部ファイルがロード時に落ちた）が出たが、対象ファイルの再実行とリポジトリ全体の参照確認では再現せず、負荷による flake と判断した。詳細は PR の記録を参照。
+`npm run validate`（type-check / lint / 各種 check / test）exit 0（1095 files / **16418 tests**。PBI 01 完了後の 16419 から、`requireConsent` のテスト 2 件を削除し seam pin 1 件を追加した数と一致）。対象 31 ファイル 485 テストも緑。
+
+**1 回目のフル実行が失敗した原因（記録）**: 最初の `npm run validate` は 8 エラー・6 失敗（`storagePort` の新テスト群）を出した。これは**同じ作業ツリーで、実行中にブランチを切り替えて rebase したため**、vitest が「PBI 01 のテスト」と「マージ前の `storagePort.ts`」を混ぜて読んだのが原因だった（作業ツリーを動かさずに録り直すと 16418/16418 で exit 0）。負荷（load average 27 / 8 コア）でフル実行が 39 分かかったことは事実だが、**失敗の原因は負荷ではなく作業ツリーの移動**である。教訓: テスト実行中は作業ツリーを触らない（ブランチ操作は実行前後に分ける）。
 
 ### inventory 中に見つけた別件（本 PBI のスコープ外・未起票）
 
