@@ -153,4 +153,60 @@ describe('InMemoryStoragePort', () => {
     port.clear();
     expect(port.dump()).toEqual({});
   });
+
+  // WHY: `*_version` is overloaded in this codebase. StorageTransaction writes
+  // `<key>_version` as a numeric CAS generation, but every `StorageKeys` value
+  // that ends in `_version` (privacy_consent_version, gemini_api_version,
+  // tranco_version) is an ordinary key holding a string. The port used to infer
+  // "CAS counter" from the suffix alone, so the string shape was dropped on set
+  // and shadowed on get — a test double that silently answered `{}` while
+  // chrome.storage.local returned the value.
+  describe('*_version keys of both shapes', () => {
+    it('round-trips a string-valued *_version key through all three get paths', async () => {
+      await port.set({ privacy_consent_version: '2026-09-08' });
+
+      expect(await port.get('privacy_consent_version')).toEqual({ privacy_consent_version: '2026-09-08' });
+      expect(await port.get(['privacy_consent_version'])).toEqual({ privacy_consent_version: '2026-09-08' });
+      expect(await port.get(null)).toEqual({ privacy_consent_version: '2026-09-08' });
+      expect(port.dump()).toEqual({ privacy_consent_version: '2026-09-08' });
+    });
+
+    it('reads a string-valued *_version key that was seeded', async () => {
+      port.seed({ gemini_api_version: 'v1beta', tranco_version: '2026-09-01T00:00:00Z' });
+
+      expect(await port.get('gemini_api_version')).toEqual({ gemini_api_version: 'v1beta' });
+      expect(await port.get(['gemini_api_version', 'tranco_version'])).toEqual({
+        gemini_api_version: 'v1beta',
+        tranco_version: '2026-09-01T00:00:00Z',
+      });
+    });
+
+    it('counts a string-valued *_version key in getBytesInUse', async () => {
+      port.seed({ privacy_consent_version: '2026-09-08' });
+
+      expect(await port.getBytesInUse('privacy_consent_version')).toBeGreaterThan(0);
+    });
+
+    it('removes a *_version key of either shape', async () => {
+      await port.set({ privacy_consent_version: '2026-09-08', settings: { theme: 'dark' }, settings_version: 3 });
+
+      await port.remove(['privacy_consent_version', 'settings_version']);
+
+      const all = await port.get(null);
+      expect(all['privacy_consent_version']).toBeUndefined();
+      expect(all['settings_version']).toBeUndefined();
+      expect(all['settings']).toEqual({ theme: 'dark' });
+    });
+
+    it('keeps a numeric *_version key readable as a CAS generation (regression guard)', async () => {
+      await port.set({ settings: { theme: 'dark' }, settings_version: 3 });
+
+      expect(await port.get('settings_version')).toEqual({ settings_version: 3 });
+      expect(await port.get(['settings', 'settings_version'])).toEqual({
+        settings: { theme: 'dark' },
+        settings_version: 3,
+      });
+      expect(await port.get(null)).toEqual({ settings: { theme: 'dark' }, settings_version: 3 });
+    });
+  });
 });

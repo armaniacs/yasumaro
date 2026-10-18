@@ -75,5 +75,15 @@ for (const { name, create } of factories) {
       const stored = (await port.get(['settings']))['settings'] as { nested: { theme: string } };
       expect(stored.nested.theme).toBe('dark');
     });
+
+    // Parity: a `*_version` key holding a string is an ordinary key for
+    // chrome.storage.local, so the test double must agree. Any divergence here
+    // means tests read a store production never exposes.
+    it('stores a string-valued *_version key like any other key', async () => {
+      await port.set({ privacy_consent_version: '2026-09-08' });
+
+      expect(await port.get(['privacy_consent_version'])).toEqual({ privacy_consent_version: '2026-09-08' });
+      expect((await port.get(null))['privacy_consent_version']).toBe('2026-09-08');
+    });
   });
 }
