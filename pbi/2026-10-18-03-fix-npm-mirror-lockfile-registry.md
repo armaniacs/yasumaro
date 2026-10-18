@@ -108,7 +108,7 @@ Scenario: 未宣言の host が lockfile に混入した状態を、ゲートが
 - **E2E（ビルドと公開経路が green）**
   - `npm run validate` が緑。
   - `npm run build` およびリリース相当のビルド（`build:store` 相当）が緑。
-  - main ブランチ推送後、`ci.yml` の validate / build / bench-check、`tests.yml` の4ジョブ、`coverage.yml`、`security-audit.yml` がすべて緑。`release.yml` が依存取得を完走すること（publish は行わない dry-run 相当まで）。
+  - main ブランチへのプッシュ後、`ci.yml` の validate / build / bench-check、`tests.yml` の4ジョブ、`coverage.yml`、`security-audit.yml` がすべて緑。`release.yml` が依存取得を完走すること（publish は行わない dry-run 相当まで）。
 
 ## 実装メモ（実装者向け）
 
@@ -130,7 +130,7 @@ Scenario: 未宣言の host が lockfile に混入した状態を、ゲートが
 #### 選択肢1: lockfile の全 resolved URL を公式レジストリへ書き換え ＋ `.npmrc` でレジストリを明示（**推奨**）
 
 - 実装: `package-lock.json` の `resolved` のホストを機械的に置換し、リポジトリ直下に `.npmrc` で `registry=https://registry.npmjs.org/` を宣言。あわせてミラーへの自動置換を止める（npm 9 以降 `replace-registry-host` の既定 `npmjs` は、lockfile が `registry.npmjs.org` を指していると**設定レジストリで置換する**ため、これを `never` に固定しないと再導入の経路が残る）。
-- **再現性**: 効果大。同一バージョンの同一アーティファクトを、宣言されたホストから取得する状態に固定される。`integrity` は不変なのでハッシュ検証の枠組みはそのまま機能する。ただし**これは「ミラーが迄今为止忠実だった」ことを証明しない**。忠実性の照合は別途（下記ブロッカー）。
+- **再現性**: 効果大。同一バージョンの同一アーティファクトを、宣言されたホストから取得する状態に固定される。`integrity` は不変なのでハッシュ検証の枠組みはそのまま機能する。ただし**これは「ミラーが今に至るまで忠実だった」ことを証明しない**。忠実性の照合は別途（下記ブロッカー）。
 - **オフライン開発**: 悪化方向。ミラー経由でしか依存を止められない環境（社内ファイアウォール等）は、突然、公式レジストリに到達できる必要がある。すでにキャッシュ済みの `node_modules` は影響を受けないが、クリーン再取得は影響を受ける。
 - **キャッシュ効果**: `setup-node` の `cache: 'npm'` は lockfile をキャッシュキーに含むため、この書き換えで**全 runner の npm キャッシュが無効化され、初回 CI はフル再取得**（時間・レート制限コストが一度だけ発生）。2回目以降は安定する。
 

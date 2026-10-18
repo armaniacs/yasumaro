@@ -51,14 +51,14 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 シナリオ 1〜3 は `src/utils/__tests__/` の既存規約（vitest / `environment: 'node'` / `testDir/vitest.setup.ts` のグローバル chrome mock / `vi.stubGlobal('fetch', fetchMock)` と `makeResponse` ヘルパー、`beforeEach` の `installTestSecretKek()`）でそのまま実行できる。
 
 ## 受け入れ基準
-- [ ] 許可済みプロバイダが 30x を返したとき、転送先（Location 解決後の URL）へリクエストが発行されないことが、単体テストで確認できる
-- [ ] 30x の応答は要約を生成せず、既存の失敗メッセージ（ユーザーには汎用の要約失敗として）で終わる
-- [ ] 転送先として loopback（`http://127.0.0.1:27124` のようなローカル AI ポートを含む）だけでなく private IP を伴う Location でも同様に拒否される
-- [ ] 許可済みプロバイダが 200 を返す通常経路では、リクエスト回数・ヘッダー・生成される要約が修正前と同一である
-- [ ] 接続テスト経路（`executeHttpTestFlow`）にも同じ方針が適用されている
-- [ ] ローカル AI（Ollama / LM Studio の許可ポート）への直接リクエストは引き続き成功する（許可ポートのループバックは拒否対象にしない）
-- [ ] AI 経路のリダイレクト方針が ADR 2026-08-29 に追記され、「他の fetch 経路は固定ホスト」という誤った記述が訂正されている
-- [ ] `npm run validate`（type-check + test）が緑
+- [x] 許可済みプロバイダが 30x を返したとき、転送先（Location 解決後の URL）へリクエストが発行されないことが、単体テストで確認できる
+- [x] 30x の応答は要約を生成せず、既存の失敗メッセージ（ユーザーには汎用の要約失敗として）で終わる
+- [x] 転送先として loopback（`http://127.0.0.1:27124` のようなローカル AI ポートを含む）だけでなく private IP を伴う Location でも同様に拒否される
+- [x] 許可済みプロバイダが 200 を返す通常経路では、リクエスト回数・ヘッダー・生成される要約が修正前と同一である
+- [x] 接続テスト経路（`executeHttpTestFlow`）にも同じ方針が適用されている
+- [x] ローカル AI（Ollama / LM Studio の許可ポート）への直接リクエストは引き続き成功する（許可ポートのループバックは拒否対象にしない）
+- [x] AI 経路のリダイレクト方針が ADR 2026-08-29 に追記され、「他の fetch 経路は固定ホスト」という誤った記述が訂正されている
+- [x] `npm run validate`（type-check + test）が緑
 
 ## テスト戦略
 - 単体: `src/utils/fetch.ts` の境界値と分岐（`redirect` オプションが 200 経路を壊さないこと、3xx で送りが起きないこと、Location 欠落・相対 Location のような境界が安全側で落ちること）、`redirect: 'error'` 起因の失敗が既存のリトライ判定（`shouldRetryTransportFailure`）で何回再送されるかの確認。既存ファイル `src/utils/__tests__/fetchRedirectGuard.test.ts` の `makeResponse` ヘルパーの形式を再利用して、`src/utils/__tests__/fetch.test.ts` に AI 経路のケースを追加する。
@@ -86,7 +86,7 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 - 副作用: 現状の `fetchWithRedirectGuard` は `skipCspValidation: true` を強制し、再検証に `validateUrlForFilterImport` を使う。AI 経路ではローカル AI の許可ポート（Ollama / LM Studio）を正当に許可したいので、そのまま流すとローカル AI が落ちる。検証器を引数化的（既定は `validateUrlForFilterImport`、AI 経路は `validateUrlForAIRequests`）する変更が前提になる。
 - 工数: A より大きく、ホップ毎検証器の引数化が必要になる。PBI 08（ssrf-guard の Obsidian 経路）と統合実装する場合に初めて検討価値が見えてくるので、単独では推奨しない。
 
-**推奨**: A を採用し、既定の安全方針を `src/utils/fetch.ts` の AI 経路側に置く。PBI 08 と共通化する場合は、`redirect:'error'` の追加が両者共通买点になることを実装時に確認する。
+**推奨**: A を採用し、既定の安全方針を `src/utils/fetch.ts` の AI 経路側に置く。PBI 08 と共通化する場合は、`redirect:'error'` の追加が両者共通の買い点になることを実装時に確認する。
 
 ### ブロッカー（needs_validation の未解決事項）— 着手前に潰すべき検証
 1. **ブラウザの実挙動（owner 確認）**: クロスオリジンリダイレクトでブラウザが Authorization / x-goog-api-key を除去するか、転送先が CORS 読み取り可能か（Chromium / Edge / Firefox）。これが「credential・prompt・response のどれがリダイレクトを越えるか」を決める。ローカルのモックテストだけでは決着しない。
@@ -101,11 +101,11 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 1 ストーリーポイント（要チームで見積もり）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] npm run validate（type-check + test）が緑
-- [ ] 監査レコード fingerprint を本PBIの完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ADR 2026-08-29 の「他のfetch経路は固定ホスト」という記述が誤りである点を更新）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] npm run validate（type-check + test）が緑
+- [x] 監査レコード fingerprint を本PBIの完了記録に残す
+- [x] コードレビュー完了（独立レビュー。正確性・セキュリティの指摘なし。残った指摘は下表の残存リスクへ記録）
+- [x] ドキュメント更新済み（ADR 2026-08-29 の「他のfetch経路は固定ホスト」という記述が誤りである点を更新）
 
 ## 調査結果（2026-10-18）
 
@@ -113,6 +113,20 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 - 決め手: Fetch 仕様により、クロスオリジンリダイレクトで Authorization は 3 エンジンとも剥がれるが、**`x-goog-api-key` は剥がれない**（CORS non-wildcard request-header は Authorization のみ）。307/308 は本文を保持し、CORS-unsafe ヘッダ付きなら preflight が先行するため、転送先が応答しない限り実リクエストは発行されない
 - 影響: Gemini 経路は重大度維持（API キー値と本文が転送先へ届きうる）、Bearer 経路は条件付き。`redirect:'error'` は依然として正しい最小修正。**Impact 3→2、RICE 16800→11200**
 
+## 完了記録（2026-10-19）
+
+- **判定**: 修正完了（PBI 08 と together 実装）。AI 経路の `fetchWithRetry` は `redirect:'error'` を明示し、platform 既定の `follow` に依存しない。
+- **実装**: `src/utils/fetch.ts` に共通 seam `NO_REDIRECT_FETCH_POLICY = { redirect: 'error' } as const` を追加し、`HttpProviderStrategy.ts` の `executeHttpSummaryFlow` / `executeHttpTestFlow` の `fetchWithRetry` オプションへ展開。片方だけ直して他方が抜け道になることを防ぐため定数を共有（PBI 08 の Obsidian 経路も同じ定数を使う）。
+- **監査 fingerprint**: `f1be34a51b1912bc2c7cf49b59b7d444a32dc9e864513c886ac96b24c295d195` — verdict を **FIXED（2026-10-19）** へ更新。
+- **ADR**: `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` の適用範囲を AI 経路へ拡大し、「他の 16 の fetch サイトは固定ホストで挙動不変」という記述が誤り（OpenAI 互換行の `baseUrlKey` はユーザー設定可能）であることを結果セクションに記録。
+- **テスト**: `src/background/ai/providers/__tests__/httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` に redirect 拒否テストを追加（実装前に Red を確認）。`src/utils/__tests__/fetch.test.ts` に「ポリシーが platform fetch まで届く」ことを追加。`NO_REDIRECT_FETCH_POLICY` を 15 ファイルのモックファクトリへ追加（Vitest は undefined な named export で throw するため）。
+- **ゲート**: `npm run validate` exit 0。PR #180 の CI（validate / test / build / bench-check / wasm-test / a11y / firefox-storage / gitleaks / usability）すべて pass。
+- **レビュー**: PBI 01・08 のコミット列を独立レビューで確認（結果は本ファイルの「コードレビュー完了」に反映）。正確性・セキュリティの欠陥は無し。以下は残存リスク・nit として持ち越す。
+  - **BDD の検証は「機構」までで「挙動」は未検証**: 追加テストは mock transport が受け取った `init.redirect === 'error'` を pin する（`httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` / `obsidianClient-secure-fetch.test.ts`）。**30x を実際に流して「2 次リクエストが発行されない」ことを確かめるテストは無い**（plain な fetch mock ではブラウザの abort を再現できないため）。テスト戦略の「統合」項（307 を再現して fetch URL が 1 件だけであること）は**未実装のまま残る**。実測はブラウザ／E2E の owner 観測に委ねる。
+  - **定数の共有範囲**: `src/background/handlers/systemHandlers.ts:104` は今も `redirect: 'error'` をリテラルで持ち、`NO_REDIRECT_FETCH_POLICY` を共有していない（挙動は正しい）。また定数は全 5 呼び出し元で**先頭**に spread しているため、同じリテラル内で後から `redirect:` を書くと黙って上書きできる。型（`Omit<RequestInit,'redirect'>`）や lint での防御は未導入。
+  - **テストが実定数の値を見ていない**: AI 経路のテストは `utils/fetch.js` をモックして `{ redirect: 'error' }` を自前で書いており、`fetch.test.ts` の素通しテストも自前リテラルを渡す。実定数の値を変えた場合に検知できるのは Obsidian 側のテスト（実モジュールを使う）だけ。
+  - **gist / tranco 経路は未適用**（同一クラスの残り）: `gistSyncTarget.ts` は `Authorization: token <PAT>` を付けて platform 既定の `follow` のまま。ADR 2026-08-29 の「固定ホストだから挙動不変」という記述を 2026-10-19 に訂正し、PBI 25 と併せて扱う残存リスクとして記録した。
+
 ## 関連
-- [ ] 同じ src/utils/fetch.ts を触るため、実装時は PBI 08（ssrf-guard Obsidian 経路）と競合しないこと（両者とも redirect:'error' 追加で共通化できるため、統合実装も検討）
+- [x] 同じ src/utils/fetch.ts を触るため、実装時は PBI 08（ssrf-guard Obsidian 経路）と競合しないこと（両者とも redirect:'error' 追加で共通化できるため、統合実装も検討）
 - pbi/00-INDEX.md

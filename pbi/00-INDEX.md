@@ -14,22 +14,39 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-18 security-audit run-2（25件） — ⬜ 25件未着手 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
+### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（9件） — ⬜ 9件未着手 🔧非機能追加 RICE順: 01 → 02 → 03 → 04 → 05 → 06 → 07 → 08 → 09
+
+PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---:|---:|---:|---|
+| ⬜ 01 | [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) | fix | 800 | 0.5 | `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（実測）。56 箇所で使う test double の忠実性 |
+| ⬜ 02 | [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) | fix | 640 | 0.5 | `requireConsent` が未配線。同意ゲートの適用範囲が未文書化（実害は未確認・要裁定） |
+| ⬜ 03 | [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) | fix | 600 | 2.0 | 設定移行が同意レコードと拒否カウンタを `settings` ブロブへ畳む（**局所再現済み**）。storage key structure は high-risk |
+| ⬜ 04 | [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) | fix | 400 | 2.0 | redirect 拒否の**実挙動**を検証したテストが 0 件（機構 pin のみ）＋接続テストの `redirected` ガード非対称 |
+| ⬜ 05 | [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) | fix | 400 | 0.5 | 共通 seam が「単一宣言」になっていない（リテラル・後置上書き可能・テストが実定数を見ない） |
+| ⬜ 06 | [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) | fix | 320 | 0.5 | gist の 3 サイト（`Authorization: token <PAT>` 付き）と tranco の 2 サイトが redirect 追従 |
+| ⬜ 07 | [2026-10-19-07-fix-consent-return-path-settings.md](2026-10-19-07-fix-consent-return-path-settings.md) | fix | 160 | 1.0 | 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う |
+| ⬜ 08 | [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) | fix | 100 | 0.5 | `jsdomFileCount` の 360 → 362 に推移と原因が無い（予算コメント自身の規約違反） |
+| ⬜ 09 | [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](2026-10-19-09-fix-ledger-deep-mojibake-restore.md) | fix | 67 | 1.5 | 台帳に残る「意味が壊れた」文字化け断片（スクリプトでは検出できない） |
+
+進め方: **redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。**consent 系（02/03/07）は run-2 の PBI 04 と同じ期**に扱うと検証条件を共有できる。01 と 08 は他と独立（各 0.5 SP）。
+
+### 2026-10-18 security-audit run-2（25件） — 🔶 3件完了（01/05/08）・22件未着手 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
 
 security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: standard）の needs_validation 25件を RICE 採点して PBI 化。**confirmed 0件**（OS-enforced sandbox 不在の source-only 実行のため confirmed は原理的に出ない）。rejected 4件はソース反証済みで PBI 化せず。
 
 **2026-10-18 にブロッカー調査を完了**: 25件中 **18件は局所再現（vitest）で欠陥を実証**、3件（02/03/16）は仕様・公開情報でブロッカー解消、4件（01/08/17/25）は構造確定のうえブラウザ実機観測が残る。調査により Reach/Impact/Confidence が動いたため **RICE を再計算し、実行順が変わった**（下の表は初回採点時の順位で、ファイル名の NN もそのまま）。**改訂スコアと推奨実行順、owner アクション（`~/.npmrc` のクリーンアップ等）は [2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) の「ブロッカー調査結果」を参照。** 各 PBI 末尾にも「調査結果（2026-10-18）」を追記済み。
 
+**2026-10-19 に 01 / 08 / 05 を完了**: 01+08（AI 経路＋Obsidian 経路の `redirect:'error'` 統一、共通 seam `NO_REDIRECT_FETCH_POLICY`）は PR #180、05（同意撤回・拒否の保全）は完了記録参照。3件とも独立レビュー済み・`npm run validate` 緑でアーカイブ。残り 22件の実行順は下表／バックログのとおり。
+
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-18-01-fix-ai-fetch-redirect-policy.md](2026-10-18-01-fix-ai-fetch-redirect-policy.md) | fix | 16800 | 0.5 | AI fetch の redirect:'error' 化。08 と同一ファイルで together 実装可 |
 | ⬜ 02 | [2026-10-18-02-fix-alarm-daily-purge-recreate.md](2026-10-18-02-fix-alarm-daily-purge-recreate.md) | fix | 5600 | 0.5 | daily-purge の 24h カウントダウンリセット。既存ガードと共通化 |
 | ⬜ 03 | [2026-10-18-03-fix-npm-mirror-lockfile-registry.md](2026-10-18-03-fix-npm-mirror-lockfile-registry.md) | fix | 4800 | 3.0 | npm ミラーの無宣言依存。発生機構（~/.npmrc + replace-registry-host）特定済み |
 | ⬜ 04 | [2026-10-18-04-fix-notification-consent-prestage.md](2026-10-18-04-fix-notification-consent-prestage.md) | fix | 4800 | 1.0 | 通知 Save に同意 pre-stage 欠落。05 と整合 |
-| ⬜ 05 | [2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md) | fix | 4800 | 3.0 | 撤回後の同意自動再付与（GDPR Art.7）。PRIVACY.md 2箇所更新が DoD |
 | ⬜ 06 | [2026-10-18-06-fix-trust-db-merge-union-removals.md](2026-10-18-06-fix-trust-db-merge-union-removals.md) | fix | 4000 | 5.0 | 信頼DB merge を和集合から操作種別考慮へ |
 | ⬜ 07 | [2026-10-18-07-fix-buffer-key-retention-sweep-noop.md](2026-10-18-07-fix-buffer-key-retention-sweep-noop.md) | fix | 3000 | 0.5 | buffer key sweep の恒久 no-op。195ff96 再発。テストモックの偽セマンティクス解消が本体 |
-| ⬜ 08 | [2026-10-18-08-fix-obsidian-redirect-bearer.md](2026-10-18-08-fix-obsidian-redirect-bearer.md) | fix | 3000 | 0.1 | Obsidian 経路の redirect ガード。接続テスト経路も対象 |
 | ⬜ 09 | [2026-10-18-09-fix-fallback-migration-partial-wipe.md](2026-10-18-09-fix-fallback-migration-partial-wipe.md) | fix | 1500 | 1.0 | fallback 移行の partial failure 時の clearAll。既存テストの期待値書き換え必須 |
 | ⬜ 10 | [2026-10-18-10-fix-opfs-v2-verify-before-delete.md](2026-10-18-10-fix-opfs-v2-verify-before-delete.md) | fix | 1500 | 3.0 | OPFS V2 移行の件数未検証削除。件数一致ガード不成立を明記 |
 | ⬜ 11 | [2026-10-18-11-fix-logger-pii-size-gate.md](2026-10-18-11-fix-logger-pii-size-gate.md) | fix | 1500 | 1.0 | PII サイズゲート超過時の原文永続化。3 sink に閉じれば低リスク |
@@ -48,7 +65,7 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 | ⬜ 24 | [2026-10-18-24-fix-restore-verify-count.md](2026-10-18-24-fix-restore-verify-count.md) | fix | 300 | 1.0 | 復元件数不一致でもバックアップを削除する |
 | ⬜ 25 | [2026-10-18-25-fix-gist-egress-csp-declare.md](2026-10-18-25-fix-gist-egress-csp-declare.md) | fix | 80 | 1.0 | Gist の origin 未宣言。fail-closed 側で出荷済み機能が動作しない |
 
-実行順（B1→B5）: B1 = 01/08/14/16/23（08 と 01 は together）→ B2 = 02/04/07/09/11/24 → B3 = 05/13/20/21/22（21→22 は直列）→ B4 = 03/06/10/12/15/17/19 → B5 = 18/25（単独・工数大）。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
+実行順（B1→B5）: B1 = ~~01/08~~(2026-10-19 完了)/14/16/23 → B2 = 02/04/07/09/11/24 → B3 = ~~05~~(2026-10-19 完了)/13/20/21/22（21→22 は直列）→ B4 = 03/06/10/12/15/17/19 → B5 = 18/25（単独・工数大）。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
 
 ### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） — ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
 
@@ -457,7 +474,7 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 ### 2026-09-15 AMO 公開 — ✅ 完了（2026-09-23 審査通過・公開済み、アーカイブ済み）
 
-- ✅ [2026-09-15-01-backlog-firefox-amo-publish.md](../dev-docs/archived/pbi/2026-09-15-01-backlog-firefox-amo-publish.md)（**公開済み**: <https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/>、公開版 6.9.17 / 2.89 MB、2026-09-23 更新。審査指摘なしで通過。提出前修正は sources zip 597MB→23.6MB、data_collection_permissions 追加、strict_min_version 140 で addons-linter 0 errors / 0 warnings / 0 notices。2026-09-26 に署名版での実機 smoke（同意→記録→検索）完了をユーザー報告で受領。FAQ (ja/en) のインストール手順も公開实际情况に合わせて更新済み）
+- ✅ [2026-09-15-01-backlog-firefox-amo-publish.md](../dev-docs/archived/pbi/2026-09-15-01-backlog-firefox-amo-publish.md)（**公開済み**: <https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/>、公開版 6.9.17 / 2.89 MB、2026-09-23 更新。審査指摘なしで通過。提出前修正は sources zip 597MB→23.6MB、data_collection_permissions 追加、strict_min_version 140 で addons-linter 0 errors / 0 warnings / 0 notices。2026-09-26 に署名版での実機 smoke（同意→記録→検索）完了をユーザー報告で受領。FAQ (ja/en) のインストール手順も公開実情に合わせて更新済み）
 
 
 ### 2026-09-05-32-refactor-wasqlite-sunset（ゲート付き・着手禁止）
@@ -492,6 +509,16 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-19 security-audit run-2 B1/B3 一部 — PBI 01・05・08 完了（3件アーカイブ済み）
+
+security-audit run-2（`d49d70a3`）の needs_validation 25件のうち 3件を実装・アーカイブ。
+
+- **01-fix-ai-fetch-redirect-policy**（AI 経路の `redirect:'error'`。fingerprint `f1be34a51b1912bc2c7cf49b59b7d444a32dc9e864513c886ac96b24c295d195`）と **08-fix-obsidian-redirect-bearer**（Obsidian の read / write / 接続テスト。fingerprint `ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put`）は同一 seam（`src/utils/fetch.ts` の `NO_REDIRECT_FETCH_POLICY`）で together 実装し PR #180 でマージ（`1f9c59d9`）。ADR 2026-08-29 の適用範囲を AI 経路＋Obsidian 経路へ拡大し、「他の fetch サイトは固定ホスト」という誤った記述を訂正。
+- **05-fix-privacy-consent-withdrawal-regrant**（fingerprint `privacyConsent.migrateLegacyPrivacyConsent::withdrawal-regrant-legacy-evidence-keys`）は撤回レコード判定に加え、独立レビューで判明した同根の 3 穴（明示拒否の保護 / settings ブロブ移設への耐性 / 撤回時の拒否猶予解除）まで含めて修正。`public/PRIVACY.md` と `docs/PRIVACY.md` を同期。
+- ゲート: `npm run validate` exit 0（1095 files / 16409 tests）。`test-perf` は jsdom files 362/362 でゲート内。3件とも「コードレビュー完了」を独立レビューで確認。
+- 同ラウンドの台帳 18 ファイルに残っていた中国語簡体字の混入（「注釈」を簡体字で書いていたもの 38 箇所、「契約」14 箇所、ほか計 118 行）と非 CJK 文字化け 1 件（韓国語の「呼び出し」が混入）を併せて修復。
+- 残課題は同日中にすべて PBI 化した（9 件。上の 2026-10-19 節を参照）。内訳: 同意キーの置き場所（03）・同意ゲートの配線範囲（02）・同意へ戻る経路（07）・gist / tranco の redirect（06）・redirect の実挙動検証（04）・redirect 宣言の一本化（05）・`InMemoryStoragePort` の忠実性（01）・test-perf の jsdom ゲート改定の根拠不足（08）・台帳の深い文字化け断片（09）。
 
 ### 2026-10-15 PBI 台帳アーカイブ — ✅ 9台帳アーカイブ（内容PBIはいずれも既にアーカイブ済み・着手候補ゼロ）
 
@@ -2367,11 +2394,13 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **31 ファイル（B 10〔うち🔵 監視 5〕/ live 台帳 19 / 統合 PBI 1 = 非 INDEX 30 + INDEX）** |
-| アーカイブ済みPBI | 1344（`00-backlog` 台帳を含む） |
+| **`pbi/` 残存 PBI 合計** | **55 ファイル（INDEX 1 / 2026-10-19 の 9 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 実測）** |
+| アーカイブ済みPBI | 1408（`00-backlog` 台帳を含む。2026-10-19 実測） |
 | アーカイブ済み実装計画 | 187 |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。
+
+※ 2026-10-19 再同期: 集計を実測値へ更新（`pbi/` 残存 31→46、アーカイブ済み PBI 1344→1408）。2026-10-18 security-audit run-2 の PBI 26 ファイル追加と、01/05/08 の 3 件アーカイブを反映。内訳の「B / live 台帳 / 統合 PBI」は初回作成時の分類で実ファイルと対応しなくなっていたため、日付・種別で数え直した内訳に置き換えた。
 
 ※ 2026-09-28 整理: 全体リファクタリングラウンド 14 件（01/02/03/04/06/07/08/09/11/12/13/15/16/17）+ 追加ラウンド 6 件（18/19/20/21/22/23）の計 20 件を実装確認の上アーカイブ。確認内容は実装コミット 20 件の対応付け・3 ゲート green（type-check / lint 0 errors / npm test 14,668 passed）。ドリフト修正: (1) アーカイブ 20 件のファイル内 checkbox が未チェックのままだったため全 [x] 化（22 は元から完了）、(2) PBI 12 の box 文言「`dev-docs/plans/` 配下」が実態（ADR 記録）と不一致だったため [x] 化で解消、(3) 集計表の件数が実態と乖離していたため再同期（未着手 4→9・監視 1→5・残存 6→23・live 台帳 4→8・アーカイブ 947→967）、(4) CHANGELOG には 09-28 ラウンド分の記載なし（最新 6.9.27 は 09-26 リリース分。リリース時バッチ方式のため次回リリース時に記載要）、(5) PBI 18 の実ブラウザ手動確認（`getBytesInUse()`）は残存項目としてアーカイブファイル内の注記を維持。
 

@@ -4,7 +4,7 @@
 
 OPFS が使えない環境（Firefox プライベートモードなど）で閲覧履歴を溜めている利用者として、**同じ URL を再記録しただけ、あるいは通信が1往復ロストしただけで、古い履歴が消えない**ことを保証してほしい。履歴保持は継続的な保存という行為なのに、与えたデータが消える理由が「その記録が重複だった」「リトライされた」だけだったからだ。消す行はユーザーが明示的にスターを付けたものでもない。
 
-さらに、まだ履歴を失いたくない利用者として、**容量が，正常に埋まったときの巻き添え対象が非スター行に統一されている**ことを望みたい。保持期間 purge（`purgeOldRecords`）は `is_starred === 1` を exempt しているのに、クォータ purge は exempt していない。同じ「古い順に捨てる」ポリシーが2つあるのに判定基準が食い違っているため、ユーザーがどちらの扱いを期待すべきか判断できない。
+さらに、まだ履歴を失いたくない利用者として、**容量が、正常に埋まったときの巻き添え対象が非スター行に統一されている**ことを望みたい。保持期間 purge（`purgeOldRecords`）は `is_starred === 1` を exempt しているのに、クォータ purge は exempt していない。同じ「古い順に捨てる」ポリシーが2つあるのに判定基準が食い違っているため、ユーザーがどちらの扱いを期待すべきか判断できない。
 
 ## 優先度
 
@@ -145,7 +145,7 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 ### ロールバック手順
 
 1. 変更は `src/offscreen/storageFallback.ts` の `ensureQuotaSpace`（`:85-95`）と `insert`（`:104-125`）/ `insertBatch`（`:131-170`）の呼び出し位置、`purgeOldRecords`（`:371-400`）の exempt 判定、および新規 pin テストに限定する。ストレージキー構造・manifest・権限には触れないためデータ移行は不要。
-2. ロールバックは上記 hunk を戻すだけで足りる。ただし**既に本 PBI 之前的実装で削除済みの行は復元できない**（履歴は fallback ストレージにのみ永続化されるため）。ロールバック時に想定する報告は「消えた記録が復活しない」であり、それは本 PBI が直す欠陥そのものである。
+2. ロールバックは上記 hunk を戻すだけで足りる。ただし**既に本 PBI 以前の実装で削除済みの行は復元できない**（履歴は fallback ストレージにのみ永続化されるため）。ロールバック時に想定する報告は「消えた記録が復活しない」であり、それは本 PBI が直す欠陥そのものである。
 3. 移行期の安全弁として「quota 超過を検知したら記録を止め、`getStatus` やダッシュボードに明示警告を出す」方向に拡張する場合、その追加は別 PBI とし、本ロールバック手順の影響を受けない形で分離する。
 4. 回帰が疑われる場合は `npx vitest run src/offscreen/__tests__/storageFallback.test.ts src/offscreen/__tests__/storageFallback-branches.test.ts --repeats=20 --retries=0` を単発実行し、purge 関連4ファイル（`storageFallback.test.ts` / `storageFallback-branches.test.ts` / `storageFallbackMutate.test.ts` / `storageFallback-comprehensive.test.ts`）をまとめて確認する。
 

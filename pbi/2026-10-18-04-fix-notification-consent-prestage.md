@@ -93,7 +93,7 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 監査 verdict は `needs_validation`。観測そのものは source-only 実行ポリシーで未実施のため、**着手前に bounded なローカル観測で再現を確定させる**こと（Red を先に1本作ってから直す進め方で進める）:
 
 - `testDir` の mock chrome で、`hasPrivacyConsent` が false（撤回済み）を返す状態で、署名済み `privacy-confirm-<hmac(url)>` 通知ID + pending ページ1件を seed し `onButtonClicked(id, 0)` を呼ぶ。
-- 現状の挙動（修正前）を一度だけ観測して記録する: `deps.record` が呼ばれていれば監査所指で確定。呼ばれていなければ needs_validation 提案を弃却して本 PBI をクローズする。
+- 現状の挙動（修正前）を一度だけ観測して記録する: `deps.record` が呼ばれていれば監査所指で確定。呼ばれていなければ needs_validation 提案を棄却して本 PBI をクローズする。
 - 修正後は同じ観測で `record` 未呼び出し + `privacy_consent_required` 拒否を assert する。
 - 監査 `validation_plan` の deployment 観測（隔離プロファイルで同意撤回 → 通知 Save → 記録が増えないか）は手動確認として `dev-docs/TESTING_GUIDE.md` のチェックリストに1行足す。
 
@@ -137,5 +137,5 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 ## 関連
 
 - `pbi/00-INDEX.md`
-- 同じ consent 領域の PBI 05（`pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` / privacyConsent migration の再付与阻止）と実装時に window の整合を取ること（撤回後に legacy migration が同意を復活させると、本修正が無効化される。両者は同じ `hasPrivacyConsent()` を読むため、順序とテスト条件を共有する）
+- 同じ consent 領域の PBI 05（2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` / privacyConsent migration の再付与阻止）と実装時に window の整合を取ること（撤回後に legacy migration が同意を復活させると、本修正が無効化される。両者は同じ `hasPrivacyConsent()` を読むため、順序とテスト条件を共有する）
 - `src/utils/pendingStorage.ts:92` の TTL（本 PBI の「通知が残る窓」の根拠）

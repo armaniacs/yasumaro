@@ -12,6 +12,9 @@ import {
     migrateLegacyPrivacyConsent,
     withdrawPrivacyConsent,
     getConsentWithdrawalHistory,
+    shouldPromptForConsent,
+    getConsentDeniedCount,
+    declineConsent,
     PRIVACY_POLICY_VERSION
 } from '../../utils/storage/privacyConsent.js';
 
@@ -310,6 +313,126 @@ describe('migrateLegacyPrivacyConsent', () => {
     });
 });
 
+// WHY: the evidence keys the migration reads are not "the user used privacy
+// features before consent existed" — they are live settings that outlive the
+// consent decision. `master_password_enabled` stays true for as long as the
+// master password is enabled (encryptionSession.ts writes it top-level), and
+// `privacy_mode` / `pii_confirmation_ui` survive until the single-object
+// settings migration finishes. A signed withdrawal record is the user's
+// explicit "no", so migration must not read that state as a fresh grant.
+describe('migrateLegacyPrivacyConsent — withdrawn consent (GDPR Art.7)', () => {
+    it.each([
+        ['master_password_enabled', 'master_password_enabled', true],
+        ['privacy_mode', 'privacy_mode', 'mask'],
+        ['pii_confirmation_ui', 'pii_confirmation_ui', true],
+    ])('keeps the withdrawal when %s is left behind', async (label, key, value) => {
+        await savePrivacyConsent();
+        await withdrawPrivacyConsent();
+        const withdrawnRecord = storageMock['privacy_consent'];
+        storageMock[key] = value;
+
+        const result = await migrateLegacyPrivacyConsent();
+
+        expect(result, `${label} must not re-grant consent`).toBe(false);
+        expect(await hasPrivacyConsent()).toBe(false);
+        const history = await getConsentWithdrawalHistory();
+        expect(history).not.toBeNull();
+        expect(history?.withdrawalDate).toBe(
+            (withdrawnRecord as { withdrawal: { withdrawalDate: string } }).withdrawal.withdrawalDate
+        );
+        // The record must not be rewritten at all — a re-grant would replace the
+        // object (and drop the withdrawal field) even if the new one looks similar.
+        expect(storageMock['privacy_consent']).toBe(withdrawnRecord);
+    });
+
+    it('does not suppress the consent modal after a withdrawal', async () => {
+        await savePrivacyConsent();
+        await withdrawPrivacyConsent();
+        storageMock['privacy_mode'] = 'mask';
+
+        // The popup path (initPrivacyConsent -> shouldPromptForConsent) must
+        // reach the modal rather than silently treating the user as consented.
+        await expect(shouldPromptForConsent()).resolves.toBe(true);
+        expect(await hasPrivacyConsent()).toBe(false);
+    });
+
+    it('leaves a current signed consent record untouched', async () => {
+        await savePrivacyConsent();
+        const consentedRecord = storageMock['privacy_consent'];
+        storageMock['master_password_enabled'] = true;
+
+        const result = await migrateLegacyPrivacyConsent();
+
+        expect(result).toBe(false);
+        expect(storageMock['privacy_consent']).toBe(consentedRecord);
+        expect(await hasPrivacyConsent()).toBe(true);
+    });
+
+    it('does not re-grant a withdrawn record whose signature no longer verifies', async () => {
+        // A withdrawn record can fail signature verification (HMAC key rotated).
+        // The withdrawal is read straight from storage, so it must still win over
+        // the evidence gate — and the modal must remain reachable for re-consent.
+        await savePrivacyConsent();
+        await withdrawPrivacyConsent();
+        const withdrawnRecord = storageMock['privacy_consent'] as Record<string, unknown>;
+        storageMock['privacy_consent'] = { ...withdrawnRecord, signature: 'not-a-valid-signature' };
+        storageMock['master_password_enabled'] = true;
+
+        await expect(migrateLegacyPrivacyConsent()).resolves.toBe(false);
+        expect(await hasPrivacyConsent()).toBe(false);
+        await expect(shouldPromptForConsent()).resolves.toBe(true);
+    });
+
+    it('does not treat a malformed withdrawal payload as a withdrawal', async () => {
+        // PrivacyConsentWithdrawal always carries withdrawalDate; a payload
+        // without it is not a real withdrawal and must not block the legacy
+        // grant forever (under-grant).
+        storageMock['privacy_consent'] = { hasConsented: false, withdrawal: {} };
+        storageMock['privacy_mode'] = 'mask';
+
+        await expect(migrateLegacyPrivacyConsent()).resolves.toBe(true);
+        await expect(getConsentWithdrawalHistory()).resolves.toBeNull();
+    });
+});
+
+// WHY: the migration exists for profiles that predate the consent prompt. The
+// evidence keys are current settings, not proof of pre-consent use, so they can
+// only be trusted when the user has never answered the prompt. Both explicit
+// answers — withdrawal (a signed record) and decline (no record, only the
+// counter + ack) — must survive a later evidence key appearing.
+describe('migrateLegacyPrivacyConsent — explicit decline', () => {
+    it('does not convert a decline into consent when an evidence key appears later', async () => {
+        await declineConsent();
+        storageMock['master_password_enabled'] = true;
+
+        await expect(migrateLegacyPrivacyConsent()).resolves.toBe(false);
+        expect(await hasPrivacyConsent()).toBe(false);
+        await expect(shouldPromptForConsent()).resolves.toBe(true);
+    });
+
+    it('does not treat the raw default ack (null) as an answered prompt', async () => {
+        // DEFAULT_SETTINGS ships privacy_consent_version: null — the key exists
+        // but nobody answered the prompt, so the legacy grant must still happen.
+        storageMock['privacy_consent_version'] = null;
+        storageMock['privacy_mode'] = 'mask';
+
+        await expect(migrateLegacyPrivacyConsent()).resolves.toBe(true);
+    });
+
+    it('lets a withdrawn user consent again even inside the 30-day denial grace', async () => {
+        // withdrawPrivacyConsent() must clear the denial counter: the settings
+        // screen only offers withdraw, so a suppressed modal would leave no UI
+        // path back to consent at all.
+        storageMock['privacy_consent_denied_count'] = 3;
+        storageMock['privacy_consent_last_denial_time'] = Date.now();
+        await savePrivacyConsent();
+        await withdrawPrivacyConsent();
+
+        expect(await getConsentDeniedCount()).toBe(0);
+        await expect(shouldPromptForConsent()).resolves.toBe(true);
+    });
+});
+
 describe('withdrawPrivacyConsent', () => {
     it('withdraws consent', async () => {
         await savePrivacyConsent('2026-02-23');
@@ -407,7 +530,7 @@ describe('Browser Restart Simulation (Wrapping Key Persistence)', () => {
         const sessionWrappingKey = sessionMock['hmac-wrapping-key'];
         expect(typeof sessionWrappingKey).toBe('string');
 
-        // 再同意하면 다시 검증 성공
+        // 再同意すれば署名検証は成功する
         await savePrivacyConsent();
         const afterReConsent = await getPrivacyConsent();
         expect(afterReConsent.hasConsented).toBe(true);

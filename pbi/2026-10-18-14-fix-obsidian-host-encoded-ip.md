@@ -140,7 +140,7 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 ### 最小変更の選択肢
 
 1. **`validateObsidianHost` で IPv4 表現可能なエンコードラベルを拒否する（`ssrfGuard` / `providerAllowlist` の既存デコード族を Write する形で Mirroring）** — 推奨。`providerAllowlist.ts:336-372` の `decodeNumericIPv4` はローカル関数なのでそのままでは共有できないが、同じ3系統（10進整数 / hex 整数 / ドット付き hex・8進）を `src/utils/` の共有ヘルパへ移す形が素直。判定は「ホスト**全体**が4オクテット IPv4 に解決しうる形」だけに絞り、`0x7f000001.nip.io` を巻き込まないこと（実測済み）。変更は `obsidianConfigValidator.ts` に閉じる。
-2. **検証器の判定と URL パーサの解決結果が一致することを、Bearer を付ける前に必須にする（`new URL` で再解釈してから照合）** — `obsidianConfigBuilder.ts:91` と `:130` の `baseUrl` 組み立て後に `new URL(baseUrl).hostname` を検証器の判定と突き合わせる。hex 形=April 生涯に型レベルではなく実行時の do-not-care になるため、`baseUrl` に `Authorization` を結線する前に失敗させる。これは 1 の**互补**で、単独でも防御になるが、判定基準が「パーサが 127.0.0.1 に落としたか」になるため将来の parser 挙動変化に追随する副作用がある。
+2. **検証器の判定と URL パーサの解決結果が一致することを、Bearer を付ける前に必須にする（`new URL` で再解釈してから照合）** — `obsidianConfigBuilder.ts:91` と `:130` の `baseUrl` 組み立て後に `new URL(baseUrl).hostname` を検証器の判定と突き合わせる。hex 形=April 生涯に型レベルではなく実行時の do-not-care になるため、`baseUrl` に `Authorization` を結線する前に失敗させる。これは 1 の**補完**で、単独でも防御になるが、判定基準が「パーサが 127.0.0.1 に落としたか」になるため将来の parser 挙動変化に追随する副作用がある。
 
 **推奨: 選択肢 1 を必須とし、選択肢 2 を同じ変更で併せて入れる（deep defense）。** 1 単体でも BDD シナリオ 1/2/5 を満たす。2 を入れる場合は `buildFromOverride` にも同じチェックを適用し、接続テスト経路だけ緩まないことをテストで固定する。
 
@@ -149,8 +149,8 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 > Correction to hunter evidence: the pure-decimal form `2130706433` is rejected at source (digit-dot guard at `src/utils/obsidianConfigValidator.ts:117-122` routes it to `isValidIpv4Address`, which requires 4 octets), so only the hex-bearing forms pass.
 
 - 本 PBI の対象は **hex 含有形（`0x7f000001` / `0x7f.0.0.1`、および大文字 `0X` 変種）** のみ。10進単独形と 8進形は本 PBI の**対象外**（既に拒否済み）。
-- ただし「対象外」は「テストしない」ではない。監査の訂正が将来コードで覆tegライトしないよう、10進形・8進形が拒否され続けることを**回帰 pin** として残すこと。
-- 同様に `ssrfGuard.ts:16` の `/^0x7f\./i` は hex ドット形しか捕まえない。`0x7f000001`（ドット無し）をdecided的に拒否するには Patterns 側の拡張か、選択肢 1 のデコード判定が必要になる。
+- ただし「対象外」は「テストしない」ではない。監査の訂正が将来コードで覆されないよう、10進形・8進形が拒否され続けることを**回帰 pin** として残すこと。
+- 同様に `ssrfGuard.ts:16` の `/^0x7f\./i` は hex ドット形しか捕まえない。`0x7f000001`（ドット無し）を決定論的に拒否するには Patterns 側の拡張か、選択肢 1 のデコード判定が必要になる。
 
 ### ファイル競合回避（PBI 08 との together 実装）
 

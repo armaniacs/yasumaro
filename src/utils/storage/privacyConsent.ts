@@ -67,6 +67,27 @@ async function signAndStoreConsent(record: Omit<SignedPrivacyConsentRecord, 'sig
 }
 
 /**
+ * 保存済み同意レコードから撤回記録を取り出す（未撤回・未設定・形式不正なら null）。
+ *
+ * `withdrawal` は署名対象（buildSignaturePayload）に含まれるため、この判定は
+ * レコードを読むだけで書き換えない。
+ */
+function readWithdrawalRecord(value: unknown): PrivacyConsentWithdrawal | null {
+    if (typeof value !== 'object' || value === null || !('withdrawal' in value)) {
+        return null;
+    }
+    const withdrawal = (value as { withdrawal?: unknown }).withdrawal;
+    if (typeof withdrawal !== 'object' || withdrawal === null) {
+        return null;
+    }
+    // PrivacyConsentWithdrawal は必ず withdrawalDate を持つ。持たない payload は
+    // 撤回記録として扱わない（壊れた記録が移行を恒久 no-op にしてしまうのを避ける）。
+    return typeof (withdrawal as { withdrawalDate?: unknown }).withdrawalDate === 'string'
+        ? (withdrawal as PrivacyConsentWithdrawal)
+        : null;
+}
+
+/**
  * プライバシーポリシー同意状態を取得
  */
 export async function getPrivacyConsent(): Promise<PrivacyConsentState> {
@@ -185,6 +206,7 @@ export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
         // 単一のストレージ呼び出しで同意状態とプライバシー機能使用状況を取得
         const result = await chrome.storage.local.get([
             StorageKeys.PRIVACY_CONSENT,
+            StorageKeys.PRIVACY_CONSENT_VERSION,
             StorageKeys.PRIVACY_MODE,
             StorageKeys.PII_CONFIRMATION_UI,
             StorageKeys.MASTER_PASSWORD_ENABLED
@@ -192,12 +214,37 @@ export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
 
         // 既に同意がある場合はマイグレーション不要
         const consentValue = result[StorageKeys.PRIVACY_CONSENT];
+
+        // 撤回済みレコードは「まだ同意していない」ではなく「同意を撤回した」。
+        // 以下の evidence ゲートは consent 導入前の利用痕跡を拾う設計なので、
+        // 撤回後も残る設定キー（master_password_enabled は master パスワード
+        // 有効中ずっと true、privacy_mode / pii_confirmation_ui は設定移行が
+        // 済むまで残る）を「初回利用の証拠」と誤読してしまう。GDPR Art.7 の
+        // 撤回を破壊しないよう、撤回レコードを最優先で no-op にする。
+        if (readWithdrawalRecord(consentValue) !== null) {
+            return false;
+        }
+
         const hasAlreadyConsented =
             typeof consentValue === 'boolean' ? consentValue :
             typeof consentValue === 'object' && consentValue !== null ? (consentValue as PrivacyConsentState).hasConsented === true :
             false;
 
         if (hasAlreadyConsented) {
+            return false;
+        }
+
+        // 同意モーダルに一度でも答えた（ack を持つ）プロファイルは、レガシー移行の
+        // 対象ではない。ack は acceptConsent / declineConsent だけが書き、同意導入前
+        // のプロファイルには存在しない（defaults は null）。evidence キーは「現在の
+        // 設定状態」であって「同意前に機能を使っていた証拠」ではないため、ack がある
+        // のに evidence で付与すると、拒否が同意へ書き換わりモーダルも出なくなる
+        // （拒否カウンタの30日猶予ごと飛ばす）。
+        //
+        // 同意レコードが settings ブロブへ移されて top-level から消えたプロファイル
+        // でも、ack は TOP_LEVEL_ONLY_KEYS で top-level に残るため、ここで移行を
+        // 止められる（同意状態が読めないならモーダルで聞き直す＝安全側）。
+        if (typeof result[StorageKeys.PRIVACY_CONSENT_VERSION] === 'string') {
             return false;
         }
 
@@ -257,6 +304,16 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
 
         await signAndStoreConsent(withdrawnState);
 
+        // 撤回したユーザーが同意へ戻る UI 経路は同意モーダルしかない（設定画面は
+        // 撤回のみ）。拒否カウンタの30日猶予が残っていると、shouldPromptForConsent
+        // が false を返して再同意が不可能になるため、撤回時に猶予を解除する。
+        // Best-effort: 撤回そのものは既に成立しているので、失敗は記録だけする。
+        try {
+            await resetConsentDeniedCount();
+        } catch (error) {
+            await logWarn('Failed to reset consent denial counter after withdrawal', { error: errorMessage(error) }, undefined, 'privacyConsent.ts');
+        }
+
         // PBI 03: withdrawing global consent must also switch off the
         // opt-in navigation trail, or the record would keep capturing a
         // referrer the user has just said no to. Best-effort: the withdrawal
@@ -279,11 +336,7 @@ export async function withdrawPrivacyConsent(): Promise<PrivacyConsentWithdrawal
  * 同意撤回履歴を取得 */
 export async function getConsentWithdrawalHistory(): Promise<PrivacyConsentWithdrawal | null> {
     const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT);
-    const data = result[StorageKeys.PRIVACY_CONSENT];
-    if (typeof data === 'object' && data !== null && 'withdrawal' in data) {
-        return (data as Record<string, unknown>).withdrawal as PrivacyConsentWithdrawal;
-    }
-    return null;
+    return readWithdrawalRecord(result[StorageKeys.PRIVACY_CONSENT]);
 }
 
 /**

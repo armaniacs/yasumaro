@@ -72,7 +72,7 @@ Scenario: 1ジョブの失敗が他の定期ジョブの登録を妨げない（
 
 - [ ] `yasumaro-daily-purge` は、既に登録済みであれば**再作成せず**、既存のアラームの発火予定時刻をそのまま維持する（`chrome.alarms.get` 相当の存在確認 → あれば return）。
 - [ ] 未登録の場合のみ `{ periodInMinutes: 1440 }` で新規登録する（初回登録経路が失われていない）。
-- [ ] ガードの挙動が既存の実装 `ensureDailyFlushArmed`（`src/background/localMarkdownIdleFlusher.ts:98-105`）と同一であり、共通化または同一パターンの再利用として reviewers が读过できる形でコード化されている。
+- [ ] ガードの挙動が既存の実装 `ensureDailyFlushArmed`（`src/background/localMarkdownIdleFlusher.ts:98-105`）と同一であり、共通化または同一パターンの再利用として reviewers が読める形でコード化されている。
 - [ ] `installAll` の逐次ジョブ処理と、ジョブ単位の try/catch による「1件の失敗で全体を止めない」失敗方針が保存されている。
 - [ ] 他の静的スケジュールジョブ（特に 5分周期の `yasumaro-offline-network-retry`）は、在りの仕様判断が明示されるまで**挙動を変更しない**（意図的変更なら同PBI内で理由とテストをセットで記載）。
 - [ ] 既存テスト `src/background/__tests__/alarmRegistry.test.ts:199`（無条件再作成を pin している）が更新され、「登録済みなら create しない」ケースと「未登録なら create する」ケースの両方が自動テストで固定されている。

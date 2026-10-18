@@ -4,7 +4,7 @@
 
 拡張機能の開発者・保守担当者として、診断ログに入り込む「同一のメールアドレスが 65,536 文字以下ならマスクされ、超えると原文のまま保存される」という非対称を解消してほしい、なぜならこれは PII サニタイザが ReDoS 対策として持つサイズゲートの**意図せざる副作用**であり、`chrome.storage.local` に 3 日間・500 件保持される診断ログが「マスク保証の穴」になることで、ログを読む将来の保守者が `user@example.com` を平文で見る余地が有一天でも早く閉じるべきだから。
 
-もう少し具体的に言えば、`https://attacker.example/?email=user@example.com&pad=<65000文字>` のような長い URL を 1 ページ記録しただけで、パイプラインの保存テイル（`savePhase.ts:94`）がその URL を `addLog` の details に載せるため、監査ログに个人的識別子が原文で残る。バグ報告ビルダーが現状エラーコード数しか送らないため流出面は限定的だが、これは「流入が起きていない」ためではない——**デバッグログを読む人間（開発者自身）が 3 日以内に storage を直接見る**だけで露見する経路が残っている。
+もう少し具体的に言えば、`https://attacker.example/?email=user@example.com&pad=<65000文字>` のような長い URL を 1 ページ記録しただけで、パイプラインの保存テイル（`savePhase.ts:94`）がその URL を `addLog` の details に載せるため、監査ログに個人の識別子が原文で残る。バグ報告ビルダーが現状エラーコード数しか送らないため流出面は限定的だが、これは「流入が起きていない」ためではない——**デバッグログを読む人間（開発者自身）が 3 日以内に storage を直接見る**だけで露見する経路が残っている。
 
 ## 優先度
 
@@ -140,8 +140,8 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 | `src/utils/logger/storageAdapter.ts` | 4-6 | `LOG_STORAGE_KEY = 'sanitization_logs'` / `RETENTION_DAYS = 3` / `MAX_LOGS = 500` |
 | `src/utils/logger/storageAdapter.ts` | 41-43 | prune（3 日）・500 件上限・`chrome.storage.local.set` |
 | `src/messaging/validators.ts` | 59-75 | `assertHttpUrl` — 非空・http(s)・parseable のみ。**URL の長さ制限なし** |
-| `src/messaging/validators.ts` | 78-81 | 同じバリデータ内の `content` 長さ制限（`VALIDATOR_LIMITS.MAX_CONTENT_LENGTH`）— URL と不对称的 |
-| `src/messaging/validators.ts` | 594-595, 636-637 | `title` の長さ制限（`VALIDATOR_LIMITS.MAX_TITLE_LENGTH`）— URL と不对称的 |
+| `src/messaging/validators.ts` | 78-81 | 同じバリデータ内の `content` 長さ制限（`VALIDATOR_LIMITS.MAX_CONTENT_LENGTH`）— URL と非対称的 |
+| `src/messaging/validators.ts` | 594-595, 636-637 | `title` の長さ制限（`VALIDATOR_LIMITS.MAX_TITLE_LENGTH`）— URL と非対称的 |
 | `src/dashboard/panels/diagnostic/issueReportLink.ts` | 21-33 | `summarizeErrorCodes` — `errorCode` の名前と件数のみ。本文は送らない |
 | `src/dashboard/panels/diagnostic/issueReportLink.ts` | 59 | バグ報告ボディの `Recent error codes:` 行 |
 | `src/dashboard/panels/diagnostic/issueReportLink.ts` | 183 | 唯一の production reader（`getLogs()`） |
@@ -161,7 +161,7 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 
 `sanitize.ts:86` と `core.ts:107`・`api.ts:174` の三項条件に `error` を掛け、`maskedItems.length > 0 || !result.error` のときだけマスク結果を使い、そうでなければ `truncateForLog(result.text)` を使う。あるいは分岐を 3 段（masked / error→truncate / それ以外）に明示的にする。
 
--  Pros: sink 側の契約変更だけで済み、`sanitizeRegex` の戻り値契約（`SanitizeResult`）を変えない。**既存の `piiSanitizer-optimization.test.ts:170-178` がそのまま通る**。ReDoS 防御（gate そのもの）にも触らないため性能-characteristics が不変。
+-  Pros: sink 側の契約変更だけで済み、`sanitizeRegex` の戻り値契約（`SanitizeResult`）を変えない。**既存の `piiSanitizer-optimization.test.ts:170-178` がそのまま通る**。ReDoS 防御（gate そのもの）にも触らないため性能特性が不変。
 -  Cons: 「gate 超過を sink だけが知っている」なので、`sanitizeRegex` の別の呼び出し元（logger 以外の PII 経路）が同じ罠を踏む可能性が残る。**他の呼び出し元を洗い出して同じ扱いになっているか確認すること**（`grep -rn "sanitizeRegex" src/`）。
 
 **選択肢 2: `sanitizeRegex` の size gate 超過時に「切り詰めた上でマスクする」外套を追加**
@@ -169,7 +169,7 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 `piiSanitizer.ts:222-230` の return を `text: truncateForLog(text, MAX_INPUT_SIZE)` のような形に書き換え、gate 超過でも末尾付近までマスクを走らせる（あるいは切り詰め結果にマスクを適用）。
 
 -  Pros: 呼び出し元が全部自動的に安全になる。1 箇所の変更で 3 sink が同時に直る。
--  Cons: **`sanitizeRegex` の戻り値契約が変わる**ため、`error` を「失敗の印」として読んでいる既存コード（今回は logger 3 処所の可能性が高いが、他にもあるかも）を洗い出す作業が発生する。また gate 超過を「成功」と見なす紧密结合は、ReDoS 防御（gate 本体）のセマンティクスを弱める。**并且 `piiSanitizer-optimization.test.ts:170-178` の `maskedItems` 0 件 expectation と矛盾しうる**ため、expectation を緩めるのではなく「gate 超過は成功ではなく切り詰め成功」という新しい契約を明示的に定義する必要がある。
+-  Cons: **`sanitizeRegex` の戻り値契約が変わる**ため、`error` を「失敗の印」として読んでいる既存コード（今回は logger 3 箇所の可能性が高いが、他にもあるかも）を洗い出す作業が発生する。また gate 超過を「成功」と見なす緊密な結合は、ReDoS 防御（gate 本体）のセマンティクスを弱める。**また `piiSanitizer-optimization.test.ts:170-178` の `maskedItems` 0 件 expectation と矛盾しうる**ため、expectation を緩めるのではなく「gate 超過は成功ではなく切り詰め成功」という新しい契約を明示的に定義する必要がある。
 
 **選択肢 3: `assertHttpUrl` に URL 長上限（他フィールドと同様の扱い）を設けて、到達可能な carrier を断つ**
 
@@ -193,7 +193,7 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 本件は needs_validation 判定であり、ソースのみでは 2 点が未決である。**実装に入る前に潰すこと**:
 
 1. **実 Chrome で 65,536 文字超の `sender.tab.url` が成立するか（primary blocker）**: Chrome のタブ URL およびメッセージパスの制限が、実際のブラウザバージョンで 65,536 code units を超える `payload.url` を許すかどうか。監査 run は source-only ポリシー（ターゲット制御の実行に対する OS sandbox 利用不可）のため観測できていない。**ソース側の chain は「長さ 65,536 超の `payload.url` が受け入れられた場合にのみ」決定的**であり、到達可能性はブラウザ挙動に依存する。
-   - 観測手順: 隔離 Chromium プロファイルで、ローカルテストサーバまたは data URL 的に長い URL（65,536 文字超、query にメールアドレス含む）を导航し、`sender.tab.url` の実長を DevTools で確認する。64KB 級の URL がブラウザで受理されない場合、**選択肢 3（`assertHttpUrl` に上限）が唯一の有効な carrier 遮断**となり、選択肢 1/2 の実害は「内部防御の一貫性」に留まる。
+   - 観測手順: 隔離 Chromium プロファイルで、ローカルテストサーバまたは data URL 的に長い URL（65,536 文字超、query にメールアドレス含む）を開き、`sender.tab.url` の実長を DevTools で確認する。64KB 級の URL がブラウザで受理されない場合、**選択肢 3（`assertHttpUrl` に上限）が唯一の有効な carrier 遮断**となり、選択肢 1/2 の実害は「内部防御の一貫性」に留まる。
    - 観測結果次第で本 PBI の優先度（影響評価）は変わるが、**選択肢 1 の実装自体は「到達不能だから不要」とはしない**（将来 URL 制限が緩められたとき、または他の無制限長文字列が carrier になったときに再度顕在化するため）。
 2. **`assertHttpUrl` に URL 長上限を追加することの UX 妥当性**: 追加する場合、記録が「失敗する URL」の出現頻度は現実的か（`SELECT * FROM` のような巨大 URL は稀か）。判断は owner（プロダクト側）が出す。**本 PBI の実装判断（選択肢 1）と UX 判断（選択肢 3）を分離し、前者を block させないこと。**
 
