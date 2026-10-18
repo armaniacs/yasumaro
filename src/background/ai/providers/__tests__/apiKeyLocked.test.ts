@@ -22,6 +22,7 @@ vi.mock('../../../utils/customPromptUtils.js', () => ({
 }));
 vi.mock('../../../utils/fetch.js', () => ({
   CONNECTION_TEST_CACHE_MODE: 'no-store',
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
 }));

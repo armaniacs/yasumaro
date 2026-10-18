@@ -24,6 +24,7 @@ vi.mock('../../../utils/logger/api.js', async () =>
 
 
 vi.mock('../../../utils/fetch.js', () => ({
+    NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
     fetchWithRetry: vi.fn(),
     validateUrlForAIRequests: vi.fn(),
 }));

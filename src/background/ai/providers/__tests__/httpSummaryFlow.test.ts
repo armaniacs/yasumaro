@@ -19,6 +19,9 @@ const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, buildAllo
 }));
 
 vi.mock('../../../../utils/fetch.js', () => ({
+  // Mirrors the real export so the strategy can spread the shared redirect
+  // policy without reaching a transport.
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: fetchWithRetryMock,
   fetchWithTimeout: vi.fn(),
   validateUrlForAIRequests: vi.fn(),

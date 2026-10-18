@@ -38,6 +38,9 @@ vi.mock('../../../../utils/customPromptUtils.js', () => ({
 }));
 vi.mock('../../../../utils/fetch.js', () => ({
   CONNECTION_TEST_CACHE_MODE: 'no-store',
+  // Mirrors the real export so the strategy can spread the shared redirect
+  // policy without reaching a transport.
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
 }));
