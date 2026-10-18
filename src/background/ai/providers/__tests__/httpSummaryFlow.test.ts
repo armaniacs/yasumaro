@@ -206,6 +206,18 @@ describe('executeHttpSummaryFlow', () => {
     expect(retry.shouldRetry).toBeUndefined();
   });
 
+  // ADR 2026-08-29 closed the redirect hole on the FETCH_URL path with
+  // `redirect: 'error'`. The AI path must carry the same policy: without it a
+  // 30x from an allow-listed provider follows the Location and re-sends the
+  // credential header and the prompt body to an address that no gate checked.
+  it('refuses redirects on the summary request', async () => {
+    const probe = new FlowProbe({} as Settings, makeHooks());
+    await probe.generateSummary('hello');
+
+    const init = fetchWithRetryMock.mock.calls[0]![1] as Record<string, unknown>;
+    expect(init.redirect).toBe('error');
+  });
+
   it('timeout maps to the shared timeout message', async () => {
     const abort = new Error('timed out');
     abort.name = 'AbortError';

@@ -50,6 +50,18 @@ import {
   type AISummaryResult,
 } from './ProviderStrategy.js';
 
+/**
+ * リダイレクトを追従しない fetch 方針。ADR 2026-08-29 が FETCH_URL 経路で
+ * `redirect: 'error'` を採用して以降、AI 経路だけが既定の `'follow'` のまま
+ * 残っていた。許可済みプロバイダが 30x を返すと、Location が指す未検証の
+ * アドレス（loopback を含む）へ資格情報ヘッダーとプロンプト本文が再送される
+ * ため、3xx を transport failure として扱い、転送先への発行自体を止める。
+ *
+ * 要約と接続テストの両フローがこの1つの宣言を読む。片方だけに適用すると、
+ * 同じ資格情報を持つもう一方の入口が抜け道として残る。
+ */
+const NO_REDIRECT_FETCH_POLICY = { redirect: 'error' } as const;
+
 /** HTTP要約リクエスト（hooks.prepareRequest の成功形） */
 export interface HttpSummaryRequest {
   url: string;
@@ -243,6 +255,7 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
       // implementation, so the summary flow cannot drift from the connection
       // test. It reads the structured kind only.
       const response = await fetchWithRetry(prepared.url, {
+        ...NO_REDIRECT_FETCH_POLICY,
         method: 'POST',
         headers: prepared.headers,
         body: prepared.body,
@@ -311,6 +324,7 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
       const allowedUrls = await this.getAllowedUrlsForRequests();
 
       const response = await fetchWithRetry(built.url, {
+        ...NO_REDIRECT_FETCH_POLICY,
         method: 'POST',
         headers: built.headers,
         body: built.body,
