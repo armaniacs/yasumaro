@@ -224,6 +224,21 @@ describe('fetchWithTimeout', () => {
       .rejects.toBe(testError);
   });
 
+  test('passes the redirect policy through to the platform fetch', async () => {
+    // The AI path passes `redirect: 'error'` so that a 30x cannot forward the
+    // request (and its credential header) to an address no gate checked. That
+    // policy only works if fetchWithTimeout hands the option to the platform
+    // fetch alongside the rest of fetchOptions, so the contract is pinned here.
+    const mockFetch = vi.fn(() => Promise.resolve({ ok: true } as Response));
+    global.fetch = mockFetch;
+
+    await fetchWithTimeout('https://example.com', { skipCspValidation: true, redirect: 'error' }, 1000);
+
+    const [url, init] = mockFetch.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe('https://example.com');
+    expect(init.redirect).toBe('error');
+  });
+
   test('defaults the timeout to 30000ms', async () => {
     const mockResponse = { ok: true } as Response;
     global.fetch = vi.fn(() => Promise.resolve(mockResponse));

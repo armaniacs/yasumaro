@@ -38,6 +38,9 @@ vi.mock('../../../../utils/customPromptUtils.js', () => ({
 }));
 vi.mock('../../../../utils/fetch.js', () => ({
   CONNECTION_TEST_CACHE_MODE: 'no-store',
+  // Mirrors the real export so the strategy can spread the shared redirect
+  // policy without reaching a transport.
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
 }));
@@ -195,6 +198,25 @@ describe('executeHttpTestFlow parity — Gemini', () => {
       backoffMultiplier: 2,
       maxDelayMs: 3000,
     });
+  });
+
+  // The connection test is the second entrance to the same credential, so it
+  // must not be the one that still follows a redirect (ADR 2026-08-29).
+  it('refuses redirects on the connection test', async () => {
+    const fetch = await fetchMock();
+    fetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({
+        candidates: [{ content: { parts: [{ text: 'OK' }] } }],
+        usageMetadata: { promptTokenCount: 5, candidatesTokenCount: 2 },
+      }),
+    } as Response);
+
+    await new GeminiProvider(geminiSettings).testConnection();
+
+    const init = fetch.mock.calls[0]![1] as Record<string, unknown>;
+    expect(init.redirect).toBe('error');
   });
 });
 

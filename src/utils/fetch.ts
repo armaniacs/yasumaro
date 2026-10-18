@@ -58,6 +58,20 @@ const MAX_TIMEOUT_MS = 300000;   // 最大5分
  */
 export const CONNECTION_TEST_CACHE_MODE: RequestCache = 'no-store';
 
+/**
+ * リダイレクトを追従しない fetch 方針。ADR 2026-08-29 が FETCH_URL 経路で
+ * `redirect: 'error'` を採用して以降、宛先をユーザーが設定できる経路
+ * (AI プロバイダの OpenAI 互換 baseUrl、Obsidian の vault URL) にも同じ
+ * 方針が必要になった。platform 既定の `'follow'` のままだと、許可済みの
+ * origin が 30x を返しただけで、`Location` が指す未検証アドレスへ資格情報
+ * ヘッダーと本文が再送される。
+ *
+ * `fetchWithTimeout` は残りの fetchOptions と一緒にこの値を platform fetch へ
+ * 素通しするので、呼び出し側はこの定数を spread するだけでよい。片方の経路
+ * だけに適用すると、同じ資格情報を持つもう一方が抜け道として残る。
+ */
+export const NO_REDIRECT_FETCH_POLICY = { redirect: 'error' } as const;
+
 interface FetchOptions extends RequestInit {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;

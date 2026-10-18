@@ -21,6 +21,7 @@ import { Crypto } from '@peculiar/webcrypto';
 Object.defineProperty(global, 'crypto', { value: new Crypto() });
 
 vi.mock('../../utils/fetch.js', () => ({
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: vi.fn(),
   fetchWithTimeout: vi.fn(),
   validateUrlForAIRequests: vi.fn(),

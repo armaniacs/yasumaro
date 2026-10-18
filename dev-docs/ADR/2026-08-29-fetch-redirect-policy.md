@@ -1,7 +1,7 @@
 # ADR: FETCH_URL Redirect Policy — redirect: 'error'
 
 ## ステータス
-採用
+採用（2026-10-18: 適用範囲を AI 経路と Obsidian 経路へ拡大）
 
 ## 日付
 2026-08-29
@@ -41,10 +41,43 @@ body を返さない。
 相対 Location は現在のホップ URL に対して解決、Location 欠落・ループは reject)。
 `FETCH_URL` は現状これを使わないが、契約として出荷する。
 
+### 追記 (2026-10-18): AI 経路への適用範囲拡大
+
+`FETCH_URL` だけを塞いでも穴は残っていた。AI 要約と接続テストの 2 経路
+(`src/background/ai/providers/HttpProviderStrategy.ts`) は同じ
+`fetchWithTimeout` を使いながら `redirect` を指定しておらず、既定の
+`'follow'` のままだった。許可済みプロバイダが 30x を返すと、`Location` が
+指す未検証アドレス (loopback を含む) へ資格情報ヘッダーとプロンプト本文が
+再送される。
+
+本 ADR は当初「AI プロバイダは固定ホスト」と整理していたが、これは誤りで
+ある。OpenAI 互換の `baseUrl` はユーザーが設定でき
+(`src/utils/storage/providerAllowlist.ts`)、Obsidian の vault URL も
+ユーザー設定である。よって AI 経路にも `redirect: 'error'` を適用する
+(`NO_REDIRECT_FETCH_POLICY`)。要約と接続テストの両フローが同じ 1 つの宣言を
+読み、片方だけに適用すると同じ資格情報を持つもう一方が抜け道として残る。
+
+帰結: 許可済みの宛先が 30x を返した場合、AI の要約・接続テストと Obsidian の
+日次ノート read/write・接続テストは失敗する。主要エンドポイント
+(Gemini / OpenAI 互換) と Obsidian Local REST API はいずれも固定 origin で
+リダイレクトに依存しないため、正当な利用は損なわれない。30x の拒否は
+transport failure として届くため共有リトライ方針で再送されうるが、再送しても
+転送先へのリクエストは発行されない (安全側)。
+
+Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
+`redirect: 'error'` に加えて `response.redirected` を検査する多層防御を置いた。
+将来この方針を緩めた場合でも、platform が redirected を立てた応答の本文を
+ノートとして採用しない。両経路とも `src/utils/fetch.ts` の
+`NO_REDIRECT_FETCH_POLICY` を共有し、片方だけが抜け道にならないようにしている。
+
 ## 結果
 - VULN-016 の実証済み攻撃経路 (許可 URL → 30x → private IP body 返却) が塞がれる。
-- 他 16 の fetch サイト (tranco / gist / obsidian / AI プロバイダ — 固定ホスト)
-  は挙動不変。リダイレクト方針の変更は `FETCH_URL` 系のみ。
+- `FETCH_URL` 以外の fetch サイトは当初「固定ホスト」として挙動不変と整理して
+  いたが、**この整理は誤りだった**。AI プロバイダの OpenAI 互換 `baseUrl` と
+  Obsidian の vault URL はユーザーが設定できる。2026-10-18 に AI 経路
+  (要約・接続テスト) と Obsidian 経路 (日次ノートの read/write と接続テスト) へ
+  同じ `redirect: 'error'` を適用した。tranco / gist は固定ホストのままで
+  挙動不変。
 - ホップ毎再検証ヘルパーが将来の fetch 追加のための規約として存在する。
 
 ## 参照
@@ -52,3 +85,5 @@ body を返さない。
 - `src/utils/fetch.ts` — `fetchWithRedirectGuard`
 - `src/utils/ssrfGuard.ts` — `validateUrlForFilterImport` / `isPrivateIpAddress`
 - PBI: `pbi/2026-08-29-09-fix-fetch-redirect-ssrf.md`
+- PBI: `pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` (AI 経路への適用)
+- PBI: `pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` (Obsidian 経路)

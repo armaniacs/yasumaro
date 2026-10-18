@@ -265,4 +265,81 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
       expect(result.message).toContain('Protocol must be "http" or "https"');
     });
   });
+
+  // ADR 2026-08-29 applied `redirect: 'error'` to the FETCH_URL path. The vault
+  // read/write paths must carry the same policy: without it a 30x from the saved
+  // vault origin re-sends `Authorization: Bearer` and the note body to an address
+  // that the pre-hop gates never saw.
+  describe('redirect policy', () => {
+    beforeEach(() => {
+      global.fetch = vi.fn();
+    });
+
+    afterEach(() => {
+      (global.fetch as Mock).mockRestore();
+    });
+
+    it('refuses redirects when reading the existing note', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({ ok: true, text: () => Promise.resolve('body') });
+
+      await obsidianClient._fetchExistingContent('https://127.0.0.1:27123/vault/test.md', {
+        'Authorization': 'Bearer test_key'
+      });
+
+      const init = (global.fetch as Mock).mock.calls[0]![1] as RequestInit;
+      expect(init.redirect).toBe('error');
+    });
+
+    it('refuses redirects when writing the note', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({ ok: true });
+
+      await obsidianClient._writeContent('https://127.0.0.1:27123/vault/test.md', {
+        'Authorization': 'Bearer test_key'
+      }, 'Test content');
+
+      const init = (global.fetch as Mock).mock.calls[0]![1] as RequestInit;
+      expect(init.redirect).toBe('error');
+    });
+
+    it('refuses redirects on the connection test', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({ ok: true });
+
+      await obsidianClient.testConnection();
+
+      const init = (global.fetch as Mock).mock.calls[0]![1] as RequestInit;
+      expect(init.redirect).toBe('error');
+    });
+
+    // Defence in depth: even if a response arrives with `redirected` set (a
+    // future relaxation, or a transport that follows anyway), its body is never
+    // adopted as note content.
+    it('does not adopt the body of a redirected response when reading', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({
+        ok: true,
+        redirected: true,
+        text: () => Promise.resolve('attacker body')
+      });
+
+      await expect(
+        obsidianClient._fetchExistingContent('https://127.0.0.1:27123/vault/test.md', {
+          'Authorization': 'Bearer test_key'
+        })
+      ).rejects.toThrow();
+    });
+
+    it('does not adopt a redirected response as a successful write', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({ ok: true, redirected: true, text: () => Promise.resolve('') });
+
+      await expect(
+        obsidianClient._writeContent('https://127.0.0.1:27123/vault/test.md', {
+          'Authorization': 'Bearer test_key'
+        }, 'note body')
+      ).rejects.toThrow();
+    });
+  });
 });

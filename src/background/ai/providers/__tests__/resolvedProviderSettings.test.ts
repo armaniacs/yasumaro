@@ -21,6 +21,7 @@ const { fetchWithRetryMock, readJsonCappedMock, applyCustomPromptMock } = vi.hoi
 }));
 
 vi.mock('../../../../utils/fetch.js', () => ({
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: fetchWithRetryMock,
   fetchWithTimeout: vi.fn(),
   validateUrlForAIRequests: vi.fn(),

@@ -33,6 +33,7 @@ Object.defineProperty(global, 'crypto', { value: new Crypto() });
 const mockRecordUsage = vi.fn();
 
 vi.mock('../../../../utils/fetch.js', () => ({
+  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
   fetchWithRetry: vi.fn(),
   fetchWithTimeout: vi.fn(),
   validateUrlForAIRequests: vi.fn(),
