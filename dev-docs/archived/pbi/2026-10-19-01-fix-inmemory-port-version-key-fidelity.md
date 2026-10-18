@@ -18,7 +18,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md)（同意キーが settings ブロブへ畳まれる問題）の調査中、`InMemoryStoragePort` に withdrawn レコードと `privacy_consent_version` を seed して移行を実走させたところ、**allowlist で保護されているはずの ack まで移行後に消えて見えた**。実際には移行は ack を消しておらず、test double が seed の時点で捨てていた。
+PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md)（同意キーが settings ブロブへ畳まれる問題）の調査中、`InMemoryStoragePort` に withdrawn レコードと `privacy_consent_version` を seed して移行を実走させたところ、**allowlist で保護されているはずの ack まで移行後に消えて見えた**。実際には移行は ack を消しておらず、test double が seed の時点で捨てていた。
 
 ### 機構（コード上で確定）
 
@@ -85,13 +85,13 @@ Scenario: 4. remove も両方の入れ物に効く（境界）
 
 ## 受け入れ基準
 
-- [ ] 文字列値の `*_version` キーが保持され、`get(string)` / `get(string[])` / `get(null)` の 3 経路すべてで返る（`get` 側の version 分岐も、`versions` に無ければ `store` を見るよう直す）
-- [ ] 数値の `*_version` キーは現行どおり `versions` に入り、`get(null)` での見え方と CAS の契約が変わらない（既存テスト非退行）
-- [ ] `remove` が両方の入れ物に対して効く
-- [ ] `ChromeStoragePort` との parity がテストで固定される（同一操作列で `get(null)` のキー・値集合が一致）
-- [ ] `privacy_consent_version` / `gemini_api_version` / `tranco_version` を seed して読めることを pin するテストがある
-- [ ] `src/utils/storage/storagePort.ts` のコメントに `*_version` の 2 つの用途（数値の CAS カウンタ / 文字列値の通常キー）が明記される
-- [ ] `npm run validate` が緑
+- [x] 文字列値の `*_version` キーが保持され、`get(string)` / `get(string[])` / `get(null)` の 3 経路すべてで返る（**根因に合わせて `versions` マップ自体を廃止**し、全キーを通常キーとして保存する。実装メモの選択肢 1 より踏み込んだ理由は完了記録のなぜなぜ分析を参照）
+- [x] 数値の `*_version` キーは CAS 世代番号として同じ見え方を保つ（`get(string)` / `get(string[])` / `get(null)` の結果が従来と一致。既存テスト非退行）
+- [x] `remove` が `*_version` キーにも効く（数値・文字列の両方）
+- [x] `ChromeStoragePort` との parity がテストで固定される（同一操作列で `get(null)` のキー・値集合が一致）
+- [x] `privacy_consent_version` / `gemini_api_version` / `tranco_version` を seed して読めることを pin するテストがある
+- [x] `src/utils/storage/storagePort.ts` のコメントに `*_version` の 2 つの用途（数値の CAS カウンタ / 文字列値の通常キー）が明記される
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -153,15 +153,57 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜4 が自動テストで実装されパス
-- [ ] `npm run validate` が緑（数値版数カウンタの既存テストが非退行）
-- [ ] `storagePort.ts` のコメントに 2 つの用途を明記
-- [ ] コードレビュー完了
-- [ ] PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の落とし穴にある「この test double では `privacy_consent_version` を seed しても観測できない」という注意書きを、本修正後に「seed して観測できる」へ更新する
+- [x] BDDシナリオ 1〜4 が自動テストで実装されパス
+- [x] `npm run validate` が緑（数値版数カウンタの既存テストが非退行）
+- [x] `storagePort.ts` のコメントに 2 つの用途を明記
+- [x] コードレビュー完了
+- [x] PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の落とし穴にある「この test double では `privacy_consent_version` を seed しても観測できない」という注意書きを、本修正後に「seed して観測できる」へ更新する
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ `InMemoryStoragePort` は `chrome.storage.local` が保持するキーを黙って捨てるのか。
+
+1. **なぜ落ちるのか** — `set` が `*_version` で終わるキーを「数値なら `versions`、それ以外は `store` に入れない」と分岐していた。文字列値はどちらの枝にも当たらず、例外もログも無く消える。
+2. **なぜ `*_version` を特別扱いしていたのか** — このコードベースは CAS（楽観ロック）の世代番号を `<key>_version` という**兄弟キー**で表現しており、ポートがそれを `versions` マップで模していた。
+3. **なぜ模倣が必要だったのか** — `get(null)` / `get('<key>_version')` を chrome と同じ見え方にしたかったため。**ただし `StorageTransaction` は `<key>_version` を通常のキーとして `port.get` / `port.set` に渡している**（`storageTransaction.ts:374`）。通常キーとして保存しても見え方は同じで、模倣は不要だった。
+4. **なぜ不要な模倣が害を生んだのか** — `*_version` という**命名規約を意味の判別子として流用**したため。判別子（数値か）は書き込み経路にしか無く、fallback も無い。しかも `StorageKeys` の中で `_version` で終わるキー（`privacy_consent_version` / `gemini_api_version` / `tranco_version`）は**すべて文字列値の通常キー**で、判別子が想定した形状（数値 CAS）は `StorageKeys` には存在しない。つまり特別扱いは「壊す形状」だけを実在させ、「守る形状」は名前から動的に生成されるものだけだった。
+5. **なぜ長く残ったのか** — 落ち方が**静か**（`{}` を返すだけ）でテストは緑のまま。port を使うテストは数値 CAS か、別ハーネス（`chrome.storage.local` モック）で seed しており、**2 実装を文字列 `*_version` で比較するテストが無かった**。
+
+**原因**: `*_version` という命名規約を「CAS 世代番号」の意味に流用してポートに特別扱いさせ、その判別に fallback が無かったこと。かつ、その特別扱いが守る対象を実際には持っていなかったこと。
+
+**示唆**:
+- PBI の推奨（選択肢 1: 数値でなければ `store` に入れ、`get` の version 分岐に fallback を足す）でも症状は消えるが、**規約の多重定義は残る**。将来 `_version` で終わる通常キーに数値を書けば再び `versions` に吸われ、`remove` と `getBytesInUse` がずれる（同じ規約を 5 箇所の分岐が別々に解釈している状態が続く）。
+- ポートは「chrome と同じ素のキー・バリュー」であるべきで、CAS の意味は `StorageTransaction` 側に閉じている。特別扱いを消せば、この分岐クラス自体が消える。
+- 静かに落ちる double は緑のテストを生む。**parity テストが無いこと**が検出漏れの直接原因なので、そこに文字列 `*_version` を足す。
+
+**解**: `versions` マップを廃止し、全キーを通常キーとして保存する（`get` / `set` / `remove` / `seed` / `dump` / `getBytesInUse` から規約依存を削除）。`getVersion()` は store から `<key>_version` を読む形へ。parity テストに文字列 `*_version` を追加。**PBI の推奨より踏み込んだのは、根因が「fallback の欠落」ではなく「規約の流用」だったため。**
+
+### 実装
+
+- `src/utils/storage/storagePort.ts` — `versions` マップを削除。`get` の 3 経路を store 参照のみに、`set` を全キー保存に変更。`getBytesInUse` から「`*_version` を飛ばして 8 バイト加算」を削除（値の JSON 長で数える）。`getVersion()` は store から読む形に変更。クラスの doc に `*_version` の 2 つの用途を明記。
+- **同時に消えた 3 つの非対称**（いずれも依存なしを確認済み）:
+  1. `get([<base>])` が、store に無く versions にある場合に `{ '<base>_version': N }` を返していた（要求したキーが結果に無い）。
+  2. `seed()` だけが非数値 `*_version` を store に入れており、`set()` と挙動が違った。
+  3. `remove()` が versions を消さず、削除後も世代番号が生き残っていた。
+- **依存が無いことの確認**: production で `<key>_version` を読むのは `storageTransaction.ts` の 6 箇所（すべて `port.get([key, \`${key}_version\`])` と明示要求）と `settingsMigration.ts:352`（`get(null)` のスナップショット経由）のみ。`getVersion()` の呼び出し元は 0 件。
+
+### テスト
+
+- `src/utils/storage/__tests__/storagePort.test.ts` — `describe('*_version keys of both shapes')` を追加（5 テスト）: 文字列 ``*_version`` の 3 経路往復、seed した文字列キーの読み出し、`getBytesInUse` の計上、数値・文字列混在の `remove`、数値 CAS 世代の回帰ガード。
+- `src/utils/storage/__tests__/storagePortCloneBoundary.test.ts` — parity のループに「文字列 `*_version` を通常キーとして保存する」を追加（InMemory と chrome モックの両方で回る）。
+- **Red の確認**: 修正前に 5 件が失敗（InMemory 側 4 件＋parity 1 件）。chrome モック側の parity テストは修正前から通っており、差分が double 側にあることを示す。
+- 回帰: `src/utils/storage/` 配下 61 ファイル 549 テストが緑。`npm run validate` exit 0（1095 files / 16416 tests。修正前 16409 から +7）。
+- **なぜなぜで選んだ形の検証**: 数値 `*_version` の見え方を固定する回帰ガードを含めたので、CAS の観測結果が変わっていないことをテストで示している。
+
+### ゲート
+
+`npm run validate` exit 0（1095 files / 16416 tests）。`src/utils/storage/` の 61 ファイル・549 テストが緑。
 
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 発見の現場。同 PBI の落とし穴に本件の回避策を記載済み
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 発見の現場。同 PBI の落とし穴は本 PBI の完了で更新済み
 - `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` — `StoragePort` への統一（本 PBI はその test double の忠実性）
 - `dev-docs/ADR/` — `storagePort` の契約に関する ADR があれば実装時に参照（`grep -rl "StoragePort" dev-docs/ADR/`）

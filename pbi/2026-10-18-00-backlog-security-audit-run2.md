@@ -70,7 +70,7 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。RICE 320
 - [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — redirect 拒否の実挙動を検証したテストが 0 件。接続テストの `redirected` ガードも非対称（PBI 01 / 08 由来）。RICE 400
 - [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) — 共通 seam が「単一宣言」になっていない（PBI 01 / 08 の独立レビュー由来）。RICE 400
-- [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) — `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800
+- ✅ [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) — `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800。**2026-10-19 完了・アーカイブ済み**（なぜなぜ分析により `versions` マップを廃止）
 - [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) — `jsdomFileCount` の 360 → 362 に推移と原因が無い（PBI 01 / 08 の独立レビュー由来。予算コメント自身の規約違反）。RICE 100
 - [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67
 

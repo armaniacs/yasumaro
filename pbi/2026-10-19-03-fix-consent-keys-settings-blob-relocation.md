@@ -143,7 +143,7 @@ grep -n "chrome.storage.local.get" src/utils/storage/privacyConsent.ts
 
 ### 落とし穴
 
-- **`InMemoryStoragePort` は `*_version` で終わるキーを数値の版数カウンタとして扱い、文字列値を捨てる**。`privacy_consent_version` は日付文字列なので、このポートに seed しても `get(null)` に出てこない（`InMemoryStoragePort.set` の分岐: 数値なら `versions`、`_version` 以外なら `store`、**文字列の `*_version` はどちらにも入らない**）。**この落とし穴を移行の欠陥と誤認しないこと**。ack の検証は `chrome.storage.local` のモック（`settingsMigration-completion-state.test.ts` の `harness`）で行う。ポート側の忠実性は別 PBI 候補として扱う。
+- ~~**`InMemoryStoragePort` は `*_version` で終わるキーを数値の版数カウンタとして扱い、文字列値を捨てる**~~ **（2026-10-19 に PBI [2026-10-19-01](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) で解消済み。`versions` マップを廃止し、文字列値の `*_version` キーも通常キーとして seed・get・remove できる。以前の注意書き: `privacy_consent_version` は日付文字列なので、このポートに seed しても `get(null)` に出てこず、移行の欠陥と誤認しやすかった。ack の検証を `chrome.storage.local` のモックで行う必要も無くなった）**
 - `TOP_LEVEL_ONLY_KEYS` への追加は**移行対象キーの集合を変える**。`settings_migrated` の完了判定（`legacyKeys` が空になったか）に影響しないか、`settingsMigration-completion-state.test.ts` の各境界テストで確認する。
 - `settings` ブロブに既に同意レコードが入っているプロファイルでは、allowlist 追加後も top-level は空のまま。**救済を入れないと `getPrivacyConsent` は「未同意」を返し続ける**（症状は再同意モーダル。同意なしの記録再開にはならない）。
 - 同意レコードは署名付き（`buildSignaturePayload`）なので、**ブロブから top-level へ戻すだけ**にして値を再生成しないこと（署名が壊れる）。
