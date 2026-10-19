@@ -24,8 +24,26 @@ const BATCH_SIZE = 100;
  * Maps all fields from the stored record (which was originally converted
  * via buildInsertRecordFields in schema.ts) with proper null/default handling.
  * Must stay in sync with all 31 fields of InsertRecordFields/schema.ts.
+ *
+ * The flat field mapping is split into field-group helpers below; the merge
+ * order matches the original property order, so the produced object is
+ * identical (same keys, same order, same values).
  */
 function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
+  return {
+    ...coreFallbackFields(record),
+    ...flagFallbackFields(record),
+    ...contentFallbackFields(record),
+    ...tokenFallbackFields(record),
+    ...byteFallbackFields(record),
+    ...trailFallbackFields(record),
+  };
+}
+
+/** Identity and engagement fields (url/title/summary/tags/timestamp/domain/durations). */
+function coreFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'url' | 'title' | 'summary' | 'tags' | 'created_at' | 'domain' | 'visit_duration' | 'scroll_ratio'> {
   return {
     url: record.url,
     title: record.title ?? null,
@@ -35,10 +53,26 @@ function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
     domain: record.domain ?? null,
     visit_duration: record.visit_duration ?? null,
     scroll_ratio: record.scroll_ratio ?? null,
+  };
+}
+
+/** Star/sync flag fields. */
+function flagFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'is_starred' | 'is_deleted' | 'obsidian_synced' | 'gist_synced'> {
+  return {
     is_starred: record.is_starred ?? 0,
     is_deleted: record.is_deleted ?? 0,
     obsidian_synced: record.obsidian_synced ?? 0,
     gist_synced: record.gist_synced ?? 0,
+  };
+}
+
+/** Content-processing and AI/obsidian metadata fields. */
+function contentFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'content' | 'masked_count' | 'cleansed_reason' | 'ai_provider' | 'ai_model' | 'ai_duration_ms' | 'obsidian_duration_ms'> {
+  return {
     content: record.content ?? null,
     masked_count: record.masked_count ?? null,
     cleansed_reason: record.cleansed_reason ?? null,
@@ -46,10 +80,26 @@ function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
     ai_model: record.ai_model ?? null,
     ai_duration_ms: record.ai_duration_ms ?? null,
     obsidian_duration_ms: record.obsidian_duration_ms ?? null,
+  };
+}
+
+/** Token metric fields. */
+function tokenFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'sent_tokens' | 'received_tokens' | 'original_tokens' | 'cleansed_tokens'> {
+  return {
     sent_tokens: record.sent_tokens ?? null,
     received_tokens: record.received_tokens ?? null,
     original_tokens: record.original_tokens ?? null,
     cleansed_tokens: record.cleansed_tokens ?? null,
+  };
+}
+
+/** Byte metric fields (page/candidate/original/cleansed/ai summary/extracted sentences). */
+function byteFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'page_bytes' | 'candidate_bytes' | 'original_bytes' | 'cleansed_bytes' | 'ai_summary_original_bytes' | 'ai_summary_cleansed_bytes' | 'extracted_sentences_bytes' | 'extracted_sentences_original_bytes'> {
+  return {
     page_bytes: record.page_bytes ?? null,
     candidate_bytes: record.candidate_bytes ?? null,
     original_bytes: record.original_bytes ?? null,
@@ -58,6 +108,14 @@ function convertFallbackRecord(record: BrowsingLogRecord): BrowsingLogRecord {
     ai_summary_cleansed_bytes: record.ai_summary_cleansed_bytes ?? null,
     extracted_sentences_bytes: record.extracted_sentences_bytes ?? null,
     extracted_sentences_original_bytes: record.extracted_sentences_original_bytes ?? null,
+  };
+}
+
+/** Fallback flag and PBI 03 trail fields. */
+function trailFallbackFields(
+  record: BrowsingLogRecord,
+): Pick<BrowsingLogRecord, 'fallback_triggered' | 'nav_source_url' | 'search_query'> {
+  return {
     fallback_triggered: record.fallback_triggered ?? 0,
     // PBI 03: records written before the opt-in existed carry no trail; null
     // keeps the recovery insert aligned with the new columns.
