@@ -157,6 +157,15 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // consent / Tranco UI state the user already acknowledged.
     StorageKeys.PRIVACY_CONSENT_VERSION,
     StorageKeys.TRANCO_VERSION,
+    // The consent state is ONE unit — record + ack version + denial counters —
+    // and every reader in privacyConsent.ts reads it straight from top-level
+    // storage. Allowlisting only the version (above) while letting the record
+    // migrate split the unit across two stores: the version said "acknowledged
+    // at vX" while the record read as absent, so the modal came back and the
+    // recording gate blocked the user. Keep the whole unit together.
+    StorageKeys.PRIVACY_CONSENT,
+    StorageKeys.PRIVACY_CONSENT_DENIED_COUNT,
+    StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME,
     // RecordingTriggerManager reads these keys directly from top-level storage;
     // moving them into the settings blob would hide them from their owner.
     StorageKeys.RECORDING_TRIGGERS,
@@ -283,6 +292,39 @@ async function hasCoveringBackup(port: StoragePort, keys: readonly string[]): Pr
     return false;
 }
 
+/**
+ * Consent state is one unit (record + ack version + denial counters) and every
+ * reader in `privacyConsent.ts` reads it straight from top-level storage. A
+ * migration that ran before the allowlist fix folded the record and the counters
+ * into the `settings` blob, where nothing reads them, so consent silently
+ * disappeared. Promote whatever is folded back out — once, idempotently.
+ *
+ * The blob copy is left in place: nothing reads it, and removing it would need a
+ * CAS rewrite inside the migration path. PBI 2026-10-19-12 keeps consent out of
+ * the settings export, which is the only place that copy could surface.
+ */
+const CONSENT_TOP_LEVEL_KEYS = [
+    StorageKeys.PRIVACY_CONSENT,
+    StorageKeys.PRIVACY_CONSENT_DENIED_COUNT,
+    StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME,
+] as const;
+
+async function promoteFoldedConsentState(port: StoragePort): Promise<void> {
+    const topLevel = await port.get([...CONSENT_TOP_LEVEL_KEYS]);
+    const missing = CONSENT_TOP_LEVEL_KEYS.filter((key) => !hasOwn(topLevel, key));
+    if (missing.length === 0) return;
+
+    const blob = (await port.get('settings'))['settings'];
+    if (!isPlainRecord(blob)) return;
+
+    const promote: Record<string, unknown> = {};
+    for (const key of missing) {
+        if (hasOwn(blob, key)) promote[key] = blob[key];
+    }
+    if (Object.keys(promote).length === 0) return;
+    await port.set(promote);
+}
+
 export async function migrateToSingleSettingsObject(
     options: MigrateSettingsOptions = {},
 ): Promise<boolean> {
@@ -300,6 +342,11 @@ export async function migrateToSingleSettingsObject(
         }
         return port.remove(keys);
     };
+
+    // Heal profiles that an earlier run already split (PBI 2026-10-19-03). Runs
+    // before the completion check on purpose: those profiles are "complete", so
+    // they would otherwise never be visited again.
+    await promoteFoldedConsentState(port);
 
     const rawState = (await port.get(SETTINGS_MIGRATED_KEY))[SETTINGS_MIGRATED_KEY];
     if (isSettingsMigrationComplete(rawState)) return false;

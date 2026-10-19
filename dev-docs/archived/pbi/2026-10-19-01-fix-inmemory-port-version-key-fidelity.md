@@ -18,7 +18,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md)（同意キーが settings ブロブへ畳まれる問題）の調査中、`InMemoryStoragePort` に withdrawn レコードと `privacy_consent_version` を seed して移行を実走させたところ、**allowlist で保護されているはずの ack まで移行後に消えて見えた**。実際には移行は ack を消しておらず、test double が seed の時点で捨てていた。
+PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md)（同意キーが settings ブロブへ畳まれる問題）の調査中、`InMemoryStoragePort` に withdrawn レコードと `privacy_consent_version` を seed して移行を実走させたところ、**allowlist で保護されているはずの ack まで移行後に消えて見えた**。実際には移行は ack を消しておらず、test double が seed の時点で捨てていた。
 
 ### 機構（コード上で確定）
 
@@ -157,7 +157,7 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 - [x] `npm run validate` が緑（数値版数カウンタの既存テストが非退行）
 - [x] `storagePort.ts` のコメントに 2 つの用途を明記
 - [x] コードレビュー完了
-- [x] PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の落とし穴にある「この test double では `privacy_consent_version` を seed しても観測できない」という注意書きを、本修正後に「seed して観測できる」へ更新する
+- [x] PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の落とし穴にある「この test double では `privacy_consent_version` を seed しても観測できない」という注意書きを、本修正後に「seed して観測できる」へ更新する
 
 ## 完了記録（2026-10-19）
 
@@ -216,6 +216,6 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 発見の現場。同 PBI の落とし穴は本 PBI の完了で更新済み
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 発見の現場。同 PBI の落とし穴は本 PBI の完了で更新済み
 - `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` — `StoragePort` への統一（本 PBI はその test double の忠実性）
 - `dev-docs/ADR/` — `storagePort` の契約に関する ADR があれば実装時に参照（`grep -rl "StoragePort" dev-docs/ADR/`）

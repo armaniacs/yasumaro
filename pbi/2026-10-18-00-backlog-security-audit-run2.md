@@ -64,7 +64,7 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - **B5（単独・工数大）**: 18, 25
 
 **2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。9 件を RICE 採点して起票済み。実行順は [00-INDEX.md](00-INDEX.md) の 2026-10-19 節）:
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600
+- ✅ [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600。**2026-10-19 完了・アーカイブ済み**（同意の単位を allowlist に追加し、畳まれたプロファイルの救済を追加）
 - ✅ [2026-10-19-02-fix-consent-gate-wiring-coverage.md](../dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md) — `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640。**2026-10-19 完了・アーカイブ済み**（ガイドに適用範囲の表を追加し、未使用 export を削除）
 - [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — **同意撤回後も記録が出ていく経路 3 件**（オフライン再送アラーム `offlineQueueProcessor.ts:119,140` / 通知の「保存」`service-worker.ts:194` / 週次・月次レビュー要約 `reviewSummaryGenerator.ts:299`）。受付時の同意は実行を許可しない（PBI 02 の独立レビューが実証）。RICE 480
 - [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — ダッシュボードの「Obsidian へ追記」`append_to_obsidian` が同意ゲートの外（dashboardSqlite に同意コードが 1 つも無い）。PBI 02 の表の「Obsidian 書き出しは継承」を直接反証（PBI 02 の独立レビューが実証）。RICE 400

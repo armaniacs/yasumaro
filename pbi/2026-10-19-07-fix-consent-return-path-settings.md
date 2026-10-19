@@ -19,7 +19,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-19-03](./2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) と、アーカイブ済み [2026-10-18-05](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（撤回時の拒否カウンタ解除）の周辺を読む過程で判明した。同 PBI は**撤回**の側（撤回時に猶予を解除する）を塞いだが、**拒否**の側は塞いでいない。拒否は同意レコードを書かず拒否カウンタと ack だけを残すため、猶予が明けるまでモーダルは出ず、設定画面にも同意アクションが無い。
+PBI [2026-10-19-03](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) と、アーカイブ済み [2026-10-18-05](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（撤回時の拒否カウンタ解除）の周辺を読む過程で判明した。同 PBI は**撤回**の側（撤回時に猶予を解除する）を塞いだが、**拒否**の側は塞いでいない。拒否は同意レコードを書かず拒否カウンタと ack だけを残すため、猶予が明けるまでモーダルは出ず、設定画面にも同意アクションが無い。
 
 ### 機構（コード上で確定）
 

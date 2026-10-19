@@ -227,12 +227,12 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 ### inventory 中に見つけた別件（本 PBI のスコープ外・未起票）
 
-**設定のエクスポート/インポートが同意レコードを運ぶ。** `sanitizeSettingsForExport`（`src/utils/settingsExportImport.ts:89-97`）は `CONFIRMED_PROVIDER_ORIGINS` と API キーフィールドしか剥がさず、`exportSettings` / `exportEncryptedSettings` は `settingsRepository.getAll()` から payload を作る（`:236` / `:463`）。`privacy_consent` は settings ブロブに畳まれている（PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の症状）か、scattered merge 経由で top-level から読まれるため、**どちらの状態でも同意レコードが書き出され、インポート先で同意が付与/撤回される**。同意はデバイス・データ主体ごとの行為なので、エクスポート時の除外とインポート時の扱い（再同意を求める）を決める必要がある。後続 PBI 候補。
+**設定のエクスポート/インポートが同意レコードを運ぶ。** `sanitizeSettingsForExport`（`src/utils/settingsExportImport.ts:89-97`）は `CONFIRMED_PROVIDER_ORIGINS` と API キーフィールドしか剥がさず、`exportSettings` / `exportEncryptedSettings` は `settingsRepository.getAll()` から payload を作る（`:236` / `:463`）。`privacy_consent` は settings ブロブに畳まれている（PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の症状）か、scattered merge 経由で top-level から読まれるため、**どちらの状態でも同意レコードが書き出され、インポート先で同意が付与/撤回される**。同意はデバイス・データ主体ごとの行為なので、エクスポート時の除外とインポート時の扱い（再同意を求める）を決める必要がある。後続 PBI 候補。
 
 ## 関連
 
 - `pbi/00-INDEX.md`
 - `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 独立レビューで本件が指摘された元 PBI
 - [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` — 同意ゲート一覧の記載先

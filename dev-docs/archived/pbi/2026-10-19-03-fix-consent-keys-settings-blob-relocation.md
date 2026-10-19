@@ -17,7 +17,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-05](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（同意の自動再付与）の実装中に、独立レビューと局所再現で判明した。同 PBI の修正は「再付与を止める」ところまでで、**キーの置き場所そのものは直していない**（完了記録の「残課題」に切り出し済み）。
+PBI [2026-10-18-05](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（同意の自動再付与）の実装中に、独立レビューと局所再現で判明した。同 PBI の修正は「再付与を止める」ところまでで、**キーの置き場所そのものは直していない**（完了記録の「残課題」に切り出し済み）。
 
 ### 機構（コード上で確定）
 
@@ -88,14 +88,14 @@ Scenario: 5. 既にブロブへ畳まれたプロファイルでも同意状態�
 
 ## 受け入れ基準
 
-- [ ] `migrateToSingleSettingsObject` の完了後も `privacy_consent` / `privacy_consent_denied_count` / `privacy_consent_last_denial_time` が top-level に残り、settings ブロブには入らない
-- [ ] スキーマ移行の完了判定（`settings_migrated` が completed になる条件）が、allowlist 追加後も全プロファイルで到達する（allowlist 追加で「残っている移行対象キー」の判定が変わっても完了できる）
-- [ ] 移行対象の他キー（例 `obsidian_port`）は従来どおりブロブへ移り、top-level から消える（移行そのものを殺さない）
-- [ ] 既にブロブへ畳まれたプロファイルについて、(a) 救済するか (b) 救済しないかを**明示的に決めて記録**する。救済する場合は、同意状態の判定・撤回履歴・拒否カウンタの 3 つが一貫して読めることをテストで固定する
-- [ ] `getConsentWithdrawalHistory()` が移行を跨いで `null` にならない
-- [ ] `getConsentDeniedCount()` が移行を跨いで値を保持する
-- [ ] 同意の署名検証（`buildSignaturePayload`）と同意版数比較（`PRIVACY_POLICY_VERSION`）の意味論を変えない
-- [ ] `npm run validate` が緑。`settingsMigration` の既存テスト（`settingsMigration-completion-state.test.ts` / `settingsMigration-port-unify.test.ts` / `settingsBackupRestoreParity.test.ts`）が非退行
+- [x] `migrateToSingleSettingsObject` の完了後も `privacy_consent` / `privacy_consent_denied_count` / `privacy_consent_last_denial_time` が top-level に残り、settings ブロブには入らない
+- [x] スキーマ移行の完了判定（`settings_migrated` が completed になる条件）が、allowlist 追加後も全プロファイルで到達する（allowlist 追加で「残っている移行対象キー」の判定が変わっても完了できる）
+- [x] 移行対象の他キー（例 `obsidian_port`）は従来どおりブロブへ移り、top-level から消える（移行そのものを殺さない）
+- [x] 既にブロブへ畳まれたプロファイルについて、(a) 救済する (b) 救済しないかを**明示的に決めて記録**する（**救済する**。理由は完了記録）。救済するため、同意状態の判定・撤回履歴・拒否カウンタの 3 つが一貫して読めることをテストで固定した
+- [x] `getConsentWithdrawalHistory()` が移行を跨いで `null` にならない
+- [x] `getConsentDeniedCount()` が移行を跨いで値を保持する
+- [x] 同意の署名検証（`buildSignaturePayload`）と同意版数比較（`PRIVACY_POLICY_VERSION`）の意味論を変えない（同意モジュールのコードは触っていない）
+- [x] `npm run validate` が緑。`settingsMigration` の既存テスト（`settingsMigration-completion-state.test.ts` / `settingsMigration-port-unify.test.ts` / `settingsBackupRestoreParity.test.ts`）が非退行 — **注**: 集約実行はホスト負荷による worker 起動タイムアウトで exit 1 になった。構成要素はすべて単独で緑、テストは 1095 files / 16423 tests で exit 0（詳細は「ゲート」節）
 
 ## テスト戦略
 
@@ -143,7 +143,7 @@ grep -n "chrome.storage.local.get" src/utils/storage/privacyConsent.ts
 
 ### 落とし穴
 
-- ~~**`InMemoryStoragePort` は `*_version` で終わるキーを数値の版数カウンタとして扱い、文字列値を捨てる**~~ **（2026-10-19 に PBI [2026-10-19-01](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) で解消済み。`versions` マップを廃止し、文字列値の `*_version` キーも通常キーとして seed・get・remove できる。以前の注意書き: `privacy_consent_version` は日付文字列なので、このポートに seed しても `get(null)` に出てこず、移行の欠陥と誤認しやすかった。ack の検証を `chrome.storage.local` のモックで行う必要も無くなった）**
+- ~~**`InMemoryStoragePort` は `*_version` で終わるキーを数値の版数カウンタとして扱い、文字列値を捨てる**~~ **（2026-10-19 に PBI [2026-10-19-01](2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) で解消済み。`versions` マップを廃止し、文字列値の `*_version` キーも通常キーとして seed・get・remove できる。以前の注意書き: `privacy_consent_version` は日付文字列なので、このポートに seed しても `get(null)` に出てこず、移行の欠陥と誤認しやすかった。ack の検証を `chrome.storage.local` のモックで行う必要も無くなった）**
 - `TOP_LEVEL_ONLY_KEYS` への追加は**移行対象キーの集合を変える**。`settings_migrated` の完了判定（`legacyKeys` が空になったか）に影響しないか、`settingsMigration-completion-state.test.ts` の各境界テストで確認する。
 - `settings` ブロブに既に同意レコードが入っているプロファイルでは、allowlist 追加後も top-level は空のまま。**救済を入れないと `getPrivacyConsent` は「未同意」を返し続ける**（症状は再同意モーダル。同意なしの記録再開にはならない）。
 - 同意レコードは署名付き（`buildSignaturePayload`）なので、**ブロブから top-level へ戻すだけ**にして値を再生成しないこと（署名が壊れる）。
@@ -167,12 +167,62 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜5 が自動テストで実装されパス（シナリオ 5 は救済するか否かの判断を明記したうえで）
-- [ ] `npm run validate` が緑
-- [ ] 既にブロブへ畳まれたプロファイルの扱い（救済する / しない）と、その理由が完了記録に残っている
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`settingsMigration.ts` の `TOP_LEVEL_ONLY_KEYS` コメント、必要なら `dev-docs/LAYERS.md` の同意キー配置の記述）
-- [ ] 完了時に `pbi/2026-10-18-05-*`（アーカイブ済み）の「残課題」から本 PBI へ参照を張り替える
+- [x] BDDシナリオ 1〜5 が自動テストで実装されパス（シナリオ 5 は救済する判断を明記）
+- [x] `npm run validate` が緑
+- [x] 既にブロブへ畳まれたプロファイルの扱い（**救済する**）と、その理由が完了記録に残っている
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`settingsMigration.ts` の `TOP_LEVEL_ONLY_KEYS` コメント。`dev-docs/LAYERS.md` に同意キー配置の記述は無く、更新不要と確認）
+- [x] 完了時に `pbi/2026-10-18-05-*`（アーカイブ済み）の「残課題」から本 PBI へ参照を張り替える（本 PBI のアーカイブに合わせて参照先を更新）
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ設定移行は同意状態を 2 箇所に分裂させたのか。
+
+1. **なぜ同意が消えるのか** — `privacy_consent` が `settings` ブロブへ畳まれ、`getPrivacyConsent()`（`privacyConsent.ts:95` で **top-level のみ**読む）が `undefined` を見て「未同意」を返す。`hasPrivacyConsent()` も false になり、記録ゲートが閉じる。
+2. **なぜ畳まれたのか** — `isMigratableStorageKey()` は「`StorageKeys` の値で allowlist に無いもの」を移行対象とする。`PRIVACY_CONSENT` は allowlist に無かった。
+3. **なぜ allowlist に無かったのか** — allowlist は「**読者が直接読むキー**」という観点で作られており、コメントにも "Version-managed state read straight from storage (privacyConsent.ts, …)" と書かれている。`PRIVACY_CONSENT_VERSION` は同意モジュールが版数比較に使うため拾われたが、**レコード本体は settings の一部に見えた**。
+4. **なぜその観点が失敗するのか** — 同意状態は「レコード＋ack 版数＋拒否カウンタ」で **1 つの単位**としてのみ意味を持つ。版数だけ残すと「vX で確認済み」という ack だけが残り、本体は別の場所に隠れる。**分類の単位が「覚えているキー」であって「一緒に残すべき保存単位」ではなかった**。
+5. **なぜテストで捕まらなかったのか** — 移行テストは settings キーと既知の allowlist キーを見ており、**「同意状態が移行を跨いで生き残る」ことを誰も assert していなかった**。同意モジュールのテストは移行を走らせない。2 つのテスト群の隙間に落ちていた。
+
+**原因**: allowlist の分類単位が「記憶しているキー」であり、「一緒に残さなければならない保存単位」ではなかったこと。
+
+**示唆**:
+- 単位で登録し、単位で検証する。allowlist のコメントに「なぜこの 3 キーが一緒なのか」を書かないと、次に誰かが同じ粒度の誤りを犯す。
+- 分裂は「片方だけ残った」状態なので、**レコードを top-level へ戻すことが唯一の回復手段**。救済は**完了判定より前**に置く必要がある（完了済みプロファイルは二度と訪問されない）。
+- 救済は冪等でなければならない（毎回の起動で走るため）。
+
+**解**: 同意系 3 キーを `TOP_LEVEL_ONLY_KEYS` に追加（単位として登録）＋ `promoteFoldedConsentState()`（ブロブにあり top-level に無いものだけ書き戻す・完了判定の前・冪等）＋ 単位の生存を 4 テストで pin。
+
+### 実装
+
+- `src/utils/storage/settingsMigration.ts` — `TOP_LEVEL_ONLY_KEYS` に `PRIVACY_CONSENT` / `PRIVACY_CONSENT_DENIED_COUNT` / `PRIVACY_CONSENT_LAST_DENIAL_TIME` を追加し、「同意状態は 1 つの単位」であることをコメントに明記。`promoteFoldedConsentState()` を追加し、`migrateToSingleSettingsObject` の**完了判定より前**で呼ぶ。
+- **救済を選んだ理由（owner 裁定の記録）**: 救済しない場合の実害は「移行直後に再同意モーダルが出る」だけではない。`hasPrivacyConsent()` が false になるため**記録ゲートが閉じ、撤回履歴・拒否カウンタも読めなくなる**（同意の実効性以前に、同意の状態そのものが失われる）。一方のコストは「冪等な書き戻し 1 回」だけで、書き戻す値は同意状態として正しい。よって救済する。
+- **ブロブ側のコピーは残す**（削除には移行経路内での CAS 書き換えが要るため）。何も読まない場所であり、唯一表に出うる経路（設定エクスポート）は PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md) で除外する。
+
+### テスト（Red → Green）
+
+- `src/utils/storage/__tests__/settingsMigration-port-unify.test.ts`
+  - 「同意の単位を top-level に残し、ブロブへ入れない」（他キーは従来どおり移行）
+  - 「以前の実行で畳まれた同意の単位を top-level へ戻す」（`settings_migrated` が completed でも救済が走り、移行自体は `false` を返す）
+  - 「一度も同意していないプロファイルは触らない（冪等）」
+- `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts`
+  - 「同意の単位全体が top-level（版数キーだけでなく）」— 分類の pin
+  - 「移行後も実リーダー（`getConsentWithdrawalHistory` / `getConsentDeniedCount`）で読める」— chrome モックを駆動する harness 経由で、移行を実ポートで走らせてから読む
+- **Red の確認**: `settingsMigration.ts` の変更を revert すると新規 4 テストすべてが失敗（`expected {} to deeply equal { privacy_consent: … }` ほか）。
+- 回帰: `src/utils/storage/__tests__/` と `src/utils/__tests__/storage.test.ts`、`src/popup/__tests__/privacyConsent.test.ts` の 62 ファイル / 599 テストが緑。
+
+### ゲート
+
+集約 `npm run validate` は**この環境では緑にならなかった**ため、構成要素ごとに検証した。結果は次のとおり（すべて実測）。
+
+- **単独実行で緑**: `validate:json` / `lint` / `check-innerhtml-escape` / `check-i18n` / `check-deprecated-aliases` / `lint:layers-docs` / `lint:adr-links` / `check-privacy` / `type-check` / `type-check:test:baseline`（**456 errors / pinned 456, exit 0**）
+- **テスト**: `npx vitest run` 単独で **1095 files / 16423 tests passed / exit 0**（PBI 02 完了後の 16418 から新規 5 テスト）
+- **集約 `npm run validate` は exit 1**。原因はテスト失敗ではなく **vitest の fork worker 起動タイムアウト 11 件**（`[vitest-pool]: Failed to start forks worker … Timeout waiting for worker to respond`）。同時刻のホスト load average が 8 コアで 13〜27 と高く、worker が起動できず 11 ファイルが未実行（1084/1095 ファイル、16280/16423 テスト。実行された分は**失敗 0**）。
+- ログの `[LocalMD] FAILED: Storage error` は `saveLocalMarkdownStep` の想定失敗経路のテストログであり、失敗ではない。集約ログ中の `test type errors grew: 3 > pinned 2` などは `check-type-test-baseline.mjs` 自身の単体テスト（環境変数スタブで合成した値）の出力で、実際の判定は上記のとおり緑。
+
+**教訓（記録）**: 負荷が高いときは集約 validate の `Errors N` を実装起因と誤読しない。まず「未実行ファイル数」と `Timeout waiting for worker to respond` の有無を見る。
 
 ## 関連
 

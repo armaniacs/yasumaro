@@ -163,6 +163,86 @@ describe('settingsMigration port unify', () => {
       await expect(migrateToSingleSettingsObject({ port: portWithoutRemove })).rejects.toThrow(/remove/);
       expect(chromeStorageCallCounts()).toEqual(before);
     });
+
+    // PBI 2026-10-19-03: the consent record, its ack version and the denial
+    // counters are ONE unit read top-level by privacyConsent.ts. Folding only
+    // the record into the blob splits the unit across two stores: the version
+    // says "acknowledged at vX" while the record reads as absent, so the consent
+    // modal returns and recording is blocked by the gate.
+    it('keeps the consent unit top-level instead of folding it into the blob', async () => {
+      const port = new InMemoryStoragePort();
+      const consent = {
+        hasConsented: true,
+        consentDate: '2026-10-01T00:00:00Z',
+        consentVersion: '2026-09-08',
+      };
+      port.seed({
+        [StorageKeys.PRIVACY_CONSENT]: consent,
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 2,
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: 1700000000000,
+        [StorageKeys.PRIVACY_CONSENT_VERSION]: '2026-09-08',
+        [StorageKeys.GEMINI_API_KEY]: 'plain-key-value',
+      });
+
+      await migrateToSingleSettingsObject({ port });
+
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT])).toEqual({
+        [StorageKeys.PRIVACY_CONSENT]: consent,
+      });
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT_DENIED_COUNT])).toEqual({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 2,
+      });
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME])).toEqual({
+        [StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]: 1700000000000,
+      });
+
+      const blob = (await port.get('settings'))['settings'] as Record<string, unknown>;
+      expect(blob[StorageKeys.PRIVACY_CONSENT]).toBeUndefined();
+      expect(blob[StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]).toBeUndefined();
+      expect(blob[StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME]).toBeUndefined();
+      // Unrelated keys still migrate.
+      expect(blob[StorageKeys.GEMINI_API_KEY]).toBe('plain-key-value');
+      expect(await port.get([StorageKeys.GEMINI_API_KEY])).toEqual({});
+    });
+
+    // Profiles migrated before the allowlist fix already have the record inside
+    // the blob and nothing top-level. Promoting it back is the only way to heal
+    // them without asking every user to consent again.
+    it('promotes a consent unit folded by an earlier run back to top-level', async () => {
+      const port = new InMemoryStoragePort();
+      const consent = { hasConsented: true, consentDate: '2026-10-01T00:00:00Z' };
+      port.seed({
+        settings: {
+          [StorageKeys.PRIVACY_CONSENT]: consent,
+          [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 3,
+        },
+        [StorageKeys.PRIVACY_CONSENT_VERSION]: '2026-09-08',
+        [SETTINGS_MIGRATED_KEY]: { schemaVersion: 2, stage: 'completed' },
+      });
+
+      const migrated = await migrateToSingleSettingsObject({ port });
+
+      // The migration itself is already complete; the heal runs regardless.
+      expect(migrated).toBe(false);
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT])).toEqual({
+        [StorageKeys.PRIVACY_CONSENT]: consent,
+      });
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT_DENIED_COUNT])).toEqual({
+        [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 3,
+      });
+    });
+
+    it('leaves a profile that never consented untouched (heal is idempotent)', async () => {
+      const port = new InMemoryStoragePort();
+      port.seed({ settings: { [StorageKeys.OBSIDIAN_PORT]: '27123' } });
+
+      await migrateToSingleSettingsObject({ port });
+      await migrateToSingleSettingsObject({ port });
+
+      expect(await port.get([StorageKeys.PRIVACY_CONSENT])).toEqual({});
+      const blob = (await port.get('settings'))['settings'] as Record<string, unknown>;
+      expect(blob[StorageKeys.OBSIDIAN_PORT]).toBe('27123');
+    });
   });
 
   describe('backup helpers', () => {
