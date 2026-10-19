@@ -210,15 +210,17 @@ async function mergeWithExistingApiKeys(
   return merged;
 }
 
-async function isOverImportSizeCap(jsonData: string): Promise<boolean> {
-  if (new TextEncoder().encode(jsonData).length <= DEFAULT_IMPORT_SIZE_CAP_BYTES) return false;
+function isOverImportSizeCap(jsonData: string): boolean {
+  return new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES;
+}
+
+async function logImportSizeCapExceeded(): Promise<void> {
   await logError(
     'Import rejected: file exceeds size cap',
     {},
     ErrorCode.SETTINGS_IMPORT_FAILURE,
     'settingsExportImport.ts'
   );
-  return true;
 }
 
 async function finalizeParsedImport(
@@ -395,7 +397,8 @@ export async function importEncryptedSettings(
   try {
     // Size cap before any decode/KDF/decrypt work (VULN-034): a forged giant
     // file must not reach PBKDF2.
-    if (await isOverImportSizeCap(jsonData)) {
+    if (isOverImportSizeCap(jsonData)) {
+      await logImportSizeCapExceeded();
       return null;
     }
 
@@ -751,7 +754,8 @@ export async function importSettings(
   opts?: ImportSettingsOptions
 ): Promise<Settings | null> {
   try {
-    if (await isOverImportSizeCap(jsonData)) {
+    if (isOverImportSizeCap(jsonData)) {
+      await logImportSizeCapExceeded();
       return null;
     }
 
