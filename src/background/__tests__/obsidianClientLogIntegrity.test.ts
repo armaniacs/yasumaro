@@ -12,6 +12,8 @@ vi.mock('../../utils/fetch.js', () => ({
   // The client spreads the shared redirect policy into every fetch, so the mock
   // must mirror that export or the access itself throws.
   NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
+  // PBI 2026-10-19-05: outbound paths take the policy through this seam.
+  noRedirectInit: (options: Record<string, unknown> = {}) => ({ redirect: 'error', ...options }),
   fetchWithTimeout: vi.fn(),
   CONNECTION_TEST_CACHE_MODE: 'no-cache',
 }));

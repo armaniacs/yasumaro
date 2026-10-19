@@ -1,5 +1,5 @@
 import type { Settings } from '../../utils/storage/types.js';
-import { validateUrlForFilterImport, fetchWithTimeout } from '../../utils/fetch.js';
+import { validateUrlForFilterImport, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logDebug, logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -96,14 +96,15 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
       // Decision: `redirect: 'error'` (not `manual` + per-hop re-validation).
       // All known filter-list sources are fixed HTTPS hosts and none rely on
       // http->https or mirror redirects, so the stricter policy costs nothing.
-      // See dev-docs/ADR/2026-08-29-fetch-redirect-policy.md. If a future source
-      // needs redirects, switch to fetchWithRedirectGuard() from utils/fetch.ts.
-      const response = await fetchWithTimeout(message.payload.url, {
+      // The decision itself now lives in `NO_REDIRECT_FETCH_POLICY`
+      // (utils/fetch.ts), shared with the AI and Obsidian paths; the ADR
+      // (dev-docs/ADR/2026-08-29-fetch-redirect-policy.md) keeps the rationale.
+      // `noRedirectInit` makes a later `redirect:` override a type error.
+      const response = await fetchWithTimeout(message.payload.url, noRedirectInit({
         method: 'GET',
         cache: 'no-cache',
-        redirect: 'error',
         allowedUrls,
-      });
+      }));
 
       // Defense in depth: `redirect: 'error'` should already have rejected, but
       // never hand back a body whose response was redirected.

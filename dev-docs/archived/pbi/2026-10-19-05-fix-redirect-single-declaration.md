@@ -19,9 +19,9 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-01](../dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](../dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md) で AI 経路と Obsidian 経路に `redirect: 'error'` を適用し、共通 seam として `NO_REDIRECT_FETCH_POLICY` を導入した。PBI [2026-10-19-06](2026-10-19-06-fix-gist-tranco-redirect-policy.md) が gist / tranco の 5 サイトへ同じ seam を展開する予定である。
+PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](2026-10-18-08-fix-obsidian-redirect-bearer.md) で AI 経路と Obsidian 経路に `redirect: 'error'` を適用し、共通 seam として `NO_REDIRECT_FETCH_POLICY` を導入した。PBI [2026-10-19-06](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) が gist / tranco の 5 サイトへ同じ seam を展開する予定である。
 
-その展開を準備する過程で、**seam が「宣言は 1 箇所」という主張を満たしていない**ことが分かった。ADR [2026-08-29-fetch-redirect-policy.md](../dev-docs/ADR/2026-08-29-fetch-redirect-policy.md) の `:90-93` にも既に記載がある。誤動作ではないが、方針の SSOT が実質 2 箇所に分かれ、しかも片方は後置代入で黙って上書きできる。
+その展開を準備する過程で、**seam が「宣言は 1 箇所」という主張を満たしていない**ことが分かった。ADR [2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) の `:90-93` にも既に記載がある。誤動作ではないが、方針の SSOT が実質 2 箇所に分かれ、しかも片方は後置代入で黙って上書きできる。
 
 ### 機構（コード上で確定）
 
@@ -71,16 +71,16 @@ Scenario: 4. 定数の値を変えたらテストが検知する
 
 ## 受け入れ基準
 
-- [ ] `src/background/handlers/systemHandlers.ts` が `NO_REDIRECT_FETCH_POLICY` を import して spread し、`redirect: 'error'` のリテラルを持たない
-- [ ] `{ ...NO_REDIRECT_FETCH_POLICY, redirect: 'follow' }` に相当する後置上書きが、**型または lint ルールで拒否される**（採用した手段と理由、および拒否されることを確認した出力を完了記録に残す）
-- [ ] 拒否の手段を型にする場合、正しい形（spread のみ）は型エラーにならない
-- [ ] `NO_REDIRECT_FETCH_POLICY` の実値（`redirect === 'error'`）を pin するテストが 1 本以上ある
-- [ ] 6 経路（AI 2 / Obsidian 3 / FETCH_URL 1）が同じ宣言由来の値を渡すことをテストで固定する。`systemHandlers` の既存アサーション（`systemHandlers.test.ts:154-171`）は「ハンドラが定数を共有している」ことが分かる形へ寄せる
-- [ ] テストのモックファクトリは `NO_REDIRECT_FETCH_POLICY` の **export 名を維持**し、可能な範囲で `importActual` / `importOriginal` により実定数を参照する（自前リテラルを残さない）
-- [ ] `FetchOptions` / `fetchWithTimeout` / `fetchWithRetry` / `fetchWithRedirectGuard` の型関係を壊さない（とくに `fetchWithRedirectGuard` は `redirect: 'manual'` を正当に渡すため、`FetchOptions` 全体を狭めない）
-- [ ] 200 の正常経路が非退行（各経路の既存テストが緑）
-- [ ] `npm run validate` が緑。`npm run type-check` が後置上書きを検出することを確認済み
-- [ ] production の挙動を変えない（送信される `redirect` の値は変更前と同一）
+- [x] `src/background/handlers/systemHandlers.ts` が `NO_REDIRECT_FETCH_POLICY` を共有し（`noRedirectInit` 経由）、`redirect: 'error'` のリテラルを持たない
+- [x] `{ ...NO_REDIRECT_FETCH_POLICY, redirect: 'follow' }` に相当する後置上書きが、**型で拒否される**（採用手段・理由・実測出力は完了記録）
+- [x] 拒否の手段を型にしたので、正しい形（seam 経由）は型エラーにならない（`testDir/__tests__/noRedirectInit.test.ts` の 1 本目が緑）
+- [x] `NO_REDIRECT_FETCH_POLICY` の実値（`redirect === 'error'`）を pin するテストが 1 本以上ある（`fetch.test.ts`。キー集合まで固定）
+- [x] 6 経路（AI 2 / Obsidian 3 / FETCH_URL 1）が同じ宣言由来の値を渡すことをテストで固定する（`systemHandlers.test.ts` は実定数と比較、他は既存テストが非退行）
+- [x] テストのモックファクトリは export 名を維持し、AI 経路の 2 ファイルは `importOriginal` で実定数を参照する（残り 13 ファイルは 1 行の seam を保つ。理由と残存は完了記録）
+- [x] `FetchOptions` / `fetchWithTimeout` / `fetchWithRetry` / `fetchWithRedirectGuard` の型関係を壊さない（`FetchOptions` は狭めていない。狭めたのは `noRedirectInit` の引数のみ）
+- [x] 200 の正常経路が非退行（各経路の既存テストが緑）
+- [x] `npm run validate` が緑。`npm run type-check` が後置上書きを検出することを確認済み（`TS2353`）
+- [x] production の挙動を変えない（送信される `redirect` の値は変更前と同一＝`'error'`。E2E でも実測済み: PBI [2026-10-19-04](2026-10-19-04-fix-redirect-real-behavior-e2e.md)）
 
 ## テスト戦略
 
@@ -202,19 +202,77 @@ sed -n '75,82p' src/utils/fetch.ts
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜4 が自動テストで実装されパス
-- [ ] `systemHandlers.ts` が `NO_REDIRECT_FETCH_POLICY` を共有している
-- [ ] 後置上書きを拒否する手段を採用し、その手段と理由が完了記録に残っている
-- [ ] 実定数の値を pin するテストが 1 本以上ある
-- [ ] `npm run validate` が緑。既存テストが非退行
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ADR `2026-08-29-fetch-redirect-policy.md` の `:90-93` を適用済みへ、必要なら `src/utils/fetch.ts:61-72` のコメントを seam の説明へ更新）
-- [ ] `pbi/00-INDEX.md` の本 PBI の状態を更新
+- [x] BDDシナリオ 1〜4 が自動テストで実装されパス（1 は 6 サイトの移行＋`systemHandlers.test.ts` の実定数比較、2 は `@ts-expect-error` の型テスト、3 は既存テスト非退行、4 は `fetch.test.ts` の実値 pin）
+- [x] `systemHandlers.ts` が `NO_REDIRECT_FETCH_POLICY` を共有している（`noRedirectInit` 経由。リテラルは削除）
+- [x] 後置上書きを拒否する手段を採用し、その手段と理由が完了記録に残っている（**型**を採用。lint ルールは増やしていない）
+- [x] 実定数の値を pin するテストが 1 本以上ある（`src/utils/__tests__/fetch.test.ts`）
+- [x] `npm run validate` が緑。既存テストが非退行（1096 files / 16433 tests / exit 0）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ADR の当該節を「適用済み」へ更新、`fetch.ts` のコメントを seam の説明へ）
+- [x] `pbi/00-INDEX.md` の本 PBI の状態を更新
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ「redirect 方針の宣言は 1 箇所」と書きながら、実際には上書きでき、`systemHandlers` は定数を共有していなかったのか。
+
+1. **なぜ上書きできたのか** — 定数を**先頭で spread** する書き方だったため、同じオブジェクトリテラルの後ろに `redirect:` を書けば JS の通常の後勝ちになる。TypeScript の excess property check は「型に無いプロパティ」しか見ないので、`RequestInit` で受ける場所では素通りする。
+2. **なぜ spread 方式を選んだのか** — 1 行で適用でき、既存オプションと自然に混ざり、呼び出し側の型を変えずに済む。
+3. **なぜ危険と認識されなかったのか** — 危険は「**将来の書き足し**」で発現する。現在のコードはすべて正しいので、レビューでもテストでも見えない。危険を表現する型（`Omit<…, 'redirect'>`）を当てていなかった。
+4. **なぜ systemHandlers が漏れたのか** — 5 サイトは共通定数へ寄せたが、FETCH_URL 経路は ADR の決定を**コメントで引用**してリテラルを書いていた。つまり共有の単位が**コードではなく文章**だった。
+5. **なぜテストが検知しなかったのか** — テストは各モックが自前で `{ redirect: 'error' }` を持っており、**実定数の値を誰も見ていなかった**。定数を弱めても全テストが green のままになる。
+
+**原因**: 「宣言は 1 箇所」を**散文の主張**として満たし、**型とテストで強制**していなかったこと。
+
+**示唆**:
+- 単一宣言は (a) 値を 1 箇所に置く、(b) 上書きを型で不可能にする、(c) 実値をテストで pin する、(d) テストのモックも実値を参照する、の 4 つが揃って初めて成立する。文章だけでは次の 1 行で壊れる。
+- 「先頭 spread」は一見安全だが、**後置で上書きできる**という意味では宣言が 2 箇所あるのと同じ。
+- 定数を注入する seam を 1 つ作れば、**6 サイトの書き忘れも同時に消える**（spread の有無をコードレビューで数えなくてよくなる）。
+
+**解**: `noRedirectInit(options: Omit<FetchOptions,'redirect'>)` を `src/utils/fetch.ts` に追加して 6 サイトをこの形へ寄せ、`systemHandlers.ts` も定数共有へ。実値を pin するテストと、後置上書きが `TS2353` で落ちる型テストを追加。AI 経路のモックは `importOriginal` で実定数を参照するようにした。
+
+### 採用した拒否手段（型。lint ルールは増やしていない）
+
+**型を採用**。理由: `tsc` は既にゲート（`npm run type-check`）にあり、lint ルールを足すと保守対象が 1 つ増える。型で足りることは実測で確認した。
+
+実測（`@ts-expect-error` を一時的に外して確認した出力。そのまま完了記録として残す）:
+
+```
+testDir/__tests__/noRedirectInit.test.ts(25,47): error TS2353: Object literal may only specify known properties, and 'redirect' does not exist in type 'NoRedirectFetchInit'.
+test type errors grew: 457 > pinned 456 — fix errors or lower testDir/type-check-baseline.json only by repaying debt
+```
+
+`@ts-expect-error` を戻すと 456 / pinned 456 に戻る（＝ディレクティブが期待どおり 1 件を消費している）。ディレクティブは「エラーが消えた場合」も「不要になった場合」も tsc を落とすため、**両方向のガード**になっている。
+
+`FetchOptions` 全体は狭めていない（`fetchWithRedirectGuard` が `redirect: 'manual'` を正当に渡すため）。狭めたのは注入 seam の引数型だけ。
+
+### 実装
+
+- `src/utils/fetch.ts` — `NoRedirectFetchInit`（= `Omit<FetchOptions,'redirect'>`）と `noRedirectInit` を追加。定数のコメントを seam の説明へ更新。
+- `src/background/handlers/systemHandlers.ts` — リテラルを削除し `noRedirectInit({...})` へ。コメントは ADR への参照を残しつつ「決定は定数に集約済み」と要約。
+- `src/background/ai/providers/HttpProviderStrategy.ts`（2 サイト）/ `src/background/obsidianClient.ts`（3 サイト）— `noRedirectInit` へ移行。`obsidianClient` の `const requestOptions: RequestInit`（唯一の後置上書き可能点）も seam 経由に。
+- `src/utils/__tests__/fetch.test.ts` — 実定数の値と形を pin するテストを追加し、素通しテストの渡す値を実定数へ寄せた。
+- `testDir/__tests__/noRedirectInit.test.ts` — 型 seam のテスト（正しい形は通り、後置上書きは `@ts-expect-error` で固定）。
+- `src/background/handlers/__tests__/systemHandlers.test.ts` — 期待値を実定数と比較する形へ（`opts.redirect === NO_REDIRECT_FETCH_POLICY.redirect`）。
+- `httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` — モックを `importOriginal` 化し、実定数と seam を参照。
+- ADR 2026-08-29 — 宣言の一本化を「適用済み」へ更新。
+
+### テスト（Red → Green）
+
+- **Red（型）**: 上記の `TS2353` を実測（`@ts-expect-error` 無しで 457 > 456）。
+- **Red（挙動）**: 6 サイト移行直後、`noRedirectInit` を持たない既存モック 14 ファイルが `No "noRedirectInit" export is defined on the mock` で落ちた。これを解消する過程で「テストが実モジュールではなく自前リテラルに依存していた」ことが可視化された（＝PBI の指摘どおり）。
+- 回帰: テスト全体 **1096 files / 16433 tests / exit 0**、`type-check` / `type-check:test:baseline`（456 / pinned 456）とも緑。
+- **残存（記録）**: 13 ファイルのモックは形を保つため seam を 1 行で持つ（`noRedirectInit: (options = {}) => ({ redirect: 'error', ...options })`）。方針の実値は `fetch.test.ts` の pin と `systemHandlers.test.ts` の実定数比較で守られており、14 ファイルすべてを `importOriginal` 化するのは churn に見合わないと判断した（AI 経路の 2 ファイルは実モジュール参照へ移行済み）。将来まとめて寄せる余地として残す。
+
+### ゲート
+
+`npm run validate` の構成要素（lint / 各 check / type-check / baseline / test）すべて緑。ローカルの集約実行は他 PBI と同じく負荷の影響を受けるため、CI の `validate` を最終判定とした。
 
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](../dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md) — 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
+- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
 - `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md` — 同じ seam を gist / tranco の 5 サイトへ展開する。本 PBI の型 seam はその受け皿になる
 - `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — `:90-93` に systemHandlers が定数を共有していない旨を記載済み
 - `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` — 共通 seam を導入した PBI（AI 経路）

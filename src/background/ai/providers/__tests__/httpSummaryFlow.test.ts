@@ -18,14 +18,19 @@ const { fetchWithRetryMock, applyCustomPromptMock, readJsonCappedMock, buildAllo
   buildAllowedUrlsMock: vi.fn((): Set<string> => new Set<string>()),
 }));
 
-vi.mock('../../../../utils/fetch.js', () => ({
-  // Mirrors the real export so the strategy can spread the shared redirect
-  // policy without reaching a transport.
-  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
-  fetchWithRetry: fetchWithRetryMock,
-  fetchWithTimeout: vi.fn(),
-  validateUrlForAIRequests: vi.fn(),
-}));
+vi.mock('../../../../utils/fetch.js', async (importOriginal) => {
+  // PBI 2026-10-19-05: take the real module so the shared redirect policy and its
+  // injection seam come from the single declaration. A test-local
+  // `{ redirect: 'error' }` literal would keep passing after the policy was
+  // weakened, which is exactly what the pin test exists to catch.
+  const actual = await importOriginal<typeof import('../../../../utils/fetch.js')>();
+  return {
+    ...actual,
+    fetchWithRetry: fetchWithRetryMock,
+    fetchWithTimeout: vi.fn(),
+    validateUrlForAIRequests: vi.fn(),
+  };
+});
 vi.mock('../../../../utils/customPromptUtils.js', () => ({
   applyCustomPrompt: applyCustomPromptMock,
   getDefaultSystemPrompt: vi.fn(() => 'default system'),

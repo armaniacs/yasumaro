@@ -391,6 +391,10 @@ vi.mock('../pipeline/RecordingOrchestrator.js', () => {
 });
 vi.mock('../../utils/fetch.js', () => ({
     CONNECTION_TEST_CACHE_MODE: 'no-store',
+    // PBI 2026-10-19-05: the FETCH_URL path injects the shared redirect policy
+    // through this seam.
+    NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
+    noRedirectInit: (options: Record<string, unknown> = {}) => ({ redirect: 'error', ...options }),
     validateUrlForFilterImport: vi.fn(),
     fetchWithTimeout: vi.fn(),
     isPrivateIpAddress: vi.fn(() => false),

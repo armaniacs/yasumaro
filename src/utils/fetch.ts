@@ -72,6 +72,28 @@ export const CONNECTION_TEST_CACHE_MODE: RequestCache = 'no-store';
  */
 export const NO_REDIRECT_FETCH_POLICY = { redirect: 'error' } as const;
 
+/**
+ * Options accepted by {@link noRedirectInit}: everything the fetch helpers take,
+ * minus `redirect` (which the policy owns).
+ */
+export type NoRedirectFetchInit = Omit<FetchOptions, 'redirect'>;
+
+/**
+ * Builds a fetch init around {@link NO_REDIRECT_FETCH_POLICY} (PBI 2026-10-19-05).
+ *
+ * The policy used to be spread first and then, in principle, overridden by a
+ * later `redirect:` key in the same object literal — silently and with no type
+ * or lint complaint. Taking the rest of the options through
+ * `Omit<FetchOptions, 'redirect'>` makes that override a compile error
+ * (`TS2353`) while the correct form (policy + other options) still type-checks.
+ *
+ * Narrow only this seam: `FetchOptions` stays as wide as `RequestInit` because
+ * `fetchWithRedirectGuard` legitimately passes `redirect: 'manual'`.
+ */
+export function noRedirectInit(options: NoRedirectFetchInit = {}): RequestInit {
+  return { ...NO_REDIRECT_FETCH_POLICY, ...options };
+}
+
 interface FetchOptions extends RequestInit {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;

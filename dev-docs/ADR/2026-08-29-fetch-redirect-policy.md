@@ -88,7 +88,7 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   PBI を起票した: `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md`
   (適用したら本節を「適用済み」へ更新すること)。実挙動の検証は
   `dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`（2026-10-19 完了）、宣言の一本化は
-  `pbi/2026-10-19-05-fix-redirect-single-declaration.md` で扱う。
+  `dev-docs/archived/pbi/2026-10-19-05-fix-redirect-single-declaration.md`（2026-10-19 完了）で扱う。
 - **実挙動の実測（2026-10-19 追記）**: それまでのテストは `init.redirect === 'error'`
   という**オプションの存在**を pin するだけで、30x が実際に来たときにブラウザが何を
   するかは測っていなかった。実サーバ（307 + リクエスト記録）と実ブラウザを使う E2E
@@ -101,10 +101,20 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   無いとフィクスチャが壊れていても green になる）。同時に、Obsidian 接続テストに
   read / write と対称な `response.redirected` ガードを追加した（それまで接続テストだけ
   抜けていた）。詳細は `dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`。
-- `src/background/handlers/systemHandlers.ts` は今も `redirect: 'error'` を
-  リテラルで書いており、上記の `NO_REDIRECT_FETCH_POLICY` を共有していない。
-  FETCH_URL 経路の挙動は正しいが、「宣言は 1 箇所」という整理は厳密には
-  まだ成り立っていない。
+- **宣言の一本化（2026-10-19 適用済み）**: 以前は `systemHandlers.ts` が
+  `redirect: 'error'` をリテラルで持ち、5 サイトは `NO_REDIRECT_FETCH_POLICY` を
+  **先頭で spread** していた。先頭 spread は、同じリテラルの後ろに `redirect:` を
+  書くと**型でも lint でも黙って上書きできる**（＝宣言が実質 1 箇所ではなかった）。
+  PBI `2026-10-19-05` で次を行った:
+  (1) `systemHandlers.ts` も定数を共有（リテラルを削除）、
+  (2) `noRedirectInit(options: Omit<FetchOptions, 'redirect'>)` を追加し、6 サイト
+  すべてをこの形へ寄せた。**後置の `redirect:` は `TS2353` で落ちる**ことを
+  `testDir/__tests__/noRedirectInit.test.ts` の `@ts-expect-error` で固定している
+  （ディレクティブは「エラーが消えても」「不要になっても」落ちるので両方向のガード）。
+  (3) 定数の実値を pin するテストを追加し、AI 経路のモックは `importOriginal` で
+  実定数を参照するようにした（自前リテラルだと方針を弱めても green のままになる）。
+  `FetchOptions` 全体は狭めていない（`fetchWithRedirectGuard` が `redirect: 'manual'`
+  を正当に渡すため）。
 - ホップ毎再検証ヘルパーが将来の fetch 追加のための規約として存在する。
 
 ## 参照

@@ -1,4 +1,4 @@
-import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry } from '../fetch.js';
+import { fetchWithTimeout, isUrlAllowed, isPrivateIpAddress, isLocalhostAddress, validateUrlForFilterImport, validateUrlForAIRequests, fetchWithRetry, noRedirectInit, NO_REDIRECT_FETCH_POLICY } from '../fetch.js';
 import { beforeEach } from 'vitest';
 import { installTestSecretKek } from '../crypto/__tests__/secretKekHelper.js';
 
@@ -229,14 +229,23 @@ describe('fetchWithTimeout', () => {
     // request (and its credential header) to an address no gate checked. That
     // policy only works if fetchWithTimeout hands the option to the platform
     // fetch alongside the rest of fetchOptions, so the contract is pinned here.
+    // The value comes from the real constant (PBI 2026-10-19-05): a test-local
+    // literal would keep passing after the policy itself was weakened.
     const mockFetch = vi.fn(() => Promise.resolve({ ok: true } as Response));
     global.fetch = mockFetch;
 
-    await fetchWithTimeout('https://example.com', { skipCspValidation: true, redirect: 'error' }, 1000);
+    await fetchWithTimeout('https://example.com', noRedirectInit({ skipCspValidation: true }), 1000);
 
     const [url, init] = mockFetch.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe('https://example.com');
-    expect(init.redirect).toBe('error');
+    expect(init.redirect).toBe(NO_REDIRECT_FETCH_POLICY.redirect);
+  });
+
+  // PBI 2026-10-19-05: the policy is declared once. This is the one test that
+  // fails if the constant's value is changed or relaxed.
+  test('declares the no-redirect policy in exactly one place', () => {
+    expect(NO_REDIRECT_FETCH_POLICY).toEqual({ redirect: 'error' });
+    expect(Object.keys(NO_REDIRECT_FETCH_POLICY)).toEqual(['redirect']);
   });
 
   test('defaults the timeout to 30000ms', async () => {

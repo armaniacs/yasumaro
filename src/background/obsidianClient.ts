@@ -7,7 +7,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { CONNECTION_TEST_CACHE_MODE, NO_REDIRECT_FETCH_POLICY, fetchWithTimeout } from '../utils/fetch.js';
+import { CONNECTION_TEST_CACHE_MODE, noRedirectInit, fetchWithTimeout } from '../utils/fetch.js';
 import {
     isRetryableNetworkError,
     isRetryableStatus,
@@ -272,11 +272,10 @@ export class ObsidianClient {
     }
 
     async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
-        const response = await fetchWithTimeout(url, {
-            ...NO_REDIRECT_FETCH_POLICY,
+        const response = await fetchWithTimeout(url, noRedirectInit({
             method: 'GET',
             headers
-        }, FETCH_TIMEOUT_MS);
+        }), FETCH_TIMEOUT_MS);
 
         if (response.redirected) {
             // `redirect: 'error'` already aborts a 30x before this point, so this
@@ -314,12 +313,11 @@ export class ObsidianClient {
     }
 
     async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
-        const response = await fetchWithTimeout(url, {
-            ...NO_REDIRECT_FETCH_POLICY,
+        const response = await fetchWithTimeout(url, noRedirectInit({
             method: 'PUT',
             headers,
             body: content
-        }, FETCH_TIMEOUT_MS);
+        }), FETCH_TIMEOUT_MS);
 
         if (response.redirected) {
             // Same defence in depth as the read path: a redirected response is
@@ -366,12 +364,14 @@ export class ObsidianClient {
             backoffMultiplier,
             retryableStatusCodes
         } = OBSIDIAN_CONNECTION_RETRY_POLICY;
-        const requestOptions: RequestInit = {
-            ...NO_REDIRECT_FETCH_POLICY,
+        // `noRedirectInit` keeps the redirect policy un-overridable here: the
+        // wide `RequestInit` annotation this used to carry was the one spot where
+        // a trailing `redirect:` would have compiled silently (PBI 2026-10-19-05).
+        const requestOptions: RequestInit = noRedirectInit({
             method: 'GET',
             headers,
             cache: CONNECTION_TEST_CACHE_MODE
-        };
+        });
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
             try {

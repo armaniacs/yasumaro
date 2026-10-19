@@ -14,10 +14,16 @@ import {
   createLogForwardHandler,
 } from '../systemHandlers.js';
 
-vi.mock('../../../utils/fetch.js', () => ({
-  validateUrlForFilterImport: vi.fn(),
-  fetchWithTimeout: vi.fn(),
-}));
+vi.mock('../../../utils/fetch.js', async (importOriginal) => {
+  // PBI 2026-10-19-05: keep the real redirect policy and its injection seam so
+  // the handler is asserted against the single declaration.
+  const actual = await importOriginal<typeof import('../../../utils/fetch.js')>();
+  return {
+    ...actual,
+    validateUrlForFilterImport: vi.fn(),
+    fetchWithTimeout: vi.fn(),
+  };
+});
 
 vi.mock('../../../utils/logger/types.js', async (importOriginal) => {
   const actual = await importOriginal();
@@ -38,7 +44,7 @@ vi.mock('../../../utils/storage/savedUrlRepository.js', () => ({
   updateSavedUrlEntry: vi.fn().mockResolvedValue(undefined),
 }));
 
-import { validateUrlForFilterImport, fetchWithTimeout } from '../../../utils/fetch.js';
+import { validateUrlForFilterImport, fetchWithTimeout, NO_REDIRECT_FETCH_POLICY } from '../../../utils/fetch.js';
 import { updateSavedUrlEntry } from '../../../utils/storage/savedUrlRepository.js';
 import type { SavedUrlEntry } from '../../../utils/urlEntry.js';
 import { logError, logWarn } from '../../../utils/logger/api.js';
@@ -168,6 +174,9 @@ describe('createFetchUrlHandler', () => {
     await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
 
     const opts = vi.mocked(fetchWithTimeout).mock.calls[0]?.[1] as Record<string, unknown>;
+    // PBI 2026-10-19-05: compare against the shared declaration, not a local
+    // literal — the assertion then also catches a weakened policy constant.
+    expect(opts.redirect).toBe(NO_REDIRECT_FETCH_POLICY.redirect);
     expect(opts.redirect).toBe('error');
   });
 
