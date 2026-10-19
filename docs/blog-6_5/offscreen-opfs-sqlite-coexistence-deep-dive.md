@@ -1,4 +1,4 @@
-# Yasumaro のローカル SQLite はどう「共存」しているか — Offscreen・OPFS Worker・3層フォールバックの実装を追った
+# Yasumaro のローカル SQLite はどう「共存」しているか ― Offscreen・OPFS Worker・3層フォールバックの実装を追った
 
 [日本語](#日本語) | [English](#english)
 
@@ -32,11 +32,11 @@ OPFS Worker (opfsWorker.ts, c11)  ── @subframe7536/sqlite-wasm / OPFSCoopSyn
 
 `sqliteClient.ts` は SW 側の「共有クライアント」で、以下の工夫を入れています。
 
-- `Mutex`（maxQueue 200）でリクエストを直列化 — offscreen は1操作ずつ処理するため、複数タブからの並行アクセスを防ぐ（M7）
+- `Mutex`（maxQueue 200）でリクエストを直列化 ― offscreen は1操作ずつ処理するため、複数タブからの並行アクセスを防ぐ（M7）
 - `ensureOffscreenDocument()` で文書の生存をキャッシュし、不要な IPC を避ける
 - メッセージ失敗時に `offscreenAlive=false` として文書を再作成し、1回だけリトライ（M12）
 
-知識グラフ上、`sqliteClient.ts`(c7) と `sqliteEngineContext.ts`(c14) の間には **AST エッジがありません**。SW↔offscreen は `chrome.runtime.sendMessage` 経由のランタイム結合だからです。実装上は `SQLITE_*` というメッセージ型で厳密にプロトコル化されていますが、静的解析では「切れたまま」になります。
+知識グラフ上、`sqliteClient.ts`(c7) と `sqliteEngineContext.ts`(c14) の間には **AST エッジがありません**。SW⇔offscreen は `chrome.runtime.sendMessage` 経由のランタイム結合だからです。実装上は `SQLITE_*` というメッセージ型で厳密にプロトコル化されていますが、静的解析では「切れたまま」になります。
 
 ---
 
@@ -51,7 +51,7 @@ OPFS Worker  >  IndexedDB VFS (wa-sqlite async, FTS5あり)  >  chrome.storage.l
 - `OpfsWorkerBackend` (c53/c94): OPFS 上に永続化し、FTS5 全文検索も使える本番パス
 - `IdbVfsBackend` (c53): OPFS が使えない環境向けの IndexedDB フォールバック（ただし `sqliteEngineContext.ts` はまだ `wa-sqlite` のまま）
 - `FallbackStorageAdapter` (c53): `chrome.storage.local` への最終フォールバック
-- `NoopBackend`: Null Object — 初期化失敗時も例外を投げず「失敗」を返す
+- `NoopBackend`: Null Object ― 初期化失敗時も例外を投げず「失敗」を返す
 
 すべてのバックエンドは `StorageBackend` インターフェース（`insert/query/search/...` の 18 メソッド）で統一されています。これは ADR 2026-07-13「Storage Backend Adapter」の成果です。
 
@@ -98,7 +98,7 @@ if (fts5Available && charLen >= 3) {
 
 1. **ADR-014 のファイル参照を現状に合わせる**: `sqlite.ts`（re_exports）と `sqliteEngineContext.ts` / `sqliteEngine.ts` の関係を追記し、将来の読者が実装にたどり着けるようにする。
 2. **IDB フォールバックパスの `@subframe7536` 移行を完了する**: OPFS Worker パスは置換済みだが、`sqliteEngineContext.ts` の IDB VFS 初期化（L9/L233）は未だ `wa-sqlite` のまま。ADR の「旧依存を移行完了まで併存」の期限を決める。
-3. **SW↔offscreen のメッセージ型を単一ソース化する**: `SQLITE_*` 文字列が `sqliteClient.ts` と `opfsWorker.ts` の両方に散る。型または定数で共有し、typo による実行時エラーを防ぐ。
+3. **SW⇔offscreen のメッセージ型を単一ソース化する**: `SQLITE_*` 文字列が `sqliteClient.ts` と `opfsWorker.ts` の両方に散る。型または定数で共有し、typo による実行時エラーを防ぐ。
 4. **Offscreen/OPFS 層の注入経路を可視化する**: この層は AST 上で孤立しやすい。メッセージング契約を docs に図示する。
 
 > **追記（v6.5系リリース内で対応済み）**: 上記2.のIDBフォールバックパス移行は、本記事執筆後に完了しました。`sqliteEngineContext.ts` は現在 `@subframe7536/sqlite-wasm` の `useIdbStorage` を使用しており、`wa-sqlite` は旧データベースからの一度限りの移行検出のためだけに動的importされる形で残っています。
@@ -111,7 +111,7 @@ if (fts5Available && charLen >= 3) {
 
 Yasumaro uses SQLite locally as a secondary store for browsing history. Running SQLite in a browser is non-trivial: OPFS persistence (which needs synchronous access) and full-text search (FTS5) were **mutually exclusive** in traditional libraries.
 
-This article traces — via knowledge-graph analysis and reading the actual code — *how Yasumaro reconciles persistence with full-text search while absorbing per-environment constraints*. The short version: it is a **double multiplexing of "3-stage fallback × 2 async channels"**.
+This article traces ― via knowledge-graph analysis and reading the actual code ― *how Yasumaro reconciles persistence with full-text search while absorbing per-environment constraints*. The short version: it is a **double multiplexing of "3-stage fallback × 2 async channels"**.
 
 ---
 
@@ -133,11 +133,11 @@ OPFS Worker (opfsWorker.ts, c11)  ── @subframe7536/sqlite-wasm / OPFSCoopSyn
 
 `sqliteClient.ts` is the SW-side shared client, with these safeguards:
 
-- A `Mutex` (maxQueue 200) serializes requests — the offscreen processes one op at a time, preventing races from multiple tabs (M7)
+- A `Mutex` (maxQueue 200) serializes requests ― the offscreen processes one op at a time, preventing races from multiple tabs (M7)
 - `ensureOffscreenDocument()` caches document liveness to avoid redundant IPC
 - On message failure it sets `offscreenAlive=false`, recreates the document, and retries once (M12)
 
-On the knowledge graph, `sqliteClient.ts` (c7) and `sqliteEngineContext.ts` (c14) have **no AST edge** — SW↔offscreen are runtime-bound via `chrome.runtime.sendMessage`. They are strictly protocolized by `SQLITE_*` message types, but static analysis shows them as "disconnected."
+On the knowledge graph, `sqliteClient.ts` (c7) and `sqliteEngineContext.ts` (c14) have **no AST edge** ― SW⇔offscreen are runtime-bound via `chrome.runtime.sendMessage`. They are strictly protocolized by `SQLITE_*` message types, but static analysis shows them as "disconnected."
 
 ---
 
@@ -149,10 +149,10 @@ Offscreen-side `SqliteEngineContext.getBackend()` dynamically picks a backend pe
 OPFS Worker  >  IndexedDB VFS (wa-sqlite async, FTS5)  >  chrome.storage.local  >  NoopBackend
 ```
 
-- `OpfsWorkerBackend` (c53/c94): production path — persists on OPFS, full FTS5 search
+- `OpfsWorkerBackend` (c53/c94): production path ― persists on OPFS, full FTS5 search
 - `IdbVfsBackend` (c53): IndexedDB fallback when OPFS is unavailable (but `sqliteEngineContext.ts` still uses `wa-sqlite`)
 - `FallbackStorageAdapter` (c53): final fallback to `chrome.storage.local`
-- `NoopBackend`: Null Object — returns "failure" instead of throwing when init fails
+- `NoopBackend`: Null Object ― returns "failure" instead of throwing when init fails
 
 All backends implement the unified `StorageBackend` interface (18 methods: insert/query/search/...). This is the outcome of ADR 2026-07-13 "Storage Backend Adapter."
 
@@ -160,7 +160,7 @@ Notably, **data migrates between fallbacks**. `_doInit()` calls `tryMigrateFallb
 
 ---
 
-### Finding 3: FTS5 vs LIKE — "search coexistence"
+### Finding 3: FTS5 vs LIKE ― "search coexistence"
 
 ADR-014 (2026-06-17) centers on reconciling OPFS persistence with FTS5. The old `wa-sqlite` couldn't do both: the sync build needed for OPFS lacked FTS5, and the async FTS5 build was stuck at IndexedDB.
 
@@ -175,21 +175,21 @@ if (fts5Available && charLen >= 3) {
 }
 ```
 
-- **Queries ≥ 3 chars**: FTS5 `trigram` MATCH (hits Japanese substring, ranked)
-- **< 3 chars**: `trigram` can't match, so LIKE fallback (full scan, but negligible at hundreds–thousands of records)
+- **Queries ≧ 3 chars**: FTS5 `trigram` MATCH (hits Japanese substring, ranked)
+- **< 3 chars**: `trigram` can't match, so LIKE fallback (full scan, but negligible at hundreds-thousands of records)
 - If `fts5Available` is false (legacy IDB path), search returns `count: 0`
 
 Persistence, full-text search, and CJK support are reconciled through 3 layers: library swap + tokenizer choice + query-length branching.
 
 ---
 
-### Finding 4: Doc↔code drift (what the graph exposed)
+### Finding 4: Doc⇔code drift (what the graph exposed)
 
 The biggest issue the graph surfaced: **ADR/PBI file references are stale**.
 
 - ADR-014 lists `src/offscreen/sqlite.ts` / `src/offscreen/sqliteEngine.ts` as primary files, but `sqlite.ts` has **degraded to re_exports**, and its responsibility moved to `sqliteEngineContext.ts` (4-module split).
 - `sqliteEngine.ts` (the `@subframe7536` thin wrapper) **exists as a separate file**, with a different responsibility from `sqliteEngineContext.ts`.
-- Consequently, you cannot navigate from the ADR's file table to the implementation — design-intent → code traceability is broken.
+- Consequently, you cannot navigate from the ADR's file table to the implementation ― design-intent → code traceability is broken.
 
 This is less an extraction blind spot and more a **practical issue: the ADR was not updated after the refactor**.
 
@@ -197,9 +197,9 @@ This is less an extraction blind spot and more a **practical issue: the ADR was 
 
 ### For developers: quick wins
 
-1. **Update ADR-014's file references** to match reality: document the `sqlite.ts` (re_exports) ↔ `sqliteEngineContext.ts` / `sqliteEngine.ts` relationship so future readers can reach the code.
+1. **Update ADR-014's file references** to match reality: document the `sqlite.ts` (re_exports) ⇔ `sqliteEngineContext.ts` / `sqliteEngine.ts` relationship so future readers can reach the code.
 2. **Finish migrating the IDB fallback path to `@subframe7536`**: the OPFS Worker path is swapped, but `sqliteEngineContext.ts`'s IDB VFS init (L9/L233) still uses `wa-sqlite`. Set a deadline for the ADR's "coexist until migration completes" clause.
-3. **Single-source the SW↔offscreen message types**: `SQLITE_*` strings are scattered across `sqliteClient.ts` and `opfsWorker.ts`. Share via a type/constant to prevent runtime typos.
+3. **Single-source the SW⇔offscreen message types**: `SQLITE_*` strings are scattered across `sqliteClient.ts` and `opfsWorker.ts`. Share via a type/constant to prevent runtime typos.
 4. **Visualize the Offscreen/OPFS injection path**: this layer is AST-isolated; document the messaging contract in docs.
 
 > **Update (completed within the v6.5 release line)**: The IDB fallback migration described in item 2 above has since been completed. `sqliteEngineContext.ts` now uses `@subframe7536/sqlite-wasm`'s `useIdbStorage`; `wa-sqlite` remains only as a dynamically-imported, one-time migration path for detecting pre-existing legacy databases.

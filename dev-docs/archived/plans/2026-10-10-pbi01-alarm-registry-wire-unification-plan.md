@@ -13,7 +13,7 @@ alarmRegistry の依存配線を composition root の DI に統一し、module-l
 - `LAYERS.md`
 
 ## Validation
-`npx vitest run src/background` — PASS（スコープ検証済み）。
+`npx vitest run src/background` ― PASS（スコープ検証済み）。
 
 ## Rollback
 配線変更のみのため、関連差分を戻せば復旧できる。

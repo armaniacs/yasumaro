@@ -15,17 +15,17 @@
 - 解: 1) トークン永続化を `chrome.storage.session` のみに一本化し `CONFIRM_TOKEN` への代入は `set` 成功後のみ行う、または 2) `set` 失敗時に指数バックオフで再試行するロジックを追加。いずれかでメモリとストレージの原子性を担保
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常に永続化されたトークンは再起動後も一致する
+Scenario: ハッピーパス ― 正常に永続化されたトークンは再起動後も一致する
   Given `chrome.storage.session` が正常である
   When `ensureConfirmToken()` で生成されたトークンで `clear_all` を実行する
   Then Service Worker 再起動後の `ensureConfirmToken()` が同じトークンを返し、検証が成功する
 
-Scenario: バグ再現 — session.set 失敗時にメモリだけが更新されない
+Scenario: バグ再現 ― session.set 失敗時にメモリだけが更新されない
   Given `chrome.storage.session.set` が 1 回失敗する（モックで throw）
   When `ensureConfirmToken()` を呼ぶ
   Then メモリの `CONFIRM_TOKEN` と storage の値が乖離せず、再試行または set 成功後のみメモリが更新される。乖離した場合は次回 `ensureConfirmToken()` が整合なトークンを返す
 
-Scenario: 境界 — session.get 失敗時も新規生成と再試行で復旧する
+Scenario: 境界 ― session.get 失敗時も新規生成と再試行で復旧する
   Given `chrome.storage.session.get` が失敗する
   When `ensureConfirmToken()` を呼ぶ
   Then 新規トークンが生成され、永続化の再試行が行われる（またはエラーが適切に伝播し、呼び出し元で再試行可能である）
@@ -38,7 +38,7 @@ Scenario: 境界 — session.get 失敗時も新規生成と再試行で復旧�
 - [x] `npm run type-check` がパスする
 
 ## テスト戦略
-- 単体: `confirmTokenManager` の best-effort 不整合テスト — `chrome.storage.session.set` を `vi.fn().mockRejectedValueOnce` で失敗させ、`ensureConfirmToken()` 後の `CONFIRM_TOKEN` と `chrome.storage.session.get` の値が一致することを検証。再試行ロジックがある場合は `set` が 2 回呼ばれることを検証
+- 単体: `confirmTokenManager` の best-effort 不整合テスト ― `chrome.storage.session.set` を `vi.fn().mockRejectedValueOnce` で失敗させ、`ensureConfirmToken()` 後の `CONFIRM_TOKEN` と `chrome.storage.session.get` の値が一致することを検証。再試行ロジックがある場合は `set` が 2 回呼ばれることを検証
 - 統合: dashboard 側 `BrowsingLogRepository` / `dashboardSqliteService` の `getConfirmToken` → SW 側 `ensureConfirmToken` の往復で、SW 再起動を模擬（`CONFIRM_TOKEN = null` リセット）してもトークンが一致すること
 - E2E: 不要（offscreen 不要）
 

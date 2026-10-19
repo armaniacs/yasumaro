@@ -6,7 +6,7 @@
 - 4 系統の並列 explore agent 調査（dashboard+popup / background+offscreen / content+utils+layer / drift sweep+test infra）+ 統合側による graphify query と file:line 裏取り（サブエージェント報告の全 file:line は実読検証済み）。
 - 差分スコープ: 過去台帳（holistic-1005 32件 / archloop-1006 23件 / archloop-1007 18件）で閉じたテーマは対象外。archloop-1007 台帳送り L1（dashboard innerHTML clearing）のトリガー「次に dashboard UI を触る時」が本ラウンドで発火したため NN15 として消費。L7（visitReporter SleepFn）はトリガー未発火のため台帳維持。
 - レビュー報告書: 本台帳「レビュー報告書サマリー」節に要約。
-- NN01–NN20 に起票（C18+C19 は同一ファイルクラスタのため NN03 に統合）。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
+- NN01-NN20 に起票（C18+C19 は同一ファイルクラスタのため NN03 に統合）。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
 
 ## RICE 採点表（RICE 降順）
 
@@ -37,10 +37,10 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次以上 / 4=四半
 
 ## 同点の順位根拠（tie-break）
 
-- **4.0（NN04 と NN05）**: NN04 先行 — 同一ファイル群（`IdbVfsBackend.ts`）の purge 統合が scalar ヘルパーの対象範囲を縮小する（purge 内の scalar 読み ~8 箇所が `runPurgeSequence` に吸収される）ため。
-- **3.0（NN06/07/08/09/10 の 5-way）**: リスク軽減順 — wire 契約 silent drift（NN06）→ 設定値 silent 不整合（NN07）→ 型境界の嘘（NN08）→ purge twins（NN09）→ 文言 drift（NN10）。
+- **4.0（NN04 と NN05）**: NN04 先行 ― 同一ファイル群（`IdbVfsBackend.ts`）の purge 統合が scalar ヘルパーの対象範囲を縮小する（purge 内の scalar 読み ~8 箇所が `runPurgeSequence` に吸収される）ため。
+- **3.0（NN06/07/08/09/10 の 5-way）**: リスク軽減順 ― wire 契約 silent drift（NN06）→ 設定値 silent 不整合（NN07）→ 型境界の嘘（NN08）→ purge twins（NN09）→ 文言 drift（NN10）。
 - **2.7（NN11/12/13）**: backend drift リスク（NN11）→ UI 2実装+死蔵コード（NN12）→ test infra（NN13）。
-- **2.0（NN14/15/16/17/18 の 5-way）**: NN15 を先頭 — dashboard UI を触る候補（NN12/13/14）の着地までに L1 台帳送りを消費する目的（受領順からの逸脱。理由記録済み）。以後 NN14 → NN16 → NN17 → NN18。
+- **2.0（NN14/15/16/17/18 の 5-way）**: NN15 を先頭 ― dashboard UI を触る候補（NN12/13/14）の着地までに L1 台帳送りを消費する目的（受領順からの逸脱。理由記録済み）。以後 NN14 → NN16 → NN17 → NN18。
 
 ## 純 RICE 順からの逸脱（1 件）
 
@@ -52,7 +52,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次以上 / 4=四半
 - **NN08 は NN02 の後に**（`contentKernel.ts` の編集競合回避）
 - 上記以外は依存なし・並列可
 
-## バッチ計画（W1–W5・ファイル排他・同一ディレクトリ戦略）
+## バッチ計画（W1-W5・ファイル排他・同一ディレクトリ戦略）
 
 | Wave | NN | 内容 |
 |---|---|---|
@@ -93,7 +93,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次以上 / 4=四半
 | F23 | quota.ts `getStorageUsage` が storagePort と同一 feature-detect を Layer 1 内に 2 実装（`:16-25`） | 次に quota を触る時 |
 | F24 | `StoragePort` 同名異形（`utils/ports.ts:27-30` vs `utils/storage/storagePort.ts:18-29`） | 次に port 型を触る時 |
 
-- archloop-1007 の L2–L8（lruCache 移設 / PermissionManager+RFC-1035 検証統合 / bench storage-key / bench e2e seams / diagnostic 述語 / archiveStaging 同名）はトリガー未発火のため台帳維持。
+- archloop-1007 の L2-L8（lruCache 移設 / PermissionManager+RFC-1035 検証統合 / bench storage-key / bench e2e seams / diagnostic 述語 / archiveStaging 同名）はトリガー未発火のため台帳維持。
 - backlog-future 統合台帳のトリガー駆動項目はトリガー未発火で維持（差分レビュー済み）。
 
 ## DoD 反映漏れ

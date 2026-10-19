@@ -2,7 +2,7 @@
 
 ## 優先度・backlog 出所・依存
 
-- 優先度: 中（RICE 8.0 — R 4 / I 1 / C 1.0 / Eff 0.5）
+- 優先度: 中（RICE 8.0 ― R 4 / I 1 / C 1.0 / Eff 0.5）
 - backlog 出所: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) NN18（順位 11, refactor）。バッチA（並列・ファイル非重複）。
 - 依存: なし。`src/utils/ublockParser/index.ts` とそのテストのみを触り、他候補と非重複。
 
@@ -12,18 +12,18 @@
 
 ## 背景（file:line 付き現状）
 
-- `src/utils/ublockParser/index.ts:109-226` — `parseUblockFilterListWithErrors(text)`（`ParseResultWithErrors` を返す）
-- `src/utils/ublockParser/index.ts:243-325` — `parseUblockFilterList(text)`（`ParsedUblockRuleset` を返す）
+- `src/utils/ublockParser/index.ts:109-226` ― `parseUblockFilterListWithErrors(text)`（`ParseResultWithErrors` を返す）
+- `src/utils/ublockParser/index.ts:243-325` ― `parseUblockFilterList(text)`（`ParsedUblockRuleset` を返す）
 - 両者はほぼ完全複製:
-  - `cleanupCache()` + `isValidString` ゲート — `index.ts:111-119` vs `:244-250`
-  - cache-key 生成・チェック — `index.ts:123-127` vs `:254-260`
-  - inline 二重化された定数 — `MAX_INPUT_SIZE = 10 * 1024 * 1024`（10MB）が `index.ts:134` と `:263`、`MAX_LINES = 500000` が `index.ts:146` と `:272`
-  - 同一 `RULE_TYPES` 分類の完全パースループ — `index.ts:162-204` vs `:284-307`
-  - metadata 組立 — `index.ts:207-218` vs `:310-319`
-- 唯一の挙動差は無効ルールの扱い — plain 版はパース不能行を黙って drop する（`:295-306` に else/error 収集がない）、WithErrors 版は `errors` 配列に収集する（`index.ts:188-196`）
+  - `cleanupCache()` + `isValidString` ゲート ― `index.ts:111-119` vs `:244-250`
+  - cache-key 生成・チェック ― `index.ts:123-127` vs `:254-260`
+  - inline 二重化された定数 ― `MAX_INPUT_SIZE = 10 * 1024 * 1024`（10MB）が `index.ts:134` と `:263`、`MAX_LINES = 500000` が `index.ts:146` と `:272`
+  - 同一 `RULE_TYPES` 分類の完全パースループ ― `index.ts:162-204` vs `:284-307`
+  - metadata 組立 ― `index.ts:207-218` vs `:310-319`
+- 唯一の挙動差は無効ルールの扱い ― plain 版はパース不能行を黙って drop する（`:295-306` に else/error 収集がない）、WithErrors 版は `errors` 配列に収集する（`index.ts:188-196`）
 - 両方 production-used:
-  - WithErrors — `src/dashboard/settings/ublockImport/rulesBuilder.ts:80`, `src/dashboard/settings/ublockImport/sourceManager.ts:103`, `sourceManager.ts:153`
-  - plain — `src/utils/ublockMatcher.ts:15`（`toStorageRules(parseUblockFilterList(text))`）
+  - WithErrors ― `src/dashboard/settings/ublockImport/rulesBuilder.ts:80`, `src/dashboard/settings/ublockImport/sourceManager.ts:103`, `sourceManager.ts:153`
+  - plain ― `src/utils/ublockMatcher.ts:15`（`toStorageRules(parseUblockFilterList(text))`）
 - 既存テスト: `src/utils/ublockParser/__tests__/index.test.ts`（両方）, `src/utils/__tests__/ublockParser.test.ts`（plain）, `src/utils/__tests__/ublockMatcher.test.ts`（plain 経由）, `src/popup/__tests__/integration-reload-workflow.test.ts`（WithErrors）
 
 ## BDD
@@ -45,21 +45,21 @@
 
 ## 実装宣言・受け入れ基準
 
-It must keep behavior: plain 版の戻り値は不変 — `rules` のみを返し、無効ルールは黙って除外し、cache 経由の返り値（shallow copy レベル）を含めて `src/utils/ublockMatcher.ts:15` の既存呼び出しがそのまま動くこと。
+It must keep behavior: plain 版の戻り値は不変 ― `rules` のみを返し、無効ルールは黙って除外し、cache 経由の返り値（shallow copy レベル）を含めて `src/utils/ublockMatcher.ts:15` の既存呼び出しがそのまま動くこと。
 
 - [x] `parseUblockFilterList` が `parseUblockFilterListWithErrors` を経由する薄いラッパになる（約 80 行の複製本体が消える）
 - [x] `MAX_INPUT_SIZE` / `MAX_LINES` の定数二重化が消える（module スコープの 1 箇所に統一）
-- [x] plain 版の戻り値互換 — rules のみ・無効ルール除外・cache 挙動含め現行と同一
+- [x] plain 版の戻り値互換 ― rules のみ・無効ルール除外・cache 挙動含め現行と同一
 - [x] WithErrors 版の挙動（エラー収集・返り値形状）は不変
 - [x] 既存テスト green（`npm run validate`）
 
 ## テスト戦略
 
 - 既存テストをそのまま regression ゲートに使う（戻り値互換の検証を兼ねる）:
-  - `src/utils/__tests__/ublockParser.test.ts` — plain 版の分岐（null/undefined/空、cache、分類）を網羅
-  - `src/utils/ublockParser/__tests__/index.test.ts` — 両関数の branch coverage
-  - `src/utils/__tests__/ublockMatcher.test.ts` — production 呼び出し経路（plain）
-  - `src/popup/__tests__/integration-reload-workflow.test.ts` — WithErrors 経路
+  - `src/utils/__tests__/ublockParser.test.ts` ― plain 版の分岐（null/undefined/空、cache、分類）を網羅
+  - `src/utils/ublockParser/__tests__/index.test.ts` ― 両関数の branch coverage
+  - `src/utils/__tests__/ublockMatcher.test.ts` ― production 呼び出し経路（plain）
+  - `src/popup/__tests__/integration-reload-workflow.test.ts` ― WithErrors 経路
 - parity テストを追加: 代表入力（正常のみ / 無効行混在 / 空 / oversize 相当）について `parseUblockFilterList(text)` と `parseUblockFilterListWithErrors(text).rules` の同値性（`blockRules` / `exceptionRules` / `metadata`）を検証する
 - リアルタイム待ちを入れない（[TEST_RULE](../dev-docs/TEST_RULE.md)）
 
@@ -83,7 +83,7 @@ It must keep behavior: plain 版の戻り値は不変 — `rules` のみを返�
 
 変更した内容:
 
-- `index.ts` — `parseUblockFilterList` の本体（約 80 行の複製）を `return { ...parseUblockFilterListWithErrors(text).rules };` に置き換え。shallow spread は旧 cache-hit 経路と同じコピーレベルを保つ
+- `index.ts` ― `parseUblockFilterList` の本体（約 80 行の複製）を `return { ...parseUblockFilterListWithErrors(text).rules };` に置き換え。shallow spread は旧 cache-hit 経路と同じコピーレベルを保つ
 - `MAX_INPUT_SIZE`（10MB）と `MAX_LINES`（500000）を module スコープへ hoist し、旧来 4 箇所にインラインで重複していた定義を 1 箇所に統一。ガード定数の WHY（メモリ枯渇・処理時間）を doc コメントに明示
 - 両関数の JSDoc を現行仕様のスナップショットに更新。「改善内容」「設計方針」「信頼性レベル」など履歴的記述とデッドコメント（`hasCacheKey` のコメントアウト）を削除
 - `cache.ts` / `transform.ts` / 呼び出し元（`ublockMatcher.ts` / `ublockImport/*`）には変更なし

@@ -4,7 +4,7 @@
 利用者として、悪意ある/侵害されたリモート（Obsidian・AI プロバイダ・Tranco・GitHub・フィルタ URL）が巨大な chunked 応答を返しても拡張が停止しないようにしたい、なぜなら現在のサイズ上限が Content-Length ヘッダ（攻撃者が省略可能）に依存し、`response.text()/json()` が SW メモリを無制限に消費するから
 
 ## ビジネス価値
-- 5 指摘・8 シンクを 1 ユーティリティで解消（実証: 64–200MB の確保、chunked で上限無効化）
+- 5 指摘・8 シンクを 1 ユーティリティで解消（実証: 64-200MB の確保、chunked で上限無効化）
 - MV3 Service Worker のメモリ枯渇による拡張全体 DoS（録画状態の喪失）を封鎖
 - 測定方法: 全 8 シンクが `readBodyCapped` を経由すること、Content-Length なしで cap が強制されること
 
@@ -71,7 +71,7 @@ Scenario: 上限超過はログに記録され処理が継続する
 - **Red-Green-Refactor**: cap 値は現行値（Obsidian 10MB/1MB、FETCH_URL 10MB、Tranco 50MB、AI/Gist は既定 10MB）を踏襲
 
 ## 見積もり
-2pt（要チームでの見積もり — ユーティリティ＋8 シンク置換＋テスト）
+2pt（要チームでの見積もり ― ユーティリティ＋8 シンク置換＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 1 推奨）。ただし PBI 10（log-integrity）と `systemHandlers.ts` を共有 → マージ順に注意
@@ -97,7 +97,7 @@ sed -n '95,110p' src/background/handlers/systemHandlers.ts
 
 ### 落とし穴
 - `response.json()` を `readBodyCapped` 後の `JSON.parse` に置き換える際、型アサーションを維持すること
-- cap 超過のエラーを無視して null を返すと呼び出し元が TypeError で落ちる — 既存エラー分類（`errorUtils`）に乗せること
+- cap 超過のエラーを無視して null を返すと呼び出し元が TypeError で落ちる ― 既存エラー分類（`errorUtils`）に乗せること
 - Obsidian の 1MB バリアント（`obsidianClient.ts:193-199`）と 10MB の両方の cap 値を維持すること
 
 ## Definition of Done

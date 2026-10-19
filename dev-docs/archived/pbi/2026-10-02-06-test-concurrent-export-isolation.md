@@ -11,9 +11,9 @@ dashboard を保守する開発者として、並行 export が相互に分離�
 
 ## 背景（現状）
 
-- 対象 A: `src/dashboard/panels/panelAction.ts:76`、`src/dashboard/panels/panelAction.ts:88` — 集約口（`unwrapServiceResult` 周辺の並行呼び出し点）。
-- 対象 B: exportLogsPanel の single-button 制御 — 単一ボタンによる export 実行の多重起動可否が意図として未コード化。
-- 対象 C: archivePanel の group controls — 複数コントロール間の相互排除の有無が意図として未コード化。
+- 対象 A: `src/dashboard/panels/panelAction.ts:76`、`src/dashboard/panels/panelAction.ts:88` ― 集約口（`unwrapServiceResult` 周辺の並行呼び出し点）。
+- 対象 B: exportLogsPanel の single-button 制御 ― 単一ボタンによる export 実行の多重起動可否が意図として未コード化。
+- 対象 C: archivePanel の group controls ― 複数コントロール間の相互排除の有無が意図として未コード化。
 - 現状の意図は不明（isolation なのか serialize なのか未確定）。本 PBI は意図の発見とコード化が目的で、ソースの振る舞い変更はしない。
 - 既存テスト（変更なしで green を保つ対象）:
   - `src/dashboard/panels/__tests__/panelAction` 系 suites

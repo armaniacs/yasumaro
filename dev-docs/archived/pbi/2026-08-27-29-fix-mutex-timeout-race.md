@@ -15,27 +15,27 @@
 - 解: タイムアウト発火時に `queue.has(taskId)` を確認してから `reject` し、`release()` 側も `clearTimeout` 後に `queue` から削除済みかを再確認する競合防止と、`nextTaskId` の上限でラップアラウンドまたはリセット対応を追加
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常な acquire/release は従来通り動作する
+Scenario: ハッピーパス ― 正常な acquire/release は従来通り動作する
   Given `mutex = new Mutex({ timeoutMs: 1000 })`
   When `await mutex.acquire(); mutex.release();`
   Then ロックが正常に取得・解放される
 
-Scenario: 競合 — タイムアウトと release の同時発火で二重 resolve しない
+Scenario: 競合 ― タイムアウトと release の同時発火で二重 resolve しない
   Given `mutex` がロック中、1件がキューで待機、`timeoutMs` 直前に `release()` を呼ぶ
   When タイムアウトタイマーが発火する
   Then 待機 Promise は `resolve` か `reject` のいずれか1回のみで確定し、二重解決しない
 
-Scenario: 競合 — タイムアウト後に release が同 taskId を再処理しない
+Scenario: 競合 ― タイムアウト後に release が同 taskId を再処理しない
   Given 待機タスクがタイムアウトで `reject` 済み
   When `release()` がキューを処理する
   Then タイムアウト済み `taskId` はスキップされ次のタスクに移譲される
 
-Scenario: エッジ — nextTaskId が上限に達してもキューが破損しない
+Scenario: エッジ ― nextTaskId が上限に達してもキューが破損しない
   Given `nextTaskId` が `Number.MAX_SAFE_INTEGER` 付近
   When さらに `acquire()` でキューイングする
   Then `taskId` が衝突せず、既存タスクを上書きしない（ラップアラウンドまたは空きID再利用）
 
-Scenario: エッジ — clearTimeout が確実に呼ばれる
+Scenario: エッジ ― clearTimeout が確実に呼ばれる
   Given タイムアウト前に `release()` でロックが移譲された
   When 移譲が完了する
   Then 当該タスクの `timeoutId` に対して `clearTimeout` が呼ばれ、遅延 reject が発火しない

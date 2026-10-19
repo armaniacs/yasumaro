@@ -8,7 +8,7 @@
 
 - 順位: 1 / 1（md-sanitize フォローアップ）
 - RICEスコア: 4.0（Reach=4 / Impact=2 / Confidence=50% / Effort=1週）
-- 根拠: 現状の TS でも 2000 エントリ ≈ 5.2ms と小さく、効果は「ベンチが反転した場合」に限定される。ゼロコピ incoming（TextEncoder → WASM メモリ直書き → ポインタ渡し）で転送コストを排除できれば反転の見込みはあるが、wasm-bindgen の文字列境界を手書きに置き換える工数とリスクがあり Confidence 50%。**本 PBI は判定が成果物**: 反転しなければ dark-launch 維持で誠実に閉じる
+- 根拠: 現状の TS でも 2000 エントリ ≒ 5.2ms と小さく、効果は「ベンチが反転した場合」に限定される。ゼロコピ incoming（TextEncoder → WASM メモリ直書き → ポインタ渡し）で転送コストを排除できれば反転の見込みはあるが、wasm-bindgen の文字列境界を手書きに置き換える工数とリスクがあり Confidence 50%。**本 PBI は判定が成果物**: 反転しなければ dark-launch 維持で誠実に閉じる
 
 ## ビジネス価値
 
@@ -46,7 +46,7 @@ Scenario: 反転しなければ誠実に閉じる
 
 ### 統合テスト
 
-- ハイブリッド wasm-success（大入力必須 — 閾値変更時に無意味化しないよう入力サイズを追従）
+- ハイブリッド wasm-success（大入力必須 ― 閾値変更時に無意味化しないよう入力サイズを追従）
 - エクスポート経路の既存テスト（表示等価）
 
 ### 単体テスト
@@ -56,8 +56,8 @@ Scenario: 反転しなければ誠実に閉じる
 
 ## 技術的考慮事項
 
-- 現状の dark-launch 状態: `MIN_WASM_CHARS = 1_048_576` / `MIN_WASM_TOTAL_CHARS = 2_097_152`（`src/utils/markdownSanitizerHybrid.ts`）— 本番の全入力は TS 経路。WASM 経路は CI 同等性ゲートと wasm-success で保守されている
-- 攻撃パターン（javascript: リンク・wikilink・生 HTML・エンティティ二重エンコード）のパリティは既に固定済み — 転送変更で壊してはならない
+- 現状の dark-launch 状態: `MIN_WASM_CHARS = 1_048_576` / `MIN_WASM_TOTAL_CHARS = 2_097_152`（`src/utils/markdownSanitizerHybrid.ts`）― 本番の全入力は TS 経路。WASM 経路は CI 同等性ゲートと wasm-success で保守されている
+- 攻撃パターン（javascript: リンク・wikilink・生 HTML・エンティティ二重エンコード）のパリティは既に固定済み ― 転送変更で壊してはならない
 - 同期呼び出し元（reviewSummaryGenerator・markdownFormatter）の配線は本 PBI のスコープ外（閾値解除後の別ステップ）
 
 ## 見積もり
@@ -70,7 +70,7 @@ Scenario: 反転しなければ誠実に閉じる
 
 ### 転送候補の実測比較（bench/pbi23-transfer-probe.ts → bench/pbi23-transfer-probe-result.json）
 
-実装した転送アーム（いずれも改行安全 — (a)(a2)(c) は長さ区切りの
+実装した転送アーム（いずれも改行安全 ― (a)(a2)(c) は長さ区切りの
 `[u32LE len][UTF-8]...` フレームで `\n` はペイロード扱い、(b) はバイト配列。
 tag-cooccur 式の `\n` 連結＋split ゲートは不採用を維持）:
 
@@ -81,7 +81,7 @@ tag-cooccur 式の `\n` 連結＋split ゲートは不採用を維持）:
 | A2（framed+join） | framed 入力＋単一 String 出力（export 集約の形） |
 | B（serde bytes） | 事前エンコード済み Uint8Array 配列を serde `Vec<Vec<u8>>` で往復 |
 | C（shared staging） | A と同一 Rust 経路＋JS 側 staging バッファを使い回し（encodeInto・共有メモリ模擬） |
-| floor（参考） | encode×N＋decode×N のみ（WASM 呼び出し無し）— 転送が原理的に払う下限 |
+| floor（参考） | encode×N＋decode×N のみ（WASM 呼び出し無し）― 転送が原理的に払う下限 |
 
 batch 100×0.5KB（30 ops）：
 
@@ -92,8 +92,8 @@ batch 100×0.5KB（30 ops）：
 | A framed | 0.339 | 0.86x |
 | A2 framed+join | 0.311 | 0.93x |
 | B serde bytes | 11.755 | 0.02x |
-| C shared staging | 0.288 | 1.01x（再測 0.95x — ノイズ） |
-| floor codec | 0.033 | — |
+| C shared staging | 0.288 | 1.01x（再測 0.95x ― ノイズ） |
+| floor codec | 0.033 | ― |
 
 batch 2000×0.5KB（本番 PBI サイズ・10 ops、再測つき）：
 
@@ -105,7 +105,7 @@ batch 2000×0.5KB（本番 PBI サイズ・10 ops、再測つき）：
 | A2 framed+join | 6.614 / 6.411 | 0.76x / 0.73x |
 | B serde bytes | 237.394 / 233.462 | 0.02x / 0.02x |
 | C shared staging | 5.830 / 5.817 | 0.86x / 0.81x |
-| floor codec | 0.712 / 0.709 | — |
+| floor codec | 0.712 / 0.709 | ― |
 
 batch 10000×0.2KB（3 ops、再測つき）：
 
@@ -117,7 +117,7 @@ batch 10000×0.2KB（3 ops、再測つき）：
 | B serde bytes | 0.02x / 0.02x |
 | C shared staging | 0.71x / 0.88x |
 
-single パスは測定対象外とした — 現行の単一文字列経路は既に
+single パスは測定対象外とした ― 現行の単一文字列経路は既に
 passStringToWasm0/getStringFromWasm0 の直接 ptr+len であり、候補 (a) と
 同一構成のため転送上の改善余地がない。本番経路の再計測（bench.ts・新バイナリ）:
 single 128B→128KB 0.20x〜0.83x、batch 0.57x / 0.66x / 0.63x、
@@ -142,7 +142,7 @@ single 128B→128KB 0.20x〜0.83x、batch 0.57x / 0.66x / 0.63x、
 
 - 本番サイズ（2000×0.5KB）で最良アーム C でも 0.81x〜0.86x に留まり、
   受諾条件の speedup > 1.0x に 2 回の測定とも届かない
-- B（serde バイト配列）は 0.02x で論外 — `Vec<Vec<u8>>` が JS 数値配列に
+- B（serde バイト配列）は 0.02x で論外 ― `Vec<Vec<u8>>` が JS 数値配列に
   展開される serde の表現コストが支配的。診断的価値のみ
 - A/A2/C で serde リフレクション分（W0 0.60x → A 0.77〜0.83x）は実際に
   削れたが、残る UTF-8 transcoding＋スキャン自体が V8 ビルトインに勝てない。

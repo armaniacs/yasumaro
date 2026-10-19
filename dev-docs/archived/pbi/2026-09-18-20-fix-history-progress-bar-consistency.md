@@ -82,7 +82,7 @@ grep -rn "計測なし" src/ public/_locales/
 確認結果:
 - `computeCleansingReduction`（`src/dashboard/panels/asyncData/historyEntryPresentation.ts:35`）が `base` / `sentToAI` のいずれか欠落または `base === 0` のとき null を返す
 - `buildCleansingProgressBarHtml`（`src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts:56`）が reduction null の場合に `''` を返し、`formatDiagnosticMetadataHtml`（同 `186-187`）は何も追加しないためバー領域ごと消える
-- Tech CNNエントリは「コンテンツ抽出 — 計測なし」「Content Cleansing — 計測なし」のため null 経路に入り、BBCエントリ（数値あり）との差がスクリーンショットの不整合になる
+- Tech CNNエントリは「コンテンツ抽出 ― 計測なし」「Content Cleansing ― 計測なし」のため null 経路に入り、BBCエントリ（数値あり）との差がスクリーンショットの不整合になる
 - 前回PBI 2026-09-18-01 ではこのバー欠落を対象外と明記（同PBI `111` 行、`142` 行のなぜなぜ11番）。今回はその残課題を扱う
 - 既存テスト `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanelView.test.ts:32-39` は欠測時に空文字を期待しており、仕様変更に伴い更新が必要
 
@@ -100,9 +100,9 @@ grep -rn "計測なし" src/ public/_locales/
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（単体3件＋統合3件、正常系の回帰含む）
-- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて — E2Eは既存fixture流用で追加なし、統合・単体は新規6件でカバー）
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて ― E2Eは既存fixture流用で追加なし、統合・単体は新規6件でカバー）
 - [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [x] リファクタリング完了（グリーン後 — wrapper構造の重複は意図的に維持し単一化による回帰を避けた）
+- [x] リファクタリング完了（グリーン後 ― wrapper構造の重複は意図的に維持し単一化による回帰を避けた）
 - [x] ロールバック手段の検討（表示層のみの変更のため、`buildMissingReductionBarHtml` 分岐をrevertすれば従来表示に戻る）
 - [x] ドキュメント更新済み
 

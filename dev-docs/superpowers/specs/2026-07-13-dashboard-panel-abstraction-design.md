@@ -1,11 +1,11 @@
-# C1: Dashboard Panel Abstraction — Design Spec
+# C1: Dashboard Panel Abstraction ― Design Spec
 
 **Date:** 2026-07-13
 **Scope:** Introduce typed Panel lifecycle abstractions, NavigationRegistry, and DashboardBootstrapper. Migrate 18 panels one-by-one from the monolithic `dashboard.ts`.
 
 ## Motivation
 
-`dashboard.ts` is 1521 lines with 59 exports, 31 `init*()` calls, two competing navigation systems, a 50-field `getDashboardElements()` blob, and no teardown logic. The 5-Why deep-dig identified the root cause as **absence of a Panel abstraction** — the file is a dumpster, not an orchestrator.
+`dashboard.ts` is 1521 lines with 59 exports, 31 `init*()` calls, two competing navigation systems, a 50-field `getDashboardElements()` blob, and no teardown logic. The 5-Why deep-dig identified the root cause as **absence of a Panel abstraction** ― the file is a dumpster, not an orchestrator.
 
 ## Decision
 
@@ -116,10 +116,10 @@ src/dashboard/
 - **Unit**: `NavigationRegistry` lifecycle sequencing, `DashboardBootstrapper` registration order
 - **Unit**: Each panel descriptor's methods called with correct container
 - **E2E (Playwright)**: Per-panel: navigate → visibility → key interaction
-- **No visual regression suite** — final one-time manual review after full migration
+- **No visual regression suite** ― final one-time manual review after full migration
 
 ### Risks
 
 - **Panel migration overhead**: 18 panels × (extract + test) is significant. Mitigation: simpler panels (DiagnosticPanel) migrate first to prove the pattern, complex ones (sqliteHistoryPanel) last.
-- **Old nav interference**: Both old and new nav systems coexist during migration. Mitigation: `DashboardBootstrapper.wireSidebar` attaches click→`navigate()` on sidebar buttons. `initSidebarNav()` / `initNavigation()` are still called for panels not yet migrated — they skip buttons whose panel already has a descriptor (checked via `registry.activeId` or by removing `data-panel` from HTML as panels are migrated). Once all 18 panels have descriptors, both old nav functions are deleted entirely.
+- **Old nav interference**: Both old and new nav systems coexist during migration. Mitigation: `DashboardBootstrapper.wireSidebar` attaches click→`navigate()` on sidebar buttons. `initSidebarNav()` / `initNavigation()` are still called for panels not yet migrated ― they skip buttons whose panel already has a descriptor (checked via `registry.activeId` or by removing `data-panel` from HTML as panels are migrated). Once all 18 panels have descriptors, both old nav functions are deleted entirely.
 - **Cross-panel communication**: Tag → history search must survive migration. Mitigation: `PanelInitMap` + `navigate('panel-sqlite-history', { searchTag })` replaces the custom event → direct call chain.

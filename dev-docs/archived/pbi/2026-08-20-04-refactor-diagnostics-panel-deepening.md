@@ -1,4 +1,4 @@
-# PBI: Diagnostics Panel の深深化 — 681行 god module を DiagnosticsCollector に分解
+# PBI: Diagnostics Panel の深深化 ― 681行 god module を DiagnosticsCollector に分解
 
 ## ユーザーストーリー
 開発者として、`src/dashboard/panels/diagnostic/diagnosticsPanel.ts`（681行）が11の診断セクション（storageStats / extInfo / obsidianSettings / aiSettings / sqliteStats / deficiencyStats / builtInAiStats / compileOptions + 3つのアクション行）の全てのクエリ・レンダリング・エラーハンドリングを1ファイルに抱えている状態を解消したい。なぜなら、新しい診断項目を追加するたびに `querySelector → innerHTML → makeStatRow → error handling` の6行パターンをコピペする必要があり、テストするには完全な DOM + `chrome.storage` + `getSqliteStatus` の全てをモックする必要があるからだ。
@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 04 / 5
 - RICEスコア: (Reach=4 × Impact=2 × Confidence=0.8) / Effort=3 = 2.1
-- 根拠: Reach 4（diagnostics パネルは開発者・サポート用途で、一般ユーザーの日常利用では開かれない。`chrome://extensions` の詳細確認や不具合報告時にのみ参照される）。Impact 2（診断の追加コストが 1/5 になり、エラーハンドリングの不整合が1箇所に集約される。11セクションの表示ロジックが1つの snapshot 型で型安全になる）。Confidence 80%（パターンは明確 — 各セクションは `query → makeStatRow` の繰り返しであり、収集と描画の分離は自明。local-substitutable な fake でテスト可能）。Effort 3人日（DiagnosticsCollector の抽出 + snapshot 型定義 + renderer の分離 + 11セクションのテスト移行）。03と並列着手可能だが、03の transport パターンが先に固まると collector の SQLite 取得部分で再利用できるため03の後に着手する方が効率的。
+- 根拠: Reach 4（diagnostics パネルは開発者・サポート用途で、一般ユーザーの日常利用では開かれない。`chrome://extensions` の詳細確認や不具合報告時にのみ参照される）。Impact 2（診断の追加コストが 1/5 になり、エラーハンドリングの不整合が1箇所に集約される。11セクションの表示ロジックが1つの snapshot 型で型安全になる）。Confidence 80%（パターンは明確 ― 各セクションは `query → makeStatRow` の繰り返しであり、収集と描画の分離は自明。local-substitutable な fake でテスト可能）。Effort 3人日（DiagnosticsCollector の抽出 + snapshot 型定義 + renderer の分離 + 11セクションのテスト移行）。03と並列着手可能だが、03の transport パターンが先に固まると collector の SQLite 取得部分で再利用できるため03の後に着手する方が効率的。
 
 ## ビジネス価値
 - 保守性: 診断項目の追加が `DiagnosticsCollector` の1メソッド追加 + `snapshot` 型への1フィールド追加で完結する（従来は panel ファイルの imperative な DOM 操作を6行コピペ）。
@@ -65,7 +65,7 @@ Scenario: 新しい診断項目の追加が容易になる
 - `DiagnosticsRenderer` × fake `DiagnosticsSnapshot` で、DOM 描画が正しく行われることを検証（jsdom 環境）。
 
 ### 単体テスト
-- 本PBIでは collector/renderer 個別の単体テストを追加しない — 深いモジュールのテストは interface（`collect() → snapshot`）と renderer（`render(snapshot) → DOM`）の2つの seam でカバーする。境界値（空 snapshot / 部分失敗 snapshot）は interface テストで検証。
+- 本PBIでは collector/renderer 個別の単体テストを追加しない ― 深いモジュールのテストは interface（`collect() → snapshot`）と renderer（`render(snapshot) → DOM`）の2つの seam でカバーする。境界値（空 snapshot / 部分失敗 snapshot）は interface テストで検証。
 
 ## 実装アプローチ
 - **Outside-In**: まず `DiagnosticsCollector` の E2E テスト（全11セクションの収集）を RED にし、既存の `diagnosticsPanel.ts` ロジックを collector 内部に移動して GREEN にする。
@@ -76,9 +76,9 @@ Scenario: 新しい診断項目の追加が容易になる
 3人日
 
 ## 技術的考慮事項
-- 依存関係: `chrome.storage.local`（local-substitutable — InMemory fake で代替可能）、`getSqliteStatus` / `getLogCount`（03の BrowsingLogRepository 経由で取得。03が未完了の場合は一時的に直接呼び出し）、`checkBuiltInAiAvailability`（in-process）。
+- 依存関係: `chrome.storage.local`（local-substitutable ― InMemory fake で代替可能）、`getSqliteStatus` / `getLogCount`（03の BrowsingLogRepository 経由で取得。03が未完了の場合は一時的に直接呼び出し）、`checkBuiltInAiAvailability`（in-process）。
 - テスタビリティ: `DiagnosticsCollector` は依存を注入可能にする（`{ storage, sqlite, ai }` adapters）。テストでは fake adapters を注入し、chrome.* をモックしない。`DiagnosticsRenderer` は純粋な DOM 描画なので jsdom でテスト可能。
-- 非機能要件: パネル表示のパフォーマンス — `collect()` は並列に全診断を収集する（`Promise.all`）。現行の逐次 `await` より高速になる。
+- 非機能要件: パネル表示のパフォーマンス ― `collect()` は並列に全診断を収集する（`Promise.all`）。現行の逐次 `await` より高速になる。
 - ADR整合性: なし（diagnostics パネルに関する ADR は存在しない）。
 
 ## 実装者向け注記
@@ -100,8 +100,8 @@ wc -l src/dashboard/panels/diagnostic/diagnosticsPanel.ts
 
 ### 落とし穴
 - `diagnosticsPanel.ts` 内の `debugMode` による `compileOptionsSection` の表示切り替え（`chrome.storage.local.get('debugMode')`）は、collector が `debugMode` を snapshot に含めることで renderer が判定するように移行すること。collector が `debugMode` を知らないと renderer が chrome.* に依存してしまう。
-- `renderBuiltInAiStatus()` は `downloadBtn` の表示切り替えを伴う — renderer が snapshot から `builtInAi.status === 'downloadable'` を判定して btn の hidden を切り替えるようにすること。現行の `classList.toggle('hidden', ...)` をそのまま移植。
-- `diagDivergenceWarning` の表示は `diagnoseDeficiencies` の結果に依存する — collector が両方を収集し、renderer が `snapshot.divergenceWarning` の有無で表示を切り替える。
+- `renderBuiltInAiStatus()` は `downloadBtn` の表示切り替えを伴う ― renderer が snapshot から `builtInAi.status === 'downloadable'` を判定して btn の hidden を切り替えるようにすること。現行の `classList.toggle('hidden', ...)` をそのまま移植。
+- `diagDivergenceWarning` の表示は `diagnoseDeficiencies` の結果に依存する ― collector が両方を収集し、renderer が `snapshot.divergenceWarning` の有無で表示を切り替える。
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする（全11セクション + 部分失敗 + fake snapshot）

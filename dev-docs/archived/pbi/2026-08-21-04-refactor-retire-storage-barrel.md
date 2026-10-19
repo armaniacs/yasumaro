@@ -1,4 +1,4 @@
-# PBI: storage.ts barrel の retire — 直接 import への移行と lint seam 付与
+# PBI: storage.ts barrel の retire ― 直接 import への移行と lint seam 付与
 
 ## ユーザーストーリー
 開発者として、`src/utils/storage.ts` の deprecated barrel を retire し直接 import に移行したい、なぜなら38個の re-export が0の振る舞いで68箇所の呼び出し元が「どの storage module に依存しているか」を隠し、LAYERS.md Wave 3 が @deprecated のまま停滞しているから
@@ -32,11 +32,11 @@ Scenario: barrel が空になる
   Then ファイルは削除されているか、@deprecated の re-export shim のみ（新規コードからは参照されない）である
 
 Scenario: 循環依存の例外が保護される
-  Given src/utils/storage/settingsStore.ts ↔ src/utils/trustDb/trustDb.ts の循環が dynamic import で回避されている
+  Given src/utils/storage/settingsStore.ts ⇔ src/utils/trustDb/trustDb.ts の循環が dynamic import で回避されている
   When barrel を削除する
   Then 循環は LAYERS.md と ADR 2026-08-20-utils-layer-circular-dependency に記録されたまま、dynamic import の形で維持される
 
-Scenario: エラー — barrel 経由のテストが移行される
+Scenario: エラー ― barrel 経由のテストが移行される
   Given 既存テストが from '../utils/storage.js' で StorageKeys を import している
   When テストを from '../utils/storage/types.js' に置換する
   Then テストは同じ StorageKeys 値でパスし、barrel 削除後も壊れない
@@ -71,7 +71,7 @@ Scenario: エラー — barrel 経由のテストが移行される
 - **Red-Green-Refactor**: バッチは 10ファイルずつに分割し、各バッチで `npm run type-check` を挟む。barrel 削除は最後に1回だけ行う
 
 ## 見積もり
-3.5pt（要チームでの見積もり）— 68ファイルの置換は機械的だが、循環依存の例外（settingsStore ↔ trustDb）の dynamic import が壊れていないか各バッチで確認が必要
+3.5pt（要チームでの見積もり）― 68ファイルの置換は機械的だが、循環依存の例外（settingsStore ⇔ trustDb）の dynamic import が壊れていないか各バッチで確認が必要
 - **実態**: 50箇所想定だが、実際には68箇所のbarrel import が存在
 
 ## 技術的考慮事項

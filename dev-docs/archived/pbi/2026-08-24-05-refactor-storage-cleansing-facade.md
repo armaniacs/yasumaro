@@ -1,8 +1,8 @@
-# PBI-05: StorageKeys Slice B — Cleansing+Thresholds facade
+# PBI-05: StorageKeys Slice B ― Cleansing+Thresholds facade
 
 優先度: 1位 / RICE 63.0 (Reach 7 × Impact 2 × Conf 90% / Effort 0.20w)
 種別: refactor
-依存: THRESHOLD_RULES(6.7.76) / ServiceContainer(6.7.77) — enabler完了、依存なし
+依存: THRESHOLD_RULES(6.7.76) / ServiceContainer(6.7.77) ― enabler完了、依存なし
 ファイル触接: `src/utils/storage/SettingsRepository.ts`, `src/utils/aiSummaryCleaner/rules.ts`, `src/content/pageState.ts`
 Effort: 0.20w (S)
 

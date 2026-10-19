@@ -1,4 +1,4 @@
-# PBI 2026-09-23-03 — 設定フォーム群の記述子表化＋SSOT 委譲
+# PBI 2026-09-23-03 ― 設定フォーム群の記述子表化＋SSOT 委譲
 
 **優先度**: 順位 3 / RICE 11.2（Reach 7 × Impact 2 × Confidence 80% ÷ Effort 1.0 人週）
 **根拠**: 「読む→検証→保存→status→confirm」が 5 箇所にミラーされ、範囲リテラルが UI 側に複製（`fieldValidation.ts:240-242` の `v<10 || v>16000` vs `aiLimits.ts` の MIN_TOKENS/GLOBAL_MAX_TOKENS/`validateMaxTokens`）。UI mirror drift を構造的に防ぎ、新設定項目を表 1 行にする。

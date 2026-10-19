@@ -1,4 +1,4 @@
-# ADR: FETCH_URL Redirect Policy — redirect: 'error'
+# ADR: FETCH_URL Redirect Policy ― redirect: 'error'
 
 ## ステータス
 採用（2026-10-18: 適用範囲を AI 経路と Obsidian 経路へ拡大）
@@ -19,7 +19,7 @@ uBlock フィルタリストの import 用に任意 URL を fetch する。URL �
 SW 仲介アクセスという新たな capability になる。
 
 対策の選択肢:
-1. `redirect: 'error'` — リダイレクトが起きた時点で fetch を失敗させる。1 行。
+1. `redirect: 'error'` ― リダイレクトが起きた時点で fetch を失敗させる。1 行。
 2. `redirect: 'manual'` + ホップ毎に `validateUrlForFilterImport` で再検証。
 
 ## 決定
@@ -119,9 +119,9 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
 - ホップ毎再検証ヘルパーが将来の fetch 追加のための規約として存在する。
 
 ## 参照
-- `src/background/handlers/systemHandlers.ts` — `createFetchUrlHandler`
-- `src/utils/fetch.ts` — `fetchWithRedirectGuard`
-- `src/utils/ssrfGuard.ts` — `validateUrlForFilterImport` / `isPrivateIpAddress`
+- `src/background/handlers/systemHandlers.ts` ― `createFetchUrlHandler`
+- `src/utils/fetch.ts` ― `fetchWithRedirectGuard`
+- `src/utils/ssrfGuard.ts` ― `validateUrlForFilterImport` / `isPrivateIpAddress`
 - PBI: `pbi/2026-08-29-09-fix-fetch-redirect-ssrf.md`
 - PBI: `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` (AI 経路への適用)
 - PBI: `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` (Obsidian 経路)

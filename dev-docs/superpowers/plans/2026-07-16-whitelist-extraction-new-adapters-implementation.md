@@ -67,7 +67,7 @@
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "metadataPatterns"`
-Expected: FAIL — 2番目のテスト（`applies adapter-specific metadataPatterns instead of the default`）が、現状の実装では常にデフォルトパターンを適用するため `★4.5` が除去されず残る。3番目のテスト（`empty array`）も同様に、現状は空配列を無視してデフォルトパターンを適用してしまうため `@mention`/`RT(1)` が除去されてFAILする。1番目のテスト（`undefined` 時にデフォルト適用）は現状の実装でもPASSする想定（型定義に `metadataPatterns` フィールドがまだ存在しないため、この時点ではTypeScriptの型エラーが先に出る可能性がある。その場合はStep 2の実行結果としてコンパイルエラーも許容する）
+Expected: FAIL ― 2番目のテスト（`applies adapter-specific metadataPatterns instead of the default`）が、現状の実装では常にデフォルトパターンを適用するため `★4.5` が除去されず残る。3番目のテスト（`empty array`）も同様に、現状は空配列を無視してデフォルトパターンを適用してしまうため `@mention`/`RT(1)` が除去されてFAILする。1番目のテスト（`undefined` 時にデフォルト適用）は現状の実装でもPASSする想定（型定義に `metadataPatterns` フィールドがまだ存在しないため、この時点ではTypeScriptの型エラーが先に出る可能性がある。その場合はStep 2の実行結果としてコンパイルエラーも許容する）
 
 - [ ] **Step 3: `WhitelistAdapter` に `metadataPatterns` フィールドを追加する**
 
@@ -243,7 +243,7 @@ git commit -m "feat(whitelist-extraction): WhitelistAdapter に metadataPatterns
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "hatena-bookmark"`
-Expected: FAIL — `hatena-bookmark` アダプタがまだ `WHITELIST_ADAPTERS` に存在しないため、`find` の結果が `undefined` になり `adapter?.domains` 等が `undefined` になってアサーションが失敗する
+Expected: FAIL ― `hatena-bookmark` アダプタがまだ `WHITELIST_ADAPTERS` に存在しないため、`find` の結果が `undefined` になり `adapter?.domains` 等が `undefined` になってアサーションが失敗する
 
 - [ ] **Step 3: `WHITELIST_ADAPTERS` にはてなブックマークアダプタを追加する**
 
@@ -333,10 +333,10 @@ git commit -m "feat(whitelist-extraction): はてなブックマークアダプ�
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "tabelog"`
-Expected: FAIL — `tabelog` アダプタが `WHITELIST_ADAPTERS` に存在しないため
+Expected: FAIL ― `tabelog` アダプタが `WHITELIST_ADAPTERS` に存在しないため
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "defines exactly 8 adapters"`
-Expected: FAIL — 現時点でのアダプタ数は7件（既存6件 + Task 2で追加したhatena-bookmark）
+Expected: FAIL ― 現時点でのアダプタ数は7件（既存6件 + Task 2で追加したhatena-bookmark）
 
 - [ ] **Step 3: `WHITELIST_ADAPTERS` に食べログアダプタを追加する**
 

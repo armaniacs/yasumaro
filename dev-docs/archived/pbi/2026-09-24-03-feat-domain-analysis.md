@@ -90,6 +90,6 @@ Scenario: domain が null の行と同件数タイと10000行超を扱う
 
 ## 実装記録（2026-09-24 autonomous-task-closer）
 - 実装: `src/dashboard/domainAnalysisAggregate.ts`（純粋集計・ドメイン/URL別・決定的タイ順序）、`src/dashboard/panels/asyncData/domainAnalysisPanel.ts`、`MAX_DOMAIN_ANALYSIS_ROWS=50000`+`DOMAIN_ANALYSIS_PAGE_SIZE=10000`（computeLimits.ts）、配線（catalog/factories/index.html/locales 16キー×2/panelCatalog pinned 20→21）
-- 設計決定: domain null 行は `(unknown)` バケットとして集計に含め、null 件数を通知表示。ドメイン行クリックは `tryNavigateTyped('panel-sqlite-history', { searchDomain })`（既存 `activateWithDomain` 経路）で遷移、URL 行は履歴パネルに URL 初期化パラメータが無いため v1 遷移なし。再取得は明示 Run ボタン式（50k 行・5 ページ取得の重いクエリをプリセット操作のたびに発火させないため）。50k 上限到達時は truncation 通知（unbounded pagination ではなく DoS ガードとして上限化 — 家法の cap パターンに整合）
+- 設計決定: domain null 行は `(unknown)` バケットとして集計に含め、null 件数を通知表示。ドメイン行クリックは `tryNavigateTyped('panel-sqlite-history', { searchDomain })`（既存 `activateWithDomain` 経路）で遷移、URL 行は履歴パネルに URL 初期化パラメータが無いため v1 遷移なし。再取得は明示 Run ボタン式（50k 行・5 ページ取得の重いクエリをプリセット操作のたびに発火させないため）。50k 上限到達時は truncation 通知（unbounded pagination ではなく DoS ガードとして上限化 ― 家法の cap パターンに整合）
 - 検証: type-check PASS / 対象 52 tests green / lint 0 errors / 全体 13,637 tests green / build PASS
 - 備考: GitHub PR レビューはユーザー作業として残置

@@ -1,4 +1,4 @@
-# PBI: RecordingPipeline Context Bag の PipelineKernel 統合 — Phase A (薄いラッパー)
+# PBI: RecordingPipeline Context Bag の PipelineKernel 統合 ― Phase A (薄いラッパー)
 
 ## ユーザーストーリー
 開発者として、`RecordingContext` の7 intersection bag を `PipelineKernel` の薄いラッパーに統合したい、なぜなら全ステップが全フィールドを可視し、`RETRY`/`offlineRetry` がテーブルと `StepExecutor` に分散して組み合わせバグを検出できないから。Phase A では副作用境界の明確化に留め、typed builder は Phase B で行う。
@@ -14,12 +14,12 @@
 - 解: Phase A: `PipelineKernel { record(data): Result }` が `StepExecutor` を統合し `RETRY`/`offlineRetry` を内部で完結。Phase B: `isNetworkError` 分類と typed builder (`Readonly<PipelineInput> & Mutable<StagePatch>`) を導入
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — record が一括で完結する
+Scenario: ハッピーパス ― record が一括で完結する
   Given `RecordingData` を渡す
   When `PipelineKernel.record` を呼ぶ
   Then `Privacy -> Obsidian -> Sqlite` が内部で実行され `RecordingResult` が返る。現行 `RecordingPipeline.record()` は facade として残す
 
-Scenario: エッジケース — offline 分岐が一箇所で完結し、論理エラーは enqueue されない
+Scenario: エッジケース ― offline 分岐が一箇所で完結し、論理エラーは enqueue されない
   Given ネットワーク断で `saveToObsidian` が失敗する
   When `record` を呼ぶ
   Then `isNetworkError(error)` が `true` の場合のみ `offlineRetry` に enqueue され、 `DOMAIN_BLOCKED` は enqueue されない
@@ -36,7 +36,7 @@ Scenario: エッジケース — offline 分岐が一箇所で完結し、論理
 - E2E: `content-script-recording` で 50% scroll + 5s 滞在の発火を検証
 
 ## 見積もり
-3pt（Phase A, 要チームでの見積もり） — Phase B は 5pt で別PBI化推奨
+3pt（Phase A, 要チームでの見積もり） ― Phase B は 5pt で別PBI化推奨
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする

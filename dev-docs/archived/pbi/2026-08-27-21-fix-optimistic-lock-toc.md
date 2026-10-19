@@ -23,14 +23,14 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 単一更新は検証有効でも成功する
+Scenario: ハッピーパス ― 単一更新は検証有効でも成功する
   Given `chrome.storage.local` に `key="savedUrls"` が `{ version: 0, value: ["a.com"] }` で存在する
   And `_postWriteVerificationEnabled` が true（修正後デフォルト）
   When `withOptimisticLock("savedUrls", v => [...v, "b.com"])` を呼ぶ
   Then 書き込みは成功し `chrome.storage.local.get("savedUrls")` が `["a.com","b.com"]` を返す
   And `ConflictError` はスローされない
 
-Scenario: 攻撃/競合 — TOCTOUウィンドウでの並行上書きが検出される
+Scenario: 攻撃/競合 ― TOCTOUウィンドウでの並行上書きが検出される
   Given `chrome.storage.local` に `key="test"` が `{ value: "v1", _version: 1 }` で存在する
   And 2つの並行 `withOptimisticLock("test", ...)` 呼び出し A と B が同時に開始される
   And A が `verify read (version=1)` を完了し `set({ value: "A", _version: 2 })` を実行する直前に B が割り込み `set({ value: "B", _version: 2 })` を完了させる（TOCTOUウィンドウの競合をテストで再現: chrome.storage.local.set をモックし割り込みを注入）
@@ -52,7 +52,7 @@ Scenario: 攻撃/競合 — TOCTOUウィンドウでの並行上書きが検出�
 - 不要（ストレージ内部ロジック）
 
 ### 統合テスト
-- `withOptimisticLock` を2並行で呼び出す統合テスト — `chrome.storage.local` をモックし、一方の `set` を遅延させ他方を割り込ませることでTOCTOUを再現
+- `withOptimisticLock` を2並行で呼び出す統合テスト ― `chrome.storage.local` をモックし、一方の `set` を遅延させ他方を割り込ませることでTOCTOUを再現
 - `permissionManager.ts:60` / `trustDb.ts:17` / `savedUrlRepository.ts:16` 等の実利用箇所で `enablePostWriteVerification` 有効時の回帰がないこと
 
 ### 単体テスト
@@ -86,11 +86,11 @@ cat src/utils/__tests__/optimisticLock*.test.ts | grep -n "enablePostWriteVerifi
 ```
 
 ### 実装手順
-1. `src/utils/optimisticLock.ts:146-181` を読む — `performCasUpdate` の TOCTOU ウィンドウと `_postWriteVerificationEnabled=false` のデフォルトを確認
+1. `src/utils/optimisticLock.ts:146-181` を読む ― `performCasUpdate` の TOCTOU ウィンドウと `_postWriteVerificationEnabled=false` のデフォルトを確認
 2. 方針を決定:
    - **案A (推奨・安全性優先)**: `src/utils/optimisticLock.ts:180` を `let _postWriteVerificationEnabled = true;` に変更する。1行修正で全呼び出し元で検証が有効になる
    - **案B (性能優先)**: `false` のまま `optimisticLock.ts:50-55` の JSDoc に `@remarks` として「デフォルト無効の理由と並行更新が想定される場合は `enablePostWriteVerification()` を呼ぶこと」を追記し、`dev-docs/ADR/` にADRを作成する
-3. TOCTOU再現テストを追加 — `chrome.storage.local.get/set` をモックし、`performCasUpdate` の `verify read` と `set` の間に割り込み `set` を注入する:
+3. TOCTOU再現テストを追加 ― `chrome.storage.local.get/set` をモックし、`performCasUpdate` の `verify read` と `set` の間に割り込み `set` を注入する:
    ```ts
    // モック例: get は version=1 を返し、set 呼び出し時に別コンテキストが version=2 に更新済みとする
    vi.mocked(chrome.storage.local.get).mockResolvedValueOnce({ key: "v1", key_version: 1 }); // initial read
@@ -102,9 +102,9 @@ cat src/utils/__tests__/optimisticLock*.test.ts | grep -n "enablePostWriteVerifi
 5. 案Aの場合、全 `withOptimisticLock` 利用箇所の統合テストで `get` 呼び出し回数が1回増えることによるタイムアウトがないか確認
 
 ### 落とし穴
-- `_postWriteVerificationEnabled` はグローバル `let` でありテスト間で共有される — テスト後に `false` にリセットするか、各テストで `enablePostWriteVerification()` の呼び出しを明示すること
-- `JSON.stringify` による `valueMatches` 比較（`optimisticLock.ts:167`）はキー順序に依存する — `newValue` と `postWriteValue` のキー順序が異なる場合に誤検出する可能性があるため、将来的には `deepEqual` に置換を検討
-- `enablePostWriteVerification()` は一度 `true` にすると `false` に戻す API がない — テスト隔離のために `disablePostWriteVerification()` または `resetPostWriteVerification()` の追加を検討すること
+- `_postWriteVerificationEnabled` はグローバル `let` でありテスト間で共有される ― テスト後に `false` にリセットするか、各テストで `enablePostWriteVerification()` の呼び出しを明示すること
+- `JSON.stringify` による `valueMatches` 比較（`optimisticLock.ts:167`）はキー順序に依存する ― `newValue` と `postWriteValue` のキー順序が異なる場合に誤検出する可能性があるため、将来的には `deepEqual` に置換を検討
+- `enablePostWriteVerification()` は一度 `true` にすると `false` に戻す API がない ― テスト隔離のために `disablePostWriteVerification()` または `resetPostWriteVerification()` の追加を検討すること
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

@@ -2,7 +2,7 @@
 
 ## 実装状況
 
-**完了** — 2026-08-11。recording handlerの最小dependency interface、共有closure、composition wiringを実装済み。
+**完了** ― 2026-08-11。recording handlerの最小dependency interface、共有closure、composition wiringを実装済み。
 
 ## 親PBI
 

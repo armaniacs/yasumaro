@@ -1,4 +1,4 @@
-# Design: sqliteHistoryPanel.ts Deepening — Function Signature Parameterization
+# Design: sqliteHistoryPanel.ts Deepening ― Function Signature Parameterization
 
 **Date:** 2026-07-13
 **Status:** Implemented (2026-07-17)
@@ -9,10 +9,10 @@
 ## Deep Dig Revision
 
 Initial design proposed extracting 4 modules. Deep dig revealed:
-1. File splitting alone does not enable testability — functions still depend on global DOM and state
+1. File splitting alone does not enable testability ― functions still depend on global DOM and state
 2. The root problem is **function signatures hardcoded to `document.getElementById()` and module-level `state`**
 3. Fixing signatures avoids unnecessary module boundary overhead
-4. DOM event wiring knowledge belongs in the module that generates the HTML — that module receives a container and wires its own subtree
+4. DOM event wiring knowledge belongs in the module that generates the HTML ― that module receives a container and wires its own subtree
 
 **Revised approach**: Parameterize function signatures only. No file moves. Estimate reduced from 3pt → 1pt.
 
@@ -33,7 +33,7 @@ function renderCalendarNav(): void {
 }
 ```
 
-This makes functions untestable — you can't call them with test data.
+This makes functions untestable ― you can't call them with test data.
 
 ### Target State
 
@@ -65,16 +65,16 @@ function renderCalendarNav(
 | `renderPagination()` | `document.getElementById`, `state.currentPage`, `state.total` | `(container, currentPage, total, PAGE_SIZE, callback)` |
 | `updateBulkBar()` | `document.getElementById`, `state.selectedIds`, `state.entries` | `(selectedIds, entries, callbacks)` |
 | `updateTagFilterBar()` | `document.querySelector`, `state.activeTagFilter` | `(container, activeTagFilter, callback)` |
-| `renderState()` | All of the above | Remains orchestrator — calls parameterized functions |
+| `renderState()` | All of the above | Remains orchestrator ― calls parameterized functions |
 | `loadData()` | `state`, `refresh()` | Add `state` as parameter or make it return data to caller |
 
 ### Functions that need no changes (already testable)
 
 | Function | Reason |
 |----------|--------|
-| `formatDiagnosticMetadataHtml()` | Pure function — input `BrowsingLogEntry`, output HTML string |
+| `formatDiagnosticMetadataHtml()` | Pure function ― input `BrowsingLogEntry`, output HTML string |
 | `buildCleansingProgressBarHtml()` | Pure function |
-| `enrichEntryWithChromeStorage()` | Pure function — input entry + storageMap, output enriched entry |
+| `enrichEntryWithChromeStorage()` | Pure function ― input entry + storageMap, output enriched entry |
 | `escapeHtml()` | Pure utility |
 | `formatTimestamp()` | Pure utility |
 | `debounce()` | Pure utility |
@@ -85,9 +85,9 @@ function renderCalendarNav(
 
 The panel (`sqliteHistoryPanel.ts`) becomes:
 
-1. **State owner** — `SqliteHistoryState` object, the single source of truth
-2. **Data loader** — `loadData()` fetches from SQLite, updates state, calls `refresh()`
-3. **Refresh orchestrator** — `refresh()` passes current state to each render function
+1. **State owner** ― `SqliteHistoryState` object, the single source of truth
+2. **Data loader** ― `loadData()` fetches from SQLite, updates state, calls `refresh()`
+3. **Refresh orchestrator** ― `refresh()` passes current state to each render function
 
 ```ts
 function refresh(): void {

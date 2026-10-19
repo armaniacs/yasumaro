@@ -73,7 +73,7 @@ The period filter at the top of the panel limits which records are aggregated. I
 | Action | Behavior |
 |--------|----------|
 | **Click a node** | Filters history by that tag and automatically navigates to the SQLite History panel |
-| **Mouse wheel** | Zoom in/out centered on the cursor (0.3x–3x) |
+| **Mouse wheel** | Zoom in/out centered on the cursor (0.3x-3x) |
 | **Drag** | Pan the graph |
 | **Pinch** (touch devices) | Two fingers to zoom, one finger to pan |
 | **+/− buttons** | Zoom in/out centered on the canvas |

@@ -23,7 +23,7 @@ refactor / 既存実装の改善
 4. なぜ解釈が分散したのか。送信メッセージの型付けと応答の型付けを別々に進めたから。
 5. なぜ差が検出されないのか。操作ごとの送受信契約を網羅する統合テストがないから。
 
-根本原因: SW↔offscreen seamのprotocolが片方向だけ型付きで、応答の責務がcallerへ漏れている。
+根本原因: SW⇔offscreen seamのprotocolが片方向だけ型付きで、応答の責務がcallerへ漏れている。
 
 ## BDD受け入れシナリオ
 
@@ -96,7 +96,7 @@ Scenario: offscreen操作の失敗理由を伝える
 - requestの型付けだけで完了にしない。responseの失敗shapeも対象にする。
 - `0` は有効なcountであり、`undefined`や不正値と混同しない。
 - offscreen documentからtabs/downloads/actionなどのChrome APIを呼ばない。
-- `postMessage`を使う内部WorkerとのprotocolとSW↔offscreen protocolを混同しない。
+- `postMessage`を使う内部WorkerとのprotocolとSW⇔offscreen protocolを混同しない。
 - バイナリ結果をJSON向けdecoderで処理しない。
 
 ## 見積もり

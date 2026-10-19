@@ -1,4 +1,4 @@
-# AI Summary Cleansing — Category B: Site-Type Specific Patterns (News/EC/QA/Video)
+# AI Summary Cleansing ― Category B: Site-Type Specific Patterns (News/EC/QA/Video)
 
 **Date:** 2026-07-15
 **Branch:** feat/ai-summary-cleansing

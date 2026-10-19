@@ -1,4 +1,4 @@
-# PBI 2026-09-23-13 — maintain 系 wire-table 化（ゲートウェイ最終手配線の解消）
+# PBI 2026-09-23-13 ― maintain 系 wire-table 化（ゲートウェイ最終手配線の解消）
 
 **優先度**: 順位 13 / RICE 12.8（Reach 4 × Impact 2 × Confidence 80% ÷ Effort 0.5 人週）
 **根拠**: 前回 PBI-02 の直接の完成形。query/mutate/archive の行が実在・テスト済みのため、定義箇所の移動のみで wire 形状・セキュリティ政策の変更なし。offscreen hop の最後の手配線 Locality 分割を解消する。

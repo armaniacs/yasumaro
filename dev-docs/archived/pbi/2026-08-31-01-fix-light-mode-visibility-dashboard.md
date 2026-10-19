@@ -1,4 +1,4 @@
-# PBI: ライトモード視認性改善 — Dashboard AIプロバイダー設定のトークン準拠化
+# PBI: ライトモード視認性改善 ― Dashboard AIプロバイダー設定のトークン準拠化
 
 > **系統**: UI/デザイン（2026-08-31 起票）。VulnHunter セキュリティ修正（29 系）や
 > クレンジング改善（30 系）とは独立。着手順・背景は
@@ -34,7 +34,7 @@ Scenario: トグルと入力欄の整合性
   Then  トグル背景は紙色系、入力欄は白背景で周囲のカードと同化せず区別できる
   And   フォーカスリングは var(--ym-focus-ring)（紫）が表示される（金ではない）
 
-Scenario: エラーケース — ハードコード残存検出
+Scenario: エラーケース ― ハードコード残存検出
   Given 修正後の dashboard.css
   When  `grep -n "#27272a\|#18181b\|#27272" entrypoints/options/dashboard.css` を実行する
   Then  該当するハードコードは 0 件
@@ -54,9 +54,9 @@ Scenario: エラーケース — ハードコード残存検出
   `--color-*` は dashboard.css:95 の `@media (prefers-color-scheme: dark)` で反転するため、
   ライトは紙色（`#f8fafc` / `#ffffff`）、ダークは墨色（`#161b22` / `#0d1117`）を自動で使い分ける。
   別途 `@media` ブロックは不要。
-- 単体テスト: `tests/dashboard/aiProviderBLightMode.test.ts`（PR #84）— CSS ソースの
+- 単体テスト: `tests/dashboard/aiProviderBLightMode.test.ts`（PR #84）― CSS ソースの
   トークン使用と暗色直値の不在をアサート。
-- E2E: `testDir/e2e/dashboard-light-mode.spec.ts` — ビルド後 options CSS を最小 DOM に適用し、
+- E2E: `testDir/e2e/dashboard-light-mode.spec.ts` ― ビルド後 options CSS を最小 DOM に適用し、
   `page.emulateMedia({ colorScheme })` で light/dark の `.b-priority-row` / `.b-provider-details`
   背景 computedStyle を検証（chromium + firefox で 6 ケース green）。
 - ハードコード検出（BDD「エラーケース」）: `grep "#27272a\|#18181b\|#3f3f46"
@@ -77,7 +77,7 @@ Scenario: エラーケース — ハードコード残存検出
 
 ### 単体テスト
 - 既存 `priorityListView.test.ts` 等が影響を受けないことを確認（DOM生成ロジックはCSSのみ変更のため）
-- 新規ユーティリティがあれば: コントラスト比計算ヘルパーの境界値テスト（#fff on #fff → 1:1 で失敗ケースなど）— 本PBIではCSSのみなら任意
+- 新規ユーティリティがあれば: コントラスト比計算ヘルパーの境界値テスト（#fff on #fff → 1:1 で失敗ケースなど）― 本PBIではCSSのみなら任意
 
 ## 実装アプローチ
 - **Outside-In**: E2Eの「ライト背景が白である」失敗テストから開始 → 統合（トークン解決）→ CSS修正 → グリーン → リファクタリング
@@ -85,7 +85,7 @@ Scenario: エラーケース — ハードコード残存検出
 - **リファクタリング**: グリーン後に `var(--ym-*)` と `var(--color-*)` の使い分けを DESIGN_TOKENS.md に照らして統一（操作要素は紫、金は装飾のみ）
 
 ## 見積もり
-2pt（要チームでの見積もり） — CSS 3クラス + トグル1つのトークン置換、E2E 2ケース追加、目視確認
+2pt（要チームでの見積もり） ― CSS 3クラス + トグル1つのトークン置換、E2E 2ケース追加、目視確認
 
 ## 技術的考慮事項
 - 依存関係: なし（独立。DESIGN_TOKENS.md / tokens.css は既存）
@@ -160,7 +160,7 @@ grep -rn "b-priority-row\|b-provider-details\|ai-layout-toggle" src/ entrypoints
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする（E2E light/dark + ハードコード検出）
 - [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記 — 本PBIはCSSのみだがXSS/CSP観点で inline style 不使用を確認）
+- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記 ― 本PBIはCSSのみだがXSS/CSP観点で inline style 不使用を確認）
 - [x] リファクタリング完了（グリーン後、トークン命名を DESIGN_TOKENS.md と整合。dashboard.css 内は `--color-*` で統一済み）
 - [x] ロールバック手段の検討（CSS変更のため即時リバート可能。`--color-*` トークン参照を旧直値に戻すだけ。feature flag不要）
 - [x] ドキュメント更新済み（DESIGN_TOKENS.md には B分離型固有の記載箇所がないため省略。本PBIの「着地サマリ」に集約）

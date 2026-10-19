@@ -78,15 +78,15 @@ cat src/dashboard/panels/staticForm/tagsSettingsPanel.ts \
 
 | id | mount で呼ぶもの | settings 要る? | refresh で呼ぶもの |
 |---|---|---|---|
-| `panel-tags` | `initTagsPanel()` (async) | – | なし |
-| `panel-recording-conditions` | `initRecordingConditionsSettings()` (async) | – | なし |
+| `panel-tags` | `initTagsPanel()` (async) | - | なし |
+| `panel-recording-conditions` | `initRecordingConditionsSettings()` (async) | - | なし |
 | `panel-prompt` | `initCustomPromptManager(settings)` | **要** | なし |
 | `panel-markdown-template` | `initMarkdownTemplateManager(settings)` | **要** | なし |
-| `panel-csp` | `CSPSettings.loadCSPSettings()` (async) | – | `CSPSettings.loadCSPSettings()` |
-| `panel-content` | `initContentSettings()` | – | `loadContentSettings()` ←**別関数** |
-| `panel-export-import` | `initExportImport()`, `initEncryptedBackupPanel()`, `initGistSettings()` ←**3つ** | – | なし |
-| `panel-trust` | `initTrustSettings()`, `loadTrustSettings()` ←**2つ** | – | `loadTrustSettings()` |
-| `panel-domain` | `initDomainFilter()`, `initDomainFilterTagUI()` ←**2つ** | – | `loadDomainSettings()` ←**別関数** |
+| `panel-csp` | `CSPSettings.loadCSPSettings()` (async) | - | `CSPSettings.loadCSPSettings()` |
+| `panel-content` | `initContentSettings()` | - | `loadContentSettings()` ←**別関数** |
+| `panel-export-import` | `initExportImport()`, `initEncryptedBackupPanel()`, `initGistSettings()` ←**3つ** | - | なし |
+| `panel-trust` | `initTrustSettings()`, `loadTrustSettings()` ←**2つ** | - | `loadTrustSettings()` |
+| `panel-domain` | `initDomainFilter()`, `initDomainFilterTagUI()` ←**2つ** | - | `loadDomainSettings()` ←**別関数** |
 
 - [ ] 上表を自分で `cat` の出力と照合し、正しいことを確認する
 - [ ] **id は HTML と一致していなければならない**。確認する
@@ -171,7 +171,7 @@ import { getSettings, type Settings } from '../../../utils/storage.js';
  * init functions.
  *
  * Panels with logic of their own (generalSettingsPanel, privacySettingsPanel,
- * aiSummaryCleansingPanel) keep their own files — the deletion test fails for
+ * aiSummaryCleansingPanel) keep their own files ― the deletion test fails for
  * them: inlining would scatter their bodies into the registration list.
  */
 export interface StaticPanelSpec {
@@ -239,7 +239,7 @@ import { initDomainFilterTagUI } from '../../domainFilterTagUI.js';
  * Panels that only forward to an existing init function.
  *
  * `id` must match the element id and `data-panel` attribute in
- * entrypoints/options/index.html — a typo makes that tab silently fail to
+ * entrypoints/options/index.html ― a typo makes that tab silently fail to
  * open, because wireSidebar swallows the registry's throw.
  */
 export const STATIC_FORM_PANELS: readonly StaticFormPanel[] = [

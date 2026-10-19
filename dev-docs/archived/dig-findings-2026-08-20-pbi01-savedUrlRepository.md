@@ -1,7 +1,7 @@
-# Deep Dig Findings — PBI #01 SavedUrlRepository
+# Deep Dig Findings ― PBI #01 SavedUrlRepository
 
 **Date:** 2026-08-20
-**Scope:** SavedUrlRepository への統合 — Legacy Dual-Write メタデータ蓄積の崩壊
+**Scope:** SavedUrlRepository への統合 ― Legacy Dual-Write メタデータ蓄積の崩壊
 
 ---
 

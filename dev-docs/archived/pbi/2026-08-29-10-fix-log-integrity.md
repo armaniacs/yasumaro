@@ -1,4 +1,4 @@
-# PBI: ログ完全性 — attribution と制御文字無害化（VULN-019/044, CWE-290/117）
+# PBI: ログ完全性 ― attribution と制御文字無害化（VULN-019/044, CWE-290/117）
 
 ## ユーザーストーリー
 開発者として、拡張の永続ログの送信元属性が偽装できず、外部応答の本文が行構造を壊して書き込まれないようにしたい、なぜなら LOG_FORWARD が payload の `source` を鵜呑みにし、Obsidian エラー本文が改行/ANSI/制御文字を含んだまま永続化され、障害解析の一次証跡が信頼できなくなるから
@@ -70,7 +70,7 @@ Scenario: PII マスクは現行どおり動作する（回帰防止）
 - **Red-Green-Refactor**: 無害化は 1 ヘルパーに集約し、PII マスクとの適用順を固定
 
 ## 見積もり
-1pt（要チームでの見積もり — handler 1 箇所＋logger 1 境界＋テスト）
+1pt（要チームでの見積もり ― handler 1 箇所＋logger 1 境界＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: Wave 2。PBI 03 と `systemHandlers.ts` を共有 → マージ順に注意
@@ -94,9 +94,9 @@ rg -n "sanitizeRegex|addLog" src/utils/logger --type ts
 3. 永続化経路に適用、テスト追加、`npm run validate`
 
 ### 落とし穴
-- `_source` の sender.url は offscreen 等で同じ URL になる — コンテキスト判別が必要なら `context` 情報（既存 `_source` の使い方）と合わせて設計すること
-- ANSI 除去で正当な本文中の `\u001b` 相当文字（esc キー）を過剰に壊さないこと — CSI シーケンスのみ対象
-- PII マスクが無害化後に走るとマスク対象が変化する可能性 — 順序をテストで固定
+- `_source` の sender.url は offscreen 等で同じ URL になる ― コンテキスト判別が必要なら `context` 情報（既存 `_source` の使い方）と合わせて設計すること
+- ANSI 除去で正当な本文中の `\u001b` 相当文字（esc キー）を過剰に壊さないこと ― CSI シーケンスのみ対象
+- PII マスクが無害化後に走るとマスク対象が変化する可能性 ― 順序をテストで固定
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

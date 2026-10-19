@@ -14,12 +14,12 @@
 - 解: `MaskNavigator` (純粋: `collectPositions(text)->MaskedPosition[]`, `next/prev` with wrap), `PreviewView` (interface `show(html)`, `onConfirm/onCancel`, inject `doc`), `PreviewPresenter` ( `resolvePromise` + `ResizeObserver` ポリシーを所有し委譲)
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — マスク位置が正しく収集される
+Scenario: ハッピーパス ― マスク位置が正しく収集される
   Given `text` に3つのマスク位置がある
   When `MaskNavigator.collectPositions(text)` を呼ぶ
   Then 3件の `MaskedPosition` が返る
 
-Scenario: エッジケース — 連続 showPreview で Promise がハングしない
+Scenario: エッジケース ― 連続 showPreview で Promise がハングしない
   Given `showPreview` を2回連続で呼ぶ
   When 1回目の Promise が未解決のまま2回目を呼ぶ
   Then 1回目の Promise は拒否され、2回目の Promise が正しく解決する

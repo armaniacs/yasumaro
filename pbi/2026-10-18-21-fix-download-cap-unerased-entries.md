@@ -15,15 +15,15 @@
 
 ## 背景（監査の出典）
 
-security-audit run-2 の needs_validation リード。fingerprint: `export-download-cap:oldest-drop-leaks-unerased-entries`。監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` の needs_validation エントリ / `NEEDS-VALIDATION.md:189-219` の「## 7. MAX_DOWNLOAD_RECORDS oldest-drop removes records from tracking without erasing their download entries — no cleanup path remains」）。verdict は `needs_validation`、判定は環境観測 2 点を blocker として挙げている。
+security-audit run-2 の needs_validation リード。fingerprint: `export-download-cap:oldest-drop-leaks-unerased-entries`。監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` の needs_validation エントリ / `NEEDS-VALIDATION.md:189-219` の「## 7. MAX_DOWNLOAD_RECORDS oldest-drop removes records from tracking without erasing their download entries ― no cleanup path remains」）。verdict は `needs_validation`、判定は環境観測 2 点を blocker として挙げている。
 
 **再現経路（trace / 実ファイルで再確認した行）**
 
-1. `src/background/localMarkdownExportCore.ts:62-69` — `flushBufferedExports` が日次バッファ1日分ごとに `chrome.downloads.download` を1回呼ぶ。`:68` の `conflictAction: 'overwrite'` により**ディスク上のファイルは日付ごとに上書きされ有界**。`:71-73` で downloadId が数値なら `:72` の `recordDownloadId(downloadId, date)` が1件記録される。
-2. `src/background/localMarkdownIdleFlusher.ts:114-118` — `scheduleImmediateFlush` は `IMMEDIATE_DEBOUNCE_MIN = 1`（`:21`）のワンショットアラームで、**記録ごとに最大1回/分**の flush まで許可する。`:58-60` の `onIdleStateChanged` は idle イベントごとに `flushBufferedExports` を呼び、`:76` の `IDLE_FALLBACK_ALARM`（`periodInMinutes: 30`）が補助する。`daily` タイミングも `:81-84` で 1440 分周期。**どのタイミングにも 1日あたりの flush 数の上限はソース上に存在しない**。
-3. `src/background/localMarkdownExportRetention.ts:79-80` — `appended.length > MAX_DOWNLOAD_RECORDS` のとき `appended.slice(appended.length - MAX_DOWNLOAD_RECORDS)` を返す。**この updater の中で `chrome.downloads.removeFile` も `chrome.downloads.erase` も一切呼ばない**（`:77-82`）。
-4. `src/background/localMarkdownExportRetention.ts:102` — `purgeExpiredDownloadRecords` の事前チェックは現リストの全レコードのみを見る。`:115-121` の lock 内 updater で `:119` の `claimed = records.filter((r) => r.createdAt <= cutoff)` を計算するため、**cap で落ちたレコードは claim の入力に存在せず**、`:123-137` の `removeFile`（`:125`）/ `erase`（`:130`）に到達できない。
-5. `src/background/dailyPurgeHandler.ts:154` — 日次パージアラームから `purgeExpiredDownloadRecords` が呼ばれるが、これは上記のとおり現リストしか見えない。
+1. `src/background/localMarkdownExportCore.ts:62-69` ― `flushBufferedExports` が日次バッファ1日分ごとに `chrome.downloads.download` を1回呼ぶ。`:68` の `conflictAction: 'overwrite'` により**ディスク上のファイルは日付ごとに上書きされ有界**。`:71-73` で downloadId が数値なら `:72` の `recordDownloadId(downloadId, date)` が1件記録される。
+2. `src/background/localMarkdownIdleFlusher.ts:114-118` ― `scheduleImmediateFlush` は `IMMEDIATE_DEBOUNCE_MIN = 1`（`:21`）のワンショットアラームで、**記録ごとに最大1回/分**の flush まで許可する。`:58-60` の `onIdleStateChanged` は idle イベントごとに `flushBufferedExports` を呼び、`:76` の `IDLE_FALLBACK_ALARM`（`periodInMinutes: 30`）が補助する。`daily` タイミングも `:81-84` で 1440 分周期。**どのタイミングにも 1日あたりの flush 数の上限はソース上に存在しない**。
+3. `src/background/localMarkdownExportRetention.ts:79-80` ― `appended.length > MAX_DOWNLOAD_RECORDS` のとき `appended.slice(appended.length - MAX_DOWNLOAD_RECORDS)` を返す。**この updater の中で `chrome.downloads.removeFile` も `chrome.downloads.erase` も一切呼ばない**（`:77-82`）。
+4. `src/background/localMarkdownExportRetention.ts:102` ― `purgeExpiredDownloadRecords` の事前チェックは現リストの全レコードのみを見る。`:115-121` の lock 内 updater で `:119` の `claimed = records.filter((r) => r.createdAt <= cutoff)` を計算するため、**cap で落ちたレコードは claim の入力に存在せず**、`:123-137` の `removeFile`（`:125`）/ `erase`（`:130`）に到達できない。
+5. `src/background/dailyPurgeHandler.ts:154` ― 日次パージアラームから `purgeExpiredDownloadRecords` が呼ばれるが、これは上記のとおり現リストしか見えない。
 
 **ヘッダ注釈が既に示している乖離（`src/background/localMarkdownExportRetention.ts:29-31`）**
 
@@ -31,16 +31,16 @@ security-audit run-2 の needs_validation リード。fingerprint: `export-downl
 > `// without limit. 200 ~= LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS worth of daily`
 > `// flushes plus headroom for the immediate/idle timings.`
 
-この注釈が述べているのは **使用量の見積もり**であり、**強制された per-day 上限ではない**。平たく言えば `200 ≈ 30日分の日次 flush + 余裕` は「1日1回 flush なら 30 日で 30 件」という前提から導かれた値に過ぎず、`:7` の `(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)` が「上限の小さいリストは正しく動くとみなしている」ことを前提にしている。監査の指摘はこれを明示する: **「ヘッダ注釈の 200 ≒ 30日分の想定は使用量の見積もりであり、強制された上限ではない」**。コードは実際には強制された上限として機能しており、`:29-31` の前提（1日1回 flush）が崩れたときに削除経路が破綻する。修正の DoD にはこの注釈の訂正を明文化する。
+この注釈が述べているのは **使用量の見積もり**であり、**強制された per-day 上限ではない**。平たく言えば `200 ≒ 30日分の日次 flush + 余裕` は「1日1回 flush なら 30 日で 30 件」という前提から導かれた値に過ぎず、`:7` の `(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)` が「上限の小さいリストは正しく動くとみなしている」ことを前提にしている。監査の指摘はこれを明示する: **「ヘッダ注釈の 200 ≒ 30日分の想定は使用量の見積もりであり、強制された上限ではない」**。コードは実際には強制された上限として機能しており、`:29-31` の前提（1日1回 flush）が崩れたときに削除経路が破綻する。修正の DoD にはこの注釈の訂正を明文化する。
 
 **既存テスト（現状 pin している挙動）**
 
-- `src/background/__tests__/localExportRetention.test.ts:117-131` — `drops the oldest record when the list exceeds MAX_DOWNLOAD_RECORDS` が **cap で最古レコードが落ちる現在の挙動を pin**している（本件の Red の置き場所）。
-- 同 `:81-83` — `MAX_DOWNLOAD_RECORDS = 200` を pin。`:142-158` は 29/30/31 日の境界、`:160-168` は removeFile 失敗時も erase する、`:170-185` は no-op 条件を pin。
-- 同 `:188-252` — `recordDownloadId` と purge の read-modify-write 競合（`:196` の「purge が chrome.downloads で待機中に追加された id を保つ」、`:227` の同時実行マージ）を pin。**新しい削除待ちキューはこれらと同じ lock 規律を守らなければならない**。
-- 同 `:47-52` — chrome スタブが `downloads: { erase, removeFile }` のみ。`downloads.search` を採用する場合（選択肢 3）のスタブ追加が必要。
-- `src/background/__tests__/dailyPurgeHandler.test.ts:119-120` / `:194-195` — purge からの erase 呼び出しを pin。
-- `src/background/__tests__/localMarkdownExportCore.test.ts:81` — flush 側が `recordDownloadId` を書き、purge 側が読む整合を担保する記述。
+- `src/background/__tests__/localExportRetention.test.ts:117-131` ― `drops the oldest record when the list exceeds MAX_DOWNLOAD_RECORDS` が **cap で最古レコードが落ちる現在の挙動を pin**している（本件の Red の置き場所）。
+- 同 `:81-83` ― `MAX_DOWNLOAD_RECORDS = 200` を pin。`:142-158` は 29/30/31 日の境界、`:160-168` は removeFile 失敗時も erase する、`:170-185` は no-op 条件を pin。
+- 同 `:188-252` ― `recordDownloadId` と purge の read-modify-write 競合（`:196` の「purge が chrome.downloads で待機中に追加された id を保つ」、`:227` の同時実行マージ）を pin。**新しい削除待ちキューはこれらと同じ lock 規律を守らなければならない**。
+- 同 `:47-52` ― chrome スタブが `downloads: { erase, removeFile }` のみ。`downloads.search` を採用する場合（選択肢 3）のスタブ追加が必要。
+- `src/background/__tests__/dailyPurgeHandler.test.ts:119-120` / `:194-195` ― purge からの erase 呼び出しを pin。
+- `src/background/__tests__/localMarkdownExportCore.test.ts:81` ― flush 側が `recordDownloadId` を書き、purge 側が読む整合を担保する記述。
 
 ## BDD受け入れシナリオ
 
@@ -98,37 +98,37 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
 
 | ファイル | 行 | 内容 |
 |---|---:|---|
-| `src/background/localMarkdownExportRetention.ts` | 7 | ヘッダ「(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)」— 落ちたレコードの扱いが未記述 |
-| `src/background/localMarkdownExportRetention.ts` | 22–26 | 上限を UI 設定化しないという設計判断の注釈（履歴窓にユーザー可視効果は `chrome://downloads` の掃除のみである旨） |
+| `src/background/localMarkdownExportRetention.ts` | 7 | ヘッダ「(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)」― 落ちたレコードの扱いが未記述 |
+| `src/background/localMarkdownExportRetention.ts` | 22-26 | 上限を UI 設定化しないという設計判断の注釈（履歴窓にユーザー可視効果は `chrome://downloads` の掃除のみである旨） |
 | `src/background/localMarkdownExportRetention.ts` | 27 | `LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS = 30` |
-| `src/background/localMarkdownExportRetention.ts` | **29–31** | **ヘッダ注釈「200 ≒ 30日分の日次 flush ＋ immediate/idle の余裕」＝使用量の見積もりであり、強制された per-day 上限ではない。監査の指摘点** |
+| `src/background/localMarkdownExportRetention.ts` | **29-31** | **ヘッダ注釈「200 ≒ 30日分の日次 flush ＋ immediate/idle の余裕」＝使用量の見積もりであり、強制された per-day 上限ではない。監査の指摘点** |
 | `src/background/localMarkdownExportRetention.ts` | 32 | `MAX_DOWNLOAD_RECORDS = 200` |
-| `src/background/localMarkdownExportRetention.ts` | 45 / 47–51 | `LOCAL_EXPORT_DOWNLOAD_IDS_KEY` / `DownloadRecord`（形状は `{downloadId, date, createdAt}`。search 照合に使える識別子が無い） |
-| `src/background/localMarkdownExportRetention.ts` | 62–73 | `recordDownloadId` の JSDoc（read/append/cap を単一 updater で行うことと `createdAt` を lock 前に打刻する理由） |
-| `src/background/localMarkdownExportRetention.ts` | **79–80** | **cap スライス。本件のバグ位置。upsert 内で erase/removeFile を一切呼ばない** |
-| `src/background/localMarkdownExportRetention.ts` | 94–95 | `purgeExpiredDownloadRecords` / cutoff 計算 |
+| `src/background/localMarkdownExportRetention.ts` | 45 / 47-51 | `LOCAL_EXPORT_DOWNLOAD_IDS_KEY` / `DownloadRecord`（形状は `{downloadId, date, createdAt}`。search 照合に使える識別子が無い） |
+| `src/background/localMarkdownExportRetention.ts` | 62-73 | `recordDownloadId` の JSDoc（read/append/cap を単一 updater で行うことと `createdAt` を lock 前に打刻する理由） |
+| `src/background/localMarkdownExportRetention.ts` | **79-80** | **cap スライス。本件のバグ位置。upsert 内で erase/removeFile を一切呼ばない** |
+| `src/background/localMarkdownExportRetention.ts` | 94-95 | `purgeExpiredDownloadRecords` / cutoff 計算 |
 | `src/background/localMarkdownExportRetention.ts` | 102 | 事前チェック（現リストのみを見る。落ちたレコードはここで不可視） |
-| `src/background/localMarkdownExportRetention.ts` | 104–113 | claim-then-erase の設計注釈。「claim すると append は kept list にしか足せない」「クラッシュするとエントリが残る forever が回復可能方向」 |
+| `src/background/localMarkdownExportRetention.ts` | 104-113 | claim-then-erase の設計注釈。「claim すると append は kept list にしか足せない」「クラッシュするとエントリが残る forever が回復可能方向」 |
 | `src/background/localMarkdownExportRetention.ts` | **119** | **claim フィルタ。現リストのみが入力。cap で落ちたレコードは claim できない** |
-| `src/background/localMarkdownExportRetention.ts` | 123–137 | 削除ループ。`:125` `removeFile` / `:130` `erase`（**src 内で唯一の erase 呼び出し**。`downloads.search` は src 内に存在しない） |
-| `src/background/localMarkdownExportCore.ts` | 24–27 | `flushBufferedExports` シグネチャ（`filter` / `repo`） |
-| `src/background/localMarkdownExportCore.ts` | 62–69 | `chrome.downloads.download` 呼び出し |
+| `src/background/localMarkdownExportRetention.ts` | 123-137 | 削除ループ。`:125` `removeFile` / `:130` `erase`（**src 内で唯一の erase 呼び出し**。`downloads.search` は src 内に存在しない） |
+| `src/background/localMarkdownExportCore.ts` | 24-27 | `flushBufferedExports` シグネチャ（`filter` / `repo`） |
+| `src/background/localMarkdownExportCore.ts` | 62-69 | `chrome.downloads.download` 呼び出し |
 | `src/background/localMarkdownExportCore.ts` | **68** | **`conflictAction: 'overwrite'`。日付ごとに上書きなのでディスクは有界。リークするのは履歴エントリとファイル参照のみ** |
-| `src/background/localMarkdownExportCore.ts` | 71–73 | `typeof downloadId === 'number'` のときのみ `recordDownloadId(downloadId, date)` |
+| `src/background/localMarkdownExportCore.ts` | 71-73 | `typeof downloadId === 'number'` のときのみ `recordDownloadId(downloadId, date)` |
 | `src/background/localMarkdownIdleFlusher.ts` | 21 | `IMMEDIATE_DEBOUNCE_MIN = 1`（**即時 flush は最大 1回/分**） |
-| `src/background/localMarkdownIdleFlusher.ts` | 20 / 58–60 / 76 | `IDLE_FALLBACK_INTERVAL_MIN = 30` / idle イベントごとに flush / 30 分フォールバックアラーム（**idle タイミングには 1日 cap が無い**） |
-| `src/background/localMarkdownIdleFlusher.ts` | 81–84 | `daily` タイミングの 1440 分周期アラーム |
-| `src/background/localMarkdownIdleFlusher.ts` | 114–118 | `scheduleImmediateFlush`（**キュー導入時に「1分1回」という上限が働くことも再確認すること**） |
-| `src/background/pipeline/buffers/MarkdownBufferManager.ts` | 18–23 / 33–38 | `MAX_DAILY_BUFFER_ENTRIES = 2000` とメモリ内 cap（本件とは別の軸のリソース。混同しない） |
-| `src/background/pipeline/buffers/MarkdownBufferManager.ts` | 56–67 | `withAtomicKeys` で永続 daily buffer をマージ＋cap（最古ドロップ）。**「最古ドロップで無害」が成り立つのは「ファイルが同値で上書きされる」場合のみ**で、ダウンロード履歴では成り立たない。設計上の対比として有用 |
-| `src/background/dailyPurgeHandler.ts` | 8 / 152–154 | `purgeExpiredDownloadRecords` の import / 日次パージからの呼び出し |
+| `src/background/localMarkdownIdleFlusher.ts` | 20 / 58-60 / 76 | `IDLE_FALLBACK_INTERVAL_MIN = 30` / idle イベントごとに flush / 30 分フォールバックアラーム（**idle タイミングには 1日 cap が無い**） |
+| `src/background/localMarkdownIdleFlusher.ts` | 81-84 | `daily` タイミングの 1440 分周期アラーム |
+| `src/background/localMarkdownIdleFlusher.ts` | 114-118 | `scheduleImmediateFlush`（**キュー導入時に「1分1回」という上限が働くことも再確認すること**） |
+| `src/background/pipeline/buffers/MarkdownBufferManager.ts` | 18-23 / 33-38 | `MAX_DAILY_BUFFER_ENTRIES = 2000` とメモリ内 cap（本件とは別の軸のリソース。混同しない） |
+| `src/background/pipeline/buffers/MarkdownBufferManager.ts` | 56-67 | `withAtomicKeys` で永続 daily buffer をマージ＋cap（最古ドロップ）。**「最古ドロップで無害」が成り立つのは「ファイルが同値で上書きされる」場合のみ**で、ダウンロード履歴では成り立たない。設計上の対比として有用 |
+| `src/background/dailyPurgeHandler.ts` | 8 / 152-154 | `purgeExpiredDownloadRecords` の import / 日次パージからの呼び出し |
 | `wxt.config.ts` | 240 | `'downloads'` 権限（**既に存在。search 追加で権限変更は不要**） |
-| `src/background/__tests__/localExportRetention.test.ts` | 17–52 | 既存 storage/erase スキャフォールド。`:47-52` の chrome スタブは `erase`/`removeFile` のみで `search` は無し |
-| `src/background/__tests__/localExportRetention.test.ts` | 81–83 | `MAX_DOWNLOAD_RECORDS = 200` の pin |
-| `src/background/__tests__/localExportRetention.test.ts` | **117–131** | **cap で最古を落とす現在の挙動を pin（＝Red の置き場所。書き換え必須）** |
-| `src/background/__tests__/localExportRetention.test.ts` | 142–158 / 160–168 / 170–185 | 29/30/31 境界、removeFile 失敗時も erase、no-op 条件 |
-| `src/background/__tests__/localExportRetention.test.ts` | 188–252 | read-modify-write 競合（`:196-225` gate、`:227-251` `useTimerClock`）— 新しい削除待ちがこれらを壊さないこと |
-| `src/background/__tests__/dailyPurgeHandler.test.ts` | 119–120 / 194–195 | purge からの erase 呼び出し pin |
+| `src/background/__tests__/localExportRetention.test.ts` | 17-52 | 既存 storage/erase スキャフォールド。`:47-52` の chrome スタブは `erase`/`removeFile` のみで `search` は無し |
+| `src/background/__tests__/localExportRetention.test.ts` | 81-83 | `MAX_DOWNLOAD_RECORDS = 200` の pin |
+| `src/background/__tests__/localExportRetention.test.ts` | **117-131** | **cap で最古を落とす現在の挙動を pin（＝Red の置き場所。書き換え必須）** |
+| `src/background/__tests__/localExportRetention.test.ts` | 142-158 / 160-168 / 170-185 | 29/30/31 境界、removeFile 失敗時も erase、no-op 条件 |
+| `src/background/__tests__/localExportRetention.test.ts` | 188-252 | read-modify-write 競合（`:196-225` gate、`:227-251` `useTimerClock`）― 新しい削除待ちがこれらを壊さないこと |
+| `src/background/__tests__/dailyPurgeHandler.test.ts` | 119-120 / 194-195 | purge からの erase 呼び出し pin |
 
 ### 最小変更の選択肢
 
@@ -136,7 +136,7 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
    `recordDownloadId` の updater（`:77-82`）で、スライスで落ちるレコード（`appended.length - MAX_DOWNLOAD_RECORDS` 分の先頭）を別キー（例 `local_md_export_erase_queue`）へ書き、最後の purge（`:123-137`）でキューも排出する。**最小差分**で「リストから外した＝削除した」という取り違えを直接解消できる。トレード: (a) 新しい永続キーが必要で service worker 再起動を跨いだ復元が要る、(b) `:104-113` の「claim してから erase する（クラッシュは回復可能方向）」という設計根拠と再検証が要る、(c) キュー自体に cap（古いものを超えたら境界を超えたら消すとすれば同じ問題が再発）が必要な点が「何を上限とし、周辺の何かを消さないか」という不変条件が増えること。
 
 2. **1日あたりの flush-download に cap を設け、cap を越えないようにしてから 200 のリスト上限に意味を持たせる（ヘッダ注釈の想定と整合）**
-   ヘッダ注釈（`:29-31`）が暗黙に前提としている「1日1回 flush」を**実際の強制された不変条件**にする。1日あたりの記録数を N に制限すれば、200 ≒ 30日分という関係が「使用量の見積もり」ではなく「構造的に保証された関係」になる。トレード: (a) **30 日 × N 件が 200 に収まる N を選ぶ必要がある**（現状の flush が 1 日 1 回という immediate/idle タイミングが 1日 1 flush に収まる保証は無い）ので、cap は「記録を捨てる」ことになる – ただし「エントリを残さない」方向であり、**ユーザー可視の履歴の減り方が変わる**（副作用🔴の本体）。(b) flush 自体を落とす判断が必要になり、どのタイミングの flush を落とすかという UX 設計（i18n 含む）が要る。
+   ヘッダ注釈（`:29-31`）が暗黙に前提としている「1日1回 flush」を**実際の強制された不変条件**にする。1日あたりの記録数を N に制限すれば、200 ≒ 30日分という関係が「使用量の見積もり」ではなく「構造的に保証された関係」になる。トレード: (a) **30 日 × N 件が 200 に収まる N を選ぶ必要がある**（現状の flush が 1 日 1 回という immediate/idle タイミングが 1日 1 flush に収まる保証は無い）ので、cap は「記録を捨てる」ことになる - ただし「エントリを残さない」方向であり、**ユーザー可視の履歴の減り方が変わる**（副作用🔴の本体）。(b) flush 自体を落とす判断が必要になり、どのタイミングの flush を落とすかという UX 設計（i18n 含む）が要る。
 
 3. **定期処理で `chrome.downloads.search` を走らせ、記録された date/file 名に一致しない古いエクスポートエントリを一律で erase する**
    `chrome.downloads.search` は `downloads` 権限（`wxt.config.ts:240`）で追加権限無しに使えるので、権限変更は不要。最も漏えいを確実に塞げる（追跡リストから完全に消えたエントリも回収できる唯一の案）。トレード: (a) **`DownloadRecord`（`:47-51`）に照合に使える識別子が無い**。`date` フィールドとファイル名（`localMarkdownExportCore.ts:64` の `${safeDir}/${date}.md`）を照合に使えるが、`safeDir` はユーザー設定由来（`:61` の `resolveSafeExportDir`）で照合が脆い。(b) **`chrome.downloads` はブラウザ全体のダウンロードを追う**ため照合を間違うと**ユーザーの無関係なダウンロードを消す**事故になる（副作用🔴の本体で、PBI 22 の id 再利用リスクと同種）。(c) 照合できないものは削除に回さない fail-closed が必須。(d) 現状 pin されている `:117-131` の他、複数テストの期待値変更が不可避。
@@ -175,7 +175,7 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
 - [ ] `npm run validate` が緑
 - [ ] 監査 fingerprint `export-download-cap:oldest-drop-leaks-unerased-entries` を完了記録に残す
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`src/background/localMarkdownExportRetention.ts` のヘッダ注釈 `:7` と `:29-31` — 「200 ≒ 30日分は使用量の見積もりであり強制された上限ではない」ことを明記）
+- [ ] ドキュメント更新済み（`src/background/localMarkdownExportRetention.ts` のヘッダ注釈 `:7` と `:29-31` ― 「200 ≒ 30日分は使用量の見積もりであり強制された上限ではない」ことを明記）
 
 ## 調査結果（2026-10-18）
 

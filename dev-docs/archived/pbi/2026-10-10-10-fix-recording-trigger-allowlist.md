@@ -11,12 +11,12 @@
 
 ## 背景（現状）
 
-- `src/utils/storage/settingsMigration.ts:139-141` — allowlist の自基準: "Each entry is a key whose owning module reads or writes it directly through `chrome.storage.local`, so migrating it into the `settings` blob deletes the only copy the owner can see."
-- `src/background/recordingTriggerManager.ts:76,155` — `recording_triggers` / `snapshot_interval_minutes` を `chrome.storage.local.get` で直接読む（blob-side reader なし）
-- `src/utils/storage/settingsMigration.ts:143-163` — `TOP_LEVEL_ONLY_KEYS` に 2 キーが未収録 → `isMigratableStorageKey() === true` で移行対象になる
-- `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts:239` — `isMigratableStorageKey(StorageKeys.RECORDING_TRIGGERS)` が true を固定する pin
-- `src/background/recordingTriggerManager.ts:105,168` — `saveTriggers` / `saveSnapshotInterval` は本番呼び出し地点なしの死蔵 write API（裏取り済み）
-- `settingsMigration.ts:99-113` — 完了ガードのコメント自体がこの状態喪失リスク（recordingTriggerManager 含む）を認め、監査を PBI 2026-09-25-18 として記録済み
+- `src/utils/storage/settingsMigration.ts:139-141` ― allowlist の自基準: "Each entry is a key whose owning module reads or writes it directly through `chrome.storage.local`, so migrating it into the `settings` blob deletes the only copy the owner can see."
+- `src/background/recordingTriggerManager.ts:76,155` ― `recording_triggers` / `snapshot_interval_minutes` を `chrome.storage.local.get` で直接読む（blob-side reader なし）
+- `src/utils/storage/settingsMigration.ts:143-163` ― `TOP_LEVEL_ONLY_KEYS` に 2 キーが未収録 → `isMigratableStorageKey() === true` で移行対象になる
+- `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts:239` ― `isMigratableStorageKey(StorageKeys.RECORDING_TRIGGERS)` が true を固定する pin
+- `src/background/recordingTriggerManager.ts:105,168` ― `saveTriggers` / `saveSnapshotInterval` は本番呼び出し地点なしの死蔵 write API（裏取り済み）
+- `settingsMigration.ts:99-113` ― 完了ガードのコメント自体がこの状態喪失リスク（recordingTriggerManager 含む）を認め、監査を PBI 2026-09-25-18 として記録済み
 
 allowlist の自基準に対する実装の不整合。現時点では本番 writer がないため実害は未発現だが、契約不整合は残る。
 
@@ -38,14 +38,14 @@ Scenario: 死蔵 write API が残らない
 
 - [x] `RECORDING_TRIGGERS` / `SNAPSHOT_INTERVAL_MINUTES` を `TOP_LEVEL_ONLY_KEYS` に追加する（基準どおりの最小修正）
 - [x] `saveTriggers` / `saveSnapshotInterval` 死蔵 write API を削除する（本番参照 0 件を rg で確認後）
-- [x] pin テスト（settingsMigration-completion-state.test.ts:239）を false に更新する（意図的な分類変更 — 理由をコミットメッセージとテストコメントに記録）
+- [x] pin テスト（settingsMigration-completion-state.test.ts:239）を false に更新する（意図的な分類変更 ― 理由をコミットメッセージとテストコメントに記録）
 - [x] 移行ステップマシンの既存テストが green（stage 意味論は変更しない）
 - [x] `StorageKeys.RECORDING_TRIGGERS` / `SNAPSHOT_INTERVAL_MINUTES` の型定義は残す（listener 経路が参照）
 
 ## テスト戦略
 
-- unit: `src/utils/storage/__tests__/settingsMigration*.test.ts` — pin 更新（true → false、意図的変更）
-- unit: recordingTriggerManager の既存テスト — 死蔵 API 削除に追従
+- unit: `src/utils/storage/__tests__/settingsMigration*.test.ts` ― pin 更新（true → false、意図的変更）
+- unit: recordingTriggerManager の既存テスト ― 死蔵 API 削除に追従
 - 挙動変更の明示: 分類変更は移行対象からの除外のみ（現在の本番 writer なしのため実データの移行挙動は不変）
 
 ## 見積もり

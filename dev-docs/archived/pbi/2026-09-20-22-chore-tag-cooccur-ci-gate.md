@@ -55,7 +55,7 @@ Scenario: 片側コミットが検出される
 
 ### 単体テスト
 
-- `npm run test:wasm` が tag-cooccur を含む（本実装で対応済み — 回帰確認のみ）
+- `npm run test:wasm` が tag-cooccur を含む（本実装で対応済み ― 回帰確認のみ）
 
 ## 実装アプローチ
 
@@ -72,7 +72,7 @@ Scenario: 片側コミットが検出される
 - 依存関係: PBI-21 とは独立。`cmp` 検査の有効化だけ PBI-21 完了が前提（それまではコメントで段階明示）
 - テスタビリティ: ワークフロー変更の検証は CI 実行か `act` 等のローカル再現
 - 非機能要件: CI 時間の増加は parity 追加分のみ（数十秒規模）
-- 制約: 本実装タスクの repo 変更限定（`.github/` 不可）のため PBI 化した経緯がある — 本 PBI で制約は解除される
+- 制約: 本実装タスクの repo 変更限定（`.github/` 不可）のため PBI 化した経緯がある ― 本 PBI で制約は解除される
 
 ## 実装者向け注記
 
@@ -97,7 +97,7 @@ sentence-dedup 用の行が tag-cooccur 追加の雛形。各箇所（キャッ�
 
 ### 落とし穴
 
-- ホスト間バイト比較は不可（panic パス・wasm-bindgen バナーの差異 — ci.yml 内コメント参照）。behavioral equivalence（parity 両実行）+ 同一ホスト内 `cmp` の構成を崩さないこと
+- ホスト間バイト比較は不可（panic パス・wasm-bindgen バナーの差異 ― ci.yml 内コメント参照）。behavioral equivalence（parity 両実行）+ 同一ホスト内 `cmp` の構成を崩さないこと
 - `npm run build:wasm` は tag-cooccur の public コピーを行わない（STAGED のため）。PBI-21 で public コピー運用が決まったら build:wasm の更新要否も再確認する
 
 ## Definition of Done
@@ -105,6 +105,6 @@ sentence-dedup 用の行が tag-cooccur 追加の雛形。各箇所（キャッ�
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
 - [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [x] リファクタリング完了（グリーン後） — 後続の crates.json SSOT化リファクタリング（PBI 2026-09-21-18/26、コミット `26011549` 等）で個別ハードコードを統合、tag-cooccur は `wasm/crates.json` に完全登録済み（cache-paths / parity-args / cmp check すべて manifest 駆動で自動対象化。`scripts/__tests__/wasm-crates.test.ts` 26 tests green で確認）
+- [x] リファクタリング完了（グリーン後） ― 後続の crates.json SSOT化リファクタリング（PBI 2026-09-21-18/26、コミット `26011549` 等）で個別ハードコードを統合、tag-cooccur は `wasm/crates.json` に完全登録済み（cache-paths / parity-args / cmp check すべて manifest 駆動で自動対象化。`scripts/__tests__/wasm-crates.test.ts` 26 tests green で確認）
 - [x] ロールバック手段の検討（ワークフロー変更の revert で旧ゲートに戻る）
 - [x] ドキュメント更新済み

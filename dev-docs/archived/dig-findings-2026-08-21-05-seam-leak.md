@@ -1,4 +1,4 @@
-# なぜなぜ分析 — background-dashboard-seam-leak
+# なぜなぜ分析 ― background-dashboard-seam-leak
 
 ## 現象
 `src/background/handlers/dashboardSqlite/deps.ts:2` が `from '../../../dashboard/obsidianFormatter.js'` を import しており、background 層が dashboard UI 層に依存している（seam leak）。

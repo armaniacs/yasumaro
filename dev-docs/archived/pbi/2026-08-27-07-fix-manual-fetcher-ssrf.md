@@ -14,12 +14,12 @@
 - 解: `fetchFromTab` 内で `validateUrl(url, {blockLocalhost:true})` を呼び defense in depth を追加
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 外部 https は許可される
+Scenario: ハッピーパス ― 外部 https は許可される
   Given `https://example.com` を渡す
   When `fetchFromTab` を呼ぶ
   Then タブが生成される
 
-Scenario: 攻撃 — private IP はブロックされる
+Scenario: 攻撃 ― private IP はブロックされる
   Given `http://169.254.169.254/latest/meta-data/` を渡す
   When `fetchFromTab` を呼ぶ
   Then `private IP` エラーで拒否されタブは生成されない

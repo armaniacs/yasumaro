@@ -1,4 +1,4 @@
-# PBI 2026-09-23-07 — SavePhase Module（保存 fan-out＋retry 投影の一元化）
+# PBI 2026-09-23-07 ― SavePhase Module（保存 fan-out＋retry 投影の一元化）
 
 **優先度**: 順位 7 / RICE 12.8（Reach 6 × Impact 2 × Confidence 80% ÷ Effort 0.75 人週）
 **根拠**: 録画パイプラインの保存 tail（4-sink fan-out＋手書き retry 部分集合＋2 注入方式）は今後の録画機能すべてに課税する最大の順序/interface 残債。Seam 配置が明確で削除テストが決定的。

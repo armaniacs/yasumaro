@@ -435,12 +435,12 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 本プロジェクトではシンプルなブランチ運用を採用しています。`CHANGELOG.md` のバージョニングポリシーに従い、v6.偶数.x はバグ修正のみ、v6.奇数.x は新機能実装となります。
 
-- `main` — 現在の偶数安定系列。バグ修正のみ受け入れます。
-- `feature/<名前>` — 新機能開発用ブランチ。例: `feature/ai-provider-improvements`
-- `fix/<名前>` — 通常のバグ修正用ブランチ。例: `fix/notification-crash`
-- `hotfix/<名前>` — 緊急のバグ修正用ブランチ。例: `hotfix/critical-security-patch`
-- `docs/<名前>` — ドキュメント更新用ブランチ。例: `docs/api-guide`
-- `refactor/<名前>` — リファクタリング用ブランチ。例: `refactor/extractor-cleanup`
+- `main` ― 現在の偶数安定系列。バグ修正のみ受け入れます。
+- `feature/<名前>` ― 新機能開発用ブランチ。例: `feature/ai-provider-improvements`
+- `fix/<名前>` ― 通常のバグ修正用ブランチ。例: `fix/notification-crash`
+- `hotfix/<名前>` ― 緊急のバグ修正用ブランチ。例: `hotfix/critical-security-patch`
+- `docs/<名前>` ― ドキュメント更新用ブランチ。例: `docs/api-guide`
+- `refactor/<名前>` ― リファクタリング用ブランチ。例: `refactor/extractor-cleanup`
 
 新機能は `feature/` ブランチで開発し、準備ができたら `main` へマージしてリリースします。v6.偶数.x はバグ修正のみを予定しています。プルリクエストやコミットメッセージは各ブランチ種別に応じた Conventional Commits タイプを使用してください。
 
@@ -518,7 +518,7 @@ This project defines two CI workflows:
 - Dependencies are installed via `npm ci` before running tests
 - All workflows run on Node.js 24
 - On PR creation/update, `tests.yml` automatically posts test results as a PR comment (existing comments are updated in-place)
-- On PR, all checks (type-check, test, E2E, PR comment) run sequentially in a single workflow — no duplicate executions
+- On PR, all checks (type-check, test, E2E, PR comment) run sequentially in a single workflow ― no duplicate executions
 - E2E tests (Playwright) in `tests.yml` run headlessly via `xvfb-run`
 - Test artifacts (Playwright reports) are retained for 7 days
 
@@ -535,7 +535,7 @@ longer triggers a WASM rebuild or an extension build.
 | `validate` | At least one file outside `.md`, `docs/**` and `LICENSE` changed |
 | `wasm-test` | `wasm/**`, `scripts/wasm-crates.mjs`, `package.json`, `package-lock.json`, or CI config changed |
 | `dod-check` | `pbi/**`, `scripts/check-pbi-dod.js`, or CI config changed |
-| `build` | `src/**`, `entrypoints/**`, `public/**`, `wasm/**`, dependency files or CI config changed — **and only if `validate` succeeded** |
+| `build` | `src/**`, `entrypoints/**`, `public/**`, `wasm/**`, dependency files or CI config changed ― **and only if `validate` succeeded** |
 
 The design point worth knowing: `validate` is decided by *subtracting* a docs
 list from "every file", not by allowlisting the inputs it is known to read. A new
@@ -738,7 +738,7 @@ test('deepseek.com is allowed', () => {
 
 There are many providers offering OpenAI-compatible APIs. If you follow the steps above and send a Pull Request, we'll be happy to merge it. Feel free to open a GitHub Issue to propose a new provider, or submit a PR directly.
 
-Adding support for a new provider is a straightforward contribution — we'd love your help!
+Adding support for a new provider is a straightforward contribution ― we'd love your help!
 
 ### Adding Privacy Status Codes
 
@@ -901,12 +901,12 @@ feat(domainFilter): uBlock format filter import feature
 
 This project uses a simple branch workflow aligned with the versioning policy in `CHANGELOG.md` (v6.even.x = bug fixes only, v6.odd.x = new features).
 
-- `main` — The current even stable release line. Accepts bug fixes only.
-- `feature/<name>` — New feature branches. Example: `feature/ai-provider-improvements`
-- `fix/<name>` — Regular bug fix branches. Example: `fix/notification-crash`
-- `hotfix/<name>` — Urgent bug fix branches. Example: `hotfix/critical-security-patch`
-- `docs/<name>` — Documentation update branches. Example: `docs/api-guide`
-- `refactor/<name>` — Refactoring branches. Example: `refactor/extractor-cleanup`
+- `main` ― The current even stable release line. Accepts bug fixes only.
+- `feature/<name>` ― New feature branches. Example: `feature/ai-provider-improvements`
+- `fix/<name>` ― Regular bug fix branches. Example: `fix/notification-crash`
+- `hotfix/<name>` ― Urgent bug fix branches. Example: `hotfix/critical-security-patch`
+- `docs/<name>` ― Documentation update branches. Example: `docs/api-guide`
+- `refactor/<name>` ― Refactoring branches. Example: `refactor/extractor-cleanup`
 
 Develop new features in `feature/` branches and merge them into `main` when ready for release. The v6.even.x line is intended for bug fixes only. Use the appropriate Conventional Commits type for each branch type.
 

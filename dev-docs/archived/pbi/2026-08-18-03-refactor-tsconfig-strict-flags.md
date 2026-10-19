@@ -16,9 +16,9 @@
 ## 背景（2026-08-18 調査済み）
 型チェックの本命である `npm run type-check`（=`tsc --noEmit`）が使う `tsconfig.json` には以下のフラグが未設定:
 
-- `noUncheckedIndexedAccess` — 配列・インデックスアクセスの結果を `T | undefined` として扱う
-- `noImplicitOverride` — `override` キーワードの明示を強制する
-- `noFallthroughCasesInSwitch` — switch 文の fallthrough を禁止する
+- `noUncheckedIndexedAccess` ― 配列・インデックスアクセスの結果を `T | undefined` として扱う
+- `noImplicitOverride` ― `override` キーワードの明示を強制する
+- `noFallthroughCasesInSwitch` ― switch 文の fallthrough を禁止する
 
 一方、WXT が生成する `.wxt/tsconfig.json` には以下の通り既に有効:
 

@@ -148,8 +148,8 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 
 ### 既存テストへの追加項目
 
-- `trustDb.test.ts:443` の 'removes a domain' — **改変せず**、隣に populated `trust_db` を返す describe を新設。`removeSensitiveDomain` / `removeUserTld` の 3 系統それぞれに「書き戻し値に含まれない」assert 1 件ずつ。
-- `lockContract.test.ts:133` — 「並行追加」既存 1 件は**そのまま残す**（選択肢 1 の契約）。追加: (a) remove intent が current に含まれる要素を消す、(b) remove が current に無い要素に対して no-op かつ冪等、(c) add と remove の競合で結果が一意かつ union 復活なし。`mergeTrustDatabase` の引数が増えるため `:100-129` の「両引数を mutate しない」「current undefined で fresh object」「tranco は新しい側」も更新が必要。
+- `trustDb.test.ts:443` の 'removes a domain' ― **改変せず**、隣に populated `trust_db` を返す describe を新設。`removeSensitiveDomain` / `removeUserTld` の 3 系統それぞれに「書き戻し値に含まれない」assert 1 件ずつ。
+- `lockContract.test.ts:133` ― 「並行追加」既存 1 件は**そのまま残す**（選択肢 1 の契約）。追加: (a) remove intent が current に含まれる要素を消す、(b) remove が current に無い要素に対して no-op かつ冪等、(c) add と remove の競合で結果が一意かつ union 復活なし。`mergeTrustDatabase` の引数が増えるため `:100-129` の「両引数を mutate しない」「current undefined で fresh object」「tranco は新しい側」も更新が必要。
 - AGENTS.md の test rule に従い、**実時間 sleep を追加しない**。並行は `vi.doMock` の直列化 fake か、`Promise.all` で in-flight な Promise 同士を競合させ、結果を見る形にする。
 
 ### ロールバック手順
@@ -180,8 +180,8 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 
 - `pbi/00-INDEX.md`（本 PBI の登録先。完了後は `dev-docs/archived/pbi/` へ移動しアーカイブ履歴へ）
 - ストレージCAS系との整合を確認すること:
-  - PBI 12「settings-blob stale patch」（監査 #21: ロック前の read で取得した patch が並行 commit 済み delta を巻き戻す）— **本件と同種の「古いスナップショットが削除を殺す／復活させる」問題**。settings 側の merge 方策（[2026-10-01-13-refactor-settings-repository-merge-unification.md](../dev-docs/archived/pbi/2026-10-01-13-refactor-settings-repository-merge-unification.md) の merge-under-lock 統一）と**同じ方策原則に揃える**こと。
-  - PBI 18「withOptimisticLock cross-context window」（監査 #25: verify→set が context 跨ぎで非原子）— 本件の前提。`storageTransaction.ts` の `chains` は module-level Map であり context を跨げない。選択肢 1 で「別コンテキストの追加を巻き戻す」リスクはこの窓の上に重なっているため、**両 PBI の設計メモを相互参照すること**。
+  - PBI 12「settings-blob stale patch」（監査 #21: ロック前の read で取得した patch が並行 commit 済み delta を巻き戻す）― **本件と同種の「古いスナップショットが削除を殺す／復活させる」問題**。settings 側の merge 方策（[2026-10-01-13-refactor-settings-repository-merge-unification.md](../dev-docs/archived/pbi/2026-10-01-13-refactor-settings-repository-merge-unification.md) の merge-under-lock 統一）と**同じ方策原則に揃える**こと。
+  - PBI 18「withOptimisticLock cross-context window」（監査 #25: verify→set が context 跨ぎで非原子）― 本件の前提。`storageTransaction.ts` の `chains` は module-level Map であり context を跨げない。選択肢 1 で「別コンテキストの追加を巻き戻す」リスクはこの窓の上に重なっているため、**両 PBI の設計メモを相互参照すること**。
   - 既存の同種マージ先行例: `src/utils/storage/savedUrlRepository.ts:353` `mergeSavedUrlEntry` / `:363` `updateSavedUrlEntry`（CAS 内で要素単位 updater を適用する前例。本 PBI の選択肢 1 と構造が近い）
   - `src/utils/storage/storageTransaction.ts:230`（updateFn は pure かつ idempotent であるべきという契約コメント）
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 24番、`findings.json`、`REPORT.md`）

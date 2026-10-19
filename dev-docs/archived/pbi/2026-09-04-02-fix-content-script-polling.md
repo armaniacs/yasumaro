@@ -95,7 +95,7 @@ sed -n '26,51p;258,341p' src/content/contentKernel.ts   # Scheduler / checkVisit
 ### 落とし穴
 - `requestIdleCallback` は「アイドル時に実行」なので、廃止すると「重いページで判定が遅延しない」＝むしろ改善。ただし単発 `setTimeout` はスロットリングされたバックグラウンドタブで遅延する → `visibilitychange` で hidden 時に stop しているので問題なし
 - しきい値が 0 秒（テスト設定）の場合、残り時間 0 → 即発火。`schedule` が同期実行される FakeScheduler と実 setTimeout(0) の差に注意（既存テストのパターンを踏襲）
-- E2E の `__OW_TEST_STATE` / `data-ow-test-state` 更新は条件評価時のみでよい（毎ループ更新をやめても E2E は条件評価タイミングで読めば足りる）— `content-script-recording.spec.ts` の待ち方を確認
+- E2E の `__OW_TEST_STATE` / `data-ow-test-state` 更新は条件評価時のみでよい（毎ループ更新をやめても E2E は条件評価タイミングで読めば足りる）― `content-script-recording.spec.ts` の待ち方を確認
 
 ## Definition of Done
 - [x] 全 BDD シナリオが自動テストとして実装されパスする

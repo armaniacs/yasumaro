@@ -1,4 +1,4 @@
-# バックログ優先度一覧 — 2026-08-21 VulnHunter 指摘対応
+# バックログ優先度一覧 ― 2026-08-21 VulnHunter 指摘対応
 
 ## 候補の列挙（フェーズ0）
 
@@ -23,7 +23,7 @@ VulnHunter 2026-08-21 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 
 ---
 
-## 優先度付け（フェーズ2） — RICE
+## 優先度付け（フェーズ2） ― RICE
 
 ### スコアリング
 
@@ -45,13 +45,13 @@ VulnHunter 2026-08-21 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 
 ---
 
-## 疑問の解決 — なぜなぜ分析（フェーズ3）
+## 疑問の解決 ― なぜなぜ分析（フェーズ3）
 
 フェーズ1・2で生じた疑問は「なぜ exploitable ではない指摘を直すのか（Impact 0.25 の根拠）」の1点。以下の5 Why で自律解決した。
 
 ### 疑問1: なぜ false positive の CWE-208 を直すのか？
 
-**疑問を一文で明確化**: 「ローカル拡張で実践的悪用不可と評価された `!==` を、なぜ工数をかけて直すのか — Impact をどう見積もるべきか」
+**疑問を一文で明確化**: 「ローカル拡張で実践的悪用不可と評価された `!==` を、なぜ工数をかけて直すのか ― Impact をどう見積もるべきか」
 
 **なぜの連鎖**:
 
@@ -85,7 +85,7 @@ VulnHunter 2026-08-21 スキャン（Run ID: `obsidian-smart-history_VULNHUNT_RE
 
 ## ファイル出力（フェーズ5）
 
-- `pbi/2026-08-21-01-fix-constant-time-confirm-token.md` — 優先度1（RICE 2500）
-- `pbi/2026-08-21-00-backlog.md` — 本ファイル（バックログ一覧 + RICE + なぜなぜ分析）
+- `pbi/2026-08-21-01-fix-constant-time-confirm-token.md` ― 優先度1（RICE 2500）
+- `pbi/2026-08-21-00-backlog.md` ― 本ファイル（バックログ一覧 + RICE + なぜなぜ分析）
 
 ファイル名の `NN` が着手順を示す。`01` が最初に着手するPBI。

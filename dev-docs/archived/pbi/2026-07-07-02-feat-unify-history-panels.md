@@ -1,4 +1,4 @@
-# PBI: ダッシュボード「履歴」タブの統一 — SQLite パネルを「記録履歴」と同等にする
+# PBI: ダッシュボード「履歴」タブの統一 ― SQLite パネルを「記録履歴」と同等にする
 
 ## ユーザーストーリー
 ユーザーとして、ダッシュボードの SQLite 履歴タブで、従来の「記録履歴」（レガシーパネル）と同じ情報量（AI要約、トークン数、バイト数、AIプロバイダ/モデル、content 表示、クレンジング統計等）を確認したい。なぜなら 2 つの履歴パネルを行き来する必要をなくし、SQLite 版で全て完結させたいから。
@@ -12,9 +12,9 @@
 **この PBI は PBI-1（SQLite への診断メタデータ永続化）の完了を前提とする。** SQLite にデータが保存されていないと表示できないため。
 
 ## 既実装確認（Phase 0）
-- `src/dashboard/historyPanel.ts` — レガシーパネル。`getSavedUrlEntries()` で `savedUrlsWithTimestamps` を読み込み、`historyEntryRow.ts` でリッチな表示を行う
-- `src/dashboard/sqliteHistoryPanel.ts` — SQLite パネル。`queryLogs()` / `searchLogs()` で SQLite を読み込むが、表示項目が最小限（URL, title, timestamp, tags, star/delete のみ）
-- `src/dashboard/historyEntryRow.ts` — AI要約、トークン数、バイト数、AIプロバイダ/モデル、content toggle、クレンジング統計、フォールバックフラグ等を表示。レガシーパネル専用で SQLite パネルでは未使用
+- `src/dashboard/historyPanel.ts` ― レガシーパネル。`getSavedUrlEntries()` で `savedUrlsWithTimestamps` を読み込み、`historyEntryRow.ts` でリッチな表示を行う
+- `src/dashboard/sqliteHistoryPanel.ts` ― SQLite パネル。`queryLogs()` / `searchLogs()` で SQLite を読み込むが、表示項目が最小限（URL, title, timestamp, tags, star/delete のみ）
+- `src/dashboard/historyEntryRow.ts` ― AI要約、トークン数、バイト数、AIプロバイダ/モデル、content toggle、クレンジング統計、フォールバックフラグ等を表示。レガシーパネル専用で SQLite パネルでは未使用
 
 レガシーパネルが表示しているが SQLite パネルが未表示の項目（全量）:
 - AI要約（aiSummary / summary）

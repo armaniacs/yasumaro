@@ -178,7 +178,7 @@ Scenario: 既存テストが全てパスする
 - `RecordingLogic` の `getPrivacyInfoWithCache` は `RecordingPipeline` に渡されるコールバックのため、`RecordingCache` への委譲が自然
 - VULN-014（API キー redaction）は `RecordingCache` 内に閉じ込める
 
-## 深掘りセッション — 2026-08-08
+## 深掘りセッション ― 2026-08-08
 
 ### 挑戦した仮定
 

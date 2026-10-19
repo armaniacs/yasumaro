@@ -68,9 +68,9 @@ Scenario: 新プロトコル追加が registry 登録のみで完了する
 ## 実装者向け注記
 
 ### 現状の証拠
-- 残留 if-chain: `src/background/ai/providerCatalog.ts:224-234` — `createProviderStrategy` が `if (providerId === 'gemini')` / `if (providerId === 'built-in-ai')` / fallback `new GenericOpenAICompatibleProvider(...)` の2分岐ファクトリ(コメント自身が if-switch を隠すと認識)
-- 先行 registry パターン: `src/background/ai/RemoteAIService.ts:44-52` — catalog から Map registry を構築する `registerDefaultProviders` / `registerProvider`
-- catalog 本体: `src/background/ai/providerCatalog.ts:63-187` — 全7 id (`gemini` / `openai` / `openai2` / `lm-studio` / `ollama` / `openai-compatible` / `built-in-ai`) の SSOT
+- 残留 if-chain: `src/background/ai/providerCatalog.ts:224-234` ― `createProviderStrategy` が `if (providerId === 'gemini')` / `if (providerId === 'built-in-ai')` / fallback `new GenericOpenAICompatibleProvider(...)` の2分岐ファクトリ(コメント自身が if-switch を隠すと認識)
+- 先行 registry パターン: `src/background/ai/RemoteAIService.ts:44-52` ― catalog から Map registry を構築する `registerDefaultProviders` / `registerProvider`
+- catalog 本体: `src/background/ai/providerCatalog.ts:63-187` ― 全7 id (`gemini` / `openai` / `openai2` / `lm-studio` / `ollama` / `openai-compatible` / `built-in-ai`) の SSOT
 - 乖離点: catalog 先頭コメント `src/background/ai/providerCatalog.ts:1-3` の 1行追加主張に対し、ファクトリ側の手編集が必須な状態
 
 ## Definition of Done

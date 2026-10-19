@@ -14,9 +14,9 @@
 
 ## File Structure
 
-- Modify: `src/background/recordRequestBuilder.ts:73` — delete `alreadyProcessed: true` from the `save` row (1 line).
-- Modify: `src/background/__tests__/recordRequestBuilder.test.ts:17-20` — update the `save` expectation (remove `alreadyProcessed: true`).
-- Modify: `src/background/__tests__/privacyPipeline.test.ts` — append one regression test (save-equivalent path masks before cloud AI). No other production or test changes.
+- Modify: `src/background/recordRequestBuilder.ts:73` ― delete `alreadyProcessed: true` from the `save` row (1 line).
+- Modify: `src/background/__tests__/recordRequestBuilder.test.ts:17-20` ― update the `save` expectation (remove `alreadyProcessed: true`).
+- Modify: `src/background/__tests__/privacyPipeline.test.ts` ― append one regression test (save-equivalent path masks before cloud AI). No other production or test changes.
 
 ## PBI
 
@@ -46,7 +46,7 @@ Replace lines 17-20:
 - [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/background/__tests__/recordRequestBuilder.test.ts`
-Expected: FAIL on `applies the per-source policy table` — received object contains `alreadyProcessed: true`, expected object does not.
+Expected: FAIL on `applies the per-source policy table` ― received object contains `alreadyProcessed: true`, expected object does not.
 
 - [x] **Step 3: Commit the red test**
 
@@ -68,7 +68,7 @@ Replace line 73:
   'save': { skipDuplicateCheck: true, recordType: 'manual' },
 ```
 
-(Delete only `alreadyProcessed: true,` — the comma and spacing must leave valid syntax. Do NOT touch `_buildSanitizedSettings`, `privacyPipeline.ts`, or any other policy row.)
+(Delete only `alreadyProcessed: true,` ― the comma and spacing must leave valid syntax. Do NOT touch `_buildSanitizedSettings`, `privacyPipeline.ts`, or any other policy row.)
 
 - [x] **Step 2: Run the test to verify it passes**
 
@@ -87,7 +87,7 @@ git commit -m "fix: drop alreadyProcessed from save policy so SAVE_RECORD masks 
 **Files:**
 - Modify: `src/background/__tests__/privacyPipeline.test.ts` (append inside `describe('process', ...)`)
 
-The existing pin test `actually calls cloud AI ... even when alreadyProcessed=true` (`:515-537`) stays untouched — it covers the mechanism as a direct input. The new test covers the save-equivalent path (no flag) end to end through `buildRecordRequest`.
+The existing pin test `actually calls cloud AI ... even when alreadyProcessed=true` (`:515-537`) stays untouched ― it covers the mechanism as a direct input. The new test covers the save-equivalent path (no flag) end to end through `buildRecordRequest`.
 
 - [x] **Step 1: Append the failing test**
 
@@ -130,7 +130,7 @@ Append this test after the `alreadyProcessed=true` test (after line 537, inside 
 - [x] **Step 2: Run the new test to verify it fails**
 
 Run: `npx vitest run src/background/__tests__/privacyPipeline.test.ts -t "save-equivalent path"`
-Expected: FAIL — `sanitizeRegex` is never called and `generateSummary` receives the raw content (pre-fix behavior), or the `alreadyProcessed in request` assertion fails.
+Expected: FAIL ― `sanitizeRegex` is never called and `generateSummary` receives the raw content (pre-fix behavior), or the `alreadyProcessed in request` assertion fails.
 
 - [x] **Step 3: Commit the red test**
 

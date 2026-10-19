@@ -1,4 +1,4 @@
-# PBI 2026-09-12-13 — FallbackStorage.query の alias 再派生を削除（planner 信頼の回復）
+# PBI 2026-09-12-13 ― FallbackStorage.query の alias 再派生を削除（planner 信頼の回復）
 
 - **種別**: 🔧非機能追加（refactor + fix・backend 分岐の実バグ解消を伴う）
 - **優先度**: 5 位 / RICE **12.8**（R8 × I2 × C80% / E1.0人日）
@@ -42,7 +42,7 @@ Then normalizeStorageQuery を経由した結果と一致する
 - `is_starred` 数値 alias を queryNormalize 側に吸収（starred > isStarred > is_starred の優先順位）。`is_starred` を送る sender は存在しないことを grep で確認（row field としての使用のみ）
 - fallback.query の qAny ブロック（:206-233）を削除し `matchesExtraWhere(r, q)` を直接消費。excludeDeleted の既定（!== false で削除済み除外）は維持
 - `search()` shim を削除（呼び出し元は test 3 ファイルのみ）。test 10 箇所を `query({text, limit, offset, orderBy, orderDir})` に移行
-- 旧 back-compat 契約を pin していた test 4 件（starred/time-range/is_starred×2）を normalize 経由に更新 — 製品パス準拠
+- 旧 back-compat 契約を pin していた test 4 件（starred/time-range/is_starred×2）を normalize 経由に更新 ― 製品パス準拠
 - 検証: seam test 4 件新設・offscreen 全 73 ファイル 1031 tests green・type-check green・lint 0 errors
 
 ## 見積もり

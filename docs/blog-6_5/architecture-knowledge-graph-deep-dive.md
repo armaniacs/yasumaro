@@ -1,4 +1,4 @@
-# 知識グラフで Yasumaro のアーキテクチャを可視化してわかったこと — 4本の脊椎と2つの島、そして放置されている技術負債
+# 知識グラフで Yasumaro のアーキテクチャを可視化してわかったこと ― 4本の脊椎と2つの島、そして放置されている技術負債
 
 [日本語](#日本語) | [English](#english)
 
@@ -78,7 +78,7 @@ Recording Pipeline そのものは 13 のステップを順次実行し、ステ
 
 1. **設定モジュールの統合を完了させる**
    旧 `storageSettings.ts` の利用者（settingsExportImport / allowedUrls / redaction / tagUtils）を新 `settingsStore.ts` に移行し、`Settings` 型を `storage/types.ts` の単一定義に集約する。これによりコミュニティ 90 の孤立を解消できる。
-2. **ドキュメント↔コードの逆リンクを復元する**
+2. **ドキュメント⇔コードの逆リンクを復元する**
    ADR / PBI から対応コードへの `references` / `implements` エッジを手動または lint で担保し、「設計意図 → 実装」のトレーサビリティを得る。
 3. **コンテンツスクリプト層の孤立を解消する**
    `src/content/loader.ts`（c277）と `src/content/extractor.ts`（c46）は SW と `chrome.runtime.sendMessage` でしか繋がらず、AST 上は孤立している。注入経路を明示するドキュメントまたは型ベースのメッセージ契約で可視化する。
@@ -91,9 +91,9 @@ Recording Pipeline そのものは 13 のステップを順次実行し、ステ
 
 ### Introduction
 
-Yasumaro is a Manifest V3 Chrome extension that summarizes browsed pages with AI and records them to Obsidian and SQLite. The codebase holds 8000+ symbols under `src/` — a medium-to-large project.
+Yasumaro is a Manifest V3 Chrome extension that summarizes browsed pages with AI and records them to Obsidian and SQLite. The codebase holds 8000+ symbols under `src/` ― a medium-to-large project.
 
-This article reports what we learned by running the entire codebase through `graphify`, a knowledge-graph tool, to objectively surface "what is the true center of this system" and "where does technical debt hide". The short version: **the system converges 4 cross-cutting utility spines at the Recording Pipeline, and it has 2 separated islands — code and documentation.**
+This article reports what we learned by running the entire codebase through `graphify`, a knowledge-graph tool, to objectively surface "what is the true center of this system" and "where does technical debt hide". The short version: **the system converges 4 cross-cutting utility spines at the Recording Pipeline, and it has 2 separated islands ― code and documentation.**
 
 ---
 
@@ -120,9 +120,9 @@ errorMessage() → logError() → writeStructuredLog() → addLog()
    → chrome.storage.local['sanitization_logs']
 ```
 
-A single pipeline — error → stringify → structured log → **PII masking** → persist — binds exceptions from every domain. PII masking is enforced at the `addLog()` base layer rather than at call sites, which is the correct design.
+A single pipeline ― error → stringify → structured log → **PII masking** → persist ― binds exceptions from every domain. PII masking is enforced at the `addLog()` base layer rather than at call sites, which is the correct design.
 
-The other spine, `getSettings()`, injects settings from `recordingLogic.ts` into `RecordingPipeline.execute(data, settings)`. Here all four spines — **settings, logging, SQLite (SqliteClient), and privacy (privacyPipeline)** — intersect.
+The other spine, `getSettings()`, injects settings from `recordingLogic.ts` into `RecordingPipeline.execute(data, settings)`. Here all four spines ― **settings, logging, SQLite (SqliteClient), and privacy (privacyPipeline)** ― intersect.
 
 The Recording Pipeline runs 13 steps sequentially, switching `FATAL` / `RETRY` / `BEST_EFFORT` error strategies per step. On failure it routes to `addPendingPage()` for missed-record recovery.
 
@@ -137,13 +137,13 @@ The knowledge graph has 605 connected components, but the top 2 alone cover 56% 
 
 So when `errorMessage()` bridges 40+ communities, that is *within the code island*. Design intent recorded in ADRs/PBIs (e.g. "StorageKeys should have a single source") has **no edge to the corresponding code**.
 
-This is not necessarily an architecture defect — `graphify`'s semantic extraction does not, by default, draw document→code back-links, so it is partly an extraction blind spot. But practically, you cannot trace "is the ADR decision reflected in code?" from the graph.
+This is not necessarily an architecture defect ― `graphify`'s semantic extraction does not, by default, draw document→code back-links, so it is partly an extraction blind spot. But practically, you cannot trace "is the ADR decision reflected in code?" from the graph.
 
 ---
 
 ### Finding 3: Settings constants are duplicated across old/new systems
 
-`StorageKeys` and `DEFAULT_SETTINGS` — the root constants of settings — exist in **two places**:
+`StorageKeys` and `DEFAULT_SETTINGS` ― the root constants of settings ― exist in **two places**:
 
 - New integrated (community 5): `src/utils/storage/types.ts`, `src/utils/storage/defaults.ts`
 - Old (community 90): `src/utils/storageSettings.ts`
@@ -160,6 +160,6 @@ The `Settings` type is also defined separately in `storageSettings.ts` and `stor
 ### For developers: quick wins
 
 1. **Finish unifying the settings modules.** Migrate old `storageSettings.ts` consumers (settingsExportImport / allowedUrls / redaction / tagUtils) to new `settingsStore.ts`, and consolidate `Settings` into the single `storage/types.ts` definition. This dissolves community 90's isolation.
-2. **Restore document↔code back-links.** Guarantee `references`/`implements` edges from ADRs/PBIs to code via manual edges or a lint check, gaining design-intent → implementation traceability.
+2. **Restore document⇔code back-links.** Guarantee `references`/`implements` edges from ADRs/PBIs to code via manual edges or a lint check, gaining design-intent → implementation traceability.
 3. **Dissolve content-script isolation.** `src/content/loader.ts` (c277) and `src/content/extractor.ts` (c46) connect to the SW only via `chrome.runtime.sendMessage`, so they are AST-isolated. Make the injection path explicit via docs or a typed message contract.
 4. **Make the `logger → piiSanitizer` dependency visible to extraction.** AST does not resolve the cross-file call today, so impact analysis misses "log change → PII mask propagation". Improve import resolution or add explicit edges.

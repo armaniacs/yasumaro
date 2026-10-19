@@ -69,7 +69,7 @@ rg -n "sanitizeRegex|sanitizePromptContent|validatePrompt|applyCustomPrompt" src
 4. 行列テスト追加 → 全 green
 
 ### 落とし穴
-- `validatePrompt` の再サニタイズは意図的二重評価の可能性 — 削除前に意図を確認し、政策として残すか決めること
+- `validatePrompt` の再サニタイズは意図的二重評価の可能性 ― 削除前に意図を確認し、政策として残すか決めること
 - async（PII）/sync（prompt）の混在は seam 内で吸収し、呼び出し側に漏らさないこと
 - マスク結果の文面・タグ付与は AI プロンプトに直結。変更は禁止（順序の所有者決めのみ）
 

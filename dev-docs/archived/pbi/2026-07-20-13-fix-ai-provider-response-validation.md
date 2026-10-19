@@ -69,7 +69,7 @@ Feature: AI provider response schema validation
 2pt（OpenAI + Gemini 検証 + テスト）
 
 ## 副作用
-🟢 なし — 正常時の動作は変更せず、異常時にのみ明示的エラーとなる。
+🟢 なし ― 正常時の動作は変更せず、異常時にのみ明示的エラーとなる。
 
 ## 落とし穴
 - OpenAI の `content` は将来的に `string | Array<{type,text}>` になる可能性がある。string のみをサポートし、配列形式は「未対応」としてエラーにするか、text を抽出するかは設計時に決定。

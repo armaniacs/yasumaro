@@ -1,7 +1,7 @@
-# PBI: CleansingConfig Codec 集約 — content ↔ background の40キー二重デコード解消
+# PBI: CleansingConfig Codec 集約 ― content ⇔ background の40キー二重デコード解消
 
 ## 概要
-- 優先度: 1 (RICE 64.0 — Reach 40 × Impact 1 × Confidence 80% / Effort 0.5w)
+- 優先度: 1 (RICE 64.0 ― Reach 40 × Impact 1 × Confidence 80% / Effort 0.5w)
 - 種別: refactor (非機能追加)
 - 見積もり: 1pt
 - Recommendation: Strong
@@ -35,12 +35,12 @@ Scenario: 閾値クランプが単一ソース
 ```
 
 ## 受け入れ基準
-- [x] `src/utils/cleansingConfigCodec.ts` (Layer 0, pure) を新設し `decode(raw: Record<string,unknown>): CleansingConfig` を提供。`CLEANSING_RULES` から `RuleKey` を導出し `Record<`${RuleKey}Enabled`, boolean>` の exhaustive check を `satisfies` で行う — 今回は interface の mapped type 化で代替、codec 本体は次スプリントで extractor 側に適用
-- [x] `src/content/extractor.ts:loadSettings` が `StorageKeys` 40キー手動マッピングをやめ、`cleansingConfigCodec.decode` に委譲。`as unknown as Record` キャストを削除 — extractor は既に CLEANSING_RULES.map で動的導出済み、threshold codec は次スプリント
+- [x] `src/utils/cleansingConfigCodec.ts` (Layer 0, pure) を新設し `decode(raw: Record<string,unknown>): CleansingConfig` を提供。`CLEANSING_RULES` から `RuleKey` を導出し `Record<`${RuleKey}Enabled`, boolean>` の exhaustive check を `satisfies` で行う ― 今回は interface の mapped type 化で代替、codec 本体は次スプリントで extractor 側に適用
+- [x] `src/content/extractor.ts:loadSettings` が `StorageKeys` 40キー手動マッピングをやめ、`cleansingConfigCodec.decode` に委譲。`as unknown as Record` キャストを削除 ― extractor は既に CLEANSING_RULES.map で動的導出済み、threshold codec は次スプリント
 - [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` の `AiSummaryCleansingSettings` 手書き interface を `type AiSummaryCleansingSettings = {enabled:boolean} & Record<`${RuleKey}Enabled`, boolean> & ...` の mapped type に置換
 - [x] `entrypoints/options/index.html` に `ai-summary-cleansing-cookie` checkbox を追加 (P0と重複するが本PBIで型SSOTまで完成)
 - [x] 既存テスト 2件FAIL (`aiSummaryCleaner.test` totalRemoved / `aiSummaryCleansingSettingsV2-ruleDerivation` 32 rules) が PASS に
-- [ ] 新規 codec 単体テスト追加 (40キー decode、閾値境界、unknown key無視) — 次スプリントで extractor codec と共に追加
+- [ ] 新規 codec 単体テスト追加 (40キー decode、閾値境界、unknown key無視) ― 次スプリントで extractor codec と共に追加
 
 ## テスト戦略 (t_wada)
 
@@ -58,7 +58,7 @@ Scenario: 閾値クランプが単一ソース
 
 ## 技術的考慮事項
 - 依存: P0完了後に着手。Layer 0 なので chrome.storage 依存なし
-- 配置: `src/utils/cleansingConfigCodec.ts` // @layer 0 — CleansingConfig codec
+- 配置: `src/utils/cleansingConfigCodec.ts` // @layer 0 ― CleansingConfig codec
 - 非機能: パフォーマンス影響なし (pure関数、decodeは1回/ページ)
 - deferred 02 (StorageKeys facade) との境界: 本PBIは cleansing 40キーのみにスコープし、Obsidian/AI等の facade は 02で段階的に
 
@@ -74,4 +74,4 @@ cat src/utils/aiSummaryCleaner/rules.ts | grep "CLEANSING_RULES"
 - [x] 全BDDシナリオが自動テストとして実装されパス
 - [x] type-check / lint / test が PASS (make clean test の2 FAIL解消を含む)
 - [x] piiSanitizer 等の他モジュールに影響なし
-- [ ] ドキュメント更新 (LAYERS.md に codec を Layer 0 として追記) — 次スプリントで extractor codec 完成時に同時更新
+- [ ] ドキュメント更新 (LAYERS.md に codec を Layer 0 として追記) ― 次スプリントで extractor codec 完成時に同時更新

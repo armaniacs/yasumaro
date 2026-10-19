@@ -459,7 +459,7 @@ Replace `src/background/localMarkdownIdleFlusher.ts` entirely with:
  * localMarkdownIdleFlusher.ts
  * Registers the alarm/listener combination matching the user's chosen
  * LOCAL_MARKDOWN_EXPORT_TIMING ('idle' or 'daily'). 'manual' and 'immediate'
- * need no standing registration — 'immediate' instead schedules a one-shot
+ * need no standing registration ― 'immediate' instead schedules a one-shot
  * debounce alarm per recording (see saveLocalMarkdownStep.ts).
  *
  * Actual chrome.downloads.download calls live in localMarkdownExportCore.ts,
@@ -491,7 +491,7 @@ function getNextMidnightTimestamp(): number {
 /**
  * Wire the alarm/listener combination for the current LOCAL_MARKDOWN_EXPORT_TIMING.
  * Safe to call on every Service Worker startup, and whenever the user changes
- * the timing setting — always clears prior alarms first so switching modes
+ * the timing setting ― always clears prior alarms first so switching modes
  * doesn't leave stale registrations behind.
  */
 export async function initExportScheduler(): Promise<void> {
@@ -670,7 +670,7 @@ const mockChrome = {
 Run: `npm test -- saveLocalMarkdownStep`
 Expected: FAIL（`mockChrome.alarms` 未使用のため新規テストのみ失敗。`timing=manual` テストは実装変更前なので `auto_enabled` 参照ロジックのままだと通ってしまう可能性があるため、次のStepで実装を変更してから再実行して確認する）
 
-- [ ] **Step 3: 実装を変更 — `AUTO_ENABLED` チェックを `TIMING` ベースに置き換え、`immediate` 用デバウンスを追加**
+- [ ] **Step 3: 実装を変更 ― `AUTO_ENABLED` チェックを `TIMING` ベースに置き換え、`immediate` 用デバウンスを追加**
 
 `src/background/pipeline/steps/saveLocalMarkdownStep.ts` の56-71行目を以下に置き換え:
 

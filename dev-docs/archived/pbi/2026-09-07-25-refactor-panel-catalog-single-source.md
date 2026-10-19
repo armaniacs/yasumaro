@@ -1,4 +1,4 @@
-# PBI: Panel catalog の単一ソース化 — sidebar / registry / deep-link の二重管理解消
+# PBI: Panel catalog の単一ソース化 ― sidebar / registry / deep-link の二重管理解消
 
 ## ユーザーストーリー
 options ダッシュボードにパネルを追加・改名する開発者として、「どのパネルが存在するか」が HTML（sidebar ボタン 17 個・data-panel 33 ヒット）・TS descriptor 20 件（main.ts 直登録 11 + staticPanels.ts 9）・`sectionPanelMap`（dashboard.ts）・NavigationRegistry の 4 箇所に分散しているのを、パネルカタログ 1 テーブルから派生させたい、なぜならパネル追加・改名が HTML + main.ts/staticPanels.ts + map の 3-4 点更新になり、`DashboardBootstrapper.registerPanels` は registry.register のループだけの pass-through で、deep-link（`?tab=`）の追加も 3 点同期が必要だから
@@ -27,7 +27,7 @@ options ダッシュボードにパネルを追加・改名する開発者とし
 ### Scenario: sidebar ボタンと HTML が同期している
   Given HTML の sidebar ボタン 17 個（`index.html:25-165` の `data-panel`）
   When カタログと HTML を突き合わせる
-  Then 「HTML 静的 sidebar を維持する場合、カタログ ↔ HTML の対応をテストで検証する」か「sidebar をカタログから実行時生成する」のどちらかが採用され、不整合が検出可能になっている
+  Then 「HTML 静的 sidebar を維持する場合、カタログ ⇔ HTML の対応をテストで検証する」か「sidebar をカタログから実行時生成する」のどちらかが採用され、不整合が検出可能になっている
 
 ### Scenario: deep-link が sectionPanelMap を経由しない
   Given `?tab=obsidian` のような deep-link
@@ -45,7 +45,7 @@ options ダッシュボードにパネルを追加・改名する開発者とし
 - [x] `dashboard.ts` の `sectionPanelMap`（:41-44）と `applySectionDeepLink`（:60-72）がカタログ派生になり、手書き map が消える（`resolvePanelIdForTab/ForSection` 派生。要素固有スクロールのみ残し既知判定をカタログ由来に）
 - [x] `DashboardBootstrapper.registerPanels` が pass-through のままでよいか再評価され、カタログと統合 or 明確な役割が残る（実装メモに記録）（`registerCatalog` を正規経路化し登録順序を所有。`registerPanels` はテスト互換APIとして残す。記録: whywhy/pbi25-catalog.md Why3・未解決事項4）
 - [x] `privacySettingsPanel.ts:92` の DOM 迂回クリックが `registry.navigate()` 経由に置き換わる（grepで迂回ゼロを確認）
-- [x] sidebar の HTML（静的）↔ カタログの同期検証テスト（または実行時生成への移行）が実装されている（静的維持＋`panelCatalog.test.ts` 16件。未解決事項1の結論は whywhy/pbi25-catalog.md に記録）
+- [x] sidebar の HTML（静的）⇔ カタログの同期検証テスト（または実行時生成への移行）が実装されている（静的維持＋`panelCatalog.test.ts` 16件。未解決事項1の結論は whywhy/pbi25-catalog.md に記録）
 - [x] a11y（tab ロール・aria-selected・keyboard 操作）と i18n（data-i18n 属性・data-i18n-aria-label）が不変（ADR 2026-04-19 回帰なし）（a11y属性の静的ピン＋keyboard既存テスト＋programmatic navigate同期テストで担保）
 - [x] 既存 dashboard テスト（DashboardBootstrapper / NavigationRegistry / dashboard 系）が green（`src/dashboard` + `src/popup`: 184ファイル3345件 green）
 - [x] `npm run type-check` / `npm run lint` / dashboard テスト green（type-check clean、lint 0 errors〈changed filesに警告なし〉）
@@ -53,7 +53,7 @@ options ダッシュボードにパネルを追加・改名する開発者とし
 > 注記（実測とPBI記載の差異）: HTML sidebarは17個ではなく18個（`data-panel` 18ヒット）、TS descriptorは20件ではなく19件（main.ts直登録は11件ではなく10件）。受け入れ基準の「20パネル」は「カタログ全19件」と読み替えた。`tagClusterTab` は両ロケールの messages.json に未定義の既存欠落（applyI18nがHTMLフォールバックを残すため表示不変。本PBIではキー一致のみ固定しロケール追加は対象外）。
 
 ## テスト戦略
-- 単体: カタログ ↔ HTML sidebar の同期検証テスト（data-panel 一致・並び順・i18n キー存在）
+- 単体: カタログ ⇔ HTML sidebar の同期検証テスト（data-panel 一致・並び順・i18n キー存在）
 - 単体: deep-link 解決のテスト（section → panel の派生が現行 map と同一結果）
 - 回帰: a11y keyboard 操作テスト、NavigationRegistry / Bootstrapper 系テスト green
 - 非対象: パネル本体の実装変更、sidebar のビジュアル変更、popup 側 navigation

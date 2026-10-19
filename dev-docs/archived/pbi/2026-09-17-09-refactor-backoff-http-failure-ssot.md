@@ -12,17 +12,17 @@ backlog: [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-
 
 バックオフ遅延の計算が3系統で別々に書かれている（いずれも実在を確認済み）：
 
-1. `src/utils/fetch.ts` の `fetchWithRetry()`（ファイル後半のリトライ付きフェッチ関数） — `initialDelayMs * backoffMultiplier^attempt` を `maxDelayMs` で cap する指数バックオフ。デフォルトは 1000ms 起点・倍率 2。
-2. `src/messaging/messageTransport.ts` の `MessageTransport.send()`（ファイル後半の送信メソッド） — `100 * 2^attempt` を 1000ms で cap する指数バックオフを inline 実装。`RETRYABLE_ERROR_PATTERNS` による再試行可否の判定付き。
-3. `src/messaging/dashboardGateway.ts` の `DashboardGateway.callDashboard()`（ファイル後半のゲートウェイクラス） — `attempts` / `delayMs`（デフォルト 1000ms 固定）の独自リトリーループ。指数計算はしない。
+1. `src/utils/fetch.ts` の `fetchWithRetry()`（ファイル後半のリトライ付きフェッチ関数） ― `initialDelayMs * backoffMultiplier^attempt` を `maxDelayMs` で cap する指数バックオフ。デフォルトは 1000ms 起点・倍率 2。
+2. `src/messaging/messageTransport.ts` の `MessageTransport.send()`（ファイル後半の送信メソッド） ― `100 * 2^attempt` を 1000ms で cap する指数バックオフを inline 実装。`RETRYABLE_ERROR_PATTERNS` による再試行可否の判定付き。
+3. `src/messaging/dashboardGateway.ts` の `DashboardGateway.callDashboard()`（ファイル後半のゲートウェイクラス） ― `attempts` / `delayMs`（デフォルト 1000ms 固定）の独自リトリーループ。指数計算はしない。
 
 このほか `src/dashboard/utils/retry.ts` の `retryWithExponentialBackoff()` という汎用ヘルパーも存在するが、こちらは jitter 付きで待機の責務まで持つ別物である。fetch（HTTP トランスポート）・message passing・dashboard RPC という意味的に異なるドメインの再試行方針そのものを統合する必要はないが、遅延計算式だけは同一の知識であり、値と文言が場所ごとに揺れていることが課題である。
 
 HTTP ステータスからユーザー向け文言への対応表も3箇所に分散している（いずれも実在を確認済み）：
 
-1. `src/background/ai/providers/ProviderStrategy.ts` の `mapConnectionError()` / `parseAndMapFetchError()`（ファイル中盤の protected メソッド群） — 401/403・404・429・5xx 系を個別に文言化。最も粒度が細かい。
-2. `src/background/obsidianClient.ts` の `testConnection()`（ファイル末尾の接続テストメソッド） — 401/403 と 404 を個別判定し、それ以外は汎用文言に落とす。429 の個別判定はない。
-3. `src/background/syncTargets/gistSyncTarget.ts` の `testConnection()`（ファイル前半の接続テストメソッド） — 401 のみ個別判定し、それ以外は汎用文言に落とす。
+1. `src/background/ai/providers/ProviderStrategy.ts` の `mapConnectionError()` / `parseAndMapFetchError()`（ファイル中盤の protected メソッド群） ― 401/403・404・429・5xx 系を個別に文言化。最も粒度が細かい。
+2. `src/background/obsidianClient.ts` の `testConnection()`（ファイル末尾の接続テストメソッド） ― 401/403 と 404 を個別判定し、それ以外は汎用文言に落とす。429 の個別判定はない。
+3. `src/background/syncTargets/gistSyncTarget.ts` の `testConnection()`（ファイル前半の接続テストメソッド） ― 401 のみ個別判定し、それ以外は汎用文言に落とす。
 
 対応方針は次の2点である：
 
@@ -43,7 +43,7 @@ Scenario: 3系統のリトライ遅延が委譲後も現行値と同一（parity
     # 例: messageTransport 系は baseMs 100・multiplier 2・maxMs 1000、
     # fetchWithRetry 系は baseMs 1000・multiplier 2、dashboardGateway 系は multiplier 1（固定 1000ms）で再現する
 
-Scenario: 境界 — 各 testConnection が返す代表ステータスの文言が委譲後も現行と同一
+Scenario: 境界 ― 各 testConnection が返す代表ステータスの文言が委譲後も現行と同一
   Given ProviderStrategy 系・obsidianClient.testConnection・gistSyncTarget.testConnection が
     | 各自が現行で区別しているステータス（ProviderStrategy は 401/403/404/429、
     | obsidianClient は 401/403/404、gistSyncTarget は 401）を返す状態

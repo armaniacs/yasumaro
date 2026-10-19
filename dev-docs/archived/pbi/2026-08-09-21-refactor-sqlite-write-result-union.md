@@ -33,7 +33,7 @@ PBI-19 は読み取り系5メソッドを `CallResult` 化したが、
  * This is shared mutable state: it describes "the most recent failure by
  * anyone", not "why *your* call failed". Reading it after a call can observe
  * a different operation's error, or null, if another operation completed in
- * between — the read is outside the request Mutex.
+ * between ― the read is outside the request Mutex.
  */
 lastErrorDetail: SqliteError | null = null;
 ```
@@ -204,14 +204,14 @@ Scenario: 共有可変状態が存在しない
 
 ## 見積もり
 
-🟡中（3pt目安）— 対象は9ハンドラ分岐＋2診断ログ。PBI-19 で確立した型・パターンをそのまま流用できる。
+🟡中（3pt目安）― 対象は9ハンドラ分岐＋2診断ログ。PBI-19 で確立した型・パターンをそのまま流用できる。
 
 ---
 
 ## 技術的考慮事項
 
 ### 依存関係
-- **前提**: PBI 2026-08-09-19（読み取り系 `CallResult` 化）完了済み — 済
+- **前提**: PBI 2026-08-09-19（読み取り系 `CallResult` 化）完了済み ― 済
 - `CallResult<T>` / `SqliteError` / `categorizeError` は**既に存在する**。新規設計は不要
 
 ### テスタビリティ
@@ -398,6 +398,6 @@ dashboard 側 `dashboardSqliteService.ts:161` は `if (response.success)` で
 ## 関連
 
 - アーキテクチャレビュー 2026-08-09（候補03）
-- 先行PBI: 2026-08-09-19（読み取り系の `CallResult` 化）— **本PBIの前提かつ手本**
+- 先行PBI: 2026-08-09-19（読み取り系の `CallResult` 化）― **本PBIの前提かつ手本**
 - 同種の過去修正: 2026-08-09-10（`lastError` の getter 化）
-- ADR 2026-07-13 sqlite-architecture-deep-dig（仮定G — 本PBIと矛盾しない）
+- ADR 2026-07-13 sqlite-architecture-deep-dig（仮定G ― 本PBIと矛盾しない）

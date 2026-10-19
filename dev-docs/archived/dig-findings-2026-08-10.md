@@ -1,4 +1,4 @@
-# Deep-Dig Findings — 2026-08-10
+# Deep-Dig Findings ― 2026-08-10
 
 5 PBI実装計画の深掘りセッション。各PBIの隠れた仮定をwhy-why分析で顕在化し、設計判断を記録。
 
@@ -30,10 +30,10 @@
 ## 決定事項
 
 1. **PBI-02**: 本番callerの使用状況を完全に調査してから削除範囲を決定
-2. **PBI-03**: 2件に分割 — 03a: handler deps複製解消、03b: pipeline factory集約。composition moduleのproduction組み込みは不要
-3. **PBI-04**: アプローチA — 操作ごとの完全型付け+decoder（DashboardSqliteResponseForと同じパターン）
+2. **PBI-03**: 2件に分割 ― 03a: handler deps複製解消、03b: pipeline factory集約。composition moduleのproduction組み込みは不要
+3. **PBI-04**: アプローチA ― 操作ごとの完全型付け+decoder（DashboardSqliteResponseForと同じパターン）
 4. **実行順序**: PBI-05 → PBI-03a → PBI-03b → PBI-04 → PBI-02 → PBI-01
-5. **PBI-05 metadata**: `offlineRetry?: { jobKind: 'obsidian_sync' | 'ai_summary' }` — presence/absenceでenabled表現
+5. **PBI-05 metadata**: `offlineRetry?: { jobKind: 'obsidian_sync' | 'ai_summary' }` ― presence/absenceでenabled表現
 6. **PBI-05**: 既存挙動（3対象step、2 job種別）をテストで固定してから宣言化
 7. **categorizeErrorの文言**: 変更しない（テスト契約）
 
@@ -55,4 +55,4 @@
 
 ### PBI-05 metadata設計（15回）
 - 根本原因: オフラインリトライポリシーに2つの関心（リトライ可否 + job routing）が混在
-- 解決策: `offlineRetry?: { jobKind }` — presence/absenceでenabled表現、TypeScriptがjobKindを強制
+- 解決策: `offlineRetry?: { jobKind }` ― presence/absenceでenabled表現、TypeScriptがjobKindを強制

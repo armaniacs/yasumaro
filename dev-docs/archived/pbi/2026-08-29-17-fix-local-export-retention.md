@@ -75,11 +75,11 @@ Scenario: 通常運用のエクスポートは影響を受けない
 - **Outside-In**: retention テスト（RED: 古い記録が残る）→ ID 記録 + purge 配線（GREEN）→ バッファ上限
 
 ## 見積もり
-2pt（要チームでの見積もり — ID 記録 1 + purge 配線 0.5 + バッファ上限 0.5）
+2pt（要チームでの見積もり ― ID 記録 1 + purge 配線 0.5 + バッファ上限 0.5）
 
 ## 技術的考慮事項
-- 依存関係: PR #75（29-08）が `dailyPurgeHandler.ts` を触っている — マージ順に注意
-- `chrome.downloads.removeFile` はユーザーが手動で移動/削除したファイルに対しては失敗する — try/catch で握りつぶし、`removeDownload` は必ず実行
+- 依存関係: PR #75（29-08）が `dailyPurgeHandler.ts` を触っている ― マージ順に注意
+- `chrome.downloads.removeFile` はユーザーが手動で移動/削除したファイルに対しては失敗する ― try/catch で握りつぶし、`removeDownload` は必ず実行
 - download ID 記録の上限を超えた場合、古い ID から捨てる（記録自体が無限成長しないように）
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
@@ -100,7 +100,7 @@ rg -n "local_export_" src --type ts -g '!**/__tests__/**'
 5. テスト追加、`npm run validate`
 
 ### 落とし穴
-- 全ストレージ走査（`chrome.storage.local.get()` 無引数）は既存コメントで正当化済み — キー削除もこの経路で
+- 全ストレージ走査（`chrome.storage.local.get()` 無引数）は既存コメントで正当化済み ― キー削除もこの経路で
 - retention の起点は download 生成時刻（`createdAt`）であってファイル日付ではない
 - `MAX_DAILY_BUFFER_ENTRIES` の切り詰めで「古い訪問が要約から消える」UX 影響を許容範囲か確認
 

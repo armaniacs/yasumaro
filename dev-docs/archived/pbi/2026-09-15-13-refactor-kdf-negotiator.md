@@ -1,4 +1,4 @@
-# PBI: KdfNegotiator — KDF 交渉の3箇所手書き集約
+# PBI: KdfNegotiator ― KDF 交渉の3箇所手書き集約
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -15,10 +15,10 @@
 ## 背景（診断結果）
 
 - 同一問題を4箇所が各々解いている:
-  1. `src/utils/crypto/primitives.ts:339-366` — `verifyPasswordWithPBKDF2` が新旧**両方**の hash を計算して比較
-  2. `src/utils/storage/settingsMigration.ts:86-135` — `tryDecryptWithLegacyFallback` が `importKey` + `deriveKey` + `atob` を手書き（master 有効時は諦める）
-  3. `src/utils/settingsExportImport.ts:269-291` — `decryptWithFallback` が stored → SSOT → legacy の3候補を逐次試行
-  4. `src/utils/storage/encryptionSession.ts:59-75,193,233` — `deriveKeyFromPassword` が `primitives.deriveKey` を使わず独自導出 + iteration 解決
+  1. `src/utils/crypto/primitives.ts:339-366` ― `verifyPasswordWithPBKDF2` が新旧**両方**の hash を計算して比較
+  2. `src/utils/storage/settingsMigration.ts:86-135` ― `tryDecryptWithLegacyFallback` が `importKey` + `deriveKey` + `atob` を手書き（master 有効時は諦める）
+  3. `src/utils/settingsExportImport.ts:269-291` ― `decryptWithFallback` が stored → SSOT → legacy の3候補を逐次試行
+  4. `src/utils/storage/encryptionSession.ts:59-75,193,233` ― `deriveKeyFromPassword` が `primitives.deriveKey` を使わず独自導出 + iteration 解決
 - `src/utils/crypto/envelope.ts:31-39` の `EncryptionEnvelope` は `iterations` を自己記述する一方、legacy の `EncryptedData` 形式には iteration が載らない → 交渉が呼び出し側に拡散
 
 ## 実装ガイド
@@ -39,14 +39,14 @@
    - envelope 判定は `envelope.ts` の型ガードを使用
    - legacy 形式: SSOT 現行 iterations → legacy 100k の順で `deriveKey` + `decrypt` を試行（`settingsExportImport.decryptWithFallback` の3候補ロジックを移植）
 2. **`settingsExportImport.decryptWithFallback` を委譲に置換**: 手書きの3候補ループを削除し、`decryptWithKdfNegotiation` 1呼び出しに
-3. **`settingsMigration.tryDecryptWithLegacyFallback` を委譲に置換**: master 有効時の諦め条件（86-135）は呼び出し側判断として維持 — 交渉は復号のみ
+3. **`settingsMigration.tryDecryptWithLegacyFallback` を委譲に置換**: master 有効時の諦め条件（86-135）は呼び出し側判断として維持 ― 交渉は復号のみ
 4. **回帰**: legacy 100k / 現行 600k / master 有効の3パターンテストが既存にあることを確認（無ければ settingsMigration/ExportImport のテストから移植）
 
 ### 触ってはいけないもの
 
-- `encryptionSession.deriveKeyFromPassword` の独自導出（本 PBI のスコープ外 — KdfNegotiator に寄せるかは別判断）
+- `encryptionSession.deriveKeyFromPassword` の独自導出（本 PBI のスコープ外 ― KdfNegotiator に寄せるかは別判断）
 - envelope 形式自体の変更（iteration 自己記述は不変）
-- `verifyPasswordWithPBKDF2` の API パスワード検証ロジック（PBI 02 で整理済みの新旧2回計算 — KdfNegotiator はデータ復号のみ）
+- `verifyPasswordWithPBKDF2` の API パスワード検証ロジック（PBI 02 で整理済みの新旧2回計算 ― KdfNegotiator はデータ復号のみ）
 
 ## BDD受け入れシナリオ
 

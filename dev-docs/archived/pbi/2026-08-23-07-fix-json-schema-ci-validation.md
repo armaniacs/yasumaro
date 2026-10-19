@@ -1,4 +1,4 @@
-# PBI: JSON schema / CI 検証 — typoの静かな蓄積防止
+# PBI: JSON schema / CI 検証 ― typoの静かな蓄積防止
 
 ## ユーザーストーリー
 開発者として、JSONファイルのtypoやフォーマット崩れをCIで即時検出したい、なぜなら `sbom.json:1` / `docs/version.json:1` / `dev-docs/metrics/history.json:1` にJSON schemaやCI検証が無く、typoやカンマ抜け、バージョン形式誤りがリリースまで気づかれず蓄積するから
@@ -16,19 +16,19 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 正常なJSONはCIをパスする
+Scenario: 正常系 ― 正常なJSONはCIをパスする
   Given 全JSONファイルが正しい形式である
   When npm run validate または CI を実行する
   Then JSON schema検証が全パスする
   And ビルドが成功する
 
-Scenario: エラーケース — typoがあるJSONはCIで失敗する
+Scenario: エラーケース ― typoがあるJSONはCIで失敗する
   Given docs/version.json に { "version": "6.7.64", } のような末尾カンマや typo がある（テストで一時的に不正化）
   When npm run validate を実行する
   Then JSON parseエラーまたはschemaエラーで失敗し、該当ファイルと行が表示される
   And CIがブロックされる
 
-Scenario: 境界ケース — sbom.jsonのCycloneDX schema準拠が検証される
+Scenario: 境界ケース ― sbom.jsonのCycloneDX schema準拠が検証される
   Given sbom.json が CycloneDX 1.6 schemaに準拠している
   When schema検証を実行する
   Then $schema のURLから取得したschemaで検証がパスする
@@ -62,7 +62,7 @@ Scenario: 境界ケース — sbom.jsonのCycloneDX schema準拠が検証され�
 - **段階的**: まず `docs/version.json` の簡易schemaから、次に `sbom.json` のCycloneDX検証、最後にCI組込み
 
 ## 見積もり
-3pt（要チーム見積もり）— schema定義とCI組込み、既存JSONの棚卸しを含むため中規模
+3pt（要チーム見積もり）― schema定義とCI組込み、既存JSONの棚卸しを含むため中規模
 
 ## 技術的考慮事項
 - 依存関係: なし。06 version SSOT化と併せると `docs/version.json` の生成物検証として自然に組み込める

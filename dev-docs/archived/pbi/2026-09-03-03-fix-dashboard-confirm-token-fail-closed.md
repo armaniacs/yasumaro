@@ -1,17 +1,17 @@
-# PBI: Dashboard confirm-token fail-closed — 破壊的操作の confirm-token 取得失敗時に IPC を送らず fail-closed で拒否する
+# PBI: Dashboard confirm-token fail-closed ― 破壊的操作の confirm-token 取得失敗時に IPC を送らず fail-closed で拒否する
 
 ## ユーザーストーリー
 データ損失を避けたいユーザーとして、ダッシュボード発の破壊的操作（`clearAll` / `restore` / `purge` / `delete` など）が confirm-token なしで実行されないようにしたい、なぜなら現行の `dashboardGateway.ts` は `getDashboardConfirmToken` が `null` 返却やタイムアウトした際に `confirmToken` なしで `DASHBOARD_SQLITE` IPC を送出し、ユーザー同意なしにデータが破壊される fail-open downgrade が起きるから
 
 ## 優先度
-- 順位: —（0902a ブランチレビュー由来のセキュリティ hotfix、単独でトラッキング）
+- 順位: ―（0902a ブランチレビュー由来のセキュリティ hotfix、単独でトラッキング）
 - RICEスコア: **10.8**（Reach=1 / Impact=3 / Confidence=0.9 / Effort=0.25）
 - 計算式: `(1 × 3 × 0.9) / 0.25 = 10.8`
 - 根拠:
-  - Reach=1 — ダッシュボード起点の手動・破壊的操作のみに影響（頻度は小さいが、影響を受ける操作は全て高インパクト）
-  - Impact=3 — 圧倒的（同意なしのデータ全消去・リストア・purge / delete による不可逆なデータ損失）
-  - Confidence=0.9 — `src/background/sqlite/dashboardGateway.ts:29-42` の分岐を直接確認済み。`if (confirmToken)` が falsy 時に token なしで IPC を送ることがコード上で自明
-  - Effort=0.25人週 — `sendDashboard` 内の分岐を fail-closed に倒す + `SqliteResult` エラー返却 + 単体テスト追加のみ
+  - Reach=1 ― ダッシュボード起点の手動・破壊的操作のみに影響（頻度は小さいが、影響を受ける操作は全て高インパクト）
+  - Impact=3 ― 圧倒的（同意なしのデータ全消去・リストア・purge / delete による不可逆なデータ損失）
+  - Confidence=0.9 ― `src/background/sqlite/dashboardGateway.ts:29-42` の分岐を直接確認済み。`if (confirmToken)` が falsy 時に token なしで IPC を送ることがコード上で自明
+  - Effort=0.25人週 ― `sendDashboard` 内の分岐を fail-closed に倒す + `SqliteResult` エラー返却 + 単体テスト追加のみ
 
 ## 背景 / なぜなぜ分析サマリ
 | 疑問 | 原因 → 示唆 → 解 |
@@ -27,11 +27,11 @@
 grep -n "getDashboardConfirmToken\|requireConfirmToken\|sendDashboard" src/background/sqlite/dashboardGateway.ts
 grep -n "tokenExempt\|TOKEN_REQUIRED\|TOKEN_EXEMPT" src/messaging/sqliteOperationSecurity.ts
 ```
-- `src/background/sqlite/dashboardGateway.ts:13-20` — `getDashboardConfirmToken` が `null` を返す fail-open 源
-- `src/background/sqlite/dashboardGateway.ts:22-27` — `sendDashboardRaw` の 10s `Promise.race` タイムアウト
-- `src/background/sqlite/dashboardGateway.ts:29-42` — `sendDashboard` が `requireConfirmToken` でも `confirmToken` falsy 時に IPC を送出するバグ本体（~111行周辺、PBI 07 分割後の行番号では 29-42）
-- `src/messaging/sqliteOperationSecurity.ts:64-82` — `tokenExempt` / `TOKEN_REQUIRED_SUBTYPES` の SSOT（read-only のみ exempt、他は token 必須が fail-safe 設計）
-- `src/background/sqlite/offscreenGateway.ts:30-31` — 正常系の `SqliteResult<T>` 型（本 PBI のエラー返却型もこれに準拠）
+- `src/background/sqlite/dashboardGateway.ts:13-20` ― `getDashboardConfirmToken` が `null` を返す fail-open 源
+- `src/background/sqlite/dashboardGateway.ts:22-27` ― `sendDashboardRaw` の 10s `Promise.race` タイムアウト
+- `src/background/sqlite/dashboardGateway.ts:29-42` ― `sendDashboard` が `requireConfirmToken` でも `confirmToken` falsy 時に IPC を送出するバグ本体（~111行周辺、PBI 07 分割後の行番号では 29-42）
+- `src/messaging/sqliteOperationSecurity.ts:64-82` ― `tokenExempt` / `TOKEN_REQUIRED_SUBTYPES` の SSOT（read-only のみ exempt、他は token 必須が fail-safe 設計）
+- `src/background/sqlite/offscreenGateway.ts:30-31` ― 正常系の `SqliteResult<T>` 型（本 PBI のエラー返却型もこれに準拠）
 
 ## ビジネス価値
 - ダッシュボードの破壊的操作で「同意トークンが取れなかったら実行しない」を保証し、不可逆なデータ損失インシデントをゼロにする
@@ -39,22 +39,22 @@ grep -n "tokenExempt\|TOKEN_REQUIRED\|TOKEN_EXEMPT" src/messaging/sqliteOperatio
 
 ## BDD受け入れシナリオ
 
-### Scenario: Happy path — confirm-token 取得成功時に破壊的操作が実行される
+### Scenario: Happy path ― confirm-token 取得成功時に破壊的操作が実行される
   Given ダッシュボードが `clear_all`（または `restore_db` / `purge_now` / `delete`）等の `TOKEN_REQUIRED` 操作を要求し、`getDashboardConfirmToken` が有効な `confirmToken` 文字列を返す
   When `DashboardGateway.callDashboard({ subtype: 'clear_all' }, ...)`（または同等の破壊的操作）が呼ばれる
   Then `chrome.runtime.sendMessage` が `{ type: 'DASHBOARD_SQLITE', payload: { subtype: 'clear_all', confirmToken: '<token>' } }` で1回呼ばれ、レスポンスが `{ success: true }` なら `SqliteResult` は `{ success: true, data }` を返す
 
-### Scenario: Fail-closed — token 取得が null を返した場合は IPC を送らずエラーを返す
+### Scenario: Fail-closed ― token 取得が null を返した場合は IPC を送らずエラーを返す
   Given `requireConfirmToken=true` の操作（例: `clear_all`）で `getDashboardConfirmToken` が `null` を返す（`sendDashboardRaw` の `catch` または `confirmToken` 不在）
   When `DashboardGateway.callDashboard` が当該操作で呼ばれる
   Then `chrome.runtime.sendMessage` は `DASHBOARD_SQLITE` で呼ばれず（`create_confirm_token` の1回を除き破壊的操作の IPC は0回）、`SqliteResult` は `{ success: false, error }` を返す。`error` は `categorizeError` 経由の `SqliteError` で `retriable: false`、メッセージは token 取得失敗を示す（例: `confirm token unavailable`）
 
-### Scenario: Fail-closed timeout — token 取得がタイムアウトした場合も IPC を送らずエラーを返す
+### Scenario: Fail-closed timeout ― token 取得がタイムアウトした場合も IPC を送らずエラーを返す
   Given `requireConfirmToken=true` の操作で `getDashboardConfirmToken` 内の `sendDashboardRaw({ subtype: 'create_confirm_token' })` が `DASHBOARD_SQLITE_TIMEOUT`（10s）でタイムアウトし `null` にフォールバックする
   When `DashboardGateway.callDashboard` が当該操作（例: `restore_db`）で呼ばれる
   Then 破壊的操作の `DASHBOARD_SQLITE` IPC は送出されず、`SqliteResult` は `{ success: false, error }` で caller に伝播する。タイムアウトの `create_confirm_token` 自体は `sendDashboardRaw` の `Promise.race` で reject されるが、`getDashboardConfirmToken` の `catch` で握り潰されず fail-closed の分岐で検出される
 
-### Scenario: No retry — 単一の失敗でリトライせず token なし fallback もしない
+### Scenario: No retry ― 単一の失敗でリトライせず token なし fallback もしない
   Given `requireConfirmToken=true` の操作で `getDashboardConfirmToken` が1回 `null` を返す
   When `DashboardGateway.callDashboard` が呼ばれる
   Then `create_confirm_token` の `sendDashboardRaw` は1回のみ呼ばれ、破壊的操作の `sendMessage` は0回。2回目の `create_confirm_token` 呼び出しや、token なしでの破壊的操作の再送は発生しない。`SqliteResult` の `error` が caller（`dashboardSqliteService` 等）にそのまま伝播し、UI はエラーを表示できる
@@ -71,7 +71,7 @@ grep -n "tokenExempt\|TOKEN_REQUIRED\|TOKEN_EXEMPT" src/messaging/sqliteOperatio
 ## テスト戦略（t_wada式 Outside-In）
 
 ### E2Eテスト（最小限）
-- なし（本 PBI は background ↔ dashboard 間の IPC ガードであり、E2E は既存の dashboard 手動 QA でカバー。必要なら `chrome.runtime.sendMessage` を stub した integration で代替）
+- なし（本 PBI は background ⇔ dashboard 間の IPC ガードであり、E2E は既存の dashboard 手動 QA でカバー。必要なら `chrome.runtime.sendMessage` を stub した integration で代替）
 
 ### 統合テスト（中程度）
 - `DashboardGateway.callDashboard` に対して `chrome.runtime.sendMessage` を stub 化し、`create_confirm_token` → 破壊的操作の2ホップを検証する contract テスト
@@ -126,7 +126,7 @@ grep -n "ALL_DASHBOARD_SQLITE_SUBTYPES\|TOKEN_EXEMPT_OPS\|tokenExempt" src/messa
    if (requireConfirmToken) {
      const confirmToken = await getDashboardConfirmToken(action, id);
      if (!confirmToken) {
-       // No retry, no fallback dispatch — propagate as SqliteResult error
+       // No retry, no fallback dispatch ― propagate as SqliteResult error
        // error は categorizeError 経由で SqliteError に正規化し retriable: false に
        throw new Error('Dashboard confirm token unavailable'); // または categorizeError で SqliteResult に包む
        // DashboardGateway.callDashboard 側で catch し { success: false, error } を返す実装でも可
@@ -154,10 +154,10 @@ grep -n "ALL_DASHBOARD_SQLITE_SUBTYPES\|TOKEN_EXEMPT_OPS\|tokenExempt" src/messa
 - ロールバック: 本修正は fail-closed 化のため、万一 `create_confirm_token` の一時不調で破壊的操作が全拒否される事態に備え、feature flag ではなく `chrome.storage.session` の token 発行側の健全性監視（既存の `confirmTokenManager` ログ）で切り分け。ロールバック時は本 PBI の diff を revert すれば fail-open に戻るが、セキュリティ後退のため推奨しない。代替として `confirmTokenManager` の token 発行失敗率を dashboard で可視化することを検討
 
 ## 参考資料
-- `src/background/sqlite/dashboardGateway.ts:13-42` — 本 PBI の修正対象（`getDashboardConfirmToken` / `sendDashboardRaw` / `sendDashboard`）
-- `src/background/sqlite/offscreenGateway.ts:30` — `SqliteResult<T>` の型定義
-- `src/messaging/sqliteOperationSecurity.ts:18-82` — `ALL_DASHBOARD_SQLITE_SUBTYPES` / `READ_ONLY_OPS` / `TOKEN_EXEMPT_OPS` / `tokenExempt` / `TOKEN_REQUIRED_SUBTYPES` の SSOT
-- `dev-docs/plans/2026-08-09-pbi23-phase3-senior-consultation.md §10.5–10.7` — allowlist による fail-safe 設計の経緯
-- `dev-docs/archived/pbi/2026-09-03-07-refactor-sqlite-gateway-fidelity.md` — 直前の SqliteGateway 分割 PBI（本ファイルの分割元）
+- `src/background/sqlite/dashboardGateway.ts:13-42` ― 本 PBI の修正対象（`getDashboardConfirmToken` / `sendDashboardRaw` / `sendDashboard`）
+- `src/background/sqlite/offscreenGateway.ts:30` ― `SqliteResult<T>` の型定義
+- `src/messaging/sqliteOperationSecurity.ts:18-82` ― `ALL_DASHBOARD_SQLITE_SUBTYPES` / `READ_ONLY_OPS` / `TOKEN_EXEMPT_OPS` / `tokenExempt` / `TOKEN_REQUIRED_SUBTYPES` の SSOT
+- `dev-docs/plans/2026-08-09-pbi23-phase3-senior-consultation.md §10.5-10.7` ― allowlist による fail-safe 設計の経緯
+- `dev-docs/archived/pbi/2026-09-03-07-refactor-sqlite-gateway-fidelity.md` ― 直前の SqliteGateway 分割 PBI（本ファイルの分割元）
 - ブランチ `0902a` レビュー指摘: `dashboardGateway.ts` ~111行の fail-open downgrade（本 PBI の Critical finding）
 

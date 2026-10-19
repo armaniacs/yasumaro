@@ -1,4 +1,4 @@
-# PBI: SQLite Domain Repository への集約 — 20の薄い proxy を domain interface に崩壊
+# PBI: SQLite Domain Repository への集約 ― 20の薄い proxy を domain interface に崩壊
 
 ## ユーザーストーリー
 開発者として、`src/dashboard/dashboardSqliteService.ts`（598行）の20の関数（`queryLogs`, `searchLogs`, `toggleStar`, `deleteLog`, `getLogCount` 等）が全て `build payload → sendDashboardMessage → decode → ServiceResult` の同一パターンを繰り返している状態を解消したい。なぜなら、新しいSQLite操作を追加するたびに15〜30行のボイラープレートを書き、validator とテストを20回分用意する必要があり、transport 固有の関心事（`tokenExempt`, `DASHBOARD_SQLITE_TIMEOUT`, `categorizeError`, `query`/`search` のリトライ）が各関数に散らばるからだ。
@@ -75,8 +75,8 @@ Scenario: テストで InMemory adapter が使える
 2人日
 
 ## 技術的考慮事項
-- 依存関係: `chrome.runtime.sendMessage`（ports & adapters — `OffscreenTransport` が既存の seam）。`chrome.storage.session`（confirmToken キャッシュ）。いずれも repository 内部で抽象化。
-- テスタビリティ: `OffscreenTransport` interface は既に存在し、`InMemory` adapter でテスト可能。新たな seam は不要 — 既存の seam を deepening の対象とする。
+- 依存関係: `chrome.runtime.sendMessage`（ports & adapters ― `OffscreenTransport` が既存の seam）。`chrome.storage.session`（confirmToken キャッシュ）。いずれも repository 内部で抽象化。
+- テスタビリティ: `OffscreenTransport` interface は既に存在し、`InMemory` adapter でテスト可能。新たな seam は不要 ― 既存の seam を deepening の対象とする。
 - 非機能要件: `DASHBOARD_SQLITE_TIMEOUT = 10000` は変更しない。`query` / `search` の1回リトライ（1秒待機）も維持。
 - ADR整合性: `ADR 2026-06-17 OPFS+FTS5 coexistence` と `ADR 2026-07-07 sqlite chrome.storage dual-write` に準拠。repository は dual-write の有無を呼び出し元から隠蔽するが、dual-write 自体は維持する（再議論しない）。
 - 前波との関係: PBI 02（前波の dashboard-sqlite-proxy-collapse）で `callDashboard` が導入されたが、20の薄い wrapper は残存している。本PBIはその残余を解消する。
@@ -102,7 +102,7 @@ ls -1 src/background/handlers/dashboardSqlite/
 
 ### 落とし穴
 - `queryLogs` と `searchLogs` のリトライは `sendDashboardMessage` の transport エラーのみをリトライし、`response.success === false`（SQL エラー）はリトライしない。集約時にこの区別を失わないこと。
-- `getConfirmToken()` は `chrome.storage.session` にキャッシュしつつ、失敗時は `confirm_token` subtype で再取得する — この2段階フォールバックを `BrowsingLogRepository` 内部に正しく移動すること。
+- `getConfirmToken()` は `chrome.storage.session` にキャッシュしつつ、失敗時は `confirm_token` subtype で再取得する ― この2段階フォールバックを `BrowsingLogRepository` 内部に正しく移動すること。
 - `dashboardSqliteService.ts` は `src/dashboard/__tests__/dashboardSqliteService.test.ts` で直接テストされている。移行時はテストも `BrowsingLogRepository.test.ts` に移行し、旧テストは削除すること（replace, don't layer）。
 
 ## Definition of Done

@@ -20,12 +20,12 @@ SSRF攻撃による `127.0.0.1` / `localhost` への内部サービスアクセ�
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — Obsidian用の許可されたlocalhostポートは許可される
+Scenario: ハッピーパス ― Obsidian用の許可されたlocalhostポートは許可される
   Given URLが "https://127.0.0.1:27124/" である（Obsidian Local REST API）
   When validateUrlForAIRequests(url) を呼ぶ（isLocalhostAddressで許可）
   Then エラーはthrowされず、リクエストは許可される
 
-Scenario: 攻撃 — blockLocalhost=trueで127.0.0.1はブロックされる
+Scenario: 攻撃 ― blockLocalhost=trueで127.0.0.1はブロックされる
   Given URLが "http://127.0.0.1:8080/admin" である
   When validateUrl(url, { blockLocalhost: true }) を呼ぶ
   Then "Blocked hostname: 127.0.0.1" エラーがthrowされる

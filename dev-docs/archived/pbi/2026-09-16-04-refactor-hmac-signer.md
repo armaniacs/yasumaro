@@ -48,8 +48,8 @@ HMAC 統合を完了。`hashUrl` の移動は層構造への影響が独立し�
 
 | 関数 | 鍵の形式 | 呼び出し元 |
 |---|---|---|
-| `computeHMAC(secret: string, data)` | 文字列 | `settingsExportImport.ts`（5箇所）・`importLogsService.ts`・`exportLogsService.ts` — 計 **5ファイル11箇所** |
-| `generateHmacSignature(data, key: CryptoKey)` | CryptoKey | `urlNotificationHandlers.ts`・`privacyConsent.ts`・`hmacKeyStore.ts` — 計 **3ファイル5箇所** |
+| `computeHMAC(secret: string, data)` | 文字列 | `settingsExportImport.ts`（5箇所）・`importLogsService.ts`・`exportLogsService.ts` ― 計 **5ファイル11箇所** |
+| `generateHmacSignature(data, key: CryptoKey)` | CryptoKey | `urlNotificationHandlers.ts`・`privacyConsent.ts`・`hmacKeyStore.ts` ― 計 **3ファイル5箇所** |
 
 呼び出し側は鍵の取得方法（`getHmacSecret()` か `getNotificationHmacKey()` か）で使い分けを強制されている。
 
@@ -68,7 +68,7 @@ interface HmacSigner {
 
 鍵取得を内部に隠し、呼び出し側からは `sign` / `verify` だけが見える形にする。
 
-あわせて `hashUrl` を crypto から logger/privacy 側へ移す（crypto は暗号操作のみに絞る — locality 向上）。
+あわせて `hashUrl` を crypto から logger/privacy 側へ移す（crypto は暗号操作のみに絞る ― locality 向上）。
 
 ## 最大の論点: 署名の互換性
 

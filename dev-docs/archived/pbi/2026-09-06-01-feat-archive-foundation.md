@@ -47,7 +47,7 @@ Scenario: downloadBlob は大容量でも遅延解放で壊れない
 
 ## 受け入れ基準
 
-- [x] `src/offscreen/opfsWorker/archiveValidation.ts`: `validateArchiveEngine(engine)` — sqlite_master 全行列挙による allowlist 検証（`type='table'` かつ `name ∈ {browsing_logs, yasumaro_archive_meta}` のみ許可、`type='index'` のみ追加許可、view/trigger/仮想テーブル（rootpage=0）は1つでも存在すれば拒否）＋ `PRAGMA table_xinfo` 照合（hidden/generated 列は拒否）＋ meta.record_count と COUNT(*) の突合せ（オプションで拒否/警告を選択可能に）
+- [x] `src/offscreen/opfsWorker/archiveValidation.ts`: `validateArchiveEngine(engine)` ― sqlite_master 全行列挙による allowlist 検証（`type='table'` かつ `name ∈ {browsing_logs, yasumaro_archive_meta}` のみ許可、`type='index'` のみ追加許可、view/trigger/仮想テーブル（rootpage=0）は1つでも存在すれば拒否）＋ `PRAGMA table_xinfo` 照合（hidden/generated 列は拒否）＋ meta.record_count と COUNT(*) の突合せ（オプションで拒否/警告を選択可能に）
 - [x] `migrateArchiveStaging(engine)`: 不足列の補完（ALTER TABLE ADD COLUMN 相当）・余剰列は COLUMN_NAMES 射影で無視
 - [x] `src/offscreen/opfsWorker/archiveStaging.ts`: staging レジストリ（`stagingName → {cutoffMs, includeDeleted, phase, createdAt}`）・`prepareIncoming()` / `prepareOutgoing()`（offscreen 発行）・`sweepOrphanStagings(exclude)`（1関数に集約・呼出点は起動時/次回実行時/明示cleanupのみ）・`releaseStaging(name)`・close→removeEntry 順序ヘルパ・ファイル名検証正規表現 `^archive_(outgoing|incoming)_[A-Za-z0-9-]{36}\.db$`
 - [x] `src/offscreen/opfsWorker/archiveGuards.ts`: `cutoffMsFromLocalDate`（`YYYY-MM-DD` 形式＋実在日＋範囲 2000-01-01〜実行日翌日の検証）・`isHttpUrl`（validators.ts からSSOT化して共用）・`MAX_ARCHIVE_FILE_BYTES` 等の上限定数
@@ -132,7 +132,7 @@ grep -rn "revokeObjectURL" src/dashboard/exportLogsService.ts
 ### 実装したファイル
 - `src/utils/archiveGuards.ts`（新規）: `cutoffMsFromLocalDate`（形式・実在日・範囲検証つき、Date正規化を拒否）/ `isHttpUrl` + `isHttpScheme`（SSOT）/ `isValidStagingName` + `ARCHIVE_STAGING_NAME_RE`（36文字nonce）/ `MAX_ARCHIVE_FILE_BYTES`（200MB）/ `ARCHIVE_FORMAT_VERSION`
 - `src/offscreen/opfsWorker/archiveStaging.ts`（新規）: メモリ内レジストリ・`prepareIncoming`/`prepareOutgoing`（offscreen発行）・`assertRegisteredStagingName`（fail-closed）・`releaseStaging`・`sweepOrphanStagings(exclude)`（SSOT・呼出点は起動時/次回実行時/明示cleanup）・`removeStagingFile`。OPFSルートはテスト用プロバイダシームで注入
-- `src/offscreen/opfsWorker/archiveValidation.ts`（新規）: `validateArchiveEngine`（sqlite_master allowlist — table/indexのみ・仮想テーブルrootpage=0拒否・`table_xinfo` でhidden/generated列拒否・型不一致拒否・meta.record_count突合せは reject/warn 選択、拒否時はエンジンclose）＋ `migrateArchiveStaging`（不足列をSCHEMA_SQLの基本型で補完・余剰列は射影で無視）＋ `readArchiveMeta`
+- `src/offscreen/opfsWorker/archiveValidation.ts`（新規）: `validateArchiveEngine`（sqlite_master allowlist ― table/indexのみ・仮想テーブルrootpage=0拒否・`table_xinfo` でhidden/generated列拒否・型不一致拒否・meta.record_count突合せは reject/warn 選択、拒否時はエンジンclose）＋ `migrateArchiveStaging`（不足列をSCHEMA_SQLの基本型で補完・余剰列は射影で無視）＋ `readArchiveMeta`
 - `src/offscreen/schema.ts`: `ARCHIVE_META_SCHEMA_SQL`（max_id_at_archive / archive_format_version を含む8列）・`ARCHIVE_INSERT_COLUMN_NAMES` / `ARCHIVE_INSERT_SQL` / `ARCHIVE_SELECT_COLUMNS` / `buildArchiveInsertParams`
 - `src/background/confirmTokenManager.ts`: `scopeHash` 束縛（create/verify・fail-closed）＋ `computeScopeHash`（SHA-256・位置・アリティ敏感）
 - `src/messaging/sqliteOperationSecurity.ts`: `deriveScopeHash(subtype, payload)`（archive_create/preview → cutoff+includeDeleted、delete_by_staging/restore/restore_preview → stagingName。他subtypeはundefined=既存フロー不変）

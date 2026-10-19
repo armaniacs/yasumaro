@@ -153,7 +153,7 @@ Only if that does not resolve the issue, also check:
 1. Click the "AI Test" button on Yasumaro's initial settings page to check the status ("AI Test" only reports the status; it never starts a download)
 2. If "Built-in AI is currently downloadable" appears, open the dashboard diagnostics panel (the Built-in AI section under `Dashboard → Diagnostics`) and start the download there with its progress indicator
 3. Download takes several minutes to tens of minutes (depending on connection speed)
-4. After download completes, run "AI Test" again — you should see "✓ Built-in AI: ok"
+4. After download completes, run "AI Test" again ― you should see "✓ Built-in AI: ok"
 
 #### 2.3 Troubleshooting
 
@@ -162,7 +162,7 @@ If the model doesn't work properly:
 1. Restart Chrome
 2. Enter `chrome://on-device-internals` in the address bar
 3. Check the **Model Status** tab for errors
-4. Run `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` in DevTools console — it should return `available`
+4. Run `await LanguageModel.availability({ expectedOutputs: [{ type: 'text', languages: ['ja'] }] })` in DevTools console ― it should return `available`
 
 ### 3. For Edge
 

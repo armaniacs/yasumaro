@@ -82,8 +82,8 @@ Scenario: 通常ビルドの挙動が変わらない
 
 ## 検証結果（2026-10-11 autonomous-task-closer）
 
-- `npm run build` exit 0 — keys＋window あり・DOM 文字列なし（プローブ機能維持）
-- `OW_E2E_PROBE=0 npx wxt build` exit 0 — 5文字列すべてゼロ件（完全除去達成）
+- `npm run build` exit 0 ― keys＋window あり・DOM 文字列なし（プローブ機能維持）
+- `OW_E2E_PROBE=0 npx wxt build` exit 0 ― 5文字列すべてゼロ件（完全除去達成）
 - 隔離・golden・extractor 系 193件 green（無変更・挙動不変の証拠）
 - headed E2E（Scenario 2）は未検証。NN08 の headed 実行時に 4 spec で併せて確認する
 - 追記（中継化後）: strip bundle に `OW_PROBE_QUERY` / `OW_PROBE_STATE` が

@@ -15,7 +15,7 @@
 
 ### H1: Rust `try_email` の非バックトラック（main からの既存バグ、本ブランチの parity 主張が覆えていない）
 
-- `wasm/pii-sanitizer/src/patterns/core5.rs:35-46` — ドメイン部を貪欲に読み切り、`:40` の `rposition` で**最後の** `.` を TLD 境界に固定する。バックトラックしない。
+- `wasm/pii-sanitizer/src/patterns/core5.rs:35-46` ― ドメイン部を貪欲に読み切り、`:40` の `rposition` で**最後の** `.` を TLD 境界に固定する。バックトラックしない。
 - TS 正典 `src/utils/piiSanitizer.ts:44` の `/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/` はバックトラックして末尾の `.` を捨てられる。
 - 本番の成功経路 `src/background/pipeline/piiSanitizeHybrid.ts:139` は WASM 結果を再スキャンせずそのまま返す（`:18-26` が「parity ゲートで等価」と宣言）。
 - 実測（System Architect が committed WASM で独立再現、Maintainability Guardian が 400 件のシード fuzz で再現）:
@@ -28,8 +28,8 @@
 
 ### H2: WASM チャンク境界クランプによる非ASCII シームの検出漏れ（本ブランチの regression）
 
-- `wasm/pii-sanitizer/src/lib.rs:142` — `chunk_start = ceil_char_boundary(text, offset)`
-- `wasm/pii-sanitizer/src/lib.rs:161` / `:165` — 前チャンク重複スキップを `SCAN_CHUNK_OVERLAP` 相対で判定
+- `wasm/pii-sanitizer/src/lib.rs:142` ― `chunk_start = ceil_char_boundary(text, offset)`
+- `wasm/pii-sanitizer/src/lib.rs:161` / `:165` ― 前チャンク重複スキップを `SCAN_CHUNK_OVERLAP` 相対で判定
 - 対照の TS（`src/utils/piiSanitizer.ts:266-281`）は UTF-16 コード単位の `slice` でクランプしない。
 - 前チャンクの実カバー終端は `floor(offset+200)`、ガード1の閾値は `ceil(offset)+200` で最大 6 バイトずれる。その窓に入る長さ7以上の ASCII PII は前チャンクに収まらず現チャンクでもスキップされ、どのチャンクでも数えられない。
 - 再現（node から出荷 WASM を実行、Compliance & Privacy Guard が実測）:
@@ -42,7 +42,7 @@
 
 ### M6: WASM 経路に wall-clock timeout が無い
 
-- 宣言 `wasm/pii-sanitizer/src/lib.rs:125-128`「the WASM core has no timeout concept — the TS wrapper owns time-bounding」
+- 宣言 `wasm/pii-sanitizer/src/lib.rs:125-128`「the WASM core has no timeout concept ― the TS wrapper owns time-bounding」
 - しかし唯一の本番呼び出し元 `src/background/pipeline/piiSanitizeHybrid.ts:128-173` にも `src/utils/wasmHybridRuntime.ts:124-215` にも deadline 実装が無い（`grep -n "timeout" piiSanitizeHybrid.ts` は doc コメント 1 件のみ）。
 - TS 側の実装は `src/utils/piiSanitizer.ts:20,22,303-304`（`DEFAULT_TIMEOUT=5000`、5 マッチごとに判定）。
 - `src/wasm/pii-sanitizer/__tests__/parity.test.ts:71-89` が「TS が throw する入力」を skip するため cap/timeout クラスは自動検証の外。
@@ -55,13 +55,13 @@
 
 ### M17: 走査ループのブロック構造破壊 + Guard 2 が Guard 1 に完全包含
 
-- `src/utils/piiSanitizer.ts:317-340` — `while` 本体が 12 スペースのまま（新ガード `:270-315` は16スペース）で、読み手には本体がループ外に見える。閉じ括弧は `:340`、`for` の閉じは `:341`。
+- `src/utils/piiSanitizer.ts:317-340` ― `while` 本体が 12 スペースのまま（新ガード `:270-315` は16スペース）で、読み手には本体がループ外に見える。閉じ括弧は `:340`、`for` の閉じは `:341`。
 - `:281` の Guard 2（`match.index === 0 && match[0].length <= OVERLAP`）は `:275` の Guard 1（`match.index + match[0].length <= OVERLAP`）に論理包含され一度も発火しない。Rust 側 `lib.rs:160-165` も同型。両言語で「別々の理由」を示すコメントが付いており、片方だけ直す編集を誘発する。
 
 ### M5: 長トークン入力のコストを回帰検知できない
 
 - 実測（Tuning Expert、新旧を同一プロセスで比較）: 60KB 英数ラン WASM 7.12 → 30.39 ms（4.27x）、60KB 数字ラン 13.89 → 38.77 ms（2.79x）、TS フォールバック 11.64 → 86.32 ms（7.41x）。記事テキストは +23%。
-- 原因は `step = 400 - 200 = 200` の 50% 重複再走査。**O(n²) 化は無く線形を維持**（k 0.98 → 1.08）。attribution 計測では OVERLAP=0 で -50%、probe 除去は数字ラン -22% のみ。
+- 原因は `step = 400 - 200 = 200` の 50% 重複再走査。**O(n^2) 化は無く線形を維持**（k 0.98 → 1.08）。attribution 計測では OVERLAP=0 で -50%、probe 除去は数字ラン -22% のみ。
 - `bench/micro/c8-pii-sanitize.bench.mjs:51-81` のフィクスチャは空白区切りの記事本文のため +23% しか出ず、この劣化クラスを検知できない。`docs/PERFORMANCE_TEST.md` の c8 説明も旧実装（サンプリング時代）のまま。
 
 ## BDD 受け入れシナリオ
@@ -124,7 +124,7 @@ Scenario: 長トークン入力のコストがベンチで検知される
 - **OVERLAP を上げても本 PBI の H2 は消えない**（`L > 0` で必ず窓が生じる）。定数調整ではなく「前チャンクの実カバー終端」を基準にした判定が必要
 - 実装順は `core5.rs`（マッチャ）→ `lib.rs`（ガード + timeout）→ コーパス再生成 → wasm 再ビルド → bench。**wasm 再ビルドは 1 回にまとめる**（本 PBI 内で完結させる）
 - `Cargo.toml` と `scripts/build-wasm.mjs` は PBI-09 が触る。本 PBI では strip 工程を追加しない（再ビルド成果物の byte が PBI-09 で変わるため直列にする）
-- Red Team が報告した「長さ200未満の PII が継ぎ目で丸ごと落ちる」は System Architect の裁定で**棄却**されている（幾何: `L ≤ 200` のマッチは開始位置を含むチャンクに必ず完全包含。実測 sweep で未マスク 0 件）。提示例はパディング `'z'` が単語文字で `\b` が消えるだけ。本 PBI の H2 とは別事象なので混同しないこと
+- Red Team が報告した「長さ200未満の PII が継ぎ目で丸ごと落ちる」は System Architect の裁定で**棄却**されている（幾何: `L ≦ 200` のマッチは開始位置を含むチャンクに必ず完全包含。実測 sweep で未マスク 0 件）。提示例はパディング `'z'` が単語文字で `\b` が消えるだけ。本 PBI の H2 とは別事象なので混同しないこと
 - `\b` 前提により「非単語文字に直接隣接する IBAN」が両実装で未検出になる点はパターン設計の受容判断であり、本 PBI のスコープ外（台帳送り）
 - マッチ件数上限到達時の UX（記録全体が失敗し理由が見えない）は本 PBI のスコープ外（台帳送り）
 

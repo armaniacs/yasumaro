@@ -23,7 +23,7 @@
 
 security-audit run-2 の needs_validation リード。fingerprint: `opfsMigrationV2.migrateOldOpfsDb:unverified-count-delete-old-db`。監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 15番 / `findings.json`）。
 
-根本原因（claimed root cause）: Count-unverified destructive delete — orchestrator が skipped/failed 行の情報を捨て、throw しない `insertBatch` の戻り値すべてに対して不可逆な `deleteOldDb` + `setMigrationDone` を実行する。一方 callee は部分失敗モードを「throw しない部分 count」に変換する。
+根本原因（claimed root cause）: Count-unverified destructive delete ― orchestrator が skipped/failed 行の情報を捨て、throw しない `insertBatch` の戻り値すべてに対して不可逆な `deleteOldDb` + `setMigrationDone` を実行する。一方 callee は部分失敗モードを「throw しない部分 count」に変換する。
 
 trace（entrypoint → sink）:
 
@@ -41,9 +41,9 @@ trace（entrypoint → sink）:
 
 部分 count に到達しうる機構（`schema.ts`）:
 
-- `src/offscreen/schema.ts:46` — `UNIQUE(url, created_at)`。旧DB内部の重複キーはこの制約下で skip になる
-- `src/offscreen/schema.ts:17-20` — `CHECK`（`visit_duration >= 0`、`0 <= scroll_ratio <= 1`、`is_starred IN (0,1)`、`is_deleted IN (0,1)`）。旧スキーマ由来値がこれに違反すれば per-row 例外になる
-- `src/offscreen/opfsMigrationV2Reader.ts:119-136` — reader は 10 列だけ SELECT しており pragma/`table_info` を行わない。**旧プールの DDL も per-row 値域も source 上に存在しない**ため、以下 BLOCKER が「実データで部分パスに到達するか」をソースから封じ込められない理由そのもの
+- `src/offscreen/schema.ts:46` ― `UNIQUE(url, created_at)`。旧DB内部の重複キーはこの制約下で skip になる
+- `src/offscreen/schema.ts:17-20` ― `CHECK`（`visit_duration >= 0`、`0 <= scroll_ratio <= 1`、`is_starred IN (0,1)`、`is_deleted IN (0,1)`）。旧スキーマ由来値がこれに違反すれば per-row 例外になる
+- `src/offscreen/opfsMigrationV2Reader.ts:119-136` ― reader は 10 列だけ SELECT しており pragma/`table_info` を行わない。**旧プールの DDL も per-row 値域も source 上に存在しない**ため、以下 BLOCKER が「実データで部分パスに到達するか」をソースから封じ込められない理由そのもの
 
 ## BDD受け入れシナリオ
 
@@ -139,7 +139,7 @@ Scenario 4 は「件数の自己申告」を信用しないという、本 PBI �
 | `src/offscreen/opfsWorker/migrationV2.ts:22-26` | module-level ガード。**同じ worker 世代内では再試行しない**。部分失敗時のリトライは「次 worker 生成」から |
 | `src/offscreen/opfsWorker/crudHandlers.ts:109-123` | per-row ループ。`:116` `inserted++` / `skipped++`、`:118-122` per-row catch（index 0 のみログ） |
 | `src/offscreen/opfsWorker/crudHandlers.ts:125-127` | transaction catch。ログのみ・再throw なし |
-| `src/offscreen/opfsWorker/crudHandlers.ts:128` | `return { count: inserted, inserted, skipped }` — **`inserted` はロールバック済みでも残る** |
+| `src/offscreen/opfsWorker/crudHandlers.ts:128` | `return { count: inserted, inserted, skipped }` ― **`inserted` はロールバック済みでも残る** |
 | `src/offscreen/sqliteTransaction.ts:27-39` | `BEGIN IMMEDIATE` → 失敗時 `ROLLBACK` して**再throw**。`:30` の COMMIT 失敗も roll-back 対象 |
 | `src/offscreen/opfsWorker/handlers.ts:38-40` | worker 側の `withTransaction` アダプタ |
 
@@ -191,10 +191,10 @@ Scenario 4 は「件数の自己申告」を信用しないという、本 PBI �
 
 現行 147 行・6 テスト。このうち `:103` は **throwing のみ**を pin しており、「throw しない部分 count で `deleteOldDb` + `setMigrationDone` が呼ばれる」順序を固定していない。追加は**改変せず隣に追加**する。
 
-- `:103` の throwing テスト — **そのまま残す**（throw 経路は引き続き「delete せず done 立たない」の契約）。
-- `:79-101` の happy path — **そのまま残す**（`callOrder` の順序が回帰ガード）。選択肢 2/3 を採ると `insertBatch` 以降に照合が入るため、`callOrder` への追加要素があれば expected も更新する（順序の意味は「insert → 確認 → delete → done」のまま不変であることを assert する）。
-- `:132` の delete 失敗テスト — **そのまま残す**が、本番 `deleteOldDbFile` は throw しない（`opfsMigrationV2Reader.ts:159-166`）ため、このエスケープが本番に無い旨をコメントで残す。
-- `:66` の 0 件テスト — そのまま残す。選択肢 3 で実体照合を入れる場合、`actualCount` スタブの初期値（0 でも 3 でも）で判定が変わらないことを確認する（`migrationBackup.ts:357-365` と同じ「0件は照合条件を待たない」扱い）。
+- `:103` の throwing テスト ― **そのまま残す**（throw 経路は引き続き「delete せず done 立たない」の契約）。
+- `:79-101` の happy path ― **そのまま残す**（`callOrder` の順序が回帰ガード）。選択肢 2/3 を採ると `insertBatch` 以降に照合が入るため、`callOrder` への追加要素があれば expected も更新する（順序の意味は「insert → 確認 → delete → done」のまま不変であることを assert する）。
+- `:132` の delete 失敗テスト ― **そのまま残す**が、本番 `deleteOldDbFile` は throw しない（`opfsMigrationV2Reader.ts:159-166`）ため、このエスケープが本番に無い旨をコメントで残す。
+- `:66` の 0 件テスト ― そのまま残す。選択肢 3 で実体照合を入れる場合、`actualCount` スタブの初期値（0 でも 3 でも）で判定が変わらないことを確認する（`migrationBackup.ts:357-365` と同じ「0件は照合条件を待たない」扱い）。
 - 新規: 非 throw 部分 count（Scenario 1）／重複スキップ（Scenario 3）／過大報告（Scenario 4）の 3 件。
 
 ### ブロッカー（着手前に潰すべき owner 確認）
@@ -238,8 +238,8 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 15番）:
 
 - `pbi/00-INDEX.md`（本 PBI の登録先）
 - 同じ移行領域の PBI との整合を確認すること:
-  - **PBI 09「fallback partial wipe」**（監査 `fallbackMigration.tryMigrateFallbackToSqlite:partial-failure-clearall-wipe`）— **同種の中核問題**。fallback 経路も「部分失敗を投げて clearAll で消す」型なら、**同じ「失敗ゼロを確認してから消す」規律**を両者に適用する必要がある。選択肢 2/3 の判定ロジックは共有できる可能性がある（別モジュールにあるが、`legacyMigration.ts:169` の `count < batch.length` 判定と並べて読むこと）。
-  - **PBI 13「field drift」**（監査 `opfsRecovery.convertFallbackRecord:fallback-reason-field-drift`）— 旧レコードのフィールドが新スキーマに合わない問題。**本 PBI の Scenario 4 と直接関連する**: フィールドが欠損/型が違う行は `crudHandlers.ts:118` の per-row catch に落ち、`failed` として数えられるべき行になる。13 が直すと決めるなら、本 PBI で「field drift を migration 前に正規化して直す」選択肢を 1 案追加すること。
-  - **PBI 17「rec snapshot」**（監査 `opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate`）— スナップショット除去のウィンドウが fail-open で status ゲートを通る問題。**同様に「安全網を捨てるタイミング」の判定漏れ**で、3 件（本 + 09 + 17）で方策を揃えるべき。3 件すべてが「検証→比較→安全に捨てる」を各自行っているため、`migrationBackup.ts:367-376` を共通言語にして統一することを推奨。
-  - 既存テスト `opfsMigrationV2.test.ts:103`（throwing のみ pin）— 追加項目の起点。
+  - **PBI 09「fallback partial wipe」**（監査 `fallbackMigration.tryMigrateFallbackToSqlite:partial-failure-clearall-wipe`）― **同種の中核問題**。fallback 経路も「部分失敗を投げて clearAll で消す」型なら、**同じ「失敗ゼロを確認してから消す」規律**を両者に適用する必要がある。選択肢 2/3 の判定ロジックは共有できる可能性がある（別モジュールにあるが、`legacyMigration.ts:169` の `count < batch.length` 判定と並べて読むこと）。
+  - **PBI 13「field drift」**（監査 `opfsRecovery.convertFallbackRecord:fallback-reason-field-drift`）― 旧レコードのフィールドが新スキーマに合わない問題。**本 PBI の Scenario 4 と直接関連する**: フィールドが欠損/型が違う行は `crudHandlers.ts:118` の per-row catch に落ち、`failed` として数えられるべき行になる。13 が直すと決めるなら、本 PBI で「field drift を migration 前に正規化して直す」選択肢を 1 案追加すること。
+  - **PBI 17「rec snapshot」**（監査 `opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate`）― スナップショット除去のウィンドウが fail-open で status ゲートを通る問題。**同様に「安全網を捨てるタイミング」の判定漏れ**で、3 件（本 + 09 + 17）で方策を揃えるべき。3 件すべてが「検証→比較→安全に捨てる」を各自行っているため、`migrationBackup.ts:367-376` を共通言語にして統一することを推奨。
+  - 既存テスト `opfsMigrationV2.test.ts:103`（throwing のみ pin）― 追加項目の起点。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 15番、`findings.json`、`REPORT.md`）

@@ -1,4 +1,4 @@
-# PBI 2026-09-12-03 — DomainPolicySnapshot に matchSubdomains を追加（content/SW 判定一致）
+# PBI 2026-09-12-03 ― DomainPolicySnapshot に matchSubdomains を追加（content/SW 判定一致）
 
 - **種別**: 🔧非機能追加（fix・判定不一致の実バグ解消）
 - **優先度**: 3 位 / RICE **16.0**（R10 × I2 × C80% / E1.0人日）

@@ -1,4 +1,4 @@
-# PBI 2026-09-12-10 — PreviewView.buildNavigation の stale-closure 修正（実バグ）
+# PBI 2026-09-12-10 ― PreviewView.buildNavigation の stale-closure 修正（実バグ）
 
 - **種別**: 🔧非機能追加（fix・実バグ修正）
 - **優先度**: 2 位 / RICE **17.1**（R8 × I2 × C80% / E0.75人日）

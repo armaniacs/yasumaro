@@ -34,7 +34,7 @@ Scenario: offscreen document が chrome.storage を直接読み取らない
 - **単体**: `SqliteHealthCheck` の `true` / `false` シナリオテスト
 
 ## 見積もり
-0.5 ストーリーポイント（低 — 0.5 人週程度）
+0.5 ストーリーポイント（低 ― 0.5 人週程度）
 
 ## 技術的考慮事項
 - **依存**: なし

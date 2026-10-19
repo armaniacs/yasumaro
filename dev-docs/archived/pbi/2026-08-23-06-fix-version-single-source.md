@@ -1,4 +1,4 @@
-# PBI: バージョン単一ソース化 — 3重ハードコードの解消
+# PBI: バージョン単一ソース化 ― 3重ハードコードの解消
 
 ## ユーザーストーリー
 リリース担当者として、バージョンを1箇所で変更すれば全ファイルに反映されてほしい、なぜなら `wxt.config.ts:24` / `sbom.json:5` / `docs/version.json:2`（および `package.json`）に `6.7.64` がハードコードされ、手動同期が必要なため、更新漏れで `check-version-consistency.js` が失敗し、store審査でバージョン不一致としてリジェクトされるから
@@ -16,20 +16,20 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — package.jsonのバージョンが全ファイルに反映される
+Scenario: 正常系 ― package.jsonのバージョンが全ファイルに反映される
   Given package.json の version を 6.7.65 に変更した
   When npm run build を実行する
   Then dist/**/manifest.json の version が 6.7.65 である
   And docs/version.json の version が 6.7.65 である
   And sbom.json の version が 6.7.65 である（generate-sbom時）
 
-Scenario: 境界ケース — check-version-consistency が不要になる
+Scenario: 境界ケース ― check-version-consistency が不要になる
   Given SSOT化が完了している
   When scripts/check-version-consistency.js を実行する
   Then 全ファイルが一致し、常にパスする（またはスクリプト自体が不要になり削除されている）
   And CIでバージョン不一致エラーが出ない
 
-Scenario: エラーケース — package.jsonのバージョンが不正でもビルド時に検出される
+Scenario: エラーケース ― package.jsonのバージョンが不正でもビルド時に検出される
   Given package.json の version が 'invalid' や '' である（テストでモック）
   When ビルドまたはバージョン検証を実行する
   Then semver形式でないことが検出され、ビルドが失敗する
@@ -61,7 +61,7 @@ Scenario: エラーケース — package.jsonのバージョンが不正でも�
 - **段階的**: まず wxt.config.ts の動的読込、次に docs/version.json の自動生成、最後に checkスクリプトの更新
 
 ## 見積もり
-3pt（要チーム見積もり）— 複数ファイルの生成フロー変更とCI更新を含むため中規模
+3pt（要チーム見積もり）― 複数ファイルの生成フロー変更とCI更新を含むため中規模
 
 ## 技術的考慮事項
 - 依存関係: 05 host_permissions生成と同ファイル（wxt.config.ts）のため同バッチ推奨。独立して実施しても衝突するが小さい

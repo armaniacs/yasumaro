@@ -23,8 +23,8 @@ PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) 
 
 ### 機構（コード上で確定）
 
-1. `src/dashboard/panels/staticForm/privacySettingsPanel.ts:34` — 撤回ボタンは `state.hasConsented` が false のとき `hidden` になる（`btn.classList.toggle('hidden', !state.hasConsented)`）。このパネルにある同意関連の操作は撤回（`:35-70`）だけ。
-2. `src/popup/privacyConsentController.ts:169` — 拒否時のメッセージは `consentDeclinedMessage`「Without consent, main features of the extension will not be available. You can consent later from the settings screen.」（ja は `public/_locales/ja/messages.json:2612-2614`）。設定画面に同意アクションは無いので、この案内は事実に反する。
+1. `src/dashboard/panels/staticForm/privacySettingsPanel.ts:34` ― 撤回ボタンは `state.hasConsented` が false のとき `hidden` になる（`btn.classList.toggle('hidden', !state.hasConsented)`）。このパネルにある同意関連の操作は撤回（`:35-70`）だけ。
+2. `src/popup/privacyConsentController.ts:169` ― 拒否時のメッセージは `consentDeclinedMessage`「Without consent, main features of the extension will not be available. You can consent later from the settings screen.」（ja は `public/_locales/ja/messages.json:2612-2614`）。設定画面に同意アクションは無いので、この案内は事実に反する。
 3. `acceptConsent`（`src/utils/storage/privacyConsent.ts:433-440`）の production 呼び出し元はポップアップの同意モーダルだけ（`src/popup/privacyConsentController.ts:148`）。ダッシュボード側に同意を書く経路は無い（grep で確認済み）。
 4. `shouldPromptForConsent`（`src/utils/storage/privacyConsent.ts:502-527`）は `getConsentDeniedCount`（`:457-464`）と `getLastConsentDenialTime`（`:467-474`）を使い、拒否 3 回かつ直近 30 日以内なら false を返してモーダルを抑止する（`:513-523`）。
 5. したがって拒否 3 回の状態では、**ポップアップのモーダルは 30 日抑止され、設定画面にも同意アクションが無く、同意する手段が 30 日間存在しない**。案内文はまさにその設定画面を指している。
@@ -141,7 +141,7 @@ Scenario: 6. 本文保存のオプトインを巻き戻さない（境界）
 7. **i18n**: 新キー（例 `grantConsent` / `consentGrantedFromSettings` / `consentGrantFailed`）を ja・en の両方に追加する。`consentDeclinedMessage` は**キー名を変えずに文言だけ**更新し、設定画面の Privacy タブの同意アクションを具体的に指す文にする（ポップアップの「設定画面」はダッシュボードの Privacy タブであることを明示する）。
 8. **テスト**: パネル単体（表示の排他・押下時の呼び出し契約・失敗表示・本文保存値の引き継ぎ）、同意モジュールの猶予解除、統合 1 本を追加する。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 1. 設定画面に同意アクションが無いこと（期待: 撤回の hidden 切替と撤回リスナーだけ）
@@ -204,11 +204,11 @@ grep -n "contentStorageEnabled" entrypoints/options/index.html
 
 **疑問**: なぜ「設定画面で後から同意できます」と案内しながら、設定画面に同意する手段が無いのか。
 
-1. **なぜ設定画面に同意アクションが無いのか** — Privacy タブは「状態表示 + 撤回」として作られた。撤回は「同意済みからの遷移」なので、`hasConsented` を前提にした UI になった。
-2. **なぜ「撤回のみ」で足りたのか** — 同意の獲得は**ポップアップのモーダル**が担う設計で、設定画面は「すでに同意した人の管理画面」という位置づけだった。
-3. **なぜその分担が破れたのか** — モーダルには**抑止**がある（3 回拒否で 30 日）。抑止された瞬間、同意獲得の唯一の担い手が沈黙する。設計時に「抑止は一時的」とだけ考え、**抑止中に代替経路が要る**ことを洗い出さなかった。
-4. **なぜ案内文が実装と食い違ったのか** — 案内文は「将来そうする」意図で書かれ、**実装との突き合わせが無かった**（文言はキー名で pin され、内容は検証されない）。
-5. **なぜ気づくのが遅れたのか** — 拒否 3 回は「レアな状態」と見なされ、その状態の UX を通しで確認していなかった（テストは単機能ごと）。
+1. **なぜ設定画面に同意アクションが無いのか** ― Privacy タブは「状態表示 + 撤回」として作られた。撤回は「同意済みからの遷移」なので、`hasConsented` を前提にした UI になった。
+2. **なぜ「撤回のみ」で足りたのか** ― 同意の獲得は**ポップアップのモーダル**が担う設計で、設定画面は「すでに同意した人の管理画面」という位置づけだった。
+3. **なぜその分担が破れたのか** ― モーダルには**抑止**がある（3 回拒否で 30 日）。抑止された瞬間、同意獲得の唯一の担い手が沈黙する。設計時に「抑止は一時的」とだけ考え、**抑止中に代替経路が要る**ことを洗い出さなかった。
+4. **なぜ案内文が実装と食い違ったのか** ― 案内文は「将来そうする」意図で書かれ、**実装との突き合わせが無かった**（文言はキー名で pin され、内容は検証されない）。
+5. **なぜ気づくのが遅れたのか** ― 拒否 3 回は「レアな状態」と見なされ、その状態の UX を通しで確認していなかった（テストは単機能ごと）。
 
 **原因**: 同意獲得の経路を**1 つだけ**用意し、その経路が**自分で自分を抑止する**設計にしたこと。抑止は「待てば戻る」が、待つ間の代替が無い。
 
@@ -230,10 +230,10 @@ grep -n "contentStorageEnabled" entrypoints/options/index.html
 
 ### 実装
 
-- `entrypoints/options/index.html` — `#btnGrantConsent`（初期 `hidden`）と `#grantConsentStatus`（`aria-live="polite"`）を追加。
-- `src/dashboard/panels/staticForm/privacySettingsPanel.ts` — 表示を `renderConsentState()` に集約し、撤回と同意を排他に。同意押下で `getContentStorageEnabled()` → `acceptConsent({ contentStorageEnabled })` → `resetConsentDeniedCount()` → 表示更新。失敗時は失敗文言のみで**表示を同意済みに変えない**。撤回成功後は同意アクションが出る。
+- `entrypoints/options/index.html` ― `#btnGrantConsent`（初期 `hidden`）と `#grantConsentStatus`（`aria-live="polite"`）を追加。
+- `src/dashboard/panels/staticForm/privacySettingsPanel.ts` ― 表示を `renderConsentState()` に集約し、撤回と同意を排他に。同意押下で `getContentStorageEnabled()` → `acceptConsent({ contentStorageEnabled })` → `resetConsentDeniedCount()` → 表示更新。失敗時は失敗文言のみで**表示を同意済みに変えない**。撤回成功後は同意アクションが出る。
 - i18n: `grantConsent` / `consentGrantedFromSettings` / `consentGrantFailed` を ja・en に追加。`consentDeclinedMessage` はキー名を変えずに「ダッシュボードの Privacy タブの『同意する』ボタン」を指す文言へ更新。
-- `public/PRIVACY.md` / `docs/PRIVACY.md` — 「拒否後の再同意」段落を追加（バイト同一を確認）。
+- `public/PRIVACY.md` / `docs/PRIVACY.md` ― 「拒否後の再同意」段落を追加（バイト同一を確認）。
 - テスト: `privacySettingsPanel.test.ts` に 4 本（排他表示 2・同意成功時の契約 1・失敗時 1）。
 
 ### テスト（Red → Green）
@@ -249,7 +249,7 @@ grep -n "contentStorageEnabled" entrypoints/options/index.html
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 撤回側の修正（撤回時に拒否カウンタを解除）。本 PBI は拒否の側（設定画面の導線と案内文）を扱う
-- `pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md` — 同意系キーの配置。同意レコードが読める前提が共通
-- `pbi/2026-10-18-04-fix-notification-consent-prestage.md` — 同じ consent lifecycle。`hasPrivacyConsent()` の読み出し前提が共通
-- `docs/i18n-guide.md` — ja・en 両方へのキー追加と `check-i18n` の規約
+- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` ― 撤回側の修正（撤回時に拒否カウンタを解除）。本 PBI は拒否の側（設定画面の導線と案内文）を扱う
+- `pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md` ― 同意系キーの配置。同意レコードが読める前提が共通
+- `pbi/2026-10-18-04-fix-notification-consent-prestage.md` ― 同じ consent lifecycle。`hasPrivacyConsent()` の読み出し前提が共通
+- `docs/i18n-guide.md` ― ja・en 両方へのキー追加と `check-i18n` の規約

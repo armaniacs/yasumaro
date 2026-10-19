@@ -61,7 +61,7 @@ sed -n '102,190p' bench/harness/cli.mjs
 
 ### 落とし穴
 - `now`（ISO stamp）は cli で 1 回生成して注入（日付跨ぎの不整合防止）
-- check モードの exit コード判定は成果物書き出しの後に来る — 順序を壊さない
+- check モードの exit コード判定は成果物書き出しの後に来る ― 順序を壊さない
 
 ## Definition of Done
 - [x] writeArtifacts 単体テスト green

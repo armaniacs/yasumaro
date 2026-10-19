@@ -10,9 +10,9 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/utils/logger.ts:4` — コメントに "Stores logs in chrome.storage.local with 7-day retention policy."
-- `src/utils/logger.ts:99` — `const MAX_LOGS = 1000; // Prevent unlimited growth`
-- `src/utils/logger.ts:214-215` — `MAX_LOGS` 超過時に古いログから切り詰める処理は既に実装済み
+- `src/utils/logger.ts:4` ― コメントに "Stores logs in chrome.storage.local with 7-day retention policy."
+- `src/utils/logger.ts:99` ― `const MAX_LOGS = 1000; // Prevent unlimited growth`
+- `src/utils/logger.ts:214-215` ― `MAX_LOGS` 超過時に古いログから切り詰める処理は既に実装済み
 - 対処案（親レポートより）: ログ保持期間を短縮（3日）、`MAX_LOGS` を500に
 
 ```bash

@@ -1,4 +1,4 @@
-# PBI: periodFilter 契約の深化 — 同期 emit の廃止
+# PBI: periodFilter 契約の深化 ― 同期 emit の廃止
 
 ## ユーザーストーリー
 パネル開発者として、期間フィルタの初期値を getRange() 1回の読み出しで受け取ってほしい、なぜなら構築中の同期 emit が filterReady 回避策×3 と二重 state 同期×7 という footgun クラスを量産しているから。
@@ -28,7 +28,7 @@ Scenario: カスタム範囲
 - [x] createPeriodFilter が構築中に onChange を発火しない（emit はユーザー操作時のみ）
 - [x] 初期範囲は getRange() が単一の真実の源として提供する
 - [x] 3パネル（tagCluster/timeHeatmap/visitDuration）の filterReady ガードを削除
-- [x] 7パネルの onChange 内 `currentRange = range` 記録と `getRange()` 読み戻しの二重同期を解消（reload 内で getRange() を読む形に統一、または onChange 記録のみに一本化 — ドキュメント化した契約に従う）
+- [x] 7パネルの onChange 内 `currentRange = range` 記録と `getRange()` 読み戻しの二重同期を解消（reload 内で getRange() を読む形に統一、または onChange 記録のみに一本化 ― ドキュメント化した契約に従う）
 - [x] プリセットラベルキーが注入可能（labelKeys オプション）になり visitDuration* へのハードコードを解消、既定値は後方互換のまま
 - [x] periodFilter.test とパネル lifecycle テスト（3本）の初回 emit 期待値を更新
 - [x] 全パネルの既存テストが green（auto-apply の二重フェッチが構造的に起きないこともテストで固定）

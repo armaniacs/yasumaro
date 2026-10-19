@@ -16,10 +16,10 @@
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/settingsExportImport.ts:200`(エクスポート時)と `:264`(検証時)— `hmacPayload = `${ciphertext}:${iv}:${salt}`` で iterations を含まない
-- `:285` — `encryptedData.iterations` を KDF 候補として採用
-- `src/utils/crypto/kdfNegotiator.ts:57-62` — stored iterations を最優先・上限なしで候補化(`storedIterations > 0` のみ)。インポートにタイムアウトなし
-- `:260-274` — v2 ガード。v1 ファイル(`:310`)は `hmac` が存在する場合のみ検証するため、`version:"1"` + hmac 省略のファイルは署名検証を完全にスキップできる
+- `src/utils/settingsExportImport.ts:200`(エクスポート時)と `:264`(検証時)― `hmacPayload = `${ciphertext}:${iv}:${salt}`` で iterations を含まない
+- `:285` ― `encryptedData.iterations` を KDF 候補として採用
+- `src/utils/crypto/kdfNegotiator.ts:57-62` ― stored iterations を最優先・上限なしで候補化(`storedIterations > 0` のみ)。インポートにタイムアウトなし
+- `:260-274` ― v2 ガード。v1 ファイル(`:310`)は `hmac` が存在する場合のみ検証するため、`version:"1"` + hmac 省略のファイルは署名検証を完全にスキップできる
 - 反証済みの範囲: 改変 iterations=1 でパスワード総当たりが可能にはならない(ciphertext 自体は 600k で暗号化済み)。成立するのは DoS(import ハング)のみ
 
 ## BDD 受け入れシナリオ

@@ -221,7 +221,7 @@ Feature: コンテンツ抽出ホットパスの負荷測定と方式裁定
 ## 実績（2026-09-27）
 
 - 実 production コード（esbuild browser IIFE）を実 Chromium で計測する `bench/e2e/content-hotpath-measure.mjs` を作成（gate 対象外の `*.mjs`）。再現手順は報告書 §2 冒頭
-- v1（PerformanceObserver）は当環境で発火せず全件 0 の偽陰性 → v2（per-run wall 分布）に切替。同期 1 実行 = 1 task のため wall > 50ms ⟺ longtask
-- 測定値: 等倍では spa32 のみ LT（71ms）。4x では news32・spa8 以上で LT（最大 spa32 で 284ms）。B は chunk max ≈ 全量・total ×4-7 で失敗、 C の main-thread 残余は ~15ms
+- v1（PerformanceObserver）は当環境で発火せず全件 0 の偽陰性 → v2（per-run wall 分布）に切替。同期 1 実行 = 1 task のため wall > 50ms ⇔ longtask
+- 測定値: 等倍では spa32 のみ LT（71ms）。4x では news32・spa8 以上で LT（最大 spa32 で 284ms）。B は chunk max ≒ 全量・total ×4-7 で失敗、 C の main-thread 残余は ~15ms
 - **裁定: offscreen 化を採用**、yield チャンキングは不採用、sync clone 除去は補完施策。後続実装 PBI（推定 3 SP）の範囲を報告書 §4 に確定
 - 成果物は報告書 + 計測 script のみ（production 変更なし）。計測 JSON は `bench/reports/`（gitignored）に保存

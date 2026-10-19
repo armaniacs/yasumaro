@@ -1,4 +1,4 @@
-# PBI-0823a-08: wxt.config ↔ protocol SSOT 完全化
+# PBI-0823a-08: wxt.config ⇔ protocol SSOT 完全化
 
 ## ユーザーストーリー
 

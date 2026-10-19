@@ -72,7 +72,7 @@ Scenario: 正しいパスワードでの通常操作は引き続き成功する�
 - **重要**: `src/dashboard/__tests__/masterPassword.test.ts:324-343`付近の既存テストが「認証なしでの削除」を正常系として検証している場合、これは脆弱な挙動をテストでロックしている状態（REQ-GRA-018相当）。修正時に `# Updated for VULN-015` 等のコメント付きで意図的に更新すること
 
 ## 見積もり
-6pt（3件それぞれが異なるサブシステム — UI認可・セッション/鍵管理・暗号パラメータ — にまたがり、特にVULN-019は既存ハッシュのマイグレーション設計が必要なため中〜大規模）
+6pt（3件それぞれが異なるサブシステム ― UI認可・セッション/鍵管理・暗号パラメータ ― にまたがり、特にVULN-019は既存ハッシュのマイグレーション設計が必要なため中〜大規模）
 
 ## 技術的考慮事項
 - VULN-019のマイグレーションは、保存されたハッシュに反復回数を記録するフィールドが無い場合、「常に600,000回で検証を試み、失敗したら100,000回でフォールバック検証し、成功したら600,000回で再保存」という透過的移行が実装しやすい
@@ -83,9 +83,9 @@ Scenario: 正しいパスワードでの通常操作は引き続き成功する�
 ### graphify依存関係分析（2026-07-22）
 ```
 crypto.ts [L124] → deriveKey()
-    ↳ encryptionSession.ts [L47] → deriveKeyFromPassword()
-        ↳ unlockWithPassword() [L236]
-        ↳ setMasterPassword() [L191]
+    └ encryptionSession.ts [L47] → deriveKeyFromPassword()
+        └ unlockWithPassword() [L236]
+        └ setMasterPassword() [L191]
 
 crypto.ts [L319] → hashPasswordWithPBKDF2() ← masterPassword.ts [verifyMasterPassword]
 crypto.ts [L13] → PBKDF2_ITERATIONS = 100,000
@@ -98,7 +98,7 @@ masterPasswordUi.ts [popup] [community=38]
 **重要な発見**: 
 - `deriveKey()` と `hashPasswordWithPBKDF2()` は `crypto.ts` 内の別関数。`deriveKeyFromPassword()` は storage から iteration を読み込む単一の入り口。
 - `ENVELOPE_ITERATIONS = 600,000` が既に `crypto.ts` に存在するが、マスターパスワード経路では未使用。`PBKDF2_ITERATIONS = 100,000` が使われている。
-- `getOrCreateEncryptionKey()` は `IS_LOCKED` を確認せずにキャッシュを返却する — VULN-017 の核心的欠陥。
+- `getOrCreateEncryptionKey()` は `IS_LOCKED` を確認せずにキャッシュを返却する ― VULN-017 の核心的欠陥。
 
 ### なぜなぜ分析（2026-07-22）
 **仮定**: 「`PBKDF2_ITERATIONS = 100,000` を `ENVELOPE_ITERATIONS = 600,000` に上げるだけで移行は完了する」
@@ -111,7 +111,7 @@ masterPasswordUi.ts [popup] [community=38]
 - **対策**: 受け入れ基準に「既存 100K ハッシュからの移行テスト」を明記し、レガシーフォールバック検証の実装を必須とする
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下が該当することを確認済み）
 ```bash
 grep -n "isChecked\|masterPasswordEnabled.addEventListener\|storage.local.remove" src/dashboard/masterPassword.ts
 grep -n "cachedEncryptionKey\|getOrCreateEncryptionKey" src/utils/storage/encryptionSession.ts

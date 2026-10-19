@@ -1,4 +1,4 @@
-# PBI 2026-09-12-29 — 小型バグバンドル（4 件）
+# PBI 2026-09-12-29 ― 小型バグバンドル（4 件）
 
 - **種別**: 🔧非機能追加（fix）
 - **優先度**: 5 位 / RICE **12.0**（R15 × I1 × C80% / E1.0人日）
@@ -10,10 +10,10 @@
 
 ## スコープ（4 件）
 
-- [ ] **statusToggleBtn の二重配線**: `statusPanel.ts:72-88` — initStatusPanel が whitelist write 後に再帰する（:390,:415 `await initStatusPanel()`）ため toggle handler が蓄積。`wireOnce`（domUtils・PBI 20 で新設）を適用
-- [ ] **removeAll が N 回の即時 flush**: `tabCache.ts:154-156` — bulk 窓閉じで tab 数分の session 書込が発生（PBI 24 で remove を flushImmediately 化した副作用）。batch + 単一 flush に修正
-- [ ] **contentKernel の gate! 非null assert**: `contentKernel.ts:347` — pre-init `checkVisitConditions()` で crash（thresholds は round 6 に fallback 済み・gate は未対応）。null ガードを追加
-- [ ] **tagClusterLoading の stale labels**: `tagClusterLoading.ts:21-26` — label を field init で解決し locale 切替に追随しない。`show()` 毎に再解決（previewView.refreshLabels と同型）
+- [ ] **statusToggleBtn の二重配線**: `statusPanel.ts:72-88` ― initStatusPanel が whitelist write 後に再帰する（:390,:415 `await initStatusPanel()`）ため toggle handler が蓄積。`wireOnce`（domUtils・PBI 20 で新設）を適用
+- [ ] **removeAll が N 回の即時 flush**: `tabCache.ts:154-156` ― bulk 窓閉じで tab 数分の session 書込が発生（PBI 24 で remove を flushImmediately 化した副作用）。batch + 単一 flush に修正
+- [ ] **contentKernel の gate! 非null assert**: `contentKernel.ts:347` ― pre-init `checkVisitConditions()` で crash（thresholds は round 6 に fallback 済み・gate は未対応）。null ガードを追加
+- [ ] **tagClusterLoading の stale labels**: `tagClusterLoading.ts:21-26` ― label を field init で解決し locale 切替に追随しない。`show()` 毎に再解決（previewView.refreshLabels と同型）
 
 ## 受け入れ基準（BDD）
 

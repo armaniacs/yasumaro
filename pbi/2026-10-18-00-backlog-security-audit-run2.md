@@ -64,18 +64,18 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - **B5（単独・工数大）**: 18, 25
 
 **2026-10-19 の完了で判明した追加の残課題**（PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー由来。9 件を RICE 採点して起票済み。実行順は [00-INDEX.md](00-INDEX.md) の 2026-10-19 節）:
-- ✅ [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600。**2026-10-19 完了・アーカイブ済み**（同意の単位を allowlist に追加し、畳まれたプロファイルの救済を追加）
-- ✅ [2026-10-19-02-fix-consent-gate-wiring-coverage.md](../dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md) — `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640。**2026-10-19 完了・アーカイブ済み**（ガイドに適用範囲の表を追加し、未使用 export を削除）
-- ✅ [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — **同意撤回後も記録が出ていく経路 3 件**（オフライン再送アラーム / 通知の「保存」 / 週次・月次レビュー要約）。受付時の同意は実行を許可しない（PBI 02 の独立レビューが実証）。RICE 480。**2026-10-19 完了・アーカイブ済み**（実行時再確認を採用し、キューは保持）
-- ✅ [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](../dev-docs/archived/pbi/2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — ダッシュボードの「Obsidian へ追記」`append_to_obsidian` が同意ゲートの外（dashboardSqlite に同意コードが 1 つも無い）。PBI 02 の表の「Obsidian 書き出しは継承」を直接反証（PBI 02 の独立レビューが実証）。RICE 400。**2026-10-19 完了・アーカイブ済み**（実行時再確認を追加し、行を読む前に拒否）
-- ✅ [2026-10-19-12-fix-settings-export-consent-record.md](../dev-docs/archived/pbi/2026-10-19-12-fix-settings-export-consent-record.md) — **設定のエクスポート/インポートが同意レコードを運ぶ**（PBI 02 の inventory 中に発見）。RICE 300。**2026-10-19 完了・アーカイブ済み**（同意レコード 4 キーを export で除外・import で無視。移行材料 2 キーは import のみ無視）
-- ✅ [2026-10-19-07-fix-consent-return-path-settings.md](../dev-docs/archived/pbi/2026-10-19-07-fix-consent-return-path-settings.md) — 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う（PBI 05 の独立レビュー由来）。RICE 160。**2026-10-19 完了・アーカイブ済み**（Privacy タブに同意アクションを追加、猶予を解除、案内文と PRIVACY.md を追随）
-- ✅ [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../dev-docs/archived/pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) — gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。RICE 320。**2026-10-19 完了・アーカイブ済み**（5 サイトを `noRedirectInit` へ寄せ、2 次リクエストの不在を mock で固定）
-- ✅ [2026-10-19-04-fix-redirect-real-behavior-e2e.md](../dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md) — redirect 拒否の実挙動を検証したテストが 0 件。接続テストの `redirected` ガードも非対称（PBI 01 / 08 由来）。RICE 400。**2026-10-19 完了・アーカイブ済み**（実サーバ + 実ブラウザの E2E で転送先へのリクエスト 0 件を実測、接続テストに対称ガードを追加）
-- ✅ [2026-10-19-05-fix-redirect-single-declaration.md](../dev-docs/archived/pbi/2026-10-19-05-fix-redirect-single-declaration.md) — 共通 seam が「単一宣言」になっていない（PBI 01 / 08 の独立レビュー由来）。RICE 400。**2026-10-19 完了・アーカイブ済み**（`noRedirectInit` の型 seam で後置上書きを `TS2353` にし、実定数を pin するテストを追加）
-- ✅ [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) — `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800。**2026-10-19 完了・アーカイブ済み**（なぜなぜ分析により `versions` マップを廃止）
-- ✅ [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](../dev-docs/archived/pbi/2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) — `jsdomFileCount` の 360 → 362 に推移と原因が無い（PBI 01 / 08 の独立レビュー由来。予算コメント自身の規約違反）。RICE 100。**2026-10-19 完了・アーカイブ済み**（実測で「1 減 + 3 増」と特定し、ADR に推移表と引き上げ手順を追加。ゲート値は不変）
-- ✅ [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67。**2026-10-19 完了・アーカイブ済み**（live の 4 断片を `〔復元不能〕` 明示で復元し、アーカイブの Hangul 残存は PBI 13 として起票）
+- ✅ [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 単一オブジェクト設定移行が `privacy_consent` と拒否カウンタ 2 キーを `settings` ブロブへ畳む（PBI 05 由来。**局所再現済み**）。RICE 600。**2026-10-19 完了・アーカイブ済み**（同意の単位を allowlist に追加し、畳まれたプロファイルの救済を追加）
+- ✅ [2026-10-19-02-fix-consent-gate-wiring-coverage.md](../dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md) ― `requireConsent` が未配線。同意ゲートの適用範囲（記録以外の外部送信）が未整理（PBI 05 の独立レビュー由来）。RICE 640。**2026-10-19 完了・アーカイブ済み**（ガイドに適用範囲の表を追加し、未使用 export を削除）
+- ✅ [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) ― **同意撤回後も記録が出ていく経路 3 件**（オフライン再送アラーム / 通知の「保存」 / 週次・月次レビュー要約）。受付時の同意は実行を許可しない（PBI 02 の独立レビューが実証）。RICE 480。**2026-10-19 完了・アーカイブ済み**（実行時再確認を採用し、キューは保持）
+- ✅ [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](../dev-docs/archived/pbi/2026-10-19-11-fix-dashboard-obsidian-export-consent.md) ― ダッシュボードの「Obsidian へ追記」`append_to_obsidian` が同意ゲートの外（dashboardSqlite に同意コードが 1 つも無い）。PBI 02 の表の「Obsidian 書き出しは継承」を直接反証（PBI 02 の独立レビューが実証）。RICE 400。**2026-10-19 完了・アーカイブ済み**（実行時再確認を追加し、行を読む前に拒否）
+- ✅ [2026-10-19-12-fix-settings-export-consent-record.md](../dev-docs/archived/pbi/2026-10-19-12-fix-settings-export-consent-record.md) ― **設定のエクスポート/インポートが同意レコードを運ぶ**（PBI 02 の inventory 中に発見）。RICE 300。**2026-10-19 完了・アーカイブ済み**（同意レコード 4 キーを export で除外・import で無視。移行材料 2 キーは import のみ無視）
+- ✅ [2026-10-19-07-fix-consent-return-path-settings.md](../dev-docs/archived/pbi/2026-10-19-07-fix-consent-return-path-settings.md) ― 設定画面に同意へ戻る経路が無く、拒否時の案内文が実装と食い違う（PBI 05 の独立レビュー由来）。RICE 160。**2026-10-19 完了・アーカイブ済み**（Privacy タブに同意アクションを追加、猶予を解除、案内文と PRIVACY.md を追随）
+- ✅ [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../dev-docs/archived/pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) ― gist / tranco の fetch が redirect を追従（PBI 01 / 08 由来。ADR 2026-08-29 の記述は訂正済み）。RICE 320。**2026-10-19 完了・アーカイブ済み**（5 サイトを `noRedirectInit` へ寄せ、2 次リクエストの不在を mock で固定）
+- ✅ [2026-10-19-04-fix-redirect-real-behavior-e2e.md](../dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md) ― redirect 拒否の実挙動を検証したテストが 0 件。接続テストの `redirected` ガードも非対称（PBI 01 / 08 由来）。RICE 400。**2026-10-19 完了・アーカイブ済み**（実サーバ + 実ブラウザの E2E で転送先へのリクエスト 0 件を実測、接続テストに対称ガードを追加）
+- ✅ [2026-10-19-05-fix-redirect-single-declaration.md](../dev-docs/archived/pbi/2026-10-19-05-fix-redirect-single-declaration.md) ― 共通 seam が「単一宣言」になっていない（PBI 01 / 08 の独立レビュー由来）。RICE 400。**2026-10-19 完了・アーカイブ済み**（`noRedirectInit` の型 seam で後置上書きを `TS2353` にし、実定数を pin するテストを追加）
+- ✅ [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) ― `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800。**2026-10-19 完了・アーカイブ済み**（なぜなぜ分析により `versions` マップを廃止）
+- ✅ [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](../dev-docs/archived/pbi/2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) ― `jsdomFileCount` の 360 → 362 に推移と原因が無い（PBI 01 / 08 の独立レビュー由来。予算コメント自身の規約違反）。RICE 100。**2026-10-19 完了・アーカイブ済み**（実測で「1 減 + 3 増」と特定し、ADR に推移表と引き上げ手順を追加。ゲート値は不変）
+- ✅ [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) ― 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67。**2026-10-19 完了・アーカイブ済み**（live の 4 断片を `〔復元不能〕` 明示で復元し、アーカイブの Hangul 残存は PBI 13 として起票）
 
 ## ブロッカー調査結果（2026-10-18 実施）
 
@@ -106,7 +106,7 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 追加で判明した重要事実:
 - **リダイレクト時の Authorization は 3 エンジンとも剥がれる**が、**`x-goog-api-key` は剥がれない**（Fetch 仕様の CORS non-wildcard は Authorization のみ）。Gemini 経路は重大度維持、Bearer 経路は本文転送に限定。307/308 は本文保持。クロスオリジンかつ CORS-unsafe ヘッダ付きなら preflight が先行するため、**転送先が preflight に応答しない限り実リクエストは発行されない**。
 - **Chrome docs 自身が alarms の get-then-create ガードを推奨**（PBI 02 の方針は公式パターン）。
-- **npm ≥ 11.15.0 の EALLOWREMOTE**: 設定レジストリと lockfile の tarball ホストが一致しない依存を拒否する。**オーナー判断（2026-10-18）により `~/.npmrc` の Takumi Guard 設定は残す**（開発機の他プロジェクトでは悪性パッケージのブロックとして実際に有効なため）。そのため PBI 03 は **プロジェクト直下の `.npmrc` に `registry=https://registry.npmjs.org/` と `replace-registry-host=never` を置く**方針とし、リポジトリ内の設定レジストリを公式に固定する（npm の設定優先順位はプロジェクト > ユーザー）。これで再発と EALLOWREMOTE の両方を防げる。トレードオフとして、このリポジトリの依存取得では Takumi Guard のブロックが効かなくなる。
+- **npm ≧ 11.15.0 の EALLOWREMOTE**: 設定レジストリと lockfile の tarball ホストが一致しない依存を拒否する。**オーナー判断（2026-10-18）により `~/.npmrc` の Takumi Guard 設定は残す**（開発機の他プロジェクトでは悪性パッケージのブロックとして実際に有効なため）。そのため PBI 03 は **プロジェクト直下の `.npmrc` に `registry=https://registry.npmjs.org/` と `replace-registry-host=never` を置く**方針とし、リポジトリ内の設定レジストリを公式に固定する（npm の設定優先順位はプロジェクト > ユーザー）。これで再発と EALLOWREMOTE の両方を防げる。トレードオフとして、このリポジトリの依存取得では Takumi Guard のブロックが効かなくなる。
 
 ### PBI 別判定（25件）
 
@@ -180,7 +180,7 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 4. **Obsidian 実機の 1 行観測**（PBI 16）: 隔離 vault で `[text] (url)` が非リンクであることを確認（調査ではほぼ確定）。
 5. **残り 1080 件の integrity 突合**（PBI 03）: 必要ならスクリプト化して全件照合。
 
-## 却下（rejected）— PBI 化しない4件
+## 却下（rejected）― PBI 化しない4件
 
 ソースで反証済みのため、次回ランで evidence が変わるまで再主張しない。詳細と fingerprint は
 `findings.json` と REPORT.md の Rejected 節を参照。

@@ -14,9 +14,9 @@
 
 ## 背景
 
-- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:331-353` — lmStudio / ollama のプリセットボタンがほぼクローン。差分は btnId / providerKey / messageKey の 3 点のみ。
+- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:331-353` ― lmStudio / ollama のプリセットボタンがほぼクローン。差分は btnId / providerKey / messageKey の 3 点のみ。
 - 同一ファイル内で優先スロットの ID リストが 4 箇所に手書き: `:94`、`:163-165`、`:178`、`:189-191`。`['aiProviderPriority2','aiProviderPriority3']` と 3 要素版が混在。
-- `:181` — `data-priority="${index+1}"` がリストの並び順に暗黙結合。
+- `:181` ― `data-priority="${index+1}"` がリストの並び順に暗黙結合。
 
 ## BDD受け入れシナリオ
 
@@ -92,7 +92,7 @@ Scenario: 既存の優先度設定動作は変わらない
 
 ### 検証（統合ゲート実測）
 
-- `npx tsc --noEmit` 0 errors / `npm run lint` 0 errors・0 warnings（no-greedy-fake-timers 0）/ `npm test` 1024 files passed | 1 skipped・15611 tests passed | 21 skipped / `npm run validate` exit 0（type-check:test baseline 469 ≤ pin 474）。
+- `npx tsc --noEmit` 0 errors / `npm run lint` 0 errors・0 warnings（no-greedy-fake-timers 0）/ `npm test` 1024 files passed | 1 skipped・15611 tests passed | 21 skipped / `npm run validate` exit 0（type-check:test baseline 469 ≦ pin 474）。
 - 本 PBI テスト 3 ファイル 25 tests green、priorityIds を `--repeats=20` で全 run green。
 
 ### 統合時の型修正

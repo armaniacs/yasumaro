@@ -1,4 +1,4 @@
-# PBI: MessageRouter — 19 handlerの浅い登録簿を深い Router moduleに
+# PBI: MessageRouter ― 19 handlerの浅い登録簿を深い Router moduleに
 
 ## ユーザーストーリー
 開発者として、`dispatch(msg, sender) → Response` の1メソッドだけを知ればメッセージのルーティングが完結する深い `MessageRouter` module がほしい、なぜなら現在の `MessageHandlerRegistry` は `register(type, handler, trust, validator)` の薄い登録簿で、interface は19タイプ分の `trust` と `validator` の組み合わせを呼び出し元に露出し、実装は Map への put と `checkSenderTrust` 委譲のみで shallow で、真のバグは `VALID_VISIT` が `content-script-allowed` だが `DASHBOARD_SQLITE` が `extension-only` である等のポリシー漏れに潜み、テストは19タイプ×3送信元の網羅を registry 越しでしか検証できないから

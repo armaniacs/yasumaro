@@ -1,4 +1,4 @@
-# PBI: sqliteHistoryPanel.ts の深化 — カレンダー・診断・エンリッチメント分離
+# PBI: sqliteHistoryPanel.ts の深化 ― カレンダー・診断・エンリッチメント分離
 
 ## ユーザーストーリー
 開発者として、1087行の `sqliteHistoryPanel.ts` からカレンダー操作、診断メタデータ整形、chrome.storage エンリッチメントを独立したモジュールに分離してほしい。

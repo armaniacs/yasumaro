@@ -10,7 +10,7 @@ SQLite 永続化層を保守する開発者として、IDB 直 exec（`IdbVfsBac
 ## 現状（スパイク調査済み）
 - 最大の重複: `src/offscreen/IdbVfsBackend.ts`（434 行・直 exec）と `src/offscreen/opfsWorker/*Handlers`（CRUD + search + audit + purge）が同一操作を別実装
 - テストも対応ごとに分離: `IdbVfsBackend-search-sort` / `opfsWorker-search-sort` / `storageFallback-search-sort`（3 系統）
-- 共通基盤の先行例: `src/offscreen/queryPlan.ts`（`buildQuerySpec` / `QUERY_CAPS` / `matchesExtraWhere`）が既に 3 系統で共有されている — 本 PBI はこれを拡張して SQL 組み立て全体を寄せる
+- 共通基盤の先行例: `src/offscreen/queryPlan.ts`（`buildQuerySpec` / `QUERY_CAPS` / `matchesExtraWhere`）が既に 3 系統で共有されている ― 本 PBI はこれを拡張して SQL 組み立て全体を寄せる
 - 注意（スパイク発見）: FTS evoke 条件と LIKE フォールバック境界、purge 条件、`DELETE` のセマンティクス（InMemoryTransport はソフトデリート・製品 fallback はハードデリート）の差分を取り違えると検索結果が変わる
 
 ## BDD受け入れシナリオ
@@ -51,5 +51,5 @@ Scenario: 既存の検索挙動は不変である
 - [x] ドキュメント更新（スパイクレポートの重複候補 1 に完了印）
 
 ## 実装メモ（2026-09-05・branch 0905c）
-- 完了（commit `a331dc80`、SDD サブエージェント実装・タスクレビュー Approved）。差分可視化テスト（query-backends-parametric）が初回 3 件 RED を検出したが、レビューの裁定で全て parity（COUNT alias・rank AS・テスト文言由来）と確認 — 製品振る舞いの drift は無し。`queryPlan.ts` に `buildFtsSearchStatements` / `buildLikeSearchStatements` / `buildPlainListStatements` / `buildPurgeOldRecordsStatements` / `buildContentPurgeStatements` / `buildAuditLogStatements` 等を新設し、IdbVfsBackend と opfsWorker ハンドラを slimmer 化。FTS evoke / LIKE 境界 / `#tag` ギャップ / audit cap の意図的差分は INTENTIONAL テストで固定。3 系統 search-sort テストをパラメトリック統合（旧ファイル削除）。bench:micro PASS。全 suite 11,668 tests green。
+- 完了（commit `a331dc80`、SDD サブエージェント実装・タスクレビュー Approved）。差分可視化テスト（query-backends-parametric）が初回 3 件 RED を検出したが、レビューの裁定で全て parity（COUNT alias・rank AS・テスト文言由来）と確認 ― 製品振る舞いの drift は無し。`queryPlan.ts` に `buildFtsSearchStatements` / `buildLikeSearchStatements` / `buildPlainListStatements` / `buildPurgeOldRecordsStatements` / `buildContentPurgeStatements` / `buildAuditLogStatements` 等を新設し、IdbVfsBackend と opfsWorker ハンドラを slimmer 化。FTS evoke / LIKE 境界 / `#tag` ギャップ / audit cap の意図的差分は INTENTIONAL テストで固定。3 系統 search-sort テストをパラメトリック統合（旧ファイル削除）。bench:micro PASS。全 suite 11,668 tests green。
 - 残置（Minor・意図的）: `handleGetCount` の COUNT 文面重複（用途別のため共有見送り）。

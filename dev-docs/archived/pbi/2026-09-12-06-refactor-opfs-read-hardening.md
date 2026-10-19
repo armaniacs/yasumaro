@@ -1,4 +1,4 @@
-# PBI 2026-09-12-06 — OPFS read path hardening（offset 正規化 + worker 既定値の死除去）
+# PBI 2026-09-12-06 ― OPFS read path hardening（offset 正規化 + worker 既定値の死除去）
 
 - **種別**: 🔧非機能追加（refactor・防御層 + backend 差異封じ）
 - **優先度**: 6 位 / RICE **8.5**（R8 × I1 × C80% / E0.75人日）
@@ -7,7 +7,7 @@
 ## 背景（なぜ）
 
 - `opfsWorker/crudHandlers.ts:38` が `buildPlainListStatements({ ...spec, limit, offset })` で spec を上書きする。planQuery が上游で clamp するため現在は到達不能だが、spread は「worker が wire 値を再適用できる」という誤った誘惑を残す（IDB backend は spec 素通しで非対称）
-- `offset` はどこでも無検証（`queryPlan.ts:175` `offset = query.offset ?? 0`）。SQL backend は `OFFSET -5` を SQLite に渡し、`storageFallback.ts:290-292` は `slice(-5,…)` で末尾から数える — backend 間で行が発散するクラス
+- `offset` はどこでも無検証（`queryPlan.ts:175` `offset = query.offset ?? 0`）。SQL backend は `OFFSET -5` を SQLite に渡し、`storageFallback.ts:290-292` は `slice(-5,…)` で末尾から数える ― backend 間で行が発散するクラス
 - 既定値 3 流儀（worker plain 20 / worker search 50 / planner 100）が死コード化
 
 ## スコープ

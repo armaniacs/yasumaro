@@ -1,4 +1,4 @@
-# Backlog — 将来候補の統合台帳（2026-09-05 整理）
+# Backlog ― 将来候補の統合台帳（2026-09-05 整理）
 
 旧ラウンド backlog（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）の全 PBI は実装・アーカイブ済み。本文書は各 backlog に散在していた**見送り・トリガー付き・製品判断待ち**の候補を 1 箇所に統合したもので、`pbi/` 配下の唯一の live 台帳である（ゲート付き PBI 32 を除く）。2026-09-23 整理で 0915〜0921 ラウンド台帳の未採番候補も本書へ統合した（各ラウンド台帳はアーカイブ済み）。
 
@@ -16,7 +16,7 @@
 |------|----------|------|
 | provider catalog 残債（06d 候補・5 項目） | 次に AI provider を追加するとき（`PROVIDER_REGISTRY` エントリ追加時） | `cspDomains.ts` の host-permission build 時生成・`cspValidator.PROVIDER_TO_DOMAIN`（Models.dev 由来の別レイヤ）・`aiLimits.PROVIDER_MAX_TOKENS` の catalog 吸収（出典管理が別課題）。**2026-09-29 レビューで乖離を実証**: aiLimits.ts:7-17 は slot 実 id と不一致で、slot id が `openai-compatible` に解決される groq/perplexity/openrouter/anthropic/claude/localai の cap は到達不能・`openai2`/`lm-studio`/`openai-compatible`/`built-in-ai` は欠落・幻の `'localai'` が builtInAIClient.ts:205 で使用。cap が効くのは openai/gemini/ollama のみ（残りは GLOBAL_MAX_TOKENS=16000 にフォールバック）・`RemoteAIService` factory 分岐の `createProvider` 化（循環リスク要設計）・per-provider `StorageKeys`/`defaults` の型自動生成（単独 PBI 相当）。出典: 2026-08-31 backlog 06d（効果確認 2026-09-01 済）+ 2026-09-29 大局的レビュー（乖離証拠追記） |
 | text/tokenizer 3 系統 `splitSentences`/`toWordSet` の署名化 | 第 3 の similarity 消費者の出現 | 各 NOTE は正確で動作リスクなし（arch2・Speculative） |
-| debug envelope のヘルパー化 | 次回 testConnection 改修時 | Gemini/OpenAI で debug envelope 組み立てが反復（形状差の検証が必要 — arch4/arch5 見送り） |
+| debug envelope のヘルパー化 | 次回 testConnection 改修時 | Gemini/OpenAI で debug envelope 組み立てが反復（形状差の検証が必要 ― arch4/arch5 見送り） |
 | `extractMainContent` string entry の削減 | bench の再計測タイミング（c1/c4 baseline 更新時） | entry 2 種は c1/c4 計測面として維持中（PBI 13・arch5 見送り） |
 | concurrency idiom 統合 | 原子性バグが強制したとき | Mutex / storageTransaction / keySerializer / PersistentRetryQueue の横断整理（arch3/4/5 で 3 回見送り・新規欠陥なし） |
 
@@ -25,7 +25,7 @@
 | 項目 | 判断内容 | 現状 |
 |------|----------|------|
 | `helpers.ts` deep-scan 機構の wire-or-delete | ルール 1 本の配線（製品判断）か機構削除（c3 ベンチ＋baseline メトリクス削除を伴う）か | 本番 consumer 0・実行時コスト ~0・NOTE で意図明示（arch2・RICE 13.3） |
-| Option B: IDB 中間層の廃止可否 | 前提として fallback-only 到達率の測定が必要（テレメトリなし製品のため privacy 制約下の計測設計が先 — ADR-014「計測基盤を先に作る」の文脈） | 検索品質縮退（FTS→LIKE）を全利用者に転嫁するため未測定のまま決定禁止（スパイク Option B・判断保留） |
+| Option B: IDB 中間層の廃止可否 | 前提として fallback-only 到達率の測定が必要（テレメトリなし製品のため privacy 制約下の計測設計が先 ― ADR-014「計測基盤を先に作る」の文脈） | 検索品質縮退（FTS→LIKE）を全利用者に転嫁するため未測定のまま決定禁止（スパイク Option B・判断保留） |
 
 ## 次ラウンド再評価（実行可能・優先度未確定）
 
@@ -45,7 +45,7 @@
 | 項目 | 現状 | 出典 |
 |------|------|------|
 | AI slot-runner 統合 | summary loop（length-gate）と test loop（progress/timing）の差分は意図的と再確認（2026-09-07）。重複は for ループ骨格 約8行、実行時コスト0、バグ源になった記録なし。RICE 0.5。3 つ目の slot consumer が設計に現れるまで見送り | arch4/arch5 見送り |
-| fallback 再入ギャップ | OPFS 復活時に IDB 経由の fallback 移行（`tryMigrateFallbackToSqlite`）が発火しない経路。実害はレアケース（次回 SW 再起動時に `OpfsRecoveryService` が回収、データロストなし）、Effort 1.0〜1.5週。**PBI 32（サンセット）で Option B（IDB 中間層廃止）を選ぶ場合のみ優先度繰り上げ** — それまで PBI 32 の設計時考慮事項に留める | スパイク移行経路表 |
+| fallback 再入ギャップ | OPFS 復活時に IDB 経由の fallback 移行（`tryMigrateFallbackToSqlite`）が発火しない経路。実害はレアケース（次回 SW 再起動時に `OpfsRecoveryService` が回収、データロストなし）、Effort 1.0〜1.5週。**PBI 32（サンセット）で Option B（IDB 中間層廃止）を選ぶ場合のみ優先度繰り上げ** ― それまで PBI 32 の設計時考慮事項に留める | スパイク移行経路表 |
 | PBI-B 測定基盤の設計 | fallback-only 到達率を privacy 制約下で計測する設計（診断 STATUS の `compileOptionsSource` 集計は要設計） | スパイク PBI-B 前提 |
 
 **2026-09-07 round 2（arch-delivery-loop・0907a ブランチ）で台帳入り（5 項目）:**
@@ -53,11 +53,11 @@
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
 | Archive validation 三つ巴（validateStructure / validateColumns が同一 PRAGMA reader を二重保持、`readArchiveMeta` は 1 flag の浅い wrapper、backupHandlers の trigger-count 検査は「コピー禁止」警告付き） | 4.8 | **PBI 21/22 着地後**（archiveSessionHandlers・archiveValidation を共有）※2026-09-09 再評価: PRAGMA reader は統合済み、残渣 ~−10LOC は下記 round 3 台帳に移管 |
-| SqliteHistoryModel 21 メソッド → 8（フィルタ系 8 メソッドを `HistoryQuery` 値オブジェクト + `applyQuery(patch)` に畳む。onNavigateIn 順序制約の contract test が前提） | 5.25 | **PBI 2026-09-07-23（View 描画統合）着地後** — 同一ファイルクラスタ ※2026-09-09 再評価で RICE 2.5 に低下、下記 round 3 台帳へ |
+| SqliteHistoryModel 21 メソッド → 8（フィルタ系 8 メソッドを `HistoryQuery` 値オブジェクト + `applyQuery(patch)` に畳む。onNavigateIn 順序制約の contract test が前提） | 5.25 | **PBI 2026-09-07-23（View 描画統合）着地後** ― 同一ファイルクラスタ ※2026-09-09 再評価で RICE 2.5 に低下、下記 round 3 台帳へ |
 | recordingHandlers の MANUAL/SAVE 双子（isSecureUrl + record 尾部 + byteStats 束の重複。`envelopePolicy` の extension-only 扱いを変えない条件で統合可） | 3.5 | envelopePolicy との相互作用を検討する次回 recording ハンドラ改修時 |
 | Archive session 状態機械の二重化（worker `archiveDirty` と panel `archiveDirtyLocal` の同期点 3 箇所、single-flight 3 旗が 2 流儀 4 実装、テスト用内部リセット関数 30+ 参照） | 3.0 | panel 写しを「毎回 status RPC」に置き換える latency 体感の検討後（`ArchiveSession` 値オブジェクト + `withSingleFlight` への統合が解の骨格） |
 
-（UPDATE 許可フィールドの 4 枚舌リスト（RICE 6.0）は 2026-09-09 round 3 の PBI 02 で実装済み — 履歴は `dev-docs/archived/pbi/2026-09-09-02-refactor-update-whitelist-ssot.md`）
+（UPDATE 許可フィールドの 4 枚舌リスト（RICE 6.0）は 2026-09-09 round 3 の PBI 02 で実装済み ― 履歴は `dev-docs/archived/pbi/2026-09-09-02-refactor-update-whitelist-ssot.md`）
 
 **2026-09-09 round 3（arch-delivery-loop・0909a ブランチ）で台帳入り（5 項目）:**
 
@@ -69,19 +69,19 @@
 | SqliteHistoryModel 21→8 畳み込み（contract test `sqliteHistoryModel.navigate.test.ts` 既存。着手時は `toHaveLength(21)` pin を更新） | 2.5 | テスト改修 ~200 行に対する payoff 再評価後 |
 | statusPanel の render-only 狩窄（`recordBtn.disabled` 二重所有解消・cleansing if-chain テーブル化） | 1.6 | recordBtn 二重所有の bug が顕在化したとき |
 
-（statusPanel recordBtn 二重所有は 2026-09-11 再評価で**解消済み**を確認 — PBI 2026-09-05-06 / 2026-09-07-24 の着地で RecordSession が唯一の書き手。cleansing if-chain テーブル化は 2026-09-11 round 4 の PBI 05 で実装済み）
+（statusPanel recordBtn 二重所有は 2026-09-11 再評価で**解消済み**を確認 ― PBI 2026-09-05-06 / 2026-09-07-24 の着地で RecordSession が唯一の書き手。cleansing if-chain テーブル化は 2026-09-11 round 4 の PBI 05 で実装済み）
 
 **2026-09-11 round 5（arch-delivery-loop・0911b ブランチ）で台帳入り（7 項目）:**
 
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
 | sqliteMessages.ts 分割（wire / responses / legacy constants）+ OffscreenResponse 完全性の型ガード（exhaustive assert） | 6.0 | 次に archive/STATUS 改修時（union の 6 変数欠落は round 5 PBI 03 で解消済み） |
-| StorageBackend capability query（supportsArchive — round 4 で意図的先送り） | 8.0 | archive panel gate 改修時 |
+| StorageBackend capability query（supportsArchive ― round 4 で意図的先送り） | 8.0 | archive panel gate 改修時 |
 | popup 3 重 GET_CONTENT coalescing（popup lifetime 計測が前提）+ i18n 英語フォールバック撲滅（`(getMessage(key) \|\| 'English')` の全数洗い出し） | 5.3 | popup lifetime 計測後 / 次回 popup UI 改修時 |
 | content scheduler 統合（throttle rAF / IdleScheduler / DeadlineTimer の 3 系統）+ ContentKernel.dispose + cleansing PoC wire-or-delete（content bundle 計測が前提） | 5.3 | 次回 content perf 改修時 |
-| 小型バグ群（全件 2026-09-11 round 5 で現存確認・file path 一部移動済）: throttle beforeunload listener 漏れ（src/content/throttle.ts:32-39）・DeadlineTimer 非null assert（deadlineTimer.ts:70,97）・**previewPresenter promise leak（:219-228 — popup modal で永久ハング、最も本物に近い）**・CSP/allowlist 3 テーブル drift（urlWhitelist ⊊ cspValidator ⊆ manifest）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:48-55） | — | 個別に顕在化したとき（previewPresenter hang は popup modal 不具合報告時に最優先） |
-| dailyNotePath %2e%2e | — | **sink 追跡完了（round 5）**: URL path 経由だが attacker は自分自身の OBSIDIAN_DAILY_PATH 設定のみ → 脆弱性昇格せず。hardening（%2e-aware reject in sanitizePathComponent）として随時可 |
-| ADR 2026-08-27-limit-policy / panel-lifecycle-wave1 の status note 追加 | — | PBI 08 で limit-policy は対応済み。wave1 は次回 panel lifecycle 改修時 |
+| 小型バグ群（全件 2026-09-11 round 5 で現存確認・file path 一部移動済）: throttle beforeunload listener 漏れ（src/content/throttle.ts:32-39）・DeadlineTimer 非null assert（deadlineTimer.ts:70,97）・**previewPresenter promise leak（:219-228 ― popup modal で永久ハング、最も本物に近い）**・CSP/allowlist 3 テーブル drift（urlWhitelist ⊂ cspValidator ⊆ manifest）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:48-55） | ― | 個別に顕在化したとき（previewPresenter hang は popup modal 不具合報告時に最優先） |
+| dailyNotePath %2e%2e | ― | **sink 追跡完了（round 5）**: URL path 経由だが attacker は自分自身の OBSIDIAN_DAILY_PATH 設定のみ → 脆弱性昇格せず。hardening（%2e-aware reject in sanitizePathComponent）として随時可 |
+| ADR 2026-08-27-limit-policy / panel-lifecycle-wave1 の status note 追加 | ― | PBI 08 で limit-policy は対応済み。wave1 は次回 panel lifecycle 改修時 |
 
 （round 4 台帳の InMemoryTransport default-limit 乖離は round 4 で解消済み、query cap 統合のトリガーは round 5 で発火し PBI 08 として完了）
 
@@ -98,14 +98,14 @@
 | FallbackStorage.query の alias 再派生削除（planner が正規化済み・test-only shim が production に残留） | 2.7 | 次に fallback storage 改修時 |
 | supportsArchive doc/code 一致（handleArchive は per-method probe・StorageBackend コメントは unit-travel 主張・subset backend 実装時の bug クラス） | 2.4 | 次に archive dispatch 改修時 |
 | repo facade 3 枚（recordsRepo / dbMaintenance / auditLogRepo が delegate のみ・ getStatus だけが実ロジック） | 2.0 | 横断 concern（retry/tracing）導入時 |
-| 予備観察: previewView dead interface members（show/close/setCleansingInfo/resetBodyWidth は production 未使用・test のみ） | — | 次に preview view 改修時（interface 縮小か test-only 文書化） |
+| 予備観察: previewView dead interface members（show/close/setCleansingInfo/resetBodyWidth は production 未使用・test のみ） | ― | 次に preview view 改修時（interface 縮小か test-only 文書化） |
 
 **2026-09-11 round 7（arch-delivery-loop・0911a ブランチ）で台帳入り（2 項目）:**
 
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
-| e2e gap: history panel UI spec（tag filter / pagination / star — High）+ cleansing preview confirm-send spec（High） | 4.0 | e2e 実行可能環境（xvfb あり）でのラウンド — 本環境では check-e2e が skip になり新規 spec を実行検証できない |
-| popup/settingsScreen 復活の要否（dead code は round 7 PBI 04 で削除済み — 将来 settings 画面を戻す場合は新規実装） | — | 製品判断が出たとき |
+| e2e gap: history panel UI spec（tag filter / pagination / star ― High）+ cleansing preview confirm-send spec（High） | 4.0 | e2e 実行可能環境（xvfb あり）でのラウンド ― 本環境では check-e2e が skip になり新規 spec を実行検証できない |
+| popup/settingsScreen 復活の要否（dead code は round 7 PBI 04 で削除済み ― 将来 settings 画面を戻す場合は新規実装） | ― | 製品判断が出たとき |
 
 （round 6 台帳の「i18n 未使用キー手動パス」は round 7 PBI 02 で機械化・実行（104 key 削除・残り 177 件は kept 判定）。「cleanse flag cache」は round 7 PBI 05 で解消。台帳トリガー駆動項目（archive codec / testConnection / Local AI / DialogShell / trustSettings / archivePanel 分離 / SqliteHistoryModel / DashboardSqlite 3-seam / ErrorTaxonomy / offscreen-cleanse PoC）は全件トリガー未発火で維持。）
 
@@ -130,37 +130,37 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | ErrorTaxonomy（4 分類器 errorClassification / popup errorUtils / categorizeError / mapConnectionError 系 + ERROR_CODES.md 未参照・statusCode 0 の正規表現） | 3.2 | エラー分類大改修時（段階移行必須） |
 | DashboardSqlite deps 30 メソッド shallow adapter → query/mutate/maintain 3 seam + READ_ONLY/TOKEN_EXEMPT 統合（セキュリティゲート触及・dashboardSqliteMock 対応が必要） | 2.7 | dashboard-sqlite ハンドラ改修時 |
 | SqliteEngineHost 14 accessor 崩し + getBackend/ensureBackend キャッシュ二重経路（stale backend の恐れ） | 1.6 | init/fallback 系バグが顕在化したとき |
-| 小型バグ群（各個に顕在化時 fix）: throttle beforeunload listener 漏れ（src/content/utils/throttle.ts:32-39）・DeadlineTimer 非null assert で pre-init crash（deadlineTimer.ts:70,96-106）・previewPresenter promise leak（DOM 欠損で永久ハング・:227-236）・CSP/allowlist 3 テーブル membership drift（nsfw.oisd.nl / tranco-list.eu）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:49-54）・dailyNotePath の %2e%2e 通過（sink 実証後 security fix 昇格） | — | 個別に顕在化したとき |
+| 小型バグ群（各個に顕在化時 fix）: throttle beforeunload listener 漏れ（src/content/utils/throttle.ts:32-39）・DeadlineTimer 非null assert で pre-init crash（deadlineTimer.ts:70,96-106）・previewPresenter promise leak（DOM 欠損で永久ハング・:227-236）・CSP/allowlist 3 テーブル membership drift（nsfw.oisd.nl / tranco-list.eu）・cleanse flag 毎回 storage 読み（cleansingOffscreenDelegate.ts:13-25）・focusTrap map 無境界（focusTrap.ts:49-54）・dailyNotePath の %2e%2e 通過（sink 実証後 security fix 昇格） | ― | 個別に顕在化したとき |
 
 **2026-09-12 round 10（arch-delivery-loop・0911a ブランチ）で台帳入り（9 項目）:**
 
 | 項目 | RICE | 再評価条件 |
 |------|------|-----------|
 | recordsRepo.serialize の interface 化（active/total 二重 select・delete/ids LIKE リポジトリ重複・`as` 3 箇所。Strong だが Effort 大） | 2.0 | export 列追加時 |
-| IdbVfsBackend の withTransaction 越境 import（opfsWorker/handlers.js から。Worth・中立 module への移動） | — | 次回 backend 改修に同梱 |
-| audit read path の orphan cap 配線（handleAuditLogQuery/queryAuditLog のデフォルト・QUERY_CAPS 参照なし。Worth） | — | STATUS 改修時に同梱（PBI 16 で idb 側 100000 は配線済み） |
-| purge trust-boundary（retentionDays/NaN bind・LIMIT -1 無制限。Speculative） | — | NaN bind 実測後に再評価 |
-| StatusPanel 分割（1456 行 god render・9 セクションの局在化。Worth） | — | 次回 popup 改修時 |
-| TagCluster overlay pipeline（geometry 6 成分 useState・基準半径単一テスト。Worth・視覚のみ） | — | 次回 tag 改修時 |
-| single-flight 統合（generateSummary 3  spellings・TTL/Mode/Trace 欠落。Worth） | — | 4 つ目の consumer 出現時 |
-| notification codec + reason ラベル（4 inline 型 + ラベル 2 重定義。Worth） | — | 次回 notification 改修時 |
-| VisitRateLimiter clock + TabCache twin（直注入 Date.now・SessionStore twin・autoSavedBadgeTabs 2 系統。Speculative） | — | 次回該当改修時 |
+| IdbVfsBackend の withTransaction 越境 import（opfsWorker/handlers.js から。Worth・中立 module への移動） | ― | 次回 backend 改修に同梱 |
+| audit read path の orphan cap 配線（handleAuditLogQuery/queryAuditLog のデフォルト・QUERY_CAPS 参照なし。Worth） | ― | STATUS 改修時に同梱（PBI 16 で idb 側 100000 は配線済み） |
+| purge trust-boundary（retentionDays/NaN bind・LIMIT -1 無制限。Speculative） | ― | NaN bind 実測後に再評価 |
+| StatusPanel 分割（1456 行 god render・9 セクションの局在化。Worth） | ― | 次回 popup 改修時 |
+| TagCluster overlay pipeline（geometry 6 成分 useState・基準半径単一テスト。Worth・視覚のみ） | ― | 次回 tag 改修時 |
+| single-flight 統合（generateSummary 3  spellings・TTL/Mode/Trace 欠落。Worth） | ― | 4 つ目の consumer 出現時 |
+| notification codec + reason ラベル（4 inline 型 + ラベル 2 重定義。Worth） | ― | 次回 notification 改修時 |
+| VisitRateLimiter clock + TabCache twin（直注入 Date.now・SessionStore twin・autoSavedBadgeTabs 2 系統。Speculative） | ― | 次回該当改修時 |
 
 **2026-09-23 整理（0915〜0921 ラウンド台帳の未採番候補を統合・7 項目）:**
 
 | 項目 | RICE | 再評価条件 | 出典 |
 |------|------|-----------|------|
 | 合成ルートの二重化解消（compositionManifest 深掘り・サービス配線の複数経路統合） | 7.0 | 次回 composition root（createBackgroundServices 周辺）の大改修時 | [0915b](../dev-docs/archived/pbi/2026-09-15-00-backlog-archloop-0915b.md) |
-| MAX_PROVIDERS 超過の明示化（`slice(0, 10)` は通常操作で到達不能の防御的上限。対応時は超過分のログ出力+設定 UI 警告をセットで） | — | provider スロットを UI 側で5個以上に拡張する時 / UI を経由しないスロット生成経路（settings import 等）を追加する時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
-| utils/ の物理再階層化（約120モジュール移動。層定義は PBI 2026-09-17-05 で import boundary lint として機械化済み） | — | PBI 05 完了後に violation 率・循環 dynamic import の残数が基準を超える時 / `utils/` の新規追加が分類作業の継続コスト化した時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
+| MAX_PROVIDERS 超過の明示化（`slice(0, 10)` は通常操作で到達不能の防御的上限。対応時は超過分のログ出力+設定 UI 警告をセットで） | ― | provider スロットを UI 側で5個以上に拡張する時 / UI を経由しないスロット生成経路（settings import 等）を追加する時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
+| utils/ の物理再階層化（約120モジュール移動。層定義は PBI 2026-09-17-05 で import boundary lint として機械化済み） | ― | PBI 05 完了後に violation 率・循環 dynamic import の残数が基準を超える時 / `utils/` の新規追加が分類作業の継続コスト化した時 | [0917](../dev-docs/archived/pbi/2026-09-17-00-backlog-arch-review-0917.md) |
 | formatBytes 双子統合（cleansingStatsView の4桁有効数字 GB/MB/KB 版と entryByteDelta の toFixed(1) MB/KB/B 版。出力差の統一は意図的 UI 変更になる） | 1.6 | UI 出力統一の要望 / いずれかの形式変更が必要になった時 | [0918b](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918b.md) |
 | console → logger seam 統一（dashboard/popup 約30サイト。init tracing は意図的 console の可能性があり設計判断が残る） | 2.1 | 可観測性方針の明確化（console 残置の許容範囲を LAYERS.md 等に規定する時）/ ダッシュボードのエラーログ収集を強化する時 | [0918c](../dev-docs/archived/pbi/2026-09-18-00-backlog-holistic-0918c.md) |
-| P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | — | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md)。**2026-09-28 追記**: archiveWireTable 行内の `backendArgs`/`depsArgs` 双子（7 行 byte 同一・`archivePreview` のみ `includeDeleted` 正規化が乖離、`src/messaging/archiveWireTable.ts:219/220` 等対 `:126/127`）を着手時の同梱対象に含める |
-| P4: ensureBackend/getBackend の resolver 入力 literal（trivial サイズ） | — | backend 状態 field の追加時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
+| P3: 2 wire table の dashboard-hop codec 形状統合（interface 抽出のみで deletion test passes） | ― | 2 wire table を同時に改修する時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md)。**2026-09-28 追記**: archiveWireTable 行内の `backendArgs`/`depsArgs` 双子（7 行 byte 同一・`archivePreview` のみ `includeDeleted` 正規化が乖離、`src/messaging/archiveWireTable.ts:219/220` 等対 `:126/127`）を着手時の同梱対象に含める |
+| P4: ensureBackend/getBackend の resolver 入力 literal（trivial サイズ） | ― | backend 状態 field の追加時 | [0921](../dev-docs/archived/pbi/2026-09-21-00-backlog-archloop-0921.md) |
 | ProviderSlotRunner 化（要約 7 フック + 接続テスト 3 フックのスロット走査を `runSlots(slots, task)` に統合。slotFailures 組立の 2 経路 drift を構造的に防止） | 4.0 | 直近の VULN-001/002 修正（origin 認可・ペアリング禁止）の運用が落ち着いた後の AI プロバイダ改修時 | [0923](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md) |
 | queryPlan Interface 圧縮（`planStorageQuery(q): QuerySpec` 唯一 Seam 化 + `qualifyCondition` regex の列ホワイトリスト駆動置換） | 1.5 | OPFS/IDB/fallback 以外の backend 追加時 / 新列追加で qualifyCondition 誤爆が顕在化する時 | [0923](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923.md) |
 | CleansingRuleView（32 ルールの view 3 重列挙: V2 × per-site × content デフォルトを `ruleBindings/reflect/read/resolveForDomain` の単一 Seam に） | 4.8 | ルール追加・改名時 / V2・per-site・content の同時改修時（preset-store busy-window との干渉に注意） | [0923b](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923b.md) |
-| KeyDerivation（PBKDF2 知識 3 箇所＋key cache 3 系統を `deriveKey({password, salt, purpose})` に統一。legacy iteration の sunset は不可 — 2026-09-22-11 の parked 境界） | 2.5 | KDF パラメータ変更時 | [0923b](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923b.md) |
+| KeyDerivation（PBKDF2 知識 3 箇所＋key cache 3 系統を `deriveKey({password, salt, purpose})` に統一。legacy iteration の sunset は不可 ― 2026-09-22-11 の parked 境界） | 2.5 | KDF パラメータ変更時 | [0923b](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923b.md) |
 | Retry-policy Module（gateway / transport / storage CAS / visitAdmission / fetch / stepExecutor / tranco の 7 retry 綴りを `shouldRetry＋delayMs` の単一 Seam に。retriable 述語自体は統一対象外） | 2.7 | いずれかの retry 系改修時 | [0923c](../dev-docs/archived/pbi/2026-09-23-00-backlog-archloop-0923c.md) |
 
 （0915 は全11候補が PBI 02-12 として消化済み、holistic-0921 の台帳送り3件は 2026-09-22 の保留候補 PBI 01/02/03 として採番済みのため、両台帳は候補ゼロでアーカイブ。0915b の PBI 03 でスコープ外とした recordingCache ensureReady の別候補は RecordingCache→RecordingCacheInstance 移行（2026-08-17）後の実在確認が前提のため、次回 recording cache 系改修時に要否を再評価する。）
@@ -170,10 +170,10 @@ pending pages の SQLite パネル移設 + legacy panel-history 撤去（〜−1
 | 項目 | RICE | 再評価条件 | 出典 |
 |------|------|-----------|------|
 | 熟読度フィルター＆マトリクス（提案1・不採用→トリガー管理） | 0.60 | 可視区間の累積計時が記録経路に配線されたとき（`visit_duration` は新規行で常に NULL・滞在時間パネルは `54cfab5e` で撤去済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
-| 遷移データだけを削除するボタン（`nav_source_url` / `search_query` の 2 列のみを消す操作） | — | ユーザーから要望があったとき（現状は記録 OFF が将来行も止めるのみ・既存行は履歴削除で消える） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
-| `EXPORT_COLUMNS` に遷移の 2 列を加える | — | エクスポートの互換方針を見直すとき（`fallback_reason` と同じく列は固定） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
-| 手動保存でも遷移を記録する（03 の v1 は自動記録 `valid-visit` のみ対象） | — | PBI 03 完了後の利用実態確認後（03 は 2026-09-26 に実装完了・アーカイブ済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
-| キーワード単位のループ検出（`wordClusterAdapter` の語抽出を流用し、タグ OFF のユーザーにもテーマ単位のループを出す） | — | PBI 01 完了後（完了済み）にドメイン・URL 単位では粗いという声が出たとき | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 遷移データだけを削除するボタン（`nav_source_url` / `search_query` の 2 列のみを消す操作） | ― | ユーザーから要望があったとき（現状は記録 OFF が将来行も止めるのみ・既存行は履歴削除で消える） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| `EXPORT_COLUMNS` に遷移の 2 列を加える | ― | エクスポートの互換方針を見直すとき（`fallback_reason` と同じく列は固定） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| 手動保存でも遷移を記録する（03 の v1 は自動記録 `valid-visit` のみ対象） | ― | PBI 03 完了後の利用実態確認後（03 は 2026-09-26 に実装完了・アーカイブ済み） | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
+| キーワード単位のループ検出（`wordClusterAdapter` の語抽出を流用し、タグ OFF のユーザーにもテーマ単位のループを出す） | ― | PBI 01 完了後（完了済み）にドメイン・URL 単位では粗いという声が出たとき | [metacognition](../dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md) |
 
 （メタ認知台帳の採用 4 PBI（01-04）は全件実装・アーカイブ済みのため、未採番候補 5 件を本台帳へ統合し、台帳は 2026-09-27 にアーカイブ。）
 

@@ -16,8 +16,8 @@ PBI記載では `_locales/ja/messages.json` ベースを想定していたが、
   複数形キー（`ruleCount_one` 等）は `en/messages.json` にのみ存在し `ja/messages.json` には存在しない
   （日本語は複数形区別がないため）。
 - また、実コードの `chrome.i18n.getMessage` 呼び出しには2パターンが混在することを確認した:
-  1. `chrome.i18n.getMessage(key, [array])` — Chrome標準の `$1`/`$2` 位置プレースホルダー
-  2. `getMessage(key, {count: ...})`（`src/utils/i18n.ts` のラッパー経由）— ラッパー内部で
+  1. `chrome.i18n.getMessage(key, [array])` ― Chrome標準の `$1`/`$2` 位置プレースホルダー
+  2. `getMessage(key, {count: ...})`（`src/utils/i18n.ts` のラッパー経由）― ラッパー内部で
      `chrome.i18n.getMessage(key)`（引数なし）を呼んでから `{name}` 形式で独自に置換
   このため、モックの `chrome.i18n.getMessage` 自体は `{name}` 置換を行わず、`message` 文字列をそのまま返す
   必要がある（`placeholders` 定義がある場合のみ `$NAME$` を配列引数から位置置換）。

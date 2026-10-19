@@ -15,11 +15,11 @@
 
 settingsForm の 2 つの purge ハンドラが finally まで書かれて catch を書き忘れた結果、service 呼び出しの拒否が unhandled rejection になり、ステータス領域が空のまま残る。
 
-- `src/dashboard/generalSettings/settingsForm.ts:188-208` — `handlePurgeNow()`: `statusEl`（`#purgeNowStatus`）を :194 でクリア → try で `await purgeOldRecordsNow()`（:196）→ `isServiceError` 分岐で結果表示 → finally で button 再 enable のみ。catch がないため、service 呼び出しが reject すると unhandled rejection になり `statusEl` は空のまま
-- `src/dashboard/generalSettings/settingsForm.ts:210-230` — `handleContentPurgeNow()`: 同構造（try :217 / finally :227-229）。`purgeContentNow()` reject 時に `#contentPurgeNowStatus` は :216 でクリアされたまま
-- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:330-331` — `#purgeNowBtn` / `#contentPurgeNowBtn` の click に async ハンドラを直接渡しており、ハンドラの reject がそのまま unhandled rejection として漏れる
+- `src/dashboard/generalSettings/settingsForm.ts:188-208` ― `handlePurgeNow()`: `statusEl`（`#purgeNowStatus`）を :194 でクリア → try で `await purgeOldRecordsNow()`（:196）→ `isServiceError` 分岐で結果表示 → finally で button 再 enable のみ。catch がないため、service 呼び出しが reject すると unhandled rejection になり `statusEl` は空のまま
+- `src/dashboard/generalSettings/settingsForm.ts:210-230` ― `handleContentPurgeNow()`: 同構造（try :217 / finally :227-229）。`purgeContentNow()` reject 時に `#contentPurgeNowStatus` は :216 でクリアされたまま
+- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:330-331` ― `#purgeNowBtn` / `#contentPurgeNowBtn` の click に async ハンドラを直接渡しており、ハンドラの reject がそのまま unhandled rejection として漏れる
 - 呼び出し先は `dashboardSqliteService` 経由の `ServiceResult`（error を戻り値に持つ、settingsForm.ts:20 で import）だが、gateway 拒否など `ServiceResult` 外の例外は reject として届く。現状その経路に境界がない
-- 兄妹ハンドラの統一パターン: `src/dashboard/panels/diagnostic/diagnosticsActions.ts:56` — 「disable button → "Working..." → try/catch → result text → re-enable in finally」。catch で result 要素に失敗テキストを出す（:86-91、:148-153 等）。`src/dashboard/encryptedBackupPanel.ts:60-62` も `setStatus(...errorMessage(error), true)` の同型
+- 兄妹ハンドラの統一パターン: `src/dashboard/panels/diagnostic/diagnosticsActions.ts:56` ― 「disable button → "Working..." → try/catch → result text → re-enable in finally」。catch で result 要素に失敗テキストを出す（:86-91、:148-153 等）。`src/dashboard/encryptedBackupPanel.ts:60-62` も `setStatus(...errorMessage(error), true)` の同型
 
 ## BDDシナリオ
 
@@ -71,8 +71,8 @@ Then unhandled rejection にならず、`#contentPurgeNowStatus` に失敗メッ
 
 ## 実装内容
 
-1. `src/dashboard/generalSettings/settingsForm.ts` — `handlePurgeNow()` に catch を追加し、`statusEl.textContent` に `getMessageOr` で i18n キー + fallback（`errorMessage(error)` 整形）を表示。`handleContentPurgeNow()` に同型の catch を追加。finally の button 再 enable は現状のまま
-2. `src/dashboard/panels/staticForm/generalSettingsPanel.ts:330-331` — listen を catch 付きに変更。表示はハンドラ内 catch が所有するため、listen 側は `console.error` の記録口とする防御境界（二重表示を避ける）
+1. `src/dashboard/generalSettings/settingsForm.ts` ― `handlePurgeNow()` に catch を追加し、`statusEl.textContent` に `getMessageOr` で i18n キー + fallback（`errorMessage(error)` 整形）を表示。`handleContentPurgeNow()` に同型の catch を追加。finally の button 再 enable は現状のまま
+2. `src/dashboard/panels/staticForm/generalSettingsPanel.ts:330-331` ― listen を catch 付きに変更。表示はハンドラ内 catch が所有するため、listen 側は `console.error` の記録口とする防御境界（二重表示を避ける）
 3. メッセージ整形は `errorMessage`（`src/utils/errorUtils.ts`）、i18n は `getMessageOr` で fallback を用意
 
 ## Definition of Done
@@ -87,14 +87,14 @@ Then unhandled rejection にならず、`#contentPurgeNowStatus` に失敗メッ
 
 ### 変更点
 
-- `src/dashboard/generalSettings/settingsForm.ts` — `handlePurgeNow()` と `handleContentPurgeNow()` に catch を追加。`statusEl.textContent` に `errorMessage(error)`（`src/utils/errorUtils.ts`）を代入する形にした。`finally` の button 再 enable・成功/skip/`isServiceError` の各分岐は未変更。
-- `src/dashboard/panels/staticForm/generalSettingsPanel.ts` — `#purgeNowBtn` / `#contentPurgeNowBtn` の click を `onPurgeClick(handler)` ラッパ経由に変更。表示はハンドラ内 catch が所有するため、ラッパは `console.error` の記録口に留めた（二重表示を避ける）。
+- `src/dashboard/generalSettings/settingsForm.ts` ― `handlePurgeNow()` と `handleContentPurgeNow()` に catch を追加。`statusEl.textContent` に `errorMessage(error)`（`src/utils/errorUtils.ts`）を代入する形にした。`finally` の button 再 enable・成功/skip/`isServiceError` の各分岐は未変更。
+- `src/dashboard/panels/staticForm/generalSettingsPanel.ts` ― `#purgeNowBtn` / `#contentPurgeNowBtn` の click を `onPurgeClick(handler)` ラッパ経由に変更。表示はハンドラ内 catch が所有するため、ラッパは `console.error` の記録口に留めた（二重表示を避ける）。
 - 受け入れ基準 3・4（finally の再 enable・成功/skip 文言）はいずれも無変更で満たされている。
 
 ### 追加・更新したテスト
 
-- `src/dashboard/generalSettings/__tests__/settingsForm.coverage.test.ts` — 2 つの既存テストが旧挙動（`rejects.toThrow('boom')` かつ status 空）をアサートしていたため、新挙動（`resolves.toBeUndefined()` かつ status に `'boom'`）へ書き換えた。あわせて各ハンドラに「非 Error の reject 値を `errorMessage` が文字列化する」ケースを 1 件ずつ追加。これは本 PBI が意図した変更そのもの（拒否が unhandled になる旧挙動を固定していたアサーションを直した）。
-- `src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-purge.test.ts`（新規）— click 経由で unhandled rejection が上がらないことを検証。
+- `src/dashboard/generalSettings/__tests__/settingsForm.coverage.test.ts` ― 2 つの既存テストが旧挙動（`rejects.toThrow('boom')` かつ status 空）をアサートしていたため、新挙動（`resolves.toBeUndefined()` かつ status に `'boom'`）へ書き換えた。あわせて各ハンドラに「非 Error の reject 値を `errorMessage` が文字列化する」ケースを 1 件ずつ追加。これは本 PBI が意図した変更そのもの（拒否が unhandled になる旧挙動を固定していたアサーションを直した）。
+- `src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-purge.test.ts`（新規）― click 経由で unhandled rejection が上がらないことを検証。
 - `npx vitest run <batch-B の 11 ファイル> --repeats=20` → 11 files / 301 tests 全回 green。
 
 ### 逸脱

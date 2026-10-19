@@ -1,13 +1,13 @@
-# PBI: Firefox ストレージ移植の中核 — StorageHost seam と manifest/build 整備
+# PBI: Firefox ストレージ移植の中核 ― StorageHost seam と manifest/build 整備
 
 ## ステータス: ✅ 完了（2026-09-14 実機 smoke で記録→検索を確認）
 
 **進捗（2026-09-14・ブランチ 0914c）**: StorageHost seam・manifest/build 整備を実装。chromium ビルドは unit 12,024 + 拡張 e2e（記録・検索）green で無回帰、firefox ビルドは build 成功・manifest 検証済み（gecko.id・権限分岐・opfs-worker エントリ）。実機 smoke（受け入れ基準5）は PBI 11 の QA で実施する。
 
 **実装上の決定（ガイドからの変更）**:
-- 分岐は `supportsOffscreen()`（ランタイム）ではなく `import.meta.env.FIREFOX`（wxt ビルド時定数）で実施 — 未使用トランスポートと engine グラフを各ビルドから物理的に除去（chromium background に engine が混入して iife ビルドが壊れる問題への対処。ランタイム分岐では rolldown の DCE が効かなかった）
+- 分岐は `supportsOffscreen()`（ランタイム）ではなく `import.meta.env.FIREFOX`（wxt ビルド時定数）で実施 ― 未使用トランスポートと engine グラフを各ビルドから物理的に除去（chromium background に engine が混入して iife ビルドが壊れる問題への対処。ランタイム分岐では rolldown の DCE が効かなかった）
 - transport を3ファイルに分割（offscreenTransport.ts = seam + factory / ChromeOffscreenTransport.ts / InPageOffscreenTransport.ts）。InPage transport は handler を constructor 注入し engine グラフを import しない
-- OPFS Worker 生成はファクトリ注入方式（`setOpfsWorkerFactory`）: リテラルは `opfsWorkerFactory.ts`（chromium offscreen 文書のみ）に隔離 — background グラフの worker リテラルが rolldown の worker サブビルドを壊すため
+- OPFS Worker 生成はファクトリ注入方式（`setOpfsWorkerFactory`）: リテラルは `opfsWorkerFactory.ts`（chromium offscreen 文書のみ）に隔離 ― background グラフの worker リテラルが rolldown の worker サブビルドを壊すため
 - offscreen.js グラフのネスト動的 import を静的化（backendResolver 3件・migrationBackup 3件）。**あわせて潜在バグ修正**: migrationBackup の `SQLite.Factory` は存在しない export への参照だった（旧コードは wa-sqlite モジュールに `SQLite` が無く、レガシー IDB バックアップ実行時に必ず TypeError になっていた）→ 正しい `Factory` export を使用
 - background の iife ビルドは `vite:build:extendConfig` hook で `output.codeSplitting = false` を強制（engine のネスト動的 import 対応）
 - `entrypoints/opfs-worker.ts`（unlisted script・`include: ['firefox']`）: firefox ビルド専用の worker バンドル。chromium ビルドからは除外（10MB の重複を回避し bundle-size gate を維持）
@@ -20,7 +20,7 @@ Firefox ユーザー（技術ドキュメントや論文、長文記事をよく
 
 - 順位: 1 / 全候補数 3
 - RICEスコア: 36.0（Reach=30 / Impact=3 / Confidence=80% / Effort=2人日）
-- 根拠: プラットフォーム解锁の中核。最大の不確実要素（Firefox での wa-sqlite OPFS VFS 互換性）は VFS プローブ（main 済み）で解消済み。Phase 1（コンテナ抽象化）と Phase 2（manifest/build）を統合する — manifest なしでは移植の検証ができないため
+- 根拠: プラットフォーム解锁の中核。最大の不確実要素（Firefox での wa-sqlite OPFS VFS 互換性）は VFS プローブ（main 済み）で解消済み。Phase 1（コンテナ抽象化）と Phase 2（manifest/build）を統合する ― manifest なしでは移植の検証ができないため
 
 ## 背景（検証済み事実）
 
@@ -40,7 +40,7 @@ Firefox ユーザー（技術ドキュメントや論文、長文記事をよく
 
 - `supportsOffscreen()`（`src/utils/browserSupport.ts:57`）で分岐:
   - **Chromium**: 現行 `OffscreenDocumentTransport`（offscreen document + `chrome.runtime.sendMessage` 経由）をそのまま使用
-  - **Firefox**: `EventPageWorkerTransport` 新設 — イベントページ（DOM・Worker 可）から `new Worker(chrome.runtime.getURL(...))` で opfsWorker を直接起動し、既存の Worker メッセージ契約（`WorkerRequestMessage` / `WorkerResponseMessage`、`src/offscreen/opfsWorker/types.ts`）を postMessage で流用
+  - **Firefox**: `EventPageWorkerTransport` 新設 ― イベントページ（DOM・Worker 可）から `new Worker(chrome.runtime.getURL(...))` で opfsWorker を直接起動し、既存の Worker メッセージ契約（`WorkerRequestMessage` / `WorkerResponseMessage`、`src/offscreen/opfsWorker/types.ts`）を postMessage で流用
 - `offscreenTransport.ts` の呼び出し側（offscreenGateway 系）は seam 経由のみにし、`chrome.offscreen` 直参照を殺す
 - IDB エンジン（`sqliteEngineContext`）も同様にイベントページ Worker でホストする
 - **wasm は `@subframe7536/dist/wa-sqlite-async.wasm` に固定**（glue と同一ファミリー。同期版は chromium でも動くが ASYNCIFY 版に統一）
@@ -57,7 +57,7 @@ Firefox ユーザー（技術ドキュメントや論文、長文記事をよく
 
 ### 触ってはいけないもの
 
-- `SQLITE_QUERY` 等のメッセージ契約（type / payload / `OffscreenResponse`）— 変更すると Gateway・Handler・dashboard に波及する
+- `SQLITE_QUERY` 等のメッセージ契約（type / payload / `OffscreenResponse`）― 変更すると Gateway・Handler・dashboard に波及する
 - `opfsCapabilities.ts` の実行時 fallback 構造（opfs-sync-worker → idb → fallback はそのまま活用）
 
 ## BDD受け入れシナリオ
@@ -76,7 +76,7 @@ Scenario: offscreen 非対応環境で transport が分岐する
 
 ## 受け入れ基準
 
-- [x] `chrome.offscreen` 直参照が分岐の内側にのみ存在する（実装は `import.meta.env.FIREFOX` ビルド時分岐 — 上記「実装上の決定」参照）
+- [x] `chrome.offscreen` 直参照が分岐の内側にのみ存在する（実装は `import.meta.env.FIREFOX` ビルド時分岐 ― 上記「実装上の決定」参照）
 - [x] `npx wxt build -b firefox` が成功し、unit tests 全件 green
 - [x] Firefox（about:debugging 一時読み込み）で記録 → ダッシュボード検索の smoke が通る（2026-09-14 実機確認済み）
 - [x] manifest に `browser_specific_settings.gecko.id` があり、`offscreen` / `favicon` 権限が chromium ビルドのみ

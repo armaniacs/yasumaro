@@ -1,4 +1,4 @@
-# PBI 2026-09-23-08 — VisitGating Module（content 側 gate 寿命の一元化）
+# PBI 2026-09-23-08 ― VisitGating Module（content 側 gate 寿命の一元化）
 
 **優先度**: 順位 8 / RICE 10.7（Reach 5 × Impact 2 × Confidence 80% ÷ Effort 0.75 人週）
 **根拠**: gate 構築 3 箇所＋fallback 2 連鎖＋scheduler 同居の 533 行 kernel。閾値ソース変更が kernel+timer+extractor+tests に分散する。寿命一元化で gate 行列を約 10 テストに畳める。

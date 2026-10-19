@@ -36,7 +36,7 @@ Scenario: Export all as Markdown が新しい居場所で動く
 ## 受け入れ基準
 
 - [x] `sqliteHistoryPanelView.ts` に pending セクション（一覧 + Record / Record without AI / Delete forever + ページング）を新設、`SQLITE_HISTORY_IDS` に id 追加
-- [x] `sqliteHistoryPanel.ts` に panel-local pending 状態（`getPendingPages` 読み込み、`pending_pages` の onChanged 購読、`destroy()` での解除 — `historyPanel.ts:176-180` と同一後始末）
+- [x] `sqliteHistoryPanel.ts` に panel-local pending 状態（`getPendingPages` 読み込み、`pending_pages` の onChanged 購読、`destroy()` での解除 ― `historyPanel.ts:176-180` と同一後始末）
 - [x] Record は `MANUAL_RECORD` + `sendMessageWithTimeout` 相当（20s timeout + PING フォールバック、`historyUtils.ts:36-56` のセマンティクス）を inline 化
 - [x] Export ボタンを Export Logs パネルへ移設し `dashboard.ts:88` の wiring を再指す（`localMarkdownExport.ts` 無変更・既存テスト green 維持）
 - [x] 新規 i18n キーは追加しない（既存キー再利用・check-i18n PASS）

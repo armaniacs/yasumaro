@@ -8,7 +8,7 @@
 
 - 順位: 2 / 4（本計画の P2）
 - RICEスコア: 5.6（Reach=4 / Impact=2 / Confidence=70% / Effort=1週）
-- 根拠: 実測（初回発見時の実測プローブ。着手時に bench/probe で再計測）で単発 128KB ≈ 1.2ms、2000エントリ集計 ≈ 11ms。正規表現セマンティクスが単純でパリティ容易＝確実に取りに行ける分、Confidence を高めに置いた。速度効果自体は P1 より小さい
+- 根拠: 実測（初回発見時の実測プローブ。着手時に bench/probe で再計測）で単発 128KB ≒ 1.2ms、2000エントリ集計 ≒ 11ms。正規表現セマンティクスが単純でパリティ容易＝確実に取りに行ける分、Confidence を高めに置いた。速度効果自体は P1 より小さい
 
 ## ビジネス価値
 
@@ -72,4 +72,4 @@ Scenario: エンティティ化の順序が保存される
 - 依存関係: なし。実行場所はダッシュボード拡張ページ（CSP 済み）
 - 遵守すべき事項: `sanitizeForObsidian` の適用順（Markdown リンク→wikilink→HTML エンティティ）は意味論であり変更不可
 
-> DoD 補足（2026-09-20）: 受け入れ基準 6/6 チェック（プローブ→クレート2口→ハイブリッド→パリティ→ベンチ→配線+CI+validate 12,761 green）。ただし BDD の「集計時間が短縮する」シナリオは**未達**: 実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x、batch 0.57x〜0.64x — メモリ帯域律速、wasm-bindgen の UTF-8 コピーが支配的）のため、**dark-launch**（MIN_WASM_CHARS=1MB / MIN_WASM_TOTAL_CHARS=2MB で全本入力を TS 経路にルーティング、WASM は CI 同等性ゲートで保守）とした。高速化の再挑戦（PBI-23）も非反転で終了したため、**2026-09-21 に dark-launch 配線ごと撤去**（exportLogsService は TS 直呼びに復帰。クレート・ラッパー・バイナリ・CI ゲート一式は git 履歴参照）。同期呼び出し元は元の直参照のまま。
+> DoD 補足（2026-09-20）: 受け入れ基準 6/6 チェック（プローブ→クレート2口→ハイブリッド→パリティ→ベンチ→配線+CI+validate 12,761 green）。ただし BDD の「集計時間が短縮する」シナリオは**未達**: 実測で WASM が全サイズ TS 負け（single 0.31x〜0.77x、batch 0.57x〜0.64x ― メモリ帯域律速、wasm-bindgen の UTF-8 コピーが支配的）のため、**dark-launch**（MIN_WASM_CHARS=1MB / MIN_WASM_TOTAL_CHARS=2MB で全本入力を TS 経路にルーティング、WASM は CI 同等性ゲートで保守）とした。高速化の再挑戦（PBI-23）も非反転で終了したため、**2026-09-21 に dark-launch 配線ごと撤去**（exportLogsService は TS 直呼びに復帰。クレート・ラッパー・バイナリ・CI ゲート一式は git 履歴参照）。同期呼び出し元は元の直参照のまま。

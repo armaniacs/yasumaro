@@ -14,12 +14,12 @@
 - 解: `optimisticLock.ts` に `withAtomicKeys(keys, updater)` を追加し `withAtomicSavedUrls` の複製を削除。`JSON.stringify` 比較を `structuredClone`+正準化に
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 二重key が原子的に更新される
+Scenario: ハッピーパス ― 二重key が原子的に更新される
   Given `savedUrls` と `savedUrlsWithTimestamps` の2キーを同時に更新する
   When `withAtomicKeys` を呼ぶ
   Then 両キーが単一トランザクションで更新され、行順序に依存しない
 
-Scenario: エッジケース — 並行更新が正しく競合検出される
+Scenario: エッジケース ― 並行更新が正しく競合検出される
   Given 2並行で同じ2キーを更新する
   When 両方が完了する
   Then 片方が `ConflictError` でリトライされ、最終的に整合する

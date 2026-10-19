@@ -9,9 +9,9 @@ popup と content script の保守担当として、記録ボタンの配線が�
 - 順位: 09 / 9
 - RICE スコア: 5.0（Reach=3 / Impact=0.5 / Confidence=100% / Effort=0.15 人週）
 - 根拠（round 6 診断）:
-  - `src/popup/main.ts:16` — `recordBtn.addEventListener` が RecordSession の `onclick`（sole-writer 契約・round 5 PBI 04）と**二重発火**（sessionState guard が守るが契約が文字どおりでない）
-  - `src/content/cleansingOffscreenDelegate.ts:13-25` — flag が default OFF の PoC なのに cleanse 毎に `chrome.storage.local.get` を読む（ホットパス）
-  - `src/dashboard/panels/diagnostic/archivePanel.ts:533-536,545-548` — `ArchiveSessionRowLike` が byte-identical で 2 重定義
+  - `src/popup/main.ts:16` ― `recordBtn.addEventListener` が RecordSession の `onclick`（sole-writer 契約・round 5 PBI 04）と**二重発火**（sessionState guard が守るが契約が文字どおりでない）
+  - `src/content/cleansingOffscreenDelegate.ts:13-25` ― flag が default OFF の PoC なのに cleanse 毎に `chrome.storage.local.get` を読む（ホットパス）
+  - `src/dashboard/panels/diagnostic/archivePanel.ts:533-536,545-548` ― `ArchiveSessionRowLike` が byte-identical で 2 重定義
 
 ## BDD 受け入れシナリオ
 
@@ -45,5 +45,5 @@ XS-S（0.15 人週）。種別: fix。
 ## 実装メモ（2026-09-11 round 6）
 
 - main.ts の recordBtn click listener 削除（onclick sole-writer 契約を文字どおり成立させる・lint 未使用 import も解消）。
-- cleansingOffscreenDelegate の flag cache 化は **本バンドルから外した**（PoC flag OFF であり、onChanged 無効化付き cache は wire-or-delete 台帳項目と一緒に着手する方が context が揃うため — 台帳に残置）。
+- cleansingOffscreenDelegate の flag cache 化は **本バンドルから外した**（PoC flag OFF であり、onChanged 無効化付き cache は wire-or-delete 台帳項目と一緒に着手する方が context が揃うため ― 台帳に残置）。
 - archivePanel `ArchiveSessionRowLike` の byte-identical 2 重定義を 1 箇所に統合。

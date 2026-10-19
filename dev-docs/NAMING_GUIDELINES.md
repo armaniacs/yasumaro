@@ -12,10 +12,10 @@
 
 ## Prohibited Names (Deprecated)
 
-- `obsidian-weave` — old name. Do not use in new documents.
-- `obsidian-smart-history` — old repository name. Do not use in new documents.
-- `Obsidian Weave` — old extension name. Do not use in new documents.
-- `Obsidian Smart History` — old extension name. Do not use in new documents.
+- `obsidian-weave` ― old name. Do not use in new documents.
+- `obsidian-smart-history` ― old repository name. Do not use in new documents.
+- `Obsidian Weave` ― old extension name. Do not use in new documents.
+- `Obsidian Smart History` ― old extension name. Do not use in new documents.
 
 ## Blog & Release Notes Checklist
 

@@ -1,4 +1,4 @@
-# PBI: TrustDb God Module 解体 — TrustPolicy / ManagedCollections / TrustDbKernel への分割
+# PBI: TrustDb God Module 解体 ― TrustPolicy / ManagedCollections / TrustDbKernel への分割
 
 ## ユーザーストーリー
 開発者として、TrustDb の 609 行 God object を 3 つの深い Module に分割したい。なぜなら `isDomainTrusted` / `addUserTld` / `addSensitiveDomain` など 15 facade、静的共有 `initPromise`、15 field 補完の `repairDatabase`、3×`ManagedStringList` が一箇所に集中し、直近 5 hotfix がすべて `repairDatabase` 起因の pipeline-error で、preset 追加が 4 ファイルに跨り漏れが再発するから。
@@ -18,7 +18,7 @@
 - なぜ1: `repairDatabase(db: Record<string,unknown>)` が引数のオブジェクトを in-place mutate し、`wasRepaired` 判定後に `save()` で部分永続化 → `bloomFilterFromData` が throw しても中途半端な DB が残る
 - なぜ2: `WhitelistStore` / `SensitiveDomainStore` が `ManagedStringList` の 1:1 shallow ラッパーで、deletion test で「消しても複雑さは移動するだけ」
 - なぜ3: `buildManagedStringLists` が `save: () => this.save()` closure を 3 つ生成し、`withOptimisticLock` の競合時にどの save が勝つか不明
-- なぜ4: `settingsStore ↔ trustDb` の循環が dynamic import で隠蔽され、StoragePort を迂回して `chrome.storage.local.get('trust_db:json')` を直接読む唯一の utils になっている
+- なぜ4: `settingsStore ⇔ trustDb` の循環が dynamic import で隠蔽され、StoragePort を迂回して `chrome.storage.local.get('trust_db:json')` を直接読む唯一の utils になっている
 - なぜ5: `TrancoVersionTracker` が `getStorageTypes` を deps として要求するが、実際は static import で足りる
 - 解: `repairDatabase` を純粋関数 `repair(db)->db` に。shallow Store を削除し `ManagedCollections` 一つに。判定は `TrustPolicy.isDomainTrusted` 一つの深い Seam に。Settings 依存は Port 経由に。
 
@@ -41,12 +41,12 @@ Scenario: ManagedCollections で preset 追加が一箇所で完結
   When  `ManagedCollections.addSensitiveDomain` 経由で保存する
   Then  `presets.ts` と `TrustDbKernel.repair` の 2 ファイル変更で完結し、別途 Store 層の変更は不要
 
-Scenario: 境界 — 競合する並行 save で optimisticLock が正しくマージされる
+Scenario: 境界 ― 競合する並行 save で optimisticLock が正しくマージされる
   Given 2 つのタブが同時に `addUserTld('.example')` を呼ぶ
   When  両方の `save()` が `withOptimisticLock` で競合する
   Then  `mergeTrustDatabase` により両方の TLD が和集合で保存され、片方の変更が失われない
 
-Scenario: エラー — 未初期化で isDomainTrusted を呼ぶと UNVERIFIED を返す
+Scenario: エラー ― 未初期化で isDomainTrusted を呼ぶと UNVERIFIED を返す
   Given `TrustDbKernel.initialize()` 未実行
   When  `policy.isDomainTrusted('example.com')` を呼ぶ
   Then  `level: UNVERIFIED, reason: 'Trust database not initialized'` が返り、throw しない
@@ -66,11 +66,11 @@ Scenario: エラー — 未初期化で isDomainTrusted を呼ぶと UNVERIFIED 
 - 単体: `repairDatabase` 純粋関数の全 field 欠落パターン、`bloomFilterFromData` throw 時の挙動、`initPromise` 静的共有の並行 initialize
 
 ## 見積もり
-8 pt（要チームでの見積もり）— 純粋関数化 2pt + shallow Store 削除と Collections 統合 2pt + TrustPolicy 抽出 2pt + 循環解消と Kernel 集約 2pt
+8 pt（要チームでの見積もり）― 純粋関数化 2pt + shallow Store 削除と Collections 統合 2pt + TrustPolicy 抽出 2pt + 循環解消と Kernel 集約 2pt
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] コードレビュー完了（trustDb / pipeline / storage の影響確認 — 2026-09-01。dead code だった `whitelistStore.ts` / `sensitiveDomainStore.ts` を削除）
+- [x] コードレビュー完了（trustDb / pipeline / storage の影響確認 ― 2026-09-01。dead code だった `whitelistStore.ts` / `sensitiveDomainStore.ts` を削除）
 - [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §5.5 Trust DB を新設、ADR 2026-08-20 circular-dependency に「解消記録」を追記し Status を Partially superseded に）
 - [x] `npm run validate` が green
 

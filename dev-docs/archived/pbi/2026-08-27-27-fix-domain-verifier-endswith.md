@@ -15,27 +15,27 @@
 - 解: `domain === tld || domain.endsWith("." + tld)` に修正し、TLD 側の形式を `isValidTld` で事前検証する
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正当なサブドメインは信頼される
+Scenario: ハッピーパス ― 正当なサブドメインは信頼される
   Given `tlds = ["example.com"]`、`domain = "sub.example.com"` を含む state
   When `checkJpAnchor("sub.example.com", state)` を呼ぶ
   Then `level === TRUSTED` かつ `source === "jp-anchor"` を返す
 
-Scenario: ハッピーパス — TLD 完全一致は信頼される
+Scenario: ハッピーパス ― TLD 完全一致は信頼される
   Given `domain = "example.com"` が TLD と完全一致
   When `checkJpAnchor` を呼ぶ
   Then `TRUSTED` を返す
 
-Scenario: 攻撃 — サフィックス部分一致は信頼されない
+Scenario: 攻撃 ― サフィックス部分一致は信頼されない
   Given `tlds = ["example.com"]`、`domain = "evil-example.com"`
   When `checkJpAnchor` を呼ぶ
   Then `level === UNVERIFIED` を返す
 
-Scenario: 攻撃 — サフィックス偽装は信頼されない
+Scenario: 攻撃 ― サフィックス偽装は信頼されない
   Given `domain = "notexample.com"`（`example.com` で終わるがドット境界なし）
   When `checkJpAnchor` を呼ぶ
   Then `UNVERIFIED` を返す
 
-Scenario: エッジ — 不正な TLD 形式はスキップされる
+Scenario: エッジ ― 不正な TLD 形式はスキップされる
   Given `tlds = ["*"]` や空文字を含む不正 TLD
   When `checkJpAnchor` を呼ぶ
   Then 当該 TLD は無視され `UNVERIFIED` を返す（`isValidTld` で除外）

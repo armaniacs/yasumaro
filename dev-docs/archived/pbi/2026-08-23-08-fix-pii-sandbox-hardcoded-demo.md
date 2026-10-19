@@ -1,4 +1,4 @@
-# PBI: pii-sandbox ハードコード除去 — 本番ログ汚染と露出防止
+# PBI: pii-sandbox ハードコード除去 ― 本番ログ汚染と露出防止
 
 ## ユーザーストーリー
 開発者として、docsのPIIサンドボックスのデモコードが本番で自動実行されないようにしたい、なぜなら `docs/assets/pii-sandbox.js:9-14` の top-level でハードコードされたサンプルと `window.PiiSandbox` の即時実行が本番でも走り、コンソールログを汚染し、意図せぬAPI露出を招くから
@@ -16,18 +16,18 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — docsページで手動デモは動作する
+Scenario: 正常系 ― docsページで手動デモは動作する
   Given docsのPIIサンドボックスページを開いている
   When ユーザーがサンプルテキストを入力し「Sanitize」ボタンを押す
   Then PiiSandbox.sanitize() が呼ばれ、結果が表示される
   And ページロード時には自動でサンプルが実行されない
 
-Scenario: 境界ケース — 開発環境ではデモが自動実行される（任意）
+Scenario: 境界ケース ― 開発環境ではデモが自動実行される（任意）
   Given NODE_ENV === 'development' または URLに ?demo=1 がある
   When ページをロードする
   Then デモサンプルが自動実行され、コンソールに結果が表示される（開発時のみ）
 
-Scenario: エラーケース — 本番でtop-levelの即時実行が無い
+Scenario: エラーケース ― 本番でtop-levelの即時実行が無い
   Given 本番ビルドの docs/assets/pii-sandbox.js を検査する
   When ファイルのtop-levelをパースする
   Then ハードコードされたサンプルテキストや console.log がtop-levelに存在しない
@@ -59,13 +59,13 @@ Scenario: エラーケース — 本番でtop-levelの即時実行が無い
 - **Red-Green-Refactor**: TDD
 
 ## 見積もり
-1pt（要チーム見積もり）— 条件分岐の追加とビルド確認のみの小規模
+1pt（要チーム見積もり）― 条件分岐の追加とビルド確認のみの小規模
 
 ## 技術的考慮事項
 - 依存関係: 09 implicit global と10 window freeze と同ファイル。同バッチで09→10→08の順に実施するとtop-levelの整理が一度で完了
 - テスタビリティ: `docs-src/pii-sandbox.ts` はESM、条件分岐は `import.meta.env.DEV` または `process.env.NODE_ENV` で可能だが、esbuildの `--define` に依存
 - 非機能要件: 本番での不要実行を無くすことで、ページロード時の数msを節約（微小）
-- 現状: `docs-src/pii-sandbox.ts` は15行で `sanitize` と `MAX_INPUT_SIZE` のexportのみ。指摘の `docs/assets/pii-sandbox.js:9-14` のハードコードは、旧版のビルド成果物に残った可能性。現行 `docs-src` にはハードコードが無いため、再ビルドで解消する可能性あり — 要現物確認
+- 現状: `docs-src/pii-sandbox.ts` は15行で `sanitize` と `MAX_INPUT_SIZE` のexportのみ。指摘の `docs/assets/pii-sandbox.js:9-14` のハードコードは、旧版のビルド成果物に残った可能性。現行 `docs-src` にはハードコードが無いため、再ビルドで解消する可能性あり ― 要現物確認
 
 ## 実装者向け注記
 

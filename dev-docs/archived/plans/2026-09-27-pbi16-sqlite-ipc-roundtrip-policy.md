@@ -1,11 +1,11 @@
-# PBI 16 調査報告: ダッシュボード SQLite 取得の IPC 往復 — 現行維持の裁定
+# PBI 16 調査報告: ダッシュボード SQLite 取得の IPC 往復 ― 現行維持の裁定
 
 PBI: `pbi/2026-09-25-16-investigate-dashboard-sqlite-ipc-roundtrip.md`（investigate・production 変更なし）
 日付: 2026-09-27
 
 ## 0. 計測方法
 
-`dashboardGateway.callDashboard`（dashboard→SW の唯一境界）を数える seam に、**実 `fetchPeriodRows` + 実 `dashboardSqliteService`** を接続し、SW 応答の protocol 形状で decode まで通すスクラッチスペックで計測（実行後に削除）。retry は既存テストと同一の instant 化。測定はメッセージ数のみ（unit 環境の wall はプロセス内解決のため絶対値として使わない。1 local IPC ≈ sub-ms〜2ms の業界的目安で換算し、明示的に推定と区別する）。
+`dashboardGateway.callDashboard`（dashboard→SW の唯一境界）を数える seam に、**実 `fetchPeriodRows` + 実 `dashboardSqliteService`** を接続し、SW 応答の protocol 形状で decode まで通すスクラッチスペックで計測（実行後に削除）。retry は既存テストと同一の instant 化。測定はメッセージ数のみ（unit 環境の wall はプロセス内解決のため絶対値として使わない。1 local IPC ≒ sub-ms〜2ms の業界的目安で換算し、明示的に推定と区別する）。
 
 前提のドリフト1件: PBI の「7 パネル」は現在 **9 パネル**（researchSessionsPanel・revisitInsightsPanel 等の追加）。`fetchAllPeriodRows` を使うパネルも含む。以下の計測は `fetchPeriodRows` 単位で行い、ページ数でスケールする。
 
@@ -32,15 +32,15 @@ uninitialized 時の query 抑止と外側 retry は現行のまま（fetch → 
 
 ## 3. 5 Whys（要旨）
 
-1. **なぜ 2 往復なのか** — query 前の readiness preflight が別 message として直列化されるため（`fetchPeriodRows.ts:50-60`、`dashboardGateway` の document 直列化）。
-2. **preflight の価値は何か** — uninitialized 時の query 回避 + 外側 retry による初期化待ち。(1) の実測で廃止の代償（error query 増）を定量化し、不採用を確定。
-3. **なぜ status が共有されないのか** — status は dashboard service の state であり fetch 境界の cache ではない。(2) の TTL は技術的に成立するが、invalidate 機構のコストが削減幅に見合わない。
-4. **なぜ response が統合されないのか** — 別 subtype・別 contract の設計であり、統合は version skew の再起動前提を伴う。~10ms の削減に対して過大。
-5. **測定と選定の結論** — 下記 §4。
+1. **なぜ 2 往復なのか** ― query 前の readiness preflight が別 message として直列化されるため（`fetchPeriodRows.ts:50-60`、`dashboardGateway` の document 直列化）。
+2. **preflight の価値は何か** ― uninitialized 時の query 回避 + 外側 retry による初期化待ち。(1) の実測で廃止の代償（error query 増）を定量化し、不採用を確定。
+3. **なぜ status が共有されないのか** ― status は dashboard service の state であり fetch 境界の cache ではない。(2) の TTL は技術的に成立するが、invalidate 機構のコストが削減幅に見合わない。
+4. **なぜ response が統合されないのか** ― 別 subtype・別 contract の設計であり、統合は version skew の再起動前提を伴う。~10ms の削減に対して過大。
+5. **測定と選定の結論** ― 下記 §4。
 
 ## 4. 裁定: 現行維持（`refactor` なし）
 
-- **実害の定量化**: 最悪条件（5 ページ・initialized）で 10 local IPC ≈ 10〜20ms/パネル。query 実行 + 描画に埋もれる水準であり、ユーザー可視の害ではない。
+- **実害の定量化**: 最悪条件（5 ページ・initialized）で 10 local IPC ≒ 10〜20ms/パネル。query 実行 + 描画に埋もれる水準であり、ユーザー可視の害ではない。
 - **3 方式はいずれも不採用**（§2 の表）。削減幅（最大 ~5 msg/open）に対して、uninitialized 悪化・staleness 機構・contract 変更のいずれも割に合わない。
 - **contract 未変更**: query success `{rows, total}` / status 別 subtype / `fetchPeriodRows` の status→query 順序をすべて維持。既存 pin（`fetchPeriodRows.test.ts` の通常経路・uninitialized 経路、8 consumer lifecycle）は無変更で green のまま。
 - **将来の再評価条件**: (a) 1 ページあたりの IPC が実測で問題になる場合（その場合は (3) の status 同梱が第一候補）(b) パネル数・ページ上限の増加で往復が線形に増えた場合 (c) offscreen hop の実測が支配的になった場合。

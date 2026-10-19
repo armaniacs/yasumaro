@@ -2,10 +2,10 @@
 
 ## 出所
 
-- arch-delivery-loop の closed loop（診断→PBI化→自律実装→検証→版上げ）を、holistic-1005 の台帳送り L1–L8 に対して実行するラウンド。スキル本体（`.kilo/skills/arch-delivery-loop/SKILL.md`）不在のため、holistic-code-improvement と同等の手順で閉じる。
+- arch-delivery-loop の closed loop（診断→PBI化→自律実装→検証→版上げ）を、holistic-1005 の台帳送り L1-L8 に対して実行するラウンド。スキル本体（`.kilo/skills/arch-delivery-loop/SKILL.md`）不在のため、holistic-code-improvement と同等の手順で閉じる。
 - 4 テーマ群の調査を並列 agent（e2e / retry-failure / offscreen-ai / dashboard）に委譲し、L8（console→logger）は統合側が直査。すべての指摘は file:line 実測で裏取り済み。
 - 差分スコープ: 過去台帳で閉じたテーマ（popup fixture 統一、no-test-sleep カバレッジ、envelope/disconnect SSOT、fetch backoff・残渣、panel 各種分割、failure contract unify 等）は再レビュー対象外。
-- NN01–NN23 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
+- NN01-NN23 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
 - file:line は受領時に統合側が実測で裏取り済み。実装着手時は行番号ズレに注意し「関数名+概略位置」で読むこと。
 
 ## RICE 採点表（RICE 降順）
@@ -40,10 +40,10 @@ RICE = R × I × C / E。Reach は保守関与頻度（10=毎週 / 5=月次 / 3=
 
 ## 同点の順位根拠（tie-break）
 
-- **4.0（05 と 06）**: NN05 先行 — Effort 小（1 vs 2）。ともに pipeline 層だが依存なし
+- **4.0（05 と 06）**: NN05 先行 ― Effort 小（1 vs 2）。ともに pipeline 層だが依存なし
 - **3.0（09 / 10 / 11 / 12 の 4-way）**: 同点のため受領順（調査報告順）を維持。ファイル重なりなし
 - **1.6（15 / 16 / 18 / 19 / 21 の 5-way）**: 依存が順序を決める。16・18・19・21 はいずれも先行依存あり（下記）。15 は依存なしのため先行
-- **1.5（17 と 20）**: NN17 先行 — SSOT 登録テーマのため
+- **1.5（17 と 20）**: NN17 先行 ― SSOT 登録テーマのため
 
 ## 純 RICE 順からの逸脱（1 件）
 
@@ -58,7 +58,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（10=毎週 / 5=月次 / 3=
 - **historyModel**: NN18 は NN07 の後に実行（同一ファイル。NN07 のガードヘルパー確定後）
 - 上記以外は依存なし・並列可
 
-## バッチ計画（B1–B6・ファイル排他）
+## バッチ計画（B1-B6・ファイル排他）
 
 | Wave | NN | 内容 |
 |---|---|---|
@@ -75,7 +75,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（10=毎週 / 5=月次 / 3=
 
 | NN | 状態 |
 |---|---|
-| 01–23 | ✅ 実装・アーカイブ済み（最終ゲート green） |
+| 01-23 | ✅ 実装・アーカイブ済み（最終ゲート green） |
 
 ## 台帳送り（見送り・次ラウンド予約）
 

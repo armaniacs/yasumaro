@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/background/recordingLogic.ts:396-401`（`record()`メソッド）— 呼び出しのたびに `new RecordingPipeline(this.getPrivacyInfoWithCache.bind(this), this.obsidian, this.aiService, this.sqliteClient)` を生成
+- `src/background/recordingLogic.ts:396-401`（`record()`メソッド）― 呼び出しのたびに `new RecordingPipeline(this.getPrivacyInfoWithCache.bind(this), this.obsidian, this.aiService, this.sqliteClient)` を生成
 - 対処案（親レポートより）: 軽量プレビューパイプラインを返すファクトリを導入
 - side-effects.md L7判定: 「ファクトリ抽出は既存の`record()`呼び出し元に影響しない範囲で対応可能」（副作用なし）
 

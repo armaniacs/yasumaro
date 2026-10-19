@@ -30,7 +30,7 @@
 
 ---
 
-## Task 1（PBI-29）: God File分割 — オフラインキュー処理の抽出
+## Task 1（PBI-29）: God File分割 ― オフラインキュー処理の抽出
 
 **Files:**
 - Create: `src/background/offlineQueueProcessor.ts`
@@ -234,7 +234,7 @@ Expected: 成功
 
 **前提**: Task 1が完了していること（ファイル分割後の方が対象範囲が明確になる）。
 
-**方針**: PBIが推奨する通り、影響範囲の小さい`TabCache`から遅延初期化パターン（`getInstance()`関数）を試験導入する。全シングルトン（`ObsidianClient`, `AIClient`, `LocalAIClient`, `RecordingLogic`, `SqliteClient`）への展開は、`TabCache`でのパターン確立後に別Task（後続PBI）として扱う——本Taskでは1クライアントの試験導入までを完了の定義とする（PBI本文のDefinition of Doneと一致）。
+**方針**: PBIが推奨する通り、影響範囲の小さい`TabCache`から遅延初期化パターン（`getInstance()`関数）を試験導入する。全シングルトン（`ObsidianClient`, `AIClient`, `LocalAIClient`, `RecordingLogic`, `SqliteClient`）への展開は、`TabCache`でのパターン確立後に別Task（後続PBI）として扱う――本Taskでは1クライアントの試験導入までを完了の定義とする（PBI本文のDefinition of Doneと一致）。
 
 - [ ] **Step 1: `TabCache`の現在のインスタンス化・依存関係を確認する**
 
@@ -264,7 +264,7 @@ describe('tabCacheFactory', () => {
   });
 
   it('does not instantiate TabCache at module load time', async () => {
-    // Importing the module itself should not construct a TabCache — only
+    // Importing the module itself should not construct a TabCache ― only
     // calling getTabCacheInstance() should. This is verified by the module
     // not throwing even before a SessionStore is available, since
     // construction is deferred until first call.

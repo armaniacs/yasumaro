@@ -16,8 +16,8 @@ dashboard を拡張する開発者として、A/B 両レイアウトの provider
   - A 用: `src/dashboard/generalSettings/settingsForm.ts:28` `collectProviderPrioritySlots()`
   - B 用: `src/dashboard/aiProviderB/priorityListView.ts:38` `collectBProviderPrioritySlots(container)`
 - inline 重複は 2 箇所に残る:
-  - Copy A（save パス）: `src/dashboard/settingsPipeline.ts:139-193` — `layout` 取得（`:139`）、`layout === 'b'` 分岐（`:140`）、`bList` 取得 + `hasBRow` 判定（`:141-142`）、`collectBProviderPrioritySlots(bList)` try + `collectProviderPrioritySlots()` fallback（`:145,:147`）、B なし時（`:189`）と A 時（`:192`）の `collectProviderPrioritySlots()` 直呼び。計 4 呼び出し点。
-  - Copy B（B-view 初期化）: `src/dashboard/panels/staticForm/generalSettingsPanel.ts:212-221` — `try collectProviderPrioritySlots()`（`:215`）+ catch 空配列（`:216`）+ `existingSlots.length === 0` 時の storage fallback（`:218-221`、`currentSettings[AI_PROVIDER_PRIORITY_LIST]`）。
+  - Copy A（save パス）: `src/dashboard/settingsPipeline.ts:139-193` ― `layout` 取得（`:139`）、`layout === 'b'` 分岐（`:140`）、`bList` 取得 + `hasBRow` 判定（`:141-142`）、`collectBProviderPrioritySlots(bList)` try + `collectProviderPrioritySlots()` fallback（`:145,:147`）、B なし時（`:189`）と A 時（`:192`）の `collectProviderPrioritySlots()` 直呼び。計 4 呼び出し点。
+  - Copy B（B-view 初期化）: `src/dashboard/panels/staticForm/generalSettingsPanel.ts:212-221` ― `try collectProviderPrioritySlots()`（`:215`）+ catch 空配列（`:216`）+ `existingSlots.length === 0` 時の storage fallback（`:218-221`、`currentSettings[AI_PROVIDER_PRIORITY_LIST]`）。
 - 既存テスト（変更なしで green を保つ対象）:
   - `src/dashboard/__tests__/settingsPipeline.test.ts:52`（`collectProviderPrioritySlots` の mock）
   - `src/dashboard/generalSettings/__tests__/settingsForm.coverage.test.ts:107-198`（A 収集の conformance）

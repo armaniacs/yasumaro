@@ -1,4 +1,4 @@
-# PBI: PanelNotices — 通知/空状態モジュール
+# PBI: PanelNotices ― 通知/空状態モジュール
 
 ## ユーザーストーリー
 パネル開発者として、空状態・エラー・通知の表示を1つの深いモジュールに委ねてほしい、なぜなら8パネルの手動配線が5種の失敗ポリシーにドリフトし false-empty / stale-notice バグが実検出済みだから。
@@ -37,7 +37,7 @@ Scenario: 次回 load 開始時のリセット
 - 統合: 8パネル lifecycle テスト（エラー状態・空状態・通知リセットのアサーション追加）
 
 ## 実装メモ
-- 配置: src/dashboard/panels/（asyncData 専用としない — sidebar 系パネルも将来的に利用可）
+- 配置: src/dashboard/panels/（asyncData 専用としない ― sidebar 系パネルも将来的に利用可）
 - MV3 CSP: data-i18n 属性の書き換えは既存パターン（textContent + setAttribute）を踏襲
 - domainAnalysis の (unknown) 通知など fetch スコープ通知の「再集計で消さない」要件（tagCooccurrenceTablePanel 先例）を hide 管理で表現できること
 

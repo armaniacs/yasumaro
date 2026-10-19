@@ -38,7 +38,7 @@ Scenario: 動作は変わらない
 
 ## 検証結果（2026-10-13 実施）
 
-- 実装: `warResourceResolves` の直上に対応起源の doc コメントを追記（`.js` は `entrypoints/<name>.ts` 由来の content-script entrypoint、それ以外は `public/` 由来。WXT が今日 WAR に合成するのはこの 2 起源のみ。src 由来のチャンクを WAR に入れる将来のモジュール分割（WXT 移行前の manifest は `utils/*.js` を持っていた）は、このリゾルバの拡張が必須 — それまでは stale チェックが偽陽性で fail する旨を明記）。
+- 実装: `warResourceResolves` の直上に対応起源の doc コメントを追記（`.js` は `entrypoints/<name>.ts` 由来の content-script entrypoint、それ以外は `public/` 由来。WXT が今日 WAR に合成するのはこの 2 起源のみ。src 由来のチャンクを WAR に入れる将来のモジュール分割（WXT 移行前の manifest は `utils/*.js` を持っていた）は、このリゾルバの拡張が必須 ― それまでは stale チェックが偽陽性で fail する旨を明記）。
 - 動作不変: `npx vitest run src/__tests__/manifest.test.ts` → 17 passed（コメントのみの変更）。`npm run validate` → exit 0（1062 files / 16032 tests）。
 - コードレビュー: メインエージェントが実装（コメント 1 か所の差分のみ）を確認済み。
 

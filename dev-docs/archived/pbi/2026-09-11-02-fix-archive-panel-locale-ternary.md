@@ -8,7 +8,7 @@
 
 - 順位: 02 / 9
 - RICE スコア: 60.0（Reach=3 / Impact=1 / Confidence=100% / Effort=0.05 人週）
-- 根拠: `src/dashboard/panels/diagnostic/archivePanel.ts:485` —
+- 根拠: `src/dashboard/panels/diagnostic/archivePanel.ts:485` ―
   `localized('archiveStatusWorking') === 'Working… …' ? 'Preview ready.' : 'Preview ready.'`
   比較は常に false（ja では左辺が日本語、en でも意味を持たない死んだ比較）で、表示は常に英語固定文字列。
 

@@ -51,8 +51,8 @@ createBackgroundServices.ts
 
 ### 1.3 既存インターフェースとの整合
 
-- `AIService.generateSummary(content, options?): Promise<AISummaryResult>` — 変更なし
-- `AIService.getSupportedModes(): AISummaryMode[]` — `LocalAIService` は引き続き `['local_only']` を返す
+- `AIService.generateSummary(content, options?): Promise<AISummaryResult>` ― 変更なし
+- `AIService.getSupportedModes(): AISummaryMode[]` ― `LocalAIService` は引き続き `['local_only']` を返す
 - `FallbackAIService` の `mode` 分岐（`local_only` / `full_pipeline` / `masked_cloud` / `auto`）も変更なし
 
 ---

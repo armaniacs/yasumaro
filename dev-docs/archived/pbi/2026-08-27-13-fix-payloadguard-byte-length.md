@@ -15,12 +15,12 @@
 - 解: `new TextEncoder().encode(value).byteLength` または `Blob.size` でバイト長判定に修正
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — ASCII 1MB以内は許可される
+Scenario: ハッピーパス ― ASCII 1MB以内は許可される
   Given `a` を 1,000,000 文字含む payload
   When `assertPayloadSize` を呼ぶ
   Then `null` (許可) を返す
 
-Scenario: 攻撃 — 絵文字で1MBバイト超過は拒否される
+Scenario: 攻撃 ― 絵文字で1MBバイト超過は拒否される
   Given 絵文字 `😀` (4bytes, length 2) を 300,000 個含む payload (1.2MB bytes, length 600k)
   When `assertPayloadSize` を呼ぶ
   Then `Payload too large` エラーを返す

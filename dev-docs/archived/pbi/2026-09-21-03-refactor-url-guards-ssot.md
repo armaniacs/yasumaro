@@ -72,7 +72,7 @@ Scenario: 層を跨ぐ呼び出し側が委譲後の実装で動く
 - 正規化の逐語重複: `src/background/headerDetector.ts:59-71` `static normalizeUrl`(hash 除去+末尾スラッシュ除去+パース失敗で元 URL 返却)は `src/utils/urlUtils.ts:35-47` `normalizeUrlSafe` と逐語同一
 - 統合延期の記録: `src/utils/urlUtils.ts:31-34` のコメントは headerDetector / PrivacyCache の同型実装との統合にはキャッシュキー意味論の確認が必要なため別 PBI と明記(PBI 2026-09-07-24 では popup 側の重複のみ解消)
 - 層跨ぎの分散呼び出し: `src/background/handlers/tabEventHandlers.ts:44,75` が `HeaderDetector.normalizeUrl` を使用し `src/popup/statusChecker.ts:121` が `normalizeUrlSafe` を使用。内部呼び出し `src/background/headerDetector.ts:161` も `HeaderDetector.normalizeUrl` 経由
-- 既存テスト網: `src/utils/__tests__/urlUtils.test.ts:8-33`(isSecureUrl の scheme 境界) / `src/background/__tests__/headerDetector.test.ts:216-228`(slash/hash/invalid の正規化境界) — 委譲後に期待値変更なしで green であることが回帰条件
+- 既存テスト網: `src/utils/__tests__/urlUtils.test.ts:8-33`(isSecureUrl の scheme 境界) / `src/background/__tests__/headerDetector.test.ts:216-228`(slash/hash/invalid の正規化境界) ― 委譲後に期待値変更なしで green であることが回帰条件
 
 ## Definition of Done
 - [x] 全BDDシナリオが実装されパスする

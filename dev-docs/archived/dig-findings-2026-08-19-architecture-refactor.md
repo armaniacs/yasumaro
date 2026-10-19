@@ -1,4 +1,4 @@
-# Deep Dig Findings — Architecture Refactor (5 PBIs)
+# Deep Dig Findings ― Architecture Refactor (5 PBIs)
 
 **Date:** 2026-08-19
 **Scope:** Implement 5 architecture-deepening PBIs for Yasumaro Chrome extension
@@ -111,7 +111,7 @@
 
 ## Unresolved risks
 
-- PBI-01 and PBI-04 both touch `createBackgroundServices.ts` — merge conflicts possible if worked in parallel. Mitigation: sequential PRs in priority order.
+- PBI-01 and PBI-04 both touch `createBackgroundServices.ts` ― merge conflicts possible if worked in parallel. Mitigation: sequential PRs in priority order.
 - PBI-05 changes `sqliteClient.ts` interface surface, which may ripple to `recordingPipeline` callers. Mitigation: keep public method signatures unchanged; only internal validation layer changes.
 
 ## Final decisions

@@ -8,7 +8,7 @@
 
 優先度: 7 位 / RICE 5.0 = (8 × 1 × 50%) / 0.8w / Strength: Worth exploring
 backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)
-依存: なし（他 6 件と独立。PBI 02 とは対象が異なる — 本 PBI は utils の回復ストア、PBI 02 は background のロック付きキュー）
+依存: なし（他 6 件と独立。PBI 02 とは対象が異なる ― 本 PBI は utils の回復ストア、PBI 02 は background のロック付きキュー）
 
 ## ユーザーストーリー
 未記録回復フローを保守する開発者として、`pendingStorage.ts` の 6-export interface が `enqueuePending / listDue / resolve / purgeExpired` の 4 method に狭窄されてほしい。なぜなら expiry フィルタが 3 箇所（読み側・daily purge・書き時 prune）に重複し、privacy/error の種別分岐を各呼び出し側が `isPrivacyPendingReason` / `renderPendingReason` で再導出しているから。
@@ -73,7 +73,7 @@ rg -n "getPendingPages|clearExpiredPages|addPendingPage" src/ --include="*.ts" |
 ### 落とし穴
 - `notificationHandlers.ts` の get→record→remove 連鎖は順序依存。resolve の意味論に吸収する際は順序を変えないこと
 - `dailyPurgeHandler.ts` の purge は全エントリ対象。purgeExpired との重複呼び出しにならないよう整理すること
-- privacy 理由（trust-domain 系）は再記録対象外の可能性 — 現行の扱いを変えないこと
+- privacy 理由（trust-domain 系）は再記録対象外の可能性 ― 現行の扱いを変えないこと
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

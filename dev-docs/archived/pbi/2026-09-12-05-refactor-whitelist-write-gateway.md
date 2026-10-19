@@ -1,4 +1,4 @@
-# PBI 2026-09-12-05 — WhitelistWriteGateway（popup whitelist 書込 seam）
+# PBI 2026-09-12-05 ― WhitelistWriteGateway（popup whitelist 書込 seam）
 
 - **種別**: 🔧非機能追加（refactor + hardening）
 - **優先度**: 5 位 / RICE **12.8**（R10 × I2 × C80% / E1.25人日）
@@ -8,16 +8,16 @@
 
 「whitelist に追加する」操作が 5 call site で read-modify-write を手書きしている:
 
-- `statusPanel.ts:382-429`（2 handler）— 生 `tab.url`（query 付き）を path として push
-- `privatePageDialog.ts:140-175`（2 handler）— domain / 生 URL push
-- `pendingPages.ts:63-84` — anchored `^regex$` で push（同一概念で格納形式が異なる）
-- `trancoNotification.ts:84,106` — setAll+cache refresh を手書き IIFE
+- `statusPanel.ts:382-429`（2 handler）― 生 `tab.url`（query 付き）を path として push
+- `privatePageDialog.ts:140-175`（2 handler）― domain / 生 URL push
+- `pendingPages.ts:63-84` ― anchored `^regex$` で push（同一概念で格納形式が異なる）
+- `trancoNotification.ts:84,106` ― setAll+cache refresh を手書き IIFE
 
 決定的な相違: dashboard の保存時検証（`settings/domainFilter.ts:339-345`）は両リストを `DomainFilter.parseAndValidate` するが、popup 経路はどこも検証しない。不正パターンが storage に直接入り、dashboard の `matchesPattern` 評価経路を静かに汚す（VULN-025/026 コメントの評価経路）。dedup も 3 流儀。
 
 ## スコープ
 
-- `src/popup/whitelistWriter.ts` 新設: `addDomainToWhitelist(domain)` / `addPathToWhitelist(url)` — repository read → `parseAndValidate` → dedup → write → cache refresh、typed result 返却
+- `src/popup/whitelistWriter.ts` 新設: `addDomainToWhitelist(domain)` / `addPathToWhitelist(url)` ― repository read → `parseAndValidate` → dedup → write → cache refresh、typed result 返却
 - 5 call site を委譲に置換。path 格納形式（生 URL vs anchored regex）を gateway 内 1 箇所で決定
 - regex escape helper（pendingPages:59-61）を implementation 内部へ移動
 
@@ -50,7 +50,7 @@ Then storage は変更されず typed result で失敗が返る
 
 ## 実装メモ（2026-09-12）
 
-- `src/popup/whitelistWriter.ts` 新設: `addDomainToWhitelist` / `addPathToWhitelist` — parseAndValidate → dedup → blob 書込 → cache refresh、typed result
+- `src/popup/whitelistWriter.ts` 新設: `addDomainToWhitelist` / `addPathToWhitelist` ― parseAndValidate → dedup → blob 書込 → cache refresh、typed result
 - **直接検証で判明した重大な発見**: 「path whitelist」エントリ（生 URL / anchored regex）は**どの consumer でも一度もマッチしない死エントリ**だった。全 whitelist 消費者（checkPrivacyHeadersStep:41 の `includes(domain)`・isDomainInListShared など）は hostname レベルで照合し、両形式とも `isValidDomainPattern`（hostname 形のみ許容）に失敗する。popup は検証なしで書き込むため dashboard の評価経路を静かに汚していた
 - **設計判断**: path 追加を URL の hostname に正規化（全 consumer が照合できる唯一の形式）。path レベル照合は未実装であり、製品判断がつくまでの正。DESIGN_SPECIFICATIONS §13.5 を現実に合わせ更新（「Path whitelist: Regex patterns」→ 正規化の記述）。将来 path 照合を実装する場合はこの gateway 1 ファイルの変更で済む
 - trancoNotification の setAll+refresh IIFE は whitelist 書込ではなく tranco consent キーの書込のため本 seam に統合しない（偽の統一を避けた・PBI 記載からの逸脱）

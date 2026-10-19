@@ -1,4 +1,4 @@
-# なぜなぜ分析 — 2026-08-22 autonomous-task-closer 洗い出し
+# なぜなぜ分析 ― 2026-08-22 autonomous-task-closer 洗い出し
 
 ## 現象 1: src/dashboard/trancoConsent.ts がコンパイルエラー
 

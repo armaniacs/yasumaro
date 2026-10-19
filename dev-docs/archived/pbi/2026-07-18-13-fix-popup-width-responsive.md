@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 grep・Read で確認済み:
-- `entrypoints/popup/styles.css:112` — `body { width: 360px; ... }` で固定幅
+- `entrypoints/popup/styles.css:112` ― `body { width: 360px; ... }` で固定幅
 - Chrome拡張のpopupは`chrome://extensions`のビューポート制約を受けるため、`max-width: 100vw` を追加しても実害はない
 
 ```bash

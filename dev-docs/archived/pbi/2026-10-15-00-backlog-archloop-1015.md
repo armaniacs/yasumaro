@@ -9,10 +9,10 @@ arch-delivery-loop skill によるコードベース全体 (差分スコープ) 
 | NN | 候補 | R | I | C | E | RICE | 判定 |
 |---|---|---|---|---|---|---|---|
 | 01 | uBlock sourceManager の i18n seam 迂回 (fix) | 3 | 1 | 1.0 | 1 | **3.0** | PBI 化・実装 |
-| — | AGENTS.md 未コミット 1 行修正 (docs) | — | — | — | — | — | PBI 化せず直接コミット |
-| — | F2 dashboardGateway 寄せ | — | — | — | — | — | 発火条件未成立 (retrying op は 2 件のみ) で deferred 維持 |
-| — | F1 KEK 脅威モデル | — | — | — | — | — | security ラウンド案件・本ループ対象外 |
-| — | Gated backlog 6 件 (wa-sqlite/TS7/stryker/wasm-watch/archive-split/utils-reorg) | — | — | — | — | — | トリガー未発火 |
+| ― | AGENTS.md 未コミット 1 行修正 (docs) | ― | ― | ― | ― | ― | PBI 化せず直接コミット |
+| ― | F2 dashboardGateway 寄せ | ― | ― | ― | ― | ― | 発火条件未成立 (retrying op は 2 件のみ) で deferred 維持 |
+| ― | F1 KEK 脅威モデル | ― | ― | ― | ― | ― | security ラウンド案件・本ループ対象外 |
+| ― | Gated backlog 6 件 (wa-sqlite/TS7/stryker/wasm-watch/archive-split/utils-reorg) | ― | ― | ― | ― | ― | トリガー未発火 |
 
 依存: なし (NN01 と docs 修正はファイル非重複のため同バッチ可)。
 

@@ -103,13 +103,13 @@ Scenario: タイマー duration と自動 clear の有無が呼び出し側か�
 
 - 正規形は `src/utils/ui/settingsUiHelper.ts:6-20` の `showStatus`。`el.className = type`（素の `'success'` / `'error'`）、clear 時 `className = ''`、timeout 3000 / 5000ms。production 呼び出し 112 箇所。
 - 変種 7 実装:
-  - `src/dashboard/gistSettings.ts:17-22` — `'status-message success'` / `'status-message error'`、自動 clear なし
-  - `src/dashboard/encryptedBackupPanel.ts:31-36` — 同形、自動 clear なし
-  - `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:490-503` — 成功 3000ms、エラーは clear されない
-  - `src/dashboard/settings/domainFilterTagUI.ts:210-215` — 同形
-  - `src/dashboard/cspSettings.ts:233-237` — class なし、`style.display`、3000ms
-  - `src/dashboard/models-dev-dialog.ts:502-507` — `classList('hidden')`、5000ms
-  - `src/popup/statusPanel.ts:426` — 2000ms
+  - `src/dashboard/gistSettings.ts:17-22` ― `'status-message success'` / `'status-message error'`、自動 clear なし
+  - `src/dashboard/encryptedBackupPanel.ts:31-36` ― 同形、自動 clear なし
+  - `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:490-503` ― 成功 3000ms、エラーは clear されない
+  - `src/dashboard/settings/domainFilterTagUI.ts:210-215` ― 同形
+  - `src/dashboard/cspSettings.ts:233-237` ― class なし、`style.display`、3000ms
+  - `src/dashboard/models-dev-dialog.ts:502-507` ― `classList('hidden')`、5000ms
+  - `src/popup/statusPanel.ts:426` ― 2000ms
 - CSS 非互換の実証: `entrypoints/options/dashboard.css:891`/`:899`/`:905` は `.status-message.success` / `.status-message.error`（ベースクラス必須）を定義し、素の `.success` / `.error`（`:917` 以降）とは別物。
 - `showStatus` の `className = ''` による clear はベースクラスも落とすため、prefix 系要素に showStatus を使うと margin / font-size / padding と toast アニメーション（`entrypoints/options/dashboard.css:4286-4293`）が消える。コピペ 4 箇所は全部 prefix 系を選んだまま。
 - 連鎖重複: `src/dashboard/generalSettings/connectionTests.ts` の保存エラー 3 分岐が `:252-267` / `:393-402` / `:481-489` に逐語重複し、`src/dashboard/settingsPipeline.ts:169-176` が 4 番目の亜種。

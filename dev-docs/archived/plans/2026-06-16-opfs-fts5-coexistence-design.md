@@ -53,7 +53,7 @@ offscreen (sqlite.ts) ── postMessage ──> opfsWorker.ts
    - `SEARCH` メッセージ型を新設し、`search()` を LIKE 経由ではなく FTS5 へ流す
    - OPFS パスで `fts5Available = true` を扱う
    - `STATUS` / `getFtsIndexSize` が Worker の実 FTS5 値を返す
-3. **postMessage プロトコル**: 既存の `{id,type,payload}` ⇄ `{id,success,result,error}` を維持。`SEARCH` type を追加するのみ
+3. **postMessage プロトコル**: 既存の `{id,type,payload}` ⇔ `{id,success,result,error}` を維持。`SEARCH` type を追加するのみ
 4. **アセット / manifest**: `wa-sqlite-fts5/wa-sqlite.wasm` を dist へコピー。新 Worker と WASM を `manifest.json` の `web_accessible_resources` に登録（`CLAUDE.local.md` のモジュール分割ルール準拠）
 
 ## 4. データフロー
@@ -146,7 +146,7 @@ init()
 
 **API 訂正（実態）:**
 - WASM パスは `wa-sqlite-fts5/` ではなく、パッケージ export `"./wasm"`（= `dist/wa-sqlite.wasm`、FTS5 ビルトイン）。URL は `new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href`。
-- `useOpfsStorage(path, { url })` — 第2引数はオブジェクト。
+- `useOpfsStorage(path, { url })` ― 第2引数はオブジェクト。
 - `run()` 戻り行型は `Record<string, SQLiteCompatibleType>`（`number | string | Uint8Array | number[] | bigint | null`）。
 - WXT は `manifest.json` を生成するため、`wxt.config.ts` の `manifest.web_accessible_resources` を編集する（今回ビルドでは追加不要だった）。
 

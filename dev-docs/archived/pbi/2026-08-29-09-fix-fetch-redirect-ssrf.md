@@ -1,10 +1,10 @@
-# PBI: FETCH_URL リダイレクト再検証 — SW 経由 SSRF 封鎖（VULN-016, CWE-918）
+# PBI: FETCH_URL リダイレクト再検証 ― SW 経由 SSRF 封鎖（VULN-016, CWE-918）
 
 ## ユーザーストーリー
 利用者として、フィルタリスト import の URL が検証後に private IP へリダイレクトしても、Service Worker が内部ネットワークの応答を取得・返却しないようにしたい、なぜなら SSRF ガードは初期 URL のみを検証し、fetch がリダイレクトを黙って追跡するから
 
 ## ビジネス価値
-- 実証済み攻撃の封鎖: 許可 URL → 30x リダイレクト → `http://127.0.0.1:9222` の body が返却される（拡張ページからは直接到達できない private IP への SW 仲介アクセス — 明確な新 capability）
+- 実証済み攻撃の封鎖: 許可 URL → 30x リダイレクト → `http://127.0.0.1:9222` の body が返却される（拡張ページからは直接到達できない private IP への SW 仲介アクセス ― 明確な新 capability）
 - fetch.ts に hop-level 検証規約を作り、将来の攻撃者影響 URL fetch にも適用可能にする
 - 測定方法: FETCH_URL のリダイレクト再現テスト（許可 URL→30x→private IP）が失敗すること、17 fetch サイトのうち攻撃者影響 URL を持つ FETCH_URL が全ホップ検証を通ること
 
@@ -69,7 +69,7 @@ Scenario: 他の fetch サイトは現行どおり動作する（回帰防止）
 - **Red-Green-Refactor**: まず最も単純な `redirect: 'error'` で塞ぎ、正当リダイレクトのニーズが確認できたら manual＋再検証へ拡張
 
 ## 見積もり
-1pt（要チームでの見積もり — fetch 方針＋ヘルパー＋テスト）
+1pt（要チームでの見積もり ― fetch 方針＋ヘルパー＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 1 推奨）。PBI 03（body caps）と `systemHandlers.ts` を共有 → マージ順に注意
@@ -93,9 +93,9 @@ sed -n '180,205p' src/utils/ssrfGuard.ts
 3. テスト追加、`npm run validate`
 
 ### 落とし穴
-- `redirect: 'error'` は http→https 昇格さえ拒否する — フィルタ供給元の実URLを確認してから方針を固定すること
-- `manual` の opaqueredirect は body/status が読めない — ホップ再検証は `Location` ヘッダから自前で追跡することになる
-- Tranco/gist は固定ホストで FETCH_URL のガード対象外（スイープ済み）— 過剰適用しない
+- `redirect: 'error'` は http→https 昇格さえ拒否する ― フィルタ供給元の実URLを確認してから方針を固定すること
+- `manual` の opaqueredirect は body/status が読めない ― ホップ再検証は `Location` ヘッダから自前で追跡することになる
+- Tranco/gist は固定ホストで FETCH_URL のガード対象外（スイープ済み）― 過剰適用しない
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

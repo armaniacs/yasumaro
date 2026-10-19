@@ -14,14 +14,14 @@
 
 ---
 
-## 1. InMemoryTransport — DELETE: ソフトデリート近似 vs 製品ハードデリート
+## 1. InMemoryTransport ― DELETE: ソフトデリート近似 vs 製品ハードデリート
 
-- **ダブル**: `src/background/__tests__/fakes/inMemoryTransport.ts` — `SQLITE_DELETE` は `is_deleted = 1` を立てるだけ（行は配列に残る）
+- **ダブル**: `src/background/__tests__/fakes/inMemoryTransport.ts` ― `SQLITE_DELETE` は `is_deleted = 1` を立てるだけ（行は配列に残る）
 - **製品側の実体**（すべてハードデリート）:
-  - `src/offscreen/FallbackStorageAdapter.ts` — `delete(id)` → `hardDelete(id)`
-  - `src/offscreen/storageFallback.ts` — `hardDelete(id)` → `records.filter(r => r.id !== id)`
-  - `src/offscreen/opfsWorker/crudHandlers.ts` — `handleHardDelete`: `DELETE FROM browsing_logs WHERE id = ?`
-  - メッセージ層 `src/offscreen/sqliteMessageHandlers.ts` — `handleDelete` → `sqliteHardDelete(id)`
+  - `src/offscreen/FallbackStorageAdapter.ts` ― `delete(id)` → `hardDelete(id)`
+  - `src/offscreen/storageFallback.ts` ― `hardDelete(id)` → `records.filter(r => r.id !== id)`
+  - `src/offscreen/opfsWorker/crudHandlers.ts` ― `handleHardDelete`: `DELETE FROM browsing_logs WHERE id = ?`
+  - メッセージ層 `src/offscreen/sqliteMessageHandlers.ts` ― `handleDelete` → `sqliteHardDelete(id)`
 - **統一しない方針の理由**: InMemoryTransport は SQL エンジンを積まない方針。製品挙動（物理削除）に寄せるとダブルが重くなる。ソフトデリート近似で軽さを保ち、乖離は本レジストリで固定する
 - **ガードテスト**: `src/background/__tests__/fakes/inMemoryTransport.test.ts` の `DELETE divergence pinned as spec` describe（乖離を仕様として固定するアサート）
 
@@ -38,21 +38,21 @@
 ### 製品側挙動の検証先
 
 - DELETE 経路（ハードデリート）: `opfsWorker.test.ts`、`testDir/e2e/dashboard-*` の削除系シナリオ
-- VACUUM / freelist（`archiveDeleteByStaging` の `freelistBefore` / `freelistAfter`）: `opfsWorker.test.ts`、`testDir/e2e/dashboard-archive.spec.ts` — **InMemoryTransport では検証不能**（`SQLITE_ARCHIVE_DELETE_BY_STAGING` は未実装で `success: false` を返す）
+- VACUUM / freelist（`archiveDeleteByStaging` の `freelistBefore` / `freelistAfter`）: `opfsWorker.test.ts`、`testDir/e2e/dashboard-archive.spec.ts` ― **InMemoryTransport では検証不能**（`SQLITE_ARCHIVE_DELETE_BY_STAGING` は未実装で `success: false` を返す）
 
 ### `is_deleted` カラムの正しい用途（DELETE とは無関係）
 
 製品スキーマ（`src/offscreen/schema.ts`）の `is_deleted INTEGER DEFAULT 0` はローカル DELETE 経路では
 **一切書き換わらない**。製品コードに `SET is_deleted = 1` は存在しない。このカラムが使われるのは:
 
-1. **Gist 同期経由の論理削除受信** — 他デバイスで論理削除されたレコードが `is_deleted=1` の行としてそのまま受信・保存される
-2. **アーカイブの includeDeleted フィルタ** — `archiveCreateHandlers.ts`（削除済み行の集計）、`archivePurgeHandlers.ts`（includeDeleted）、`archiveRestoreHandlers.ts`（`restoredDeleted`）
+1. **Gist 同期経由の論理削除受信** ― 他デバイスで論理削除されたレコードが `is_deleted=1` の行としてそのまま受信・保存される
+2. **アーカイブの includeDeleted フィルタ** ― `archiveCreateHandlers.ts`（削除済み行の集計）、`archivePurgeHandlers.ts`（includeDeleted）、`archiveRestoreHandlers.ts`（`restoredDeleted`）
 
 テストダブルの DELETE はこの用途と無関係な近似である。混同しないこと。
 
 ---
 
-## 2. InMemoryTransport — アーカイブ系: 全面非対応
+## 2. InMemoryTransport ― アーカイブ系: 全面非対応
 
 - **ダブル**: `SQLITE_ARCHIVE_*` すべて `success: false` を返す
 - **統一しない方針の理由**: アーカイブ系は専用 engine 参照・single-flight・quota プレフライトなど重い機構のテストであり、InMemory で再現する価値がない。e2e と `opfsWorker.test.ts` が受け皿

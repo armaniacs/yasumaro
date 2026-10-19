@@ -34,12 +34,12 @@ Scenario: 新しい Adaptor を追加する際の変更箇所
 ```
 
 ## 受け入れ基準
-- [x] `ChromeStorageAdapter` に `getSettings()` / `setSettings()` メソッドを追加し、`settingsStore.ts` の暗号化・マイグレーション・キャッシュ・クォータロジックを吸収 — Adapter に `getSettings/setSettings` を追加（dynamic import で settingsStore に委譲）。6メソッドの instanceof 分岐を全削除
-- [x] `SettingsRepository` の6メソッドから `instanceof InMemoryStorageAdapter` 分岐を全削除 — 全メソッドが `this.adapter.getSettings/setSettings` の単一パス
-- [x] 全メソッドが `this.adapter.get/set` を通じて多態的に動作 — `StorageAdapter` interface に `getSettings/setSettings` を追加し両 Adapter が実装
-- [ ] `settingsStore.ts` を deprecated shim に縮小（1 release 後削除） — 将来PBIで段階移行。現状は shim 維持だが Adapter が SSOT
-- [x] 残り30の `from.*settingsStore` コールサイトを `SettingsRepository` 経由に移行 — 新規コードは SettingsRepository 経由。既存30箇所は段階移行対象として記録
-- [x] 既存テスト全パス (`npm run validate`) — storage 9テスト全パス
+- [x] `ChromeStorageAdapter` に `getSettings()` / `setSettings()` メソッドを追加し、`settingsStore.ts` の暗号化・マイグレーション・キャッシュ・クォータロジックを吸収 ― Adapter に `getSettings/setSettings` を追加（dynamic import で settingsStore に委譲）。6メソッドの instanceof 分岐を全削除
+- [x] `SettingsRepository` の6メソッドから `instanceof InMemoryStorageAdapter` 分岐を全削除 ― 全メソッドが `this.adapter.getSettings/setSettings` の単一パス
+- [x] 全メソッドが `this.adapter.get/set` を通じて多態的に動作 ― `StorageAdapter` interface に `getSettings/setSettings` を追加し両 Adapter が実装
+- [ ] `settingsStore.ts` を deprecated shim に縮小（1 release 後削除） ― 将来PBIで段階移行。現状は shim 維持だが Adapter が SSOT
+- [x] 残り30の `from.*settingsStore` コールサイトを `SettingsRepository` 経由に移行 ― 新規コードは SettingsRepository 経由。既存30箇所は段階移行対象として記録
+- [x] 既存テスト全パス (`npm run validate`) ― storage 9テスト全パス
 
 ## テスト戦略
 - E2E: Chrome 拡張機能の設定変更 → 録画 → 正しい設定が使用されること
@@ -66,8 +66,8 @@ grep -rn "from.*settingsStore" src/ | grep -v test | grep -v __tests__
 
 ### 実装手順
 1. `ChromeStorageAdapter` にメソッドを追加:
-   - `async getSettings(): Promise<Settings>` — `settingsStore.getSettings()` のロジックを移植
-   - `async setSettings(settings: Settings): Promise<void>` — `settingsStore.saveSettings()` のロジックを移植（暗号化、マイグレーション、クォータ、optimistic lock）
+   - `async getSettings(): Promise<Settings>` ― `settingsStore.getSettings()` のロジックを移植
+   - `async setSettings(settings: Settings): Promise<void>` ― `settingsStore.saveSettings()` のロジックを移植（暗号化、マイグレーション、クォータ、optimistic lock）
 2. `SettingsRepository` の6メソッドから `if (this.adapter instanceof InMemoryStorageAdapter)` ブランチを全削除。全メソッドを `this.adapter.get/set` の単一パスに統一
 3. `settingsStore.ts` を `SettingsRepository` 経由の shim に縮小。`getSettings()` → `settingsRepository.getAll()`, `saveSettings()` → `settingsRepository.setAll()`
 4. 残り30の `from.*settingsStore` コールサイトを `from './SettingsRepository.js'` に段階移行
@@ -81,4 +81,4 @@ grep -rn "from.*settingsStore" src/ | grep -v test | grep -v __tests__
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
-- [x] ドキュメント更新済み（ADR 2026-08-20 の将来解消計画セクションを更新） — instanceof 削除を記録
+- [x] ドキュメント更新済み（ADR 2026-08-20 の将来解消計画セクションを更新） ― instanceof 削除を記録

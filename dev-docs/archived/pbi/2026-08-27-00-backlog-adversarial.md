@@ -1,4 +1,4 @@
-# Backlog: 2026-08-27 Adversarial Review 17件 — 全修正
+# Backlog: 2026-08-27 Adversarial Review 17件 ― 全修正
 
 ## 概要
 `adversarial-code-review` 全コードベースレビューで検出された 17件 (Hacker 9 / Maintainer 8) を RICE で優先度付け。Stored XSS とバイト長迂回が最優先。SSOT化とDoS対策を並列化可能なバッチに分割。
@@ -27,7 +27,7 @@
 同点はリスク軽減効果で決定。XSS/SSRF/PCIをDoSより優先。
 
 ## 依存関係
-- 13,15,20,18は独立 — バッチ1で4並列可 (utils/offscreen/popup)
+- 13,15,20,18は独立 ― バッチ1で4並列可 (utils/offscreen/popup)
 - 16,27は共にドメイン判定だが別ファイル (ssrfGuard vs domainVerifier) で並列可
 - 14,22,23,24は別ディレクトリ (background/content) で並列可
 
@@ -39,20 +39,20 @@
 - Wave5 (1): 19
 
 ## 出力ファイル
-- `pbi/2026-08-27-13-fix-payloadguard-byte-length.md` — 15 と同点1位、RICE 4800
-- `pbi/2026-08-27-14-fix-manual-content-fetcher-rate-limit.md` — RICE 320
-- `pbi/2026-08-27-15-fix-pending-pages-xss.md` — RICE 4800
-- `pbi/2026-08-27-16-fix-ssrfguard-localhost.md` — RICE 420
-- `pbi/2026-08-27-17-fix-pii-credit-card-regex.md` — RICE 600
-- `pbi/2026-08-27-18-fix-ublock-cache-shallow-copy.md` — RICE 720
-- `pbi/2026-08-27-19-fix-trustdb-bloom-hash.md` — RICE 93
-- `pbi/2026-08-27-20-fix-permission-manager-dos.md` — RICE 960
-- `pbi/2026-08-27-21-fix-optimistic-lock-toc.md` — RICE 225
-- `pbi/2026-08-27-22-fix-page-state-shallow-copy.md` — RICE 320
-- `pbi/2026-08-27-23-fix-extractor-boolean.md` — RICE 320
-- `pbi/2026-08-27-24-fix-per-url-mutex-leak.md` — RICE 315
-- `pbi/2026-08-27-25-fix-confirm-token-best-effort.md` — RICE 140
-- `pbi/2026-08-27-26-fix-ublock-domain-validation.md` — RICE 280
-- `pbi/2026-08-27-27-fix-domain-verifier-endswith.md` — RICE 420
-- `pbi/2026-08-27-28-fix-saved-url-non-atomic.md` — RICE 140
-- `pbi/2026-08-27-29-fix-mutex-timeout-race.md` — RICE 140
+- `pbi/2026-08-27-13-fix-payloadguard-byte-length.md` ― 15 と同点1位、RICE 4800
+- `pbi/2026-08-27-14-fix-manual-content-fetcher-rate-limit.md` ― RICE 320
+- `pbi/2026-08-27-15-fix-pending-pages-xss.md` ― RICE 4800
+- `pbi/2026-08-27-16-fix-ssrfguard-localhost.md` ― RICE 420
+- `pbi/2026-08-27-17-fix-pii-credit-card-regex.md` ― RICE 600
+- `pbi/2026-08-27-18-fix-ublock-cache-shallow-copy.md` ― RICE 720
+- `pbi/2026-08-27-19-fix-trustdb-bloom-hash.md` ― RICE 93
+- `pbi/2026-08-27-20-fix-permission-manager-dos.md` ― RICE 960
+- `pbi/2026-08-27-21-fix-optimistic-lock-toc.md` ― RICE 225
+- `pbi/2026-08-27-22-fix-page-state-shallow-copy.md` ― RICE 320
+- `pbi/2026-08-27-23-fix-extractor-boolean.md` ― RICE 320
+- `pbi/2026-08-27-24-fix-per-url-mutex-leak.md` ― RICE 315
+- `pbi/2026-08-27-25-fix-confirm-token-best-effort.md` ― RICE 140
+- `pbi/2026-08-27-26-fix-ublock-domain-validation.md` ― RICE 280
+- `pbi/2026-08-27-27-fix-domain-verifier-endswith.md` ― RICE 420
+- `pbi/2026-08-27-28-fix-saved-url-non-atomic.md` ― RICE 140
+- `pbi/2026-08-27-29-fix-mutex-timeout-race.md` ― RICE 140

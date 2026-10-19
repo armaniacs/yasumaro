@@ -10,8 +10,8 @@ OSSとして拡張機能を公開する立場として、全ての依存パッ�
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read・grep で確認済み:
-- `THIRD_PARTY_NOTICES.md`（全75行）— `wa-sqlite` 等ランタイム依存のライセンス全文のみ記載
-- `package.json:45` — `"license": "MIT"`（本プロジェクト自体のライセンス）
+- `THIRD_PARTY_NOTICES.md`（全75行）― `wa-sqlite` 等ランタイム依存のライセンス全文のみ記載
+- `package.json:45` ― `"license": "MIT"`（本プロジェクト自体のライセンス）
 - `package.json` に `license-checker` や `generate-license-file` 等のライセンス集計ツールは現状導入されていない
 - 対処案（親レポートより）: `license-checker` や `generate-license-file` などのツールで推移的依存を含む THIRD_PARTY_NOTICES を自動生成する仕組みをCIに組み込む
 

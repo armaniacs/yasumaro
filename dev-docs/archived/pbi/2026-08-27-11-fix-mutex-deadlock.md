@@ -14,12 +14,12 @@
 - 解: `maxQueueSize` 到達時は `locked` を維持せず `throw` 前に `locked=false` に戻すか、キュー満杯時は `clearTimeout` で待機を解除し、`allocateTaskId` で `MAX_SAFE_INTEGER` 到達時にラップアラウンド
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 50回 acquire 後の 51回目は拒否されるがロックは維持される
+Scenario: ハッピーパス ― 50回 acquire 後の 51回目は拒否されるがロックは維持される
   Given `maxQueueSize=50` で 50回 `acquire` した
   When 51回目を呼ぶ
   Then `throw` されるが `locked` は `true` のまま
 
-Scenario: エッジケース — タイムアウトした待機が二重resolveしない
+Scenario: エッジケース ― タイムアウトした待機が二重resolveしない
   Given `acquire` がタイムアウトで `reject` した
   When `release` が呼ばれる
   Then 次の待機タスクへ正しく転送されデッドロックしない

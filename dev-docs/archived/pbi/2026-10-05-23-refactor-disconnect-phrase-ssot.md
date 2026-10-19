@@ -1,4 +1,4 @@
-# PBI: 同一ロールの並行実装 — 切断エラー文言の 3 系統判定と queue facade の pre-flush 計測コピペ
+# PBI: 同一ロールの並行実装 ― 切断エラー文言の 3 系統判定と queue facade の pre-flush 計測コピペ
 
 ## ユーザーストーリー
 

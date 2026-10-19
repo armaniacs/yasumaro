@@ -16,7 +16,7 @@ yasumaroのユーザーとして、Archiveパネルの説明が実装の実際�
 | 「フェーズ2（次ステップ）で…削除も可能」= 削除は次ステップで実行可能な別操作 | フェーズB（`archive_delete_by_staging`）は作成完了後に表示される別ボタンで、confirm dialog（dangerous）を経て実行される | ✅ | `archivePanel.ts` の purge リスナー / `archivePurgeHandlers.ts` |
 | 現行文言の「ファイルを取得後」= 削除の前提条件に見える | 実装ではフェーズBはダウンロードを**要求しない**（staging＋レジストリのみで実行可能。ダウンロード有無は関与しない） | ⚠️ 現行文言が誤って前提条件を示唆 → 削除する（望ましい文言どおり） | `archivePurgeHandlers.ts` はダウンロードに依存しない |
 
-つまり、**望ましい文言のほうが現在の実装を正確に記述しており、現行文言のほうが誤解を招く**。したがって文言修正のみで、挙動変更・テストの期待値変更は発生しない（旧文言をアサートするテストは存在しない — grepで確認済み）。
+つまり、**望ましい文言のほうが現在の実装を正確に記述しており、現行文言のほうが誤解を招く**。したがって文言修正のみで、挙動変更・テストの期待値変更は発生しない（旧文言をアサートするテストは存在しない ― grepで確認済み）。
 
 付随する用語統一: UI以外のユーザー向けドキュメント（SETUP_GUIDE / FAQ / README）も「退避」表記で書かれているため、同じ修正に含める（歴史記録である CHANGELOG 6.7.114 の記述とアーカイブ済みPBIファイルは改変しない）。
 
@@ -54,7 +54,7 @@ Scenario: ユーザー向けドキュメントの用語が統一されている
 ## テスト戦略（t_wadaスタイル）
 
 ### 単体テスト
-- `src/utils/__tests__/archiveWording.test.ts`（新規）: ja/en の `archivePanelDescription` に対し「バックアップ / Backs up を含む」「退避 / then remove it from the local database を含まない」を検証（locale JSON を fs で読む — archiveGuards.test.ts と同じパターン）
+- `src/utils/__tests__/archiveWording.test.ts`（新規）: ja/en の `archivePanelDescription` に対し「バックアップ / Backs up を含む」「退避 / then remove it from the local database を含まない」を検証（locale JSON を fs で読む ― archiveGuards.test.ts と同じパターン）
 
 ### E2Eテスト
 - なし（静的コピーであり、dashboard-ui.spec.ts は file:// のため JS 非実行。既存のパネル要素検証で十分）
@@ -80,7 +80,7 @@ Scenario: ユーザー向けドキュメントの用語が統一されている
 grep -n "archivePanelDescription" -A 2 public/_locales/ja/messages.json public/_locales/en/messages.json
 grep -rn "退避" public/_locales/ja/messages.json docs/SETUP_GUIDE.md docs/FAQ.md README.md
 ```
-（2026-09-06 作成時点: 上記の箇所のみに「退避」が残存。src/ の実装ロジックには影響なし — trustDb/trancoConsentManager.ts のコメント内「退避」は無関係）
+（2026-09-06 作成時点: 上記の箇所のみに「退避」が残存。src/ の実装ロジックには影響なし ― trustDb/trancoConsentManager.ts のコメント内「退避」は無関係）
 
 ### 実装手順
 1. Red: `src/utils/__tests__/archiveWording.test.ts`（新規）で ja/en の旧文言を検出

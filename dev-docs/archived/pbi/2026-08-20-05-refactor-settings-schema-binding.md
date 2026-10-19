@@ -1,4 +1,4 @@
-# PBI: Settings Schema Binding — 設定→DOMの隠れた契約を型安全にする
+# PBI: Settings Schema Binding ― 設定→DOMの隠れた契約を型安全にする
 
 ## ユーザーストーリー
 開発者として、設定→DOMの契約が3ファイル（`settingsFormBinding.ts`、`settingsPipeline.ts`、`generalSettingsPanel.ts`）に分散し、`data-storage-key`属性にコンパイル時チェックがない状態を解消したい。なぜなら、`data-storage-key`のtypoがsilent failとして振る舞い、デバッグに時間を消費するからだ。

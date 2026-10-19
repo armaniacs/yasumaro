@@ -14,7 +14,7 @@
 
 ## 背景
 
-- `src/popup/statusPanel.ts` — renderer / store 抽出後も 468 行で複数責務が混在。
+- `src/popup/statusPanel.ts` ― renderer / store 抽出後も 468 行で複数責務が混在。
   - init 制御 + 信頼・権限フロー: `:139-216`（permissionManager の動的 import を含む）
   - 全 URL バナー: `:392-426`
   - ホワイトリスト配線: `:334-390`
@@ -80,7 +80,7 @@ trustPanel 抽出、statusPanel からの配線、パリティテストの新設
 - 抽出: `src/popup/trustPanel.ts`（新設・143 行）に信頼・権限フロー（updateTrustStatus）、全 URL バナー（initAllUrlsPermissionBanner）、共有失敗経路（reportHandlerError）、errorToastTimer を移設。permissionManager / trustChecker の動的 import 経路（タイミング含む）は実装同一で維持
 - statusPanel.ts: 468 → 340 行（imports/re-exports に集約、init のモードバッジ取得を `renderPrivacyModeBadge` ヘルパーへ抽出）。statusPanel は updateTrustStatus / initAllUrlsPermissionBanner を再 export し、main.ts / recordSession.ts 側の import 面は不変
 - statusRenderers.ts: trust renderer 移設に伴う doc コメント整備
-- テスト: `trustPanel.test.ts`（新設・15 tests）でバナー表示条件・trust 判定・権限フロー・toast チェーンのパリティと statusPanel re-export の配線 pin。`statusPanel-extra.test.ts` の mainStatus ソース pin を 2 ファイル横断チェックへ更新（statusPanel 4 + trustPanel 1 = 計 5、旧 1 ファイル 5 の合計は不変）— 旧 pin は分割後に落ちるため本テスト更新は本 PBI コミットに同梱必須
+- テスト: `trustPanel.test.ts`（新設・15 tests）でバナー表示条件・trust 判定・権限フロー・toast チェーンのパリティと statusPanel re-export の配線 pin。`statusPanel-extra.test.ts` の mainStatus ソース pin を 2 ファイル横断チェックへ更新（statusPanel 4 + trustPanel 1 = 計 5、旧 1 ファイル 5 の合計は不変）― 旧 pin は分割後に落ちるため本テスト更新は本 PBI コミットに同梱必須
 - 検証: `src/popup` スイープ 916 tests green / `npm run validate` PASS / 全 E2E 324 passed（`npm run build` 後）
 - rank-16（NN31 double casts cleanup）への引き継ぎメモ: 旧 `statusPanel.ts:29` の as-unknown-as（errorToastTimer 初期化）は trustPanel.ts への移設で `trustPanel.ts:12` に位置変更。NN31 実装時は参照位置を trustPanel.ts 側に更新すること（ファイル分割の現時点では清掃対象外として保持）
-- 備考: trustPanel.test.ts のファイル自体は PBI 30 のコミットに同梱（PBI 30 の mockGetMessage ファクトリ置換が同一ファイルに及ぶためのファイル単位の帰属 — 25 の実装時点でパリティ検証済み）
+- 備考: trustPanel.test.ts のファイル自体は PBI 30 のコミットに同梱（PBI 30 の mockGetMessage ファクトリ置換が同一ファイルに及ぶためのファイル単位の帰属 ― 25 の実装時点でパリティ検証済み）

@@ -1,4 +1,4 @@
-# SettingsRepository Seam — Minimal Changes Plan
+# SettingsRepository Seam ― Minimal Changes Plan
 
 > **For agentic workers:** Use subagent-driven-development or executing-plans to implement this plan task-by-task.
 
@@ -224,7 +224,7 @@ git commit -m "test: add SettingsRepository unit tests"
 
 ```typescript
 /**
- * SettingsRepository — deep module hiding the 30 scattered StorageKeys accesses
+ * SettingsRepository ― deep module hiding the 30 scattered StorageKeys accesses
  * ... (既存コメントはそのまま) ...
  */
 

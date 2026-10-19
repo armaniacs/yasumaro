@@ -1,4 +1,4 @@
-# PBI 2026-09-12-16 — Read-limit 政策の単一 owner（planner が fts/plain cap を所有）
+# PBI 2026-09-12-16 ― Read-limit 政策の単一 owner（planner が fts/plain cap を所有）
 
 - **種別**: 🔧非機能追加（refactor）
 - **優先度**: 8 位 / RICE **6.4**（R12 × I1 × C80% / E1.5人日）
@@ -43,7 +43,7 @@ Then もう片方の更新漏れが検出される
 
 - `QUERY_CAPS` 定義を `messaging/limits.ts`（MAX_QUERY_LIMIT の隣）に移動。`queryPlan.ts` は worker 境界用に再 export（既存 import は不変）
 - `selectReadCap(useFts)` + `applySearchPolicy(q, fts5Available)` を planner に新設。searchHandlers の inline ternary を置換
-- `buildQuerySpec` の clamp は worker 境界の防御的再適用として文書化し維持（生 payload が直接来るため削除しない — 削除が怖かった理由を明示）
+- `buildQuerySpec` の clamp は worker 境界の防御的再適用として文書化し維持（生 payload が直接来るため削除しない ― 削除が怖かった理由を明示）
 - `IdbVfsBackend` の orphan `100000` を `QUERY_CAPS.fts` に配線 + stale コメント（old worker cap 言及）を修正
 - `queryPlan.ts:7` の `plain:1000` コメント drift を修正
 - 検証: cap table test 3 件新設・offscreen 全 73 ファイル 1034 tests green・type-check green・lint 0 errors

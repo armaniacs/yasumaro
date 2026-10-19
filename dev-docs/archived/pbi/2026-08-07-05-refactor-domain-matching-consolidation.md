@@ -23,7 +23,7 @@
 
 **リスク**: ReDoSガードが `domainUtils.ts` のみにあり、他3ファイルは脆弱。
 
-### 重複2: `wildcardToRegex` パターン — 7箇所
+### 重複2: `wildcardToRegex` パターン ― 7箇所
 
 ```ts
 pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')
@@ -39,7 +39,7 @@ pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\\\*/g, '.*')
 | `content/urlSkipper.ts` | 54 |
 | `content/loader.ts` | 87 |
 
-### 重複3: `SKIPPED_PROTOCOLS` + `shouldSkipUrl` — 2箇所
+### 重複3: `SKIPPED_PROTOCOLS` + `shouldSkipUrl` ― 2箇所
 
 | ファイル |
 |---------|

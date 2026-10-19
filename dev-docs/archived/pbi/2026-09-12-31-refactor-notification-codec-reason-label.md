@@ -1,4 +1,4 @@
-# PBI 2026-09-12-31 — NotificationCodec + ReasonLabel（codec 3 箇所・ラベル 3 スペリング統合）
+# PBI 2026-09-12-31 ― NotificationCodec + ReasonLabel（codec 3 箇所・ラベル 3 スペリング統合）
 
 - **種別**: 🔧非機能追加（refactor + latent bug 解消）
 - **優先度**: 7 位 / RICE **6.4**（R8 × I1 × C80% / E1.0人日）
@@ -6,11 +6,11 @@
 
 ## 背景（なぜ）
 
-wire codec（prefix `privacy-confirm-` + url-safe base64 + HMAC）が 3 call site で再派生: `urlNotificationHandlers.ts:21-65,72-134`、`notificationHelper.ts:4`、`notificationHandlers.ts:46,59,64`。reason ラベルは 2 i18n family 上に 3 スペリング: `recordingHandlers.ts:143-149`、`visitReporter.ts:193-200`、`popup/recordCurrentPage/recordSession.ts:228` — いずれも `.replace('-','')`（初回のみ置換）がコピペされ、multi-hyphen reason で i18n lookup が破綻する latent bug。
+wire codec（prefix `privacy-confirm-` + url-safe base64 + HMAC）が 3 call site で再派生: `urlNotificationHandlers.ts:21-65,72-134`、`notificationHelper.ts:4`、`notificationHandlers.ts:46,59,64`。reason ラベルは 2 i18n family 上に 3 スペリング: `recordingHandlers.ts:143-149`、`visitReporter.ts:193-200`、`popup/recordCurrentPage/recordSession.ts:228` ― いずれも `.replace('-','')`（初回のみ置換）がコピペされ、multi-hyphen reason で i18n lookup が破綻する latent bug。
 
 ## スコープ
 
-- `NotificationCodec` module 新設: `encode(url) / decode(id) / isOurs(id)` — prefix と上限（MAX_URL_LENGTH / MAX_ENCODED_LENGTH）は implementation
+- `NotificationCodec` module 新設: `encode(url) / decode(id) / isOurs(id)` ― prefix と上限（MAX_URL_LENGTH / MAX_ENCODED_LENGTH）は implementation
 - `ReasonLabel` module 新設: `reason → messageKey → label` の単一テーブル（`reasonToStatusCode` / `statusCodeToMessageKey` / `privatePageReason_*` fallback を統一・replace は replaceAll）
 - 3 label site + codec call site を委譲
 - 振る舞い: 現行の key・文言は不変
@@ -44,7 +44,7 @@ then replaceAll により正しい message key が生成される
 
 ## 実装メモ（2026-09-12）
 
-- **主張の訂正（直接検証）**: wire codec は既に単一 module（urlNotificationHandlers.ts の encode/decode）に集約されており、3 call site は「再派生」ではなく共有関数の import — codec 部分は既に SSOT だった。実在した重複は reason ラベルの 3 スペリングのみ
+- **主張の訂正（直接検証）**: wire codec は既に単一 module（urlNotificationHandlers.ts の encode/decode）に集約されており、3 call site は「再派生」ではなく共有関数の import ― codec 部分は既に SSOT だった。実在した重複は reason ラベルの 3 スペリングのみ
 - `reasonLabel.ts` 新設: `reasonToMessageKeys(reason)`（canonical `privacyStatus_*` + legacy `privatePageReason_*` の両 key を返す）+ `resolveReasonLabel`（canonical → legacy → raw の順で解決）+ `legacyReasonMessageKey`（replaceAll で multi-hyphen 対応）
-- 3 label site（recordingHandlers / visitReporter / recordSession）を委譲 — `.replace('-','')` 初回のみ置換の latent bug 解消
+- 3 label site（recordingHandlers / visitReporter / recordSession）を委譲 ― `.replace('-','')` 初回のみ置換の latent bug 解消
 - 検証: content + background + popup 3,636 tests green・type-check green・lint 0 errors

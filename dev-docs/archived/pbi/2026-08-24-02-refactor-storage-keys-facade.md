@@ -35,7 +35,7 @@ Scenario: フォールバックが facade 内に集中する
 - **契約**: `Settings` 型が exact であることを型テストで検証
 
 ## 見積もり
-3 ストーリーポイント（高 — 3 人週程度。incremental に実施）
+3 ストーリーポイント（高 ― 3 人週程度。incremental に実施）
 
 ## 技術的考慮事項
 - **依存**: PBI-01（SettingsRepository shim 廃止）に依存

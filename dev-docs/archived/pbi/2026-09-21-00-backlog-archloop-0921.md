@@ -20,15 +20,15 @@ holistic-0921 + closer の21 PBI 完了後の第2回 arch-delivery-loop。3ク�
 
 ## 実行順の逸脱理由
 
-- 順位1 R1 = 2 W1 同点 (32): W1 を先 — STAGED drift（dedup public 未出荷）が実害の実績であり、24 で wasm-pack 再構築を含む以降の wasm 作業の土台になる
+- 順位1 R1 = 2 W1 同点 (32): W1 を先 ― STAGED drift（dedup public 未出荷）が実害の実績であり、24 で wasm-pack 再構築を含む以降の wasm 作業の土台になる
 - 3位 W2 = 4位 P1 同点 (24): W2 先（同点 tie-break のリスク軽減: mechanism/policy 配置違反は runtime 契約そのものの劣化）
 - 依存: 21 は 17 と extractSentencesStep.ts を共有 → 17 の後。24 は wasm-pack 再構築（3クレート）を伴うため直列最終。バッチ: A = 17/18/19/20（並列）→ B = 21/22/23/25（並列）→ C = 24（直列）
 
 ## 台帳送り（実害未発生・再検討トリガー付き）
 
-- **P3: 2 wire table の dashboard-hop codec 形状統合**（interface 抽出のみ deletion test passes）— トリガー: 2 wire table を同時に改修する時
-- **P4: ensureBackend/getBackend の resolver 入力 literal**（trivial サイズ）— トリガー: backend 状態 field の追加時
-- **R4: checkPrivacyHeadersStep の force/whitelist 短絡+pending 組み立て残余**（allow 短絡は privacyInfo fetch 回避の意図的 I/O 最適化を含む）— トリガー: privacy step 次回改修時
+- **P3: 2 wire table の dashboard-hop codec 形状統合**（interface 抽出のみ deletion test passes）― トリガー: 2 wire table を同時に改修する時
+- **P4: ensureBackend/getBackend の resolver 入力 literal**（trivial サイズ）― トリガー: backend 状態 field の追加時
+- **R4: checkPrivacyHeadersStep の force/whitelist 短絡+pending 組み立て残余**（allow 短絡は privacyInfo fetch 回避の意図的 I/O 最適化を含む）― トリガー: privacy step 次回改修時
 
 ## なぜなぜ要約
 
@@ -40,5 +40,5 @@ holistic-0921 + closer の21 PBI 完了後の第2回 arch-delivery-loop。3ク�
 
 - **全9件 実装・検証・コミット・アーカイブ完了。** バッチA（17/18/19/20 並列）→ バッチB（21/22/23/25 並列）→ バッチC（24 直列・Rust）
 - コミット: 17 9e3bf74 / 18 bb37635 / 19 706eeb6 / 20 d7d4c4c / 21 fd868b0 / 22 5a2c4a1 / 23 cc61e97 / 25 2e30490+1df8994 / 24 8aef932
-- 実装中の発見: (a) PBI 20 — fts 既定 50 が background clamp 専有で offscreen planner は再現していなかった（単純削除で既定 50→100 の挙動変化）→ planSearch に DEFAULT_SEARCH_LIMIT=50 を移植し SQLITE_SEARCH 直送路とも既定を統一 (b) PBI 22 — 診断の「~8重複」実数は10サイト（bench 4本・parity 4本・wasm-success 2本）(c) PBI 23 の検証で offscreen-search-orderby pin が PBI 20 の意図的変更（100→50）で RED → pin 更新 (d) PBI 17 — selector 配置は background/pipeline（contentExtractor 配置は utils→background 逆辺を生むと実証）(e) PBI 25 — extractor.ts facade は禁止ファイルだったため統合側が deep call 優先配線に移行
+- 実装中の発見: (a) PBI 20 ― fts 既定 50 が background clamp 専有で offscreen planner は再現していなかった（単純削除で既定 50→100 の挙動変化）→ planSearch に DEFAULT_SEARCH_LIMIT=50 を移植し SQLITE_SEARCH 直送路とも既定を統一 (b) PBI 22 ― 診断の「~8重複」実数は10サイト（bench 4本・parity 4本・wasm-success 2本）(c) PBI 23 の検証で offscreen-search-orderby pin が PBI 20 の意図的変更（100→50）で RED → pin 更新 (d) PBI 17 ― selector 配置は background/pipeline（contentExtractor 配置は utils→background 逆辺を生むと実証）(e) PBI 25 ― extractor.ts facade は禁止ファイルだったため統合側が deep call 優先配線に移行
 - 統合検証（Phase 3）と版上げ（Phase 4）は台帳の各セクションに追記

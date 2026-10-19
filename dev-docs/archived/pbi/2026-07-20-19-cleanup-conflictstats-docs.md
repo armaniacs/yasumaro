@@ -1,4 +1,4 @@
-# PBI: デッドコード削除 — optimisticLock conflictStats とドキュメント整備
+# PBI: デッドコード削除 ― optimisticLock conflictStats とドキュメント整備
 
 元指摘: Checking Team (High: System Architect; Medium: Documentation Architect)
 
@@ -68,7 +68,7 @@ Feature: Dead code removal and doc cleanup
 2pt（デッドコード削除 + テスト3件更新 + ドキュメント修正）
 
 ## 副作用
-🟢 なし — プロダクションコードで使用されていない機能の削除のみ。
+🟢 なし ― プロダクションコードで使用されていない機能の削除のみ。
 
 ## 落とし穴
 - `storage-locking.test.ts` の `resetConflictStats()` はテスト間のクリーンアップ用途かもしれない。削除後にテストが flaky にならないか注意。

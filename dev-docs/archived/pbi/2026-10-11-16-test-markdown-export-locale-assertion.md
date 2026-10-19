@@ -22,11 +22,11 @@ E2E 担当者として、ブラウザの UI 言語によらず export 検証を 
 
 ## 背景（現状・証拠）
 
-- `testDir/e2e/usability/dashboard-markdown-export.spec.ts:36` —
+- `testDir/e2e/usability/dashboard-markdown-export.spec.ts:36` ―
   `await expect(page.locator('#export-status')).toContainText(/completed/i)`。
 - 実測（失敗ログ）: 同 locator は `<div id="export-status" class="status-message success">Markdown エクスポートが完了しました。</div>` と空 div を交互に解決。
   日本語文言に Latin の "completed" は含まれないため、ja UI では成立不能。
-- アプリ側: `src/dashboard/panels/diagnostic/exportLogsPanel.ts:40` —
+- アプリ側: `src/dashboard/panels/diagnostic/exportLogsPanel.ts:40` ―
   `getMessageOr('exportLogsMarkdownCompleted', 'Markdown export completed.')`
   で i18n 解決しており、日本語表示は正動作。NN08 差分は dashboard/export/i18n
   に触れていない（無関係を確認済み）。
@@ -99,7 +99,7 @@ Scenario: 英語 UI でも回帰しない
 
 - 実装: `toContainText(/completed/i)` → `toHaveClass(/success/)` に置換
   （経緯は受け入れ基準の方針裁定欄を参照。(a) 実装→headed で無効を確認→(b) へ）
-- `npm run type-check:test:baseline` — 463（pinned 463、exit 0）
+- `npm run type-check:test:baseline` ― 463（pinned 463、exit 0）
 - `npx eslint` exit 0
 - headed E2E は未検証。ユーザー headed 実行待ち。
   本 PBI は E2E green 確認後にアーカイブする（NN08 と同一基準）

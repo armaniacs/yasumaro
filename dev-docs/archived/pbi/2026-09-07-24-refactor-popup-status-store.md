@@ -1,4 +1,4 @@
-# PBI: Popup の二重 status 取得を StatusStore に統合 — ボタン文言と status 表示の不一致温床を解消
+# PBI: Popup の二重 status 取得を StatusStore に統合 ― ボタン文言と status 表示の不一致温床を解消
 
 ## ユーザーストーリー
 Popup の記録体験を保守する開発者として、statusPanel の初期化と recordSession のボタン状態決定がそれぞれ `chrome.tabs.query → checkPageStatus(url)` を実行して同じ重い問いに 2 回答えているのを、1 回の取得を共有する StatusStore（単一 seam）に畳みたい、なぜなら `checkPageStatus` は GET_PRIVACY_CACHE + SettingsRepository.getAll + getSavedUrlsWithTimestamps + isDomainAllowed の並列取得を含む重い純データ関数であり、ポップアップ表示のたびに 2 回走り、しかもボタン文言の分岐（`domainFilter.allowed`）と status 表示の分岐が別スナップショットを参照するため、domain filter 変更直後などに「ボタンは Record Now、表示は filtered」といった不一致が起きうるから
@@ -43,7 +43,7 @@ Popup の記録体験を保守する開発者として、statusPanel の初期�
 - [x] `npm run type-check` / `npm run lint` / popup 関連テストが green
 
 ## テスト戦略
-- 単体: StatusStore の新規テスト — 1 回取得の共有（スパイで呼び出し回数 1 を assert）、null フォールバック、スナップショット同一性
+- 単体: StatusStore の新規テスト ― 1 回取得の共有（スパイで呼び出し回数 1 を assert）、null フォールバック、スナップショット同一性
 - 回帰: 既存 popup テスト群が green
 - 非対象: statusPanel の全面分割（6 セクションの render 関数化は本 PBI のスコープ外として台帳に記録可能）、background 側の normalizeUrl 統合
 

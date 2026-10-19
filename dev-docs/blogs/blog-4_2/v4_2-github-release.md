@@ -1,6 +1,6 @@
 ## What's New in v4.2
 
-You can now see at a glance whether a page was recorded or privacy-detected — without opening the popup.
+You can now see at a glance whether a page was recorded or privacy-detected ― without opening the popup.
 
 ### 🔶 Privacy Detection Badge `!`
 
@@ -8,13 +8,13 @@ When `Cache-Control: private`, `Set-Cookie`, or `Authorization` headers are dete
 
 ### 🔵 Auto-Save Badge `◎`
 
-When a page is auto-recorded, a blue `◎` badge appears on the toolbar icon. It stays visible while you're on that tab — even if you switch to another tab and come back. It clears when you navigate to a new page in the same tab.
+When a page is auto-recorded, a blue `◎` badge appears on the toolbar icon. It stays visible while you're on that tab ― even if you switch to another tab and come back. It clears when you navigate to a new page in the same tab.
 
 | Badge | Color | Meaning |
 |-------|-------|---------|
 | `!` | Orange | Privacy header detected. Auto-recording paused. |
 | `◎` | Blue | Auto-recording completed. |
-| (none) | — | Normal state. |
+| (none) | ― | Normal state. |
 
 ### 🤖 5 AI Prompt Presets
 
@@ -22,10 +22,10 @@ Open the "Prompt" panel in the dashboard to find 5 built-in presets:
 
 | Preset | Output |
 |--------|--------|
-| Default | 1–2 sentence summary in Japanese |
+| Default | 1-2 sentence summary in Japanese |
 | With Tags | `#category` tag + 1-line summary |
 | Bullet Points | 3-point bullet list in Japanese |
-| English Summary | 1–2 sentence summary in English |
+| English Summary | 1-2 sentence summary in English |
 | Technical | 3 technical highlights in Japanese |
 
 Click **Activate** to use a preset. To customize, use **Duplicate** to copy it as a new custom prompt.
@@ -52,7 +52,7 @@ When you open the popup on a domain in your block list, the record button change
 |-------|----|------|
 | `!` | オレンジ | プライバシーヘッダー検出。自動記録が止まっている |
 | `◎` | 青 | 自動記録が完了した |
-| （なし） | — | 通常状態 |
+| （なし） | ― | 通常状態 |
 
 ### 🤖 AIプロンプトプリセット 5種類
 

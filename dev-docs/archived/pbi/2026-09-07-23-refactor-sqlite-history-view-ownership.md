@@ -1,4 +1,4 @@
-# PBI: sqliteHistoryPanel の描画所有権を View に一本化 — 二重レンダーパスと DOM ID seam 漏洩の解消
+# PBI: sqliteHistoryPanel の描画所有権を View に一本化 ― 二重レンダーパスと DOM ID seam 漏洩の解消
 
 ## ユーザーストーリー
 SQLite 履歴パネルの見た目と描画を保守する開発者として、Panel（610 行）と View（358 行）の間で描画の所有権が分断されているのを View 1 箇所に集約したい、なぜなら Panel 内に `updateDynamicRegions()`（差分更新）と `renderState()`（フル再構築）の 2 つの描画パスが併存して calendar / sort / list / pagination の描画とコールバック束を二重記述しており、View は HTML 文字列だけ作って Panel が `getElementById` を 12 箇所から再取得するため、ID 5 種が View / Panel / CSS / テストに 33 箇所漏洩して View を直さず Panel だけ変えることもその逆もできないから
@@ -14,7 +14,7 @@ SQLite 履歴パネルの見た目と描画を保守する開発者として、P
 | なぜ 2 つの描画パスが併存するのか | 差分更新（パフォーマンス）とフル再構築（初期化・復帰）が別タイミングで実装され、共通の render 入口が設計されなかった。`refresh()`（:544-550）が `isPanelMounted()` で分岐するだけの thin dispatcher |
 | なぜ View が HTML だけなのか | View が「文字列を作るだけ」で、リスナー配線と DOM 再取得を Panel が所有している。`buildXxxHtml` と `wireXxx` が分離していないため、ID という seam を跨いだ密結合（33 ヒット）になった |
 | なぜコールバック束が二重なのか | `onDateSelect / onToggleStar / onDelete / onSelectionChange / onTagFilterClick / onContentToggle` 等を 2 パスがそれぞれ渡している。追加のコールバックは 2 箇所同時更新 |
-| なぜ View を削除すると壊れるのか | View は Panel のコールバック束なしでは振る舞えない — これは seam が本物（2 adapters）ではなく仮説的である証拠。render と wire を 1 つの interface にすれば seam が本物になる |
+| なぜ View を削除すると壊れるのか | View は Panel のコールバック束なしでは振る舞えない ― これは seam が本物（2 adapters）ではなく仮説的である証拠。render と wire を 1 つの interface にすれば seam が本物になる |
 | 解の粒度 | View が `buildXxxHtml + wireXxx(container, callbacks)` ペアを公開、Panel は `view.render(container, state, callbacks)` 1 呼び出しのみ。差分/フルの分岐は View 内部 1 箇所に |
 
 ## BDD受け入れシナリオ
@@ -62,7 +62,7 @@ SQLite 履歴パネルの見た目と描画を保守する開発者として、P
 
 ## 未解決事項
 1. 差分更新の粒度（list のみ差分、それ以外フル等）を View 内部の最適化としてどこまで残すか → 【結論: フル再構築 1 パスへの単純化は不採用】旧 `renderState` は毎回 `searchInput.focus()` するため、全 state 変化でフル再構築すると star 切替・ページ送りのたびに検索欄へフォーカスが奪われる（a11y 回帰・振る舞い変化）。差分パスは入力値同期・フォーカス維持のために必須。よって View 内部に差分（`updateDynamicRegions` 相当）/フル（`renderFull`）の 2 経路を残し、分岐判定だけを `render()` 1 箇所に集約した。差分/フル収束テストとフォーカス維持テストで担保。
-2. `updateTagFilterBar`（旧 Panel :183-232）と legacy `historyFilters.updateTagFilterIndicator` の関係 — 【結論: スコープ外】legacy 撤去（PBI 16）待ちのため本 PBI では触らない。`updateTagFilterBar` 自体は View 内部関数として移動済み（振る舞い不変）。
+2. `updateTagFilterBar`（旧 Panel :183-232）と legacy `historyFilters.updateTagFilterIndicator` の関係 ― 【結論: スコープ外】legacy 撤去（PBI 16）待ちのため本 PBI では触らない。`updateTagFilterBar` 自体は View 内部関数として移動済み（振る舞い不変）。
 
 ## Definition of Done
 - [x] 全 BDD シナリオが自動テストとして実装されパスする（Panel grep 0 件は手動確認＋記録。単一入口の差分/フル切替は `render` テスト 5 件、振る舞い同一は既存 240 件 green）

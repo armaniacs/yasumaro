@@ -42,7 +42,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 | Naming Guidelines | [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md) |
 | Performance Guide | [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md) |
 | Test Rules (required reading before writing tests) | [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) |
-| Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) · [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) · [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) · [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
+| Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) ・ [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) ・ [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) ・ [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
 | Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
 | Performance Testing (benchmark harness) | [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md) |
@@ -64,11 +64,11 @@ To load the unpacked extension: run `npm run build`, open `chrome://extensions`,
 
 | Component | Location | Responsibility |
 |-----------|----------|----------------|
-| Service Worker | `entrypoints/background/` + `src/background/` | Coordinates all operations — ObsidianClient, AIClient, sessionAlarmsManager, Mutex/ServiceWorkerContext, recordingLogic |
-| Popup UI | `entrypoints/popup/` + `src/popup/` | Configuration & recording UI — domainFilter, ublockImport, settings, utils (focusTrap, i18n) |
+| Service Worker | `entrypoints/background/` + `src/background/` | Coordinates all operations ― ObsidianClient, AIClient, sessionAlarmsManager, Mutex/ServiceWorkerContext, recordingLogic |
+| Popup UI | `entrypoints/popup/` + `src/popup/` | Configuration & recording UI ― domainFilter, ublockImport, settings, utils (focusTrap, i18n) |
 | Dashboard / Options | `entrypoints/options/` + `src/dashboard/` | Settings and management interface |
 | Offscreen | `entrypoints/offscreen.html` + `src/offscreen/` | DOM operations that cannot run in service workers |
-| Content Scripts | `entrypoints/content/` + `src/content/` | Engagement tracking — loader, extractor |
+| Content Scripts | `entrypoints/content/` + `src/content/` | Engagement tracking ― loader, extractor |
 
 Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_MAP.md](dev-docs/ARCHITECTURE_MAP.md).
 
@@ -157,7 +157,7 @@ gh run watch <id> --exit-status --interval 10   # OK
 gh run watch <id> --exit-status --interval 30   # violation
 ```
 
-The default of 3 seconds is fine. Raising it above 10 is not: the interval is the **worst-case latency of each individual wait**, so a 30-second interval means every wait can waste up to 30 seconds of wall clock, and that cost is paid again on each poll. It also delays `--exit-status` reporting by up to one interval after the run is already finished. The cost multiplies across every wait in a session, and it is invisible — the work is not slower in any visible way, it just sits there.
+The default of 3 seconds is fine. Raising it above 10 is not: the interval is the **worst-case latency of each individual wait**, so a 30-second interval means every wait can waste up to 30 seconds of wall clock, and that cost is paid again on each poll. It also delays `--exit-status` reporting by up to one interval after the run is already finished. The cost multiplies across every wait in a session, and it is invisible ― the work is not slower in any visible way, it just sits there.
 
 `src/__tests__/agent-poll-interval.test.ts` fails if this rule's text disappears from `AGENTS.md` or `.kilorules`, or if a file in the repository passes an interval above 10 to a watch/poll flag.
 
@@ -209,6 +209,39 @@ Documentation inventory, i18n formatting rules, and the documentation update che
 
 ---
 
+## Documentation Characters (Shift-JIS + enumerated emoji)
+
+Documents must survive a Shift-JIS round trip. Scope: `pbi/`, `dev-docs/`, `docs/`, `public/`, and root `*.md`.
+Out of scope: generated files (`THIRD_PARTY_NOTICES.md`, `graphify-out/`, `bench/reports/`), agent
+scratch directories (`.superpowers/`, `.kilo/`, `.checking-team-tmp/`, `plans/`, `bench/`), and these
+rule files themselves (`AGENTS.md` / `CLAUDE.md` symlink / `CLAUDE.local.md`) because they quote the
+forbidden characters.
+
+- Use only characters representable in **JIS X 0208 / CP932**.
+- Never use `—` (EM DASH, U+2014); use `―` (U+2015). The whole tree was converted on 2026-10-20.
+- Substitute out-of-range symbols: `≤`→`≦`, `≥`→`≧`, `≈`→`≒`, `↔`/`↕`/`⇄`/`⟺`→`⇔`, `↳`→`└`,
+  `•`→`・`, `–`→`-`, `²`→`^2`, `µ`→`μ`, `©`→`(c)`, `█`/`░`→`#`/`-`, `⎯`→`-`, `›`→`>`, `⊊`→`⊂`.
+- Accented Latin letters (`Ō`, `ç`, `ó`, `á`) become the basic Latin letter (`Ō`→`O`, `ç`→`c`).
+- **Mojibake is never an exception.** Hangul, Simplified Chinese, `U+FFFD`, and Arabic text are
+  corruption: rewrite the sentence instead of exempting it (tracked as PBI `2026-10-19-13`).
+- **Emoji: only the enumerated set below** (67 + flags + presentation modifiers `U+FE0F` / `U+20E3`):
+
+  ```
+  ✅ 🟡 🟢 🎯 🔴 ✓ 🔧 ⬜ ❌ ⚙ 🔒 📝 ✗ ⚠ 📋 🔵 🔶 🤖 ♻ 🧹 📊 🏷 🌐 ✨
+  🛡 🚧 🖱 🗄 💡 🐛 📱 🚫 ☁ 📌 📦 🔐 🔍 ❓ ⛅ 🌨 ✕ ☰ 🎉 📂 ✏ 🔔 🙏
+  🚀 ⛔ 📈 🕸 📉 🖥 🗑 🦋 📜 🟣 🗂 📖 💎 🔗 🔓 😀 🧪 ⏳ ⏸ ▶ 🇯🇵
+  ```
+
+  Adding an emoji means updating this list first. It is enumerated, not a range, so the set cannot
+  grow without a deliberate edit.
+- **Product glyphs are quoted on purpose:** `∉` (toolbar badge) and `⏎` (log line-break separator)
+  are what the extension actually renders; replacing them would make the document wrong.
+- Check with `node scripts/check-docs-chars.mjs` (`--list` prints every offending character).
+  It exits 1 on a violation. The emoji list and the product-glyph allowlist live in that script —
+  keep it and this section in step.
+
+---
+
 ## Performance
 
 Performance metrics, optimization targets, and browser compatibility notes live in [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md). When optimizing, verify against the key metrics defined there.
@@ -251,4 +284,4 @@ Graphify rules live in `AGENTS.local.md` (gitignored, local-only). Read it if pr
 
 ## arch-delivery-loop
 
-Closed loop: architecture diagnosis → PBI creation (RICE prioritization) → autonomous implementation → `make clean test` → version bump. Skill file: `.agents/skills/arch-delivery-loop/SKILL.md` — read it and follow its phases before executing. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when the user names `arch-delivery-loop`.
+Closed loop: architecture diagnosis → PBI creation (RICE prioritization) → autonomous implementation → `make clean test` → version bump. Skill file: `.agents/skills/arch-delivery-loop/SKILL.md` ― read it and follow its phases before executing. Trigger on 「アーキテクチャから実装まで一気に」「全部やって」「積み残しを閉じて」, or when the user names `arch-delivery-loop`.

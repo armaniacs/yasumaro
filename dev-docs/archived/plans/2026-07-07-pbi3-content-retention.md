@@ -1,10 +1,10 @@
-# PBI-3: content（本文）保存 + 保持ポリシー — Implementation Plan
+# PBI-3: content（本文）保存 + 保持ポリシー ― Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Save content (page body text) to SQLite `browsing_logs.content` and add configurable retention policy (days-based, count-based, starred-entry protection) with daily purge + dashboard UI + fallback storage support.
 
-**Architecture:** Pipeline `createSaveSqliteStep` sets `content: data.content || null` (was hardcoded `null` for PBI-3). New `purgeContent()` function follows existing `purgeOldRecords()` pattern (2-stage: OPFS Worker delegation → direct SQL → `usingFallbackStorage`). Retention settings stored via StorageKeys. Dashboard UI mirrors existing retention policy section. offscreen.ts INSERT/INSERT_BATCH handlers receive full BrowsingLogRecord payload (PBI-1 metadata was silently dropped — fixed here). storageFallback.ts insert/insertBatch expanded to store all metadata + content + purgeContent.
+**Architecture:** Pipeline `createSaveSqliteStep` sets `content: data.content || null` (was hardcoded `null` for PBI-3). New `purgeContent()` function follows existing `purgeOldRecords()` pattern (2-stage: OPFS Worker delegation → direct SQL → `usingFallbackStorage`). Retention settings stored via StorageKeys. Dashboard UI mirrors existing retention policy section. offscreen.ts INSERT/INSERT_BATCH handlers receive full BrowsingLogRecord payload (PBI-1 metadata was silently dropped ― fixed here). storageFallback.ts insert/insertBatch expanded to store all metadata + content + purgeContent.
 
 **Design doc:** `docs/superpowers/specs/2026-07-07-pbi3-content-retention-design.md`
 
@@ -70,7 +70,7 @@ git commit -m "feat(pbi3): add content retention storage keys and defaults"
 
 ---
 
-### Task 2: Pipeline — set content field from context
+### Task 2: Pipeline ― set content field from context
 
 **Files:**
 - Modify: `src/background/pipeline/RecordingPipeline.ts` (createSaveSqliteStep)
@@ -110,7 +110,7 @@ git commit -m "feat(pbi3): save content field in pipeline"
 
 ---
 
-### Task 3: offscreen.ts — update INSERT/INSERT_BATCH for full field passthrough
+### Task 3: offscreen.ts ― update INSERT/INSERT_BATCH for full field passthrough
 
 **Files:**
 - Modify: `src/offscreen/offscreen.ts` (SQLITE_INSERT handler, SQLITE_INSERT_BATCH handler)
@@ -137,7 +137,7 @@ function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRe
     is_starred: payload.is_starred != null ? Number(payload.is_starred) : 0,
     is_deleted: payload.is_deleted != null ? Number(payload.is_deleted) : 0,
     obsidian_synced: payload.obsidian_synced != null ? Number(payload.obsidian_synced) : 0,
-    // PBI-1: diagnostic metadata (was missing — content always null)
+    // PBI-1: diagnostic metadata (was missing ― content always null)
     content: payload.content != null ? String(payload.content) : null,
     masked_count: payload.masked_count != null ? Number(payload.masked_count) : null,
     cleansed_reason: payload.cleansed_reason != null ? String(payload.cleansed_reason) : null,
@@ -244,7 +244,7 @@ git commit -m "fix(pbi3): passthrough all BrowsingLogRecord fields in offscreen 
 
 ---
 
-### Task 4: sqlite.ts — add purgeContent()
+### Task 4: sqlite.ts ― add purgeContent()
 
 **Files:**
 - Modify: `src/offscreen/sqlite.ts` (add `purgeContent` function + `OPFS_PROXY_METHODS` registration)
@@ -364,7 +364,7 @@ git commit -m "feat(pbi3): add purgeContent function to sqlite.ts"
 
 ---
 
-### Task 5: opfsWorker.ts — add handleContentPurge()
+### Task 5: opfsWorker.ts ― add handleContentPurge()
 
 **Files:**
 - Modify: `src/offscreen/opfsWorker.ts` (add handleContentPurge dispatcher entry + handler function)
@@ -453,7 +453,7 @@ git commit -m "feat(pbi3): add handleContentPurge to opfsWorker.ts"
 
 ---
 
-### Task 6: offscreen.ts — add CONTENT_PURGE message handler
+### Task 6: offscreen.ts ― add CONTENT_PURGE message handler
 
 **Files:**
 - Modify: `src/offscreen/offscreen.ts` (add CONTENT_PURGE handler, export purgeContent)
@@ -516,7 +516,7 @@ git commit -m "feat(pbi3): add CONTENT_PURGE handler to offscreen.ts"
 
 ---
 
-### Task 7: sqliteClient.ts — add purgeContent() method
+### Task 7: sqliteClient.ts ― add purgeContent() method
 
 **Files:**
 - Modify: `src/background/sqliteClient.ts` (add purgeContent method)
@@ -555,7 +555,7 @@ git commit -m "feat(pbi3): add purgeContent method to SqliteClient"
 
 ---
 
-### Task 8: dailyPurgeHandler.ts + service-worker.ts — integrate content purge
+### Task 8: dailyPurgeHandler.ts + service-worker.ts ― integrate content purge
 
 **Files:**
 - Modify: `src/background/dailyPurgeHandler.ts` (add ContentPurgeFn parameter)
@@ -661,7 +661,7 @@ git commit -m "feat(pbi3): integrate content purge into daily alarm"
 
 ---
 
-### Task 9: storageFallback.ts — add metadata + content + purgeContent
+### Task 9: storageFallback.ts ― add metadata + content + purgeContent
 
 **Files:**
 - Modify: `src/offscreen/storageFallback.ts` (insert/insertBatch expanded, add purgeContent)
@@ -793,7 +793,7 @@ git commit -m "feat(pbi3): add metadata+content fields and purgeContent to stora
 
 ---
 
-### Task 10: dashboardSqliteHandlers.ts — add CONTENT_PURGE_NOW handler
+### Task 10: dashboardSqliteHandlers.ts ― add CONTENT_PURGE_NOW handler
 
 **Files:**
 - Modify: `src/background/handlers/dashboardSqliteHandlers.ts` (add content_purge_now case)
@@ -842,7 +842,7 @@ git commit -m "feat(pbi3): add content_purge_now handler to dashboardSqliteHandl
 
 ---
 
-### Task 11: Dashboard UI — HTML + TypeScript for content retention settings
+### Task 11: Dashboard UI ― HTML + TypeScript for content retention settings
 
 **Files:**
 - Modify: `entrypoints/options/index.html` (add content retention HTML section)
@@ -932,7 +932,7 @@ In the settings mapping array (around line 351), add:
 In the save handler (around line 553), add after the SQLITE_* transformations:
 
 ```typescript
-  // Content retention (PBI-3) — same null handling as SQLITE_RETENTION
+  // Content retention (PBI-3) ― same null handling as SQLITE_RETENTION
   const contentDaysRaw = newSettings[StorageKeys.CONTENT_RETENTION_DAYS];
   newSettings[StorageKeys.CONTENT_RETENTION_DAYS] =
     contentDaysRaw === '' || contentDaysRaw === undefined ? null : Number(contentDaysRaw);
@@ -1063,7 +1063,7 @@ Add after the `purgeNowSkipped` entry:
     "message": "Purged $COUNT$ content entries"
   },
   "contentPurgeNowSkipped": {
-    "message": "No content retention policy set — purge skipped"
+    "message": "No content retention policy set ― purge skipped"
   },
 ```
 
@@ -1342,7 +1342,7 @@ Expected: All tests pass.
 
 - [ ] **Step 5: Update daily-purge-alarm.test.ts**
 
-Read the existing test file and update the `handleDailyPurgeAlarm` calls to pass the second argument (content purge function). The existing tests call `handleDailyPurgeAlarm(purgeOldRecords)` — they should still work since the second parameter is optional (`purgeContent?: ContentPurgeFn`). Verify they pass:
+Read the existing test file and update the `handleDailyPurgeAlarm` calls to pass the second argument (content purge function). The existing tests call `handleDailyPurgeAlarm(purgeOldRecords)` ― they should still work since the second parameter is optional (`purgeContent?: ContentPurgeFn`). Verify they pass:
 
 ```bash
 npx vitest run src/background/__tests__/daily-purge-alarm.test.ts --reporter=verbose 2>&1

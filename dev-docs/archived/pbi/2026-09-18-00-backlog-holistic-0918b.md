@@ -15,9 +15,9 @@ Effort: ストーリーポイント
 
 | スコア順 | 候補 | R | I | C | E | RICE | 判定 |
 |---|---|---|---|---|---|---|---|
-| — | reviewSummaryAlarm デッドコード削除 | 4 | 1 | 1.0 | 0.5 | 8.0 | → PBI 11 |
-| — | errorMessage 迂回残存の置換 | 6 | 1 | 1.0 | 1 | 6.0 | → PBI 12 |
-| — | restorableSettings 並列テーブル統合 | 3 | 1 | 1.0 | 1 | 3.0 | → PBI 13 |
+| ― | reviewSummaryAlarm デッドコード削除 | 4 | 1 | 1.0 | 0.5 | 8.0 | → PBI 11 |
+| ― | errorMessage 迂回残存の置換 | 6 | 1 | 1.0 | 1 | 6.0 | → PBI 12 |
+| ― | restorableSettings 並列テーブル統合 | 3 | 1 | 1.0 | 1 | 3.0 | → PBI 13 |
 | 台帳 | formatBytes 双子統合 | 2 | 0.5 | 0.8 | 0.5 | 1.6 | 台帳送り |
 
 ## 実行順

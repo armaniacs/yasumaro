@@ -94,10 +94,10 @@ Scenario: refactor 後も送信されるメッセージの観測挙動が不変�
 
 ## 技術的考慮事項
 
-- `src/popup/recordCurrentPage/previewFlow.ts:8-11` — `RecordMessage` 型が MANUAL_RECORD / PREVIEW_RECORD / SAVE_RECORD の payload を `Record<string, unknown>` で手書きしている。
-- `src/popup/recordCurrentPage/previewFlow.ts:59-81` — `buildRecordPayload(...): Record<string, unknown>` がフィールド集合を 3 度目に記述している。`pickDefined` 経由で `:79` が maskedCount をどの op にも載せ得る。
-- `src/popup/recordCurrentPage/previewFlow.ts:85` — `messageTransport.send(message as unknown as ExtensionMessage, { retries: 5 }) as Promise<...>`。
-- 本物の契約は `src/background/messageTypes.ts:92-105` — `{title,url,content,force?,skipAi?} & ByteStatsPayload`、maskedCount? は SAVE_RECORD のみ。
+- `src/popup/recordCurrentPage/previewFlow.ts:8-11` ― `RecordMessage` 型が MANUAL_RECORD / PREVIEW_RECORD / SAVE_RECORD の payload を `Record<string, unknown>` で手書きしている。
+- `src/popup/recordCurrentPage/previewFlow.ts:59-81` ― `buildRecordPayload(...): Record<string, unknown>` がフィールド集合を 3 度目に記述している。`pickDefined` 経由で `:79` が maskedCount をどの op にも載せ得る。
+- `src/popup/recordCurrentPage/previewFlow.ts:85` ― `messageTransport.send(message as unknown as ExtensionMessage, { retries: 5 }) as Promise<...>`。
+- 本物の契約は `src/background/messageTypes.ts:92-105` ― `{title,url,content,force?,skipAi?} & ByteStatsPayload`、maskedCount? は SAVE_RECORD のみ。
 - 現状の validator は required field のみ検査するため実害は未顕在化である。`validators.ts` が unknown-key 厳格化（defense-in-depth 方針）を採ると runtime 破綻する。
 - `src/messaging/messageTransport.ts` の send シグネチャ拡張が必要なら、既存ジェネリクスと整合させること。
 - `ByteStatsPayload` の op 間での必須 / 任意差（maskedCount? が SAVE_RECORD のみ等）を型で表現する必要がある。

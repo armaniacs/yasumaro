@@ -11,7 +11,7 @@
 
 ## 背景
 
-Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）の Maintainability Guardian, Refactoring Evangelist（重複）からの High指摘。`src/background/service-worker.ts`（全654行）に初期化・マイグレーション・メッセージルーティング・オフラインキュー処理・セッション管理・コンテキストメニュー登録・バッジ更新・プライバシーパイプライン——少なくとも5つ以上の責務が1ファイルに混在している。新機能追加時の変更影響範囲が大きく、merge conflictのリスクが高い。
+Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）の Maintainability Guardian, Refactoring Evangelist（重複）からの High指摘。`src/background/service-worker.ts`（全654行）に初期化・マイグレーション・メッセージルーティング・オフラインキュー処理・セッション管理・コンテキストメニュー登録・バッジ更新・プライバシーパイプライン――少なくとも5つ以上の責務が1ファイルに混在している。新機能追加時の変更影響範囲が大きく、merge conflictのリスクが高い。
 
 **2026-07-26時点で `service-worker.ts` は654行のままであることを確認した（レビュー時と同じ行数、対応が行われていない）。**
 

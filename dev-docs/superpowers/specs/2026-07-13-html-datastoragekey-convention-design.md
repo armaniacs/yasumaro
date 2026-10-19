@@ -1,11 +1,11 @@
-# C2: HTML `data-storage-key` Convention — Design Spec
+# C2: HTML `data-storage-key` Convention ― Design Spec
 
 **Date:** 2026-07-13
 **Scope:** Replace manual `getSettingsMapping()` / `getDashboardElements()` with attribute-based convention. Eliminate the popup→dashboard import dependency for settings form handling.
 
 ## Motivation
 
-The dashboard imports 14 modules from `src/popup/` because settings utilities (`loadSettingsToInputs`, `extractSettingsFromInputs`) use element IDs that happen to match between `options.html` and `popup.html`. Adding a new setting requires updating 3 places (HTML id, `getDashboardElements()`, `getSettingsMapping()`). The 5-Why deep-dig identified the root cause as **HTML template copy-paste** — adapter interfaces would be treating the symptom.
+The dashboard imports 14 modules from `src/popup/` because settings utilities (`loadSettingsToInputs`, `extractSettingsFromInputs`) use element IDs that happen to match between `options.html` and `popup.html`. Adding a new setting requires updating 3 places (HTML id, `getDashboardElements()`, `getSettingsMapping()`). The 5-Why deep-dig identified the root cause as **HTML template copy-paste** ― adapter interfaces would be treating the symptom.
 
 ## Decision
 
@@ -52,7 +52,7 @@ function extractSettingsFromInputs(container: HTMLElement): Record<string, unkno
 | `select` | `el.value` | `el.value = String(v)` |
 | `textarea` | `el.value` | `el.value = String(v)` |
 
-API key fields (detected via `data-storage-key` containing `ApiKey`) are read-only in `extractSettingsFromInputs` when the value matches the masked placeholder — preserving existing security behavior.
+API key fields (detected via `data-storage-key` containing `ApiKey`) are read-only in `extractSettingsFromInputs` when the value matches the masked placeholder ― preserving existing security behavior.
 
 ### Files Changed
 
@@ -66,9 +66,9 @@ API key fields (detected via `data-storage-key` containing `ApiKey`) are read-on
 
 ### What Gets Deleted
 
-- `dashboard.ts:getSettingsMapping()` — 30-line manual key-by-key mapping
-- `dashboard.ts:getDashboardElements()` — 50-field DOM blob
-- `popup/settingsUiHelper.ts:apiKeyFields` — hardcoded API key field list
+- `dashboard.ts:getSettingsMapping()` ― 30-line manual key-by-key mapping
+- `dashboard.ts:getDashboardElements()` ― 50-field DOM blob
+- `popup/settingsUiHelper.ts:apiKeyFields` ― hardcoded API key field list
 - 14 popup imports from `dashboard.ts` (most become unnecessary; a few remain for non-settings functions like `initDomainFilter` which is more than a form)
 
 ### Migration Strategy
@@ -78,9 +78,9 @@ API key fields (detected via `data-storage-key` containing `ApiKey`) are read-on
 
 ### Tests
 
-- **Unit**: `loadSettingsToInputs` with mock DOM — verify text/checkbox/select all populated
-- **Unit**: `extractSettingsFromInputs` — verify value types, API key masking
-- **Unit**: `StorageKeys` ↔ `data-storage-key` consistency check
+- **Unit**: `loadSettingsToInputs` with mock DOM ― verify text/checkbox/select all populated
+- **Unit**: `extractSettingsFromInputs` ― verify value types, API key masking
+- **Unit**: `StorageKeys` ⇔ `data-storage-key` consistency check
 - **E2E**: Save settings → reload dashboard → verify values persisted
 
 ### Relationship to C1

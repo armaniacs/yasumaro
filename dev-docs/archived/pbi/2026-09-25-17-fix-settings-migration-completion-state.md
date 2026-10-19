@@ -224,16 +224,16 @@ Scenario: 完了済み移行を変更せず再実行する
 | `settingsMigration.ts:55-58` / `:71-76` | `Object.values(StorageKeys).includes(key) && !key.includes('_version') && !isEncryptionKey(key)`。`gemini_api_version`（`types.ts:34`）・`privacy_consent_version`（`:130`）・`tranco_version`（`:223`）の 3 つが誤って除外される。CAS record（`settings_version` 等）は StorageKeys 値でないため別の理由で除外される |
 | `defaults.ts:34` | `GEMINI_API_VERSION` の default は `'v1beta'`（`gemini_api_version` が nested に入らないと利用者が変更した値を読み戻せない） |
 | `deferredMigrations.ts:19` | production の直接 call は 1 か所。返値が truthy のときだけ `logInfo` |
-| `SettingsRepository.ts:132` | `if (result['settings'] && result['settings_migrated'])` — truthy 判定 そのまま。新しい段階文字列も完了扱いになる |
+| `SettingsRepository.ts:132` | `if (result['settings'] && result['settings_migrated'])` ― truthy 判定 そのまま。新しい段階文字列も完了扱いになる |
 | `settingsMigration.ts:243-260` | `tryRestoreFromBackup()` は `legacy_settings_backup*` の最大キーの `data` を取り出し、`withOptimisticLock('settings', ...)` で restore する |
 
 ### 5 Whys
 
-1. **なぜ完了フラグがバックアップと削除より先に書かれるのか** — 移行を「1 回の書き込み」として modelled し、非同期境界（`withOptimisticLock` の後、`chrome.storage.local.set` の後、`remove` の前）でプロセスが落ちても矛盾しないことを検出する手段がなかった。`settings_migrated` が表現できるのは「移行が走る」か「移行が成功した」の 2 値だけで、後者を置く場所が早期になっていた。
-2. **なぜその順序でも「一度しか Migrate されない」前提で設計されたのか** — MV3 の Service Worker が任意に終了するという事実を、逐次 `await` の列が隠していた。各 `chrome.storage.local` 呼び出しは短時間で終わるため中断を前提にせず、バックアップを典型的な最初（完了フラグ）の直後に置いた。チェックポイントを置くという発想自体がなかった。
-3. **なぜ truthy フラグだけで完了判定できたのか** — 記録される値が boolean しかなく、判定側は `if (result[KEY])` という truthiness を書くしかない。**段階という概念がドメインに存在しなかった**ため、`pending` と `completed` の区別がデータモデルとして表現されなかった。
-4. **なぜ `_version` を含むキーの分類が誤るのか** — 命名規則を「意味の代用」にしていた。`{key}_version` は CAS の世代カウンター、`gemini_api_version` は利用者が変更する一般設定 —— という 2 つの意味が同一の文字列パターンに落ちる。`!key.includes('_version')` は前者を排除するために後者も落とし、`defaults.ts:34` の通常設定が nested に入らないという害が silent に現れる。
-5. **根本原因** — **移行が「1 回の原子的操作」ではなく「中断しうる多段階の列」であることが契約で表現されておらず、完了が単一の真偽値として記録されていたこと。** チェックポイントが契約上の概念として無いまま、実装の副作用として「最後に `true` を書く」だけで中断耐性を表現しようとしていた。加えて、キー配置の規則が所有権ではなく文字列パターンで決まっていたため、削除が破壊的操作であることの重大性も表現されていなかった。
+1. **なぜ完了フラグがバックアップと削除より先に書かれるのか** ― 移行を「1 回の書き込み」として modelled し、非同期境界（`withOptimisticLock` の後、`chrome.storage.local.set` の後、`remove` の前）でプロセスが落ちても矛盾しないことを検出する手段がなかった。`settings_migrated` が表現できるのは「移行が走る」か「移行が成功した」の 2 値だけで、後者を置く場所が早期になっていた。
+2. **なぜその順序でも「一度しか Migrate されない」前提で設計されたのか** ― MV3 の Service Worker が任意に終了するという事実を、逐次 `await` の列が隠していた。各 `chrome.storage.local` 呼び出しは短時間で終わるため中断を前提にせず、バックアップを典型的な最初（完了フラグ）の直後に置いた。チェックポイントを置くという発想自体がなかった。
+3. **なぜ truthy フラグだけで完了判定できたのか** ― 記録される値が boolean しかなく、判定側は `if (result[KEY])` という truthiness を書くしかない。**段階という概念がドメインに存在しなかった**ため、`pending` と `completed` の区別がデータモデルとして表現されなかった。
+4. **なぜ `_version` を含むキーの分類が誤るのか** ― 命名規則を「意味の代用」にしていた。`{key}_version` は CAS の世代カウンター、`gemini_api_version` は利用者が変更する一般設定 ―― という 2 つの意味が同一の文字列パターンに落ちる。`!key.includes('_version')` は前者を排除するために後者も落とし、`defaults.ts:34` の通常設定が nested に入らないという害が silent に現れる。
+5. **根本原因** ― **移行が「1 回の原子的操作」ではなく「中断しうる多段階の列」であることが契約で表現されておらず、完了が単一の真偽値として記録されていたこと。** チェックポイントが契約上の概念として無いまま、実装の副作用として「最後に `true` を書く」だけで中断耐性を表現しようとしていた。加えて、キー配置の規則が所有権ではなく文字列パターンで決まっていたため、削除が破壊的操作であることの重大性も表現されていなかった。
 
 ### 採用した migration version 方式
 
@@ -278,7 +278,7 @@ Scenario: 完了済み移行を変更せず再実行する
 
 新: `isMigratableStorageKey(key)` = `STORAGE_KEY_VALUES.has(key) && !TOP_LEVEL_ONLY_KEYS.has(key)`
 
-- `STORAGE_KEY_VALUES` は `Object.values(StorageKeys)` の実値集合。CAS record（`settings_version` / `savedUrls_version`）、`settings` blob、`settings_migrated`、`legacy_settings_backup_*`、他モジュールのキーは「StorageKeys 値でない」ことで排除される — 名前パターンではなく。
+- `STORAGE_KEY_VALUES` は `Object.values(StorageKeys)` の実値集合。CAS record（`settings_version` / `savedUrls_version`）、`settings` blob、`settings_migrated`、`legacy_settings_backup_*`、他モジュールのキーは「StorageKeys 値でない」ことで排除される ― 名前パターンではなく。
 - `TOP_LEVEL_ONLY_KEYS` は明示的許可リスト。エントリごとに、所有モジュールが raw `chrome.storage.local` を読んでいる証拠がある:
   - 鍵リング 5 キー（`encryptionSession.ts`）
   - `privacy_consent_version`（`privacyConsent.ts:492`）
@@ -288,13 +288,13 @@ Scenario: 完了済み移行を変更せず再実行する
 
 ### 変更ファイル
 
-- `src/utils/storage/settingsMigration.ts` — ステートマシン本体、`isSettingsMigrationComplete` / `isSettingsBlobAuthoritative` / `isMigratableStorageKey` / `parseSettingsMigrationState`、`StoragePort` seam、バックアップ検証、削除前競合検知
-- `src/utils/storage/SettingsRepository.ts` — 読取判定を `isSettingsBlobAuthoritative` へ
-- `src/utils/storage/storagePort.ts` — `StoragePort.remove?`（破壊操作の seam）、`ChromeStoragePort` / `InMemoryStoragePort` に実装
-- `src/utils/storage/storageTransaction.ts` — `deepEqual` を export（削除前の値比較で CAS と同じ canonical 意味論を使う）
-- `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts` — 新規（31 テスト）
-- `src/utils/__tests__/storage-locking.test.ts` — 旧 boolean 前提の 2 アサーションを versioned 記録へ更新
-- `dev-docs/DESIGN_SPECIFICATIONS.md` — §5.1.1 キーの配置ルール、§5.1.2 設定移行ステートマシン
+- `src/utils/storage/settingsMigration.ts` ― ステートマシン本体、`isSettingsMigrationComplete` / `isSettingsBlobAuthoritative` / `isMigratableStorageKey` / `parseSettingsMigrationState`、`StoragePort` seam、バックアップ検証、削除前競合検知
+- `src/utils/storage/SettingsRepository.ts` ― 読取判定を `isSettingsBlobAuthoritative` へ
+- `src/utils/storage/storagePort.ts` ― `StoragePort.remove?`（破壊操作の seam）、`ChromeStoragePort` / `InMemoryStoragePort` に実装
+- `src/utils/storage/storageTransaction.ts` ― `deepEqual` を export（削除前の値比較で CAS と同じ canonical 意味論を使う）
+- `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts` ― 新規（31 テスト）
+- `src/utils/__tests__/storage-locking.test.ts` ― 旧 boolean 前提の 2 アサーションを versioned 記録へ更新
+- `dev-docs/DESIGN_SPECIFICATIONS.md` ― §5.1.1 キーの配置ルール、§5.1.2 設定移行ステートマシン
 
 ### 中断段階ごとのテストが保証していること
 
@@ -310,13 +310,13 @@ Scenario: 完了済み移行を変更せず再実行する
 | `skips a completed migration without touching anything` | 完了済みは 0 書き込みでスキップ、blob を上書きしない |
 | `keeps the nested settings, backfills the gaps, and only then removes the raw keys` | boolean `true` の非破壊修復: 既存 nested 優先・不足分補完・raw 削除・completed |
 | `upgrades a legacy boolean with nothing left to migrate without creating a backup` | 残存 raw 無しの boolean `true` はバックアップを作らず versioned 記録へ |
-| `SettingsRepository — an unfinished stage is not an authoritative blob` | `pending`/`backed_up`/`legacy_removed` では raw キーが読み取りに混ざる（未完了を完了扱いしない）。`completed` では混ざらない |
+| `SettingsRepository ― an unfinished stage is not an authoritative blob` | `pending`/`backed_up`/`legacy_removed` では raw キーが読み取りに混ざる（未完了を完了扱いしない）。`completed` では混ざらない |
 
-### 残課題（本 PBI の範囲外 — 別 PBI が必要）
+### 残課題（本 PBI の範囲外 ― 別 PBI が必要）
 
 raw `chrome.storage.local` を読むモジュールが複数あり、**同じクラスのデータ損失ベクタが残っている**。いずれも PBI 2026-09-25-18（single writer）の対象:
 
-- `privacy_consent` / `privacy_consent_denied_count` / `privacy_consent_last_denial_time`（`privacyConsent.ts:72,404,414` が raw read）— 現状は移行で nested へ移動・削除され、consent state を失う
-- `recording_triggers` / `min_visit_duration` / `min_scroll_depth` / `snapshot_interval_minutes`（`recordingTriggerManager.ts:74,125,150` が raw read/write）— 同じく移動・削除される
+- `privacy_consent` / `privacy_consent_denied_count` / `privacy_consent_last_denial_time`（`privacyConsent.ts:72,404,414` が raw read）― 現状は移行で nested へ移動・削除され、consent state を失う
+- `recording_triggers` / `min_visit_duration` / `min_scroll_depth` / `snapshot_interval_minutes`（`recordingTriggerManager.ts:74,125,150` が raw read/write）― 同じく移動・削除される
 - `tranco_version` の split-brain: `TrancoConsentManager` は raw 読、`TrancoVersionTracker.getSavedTrancoVersion()` は blob 読
 

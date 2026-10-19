@@ -2,7 +2,7 @@
 
 ## 実装状況
 
-**完了** — 2026-08-11。`saveSavedUrlEntryMetadata`による原子CAS、metadata patch retry、旧queue payload互換、dual-write制御、関連テストを実装済み。
+**完了** ― 2026-08-11。`saveSavedUrlEntryMetadata`による原子CAS、metadata patch retry、旧queue payload互換、dual-write制御、関連テストを実装済み。
 
 ## 親PBI
 

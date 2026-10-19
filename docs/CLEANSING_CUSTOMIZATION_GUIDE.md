@@ -10,11 +10,11 @@
 
 AI 要約から重要な情報が誤って削除される（誤削除）場合に、原因を報告し、ドメイン単位でクレンジング設定を上書きできます。このガイドでは次の機能を説明します。
 
-1. **クレンジングプリセット** — 33 個のトグルを4つのプリセットに集約
-2. **誤削除を報告** — popup からワンクリックで報告
-3. **ドメイン別クレンジング上書き** — 特定ドメインだけ設定を変更
-4. **動的コンテンツと観測性** — SPA / Shadow DOM への対応と、除去内容の可視化
-5. **再生成時のクレンジング緩和** — 履歴エントリから1回だけ緩めて作り直し
+1. **クレンジングプリセット** ― 33 個のトグルを4つのプリセットに集約
+2. **誤削除を報告** ― popup からワンクリックで報告
+3. **ドメイン別クレンジング上書き** ― 特定ドメインだけ設定を変更
+4. **動的コンテンツと観測性** ― SPA / Shadow DOM への対応と、除去内容の可視化
+5. **再生成時のクレンジング緩和** ― 履歴エントリから1回だけ緩めて作り直し
 
 設定を変える前に対象レコードだけ作り直したい場合は、**Dashboard → SQLite History** のエントリヘッダーから「AI要約を作り直す」を選び、緩和3択（現在の設定 / やや緩い / 最も緩い）を指定します。設定の永続化は行いません（詳細: [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md)）。
 
@@ -27,7 +27,7 @@ AI 要約から重要な情報が誤って削除される（誤削除）場合�
 | `minimal` | 3 | alt テキスト、広告、ナビゲーションのみ |
 | `balanced` | 9 | minimal に加え、メタデータ、SNS、推奨記事、ポップアップ、Cookie 同意バナー、ニュースメディア定型句（デフォルト） |
 | `aggressive` | 25 | ほぼ全ルール ON。OFFは `jsonLd`、`lazyLoad`、`skipLink`、`card`、`fixed`、`pagination`、`platform`、`author` の8件のみ |
-| `custom` | — | 個別調整。トグルを1つでも手で変更すると自動でこの表示になる |
+| `custom` | ― | 個別調整。トグルを1つでも手で変更すると自動でこの表示になる |
 
 保存形式は 33 キーそのままです。プリセットは 33 値を一括で埋めるショートカットとして機能します。まず `balanced` で使い、要約に不要な要素が残るなら `aggressive`、本文が削られるなら `minimal` へ、という調整で足ります。個別の要素だけ変えたい場合はトグルを直接操作するか、後述のドメイン別上書きを使います。
 
@@ -58,10 +58,10 @@ popup の「Cleansing」セクションにある **「誤削除を報告」** �
 
 ### 動的コンテンツと観測性
 
-- **Cookie 同意バナーの除去** — OneTrust 系（`onetrust` / `ot-sdk` / `optanon` など）のバナー定型文を除去します。`cookie` ルール（`balanced` と `aggressive` の両プリセットで有効な通常のトグルです）として動作します。判定はテキストが主体で、一部クラス名パターンも併用します
-- **SPA と Shadow DOM** — `MutationObserver` で描画後のコンテンツ変化を検知します。現行ルールはホットパスで `shadowRoot` / iframe 内の再帰走査を行いません
-- **多言語パターン** — 日本語・英語に加え、フランス語・ドイツ語・中国語・スペイン語・韓国語の広告／SNS 定型句に対応します
-- **除去内容の可視化** — ダッシュボードの「AI 要約クレンジング」パネルで、どのルールが何個の要素を除去したかの内訳と、クレンジング前後のテキスト差分を確認できます
+- **Cookie 同意バナーの除去** ― OneTrust 系（`onetrust` / `ot-sdk` / `optanon` など）のバナー定型文を除去します。`cookie` ルール（`balanced` と `aggressive` の両プリセットで有効な通常のトグルです）として動作します。判定はテキストが主体で、一部クラス名パターンも併用します
+- **SPA と Shadow DOM** ― `MutationObserver` で描画後のコンテンツ変化を検知します。現行ルールはホットパスで `shadowRoot` / iframe 内の再帰走査を行いません
+- **多言語パターン** ― 日本語・英語に加え、フランス語・ドイツ語・中国語・スペイン語・韓国語の広告／SNS 定型句に対応します
+- **除去内容の可視化** ― ダッシュボードの「AI 要約クレンジング」パネルで、どのルールが何個の要素を除去したかの内訳と、クレンジング前後のテキスト差分を確認できます
 
 ルールの適用順の詳細は [クレンジングの順番](CLEANSING_ORDER.md) をご覧ください。
 
@@ -77,11 +77,11 @@ popup の「Cleansing」セクションにある **「誤削除を報告」** �
 
 When important information is accidentally removed by the AI summary cleansing (a "false positive"), you can report it and override cleansing settings per domain. This guide covers:
 
-1. **Cleansing presets** — 33 toggles collapsed into four presets
-2. **Report Cleansing Feedback** — one-click reporting from the popup
-3. **Per-site cleansing overrides** — change settings for specific domains only
-4. **Dynamic content and observability** — SPA / Shadow DOM handling and visibility into what was removed
-5. **Cleansing loosening on regenerate** — rebuild a single record with a one-shot looser setting
+1. **Cleansing presets** ― 33 toggles collapsed into four presets
+2. **Report Cleansing Feedback** ― one-click reporting from the popup
+3. **Per-site cleansing overrides** ― change settings for specific domains only
+4. **Dynamic content and observability** ― SPA / Shadow DOM handling and visibility into what was removed
+5. **Cleansing loosening on regenerate** ― rebuild a single record with a one-shot looser setting
 
 If you want to rebuild just one record before changing global settings, open the entry header under **Dashboard → SQLite History**, choose "Regenerate AI summary", and pick one of the three loosening modes (Current settings / Looser / Loosest). Nothing is persisted to settings (see the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details).
 
@@ -94,7 +94,7 @@ The preset selector in `Dashboard → AI Summary Cleansing` switches all 33 togg
 | `minimal` | 3 | alt text, ads, navigation only |
 | `balanced` | 9 | minimal plus metadata, social, recommended articles, popups, cookie consent banners, news-media boilerplate (default) |
 | `aggressive` | 25 | nearly all rules on; only 8 stay off (`jsonLd`, `lazyLoad`, `skipLink`, `card`, `fixed`, `pagination`, `platform`, `author`) |
-| `custom` | — | individual adjustment; changing any toggle by hand switches to this automatically |
+| `custom` | ― | individual adjustment; changing any toggle by hand switches to this automatically |
 
 The stored format is still the 33 keys; a preset is a shortcut that fills all 33 values at once. Start with `balanced`, move to `aggressive` if unwanted elements remain in the summary, or to `minimal` if body text is being trimmed. To change only specific elements, edit the toggles directly or use per-site overrides below.
 
@@ -108,7 +108,7 @@ Press the **"Report Cleansing Feedback"** button in the popup's "Cleansing" sect
 
 **This information is stored only on your device (`chrome.storage.local`) and is never sent anywhere.**
 
-Reported entries are listed in the dashboard under **AI Summary Cleansing settings → "Cleansing Feedback"**. You can delete entries individually or clear all of them with "Clear All". The queue holds at most 50 entries; older entries are discarded first (FIFO). The feedback queue is an aid for your own history management — it is not sent to the developers.
+Reported entries are listed in the dashboard under **AI Summary Cleansing settings → "Cleansing Feedback"**. You can delete entries individually or clear all of them with "Clear All". The queue holds at most 50 entries; older entries are discarded first (FIFO). The feedback queue is an aid for your own history management ― it is not sent to the developers.
 
 ### Per-Site Cleansing Overrides
 
@@ -120,15 +120,15 @@ If mis-deletions keep happening on the same domain, you can override cleansing s
 
 **Matching rules:**
 
-- Domains match by **exact match only** (after lowercasing and trimming). **Subdomains are treated as different domains** — an override for `example.com` does not apply to `www.example.com`
+- Domains match by **exact match only** (after lowercasing and trimming). **Subdomains are treated as different domains** ― an override for `example.com` does not apply to `www.example.com`
 - Overrides are a differential merge over the base config: unspecified items fall back to the global settings
 
 ### Dynamic Content and Observability
 
-- **Cookie consent banner removal** — removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`, etc.). Enabled as the plain `cookie` toggle in both the `balanced` and `aggressive` presets. Detection is primarily text-based, with some class-name patterns also in use
-- **SPA and Shadow DOM** — a `MutationObserver` detects post-render content changes. The current rules do not recurse into `shadowRoot` or iframes on the hot path
-- **Multilingual patterns** — in addition to Japanese and English, covers French, German, Chinese, Spanish, and Korean ad / social boilerplate
-- **Visibility into what was removed** — the AI Summary Cleansing panel shows a breakdown of which rule removed how many elements, and a text diff of before and after cleansing
+- **Cookie consent banner removal** ― removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`, etc.). Enabled as the plain `cookie` toggle in both the `balanced` and `aggressive` presets. Detection is primarily text-based, with some class-name patterns also in use
+- **SPA and Shadow DOM** ― a `MutationObserver` detects post-render content changes. The current rules do not recurse into `shadowRoot` or iframes on the hot path
+- **Multilingual patterns** ― in addition to Japanese and English, covers French, German, Chinese, Spanish, and Korean ad / social boilerplate
+- **Visibility into what was removed** ― the AI Summary Cleansing panel shows a breakdown of which rule removed how many elements, and a text diff of before and after cleansing
 
 See [Cleansing Order](CLEANSING_ORDER.md) for the rule application order.
 

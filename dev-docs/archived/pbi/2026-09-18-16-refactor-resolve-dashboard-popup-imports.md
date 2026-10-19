@@ -12,9 +12,9 @@ UI 層の境界を保守する開発者として、dashboard から popup モジ
 
 実測済みの dashboard → popup import は3件:
 
-1. `src/dashboard/markdownTemplateManager.ts`（20行目付近）— `import { escapeHtml } from '../popup/errorUtils.js'`。実体は popup/errorUtils 内の re-export（`export { escapeHtml } from '../utils/htmlEscape.js'`）で、SSOT は `src/utils/htmlEscape.ts`
-2. `src/dashboard/settings/customPromptManager.ts`（27行目付近）— 同上
-3. `src/dashboard/panels/staticForm/generalSettingsPanel.ts`（27行目付近）— `import { initOnboardingWizard } from '../../../popup/onboardingWizard.js'`。onboardingWizard は utils のみに依存する中立 DOM コンポーネント（実測: import 全部が utils/*）で、popup.ts と dashboard の両方から使用される。`utils/ui/focusTrap.js` が先例の中立配置
+1. `src/dashboard/markdownTemplateManager.ts`（20行目付近）― `import { escapeHtml } from '../popup/errorUtils.js'`。実体は popup/errorUtils 内の re-export（`export { escapeHtml } from '../utils/htmlEscape.js'`）で、SSOT は `src/utils/htmlEscape.ts`
+2. `src/dashboard/settings/customPromptManager.ts`（27行目付近）― 同上
+3. `src/dashboard/panels/staticForm/generalSettingsPanel.ts`（27行目付近）― `import { initOnboardingWizard } from '../../../popup/onboardingWizard.js'`。onboardingWizard は utils のみに依存する中立 DOM コンポーネント（実測: import 全部が utils/*）で、popup.ts と dashboard の両方から使用される。`utils/ui/focusTrap.js` が先例の中立配置
 
 対応方針:
 - escapeHtml 2件は `../../utils/htmlEscape.js` / `../../../utils/htmlEscape.js` 直参照に変更

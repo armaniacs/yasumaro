@@ -1,7 +1,7 @@
 # PBI: CSPValidator の設定由来ドメイン自己許可を締め直す（VULN Code Quality）
 
 > `2026-08-29-14-fix-security-hardening-code-quality.md` の AC1 から分離。
-> 29-14（PR: Wave 3 統合）では AC2–AC6 の 5 件が着地したが、
+> 29-14（PR: Wave 3 統合）では AC2-AC6 の 5 件が着地したが、
 > AC1（CSPValidator 自己許可）は「どのドメインを正当なカスタム API
 > エンドポイントとみなすか」の設計判断が必要なため単独 PBI とした。
 
@@ -30,7 +30,7 @@ Code Quality（自己許可構造）として指摘した。
 ### 現行コードの他のガード（参考）
 - `src/utils/ssrfGuard.ts` に private IP / localhost 判定あり
 - `src/utils/cspDomains.ts` の `LOCAL_PORTS` / `aiConnectSrc` に localhost ポート許可リスト
-- `src/utils/allowedUrls.ts` の `isAllowedProviderBaseUrl(url, isLocal)` — 別 PBI で追加された同種のガード（169.254.169.254 / metadata.google.internal / private IP を拒否）
+- `src/utils/allowedUrls.ts` の `isAllowedProviderBaseUrl(url, isLocal)` ― 別 PBI で追加された同種のガード（169.254.169.254 / metadata.google.internal / private IP を拒否）
 
 ## BDD受け入れシナリオ
 
@@ -75,7 +75,7 @@ Scenario: localhost のカスタムエンドポイント（Ollama/LM Studio）�
 - private IP は local provider でも拒否される（`isAllowedProviderBaseUrl` の仕様）。
   LAN 上の Ollama（`192.168.x`）を CSP allowlist しなくなるが、実 fetch も同関数で
   弾くため挙動は一貫。localhost / `127.0.0.1` は従来どおり許可。
-- テスト: `src/utils/__tests__/cspValidatorSelfAllow.test.ts`（LF 新規、8 ケース）—
+- テスト: `src/utils/__tests__/cspValidatorSelfAllow.test.ts`（LF 新規、8 ケース）―
   metadata / private IP / 非 https evil / 非 http(s) スキームの拒否と、
   正当な https・localhost・127.0.0.1 の許可（回帰防止）。
 - CRLF の既存 `cspValidator.test.ts` は無改修（29 件 green 維持）。
@@ -90,7 +90,7 @@ Scenario: localhost のカスタムエンドポイント（Ollama/LM Studio）�
 - `initializeFromSettings` × 正当設定（https custom / localhost）: 追加されること
 
 ### 単体テスト
-- 更新: `src/utils/__tests__/cspValidator.test.ts` の "Provider Base URL Domains" ブロック（CRLF 注意 — CRLF なら別 LF ファイルへ）
+- 更新: `src/utils/__tests__/cspValidator.test.ts` の "Provider Base URL Domains" ブロック（CRLF 注意 ― CRLF なら別 LF ファイルへ）
 - 新規（別 LF ファイル）: private IP / metadata / 非 https 拒否の境界テスト
 
 ## 実装アプローチ
@@ -98,11 +98,11 @@ Scenario: localhost のカスタムエンドポイント（Ollama/LM Studio）�
 - **Red-Green-Refactor**: ガードを 1 箇所に集約（`allowedUrls.ts` の既存関数を再利用）
 
 ## 見積もり
-1pt（要チームでの見積もり — ガード適用 + 既存テスト更新 + 境界テスト）
+1pt（要チームでの見積もり ― ガード適用 + 既存テスト更新 + 境界テスト）
 
 ## 技術的考慮事項
 - 依存関係: なし
-- `cspValidator.test.ts` は CRLF の可能性 — 着手時に `file` で確認
+- `cspValidator.test.ts` は CRLF の可能性 ― 着手時に `file` で確認
 - `isAllowedProviderBaseUrl` の `isLocal` 引数の判定（provider type から localhost 期待かどうか）を CSPValidator 側でどう渡すか
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
@@ -123,12 +123,12 @@ rg -n "Provider Base URL Domains|custom-openai" src/utils/__tests__/cspValidator
 5. `npm run validate`
 
 ### 落とし穴
-- 既存ユーザーが private IP の Ollama を設定している場合、締め直しで動かなくなる可能性 — localhost/loopback は許可、private IP（10.x/192.168.x/172.16-31.x）の扱いを慎重に（Ollama を LAN 上の別マシンで動かすケース）
+- 既存ユーザーが private IP の Ollama を設定している場合、締め直しで動かなくなる可能性 ― localhost/loopback は許可、private IP（10.x/192.168.x/172.16-31.x）の扱いを慎重に（Ollama を LAN 上の別マシンで動かすケース）
 - `isLocal` の判定: `ollama_base_url` / `lm-studio_base_url` は localhost 期待、`provider_base_url` / `openai*_base_url` はリモート期待
 
 ## Definition of Done
 - [x] 全 BDD シナリオが自動テストとして実装されパスする（`cspValidatorSelfAllow.test.ts` 8 ケース）
 - [x] テストカバレッジが基準を満たす（汚染系 5・正当系 3 で境界を網羅）
 - [ ] コードレビュー完了（GitHub PR approve）
-- [x] リファクタリング完了（グリーン後 — `addBaseUrlDomain` に集約、`providerTypes` を `{key, isLocal}` 配列化）
+- [x] リファクタリング完了（グリーン後 ― `addBaseUrlDomain` に集約、`providerTypes` を `{key, isLocal}` 配列化）
 - [ ] VulnHunter 再スキャンで該当 Code Quality 指摘が解消されること（29 系一括の再スキャン時に確認）

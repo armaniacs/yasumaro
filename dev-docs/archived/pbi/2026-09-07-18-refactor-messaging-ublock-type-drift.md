@@ -1,4 +1,4 @@
-# PBI: messaging・uBlock 型ドリフト返済 — `PayloadForType` の `never` バグと `UblockRules` 同名衝突の解消
+# PBI: messaging・uBlock 型ドリフト返済 ― `PayloadForType` の `never` バグと `UblockRules` 同名衝突の解消
 
 ## ユーザーストーリー
 messaging レイヤと uBlock 機能を保守する開発者として、`PayloadForType<'TEST_OBSIDIAN'>` / `<'DASHBOARD_SQLITE'>` が `never` に解決される型ユーティリティのバグと、構造非互換な 2 つの `interface UblockRules` が同名で存在する状態を解消したい、なぜなら 2026-09-07 のテスト型債務返済中に、型安全メッセージング API（`sendServiceWorkerMessage` 等）が optional payload を持つメッセージの payload をコンパイル時に検証できず、`messaging-types-uniformity.test.ts` が `as unknown as` で型アサートを空洞化させ、uBlock のテストが `parseUblockFilterList(text) as unknown as UblockRules` という「型が現実を表現できていない」サインを出しているから
@@ -32,7 +32,7 @@ messaging レイヤと uBlock 機能を保守する開発者として、`Payload
 - optional プロパティは `U extends { payload: infer P }`（payload 必須の制約）にマッチせず `P` は推論されず `never` に解決される（TypeScript の仕様どおりの挙動）
 - 対照的に `ValidVisitMessage` などは `payload:`（必須）なので正しく解決される
 - テスト実害: `messaging-types-uniformity.test.ts:106-113`（`TEST_OBSIDIAN payload type should allow optional apiKey`）と `:121-126`（`DASHBOARD_SQLITE`）は、本来 `const payload: Payload = { apiKey: 'secret' }` と書きたいところを `as { apiKey?: string }` / `as unknown as Payload` に退避しており、payload 形状の型アサートが空洞化している
-- `isServiceWorkerRequest` 型ガード（`types.ts:212-214`）は `TEST_OBSIDIAN` の object payload を許容するのに `PayloadForType` は表現できない — **この不整合が「ドリフト」の核心**
+- `isServiceWorkerRequest` 型ガード（`types.ts:212-214`）は `TEST_OBSIDIAN` の object payload を許容するのに `PayloadForType` は表現できない ― **この不整合が「ドリフト」の核心**
 - 修正案: `U extends { payload?: infer P }` に変更。ただし payload を持たないメンバー（`CheckDomainMessage` 等、`payload` キー自体が無い）で `P` が `unknown` になる問題があるため、`[P] extends [undefined] ? never : P` や `'payload' extends keyof U ? ... : never` の分岐が要る。**実装時に型パズルの検証が必要**
 - 影響: 本番型が変わる（`sendServiceWorkerMessage` / `sendFromContentScript` / `sendFromPopup` の `payload?: PayloadForType<T>` 引数）。実行時挙動は不変。`src/messaging/dashboardGateway.ts:37` は `sendFromPopup` を使わず直接 `chrome.runtime.sendMessage` するので影響限定的だが要確認。現状 grep で `sendFromPopup('TEST_OBSIDIAN', <payload>)` の payload 付き呼び出しは見つからず（payload は将来用の可能性）
 

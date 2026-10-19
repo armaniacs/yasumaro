@@ -2,7 +2,7 @@
 
 ## Status
 
-**Accepted** (2026-02-25) — **その後 "Yasumaro" へ再改名済み**（v6.0.2、2026-06-20。CHANGELOG.md参照）。以下は"Obsidian Weave"への改名を決定した当時の記録です。
+**Accepted** (2026-02-25) ― **その後 "Yasumaro" へ再改名済み**（v6.0.2、2026-06-20。CHANGELOG.md参照）。以下は"Obsidian Weave"への改名を決定した当時の記録です。
 
 ## Context（背景・経緯）
 
@@ -57,19 +57,19 @@
 ### 変更が必要なファイル・箇所
 
 #### 設定ファイル
-- `manifest.json` — `name` フィールド
-- `package.json` — `name` フィールド
+- `manifest.json` ― `name` フィールド
+- `package.json` ― `name` フィールド
 
 #### i18n
-- `_locales/en/messages.json` — `extensionName`, `extensionDescription` 内の名称参照
-- `_locales/ja/messages.json` — 同上
+- `_locales/en/messages.json` ― `extensionName`, `extensionDescription` 内の名称参照
+- `_locales/ja/messages.json` ― 同上
 
 #### ドキュメント
 - `README.md`
 - `SETUP_GUIDE.md`
 - `PRIVACY.md`
 - `CONTRIBUTING.md`
-- `CHANGELOG.md` — 過去エントリのヘッダー記述（任意）
+- `CHANGELOG.md` ― 過去エントリのヘッダー記述（任意）
 
 #### コード内文字列
 - `src/` 以下のコメント・ログ出力に残る "Obsidian Smart History" の参照
@@ -80,24 +80,24 @@
 
 ### Positive（良い影響）
 
-1. **Chrome Web Store 登録時の混乱を回避** — オリジナル作者との競合がなくなる
-2. **独自ブランドの確立** — 将来の機能拡張を見据えたアイデンティティを持てる
-3. **検索での差別化** — "Smart History" 系の類似拡張機能と区別されやすくなる
+1. **Chrome Web Store 登録時の混乱を回避** ― オリジナル作者との競合がなくなる
+2. **独自ブランドの確立** ― 将来の機能拡張を見据えたアイデンティティを持てる
+3. **検索での差別化** ― "Smart History" 系の類似拡張機能と区別されやすくなる
 
 ### Negative（考慮すべき点）
 
-1. **既存ユーザーへの影響** — 拡張機能名が変わるため、インストール済みユーザーに通知が必要な場合がある
-2. **ドキュメント・スクリーンショットの更新コスト** — ブログ記事・ドキュメント内の旧名称を一括置換する作業が発生する
-3. **"Obsidian Smart History" で認知しているユーザーの混乱** — リリースノートで経緯を明記することで対処する
+1. **既存ユーザーへの影響** ― 拡張機能名が変わるため、インストール済みユーザーに通知が必要な場合がある
+2. **ドキュメント・スクリーンショットの更新コスト** ― ブログ記事・ドキュメント内の旧名称を一括置換する作業が発生する
+3. **"Obsidian Smart History" で認知しているユーザーの混乱** ― リリースノートで経緯を明記することで対処する
 
 ## References（参照）
 
 ### プロジェクト内ドキュメント
 
-- [CHANGELOG.md](../../CHANGELOG.md) — v4.0.1 リリースノート
-- [ADR-001](./2026-02-21-privacy-detection-logic-refinement.md) — プライバシー検出ロジック
-- [ADR-002](./2026-02-22-port-migration-to-https.md) — HTTPS移行
+- [CHANGELOG.md](../../CHANGELOG.md) ― v4.0.1 リリースノート
+- [ADR-001](./2026-02-21-privacy-detection-logic-refinement.md) ― プライバシー検出ロジック
+- [ADR-002](./2026-02-22-port-migration-to-https.md) ― HTTPS移行
 
 ### 実装ブランチ
 
-- `weave-initial` — 本ADRに対応した名称変更作業ブランチ
+- `weave-initial` ― 本ADRに対応した名称変更作業ブランチ

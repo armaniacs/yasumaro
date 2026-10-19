@@ -1,4 +1,4 @@
-# PBI 2026-09-12-19 — planPurge（破壊的 purge の trust-boundary を fail-closed に）
+# PBI 2026-09-12-19 ― planPurge（破壊的 purge の trust-boundary を fail-closed に）
 
 - **種別**: 🔧非機能追加（refactor + hardening）
 - **優先度**: 3 位 / RICE **9.6**（R6 × I1 × C80% / E0.5人日）

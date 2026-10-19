@@ -38,7 +38,7 @@ Scenario: 動作は変わらない
 
 ## 検証結果（2026-10-13 実施）
 
-- 実装: `wxtConfig` import 行の直上に逸脱理由のコメントを追記（"Intentional deviation from the '.js extensions on all imports' convention (AGENTS.md): wxt.config.ts is the root build config, not a compiled module — no .js form exists for it, and vitest (vite) resolves the .ts directly."）。コメントのみ、import 実装は無変更。
+- 実装: `wxtConfig` import 行の直上に逸脱理由のコメントを追記（"Intentional deviation from the '.js extensions on all imports' convention (AGENTS.md): wxt.config.ts is the root build config, not a compiled module ― no .js form exists for it, and vitest (vite) resolves the .ts directly."）。コメントのみ、import 実装は無変更。
 - 動作不変: `npm run type-check` → exit 0。`npm run validate` → exit 0（1062 files / 16032 tests）。
 - コードレビュー: メインエージェントが実装（コメント 1 か所の差分のみ）を確認済み。
 

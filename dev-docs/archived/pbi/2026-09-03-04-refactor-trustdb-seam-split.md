@@ -1,4 +1,4 @@
-# PBI: TrustDb seam split — shim 削除と readonly / admin の 2 seam 化、storage 循環解消
+# PBI: TrustDb seam split ― shim 削除と readonly / admin の 2 seam 化、storage 循環解消
 
 ## ユーザーストーリー
 Trust データベースを保守する開発者として、`trustDb.ts` の 90l shim と単一 god object を `TrustPolicy`（readonly）と `TrustDbAdmin`（mutation）の 2 seam に分割したい、なぜなら現在は Kernel / Policy / ManagedCollections に分解済みでも shim が全 method を再export し caller は依然として単一の god object を見て境界が enforce されず、`@layer 1-循環` の通り storage と循環し `settingsReader` が SettingsRepository の cache/暗号化を bypass しているから
@@ -46,12 +46,12 @@ Trust データベースを保守する開発者として、`trustDb.ts` の 90l
   Then `(db as any).state` の直接 poke ではなく、Kernel の test-only seam（`_getState` / `_setState`）または `TrustDbAdmin` の公開 API 経由で状態を操作する
 
 ## 受け入れ基準
-- [x] `src/utils/trustDb/trustDb.ts` の shim が削除され、`TrustPolicy` と `TrustDbAdmin`（命名は実装時に確定）の2 seam が存在する — shimは `@deprecated` として残置（prod呼出し0件に移行済み、次iterationで物理削除）/ `TrustPolicy`（readonly）と `TrustDbAdmin`（mutation, `StorageKeys.TRUST_DB` owns）は存在
-- [x] `TrustPolicy` が `isDomainTrusted` / `isTrancoDomain` の readonly 2メソッドを持ち storage に依存しない — `getTrustPolicy()` は `TrustPolicy.ts` から提供、storage依存なし、global registryでKernelと共有
-- [x] `TrustDbAdmin` が `updateTranco` / `addToWhitelist` / `addSensitiveDomain` 等の mutation を `StoragePort` 経由で提供する — `getTrustDbAdmin()` は `TrustDbAdmin.ts` から提供、`initialize`/`isDomainTrusted`/`getStatus`等も委譲
+- [x] `src/utils/trustDb/trustDb.ts` の shim が削除され、`TrustPolicy` と `TrustDbAdmin`（命名は実装時に確定）の2 seam が存在する ― shimは `@deprecated` として残置（prod呼出し0件に移行済み、次iterationで物理削除）/ `TrustPolicy`（readonly）と `TrustDbAdmin`（mutation, `StorageKeys.TRUST_DB` owns）は存在
+- [x] `TrustPolicy` が `isDomainTrusted` / `isTrancoDomain` の readonly 2メソッドを持ち storage に依存しない ― `getTrustPolicy()` は `TrustPolicy.ts` から提供、storage依存なし、global registryでKernelと共有
+- [x] `TrustDbAdmin` が `updateTranco` / `addToWhitelist` / `addSensitiveDomain` 等の mutation を `StoragePort` 経由で提供する ― `getTrustDbAdmin()` は `TrustDbAdmin.ts` から提供、`initialize`/`isDomainTrusted`/`getStatus`等も委譲
 - [x] `TrustDbKernel` のデフォルト `settingsReader` が `SettingsRepository` 由来に統一され、`chrome.storage.local.get('settings')` の直読が削除されている
-- [x] 既存の TrustDb 関連テストが新 seam 経由で green、`npm run validate` green — `npm test -- src/utils/trustDb` 227 passed, `npm run type-check` green
-- [x] `STORAGE_KEY = 'trust_db:json'` が `StoragePort` または Admin module に集約され、string key の循環が解消している — `TrustDbAdmin.TRUST_DB_STORAGE_KEY = StorageKeys.TRUST_DB`
+- [x] 既存の TrustDb 関連テストが新 seam 経由で green、`npm run validate` green ― `npm test -- src/utils/trustDb` 227 passed, `npm run type-check` green
+- [x] `STORAGE_KEY = 'trust_db:json'` が `StoragePort` または Admin module に集約され、string key の循環が解消している ― `TrustDbAdmin.TRUST_DB_STORAGE_KEY = StorageKeys.TRUST_DB`
 
 ## テスト戦略
 - 単体: `TrustPolicy` の `isDomainTrusted` / `isTrancoDomain` を storage なしで unit test（DomainVerifier / BloomFilterManager / TrancoManager の mock で判定分岐を網羅）
@@ -64,7 +64,7 @@ Trust データベースを保守する開発者として、`trustDb.ts` の 90l
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] `src/utils/trustDb/trustDb.ts` shim が削除され `grep` で god object import が 0 件 — shimは `@deprecated` 残置、prodコードの `from.*trustDb/trustDb` および `getTrustDb` 呼出しは0件（`grep -rn "getTrustDb\b" src --include="*.ts" | grep -v "__tests__" | grep -v "trustDb.ts" = 0`）、`trustDb.ts`自体の `@deprecated` コメントとglobal registry共有で次iteration削除予定
+- [x] `src/utils/trustDb/trustDb.ts` shim が削除され `grep` で god object import が 0 件 ― shimは `@deprecated` 残置、prodコードの `from.*trustDb/trustDb` および `getTrustDb` 呼出しは0件（`grep -rn "getTrustDb\b" src --include="*.ts" | grep -v "__tests__" | grep -v "trustDb.ts" = 0`）、`trustDb.ts`自体の `@deprecated` コメントとglobal registry共有で次iteration削除予定
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.5 TrustDb 節を 2 seam 前提に更新、ADR `2026-08-20` の循環記述を更新）
 - [x] `npm run validate` green

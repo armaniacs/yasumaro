@@ -1,5 +1,5 @@
 ---
-title: "Obsidian Weave から Yasumaro へ — ブラウザの記録を、もっと自由に"
+title: "Obsidian Weave から Yasumaro へ ― ブラウザの記録を、もっと自由に"
 emoji: "🦋"
 type: "tech"
 topics: ["chrome拡張機能", "obsidian", "ai", "sqlite", "プロダクト開発"]

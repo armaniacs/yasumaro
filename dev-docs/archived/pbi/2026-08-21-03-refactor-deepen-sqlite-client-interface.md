@@ -1,4 +1,4 @@
-# PBI: SqliteClient 深掘り — 20メソッドの shallow interface を deep に集約
+# PBI: SqliteClient 深掘り ― 20メソッドの shallow interface を deep に集約
 
 ## ユーザーストーリー
 開発者として、SqliteClient の 20メソッドの浅い interface を深い module に集約したい、なぜなら各メソッドが `this.call(TYPE, payload, transform)` の1行ラッパーで、deps が1:1で再マップされ、新しい操作を追加するたびに3箇所（interface / 実装 / deps）に名前を足す必要があるから
@@ -11,7 +11,7 @@
 ## ビジネス価値
 - 新しい SQLite 操作（例: 新しい maintenance op）を追加する際の変更箇所が1 seam に集中し、interface を学ぶコストが下がる（leverage）
 - error categorization と transform のバグが1 module に局在し、呼び出し元に散らない（locality）
-- 測定: `SqliteRpcClient` の公開メソッド数が 20→3–4 に減り、`createSqliteClientDeps` の 1:1 マップが消えること
+- 測定: `SqliteRpcClient` の公開メソッド数が 20→3-4 に減り、`createSqliteClientDeps` の 1:1 マップが消えること
 
 ## BDD受け入れシナリオ
 
@@ -31,19 +31,19 @@ Scenario: error categorization が一貫する
   When query / mutate のいずれかが失敗する
   Then categorizeError が retriable=true の SqliteError を返し、呼び出し元で同一の message と retry hint が得られる
 
-Scenario: 後方互換 — 旧メソッド名が残っていない
+Scenario: 後方互換 ― 旧メソッド名が残っていない
   Given SqliteClient の旧 20メソッド名（insertResult / queryResult / toggleStarResult など）を grep する
   When src/background/sqliteClient.ts と src/messaging/sqliteRpcClient.ts を検索する
   Then 旧メソッド名は存在せず、呼び出し元は新 domain メソッド経由でのみアクセスする
 
-Scenario: 境界 — transform が細粒度な型変換を隠蔽する
+Scenario: 境界 ― transform が細粒度な型変換を隠蔽する
   Given queryResult が BrowsingLogRecord の rows/total を返す
   When 新しい StorageQuery フィールドが追加される
   Then transform は内部 seam に留まり、公開 interface のシグネチャは変わらない
 ```
 
 ## 受け入れ基準
-- [ ] `SqliteRpcClient` interface の公開メソッドが 3–4 の domain メソッド（例: `query` / `mutate` / `maintain` / `getStatus`）または単一 `call<T,R>` seam に集約されている（20メソッドの1:1ラッパーが存在しない）
+- [ ] `SqliteRpcClient` interface の公開メソッドが 3-4 の domain メソッド（例: `query` / `mutate` / `maintain` / `getStatus`）または単一 `call<T,R>` seam に集約されている（20メソッドの1:1ラッパーが存在しない）
 - [ ] `src/background/sqliteClient.ts` の各旧メソッド（`insertResult` / `queryResult` など）が削除され、domain メソッド内部で `private call` を呼ぶ形に集約されている
 - [ ] `src/background/handlers/dashboardSqlite/deps.ts` の `createSqliteClientDeps` が 20の1:1マップではなく 3ドメインの deps（`ReadOnlyDeps` / `CoreCrudDeps` / `MaintenanceBatchDeps` は維持しつつ内部で新 interface に委譲）に更新されている
 - [ ] `categorizeError` と `SqliteRpcResult<T>` の分類が全 domain で一貫し、旧 `categorizeError` の呼び出しが SqliteClient 内部に集約されている
@@ -60,7 +60,7 @@ Scenario: 境界 — transform が細粒度な型変換を隠蔽する
 - createSqliteClientDeps が新 SqliteClient interface に正しく委譲し、旧 1:1 マップが消えていることのテスト
 
 ### 単体テスト
-- call の transform が BrowsingLogRecord ↔ OffscreenResponse の型変換を正しく行うテスト
+- call の transform が BrowsingLogRecord ⇔ OffscreenResponse の型変換を正しく行うテスト
 - categorizeError の retriable 分岐（timeout / offscreen_lost / quota / sqlite_error / unknown）
 - StorageQuery の新フィールド追加時に interface が変わらないことのテスト（internal seam の検証）
 
@@ -69,7 +69,7 @@ Scenario: 境界 — transform が細粒度な型変換を隠蔽する
 - **Red-Green-Refactor**: 各 domain ごとに 1つずつ移行し、都度 `npm run type-check`
 
 ## 見積もり
-3pt（要チームでの見積もり）— interface 再設計、deps 更新、テスト更新、レビューでの合意形成が必要
+3pt（要チームでの見積もり）― interface 再設計、deps 更新、テスト更新、レビューでの合意形成が必要
 - **確認**: sqliteClient.ts は 319行、20メソッドの shallow interface が実在
 
 ## 技術的考慮事項
@@ -102,7 +102,7 @@ grep -n "private async call" src/background/sqliteClient.ts -A 15
 7. `npm run type-check` と `npm run validate` で確認
 
 ### 落とし穴
-- `SqliteRpcClient` は `src/messaging/sqliteRpcClient.ts` で定義され background と dashboard の両方から import される中立 module。interface を変えると dashboard 側の `dashboardSqliteService.ts` も同時に壊れる — 両 side を同じ PR で移行すること
+- `SqliteRpcClient` は `src/messaging/sqliteRpcClient.ts` で定義され background と dashboard の両方から import される中立 module。interface を変えると dashboard 側の `dashboardSqliteService.ts` も同時に壊れる ― 両 side を同じ PR で移行すること
 - `searchResult(query, limit, offset, options)` は `queryResult({ text, limit, offset, ... })` の薄いラッパー。削除時に呼び出し元の `searchResult("hello", 10, 0)` を `query({ text:"hello", limit:10, offset:0 })` に機械的に置換すると、orderBy のデフォルト挙動が変わらないか確認が必要
 - `transform` が細粒度な型変換（`res.rows as T[]` / `new Uint8Array(res.data)` など）を隠蔽しているため、新 domain メソッドでも transform を内部 seam に留め、公開 interface に漏らさないこと
 

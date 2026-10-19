@@ -1,6 +1,6 @@
 # PBI: deduplicateContent の O(N^2) Jaccard 比較を近似アルゴリズムで削減
 > **実装結果（クローズ）**: 方式 B（事前フィルタ + 転置インデックス）を実装し
-> ベンチ計測した結果、現行 O(N²) 実装が L=800 センテンスで p50 2.0ms と
+> ベンチ計測した結果、現行 O(N^2) 実装が L=800 センテンスで p50 2.0ms と
 > 十分高速であることが判明。近似最適化は S/M サイズで p95 +147〜155%、
 > L でも p95 +53% と逆効果（インデックス構築コストが比較削減を上回る）
 > ため revert し、計測ベースでクローズ。ref: commit e5a7a837 / 9d083f26。
@@ -15,10 +15,10 @@
 
 ## 既実装確認（Phase 0）
 - `src/utils/contentDeduplicator.ts:52` `deduplicateContent(text, { threshold=0.7, minLength=10 })`
-- `:65-86` 外側ループ（全センテンス）× 内側ループ（`keptSets` 全件）で `jaccardSimilarity(wordSet, existingSet) >= threshold` — O(N^2)
-- `:68` `:72` `toWordSet(part.sentence)` — 各センテンスで 1 回（これは O(N)、問題は比較回数）
+- `:65-86` 外側ループ（全センテンス）× 内側ループ（`keptSets` 全件）で `jaccardSimilarity(wordSet, existingSet) >= threshold` ― O(N^2)
+- `:68` `:72` `toWordSet(part.sentence)` ― 各センテンスで 1 回（これは O(N)、問題は比較回数）
 - `import { toWordSet } from './text/tokenizer.js'` / `import { jaccardSimilarity } from './text/similarity.js'`
-- `contentExtractor/index.ts:437` `if (dedupEnabled) content = deduplicateContent(content, { threshold: dedupThreshold });` — オプトイン（`CONTENT_DEDUP_ENABLED`、default OFF）
+- `contentExtractor/index.ts:437` `if (dedupEnabled) content = deduplicateContent(content, { threshold: dedupThreshold });` ― オプトイン（`CONTENT_DEDUP_ENABLED`、default OFF）
 - 呼ばれるのは抽出パイプラインの最後、空白正規化後・切り詰め前
 
 ## BDD受け入れシナリオ
@@ -48,8 +48,8 @@ Scenario: 短いセンテンスは除去対象にならない
 
 ## 受け入れ基準
 - [x] 全ペア Jaccard 比較を、候補を絞ってから精査する 2 段構えに変更。方式は次のいずれか（実装者が計測で選択）:
-  - **A: SimHash** — 各センテンスを 64bit シグネチャに落とし、ハミング距離バケット（LSH）で候補を絞ってから Jaccard で確定判定
-  - **B: 事前フィルタ** — 比較前に「文字数比が [0.6, 1.67] の範囲外」または「先頭 3-gram 集合が disjoint」なら Jaccard をスキップ
+  - **A: SimHash** ― 各センテンスを 64bit シグネチャに落とし、ハミング距離バケット（LSH）で候補を絞ってから Jaccard で確定判定
+  - **B: 事前フィルタ** ― 比較前に「文字数比が [0.6, 1.67] の範囲外」または「先頭 3-gram 集合が disjoint」なら Jaccard をスキップ
 - [x] 除去結果は全ペア Jaccard 実装と一致すること（方式 B）。方式 A で取りこぼしがありうる場合は「閾値 0.7 で precision/recall が実測 99% 以上」をベンチで示し、乖離ケースをテストに明記
 - [x] `threshold === 0` / `sentenceParts.length <= 1` / 空文字の早期リターンは維持
 - [x] `minLength` 未満のセンテンスは無条件保持（現状維持）
@@ -77,11 +77,11 @@ Scenario: 短いセンテンスは除去対象にならない
 
 ## 技術的考慮事項
 - 依存関係: **PBI 01（ベンチ基盤）に依存**
-- 外部ライブラリ不使用の方針（`contentDeduplicator.ts` 冒頭コメント）は維持 — SimHash も事前フィルタも自前実装可能
+- 外部ライブラリ不使用の方針（`contentDeduplicator.ts` 冒頭コメント）は維持 ― SimHash も事前フィルタも自前実装可能
 - 方式 B（事前フィルタ）は「結果完全一致」を保てるので安全側。まず B を実装し、それでも L サイズが目標未達なら A を追加、という段階的アプローチを推奨
 - SimHash のハッシュ関数は決定的で軽量なもの（FNV-1a など）。トークンは `toWordSet` と同じ分かち書きを使う
 - `toWordSet` の結果を SimHash 計算にも再利用できる（二重トークナイズを避ける）
-- minLength 未満のセンテンスは `keptSets` に追加されるが比較には使われる — この挙動を変えないこと（既存テストが依存している可能性）
+- minLength 未満のセンテンスは `keptSets` に追加されるが比較には使われる ― この挙動を変えないこと（既存テストが依存している可能性）
 
 ## 実装者向け注記
 
@@ -101,7 +101,7 @@ sed -n '1,40p' src/utils/text/tokenizer.js src/utils/text/similarity.js
 ### 落とし穴
 - 事前フィルタの閾値（文字数比・n-gram）を厳しくしすぎると本来除去すべきペアを見逃す → 参照実装との 100 パターン照合で担保
 - `jaccardSimilarity >= threshold` の等号。フィルタで「ちょうど閾値」のペアを落とさないよう、フィルタは「Jaccard がこれ以下にしかなり得ない」場合のみスキップする（保守的に）
-- センテンス分割（`splitSentences`、区切り文字を保持する独自版）は変更しない — テキスト復元がここに依存
+- センテンス分割（`splitSentences`、区切り文字を保持する独自版）は変更しない ― テキスト復元がここに依存
 
 ## Definition of Done
 - [x] 全 BDD シナリオが自動テストとして実装されパスする

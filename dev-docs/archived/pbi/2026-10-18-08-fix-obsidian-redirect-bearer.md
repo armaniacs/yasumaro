@@ -19,9 +19,9 @@ security-audit run-2 の needs_validation リード。fingerprint: `ssrf-guard:p
 
 claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オプションも `response.redirected` チェックも持たず `fetchWithTimeout` を呼ぶが、この経路上のゲート（`validateUrl`、`CSPValidator.isUrlAllowed` + `savedObsidianOrigins`）はすべて pre-hop の URL しか評価しない。`FETCH_URL` ハンドラが持つ `redirect:'error'` 方針と `response.redirected` の body ガードは、この経路に拡張されていない。
 
-- [entrypoint] `src/background/obsidianClient.ts:238`（`appendToDailyNote`）— 検証済み設定から daily-note URL を組み立て、既存本文を読む（`:256`）→ 結合した本文を書く（`:264`）。
-- [propagation] `src/utils/fetch.ts:128`（`fetchWithTimeout`）— `validateUrl` の pre-hop プロトコルチェック（`:112`）と `CSPValidator.isUrlAllowed` の pre-hop 完全一致（`:128`）、任意の `allowedUrls`（`:140-143`）はすべて初期 URL のみ評価。ホップ毎の再検証は存在しない。
-- [sink] `src/background/obsidianClient.ts:306`（`_writeContent`）— vault Bearer ヘッダーとノート本文を伴う PUT。redirect オプションなし。`:275` の GET も同じ姿勢。
+- [entrypoint] `src/background/obsidianClient.ts:238`（`appendToDailyNote`）― 検証済み設定から daily-note URL を組み立て、既存本文を読む（`:256`）→ 結合した本文を書く（`:264`）。
+- [propagation] `src/utils/fetch.ts:128`（`fetchWithTimeout`）― `validateUrl` の pre-hop プロトコルチェック（`:112`）と `CSPValidator.isUrlAllowed` の pre-hop 完全一致（`:128`）、任意の `allowedUrls`（`:140-143`）はすべて初期 URL のみ評価。ホップ毎の再検証は存在しない。
+- [sink] `src/background/obsidianClient.ts:306`（`_writeContent`）― vault Bearer ヘッダーとノート本文を伴う PUT。redirect オプションなし。`:275` の GET も同じ姿勢。
 
 既存対照: ADR 2026-08-29（`dev-docs/ADR/2026-08-29-fetch-redirect-policy.md`）は `FETCH_URL` にのみ `redirect:'error'` を適用し、`fetchWithRedirectGuard` を将来の攻撃者影響 URL 規約として出荷済み。本 PBI はその適用範囲を Obsidian 経路へ拡大する。
 
@@ -78,19 +78,19 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 | ファイル | 行 | 現状 |
 |---|---|---|
-| `src/background/obsidianClient.ts` | 275 | `_fetchExistingContent` — `fetchWithTimeout(url, { method:'GET', headers })`。redirect オプションなし |
-| `src/background/obsidianClient.ts` | 306 | `_writeContent` — `fetchWithTimeout(url, { method:'PUT', headers, body })`。redirect オプションなし |
-| `src/background/obsidianClient.ts` | 356 | `_fetchConnectionResponse` — 接続テスト GET。redirect オプションなし（同一ファイル内の第 3 サイト） |
+| `src/background/obsidianClient.ts` | 275 | `_fetchExistingContent` ― `fetchWithTimeout(url, { method:'GET', headers })`。redirect オプションなし |
+| `src/background/obsidianClient.ts` | 306 | `_writeContent` ― `fetchWithTimeout(url, { method:'PUT', headers, body })`。redirect オプションなし |
+| `src/background/obsidianClient.ts` | 356 | `_fetchConnectionResponse` ― 接続テスト GET。redirect オプションなし（同一ファイル内の第 3 サイト） |
 | `src/utils/fetch.ts` | 155 | `fetch(url, { ...fetchOptions, signal })`。呼び出し側オプションの spread で redirect デフォルトは指定されない |
-| `src/utils/fetch.ts` | 201 | `fetchWithRedirectGuard` — `redirect:'manual'` + ホップ毎 `validateUrlForFilterImport`（最大 5 ホップ）。攻撃者影響 URL 向け |
+| `src/utils/fetch.ts` | 201 | `fetchWithRedirectGuard` ― `redirect:'manual'` + ホップ毎 `validateUrlForFilterImport`（最大 5 ホップ）。攻撃者影響 URL 向け |
 | `src/background/handlers/systemHandlers.ts` | 104 | `FETCH_URL` の `redirect:'error'` 設定 |
 | `src/background/handlers/systemHandlers.ts` | 110 | `response.redirected` の body ガード |
-| `src/utils/cspValidator.ts` | 186-200 | `savedObsidianOrigins` — pre-hop かつ文字列完全一致。不正な保存設定は空集合を寄与（ゲートを広げない） |
+| `src/utils/cspValidator.ts` | 186-200 | `savedObsidianOrigins` ― pre-hop かつ文字列完全一致。不正な保存設定は空集合を寄与（ゲートを広げない） |
 
 ### 最小変更の選択肢
 
-1. **Obsidian の fetch オプションに `redirect:'error'` を付ける（FETCH_URL 経路と同じ形）** — 推奨。3 箇所の呼び出しに 1 行ずつ `redirect:'error'` を追加するだけ。ADR 2026-08-29 の決定を再利用でき、ブロッカー 3（Obsidian Local REST API がリダイレクトに依存しない）が成立するなら最も安価で正しい修正になる。
-2. **攻撃者が影響しうる URL 向けの共通ガード `fetchWithRedirectGuard` を本経路にも適用する** — 本経路の URL はユーザー設定済みの vault origin であり攻撃者が影響するものではないため、`validateUrlForFilterImport`（private IP ガード）を構成する要素が過度に厳しい。ただし「vault origin の設定を攻撃者が書き換えられる」 tying を将来想定する場合はこの方が安全。採用する場合は hop 数の扱い（GET は可、PUT は body 再送の可否）を明示すること。
+1. **Obsidian の fetch オプションに `redirect:'error'` を付ける（FETCH_URL 経路と同じ形）** ― 推奨。3 箇所の呼び出しに 1 行ずつ `redirect:'error'` を追加するだけ。ADR 2026-08-29 の決定を再利用でき、ブロッカー 3（Obsidian Local REST API がリダイレクトに依存しない）が成立するなら最も安価で正しい修正になる。
+2. **攻撃者が影響しうる URL 向けの共通ガード `fetchWithRedirectGuard` を本経路にも適用する** ― 本経路の URL はユーザー設定済みの vault origin であり攻撃者が影響するものではないため、`validateUrlForFilterImport`（private IP ガード）を構成する要素が過度に厳しい。ただし「vault origin の設定を攻撃者が書き換えられる」 tying を将来想定する場合はこの方が安全。採用する場合は hop 数の扱い（GET は可、PUT は body 再送の可否）を明示すること。
 
 **推奨: 選択肢 1 を実装し、選択肢 2 は代替として記録のみ。** ただし本 PBI では両者を排他とはせず、実装時に owner がブロッカー 3 の答え次第で判断する。
 
@@ -104,9 +104,9 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
-1. **ブラウザが跨オリジン redirect で Authorization を運送するか** — Chromium/Edge/Firefox で、拡張 service worker の fetch が跨オリジン 30x を追った場合、`Authorization` ヘッダーがリダイレクト先へ運送されるか。これが未観測の事実であり needs_validation の留保理由そのもの。確認結果次第で本 PBI の影響評価は「資格情報とノート本文の流出」から「リクエスト行だけが渡る場合」に狭まる。
-2. **リダイレクト後応答が CORS 読み取り可能か** — 2 次応答の body が拡張から読めるか。読めなければ影響は送信側に閉じる。
-3. **Obsidian Local REST API が redirect に依存しないか** — 依存する場合、`redirect:'error'` ではなく replacement（hop 毎再検証）を owner が判断する。
+1. **ブラウザが跨オリジン redirect で Authorization を運送するか** ― Chromium/Edge/Firefox で、拡張 service worker の fetch が跨オリジン 30x を追った場合、`Authorization` ヘッダーがリダイレクト先へ運送されるか。これが未観測の事実であり needs_validation の留保理由そのもの。確認結果次第で本 PBI の影響評価は「資格情報とノート本文の流出」から「リクエスト行だけが渡る場合」に狭まる。
+2. **リダイレクト後応答が CORS 読み取り可能か** ― 2 次応答の body が拡張から読めるか。読めなければ影響は送信側に閉じる。
+3. **Obsidian Local REST API が redirect に依存しないか** ― 依存する場合、`redirect:'error'` ではなく replacement（hop 毎再検証）を owner が判断する。
 
 いずれも owner 確認として PBI の冒頭に置き、実装着手の前に対応する（source-only 実行境界のもと未確認のまま「直した」としない）。
 
@@ -139,7 +139,7 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 
 - **判定**: 修正完了（PBI 01 と together 実装）。Obsidian の read / write / 接続テストの 3 経路が `redirect:'error'` を明示し、platform 既定の `follow` に依存しない。
 - **実装**: `src/background/obsidianClient.ts` の `_fetchExistingContent`（GET）/ `_writeContent`（PUT）/ `_fetchConnectionResponse`（接続テスト）が共通 seam `NO_REDIRECT_FETCH_POLICY`（`src/utils/fetch.ts`）を展開。read / write には多層防御として `if (response.redirected) throw tagFailure(..., FailureKind.NETWORK)` を追加（`redirect:'error'` が効かない実装差の保険）。
-- **監査 fingerprint**: `ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put` — verdict を **FIXED（2026-10-19）** へ更新。
+- **監査 fingerprint**: `ssrf-guard:pre-hop-only-gates-redirect-follow-obsidian-put` ― verdict を **FIXED（2026-10-19）** へ更新。
 - **ADR**: `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` の適用範囲に Obsidian vault 経路を追記（AI 経路と同時）。
 - **テスト**: `src/background/__tests__/obsidianClient-secure-fetch.test.ts` に `describe('redirect policy')` を新設（5 テスト、実装前に Red を確認）。GET / PUT / 接続テストの 3 経路で fetch 引数を pin し、`response.redirected` の body 拒否も pin。
 - **ゲート**: `npm run validate` exit 0。PR #180 の CI すべて pass。`obsidianClient*.test.ts` の既存テストは非互換なし。
@@ -151,7 +151,7 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 ## 関連
 
 - `pbi/00-INDEX.md`
-- PBI 01（同じ fetch.ts の別箇所）— 実装時に together 行うと効率的
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — 本 PBI が拡大する適用範囲の原本
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — SSRF / CWE-918 の脅威モデル
+- PBI 01（同じ fetch.ts の別箇所）― 実装時に together 行うと効率的
+- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` ― 本 PBI が拡大する適用範囲の原本
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― SSRF / CWE-918 の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json / NEEDS-VALIDATION.md 22番）

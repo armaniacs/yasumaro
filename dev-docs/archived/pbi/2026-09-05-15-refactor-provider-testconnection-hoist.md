@@ -12,7 +12,7 @@ AI provider を保守する開発者として、testConnection 経路の共有�
 | 項目 | 現状 |
 |------|------|
 | `_getAllowedUrls` | `GeminiProvider.ts:313-315` と `OpenAIProvider.ts:243-245` が**逐語同一**（`return getAllowedUrls();`）。urlWhitelist の re-export wrapper |
-| 応答 cap 定数 | `MAX_AI_RESPONSE_BYTES`（Gemini:18 / OpenAI:17）と `MAX_HTTP_SUMMARY_RESPONSE_BYTES`（ProviderStrategy.ts:91）— 同値 10MB・3 定義・名前不一致 |
+| 応答 cap 定数 | `MAX_AI_RESPONSE_BYTES`（Gemini:18 / OpenAI:17）と `MAX_HTTP_SUMMARY_RESPONSE_BYTES`（ProviderStrategy.ts:91）― 同値 10MB・3 定義・名前不一致 |
 | debug envelope | testConnection の debug 情報組み立てが 2 provider で反復（形状が微妙に異なるため本 PBI では触らない） |
 
 ## なぜなぜ分析（設計判断の導出）
@@ -54,7 +54,7 @@ Scenario: testConnection の振る舞いは不変
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト
 - 既存 provider テスト（Gemini/OpenAI/ProviderStrategy catalog 系）無修正 green が主担保
-- cap 統合の検証: 定数の export 元が 1 つであること（import 元検査は過剰 — grep ガード不要。ファイル数 3 の小さな cluster のため）
+- cap 統合の検証: 定数の export 元が 1 つであること（import 元検査は過剰 ― grep ガード不要。ファイル数 3 の小さな cluster のため）
 ### 統合テスト
 - testConnection の既存モックテスト（fetch mock）が無修正で通ること
 ### 例外ハンドリング
@@ -86,9 +86,9 @@ sed -n '240,246p' src/background/ai/providers/OpenAIProvider.ts
 4. provider テスト全 green を確認
 
 ### 落とし穴
-- base（ProviderStrategy.ts）から urlWhitelist を import する際の依存方向を確認すること。utils → background の逆辺規約（LAYERS.md:110）は background → utils には適用されないため方向は安全だが、import サイクル（ProviderStrategy ↔ urlWhitelist）が無いか type-check で確認する
+- base（ProviderStrategy.ts）から urlWhitelist を import する際の依存方向を確認すること。utils → background の逆辺規約（LAYERS.md:110）は background → utils には適用されないため方向は安全だが、import サイクル（ProviderStrategy ⇔ urlWhitelist）が無いか type-check で確認する
 - cap 定数の改名で bench やスクリプトが grep している場合は影響確認（`rg MAX_AI_RESPONSE_BYTES` で全参照を先に出す）
-- `_getAllowedUrls` の呼び出し位置（Gemini:195 / OpenAI:183）は testConnection 内 — summary flow 側に同名の別仕組み（providerAllowlist の中立テーブル、Round 4 PBI 01）が既にあるため混同しないこと。本 PBI は testConnection の fetch 許可リスト取得の共有化のみ
+- `_getAllowedUrls` の呼び出し位置（Gemini:195 / OpenAI:183）は testConnection 内 ― summary flow 側に同名の別仕組み（providerAllowlist の中立テーブル、Round 4 PBI 01）が既にあるため混同しないこと。本 PBI は testConnection の fetch 許可リスト取得の共有化のみ
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

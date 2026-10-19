@@ -1,4 +1,4 @@
-# PBI 01: 上限定数の SSOT 化 — limits テーブル新設で 4 authorities の drift を解消
+# PBI 01: 上限定数の SSOT 化 ― limits テーブル新設で 4 authorities の drift を解消
 
 ## ユーザーストーリー
 

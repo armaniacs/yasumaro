@@ -10,10 +10,10 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 深掘り調査済み（side-effects.md M32セクションで詳細記録済み。本PBIはその調査結果に基づく）:
-- `src/background/pipeline/steps/saveSqliteStep.ts:18-22` — `withOptimisticLock` の戻り値は完全に破棄されており、後続の `params.sqliteClient.insert(params.record)`（24行目）には一切渡されていない
+- `src/background/pipeline/steps/saveSqliteStep.ts:18-22` ― `withOptimisticLock` の戻り値は完全に破棄されており、後続の `params.sqliteClient.insert(params.record)`（24行目）には一切渡されていない
 - コールチェーン実装まで追跡済み: `sqliteClient.insert()` → offscreen `SQLITE_INSERT` メッセージ → `recordsRepo.ts: insert()` → `IdbVfsBackend.ts:28-36`
-- `IdbVfsBackend.ts:32` — 単体 `insert()` は `INSERT_SQL`（`INSERT OR IGNORE` ではない）を使用
-- `schema.ts:43` — `UNIQUE(url, created_at)` 制約はテーブル定義でDBレベルに常時存在するため、楽観的ロックの有無に関わらず重複行がDBに2件入ることはない
+- `IdbVfsBackend.ts:32` ― 単体 `insert()` は `INSERT_SQL`（`INSERT OR IGNORE` ではない）を使用
+- `schema.ts:43` ― `UNIQUE(url, created_at)` 制約はテーブル定義でDBレベルに常時存在するため、楽観的ロックの有無に関わらず重複行がDBに2件入ることはない
 - **結論（確定済み）**: ロック単純削除の副作用はなし。ただし単体insert経路は `INSERT OR IGNORE` ではないため、重複挿入の試行は「例外throw」という挙動になる（`saveSqliteStep.ts:35-40` でログ記録後re-throw）。この挙動はロックの有無と無関係に既に発生している
 
 ```bash

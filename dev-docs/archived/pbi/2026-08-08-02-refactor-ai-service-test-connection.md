@@ -41,9 +41,9 @@ export interface AIService {
 `RemoteAIService` が `success` / `error` を転送していない：
 
 ```typescript
-// src/background/ai/RemoteAIService.ts:23-37 — success/error を返さない
-// src/background/ai/LocalAIService.ts:33-34 — success/error を返す
-// src/background/ai/FallbackAIService.ts:25 — localResult.success === false で分岐
+// src/background/ai/RemoteAIService.ts:23-37 ― success/error を返さない
+// src/background/ai/LocalAIService.ts:33-34 ― success/error を返す
+// src/background/ai/FallbackAIService.ts:25 ― localResult.success === false で分岐
 ```
 
 `FallbackAIService` の `auto` 分岐は `success === false` を判定するが、remote 結果は常に `success: undefined` として読まれる。`undefined === false` は `false` なので、**remote が失敗しても失敗として扱われない**。

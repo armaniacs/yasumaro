@@ -6,13 +6,13 @@
 
 | 順位 | NN | 候補 | RICE | R/I/C/E | 依存 |
 |---|---|---|---:|---|---|
-| 1 | 24 | recordingTriggerManager の blob 読み化 + pin（fix） | 24.0 | 4/2/100%/0.25 | — |
-| 2 | 25 | 死コード除去: migration.ts / storage.ts shim / trancoConsent chain / inMemoryTransport 移動（refactor） | 24.0 | 8/1.5/100%/0.5 | —（同点はリスク軽減効果で順位1を先行） |
-| 3 | 26 | メッセージ契約 linkage + 未登録型 fallback 応答（fix） | 10.8 | 6/2/90%/1.0 | — |
-| 4 | 27 | gate 順序 SSOT 一本化: ADR 裁定 + 実装（refactor） | 6.4 | 4/2/80%/1.0 | — |
-| 5 | 28 | 既定値一本化 + permissionManager seam 統一 + clear() 経路（refactor） | 5.0 | 5/1/100%/1.0 | —（PBI 24 の姉妹。実害側は 24 が閉じる） |
+| 1 | 24 | recordingTriggerManager の blob 読み化 + pin（fix） | 24.0 | 4/2/100%/0.25 | ― |
+| 2 | 25 | 死コード除去: migration.ts / storage.ts shim / trancoConsent chain / inMemoryTransport 移動（refactor） | 24.0 | 8/1.5/100%/0.5 | ―（同点はリスク軽減効果で順位1を先行） |
+| 3 | 26 | メッセージ契約 linkage + 未登録型 fallback 応答（fix） | 10.8 | 6/2/90%/1.0 | ― |
+| 4 | 27 | gate 順序 SSOT 一本化: ADR 裁定 + 実装（refactor） | 6.4 | 4/2/80%/1.0 | ― |
+| 5 | 28 | 既定値一本化 + permissionManager seam 統一 + clear() 経路（refactor） | 5.0 | 5/1/100%/1.0 | ―（PBI 24 の姉妹。実害側は 24 が閉じる） |
 | 6 | 29 | 送信 seam 集約 + リトライ判定の正規形集約（refactor） | 4.8 | 8/1.5/80%/2.0 | 26 の後に着手 |
-| 7 | 30 | 層 edge 整備: protocol 値の中立層引き上げ + content reader + offscreen proof（refactor） | 4.0 | 5/1.5/80%/1.5 | — |
+| 7 | 30 | 層 edge 整備: protocol 値の中立層引き上げ + content reader + offscreen proof（refactor） | 4.0 | 5/1.5/80%/1.5 | ― |
 
 合計 8.25 SP。推奨バッチ: {24, 25} → {26, 27, 28} → {29, 30}。
 

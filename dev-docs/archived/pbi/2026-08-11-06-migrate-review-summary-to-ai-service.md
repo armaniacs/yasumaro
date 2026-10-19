@@ -2,7 +2,7 @@
 
 ## 実装状況
 
-**完了** — 2026-08-11。review summaryのAIService factory注入、alarm/message共有、AIClient直接生成除去、ADR更新を実装済み。
+**完了** ― 2026-08-11。review summaryのAIService factory注入、alarm/message共有、AIClient直接生成除去、ADR更新を実装済み。
 
 ## 親PBI
 

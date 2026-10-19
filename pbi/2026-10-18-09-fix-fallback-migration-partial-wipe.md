@@ -21,16 +21,16 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 ### Trace
 
-- [entrypoint] `src/offscreen/sqliteEngineHost.ts:235`（engine init）— `_doInit` のステップ4。`runMigrationBackup`（`:223`）と `runMigrationRestore`（`:232`）の後に `tryMigrateFallbackToSqlite(this.fallbackMigrationState)` を await する。engine 初期化は成功扱いで返る（`:236 return true`）ため、失敗は上位に伝播しない。
-- [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:29`（snapshot）— `new FallbackStorage()`（`:28`）が別インスタンスなので mutex も別（`storageFallback.ts:24 private readonly mutex = new Mutex()`）。稼働中の engine が持つ FallbackStorage とはロックを共有せず、`getAllRecords()`（`storageFallback.ts:475`）で全件を一度だけ読む。
-- [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:42`（migration loop）— 各レコードを `INSERT OR IGNORE`（`src/offscreen/schema.ts:145`）で `execWithCache`（`idbEngineLifecycle.ts:55`）経由の投入。失敗は `:47-48` の空 catch で飲み込まれ、`migrated++`（`:46`）は成功時のみ。ループは打ち切られない。
-- [sink] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53`（destruction）— `if (migrated > 0)`（`:51`）が成立すると `tempFallback.clearAll()` が `FALLBACK_STORAGE_DATA`（`storageFallback.ts:15`）を全消しする（`storageFallback.ts:361`、実体は `:57 mutate(() => ({ next: { records: [] } }))`）。INSERT に失敗したレコードもここで死ぬ。`:55` が `OPFS_FALLBACK_MODE` を落とし、残りが無かったことに两端が寄与する。
+- [entrypoint] `src/offscreen/sqliteEngineHost.ts:235`（engine init）― `_doInit` のステップ4。`runMigrationBackup`（`:223`）と `runMigrationRestore`（`:232`）の後に `tryMigrateFallbackToSqlite(this.fallbackMigrationState)` を await する。engine 初期化は成功扱いで返る（`:236 return true`）ため、失敗は上位に伝播しない。
+- [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:29`（snapshot）― `new FallbackStorage()`（`:28`）が別インスタンスなので mutex も別（`storageFallback.ts:24 private readonly mutex = new Mutex()`）。稼働中の engine が持つ FallbackStorage とはロックを共有せず、`getAllRecords()`（`storageFallback.ts:475`）で全件を一度だけ読む。
+- [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:42`（migration loop）― 各レコードを `INSERT OR IGNORE`（`src/offscreen/schema.ts:145`）で `execWithCache`（`idbEngineLifecycle.ts:55`）経由の投入。失敗は `:47-48` の空 catch で飲み込まれ、`migrated++`（`:46`）は成功時のみ。ループは打ち切られない。
+- [sink] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53`（destruction）― `if (migrated > 0)`（`:51`）が成立すると `tempFallback.clearAll()` が `FALLBACK_STORAGE_DATA`（`storageFallback.ts:15`）を全消しする（`storageFallback.ts:361`、実体は `:57 mutate(() => ({ next: { records: [] } }))`）。INSERT に失敗したレコードもここで死ぬ。`:55` が `OPFS_FALLBACK_MODE` を落とし、残りが無かったことに两端が寄与する。
 
 ### Evidence
 
-- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:47` — per-record INSERT を囲む空 catch。エラーも件数も捨てられ、後始末の判断材料にならない。
-- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53` — `clearAll` は `migrated > 0` のみで無条件に走る。全件成功であることは検証されていない。
-- `src/offscreen/storageFallback.ts:361` — `clearAll` は store 内の全レコードを破棄する。取り戻す経路が存在しない。
+- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:47` ― per-record INSERT を囲む空 catch。エラーも件数も捨てられ、後始末の判断材料にならない。
+- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53` ― `clearAll` は `migrated > 0` のみで無条件に走る。全件成功であることは検証されていない。
+- `src/offscreen/storageFallback.ts:361` ― `clearAll` は store 内の全レコードを破棄する。取り戻す経路が存在しない。
 
 ### 対照: ハードニング済みの兄弟
 
@@ -38,8 +38,8 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 - `:355` `const expectedCount = payload.records.length;`
 - `:368` `SELECT COUNT(*) FROM browsing_logs` で `actualCount` を実測
-- `:370` `if (actualCount >= expectedCount && expectedCount > 0)` — 満たしたときだけバックアップを削除（`:371-376`）
-- `:402` / `:416` — restore 後に一度だけ再検証する終端保証
+- `:370` `if (actualCount >= expectedCount && expectedCount > 0)` ― 満たしたときだけバックアップを削除（`:371-376`）
+- `:402` / `:416` ― restore 後に一度だけ再検証する終端保証
 
 この「count 一致を確認してから安全網を捨てる」方針を `fallbackMigration` にも適用するのが本 PBI の中心です。
 
@@ -117,9 +117,9 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 | 同上 | 51-54 | `if (migrated > 0)` → `logInfo` → `:53` `await tempFallback.clearAll()` ★破壊の sink |
 | 同上 | 55 | `chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE)`。残存の有無に関わらず実行される |
 | `src/offscreen/storageFallback.ts` | 15 | `const STORAGE_KEY = 'FALLBACK_STORAGE_DATA'` |
-| `src/offscreen/storageFallback.ts` | 24 / 57 | `private readonly mutex = new Mutex()` / `private async mutate<T>(fn)` — 全 mutator の単一ロック規律。`clearAll` もこの `mutate` を通る |
-| `src/offscreen/storageFallback.ts` | 361 | `async clearAll()` — `mutate(() => ({ next: { records: [] } }))` + counter リセット。取り戻す経路なし |
-| `src/offscreen/storageFallback.ts` | 475 | `async getAllRecords()` — 移行スナップショットの供給元 |
+| `src/offscreen/storageFallback.ts` | 24 / 57 | `private readonly mutex = new Mutex()` / `private async mutate<T>(fn)` ― 全 mutator の単一ロック規律。`clearAll` もこの `mutate` を通る |
+| `src/offscreen/storageFallback.ts` | 361 | `async clearAll()` ― `mutate(() => ({ next: { records: [] } }))` + counter リセット。取り戻す経路なし |
+| `src/offscreen/storageFallback.ts` | 475 | `async getAllRecords()` ― 移行スナップショットの供給元 |
 | `src/offscreen/sqliteEngineContext/idbEngineLifecycle.ts` | 55 | `execWithCache(idbEngine, sql, params, callback?)`。callback 付きなら `query` を走査、無しなら `exec`。件数検証（選択肢3）にそのまま使える |
 | `src/offscreen/schema.ts` | 145 | `INSERT_IGNORE_SQL = INSERT OR IGNORE INTO browsing_logs (...)`。重複は無害化される＝再試行しても安全 |
 | `src/offscreen/sqliteEngineContext/migrationBackup.ts` | 355 / 368 / 370 | 兄弟の実装。`expectedCount` 取得 → `SELECT COUNT(*)` で実測 → 一致時のみバックアップ削除 |
@@ -130,11 +130,11 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 ### 最小変更の選択肢
 
-1. **条件だけを差し替える（最小 diff）** — `:51` の `if (migrated > 0)` を「`failed === 0`（= `records.length` 件すべて成功）」に変更し、`:47-48` の空 catch で `failed` を数える。`:45` の per-record ループと `execWithCache` の呼び出し方は不変。**推奨の第一候補**（差分が最小・既存テストの mock 差し込み口だけで書ける・`migrationBackup.ts` 相当の count 検証を init 時に1クエリ追加せずに済む）。ただし「投入成功」と「SQLite に着地」が `INSERT OR IGNORE` では厳密には別（重複既存行は success だが新行ではない）ため、既存行が混在する実データでは履歴が重複して残る可能性がある。この点が気になる場合は選択肢 3 を採る。
+1. **条件だけを差し替える（最小 diff）** ― `:51` の `if (migrated > 0)` を「`failed === 0`（= `records.length` 件すべて成功）」に変更し、`:47-48` の空 catch で `failed` を数える。`:45` の per-record ループと `execWithCache` の呼び出し方は不変。**推奨の第一候補**（差分が最小・既存テストの mock 差し込み口だけで書ける・`migrationBackup.ts` 相当の count 検証を init 時に1クエリ追加せずに済む）。ただし「投入成功」と「SQLite に着地」が `INSERT OR IGNORE` では厳密には別（重複既存行は success だが新行ではない）ため、既存行が混在する実データでは履歴が重複して残る可能性がある。この点が気になる場合は選択肢 3 を採る。
 
-2. **失敗したレコードだけを残して次回移行の対象にする（部分成功レコードを別キーで保持）** — `:53` の `clearAll` を「成功した分だけを store から落とす」delete-by-id に置き換える（`FallbackStorage` に selective delete がない場合は、新キーを追加して成功 id を記録し、次回 init で成功分を skip してから clear する）。**最小 diff ではない**：`storageFallback.ts` に新 API か新ストレージキーが必要なため、工程が他の選択肢を上回り、`pbi/2026-10-18-10`（legacy count）や 13（field drift）とキー設計が干渉しうる。副作用 🔴 の実体がこれ（孤児残存の明示）。採用する場合はキー設計を先に owner と合意すること。
+2. **失敗したレコードだけを残して次回移行の対象にする（部分成功レコードを別キーで保持）** ― `:53` の `clearAll` を「成功した分だけを store から落とす」delete-by-id に置き換える（`FallbackStorage` に selective delete がない場合は、新キーを追加して成功 id を記録し、次回 init で成功分を skip してから clear する）。**最小 diff ではない**：`storageFallback.ts` に新 API か新ストレージキーが必要なため、工程が他の選択肢を上回り、`pbi/2026-10-18-10`（legacy count）や 13（field drift）とキー設計が干渉しうる。副作用 🔴 の実体がこれ（孤児残存の明示）。採用する場合はキー設計を先に owner と合意すること。
 
-3. **兄弟の count 一致判定（`migrationBackup.ts:370`）と同じ形に揃える** — ループ後に `execWithCache(engine, 'SELECT COUNT(*) FROM browsing_logs', [], cb)`（callback 付き = `query` 経路）で実数を測り、`actualCount >= expectedCount && expectedCount > 0` を満たしたときだけ `clearAll`。**方針の一貫性が最も高く**、同一モジュールに「数を確認してから捨てる」「数を見ずに捨てる」の2系統を残さない。ただし既存行（すでに移行済みの履歴）が混ざると `COUNT(*)` が期待値以上になり得るため、判定は「投入後の差分」で取るか、`browsing_logs` の移行前行数を控えて差分を見る必要がある。**推奨: 選択肢 1 を既定実装とし、選択肢 3 を「1 が孤児残存に耐えられないと判断された場合の置換先」として記録。**
+3. **兄弟の count 一致判定（`migrationBackup.ts:370`）と同じ形に揃える** ― ループ後に `execWithCache(engine, 'SELECT COUNT(*) FROM browsing_logs', [], cb)`（callback 付き = `query` 経路）で実数を測り、`actualCount >= expectedCount && expectedCount > 0` を満たしたときだけ `clearAll`。**方針の一貫性が最も高く**、同一モジュールに「数を確認してから捨てる」「数を見ずに捨てる」の2系統を残さない。ただし既存行（すでに移行済みの履歴）が混ざると `COUNT(*)` が期待値以上になり得るため、判定は「投入後の差分」で取るか、`browsing_logs` の移行前行数を控えて差分を見る必要がある。**推奨: 選択肢 1 を既定実装とし、選択肢 3 を「1 が孤児残存に耐えられないと判断された場合の置換先」として記録。**
 
 **推奨方針**: 選択肢1（`failed === 0` 条件を足す＋失敗件数のログ）を最小実装とし、既存の `:64-75` テストの期待値を書き換える。同時に「全件成功時の clearAll 1回」を既存 `:51-62` で緑に保つことで回帰ガードとしても固定できる。選択肢3への切り替えは owner の判断で、実装中に孤児残存が許容できないと判断された時点で引き継ぐ。
 
@@ -142,9 +142,9 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 監査 verdict は `needs_validation`。**ブロッカーは「per-record の `execWithCache` がループ途中で 1 件だけ reject し得るか」という実行事実**であり、ソース（`INSERT OR IGNORE` + 空 catch）では実プロファイルでの発生を証明できない（run-2 は sandbox 実行不可・source-only 判定）。着手前に潰すもの:
 
-1. **ローカル再現を先に 1 本書く** — BDD シナリオ1・3 の単体テストを先に追加して緑にすれば「部分失敗時に clearAll が走る」ことが現行コードで実際に観測できる。観測できなければ needs_validation の留保理由そのものが変わり、影響評価を再記載する。
-2. **失敗モードの実在確認** — 想定している reject の原因（IDB クォータ / eviction / wasm engine error / `SqliteValue` の型不正）が 1 つでも実プロファイルで起こり得るかを owner が隔離プロファイルで確かめる。1 つも再現できなくても選択肢1 は無害（現状より安全性が増すだけ）だが、**再現が確認できないまま「直した」と書かない**（source-only 実行境界の明示）。
-3. **`OPFS_FALLBACK_MODE` の扱い** — `:55` が残存の有無に関わらずフラグを消すため、「残ったが本番は OPFS 経路で動き中」という状態で fallback の残存レコードが二度と読まれなくなる可能性がある。保持方針を変えた場合、このフラグの削除条件も併せて変更するか、理由コメントを残す。
+1. **ローカル再現を先に 1 本書く** ― BDD シナリオ1・3 の単体テストを先に追加して緑にすれば「部分失敗時に clearAll が走る」ことが現行コードで実際に観測できる。観測できなければ needs_validation の留保理由そのものが変わり、影響評価を再記載する。
+2. **失敗モードの実在確認** ― 想定している reject の原因（IDB クォータ / eviction / wasm engine error / `SqliteValue` の型不正）が 1 つでも実プロファイルで起こり得るかを owner が隔離プロファイルで確かめる。1 つも再現できなくても選択肢1 は無害（現状より安全性が増すだけ）だが、**再現が確認できないまま「直した」と書かない**（source-only 実行境界の明示）。
+3. **`OPFS_FALLBACK_MODE` の扱い** ― `:55` が残存の有無に関わらずフラグを消すため、「残ったが本番は OPFS 経路で動き中」という状態で fallback の残存レコードが二度と読まれなくなる可能性がある。保持方針を変えた場合、このフラグの削除条件も併せて変更するか、理由コメントを残す。
 
 ### ロールバック手順
 
@@ -174,9 +174,9 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 ## 関連
 
 - `pbi/00-INDEX.md`
-- PBI 10（legacy count）/ 13（field drift）/ 17（rec snapshot）— 同じ fallback・移行領域。移行系方針（count 一致で安全網を捨てる）の整合を確認すること。特に 13 は `browsing_logs` の列定義に絡むため、選択肢3（count 検証）を採る場合は列ドリフトと併せて確認する
-- `src/offscreen/sqliteEngineContext/migrationBackup.ts:370` — 本 PBI が揃えるべき方針の兄弟実装
-- `src/offscreen/storageFallback.ts:361` — `clearAll` の実体。取り戻す経路が存在しないことを示す
-- `src/offscreen/sqliteEngineHost.ts:235` — 呼び出し点。`_doInit` のステップ4
-- run-2 の companion プロトコル DATA-ISOLATION-AND-LIFECYCLE（`/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/agents/hunter-offscreen/` の結果）— 「唯一のコピーを破壊する」ライフサイクル評価の根拠
+- PBI 10（legacy count）/ 13（field drift）/ 17（rec snapshot）― 同じ fallback・移行領域。移行系方針（count 一致で安全網を捨てる）の整合を確認すること。特に 13 は `browsing_logs` の列定義に絡むため、選択肢3（count 検証）を採る場合は列ドリフトと併せて確認する
+- `src/offscreen/sqliteEngineContext/migrationBackup.ts:370` ― 本 PBI が揃えるべき方針の兄弟実装
+- `src/offscreen/storageFallback.ts:361` ― `clearAll` の実体。取り戻す経路が存在しないことを示す
+- `src/offscreen/sqliteEngineHost.ts:235` ― 呼び出し点。`_doInit` のステップ4
+- run-2 の companion プロトコル DATA-ISOLATION-AND-LIFECYCLE（`/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/agents/hunter-offscreen/` の結果）― 「唯一のコピーを破壊する」ライフサイクル評価の根拠
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json / NEEDS-VALIDATION.md 10番 / run-metadata.json の `source_ref: d49d70a3`）

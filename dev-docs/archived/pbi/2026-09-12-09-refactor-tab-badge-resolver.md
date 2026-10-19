@@ -1,4 +1,4 @@
-# PBI 2026-09-12-09 — TabBadgeResolver（タブバッジ判定の二重実装を ordered table に）
+# PBI 2026-09-12-09 ― TabBadgeResolver（タブバッジ判定の二重実装を ordered table に）
 
 - **種別**: 🔧非機能追加（refactor）
 - **優先度**: 1 位 / RICE **19.2**（R12 × I2 × C80% / E1.0人日）

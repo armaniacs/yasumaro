@@ -48,7 +48,7 @@
 
 ## 重要指摘事項（優先度順）
 
-### [High] SQLインジェクション — IdbVfsBackend.query() の ORDER BY インジェクション
+### [High] SQLインジェクション ― IdbVfsBackend.query() の ORDER BY インジェクション
 
 - **指摘者**: Red Team Leader
 - **場所**: `src/offscreen/IdbVfsBackend.ts:68-73`

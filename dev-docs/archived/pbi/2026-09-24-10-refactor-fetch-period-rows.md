@@ -1,4 +1,4 @@
-# PBI: fetchPeriodRows — パネルデータ読み込みシームの深化
+# PBI: fetchPeriodRows ― パネルデータ読み込みシームの深化
 
 ## ユーザーストーリー
 保守担当者として、ダッシュボードパネルのデータ取得が1つの深いモジュール経由で行われてほしい、なぜなら8重複ラッパーの失敗ポリシードリフト（サイレント空表示・誤 cap 通知）が実バグとして検出済みだから。
@@ -40,8 +40,8 @@ Scenario: cap 到達の検出
 
 ## 実装メモ
 - 配置: src/dashboard/panels/ 配下（パネル専用。dashboardSqliteService は移動しない）
-- periodFilter 契約（PBI 11）には触れない — 本 PBI はロード経路のみ
-- PanelNotices（PBI 14）には触れない — エラー表示は既存の catch パターンを維持
+- periodFilter 契約（PBI 11）には触れない ― 本 PBI はロード経路のみ
+- PanelNotices（PBI 14）には触れない ― エラー表示は既存の catch パターンを維持
 
 ## 見積もり
 1.5 SP（要チームでの見積もり）

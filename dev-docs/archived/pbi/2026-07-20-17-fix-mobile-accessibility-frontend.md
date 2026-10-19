@@ -74,7 +74,7 @@ Feature: Mobile and accessibility frontend improvements
 2pt（viewport + CSS + 見出し + roving tabindex + テスト）
 
 ## 副作用
-🟢 なし — UI の見た目・操作性改善のみ。
+🟢 なし ― UI の見た目・操作性改善のみ。
 
 ## 落とし穴
 - roving tabindex の実装は、既存の `focusTrap.ts` と競合しないよう注意

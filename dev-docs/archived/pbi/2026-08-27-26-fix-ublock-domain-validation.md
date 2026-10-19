@@ -15,22 +15,22 @@
 - 解: 正規表現から `*` を除外し `/^[a-z0-9._-]+(\.[a-z0-9._-]+)*$/i` に修正
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常ドメインは通過する
+Scenario: ハッピーパス ― 正常ドメインは通過する
   Given `example.com` / `sub.example.co.jp` / `a-b.example.com` を入力
   When `validateDomain` を呼ぶ
   Then `true` を返す
 
-Scenario: 攻撃 — ワイルドカードを含むドメインは拒否される
+Scenario: 攻撃 ― ワイルドカードを含むドメインは拒否される
   Given `*.example.com` を含むフィルタ行 `||*.example.com^`
   When `validateDomain("*.example.com")` を呼ぶ
   Then `false` を返す
 
-Scenario: 攻撃 — ドメイン中間のワイルドカードも拒否される
+Scenario: 攻撃 ― ドメイン中間のワイルドカードも拒否される
   Given `exa*mple.com` を入力
   When `validateDomain` を呼ぶ
   Then `false` を返す
 
-Scenario: エッジ — ハイフン・アンダースコア・ドットは引き続き許容される
+Scenario: エッジ ― ハイフン・アンダースコア・ドットは引き続き許容される
   Given `my_domain.example-site.com` を入力
   When `validateDomain` を呼ぶ
   Then `true` を返す

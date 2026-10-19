@@ -1,4 +1,4 @@
-# PBI: Code Quality ハードニング一括 — 将来攻撃面6件
+# PBI: Code Quality ハードニング一括 ― 将来攻撃面6件
 
 > 当初この PBI には orphan-key 機能バグ（pending パネルのホワイトリスト追加が無効）が含まれていたが、
 > 実在のユーザー影響がある機能バグのため `2026-08-29-15-fix-pending-whitelist-orphan-key.md` に分離した
@@ -16,7 +16,7 @@
 - 順位: 14 / 15
 - RICEスコア: 170（Reach=300 / Impact=0.1 / Confidence=85% / Effort=0.15人月）
   - Reach 300: ハードニングは将来前提
-  - Impact 0.1: 防御深度（現行 exploitable ではない — VulnHunter Phase 2b の Code Quality 分類）
+  - Impact 0.1: 防御深度（現行 exploitable ではない ― VulnHunter Phase 2b の Code Quality 分類）
   - Confidence 85%: 各修正は小さいが、6 件の横断でハズレがないかの確認が必要
   - Effort 0.15: 6 件の小修正を束ねて 1 PBI
 - 根拠: 個々は 1pt 未満だが束ねることで追跡コストを 1 件に圧縮。任意タイミングで着手
@@ -79,13 +79,13 @@ Scenario: 旧 href パネルは安全な URL のみ開く
 - **Red-Green-Refactor**: 単純な 2 件（TSV 無害化 / Gemini path エンコード）→ models-dev / href パネル → CSP/allowedUrls の締め直し（既存設定の棚卸し後）
 
 ## 見積もり
-1pt（要チームでの見積もり — 6 小修正）
+1pt（要チームでの見積もり ― 6 小修正）
 
 ## 技術的考慮事項
 - 依存関係: なし（任意タイミング）。他 PBI とファイル触接なし
 - テスタビリティ: 各修正が独立し、単体テストで閉じる
 - 非機能要件: CSP/allowedUrls の締め直しが正当な設定利用を壊さないこと（既存設定の棚卸しを先に）
-- 注意: models-dev JSON は bundled asset（`chrome.runtime.getURL`）であり、リモート取得に変わった場合のみ脅威が変わる — コメントで前提を明記
+- 注意: models-dev JSON は bundled asset（`chrome.runtime.getURL`）であり、リモート取得に変わった場合のみ脅威が変わる ― コメントで前提を明記
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
@@ -106,8 +106,8 @@ rg -n "isSecureUrl|tabs\.create|a\.href" src/dashboard/historyEntryRow.ts src/da
 4. テスト追加、`npm run validate`
 
 ### 落とし穴
-- CSPValidator の締め直しは正当な AI provider カスタム baseUrl を壊す可能性 — `src/utils/cspDomains.ts` の LOCAL_PORTS/aiConnectSrc 経路を先に確認
-- 旧 href パネルへの isSecureUrl 適用で、http:// ページの再オープン（tabs.create）が変わる可能性 — pendingPages の DESIGN-INTENT（自身の訪問 URL 再オープン）と衝突しないよう範囲を限定
+- CSPValidator の締め直しは正当な AI provider カスタム baseUrl を壊す可能性 ― `src/utils/cspDomains.ts` の LOCAL_PORTS/aiConnectSrc 経路を先に確認
+- 旧 href パネルへの isSecureUrl 適用で、http:// ページの再オープン（tabs.create）が変わる可能性 ― pendingPages の DESIGN-INTENT（自身の訪問 URL 再オープン）と衝突しないよう範囲を限定
 - `escapeTsvField` は現状 `\t` `\n` `"` のみ処理。数式トリガー（先頭 `= + - @`）は別途プレフィックス（`'`）付与が必要
 
 ## Definition of Done

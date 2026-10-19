@@ -16,10 +16,10 @@ crypto レイヤを保守する開発者として、IndexedDB の open/get/put �
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/crypto/secretWrappingKey.ts:60-106` と `src/utils/crypto/durableKeyStore.ts:40-87` — `indexedDB.open` / `onupgradeneeded` / transaction エラー処理が定数(DB 名・store 名)と空白のみ異なる逐語重複。`secretWrappingKey.ts:50` 自身が "mirrors durableKeyStore" と明記
-- 契約の対立: `durableKeyStore.ts:21-22` — "Fails open: any IndexedDB absence or error resolves to null, and callers fall back to generating a fresh key" / `secretWrappingKey.ts:19-22` — "Fail-closed contract: ... Callers must NOT fall back to generating a fresh secret"
+- `src/utils/crypto/secretWrappingKey.ts:60-106` と `src/utils/crypto/durableKeyStore.ts:40-87` ― `indexedDB.open` / `onupgradeneeded` / transaction エラー処理が定数(DB 名・store 名)と空白のみ異なる逐語重複。`secretWrappingKey.ts:50` 自身が "mirrors durableKeyStore" と明記
+- 契約の対立: `durableKeyStore.ts:21-22` ― "Fails open: any IndexedDB absence or error resolves to null, and callers fall back to generating a fresh key" / `secretWrappingKey.ts:19-22` ― "Fail-closed contract: ... Callers must NOT fall back to generating a fresh secret"
 - 戻り値の形状は同じ(`null` / `false`)で、対立は「呼び出し側に許される次の行動」にある
-- 第三のチェーン: `hmacKeyStore.ts:166-226` — session → legacy local → durable IDB の候補配列 + generate フォールバック
+- 第三のチェーン: `hmacKeyStore.ts:166-226` ― session → legacy local → durable IDB の候補配列 + generate フォールバック
 - `repo` 内の `indexedDB.open` はこの 2 モジュール(+hmac 経由)の 4 箇所のみ
 
 ## BDD 受け入れシナリオ

@@ -124,7 +124,7 @@ Test Experts（Wave 3）が以下の修正を実行しました：
 | 3 | `validate.yml` に `permissions: { contents: read, issues: write }` 追加 | Red/Blue/Compliance |
 | 4 | 各ステップに `id` 追加＋スクリプト参照を `steps['type-check']` に修正 | DX/Maintainability/API Contract/Data Integrity/Domain Logic/Red |
 | 5 | `validate.yml` に `cache: 'npm'` + `timeout-minutes: 10` 追加 | System Arch/Legacy Bridge/Tuning/SRE/DX/FinOps/Edge & Mobile |
-| 6 | `npm audit fix` 実行（脆弱性 15件→8件） | — |
+| 6 | `npm audit fix` 実行（脆弱性 15件→8件） | ― |
 
 ---
 

@@ -1,4 +1,4 @@
-# PBI: CSP connect-src を特定ポートに限定 — SSRF面の最小化
+# PBI: CSP connect-src を特定ポートに限定 ― SSRF面の最小化
 
 ## ユーザーストーリー
 拡張機能ユーザーとして、XSS脆弱性が仮に存在しても `connect-src` が任意ポートへのfetchを許可しないようにしたい、なぜなら `localhost:*` はローカルで動作する任意サービス（Obsidian Local REST API以外）へのSSRFを可能にし、情報漏洩・操作リスクを拡大するから
@@ -16,13 +16,13 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 許可ポートへの接続は成功する
+Scenario: 正常系 ― 許可ポートへの接続は成功する
   Given 拡張機能がビルドされインストールされている
   When 拡張機能が http://localhost:27124/ や http://127.0.0.1:11434/ へ fetch する
   Then CSP違反なく接続が成功する
   And Obsidian Local REST API (27123/27124) とローカルAI (11434/1234) の疎通テストがパスする
 
-Scenario: 境界ケース — 未許可ポートへの接続はCSPでブロックされる
+Scenario: 境界ケース ― 未許可ポートへの接続はCSPでブロックされる
   Given 拡張機能がインストールされている
   When 悪性ページのXSSペイロードが http://localhost:9999/secret へ fetch を試みる
   Then CSP `connect-src` 違反でブロックされ、networkタブにCSPエラーが記録される
@@ -30,7 +30,7 @@ Scenario: 境界ケース — 未許可ポートへの接続はCSPでブロッ�
 ```
 
 ```gherkin
-Scenario: エラーケース — 不正なCSP生成時はビルドが失敗する
+Scenario: エラーケース ― 不正なCSP生成時はビルドが失敗する
   Given buildConnectSrcDomains() が不正な値（空文字やスキーム欠落）を返した
   When npm run build を実行する
   Then CSP検証ステップがエラーをthrowしビルドが失敗する
@@ -64,7 +64,7 @@ Scenario: エラーケース — 不正なCSP生成時はビルドが失敗す�
 - **リファクタリング**: 生成ロジックは `src/utils/cspDomains.ts` に集約し `wxt.config.ts` は呼ぶだけに
 
 ## 見積もり
-2pt（要チーム見積もり）— 1日以内の小規模だがCSP検証と手動疎通確認を含む
+2pt（要チーム見積もり）― 1日以内の小規模だがCSP検証と手動疎通確認を含む
 
 ## 技術的考慮事項
 - 依存関係: 05 host_permissions生成、03 CSP validation と同バッチ推奨。05を先にやるとSSOT化できる
@@ -98,7 +98,7 @@ cat dist/chromium-mv3/manifest.json | grep -A2 content_security_policy
 
 ### 落とし穴
 - `buildConnectSrcDomains()` は `/*` をstripするが、local側は `/*` を付けないこと（CSPはパス不要）
-- `host_permissions` と `connect-src` の二重管理を再発させない — 05 と同時対応が望ましい
+- `host_permissions` と `connect-src` の二重管理を再発させない ― 05 と同時対応が望ましい
 - WASM利用時の `wasm-unsafe-eval` と混同しない（本PBIは connect-src のみ）
 
 ## Definition of Done

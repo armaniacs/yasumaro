@@ -9,7 +9,7 @@
 - 根拠: 失敗はPR #150マージ時から継続しており、CIの赤が常態化してマージ判断のシグナルを失っている。全PRのCI実行ごとに影響し、修正によって他候補のパリティゲート監視も含むCI全体の信頼性が回復する
 
 ## 状況
-- 失敗テスト: `testDir/e2e/usability/dashboard-task-flows.spec.ts`「Dashboard settings task completion @extension › user adds a domain filter, saves, and it survives a reload」
+- 失敗テスト: `testDir/e2e/usability/dashboard-task-flows.spec.ts`「Dashboard settings task completion @extension > user adds a domain filter, saves, and it survives a reload」
 - CI（ubuntu headless + xvfb）で3リトライ全滅（17-18秒、`expect(locator).toBeVisible()` 失敗）。ローカル（macOS headed）では未検証
 - 同一失敗はPR #150でも発生しておりpre-existing。CIの失敗アーティファクト（スクリーンショット等）は取得済み
 - 参考: 6.8.20で同種の「ドメインフィルタ保存直後リロードで設定が反映されない」タイミング問題を修正済み。同クラスの未修正経路か、CI環境固有（xvfb描画・タイムゾーン等）の可能性

@@ -9,13 +9,13 @@
 
 W1（NN01 / NN02 / NN04 / NN07）はサブエージェント4体で並列実行、W2（NN03 / NN06）はメインで処理（NN06 は Red 確認で pin テストの実効性を実証）、W3（NN05）。全 7 件 `npm run validate` exit 0（1062 files / 16032 tests passed・skipped 0）+ build exit 0。実装中の検証失敗（型債務 463 → 464）は新規 pin テストの配列分割代入が原因でコード修正し 463 に復帰（返済ではなく修正）。実行詳細のまとめは [00-INDEX.md](00-INDEX.md) のアーカイブ履歴「2026-10-13 autonomous-task-closer ラウンド3」を参照。
 
-- **NN01** — 改変入力 2 パターン → throw を pin（メッセージ断片 `/to deeply equal/` + `toContain` 前提ガード）。設計判断: PBI 基準の「import され」ではなく同ファイル内テスト + de-export（死にエクスポートの完全解消）。Red 確認: ゲート弱体化で Red 側 2 件のみ FAILED・既存テストは green のまま。
-- **NN02** — existsSync + try/catch クリーン fail パターンに統一。実測によるスコープ拡張: クラッシュ点は PBI が挙げた 2 関数ではなく `checkManifestV3Compliance()`(:45) だったため含めた。invalid JSON → exit 1・クリーンメッセージ。dist 復元は checksum 一致で確認。
-- **NN03** — warResourceResolves の対応 2 起源と拡張前提を doc コメントに明記。
-- **NN04** — シャドーイングをリテラル名判定の限界として Limitation 節に併記。
-- **NN05** — `wxt.config.ts` import の規約逸脱理由を import 直上に明記。
-- **NN06** — geturl-extraction-sync.test.ts を新設（ci-paths-filter と同型の pin テスト・dist 依存なし）。Red 確認: 生成物層だけ 1 文字変更 → pin FAILED → 復元 → green。
-- **NN07** — 注入モックを `as Pick<ObsidianClient, 'appendToDailyNote'>` へ寄せる。実契約は後方 2 引数省略可能で 1 引数 vi.fn と互換 → モック側変更不要。
+- **NN01** ― 改変入力 2 パターン → throw を pin（メッセージ断片 `/to deeply equal/` + `toContain` 前提ガード）。設計判断: PBI 基準の「import され」ではなく同ファイル内テスト + de-export（死にエクスポートの完全解消）。Red 確認: ゲート弱体化で Red 側 2 件のみ FAILED・既存テストは green のまま。
+- **NN02** ― existsSync + try/catch クリーン fail パターンに統一。実測によるスコープ拡張: クラッシュ点は PBI が挙げた 2 関数ではなく `checkManifestV3Compliance()`(:45) だったため含めた。invalid JSON → exit 1・クリーンメッセージ。dist 復元は checksum 一致で確認。
+- **NN03** ― warResourceResolves の対応 2 起源と拡張前提を doc コメントに明記。
+- **NN04** ― シャドーイングをリテラル名判定の限界として Limitation 節に併記。
+- **NN05** ― `wxt.config.ts` import の規約逸脱理由を import 直上に明記。
+- **NN06** ― geturl-extraction-sync.test.ts を新設（ci-paths-filter と同型の pin テスト・dist 依存なし）。Red 確認: 生成物層だけ 1 文字変更 → pin FAILED → 復元 → green。
+- **NN07** ― 注入モックを `as Pick<ObsidianClient, 'appendToDailyNote'>` へ寄せる。実契約は後方 2 引数省略可能で 1 引数 vi.fn と互換 → モック側変更不要。
 
 ## RICE スコアリング
 

@@ -9,7 +9,7 @@ recording trigger の raw storage 読み取りキーを migration allowlist と�
 - `src/background/recordingTriggerManager.ts`
 
 ## Validation
-`npx vitest run src/utils/storage` — PASS（スコープ検証済み）。
+`npx vitest run src/utils/storage` ― PASS（スコープ検証済み）。
 
 ## Rollback
 allowlist の2キー変更と write API 削除を戻せばロールバックできる。

@@ -1,4 +1,4 @@
-# PBI 2026-09-23-09 — ExtractionReport Module（抽出診断 18 フィールド幅の圧縮）
+# PBI 2026-09-23-09 ― ExtractionReport Module（抽出診断 18 フィールド幅の圧縮）
 
 **優先度**: 順位 9 / RICE 8.0（Reach 5 × Impact 2 × Confidence 80% ÷ Effort 1.0 人週）
 **根拠**: `ExtractResult` の約 18 mostly-optional 診断を全消費者が知らなければならない。report 背後化で index.ts 580→約460 行、kernel の 22 行手コピーを 1 呼び出しに。byte 列改名が report＋1 mapper のみに。

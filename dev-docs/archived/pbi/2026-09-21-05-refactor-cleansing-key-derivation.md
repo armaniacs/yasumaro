@@ -72,11 +72,11 @@ Scenario: 既存バックアップとの互換性が保たれる
 ## 実装者向け注記
 
 ### 現状の証拠
-- SSOT: `src/utils/aiSummaryCleaner/rules.ts:141-184` — `CLEANSING_RULES`(32行)。`src/utils/aiSummaryCleaner/rules.ts:187` の `CLEANSING_RULE_KEYS` は既に派生済み
-- presets の手書き列挙: `src/utils/aiSummaryCleaner/presets.ts:36-143` — minimal / balanced / aggressive の 3x32 フラグを手書き。`src/utils/aiSummaryCleaner/presets.ts:156-163` の `isPresetMatch` は preset エントリのみ走査するため PRESETS 忘れは preset 判定も壊す
-- restorable の欠落: `src/utils/storage/restorableSettings.ts:55-85` — クレンジング boolean セクションに news_media / ec_site / qa_site / video_site の4鍵がない。`src/utils/storage/types.ts:185-188` には4鍵が実在する
-- 欠落の影響経路: `src/utils/storage/restorableSettings.ts:220-228` — allowlist 不一致は skippedKeys 行きのため4フラグが黙って落ちる
-- 設計上の注意: presets は camelCase の config 鍵(`altEnabled` 等)、restorable は storage 鍵(`ai_summary_cleansing_alt` 等) — 同一テーブルからの2つの派生になる設計。`CleansingRule` の `key` と `storageKey` をそれぞれ変換元にする
+- SSOT: `src/utils/aiSummaryCleaner/rules.ts:141-184` ― `CLEANSING_RULES`(32行)。`src/utils/aiSummaryCleaner/rules.ts:187` の `CLEANSING_RULE_KEYS` は既に派生済み
+- presets の手書き列挙: `src/utils/aiSummaryCleaner/presets.ts:36-143` ― minimal / balanced / aggressive の 3x32 フラグを手書き。`src/utils/aiSummaryCleaner/presets.ts:156-163` の `isPresetMatch` は preset エントリのみ走査するため PRESETS 忘れは preset 判定も壊す
+- restorable の欠落: `src/utils/storage/restorableSettings.ts:55-85` ― クレンジング boolean セクションに news_media / ec_site / qa_site / video_site の4鍵がない。`src/utils/storage/types.ts:185-188` には4鍵が実在する
+- 欠落の影響経路: `src/utils/storage/restorableSettings.ts:220-228` ― allowlist 不一致は skippedKeys 行きのため4フラグが黙って落ちる
+- 設計上の注意: presets は camelCase の config 鍵(`altEnabled` 等)、restorable は storage 鍵(`ai_summary_cleansing_alt` 等) ― 同一テーブルからの2つの派生になる設計。`CleansingRule` の `key` と `storageKey` をそれぞれ変換元にする
 
 ## Definition of Done
 - [x] 全BDDシナリオ実装+パス

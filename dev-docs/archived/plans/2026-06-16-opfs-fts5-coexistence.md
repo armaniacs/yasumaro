@@ -6,7 +6,7 @@
 
 **Goal:** OPFS Worker パスで FTS5 全文検索（rank ソート付き）を有効化し、OPFS 永続化と FTS5 を両立させる。
 
-**Architecture:** `src/offscreen/opfsWorker.ts` の SQLite エンジンを `@subframe7536/sqlite-wasm`（`OPFSCoopSyncVFS` + `wa-sqlite-fts5` ビルド）へ置換する。offscreen ↔ Worker の postMessage プロトコルと `sqlite.ts` の proxy / 3 段フォールバック構造は維持し、`SEARCH` メッセージ型を追加する。旧 `AccessHandlePoolVFS` DB からの 1 回限りデータ移行を行う。
+**Architecture:** `src/offscreen/opfsWorker.ts` の SQLite エンジンを `@subframe7536/sqlite-wasm`（`OPFSCoopSyncVFS` + `wa-sqlite-fts5` ビルド）へ置換する。offscreen ⇔ Worker の postMessage プロトコルと `sqlite.ts` の proxy / 3 段フォールバック構造は維持し、`SEARCH` メッセージ型を追加する。旧 `AccessHandlePoolVFS` DB からの 1 回限りデータ移行を行う。
 
 **Tech Stack:** TypeScript (ESM, `.js` 拡張子 import), WXT (ビルド/manifest 生成), Vitest (ユニット), Playwright (E2E), `@subframe7536/sqlite-wasm@^1.1.1`, 旧 `wa-sqlite@^1.0.0`（移行読み出し用に併存）。
 

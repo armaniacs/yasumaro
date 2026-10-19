@@ -12,7 +12,7 @@
 
 ## 背景（file:line 付き現状）
 
-- `src/utils/recoveryClaimStore.ts:95` — `claimRecoveryOwner` は `mine?.owner === owner && mine.claimedAt === at` で成功判定する。同一オーナー X が同一ミリ秒 `at = T` で 2 回呼ぶと:
+- `src/utils/recoveryClaimStore.ts:95` ― `claimRecoveryOwner` は `mine?.owner === owner && mine.claimedAt === at` で成功判定する。同一オーナー X が同一ミリ秒 `at = T` で 2 回呼ぶと:
   - 1 回目: `:89` `isFresh` 不成立 → `:92` write → `:95` true
   - 2 回目: `:89` fresh → `:90` no-op で claims 保持 → `:94` `written[url]` は X/T → `:95` true
   - つまり 2 連続取得が両方 true を返す。
@@ -72,12 +72,12 @@ Then true を返し claim を引き継ぐ
 - [x] 同一ミリ秒重複取得の挙動が決定され（token 導入 or 仕様明示）、テストで固定されている
 - [x] CAS retry 経路のテストが存在する
 - [x] `npm run validate` が green
-- [x] backlog（順位 14）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] backlog（順位 14）としての完了報告が紐づく ― アーカイブ/台帳更新は別ステップ
 
 ## 実装記録（2026-10-03）
 
-- 裁定: token 導入。`RecoveryClaim` に `token`（claim 発行毎の uuid: `crypto.randomUUID`、非対応環境は `getRandomValues` hex）を追加し、成功判定を `mine?.owner === owner && mine.token === token` に置換（`claimedAt === at` 比較は廃止）。token は `at` と同じく呼出毎に発行し、updater 内ではなく呼び出し側でキャプチャするため CAS retry 間で安定 — updater は純粋のまま。
-- `RecoveryClaimStoreOptions` に `sleep?: SleepFn` を追加 — 共有 CAS への retry 待ちを注入可能にし、テストが競合 retry を実時間なしで駆動できる。省略時は production backoff。
+- 裁定: token 導入。`RecoveryClaim` に `token`（claim 発行毎の uuid: `crypto.randomUUID`、非対応環境は `getRandomValues` hex）を追加し、成功判定を `mine?.owner === owner && mine.token === token` に置換（`claimedAt === at` 比較は廃止）。token は `at` と同じく呼出毎に発行し、updater 内ではなく呼び出し側でキャプチャするため CAS retry 間で安定 ― updater は純粋のまま。
+- `RecoveryClaimStoreOptions` に `sleep?: SleepFn` を追加 ― 共有 CAS への retry 待ちを注入可能にし、テストが競合 retry を実時間なしで駆動できる。省略時は production backoff。
 - テスト: `recoveryClaimStore.test.ts` に 6 件を追加（同一オーナー同一ミリ秒の 2 連続取得、CAS 競合 retry、TTL・異オーナー回帰）。mutation-verified を確認。17 テスト `--repeats=20` green。
 - 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
-- 逸脱: token の説明コメントに confirmTokenManager との対照（fail-closed throw なし — claim は mutual-exclusion hint で authorization gate ではない）を明記。テスト側の `getMockImplementation()` 戻り値に `| undefined` 型の cast を追加 — testDir 型 baseline ゲートが新規 tsc エラーの持ち込みを禁じるため（実行時挙動は不変）。
+- 逸脱: token の説明コメントに confirmTokenManager との対照（fail-closed throw なし ― claim は mutual-exclusion hint で authorization gate ではない）を明記。テスト側の `getMockImplementation()` 戻り値に `| undefined` 型の cast を追加 ― testDir 型 baseline ゲートが新規 tsc エラーの持ち込みを禁じるため（実行時挙動は不変）。

@@ -1,4 +1,4 @@
-# AI Summary Cleansing — Category A: WordPress Theme Specific Patterns
+# AI Summary Cleansing ― Category A: WordPress Theme Specific Patterns
 
 **Date:** 2026-07-14
 **Branch:** feat/ai-summary-cleansing
@@ -163,7 +163,7 @@ AI_SUMMARY_CLEANSING_SPEECH_BUBBLE = 'ai_summary_cleansing_speech_bubble'
 
 ---
 
-## Deep Dig Session — 2026-07-14
+## Deep Dig Session ― 2026-07-14
 
 ### Challenged Assumptions
 

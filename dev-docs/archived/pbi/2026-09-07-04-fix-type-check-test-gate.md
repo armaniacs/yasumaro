@@ -12,7 +12,7 @@ yasumaroの開発者として、`npm run type-check:test`（`testDir/tsconfig.js
   - **4,993 × TS2593**（`Cannot find name 'describe'. Do you need to install type definitions for a test runner?`）
   - 残り ~3,200 は上記のカスケード（TS2532 / TS2503 / TS2345 等）
 - 根本原因（強い見込み）:
-  - `testDir/tsconfig.json` の `types: ["vitest", "node", "chrome"]` — **`"vitest"` はモジュール型を提供するだけでグローバル API（describe/it/expect/vi）を露出しない**。vitest 4.1.11 + `globals: true`（testDir/vitest.config.ts:17）の構成では `"vitest/globals"` が必要
+  - `testDir/tsconfig.json` の `types: ["vitest", "node", "chrome"]` ― **`"vitest"` はモジュール型を提供するだけでグローバル API（describe/it/expect/vi）を露出しない**。vitest 4.1.11 + `globals: true`（testDir/vitest.config.ts:17）の構成では `"vitest/globals"` が必要
   - `tsconfig.json`（基底）の `rootDir: "src"` を testDir 側が extends して override していないため、src 配下以外のファイル（testDir/__tests__ 等）を include に足すと TS6059 になる（2026-09-07-01 実装時に実測。archiveDbReader.test.ts は型チェック対象外のまま）
   - TypeScript 6.0.3 での動作未検証ポイント: `"vitest/globals"` の解決（nodeNext での exports フィールド解決）
 
@@ -44,17 +44,17 @@ Scenario: 型ゲートが実際に壊れたコードを検出する
 - [x] `npm run validate`（既存ゲート）が引き続き exit 0
 - [x] 本体 `tsconfig.json` の include は変更しない（src 本体の型チェック挙動を変えない）
 
-## 逸脱メモ（見積もりと実態の差・スコープ分割 — ユーザー確認済み）
+## 逸脱メモ（見積もりと実態の差・スコープ分割 ― ユーザー確認済み）
 
 **見込みと実態**: 「ほぼ types 設定系の1発修正見込み」は誤りだった。設定修理は正しく globals 未解決の 15,532 errors を消滅させたが、その後 **326 ファイル・3,173 件の「未型チェックだったテストの実在する型エラー」** が顕在化（null 安全性・モック型付け・暗黙 any・引数不一致など、1件ずつの判断が必要）。
 
 **採用した解決**:
-1. 設定修理（本PBI）: `types: ["chrome", "vitest/globals", "node"]` + `rootDir: ".."` — 15,532 → 3,173。vitest 4 は `vi` を値としてのみ公開（`globals.d.ts` の `let vi` 宣言）し、型名前空間（`vi.Mock` 等）は削除されているため、globals では値使用しか解決しない
+1. 設定修理（本PBI）: `types: ["chrome", "vitest/globals", "node"]` + `rootDir: ".."` ― 15,532 → 3,173。vitest 4 は `vi` を値としてのみ公開（`globals.d.ts` の `let vi` 宣言）し、型名前空間（`vi.Mock` 等）は削除されているため、globals では値使用しか解決しない
 2. 安全なコードモド（本PBI・実測で動作確認済み）:
    - vitest 4 で削除された `vi.*` 型名前空間 → 型名直接 import へ機械置換（37 ファイル・325 errors）。`Mock`/`Mocked`/`MockedFunction`/`MockedClass`/`MockInstance` は root export 存在を確認。ジェネリクスは全て単一引数形（`<typeof fn>`）で vitest 4 の `Mock<T>` と互換（2引数形の使用はゼロを実測）
    - 不要になった `@ts-expect-error` の除去（27 ファイル・265 directives）
    - 3,173 → **2,601**（309 ファイル）
-3. ベースラインゲート（本PBI）: `scripts/check-type-baseline.mjs` — ファイル別エラー数を `testDir/type-check-baseline.json` と比較し、**新規エラー・件数増で exit 1**、改善時はベースライン更新を促す。既存債務はベースラインに記録して保留
+3. ベースラインゲート（本PBI）: `scripts/check-type-baseline.mjs` ― ファイル別エラー数を `testDir/type-check-baseline.json` と比較し、**新規エラー・件数増で exit 1**、改善時はベースライン更新を促す。既存債務はベースラインに記録して保留
 4. 全量返済（2,601 件・309 ファイル）は **2026-09-07-07** に切り出し（ベースラインファイルがインベントリ）
 
 **DoD の意味論**: `type-check:test` は素の tsc ではなくベースラッパーになった（素の tsc は `type-check:test:raw` に残置）。exit 0 の条件は「エラー数がベースライン以下」。

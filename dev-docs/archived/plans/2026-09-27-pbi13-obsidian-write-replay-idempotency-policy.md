@@ -1,19 +1,19 @@
 # PBI 13 調査報告: Obsidian 書込 replay の冪等性方式の確定
 
 PBI: `pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md`（investigate・production 変更なし）
-依存: PBI 12（recovery owner 裁定・2026-09-27 完了アーカイブ済み — `84d26644`）、PBI 11（failure SSOT・完了アーカイブ済み）
+依存: PBI 12（recovery owner 裁定・2026-09-27 完了アーカイブ済み ― `84d26644`）、PBI 11（failure SSOT・完了アーカイブ済み）
 日付: 2026-09-27
 
-## 0. 調査台帳（現状の事実 — 実測行番号付き）
+## 0. 調査台帳（現状の事実 ― 実測行番号付き）
 
 | 項目 | 事実 | 出典 |
 |---|---|---|
 | write の read-modify-write | `appendToDailyNote` = GET（404 は空文字）→ section insert → PUT。`globalWriteMutex` で競合排除。同一 operation の識別は保証しない | `obsidianClient.ts:174-203` |
 | HTTP surface | GET 2 回（daily note 取得 + 既存内容）+ PUT 1 回。PATCH/POST/DELETE はクライアント未実装 | `obsidianClient.ts:205-224,236-276` |
-| replay 時の時刻再生成 | `formatMarkdownStep` が entry 変換時に `new Date().toLocaleTimeString(...)` で timestamp を生成 — **retry ごとに値が変わる**。`retryObsidianWrite`（2-step subset）がこの step を replay するため、PUT body が replay ごとに変わる | `pipeline/steps/formatMarkdownStep.ts:34-47`、`RecordingOrchestrator.ts:155-173` |
+| replay 時の時刻再生成 | `formatMarkdownStep` が entry 変換時に `new Date().toLocaleTimeString(...)` で timestamp を生成 ― **retry ごとに値が変わる**。`retryObsidianWrite`（2-step subset）がこの step を replay するため、PUT body が replay ごとに変わる | `pipeline/steps/formatMarkdownStep.ts:34-47`、`RecordingOrchestrator.ts:155-173` |
 | section editor の挙動 | `insertIntoSection` / `_insertUnderExistingSection` は同一内容を検出せず**無条件に splice 挿入**。dedupe test は存在しない | `noteSectionEditor.ts:13-30` |
 | `traceId` | helper・log に渡るだけ。本文・header・idempotency key ではない | `obsidianClient.ts:188-197` |
-| `job.id` | `processJob(job, payload)` が `job` 全体を受けるが使用は `payload` のみ — **`job.id` は捨てられている**（PBI 12 実装後も変わらず） | `offlineQueueProcessor.ts:93,100` |
+| `job.id` | `processJob(job, payload)` が `job` 全体を受けるが使用は `payload` のみ ― **`job.id` は捨てられている**（PBI 12 実装後も変わらず） | `offlineQueueProcessor.ts:93,100` |
 | production write call site | (1) `saveToObsidianStep`（pipeline 内・自動）(2) dashboard append（`dashboardSqlite/deps.ts:237-240`、ユーザー明示操作） | 同左 |
 | retry owner（PBI 12 裁定） | 自動 retry の owner は **offline retry queue**（`offlineQueueProcessor`、5 分 alarm・durable claim）。Obsidian-only retry path（`retryObsidianWrite`）は queue からの呼び出し先であり、owner ではない。二重 owner は claim で排除済み | PBI 12 報告 + `offlineQueueProcessor.ts:80-115` |
 | failure SSOT | `failureTaxonomy.ts`（Layer 0）。write 側は `failureFromHttpStatus` で `FailureMetadata` を付与済み。retry 述語（`FAILURE_RETRY_PROFILE`）と breaker 方式は重複定義しない | `utils/failureTaxonomy.ts` |
@@ -26,19 +26,19 @@ PBI: `pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md`（inve
 
 - **事実**: `formatMarkdownStep` は entry 変換時に現在時刻から timestamp を生成する。offline job payload には変換前データ（title/url/summary/tags）が入っており、`retryObsidianWrite` が replay のたびに markdown を作り直すため、**PUT body が replay ごとに変わる**。PUT は同一 body なら HTTP として冪等だが、body が変わるため「2 回の異なる write」として挙動し、section editor の無条件挿入と合わさって section が重複する。
 - **判断材料**: markdown の変換に必要な入力（title/url/summary/tags + timestamp）は初回 pipeline 実行時にすべて確定している。replay で再変換する理由がない。
-- **裁定**: **markdown を初回 pipeline 実行時に確定し、offline job payload に完成品として保存する**。replay は payload から markdown を読んで PUT するだけ（変換しない）。これにより replay の PUT body が同一になり、HTTP 冪等（同一 body PUT）の性質を得る。保存先は offline job payload（chrome.storage.local — durable、SW memory に依存しない）。
+- **裁定**: **markdown を初回 pipeline 実行時に確定し、offline job payload に完成品として保存する**。replay は payload から markdown を読んで PUT するだけ（変換しない）。これにより replay の PUT body が同一になり、HTTP 冪等（同一 body PUT）の性質を得る。保存先は offline job payload（chrome.storage.local ― durable、SW memory に依存しない）。
 - **残存リスク**: payload サイズ増（markdown 文字列 1 份）。queue 上限 50KB の計算に含まれるため、既存上限チェックはそのまま有効。
 
 ### Q2: なぜ job ID をそのまま冪等性に使えないのか
 
 - **事実**: `processJob(job, payload)` が `job.id` を捨てている。retry traceId も `retryObsidianWrite` 内で毎回新規生成される。
 - **判断材料**: (a) job.id を payload に保持して stable operation ID に使う (b) operation ID を採用しない。
-- **裁定**: **operation ID は採用しない**。理由は Q3（上流 API に idempotency header が存在しない）— operation ID の送出先がない。ローカル dedupe は Q4 の本文内容検出で表現し、ID による照合は不要になる。`job.id` の payload 保持も行わない（ログの紐付け程度にしか使えない）。
+- **裁定**: **operation ID は採用しない**。理由は Q3（上流 API に idempotency header が存在しない）― operation ID の送出先がない。ローカル dedupe は Q4 の本文内容検出で表現し、ID による照合は不要になる。`job.id` の payload 保持も行わない（ログの紐付け程度にしか使えない）。
 - **残存リスク**: 後続 fix で marker/DUI の運用を変える場合に再検討。現時点では採用理由が立たない。
 
 ### Q3: Local REST API plugin は idempotency header や 409 をサポートするのか
 
-- **一次情報（2026-09-27 取得）**: 上流 README（coddingtonbear/obsidian-local-rest-api、master branch）— response headers の記載は `Content-Location` / `Markdown-Patch-Warnings` / `Deprecation` / `Mcp-Session-Id` のみで、**idempotency key header は存在しない**。409 Conflict の明記もない。OpenAPI spec は `obsidian://local-rest-api/openapi.yaml` で提供される（契約 owner: 上流リポジトリ）。`ifMatch`（optimistic concurrency）と `Reject-If-Content-Preexists` は存在するが **PATCH 専用**であり、本プロジェクトの HTTP surface（GET 2 + PUT 1、PBI 制約で追加禁止）では利用できない。
+- **一次情報（2026-09-27 取得）**: 上流 README（coddingtonbear/obsidian-local-rest-api、master branch）― response headers の記載は `Content-Location` / `Markdown-Patch-Warnings` / `Deprecation` / `Mcp-Session-Id` のみで、**idempotency key header は存在しない**。409 Conflict の明記もない。OpenAPI spec は `obsidian://local-rest-api/openapi.yaml` で提供される（契約 owner: 上流リポジトリ）。`ifMatch`（optimistic concurrency）と `Reject-If-Content-Preexists` は存在するが **PATCH 専用**であり、本プロジェクトの HTTP surface（GET 2 + PUT 1、PBI 制約で追加禁止）では利用できない。
 - **裁定**: **idempotency header と 409 扱いに依存しない**。409 の retryable/terminal/idempotent-success 分類も採用しない（上流が 409 を返す契約にないため）。未提供を前提に、クライアント側で冪等性を表現する（Q1・Q4）。
 - **残存リスク**: 上流が将来 idempotency header を追加した場合も、本方式（同一 body PUT + 内容検出）と共存可能。上流の 6.0 sunset（PATCH legacy format）は本プロジェクトに影響しない（PATCH 未使用）。
 
@@ -63,7 +63,7 @@ PBI: `pbi/2026-09-25-13-investigate-obsidian-write-replay-idempotency.md`（inve
 |---|---|
 | 生成時刻の固定 | 初回 pipeline 実行時に markdown を確定し、offline job payload に完成品を保存（chrome.storage.local）。replay は再変換しない |
 | operation ID | **不採用**。上流 idempotency header が存在しないため送出先がない。ローカル dedupe は内容検出で代替。`job.id` は payload に保持しない |
-| idempotency header / 409 | **依存しない**（上流未提供 — 一次情報 §1 Q3）。409 分類も不採用 |
+| idempotency header / 409 | **依存しない**（上流未提供 ― 一次情報 §1 Q3）。409 分類も不採用 |
 | 本文 marker / dedupe window | **不採用**。代わりに同一内容検出（section 範囲内の行一致）を `insertIntoSection` に追加。時間 window なしの完全冪等 |
 | 同一 body PUT と全体 replay の区別 | 同一 body PUT は HTTP 冪等（再送安全）。全体 replay は時刻固定 + 内容検出で冪等化。両者を同じ「retry」として扱わない |
 | retry owner | offline retry queue（PBI 12 裁定どおり）。Obsidian-only retry path は呼び出し先 |

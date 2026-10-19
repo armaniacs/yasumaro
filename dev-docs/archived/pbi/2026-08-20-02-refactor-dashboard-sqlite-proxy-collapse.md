@@ -1,4 +1,4 @@
-# PBI: Dashboard SQLite Proxy Collapse — 637行のボイラープレートを汎用パスに集約
+# PBI: Dashboard SQLite Proxy Collapse ― 637行のボイラープレートを汎用パスに集約
 
 ## ユーザーストーリー
 開発者として、`dashboardSqliteService.ts`（637行）の~20関数が全て同一パターン（ペイロード構築→メッセージ送信→レスポンス検証→返却）を繰り返す状態を解消したい。なぜなら、新しいSQLite操作を追加するたびに15-30行のボイラープレートを書く必要があり、テストも20回分必要になるからだ。

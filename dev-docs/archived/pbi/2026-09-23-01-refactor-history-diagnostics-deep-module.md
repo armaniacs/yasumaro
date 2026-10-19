@@ -1,4 +1,4 @@
-# PBI 2026-09-23-01 — 履歴エントリ診断表示の深い Module 化
+# PBI 2026-09-23-01 ― 履歴エントリ診断表示の深い Module 化
 
 **優先度**: 順位 1 / RICE 24.0（Reach 6 × Impact 2 × Confidence 100% ÷ Effort 0.5 人週）
 **根拠**: View 1169 行中の診断分岐約 300 行が 1 Module 背後に畳める。HTML バイト等価を守る純粋な Seam 移動で、録画パイプライン・WASM parity・wire-table・監視 backlog のいずれにも触れない。後続ラウンド候補（RPC Seam・設定フォーム）の雛形になる。
@@ -6,7 +6,7 @@
 
 ## 背景
 
-`historyEntryPresentation.ts` が 6 classifier（classifyDiagnosticMissing / classifyExtractionMissing / classifyCleansingMissing / classifyTokensMissing / classifyMaskingMissing / classifyAiSummaryMissing）と `computeCleansingReduction` / `resolveCleansingBytes` / `describeFallbackReasonKey` に判断を集約した後も、View 側 `sqliteHistoryPanelView.ts` が `MISSING_REASON_KEYS`・`missingReasonText`・`pushReasonRow`・`formatDiagnosticMetadataHtml`（約 110 行の per-row if/else）・`buildCleansingProgressBarHtml`・`buildMissingReductionBarHtml` を所有する。呼び出し側は「どの classifier をどの行に使うか」「null のときどの reason で行を残すか」「CSS クラスと separator（`' — '` vs `': '`）」の 3 層を正しい順序で合成しなければならない。各 classifier は 5–10 行の null/0 分岐で、interface が実装と同程度の合成知識を要求する shallow module である。
+`historyEntryPresentation.ts` が 6 classifier（classifyDiagnosticMissing / classifyExtractionMissing / classifyCleansingMissing / classifyTokensMissing / classifyMaskingMissing / classifyAiSummaryMissing）と `computeCleansingReduction` / `resolveCleansingBytes` / `describeFallbackReasonKey` に判断を集約した後も、View 側 `sqliteHistoryPanelView.ts` が `MISSING_REASON_KEYS`・`missingReasonText`・`pushReasonRow`・`formatDiagnosticMetadataHtml`（約 110 行の per-row if/else）・`buildCleansingProgressBarHtml`・`buildMissingReductionBarHtml` を所有する。呼び出し側は「どの classifier をどの行に使うか」「null のときどの reason で行を残すか」「CSS クラスと separator（`' ― '` vs `': '`）」の 3 層を正しい順序で合成しなければならない。各 classifier は 5-10 行の null/0 分岐で、interface が実装と同程度の合成知識を要求する shallow module である。
 
 ## 実装戦略（何を・どこに・どの順で）
 
@@ -36,7 +36,7 @@
 
 - [x] `renderEntryDiagnostics` / `renderCleansingBar` が historyEntryPresentation.ts の公開 interface になり、View から内部関数への import が 0 になる
 - [x] characterization test（バイト等価 pin）が追加され、緑
-- [x] View 1169 行のうち診断分岐相当（約 250–350 行）が Module 背後に移動し、View の行数が実質減少する
+- [x] View 1169 行のうち診断分岐相当（約 250-350 行）が Module 背後に移動し、View の行数が実質減少する
 - [x] `npm run type-check` / `npm run lint` / `npm test` が緑
 
 ## 実装記録（2026-09-23）

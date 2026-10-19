@@ -134,7 +134,7 @@
 
 ## コンフリクト調整結果
 
-- **バージョン番号ハードコード**: Legacy Bridge (Medium) + Refactoring (Medium) — 同じ問題を独立して指摘。System Architect の判断を優先し、Medium 1件として統合。
+- **バージョン番号ハードコード**: Legacy Bridge (Medium) + Refactoring (Medium) ― 同じ問題を独立して指摘。System Architect の判断を優先し、Medium 1件として統合。
 - **ブランチ種別とコミット種別の不一致**: System Architect + Refactoring + DX Advocate が同方向の指摘。Medium 1件として統合。
 - **バージョニングポリシーとブランチ規則の不整合**: Domain Logic + Documentation が同方向。Medium 1件として統合。
 

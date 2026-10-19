@@ -1,4 +1,4 @@
-# PBI: ProviderCatalog 統合 — Registry / Catalog alias と RemoteAIService switch の deep 化
+# PBI: ProviderCatalog 統合 ― Registry / Catalog alias と RemoteAIService switch の deep 化
 
 ## ユーザーストーリー
 AIプロバイダーを追加・保守する開発者として、ProviderRegistry と ProviderCatalog の alias indirection と RemoteAIService の `if (id)` switch を単一の deep module に統合したい、なぜなら現在は 197l + 45l の2つの Map が同一データを二重に露出し、csp / urlWhitelist / dashboard UI / factory の4箇所が別 import で同期漏れし、新 provider 追加が `PROVIDER_REGISTRY` 1行では完結しないから

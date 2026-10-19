@@ -23,12 +23,12 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 正規データは検証をパスする
+Scenario: ハッピーパス ― 正規データは検証をパスする
   Given `bloomFilterFromDomains(["example.com","google.com"])` で生成した `BloomFilterData` (data, hashCount, bitCount, expectedDomainCount, hash)
   When `bloomFilterFromData(data)` を呼ぶ
   Then 例外はスローされず `TrustBloomFilter` が復元され `mightContain("example.com")` が true を返す
 
-Scenario: 攻撃 — 改ざんデータは暗号学的ハッシュで検出される
+Scenario: 攻撃 ― 改ざんデータは暗号学的ハッシュで検出される
   Given 正規の `BloomFilterData` の `data` を1文字改ざんした `tamperedData`（例: base64 先頭1文字を置換）
   And 正規の `hash` を `simpleHash(tamperedData.data)` で再計算して付与した偽装データ（simpleHashなら検証をパスしてしまう）
   When `bloomFilterFromData(tamperedData)` を呼ぶ
@@ -95,9 +95,9 @@ cat src/utils/trustDb/bloomFilter.ts | grep -A 12 "function simpleHash"
 6. `npx vitest run src/utils/__tests__/bloomFilter` で検証
 
 ### 落とし穴
-- `crypto.subtle` は `http` コンテキストでは利用不可 — 拡張機能の `chrome-extension://` と `offscreen` 文脈では利用可能だがテスト環境では要ポリフィル
-- `toData()` を `async` にすると `TrustBloomFilter` の全呼び出し元（`trustDb.ts:311` 等）で `await` 漏れが発生しやすい — 型エラーで検出できるよう `Promise<BloomFilterData>` に変更すること
-- `base64ToUint32Array` の `atob` は非ASCIIで失敗するが現行データは常にASCII base64なので問題なし — 新ハッシュ導入時に `TextEncoder` のエンコーディングを誤らないこと
+- `crypto.subtle` は `http` コンテキストでは利用不可 ― 拡張機能の `chrome-extension://` と `offscreen` 文脈では利用可能だがテスト環境では要ポリフィル
+- `toData()` を `async` にすると `TrustBloomFilter` の全呼び出し元（`trustDb.ts:311` 等）で `await` 漏れが発生しやすい ― 型エラーで検出できるよう `Promise<BloomFilterData>` に変更すること
+- `base64ToUint32Array` の `atob` は非ASCIIで失敗するが現行データは常にASCII base64なので問題なし ― 新ハッシュ導入時に `TextEncoder` のエンコーディングを誤らないこと
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

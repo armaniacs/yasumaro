@@ -18,7 +18,7 @@
 
 ## 背景（現状・証拠）
 
-- `src/background/pipeline/__tests__/RecordingPipeline.test.ts:419` — `it.skip('saves the AI summary to Obsidian')`。
+- `src/background/pipeline/__tests__/RecordingPipeline.test.ts:419` ― `it.skip('saves the AI summary to Obsidian')`。
 - skip 理由コメント（415-417 行）は「RecordingPipeline が obsidian を context 経由で `saveToObsidianStep` に渡さないため `MockedObsidianClient` が呼ばれない。テスト設計の問題」と主張する。
 - しかし**同じ harness の active テストが obsidian 経路に到達できている**: 同ファイル 467 行 `it('returns success while registering obsidian-write-failed as pending when only saveObsidian fails')` は `failingObsidian` オブジェクトを `makeOrchestrator` へ直接注入し、`appendToDailyNote` の reject を観測している。よって skip コメントの前提は stale。
 - 真因: skip テストは `MockedObsidianClient.mockImplementation(...)`（138 行でモック化した `ObsidianClient` クラス）で `mockAppend` を仕込むが、`makeOrchestrator` に渡しているのは `makeObsidian()`（159-163 行が返す**ただのリテラル** `{ appendToDailyNote: vi.fn() }`）である。クラスモックは使われないため `mockAppend` は呼ばれない。

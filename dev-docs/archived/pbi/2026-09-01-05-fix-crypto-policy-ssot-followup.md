@@ -1,4 +1,4 @@
-# PBI: 暗号ポリシー SSOT の残余 — log export/import 署名 と get-or-create 排他
+# PBI: 暗号ポリシー SSOT の残余 ― log export/import 署名 と get-or-create 排他
 
 ## ユーザーストーリー
 利用者として、ブラウジングログのエクスポート/インポートが、設定エクスポートと同じ HMAC 署名で改竄検知されるようにしたい。なぜなら現在 log export ファイルは無署名で、細工したログ JSON をそのまま SQLite に取り込めてしまうから（VULN-035）。あわせて `hmacKeyStore` / `confirmTokenManager` の鍵・トークン生成が未排他で、並行呼び出しが分岐した鍵/トークンを生む余地が残っている（VULN-039 の残り）。
@@ -11,7 +11,7 @@ archived PBI `2026-08-29-12-fix-crypto-policy-ssot.md`（VULN-010/034/035/037/03
 - `src/utils/crypto/cryptoParams.ts` に暗号パラメータ SSOT（`PBKDF2_ITERATIONS: 600_000` / `LEGACY_PBKDF2_ITERATIONS: 100_000` / strict パスワードポリシー validator）。`primitives.ts` / `envelope.ts` / `hmacKeyStore.ts` / `masterPassword.ts` / `settingsExportImport.ts` が参照
 - KEK の `chrome.storage.session` 化（`hmacKeyStore.ts:137`、local は読み取り後方互換のみ）
 - `RateLimitService` の FAILED_ATTEMPTS / LOCKED_UNTIL を `storage.local` 永続化、成功時のみリセット
-- `masterPassword.validatePasswordRequirements` が `cryptoParams.validatePasswordPolicy` に一本化（弱い length≥8 実装は削除）
+- `masterPassword.validatePasswordRequirements` が `cryptoParams.validatePasswordPolicy` に一本化（弱い length≧8 実装は削除）
 - settings 暗号エクスポート version:2（ciphertext HMAC、復号前検証、v1 後方互換）
 - `encryptionSession.ts` の `encryptionKeyMutex` パターン
 
@@ -44,8 +44,8 @@ archived PBI `2026-08-29-12-fix-crypto-policy-ssot.md`（VULN-010/034/035/037/03
 ## テスト戦略
 
 ### 単体
-- 新規 `src/dashboard/__tests__/exportImportLogsSignature.test.ts` — export→import の round-trip / 署名欠落拒否 / 改竄検知
-- 更新 `src/dashboard/__tests__/importLogsService.test.ts` / `importLogsService-validateRow.test.ts` — 署名フィクスチャ追加
+- 新規 `src/dashboard/__tests__/exportImportLogsSignature.test.ts` ― export→import の round-trip / 署名欠落拒否 / 改竄検知
+- 更新 `src/dashboard/__tests__/importLogsService.test.ts` / `importLogsService-validateRow.test.ts` ― 署名フィクスチャ追加
 
 ### 統合
 - `hmacKeyStore` × 2 コンテキスト同時 `getOrCreateWrappedHmacKey` → 単一鍵
@@ -56,7 +56,7 @@ archived PBI `2026-08-29-12-fix-crypto-policy-ssot.md`（VULN-010/034/035/037/03
 - `settingsExportImport.ts:310-352`（`exportSettings`）と `:440-490`（`importSettings`）を参照実装とする。secret 取得は `getOrCreateHmacSecret`（`encryptionSession.ts`）
 
 ## 見積もり
-3pt — 署名パターンは settings 側に実在するため移植中心。get-or-create 排他は Mutex 適用 2 箇所 + 並行テスト
+3pt ― 署名パターンは settings 側に実在するため移植中心。get-or-create 排他は Mutex 適用 2 箇所 + 並行テスト
 
 ## Definition of Done
 - [x] 全受け入れ基準を満たす
@@ -72,7 +72,7 @@ archived PBI `2026-08-29-12-fix-crypto-policy-ssot.md`（VULN-010/034/035/037/03
 
 ## 実装メモ（PR #104、2026-09-01）
 
-### VULN-035 — log export/import 署名
+### VULN-035 ― log export/import 署名
 - `exportLogsService.ts`: `LOG_EXPORT_VERSION = 2` を新設。`exportJson()` が
   `getOrCreateHmacSecret()` + `computeHMAC(secret, JSON.stringify(body, null, 2))` で
   署名を計算し `{ version: 2, table, rows, signature }` を書き出す
@@ -80,13 +80,13 @@ archived PBI `2026-08-29-12-fix-crypto-policy-ssot.md`（VULN-010/034/035/037/03
   JSON パース直後・`importLogs` 呼び出し前に検証。`signature` 欠落は「unsigned」で拒否、
   `constantTimeCompare` 不一致は「verification failed」で拒否。旧無署名（version 1）は
   即時拒否（settings import と同方針、移行フラグなし）
-- 新規 `src/dashboard/__tests__/logExportSignature.test.ts` — 実 crypto での round-trip /
+- 新規 `src/dashboard/__tests__/logExportSignature.test.ts` ― 実 crypto での round-trip /
   1 バイト改竄検知 / 無署名拒否。既存 `importLogsService{,-validateRow}.test.ts` /
   `exportLogsService.test.ts` を署名フィクスチャ（deterministic mock）に更新
 
-### VULN-039 — get-or-create 排他
+### VULN-039 ― get-or-create 排他
 - `src/utils/crypto/hmacKeyStore.ts`: `signingKeyMutex` / `wrappingKeyMutex` の 2 ロック
-  （`../Mutex.js` — utils 内で完結、層を跨がない）。常に outer（signing）→ inner（wrapping）の
+  （`../Mutex.js` ― utils 内で完結、層を跨がない）。常に outer（signing）→ inner（wrapping）の
   順で取得するため reentrancy デッドロックなし。`getOrCreateWrappedHmacKey` /
   `getOrCreateHmacWrappingKey` を `*Locked` へ分離しラッパで直列化
 - `src/background/confirmTokenManager.ts`: `withTokenMap()` で load → mutate → save を

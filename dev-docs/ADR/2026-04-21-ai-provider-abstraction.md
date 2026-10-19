@@ -88,7 +88,7 @@ registerDefaultProviders(): void {
 | OpenAI-compatible | 1 (aiClient.ts) |
 | Custom provider | 1-2 (new provider class + aiClient.ts) |
 
-**Target achieved: ≤ 5 files**
+**Target achieved: ≦ 5 files**
 
 ## Implements
 

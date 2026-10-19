@@ -61,7 +61,7 @@ JSON・CSV・Markdown のエクスポートは最大10,000件までです。`.db
 
 ### Overview
 
-The **Export Logs** panel in the dashboard lets you export and import your accumulated browsing history in multiple formats — for backups, migration to another environment, or analysis in other tools.
+The **Export Logs** panel in the dashboard lets you export and import your accumulated browsing history in multiple formats ― for backups, migration to another environment, or analysis in other tools.
 
 > This guide covers browsing-history data. To migrate settings (API keys, etc.), use the dashboard's **Export/Import Settings** feature instead. API keys are never included in settings exports.
 
@@ -83,7 +83,7 @@ Since v6.7.99, JSON exports carry an **HMAC-SHA256 signature** for tamper detect
 Use the "Import Logs from JSON" button to import a previously exported JSON file.
 
 - The **HMAC signature is verified on import**. Files whose signature does not match (tampered files) are rejected
-- **Unsigned JSON exported by older versions (≤ v6.7.98) can no longer be re-imported.** If needed, re-export while your data is still present in the latest version
+- **Unsigned JSON exported by older versions (≦ v6.7.98) can no longer be re-imported.** If needed, re-export while your data is still present in the latest version
 - `.db` exports are not affected by signing
 
 ### Encrypted Backup

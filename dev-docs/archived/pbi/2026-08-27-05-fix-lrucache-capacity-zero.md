@@ -15,12 +15,12 @@
 - 解: `maxSize <=0` は即時 `onEvict` せず `set` を無視するか `throw` し、不変条件を保つ
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — capacity 1 は正常に evict する
+Scenario: ハッピーパス ― capacity 1 は正常に evict する
   Given `LruCache(1)` を生成する
   When `set(1,'a')` 後に `set(2,'b')` する
   Then `evicted=[1]` で `size===1` である
 
-Scenario: エッジケース — capacity 0 は保存しない
+Scenario: エッジケース ― capacity 0 は保存しない
   Given `LruCache(0)` を生成する
   When `set(1,'a')` する
   Then `onEvict` は `undefined` で呼ばれず `size===0` である

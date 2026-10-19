@@ -17,9 +17,9 @@
 
 - `CHANGELOG.md:38-46` の `## [6.9.40] - 2026-10-10` はアーキテクチャ系 13 件のみを列挙している。
 - バージョン bump と CHANGELOG 追記は `46069dda` で完了し、その後に同一リリース単位で以下が積まれた:
-  - `088423cf` — SAVE_RECORD 経路の PII マスク漏れ修正（未マスク本文がクラウド AI へ送信されていた）
-  - `bb93d482` / `7e328646` — 重なり付きチャンク走査による長トークン中間 PII の検出回避の修正（TS → WASM 移植）
-  - `6a9da7d6` / `1bc43c2d` — `sanitizeTitle` の改行・CR 正規化による Markdown リンク注入対策
+  - `088423cf` ― SAVE_RECORD 経路の PII マスク漏れ修正（未マスク本文がクラウド AI へ送信されていた）
+  - `bb93d482` / `7e328646` ― 重なり付きチャンク走査による長トークン中間 PII の検出回避の修正（TS → WASM 移植）
+  - `6a9da7d6` / `1bc43c2d` ― `sanitizeTitle` の改行・CR 正規化による Markdown リンク注入対策
 - `grep -in "pii\|マスク" CHANGELOG.md` の 6.9.40 節に該当記述は無く、AGENTS.md のリリースチェックリスト「CHANGELOG.md updated」を満たさないまま、ユーザーのプライバシー挙動が変わる修正が無告知で出荷される。
 - バージョンは `package.json` / `package-lock.json` / `docs/version.json` で 6.9.40 に上がっており（manifest は `wxt.config.ts:14-21` 経由で同値を生成）、そのまま出荷される。
 
@@ -112,7 +112,7 @@ Scenario: clearElement の正典が AGENTS.md と実装で一致する
 |---|---|
 | `npm run validate:json` | All JSON validations passed |
 | `npm run lint:layers-docs` | layer lists in sync |
-| `npm run lint:adr-links` | 61 ADRs — all implements references valid |
+| `npm run lint:adr-links` | 61 ADRs ― all implements references valid |
 | `node scripts/release-checks/check-privacy.mjs` | PASS（PRIVACY.md は未変更） |
 | `npm run validate` | exit 0（1055 files / 15933 tests passed） |
 

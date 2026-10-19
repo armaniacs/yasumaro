@@ -2,7 +2,7 @@
 
 ## 優先度・backlog 出所・依存
 
-- 優先度: 中（RICE 8.0 — R 4 / I 1 / C 1.0 / Eff 0.5）
+- 優先度: 中（RICE 8.0 ― R 4 / I 1 / C 1.0 / Eff 0.5）
 - backlog 出所: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) NN20（順位 13, fix）。バッチB の `generalSettingsPanel` チェーン末尾。
 - 依存: NN17（stale mount スナップショット修正）が同一ファイル `src/dashboard/panels/staticForm/generalSettingsPanel.ts` を触るため直列。NN17 完了後に着手する。他候補と非重複。
 
@@ -13,10 +13,10 @@ onboarding wizard を再オープンするユーザーとして、何回 wizard 
 ## 背景（file:line 付き現状）
 
 - 所在は grep `observeWizard` で確認済み。対象は `src/dashboard/panels/staticForm/generalSettingsPanel.ts`。
-- `generalSettingsPanel.ts:228-231` — `syncBackdrop`: `#wizardBackdrop` の display を `#onboardingWizard` の class（`hidden` の有無）に同期する。
-- `generalSettingsPanel.ts:233-240` — `observeWizard()`: `#onboardingWizard` と `#wizardBackdrop` が存在するたびに `new MutationObserver(syncBackdrop)` を構築し（`:237`）、`wizardEl` の class 変更を observe する（`:238`）。
-- `generalSettingsPanel.ts:241-249` — `reopenWizard()`: `delete wizard.dataset.initialized` → `initOnboardingWizard(true)` → `observeWizard()`（`:247`）→ `syncBackdrop()`。
-- `generalSettingsPanel.ts:250-251` — `reopenWizard` は `#reopenWizardBtn` / `#reopenWizardBtnTop` の click に bind されている。
+- `generalSettingsPanel.ts:228-231` ― `syncBackdrop`: `#wizardBackdrop` の display を `#onboardingWizard` の class（`hidden` の有無）に同期する。
+- `generalSettingsPanel.ts:233-240` ― `observeWizard()`: `#onboardingWizard` と `#wizardBackdrop` が存在するたびに `new MutationObserver(syncBackdrop)` を構築し（`:237`）、`wizardEl` の class 変更を observe する（`:238`）。
+- `generalSettingsPanel.ts:241-249` ― `reopenWizard()`: `delete wizard.dataset.initialized` → `initOnboardingWizard(true)` → `observeWizard()`（`:247`）→ `syncBackdrop()`。
+- `generalSettingsPanel.ts:250-251` ― `reopenWizard` は `#reopenWizardBtn` / `#reopenWizardBtnTop` の click に bind されている。
 - `disconnect()` はどこからも呼ばれない → `#reopenWizardBtn` / `#reopenWizardBtnTop` をクリックするたびに、同一要素・同一 `attributeFilter` を監視する observer が新しいインスタンスとして蓄積する。`syncBackdrop` 自体は冪等だが、N 回クリックで N 個の生きた observer が残り続ける。
 
 ## BDD
@@ -80,7 +80,7 @@ It must keep behavior: `syncBackdrop` による class → backdrop display 同�
 
 ### 追加したテスト
 
-- `src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-wizardObserver.test.ts`（新規）— グローバル `MutationObserver` の生成回数を数える mock に差し替え、`#reopenWizardBtn` を N 回クリックして生成回数が 1 であること、さらに class 変更で backdrop の display が同期されることを確認。`waitForMock` で完了を待ち、実時間待ちを入れていない。
+- `src/dashboard/panels/staticForm/__tests__/generalSettingsPanel-wizardObserver.test.ts`（新規）― グローバル `MutationObserver` の生成回数を数える mock に差し替え、`#reopenWizardBtn` を N 回クリックして生成回数が 1 であること、さらに class 変更で backdrop の display が同期されることを確認。`waitForMock` で完了を待ち、実時間待ちを入れていない。
 - `npx vitest run <batch-B の 11 ファイル> --repeats=20` → 11 files / 301 tests 全回 green。`npm run validate` も green。
 
 ### 逸脱・未達

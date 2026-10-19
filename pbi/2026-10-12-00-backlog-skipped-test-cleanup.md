@@ -1,4 +1,4 @@
-# Backlog: skipped test の棚卸しと再発防止（skipped-test-cleanup） — ✅ 4件完了（2026-10-12 ラウンド2 で実装・アーカイブ済み）
+# Backlog: skipped test の棚卸しと再発防止（skipped-test-cleanup） ― ✅ 4件完了（2026-10-12 ラウンド2 で実装・アーカイブ済み）
 
 autonomous-task-closer（2026-10-12）が残課題として報告した「skipped test 4 箇所」を入力に、
 pbi-backlog-prioritizer で候補を再列挙・RICE 採点して PBI 化したラウンド。
@@ -47,17 +47,17 @@ RICE 降順。依存は 02 → 04。
 
 ## 候補から除外したものと理由
 
-- **E2E `testDir/` の `test.skip` 8 件** — `test.skip(cond, reason)` の実行時条件形
+- **E2E `testDir/` の `test.skip` 8 件** ― `test.skip(cond, reason)` の実行時条件形
   （`if (!process.env.CI && !process.env.DISPLAY)` / `testInfo.project.name !== 'firefox'`）。
   恒久 skip ではないため削除対象外。NN04 では**誤検知してはならない valid ケース**として固定する。
-- **`manifest.test.ts` の 11 件** — 一度 S1 として台帳送りにしたが、実測で恒久 skip（かつ WAR 検証が
+- **`manifest.test.ts` の 11 件** ― 一度 S1 として台帳送りにしたが、実測で恒久 skip（かつ WAR 検証が
   early return で空振り）と判明したため NN03 へ昇格した（S1 は消費済み）。
 
 ## 台帳送り（見送り・トリガー管理）
 
 | # | テーマ | 理由 | 再検討トリガー |
 |---|---|---|---|
-| ~~S1~~ | ~~`src/__tests__/manifest.test.ts` の権限最小化テスト 11 件が恒久的に skip~~ | **2026-10-12 に NN03 として昇格・消費** | — |
+| ~~S1~~ | ~~`src/__tests__/manifest.test.ts` の権限最小化テスト 11 件が恒久的に skip~~ | **2026-10-12 に NN03 として昇格・消費** | ― |
 | S2 | E2E の `test.fixme` 7 件（headless 条件）と headed 専用 skip の実行保証 | `test.fixme(true, HEADLESS_FIXME_MESSAGE)` は headless で意図的に落とさない設計。headed CI で実際に走っているかの保証は別問題 | headed E2E の CI 実行状況を触る時 / `HEADLESS_FIXME_MESSAGE` 経路の見直し時 |
 | S3 | `local/no-greedy-fake-timers` が `warn` のまま（既存 124 箇所） | 既存台帳の項目であり本ラウンドの対象外。NN04 と同じ「warn 導入 → 解消 → error 昇格」の型が使える | `useFakeTimers` を含むテストを触る時 / lint 警告バジェットを見直す時 |
 

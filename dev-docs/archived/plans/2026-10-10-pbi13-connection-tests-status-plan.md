@@ -8,7 +8,7 @@ connectionTests の status 書き込みを `showStatus` 契約へ統一し、冗
 - `src/dashboard/generalSettings/__tests__/connectionTests*.test.ts`
 
 ## Validation
-`npx vitest run src/dashboard` — PASS（スコープ検証済み）。
+`npx vitest run src/dashboard` ― PASS（スコープ検証済み）。
 
 ## Rollback
 status ブロックとテストの置換を戻せばロールバックできる。

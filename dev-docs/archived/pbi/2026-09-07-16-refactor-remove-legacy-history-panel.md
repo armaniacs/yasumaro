@@ -122,8 +122,8 @@ PBI 14 と同方針で、`PanelLifecycle` interface / `NavigationRegistry` は�
 - 前史: `20513c23` "merge History panel into SQLite History" → `27872107` "revert: restore 記録履歴 panel" → `3478f9d9` で再度ボタン削除。2 回の統合試行と、間に 1 回の revert がある
 
 **legacy panel を今も参照している箇所:**
-- `src/dashboard/main.ts:8,27` 相当 — import と登録（本番）
-- `entrypoints/options/index.html:1667-1719` 相当 — HTML セクション
+- `src/dashboard/main.ts:8,27` 相当 ― import と登録（本番）
+- `entrypoints/options/index.html:1667-1719` 相当 ― HTML セクション
 - テスト（**旧 API 名 mock で陳腐化**）: `src/dashboard/__tests__/dashboard-handlers.test.ts:258`、`dashboard.test.ts:465`、`dashboard-obsidian-enabled.test.ts:176` が `vi.mock('../historyPanel.js', () => ({ initHistoryPanel: ... }))` としているが、現行 `historyPanel.ts` は `createHistoryPanel` をエクスポートし `initHistoryPanel` は存在しない（mock が実体に対応せず無効）
 - 旧共有モジュール群: `historyState.ts` / `historyRenderer.ts` / `historyPendingPanel.ts` / `historyFilters.ts` / `historyTagEditModal.ts` / `historyCleansingSync.ts` / `historyEntryRow.ts` / `utils/storageUrls.ts`（`getSavedUrlEntries`）/ `utils/pendingStorage.ts`
   - ※ `historyFilters.ts` の `shouldFallbackToTextSearch` は新 SQLite パネル側（`sqliteHistoryQuery.ts:22`）も使用 → **ファイル全体は削除不可**

@@ -1,13 +1,13 @@
 # ADR 2026-08-20: Utils Layer 循環依存の記録と保護
 
 ## Status
-Partially superseded (2026-08-31 / 2026-09-03) — 循環 1 は PBI 01・03・04b で解消。循環 2・3 は「解消記録」節を参照。
+Partially superseded (2026-08-31 / 2026-09-03) ― 循環 1 は PBI 01・03・04b で解消。循環 2・3 は「解消記録」節を参照。
 
 ## Context
 
 `src/utils/` の層構造を形式化する過程で、2つの循環依存が発見された。いずれも業務ルール上不可避であり、`await import()` による遅延 import で回避されている。コード上は「なぜこんな複雑な import なのか」と見えるため、将来のリファクタで無意識に除去されるリスクがある。
 
-### 循環 1: `settingsStore.ts` ↔ `trustDb.ts` (双方向)
+### 循環 1: `settingsStore.ts` ⇔ `trustDb.ts` (双方向)
 
 ```
 settingsStore.ts (L72)
@@ -111,11 +111,11 @@ PBI 04 で、この逆方向依存を橋渡しする `setSqliteHealthCheck(() =>
 
 ## References
 
-* src/utils/trustDb/TrustDbKernel.ts — `settingsReader` port（循環 1 解消後の settings アクセス）
-* src/utils/storage/storageMaintenance.ts:13 — 循環 2（未解消）
-* src/utils/trustDb/trancoConsentManager.ts — 循環 3
-* dev-docs/LAYERS.md — 層定義の SSOT
-* src/background/compositionManifest.ts — 循環 2 の回避配線（`onReady` で `setSqliteHealthCheck` / `setPendingWriteQueue`）
+* src/utils/trustDb/TrustDbKernel.ts ― `settingsReader` port（循環 1 解消後の settings アクセス）
+* src/utils/storage/storageMaintenance.ts:13 ― 循環 2（未解消）
+* src/utils/trustDb/trancoConsentManager.ts ― 循環 3
+* dev-docs/LAYERS.md ― 層定義の SSOT
+* src/background/compositionManifest.ts ― 循環 2 の回避配線（`onReady` で `setSqliteHealthCheck` / `setPendingWriteQueue`）
 * PBI 2026-08-31-01-fix-settings-dual-truth（循環 1 の settingsStore 側を削除）
 * PBI 2026-08-31-03-fix-trustdb-god-module（循環 1 の trustDb 側を port 化）
 * PBI 2026-08-31-04-feat-composition-manifest（循環 2 の回避配線を manifest の onReady に整理）

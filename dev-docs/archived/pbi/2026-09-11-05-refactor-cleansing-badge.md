@@ -9,10 +9,10 @@
 - 順位: 05 / 9
 - RICE スコア: 21.3（Reach=4 / Impact=1 / Confidence=80% / Effort=0.15 人週）
 - 根拠（2026-09-11 診断）:
-  - `src/popup/statusPanel.ts:86-101` `getCleansedReasonText()` — hard/keyword/both switch
-  - `src/popup/statusPanel.ts:103-129` `updateCleansingStatus()` — 同一 counts→表示変換の第 3 の実装
-  - `src/popup/previewPresenter.ts:47-81` `updateCleansingInfo()` — 同一 switch + `Badge (Hard: N, Keyword: M)` 接尾
-  - `src/background/handlers/systemHandlers.ts:157-167` — counts から hard/keyword/both 派生（第 4）
+  - `src/popup/statusPanel.ts:86-101` `getCleansedReasonText()` ― hard/keyword/both switch
+  - `src/popup/statusPanel.ts:103-129` `updateCleansingStatus()` ― 同一 counts→表示変換の第 3 の実装
+  - `src/popup/previewPresenter.ts:47-81` `updateCleansingInfo()` ― 同一 switch + `Badge (Hard: N, Keyword: M)` 接尾
+  - `src/background/handlers/systemHandlers.ts:157-167` ― counts から hard/keyword/both 派生（第 4）
   - deletion test: 各実装を単独で削除しても他が壊れない = 浅いクラスタ。政策テーブル 1 箇所に集約すれば複雑さが正の方向に集まる
 
 ## BDD 受け入れシナリオ
@@ -49,7 +49,7 @@ S（0.15 人週）。種別: refactor。
 ## 実装アプローチ
 
 1. `src/popup/cleansingBadge.ts`（または utils 配下が適切なら移動）に政策テーブル + 純関数を新設
-2. 4 消費者を置換（background handler は popup import を避けるため、counts→reason 派生の純関数のみ共有。配置は診断時に決定 — utils（中立）推奨）
+2. 4 消費者を置換（background handler は popup import を避けるため、counts→reason 派生の純関数のみ共有。配置は診断時に決定 ― utils（中立）推奨）
 3. テスト
 
 ## 実装メモ（2026-09-11）

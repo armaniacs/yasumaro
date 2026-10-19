@@ -20,13 +20,13 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 区切りあり16桁はマスクされる（既存動作の維持）
+Scenario: ハッピーパス ― 区切りあり16桁はマスクされる（既存動作の維持）
   Given テキストが "My card is 4111-1111-1111-1111 please" である
   When sanitizeRegex(text) を呼ぶ
   Then text は "My card is [MASKED:creditCard] please" に置換される
   And  maskedItems に { type: "creditCard", original: "4111-1111-1111-1111" } が含まれる
 
-Scenario: 攻撃 — 連続16桁もマスクされる（現状は未検出）
+Scenario: 攻撃 ― 連続16桁もマスクされる（現状は未検出）
   Given テキストが "My card is 4111111111111111 please" である
   When sanitizeRegex(text) を呼ぶ
   Then text は "My card is [MASKED:creditCard] please" に置換される

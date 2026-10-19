@@ -1,4 +1,4 @@
-# PBI: テスト型債務返済 3/5 — utils + messaging + src/__tests__（570 errors / 86 ファイル）
+# PBI: テスト型債務返済 3/5 ― utils + messaging + src/__tests__（570 errors / 86 ファイル）
 
 > **開始前に必読**: `pbi/2026-09-07-08-test-type-debt-background.md` の「前提環境」「ベースラインゲートの仕様」「baseline.json の編集規約」「共通実装手順」「修復パターン（実例つき）」「禁止事項」「コミット規約」を読み、同一手順を適用すること（08 完了・アーカイブ後も `dev-docs/archived/pbi/` から参照可）。本ファイルはバッチ固有の差分のみを記載する。
 
@@ -8,7 +8,7 @@ yasumaroの開発者として、`src/utils`（ドメインフィルタ・PII サ
 
 ## 分析: 本バッチのスコープ（実測 2026-09-07、インベントリ = testDir/type-check-baseline.json）
 
-- スコープ: **`src/utils/**` + `src/messaging/**` + `src/__tests__/**` の baseline エントリ** — 542 + 14 + 14 = 570 errors / 86 files
+- スコープ: **`src/utils/**` + `src/messaging/**` + `src/__tests__/**` の baseline エントリ** ― 542 + 14 + 14 = 570 errors / 86 files
 - 上位ファイル: `contentExtractor/__tests__/index.test.ts`(86)・`piiSanitizer.test.ts`(39)・`storageUrls.test.ts`(38)・`trustDb.test.ts`(51)
 - エラー内訳（ディレクトリ傾向）: null 安全性、リテラル不一致、暗黙 any
 - 依存なし・他バッチと並行可
@@ -47,8 +47,8 @@ Scenario: utils + messaging 配下の型エラーが 0 になる
 ## 実装アプローチ
 
 1. `type-check:test:raw` の出力を 3 配下でフィルタし、エラー数の多い順に返済
-2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 — INDEX セクション参照）
-3. `contentExtractor/index.test.ts`（86 件）は最大 — describe 単位で複数コミットに分割可
+2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 ― INDEX セクション参照）
+3. `contentExtractor/index.test.ts`（86 件）は最大 ― describe 単位で複数コミットに分割可
 
 ## 見積もり
 
@@ -68,8 +68,8 @@ npm run type-check:test:raw 2>&1 | grep -E "src/(utils|messaging)" | cut -d'(' -
 ```
 
 ### 落とし穴
-- **noUncheckedIndexedAccess**: 配列アクセス（`rows[0]`）が `| undefined` — テスト意図に合わせ `!` か先頭ガード
-- **`exactOptionalPropertyTypes`**: `prop: undefined` の代入が型エラーになる — 実テスト意図（undefined を渡したい）ならオブジェクトスプレッドで条件付き構築
+- **noUncheckedIndexedAccess**: 配列アクセス（`rows[0]`）が `| undefined` ― テスト意図に合わせ `!` か先頭ガード
+- **`exactOptionalPropertyTypes`**: `prop: undefined` の代入が型エラーになる ― 実テスト意図（undefined を渡したい）ならオブジェクトスプレッドで条件付き構築
 - **PII サニタイザ系**: 期待値の文字列は絶対に変更しない（プライバシー保護の回帰テスト）
 
 ## Definition of Done

@@ -8,7 +8,7 @@
 
 - 順位: 07 / 9
 - RICE スコア: 5.3（Reach=2 / Impact=1 / Confidence=90% / Effort=0.25 人週）
-- 根拠（round 6 直接検証）: `src/content/throttle.ts:11-39` — ①`else if`（:24）が同一フレーム内で同条件を再テストする dead branch で、trailing 呼び出しが実質無い。②throttle 呼び出し毎に `window.beforeunload` listener が積まれ、dispose 返却なし（:32-39）。③`THROTTLE_DELAY` が closure 内マジックリテラル。唯一の caller は `contentKernel.ts:400`（scroll → updateMaxScroll → visit gate 判定に波及）。
+- 根拠（round 6 直接検証）: `src/content/throttle.ts:11-39` ― ①`else if`（:24）が同一フレーム内で同条件を再テストする dead branch で、trailing 呼び出しが実質無い。②throttle 呼び出し毎に `window.beforeunload` listener が積まれ、dispose 返却なし（:32-39）。③`THROTTLE_DELAY` が closure 内マジックリテラル。唯一の caller は `contentKernel.ts:400`（scroll → updateMaxScroll → visit gate 判定に波及）。
 
 ## BDD 受け入れシナリオ
 

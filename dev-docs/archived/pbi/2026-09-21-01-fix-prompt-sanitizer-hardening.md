@@ -57,9 +57,9 @@ Scenario: 正常な本文は出力が変わらない
 
 ## 技術的考慮事項
 
-- `isMaliciousUsage(decodedContent)` は**デコード前の元文字列**を参照する（`sanitized` ではない）— 置換適用方法を変えてもこの入力を変えないこと
-- `GENERIC_TERM_PATTERNS` ループは `sanitized.slice(...).includes('[FILTERED]')` で置換済み箇所をスキップする — 範囲収集方式ではこの重複スキップの意味論を維持する
--dangerLevel は「最悪値を保持する」累積（SAFE→LOW→HIGH）— 警告の順序も回帰テストの対象
+- `isMaliciousUsage(decodedContent)` は**デコード前の元文字列**を参照する（`sanitized` ではない）― 置換適用方法を変えてもこの入力を変えないこと
+- `GENERIC_TERM_PATTERNS` ループは `sanitized.slice(...).includes('[FILTERED]')` で置換済み箇所をスキップする ― 範囲収集方式ではこの重複スキップの意味論を維持する
+-dangerLevel は「最悪値を保持する」累積（SAFE→LOW→HIGH）― 警告の順序も回帰テストの対象
 - WASM 移植（PBI-19・アーカイブ済み）は不採用。本 PBI はすべて TS 内で完結する
 
 ## 見積もり

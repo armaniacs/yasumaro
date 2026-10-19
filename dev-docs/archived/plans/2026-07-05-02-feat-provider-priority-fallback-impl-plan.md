@@ -1098,8 +1098,8 @@ git commit -m "feat(dashboard): 優先度セレクト変更時に複数プロバ
 ```markdown
 ## 関連設計ドキュメント
 
-- [2026-07-05-01-feat-provider-priority-fallback-design.md](2026-07-05-01-feat-provider-priority-fallback-design.md) — AIプロバイダ優先順位（1〜3位）設計。ステータス: 実装完了
-- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — 上記の実装計画。ステータス: 実装完了
+- [2026-07-05-01-feat-provider-priority-fallback-design.md](2026-07-05-01-feat-provider-priority-fallback-design.md) ― AIプロバイダ優先順位（1〜3位）設計。ステータス: 実装完了
+- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) ― 上記の実装計画。ステータス: 実装完了
 ```
 
 - [ ] **Step 3: コミット**

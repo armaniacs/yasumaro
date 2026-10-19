@@ -14,7 +14,7 @@
 - `src/dashboard/utils/auditLogTsv.ts`
 
 ## Validation
-`npm run type-check` と監査ログ系テスト — PASS（スコープ検証済み）。
+`npm run type-check` と監査ログ系テスト ― PASS（スコープ検証済み）。
 
 ## Rollback
 各消費者の型 import を元の宣言へ戻せばロールバックできる。

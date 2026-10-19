@@ -2,7 +2,7 @@
 
 ## ステータス: ⬜ 未着手（順位2 / RICE 32.0 / 台帳: 2026-09-14-00-backlog-firefox-support.md）
 
-## ステータス: ✅ 完了（2026-09-15 — 実現可能な範囲で完了・拡張レベル自動化は技術的に不可と判断して記録）
+## ステータス: ✅ 完了（2026-09-15 ― 実現可能な範囲で完了・拡張レベル自動化は技術的に不可と判断して記録）
 
 **結果サマリ**: CI に `firefox-storage` ジョブを追加（firefox ビルド → VFS プローブ + worker smoke を実 dist 成果物で実行）。**拡張込み（moz-extension origin）の自動化は技術的に不可**と実験で確定したため、PBI 自身の代替計画（プローブのみ CI 化・拡張 smoke は PBI 11 の手動チェックリスト）どおりに完了。実験の記録と再現手順は下記「実験記録」参照。
 
@@ -33,10 +33,10 @@ Playwright の Firefox ビルド（Juggler・リリース系ベース）に、�
 
 ## 実装ガイド（実施結果）
 
-1. **CI 追加**: `.github/workflows/tests.yml` に `firefox-storage` ジョブを追加 — `build:firefox` → `npx playwright install --with-deps firefox` → `--project=firefox` で VFS プローブ + worker smoke（実 dist 成果物）を実行、レポートをアーティファクト化
+1. **CI 追加**: `.github/workflows/tests.yml` に `firefox-storage` ジョブを追加 ― `build:firefox` → `npx playwright install --with-deps firefox` → `--project=firefox` で VFS プローブ + worker smoke（実 dist 成果物）を実行、レポートをアーティファクト化
 2. **拡張 smoke 自動化は不可と確定**（上記「実験記録」）→ 拡張レベルの検証は PBI 11 の手動チェックリストが担当
 3. **プローブの wasm ペア固定の維持**: probe の `copyFileSync` が `@subframe7536/dist/wa-sqlite-async.wasm` を使っていることを回帰で担保（spec 内アサーション済み）
-4. **worker smoke の追加**（プローブの補完）: `testDir/e2e/firefox-worker-smoke.spec.ts` — 実 dist の `opfs-worker.js` を INIT（安定パス wasm URL 注入）→ INSERT → SEARCH(FTS5) → STATUS で駆動。テストサーバに `/dist/` 配信（ディレクトリトラバーサル制限付き）を追加
+4. **worker smoke の追加**（プローブの補完）: `testDir/e2e/firefox-worker-smoke.spec.ts` ― 実 dist の `opfs-worker.js` を INIT（安定パス wasm URL 注入）→ INSERT → SEARCH(FTS5) → STATUS で駆動。テストサーバに `/dist/` 配信（ディレクトリトラバーサル制限付き）を追加
 
 ## BDD受け入れシナリオ
 

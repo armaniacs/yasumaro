@@ -214,7 +214,7 @@ If the browser's download notification appears each time a file is exported, you
 - Check Service Worker console logs for `[LocalMD]`
 
 **Q. The same file is downloaded multiple times**
-- Each flush re-downloads (overwrites) the complete daily file — this is how the feature is designed to work
+- Each flush re-downloads (overwrites) the complete daily file ― this is how the feature is designed to work
 - Switch to "Idle / every 30 min" or "On date change" if you'd rather have a single batched export
 - Set Chrome's download setting for "When a file with the same name exists" to "Overwrite"
 

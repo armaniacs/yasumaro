@@ -1,4 +1,4 @@
-# PBI: diagnosticsPanel の深掘り — 全セクションを DiagnosticsCollector の collect() に集約
+# PBI: diagnosticsPanel の深掘り ― 全セクションを DiagnosticsCollector の collect() に集約
 
 ## ユーザーストーリー
 開発者として、682行の diagnosticsPanel を「collect() → DiagnosticsSnapshot → render(Snapshot)」の1 seam に再構成したい、なぜならデータ収集（getSettings + キャスト20件）、整形（makeStatRow 約30件）、破壊的操作（migrate/backfill/cleanup）が1クロージャに混在し、DiagnosticsCollector が存在するのに迂回されて「システム状態の正解」が2つある状態だから
@@ -31,7 +31,7 @@ Scenario: 破壊的操作は action handler 経由で確認ダイアログ付き
   When action handler が confirmDialog を表示して承認される
   Then サービス呼び出し後に Snapshot を再収集して該当セクションのみ再描画する
 
-Scenario: エラー — 収集の一部が失敗しても他セクションは描画される
+Scenario: エラー ― 収集の一部が失敗しても他セクションは描画される
   Given SQLite status の取得がタイムアウトする
   When collect() がセクションごとにエラーを捕捉する
   Then 失敗セクションは error ステータスを持ち、残りセクションは正常描画される
@@ -59,7 +59,7 @@ Scenario: エラー — 収集の一部が失敗しても他セクションは�
 - セクション別エラー捕捉（1セクション throw で他が生きること）
 
 ## 見積もり
-3pt（要チームでの見積もり）— 全面移植だが型（Snapshot）で導かれる機械的移動。既存 lifecycle テストの書き換えが主コスト
+3pt（要チームでの見積もり）― 全面移植だが型（Snapshot）で導かれる機械的移動。既存 lifecycle テストの書き換えが主コスト
 - **確認**: diagnosticsPanel.ts は 682行、DiagnosticsCollector.ts は 146行（underused）
 
 ## 技術的考慮事項

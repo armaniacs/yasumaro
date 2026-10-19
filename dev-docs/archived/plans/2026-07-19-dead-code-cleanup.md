@@ -4,7 +4,7 @@
 
 **Goal:** Remove 10 confirmed dead code symbols across 8 files, verified by static analysis and grep.
 
-**Architecture:** Pure removal — no new code, no refactoring, no test changes. Each commit removes a single risk category of dead symbols, followed by type-check + test + build validation.
+**Architecture:** Pure removal ― no new code, no refactoring, no test changes. Each commit removes a single risk category of dead symbols, followed by type-check + test + build validation.
 
 **Tech Stack:** TypeScript, Chrome Extension Manifest V3, WXT build tool, Jest
 
@@ -290,11 +290,11 @@ git commit -m "chore: remove unused exported public APIs"
 Delete lines 89-197 (the function and its preceding comment block, through end of file):
 
 ```typescript
-// Before (L88 onward) — keep everything up to and including L88, delete L89 to EOF:
+// Before (L88 onward) ― keep everything up to and including L88, delete L89 to EOF:
 
 }
 
-// After — file ends at the closing brace of `runOpfsSpikeA()` (L88):
+// After ― file ends at the closing brace of `runOpfsSpikeA()` (L88):
 }
 ```
 
@@ -316,7 +316,7 @@ npm test
 npm run build
 ```
 
-Expected: All pass. The OPFS spike test (`src/offscreen/__tests__/opfsSpike.test.ts`) tests `runSpikeSteps`, which remains in the file — it should continue to pass.
+Expected: All pass. The OPFS spike test (`src/offscreen/__tests__/opfsSpike.test.ts`) tests `runSpikeSteps`, which remains in the file ― it should continue to pass.
 
 - [ ] **Step 3: Commit**
 
@@ -411,7 +411,7 @@ npm test
 npm run build
 ```
 
-Expected: All pass. Test files (`dashboard.test.ts`, `dashboard-handlers.test.ts`) contain HTML fixtures with `closeBreakingChangesModalBtn` elements but do not import or call the removed functions — they should continue to pass.
+Expected: All pass. Test files (`dashboard.test.ts`, `dashboard-handlers.test.ts`) contain HTML fixtures with `closeBreakingChangesModalBtn` elements but do not import or call the removed functions ― they should continue to pass.
 
 - [ ] **Step 3: Commit**
 
@@ -432,7 +432,7 @@ npm run type-check && npm test && npm run build
 
 Expected: All pass, zero regressions.
 
-- [ ] **Step 2: Optional — verify no remaining references exist**
+- [ ] **Step 2: Optional ― verify no remaining references exist**
 
 ```bash
 rg -n "getConsecutiveFailureCount|showBreakingChangesModal|closeBreakingChangesModal|BREAKING_CHANGES_SHOWN_KEY|setActiveTag|runOpfsSpikeB|_isKnownError|_resetRecordButtonAndClearFlag|_getRecordCurrentPage|_executeWithTimeout|checkContentDangerLevel|_matchRule" src/

@@ -8,7 +8,7 @@
 
 - 順位: 01 / 10
 - RICE スコア: 40.0（Reach=2 / Impact=1 / Confidence=100% / Effort=0.05 人週）
-- 根拠: `src/offscreen/queryNormalize.ts:29` の `ids: payload?.ids != null ? (payload.ids as number[]) : undefined` — limit/offset は Number 正規化済みだが ids だけ無検証。SQL 側 `queryPlan.ts:36-40` が `.map` → 型外れ値でクラスタ。wire（chrome.runtime.sendMessage）から到達可能。
+- 根拠: `src/offscreen/queryNormalize.ts:29` の `ids: payload?.ids != null ? (payload.ids as number[]) : undefined` ― limit/offset は Number 正規化済みだが ids だけ無検証。SQL 側 `queryPlan.ts:36-40` が `.map` → 型外れ値でクラスタ。wire（chrome.runtime.sendMessage）から到達可能。
 
 ## BDD 受け入れシナリオ
 

@@ -14,12 +14,12 @@
 
 | ワークフロー | PR | push main | tag push (v*) |
 |------------|:--:|:---------:|:------------:|
-| **ci.yml** | ✅ validate+build | ✅ validate+build | — |
-| **tests.yml** | ✅ type-check+test+E2E | — | — |
-| **validate.yml** | ✅ type-check+test+PRコメント | ✅ type-check+test（←無駄） | — |
-| release.yml | — | — | ✅ zip+リリース |
-| coverage.yml | — | ✅ test:coverage | — |
-| pages.yml | — | ✅ (docs/**変更時) | — |
+| **ci.yml** | ✅ validate+build | ✅ validate+build | ― |
+| **tests.yml** | ✅ type-check+test+E2E | ― | ― |
+| **validate.yml** | ✅ type-check+test+PRコメント | ✅ type-check+test（←無駄） | ― |
+| release.yml | ― | ― | ✅ zip+リリース |
+| coverage.yml | ― | ✅ test:coverage | ― |
+| pages.yml | ― | ✅ (docs/**変更時) | ― |
 
 ### 重複の内訳
 

@@ -374,7 +374,7 @@ Click the extension icon to open the main screen.
 - No duplicate URL restrictions - record the same page multiple times
 - Chrome notifications and status messages confirm successful recording
 - The status message shows processing time, e.g. "AI summary recorded (6.0s / AI: 2.2s)"
-  - The first number (e.g. 6.0s) is the total time from starting the recording to completion — covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage
+  - The first number (e.g. 6.0s) is the total time from starting the recording to completion ― covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage
   - The number after "AI: " (e.g. 2.2s) is the time spent on a single summarization request to the AI provider. It appears whenever an AI summary was actually produced, and is omitted when the AI produced nothing (this applies to local-AI summaries as well: if a summary ran, the time is shown)
 
 #### Accessing the Dashboard
@@ -415,12 +415,12 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. For th
 > 1. Open the link's URL in a new tab and add a certificate exception
 > 2. Import the CA certificate under Settings → Privacy & Security → Certificates
 >
-> If no link is shown at all, the endpoint itself is probably misconfigured — check **Obsidian Host** and **Port** in the settings. Plain HTTP is allowed on loopback addresses only (`127.0.0.1` / `localhost`), so a remote host requires HTTPS.
+> If no link is shown at all, the endpoint itself is probably misconfigured ― check **Obsidian Host** and **Port** in the settings. Plain HTTP is allowed on loopback addresses only (`127.0.0.1` / `localhost`), so a remote host requires HTTPS.
 
 #### 2. AI Provider Settings
 Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers. The settings screen has two input slots ("OpenAI Compatible" and "OpenAI Compatible 2"), and the Priority (Failover Order) list defines the fallback order (up to 10 slots are kept internally; the screen shows 3 rows).
 
-> **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings — an empty field is not saved as an explicit model. A value you type yourself takes precedence.
+> **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings ― an empty field is not saved as an explicit model. A value you type yourself takes precedence.
 
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
@@ -563,7 +563,7 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
 - **Star**: Star frequently referenced pages to find them quickly later
 - **Regenerate AI summary**: The "Regenerate AI summary" button in each entry header rebuilds the summary in place (no new row) with a cleansing-loosening choice of three (Current settings / Looser / Loosest). See the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details
-- **Bulk selection actions**: Check the box on multiple entries to reveal **"Regenerate AI summaries"** and **"Delete selected articles"** in the selection bar. Bulk delete confirms inline in the bar with the count ("Delete now" / Cancel) and stops at the first failure. Bulk regenerate runs sequentially with current settings and toasts succeeded/failed counts (rows already running are reported as skipped; the loosening choices and force option are header-only — use the per-entry header for those)
+- **Bulk selection actions**: Check the box on multiple entries to reveal **"Regenerate AI summaries"** and **"Delete selected articles"** in the selection bar. Bulk delete confirms inline in the bar with the count ("Delete now" / Cancel) and stops at the first failure. Bulk regenerate runs sequentially with current settings and toasts succeeded/failed counts (rows already running are reported as skipped; the loosening choices and force option are header-only ― use the per-entry header for those)
 - **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
 
 **Filtering**:
@@ -575,7 +575,7 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 **Privacy Mode Badges**:
 Each history entry shows a badge indicating which privacy mode was used when it was saved (Local Only / Full Pipeline / Masked Cloud / Cloud Only). Even after changing your settings, you can see at a glance which mode each past entry was processed with.
 
-**Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy".
+**Retention Policy**: By default, records are retained indefinitely (no automatic deletion). You can optionally configure a retention period (30-365 days) and/or a maximum record count (1,000-100,000) in the settings under "History Retention Policy".
 
 **Mobile Chrome / OPFS-unavailable environments**: On devices where OPFS is unavailable, the extension automatically falls back through IndexedDB VFS and then to `chrome.storage.local` storage (see [STORAGE_MODES.md](STORAGE_MODES.md) for details).
 
@@ -637,7 +637,7 @@ The `Dashboard → Archive` panel lets you back up browsing history up to a chos
 **Phase 1: Create archive (backup)**
 - Pick a date and use "Check records to archive" to review the record counts (starred / deleted breakdown included)
 - "Create archive file" creates an archive (`yasumaro_archive_<date>.db`) and downloads it
-- The created file is a standard SQLite database — open it directly with DB Browser for SQLite, etc.
+- The created file is a standard SQLite database ― open it directly with DB Browser for SQLite, etc.
 - **The main database is not modified at this point**
 - Deleted records are excluded by default (turn the checkbox on to include them; excluded records cannot be restored later)
 

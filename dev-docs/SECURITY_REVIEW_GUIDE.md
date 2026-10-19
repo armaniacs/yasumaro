@@ -28,20 +28,20 @@
 | Local REST API | Self-signed certificate support |
 | Content Script Injection | Runs on all web pages with user consent |
 | PKI/Certificate | HTTPS with protocol/port validation |
-| SSRF via user-supplied URL | Per-entry-point URL guard (`src/utils/ssrfGuard.ts`); **DNS rebinding remains** — see below |
+| SSRF via user-supplied URL | Per-entry-point URL guard (`src/utils/ssrfGuard.ts`); **DNS rebinding remains** ― see below |
 | Forged extension messages | No `externally_connectable`; `sender.id` match; `extension-only` registration |
 
 ### Who can invoke destructive DASHBOARD_SQLITE operations
 
 Assessed 2026-09-16. Three layers stop an outside caller, in this order:
 
-1. **No `externally_connectable` in the manifest.** Web pages and other extensions cannot reach `chrome.runtime.sendMessage` at all — the browser refuses to deliver.
+1. **No `externally_connectable` in the manifest.** Web pages and other extensions cannot reach `chrome.runtime.sendMessage` at all ― the browser refuses to deliver.
 2. **`checkSenderTrust` requires `sender.id === chrome.runtime.id`** (`src/background/handlers/senderTrust.ts`). The browser assigns that id; it cannot be forged.
 3. **`DASHBOARD_SQLITE` is registered `extension-only`**, so even our own content scripts are rejected.
 
-**The confirmToken is not one of these layers.** Anything that reaches the token check is already one of our own extension pages, and any such page may call `create_confirm_token` freely (it is in `TOKEN_EXEMPT_OPS`). The token's real contributions are parameter binding via `scopeHash`, single-use + 60s TTL, and defence in depth should layers 1–3 regress.
+**The confirmToken is not one of these layers.** Anything that reaches the token check is already one of our own extension pages, and any such page may call `create_confirm_token` freely (it is in `TOKEN_EXEMPT_OPS`). The token's real contributions are parameter binding via `scopeHash`, single-use + 60s TTL, and defence in depth should layers 1-3 regress.
 
-When reviewing, do not accept "this operation requires a confirmToken" as the argument that it is safe from outside callers. Point at layers 1–3 instead. Details and the full analysis: `src/messaging/sqliteOperationSecurity.ts` and PBI 2026-09-16-03.
+When reviewing, do not accept "this operation requires a confirmToken" as the argument that it is safe from outside callers. Point at layers 1-3 instead. Details and the full analysis: `src/messaging/sqliteOperationSecurity.ts` and PBI 2026-09-16-03.
 
 **Out of scope:** XSS inside our own dashboard. A script running there can mint its own tokens, so the gate cannot help; this is a deliberate scope decision. Revisit it if the dashboard ever renders untrusted HTML.
 
@@ -53,11 +53,11 @@ The guard is `src/utils/ssrfGuard.ts`. It is the SSRF threat model's positive do
 #### What the guard inspects
 
 - URL syntax, and the protocol allowlist (`https:`, `http:` only).
-- IP literals — IPv4 and IPv6, via `normalizeIpHostname` (brackets stripped) and `isPrivateIpAddress`.
+- IP literals ― IPv4 and IPv6, via `normalizeIpHostname` (brackets stripped) and `isPrivateIpAddress`.
 - `localhost` by name, and private / link-local / ULA ranges.
 - The port, where the entry point constrains it: `ALLOWED_LOCALHOST_PORTS` is
   `{27123, 27124, 11434, 1234}`.
-- Redirect targets, **when the entry point asks for it** — see the entry-point table.
+- Redirect targets, **when the entry point asks for it** ― see the entry-point table.
 
 Three entry-point validators exist: `validateUrl()` (the general form, with `requireValidProtocol`
 and `blockLocalhost` options), `validateUrlForFilterImport()`, and `validateUrlForAIRequests()`
@@ -67,8 +67,8 @@ and `blockLocalhost` options), `validateUrlForFilterImport()`, and `validateUrlF
 
 | Entry point | Validator | Redirect handling |
 |---|---|---|
-| Filter-list import (`FETCH_URL`, `extension-only`) | `validateUrlForFilterImport` | `redirect: 'error'` — any redirect aborts. Plus a `response.redirected` re-check. |
-| AI provider base URL | `validateUrlForAIRequests` + registry allowlist | n/a — the URL is a configured origin, pinned per provider |
+| Filter-list import (`FETCH_URL`, `extension-only`) | `validateUrlForFilterImport` | `redirect: 'error'` ― any redirect aborts. Plus a `response.redirected` re-check. |
+| AI provider base URL | `validateUrlForAIRequests` + registry allowlist | n/a ― the URL is a configured origin, pinned per provider |
 | Manual / regenerate tab fetch | `validateUrl({ requireValidProtocol: true, blockLocalhost: true })` | n/a |
 | Common fetch helper | `fetchWithRedirectGuard` re-applies `validateUrlForFilterImport` to every hop, using `redirect: 'manual'` | per-hop URL re-validation, up to `MAX_REDIRECT_HOPS` |
 
@@ -77,7 +77,7 @@ all known filter-list sources are fixed HTTPS hosts that rely on neither http→
 redirects, so the stricter policy costs nothing (ADR `2026-08-29-fetch-redirect-policy.md`).
 `fetchWithRedirectGuard` is the contract for any entry point that must follow redirects.
 
-#### What the guard does NOT verify — residual risk
+#### What the guard does NOT verify ― residual risk
 
 **The guard never compares the hostname it approved against the IP the browser actually connects
 to.** It validates a URL *string*; DNS resolution happens later, inside the browser's network
@@ -94,7 +94,7 @@ Two follow-on limits, stated so they are not over-read:
 - The contract tests in `src/utils/__tests__/ssrfGuard.test.ts` (23 cases) cover private IPv4/IPv6,
   localhost, scheme, and redirect hops. Two of them assert that a **public** hostname is allowed
   as-is (`https://example.com/filters.txt`, `https://api.openai.com/v1/chat`). There is **no test
-  for a hostname whose DNS answer changes**, because the guard does not model that — so those
+  for a hostname whose DNS answer changes**, because the guard does not model that ― so those
   public-hostname cases are not evidence that a hostname's DNS answer is safe.
 
 #### Why the risk is accepted rather than fixed here
@@ -134,12 +134,12 @@ that is a design question, not a guard change.
 `hasPrivacyConsent()` is the single source of truth, and there are exactly **two
 kinds of gate** read point:
 
-1. **The admission gate** — `createBackgroundServices()` wires
+1. **The admission gate** ― `createBackgroundServices()` wires
    `isRecordingAllowed: () => hasPrivacyConsent()`
    (`src/background/compositionManifest.ts:41`, `src/background/service-worker.ts:177`),
    and `RecordingAdmission` calls it before admitting a record
    (`src/background/recordingAdmission.ts` → `reason: 'privacy_consent_required'`).
-2. **Outbound gates** — paths that leave the admission flow entirely (the dashboard
+2. **Outbound gates** ― paths that leave the admission flow entirely (the dashboard
    Obsidian export in `src/background/handlers/dashboardSqlite/coreCrudHandler.ts`,
    the alarm replay / notification / review-digest paths in PBI `2026-10-19-10`).
    These take an injected `isConsentGranted: () => Promise<boolean>` from the
@@ -155,13 +155,13 @@ Two rules for a new outbound path:
 1. **Is it allowed to run at all without consent?** If it can carry a recorded
    row, a page body, or a derived summary, it needs the gate; if it carries only
    configuration the user just typed, it does not. Local-only operations (delete,
-   clear-all, star, update) never take the gate — otherwise a withdrawn user could
+   clear-all, star, update) never take the gate ― otherwise a withdrawn user could
    not erase their own data.
 2. **When is the gate read?** Admission-time consent does **not** license later
    execution. Anything that runs on a timer, an alarm, a queue, or a user
    interaction *after* the record was admitted must re-read consent at that
    moment, because consent can be withdrawn in between (withdrawal does not purge
-   queues). This is the failure mode behind rows 8–10 below.
+   queues). This is the failure mode behind rows 8-10 below.
 
 | # | Operation | Gated? | Why / where |
 |---|---|---|---|
@@ -172,26 +172,26 @@ Two rules for a new outbound path:
 | 5 | Obsidian export inside the recording pipeline | Inherited **at record time** | Export is a step of the pipeline |
 | 6 | AI / Obsidian / Gist connection tests | No | Send only the configuration the user typed (URL, API key, PAT). Blocking them would stop an unconsented user from validating settings before deciding |
 | 7 | Tranco metadata / list download | No | Public list metadata; no user data |
-| 8 | Offline retry replay (`src/background/offlineQueueProcessor.ts`) | **Yes — at execution time** | The `yasumaro-offline-network-retry` alarm re-reads consent before the cycle and skips the whole queue when it is withdrawn (a per-job skip would burn retries and starve consented jobs). Pinned by `src/background/__tests__/offlineQueueProcessor.test.ts` ("does not replay queued jobs after the user withdrew consent", "replays the same jobs once consent is granted again") |
-| 9 | Notification "save" re-run (`src/background/handlers/notificationHandlers.ts`) | **Yes — at click time** | A privacy-confirm notification outlives the consent it was raised under; the Save button re-reads consent and keeps the pending page so a re-consented user can retry. Pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts` ("does not record a pending page after consent was withdrawn") |
-| 10 | Weekly / monthly review digest (`src/background/reviewSummaryGenerator.ts`) | **Yes — at execution time** | The digest joins every row in the period, so consent is re-read after the `REVIEW_SUMMARY_ENABLED` check; nothing is sent and `REVIEW_SUMMARY_LAST_GENERATED_*` stays untouched, so a re-granted consent can still build the period. Pinned by `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ("does not send the digest to AI when consent was withdrawn") |
-| 11 | Dashboard "append selected to Obsidian" (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts`) | **Yes — at execution time** | Rows leave for the Obsidian REST API, outside `RecordingAdmission`. The append case reads the injected `isConsentGranted` (wired in `src/background/dashboardSqliteWiring.ts` from `hasPrivacyConsent`) after input validation and **before** `getSettings`/`query`, so a withdrawn profile neither sends nor reads the rows. All other dashboardSqlite subtasks stay ungated (local-only). Pinned by `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` ("refuses to append when consent was withdrawn (and reads no rows)", "still appends when consent is granted (regression guard)") |
+| 8 | Offline retry replay (`src/background/offlineQueueProcessor.ts`) | **Yes ― at execution time** | The `yasumaro-offline-network-retry` alarm re-reads consent before the cycle and skips the whole queue when it is withdrawn (a per-job skip would burn retries and starve consented jobs). Pinned by `src/background/__tests__/offlineQueueProcessor.test.ts` ("does not replay queued jobs after the user withdrew consent", "replays the same jobs once consent is granted again") |
+| 9 | Notification "save" re-run (`src/background/handlers/notificationHandlers.ts`) | **Yes ― at click time** | A privacy-confirm notification outlives the consent it was raised under; the Save button re-reads consent and keeps the pending page so a re-consented user can retry. Pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts` ("does not record a pending page after consent was withdrawn") |
+| 10 | Weekly / monthly review digest (`src/background/reviewSummaryGenerator.ts`) | **Yes ― at execution time** | The digest joins every row in the period, so consent is re-read after the `REVIEW_SUMMARY_ENABLED` check; nothing is sent and `REVIEW_SUMMARY_LAST_GENERATED_*` stays untouched, so a re-granted consent can still build the period. Pinned by `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ("does not send the digest to AI when consent was withdrawn") |
+| 11 | Dashboard "append selected to Obsidian" (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts`) | **Yes ― at execution time** | Rows leave for the Obsidian REST API, outside `RecordingAdmission`. The append case reads the injected `isConsentGranted` (wired in `src/background/dashboardSqliteWiring.ts` from `hasPrivacyConsent`) after input validation and **before** `getSettings`/`query`, so a withdrawn profile neither sends nor reads the rows. All other dashboardSqlite subtasks stay ungated (local-only). Pinned by `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` ("refuses to append when consent was withdrawn (and reads no rows)", "still appends when consent is granted (regression guard)") |
 | 12 | `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
 | 13 | Settings export / import (`src/utils/settingsExportImport.ts`) | **Consent never travels** | A settings file must not carry the consent record: an export would grant consent on the target profile, and a revoked export would withdraw a valid grant there. Consent is an act performed on *this* device. `sanitizeSettingsForExport` drops `privacy_consent` / `_version` / `_denied_count` / `_last_denial_time`; the import path ignores those **and** `privacy_mode` / `pii_confirmation_ui`, because `migrateLegacyPrivacyConsent` reads them as evidence of a previous grant and would auto-consent from a file. Pinned by `src/utils/__tests__/settingsExportImport-consent.test.ts` |
 
 `requireConsent()` used to exist as an unused "guard the caller" helper
 (`privacyConsent.ts`); it was removed on 2026-10-19 because nothing called it and
 its name implied a second seam that does not exist. The rows marked **gap** were
-what that name was hiding: paths that never saw the gate at all. Rows 8–11 are all
+what that name was hiding: paths that never saw the gate at all. Rows 8-11 are all
 closed as of 2026-10-19 (PBI `2026-10-19-10` for the scheduled/queued paths, PBI
 `2026-10-19-11` for the dashboard export). Every one of those re-checks takes an
-injected `isConsentGranted: () => Promise<boolean>` from the composition — do not
+injected `isConsentGranted: () => Promise<boolean>` from the composition ― do not
 import the consent module from the handler itself.
 
 **Consent is device-local, not portable** (row 13, PBI `2026-10-19-12`). Treat any
 path that copies settings between profiles as an outbound path for consent: a
 restored profile must show the consent modal, and restoring a backup must never
-grant or withdraw consent on the target. This is the same family as rows 8–10 —
+grant or withdraw consent on the target. This is the same family as rows 8-10 ―
 consent is a *state*, so it can differ from when the artifact that carries it was
 created.
 

@@ -37,7 +37,7 @@ Scenario: archive 未対応 backend は明確に拒否される
 - [x] 14 の archive 操作が ArchiveStaging モジュールの背後にある（`src/offscreen/archiveStaging.ts` 新設: `ArchiveStaging` + `supportsArchive()`）
 - [x] StorageBackend 接口が core read/write のみに縮小している（Mutable から 14 署名・NoopBackend の 14 余分・`archiveUnsupported` 共有 stub を除去）
 - [x] archive 呼び出し元が ArchiveStaging 経由に置換されている（`handleArchive` が per-method narrow + fail-closed。呼び出し元は従来から wire-table 経由で backend 直呼びは無し）
-- [x] archive 未対応 adapter の stub が共有化されている（stub 28 件を削除し dispatch 1 箇所の fail-closed に統一 — round 4 PBI-08 の `ARCHIVE_UNSUPPORTED_ERROR` 定数は維持）
+- [x] archive 未対応 adapter の stub が共有化されている（stub 28 件を削除し dispatch 1 箇所の fail-closed に統一 ― round 4 PBI-08 の `ARCHIVE_UNSUPPORTED_ERROR` 定数は維持）
 - [x] `npm run type-check` と archive 関連テスト・E2E が green（type-check exit 0・offscreen 全 978 green。E2E は headless のため vitest + parametric で代替）
 
 ## テスト戦略（t_wadaスタイル）
@@ -109,6 +109,6 @@ grep -rn "archiveUnsupported" src/ --include="*.ts" -l
 ## 実装メモ（2026-09-11 autonomous-task-closer）
 
 - 削除: IdbVfs/Fallback の stub 28 件 + NoopBackend の 14 余分 + `archiveUnsupported()` 共有関数（利用者ゼロに）。`ARCHIVE_UNSUPPORTED_ERROR` 定数は維持（Y2 が定数を pin）。
-- 設計判断: `supportsArchive()` は全 14 一括 probe だが dispatch は per-method チェック — 部分実装 backend に未実装 op を要求しない。`this` bind（e2e 回帰の WHY）は維持。
+- 設計判断: `supportsArchive()` は全 14 一括 probe だが dispatch は per-method チェック ― 部分実装 backend に未実装 op を要求しない。`this` bind（e2e 回帰の WHY）は維持。
 - Y2 テストを新契約に更新（所有の不在 + narrow + 定数 pin）。dispatch fail-closed 3 件を `archiveWireDispatch.test.ts` に追加。
 - なぜなぜ: なぜ stub が 28 件も残ったのか → round 4 で共有 stub 化はしたが「除去」は dispatch が `backend[method]` 型を要求するため不可だった → 解: dispatch を narrow + fail-closed に変えてから除去（順序が逆では型が壊れる）。

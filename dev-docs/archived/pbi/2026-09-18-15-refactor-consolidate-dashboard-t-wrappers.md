@@ -12,10 +12,10 @@ dashboard を保守する開発者として、翻訳ラッパを1つの seam 関
 
 以下の4ラッパが同義実装として分散している（着手時に行番号を再確認すること）:
 
-1. `dashboard/panels/asyncData/sqliteHistoryPanelView.ts`（20行目付近）— `t(key, subs?) => getMessageOr(key, key, subs)`、61呼び出し
-2. `dashboard/panels/asyncData/sqliteHistoryPanel.ts`（23行目付近）— 同一実装、15呼び出し
-3. `dashboard/cleansingStatsView.ts`（5行目付近）— `t(key) => getMessageOr(key, key)`、12呼び出し
-4. `dashboard/panels/diagnostic/archivePanel.ts`（27行目付近）— `localized(key, args?) => getMessage(key, args ?? null) || key`、41呼び出し（**名前付き置換 Record<string, string|number> を使用** — archivePreviewSummary {…} 等で実使用を確認済み）
+1. `dashboard/panels/asyncData/sqliteHistoryPanelView.ts`（20行目付近）― `t(key, subs?) => getMessageOr(key, key, subs)`、61呼び出し
+2. `dashboard/panels/asyncData/sqliteHistoryPanel.ts`（23行目付近）― 同一実装、15呼び出し
+3. `dashboard/cleansingStatsView.ts`（5行目付近）― `t(key) => getMessageOr(key, key)`、12呼び出し
+4. `dashboard/panels/diagnostic/archivePanel.ts`（27行目付近）― `localized(key, args?) => getMessage(key, args ?? null) || key`、41呼び出し（**名前付き置換 Record<string, string|number> を使用** ― archivePreviewSummary {…} 等で実使用を確認済み）
 
 対応方針: `utils/i18n.ts` に `tOrKey(key, substitutions?)` を新設する。substitutions は `string | string[] | Record<string, string | number>` を受け、string/array は位置置換、object は getMessage 既存の名前付き置換に委譲する。4ファイルはローカル定義を削除し `import { tOrKey as t }` / `import { tOrKey as localized }` に置換する（**呼び出しサイト129箇所は無変更**）。
 
@@ -55,6 +55,6 @@ Scenario: 欠落キーでキー自身が返る
 
 ## 実装ガイド
 
-- 着手時点での確認ポイント: `utils/i18n.ts` の getMessage 名前付き置換ロジック、archivePanel の args 実使用（名前付きオブジェクトあり — 実測済み）
+- 着手時点での確認ポイント: `utils/i18n.ts` の getMessage 名前付き置換ロジック、archivePanel の args 実使用（名前付きオブジェクトあり ― 実測済み）
 - `getMessageOr` 自体のシグネチャは変更しないこと（既存呼び出し影響を避ける。tOrKey は新規関数）
 - git 操作・pbi 編集は統合側が行う

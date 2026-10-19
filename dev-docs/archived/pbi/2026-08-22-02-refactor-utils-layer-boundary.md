@@ -18,7 +18,7 @@
 
 ### 主要価値
 1. **Onboarding 効率化**: 新規開発者が「utils/ 配下のどこに置くべきか」判断できる
-2. **循環依存検出**: trustDb ↔ settingsStore の既存循環依存を明記し、将来の無意識削除を防止
+2. **循環依存検出**: trustDb ⇔ settingsStore の既存循環依存を明記し、将来の無意識削除を防止
 3. **Re-export barrel 管理**: storage.ts の 17+ import を 3 層に整理
 
 ### 測定方法
@@ -61,7 +61,7 @@ src/utils/
   - 先に層を **形式化し、ドキュメント化**する（低リスク）
   - 次の refactor (PBI#3 以降) で gradual migration
 
-**Question 3: trustDb ↔ settingsStore の循環依存は、なぜ存在するのか？**
+**Question 3: trustDb ⇔ settingsStore の循環依存は、なぜ存在するのか？**
 - **Answer**: 設計上の制約
   - trustDb: Tranco ドメインリストのバージョンを追跡
   - settingsStore: ユーザー設定の永続化
@@ -79,7 +79,7 @@ Scenario: Utils Layer ドキュメント化で新規ファイル配置が明確�
   Then 層ルール文書を参照して正しく配置できる
 
 Scenario: 既存循環依存が明記され、将来のリファクタで無意識削除を防ぐ
-  Given trustDb ↔ settingsStore の循環依存が ADR に記録されていない
+  Given trustDb ⇔ settingsStore の循環依存が ADR に記録されていない
   When 今後のリファクタで「なぜこんな複雑な import?」と削除試行される
   Then ADR で理由が明記されているため、削除を防止できる
 
@@ -97,7 +97,7 @@ Scenario: Layer 0/1/2 の境界が形式化され、grep で layer 所属を確�
   - Layer 0: logger, crypto, errorUtils (依存なし)
   - Layer 1: storage, trustDb, domain repositories (Layer 0 のみに依存)
   - Layer 2: pageContentPipeline, aiSummaryCleaner など (Layer 0/1 に依存)
-- [ ] 循環依存 (trustDb ↔ settingsStore) を新規 ADR または既存 ADR に記録
+- [ ] 循環依存 (trustDb ⇔ settingsStore) を新規 ADR または既存 ADR に記録
 - [ ] re-export barrel (storage.ts) を形式化（再構成は Wave 3+）
 - [ ] 新規ファイル配置チェックリスト をドキュメント作成
 - [ ] npm run validate pass
@@ -143,7 +143,7 @@ Scenario: Layer 0/1/2 の境界が形式化され、grep で layer 所属を確�
 - [etc.]
 
 ## Circular Dependencies (Must Maintain)
-- trustDb ↔ settingsStore (遅延 import 中継。詳細は ADR-XXXX)
+- trustDb ⇔ settingsStore (遅延 import 中継。詳細は ADR-XXXX)
 ```
 
 ### Step 2: ADR 記録（既存 または 新規）
@@ -176,7 +176,7 @@ trustDb と settingsStore は相互依存：
   → No: → Layer 0 or Layer 1
 
 □ Create new directory under utils/ with layer designation in comment:
-  // Layer 1: Infrastructure — [purpose]
+  // Layer 1: Infrastructure ― [purpose]
   export ...
 ```
 
@@ -215,7 +215,7 @@ grep "import.*trustDb" src/utils/storage/ src/utils/settings*
 
 - [ ] `dev-docs/LAYERS.md` または `docs/ARCHITECTURE.md` 作成・記載
 - [ ] Layer 0/1/2 の定義が明確（ディレクトリまたは comment で区別可能）
-- [ ] 循環依存 (trustDb ↔ settingsStore) を ADR に記録
+- [ ] 循環依存 (trustDb ⇔ settingsStore) を ADR に記録
 - [ ] 新規ファイル配置チェックリスト を docs に追加
 - [ ] Layer 違反の grep で検出（ドキュメント整合性テスト）
 - [ ] コードレビュー完了
@@ -225,7 +225,7 @@ grep "import.*trustDb" src/utils/storage/ src/utils/settings*
 
 ## 参考資料
 
-- [ADR 2026-07-13: Architecture Phase 2 Deep-Dig](../dev-docs/ADR/2026-07-13-architecture-phase2-deep-dig.md) — Panel abstraction も同様の layer pattern
+- [ADR 2026-07-13: Architecture Phase 2 Deep-Dig](../dev-docs/ADR/2026-07-13-architecture-phase2-deep-dig.md) ― Panel abstraction も同様の layer pattern
 - [Current utils/ structure](src/utils/)
 - [re-export barrel: storage.ts](src/utils/storage.ts)
 

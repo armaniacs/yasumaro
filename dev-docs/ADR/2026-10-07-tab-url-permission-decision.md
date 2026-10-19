@@ -1,4 +1,4 @@
-# ADR: tabs 権限なしで参照される tab.url の制約 — manifest 変更なしで nav trail を記録由来に再配線する裁定
+# ADR: tabs 権限なしで参照される tab.url の制約 ― manifest 変更なしで nav trail を記録由来に再配線する裁定
 
 ## ステータス
 採用
@@ -21,7 +21,7 @@ early return / 条件不成立という形で構造的に無効化され、ロ�
 
 例外として、`sender.tab.url`（`chrome.runtime.onMessage` の MessageSender）は
 tabs 権限なしでも読める: コンテンツスクリプトが注入済みのタブでは receiver が
-送信元フレームの URL を取得できる。本リポジトリはこれに依存している —
+送信元フレームの URL を取得できる。本リポジトリはこれに依存している ―
 VALID_VISIT の trust gate `isTabPageSender`（`src/background/handlers/senderTrust.ts:48-54`）
 が `sender.tab?.url` を要求し、VALID_VISIT 記録が全 http(s) ページで動作している。
 コンテンツスクリプトは `<all_urls>` で注入される（`entrypoints/content/index.ts:7`）。
@@ -51,11 +51,11 @@ nav trail の構造的矛盾: 唯一の writer（`navTrailTracker.ts:69-93` `onT
 `changeInfo.url` 依存で通常サイトで発火せず、reader（記録時の
 `resolveNavTrailFields` → `getNavSource`）はその map を読む。結果、通常サイトでは
 `navSourceUrl` / `searchQuery` は常に空。nav trail が機能するのは host permission
-のある origin（localhost / AI provider — 実ブラウジングの対象にならない）だけなので、
+のある origin（localhost / AI provider ― 実ブラウジングの対象にならない）だけなので、
 **実質的に死んだ機能**である。
 
 制約の文書化済み例は `src/background/regenerateContentFetcher.ts:11-13` のみ
-（「manifest has no `tabs` permission, so `tab.url` is unreadable for most origins —
+（「manifest has no `tabs` permission, so `tab.url` is unreadable for most origins ―
 reuse lookup would silently fail anyway」）。
 
 ## 関連するADR
@@ -75,7 +75,7 @@ reuse lookup would silently fail anyway」）。
 - **費用**: 2 つの副次機能（badge 補完、opt-in nav trail）のために全ユーザーに
   broad permission を要求する。manifest 権限変更は AGENTS.md の高リスク領域。
 
-### 案 B: manifest 変更なし — nav trail を VALID_VISIT 由来に再配線
+### 案 B: manifest 変更なし ― nav trail を VALID_VISIT 由来に再配線
 
 - **nav trail**: writer を VALID_VISIT 表面（記録成立時に `sender.tab.url` が読める
   唯一の経路）由来に再配線する。**語義変化**: `changeInfo.url` は遷移の即時点、

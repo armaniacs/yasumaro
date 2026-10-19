@@ -44,8 +44,8 @@ Yasumaro はかつて全ての閲覧履歴を `chrome.storage.local` の `savedU
 
 ## 関連する ADR
 
-- [OPFS永続化とFTS5全文検索の両立](./2026-06-17-opfs-fts5-coexistence.md) — SQLite への移行経緯
-- `docs/STORAGE_MODES.md` — フォールバックモードのユーザー向け説明
+- [OPFS永続化とFTS5全文検索の両立](./2026-06-17-opfs-fts5-coexistence.md) ― SQLite への移行経緯
+- `docs/STORAGE_MODES.md` ― フォールバックモードのユーザー向け説明
 
 ## 決定事項
 
@@ -139,10 +139,10 @@ Yasumaro はかつて全ての閲覧履歴を `chrome.storage.local` の `savedU
 ## 参照
 
 - [Chrome storage.local quota 仕様](https://developer.chrome.com/docs/extensions/reference/api/storage#property-local)
-- `src/utils/storage/savedUrlStore.ts` — `purgeLegacyStorage()` 実装（`src/utils/storage.ts`から再エクスポート）
-- `src/utils/storageUrls.ts` — `storageUrls.ts` エクスポート集約
-- `src/background/pipeline/steps/saveMetadataStep.ts` — 二重書き込みの主要箇所
-- `src/offscreen/storageFallback.ts` — FallbackStorage 実装
+- `src/utils/storage/savedUrlStore.ts` ― `purgeLegacyStorage()` 実装（`src/utils/storage.ts`から再エクスポート）
+- `src/utils/storageUrls.ts` ― `storageUrls.ts` エクスポート集約
+- `src/background/pipeline/steps/saveMetadataStep.ts` ― 二重書き込みの主要箇所
+- `src/offscreen/storageFallback.ts` ― FallbackStorage 実装
 
 ## 終了条件（M9: デュアルライト終了条件フラグ）
 

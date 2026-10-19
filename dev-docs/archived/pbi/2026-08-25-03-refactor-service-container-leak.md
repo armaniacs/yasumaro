@@ -1,8 +1,8 @@
-# PBI-03: createBackgroundServices DI漏れ解消 — 後半7件をcontainer登録
+# PBI-03: createBackgroundServices DI漏れ解消 ― 後半7件をcontainer登録
 
 優先度: 3位 / RICE 22.5 (Reach 7 × Impact 1.5 × Conf 75% / Effort 0.35w)
 種別: refactor
-依存: —
+依存: ―
 ファイル触接: `src/background/createBackgroundServices.ts:144-218`, `src/background/serviceContainer.ts`
 Effort: 0.35w (M)
 

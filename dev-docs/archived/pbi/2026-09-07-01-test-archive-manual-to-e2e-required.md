@@ -32,7 +32,7 @@ yasumaro の開発者として、`docs/MANUAL_TEST_ARCHIVE.md` の 🔴必須項
 
 `cutoffMsFromLocalDate`（`src/utils/archiveGuards.ts:61`）は `new Date(year, month-1, day, 23,59,59,999).getTime()` で**ローカル TZ 依存**の epoch を作る。worker 側 `resolveCutoffMs` はクライアントが送った `cutoffMs` と**完全一致**を要求する（`archiveCreateHandlers.ts`）。既存 `dashboard-archive.spec.ts:104` はページ内で同じ式を評価して `cutoffMs` を作っている。
 
-このため **TZ を変えると cutoff と seed の `created_at` が同じ方向にズレて、境界判定は常に成功する** — UTC/local 変換バグがあっても検出できない。
+このため **TZ を変えると cutoff と seed の `created_at` が同じ方向にズレて、境界判定は常に成功する** ― UTC/local 変換バグがあっても検出できない。
 
 正しい設計:
 - seed の `created_at` は**固定 epoch**（TZ に依存しない絶対値）で投入する
@@ -143,7 +143,7 @@ const dashboardMsg = (payload) => page.evaluate(async (p) =>
 
 - リクエスト: `{ subtype: 'archive_export', stagingName, offset, length, confirmToken, scopeHash }`（`dashboardSqliteProtocol.ts:70`）
 - レスポンス: `{ success: true, chunk: number[], nextOffset: number, total: number, done: boolean }`（`dashboardSqliteProtocol.ts:168`）
-- worker 実装: `archiveCreateHandlers.ts:252` `handleArchiveExport` — `navigator.storage.getDirectory()` → `getFileHandle(stagingName)` → `file.slice(offset, end).arrayBuffer()`。`assertRegisteredStagingName` で staging 名の登録チェックあり
+- worker 実装: `archiveCreateHandlers.ts:252` `handleArchiveExport` ― `navigator.storage.getDirectory()` → `getFileHandle(stagingName)` → `file.slice(offset, end).arrayBuffer()`。`assertRegisteredStagingName` で staging 名の登録チェックあり
 - **チャンク結合**: `done` になるまで `offset = nextOffset` で回し、全 `chunk`（`number[]`）を `Uint8Array` に連結 → `Buffer` 化 → SQLite に渡す。`archiveDbReader.ts` はこのループを実装
 
 ### アーカイブ .db のスキーマ（R1 の照合対象）
@@ -174,7 +174,7 @@ dashboardMsg({ subtype: 'import', confirmToken, rows: [{ url, title, summary, cr
 - worker（`opfsWorker.ts` / `archiveCreateHandlers.ts`）内で `import.meta.env.DEV` または明示的な `globalThis.__ARCHIVE_TEST_HOOKS__` を条件にフックを読む
 - WXT のビルドは本番で `import.meta.env.DEV === false` に置換 → デッドコード削除される
 - DoD で `npm run build` 後の `dist/chromium-mv3` を `grep -r '__ARCHIVE_TEST'` してヒット 0 を確認
-- E2E からフックを有効化する手段: 拡張ロード時の `args` に渡せないので、`sw.evaluate` で offscreen へ設定メッセージを送るか、テスト用に `import.meta.env.DEV` がそもそも E2E ビルドで true になっているか確認（`npm run build` は本番モード。E2E は `dist/chromium-mv3` を読むため、**E2E 専用の dev ビルドを別途用意する必要があるかもしれない** — 着手時に `wxt.config.ts` のビルドモードを確認）
+- E2E からフックを有効化する手段: 拡張ロード時の `args` に渡せないので、`sw.evaluate` で offscreen へ設定メッセージを送るか、テスト用に `import.meta.env.DEV` がそもそも E2E ビルドで true になっているか確認（`npm run build` は本番モード。E2E は `dist/chromium-mv3` を読むため、**E2E 専用の dev ビルドを別途用意する必要があるかもしれない** ― 着手時に `wxt.config.ts` のビルドモードを確認）
 
 ## 実装アプローチ
 
@@ -183,7 +183,7 @@ dashboardMsg({ subtype: 'import', confirmToken, rows: [{ url, title, summary, cr
 
 ## 見積もり
 
-2〜3pt（要チームでの見積もり）— SQLite リーダー選定 + `archiveDbReader` ヘルパ + TZ マトリクスの正しい設計 + R4 ユニットテスト。DEV ガード機構は R4 を E2E で担保する場合のみ必要（+1pt）で、まず vitest 層で済ませる想定
+2〜3pt（要チームでの見積もり）― SQLite リーダー選定 + `archiveDbReader` ヘルパ + TZ マトリクスの正しい設計 + R4 ユニットテスト。DEV ガード機構は R4 を E2E で担保する場合のみ必要（+1pt）で、まず vitest 層で済ませる想定
 
 ## 技術的考慮事項
 
@@ -253,11 +253,11 @@ find . -path '*/opfsWorker/__tests__/*archiveCreate*' -o -name 'archiveCreate*.t
 
 ### 産出物
 
-- `testDir/e2e/fixtures/archiveDbReader.ts` — チャンクループ（`collectArchiveChunks`）+ 結合 + better-sqlite3 open。02（Y3）・03（R5）で再利用
-- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` — `dashboardMsg` / `scopeHash` / `tokenFor`（id バインド対応）/ `poll` / `localEndOfDayMs`。dashboard-archive.spec.ts も共通ヘルパに移行済み
-- `testDir/e2e/archive-required-verification.spec.ts` — R1〜R3（R2 は TZ 3種 × 固定epoch seed + 文字列 cutoff）
-- `testDir/__tests__/archiveDbReader.test.ts` — チャンク結合ロジック（境界・空ファイル・nextOffset 停滞・total 不一致）11ケース
-- `src/offscreen/__tests__/archiveSchemaNoFts.test.ts` — アーカイブスキーマ定数の FTS 非存在（文字列 + 実SQLite実行）
+- `testDir/e2e/fixtures/archiveDbReader.ts` ― チャンクループ（`collectArchiveChunks`）+ 結合 + better-sqlite3 open。02（Y3）・03（R5）で再利用
+- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` ― `dashboardMsg` / `scopeHash` / `tokenFor`（id バインド対応）/ `poll` / `localEndOfDayMs`。dashboard-archive.spec.ts も共通ヘルパに移行済み
+- `testDir/e2e/archive-required-verification.spec.ts` ― R1〜R3（R2 は TZ 3種 × 固定epoch seed + 文字列 cutoff）
+- `testDir/__tests__/archiveDbReader.test.ts` ― チャンク結合ロジック（境界・空ファイル・nextOffset 停滞・total 不一致）11ケース
+- `src/offscreen/__tests__/archiveSchemaNoFts.test.ts` ― アーカイブスキーマ定数の FTS 非存在（文字列 + 実SQLite実行）
 
 ### R4 について
 

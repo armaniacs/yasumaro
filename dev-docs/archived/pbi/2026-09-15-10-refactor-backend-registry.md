@@ -1,4 +1,4 @@
-# PBI: createBackend のレジストリ化 — backend 追加を2箇所編集に
+# PBI: createBackend のレジストリ化 ― backend 追加を2箇所編集に
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -14,9 +14,9 @@
 
 ## 背景（診断結果）
 
-- `src/offscreen/backendResolver.ts:51-80` — `createBackend` の switch（opfs/idb/fallback/none）がバックエンド毎の case を持つ
+- `src/offscreen/backendResolver.ts:51-80` ― `createBackend` の switch（opfs/idb/fallback/none）がバックエンド毎の case を持つ
 - バックエンド追加時の6編集箇所: BackendType union / createBackend switch / sqliteEngineHost の状態フィールド / init 順序 / 再解決経路 / worker factory 配線（opfsWorkerProxy:49-53）
-- 対照: queryPlan の SECTIONS 派生や archiveWireTable は既にテーブル化済み — 同じ規律を backend にも
+- 対照: queryPlan の SECTIONS 派生や archiveWireTable は既にテーブル化済み ― 同じ規律を backend にも
 
 ## 実装ガイド
 
@@ -29,12 +29,12 @@
      none: () => new NoopBackend(),
    } satisfies Record<BackendType, (context: SqliteEngineHost) => StorageBackend>;
    ```
-2. **第二段階（任意・別判断）**: `setOpfsWorkerFactory` のグローバルを Host constructor 注入に — 本 PBI では scope 外とし、Factory 注入の追加のみ
+2. **第二段階（任意・別判断）**: `setOpfsWorkerFactory` のグローバルを Host constructor 注入に ― 本 PBI では scope 外とし、Factory 注入の追加のみ
 3. **回帰**: backendResolver / sqliteEngineHost 関連テスト全件 + 実機の storage fallback 経路
 
 ### 触ってはいけないもの
 
-- `setOpfsWorkerFactory` の API（PBI 09-02 で Firefox 移植のために導入 — 形は不変）
+- `setOpfsWorkerFactory` の API（PBI 09-02 で Firefox 移植のために導入 ― 形は不変）
 - opfsCapabilities.ts の実行時 fallback 構造
 
 ## BDD受け入れシナリオ

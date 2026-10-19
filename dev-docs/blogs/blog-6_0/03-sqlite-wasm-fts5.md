@@ -1,5 +1,5 @@
 ---
-title: "Chrome拡張の中で SQLite + FTS5 を動かす技術 — @subframe7536/sqlite-wasm で日本語全文検索を実現した話"
+title: "Chrome拡張の中で SQLite + FTS5 を動かす技術 ― @subframe7536/sqlite-wasm で日本語全文検索を実現した話"
 emoji: "🗄️"
 type: "tech"
 topics: ["sqlite", "wasm", "chrome拡張機能", "fts5", "javascript"]
@@ -99,7 +99,7 @@ FTS5 のデフォルトトークナイザ `unicode61` では、日本語（CJK�
 function sanitizeFtsTerm(query: string): string {
   // 英数字・CJK・空白のみ許可（FTS5 演算子注入対策）
   const bare = query
-    .replace(/[^A-Za-z0-9぀-ゟ゠-ヿ一-鿿㐀-䶿\s]/g, ' ')
+    .replace(/[^A-Za-z0-9\u3040-\u309f\u30a0-\u30ff\u4e00-\u9fff\u3400-\u4dbf\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 

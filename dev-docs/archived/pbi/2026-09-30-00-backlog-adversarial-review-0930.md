@@ -1,6 +1,6 @@
 # Backlog: adversarial code review ラウンド(2026-09-30)
 
-出典: adversarial code review(対象: encryption 関連モジュール一式 — `encryptionSession.ts` / `apiKeyTransition.ts` / `masterPassword.ts` 2種 / `src/utils/crypto/*` / `SettingsRepository.ts` / `settingsMigration.ts`)
+出典: adversarial code review(対象: encryption 関連モジュール一式 ― `encryptionSession.ts` / `apiKeyTransition.ts` / `masterPassword.ts` 2種 / `src/utils/crypto/*` / `SettingsRepository.ts` / `settingsMigration.ts`)
 
 検証ステータス: 発見フェーズで 25 件の指摘が出た後、重大度上位を反証エージェントで検証し、主要な到達可能性の主張は配線コードを直接読んで確認済み。反証で却下された指摘は末尾に記録。
 
@@ -10,7 +10,7 @@ RICE スコア = (Reach × Impact × Confidence) / Effort
 - Reach: 10=全ユーザー(APIキー保持者)〜1=稀な条件にしか晒されない層
 - Impact: 3=データ損失・乗っ取り級 / 2=大きい / 1=中 / 0.5=小
 - Confidence: 1.0=反証済みで確定 / 0.8=配線確認済みだが実行時未再現
-- Effort: 0.25≈1 SP / 0.5≈2 SP / 1.0≈3 SP / 1.5≈5 SP の相対値
+- Effort: 0.25≒1 SP / 0.5≒2 SP / 1.0≒3 SP / 1.5≒5 SP の相対値
 
 | 順 | PBI | type | R×I×C/E | スコア | 根拠 |
 |---|------|------|---------|--------|------|
@@ -36,8 +36,8 @@ RICE スコア = (Reach × Impact × Confidence) / Effort
 
 ## 反証で却下された指摘(誤検出の記録)
 
-- `isEncryptionLocked()` が SW 再起動直後に常に false — 因果が誤り。`isMasterPasswordRequired = true`(:127)は throw 前に実行されるため、最初のキー導出試行後に true になる。本番呼び出しもゼロ。
-- r2 テストが change モード UI バグを固定 — fixture に `hidden` クラスが最初から無く、assertion(:143)は production 動作と無関係に常に通る空テスト。バグの固定ではない(空振りであること自体は順位 10 の PBI で扱う)。
-- エクスポート `iterations:1` でパスワード総当たりが可能 — ciphertext 自体は 600k 固定で暗号化されており、改変 iterations は KDF 候補の順序にしか影響しない。成立するのは import ハング(DoS)のみ。
-- removeMasterPassword 中断で「永久に読めない」状態 — `removeMasterPassword` 再実行で全 field が `alreadyMigrated` と判定され自己修復する。恒久破壊ではない。
-- PENDING_SALT 残置で「永久 stranding」— 同じ失敗パスワードを再入力すれば `alreadyMigrated` 経由で回復する。恒久喪失ではない(詰まりは実在)。
+- `isEncryptionLocked()` が SW 再起動直後に常に false ― 因果が誤り。`isMasterPasswordRequired = true`(:127)は throw 前に実行されるため、最初のキー導出試行後に true になる。本番呼び出しもゼロ。
+- r2 テストが change モード UI バグを固定 ― fixture に `hidden` クラスが最初から無く、assertion(:143)は production 動作と無関係に常に通る空テスト。バグの固定ではない(空振りであること自体は順位 10 の PBI で扱う)。
+- エクスポート `iterations:1` でパスワード総当たりが可能 ― ciphertext 自体は 600k 固定で暗号化されており、改変 iterations は KDF 候補の順序にしか影響しない。成立するのは import ハング(DoS)のみ。
+- removeMasterPassword 中断で「永久に読めない」状態 ― `removeMasterPassword` 再実行で全 field が `alreadyMigrated` と判定され自己修復する。恒久破壊ではない。
+- PENDING_SALT 残置で「永久 stranding」― 同じ失敗パスワードを再入力すれば `alreadyMigrated` 経由で回復する。恒久喪失ではない(詰まりは実在)。

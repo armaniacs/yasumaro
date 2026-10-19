@@ -48,7 +48,7 @@ graphify調査により、`aiDuration` は本設計が対象とする popup 表�
 - `src/dashboard/historyEntryRow.ts`: 履歴一覧の各行で「処理時間 X.X秒」として表示（保存済みSQLite値を参照するため、保存時点で正しい値であれば自動的に正しく表示される）
 - `src/background/migrationService.ts`: 旧データ移行時に `entry.aiDuration` をそのままコピー（既存データの移行ロジックであり、今回の計測ロジック修正の影響を受けない）
 
-これらは全て「`context.aiDuration` が正しい実測値であること」に依存しているだけで、本設計の Changes #1・#2（計測ロジックの修正）が適用されれば連鎖的に正しくなる。Changes #3〜#6 は popup↔background 間の誤った値の伝播経路（不要になった中継）を除去するものであり、下流の保存・表示ロジックには影響しない。
+これらは全て「`context.aiDuration` が正しい実測値であること」に依存しているだけで、本設計の Changes #1・#2（計測ロジックの修正）が適用されれば連鎖的に正しくなる。Changes #3〜#6 は popup⇔background 間の誤った値の伝播経路（不要になった中継）を除去するものであり、下流の保存・表示ロジックには影響しない。
 
 ### Target State
 
@@ -208,7 +208,7 @@ let context: RecordingContext = {
 
 - `src/messaging/types.ts`: `RecordingData.aiDuration`（コメント「alreadyProcessed 時にプレビューから伝播させる」ごと削除）
 - `src/background/messageTypes.ts`: `SaveRecordMessage.payload.aiDuration`
-- `src/popup/mainTypes.ts`: `PreviewResponse.aiDuration` — 唯一の参照元は `recordCurrentPage.ts:329`（今回削除対象）のみと確認済みのため、あわせて削除する
+- `src/popup/mainTypes.ts`: `PreviewResponse.aiDuration` ― 唯一の参照元は `recordCurrentPage.ts:329`（今回削除対象）のみと確認済みのため、あわせて削除する
 
 ---
 

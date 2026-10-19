@@ -1,4 +1,4 @@
-# PBI: web_accessible_resources 露出最小化 — fingerprinting対策
+# PBI: web_accessible_resources 露出最小化 ― fingerprinting対策
 
 ## ユーザーストーリー
 拡張機能ユーザーとして、content scriptが公開するリソースが必要最小限に絞られてほしい、なぜなら `web_accessible_resources` が `http://*/* https://*/*` の全サイトに `content-extractor.js` を晒すと、任意サイトから拡張機能の存在をfingerprintingでき、標的型攻撃の踏み台になるから
@@ -16,19 +16,19 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — content scriptの抽出は従来通り動作する
+Scenario: 正常系 ― content scriptの抽出は従来通り動作する
   Given 拡張機能がインストールされ、任意のhttpsページを開いている
   When content script が chrome.runtime.getURL('content-extractor.js') をfetchする
   Then スクリプトが正常にロードされ、ページ内容の抽出が成功する
   And popupの履歴にページが記録される
 
-Scenario: 境界ケース — 不要なリソースは公開されない
+Scenario: 境界ケース ― 不要なリソースは公開されない
   Given 拡張機能のmanifestを検査する
   When web_accessible_resources.resources を列挙する
   Then content-extractor.js 以外（例: icon48.png）が不要なら含まれていない
   And 必要ならmatchesは最小限のオリジンに限定されている
 
-Scenario: エラーケース — 任意サイトからの直接fetchはブロックされる（将来の絞り込み時）
+Scenario: エラーケース ― 任意サイトからの直接fetchはブロックされる（将来の絞り込み時）
   Given 将来matchesを特定オリジンに絞った場合
   When 許可外オリジンから chrome-extension://<id>/content-extractor.js をfetchする
   Then CSP/web_accessible_resources によりブロックされる
@@ -59,7 +59,7 @@ Scenario: エラーケース — 任意サイトからの直接fetchはブロッ
 - **Red-Green-Refactor**: TDD
 
 ## 見積もり
-1pt（要チーム見積もり）— 数時間の小規模修正だがE2Eでのfingerprinting検証を含む
+1pt（要チーム見積もり）― 数時間の小規模修正だがE2Eでのfingerprinting検証を含む
 
 ## 技術的考慮事項
 - 依存関係: なし。ただし01/03/04/05/06と同ファイルのため同バッチで一括レビュー推奨

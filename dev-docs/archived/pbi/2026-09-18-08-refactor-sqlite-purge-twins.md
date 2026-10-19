@@ -12,9 +12,9 @@ backlog: [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic
 
 `src/offscreen/sqliteMessageHandlers.ts` に以下の双子がある（着手時に行番号を再確認すること）：
 
-1. `handlePurge`（174-185行目付近）と `handleContentPurge`（187-196行目付近） — `planPurge` の fail-closed + purge 実行が複製され、`includeStarred` 引数の有無のみが差異
-2. `handleDelete`（118-122行目付近）と `handleToggleStar`（124-128行目付近） — `Number(payload.id)` + 単一 repo 呼び出しの形が複製
-3. `handleQuery`（72-76行目付近）と `handleSearch`（99-103行目付近） — plan して `sqliteQuery` に渡す形が複製
+1. `handlePurge`（174-185行目付近）と `handleContentPurge`（187-196行目付近） ― `planPurge` の fail-closed + purge 実行が複製され、`includeStarred` 引数の有無のみが差異
+2. `handleDelete`（118-122行目付近）と `handleToggleStar`（124-128行目付近） ― `Number(payload.id)` + 単一 repo 呼び出しの形が複製
+3. `handleQuery`（72-76行目付近）と `handleSearch`（99-103行目付近） ― plan して `sqliteQuery` に渡す形が複製
 
 対応方針: `runPlannedPurge(payload, includeStarred?)`・`runById(payload, fn)`・`runPlannedQuery(payload, planner)` の helper に集約する。応答 shape・error 文言・fail-closed 順序は不変。archive dispatch テーブルには触れない。
 

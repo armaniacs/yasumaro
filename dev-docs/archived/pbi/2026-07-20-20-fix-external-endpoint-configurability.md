@@ -72,7 +72,7 @@ Feature: External endpoint configurability
 3pt（fetch 統合 + 2設定追加 + UI + テスト）
 
 ## 副作用
-🟡 軽微 — 新しい設定キー追加と fetch 経路変更。ただしデフォルト値を維持するため既存ユーザーへの影響は最小。
+🟡 軽微 ― 新しい設定キー追加と fetch 経路変更。ただしデフォルト値を維持するため既存ユーザーへの影響は最小。
 
 ## 落とし穴
 - `fetchWithTimeout` は `allowedUrls` チェックを行うが、Obsidian の `127.0.0.1` / `localhost` は許可リストに含まれているか確認・追加が必要。

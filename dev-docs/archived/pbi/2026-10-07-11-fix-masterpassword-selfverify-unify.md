@@ -13,12 +13,12 @@
 
 ## 背景（file:line 現状）
 
-- auth-modal 経路: `src/utils/masterPassword.ts:117-127` — rehash が `chrome.storage.local.set({ master_password_hash: newHash })`（生文字列キー・単一フィールド・KDF iterations 更新なし・非原子）
-- canonical: `src/utils/storage/encryptionSession.ts:689-695` — `{ [StorageKeys.MASTER_PASSWORD_HASH]: newHash, [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS }` を原子に書く
+- auth-modal 経路: `src/utils/masterPassword.ts:117-127` ― rehash が `chrome.storage.local.set({ master_password_hash: newHash })`（生文字列キー・単一フィールド・KDF iterations 更新なし・非原子）
+- canonical: `src/utils/storage/encryptionSession.ts:689-695` ― `{ [StorageKeys.MASTER_PASSWORD_HASH]: newHash, [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS }` を原子に書く
 - 3 つ目の自己検証: `encryptionSession.ts:796-808`（removeMasterPasswordUnlocked、stored-iterations 定数時間経路）
 - 定数時間経路は stored iterations を専用使用: `src/utils/crypto/primitives.ts:493-498` → hash を ENVELOPE_ITERATIONS で再生成しつつ stored count が古いままだと次の verify が正しいパスワードを拒否し得る
-- 浅い adapter: `src/utils/masterPasswordUiCore.ts:48-52`（`buildGetStorageFn()` — deletion test で即消える）
-- 宣言: `dev-docs/DESIGN_SPECIFICATIONS.md:100` — keyring は `storage/encryptionSession.ts`
+- 浅い adapter: `src/utils/masterPasswordUiCore.ts:48-52`（`buildGetStorageFn()` ― deletion test で即消える）
+- 宣言: `dev-docs/DESIGN_SPECIFICATIONS.md:100` ― keyring は `storage/encryptionSession.ts`
 
 ## BDD受け入れシナリオ
 

@@ -12,8 +12,8 @@ backlog: [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic
 
 送信の単一 seam（`src/messaging/messageTransport.ts` の MessageTransport L51-85行目付近：protocol version 付与・retryable 分類・backoff）があるのに、dashboard 経路だけが外側に残っている（着手時に行番号を再確認すること）：
 
-1. `src/messaging/dashboardGateway.ts` の 36-41行目付近 — `sendDashboardRaw` が `chrome.runtime.sendMessage` 直呼び + 自前10秒 race（`DASHBOARD_SQLITE_TIMEOUT`）
-2. 116-153行目付近 — `callDashboard` の自前 retry loop（`backoffDelayMs` multiplier 1）。Transport 側は multiplier 2 で別政策
+1. `src/messaging/dashboardGateway.ts` の 36-41行目付近 ― `sendDashboardRaw` が `chrome.runtime.sendMessage` 直呼び + 自前10秒 race（`DASHBOARD_SQLITE_TIMEOUT`）
+2. 116-153行目付近 ― `callDashboard` の自前 retry loop（`backoffDelayMs` multiplier 1）。Transport 側は multiplier 2 で別政策
 
 対応方針: `sendDashboardRaw` を注入可能な TransportPort 経由にし、既定 port が現行の timeout 付き send を保つ。timeout 値（10s）・confirmToken 意味論・retry 回数・応答 shape は不変。`MessageTransport` 自体は変えない。logging は PBI 06 の範囲であり触らない。
 

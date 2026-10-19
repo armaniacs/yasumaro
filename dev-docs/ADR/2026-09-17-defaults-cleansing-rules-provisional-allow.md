@@ -1,4 +1,4 @@
-# ADR: storage/defaults.ts → aiSummaryCleaner/rules.ts の暫定許可の裁定 — 値導出のみの Layer 1→2 辺として継続
+# ADR: storage/defaults.ts → aiSummaryCleaner/rules.ts の暫定許可の裁定 ― 値導出のみの Layer 1→2 辺として継続
 
 ## ステータス
 採用
@@ -25,12 +25,12 @@
 一体である。
 
 検討した代替案（いずれも今回は不採用）:
-1. 純粋定数の抽出 — `CLEANSING_RULES`・`THRESHOLD_RULES` のテーブル部だけを別モジュール
+1. 純粋定数の抽出 ― `CLEANSING_RULES`・`THRESHOLD_RULES` のテーブル部だけを別モジュール
    に切り出す案。`rules.ts` 自体は `stripCore.js`・`stripExtended.js`・`selectorRules.js`
    の strip 関数群を静的に import しており（`rules.ts:22-37`）、モジュール全体は正当に
    Layer 2 である。テーブルとロジックの分割は単なる移動ではなく依存設計の変更であり、
    別リファクタの予算が必要。
-2. 再分類 — テーブル行だけ Layer 0/1 と見なす案。`aiSummaryCleaner/` はディレクトリ単位で
+2. 再分類 ― テーブル行だけ Layer 0/1 と見なす案。`aiSummaryCleaner/` はディレクトリ単位で
    Layer 2 に分類されており（`LAYERS.md`・`LAYER2_MODULES` の `aiSummaryCleaner/` エントリ）、
    ファイル1枚の切り出しは分類単位と矛盾する。ディレクトリ分割（テーブル層とロジック層の
    分離）とセットでなければ正当化できない。
@@ -69,5 +69,5 @@
 ## 参照
 - PBI: `pbi/2026-09-17-14-refactor-layer-list-single-source.md`
 - 5 Whys: `/tmp/whywhy/pbi14-layer-list-single-source.md`
-- `pbi/2026-08-09-20` — 32 デフォルト手写しの 7 ルール drift incident
-- `dev-docs/ADR/2026-03-20-default-settings-single-source.md` — DEFAULT_SETTINGS 単一ソース化
+- `pbi/2026-08-09-20` ― 32 デフォルト手写しの 7 ルール drift incident
+- `dev-docs/ADR/2026-03-20-default-settings-single-source.md` ― DEFAULT_SETTINGS 単一ソース化

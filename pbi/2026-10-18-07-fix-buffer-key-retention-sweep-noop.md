@@ -22,7 +22,7 @@ security-audit run-2 の needs_validation リード。fingerprint: `local-export
 
 ### なぜ「テストは緑」なのか
 
-`src/background/__tests__/dailyPurgeHandler.test.ts:44-55` のストレージモックが「文字列引数なら完全一致キー＋その文字列を接頭辞に持つ全キーを返す」という prefix セマンティクスを**捏造**している（コメント: "Chrome returns the exact key plus every key sharing it as a prefix — the sweep relies on the prefix half of that"）。この捏造があるため、`dailyPurgeHandler.test.ts` の sweep テストは本番の no-op を検出できない。
+`src/background/__tests__/dailyPurgeHandler.test.ts:44-55` のストレージモックが「文字列引数なら完全一致キー＋その文字列を接頭辞に持つ全キーを返す」という prefix セマンティクスを**捏造**している（コメント: "Chrome returns the exact key plus every key sharing it as a prefix ― the sweep relies on the prefix half of that"）。この捏造があるため、`dailyPurgeHandler.test.ts` の sweep テストは本番の no-op を検出できない。
 
 一方、同じ API を flush 側で正しくモックしている `src/background/__tests__/localMarkdownExportCore.test.ts:95-103` は exact-key セマンティクス（要求されたキーだけ、prefix 分岐なし）で、**同じ `chrome.storage.local.get` に対して2つの矛盾するセマンティクスが同一リポジトリ内に並存している**。加えて `src/background/__tests__/localExportRetention.test.ts:19-35` にも同じ prefix ブランチが複製されている。
 
@@ -30,7 +30,7 @@ security-audit run-2 の needs_validation リード。fingerprint: `local-export
 
 本リポジトリ自身の `src/background/localMarkdownExportCore.ts:36-42` に設計ノートが残っている:
 
-> Deliberately no-arg (fetch all of storage): the daily buffer keys this loop looks for (`local_export_YYYY-MM-DD`, DAILY_BUFFER_PREFIX) are dynamic and never enumerated in StorageKeys, so a keyed get() cannot find them — see 195ff96 (keyed get(), broke this feature entirely) and its revert.
+> Deliberately no-arg (fetch all of storage): the daily buffer keys this loop looks for (`local_export_YYYY-MM-DD`, DAILY_BUFFER_PREFIX) are dynamic and never enumerated in StorageKeys, so a keyed get() cannot find them ― see 195ff96 (keyed get(), broke this feature entirely) and its revert.
 
 `195ff96`「chrome.storage.local.get の全件取得をキー指定取得に変更」で keyed get が本日付エクスポート機能を丸ごと壊し、あとで revert されている（履歴: `57e26998 docs: no-arg get()が意図的である理由をコメントで明記` で意図が明文化された）。**同じパターンを sweep 側が再導入した**ため、これは再発である。
 
@@ -60,7 +60,7 @@ Scenario: 今日・昨日・窓内・日付形式でないキー・prefix 外の
   And 今日・昨日・窓内のキーは flush 自身のスケジュールで持ちうるため必ず残る
   And 日付として解釈できないキーと prefix 外のキーは無傷で残る
 
-Scenario: 回帰ガード — プラットフォーム契約に忠実な exact-key モックでも green になる
+Scenario: 回帰ガード ― プラットフォーム契約に忠実な exact-key モックでも green になる
   Given ストレージモックは chrome.storage.local.get のプラットフォーム契約どおりに振る舞う
         （文字列引数 = 完全一致キーの単一参照、prefix 一致は返さない）
         つまり localMarkdownExportCore.test.ts:95-103 と同じセマンティクスであり、
@@ -105,7 +105,7 @@ flush 側 `src/background/__tests__/localMarkdownExportCore.test.ts` の exact-k
 
 | ファイル | 行 | 役割 |
 |---|---:|---|
-| `src/background/dailyPurgeHandler.ts` | 63 | 破損点。`get(DAILY_BUFFER_PREFIX)` — prefix 仮定の keyed get |
+| `src/background/dailyPurgeHandler.ts` | 63 | 破損点。`get(DAILY_BUFFER_PREFIX)` ― prefix 仮定の keyed get |
 | `src/background/dailyPurgeHandler.ts` | 73-80 | フィルタ本体（正しい仕様だが入力が空で未実行） |
 | `src/background/dailyPurgeHandler.ts` | 82-85 | `return 0` で短絡 / `remove` への到達不能点 |
 | `src/background/dailyPurgeHandler.ts` | 48 | 「唯一の回収経路」だという前提で書かれた doc コメント |

@@ -1,4 +1,4 @@
-# PBI: SettingsRepository の採用 — パネルの生キャスト読み取りを型付き seam へ移行
+# PBI: SettingsRepository の採用 ― パネルの生キャスト読み取りを型付き seam へ移行
 
 ## ユーザーストーリー
 開発者として、ダッシュボードパネルの設定読み取りを `SettingsRepository`（既存 deep module）経由に移行したい、なぜなら `(settings[StorageKeys.X] as string) || 'default'` のキャストとインラインデフォルトが呼び出し箇所ごとに複製され、deep module が存在するのに friction が残り続けているから
@@ -26,7 +26,7 @@ Scenario: InMemory adapter でテストできる
   When パネルの view model 構築関数が repository 経由で読む
   Then chrome.storage モックなしでテストが完結する
 
-Scenario: エラー — storage 失敗時は現行と同一の挙動
+Scenario: エラー ― storage 失敗時は現行と同一の挙動
   Given chrome.storage.local.get が例外を投げる
   When getMany が失敗する
   Then 呼び出し側の catch が現行の getSettings 失敗時と同じエラー処理を行う（新たなエラー分岐を導入しない）
@@ -53,13 +53,13 @@ Scenario: エラー — storage 失敗時は現行と同一の挙動
 - defaults 適用の優先順位（seeded 値 > schema default）
 
 ## 見積もり
-3pt（要チームでの見積もり）— getMany 追加は小さいが、パネル横断の移行とキャスト撤去のレビューが主コスト
+3pt（要チームでの見積もり）― getMany 追加は小さいが、パネル横断の移行とキャスト撤去のレビューが主コスト
 - **注意**: 本 PBI は PBI 2026-08-22-02（diagnosticsPanel 深掘り）完了後推奨
   - PBI 02 完了でディ agnosticsPanel の 20キャストが既に collector 側に移動
   - 本 PBI では collector 内 1箇所の置換のみで済む
 
 ## 技術的考慮事項
-- 依存関係: PBI 02 完了後推奨（diagnosticsPanel の20キャストが collector 側に移動済みとなり、本 PBI では collector 内1箇所だけの置換でよくなる）。pass 1 PBI 04（barrel 経路）とは独立だが同一ファイル群を触るため競合注意 — 本 PBI を先にし、import 経路は PBI 04 で機械的に一括置換するのが競合最小
+- 依存関係: PBI 02 完了後推奨（diagnosticsPanel の20キャストが collector 側に移動済みとなり、本 PBI では collector 内1箇所だけの置換でよくなる）。pass 1 PBI 04（barrel 経路）とは独立だが同一ファイル群を触るため競合注意 ― 本 PBI を先にし、import 経路は PBI 04 で機械的に一括置換するのが競合最小
 - テスタビリティ: InMemoryStorageAdapter が既存（`src/utils/storage/SettingsRepository.ts`）。getMany も同 adapter 越しにテスト
 - 非機能要件: 設定の永続化形式・マイグレーション・暗号化挙動は不変。読み取り経路の変更のみ
 

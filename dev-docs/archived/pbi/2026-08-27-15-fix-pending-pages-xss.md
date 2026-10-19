@@ -20,13 +20,13 @@ pendingPagesのStored XSSを解消し、攻撃者が保存した悪意あるURL�
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 正常URLはそのまま表示・選択できる
+Scenario: ハッピーパス ― 正常URLはそのまま表示・選択できる
   Given pendingPagesに { url: "https://example.com/page", title: "Example" } が保存されている
   When popupでpendingPagesリストを開く
   Then リストにURLがテキストとして表示され、checkboxのvalueが "https://example.com/page" として保持される
   And  スクリプトは実行されない
 
-Scenario: 攻撃 — 悪意あるURLはエスケープされスクリプト実行されない
+Scenario: 攻撃 ― 悪意あるURLはエスケープされスクリプト実行されない
   Given pendingPagesに { url: "\"><img src=x onerror=alert(1)>", title: "x" } が保存されている
   When popupでpendingPagesリストを開く
   Then DOM上で <img> タグは生成されず、属性値はエスケープされた文字列として表示される

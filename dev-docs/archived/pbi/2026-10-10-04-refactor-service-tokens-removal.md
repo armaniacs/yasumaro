@@ -11,9 +11,9 @@
 
 ## 背景（現状）
 
-- `src/background/serviceContainer.ts:14-38` — `ServiceTokens`（21キー const）+ `ServiceKey = keyof typeof ServiceTokens | (string & {})`。production 参照は `ServiceKey` 型定義のみで、`(string & {})` により実質 string（型安全性に寄与ゼロ）
-- `src/background/__tests__/serviceContainer-coverage.test.ts` — 内容の整合を検査するテストが存在する可能性
-- DESIGN_SPECIFICATIONS.md §2.2 — compositionManifest について「**there is no separate register() block, keys union, or subset-check type to keep in sync**」と明言
+- `src/background/serviceContainer.ts:14-38` ― `ServiceTokens`（21キー const）+ `ServiceKey = keyof typeof ServiceTokens | (string & {})`。production 参照は `ServiceKey` 型定義のみで、`(string & {})` により実質 string（型安全性に寄与ゼロ）
+- `src/background/__tests__/serviceContainer-coverage.test.ts` ― 内容の整合を検査するテストが存在する可能性
+- DESIGN_SPECIFICATIONS.md §2.2 ― compositionManifest について「**there is no separate register() block, keys union, or subset-check type to keep in sync**」と明言
 - drift 実証: `pendingSqliteQueue` / `offlineNetworkQueue` / `sessionAlarmService` / `deferredMigrationRunner` / `alarmRegistry` の 5 キーが ServiceTokens 未収録で manifest には存在
 
 「keep in sync する union」が sync されずに腐った実例。dead seam + 規約逸脱。
@@ -42,7 +42,7 @@ Scenario: コンテナの動作は変更前と同一
 
 ## テスト戦略
 
-- unit: `src/background/__tests__/serviceContainer*.test.ts` — リテラルキー置換（既に `c.register('counter', ...)` 等のリテラル併用済み）
+- unit: `src/background/__tests__/serviceContainer*.test.ts` ― リテラルキー置換（既に `c.register('counter', ...)` 等のリテラル併用済み）
 - 挙動不変: register/resolve/override の意味論は変更しない
 
 ## 見積もり

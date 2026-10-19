@@ -1,4 +1,4 @@
-# Checking Team レビュー — アーカイブPBI 3件（設計ドキュメント）
+# Checking Team レビュー ― アーカイブPBI 3件（設計ドキュメント）
 
 - 対象: pbi/2026-09-06-01-feat-record-archive.md / -02-feat-archive-temp-open.md / -03-feat-archive-restore.md
 - 実行: 標準レビュー（Wave1 5観点 + Wave2 4クラスタ16観点 + Wave3 Test Experts）
@@ -76,20 +76,20 @@
 
 ## Medium 指摘事項
 
-- [Medium] dashboard の OPFS 直アクセスは Layer 単方向依存を破る（Gateway バイパス）— System Architect。**コンフリクト調整: Architect の判断を優先**し、第1経路は offscreen 経由読み出し（handleBackup の getFile 流用・チャンク分割）。dashboard 直OPFS（archiveStagingService）は F-1 スパイク対象から「将来の最適化候補」に降格し、スパイク合格基準に「Gateway 経由フォールバック動作」を追加
-- [Medium] 12 subtype の一括追加は第4グループ（`ARCHIVE_SUBTYPES` + createArchiveHandler）に分離すべき（stateless でないため maintenanceBatchHandler に混ぜない。GROUPED_SUBTYPES assert を4分割）— System Architect
-- [Medium] archive_query の per-subtype 上限検証（query 1_000字 / limit 500 / offset 非負 / LIKE特殊文字のサーバ側エスケープ）。meta 由来表示は textContent 限定 — Blue Team
-- [Medium] ステージング掃除のSSOT: `sweepOrphanStagings(exclude: Set<string>)` 1関数に集約し、呼出点は起動時・次回実行時・明示cleanupの3点のみ。ハンドラの finally は `releaseStaging(name)` に統一 — Maintainability
-- [Medium] table_xinfo 照合ポリシーの仕様化: 不足列は staging に補完（ALTER TABLE ADD COLUMN 相当）して開く・余剰列は COLUMN_NAMES 射影で無視・hidden/generated は拒否継続。`migrateArchiveStaging(engine)` を ARCHIVE_OPEN / RESTORE 冒頭で適用。テスト「現行より1列少ない自作アーカイブが開けて復元できる」— Legacy Bridge
-- [Medium] 長時間処理のUI: ボタン・入力の disabled 化＋既存 status-message（aria-live=polite、aria-busy）で「処理中・再実行不可」通知。プログレスバー新規部品は不要 — UI Expert
-- [Medium] archiveEditModal のフォーカス管理規定: showConfirmDialog 同等（role=dialog + aria-modal + Tab trap + Esc + 復帰）。focusTrapManager 再利用 — Accessibility
-- [Medium] 件数・日時表示はプレースホルダー化（`{restored}` / `{skipped}`、data-i18n-args の ruleCount 先例）＋ロケール形式の日時整形 — i18n Expert
-- [Medium] アーカイブ一時オープン中のアイドルTTL/リース欠落と構造化ログ欠落 — SRE。調整: TTLは初版不採用（再接続仕様で可視化・回収）。フェーズA/B・復元・VACUUMの開始/終了/件数/所要ms/freelist前後の構造化ログを受入基準に追加
-- [Medium] OPFS quota プレフライト（本体×2＋ステージング上限の空き確認、不足時は実行拒否＋案内）。200MB上限の worker 側強制（3PBI共通定数）— FinOps
-- [Medium] PRIVACY.md 更新の必須記載項目: (a) アーカイブ.db は平文（暗号化・署名なし）(b) 保管・削除はユーザー責任 (c) 削除済み行を含めた場合 GDPR Art.17 で削除済みデータがファイル内に残る旨 — Compliance
-- [Medium] ERROR_CODES.md 未登録: archive 系コード（ARCHIVE_ALREADY_OPEN / ARCHIVE_INVALID / ARCHIVE_STAGING_EXPIRED 等）の登録とエラー文字列の列挙表固定、`code` フィールド可否を G レビューへ — API & Contract
-- [Medium] アーカイブ形式の互換契約: `yasumaro_archive_meta` に `archive_format_version=1` を追加し「v1 リーダー維持・列追加時は未知列無視」を受入基準化 — API & Contract
-- [Medium] フェーズBの max_id 述語（上記 High に統合済み）— Data Integrity
+- [Medium] dashboard の OPFS 直アクセスは Layer 単方向依存を破る（Gateway バイパス）― System Architect。**コンフリクト調整: Architect の判断を優先**し、第1経路は offscreen 経由読み出し（handleBackup の getFile 流用・チャンク分割）。dashboard 直OPFS（archiveStagingService）は F-1 スパイク対象から「将来の最適化候補」に降格し、スパイク合格基準に「Gateway 経由フォールバック動作」を追加
+- [Medium] 12 subtype の一括追加は第4グループ（`ARCHIVE_SUBTYPES` + createArchiveHandler）に分離すべき（stateless でないため maintenanceBatchHandler に混ぜない。GROUPED_SUBTYPES assert を4分割）― System Architect
+- [Medium] archive_query の per-subtype 上限検証（query 1_000字 / limit 500 / offset 非負 / LIKE特殊文字のサーバ側エスケープ）。meta 由来表示は textContent 限定 ― Blue Team
+- [Medium] ステージング掃除のSSOT: `sweepOrphanStagings(exclude: Set<string>)` 1関数に集約し、呼出点は起動時・次回実行時・明示cleanupの3点のみ。ハンドラの finally は `releaseStaging(name)` に統一 ― Maintainability
+- [Medium] table_xinfo 照合ポリシーの仕様化: 不足列は staging に補完（ALTER TABLE ADD COLUMN 相当）して開く・余剰列は COLUMN_NAMES 射影で無視・hidden/generated は拒否継続。`migrateArchiveStaging(engine)` を ARCHIVE_OPEN / RESTORE 冒頭で適用。テスト「現行より1列少ない自作アーカイブが開けて復元できる」― Legacy Bridge
+- [Medium] 長時間処理のUI: ボタン・入力の disabled 化＋既存 status-message（aria-live=polite、aria-busy）で「処理中・再実行不可」通知。プログレスバー新規部品は不要 ― UI Expert
+- [Medium] archiveEditModal のフォーカス管理規定: showConfirmDialog 同等（role=dialog + aria-modal + Tab trap + Esc + 復帰）。focusTrapManager 再利用 ― Accessibility
+- [Medium] 件数・日時表示はプレースホルダー化（`{restored}` / `{skipped}`、data-i18n-args の ruleCount 先例）＋ロケール形式の日時整形 ― i18n Expert
+- [Medium] アーカイブ一時オープン中のアイドルTTL/リース欠落と構造化ログ欠落 ― SRE。調整: TTLは初版不採用（再接続仕様で可視化・回収）。フェーズA/B・復元・VACUUMの開始/終了/件数/所要ms/freelist前後の構造化ログを受入基準に追加
+- [Medium] OPFS quota プレフライト（本体×2＋ステージング上限の空き確認、不足時は実行拒否＋案内）。200MB上限の worker 側強制（3PBI共通定数）― FinOps
+- [Medium] PRIVACY.md 更新の必須記載項目: (a) アーカイブ.db は平文（暗号化・署名なし）(b) 保管・削除はユーザー責任 (c) 削除済み行を含めた場合 GDPR Art.17 で削除済みデータがファイル内に残る旨 ― Compliance
+- [Medium] ERROR_CODES.md 未登録: archive 系コード（ARCHIVE_ALREADY_OPEN / ARCHIVE_INVALID / ARCHIVE_STAGING_EXPIRED 等）の登録とエラー文字列の列挙表固定、`code` フィールド可否を G レビューへ ― API & Contract
+- [Medium] アーカイブ形式の互換契約: `yasumaro_archive_meta` に `archive_format_version=1` を追加し「v1 リーダー維持・列追加時は未知列無視」を受入基準化 ― API & Contract
+- [Medium] フェーズBの max_id 述語（上記 High に統合済み）― Data Integrity
 
 ## コンフリクト調整結果
 

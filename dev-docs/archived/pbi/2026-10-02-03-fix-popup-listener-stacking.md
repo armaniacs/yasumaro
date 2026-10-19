@@ -11,7 +11,7 @@ popup を保守する開発者として、`statusPanel.ts:329-377` の素の `ad
 
 ## 背景（現状）
 
-- 対象区間: `src/popup/statusPanel.ts:329-377` — `statusAddDomain` / `statusAddPath` ボタンへの素の `addEventListener`（再 init で重複登録される）。
+- 対象区間: `src/popup/statusPanel.ts:329-377` ― `statusAddDomain` / `statusAddPath` ボタンへの素の `addEventListener`（再 init で重複登録される）。
 - 兄弟箇所は既に `wireOnce` 済み: `src/popup/statusPanel.ts:88`、`src/popup/statusPanel.ts:157`、`src/popup/statusPanel.ts:398`、`src/popup/statusPanel.ts:423`。
 - 共有 seam: `src/popup/domUtils.ts:11`（`export function wireOnce`）。再利用のみで seam 自体の変更はしない。
 - 既存テスト（変更なしで green を保つ対象）:

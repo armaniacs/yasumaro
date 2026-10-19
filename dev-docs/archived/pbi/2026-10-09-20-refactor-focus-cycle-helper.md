@@ -12,7 +12,7 @@
 - **RICE**: R2 / I1 / C0.8 / E1.5 → **1.1**
 - **根拠**:
   - `focusTrap.ts:16-18` は「popup/dashboard 側と共有する単一の非表示判定基準」と宣言するが、`confirmDialog.ts` は独自セレクタと Tab 循環・Escape を持ち、disabled の扱いが割れている（「どの要素にフォーカスが当たるか」が部品ごとに別基準）
-  - Confidence 0.8 — disabled 扱いの差が意図差かどうかの判断が残るため、現行挙動を維持する形（各呼び出し元がリストを渡す）を既定とする
+  - Confidence 0.8 ― disabled 扱いの差が意図差かどうかの判断が残るため、現行挙動を維持する形（各呼び出し元がリストを渡す）を既定とする
 - **依存**: **なし**
 
 ## 3. ユーザーストーリー
@@ -25,8 +25,8 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/utils/ui/focusTrap.ts:12` — `FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'`（disabled 含む）
-- `src/utils/ui/confirmDialog.ts:30-37` — 別の `FOCUSABLE_SELECTOR`（`button:not([disabled])` 等、disabled 除外）
+- `src/utils/ui/focusTrap.ts:12` ― `FOCUSABLE_SELECTOR = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'`（disabled 含む）
+- `src/utils/ui/confirmDialog.ts:30-37` ― 別の `FOCUSABLE_SELECTOR`（`button:not([disabled])` 等、disabled 除外）
 - Tab 循環の重複: `src/utils/ui/confirmDialog.ts:39-55`（`trapFocus`）vs `src/utils/ui/focusTrap.ts:102-120`（`keydownHandler` 内の同一判定木）
 - Escape 処理の重複: `src/utils/ui/confirmDialog.ts:116-123` vs `src/utils/ui/focusTrap.ts:103-106`
 - 利用実態: `focusTrapManager` は dashboard/popup の 10+ 箇所で使用（例: `src/dashboard/exportImport.ts:100,186`、`src/popup/privatePageDialog.ts:63,85`、`src/utils/ui/onboardingWizard.ts:156-166`）が、confirmDialog はどちらも使わない
@@ -76,7 +76,7 @@ Then 上限 tripwire と release 挙動が現行どおりであること
 
 ## 8. 見積もり
 
-**1.5 SP** — ヘルパー抽出 + 2 呼び出し元の追従 + disabled 差の挙動 pin。Confidence 0.8 のため disabled 扱いの判断確認を含む。
+**1.5 SP** ― ヘルパー抽出 + 2 呼び出し元の追従 + disabled 差の挙動 pin。Confidence 0.8 のため disabled 扱いの判断確認を含む。
 
 ## 9. DoD
 

@@ -86,6 +86,6 @@ Scenario: デッドコードを削除しても検証が成功する
 
 ## 実装記録
 
-- 変更ファイル: `src/background/handlers/MessageRouter.ts`（`setValidator` ヘルパーを導入し validators 登録の二段キャスト ×10 を解消、新ハンドラ追加の編集点を factory + handlers entry の 2 点に削減）、`src/messaging/types.ts`（`extractMessageContent` と `MessageContext` を削除 — production 呼び出し 0 を grep で確認済み）、`src/background/handlers/urlNotificationHandlers.ts`（実質デッドの `MAX_URL_LENGTH=2000` 先行チェックと純粋エイリアス `createNotificationId`/`getUrlFromNotificationId` を削除、日本語混在コメントを英語へ修正。エラーメッセージを 'URL too long' → 'URL too long for notification ID' へ明確化）、`src/offscreen/offscreen.ts`（常偽の `isSqliteMessageType` 分岐と常に undefined の `traceId` 条件を削除）
+- 変更ファイル: `src/background/handlers/MessageRouter.ts`（`setValidator` ヘルパーを導入し validators 登録の二段キャスト ×10 を解消、新ハンドラ追加の編集点を factory + handlers entry の 2 点に削減）、`src/messaging/types.ts`（`extractMessageContent` と `MessageContext` を削除 ― production 呼び出し 0 を grep で確認済み）、`src/background/handlers/urlNotificationHandlers.ts`（実質デッドの `MAX_URL_LENGTH=2000` 先行チェックと純粋エイリアス `createNotificationId`/`getUrlFromNotificationId` を削除、日本語混在コメントを英語へ修正。エラーメッセージを 'URL too long' → 'URL too long for notification ID' へ明確化）、`src/offscreen/offscreen.ts`（常偽の `isSqliteMessageType` 分岐と常に undefined の `traceId` 条件を削除）
 - テスト更新（2 ファイル）: `src/messaging/__tests__/types.test.ts`（extractMessageContent の describe 削除）、`src/background/handlers/__tests__/urlNotificationHandlers.test.ts`（削除されたエイリアス・デッドチェックの参照を整理）
 - ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15529 passed・21 skipped / `npm run validate` PASS

@@ -1,4 +1,4 @@
-# PBI: ArchiveSessionStore 抽出 — 500行 mount の状態機械化
+# PBI: ArchiveSessionStore 抽出 ― 500行 mount の状態機械化
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -14,9 +14,9 @@
 
 ## 背景（診断結果）
 
-- `src/dashboard/panels/diagnostic/archivePanel.ts:30-68` — staging ライフサイクルの状態が nullable 変数（sessionStaging / currentSessionId 等）+ dirty フラグに分散
-- `archivePanel.ts:215-256` — busy スコープ内での sessionStaging 引き継ぎ（過去の修正箇所）
-- `archivePanel.ts:366-380,432-495` — sessionStaging は renderSessionList の前に設定されるという順序制約がコメントのみ
+- `src/dashboard/panels/diagnostic/archivePanel.ts:30-68` ― staging ライフサイクルの状態が nullable 変数（sessionStaging / currentSessionId 等）+ dirty フラグに分散
+- `archivePanel.ts:215-256` ― busy スコープ内での sessionStaging 引き継ぎ（過去の修正箇所）
+- `archivePanel.ts:366-380,432-495` ― sessionStaging は renderSessionList の前に設定されるという順序制約がコメントのみ
 - 状態機械: idle → staged → open → dirty の遷移が明示されていない
 
 ## 実装ガイド
@@ -36,7 +36,7 @@
    ```
 2. **archivePanel が状態変数の代わりに store を参照**: `sessionStaging` 等の nullable 変数を store への委譲に置換。mount クロージャの該当行を store 呼び出しに置換（500行 mount は保持、状態管理のみ抽出）
 3. **遷移の illegal ガード**: store 内部で遷移の妥当性を検査し、不正遷移はログ + no-op（現行の防御的 null チェックの置換先）
-4. **モーダルの抽出は別 PBI**（診断ではモーダル分離も推奨されたが、本 PBI は状態機械のみ — 範囲爆発を防ぐ）
+4. **モーダルの抽出は別 PBI**（診断ではモーダル分離も推奨されたが、本 PBI は状態機械のみ ― 範囲爆発を防ぐ）
 
 ### 触ってはいけないもの
 
@@ -68,7 +68,7 @@ Scenario: 過去の退行が pin される
 - [x] 不正遷移（idle からの markDirty / markOpen 等）がログ付き no-op になる（遷移表テストで pin）
 - [x] archivePanel.test.ts / archiveEditModal.test.ts 全件 green（11 passed）
 - [x] 新規 store テスト 9件 green（遷移表・reconnect・6.8.11 退行 pin 含む）
-- [ ] archive-required-verification e2e（R1-R3）— Phase 3 の一括 e2e で確認
+- [ ] archive-required-verification e2e（R1-R3）― Phase 3 の一括 e2e で確認
 
 実装メモ: 「作成→ダウンロード→クリーンアップ」フローの `lastStagingName`/`lastFileName` は線形フローで分岐を持たないため状態機械の対象外（パネル内ローカル変数のまま・コメントで記録）。
 
@@ -79,7 +79,7 @@ Scenario: 過去の退行が pin される
 
 ## 見積もり
 
-3-5日（ Confidence 50% はこの抽出のスパイク要因 — mount 内の状態参照箇所が想定より多い場合あり）
+3-5日（ Confidence 50% はこの抽出のスパイク要因 ― mount 内の状態参照箇所が想定より多い場合あり）
 
 ## Definition of Done
 

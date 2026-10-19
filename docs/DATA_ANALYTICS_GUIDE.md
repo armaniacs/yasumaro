@@ -203,7 +203,7 @@ Shows the number of records in a 7-day-of-week × 24-hour grid, colored by densi
 
 ### Domain Analysis
 
-Specify an optional tag and a period to see top-20 domain counts and top-20 URL counts as tables — a direct answer to questions like "which sites do my #travel reads come from?"
+Specify an optional tag and a period to see top-20 domain counts and top-20 URL counts as tables ― a direct answer to questions like "which sites do my #travel reads come from?"
 
 - Analyzes up to 50,000 history rows
 
@@ -211,9 +211,9 @@ Specify an optional tag and a period to see top-20 domain counts and top-20 URL 
 
 Automatic recording already streams every visit into a daily note, so one topic ends up scattered across many days. This panel surfaces what you keep re-researching in four sections, and gives you a way to gather the scattered visits into a single note.
 
-- **Topics you keep re-researching**: domains, tags and pages with no record for 31–89 days that came back in the last 30 days. Only the "quiet, then back" shape counts, so a site you use every day never shows up
+- **Topics you keep re-researching**: domains, tags and pages with no record for 31-89 days that came back in the last 30 days. Only the "quiet, then back" shape counts, so a site you use every day never shows up
 - **Frequently revisited pages**: URLs visited on 2 or more distinct days
-- **Topics you have not revisited**: domains and tags that were frequent 60–120 days ago with no record in the last 30 days
+- **Topics you have not revisited**: domains and tags that were frequent 60-120 days ago with no record in the last 30 days
 - **This week, one year ago**: what you recorded during the same local week 52 weeks ago
 
 "Copy as Markdown" puts that topic's visits on the clipboard as `## domain` plus `- YYYY-MM-DD [title](URL)` lines, dated by local day.
@@ -226,7 +226,7 @@ Automatic recording already streams every visit into a daily note, so one topic 
 
 Groups records that fall within a chosen time gap of each other into one "research session". The point aggregates answer "how many"; this panel answers "what did I look at, in what order, on that day" by showing the run of records as a timeline.
 
-- The gap is 5, 15, 30 or 60 minutes (default 30). Changing it re-groups the rows already fetched — no refetch
+- The gap is 5, 15, 30 or 60 minutes (default 30). Changing it re-groups the rows already fetched ― no refetch
 - A gap of exactly the threshold stays in one session; one millisecond more splits it
 - Only sessions of 2 or more records are listed, newest first. Single records are counted separately as "single pages"
 - Each section shows the start time, page count, minutes and the top tags (or top domains when tagging is off). The minutes are the span from the first to the last record, not actual reading time
@@ -255,7 +255,7 @@ What fills the "Search: …" and "From: …" fields on each research-session row
 
 #### Path and "topics that take the longest to resolve"
 
-With the navigation trail on, a session's expanded body is no longer a flat list — it is the **path** that was taken, recovered from the referrer column, with the leading search term printed once above it.
+With the navigation trail on, a session's expanded body is no longer a flat list ― it is the **path** that was taken, recovered from the referrer column, with the leading search term printed once above it.
 
 - A record's parent is "the most recent earlier record in the same session whose URL matches this record's referrer". When a URL is revisited, the most recent visit becomes the parent rather than the first
 - A parent is always an earlier record, so a cycle cannot form
@@ -264,7 +264,7 @@ With the navigation trail on, a session's expanded body is no longer a flat list
 A "Topics that take the longest to resolve" table is shown as well. It groups search-started sessions by the tags of their **last page** and reports the session count, average pages and average minutes.
 
 - A tag seen in only one session is an anecdote, so only tags with 2 or more sessions appear
-- A last page with no tag still gets a row, labelled "(untagged)" — it is not dropped
+- A last page with no tag still gets a row, labelled "(untagged)" ― it is not dropped
 - The table covers exactly the sessions on screen (at most 100), the same window as the truncation notice
 - Treating the last page as the resolution is a heuristic: it is where one burst of activity ended, not a measurement of whether the user understood it
 
@@ -293,7 +293,7 @@ For the top tags in a period (default 10), shows stacked weekly/monthly record c
 
 ### Tag Pairs
 
-Shows the top 20 tag co-occurrence pairs as a table — the same computation as the Tag Cluster graph, presented numerically for people who prefer tables over graphs.
+Shows the top 20 tag co-occurrence pairs as a table ― the same computation as the Tag Cluster graph, presented numerically for people who prefer tables over graphs.
 
 - Each row is a tag pair with its co-occurrence count. Clicking a row filters history
 

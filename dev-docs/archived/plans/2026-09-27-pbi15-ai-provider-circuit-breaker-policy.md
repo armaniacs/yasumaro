@@ -60,16 +60,16 @@ breaker はこの構造の**外側**で「スロットを試すかどうか」�
 
 | FailureKind | status | 判定 | 根拠 |
 |---|---|---|---|
-| `network` | — | **加算** | provider エンドポイント到達不能。連続 3 回は障害と見なす |
-| `timeout` | — | **加算** | サーバ応答なし。network と同様に連続で障害と見なす |
+| `network` | ― | **加算** | provider エンドポイント到達不能。連続 3 回は障害と見なす |
+| `timeout` | ― | **加算** | サーバ応答なし。network と同様に連続で障害と見なす |
 | `http` | 500-599 | **加算** | サーバ側障害。cooldown 中に回復する可能性が高い |
 | `http` | 4xx（401/403/429 以外） | **加算**（但し threshold に到達しても cooldown は既定値） | リクエスト構造の問題は回復しないが、provider 側の暫定的なバグの場合がある。cooldown で一時隔離し、probe で回復検知 |
 | `auth` | 401/403 | **加算・threshold 1・cooldown 15 分** | 無効 credential の cooldown 後再試行は無駄課金。probe（§4）でのみ回復検知し、ユーザーは testConnection で診断する |
 | `rate_limit` | 429 | **加算・threshold 1・cooldown 10 分** | retry は throttling を深める（`FAILURE_RETRY_PROFILE` が offlineRecovery も禁止）。cooldown を長くして節流する |
-| `configuration` | — | **無視**（加算しない） | 設定欠落はユーザー操作で即座に直る。cooldown に閉じ込めない |
-| `csp` | — | **無視**（加算しない） | 同上。ホスト許可の設定問題 |
-| （`failure` なし） | — | **無視** | min-length 未満の成功レスポンス等、分類不能な低品質応答は breaker に入力しない |
-| `success` | — | **reset** | 連続失敗カウンタを 0 に戻し、openUntil をクリア |
+| `configuration` | ― | **無視**（加算しない） | 設定欠落はユーザー操作で即座に直る。cooldown に閉じ込めない |
+| `csp` | ― | **無視**（加算しない） | 同上。ホスト許可の設定問題 |
+| （`failure` なし） | ― | **無視** | min-length 未満の成功レスポンス等、分類不能な低品質応答は breaker に入力しない |
+| `success` | ― | **reset** | 連続失敗カウンタを 0 に戻し、openUntil をクリア |
 
 breaker 判定に `failure` が付与されていない場合は無視する（Q4 裁定）。taxonomy から判定できない error は存在しない（`failure` なし = 判定不能 = 無視、という単純規則で malformed state とは区別する）。
 
@@ -82,14 +82,14 @@ breaker 判定に `failure` が付与されていない場合は無視する（Q
 | cooldown（auth） | 15 分 | credential 無効は即時回復しない | ユーザーが key を更新した直後の UX 不満が出たら testConnection 経由の reset を強化 |
 | cooldown（rate_limit） | 10 分 | 429 は節流を意図した応答。5 分より長く抑える | 上流の rate limit ヘッダが利用可能になったら Retry-After 接続 |
 | half-open probe 数 | 1（cooldown 経過後の最初の要約リクエストのみ試行） | probe 失敗 → cooldown 再開（同じ cooldown 長）、probe 成功 → reset。連続 probe は課金増加に直結するため 1 件のみ | probe が頻繁に失敗する場合（障害未回復での無駄課金）は probe 間隔（cooldown 再開長）を 2 倍へ指数退避 |
-| success reset | 任意の success で failures = 0、openUntil 削除 | 1 回の成功は provider が完全に動作している証拠 | — |
+| success reset | 任意の success で failures = 0、openUntil 削除 | 1 回の成功は provider が完全に動作している証拠 | ― |
 
 half-open は **lazy evaluation のみ**：state に保存した `openUntil` timestamp と現在時刻の比較だけで試行可否を判定する。setTimeout・module-global timer・alarm は一切使わない（SW エフェメラル性に対する耐性）。
 
 ## 5. state key と value shape
 
 ```ts
-// storage key: 'sw:aiProviderBreaker'（SESSION_KEYS に追加 — 後続 fix）
+// storage key: 'sw:aiProviderBreaker'（SESSION_KEYS に追加 ― 後続 fix）
 interface ProviderBreakerState {
   [providerModelKey: string]: ProviderBreakerEntry | undefined;
 }

@@ -14,8 +14,8 @@
 
 ## 背景 (evidence, verified)
 
-- `src/utils/storage/SettingsRepository.ts:81-85` — `persistMerged` が pre/post drop。
-- `:152` — `await` (`:144-147` の `applyMigrationsAndDecryptWithReEncrypt`) を挟んだ後の cached への無条件代入。
+- `src/utils/storage/SettingsRepository.ts:81-85` ― `persistMerged` が pre/post drop。
+- `:152` ― `await` (`:144-147` の `applyMigrationsAndDecryptWithReEncrypt`) を挟んだ後の cached への無条件代入。
 - インターリーブ: `getAll` の `port.get` (`:128`) → async window → `persistMerged` 完了 (`null,null`) → `:152` が書き込み前スナップショットに新しい timestamp 付きで代入 → TTL 1000ms (`:43`) の間そのスナップショットが供給され続ける。
 - コメント `:76-78` が閉じているのは片方向の順序のみ。read-your-write 違反: `await set()` 直後の `get()` が旧値を返し得る。
 - dual-drop を pin するテストが存在しない。
@@ -42,8 +42,8 @@ Scenario: 読み出しと保存が重なっても古い値が供給されない
 
 ## 受け入れ基準 (file-scoped)
 
-- [x] `src/utils/storage/SettingsRepository.ts:152` — 書き込みと重なった `getAll` の cached 代入が、書き込み後の状態を反映しない形で固定される (現在は `await` 後の無条件代入)
-- [x] `src/utils/storage/SettingsRepository.ts:81-85` — `persistMerged` の pre/post drop と `:152` の代入が競合で逆転しても、TTL (`:43`, 1000ms) 内に書き込み前スナップショットが供給されない
+- [x] `src/utils/storage/SettingsRepository.ts:152` ― 書き込みと重なった `getAll` の cached 代入が、書き込み後の状態を反映しない形で固定される (現在は `await` 後の無条件代入)
+- [x] `src/utils/storage/SettingsRepository.ts:81-85` ― `persistMerged` の pre/post drop と `:152` の代入が競合で逆転しても、TTL (`:43`, 1000ms) 内に書き込み前スナップショットが供給されない
 - [x] `await set()` → `await get()` の read-your-write 契約がテストで pin される
 - [x] race クロージャ以外の本番ふるまい変更がない (既存 API 形状・応答は不変)
 

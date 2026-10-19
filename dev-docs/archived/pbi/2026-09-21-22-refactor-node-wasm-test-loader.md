@@ -92,13 +92,13 @@ grep -rn "initForNode\|module_or_path: bytes" src/wasm bench | head -30
 
 ### 証拠
 
-- `src/wasm/initWasm.ts:15-16` — `Node/tests bypass this module and feed the wasm bytes to the glue directly`。Node 経路に所有者がないことの自認。extension 経路の `initExtensionWasm` に対応する Node 側 helper が存在しない
-- `src/wasm/pii-sanitizer/__tests__/parity.test.ts:27-32` — `initForNode` が `readFile` と `initWasmModule({ module_or_path: bytes })` を直書きする複製1
-- `src/wasm/sentence-dedup/__tests__/parity.test.ts:48-52` — 同一 `initForNode` の複製2
-- `src/wasm/tag-cooccur/bench.ts:37-40` — 同一 `initForNode` の複製3（bench 側）。`src/wasm/tag-cooccur/__tests__/parity.test.ts:96-100` に parity 側の対もある
-- `src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts:27-30` — 同一 `initForNode` の複製4
-- `src/wasm/textrank/bench.ts:22-25` — 同一 `initForNode` の複製5。`src/wasm/pii-sanitizer/bench.ts:21-24` と `src/wasm/sentence-dedup/bench.ts:31-34` も同型
-- `src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts:17-30` — `vi.mock` ブロック内のバイト読みと `initWasmModule({ module_or_path: bytes })` の複製。他に `src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts:27` 付近、`src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts:26` 付近、`src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts:29` 付近が同型
+- `src/wasm/initWasm.ts:15-16` ― `Node/tests bypass this module and feed the wasm bytes to the glue directly`。Node 経路に所有者がないことの自認。extension 経路の `initExtensionWasm` に対応する Node 側 helper が存在しない
+- `src/wasm/pii-sanitizer/__tests__/parity.test.ts:27-32` ― `initForNode` が `readFile` と `initWasmModule({ module_or_path: bytes })` を直書きする複製1
+- `src/wasm/sentence-dedup/__tests__/parity.test.ts:48-52` ― 同一 `initForNode` の複製2
+- `src/wasm/tag-cooccur/bench.ts:37-40` ― 同一 `initForNode` の複製3（bench 側）。`src/wasm/tag-cooccur/__tests__/parity.test.ts:96-100` に parity 側の対もある
+- `src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts:27-30` ― 同一 `initForNode` の複製4
+- `src/wasm/textrank/bench.ts:22-25` ― 同一 `initForNode` の複製5。`src/wasm/pii-sanitizer/bench.ts:21-24` と `src/wasm/sentence-dedup/bench.ts:31-34` も同型
+- `src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts:17-30` ― `vi.mock` ブロック内のバイト読みと `initWasmModule({ module_or_path: bytes })` の複製。他に `src/utils/__tests__/sentenceExtractorHybrid.wasm-success.test.ts:27` 付近、`src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts:26` 付近、`src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts:29` 付近が同型
 
 ### 実装手順
 

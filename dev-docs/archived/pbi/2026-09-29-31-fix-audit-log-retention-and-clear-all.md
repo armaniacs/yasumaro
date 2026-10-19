@@ -56,7 +56,7 @@ Scenario: purge 失敗が成功として誤記録されない
 - [x] `src/offscreen/opfsWorker/purgeHandlers.ts:95-100` の handleClearAll が audit_log も削除する
 - [x] `src/offscreen/IdbVfsBackend.ts:407-413` の clearAll が audit_log も削除する
 - [x] sweep 失敗時に 0 件成功として記録されない（`src/background/dailyPurgeHandler.ts:103-105` の失敗記録規約に準拠）
-- [x] 決定: schema 列追加は不要 — 既存 `created_at` フィルタで充足（`idx_audit_log_created` が既にあり、追加も backfill も不要のため該当なし）
+- [x] 決定: schema 列追加は不要 ― 既存 `created_at` フィルタで充足（`idx_audit_log_created` が既にあり、追加も backfill も不要のため該当なし）
 
 ## テスト戦略
 
@@ -79,25 +79,25 @@ Scenario: purge 失敗が成功として誤記録されない
 
 生成（新規）:
 
-- `src/background/__tests__/dailyPurgeAuditLog.test.ts` — 日次 sweep の呼び出し・保持窓・失敗記録
-- `src/offscreen/__tests__/auditLogRetention.test.ts` — OPFS / IDB 両経路が同一 SQL を実行すること、clear_all の audit_log 削除
-- `src/offscreen/__tests__/auditLogPurgeSeam.test.ts` — メッセージハンドラの fail-closed と各 StorageBackend 実装の応答
+- `src/background/__tests__/dailyPurgeAuditLog.test.ts` ― 日次 sweep の呼び出し・保持窓・失敗記録
+- `src/offscreen/__tests__/auditLogRetention.test.ts` ― OPFS / IDB 両経路が同一 SQL を実行すること、clear_all の audit_log 削除
+- `src/offscreen/__tests__/auditLogPurgeSeam.test.ts` ― メッセージハンドラの fail-closed と各 StorageBackend 実装の応答
 
 変更:
 
-- `src/background/dailyPurgeHandler.ts` — `AUDIT_LOG_RETENTION_DAYS` 定数と `handleDailyPurgeAlarm` の第 4 引数 `purgeAuditLog`。設定で無効化できない無条件 sweep
-- `src/background/alarmRegistry.ts` — `maintain({ type: 'purgeAuditLog' })` の PurgeFn を結線
-- `src/background/sqlite/offscreenGateway.ts` — `maintain` の `purgeAuditLog` オーバーロード
-- `src/offscreen/queryPlan.ts` — `buildAuditLogPurgeStatements`（両経路が共有する単一の SQL 定義）
-- `src/offscreen/StorageBackend.ts` — `Mutable.purgeAuditLog` と `NoopBackend.purgeAuditLog`
-- `src/offscreen/IdbVfsBackend.ts` — `purgeAuditLog` 実装と `clearAll` への `DELETE FROM audit_log` 追加
-- `src/offscreen/OpfsWorkerBackend.ts` — `AUDIT_LOG_PURGE` ワーカーメッセージへの委譲
-- `src/offscreen/FallbackStorageAdapter.ts` — fallback は audit_log を持たないため `AUDIT_LOG_UNSUPPORTED_ERROR` で拒否
-- `src/offscreen/auditLogRepo.ts` — `purgeAuditLog` リポジトリ関数
-- `src/offscreen/sqliteMessageHandlers.ts` — `SQLITE_AUDIT_LOG_PURGE` ハンドラ（`runPlannedPurge` 経由で fail-closed）
-- `src/offscreen/opfsWorker/purgeHandlers.ts` — `handleAuditLogPurge` と `handleClearAll` への `DELETE FROM audit_log` 追加
-- `src/offscreen/opfsWorker/types.ts` / `src/offscreen/opfsWorker.ts` — `AUDIT_LOG_PURGE` メッセージ型とディスパッチ
-- `src/messaging/sqliteMessages.ts` / `src/messaging/sqliteRpcClient.ts` / `src/messaging/sqliteWireTable.ts` / `src/messaging/transportRetryPolicy.ts` — 新メッセージ型の登録（wire table 1 行追加、retry は既存の purge 2 件に倣って `RETRY_UNSAFE`）
+- `src/background/dailyPurgeHandler.ts` ― `AUDIT_LOG_RETENTION_DAYS` 定数と `handleDailyPurgeAlarm` の第 4 引数 `purgeAuditLog`。設定で無効化できない無条件 sweep
+- `src/background/alarmRegistry.ts` ― `maintain({ type: 'purgeAuditLog' })` の PurgeFn を結線
+- `src/background/sqlite/offscreenGateway.ts` ― `maintain` の `purgeAuditLog` オーバーロード
+- `src/offscreen/queryPlan.ts` ― `buildAuditLogPurgeStatements`（両経路が共有する単一の SQL 定義）
+- `src/offscreen/StorageBackend.ts` ― `Mutable.purgeAuditLog` と `NoopBackend.purgeAuditLog`
+- `src/offscreen/IdbVfsBackend.ts` ― `purgeAuditLog` 実装と `clearAll` への `DELETE FROM audit_log` 追加
+- `src/offscreen/OpfsWorkerBackend.ts` ― `AUDIT_LOG_PURGE` ワーカーメッセージへの委譲
+- `src/offscreen/FallbackStorageAdapter.ts` ― fallback は audit_log を持たないため `AUDIT_LOG_UNSUPPORTED_ERROR` で拒否
+- `src/offscreen/auditLogRepo.ts` ― `purgeAuditLog` リポジトリ関数
+- `src/offscreen/sqliteMessageHandlers.ts` ― `SQLITE_AUDIT_LOG_PURGE` ハンドラ（`runPlannedPurge` 経由で fail-closed）
+- `src/offscreen/opfsWorker/purgeHandlers.ts` ― `handleAuditLogPurge` と `handleClearAll` への `DELETE FROM audit_log` 追加
+- `src/offscreen/opfsWorker/types.ts` / `src/offscreen/opfsWorker.ts` ― `AUDIT_LOG_PURGE` メッセージ型とディスパッチ
+- `src/messaging/sqliteMessages.ts` / `src/messaging/sqliteRpcClient.ts` / `src/messaging/sqliteWireTable.ts` / `src/messaging/transportRetryPolicy.ts` ― 新メッセージ型の登録（wire table 1 行追加、retry は既存の purge 2 件に倣って `RETRY_UNSAFE`）
 
 テスト追従（網羅的な SSOT ピンの更新）:
 

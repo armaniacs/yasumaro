@@ -1,4 +1,4 @@
-# PBI 2026-09-23-11 — Deprecated HMAC twins の削除
+# PBI 2026-09-23-11 ― Deprecated HMAC twins の削除
 
 **優先度**: 順位 11 / RICE 25.0（Reach 5 × Impact 0.5 × Confidence 100% ÷ Effort 0.1 人週）
 **根拠**: 生産呼び出し 0 の弱い crypto 双子の確定削除。sunset 2026-12-31 を待つ理由が blast radius ゼロで消滅。0.1 週のマイクロタスクで先に片付ける。

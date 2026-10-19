@@ -61,7 +61,7 @@ describe('settingsStore API_KEY_FIELDS', () => {
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/storage/__tests__/settingsStore-apiKeyFields.test.ts`
-Expected: FAIL — `API_KEY_FIELDS` is not exported from `settingsStore.ts`（`const` のため）、および `storage.js` にも存在しない
+Expected: FAIL ― `API_KEY_FIELDS` is not exported from `settingsStore.ts`（`const` のため）、および `storage.js` にも存在しない
 
 - [ ] **Step 3: `settingsStore.ts` で `API_KEY_FIELDS` を公開する**
 
@@ -162,7 +162,7 @@ git commit -m "feat(storage): API_KEY_FIELDS を settingsStore.ts で公開す�
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/__tests__/redaction.test.ts`
-Expected: FAIL — `result.provider_api_key` and `result.github_pat` は `'[REDACTED]'` ではなく元の値のまま
+Expected: FAIL ― `result.provider_api_key` and `result.github_pat` は `'[REDACTED]'` ではなく元の値のまま
 
 - [ ] **Step 3: import元を切り替える**
 
@@ -277,7 +277,7 @@ vi.mock('../storage.js', () => ({
 - [ ] **Step 2: テストが失敗することを確認する**
 
 Run: `npx vitest run src/utils/__tests__/settingsExportImport.test.ts -t "provider_api_key と github_pat"`
-Expected: FAIL — `decrypted.settings.provider_api_key` と `decrypted.settings.github_pat` が `undefined` ではなく `'provider_key'`/`'ghp_test_pat'` のまま（旧4フィールド版の `API_KEY_FIELDS` がまだ使われているため除外されない）
+Expected: FAIL ― `decrypted.settings.provider_api_key` と `decrypted.settings.github_pat` が `undefined` ではなく `'provider_key'`/`'ghp_test_pat'` のまま（旧4フィールド版の `API_KEY_FIELDS` がまだ使われているため除外されない）
 
 - [ ] **Step 3: import元を切り替える**
 

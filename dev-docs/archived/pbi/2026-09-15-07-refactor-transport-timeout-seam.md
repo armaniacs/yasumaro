@@ -1,4 +1,4 @@
-# PBI: Transport timeout/settle の重複除去 — 横断関心を Base に隠す
+# PBI: Transport timeout/settle の重複除去 ― 横断関心を Base に隠す
 
 ## ステータス: ✅ 完了（2026-09-15）
 

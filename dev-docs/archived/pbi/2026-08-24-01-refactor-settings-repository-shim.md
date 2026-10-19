@@ -40,7 +40,7 @@ Scenario: テストが InMemoryStorageAdapter で動作する
 - **契約**: `no-restricted-imports` が production コードで `settingsStore(.legacy)` をブロックすることを検証
 
 ## 見積もり
-2 ストーリーポイント（中 — 2 人週程度）
+2 ストーリーポイント（中 ― 2 人週程度）
 
 ## 技術的考慮事項
 - **依存**: なし。他の PBI の前提となるため最優先。

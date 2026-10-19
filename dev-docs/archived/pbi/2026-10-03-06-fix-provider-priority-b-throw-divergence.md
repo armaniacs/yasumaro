@@ -9,11 +9,11 @@
 - 順位: 06/15
 - RICE: 7.2（R2 / I2 / C0.9 / E0.5）
 - 根拠: ユーザーの優先リストが沈黙 blank 化し UI と発散（R2・I2）。2026-10-02-09 で裁定済みの throw 意味論への差分のみで小さく治る（C0.9・E0.5）
-- 依存: rank-04（logInfo）PBI の完了後に着手 — 両方とも `src/dashboard/settingsPipeline.ts` を編集するため直列
+- 依存: rank-04（logInfo）PBI の完了後に着手 ― 両方とも `src/dashboard/settingsPipeline.ts` を編集するため直列
 
 ## 現状（証拠）
 
-- `src/dashboard/providerPrioritySlots.ts:56-60` — B-throw を catch して `collectProviderPrioritySlots()`（A-collector）へ silent fallback
+- `src/dashboard/providerPrioritySlots.ts:56-60` ― B-throw を catch して `collectProviderPrioritySlots()`（A-collector）へ silent fallback
 - A-collector は hidden inputs 未設定時に `[]` を返す（`src/dashboard/__tests__/settingsForm.coverage.test.ts:114-117, 186-191`）
 - `src/dashboard/settingsPipeline.ts:147` は `collectCurrentProviderPrioritySlots({ layout, bList })` を **stored なし** で呼ぶ → `providerPrioritySlots.ts:64` の stored fallback が発火せず `[]` が `AI_PROVIDER_PRIORITY_LIST` に保存される
 - B validation（`src/dashboard/settingsPipeline.ts:152-192`、`src/dashboard/aiProviderB/priorityListView.ts:75-85`）は DOM のみ参照 → UI に B rows が表示されたまま validation が通る
@@ -65,7 +65,7 @@ Scenario: UI と保存値が一致する
 ## 実装記録（2026-10-03）
 
 - 裁定: B-throw も A-throw と同一の propagate 意味論に統一（B-try/catch → A silent fallback を廃止）。B-throw 時は保存が `collector_failed` で中断され、`[]` は `AI_PROVIDER_PRIORITY_LIST` に保存されない
-- `src/dashboard/providerPrioritySlots.ts` — B-try/catch → A silent fallback を削除し、両 collector の throw を propagate（三項演算子化）。doc comment（`:36-53`）に A/B 両方の throw 意味論と「storage fallback は throw では発火しない」ことを追記
-- `src/dashboard/settingsPipeline.ts` — コメントのみ更新（B-throw 統一を `:142-147` に反映、コード無変更）
+- `src/dashboard/providerPrioritySlots.ts` ― B-try/catch → A silent fallback を削除し、両 collector の throw を propagate（三項演算子化）。doc comment（`:36-53`）に A/B 両方の throw 意味論と「storage fallback は throw では発火しない」ことを追記
+- `src/dashboard/settingsPipeline.ts` ― コメントのみ更新（B-throw 統一を `:142-147` に反映、コード無変更）
 - テスト: `providerPrioritySlots.test.ts` に B-throw 伝播の回帰テスト（修正前 RED 4 件を確認済み）、`settingsPipeline.test.ts` に B-throw 保存中断 + B-success parity テストを追加
 - 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0・当該 35/35 green・repeats=5

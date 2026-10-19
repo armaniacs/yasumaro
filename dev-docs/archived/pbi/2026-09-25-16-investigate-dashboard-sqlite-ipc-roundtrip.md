@@ -185,5 +185,5 @@ Scenario: query response への status 同梱を採用した場合
 
 - 実 `fetchPeriodRows` + 実 service を数え上げ seam に接続したスクラッチで計測（実行後に削除）。1p=2・5p=10・uninitialized=4/0 を再現
 - (1) preflight 廃止は initialized 半減だが uninitialized で 4 status → 20 error query に悪化。(2) TTL は ~5 msg/open 削減だが invalidate 機構が不釣り合い。(3) 同梱は contract 変更 + version skew で過大
-- **裁定: 現行維持・refactor なし**（10 local IPC ≈ 10〜20ms は query 実行・描画に埋もれる）。既存 pin が証拠のためテスト更新なし
+- **裁定: 現行維持・refactor なし**（10 local IPC ≒ 10〜20ms は query 実行・描画に埋もれる）。既存 pin が証拠のためテスト更新なし
 - 前提ドリフト: 対象パネル 7 → 9。成果物は報告書のみ（production 変更なし）

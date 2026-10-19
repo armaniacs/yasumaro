@@ -1,4 +1,4 @@
-# なぜなぜ分析 — storage-barrel-retire
+# なぜなぜ分析 ― storage-barrel-retire
 
 ## 現象
 `src/utils/storage.ts`（@deprecated barrel、38 re-export）が production 75箇所 + テスト90ファイルから参照され、lint の no-restricted-imports 警告58件が残存。Wave 3 移行が停滞していた。

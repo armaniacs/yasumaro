@@ -15,7 +15,7 @@ CI の失敗を見る開発者として、壊れたビルド成果物でゲー�
 ## 背景
 
 - `checkPermissionCaps()` と `checkWebAccessibleResourcesChain()`（`scripts/release-checks/check-manifest.mjs`）は `JSON.parse(readFileSync(manifestPath, 'utf-8'))` を裸で呼ぶ。manifest.json が invalid JSON の場合、unhandled SyntaxError とスタックトレースで落ちる。
-- 同ファイルの `checkManifestV3Compliance()` は `existsSync` + クリーン fail（`fail('Built manifest.json not found — run build first'); return false;`）のパターンを持つ。このパターンに統一する。
+- 同ファイルの `checkManifestV3Compliance()` は `existsSync` + クリーン fail（`fail('Built manifest.json not found ― run build first'); return false;`）のパターンを持つ。このパターンに統一する。
 
 ## BDD受け入れシナリオ
 
@@ -39,13 +39,13 @@ Scenario: 正常な成果物では動作が変わらない
 ## 検証結果（2026-10-13 実施）
 
 - 実装のスコープ拡張（実測に基づく判断）: 修正前の再現で invalid JSON 時のクラッシュ点が PBI 背景の挙げる `checkPermissionCaps()` / `checkWebAccessibleResourcesChain()` ではなく **`checkManifestV3Compliance()`（:45、main() が最初に実行する関数）** であることを特定（`SyntaxError: Expected property name or '}' in JSON at position 1` + スタックトレース + 壊れた manifest 全文ダンプ）。指定 2 関数に加えてこの関数の裸 `JSON.parse` も同一メッセージの try/catch で包んだ。ここを直さないと invalid JSON 時のゲート出力は 1 文字も変わらないため必須。fix 後は invalid JSON はこの 1 か所で ❌ + exit 1 となり、main() の fail-fast で以降のセクションは走らない。
-- invalid JSON 確認: manifest.json 先頭に `{` を付与（Edit ツール）→ 修正前: exit 1 + スタックトレース + manifest 全文ダンプ。修正後: exit 1、`Built manifest.json could not be parsed as JSON — the build artifact is corrupt` のみ（スタックトレース無し・ダンプ無し）。`npm run build` で再生成 → checksum が事前退避した baseline と完全一致を確認後にバックアップ削除。**dist 復元漏れなし**。
+- invalid JSON 確認: manifest.json 先頭に `{` を付与（Edit ツール）→ 修正前: exit 1 + スタックトレース + manifest 全文ダンプ。修正後: exit 1、`Built manifest.json could not be parsed as JSON ― the build artifact is corrupt` のみ（スタックトレース無し・ダンプ無し）。`npm run build` で再生成 → checksum が事前退避した baseline と完全一致を確認後にバックアップ削除。**dist 復元漏れなし**。
 - 検証: `npm run build` → exit 0。正常な成果物で `node scripts/release-checks/index.mjs --category=manifest` → exit 0（20 passed、baseline と同一・動作不変）。`npm run validate` → exit 0（1062 files / 16032 tests）。
 - コードレビュー: マージ時にメインエージェントが全差分をレビュー済み。
 
 ## テスト戦略
 
-- 統合: ビルド後ゲートの手動実行確認（dist 依存のため vitest スイートには置かない — NN03 2026-10-12 の配線判断と同じ）。単体/E2E は不要。
+- 統合: ビルド後ゲートの手動実行確認（dist 依存のため vitest スイートには置かない ― NN03 2026-10-12 の配線判断と同じ）。単体/E2E は不要。
 
 ## 見積もり
 

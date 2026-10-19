@@ -62,7 +62,7 @@ describe('WHITELIST_ADAPTERS definitions', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts`
-Expected: FAIL — モジュール `../whitelistAdapters.js` が存在しない
+Expected: FAIL ― モジュール `../whitelistAdapters.js` が存在しない
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -70,7 +70,7 @@ Expected: FAIL — モジュール `../whitelistAdapters.js` が存在しない
 
 ```typescript
 /**
- * Domain Whitelist Extraction — サイト別ホワイトリスト抽出アダプタ定義
+ * Domain Whitelist Extraction ― サイト別ホワイトリスト抽出アダプタ定義
  * ノイズ比率が極端に高いサイト向けに、特定クラスの中身だけを狙い撃ちで抽出する
  */
 
@@ -141,7 +141,7 @@ git commit -m "feat(whitelist-extraction): WhitelistAdapter 型と6アダプタ�
 
 ---
 
-## Task 2: matchWhitelistAdapter — 検知ロジック（ドメイン判定 + DOMクラス検知）
+## Task 2: matchWhitelistAdapter ― 検知ロジック（ドメイン判定 + DOMクラス検知）
 
 **Files:**
 - Modify: `src/utils/contentExtractor/whitelistAdapters.ts`
@@ -200,7 +200,7 @@ describe('matchWhitelistAdapter', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "matchWhitelistAdapter"`
-Expected: FAIL — `matchWhitelistAdapter is not a function`
+Expected: FAIL ― `matchWhitelistAdapter is not a function`
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -254,7 +254,7 @@ git commit -m "feat(whitelist-extraction): matchWhitelistAdapter 検知ロジッ
 
 ---
 
-## Task 3: extractWhitelistedContent — 抽出エンジン
+## Task 3: extractWhitelistedContent ― 抽出エンジン
 
 **Files:**
 - Modify: `src/utils/contentExtractor/whitelistAdapters.ts`
@@ -308,7 +308,7 @@ describe('extractWhitelistedContent', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/whitelistAdapters.test.ts -t "extractWhitelistedContent"`
-Expected: FAIL — `extractWhitelistedContent is not a function`
+Expected: FAIL ― `extractWhitelistedContent is not a function`
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -427,7 +427,7 @@ import { extractMainContent, isExcludedElement, isAsianContentElement, calculate
 ファイル末尾に以下のテストブロックを追加する。`location.hostname` のモックには `vi.stubGlobal` は使わず、jsdom の `Object.defineProperty` でオーバーライドする（jsdomの`location`は再定義可能ではないため、`configurable: true` を明示する）。
 
 ```typescript
-describe('extractMainContent — whitelist extraction mode', () => {
+describe('extractMainContent ― whitelist extraction mode', () => {
   const originalHostname = window.location.hostname;
 
   function setHostname(hostname: string) {
@@ -487,7 +487,7 @@ describe('extractMainContent — whitelist extraction mode', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/utils/contentExtractor/__tests__/index.test.ts -t "whitelist extraction mode"`
-Expected: FAIL — ホワイトリスト抽出が未実装のため、1件目のテストで `nav`/`ad-banner` のテキストも含まれてしまいFAIL
+Expected: FAIL ― ホワイトリスト抽出が未実装のため、1件目のテストで `nav`/`ad-banner` のテキストも含まれてしまいFAIL
 
 - [ ] **Step 3: extractMainContent に分岐ロジックを実装**
 
@@ -518,7 +518,7 @@ import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAda
                     }
                     return truncated;
                 }
-                // 0件抽出 — 通常のブラックリスト方式へフォールバック（whitelistFallbackTriggeredは returnInfo 時のみ記録）
+                // 0件抽出 ― 通常のブラックリスト方式へフォールバック（whitelistFallbackTriggeredは returnInfo 時のみ記録）
             }
         }
 ```
@@ -574,7 +574,7 @@ git commit -m "feat(whitelist-extraction): extractMainContent にホワイトリ
 `src/utils/storage/defaults.ts` の `[StorageKeys.AI_SUMMARY_CLEANSING_CUSTOM_PATTERNS]: [],` の行の直後に追加する。
 
 ```typescript
-    // Domain Whitelist Extraction Mode — default true for new users (existing users migrated to false)
+    // Domain Whitelist Extraction Mode ― default true for new users (existing users migrated to false)
     [StorageKeys.WHITELIST_EXTRACTION_ENABLED]: true,
 ```
 
@@ -724,7 +724,7 @@ Expected: PASS（`whitelistExtractionEnabled` を明示的に渡していない�
 
 - [ ] **Step 5: 無効化テストを追加**
 
-`src/utils/contentExtractor/__tests__/index.test.ts` の `describe('extractMainContent — whitelist extraction mode', ...)` ブロック内に以下を追記する。
+`src/utils/contentExtractor/__tests__/index.test.ts` の `describe('extractMainContent ― whitelist extraction mode', ...)` ブロック内に以下を追記する。
 
 ```typescript
   it('skips whitelist extraction when whitelistExtractionEnabled is false', () => {

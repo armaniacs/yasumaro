@@ -19,7 +19,7 @@
 
 ## 背景（現状・証拠）
 
-- `src/content/contentKernel.ts:285-295` — `init()` は `await this.loadSettings()` の完了後に `await isE2EProbeEnabled()` を直列実行する。
+- `src/content/contentKernel.ts:285-295` ― `init()` は `await this.loadSettings()` の完了後に `await isE2EProbeEnabled()` を直列実行する。
 - 両者は依存関係がない（設定スナップショット読みと session フラグ読み）。`session.get` はメモリ読みで高速だが、await が2直列になる。
 
 ## BDD 受け入れシナリオ
@@ -44,7 +44,7 @@ Scenario: どちらかが失敗しても初期化が壊れない
 
 ## テスト戦略
 
-- unit: 既存の `contentKernel.e2eProbeIsolation.test.ts`（3件）＋ `contentKernel.e2eState.golden.test.ts` が無変更で green — 並列化の等価性の証拠。
+- unit: 既存の `contentKernel.e2eProbeIsolation.test.ts`（3件）＋ `contentKernel.e2eState.golden.test.ts` が無変更で green ― 並列化の等価性の証拠。
 - unit（追加・任意）: `loadSettings` と session 読みの完了順を入れ替えても結果が同一になるテスト（片方を遅延させる）。小さいため既存テストの green で代替可なら省略してよい。
 - 回帰: extractor 系テストが green のまま。
 

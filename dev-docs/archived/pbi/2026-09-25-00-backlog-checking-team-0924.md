@@ -1,4 +1,4 @@
-# 2026-09-25 Checking Team 残債 PBI 化 — 採点台帳
+# 2026-09-25 Checking Team 残債 PBI 化 ― 採点台帳
 
 ワークスペース全量レビュー（2026-09-24、報告書は `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`）で得た残存指摘を PBI 化。Phase 5 で 23 指摘（High 3 + Medium 19 + 連動修正 1）を修正済みで、残った「確認待ち 15 Medium」と「未対応の Low 16 件」を 31 候補として抽出し、RICE 採点して 30 PBI を出力した。候補 1 件は調査の結果 PBI 化不要と判定し、本台帳に記録する。
 
@@ -99,5 +99,5 @@ C05 / C20 / C30 / C22 の重複・デッドコード除去 → C03 utils 再編 
 ## 参照
 
 - レビュー報告書: `dev-docs/archived/plans/2026-09-24-2213-review-workspace.md`（総合評価 88/100、High 3 / Medium 34 / Low 16）
-- 個別 PBI: `dev-docs/archived/pbi/2026-09-25-01` 〜 `dev-docs/archived/pbi/2026-09-25-28`（01–25・27・28 はアーカイブ済み。26・29・30 は監視・ゲート付き PBI として `pbi/` に live 継続中）
+- 個別 PBI: `dev-docs/archived/pbi/2026-09-25-01` 〜 `dev-docs/archived/pbi/2026-09-25-28`（01-25・27・28 はアーカイブ済み。26・29・30 は監視・ゲート付き PBI として `pbi/` に live 継続中）
 - アーカイブ記録（2026-10-11）: 採点・5 Whys・不採用記録の役割は完了したため本台帳をアーカイブ。残る 26・29・30 は独立ファイルとして `pbi/` に残る。

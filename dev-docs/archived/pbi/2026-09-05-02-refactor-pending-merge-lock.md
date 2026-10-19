@@ -2,7 +2,7 @@
 
 優先度: 2 位 / RICE 16.0 = (6 × 2 × 80%) / 0.6w / Strength: Strong
 backlog: [2026-09-05-00-backlog-arch4.md](2026-09-05-00-backlog-arch4.md)
-依存: なし（他 6 件と独立。PBI 07 とは対象が異なる — 本 PBI は background のロック付きキュー、PBI 07 は utils の回復ストア）
+依存: なし（他 6 件と独立。PBI 07 とは対象が異なる ― 本 PBI は background のロック付きキュー、PBI 07 は utils の回復ストア）
 
 ## ユーザーストーリー
 再試行キューを保守する開発者として、URL 結合・切り詰め・サイズ上限の政策がキューのロック内で実行されてほしい。なぜなら現状は `enqueuePendingWrite` が `load()`→`save()` をロック外で直に行い、flush 中の並行 enqueue で書き込み消失が起きうる構造であり、merge 時の retry-count リセットが backoff を捨て、2 つのサイズ上限が乖離しているから。
@@ -69,7 +69,7 @@ sed -n '60,190p' src/background/persistentRetryQueue.ts
 4. interleaving テスト追加 → 全 green
 
 ### 落とし穴
-- `flushPendingWrites` のシグネチャ変更は AlarmRegistry 経路に波及する — 変更する場合は alarm テストも更新すること
+- `flushPendingWrites` のシグネチャ変更は AlarmRegistry 経路に波及する ― 変更する場合は alarm テストも更新すること
 - `retryCount` 継承は既存 backoff テストと突き合わせること（リセット前提のテストがあれば更新）
 - `pendingSqliteQueue`（98 行）と `offlineNetworkQueue`（QueuePort 付き）は対照事例。揃える必要はないが、矛盾する政策を増やさないこと
 

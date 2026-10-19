@@ -1,4 +1,4 @@
-# 2026-10-01 arch-delivery-loop 診断ラウンド — 採点台帳
+# 2026-10-01 arch-delivery-loop 診断ラウンド ― 採点台帳
 
 Phase 0 で並列サブエージェント 4 系統（background / dashboard / offscreen-storage / content-extraction）が抽出した 14 候補を RICE 採点し、上位 7 件を PBI 化した。残り 7 件は本台帳に送り、トリガー発火時に PBI 化する。
 
@@ -15,13 +15,13 @@ Phase 0 で並列サブエージェント 4 系統（background / dashboard / of
 | 5 | S1 SqliteEngineHost 状態 accessor の縮小 | 8 | 2 | 0.8 | 1.5 | 8.5 | PBI 05 |
 | 6 | B2 replay 書き込みの SavePhase seam 移設 | 3 | 2 | 0.8 | 0.75 | 6.4 | PBI 06 |
 | 7 | C1 抽出オーケストレータの単一 seam 化 | 6 | 1 | 0.8 | 1.0 | 4.8 | PBI 07 |
-| — | O3 SettingsWrite module（15 writers 統一） | 15 | 2 | 0.5 | 2.5 | 6.0 | 台帳送り |
-| — | C3 text/tokenizer 単一 seam 化 | 5 | 1 | 0.8 | 0.75 | 5.3 | 台帳送り |
-| — | B3 SlotRunner＋InFlightCoalescer 抽出 | 5 | 1 | 0.5 | 1.5 | 1.7 | 台帳送り |
-| — | O4 generalSettingsPanel mount spec 化 | 4 | 1 | 0.5 | 2.0 | 1.0 | 台帳送り |
-| — | C2 hybrid policy-row helper 共通化 | 4 | 0.5 | 0.5 | 1.0 | 1.0 | 台帳送り |
-| — | S4 読取 policy 集約＋SettingsRepository 分割 | 6 | 1 | 0.5 | 2.0 | 1.5 | 台帳送り |
-| — | S3 wire-row `defineWireOp` 共通化 | 4 | 0.5 | 0.5 | 1.5 | 0.7 | 台帳送り |
+| ― | O3 SettingsWrite module（15 writers 統一） | 15 | 2 | 0.5 | 2.5 | 6.0 | 台帳送り |
+| ― | C3 text/tokenizer 単一 seam 化 | 5 | 1 | 0.8 | 0.75 | 5.3 | 台帳送り |
+| ― | B3 SlotRunner＋InFlightCoalescer 抽出 | 5 | 1 | 0.5 | 1.5 | 1.7 | 台帳送り |
+| ― | O4 generalSettingsPanel mount spec 化 | 4 | 1 | 0.5 | 2.0 | 1.0 | 台帳送り |
+| ― | C2 hybrid policy-row helper 共通化 | 4 | 0.5 | 0.5 | 1.0 | 1.0 | 台帳送り |
+| ― | S4 読取 policy 集約＋SettingsRepository 分割 | 6 | 1 | 0.5 | 2.0 | 1.5 | 台帳送り |
+| ― | S3 wire-row `defineWireOp` 共通化 | 4 | 0.5 | 0.5 | 1.5 | 0.7 | 台帳送り |
 
 - 同点（B1/S2）は推奨強度（Strong > Medium-Strong）で順序付け。
 - O3 は RICE 6.0 で B2/C1 を上回るが、15 writers の移行が大きく O4 の mount 仕様と `settingsPipeline.ts` で領域競合するため、O4 との一体設計が必要と判断し台帳送りとした。

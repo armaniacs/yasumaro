@@ -133,11 +133,11 @@ grep -rn "estimate()" src/dashboard/ src/offscreen/ | head
 - `archive_preview`/`archive_restore_preview` は READ_ONLY+EXEMPT、`archive_delete_by_staging` はトークン必須＋scope束縛（deriveScopeHash 既存マッピングで効く）
 
 ### PBI記載からの逸脱と理由
-- **quota プレフライトの計算方式**: PBI記載の「本体×2＋ステージング上限」の厳密計算に替え、`estimate()` の（quota − usage）≥ usage（VACUUMの実効倍増）で判定。estimate が取れない環境ではブロックしない（fail-open）。フェーズBの追加書き込みは staging ではないため、staging上限は無関係
+- **quota プレフライトの計算方式**: PBI記載の「本体×2＋ステージング上限」の厳密計算に替え、`estimate()` の（quota − usage）≧ usage（VACUUMの実効倍増）で判定。estimate が取れない環境ではブロックしない（fail-open）。フェーズBの追加書き込みは staging ではないため、staging上限は無関係
 - **VACUUM はトランザクション外**（SQLite仕様）。DELETE（トランザクション）→COMMIT→VACUUM→freelist_count 再取得の順。VACUUM 失敗時は vacuumOk=false を返しデータ整合は保証（freelist は次回実行で解放）
 - **skippedInvalid は本PBIに含まない**: INSERT OR IGNORE が CHECK違反も握り潰すため、フェーズBの DELETE では発生し得ない（03の復元で分類済み）
 - **E2E**: file:// のCSP制約によりフェーズBフローはユニットテスト（8件）で検証。@extension e2e への追加は次回以降
 
 ### 検証結果
 - `npm run type-check` ✓ / `npm run lint` ✓（0 errors）/ `npm test` ✓ **11807 passed / 0 failed**（追加14件）/ `npm run build` ✓ / E2E dashboard-ui ✓ 104 passed
-- 途中、subtypeパーティション assert が `archive_delete_by_staging` のグループ登録漏れを検出（スタートアップエラーとして機能 — 設計どおり）し、archiveSubtypes.ts への追加で解消
+- 途中、subtypeパーティション assert が `archive_delete_by_staging` のグループ登録漏れを検出（スタートアップエラーとして機能 ― 設計どおり）し、archiveSubtypes.ts への追加で解消

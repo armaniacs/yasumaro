@@ -9,7 +9,7 @@
 - `src/dashboard/settings/__tests__/aiSummaryCleansingSettings-extra.test.ts`
 
 ## Validation
-`npx vitest run src/dashboard/settings` — PASS（スコープ検証済み）。
+`npx vitest run src/dashboard/settings` ― PASS（スコープ検証済み）。
 
 ## Rollback
 削除した dead path と fixture を復元すればロールバックできる。

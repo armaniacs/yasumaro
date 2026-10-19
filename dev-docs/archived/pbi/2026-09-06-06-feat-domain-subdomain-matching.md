@@ -119,7 +119,7 @@ grep -rn "domainFilterToggle\|サブドメイン" src/
 - `matchesDomainPattern(domain, pattern, matchSubdomains = false)` / `isDomainInList(..., matchSubdomains = false)` を拡張（デフォルト false で既存の全呼び出し元は無影響。ワイルドカードパターンはトグルの影響を受けない）
 - ライブパス: `domainUtils.isDomainAllowed` が `DOMAIN_SUBDOMAIN_MATCHING` を読み、共有実装 `isDomainInListShared` に直接渡すよう変更。**ローカル 2引数ラッパー（`isDomainInList`）経由だと第3引数が握り潰される**問題を実装中に発見し、テスト（サブドメインON許可）で検出・修正済み
 - キャッシュパス: `evaluateCachedAllow` / `DomainFilter.isAllowedCached` / `DomainFilterCacheAdapter` に matchSubdomains を伝播。`getDomainFilterCacheSync` がトグル値を返すように拡張（`storage.test.ts` の期待値を更新）
-- UI: `#domainSubdomainToggle` をパネルに追加。load/save は `settings/domainFilter.ts`（`loadDomainSettings` / `handleSaveDomainSettings`）で処理。タグUIの保存は hidden ボタン経由で `handleSaveDomainSettings` に委譲されるため `domainFilterTagUI.ts` の変更は不要（PBI実装手順5との差分 — 委譲構造を尊重）
+- UI: `#domainSubdomainToggle` をパネルに追加。load/save は `settings/domainFilter.ts`（`loadDomainSettings` / `handleSaveDomainSettings`）で処理。タグUIの保存は hidden ボタン経由で `handleSaveDomainSettings` に委譲されるため `domainFilterTagUI.ts` の変更は不要（PBI実装手順5との差分 ― 委譲構造を尊重）
 - i18n: `domainSubdomainMatching`（en/ja）。デフォルトOFFで後方互換
 - テスト: wildcardToRegex 9 cases / domainFilter-seam 6 assertions / domainUtils isDomainAllowed 3 cases を追加
 - コードレビューは diff 自レビュー＋全体検証で実施

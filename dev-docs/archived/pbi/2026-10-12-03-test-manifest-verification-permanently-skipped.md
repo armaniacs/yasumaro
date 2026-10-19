@@ -21,7 +21,7 @@
 
 ### 1. 恒久 skip の機序
 
-- `src/__tests__/manifest.test.ts:34` — `const manifestExists = existsSync(join(process.cwd(), 'manifest.json'))`、`:35` — `const describeFn = manifestExists ? describe : describe.skip`。
+- `src/__tests__/manifest.test.ts:34` ― `const manifestExists = existsSync(join(process.cwd(), 'manifest.json'))`、`:35` ― `const describeFn = manifestExists ? describe : describe.skip`。
 - WXT 移行後、manifest は `wxt.config.ts` からビルド時に `dist/chromium-mv3/manifest.json` へ生成される。リポジトリ直下に `manifest.json` は存在しないため `manifestExists` は**常に false**。`npm run build` の後でも変わらない。
 - 実測（2026-10-12、`npx vitest run --reporter=json`）: 本ファイルの skip は 11 件。`src/background` の 10 件と合わせてスイート全体の skip 21 件のうち 11 件を占める。
 

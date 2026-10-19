@@ -8,7 +8,7 @@
 
 - 順位: 07 / 10
 - RICE スコア: 9.6（Reach=3 / Impact=1 / Confidence=80% / Effort=0.25 人週）
-- 根拠: `cleansingBadge.ts:40-47`（round 4 新設 — `(0,0)`→'both'、戻り値型が 'none' を表現できない。現行呼び出し元は totalRemoved>0 ガードで安全だが、新規 caller がガードを忘れると空 badge が出る）vs `contentExtractor/cleansedReason.ts:61-75`（`resolveCleanseReason` — `(0,0)`→'none' が正しい dual）+ 同 :82-101 の map 派生 = 計 3 実装。deletion test 正: どちらか一方を消しても他が生きる。preview `previewPresenter.ts:64-70` の `Hard: n` / `Keyword: n` は英語リテラル（statusPanel は i18n キー）。
+- 根拠: `cleansingBadge.ts:40-47`（round 4 新設 ― `(0,0)`→'both'、戻り値型が 'none' を表現できない。現行呼び出し元は totalRemoved>0 ガードで安全だが、新規 caller がガードを忘れると空 badge が出る）vs `contentExtractor/cleansedReason.ts:61-75`（`resolveCleanseReason` ― `(0,0)`→'none' が正しい dual）+ 同 :82-101 の map 派生 = 計 3 実装。deletion test 正: どちらか一方を消しても他が生きる。preview `previewPresenter.ts:64-70` の `Hard: n` / `Keyword: n` は英語リテラル（statusPanel は i18n キー）。
 
 ## BDD 受け入れシナリオ
 
@@ -49,5 +49,5 @@ S（0.25 人週）。種別: refactor。
 ## 実装メモ（2026-09-11 round 5）
 
 - `deriveCleansedReasonFromCounts` を `resolveCleanseReason`（extractor 側の単一 dual-axis owner）に委譲。`({}) → 'none'`（round 4 の local copy は 'both' だった）。`ExtractResult['cleansedReason']` が optional 型のため `?? 'none'` で always-return 保証を文書化。
-- `buildCleansingCountDetail` 新設（badge モジュールに count 詳細フォーマットを集約・i18n キー `cleansingDetailHard`/`cleansingDetailKeyword` ja/en 新設・配列 substitution — wrapper は string substitution を展開しない既知挙動のため）。
+- `buildCleansingCountDetail` 新設（badge モジュールに count 詳細フォーマットを集約・i18n キー `cleansingDetailHard`/`cleansingDetailKeyword` ja/en 新設・配列 substitution ― wrapper は string substitution を展開しない既知挙動のため）。
 - previewPresenter の英語リテラル `Hard: n` をモジュール経由に置換。truth-value テスト更新 + sanitizePreview/mask-visualization の i18n モック更新。

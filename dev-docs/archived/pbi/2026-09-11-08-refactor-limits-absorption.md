@@ -8,11 +8,11 @@
 
 - 順位: 08 / 10
 - RICE スコア: 9.6（Reach=3 / Impact=1 / Confidence=80% / Effort=0.5 人週）
-- 根拠（2026-09-11 再評価で drift 再検出 — トリガー発火）:
-  - `systemHandlers.ts:286-288` — MAX_LOG_FORWARD_MESSAGE_CHARS / DETAILS_KEYS / SERIALIZED_CHARS（VULN-004 修正時に file-local 化された 3 定数）
-  - `sqliteEngineHost.ts:56` — `MAX_QUERY_LIMIT = 100000`（`QUERY_CAPS.fts` と同値の二重定義・`recordsRepo.ts:45` が消費）
-  - `archivePanel.ts:23` — `EXPORT_CHUNK_BYTES = 8MB`（`limits.ts:31` の MAX_ARCHIVE_EXPORT_CHUNK_BYTES と二重 — validator は canonical を使用済み）
-  - `recordingValidator.ts:16` — MAX_RECORD_SIZE 64K · `piiSanitizer.ts:14,16` — 64K/128K · `aiUsageTracker.ts:214` — MAX_TOKENS_PER_CALL 10M · `obsidianClient.ts:194` — MAX_ERROR_BODY_SIZE 1MB
+- 根拠（2026-09-11 再評価で drift 再検出 ― トリガー発火）:
+  - `systemHandlers.ts:286-288` ― MAX_LOG_FORWARD_MESSAGE_CHARS / DETAILS_KEYS / SERIALIZED_CHARS（VULN-004 修正時に file-local 化された 3 定数）
+  - `sqliteEngineHost.ts:56` ― `MAX_QUERY_LIMIT = 100000`（`QUERY_CAPS.fts` と同値の二重定義・`recordsRepo.ts:45` が消費）
+  - `archivePanel.ts:23` ― `EXPORT_CHUNK_BYTES = 8MB`（`limits.ts:31` の MAX_ARCHIVE_EXPORT_CHUNK_BYTES と二重 ― validator は canonical を使用済み）
+  - `recordingValidator.ts:16` ― MAX_RECORD_SIZE 64K ・ `piiSanitizer.ts:14,16` ― 64K/128K ・ `aiUsageTracker.ts:214` ― MAX_TOKENS_PER_CALL 10M ・ `obsidianClient.ts:194` ― MAX_ERROR_BODY_SIZE 1MB
   - ADR `2026-08-27-limit-policy.md` の「MAX_QUERY_LIMIT を QUERY_CAPS に SSOT 化」主張と実態が乖離
 
 ## BDD 受け入れシナリオ

@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/background/pendingSqliteQueue.ts:57-61`（`flushPendingRecords`）— `for (const record of queue)` で1件ずつ `sqliteClient.insert(record)` を呼び出すループ
+- `src/background/pendingSqliteQueue.ts:57-61`（`flushPendingRecords`）― `for (const record of queue)` で1件ずつ `sqliteClient.insert(record)` を呼び出すループ
 - 既存の `sqliteClient.insertBatch(records: BrowsingLogRecord[])`（`src/background/sqliteClient.ts:221`）が既に実装済みで利用可能
 - 対処案（親レポートより）: `insertBatch()` を使用してチャンク（50件単位）で一括挿入
 - **副作用として要考慮（side-effects.md M10判定）**: バッチ化により「一部成功」ハンドリングができなくなり、1件のエラーで全滅する挙動に変化するリスクがある。個別insertの現状は各レコードの成否を独立して判定し `stillPending` に振り分けているため、バッチ化してもこの粒度を維持する設計にする必要がある

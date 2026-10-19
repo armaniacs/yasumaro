@@ -68,12 +68,12 @@ Scenario: 新規 provider 追加で条件分岐を足さない
 ## 実装者向け注記
 
 ### 現状の証拠
-- css クラス特例: `src/dashboard/aiProviderCatalogView.ts:73` — `if (providerId !== 'gemini') container.classList.add('openai-settings')`
-- apiKey ラベル特例: `src/dashboard/aiProviderCatalogView.ts:143` — `providerId === 'gemini' ? 'geminiApiKey' : 'aiApiKey'`
-- extra-field 特例: `src/dashboard/aiProviderCatalogView.ts:163-175` — `field.storageKey === 'gemini_api_version'` の aria/note/error 特別ブロック(`aria-invalid`・`aria-describedby`・`geminiApiVersionNote`・`geminiApiVersionError`・`role=alert`)
-- 初期開閉特例: `src/dashboard/aiProviderB/providerAccordionView.ts:34` — `if (id === 'gemini') details.open = true`
-- 設計意図との矛盾: `src/dashboard/aiProviderCatalogView.ts:7` — `Adding a provider = one PROVIDER_REGISTRY row + i18n keys` とあるが、上記4分岐が残るため現状は catalog 1行追加だけでは同種の特例を再現できない
-- catalog 本体: `src/background/ai/providerCatalog.ts` — `ProviderCatalogEntry` に追加すべきフィールドの置き場所。B レイアウトは `src/dashboard/aiProviderB/providerAccordionView.ts:19-35` の accordion 生成部が対象
+- css クラス特例: `src/dashboard/aiProviderCatalogView.ts:73` ― `if (providerId !== 'gemini') container.classList.add('openai-settings')`
+- apiKey ラベル特例: `src/dashboard/aiProviderCatalogView.ts:143` ― `providerId === 'gemini' ? 'geminiApiKey' : 'aiApiKey'`
+- extra-field 特例: `src/dashboard/aiProviderCatalogView.ts:163-175` ― `field.storageKey === 'gemini_api_version'` の aria/note/error 特別ブロック(`aria-invalid`・`aria-describedby`・`geminiApiVersionNote`・`geminiApiVersionError`・`role=alert`)
+- 初期開閉特例: `src/dashboard/aiProviderB/providerAccordionView.ts:34` ― `if (id === 'gemini') details.open = true`
+- 設計意図との矛盾: `src/dashboard/aiProviderCatalogView.ts:7` ― `Adding a provider = one PROVIDER_REGISTRY row + i18n keys` とあるが、上記4分岐が残るため現状は catalog 1行追加だけでは同種の特例を再現できない
+- catalog 本体: `src/background/ai/providerCatalog.ts` ― `ProviderCatalogEntry` に追加すべきフィールドの置き場所。B レイアウトは `src/dashboard/aiProviderB/providerAccordionView.ts:19-35` の accordion 生成部が対象
 
 ## Definition of Done
 - [x] 全BDDシナリオ実装+パス

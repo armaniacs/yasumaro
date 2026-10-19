@@ -1,4 +1,4 @@
-# PBI: chrome.storage 読み書きの直列化 — RMW・単一実行・CAS（VULN-003/005/009/012/050/056, CWE-362/367）
+# PBI: chrome.storage 読み書きの直列化 ― RMW・単一実行・CAS（VULN-003/005/009/012/050/056, CWE-362/367）
 
 ## ユーザーストーリー
 利用者として、複数の拡張コンテキスト（SW/popup/dashboard）が同時に動いても録画バッファ・保留ページ・ログ・リトライジョブが失われないようにしたい、なぜなら get→mutate→set の RMW がロックなしで並行実行され、stale スナップショットで他方の書き込みが消えるから
@@ -69,10 +69,10 @@ Scenario: enqueue と flush が重なってもジョブが失われない
 - **Red-Green-Refactor**: `optimisticLock` の Mutex 直列化は最後に実施（全呼び出しサイトが受益し、回帰は既存 34 テスト）
 
 ## 見積もり
-2pt（要チームでの見積もり — 6 サイト＋lock 内部強化＋変異テスト）
+2pt（要チームでの見積もり ― 6 サイト＋lock 内部強化＋変異テスト）
 
 ## 技術的考慮事項
-- 依存関係: PBI 07（lock-cas-correctness）と理論上相互作用 — 本 PBI 先着手推奨（Wave 2）
+- 依存関係: PBI 07（lock-cas-correctness）と理論上相互作用 ― 本 PBI 先着手推奨（Wave 2）
 - テスタビリティ: インターリーブは `Mutex`/`withOptimisticLock` の注入モックで決定的に再現する
 - 非機能要件: lock 待ちによる UI 遅延は Mutex timeout（既存）で_bound_。queue-full は既存の throw 挙動を維持
 - 注意: `storageFallback.ts` は PBI 11 のスコープ（触れない）。スイープで「緩和済み16サイト」に触れない
@@ -97,9 +97,9 @@ sed -n '38,100p' src/background/handlers/contextMenuHandlers.ts   # single-fligh
 4. 変異テスト 6 件、`npm run validate`
 
 ### 落とし穴
-- `withOptimisticLock` の Mutex をグローバル単一にすると無関係キーまで直列化される — lock 内部でのみ共有する Mutex インスタンスにすること（キー粒度は以後の改善）
-- `persistentRetryQueue` は per-item `persistPerItem:true` の経路も stale snapshot を書く — flush 全体の persist も lock 経由に
-- ロガーは全コンテキスト共有キーのため、コンテキスト内 `isFlushing` ガードだけでは不十分（VULN-050 の根拠）— storage CAS 必須
+- `withOptimisticLock` の Mutex をグローバル単一にすると無関係キーまで直列化される ― lock 内部でのみ共有する Mutex インスタンスにすること（キー粒度は以後の改善）
+- `persistentRetryQueue` は per-item `persistPerItem:true` の経路も stale snapshot を書く ― flush 全体の persist も lock 経由に
+- ロガーは全コンテキスト共有キーのため、コンテキスト内 `isFlushing` ガードだけでは不十分（VULN-050 の根拠）― storage CAS 必須
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

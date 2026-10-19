@@ -20,18 +20,18 @@ security-audit run-2 の needs_validation リード。fingerprint: `privacyConse
 
 **再現経路（trace）**
 
-1. `src/background/handlers/lifecycleHandlers.ts:75` — `handleInstalled('update')` が拡張機能更新ごとに `migrateLegacyPrivacyConsent()` を呼ぶ。popup 側の兄弟経路 `src/popup/privacyConsentController.ts:57` → `shouldPromptForConsent` → `privacyConsent.ts:450` も同意モーダル判定ごとに同じ migration を再実行する。
-2. `src/utils/storage/privacyConsent.ts:195` — `hasAlreadyConsented` は署名済み withdrawn レコード（`{hasConsented:false, withdrawal, signature}`）に対して false。`:200-202` の早期 return は「撤回」と「一度も同意していない」を区別しない。
-3. `src/utils/storage/privacyConsent.ts:205` — `hasUsedPrivacyFeatures` は top-level `chrome.storage.local` を直接読む。`privacy_mode` / `pii_confirmation_ui` は単一オブジェクト設定移行が完了するまで残存し（`settingsMigration.ts:143-167` はどちらのキーも除外していない）、`master_password_enabled === true` は master パスワード設定後に top-level に残る。
-4. `src/utils/storage/privacyConsent.ts:211` — `savePrivacyConsent()` → `signAndStoreConsent`（`:62-67`）が `StorageKeys.PRIVACY_CONSENT` を署名付き `{hasConsented:true, consentVersion:'2026-09-08'}` で上書きし、withdrawal レコード（および `withdrawal` フィールド）を破壊する（`getConsentWithdrawalHistory` `:280-287` は以降 null）。
-5. `src/utils/storage/privacyConsent.ts:163` — `hasPrivacyConsent()` が true を返し、記録 / AI 機能が同意なしで再開。`shouldPromptForConsent`（`:449-460`）も false を返して consent modal を二度と出さない。
+1. `src/background/handlers/lifecycleHandlers.ts:75` ― `handleInstalled('update')` が拡張機能更新ごとに `migrateLegacyPrivacyConsent()` を呼ぶ。popup 側の兄弟経路 `src/popup/privacyConsentController.ts:57` → `shouldPromptForConsent` → `privacyConsent.ts:450` も同意モーダル判定ごとに同じ migration を再実行する。
+2. `src/utils/storage/privacyConsent.ts:195` ― `hasAlreadyConsented` は署名済み withdrawn レコード（`{hasConsented:false, withdrawal, signature}`）に対して false。`:200-202` の早期 return は「撤回」と「一度も同意していない」を区別しない。
+3. `src/utils/storage/privacyConsent.ts:205` ― `hasUsedPrivacyFeatures` は top-level `chrome.storage.local` を直接読む。`privacy_mode` / `pii_confirmation_ui` は単一オブジェクト設定移行が完了するまで残存し（`settingsMigration.ts:143-167` はどちらのキーも除外していない）、`master_password_enabled === true` は master パスワード設定後に top-level に残る。
+4. `src/utils/storage/privacyConsent.ts:211` ― `savePrivacyConsent()` → `signAndStoreConsent`（`:62-67`）が `StorageKeys.PRIVACY_CONSENT` を署名付き `{hasConsented:true, consentVersion:'2026-09-08'}` で上書きし、withdrawal レコード（および `withdrawal` フィールド）を破壊する（`getConsentWithdrawalHistory` `:280-287` は以降 null）。
+5. `src/utils/storage/privacyConsent.ts:163` ― `hasPrivacyConsent()` が true を返し、記録 / AI 機能が同意なしで再開。`shouldPromptForConsent`（`:449-460`）も false を返して consent modal を二度と出さない。
 
 **cohort が持続する理由（evidence）**
 
-- `src/utils/storage/encryptionSession.ts:537` — master パスワード設定時に top-level へ `MASTER_PASSWORD_ENABLED: true` を直接書く。本番コードが削除するのは無効化パスのみ（`DISABLE_REMOVED_KEYS` `:355-360`、削除は `:880`）。つまり master パスワード有効中はセッションをまたいでも証跡が残る。
-- `src/utils/storage/settingsMigration.ts:143` — `TOP_LEVEL_ONLY_KEYS` は keyring / consent-version / trust 系を除外するが `master_password_enabled` / `privacy_mode` / `pii_confirmation_ui` は除外していないため、pending / partial 状態のプロファイルでは散在コピーがそのまま残る。
-- `src/utils/storage/privacyConsent.ts:253` — `withdrawPrivacyConsent` は署名済み withdrawn レコードを書くが、evidence キー（`disableNavTrail` のみ `:264-268`）を消さないため、撤回後もゲートが true のまま残る。
-- `src/popup/__tests__/privacyConsent.test.ts:261` — 既存テストは各 evidence key で migration grant を pin するが、「withdrawn consent + evidence key」ケースが存在しないため、再付与は pin されていない挙動。
+- `src/utils/storage/encryptionSession.ts:537` ― master パスワード設定時に top-level へ `MASTER_PASSWORD_ENABLED: true` を直接書く。本番コードが削除するのは無効化パスのみ（`DISABLE_REMOVED_KEYS` `:355-360`、削除は `:880`）。つまり master パスワード有効中はセッションをまたいでも証跡が残る。
+- `src/utils/storage/settingsMigration.ts:143` ― `TOP_LEVEL_ONLY_KEYS` は keyring / consent-version / trust 系を除外するが `master_password_enabled` / `privacy_mode` / `pii_confirmation_ui` は除外していないため、pending / partial 状態のプロファイルでは散在コピーがそのまま残る。
+- `src/utils/storage/privacyConsent.ts:253` ― `withdrawPrivacyConsent` は署名済み withdrawn レコードを書くが、evidence キー（`disableNavTrail` のみ `:264-268`）を消さないため、撤回後もゲートが true のまま残る。
+- `src/popup/__tests__/privacyConsent.test.ts:261` ― 既存テストは各 evidence key で migration grant を pin するが、「withdrawn consent + evidence key」ケースが存在しないため、再付与は pin されていない挙動。
 
 **監査側の blocker（着手前に潰すべき検証）**
 
@@ -74,7 +74,7 @@ Scenario: 4. withdrawn レコードが無い旧来プロファイルは従来ど
 - [x] `withdrawPrivacyConsent` 実行後に top-level evidence キー（`master_password_enabled` / `privacy_mode` / `pii_confirmation_ui`）が残っていても、update 経路・popup consent-modal 経路のどちらでも撤回状態が保持される
 - [x] `getConsentWithdrawalHistory()` が再付与後も `null` にならない（withdrawal フィールドが破壊されない）
 - [x] withdrawn レコードが無い never-consented プロファイルでは、既存 fixture の期待どおり evidence キーの存在を根拠に grant する（移行を殺さない）
-- [x] `getPrivacyConsent` の既存意味論（`needsReconsent` / `signatureInvalid` / ポリシー版数比較）を壊さない — 特に `PRIVACY_POLICY_VERSION` 不一致で再同意が必要なケースが migration によって握り潰されない
+- [x] `getPrivacyConsent` の既存意味論（`needsReconsent` / `signatureInvalid` / ポリシー版数比較）を壊さない ― 特に `PRIVACY_POLICY_VERSION` 不一致で再同意が必要なケースが migration によって握り潰されない
 - [x] `signAndStoreConsent` の署名ペイロード互換を壊さない（`withdrawal` フィールドの追加・判定が署名の検証結果に影響しない。`buildSignaturePayload` のキー列挙は変更しないか、変更する場合は既存署名済みレコードが検証を通ることを確認）
 - [x] `src/popup/__tests__/privacyConsent.test.ts` に「withdrawn + evidence key」ケース（update 経路 / popup 経路 / never-consented 回帰ガード）が追加され、`npm run validate` が緑
 - [x] `public/PRIVACY.md` と `docs/PRIVACY.md` の撤回（withdrawal）の説明が、本修正の挙動と矛盾しないことを確認・同期する
@@ -91,19 +91,19 @@ Scenario: 4. withdrawn レコードが無い旧来プロファイルは従来ど
 
 | ファイル | 行 | 内容 |
 |---|---:|---|
-| `src/utils/storage/privacyConsent.ts` | 183–230 | `migrateLegacyPrivacyConsent`。migration-spent マーカー無し・撤回非認識 |
-| `src/utils/storage/privacyConsent.ts` | 195–202 | `hasAlreadyConsented`。withdrawn レコードと never-consented を区別しない早期 return |
-| `src/utils/storage/privacyConsent.ts` | 205–208 | `hasUsedPrivacyFeatures`。継続中の設定状態を「consent 以前の初回使用の証拠」として再読 |
+| `src/utils/storage/privacyConsent.ts` | 183-230 | `migrateLegacyPrivacyConsent`。migration-spent マーカー無し・撤回非認識 |
+| `src/utils/storage/privacyConsent.ts` | 195-202 | `hasAlreadyConsented`。withdrawn レコードと never-consented を区別しない早期 return |
+| `src/utils/storage/privacyConsent.ts` | 205-208 | `hasUsedPrivacyFeatures`。継続中の設定状態を「consent 以前の初回使用の証拠」として再読 |
 | `src/utils/storage/privacyConsent.ts` | 211 | `savePrivacyConsent()` による再付与（`signAndStoreConsent` `:62-67` 経由で signed `hasConsented:true` を保存） |
-| `src/utils/storage/privacyConsent.ts` | 242–276 | `withdrawPrivacyConsent`。署名済み withdrawn レコードを書くが evidence キーは消さない |
-| `src/utils/storage/privacyConsent.ts` | 280–287 | `getConsentWithdrawalHistory`。withdrawal フィールドが消えると null |
-| `src/utils/storage/privacyConsent.ts` | 449–474 | `shouldPromptForConsent`。`:450` で migration を再実行し、再付与後は modal も出ない |
-| `src/utils/storage/encryptionSession.ts` | 536–542 | master パスワード設定時に top-level `MASTER_PASSWORD_ENABLED: true` を書く |
-| `src/utils/storage/encryptionSession.ts` | 355–360 / 880 | `DISABLE_REMOVED_KEYS`（削除は master パスワード無効化パスのみ） |
-| `src/utils/storage/settingsMigration.ts` | 143–167 | `TOP_LEVEL_ONLY_KEYS`。`master_password_enabled` / `privacy_mode` / `pii_confirmation_ui` は除外されず scatter key が残存 |
-| `src/popup/privacyConsentController.ts` | 53–63 | `initPrivacyConsent` → `shouldPromptForConsent`（popup 側の再実行経路） |
-| `src/background/handlers/lifecycleHandlers.ts` | 74–83 | `handleInstalled('update')` → `migrateLegacyPrivacyConsent` |
-| `src/popup/__tests__/privacyConsent.test.ts` | 261–311 | `describe('migrateLegacyPrivacyConsent')`。withdrawn ケース不在 |
+| `src/utils/storage/privacyConsent.ts` | 242-276 | `withdrawPrivacyConsent`。署名済み withdrawn レコードを書くが evidence キーは消さない |
+| `src/utils/storage/privacyConsent.ts` | 280-287 | `getConsentWithdrawalHistory`。withdrawal フィールドが消えると null |
+| `src/utils/storage/privacyConsent.ts` | 449-474 | `shouldPromptForConsent`。`:450` で migration を再実行し、再付与後は modal も出ない |
+| `src/utils/storage/encryptionSession.ts` | 536-542 | master パスワード設定時に top-level `MASTER_PASSWORD_ENABLED: true` を書く |
+| `src/utils/storage/encryptionSession.ts` | 355-360 / 880 | `DISABLE_REMOVED_KEYS`（削除は master パスワード無効化パスのみ） |
+| `src/utils/storage/settingsMigration.ts` | 143-167 | `TOP_LEVEL_ONLY_KEYS`。`master_password_enabled` / `privacy_mode` / `pii_confirmation_ui` は除外されず scatter key が残存 |
+| `src/popup/privacyConsentController.ts` | 53-63 | `initPrivacyConsent` → `shouldPromptForConsent`（popup 側の再実行経路） |
+| `src/background/handlers/lifecycleHandlers.ts` | 74-83 | `handleInstalled('update')` → `migrateLegacyPrivacyConsent` |
+| `src/popup/__tests__/privacyConsent.test.ts` | 261-311 | `describe('migrateLegacyPrivacyConsent')`。withdrawn ケース不在 |
 
 ### 最小変更の選択肢
 
@@ -119,7 +119,7 @@ needs_validation の bounded local 再現（`validation_plan.local`）を先に�
 
 ### 落とし穴
 
-- ゲートを単純に「`hasAlreadyConsented` が false なら skip」にするだけでは、**never-consented だが evidence キーがある旧来プロファイルの grant を殺す**（シナリオ 4 の回帰）。既存 fixture（`:274`–`:298`）が壊れるため、シナリオ 4 の回帰ガードを必ず残すこと。
+- ゲートを単純に「`hasAlreadyConsented` が false なら skip」にするだけでは、**never-consented だが evidence キーがある旧来プロファイルの grant を殺す**（シナリオ 4 の回帰）。既存 fixture（`:274`-`:298`）が壊れるため、シナリオ 4 の回帰ガードを必ず残すこと。
 - `signatureInvalid`（HMAC キー再生成で署名検証失敗した）レコードは `getPrivacyConsent` では `hasConsented:false, needsReconsent:true` になる。migration がこれを grant してよいかは現行挙動との整合を明示的に決める（skip 推奨。署名検証失敗＝同意状態の信頼性喪失）。
 - `withdrawal` フィールドは `buildSignaturePayload`（`:50-57`）の署名対象に含まれるため、判定ロジックで withdrawal を書き換えると署名検証が壊れる。**新しい判定は既存レコードを読むだけ、書き換えない**こと。
 - `TOP_LEVEL_ONLY_KEYS`（`settingsMigration.ts:143`）に証跡キーを追加して「上書きで回避する」案は、所有者が top-level を直接読む別モジュールとの不整合を招くため、採らない。
@@ -158,12 +158,12 @@ needs_validation の bounded local 再現（`validation_plan.local`）を先に�
   2. **拒否（decline）の保護**: `declineConsent()` は同意レコードを書かず拒否カウンタと ack だけを残すため、撤回と同じ穴が開いていた（下記の局所観測）。ack（`privacy_consent_version`。accept / decline だけが書き、同意導入前は `null`）を持つプロファイルは「既にモーダルに答えた」ので移行対象外にした。同意導入前のプロファイルは ack が null なので従来どおり evidence で grant する（シナリオ 4 の回帰ガード維持）。
   3. **settings ブロブ移設への耐性**: `isMigratableStorageKey('privacy_consent')` は `true` で、未完了の単一オブジェクト設定移行が署名済み同意レコードを `settings` ブロブへ畳み top-level から消す。ack は `TOP_LEVEL_ONLY_KEYS` で保護されているため 2 のガードがこの経路も塞ぐ（同意状態が読めない場合はモーダルで聞き直す＝安全側）。キー配置そのものの是正は下記「残課題」へ切り出した。
   4. **撤回時の拒否猶予の解除**: `withdrawPrivacyConsent()` が拒否カウンタをリセットする。同意へ戻る UI 経路は同意モーダルだけで（設定画面は撤回のみ）、30日猶予が残ると再同意が不可能になるため。
-- **監査 fingerprint**: `privacyConsent.migrateLegacyPrivacyConsent::withdrawal-regrant-legacy-evidence-keys` — verdict を **CONFIRMED → FIXED（2026-10-19）** へ更新。
+- **監査 fingerprint**: `privacyConsent.migrateLegacyPrivacyConsent::withdrawal-regrant-legacy-evidence-keys` ― verdict を **CONFIRMED → FIXED（2026-10-19）** へ更新。
 - **Red の観測（判別力の確認）**: ソースを revert した状態で **7 テストが失敗**することを確認（撤回＋evidence 3種 / 撤回後のモーダル抑制 / 署名検証失敗の撤回 / 拒否＋evidence / 30日猶予中の撤回）。更新経路の統合テストも `expected { hasConsented: true }`（`hasConsented:false` を期待）で失敗する。ack が `null` のとき grant する pin と `withdrawalDate` 欠落 payload の pin は、新しいガードが過剰に効かないことの回帰ガード。
 - **拒否経路の局所観測（2026-10-19、実装前）**: 拒否直後は `privacy_consent` 未設定・拒否カウンタ 1・ack `2026-09-08` → `master_password_enabled=true` → `migrateLegacyPrivacyConsent()` が `true`、`hasConsented:true`、`shouldPromptForConsent()` が `false`（拒否カウンタの30日猶予ごと飛ばしてモーダルが二度と出ない）。
 - **テスト**:
-  - 単体 `src/popup/__tests__/privacyConsent.test.ts` — 撤回＋evidence キー3種で no-op・withdrawal 保持・レコード非書き換え（参照同一性）、撤回後のモーダル再表示、署名検証失敗した撤回の非再付与、拒否＋evidence の非付与、ack `null` の従来 grant、`withdrawalDate` 欠落 payload の扱い、30日猶予中の撤回でカウンタ解除＋モーダル再表示。
-  - 統合 `src/background/handlers/__tests__/lifecycleHandlers-consentWithdrawal.test.ts`（新規）— `handleInstalled({reason:'update'})` を実 `privacyConsent.ts` で通し、storage が書き換わらないことと、never-consented + evidence の従来 grant の両方向を固定（`privacyConsent.js` をモックしない）。
+  - 単体 `src/popup/__tests__/privacyConsent.test.ts` ― 撤回＋evidence キー3種で no-op・withdrawal 保持・レコード非書き換え（参照同一性）、撤回後のモーダル再表示、署名検証失敗した撤回の非再付与、拒否＋evidence の非付与、ack `null` の従来 grant、`withdrawalDate` 欠落 payload の扱い、30日猶予中の撤回でカウンタ解除＋モーダル再表示。
+  - 統合 `src/background/handlers/__tests__/lifecycleHandlers-consentWithdrawal.test.ts`（新規）― `handleInstalled({reason:'update'})` を実 `privacyConsent.ts` で通し、storage が書き換わらないことと、never-consented + evidence の従来 grant の両方向を固定（`privacyConsent.js` をモックしない）。
 - **ドキュメント**: `public/PRIVACY.md` / `docs/PRIVACY.md`（バイト同一）の撤回説明に「撤回した状態は拡張機能の更新時やポップアップを開いた際にも維持され、同意が自動的に復活しない」を追記。`PRIVACY_POLICY_VERSION` は据え置き（同意スコープの変更ではなく、既存の約束の明文化のため）。
 - **ゲート**: `npm run validate` exit 0。`npm run test:perf` は `jsdom files 362/362` でゲート内（新規テストは node 側のため jsdom カウントは不変）。`node scripts/release-checks/check-privacy.mjs` PASS（バイト同一・版数一致）。
 - **残課題（本 PBI のスコープ外・PBI 化済み）**: 単一オブジェクト設定移行が `privacy_consent` を `settings` ブロブへ畳んで top-level から削除する（`TOP_LEVEL_ONLY_KEYS` が保護しているのは `privacy_consent_version` だけ。`isMigratableStorageKey` は `STORAGE_KEY_VALUES` 全値を対象にするため `privacy_consent` は移行対象）。同意を読む側（`getPrivacyConsent` / `migrateLegacyPrivacyConsent` / `getConsentWithdrawalHistory`）はすべて top-level を直接読むので、**既に移行済みのプロファイルでは同意が「未同意」に見え、撤回履歴も読めなくなる**（同意レコードが移されると ack ガードにより移行も走らないため、症状は「再同意モーダルが出る」＝安全側に倒れる）。同様に `privacy_consent_denied_count` / `privacy_consent_last_denial_time` も畳まれるため、`getConsentDeniedCount()` は 0 を返す（30日猶予がリセットされる）。本 PBI は ack ガードで「再付与」を止めるところまでとし、**キー配置（`TOP_LEVEL_ONLY_KEYS` への追加、または全 reader の repository 経由化）は AGENTS.md の high-risk 領域（storage key structure）なので別 PBI とした**: [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md)（2026-10-19 起票。局所再現済み。同日の採点で 03 に採番）。

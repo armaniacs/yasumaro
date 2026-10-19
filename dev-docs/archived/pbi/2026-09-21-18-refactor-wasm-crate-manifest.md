@@ -93,11 +93,11 @@ grep -n "cmp -s\|git diff --exit-code\|dedup" .github/workflows/ci.yml
 
 ### file:line付き証拠
 
-- `package.json:12` — `build:wasm` が per-crate の wasm-pack build + cp x2 の shell chain（pii-sanitizer → textrank → sentence-dedup → tag-cooccur の順に直書き。sentence-dedup のみ public/wasm への cp がなく、STAGED 由来の分岐が chain 内に埋め込まれている）
-- `scripts/postprocess-wasm-glue.mjs:34-63` — CRATES テーブル（gluePath・outPath・dtsName・wasmName・crateLabel）が同一4 crate を再列挙。package.json の crate 順序・命名と同調が必要な構造
-- `wxt.config.ts:149-165` — files.push ブロック x3（pii・textrank・tag_cooccur の public/wasm 出荷）+ STAGED NOTE（sentence-dedup の public 未出荷が prose で記録。build:wasm の cp 有無と対で読まないと一致確認できない）
-- `.github/workflows/ci.yml:121-159` — per-crate の cp・cmp -s・git diff --exit-code トリプレット + dedup 例外コメント（sentence-dedup は src コピーのみ対象の旨が prose で記述。wxt.config.ts の NOTE と同調が必要）
-- `wxt.config.ts:211-215` — CSP コメント内の sentence-dedup STAGED 記述（出荷可否の prose 記録が3箇所目。field 化の際に合わせて削除する）
+- `package.json:12` ― `build:wasm` が per-crate の wasm-pack build + cp x2 の shell chain（pii-sanitizer → textrank → sentence-dedup → tag-cooccur の順に直書き。sentence-dedup のみ public/wasm への cp がなく、STAGED 由来の分岐が chain 内に埋め込まれている）
+- `scripts/postprocess-wasm-glue.mjs:34-63` ― CRATES テーブル（gluePath・outPath・dtsName・wasmName・crateLabel）が同一4 crate を再列挙。package.json の crate 順序・命名と同調が必要な構造
+- `wxt.config.ts:149-165` ― files.push ブロック x3（pii・textrank・tag_cooccur の public/wasm 出荷）+ STAGED NOTE（sentence-dedup の public 未出荷が prose で記録。build:wasm の cp 有無と対で読まないと一致確認できない）
+- `.github/workflows/ci.yml:121-159` ― per-crate の cp・cmp -s・git diff --exit-code トリプレット + dedup 例外コメント（sentence-dedup は src コピーのみ対象の旨が prose で記述。wxt.config.ts の NOTE と同調が必要）
+- `wxt.config.ts:211-215` ― CSP コメント内の sentence-dedup STAGED 記述（出荷可否の prose 記録が3箇所目。field 化の際に合わせて削除する）
 
 ### 実装手順
 
@@ -109,7 +109,7 @@ grep -n "cmp -s\|git diff --exit-code\|dedup" .github/workflows/ci.yml
 
 ### 落とし穴
 
-- ホスト間バイト比較は不可（panic パス・wasm-bindgen バナーの差異 — ci.yml 内コメント参照）。behavioral equivalence（parity 両実行）+ 同一ホスト内 cmp の構成を崩さないこと
+- ホスト間バイト比較は不可（panic パス・wasm-bindgen バナーの差異 ― ci.yml 内コメント参照）。behavioral equivalence（parity 両実行）+ 同一ホスト内 cmp の構成を崩さないこと
 - `package.json` の `build:wasm` は他スクリプト・CI・ドキュメントから名前参照されているため、スクリプト名は維持し実体のみ置き換えること
 - manifest のパス解決は実行カレントに依存させない（`build:wasm` は cd を繰り返すため、絶対パス解決または root 基準の相対パスにすること）
 

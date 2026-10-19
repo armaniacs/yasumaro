@@ -1,4 +1,4 @@
-# PBI: UI/CSS 修正 — inline style・light mode・docs/index.html・Permissions lang の修正
+# PBI: UI/CSS 修正 ― inline style・light mode・docs/index.html・Permissions lang の修正
 
 元指摘: Checking Team (Medium: UI Expert, Accessibility Advocate, i18n Expert, Documentation Architect)
 

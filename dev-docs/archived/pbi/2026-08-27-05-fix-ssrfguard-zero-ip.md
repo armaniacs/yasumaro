@@ -14,12 +14,12 @@
 - 解: `isPrivateIpAddress` に `a===0` 分岐を追加し `0.0.0.0/8` をブロック
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 0.0.0.0 はブロックされる
+Scenario: ハッピーパス ― 0.0.0.0 はブロックされる
   Given `validateUrl("http://0.0.0.0:27123")` を呼ぶ
   When 判定する
   Then `private IP` エラーで拒否される
 
-Scenario: エッジケース — 正常な外部 IP は許可される
+Scenario: エッジケース ― 正常な外部 IP は許可される
   Given `validateUrl("http://8.8.8.8")` を呼ぶ
   When 判定する
   Then 許可される

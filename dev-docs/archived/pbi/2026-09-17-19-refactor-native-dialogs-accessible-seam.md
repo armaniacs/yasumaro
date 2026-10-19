@@ -12,13 +12,13 @@ backlog: [2026-09-17-00-backlog-archloop-0917.md](2026-09-17-00-backlog-archloop
 
 残存箇所（2026-09-17 実測）:
 
-- `src/dashboard/tagsPanel.ts:114, 122, 131, 193` — `alert()` ×4
-- `src/dashboard/settings/customPromptManager.ts:377` — `confirm()`
-- `src/dashboard/markdownTemplateManager.ts:204` — `confirm()`
-- `src/dashboard/settings/settingsExportImportUiCore.ts:180` — `confirm()`
-- `src/popup/pendingPages.ts:131` — `confirm()`
-- `src/popup/privacyConsentController.ts:166` — `alert()`
-- `src/utils/settingsExportImport.ts:480` — `alert()`（utils 層からの UI 直呼び・seam 逆漏洩）
+- `src/dashboard/tagsPanel.ts:114, 122, 131, 193` ― `alert()` ×4
+- `src/dashboard/settings/customPromptManager.ts:377` ― `confirm()`
+- `src/dashboard/markdownTemplateManager.ts:204` ― `confirm()`
+- `src/dashboard/settings/settingsExportImportUiCore.ts:180` ― `confirm()`
+- `src/popup/pendingPages.ts:131` ― `confirm()`
+- `src/popup/privacyConsentController.ts:166` ― `alert()`
+- `src/utils/settingsExportImport.ts:480` ― `alert()`（utils 層からの UI 直呼び・seam 逆漏洩）
 
 プロジェクトには既に deep module が在る: `focusTrapManager`（`src/utils/ui/focusTrap.ts`）、models-dev-dialog、archive edit modal（2026-09-06-07 で `window.prompt` を置換済み）。新設ではなく移行のみ。
 
@@ -55,7 +55,7 @@ Scenario: 既存文言とテストは不変
 
 ## 見積もり
 
-1 pt（🟢低）— 既存 seam への移行のみ。tagsPanel の alert ×4 が最大の作業塊。
+1 pt（🟢低）― 既存 seam への移行のみ。tagsPanel の alert ×4 が最大の作業塊。
 
 ## Definition of Done
 

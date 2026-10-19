@@ -18,7 +18,7 @@ backlog: [./2026-10-01-00-backlog-holistic-1001.md](./2026-10-01-00-backlog-holi
 | main catch | `src/background/obsidianClient.ts:363-393` | 同じ encryption-locked 分類 → AbortError / `timed out` → TIMEOUT → `Failed to fetch` / TypeError → NETWORK → `API key is missing` → CONFIGURATION → fall-through は無 kind（`Connection error: <msg>`） |
 
 - 共通の重複: `isEncryptionLockedError(e)` → `withFailure({ success: false, message: errorMessage(e) }, connectionTestFailure(e, FailureKind.CONFIGURATION))` と、`msg.includes('API key is missing')` → `withFailure({ success: false, message: 'API key is missing. Please enter your Obsidian API key.' }, connectionTestFailure(e, FailureKind.CONFIGURATION))` が両 catch にそのまま繰り返されている
-- 差分（保存必須）: (1) override 経路には timeout / network 分岐が無い（`buildObsidianConfig` は fetch を行わない）、(2) fall-through の kind が異なる（override 経路は CONFIGURATION 固定、main 経路は意図的に無 kind — :389-391 行のコメント「認識不能エラーに kind を主張しない」）、(3) main 経路では api-key-missing 判定が timeout / network 判定より後にある
+- 差分（保存必須）: (1) override 経路には timeout / network 分岐が無い（`buildObsidianConfig` は fetch を行わない）、(2) fall-through の kind が異なる（override 経路は CONFIGURATION 固定、main 経路は意図的に無 kind ― :389-391 行のコメント「認識不能エラーに kind を主張しない」）、(3) main 経路では api-key-missing 判定が timeout / network 判定より後にある
 
 ### 関連する既存の共通化
 
@@ -79,8 +79,8 @@ It must keep behavior: 両 catch から返る `ObsidianConnectionResult`（`succ
 - [x] `npm run validate`（type-check + test）が green
 - [x] `rg "API key is missing" src/background/obsidianClient.ts` で分類側の文言定義が 1 箇所に集約されていることを確認する
 - [x] `rg "isEncryptionLockedError" src/background/obsidianClient.ts` で testConnection 内の判定が共通分類経由のみになっていることを確認する
-- [ ] `graphify update .` を実行しグラフを現行コードに追従させる — 未実施（統合ステップのスコープ外）
-- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 15 を完了扱いに更新する — アーカイブ/台帳更新は別ステップで処理
+- [ ] `graphify update .` を実行しグラフを現行コードに追従させる ― 未実施（統合ステップのスコープ外）
+- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 15 を完了扱いに更新する ― アーカイブ/台帳更新は別ステップで処理
 
 ## 実装記録（2026-10-02）
 

@@ -1,7 +1,7 @@
 # Design: opfsWorker.ts Type and Migration Deduplication
 
 **Date:** 2026-07-13
-**Status:** Implemented (2026-07-13) — v6.5.27
+**Status:** Implemented (2026-07-13) ― v6.5.27
 **PBI:** [2026-07-13-02-fix-opfs-worker-type-dedup](../pbi/2026-07-13-02-fix-opfs-worker-type-dedup.md)
 **Depends on:** PBI #1 (StorageBackend Adapter)
 
@@ -12,10 +12,10 @@
 ### Current State (Problem)
 
 `opfsWorker.ts` (970 lines) contains inline copies of:
-- `BrowsingLogRecord` interface (56 lines) — duplicated from `sqlite-types.ts`
-- `SearchResultRecord`, `QueryPayload`, `SearchPayload` interfaces — duplicated types
-- ALTER TABLE migration columns (19 entries) — duplicated from `sqliteEngineContext.ts`
-- FTS rebuild logic — duplicated init sequence
+- `BrowsingLogRecord` interface (56 lines) ― duplicated from `sqlite-types.ts`
+- `SearchResultRecord`, `QueryPayload`, `SearchPayload` interfaces ― duplicated types
+- ALTER TABLE migration columns (19 entries) ― duplicated from `sqliteEngineContext.ts`
+- FTS rebuild logic ― duplicated init sequence
 
 Adding a column to `browsing_logs` requires editing 3 files. PBI-11 (gist_synced) exposed this drift.
 
@@ -44,21 +44,21 @@ After:
 ### 1. Remove inline type definitions
 
 Delete from `opfsWorker.ts`:
-- `interface BrowsingLogRecord` (lines 22–56)
-- `interface SearchResultRecord` (lines 58–70)
-- `interface QueryPayload` (lines 77–88)
-- `interface SearchPayload` (lines 90–94)
+- `interface BrowsingLogRecord` (lines 22-56)
+- `interface SearchResultRecord` (lines 58-70)
+- `interface QueryPayload` (lines 77-88)
+- `interface SearchPayload` (lines 90-94)
 
 Replace with:
 ```ts
 import type { BrowsingLogRecord, BrowsingLogEntry, SearchResult } from '../utils/sqlite-types.js';
 ```
 
-Note: `sqlite-types.ts` already exports these. The worker can import them via ESM — WXT/Vite resolves the path during bundling.
+Note: `sqlite-types.ts` already exports these. The worker can import them via ESM ― WXT/Vite resolves the path during bundling.
 
 ### 2. Use shared migrations
 
-The ALTER TABLE migration loop in `initSqliteInner()` (lines 221–232 in `opfsWorker.ts`) is replaced by:
+The ALTER TABLE migration loop in `initSqliteInner()` (lines 221-232 in `opfsWorker.ts`) is replaced by:
 ```ts
 await runMigrations({
   exec: (sql: string) => sqlExec(sql),
@@ -94,7 +94,7 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.ts';
 
 ## Rollback
 
-Restore deleted inline interfaces. No data or schema changes involved — purely import restructuring.
+Restore deleted inline interfaces. No data or schema changes involved ― purely import restructuring.
 
 ---
 

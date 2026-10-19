@@ -1,4 +1,4 @@
-# PBI: 送信者検証 seam の一本化 — AuthorizedSqliteSender
+# PBI: 送信者検証 seam の一本化 ― AuthorizedSqliteSender
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -23,7 +23,7 @@
 1. **`authorizeOffscreenSender(sender)` を新設**（`src/utils/extensionOrigin.ts` の隣、または senderTrust.ts 内）: `sender` を受けて `AuthorizedSqliteSender | null` を返す単一関数。内部で `isContentScriptSender` + id 照合を行う
 2. **`senderTrust.ts` のローカル `isContentScriptSender` を削除**し、共有関数に一本化（senderTrust.ts:46-48）
 3. **`offscreen.ts` の送信者チェックを委譲**: `src/offscreen/offscreen.ts:75-92` の sender 検証を `authorizeOffscreenSender` 経由にする
-4. **`InPageOffscreenTransport` に internal seam を追加**: `dispatchAuthorized(msg, proof: AuthorizedSqliteSender)` — 捏造 sender ではなく、生成時に取得した承認証明を渡す。interface 上「in-process 呼び出しは検証済み」を明示
+4. **`InPageOffscreenTransport` に internal seam を追加**: `dispatchAuthorized(msg, proof: AuthorizedSqliteSender)` ― 捏造 sender ではなく、生成時に取得した承認証明を渡す。interface 上「in-process 呼び出しは検証済み」を明示
 5. `createOffscreenTransport()` の firefox 分岐で、`offscreen.js` の import から `handleOffscreenMessage` と併せて authorize 関数を取得し transport に渡す
 
 ### 触ってはいけないもの

@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 07 / 全候補数 7
 - RICEスコア: 1.6（Reach=3 / Impact=1 / Confidence=80% / Effort=1.5人週）
-- 根拠: 依存関係上最後に着手。Speculative — PBI-01 完了後の settings access 整備後にのみ着手。
+- 根拠: 依存関係上最後に着手。Speculative ― PBI-01 完了後の settings access 整備後にのみ着手。
 
 ## BDD受け入れシナリオ
 
@@ -37,7 +37,7 @@ Scenario: extractor.ts が thin orchestrator になる
 - **契約**: `PageState` が per-tab であることをコンテンツスクリプトの複数タブテストで検証
 
 ## 見積もり
-1.5 ストーリーポイント（中 — 1.5 人週程度）
+1.5 ストーリーポイント（中 ― 1.5 人週程度）
 
 ## 技術的考慮事項
 - **依存**: PBI-01（SettingsRepository shim 廃止）に依存

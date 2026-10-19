@@ -110,7 +110,7 @@ Scenario: 4. remove も両方の入れ物に効く（境界）
 | 同上 | 115-119 | `get(string)` の version 分岐（`versions` のみ参照） |
 | 同上 | 94-113 | `get(string[])` の version 分岐（同上） |
 | 同上 | 139-141 | `remove`。`store` のみ削除（`versions` を消すかを決める） |
-| `src/utils/storage/__tests__/storagePort.test.ts` | — | 往復のテストを足す場所 |
+| `src/utils/storage/__tests__/storagePort.test.ts` | ― | 往復のテストを足す場所 |
 | `src/utils/storage/__tests__/storagePortCloneBoundary.test.ts` | 16 | 2 実装を並べる parity テストの型 |
 | `src/utils/storage/__tests__/storageTransaction-contract.test.ts` | 22 | 同上（transaction 契約の matrix） |
 
@@ -124,7 +124,7 @@ Scenario: 4. remove も両方の入れ物に効く（境界）
 
 **推奨: 1。**
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 分岐の現状（文字列 *_version がどちらにも入らないことを確認）
@@ -165,11 +165,11 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 **疑問**: なぜ `InMemoryStoragePort` は `chrome.storage.local` が保持するキーを黙って捨てるのか。
 
-1. **なぜ落ちるのか** — `set` が `*_version` で終わるキーを「数値なら `versions`、それ以外は `store` に入れない」と分岐していた。文字列値はどちらの枝にも当たらず、例外もログも無く消える。
-2. **なぜ `*_version` を特別扱いしていたのか** — このコードベースは CAS（楽観ロック）の世代番号を `<key>_version` という**兄弟キー**で表現しており、ポートがそれを `versions` マップで模していた。
-3. **なぜ模倣が必要だったのか** — `get(null)` / `get('<key>_version')` を chrome と同じ見え方にしたかったため。**ただし `StorageTransaction` は `<key>_version` を通常のキーとして `port.get` / `port.set` に渡している**（`storageTransaction.ts:374`）。通常キーとして保存しても見え方は同じで、模倣は不要だった。
-4. **なぜ不要な模倣が害を生んだのか** — `*_version` という**命名規約を意味の判別子として流用**したため。判別子（数値か）は書き込み経路にしか無く、fallback も無い。しかも `StorageKeys` の中で `_version` で終わるキー（`privacy_consent_version` / `gemini_api_version` / `tranco_version`）は**すべて文字列値の通常キー**で、判別子が想定した形状（数値 CAS）は `StorageKeys` には存在しない。つまり特別扱いは「壊す形状」だけを実在させ、「守る形状」は名前から動的に生成されるものだけだった。
-5. **なぜ長く残ったのか** — 落ち方が**静か**（`{}` を返すだけ）でテストは緑のまま。port を使うテストは数値 CAS か、別ハーネス（`chrome.storage.local` モック）で seed しており、**2 実装を文字列 `*_version` で比較するテストが無かった**。
+1. **なぜ落ちるのか** ― `set` が `*_version` で終わるキーを「数値なら `versions`、それ以外は `store` に入れない」と分岐していた。文字列値はどちらの枝にも当たらず、例外もログも無く消える。
+2. **なぜ `*_version` を特別扱いしていたのか** ― このコードベースは CAS（楽観ロック）の世代番号を `<key>_version` という**兄弟キー**で表現しており、ポートがそれを `versions` マップで模していた。
+3. **なぜ模倣が必要だったのか** ― `get(null)` / `get('<key>_version')` を chrome と同じ見え方にしたかったため。**ただし `StorageTransaction` は `<key>_version` を通常のキーとして `port.get` / `port.set` に渡している**（`storageTransaction.ts:374`）。通常キーとして保存しても見え方は同じで、模倣は不要だった。
+4. **なぜ不要な模倣が害を生んだのか** ― `*_version` という**命名規約を意味の判別子として流用**したため。判別子（数値か）は書き込み経路にしか無く、fallback も無い。しかも `StorageKeys` の中で `_version` で終わるキー（`privacy_consent_version` / `gemini_api_version` / `tranco_version`）は**すべて文字列値の通常キー**で、判別子が想定した形状（数値 CAS）は `StorageKeys` には存在しない。つまり特別扱いは「壊す形状」だけを実在させ、「守る形状」は名前から動的に生成されるものだけだった。
+5. **なぜ長く残ったのか** ― 落ち方が**静か**（`{}` を返すだけ）でテストは緑のまま。port を使うテストは数値 CAS か、別ハーネス（`chrome.storage.local` モック）で seed しており、**2 実装を文字列 `*_version` で比較するテストが無かった**。
 
 **原因**: `*_version` という命名規約を「CAS 世代番号」の意味に流用してポートに特別扱いさせ、その判別に fallback が無かったこと。かつ、その特別扱いが守る対象を実際には持っていなかったこと。
 
@@ -182,7 +182,7 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 ### 実装
 
-- `src/utils/storage/storagePort.ts` — `versions` マップを削除。`get` の 3 経路を store 参照のみに、`set` を全キー保存に変更。`getBytesInUse` から「`*_version` を飛ばして 8 バイト加算」を削除（値の JSON 長で数える）。`getVersion()` は store から読む形に変更。クラスの doc に `*_version` の 2 つの用途を明記。
+- `src/utils/storage/storagePort.ts` ― `versions` マップを削除。`get` の 3 経路を store 参照のみに、`set` を全キー保存に変更。`getBytesInUse` から「`*_version` を飛ばして 8 バイト加算」を削除（値の JSON 長で数える）。`getVersion()` は store から読む形に変更。クラスの doc に `*_version` の 2 つの用途を明記。
 - **同時に消えた 3 つの非対称**（いずれも依存なしを確認済み）:
   1. `get([<base>])` が、store に無く versions にある場合に `{ '<base>_version': N }` を返していた（要求したキーが結果に無い）。
   2. `seed()` だけが非数値 `*_version` を store に入れており、`set()` と挙動が違った。
@@ -191,8 +191,8 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 ### テスト
 
-- `src/utils/storage/__tests__/storagePort.test.ts` — `describe('*_version keys of both shapes')` を追加（5 テスト）: 文字列 ``*_version`` の 3 経路往復、seed した文字列キーの読み出し、`getBytesInUse` の計上、数値・文字列混在の `remove`、数値 CAS 世代の回帰ガード。
-- `src/utils/storage/__tests__/storagePortCloneBoundary.test.ts` — parity のループに「文字列 `*_version` を通常キーとして保存する」を追加（InMemory と chrome モックの両方で回る）。
+- `src/utils/storage/__tests__/storagePort.test.ts` ― `describe('*_version keys of both shapes')` を追加（5 テスト）: 文字列 ``*_version`` の 3 経路往復、seed した文字列キーの読み出し、`getBytesInUse` の計上、数値・文字列混在の `remove`、数値 CAS 世代の回帰ガード。
+- `src/utils/storage/__tests__/storagePortCloneBoundary.test.ts` ― parity のループに「文字列 `*_version` を通常キーとして保存する」を追加（InMemory と chrome モックの両方で回る）。
 - **Red の確認**: 修正前に 5 件が失敗（InMemory 側 4 件＋parity 1 件）。chrome モック側の parity テストは修正前から通っており、差分が double 側にあることを示す。
 - 回帰: `src/utils/storage/` 配下 61 ファイル 549 テストが緑。`npm run validate` exit 0（1095 files / 16416 tests。修正前 16409 から +7）。
 - **なぜなぜで選んだ形の検証**: 数値 `*_version` の見え方を固定する回帰ガードを含めたので、CAS の観測結果が変わっていないことをテストで示している。
@@ -205,8 +205,8 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 
 レビューの verdict は「根因に対して正しく完全」。指摘 5 件（いずれも同じファイルの忠実性ギャップ）をすべて反映した。
 
-1. **MEDIUM: `remove()` が listener に通知していなかった** — chrome は削除でも `storage.onChanged` を発火し、`ChromeStoragePort` は `{key: undefined}` として配送する。`SettingsRepository.observe` はこれでキャッシュを捨てるため、double が黙っていると「削除 → 無効化」経路がテストで検出できない（`CACHE_TTL` 内の `getAll` が削除前のスナップショットを返す）。**実際に存在したキーだけ**を `{key: undefined}` で通知する形に修正（chrome は変化が無ければ発火しない）。`SettingsRepository.test.ts` にキャッシュ無効化までの統合テストを追加。
-2. **数値 CAS の回帰ガードが判別力なし**（修正前でも通っていた）— `getBytesInUse` の計上（修正前は `*_version` を飛ばして 0）を assert に加え、判別する形にした。
+1. **MEDIUM: `remove()` が listener に通知していなかった** ― chrome は削除でも `storage.onChanged` を発火し、`ChromeStoragePort` は `{key: undefined}` として配送する。`SettingsRepository.observe` はこれでキャッシュを捨てるため、double が黙っていると「削除 → 無効化」経路がテストで検出できない（`CACHE_TTL` 内の `getAll` が削除前のスナップショットを返す）。**実際に存在したキーだけ**を `{key: undefined}` で通知する形に修正（chrome は変化が無ければ発火しない）。`SettingsRepository.test.ts` にキャッシュ無効化までの統合テストを追加。
+2. **数値 CAS の回帰ガードが判別力なし**（修正前でも通っていた）― `getBytesInUse` の計上（修正前は `*_version` を飛ばして 0）を assert に加え、判別する形にした。
 3. **`privacy_consent_version` は `string | null`** で `DEFAULT_SETTINGS` は `null` を積む。修正で新たに保持されるようになった `null` をテストで固定し、コメントの「a string」を「a string or null」に訂正（ack の `null` が消えると、回答済みユーザーに再同意を求める経路に戻る）。
 4. **stale なテスト名** `'getBytesInUse always returns 0'` を、同 describe の新テストと矛盾しない名前に変更。
 5. **`clear()` が listener も落とす**のは chrome と違う。テスト隔離のための仕様であることを doc に明記（挙動は変えない）。
@@ -216,6 +216,6 @@ grep -n "_VERSION:" src/utils/storage/types.ts
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 発見の現場。同 PBI の落とし穴は本 PBI の完了で更新済み
-- `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` — `StoragePort` への統一（本 PBI はその test double の忠実性）
-- `dev-docs/ADR/` — `storagePort` の契約に関する ADR があれば実装時に参照（`grep -rl "StoragePort" dev-docs/ADR/`）
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 発見の現場。同 PBI の落とし穴は本 PBI の完了で更新済み
+- `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` ― `StoragePort` への統一（本 PBI はその test double の忠実性）
+- `dev-docs/ADR/` ― `storagePort` の契約に関する ADR があれば実装時に参照（`grep -rl "StoragePort" dev-docs/ADR/`）

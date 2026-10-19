@@ -81,8 +81,8 @@ It must keep behavior: content 保持のセマンティクス（timestamp 降順
 - [x] 受け入れ基準 1-6 をすべて満たす
 - [x] `npm run validate`（type-check + test）が green
 - [x] `rg "MAX_CONTENT_ENTRIES" src/utils/storage/savedUrlRepository.ts` で保持ルールの実装が共通関数 1 箇所のみになっていることを確認する（import と re-export を除く）
-- [ ] `graphify update .` を実行しグラフを現行コードに追従させる — 未実施（統合ステップのスコープ外）
-- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 16 を完了扱いに更新する — アーカイブ/台帳更新は別ステップで処理
+- [ ] `graphify update .` を実行しグラフを現行コードに追従させる ― 未実施（統合ステップのスコープ外）
+- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 16 を完了扱いに更新する ― アーカイブ/台帳更新は別ステップで処理
 
 ## 実装記録（2026-10-02）
 

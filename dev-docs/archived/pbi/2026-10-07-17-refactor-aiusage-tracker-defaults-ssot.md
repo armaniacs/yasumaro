@@ -15,7 +15,7 @@ AI レート制限の保守担当者として、`AI_RATE_LIMIT_MAX` / `MAX_MONTH
 
 - 既定複製: `src/utils/aiUsageTracker.ts:12`（`DEFAULT_RATE_LIMIT_MAX = 10`）/ `:293`（`DEFAULT_MAX = 1000000`）vs `src/utils/storage/defaults.ts:114-115`（canonical）
 - 生読み主経路: `:74`（`chrome.storage.local.get('settings')`）/ `:303`（同様）/ legacy 読み `:87,317` / repo フォールバック `:98-104,327-334`（動的 import）
-- 宣言: DESIGN_SPECIFICATIONS §5.1 — 「Settings access goes through the SettingsRepository deep module」「DEFAULT_SETTINGS is the only source of fallback values」
+- 宣言: DESIGN_SPECIFICATIONS §5.1 ― 「Settings access goes through the SettingsRepository deep module」「DEFAULT_SETTINGS is the only source of fallback values」
 - 既存 fix の文脈: `:67-73,297-301` のコメント（生読み先行は writer/reader mismatch 修正として文書化済み）
 
 ## BDD受け入れシナリオ

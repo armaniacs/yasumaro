@@ -8,10 +8,10 @@ PBI: `pbi/2026-09-25-28-investigate-content-hot-path-yield.md`（investigate・p
 | PBI 記載 | 実測 |
 |---|---|
 | `src/content/contentKernel.ts:99-101`（extractPageContent） | ✅ 一致 |
-| `src/utils/contentExtractor/pageContentPipeline.ts:7-11` | ❌ ドリフト — `src/utils/pageContentPipeline.ts:48` に移動済み（`preparePageContent`） |
-| `src/utils/contentExtractor/index.ts:437-441`（extractMainContentWithInfo） | ⚠️ 行番号ドリフト — 同関数は `index.ts:114` に存在（437-441 は別コード）。production entry であることは一致 |
+| `src/utils/contentExtractor/pageContentPipeline.ts:7-11` | ❌ ドリフト ― `src/utils/pageContentPipeline.ts:48` に移動済み（`preparePageContent`） |
+| `src/utils/contentExtractor/index.ts:437-441`（extractMainContentWithInfo） | ⚠️ 行番号ドリフト ― 同関数は `index.ts:114` に存在（437-441 は別コード）。production entry であることは一致 |
 | `cloneNode(true)` 2 箇所（`index.ts:221,276`） | ✅ 一致（cleanse 用・AI cleanse 用） |
-| `scheduler.yield` / `globalThis.scheduler?.yield` が production・test・entrypoints で 0 件 | ✅ 一致（本調査の計測で Chromium 実機には存在することを確認 — 未使用なだけ） |
+| `scheduler.yield` / `globalThis.scheduler?.yield` が production・test・entrypoints で 0 件 | ✅ 一致（本調査の計測で Chromium 実機には存在することを確認 ― 未使用なだけ） |
 | `cleanseViaOffscreen()` 存在・production call site 0・flag default false | ✅ 一致（`cleansingOffscreenDelegate.ts`、`types.ts:208-209`、`defaults.ts:87`） |
 | `bench:check` は deterministic 4 counter のみ・`bench:e2e` と分離 | ✅ 一致 |
 | 既存テスト 4 件 | ✅ 存在＋本調査で green 確認（28 件）。`c4.clone-dedup.bench.mjs` は micro suite で実行確認（L p50 211.95ms） |
@@ -55,7 +55,7 @@ PBI: `pbi/2026-09-25-28-investigate-content-hot-path-yield.md`（investigate・p
 
 ## 2. 測定結果（実 production コード・実 Chromium・4x throttle＋等倍）
 
-条件: fixture server（bench/e2e/server.mjs）、esbuild IIFE bundle、`extractMainContentWithInfo(10000, {cleanseEnabled:true})`。A は 1 回実行 walls ×5 の max/mean、B は 8 chunk の chunk max/total、C は slice 分解。longtask ⟺ 50ms 超（同期 1 実行 = 1 task のため）。
+条件: fixture server（bench/e2e/server.mjs）、esbuild IIFE bundle、`extractMainContentWithInfo(10000, {cleanseEnabled:true})`。A は 1 回実行 walls ×5 の max/mean、B は 8 chunk の chunk max/total、C は slice 分解。longtask ⇔ 50ms 超（同期 1 実行 = 1 task のため）。
 
 | page/scale | A max 4x | A max 1x | B chunkmax 4x | B total 4x | C ser+rt+parse 4x |
 |---|---|---|---|---|---|
@@ -69,17 +69,17 @@ PBI: `pbi/2026-09-25-28-investigate-content-hot-path-yield.md`（investigate・p
 − = longtask なし / LT = longtask 級。等倍（本機 M 系）では spa32 のみ LT。4x（低速 proxy）では news32・spa8 以上で LT。
 
 読み:
-- 通常 hardware・通常ページは longtask なし — 緊急度は低い。
-- 低速 CPU × heavy ページで最大 284ms — 対策の対象はここ。
-- B は chunk max が A max と同等かつ total が 4〜7 倍 — **yield 化の失敗**（Q2）。
-- C の main-thread 残余（ser+rt）は最大 9.7ms — **longtask  class の解消**（Q3）。
+- 通常 hardware・通常ページは longtask なし ― 緊急度は低い。
+- 低速 CPU × heavy ページで最大 284ms ― 対策の対象はここ。
+- B は chunk max が A max と同等かつ total が 4〜7 倍 ― **yield 化の失敗**（Q2）。
+- C の main-thread 残余（ser+rt）は最大 9.7ms ― **longtask  class の解消**（Q3）。
 
 ## 3. 方式比較と裁定
 
 | 方式 | longtask への効果 | コスト | 判定 |
 |---|---|---|---|
 | 現状維持 + 同期最適化（clone 重複除去） | bounded（半減級。heavy×低速は残る） | 小（c4 計測面あり） | 補完施策として推奨。採用方式にはしない |
-| 非同期 rAF batching + scheduler.yield | prototype で効果なし（chunk max ≈ 全量、total ×4-7） | 大（extractor 内部の再構成 + epoch + preview 非同期伝播） | **不採用** |
+| 非同期 rAF batching + scheduler.yield | prototype で効果なし（chunk max ≒ 全量、total ×4-7） | 大（extractor 内部の再構成 + epoch + preview 非同期伝播） | **不採用** |
 | **offscreen 化** | main-thread 残余 ~15ms（longtask 解消） | 中（wiring + flag path + 非同期境界伝播 + lifecycle） | **採用** |
 
 **裁定: offscreen 化を採用方式とする**。`cleanseViaOffscreen()` の PoC・`cleansing_offscreen_enabled` flag（default false）は存在するが production call site 0 のため、後続実装 PBI は wiring・設定経路・`extractPageContent` 同期契約の非同期伝播（preview 自動保存フローへの影響評価を含む）・offscreen lifecycle 管理を範囲とする。Offscreen document 内では `chrome.runtime` messaging と Web API のみ使用。非同期化後もページ DOM を変更しない detached 処理に限定する。

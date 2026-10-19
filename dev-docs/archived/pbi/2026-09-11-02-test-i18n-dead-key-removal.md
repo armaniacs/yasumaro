@@ -45,6 +45,6 @@ S（0.25 人週）。種別: test。
 
 ## 実装メモ（2026-09-11 round 7）
 
-- 3 段階 verifier（リテラル → コメント除去後 substring（tests 込み）→ 動的 prefix）により **104 key を削除**（verifier は 103 と報告したが ja/en 実削除は 104 — ruleLabels ファミリー等の kept 判定は正しく機能）。6 フィルターモード系（legacy panel 撤去）・trancoUpdateModal 系・trigger 系・maskedBadge 系・historyAiSummaryCleansedBytes/Elements 系など。
-- kept 177 件: 変数経由（union 型リスト・ternary label map）・manifest 解決（extensionName/ShortName/Description — Chrome が default_locale で解決）・動的構築（ruleLabels 30 件）。
+- 3 段階 verifier（リテラル → コメント除去後 substring（tests 込み）→ 動的 prefix）により **104 key を削除**（verifier は 103 と報告したが ja/en 実削除は 104 ― ruleLabels ファミリー等の kept 判定は正しく機能）。6 フィルターモード系（legacy panel 撤去）・trancoUpdateModal 系・trigger 系・maskedBadge 系・historyAiSummaryCleansedBytes/Elements 系など。
+- kept 177 件: 変数経由（union 型リスト・ternary label map）・manifest 解決（extensionName/ShortName/Description ― Chrome が default_locale で解決）・動的構築（ruleLabels 30 件）。
 - 削除後: check-i18n PASS・type-check 0 errors・dashboard/popup/utils 7466 tests green。

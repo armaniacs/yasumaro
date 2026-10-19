@@ -25,10 +25,10 @@
 - 18 は 12-17 と独立。最小案 0.5pt (retry 抽出) に縮退し、`BrowsingLogRepository` の去就決定後に再検討
 
 ## 推奨着手順（再評価後）
-- **Wave1 (2並列): 12 (5pt), 13A (3pt)** — `LIMIT` 政策 ADR + `isNetworkError` ガードを先に
-- **Wave2 (2並列): 15 (3pt), 14 (3pt 薄い alias)** — 12確定後に `Settings` と `Host` を並行
-- **Wave3 (2並列): 16 (3pt ヘルパ), 17 (3pt 縮小)** — 12確定後に Worker と History を並行
-- **Wave4 (1): 18 (0.5pt 最小)** — `withRetry` 抽出のみ。フル 3pt は `BrowsingLogRepository` 去就決定後に再検討
+- **Wave1 (2並列): 12 (5pt), 13A (3pt)** ― `LIMIT` 政策 ADR + `isNetworkError` ガードを先に
+- **Wave2 (2並列): 15 (3pt), 14 (3pt 薄い alias)** ― 12確定後に `Settings` と `Host` を並行
+- **Wave3 (2並列): 16 (3pt ヘルパ), 17 (3pt 縮小)** ― 12確定後に Worker と History を並行
+- **Wave4 (1): 18 (0.5pt 最小)** ― `withRetry` 抽出のみ。フル 3pt は `BrowsingLogRepository` 去就決定後に再検討
 
 ## 出力ファイル
 - `pbi/2026-08-27-12-feat-unify-sqlite-storage-backend.md`

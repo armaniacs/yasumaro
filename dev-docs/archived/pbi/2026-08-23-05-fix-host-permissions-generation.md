@@ -1,4 +1,4 @@
-# PBI: host_permissions 自動生成 — 16行手書きの脱落防止
+# PBI: host_permissions 自動生成 ― 16行手書きの脱落防止
 
 ## ユーザーストーリー
 開発者として、host_permissions の16行を手書きせず自動生成したい、なぜなら `wxt.config.ts:47-64` の `http://127.0.0.1:27123/*` 等を4ports×2proto×2hostで手書きすると、ポート追加・削除時の脱落や `http`/`https` の片側漏れが起き、Obsidian Local REST APIやローカルAIへの接続が静かに失敗するから
@@ -16,19 +16,19 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 生成されたhost_permissionsで全ポートに接続できる
+Scenario: 正常系 ― 生成されたhost_permissionsで全ポートに接続できる
   Given wxt.config.ts がビルドされる
   When 生成されたhost_permissionsを検査する
   Then http://127.0.0.1:27123/*, https://localhost:27124/* 等の16オリジンが全て含まれている
   And Obsidian (27123/27124) とローカルAI (11434/1234) の疎通テストが全パスする
 
-Scenario: 境界ケース — 新ポート追加時は1箇所の変更で全箇所に反映される
+Scenario: 境界ケース ― 新ポート追加時は1箇所の変更で全箇所に反映される
   Given LOCAL_PORTS に 9999 を追加した
   When ビルドする
   Then host_permissions と connect-src の両方に 9999 が自動で含まれる
   And 手動での16行編集が不要である
 
-Scenario: エラーケース — 生成関数のバグでhost_permissionsが空でもビルド時に気づく
+Scenario: エラーケース ― 生成関数のバグでhost_permissionsが空でもビルド時に気づく
   Given 生成関数が空配列を返した（テストでモック）
   When ビルドまたはテストを実行する
   Then host_permissionsが空であることを検出するテストが失敗する
@@ -62,7 +62,7 @@ Scenario: エラーケース — 生成関数のバグでhost_permissionsが空�
 - **Red-Green-Refactor**: TDD
 
 ## 見積もり
-2pt（要チーム見積もり）— 生成関数は小規模だが、wxt.config.tsの置換と既存接続テストの回帰確認を含む
+2pt（要チーム見積もり）― 生成関数は小規模だが、wxt.config.tsの置換と既存接続テストの回帰確認を含む
 
 ## 技術的考慮事項
 - 依存関係: 01 CSP connect-src と同根。両方を同じ `LOCAL_PORTS` から生成することで二重管理を解消。01と同バッチ推奨

@@ -13,9 +13,9 @@ RICEスコア: 6.0（Reach=5 / Impact=2 / Confidence=0.9 / Effort=1.5 SP）
 
 ## 背景
 
-- 正: `testDir/e2e/fixtures/extension.fixture.ts:26-81` — SW race 対策 + headless fixme + `serviceWorkers: 'allow'` + host-resolver-rules を保持する唯一の正装版
-- 再実装: `testDir/e2e/fixtures/cleansing-preview.fixture.ts:29-60` — 同一起動手順を再実装
-- 欠落: `popup.fixture.ts:30-40` / `dashboard.fixture.ts:17-27` / `popup-pbi27.fixture.ts:23-33` / `dashboard-issue-report.fixture.ts:28` / `dashboard-locale.fixture.ts:25-37` — SW race ガード + headless skip なし
+- 正: `testDir/e2e/fixtures/extension.fixture.ts:26-81` ― SW race 対策 + headless fixme + `serviceWorkers: 'allow'` + host-resolver-rules を保持する唯一の正装版
+- 再実装: `testDir/e2e/fixtures/cleansing-preview.fixture.ts:29-60` ― 同一起動手順を再実装
+- 欠落: `popup.fixture.ts:30-40` / `dashboard.fixture.ts:17-27` / `popup-pbi27.fixture.ts:23-33` / `dashboard-issue-report.fixture.ts:28` / `dashboard-locale.fixture.ts:25-37` ― SW race ガード + headless skip なし
 - `waitForEvent('serviceworker')` が無上限タイムアウト（`popup.fixture.ts:45`）
 - `EXTENSION_PATH` + `__dirname` ボイラープレートが 8 か所
 - Seed drift: `dashboard.fixture.ts:50-58` は `ai_provider_priority_list: []` を seed しないよう WHY コメントで警告するが、`dashboard-locale.fixture.ts:57` はまさにそれを seed している
@@ -76,8 +76,8 @@ Scenario: serviceworker 待ちが上限付きになる
 
 - 統合: `testDir/e2e/fixtures/launchExtensionContext.ts`（新設・215 行）に単一起動経路を集約。SW race ガード（`waitForServiceWorker` 200ms ポーリング / 5s 上限の bounded race）・headless fixme（null 返却で caller が `test.fixme()`）・`serviceWorkers: 'allow'`・host-resolver-rules をすべて起動側で常時適用。`resolveExtensionId` の `waitForEvent('serviceworker')` フォールバックにも 10s 上限（`EXTENSION_ID_TIMEOUT_MS`）を設け、無上限待機を解消
 - seed drift の構造的解消: `ExtensionSeedPolicy` / `ProviderSeedPolicy`（`priorityList: 'synthesize' | 'empty'` 明示パラメータ）で全 fixture がシードを宣言。`'synthesize'` は flat list を seed せず SW の deferred migration に委ね（実ユーザーのアップグレード経路と同一）、`'empty'` は明示 `[]`（user-configured 扱いで synthesis を抑止）。dashboard-locale.fixture.ts が暗黙 seed していた問題を起動側で封じる
-- 置換 8 ファイル: extension.fixture.ts（delegated 化）+ popup / dashboard / popup-pbi27 / dashboard-issue-report / dashboard-locale / cleansing-preview fixture（SW race ガード + headless fixme を欠落していた 6 ファイルに常時適用）。旧 fixture ファイルは page-fixture ホルダーとして保持（削除は page object の import 面としての役割が残るため未実施 — 未達理由）
+- 置換 8 ファイル: extension.fixture.ts（delegated 化）+ popup / dashboard / popup-pbi27 / dashboard-issue-report / dashboard-locale / cleansing-preview fixture（SW race ガード + headless fixme を欠落していた 6 ファイルに常時適用）。旧 fixture ファイルは page-fixture ホルダーとして保持（削除は page object の import 面としての役割が残るため未実施 ― 未達理由）
 - spec 移行: popup-fix09-25.spec.ts を新ヘルパー経由へ移行
 - 単体テスト: `testDir/__tests__/launchExtensionContext.test.ts`（新設・17 tests。seed-policy の payload 構築 parity 表、SW race ガード、timeout 上限、headless fixme を検証）
-- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15583 passed・21 skipped / `npm run validate` PASS（baseline 468 ≤ pinned 474）/ 全 E2E `testDir/playwright.config.ts` 324 passed・31 skipped（`npm run build` 後）/ 移行 spec `--repeat-each=3 --retries=0` 18 passed
+- ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15583 passed・21 skipped / `npm run validate` PASS（baseline 468 ≦ pinned 474）/ 全 E2E `testDir/playwright.config.ts` 324 passed・31 skipped（`npm run build` 後）/ 移行 spec `--repeat-each=3 --retries=0` 18 passed
 - baseline lock: `testDir/type-check-baseline.json` を 489 → 474 に引き下げ（e2e fixture 型整理で 15 errors 減。現実測 468）。validate の「below pin」指摘で推奨されていた gain 固定を実施

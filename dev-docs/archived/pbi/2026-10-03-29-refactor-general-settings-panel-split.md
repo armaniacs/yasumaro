@@ -9,7 +9,7 @@
 順位: 14 / 20
 RICEスコア: 4.8（Reach=6 / Impact=2 / Confidence=0.8 / Effort=2.0 SP）
 根拠: `archivePanel` に次ぐ肥大化ファイル。state 変数の混在と内部重複（visibility toggle 3 か所、summary ハンドラ 2 か所、refresh core 二重化）が保守性を下げている。
-依存: generalSettingsPanel チェーンの最後 — rank-02（reload）、rank-05（preset-status）、rank-08（preset-id-ssot）の完了後に着手する。
+依存: generalSettingsPanel チェーンの最後 ― rank-02（reload）、rank-05（preset-status）、rank-08（preset-id-ssot）の完了後に着手する。
 
 ## 背景
 

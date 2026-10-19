@@ -13,9 +13,9 @@
 
 ## 背景（現状）
 
-- `src/dashboard/panels/DashboardBootstrapper.ts:131-133` — sidebar click ハンドラ内で `void this.registry.navigate(panelId).catch(() => { /* Panel not yet migrated to new system; old navigation handles it */ })`。コメントが指す「未 migrate パネル」は `registerCatalog()`（:35-39）が `PANEL_CATALOG` 全件を登録する現状ではもう存在せず、catch は今は `NavigationRegistry.navigate()` の実エラーを無言で吞む
+- `src/dashboard/panels/DashboardBootstrapper.ts:131-133` ― sidebar click ハンドラ内で `void this.registry.navigate(panelId).catch(() => { /* Panel not yet migrated to new system; old navigation handles it */ })`。コメントが指す「未 migrate パネル」は `registerCatalog()`（:35-39）が `PANEL_CATALOG` 全件を登録する現状ではもう存在せず、catch は今は `NavigationRegistry.navigate()` の実エラーを無言で吞む
 - `src/dashboard/panels/staticForm/__tests__/staticPanels.test.ts:11-14` が機械的に担保する領域: id のタイプミスは `NavigationRegistry.navigate()` が throw するが、本 catch が吞むため該当タブだけが「押しても何も起きない」状態になり、console に何も出ない
-- `src/dashboard/main.ts:24` — dashboard 側 main の `await bootstrapper.start(resolveInitialPanelId())` が top-level await。`registry.navigate()` が reject するとモジュール評価がそこで死に、後続の `applySectionDeepLink()`（:25）と `initDashboard()`（:27）が走らない。失敗はどこにも記録されない
+- `src/dashboard/main.ts:24` ― dashboard 側 main の `await bootstrapper.start(resolveInitialPanelId())` が top-level await。`registry.navigate()` が reject するとモジュール評価がそこで死に、後続の `applySectionDeepLink()`（:25）と `initDashboard()`（:27）が走らない。失敗はどこにも記録されない
 - 既存の通知経路: `src/dashboard/notificationService.ts` の `notify()`（chrome.notifications 依存、API 未導入環境で no-op、`src/dashboard/__tests__/notificationService.test.ts` でテスト済み）。asyncData パネルの `notices.showError` 慣習は panel container が解決済みであることが前提のため、bootstrap 時点では `notify()` が第一候補
 
 ## BDDシナリオ
@@ -46,7 +46,7 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 
 ## 実装戦略
 
-**It must keep behavior**: 正常系の navigation（active tab 更新、aria-selected、settings subgroup 同期、roving tabindex、`onDidNavigate` 購読）は一切変わらない。`wireSidebar` の click ハンドラは fire-and-forget のまま catch を外さない — 変えるのは「catch の中身をサイレントから記録へ」のみ。
+**It must keep behavior**: 正常系の navigation（active tab 更新、aria-selected、settings subgroup 同期、roving tabindex、`onDidNavigate` 購読）は一切変わらない。`wireSidebar` の click ハンドラは fire-and-forget のまま catch を外さない ― 変えるのは「catch の中身をサイレントから記録へ」のみ。
 
 `start()` は初期 navigate の失敗を catch して記録する。top-level await でモジュール評価ごと死なせる現状より、失敗を残して評価を続行する方が堅牢（初期パネルの失敗で dashboard 全体が死なない）。最低要件は「失敗が記録される」こと。
 
@@ -56,7 +56,7 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 - [x] 2. サイレント吞み込み（空の catch + 「未 migrate」コメント）が消える
 - [x] 3. `start()` の初期 navigate 失敗も記録される
 - [x] 4. 正常系の navigation 挙動（active tab / aria-selected / settings subgroup 同期）が変わらない
-- [ ] 5. 失敗時に既存の通知経路（`notify()`）または同等のユーザー可視経路が出る — **未達**（実装記録参照）
+- [ ] 5. 失敗時に既存の通知経路（`notify()`）または同等のユーザー可視経路が出る ― **未達**（実装記録参照）
 - [x] 6. 既存テストが green
 
 ## テスト戦略
@@ -68,9 +68,9 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 
 ## 実装内容
 
-1. `src/dashboard/panels/DashboardBootstrapper.ts:131-133` — catch を `console.error('[DashboardBootstrapper] navigate failed:', error)` + `notify(...)` に置換し、コメントは現状の事実（全パネル migrated、catch は実エラーの記録口）に更新
-2. `start()` — try/catch を付けて初期 navigate の失敗を `console.error` + `notify` し、reject を外に漏らさない。または `src/dashboard/main.ts` 側で catch して記録（どちらかの実装で「無記録のまま評価が死ぬ」を解消）
-3. `src/dashboard/main.ts` — 起動経路のコメントが現状と合致するか確認し、乖離があれば更新
+1. `src/dashboard/panels/DashboardBootstrapper.ts:131-133` ― catch を `console.error('[DashboardBootstrapper] navigate failed:', error)` + `notify(...)` に置換し、コメントは現状の事実（全パネル migrated、catch は実エラーの記録口）に更新
+2. `start()` ― try/catch を付けて初期 navigate の失敗を `console.error` + `notify` し、reject を外に漏らさない。または `src/dashboard/main.ts` 側で catch して記録（どちらかの実装で「無記録のまま評価が死ぬ」を解消）
+3. `src/dashboard/main.ts` ― 起動経路のコメントが現状と合致するか確認し、乖離があれば更新
 
 ## Definition of Done
 
@@ -84,8 +84,8 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 
 変更した内容:
 
-- `DashboardBootstrapper.ts` — sidebar click ハンドラと `start()` の両方に 있던無言の catch を、共通の private `#reportNavigateFailure(panelId, error)` へ集約し、`console.error` で記録する形にした。「Panel not yet migrated」コメントは、`registerCatalog()` が `PANEL_CATALOG` 全件を登録する現在の事実に合わせて書き換えた
-- `start()` — 初期 navigate を try/catch で包み、失敗を記録して resolve する形にした。`src/dashboard/main.ts:24` は top-level await で `start()` を待つため、従来は reject がモジュール評価ごとを殺して後続の `applySectionDeepLink()` / `initDashboard()` を巻き込んでいた
+- `DashboardBootstrapper.ts` ― sidebar click ハンドラと `start()` の両方に 있던無言の catch を、共通の private `#reportNavigateFailure(panelId, error)` へ集約し、`console.error` で記録する形にした。「Panel not yet migrated」コメントは、`registerCatalog()` が `PANEL_CATALOG` 全件を登録する現在の事実に合わせて書き換えた
+- `start()` ― 初期 navigate を try/catch で包み、失敗を記録して resolve する形にした。`src/dashboard/main.ts:24` は top-level await で `start()` を待つため、従来は reject がモジュール評価ごとを殺して後続の `applySectionDeepLink()` / `initDashboard()` を巻き込んでいた
 
 追加したテスト（`DashboardBootstrapper.test.ts` の `navigate failures are recorded, not swallowed` describe）:
 

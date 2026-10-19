@@ -16,8 +16,8 @@ API キーを暗号化して保存しているユーザーとして、ciphertext
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/crypto/primitives.ts:140-147`(encrypt)と `:173-180`(decrypt)— `{ name, iv }` のみで `additionalData` は src 配下に 0 件
-- `src/utils/crypto/types.ts:10-13` — `EncryptedData { ciphertext, iv }` はフィールド識別子・version を持たない
+- `src/utils/crypto/primitives.ts:140-147`(encrypt)と `:173-180`(decrypt)― `{ name, iv }` のみで `additionalData` は src 配下に 0 件
+- `src/utils/crypto/types.ts:10-13` ― `EncryptedData { ciphertext, iv }` はフィールド識別子・version を持たない
 - 単一 KEK(`encryptionSession.ts:512-537`)が全フィールドを覆い、per-field 鍵は存在しない
 - 復号後のフィールド束縛検証なし(`settingsMigration.ts:444-449` は同一 key で全 field を復号しそのまま代入)
 - 消費側にも検出なし(`OpenAIProvider.ts:69` は無検証キャスト、provider 側にキー形式チェックなし)
@@ -38,7 +38,7 @@ API キーを暗号化して保存しているユーザーとして、ciphertext
 
 ## 受け入れ基準
 
-- [x] 新規暗号化は AAD に「保存位置のフィールド識別子」を含む(envelope 本体に埋め込まない — 埋め込むと攻撃者が ciphertext+iv+AAD をセットで入れ替えられるため)
+- [x] 新規暗号化は AAD に「保存位置のフィールド識別子」を含む(envelope 本体に埋め込まない ― 埋め込むと攻撃者が ciphertext+iv+AAD をセットで入れ替えられるため)
 - [x] 復号は呼び出し側が保存位置のフィールド識別子を渡す形へ更新される
 - [x] v1 envelope の判別とフォールバック復号を実装し、既存データが全件読めることを移行テストで担保する
 - [x] KEK ローテーション(`reencryptApiKeysToKek`)と settingsMigration の再暗号化経路で AAD が正しく引き継がれる

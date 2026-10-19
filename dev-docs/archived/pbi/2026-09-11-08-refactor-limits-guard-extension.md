@@ -8,7 +8,7 @@
 
 - 順位: 08 / 9
 - RICE スコア: 5.3（Reach=2 / Impact=1 / Confidence=80% / Effort=0.3 人週）
-- 根拠（round 6 診断）: `limits-drift.test.ts:18-27` の CAPS は 8 パターンのみ。未吸収のまま: `systemHandlers.ts:74` MAX_FILTER_LIST_SIZE 10MB / `obsidianConfigValidator.ts:146` MAX_BODY_SIZE 10MB / `ProviderStrategy.ts:95` MAX_AI_HTTP_RESPONSE_BYTES 10MB（SSOT だが limits 未登録）/ `importPipeline.ts:12` DEFAULT_IMPORT_SIZE_CAP_BYTES 10MB（他 3 箇所の canonical）/ `crypto/envelope.ts:27` MAX_ENVELOPE_BASE64_LENGTH 10MB（暗号文 64MB と別層 — 文書化必要）。EXEMPT 各行に理由が無い箇所あり（ublockParser の同一 2 local など）。
+- 根拠（round 6 診断）: `limits-drift.test.ts:18-27` の CAPS は 8 パターンのみ。未吸収のまま: `systemHandlers.ts:74` MAX_FILTER_LIST_SIZE 10MB / `obsidianConfigValidator.ts:146` MAX_BODY_SIZE 10MB / `ProviderStrategy.ts:95` MAX_AI_HTTP_RESPONSE_BYTES 10MB（SSOT だが limits 未登録）/ `importPipeline.ts:12` DEFAULT_IMPORT_SIZE_CAP_BYTES 10MB（他 3 箇所の canonical）/ `crypto/envelope.ts:27` MAX_ENVELOPE_BASE64_LENGTH 10MB（暗号文 64MB と別層 ― 文書化必要）。EXEMPT 各行に理由が無い箇所あり（ublockParser の同一 2 local など）。
 
 ## BDD 受け入れシナリオ
 
@@ -42,6 +42,6 @@ S（0.3 人週）。種別: refactor。
 
 ## 実装メモ（2026-09-11 round 6）
 
-- drift ガードの CAPS に `10MB family` パターンを追加（ガード自身が 3 件の未吸収を発見して吸収した）: MAX_FILTER_LIST_SIZE（systemHandlers）/ MAX_BODY_SIZE（obsidianConfigValidator）/ DEFAULT_IMPORT_SIZE_CAP_BYTES（importPipeline）/ MAX_ENVELOPE_BASE64_LENGTH（envelope）/ MAX_AI_HTTP_RESPONSE_BYTES（ProviderStrategy — SSOT 記載だが limits 未登録だった）/ STORAGE_QUOTA_BYTES（quota.ts）。値はすべて不変。
+- drift ガードの CAPS に `10MB family` パターンを追加（ガード自身が 3 件の未吸収を発見して吸収した）: MAX_FILTER_LIST_SIZE（systemHandlers）/ MAX_BODY_SIZE（obsidianConfigValidator）/ DEFAULT_IMPORT_SIZE_CAP_BYTES（importPipeline）/ MAX_ENVELOPE_BASE64_LENGTH（envelope）/ MAX_AI_HTTP_RESPONSE_BYTES（ProviderStrategy ― SSOT 記載だが limits 未登録だった）/ STORAGE_QUOTA_BYTES（quota.ts）。値はすべて不変。
 - envelope 10MB（pre-decode base64）vs 64MB（ciphertext）の層分離を limits.ts のコメントで明示。
 - 「limits.ts actually defines」assertion を 15 定数に拡張。

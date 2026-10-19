@@ -72,8 +72,8 @@ Scenario: 存在しない設定行が表に残らない
 ### 変更内容
 
 - 未結線だった 2 スライダーを delta テーブルに追加し、いずれもスキップしていない:
-  - `AI_SUMMARY_CLEANSING_FALLBACK_RATIO` — 保存値は 0..1 の分数で、UI はパーセント（5..50）表示のため、行の `divisor: 100` が必要。この reason を why コメントとして残した
-  - `AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES` — 保存値と UI 単位が一致
+  - `AI_SUMMARY_CLEANSING_FALLBACK_RATIO` ― 保存値は 0..1 の分数で、UI はパーセント（5..50）表示のため、行の `divisor: 100` が必要。この reason を why コメントとして残した
+  - `AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES` ― 保存値と UI 単位が一致
   - いずれも 4 つの独立した箇所（保存ボタンからの読み出し・統計ビュー・AI クライアント・復元系）で使用箇所を確認済み
 - 不活性だった `popup-body-protection-threshold` の行を削除。共有設定キー `ai_summary_cleansing_body_protection_threshold` は `ai-summary-cleansing-body-protection-threshold` の UI が使っているため**削除していない**（`StorageKeys` に残ることをテストで固定）
 

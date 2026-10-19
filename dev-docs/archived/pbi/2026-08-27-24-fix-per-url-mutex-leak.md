@@ -15,17 +15,17 @@
 - 解: `catch` または `finally` で `acquire` 失敗時も `if (!mutex.isLocked() && mutex.getQueueSize() === 0) map.delete(url)` を実行。または `getOrCreate` で作成した直後に失敗した場合は即時 delete
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常な排他実行後は idle ならエントリーが削除される
+Scenario: ハッピーパス ― 正常な排他実行後は idle ならエントリーが削除される
   Given `PerUrlMutexMap` に URL `https://example.com/a` のエントリーが存在する
   When `runExclusive(url, fn)` が成功し `fn` が完了する
   Then `mutex.isLocked()===false && getQueueSize()===0` なら `map.delete(url)` され、次回 `getOrCreate` は新規 Mutex を生成する
 
-Scenario: バグ再現 — Queue full throw 時もエントリーが残留しない
+Scenario: バグ再現 ― Queue full throw 時もエントリーが残留しない
   Given `maxQueueSize: 5` の Mutex に 5 件の待機が詰まっている
   When 6 件目の `runExclusive(url, fn)` が `Queue full` で throw される
   Then `map` に当該 URL のエントリーが残留せず（または idle 条件で削除され）、メモリリークしない
 
-Scenario: 境界 — timeout throw 時も同様にクリーンアップされる
+Scenario: 境界 ― timeout throw 時も同様にクリーンアップされる
   Given `timeoutMs: 60000` で acquire がタイムアウトする
   When `runExclusive` が timeout で throw される
   Then エントリーは idle なら削除され、後続の `runExclusive` は正常に取得できる
@@ -38,7 +38,7 @@ Scenario: 境界 — timeout throw 時も同様にクリーンアップされる
 - [x] `npm run type-check` がパスする
 
 ## テスト戦略
-- 単体: `PerUrlMutex` の queue-full 回帰テスト — `maxQueueSize: 1` の小さい Mutex で 2件同時 `runExclusive` → 2件目が throw → `map.has(url) === false`（または `getQueueSize()===0 && !isLocked()` なら delete）を検証。`Mutex` を直接モックして `acquire` が throw するケースもカバー
+- 単体: `PerUrlMutex` の queue-full 回帰テスト ― `maxQueueSize: 1` の小さい Mutex で 2件同時 `runExclusive` → 2件目が throw → `map.has(url) === false`（または `getQueueSize()===0 && !isLocked()` なら delete）を検証。`Mutex` を直接モックして `acquire` が throw するケースもカバー
 - 統合: `RecordingPipeline` で同一 URL への 6 並行 recording を発火し、queue-full が発生しても後続の recording が正常に完了すること
 - E2E: 不要
 

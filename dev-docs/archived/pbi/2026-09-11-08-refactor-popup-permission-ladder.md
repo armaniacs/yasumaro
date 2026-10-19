@@ -34,10 +34,10 @@ Scenario: 拒否された origin は fallback せず明確に中断する
 
 ## 受け入れ基準
 
-- [x] `PermissionLadder` モジュールが ask-to-extract 判断を単一 seam の背後に所有している（判定結果: 見送り — 実装メモ参照。ladder は `ContentFetchGateway.fetch` 内の単一 seam として既に所有されている）
-- [x] ContentFetchGateway が timeout 判定のみに縮小している（見送り — 消費者 1 件では分離の payoff なし。代わりに死んだ `TabContentFetcher` 再export を除去し seam 名を 1 つに）
-- [x] record-flow 呼び出し元が PermissionLadder の 1 メソッド経由に置換されている（対象外 — 見送りのため。呼び出し元は既に gateway の 1 メソッド経由）
-- [x] 拒否時の fallback 挙動が仕様として固定されている（既存 `tabContentFetcher.permissionLadder.test.ts` 5 件で pin 済み — 変更なし）
+- [x] `PermissionLadder` モジュールが ask-to-extract 判断を単一 seam の背後に所有している（判定結果: 見送り ― 実装メモ参照。ladder は `ContentFetchGateway.fetch` 内の単一 seam として既に所有されている）
+- [x] ContentFetchGateway が timeout 判定のみに縮小している（見送り ― 消費者 1 件では分離の payoff なし。代わりに死んだ `TabContentFetcher` 再export を除去し seam 名を 1 つに）
+- [x] record-flow 呼び出し元が PermissionLadder の 1 メソッド経由に置換されている（対象外 ― 見送りのため。呼び出し元は既に gateway の 1 メソッド経由）
+- [x] 拒否時の fallback 挙動が仕様として固定されている（既存 `tabContentFetcher.permissionLadder.test.ts` 5 件で pin 済み ― 変更なし）
 - [x] `npm run type-check` と popup 関連テストが green（type-check exit 0・関連 27 tests green）
 
 ## テスト戦略（t_wadaスタイル）
@@ -99,16 +99,16 @@ grep -rn "permissionManager\|ContentFetchGateway\|ask-to-extract\|requestPermiss
 
 ## Definition of Done
 
-- [x] 全BDDシナリオが自動テストとして実装されパスする（既存 ladder 5 件が仕様を pin — 新規テスト不要と判断）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（既存 ladder 5 件が仕様を pin ― 新規テスト不要と判断）
 - [x] コードレビュー完了（自律レビュー: 消費者数・既存 seam・テスト被覆を確認）
-- [x] ドキュメント更新済み（本メモに判定記録。ARCHITECTURE_MAP の変更は不要 — 構成は不変）
-- [x] ロールバック手段の検討（1 行削除のみ — git revert で可能）
+- [x] ドキュメント更新済み（本メモに判定記録。ARCHITECTURE_MAP の変更は不要 ― 構成は不変）
+- [x] ロールバック手段の検討（1 行削除のみ ― git revert で可能）
 
-## 実装メモ（2026-09-11 autonomous-task-closer）— seam 正当化の再確認結果: 見送り
+## 実装メモ（2026-09-11 autonomous-task-closer）― seam 正当化の再確認結果: 見送り
 
 - PBI 内の exit clause（「2 adapter で seam が正当化できるか再確認し、正当化できない場合は見送る」）に従い調査:
   1. `ContentFetchGateway.fetch`（ladder 付き）の消費者は `recordSession` の 1 件のみ。`requestContentFromTab`（ladder 無し）の消費者は `statusPanel` の 2 箇所。ladder を必要とする adapter は 1 件であり、2 adapter 基準を満たさない。
   2. 権限判断の真の seam は一段下の `permissionManager`（per-origin / all-urls の決定を既にカプセル化）にあり、gateway はその薄い orchestrator である。ladder 抽出は orchestrator を 2 分割するだけで欠陥局所性は変わらない。
   3. ladder 振る舞い（許可→抽出 / 拒否→中断・無断 injection なし）は `tabContentFetcher.permissionLadder.test.ts` 5 件で pin 済み。壊れていない。
-  → 解: PermissionLadder 新設は見送り。実施したのは死んだ `TabContentFetcher` 再export の除去（`recordCurrentPage.ts` — prod の輸入者ゼロ、round 4 改名の残渣）のみ。
+  → 解: PermissionLadder 新設は見送り。実施したのは死んだ `TabContentFetcher` 再export の除去（`recordCurrentPage.ts` ― prod の輸入者ゼロ、round 4 改名の残渣）のみ。
 - なぜなぜ: なぜ ladder 分離が提案されたのか → gateway の fetch が 60 行超で「責務混在」に見えた → なぜ混在に見えたのか → timeout と permission が同一メソッドにあるから → なぜそれが許容できるのか → 消費者が 1 件で、判断自体は permissionManager に委譲済み（gateway は順序だけを持つ）→ 解: 見送り。再評価条件: 2 件目の ladder 消費者の出現。

@@ -227,7 +227,7 @@ Select one of the following modes:
 
 #### 4. Expanding the uBlock Format Section
 
-Click "uBlock Origin Filter (Advanced)" near the bottom of the panel to expand it. There is no separate filter-format switch to select — this section is always accessible.
+Click "uBlock Origin Filter (Advanced)" near the bottom of the panel to expand it. There is no separate filter-format switch to select ― this section is always accessible.
 
 #### 5. Inputting Filters
 
@@ -266,7 +266,7 @@ You can export existing uBlock filters:
 
 #### 8. Saving Settings
 
-Filters are saved through the domain filter panel's save flow — the uBlock section itself has no save button, only Export and Copy buttons. After saving, the text area is cleared and the filters are added to the "Registered Filter Sources" list.
+Filters are saved through the domain filter panel's save flow ― the uBlock section itself has no save button, only Export and Copy buttons. After saving, the text area is cleared and the filters are added to the "Registered Filter Sources" list.
 
 #### 9. Managing Multiple Sources
 

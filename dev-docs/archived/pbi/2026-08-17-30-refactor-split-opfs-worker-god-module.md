@@ -42,7 +42,7 @@ Scenario: UPDATE がホワイトリストを遵守する
 - Dashboard からの SQLite 操作が OPFS 環境で既存通り動作する
 
 ### 統合テスト
-- `OpfsWorkerBackend` ↔ Worker のプロトコル往復（成功/失敗/タイムアウト）
+- `OpfsWorkerBackend` ⇔ Worker のプロトコル往復（成功/失敗/タイムアウト）
 - 分割後のルーターが全メッセージ型を正しくディスパッチする網羅テスト
 
 ### 単体テスト

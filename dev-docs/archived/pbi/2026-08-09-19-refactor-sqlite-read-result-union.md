@@ -264,10 +264,10 @@ if (result !== null) {
 
 > 【実装後の訂正】このリスクは**実際には発現しなかった**。
 > 全4箇所の利用状況を確認した結果:
-> - `tagClusterPanel.ts:158` — thunk 内で `'error' in queryResult` を判定し
+> - `tagClusterPanel.ts:158` ― thunk 内で `'error' in queryResult` を判定し
 >   `null` に正規化済み（2026-08-09-12 の修正による）
-> - `sqliteHistoryPanel.ts:1039` — thunk が `state.error ? null : true` を返す
-> - `diagnosticsPanel.ts:214` — `getSqliteStatus` を渡すが、同関数は決定7の
+> - `sqliteHistoryPanel.ts:1039` ― thunk が `state.error ? null : true` を返す
+> - `diagnosticsPanel.ts:214` ― `getSqliteStatus` を渡すが、同関数は決定7の
 >   個別判断により**対象外**とした（下記）
 >
 > いずれも `{error}` をそのまま `retryWithExponentialBackoff` に渡していない。
@@ -325,6 +325,6 @@ if (result !== null) {
 
 - アーキテクチャレビュー 2026-08-09（候補02・04）
 - 設計対話: `/grilling` 質問7〜10
-- 先行 PBI: 2026-08-09-18（クレンジングルール表）— **独立だが実施順は 18 が先**
+- 先行 PBI: 2026-08-09-18（クレンジングルール表）― **独立だが実施順は 18 が先**
 - 同種の過去修正: 2026-08-09-12（queryLogs 失敗の空データ化、v6.7.26）
 - ADR 2026-07-13 sqlite-architecture-deep-dig（仮定G）

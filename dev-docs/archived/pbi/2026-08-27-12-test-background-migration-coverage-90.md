@@ -14,12 +14,12 @@
 - 解: `migrationState` に `InMemory` / `ChromeStorageAdapter` の 2 adapter で分岐テスト、`serviceContainer` の `has/override` を `InMemory` で検証
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — マイグレーションが正常に完了する
+Scenario: ハッピーパス ― マイグレーションが正常に完了する
   Given `migrationState` のバージョンが最新でない
   When `runMigrations` を呼ぶ
   Then `version` が更新され `legacyMigration` が実行される
 
-Scenario: エッジケース — storage が undefined の場合は初期化される
+Scenario: エッジケース ― storage が undefined の場合は初期化される
   Given `chrome.storage.local.get` が `undefined` を返す
   When `migrationState.getVersion` を呼ぶ
   Then デフォルトバージョンが返りマイグレーションが走る

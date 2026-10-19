@@ -25,7 +25,7 @@ npm audit
 npm view wxt version
 ```
 
-**最終確認**: 2026-06-29 — wxt@0.20.27 が最新。変化なし。
+**最終確認**: 2026-06-29 ― wxt@0.20.27 が最新。変化なし。
 **トリガー**: `wxt` が `web-ext-run` の依存を更新したバージョンをリリースしたとき。
 
 ---
@@ -43,7 +43,7 @@ npm view wxt version
 - [x] a11y ジョブが正しく並列実行されているか
 - [x] SHA ピン留め後に Dependabot が PR を作成しているか
 
-**最終確認**: 2026-06-29 — 全5WFで mutable tag ゼロ。Dependabot weekly 設定済み。a11y ジョブ正常。PR コメント機能正常。
+**最終確認**: 2026-06-29 ― 全5WFで mutable tag ゼロ。Dependabot weekly 設定済み。a11y ジョブ正常。PR コメント機能正常。
 **次回の CI ワークフロー更新時**:
 - Dependabot が自動生成した PR のマージ
 - アクションの SHA が自動更新されていることの確認
@@ -67,7 +67,7 @@ npm outdated | grep -v '# maybe'
 | `svelte` / `tailwindcss` | offscreen で使用中 |
 | `playwright` | E2E テスト基盤 |
 
-**最終実行**: 2026-06-29 — `npm update` 実行。以下のパッケージが更新され、テスト通過（5936 passed）。
+**最終実行**: 2026-06-29 ― `npm update` 実行。以下のパッケージが更新され、テスト通過（5936 passed）。
 - `@playwright/test`: 1.59.1 → 1.61.1
 - `@rollup/plugin-commonjs`: 29.0.2 → 29.0.3
 - `@subframe7536/sqlite-wasm`: 1.1.1 → 1.2.0

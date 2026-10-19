@@ -50,14 +50,14 @@ sortDir: 'ASC' | 'DESC'; // sortBy === 'relevance' の時は無視される
 
 `searchLogs` は現在 `ORDER BY rank` 固定でパラメータを持たない。以下の経路すべてに `orderBy?: 'rank' | 'created_at'`, `orderDir?: 'ASC' | 'DESC'` を追加する。
 
-1. `dashboardSqliteService.searchLogs()` — シグネチャに追加
-2. `dashboardSqliteProtocol.ts` の `search` サブタイプ — ペイロードに追加
-3. `dashboardSqliteHandlers.ts` の `case 'search'` — `deps.search()` に伝播
-4. `recordsRepo.ts` の `search()` — `backend.search()` に伝播
+1. `dashboardSqliteService.searchLogs()` ― シグネチャに追加
+2. `dashboardSqliteProtocol.ts` の `search` サブタイプ ― ペイロードに追加
+3. `dashboardSqliteHandlers.ts` の `case 'search'` ― `deps.search()` に伝播
+4. `recordsRepo.ts` の `search()` ― `backend.search()` に伝播
 5. 各 `StorageBackend` 実装:
-   - `IdbVfsBackend.search()` — `ORDER BY rank` を条件分岐させ、`orderBy === 'created_at'` の時は `ORDER BY b.created_at {dir}, b.id {dir}` にする
+   - `IdbVfsBackend.search()` ― `ORDER BY rank` を条件分岐させ、`orderBy === 'created_at'` の時は `ORDER BY b.created_at {dir}, b.id {dir}` にする
    - OPFS Worker 側の同等SQL（`opfsWorker.ts` 内、同じロジックの重複実装）
-   - `FallbackStorageAdapter`（chrome.storage.local ベースの最終フォールバック）— メモリ内ソートで同等の分岐
+   - `FallbackStorageAdapter`（chrome.storage.local ベースの最終フォールバック）― メモリ内ソートで同等の分岐
 
 3系統すべてに対応する（ユーザー承認済み）。どのバックエンドが実際に使われるかは実行環境依存のため、一部のみ対応すると挙動が環境依存でばらつく。
 

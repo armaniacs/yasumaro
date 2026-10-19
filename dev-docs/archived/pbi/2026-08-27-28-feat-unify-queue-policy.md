@@ -14,12 +14,12 @@
 - 解: `PersistentRetryQueue` に `filterExpiredAndOverRetry(items)` を一箇所化し `flush/flushBatch` と `OfflineNetworkQueue.dequeue/peek` の TTL 重複を削除。`estimatePayloadSize/truncate` を `queue/payload.ts` に抽出し3 queueで共有、drop vs truncate ポリシーを option 化
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — TTL が一箇所でフィルタされる
+Scenario: ハッピーパス ― TTL が一箇所でフィルタされる
   Given TTL を超えたジョブがキューにある
   When `filterExpiredAndOverRetry` を呼ぶ
   Then 全 queue で同じ TTL チェックが行われる
 
-Scenario: エッジケース — drop vs truncate ポリシーが option で選択できる
+Scenario: エッジケース ― drop vs truncate ポリシーが option で選択できる
   Given `maxPayloadBytes` を超えるペイロードがある
   When `estimatePayloadSize` を呼ぶ
   Then `pendingChromeStorageQueue` は truncate、`offlineNetworkQueue` は drop のポリシーが option で選択される
@@ -27,8 +27,8 @@ Scenario: エッジケース — drop vs truncate ポリシーが option で選�
 ## 受け入れ基準
 - [x] `PersistentRetryQueue` に `filterExpiredAndOverRetry(items)` が一箇所化されている（`flush`/`flushBatch` 内部からも利用）
 - [x] `OfflineNetworkQueue.dequeue/peek` の TTL 再実装が削除されている
-- [x] `estimatePayloadSize/truncate` が `queue/payload.ts` に抽出され3 queueで共有されている — `estimatePayloadSize` は `persistentRetryQueue.ts`（offlineNetworkQueue/pendingSqliteQueue が経由）と `pendingChromeStorageQueue.ts` の `truncatePatchToFit` で共有。`truncate` 自体は3 queueで共通化できる汎用ロジックではなく（chrome-storageのみ patch 構造に対する truncation を持つ）、サイズ測定のみを共通化
-- [x] drop vs truncate ポリシーが option 化されている — 実装時に判明: 既存の3 queueは元々ポリシーが分離済み（`PersistentRetryQueue.enqueue` の `maxPayloadBytes` 超過は一律 drop、`pendingChromeStorageQueue` は enqueue 前に独自 truncate 済みなので drop 経路に到達しない）。共通の `estimatePayloadSize` を使いつつ既存の呼び出し側ごとの policy を保持する形で統一（drop/truncateの実装自体を1つのoption分岐に集約する変更は、chrome-storageの patch 構造（content/tags個別truncate）が汎用化できないため見送り、サイズ測定の重複排除のみ実施）
+- [x] `estimatePayloadSize/truncate` が `queue/payload.ts` に抽出され3 queueで共有されている ― `estimatePayloadSize` は `persistentRetryQueue.ts`（offlineNetworkQueue/pendingSqliteQueue が経由）と `pendingChromeStorageQueue.ts` の `truncatePatchToFit` で共有。`truncate` 自体は3 queueで共通化できる汎用ロジックではなく（chrome-storageのみ patch 構造に対する truncation を持つ）、サイズ測定のみを共通化
+- [x] drop vs truncate ポリシーが option 化されている ― 実装時に判明: 既存の3 queueは元々ポリシーが分離済み（`PersistentRetryQueue.enqueue` の `maxPayloadBytes` 超過は一律 drop、`pendingChromeStorageQueue` は enqueue 前に独自 truncate 済みなので drop 経路に到達しない）。共通の `estimatePayloadSize` を使いつつ既存の呼び出し側ごとの policy を保持する形で統一（drop/truncateの実装自体を1つのoption分岐に集約する変更は、chrome-storageの patch 構造（content/tags個別truncate）が汎用化できないため見送り、サイズ測定の重複排除のみ実施）
 
 ## テスト戦略
 - 単体: `filterExpiredAndOverRetry` の TTL/maxRetry テスト

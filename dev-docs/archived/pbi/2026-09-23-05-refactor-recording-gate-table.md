@@ -1,4 +1,4 @@
-# PBI 2026-09-23-05 — 記録可否判定 gate 群の表駆動化（録画パイプライン）
+# PBI 2026-09-23-05 ― 記録可否判定 gate 群の表駆動化（録画パイプライン）
 
 **優先度**: 順位 5 / RICE 7.5（Reach 7 × Impact 1 × Confidence 80% ÷ Effort 0.75 人週）
 **根拠**: 同一 precedence（domain→permission→trust→privacy→duplicate）が 4 箇所で再記述され、新 gate 追加が 4 点編集になる。表駆動化で順序知識を 1 表に集約し、step 毎の結合テストを verdict マトリクスに畳める。
@@ -6,7 +6,7 @@
 
 ## 背景
 
-`recordingDecision.ts`（verdict 純粋関数群 + `RECORDING_DECISION_ORDER`）と、各 30–80 行の薄皮 step（checkDomainFilterStep / checkPermissionStep / checkTrustDomainStep / checkPrivacyHeadersStep / checkDuplicateStep）と、content 側 `visitGate.ts` と popup 側 `recordSession.ts` の `isRecordable` 連携が、同一 precedence を別々に再記述している。理解には 5 ファイルの bounce が必要で、新 gate 追加は decide＋step＋index＋orchestrator 配線の 4 点編集になる。
+`recordingDecision.ts`（verdict 純粋関数群 + `RECORDING_DECISION_ORDER`）と、各 30-80 行の薄皮 step（checkDomainFilterStep / checkPermissionStep / checkTrustDomainStep / checkPrivacyHeadersStep / checkDuplicateStep）と、content 側 `visitGate.ts` と popup 側 `recordSession.ts` の `isRecordable` 連携が、同一 precedence を別々に再記述している。理解には 5 ファイルの bounce が必要で、新 gate 追加は decide＋step＋index＋orchestrator 配線の 4 点編集になる。
 
 ## 実装戦略
 

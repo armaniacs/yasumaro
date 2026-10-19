@@ -26,10 +26,10 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/utils/contentExtractor/optionBuilder.ts:21-23` — 独自 `capitalize()` ヘルパー（`s.charAt(0).toUpperCase() + s.slice(1)`）
-- `src/utils/contentExtractor/optionBuilder.ts:45` — `(config as unknown as Record<string, unknown>)[\`aiSummaryCleansing${capitalize(rule.key)}\`] as boolean`（二重キャスト付きの動的 property access）
-- `src/content/visitGating.ts:175-178` — `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` を `as BooleanCleansingKey` でキャスト
-- `src/utils/cleansingConfig.ts:54-59` — `CLEANSING_RULE_PLACEHOLDER_DEFAULTS` 生成時の同一インライン導出
+- `src/utils/contentExtractor/optionBuilder.ts:21-23` ― 独自 `capitalize()` ヘルパー（`s.charAt(0).toUpperCase() + s.slice(1)`）
+- `src/utils/contentExtractor/optionBuilder.ts:45` ― `(config as unknown as Record<string, unknown>)[\`aiSummaryCleansing${capitalize(rule.key)}\`] as boolean`（二重キャスト付きの動的 property access）
+- `src/content/visitGating.ts:175-178` ― `aiSummaryCleansing${rule.key.charAt(0).toUpperCase()}${rule.key.slice(1)}` を `as BooleanCleansingKey` でキャスト
+- `src/utils/cleansingConfig.ts:54-59` ― `CLEANSING_RULE_PLACEHOLDER_DEFAULTS` 生成時の同一インライン導出
 
 ## 5. BDD シナリオ
 
@@ -78,7 +78,7 @@ And 導出される prop 名・フラグ値は変更前と同一であること
 
 ## 8. 見積もり
 
-**1 SP** — 1 ヘルパーの追加と 3 箇所の呼び出し置換、キャスト削除のみでロジック変更なし。影響範囲は `cleansingConfig.ts`、`optionBuilder.ts`、`visitGating.ts` の 3 ファイル（+ 必要に応じて golden pin テスト 1 件）
+**1 SP** ― 1 ヘルパーの追加と 3 箇所の呼び出し置換、キャスト削除のみでロジック変更なし。影響範囲は `cleansingConfig.ts`、`optionBuilder.ts`、`visitGating.ts` の 3 ファイル（+ 必要に応じて golden pin テスト 1 件）
 
 ## 9. DoD
 

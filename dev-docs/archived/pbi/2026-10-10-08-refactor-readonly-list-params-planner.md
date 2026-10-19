@@ -11,9 +11,9 @@
 
 ## 背景（現状）
 
-- `src/background/handlers/dashboardSqlite/readOnlyHandler.ts:26-56` — `buildListParams` は `orderBy: payload.orderBy || 'created_at'`、`orderDir: payload.orderDir || 'DESC'`、`offset: payload.offset ?? 0` を bake。兄弟 `buildSearchParams` は `pickDefined` で undefined を透過し planner に委譲
-- ヘッダーコメント（:20-25）は「limits pass through raw (undefined included) and the offscreen planner seam owns them」と主張 — limit についてのみ真、orderBy/orderDir は反例（stale doc claim）
-- offscreen `src/offscreen/sqliteQueryBuilder.ts:82` — `buildOrderByClause` が同一デフォルト（`q.orderBy || 'created_at'`、orderDir は `|| 'DESC'`）を適用済み → 背景側の bake を外しても wire 結果は不変
+- `src/background/handlers/dashboardSqlite/readOnlyHandler.ts:26-56` ― `buildListParams` は `orderBy: payload.orderBy || 'created_at'`、`orderDir: payload.orderDir || 'DESC'`、`offset: payload.offset ?? 0` を bake。兄弟 `buildSearchParams` は `pickDefined` で undefined を透過し planner に委譲
+- ヘッダーコメント（:20-25）は「limits pass through raw (undefined included) and the offscreen planner seam owns them」と主張 ― limit についてのみ真、orderBy/orderDir は反例（stale doc claim）
+- offscreen `src/offscreen/sqliteQueryBuilder.ts:82` ― `buildOrderByClause` が同一デフォルト（`q.orderBy || 'created_at'`、orderDir は `|| 'DESC'`）を適用済み → 背景側の bake を外しても wire 結果は不変
 
 同一概念（read-param デフォルト）の所有が op によって違う split seam。
 
@@ -64,7 +64,7 @@ Scenario: 不正な orderDir の拒否は planner 側で不変
 
 ### 落とし穴
 
-- `buildLikeOrderClause` は `orderBy !== 'created_at'` を `created_at DESC` に落とす語義を持つ（G17 台帳送りで文書化）— 本 PBI では変更しない
+- `buildLikeOrderClause` は `orderBy !== 'created_at'` を `created_at DESC` に落とす語義を持つ（G17 台帳送りで文書化）― 本 PBI では変更しない
 - offset の扱いは planner 側の実装確認後に決める（`?? 0` の bake が残るならコメントに例外を明記）
 
 ## Definition of Done

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Split `src/utils/logger/core.ts` (408 lines) into focused modules — `LogBuffer` and `LogSanitize` as internal implementations, `LogStorageAdapter` and `LogFlushScheduler` as adapters — while keeping the external `addLog` / `getLogs` / `clearLogs` / `flushLogs` interface and all 159 call sites unchanged.
+**Goal:** Split `src/utils/logger/core.ts` (408 lines) into focused modules ― `LogBuffer` and `LogSanitize` as internal implementations, `LogStorageAdapter` and `LogFlushScheduler` as adapters ― while keeping the external `addLog` / `getLogs` / `clearLogs` / `flushLogs` interface and all 159 call sites unchanged.
 
 **Architecture:** `core.ts` becomes a thin orchestrator: validate input → sanitize → push to buffer → decide flush. The buffer, sanitize, storage, and scheduler are extracted into separate files under `src/utils/logger/`. Storage and scheduler are defined as interfaces (adapters) with a Chrome runtime implementation and an in-memory/test fake each, so tests can swap them without touching `chrome`. Sanitize stays an internal module (no interface) because it has only one real implementation (piiSanitizer).
 
@@ -14,16 +14,16 @@
 
 | File | Responsibility |
 |------|---------------|
-| `src/utils/logger/types.ts` | (existing) `LogEntry`, `LogTypeValues`, `ErrorCode` — leaf, no change |
-| `src/utils/logger/buffer.ts` | **Create** — `LogBuffer` in-memory ring: push / drain / size / clear |
-| `src/utils/logger/sanitize.ts` | **Create** — `sanitizeLogDetails` / `sanitizeArray` moved from core, uses `piiSanitizer.sanitizeRegex` |
-| `src/utils/logger/storageAdapter.ts` | **Create** — `LogStorageAdapter` interface + `ChromeStorageLogAdapter` + `InMemoryLogAdapter` |
-| `src/utils/logger/flushScheduler.ts` | **Create** — `LogFlushScheduler` interface + `ChromeAlarmFlushScheduler` + `ImmediateFlushScheduler` |
-| `src/utils/logger/core.ts` | **Modify** — becomes orchestrator; imports the 4 modules above; keeps `addLog`/`getLogs`/`clearLogs`/`flushLogs` exports |
-| `src/utils/logger/api.ts` | (existing) unchanged — still calls `addLog` from core |
-| `src/utils/__tests__/buffer.test.ts` | **Create** — buffer unit tests |
-| `src/utils/__tests__/storageAdapter.test.ts` | **Create** — storage adapter tests (in-memory fake) |
-| `src/utils/__tests__/flushScheduler.test.ts` | **Create** — scheduler tests (immediate fake) |
+| `src/utils/logger/types.ts` | (existing) `LogEntry`, `LogTypeValues`, `ErrorCode` ― leaf, no change |
+| `src/utils/logger/buffer.ts` | **Create** ― `LogBuffer` in-memory ring: push / drain / size / clear |
+| `src/utils/logger/sanitize.ts` | **Create** ― `sanitizeLogDetails` / `sanitizeArray` moved from core, uses `piiSanitizer.sanitizeRegex` |
+| `src/utils/logger/storageAdapter.ts` | **Create** ― `LogStorageAdapter` interface + `ChromeStorageLogAdapter` + `InMemoryLogAdapter` |
+| `src/utils/logger/flushScheduler.ts` | **Create** ― `LogFlushScheduler` interface + `ChromeAlarmFlushScheduler` + `ImmediateFlushScheduler` |
+| `src/utils/logger/core.ts` | **Modify** ― becomes orchestrator; imports the 4 modules above; keeps `addLog`/`getLogs`/`clearLogs`/`flushLogs` exports |
+| `src/utils/logger/api.ts` | (existing) unchanged ― still calls `addLog` from core |
+| `src/utils/__tests__/buffer.test.ts` | **Create** ― buffer unit tests |
+| `src/utils/__tests__/storageAdapter.test.ts` | **Create** ― storage adapter tests (in-memory fake) |
+| `src/utils/__tests__/flushScheduler.test.ts` | **Create** ― scheduler tests (immediate fake) |
 | `src/utils/__tests__/logger-enhanced.test.ts` | (existing) verify still passes |
 | `src/utils/__tests__/logger-security.test.ts` | (existing) verify sanitize still masks |
 
@@ -77,7 +77,7 @@ describe('LogBuffer', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/buffer.test.ts`
-Expected: FAIL — cannot find module `../logger/buffer.js`
+Expected: FAIL ― cannot find module `../logger/buffer.js`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -166,7 +166,7 @@ describe('sanitizeLogDetails', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/sanitize.test.ts`
-Expected: FAIL — cannot find module `../logger/sanitize.js`
+Expected: FAIL ― cannot find module `../logger/sanitize.js`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -300,7 +300,7 @@ describe('InMemoryLogAdapter', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/storageAdapter.test.ts`
-Expected: FAIL — cannot find module
+Expected: FAIL ― cannot find module
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -323,7 +323,7 @@ function pruneLogs(logs: LogEntry[]): LogEntry[] {
   return logs.filter((log) => log.timestamp > cutoff);
 }
 
-/** Chrome runtime implementation — uses chrome.storage.local */
+/** Chrome runtime implementation ― uses chrome.storage.local */
 export class ChromeStorageLogAdapter implements LogStorageAdapter {
   async append(entries: LogEntry[]): Promise<void> {
     const storage = await chrome.storage.local.get(LOG_STORAGE_KEY);
@@ -344,7 +344,7 @@ export class ChromeStorageLogAdapter implements LogStorageAdapter {
   }
 }
 
-/** Test fake — keeps everything in a plain array */
+/** Test fake ― keeps everything in a plain array */
 export class InMemoryLogAdapter implements LogStorageAdapter {
   private logs: LogEntry[] = [];
 
@@ -412,7 +412,7 @@ describe('ImmediateFlushScheduler', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/flushScheduler.test.ts`
-Expected: FAIL — cannot find module
+Expected: FAIL ― cannot find module
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -428,7 +428,7 @@ export interface LogFlushScheduler {
   flushNow(): Promise<void>;
 }
 
-/** Chrome runtime implementation — uses chrome.alarms + onSuspend */
+/** Chrome runtime implementation ― uses chrome.alarms + onSuspend */
 export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
   private handler: (() => Promise<void>) | null = null;
 
@@ -456,7 +456,7 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
   }
 }
 
-/** Test fake — runs handler synchronously/immediately */
+/** Test fake ― runs handler synchronously/immediately */
 export class ImmediateFlushScheduler implements LogFlushScheduler {
   private handler: (() => Promise<void>) | null = null;
 
@@ -519,7 +519,7 @@ describe('core orchestrator', () => {
 - [ ] **Step 2: Run test to verify current core still behaves (baseline)**
 
 Run: `npx vitest run src/utils/__tests__/coreOrchestrator.test.ts`
-Expected: may PASS or FAIL depending on chrome availability — this is a baseline before rewrite. Note the result, then proceed.
+Expected: may PASS or FAIL depending on chrome availability ― this is a baseline before rewrite. Note the result, then proceed.
 
 - [ ] **Step 3: Rewrite core.ts as orchestrator**
 
@@ -630,7 +630,7 @@ export function clearPendingLogs(): void {
 }
 ```
 
-Note: `getLogs` calls `buffer.drain()` which empties the buffer — this matches the original behaviour (pending logs are merged into the returned list and persisted on next flush). Keep it consistent with the original `getLogs` (core.ts:385-389).
+Note: `getLogs` calls `buffer.drain()` which empties the buffer ― this matches the original behaviour (pending logs are merged into the returned list and persisted on next flush). Keep it consistent with the original `getLogs` (core.ts:385-389).
 
 - [ ] **Step 4: Run the full logger test suite**
 
@@ -654,7 +654,7 @@ git commit -m "refactor(logger): rewrite core.ts as orchestrator over extracted 
 ### Task 6: Verify no call sites changed and full suite passes
 
 **Files:**
-- None new — verification only
+- None new ― verification only
 
 - [ ] **Step 1: Confirm addLog call sites are unchanged**
 
@@ -668,7 +668,7 @@ Expected: PASS (no regressions across the project)
 
 - [ ] **Step 3: Commit a final verification note if needed**
 
-If any test failed due to import path changes (e.g. a caller imported `sanitizeLogDetails` directly from core — verify none did), fix the import and commit. Otherwise no commit needed for this task.
+If any test failed due to import path changes (e.g. a caller imported `sanitizeLogDetails` directly from core ― verify none did), fix the import and commit. Otherwise no commit needed for this task.
 
 ---
 

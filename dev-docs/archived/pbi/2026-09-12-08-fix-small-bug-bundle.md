@@ -1,4 +1,4 @@
-# PBI 2026-09-12-08 — 小型バグバンドル（6 件）
+# PBI 2026-09-12-08 ― 小型バグバンドル（6 件）
 
 - **種別**: 🔧非機能追加（fix）
 - **優先度**: 8 位 / RICE **8.0**（R15 × I1 × C80% / E1.5人日）
@@ -10,12 +10,12 @@
 
 ## スコープ（6 件）
 
-- [x] **TabCache hang**: `src/background/tabCache.ts:33-48` — `chrome.tabs.query` callback が `lastError` 未確認・reject 経路なし → 失敗時に initPromise が未解決でメッセージ応答が hang。lastError チェック + reject + 呼び出し側フォールバック
-- [x] **dequeue lock bypass**: `src/background/offlineNetworkQueue.ts:91-102` — dequeue が VULN-056 の queue lock を迂回（load→filter→save 直接）。`mutate` 経由に統一
-- [x] **sender.tab! crash**: `src/background/handlers/systemHandlers.ts:147` — **PBI 07 で解消済み**（同一ハンドラのため吸収・guard + 早期 return + テスト）
-- [x] **cleansing feedback 二重配線**: `src/popup/statusPanel.ts:463-495` — `initCleansingFeedbackButton` に `dataset.wired` guard がなく re-init 毎に handler が積み重なる（attachPrivacyActionListeners の再帰 init で発火）。既存 2 button と同一の wired 紀律を適用
-- [x] **i18n cache stale**: `src/popup/errorUtils.ts:107-133` — `messagesCache` が無効化されず locale 切替後も旧言語。`chrome.i18n.getUILanguage()` を cache key にするか cache 廃止
-- [x] **ublock 無音 drop（最小 fix）**: `src/utils/ublockMatcher.ts:52-53,91-92` — 両形式（domains + rules）混在 store で legacy rule 集合が無警告で無視される。挙動は変えず（統合は別判断）警告ログ + 両形式混在 pin テストを追加
+- [x] **TabCache hang**: `src/background/tabCache.ts:33-48` ― `chrome.tabs.query` callback が `lastError` 未確認・reject 経路なし → 失敗時に initPromise が未解決でメッセージ応答が hang。lastError チェック + reject + 呼び出し側フォールバック
+- [x] **dequeue lock bypass**: `src/background/offlineNetworkQueue.ts:91-102` ― dequeue が VULN-056 の queue lock を迂回（load→filter→save 直接）。`mutate` 経由に統一
+- [x] **sender.tab! crash**: `src/background/handlers/systemHandlers.ts:147` ― **PBI 07 で解消済み**（同一ハンドラのため吸収・guard + 早期 return + テスト）
+- [x] **cleansing feedback 二重配線**: `src/popup/statusPanel.ts:463-495` ― `initCleansingFeedbackButton` に `dataset.wired` guard がなく re-init 毎に handler が積み重なる（attachPrivacyActionListeners の再帰 init で発火）。既存 2 button と同一の wired 紀律を適用
+- [x] **i18n cache stale**: `src/popup/errorUtils.ts:107-133` ― `messagesCache` が無効化されず locale 切替後も旧言語。`chrome.i18n.getUILanguage()` を cache key にするか cache 廃止
+- [x] **ublock 無音 drop（最小 fix）**: `src/utils/ublockMatcher.ts:52-53,91-92` ― 両形式（domains + rules）混在 store で legacy rule 集合が無警告で無視される。挙動は変えず（統合は別判断）警告ログ + 両形式混在 pin テストを追加
 
 ## 受け入れ基準（BDD）
 

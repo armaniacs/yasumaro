@@ -64,7 +64,7 @@ Scenario: swallow が意図的な場合
 ## 実装記録 (2026-10-02)
 
 - 裁定: RESTORE (propagate)。統合前の保存経路は `collectProviderPrioritySlots()` の throw で保存中断し stored list を温存していたが、集約ヘルパーの `collectASafe` が swallow→`[]` 化し、保存経路 (stored snapshot なし) で priority list の沈黙 blank 永続化を起こすため。swallow 側の pin 基準は本裁定により N/A (propagate の仕様コメントをコードに残した)
-- 変更: `src/dashboard/providerPrioritySlots.ts` — `collectASafe` を削除し `collectProviderPrioritySlots()` 直接呼び出しへ (throw 伝播)、意味論の仕様コメントを追加。`src/dashboard/settingsPipeline.ts` — try/catch で捕捉し `logInfo` + `{ success: false, error: 'collector_failed' }` を返して保存中断 (呼び出し側は `saveErrorText` の generic saveError で描画)。`src/dashboard/panels/staticForm/generalSettingsPanel.ts` — B-view 初期化を try/catch し、throw 時は stored snapshot へ fallback (mount 破壊の防止)
+- 変更: `src/dashboard/providerPrioritySlots.ts` ― `collectASafe` を削除し `collectProviderPrioritySlots()` 直接呼び出しへ (throw 伝播)、意味論の仕様コメントを追加。`src/dashboard/settingsPipeline.ts` ― try/catch で捕捉し `logInfo` + `{ success: false, error: 'collector_failed' }` を返して保存中断 (呼び出し側は `saveErrorText` の generic saveError で描画)。`src/dashboard/panels/staticForm/generalSettingsPanel.ts` ― B-view 初期化を try/catch し、throw 時は stored snapshot へ fallback (mount 破壊の防止)
 - 経路差異の注記: 起票時の `src/dashboard/panels/asyncData/providerPrioritySlots.ts:58-63` は現行 `src/dashboard/providerPrioritySlots.ts` に移設済み。移設先で実施した
 - テスト: 新規 3 件 (`providerPrioritySlots.test.ts` に propagate 2 件: A-collector throw 伝播 + B throw→A fallback 伝播、`settingsPipeline.test.ts` に `collector_failed` 中断 1 件)。probe: 旧 swallow 振る舞いでは 3 fail / 27 pass の対比を確認し、復元後に green
 - `npm run validate` フル PASS (15423 passed)

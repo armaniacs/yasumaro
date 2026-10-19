@@ -1,4 +1,4 @@
-# 積み残し全体実行計画 — 2026-08-30 時点バックログ横断
+# 積み残し全体実行計画 ― 2026-08-30 時点バックログ横断
 
 > Branch: `plan/0830-backlog-execution`（本計画策定ブランチ。実装は各 Wave ごとに `feat/fix` ブランチを切る）
 > 作成日: 2026-08-30
@@ -7,7 +7,7 @@
 
 ---
 
-## 1. Context — なぜ今この計画が必要か
+## 1. Context ― なぜ今この計画が必要か
 
 - `pbi/` には **未完了のみ** が残る運用に移行済み。完了 13 件は `dev-docs/archived/pbi/` へ移動済み。
 - しかし 3 系統（29 VulnHunter / 30 Cleansing / 31 UI Visibility）が併存し、RICE 尺度・Wave 提案・ファイル触接が系統ごとに分断されている。
@@ -21,7 +21,7 @@
 
 | 系統 | 索引 PBI | 実体 PBI（未完了） | うち真に未着手 | 部分実装（実装は分離先で完了・再スキャン待ちで残置） |
 |------|----------|-------------------|----------------|-------------------------------------------------------|
-| 29 VulnHunter | 00 | 7 | **2**（06, 12） | 5（04, 08, 13, 14, 19）— 実装は PR #74-81/#79/#78/#77/#86 で完了、VulnHunter 再スキャンで解消確認後にアーカイブ |
+| 29 VulnHunter | 00 | 7 | **2**（06, 12） | 5（04, 08, 13, 14, 19）― 実装は PR #74-81/#79/#78/#77/#86 で完了、VulnHunter 再スキャンで解消確認後にアーカイブ |
 | 30 Cleansing  | 00 | 14 | **14**（01-14 除く 15） | 0 |
 | 31 UI Visibility | 00 | 0 | 0（01 は PR #84-85 でアーカイブ済み） | 0 |
 | **計** | 3 | **21** | **16** | **5** |
@@ -30,31 +30,31 @@
 
 ### 2.2 真に未着手 16 PBI の一覧（RICE 降順・系統内）
 
-#### 29 系 — セキュリティ（高リスク・要慎重レビュー）
+#### 29 系 ― セキュリティ（高リスク・要慎重レビュー）
 
 | # | PBI | タイトル | RICE | 規模 | 副作用 | 主な触接 |
 |---|-----|----------|------|------|--------|----------|
 | 29-06 | `2026-08-29-06-fix-trust-boundary-consistency.md` | 信頼境界一貫性（4迂回解消） | 1260 | 🟡 2pt | 🔴 | `src/content/loader.ts`, `offlineQueueProcessor.ts`, `readOnlyHandler.ts`, `tabContentFetcher.ts` |
 | 29-12 | `2026-08-29-12-fix-crypto-policy-ssot.md` | 暗号・認証ポリシーSSOT＋HMAC先行化 | 453 | 🔴 3pt | 🔴 | `src/utils/crypto/*`, `masterPassword.ts`, `RateLimitService.ts`, `settingsExportImport.ts`, `exportLogsService.ts` |
 
-#### 30 系 — クレンジング改善（独立・並列しやすい）
+#### 30 系 ― クレンジング改善（独立・並列しやすい）
 
 | 順位 | PBI | タイトル | RICE | 規模 | 副作用 | 触接の独立性 |
 |------|-----|----------|------|------|--------|--------------|
-| 30-12 | `2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md` | 多言語パターン拡充 | 12.0 | 🟢 1日 | 🟢 | `patterns.ts` のみ — 完全独立 |
-| 30-04 | `2026-08-30-04-investigate-cleansing-single-pass-benchmark.md` | 74回走査の1パス集約を計測検証 | 8.0 | 🟢 1日 | 🟢 | `aiSummaryCleaner/index.ts` + `scripts/benchmark*` — 計測のみ |
-| 30-06 | `2026-08-30-06-feat-cleansing-presets.md` | 32トグルをプリセットに束ねる | 8.0 | 🟡 3日 | 🟢 | `entrypoints/options/*`, `aiSummaryCleansingSettingsV2.ts`, `presets.ts` — UI 中心 |
+| 30-12 | `2026-08-30-12-feat-cleansing-i18n-expanded-patterns.md` | 多言語パターン拡充 | 12.0 | 🟢 1日 | 🟢 | `patterns.ts` のみ ― 完全独立 |
+| 30-04 | `2026-08-30-04-investigate-cleansing-single-pass-benchmark.md` | 74回走査の1パス集約を計測検証 | 8.0 | 🟢 1日 | 🟢 | `aiSummaryCleaner/index.ts` + `scripts/benchmark*` ― 計測のみ |
+| 30-06 | `2026-08-30-06-feat-cleansing-presets.md` | 32トグルをプリセットに束ねる | 8.0 | 🟡 3日 | 🟢 | `entrypoints/options/*`, `aiSummaryCleansingSettingsV2.ts`, `presets.ts` ― UI 中心 |
 | 30-02 | `2026-08-30-02-feat-cleansing-semantic-classification.md` | クラス部分一致に依存しないセマンティック分類 | 6.3 | 🟡 2日 | 🟡 | `patterns.ts`, `helpers.ts`, `stripCore/Extended.ts` |
 | 30-01 | `2026-08-30-01-feat-cleansing-readability-scoring.md` | Readabilityベース本文保護スコア | 4.8 | 🔴 3日 | 🟡 | `readabilityScore.ts`, `bodyProtection.ts` |
-| 30-09 | `2026-08-30-09-test-cleansing-corpus-ci.md` | コーパスでCI検出 | 3.5 | 🟡 3日 | 🟢 | `test/corpus/`, `scripts/check-cleansing-corpus.mjs` — 土台 |
+| 30-09 | `2026-08-30-09-test-cleansing-corpus-ci.md` | コーパスでCI検出 | 3.5 | 🟡 3日 | 🟢 | `test/corpus/`, `scripts/check-cleansing-corpus.mjs` ― 土台 |
 | 30-14 | `2026-08-30-14-refactor-cleansing-observability-funnel.md` | 観測性ファネル/理由分解 | 3.2 | 🟡 2日 | 🟢 | `contentExtractor/types.ts`, `index.ts`, `cleansedReason.ts` |
 | 30-11 | `2026-08-30-11-feat-cleansing-transparency-dual-payload.md` | 二重ペイロード方式 | 2.0 | 🟡 3日 | 🟢 | `contentExtractor/types.ts`, `index.ts`, `cleansingStatsView.ts` |
 | 30-13 | `2026-08-30-13-feat-cleansing-spa-dynamic-content.md` | SPA動的コンテンツ対応 | 1.67 | 🟡 3日 | 🟡 | `contentKernel.ts`, `extractor.ts` |
 | 30-03 | `2026-08-30-03-feat-cleansing-shadow-dom-traversal.md` | Shadow DOM/iframe走査 | 1.5 | 🔴 3日 | 🟡 | `helpers.ts` + 各 strip |
 | 30-07 | `2026-08-30-07-feat-cleansing-per-site-override.md` | ドメイン別オーバーライド | 1.44 | 🔴 5日 | 🟡 | `storage/types.ts`, `contentKernel.ts`, `popup` |
 | 30-08 | `2026-08-30-08-feat-cleansing-feedback-loop.md` | 誤削除フィードバックループ | 0.96 | 🔴 5日 | 🟢 | `storage/types.ts`, `popup`, `dashboard` |
-| 30-05 | `2026-08-30-05-feat-cleansing-offscreen-delegation.md` | Offscreen委譲 | 0.8 | 🔴 5日 | 🟡 | `offscreen.ts`, `pageContentPipeline.ts` — **保留候補** |
-| 30-10 | `2026-08-30-10-feat-whitelist-adapter-auto-generation.md` | ホワイトリストLLM自動生成 | 0.48 | 🔴 5日 | 🟢 | `whitelistAdapters.ts`, `ai/`, `scripts/generate*` — **保留候補** |
+| 30-05 | `2026-08-30-05-feat-cleansing-offscreen-delegation.md` | Offscreen委譲 | 0.8 | 🔴 5日 | 🟡 | `offscreen.ts`, `pageContentPipeline.ts` ― **保留候補** |
+| 30-10 | `2026-08-30-10-feat-whitelist-adapter-auto-generation.md` | ホワイトリストLLM自動生成 | 0.48 | 🔴 5日 | 🟢 | `whitelistAdapters.ts`, `ai/`, `scripts/generate*` ― **保留候補** |
 
 > 29系と30系の RICE 絶対値は尺度が異なるため **系統を跨いだ RICE 比較はしない**。Wave は系統内 RICE＋依存で決める。
 
@@ -72,14 +72,14 @@
 
 ---
 
-## 3. 実行戦略 — Wave 分割と並列性
+## 3. 実行戦略 ― Wave 分割と並列性
 
 ### 3.1 原則
 
-1. **系統間は完全独立** — 29系（background/content/crypto）と30系（cleansing）と31系（CSS済み）はファイル触接が重ならない。系統を跨いだ並列は常に安全。
-2. **29系内は直列（高リスク）** — 29-06 と 29-12 はどちらもセマンティクス変更・暗号変更を含む。1ブランチずつ、レビューを挟んで直列に。
-3. **30系内は Wave 化で並列** — `00-backlog-cleansing.md` の推奨 Wave を尊重しつつ、RICE 順＋Enabler 前倒しで再編。
-4. **検証は `npm run validate` をゲートに** — 各 Wave 完了ごとに `type-check + validate (10839 tests)` を必須。
+1. **系統間は完全独立** ― 29系（background/content/crypto）と30系（cleansing）と31系（CSS済み）はファイル触接が重ならない。系統を跨いだ並列は常に安全。
+2. **29系内は直列（高リスク）** ― 29-06 と 29-12 はどちらもセマンティクス変更・暗号変更を含む。1ブランチずつ、レビューを挟んで直列に。
+3. **30系内は Wave 化で並列** ― `00-backlog-cleansing.md` の推奨 Wave を尊重しつつ、RICE 順＋Enabler 前倒しで再編。
+4. **検証は `npm run validate` をゲートに** ― 各 Wave 完了ごとに `type-check + validate (10839 tests)` を必須。
 
 ### 3.2 Wave 設計（推奨実行順）
 
@@ -88,7 +88,7 @@ Wave 0 : 再スキャン＆アーカイブ判定（1日・ブロッキングな�
   └─ 29-04 / 08 / 13 / 14 / 19 の再スキャン確認 → アーカイブ
 
 Wave 1 : セキュリティ単独 ＋ クレンジング Enabler 並列（2-3日）
-  ├─ Track A (security・直列): 29-06 trust-boundary（2pt）— 単独ブランチ `fix/trust-boundary-consistency`
+  ├─ Track A (security・直列): 29-06 trust-boundary（2pt）― 単独ブランチ `fix/trust-boundary-consistency`
   └─ Track B (cleansing・並列4): 30-12(i18n) / 30-04(benchmark) / 30-06(presets) / 30-09土台(corpus-ci)
        ※ 30-12 と 30-04 と 30-06 と 30-09 はファイル触接が disjoint → 4並列 subagent 可
        ※ 30-09 は「10サイト分のコーパス土台だけ先に」作る。以降の 01/02 の回帰ネットになる
@@ -98,12 +98,12 @@ Wave 2 : クレンジング中核（3-4日）
   │   ※ 01 と 02 は `bodyProtection.ts` / `helpers.ts` で競合するため直列
   │   ※ 09 の土台があれば回帰検出が安全
   └─ 29-12 crypto-SSOT（3pt）は Wave 1 の 29-06 完了後に着手（Wave 2 と並列可だがレビュー負荷を考慮し Wave 2.5 として分離推奨）
-       ブランチ `fix/crypto-policy-ssot` — 暗号変更のため単独レビュー
+       ブランチ `fix/crypto-policy-ssot` ― 暗号変更のため単独レビュー
 
 Wave 3 : クレンジング観測性＆透明性（3-4日・並列可）
   ├─ 30-14 observability-funnel（2日）→ 30-11 dual-payload（3日）の順（ExtractResult 型で触接）
-  ├─ 30-13 SPA dynamic（3日）— 独立、Wave 3 と並列可
-  └─ 30-03 shadow-dom（3日）— 独立、Wave 3 と並列可
+  ├─ 30-13 SPA dynamic（3日）― 独立、Wave 3 と並列可
+  └─ 30-03 shadow-dom（3日）― 独立、Wave 3 と並列可
 
 Wave 4 : 高 Effort・低 RICE（必要になったら・任意）
   ├─ 30-07 per-site-override（5日）
@@ -231,14 +231,14 @@ Wave 4 : 高 Effort・低 RICE（必要になったら・任意）
 
 ## 7. 次のアクション（本計画ブランチで即実行）
 
-1. **本計画書をコミット** — `plan/0830-backlog-execution` ブランチで `dev-docs/plans/2026-08-30-backlog-execution-plan.md` をコミット。
-2. **Wave 0 の即実行** — VulnHunter 再スキャン（または再現テストの GREEN→RED 確認）を実行し、29-04/08/14/19 のアーカイブ可否を判定。可能なら即 `git mv` でアーカイブ。
-3. **Wave 1 の着手** — `fix/trust-boundary-consistency` と `feat/cleansing-wave1-enablers` を並列で着手。subagent 4並列で 30-12/04/06/09土台を同時実行。
-4. **計画の可視化** — `pbi/00-INDEX.md` の「進行中」表は本計画の Wave 0-3 完了に応じて逐次更新。`dev-docs/plans/00-index.md` に本計画へのリンクを追記（任意）。
+1. **本計画書をコミット** ― `plan/0830-backlog-execution` ブランチで `dev-docs/plans/2026-08-30-backlog-execution-plan.md` をコミット。
+2. **Wave 0 の即実行** ― VulnHunter 再スキャン（または再現テストの GREEN→RED 確認）を実行し、29-04/08/14/19 のアーカイブ可否を判定。可能なら即 `git mv` でアーカイブ。
+3. **Wave 1 の着手** ― `fix/trust-boundary-consistency` と `feat/cleansing-wave1-enablers` を並列で着手。subagent 4並列で 30-12/04/06/09土台を同時実行。
+4. **計画の可視化** ― `pbi/00-INDEX.md` の「進行中」表は本計画の Wave 0-3 完了に応じて逐次更新。`dev-docs/plans/00-index.md` に本計画へのリンクを追記（任意）。
 
 ---
 
-## 8. 付録 — トレーサビリティ（PBI → ブランチ → Wave）
+## 8. 付録 ― トレーサビリティ（PBI → ブランチ → Wave）
 
 | PBI | Wave | ブランチ | RICE | 依存 |
 |-----|------|----------|------|------|
@@ -260,16 +260,16 @@ Wave 4 : 高 Effort・低 RICE（必要になったら・任意）
 | 30-03 | 3 | `feat/cleansing-observability-spa-shadow` | 1.5 | なし |
 | 30-07 | 4 | `feat/cleansing-per-site-feedback` | 1.44 | 任意 |
 | 30-08 | 4 | `feat/cleansing-per-site-feedback` | 0.96 | 任意 |
-| 30-05 | 保留 | — | 0.8 | 04計測後 |
-| 30-10 | 保留 | — | 0.48 | スパイク後 |
+| 30-05 | 保留 | ― | 0.8 | 04計測後 |
+| 30-10 | 保留 | ― | 0.48 | スパイク後 |
 
 ---
 
-## 9. 参考 — 関連バックログ索引
+## 9. 参考 ― 関連バックログ索引
 
-- [2026-08-29-00-backlog-vulnhunt-audit.md](../../pbi/2026-08-29-00-backlog-vulnhunt-audit.md) — 29系の RICE/なぜなぜ/Wave/TRACEABILITY の正本
-- [2026-08-30-00-backlog-cleansing.md](../../pbi/2026-08-30-00-backlog-cleansing.md) — 30系の RICE/Wave/TRACEABILITY の正本
-- [2026-08-31-00-backlog-ui-visibility.md](../../pbi/2026-08-31-00-backlog-ui-visibility.md) — 31系（完了済み1件、索引のみ残存）
-- [pbi/00-INDEX.md](../../pbi/00-INDEX.md) — 全系統の進捗一覧（正）
+- [2026-08-29-00-backlog-vulnhunt-audit.md](../../pbi/2026-08-29-00-backlog-vulnhunt-audit.md) ― 29系の RICE/なぜなぜ/Wave/TRACEABILITY の正本
+- [2026-08-30-00-backlog-cleansing.md](../../pbi/2026-08-30-00-backlog-cleansing.md) ― 30系の RICE/Wave/TRACEABILITY の正本
+- [2026-08-31-00-backlog-ui-visibility.md](../../pbi/2026-08-31-00-backlog-ui-visibility.md) ― 31系（完了済み1件、索引のみ残存）
+- [pbi/00-INDEX.md](../../pbi/00-INDEX.md) ― 全系統の進捗一覧（正）
 
 > 本計画は上記3索引の Wave 提案を尊重しつつ、**系統を跨いだ並列（Track A/B）と Enabler 前倒し（09土台）** で最短化した統合版。

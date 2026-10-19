@@ -65,9 +65,9 @@ Scenario: Service Worker とダッシュボードの判定が一致する
 ## 実装者向け注記
 
 ### 現状の証拠
-- ダッシュボード側の緩い検査: `src/dashboard/settings/fieldValidation.ts:100-108` — `validatePort` が `parseInt(input.value.trim(), 10)` で 1-65535 のみ検査し、`parseInt('80.5')=80`・`parseInt('80abc')=80` を通過させる
-- 正規実装の厳密な検査: `src/utils/obsidianConfigValidator.ts:129-154` — `validateObsidianPort` が `Number` と `Number.isInteger` と範囲 1-65535 で検査し、同じ入力を throw で拒否する
-- SW 側は委譲済み: `src/background/obsidianClient.ts:124-126` — `_validatePort` が `validateObsidianPort` に委譲しており、dashboard UI だけが迂回している
+- ダッシュボード側の緩い検査: `src/dashboard/settings/fieldValidation.ts:100-108` ― `validatePort` が `parseInt(input.value.trim(), 10)` で 1-65535 のみ検査し、`parseInt('80.5')=80`・`parseInt('80abc')=80` を通過させる
+- 正規実装の厳密な検査: `src/utils/obsidianConfigValidator.ts:129-154` ― `validateObsidianPort` が `Number` と `Number.isInteger` と範囲 1-65535 で検査し、同じ入力を throw で拒否する
+- SW 側は委譲済み: `src/background/obsidianClient.ts:124-126` ― `_validatePort` が `validateObsidianPort` に委譲しており、dashboard UI だけが迂回している
 - 故障形態: dashboard では保存できて SW 側接続テストで拒否される save-then-fail。範囲変更時に2箇所編集が必要
 - 修正方向: `validatePort` を `validateObsidianPort` の try/catch 委譲にし、throw を `setFieldError(getMessage('errorPort'))` に変換する
 

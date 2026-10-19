@@ -15,12 +15,12 @@
 - 解: `already exists` / `duplicate` のみ無視し、それ以外は再 throw またはリトライに回す
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 既存 index は無視して続行
+Scenario: ハッピーパス ― 既存 index は無視して続行
   Given DB に `idx_logs_gist` が既に存在する
   When `runMigrations` を実行する
   Then `already exists` は無視され `fts5Available` が正しく返る
 
-Scenario: 異常系 — database locked は握り潰されない
+Scenario: 異常系 ― database locked は握り潰されない
   Given `exec(GIST_SYNCED_INDEX_SQL)` が `database locked` で失敗する
   When `runMigrations` を実行する
   Then エラーは再 throw され、呼び出し側がリトライまたは失敗を検出できる

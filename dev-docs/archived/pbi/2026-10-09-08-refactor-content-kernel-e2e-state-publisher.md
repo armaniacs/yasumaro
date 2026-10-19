@@ -23,11 +23,11 @@
 
 - 同一の OWTestState 形状（6 フィールド: maxScrollPercentage / isValidVisitReported / startTime / minVisitDuration / minScrollDepth / duration）を `window.__OW_TEST_STATE` と `data-ow-test-state` 属性の 2 経路に書くロジックが kernel 内に 3 ブロックあり、形状が毎回手書きされている
 - 該当箇所:
-  - `src/content/contentKernel.ts:215-229` — checkVisitConditions 内の state 構築＋両経路への書き込み
-  - `src/content/contentKernel.ts:234-242` — reportable 時の isValidVisitReported 更新＋再書き込み
-  - `src/content/contentKernel.ts:327-339` — init() 内の初期 state 書き込み
-- 型宣言の所在: `src/content/extractor.ts:30-43` — interface OWTestState + declare global { interface Window { __OW_TEST_STATE?: OWTestState } }
-- キャスト例: `src/content/contentKernel.ts:224` と `:236` — extractor.ts の global 型宣言を参照せず `as unknown as { __OW_TEST_STATE?: unknown }` で上書きしている
+  - `src/content/contentKernel.ts:215-229` ― checkVisitConditions 内の state 構築＋両経路への書き込み
+  - `src/content/contentKernel.ts:234-242` ― reportable 時の isValidVisitReported 更新＋再書き込み
+  - `src/content/contentKernel.ts:327-339` ― init() 内の初期 state 書き込み
+- 型宣言の所在: `src/content/extractor.ts:30-43` ― interface OWTestState + declare global { interface Window { __OW_TEST_STATE?: OWTestState } }
+- キャスト例: `src/content/contentKernel.ts:224` と `:236` ― extractor.ts の global 型宣言を参照せず `as unknown as { __OW_TEST_STATE?: unknown }` で上書きしている
 
 ## 改善案
 

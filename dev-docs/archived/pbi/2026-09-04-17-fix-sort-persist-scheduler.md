@@ -59,8 +59,8 @@ rg -n "isFakeTimersActive|isTestEnv|schedulePersistSort|flushPendingPersist" src
 4. sort-persistence テストを注入版に更新（既存の同期検証を維持）
 
 ### 落とし穴
-- unmount（bumpGenerationOnUnmount）の flush を壊さない — テストで固定
-- 本番 scheduler は chrome.storage.local.set を呼ぶ — テスト注入時は fake storage
+- unmount（bumpGenerationOnUnmount）の flush を壊さない ― テストで固定
+- 本番 scheduler は chrome.storage.local.set を呼ぶ ― テスト注入時は fake storage
 
 ## Definition of Done
 - [x] isFakeTimersActive/isTestEnv がモデルから消える

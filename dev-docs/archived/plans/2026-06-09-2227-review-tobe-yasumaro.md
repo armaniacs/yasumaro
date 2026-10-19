@@ -68,7 +68,7 @@
 - **影響**: "Delete All Data" ボタンは `chrome.storage.local.clear()` のみ実行し、OPFS上のSQLiteデータベースの履歴を削除しない。GDPR第17条（忘れられる権利）に違反する可能性がある。
 - **対処**: `DELETE FROM browsing_logs` または `DROP TABLE browsing_logs` をoffscreenに指示するメッセージを追加する。
 
-### [High] オフスクリーン文書ライフサイクル未対処 — モバイルで頻繁に切断
+### [High] オフスクリーン文書ライフサイクル未対処 ― モバイルで頻繁に切断
 - **指摘者**: Edge & Mobile Strategist
 - **場所**: `src/background/sqliteClient.ts:89-116`, `src/offscreen/sqlite.ts:134-136`
 - **影響**: Chrome Androidがメモリ逼迫時にオフスクリーン文書を切断。WALモードで未フラッシュトランザクションが失われる。
@@ -86,7 +86,7 @@
 - **影響**: SQLite CRUD/AI要約のエラーが `console.*` にのみ出力され、拡張機能の構造化ログシステム (`addLog`) に送られない。SWサスペンド時にログが消失。
 - **対処**: Offscreenドキュメントからも `addLog` / `logError` を使用するか、メッセージ応答時にSW側でログ記録。
 
-### [High] 新規パネルのi18n定義欠落 — 15+キーが未定義
+### [High] 新規パネルのi18n定義欠落 ― 15+キーが未定義
 - **指摘者**: i18n Expert
 - **場所**: `public/_locales/{en,ja}/messages.json`, `entrypoints/options/index.html:1290-1328`
 - **影響**: Recording Triggers、Export Logs、SQLite Historyの全キーがmessages.jsonに未定義 → UI要素が空欄になる。
@@ -132,9 +132,9 @@
 | 2 | スキーママイグレーションがバージョン管理されていない | System Architect, SRE/Ops | `sqlite.ts:175-179` |
 | 3 | DASHBOARD_SQLITEが型安全でない文字列ディスパッチ | System Architect, API Contract | `messageTypes.ts:110-113` |
 | 4 | offscreen.tsがSRP違反（SQLite+Prompt APIの2責務） | Maintainability Guardian | `offscreen/offscreen.ts` |
-| 5 | バッチINSERT不在—移行処理がO(n) IPCラウンドトリップ | Tuning Expert | `migrationService.ts:68-103` |
-| 6 | クエリ結果のキャッシュ不在—全操作が2-hop IPC | Tuning Expert | `sqliteHistoryPanel.ts:59-106` |
-| 7 | SqliteClientのエラー全面飲み込み—リトライ機構欠如 | SRE/Ops | `sqliteClient.ts:167-178` |
+| 5 | バッチINSERT不在―移行処理がO(n) IPCラウンドトリップ | Tuning Expert | `migrationService.ts:68-103` |
+| 6 | クエリ結果のキャッシュ不在―全操作が2-hop IPC | Tuning Expert | `sqliteHistoryPanel.ts:59-106` |
+| 7 | SqliteClientのエラー全面飲み込み―リトライ機構欠如 | SRE/Ops | `sqliteClient.ts:167-178` |
 | 8 | Obsidian同期がプライバシー同意状態を確認せず送信 | Compliance & Privacy | `obsidianSyncService.ts:39-58` |
 | 9 | 旧製品名"Obsidian Weave"が4つのmessage値に残存 | i18n Expert, Ethics | `_locales/*/messages.json:567,897,1125,1404` |
 | 10 | applyI18nに空文字戻り値のガードがない | i18n Expert | `popup/i18n.ts:104-114` |
@@ -180,8 +180,8 @@
 ## 修正アクション
 
 Test Experts (Wave 3) が以下を修正済み:
-1. 🔧 `src/offscreen/sqlite.ts` — スキーマ初期化バグ修正（`CREATE INDEX` を `ALTER TABLE` 後に移動）
-2. 🔧 `src/background/service-worker.ts` — DASHBOARD_SQLITE 送信元検証追加
+1. 🔧 `src/offscreen/sqlite.ts` ― スキーマ初期化バグ修正（`CREATE INDEX` を `ALTER TABLE` 後に移動）
+2. 🔧 `src/background/service-worker.ts` ― DASHBOARD_SQLITE 送信元検証追加
 
 ### 安全に自動修正可能な項目
 

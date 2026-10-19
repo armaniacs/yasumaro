@@ -15,7 +15,7 @@
 - 種別: 非機能追加（fix）
 - 難易度: 低
 - 副作用: あり（撤回中は追記が拒否される。`RecordingAdmission` の外側に 2 つ目の同意読み出し点ができるため、`dev-docs/SECURITY_REVIEW_GUIDE.md` の「ゲート読み出しは 1 点」という記述を実態に合わせて更新する必要がある）
-- 根拠: `dev-docs/SECURITY_REVIEW_GUIDE.md` の「Privacy-consent gating」表の行 11 が「No — gap」として本 PBI を指している。ルール 1（記録行・ページ本文・派生要約を運ぶ経路はゲートが要る）に該当する唯一の dashboard 経路ながら、admission の外側にあるため記録ゲートに覆われていない
+- 根拠: `dev-docs/SECURITY_REVIEW_GUIDE.md` の「Privacy-consent gating」表の行 11 が「No ― gap」として本 PBI を指している。ルール 1（記録行・ページ本文・派生要約を運ぶ経路はゲートが要る）に該当する唯一の dashboard 経路ながら、admission の外側にあるため記録ゲートに覆われていない
 
 ## 背景（発見の経緯）
 
@@ -23,12 +23,12 @@ security-audit run-2（`pbi/2026-10-18-00-backlog-security-audit-run2.md`）の�
 
 ### 機構（コード上で確定、2026-10-19 にコード直読で確認）
 
-- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:75` — `case 'append_to_obsidian': {`。`CORE_CRUD_SUBTYPES`（`:40`）に含まれる dashboard の書き込み操作。
-- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:90` — `deps.getSettings()` を読むが、読むのは Obsidian API キー（`StorageKeys.OBSIDIAN_API_KEY`）だけ。
-- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:114` — `await deps.appendToDailyNote(markdown);`。選択行を Markdown 化して Obsidian へ書く。
-- `src/background/handlers/dashboardSqlite/deps.ts:271` — `appendToDailyNote: async (markdown) => { await getObsidianClient().appendToDailyNote(markdown); }`。Obsidian REST API への実配線。
-- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:778` — UI から `appendToLogs(ids)` を呼ぶ。
-- `src/dashboard/dashboardSqliteService.ts:467` — `sqliteClient.call('appendToLogs', { subtype: 'append_to_obsidian', ids })`。
+- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:75` ― `case 'append_to_obsidian': {`。`CORE_CRUD_SUBTYPES`（`:40`）に含まれる dashboard の書き込み操作。
+- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:90` ― `deps.getSettings()` を読むが、読むのは Obsidian API キー（`StorageKeys.OBSIDIAN_API_KEY`）だけ。
+- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts:114` ― `await deps.appendToDailyNote(markdown);`。選択行を Markdown 化して Obsidian へ書く。
+- `src/background/handlers/dashboardSqlite/deps.ts:271` ― `appendToDailyNote: async (markdown) => { await getObsidianClient().appendToDailyNote(markdown); }`。Obsidian REST API への実配線。
+- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:778` ― UI から `appendToLogs(ids)` を呼ぶ。
+- `src/dashboard/dashboardSqliteService.ts:467` ― `sqliteClient.call('appendToLogs', { subtype: 'append_to_obsidian', ids })`。
 - **`src/background/handlers/dashboardSqlite/` 配下と上記 UI / service 経路に、同意の読み出しは 1 つも無い**（`consent` / `hasPrivacyConsent` の grep が空）。`RecordingAdmission`（`src/background/recordingAdmission.ts`）も経由しない。
 - confirm token は同意の確認ではない。`append_to_obsidian` は `TOKEN_EXEMPT_OPS` に含まれないため `TOKEN_REQUIRED_SUBTYPES`（`src/messaging/sqliteOperationSecurity.ts:159-162`）に入り、sender の fail-safe 既定で token が自動付与され、`verifyConfirmToken`（`src/background/confirmTokenManager.ts:152-186`）が action / scope と 60 秒 TTL・単一使用を検証する。これは「その操作を意図した」ことの証明（anti-CSRF / 誤操作防止）であり、同意の有無は見ない。
 - 帰結: 同意して記録された行を、撤回後にダッシュボードで選択して追記すると、撤回済みの title / url / summary / tags が Obsidian へ出る。行は当時 consent 済みで保存されたものなので admission の記録は残っておらず、「記録時の同意」を根拠にできない。
@@ -53,7 +53,7 @@ security-audit run-2（`pbi/2026-10-18-00-backlog-security-audit-run2.md`）の�
 - **撤回後の外部送信**: 撤回済みユーザーの保存済み行が Obsidian へ出る。ユーザー操作が起点だが、撤回の意思表示と矛盾する。
 - **記録ゲートに覆われていない**: この経路は `RecordingAdmission` の外側にあり、記録時の同意を引き継ぐ説明が成り立たない。既存の 5 つのゲート対象（`dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 1〜5）はいずれも admission の前段か pipeline 内で、admission 後の別操作はここだけ。
 - **撤回の意味の後退（GDPR Art.7(3) の趣旨）**: 撤回は「以後の処理を停止する」効果を持つとされる。撤回はユーザーの明示的な行為であり、過去に同意して保存された行だからという理由で外部へ出し続けることは、厳格な読みでは説明できない。少なくとも**実行時点で同意を再確認する**ことが最低線。
-- **監査上の未解消項目**: `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 が「No — gap」のまま残り、適用範囲の記述が実装とずれ続ける。
+- **監査上の未解消項目**: `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 が「No ― gap」のまま残り、適用範囲の記述が実装とずれ続ける。
 - **同意のソースオブトゥルースの記述の更新**: ガイドは「`hasPrivacyConsent()` は唯一のソースオブトゥルースで、ゲート読み出し点はちょうど 1 点（`RecordingAdmission`）」と書いている（`:134-139`）。本 PBI の修正は admission 外に 2 つ目の正当なゲート読み出し点を作るため、この記述を「admission ゲート 1 点＋非 admission の外部送信ゲート」へ実態に合わせる。
 
 ## BDD受け入れシナリオ
@@ -163,7 +163,7 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 ### ロールバック手順
 
 1. 同意 seam と append のガードは 1 箇所なので、`git revert` で戻せる（元の「無条件に追記」へ戻る）。
-2. revert 後は「未修正に戻る」ため、`dev-docs/SECURITY_REVIEW_GUIDE.md` の行 11 を「No — gap」へ戻し、`pbi/00-INDEX.md` の状態も戻す。
+2. revert 後は「未修正に戻る」ため、`dev-docs/SECURITY_REVIEW_GUIDE.md` の行 11 を「No ― gap」へ戻し、`pbi/00-INDEX.md` の状態も戻す。
 3. revert 後に `npm run validate` で緑を確認する（append の既存テストが非退行であること）。
 
 ## 見積もり
@@ -188,11 +188,11 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 **疑問**: なぜダッシュボードの「Obsidian へ追記」だけが同意ゲートの外にあったのか。
 
-1. **なぜ外にあったのか** — この経路は `RecordingAdmission` を通らない。admission は「記録を新規に作る」経路の前段で、**既存行を書き出す**操作は別の入口（dashboardSqlite handler）から来る。
-2. **なぜ admission に乗っていないのか** — ダッシュボード操作は「ユーザーが明示的に選んだ行を操作する」もので、記録の生成ではない。設計上は別系統が正しい（delete / clear_all / update / toggle_star と同じ family）。
-3. **なぜ正しさが崩れたのか** — 同じ family に「ローカル操作（delete / star / update）」と「**外部送信**（append to Obsidian）」が同居しているのに、**family 単位でゲートの要否を判断**した。ローカル操作には不要・外部送信には必要という区別が、family の境界と一致しなかった。
-4. **なぜ区別されなかったのか** — PBI 02 の一覧が「記録が前提なら継承」と書いていた。判断軸が「**記録に由来するか**」であり、「**どこへ出るか（外部送信か）**」ではなかった。既存行の書き出しは「記録が前提」に見えるため継承と分類された。
-5. **なぜテストで捕まらないのか** — append のテストは「行が選ばれて追記される」ことだけを見ており、**同意という軸**が無かった（token ガードのテストはあったが、token は同意の代わりにならない）。
+1. **なぜ外にあったのか** ― この経路は `RecordingAdmission` を通らない。admission は「記録を新規に作る」経路の前段で、**既存行を書き出す**操作は別の入口（dashboardSqlite handler）から来る。
+2. **なぜ admission に乗っていないのか** ― ダッシュボード操作は「ユーザーが明示的に選んだ行を操作する」もので、記録の生成ではない。設計上は別系統が正しい（delete / clear_all / update / toggle_star と同じ family）。
+3. **なぜ正しさが崩れたのか** ― 同じ family に「ローカル操作（delete / star / update）」と「**外部送信**（append to Obsidian）」が同居しているのに、**family 単位でゲートの要否を判断**した。ローカル操作には不要・外部送信には必要という区別が、family の境界と一致しなかった。
+4. **なぜ区別されなかったのか** ― PBI 02 の一覧が「記録が前提なら継承」と書いていた。判断軸が「**記録に由来するか**」であり、「**どこへ出るか（外部送信か）**」ではなかった。既存行の書き出しは「記録が前提」に見えるため継承と分類された。
+5. **なぜテストで捕まらないのか** ― append のテストは「行が選ばれて追記される」ことだけを見ており、**同意という軸**が無かった（token ガードのテストはあったが、token は同意の代わりにならない）。
 
 **原因**: ゲートの要否を「操作の family（どの handler か）」で判断し、「データが外部へ出るか」で判断しなかったこと。
 
@@ -213,14 +213,14 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 ### 実装
 
-- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts` — append ケースの入力検証後・`getSettings` の前に同意判定を追加。拒否は `{ success:false, error: 'Privacy consent required to export to Obsidian' }`（既存の入力検証エラーと区別できる文字列）。
-- `src/background/handlers/dashboardSqlite/deps.ts` — `CoreCrudDeps` と `SqliteClientBackedDeps` に `isConsentGranted` を追加し、`createSqliteClientDeps` が袋から handler の deps へ渡す。
-- `src/background/dashboardSqliteWiring.ts` — `DashboardSqliteWiringDeps.isConsentGranted`（任意、既定は `hasPrivacyConsent`）として受け取り、袋へ渡す。
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — ゲートの記述を 2 種に更新、表の行 11 を「Yes — at execution time」に。
+- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts` ― append ケースの入力検証後・`getSettings` の前に同意判定を追加。拒否は `{ success:false, error: 'Privacy consent required to export to Obsidian' }`（既存の入力検証エラーと区別できる文字列）。
+- `src/background/handlers/dashboardSqlite/deps.ts` ― `CoreCrudDeps` と `SqliteClientBackedDeps` に `isConsentGranted` を追加し、`createSqliteClientDeps` が袋から handler の deps へ渡す。
+- `src/background/dashboardSqliteWiring.ts` ― `DashboardSqliteWiringDeps.isConsentGranted`（任意、既定は `hasPrivacyConsent`）として受け取り、袋へ渡す。
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― ゲートの記述を 2 種に更新、表の行 11 を「Yes ― at execution time」に。
 
 ### テスト（Red → Green）
 
-- `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` — 「撤回中は追記を拒否し、行も読まない（`query` 未呼び出し）」「同意済みなら従来どおり追記する（回帰ガード）」。
+- `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` ― 「撤回中は追記を拒否し、行も読まない（`query` 未呼び出し）」「同意済みなら従来どおり追記する（回帰ガード）」。
 - **Red の確認**: `coreCrudHandler.ts` の同意判定を revert すると新規 1 テストが失敗。token 検証はスタブしたままなので、シナリオ 3（token は同意の代わりにならない）も同時に満たしている。
 - 回帰: `dashboardSqliteHandlers*` / `nn26-manifest-singletons` など 4 ファイル 52 テスト緑、テスト全体 **1095 files / 16429 tests / exit 0**。型は `type-check` / `type-check:test:baseline`（456 / pinned 456）とも緑。
 
@@ -230,10 +230,10 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 ## 関連
 
-- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する（2026-10-19 完了・アーカイブ済み）
-- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
-- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
-- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
+- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) ― 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する（2026-10-19 完了・アーカイブ済み）
+- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) ― 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
+- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) ― 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) ― 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
 - [pbi/00-INDEX.md](../../../pbi/00-INDEX.md)
-- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) — 実時間待ちの禁止と、注入 seam の使い方
+- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) ― 実時間待ちの禁止と、注入 seam の使い方

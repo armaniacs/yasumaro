@@ -2,9 +2,9 @@
 
 ## ユーザーストーリー
 
-拡張機能を保守する開発者として、どこからも到達不能な UI とその依存チェーン（〜1,500 LOC）が消え、履歴画面が SQLite パネル 1 本である状態を望む。なぜなら `panel-history` はナビゲーション経路ゼロ（sidebar 18 パネル、`?tab=history` は sqlite パネルへ解決済み — catalog test で pin）で、維持だけがコストだから。
+拡張機能を保守する開発者として、どこからも到達不能な UI とその依存チェーン（〜1,500 LOC）が消え、履歴画面が SQLite パネル 1 本である状態を望む。なぜなら `panel-history` はナビゲーション経路ゼロ（sidebar 18 パネル、`?tab=history` は sqlite パネルへ解決済み ― catalog test で pin）で、維持だけがコストだから。
 
-> 元 PBI: `pbi/2026-09-07-16-refactor-remove-legacy-history-panel.md`（本 PBI がそれを置き換える — 依存の PBI 15 / PBI-P が完了したため着手可能。`main.ts` に関する旧 DoD は panel catalog 化で陳腐化しており、実際の登録箇所は `panelCatalog.ts:62` と `panelFactories.ts:16,29`）
+> 元 PBI: `pbi/2026-09-07-16-refactor-remove-legacy-history-panel.md`（本 PBI がそれを置き換える ― 依存の PBI 15 / PBI-P が完了したため着手可能。`main.ts` に関する旧 DoD は panel catalog 化で陳腐化しており、実際の登録箇所は `panelCatalog.ts:62` と `panelFactories.ts:16,29`）
 
 ## 優先度
 
@@ -14,9 +14,9 @@
 
 ## 製品判断（本 PBI で記録する・2026-09-11 診断時点の決定）
 
-1. **6 フィルターモード（all/auto/manual/skipped/masked/cleansed）は撤去** — pending は専用セクション化（PBI-P）で skipped モードの役割終了。auto/manual/masked/cleansed の SQL フィルタ化は follow-up PBI（必要になった時点で）
-2. **タグ編集モーダルは撤去** — タグ「フィルタ」は SQLite パネルに既存、編集 UI は follow-up（`#tagEditModal` は body-level のため HTML からも削除、`historyTagEditModal.ts` と共に）
-3. **Export all as Markdown ボタンの新居は Export Logs パネル**（PBI-P で移設済み — 本 PBI では legacy セクション削除のみ）
+1. **6 フィルターモード（all/auto/manual/skipped/masked/cleansed）は撤去** ― pending は専用セクション化（PBI-P）で skipped モードの役割終了。auto/manual/masked/cleansed の SQL フィルタ化は follow-up PBI（必要になった時点で）
+2. **タグ編集モーダルは撤去** ― タグ「フィルタ」は SQLite パネルに既存、編集 UI は follow-up（`#tagEditModal` は body-level のため HTML からも削除、`historyTagEditModal.ts` と共に）
+3. **Export all as Markdown ボタンの新居は Export Logs パネル**（PBI-P で移設済み ― 本 PBI では legacy セクション削除のみ）
 
 ## BDD 受け入れシナリオ
 
@@ -39,9 +39,9 @@ Scenario: 撤去後も sqlite パネルの全機能が動く
 - [x] `panelCatalog.ts:62`（legacy 1 行）と `panelFactories.ts:16,29`（import + factory 1 行）を削除
 - [x] `index.html` から `<section id="panel-history">`（:1667-1719）と body-level `#tagEditModal`（:2207-2238）を削除
 - [x] prod 削除: `historyPanel.ts` / `historyState.ts` / `historyRenderer.ts` / `historyPendingPanel.ts` / `historyTagEditModal.ts` / `historyEntryRow.ts` / `historyCleansingSync.ts` / `historyUtils.ts` / `historyBadges.ts`
-- [x] `historyFilters.ts` を `shouldFallbackToTextSearch` 1 関数に slim（唯一の現役 caller は `sqliteHistoryQuery.ts` — 検証済み）
+- [x] `historyFilters.ts` を `shouldFallbackToTextSearch` 1 関数に slim（唯一の現役 caller は `sqliteHistoryQuery.ts` ― 検証済み）
 - [x] 共有 keep 確認: `cleansingStatsView.ts`（aiSummaryCleansingPanel が使用）/ `storageUrls.ts` / `pendingStorage.ts` は無変更
-- [x] dead vi.mock 3 箇所削除（`dashboard-handlers.test.ts:261` / `dashboard.test.ts:470` / `dashboard-obsidian-enabled.test.ts:176` — 存在しないパスと export 名を mock する no-op）+ `historyPanel.lifecycle.test.ts` + legacy 単体 spec 11 件削除（`historyFilters.test.ts` は shouldFallbackToTextSearch ケースを残す）
+- [x] dead vi.mock 3 箇所削除（`dashboard-handlers.test.ts:261` / `dashboard.test.ts:470` / `dashboard-obsidian-enabled.test.ts:176` ― 存在しないパスと export 名を mock する no-op）+ `historyPanel.lifecycle.test.ts` + legacy 単体 spec 11 件削除（`historyFilters.test.ts` は shouldFallbackToTextSearch ケースを残す）
 - [x] `panelCatalog.test.ts` を 18 パネルに更新（legacy case 削除）
 - [x] grep ガードテスト新設（`panel-history` / `createHistoryPanel` / `initHistoryPanel` が PBI docs 外に出現したら失敗）
 - [x] DESIGN_SPECIFICATIONS / ARCHITECTURE_MAP / docs/i18n-guide の該当箇所更新

@@ -25,10 +25,10 @@ backlog: [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-
 - `src/background/syncTargets/SyncBatchRunner.ts`: 冒頭の doc comment が「Shared batch-sync policy for SyncTarget implementations (Gist, Obsidian)」と Obsidian を現役扱いしているため、「現時点では `GistSyncTarget` 専用。新しい sync 先を追加する際はこの抽象を再評価する」旨に書き換える。
 
 ### 触ってはいけないもの
-- `src/background/syncTargets/gistSyncTarget.ts` の `GistSyncTarget` 本体 — 現役の唯一の `SyncTarget` 実装。挙動変更なし。
-- `src/background/pipeline/steps/saveToObsidianStep.ts` — 本番の Obsidian 書込所有者。触らない。
-- `src/__tests__/sqlite-security-integrity.test.ts` の `obsidian_synced` ホワイトリスト値 — `ObsidianSyncService` クラスへの依存ではなく、SQLite 更新フィールドの整合性検証であるため残す。コメント文中のクラス名言及は、混乱を避ける範囲で文言調整してよい。
-- `src/utils/markdownSanitizer.ts` — 削除対象ではない。サニタイザ本体の重複解消は後続 PBI pbi/2026-09-17-04 の範囲。
+- `src/background/syncTargets/gistSyncTarget.ts` の `GistSyncTarget` 本体 ― 現役の唯一の `SyncTarget` 実装。挙動変更なし。
+- `src/background/pipeline/steps/saveToObsidianStep.ts` ― 本番の Obsidian 書込所有者。触らない。
+- `src/__tests__/sqlite-security-integrity.test.ts` の `obsidian_synced` ホワイトリスト値 ― `ObsidianSyncService` クラスへの依存ではなく、SQLite 更新フィールドの整合性検証であるため残す。コメント文中のクラス名言及は、混乱を避ける範囲で文言調整してよい。
+- `src/utils/markdownSanitizer.ts` ― 削除対象ではない。サニタイザ本体の重複解消は後続 PBI pbi/2026-09-17-04 の範囲。
 
 ### 作業順序（推奨）
 1. `markdownJoinSafety.test.ts` から `ObsidianSyncService` 用ケースと import を削除（`GistSyncTarget` 用ケースが残ることを確認）

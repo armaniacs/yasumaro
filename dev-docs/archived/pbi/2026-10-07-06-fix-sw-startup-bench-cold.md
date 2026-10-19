@@ -13,7 +13,7 @@
 
 ## 背景（file:line 現状）
 
-- `bench/e2e/sw-startup.bench.ts:24-32` — ループ本体は `context.newCDPSession(page)` で `Runtime.evaluate('true')` を送るだけで `sw.stop()` / `ServiceWorker.stopAllWorkers` を一度も呼ばない。worker ハンドルは `void sw` で破棄、`ServiceWorker.enable` はループ後（:32）のみ。CDP セッションが反復ごとに蓄積（detach なし）
+- `bench/e2e/sw-startup.bench.ts:24-32` ― ループ本体は `context.newCDPSession(page)` で `Runtime.evaluate('true')` を送るだけで `sw.stop()` / `ServiceWorker.stopAllWorkers` を一度も呼ばない。worker ハンドルは `void sw` で破棄、`ServiceWorker.enable` はループ後（:32）のみ。CDP セッションが反復ごとに蓄積（detach なし）
 - 影響: 5 サンプルすべて warm-message latency。`bench/reports/e2e-sw-startup-*.json` の既存値は warm 数値
 - 同点根拠: NN05（6.0）と同点だが NN05 が実データ乖離のためリスク軽減順で先行
 

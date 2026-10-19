@@ -41,7 +41,7 @@ fail-closed 方針に統一し、予測可能なフォールバック経路を�
 - 指摘スコープ外のトークン仕様（TTL・使い捨て・検証条件）は変更しないこと
 
 ## 実装メモ
-- 2026-09-05 完了（commit `eebc9c66`）: `generateToken` を fail-closed 化 — randomUUID / getRandomValues のいずれも使えない環境では throw し、`Math.random` フォールバック経路を物理削除。テスト: `confirmTokenManager-failclosed.test.ts`（RNG 不可・部分可・getRandomValues 経由の 3 ケース、24 tests のうち 3 件）
+- 2026-09-05 完了（commit `eebc9c66`）: `generateToken` を fail-closed 化 ― randomUUID / getRandomValues のいずれも使えない環境では throw し、`Math.random` フォールバック経路を物理削除。テスト: `confirmTokenManager-failclosed.test.ts`（RNG 不可・部分可・getRandomValues 経由の 3 ケース、24 tests のうち 3 件）
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

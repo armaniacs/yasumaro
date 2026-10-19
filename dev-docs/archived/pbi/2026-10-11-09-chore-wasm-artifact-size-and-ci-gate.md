@@ -32,8 +32,8 @@
 ### 片側差し替えがゲートをすり抜ける
 
 - `.github/workflows/ci.yml:65-71` の `wasm` paths フィルタは `wasm/**` / `scripts/wasm-crates.mjs` / `package*.json` / workflows のみで、**`public/wasm/**` を含まない**（`:183-185` の `wasm-test` ジョブ実行条件）。
-- ゲート本体 `:225-260` は `scripts/wasm-crates.mjs check` で src↔public の byte 一致を検査し、「片側コミットは失敗させる」と明記している（`scripts/wasm-crates.mjs:318-330`）。
-- しかし実際に配布されるのは `public/wasm/pii_sanitizer_bg.wasm`（`wxt.config.ts` の publicAssets 経由）であり、`public/wasm/*.wasm` だけを差し替える PR では rebuild パリティも src↔public のバイト比較も走らない。
+- ゲート本体 `:225-260` は `scripts/wasm-crates.mjs check` で src⇔public の byte 一致を検査し、「片側コミットは失敗させる」と明記している（`scripts/wasm-crates.mjs:318-330`）。
+- しかし実際に配布されるのは `public/wasm/pii_sanitizer_bg.wasm`（`wxt.config.ts` の publicAssets 経由）であり、`public/wasm/*.wasm` だけを差し替える PR では rebuild パリティも src⇔public のバイト比較も走らない。
 - 本ブランチの成果物自体は問題なし（`cmp public/wasm/pii_sanitizer_bg.wasm src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm` 一致、ローカルの `npm run build:wasm` 生成物とも byte 一致）。
 
 ## BDD 受け入れシナリオ
@@ -53,7 +53,7 @@ Scenario: サイズ上限を超えたら CI が落ちる
 Scenario: public/wasm だけの差し替えでもゲートが走る
   Given public/wasm/pii_sanitizer_bg.wasm のみを変更した PR である
   When CI が paths フィルタでジョブを選ぶ
-  Then wasm ジョブが起動し、src↔public の不一致を検出して失敗する
+  Then wasm ジョブが起動し、src⇔public の不一致を検出して失敗する
 ```
 
 ## 検証結果（2026-10-11）
@@ -88,7 +88,7 @@ textrank 41,984 / sentence-dedup 32,768。実測 + 約8%）。`scripts/wasm-crat
 - [x] `.github/workflows/ci.yml` の `wasm` paths フィルタに `public/wasm/**` を追加する
 - [x] CI の wasm ジョブに crate 単位のサイズ上限を追加する（`crates.json` の `maxBytes` を SSOT とし、`wasm-crates.mjs budget` で検査）
 - [x] strip（再ビルド）後も TS/WASM パリティ（`parity.test.ts` / `extended-patterns-parity.test.ts`）と `npm run test:wasm` が green
-- [x] src↔public の pii wasm が byte 一致（`cmp` 一致）
+- [x] src⇔public の pii wasm が byte 一致（`cmp` 一致）
 - [x] `docs/PERFORMANCE_TEST.md` または `bench/README.md` に「wasm 成果物サイズ」の行を設け、PBI 単位で増分を記録する運用を明記する
 - [x] `npm run validate` が green
 

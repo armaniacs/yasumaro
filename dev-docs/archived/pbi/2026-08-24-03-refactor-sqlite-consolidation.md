@@ -1,6 +1,6 @@
 # PBI-03: SqliteClient 4 helper重複解消 + storageMaintenance singleton迂回除去
 
-優先度: 3位 / RICE 17.1 (Reach 8 × Impact 2 × Conf 75% / Effort 0.7w) — #5(RICE12.0)と#7(RICE32.0)をマージし再計算
+優先度: 3位 / RICE 17.1 (Reach 8 × Impact 2 × Conf 75% / Effort 0.7w) ― #5(RICE12.0)と#7(RICE32.0)をマージし再計算
 種別: refactor
 依存: なし（#5と#7は同一ファイル集合でマージ、他PBIとdisjoint）
 ファイル触接: `src/background/sqliteClient.ts:65-165`, `src/utils/storage/storageMaintenance.ts:16-17`, `src/background/createBackgroundServices.ts:114`
@@ -10,9 +10,9 @@ Effort: 0.7w (Medium)
 
 2つの摩擦が同一ファイル集合に同居しているため1 PBIに統合する。
 
-**摩擦A: 4 helper重複** — PBI-11で20 shimは削除され`call`は4 domain helper（callQuery/callMutate/callMaintain/callStatus）に分割済みだが、4 helperはtry/catch + recordSqliteFailure + logError + categorizeErrorがverbatim重複。変更時に4箇所同期が必要でshallow module化。sqliteMessageHandlersのMap registryはexhaustivenessが実行時forwardWarnのみで静的保証なし。
+**摩擦A: 4 helper重複** ― PBI-11で20 shimは削除され`call`は4 domain helper（callQuery/callMutate/callMaintain/callStatus）に分割済みだが、4 helperはtry/catch + recordSqliteFailure + logError + categorizeErrorがverbatim重複。変更時に4箇所同期が必要でshallow module化。sqliteMessageHandlersのMap registryはexhaustivenessが実行時forwardWarnのみで静的保証なし。
 
-**摩擦B: singleton迂回** — `SqliteHealthCheck`型はLayer 0（types.ts:12）に抽出済みだが、`storageMaintenance.getDefaultSqliteHealthCheck()`は`await import('../../background/sqliteClient.js')`の動的import + `new SqliteClient()`でsingletonを迂回する。LAYERS.mdのLayer 1-循環例外として記録されているが実質的に逆方向依存（utils→background）を温存し、offscreen二重生成raceとaliveチェック分散を招く。注入経路はcreateBackgroundServicesから可能だが未配線。
+**摩擦B: singleton迂回** ― `SqliteHealthCheck`型はLayer 0（types.ts:12）に抽出済みだが、`storageMaintenance.getDefaultSqliteHealthCheck()`は`await import('../../background/sqliteClient.js')`の動的import + `new SqliteClient()`でsingletonを迂回する。LAYERS.mdのLayer 1-循環例外として記録されているが実質的に逆方向依存（utils→background）を温存し、offscreen二重生成raceとaliveチェック分散を招く。注入経路はcreateBackgroundServicesから可能だが未配線。
 
 ## 目的
 
@@ -68,24 +68,24 @@ Effort: 0.7w (Medium)
 
 ## DoD
 
-- [~] 4 helperの重複解消 — `callInternal` genericではなく、`SqliteClient` の
+- [~] 4 helperの重複解消 ― `callInternal` genericではなく、`SqliteClient` の
   `query`/`mutate`/`maintain`/`getStatus` を `SqliteGateway`（PBI 2026-08-31-05）への
   薄い委譲に置換する別アプローチで実質達成。try/catch・`recordSqliteFailure`・
   `categorizeError` の verbatim 重複は SqliteClient から消滅。`callInternal` シンボルは未作成
 - [ ] `storageMaintenance.ts`から`await import('../../background/sqliteClient.js')`と`new SqliteClient()`が削除されている
-  — **未達**。`src/utils/storage/storageMaintenance.ts:34-37` に `getDefaultSqliteHealthCheck()` が現存し、
+  ― **未達**。`src/utils/storage/storageMaintenance.ts:34-37` に `getDefaultSqliteHealthCheck()` が現存し、
   `await import('../../background/sqliteClient.js')` + `new SqliteClient()` を実行。
   `:61` で `sqliteHealthCheck ?? getSqliteHealthCheck() ?? (await getDefaultSqliteHealthCheck())` と
   本番フォールバック経路として現役参照（popup/options 等 `setSqliteHealthCheck` 未実行コンテキスト向け）
 - [x] `createBackgroundServices.ts`でhealthCheckが注入されている
-  — `compositionManifest.ts:92` の `onReady` で `setSqliteHealthCheck(...)` を配線、
+  ― `compositionManifest.ts:92` の `onReady` で `setSqliteHealthCheck(...)` を配線、
   `createBackgroundServices.ts` が resolve。ただし動的 import フォールバックと併存
 - [x] `sqliteMessageHandlers` Mapに`satisfies Record<SqliteMessageType, SqliteHandler>`
   （`src/offscreen/sqliteMessageHandlers.ts:313`）
 - [x] `npm run type-check` PASS
 - [x] 既存テスト全PASS
 - [ ] `grep -rn "await import.*sqliteClient" src/utils/` が0件
-  — **未達**（`storageMaintenance.ts:36` が 1 件ヒット）
+  ― **未達**（`storageMaintenance.ts:36` が 1 件ヒット）
 
 ## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査）
 

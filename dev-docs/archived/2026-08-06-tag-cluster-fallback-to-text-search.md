@@ -17,9 +17,9 @@ Tag Cluster パネルでタグノード (例: `#教育`) をクリックする�
 | ユニットテスト | `src/dashboard/__tests__/historyFilters.test.ts` | フォールバック判定テストを追加 |
 
 参照のみ (触らない):
-- `src/dashboard/panels/asyncData/tagClusterPanel.ts` — `navigateToHistoryWithTag` は変えず、`searchTag: '教育'` のセマンティクスを SQLite パネル側で吸収する。
-- `src/dashboard/panels/NavigationRegistry.ts` — `onActivate` 契約は維持。
-- `src/dashboard/dashboardSqliteService.ts` — 既存の `searchLogs()` をそのまま使う。
+- `src/dashboard/panels/asyncData/tagClusterPanel.ts` ― `navigateToHistoryWithTag` は変えず、`searchTag: '教育'` のセマンティクスを SQLite パネル側で吸収する。
+- `src/dashboard/panels/NavigationRegistry.ts` ― `onActivate` 契約は維持。
+- `src/dashboard/dashboardSqliteService.ts` ― 既存の `searchLogs()` をそのまま使う。
 
 ## 設計
 

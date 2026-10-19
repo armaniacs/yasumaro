@@ -16,12 +16,12 @@
 
 `CONSENT_STATE_CHANGED` は `src/background/messageTypes.ts:249-260` の `NO_PAYLOAD_TYPES` に登録されており、以下3箇所で「payloadを持たない」ことが機械的に強制されている:
 
-1. **実行時の enforcement** — `src/background/handlers/envelopePolicy.ts:119-123`
+1. **実行時の enforcement** ― `src/background/handlers/envelopePolicy.ts:119-123`
    `NO_PAYLOAD_TYPES` に含まれる型は payload チェックをスキップする分岐にある。
-2. **型レベルの固定** — `src/messaging/types.ts:278` の `PayloadForType<'CONSENT_STATE_CHANGED'>` は `never` に解決される。
-3. **契約テスト** — `src/__tests__/messaging-types-uniformity.test.ts:147-158`
+2. **型レベルの固定** ― `src/messaging/types.ts:278` の `PayloadForType<'CONSENT_STATE_CHANGED'>` は `never` に解決される。
+3. **契約テスト** ― `src/__tests__/messaging-types-uniformity.test.ts:147-158`
    ```typescript
-   test('CONSENT_STATE_CHANGED has never payload — bare envelope passes guard, any payload is rejected', () => {
+   test('CONSENT_STATE_CHANGED has never payload ― bare envelope passes guard, any payload is rejected', () => {
      type Payload = PayloadForType<'CONSENT_STATE_CHANGED'>;
      const assertNever: never = 1 as Payload;   // ← コンパイル時チェック
      expect(NO_PAYLOAD_TYPES).toContain('CONSENT_STATE_CHANGED');
@@ -33,7 +33,7 @@
 
 ## 実装方針: 2案から選択する
 
-### 案A（推奨・低コスト）— 契約をコードに明示して型で守る
+### 案A（推奨・低コスト）― 契約をコードに明示して型で守る
 
 payload は追加せず、「このメッセージは値を運ばない意図的なトリガーである」ことを**コード上の明示的な契約**にする。当初の懸念（将来の購読者が区別不能に気づかない）は、気づける形にすれば解消できる。
 
@@ -69,7 +69,7 @@ type ConsentStateChangedMessage = {
    ```
    （`ExtensionMessage` の正確なエクスポート名・場所は `messageTypes.ts` で確認すること。存在しなければこの項目はスキップ可）
 
-4. 契約テストを追加 — `src/popup/__tests__/privacyConsentController.test.ts` に
+4. 契約テストを追加 ― `src/popup/__tests__/privacyConsentController.test.ts` に
    「accept と decline が同一形状のメッセージを送る（区別を載せない）ことが意図的な契約である」ことを pin するテストを追加:
    ```typescript
    it('sends an identical bare envelope for both accept and decline (INTENTIONAL: value lives in storage)', async () => {
@@ -80,7 +80,7 @@ type ConsentStateChangedMessage = {
 
 案Aの工数: 0.5人日。SSOTと衝突しない。
 
-### 案B（非推奨・要合意）— NO_PAYLOAD_TYPES から外して値を載せる
+### 案B（非推奨・要合意）― NO_PAYLOAD_TYPES から外して値を載せる
 
 どうしてもメッセージで値を運びたい場合、以下すべての改修が必要:
 

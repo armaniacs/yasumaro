@@ -167,7 +167,7 @@ describe('stripNewsMediaPatterns', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx jest src/utils/aiSummaryCleaner/__tests__/stripExtended.test.ts -t "stripNewsMediaPatterns"`
-Expected: FAIL — `stripNewsMediaPatterns is not a function` または import エラー
+Expected: FAIL ― `stripNewsMediaPatterns is not a function` または import エラー
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -268,7 +268,7 @@ describe('stripEcSitePatterns', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx jest src/utils/aiSummaryCleaner/__tests__/stripExtended.test.ts -t "stripEcSitePatterns"`
-Expected: FAIL — `stripEcSitePatterns is not a function`
+Expected: FAIL ― `stripEcSitePatterns is not a function`
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -362,7 +362,7 @@ describe('stripQaSitePatterns', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx jest src/utils/aiSummaryCleaner/__tests__/stripExtended.test.ts -t "stripQaSitePatterns"`
-Expected: FAIL — `stripQaSitePatterns is not a function`
+Expected: FAIL ― `stripQaSitePatterns is not a function`
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -456,7 +456,7 @@ describe('stripVideoSitePatterns', () => {
 - [ ] **Step 2: テストが失敗することを確認**
 
 Run: `npx jest src/utils/aiSummaryCleaner/__tests__/stripExtended.test.ts -t "stripVideoSitePatterns"`
-Expected: FAIL — `stripVideoSitePatterns is not a function`
+Expected: FAIL ― `stripVideoSitePatterns is not a function`
 
 - [ ] **Step 3: 最小実装を書く**
 
@@ -592,7 +592,7 @@ git commit -m "feat(ai-summary-cleaning): Category B の型定義を追加"
 
 **Files:**
 - Modify: `src/utils/aiSummaryCleaner/index.ts`
-- Test: `src/utils/aiSummaryCleaner/__tests__/index.test.ts`（存在する場合。無ければこのタスクでは新規作成しない — Task 8 の統合テストで確認する）
+- Test: `src/utils/aiSummaryCleaner/__tests__/index.test.ts`（存在する場合。無ければこのタスクでは新規作成しない ― Task 8 の統合テストで確認する）
 
 - [ ] **Step 1: import 文に4関数を追加**
 
@@ -718,7 +718,7 @@ Run: `ls src/utils/aiSummaryCleaner/__tests__/index.test.ts`
 存在する場合はそのファイルに、存在しない場合は `src/utils/aiSummaryCleaner/__tests__/stripCore.test.ts` 冒頭の import パターンを参考に、以下のテストを追加する。
 
 ```typescript
-describe('cleanseAISummaryContent — Category B integration', () => {
+describe('cleanseAISummaryContent ― Category B integration', () => {
   it('applies newsMediaEnabled when true', () => {
     const root = document.createElement('div');
     root.innerHTML = '<div class="byline-source">配信：共同通信</div><p>Article body content here for scoring.</p>';
@@ -796,7 +796,7 @@ git commit -m "feat(ai-summary-cleaning): cleanseAISummaryContent に Category B
 `src/utils/storage/defaults.ts` の `[StorageKeys.AI_SUMMARY_CLEANSING_SPEECH_BUBBLE]: false,` の行の直後に追加する。
 
 ```typescript
-    // Category B: Site-Type Specific Patterns — default true for new users (existing users migrated to false)
+    // Category B: Site-Type Specific Patterns ― default true for new users (existing users migrated to false)
     [StorageKeys.AI_SUMMARY_CLEANSING_NEWS_MEDIA]: true,
     [StorageKeys.AI_SUMMARY_CLEANSING_EC_SITE]: true,
     [StorageKeys.AI_SUMMARY_CLEANSING_QA_SITE]: true,
@@ -849,7 +849,7 @@ export async function migrateCategoryBDefault(): Promise<boolean> {
 
   const result = await chrome.storage.local.get([MIGRATION_DONE_KEY, ...CATEGORY_B_KEYS]);
 
-  // Already migrated — nothing to do
+  // Already migrated ― nothing to do
   if (result[MIGRATION_DONE_KEY]) {
     return false;
   }
@@ -857,7 +857,7 @@ export async function migrateCategoryBDefault(): Promise<boolean> {
   const hasExistingCategoryBSetting = CATEGORY_B_KEYS.some(k => result[k] !== undefined);
 
   if (!hasExistingCategoryBSetting) {
-    // No prior Category B setting — distinguish new install from existing user
+    // No prior Category B setting ― distinguish new install from existing user
     // by checking if any OTHER setting keys exist in storage (indicating prior use)
     const allKeys = await chrome.storage.local.get(null);
     const hasAnyExistingSetting = Object.keys(allKeys).some(k =>

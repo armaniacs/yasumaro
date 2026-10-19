@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-16
 **PBI:** [2026-07-16-02-fix-architecture-knowledge-graph-findings](../../../pbi/2026-07-16-02-fix-architecture-knowledge-graph-findings.md) （PBI-1のみ）
-**Status:** Implemented (2026-07-16) — v6.5.33
+**Status:** Implemented (2026-07-16) ― v6.5.33
 **Depends on:** ADR [2026-03-20-default-settings-single-source](../../../dev-docs/ADR/2026-03-20-default-settings-single-source.md)
 
 ---
@@ -95,8 +95,8 @@ export {
 | `gemini_api_key` | `gemini_api_key` |
 | `openai_api_key` | `openai_api_key` |
 | `openai_2_api_key` | `openai_2_api_key` |
-| — | `provider_api_key`（`StorageKeys.PROVIDER_API_KEY`） |
-| — | `github_pat`（`StorageKeys.GITHUB_PAT`） |
+| ― | `provider_api_key`（`StorageKeys.PROVIDER_API_KEY`） |
+| ― | `github_pat`（`StorageKeys.GITHUB_PAT`） |
 
 この差分は2箇所で実害を持つセキュリティギャップになっている:
 
@@ -137,6 +137,6 @@ export {
 
 ## Dependencies
 
-- **Blocks**: PBI-2（ADR↔コード逆リンク）が本ADRの実装完了を参照する可能性がある
+- **Blocks**: PBI-2（ADR⇔コード逆リンク）が本ADRの実装完了を参照する可能性がある
 - **Blocked by**: なし
-- **Out of scope**: PBI-2/3/4（ドキュメント↔コード逆リンク、content script注入経路可視化、logger→PII依存可視化）は別セッションで個別に設計する
+- **Out of scope**: PBI-2/3/4（ドキュメント⇔コード逆リンク、content script注入経路可視化、logger→PII依存可視化）は別セッションで個別に設計する

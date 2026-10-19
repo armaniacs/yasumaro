@@ -1,4 +1,4 @@
-# ADR: Dashboard Panel Lifecycle Migration — Wave 1 (sqliteHistoryPanel)
+# ADR: Dashboard Panel Lifecycle Migration ― Wave 1 (sqliteHistoryPanel)
 
 **Date:** 2026-08-20  
 **Status:** Implemented  
@@ -21,7 +21,7 @@ The goal is to gradually migrate panels to direct PanelLifecycle implementation,
 
 ## Solution
 
-**Phase 1 (Wave 1 — this ADR): sqliteHistoryPanel direct implementation**
+**Phase 1 (Wave 1 ― this ADR): sqliteHistoryPanel direct implementation**
 
 Convert sqliteHistoryPanel from AsyncDataPanel to PanelLifecycle interface directly:
 
@@ -54,7 +54,7 @@ Convert sqliteHistoryPanel from AsyncDataPanel to PanelLifecycle interface direc
 - `unmount()` → `destroy()` (lifecycle cleanup)
 
 **Rationale:**
-- sqliteHistoryPanel is the most-changed panel (26 changes in past month) — highest benefit from direct implementation
+- sqliteHistoryPanel is the most-changed panel (26 changes in past month) ― highest benefit from direct implementation
 - Existing tests (10 files, 113 test cases) provide strong regression safety
 - No architectural changes; only interface remapping at the boundary
 
@@ -72,7 +72,7 @@ Convert sqliteHistoryPanel from AsyncDataPanel to PanelLifecycle interface direc
    - **Mitigation**: NavigationRegistry controls the order (init before load). Verified in lifecycle integration tests.
 
 2. **Incomplete cleanup**: destroy() must cover all unmount() responsibilities
-   - **Mitigation**: debounce timer cleanup, generation bump, selection clear — all preserved. Verified in destroy tests.
+   - **Mitigation**: debounce timer cleanup, generation bump, selection clear ― all preserved. Verified in destroy tests.
 
 3. **Parameter type drift**: init(initParams?: Record<string, unknown>) is less type-safe than specific params
    - **Mitigation**: Runtime checks for searchTag/searchDomain. PanelInitMap in types.ts provides typed navigation.
@@ -135,7 +135,7 @@ Convert sqliteHistoryPanel from AsyncDataPanel to PanelLifecycle interface direc
 ## Wave 2+ Planning
 
 **Next panels (diagnosticsPanel):**
-- 19 changes in past month — second hotspot
+- 19 changes in past month ― second hotspot
 - Similar lifecycle pattern (async data loading + cleanup)
 - Same mapping: DiagnosticPanel → PanelLifecycle
 - Expected: 1-2 day effort per panel

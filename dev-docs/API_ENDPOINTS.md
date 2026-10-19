@@ -39,8 +39,8 @@ New message types must set `protocolVersion: CURRENT_PROTOCOL_VERSION` in their 
 |-----------|---------------------|
 | `Failed to fetch` + `https://` target | Prompts the user to accept the self-signed certificate in a browser tab first |
 | Message contains `timed out` | Generic timeout message |
-| HTTP 401/403 (in `testConnection`) | Authentication failed — check API key |
-| HTTP 404 (in `testConnection`) | Endpoint not found — check Local REST API plugin is enabled |
+| HTTP 401/403 (in `testConnection`) | Authentication failed ― check API key |
+| HTTP 404 (in `testConnection`) | Endpoint not found ― check Local REST API plugin is enabled |
 | Other | Generic connection failure message |
 
 ## Updating this document

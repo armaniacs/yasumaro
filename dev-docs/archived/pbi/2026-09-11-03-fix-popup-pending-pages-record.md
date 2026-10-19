@@ -50,11 +50,11 @@ Scenario: 複数選択保存で storage 読みが 1 回になる
 
 ## 見積もり
 
-S（0.2 人週）。副作用: 🟡（MANUAL_RECORD 経路では isSecureUrl / rate limit が適用される — pending は既に https 前提で許容）。種別: fix。
+S（0.2 人週）。副作用: 🟡（MANUAL_RECORD 経路では isSecureUrl / rate limit が適用される ― pending は既に https 前提で許容）。種別: fix。
 
 ## 実装アプローチ
 
-1. `pendingPages.ts` の送信を MANUAL_RECORD envelope に修正（`content: ''` + `force: true` — 既存意図を維持。background が content fetch を行う）
+1. `pendingPages.ts` の送信を MANUAL_RECORD envelope に修正（`content: ''` + `force: true` ― 既存意図を維持。background が content fetch を行う）
 2. whitelist 部分を SettingsRepository に置換（import 追加。popup から repository 利用は `statusPanel.ts` と同一パターン）
 3. N+1 解消（ループ前に 1 回取得）
 4. テスト更新

@@ -1,17 +1,17 @@
-# PBI: Cleanup — orphan exports / dead mocks / optimisticLock shim importers の一括除去
+# PBI: Cleanup ― orphan exports / dead mocks / optimisticLock shim importers の一括除去
 
 ## ユーザーストーリー
 開発者（dev/CI）として、orphan exports / dead test mocks / `@deprecated` shim への残存 import を一括で除去したい、なぜなら次 iteration で shim（`optimisticLock.ts` / `sqliteClient.ts` / `trustDb.ts` 等）を物理削除した際にビルドが壊れ、dead mock は削除済み module を参照してテストの意図が空振りし、orphan export は API サーフェスを肥大化させて drift を隠すから
 
 ## 種別
-- chore / cleanup（非機能・クリーンアップ）— 単一機能ではなく、branch review `0902a` で検出された WARNING/dead-code 3 カテゴリ（A: orphan exports / B: dead test mocks / C: shim importers）の束ね
+- chore / cleanup（非機能・クリーンアップ）― 単一機能ではなく、branch review `0902a` で検出された WARNING/dead-code 3 カテゴリ（A: orphan exports / B: dead test mocks / C: shim importers）の束ね
 
 ## 優先度
 - 順位: 05 / 07（Architecture Deepening 0903 の番外 cleanup）
 - RICEスコア: **0.9**（Reach=1 / Impact=1 / Confidence=0.9 / Effort=1）
 - RICE 内訳:
-  - Reach: 1（dev/CI のみ。ユーザー影響なし — 次の shim 物理削除が着地するまでは prod 挙動に影響しない）
-  - Impact: 1（中 — drift リスク / mock 空振りによるバグ見逃し / shim 削除時のビルド破壊）
+  - Reach: 1（dev/CI のみ。ユーザー影響なし ― 次の shim 物理削除が着地するまでは prod 挙動に影響しない）
+  - Impact: 1（中 ― drift リスク / mock 空振りによるバグ見逃し / shim 削除時のビルド破壊）
   - Confidence: 0.9（grep で全箇所を特定済み、移行先 `StorageTransaction` は PBI 01 で deep 化済み）
   - Effort: 1 人週（orphan 削除 + mock 削除 + 6〜7 ファイルの import 移行 + shim 物理削除 + validate green）
   - 根拠: 短期的ユーザー価値はゼロだが、放置すると次の iteration（shim 物理削除）で確実に `ERR_MODULE_NOT_FOUND` / type-check 失敗が発生し、dead mock は 2 スイート分のテストが実体を検証していない状態を隠す。Effort は機械的な置換中心で 1 人週に収まる。
@@ -34,7 +34,7 @@
 | # | ファイル | 行 | export | 状態 |
 |---|----------|----|--------|------|
 | A1 | `src/utils/storage/storageTransaction.ts` | 235-244 | `withLockViaPort` / `withAtomicViaPort` | prod caller なし（shim 経由の再export のみ） |
-| A2 | `src/background/ai/providerCatalog.ts` | 188, 248 | `PROVIDER_REGISTRY` / `ProviderCatalogEntryAlias` / `createStrategy` | `PROVIDER_REGISTRY` は旧 Registry alias、`ProviderCatalogEntryAlias` は `ProviderCatalogEntry = ProviderRegistryEntry` の alias、`createStrategy` は旧 factory alias — いずれも新 seam（`ProviderCatalog`）に吸収済み |
+| A2 | `src/background/ai/providerCatalog.ts` | 188, 248 | `PROVIDER_REGISTRY` / `ProviderCatalogEntryAlias` / `createStrategy` | `PROVIDER_REGISTRY` は旧 Registry alias、`ProviderCatalogEntryAlias` は `ProviderCatalogEntry = ProviderRegistryEntry` の alias、`createStrategy` は旧 factory alias ― いずれも新 seam（`ProviderCatalog`）に吸収済み |
 | A3 | `src/utils/trustDb/TrustDbAdmin.ts` | ~143 | convenience `isDomainTrusted` 関数 | `getTrustDbAdmin().isDomainTrusted` に集約済み、単独関数は orphan |
 | A4 | `src/background/pipeline/contextBuilder.ts` | ~184 | `createInitialContext` / `assertStage` | `contextBuilder.test.ts` のみで使用、prod caller なし |
 
@@ -44,7 +44,7 @@
 | B1 | `src/dashboard/__tests__/gistSettings.test.ts` | 46 | `vi.mock('../../background/sqliteClient.js', …)` | `sqliteClient.ts` は 8f1d956d で物理削除済み |
 | B2 | `src/background/handlers/__tests__/confirmTokenConstantTime.test.ts` | 56 | `vi.mock('../../sqliteClient.js', () => ({}))` | 同上 |
 
-#### C. `optimisticLock.ts` shim — 残存 prod importers
+#### C. `optimisticLock.ts` shim ― 残存 prod importers
 | # | ファイル | 行 | 現状 import |
 |---|----------|----|-------------|
 | C1 | `src/utils/markdown/MarkdownBufferManager.ts` | 2 | `from '../optimisticLock.js'` |
@@ -53,7 +53,7 @@
 | C4 | `src/utils/savedUrlRepository.ts` | 16 | `from './optimisticLock.js'` または `from '../utils/optimisticLock.js'` |
 | C5 | `src/utils/storage/settingsMigration.ts` | 10 | `from '../optimisticLock.js'` |
 | C6 | `src/utils/permissionManager.ts` | 10 | `from './optimisticLock.js'` または `from '../utils/optimisticLock.js'` |
-| C7 | `src/utils/trustDb/TrustDbKernel.ts` | 11 | `from '../optimisticLock.js'` — prod か test-only かを本 PBI 着手時に確認し、prod なら移行対象に含める |
+| C7 | `src/utils/trustDb/TrustDbKernel.ts` | 11 | `from '../optimisticLock.js'` ― prod か test-only かを本 PBI 着手時に確認し、prod なら移行対象に含める |
 
 - 移行先: `src/utils/storage/storageTransaction.js`（`StorageTransaction` / `withLock` / `withAtomic` / `withOptimisticLock` / `withAtomicKeys` のいずれか適切なもの。命名は `storageTransaction.ts` の公開 API に合わせる）
 - ゴール: 上記 6（または C7 含め 7）箇所を全て `storageTransaction` に移行した後に `src/utils/optimisticLock.ts` を物理削除
@@ -171,7 +171,7 @@ Scenario: C2 optimisticLock shim が物理削除され validate が green であ
 - なし（本 PBI は dev/CI のみ、ユーザー可視の挙動変更なし）
 
 ### 統合テスト
-- `npm run validate`（type-check + lint + tests）が green であることを CI で確認 — 本 PBI の最終ゲート
+- `npm run validate`（type-check + lint + tests）が green であることを CI で確認 ― 本 PBI の最終ゲート
 - `npm run build` が green であることを確認（shim 削除後の module resolution 破壊を検出）
 
 ### 単体テスト
@@ -185,12 +185,12 @@ Scenario: C2 optimisticLock shim が物理削除され validate が green であ
 - **リファクタリング**: shim 削除は C1（import 移行）が全て green になってから最後に実行。順序違反で `ERR_MODULE_NOT_FOUND` を出さないこと
 
 ## 見積もり
-1 pt（要チームでの見積もり — RICE Effort=1 人週に対応）
+1 pt（要チームでの見積もり ― RICE Effort=1 人週に対応）
 
 ## 技術的考慮事項
 - 依存関係: PBI 01（StorageTransaction deep 化）完了済みが前提。PBI 04b（trustDb.ts 物理削除 64609768）と PBI 07b（sqliteClient.ts 物理削除 8f1d956d）完了済みが前提
 - テスタビリティ: `grep -rn` による conformance が主。`withLockViaPort` 等は prod caller 0 件を事前に `grep -rn "withLockViaPort" src/ --include="*.ts" | grep -v "__tests__" | grep -v ".test.ts"` で再確認すること
-- 非機能要件: ビルド破壊の防止（`optimisticLock.ts` 物理削除は import 移行完了が前提）、dead mock の隠蔽バグの洗い出し（mock 削除後にテストが fail するなら、従来 mock が実体を隠していたバグの可能性 — 要調査）
+- 非機能要件: ビルド破壊の防止（`optimisticLock.ts` 物理削除は import 移行完了が前提）、dead mock の隠蔽バグの洗い出し（mock 削除後にテストが fail するなら、従来 mock が実体を隠していたバグの可能性 ― 要調査）
 - 順序: A（orphan 削除）と B（dead mock 削除）は独立して並行可。C1（import 移行）→ C2（shim 物理削除）は直列必須。A/B と C は並行可だが、C2 は全 C1 完了が前提
 
 ## 実装者向け注記
@@ -215,9 +215,9 @@ grep -rn "createInitialContext\|assertStage" src/ --include="*.ts"
 
 # B1/B2
 grep -rn "sqliteClient" src/ --include="*.ts"
-# expect: B1/B2 の vi.mock 2 件のみが残存（prod import は 0 件のはず — PBI 07b で移行済み）
+# expect: B1/B2 の vi.mock 2 件のみが残存（prod import は 0 件のはず ― PBI 07b で移行済み）
 
-# C — shim importers
+# C ― shim importers
 grep -rn "from.*optimisticLock" src/ --include="*.ts"
 # expect: 6 (+ TrustDbKernel.ts) 件の prod importers + src/utils/optimisticLock.ts 自体
 cat src/utils/optimisticLock.ts
@@ -236,7 +236,7 @@ cat src/utils/optimisticLock.ts
 2. **B. Dead test mocks 削除**
    1. `src/dashboard/__tests__/gistSettings.test.ts:46` の `vi.mock('../../background/sqliteClient.js', …)` を削除。必要なら `offscreenGateway` / `dashboardGateway` への mock に置換、不要なら単に削除
    2. `src/background/handlers/__tests__/confirmTokenConstantTime.test.ts:56` の `vi.mock('../../sqliteClient.js', () => ({}))` を削除
-   3. 各削除後に `npm test -- <該当ファイル>` が green であることを確認。fail する場合は mock が実体を隠していたバグの可能性 — 要調査の上で適切な mock に置換
+   3. 各削除後に `npm test -- <該当ファイル>` が green であることを確認。fail する場合は mock が実体を隠していたバグの可能性 ― 要調査の上で適切な mock に置換
 3. **C. optimisticLock shim importers 移行 → shim 物理削除**
    1. 6 箇所の prod importers を `src/utils/storage/storageTransaction.js` に移行:
       - `src/utils/markdown/MarkdownBufferManager.ts:2`
@@ -245,8 +245,8 @@ cat src/utils/optimisticLock.ts
       - `src/utils/savedUrlRepository.ts:16`
       - `src/utils/storage/settingsMigration.ts:10`
       - `src/utils/permissionManager.ts:10`
-      - `src/utils/trustDb/TrustDbKernel.ts:11` — 着手時に `grep -n "optimisticLock" src/utils/trustDb/TrustDbKernel.ts` で prod import か test-only かを確認。prod なら同様に移行、test-only なら対象外として PR 説明に記載
-   2. 各ファイルで `import { withOptimisticLock, withAtomicKeys } from '../optimisticLock.js'` → `import { withOptimisticLock, withAtomicKeys } from './storage/storageTransaction.js'`（または `StorageTransaction.withLock` / `withAtomic` に置換 — `storageTransaction.ts` の公開 API に合わせる。`withOptimisticLock` は `withLock` の alias として提供されているため、いずれも可だが `withLock` / `withAtomic` への統一を推奨）
+      - `src/utils/trustDb/TrustDbKernel.ts:11` ― 着手時に `grep -n "optimisticLock" src/utils/trustDb/TrustDbKernel.ts` で prod import か test-only かを確認。prod なら同様に移行、test-only なら対象外として PR 説明に記載
+   2. 各ファイルで `import { withOptimisticLock, withAtomicKeys } from '../optimisticLock.js'` → `import { withOptimisticLock, withAtomicKeys } from './storage/storageTransaction.js'`（または `StorageTransaction.withLock` / `withAtomic` に置換 ― `storageTransaction.ts` の公開 API に合わせる。`withOptimisticLock` は `withLock` の alias として提供されているため、いずれも可だが `withLock` / `withAtomic` への統一を推奨）
    3. 全移行後に `grep -rn "from.*optimisticLock" src/ --include="*.ts"` が 0 件であることを確認し `npm run type-check` green を確認
    4. `rm src/utils/optimisticLock.ts` で shim を物理削除
    5. `npm run validate`（type-check + lint + tests）と `npm run build` が green であることを確認
@@ -254,7 +254,7 @@ cat src/utils/optimisticLock.ts
 ### 落とし穴
 - **C の順序違反**: `optimisticLock.ts` を C1 移行前に物理削除すると `ERR_MODULE_NOT_FOUND` で type-check / build が即 fail する。必ず C1 green 後に C2 を実行すること
 - **A2 の @deprecated 温存判断**: 他ブランチや外部参照で `PROVIDER_REGISTRY` を使っている可能性。削除前に `grep -rn "PROVIDER_REGISTRY" . --include="*.ts" --include="*.md"` で repo 全体を検索し、0 件なら削除、参照が残る場合は `@deprecated` 温存 + removal date 明記で段階削除すること
-- **B の mock 空振り**: dead mock は現在 `vi.mock` が存在しない module を指しているため、vitest が warning または no-op になっている可能性。mock 削除後にテストが fail する場合、そのテストは従来 mock によって実体のバグを隠していた — 要調査
+- **B の mock 空振り**: dead mock は現在 `vi.mock` が存在しない module を指しているため、vitest が warning または no-op になっている可能性。mock 削除後にテストが fail する場合、そのテストは従来 mock によって実体のバグを隠していた ― 要調査
 - **相対パス**: `storageTransaction` への移行時、各ファイルからの相対パスが異なる（`../storage/storageTransaction.js` vs `./storage/storageTransaction.js` vs `../utils/storage/storageTransaction.js`）。`npm run type-check` で即検出できるが、PR では各 import の相対パスを要確認
 - **TrustDbKernel.ts:11 の prod/test 判定**: このファイルが prod で `optimisticLock` を使っているか、test-only（`__tests__` からの import 経由）のみかを `grep -rn "from.*TrustDbKernel" src/ --include="*.ts" | grep -v "__tests__"` と `grep -n "optimisticLock" src/utils/trustDb/TrustDbKernel.ts` で確認してから C1 に含めるか判断すること
 
@@ -264,7 +264,7 @@ cat src/utils/optimisticLock.ts
 - [ ] `src/utils/optimisticLock.ts` が物理削除されている（C2）
 - [ ] `npm run type-check` / `npm run lint` / `npm test` / `npm run build` が green
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（必要に応じて `dev-docs/DESIGN_SPECIFICATIONS.md` の該当節を更新 — 特に TrustDb の entry point 明記）
+- [ ] ドキュメント更新済み（必要に応じて `dev-docs/DESIGN_SPECIFICATIONS.md` の該当節を更新 ― 特に TrustDb の entry point 明記）
 - [ ] `pbi/00-INDEX.md` の進行中一覧から本 PBI を削除し、アーカイブ履歴に 1 行追記（運用ルールに準拠）
 
 ## 実装メモ（任意）

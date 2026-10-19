@@ -15,7 +15,7 @@
 - 種別: 非機能追加（fix）
 - 難易度: 中
 - 副作用: あり（同意撤回中は再送・要約が止まるため、「同意済みユーザーの積み残しが実行されない」時間帯が生じる。設計判断（実行時再確認か、撤回時にキューを破棄するか）を誤ると、同意済みユーザーの正当なキューを失う）
-- 根拠: `dev-docs/SECURITY_REVIEW_GUIDE.md` の「Privacy-consent gating」表の行 8〜10 が「No — gap」として本 PBI を指している。同意の唯一のゲートは `RecordingAdmission`（`src/background/recordingAdmission.ts`）の admission 時 1 点であり、admission 後にタイマー・アラーム・キュー・ユーザー操作で走る経路は再確認しない（`dev-docs/SECURITY_REVIEW_GUIDE.md:149-153`）
+- 根拠: `dev-docs/SECURITY_REVIEW_GUIDE.md` の「Privacy-consent gating」表の行 8〜10 が「No ― gap」として本 PBI を指している。同意の唯一のゲートは `RecordingAdmission`（`src/background/recordingAdmission.ts`）の admission 時 1 点であり、admission 後にタイマー・アラーム・キュー・ユーザー操作で走る経路は再確認しない（`dev-docs/SECURITY_REVIEW_GUIDE.md:149-153`）
 
 ## 背景（発見の経緯）
 
@@ -24,30 +24,30 @@ security-audit run-2（`pbi/2026-10-18-00-backlog-security-audit-run2.md`）の�
 ### 機構（コード上で確定、2026-10-19 にコード直読で確認）
 
 1. **オフライン再送（admission 済みジョブの再生）**
-   - `src/background/pipeline/stepExecutor.ts:67-74` — Obsidian / AI ステップが失敗し `step.offlineRetry` が立っていると `enqueueOfflineJob` して `StepFailureError(error, enqueued)` を投げる。ここでキューに積まれる。
-   - `src/background/offlineNetworkQueue.ts:28` — `JOB_TTL_MS = 7 * 24 * 60 * 60 * 1000`（7 日）。`MAX_RETRY_COUNT = 3`、`MAX_JOBS_PER_CYCLE = 20`。
-   - `src/background/alarmRegistry.ts:165` — `yasumaro-offline-network-retry`（`periodInMinutes: 5`）。
-   - `src/background/service-worker.ts:66` — `alarmRegistry.installAll()` が service worker の起動ごとに走る。MV3 では起動が頻繁なので、アラームは実質常時武装される。
-   - `src/background/offlineQueueProcessor.ts:119` — `deps.recordingPipeline.retryObsidianWrite(...)` が Obsidian REST API へ送る。
-   - `src/background/offlineQueueProcessor.ts:140` — `deps.recordingPipeline.record(buildOfflineRetryRequest(payload))` が AI プロバイダへ送る（フルパイプライン再実行）。
+   - `src/background/pipeline/stepExecutor.ts:67-74` ― Obsidian / AI ステップが失敗し `step.offlineRetry` が立っていると `enqueueOfflineJob` して `StepFailureError(error, enqueued)` を投げる。ここでキューに積まれる。
+   - `src/background/offlineNetworkQueue.ts:28` ― `JOB_TTL_MS = 7 * 24 * 60 * 60 * 1000`（7 日）。`MAX_RETRY_COUNT = 3`、`MAX_JOBS_PER_CYCLE = 20`。
+   - `src/background/alarmRegistry.ts:165` ― `yasumaro-offline-network-retry`（`periodInMinutes: 5`）。
+   - `src/background/service-worker.ts:66` ― `alarmRegistry.installAll()` が service worker の起動ごとに走る。MV3 では起動が頻繁なので、アラームは実質常時武装される。
+   - `src/background/offlineQueueProcessor.ts:119` ― `deps.recordingPipeline.retryObsidianWrite(...)` が Obsidian REST API へ送る。
+   - `src/background/offlineQueueProcessor.ts:140` ― `deps.recordingPipeline.record(buildOfflineRetryRequest(payload))` が AI プロバイダへ送る（フルパイプライン再実行）。
    - **このファイルには同意の読み出しが 1 つも無い。** `hasPrivacyConsent` も `admit` も import していない（`OfflineQueueProcessorDeps` は `offlineNetworkQueue` / `recordingPipeline` / `terminalFailureHandler` / `notifyError` のみ、`:75-86`）。
-   - `src/utils/storage/privacyConsent.ts:285-329` — `withdrawPrivacyConsent()` は撤回記録を書き、拒否カウンタをリセットし、nav trail を切る。**キューを破棄も無効化もしない。**
+   - `src/utils/storage/privacyConsent.ts:285-329` ― `withdrawPrivacyConsent()` は撤回記録を書き、拒否カウンタをリセットし、nav trail を切る。**キューを破棄も無効化もしない。**
    - 帰結: 同意して記録 → ステップ失敗でキュー投入 → ユーザーが撤回 → 5 分以内の再送で、保存済み summary / content が AI プロバイダと Obsidian へ送られる。
 
 2. **通知の「保存」再実行**
-   - `src/background/service-worker.ts:194` — `createNotificationHandlers({ record: (data) => recordingPipeline.record(data) })`。`admit` は渡っていない。
-   - `src/background/handlers/recordingHandlers.ts:175` — 同意済みの記録が確認を要したとき `NotificationHelper.notifyPrivacyConfirm(...)` を出す。
-   - `src/background/notificationHelper.ts:42-52` — button 0 = 保存（`requireInteraction: true` で画面に残る）。
-   - `src/background/handlers/notificationHandlers.ts:77-95` — buttonIndex 0 で `deps.record(buildRecordRequest('notification-confirm', ...))` を直接呼ぶ。`admit()` も同意読み出しも無い。
+   - `src/background/service-worker.ts:194` ― `createNotificationHandlers({ record: (data) => recordingPipeline.record(data) })`。`admit` は渡っていない。
+   - `src/background/handlers/recordingHandlers.ts:175` ― 同意済みの記録が確認を要したとき `NotificationHelper.notifyPrivacyConfirm(...)` を出す。
+   - `src/background/notificationHelper.ts:42-52` ― button 0 = 保存（`requireInteraction: true` で画面に残る）。
+   - `src/background/handlers/notificationHandlers.ts:77-95` ― buttonIndex 0 で `deps.record(buildRecordRequest('notification-confirm', ...))` を直接呼ぶ。`admit()` も同意読み出しも無い。
    - pending ページの TTL は `PENDING_MAX_TTL_MS = 24h`（`src/utils/pendingStorage.ts:92`）。通知発行から最長 24 時間、撤回後に保存を押せる。
    - 帰結: 同意して記録 → 確認通知が残る → ユーザーが撤回 → 通知の「保存」を押す → `record()` が同意を見ずに走る。
 
 3. **週次・月次の定期要約**
-   - `src/background/reviewSummaryGenerator.ts:299` — 期間内の全行の `summary` を join して `aiService.generateSummary(...)` へ送る。
-   - `src/background/reviewSummaryGenerator.ts:259-263` — 唯一のガードは `REVIEW_SUMMARY_ENABLED`。
-   - `src/utils/storage/defaults.ts:173` — 既定 `false`。ただし一度有効化すると永続し、無効化されるまでアラームが武装され続ける。
-   - `src/background/alarmRegistry.ts:169-174` — `yasumaro-review-weekly` / `yasumaro-review-monthly`（`installReviewSummary` が `REVIEW_SUMMARY_ENABLED` true のときだけ作成、`:124-136`）。
-   - `src/background/handlers/MessageRouter.ts:233` → `src/background/handlers/systemHandlers.ts:347-349` — `GENERATE_REVIEW_SUMMARY` による手動起動も同じ生成器を通る。
+   - `src/background/reviewSummaryGenerator.ts:299` ― 期間内の全行の `summary` を join して `aiService.generateSummary(...)` へ送る。
+   - `src/background/reviewSummaryGenerator.ts:259-263` ― 唯一のガードは `REVIEW_SUMMARY_ENABLED`。
+   - `src/utils/storage/defaults.ts:173` ― 既定 `false`。ただし一度有効化すると永続し、無効化されるまでアラームが武装され続ける。
+   - `src/background/alarmRegistry.ts:169-174` ― `yasumaro-review-weekly` / `yasumaro-review-monthly`（`installReviewSummary` が `REVIEW_SUMMARY_ENABLED` true のときだけ作成、`:124-136`）。
+   - `src/background/handlers/MessageRouter.ts:233` → `src/background/handlers/systemHandlers.ts:347-349` ― `GENERATE_REVIEW_SUMMARY` による手動起動も同じ生成器を通る。
    - 帰結: 同意して記録 → 定期要約を有効化 → ユーザーが撤回 → 次の週次 / 月次アラーム（または手動メッセージ）で、撤回済みの期間の全 summary が AI へ送られる。
 
 ## 再現手順
@@ -65,7 +65,7 @@ security-audit run-2（`pbi/2026-10-18-00-backlog-security-audit-run2.md`）の�
 - **撤回後の外部送信**: 撤回済みユーザーの保存済み summary / content が AI プロバイダと Obsidian へ出る。オフライン再送は 5 分間隔で自動、定期要約は週次 / 月次で自動。
 - **撤回の意味の後退（GDPR Art.7(3) の趣旨）**: 撤回は「以後の処理を停止する」効果を持つとされる。撤回はユーザーの明示的な行為であり、撤回より前に作られたキュー・通知・アラームを理由に処理を続けることは、厳格な読みでは説明できない。少なくとも**実行時点で同意を再確認する**ことが最低線。
 - **撤回と同時に nav trail を切る既存の扱いとの不整合**: `withdrawPrivacyConsent` は「撤回したのに記録が捕捉し続ける」経路（nav trail）を塞いでいる（`src/utils/storage/privacyConsent.ts:317-327`）。同じ問題意識がキュー・通知・定期要約には適用されていない。
-- **監査上の未解消項目**: `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8〜10 が「No — gap」のまま残り、同意ゲートの適用範囲の記述が実装とずれ続ける。
+- **監査上の未解消項目**: `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8〜10 が「No ― gap」のまま残り、同意ゲートの適用範囲の記述が実装とずれ続ける。
 - 同意の実効性は PBI `2026-10-18-05` の ack ガード（再付与の抑止）で部分的に守られているが、それは「同意なしに記録が再開する」経路の話であり、本件（admission 済みの後続処理）は別の穴。
 
 ## BDD受け入れシナリオ
@@ -185,7 +185,7 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 ### ロールバック手順
 
 1. 3 経路は独立なので、1 経路ずつ revert できる（オフライン再送だけ撤回時に止める、など）。
-2. revert 後は「未修正に戻る」ため、`dev-docs/SECURITY_REVIEW_GUIDE.md` の該当行を「No — gap」へ戻し、`pbi/00-INDEX.md` の状態も戻す。
+2. revert 後は「未修正に戻る」ため、`dev-docs/SECURITY_REVIEW_GUIDE.md` の該当行を「No ― gap」へ戻し、`pbi/00-INDEX.md` の状態も戻す。
 3. revert で同意済みユーザーのキューが壊れないこと（キュー保持を選んだ場合、ジョブは減っていないこと）を `npm run validate` で確認する。
 
 ## 見積もり
@@ -209,11 +209,11 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 **疑問**: なぜ同意を撤回した後も、記録に由来するデータが外部へ出ていくのか。
 
-1. **なぜ送信されるのか** — 3 経路（オフライン再送アラーム・通知の Save・定期要約）は、**受付時に同意を確認した後**に走る処理を、数分〜数週間後に独立して実行する。実行時点では同意を読まない。
-2. **なぜ実行時に読まなかったのか** — 同意を「記録を始めてよいか」という**入口の判定**として設計し、`RecordingAdmission` に集約した。この設計自体は正しいが、**「入口の判定」と「外部送信の許可」を同一視**した。
-3. **なぜ同一視が起きたのか** — 同意を「状態（撤回できる）」ではなく「ゲート通過の事実」として扱っていた。状態は時間で変わるが、事実は変わらない。後から走る経路は「事実」を前提にしていた。
-4. **なぜそれが見えなかったのか** — 3 経路はどれも admission の**下流**にあるため、コードを読むと「記録が同意済みだから安全」に見える。**下流の実行時点が admission より後である**ことが、一覧でもレビューでも表現されていなかった（PBI 02 の表も「継承」と書いた）。
-5. **なぜテストで捕まらないのか** — 3 経路のテストは「同意済み」の状態だけを再現していた。**撤回という遷移**を、キュー・通知・アラームという時間差の対象と組み合わせたテストが無かった。
+1. **なぜ送信されるのか** ― 3 経路（オフライン再送アラーム・通知の Save・定期要約）は、**受付時に同意を確認した後**に走る処理を、数分〜数週間後に独立して実行する。実行時点では同意を読まない。
+2. **なぜ実行時に読まなかったのか** ― 同意を「記録を始めてよいか」という**入口の判定**として設計し、`RecordingAdmission` に集約した。この設計自体は正しいが、**「入口の判定」と「外部送信の許可」を同一視**した。
+3. **なぜ同一視が起きたのか** ― 同意を「状態（撤回できる）」ではなく「ゲート通過の事実」として扱っていた。状態は時間で変わるが、事実は変わらない。後から走る経路は「事実」を前提にしていた。
+4. **なぜそれが見えなかったのか** ― 3 経路はどれも admission の**下流**にあるため、コードを読むと「記録が同意済みだから安全」に見える。**下流の実行時点が admission より後である**ことが、一覧でもレビューでも表現されていなかった（PBI 02 の表も「継承」と書いた）。
+5. **なぜテストで捕まらないのか** ― 3 経路のテストは「同意済み」の状態だけを再現していた。**撤回という遷移**を、キュー・通知・アラームという時間差の対象と組み合わせたテストが無かった。
 
 **原因**: 同意を「入口の判定（事実）」として扱い、「実行時の状態」として扱わなかったこと。
 
@@ -231,17 +231,17 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 ### 実装
 
-- `src/background/offlineQueueProcessor.ts` — `isConsentGranted` を必須の dep に追加し、`retryAll` を呼ぶ前に判定。撤回中は 1 件も処理せず**キューに触らない**（`retryCount` も 20 件枠も消費しない）。
-- `src/background/handlers/notificationHandlers.ts` — `isConsentGranted` を dep に追加し、`buttonIndex === 0` の先頭で判定。撤回中は `record` を呼ばず、**pending ページを残す**（既存の「claim が取れないときは残す」方針と同じ）。
-- `src/background/reviewSummaryGenerator.ts` — `isConsentGranted` を options に追加し、`REVIEW_SUMMARY_ENABLED` の後・クエリの前に判定。撤回中は `generateSummary` を呼ばず、`REVIEW_SUMMARY_LAST_GENERATED_*` も更新しない（再同意後にその期間を生成できる）。
+- `src/background/offlineQueueProcessor.ts` ― `isConsentGranted` を必須の dep に追加し、`retryAll` を呼ぶ前に判定。撤回中は 1 件も処理せず**キューに触らない**（`retryCount` も 20 件枠も消費しない）。
+- `src/background/handlers/notificationHandlers.ts` ― `isConsentGranted` を dep に追加し、`buttonIndex === 0` の先頭で判定。撤回中は `record` を呼ばず、**pending ページを残す**（既存の「claim が取れないときは残す」方針と同じ）。
+- `src/background/reviewSummaryGenerator.ts` ― `isConsentGranted` を options に追加し、`REVIEW_SUMMARY_ENABLED` の後・クエリの前に判定。撤回中は `generateSummary` を呼ばず、`REVIEW_SUMMARY_LAST_GENERATED_*` も更新しない（再同意後にその期間を生成できる）。
 - 配線: `alarmRegistry.ts`（`AlarmHandlerDeps` に追加して再送へ渡す）、`compositionManifest.ts`（要約生成器と alarm deps に `() => hasPrivacyConsent()`）、`service-worker.ts`（通知ハンドラ）。
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 表の行 8〜10 を「Yes — at execution time」にし、固定しているテスト名を記載。行 11 は未着手のまま（PBI 11）。
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― 表の行 8〜10 を「Yes ― at execution time」にし、固定しているテスト名を記載。行 11 は未着手のまま（PBI 11）。
 
 ### テスト（Red → Green）
 
-- `src/background/__tests__/offlineQueueProcessor.test.ts` — 「撤回中は 1 件も再送しない（`retryAll` 自体を呼ばない）」「再同意後に同じジョブが再送される」
-- `src/background/handlers/__tests__/notificationHandlers.test.ts` — 「撤回中は pending ページから記録せず、pending も消さない」（claim をモックして**同意だけが理由**で止まることを保証）
-- `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` — 「撤回中は AI へ送らず、生成済みの印も進めない」
+- `src/background/__tests__/offlineQueueProcessor.test.ts` ― 「撤回中は 1 件も再送しない（`retryAll` 自体を呼ばない）」「再同意後に同じジョブが再送される」
+- `src/background/handlers/__tests__/notificationHandlers.test.ts` ― 「撤回中は pending ページから記録せず、pending も消さない」（claim をモックして**同意だけが理由**で止まることを保証）
+- `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ― 「撤回中は AI へ送らず、生成済みの印も進めない」
 - **Red の確認**: 3 実装を revert すると新規 4 テストが失敗（offline 2・review 1・通知 1）。通知は当初、claim の失敗で偶然とおってしまったため claim をモックして判別力を確保した。
 - 回帰: `src/background/__tests__/` と `src/background/handlers/__tests__/` の 152 ファイル 2019 テストが緑。型は `type-check` / `type-check:test:baseline`（456 / pinned 456）ともに緑。
 
@@ -251,11 +251,11 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 ## 関連
 
-- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する（2026-10-19 完了・アーカイブ済み）
-- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 8〜10（本 PBI）と行 11（PBI 11）。ルール 2（admission 時の同意は後の実行を許さない）が本 PBI の根拠
-- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）
-- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
-- [pbi/2026-10-18-04-fix-notification-consent-prestage.md](../../../pbi/2026-10-18-04-fix-notification-consent-prestage.md) — 通知 Save への admission pre-stage。本 PBI の通知アームと重複するため実装順を決める
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同じ同意 lifecycle。同意レコードの読み出し前提が共通
+- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) ― 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する（2026-10-19 完了・アーカイブ済み）
+- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) ― 「Privacy-consent gating」表の行 8〜10（本 PBI）と行 11（PBI 11）。ルール 2（admission 時の同意は後の実行を許さない）が本 PBI の根拠
+- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) ― 発見の系譜（security-audit run-2）
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) ― 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
+- [pbi/2026-10-18-04-fix-notification-consent-prestage.md](../../../pbi/2026-10-18-04-fix-notification-consent-prestage.md) ― 通知 Save への admission pre-stage。本 PBI の通知アームと重複するため実装順を決める
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 同じ同意 lifecycle。同意レコードの読み出し前提が共通
 - [pbi/00-INDEX.md](../../../pbi/00-INDEX.md)
-- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) — 実時間待ちの禁止と、注入した時計 / sleep の使い方
+- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) ― 実時間待ちの禁止と、注入した時計 / sleep の使い方

@@ -13,24 +13,24 @@ adversarial-code-reviewの反証検証を通過（SURVIVES）した3件のみを
 
 ### #1: save経路の未マスク本文がクラウドAIへ送信される
 
-- `src/background/handlers/recordingHandlers.ts:316-323` — SAVE_RECORDが生contentを`buildRecordRequest('save', …)`に渡す
-- `src/background/recordRequestBuilder.ts:73` — saveポリシーが`alreadyProcessed: true`を付与
-- `src/background/privacyPipeline.ts:185-186` — `_buildSanitizedSettings`は`useMasking`だけ`&& !alreadyProcessed`で落とし、`useCloudAi(mode !== 'local_only')`は残る
-- `src/background/privacyPipeline.ts:162-164` — 未マスク`processingText`が`generateSummary`へ
-- `src/utils/storage/defaults.ts:68` — 既定`masked_cloud`のため到達可能
+- `src/background/handlers/recordingHandlers.ts:316-323` ― SAVE_RECORDが生contentを`buildRecordRequest('save', …)`に渡す
+- `src/background/recordRequestBuilder.ts:73` ― saveポリシーが`alreadyProcessed: true`を付与
+- `src/background/privacyPipeline.ts:185-186` ― `_buildSanitizedSettings`は`useMasking`だけ`&& !alreadyProcessed`で落とし、`useCloudAi(mode !== 'local_only')`は残る
+- `src/background/privacyPipeline.ts:162-164` ― 未マスク`processingText`が`generateSummary`へ
+- `src/utils/storage/defaults.ts:68` ― 既定`masked_cloud`のため到達可能
 
 ### #2: 長トークン中間PIIの検出回避
 
-- `src/utils/piiSanitizer.ts:57-69` — `sampleMiddleForScan`が100文字毎に末尾1文字を`#`に置換
-- `src/utils/piiSanitizer.ts:287,305` — 検出は`scanText`上で実行
-- `src/utils/piiSanitizer.ts:322` — 値は原文から切り出すため`#`を跨ぐPIIは未検出のまま素通り
+- `src/utils/piiSanitizer.ts:57-69` ― `sampleMiddleForScan`が100文字毎に末尾1文字を`#`に置換
+- `src/utils/piiSanitizer.ts:287,305` ― 検出は`scanText`上で実行
+- `src/utils/piiSanitizer.ts:322` ― 値は原文から切り出すため`#`を跨ぐPIIは未検出のまま素通り
 - コメント（`:320-321`）の「影響しない」は境界跨ぎを見落とした誤読
 
 ### #3: タイトル改行によるMarkdown構造インジェクション
 
-- `src/utils/markdownSanitizer.ts:151-160` — `sanitizeForMarkdownLinkText`は改行を処理しない
-- `src/utils/markdownFormatter.ts:62-69` — `sanitizeTitle`も改行無処理（対照的にsummary `:75-81`は正規化、tag `:94`は除去）
-- `src/utils/markdownFormatter.ts:174` — `- ts [title](url)`に割って入る（heading `:161`も同経路）
+- `src/utils/markdownSanitizer.ts:151-160` ― `sanitizeForMarkdownLinkText`は改行を処理しない
+- `src/utils/markdownFormatter.ts:62-69` ― `sanitizeTitle`も改行無処理（対照的にsummary `:75-81`は正規化、tag `:94`は除去）
+- `src/utils/markdownFormatter.ts:174` ― `- ts [title](url)`に割って入る（heading `:161`も同経路）
 
 ## 設計決定
 

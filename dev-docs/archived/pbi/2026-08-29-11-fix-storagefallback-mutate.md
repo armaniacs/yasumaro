@@ -1,4 +1,4 @@
-# PBI: storageFallback ミューテータ統一 — mutate(fn) ヘルパー（VULN-022, CWE-362）
+# PBI: storageFallback ミューテータ統一 ― mutate(fn) ヘルパー（VULN-022, CWE-362）
 
 ## ユーザーストーリー
 開発者として、OPFS が使えない環境のフォールバック SQLite エンジンで、全ミューテータが同一のロック規律で動くようにしたい、なぜなら 8 ミューテータのうち 6 個がロックなしで load→mutate→save し、purge が同時 toggleStar の全 blob 書き込みで取り消されるから
@@ -69,7 +69,7 @@ Scenario: lock 待ちのタイムアウトは既存契約どおり
 - **Red-Green-Refactor**: insert の「重複チェック後に ID 確保」順序（PBI 2026-08-27-06 で確立）を mutate 内で維持
 
 ## 見積もり
-1pt（要チームでの見積もり — ヘルパー 1 本＋8 メソッド置換＋テスト）
+1pt（要チームでの見積もり ― ヘルパー 1 本＋8 メソッド置換＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 2）。OPFS 正常経路（opfsWorker）には触れない
@@ -94,7 +94,7 @@ rg -n "loadData|saveData" src/offscreen/storageFallback.ts
 4. 並行変異テスト追加、`npm run validate`
 
 ### 落とし穴
-- fn 内で再帰的に mutate を呼ぶとデッドロックする — fn は純粋変換に限定する契約コメントを付けること
+- fn 内で再帰的に mutate を呼ぶとデッドロックする ― fn は純粋変換に限定する契約コメントを付けること
 - saveData 失敗時にロックだけ解放してデータが半端にならないこと（load し直しの原状回復または例外伝播）
 - insertBatch のバッチ内重複フィルタ順序を崩さないこと（既存テスト 2026-08-27-06 を回帰ゲートに）
 

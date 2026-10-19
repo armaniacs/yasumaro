@@ -9,10 +9,10 @@ storage backend を保守する開発者として、「archive/backup/audit は 
 - 順位: 08 / 9
 - RICE スコア: 9.6（Reach=3 / Impact=2 / Confidence=80% / Effort=0.5 人週）
 - 根拠（2026-09-11 診断）:
-  - `src/offscreen/StorageBackend.ts:69-122` — interface 29 メソッドのうち 14 が 3 backend 中 2 つ（Idb/Fallback）で非対応
-  - `src/offscreen/IdbVfsBackend.ts:276-330` — 14 行の `Archive requires OPFS storage.` stub + `:273` backup + `:332-334` restore
-  - `src/offscreen/FallbackStorageAdapter.ts:57-111` — 14 行同一 stub + `:54` backup + `:114` restore + `:128-132` audit 2 件
-  - `src/offscreen/__tests__/archiveFallbackRejection.test.ts:8-14` — 正確な文字列を pin（文言 1 修正が 34 箇所に波及）
+  - `src/offscreen/StorageBackend.ts:69-122` ― interface 29 メソッドのうち 14 が 3 backend 中 2 つ（Idb/Fallback）で非対応
+  - `src/offscreen/IdbVfsBackend.ts:276-330` ― 14 行の `Archive requires OPFS storage.` stub + `:273` backup + `:332-334` restore
+  - `src/offscreen/FallbackStorageAdapter.ts:57-111` ― 14 行同一 stub + `:54` backup + `:114` restore + `:128-132` audit 2 件
+  - `src/offscreen/__tests__/archiveFallbackRejection.test.ts:8-14` ― 正確な文字列を pin（文言 1 修正が 34 箇所に波及）
   - deletion test: 政策（「archive は OPFS でのみ可能」）を 1 箇所に置けば stub の山は消える = 正の集約
 
 ## BDD 受け入れシナリオ
@@ -56,11 +56,11 @@ S-M（0.5 人週）。種別: refactor。
 1. `StorageBackend.ts` に capability クエリ + 共有ヘルパを追加
 2. IdbVfsBackend / FallbackStorageAdapter / NoopBackend の stub を置換
 3. test を定数参照に更新
-4. （任意）facets 分割は本 PBI では行わず capability 統合のみ — facets は将来の archive 改修時に再評価
+4. （任意）facets 分割は本 PBI では行わず capability 統合のみ ― facets は将来の archive 改修時に再評価
 
 ## 実装メモ（2026-09-11）
 
 - `StorageBackend.ts` に `ARCHIVE_UNSUPPORTED_ERROR` / `BINARY_BACKUP_UNSUPPORTED_ERROR` / `BINARY_RESTORE_UNSUPPORTED_ERROR` / `AUDIT_LOG_UNSUPPORTED_ERROR` 定数 + `archiveUnsupported()` 共有 stub を 1 箇所で定義。
 - IdbVfsBackend（14+2）と FallbackStorageAdapter（14+2+audit 2）の stub を共有ヘルパ/定数参照に置換（28+6 → 0 重複）。NoopBackend は NOT_INITIALIZED（別契約）のため据え置き。
 - `archiveFallbackRejection.test.ts` は定数参照で pin（文言 1 修正が 1 箇所で完結）。
-- スコープ調整: `supportsArchive()` capability クエリは追加しなかった — 呼び出し側が pre-check する経路が現時点で無く、「1 adapter = 仮の seam」原則に従い stub 統合のみで効果を得る。facets 分割も将来の archive 改修時に再評価。
+- スコープ調整: `supportsArchive()` capability クエリは追加しなかった ― 呼び出し側が pre-check する経路が現時点で無く、「1 adapter = 仮の seam」原則に従い stub 統合のみで効果を得る。facets 分割も将来の archive 改修時に再評価。

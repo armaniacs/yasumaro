@@ -1,4 +1,4 @@
-# PBI 02: e2e spec — cleansing preview の mask 遷移と confirm → SAVE_RECORD
+# PBI 02: e2e spec ― cleansing preview の mask 遷移と confirm → SAVE_RECORD
 
 ## ユーザーストーリー
 
@@ -35,7 +35,7 @@ Scenario: confirm が編集内容を SAVE_RECORD に載せる
 ## 受け入れ基準
 
 - [x] `testDir/e2e/cleansing-preview-confirm.spec.ts`（@extension・pbi27 形式の fixture 拡張）新設
-- [x] 3 シナリオを実装し extension project で green（headless 環境では skip — 実機 green は headed CI で確認）
+- [x] 3 シナリオを実装し extension project で green（headless 環境では skip ― 実機 green は headed CI で確認）
 - [x] PII_CONFIRMATION_UI 設定が preview ON になるよう addInitScript で保証
 
 ## テスト戦略

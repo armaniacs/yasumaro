@@ -12,11 +12,11 @@ Service Worker の依存は composition root（`src/background/createBackgroundS
 `ServiceContainer` による singleton 管理）に統一されている。一方で以下の module 級
 singleton が並存する（いずれも実コードで現状確認済み）。
 
-1. `src/background/obsidianClient.ts` — module スコープの `globalWriteMutex`
+1. `src/background/obsidianClient.ts` ― module スコープの `globalWriteMutex`
    （`ObsidianClient` のコンストラクタ引数 `options.mutex` が未指定時の既定値、
    テスト用アクセサ `_globalWriteMutex` あり）。container の `obsidian` entry は
    `new ObsidianClient()` であり、この mutex を内包する。単一実体。
-2. `src/background/pendingChromeStorageQueue.ts` — module スコープの `activeQueue` ＋
+2. `src/background/pendingChromeStorageQueue.ts` ― module スコープの `activeQueue` ＋
    `setPendingWriteQueue()` による注入点（`getActiveQueue` が未設定時は
    `ChromeStorageAdapter` で遅延構築、テストでは InMemory 系 adapter に差し替え）。
    `compositionManifest` には `pendingWriteQueue` entry
@@ -27,12 +27,12 @@ singleton が並存する（いずれも実コードで現状確認済み）。
    `setPendingWriteQueue` の生産コードからの呼び出しもない（呼び出しはテストのみ）。
    なお manifest の `onReady` 配線は PBI 2026-09-03-05 で撤去され、現 manifest に
    `onReady` 付き entry は0件である（`CompositionEntry` 型の `onReady?` フィールドは残る）。
-3. `src/background/offlineNetworkQueue.ts` — ファイル末尾で構築される
+3. `src/background/offlineNetworkQueue.ts` ― ファイル末尾で構築される
    `sharedOfflineNetworkQueue`。`compositionManifest` の `recordingPipeline` entry と
    `alarmRegistry` entry の `getOfflineNetworkQueue` が import して使う。
    `offlineNetworkQueue` の manifest 登録自体は存在しない。一方コンストラクタは
    `QueuePort` を受け（既定値は module 内 `queue`）、`NoOpQueuePort` による差し替え seam を備える。
-4. `src/utils/storage/SettingsRepository.ts` — ファイル末尾の `settingsRepository`
+4. `src/utils/storage/SettingsRepository.ts` ― ファイル末尾の `settingsRepository`
    シングルトン（`new SettingsRepository()` 既定構築）。`compositionManifest` には別途
    `settingsRepository` entry（`new SettingsRepository(new SettingsChromeStorageAdapter())`）が
    あるが、`manualRecordDeps` / `saveRecordDeps` / `messageRouter` の各 entry 内では直接
@@ -40,10 +40,10 @@ singleton が並存する（いずれも実コードで現状確認済み）。
    SettingsRepository 実体が2つある（いずれも 1s TTL の in-memory cache。重複の実害なし）。
    なお module singleton は popup / dashboard / content / utils といった container の
    届かない層からも広く消費されている（`obsidianConfigBuilder`、`storage.ts` など）。
-5. `src/messaging/messageTransport.ts` — ファイル末尾の `messageTransport`
+5. `src/messaging/messageTransport.ts` ― ファイル末尾の `messageTransport`
    （`new MessageTransport()` 既定構築）。stateless（`TransportPort`＋clock は
    コンストラクタ注入、`ImmediateTransport` でテスト差し替え）。manifest 登録なし。
-6. `src/background/sqlite/offscreenGateway.ts` — ファイル末尾の `getSharedSqliteClient()`
+6. `src/background/sqlite/offscreenGateway.ts` ― ファイル末尾の `getSharedSqliteClient()`
    （module 内 `sharedInstance` の lazy 初期化）。`compositionManifest` の `sqliteClient`
    entry の factory はこれを呼ぶ。委譲により両経路で単一実体。
 
@@ -99,21 +99,21 @@ load-then-save の競合を防ぐ）は module singleton に依存せず adapter
 - 本 PBI のコード変更は doc comment レベルに留まり、挙動変更はない。
 
 ## Implements
-- `src/background/obsidianClient.ts` — `globalWriteMutex` 宣言箇所の ADR 参照 doc comment
-- `src/background/pendingChromeStorageQueue.ts` — `activeQueue` 宣言箇所の ADR 参照 doc comment
-- `src/background/offlineNetworkQueue.ts` — `sharedOfflineNetworkQueue` 宣言箇所の ADR 参照 doc comment
-- `src/messaging/messageTransport.ts` — `messageTransport` 宣言箇所の ADR 参照 doc comment
-- `src/background/sqlite/offscreenGateway.ts` — `getSharedSqliteClient` 宣言箇所の ADR 参照 doc comment
+- `src/background/obsidianClient.ts` ― `globalWriteMutex` 宣言箇所の ADR 参照 doc comment
+- `src/background/pendingChromeStorageQueue.ts` ― `activeQueue` 宣言箇所の ADR 参照 doc comment
+- `src/background/offlineNetworkQueue.ts` ― `sharedOfflineNetworkQueue` 宣言箇所の ADR 参照 doc comment
+- `src/messaging/messageTransport.ts` ― `messageTransport` 宣言箇所の ADR 参照 doc comment
+- `src/background/sqlite/offscreenGateway.ts` ― `getSharedSqliteClient` 宣言箇所の ADR 参照 doc comment
 
 ## 参照
-- `src/background/compositionManifest.ts` — 登録リスト（現状 `onReady` 付き entry なし）
-- `src/background/createBackgroundServices.ts` — register／resolve／`onReady` 実行ループ
-- `src/background/serviceContainer.ts` — register/resolve/override
-- `src/background/service-worker.ts` — 起動時の `createBackgroundServices()` 呼び出し
-- `src/background/persistentRetryQueue.ts` — adapter 注入＋promise-chain ロックの先例（VULN-056）
-- `src/utils/storage/SettingsRepository.ts` — `settingsRepository` singleton（調査のみ、本 PBI では編集しない）
-- `src/background/retryPendingWrites.ts` — module facade 経由のリトライ実体
-- `src/background/alarmRegistry.ts` — `flushPendingWrites` の alarm 経路消費
-- `dev-docs/ADR/2026-08-20-utils-layer-circular-dependency.md` — `onReady` 配線の沿革
+- `src/background/compositionManifest.ts` ― 登録リスト（現状 `onReady` 付き entry なし）
+- `src/background/createBackgroundServices.ts` ― register／resolve／`onReady` 実行ループ
+- `src/background/serviceContainer.ts` ― register/resolve/override
+- `src/background/service-worker.ts` ― 起動時の `createBackgroundServices()` 呼び出し
+- `src/background/persistentRetryQueue.ts` ― adapter 注入＋promise-chain ロックの先例（VULN-056）
+- `src/utils/storage/SettingsRepository.ts` ― `settingsRepository` singleton（調査のみ、本 PBI では編集しない）
+- `src/background/retryPendingWrites.ts` ― module facade 経由のリトライ実体
+- `src/background/alarmRegistry.ts` ― `flushPendingWrites` の alarm 経路消費
+- `dev-docs/ADR/2026-08-20-utils-layer-circular-dependency.md` ― `onReady` 配線の沿革
 - PBI: `pbi/2026-09-17-08-investigate-module-singleton-policy.md`
 - 5 Whys: `/tmp/whywhy/pbi08-module-singleton-policy.md`

@@ -53,7 +53,7 @@ Every time Yasumaro sends an AI summarization request, it records when, to which
 | **URL** | The full URL of the page that was summarized |
 | **Timestamp** | When the log entry was recorded |
 
-**Important**: The page's body text and the generated summary content are never recorded. Only "ID, provider, URL, and timestamp" are stored — success or failure of the summarization is not tracked either. The design intentionally records the minimum metadata necessary, out of privacy consideration.
+**Important**: The page's body text and the generated summary content are never recorded. Only "ID, provider, URL, and timestamp" are stored ― success or failure of the summarization is not tracked either. The design intentionally records the minimum metadata necessary, out of privacy consideration.
 
 ### Viewing the Log
 
@@ -61,7 +61,7 @@ From the dashboard's **Export Logs** panel, use "TSV でダウンロード" to d
 
 ### Retention
 
-Audit log entries are stored in the local SQLite database, and a daily retention job automatically deletes entries older than 7 days (the same as the default browsing-history retention period). The retention period cannot be extended in user settings. "Delete All Data" also removes the audit log. On Fallback Storage, audit log recording and querying are unsupported — events are dropped and TSV download fails with an error.
+Audit log entries are stored in the local SQLite database, and a daily retention job automatically deletes entries older than 7 days (the same as the default browsing-history retention period). The retention period cannot be extended in user settings. "Delete All Data" also removes the audit log. On Fallback Storage, audit log recording and querying are unsupported ― events are dropped and TSV download fails with an error.
 
 ### Typical Use Cases
 

@@ -178,5 +178,5 @@ Scenario: 日本語/英語切り替え時に文言欠落がない
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] `npm run test:e2e:usability` で全ファイルがPASSする（**単独実行で検証すること** — worktree並列実行はリソース競合で誤検知する）
+- [x] `npm run test:e2e:usability` で全ファイルがPASSする（**単独実行で検証すること** ― worktree並列実行はリソース競合で誤検知する）
 - [x] コードレビュー完了

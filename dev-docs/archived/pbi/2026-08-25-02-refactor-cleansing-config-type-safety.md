@@ -2,7 +2,7 @@
 
 優先度: 2位 / RICE 32.0 (Reach 4 × Impact 1 × Conf 80% / Effort 0.10w)
 種別: refactor
-依存: —
+依存: ―
 ファイル触接: `src/content/pageState.ts:22`, `src/content/extractor.ts:154-175`
 Effort: 0.10w (S)
 

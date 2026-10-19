@@ -1,4 +1,4 @@
-# PBI: DomainFilter 統合 — 4 gates / 3 wildcard エンジンを単一 deep module に
+# PBI: DomainFilter 統合 ― 4 gates / 3 wildcard エンジンを単一 deep module に
 
 ## ユーザーストーリー
 ドメインフィルタを保守する開発者として、`isDomainAllowed`（live read）/ `domainFilterCache`（5分 TTL）/ `dashboard domainFilter`（textarea + toggles）/ `content extractor`（callback cache）の4箇所と 3つの wildcard エンジンを単一の deep module `DomainFilter` に統合したい、なぜなら現在は同じ問い「このURLは許可か？」に別 staleness・別 wildcard 実装で答え、ReDoS guard が重複し blacklist mode の cache は空のまま（TODO）で、パターン型追加が4箇所の同時更新を要するから
@@ -11,7 +11,7 @@
 ## 背景 / なぜなぜ分析サマリ
 | 疑問 | 原因 → 示唆 → 解 |
 |------|------------------|
-| なぜ 4箇所が同じ問いに答える？ | `domainUtils.isDomainAllowed`（background live）、`domainFilterCache`（content 5分 TTL）、`dashboard/settings/domainFilter.ts`（textarea ↔ STORAGE）、`content loader`（callback）がそれぞれ独自にフィルタリングを実装 → `DomainFilter.isAllowed(url)` を唯一の seam にし各 context は adapter で利用 |
+| なぜ 4箇所が同じ問いに答える？ | `domainUtils.isDomainAllowed`（background live）、`domainFilterCache`（content 5分 TTL）、`dashboard/settings/domainFilter.ts`（textarea ⇔ STORAGE）、`content loader`（callback）がそれぞれ独自にフィルタリングを実装 → `DomainFilter.isAllowed(url)` を唯一の seam にし各 context は adapter で利用 |
 | なぜ wildcard が3つ？ | `matchesPattern` / `matchesWildcardPattern` / `isUrlBlocked`（uBlock matcher）が別実装で ReDoS guard（`MAX_WILDCARDS_PER_PATTERN` / `wildcardToRegex`）が `domainUtils` と `wildcardToRegex.ts` に重複 → `wildcardToRegex` に一本化し guard を1箇所に |
 | なぜ blacklist cache が空？ | `updateDomainFilterCache` の blacklist 分岐が `cachedDomains = []` の不完全実装でコメントに「別途ブロックドメインキャッシュが必要」と記載 → `DomainFilter.cache(validFor)` が mode に応じて正しいキャッシュを生成 |
 | なぜ 1 adapter では hypothetical か？ | Content-script 向け cache adapter がなければ `DomainFilter` は1つの実装しか持たず seam が仮説的 → `DomainFilterCacheAdapter` を2つ目の adapter として用意し seam を実在化（one adapter = hypothetical, two = real） |

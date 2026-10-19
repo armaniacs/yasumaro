@@ -17,7 +17,7 @@ Firefox で Yasumaro を使っているユーザーとして、Obsidian Local RE
 ## 優先度
 
 - 順位: 未採点（ユーザー報告バグ。Issue #160 起票）
-- RICEスコア: —（個別 RICE 採点は未実施）
+- RICEスコア: ―（個別 RICE 採点は未実施）
 
 ## 問題の事実（2026-09-26 実測）
 

@@ -56,7 +56,7 @@ export interface MigrationOpfsStatus {
    * 移行済みフラグが立っているのにライブprobeがレガシーDBを検出した状態。
    * 移行ルーチンは完走したがレガシーファイルの削除に失敗した/未実施の
    * 可能性があり、ディスクを二重消費している。done とは独立したフラグ
-   * （done 自体は true のまま — 移行そのものは完了しているため）。
+   * （done 自体は true のまま ― 移行そのものは完了しているため）。
    */
   legacyStillPresent: boolean;
   legacyPath: string | null | undefined;
@@ -71,7 +71,7 @@ export interface MigrationOpfsStatus {
   const idbLegacyStillPresent = idbDone && idbLegacyName != null;
 ```
 
-`!= null` を使うこと（`undefined` は「probeが失敗して未確認」なので残存と断定しない — 上記`sqliteStatus.ts:112-113`のコメント参照）。
+`!= null` を使うこと（`undefined` は「probeが失敗して未確認」なので残存と断定しない ― 上記`sqliteStatus.ts:112-113`のコメント参照）。
 
 3. 戻り値の `opfs` / `idb` にそれぞれ `legacyStillPresent` を含める
 
@@ -90,7 +90,7 @@ export type MigrationHintKind = 'noAbsolutePath' | 'idbExplanation' | 'opfsCheck
     const note = document.createElement('p');
     note.className = 'help-text';
     note.textContent = getMessage('diagMigrationLegacyStillPresent')
-      || 'Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage — reloading the extension may trigger cleanup.';
+      || 'Migration is marked complete, but the legacy database file is still present. It is safe to keep, but it consumes storage ― reloading the extension may trigger cleanup.';
     el.appendChild(note);
   }
 ```
@@ -154,9 +154,9 @@ npx vitest run src/dashboard
 
 ### 触ってはいけないもの
 
-- `allDone` の算出ロジック — `legacyStillPresent` は `done` とは独立した情報であり、`allDone` を `false` にしてはいけない（移行自体は完了している）
-- `src/offscreen/sqliteStatus.ts` — 値の生成側は変更不要
-- 既存の10件のテストケース — すべて変更なくパスすること
+- `allDone` の算出ロジック ― `legacyStillPresent` は `done` とは独立した情報であり、`allDone` を `false` にしてはいけない（移行自体は完了している）
+- `src/offscreen/sqliteStatus.ts` ― 値の生成側は変更不要
+- 既存の10件のテストケース ― すべて変更なくパスすること
 
 ---
 

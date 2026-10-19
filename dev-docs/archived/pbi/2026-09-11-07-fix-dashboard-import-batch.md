@@ -9,9 +9,9 @@
 - 順位: 07 / 9
 - RICE スコア: 10.7（Reach=2 / Impact=2 / Confidence=80% / Effort=0.3 人週）
 - 根拠（2026-09-11 診断）:
-  - `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:36-73` — 50 行バッチだが `deps.insert` を行毎に呼ぶ（backend の `insertBatch` 未使用）。`lastInsertError` のみ保持し `inserted===0` のときしか表面化しない（99 成功 1 失敗が成功と報告）
-  - `src/offscreen/recordsRepo.ts:31-36` — `insertBatch` の戻り `{inserted, skipped}` を `{count: inserted}` に潰す（seam での shape 欠落）
-  - `src/dashboard/dashboardSqliteService.ts:452-466` — dashboard は `{inserted, skipped, total}` を期待し、行毎ループの結果から自前 reconstruct
+  - `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:36-73` ― 50 行バッチだが `deps.insert` を行毎に呼ぶ（backend の `insertBatch` 未使用）。`lastInsertError` のみ保持し `inserted===0` のときしか表面化しない（99 成功 1 失敗が成功と報告）
+  - `src/offscreen/recordsRepo.ts:31-36` ― `insertBatch` の戻り `{inserted, skipped}` を `{count: inserted}` に潰す（seam での shape 欠落）
+  - `src/dashboard/dashboardSqliteService.ts:452-466` ― dashboard は `{inserted, skipped, total}` を期待し、行毎ループの結果から自前 reconstruct
 
 ## BDD 受け入れシナリオ
 

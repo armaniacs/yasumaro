@@ -1,4 +1,4 @@
-# PBI 2026-09-12-32 — supportsArchive の narrowing 統一（doc/code 不一致解消）
+# PBI 2026-09-12-32 ― supportsArchive の narrowing 統一（doc/code 不一致解消）
 
 - **種別**: 🔧非機能追加（refactor・hygiene）
 - **優先度**: 8 位 / RICE **6.4**（R4 × I0.5 × C80% / E0.25人日）
@@ -43,5 +43,5 @@ then narrowing は supportsArchive 1 箇所のみで決まり、per-method probe
 ## 実装メモ（2026-09-12）
 
 - `handleArchive` を `supportsArchive(backend)` 経由（type guard `StorageBackend & ArchiveStaging`）に統一。per-method probe（typeof チェック）を削除
-- `ClassBasedBackend` テスト fake に `archiveStatus` を追加（supportsArchive の probe 対象 — 全 14 op は contract 上同時に旅するため部分 fake は非対応 backend 扱い）
+- `ClassBasedBackend` テスト fake に `archiveStatus` を追加（supportsArchive の probe 対象 ― 全 14 op は contract 上同時に旅するため部分 fake は非対応 backend 扱い）
 - 検証: archiveWireDispatch + archiveFallbackRejection 25 tests green・offscreen 全 77 ファイル 1067 tests green・type-check green・lint 0 errors

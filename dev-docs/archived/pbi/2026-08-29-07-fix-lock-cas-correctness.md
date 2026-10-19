@@ -1,4 +1,4 @@
-# PBI: ロック/CAS 運用の正しさ — try/finally と current マージ（VULN-028/029, CWE-667/362）
+# PBI: ロック/CAS 運用の正しさ ― try/finally と current マージ（VULN-028/029, CWE-667/362）
 
 ## ユーザーストーリー
 開発者として、Tranco 更新の失敗が後続の更新を永久にブロックせず、trust DB への同時書き込みが片方の差分を静かに捨てないようにしたい、なぜならロック解除が例外経路で到達不能（try/finally 未使用）で、CAS コールバックが現在状態を無視して stale スナップショットを返しているから
@@ -13,7 +13,7 @@
 - RICEスコア: 1125（Reach=500 / Impact=0.25 / Confidence=90% / Effort=0.1人月）
   - Reach 500: Tranco 更新（全利用者の trust DB 品質）＋trust DB 同時書き込み（設定 UI・更新・migration）
   - Impact 0.25: 恒久ロックアウトは手動復旧が必要、LWW は信頼データの静黙欠落
-  - Confidence 90%: スイープで 8 CAS サイト中 7 が正しい current 消費と確認済み — 誤用は 1 箇所のみ
+  - Confidence 90%: スイープで 8 CAS サイト中 7 が正しい current 消費と確認済み ― 誤用は 1 箇所のみ
   - Effort 0.1: finally 追加＋updateFn 修正＋契約テスト
 - 根拠: ロック API の誤用パターンに対する契約テストを追加することで、将来の誤用も検出可能にする
 
@@ -69,13 +69,13 @@ Scenario: ロック契約の誤用はテストで検出される
 - **Red-Green-Refactor**: 契約テストは既存 7 正解サイトに対しても実行し、回帰がないことを確認
 
 ## 見積もり
-1pt（要チームでの見積もり — finally 1 箇所＋merge 1 箇所＋契約テスト）
+1pt（要チームでの見積もり ― finally 1 箇所＋merge 1 箇所＋契約テスト）
 
 ## 技術的考慮事項
-- 依存関係: PBI 04（optimisticLock の Mutex 直列化）と相互作用 — 04 先着手を推奨（Wave 2）
+- 依存関係: PBI 04（optimisticLock の Mutex 直列化）と相互作用 ― 04 先着手を推奨（Wave 2）
 - テスタビリティ: `_currentDb` はテスト注入可能
 - 非機能要件: リトライ上限は既存 `withOptimisticLock` の挙動を踏襲
-- 注意: `contextMenuHandlers.ts:38-100` は正解実装（スイープ済み）— 触れない
+- 注意: `contextMenuHandlers.ts:38-100` は正解実装（スイープ済み）― 触れない
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
@@ -94,7 +94,7 @@ rg -n "withOptimisticLock" src/utils/trustDb --type ts
 
 ### 落とし穴
 - finally 内でさらに例外を投げないこと（元の例外を握り潰す）
-- merge 実装で `_currentDb` をミューテートしないこと（新オブジェクトを返す — CAS の前提）
+- merge 実装で `_currentDb` をミューテートしないこと（新オブジェクトを返す ― CAS の前提）
 - 例外経路のフラグ解除は既存 `Mutex.ts` の正解パターン（release が常に走る）と揃える
 
 ## Definition of Done

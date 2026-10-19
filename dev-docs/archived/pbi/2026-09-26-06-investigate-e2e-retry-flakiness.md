@@ -54,9 +54,9 @@ npx playwright test --retries=0 --project=usability
 
 ```
 1 flaky
-  [extension] › testDir/e2e/regenerate-summary.spec.ts:215:3
-    › Regenerate summary @extension
-    › CRITICAL: regenerate UPDATES the same row (no duplicate) and never persists cleanseMode
+  [extension] > testDir/e2e/regenerate-summary.spec.ts:215:3
+    > Regenerate summary @extension
+    > CRITICAL: regenerate UPDATES the same row (no duplicate) and never persists cleanseMode
 100 passed / 20 skipped
 ```
 
@@ -122,7 +122,7 @@ retry 設定を見ずに retry を 0 にして全プロジェクトを走査す�
 - [x] `npx playwright test --retries=0 --project=usability` で全テスト PASS（実測: 40 passed / 3 skipped / 0 failed）
 - [x] `playwright.config.ts` の extension / interaction / a11y / usability の `retries` を 0 に変更（retries 行自体を削除し、グローバルの `retries: 0` に統一）
 - [x] グローバル retry を CI のみから完全削除（理由を comment に記載済み。あわせて `trace: 'on-first-retry'` は retry 廃止で不活性化するため `retain-on-failure` に変更）
-- [x] `npm run test:e2e` がローカル・CI 両方で PASS する（ローカル実測 2026-09-27: 323 passed / 30 skipped / 0 failed。CI 実走は push 後に確認 — ユーザー作業）
+- [x] `npm run test:e2e` がローカル・CI 両方で PASS する（ローカル実測 2026-09-27: 323 passed / 30 skipped / 0 failed。CI 実走は push 後に確認 ― ユーザー作業）
 - [x] 修正内容を CHANGELOG に記載
 
 ### 調査結果の記録（2026-09-27 実走）

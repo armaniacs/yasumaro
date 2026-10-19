@@ -41,7 +41,7 @@ Scenario: エラーメッセージ文言が変わっても冪等判定が維持�
 - 現状の判定文言（`duplicate column name` / `already exists`）を変更・削除する際は、既存の冪等テストへの影響を確認すること
 
 ## 実装メモ
-- 2026-09-05 完了: 冪等判定を実行前の存在確認（`pragma_table_info('browsing_logs')` — MIGRATION_SEQUENCE は `step.id` = 列名、MIGRATION_COLUMNS は colDef 先頭トークン）中心に変更。許容パターンは `IDEMPOTENT_DDL_ERROR_PATTERNS` 定数として export しテストで固定（競合時の防御的フォールバックとして維持）。両エンジン（OPFS/IDB）とも実 SQLite WASM のため pragma テーブル関数が使用可能。真の失敗（構文エラー・disk I/O）は従来どおり throw。
+- 2026-09-05 完了: 冪等判定を実行前の存在確認（`pragma_table_info('browsing_logs')` ― MIGRATION_SEQUENCE は `step.id` = 列名、MIGRATION_COLUMNS は colDef 先頭トークン）中心に変更。許容パターンは `IDEMPOTENT_DDL_ERROR_PATTERNS` 定数として export しテストで固定（競合時の防御的フォールバックとして維持）。両エンジン（OPFS/IDB）とも実 SQLite WASM のため pragma テーブル関数が使用可能。真の失敗（構文エラー・disk I/O）は従来どおり throw。
 - テスト: pre-check スキップ（exec に到達しない=文言非依存）・パターン定数固定・真の失敗 throw の 3 件新設。migrations 関連 4 スイート 31 tests green。
 
 ## Definition of Done

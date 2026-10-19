@@ -20,13 +20,13 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 既存タブのURLは正常にfetchできる
+Scenario: ハッピーパス ― 既存タブのURLは正常にfetchできる
   Given ブラウザに "https://example.com/page" のタブが既に開かれている
   When manualContentFetcher.fetchContent("https://example.com/page") を呼ぶ
   Then 既存タブが再利用され、contentが正常に取得される
   And  新規タブは生成されない
 
-Scenario: 攻撃 — 任意URL連打はrateLimitとドメイン制限でブロックされる
+Scenario: 攻撃 ― 任意URL連打はrateLimitとドメイン制限でブロックされる
   Given 攻撃者が "https://evil.com/unique?id=1" … "https://evil.com/unique?id=100" のユニークURLで連打する
   When 各URLで MANUAL_RECORD (skipAi=false) を送信する
   Then rateLimitにより一定回数以降は { success: false, error: "Rate limit exceeded" } が返される

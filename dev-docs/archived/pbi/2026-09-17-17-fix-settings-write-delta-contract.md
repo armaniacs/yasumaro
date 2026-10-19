@@ -13,10 +13,10 @@ backlog: [2026-09-17-00-backlog-archloop-0917.md](2026-09-17-00-backlog-archloop
 - `SettingsRepository.setAll()` は `withLock('settings', (fresh) => ({ ...fresh, ...toSave }))` で書き込む（`storageTransaction.ts:113-148` の CAS + version + post-write verification は正常に働く）。
 - しかし `toSave` が**呼び出し側の full スナップショット**の場合、merge で full スナップショットが fresh base に勝つため、lock は「blob 単位の同時書き込み」しか防げず、**スナップショット取得時点に巻き戻す論理 lost update が残る**。
 - full スナップショットを渡す書き手が実在する:
-  - `src/dashboard/settings/customPromptManager.ts:316-317, 385-386, 450-451` — panel load 時の `currentSettings` を保持し、書き込み時に full blob を `setAll()` に渡す
-  - `src/dashboard/markdownTemplateManager.ts:190-191, 210-214, 380-381` — 同型
-  - `src/dashboard/settings/domainFilter.ts:374` — `(async (s)=>{ await setAll(s); await updateDomainFilterCache(await getAll()); })(newSettings)` で full snapshot を渡す
-  - `src/popup/trancoNotification.ts:84, 106` — 同一 IIFE のコピー
+  - `src/dashboard/settings/customPromptManager.ts:316-317, 385-386, 450-451` ― panel load 時の `currentSettings` を保持し、書き込み時に full blob を `setAll()` に渡す
+  - `src/dashboard/markdownTemplateManager.ts:190-191, 210-214, 380-381` ― 同型
+  - `src/dashboard/settings/domainFilter.ts:374` ― `(async (s)=>{ await setAll(s); await updateDomainFilterCache(await getAll()); })(newSettings)` で full snapshot を渡す
+  - `src/popup/trancoNotification.ts:84, 106` ― 同一 IIFE のコピー
 - repo 内部も同じ形: `set()` が `getAll()`（repo 自身の cache を含む）の full snapshot を `toSave` に組み立てるため、cache が stale な場合に無関係キーを巻き戻し得る。
 - dashboard settings 面は `getMessage(key) || 'fallback'` を含む full snapshot 保持パターンで、表示中に他 context が書いた設定（consent、whitelist、テンプレ等）が保存操作のたびに危険に晒される。
 - `StorageTransaction.withLock` という深い module は既に存在し、呼び出し側が delta だけ渡せば正しく守る。seam を新設しない、interface の形だけの修正で効力を回復できる。
@@ -57,7 +57,7 @@ Scenario: full 置換が必要な import は明示的な契約で書ける
 
 ## 見積もり
 
-2 pt（🟡中）— repo 側の write 経路修正 + 呼び出し側 4 ファイルの機械的移行 + 交差書き込みテスト。
+2 pt（🟡中）― repo 側の write 経路修正 + 呼び出し側 4 ファイルの機械的移行 + 交差書き込みテスト。
 
 ## Definition of Done
 

@@ -11,9 +11,9 @@ dashboard を保守する開発者として、`markdownExport.ts:285` の固定 
 
 ## 背景（現状）
 
-- 対象: `src/dashboard/markdownExport.ts:285` — object URL revoke を固定 1s タイマー（`setTimeout(..., 1000)`）で行う。
-- 対照パターン A（推奨）: `src/dashboard/panels/connectionTests.ts:464-470` — `finally` での確定クリーンアップ。
-- 対照パターン B（変種）: `src/dashboard/exportLogsService.ts` の 60s revoke 変種 — 保持理由が記録対象（本 PBI の実装記録で対比すること）。
+- 対象: `src/dashboard/markdownExport.ts:285` ― object URL revoke を固定 1s タイマー（`setTimeout(..., 1000)`）で行う。
+- 対照パターン A（推奨）: `src/dashboard/panels/connectionTests.ts:464-470` ― `finally` での確定クリーンアップ。
+- 対照パターン B（変種）: `src/dashboard/exportLogsService.ts` の 60s revoke 変種 ― 保持理由が記録対象（本 PBI の実装記録で対比すること）。
 - 既存テスト（変更なしで green を保つ対象）:
   - `src/dashboard/__tests__/markdownExport.test.ts`、`src/dashboard/__tests__/markdownExport-seam.test.ts`、`src/dashboard/__tests__/exportDateSsot.golden.test.ts`
 

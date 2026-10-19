@@ -327,7 +327,7 @@ popup の「Cleansing」セクションにある「誤削除を報告」ボタ�
 
 **Q1. Where does the name 'Yasumaro' come from?**
 
-It's named after Ō no Yasumaro, the compiler of the Kojiki, Japan's oldest chronicle. He transcribed the vast oral memory recited by Hieda no Are into writing, turning spoken words into a permanent record. This extension does the same thing: it turns the fleeting pages you browse into a lasting record you can look back on later.
+It's named after O no Yasumaro, the compiler of the Kojiki, Japan's oldest chronicle. He transcribed the vast oral memory recited by Hieda no Are into writing, turning spoken words into a permanent record. This extension does the same thing: it turns the fleeting pages you browse into a lasting record you can look back on later.
 
 **Q2. What can Yasumaro do?**
 
@@ -335,7 +335,7 @@ Yasumaro is a Chrome extension that automatically or manually records the web pa
 
 **Q3. Can I use it without Obsidian?**
 
-Yes. Obsidian integration is optional. If you leave the "Use Obsidian" checkbox unchecked in the dashboard, browsing history will be saved only to the SQLite database on your device. All history management features—full-text search, starring, and deletion—remain available.
+Yes. Obsidian integration is optional. If you leave the "Use Obsidian" checkbox unchecked in the dashboard, browsing history will be saved only to the SQLite database on your device. All history management features―full-text search, starring, and deletion―remain available.
 
 **Q4. Do I need an AI provider account or API key?**
 
@@ -343,9 +343,9 @@ Not if you don't want AI summaries. If you don't configure an AI provider in the
 
 **Q5. Does it work on browsers other than Chrome?**
 
-Yasumaro is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) and installs directly into Chrome. It also works on other Chromium-based browsers such as Microsoft Edge and Brave — in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). If you are not installing from the Chrome Web Store, load the GitHub Releases zip or build from source (see Q7).
+Yasumaro is published on the [Chrome Web Store](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc) and installs directly into Chrome. It also works on other Chromium-based browsers such as Microsoft Edge and Brave ― in fact, the author uses Microsoft Edge as their daily driver. Edge can be installed from [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep). If you are not installing from the Chrome Web Store, load the GitHub Releases zip or build from source (see Q7).
 
-A **Firefox build** is published on [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/). It passed review, so it installs signed into regular Firefox — no Developer Edition and no signature bypass needed:
+A **Firefox build** is published on [addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/). It passed review, so it installs signed into regular Firefox ― no Developer Edition and no signature bypass needed:
 
 1. Open the [Yasumaro page on addons.mozilla.org](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/)
 2. Click "Get the extension for Firefox" to add it
@@ -377,7 +377,7 @@ You need to install and enable the "Local REST API" community plugin in Obsidian
 
 **Q9. What should I enter for Daily Note Path?**
 
-Enter the name of the folder inside your Obsidian Vault where daily notes are stored—for example `DailyNotes`, `Journal`, or `092.Daily`. This is a path relative to the Vault root; no leading `/` is needed. Match it to the "New file location" shown in Obsidian's Daily Notes plugin settings.
+Enter the name of the folder inside your Obsidian Vault where daily notes are stored―for example `DailyNotes`, `Journal`, or `092.Daily`. This is a path relative to the Vault root; no leading `/` is needed. Match it to the "New file location" shown in Obsidian's Daily Notes plugin settings.
 
 If your notes are organized into monthly subfolders (e.g. `raw/2026-09`), you can use the `YYYY` / `MM` / `DD` placeholders. Setting the path to `raw/YYYY-MM` automatically resolves to the current year and month, so you never need to update it manually.
 
@@ -443,9 +443,9 @@ Yes. The "AI Prompt" tab in the dashboard lets you edit the system and user prom
 
 For security reasons, Yasumaro only allows connections to officially supported domains. Connections to unsupported domains are blocked by CSP. Check the supported domain list in the [Complete Setup Guide](SETUP_GUIDE.md).
 
-**Q20. There are two "OpenAI Compatible" slots—what's the difference?**
+**Q20. There are two "OpenAI Compatible" slots―what's the difference?**
 
-You can enter multiple OpenAI-compatible LLM services independently—for example, Groq and Ollama—and compare or switch between them as needed.
+You can enter multiple OpenAI-compatible LLM services independently―for example, Groq and Ollama―and compare or switch between them as needed.
 
 ---
 
@@ -469,7 +469,7 @@ No. API keys are excluded from exports for security reasons. When migrating to a
 
 **Q25. What is PII masking?**
 
-PII masking detects personal information in page text—such as credit card numbers, My Number, phone numbers, and email addresses—using the WASM-first hybrid detector (21 patterns implemented in Rust), and automatically replaces them with tokens like `[MASKED:creditCard]` before sending content to the AI. Select "Masked Cloud" in the Privacy tab of the dashboard to enable it. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details.
+PII masking detects personal information in page text―such as credit card numbers, My Number, phone numbers, and email addresses―using the WASM-first hybrid detector (21 patterns implemented in Rust), and automatically replaces them with tokens like `[MASKED:creditCard]` before sending content to the AI. Select "Masked Cloud" in the Privacy tab of the dashboard to enable it. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details.
 
 **Q26. Are private pages like online banking automatically recorded?**
 
@@ -505,7 +505,7 @@ Automatic recording fires each time the time and scroll thresholds are met. To p
 
 **Q33. What does "(6.0s / AI: 2.2s)" in the completion message mean?**
 
-The first number (6.0s) is the total processing time from starting the recording to completion — covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage. The number after "AI: " (2.2s) is the time spent on a single summarization request to the AI provider. It only appears when a cloud AI mode is configured (Masked Cloud / Full Pipeline); it does not appear in Local Only mode, which uses no cloud AI.
+The first number (6.0s) is the total processing time from starting the recording to completion ― covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage. The number after "AI: " (2.2s) is the time spent on a single summarization request to the AI provider. It only appears when a cloud AI mode is configured (Masked Cloud / Full Pipeline); it does not appear in Local Only mode, which uses no cloud AI.
 
 ---
 
@@ -545,7 +545,7 @@ This is by design (see Q24). API keys are excluded from exports for security rea
 
 **Q41. Skipped pages disappeared unexpectedly.**
 
-Skipped (pending) pages are automatically deleted after 24 hours—this is intentional. Use "Record Now" to manually save important pages before they are skipped.
+Skipped (pending) pages are automatically deleted after 24 hours―this is intentional. Use "Record Now" to manually save important pages before they are skipped.
 
 ---
 
@@ -557,7 +557,7 @@ In the Dashboard's SQLite History panel, type a keyword in the search box to sea
 
 **Q43. What is FTS5?**
 
-FTS5 is the full-text search engine built into SQLite. Unlike naively comparing text character by character (a LIKE-based search), it pre-builds an index of where words appear, so search speed stays fast even as your history grows. Yasumaro registers each record's URL, title, and AI summary in an FTS5-backed table, enabling fast keyword search — including Japanese text.
+FTS5 is the full-text search engine built into SQLite. Unlike naively comparing text character by character (a LIKE-based search), it pre-builds an index of where words appear, so search speed stays fast even as your history grows. Yasumaro registers each record's URL, title, and AI summary in an FTS5-backed table, enabling fast keyword search ― including Japanese text.
 
 **Q44. What is the star feature for?**
 
@@ -565,9 +565,9 @@ Starring a page lets you find it quickly later. Starred entries are also exempt 
 
 **Q45. What happens when I set a retention policy?**
 
-Entries older than the configured period (30–365 days) or beyond the maximum count (1,000–100,000) are physically deleted every 24 hours. Starred entries are never deleted automatically. The default is unlimited (no auto-deletion). See [PRIVACY.md](PRIVACY.md) for details.
+Entries older than the configured period (30-365 days) or beyond the maximum count (1,000-100,000) are physically deleted every 24 hours. Starred entries are never deleted automatically. The default is unlimited (no auto-deletion). See [PRIVACY.md](PRIVACY.md) for details.
 
-**Q46. I heard I can import uBlock Origin filter lists—what is that for?**
+**Q46. I heard I can import uBlock Origin filter lists―what is that for?**
 
 It lets you bulk-register large numbers of domains into the blacklist. You can import existing uBlock Origin filter lists or Steven Black's hosts-format lists directly, making it easy to manage sites you don't want recorded. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
@@ -575,23 +575,23 @@ It lets you bulk-register large numbers of domains into the blacklist. You can i
 
 Yes. Toggle "Export to Local Markdown" ON in the dashboard under "Initial Setup" → "Local Markdown Export". A daily file (`~/Downloads/Yasumaro/YYYY-MM-DD.md`) is written according to one of four timing modes: "Manual only", "Immediate", "Idle / every 30 min" (default), or "On date change". Manual export with a date range is also available at any time. See the [Local Markdown Export Guide](MARKDOWN_DOWNLOAD.md) for details.
 
-**Q48. The download notification appears every time export fires—it's annoying.**
+**Q48. The download notification appears every time export fires―it's annoying.**
 
 You can hide it in your browser settings. In Chrome, open `chrome://settings/downloads` and toggle off "Show downloads when they're done". In Edge, open `edge://settings/downloads` for a similar setting. Downloads will still work normally.
 
 **Q49. Can I back up my browsing history or migrate it to another environment?**
 
-Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** — re-export it with the latest version if needed. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
+Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** ― re-export it with the latest version if needed. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
 
 The `Dashboard → Archive` panel can also export browsing history up to a chosen date as a standard SQLite file and merge it back into the main database when needed. Export and deletion are separate phases; deletion is cross-checked against the exported file's contents. See the "History Archive" section in the [Setup Guide](SETUP_GUIDE.md).
 
 **Q49a. Can I safely reduce old history with the archive feature?**
 
-Yes. The `Dashboard → Archive` flow has two phases. First, export history up to a chosen date to a file (`.db`) and download it — the main database is not changed at this point. After confirming the download, delete the corresponding records from the main database. Deletion is cross-checked against the file created in phase 1, and records added after phase 1 are protected. Deleted records can be merged back later by selecting the file.
+Yes. The `Dashboard → Archive` flow has two phases. First, export history up to a chosen date to a file (`.db`) and download it ― the main database is not changed at this point. After confirming the download, delete the corresponding records from the main database. Deletion is cross-checked against the file created in phase 1, and records added after phase 1 are protected. Deleted records can be merged back later by selecting the file.
 
 **Q49b. Is the archive file encrypted?**
 
-No. The archive file is a plain, unsigned standard SQLite file that opens in generic tools like DB Browser for SQLite. Its contents are your browsing history, so managing the file after export — storage, moving, deletion — is your responsibility. See the [Privacy Policy](PRIVACY.md) for how data is handled.
+No. The archive file is a plain, unsigned standard SQLite file that opens in generic tools like DB Browser for SQLite. Its contents are your browsing history, so managing the file after export ― storage, moving, deletion ― is your responsibility. See the [Privacy Policy](PRIVACY.md) for how data is handled.
 
 **Q50. The AI summary cleansing accidentally removed something important. What can I do?**
 
@@ -599,7 +599,7 @@ Use the "Report Cleansing Feedback" button in the popup's Cleansing section to r
 
 **Q51. Which keywords are restored when I reset the cleansing keyword settings?**
 
-The full keyword list used by the actual cleansing logic (50+ words, covering both Japanese and English patterns) — including `balance`, `login`, `password`, `mynumber`, `credit-card`, `seed-phrase`, and more. The settings UI always matches the actual behavior. See [Cleansing Order](CLEANSING_ORDER.md) for details.
+The full keyword list used by the actual cleansing logic (50+ words, covering both Japanese and English patterns) ― including `balance`, `login`, `password`, `mynumber`, `credit-card`, `seed-phrase`, and more. The settings UI always matches the actual behavior. See [Cleansing Order](CLEANSING_ORDER.md) for details.
 
 **Q52. The recorded AI summary is too thin / collapsed to one sentence. Can I rebuild it?**
 

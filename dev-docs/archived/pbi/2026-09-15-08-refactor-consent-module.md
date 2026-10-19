@@ -1,4 +1,4 @@
-# PBI: consent module の深掘り — 状態遷移の locality 回復
+# PBI: consent module の深掘り ― 状態遷移の locality 回復
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -17,7 +17,7 @@
 - 真の同意 module（`src/utils/storage/privacyConsent.ts`）の interface が6関数に膨張し、本来 implementation であるべき知識が呼び出し側に漏れている:
   1. **拒否カウンタ**: `src/popup/privacyConsentController.ts:79-116` が `chrome.storage.local` に直読み直書き（`PRIVACY_CONSENT_DENIED_COUNT / LAST_DENIAL_TIME`）。ポリシー更新時のリセット規則（`initPrivacyConsent:56-60`）と対になっているのに所有者が controller
   2. **本文保存フラグ**: `handleAcceptConsent:212-214` が `CONTENT_STORAGE_ENABLED` を直書き。同意の原子性（同意 + 本文保存 + ack の3点セット 216-217）が controller の手続き知識
-  3. **通知 fan-out**: `notifyConsentStateChanged:179-186` の `document.dispatch + runtime.sendMessage` 二重配送を `popup.ts:97-104` が両チャネル購読で再実装（過去に送信者自身へ配送されない Chrome 仕様で退行 — CHANGELOG 記録済み）。interface に「購読すれば届く」という不変条件が書けていない
+  3. **通知 fan-out**: `notifyConsentStateChanged:179-186` の `document.dispatch + runtime.sendMessage` 二重配送を `popup.ts:97-104` が両チャネル購読で再実装（過去に送信者自身へ配送されない Chrome 仕様で退行 ― CHANGELOG 記録済み）。interface に「購読すれば届く」という不変条件が書けていない
 - 1つの状態変更の影響範囲: KEK 変更 → hmacKeyStore → privacyConsent:87-99 → controller → popup の4ファイル
 
 ## 実装ガイド
@@ -40,7 +40,7 @@
 
 ### 触ってはいけないもの
 
-- 署名方式（HMAC / KEK チェーン — PBI 09-05 で修正済みの hmacKeyStore/durableKeyStore は触らない）
+- 署名方式（HMAC / KEK チェーン ― PBI 09-05 で修正済みの hmacKeyStore/durableKeyStore は触らない）
 - offscreen 側の CONSENT_STATE_CHANGED バッジ更新（背景 listener はそのまま）
 
 ## BDD受け入れシナリオ
@@ -62,7 +62,7 @@ Scenario: 購読者は両チャネルの変更を受け取る
 - [x] 拒否カウンタ・本文保存フラグの直読み直書きが `privacyConsent.ts` 内に移動している（controller は `shouldPromptForConsent` / `acceptConsent` / `declineConsent` のみを呼ぶ）
 - [x] 通知が `subscribeConsentChanges` seam 1つに統合され、popup.ts の二重購読が解消されている（Chrome の送信者非配送仕様は module 内に隠蔽）
 - [x] KEK 不一致時の動作が interface ドキュメントに明文化されている（署名検証失敗 → 未同意 + 再署名の現行動作を不変条件として記載）
-- [x] privacyConsent 系テスト全件 green（61 passed + r2 suite 27 passed — 双チャネル notify の pin とカウンタ規則テストを privacyConsent-version.test.ts に移設）+ 実機で onboarding 表示が動作する
+- [x] privacyConsent 系テスト全件 green（61 passed + r2 suite 27 passed ― 双チャネル notify の pin とカウンタ規則テストを privacyConsent-version.test.ts に移設）+ 実機で onboarding 表示が動作する
 
 ## テスト戦略
 

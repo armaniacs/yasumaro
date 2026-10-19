@@ -1,4 +1,4 @@
-# PBI: diagnostics section のデータ駆動化 — section 追加を4箇所編集から1行に
+# PBI: diagnostics section のデータ駆動化 ― section 追加を4箇所編集から1行に
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -14,9 +14,9 @@
 
 ## 背景（診断結果）
 
-- `src/dashboard/panels/diagnostic/diagnosticsPanel.ts:78-111` — `querySections` と `clearSections` の二重 switch が `SectionElements`（62-76、14フィールド）の ID 羅列と対応
-- `diagnosticsPanel.ts:530-587` — `loadAndPopulate` が各 section の render 呼び出しを手書き列挙
-- `src/dashboard/dashboard.ts:50-68,136-156` — `attachIssueReportTrigger` のキュー + 遅延 controller 生成 + flush が時間的結合を2機構（WeakSet 冪等ガード + pending 配列）で吸収
+- `src/dashboard/panels/diagnostic/diagnosticsPanel.ts:78-111` ― `querySections` と `clearSections` の二重 switch が `SectionElements`（62-76、14フィールド）の ID 羅列と対応
+- `diagnosticsPanel.ts:530-587` ― `loadAndPopulate` が各 section の render 呼び出しを手書き列挙
+- `src/dashboard/dashboard.ts:50-68,136-156` ― `attachIssueReportTrigger` のキュー + 遅延 controller 生成 + flush が時間的結合を2機構（WeakSet 冪等ガード + pending 配列）で吸収
 - 対照: `debugModeStore.ts` は chrome.storage を集約する adapter として模範的（診断で健康と判定済み）
 
 ## 実装ガイド
@@ -38,7 +38,7 @@
 
 ### 触ってはいけないもの
 
-- `deriveMigrationStatus` / `renderMigrationSection`（PBI 09-03 で純粋化済み — render 関数本体は触らない、呼び出し構造だけ変更）
+- `deriveMigrationStatus` / `renderMigrationSection`（PBI 09-03 で純粋化済み ― render 関数本体は触らない、呼び出し構造だけ変更）
 - `debugModeStore`（健康と判定済み）
 
 ## BDD受け入れシナリオ
@@ -58,7 +58,7 @@ Scenario: 診断データの再取得で全 section が一括クリアされる
 ## 受け入れ基準
 
 - [x] `querySections` / `clearSections` の switch が `SECTIONS` テーブルのループに置換されている
-- [x] `dashboard.ts` の issue report キューが `registerReportBugButton` 1関数に集約されている（`issueReportEntry.ts` 新設 — panel → dashboard の依存も解消）
+- [x] `dashboard.ts` の issue report キューが `registerReportBugButton` 1関数に集約されている（`issueReportEntry.ts` 新設 ― panel → dashboard の依存も解消）
 - [x] `dashboard-diagnostics` e2e + 診断パネル unit テスト全件 green（diagnostics 関連 e2e 4/4・unit 107 passed）
 - [x] section 追加時の編集箇所が1行（テーブル）+ render 関数になる（SECTIONS テーブルの先頭コメントに記載）
 

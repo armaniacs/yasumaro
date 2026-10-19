@@ -1,4 +1,4 @@
-# PBI: サプライチェーン脆弱性対応 — adm-zip と runtime 依存のピン留め緩和
+# PBI: サプライチェーン脆弱性対応 ― adm-zip と runtime 依存のピン留め緩和
 
 元指摘: Checking Team (High: Supply Chain & Dependency Sentinel)
 
@@ -69,7 +69,7 @@ Feature: Supply chain security
 1pt（依存関係更新 + CI 追加）
 
 ## 副作用
-🟢 なし — ビルド/開発環境のみ。ただし `wxt` メジャーアップデートは避け、影響範囲を最小化する。
+🟢 なし ― ビルド/開発環境のみ。ただし `wxt` メジャーアップデートは避け、影響範囲を最小化する。
 
 ## 落とし穴
 - `overrides` で `adm-zip` を強制上書きすると、`firefox-profile` の互換性が損なわれる可能性がある。CI テストで検証。

@@ -89,7 +89,7 @@ Scenario: 遷移記録が無効なら案内を出す
 | 3 | `entrypoints/options/index.html` | 変更（指標の見出し・表・案内を section に追加） |
 | 4 | `entrypoints/options/dashboard.css` | 変更（ツリーの字下げ） |
 | 5 | `public/_locales/{ja,en}/messages.json` | 変更 |
-| 6 | テスト（変更 2） | — |
+| 6 | テスト（変更 2） | ― |
 | 7 | `docs/DATA_ANALYTICS_GUIDE.md` / `CHANGELOG.md` | 変更 |
 
 ### 1. 集計（`src/dashboard/researchSessionAggregate.ts` に追加）

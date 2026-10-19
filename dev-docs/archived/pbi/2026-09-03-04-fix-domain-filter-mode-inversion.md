@@ -1,4 +1,4 @@
-# PBI: DomainFilter の blacklist mode 反転バグ修正 — isAllowedCached と CacheAdapter に mode を thread する
+# PBI: DomainFilter の blacklist mode 反転バグ修正 ― isAllowedCached と CacheAdapter に mode を thread する
 
 ## ユーザーストーリー
 ドメインフィルタでブラックリスト運用するユーザーとして、ブロックリストに入れたサイトが記録されないようにしたい、なぜなら現在 `DomainFilter.isAllowedCached()` と `DomainFilterCacheAdapter.isAllowed()` が `DOMAIN_FILTER_MODE` を参照せず常に allowlist として `cachedDomains.some(...)` を評価するため、blacklist mode でブロック対象 URL が `allowed: true` と反転して記録されてしまい、ドメインフィルタという主要なユーザー制御が機能不全に陥っているから
@@ -7,7 +7,7 @@
 - 順位: 04 / 07（Architecture Deepening 0903 の追加発見、branch `0902a` レビュー由来）
 - RICEスコア: **5.4**（Reach=1 / Impact=3 / Confidence=0.9 / Effort=0.5）
   - Reach 1: 毎記録時の engagement 判定で実行される（全ページ記録に影響、high）
-  - Impact 3: 圧倒的 — ドメインフィルタはユーザーが制御できる主要なブロックリストであり、反転するとブロック対象サイトが記録される実害
+  - Impact 3: 圧倒的 ― ドメインフィルタはユーザーが制御できる主要なブロックリストであり、反転するとブロック対象サイトが記録される実害
   - Confidence 0.9: `src/utils/domainFilter/DomainFilter.ts:113` および `:152` のコードパスを特定済み、再現は mode を切り替えての unit test で確定可能
   - Effort 0.5: cache + adapter + mode threading + tests（0.5人週）
 - 根拠: `Score = (1 * 3 * 0.9) / 0.5 = 5.4`。DomainFilter は `2026-09-03-06-refactor-domain-filter-unification` で統合された直後であり、同 PBI の DoD は満たすが本バグは統合後の cache 経路に残存した論理反転。修正は mode の thread のみで blast radius は小さいが correctness は critical。
@@ -22,27 +22,27 @@
 
 ## BDD受け入れシナリオ
 
-### Scenario: allowlist mode — リスト内は許可、リスト外は拒否（happy path）
+### Scenario: allowlist mode ― リスト内は許可、リスト外は拒否（happy path）
   Given `DOMAIN_FILTER_MODE='whitelist'` かつ `DOMAIN_WHITELIST=['example.com', '*.trusted.org']` である
   When `DomainFilter.isAllowedCached('https://example.com/page', cached)` を `cached = { allowedDomains: ['example.com','*.trusted.org'], cachedAt: now }` で呼ぶ（TTL内）
   Then `https://example.com/page` は `allowed: true` を返す
   And  `https://other.com/page` は `allowed: false` を返す
   And  `https://sub.trusted.org/page` は wildcard にマッチして `allowed: true` を返す
 
-### Scenario: blacklist mode — リスト内は拒否、リスト外は許可（happy path）
+### Scenario: blacklist mode ― リスト内は拒否、リスト外は許可（happy path）
   Given `DOMAIN_FILTER_MODE='blacklist'` かつ `DOMAIN_BLACKLIST=['blocked.com', '*.evil.net']` である
   When `DomainFilter.isAllowedCached('https://blocked.com/page', cached)` を `cached = { allowedDomains: ['blocked.com','*.evil.net'], cachedAt: now }` で呼ぶ（TTL内）
   Then `https://blocked.com/page` は `allowed: false` を返す
   And  `https://sub.evil.net/page` は wildcard にマッチして `allowed: false` を返す
   And  `https://allowed.com/page` はリスト外のため `allowed: true` を返す
 
-### Scenario: cache hit が mode を保持する — blacklist で blacklisted ドメインの cache hit は常に拒否
+### Scenario: cache hit が mode を保持する ― blacklist で blacklisted ドメインの cache hit は常に拒否
   Given `DOMAIN_FILTER_MODE='blacklist'` で `DomainFilter`（`ttlMs=5*60*1000`）が `cached = { allowedDomains: ['blocked.com'], cachedAt: Date.now() }` を持つ
   When TTL内の `isAllowedCached('https://blocked.com/page', cached)` を呼ぶ
   Then 結果は `allowed: false` である（cache hit でも反転せず、TTL hit が mode を正しく反映する）
   And  TTL外（`cachedAt` が `ttlMs` 超過）では live の `isDomainAllowedLive` に fallback し、同様に `allowed: false` が得られる
 
-### Scenario: adapter parity — DomainFilterCacheAdapter.isAllowed が DomainFilter.isAllowedCached と両 mode で一致する
+### Scenario: adapter parity ― DomainFilterCacheAdapter.isAllowed が DomainFilter.isAllowedCached と両 mode で一致する
   Given 同一の `ttlMs` と同一の `allowedDomains` / `DOMAIN_FILTER_MODE` で `DomainFilter` と `DomainFilterCacheAdapter` を用意する
   When allowlist mode で `DomainFilter.isAllowedCached(url, cached)` と `adapter.isAllowed(url)`（事前に `adapter.updateCache(allowedDomains)` 済み）を同じ URL 集合で呼ぶ
   Then 両者の戻り値は全 URL で一致する
@@ -58,15 +58,15 @@
 - [ ] `npm run validate`（type-check + tests）が green
 
 ## テスト戦略
-- 単体: `DomainFilter.isAllowedCached` の allowlist mode テスト — listed `true` / unlisted `false` / wildcard マッチ `true` を TTL内 cache で検証（`ttlMs: 100` の短い TTL インスタンスで `Date.now()` を固定または fake timer）
-- 単体: `DomainFilter.isAllowedCached` の blacklist mode テスト — listed `false` / wildcard listed `false` / unlisted `true` を TTL内 cache で検証
-- 単体: cache hit が mode を保持することの検証 — blacklist mode で `blocked.com` の cache hit が `false` を返すこと、TTL外では live fallback が同結果を返すことを検証
-- 単体: `DomainFilterCacheAdapter.isAllowed` の parity テスト — 同一 `allowedDomains` と mode で `DomainFilter.isAllowedCached` と `adapter.isAllowed` の結果が全 URL で一致することを allowlist / blacklist の両方で検証（`adapter.updateCache()` 後の TTL内 hit パス）
-- 単体: TTL 境界テスト — `ttlMs` を construction param で注入し、TTL内は cache、TTL外は live に fallback することを fake timer で検証
+- 単体: `DomainFilter.isAllowedCached` の allowlist mode テスト ― listed `true` / unlisted `false` / wildcard マッチ `true` を TTL内 cache で検証（`ttlMs: 100` の短い TTL インスタンスで `Date.now()` を固定または fake timer）
+- 単体: `DomainFilter.isAllowedCached` の blacklist mode テスト ― listed `false` / wildcard listed `false` / unlisted `true` を TTL内 cache で検証
+- 単体: cache hit が mode を保持することの検証 ― blacklist mode で `blocked.com` の cache hit が `false` を返すこと、TTL外では live fallback が同結果を返すことを検証
+- 単体: `DomainFilterCacheAdapter.isAllowed` の parity テスト ― 同一 `allowedDomains` と mode で `DomainFilter.isAllowedCached` と `adapter.isAllowed` の結果が全 URL で一致することを allowlist / blacklist の両方で検証（`adapter.updateCache()` 後の TTL内 hit パス）
+- 単体: TTL 境界テスト ― `ttlMs` を construction param で注入し、TTL内は cache、TTL外は live に fallback することを fake timer で検証
 - 回帰: 既存の `tests/domainFilter*` / `wildcardToRegex` / `domainUtils` テストを新 seam 経由で実行し green を確認
 
 ## 見積もり
-1 pt（🟢低、0.5人週）— cache + adapter + mode threading + tests
+1 pt（🟢低、0.5人週）― cache + adapter + mode threading + tests
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする

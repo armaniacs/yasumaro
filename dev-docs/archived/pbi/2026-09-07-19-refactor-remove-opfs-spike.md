@@ -143,7 +143,7 @@ Scenario: validate が通る
 | background handler deps | `src/background/handlers/dashboardSqlite/deps.ts:44,168`（`runOpfsSpike: () => sqliteClient.maintain({ type: 'opfsSpike' })`） |
 | background read-only handler | `src/background/handlers/dashboardSqlite/readOnlyHandler.ts:80`（`opfs_spike` メッセージ → `deps.runOpfsSpike()`） |
 | protocol 型 | `src/background/handlers/dashboardSqliteProtocol.ts:14,133`（`S extends 'opfs_spike' ? { success: true; report: OpfsSpikeReport } : ...`） |
-| InMemoryTransport | `src/background/inMemoryTransport.ts:162`（`case 'SQLITE_OPFS_SPIKE'` — **exhaustive `never` チェックあり**、union から外すと同時対応必須） |
+| InMemoryTransport | `src/background/inMemoryTransport.ts:162`（`case 'SQLITE_OPFS_SPIKE'` ― **exhaustive `never` チェックあり**、union から外すと同時対応必須） |
 | dashboard サービス | `src/dashboard/dashboardSqliteService.ts:24,192,198-203`（`runOpfsSpike(): Promise<ServiceResult<OpfsSpikeReportView>>`） |
 
 ### UI 導線（本番、ユーザーがクリック可能）
@@ -172,7 +172,7 @@ Scenario: validate が通る
 
 ### 制約
 - `SqliteMessage` は discriminated union + `InMemoryTransport` の `const exhaustive: never` チェックあり。union から外すと同時に全 `switch` を直さないとコンパイルが通らない（= 機械的に検出できるが一括対応必要）
-- `src/messaging/__tests__/sqliteMessages.test.ts` が `SQLITE_MESSAGE_TYPES` の内容を検証、`testDir/vitest.config.ts` がカバレッジ対象に `opfsSpike.ts` を明示、E2E 2 本が `#diagOpfsSpikeBtn` の存在を assert — テスト側の同時修正必須
+- `src/messaging/__tests__/sqliteMessages.test.ts` が `SQLITE_MESSAGE_TYPES` の内容を検証、`testDir/vitest.config.ts` がカバレッジ対象に `opfsSpike.ts` を明示、E2E 2 本が `#diagOpfsSpikeBtn` の存在を assert ― テスト側の同時修正必須
 - 製品 Worker `opfsWorker.ts`（363KB WASM チャンク）は削除対象外
 - CSP（`wxt.config.ts`）変更不要。触らない
 - ロケールキー削除は ja / en 両方。`npm run check-i18n` PASS 必須
@@ -208,10 +208,10 @@ git log --oneline -- src/offscreen/opfsSpike.ts
 
 ### 未解決事項 1〜4 の結論
 
-- 事項1（使用実績）: 結論 — 使用実績なし、削除可。GitHub issue 全 4 件に OPFS / SQLite / spike / fallback 関連ゼロ（調査済み）。
-- 事項2（divergence 警告との棲み分け）: 結論 — 診断パネルの OPFS 移行状態表示（`diagnosticsPanel.ts:250-330`）と divergence 警告（`offscreenUsesFallback` / `dashboardDetectsOpfs`）で十分。spike 固有の追加価値（ステップ単位の失敗箇所出し）は実運用で不要と判断。
-- 事項3（sqlite-wasm 更新時の回帰確認）: 結論 — 完全削除でも OPFS+FTS5 疎通は診断パネルの状態表示（OPFS 検出成功 = 疎通成功を含意）と E2E で担保される。開発フローとしての実機ステップ確認は使用実績ゼロのため復活させない。
-- 事項4（削除 vs 格下げ）: 結論 — **完全削除**を採る。格下げ案（スタンドアロン開発スクリプト化）は保守コスト削減になるが、使用実績ゼロ・診断価値重複・別管理スクリプトという新たな保守面（CI 外・陳腐化リスク）が理由。5 Whys 分析（`/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/kilo/whywhy/pbi19-opfs.md`）参照。
+- 事項1（使用実績）: 結論 ― 使用実績なし、削除可。GitHub issue 全 4 件に OPFS / SQLite / spike / fallback 関連ゼロ（調査済み）。
+- 事項2（divergence 警告との棲み分け）: 結論 ― 診断パネルの OPFS 移行状態表示（`diagnosticsPanel.ts:250-330`）と divergence 警告（`offscreenUsesFallback` / `dashboardDetectsOpfs`）で十分。spike 固有の追加価値（ステップ単位の失敗箇所出し）は実運用で不要と判断。
+- 事項3（sqlite-wasm 更新時の回帰確認）: 結論 ― 完全削除でも OPFS+FTS5 疎通は診断パネルの状態表示（OPFS 検出成功 = 疎通成功を含意）と E2E で担保される。開発フローとしての実機ステップ確認は使用実績ゼロのため復活させない。
+- 事項4（削除 vs 格下げ）: 結論 ― **完全削除**を採る。格下げ案（スタンドアロン開発スクリプト化）は保守コスト削減になるが、使用実績ゼロ・診断価値重複・別管理スクリプトという新たな保守面（CI 外・陳腐化リスク）が理由。5 Whys 分析（`/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/kilo/whywhy/pbi19-opfs.md`）参照。
 
 ### PBI 記載からの差分・補足
 

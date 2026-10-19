@@ -13,7 +13,7 @@
 
 ## 背景（現状・証拠）
 
-- `src/background/privacyPipeline.ts:185-186` — `useMasking` は `full_pipeline | masked_cloud | local_only` の 3 値のみ true、`useCloudAi` は `mode !== 'local_only'`。
+- `src/background/privacyPipeline.ts:185-186` ― `useMasking` は `full_pipeline | masked_cloud | local_only` の 3 値のみ true、`useCloudAi` は `mode !== 'local_only'`。
 - 型は `src/utils/storage/types.ts:338` の `[StorageKeys.PRIVACY_MODE]: string`（union でない）。
 - 設定インポートは構造検証のみで値域検証が無い（`src/utils/settingsExportImport.ts:455` の `validateExportData`、`src/dashboard/exportImport.ts:200-201`）。
 - したがって `privacy_mode` が既知3値以外になると、UI 上は「Cloud Only」表示（`src/popup/statusPanel.ts:39` のフォールバック）になりつつ、PII マスクを一切せず生のページ本文がクラウド AI へ送られる。

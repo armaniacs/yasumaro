@@ -1,4 +1,4 @@
-# PBI: Panel Lifecycle Interface — 25ダッシュボードパネルの共通寿命サイクル定義
+# PBI: Panel Lifecycle Interface ― 25ダッシュボードパネルの共通寿命サイクル定義
 
 ## ユーザーストーリー
 開発者として、25のダッシュボードパネルが2つのアドホックなインターフェース（`AsyncDataPanel`、`StaticFormPanel`）とレガシーシェイプを実装している状態を解消したい。なぜなら、`NavigationRegistry`と`DashboardBootstrapper`が各シェイプを特別扱いしており、パネルの動作を理解するのにパネルファイル＋レジストリ＋ブートストラッパーの3ファイルを読む必要があるからだ。

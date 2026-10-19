@@ -28,10 +28,10 @@
 | 10 | aiClient.test.ts: 推奨される改善点 | 内部情報を削除すべき（プレースホルダー） | 同上 | 削除 |
 | 11 | aiClient.test.ts: 推奨される改善点 | errorUtils使用すべき（プレースホルダー） | 同上 | 削除 |
 | 12 | aiClient.test.ts: registerProvider | カスタムプロバイダー登録できる | `RemoteAIService.registerProvider`の動作確認だが実質アサーションなし(`expect(true).toBe(true)`) | RemoteAIService.test.tsに実質的なテストとして統合（Task 2で`registerProvider`が登録したfactoryが実際に呼ばれることを検証する形に強化） |
-| 13 | aiClient.test.ts: in-flight重複排除 | 同一URL並行呼び出しは1回に集約 | `RemoteAIService.generateSummary`のdedupe機構 | **RemoteAIService.test.tsに既存**(`deduplicates concurrent generateSummary calls for the same URL`, RemoteAIService.test.ts:54) — 重複、移植不要 |
+| 13 | aiClient.test.ts: in-flight重複排除 | 同一URL並行呼び出しは1回に集約 | `RemoteAIService.generateSummary`のdedupe機構 | **RemoteAIService.test.tsに既存**(`deduplicates concurrent generateSummary calls for the same URL`, RemoteAIService.test.ts:54) ― 重複、移植不要 |
 | 14 | aiClient.test.ts: in-flight重複排除 | 異なるURLはそれぞれ独立 | 同上 | RemoteAIService.test.ts (Task 2で新規追加、既存にない観点) |
 | 15 | aiClient.test.ts: in-flight重複排除 | 完了後は同一URLで再度APIが呼ばれる | 同上 | RemoteAIService.test.ts (Task 2で新規追加) |
-| 16 | aiClient.test.ts: in-flight重複排除 | urlが空文字列は対象外 | **RemoteAIService.test.tsに既存**(`treats empty URL as non-dedupeable`, :71) — 重複、移植不要 |
+| 16 | aiClient.test.ts: in-flight重複排除 | urlが空文字列は対象外 | **RemoteAIService.test.tsに既存**(`treats empty URL as non-dedupeable`, :71) ― 重複、移植不要 |
 | 17 | aiClient.test.ts: in-flight重複排除 | 失敗時もin-flightマップから削除される | RemoteAIService.test.ts (Task 2で新規追加) |
 | 18 | aiClient.test.ts: registerDefaultProviders | デフォルトプロバイダーが登録される（実質アサーションなし） | 削除（`expect(client).toBeDefined()`のみで無意味） |
 | 19 | aiClient.test.ts: testConnection | 未知のプロバイダーでエラーを返す | RemoteAIService.test.ts (Task 2で新規追加) |
@@ -42,12 +42,12 @@
 | 24 | aiClient.test.ts: generateSummary正常系 | OpenAIプロバイダーで正常に要約 | 対象外（#23と同様） |
 | 25 | aiClient.test.ts: generateSummary正常系 | recordAuditLogがprovider/urlで呼ばれる | RemoteAIService.test.ts (Task 2で新規追加。`processSummarySlot`内の`recordAuditLog`呼び出しを検証) |
 | 26 | aiClient.test.ts: generateSummary正常系 | fallback時に複数回recordAuditLogが呼ばれる | RemoteAIService.test.ts (Task 2で新規追加) |
-| 27 | aiClient.test.ts: プロバイダー例外ハンドリング | throwした場合汎用エラーメッセージ | **RemoteAIService.test.tsに既存**(`propagates provider exceptions as error results`, :87) — ほぼ重複だが「Provider internal errorが含まれない」というnegativeアサーションは新規。RemoteAIService.test.ts (Task 2で強化) |
+| 27 | aiClient.test.ts: プロバイダー例外ハンドリング | throwした場合汎用エラーメッセージ | **RemoteAIService.test.tsに既存**(`propagates provider exceptions as error results`, :87) ― ほぼ重複だが「Provider internal errorが含まれない」というnegativeアサーションは新規。RemoteAIService.test.ts (Task 2で強化) |
 | 28 | aiClient.test.ts: testConnection例外 | throwした場合エラー結果を返す | RemoteAIService.test.ts (Task 2で新規追加) |
 | 29 | aiClient.test.ts: MAX_PROVIDERS制限 | 10件を超えるスロットは切り捨てられる | RemoteAIService.test.ts (Task 2で新規追加。`resolveProviderSlots`のDoS対策) |
 | 30 | fallback.test.ts: 優先度フォールバック | 1位失敗→2位で成功 | RemoteAIService.test.tsに既存の`falls back to the next provider`と概念は同じだが、こちらは**実プロバイダー(Gemini/OpenAI)経由**のfetchモック。RemoteAIServiceのスタブ版で同等カバレッジ済みのため対象外 |
 | 31 | fallback.test.ts: 優先度フォールバック | 最小長未満→2位にフォールバック | RemoteAIService.test.ts (Task 2で新規追加。`minLength`しきい値によるフォールバックはRemoteAIService固有ロジックで未カバー) |
-| 32 | fallback.test.ts: 優先度フォールバック | 全プロバイダー失敗で失敗結果 | **RemoteAIService.test.tsに既存**(`returns the last provider result when all providers fail`, :43) — 重複、移植不要 |
+| 32 | fallback.test.ts: 優先度フォールバック | 全プロバイダー失敗で失敗結果 | **RemoteAIService.test.tsに既存**(`returns the last provider result when all providers fail`, :43) ― 重複、移植不要 |
 | 33 | fallback.test.ts: 優先度フォールバック | 優先度リスト空配列→旧AI_PROVIDER単一設定にフォールバック | RemoteAIService.test.ts (Task 2で新規追加。`resolveProviderSlots`のフォールバック仕様) |
 | 34 | fallback.test.ts: 進捗コールバック | 各プロバイダー開始時にonProgressが順番に呼ばれる | **RemoteAIService.test.tsに既存**(`delegates testConnection to providers with progress callback`, :119)だが1件のみ検証。複数スロットでの順序保証は未カバー → RemoteAIService.test.ts (Task 2で強化) |
 | 35 | fallback.test.ts: 進捗コールバック | model未指定でもデフォルトモデルを解決してonProgressに渡す | RemoteAIService.test.ts (Task 2で新規追加。`resolveEffectiveModel`のロジック) |
@@ -56,7 +56,7 @@
 
 ### 対応表のサマリー
 
-- **対象外（移植しない）**: #3,4,5,6,7,8,23,24,30,32,37の一部 — GeminiProvider/OpenAIProvider/BuiltInAiProviderの内部実装に依存する統合的な検証であり、`RemoteAIService`は関与しない。これらのプロバイダー固有ロジックは`providers/__tests__/`配下の既存テストでカバーされているか、カバーされていない場合は本PBIのスコープ外として別途Issue化する（Task 1で確認）。
+- **対象外（移植しない）**: #3,4,5,6,7,8,23,24,30,32,37の一部 ― GeminiProvider/OpenAIProvider/BuiltInAiProviderの内部実装に依存する統合的な検証であり、`RemoteAIService`は関与しない。これらのプロバイダー固有ロジックは`providers/__tests__/`配下の既存テストでカバーされているか、カバーされていない場合は本PBIのスコープ外として別途Issue化する（Task 1で確認）。
 - **削除（無意味なプレースホルダー）**: #9,10,11,18
 - **既存で重複（移植不要）**: #13(部分),16,20(部分),27(部分),32,34(部分)
 - **RemoteAIService.test.tsへ新規追加**: #1,2,12,14,15,17,19,21,22,25,26,28,29,31,33,35,36 (17件相当)
@@ -66,8 +66,8 @@
 
 ## File Structure
 
-- Modify: `src/background/ai/__tests__/RemoteAIService.test.ts` — DIパターンで新規テストケースを追加
-- Modify: `src/background/__tests__/aiClient.test.ts` — 委譲contract 4件のみに全面書き換え
+- Modify: `src/background/ai/__tests__/RemoteAIService.test.ts` ― DIパターンで新規テストケースを追加
+- Modify: `src/background/__tests__/aiClient.test.ts` ― 委譲contract 4件のみに全面書き換え
 - Delete: `src/background/__tests__/aiClient-priority-fallback.test.ts`
 - No production code changes（`src/background/aiClient.ts`, `src/background/ai/RemoteAIService.ts`は変更しない）
 

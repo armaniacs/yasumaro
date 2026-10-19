@@ -1,7 +1,7 @@
 # PBI: 端末内AIの「ディスク容量不足」誤案内の修正（Prompt API 非対応ブラウザ）
 
 - 発生源: [issue #161](https://github.com/armaniacs/yasumaro/issues/161)（Linear DEV-93、報告バージョン 6.9.17）
-- 種別: fix（既存機能の誤判定修正。既実装確認は 2026-09-27 実施済み — 下記「実装者向け注記」参照）
+- 種別: fix（既存機能の誤判定修正。既実装確認は 2026-09-27 実施済み ― 下記「実装者向け注記」参照）
 
 ## ユーザーストーリー
 
@@ -98,7 +98,7 @@ grep -n "builtInAiUnavailableDiskSpace\|diagBuiltInAiDiskSpaceGuidance" public/_
 
 既実装確認（2026-09-27 実施済み）: ディスク容量推定と案内表示は既に実装済みで、本 PBI はその誤判定を修正する。修正対象は 1 関数で、3 つの表示経路が同時に直る。
 
-- 判定: `src/utils/browserSupport.ts` `getBuiltInAIDiskSpace()` — `navigator.storage.estimate()` の `quota - usage` を空き容量の代理として使用（定数 22 GiB と比較）
+- 判定: `src/utils/browserSupport.ts` `getBuiltInAIDiskSpace()` ― `navigator.storage.estimate()` の `quota - usage` を空き容量の代理として使用（定数 22 GiB と比較）
 - 表示: `src/background/builtInAIClient.ts` `buildUnavailableMessage()` / `src/dashboard/builtInAiDiagnosticsService.ts` `explainUnavailable()` / `src/dashboard/panels/diagnostic/diagnosticsPanel.ts` `renderBuiltInAiStatus()`
 
 ### 実装手順

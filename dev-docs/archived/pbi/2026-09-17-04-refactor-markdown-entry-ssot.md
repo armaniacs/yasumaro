@@ -12,11 +12,11 @@ backlog: [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-
 ## 背景（現状と課題）
 Markdown リンク脱出対策のサニタイズ列（`sanitizeForMarkdownLinkText` → `sanitizeUrlForMarkdownTarget` → `sanitizeForObsidian` の適用順序）が複数ファイルに重複している。該当箇所はいずれも実在を確認済みである（以下、行番号ではなく関数名と概略位置で示す）。
 
-1. `formatMarkdownStep`（`src/background/pipeline/steps/` 配下） — リスト形式 `- HH:MM [title](url)\n    - summary` を組み立てる。タグがある場合は `#` 付きプレフィックスを付ける。この形式は `src/utils/markdownFormatter.ts` の `formatSingleEntry()` とほぼ逐語重複であり、差は timestamp の出所（現在時刻かエントリの `created_at` か）と tags の有無のみである。
-2. `formatSingleEntry()`（`src/utils/markdownFormatter.ts` 内の非公開関数。`formatEntriesToMarkdown()` 経由で公開） — 同じリスト形式を独自実装している。`formatEntriesToMarkdown()` は `src/background/handlers/dashboardSqlite/` 配下の append 系ハンドラから `deps.ts` の注入経由で使用され、`src/dashboard/obsidianFormatter.ts` が re-export している。
-3. `formatEntryToMarkdown()`（`src/utils/markdownFormatter.ts`） — 見出し形式を独自実装している。`src/utils/copyMarkdownButton.ts` が使用している。
-4. `toMarkdownTemplateEntryData()`（`src/dashboard/markdownExport.ts`） — 見出し＋タグ形式向けのエントリデータ組み立てを独自実装している。
-5. `sync()` 内の `defaultEntry()` クロージャ（`src/background/syncTargets/gistSyncTarget.ts`） — 1行形式 `- [title](url): summary` を独自実装している。
+1. `formatMarkdownStep`（`src/background/pipeline/steps/` 配下） ― リスト形式 `- HH:MM [title](url)\n    - summary` を組み立てる。タグがある場合は `#` 付きプレフィックスを付ける。この形式は `src/utils/markdownFormatter.ts` の `formatSingleEntry()` とほぼ逐語重複であり、差は timestamp の出所（現在時刻かエントリの `created_at` か）と tags の有無のみである。
+2. `formatSingleEntry()`（`src/utils/markdownFormatter.ts` 内の非公開関数。`formatEntriesToMarkdown()` 経由で公開） ― 同じリスト形式を独自実装している。`formatEntriesToMarkdown()` は `src/background/handlers/dashboardSqlite/` 配下の append 系ハンドラから `deps.ts` の注入経由で使用され、`src/dashboard/obsidianFormatter.ts` が re-export している。
+3. `formatEntryToMarkdown()`（`src/utils/markdownFormatter.ts`） ― 見出し形式を独自実装している。`src/utils/copyMarkdownButton.ts` が使用している。
+4. `toMarkdownTemplateEntryData()`（`src/dashboard/markdownExport.ts`） ― 見出し＋タグ形式向けのエントリデータ組み立てを独自実装している。
+5. `sync()` 内の `defaultEntry()` クロージャ（`src/background/syncTargets/gistSyncTarget.ts`） ― 1行形式 `- [title](url): summary` を独自実装している。
 
 なお `src/background/obsidianSyncService.ts` の `sync()` 付近にも同一サニタイズ列が存在するが、これは依存 PBI（03）の削除対象であり、本 PBI 着手時には消滅している前提である。03 を先に完了させることで、本 PBI が扱う重複箇所は上記 5 件に絞られる。
 

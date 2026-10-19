@@ -74,7 +74,7 @@ rg -n "getCleansedReasonText" src/popup/statusPanel.ts src/popup/recordCurrentPa
 ### 落とし穴
 - `start()` の再入ガードは `running` のみを拒否する。`awaiting-force` からの force 再開と `showing-result` からの再開は元コードで許容されていたため維持（UI 上ボタン無効で実質到達不能）。`showing-result` を拒否すると逐次テスト呼び出しが止まる
 - `previewFlow.run` の `mockResolvedValueOnce` は消費されないと後続テストにリークする（`clearAllMocks` は Once キューを消さない）。不要な Once は置かないこと
-- `resetRecordButton` の onclick プロパティ代入は「重複登録防止の意図」がある — セッション化で不要になるが、意図をコメントに残すこと
+- `resetRecordButton` の onclick プロパティ代入は「重複登録防止の意図」がある ― セッション化で不要になるが、意図をコメントに残すこと
 - `finally` ブロックのリセットと `isShowingResultState` の競合が既知のバグ温床。遷移表で明示的に潰すこと
 - copy-button コンテナ生成の silent-fail は振る舞いを変えず、セッション内に集約するだけに留める
 

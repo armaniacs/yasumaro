@@ -239,7 +239,7 @@ git commit -m "chore(docs): PII sandbox バンドルスクリプトを追加"
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PII Sandbox — Yasumaro</title>
+  <title>PII Sandbox ― Yasumaro</title>
   <meta name="description" content="Yasumaro の PII マスキング動作をブラウザで確認できるサンドボックス。">
   <link rel="icon" href="https://github.com/armaniacs/yasumaro/raw/main/public/icons/icon128.png">
   <style>

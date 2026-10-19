@@ -14,8 +14,8 @@ dashboard-SQLite wire 契約の保守担当者として、新 subtype 追加時�
 ## 背景（file:line 現状）
 
 - 正リスト: `src/messaging/sqliteOperationSecurity.ts:77-112`（ALL_DASHBOARD_SQLITE_SUBTYPES）
-- response union: `src/messaging/dashboardSqliteProtocol.ts:121-176` — `DashboardSqliteResponseFor` が never で終わるが、subtype セットとの assert がない（忘れると gateway の `Extract<...>` が silently never に崩れる）
-- validator spec: `src/messaging/validators.ts:317-401` — `DASHBOARD_SQLITE_SUBTYPE_SPECS` が string-keyed Record。忘れた行 = payload 検査なし（`validators.ts:438-448` が spec 未定義を skip）
+- response union: `src/messaging/dashboardSqliteProtocol.ts:121-176` ― `DashboardSqliteResponseFor` が never で終わるが、subtype セットとの assert がない（忘れると gateway の `Extract<...>` が silently never に崩れる）
+- validator spec: `src/messaging/validators.ts:317-401` ― `DASHBOARD_SQLITE_SUBTYPE_SPECS` が string-keyed Record。忘れた行 = payload 検査なし（`validators.ts:438-448` が spec 未定義を skip）
 - 影響: 新 subtype 追加時に response 形状が未定義のまま通る・payload 検査が素通りする
 
 ## BDD受け入れシナリオ

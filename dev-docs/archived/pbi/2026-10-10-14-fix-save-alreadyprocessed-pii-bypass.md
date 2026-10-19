@@ -12,11 +12,11 @@
 
 ## 背景（現状・証拠）
 
-- `src/background/handlers/recordingHandlers.ts:316-323` — SAVE_RECORDが生contentを`buildRecordRequest('save', …)`に渡す
-- `src/background/recordRequestBuilder.ts:73` — saveポリシーが`alreadyProcessed: true`を付与（検証なき自己申告）
-- `src/background/privacyPipeline.ts:185` — `useMasking`が`&& !alreadyProcessed`で無効化される一方、`:186`の`useCloudAi`は無関係に有効
-- `src/background/privacyPipeline.ts:162-164` — 未マスク`processingText`が`aiService.generateSummary`へ直送（fail-open）
-- `src/utils/storage/defaults.ts:68` — 既定`masked_cloud`のため到達可能（反証検証SURVIVES＋目視確認済み）
+- `src/background/handlers/recordingHandlers.ts:316-323` ― SAVE_RECORDが生contentを`buildRecordRequest('save', …)`に渡す
+- `src/background/recordRequestBuilder.ts:73` ― saveポリシーが`alreadyProcessed: true`を付与（検証なき自己申告）
+- `src/background/privacyPipeline.ts:185` ― `useMasking`が`&& !alreadyProcessed`で無効化される一方、`:186`の`useCloudAi`は無関係に有効
+- `src/background/privacyPipeline.ts:162-164` ― 未マスク`processingText`が`aiService.generateSummary`へ直送（fail-open）
+- `src/utils/storage/defaults.ts:68` ― 既定`masked_cloud`のため到達可能（反証検証SURVIVES＋目視確認済み）
 
 ## BDD 受け入れシナリオ
 
@@ -40,11 +40,11 @@ Scenario: AI要約の有無は変わらない
 - [x] `recordRequestBuilder.test.ts:17-19`のsave期待値を新ポリシーに更新する
 - [x] 再現テスト（PII含有contentのsave経路→マスク済みAI送信）を追加する
 
-（2026-10-11 DoD反映漏れの解消: `SOURCE_POLICY['save']` は `{ skipDuplicateCheck: true, recordType: 'manual' }` のみ（`recordRequestBuilder.ts:73`）、`alreadyProcessed` は `_buildSanitizedSettings` の機構として温存、`privacyPipeline.test.ts` に save 経路のマスク回帰テストが存在することを実コードで確認。`npm run validate` exit 0 — 1053 files / 15895 tests passed）
+（2026-10-11 DoD反映漏れの解消: `SOURCE_POLICY['save']` は `{ skipDuplicateCheck: true, recordType: 'manual' }` のみ（`recordRequestBuilder.ts:73`）、`alreadyProcessed` は `_buildSanitizedSettings` の機構として温存、`privacyPipeline.test.ts` に save 経路のマスク回帰テストが存在することを実コードで確認。`npm run validate` exit 0 ― 1053 files / 15895 tests passed）
 
 ## テスト戦略
 
-- unit: `src/background/__tests__/recordRequestBuilder.test.ts` — save期待値更新
+- unit: `src/background/__tests__/recordRequestBuilder.test.ts` ― save期待値更新
 - unit（新規）: save経路のマスキング実行確認（AI送信テキストに生PIIなし）
 - 既存pin: `privacyPipeline.test.ts`・`processPrivacyPipelineStep.test.ts`は無変更greenを gate にする
 

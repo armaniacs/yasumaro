@@ -9,7 +9,7 @@
 順位: 13 / 20
 RICEスコア: 4.8（Reach=6 / Impact=2 / Confidence=0.8 / Effort=2.0 SP）
 根拠: リポジトリで最悪の肥大化ファイル。`generalSettingsPanel` より大きく、機能領域 3 つが混在。`archiveSessionStore` は分離済みのため、残る結合は mount closure 内部に局所する。
-依存: rank-1003-08（in-flight guard）が本ファイルに着地済み — 分割時に保持すること。
+依存: rank-1003-08（in-flight guard）が本ファイルに着地済み ― 分割時に保持すること。
 
 ## 背景
 
@@ -19,7 +19,7 @@ RICEスコア: 4.8（Reach=6 / Impact=2 / Confidence=0.8 / Effort=2.0 SP）
   - セッション管理 + 編集モーダル: L207-417
   - restore: L420-511
 - `archiveSessionStore` は既に分離済み
-- rank-1003-08（in-flight guard）は本ファイルに着地済み — 分割時に保持必須
+- rank-1003-08（in-flight guard）は本ファイルに着地済み ― 分割時に保持必須
 
 ## BDD受け入れシナリオ
 

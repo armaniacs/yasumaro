@@ -1,4 +1,4 @@
-# PBI: Archive wire 層の表駆動統合 — 7-hop 1:1 pass-through の畳み込みと重複ブロック削除
+# PBI: Archive wire 層の表駆動統合 ― 7-hop 1:1 pass-through の畳み込みと重複ブロック削除
 
 ## ユーザーストーリー
 SQLite / アーカイブ wire 層を保守する開発者として、1 つの archive subtype が 7 層（service → SW handler → deps → offscreenGateway → offscreen MessageHandlers → dbMaintenance → OpfsWorkerBackend → opfsWorker dispatch）を通り、各層が 14-way の 1:1 写像になっているのを、`MaintainOp` を正とする単一テーブル（op → wire type → decode → noRetry flag）に畳みたい、なぜなら現状は新 subtype 追加時に 7 ファイル編集が必須で、既に TypeScript が黙って通すコピペ重複ブロック 3 箇所（重複 overload、重複 interface、重複 payload 型の到達不能第 2 ブロック）が実在し、次の subtype 追加で同期漏れが確定するから
@@ -73,7 +73,7 @@ SQLite / アーカイブ wire 層を保守する開発者として、1 つの ar
 
 ## 未解決事項
 1. テーブルの置き場所（background/sqlite vs messaging）→ offscreenGateway と MessageHandlers の両方が参照するため、依存方向（background → offscreen 禁止、messaging は中立）を守れる位置に実装時に決定
-2. `dbMaintenance.ts` の削除可否 — Layer 的に offscreen 内部なので削除（Backend 直結）が筋だが、opfsWorker dispatch との契約を確認してから決める。実装メモに記録
+2. `dbMaintenance.ts` の削除可否 ― Layer 的に offscreen 内部なので削除（Backend 直結）が筋だが、opfsWorker dispatch との契約を確認してから決める。実装メモに記録
 3. `dashboardSqliteService.ts` の archive 14 関数を公開 API として維持するか、薄いジェネリック 1 関数に寄せるか → 呼び出し側（archivePanel 等）の破壊を避けるため公開関数維持を基本とし、内部を共通化
 
 ## Definition of Done

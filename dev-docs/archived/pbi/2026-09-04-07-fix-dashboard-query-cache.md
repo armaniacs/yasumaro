@@ -9,11 +9,11 @@ Dashboard で閲覧履歴を見るユーザーとして、ページ送り・タ�
 
 ## 既実装確認（Phase 0）
 - `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:354` `fetchData()` が全アクションの共通経路。`runQueryHistory({ limit, offset, sortBy, sortDir, ...search/since/until/tagFilter })` を毎回 await
-- `:255` `loadPersistedSort()` — `chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY)` + `JSON.parse`
-- `:269` `persistSort()` — `JSON.stringify` + `chrome.storage.local.set`、`changeSort`（`:529`）から毎回呼ばれる
-- `:456` `loadPersistedSortIntoState()` — 起動時に 1 回呼ばれる想定だが `loadPersistedSort` は他からも呼べる構造
-- `fetchData` には `requestGeneration` によるレースガードあり（`:355`）— キャッシュ実装時もこれと整合させる
-- `toggleStar` / `deleteEntry` / `appendSelectedToObsidian` はローカル state を直接更新（reducer）してクエリを再発行しない — キャッシュ無効化の対象
+- `:255` `loadPersistedSort()` ― `chrome.storage.local.get(HISTORY_SORT_STORAGE_KEY)` + `JSON.parse`
+- `:269` `persistSort()` ― `JSON.stringify` + `chrome.storage.local.set`、`changeSort`（`:529`）から毎回呼ばれる
+- `:456` `loadPersistedSortIntoState()` ― 起動時に 1 回呼ばれる想定だが `loadPersistedSort` は他からも呼べる構造
+- `fetchData` には `requestGeneration` によるレースガードあり（`:355`）― キャッシュ実装時もこれと整合させる
+- `toggleStar` / `deleteEntry` / `appendSelectedToObsidian` はローカル state を直接更新（reducer）してクエリを再発行しない ― キャッシュ無効化の対象
 
 ## BDD受け入れシナリオ
 

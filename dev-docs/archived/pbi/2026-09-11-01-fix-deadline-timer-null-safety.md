@@ -8,7 +8,7 @@ visit gate を消費する開発者として、初期化前の getter 読み取�
 
 - 順位: 01 / 9
 - RICE スコア: 20.0（Reach=2 / Impact=0.5 / Confidence=100% / Effort=0.05 人週）
-- 根拠（2026-09-11 round 6 直接検証）: `src/content/deadlineTimer.ts` — `get thresholds(): return this.cachedThresholds!`（:96-98）は初期化前読み取りで throw。`get gate`（:100-102）は `| null`。:70 の `!` は `refreshCachesIfStale()`（:68）が先行するため self-heal するが interface は嘘。`get isE2E` も `boolean | null` で全 consumer に null-check を強いる。
+- 根拠（2026-09-11 round 6 直接検証）: `src/content/deadlineTimer.ts` ― `get thresholds(): return this.cachedThresholds!`（:96-98）は初期化前読み取りで throw。`get gate`（:100-102）は `| null`。:70 の `!` は `refreshCachesIfStale()`（:68）が先行するため self-heal するが interface は嘘。`get isE2E` も `boolean | null` で全 consumer に null-check を強いる。
 
 ## BDD 受け入れシナリオ
 

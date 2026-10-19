@@ -21,7 +21,7 @@
   3. `archive_query.query` の長さ上限
 - 差分は本ブランチの新規テスト `src/messaging/__tests__/archivePayloadValidation-parity.test.ts:156-176` に「意図的に閉じない差分」として固定されている。
 - エンベロープを通らない経路（`src/background/sqlite/offscreenGateway.ts:115` は archive op を wire table で解決する）ではこれらの検証が効かない。
-- 境界値（`length` / `limit`）は本ブランチで SSOT 化されて一致した（`src/utils/limits.ts:31,147` ⇄ `validators.ts:388-410`）。残っているのは検証規則そのものの二重定義。
+- 境界値（`length` / `limit`）は本ブランチで SSOT 化されて一致した（`src/utils/limits.ts:31,147` ⇔ `validators.ts:388-410`）。残っているのは検証規則そのものの二重定義。
 - 上限超過メッセージの食い違い: `src/messaging/archiveWireTable.ts:226-227` は `length` が 8MB 超でも `archive_export: length must be a positive number` を返す。比較対象の query 側 `:385-386` は `1..500` と範囲を明示している。この誤誘導文言は新規テスト `archivePayloadValidation-parity.test.ts:144-146` で固定されている。
 - 参考（同じ契約面の潜在トラップ）: `MaskedItem.index` は WASM 経路では UTF-8 バイト、TS 経路では UTF-16 コード単位（`src/background/pipeline/piiSanitizeHybrid.ts:41-43`, `:114-120`）。現時点で読み手がいないことは確認済みだが、`includeIndices: true` の戻り値の意味が実行経路で変わる。
 
@@ -46,7 +46,7 @@ Scenario: 上限超過メッセージが範囲を示す
 
 ## 受け入れ基準
 
-- [x] archive の検証規則（必須性・`cutoffDate`⇄`cutoffMs` のペア整合・`archive_query.query` 長上限）を 1 箇所から導出する形にする（wire table の `validate` を spec から導出）
+- [x] archive の検証規則（必須性・`cutoffDate`⇔`cutoffMs` のペア整合・`archive_query.query` 長上限）を 1 箇所から導出する形にする（wire table の `validate` を spec から導出）
 - [x] エンベロープを通らない経路（`offscreenGateway.ts`）でも同じ検証が効く
 - [x] `archivePayloadValidation-parity.test.ts` の「意図的に閉じない差分」を**解消**（受容した残存差分なし。旧 pin は「両経路が一致する」テストへ置換）
 - [x] `archiveWireTable.ts` のメッセージを `length must be 1..${MAX_ARCHIVE_EXPORT_CHUNK_BYTES}` に揃え、テストの期待値も同時に更新する
@@ -63,7 +63,7 @@ Scenario: 上限超過メッセージが範囲を示す
 契約をそのまま満たす。`subtype` は payload に注入する（guard とメッセージが読むため）。
 
 これにより 3 つの差分が閉じた: (1) `includeDeleted` / `yasumaroVersion` の必須性、
-(2) `cutoffDate`⇄`cutoffMs` のペア整合、(3) `archive_query.query` の長さ上限。
+(2) `cutoffDate`⇔`cutoffMs` のペア整合、(3) `archive_query.query` の長さ上限。
 producer（`dashboardSqliteService.ts`）は 3 つとも既に満たしていたため、実運用の
 accept 挙動は変わらない（BASE 全サブタイプが両ゲートで accept することをテストで固定）。
 

@@ -9,8 +9,8 @@ models.dev ダイアログを使う利用者・開発者として、Esc でダ�
 - 順位: 01 / 7
 - RICE スコア: 18.0（Reach=2 / Impact=1 / Confidence=90% / Effort=0.1 人週）
 - 根拠（2026-09-11 round 7 直接検証）:
-  - `models-dev-dialog.ts:70` — `focusTrapManager.trap(dialog, () => this.hide())` が Esc を処理
-  - `:258-262` — `document.addEventListener('keydown', ... Escape → this.hide())` が重複
+  - `models-dev-dialog.ts:70` ― `focusTrapManager.trap(dialog, () => this.hide())` が Esc を処理
+  - `:258-262` ― `document.addEventListener('keydown', ... Escape → this.hide())` が重複
   - keydown listener は `attachEventListeners`（:206-214）の `eventListenersAttached`（instance フィールド）guard で attach され、remove される経路が無い
   - `entrypoints/options/models-dev-dialog.html`（13 行 stub・dashboard 全体を読む・未参照）と `src/dashboard/models-dev-dialog.html`（78 行の静的コピー・TS class は自前 DOM 構築のため未使用・非 module script）の twin が drift 済み（searchPlaceholder vs providerSearchPlaceholder ほか 5 件）
 
@@ -46,5 +46,5 @@ S（0.1 人週）。種別: fix。
 ## 実装メモ（2026-09-11 round 7）
 
 - 手動 document keydown Esc listener を削除（focusTrap closeCallback に一本化）+ `hide()` を idempotent 化（trapId null check で二重発火を構造的に遮断）。
-- **追加発見**: 静的 HTML twin は TS 実装が満たしていなかった a11y 仕様（aria-live ×2 / aria-busy / aria-required）を持っていた — twin を「a11y spec」として扱い、TS 実装を twin 水準に合わせてから twin 2 件（entrypoints/options/models-dev-dialog.html の orphan entrypoint + src/dashboard/models-dev-dialog.html の静的コピー）を削除し、a11y テストを TS 構築 DOM に向け直し（実装メモ: 旧テストは drift した静的コピーへの文字列一致で false assurance だった）。build 確認済み（models-dev-dialog.css は options/index.html から読まれ続ける）。
+- **追加発見**: 静的 HTML twin は TS 実装が満たしていなかった a11y 仕様（aria-live ×2 / aria-busy / aria-required）を持っていた ― twin を「a11y spec」として扱い、TS 実装を twin 水準に合わせてから twin 2 件（entrypoints/options/models-dev-dialog.html の orphan entrypoint + src/dashboard/models-dev-dialog.html の静的コピー）を削除し、a11y テストを TS 構築 DOM に向け直し（実装メモ: 旧テストは drift した静的コピーへの文字列一致で false assurance だった）。build 確認済み（models-dev-dialog.css は options/index.html から読まれ続ける）。
 - 新規テスト: a11y テストを shipped DOM 対応に全面書き換え（13 tests・Esc 二重発火防止 pin 含む）。

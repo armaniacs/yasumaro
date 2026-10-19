@@ -36,7 +36,7 @@ PBI-1（core 分割）と並行して進められる。
 
 ## 実装内容
 
-1. 新規 `src/utils/logger/criticalAlertSink.ts` — `CriticalAlertSink` interface + `ChromeNotificationCriticalSink`（既存の notifications.create + クールダウン実装を移動）
+1. 新規 `src/utils/logger/criticalAlertSink.ts` ― `CriticalAlertSink` interface + `ChromeNotificationCriticalSink`（既存の notifications.create + クールダウン実装を移動）
 2. `api.ts` の `logCritical` から `chrome.notifications` 発火・クールダウン管理を削除し、「記録 + flushLogs(true)」のみにする
 3. `logCritical` は `CriticalAlertSink` を引数または `initializeLogger` 経由で受け取り、記録後に sink を呼ぶ
 4. `sqliteAlert.ts` は `ChromeNotificationCriticalSink` を組み立てて logCritical に渡す（または composition root で initializeLogger に注入）

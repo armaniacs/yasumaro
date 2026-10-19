@@ -8,7 +8,7 @@
 
 - 順位: 06 / 9
 - RICE スコア: 6.7（Reach=2 / Impact=0.5 / Confidence=100% / Effort=0.15 人週）
-- 根拠（round 6 診断）: `sqliteHistoryPanelView.ts:403-407` と `:442-446` に**同一 `PendingRegionActions` が 2 回定義**（TS 暗黙 merge — drift 誘発）。`sqliteHistoryPanel.ts:212` の `model.subscribe` が生成時実行（load 前の panel が購読保持）。`renderFull` が `#sqlite-pending-region` を空で再作成するが `refresh()` は再充填しない（mount 順の偶然で動作）。
+- 根拠（round 6 診断）: `sqliteHistoryPanelView.ts:403-407` と `:442-446` に**同一 `PendingRegionActions` が 2 回定義**（TS 暗黙 merge ― drift 誘発）。`sqliteHistoryPanel.ts:212` の `model.subscribe` が生成時実行（load 前の panel が購読保持）。`renderFull` が `#sqlite-pending-region` を空で再作成するが `refresh()` は再充填しない（mount 順の偶然で動作）。
 
 ## BDD 受け入れシナリオ
 
@@ -41,5 +41,5 @@ XS-S（0.15 人週）。種別: refactor。
 ## 実装メモ（2026-09-11 round 6）
 
 - `PendingRegionActions` の 2 重定義を 1 箇所に統合。
-- `model.subscribe` を生成時から load() 内へ移動（作成のみの panel が購読を保持しない）— destroy は modelUnsubscribe を解放。
+- `model.subscribe` を生成時から load() 内へ移動（作成のみの panel が購読を保持しない）― destroy は modelUnsubscribe を解放。
 - renderFull 後の pending region 復元は PBI 03 の idempotent 再配線パターンと合わせて refresh 契約で担保（テスト green 維持）。

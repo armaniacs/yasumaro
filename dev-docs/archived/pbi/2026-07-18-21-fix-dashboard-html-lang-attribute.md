@@ -11,7 +11,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `entrypoints/options/index.html:2` — `<html lang="" dir="ltr">`
+- `entrypoints/options/index.html:2` ― `<html lang="" dir="ltr">`
 - JS実行後は必ず `setHtmlLangAndDir` で上書きされる（既存メモリ: opfs-fts5-coexistence等の記録にはないが、コード確認により該当関数の存在を確認要）
 - 対処案: `<html lang="en" dir="ltr">` に変更し、JSで上書き
 

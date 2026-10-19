@@ -11,9 +11,9 @@
 
 ## 背景（現状）
 
-- `src/offscreen/sqliteQueryBuilder.ts:86-89` — `buildOrderByClause`: `const dir = (q.orderDir || 'DESC').toUpperCase(); if (!ALLOWED_ORDER_DIRECTIONS.includes(...)) return { orderClause: '', error: ... }`
-- `src/offscreen/sqliteQueryBuilder.ts:99-102` — `buildFts5OrderClause`: 同一ブロック
-- `src/offscreen/sqliteQueryBuilder.ts:113-116` — `buildLikeOrderClause`: 同一ブロック
+- `src/offscreen/sqliteQueryBuilder.ts:86-89` ― `buildOrderByClause`: `const dir = (q.orderDir || 'DESC').toUpperCase(); if (!ALLOWED_ORDER_DIRECTIONS.includes(...)) return { orderClause: '', error: ... }`
+- `src/offscreen/sqliteQueryBuilder.ts:99-102` ― `buildFts5OrderClause`: 同一ブロック
+- `src/offscreen/sqliteQueryBuilder.ts:113-116` ― `buildLikeOrderClause`: 同一ブロック
 
 同一の 4 行ブロックが同一ファイル内に逐語 3 回。クローズ済み「SEARCH_COLUMNS drift」ではなく order-dir 正規化の側の DRY 摩擦。
 

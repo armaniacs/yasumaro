@@ -1,4 +1,4 @@
-# 2026-09-24 arch-delivery-loop ラウンド（パネル基盤深化）— 採点台帳
+# 2026-09-24 arch-delivery-loop ラウンド（パネル基盤深化）― 採点台帳
 
 分析パネルラウンド（01-08・アーカイブ済み）後のアーキテクチャ診断（Phase 0）で抽出した9候補を RICE 採点。NN は 2026-09-24 内の通し番号（前ラウンド 01-08 はアーカイブ済みのため 09 起点とし、優先順位は本台帳の順位列で管理する）。
 
@@ -9,15 +9,15 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は影響する呼び出
 | 順位 | 候補 | Reach | Impact | Conf | Effort | RICE | 結果 |
 |---|---|---|---|---|---|---|---|
 | 1 | 『Summary not available.』リテラルの中立層 SSOT 化 | 5 | 1.0 | 100% | 0.25pt | 20.0 | PBI 09 |
-| 2 | fetchPeriodRows — パネルデータ読み込みシーム | 8 | 2.0 | 100% | 1.5pt | 10.7 | PBI 10 |
+| 2 | fetchPeriodRows ― パネルデータ読み込みシーム | 8 | 2.0 | 100% | 1.5pt | 10.7 | PBI 10 |
 | 3 | periodFilter 契約の深化（同期 emit 廃止） | 7 | 2.0 | 100% | 1.5pt | 9.3 | PBI 11 |
 | 4 | i18n / パネルカタログゲート強化 | 2 | 1.0 | 100% | 0.25pt | 8.0 | PBI 12 |
 | 5 | navigateToHistoryWithTag 集約 | 7 | 0.5 | 100% | 0.5pt | 7.0 | PBI 13 |
-| 6 | PanelNotices — 通知/空状態モジュール | 8 | 1.5 | 80% | 1.5pt | 6.4 | PBI 14 |
+| 6 | PanelNotices ― 通知/空状態モジュール | 8 | 1.5 | 80% | 1.5pt | 6.4 | PBI 14 |
 | 7 | MAX_QUERY_ROWS ローカル再宣言の SSOT 化 | 3 | 0.5 | 100% | 0.25pt | 6.0 | PBI 15 |
 | 8 | msg() フォールバックヘルパー集約 | 6 | 0.5 | 100% | 0.5pt | 6.0 | PBI 16 |
-| — | defineAnalysisPanel 単一登録シーム | 6 | 1.5 | 80% | 2.0pt | 3.6 | 台帳送り |
-| — | renderTagGraph 抽出 | 2 | 0.5 | 80% | 1.0pt | 0.8 | 台帳送り |
+| ― | defineAnalysisPanel 単一登録シーム | 6 | 1.5 | 80% | 2.0pt | 3.6 | 台帳送り |
+| ― | renderTagGraph 抽出 | 2 | 0.5 | 80% | 1.0pt | 0.8 | 台帳送り |
 
 同点（6.0×2）はリスク軽減 → 緊急性の順: MAX_QUERY_ROWS（表示が静かに嘘をつく drift）を msg() より先。
 
@@ -41,7 +41,7 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は影響する呼び出
 
 ## アーカイブ記録（2026-10-11）
 
-本台帳の役割は完了したため `dev-docs/archived/pbi/` へ移動する。PBI 09–16 は全件実装・アーカイブ済み、送り2件の扱いは以下:
+本台帳の役割は完了したため `dev-docs/archived/pbi/` へ移動する。PBI 09-16 は全件実装・アーカイブ済み、送り2件の扱いは以下:
 
 - renderTagGraph 抽出 → 2026-09-28 に PBI 17 へ昇格・実装済み（上記）。
 - defineAnalysisPanel 単一登録シーム → **別設計で解消済みとして閉じる**。`src/dashboard/panels/panelCatalog.ts`（PBI 2026-09-07-25）がパネル存在の SSOT となり「4箇所分散」は解消済み、HTML 同期は `panelCatalog.test.ts` で検証される。`defineAnalysisPanel` という関数は作られず、静的 sidebar HTML 維持は記録済み決定。よって本送りのトリガー（登録ミス／パネル数 30 超）は panelCatalog 側の責務に吸収された。

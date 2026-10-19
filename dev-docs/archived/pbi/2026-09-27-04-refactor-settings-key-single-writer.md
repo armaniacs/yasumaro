@@ -9,7 +9,7 @@
 ## 優先度
 
 - 順位: 後続（PBI 18 完了直後）
-- RICEスコア: 1.5（Confidence 90% — 裁定済みのため Effort 2 SP → 1 SP に縮小）
+- RICEスコア: 1.5（Confidence 90% ― 裁定済みのため Effort 2 SP → 1 SP に縮小）
 - 見積もり: 1 SP
 
 ## BDD受け入れシナリオ
@@ -41,7 +41,7 @@ Scenario: 既存契約の維持
 
 - [x] `trustSettings.ts:565` の raw `chrome.storage.local.set` を `SettingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, clampedValue)`（delta write 契約）に置換する。クランプ 1-50 は呼び出し側で維持する
 - [x] `permissionManager.ts:281` の raw get を `SettingsRepository.get(StorageKeys.PERMISSION_NOTIFY_THRESHOLD)` に置換する。クランプは permissionManager 内に保持する
-- [x] `denied_domains` は production 変更なし（`updateDeniedDomains()` 専用 CAS を canonical writer として維持。nested 統合・export 対象化はしない — PBI 18 裁定）
+- [x] `denied_domains` は production 変更なし（`updateDeniedDomains()` 専用 CAS を canonical writer として維持。nested 統合・export 対象化はしない ― PBI 18 裁定）
 - [x] `trustSettings.ts` 内の `chrome.storage.local.set` 直接呼び出しが 0 件であることを static test で pin する
 - [x] denied_domains 経路が `withLock('settings')` を呼ばないことを spy で pin する
 - [x] 既存テスト変更: `trustSettings.test.ts:434-437`（raw set pin → repository 呼び出し pin）。`trustSettings-r2` / `trustSettings-r3` の同系 pin

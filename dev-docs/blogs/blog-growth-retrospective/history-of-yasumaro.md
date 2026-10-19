@@ -1,5 +1,5 @@
 ---
-title: "4千行から17万行へ — Chrome拡張『Yasumaro』の成長をコミット履歴から振り返る"
+title: "4千行から17万行へ ― Chrome拡張『Yasumaro』の成長をコミット履歴から振り返る"
 emoji: "📈"
 type: "tech"
 topics: ["chrome拡張機能", "プロダクト開発", "個人開発", "githubactions", "typescript"]

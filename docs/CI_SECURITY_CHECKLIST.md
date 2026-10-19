@@ -24,14 +24,14 @@ GitHub Actions の `${{ }}` 展開はシェルパース **前** に実行され�
       VERSION: ${{ steps.version.outputs.version }}
     run: echo "Version: ${VERSION}"
     ```
-  - **関連インシデント:** PBI 01 — release.yml コマンドインジェクション（過去の教訓。メトリクス記録ステップの `${{ github.ref_name }}` 直接展開は `env:` 経由参照に是正済み。監査手順の grep で再発を検出できる）
+  - **関連インシデント:** PBI 01 ― release.yml コマンドインジェクション（過去の教訓。メトリクス記録ステップの `${{ github.ref_name }}` 直接展開は `env:` 経由参照に是正済み。監査手順の grep で再発を検出できる）
 
 - [ ] 外部入力（version、branch名、タグ名等）を二重引用符で囲んでいる
   - **なぜ危険か:** 引用符なしの変数展開はシェルのワード分割とパス名展開（グロブ）の影響を受ける。
   - **どう修正するか:** 常に `"${VAR}"` のように二重引用符で囲む。
   - **例:**
     ```bash
-    # ❌ 危険 — 値に空白や `*` が含まれると分割/展開される
+    # ❌ 危険 ― 値に空白や `*` が含まれると分割/展開される
     echo $VERSION
 
     # ✅ 安全
@@ -63,7 +63,7 @@ CI ログはリポジトリの read 権限を持つ全ユーザーが閲覧可�
     # ❌ 危険
     echo "${CRX_PRIVATE_KEY}"  # ログに秘密鍵が表示される
 
-    # ✅ 安全 — 必要な処理のみ行い、出力しない
+    # ✅ 安全 ― 必要な処理のみ行い、出力しない
     echo "${CRX_PRIVATE_KEY}" > /tmp/private.pem
     node build.mjs ... && rm /tmp/private.pem
     ```
@@ -73,10 +73,10 @@ CI ログはリポジトリの read 権限を持つ全ユーザーが閲覧可�
   - **どう修正するか:** 機密フィールドをマスクしてから出力する。`python3` や `jq` で特定フィールドを削除する。
   - **例:**
     ```bash
-    # ❌ 危険 — すべてのフィールドをそのまま出力
+    # ❌ 危険 ― すべてのフィールドをそのまま出力
     echo "${FULL_RESP}" | python3 -m json.tool
 
-    # ✅ 安全 — 機密フィールドを削除してから出力
+    # ✅ 安全 ― 機密フィールドを削除してから出力
     echo "${FULL_RESP}" | python3 -c "
     import sys, json
     d = json.load(sys.stdin)
@@ -85,7 +85,7 @@ CI ログはリポジトリの read 権限を持つ全ユーザーが閲覧可�
     print(json.dumps(d, indent=2))
     "
     ```
-  - **関連インシデント:** PBI 02 — OAuth 認証失敗時の CI ログ漏洩（過去の教訓。現在のワークフローに対応する OAuth 系 curl は存在しない）
+  - **関連インシデント:** PBI 02 ― OAuth 認証失敗時の CI ログ漏洩（過去の教訓。現在のワークフローに対応する OAuth 系 curl は存在しない）
 
 - [ ] 機密情報は `::add-mask::` でマスクしてからログ出力する（必要な場合のみ）
   - **なぜ危険か:** デバッグ目的でシークレットの一部を確認したい場合があるが、マスクなしでは漏洩する。
@@ -110,10 +110,10 @@ CI 環境からのネットワーク呼び出しはタイムアウトがない�
   - **どう修正するか:** 接続タイムアウトと最大実行時間を設定する。
   - **例:**
     ```bash
-    # ❌ 危険 — タイムアウトなし
+    # ❌ 危険 ― タイムアウトなし
     curl -s -X POST https://api.example.com/token
 
-    # ✅ 安全 — タイムアウト付き
+    # ✅ 安全 ― タイムアウト付き
     curl -s --connect-timeout 10 --max-time 30 -X POST https://api.example.com/token
     ```
 
@@ -156,7 +156,7 @@ CI 環境からのネットワーク呼び出しはタイムアウトがない�
       sleep 2
     done
     ```
-  - **関連インシデント:** PBI 04 発見 — Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如（release.yml の `Upload to Chrome Web Store` ステップは `:fetchStatus` を 10 秒間隔・最大 30 回ポーリングし、`SUCCEEDED` になるまで待つ）
+  - **関連インシデント:** PBI 04 発見 ― Chrome Web Store アップロード後の `IN_PROGRESS` ポーリング欠如（release.yml の `Upload to Chrome Web Store` ステップは `:fetchStatus` を 10 秒間隔・最大 30 回ポーリングし、`SUCCEEDED` になるまで待つ）
 
 - [ ] エラー時の詳細情報を出力している（機密情報を除く）
   - **なぜ危険か:** エラー情報が不十分だと原因特定に時間がかかる。逆に full dump は機密情報漏洩のリスク。
@@ -210,10 +210,10 @@ CI ワークフローへの入力を検証しないと、予期しない動作�
   - **どう修正するか:** YAML の literal block scalar（`|`）を使用して複数行スクリプトを記述する。
   - **例:**
     ```yaml
-    # ❌ 危険 — \n エスケープの問題
+    # ❌ 危険 ― \n エスケープの問題
     run: python3 -c "import sys, json;\nfor e in json.load(sys.stdin).get('itemError', []):\n    print(e.get('error_code', ''))"
 
-    # ✅ 安全 — literal block を使用
+    # ✅ 安全 ― literal block を使用
     run: |
       python3 -c "
     import sys, json
@@ -259,5 +259,5 @@ grep -Pn 'echo\s+"?\${?\w*(SECRET|TOKEN|KEY|PASS|PRIVATE)}?' .github/workflows/*
 
 ---
 
-*Created as part of PBI 04 — CI/CD Security Review Checklist*
+*Created as part of PBI 04 ― CI/CD Security Review Checklist*
 *Related incidents: PBI 01 (command injection), PBI 02 (OAuth log leak)*

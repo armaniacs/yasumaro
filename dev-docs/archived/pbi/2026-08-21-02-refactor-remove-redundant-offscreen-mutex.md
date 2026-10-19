@@ -1,4 +1,4 @@
-# PBI: 冗長な offscreen SqliteWriteMutex の削除 — transport Mutex への集約
+# PBI: 冗長な offscreen SqliteWriteMutex の削除 ― transport Mutex への集約
 
 ## ユーザーストーリー
 開発者として、offscreen の手作り `SqliteWriteMutex` を削除し transport の `Mutex` に集約したい、なぜなら同一パスで二重に直列化され、timeout / maxQueueSize のない弱い Mutex が本当の back-pressure を隠しているから
@@ -10,7 +10,7 @@
 
 ## ビジネス価値
 - オフライン時の大量書き込みや mobile での offscreen サスペンド時の挙動が、timeout と bounded queue で可視化される（無限に詰む hand-rolled queue ではなく）
-- 保守者が「どちらの Mutex が SQLite を守っているか」を迷わない — locality が1箇所に集中
+- 保守者が「どちらの Mutex が SQLite を守っているか」を迷わない ― locality が1箇所に集中
 - 測定: `src/offscreen/offscreen.ts` の `SqliteWriteMutex` クラスが0件、`ChromeOffscreenTransport.requestQueue` のみが序列化を担うこと
 
 ## BDD受け入れシナリオ
@@ -31,14 +31,14 @@ Scenario: 冗長 Mutex が存在しない
   When "class SqliteWriteMutex" を検索する
   Then ヒットが0件であり、handleOffscreenMessage が acquire/release を呼ばない
 
-Scenario: 境界 — queue 上限超過時の挙動
+Scenario: 境界 ― queue 上限超過時の挙動
   Given requestQueue が maxQueueSize に達している
   When さらに msgOffscreen を呼ぶ
   Then Mutex が timeout または queue-full エラーで失敗し、offscreen 側で無限に積まれない
 ```
 
 ## 受け入れ基準
-- [x] `src/offscreen/offscreen.ts` の `SqliteWriteMutex` クラス（41–63行相当）と `sqliteWriteMutex` インスタンスが削除されている
+- [x] `src/offscreen/offscreen.ts` の `SqliteWriteMutex` クラス（41-63行相当）と `sqliteWriteMutex` インスタンスが削除されている
 - [x] `handleOffscreenMessage` の `await sqliteWriteMutex.acquire()` / `release()` 呼び出しが存在しない（`dispatchSqliteMessage` が直接呼ばれる）
 - [x] `src/background/offscreenTransport.ts` の `ChromeOffscreenTransport.requestQueue: Mutex` が唯一の直列化 seam として残り、maxQueueSize（desktop 200 / mobile 50）と timeout（10s / 5s）が維持される
 - [x] SQLite WASM が Worker 内で単一スレッドであることを前提に、同時書き込みの競合テストが transport seam 越しにパスする
@@ -63,8 +63,8 @@ Scenario: 境界 — queue 上限超過時の挙動
 - **Red-Green-Refactor**: 削除後に `npm run validate` で offscreen の未使用 import エラーを解消
 
 ## 見積もり
-1pt（要チームでの見積もり）— 削除のみ、手順は短いが mobile timeout の検証が必要
-- **確認**: offscreen.ts に SqliteWriteMutex（41行相当）が実在し、41–63行、65行、401行、409行で使用中
+1pt（要チームでの見積もり）― 削除のみ、手順は短いが mobile timeout の検証が必要
+- **確認**: offscreen.ts に SqliteWriteMutex（41行相当）が実在し、41-63行、65行、401行、409行で使用中
 
 ## 技術的考慮事項
 - 依存関係: PBI 01 と同パスだが依存なし。PBI 01 と同時着手・同時レビュー推奨（両方ともメッセージング周りの seam 整理）

@@ -1,4 +1,4 @@
-# PBI 2026-09-23-02 — ダッシュボード→SQLite 二次ストア RPC の wire-table Seam 深化
+# PBI 2026-09-23-02 ― ダッシュボード→SQLite 二次ストア RPC の wire-table Seam 深化
 
 **優先度**: 順位 2 / RICE 17.1（Reach 8 × Impact 2 × Confidence 80% ÷ Effort 0.75 人週）
 **根拠**: 約 30 op の Service ラッパー群が shallow（interface が実装と同複雑さ）。wire-table を真の Seam に昇格すると新 op が 1 行追加になり、decode・エラー文面・retry の知識が 1 表に集まる。呼び出し側 8 箇所が恩恵を受ける。
@@ -41,6 +41,6 @@
 - [x] `npm run type-check` / `npm run lint` / `npm test` が緑
 
 ## 実装記録（2026-09-23）
-- コミット 69f7d2c5。三重 runner（callDashboard/callSqliteWire/callArchive）を表駆動の単一 runner に統合し、各行が encode/decode/retry/defaultError を所有。公開 interface は `sqliteClient.call<O>(op, payload)` の1本。既存 30 named op は互換エイリアス。export/import の2呼び出し側をジェネリック呼び出しに移行（sqliteHistoryModel 等は named import を spy するテストが12+ ファイルあるため移行せず、リスク回避を記録）。ARCHIVE_GATEWAY_DECODERS 複製を削除し decode を wire-table 側に寄せる（cross-tier 障害なし — 両辺とも messaging 依存済み）。
+- コミット 69f7d2c5。三重 runner（callDashboard/callSqliteWire/callArchive）を表駆動の単一 runner に統合し、各行が encode/decode/retry/defaultError を所有。公開 interface は `sqliteClient.call<O>(op, payload)` の1本。既存 30 named op は互換エイリアス。export/import の2呼び出し側をジェネリック呼び出しに移行（sqliteHistoryModel 等は named import を spy するテストが12+ ファイルあるため移行せず、リスク回避を記録）。ARCHIVE_GATEWAY_DECODERS 複製を削除し decode を wire-table 側に寄せる（cross-tier 障害なし ― 両辺とも messaging 依存済み）。
 - 駆動行（coreCrud 3行）に `retry: { retryAttempts: 1 }` を明示（coreCrudHandler の Required<> 制約に合わせ、挙動同一）。将来の駆動行も retry 宣言がコンパイル強制される。
 - limits-drift / wire-table sync assert は無修正で緑。検証: type-check / messaging+service 24 ファイル 337 テスト緑。

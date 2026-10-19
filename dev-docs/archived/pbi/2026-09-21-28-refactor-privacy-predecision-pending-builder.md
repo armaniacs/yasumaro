@@ -63,10 +63,10 @@ Scenario: pending 組み立てが純粋関数としてテストできる
 ## 実装者向け注記
 
 ### 現状コードの確認
-- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:33` 付近 `if (force) { ... return context; }` — 手書き bypass その1
-- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:54` 付近 `if (shouldSkipPrivacyCheck) { return context; }` — 手書き bypass その2
-- `src/background/pipeline/recordingDecision.ts:91` 付近 decidePrivacy 内の同規則 — step が先に return するためこの経路では到達不能で二重エンコード
-- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:125` 付近 savePendingPage — validReasons 配列・redactHeaderValue・substring(0,1024)・{url,title,timestamp:Date.now(),...,expiry:Date.now()+24h} を直書き
+- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:33` 付近 `if (force) { ... return context; }` ― 手書き bypass その1
+- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:54` 付近 `if (shouldSkipPrivacyCheck) { return context; }` ― 手書き bypass その2
+- `src/background/pipeline/recordingDecision.ts:91` 付近 decidePrivacy 内の同規則 ― step が先に return するためこの経路では到達不能で二重エンコード
+- `src/background/pipeline/steps/checkPrivacyHeadersStep.ts:125` 付近 savePendingPage ― validReasons 配列・redactHeaderValue・substring(0,1024)・{url,title,timestamp:Date.now(),...,expiry:Date.now()+24h} を直書き
 - `src/utils/pendingStorage.ts:13` PrivacyPendingReason 型・`src/utils/pendingStorage.ts:24` 付近 PRIVACY_PENDING_REASONS set・`src/utils/pendingStorage.ts:57` 付近 PendingPage interface・`src/utils/pendingStorage.ts:91` PENDING_MAX_TTL_MS=24h が既に単一所有
 
 ### 実装手順

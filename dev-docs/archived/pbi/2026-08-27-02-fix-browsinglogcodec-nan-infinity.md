@@ -15,12 +15,12 @@
 - 解: `!Number.isFinite(n) ? null : n` に正規化しテスト期待を `null` に修正
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常数値はそのまま保存される
+Scenario: ハッピーパス ― 正常数値はそのまま保存される
   Given payload に `visit_duration: 30000` が含まれる
   When `buildRecordFromPayload` を呼ぶ
   Then `visit_duration === 30000` で返る
 
-Scenario: 異常系 — NaN/Infinity は null に正規化される
+Scenario: 異常系 ― NaN/Infinity は null に正規化される
   Given payload に `visit_duration: "not-a-number"`, `scroll_ratio: Infinity` が含まれる
   When `buildRecordFromPayload` を呼ぶ
   Then 両フィールドは `null` になり SQLite CHECK に違反しない

@@ -1,4 +1,4 @@
-# C4: Service Worker Handler Dependency Narrowing + Registry — Design Spec
+# C4: Service Worker Handler Dependency Narrowing + Registry ― Design Spec
 
 **Date:** 2026-07-13
 **Scope:** Refactor handler dependencies from singleton-object injection to method-level injection. Replace the 15-branch if-else dispatch chain with a typed `MessageHandlerRegistry`. Extract composition into `createBackgroundServices()`.
@@ -153,9 +153,9 @@ chrome.tabs.onUpdated.addListener(handleTabUpdate);
 
 ### Tests
 
-- **Unit**: Each handler with stubbed deps — verify correct method calls, error paths
-- **Unit**: `MessageHandlerRegistry` — duplicate registration, unknown type, dispatch routing
-- **Unit**: `createBackgroundServices()` — composition order, all services created
+- **Unit**: Each handler with stubbed deps ― verify correct method calls, error paths
+- **Unit**: `MessageHandlerRegistry` ― duplicate registration, unknown type, dispatch routing
+- **Unit**: `createBackgroundServices()` ― composition order, all services created
 
 ### Risks
 

@@ -16,12 +16,12 @@
 
 ## 証拠(レビュー由来・配線を直接確認済み)
 
-- `src/dashboard/masterPassword.ts:327-330` — change ハンドラが `if (isChecked) { this.showPasswordModal('set'); }` で設定状態を判定せず set モーダルを開く
-- `src/dashboard/masterPassword.ts:249-258` — `closePasswordAuthModal` が `masterPasswordEnabled.checked` を復元しないため「OFF 表示 + storage は ENABLED」の desync が生じる(乗っ取りの前提条件)
-- `src/dashboard/masterPassword.ts:217-218` — set 分岐は `setMasterPasswordService(password)` に旧パスワードを渡さない
-- `src/utils/storage/encryptionSession.ts:565-570` — `setMasterPassword` は `MASTER_PASSWORD_ENABLED` を読まず、`:458` は新パスワードの policy 検査のみ
-- `src/utils/storage/encryptionSession.ts:380-384` — ciphertext が無い場合 fast path で `resolveKeys` が呼ばれず旧 KEK 検証が発生しない
-- `src/utils/storage/encryptionSession.ts:482-488` — `MASTER_PASSWORD_SALT/HASH/ENABLED/IS_LOCKED` を上書き
+- `src/dashboard/masterPassword.ts:327-330` ― change ハンドラが `if (isChecked) { this.showPasswordModal('set'); }` で設定状態を判定せず set モーダルを開く
+- `src/dashboard/masterPassword.ts:249-258` ― `closePasswordAuthModal` が `masterPasswordEnabled.checked` を復元しないため「OFF 表示 + storage は ENABLED」の desync が生じる(乗っ取りの前提条件)
+- `src/dashboard/masterPassword.ts:217-218` ― set 分岐は `setMasterPasswordService(password)` に旧パスワードを渡さない
+- `src/utils/storage/encryptionSession.ts:565-570` ― `setMasterPassword` は `MASTER_PASSWORD_ENABLED` を読まず、`:458` は新パスワードの policy 検査のみ
+- `src/utils/storage/encryptionSession.ts:380-384` ― ciphertext が無い場合 fast path で `resolveKeys` が呼ばれず旧 KEK 検証が発生しない
+- `src/utils/storage/encryptionSession.ts:482-488` ― `MASTER_PASSWORD_SALT/HASH/ENABLED/IS_LOCKED` を上書き
 - 対比: `changeMasterPassword` は `:676` で `unlockWithPassword(oldPassword)` を必ず通す
 
 ## BDD 受け入れシナリオ

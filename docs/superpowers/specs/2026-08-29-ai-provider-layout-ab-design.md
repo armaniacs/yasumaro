@@ -1,9 +1,9 @@
-# AIプロバイダ設定 A/B 比較実験 — 設計書
+# AIプロバイダ設定 A/B 比較実験 ― 設計書
 
 - Date: 2026-08-29
 - Topic: AIプロバイダ設定のA（優先度一体型：現行）とB（優先度と設定を分離）のトグル比較
 - Approach: 案2 単一状態＋二つのレンダラー
-- Status: Draft — 要レビュー
+- Status: Draft ― 要レビュー
 
 ## 1. 背景と目的
 
@@ -20,13 +20,13 @@ chrome.storage.local
   - openai_base_url / openai_api_key / openai_model
   - openai_2_*, lm_studio_*, ollama_*, provider_*
   + ai_provider_layout: 'a'|'b'               // 新規、実験用
-        ↕
+        ↑↓
 SettingsRepository + settingsFormBinding (GENERAL_SETTINGS_SCHEMA駆動)
-        ↕
+        ↑↓
 generalSettingsPanel.ts
   - ヘッダートグル（segmented control）→ ai_provider_layout保存 → refreshAIProviderLayout()
   - if (layout==='b') renderB() else renderA()
-        ↕
+        ↑↓
 Background: RemoteAIService.resolveProviderSlots() / FallbackAIService（変更なし）
 ```
 
@@ -165,7 +165,7 @@ if (layout == null) {
 ### Unit (Vitest)
 
 - `priorityListView.test.ts`: 重複許可/禁止、ドラッグ順序、空スロット、collectBSlotsのtrim/空無視
-- `providerAccordionView.test.ts`: 開閉、A↔B切替で値保持、data-storage-keyの保持
+- `providerAccordionView.test.ts`: 開閉、A⇔B切替で値保持、data-storage-keyの保持
 - `layoutToggle.test.ts`: 初期値出し分け（新規/既存/既に設定済み）、永続化、aria-pressed
 
 ### Integration
@@ -175,7 +175,7 @@ if (layout == null) {
 
 ### Manual / E2E (Playwright)
 
-- Dashboardで A↔Bを10回切替 → 入力値が消えない
+- Dashboardで A⇔Bを10回切替 → 入力値が消えない
 - 新規プロファイル（storageクリア）でBが初期表示、既存プロファイルでAが維持
 - 同一provider+異なるmodelの重複が保存できること、同一modelの重複で警告が出ること
 

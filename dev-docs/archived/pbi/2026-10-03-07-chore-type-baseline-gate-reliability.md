@@ -68,4 +68,4 @@ Scenario: local-only の裁定は正直に文書化される
 - `testDir/__tests__/type-test-baseline.test.ts`: crash 経路 3 件 + include/exclude set pin、計 9 テスト（修正前は stub 空出力のみ）。
 - `CHANGELOG.md:1192`: 「テストコードに型エラーを持ち込むと CI が落ちる」の stale 記載を現行仕様（baseline pin が CI validate で合否判定）に整合。
 - 検証: baseline PASS 489/489 / npm test 15,465 pass / npm run validate exit 0。
-- 逸脱: summary 行検出による sanity は採用せず exit-code sanity を採用 — 実測 tsc 6.0.3 では「Found N errors」要約行は pretty モードのみで出力され（ANSI ラップがエラー行正規表現を壊す）、summary は sanity シグナルにならないため。総数比較の swap 限界（exit ちょうど 2 で部分エラーリストを出す crash は完走と区別できず通過する残留穴）をスクリプトヘッダに文書化。
+- 逸脱: summary 行検出による sanity は採用せず exit-code sanity を採用 ― 実測 tsc 6.0.3 では「Found N errors」要約行は pretty モードのみで出力され（ANSI ラップがエラー行正規表現を壊す）、summary は sanity シグナルにならないため。総数比較の swap 限界（exit ちょうど 2 で部分エラーリストを出す crash は完走と区別できず通過する残留穴）をスクリプトヘッダに文書化。

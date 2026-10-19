@@ -104,11 +104,11 @@ Scenario: popup の mainStatus が単一実装の契約に乗る
 
 ## 技術的考慮事項
 
-- (a) stale-timer race: `src/utils/ui/settingsUiHelper.ts:59-64` — `showStatus` は `setTimeout` を発火するだけで同要素の前回タイマーを `cancel` しない。同一要素に短時間で 2 回呼ぶと古いタイマーが新しいメッセージを早期 clear する（例: 3s success の直後に 5s error → 3s 後に error が消える）。
+- (a) stale-timer race: `src/utils/ui/settingsUiHelper.ts:59-64` ― `showStatus` は `setTimeout` を発火するだけで同要素の前回タイマーを `cancel` しない。同一要素に短時間で 2 回呼ぶと古いタイマーが新しいメッセージを早期 clear する（例: 3s success の直後に 5s error → 3s 後に error が消える）。
 - (b) markup utility class の脱落: `src/utils/ui/settingsUiHelper.ts:59-64` の全要素書き換え（`el.className = \`${STATUS_BASE_CLASS} ${type}\``）のため、markup が宣言した `status-message-spaced` / `mt-4` などの spacing class が最初の `showStatus` で消える。pin は `src/utils/ui/__tests__/statusMessageCssContract.test.ts` に済み。
 - (b) の採用候補: (i) spacing を `.status-message` ベース CSS へ吸収 / (ii) keep-list 方式（既知 utility class を退避・復元）。(i) を推奨する。
 - (b) の注意: margin-top 12px が全 status 要素に付く挙動は 15 の DoD で意図的変化として宣言済みであり、(i) 採用時も変えない。
-- (c) popup mainStatus の旧経路: `src/popup/statusPanel.ts:317-350` — `document.getElementById('mainStatus')` → `statusDiv.className = 'success' / 'error'`（素 class・base class なし・タイマー管理なし）が 4 箇所残存。15 の 8 変種対象外だった。
+- (c) popup mainStatus の旧経路: `src/popup/statusPanel.ts:317-350` ― `document.getElementById('mainStatus')` → `statusDiv.className = 'success' / 'error'`（素 class・base class なし・タイマー管理なし）が 4 箇所残存。15 の 8 変種対象外だった。
 - (c) の popup 側契約: `src/popup/statusPanel.ts:426` の 2000ms（popup 専用契約）を基準値とする。
 - 上流 PBI `2026-09-28-15` の決定（`src/utils/ui/settingsUiHelper.ts:59-64` の全要素書き換え方式・単一 class 契約・`durationMs` / `autoClear` オプション）は変更しない。
 - ファイル非重複: (a)(b) は `src/utils/ui/settingsUiHelper.ts` + `entrypoints/options/dashboard.css` + そのテスト、(c) は `src/popup/statusPanel.ts` + そのテスト。互いに独立コミット可能な単位として実装する。

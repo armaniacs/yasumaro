@@ -1,4 +1,4 @@
-# PBI 2026-09-12-04 — RecordRequestBuilder（記録リクエスト構築の単一化・offline retry 損失修正）
+# PBI 2026-09-12-04 ― RecordRequestBuilder（記録リクエスト構築の単一化・offline retry 損失修正）
 
 - **種別**: 🔧非機能追加（refactor + fix）
 - **優先度**: 4 位 / RICE **12.8**（R20 × I2 × C80% / E2.5人日）
@@ -8,16 +8,16 @@
 
 `RecordingData`（約12 optional 診断フィールド）の「どれが一緒に wire を旅するか」という interface 知識が 5 call site で手書きされている:
 
-- `recordingHandlers.ts:167-321` — manual（~95行）と save（~57行）が同意/isSecureUrl/getSettings/record/setUrlContent を copy-paste（70% 重複）。`:181` は `skipAi` を `type==='MANUAL_RECORD'` のときしか読まず PREVIEW_RECORD では黙って捨てる
-- `offlineQueueProcessor.ts:55-62` — `{title,url,content,force:false,skipDuplicateCheck:true,recordType:'manual'} as RecordingData` で byte/ai 統計・tags・maskedCount を全欠落でリトライ + 両分岐 `catch{return false}` 無ログ
-- `notificationHandlers.ts:79-95` — `content:''` で手組み
-- `contextMenuHandlers.ts:56-91` — `slice(0,5000)` magic number（limits.ts 外）+ 手組み envelope
+- `recordingHandlers.ts:167-321` ― manual（~95行）と save（~57行）が同意/isSecureUrl/getSettings/record/setUrlContent を copy-paste（70% 重複）。`:181` は `skipAi` を `type==='MANUAL_RECORD'` のときしか読まず PREVIEW_RECORD では黙って捨てる
+- `offlineQueueProcessor.ts:55-62` ― `{title,url,content,force:false,skipDuplicateCheck:true,recordType:'manual'} as RecordingData` で byte/ai 統計・tags・maskedCount を全欠落でリトライ + 両分岐 `catch{return false}` 無ログ
+- `notificationHandlers.ts:79-95` ― `content:''` で手組み
+- `contextMenuHandlers.ts:56-91` ― `slice(0,5000)` magic number（limits.ts 外）+ 手組み envelope
 
 新 field 追加が 5 箇所同期編集で、1 箇所漏れると静かに劣化する（実際に offline で漏れている）。
 
 ## スコープ
 
-- `src/background/recordRequestBuilder.ts` 新設: `buildRecordRequest(source, fields)` — canonical field テーブル（現 pickDefined リスト）+ source 別政策行（force / skipDuplicateCheck / alreadyProcessed / content 取得法 / slice cap）
+- `src/background/recordRequestBuilder.ts` 新設: `buildRecordRequest(source, fields)` ― canonical field テーブル（現 pickDefined リスト）+ source 別政策行（force / skipDuplicateCheck / alreadyProcessed / content 取得法 / slice cap）
 - manual/save ハンドラの重複骨格を builder 経由に統合、offline の `as` cast 解消、contextMenu の 5000 を named constant 化
 - offline リトライで統計が保持される回帰テスト新設
 - PREVIEW_RECORD の `skipAi` は現契約（payload 型が持たない）を pin する明示的テストを残す（契約拡張は本 PBI のスコープ外）
@@ -51,7 +51,7 @@ Then force・skipDuplicateCheck・alreadyProcessed・content cap が政策テー
 
 ## 実装メモ（2026-09-12）
 
-- `src/background/recordRequestBuilder.ts` 新設: `buildRecordRequest(source, fields)` — SOURCE_POLICY テーブル（manual / save / offline-retry / notification-confirm / valid-visit）+ canonical diagnostic field テーブル。明示 field が政策を上書き
+- `src/background/recordRequestBuilder.ts` 新設: `buildRecordRequest(source, fields)` ― SOURCE_POLICY テーブル（manual / save / offline-retry / notification-confirm / valid-visit）+ canonical diagnostic field テーブル。明示 field が政策を上書き
 - offline リトライの統計保持は 2 段構成: `stepExecutor.enqueueOfflineJob` がジョブ payload に byte/ai 統計を同梱するようにし、`offlineQueueProcessor` が builder 経由で復元（旧 `as RecordingData` cast と欠落を解消）
 - offline 両分岐の `catch { return false }` を logWarn/logError 付きに（毒ジョブと一時失敗を識別可能に）
 - contextMenu の slice(5000) を `CONTEXT_MENU_CONTENT_MAX_CHARS` 定数化（executeScript args 経由）、recordingHandlers の `sites.google.com` を `GOOGLE_SITES_HOST` 定数化

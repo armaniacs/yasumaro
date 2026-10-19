@@ -41,7 +41,7 @@ Scenario: 副作用が onReady に局所化される
   Then  `setPendingWriteQueue` と `setSqliteHealthCheck` が manifest の onReady で 1 回だけ呼ばれる
   And   service-worker.ts は compose 呼び出し以外に副作用を持たない
 
-Scenario: 境界 — テストで override が manifest 差し替えとして機能する
+Scenario: 境界 ― テストで override が manifest 差し替えとして機能する
   Given テストが `container.override('sqliteClient', fakeClient)` を呼んだ後に `createBackgroundServices(container)` を呼ぶ
   When  `recordingPipeline` が解決される
   Then  fakeClient を受け取った pipeline が生成される
@@ -61,11 +61,11 @@ Scenario: 境界 — テストで override が manifest 差し替えとして機
 - 単体: Manifest 型推論（型レベルテスト）、deps 解決順序、singleton 保証（2 回 resolve で同一インスタンス）
 
 ## 見積もり
-3 pt（要チームでの見積もり）— Manifest 型と builder 1pt + alias 削除と呼出元置換 1pt + 副作用移設と import 削減 1pt
+3 pt（要チームでの見積もり）― Manifest 型と builder 1pt + alias 削除と呼出元置換 1pt + 副作用移設と import 削減 1pt
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする（Manifest 型推論の型レベルテストは見送り — `deps` フィールドを持たない設計にしたため推論の必要がない）
-- [x] コードレビュー完了（service-worker / handlers / storage の影響確認 — 2026-09-01）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（Manifest 型推論の型レベルテストは見送り ― `deps` フィールドを持たない設計にしたため推論の必要がない）
+- [x] コードレビュー完了（service-worker / handlers / storage の影響確認 ― 2026-09-01）
 - [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §2.2 Service Worker Composition Root を新設。ADR 2026-08-20 に循環 2 の配線整理を追記）
 - [x] `npm run validate` が green
 

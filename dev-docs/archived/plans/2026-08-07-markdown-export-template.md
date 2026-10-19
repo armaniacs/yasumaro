@@ -122,7 +122,7 @@ git commit -m "feat: MarkdownテンプレートのStorageKeysを追加"
 
 ---
 
-### Task 3: `markdownTemplateUtils.ts` — デフォルトテンプレートとレンダリング関数(TDD)
+### Task 3: `markdownTemplateUtils.ts` ― デフォルトテンプレートとレンダリング関数(TDD)
 
 **Files:**
 - Create: `src/utils/markdownTemplateUtils.ts`
@@ -228,7 +228,7 @@ describe('markdownTemplateUtils', () => {
 - [ ] **Step 2: テストを実行して失敗することを確認**
 
 Run: `npx jest src/utils/__tests__/markdownTemplateUtils.test.ts`
-Expected: FAIL — `Cannot find module '../markdownTemplateUtils.js'`
+Expected: FAIL ― `Cannot find module '../markdownTemplateUtils.js'`
 
 - [ ] **Step 3: `markdownTemplateUtils.ts` を実装(デフォルトテンプレート・レンダリング関数のみ)**
 
@@ -317,7 +317,7 @@ git commit -m "feat: Markdownテンプレートのレンダリング関数を追
 
 ---
 
-### Task 4: `markdownTemplateUtils.ts` — バリデーション(TDD)
+### Task 4: `markdownTemplateUtils.ts` ― バリデーション(TDD)
 
 **Files:**
 - Modify: `src/utils/markdownTemplateUtils.ts`
@@ -387,7 +387,7 @@ import {
 - [ ] **Step 2: テストを実行して失敗することを確認**
 
 Run: `npx jest src/utils/__tests__/markdownTemplateUtils.test.ts`
-Expected: FAIL — `validateTemplate is not a function`
+Expected: FAIL ― `validateTemplate is not a function`
 
 - [ ] **Step 3: `validateTemplate` を実装**
 
@@ -455,7 +455,7 @@ git commit -m "feat: Markdownテンプレートのバリデーションを追加
 
 ---
 
-### Task 5: `markdownTemplateUtils.ts` — CRUD 関数(TDD)
+### Task 5: `markdownTemplateUtils.ts` ― CRUD 関数(TDD)
 
 **Files:**
 - Modify: `src/utils/markdownTemplateUtils.ts`
@@ -551,7 +551,7 @@ import {
 - [ ] **Step 2: テストを実行して失敗することを確認**
 
 Run: `npx jest src/utils/__tests__/markdownTemplateUtils.test.ts`
-Expected: FAIL — `createTemplate is not a function`(他も同様に未定義)
+Expected: FAIL ― `createTemplate is not a function`(他も同様に未定義)
 
 - [ ] **Step 3: CRUD 関数を実装**
 
@@ -718,7 +718,7 @@ describe('formatMarkdownStep', () => {
 - [ ] **Step 3: テストを実行して失敗することを確認**
 
 Run: `npx jest src/background/pipeline/steps/__tests__/formatMarkdownStep.test.ts`
-Expected: FAIL — `result.markdownEntryData` が `undefined`
+Expected: FAIL ― `result.markdownEntryData` が `undefined`
 
 - [ ] **Step 4: `RecordingContext` に `markdownEntryData` フィールドを追加**
 
@@ -844,7 +844,7 @@ describe('buildDailyMarkdown', () => {
 - [ ] **Step 3: テストを実行して失敗することを確認**
 
 Run: `npx jest src/background/pipeline/steps/__tests__/saveLocalMarkdownStep.test.ts`
-Expected: FAIL — `buildDailyMarkdown` の引数不一致、または `entryData` プロパティが `MarkdownEntry` に存在しない
+Expected: FAIL ― `buildDailyMarkdown` の引数不一致、または `entryData` プロパティが `MarkdownEntry` に存在しない
 
 - [ ] **Step 4: `MarkdownEntry` に `entryData` フィールドを追加**
 
@@ -1108,7 +1108,7 @@ Run: `find src/utils/__tests__ -iname "*storage*"`
 - [ ] **Step 3: テストを実行して失敗することを確認**
 
 Run: `npx jest src/utils/__tests__/storage`
-Expected: FAIL — デフォルト値が `undefined`
+Expected: FAIL ― デフォルト値が `undefined`
 
 - [ ] **Step 4: `DEFAULT_SETTINGS` に追加**
 
@@ -1134,7 +1134,7 @@ git commit -m "feat: MARKDOWN_EXPORT_TEMPLATESのデフォルト値を追加"
 
 ---
 
-### Task 10: 管理パネル UI — テンプレート一覧・CRUD 操作
+### Task 10: 管理パネル UI ― テンプレート一覧・CRUD 操作
 
 **Files:**
 - Create: `src/dashboard/panels/staticForm/markdownTemplatePanel.ts`

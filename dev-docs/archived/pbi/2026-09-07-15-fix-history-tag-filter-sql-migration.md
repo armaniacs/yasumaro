@@ -206,9 +206,9 @@ Scenario: バックエンドが tag フィルタを honor しない場合の挙�
    `filterRowsByTag` はカンマ split 後の `includes` 部分一致。SQL 側は
    `buildTagFilterCondition`（`sqliteQueryBuilder.ts`）に統一:
    - 3 文字以上 + FTS5 利用可 → trigram `MATCH`（phrase quote した生の語、**`#` prefix を付けない**
-     — trigram は連続部分一致なので `AI` は `#AImaster` にヒットし、旧 client 挙動と同じ）
+     ― trigram は連続部分一致なので `AI` は `#AImaster` にヒットし、旧 client 挙動と同じ）
    - 3 文字未満 or FTS 無し → `tags LIKE '%<term>%'`（全表スキャン。`%`/`_` はワイルドカード
-     として機能 — LIKE 検索パスと同一の documented 挙動）
+     として機能 ― LIKE 検索パスと同一の documented 挙動）
 2. **性能 = 実測で許容判定**。better-sqlite3 + 実スキーマ（FTS5 trigram・trigger 同期）で
    50,000 行を投入して計測:
    - `tags LIKE '%AI%'` rows: median 3.2ms / p95 3.2ms（6,428 件一致・COUNT 込み 3.1ms）
@@ -241,4 +241,4 @@ Scenario: バックエンドが tag フィルタを honor しない場合の挙�
 ### 検証
 
 - type-check / offscreen 961 tests / dashboard+messaging 1451 / background 1291 /
-  utils+popup+content 3841 — 全 green（2026-09-11 時点）。
+  utils+popup+content 3841 ― 全 green（2026-09-11 時点）。

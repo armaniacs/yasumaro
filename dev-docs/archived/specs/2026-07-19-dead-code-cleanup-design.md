@@ -7,7 +7,7 @@
 ## Overview
 
 Remove 10 dead code symbols identified by static analysis across 8 files.
-No functional changes — all symbols are confirmed unreferenced by any production code, test, or runtime dispatch.
+No functional changes ― all symbols are confirmed unreferenced by any production code, test, or runtime dispatch.
 
 ## Removal Targets
 
@@ -45,7 +45,7 @@ npm test             # All existing tests pass
 npm run build        # Production build succeeds
 ```
 
-No new tests needed — this is pure removal with no new functionality.
+No new tests needed ― this is pure removal with no new functionality.
 
 ## Scope Boundaries
 

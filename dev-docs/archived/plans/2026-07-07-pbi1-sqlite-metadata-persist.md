@@ -1,10 +1,10 @@
-# PBI-1: SQLite への診断メタデータ永続化 — Implementation Plan
+# PBI-1: SQLite への診断メタデータ永続化 ― Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) for syntax tracking.
 
 **Goal:** Add 21 new columns to SQLite `browsing_logs` table for diagnostic metadata (tokens, bytes, AI info, durations, L0 extraction, fallback flag). Extend BrowsingLogRecord type, update pipeline to write these fields, add ALTER TABLE migration for existing DBs, and update insert/update in both sqlite.ts and opfsWorker.ts.
 
-**Architecture:** Schema migration via `ALTER TABLE ADD COLUMN` with try/catch for idempotency. Pipeline `createSaveSqliteStep` extracts fields from context and passes to `saveSqliteStep`. New fields are nullable — existing records get NULL. Content column is added to schema but always saved as null (reserved for PBI-3).
+**Architecture:** Schema migration via `ALTER TABLE ADD COLUMN` with try/catch for idempotency. Pipeline `createSaveSqliteStep` extracts fields from context and passes to `saveSqliteStep`. New fields are nullable ― existing records get NULL. Content column is added to schema but always saved as null (reserved for PBI-3).
 
 **Tech Stack:** SQLite (wa-sqlite), OPFS Worker, TypeScript, Jest/Vitest
 
@@ -20,7 +20,7 @@
 - [ ] **Step 1: Add new fields to BrowsingLogRecord interface**
 
 ```typescript
-// src/utils/sqlite-types.ts — add after obsidian_synced
+// src/utils/sqlite-types.ts ― add after obsidian_synced
 export interface BrowsingLogRecord {
   id?: number;
   url: string;
@@ -58,7 +58,7 @@ export interface BrowsingLogRecord {
 }
 ```
 
-Note: `BrowsingLogEntry` (`Omit<BrowsingLogRecord, 'is_deleted'> & { id: number }`) automatically inherits the new fields — no change needed.
+Note: `BrowsingLogEntry` (`Omit<BrowsingLogRecord, 'is_deleted'> & { id: number }`) automatically inherits the new fields ― no change needed.
 
 - [ ] **Step 2: Run type-check to verify**
 
@@ -80,7 +80,7 @@ git commit -m "feat(pbi1): extend BrowsingLogRecord with diagnostic metadata fie
 
 **Files:**
 - Modify: `src/offscreen/schema.ts` (SCHEMA_SQL)
-- Modify: `src/offscreen/sqlite.ts` (initDatabase — migration execution)
+- Modify: `src/offscreen/sqlite.ts` (initDatabase ― migration execution)
 
 - [ ] **Step 1: Extend SCHEMA_SQL in schema.ts**
 
@@ -163,7 +163,7 @@ for (const colDef of newColumns) {
   try {
     await sqlExec(`ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
   } catch {
-    // Column already exists — safe to ignore
+    // Column already exists ― safe to ignore
   }
 }
 ```
@@ -263,11 +263,11 @@ Find the `insert()` function (around line 504). Update the INSERT SQL and parame
 
 - [ ] **Step 2: Insert new columns into the batch `insertBatch()` function**
 
-Find the `insertBatch()` function (around line 562). Same change as Step 1 — update the INSERT SQL and parameters.
+Find the `insertBatch()` function (around line 562). Same change as Step 1 ― update the INSERT SQL and parameters.
 
 - [ ] **Step 3: Insert new columns into the migration helper insert**
 
-Find the migration code block (around line 333). Same change — update the INSERT SQL and parameters.
+Find the migration code block (around line 333). Same change ― update the INSERT SQL and parameters.
 
 - [ ] **Step 4: Insert new columns into `tryOpfsProxy`-based insert (offscreen.ts)**
 
@@ -323,7 +323,7 @@ git commit -m "feat(pbi1): update sqlite.ts insert/batch/ALLOWED_ORDER_COLUMNS w
 - [ ] **Step 1: Update handleInsert in opfsWorker.ts**
 
 ```typescript
-// Around line 277 — update INSERT SQL
+// Around line 277 ― update INSERT SQL
 await sqlExec(
   `INSERT INTO browsing_logs (
     url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio,
@@ -366,7 +366,7 @@ await sqlExec(
 
 - [ ] **Step 2: Update handleInsertBatch in opfsWorker.ts**
 
-Find `handleInsertBatch` (around line 410). Same change as Step 1 — update the INSERT SQL and parameters in the batch loop.
+Find `handleInsertBatch` (around line 410). Same change as Step 1 ― update the INSERT SQL and parameters in the batch loop.
 
 - [ ] **Step 3: Add ALTER TABLE migration to handleOpenDatabase in opfsWorker.ts**
 
@@ -403,7 +403,7 @@ for (const colDef of newColumns) {
   try {
     await sqlExec(`ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
   } catch {
-    // Column already exists — ignore
+    // Column already exists ― ignore
   }
 }
 ```
@@ -426,7 +426,7 @@ git commit -m "feat(pbi1): update opfsWorker.ts insert/batch/migration with new 
 
 ---
 
-### Task 5: Pipeline — createSaveSqliteStep 更新
+### Task 5: Pipeline ― createSaveSqliteStep 更新
 
 **Files:**
 - Modify: `src/background/pipeline/RecordingPipeline.ts` (createSaveSqliteStep)
@@ -437,7 +437,7 @@ Create or modify test file `src/background/pipeline/__tests__/saveSqliteStep.tes
 
 ```typescript
 // Add to existing describe block
-describe('saveSqliteStep — PBI-1 diagnostic metadata', () => {
+describe('saveSqliteStep ― PBI-1 diagnostic metadata', () => {
   it('passes full diagnostic metadata to BrowsingLogRecord', async () => {
     const mockInsert = vi.fn().mockResolvedValue({ id: 42 });
     const mockUpdate = vi.fn().mockResolvedValue(undefined);
@@ -496,7 +496,7 @@ describe('saveSqliteStep — PBI-1 diagnostic metadata', () => {
     const mockInsert = vi.fn().mockResolvedValue({ id: 1 });
     const mockClient = { insert: mockInsert, update: vi.fn() } as unknown as SqliteClient;
 
-    // Minimal record — no PBI-1 fields
+    // Minimal record ― no PBI-1 fields
     const record: BrowsingLogRecord = {
       url: 'https://example.com/minimal',
       title: null,
@@ -524,7 +524,7 @@ describe('saveSqliteStep — PBI-1 diagnostic metadata', () => {
 });
 ```
 
-- [ ] **Step 2: Run test — should fail (new fields not yet in pipeline)**
+- [ ] **Step 2: Run test ― should fail (new fields not yet in pipeline)**
 
 ```bash
 npx vitest run src/background/pipeline/__tests__/saveSqliteStep.test.ts --reporter=verbose 2>&1 | tail -20
@@ -549,7 +549,7 @@ private createSaveSqliteStep() {
     const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
     const { url, title } = data;
 
-    // Build BrowsingLogRecord from pipeline context — including PBI-1 diagnostic fields
+    // Build BrowsingLogRecord from pipeline context ― including PBI-1 diagnostic fields
     const record: BrowsingLogRecord = {
       url,
       title: title || null,
@@ -630,7 +630,7 @@ git commit -m "feat(pbi1): update pipeline to write diagnostic metadata to SQLit
 
 ---
 
-### Task 6: Integration — verify data round-trip
+### Task 6: Integration ― verify data round-trip
 
 **Files:**
 - Tests in `src/offscreen/__tests__/`

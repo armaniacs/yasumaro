@@ -14,12 +14,12 @@
 - 解: Context の `_doInit` で OPFS Worker 生成失敗 → IDB フォールバック、分岐後の `fts5Available` 反映、タイムアウト時の `terminate` を注入テストで追加
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — OPFS Worker が正常に初期化される
+Scenario: ハッピーパス ― OPFS Worker が正常に初期化される
   Given `Worker` 生成が成功する環境
   When `sqliteEngineContext.init()` を呼ぶ
   Then `opfsWorker` が生成され `fts5Available` が `compile_options` から取得される
 
-Scenario: エッジケース — OPFS タイムアウトで IDB にフォールバック
+Scenario: エッジケース ― OPFS タイムアウトで IDB にフォールバック
   Given `Worker` からの応答が 15s 以内に返らない
   When `sendToOpfsWorker` を呼ぶ
   Then `TimeoutError` で IDB エンジンにフォールバックし `fallback` フラグが立つ

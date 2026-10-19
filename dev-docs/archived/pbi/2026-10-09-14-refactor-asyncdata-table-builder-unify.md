@@ -25,8 +25,8 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/dashboard/panels/asyncData/domainAnalysisPanel.ts:73-98`（`renderDomainRows`）と `:100-114`（`renderUrlRows`）— `tr` / nameCell（`th scope=row`）/ `countCell(String(row.count))` の組立が同一で、name cell の button/text のみ差分。`resetOutput`（`:125-128`）も両 body の二重クリア
-- `src/dashboard/panels/asyncData/timeHeatmapPanel.ts:144-185`（`buildHeatmapTable`）と `:187-222`（`buildNumericTable`）— caption・thead（corner th + 時間ループ `:154-159` vs `:197-202` は同一）・tbody の weekday 行ヘッダ（`:164-169` vs `:207-212` も同一）、`td` の描画のみ差分
+- `src/dashboard/panels/asyncData/domainAnalysisPanel.ts:73-98`（`renderDomainRows`）と `:100-114`（`renderUrlRows`）― `tr` / nameCell（`th scope=row`）/ `countCell(String(row.count))` の組立が同一で、name cell の button/text のみ差分。`resetOutput`（`:125-128`）も両 body の二重クリア
+- `src/dashboard/panels/asyncData/timeHeatmapPanel.ts:144-185`（`buildHeatmapTable`）と `:187-222`（`buildNumericTable`）― caption・thead（corner th + 時間ループ `:154-159` vs `:197-202` は同一）・tbody の weekday 行ヘッダ（`:164-169` vs `:207-212` も同一）、`td` の描画のみ差分
 
 改善案: domainAnalysis は `renderRankRows(body, rows, renderNameCell)` 1 つに、timeHeatmap は `buildTable(grid, captionKey, renderCell)` 1 つに統合する（cell 描画をコールバックで切替）。host の null-check（guard）は `resetOutput`/`isReady` の現位置に保持し、生成 DOM は同一。挙動不変。
 
@@ -74,7 +74,7 @@ Then 生成される DOM 構造（要素種別・属性・テキスト・順序�
 
 ## 8. 見積もり
 
-**1.5 SP** — 2 ファイル・4 関数の統合と golden pin の確認。ロジック変更なし、影響範囲は asyncData の 2 ファイル。
+**1.5 SP** ― 2 ファイル・4 関数の統合と golden pin の確認。ロジック変更なし、影響範囲は asyncData の 2 ファイル。
 
 ## 9. DoD
 

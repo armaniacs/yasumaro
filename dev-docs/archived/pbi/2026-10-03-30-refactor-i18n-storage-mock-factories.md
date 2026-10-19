@@ -9,13 +9,13 @@
 順位: 15 / 20
 RICEスコア: 4.5（Reach=5 / Impact=1 / Confidence=0.9 / Effort=1.0 SP）
 根拠: 同一モックの 14 コピーは DRY 違反の典型で、i18n セマンティクス変更時の更新漏れリスクが高い。storage モックの 3 重定義も同様。
-依存: なし（logger モックは別 PBI rank 19 の担当 — 本 PBI では触れない）。
+依存: なし（logger モックは別 PBI rank 19 の担当 ― 本 PBI では触れない）。
 
 ## 背景
 
 - i18n モック: `getMessageOr` / `getMessageWithSubstitutions` の手作りコピーが 14 ファイル（例: `tabSeamNullPin.test.ts:35-45`、`statusPanel-extra.test.ts:60-70`）
-- storage モック: `vitest.setup.ts` で 3 重定義 — `:183-224`（local）、`:225-264`（session）、`:326-347`（sync）で同じ get/set/remove/clear ボディ
-- logger モックのファクトリ化は別 PBI（rank 19）の範囲 — 本 PBI では触れない
+- storage モック: `vitest.setup.ts` で 3 重定義 ― `:183-224`（local）、`:225-264`（session）、`:326-347`（sync）で同じ get/set/remove/clear ボディ
+- logger モックのファクトリ化は別 PBI（rank 19）の範囲 ― 本 PBI では触れない
 
 ## BDD受け入れシナリオ
 
@@ -70,9 +70,9 @@ Scenario: logger モックには触れない
 ## 実装記録
 
 - ファクトリ 2 件: `testDir/i18nMock.ts`（新設。`mockGetMessage(getMessage)` が `getMessage` / `getMessageOr` / `getMessageWithSubstitutions` の同一挙動を返す。fallback 展開の `{name}` トークン挙動は旧手作りコピーと byte 等価）と `testDir/storageMock.ts`（新設。`createStorageAreaMock(store, { clone, remove, clear, getBytesInUse })`）
-- 置換 14 ファイル: dashboard settings 4（contentSettings / customPromptManager-r3 / privacySettings / trustSettings-r3）+ popup 9（pendingPages-errorBoundary / privacyConsentController / privacyConsentController-r2 / privatePageDialog-recordRejection / recordOrchestrator / statusPanel / statusPanel-wireOnce-parity / tabSeamNullPin / trancoNotification）+ statusPanel-extra 1 — すべて `vi.mock('../../utils/i18n.js')` をファクトリ経由へ。旧手作りコピーのコードは削除済み（`getMessageWithSubstitutions: (` の手作り残存は `dashboardLegacyPanelFactories.test.ts` の 1 ファイルのみだが、これは `getMessageWithSubstitutions` が subs を無視する別変種 + getUserLocale/isRTL 拡張を持ち、ファクトリ置換では挙動が変わるため対象外 — 後続候補として記録）
+- 置換 14 ファイル: dashboard settings 4（contentSettings / customPromptManager-r3 / privacySettings / trustSettings-r3）+ popup 9（pendingPages-errorBoundary / privacyConsentController / privacyConsentController-r2 / privatePageDialog-recordRejection / recordOrchestrator / statusPanel / statusPanel-wireOnce-parity / tabSeamNullPin / trancoNotification）+ statusPanel-extra 1 ― すべて `vi.mock('../../utils/i18n.js')` をファクトリ経由へ。旧手作りコピーのコードは削除済み（`getMessageWithSubstitutions: (` の手作り残存は `dashboardLegacyPanelFactories.test.ts` の 1 ファイルのみだが、これは `getMessageWithSubstitutions` が subs を無視する別変種 + getUserLocale/isRTL 拡張を持ち、ファクトリ置換では挙動が変わるため対象外 ― 後続候補として記録）
 - vitest.setup.ts: local / session / sync の 3 重 storage モック定義を `createStorageAreaMock` 1 本に統合（net -195 行）
 - 単体テスト: `testDir/__tests__/i18nMock.test.ts` + `testDir/__tests__/storageMock.test.ts`（新設。モック挙動の契約 pin）
 - ベースライン: 置換前後でテスト結果は同一（324 + 234 のスイープ、`npm test` 全体も同一結果 15583 passed・21 skipped）
-- 統合時の追補: PBI 25 が作成した `trustPanel.test.ts`（未トラッキング）に旧手作り i18n モックのコピーが残っていたため、同一の `mockGetMessage` ファクトリ置換を本 PBI のコミットで適用（1 編集、focused vitest 15 tests green）。同ファイルは本 PBI のコミットに同梱。また `statusPanel-extra.test.ts` の本 PBI 分の置換は、PBI 25 の mainStatus ソース pin 更新と同一ファイルのため PBI 25 のコミットに同梱（ファイル単位の帰属 — 挙動は不変）。`storageMock.test.ts` の未使用 `vi` import は lint ゲートで検出し削除（統合時）
+- 統合時の追補: PBI 25 が作成した `trustPanel.test.ts`（未トラッキング）に旧手作り i18n モックのコピーが残っていたため、同一の `mockGetMessage` ファクトリ置換を本 PBI のコミットで適用（1 編集、focused vitest 15 tests green）。同ファイルは本 PBI のコミットに同梱。また `statusPanel-extra.test.ts` の本 PBI 分の置換は、PBI 25 の mainStatus ソース pin 更新と同一ファイルのため PBI 25 のコミットに同梱（ファイル単位の帰属 ― 挙動は不変）。`storageMock.test.ts` の未使用 `vi` import は lint ゲートで検出し削除（統合時）
 - ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー（119 warning は既存） / `npm test` 15583 passed・21 skipped / `npm run validate` PASS

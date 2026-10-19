@@ -1,4 +1,4 @@
-# PBI: alarm 系3つの onAlarm seam 統合 — timed job 追加を1行に
+# PBI: alarm 系3つの onAlarm seam 統合 ― timed job 追加を1行に
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -15,7 +15,7 @@
 ## 背景（診断結果）
 
 - `chrome.alarms.onAlarm` リスナー登録が3箇所に分散:
-  1. `src/background/alarmRegistry.ts:94-113`（registry 系 — `AlarmJobSpec` テーブル・失敗政策均一）
+  1. `src/background/alarmRegistry.ts:94-113`（registry 系 ― `AlarmJobSpec` テーブル・失敗政策均一）
   2. `src/background/SessionAlarmService.ts:55-77,189-200`（`startTimeoutChecker` + 独自 `setupAlarmListener`・冪等ガード独自実装 `alarmListenerSetUp`）
   3. `src/background/reviewSummaryAlarm.ts:21-50,55-70`（`initializeReviewSummaryAlarms` + 独自 listener・module-global `listenerSetUp`）
 - 冪等な clear→create パターンの重複（SessionAlarmService:57-60 と reviewSummaryAlarm:36-47）
@@ -41,7 +41,7 @@
 
 ### 触ってはいけないもの
 
-- SessionAlarmService の内部 seam（AlarmPort/Clock/StoragePort 注入 — 良い設計として維持）
+- SessionAlarmService の内部 seam（AlarmPort/Clock/StoragePort 注入 ― 良い設計として維持）
 - alarm の動作仕様（タイミング・頻度・データは不変）
 
 ## BDD受け入れシナリオ
@@ -78,4 +78,4 @@ Scenario: registry が alarm を単一 seam で処理する
 
 - [ ] 全BDDシナリオが完了している
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（alarmRegistry 先頭コメント — "Out of scope" 宣言の解消）
+- [ ] ドキュメント更新済み（alarmRegistry 先頭コメント ― "Out of scope" 宣言の解消）

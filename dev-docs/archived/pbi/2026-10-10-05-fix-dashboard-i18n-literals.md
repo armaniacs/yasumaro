@@ -4,7 +4,7 @@
 - RICE: 5.3（R8 × I2 × C1.0 / E3.0）
 - 依存: なし（messages.json の編集を独占する）
 - バッチ: W2
-- 台帳送り消費: F14（cleansingStatsView i18n — i18n カバレッジ改善時トリガー発火）、F17（exportLogsPanel limit: 100000 — export logs panel 触るトリガー発火）
+- 台帳送り消費: F14（cleansingStatsView i18n ― i18n カバレッジ改善時トリガー発火）、F17（exportLogsPanel limit: 100000 ― export logs panel 触るトリガー発火）
 
 ## ユーザーストーリー
 
@@ -14,14 +14,14 @@
 
 AGENTS.md の i18n 約束（user-facing text は data-i18n / t()）からの逸脱。動的生成 status は data-i18n 静的網羅で捉えられず、`getMessageOr` seam が実在するのに迂回されている:
 
-- `src/dashboard/panels/diagnostic/exportLogsPanel.ts:26-110` — 全面ハードコード（英語 `'Exporting JSON…'` `'JSON export completed.'` `'Export failed: ${message}'` `'Binary export requires OPFS storage. Use JSON export instead.'`、日本語 `'取得中...'` `'データがありません'` `監査ログは ${rows.length} / ${total} 件のみ取得できました…` `${rows.length} 件をダウンロードしました` `エラー: ${...}`）。同 `:queryAuditLogs({ limit: 100000 })` — F17、`AUDIT_CAP_IDB`（src/utils/limits.ts）が SSOT
-- `src/dashboard/cleansingFeedbackView.ts:84,87,100,139` — 同一関数内で getMessageOr（ヘッダ）と直書き（`'全削除'` `'報告はありません'` `'削除'`、タイトル `Cleansing Feedback (${entries.length})`）が混在
-- `src/dashboard/cleansingStatsView.ts:327,350,379` — `原文 ${originalLen}字 → …` `除去内容プレビュー: ${diffText}` `削減率 ${reduction.toFixed(1)}%`（F14）
-- `src/dashboard/settings/customPromptManager.ts:383,431,470,588,601` — エラー系のみ直書き（`'Invalid prompt'` `'Cannot edit default prompt…'` `'Cannot delete default prompt'` `'Preset not found'`）、success 系は翻訳済み → en/ja 混在
-- `src/dashboard/encryptedBackupPanel.ts:55,57,74,84,95` — `'暗号化バックアップを作成しました'` 等の日本語リテラル 5 箇所
-- `src/dashboard/gistSettings.ts:83` — `'Gist settings saved'`
-- `src/dashboard/trancoConsent.ts:114` — `|| \`再確認まで ${n} 日\``（{days} 置換手書き）
-- `src/dashboard/localMarkdownExport.ts:74,77` — `${result.totalRows}件の記録を…` `エクスポートに失敗しました: ${errorMessage(e)}`
+- `src/dashboard/panels/diagnostic/exportLogsPanel.ts:26-110` ― 全面ハードコード（英語 `'Exporting JSON…'` `'JSON export completed.'` `'Export failed: ${message}'` `'Binary export requires OPFS storage. Use JSON export instead.'`、日本語 `'取得中...'` `'データがありません'` `監査ログは ${rows.length} / ${total} 件のみ取得できました…` `${rows.length} 件をダウンロードしました` `エラー: ${...}`）。同 `:queryAuditLogs({ limit: 100000 })` ― F17、`AUDIT_CAP_IDB`（src/utils/limits.ts）が SSOT
+- `src/dashboard/cleansingFeedbackView.ts:84,87,100,139` ― 同一関数内で getMessageOr（ヘッダ）と直書き（`'全削除'` `'報告はありません'` `'削除'`、タイトル `Cleansing Feedback (${entries.length})`）が混在
+- `src/dashboard/cleansingStatsView.ts:327,350,379` ― `原文 ${originalLen}字 → …` `除去内容プレビュー: ${diffText}` `削減率 ${reduction.toFixed(1)}%`（F14）
+- `src/dashboard/settings/customPromptManager.ts:383,431,470,588,601` ― エラー系のみ直書き（`'Invalid prompt'` `'Cannot edit default prompt…'` `'Cannot delete default prompt'` `'Preset not found'`）、success 系は翻訳済み → en/ja 混在
+- `src/dashboard/encryptedBackupPanel.ts:55,57,74,84,95` ― `'暗号化バックアップを作成しました'` 等の日本語リテラル 5 箇所
+- `src/dashboard/gistSettings.ts:83` ― `'Gist settings saved'`
+- `src/dashboard/trancoConsent.ts:114` ― `|| \`再確認まで ${n} 日\``（{days} 置換手書き）
+- `src/dashboard/localMarkdownExport.ts:74,77` ― `${result.totalRows}件の記録を…` `エクスポートに失敗しました: ${errorMessage(e)}`
 
 ## BDD 受け入れシナリオ
 

@@ -75,21 +75,21 @@ Scenario: 署名部は対象外である
 | バリアント | 10k行 | 100行（小入力） |
 |---|---|---|
 | TS JSON.parse（pretty） | 5.38ms | 0.060ms |
-| TS JSON.stringify（pretty） | 5.32ms | — |
-| WASM untyped roundtrip（serde_json::Value） | 25.8ms（0.21x） | — |
+| TS JSON.stringify（pretty） | 5.32ms | ― |
+| WASM untyped roundtrip（serde_json::Value） | 25.8ms（0.21x） | ― |
 | WASM typed roundtrip（compact） | 20.1ms（0.27x） | 0.212ms（0.28x） |
-| WASM typed pretty（exportJson の直接置換） | 22.2ms（0.24x） | — |
-| WASM typed→bincode（4.68MB） | 16.9ms（0.32x） | — |
-| WASM rows_to_json（JsValue→serde、現実的な採用形状） | 26.5ms（0.20x） | — |
-| WASM json_to_rows（serde→JsValue） | 29.5ms（0.18x） | — |
+| WASM typed pretty（exportJson の直接置換） | 22.2ms（0.24x） | ― |
+| WASM typed→bincode（4.68MB） | 16.9ms（0.32x） | ― |
+| WASM rows_to_json（JsValue→serde、現実的な採用形状） | 26.5ms（0.20x） | ― |
+| WASM json_to_rows（serde→JsValue） | 29.5ms（0.18x） | ― |
 
 round-trip 等価性は全バリアント OK（内容は正しく保持される。問題は速度のみ）。
 
 判定の理由:
 
-1. **serde-wasm-bindgen の往復コストが判明**: V8 ネイティブ JSON の4〜5倍。JsValue↔serde のリフレクション変換と UTF-8 コピーが支配的
+1. **serde-wasm-bindgen の往復コストが判明**: V8 ネイティブ JSON の4〜5倍。JsValue⇔serde のリフレクション変換と UTF-8 コピーが支配的
 2. **JSON.parse/stringify は V8 の最適化済みネイティブ経路**であり、pii-sanitizer（複雑な正規表現交替を置き換えて勝ち）と違い、置き換え先がネイティブ最速のプリミティブ。転送律速+ネイティブ最速の二重の壁
-3. bincode（コンパクトバイナリ）でも JSON.stringify 未満 — 中間形式の導入も利得なし
+3. bincode（コンパクトバイナリ）でも JSON.stringify 未満 ― 中間形式の導入も利得なし
 4. iteration-1 の eval-2 先行判断（「serde化は勝機なし」）を、serde 実測で裏付けた形
 
 結論: **移植しない（確定）**。エクスポート経路の改善は署名対象の設計変更（eval-2 で特定の HMAC pretty 再シリアライズ排除）へ委ねる。試作クレートはリポジトリ外隔離のまま破棄（判定記録と実測 JSON は本ファイルと `bench/` 履歴に保持）。

@@ -1,4 +1,4 @@
-# PBI 2026-09-12-07 — BadgePolicy（バッジ interface の 4 owner 統合）
+# PBI 2026-09-12-07 ― BadgePolicy（バッジ interface の 4 owner 統合）
 
 - **種別**: 🔧非機能追加（refactor + fix・SW ルール違反解消を伴う）
 - **優先度**: 7 位 / RICE **8.0**（R15 × I1 × C80% / E1.5人日）
@@ -8,10 +8,10 @@
 
 state→表示（text / color / tabId scope）の政策が 4 箇所で再派生している:
 
-- `systemHandlers.ts:149-150` — `C${totalRemoved}` + GREEN（per-tab）+ **`setTimeout` 3s clear（:152-156・SW ルール違反、SW 停止で clear が消滅）**
-- `recordingHandlers.ts:137-142` — `◎`
-- `tabEventHandlers.ts:46-110` — `!` / `∉` / `●` / `''`、global と per-tab が混在（:57,65,68,74,77,85 は global）
-- `consentBadge.ts:20-39` — `!` / clear（global）
+- `systemHandlers.ts:149-150` ― `C${totalRemoved}` + GREEN（per-tab）+ **`setTimeout` 3s clear（:152-156・SW ルール違反、SW 停止で clear が消滅）**
+- `recordingHandlers.ts:137-142` ― `◎`
+- `tabEventHandlers.ts:46-110` ― `!` / `∉` / `●` / `''`、global と per-tab が混在（:57,65,68,74,77,85 は global）
+- `consentBadge.ts:20-39` ― `!` / clear（global）
 
 global `setBadgeText` が per-tab `◎` / `C{n}` を上書き消去する（global clear が全タブの per-tab badge を消す）。
 

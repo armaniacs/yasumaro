@@ -102,7 +102,7 @@ cspValidator.ts [community=10] → isLocalhostAddress() の検証不足
 - **対策**: VULN-013 の修正でポートallowlistを追加し、`skipCspValidation` は削除せず `allowedUrls` でlocalhostを明示的に許可する形に変更
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下が該当することを確認済み）
 ```bash
 grep -n "forceImport\|hmacVerificationFailedConfirm" src/utils/settingsExportImport.ts
 grep -n "127.0.0.1\|isLocalhostAddress" src/utils/cspValidator.ts src/utils/fetch.ts

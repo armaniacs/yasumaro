@@ -1,4 +1,4 @@
-# Test Coverage Analysis — Priority Files
+# Test Coverage Analysis ― Priority Files
 
 ## Testing Conventions
 
@@ -11,7 +11,7 @@
 - **Language:** Test descriptions in Japanese
 - **Structure:** `describe` → `beforeEach` → `test`/`it` with `expect()`
 
-## Priority Tier 1 — Highest ROI
+## Priority Tier 1 ― Highest ROI
 
 | File | Lines | Complexity | Testability | Tests Needed |
 |------|-------|-----------|-------------|-------------|
@@ -25,7 +25,7 @@
 | `saveMetadataStep.ts` | 150 | High | Medium | All metadata fields, best-effort errors, empty fields |
 | `privacy.ts` | 161 | Medium | Easy | escapeHtml, renderMarkdown, renderInline |
 
-## Priority Tier 2 — High Value
+## Priority Tier 2 ― High Value
 
 | File | Lines | Complexity | Testability | Tests Needed |
 |------|-------|-----------|-------------|-------------|
@@ -35,7 +35,7 @@
 | `crypto.ts` | 534 | Medium | Easy | HMAC, signature, hashUrl (additional to 63% existing) |
 | `sessionAlarmsManager.ts` | 183 | Medium | Medium | Activity update, alarm start/stop, timeout check, lock |
 
-## Priority Tier 3 — Medium Value
+## Priority Tier 3 ― Medium Value
 
 | File | Lines | Complexity | Testability | Tests Needed |
 |------|-------|-----------|-------------|-------------|
@@ -45,7 +45,7 @@
 | `trustChecker.ts` | 372 | Medium | Medium | Alert logic, domain check flow, safety mode |
 | `main.ts` | 1329 | Very High | Very Hard | escapeHtml, SVG icons, pending pages, record flow |
 
-## Priority Tier 4 — Lower Priority
+## Priority Tier 4 ― Lower Priority
 
 | File | Lines | Complexity | Testability | Why Lower |
 |------|-------|-----------|-------------|-----------|
@@ -61,7 +61,7 @@
 
 ## Recommended Testing Order
 
-1. **Week 1:** All Tier 1 files (9 files, ~870 lines total) — pure logic, fast wins
-2. **Week 2:** Tier 2 files (5 files, ~2,800 lines) — core utilities
+1. **Week 1:** All Tier 1 files (9 files, ~870 lines total) ― pure logic, fast wins
+2. **Week 2:** Tier 2 files (5 files, ~2,800 lines) ― core utilities
 3. **Week 3:** Top Tier 3 files (`trustSettings.ts`, `ublockImport/index.ts`, `storage.ts`)
 4. **Week 4:** Remaining Tier 3 + selected Tier 4 files

@@ -10,8 +10,8 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read・grep で確認済み:
-- `entrypoints/permissions/index.html:2` — `<html lang="ja">` 固定
-- `entrypoints/permissions/index.html:11` — `読み込み中...` が直接ハードコード
+- `entrypoints/permissions/index.html:2` ― `<html lang="ja">` 固定
+- `entrypoints/permissions/index.html:11` ― `読み込み中...` が直接ハードコード
 - 他entrypoint（`src/popup/`, `entrypoints/options/`）には `data-i18n` 属性を使った確立されたi18nパターンが既に存在し、それに追従するだけで対応可能（side-effects.md M22判定で確認済み）
 
 ```bash
@@ -40,7 +40,7 @@ Scenario: 日本語環境では従来通り日本語表示される
 ## 受け入れ基準
 - [ ] `entrypoints/permissions/index.html` の日本語ハードコードテキストに `data-i18n` 属性を付与
 - [ ] `public/_locales/en/messages.json` と `public/_locales/ja/messages.json` に対応するメッセージキーを追加
-- [ ] `lang` 属性を他entrypointと同様、i18n APIから動的に設定するよう変更（初期値は空文字ではなくデフォルト言語を設定 — M19と同様の注意点）
+- [ ] `lang` 属性を他entrypointと同様、i18n APIから動的に設定するよう変更（初期値は空文字ではなくデフォルト言語を設定 ― M19と同様の注意点）
 - [ ] Permissionsページのi18n初期化ロジック（他entrypointの `applyI18n` 相当関数）を追加または既存共通モジュールから流用
 
 ## テスト戦略（t_wadaスタイル）

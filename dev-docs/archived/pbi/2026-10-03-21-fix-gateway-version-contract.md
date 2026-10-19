@@ -14,8 +14,8 @@
 
 ## 背景
 
-- `src/messaging/dashboardGateway.ts:61` — `protocolVersion: CURRENT_PROTOCOL_VERSION` を自前でスタンプし、生の `TransportPort.send` で送信している。
-- `src/messaging/messageTransport.ts:59-60` — 契約は「Senders must not stamp the version themselves — send() does it for every message」。自己スタンプは契約違反。
+- `src/messaging/dashboardGateway.ts:61` ― `protocolVersion: CURRENT_PROTOCOL_VERSION` を自前でスタンプし、生の `TransportPort.send` で送信している。
+- `src/messaging/messageTransport.ts:59-60` ― 契約は「Senders must not stamp the version themselves ― send() does it for every message」。自己スタンプは契約違反。
 - 生の `TransportPort.send` 使用により、`VALID_MESSAGE_TYPES` による検証経路も迂回されている。
 
 ## BDD受け入れシナリオ

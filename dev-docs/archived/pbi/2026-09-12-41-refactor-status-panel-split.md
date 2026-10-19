@@ -1,4 +1,4 @@
-# PBI 2026-09-12-41 — StatusPanel split（statusRenderers 抽出 + 実バグ 3 件同時解消）
+# PBI 2026-09-12-41 ― StatusPanel split（statusRenderers 抽出 + 実バグ 3 件同時解消）
 
 - **種別**: 🔧非功能追加（refactor + fix・trigger 発火済み）
 - **優先度**: 4 位 / RICE **4.8**（R15 × I1 × C80% / E2.5人日）
@@ -10,16 +10,16 @@
 
 **実バグ 3 件（検証済み）**:
 
-1. **trust deny path の非解析 URL throw**: `:158` — `new URL(url).hostname` が非解析 URL で throw し errorMsg toast が表示されない（`extractDomain` が既に import 済み）
-2. **stale-closure URL**: `:152-159` — click closure が render 時の `url` を capture し、遷移後のクリックで誤 host に許可要求（修正: click 時に chrome.tabs 再取得 — initAllUrlsPermissionBanner:457-460 と同型）
-3. **toast タイマー競合**: `:165-170` — 連続 deny で 2 つの setTimeout チェーンが競合（per-element timer token）
+1. **trust deny path の非解析 URL throw**: `:158` ― `new URL(url).hostname` が非解析 URL で throw し errorMsg toast が表示されない（`extractDomain` が既に import 済み）
+2. **stale-closure URL**: `:152-159` ― click closure が render 時の `url` を capture し、遷移後のクリックで誤 host に許可要求（修正: click 時に chrome.tabs 再取得 ― initAllUrlsPermissionBanner:457-460 と同型）
+3. **toast タイマー競合**: `:165-170` ― 連続 deny で 2 つの setTimeout チェーンが競合（per-element timer token）
 
 **非バグ確認**: attachPrivacyActionListeners の裸 addEventListener は innerHTML 再構築で safe（wireOnce は誤り）、XSS escape 紀律も良好。
 
 ## スコープ
 
 - `statusRenderers.ts`（Layer-0: string in → string out・`{t, esc}` 注入）新設、7 関数抽出: renderCleansingHtml（:104-124）/ renderLockedHtml（:144）/ renderTrustHtml（:187-201）/ renderPrivacyHtml（:283-307）/ renderCacheHtml（:318-335）/ renderDomainStateHtml（:264-274）/ renderLastSavedHtml（:340-348）
-- wiring（DOM/classList/wireOnce/timer/dynamic import）は statusPanel に保持 — 動的 import は section に移さない
+- wiring（DOM/classList/wireOnce/timer/dynamic import）は statusPanel に保持 ― 動的 import は section に移さない
 - 実バグ 3 件の fix（extractDomain / click 時 tabs 再取得 / timer token）
 - テスト: cleansing + trust の string assertion を statusRenderers.test.ts（純粋 unit）へ移行、wiring テストは薄化
 

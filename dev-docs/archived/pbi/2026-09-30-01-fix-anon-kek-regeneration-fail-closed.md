@@ -16,8 +16,8 @@
 
 ## 証拠(レビュー由来)
 
-- `src/utils/storage/encryptionSession.ts:296-298` — `if (!saltBase64 || !secret)` で `generateAndPersistSecret()` が走り、`:177-180` が既存 ENCRYPTION_SALT を含めて上書きする
-- 鏡像ケース(secret あり salt なし)は `:285-294` で `CORRUPTION: encryption salt missing` として fail-closed — 非対称は omission
+- `src/utils/storage/encryptionSession.ts:296-298` ― `if (!saltBase64 || !secret)` で `generateAndPersistSecret()` が走り、`:177-180` が既存 ENCRYPTION_SALT を含めて上書きする
+- 鏡像ケース(secret あり salt なし)は `:285-294` で `CORRUPTION: encryption salt missing` として fail-closed ― 非対称は omission
 - トリガー条件: salt があり secret が欠けた状態(部分復元・破損)。この状態で API キー ciphertext が残っていれば全件孤立する
 
 ## BDD 受け入れシナリオ

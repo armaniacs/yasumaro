@@ -94,7 +94,7 @@ export async function clearAllLogs(): Promise<boolean> {
 ### なぜなぜ分析
 
 **なぜ1**: なぜ6層あるのか
-→ SW ↔ offscreen、dashboard ↔ SW という**2つのプロセス境界**があり、
+→ SW ⇔ offscreen、dashboard ⇔ SW という**2つのプロセス境界**があり、
 各境界に送信側・受信側があるから（2境界 × 2 = 4層 + 型定義2層）。
 
 **なぜ2**: 境界が2つあるのは仕方ないのでは
@@ -111,7 +111,7 @@ export async function clearAllLogs(): Promise<boolean> {
 **なぜ5（根本）**
 **操作という概念が「宣言」として存在せず、
 6箇所の実装の中に暗黙的に散らばっているから。**
-`TOKEN_REQUIRED_SUBTYPES` という定数の存在がその証拠 —
+`TOKEN_REQUIRED_SUBTYPES` という定数の存在がその証拠 ―
 「トークンが要るか」は操作の属性なのに、操作から切り離されて別の一覧になっている。
 
 ### 実際に起きた事故
@@ -222,7 +222,7 @@ Phase 3 は着手前にシニアと相談する。
 
 ## 見積もり
 
-🔴大（8pt / Epic）— Phase 1: 2pt、Phase 2: 3pt、Phase 3: 3pt。
+🔴大（8pt / Epic）― Phase 1: 2pt、Phase 2: 3pt、Phase 3: 3pt。
 
 ---
 
@@ -369,8 +369,8 @@ Phase 3 には着手していない。
 - [x] Phase 3（tokenExempt 方式の単一ソース化）の受け入れ基準を満たす
 - [x] confirmToken のセキュリティテストが通る（データ駆動 it.each + 許可リスト整合性テストを追加）
 - [x] `npm run validate` / `npm run build` が通る（426ファイル・7750テスト）
-- [x] シニア相談実施（`dev-docs/archived/plans/2026-08-09-pbi23-phase3-senior-consultation.md`）— 配置 B・fail-safe 設計・生成粒度を決定
-- [ ] コードレビュー完了（**セキュリティ経路のため必須**）— アーカイブ前の最終レビューで実施
+- [x] シニア相談実施（`dev-docs/archived/plans/2026-08-09-pbi23-phase3-senior-consultation.md`）― 配置 B・fail-safe 設計・生成粒度を決定
+- [ ] コードレビュー完了（**セキュリティ経路のため必須**）― アーカイブ前の最終レビューで実施
 - [x] CHANGELOG.md に記載
 
 ---
@@ -378,7 +378,7 @@ Phase 3 には着手していない。
 ## 関連
 
 - アーキテクチャレビュー 2026-08-09（候補02）
-- **前提PBI: 2026-08-09-21（変更系 Result 化）— 先に完了させること**
+- **前提PBI: 2026-08-09-21（変更系 Result 化）― 先に完了させること**
 - PBI 2026-08-09-19（読み取り系 Result 化）
 - 過去の配線ミス: 2026-08-09-10 / 2026-08-09-12
 - ADR 2026-07-13 sqlite-architecture-deep-dig

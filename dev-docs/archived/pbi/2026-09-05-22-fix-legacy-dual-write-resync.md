@@ -51,10 +51,10 @@ Scenario: 再同期中の新規記録が失われない
 
 ## 実装者向け注記
 - 確認済み現状: `src/background/pipeline/steps/saveMetadataStep.ts:22-26` が `LEGACY_DUAL_WRITE_ENABLED !== false` で early-return し、無効期間中のレガシー書き込みは捨てられる（キューイングなし）。再有効化時の再同期処理は存在しないことを確認: `rg -ni "resync|re-sync" src/background/pipeline/ src/utils/storage/ src/background/migration/` で該当なし
-- フラグ定義: `rg -n "LEGACY_DUAL_WRITE" src/utils/storage/types.ts src/utils/storage/defaults.ts` — `types.ts:271,474`（キー定義）・`defaults.ts:173`（デフォルト `true`）
-- 設計文書: `rg -n "LEGACY_DUAL_WRITE" dev-docs/ADR/2026-07-07-sqlite-chrome-storage-dual-write.md dev-docs/ADR/2026-07-27-legacy-dual-write-savedurls-dependency-audit.md` — 前者が終了条件フラグの設計、後者がデフォルト false 化見送りの監査記録
-- 類似機構（参考・逆方向）: `rg -n "backfillMetadata" src/dashboard/dashboardSqliteService.ts src/background/migrationService.ts` — `dashboardSqliteService.ts:296`・`migrationService.ts:52`。こちらは chrome.storage→SQLite 方向の補完であり、本PBI（SQLite→レガシー）とは逆。流用ではなく対称設計として参照すること
-- リトライキュー: `rg -n "metadataPatch" src/background/pendingChromeStorageQueue.ts src/background/pipeline/steps/saveMetadataStep.ts` — 書き込み失敗時の退避経路。再同期ジョブとの二重書き込み競合に注意
+- フラグ定義: `rg -n "LEGACY_DUAL_WRITE" src/utils/storage/types.ts src/utils/storage/defaults.ts` ― `types.ts:271,474`（キー定義）・`defaults.ts:173`（デフォルト `true`）
+- 設計文書: `rg -n "LEGACY_DUAL_WRITE" dev-docs/ADR/2026-07-07-sqlite-chrome-storage-dual-write.md dev-docs/ADR/2026-07-27-legacy-dual-write-savedurls-dependency-audit.md` ― 前者が終了条件フラグの設計、後者がデフォルト false 化見送りの監査記録
+- 類似機構（参考・逆方向）: `rg -n "backfillMetadata" src/dashboard/dashboardSqliteService.ts src/background/migrationService.ts` ― `dashboardSqliteService.ts:296`・`migrationService.ts:52`。こちらは chrome.storage→SQLite 方向の補完であり、本PBI（SQLite→レガシー）とは逆。流用ではなく対称設計として参照すること
+- リトライキュー: `rg -n "metadataPatch" src/background/pendingChromeStorageQueue.ts src/background/pipeline/steps/saveMetadataStep.ts` ― 書き込み失敗時の退避経路。再同期ジョブとの二重書き込み競合に注意
 - スコープ補正: backlog表題は「再同期を実装」だが、トリガー方式（設定変更の自動検知 vs 診断パネルの手動実行）が未定。自動・手動のいずれかに決めることを本PBIの受け入れに含め、両方作ることはしない
 
 ## Definition of Done

@@ -14,12 +14,12 @@
 - 解: `sqlite_master` で `type='trigger'` が 0件であることを検証し、存在すれば拒否
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常 DB は復元される
+Scenario: ハッピーパス ― 正常 DB は復元される
   Given トリガーなしの正当な DB ファイルを渡す
   When `handleRestore` を呼ぶ
   Then 検証を通過し DB が置換される
 
-Scenario: 攻撃 — トリガー付き DB は拒否される
+Scenario: 攻撃 ― トリガー付き DB は拒否される
   Given `CREATE TRIGGER evil AFTER INSERT ON browsing_logs BEGIN ... END` を含む DB を渡す
   When `handleRestore` を呼ぶ
   Then `trigger detected` エラーで拒否される

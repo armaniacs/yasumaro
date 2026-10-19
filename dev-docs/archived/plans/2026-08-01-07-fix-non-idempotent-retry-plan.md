@@ -1,4 +1,4 @@
-# PBI-07: 非冪等な POST の 5xx 再送を防止する — Implementation Plan
+# PBI-07: 非冪等な POST の 5xx 再送を防止する ― Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

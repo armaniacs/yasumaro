@@ -2,7 +2,7 @@
 
 ## 状況（Status）
 
-**撤回済み (Superseded)** — 本ADRの決定は撤回されました。現在は `.github/workflows/`（`ci.yml`, `tests.yml`, `coverage.yml`, `release.yml`, `security-audit.yml`, `pages.yml`）でCI/CDが稼働しています。以下の本文は撤回前の意思決定記録として残しています。
+**撤回済み (Superseded)** ― 本ADRの決定は撤回されました。現在は `.github/workflows/`（`ci.yml`, `tests.yml`, `coverage.yml`, `release.yml`, `security-audit.yml`, `pages.yml`）でCI/CDが稼働しています。以下の本文は撤回前の意思決定記録として残しています。
 
 ---
 

@@ -414,7 +414,7 @@ Local Only and Full Pipeline use your browser's Built-in AI (such as Chrome's Ge
 | **PII Masking (🔒)** | Page text content (phone numbers, email addresses, etc.) | Always, just before sending to AI |
 | **Private Page Detection** | HTTP response headers (e.g., `Cache-Control: private`) | At page load time |
 
-For example, public government pages may contain personal information such as phone numbers. Since these pages do not declare themselves private via HTTP headers, no confirmation notification is shown — but any PII in the text is still automatically protected by the masking feature.
+For example, public government pages may contain personal information such as phone numbers. Since these pages do not declare themselves private via HTTP headers, no confirmation notification is shown ― but any PII in the text is still automatically protected by the masking feature.
 
 Confirmation notifications appear when accessing pages where the server returns `Cache-Control: private` or `Set-Cookie` headers, such as online banking, internal systems, or medical portals.
 
@@ -431,6 +431,6 @@ Confirmation notifications appear when accessing pages where the server returns 
 | **Content Cleansing** | DOM element removal from page content (ads, navigation, etc.) | During content extraction |
 | **PII Masking** | Replacement of personal information with `[MASKED:*]` | Just before sending to AI |
 
-The token count on the "PII Masking" line is a rough estimate (Japanese text is approximated as 2 characters per token) computed on the text including mask replacement strings like `[MASKED:phoneJp]`. Since a mask replacement string can be **longer** than the original phone number fragment it replaces, the character-count change from masking doesn't always show up after rounding to an integer token count — so you may see `82 → 82` even though masking actually ran.
+The token count on the "PII Masking" line is a rough estimate (Japanese text is approximated as 2 characters per token) computed on the text including mask replacement strings like `[MASKED:phoneJp]`. Since a mask replacement string can be **longer** than the original phone number fragment it replaces, the character-count change from masking doesn't always show up after rounding to an integer token count ― so you may see `82 → 82` even though masking actually ran.
 
 To confirm masking actually happened, check the **detected count** on the same line (e.g., `Detected: 2`). If the detected count is 1 or more, PII masking is working correctly even if the token count looks unchanged.

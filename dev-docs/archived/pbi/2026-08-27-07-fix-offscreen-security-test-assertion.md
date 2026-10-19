@@ -15,12 +15,12 @@
 - 解: `expect(result).toBe(false)` と `expect(responses).toHaveLength(0)` を追加し仕様を固定
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — null メッセージは無視され false を返す
+Scenario: ハッピーパス ― null メッセージは無視され false を返す
   Given `message=null` を渡す
   When `handleOffscreenMessage` を呼ぶ
   Then `return false` で `sendResponse` は呼ばれない
 
-Scenario: 異常系 — 不正 target は無視される
+Scenario: 異常系 ― 不正 target は無視される
   Given `target='background'` のメッセージを渡す
   When `handleOffscreenMessage` を呼ぶ
   Then `return false` で `sendResponse` は呼ばれない

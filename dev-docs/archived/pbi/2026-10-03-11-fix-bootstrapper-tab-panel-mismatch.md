@@ -12,7 +12,7 @@ dashboard の利用者として、サイドバーのタブをクリックして�
 
 ## 背景（file:line 付き現状）
 
-- `src/dashboard/panels/DashboardBootstrapper.ts:129` — クリックハンドラ内で `#updateActiveTabForPanel(panelId)` を先に実行し、`:133-135` の `void this.registry.navigate(panelId).catch((error) => this.#reportNavigateFailure(panelId, error))` は後から走る。active 状態は navigate の成否と無関係に新パネルへ先に更新される。
+- `src/dashboard/panels/DashboardBootstrapper.ts:129` ― クリックハンドラ内で `#updateActiveTabForPanel(panelId)` を先に実行し、`:133-135` の `void this.registry.navigate(panelId).catch((error) => this.#reportNavigateFailure(panelId, error))` は後から走る。active 状態は navigate の成否と無関係に新パネルへ先に更新される。
 - navigate 失敗時（typo'd id、mount throw）は catch で `#reportNavigateFailure`（`:182-184`、`console.error` のみ）が走るだけで、active 状態のロールバックは存在しない。結果: 新パネルのタブが active/aria-selected=true（`#updateActiveTabForPanel` `:41-52` が `:46-51` で `active` クラスと `aria-selected`/`tabindex` を割り当て）のまま、表示は旧パネルのまま残る。
 - 対照的に `start()`（`:169-180`、try 内 `:171-173`）は `await navigate` → `#updateActiveTabForPanel` の逆順（update after resolve）で、失敗時は catch `:174-179` に落ちるため state 更新が起きず不整合が発生しない。
 
@@ -70,13 +70,13 @@ And 失敗時は reportNavigateFailure のみで state を壊さない
 - [x] 失敗時にタブ状態と表示パネルが一致することを assert するテストが存在する
 - [x] 失敗時のユーザーフィードバック方針が決定・記録されている
 - [x] `npm run validate` と `npm run type-check` が green
-- [x] backlog（順位 11）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] backlog（順位 11）としての完了報告が紐づく ― アーカイブ/台帳更新は別ステップ
 
 ## 実装記録（2026-10-03）
 
 - 裁定: catch でのロールバック方式（update 先移動ではなく）。`#rollbackActiveTab(panelId, previousTab)` を新設し、クリック前に active タブを snapshot（`:159`）、navigate 失敗時は `#updateActiveTabForPanel` の後でも snapshot へ戻す。
-- 失敗時の見え方: ロールバック自体がユーザー可視のハンドリング（クリックがパネルを切り替えなかったことが分かる）。`#reportNavigateFailure`（console.error）での追加記録は維持。toast は意図的に入れない — パネルコンテナが存在する前に走るため、dashboard 全体通知経路は別作業。
+- 失敗時の見え方: ロールバック自体がユーザー可視のハンドリング（クリックがパネルを切り替えなかったことが分かる）。`#reportNavigateFailure`（console.error）での追加記録は維持。toast は意図的に入れない ― パネルコンテナが存在する前に走るため、dashboard 全体通知経路は別作業。
 - `#setActiveTab` を `#updateActiveTabForPanel` から抽出（単一タブへの active/aria-selected/tabindex パターン適用、null で全タブ解除）。
 - テスト: `DashboardBootstrapper.test.ts` に 4 件を追加（失敗時ロールバック、成功時維持、start() 不変、post-activation ケース待ち `waitForMock` 使用）。修正前 RED 2 件を確認。21/21 green、`--repeats=20` 全 run green。
 - 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0。
-- 逸脱: ロールバックは `registry.activeId === panelId` の場合に発火しない — registry が先に clicked パネルへ切り替えてから失敗した場合（activation 後の mount throw）、表示されている要素が clicked パネル自身であり、ロールバックすると本修正が防ぐべきタブ/表示不整合を作り直すため。受け入れ基準 1 の「どちらかを採るかは見せ方とセットで決定」の裁定部分として記録。
+- 逸脱: ロールバックは `registry.activeId === panelId` の場合に発火しない ― registry が先に clicked パネルへ切り替えてから失敗した場合（activation 後の mount throw）、表示されている要素が clicked パネル自身であり、ロールバックすると本修正が防ぐべきタブ/表示不整合を作り直すため。受け入れ基準 1 の「どちらかを採るかは見せ方とセットで決定」の裁定部分として記録。

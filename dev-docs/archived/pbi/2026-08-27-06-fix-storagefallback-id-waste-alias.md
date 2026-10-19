@@ -15,12 +15,12 @@
 - 解: ID 確保を存在チェック後に移動し、alias は `sqliteQueryBuilder` の StorageQuery に一本化して非推奨化
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 重複時は ID を消費しない
+Scenario: ハッピーパス ― 重複時は ID を消費しない
   Given `url=https://a.com, created_at=100` が既存
   When 同じレコードを `insert` する
   Then `id === -1` でカウンタは進まず次の正常 insert は連番である
 
-Scenario: エッジケース — 旧 alias は非推奨だが動作し新 alias が優先される
+Scenario: エッジケース ― 旧 alias は非推奨だが動作し新 alias が優先される
   Given クエリ `isStarred:true, since:100` を渡す
   When `query` を実行する
   Then 新型 `starred/dateFrom` と同結果を返し、将来的な削除時にテストが失敗して気づける

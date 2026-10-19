@@ -31,9 +31,9 @@ Scenario: retry 方針が table に一元化される
 ## 受け入れ基準
 
 - [x] runtime の公開 interface を `execute(op: QueryOp | MutateOp | MaintainOp)` に畳む（overload は型 level の薄い adapter として残してよい）
-- [x] `retryPolicy` 適用を `callInternal` の単一 transport seam に寄せる（全 branch が execute → callInternal の 1 seam のみで transport に触る。row 所有の retryPolicy は policy table 由来の宣言データとして据え置き、適用は transport の table lookup が唯一の判断点。caller 側 override を追加しない — 既存 pin「leaves toggleStar retry policy to the transport」が ground truth）
+- [x] `retryPolicy` 適用を `callInternal` の単一 transport seam に寄せる（全 branch が execute → callInternal の 1 seam のみで transport に触る。row 所有の retryPolicy は policy table 由来の宣言データとして据え置き、適用は transport の table lookup が唯一の判断点。caller 側 override を追加しない ― 既存 pin「leaves toggleStar retry policy to the transport」が ground truth）
 - [x] wire 形状・table 行・runner map に挙動変更なし（compile 時の双方向 sync assert を維持）
-- [x] ADR-014 の channel 分割（SW↔offscreen と offscreen↔worker の型分離）を崩さない
+- [x] ADR-014 の channel 分割（SW⇔offscreen と offscreen⇔worker の型分離）を崩さない
 
 ## テスト戦略
 
@@ -50,7 +50,7 @@ Scenario: retry 方針が table に一元化される
 - `execute(op: SqliteGatewayOp)` を新設（`SqliteGatewayOp = QueryOp | MutateOp | MaintainOp`）。判別は `isQueryOp`（guard param を union 全体に拡張）→ `isSqliteWireOp(op.type)`（mutate）→ `isArchiveOpType`（archive maintain）→ `sqliteMaintainWireFor`（非 archive maintain）の 4 branch。drift した lookup は fail-closed
 - query/mutate/maintain の実装 body を `execute` へ委譲する薄い adapter に畳み（overload 列は call-site 型精度のため保持）。dispatch logic の手更新は消滅し、op 追加は table 行 + （必要なら）overload 1 行のみ
 - `callInternal` は全 branch 共通の単一 transport seam のまま。retry 適用の caller 側 override は追加しない（transport の `shouldRetryTransport` table lookup が唯一の判断点。既存 pin テスト 2 件が wire 形状を pin）
-- 試行後撤回: row の `retryPolicy` を `noRetry` opt として transport に流す実装を一度試したが、既存 pin（`seenOpts` が `[{}]` — gateway は caller 側 override を渡さない）と矛盾するため撤回。適用は transport seam のまま
+- 試行後撤回: row の `retryPolicy` を `noRetry` opt として transport に流す実装を一度試したが、既存 pin（`seenOpts` が `[{}]` ― gateway は caller 側 override を渡さない）と矛盾するため撤回。適用は transport seam のまま
 - テスト新設: `gatewayExecuteSeam.test.ts`（query/mutate/maintain/records 各 1 件の透過 parity、unsafe row での override 不在、未知 op の fail-closed）
 - 検証: `npm run validate` green（988 ファイル / 15,247 tests passed）
 

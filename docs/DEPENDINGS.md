@@ -69,7 +69,7 @@
 ### 直近の `npm outdated` 実測と反映（2026-09-26）
 
 - 更新を検出: 12 件。うち 11 件は同日中に反映済み（`@types/chrome`, `@types/node`, `@typescript-eslint/*`, `@vitest/coverage-v8`, `eslint`, `happy-dom`, `jsdom`, `knip`, `vite`, `vitest`）
-- `vitest` と `@vitest/coverage-v8` は互いに厳密な peer pin（`vitest@5.0.2` ↔ `@vitest/coverage-v8@5.0.2`）を持つため、必ず同時に更新する
+- `vitest` と `@vitest/coverage-v8` は互いに厳密な peer pin（`vitest@5.0.2` ⇔ `@vitest/coverage-v8@5.0.2`）を持つため、必ず同時に更新する
 - 意図的に未反映の残り 1 件と理由
 
 | パッケージ | 現在 → 最新 | 未反映の理由 |

@@ -1,4 +1,4 @@
-# Dig Findings — Architecture Deepening Autonomous Closer (2026-08-23)
+# Dig Findings ― Architecture Deepening Autonomous Closer (2026-08-23)
 
 ## 洗い出し結果
 

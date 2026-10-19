@@ -10,7 +10,7 @@
 - 関連テスト
 
 ## Validation
-`npm run type-check` と dashboard/background テスト — PASS（スコープ検証済み）。
+`npm run type-check` と dashboard/background テスト ― PASS（スコープ検証済み）。
 
 ## Rollback
 wire 型・adapter・dashboard 読み取りを元に戻せばロールバックできる。

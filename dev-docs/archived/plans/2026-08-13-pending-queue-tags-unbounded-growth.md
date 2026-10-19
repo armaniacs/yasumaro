@@ -273,7 +273,7 @@ export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Prom
       }
 
       // If still too large (e.g. tags accumulated across many failed
-      // retries), truncate tags — keep the most recently added ones
+      // retries), truncate tags ― keep the most recently added ones
       // (array tail, since mergeTags appends new tags after existing ones)
       // and drop the oldest first.
       if (mergedSize > MAX_PATCH_PAYLOAD_BYTES) {
@@ -284,7 +284,7 @@ export async function enqueuePendingWrite(write: QueuedChromeStorageWrite): Prom
           let candidatePatch = { ...currentPatch, tags: truncatedTags };
           let candidateSize = new Blob([JSON.stringify(candidatePatch)]).size;
           // Even MAX_TAGS_AFTER_TRUNCATION tags might still be too large
-          // if individual tag strings are unusually long — keep shrinking
+          // if individual tag strings are unusually long ― keep shrinking
           // from the front until it fits or nothing is left.
           while (candidateSize > MAX_PATCH_PAYLOAD_BYTES && truncatedTags.length > 0) {
             truncatedTags = truncatedTags.slice(1);

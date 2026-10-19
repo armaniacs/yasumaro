@@ -113,7 +113,7 @@ node -e "console.log(typeof navigator.locks)"
 **手順 1: `src/utils/storage/rotationLock.ts` を新規作成する。**
 
 ```ts
-// @layer 1 — Infrastructure: cross-context mutual exclusion for master-password KEK rotation
+// @layer 1 ― Infrastructure: cross-context mutual exclusion for master-password KEK rotation
 export const ROTATION_LOCK_NAME = 'yasumaro:master-password-rotation';
 
 export class RotationInProgressError extends Error {
@@ -201,13 +201,13 @@ this.dom.passwordAuthError.textContent = e instanceof ReencryptionAbortedError
 - en: `"masterPasswordRotationInProgress": { "message": "Another tab or window is changing the master password. Wait for it to finish, then try again." }`
 - ja: `"masterPasswordRotationInProgress": { "message": "別のタブまたはウィンドウでマスターパスワードを変更中です。完了してからもう一度お試しください。" }`
 
-**手順 8: 層登録。** `eslint/rules/utils-layer-boundary.mjs` の `LAYER1_FILES` に `'src/utils/storage/rotationLock.ts',` を `settingsSnapshot.ts` の行の下へ、`dev-docs/LAYERS.md` の Layer 1 一覧の `settingsSnapshot.ts` 行の下へ `src/utils/storage/rotationLock.ts — KEK 回転のクロスコンテキスト排他(Web Locks)` を追加する。
+**手順 8: 層登録。** `eslint/rules/utils-layer-boundary.mjs` の `LAYER1_FILES` に `'src/utils/storage/rotationLock.ts',` を `settingsSnapshot.ts` の行の下へ、`dev-docs/LAYERS.md` の Layer 1 一覧の `settingsSnapshot.ts` 行の下へ `src/utils/storage/rotationLock.ts ― KEK 回転のクロスコンテキスト排他(Web Locks)` を追加する。
 
 ### 4. テスト先行(RED)
 
 各テストは手順 1 以降の実装より前に書き、`npx vitest run <file>` で実行して**失敗することを確認**してから実装する(新規ファイルは import 解決エラーで落ちてよい。落ちない場合はテストが無意味なので書き直す)。
 
-**(a) `src/utils/storage/__tests__/rotationLock.test.ts`(単体)** — `import { withRotationLock, RotationInProgressError, ROTATION_LOCK_NAME } from '../rotationLock.js';`
+**(a) `src/utils/storage/__tests__/rotationLock.test.ts`(単体)** ― `import { withRotationLock, RotationInProgressError, ROTATION_LOCK_NAME } from '../rotationLock.js';`
 - `it('runs fn and returns its value when the lock is granted')`: Given `const granted = { request: vi.fn(async (_n: string, _o: unknown, cb: (l: unknown) => Promise<unknown>) => cb({})) } as unknown as Pick<LockManager, 'request'>`。When `withRotationLock(async () => 'ok', granted)`。Then `'ok'`。
 - `it('requests an exclusive ifAvailable lock under the fixed name')`: 上と同じ fake に対し `expect(granted.request).toHaveBeenCalledWith(ROTATION_LOCK_NAME, { mode: 'exclusive', ifAvailable: true }, expect.any(Function))`。
 - `it('rejects with RotationInProgressError and skips fn when the lock is unavailable')`: fake が `cb(null)` を呼ぶ。`fn = vi.fn()`。Then `rejects.toBeInstanceOf(RotationInProgressError)` かつ `fn` 未呼び出し。
@@ -216,7 +216,7 @@ this.dom.passwordAuthError.textContent = e instanceof ReencryptionAbortedError
 - `it('is not re-entrant: a nested call fails instead of deadlocking')`: `withRotationLock(() => withRotationLock(async () => 'x'))` が `rejects.toBeInstanceOf(RotationInProgressError)`。
 - `it('rejects the second of two concurrent callers')`: `let release!: () => void; const gate = new Promise<void>((r) => { release = r; });` A = `withRotationLock(() => gate)`、B = `withRotationLock(async () => 'b')`。B が `RotationInProgressError` で reject、`release()` 後に A が resolve。
 
-**(b) `src/utils/storage/__tests__/encryptionSession-rotation-lock.test.ts`(結合)** — `encryptionSession-set-guard.test.ts` の先頭(`vi.mock('../../crypto/cryptoParams.js', ...)` の PBKDF2 反復を 1_000 に下げる mock、`rateLimiter` / `authGuard` の mock、`AUTH_KEYS`、`beforeEach` の `chrome.storage.local.clear()` / `setSecretKeyStorageOverride` / `clearEncryptionKeyCache()`、`snapshotAuth`)をそのままコピーする。他クロスコンテキストの保持者は、テスト内で実ロックを保持して再現する:
+**(b) `src/utils/storage/__tests__/encryptionSession-rotation-lock.test.ts`(結合)** ― `encryptionSession-set-guard.test.ts` の先頭(`vi.mock('../../crypto/cryptoParams.js', ...)` の PBKDF2 反復を 1_000 に下げる mock、`rateLimiter` / `authGuard` の mock、`AUTH_KEYS`、`beforeEach` の `chrome.storage.local.clear()` / `setSecretKeyStorageOverride` / `clearEncryptionKeyCache()`、`snapshotAuth`)をそのままコピーする。他クロスコンテキストの保持者は、テスト内で実ロックを保持して再現する:
 
 ```ts
 async function withForeignHolder<T>(body: () => Promise<T>): Promise<T> {

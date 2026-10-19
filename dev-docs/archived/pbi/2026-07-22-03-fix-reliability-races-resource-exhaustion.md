@@ -1,4 +1,4 @@
-# PBI: 信頼性ハードニング — 競合状態・リソース枯渇の解消
+# PBI: 信頼性ハードニング ― 競合状態・リソース枯渇の解消
 
 ## ユーザーストーリー
 拡張機能の利用者として、通常のブラウジングや設定操作を行っている最中に、競合状態（レースコンディション）や巨大な入力による処理停止（DoS/ReDoS）でService Workerがハング・クラッシュしたり、意図しない重複データが記録されたりしないことを望む。なぜなら、拡張機能はバックグラウンドで常時動作する性質上、些細なタイミングの偶然や単一の悪意あるインポートファイルによって全機能が止まってしまうのは許容できないためである。
@@ -107,7 +107,7 @@ SessionStore [community=167] ← chrome.storage.session 状態管理
 ```
 **重要な発見**: 
 - `Mutex` クラス (community=214) はプロジェクト全体の並行制御パターンとして確立されている。alarm handler で未使用なのみ。
-- `withOptimisticLock()` (`optimisticLock.ts`) がプロジェクトに存在 — VULN-016 (offscreen SQLite race) の修正に最適なパターンが既に利用可能。
+- `withOptimisticLock()` (`optimisticLock.ts`) がプロジェクトに存在 ― VULN-016 (offscreen SQLite race) の修正に最適なパターンが既に利用可能。
 - 「Concurrency Control Infrastructure」ハイパーエッジが検出: `optimistic_lock_pattern`, `mutex_pattern`, `rate_limiter_module` が関連。
 
 ### なぜなぜ分析（2026-07-22）
@@ -121,7 +121,7 @@ SessionStore [community=167] ← chrome.storage.session 状態管理
 - **対策**: 本PBIの実装時に「VULN-003/016はMutex、VULN-014はoptimisticLock」という使用基準をADRに記録する
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下が該当することを確認済み）
 ```bash
 grep -n "getSavedUrlsWithTimestamps\|urlMap.get" src/background/pipeline/steps/checkDuplicateStep.ts
 grep -n "restore_db\|data.length === 0" src/background/handlers/dashboardSqliteHandlers.ts

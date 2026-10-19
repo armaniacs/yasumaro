@@ -6,7 +6,7 @@
 
 **Goal:** Replace the `#`-substitution sampling scan with an overlapping-chunk scan over the original text so PII inside long whitespace-free tokens cannot evade detection.
 
-**Architecture:** Delete the module-private helpers (`TOKEN_EDGE_KEEP_LENGTH`, `NON_WHITESPACE_RUN`, `neutralizeLongNonWhitespaceRuns`, `sampleMiddleForScan` — used only inside `src/utils/piiSanitizer.ts`) and run the existing combined-regex construction per chunk (`CHUNK_SIZE=400`, `OVERLAP=200`, step 200). Match offsets are rebased onto the original text; the existing overlap-resolution block (`:350-364`) already dedupes cross-chunk duplicates, and the `timeout` / `MAX_MATCH_COUNT` guards are preserved per scan.
+**Architecture:** Delete the module-private helpers (`TOKEN_EDGE_KEEP_LENGTH`, `NON_WHITESPACE_RUN`, `neutralizeLongNonWhitespaceRuns`, `sampleMiddleForScan` ― used only inside `src/utils/piiSanitizer.ts`) and run the existing combined-regex construction per chunk (`CHUNK_SIZE=400`, `OVERLAP=200`, step 200). Match offsets are rebased onto the original text; the existing overlap-resolution block (`:350-364`) already dedupes cross-chunk duplicates, and the `timeout` / `MAX_MATCH_COUNT` guards are preserved per scan.
 
 **Tech Stack:** TypeScript (nodeNext, `.js` import extensions), Vitest, `npm run validate` gate. No real-time waits in tests (`testDir/waitPolicy.ts`).
 
@@ -14,8 +14,8 @@
 
 ## File Structure
 
-- Modify: `src/utils/piiSanitizer.ts` — `:36-69` (delete helpers, add chunk constants + premise comment), `:283-287` (delete `scanText` derivation), `:301-348` (wrap exec loop in chunk loop with offset rebase), `:316-321` (rewrite stale comments).
-- Modify: `src/utils/__tests__/piiSanitizer.test.ts` — add one straddling-alignment repro test in `describe('sanitizeRegex - 長トークン内部のPII')`. Existing tests in that block stay (the `150/150` case keeps passing; the `64KB` timeout test pins ReDoS resistance).
+- Modify: `src/utils/piiSanitizer.ts` ― `:36-69` (delete helpers, add chunk constants + premise comment), `:283-287` (delete `scanText` derivation), `:301-348` (wrap exec loop in chunk loop with offset rebase), `:316-321` (rewrite stale comments).
+- Modify: `src/utils/__tests__/piiSanitizer.test.ts` ― add one straddling-alignment repro test in `describe('sanitizeRegex - 長トークン内部のPII')`. Existing tests in that block stay (the `150/150` case keeps passing; the `64KB` timeout test pins ReDoS resistance).
 
 ## PBI
 
@@ -29,7 +29,7 @@
 - Modify: `src/utils/__tests__/piiSanitizer.test.ts`
 - Test: `src/utils/__tests__/piiSanitizer.test.ts`
 
-Why this exact input: token length 406 > 200 triggers sampling; `middle` is 206 chars so `sampleMiddleForScan` places `#` deterministically at the email's offset 199/299 region, splitting `user@example.com` into `user@exam#le.com` on the scan text. The pre-existing `150/150` test does NOT straddle a `#` and keeps passing pre-fix — that is why a new test is needed.
+Why this exact input: token length 406 > 200 triggers sampling; `middle` is 206 chars so `sampleMiddleForScan` places `#` deterministically at the email's offset 199/299 region, splitting `user@example.com` into `user@exam#le.com` on the scan text. The pre-existing `150/150` test does NOT straddle a `#` and keeps passing pre-fix ― that is why a new test is needed.
 
 - [x] **Step 1: Append the test in `describe('sanitizeRegex - 長トークン内部のPII')`**
 
@@ -48,7 +48,7 @@ Why this exact input: token length 406 > 200 triggers sampling; `middle` is 206 
 - [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts -t "straddling the sampling window"`
-Expected: FAIL — `result.text` still contains `user@example.com`, `maskedItems` has no email.
+Expected: FAIL ― `result.text` still contains `user@example.com`, `maskedItems` has no email.
 
 - [x] **Step 3: Commit the red test**
 
@@ -108,12 +108,12 @@ Delete line 287 (`const scanText = neutralizeLongNonWhitespaceRuns(text);`) and 
                 const startIndex = offset + match.index;
 ```
 
-The remainder of the loop body (`:325-348`: group identification, Luhn check, `replacements.push`) is kept verbatim — it already uses `matchedValue`/`startIndex`. Close the added `for` loop after the existing `while` loop's closing brace. Rewrite the stale comment (`:316-321`, scanText length-equality claims) — delete it, the new comment above replaces it. The existing overlap-resolution block (`:350-364`, `usedRanges` dedupe) is kept verbatim and now also absorbs cross-chunk duplicates.
+The remainder of the loop body (`:325-348`: group identification, Luhn check, `replacements.push`) is kept verbatim ― it already uses `matchedValue`/`startIndex`. Close the added `for` loop after the existing `while` loop's closing brace. Rewrite the stale comment (`:316-321`, scanText length-equality claims) ― delete it, the new comment above replaces it. The existing overlap-resolution block (`:350-364`, `usedRanges` dedupe) is kept verbatim and now also absorbs cross-chunk duplicates.
 
 - [x] **Step 3: Run the sanitizer tests**
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts src/utils/__tests__/piiSanitizer-optimization.test.ts src/utils/__tests__/piiSanitizer-redos.test.ts src/utils/__tests__/piiSanitizer-security.test.ts`
-Expected: PASS — new repro test green, the `150/150` tests still green, the `64KB ... within the timeout` test still green (ReDoS pin).
+Expected: PASS ― new repro test green, the `150/150` tests still green, the `64KB ... within the timeout` test still green (ReDoS pin).
 
 - [x] **Step 4: Commit**
 
@@ -195,7 +195,7 @@ Expected: exit 0. Verify `git status` shows the rebuilt artifacts (`src/wasm/pii
 - [x] **Step 3: Run the parity and TS suites**
 
 Run: `npx vitest run src/wasm/pii-sanitizer/__tests__/parity.test.ts src/wasm/pii-sanitizer/__tests__/extended-patterns-parity.test.ts`
-Expected: PASS — the 7 previously failing inputs (#4/#22/#28/#33/#147/#149/#213) now match.
+Expected: PASS ― the 7 previously failing inputs (#4/#22/#28/#33/#147/#149/#213) now match.
 
 Run: `npx vitest run src/utils/__tests__/piiSanitizer.test.ts src/utils/__tests__/piiSanitizer-optimization.test.ts src/utils/__tests__/piiSanitizer-redos.test.ts src/utils/__tests__/piiSanitizer-security.test.ts`
 Expected: PASS (no TS changes in this task; regression check).

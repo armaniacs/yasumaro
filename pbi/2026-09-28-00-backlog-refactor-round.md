@@ -1,4 +1,4 @@
-# Backlog — 2026-09-28 全体リファクタリングラウンド採点台帳
+# Backlog ― 2026-09-28 全体リファクタリングラウンド採点台帳
 
 ユーザー要求「リポジトリ全体のリファクタリング（PBI 作成まで・実装は別ラウンド）」に基づく差分レビューの採点台帳。
 
@@ -97,7 +97,7 @@ RICE = Reach（今後 1 年の関与頻度 1-10）× Impact（3=実害解消 / 2
 |---|---|---|---:|---:|---:|---:|---:|---:|---|
 | 18 | [fix-session-store-flush-cap-stagnation-drop](../dev-docs/archived/pbi/2026-09-28-18-fix-session-store-flush-cap-stagnation-drop.md) | fix | 3 | 3 | 100% | 1 | 9.0 | 1 | investigate 12 の裁定（ADR 2026-09-28-session-store-overflow-persistence） |
 | 19 | [refactor-status-message-residual-bundle](../dev-docs/archived/pbi/2026-09-28-19-refactor-status-message-residual-bundle.md) | refactor | 3 | 1.5 | 90% | 1 | 4.05 | 1 | 残課題 1-3（stale-timer race・markup class 落ち・mainStatus 旧経路） |
-| 20 | [refactor-ai-summary-cleansing-settings-delta-write](../dev-docs/archived/pbi/2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 2 | 1 | 100% | 0.5 | 4.0 | 0.5 | 残課題 6（full-snapshot writer。実読の結果 writer は 1 本で :171 は同関数内の代入行 — PBI 側に記録済み） |
+| 20 | [refactor-ai-summary-cleansing-settings-delta-write](../dev-docs/archived/pbi/2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md) | refactor | 2 | 1 | 100% | 0.5 | 4.0 | 0.5 | 残課題 6（full-snapshot writer。実読の結果 writer は 1 本で :171 は同関数内の代入行 ― PBI 側に記録済み） |
 | 21 | [fix-cleansing-feedback-ai-stats-persistence](../dev-docs/archived/pbi/2026-09-28-21-fix-cleansing-feedback-ai-stats-persistence.md) | fix | 2 | 2 | 80% | 1 | 3.2 | 1 | 残課題 7（CleansingFeedbackEntry への加算的 optional フィールド・後方互換） |
 | 22 | [investigate-dst-ambiguous-day-end](../dev-docs/archived/pbi/2026-09-28-22-investigate-dst-ambiguous-day-end.md) | investigate | 1 | 1 | 80% | 0.5 | 1.6 | 0.5 | 残課題 5（localDate endOfLocalDayMs の曖昧時刻） |
 | 23 | [refactor-svg-ns-single-source](../dev-docs/archived/pbi/2026-09-28-23-refactor-svg-ns-single-source.md) | refactor | 1 | 0.5 | 100% | 0.5 | 1.0 | 0.5 | 残課題 4（SVG_NS 残留 + computeLimits doc drift） |

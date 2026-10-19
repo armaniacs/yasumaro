@@ -1,6 +1,6 @@
-# PBI 18: 負荷依存フレーキーテストの安定化 — clock 注入・遅延注入・不変式アサーション化
+# PBI 18: 負荷依存フレーキーテストの安定化 ― clock 注入・遅延注入・不変式アサーション化
 
-優先度: RICE 16 ≈ (5 × 2 × 80%) / 0.5w / 種別: test
+優先度: RICE 16 ≒ (5 × 2 × 80%) / 0.5w / 種別: test
 背景: 2026-09-04 のフル suite 実行で 4 ファイルが断続的に失敗（負荷下のみ。単独実行は全 green）。アーキテクチャ診断ラウンド（arch-delivery-loop）の Phase 3 でも 2 回観測され、`make clean test` の信頼性を損なっている。
 
 ## ユーザーストーリー
@@ -16,8 +16,8 @@ CI とローカルでフル suite を実行する開発者として、テスト�
 | # | ファイル | 機構 | 安定化の方向 |
 |---|---|---|---|
 | 1 | bodyProtection.test.ts | **固有のフレーキー機構なし**（SUT は同期純関数）。負荷下の worker 資源枯渇（jsdom 起動コスト × forks 無制限）が疑われ、失敗メッセージが未捕捉 | テスト修正禁止。vitest 設定で `poolOptions.forks.maxForks` を cap（4-8）し、次回失敗時にエラー本文を記録 |
-| 2 | aiUsageTracker.test.ts | (a) `Date.now()` の 60s ウィンドウ判定 — 期限切れテストは境界マージン 1 秒（SUT :54,:66、テスト :292 で `Date.now() - 61000` をシード）(b) module-level `counterLock` がテスト間で未リセット（SUT :18-26）(c) VULN-010 テストの `delay(5)` 実タイマーが負荷で伸張 | clock 注入（`now: () => number` オプション）+ `resetCounterLockForTesting()` export + `vi.useFakeTimers` へ置換 |
-| 3 | RecordingPipeline.test.ts | リトライ 3 回の指数バックオフが**実タイマーで ~11 秒 sleep**（`stepExecutor.ts:34,40` `delay()`、テスト :652-669 が `mockRejectedValue` + 実タイマー）vs `testTimeout: 15000`。ヘッドルーム 4 秒が負荷で消える。同ファイルの `指数バックオフ` ブロック（:466-472）は既に `vi.useFakeTimers` + `runAllTimersAsync` で解決済み — 同手法が未適用なだけ | `StepExecutor` に `delay: (ms) => Promise` を注入可能にするか、:652-669 と :521-589 のテストにも scoped fake timers を適用（~11 秒 → 数 ms、suite 全体も高速化） |
+| 2 | aiUsageTracker.test.ts | (a) `Date.now()` の 60s ウィンドウ判定 ― 期限切れテストは境界マージン 1 秒（SUT :54,:66、テスト :292 で `Date.now() - 61000` をシード）(b) module-level `counterLock` がテスト間で未リセット（SUT :18-26）(c) VULN-010 テストの `delay(5)` 実タイマーが負荷で伸張 | clock 注入（`now: () => number` オプション）+ `resetCounterLockForTesting()` export + `vi.useFakeTimers` へ置換 |
+| 3 | RecordingPipeline.test.ts | リトライ 3 回の指数バックオフが**実タイマーで ~11 秒 sleep**（`stepExecutor.ts:34,40` `delay()`、テスト :652-669 が `mockRejectedValue` + 実タイマー）vs `testTimeout: 15000`。ヘッドルーム 4 秒が負荷で消える。同ファイルの `指数バックオフ` ブロック（:466-472）は既に `vi.useFakeTimers` + `runAllTimersAsync` で解決済み ― 同手法が未適用なだけ | `StepExecutor` に `delay: (ms) => Promise` を注入可能にするか、:652-669 と :521-589 のテストにも scoped fake timers を適用（~11 秒 → 数 ms、suite 全体も高速化） |
 | 4 | tagCooccurrenceCap.test.ts | sub-ms ワークロードの `performance.now()` 比率アサーション（:48-60 `t4 < t1*8`、:96-111 `t4 < t1*12`）。コメント自身が「shared CI hardware picks up scheduling noise」と自認 | wall-clock 比率を**cap 不変式の操作数アサーション**に置換（`edges.length <= C(50,2)` は :19 で既存）。timing signal は非ゲートのベンチ（`bench/`）に移管 |
 | 5 | idb-migration.test.ts | (a) モジュール singleton `engine` の `resetForTesting()` が `#mutex` をリセットしない（sqliteEngineHost.ts:364-378 vs :94）(b) `vi.clearAllMocks()` が実装を温存し mock 実装がファイル順で漏洩（:122,184,224,230,253）(c) 実 `runMigrations` + 実 Mutex（30s timeout）+ 動的 import チェーンが負荷で 15s に接近し、init 失敗が `usingFallbackStorage → false` に silently 転化 | `resetForTesting()` に mutex リセット追加（または singleton でなくインスタンス生成）、`vi.resetAllMocks()` + beforeEach 再宣言、`runMigrations` 境界のモック（1 件は統合のまま残す） |
 
@@ -83,7 +83,7 @@ Scenario: tag 共起の cap 不変式が実時間でなく操作数で検証さ�
 - 依存関係: なし（5 ファイル + vitest.config は互いに非重複で並行実装可）
 - テスタビリティ: clock/delay 注入は本番既定（Date.now/setTimeout）を壊さない optional パラメータ
 - 非機能要件: リート制限・バックオフの**セマンティクス検証を弱めない**こと（VULN-010 の直列化保証、バックオフ上限は別テストで既に担保）。wall-clock probe の移管先は `bench/`（非ゲート）
-- 関連: `src/offscreen/sqliteEngineContext/opfsWorkerProxy.ts:99-102` の 15s OPFS timeout が `testTimeout: 15000` と一致 — 偶発一致だが本 PBI では触らない（記録のみ）
+- 関連: `src/offscreen/sqliteEngineContext/opfsWorkerProxy.ts:99-102` の 15s OPFS timeout が `testTimeout: 15000` と一致 ― 偶発一致だが本 PBI では触らない（記録のみ）
 
 ## 実装者向け注記
 
@@ -99,15 +99,15 @@ cat testDir/vitest.config.ts
 1. `testDir/vitest.config.ts`: `poolOptions: { forks: { maxForks: 8 } }` を追加（根拠コメント: 660 ファイルの無制限 fork が timing 系テストの contention を生む。8 で ~1.5 倍の実行時間に対して flake 消滅を優先。効果を 3 連続実行で確認し、必要なら調整）
 2. aiUsageTracker: `checkRateLimitUnlocked` / `getRateLimitMessage` に `now = Date.now` を注入 → テストで固定 clock。`resetCounterLockForTesting()` を export → beforeEach で呼ぶ。`delay(5)` を `vi.useFakeTimers` + `advanceTimersByTimeAsync(5)` に置換
 3. stepExecutor: constructor（または run 呼び出しオプション）に `delay` を追加（既定 `ms => new Promise(r => setTimeout(r, ms))`）→ RecordingPipeline の NoOp/error-result テストで no-op delay 注入（または :466-472 と同じ scoped fake timers）。既存 fake-timer backoff テスト（:466-505）との干渉に注意（スコープはそのまま）
-4. tagCooccurrenceCap: 比率アサーション 2 箇所を cap 不変式アサーションに置換（例: pre-narrow 後のユニーク tag 数 ≤ `MAX_TAG_CLUSTER_TAGS`、record あたり edges ≤ C(MAX_TAGS_PER_RECORD, 2)）。timing probe は削除（必要なら bench/ に移管）
+4. tagCooccurrenceCap: 比率アサーション 2 箇所を cap 不変式アサーションに置換（例: pre-narrow 後のユニーク tag 数 ≦ `MAX_TAG_CLUSTER_TAGS`、record あたり edges ≦ C(MAX_TAGS_PER_RECORD, 2)）。timing probe は削除（必要なら bench/ に移管）
 5. idb-migration: `sqliteEngineHost.ts` の `resetForTesting()` に `#mutex` リセットを追加（`#mutex` を optional 引数で差し替え可能にする等、本番挙動不変）+ `vi.clearAllMocks()` → `vi.resetAllMocks()` と beforeEach での既定 mock 再宣言 + 4 テストは `runMigrations` モック、1 テストは無モック統合として分離
 6. 検証: `npm test` × 3 連続 0 failed → `make clean test` EXIT=0
 
 ### 落とし穴
-- **fake timers のスコープ**: RecordingPipeline には既存の fake-timer ブロック（:466-505）がある。ファイル単位で useFakeTimers にすると別テストの Promise 解決が止まる — 必ず test 単位で scoped にし、afterEach で useRealTimers
+- **fake timers のスコープ**: RecordingPipeline には既存の fake-timer ブロック（:466-505）がある。ファイル単位で useFakeTimers にすると別テストの Promise 解決が止まる ― 必ず test 単位で scoped にし、afterEach で useRealTimers
 - **mutex リセットは本番挙動を変えない**: `resetForTesting` はテストからしか呼ばれない。本番コードに `if (process.env.VITEST)` 分岐を入れない（resetForTesting のみで完結）
 - **bodyProtection は触らない**: 診断で固有機構なし。maxForks cap で解消する可能性が高く、次回失敗時にエラー本文を記録してから判断
-- **操作数アサーションへの置換は弱化ではない**: cap 不変式（ユニーク tag 上限・edge 上限）は「貪欲すぎる縮小」を検出できる。失うのは「caps 内での偶発的な速度低下」のみ — それは bench の管轄
+- **操作数アサーションへの置換は弱化ではない**: cap 不変式（ユニーク tag 上限・edge 上限）は「貪欲すぎる縮小」を検出できる。失うのは「caps 内での偶発的な速度低下」のみ ― それは bench の管轄
 - **maxForks cap で suite 時間が伸びる**: 660 ファイル / 8 forks ≒ 実測 ~100 秒前後（現状 ~100 秒と大差ない場合が多い）。3 連続実行で効果を確認してから確定
 
 ## Definition of Done

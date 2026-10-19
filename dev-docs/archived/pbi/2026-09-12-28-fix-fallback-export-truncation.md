@@ -1,4 +1,4 @@
-# PBI 2026-09-12-28 — Fallback export の 10k 切り詰め解消（SQL backend は全件のままの実バグ）
+# PBI 2026-09-12-28 ― Fallback export の 10k 切り詰め解消（SQL backend は全件のままの実バグ）
 
 - **種別**: 🔧非機能追加（fix）
 - **優先度**: 4 位 / RICE **12.8**（R4 × I2 × C80% / E0.5人日）
@@ -39,8 +39,8 @@ then {version:1, table, rows} で EXPORT_COLUMNS が維持される
 
 ## 実装メモ（2026-09-12）
 
-- `FallbackStorage.exportAllRecords()` 新設（未削除全件・created_at DESC の direct scan — capped query を迂回）。`FallbackStorageAdapter.serialize` がこれを使用
-- envelope SSOT（buildExportEnvelope）は維持 — 形状不変・件数のみ修正
+- `FallbackStorage.exportAllRecords()` 新設（未削除全件・created_at DESC の direct scan ― capped query を迂回）。`FallbackStorageAdapter.serialize` がこれを使用
+- envelope SSOT（buildExportEnvelope）は維持 ― 形状不変・件数のみ修正
 - 検証: offscreen 全 77 ファイル 1067 tests green・type-check green・lint 0 errors
 
 ## 見積もり

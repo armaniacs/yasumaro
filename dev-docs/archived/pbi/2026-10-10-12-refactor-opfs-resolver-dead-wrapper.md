@@ -11,9 +11,9 @@
 
 ## 背景（現状）
 
-- `src/offscreen/backendResolver.ts:45-47` — `detectOpfsCapabilitiesForResolver()` は `detectLiveVfsStrategy().caps` の 1 行委譲のみ。本番参照 0 件（rg で定義+テストのみ確認済み）
-- `src/offscreen/__tests__/backendResolver-coverage.test.ts:64,95-106` — coverage ゲートを通すための describe
-- ヘッダーコメントが「diagnostics panel と lifecycle が共有する」接続を主張 — 実際には両者は `opfsCapabilities` を直接使う（stale）
+- `src/offscreen/backendResolver.ts:45-47` ― `detectOpfsCapabilitiesForResolver()` は `detectLiveVfsStrategy().caps` の 1 行委譲のみ。本番参照 0 件（rg で定義+テストのみ確認済み）
+- `src/offscreen/__tests__/backendResolver-coverage.test.ts:64,95-106` ― coverage ゲートを通すための describe
+- ヘッダーコメントが「diagnostics panel と lifecycle が共有する」接続を主張 ― 実際には両者は `opfsCapabilities` を直接使う（stale）
 
 coverage ゲート通すためだけに生存する dead seam。
 

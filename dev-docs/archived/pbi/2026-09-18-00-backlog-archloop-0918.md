@@ -7,7 +7,7 @@ Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 | 順位 | 候補 | Reach | Impact | Confidence | Effort | RICE | ファイル |
 |------|------|-------|--------|------------|--------|------|----------|
 | 1 | C1: 理由行 push 重複と cleansing bytes 解決の二重所有を seam 化 | 4 | 0.5 | 80% | 0.2 | 8.0 | sqliteHistoryPanelView.ts, historyEntryPresentation.ts |
-| — | C2: getMessage 直呼び散在の getMessageOr 統一（backlog送り） | 20 | 0.25 | 50% | 1.0 | 2.5 | resultBuilder.ts, notificationHelper.ts, errorUtils.ts ほか |
+| ― | C2: getMessage 直呼び散在の getMessageOr 統一（backlog送り） | 20 | 0.25 | 50% | 1.0 | 2.5 | resultBuilder.ts, notificationHelper.ts, errorUtils.ts ほか |
 
 RICE = (Reach × Impact × Confidence) / Effort。Impact 基準: 3=圧倒的 / 2=大 / 1=中 / 0.5=小 / 0.25=極小。
 

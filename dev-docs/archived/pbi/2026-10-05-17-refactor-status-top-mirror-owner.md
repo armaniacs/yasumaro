@@ -65,7 +65,7 @@ Scenario: 二重 mirror でも挙動が変わらない
 
 ## 実装記録
 
-- 変更ファイル: `src/utils/ui/settingsUiHelper.ts`（`showStatus` 内で対象が `#status` のときだけ mirror。`syncStatusToTop` の実装自体も同ファイルへ移動）、`src/dashboard/statusView.ts`（再エクスポート化）、`src/dashboard/settingsPipeline.ts` と `src/dashboard/generalSettings/providerPresets.ts`（手呼び出し削除）、`src/dashboard/generalSettings/connectionTests.ts`（`showSaveError` の手呼び出し削除。`#status` への直接 DOM 書き込みに付随する明示 sync は残す — `showStatus(text)` では node を運べないため。mirror は冪等で挙動不変）
+- 変更ファイル: `src/utils/ui/settingsUiHelper.ts`（`showStatus` 内で対象が `#status` のときだけ mirror。`syncStatusToTop` の実装自体も同ファイルへ移動）、`src/dashboard/statusView.ts`（再エクスポート化）、`src/dashboard/settingsPipeline.ts` と `src/dashboard/generalSettings/providerPresets.ts`（手呼び出し削除）、`src/dashboard/generalSettings/connectionTests.ts`（`showSaveError` の手呼び出し削除。`#status` への直接 DOM 書き込みに付随する明示 sync は残す ― `showStatus(text)` では node を運べないため。mirror は冪等で挙動不変）
 - 逸脱の記録: 受け入れ基準の「10 箇所の手呼び出し削除」は直接 DOM 書き込みに付随する分は残した（showStatus 経由化は別 PBI の範囲）。表示結果は同一
 - 統合修正: 当初 settingsUiHelper が dashboard/statusView を import してレイヤ境界違反（utils→dashboard の逆依存）で lint エラーになったため、実装を settingsUiHelper 側へ移し statusView から再エクスポートする形に統合側で修正
 - テスト: mirror 3 件追加。対象 159 tests green

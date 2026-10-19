@@ -1,4 +1,4 @@
-# PBI: CleansingPresetStore 抽出 — 順序制約を interface に隠す
+# PBI: CleansingPresetStore 抽出 ― 順序制約を interface に隠す
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -35,7 +35,7 @@
 
 ### 触ってはいけないもの
 
-- PRESETS / CLEANSING_RULES / migrateToPreset の検出ロジック（値の意味は不変 — store は順序と書き込み先の所有のみ）
+- PRESETS / CLEANSING_RULES / migrateToPreset の検出ロジック（値の意味は不変 ― store は順序と書き込み先の所有のみ）
 - `dashboard-cleansing-preset.spec.ts` の e2e 契約（select 値・両ストレージ一致）
 
 ## BDD受け入れシナリオ
@@ -57,7 +57,7 @@ Scenario: 手動トグルで custom に遷移する
 - [x] `aiSummaryCleansingSettingsV2.ts` から `chrome.storage.local` の preset 直打ちが消えている（store の adapter に集約）
 - [x] ガードフラグ（`_isApplyingPreset` / `_initialRenderGuard` / applyEpoch）と `setTimeout` 解除が store 内部の状態機械（`idle | busy` + held 窓 + applyEpoch）に置換されている
 - [x] `dashboard-cleansing-preset.spec.ts`（e2e）が据え置きで green（2回実行）
-- [x] store の単体テストが追加されている — 競合シナリオは既存の `hmacKeyStoreRestart.test.ts` パターンに倣い、e2e + V2 テスト81件で検証（migration/apply 同時進行の epoch テストは store 実装に組込み）
+- [x] store の単体テストが追加されている ― 競合シナリオは既存の `hmacKeyStoreRestart.test.ts` パターンに倣い、e2e + V2 テスト81件で検証（migration/apply 同時進行の epoch テストは store 実装に組込み）
 
 ## テスト戦略
 

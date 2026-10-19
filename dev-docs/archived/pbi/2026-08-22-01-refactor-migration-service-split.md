@@ -1,4 +1,4 @@
-# PBI: MigrationService の分割 — 4ジョブの god module を LegacyMigration / OpfsRecovery に分離
+# PBI: MigrationService の分割 ― 4ジョブの god module を LegacyMigration / OpfsRecovery に分離
 
 ## ユーザーストーリー
 開発者として、565行の MigrationService をジョブ別モジュールに分割し、status/progress/retry の状態マシンを storage adapter の背後に隠したい、なぜなら legacy移行・backfill・cleanup・OPFS復旧という無関係な4ジョブが1クラスに同居し、retry/give-up ロジックが chrome.storage 直呼び出し25箇所に埋もれてテスト不能だから
@@ -31,7 +31,7 @@ Scenario: 純粋マッパーは両モジュールから共有される
   When legacy entry（28フィールド）を変換する
   Then tags join・null デフォルト・fallback_triggered の boolean→0/1 変換が現行と同一である
 
-Scenario: エラー — ストレージ自体が落ちた場合も retry 記録は best-effort
+Scenario: エラー ― ストレージ自体が落ちた場合も retry 記録は best-effort
   Given chrome.storage.local が例外を投げる
   When run() の外側 catch が recordFailureAndMaybeGiveUp() を呼ぶ
   Then retry 記録失敗を WARN ログに残し、クラッシュせず次回起動に委ねる（現行挙動を維持）
@@ -60,7 +60,7 @@ Scenario: エラー — ストレージ自体が落ちた場合も retry 記録�
 - OpfsRecovery.needsMigration() の判定条件
 
 ## 見積もり
-3pt（要チームでの見積もり）— 分割自体は機械的だが、状態マシンの port 化と既存テストの DI 移行が含まれる
+3pt（要チームでの見積もり）― 分割自体は機械的だが、状態マシンの port 化と既存テストの DI 移行が含まれる
 - **確認**: migrationService.ts は 565行（4ジョブ+状態マシン混在を確認）
 
 ## 技術的考慮事項

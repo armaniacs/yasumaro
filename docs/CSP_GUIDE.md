@@ -327,7 +327,7 @@ When using local LLMs (Ollama, LM Studio) or OpenAI-compatible APIs, the Base UR
 | LM Studio | `http://127.0.0.1:1234/v1` |
 | Ollama | `http://localhost:11434/v1` |
 
-When the Base URL changes, CSPValidator automatically adds the new domain during initialization. Before allowlisting, the URL is re-validated against the SSRF gate — private IPs, metadata hosts, and non-localhost http URLs are rejected.
+When the Base URL changes, CSPValidator automatically adds the new domain during initialization. Before allowlisting, the URL is re-validated against the SSRF gate ― private IPs, metadata hosts, and non-localhost http URLs are rejected.
 
 ---
 

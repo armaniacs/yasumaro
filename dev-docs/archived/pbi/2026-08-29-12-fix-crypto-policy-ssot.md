@@ -13,7 +13,7 @@
 - VULN-037/052: PBKDF2 100k（標準 600k）で 5.8 倍速いオフライン攻撃（実証）→ iterations SSOT
 - VULN-038: レート制限カウンタが storage.session でリセット可能（実証: 4000 guesses）→ local 永続化
 - VULN-039: crypto get-or-create の未排他（実証: 分岐トークン）→ encryptionKeyMutex パターン適用
-- VULN-040: パスワードポリシー length≥8 のみ（実証: rockyou 4/4 通過）→ strict ポリシー一本化
+- VULN-040: パスワードポリシー length≧8 のみ（実証: rockyou 4/4 通過）→ strict ポリシー一本化
 - 測定方法: 暗号パラメータが 1 箇所で定義され、3 KDF 経路が同一 iterations を使うこと
 
 ## 優先度
@@ -91,7 +91,7 @@ Scenario: 弱いパスワードは production 経路で拒否される
 - **Red-Green-Refactor**: KEK 配線は unlock UX（master password 未設定時）のフォールバック設計を先に決める
 
 ## 見積もり
-3pt（要チームでの見積もり — SSOT 抽出、KEK リカバリ設計、5 モジュール変更、互換移行）
+3pt（要チームでの見積もり ― SSOT 抽出、KEK リカバリ設計、5 モジュール変更、互換移行）
 
 ## 技術的考慮事項
 - 依存関係: Wave 3（単独着手推奨）。既存暗号データを持つユーザー環境での移行検証が必須
@@ -122,12 +122,12 @@ sed -n '30,98p' src/utils/RateLimitService.ts
 7. 移行テスト（旧 100k 形式読み込み）＋ `npm run validate`
 
 ### 落とし穴
-- KEK を session-only にすると Chrome 再起動後に HMAC 検証ができない期間が出る — deriveHmacWrappingKey の配線と「master password 未設定ユーザー」のフォールバック（平文キー運用の明示化）を必ず設計すること
-- iterations の旧形式読み込み漏れは既存ユーザーのエクスポートを壊す — 読み込み側は 100k 互換を維持
+- KEK を session-only にすると Chrome 再起動後に HMAC 検証ができない期間が出る ― deriveHmacWrappingKey の配線と「master password 未設定ユーザー」のフォールバック（平文キー運用の明示化）を必ず設計すること
+- iterations の旧形式読み込み漏れは既存ユーザーのエクスポートを壊す ― 読み込み側は 100k 互換を維持
 - RateLimit の local 永続化はストレージ障害時に fail-open にならないよう（成功時のみリセット）をテストで固定
 
 ## Definition of Done
-- [x] 全 BDD シナリオが自動テストとして実装されパスする（KEK session化 / iterations SSOT / RateLimit 永続化 / strict ポリシー / settings export v2 HMAC。get-or-create 単一生成は encryptionSession のみ — 下記「未達」参照）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする（KEK session化 / iterations SSOT / RateLimit 永続化 / strict ポリシー / settings export v2 HMAC。get-or-create 単一生成は encryptionSession のみ ― 下記「未達」参照）
 - [x] テストカバレッジが基準を満たす（`cryptoParamsSSOT.test.ts` 他）
 - [x] コードレビュー完了
 - [x] リファクタリング完了（グリーン後）
@@ -139,14 +139,14 @@ sed -n '30,98p' src/utils/RateLimitService.ts
 2026-09-01 の `autonomous-task-closer` 監査で **中核は実装済み、2 項目が未達**と判定した。
 
 ### 実装済み（実コードで確認）
-- `src/utils/crypto/cryptoParams.ts` — 暗号パラメータ SSOT（`PBKDF2_ITERATIONS: 600_000` /
+- `src/utils/crypto/cryptoParams.ts` ― 暗号パラメータ SSOT（`PBKDF2_ITERATIONS: 600_000` /
   `LEGACY_PBKDF2_ITERATIONS: 100_000` / strict `validatePasswordPolicy`）。
   `primitives.ts` / `envelope.ts` / `hmacKeyStore.ts` / `masterPassword.ts` /
   `settingsExportImport.ts` が参照
 - KEK の `chrome.storage.session` 化（`hmacKeyStore.ts:137`。local は読み取り後方互換のみ）
 - `RateLimitService` の FAILED_ATTEMPTS / LOCKED_UNTIL を `storage.local` 永続化、成功時のみリセット
 - `masterPassword.validatePasswordRequirements` が `cryptoParams.validatePasswordPolicy` に一本化
-  （弱い length≥8 実装は削除）
+  （弱い length≧8 実装は削除）
 - settings 暗号エクスポート version:2（ciphertext HMAC、復号前検証、v1 後方互換）。
   `ENCRYPTED_EXPORT_VERSION = '2'`（`settingsExportImport.ts:21`）
 - `encryptionSession.ts` の `encryptionKeyMutex` パターン

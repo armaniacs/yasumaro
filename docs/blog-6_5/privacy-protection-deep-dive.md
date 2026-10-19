@@ -1,4 +1,4 @@
-# Yasumaro のプライバシー保護はどう動いているか — PII マスキングから毎日削除までの全体像
+# Yasumaro のプライバシー保護はどう動いているか ― PII マスキングから毎日削除までの全体像
 
 [日本語](#日本語) | [English](#english)
 
@@ -43,8 +43,8 @@ Web ページを AI に送って要約する拡張機能にとって、いちば
 
 さらに Yasumaro はこれを **2 層のプライバシー保護（Two-Layer Privacy Protection）** として設計しています。
 
-- **層 1: Private Page Detection** — HTTP レスポンスヘッダを解析し、「これはプライベートなページ（銀行のログイン後画面など）だ」と判定する
-- **層 2: PII マスキング** — ページ内容から個人情報そのものを伏せ字にする
+- **層 1: Private Page Detection** ― HTTP レスポンスヘッダを解析し、「これはプライベートなページ（銀行のログイン後画面など）だ」と判定する
+- **層 2: PII マスキング** ― ページ内容から個人情報そのものを伏せ字にする
 
 どちらかが「プライベート」と判定すれば、記録は止まります。
 
@@ -68,8 +68,8 @@ Mode C のとき、`_buildSanitizedSettings()` が `useMasking: true` を返す�
 
 加えて、マスキングはもう 2 つの場所からも呼ばれます。
 
-1. **記録結果の確定時** — `RecordingPipeline.execute()` の最後で、`stripPiiFromMaskedItems()` が呼ばれます。これは「マスクした結果（置換後の文字列）」は残しておくものの、**元の生データ（`original` フィールド）を完全に削除する** 処理です。`piiStripper.ts` が担っています。「伏せ字にしたけど、念のため元データもメモリに残さない」という多層防御です。
-2. **手動記録のとき** — ポップアップの「今すぐ記録」など手動経路では、`manualContentFetcher.ts` の `sanitizeContent()` がコンテンツ取得直後に `piiSanitizer.sanitizeRegex()` を呼び、取得した瞬間にマスクします。
+1. **記録結果の確定時** ― `RecordingPipeline.execute()` の最後で、`stripPiiFromMaskedItems()` が呼ばれます。これは「マスクした結果（置換後の文字列）」は残しておくものの、**元の生データ（`original` フィールド）を完全に削除する** 処理です。`piiStripper.ts` が担っています。「伏せ字にしたけど、念のため元データもメモリに残さない」という多層防御です。
+2. **手動記録のとき** ― ポップアップの「今すぐ記録」など手動経路では、`manualContentFetcher.ts` の `sanitizeContent()` がコンテンツ取得直後に `piiSanitizer.sanitizeRegex()` を呼び、取得した瞬間にマスクします。
 
 ---
 
@@ -160,7 +160,7 @@ if (contentDays !== null || contentMax !== null) {
 | 3. 除去 | 記録確定時に元データを削除 | `stripPiiFromMaskedItems()` |
 | 4. 削除 | 保持期間超過分を毎日物理削除 | `handleDailyPurgeAlarm()` → `purgeOldRecords()` |
 
-「同意 → マスク → 除去 → 自動削除」——この 4 段階が、`Content Privacy-by-Design` というひとつの設計思想のもとで繋がっているのが、Yasumaro のプライバシー保護の全貌です。
+「同意 → マスク → 除去 → 自動削除」――この 4 段階が、`Content Privacy-by-Design` というひとつの設計思想のもとで繋がっているのが、Yasumaro のプライバシー保護の全貌です。
 
 ---
 
@@ -179,7 +179,7 @@ This article walks through the actual source code, end to end, to explain how th
 
 ### Chapter 1: What is PII Masking
 
-**PII (Personally Identifiable Information)** means data that can identify a person — email addresses, phone numbers, credit card numbers, My Number, bank accounts, and so on. Yasumaro has a PII masking layer that replaces these with placeholders *before* the content is sent to AI summarization or saved to Obsidian.
+**PII (Personally Identifiable Information)** means data that can identify a person ― email addresses, phone numbers, credit card numbers, My Number, bank accounts, and so on. Yasumaro has a PII masking layer that replaces these with placeholders *before* the content is sent to AI summarization or saved to Obsidian.
 
 The implementation lives in two files.
 
@@ -188,7 +188,7 @@ The implementation lives in two files.
 | `src/utils/piiSanitizer.ts` | Detects PII via regex and replaces it with `[MASKED]`; keeps the result as a `MaskedItem` |
 | `src/utils/piiStripper.ts` | Strips the original raw data (`original` field) from masked items entirely |
 
-`piiSanitizer.ts` does more than simple replacement. Credit card numbers, for example, are validated with the Luhn algorithm before masking to reduce false positives. It also defends against **ReDoS (Regular expression Denial of Service)** with an input size cap (64KB), a match-count limit (1000), and a 5-second timeout — so a malicious string cannot freeze processing.
+`piiSanitizer.ts` does more than simple replacement. Credit card numbers, for example, are validated with the Luhn algorithm before masking to reduce false positives. It also defends against **ReDoS (Regular expression Denial of Service)** with an input size cap (64KB), a match-count limit (1000), and a 5-second timeout ― so a malicious string cannot freeze processing.
 
 Crucially, masking is tied to the **Privacy Mode**. Yasumaro has four modes.
 
@@ -203,8 +203,8 @@ By default, **Mode C (Masked Cloud)** is used. So the main purpose of PII maskin
 
 Yasumaro designs this as **Two-Layer Privacy Protection**.
 
-- **Layer 1: Private Page Detection** — analyzes HTTP response headers to flag a page as private (e.g. a post-login banking screen)
-- **Layer 2: PII Masking** — masks the personal information in the page content itself
+- **Layer 1: Private Page Detection** ― analyzes HTTP response headers to flag a page as private (e.g. a post-login banking screen)
+- **Layer 2: PII Masking** ― masks the personal information in the page content itself
 
 If either layer judges the page private, recording stops.
 
@@ -216,7 +216,7 @@ So when does the masking actually run? The answer is **midway through `Recording
 
 `src/background/pipeline/RecordingPipeline.ts` runs recording as a sequence of steps. One of them, `processPrivacyPipelineStep`, calls `PrivacyPipeline` in `src/background/privacyPipeline.ts`.
 
-Inside `PrivacyPipeline.process()`, there are three layers (L1–L3).
+Inside `PrivacyPipeline.process()`, there are three layers (L1-L3).
 
 ```
 L1: Local summarization (if a local AI is available)
@@ -228,8 +228,8 @@ In Mode C, `_buildSanitizedSettings()` returns `useMasking: true`, so L2's `sani
 
 Masking is also called from two other places.
 
-1. **When the recording result is finalized** — at the end of `RecordingPipeline.execute()`, `stripPiiFromMaskedItems()` is called. It keeps the masked result (the replaced string) but **fully removes the original raw data** via `piiStripper.ts`. "Mask it, but don't even keep the original in memory" — defense in depth.
-2. **For manual recording** — the manual path (e.g. "Record now" in the popup) calls `sanitizeContent()` in `manualContentFetcher.ts`, which invokes `piiSanitizer.sanitizeRegex()` immediately after fetching content.
+1. **When the recording result is finalized** ― at the end of `RecordingPipeline.execute()`, `stripPiiFromMaskedItems()` is called. It keeps the masked result (the replaced string) but **fully removes the original raw data** via `piiStripper.ts`. "Mask it, but don't even keep the original in memory" ― defense in depth.
+2. **For manual recording** ― the manual path (e.g. "Record now" in the popup) calls `sanitizeContent()` in `manualContentFetcher.ts`, which invokes `piiSanitizer.sanitizeRegex()` immediately after fetching content.
 
 ---
 
@@ -244,11 +244,11 @@ Reading this far, you might wonder: "If it masks for me, is it always recording?
 isRecordingAllowed: () => hasPrivacyConsent(),
 ```
 
-So **without consent, recording never starts** — it never even reaches the masking step. On first launch or policy change, a consent modal appears; declining stops recording.
+So **without consent, recording never starts** ― it never even reaches the masking step. On first launch or policy change, a consent modal appears; declining stops recording.
 
 These pieces are bound together under one concept in Yasumaro: **"Content Privacy-by-Design (Sanitize + Consent + Retention)."**
 
-- **Sanitize**: PII masking (Chapters 1–2)
+- **Sanitize**: PII masking (Chapters 1-2)
 - **Consent**: user consent (this chapter)
 - **Retention**: retention period and auto-deletion (next chapter)
 
@@ -292,7 +292,7 @@ And **which storage layer gets purged** depends on the currently selected **Stor
 
 Because all implement the same `StorageBackend` abstraction, the deletion logic only needs to "call `purgeOldRecords()` on the selected backend."
 
-The retention values themselves are editable from the **Dashboard's retention-settings** (`src/dashboard/`), with defaults in `DEFAULT_SETTINGS` of `src/utils/storageSettings.ts`. The intended range is "30–365 days / 1,000–100,000 records." When both values are `null` (unset), purge is skipped for unlimited retention.
+The retention values themselves are editable from the **Dashboard's retention-settings** (`src/dashboard/`), with defaults in `DEFAULT_SETTINGS` of `src/utils/storageSettings.ts`. The intended range is "30-365 days / 1,000-100,000 records." When both values are `null` (unset), purge is skipped for unlimited retention.
 
 ---
 
@@ -320,4 +320,4 @@ The whole picture looks like this.
 | 3. Strip | drops original data at finalize | `stripPiiFromMaskedItems()` |
 | 4. Delete | daily physical purge past retention | `handleDailyPurgeAlarm()` → `purgeOldRecords()` |
 
-"Consent → Mask → Strip → Delete" — these four stages are connected under a single design philosophy, `Content Privacy-by-Design`. That is the full shape of Yasumaro's privacy protection.
+"Consent → Mask → Strip → Delete" ― these four stages are connected under a single design philosophy, `Content Privacy-by-Design`. That is the full shape of Yasumaro's privacy protection.

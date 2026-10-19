@@ -13,7 +13,7 @@ backlog: [2026-09-18-00-backlog-archloop-0918.md](2026-09-18-00-backlog-archloop
 - LAYERS.md Wave 4 の明示的残作業: 「約120箇所の呼び出し側の直接 import 移行（別 PBI 化を推奨）」
 - 実測: production 94 import（93ファイル）+ test 39 import。直接 import は6のみ
 - barrel の再export分布（実測）: `LogType` 47 + `ErrorCode` 38 → `logger/types.js`、`logError` 13 / `logWarn` 10 / `logInfo` 4 / `logDebug` 4 / `logCritical` 1 → `logger/api.js`、`addLog` 1 → `logger/core.js`
-- storage 系の dynamic import 3箇所（savedUrlRepository・encryptionSession・SettingsRepository）が `await import('../logger.js')` — 循環回避を意図するが、logger/* は storage/* を import しない（実測）ため静的直参照に置換可能
+- storage 系の dynamic import 3箇所（savedUrlRepository・encryptionSession・SettingsRepository）が `await import('../logger.js')` ― 循環回避を意図するが、logger/* は storage/* を import しない（実測）ため静的直参照に置換可能
 
 対応方針:
 
@@ -49,7 +49,7 @@ Scenario: ログ出力の挙動が不変である
 ## テスト戦略
 
 - 機械移行のため既存テスト全体で担保（この PBI はフルスイート検証を前提とする統合側作業を含む）
-- `vi.mock('../utils/logger.js')` 形のテストは `vi.mock('../utils/logger/api.js')` 等への移行が必要 — モック対象モジュール名の機械置換漏れに注意
+- `vi.mock('../utils/logger.js')` 形のテストは `vi.mock('../utils/logger/api.js')` 等への移行が必要 ― モック対象モジュール名の機械置換漏れに注意
 
 ## 見積もり
 

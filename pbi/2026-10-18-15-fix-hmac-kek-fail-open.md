@@ -22,21 +22,21 @@ security-audit run-2 の needs_validation リード（run-1 持ち越し）。fi
 
 **再現経路（trace）**
 
-1. `src/utils/crypto/durableKeyStore.ts:53-61` — `loadDurableWrappingKey` は `storage` が無ければ `:55`、`get()` が例外を投げれば `:59` で `null` を返す。ヘッダコメント `:21-24` がこれを「呼び出し側は新しいキーを生成する fallback にする」契約と明記している（意図された fail-open）。
-2. `src/utils/crypto/hmacKeyStore.ts:179-214` — KEK 候補チェーン。session（`:180` 前後）→ legacy `localStored`（`:195-208`）→ durable IDB（`:209-213` で `loadDurableWrappingKey` を呼び、`null` なら `throw new Error('no durable KEK')`）。
-3. `src/utils/crypto/hmacKeyStore.ts:216-222` — 候補ループが全滅を吞む。`:224` のコメント「All candidates exhausted (fresh install or post-restart with no durable key): generate a new KEK」に続き、`:227` で `webcrypto.getRandomValues` で新 KEK を生成し `saveDurableWrappingKey` で保存する。**fresh install と「永続ストア喪失」を同一視している**のが本件の核心。
-4. `src/utils/crypto/hmacKeyStore.ts:319-339` — `getOrCreateWrappedHmacKeyLocked`。既存 envelope の unwrap に失敗すると `:331` で warn、`:333` で `${storageKey}${QUARANTINE_SUFFIX}`（`:89`）へ旧 envelope を隔離、`:335` で「HMAC key regenerated after unwrap failure; signatures made with the old key will no longer verify」を `CRYPTO_HMAC_FAILURE` で記録し、再生成へ落ちる。この経路は `getConsentHmacKey`（`:405`）と `getNotificationHmacKey`（`:414`）＝ `consentHmacSigner`（`:433`）/ `notificationHmacSigner`（`:424`）が使う。
-5. `src/utils/storage/encryptionSession.ts:904-943` — `getOrCreateHmacSecret` の unwrap 失敗 catch（`:919`）は `:922` で「Failed to unwrap HMAC secret, regenerating」を記録し、`:924-926` で新規 secret を生成してラップし直し、**隔離せずに `:926` で `HMAC_SECRET` を上書き**する（旧 envelope は痕跡を残さず消える）。`:918-921` のコメントは今でも「The KEK lives in chrome.storage.session」と書かれており、`durableKeyStore` 導入前の前提で**既に stale**。`:942` の `cachedHmacSecret` でプロセス内キャッシュも更新される。`exportHmacSigner`（`:956`）はこの関数を毎回解決するため、回転は即座に picking up される。
-6. `src/utils/storage/privacyConsent.ts:94-105` — `getPrivacyConsent` は署名検証に失敗すると `:104` で `{ hasConsented: false, needsReconsent: true, signatureInvalid: true }` を返す。**ユーザー向けの再同意プロンプトは原則出ない**（`:110-113` の版数不一致経路は `needsReconsent` を立てず、`signatureInvalid` は popup/background の UI 層で optional 扱い）。
-7. `src/utils/settingsExportImport.ts:335-343`（暗号化エクスポート）と `:714-740`（平文エクスポート。`:731` の `verifier.verify` 失敗で `:740` `return null`）— 検証不一致は**無条件拒否**（`:738` コメント「VULN-009 fix: reject import unconditionally … Do not allow force-import」）。bypass は無い。
+1. `src/utils/crypto/durableKeyStore.ts:53-61` ― `loadDurableWrappingKey` は `storage` が無ければ `:55`、`get()` が例外を投げれば `:59` で `null` を返す。ヘッダコメント `:21-24` がこれを「呼び出し側は新しいキーを生成する fallback にする」契約と明記している（意図された fail-open）。
+2. `src/utils/crypto/hmacKeyStore.ts:179-214` ― KEK 候補チェーン。session（`:180` 前後）→ legacy `localStored`（`:195-208`）→ durable IDB（`:209-213` で `loadDurableWrappingKey` を呼び、`null` なら `throw new Error('no durable KEK')`）。
+3. `src/utils/crypto/hmacKeyStore.ts:216-222` ― 候補ループが全滅を吞む。`:224` のコメント「All candidates exhausted (fresh install or post-restart with no durable key): generate a new KEK」に続き、`:227` で `webcrypto.getRandomValues` で新 KEK を生成し `saveDurableWrappingKey` で保存する。**fresh install と「永続ストア喪失」を同一視している**のが本件の核心。
+4. `src/utils/crypto/hmacKeyStore.ts:319-339` ― `getOrCreateWrappedHmacKeyLocked`。既存 envelope の unwrap に失敗すると `:331` で warn、`:333` で `${storageKey}${QUARANTINE_SUFFIX}`（`:89`）へ旧 envelope を隔離、`:335` で「HMAC key regenerated after unwrap failure; signatures made with the old key will no longer verify」を `CRYPTO_HMAC_FAILURE` で記録し、再生成へ落ちる。この経路は `getConsentHmacKey`（`:405`）と `getNotificationHmacKey`（`:414`）＝ `consentHmacSigner`（`:433`）/ `notificationHmacSigner`（`:424`）が使う。
+5. `src/utils/storage/encryptionSession.ts:904-943` ― `getOrCreateHmacSecret` の unwrap 失敗 catch（`:919`）は `:922` で「Failed to unwrap HMAC secret, regenerating」を記録し、`:924-926` で新規 secret を生成してラップし直し、**隔離せずに `:926` で `HMAC_SECRET` を上書き**する（旧 envelope は痕跡を残さず消える）。`:918-921` のコメントは今でも「The KEK lives in chrome.storage.session」と書かれており、`durableKeyStore` 導入前の前提で**既に stale**。`:942` の `cachedHmacSecret` でプロセス内キャッシュも更新される。`exportHmacSigner`（`:956`）はこの関数を毎回解決するため、回転は即座に picking up される。
+6. `src/utils/storage/privacyConsent.ts:94-105` ― `getPrivacyConsent` は署名検証に失敗すると `:104` で `{ hasConsented: false, needsReconsent: true, signatureInvalid: true }` を返す。**ユーザー向けの再同意プロンプトは原則出ない**（`:110-113` の版数不一致経路は `needsReconsent` を立てず、`signatureInvalid` は popup/background の UI 層で optional 扱い）。
+7. `src/utils/settingsExportImport.ts:335-343`（暗号化エクスポート）と `:714-740`（平文エクスポート。`:731` の `verifier.verify` 失敗で `:740` `return null`）― 検証不一致は**無条件拒否**（`:738` コメント「VULN-009 fix: reject import unconditionally … Do not allow force-import」）。bypass は無い。
 
 **既存テスト（現状 pin している挙動）**
 
-- `src/utils/crypto/__tests__/hmacKeyStoreRegeneration.test.ts:46` — 隔離＋再生成＋エラーコードログを pin。`:63` は正常 unwrap 時に隔離しないこと、`:72` は隔離が1世代だけ、`:85` は KEK 保存失敗時もキーを返す（fail-open）を pin。
+- `src/utils/crypto/__tests__/hmacKeyStoreRegeneration.test.ts:46` ― 隔離＋再生成＋エラーコードログを pin。`:63` は正常 unwrap 時に隔離しないこと、`:72` は隔離が1世代だけ、`:85` は KEK 保存失敗時もキーを返す（fail-open）を pin。
 - `src/utils/crypto/__tests__/hmacKeyStoreChain.test.ts:39` session 優先、`:51` durable fallback、`:58` 全候補空で新規 KEK 生成＋永続化を pin。
-- `src/utils/crypto/__tests__/hmacKeyStoreRestart.test.ts` — durable ストア経由の再起動経路。
-- `src/utils/storage/__tests__/privacyConsentSignatureReset.test.ts:17` — 署名検証失敗が `needsReconsent` + `signatureInvalid` を返すこと、`:36` は再同意で回復することを pin。
-- `src/utils/__tests__/settingsExportImport-signature.test.ts` / `settingsExportImport.test.ts` — 署名検証失敗で `null` を返すこと。
+- `src/utils/crypto/__tests__/hmacKeyStoreRestart.test.ts` ― durable ストア経由の再起動経路。
+- `src/utils/storage/__tests__/privacyConsentSignatureReset.test.ts:17` ― 署名検証失敗が `needsReconsent` + `signatureInvalid` を返すこと、`:36` は再同意で回復することを pin。
+- `src/utils/__tests__/settingsExportImport-signature.test.ts` / `settingsExportImport.test.ts` ― 署名検証失敗で `null` を返すこと。
 
 **監査側の blocker（着手前に潰すべき owner 確認）**
 
@@ -98,25 +98,25 @@ Scenario: 4. 新規インストール（初回 ever）では KEK チェーン終
 
 | ファイル | 行 | 内容 |
 |---|---:|---|
-| `src/utils/crypto/durableKeyStore.ts` | 21–24 | fail-open 契約コメント。「IndexedDB 不在・任意エラーは null/false、呼び出し側は新キー生成に fallback」 |
+| `src/utils/crypto/durableKeyStore.ts` | 21-24 | fail-open 契約コメント。「IndexedDB 不在・任意エラーは null/false、呼び出し側は新キー生成に fallback」 |
 | `src/utils/crypto/durableKeyStore.ts` | 34 | `export type DurableKeyStorage = IdbKeyStorage`（テスト注入 seam の型） |
-| `src/utils/crypto/durableKeyStore.ts` | 41–43 | `setDurableKeyStorageOverride`（テスト専用差し替え） |
-| `src/utils/crypto/durableKeyStore.ts` | 51–61 | `loadDurableWrappingKey`。`:55` / `:59` で `null` を返す |
-| `src/utils/crypto/durableKeyStore.ts` | 67–76 | `saveDurableWrappingKey`。`:70` / `:75` で `false`（保存失敗も fail-open） |
+| `src/utils/crypto/durableKeyStore.ts` | 41-43 | `setDurableKeyStorageOverride`（テスト専用差し替え） |
+| `src/utils/crypto/durableKeyStore.ts` | 51-61 | `loadDurableWrappingKey`。`:55` / `:59` で `null` を返す |
+| `src/utils/crypto/durableKeyStore.ts` | 67-76 | `saveDurableWrappingKey`。`:70` / `:75` で `false`（保存失敗も fail-open） |
 | `src/utils/crypto/hmacKeyStore.ts` | 89 | `QUARANTINE_SUFFIX = '-quarantine'` |
-| `src/utils/crypto/hmacKeyStore.ts` | 179–214 | KEK 候補チェーン（session → legacy local → durable IDB）。`:209-213` が durable 呼び出し |
-| `src/utils/crypto/hmacKeyStore.ts` | 216–222 | 候補ループ。全滅を握りつぶす |
-| `src/utils/crypto/hmacKeyStore.ts` | 224–245 | **チェーン終端**。`:224` コメント、`:227` 新 KEK 生成、`:238-244` 保存失敗ログ |
-| `src/utils/crypto/hmacKeyStore.ts` | 319–339 | `getOrCreateWrappedHmacKeyLocked`。`:331` warn、**`:333` 隔離 set**、`:335` 「signatures made with the old key will no longer verify」 |
+| `src/utils/crypto/hmacKeyStore.ts` | 179-214 | KEK 候補チェーン（session → legacy local → durable IDB）。`:209-213` が durable 呼び出し |
+| `src/utils/crypto/hmacKeyStore.ts` | 216-222 | 候補ループ。全滅を握りつぶす |
+| `src/utils/crypto/hmacKeyStore.ts` | 224-245 | **チェーン終端**。`:224` コメント、`:227` 新 KEK 生成、`:238-244` 保存失敗ログ |
+| `src/utils/crypto/hmacKeyStore.ts` | 319-339 | `getOrCreateWrappedHmacKeyLocked`。`:331` warn、**`:333` 隔離 set**、`:335` 「signatures made with the old key will no longer verify」 |
 | `src/utils/crypto/hmacKeyStore.ts` | 405 / 414 | `getConsentHmacKey` / `getNotificationHmacKey`（隔離経路を使う側） |
 | `src/utils/crypto/hmacKeyStore.ts` | 424 / 433 | `notificationHmacSigner` / `consentHmacSigner` |
-| `src/utils/storage/encryptionSession.ts` | 904–943 | `getOrCreateHmacSecret`。`:918-921` **stale コメント**（KEK は session にあるという旧前提）、`:922` ログ、`:924-926` 生成＋**隔離なし上書き**、`:942` キャッシュ更新 |
+| `src/utils/storage/encryptionSession.ts` | 904-943 | `getOrCreateHmacSecret`。`:918-921` **stale コメント**（KEK は session にあるという旧前提）、`:922` ログ、`:924-926` 生成＋**隔離なし上書き**、`:942` キャッシュ更新 |
 | `src/utils/storage/encryptionSession.ts` | 956 | `exportHmacSigner`（呼び出しごとに secret を解決するため回転が即反映） |
-| `src/utils/storage/privacyConsent.ts` | 94–105 | 署名検証。`:104` `{hasConsented:false, needsReconsent:true, signatureInvalid:true}` |
-| `src/utils/storage/privacyConsent.ts` | 108–115 | 版数一致判定（PBI 05 と交差する） |
-| `src/utils/storage/privacyConsent.ts` | 163–165 | `hasPrivacyConsent` |
-| `src/utils/settingsExportImport.ts` | 335–343 | 暗号化エクスポートの HMAC 不一致 → `return null` |
-| `src/utils/settingsExportImport.ts` | 714–740 | 平文エクスポート。`:714` 署名無し拒否、`:730` verifier 解決、`:731-740` 検証失敗 `return null`（VULN-009 無条件拒否） |
+| `src/utils/storage/privacyConsent.ts` | 94-105 | 署名検証。`:104` `{hasConsented:false, needsReconsent:true, signatureInvalid:true}` |
+| `src/utils/storage/privacyConsent.ts` | 108-115 | 版数一致判定（PBI 05 と交差する） |
+| `src/utils/storage/privacyConsent.ts` | 163-165 | `hasPrivacyConsent` |
+| `src/utils/settingsExportImport.ts` | 335-343 | 暗号化エクスポートの HMAC 不一致 → `return null` |
+| `src/utils/settingsExportImport.ts` | 714-740 | 平文エクスポート。`:714` 署名無し拒否、`:730` verifier 解決、`:731-740` 検証失敗 `return null`（VULN-009 無条件拒否） |
 | `src/utils/crypto/encryptedExportCodec.ts` | 92 | `verifyEncryptedExportHmac`（'mismatch' を返す検証契約） |
 | `src/utils/crypto/__tests__/hmacKeyStoreRegeneration.test.ts` | 46 / 63 / 72 / 85 | 隔離＋再生成の pin |
 | `src/utils/crypto/__tests__/hmacKeyStoreChain.test.ts` | 39 / 51 / 58 | 候補チェーン順・全滅時新規生成の pin |
@@ -177,6 +177,6 @@ Scenario: 4. 新規インストール（初回 ever）では KEK チェーン終
 ## 関連
 
 - `pbi/00-INDEX.md`
-- consent lifecycle 領域の PBI 05（migration 再付与阻止。2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — `needsReconsent` 判定が交差する）
+- consent lifecycle 領域の PBI 05（migration 再付与阻止。2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` ― `needsReconsent` 判定が交差する）
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` / `NEEDS-VALIDATION.md:156`〜）
 - PBI 2026-09-14-09（durableKeyStore 導入の元 PBI。ヘッダコメントが本件の前提を記述している）

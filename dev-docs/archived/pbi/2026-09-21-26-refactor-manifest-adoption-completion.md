@@ -105,18 +105,18 @@ cat wasm/crates.json
 
 ### file:line付き証拠
 
-- `package.json:13` — `test:wasm` が `cd wasm/js-strings && cargo test && cd ../pii-sanitizer && ...` の 5 ディレクトリ硬直 chain。`js-strings` は lib-only であり manifest 外にのみ存在する（build 対象 4 crate と非対称）
-- `.github/workflows/ci.yml:83-92` — cache path の 5 クレート列挙（`wasm/js-strings/target` から `wasm/tag-cooccur/target` までの直書き）。lock キーの `hashFiles('wasm/*/Cargo.lock')` は既に汎用であり、path 列だけが硬直している
-- `.github/workflows/ci.yml:95` — step 名に 5 crate の prose 列挙（`js-strings + pii-sanitizer + textrank + sentence-dedup + tag-cooccur`）。crate 追加のたびに step 名の同調が必要な構造
-- `.github/workflows/ci.yml:129`・`.github/workflows/ci.yml:132` — 文字相同の 7-path parity vitest 呼び出し 2 行（fresh rebuild 用と committed binary 用）。同期強制なしに 2 行の一致を維持する必要がある
-- `wxt.config.ts:152-161` — manifest 駆動 loop（`wasm/crates.json` を読み `publicShip` のみ出荷）。本 PBI で矛盾解消の基準になる側である
-- `wxt.config.ts:207-211` — CSP コメントの sentence-dedup STAGED prose（`not yet called from production`・`its binary is not shipped`・`no publicAssets entry, no public/wasm copy` の記述）。直上の manifest 駆動 loop と矛盾する prose 管理である
-- `wxt.config.ts:216` — grep 検索パターン文字列（`sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur`）。列挙ではなく検証用パターンであり benign として対象外と明記する
-- `CONTEXT.md:29` — WASM コア行が 3 クレートのみ列挙（`wasm/pii-sanitizer/`・`wasm/textrank/`・`wasm/sentence-dedup/`）。出荷済みの tag-cooccur と js-strings が欠落している
-- `wasm/crates.json:3` — comment の invariant 宣言（`no other enumeration file may list crates`）。上記の重複列挙により現在偽である
-- `wasm/tag-cooccur/src/cooccur.rs:18-19` — 陳腐 doc 2 行（JS `\s` と Rust `White_Space` の差異に関する記述。drive-by 更新対象）
-- `wasm/js-strings/src/jsstring.rs:1-2` — 陳腐 doc 2 行（`shared by the textrank and sentence-dedup WASM cores` の記述。tag-cooccur への共有が漏れている）
-- `scripts/validate-json.mjs:43-48` — `validate:json` の対象 JSON 列挙（`docs/version.json`・`dev-docs/metrics/history.json`・`sbom.json`・`package.json`）。`wasm/crates.json` を通るか着手前に確認する
+- `package.json:13` ― `test:wasm` が `cd wasm/js-strings && cargo test && cd ../pii-sanitizer && ...` の 5 ディレクトリ硬直 chain。`js-strings` は lib-only であり manifest 外にのみ存在する（build 対象 4 crate と非対称）
+- `.github/workflows/ci.yml:83-92` ― cache path の 5 クレート列挙（`wasm/js-strings/target` から `wasm/tag-cooccur/target` までの直書き）。lock キーの `hashFiles('wasm/*/Cargo.lock')` は既に汎用であり、path 列だけが硬直している
+- `.github/workflows/ci.yml:95` ― step 名に 5 crate の prose 列挙（`js-strings + pii-sanitizer + textrank + sentence-dedup + tag-cooccur`）。crate 追加のたびに step 名の同調が必要な構造
+- `.github/workflows/ci.yml:129`・`.github/workflows/ci.yml:132` ― 文字相同の 7-path parity vitest 呼び出し 2 行（fresh rebuild 用と committed binary 用）。同期強制なしに 2 行の一致を維持する必要がある
+- `wxt.config.ts:152-161` ― manifest 駆動 loop（`wasm/crates.json` を読み `publicShip` のみ出荷）。本 PBI で矛盾解消の基準になる側である
+- `wxt.config.ts:207-211` ― CSP コメントの sentence-dedup STAGED prose（`not yet called from production`・`its binary is not shipped`・`no publicAssets entry, no public/wasm copy` の記述）。直上の manifest 駆動 loop と矛盾する prose 管理である
+- `wxt.config.ts:216` ― grep 検索パターン文字列（`sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur`）。列挙ではなく検証用パターンであり benign として対象外と明記する
+- `CONTEXT.md:29` ― WASM コア行が 3 クレートのみ列挙（`wasm/pii-sanitizer/`・`wasm/textrank/`・`wasm/sentence-dedup/`）。出荷済みの tag-cooccur と js-strings が欠落している
+- `wasm/crates.json:3` ― comment の invariant 宣言（`no other enumeration file may list crates`）。上記の重複列挙により現在偽である
+- `wasm/tag-cooccur/src/cooccur.rs:18-19` ― 陳腐 doc 2 行（JS `\s` と Rust `White_Space` の差異に関する記述。drive-by 更新対象）
+- `wasm/js-strings/src/jsstring.rs:1-2` ― 陳腐 doc 2 行（`shared by the textrank and sentence-dedup WASM cores` の記述。tag-cooccur への共有が漏れている）
+- `scripts/validate-json.mjs:43-48` ― `validate:json` の対象 JSON 列挙（`docs/version.json`・`dev-docs/metrics/history.json`・`sbom.json`・`package.json`）。`wasm/crates.json` を通るか着手前に確認する
 
 ### 実装手順
 

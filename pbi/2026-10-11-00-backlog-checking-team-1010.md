@@ -100,7 +100,7 @@ NN01 は `Cargo.toml` を触らない（strip 設定は NN09）。`src/utils/pii
 
 ### 完了分の検証（2026-10-11）
 
-- 01: `cargo test` 54 passed / `npm run test:wasm` green / parity 223 + extended 59 green / `piiSanitizer.test.ts` 75 green / wasm src↔public byte 一致
+- 01: `cargo test` 54 passed / `npm run test:wasm` green / parity 223 + extended 59 green / `piiSanitizer.test.ts` 75 green / wasm src⇔public byte 一致
 - 02: 関連 13 ファイル 256 passed / インポート値域検証 12 ケース / `type-check` exit 0
 - 03: `markdownFormatter.test.ts` 26 passed（新規 4 件）/ 関連 7 ファイル 108 passed
 - 04: `npm run check-i18n` ALL PASSED（ja/en 1566 一致、ソース 597 キー全て存在）/ 関連 6 ファイル 215 passed

@@ -1,4 +1,4 @@
-# PBI: pii-sandbox window公開の凍結 — 隔離破綻防止
+# PBI: pii-sandbox window公開の凍結 ― 隔離破綻防止
 
 ## ユーザーストーリー
 docs訪問者として、PIIサンドボックスのwindow公開が改竄されないようにしてほしい、なぜなら `docs/assets/pii-sandbox.js:14` の `window.PiiSandbox` が origin検証や `Object.freeze` 無しで公開されると、同一originのiframeや拡張機能が `PiiSandbox.sanitize` を上書きし、マスク結果を偽装できるから
@@ -16,19 +16,19 @@ docs訪問者として、PIIサンドボックスのwindow公開が改竄され�
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 正常なsanitize呼び出しは成功する
+Scenario: 正常系 ― 正常なsanitize呼び出しは成功する
   Given docsページがロードされ、window.PiiSandbox が凍結されている
   When window.PiiSandbox.sanitize('test@example.com') を呼ぶ
   Then マスクされた結果が返る
   And Object.isFrozen(window.PiiSandbox) が true である
 
-Scenario: 境界ケース — 上書きが防止される
+Scenario: 境界ケース ― 上書きが防止される
   Given window.PiiSandbox が凍結されている
   When 攻撃者が window.PiiSandbox.sanitize = () => 'hacked' を試みる
   Then TypeError がthrowされるか、代入が無視される（strict modeではthrow）
   And 元のsanitizeが依然として動作する
 
-Scenario: エラーケース — origin検証が無い場合のリスクを文書化
+Scenario: エラーケース ― origin検証が無い場合のリスクを文書化
   Given docsが外部originからpostMessageでsanitizeを呼ばない
   When window.PiiSandbox が公開されている
   Then origin検証は不要であることがADRまたはコメントで明記されている
@@ -60,7 +60,7 @@ Scenario: エラーケース — origin検証が無い場合のリスクを文�
 - **Red-Green-Refactor**: TDD
 
 ## 見積もり
-1pt（要チーム見積もり）— freeze 1行とテストの小規模
+1pt（要チーム見積もり）― freeze 1行とテストの小規模
 
 ## 技術的考慮事項
 - 依存関係: 09 implicit global解消後に実施。09で公開物が整理されてからfreezeをかけると二重手間を回避

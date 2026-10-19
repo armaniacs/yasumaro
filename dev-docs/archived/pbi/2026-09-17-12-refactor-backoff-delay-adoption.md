@@ -12,11 +12,11 @@ backlog: [2026-09-17-00-backlog-arch-review-0917b.md](2026-09-17-00-backlog-arch
 
 `src/utils/backoff.ts` の `backoffDelayMs(attempt, opts)` が PBI 09（archived: 2026-09-17-09）で新設され、`messageTransport` / `dashboardGateway` / `fetchWithRetry` の遅延計算は移行済みである。一方、以下5箇所が `Math.pow(2, ...)` の手書き計算を残している（いずれも実在を確認済み）：
 
-1. `src/background/pipeline/stepExecutor.ts` の `StepExecutor.executeWithStrategy()`（リトライ分岐内） — `1000ms * 2^retries` を 5000ms で cap。`retries` はインクリメント後の 1-origin 値である。
-2. `src/utils/storage/storageTransaction.ts` の `StorageTransaction.withLock()`（`ConflictError` catch 内） — `initialDelay * 2^(attemptCount - 1)`。cap なし。
-3. 同ファイルの `StorageTransaction.withAtomic()`（`ConflictError` catch 内） — `initialDelay * 2^(attempt - 1)`。cap なし。
-4. `src/utils/trustDb/TrustDbKernel.ts` の `doInitializeWithRetry()`（リトライループ内） — `100ms * 2^attempt`（`attempt` は 0-origin）。cap なし。
-5. `src/utils/trustDb/trancoUpdater.ts` の `TrancoUpdater.updateTrancoList()`（リトライループ内） — `baseDelay * 2^(attempt - 1)`（`attempt` は 1-origin、`baseDelay` は 1000ms）。cap なし。
+1. `src/background/pipeline/stepExecutor.ts` の `StepExecutor.executeWithStrategy()`（リトライ分岐内） ― `1000ms * 2^retries` を 5000ms で cap。`retries` はインクリメント後の 1-origin 値である。
+2. `src/utils/storage/storageTransaction.ts` の `StorageTransaction.withLock()`（`ConflictError` catch 内） ― `initialDelay * 2^(attemptCount - 1)`。cap なし。
+3. 同ファイルの `StorageTransaction.withAtomic()`（`ConflictError` catch 内） ― `initialDelay * 2^(attempt - 1)`。cap なし。
+4. `src/utils/trustDb/TrustDbKernel.ts` の `doInitializeWithRetry()`（リトライループ内） ― `100ms * 2^attempt`（`attempt` は 0-origin）。cap なし。
+5. `src/utils/trustDb/trancoUpdater.ts` の `TrancoUpdater.updateTrancoList()`（リトライループ内） ― `baseDelay * 2^(attempt - 1)`（`attempt` は 1-origin、`baseDelay` は 1000ms）。cap なし。
 
 対応方針は次の1点である：上記5箇所の遅延計算のみ `backoffDelayMs` に委譲する。再試行可否の判定の述語（`ConflictError` 判定、`ErrorStrategy.RETRY` 判定、`maxRetries` 到達判定等）は各ドメインに残す。jitter 等の拡張は本 PBI のスコープ外とする（導入するなら別 PBI で parity を pin してから）。
 
@@ -35,7 +35,7 @@ Scenario: 5箇所のリトライ遅延が委譲後も現行値と同一（parity
     # trancoUpdater 系は baseMs 1000・multiplier 2（cap なし）で再現する。
     # 1-origin の呼び出し側は attempt - 1 を渡してオフセットを吸収する
 
-Scenario: 境界 — maxMs 超過の attempt は cap 値で頭打ちになる
+Scenario: 境界 ― maxMs 超過の attempt は cap 値で頭打ちになる
   Given cap を持つ stepExecutor 系の遅延計算（maxMs 5000）
   When cap を超過する attempt（例: retries が大きく `1000 * 2^retries` が 5000 を超える回）の遅延を計算する
   Then 現行の Math.min 挙動と同一で 5000ms が返る

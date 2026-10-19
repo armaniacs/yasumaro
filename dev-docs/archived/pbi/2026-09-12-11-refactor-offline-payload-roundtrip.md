@@ -1,4 +1,4 @@
-# PBI 2026-09-12-11 — Offline payload の enqueue/retry round-trip 統合
+# PBI 2026-09-12-11 ― Offline payload の enqueue/retry round-trip 統合
 
 - **種別**: 🔧非機能追加（refactor）
 - **優先度**: 3 位 / RICE **16.0**（R10 × I2 × C80% / E1.0人日）

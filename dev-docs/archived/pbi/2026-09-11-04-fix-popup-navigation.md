@@ -9,8 +9,8 @@ popup を保守する開発者として、存在しない要素を参照する�
 - 順位: 04 / 7
 - RICE スコア: 5.3（Reach=2 / Impact=1 / Confidence=80% / Effort=0.3 人週）
 - 根拠（round 7 診断）:
-  - `navigation.ts:17,21`（settingsScreen）と `:87,100-102`（backBtn）— 参照先要素が popup/index.html に無い（CSS とテスト fixture にのみ存在）
-  - `:94-97` — historyBtn wiring が `if (menuBtn)` 内にネスト（menuBtn 依存）
+  - `navigation.ts:17,21`（settingsScreen）と `:87,100-102`（backBtn）― 参照先要素が popup/index.html に無い（CSS とテスト fixture にのみ存在）
+  - `:94-97` ― historyBtn wiring が `if (menuBtn)` 内にネスト（menuBtn 依存）
   - 3 initializer: `entrypoints/popup/main.ts:12-22`（DOMContentLoaded → applyI18n）/ `src/popup/popup.ts:110-112`（import 時 auto-run）/ `src/popup/main.ts:13-31`（DOMContentLoaded → load）
   - lang/dir 設定が `popup.ts:24-35`（setHtmlLangDir）と `i18n-dom.ts`（setHtmlLangAndDir）の 2 実装
 
@@ -47,6 +47,6 @@ S（0.3 人週）。種別: refactor（+fix）。
 ## 実装メモ（2026-09-11 round 7）
 
 - navigation.ts: settingsScreen/backBtn の dead 分岐削除（参照先要素は HTML に存在しない）+ historyBtn wiring を menuBtn guard 外へ。
-- popup.ts: import 時 auto-run（initPopup 即時実行）を削除 — entrypoints/popup/main.ts の bootstrap（setHtmlLangAndDir → applyI18n → translatePageTitle → initPopup）が単一 entry point に。
+- popup.ts: import 時 auto-run（initPopup 即時実行）を削除 ― entrypoints/popup/main.ts の bootstrap（setHtmlLangAndDir → applyI18n → translatePageTitle → initPopup）が単一 entry point に。
 - `setHtmlLangDir`（popup.ts・getUILanguage ベース）を削除し i18n-dom の `setHtmlLangAndDir` に統一（単一 lang/dir helper）。popup テストを i18n-dom 対応に更新（3 ブロック書き換え）。
 - popup 全 855 tests green。

@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Refactor 5 architectural friction areas across dashboard UI, background, and pipeline layers — introducing typed abstractions, eliminating dead code, and improving testability.
+**Goal:** Refactor 5 architectural friction areas across dashboard UI, background, and pipeline layers ― introducing typed abstractions, eliminating dead code, and improving testability.
 
 **Architecture:** Phase 1 builds foundations (types, registries, mappers) in parallel across all 5 candidates. Phase 2 migrates panels one-by-one and integrates new abstractions. Phase 3 deletes dead code. Each task produces a self-contained commit.
 
@@ -42,7 +42,7 @@ Phase 3 ──┬── C1-3: Delete old nav, getDashboardElements ────�
 
 ## Phase 1: Foundations (All candidates, max parallel)
 
-### Task 1.1: C1 — Create Panel types and NavigationRegistry
+### Task 1.1: C1 ― Create Panel types and NavigationRegistry
 
 **Files:**
 - Create: `src/dashboard/panels/types.ts`
@@ -187,7 +187,7 @@ describe('NavigationRegistry', () => {
 - [ ] **Step 1.1c: Run tests to verify they fail**
 
 Run: `npx jest src/dashboard/panels/__tests__/NavigationRegistry.test.ts`
-Expected: FAIL — module not found
+Expected: FAIL ― module not found
 
 - [ ] **Step 1.1d: Implement NavigationRegistry**
 
@@ -372,7 +372,7 @@ git add src/dashboard/panels/types.ts src/dashboard/panels/NavigationRegistry.ts
 git commit -m "feat(dashboard): add Panel types, NavigationRegistry, and DashboardBootstrapper"
 ```
 
-### Task 1.2: C3 — Create AIService interface and implementations
+### Task 1.2: C3 ― Create AIService interface and implementations
 
 **Files:**
 - Create: `src/background/ai/AIService.ts`
@@ -610,7 +610,7 @@ git commit -m "feat(ai): add AIService interface, Remote/Local/Fallback implemen
 
 ---
 
-### Task 1.3: C4 — Create MessageHandlerRegistry and createBackgroundServices
+### Task 1.3: C4 ― Create MessageHandlerRegistry and createBackgroundServices
 
 **Files:**
 - Create: `src/background/handlers/MessageHandlerRegistry.ts`
@@ -773,7 +773,7 @@ git commit -m "feat(sw): add MessageHandlerRegistry and createBackgroundServices
 
 ---
 
-### Task 1.4: C5 — Create BrowsingLogRecordMapper
+### Task 1.4: C5 ― Create BrowsingLogRecordMapper
 
 **Files:**
 - Create: `src/background/pipeline/mappers/BrowsingLogRecordMapper.ts`
@@ -865,7 +865,7 @@ import { type BrowsingLogRecord } from '../../../utils/storage/types';
 
 /**
  * Maps the accumulated RecordingContext to a BrowsingLogRecord.
- * Pure function — no side effects, no storage access, no chrome APIs.
+ * Pure function ― no side effects, no storage access, no chrome APIs.
  */
 export function mapToBrowsingLogRecord(context: RecordingContext): BrowsingLogRecord {
   return {
@@ -911,7 +911,7 @@ git commit -m "feat(pipeline): extract BrowsingLogRecordMapper from RecordingPip
 
 ---
 
-### Task 1.5: C5 — Create MarkdownBufferManager
+### Task 1.5: C5 ― Create MarkdownBufferManager
 
 **Files:**
 - Create: `src/background/pipeline/buffers/MarkdownBufferManager.ts`
@@ -1081,7 +1081,7 @@ git commit -m "feat(pipeline): extract MarkdownBufferManager from saveLocalMarkd
 
 ## Phase 2: Migration & Integration
 
-### Task 2.1: C1 — Migrate DiagnosticPanel (simplest panels first)
+### Task 2.1: C1 ― Migrate DiagnosticPanel (simplest panels first)
 
 **Files:**
 - Create: `src/dashboard/panels/diagnostic/diagnosticsPanel.ts`
@@ -1206,7 +1206,7 @@ git commit -m "refactor(dashboard): migrate diagnostics and export-logs to Diagn
 
 ---
 
-### Task 2.2: C1 — Migrate AsyncDataPanels (history panels + tagCluster + domainSearch + auditLog)
+### Task 2.2: C1 ― Migrate AsyncDataPanels (history panels + tagCluster + domainSearch + auditLog)
 
 This task follows the same pattern as 2.1 but for 6 panels. Each panel migration is independent and can be parallelized.
 
@@ -1219,7 +1219,7 @@ This task follows the same pattern as 2.1 but for 6 panels. Each panel migration
 - [ ] Register in Bootstrapper
 - [ ] Commit
 
-**Panels to migrate (in this order — independent of each other):**
+**Panels to migrate (in this order ― independent of each other):**
 
 | # | Panel | File | E2E test |
 |---|-------|------|----------|
@@ -1234,11 +1234,11 @@ This task follows the same pattern as 2.1 but for 6 panels. Each panel migration
 
 ---
 
-### Task 2.3: C1 — Migrate StaticFormPanels (11 panels)
+### Task 2.3: C1 ― Migrate StaticFormPanels (11 panels)
 
 Same pattern as 2.2 but with `StaticFormPanel` interface. Each panel migration is independent.
 
-**Panels to migrate (in this order — independent of each other):**
+**Panels to migrate (in this order ― independent of each other):**
 
 | # | Panel | File |
 |---|-------|------|
@@ -1256,7 +1256,7 @@ Same pattern as 2.2 but with `StaticFormPanel` interface. Each panel migration i
 
 ---
 
-### Task 2.4: C2 — Add data-storage-key attributes to HTML
+### Task 2.4: C2 ― Add data-storage-key attributes to HTML
 
 **Files:**
 - Modify: `entrypoints/options/index.html`
@@ -1289,7 +1289,7 @@ git commit -m "feat(html): add data-storage-key attributes to all settings input
 
 ---
 
-### Task 2.5: C2 — Implement generic settingsFormBinding utilities
+### Task 2.5: C2 ― Implement generic settingsFormBinding utilities
 
 **Files:**
 - Create: `src/utils/settingsFormBinding.ts`
@@ -1498,7 +1498,7 @@ git commit -m "refactor(settings): replace manual mapping with data-storage-key 
 
 ---
 
-### Task 2.6: C3 — Refactor PrivacyPipeline to use AIService
+### Task 2.6: C3 ― Refactor PrivacyPipeline to use AIService
 
 **Files:**
 - Modify: `src/background/pipeline/PrivacyPipeline.ts`
@@ -1543,7 +1543,7 @@ git commit -m "refactor(ai): replace PrivacyPipeline direct AI calls with AIServ
 
 ---
 
-### Task 2.7: C4 — Refactor handlers with narrowed dependencies
+### Task 2.7: C4 ― Refactor handlers with narrowed dependencies
 
 **Files:**
 - Modify: `src/background/handlers/*.ts` (15 handler files)
@@ -1585,7 +1585,7 @@ export function createValidVisitHandler(deps: ValidVisitHandlerDeps) {
 
       const result = await deps.recordVisit(message.data);
       sendResponse({ success: true, data: result });
-      return true; // async — keep channel open
+      return true; // async ― keep channel open
     } catch (err) {
       sendResponse({ success: false, error: (err as Error).message });
       return false;
@@ -1643,7 +1643,7 @@ git commit -m "refactor(sw): narrow handler dependencies and wire MessageHandler
 
 ---
 
-### Task 2.8: C5 — Wire mapper and buffer manager into pipeline
+### Task 2.8: C5 ― Wire mapper and buffer manager into pipeline
 
 **Files:**
 - Modify: `src/background/pipeline/RecordingPipeline.ts`
@@ -1706,7 +1706,7 @@ git commit -m "refactor(pipeline): wire BrowsingLogRecordMapper and MarkdownBuff
 
 ## Phase 3: Cleanup
 
-### Task 3.1: C1 — Delete old navigation and getDashboardElements
+### Task 3.1: C1 ― Delete old navigation and getDashboardElements
 
 **Files:**
 - Modify: `src/dashboard/dashboard.ts` (delete old code)
@@ -1767,7 +1767,7 @@ git commit -m "refactor(dashboard): delete old nav systems and getDashboardEleme
 
 ---
 
-### Task 3.2: C2 / C3 — Delete dead code
+### Task 3.2: C2 / C3 ― Delete dead code
 
 - [ ] **Step 3.2a: Delete interfaces/index.ts**
 
@@ -1816,7 +1816,7 @@ Expected: Build succeeds
 
 ```bash
 git add -A
-git commit -m "chore: final validation — all tests pass, build succeeds"
+git commit -m "chore: final validation ― all tests pass, build succeeds"
 ```
 
 ---
@@ -1831,7 +1831,7 @@ Phase 1 (ALL PARALLEL):
   1.4 (C5 mapper)          ─┤
   1.5 (C5 buffer mgr)      ─┘
 
-Phase 2 (MOSTLY PARALLEL — after Phase 1):
+Phase 2 (MOSTLY PARALLEL ― after Phase 1):
   2.1 (C1 diagnostic panels)  ─┐
   2.2 (C1 async panels)       ─┤── independent of each other
   2.3 (C1 static form panels) ─┤── (each panel migration is independent)

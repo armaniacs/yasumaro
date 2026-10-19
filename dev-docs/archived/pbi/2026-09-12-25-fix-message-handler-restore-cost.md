@@ -1,4 +1,4 @@
-# PBI 2026-09-12-25 — メッセージ毎 restore() ファンアウトの削減（round 11 prune の hot-path 回帰修正）
+# PBI 2026-09-12-25 ― メッセージ毎 restore() ファンアウトの削減（round 11 prune の hot-path 回帰修正）
 
 - **種別**: 🔧非機能追加（fix・perf 回帰修正）
 - **優先度**: 1 位 / RICE **40.0**（R25 × I1 × C80% / E0.5人日）
@@ -40,7 +40,7 @@ then prune を含む restore が 1 回実行され stale tabId が初期化さ�
 ## 実装メモ（2026-09-12）
 
 - `RestoreOnce` seam 新設: `restoredOnce()` / `resetRestoreOnce()`。`createAutoSavedBadgeTabs` が restore-once 化（1 回目のみ fan-out・以後 no-op）
-- `messageHandler` の per-message restore は削除せず no-op 化（restore-once により 2 回目以降は即 return — MessageHandlerDeps の interface 変更を避ける最小修正）
+- `messageHandler` の per-message restore は削除せず no-op 化（restore-once により 2 回目以降は即 return ― MessageHandlerDeps の interface 変更を避ける最小修正）
 - `handleTabRemoved` が `resetRestoreOnce()` + `removeAndFlush` を実行（prune 再発火点）
 - ctx 型は `resetRestoreOnce?` オプショナル（既存 test mock 互換）・tabCache は `removeAndFlush?` オプショナル参照
 - 検証: restoreOnce 3 tests 新設・tab 3 ファイル 41 tests green・type-check green・lint 0 errors

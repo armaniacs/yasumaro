@@ -15,17 +15,17 @@
 - 解: `structuredClone(DEFAULT_CLEANSING_CONFIG)` または `{ ...DEFAULT_CLEANSING_CONFIG, contentStripKeywords: [...DEFAULT_CLEANSING_CONFIG.contentStripKeywords], aiSummaryCleansingCustomPatterns: [...DEFAULT_CLEANSING_CONFIG.aiSummaryCleansingCustomPatterns] }` で深い複製に修正
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 新しい PageState は独立した配列を持つ
+Scenario: ハッピーパス ― 新しい PageState は独立した配列を持つ
   Given `DEFAULT_CLEANSING_CONFIG.contentStripKeywords` が 17 要素である
   When `new PageState()` を 2 回生成し、一方の `cleansingConfig.contentStripKeywords.push('__test__')` を実行する
   Then 他方の `cleansingConfig.contentStripKeywords` は `__test__` を含まず、`DEFAULT_CLEANSING_CONFIG` も汚染されない
 
-Scenario: 境界 — 空配列プロパティも独立して複製される
+Scenario: 境界 ― 空配列プロパティも独立して複製される
   Given `aiSummaryCleansingCustomPatterns` が空配列である
   When 1つの PageState で `cleansingConfig.aiSummaryCleansingCustomPatterns = ['a']` を代入する
   Then 別インスタンスと `DEFAULT_CLEANSING_CONFIG.aiSummaryCleansingCustomPatterns` は空配列のままである
 
-Scenario: 回帰 — loadSettings 後の配列置換が他インスタンスに影響しない
+Scenario: 回帰 ― loadSettings 後の配列置換が他インスタンスに影響しない
   Given 2つの PageState インスタンスが存在する
   When 片方で `loadSettings` 相当の配列置換を行う
   Then もう片方の配列は元のままである
@@ -38,7 +38,7 @@ Scenario: 回帰 — loadSettings 後の配列置換が他インスタンスに�
 - [x] 既存テスト `src/content/__tests__/pageState.test.ts` がパスする（必要に応じて汚染回帰テストを1件追加）
 
 ## テスト戦略
-- 単体: `PageState` の独立性テスト — 2インスタンス生成 → 片方 push → もう片方と DEFAULT が汚染されないことを `expect(...).not.toContain` で検証。`structuredClone` 使用時は `contentStripKeywords` の要素数・内容が維持されることも検証
+- 単体: `PageState` の独立性テスト ― 2インスタンス生成 → 片方 push → もう片方と DEFAULT が汚染されないことを `expect(...).not.toContain` で検証。`structuredClone` 使用時は `contentStripKeywords` の要素数・内容が維持されることも検証
 - 統合: `loadSettings` 経由で配列が置換された後に別インスタンスが影響を受けないこと
 - E2E: 不要
 

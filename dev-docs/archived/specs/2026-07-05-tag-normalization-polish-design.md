@@ -1,4 +1,4 @@
-# Tag Normalization Polish — i18n, FTS5 Tag Search, CSS
+# Tag Normalization Polish ― i18n, FTS5 Tag Search, CSS
 
 Date: 2026-07-05
 
@@ -77,8 +77,8 @@ AND id IN (SELECT rowid FROM browsing_logs_fts WHERE tags MATCH '"#AI"')
 
 `searchLogs()` と `queryLogs()` の両方に `tagFilter` を追加。`loadData()` で以下のように使い分ける:
 
-- **searchなし**: `queryLogs({ limit, offset, since, until, tagFilter })` — 日付 + tagFilter
-- **searchあり**: `searchLogs(query, limit, offset, { tagFilter })` — FTS5全文検索 + tagFilterを追加条件として適用
+- **searchなし**: `queryLogs({ limit, offset, since, until, tagFilter })` ― 日付 + tagFilter
+- **searchあり**: `searchLogs(query, limit, offset, { tagFilter })` ― FTS5全文検索 + tagFilterを追加条件として適用
 
 | Search | Date | TagFilter | Behavior |
 |--------|------|-----------|----------|

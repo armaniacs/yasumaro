@@ -1,4 +1,4 @@
-# PBI 2026-09-23-06 — 互換 shim 削除: popup/tabUtils.isRecordable
+# PBI 2026-09-23-06 ― 互換 shim 削除: popup/tabUtils.isRecordable
 
 **優先度**: 順位 6 / RICE 15.0（Reach 3 × Impact 0.5 × Confidence 100% ÷ Effort 0.1 人週）
 **根拠**: 前ラウンド PBI 2026-09-23-05 で生産呼び出しが 0 になった shim の確定削除。削除しても複雑さは集中も分散もしない（移行完了の証明）。0.1 週のマイクロタスクで先に片付ける。

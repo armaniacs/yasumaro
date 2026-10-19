@@ -13,10 +13,10 @@
 ## ファイル構造
 
 **修正ファイル:**
-- `src/dashboard/tagClusterPanel.ts` — ローディング UI ロジックを追加
+- `src/dashboard/tagClusterPanel.ts` ― ローディング UI ロジックを追加
 
 **新規ファイル:**
-- `src/dashboard/tagClusterLoading.ts` — ローディング UI を管理する専用モジュール
+- `src/dashboard/tagClusterLoading.ts` ― ローディング UI を管理する専用モジュール
 
 ---
 

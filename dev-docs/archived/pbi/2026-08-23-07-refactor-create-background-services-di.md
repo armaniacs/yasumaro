@@ -21,7 +21,7 @@ Scenario: テスト環境で個別モジュールを注入できる
   And   他のモジュール（obsidian, sqliteClient 等）は実装のまま
 
 Scenario: 循環依存が正しく解決される
-  Given settingsStore ↔ trustDb の循環依存がある
+  Given settingsStore ⇔ trustDb の循環依存がある
   When  ServiceContainer が両方を遅延初期化する
   Then  ESM キャッシュにより2回目以降は即時解決し、実行時エラーが発生しない
 
@@ -32,11 +32,11 @@ Scenario: 手動クロージャーが不要になる
 ```
 
 ## 受け入れ基準
-- [x] `src/background/diContainer.ts` を新設。`ServiceContainer` クラスに `register<T>(key, factory)` + `resolve<T>(key)` を実装 — `serviceContainer.ts` を作成。`register/resolve/override/has` を実装
-- [x] `createBackgroundServices.ts` を `ServiceContainer` を使用するようにリファクタ — ServiceContainer は独立モジュールとして作成。createBackgroundServices への完全統合は段階的に。今後 `container.register('recordingCache', ...)` で各サービスを登録し、`resolve()` で取得する形に移行可能
-- [x] `MessageRouterDeps` の6手動クロージャーを削除し、サービスオブジェクトを直接渡す — MessageRouter 側は既に対応済み（Pick型で部分委譲）。ServiceContainer 導入後に直接渡しに移行
-- [x] `service-worker.ts` を `createServiceWorker(services)` ファクタリに変更し、テスト隔離を改善 — 将来PBIで段階移行。ServiceContainer の override() でテスト隔離が可能
-- [x] `getSharedSqliteClient` の singleton シェアが DI でも維持されること — `register('sqliteClient', () => getSharedSqliteClient())` で singleton をラップ
+- [x] `src/background/diContainer.ts` を新設。`ServiceContainer` クラスに `register<T>(key, factory)` + `resolve<T>(key)` を実装 ― `serviceContainer.ts` を作成。`register/resolve/override/has` を実装
+- [x] `createBackgroundServices.ts` を `ServiceContainer` を使用するようにリファクタ ― ServiceContainer は独立モジュールとして作成。createBackgroundServices への完全統合は段階的に。今後 `container.register('recordingCache', ...)` で各サービスを登録し、`resolve()` で取得する形に移行可能
+- [x] `MessageRouterDeps` の6手動クロージャーを削除し、サービスオブジェクトを直接渡す ― MessageRouter 側は既に対応済み（Pick型で部分委譲）。ServiceContainer 導入後に直接渡しに移行
+- [x] `service-worker.ts` を `createServiceWorker(services)` ファクタリに変更し、テスト隔離を改善 ― 将来PBIで段階移行。ServiceContainer の override() でテスト隔離が可能
+- [x] `getSharedSqliteClient` の singleton シェアが DI でも維持されること ― `register('sqliteClient', () => getSharedSqliteClient())` で singleton をラップ
 - [x] 既存テスト全パス (`npm run validate`)
 
 ## テスト戦略
@@ -94,4 +94,4 @@ grep -n "createBackgroundServices\|addListener" src/background/service-worker.ts
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
-- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Service Worker 構成セクション更新） — ServiceContainer モジュールの追加を記載
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の Service Worker 構成セクション更新） ― ServiceContainer モジュールの追加を記載

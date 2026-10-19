@@ -19,14 +19,14 @@ PBI 2026-08-31-06（feat-provider-catalog）で `ProviderCatalog` を先行実�
 - [x] `src/utils/aiProviderLabels.ts` を削除。importer 3 箇所（`popup/errorUtils.ts` / `dashboard/aiTestResultView.ts` / `diagnosticsPanel.ts`）を `tryResolveCatalogEntry(id)?.label ?? id` に移行
 - [x] `urlWhitelist.ts` の 3× コピペを `addProviderBaseUrls` の catalog loop に集約。挙動パリティ厳守（`isLocal` provider は対象外、gemini の固定 add は残す）
 - [x] `DiagnosticsCollector.settingsKeys` / `diagnosticsPanel.KNOWN_DETAIL_PROVIDERS` を catalog 由来に。後者は `built-in-ai` を除外する `modelKey || baseUrlKey || apiKeyKey` フィルタで現行 6 id セットを再現
-- [x] 新規 `src/background/ai/__tests__/providerCatalog.test.ts` — conformance test（全 ProviderId が resolve / キー集合が union と一致 / 参照 storage key が実在 / label 非空 / cspDomain が well-formed / requiresApiKey・isLocal が boolean）
+- [x] 新規 `src/background/ai/__tests__/providerCatalog.test.ts` ― conformance test（全 ProviderId が resolve / キー集合が union と一致 / 参照 storage key が実在 / label 非空 / cspDomain が well-formed / requiresApiKey・isLocal が boolean）
 
 ## テスト戦略
 - conformance test を先に書く（RED）→ データ移動（GREEN）
 - 影響テスト: `aiProviderLabels.test.ts`（削除）/ `aiTestResultView.test.ts`（mock 張替）/ `DiagnosticsCollector.test.ts`（実 label に更新）/ `storageUrls.test.ts`（warn 文字列を catalog label ベースに更新）/ `diagnosticsPanel.*.test.ts`
 
 ## 見積もり
-5 pt — 挙動変更なし・低リスクだが約 10 src + 6 test ファイルに触れる
+5 pt ― 挙動変更なし・低リスクだが約 10 src + 6 test ファイルに触れる
 
 ## Definition of Done
 - [x] provider メタデータのソースが `PROVIDER_REGISTRY` 1 箇所

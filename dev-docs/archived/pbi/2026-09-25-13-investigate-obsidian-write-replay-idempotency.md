@@ -16,7 +16,7 @@
 ## 優先度
 
 順位: 13 / 30
-RICEスコア: 2.0（Reach=2 / Impact=2 / Confidence=50% / Effort=1 SP）— 依存（12 完了後）で降格
+RICEスコア: 2.0（Reach=2 / Impact=2 / Confidence=50% / Effort=1 SP）― 依存（12 完了後）で降格
 
 ## BDD受け入れシナリオ
 
@@ -228,7 +228,7 @@ Feature: Obsidian 書込 replay の冪等性方式の確定
 - [x] `formatMarkdownStep` が retry ごとに生成時刻を作り直す現状と、生成時刻を固定する時点が記録されている（初回 pipeline 実行時に markdown を確定し offline job payload に保存）
 - [x] `NoteSectionEditor` が同一内容を検出せず無条件に再挿入する現状が記録されている（`noteSectionEditor.ts:13-30`）
 - [x] `traceId` が本文、header、idempotency key ではないこと、`offlineQueueProcessor` が `job.id` を捨てていることが裁定に含まれている
-- [x] operation ID を採用する場合は、生成者、owner、保存先、再利用条件、保存期間が offline job payload または local storage で定義されている（**不採用** — 上流に idempotency header がなく送出先がない）
+- [x] operation ID を採用する場合は、生成者、owner、保存先、再利用条件、保存期間が offline job payload または local storage で定義されている（**不採用** ― 上流に idempotency header がなく送出先がない）
 - [x] operation ID を採用しない場合も、marker、dedupe window、409 扱いを採用しない理由と代替方式が記録されている（同一内容検出方式を採用。時間 window なし）
 - [x] Local REST API plugin の idempotency header と 409 の提供状況が、一次情報と確定先とともに記録されている（上流 README + OpenAPI。未提供。契約 owner は上流リポジトリ）
 - [x] 本文 marker を採用する場合は、dedupe window の長さ、判定位置、既存 note section との境界が定義されている（marker 不採用。代替の同一内容検出の判定位置を明記）

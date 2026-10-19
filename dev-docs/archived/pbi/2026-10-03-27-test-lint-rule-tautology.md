@@ -15,7 +15,7 @@ RICEスコア: 6.0（Reach=3 / Impact=1 / Confidence=1.0 / Effort=0.5 SP）
 
 - `eslint/rules/no-tautology-expect.mjs` が `eslint.config:174` で error として有効
 - `eslint/__tests__/` 配下で唯一テストを持たないルール（他の 8 ルールはテスト済み）
-- 既存ルールテストは `createRepeatSafeRuleTester`（`eslint/__tests__/repeatSafeRuleTester.ts`）を使用 — プレーンな `new RuleTester` は `vitest --repeats` の重複ケースレジストリ問題を避けられない（`dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md`）
+- 既存ルールテストは `createRepeatSafeRuleTester`（`eslint/__tests__/repeatSafeRuleTester.ts`）を使用 ― プレーンな `new RuleTester` は `vitest --repeats` の重複ケースレジストリ問題を避けられない（`dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md`）
 
 ## BDD受け入れシナリオ
 
@@ -60,6 +60,6 @@ Scenario: ルールテストがリピートセーフに実行される
 
 ## 実装記録
 
-- 新設: `eslint/__tests__/no-tautology-expect.test.ts`（27 ケース作成 — valid: 通常アサーション・別識別子比較・メンバーチェーン等、invalid: 同一識別子×同一リテラル等の常真 expect パターン）。`createRepeatSafeRuleTester` 経由で flat config API を使用
+- 新設: `eslint/__tests__/no-tautology-expect.test.ts`（27 ケース作成 ― valid: 通常アサーション・別識別子比較・メンバーチェーン等、invalid: 同一識別子×同一リテラル等の常真 expect パターン）。`createRepeatSafeRuleTester` 経由で flat config API を使用
 - 実行: `npx vitest run eslint/__tests__ --repeats=20` = 10 ファイル・162 tests すべて green（`--repeats` 重複ケース衝突なし）
 - ゲート: `npm test` 15529 passed・21 skipped / `npm run validate` PASS

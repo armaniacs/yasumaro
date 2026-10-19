@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read・grep で確認済み:
-- `entrypoints/options/index.html` — サイドバーボタンは `data-panel="panel-*"` 属性を15個持つが（24〜146行目付近）、`role="tab"` や `aria-controls` は付与されていない
+- `entrypoints/options/index.html` ― サイドバーボタンは `data-panel="panel-*"` 属性を15個持つが（24〜146行目付近）、`role="tab"` や `aria-controls` は付与されていない
 - パネル側（例: 161行目 `<section id="panel-general" class="panel active" role="tabpanel">`）には既に `role="tabpanel"` が付与されている
 - クリックハンドラは `data-panel` 属性ベースで動作しており、role/aria追加はCSS/JSロジックに影響しない（side-effects.md M21判定で確認済み）
 - 既存の類似実装パターンとして `domain-mode-tabs`（584-585行目）が `role="tablist"` + `role="tab"` + `aria-selected` を正しく実装しており、これを参考にできる

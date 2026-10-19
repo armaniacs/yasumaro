@@ -1,4 +1,4 @@
-# PBI: VisitPayload module — 記録ペイロード wire 契約の二重所有解消
+# PBI: VisitPayload module ― 記録ペイロード wire 契約の二重所有解消
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -15,10 +15,10 @@
 ## 背景（診断結果）
 
 - wire 契約の二重所有:
-  1. `src/content/visitReporter.ts:171-179`（初回 `VALID_VISIT` 送信 — flat spread）vs `:206-211`（force 再送 — `payload: { content, force: true }` のみで **stats を落下**）
+  1. `src/content/visitReporter.ts:171-179`（初回 `VALID_VISIT` 送信 ― flat spread）vs `:206-211`（force 再送 ― `payload: { content, force: true }` のみで **stats を落下**）
   2. `src/content/getContentHandler.ts:49-56`（`GET_CONTENT` 応答を `byteStats` / `aiSummaryCleansedStats` に nested 梱包）
-  3. `src/messaging/types.ts:118-143`（`RecordingData`）vs `visitReporter.ts:85-102`（`ServiceWorkerResponse` の独自再定義 — `maskedItems` の型不一致: `unknown[]` vs `StrippedMaskedItem[]`）
-  4. `src/content/pageState.ts:118-147`（`lastByteStats` / `lastAiSummaryCleansedStats` / `lastFallbackTriggered` — 第4の所有者）
+  3. `src/messaging/types.ts:118-143`（`RecordingData`）vs `visitReporter.ts:85-102`（`ServiceWorkerResponse` の独自再定義 ― `maskedItems` の型不一致: `unknown[]` vs `StrippedMaskedItem[]`）
+  4. `src/content/pageState.ts:118-147`（`lastByteStats` / `lastAiSummaryCleansedStats` / `lastFallbackTriggered` ― 第4の所有者）
 - `Message.payload?: unknown` のため field 追加漏れが型で検出されない（visitReporter.ts:74-79）
 - locality 欠如: 1つの field 追加（例: `extractedSentencesBytes`）が最低4箇所の編集
 
@@ -31,7 +31,7 @@
      toGetContentReply(state: PageState, content: string): ContentResponse;
    }
    ```
-   - `buildVisitStats`（visitReporter.ts:15-62 — 既に選別を集約済み）をこの module に移動
+   - `buildVisitStats`（visitReporter.ts:15-62 ― 既に選別を集約済み）をこの module に移動
    - `force` 再送も `toValidVisitPayload(..., { force: true })` 経由に統一し、stats 落としを構造的に不可能にする
    - `lastByteStats` 等の PageState 読み出し（pageState.ts:118-147）を内部化
 2. **`visitReporter.ts` が `toValidVisitPayload` を呼ぶ**: 初回・force 再送の両 path が同一関数経由に
@@ -41,7 +41,7 @@
 
 ### 触ってはいけないもの
 
-- background 側の消費コード（RecordingData を読む step — wire 契約の shape は不変）
+- background 側の消費コード（RecordingData を読む step ― wire 契約の shape は不変）
 - `RecordingResult` の field 定義（shape 不変）
 
 ## BDD受け入れシナリオ
@@ -61,9 +61,9 @@ Scenario: GET_CONTENT 応答が初回送信と同一の stats 形になる
 ## 受け入れ基準
 
 - [x] `visitPayload.ts` が新設され、`toValidVisitPayload` / `toGetContentReply` に梱包知識が集約されている
-- [x] `visitReporter.ts` の初回・force 再送が同一関数経由になっている（force でも stats が落ちない pin テスト付き — 旧テストは最小 payload を pin していたため「full payload」テストに書き換え）
+- [x] `visitReporter.ts` の初回・force 再送が同一関数経由になっている（force でも stats が落ちない pin テスト付き ― 旧テストは最小 payload を pin していたため「full payload」テストに書き換え）
 - [x] `getContentHandler.ts` が `toGetContentReply` を使用している
-- [x] `ServiceWorkerResponse` は RecordingResult と shape 一致を確認（alias ではなく struct 同一と判断して現状維持 — maskedItems 型差は `unknown[]` vs union で互換）
+- [x] `ServiceWorkerResponse` は RecordingResult と shape 一致を確認（alias ではなく struct 同一と判断して現状維持 ― maskedItems 型差は `unknown[]` vs union で互換）
 - [x] content / recordingPipeline 関連テスト全件 green（457 passed）
 
 ## テスト戦略

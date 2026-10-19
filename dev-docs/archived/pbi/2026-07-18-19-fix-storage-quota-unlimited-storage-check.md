@@ -10,8 +10,8 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read・grep で確認済み:
-- `src/utils/storage/quota.ts:7` — `export const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB`
-- `wxt.config.ts:33` — `manifest.permissions` に `'unlimitedStorage'` が含まれる（確認済み）
+- `src/utils/storage/quota.ts:7` ― `export const STORAGE_QUOTA_BYTES = 5 * 1024 * 1024; // 5MB`
+- `wxt.config.ts:33` ― `manifest.permissions` に `'unlimitedStorage'` が含まれる（確認済み）
 - side-effects.md M7判定: 「`unlimitedStorage`権限があるため実質無害」だが、`savedUrlStore.ts:86-90` で誤ったクォータエラーが送出されうる、と親レポートで指摘
 - 対処案: `unlimitedStorage` がある場合はクォータチェックをスキップ。定数を `chrome.storage.local.QUOTA_BYTES`（10MB）に合わせる
 

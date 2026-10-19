@@ -16,7 +16,7 @@
 `tsconfig.json` に `allowJs: true` と `checkJs: true` が設定されている。`src/` 配下の非TSソースは1ファイルのみ:
 
 - `src/utils/trustDb/bloomfilter-vendor.mjs`（245行、bloomfilter npm パッケージのベンダーコピー）
-- `src/utils/trustDb/bloomFilter.ts:7` で `import { BloomFilter } from './bloomfilter-vendor.mjs'` として参照し、`// @ts-ignore — vendor JS file bundled from bloomfilter npm package` が付与されている
+- `src/utils/trustDb/bloomFilter.ts:7` で `import { BloomFilter } from './bloomfilter-vendor.mjs'` として参照し、`// @ts-ignore ― vendor JS file bundled from bloomfilter npm package` が付与されている
 
 `allowJs: false` に変更すると、この import の型が解決できず `npm run type-check` が失敗する。したがって、ベンダーモジュールに手書きの `.d.ts`（`BloomFilter` の公開APIのみ宣言）を用意してから無効化する必要がある。
 

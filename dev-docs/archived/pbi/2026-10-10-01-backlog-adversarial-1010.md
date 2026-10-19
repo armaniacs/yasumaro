@@ -6,7 +6,7 @@
 - hacker + maintainer の 2 視点を 6 agents で発見し、独立検証（5並列の反証裏取り）を実施。
 - REFUTED 分（リダイレクト漏洩、DNSリバインディング、senderTrust、confirmToken、GET_CONTENT盗読、alarm誘発、UI/CAS/Mutex等）は起票対象外。
 - 保守バッチ約130件は個別反証未実施のため不採用。
-- 実残 3 件を PBI 14–16 に起票した。本台帳は RICE 採点・依存順・到達可能性証拠の SSOT。
+- 実残 3 件を PBI 14-16 に起票した。本台帳は RICE 採点・依存順・到達可能性証拠の SSOT。
 
 ## RICE 採点表（RICE 降順）
 
@@ -28,9 +28,9 @@ RICE = R × I × C / E。値は各 PBI 内「見積もり」前の記載に基�
 
 独立検証で file:line を確認済みの到達経路（詳細は各 PBI の「背景」セクション、統合時に目視再確認済み）:
 
-- 14: SAVE_RECORD（popup dialog保存）から常に到達 — `recordingHandlers.ts:316-323` → `recordRequestBuilder.ts:73` → `privacyPipeline.ts:185-186,162-164`。既定 `masked_cloud`（`defaults.ts:68`）
-- 15: 攻撃者制御`<title>`の記録で到達 — `markdownFormatter.ts:62-69,174`（validatorは長さのみ `validators.ts:512-517`）
-- 16: 攻撃者制御ページ本文の長トークンで到達 — `piiSanitizer.ts:57-69,287,305,322`（node再現あり）
+- 14: SAVE_RECORD（popup dialog保存）から常に到達 ― `recordingHandlers.ts:316-323` → `recordRequestBuilder.ts:73` → `privacyPipeline.ts:185-186,162-164`。既定 `masked_cloud`（`defaults.ts:68`）
+- 15: 攻撃者制御`<title>`の記録で到達 ― `markdownFormatter.ts:62-69,174`（validatorは長さのみ `validators.ts:512-517`）
+- 16: 攻撃者制御ページ本文の長トークンで到達 ― `piiSanitizer.ts:57-69,287,305,322`（node再現あり）
 
 ## 実装状況
 

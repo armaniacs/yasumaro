@@ -265,7 +265,7 @@ grep -n "^export" src/dashboard/dashboard.ts
 
 - [ ] `npm run validate`
 - [ ] `npm run build`
-- [ ] `npm run test:e2e` — **Phase B で初期化経路が変わるため必須**
+- [ ] `npm run test:e2e` ― **Phase B で初期化経路が変わるため必須**
 - [ ] **手動確認**（自動テストでは不足）
 
 | 操作 | 確認内容 |

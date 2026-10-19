@@ -1,4 +1,4 @@
-# PBI 2026-09-12-01 — PendingRecordGateway（popup 再記録 seam 新設・dead envelope 実バグ解消）
+# PBI 2026-09-12-01 ― PendingRecordGateway（popup 再記録 seam 新設・dead envelope 実バグ解消）
 
 - **種別**: 🔧非機能追加（fix + refactor・実バグ解消を伴う内部改善）
 - **優先度**: 1 位 / RICE **28.8**（R12 × I3 × C80% / E1.0人日）

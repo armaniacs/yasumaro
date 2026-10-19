@@ -1,4 +1,4 @@
-# Deep-dig findings — Architecture deepening PBI implementation
+# Deep-dig findings ― Architecture deepening PBI implementation
 
 ## 対象
 

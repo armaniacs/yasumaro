@@ -18,17 +18,17 @@
 ## 現状と問題（file:line 証拠付き）
 
 - module-level の可変状態 58 個が旧形式 4 モジュールに集中している
-  - `src/dashboard/settings/trustSettings.ts:25-49` — 26 個の DOM 要素参照 + `currentCategory`
-  - `src/dashboard/markdownTemplateManager.ts:49-65` — 13 個
-  - `src/dashboard/settings/customPromptManager.ts:39-51` — 11 個
-  - `src/dashboard/recordingConditionsSettings.ts:15-22` — 8 個
+  - `src/dashboard/settings/trustSettings.ts:25-49` ― 26 個の DOM 要素参照 + `currentCategory`
+  - `src/dashboard/markdownTemplateManager.ts:49-65` ― 13 個
+  - `src/dashboard/settings/customPromptManager.ts:39-51` ― 11 個
+  - `src/dashboard/recordingConditionsSettings.ts:15-22` ― 8 個
 - いずれも `init*()` が `document.getElementById` の戻り値を module global に代入する旧形式である。破棄経路（`destroy()` 等）が存在しないため、同じ document を再利用するテストで状態が持ち越される
 - `src/dashboard/panels/staticForm/staticPanels.ts:20-25` は「7 spec が container を無視して `document.getElementById` を使う」ことを自らコメントで自認している
 - 新形式の先例が同一ツリーに既に存在し、パターンを写せる
-  - `createArchiveSessionStore`（`src/dashboard/panels/diagnostic/archiveSessionStore.ts`）— factory + `destroy()`
+  - `createArchiveSessionStore`（`src/dashboard/panels/diagnostic/archiveSessionStore.ts`）― factory + `destroy()`
   - `PanelNotices`（`src/dashboard/panels/PanelNotices.ts:58-60` instance fields、`clear()` は `:141`）
   - `QueryCache`（`src/dashboard/panels/asyncData/historyQueryCache.ts:14-20`、`clear()` あり）
-  - `createAsyncDataPanelLifecycle`（`src/dashboard/panels/asyncData/asyncDataPanelLifecycle.ts:106-107`）— クロージャ + `destroy()`
+  - `createAsyncDataPanelLifecycle`（`src/dashboard/panels/asyncData/asyncDataPanelLifecycle.ts:106-107`）― クロージャ + `destroy()`
 - 付随する問題
   - `registryContext.ts:4` の module-global `_registry` のため、8 テストファイルが `vi.mock('...registryContext.js')` を強制されている。`:19-21` のコメントは「options/main.ts imports dashboard.ts before main.ts」と説明するが実際は `dashboard/main.js` を import しており陳腐化している（`registryContext.test.ts:13-14` も同様）
   - `issueReportEntry.ts:24,27` の module queue / controller は、`initIssueReportEntry` の二重呼び出しで恒久に未配線のボタンを残す

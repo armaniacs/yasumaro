@@ -34,8 +34,8 @@ Scenario: 不正な読み取り要求は境界で拒否される
 
 ## 受け入れ基準
 
-- [x] `SqliteRequest` モジュールが validation・routing・projection を単一 seam の背後に所有している（スパイク結果: フル集約は不採択 — 代わりに validation seam `verifyRequestToken` + projection seam `buildListParams`/`buildSearchParams` を `dashboardSqlite/` に確立）
-- [x] 5 つのサブモジュールが internals 化されている（`src/background/handlers/dashboardSqlite/` 配下）（現状維持 — partition invariant と per-group テストが健全なため移動なし。判断記録は実装メモ）
+- [x] `SqliteRequest` モジュールが validation・routing・projection を単一 seam の背後に所有している（スパイク結果: フル集約は不採択 ― 代わりに validation seam `verifyRequestToken` + projection seam `buildListParams`/`buildSearchParams` を `dashboardSqlite/` に確立）
+- [x] 5 つのサブモジュールが internals 化されている（`src/background/handlers/dashboardSqlite/` 配下）（現状維持 ― partition invariant と per-group テストが健全なため移動なし。判断記録は実装メモ）
 - [x] dashboard から offscreen までの直参照が SqliteRequest 経由に置換されている（read 経路の param 構築が builder 経由に。transport 層は不変）
 - [x] 既存の dashboard 表示と同一である（dashboardSqlite 全 50 tests green）
 - [x] `npm run type-check` と関連テストが green
@@ -94,7 +94,7 @@ ls src/background/handlers/dashboardSqlite/
 
 ### 落とし穴
 
-- offscreenGateway.status() の STATUS extras 欠落バグ（round 4 PBI-06 で修正済み）を再発させないこと — STATUS 経路は projection 集約時に extras を維持する
+- offscreenGateway.status() の STATUS extras 欠落バグ（round 4 PBI-06 で修正済み）を再発させないこと ― STATUS 経路は projection 集約時に extras を維持する
 - validation と projection の責務を混ぜないこと（validation は拒否、projection は列選択に限定）
 - Worth exploring のため、着手前にスパイクで分離難度を見極め、3人日を超える見込みなら分割を検討すること
 
@@ -102,14 +102,14 @@ ls src/background/handlers/dashboardSqlite/
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする（`dispatch-seams.test.ts` 新設 8 件 + 既存 42 green。E2E は headless のため unit で代替）
 - [x] コードレビュー完了（自律レビュー: token 検証の振る舞い不変・scopeHash 導出の位置不変）
-- [x] ドキュメント更新済み（seam の JSDoc に PBI 番号と責務を明記。ARCHITECTURE_MAP の変更は不要 — 構成は不変）
+- [x] ドキュメント更新済み（seam の JSDoc に PBI 番号と責務を明記。ARCHITECTURE_MAP の変更は不要 ― 構成は不変）
 - [x] ロールバック手段の検討（git revert で可能・振る舞い不変のため feature flag 不要）
 
-## 実装メモ（2026-09-11 autonomous-task-closer）— スパイク結果: フル集約は不採択
+## 実装メモ（2026-09-11 autonomous-task-closer）― スパイク結果: フル集約は不採択
 
 - なぜフル集約（SqliteRequest mega-module）を見送るのか:
   1. なぜ連鎖が 6 層に見えるのか → token gate・subtype partition・per-group handler・deps 適応・gateway transport・offscreen handler は各々 pin 済みテストと責務を持つ健全な composition root（`index.ts` + partition invariant）だから。1 モジュール化は god module 化であり、deepening の原則に逆行する。
   2. なぜ危険なのか → token scope-hash binding（PBI 2026-09-06-01・セキュリティ）と subtype partition の startup invariant を崩す。Confidence 50% の項目に不釣り合い。
   3. なぜ validation 集中が既に足りているのか → wire 検証は validators + sqliteOperationSecurity + offscreen 側の多層防御で、単一箇所化は防御の層を減らす。
-  → 解: PBI 内の exit clause（3 人日超なら分割）に従い、validation seam（`verifyRequestToken` — 3 分岐を単体テスト可能に）と projection seam（`buildListParams`/`buildSearchParams` — dashboard-hop 形状を 1 箇所に）の slice のみ実施。transport・partition・token 政策は不変。
+  → 解: PBI 内の exit clause（3 人日超なら分割）に従い、validation seam（`verifyRequestToken` ― 3 分岐を単体テスト可能に）と projection seam（`buildListParams`/`buildSearchParams` ― dashboard-hop 形状を 1 箇所に）の slice のみ実施。transport・partition・token 政策は不変。
 - BDD シナリオの「単一経路で返る」「境界で拒否」は slice 後の構成でも成立（検証は seam 越しテスト + 既存 handler テストで担保）。

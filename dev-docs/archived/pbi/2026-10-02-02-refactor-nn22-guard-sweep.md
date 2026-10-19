@@ -2,7 +2,7 @@
 
 優先度: NN22 follow-up / RICE 4.8（暫定・integrator 裁定待ち）/ SP S（0.5、small）
 backlog: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)（holistic-code-review テーマ「ハンドラ足場のコピー群」）
-親 PBI: [2026-10-01-22-refactor-dashboard-button-scaffold.md](2026-10-01-22-refactor-dashboard-button-scaffold.md)（受け入れ基準「`'error' in result` の inline 判定が共有ガードへ置換される」は未達。実装記録 §未達 参照 — 4 ファイル内では達成だが `markdownExport.ts` / `exportLogsService.ts` / `panels/asyncData/sqliteHistoryModel.ts` / `exportImport.ts` がスコープ外として残存）
+親 PBI: [2026-10-01-22-refactor-dashboard-button-scaffold.md](2026-10-01-22-refactor-dashboard-button-scaffold.md)（受け入れ基準「`'error' in result` の inline 判定が共有ガードへ置換される」は未達。実装記録 §未達 参照 ― 4 ファイル内では達成だが `markdownExport.ts` / `exportLogsService.ts` / `panels/asyncData/sqliteHistoryModel.ts` / `exportImport.ts` がスコープ外として残存）
 依存: なし（NN22 の `panelAction.ts` / `unwrapServiceResult` と競合しないファイル集合のみ。`settingsForm.ts` 等の NN22 済みファイルには触らない）
 
 ## ユーザーストーリー
@@ -15,15 +15,15 @@ canonical ガードは `src/dashboard/dashboardSqliteService.ts:55-56`（`export
 
 残存 8 箇所（2026-10-02 に実パス再確認。すべて `src/dashboard/` 配下）:
 
-- `src/dashboard/markdownExport.ts:187` — batch loop 内。`if ('error' in result) { throw new Error(result.error); }`（`:187-189`）。drop-in 置換可
-- `src/dashboard/markdownExport.ts:247` — `exportDateRange` 内。同一 throw パターン（`:247-249`）。drop-in 置換可
-- `src/dashboard/exportLogsService.ts:44` — `queryAllData` 内。同一 throw パターン（`:44-46`）。drop-in 置換可
-- `src/dashboard/exportLogsService.ts:130` — `exportDb` 内（`backupDb()` の結果）。同一 throw パターン（`:130-132`）。drop-in 置換可
-- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:661` — `toggleStarImpl` 内。ガード継続は `dispatch({ type: 'operationError', ... })` + `notify()` + `return`（`:662-664`）。throw ではないため `unwrapServiceResult` 化は不可、ガード判定のみ swap
-- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:677` — `deleteEntry` 内。ガード継続は `dispatch({ type: 'operationError', ... })` + `notify()` + `return`（`:678-680`）。同上
-- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:707` — `deleteSelectedEntries` の bulk loop 内。ガード継続は `error = result.error; break;`（`:708-709`、accumulate-and-break）。同上
+- `src/dashboard/markdownExport.ts:187` ― batch loop 内。`if ('error' in result) { throw new Error(result.error); }`（`:187-189`）。drop-in 置換可
+- `src/dashboard/markdownExport.ts:247` ― `exportDateRange` 内。同一 throw パターン（`:247-249`）。drop-in 置換可
+- `src/dashboard/exportLogsService.ts:44` ― `queryAllData` 内。同一 throw パターン（`:44-46`）。drop-in 置換可
+- `src/dashboard/exportLogsService.ts:130` ― `exportDb` 内（`backupDb()` の結果）。同一 throw パターン（`:130-132`）。drop-in 置換可
+- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:661` ― `toggleStarImpl` 内。ガード継続は `dispatch({ type: 'operationError', ... })` + `notify()` + `return`（`:662-664`）。throw ではないため `unwrapServiceResult` 化は不可、ガード判定のみ swap
+- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:677` ― `deleteEntry` 内。ガード継続は `dispatch({ type: 'operationError', ... })` + `notify()` + `return`（`:678-680`）。同上
+- `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:707` ― `deleteSelectedEntries` の bulk loop 内。ガード継続は `error = result.error; break;`（`:708-709`、accumulate-and-break）。同上
   - 当ファイルは `isServiceError` を既に import 済み（import at `sqliteHistoryModel.ts:27`、使用例 at `:503`。検証指示の「`:503`」は import 行ではなく使用行であることを再確認済み）
-- `src/dashboard/exportImport.ts:179` — `importFromJson` の結果に対する `if ('error' in result)`（`:179-183`）。**型が異なる**: `importFromJson` は `src/dashboard/importLogsService.ts:109-112` で `Promise<{ inserted: number; skipped: number; total: number } | { error: string }>` を返し、`ServiceResult<T>`（`{ data: T } | { error: string }`）ではない。成功側に `data` ラッパーが無いため、そのまま `isServiceError(result)`（引数型 `ServiceResult<T>`）には渡せない。要 D1 裁定
+- `src/dashboard/exportImport.ts:179` ― `importFromJson` の結果に対する `if ('error' in result)`（`:179-183`）。**型が異なる**: `importFromJson` は `src/dashboard/importLogsService.ts:109-112` で `Promise<{ inserted: number; skipped: number; total: number } | { error: string }>` を返し、`ServiceResult<T>`（`{ data: T } | { error: string }`）ではない。成功側に `data` ラッパーが無いため、そのまま `isServiceError(result)`（引数型 `ServiceResult<T>`）には渡せない。要 D1 裁定
 
 既存テスト（変更なしで green を保つ対象）:
 - `src/dashboard/__tests__/markdownExport.test.ts`、`src/dashboard/__tests__/markdownExport-seam.test.ts`、`src/dashboard/__tests__/exportDateSsot.golden.test.ts`
@@ -62,7 +62,7 @@ Scenario: dispatch 系ガードの継続意味論が保たれる
 - [x] C1: `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:661` の判定のみ `isServiceError` に置換され、継続（`operationError` dispatch + `notify()` + `return`）が不変である
 - [x] C2: `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:677` の判定のみ `isServiceError` に置換され、継続（`operationError` dispatch + `notify()` + `return`）が不変である
 - [x] C3: `src/dashboard/panels/asyncData/sqliteHistoryModel.ts:707` の判定のみ `isServiceError` に置換され、継続（`error = result.error; break;` の accumulate-and-break）が不変である
-- [x] D1: (b) 除外を選択 — `exportImport.ts:179` は PBI スコープから明示的に除外する（理由は実装記録に記載）
+- [x] D1: (b) 除外を選択 ― `exportImport.ts:179` は PBI スコープから明示的に除外する（理由は実装記録に記載）
 - [x] 対象 4 ファイル内の `if ('error' in result)` inline 判定が D1 の結論と整合する状態になる（除外選択時は `exportImport.ts:179` の 1 件のみ残存し除外理由が記録される）
 - [x] parity テストが存在し、成功 / `{ error }` 失敗の両経路で旧 inline 判定と同一の結果（throw メッセージ / dispatch / break 件数）を返すことを固定する
 - [x] `npm run type-check` と変更ディレクトリ配下の vitest が green（上記既存テスト群を変更なしで通過、またはガード置換に伴う最小限の mock 差し替えのみ）

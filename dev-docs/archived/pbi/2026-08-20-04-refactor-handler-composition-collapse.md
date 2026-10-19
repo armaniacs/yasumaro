@@ -1,4 +1,4 @@
-# PBI: 3層Handler Composition の統合 — 中間パススルー層の削除
+# PBI: 3層Handler Composition の統合 ― 中間パススルー層の削除
 
 ## ユーザーストーリー
 開発者として、Service Workerのメッセージハンドラ配線が3層の構成（`createBackgroundServices` → `createMessageRegistryComposition` → `createMessageHandlerRegistry`）で、合計~40のユニークフィールドを経由している状態を解消したい。なぜなら、どのハンドラがどの依存を受け取るか理解するのに3層をトレースする必要があるからだ。

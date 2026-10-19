@@ -32,7 +32,7 @@ Scenario: 週次サマリー生成が統合後も現行と同一の出力を生�
   When generatePeriodSummary(weekPeriod, weeklyMutex) を呼び出す
   Then 統合前の generateWeeklySummary と同一のMarkdown・同一のstorageキー（REVIEW_SUMMARY_LAST_GENERATED_WEEK）で保存される
 
-Scenario: 境界 — 同一期間の重複生成が防止される
+Scenario: 境界 ― 同一期間の重複生成が防止される
   Given 直近の REVIEW_SUMMARY_LAST_GENERATED_WEEK が今週のキーと一致している
   When generatePeriodSummary(weekPeriod, weeklyMutex) を呼び出す
   Then サマリーは再生成されず、既存の重複防止チェックと同じ結果になる

@@ -40,7 +40,7 @@ built-in-aiディスパッチ等の実ロジックは全て `RemoteAIService`
 本来のカバレッジ先である `RemoteAIService.test.ts`（9件）が薄い、という
 逆転状態になっている。
 
-## なぜなぜ分析（20回）— なぜこの逆転が起きたか
+## なぜなぜ分析（20回）― なぜこの逆転が起きたか
 
 1. **Why 1**: なぜ `RemoteAIService.test.ts` が薄いのか
    → `RemoteAIService` を新規追加した際、既存の `aiClient.test.ts` が

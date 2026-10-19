@@ -45,24 +45,24 @@ npm run build && npm run bench:e2e
 
 ### 局所ベンチの読み方
 
-各ベンチは入力サイズ **S / M / L**（内部倍率 `n`）で計測し、`time ≈ c·Nᵏ` を当てはめてスケーリング指数 `k` を出す。
+各ベンチは入力サイズ **S / M / L**（内部倍率 `n`）で計測し、`time ≒ c・N^k` を当てはめてスケーリング指数 `k` を出す。
 
 | k の範囲 | 判定 | 意味 |
 |---------|------|------|
 | < 0.5 | `sub-linear` | サイズにほぼ依存しない |
 | 0.5〜1.35 | `linear` | O(N) |
 | 1.35〜1.75 | `super-linear` | O(N log N) 相当 |
-| 1.75〜2.5 | `quadratic` | O(N²) |
-| ≥ 2.5 | `polynomial-or-worse` | それ以上 |
+| 1.75〜2.5 | `quadratic` | O(N^2) |
+| ≧ 2.5 | `polynomial-or-worse` | それ以上 |
 
 なお、指数が非有限値の場合は `unknown`、サイズのばらつきが不足する場合（有効な計測点が 2 点未満・サイズ種別が 1 種類のみ）は `insufficient-data` が返る。
 
 レポート例:
 
 ```
-## c7 — sentence dedup O(N^2) Jaccard (PBI-08)
+## c7 ― sentence dedup O(N^2) Jaccard (PBI-08)
 
-warmup 5 · measure 30 · scaling exponent 1.98 (quadratic)
+warmup 5 ・ measure 30 ・ scaling exponent 1.98 (quadratic)
 
 | Size | N | wall p50 (ms) | wall p95 (ms) | wall p99 (ms) | heap p50 (KB) | counters |
 |------|---|---------------|---------------|---------------|---------------|----------|
@@ -82,7 +82,7 @@ warmup 5 · measure 30 · scaling exponent 1.98 (quadratic)
 | `c4` | 06 cloneNode 統一 | news-article | `clone` 数、heap p50 |
 | `c5` | 02 周期ポーリング廃止 | 合成 | `schedule_calls`（N 秒間の schedule 呼び出し回数） |
 | `c6` | 07 Dashboard クエリキャッシュ | fake query/storage | `query_calls`、`storage_set`（操作シーケンス中の回数） |
-| `c7` | 08 dedup O(N²) 解消 | long-text | wall p95、**スケーリング指数**（2→1 が目標） |
+| `c7` | 08 dedup O(N^2) 解消 | long-text | wall p95、**スケーリング指数**（2→1 が目標） |
 | `c8-ts` / `c8-wasm` / `c8-hybrid` | PII サニタイズ（機能領域別。PBI 対応なし） | 抽出記事 HTML | wall p95（TS のみ / WASM のみ / 両者のハイブリッドの比較） |
 | `f3` | archive 作成（`pbi/2026-09-06-02` F-3） | 50k / 100k 行 SQLite | フル archive パスの wall 時間（warmup 0 / measure 1） |
 
@@ -203,7 +203,7 @@ bench/
 | **Regression check (CI)** | `npm run bench:check` | Node + jsdom | exit 1 when a deterministic counter is >15% worse than baseline |
 | **Report cleanup** | `npm run bench:clean` | Node | Prunes `bench/reports/` to rolling 5 generations + weekly anchors (`-- --all` wipes everything except dotfiles) |
 
-Micro benches `c1`–`c7` map 1:1 to the optimization PBIs (`pbi/2026-09-04-02`…`08`). `cleansing` is the migrated `benchmark:cleansing`. `c8-ts` / `c8-wasm` / `c8-hybrid` (PII sanitization: TS regex / WASM / hybrid of both) and `f3` (archive batch INSERT) are extra benches by feature area, so the map is no longer a strict 1:1:
+Micro benches `c1`-`c7` map 1:1 to the optimization PBIs (`pbi/2026-09-04-02`…`08`). `cleansing` is the migrated `benchmark:cleansing`. `c8-ts` / `c8-wasm` / `c8-hybrid` (PII sanitization: TS regex / WASM / hybrid of both) and `f3` (archive batch INSERT) are extra benches by feature area, so the map is no longer a strict 1:1:
 
 | id | Feature area | Fixture | Key signal |
 |----|--------------|---------|------------|
@@ -221,8 +221,8 @@ npm run build && npm run bench:e2e        # e2e suite (needs dist/chromium-mv3)
 
 ### Reading a micro report
 
-Each bench runs at sizes **S / M / L** and fits `time ≈ c·Nᵏ`. The exponent `k`
-tells O(N) (`linear`, ~1.0) apart from O(N²) (`quadratic`, ~2.0). The `counters`
+Each bench runs at sizes **S / M / L** and fits `time ≒ c・N^k`. The exponent `k`
+tells O(N) (`linear`, ~1.0) apart from O(N^2) (`quadratic`, ~2.0). The `counters`
 column shows `querySelectorAll` calls (`qsa`), TreeWalker nodes visited
 (`treeWalker`), deep `cloneNode` calls (`clone`), layout-getter reads (`reflow`),
 and per-bench counters (`encode`, `schedule_calls`, `query_calls`, `storage_set`).
@@ -249,7 +249,7 @@ npm run build && npm run bench:e2e        # 5. if it affects e2e, attach autosav
 on deterministic counters** (`querySelectorAll` / TreeWalker / `cloneNode` /
 `encode` calls, and the `c5`/`c6` call counters) that regress past **+15%**.
 
-Wall-clock, heap and the scaling exponent are **reported but not gated** — a
+Wall-clock, heap and the scaling exponent are **reported but not gated** ― a
 shared CI runner swings them ±100% under load. Use those as the before/after you
 attach to a PR, read by a human, not a build gate.
 
@@ -271,7 +271,7 @@ e2e suite nightly or on demand.
 
 Every run mode (default / `--check` / `--update-baseline`) writes the same
 `.md` / `.html` / `.json` artifact set. The `.html` file is self-contained
-(zero external references) — attach it to a PR or open it directly.
+(zero external references) ― attach it to a PR or open it directly.
 
 The HTML report includes a **Trend section**: it reads the accumulated
 `micro-<date>.json` generations from `bench/reports/` and renders per-bench
@@ -300,11 +300,11 @@ git add bench/baselines/micro.json
   (`npm i -D lighthouse`).
 - Autosave sync cost = the gap between `performance.mark('ow-extract-start')` and
   `'ow-send-ready')` in `src/content/visitReporter.ts`. This window covers the
-  **synchronous** extract + cleanse work only — the async send (service-worker
+  **synchronous** extract + cleanse work only ― the async send (service-worker
   processing, storage writes) is not included.
 - The A/B test disables the content script via
   `localStorage.__ow_bench_disable_cs = '1'` (`src/content/loader.ts`). The
-  toggle only exists in a bench build — build with `OW_BENCH=1 npm run build`.
+  toggle only exists in a bench build ― build with `OW_BENCH=1 npm run build`.
   Production builds compile it out, so page content cannot alter extension
   behavior.
 
@@ -312,7 +312,7 @@ git add bench/baselines/micro.json
 
 | Symptom | Fix |
 |---------|-----|
-| `bench:check` false-positives | Re-take the baseline (`npm run bench:baseline`). If it persists, a deterministic counter really changed — check the code. |
+| `bench:check` false-positives | Re-take the baseline (`npm run bench:baseline`). If it persists, a deterministic counter really changed ― check the code. |
 | Unstable heap deltas | The npm scripts already pass `--expose-gc`; run on an idle machine. |
 | Every e2e test skips | Confirm `npm run build` ran and the environment can run headed Chromium. |
 | jsdom numbers differ from a real browser | jsdom does not lay out; judge by ratios and baseline deltas, not absolutes. Use the e2e suite for real-browser numbers. |
@@ -322,6 +322,6 @@ git add bench/baselines/micro.json
 Beyond stats / domEnv / bundle / runner / report / cli / trend / htmlReport /
 format, `bench/harness/` includes `args.mjs` (`parseArgs`), `writeArtifacts.mjs`
 (`.md` / `.html` / `.json` output), and `openReport.mjs` (`shouldAutoOpen`);
-`bench/e2e/` also includes `teardown.mjs`. `bench/micro/` holds `c1`–`c8`,
+`bench/e2e/` also includes `teardown.mjs`. `bench/micro/` holds `c1`-`c8`,
 `cleansing`, and `f3`, each exporting its bench definition(s); `bench:micro`
 discovers them via directory scan.

@@ -1,4 +1,4 @@
-# PBI 2026-09-12-18 — Visit-report の commit 権を success-only に（transient 失敗で訪問が失われる実バグ）
+# PBI 2026-09-12-18 ― Visit-report の commit 権を success-only に（transient 失敗で訪問が失われる実バグ）
 
 - **種別**: 🔧非機能追加（fix・実バグ修正）
 - **優先度**: 2 位 / RICE **10.7**（R10 × I2 × C80% / E1.5人日）

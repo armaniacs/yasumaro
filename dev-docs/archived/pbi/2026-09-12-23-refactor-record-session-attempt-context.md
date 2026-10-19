@@ -1,4 +1,4 @@
-# PBI 2026-09-12-23 — RecordSession の prelude/tail を AttemptContext に統合
+# PBI 2026-09-12-23 ― RecordSession の prelude/tail を AttemptContext に統合
 
 - **種別**: 🔧非機能追加（refactor）
 - **優先度**: 7 位 / RICE **6.4**（R8 × I1 × C80% / E1.0人日）
@@ -13,7 +13,7 @@ normal/force の 2 分岐（recordSession.ts:362-472,475-526）が guard → arm
 - `openAttempt()`（degenerate DOM で null 返却 + idle 自己復帰）と `closeAttempt(kind, ...)`（hideSpinner + result-state）を private seam に
 - 分岐は差分の中間（fetch 有無・tail の分岐）のみ保持
 - SpinnerScope 採用（PBI 14 で新設済み）
-- 振る舞い不変（drift は現状維持 — 統合はしない）
+- 振る舞い不変（drift は現状維持 ― 統合はしない）
 
 ## 受け入れ基準（BDD）
 

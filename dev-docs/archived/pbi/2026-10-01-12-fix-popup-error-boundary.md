@@ -2,7 +2,7 @@
 
 ## 優先度・backlog 出所・依存
 
-- 出所: [pbi/2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) — 検証済み候補 NN12。
+- 出所: [pbi/2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) ― 検証済み候補 NN12。
 - RICE: R=8 / I=3 / C=1.0 / Eff=1.5 → 16.0（順位 5）。
 - 優先度: High。storage 拒否や不正 URL が unhandled rejection になり、ユーザー通知がゼロのまま popup の操作が無音で失敗する。
 - 依存: なし。`src/popup/pendingPages.ts`・`src/popup/statusPanel.ts`・`src/popup/privatePageDialog.ts`・`src/popup/privacyConsentController.ts` を触り、バッチA（08/10/11/13/14/15/16/18/23/24/25）とファイル非重複。settingsForm / generalSettingsPanel チェーン（09→17→20）とも非重複。
@@ -15,19 +15,19 @@ popup で「選択したページを保存」や「ドメインを許可リス�
 
 検証済み事実: 以下のハンドラは全て await チェーンで try/catch がなく、拒否が unhandled でユーザー通知ゼロになる。
 
-- `src/popup/pendingPages.ts:114-120` — `btn-save-selected` / `btn-save-whitelist` が `saveSelectedPages()` を catch なしで呼ぶ。内部の `recordPendingPage` / `removePendingPages` / `addDomainToWhitelist`（:84・:96・:100）の拒否が unhandled。
-- `src/popup/pendingPages.ts:122-142` — `btn-discard` の async ハンドラ。`showConfirmDialog` → `removePendingPages(urls)`（:139）が拒否された場合の catch がない。
-- `src/popup/pendingPages.ts:67-75` — `addDomainsOrPathsToWhitelist` の `new URL(url).hostname`（:69）が不正 URL で throw し、バッチ全体（残りの URL だけでなく後続の保存処理）を中断する。1 件の不正 URL でバッチが死なないよう hostname 変換も個別 try が必要。
-- `src/popup/statusPanel.ts:315-336` — `addDomainBtn` の async ハンドラ。`getCurrentTab` / `addDomainToWhitelist` / `initStatusPanel` の拒否に catch がない。
-- `src/popup/statusPanel.ts:338-354` — `addPathBtn` の async ハンドラ。同様に catch がない。
-- `src/popup/statusPanel.ts:146-178` — `btnRequestPermission` の async ハンドラ。`await requestPermission(url)`（:154）と `await recordDeniedVisit(domain)`（:160）の拒否に catch がない。
-- `src/popup/statusPanel.ts:375-386` — `btnRequestAllUrls` の async ハンドラ。`await requestAllUrls()`（:377）の拒否に catch がない。
-- `src/popup/privatePageDialog.ts:128-136`（`dialog-save-once`）・`:138-151`（`dialog-save-domain`）・`:153-166`（`dialog-save-path`）・`:175-184`（`recording-failed-retry`）— ダイアログ buttons の async ハンドラ。await の拒否時に catch がなく、ダイアログは既に `close()` 済み（:130・:140・:155・:177）のため失敗が UI に残らない。`addDomainToWhitelist`（:147）・`addPathToWhitelist`（:163）・`recordWithForce`（:134・:149・:164）・`recordPendingSave(false)`（:182）の拒否が unhandled。
-- `src/popup/privacyConsentController.ts:156-168` — `handleDeclineConsent` が try/catch なし。`await declineConsent()`（:157）の拒否が unhandled。対照として `handleAcceptConsent`（:131-151）は既に try/catch + `logError` + ボタンへのエラー表示（:138-149）を実装済み — 同じモジュール内の兄弟ハンドラで非対称。
-- 拒否は現実に発生する: `src/utils/storage/SettingsRepository.ts:197` — `writeSettings` の API key 暗号化失敗経路が `await logError(...)` の後に `throw e` で再 throw する。暗号化が未初期化（master password 未設定・ロック中）のとき、この経路は setAll / set を経由する全 popup 書き込みを reject させる。
+- `src/popup/pendingPages.ts:114-120` ― `btn-save-selected` / `btn-save-whitelist` が `saveSelectedPages()` を catch なしで呼ぶ。内部の `recordPendingPage` / `removePendingPages` / `addDomainToWhitelist`（:84・:96・:100）の拒否が unhandled。
+- `src/popup/pendingPages.ts:122-142` ― `btn-discard` の async ハンドラ。`showConfirmDialog` → `removePendingPages(urls)`（:139）が拒否された場合の catch がない。
+- `src/popup/pendingPages.ts:67-75` ― `addDomainsOrPathsToWhitelist` の `new URL(url).hostname`（:69）が不正 URL で throw し、バッチ全体（残りの URL だけでなく後続の保存処理）を中断する。1 件の不正 URL でバッチが死なないよう hostname 変換も個別 try が必要。
+- `src/popup/statusPanel.ts:315-336` ― `addDomainBtn` の async ハンドラ。`getCurrentTab` / `addDomainToWhitelist` / `initStatusPanel` の拒否に catch がない。
+- `src/popup/statusPanel.ts:338-354` ― `addPathBtn` の async ハンドラ。同様に catch がない。
+- `src/popup/statusPanel.ts:146-178` ― `btnRequestPermission` の async ハンドラ。`await requestPermission(url)`（:154）と `await recordDeniedVisit(domain)`（:160）の拒否に catch がない。
+- `src/popup/statusPanel.ts:375-386` ― `btnRequestAllUrls` の async ハンドラ。`await requestAllUrls()`（:377）の拒否に catch がない。
+- `src/popup/privatePageDialog.ts:128-136`（`dialog-save-once`）・`:138-151`（`dialog-save-domain`）・`:153-166`（`dialog-save-path`）・`:175-184`（`recording-failed-retry`）― ダイアログ buttons の async ハンドラ。await の拒否時に catch がなく、ダイアログは既に `close()` 済み（:130・:140・:155・:177）のため失敗が UI に残らない。`addDomainToWhitelist`（:147）・`addPathToWhitelist`（:163）・`recordWithForce`（:134・:149・:164）・`recordPendingSave(false)`（:182）の拒否が unhandled。
+- `src/popup/privacyConsentController.ts:156-168` ― `handleDeclineConsent` が try/catch なし。`await declineConsent()`（:157）の拒否が unhandled。対照として `handleAcceptConsent`（:131-151）は既に try/catch + `logError` + ボタンへのエラー表示（:138-149）を実装済み ― 同じモジュール内の兄弟ハンドラで非対称。
+- 拒否は現実に発生する: `src/utils/storage/SettingsRepository.ts:197` ― `writeSettings` の API key 暗号化失敗経路が `await logError(...)` の後に `throw e` で再 throw する。暗号化が未初期化（master password 未設定・ロック中）のとき、この経路は setAll / set を経由する全 popup 書き込みを reject させる。
 - 正解パターンは同プロジェクト内に実在:
-  - `src/popup/statusPanel.ts:396-427` — feedback button が try/catch で wrap し、`statusChannel.report(statusEl, ..., 'error')` で UI 表示（:423）+ `logError`（:424）。
-  - `src/popup/trancoNotification.ts:70-98` — `handleTrancoGrant` / `handleTrancoDeny` が try/catch + `logError`（:81・:96）で wrap。
+  - `src/popup/statusPanel.ts:396-427` ― feedback button が try/catch で wrap し、`statusChannel.report(statusEl, ..., 'error')` で UI 表示（:423）+ `logError`（:424）。
+  - `src/popup/trancoNotification.ts:70-98` ― `handleTrancoGrant` / `handleTrancoDeny` が try/catch + `logError`（:81・:96）で wrap。
 
 ## BDD
 
@@ -66,7 +66,7 @@ And 失敗が popup のステータス表示に出る
 
 ## 実装宣言・受け入れ基準
 
-実装宣言: **It must keep behavior** — 全ハンドラの成功経路（保存が完了した場合の UI 遷移・再描画・メッセージ）は不変。失敗時の catch → `showStatus` / `statusChannel.report` / エラー表示の追加のみを行う。`wireOnce`（`statusPanel.ts:146-147`・`:375-376`・`:396` の重複ハンドラ防止契約）と閾値トーストの timer token 管理（`statusPanel.ts:166-175`）は移設しない・壊さない。拒否時の `handleDeclineConsent` のモーダル非表示（:159）と拒否回数 3 回以降の警告抑制（:161-163）の成功経路も維持する。
+実装宣言: **It must keep behavior** ― 全ハンドラの成功経路（保存が完了した場合の UI 遷移・再描画・メッセージ）は不変。失敗時の catch → `showStatus` / `statusChannel.report` / エラー表示の追加のみを行う。`wireOnce`（`statusPanel.ts:146-147`・`:375-376`・`:396` の重複ハンドラ防止契約）と閾値トーストの timer token 管理（`statusPanel.ts:166-175`）は移設しない・壊さない。拒否時の `handleDeclineConsent` のモーダル非表示（:159）と拒否回数 3 回以降の警告抑制（:161-163）の成功経路も維持する。
 
 受け入れ基準:
 
@@ -86,10 +86,10 @@ And 失敗が popup のステータス表示に出る
 
 ## 実装内容
 
-1. `src/popup/pendingPages.ts` — `btn-save-selected` / `btn-save-whitelist`（:114-120）・`btn-discard`（:122-142）のハンドラを正解パターン（`statusPanel.ts:396-427` の try/catch + `statusChannel.report` / `showSuccess` と同型のエラー表示 + `logError`）で wrap。`addDomainsOrPathsToWhitelist`（:67-75）はループ内の hostname 変換を個別 try にし、`new URL(url)` 失敗の 1 件を catch して UI に記録し、残りの URL を継続処理する。
-2. `src/popup/statusPanel.ts` — `addDomainBtn`（:315-336）・`addPathBtn`（:338-354）・`btnRequestPermission`（:146-178）・`btnRequestAllUrls`（:375-386）を同一パターンで wrap。`btnRequestPermission` の既存の拒否時トースト表示（:161-175）は成功/失敗分岐の内側に温存し、catch はその外側に置く。エラー表示は既存の `statusChannel.report` seam を使う。
-3. `src/popup/privatePageDialog.ts` — `dialog-save-once`（:128-136）・`dialog-save-domain`（:138-151）・`dialog-save-path`（:153-166）・`recording-failed-retry`（:175-184）を wrap。ダイアログは既に閉じているため、失敗表示は popup 本体のステータス領域（`mainStatus`）に出す。
-4. `src/popup/privacyConsentController.ts` — `handleDeclineConsent`（:156-168）を `handleAcceptConsent`（:131-151）と同じ形（catch → `logError` + ボタンまたはモーダルへのエラー表示）に wrap。
+1. `src/popup/pendingPages.ts` ― `btn-save-selected` / `btn-save-whitelist`（:114-120）・`btn-discard`（:122-142）のハンドラを正解パターン（`statusPanel.ts:396-427` の try/catch + `statusChannel.report` / `showSuccess` と同型のエラー表示 + `logError`）で wrap。`addDomainsOrPathsToWhitelist`（:67-75）はループ内の hostname 変換を個別 try にし、`new URL(url)` 失敗の 1 件を catch して UI に記録し、残りの URL を継続処理する。
+2. `src/popup/statusPanel.ts` ― `addDomainBtn`（:315-336）・`addPathBtn`（:338-354）・`btnRequestPermission`（:146-178）・`btnRequestAllUrls`（:375-386）を同一パターンで wrap。`btnRequestPermission` の既存の拒否時トースト表示（:161-175）は成功/失敗分岐の内側に温存し、catch はその外側に置く。エラー表示は既存の `statusChannel.report` seam を使う。
+3. `src/popup/privatePageDialog.ts` ― `dialog-save-once`（:128-136）・`dialog-save-domain`（:138-151）・`dialog-save-path`（:153-166）・`recording-failed-retry`（:175-184）を wrap。ダイアログは既に閉じているため、失敗表示は popup 本体のステータス領域（`mainStatus`）に出す。
+4. `src/popup/privacyConsentController.ts` ― `handleDeclineConsent`（:156-168）を `handleAcceptConsent`（:131-151）と同じ形（catch → `logError` + ボタンまたはモーダルへのエラー表示）に wrap。
 5. 失敗表示の i18n: ユーザー向け文言は既存キーがあれば再利用し、なければ `getMessageOr(key, fallback)` 形式で新キーを定義する（`docs/i18n-guide.md` の data-i18n 契約に従い、`_locales` にも追加）。
 6. ガードの移設先の明示: catch の位置は「各ハンドラの最外殻 1 箇所」に統一する。ループ内の hostname 変換のみ例外（個別 try）とする。既存の `wireOnce` / timer token / `releasePrivatePageTrap` / `currentPendingSave = null` の状態操作は catch の外側の成功・失敗共通パスにそのまま残す。
 
@@ -106,18 +106,18 @@ And 失敗が popup のステータス表示に出る
 
 ### 変更点
 
-- `src/popup/pendingPages.ts` — `reportActionFailure(message, error, errorCode)` を新設し、`#mainStatus` への `showError` と `logError`（cause 付き）を一箇所に集約。`saveSelectedPages()` 全体と `btn-discard` ハンドラを try/catch で囲み、`addDomainsOrPathsToWhitelist()` の hostname 変換を**ループ内の個別 try** にした（受け入れ基準 4）。不正 URL 1 件は `INVALID_INPUT` として記録して `continue` するため、後続 URL と保存パスを巻き込まない。
-- `src/popup/statusPanel.ts` — `reportHandlerError(message, error)` を新設し、`addDomainBtn`・`addPathBtn`・`btnRequestPermission`・`btnRequestAllUrls` の 4 ハンドラを try/catch で囲んだ。`btnRequestPermission` の既存拒否トーストは成功/失敗分岐の内側に温存し、catch はその外側にある。`wireOnce` と timer token 管理は移設していない。エラー表示は成功経路と同じ `statusChannel.report('mainStatus', ...)` seam を使う。
-- `src/popup/privatePageDialog.ts` — `reportDialogActionFailure(action, error)` を新設し、ダイアログの 4 ボタン（`dialog-save-once` / `dialog-save-domain` / `dialog-save-path` / `recording-failed-retry`）を try/catch で囲んだ。ダイアログは既に `close()` 済みなので失敗表示は popup 本体の `#mainStatus` に出す。`releasePrivatePageTrap` と `currentPendingSave` の状態操作は catch の外側にそのまま残した。
-- `src/popup/privacyConsentController.ts` — `handleAcceptConsent` にあったボタンへのエラー表示を `flashButtonError()` として切り出し、`handleDeclineConsent` を同じ形（catch → `logError` + ボタン点滅）にして兄弟ハンドラと対称にした（受け入れ基準 5）。拒否回数 3 回以降の警告抑制は catch の内側のため、成功経路は不変。
+- `src/popup/pendingPages.ts` ― `reportActionFailure(message, error, errorCode)` を新設し、`#mainStatus` への `showError` と `logError`（cause 付き）を一箇所に集約。`saveSelectedPages()` 全体と `btn-discard` ハンドラを try/catch で囲み、`addDomainsOrPathsToWhitelist()` の hostname 変換を**ループ内の個別 try** にした（受け入れ基準 4）。不正 URL 1 件は `INVALID_INPUT` として記録して `continue` するため、後続 URL と保存パスを巻き込まない。
+- `src/popup/statusPanel.ts` ― `reportHandlerError(message, error)` を新設し、`addDomainBtn`・`addPathBtn`・`btnRequestPermission`・`btnRequestAllUrls` の 4 ハンドラを try/catch で囲んだ。`btnRequestPermission` の既存拒否トーストは成功/失敗分岐の内側に温存し、catch はその外側にある。`wireOnce` と timer token 管理は移設していない。エラー表示は成功経路と同じ `statusChannel.report('mainStatus', ...)` seam を使う。
+- `src/popup/privatePageDialog.ts` ― `reportDialogActionFailure(action, error)` を新設し、ダイアログの 4 ボタン（`dialog-save-once` / `dialog-save-domain` / `dialog-save-path` / `recording-failed-retry`）を try/catch で囲んだ。ダイアログは既に `close()` 済みなので失敗表示は popup 本体の `#mainStatus` に出す。`releasePrivatePageTrap` と `currentPendingSave` の状態操作は catch の外側にそのまま残した。
+- `src/popup/privacyConsentController.ts` ― `handleAcceptConsent` にあったボタンへのエラー表示を `flashButtonError()` として切り出し、`handleDeclineConsent` を同じ形（catch → `logError` + ボタン点滅）にして兄弟ハンドラと対称にした（受け入れ基準 5）。拒否回数 3 回以降の警告抑制は catch の内側のため、成功経路は不変。
 
 ### 追加したテスト
 
-- `src/popup/__tests__/pendingPages-errorBoundary.test.ts`（新規・275 行）— `saveSelectedPages` の拒否 3 ケース、不正 URL 混在バッチ 3 ケース（BDD シナリオ 2）、`btn-discard` の拒否 2 ケース。`errorUtils` は意図的に mock せず、ユーザーが実際に読む文言を検証する。
-- `src/popup/__tests__/privatePageDialog-recordRejection.test.ts`（新規・167 行）— ダイアログ 4 ボタンの record seam 拒否を検証（BDD シナリオ 3）。
-- `src/popup/__tests__/statusPanel-extra.test.ts` — `statusPanel async handlers — rejected dependencies` を 6 ケース追加（addDomain の whitelist 拒否 / addPath の whitelist 拒否 / addDomain のタブ読み取り拒否 / requestPermission の prompt 拒否 / denied-visit 記録の拒否 / requestAllUrls の prompt 拒否）。
-- `src/popup/__tests__/privatePageDialog.test.ts` — 閉鎖済みダイアログからの domain / path 書き込み拒否を 2 ケース追加。
-- `src/popup/__tests__/privacyConsentController-r2.test.ts` — `handleDeclineConsent` の error branch を 1 ケース追加。
+- `src/popup/__tests__/pendingPages-errorBoundary.test.ts`（新規・275 行）― `saveSelectedPages` の拒否 3 ケース、不正 URL 混在バッチ 3 ケース（BDD シナリオ 2）、`btn-discard` の拒否 2 ケース。`errorUtils` は意図的に mock せず、ユーザーが実際に読む文言を検証する。
+- `src/popup/__tests__/privatePageDialog-recordRejection.test.ts`（新規・167 行）― ダイアログ 4 ボタンの record seam 拒否を検証（BDD シナリオ 3）。
+- `src/popup/__tests__/statusPanel-extra.test.ts` ― `statusPanel async handlers ― rejected dependencies` を 6 ケース追加（addDomain の whitelist 拒否 / addPath の whitelist 拒否 / addDomain のタブ読み取り拒否 / requestPermission の prompt 拒否 / denied-visit 記録の拒否 / requestAllUrls の prompt 拒否）。
+- `src/popup/__tests__/privatePageDialog.test.ts` ― 閉鎖済みダイアログからの domain / path 書き込み拒否を 2 ケース追加。
+- `src/popup/__tests__/privacyConsentController-r2.test.ts` ― `handleDeclineConsent` の error branch を 1 ケース追加。
 - ハンドラ別の被覆：pendingPages 3 / statusPanel 4 / privatePageDialog 4 / privacyConsent 1。`npx vitest run <batch-B の 11 ファイル> --repeats=20` → 11 files / 301 tests 全回 green。`npm run validate` も green（998 files / 15343 tests）。
 
 ### 逸脱・未達

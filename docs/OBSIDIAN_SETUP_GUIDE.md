@@ -213,9 +213,9 @@ If your daily notes are organized into monthly or yearly subfolders, you can use
    | **Protocol** | `https` (default; `http` also available) |
    | **Port** | `27124` (default; `27123` for `http`) |
    | **Daily Note Path** | The path confirmed in step 4 (e.g., `DailyNotes`) |
-   | **Obsidian Host** | `127.0.0.1` (default; normally unchanged — set a different host for setups like WSL2) |
+   | **Obsidian Host** | `127.0.0.1` (default; normally unchanged ― set a different host for setups like WSL2) |
 
-   > **Note**: Plaintext HTTP is allowed only for loopback hosts (`localhost` / `127.0.0.1` / `::1`). Configuring HTTP against a non-loopback host is rejected — use HTTPS in that case.
+   > **Note**: Plaintext HTTP is allowed only for loopback hosts (`localhost` / `127.0.0.1` / `::1`). Configuring HTTP against a non-loopback host is rejected ― use HTTPS in that case.
 
 4. Click **Save**, then click **Test Obsidian**.
 5. You should see "Success! Connected to Obsidian. Settings Saved.".

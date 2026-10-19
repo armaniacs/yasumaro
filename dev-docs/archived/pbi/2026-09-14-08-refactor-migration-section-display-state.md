@@ -35,7 +35,7 @@
 
 ```typescript
 /**
- * 移行状態の表示区分 — 優先順位（done > notApplicable > checking > pending）を
+ * 移行状態の表示区分 ― 優先順位（done > notApplicable > checking > pending）を
  * deriveMigrationStatus 側で一度だけ解決した結果。レンダー側はこれをラベルに
  * マッピングするだけで、優先順位を再導出しない。
  *
@@ -156,9 +156,9 @@ npx vitest run src/dashboard
 
 ### 触ってはいけないもの
 
-- `makeStatRow` の第3引数に渡している `opfs.warn` / `idb.warn`（369-370行目）— `displayState` とは別の軸なので残す
-- `overall` の算出ロジック（`allDone` / `checking` / `warn`）— 今回のスコープ外
-- `diagnosticsPanel.migration.test.ts` — 無変更でパスすることが受け入れ条件
+- `makeStatRow` の第3引数に渡している `opfs.warn` / `idb.warn`（369-370行目）― `displayState` とは別の軸なので残す
+- `overall` の算出ロジック（`allDone` / `checking` / `warn`）― 今回のスコープ外
+- `diagnosticsPanel.migration.test.ts` ― 無変更でパスすることが受け入れ条件
 
 ---
 

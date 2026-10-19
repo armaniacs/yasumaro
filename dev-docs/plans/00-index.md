@@ -24,10 +24,10 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 ### 選定基準
 
-1. **Quick Win 優先** — 小工数で早期にユーザー価値を届ける（#07: 5pt, #03: 3pt）
-2. **依存解決** — 後続機能の前提を先に整える（#05 → #06/#12, #03 → #01/#02）
-3. **★ 分散配置** — 各フェーズに★を1つずつ配置し常に価値を届ける
-4. **リスクは基盤後** — #04（誤マージリスク）は品質機構が固まってから着手
+1. **Quick Win 優先** ― 小工数で早期にユーザー価値を届ける（#07: 5pt, #03: 3pt）
+2. **依存解決** ― 後続機能の前提を先に整える（#05 → #06/#12, #03 → #01/#02）
+3. **★ 分散配置** ― 各フェーズに★を1つずつ配置し常に価値を届ける
+4. **リスクは基盤後** ― #04（誤マージリスク）は品質機構が固まってから着手
 
 ### フェーズ構成
 
@@ -103,12 +103,12 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 
 ## 関連設計ドキュメント
 
-- [2026-07-05-01-feat-provider-priority-fallback-design.md](archive-old/2026-07-05-01-feat-provider-priority-fallback-design.md) — #05のAIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画作成済み
-- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](archive-old/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) — #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
-- [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) — #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
-- [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) — #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
+- [2026-07-05-01-feat-provider-priority-fallback-design.md](archive-old/2026-07-05-01-feat-provider-priority-fallback-design.md) ― #05のAIプロバイダ優先順位（1〜3位）設計。ステータス: 設計承認済み、実装計画作成済み
+- [2026-07-05-02-feat-provider-priority-fallback-impl-plan.md](archive-old/2026-07-05-02-feat-provider-priority-fallback-impl-plan.md) ― #05の実装計画（9タスク・各Step分解済み）。ステータス: 未着手
+- [2026-07-05-02-feat-encrypted-backup-design.md](archive-old/2026-07-05-02-feat-encrypted-backup-design.md) ― #10の暗号化バックアップ設計。ステータス: 設計済み、実装未着手
+- [docs/superpowers/specs/2026-07-05-weekly-monthly-local-summary-design.md](../superpowers/archive/specs/2026-07-05-weekly-monthly-local-summary-design.md) ― #01の週次/月次サマリ設計。ステータス: 設計済み、実装完了
 
-## 非機能PBI 実装計画（2026-07-27作成）— アーカイブ済み
+## 非機能PBI 実装計画（2026-07-27作成）― アーカイブ済み
 
 Checking Team レビューから起票した非機能PBI（PBI-13 / 15 / 24 / 26 / 27 / 29・35・36 / 34）は
 すべて完了またはADR記録済みで、**PBI・実装計画とも 2026-08-09 にアーカイブへ移動した**。

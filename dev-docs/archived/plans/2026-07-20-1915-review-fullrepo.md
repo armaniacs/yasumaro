@@ -1,10 +1,10 @@
-# Checking Team レビュー結果 — Yasumaro (全リポジトリ)
+# Checking Team レビュー結果 ― Yasumaro (全リポジトリ)
 
 - レビュー対象: 全リポジトリ (workspace root: obsidian-smart-history, main @ 0636bca)
 - 比較ブランチ: なし (全体レビュー)
 - 実行方式: 並列 (Wave1: 5観点 / Wave2: 4クラスタ・16観点 = 計21観点を個別スコア算出)
 - 実行日: 2026-07-20
-- ルール適用: プロジェクト固有パターン(🎯) — web_accessible_resources 分割漏れ、ESM .js 拡張、SW ステートレス、OPFS トランザクション順序、`.env` 非読取
+- ルール適用: プロジェクト固有パターン(🎯) ― web_accessible_resources 分割漏れ、ESM .js 拡張、SW ステートレス、OPFS トランザクション順序、`.env` 非読取
 
 ---
 
@@ -28,19 +28,19 @@
 - 影響: デフォルト `BEGIN` は最初の書き込みまでロックを取得しないため、並行アクセス時に `SQLITE_BUSY` のリスク。また L361 の `inserted++` ローカルカウンタは `INSERT OR IGNORE` の重複を実数として数えず、統計が不正確。
 - 対処: `BEGIN` → `BEGIN IMMEDIATE`。カウンタを削除し COMMIT 直後に `SELECT changes()` を1回実行。
 
-### [High] 🎯 `PRIVACY_POLICY_VERSION` が PRIVACY.md の最終更新日と不整合 — 再同意機構が機能しない
+### [High] 🎯 `PRIVACY_POLICY_VERSION` が PRIVACY.md の最終更新日と不整合 ― 再同意機構が機能しない
 - 指摘者: Compliance & Privacy Guard
 - 場所: `src/popup/privacyConsent.ts:11` (`'2026-02-23'`) vs `docs/PRIVACY.md:3` (2026-06-20)
 - 影響: v6.0.1 (GDPR 修正・30日ルール) 等の変更後も定数がバンプされておらず、既存ユーザーへ再同意が促されない。GDPR Art.7 抵触の可能性。
 - 対処: 定数を `'2026-06-20'` に更新し、既存ユーザーへポリシー変更通知のマイグレーションを追加。
 
-### [High] gistSyncTarget.syncBatch() が最新5件のみ参照 — 未同期レコードが取り残される
+### [High] gistSyncTarget.syncBatch() が最新5件のみ参照 ― 未同期レコードが取り残される
 - 指摘者: Domain Logic Expert
 - 場所: `src/background/syncTargets/gistSyncTarget.ts:72-75`
 - 影響: `query({ limit: 5, orderDir: 'DESC' })` で最新5件のみ取得し、その中で未同期をフィルタ。未同期が101件以上で最新5件が同期済みなら、残りは永遠に同期されない。バックアップが静的欠損。
 - 対処: クエリに `gist_synced = 0` フィルタを追加し、LIMIT はページネーション(OFFSET ループ)で管理。
 
-### [High] API レスポンススキーマの未検証 — コントラクト逸脱時にサイレント障害
+### [High] API レスポンススキーマの未検証 ― コントラクト逸脱時にサイレント障害
 - 指摘者: API & Contract Negotiator
 - 場所: `src/background/ai/providers/OpenAIProvider.ts:274-282`, `GeminiProvider.ts:204-216`
 - 影響: `data.choices[0].message.content` / `candidates[0].content.parts[0].text` を無条件に読取。プロバイダが形式変更すると undefined になり "No summary generated." がサイレント返却。
@@ -52,7 +52,7 @@
 - 影響: 全ページで毎秒ポーリング + スクロール時 DOM アクセス。モバイル・ヘビーページでフレームドロップ/入力遅延。
 - 対処: scroll 監視を `IntersectionObserver` へ。ポーリングを `requestIdleCallback` へ。storage 読取は単一 `get('settings')` に統合。
 
-### [High] 🎯 Logger の flush に `setTimeout` を使用 — SW 終了時にログ消失
+### [High] 🎯 Logger の flush に `setTimeout` を使用 ― SW 終了時にログ消失
 - 指摘者: SRE/Ops Specialist
 - 場所: `src/utils/logger.ts:235` (setTimeout), `:247` (`void flushLogs(true)` in onSuspend)
 - 影響: プロジェクト既知ルール「Use alarms not timers」に反する。SW が flush 前に終了すると保留ログが全損。onSuspend の flush は `void` で await されず完了保証なし。
@@ -148,17 +148,17 @@
 - 対処: パスを WXT 構造(`entrypoints/`)に合わせ修正。`npm build` → `npm run build`。
 
 ### [Medium] その他 (Low/Medium 群)
-- handlePurgeOldRecords の二段 DELETE が単一トランザクションでない (`opfsWorker.ts:431-463`) — BEGIN IMMEDIATE/COMMIT でラップ。
-- CI が type-check と test を単一ステップ (`npm run validate`) で実行 — 別ステップ化。
-- `make test` が build+validate+E2E 直列でフィードバック長い — `test-quick`/`test-unit` 追加。
-- runtime 依存が全ピン留め(`wa-sqlite@1.0.0` 等) — `~` で patch-range に。
-- レート制限 10 req/min ハードコード — `AI_RATE_LIMIT_MAX` 設定化。
-- コンテンツ長の動的切り詰めなし(一律10k文字) — モデル別 `maxContentChars`。
-- AI プロバイダ障害の集約/アラート経路なし — エラーカウンタ + 通知。
-- domainFilter の save 関数が DOM と storage を直接結合 — 中間モデル導入。
-- `extractDomain` が3箇所重複 — `src/utils/domainUtils.ts` に統合。
-- `<title>` ハードコード英語 — JS で `getMessage` 設定。
-- リポジトリルート `.env` が存在(gitignored) — `.env.example` へのリネーム推奨。
+- handlePurgeOldRecords の二段 DELETE が単一トランザクションでない (`opfsWorker.ts:431-463`) ― BEGIN IMMEDIATE/COMMIT でラップ。
+- CI が type-check と test を単一ステップ (`npm run validate`) で実行 ― 別ステップ化。
+- `make test` が build+validate+E2E 直列でフィードバック長い ― `test-quick`/`test-unit` 追加。
+- runtime 依存が全ピン留め(`wa-sqlite@1.0.0` 等) ― `~` で patch-range に。
+- レート制限 10 req/min ハードコード ― `AI_RATE_LIMIT_MAX` 設定化。
+- コンテンツ長の動的切り詰めなし(一律10k文字) ― モデル別 `maxContentChars`。
+- AI プロバイダ障害の集約/アラート経路なし ― エラーカウンタ + 通知。
+- domainFilter の save 関数が DOM と storage を直接結合 ― 中間モデル導入。
+- `extractDomain` が3箇所重複 ― `src/utils/domainUtils.ts` に統合。
+- `<title>` ハードコード英語 ― JS で `getMessage` 設定。
+- リポジトリルート `.env` が存在(gitignored) ― `.env.example` へのリネーム推奨。
 
 ---
 
@@ -172,7 +172,7 @@
 
 ## 対象外としてスキップした観点
 
-なし (全21観点を実行。関連性マップによるスキップなし — 全リポジトリレビューのため)。
+なし (全21観点を実行。関連性マップによるスキップなし ― 全リポジトリレビューのため)。
 
 ---
 
@@ -214,7 +214,7 @@
 
 High/Medium 指摘が多数あるため、自動修正フェーズへ進む。ただし全リポジトリ対象かつ一部は破壊的変更(マスターパスワード鍵移行・トークン上限UI・host/version 設定追加)を伴うため、以下の方針で実施:
 - **即時修正(安全)**: OPFS WAL/BEGIN IMMEDIATE、PRIVACY_POLICY_VERSION バンプ、viewport meta 追加、HTML CSP `unsafe-inline` 削除、Logger onSuspend await、AGENTS.md パス修正、`conflictStats` 削除、i18n 重複/欠落修正。
-- **要ユーザー判断(保留)**: マスターパスワード鍵ストレージ移行、トークン上限UI、Obsidian host/Gemini version 設定追加、中央 fetch 統合 — 別途確認後に実施。
+- **要ユーザー判断(保留)**: マスターパスワード鍵ストレージ移行、トークン上限UI、Obsidian host/Gemini version 設定追加、中央 fetch 統合 ― 別途確認後に実施。
 
 ---
 
@@ -233,4 +233,4 @@ High/Medium 指摘が多数あるため、自動修正フェーズへ進む。�
 | `confirmImport` 重複解消 (title を `confirmImportTitle` にリネーム + HTML 更新) | `public/_locales/{ja,en}/messages.json`, `entrypoints/{popup,options}/index.html` | 🎯 i18n 重複 (Medium) |
 | `triggerTabClose` / `triggerTabCloseDesc` を en に追加 | `public/_locales/en/messages.json` | i18n 欠落 (Medium) |
 
-**保留(要ユーザー判断)**: マスターパスワード鍵ストレージ移行、トークン月次ハードリミットUI、Obsidian host / Gemini version 設定追加、ObsidianClient 中央 fetch 統合、gistSyncTarget 未同期フィルタ、`conflictStats` 削除(テスト3件の書き換えが必要)、API レスポンススキーマ検証 — 上記は破壊的変更または設計判断が必要なため、確認後に別途実施。
+**保留(要ユーザー判断)**: マスターパスワード鍵ストレージ移行、トークン月次ハードリミットUI、Obsidian host / Gemini version 設定追加、ObsidianClient 中央 fetch 統合、gistSyncTarget 未同期フィルタ、`conflictStats` 削除(テスト3件の書き換えが必要)、API レスポンススキーマ検証 ― 上記は破壊的変更または設計判断が必要なため、確認後に別途実施。

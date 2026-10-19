@@ -1,4 +1,4 @@
-# PBI: 日付指定でのレコードアーカイブ作成 — フェーズA（退避ファイル作成）
+# PBI: 日付指定でのレコードアーカイブ作成 ― フェーズA（退避ファイル作成）
 
 ## ユーザーストーリー
 
@@ -122,13 +122,13 @@ grep -rn "purgeOldRecords" src/offscreen/ | head
 ### 実装手順
 1. E2EテストをRedで書く（ダッシュボードUIフロー: 日付入力→確認→実行→退避ファイル確認・本体不変）
 2. 統合テストをRedで書く（opfsWorker アーカイブハンドラ: 生成内容・境界値・トークン拒否）
-3. メッセージ経路に `archive_preview` / `archive_create` / `archive_cleanup` を追加: `src/messaging/sqliteMessages.ts` / `sqliteRpcClient.ts`（MaintainOp）、`src/background/handlers/dashboardSqliteProtocol.ts`（subtype）、`src/messaging/sqliteOperationSecurity.ts`（`ALL_DASHBOARD_SQLITE_SUBTYPES` に追加。`archive_preview` のみ READ_ONLY+TOKEN_EXEMPT）、`src/messaging/validators.ts`（cutoff の per-subtype 検証）、**第4グループ `ARCHIVE_SUBTYPES` + `createArchiveHandler` を確定**（`GROUPED_SUBTYPES` assert を4分割 — `maintenanceBatchHandler` には混ぜない）。`MAINTENANCE_BATCH_SUBTYPES` には追加しない
+3. メッセージ経路に `archive_preview` / `archive_create` / `archive_cleanup` を追加: `src/messaging/sqliteMessages.ts` / `sqliteRpcClient.ts`（MaintainOp）、`src/background/handlers/dashboardSqliteProtocol.ts`（subtype）、`src/messaging/sqliteOperationSecurity.ts`（`ALL_DASHBOARD_SQLITE_SUBTYPES` に追加。`archive_preview` のみ READ_ONLY+TOKEN_EXEMPT）、`src/messaging/validators.ts`（cutoff の per-subtype 検証）、**第4グループ `ARCHIVE_SUBTYPES` + `createArchiveHandler` を確定**（`GROUPED_SUBTYPES` assert を4分割 ― `maintenanceBatchHandler` には混ぜない）。`MAINTENANCE_BATCH_SUBTYPES` には追加しない
 4. opfsWorker `archiveCreateHandlers.ts`（新規）にフェーズAを実装（purgeHandlers.ts / backupHandlers.ts パターンに倣う）:
    - `archive_outgoing_<nonce>.db` を OPFS に直接作成し `createEngine` で開く（同一ワーカー内の第2エンジンは backupHandlers.ts:88 の restore 検証が先例。**createEngine はDDLフリー（sqliteEngine.ts:47-51）。SCHEMA_SQL適用は opfsWorker.ts:116-120 のメインエンジン初期化経路にあるため、そのヘルパーを流用しないこと**）
    - `SCHEMA_SQL` のみ適用（FTS5_STATEMENTS / AUDIT_LOG_SCHEMA_SQL は適用しない）→ `ARCHIVE_META_SCHEMA_SQL` テーブル作成 → meta 1行書き込み（include_deleted / max_id_at_archive / archive_format_version 含む）
    - メインエンジンで `wal_checkpoint(TRUNCATE)` → バッチINSERT（5000件/COMMIT）で退避（`SELECT ... WHERE created_at <= ? [AND is_deleted = 0] ORDER BY id` → `ARCHIVE_INSERT_SQL`。`buildArchiveInsertParams` 流用）
    - `validateArchiveEngine()`（PBI-01 共通モジュール）で検証（件数一致・構造）→ close → checkpoint → 応答は**ステージングファイル名と recordCount のみ**（バイト列をメッセージに載せない）。**本体は未削除**
-5. ダッシュボードUIを追加（`entrypoints/options/index.html` + `src/dashboard/`）: 配置は保持ポリシー節の近くか Export Logs パネル。日付入力・削除済み行チェックボックス・プレビュー（対象件数・スター付き件数・削除済み件数・最古/最新日）・confirmToken（scopeHash付き）・ダウンロード（**offscreen 経由のチャンク転送** — Checking Team 調整済み）・クリーンアップまでの再ダウンロード・実行中 disabled／aria-live
+5. ダッシュボードUIを追加（`entrypoints/options/index.html` + `src/dashboard/`）: 配置は保持ポリシー節の近くか Export Logs パネル。日付入力・削除済み行チェックボックス・プレビュー（対象件数・スター付き件数・削除済み件数・最古/最新日）・confirmToken（scopeHash付き）・ダウンロード（**offscreen 経由のチャンク転送** ― Checking Team 調整済み）・クリーンアップまでの再ダウンロード・実行中 disabled／aria-live
 6. i18n（`public/_locales/en/messages.json` / `public/_locales/ja/messages.json`）に data-i18n キーを追加
 7. Green → リファクタリング（共通モジュール経由の整理）
 
@@ -222,11 +222,11 @@ grep -rn "purgeOldRecords" src/offscreen/ | head
 ```
 
 **新規ファイル**:
-- `src/offscreen/opfsWorker/archiveCreateHandlers.ts` — `handleArchiveCreate` / `handleArchivePreview` / `handleArchiveCleanup`（PBI-05 で `archiveSessionHandlers.ts` に `handleArchiveOpen/Query/Update/Save/Close`、PBI-03 で `archiveRestoreHandlers.ts` に `handleArchiveRestorePreview/Restore` を追加）
-- `src/offscreen/opfsWorker/archiveValidation.ts` — `validateArchiveEngine(engine): Promise<{ recordCount, meta }>` 共通検証（**PBI-01 で実装**・05 / 03 と共有）
-- `src/dashboard/archiveStagingService.ts` — dashboard 側 OPFS アクセス隔離（テストでモック可能）
-- `src/dashboard/panels/diagnostic/archivePanel.ts` — 新パネル
-- `src/dashboard/fileSystemAccess.ts` — （PBI-05 用）FS Access API のモック可能ラッパー
+- `src/offscreen/opfsWorker/archiveCreateHandlers.ts` ― `handleArchiveCreate` / `handleArchivePreview` / `handleArchiveCleanup`（PBI-05 で `archiveSessionHandlers.ts` に `handleArchiveOpen/Query/Update/Save/Close`、PBI-03 で `archiveRestoreHandlers.ts` に `handleArchiveRestorePreview/Restore` を追加）
+- `src/offscreen/opfsWorker/archiveValidation.ts` ― `validateArchiveEngine(engine): Promise<{ recordCount, meta }>` 共通検証（**PBI-01 で実装**・05 / 03 と共有）
+- `src/dashboard/archiveStagingService.ts` ― dashboard 側 OPFS アクセス隔離（テストでモック可能）
+- `src/dashboard/panels/diagnostic/archivePanel.ts` ― 新パネル
+- `src/dashboard/fileSystemAccess.ts` ― （PBI-05 用）FS Access API のモック可能ラッパー
 
 **既存ファイル更新（subtype 追加の連鎖、PBI-02 分）**:
 `src/messaging/sqliteOperationSecurity.ts`（`ALL_DASHBOARD_SQLITE_SUBTYPES` に `archive_create` `archive_preview` `archive_cleanup` 追加。`archive_preview` のみ `READ_ONLY_OPS` + `TOKEN_EXEMPT_OPS`）/ `src/background/handlers/dashboardSqliteProtocol.ts` / `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts`（`MAINTENANCE_BATCH_SUBTYPES`）/ `src/background/handlers/dashboardSqlite/deps.ts` / `src/messaging/sqliteRpcClient.ts`（`MaintainOp`）/ `src/background/sqlite/offscreenGateway.ts`（`maintain()`）/ `src/messaging/sqliteMessages.ts`（`SqliteMessage` + `SQLITE_MESSAGE_TYPES`）/ `src/offscreen/opfsWorker/types.ts`（`WORKER_MESSAGE_TYPES`）/ `src/offscreen/OpfsWorkerBackend.ts` / `src/offscreen/dbMaintenance.ts` / `src/offscreen/sqliteMessageHandlers.ts` / `src/offscreen/schema.ts`（archive 定数）/ `entrypoints/options/index.html`（サイドバー nav + `<section id="panel-archive">`）/ `public/_locales/{en,ja}/messages.json`
@@ -239,7 +239,7 @@ BDD シナリオ「実行前確認に対象件数・スター付き件数・削�
 
 → `archive_preview { cutoffDate }` を **読み取り専用**（`READ_ONLY_OPS` + `TOKEN_EXEMPT_OPS`）として追加。`SELECT COUNT(*) FILTER (WHERE ...)` 相当を 1 クエリで実行し `{ total, starred, deleted, oldestCreatedAt, newestCreatedAt }` を返す。整合テスト `exempt ⊆ read-only` を満たす。
 
-#### C-2. cutoff の計算 — `new Date(y, m-1, d, 23,59,59,999).getTime()`
+#### C-2. cutoff の計算 ― `new Date(y, m-1, d, 23,59,59,999).getTime()`
 
 なぜなぜ分析:
 - `created_at` は UTC ミリ秒。UI は `"2026-03-31"` 文字列。「指定日の終日まで」を含める（受け入れ基準）。
@@ -260,7 +260,7 @@ export function cutoffMsFromLocalDate(dateStr: string): number {
 
 単体テスト: 月末 / 月境界（`2026-02-28`）/ うるう年（`2028-02-29`）/ DST 切り替え日（`TZ=America/New_York` で `2026-03-08`、`vitest` の `process.env.TZ` 設定）で例外を投げず単調 / `created_at === cutoff` は含む・`cutoff + 1` は含まない。
 
-#### C-3. archive.db への INSERT — schema.ts に archive 専用定数を追加（`buildInsertParams` は流用しない）
+#### C-3. archive.db への INSERT ― schema.ts に archive 専用定数を追加（`buildInsertParams` は流用しない）
 
 なぜなぜ分析:
 - 本 PBI は「id 列の値は本体と同一」。`buildInsertParams` / `INSERT_SQL` は `id` を含まない（A-12）。
@@ -269,7 +269,7 @@ export function cutoffMsFromLocalDate(dateStr: string): number {
 
 → `src/offscreen/schema.ts` に追加:
 ```ts
-/** archive.db への INSERT — id を含む全列。本体 COLUMN_NAMES + 先頭 'id'。 */
+/** archive.db への INSERT ― id を含む全列。本体 COLUMN_NAMES + 先頭 'id'。 */
 export const ARCHIVE_INSERT_COLUMN_NAMES = ['id', ...COLUMN_NAMES] as const;
 export const ARCHIVE_INSERT_SQL =
   `INSERT INTO browsing_logs (${ARCHIVE_INSERT_COLUMN_NAMES.join(', ')}) ` +
@@ -319,7 +319,7 @@ CREATE TABLE yasumaro_archive_meta (
 ```
 どこで失敗しても手順 8 に到達しない限り本体は無傷。ステージングファイルは残る（後述の掃除まで再ダウンロード可能）。
 
-#### C-6. 10万件・10秒タイムアウト問題（A-3）— 初版の判断
+#### C-6. 10万件・10秒タイムアウト問題（A-3）― 初版の判断
 
 **問題**: 手順 5〜8 の同期実行が SW→offscreen の 10 秒（A-3）を超える可能性。
 
@@ -388,11 +388,11 @@ F-1〜F-4 のコードと結果は `dev-docs/plans/2026-09-06-archive-spike.md` 
 
 ### G. 未解決・レビューで意見が欲しい点
 
-1. **C-6 の 10 秒タイムアウト対策** — ポーリング方式 vs 件数上限 + 分割案内 vs `offscreenTransport` に archive 専用の長いタイムアウトを追加。どれが妥当か。
-2. **F-1** — options ページの OPFS 直アクセスが本当に動くか。動かない場合の代替経路（offscreen 経由 base64 チャンク）は deep-dig が却下したが、staging が使えないなら再考が必要。
-3. **VACUUM 依存**（F-2） — 動かない場合の本体 `auto_vacuum` 設定はスキーマ変更を伴う。既存 DB へのマイグレーション影響をどう評価するか。
-4. **`archive_cleanup` のトークン要否** — 破壊的ではない（孤児ファイル削除のみ）が OPFS 状態を変える。EXEMPT にすると整合テスト（`exempt ⊆ read-only`）が fail する。read-only 扱いにするのは実態と乖離。トークン必須で UX 上問題ないか（ダウンロード後の掃除ボタンで毎回トークン発行）。
-5. **schema.ts への archive 定数追加**（C-3） — 本体スキーマファイルに「archive 専用」の定数を置くのは適切か。別ファイル `src/offscreen/archiveSchema.ts` に分離すべきか。
+1. **C-6 の 10 秒タイムアウト対策** ― ポーリング方式 vs 件数上限 + 分割案内 vs `offscreenTransport` に archive 専用の長いタイムアウトを追加。どれが妥当か。
+2. **F-1** ― options ページの OPFS 直アクセスが本当に動くか。動かない場合の代替経路（offscreen 経由 base64 チャンク）は deep-dig が却下したが、staging が使えないなら再考が必要。
+3. **VACUUM 依存**（F-2） ― 動かない場合の本体 `auto_vacuum` 設定はスキーマ変更を伴う。既存 DB へのマイグレーション影響をどう評価するか。
+4. **`archive_cleanup` のトークン要否** ― 破壊的ではない（孤児ファイル削除のみ）が OPFS 状態を変える。EXEMPT にすると整合テスト（`exempt ⊆ read-only`）が fail する。read-only 扱いにするのは実態と乖離。トークン必須で UX 上問題ないか（ダウンロード後の掃除ボタンで毎回トークン発行）。
+5. **schema.ts への archive 定数追加**（C-3） ― 本体スキーマファイルに「archive 専用」の定数を置くのは適切か。別ファイル `src/offscreen/archiveSchema.ts` に分離すべきか。
 
 ## 番号再編に関する注記（2026-09-06）
 
@@ -405,7 +405,7 @@ F-1〜F-4 のコードと結果は `dev-docs/plans/2026-09-06-archive-spike.md` 
 2. **操作モデルの2フェーズ化（必須）**: 「1トランザクション内で退避と削除」の記述は削除する（2エンジン跨ぎのトランザクションは実現不能）。
    - フェーズA `archive_create`: 退避INSERT（新nonceのstagingへ・1トランザクション）→ 検証（テーブル構造・件数一致）→ **本体は未削除**。staging名のみ返却。新stagingを作り直す設計のため transport リトライに対して冪等（旧stagingは孤児掃除で回収）
    - フェーズB `archive_delete_by_staging`（新op・トークン必須）: 指定stagingのmeta（cutoff/include_deleted）を再読みして検証した上で本体DELETE+VACUUM。DELETEはcutoff述語で冪等（二重実行は2回目0件）→ transport リトライでも安全
-3. **並行ガード（必須）**: offscreen worker の module-level single-flight フラグ（`ARCHIVE_ALREADY_OPEN` と同型・タブ横断有効）を archive_create / archive_delete / restore に適用。実行中はUI・offscreen両方で拒否。ステージング掃除（パターンマッチ一括削除）はガード内でのみ実行し、実行中セッションのstagingは対象外 — 2タブ競合で「タブAの未DL成果がタブBの掃除で消える」問題を根絶
+3. **並行ガード（必須）**: offscreen worker の module-level single-flight フラグ（`ARCHIVE_ALREADY_OPEN` と同型・タブ横断有効）を archive_create / archive_delete / restore に適用。実行中はUI・offscreen両方で拒否。ステージング掃除（パターンマッチ一括削除）はガード内でのみ実行し、実行中セッションのstagingは対象外 ― 2タブ競合で「タブAの未DL成果がタブBの掃除で消える」問題を根絶
 4. **cutoff検証（必須）**: `validators.ts` に `archive_create` / `archive_delete_by_staging` / `archive_preview` の per-subtype 検証を必須追加（backup/restore系subtypeがper-subtype検証なしで素通しの現状に依存しない）。cutoffDate は `YYYY-MM-DD` 形式＋実在日＋範囲（2000-01-01〜実行日の翌日）で検証し、Date正規化に頼らない（"9999-99-99" での全件削除経路を封じる）
 5. **ステージング寿命**: DL完了検知は不可能という前提を維持し、(a) 実行中セッションのstagingは常に保持 (b) 掃除は起動時・次回実行時・ユーザー明示操作のみ（single-flight下で競合なし）。`downloadBlob` の即時 `revokeObjectURL`（既存バグ）は本PBI内で遅延解放に修正
 6. **archive_status の削除**: 初版スコープから除去（表Dから削除）。進捗・キャンセルは将来候補。代わりに「実行中は再実行不可」をUI文言で明示
@@ -418,9 +418,9 @@ F-1〜F-4 のコードと結果は `dev-docs/plans/2026-09-06-archive-spike.md` 
 2. **トークンの payload 束縛（High）**: `create_confirm_token` に scopeHash（sha256(`cutoffMs | includeDeleted | stagingName`)）を追加し、`verifyConfirmToken` で厳密比較・単回消費・fail-closed。`dashboardGateway` は取得〜送信間で payload 不変を送信直前に assert。テスト: sqlite-security-integrity.test.ts に「発行後に cutoff 変更→拒否」「別タブ staging 差し替え→拒否」を追加
 3. **staging レジストリ（High）**: offscreen/worker のメモリ内レジストリ（`stagingName → {cutoffMs, includeDeleted, phase, createdAt}`）を3PBI統一の正本とする。フェーズB/RESTORE はレジストリ値を述語に使い、ファイル内 meta と不一致なら fail-closed（実行拒否・両方残置）。offscreen 再起動後はレジストリ消滅のため全 staging は「再 preview 必須」。ファイル名は allowlist 正規表現 `^archive_(outgoing|incoming)_[A-Za-z0-9-]{36}\.db$` で検証
 4. **max_id 述語（Medium/Data Integrity）**: フェーズAで `MAX(id)` を staging meta に `max_id_at_archive` 記録し、フェーズB の DELETE は `WHERE created_at <= ? [AND is_deleted = 0] AND id <= :max_id_at_archive`（PBI-03 復元・JSON import による後着行を保護。VACUUM後の復旧不能ロスを封じる）
-5. **共通モジュール所有者の確定（High）**: `archiveValidation.ts`（`validateArchiveEngine`: allowlist検証＋meta突合せ＋トリガー0）/ `archiveStaging.ts`（staging発行・レジストリ・`sweepOrphanStagings(exclude)`・`releaseStaging`）/ `archiveGuards.ts`（`isHttpUrl` — src/messaging/validators.ts の実装をSSOT化してimport — `cutoffMsFromLocalDate`・サイズ上限定数）は **PBI-01（アーカイブ共通基盤）で実装する**。本PBIは使用のみ（再編による移管）
+5. **共通モジュール所有者の確定（High）**: `archiveValidation.ts`（`validateArchiveEngine`: allowlist検証＋meta突合せ＋トリガー0）/ `archiveStaging.ts`（staging発行・レジストリ・`sweepOrphanStagings(exclude)`・`releaseStaging`）/ `archiveGuards.ts`（`isHttpUrl` ― src/messaging/validators.ts の実装をSSOT化してimport ― `cutoffMsFromLocalDate`・サイズ上限定数）は **PBI-01（アーカイブ共通基盤）で実装する**。本PBIは使用のみ（再編による移管）
 6. **ハンドラ分割（High）**: `archiveHandlers.ts` 単一集約の記述は削除し、`archiveCreateHandlers.ts`（create/preview/cleanup/delete_by_staging）/ `archiveSessionHandlers.ts`（open/query/update/save/close。`archiveEngine` の保有をこのモジュールに閉じ込め `getArchiveEngineOrThrow()` 経由のみ公開）/ `archiveRestoreHandlers.ts`（PBI-03）に責務分割。SW層の archive ハンドラは stateless、セッション状態は offscreen/worker 層に閉じ込める
-7. **subtype は第4グループ（Medium）**: 12 subtype を `ARCHIVE_SUBTYPES` + `createArchiveHandler` に分離し `GROUPED_SUBTYPES` assert を4分割（`maintenanceBatchHandler` には混ぜない — ステートフル操作のため）。`WORKER_MESSAGE_TYPES` 更新チェックリストを4グループ対応に更新
+7. **subtype は第4グループ（Medium）**: 12 subtype を `ARCHIVE_SUBTYPES` + `createArchiveHandler` に分離し `GROUPED_SUBTYPES` assert を4分割（`maintenanceBatchHandler` には混ぜない ― ステートフル操作のため）。`WORKER_MESSAGE_TYPES` 更新チェックリストを4グループ対応に更新
 8. **dashboard OPFS 直アクセスの降格（Medium/Architect調整）**: 第1経路は offscreen 経由読み出し（`handleBackup` の `getFile()` 流用・上限超過分はチャンク分割）。dashboard 直OPFS（archiveStagingService）は F-1 スパイク対象から「将来の最適化候補」に降格し、F-1 合格基準に「Gateway 経由フォールバック動作」を追加。archiveStagingService は `dashboardSqliteService` 配下に置き抽象の裏に隠す
 9. **quota プレフライト（Medium）**: フェーズA/B開始前に `navigator.storage.estimate()` で「本体×2＋ステージング上限」の空きを確認し、不足時は実行拒否＋「ダウンロードフォルダの整理／日付分割」案内。200MB 上限は worker 側でも再検証（3PBI共通定数）
 10. **バッチ分割（High/Tuning調整）**: フェーズAの退避INSERTはバッチ分割（5000件/COMMIT）を設計に含め、`bench/` にアーカイブ相当の長時間系ケース追加を受入基準化。実行中はボタン・日付入力を `disabled`＋既存 status-message（`aria-live="polite"`、`aria-busy`）で「処理中・他の操作は待機」を通知（PBI-05/03共通のUI規定。プログレスバー新規部品は作らない）

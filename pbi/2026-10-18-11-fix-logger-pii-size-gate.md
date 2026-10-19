@@ -4,7 +4,7 @@
 
 拡張機能の開発者・保守担当者として、診断ログに入り込む「同一のメールアドレスが 65,536 文字以下ならマスクされ、超えると原文のまま保存される」という非対称を解消してほしい、なぜならこれは PII サニタイザが ReDoS 対策として持つサイズゲートの**意図せざる副作用**であり、`chrome.storage.local` に 3 日間・500 件保持される診断ログが「マスク保証の穴」になることで、ログを読む将来の保守者が `user@example.com` を平文で見る余地が有一天でも早く閉じるべきだから。
 
-もう少し具体的に言えば、`https://attacker.example/?email=user@example.com&pad=<65000文字>` のような長い URL を 1 ページ記録しただけで、パイプラインの保存テイル（`savePhase.ts:94`）がその URL を `addLog` の details に載せるため、監査ログに個人の識別子が原文で残る。バグ報告ビルダーが現状エラーコード数しか送らないため流出面は限定的だが、これは「流入が起きていない」ためではない——**デバッグログを読む人間（開発者自身）が 3 日以内に storage を直接見る**だけで露見する経路が残っている。
+もう少し具体的に言えば、`https://attacker.example/?email=user@example.com&pad=<65000文字>` のような長い URL を 1 ページ記録しただけで、パイプラインの保存テイル（`savePhase.ts:94`）がその URL を `addLog` の details に載せるため、監査ログに個人の識別子が原文で残る。バグ報告ビルダーが現状エラーコード数しか送らないため流出面は限定的だが、これは「流入が起きていない」ためではない――**デバッグログを読む人間（開発者自身）が 3 日以内に storage を直接見る**だけで露見する経路が残っている。
 
 ## 優先度
 
@@ -35,7 +35,7 @@ security-audit run-2 の needs_validation リード。fingerprint: `pii-mask:log
 
 ### なぜ流出面が限定的と判定されたか
 
-`chrome.storage.local['sanitization_logs']`（`src/utils/logger/storageAdapter.ts:4-6`、3 日保持・500 件上限）の**唯一の production reader** は GitHub バグ報告ビルダーで、`summarizeErrorCodes`（`src/dashboard/panels/diagnostic/issueReportLink.ts:21-33`）は `log.errorCode` の名前と件数だけを集計し、本文 `:59` の `Recent error codes:` 行に填めるだけで、`message` も `details` も送らない。エクスポート・sync の経路も存在しない。つまり漏出を観測するには DevTools レベルの storage 直接閲覧、または将来の「ログ Surfacing reader」が必要になる——これは「流入が発生している」ことの軽減であって、排除ではない。
+`chrome.storage.local['sanitization_logs']`（`src/utils/logger/storageAdapter.ts:4-6`、3 日保持・500 件上限）の**唯一の production reader** は GitHub バグ報告ビルダーで、`summarizeErrorCodes`（`src/dashboard/panels/diagnostic/issueReportLink.ts:21-33`）は `log.errorCode` の名前と件数だけを集計し、本文 `:59` の `Recent error codes:` 行に填めるだけで、`message` も `details` も送らない。エクスポート・sync の経路も存在しない。つまり漏出を観測するには DevTools レベルの storage 直接閲覧、または将来の「ログ Surfacing reader」が必要になる――これは「流入が発生している」ことの軽減であって、排除ではない。
 
 ### 影響の輪郭
 
@@ -95,7 +95,7 @@ Scenario: 既存ピンの整合性（sanitizeRegex の戻り値契約が意図�
 - [ ] `src/utils/logger/core.ts:107-109` の message 経路が同様に `sanitizedMessage.error` を判定材料に含み、ゲート超過時に原文を保存しない
 - [ ] `src/utils/logger/api.ts:173-175` の OS 通知経路も同じ扱いとなり、通知本文にゲート超過の原文が載らない（storage 経路と通知経路が乖離しない）
 - [ ] 上記 BDD Scenario 1〜4 が自動テストとして実装されパスしている。Scenario 2（ゲート以下・従来挙動の不変）が対照として必ず同居している
-- [ ] 切り詰めが発生した場合はログ上でそれが分かる（既存 `LOG_TRUNCATION_MARKER` 相当のマーカー、または `error` 由来のフィールド）—「黙って短くなった」状態にしない。`src/utils/logTruncate.ts:15` のマーカー規約を再利用すること
+- [ ] 切り詰めが発生した場合はログ上でそれが分かる（既存 `LOG_TRUNCATION_MARKER` 相当のマーカー、または `error` 由来のフィールド）―「黙って短くなった」状態にしない。`src/utils/logTruncate.ts:15` のマーカー規約を再利用すること
 - [ ] `MAX_INPUT_SIZE = 65536`（`src/utils/piiSanitizer.ts:15` ← `src/utils/limits.ts:81`）自体を変更していない。gate の値を変える場合は `src/utils/__tests__/limits-drift.test.ts` と併せてレビューする
 - [ ] 既存テスト `src/utils/__tests__/piiSanitizer-optimization.test.ts:170-178`（`error` 定義・`maskedItems` 0 件を固定）と矛盾しない。矛盾する場合は expectation を緩めるのではなく**意図を明記したうえで**書き換える
 - [ ] 「ログを詳細に残したい（診断価値）」という運用上の意図と「PII を残さない」をどちらを優先したかが、コード中コメントと本 PBI の完了記録に明記されている（下記「どちらを優先するか」の節を参照）。`npm run validate` が緑
@@ -104,7 +104,7 @@ Scenario: 既存ピンの整合性（sanitizeRegex の戻り値契約が意図�
 
 ### 単体
 
-in-memory ロガー配線（`src/utils/logger/core.ts:49-51` の `initLogger(next: LoggerWiring)` + `resetLoggerWiring()`。`storage: LogStorageAdapter` / `scheduler: LogFlushScheduler` を注入する既存パターン）に `addLog('INFO', msg, { url })` を渡し、`flushLogs(true)` 後に `getLogs()` で **永続化されるエントリ**（disc 相当の storage adapter の中身）を assert する。**buffer を peek しただけでは検証にならない** — sink のバグは「保存された値」であって「渡した値」ではないため。
+in-memory ロガー配線（`src/utils/logger/core.ts:49-51` の `initLogger(next: LoggerWiring)` + `resetLoggerWiring()`。`storage: LogStorageAdapter` / `scheduler: LogFlushScheduler` を注入する既存パターン）に `addLog('INFO', msg, { url })` を渡し、`flushLogs(true)` 後に `getLogs()` で **永続化されるエントリ**（disc 相当の storage adapter の中身）を assert する。**buffer を peek しただけでは検証にならない** ― sink のバグは「保存された値」であって「渡した値」ではないため。
 
 - 主検証: `{ url: 'https://e.test/?email=user@example.com&pad=' + 'a'.repeat(70000) }` を渡す → `logs[0].details.url` に `user@example.com` が含まれないこと（現状は含まれるため RED）
 - 対照（同テストファイル内に置く）: 同じ URL を 65,000 文字に詰めたもの → `[MASKED:email]` が入り、それ以外の挙動が従来と同一であること
@@ -127,7 +127,7 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 | ファイル | 行 | 役割 |
 |---|---:|---|
 | `src/utils/piiSanitizer.ts` | 15 | `MAX_INPUT_SIZE = MAX_PII_INPUT_SIZE`（`src/utils/limits.ts:81` = `64 * 1024` = 65,536） |
-| `src/utils/piiSanitizer.ts` | 164-177 | `validateInputSize` — `:169` で `text.length > MAX_INPUT_SIZE` を判定し `error` を立てる |
+| `src/utils/piiSanitizer.ts` | 164-177 | `validateInputSize` ― `:169` で `text.length > MAX_INPUT_SIZE` を判定し `error` を立てる |
 | `src/utils/piiSanitizer.ts` | 222-230 | **サイズゲート本体**。`{ text（原文）, maskedItems: [], error }` を返す |
 | `src/utils/piiSanitizer.ts` | 18, 233-238 | `MAX_SKIP_SIZE = 512 * 1024`。`skipSizeLimit: true` でも 512KB 超は同じく原文＋error |
 | `src/utils/logger/sanitize.ts` | 85 | `const result = await sanitizeRegex(value)` |
@@ -135,19 +135,19 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 | `src/utils/logger/sanitize.ts` | 135-140 | sink #1 の配列枝。`:136` と同じ判定、`:139` が原文 |
 | `src/utils/logger/core.ts` | 99 | `const sanitizedMessage = await sanitizeRegex(message)` |
 | `src/utils/logger/core.ts` | 107-109 | **sink #2**。`sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message` → ゲート超過時は `message`（原文） |
-| `src/utils/logger/core.ts` | 110 | `details: await sanitizeLogDetails(restDetails)` — sink #1 へ渡す |
+| `src/utils/logger/core.ts` | 110 | `details: await sanitizeLogDetails(restDetails)` ― sink #1 へ渡す |
 | `src/utils/logger/api.ts` | 173-175 | **sink #3**（OS 通知）。`:174` も同じ `maskedItems.length > 0` 判定。`details` は生で `sink.raise` に渡される（`:175`） |
 | `src/utils/logger/storageAdapter.ts` | 4-6 | `LOG_STORAGE_KEY = 'sanitization_logs'` / `RETENTION_DAYS = 3` / `MAX_LOGS = 500` |
 | `src/utils/logger/storageAdapter.ts` | 41-43 | prune（3 日）・500 件上限・`chrome.storage.local.set` |
-| `src/messaging/validators.ts` | 59-75 | `assertHttpUrl` — 非空・http(s)・parseable のみ。**URL の長さ制限なし** |
-| `src/messaging/validators.ts` | 78-81 | 同じバリデータ内の `content` 長さ制限（`VALIDATOR_LIMITS.MAX_CONTENT_LENGTH`）— URL と非対称的 |
-| `src/messaging/validators.ts` | 594-595, 636-637 | `title` の長さ制限（`VALIDATOR_LIMITS.MAX_TITLE_LENGTH`）— URL と非対称的 |
-| `src/dashboard/panels/diagnostic/issueReportLink.ts` | 21-33 | `summarizeErrorCodes` — `errorCode` の名前と件数のみ。本文は送らない |
+| `src/messaging/validators.ts` | 59-75 | `assertHttpUrl` ― 非空・http(s)・parseable のみ。**URL の長さ制限なし** |
+| `src/messaging/validators.ts` | 78-81 | 同じバリデータ内の `content` 長さ制限（`VALIDATOR_LIMITS.MAX_CONTENT_LENGTH`）― URL と非対称的 |
+| `src/messaging/validators.ts` | 594-595, 636-637 | `title` の長さ制限（`VALIDATOR_LIMITS.MAX_TITLE_LENGTH`）― URL と非対称的 |
+| `src/dashboard/panels/diagnostic/issueReportLink.ts` | 21-33 | `summarizeErrorCodes` ― `errorCode` の名前と件数のみ。本文は送らない |
 | `src/dashboard/panels/diagnostic/issueReportLink.ts` | 59 | バグ報告ボディの `Recent error codes:` 行 |
 | `src/dashboard/panels/diagnostic/issueReportLink.ts` | 183 | 唯一の production reader（`getLogs()`） |
-| `src/background/handlers/systemHandlers.ts` | 309-312 | `LOG_FORWARD` の message を `MAX_LOG_FORWARD_MESSAGE_CHARS`（= 65,536、`limits.ts:73`）へ slice — message 経路はゲートに到達しない |
+| `src/background/handlers/systemHandlers.ts` | 309-312 | `LOG_FORWARD` の message を `MAX_LOG_FORWARD_MESSAGE_CHARS`（= 65,536、`limits.ts:73`）へ slice ― message 経路はゲートに到達しない |
 | `src/background/handlers/systemHandlers.ts` | 313-318 | details プレビューは `MAX_LOG_FORWARD_SERIALIZED_CHARS`（= 262,144、`limits.ts:75`）まで運ぶ（本 PBI のスコープ外） |
-| `src/background/pipeline/savePhase.ts` | 94 | `addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title, traceId })` — 実際の carrier |
+| `src/background/pipeline/savePhase.ts` | 94 | `addLog(LogType.INFO, 'Saved to SQLite', { url: context.data.url, title, traceId })` ― 実際の carrier |
 | `src/background/handlers/recordingHandlers.ts` | 211-213 | insecure scheme 拒否パスで raw `payload.url` を `addLog` details に載せる |
 | `src/utils/logTruncate.ts` | 12, 15, 17-21 | **再利用候補**。`MAX_LOG_BODY_CHARS = 500` / `LOG_TRUNCATION_MARKER = '…(truncated)'` / `truncateForLog(body, maxChars)` |
 | `src/utils/__tests__/piiSanitizer-optimization.test.ts` | 159-168 | 既存ピン。ちょうど 65,536 文字はマスクされる（`toContain('[MASKED:email]')`） |
@@ -228,6 +228,6 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 
 - pbi/00-INDEX.md
 - 既存の切り詰めヘルパー: `src/utils/logTruncate.ts`（`MAX_LOG_BODY_CHARS = 500` / `LOG_TRUNCATION_MARKER` / `truncateForLog`）
-- サイズ系リミットの SSOT: `src/utils/limits.ts:73-75, 81-82`（`MAX_LOG_FORWARD_*` / `MAX_PII_INPUT_SIZE` / `MAX_PII_OUTPUT_SIZE`）— ドリフト pin は `src/utils/__tests__/limits-drift.test.ts`
+- サイズ系リミットの SSOT: `src/utils/limits.ts:73-75, 81-82`（`MAX_LOG_FORWARD_*` / `MAX_PII_INPUT_SIZE` / `MAX_PII_OUTPUT_SIZE`）― ドリフト pin は `src/utils/__tests__/limits-drift.test.ts`
 - 既存 Sink（参考・本件の変更対象外）: `src/background/handlers/systemHandlers.ts:309-318`（`LOG_FORWARD` の境界処理。message は 65,536、details preview は 262,144 まで運ぶ）
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` `root[20]`, `NEEDS-VALIDATION.md` 18番）

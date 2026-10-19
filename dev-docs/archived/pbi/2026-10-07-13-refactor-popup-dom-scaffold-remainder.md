@@ -15,9 +15,9 @@ popup テストの保守担当者として、残り 4 ファイルの手作り D
 
 - 共有 helper は実在: `src/popup/__tests__/helpers/popupDom.ts:99`（setupPopupDom、6 ファイルが使用）
 - 残り 4 ファイル:
-  - `statusPanel-cleansingFeedback.test.ts:54-60` — STATUS_PANEL_SKELETON に `#reportCleansingFeedbackBtn` / `#reportCleansingFeedbackStatus` が不在（ギャップ）+ `#statusPanel` shell の重複
-  - `privacyConsentController.test.ts:92-114` + `privacyConsentController-r2.test.ts:74-96` — ポリフィル + dialog skeleton がバイト同一の 2 複製。共有 polyfillDialogs（:81-97）が ids 引数付きで再利用可能
-  - `recordCurrentPage-extra.test.ts:131-140,435-441` — currentPage 要素（#favicon/#pageTitle/#pageUrl/#recordBtn/#tagResultPanel）が skeleton 未対応（`#mainStatus` のみ重複）
+  - `statusPanel-cleansingFeedback.test.ts:54-60` ― STATUS_PANEL_SKELETON に `#reportCleansingFeedbackBtn` / `#reportCleansingFeedbackStatus` が不在（ギャップ）+ `#statusPanel` shell の重複
+  - `privacyConsentController.test.ts:92-114` + `privacyConsentController-r2.test.ts:74-96` ― ポリフィル + dialog skeleton がバイト同一の 2 複製。共有 polyfillDialogs（:81-97）が ids 引数付きで再利用可能
+  - `recordCurrentPage-extra.test.ts:131-140,435-441` ― currentPage 要素（#favicon/#pageTitle/#pageUrl/#recordBtn/#tagResultPanel）が skeleton 未対応（`#mainStatus` のみ重複）
 
 ## BDD受け入れシナリオ
 

@@ -12,9 +12,9 @@ backlog: [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic
 
 `src/messaging/validators.ts` に以下の三重複がある（着手時に行番号を再確認すること）：
 
-1. protocolVersion 検査 — `ValidVisitValidator`（115-117行目付近）と `FetchUrlValidator`（411-413行目付近）で同一文言 `protocolVersion must be a number`
-2. http scheme 検査 — `FetchUrlValidator`（401-410行目付近）と `ManualRecordValidator`（447-455行目付近）で同一の `isHttpScheme` 判定 + 3文言（non-empty / must be http or https / must be valid URL）。SSOT は `utils/archiveGuards.ts` の `isHttpScheme`
-3. content 上限検査 — `ValidVisitValidator`（108-110行目付近）と `ManualRecordValidator`（459-461行目付近）で同一の `VALIDATOR_LIMITS.MAX_CONTENT_LENGTH` 判定 + 文言
+1. protocolVersion 検査 ― `ValidVisitValidator`（115-117行目付近）と `FetchUrlValidator`（411-413行目付近）で同一文言 `protocolVersion must be a number`
+2. http scheme 検査 ― `FetchUrlValidator`（401-410行目付近）と `ManualRecordValidator`（447-455行目付近）で同一の `isHttpScheme` 判定 + 3文言（non-empty / must be http or https / must be valid URL）。SSOT は `utils/archiveGuards.ts` の `isHttpScheme`
+3. content 上限検査 ― `ValidVisitValidator`（108-110行目付近）と `ManualRecordValidator`（459-461行目付近）で同一の `VALIDATOR_LIMITS.MAX_CONTENT_LENGTH` 判定 + 文言
 
 対応方針: モジュールローカルな `assertProtocolVersion(m, validatorName)`・`assertHttpUrl(raw, validatorName, field)`・`assertContentLength(text, validatorName, field)` を新設し、3 validator は委譲のみにする。拒否文言・field 名・評価順序は変えない。
 

@@ -1,4 +1,4 @@
-# PBI: MessageHandlerRegistry shadow の collapse — MessageRouter 1 seam に集約
+# PBI: MessageHandlerRegistry shadow の collapse ― MessageRouter 1 seam に集約
 
 ## ユーザーストーリー
 開発者として、19 handler の dispatch を `MessageRouter.dispatch(msg, sender)` の1 seam に集約したい、なぜなら二重構築と二重 dispatch パスがバグの温床（trust / validator の抜け漏れ）とテストの二重化を生んでいるから
@@ -44,9 +44,9 @@ Scenario: エラー時も二重化なしで応答する
 
 ## 受け入れ基準
 - [x] `src/background/handlers/MessageHandlerRegistry.ts` と `createMessageHandlerRegistry.ts` が削除されている（`git log --diff-filter=D` で確認）
-- [x] `src/background/createBackgroundServices.ts` が deps リテラルを1箇所で構築し、`new MessageRouter(deps)` を1回だけ呼ぶ（重複する168–198行の二重リテラルが存在しない）
+- [x] `src/background/createBackgroundServices.ts` が deps リテラルを1箇所で構築し、`new MessageRouter(deps)` を1回だけ呼ぶ（重複する168-198行の二重リテラルが存在しない）
 - [x] `src/background/messageHandler.ts` が `deps.router` 必須の単一 dispatch パス（`registry.dispatch` fallback なし）で動作する
-  - **現状**: 98–101行で `if (deps.router)` の条件分岐あり。router 優先、fallback として registry.dispatch 残存 → 解消済み
+  - **現状**: 98-101行で `if (deps.router)` の条件分岐あり。router 優先、fallback として registry.dispatch 残存 → 解消済み
 - [x] `MessageRouter` の `handlers` / `trustLevels` / `validators` が private のまま dispatch seam 越しにテストされる（`as unknown as { handlers: Map }` の cast が存在しない）
   - **解消方法**: `getHandler` / `getTrustLevel` / `getRegisteredTypes` の observable accessor を追加し cast を全廃
 - [x] 既存の `MessageRouter.test.ts` / `MessageHandlerRegistry.validators.test.ts` 相当のテストが `MessageRouter` seam 越しにパスする（19 type × trust × validator の網羅は維持）
@@ -72,8 +72,8 @@ Scenario: エラー時も二重化なしで応答する
 - **Red-Green-Refactor**: 各ステップで `npm run type-check` を挟む（Pick 型の縮小が壊れていないか確認）
 
 ## 見積もり
-2pt（要チームでの見積もり）— 以下の複雑さを考慮
-- messageHandler.ts の 2分岐（registry / router）の片方化（98–101行の条件分岐削除）
+2pt（要チームでの見積もり）― 以下の複雑さを考慮
+- messageHandler.ts の 2分岐（registry / router）の片方化（98-101行の条件分岐削除）
 - createBackgroundServices.ts の 2箇所の deps リテラルの統合（168行 + 198行）
 - テストの二重化解消（MessageRouter.test.ts + MessageHandlerRegistry.validators.test.ts の統合）
 - 型チェック対応（MessageHandlerDeps の registry 削除に伴う import 修正）
@@ -100,22 +100,22 @@ grep -rn "MessageHandlerRegistry" src/ --include="*.ts" | grep -v "__tests__" | 
 未実装ではなく「置換が積層になった」状態。削除が目的であり新規ロジック追加は最小限。
 
 ### 実装手順
-1. `MessageRouter.test.ts` に「19 handler が router.handlers に登録されている」契約テストを追加（RED で失敗しないことを確認 — 既存のテストで代替可能か確認）
+1. `MessageRouter.test.ts` に「19 handler が router.handlers に登録されている」契約テストを追加（RED で失敗しないことを確認 ― 既存のテストで代替可能か確認）
 2. `createMessageHandlerRegistry` の呼び出しを `createBackgroundServices.ts` から削除し、deps リテラルを共通化
    - 現状: createBackgroundServices.ts の 168行と 198行に別々の deps リテラル構築あり
    - 目標: 1箇所で `const deps = { ... } as MessageHandlerRegistryDeps` を定義し、createMessageRouter のみ呼び出し
 3. `messageHandler.ts` の `MessageHandlerDeps` から `registry` を削除し `router: MessageRouter` を必須化
-   - 現状: 32–39行で registry と router (optional) が混在
-   - 削除後: router 必須、fallback 分岐（98–101行）を削除
+   - 現状: 32-39行で registry と router (optional) が混在
+   - 削除後: router 必須、fallback 分岐（98-101行）を削除
 4. `MessageHandlerRegistry.ts` / `createMessageHandlerRegistry.ts` を削除（`git rm`）
 5. 旧 registry を import していたテストの import を `MessageRouter` に置換し、`npm run validate` で確認
 6. `dev-docs/ADR/2026-07-26-domain-filter-layer-map.md` など registry に言及する ADR があれば追記で deprecated 経路の削除を記録
 
 ### 落とし穴
 - `createMessageHandler()` は現在 deps.registry と deps.router の両方をサポート。router 必須化時にテスト側が deps の構築を更新する必要
-  - 現状: messageHandler.ts:32–39 で `MessageHandlerDeps` に registry と router (optional) が両方存在
+  - 現状: messageHandler.ts:32-39 で `MessageHandlerDeps` に registry と router (optional) が両方存在
   - 削除後: registry を削除し router 必須化 → テストで `createMessageHandler({ router, tabCache, ... })` に置換が必要
-- `handlers` / `trustLevels` / `validators` が private なので `as unknown as` で無理に読むテストが残っていると削除後にコンパイルエラーになる — `getHandlerCount()` や `dispatch` の observable な振る舞いで検証する形に書き換える
+- `handlers` / `trustLevels` / `validators` が private なので `as unknown as` で無理に読むテストが残っていると削除後にコンパイルエラーになる ― `getHandlerCount()` や `dispatch` の observable な振る舞いで検証する形に書き換える
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
@@ -131,8 +131,8 @@ grep -rn "MessageHandlerRegistry" src/ --include="*.ts" | grep -v "__tests__" | 
 ### ✅ 確認済み事項
 1. **MessageHandlerRegistry の残存**: ファイルは現在も存在（MessageHandlerRegistry.ts, createMessageHandlerRegistry.ts）
 2. **二重構築の実態**: createBackgroundServices.ts で createMessageHandlerRegistry（168行）と createMessageRouter（198行）が別々に呼ばれている
-3. **MessageRouter の状態**: 既に 19 handler を内部で登録済み（MessageRouter.ts:79–）
-4. **messageHandler.ts の分岐**: 現在 98–101行で router 優先、registry fallback の条件分岐が存在（削除対象）
+3. **MessageRouter の状態**: 既に 19 handler を内部で登録済み（MessageRouter.ts:79-）
+4. **messageHandler.ts の分岐**: 現在 98-101行で router 優先、registry fallback の条件分岐が存在（削除対象）
 5. **参照数**: grep -rn で MessageHandlerRegistry への参照が 23件残存（テスト含む）
 
 ### ⚠️ 注意事項
@@ -143,6 +143,6 @@ grep -rn "MessageHandlerRegistry" src/ --include="*.ts" | grep -v "__tests__" | 
 
 ### 📝 PBI の精度確認
 - **ユーザーストーリー**: 妥当（二重構築・二重 dispatch パスが実在を確認）
-- **受け入れ基準**: 妥当（ただし現状のコード位置が 168–226行ではなく 168–198行に修正）
+- **受け入れ基準**: 妥当（ただし現状のコード位置が 168-226行ではなく 168-198行に修正）
 - **テスト戦略**: 妥当（E2E / 統合 / 単体の 3層は適切）
 - **落とし穴**: 実装時に「deps.router 優先化」の分岐削除が漏れやすい点を強調済み

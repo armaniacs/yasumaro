@@ -1,4 +1,4 @@
-# PBI: wasm-unsafe-eval スコープ限定 — CSP最小権限化
+# PBI: wasm-unsafe-eval スコープ限定 ― CSP最小権限化
 
 ## ユーザーストーリー
 拡張機能ユーザーとして、CSPの `wasm-unsafe-eval` が必要なページでのみ許可されてほしい、なぜなら `script-src 'self' 'wasm-unsafe-eval'` を全extension_pagesで常時許可すると、XSSがWASM実行に直結し、JSだけでは困難な難読化・永続化攻撃が可能になるから
@@ -16,19 +16,19 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — WASMが必要なページではWASMが動作する
+Scenario: 正常系 ― WASMが必要なページではWASMが動作する
   Given 拡張機能がビルドされている
   When offscreen/dashboardで sqlite-wasm をロードする
   Then CSP違反なくWASMがコンパイル・実行される
   And ブラウジング履歴の保存・検索が正常に動作する
 
-Scenario: 境界ケース — WASM不要なページでは wasm-unsafe-eval が無い
+Scenario: 境界ケース ― WASM不要なページでは wasm-unsafe-eval が無い
   Given 拡張機能のmanifestを検査する
   When extension_pages のCSPをパースする（将来ページ別CSPが可能になった場合）
   Then WASM不要なページ（例: popup）のCSPには wasm-unsafe-eval が含まれない
   And 現行の単一CSP制約下では、代替としてコメントで「なぜ必要か」が明記されている
 
-Scenario: エラーケース — wasm-unsafe-eval を除去してもWASMが壊れない
+Scenario: エラーケース ― wasm-unsafe-eval を除去してもWASMが壊れない
   Given wasm-unsafe-eval を除去したビルド
   When WASM不要ページで拡張機能を操作する
   Then コンソールにCSPエラーが出ない
@@ -62,7 +62,7 @@ Scenario: エラーケース — wasm-unsafe-eval を除去してもWASMが壊�
 - **スパイク**: 最初に `grep -rn wasm` と `wxt` のページ別CSPサポート有無を調査する小タスクから開始
 
 ## 見積もり
-3pt（要チーム見積もり）— 調査と条件分岐の設計を含むため中規模。WXTの制約で(B)になる可能性あり
+3pt（要チーム見積もり）― 調査と条件分岐の設計を含むため中規模。WXTの制約で(B)になる可能性あり
 
 ## 技術的考慮事項
 - 依存関係: 01/03と同ファイル。03のvalidation後に実施するとCSP変更の安全性が高い

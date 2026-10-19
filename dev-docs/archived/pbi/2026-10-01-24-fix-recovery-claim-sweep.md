@@ -64,7 +64,7 @@ Scenario: 掃除は take-over の挙動を変えない
 
 変更した内容:
 
-- `recoveryClaimStore.ts` — `createRecoveryClaimStore({ now })` ファクトリを新設し、`claimRecoveryOwner` / `releaseRecoveryOwner` をその内部関数としてクロージャにする形にした。既存の 2 つの自由関数は `createRecoveryClaimStore()` の既定インスタンスからの分割 export として同じ名前・同じシグネチャで公開されるため、呼び出し側（`offlineQueueProcessor` / `recordingHandlers` / `notificationHandlers`）は変更不要
+- `recoveryClaimStore.ts` ― `createRecoveryClaimStore({ now })` ファクトリを新設し、`claimRecoveryOwner` / `releaseRecoveryOwner` をその内部関数としてクロージャにする形にした。既存の 2 つの自由関数は `createRecoveryClaimStore()` の既定インスタンスからの分割 export として同じ名前・同じシグネチャで公開されるため、呼び出し側（`offlineQueueProcessor` / `recordingHandlers` / `notificationHandlers`）は変更不要
 - `withoutExpiredClaims(claims, now)` を追加し、`claimRecoveryOwner` の updater で「対象 URL が fresh なら無変更、take over なら sweep 済みの map に自分のエントリを足す」ようにした。sweep は take-over と同じ `withOptimisticLock` の CAS 内に載っているため、掃除と取得は 1 つの write で原子的に行える
 - 時刻源は `options.now ?? (() => Date.now())` として**呼び出しごとに解決**する（参照で捕捉すると、テストで fake clock を入れても実際の clock が残り続けるため）
 - モジュール docstring から PBI ID 参照を削り、claim が 1 つの storage key を共有しているため、claim 取得が sweep を伴うという WHY を追記。`isFresh` の doc に「age < TTL」を明記

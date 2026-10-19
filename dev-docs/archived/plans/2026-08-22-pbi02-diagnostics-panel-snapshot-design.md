@@ -36,7 +36,7 @@ src/dashboard/panels/diagnostic/
 | モジュール | 担当 | 禁止 |
 |---|---|---|
 | DiagnosticsCollector | データ収集・派生計算（deficiencies, divergence） | DOM 操作 |
-| debugModeStore | debugMode の読み書き | — |
+| debugModeStore | debugMode の読み書き | ― |
 | diagnosticsActions | ユーザー起因の操作（テスト実行・破壊的操作） | load 時のデータ収集 |
 | diagnosticsPanel | Snapshot の描画 + wiring | getSettings / chrome.storage 直呼び |
 
@@ -99,7 +99,7 @@ load() → collect() 1回 → Snapshot → 各セクション描画ブロック�
 | builtInAi | `null` | null ガードしてセクションをスキップ |
 | obsidian / aiProviderDetails | settings 取得失敗時はデフォルト値群 + `settingsLoadFailed: true` | obsidianSettingsEl へ現行どおり `diagLoadError` 文言、AI セクションは空のまま |
 | divergence | `detectLiveVfsStrategy()` 失敗時 `dashboardDetectsOpfs: false` | 警告非表示側に倒す（現行と同じ安全側） |
-| extInfo | 失敗なし（同期API） | — |
+| extInfo | 失敗なし（同期API） | ― |
 
 **settingsLoadFailed の設計判断**: getSettings() は単一呼び出しで obsidian と AI の2セクションに供給するため部分失敗モードが存在せず、boolean 1個で失敗モードと1対1対応する。既存ユーザー可視挙動（エラー文言）を厳密維持する。sqlite の `null` や storage の `'Unavailable'` 文字列などフィールドごとの失敗表現は現行規約を踏襲する（全面統一はスコープ外、§9）。
 

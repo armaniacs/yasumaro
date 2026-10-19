@@ -1,4 +1,4 @@
-# Deep-Dig Findings — 2026-08-11
+# Deep-Dig Findings ― 2026-08-11
 
 6つの未完了PBIを実装前に深掘り検証。各PBIの隠れた仮定をwhy-why分析で顕在化し、設計判断と未解決の疑問を記録する。
 

@@ -14,28 +14,28 @@
 
 (a) ublockParser 浅いコピーのコメントが実際の保証と不一致
 
-- `src/utils/ublockParser/index.ts:232-234` — 「ruleset を浅いコピーで返す。呼び出し側が cache 内のオブジェクトを書き換えても他呼び出しに影響しない」と主張。しかし `:240` `{ ...parseUblockFilterListWithErrors(text).rules }` と `:131` `{ ...cached, errors: cached.errors || [] }` はネストした `blockRules`/`exceptionRules`/`errors` 配列を cache と共有する。
+- `src/utils/ublockParser/index.ts:232-234` ― 「ruleset を浅いコピーで返す。呼び出し側が cache 内のオブジェクトを書き換えても他呼び出しに影響しない」と主張。しかし `:240` `{ ...parseUblockFilterListWithErrors(text).rules }` と `:131` `{ ...cached, errors: cached.errors || [] }` はネストした `blockRules`/`exceptionRules`/`errors` 配列を cache と共有する。
 - 現行呼び出し側はすべて読み取り専用（`src/dashboard/settings/ublockImport/rulesBuilder.ts:83-84` の `.length` 参照、`src/dashboard/settings/ublockImport/sourceManager.ts:116-117,153` の `.map()` 参照）で実害なし。
 
 (b) settingsForm のデッド比較
 
-- `src/dashboard/generalSettings/settingsForm.ts:193, :219` — `detail && detail !== 'Error'`。旧 display フォールバック（d2c8f27e 由来）で、現行プロデューサはちょうど `'Error'` を返さない（`src/utils/errorUtils.ts:12-13` の `errorMessage` は空メッセージで空文字を返し、`detail &&` 側で処理済み）。
+- `src/dashboard/generalSettings/settingsForm.ts:193, :219` ― `detail && detail !== 'Error'`。旧 display フォールバック（d2c8f27e 由来）で、現行プロデューサはちょうど `'Error'` を返さない（`src/utils/errorUtils.ts:12-13` の `errorMessage` は空メッセージで空文字を返し、`detail &&` 側で処理済み）。
 
 (c) storageTransaction の到達不能 tail throw
 
-- `src/utils/storage/storageTransaction.ts:170` — `throw lastError || new Error(shell.fallbackMessage)` は budget check `:164` が先に throw するため到達不能。`:137` のコメントが自己認識済み。
+- `src/utils/storage/storageTransaction.ts:170` ― `throw lastError || new Error(shell.fallbackMessage)` は budget check `:164` が先に throw するため到達不能。`:137` のコメントが自己認識済み。
 
 (d) verifyPostWrite の key/version-key 衝突の契約
 
-- `src/utils/storage/storageTransaction.ts:180-196` — `port.get([...keys, ...keys.map((k) => \`${k}_version\`)])` は `withAtomic(['foo', 'foo_version'])` のような呼び出しでキー衝突し得る。現行呼び出し側は安全（`src/utils/storage/savedUrlRepository.ts:230, :273, :324` — いずれも `savedUrlsWithTimestamps` / `savedUrls` のみ）。
+- `src/utils/storage/storageTransaction.ts:180-196` ― `port.get([...keys, ...keys.map((k) => \`${k}_version\`)])` は `withAtomic(['foo', 'foo_version'])` のような呼び出しでキー衝突し得る。現行呼び出し側は安全（`src/utils/storage/savedUrlRepository.ts:230, :273, :324` ― いずれも `savedUrlsWithTimestamps` / `savedUrls` のみ）。
 
 (e) session-timeout install の順序暗黙依存
 
-- `src/background/service-worker.ts:45`（`void alarmRegistry.installAll()` 未 await）と `:187`（`setSessionTimeoutRefs`）— installAll 内の `check_session_timeout` install hook（`src/background/alarmRegistry.ts:139-143` の `sessionTimeoutInstallRef?.()`）は ref 未注入時に no-op する。installAll が未 await のため、`:187` の ref 注入との実行順はタイミングに依存し、将来 `await` に変えると黙って no-op し得る。
+- `src/background/service-worker.ts:45`（`void alarmRegistry.installAll()` 未 await）と `:187`（`setSessionTimeoutRefs`）― installAll 内の `check_session_timeout` install hook（`src/background/alarmRegistry.ts:139-143` の `sessionTimeoutInstallRef?.()`）は ref 未注入時に no-op する。installAll が未 await のため、`:187` の ref 注入との実行順はタイミングに依存し、将来 `await` に変えると黙って no-op し得る。
 
 (f) CHANGELOG の stale 主張
 
-- `CHANGELOG.md:1192` — 「ベースラインラッパーを撤去し、`type-check:test` は `tsc` を直接実行する。以降テストコードに型エラーを持ち込むと CI が落ちる」。現状は `package.json:36` に `type-check:test:baseline` が存在し、`validate`（`package.json:44`）は baseline 版を実行、CI（`ci.yml:133-134`）は src の `tsc --noEmit`（`npm run type-check`）のみで `type-check:test` を実行しない。主張は現状と矛盾。
+- `CHANGELOG.md:1192` ― 「ベースラインラッパーを撤去し、`type-check:test` は `tsc` を直接実行する。以降テストコードに型エラーを持ち込むと CI が落ちる」。現状は `package.json:36` に `type-check:test:baseline` が存在し、`validate`（`package.json:44`）は baseline 版を実行、CI（`ci.yml:133-134`）は src の `tsc --noEmit`（`npm run type-check`）のみで `type-check:test` を実行しない。主張は現状と矛盾。
 
 ## BDD受け入れシナリオ（doc-review）
 
@@ -91,14 +91,14 @@ Then コメントから session-timeout install が ref 未注入で no-op に�
 - [x] 6 件 (a)-(f) がすべて処理され、各受け入れ基準を満たす
 - [x] 実行時挙動が不変であることを `npm run validate` で確認
 - [x] 変更対象がコメント・ドキュメント（(b) の比較削除、(d) のガードは必要な場合のみ）に限定されている
-- [x] backlog（順位 15）としての完了報告が紐づく — アーカイブ/台帳更新は別ステップ
+- [x] backlog（順位 15）としての完了報告が紐づく ― アーカイブ/台帳更新は別ステップ
 
 ## 実装記録（2026-10-03）
 
-- (a) `src/utils/ublockParser/index.ts:232-234` — 浅いコピーのコメントを実際の保証（トップレベルのプロパティ再代入のみ保護、`blockRules`/`exceptionRules`/`errors` 配列は cache 共有、読み取り専用前提）に修正。コード無変更
-- (b) `src/dashboard/generalSettings/settingsForm.ts:193, :219` — デッド比較 `detail !== 'Error'` を削除。現行プロデューサは `'Error'` を返さないため表示挙動は不変
-- (c) `src/utils/storage/storageTransaction.ts:137` — tail throw は保持、コメントに identity 目的（budget check が先に throw するため到達不能・TypeScript が loop の常時 return/throw を静的証明できないための tail throw・fallback error に呼び出し元メソッド名を記録）を補完
-- (d) `src/utils/storage/storageTransaction.ts:184` — `verifyPostWrite` に key/version-key 衝突の契約コメントを追加（`${key}_version` 派生のため `_version` 接尾辞付きデータ key は衝突し動作が偶発的になる旨、呼び出し側は repository key のみで安全）。衝突ガードは不採用 — 現行呼び出し側契約で十分なため
-- (e) `src/background/service-worker.ts` + `src/background/alarmRegistry.ts` — session-timeout install hook が ref 未注入時に no-op（アラーム未装着・無ログ）になることと、現在の成立条件が service-worker.ts の module-eval 順序（ref 注入が init() の `void alarmRegistry.installAll()` より前）であることを WHY コメントで復元。コード順序無変更
-- (f) `CHANGELOG.md:1192` — 追加修正不要。rank-07（PBI 2026-10-03-07）の CHANGELOG 整合で「※現行（v6.9.33 以降）は素の tsc ゲートではなく `type-check:test:baseline` の pin 上限が CI の validate で合否を判定」の現状一致記述が既に存在する
+- (a) `src/utils/ublockParser/index.ts:232-234` ― 浅いコピーのコメントを実際の保証（トップレベルのプロパティ再代入のみ保護、`blockRules`/`exceptionRules`/`errors` 配列は cache 共有、読み取り専用前提）に修正。コード無変更
+- (b) `src/dashboard/generalSettings/settingsForm.ts:193, :219` ― デッド比較 `detail !== 'Error'` を削除。現行プロデューサは `'Error'` を返さないため表示挙動は不変
+- (c) `src/utils/storage/storageTransaction.ts:137` ― tail throw は保持、コメントに identity 目的（budget check が先に throw するため到達不能・TypeScript が loop の常時 return/throw を静的証明できないための tail throw・fallback error に呼び出し元メソッド名を記録）を補完
+- (d) `src/utils/storage/storageTransaction.ts:184` ― `verifyPostWrite` に key/version-key 衝突の契約コメントを追加（`${key}_version` 派生のため `_version` 接尾辞付きデータ key は衝突し動作が偶発的になる旨、呼び出し側は repository key のみで安全）。衝突ガードは不採用 ― 現行呼び出し側契約で十分なため
+- (e) `src/background/service-worker.ts` + `src/background/alarmRegistry.ts` ― session-timeout install hook が ref 未注入時に no-op（アラーム未装着・無ログ）になることと、現在の成立条件が service-worker.ts の module-eval 順序（ref 注入が init() の `void alarmRegistry.installAll()` より前）であることを WHY コメントで復元。コード順序無変更
+- (f) `CHANGELOG.md:1192` ― 追加修正不要。rank-07（PBI 2026-10-03-07）の CHANGELOG 整合で「※現行（v6.9.33 以降）は素の tsc ゲートではなく `type-check:test:baseline` の pin 上限が CI の validate で合否を判定」の現状一致記述が既に存在する
 - 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0（実行時挙動不変・型・テストに差分なし）

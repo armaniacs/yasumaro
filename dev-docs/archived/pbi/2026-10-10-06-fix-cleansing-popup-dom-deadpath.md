@@ -11,9 +11,9 @@
 
 ## 背景（現状）
 
-- `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:243-250` — `popup-body-protection-enabled` / `popup-body-protection-threshold` / `popup-body-protection-threshold-value` を `getElementById` で照会（mount 時のミラー更新）
-- `:365-370` — apply/get 関数内でも同一 id を照会・書き込み
-- `:482` — `'popup-body-protection-enabled'` リテラル参照
+- `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:243-250` ― `popup-body-protection-enabled` / `popup-body-protection-threshold` / `popup-body-protection-threshold-value` を `getElementById` で照会（mount 時のミラー更新）
+- `:365-370` ― apply/get 関数内でも同一 id を照会・書き込み
+- `:482` ― `'popup-body-protection-enabled'` リテラル参照
 - `entrypoints/options/index.html` と `entrypoints/popup/index.html` のいずれにもこれらの id は不在（rg で全 HTML ゼロ一致を裏取り済み）
 - テストだけが DOM を手作りしてパス（`src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts:102-104,385-387`、`aiSummaryCleansingSettings-extra.test.ts:221-225,457-577`）
 
@@ -43,7 +43,7 @@ Scenario: 既存の AI クレンジング設定 UI は変更前と同一に動�
 
 ## テスト戦略
 
-- unit: `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts` / `aiSummaryCleansingSettings-extra.test.ts` — popup DOM fixture と当該 assertion を削除、残りは green
+- unit: `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts` / `aiSummaryCleansingSettings-extra.test.ts` ― popup DOM fixture と当該 assertion を削除、残りは green
 - 挙動不変: ai-summary-cleansing-* の保存・読込は変更しない
 
 ## 見積もり
@@ -66,7 +66,7 @@ Scenario: 既存の AI クレンジング設定 UI は変更前と同一に動�
 
 ### 落とし穴
 
-- :243-250 のミラー更新ブロックは他の変数宣言と混ざっている可能性 — 削除対象を popup id 3 つに限定する
+- :243-250 のミラー更新ブロックは他の変数宣言と混ざっている可能性 ― 削除対象を popup id 3 つに限定する
 - popup-body-protection 設定値の storage キーは削除しない（別機能が読む可能性を確認）
 
 ## Definition of Done

@@ -1,6 +1,6 @@
 # PBI-04: Settings `index signature`撤廃 + settingsStore.legacy削除
 
-優先度: 4位 / RICE 36.0 (Reach 10 × Impact 1.5 × Conf 60% / Effort 0.25w) — Slice A完了後に着手（依存）
+優先度: 4位 / RICE 36.0 (Reach 10 × Impact 1.5 × Conf 60% / Effort 0.25w) ― Slice A完了後に着手（依存）
 種別: refactor
 依存: Slice A（PBI-01）完了後
 ファイル触接: `src/utils/storage/types.ts:469`, `src/utils/storage/settingsStore.legacy.ts`, `src/utils/storage/settingsStore.ts`, `eslint.config.js`
