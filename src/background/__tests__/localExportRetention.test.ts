@@ -18,18 +18,17 @@ const store = vi.hoisted(() => ({ data: {} as Record<string, unknown> }));
 
 const mockStorageGet = vi.hoisted(() =>
   vi.fn((keys?: string | string[] | null) => {
+    // Platform contract: a string (or array) argument is an exact-key lookup,
+    // and a no-arg (or null) call fetches all of storage. An earlier comment
+    // here claimed "Chrome returns the exact key plus every key sharing it as
+    // a prefix" and fabricated that prefix branch — chrome.storage.local.get
+    // has no prefix mode, and a mock that invents one hides keyed-get bugs
+    // (PBI 2026-10-18-07: the same fabrication kept the buffer-key sweep's
+    // keyed-get no-op green in dailyPurgeHandler.test.ts).
     if (keys === null || keys === undefined) return Promise.resolve({ ...store.data });
-    if (typeof keys === 'string') {
-      // Chrome returns the exact key plus every key sharing it as a prefix.
-      const out: Record<string, unknown> = {};
-      if (keys in store.data) out[keys] = store.data[keys];
-      for (const k of Object.keys(store.data)) {
-        if (k !== keys && k.startsWith(keys)) out[k] = store.data[k];
-      }
-      return Promise.resolve(out);
-    }
     const out: Record<string, unknown> = {};
-    for (const k of keys) if (k in store.data) out[k] = store.data[k];
+    const requested = Array.isArray(keys) ? keys : [keys];
+    for (const k of requested) if (k in store.data) out[k] = store.data[k];
     return Promise.resolve(out);
   }),
 );

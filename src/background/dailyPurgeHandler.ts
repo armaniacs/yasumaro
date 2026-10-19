@@ -60,7 +60,17 @@ function daysAgo(now: Date, days: number): string {
  * @returns how many buffer keys were removed.
  */
 export async function sweepExpiredLocalExportBuffers(now: Date = new Date()): Promise<number> {
-    const stored = await chrome.storage.local.get(DAILY_BUFFER_PREFIX);
+    // Deliberately no-arg (fetch all of storage), the same read
+    // flushBufferedExports already makes: the daily buffer keys this sweep
+    // looks for (`local_export_YYYY-MM-DD`, DAILY_BUFFER_PREFIX) are dynamic
+    // and never enumerated in StorageKeys, and chrome.storage.local.get has no
+    // prefix mode — a keyed get(DAILY_BUFFER_PREFIX) is an exact-key lookup
+    // that always returns {} here, which turned this sweep into a permanent
+    // no-op (see 195ff96, which broke the flush path the same way and had to
+    // be reverted). The read runs once per day from the daily alarm, so it
+    // adds no unbounded load: unlimitedStorage is granted and buffer content
+    // is capped by MAX_DAILY_BUFFER_ENTRIES.
+    const stored = await chrome.storage.local.get();
 
     const today = formatLocalDate(now);
     const yesterday = daysAgo(now, 1);
@@ -71,6 +81,9 @@ export async function sweepExpiredLocalExportBuffers(now: Date = new Date()): Pr
     // unflushed entries when the daily alarm fires. The window is a tuning knob;
     // this is the data-safety invariant under it.
     const expiredKeys = Object.keys(stored).filter((key) => {
+        // Enumerate the buffer keys explicitly: keys outside the
+        // local_export_ prefix are never this sweep's input.
+        if (!key.startsWith(DAILY_BUFFER_PREFIX)) return false;
         const date = key.slice(DAILY_BUFFER_PREFIX.length);
         if (!BUFFER_DATE_PATTERN.test(date)) return false;
         if (date === today || date === yesterday) return false;

@@ -41,24 +41,22 @@ describe('handleDailyPurgeAlarm', () => {
     globalThis.chrome = {
       storage: {
         local: {
-          get: vi.fn((keys: unknown) => {
-            if (keys === null) return Promise.resolve({ ...storageData });
-            if (typeof keys === 'string') {
-              // Chrome returns the exact key plus every key sharing it as a
-              // prefix — the sweep relies on the prefix half of that.
-              const out: Record<string, unknown> = {};
-              if (keys in storageData) out[keys] = storageData[keys];
-              for (const k of Object.keys(storageData)) {
-                if (k !== keys && k.startsWith(keys)) out[k] = storageData[k];
-              }
-              return Promise.resolve(out);
-            }
-            if (Array.isArray(keys)) {
-              const out: Record<string, unknown> = {};
-              for (const k of keys) out[k] = storageData[k];
-              return Promise.resolve(out);
-            }
-            return Promise.resolve({});
+          get: vi.fn((keys?: string | string[] | null) => {
+            // Platform contract: chrome.storage.local.get has no prefix mode.
+            // A string (or array) argument is an exact-key lookup, and a no-arg
+            // (or null) call fetches all of storage. An earlier mock here
+            // claimed "Chrome returns the exact key plus every key sharing it
+            // as a prefix" and fabricated that prefix half — no such behavior
+            // exists in the API, and a mock that invents it keeps a keyed-get
+            // no-op green (PBI 2026-10-18-07: the sweep's get('local_export_')
+            // returned {} in production while this mock made it look like it
+            // matched local_export_YYYY-MM-DD keys; 195ff96 made the same
+            // assumption in the flush path and had to be reverted).
+            if (keys === null || keys === undefined) return Promise.resolve({ ...storageData });
+            const out: Record<string, unknown> = {};
+            const requested = Array.isArray(keys) ? keys : [keys];
+            for (const k of requested) if (k in storageData) out[k] = storageData[k];
+            return Promise.resolve(out);
           }),
           set: vi.fn((obj: Record<string, unknown>) => { Object.assign(storageData, obj); return Promise.resolve(); }),
           remove: vi.fn((keys: string[]) => { for (const k of keys) delete storageData[k]; return Promise.resolve(); }),
@@ -206,6 +204,56 @@ describe('handleDailyPurgeAlarm', () => {
         { swept: 1 },
         'dailyPurgeHandler',
       );
+    });
+
+    // BDD Scenario 1: the expired key is reclaimed through
+    // chrome.storage.local.remove — asserted on the call itself, not just the
+    // post-write state, because a state-only check also passes when the read
+    // returns {} and the sweep silently becomes a no-op.
+    it('BDD Scenario 1: calls remove once with the expired key and returns the removed count', async () => {
+      storageData = {
+        [`local_export_${dayOffset(-10)}`]: ['# expired'],
+        [`local_export_${dayOffset(-6)}`]: ['# in window'],
+        [`local_export_${dayOffset(-1)}`]: ['# yesterday'],
+        [`local_export_${dayOffset(0)}`]: ['# today'],
+      };
+
+      const swept = await sweepExpiredLocalExportBuffers();
+
+      expect(swept).toBe(1);
+      expect(chrome.storage.local.remove).toHaveBeenCalledTimes(1);
+      expect(chrome.storage.local.remove).toHaveBeenCalledWith([`local_export_${dayOffset(-10)}`]);
+      expect(storageData).not.toHaveProperty(`local_export_${dayOffset(-10)}`);
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(-6)}`);
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(-1)}`);
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(0)}`);
+    });
+
+    // BDD Scenario 2: today / yesterday / in-window keys are always kept (their
+    // flush runs on its own schedule), and unparseable or outside-prefix keys
+    // are untouched — only local_export_ keys whose date parses and sits past
+    // the window are ever removed.
+    it('BDD Scenario 2: keeps today, yesterday, in-window, unparseable and outside-prefix keys', async () => {
+      const corrupted = `local_export_${dayOffset(-30)}corrupt`;
+      storageData = {
+        [`local_export_${dayOffset(0)}`]: ['# today'],
+        [`local_export_${dayOffset(-1)}`]: ['# yesterday'],
+        [`local_export_${dayOffset(-6)}`]: ['# in window'],
+        [corrupted]: ['# unparseable suffix'],
+        'local_export_': ['# bare prefix'],
+        'unrelated_key': 'keep me',
+      };
+
+      const swept = await sweepExpiredLocalExportBuffers();
+
+      expect(swept).toBe(0);
+      expect(chrome.storage.local.remove).not.toHaveBeenCalled();
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(0)}`);
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(-1)}`);
+      expect(storageData).toHaveProperty(`local_export_${dayOffset(-6)}`);
+      expect(storageData).toHaveProperty(corrupted);
+      expect(storageData).toHaveProperty('local_export_');
+      expect(storageData).toHaveProperty('unrelated_key');
     });
   });
 });
