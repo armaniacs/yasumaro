@@ -86,8 +86,62 @@ export function stripDeviceLocalSecurityState(settings: Settings): Settings {
   return stripped;
 }
 
+/**
+ * The consent record itself (PBI 2026-10-19-12). Consent is an act the data
+ * subject performs on *this* device, so a settings file must not carry it: an
+ * export would grant consent on the target profile, and a revoked export would
+ * withdraw a valid grant there.
+ */
+const CONSENT_RECORD_KEYS: readonly string[] = [
+  StorageKeys.PRIVACY_CONSENT,
+  StorageKeys.PRIVACY_CONSENT_VERSION,
+  StorageKeys.PRIVACY_CONSENT_DENIED_COUNT,
+  StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME,
+];
+
+/**
+ * Keys an import must ignore on top of the consent record: the evidence
+ * `migrateLegacyPrivacyConsent` reads to decide "this profile used privacy
+ * features before" and auto-grant consent. That judgement belongs to this
+ * device's own history, not to a file from another device, so an imported
+ * payload must not be able to trigger it.
+ *
+ * These stay in the export on purpose. They are ordinary configuration (which
+ * pipeline runs) and part of the fail-closed required-key contract, so removing
+ * them from the file would both break that contract and lose the setting for
+ * no security gain — the import-side drop is the defence.
+ */
+const IMPORT_ONLY_IGNORED_KEYS: readonly string[] = [
+  StorageKeys.PRIVACY_MODE,
+  StorageKeys.PII_CONFIRMATION_UI,
+];
+
+/**
+ * Strip the consent record from a settings blob (export side).
+ */
+function stripDeviceLocalConsentState(settings: Settings): Settings {
+  const stripped = { ...settings };
+  for (const key of CONSENT_RECORD_KEYS) {
+    delete (stripped as Record<string, unknown>)[key];
+  }
+  return stripped;
+}
+
+/**
+ * Strip everything consent-related from an imported blob (import side). Ignoring
+ * rather than rejecting keeps old backups usable; the target device keeps its own
+ * consent record because `setAll` merges the patch and these keys are absent.
+ */
+function stripImportedConsentKeys(settings: Settings): Settings {
+  const stripped = stripDeviceLocalConsentState(settings);
+  for (const key of IMPORT_ONLY_IGNORED_KEYS) {
+    delete (stripped as Record<string, unknown>)[key];
+  }
+  return stripped;
+}
+
 function sanitizeSettingsForExport(settings: Settings): Settings {
-  const sanitized = stripDeviceLocalSecurityState(settings);
+  const sanitized = stripDeviceLocalConsentState(stripDeviceLocalSecurityState(settings));
 
   for (const field of API_KEY_FIELDS) {
     delete sanitized[field];
@@ -134,8 +188,8 @@ export async function finalizeImportedSettings(
 ): Promise<Settings> {
   const repo: SettingsImportRepo = opts.repo ?? settingsRepository;
   const toSave = opts.apiKeyExcluded
-    ? stripDeviceLocalSecurityState(await mergeWithExistingApiKeys(importedSettings, repo))
-    : stripDeviceLocalSecurityState(importedSettings);
+    ? stripImportedConsentKeys(stripDeviceLocalSecurityState(await mergeWithExistingApiKeys(importedSettings, repo)))
+    : stripImportedConsentKeys(stripDeviceLocalSecurityState(importedSettings));
   await repo.setAll(toSave);
   return toSave;
 }
@@ -160,10 +214,17 @@ async function mergeWithExistingApiKeys(
  * validate. Derived from the canonical defaults minus API key fields so newly
  * added settings become required automatically instead of via a hand-maintained
  * parallel list that can drift out of sync.
+ *
+ * Device-local consent keys are excluded for the same reason they are excluded
+ * from the payload (PBI 2026-10-19-12): a key the exporter never writes cannot be
+ * required of an importer. Without this filter the exporter would produce files
+ * its own validator rejects (`missing_required_key`). Files written by older
+ * releases still carry these keys, which is fine — the check is a lower bound.
  */
 const API_KEY_FIELD_SET: ReadonlySet<string> = new Set<string>(API_KEY_FIELDS);
+const CONSENT_RECORD_KEY_SET: ReadonlySet<string> = new Set<string>(CONSENT_RECORD_KEYS);
 const REQUIRED_EXPORT_KEYS: readonly string[] = Object.keys(DEFAULT_SETTINGS).filter(
-  (key) => !API_KEY_FIELD_SET.has(key)
+  (key) => !API_KEY_FIELD_SET.has(key) && !CONSENT_RECORD_KEY_SET.has(key)
 );
 
 /**

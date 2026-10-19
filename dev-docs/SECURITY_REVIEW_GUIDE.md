@@ -177,6 +177,7 @@ Two rules for a new outbound path:
 | 10 | Weekly / monthly review digest (`src/background/reviewSummaryGenerator.ts`) | **Yes — at execution time** | The digest joins every row in the period, so consent is re-read after the `REVIEW_SUMMARY_ENABLED` check; nothing is sent and `REVIEW_SUMMARY_LAST_GENERATED_*` stays untouched, so a re-granted consent can still build the period. Pinned by `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ("does not send the digest to AI when consent was withdrawn") |
 | 11 | Dashboard "append selected to Obsidian" (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts`) | **Yes — at execution time** | Rows leave for the Obsidian REST API, outside `RecordingAdmission`. The append case reads the injected `isConsentGranted` (wired in `src/background/dashboardSqliteWiring.ts` from `hasPrivacyConsent`) after input validation and **before** `getSettings`/`query`, so a withdrawn profile neither sends nor reads the rows. All other dashboardSqlite subtasks stay ungated (local-only). Pinned by `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` ("refuses to append when consent was withdrawn (and reads no rows)", "still appends when consent is granted (regression guard)") |
 | 12 | `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
+| 13 | Settings export / import (`src/utils/settingsExportImport.ts`) | **Consent never travels** | A settings file must not carry the consent record: an export would grant consent on the target profile, and a revoked export would withdraw a valid grant there. Consent is an act performed on *this* device. `sanitizeSettingsForExport` drops `privacy_consent` / `_version` / `_denied_count` / `_last_denial_time`; the import path ignores those **and** `privacy_mode` / `pii_confirmation_ui`, because `migrateLegacyPrivacyConsent` reads them as evidence of a previous grant and would auto-consent from a file. Pinned by `src/utils/__tests__/settingsExportImport-consent.test.ts` |
 
 `requireConsent()` used to exist as an unused "guard the caller" helper
 (`privacyConsent.ts`); it was removed on 2026-10-19 because nothing called it and
@@ -186,6 +187,13 @@ closed as of 2026-10-19 (PBI `2026-10-19-10` for the scheduled/queued paths, PBI
 `2026-10-19-11` for the dashboard export). Every one of those re-checks takes an
 injected `isConsentGranted: () => Promise<boolean>` from the composition — do not
 import the consent module from the handler itself.
+
+**Consent is device-local, not portable** (row 13, PBI `2026-10-19-12`). Treat any
+path that copies settings between profiles as an outbound path for consent: a
+restored profile must show the consent modal, and restoring a backup must never
+grant or withdraw consent on the target. This is the same family as rows 8–10 —
+consent is a *state*, so it can differ from when the artifact that carries it was
+created.
 
 ## Regular Audits
 

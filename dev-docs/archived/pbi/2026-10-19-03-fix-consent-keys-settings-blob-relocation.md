@@ -199,7 +199,7 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
 
 - `src/utils/storage/settingsMigration.ts` — `TOP_LEVEL_ONLY_KEYS` に `PRIVACY_CONSENT` / `PRIVACY_CONSENT_DENIED_COUNT` / `PRIVACY_CONSENT_LAST_DENIAL_TIME` を追加し、「同意状態は 1 つの単位」であることをコメントに明記。`promoteFoldedConsentState()` を追加し、`migrateToSingleSettingsObject` の**完了判定より前**で呼ぶ。
 - **救済を選んだ理由（owner 裁定の記録）**: 救済しない場合の実害は「移行直後に再同意モーダルが出る」だけではない。`hasPrivacyConsent()` が false になるため**記録ゲートが閉じ、撤回履歴・拒否カウンタも読めなくなる**（同意の実効性以前に、同意の状態そのものが失われる）。一方のコストは「冪等な書き戻し 1 回」だけで、書き戻す値は同意状態として正しい。よって救済する。
-- **ブロブ側のコピーは残す**（削除には移行経路内での CAS 書き換えが要るため）。何も読まない場所であり、唯一表に出うる経路（設定エクスポート）は PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md) で除外する。
+- **ブロブ側のコピーは残す**（削除には移行経路内での CAS 書き換えが要るため）。何も読まない場所であり、唯一表に出うる経路（設定エクスポート）は PBI [2026-10-19-12](2026-10-19-12-fix-settings-export-consent-record.md) で除外した（2026-10-19 完了）。
 
 ### テスト（Red → Green）
 
