@@ -2,7 +2,7 @@
 
 ## ユーザーストーリー
 
-古い OPFS（wa-sqlite AccessHandlePoolVFS）の閲覧履歴を新しい SQLite DB へ移したユーザーとして、**移行が「全部移った」と確認できたときだけ元のデータを消してほしい**。移行は一度きり・自動・.background 側で行われるため、ユーザーは「移行は自動で安全」と(MigrationResult が例外を投げなければ)前提で_regexp 精装機器Jpaまで拡張機能を更新する。そして移行は**データ復元の最後のひとつの機会**であり、移っていない行を黙って破棄することは、復元手段そのものを消すことに等しいからである。
+古い OPFS（wa-sqlite AccessHandlePoolVFS）の閲覧履歴を新しい SQLite DB へ移したユーザーとして、**移行が「全部移った」と確認できたときだけ元のデータを消してほしい**。移行は一度きり・自動・.background 側で行われるため、ユーザーは「移行は自動で安全」と(MigrationResult が例外を投げなければ)前提で、拡張機能を更新する（〔復元不能: 原文には「〜まで」で表される条件が入っていた。語は失われている〕）。そして移行は**データ復元の最後のひとつの機会**であり、移っていない行を黙って破棄することは、復元手段そのものを消すことに等しいからである。
 
 現状、`migrateOldOpfsDb` は旧DBから読んだ行数と実際に新DBへ入った行数を一度も突き合わせずに、旧 OPFS ディレクトリを削除し（`deleteOldDb`）、`opfs_migration_v2_done` を立てて再試行を永久に止める。 **`count` は 1 つの成功シェイプに過ぎず、「重複でスキップ」「行単位で失敗」「トランザクションごとロールバック」のいずれも throw せず返り得る**ため、壊れた result を「全部成功」と読んで旧データを消す経路が開いている。
 
@@ -11,8 +11,8 @@
 - 順位: 10 / 25
 - RICE: 1500（Reach=300 / Impact=1 / Confidence=100% / Effort=0.2）
 - 根拠: 監査10位。`migrateOldOpfsDb` は `insertBatch` から `{count}` だけを取り出し（`src/offscreen/opfsMigrationV2.ts:58`）、`records.length` との比較なしに `deleteOldDb`（`:59`）と `setMigrationDone`（`:60`）を**無条件**実行する。本番の `insertBatch` は INSERT OR IGNORE で skip を別 counter に回し（`crudHandlers.ts:116`）、per-row エラーは `index === 0` だけログして握りつぶし（`:118-122`）、transaction エラーはログのみで再throwしない（`:125-127`）。これらは例外ではなく `count` が小さい／**大きい**「成功Shape」で返る。よって skip/failed 行が旧ディレクトリごと破壊され、done フラグが再試行を止める。
-  - 特に危険なのは**過大報告**側。`withTransaction` は COMMIT 失敗時も `ROLLBACK` して再throw する（`sqliteTransaction.ts:27-39`）のに対し、`handleInsertBatch` の transaction catch（`crudHandlers.ts:125-127`）はログのみでcatchし、**ロールバック済みのトランザクション内で積み上げた `inserted` カウンタをそのまま `count` として返す**（`:128`）。結果として「1行も永続化されていないのに `count = 3`」という oldest-first に最も Unlock されやすい非 throw パスが存在する。`count === records.length` 比較だけではこの経路を捕まえられる保証がない。
-  - 一方**真Organisationには「重複で skip」は失敗ではない**。INSERT OR IGNORE の skip は「その `(url, created_at)` が既に新DBにある」= 既に移行済み or 新 UNIQUE 制約で縮退しただけで、その行の内容自体は新DBに存在する。したがって素朴な `count === records.length` ゲートを入れると、旧DB内部に `(url, created_at)` 重複を持つユーザーでは**永久に done が立たず**、worker 起動のたびに再読込＋warn を繰り返す purely な副作用が生じる（`runMigrationV2` の module-level ガード `migrationV2.ts:22-26` があるため再試行は worker 世代単位）。
+  - 特に危険なのは**過大報告**側。`withTransaction` は COMMIT 失敗時も `ROLLBACK` して再throw する（`sqliteTransaction.ts:27-39`）のに対し、`handleInsertBatch` の transaction catch（`crudHandlers.ts:125-127`）はログのみでcatchし、**ロールバック済みのトランザクション内で積み上げた `inserted` カウンタをそのまま `count` として返す**（`:128`）。結果として「1行も永続化されていないのに `count = 3`」という oldest-first に最も〔復元不能〕な非 throw パスが存在する。`count === records.length` 比較だけではこの経路を捕まえられる保証がない。
+  - 一方、**「重複で skip」は失敗ではない**（〔復元不能: 原文の主語〕）。INSERT OR IGNORE の skip は「その `(url, created_at)` が既に新DBにある」= 既に移行済み or 新 UNIQUE 制約で縮退しただけで、その行の内容自体は新DBに存在する。したがって素朴な `count === records.length` ゲートを入れると、旧DB内部に `(url, created_at)` 重複を持つユーザーでは**永久に done が立たず**、worker 起動のたびに再読込＋warn を繰り返す〔復元不能〕な副作用が生じる（`runMigrationV2` の module-level ガード `migrationV2.ts:22-26` があるため再試行は worker 世代単位）。
   - 兄弟の `migrationBackup.ts` は「件数を再検証してから安全網を捨てる」方針を持つが（`:367-376`）、レガシー tripling の V2 経路には同等チェックが無い。**さらに、同じ codebase 内の第3のマイグレーション（`legacyMigration.ts`）は既に正しい形をしている**: `:169` で `count < batch.length` を部分成功と判定し `hasErrors = true`、`:204-207` で完了に到達せず returnし、`:209-217` で **「original data preserved」**（＝元のデータを消さない）と明言している。V2 経路だけがこの規律から外れている。
   - 既存テストは throwing のみを pin しており（`opfsMigrationV2.test.ts:103`）、非 throw の部分 count の順序を固定していない。
 - 種別: 🔧非機能追加（fix）

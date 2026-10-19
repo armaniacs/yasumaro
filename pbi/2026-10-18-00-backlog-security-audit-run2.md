@@ -75,7 +75,7 @@ Confidence = 100% / 80% / 50% / Effort = 人月
 - ✅ [2026-10-19-05-fix-redirect-single-declaration.md](../dev-docs/archived/pbi/2026-10-19-05-fix-redirect-single-declaration.md) — 共通 seam が「単一宣言」になっていない（PBI 01 / 08 の独立レビュー由来）。RICE 400。**2026-10-19 完了・アーカイブ済み**（`noRedirectInit` の型 seam で後置上書きを `TS2353` にし、実定数を pin するテストを追加）
 - ✅ [2026-10-19-01-fix-inmemory-port-version-key-fidelity.md](../dev-docs/archived/pbi/2026-10-19-01-fix-inmemory-port-version-key-fidelity.md) — `InMemoryStoragePort` が文字列値の `*_version` キーを捨てる（PBI 05 の検証中に実測で発見。`privacy_consent_version` / `gemini_api_version` / `tranco_version` がテストから見えない）。RICE 800。**2026-10-19 完了・アーカイブ済み**（なぜなぜ分析により `versions` マップを廃止）
 - ✅ [2026-10-19-08-fix-testperf-jsdom-gate-attribution.md](../dev-docs/archived/pbi/2026-10-19-08-fix-testperf-jsdom-gate-attribution.md) — `jsdomFileCount` の 360 → 362 に推移と原因が無い（PBI 01 / 08 の独立レビュー由来。予算コメント自身の規約違反）。RICE 100。**2026-10-19 完了・アーカイブ済み**（実測で「1 減 + 3 増」と特定し、ADR に推移表と引き上げ手順を追加。ゲート値は不変）
-- [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67
+- ✅ [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 台帳に残る「意味が壊れた」文字化け断片の復元（2026-10-19 の一括修復で残った第 3 のクラス。スクリプトでは検出できない）。RICE 67。**2026-10-19 完了・アーカイブ済み**（live の 4 断片を `〔復元不能〕` 明示で復元し、アーカイブの Hangul 残存は PBI 13 として起票）
 
 ## ブロッカー調査結果（2026-10-18 実施）
 
