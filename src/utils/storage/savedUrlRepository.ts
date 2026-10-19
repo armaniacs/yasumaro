@@ -394,15 +394,20 @@ export async function saveSavedUrlEntryMetadata(
 
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const entries = currentEntries || [];
-        const exists = entries.some((e) => e.url === url);
-        if (!exists) {
+        // WHY the single findIndex: some() + replaceEntry() walked the array
+        // twice; idx locates the entry once and both branches below reuse it.
+        const idx = entries.findIndex((e) => e.url === url);
+        if (idx < 0) {
             if (!createIfMissing) return entries;
             return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
         }
-        return replaceEntry(entries, url, (current) => {
-            const merged = applyMetadataPatch(current, patch, mergeTags);
-            return refreshTimestamp ? { ...merged, timestamp: timestamp ?? Date.now() } : merged;
-        });
+        const current = entries[idx];
+        if (current === undefined) return entries;
+        const merged = applyMetadataPatch(current, patch, mergeTags);
+        const updated = refreshTimestamp ? { ...merged, timestamp: timestamp ?? Date.now() } : merged;
+        const updatedEntries = [...entries];
+        updatedEntries[idx] = updated;
+        return updatedEntries;
     });
 }
 
