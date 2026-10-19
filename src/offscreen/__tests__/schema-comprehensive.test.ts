@@ -13,6 +13,7 @@ import {
   INSERT_SQL,
   INSERT_IGNORE_SQL,
   UPDATABLE_FIELDS,
+  NOT_UPDATABLE_COLUMNS,
   ALLOWED_ORDER_COLUMNS,
   buildInsertParams,
   buildInsertRecordFields,
@@ -156,6 +157,37 @@ describe('UPDATABLE_FIELDS', () => {
   it('includes url and title', () => {
     expect(UPDATABLE_FIELDS).toContain('url');
     expect(UPDATABLE_FIELDS).toContain('title');
+  });
+
+  // Fail-closed pin (PBI 2026-10-20-01): every INSERT column must carry an
+  // explicit update decision in schema.ts. A column that reaches neither set
+  // is undecided and fails here with its name in the failure message until
+  // it is added to UPDATABLE_FIELDS or to NOT_UPDATABLE_COLUMNS.
+  it('fail-closed pin: every COLUMN_NAMES entry is explicitly updatable or explicitly excluded', () => {
+    const undecided = COLUMN_NAMES.filter(
+      (name) => !UPDATABLE_FIELDS.includes(name) && !NOT_UPDATABLE_COLUMNS.has(name),
+    );
+    // On failure vitest prints the undecided column names inside the received
+    // message; the pin stays red until schema.ts decides every column.
+    expect(
+      undecided.length === 0
+        ? 'all COLUMN_NAMES entries have an explicit update decision'
+        : `undecided update decision: ${undecided.join(', ')}`,
+    ).toBe('all COLUMN_NAMES entries have an explicit update decision');
+  });
+
+  // Fail-closed reinforcement (PBI 2026-10-20-01): every excluded column must
+  // still be a real INSERT column. A column rename that leaves the old name in
+  // NOT_UPDATABLE_COLUMNS would silently drop the exclusion from the
+  // derivation and re-enable UPDATE for the renamed provenance column.
+  it('keeps NOT_UPDATABLE_COLUMNS a subset of COLUMN_NAMES', () => {
+    const columnNames = new Set(COLUMN_NAMES);
+    const stale = [...NOT_UPDATABLE_COLUMNS].filter((name) => !columnNames.has(name));
+    expect(
+      stale.length === 0
+        ? 'all excluded columns are real INSERT columns'
+        : `stale excluded columns not present in COLUMN_NAMES: ${stale.join(', ')}`,
+    ).toBe('all excluded columns are real INSERT columns');
   });
 });
 

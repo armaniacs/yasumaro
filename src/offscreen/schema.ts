@@ -114,6 +114,18 @@ const INSERT_PLACEHOLDERS = COLUMN_NAMES.map(() => '?').join(', ');
 export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
 /**
+ * INSERT columns that are never allowed in UPDATE SET clauses across any
+ * backend — the explicit exceptions to the "insertable implies updatable"
+ * sync rule that UPDATABLE_FIELDS below derives from COLUMN_NAMES.
+ */
+export const NOT_UPDATABLE_COLUMNS = new Set(['created_at', 'nav_source_url', 'search_query']);
+// WHY nav_source_url / search_query are excluded despite the sync rule
+// below: they are captured once when the record is made and describe how
+// that visit happened. Letting an UPDATE rewrite them would let a later
+// edit rewrite history, and a re-run regeneration would overwrite the
+// original referrer (PBI 2026-09-26-03).
+
+/**
  * Fields allowed in UPDATE SET clauses across all backends.
  * Derived from the INSERT columns — any field that can be inserted is also
  * updatable, so adding a column to COLUMN_NAMES extends every update path
@@ -123,13 +135,8 @@ export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${
  * (background/handlers/dashboardSqlite).
  */
 export const UPDATABLE_FIELDS = COLUMN_NAMES.filter(
-  (name) => name !== 'created_at' && name !== 'nav_source_url' && name !== 'search_query',
+  (name) => !NOT_UPDATABLE_COLUMNS.has(name),
 );
-// WHY nav_source_url / search_query are absent despite the sync rule above:
-// they are captured once when the record is made and describe how that
-// visit happened. Letting an UPDATE rewrite them would let a later edit
-// rewrite history, and a re-run regeneration would overwrite the original
-// referrer (PBI 2026-09-26-03).
 
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
