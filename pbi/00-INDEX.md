@@ -14,6 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-20 code-review・簡素化パス由来の発見（6件） ― ⬜ 6件未着手 🔧非機能追加 RICE順: 01(128) → 02(80) → 03(60) → 04(24) → 05(20) → 06(8.3)
+
+2026-10-20 の code-simplifier パス（ブランチ 1020a、src/ 全体簡素化 29 ファイル + 新規 1 ファイル）と、その差分に対する code-review で出た Suggestions 3 件と未適用発見のうち PBI 化対象 3 件。RICE で採点し、ファイル名の NN を着手順とした。意図的判断の 2 件（encryptionSession.ts:274 の session-rescue、privacyConsent.ts:375 の docListener）は rejected として PBI 化せず。rejected の詳細は backlog を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-20-01-fix-updatable-fields-fail-closed.md](2026-10-20-01-fix-updatable-fields-fail-closed.md) | fix | 128 | 1.0 | UPDATABLE_FIELDS 派生の fail-open 化。新列の更新可否を NOT_UPDATABLE_COLUMNS + テスト pin で強制 |
+| ⬜ 02 | [2026-10-20-02-fix-import-size-cap-naming.md](2026-10-20-02-fix-import-size-cap-naming.md) | fix | 80 | 0.1 | 述語名に隠れた logError 副作用を名前で誠実に。VULN-034 入口の契約明示 |
+| ⬜ 03 | [2026-10-20-03-fix-saved-url-metadata-single-pass.md](2026-10-20-03-fix-saved-url-metadata-single-pass.md) | fix | 60 | 0.3 | some + findIndex の二重走査を 1 回に。影響は微小だが安価 |
+| ⬜ 04 | [2026-10-20-04-fix-wasm-dts-any-elimination.md](2026-10-20-04-fix-wasm-dts-any-elimination.md) | fix | 24 | 2.0 | wasm ラッパ .d.ts の any を型へ。PII・共起の型境界 |
+| ⬜ 05 | [2026-10-20-05-fix-plain-record-guard-merge.md](2026-10-20-05-fix-plain-record-guard-merge.md) | fix | 20 | 0.5 | 同一条件の plain-object ガード 2 件を objectUtils に統合（統合前に同一性再確認が受入条件） |
+| ⬜ 06 | [2026-10-20-06-fix-background-complexity-refactor.md](2026-10-20-06-fix-background-complexity-refactor.md) | fix | 8.3 | 5.0 | 複雑度 30 超ホットスポット（legacyMigration 38 / opfsRecovery 33）の分割。工数最大・単独セッション・1 関数 1 コミット |
+
+実行順（依存なし）: 01 → 02 → 03 → 04 → 05 → 06。02・03 はまとめて着手してよい。詳細と rejected 2 件: [2026-10-20-00-backlog-review-findings.md](2026-10-20-00-backlog-review-findings.md)
+
 ### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 13件すべて完了（01〜13） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → ~~13(100)~~
 
 PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**（01〜09）。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。その後 **PBI 02 の独立レビューが同意ゲートの穴を 4 件実証**し、10・11 として追加起票、inventory 中に別途見つけた同意レコードのエクスポートを 12 として起票した（NN は起票順のため RICE 順とは一致しない。`10` は RICE 480 で 03 に次ぐ 2 番目、`11` は 400 で 04/05 と同点、`12` は 300）。

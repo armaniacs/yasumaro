@@ -14,6 +14,7 @@ dev-docs/plans/*.md には、今後やりたいこと、今やっていること
 - 更新 2026-07-27（非機能PBIセクションを修正。PBI-13, 15, 24, 26, 27, 29/35/36, 34は完了またはADR記録済みでアーカイブ済み）
 - 更新 2026-08-09（完了PBIに対応する実装計画9件を `dev-docs/archived/plans/` へ移動。「現在の実装計画」セクションを新設し、残存ファイルを一覧化）
 - 更新 2026-08-17（完了済みの実装計画・設計14件を `dev-docs/archived/{plans,specs}/` へ移動。pbi20-24 の実装計画は v6.7.29 で完了・archive 済みのため一覧から除去）
+- 更新 2026-10-20（実装完了済みの plan 2 件を `dev-docs/archived/plans/` へ移動。2026-10-17-pbi01 は `src/background/recordingPause.ts`、2026-10-17-pbi02 は `src/dashboard/researchSessionSelection.ts` で実装済み・対応 PBI もアーカイブ済み）
 
 完了済み計画ファイルの移動先は `dev-docs/archived/plans/`。
 （古い記述にある `dev-docs/plans/archive-old/` は現存しない）
@@ -131,5 +132,7 @@ Checking Team レビューから起票した非機能PBI（PBI-13 / 15 / 24 / 26
 |---------|------|------|
 | [2026-06-29-maintenance-plan.md](../archived/plans/2026-06-29-maintenance-plan.md) | 定期メンテナンス | 📌 恒常ドキュメント（アーカイブ保管） |
 | [verified-crx-upload.md](../archived/plans/verified-crx-upload.md) | CWS検証済みCRXアップロード | 📌 恒常ドキュメント（アーカイブ保管） |
+| [2026-10-17-pbi01-pause-autosave-temporarily-plan.md](../archived/plans/2026-10-17-pbi01-pause-autosave-temporarily-plan.md) | 自動保存の一時停止 | ✅ 実装完了（`src/background/recordingPause.ts`、PBI 2026-10-17-01 アーカイブ済み） |
+| [2026-10-17-pbi02-research-session-bulk-delete-plan.md](../archived/plans/2026-10-17-pbi02-research-session-bulk-delete-plan.md) | リサーチセッションまとめて削除 | ✅ 実装完了（`src/dashboard/researchSessionSelection.ts`、PBI 2026-10-17-02 アーカイブ済み） |
 
 未完了PBIの一覧は [pbi/00-INDEX.md](../../pbi/00-INDEX.md) が正。
