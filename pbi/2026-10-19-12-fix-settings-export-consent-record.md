@@ -136,6 +136,6 @@ Then B の同意状態はインポート前のままである（撤回が伝播�
 - `pbi/00-INDEX.md`
 - [2026-10-19-02-fix-consent-gate-wiring-coverage.md](../dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 発見の現場（同意ゲートの inventory）。同 PBI の独立レビュー由来の穴は 10・11 として起票済み
 - [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意キーが settings ブロブへ畳まれる問題。本 PBI の「ブロブ経由」の前提
-- [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) / [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「同意は状態であり、移動・遅延して使われうる」族
+- [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) / [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](../dev-docs/archived/pbi/2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「同意は状態であり、移動・遅延して使われうる」族（どちらも 2026-10-19 完了・アーカイブ済み）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` — 「Privacy-consent gating」節
 - `pbi/2026-10-18-00-backlog-security-audit-run2.md` — 発見の記録

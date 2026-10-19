@@ -93,18 +93,18 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 ## 受け入れ基準
 
-- [ ] `append_to_obsidian` が実行時点で同意を再確認する。判定は `hasPrivacyConsent()` または `RecordingAdmission` のシングルトン（`src/background/compositionManifest.ts:229-235`）のどちらか一方を共有し、handler 内で新しい同意判定を実装しない
-- [ ] 撤回状態では `deps.appendToDailyNote` が呼ばれない（シナリオ 1・3）
-- [ ] 拒否時は `deps.query` を呼ばず、行の中身を扱わない（シナリオ 4）
-- [ ] 拒否の応答は既存の入力検証エラー（`No IDs provided` / `Maximum N IDs allowed` / `No matching entries found` など）と区別できる文字列を返す（呼び出し側が理由を表示できる）
-- [ ] 同意済みでは従来どおり追記でき、`src/background/__tests__/dashboardSqliteHandlers-append.test.ts` の既存の期待が非退行（シナリオ 2）
-- [ ] `delete` / `clear_all` / `update` / `toggle_star` の挙動を変えない（シナリオ 5）
-- [ ] confirm token の扱いを**明示的に決めて記録**する。推奨は「token は意図の証明であり同意ではない。同意は実行時に別途読む。token を同意に連動させたり、撤回で失効させたりしない」で、その理由（token TTL 60 秒・単一使用で、撤回の窓は実行時再確認で閉じる）を残す
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 を「Yes」に更新し、「Why / where」列に**固定しているテストのファイル名と、ゲートを読む位置**（例: `coreCrudHandler.ts` の append ケース冒頭、deps 注入の `hasPrivacyConsent`）を書く
-- [ ] 同ガイドの「ゲート読み出し点は 1 点」という記述（`:134-139`）を、admission ゲートと非 admission の外部送信ゲートの 2 種として実態に合わせる
-- [ ] 設定のエクスポート / インポートが同意レコードを運ぶ件（`pbi/2026-10-18-00` の未起票の観測）は本 PBI では扱わず、参照だけ残す
-- [ ] 実時間待ちを追加しない（`dev-docs/TEST_RULE.md`）
-- [ ] `npm run validate` が緑
+- [x] `append_to_obsidian` が実行時点で同意を再確認する。判定は composition が注入する `isConsentGranted`（実体は `hasPrivacyConsent`）を共有し、handler 内で新しい同意判定を実装しない
+- [x] 撤回状態では `deps.appendToDailyNote` が呼ばれない（シナリオ 1・3）
+- [x] 拒否時は `deps.query` を呼ばず、行の中身を扱わない（シナリオ 4。`getSettings` も読まない）
+- [x] 拒否の応答は既存の入力検証エラー（`No IDs provided` / `Maximum N IDs allowed` / `No matching entries found` など）と区別できる文字列を返す（`Privacy consent required to export to Obsidian`）
+- [x] 同意済みでは従来どおり追記でき、`src/background/__tests__/dashboardSqliteHandlers-append.test.ts` の既存の期待が非退行（シナリオ 2）
+- [x] `delete` / `clear_all` / `update` / `toggle_star` の挙動を変えない（シナリオ 5。同意チェックは append ケースのみ）
+- [x] confirm token の扱いを**明示的に決めて記録**する（**連動させない**。理由は完了記録）
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 を「Yes」に更新し、「Why / where」列に固定しているテストのファイル名と、ゲートを読む位置を書く
+- [x] 同ガイドの「ゲート読み出し点は 1 点」という記述を、**admission ゲートと外部送信ゲートの 2 種**として実態に合わせる
+- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は本 PBI では扱わず、参照だけ残す（PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md)）
+- [x] 実時間待ちを追加しない（`dev-docs/TEST_RULE.md`。同意判定は注入した関数で決定的）
+- [x] `npm run validate` が緑（CI。テスト全体 1095 files / 16429 tests で exit 0）
 
 ## テスト戦略
 
@@ -172,22 +172,68 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 ## Definition of Done
 
-- [ ] BDD シナリオ 1〜5 が自動テストで実装されパス
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 が「Yes」になり、固定テスト名とゲートの読み出し位置が書かれている
-- [ ] 同ガイドの「ゲート読み出し点は 1 点」の記述が実態（admission ゲート＋外部送信ゲート）に更新されている
-- [ ] 設計判断（handler で読む / 共有 seam に寄せる）と confirm token の扱い、その理由が完了記録に残っている
-- [ ] 設定のエクスポート / インポートが同意レコードを運ぶ件は未解決のまま参照だけが残っている
-- [ ] `delete` / `clear_all` / `update` / `toggle_star` の非退行がテストで pin されている
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ガイドの表と記述、必要なら `coreCrudHandler.ts` の append ケースのコメント）
+- [x] BDD シナリオ 1〜5 が自動テストで実装されパス（シナリオ 1・2 を新規テストで、3 は token をスタブしたまま同意だけ false にして固定、4 は `query` 未呼び出しで固定、5 は既存のローカル操作テストが非退行）
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 が「Yes」になり、固定テスト名とゲートの読み出し位置が書かれている
+- [x] 同ガイドの「ゲート読み出し点は 1 点」の記述が実態（**admission ゲート＋外部送信ゲートの 2 種**）に更新されている
+- [x] 設計判断（**A: handler の deps に注入**）と confirm token の扱い（**連動させない**）、その理由が完了記録に残っている
+- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は未解決のまま参照だけが残っている（PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md)）
+- [x] `delete` / `clear_all` / `update` / `toggle_star` の非退行がテストで pin されている（同意チェックは append ケースにのみ追加）
+- [x] `npm run validate` が緑（CI。テスト全体は 1095 files / 16429 tests で exit 0）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ガイドの表と 2 種のゲート記述、`coreCrudHandler.ts` の append ケースのコメント、`deps.ts` の seam のコメント）
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜダッシュボードの「Obsidian へ追記」だけが同意ゲートの外にあったのか。
+
+1. **なぜ外にあったのか** — この経路は `RecordingAdmission` を通らない。admission は「記録を新規に作る」経路の前段で、**既存行を書き出す**操作は別の入口（dashboardSqlite handler）から来る。
+2. **なぜ admission に乗っていないのか** — ダッシュボード操作は「ユーザーが明示的に選んだ行を操作する」もので、記録の生成ではない。設計上は別系統が正しい（delete / clear_all / update / toggle_star と同じ family）。
+3. **なぜ正しさが崩れたのか** — 同じ family に「ローカル操作（delete / star / update）」と「**外部送信**（append to Obsidian）」が同居しているのに、**family 単位でゲートの要否を判断**した。ローカル操作には不要・外部送信には必要という区別が、family の境界と一致しなかった。
+4. **なぜ区別されなかったのか** — PBI 02 の一覧が「記録が前提なら継承」と書いていた。判断軸が「**記録に由来するか**」であり、「**どこへ出るか（外部送信か）**」ではなかった。既存行の書き出しは「記録が前提」に見えるため継承と分類された。
+5. **なぜテストで捕まらないのか** — append のテストは「行が選ばれて追記される」ことだけを見ており、**同意という軸**が無かった（token ガードのテストはあったが、token は同意の代わりにならない）。
+
+**原因**: ゲートの要否を「操作の family（どの handler か）」で判断し、「データが外部へ出るか」で判断しなかったこと。
+
+**示唆**:
+- 判定基準は「**外部へ出るか**」。同じ family 内でも outbound だけがゲート対象で、ローカル操作は対象外にする（撤回後に自分のデータを消せなくしない）。
+- 読み出し位置は**入力検証の後・設定/行の読み出しの前**。撤回中は行を読まない（データ最小化）。
+- token は意図の証明であって同意ではない。連動させない（責務を混ぜない）。
+- 「admission ゲート 1 点」という表現は実態に合わない。**admission ゲート＋外部送信ゲート**の 2 種として書き、後者は composition から注入した同一ソースを読む。
+
+**解**: `CoreCrudDeps.isConsentGranted` を追加し、append ケースの入力検証後・`getSettings` の前で判定。composition（`dashboardSqliteWiring`）から `hasPrivacyConsent` を注入。ガイドの記述を 2 種のゲートに更新し、表の行 11 を「Yes」に。
+
+### 設計判断の記録
+
+- **A（handler の deps に注入）を採用、B（外部送信の共通関門）は今回作らない。** B は PBI [2026-10-19-10](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) の 3 経路と将来の Gist を巻き込む広い設計で、本 PBI の範囲を超える。代わりに **seam の名前と実体を PBI 10 と揃えた**（どちらも composition が渡す `isConsentGranted: () => Promise<boolean>`＝`hasPrivacyConsent` の 1 行）。判定ロジックは handler に書かず、注入された関数を呼ぶだけ。
+- **seam の置き場所**: `SqliteClientBackedDeps`（Service Worker が所有する deps の袋）に足した。PBI の実装メモは「袋を肥大化させない」としていたが、代替は `createSqliteClientDeps` の第 3 引数追加で、harness と 6 つのテスト呼び出しを書き換える必要があった。袋は「Service Worker が所有し注入するもの」の定義そのものなので、ここに置く方が意味が通る（型は `CoreCrudDeps` 側で明示的に受ける）。
+- **confirm token は同意に連動させない。** token は action / scope 束縛・単一使用・60 秒 TTL の「意図の証明」であり、同意の確認ではない。撤回 → 実行の窓は実行時再確認で閉じる。撤回で token を失効させると token の責務（anti-CSRF / 誤操作防止）と同意の責務が混ざる。
+- **同意チェックは API キー確認より前**（撤回中は設定も読まない）。テストで固定した（`query` も `getSettings` も呼ばれない）。
+
+### 実装
+
+- `src/background/handlers/dashboardSqlite/coreCrudHandler.ts` — append ケースの入力検証後・`getSettings` の前に同意判定を追加。拒否は `{ success:false, error: 'Privacy consent required to export to Obsidian' }`（既存の入力検証エラーと区別できる文字列）。
+- `src/background/handlers/dashboardSqlite/deps.ts` — `CoreCrudDeps` と `SqliteClientBackedDeps` に `isConsentGranted` を追加し、`createSqliteClientDeps` が袋から handler の deps へ渡す。
+- `src/background/dashboardSqliteWiring.ts` — `DashboardSqliteWiringDeps.isConsentGranted`（任意、既定は `hasPrivacyConsent`）として受け取り、袋へ渡す。
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` — ゲートの記述を 2 種に更新、表の行 11 を「Yes — at execution time」に。
+
+### テスト（Red → Green）
+
+- `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` — 「撤回中は追記を拒否し、行も読まない（`query` 未呼び出し）」「同意済みなら従来どおり追記する（回帰ガード）」。
+- **Red の確認**: `coreCrudHandler.ts` の同意判定を revert すると新規 1 テストが失敗。token 検証はスタブしたままなので、シナリオ 3（token は同意の代わりにならない）も同時に満たしている。
+- 回帰: `dashboardSqliteHandlers*` / `nn26-manifest-singletons` など 4 ファイル 52 テスト緑、テスト全体 **1095 files / 16429 tests / exit 0**。型は `type-check` / `type-check:test:baseline`（456 / pinned 456）とも緑。
+
+### ゲート
+
+`npm run validate` は CI で緑。ローカルの集約実行は他 PBI と同じくホスト負荷の影響を受けるため、構成要素と対象スイートを個別に緑確認した。
 
 ## 関連
 
-- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する（2026-10-19 完了・アーカイブ済み）
-- [dev-docs/SECURITY_REVIEW_GUIDE.md](../dev-docs/SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
-- [pbi/2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
-- dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
-- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
-- [pbi/00-INDEX.md](00-INDEX.md)
-- [dev-docs/TEST_RULE.md](../dev-docs/TEST_RULE.md) — 実時間待ちの禁止と、注入 seam の使い方
+- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する（2026-10-19 完了・アーカイブ済み）
+- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
+- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
+- [pbi/00-INDEX.md](../../../pbi/00-INDEX.md)
+- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) — 実時間待ちの禁止と、注入 seam の使い方

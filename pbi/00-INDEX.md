@@ -14,13 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） — 🔶 4件完了（01/02/03/10）・8件未着手 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → 11(400) → 04(400) → 05(400) → 06(320) → 12(300) → 07(160) → 08(100) → 09(67)
+### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） — 🔶 5件完了（01/02/03/10/11）・7件未着手 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → 04(400) → 05(400) → 06(320) → 12(300) → 07(160) → 08(100) → 09(67)
 
 PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**（01〜09）。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。その後 **PBI 02 の独立レビューが同意ゲートの穴を 4 件実証**し、10・11 として追加起票、inventory 中に別途見つけた同意レコードのエクスポートを 12 として起票した（NN は起票順のため RICE 順とは一致しない。`10` は RICE 480 で 03 に次ぐ 2 番目、`11` は 400 で 04/05 と同点、`12` は 300）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---:|---:|---:|---|
-| ⬜ 11 | [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) | fix | 400 | 1.5 | ダッシュボードの「Obsidian へ追記」が同意ゲートの外（dashboardSqlite に同意コードが 1 つも無い） |
 | ⬜ 12 | [2026-10-19-12-fix-settings-export-consent-record.md](2026-10-19-12-fix-settings-export-consent-record.md) | fix | 300 | 1.0 | 設定のエクスポート/インポートが同意レコードを運ぶ（同意は端末をまたがない） |
 | ⬜ 04 | [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) | fix | 400 | 2.0 | redirect 拒否の**実挙動**を検証したテストが 0 件（機構 pin のみ）＋接続テストの `redirected` ガード非対称 |
 | ⬜ 05 | [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) | fix | 400 | 0.5 | 共通 seam が「単一宣言」になっていない（リテラル・後置上書き可能・テストが実定数を見ない） |
@@ -518,6 +517,17 @@ security-audit run-2（`d49d70a3`）の needs_validation 25件のうち 3件を�
 - ゲート: `npm run validate` exit 0（1095 files / 16409 tests）。`test-perf` は jsdom files 362/362 でゲート内。3件とも「コードレビュー完了」を独立レビューで確認。
 - 同ラウンドの台帳 18 ファイルに残っていた中国語簡体字の混入（「注釈」を簡体字で書いていたもの 38 箇所、「契約」14 箇所、ほか計 118 行）と非 CJK 文字化け 1 件（韓国語の「呼び出し」が混入）を併せて修復。
 - 残課題は同日中にすべて PBI 化した（9 件。上の 2026-10-19 節を参照）。内訳: 同意キーの置き場所（03）・同意ゲートの配線範囲（02）・同意へ戻る経路（07）・gist / tranco の redirect（06）・redirect の実挙動検証（04）・redirect 宣言の一本化（05）・`InMemoryStoragePort` の忠実性（01）・test-perf の jsdom ゲート改定の根拠不足（08）・台帳の深い文字化け断片（09）。
+
+### 2026-10-19 PBI 2026-10-19-11 アーカイブ — ✅ 1件完了（ダッシュボードの Obsidian 追記に同意ゲート）
+
+ダッシュボードの「Obsidian へ追記」（`append_to_obsidian`）が `RecordingAdmission` の外で既存行を Obsidian REST API へ送っていた問題を修正。なぜなぜで根因を「ゲートの要否を**操作の family**で判断し、**外部へ出るか**で判断しなかったこと」と特定（同じ family にローカル操作と外部送信が同居していた）。
+
+- `CoreCrudDeps.isConsentGranted` を追加し、append ケースの入力検証後・`getSettings`/`query` の**前**で判定。撤回中は送信も行の読み出しもしない（データ最小化）。拒否は `Privacy consent required to export to Obsidian`。
+- seam は PBI 10 と同名・同実体（composition が渡す `hasPrivacyConsent` の 1 行）。判断ロジックは handler に書かない。
+- confirm token は同意に連動させない（token は意図の証明。撤回 → 実行の窓は実行時再確認で閉じる）。
+- ローカル操作（delete / clear_all / update / toggle_star）は対象外のまま（撤回後に自分のデータを消せなくしない）。
+- ガイドの「ゲート読み出し点は 1 点」を **admission ゲート＋外部送信ゲートの 2 種**に更新し、表の行 11 を「Yes」に（これで 8〜11 すべて閉じた）。
+- Red: 同意判定を revert すると新規 1 テストが失敗。テスト全体 1095 files / 16429 tests で exit 0。
 
 ### 2026-10-19 PBI 2026-10-19-10 アーカイブ — ✅ 1件完了（実行時の同意再確認）
 
@@ -2431,8 +2441,8 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **54 ファイル（INDEX 1 / 2026-10-19 の 8〔01〜03・10 は完了・アーカイブ済み、11・12 を追加〕/ 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 実測: `ls pbi/*.md` = 54）** |
-| アーカイブ済みPBI | 1412（`00-backlog` 台帳を含む。2026-10-19 実測） |
+| **`pbi/` 残存 PBI 合計** | **53 ファイル（INDEX 1 / 2026-10-19 の 7〔01〜03・10・11 は完了・アーカイブ済み、12 を追加〕/ 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 実測: `ls pbi/*.md` = 53）** |
+| アーカイブ済みPBI | 1413（`00-backlog` 台帳を含む。2026-10-19 実測） |
 | アーカイブ済み実装計画 | 187 |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。

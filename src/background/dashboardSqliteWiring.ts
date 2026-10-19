@@ -10,11 +10,17 @@ import { createErrorResponse } from '../utils/errorClassification.js';
 import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { MigrationService } from './migrationService.js';
 import { createConfirmToken as createConfirmTokenImpl, verifyConfirmToken as verifyConfirmTokenImpl } from './confirmTokenManager.js';
+import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 
 export interface DashboardSqliteWiringDeps {
   sqliteClient: SqliteClient;
   createConfirmToken?: (action: string, id?: number) => Promise<string>;
   verifyConfirmToken?: (token: string, action: string, id?: number) => Promise<boolean>;
+  /**
+   * Consent source for outbound dashboard operations (PBI 2026-10-19-11).
+   * Defaults to the shared `hasPrivacyConsent` seam so production has one answer.
+   */
+  isConsentGranted?: () => Promise<boolean>;
 }
 
 export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringDeps): (
@@ -51,6 +57,7 @@ export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringD
       runBackfill: () => migrationService.backfillDiagnosticMetadata(),
       runCleanup: () => migrationService.cleanupLegacyStorage(),
       runLegacyResync: (options?: { maxRecords?: number }) => migrationService.resyncLegacyStore(options),
+      isConsentGranted: deps.isConsentGranted ?? (() => hasPrivacyConsent()),
     }),
   );
 

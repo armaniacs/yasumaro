@@ -154,6 +154,48 @@ describe('handleDashboardSqlite — append_to_obsidian', () => {
     expect(result).toEqual({ success: false, error: 'No IDs provided' });
   });
 
+  // PBI 2026-10-19-11: this path exports recorded rows to the Obsidian REST API.
+  // A withdrawn profile must not send them, and must not read the rows at all
+  // (data minimisation) — the token proves intent, not consent.
+  it('refuses to append when consent was withdrawn (and reads no rows)', async () => {
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1, 2] },
+      mockSqliteClient as any,
+      {
+        getConfirmToken: async () => APPEND_TOKEN,
+        isConsentGranted: async () => false,
+      }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Privacy consent required to export to Obsidian',
+    });
+    expect(mockSqliteClient.query).not.toHaveBeenCalled();
+    expect((new ObsidianClient() as unknown as { appendToDailyNote: ReturnType<typeof vi.fn> }).appendToDailyNote)
+      .not.toHaveBeenCalled();
+  });
+
+  it('still appends when consent is granted (regression guard)', async () => {
+    mockSqliteClient.query.mockResolvedValue({
+      success: true,
+      data: { rows: [{ id: 1, url: 'https://a.com', title: 'Page A', summary: 'Summary A' }], total: 1 },
+    });
+
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'append_to_obsidian', confirmToken: APPEND_TOKEN, ids: [1] },
+      mockSqliteClient as any,
+      {
+        getConfirmToken: async () => APPEND_TOKEN,
+        isConsentGranted: async () => true,
+      }
+    );
+
+    expect(result).toEqual({ success: true, appended: 1 });
+    expect((new ObsidianClient() as unknown as { appendToDailyNote: ReturnType<typeof vi.fn> }).appendToDailyNote)
+      .toHaveBeenCalledTimes(1);
+  });
+
   it('returns error when Obsidian API key is not configured', async () => {
     setupSettings({ obsidian_api_key: '' });
 

@@ -17,6 +17,8 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     insert: async () => ({ success: true, data: { id: 1 } }),
     insertBatch: async (records: Record<string, unknown>[]) => ({ success: true, data: { count: records.length, skipped: 0 } }),
     getSettings: async () => ({}),
+    // PBI 2026-10-19-11: the append path re-reads consent before exporting.
+    isConsentGranted: async () => true,
     formatEntriesToMarkdown: () => null,
     appendToDailyNote: async () => {},
     restoreDb: async () => ({ success: true, data: undefined }),
