@@ -102,7 +102,7 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 - [x] confirm token の扱いを**明示的に決めて記録**する（**連動させない**。理由は完了記録）
 - [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 を「Yes」に更新し、「Why / where」列に固定しているテストのファイル名と、ゲートを読む位置を書く
 - [x] 同ガイドの「ゲート読み出し点は 1 点」という記述を、**admission ゲートと外部送信ゲートの 2 種**として実態に合わせる
-- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は本 PBI では扱わず、参照だけ残す（PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md)）
+- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は本 PBI では扱わず、参照だけ残す（PBI [2026-10-19-12](2026-10-19-12-fix-settings-export-consent-record.md)。2026-10-19 完了）
 - [x] 実時間待ちを追加しない（`dev-docs/TEST_RULE.md`。同意判定は注入した関数で決定的）
 - [x] `npm run validate` が緑（CI。テスト全体 1095 files / 16429 tests で exit 0）
 
@@ -176,7 +176,7 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 - [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 11 が「Yes」になり、固定テスト名とゲートの読み出し位置が書かれている
 - [x] 同ガイドの「ゲート読み出し点は 1 点」の記述が実態（**admission ゲート＋外部送信ゲートの 2 種**）に更新されている
 - [x] 設計判断（**A: handler の deps に注入**）と confirm token の扱い（**連動させない**）、その理由が完了記録に残っている
-- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は未解決のまま参照だけが残っている（PBI [2026-10-19-12](../../../pbi/2026-10-19-12-fix-settings-export-consent-record.md)）
+- [x] 設定のエクスポート / インポートが同意レコードを運ぶ件は本 PBI の範囲外として切り出した（PBI [2026-10-19-12](2026-10-19-12-fix-settings-export-consent-record.md)。2026-10-19 完了）
 - [x] `delete` / `clear_all` / `update` / `toggle_star` の非退行がテストで pin されている（同意チェックは append ケースにのみ追加）
 - [x] `npm run validate` が緑（CI。テスト全体は 1095 files / 16429 tests で exit 0）
 - [x] コードレビュー完了
