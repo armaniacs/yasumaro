@@ -1614,6 +1614,13 @@
         <div class="form-group">
           <label data-i18n="privacyConsentStatus">Privacy Consent Status</label>
           <div id="consentStatusDisplay" class="help-text"></div>
+          <!-- PBI 2026-10-19-07: the settings screen is the documented return
+               path after declining (the popup suppresses the modal for 30 days
+               once consent was declined three times), so it needs a real grant
+               action. Exactly one of these two buttons is visible at a time. -->
+          <button type="button" id="btnGrantConsent" class="hidden"
+            data-i18n="grantConsent">Grant Consent</button>
+          <div id="grantConsentStatus" class="status-message" aria-live="polite"></div>
           <button type="button" id="btnWithdrawConsent" class="btn-danger hidden"
             data-i18n="withdrawConsent">Withdraw Consent</button>
           <div id="withdrawConsentStatus" class="status-message" aria-live="polite"></div>

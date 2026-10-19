@@ -3,7 +3,13 @@ import { tryNavigate } from '../registryContext.js';
 import { init as initPrivacySettings, loadPrivacySettings } from '../../settings/privacySettings.js';
 import { initMasterPasswordSettings, loadMasterPasswordSettings } from '../../masterPassword.js';
 import { initNavTrailToggle } from '../../settings/navTrailToggle.js';
-import { getPrivacyConsent, withdrawPrivacyConsent } from '../../../utils/storage/privacyConsent.js';
+import {
+  acceptConsent,
+  getContentStorageEnabled,
+  getPrivacyConsent,
+  resetConsentDeniedCount,
+  withdrawPrivacyConsent,
+} from '../../../utils/storage/privacyConsent.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
@@ -24,14 +30,60 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
       const display = container.querySelector('#consentStatusDisplay') as HTMLElement | null;
       const btn = container.querySelector('#btnWithdrawConsent') as HTMLButtonElement | null;
       const statusEl = container.querySelector('#withdrawConsentStatus') as HTMLElement | null;
-      if (display && btn) {
-        const state = await getPrivacyConsent();
-        display.textContent = state.hasConsented
+      // PBI 2026-10-19-07: the popup suppresses the consent modal for 30 days
+      // after three declines and tells the user to consent later from the
+      // settings screen, so this screen owns the grant path as well.
+      const grantBtn = container.querySelector('#btnGrantConsent') as HTMLButtonElement | null;
+      const grantStatusEl = container.querySelector('#grantConsentStatus') as HTMLElement | null;
+
+      const renderConsentState = (state: { hasConsented: boolean; consentDate?: string | null }): void => {
+        display!.textContent = state.hasConsented
           ? (state.consentDate
               ? getMessageOr('consented', `Consented (${state.consentDate})`, [state.consentDate])
               : getMessageOr('consentedNoDate', 'Consented'))
           : getMessageOr('notConsented', 'Not consented');
-        btn.classList.toggle('hidden', !state.hasConsented);
+        // Exactly one of the two actions is available at a time.
+        btn!.classList.toggle('hidden', !state.hasConsented);
+        grantBtn?.classList.toggle('hidden', state.hasConsented);
+      };
+
+      if (display && btn) {
+        const state = await getPrivacyConsent();
+        renderConsentState(state);
+
+        grantBtn?.addEventListener('click', async () => {
+          grantBtn.disabled = true;
+          try {
+            // Consent recovery must not silently change the body-storage
+            // opt-in: carry the current value through instead of a default.
+            const contentStorageEnabled = await getContentStorageEnabled();
+            await acceptConsent({ contentStorageEnabled });
+            // A decline opened a 30-day grace window; an explicit grant ends it.
+            await resetConsentDeniedCount();
+            renderConsentState(await getPrivacyConsent());
+            if (grantStatusEl) {
+              grantStatusEl.textContent = getMessageOr(
+                'consentGrantedFromSettings',
+                'Consent granted. Recording is available again.',
+              );
+              grantStatusEl.style.color = 'var(--color-success-text)';
+            }
+          } catch {
+            // Keep the screen in the not-consented state: it must not look
+            // granted when storage rejected the write.
+            if (grantStatusEl) {
+              grantStatusEl.textContent = getMessageOr(
+                'consentGrantFailed',
+                'Failed to record consent. Consent status was not changed.',
+              );
+              grantStatusEl.style.color = 'var(--color-error)';
+            }
+            renderConsentState(await getPrivacyConsent().catch(() => ({ hasConsented: false })));
+          } finally {
+            grantBtn.disabled = false;
+          }
+        });
+
         btn.addEventListener('click', async () => {
           const confirmed = await showConfirmDialog({
             title: getMessageOr('confirmWithdrawConsentTitle', 'Withdraw Privacy Consent'),
@@ -61,8 +113,8 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
               : getMessageOr('consentWithdrawFailed', 'Failed to withdraw consent.');
             statusEl.style.color = ok ? 'var(--color-success-text)' : 'var(--color-error)';
           }
-          display.textContent = getMessageOr('notConsented', 'Not consented');
-          btn.classList.add('hidden');
+          // Withdrawn: the grant action becomes the way back (PBI 2026-10-19-07).
+          renderConsentState({ hasConsented: false });
           // PBI 03: withdrawPrivacyConsent() already switched the feature off
           // in storage; this only keeps the rendered checkbox in step.
           const navTrail = container.querySelector('#navTrailEnabled') as HTMLInputElement | null;
