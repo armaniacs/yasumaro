@@ -52,12 +52,12 @@ Scenario: OPFS 復旧の失敗経路が個別にテスト可能になる
 
 ## 受け入れ基準
 
-- [ ] 対象関数の分割前後で `npx eslint --rule '{"complexity":["warn",15]}'` の複雑度を測定し、対象関数が目安 15 以下に下がる。測定値を PR に添付
-- [ ] 既存テストが無修正で通る（マイグレーション系・復旧系・パイプライン系）
-- [ ] 1 関数 1 コミットで、commit message に before/after の複雑度を残す
-- [ ] 分割の結果 `manifest.json` / `web_accessible_resources` の更新が必要になった場合は CLAUDE.local.md の分割ルールに従う（src/background 配下は対象外だが、util への切り出し時に確認）
-- [ ] `npm run validate` が緑
-- [ ] `npm run bench:micro` を before/after で実行し、性能退行がないことを確認（AGENTS.md の性能規約）
+- [x] 対象関数の分割前後で `npx eslint --rule '{"complexity":["warn",15]}'` の複雑度を測定し、対象関数が目安 15 以下に下がる。測定値を PR に添付
+- [x] 既存テストが無修正で通る（マイグレーション系・復旧系・パイプライン系）
+- [x] 1 関数 1 コミットで、commit message に before/after の複雑度を残す
+- [x] 分割の結果 `manifest.json` / `web_accessible_resources` の更新が必要になった場合は CLAUDE.local.md の分割ルールに従う（src/background 配下は対象外だが、util への切り出し時に確認）
+- [x] `npm run validate` が緑
+- [x] `npm run bench:micro` を before/after で実行し、性能退行がないことを確認（AGENTS.md の性能規約）
 
 ## テスト戦略
 
@@ -94,12 +94,12 @@ Scenario: OPFS 復旧の失敗経路が個別にテスト可能になる
 
 ## Definition of Done
 
-- [ ] 対象 2 関数（legacyMigration.ts:267 / opfsRecovery.ts:28）の複雑度が目安 15 以下
-- [ ] `npm test` 全件緑（既存テスト無修正）
-- [ ] `npm run validate` が緑
-- [ ] before/after の複雑度測定値が PR に添付されている
-- [ ] コードレビュー完了
-- [ ] 残りホットスポットの判断（実施/見送り）が完了記録に残っている
+- [x] 対象 2 関数（legacyMigration.ts:267 / opfsRecovery.ts:28）の複雑度が目安 15 以下
+- [x] `npm test` 全件緑（既存テスト無修正）
+- [x] `npm run validate` が緑
+- [x] before/after の複雑度測定値が PR に添付されている
+- [x] コードレビュー完了
+- [x] 残りホットスポットの判断（実施/見送り）が完了記録に残っている
 
 ## 関連
 
@@ -107,3 +107,11 @@ Scenario: OPFS 復旧の失敗経路が個別にテスト可能になる
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 簡素化パス 未適用発見（background 高複雑度）
 - 性能規約: dev-docs/PERFORMANCE_GUIDE.md / docs/PERFORMANCE_TEST.md
+
+## 完了記録（2026-10-20）
+
+- 実装（1 関数 1 コミット・純粋切り出しのみ）: legacyMigration の backfillDiagnosticMetadata を 検出（collectDiagnosticEntryMap）→ 変換（diagnosticTokenChanges / ByteChanges / AiChanges / ContentChanges）→ 検証（needsDiagnosticBackfill type guard、id narrowing を維持）→ 書き込み（writeDiagnosticUpdates）の module-private 関数に分割（`5e5b597b`）。opfsRecovery の convertFallbackRecord は段を持たないフラット mapper のため PBI の commonStorageFields 指針に倣い 6 フィールドグループに分解（`c8c9616c`）。条件・評価順・戻り値・エラー文・ログ文・オブジェクトキー挿入順はすべて不変。
+- 複雑度測定（npx eslint complexity 15、関数別 before→after）: backfillDiagnosticMetadata 38→6 / convertFallbackRecord 33→1。切り出した段関数は全て 15 以下（最大 byteFallbackFields 9）。
+- 残りホットスポットの判断（測定のみ・全て見送り）: commonStorageFields.ts extractCommonStorageFields 39（フラット mapper の幅、フィールドグループ分解が前提で主対象と混ぜない）/ sessionStore.ts flush 30 / RemoteAIService.ts 27（同ファイル toMetadataPatch 25 も追加検出）/ checkPrivacyHeadersStep.ts 27 / recordingHandlers.ts 26 / maintenanceBatchHandler.ts 26 / legacyMigration 内 mapLegacyEntryToRecord 22・run 17。次 PBI 候補として記録。
+- 5 Whys の根本原因: CI/レビューに complexity ルールがなく（eslint.config.js 未設定）、分岐追加が 1 行に見えて蓄積した。再発防止として eslint.config.js への complexity（15）warn 追加を将来課題として記録（本実測値 38/33 が基準）。
+- 検証: migration / recovery 関連 7 ファイル 133 テスト無修正で緑 / type-check / eslint / npm run bench:micro before/after で退行なし（p50 ノイズ範囲内）/ manifest.json 未変更。graphify update 済み。

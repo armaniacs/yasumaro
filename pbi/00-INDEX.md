@@ -14,15 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 code-review・簡素化パス由来の発見（6件） ― 🔶 5件完了・アーカイブ済み / ⬜ 1件残（06） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → 06(8.3)
+### 2026-10-20 code-review・簡素化パス由来の発見（6件） ― ✅ 6件すべて完了（01〜06） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → ~~06~~
 
-2026-10-20 の code-simplifier パス（ブランチ 1020a、src/ 全体簡素化 29 ファイル + 新規 1 ファイル）と、その差分に対する code-review で出た Suggestions 3 件と未適用発見のうち PBI 化対象 3 件。RICE で採点し、ファイル名の NN を着手順とした。意図的判断の 2 件（encryptionSession.ts:274 の session-rescue、privacyConsent.ts:375 の docListener）は rejected として PBI 化せず。rejected の詳細は backlog を参照。**01-05 は 2026-10-20 に完了・アーカイブ済み（下のアーカイブ履歴を参照）。06 は工数最大のため単独セッションで実施する。**
+2026-10-20 の code-simplifier パス（ブランチ 1020a、src/ 全体簡素化 29 ファイル + 新規 1 ファイル）と、その差分に対する code-review で出た Suggestions 3 件と未適用発見のうち PBI 化対象 3 件。RICE で採点し、ファイル名の NN を着手順とした。意図的判断の 2 件（encryptionSession.ts:274 の session-rescue、privacyConsent.ts:375 の docListener）は rejected として PBI 化せず。**6 件すべて 2026-10-20 に完了・アーカイブ済み（下のアーカイブ履歴を参照）。01-05 は 5 体並列実装、06 は単独実装。**
 
-| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
-|---|---|---|---:|---:|---|
-| ⬜ 06 | [2026-10-20-06-fix-background-complexity-refactor.md](2026-10-20-06-fix-background-complexity-refactor.md) | fix | 8.3 | 5.0 | 複雑度 30 超ホットスポット（legacyMigration 38 / opfsRecovery 33）の分割。工数最大・単独セッション・1 関数 1 コミット |
-
-実行順: 06（依存なし。01-05 は完了済み）。詳細と rejected 2 件: [2026-10-20-00-backlog-review-findings.md](2026-10-20-00-backlog-review-findings.md)
+詳細と rejected 2 件: [2026-10-20-00-backlog-review-findings.md](2026-10-20-00-backlog-review-findings.md)
 
 ### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 13件すべて完了（01〜13） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → ~~13(100)~~
 
@@ -511,16 +507,17 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
-### 2026-10-20 PBI 01-05 アーカイブ ― code-review・簡素化パス由来の発見 5件完了
+### 2026-10-20 PBI 01-06 アーカイブ ― code-review・簡素化パス由来の発見 6件完了
 
-2026-10-20 起票の 6 件（Suggestions 1-3 + 未適用発見 3 件）のうち 5 件をサブエージェント 5 体で並列実装（対象ファイル disjoint）し、review-diff（164+/41- 全行精読・実害なし）を経て個別コミット・アーカイブ。
+2026-10-20 起票の 6 件（Suggestions 1-3 + 未適用発見 3 件）を実装・アーカイブ。01-05 はサブエージェント 5 体で並列実装（対象ファイル disjoint）、06 は単独実装。いずれも review-diff（164+/41- 全行精読・実害なし）または複雑度測定を経て個別コミット・アーカイブ。
 
 - **01-fix-updatable-fields-fail-closed**（`7c76c8c0`）: `NOT_UPDATABLE_COLUMNS` 抽出 + fail-closed pin / subset pin。UPDATABLE_FIELDS 32 項目は byte 一致を esbuild 比較で検証。現行の全域派生下では pin が恒真的になる観察（設計判断として Pros に明記済み）を完了記録に残した。
 - **02-fix-import-size-cap-naming**（`805298bb`）: 述語を純粋同期化し logError を `logImportSizeCapExceeded()` に分離。VULN-034 入口の早期リターンタイミング維持。
 - **03-fix-saved-url-metadata-single-pass**（`d9786f01`）: some + findIndex の二重走査を 1 回に。挙動同値をレビューが確認。
 - **04-fix-wasm-dts-any-elimination**（`d42e2b02`）: any 3 宣言を契約型に。逸脱 2 点（tag-cooccur は手書きではなく pkg 生成コピーのため hand-maintained 化 / mirror 形ではなく runtime の raw 契約型を採用）を完了記録に残した。crates.json + expectedCopies を更新。
 - **05-fix-plain-record-guard-merge**（`3135939d`）: 同一条件の plain-object ガードを objectUtils.isPlainRecord 1 箇所に統合。Date は旧実装と同一にガードを通る（テストで pin、条件強化は将来 PBI 候補）。
-- ゲート: type-check / eslint / npm run validate（フルゲート 1,097 ファイル / 16,453 テスト）全緑。残課題は 06（複雑度分割、単独セッション推奨）のみ。
+- **06-fix-background-complexity-refactor**（`5e5b597b` + `c8c9616c`、1 関数 1 コミット）: backfillDiagnosticMetadata を検出→変換→検証→書き込みの段に分割（複雑度 38→6）、convertFallbackRecord を 6 フィールドグループに分解（33→1）。既存テスト 133 件無修正で緑、bench:micro before/after で退行なし。残りホットスポット（commonStorageFields 39 / sessionStore 30 / RemoteAIService 27 ほか）は測定のみで見送り、次 PBI 候補として完了記録に残した。
+- ゲート: type-check / eslint / npm run validate（フルゲート 1,097 ファイル / 16,453 テスト）全緑。
 
 ### 2026-10-20 PBI 2026-10-19-13 アーカイブ ― 台帳の文字化けを全量修復（326 箇所 / 104 ファイル）
 
