@@ -27,9 +27,16 @@ vi.mock('../../../../utils/i18n.js', () => ({
 
 const mockGetPrivacyConsent = vi.fn();
 const mockWithdrawPrivacyConsent = vi.fn();
+const mockAcceptConsent = vi.fn();
+const mockGetContentStorageEnabled = vi.fn();
+const mockResetConsentDeniedCount = vi.fn();
 vi.mock('../../../../utils/storage/privacyConsent.js', () => ({
   getPrivacyConsent: (...args: unknown[]) => mockGetPrivacyConsent(...args),
   withdrawPrivacyConsent: (...args: unknown[]) => mockWithdrawPrivacyConsent(...args),
+  // PBI 2026-10-19-07: the panel owns the grant path as well.
+  acceptConsent: (...args: unknown[]) => mockAcceptConsent(...args),
+  getContentStorageEnabled: (...args: unknown[]) => mockGetContentStorageEnabled(...args),
+  resetConsentDeniedCount: (...args: unknown[]) => mockResetConsentDeniedCount(...args),
 }));
 
 const mockShowConfirmDialog = vi.fn();
@@ -68,6 +75,8 @@ function buildContainer(): HTMLElement {
   const container = document.createElement('div');
   container.innerHTML = `
     <div id="consentStatusDisplay" class="help-text"></div>
+    <button type="button" id="btnGrantConsent" class="hidden"></button>
+    <div id="grantConsentStatus" class="status-message"></div>
     <button type="button" id="btnWithdrawConsent" class="btn-danger"></button>
     <div id="withdrawConsentStatus" class="status-message"></div>
     <button type="button" id="btnDeleteAllData"></button>
@@ -265,5 +274,87 @@ describe('privacySettingsPanel — 同意撤回フロー', () => {
 
     expect(mockNavigate).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith('panel-export-logs');
+  });
+
+  // PBI 2026-10-19-07: after three declines the popup suppresses the consent
+  // modal for 30 days and tells the user to consent from the settings screen.
+  // That screen therefore has to own the grant path.
+  describe('同意の付与（設定画面からの復帰経路）', () => {
+    function grantButton(container: HTMLElement): HTMLButtonElement {
+      return container.querySelector('#btnGrantConsent') as HTMLButtonElement;
+    }
+
+    function withdrawButton(container: HTMLElement): HTMLButtonElement {
+      return container.querySelector('#btnWithdrawConsent') as HTMLButtonElement;
+    }
+
+    it('shows the grant action only while consent is missing', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+
+      const panel = createPrivacySettingsPanel();
+      const container = buildContainer();
+      await panel.mount(container);
+
+      expect(grantButton(container).classList.contains('hidden')).toBe(false);
+      expect(withdrawButton(container).classList.contains('hidden')).toBe(true);
+    });
+
+    it('hides the grant action for a consented profile', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: true, consentDate: '2026-01-01' });
+
+      const panel = createPrivacySettingsPanel();
+      const container = buildContainer();
+      await panel.mount(container);
+
+      expect(grantButton(container).classList.contains('hidden')).toBe(true);
+      expect(withdrawButton(container).classList.contains('hidden')).toBe(false);
+    });
+
+    it('grants consent with the current body-storage opt-in and ends the grace window', async () => {
+      mockGetPrivacyConsent
+        .mockResolvedValueOnce({ hasConsented: false })
+        .mockResolvedValueOnce({ hasConsented: true, consentDate: '2026-10-19' });
+      mockGetContentStorageEnabled.mockResolvedValue(true);
+      mockAcceptConsent.mockResolvedValue(undefined);
+      mockResetConsentDeniedCount.mockResolvedValue(undefined);
+
+      const panel = createPrivacySettingsPanel();
+      const container = buildContainer();
+      await panel.mount(container);
+
+      grantButton(container).click();
+      await vi.waitFor(() => expect(mockAcceptConsent).toHaveBeenCalledTimes(1));
+
+      // The opt-in is carried through, not reset to a default (scenario 6).
+      expect(mockAcceptConsent).toHaveBeenCalledWith({ contentStorageEnabled: true });
+      // A decline opened the 30-day grace window; an explicit grant closes it.
+      expect(mockResetConsentDeniedCount).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() =>
+        expect(grantButton(container).classList.contains('hidden')).toBe(true),
+      );
+      expect(withdrawButton(container).classList.contains('hidden')).toBe(false);
+      // The i18n stub resolves keys to themselves, so the rendered value is the
+      // message key — what matters is that it switched to the consented state.
+      expect(container.querySelector('#consentStatusDisplay')?.textContent).toBe('consented');
+    });
+
+    it('reports a failed grant and does not pretend the state changed', async () => {
+      mockGetPrivacyConsent.mockResolvedValue({ hasConsented: false });
+      mockGetContentStorageEnabled.mockResolvedValue(false);
+      mockAcceptConsent.mockRejectedValue(new Error('storage write failed'));
+
+      const panel = createPrivacySettingsPanel();
+      const container = buildContainer();
+      await panel.mount(container);
+
+      grantButton(container).click();
+      await vi.waitFor(() =>
+        expect(container.querySelector('#grantConsentStatus')?.textContent).toBe('consentGrantFailed'),
+      );
+
+      expect(mockResetConsentDeniedCount).not.toHaveBeenCalled();
+      expect(grantButton(container).classList.contains('hidden')).toBe(false);
+      expect(container.querySelector('#consentStatusDisplay')?.textContent).toBe('notConsented');
+    });
   });
 });

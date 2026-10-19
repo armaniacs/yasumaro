@@ -2610,7 +2610,7 @@
     "message": "同意の保存に失敗しました"
   },
   "consentDeclinedMessage": {
-    "message": "同意しない場合、拡張機能の主要機能は利用できません。後から設定画面で同意することができます。"
+    "message": "同意しない場合、拡張機能の主要機能は利用できません。後からダッシュボードの「プライバシー」タブにある「同意する」ボタンから同意できます。"
   },
   "wizardTitle": {
     "message": "Yasumaro へようこそ"
@@ -3472,6 +3472,15 @@
   },
   "withdrawConsent": {
     "message": "同意を撤回する"
+  },
+  "grantConsent": {
+    "message": "同意する"
+  },
+  "consentGrantedFromSettings": {
+    "message": "同意しました。記録を再開できます。"
+  },
+  "consentGrantFailed": {
+    "message": "同意を記録できませんでした。同意状態は変わっていません。"
   },
   "privacyConsentStatus": {
     "message": "プライバシー同意状態"

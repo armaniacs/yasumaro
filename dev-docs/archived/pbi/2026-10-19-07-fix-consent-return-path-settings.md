@@ -19,7 +19,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-19-03](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) と、アーカイブ済み [2026-10-18-05](../dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（撤回時の拒否カウンタ解除）の周辺を読む過程で判明した。同 PBI は**撤回**の側（撤回時に猶予を解除する）を塞いだが、**拒否**の側は塞いでいない。拒否は同意レコードを書かず拒否カウンタと ack だけを残すため、猶予が明けるまでモーダルは出ず、設定画面にも同意アクションが無い。
+PBI [2026-10-19-03](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) と、アーカイブ済み [2026-10-18-05](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（撤回時の拒否カウンタ解除）の周辺を読む過程で判明した。同 PBI は**撤回**の側（撤回時に猶予を解除する）を塞いだが、**拒否**の側は塞いでいない。拒否は同意レコードを書かず拒否カウンタと ack だけを残すため、猶予が明けるまでモーダルは出ず、設定画面にも同意アクションが無い。
 
 ### 機構（コード上で確定）
 
@@ -82,18 +82,18 @@ Scenario: 6. 本文保存のオプトインを巻き戻さない（境界）
 
 ## 受け入れ基準
 
-- [ ] 未同意（`getPrivacyConsent().hasConsented === false`）のとき、設定画面の Privacy タブに同意アクションが表示され、押下で `acceptConsent({ contentStorageEnabled })` 相当の 3 点セット（同意レコード＋`content_storage_enabled`＋ack）が一貫して書かれる
-- [ ] 同意後、拒否カウンタがリセットされ猶予が解除される（`getConsentDeniedCount()` が 0、`getLastConsentDenialTime()` が 0）
-- [ ] 同意後 `hasPrivacyConsent()` が true を返し、拒否 3 回の猶予中でも設定画面から同意できる（BDD シナリオ 1）
-- [ ] 撤回済みの状態からも設定画面で再同意でき、新しい同意レコードが署名付きで保存される（BDD シナリオ 2）
-- [ ] 本文保存のオプトインの既存値を巻き戻さない。`contentStorageEnabled` は固定値ではなく `getContentStorageEnabled()` の現状値（または同意アクション行のチェックボックス状態）を渡す（BDD シナリオ 6）
-- [ ] 同意済みのユーザーには同意アクションを表示しない（撤回アクションと排他）
-- [ ] 拒否時の案内文（`consentDeclinedMessage`）が ja・en 両方で実装と一致し、設定画面の Privacy タブの同意アクションを指す（BDD シナリオ 3）
-- [ ] 新規 i18n キーが ja・en 両方にあり、`npm run check-i18n` が緑（en が default_locale のため片側だけの追加は不可）
-- [ ] 既存の撤回導線（確認ダイアログ→SQLite 削除→撤回の順、データ削除失敗時に撤回しない、非同意時に撤回ボタンが `hidden`）が非退行
-- [ ] ポップアップのモーダル挙動（accept / decline、3 回拒否の 30 日猶予、ack の書き込み）が非退行
-- [ ] `shouldPromptForConsent` の猶予規則の計算は変更しない（猶予テストが非退行、BDD シナリオ 4）
-- [ ] `npm run validate` が緑
+- [x] 未同意（`getPrivacyConsent().hasConsented === false`）のとき、設定画面の Privacy タブに同意アクションが表示され、押下で `acceptConsent({ contentStorageEnabled })` 相当の 3 点セット（同意レコード＋`content_storage_enabled`＋ack）が一貫して書かれる → **完了記録参照（実装済み）**
+- [x] 同意後、拒否カウンタがリセットされ猶予が解除される（`getConsentDeniedCount()` が 0、`getLastConsentDenialTime()` が 0）
+- [x] 同意後 `hasPrivacyConsent()` が true を返し、拒否 3 回の猶予中でも設定画面から同意できる（BDD シナリオ 1）
+- [x] 撤回済みの状態からも設定画面で再同意でき、新しい同意レコードが署名付きで保存される（BDD シナリオ 2）
+- [x] 本文保存のオプトインの既存値を巻き戻さない。`contentStorageEnabled` は固定値ではなく `getContentStorageEnabled()` の現状値（または同意アクション行のチェックボックス状態）を渡す（BDD シナリオ 6）
+- [x] 同意済みのユーザーには同意アクションを表示しない（撤回アクションと排他）
+- [x] 拒否時の案内文（`consentDeclinedMessage`）が ja・en 両方で実装と一致し、設定画面の Privacy タブの同意アクションを指す（BDD シナリオ 3）
+- [x] 新規 i18n キーが ja・en 両方にあり、`npm run check-i18n` が緑（en が default_locale のため片側だけの追加は不可）
+- [x] 既存の撤回導線（確認ダイアログ→SQLite 削除→撤回の順、データ削除失敗時に撤回しない、非同意時に撤回ボタンが `hidden`）が非退行
+- [x] ポップアップのモーダル挙動（accept / decline、3 回拒否の 30 日猶予、ack の書き込み）が非退行
+- [x] `shouldPromptForConsent` の猶予規則の計算は変更しない（猶予テストが非退行、BDD シナリオ 4）
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -186,12 +186,65 @@ grep -n "contentStorageEnabled" entrypoints/options/index.html
 
 ## Definition of Done
 
-- [ ] BDD シナリオ 1〜6 が自動テストで実装されパス
-- [ ] `npm run validate` が緑（`check-i18n` 含む）
-- [ ] 本文保存オプトインの扱い（既存値を読んで渡す／同意アクション行にチェックボックスを置く）と、拒否カウンタ解除の置き場所（パネル側か `acceptConsent` 内部か）の判断が完了記録に残っている
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`public/PRIVACY.md` / `docs/PRIVACY.md` をバイト同一で同期し、「拒否後も設定画面の Privacy タブからいつでも同意できる」導線を追記するか、同意スコープ不変のため据え置くかを明示的に決めて記録する）
-- [ ] `pbi/00-INDEX.md` に登録済み
+- [x] シナリオ 1〜6 が自動テストでパス（Red を観測してから実装）
+- [x] 同意後に拒否カウンタがリセットされ猶予が解除される（`resetConsentDeniedCount`）
+- [x] 撤回済みからも設定画面で再同意できる
+- [x] 本文保存オプトインの既存値を巻き戻さない（`getContentStorageEnabled()` の現状値を渡す）
+- [x] 同意済みには同意アクションを出さない（撤回と排他）
+- [x] 案内文が ja・en 両方で実装と一致（Privacy タブの「同意する」を指す）
+- [x] 既存の撤回導線・ポップアップのモーダル挙動・`shouldPromptForConsent` の計算が非退行
+- [x] `npm run validate` が緑（CI）
+- [x] コードレビュー完了
+- [x] 完了記録に、なぜなぜ分析と裁定（本文保存オプトインの扱い・猶予解除の置き場所）を残す
+- [x] ドキュメント更新済み（`public/PRIVACY.md` / `docs/PRIVACY.md` を**バイト同一で同期**し、「拒否後の再同意」段落を追記。同意スコープは不変なので同意バージョンは据え置き）
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ「設定画面で後から同意できます」と案内しながら、設定画面に同意する手段が無いのか。
+
+1. **なぜ設定画面に同意アクションが無いのか** — Privacy タブは「状態表示 + 撤回」として作られた。撤回は「同意済みからの遷移」なので、`hasConsented` を前提にした UI になった。
+2. **なぜ「撤回のみ」で足りたのか** — 同意の獲得は**ポップアップのモーダル**が担う設計で、設定画面は「すでに同意した人の管理画面」という位置づけだった。
+3. **なぜその分担が破れたのか** — モーダルには**抑止**がある（3 回拒否で 30 日）。抑止された瞬間、同意獲得の唯一の担い手が沈黙する。設計時に「抑止は一時的」とだけ考え、**抑止中に代替経路が要る**ことを洗い出さなかった。
+4. **なぜ案内文が実装と食い違ったのか** — 案内文は「将来そうする」意図で書かれ、**実装との突き合わせが無かった**（文言はキー名で pin され、内容は検証されない）。
+5. **なぜ気づくのが遅れたのか** — 拒否 3 回は「レアな状態」と見なされ、その状態の UX を通しで確認していなかった（テストは単機能ごと）。
+
+**原因**: 同意獲得の経路を**1 つだけ**用意し、その経路が**自分で自分を抑止する**設計にしたこと。抑止は「待てば戻る」が、待つ間の代替が無い。
+
+**示唆**:
+- 入口を 1 つに集約するのは良いが、**その入口が閉じうる**なら代替経路を同じ作業で用意する。
+- 案内文は「実装に存在する導線」を指しているか確かめる。文字列の pin だけでは足りない。
+- 「レアな状態」（拒否 3 回、撤回済み）こそ UX を通しで確認する価値がある。
+- 同意の付与は `acceptConsent` の 1 経路に保つ。UI を増やしても**保存の一貫性（同意 + 本文保存 + ack）は 1 か所**に置く。
+
+**解**: Privacy タブに `#btnGrantConsent` を追加し、`acceptConsent` → `resetConsentDeniedCount` を通す。撤回ボタンとは排他表示。本文保存オプトインは現状値を引き継ぐ。案内文を Privacy タブの同意ボタンに向ける。
+
+### 裁定 1: 本文保存オプトインの扱い
+
+**既存値を読んで渡す**（`getContentStorageEnabled()`）を採用。同意アクションの目的は**同意の回復**であって本文保存の意思変更ではないため、固定の `false` を渡すとユーザーが有効にしていた設定を黙って無効化してしまう。同意アクション行にチェックボックスは置かず、既存の `#contentStorageEnabled` を唯一の設定点として残す（設定点を 2 つにしない）。
+
+### 裁定 2: 猶予解除の置き場所
+
+**パネル側の 1 呼び出し**（`resetConsentDeniedCount()`）を採用。`acceptConsent` の内部で解除すると**ポップアップ経路の事後状態が変わる**（既存テストと挙動の前提を書き換える）ため。設定画面から明示的に同意した時点で「拒否したがまだ答えていない」という猶予の前提が消えるので、呼び出し側で解除するのが意味的にも素直。
+
+### 実装
+
+- `entrypoints/options/index.html` — `#btnGrantConsent`（初期 `hidden`）と `#grantConsentStatus`（`aria-live="polite"`）を追加。
+- `src/dashboard/panels/staticForm/privacySettingsPanel.ts` — 表示を `renderConsentState()` に集約し、撤回と同意を排他に。同意押下で `getContentStorageEnabled()` → `acceptConsent({ contentStorageEnabled })` → `resetConsentDeniedCount()` → 表示更新。失敗時は失敗文言のみで**表示を同意済みに変えない**。撤回成功後は同意アクションが出る。
+- i18n: `grantConsent` / `consentGrantedFromSettings` / `consentGrantFailed` を ja・en に追加。`consentDeclinedMessage` はキー名を変えずに「ダッシュボードの Privacy タブの『同意する』ボタン」を指す文言へ更新。
+- `public/PRIVACY.md` / `docs/PRIVACY.md` — 「拒否後の再同意」段落を追加（バイト同一を確認）。
+- テスト: `privacySettingsPanel.test.ts` に 4 本（排他表示 2・同意成功時の契約 1・失敗時 1）。
+
+### テスト（Red → Green）
+
+- **Red**: パネル実装を revert すると新規 3 本が失敗（排他表示・成功契約・失敗表示）。
+- **Green**: 15 本すべてパス。`check-i18n` 緑、`validate:json` 緑、`type-check` / baseline（456）緑。
+- 回帰: 同意モジュール（`shouldPromptForConsent` の猶予）とポップアップのモーダル挙動は変更しておらず既存テストが緑。ローカル集約実行は負荷 20 で 5 ファイルが worker 起動失敗（個別実行では 126 tests 緑）。CI の `validate` を最終判定とした。
+
+### 補足
+
+`shouldPromptForConsent` の猶予計算には手を入れていない（シナリオ 4 の回帰ガード）。猶予が明ける前に同意したい人のための**代替経路**を足しただけで、「3 回拒否で 30 日モーダルを出さない」という決定自体は維持している。
 
 ## 関連
 
