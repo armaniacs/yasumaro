@@ -19,7 +19,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](2026-10-18-08-fix-obsidian-redirect-bearer.md) で AI 経路と Obsidian 経路に `redirect: 'error'` を適用し、共通 seam として `NO_REDIRECT_FETCH_POLICY` を導入した。PBI [2026-10-19-06](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) が gist / tranco の 5 サイトへ同じ seam を展開する予定である。
+PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](2026-10-18-08-fix-obsidian-redirect-bearer.md) で AI 経路と Obsidian 経路に `redirect: 'error'` を適用し、共通 seam として `NO_REDIRECT_FETCH_POLICY` を導入した。PBI [2026-10-19-06](2026-10-19-06-fix-gist-tranco-redirect-policy.md) が gist / tranco の 5 サイトへ同じ seam を展開した（2026-10-19 完了）。
 
 その展開を準備する過程で、**seam が「宣言は 1 箇所」という主張を満たしていない**ことが分かった。ADR [2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) の `:90-93` にも既に記載がある。誤動作ではないが、方針の SSOT が実質 2 箇所に分かれ、しかも片方は後置代入で黙って上書きできる。
 
@@ -273,7 +273,7 @@ test type errors grew: 457 > pinned 456 — fix errors or lower testDir/type-che
 
 - `pbi/00-INDEX.md`
 - [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
-- `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md` — 同じ seam を gist / tranco の 5 サイトへ展開する。本 PBI の型 seam はその受け皿になる
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同じ seam を gist / tranco の 5 サイトへ展開した PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の型 seam がその受け皿になった
 - `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — `:90-93` に systemHandlers が定数を共有していない旨を記載済み
 - `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` — 共通 seam を導入した PBI（AI 経路）
 - `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` — 同じ seam を Obsidian 経路へ広げた PBI

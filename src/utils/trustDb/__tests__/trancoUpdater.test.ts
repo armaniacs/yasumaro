@@ -37,9 +37,15 @@ vi.mock('../../logger/api.js', async () =>
 );
 
 // fetch モック
-vi.mock('../../fetch.js', () => ({
-    fetchWithTimeout: vi.fn()
-}));
+vi.mock('../../fetch.js', async (importOriginal) => {
+    // PBI 2026-10-19-06: keep the real redirect seam so the assertion below sees
+    // the same policy the production code injects; only the transport is a spy.
+    const actual = await importOriginal<typeof import('../../fetch.js')>();
+    return {
+        ...actual,
+        fetchWithTimeout: vi.fn(),
+    };
+});
 
 // trustDb モック — mutation seam owns lifecycle (TrustDbAdmin)
 const mockDb = {
@@ -177,6 +183,32 @@ describe('trancoUpdater', () => {
 
                 expect(result.success).toBe(false);
                 expect(result.error).toContain('missing list_id');
+            });
+
+            // PBI 2026-10-19-06: both fetches (metadata and the list download)
+            // must refuse a 30x. The download URL is built from the API response,
+            // so following a redirect there would leave the fixed-host assumption.
+            test('passes the no-redirect policy to both tranco fetches', async () => {
+                (fetchWithTimeout as Mock)
+                    .mockResolvedValueOnce({
+                        ok: true,
+                        status: 200,
+                        json: async () => ({ list_id: 'test-list-id' }),
+                    })
+                    .mockResolvedValueOnce({
+                        ok: true,
+                        status: 200,
+                        text: async () => '1,google.com',
+                    });
+
+                const result = await updater.updateTrancoList('top1k');
+
+                expect(result.success).toBe(true);
+                const calls = (fetchWithTimeout as Mock).mock.calls;
+                expect(calls).toHaveLength(2);
+                for (const [, init] of calls) {
+                    expect((init as RequestInit).redirect).toBe('error');
+                }
             });
         });
     });

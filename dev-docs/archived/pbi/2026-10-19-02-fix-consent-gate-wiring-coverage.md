@@ -131,7 +131,7 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 - **`requireConsent()` は throw する。** メッセージハンドラに配線すると、未処理の rejection が返り先で「不明なエラー」になる。入口ごとに拒否時の返し方（既存のサービスエラー型に載せる）を決めること。
 - **設定の疎通確認まで同意で止めない。** 未同意ユーザーが API キーの有効性を確かめられなくなると、同意する前に設定を整える動線が壊れる。ここは「同意不要」と裁定し、理由を残すこと。
 - `MANUAL_RECORD` 系は `MessageRouter` の validator を通ってから `recordingAdmission` に届く。**validator の層で同意を拒否すると、既存の拒否理由の分類が二重になる**ので、既存の admission の拒否経路に乗せること。
-- PBI [2026-10-19-06](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) と `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` が同じ `gistSyncTarget.ts` を触る。Gist 同期の production 呼び出し元が無い可能性（PBI 25 の blocker）を先に確認し、呼び出し元が無いなら「同意を要求する」判断は**将来の配線時に効く前提条件**として記録するに留める。
+- PBI [2026-10-19-06](2026-10-19-06-fix-gist-tranco-redirect-policy.md) と `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` が同じ `gistSyncTarget.ts` を触る。Gist 同期の production 呼び出し元が無い可能性（PBI 25 の blocker）を先に確認し、呼び出し元が無いなら「同意を要求する」判断は**将来の配線時に効く前提条件**として記録するに留める。
 - 同意状態の判定は `getPrivacyConsent()`（`needsReconsent` / `signatureInvalid` を含む）と `hasPrivacyConsent()`（真偽のみ）で意味が違う。入口に配線するときは**どちらの意味が必要か**を明示すること（撤回済み・再同意待ちをどう扱うかが変わる）。
 
 ### ロールバック手順
@@ -233,6 +233,6 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 - `pbi/00-INDEX.md`
 - `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 独立レビューで本件が指摘された元 PBI
-- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う（前者は 2026-10-19 完了）
 - [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` — 同意ゲート一覧の記載先

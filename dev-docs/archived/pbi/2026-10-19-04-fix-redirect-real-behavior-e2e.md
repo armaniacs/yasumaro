@@ -211,7 +211,7 @@ E2E で実測したのは次の 3 点で、いずれも plain な fetch mock で
 
 - `pbi/00-INDEX.md`
 - [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) — 同じ `redirect` 方針の宣言箇所を 1 つに寄せる隣接 PBI（2026-10-19 完了・アーカイブ済み）。本 PBI はその宣言が実挙動として効いていることを測る
-- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同一クラスの未適用経路（gist / tranco）。本 PBI の E2E フィクスチャはそちらでも再利用できる
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同一クラスの経路（gist / tranco）へ方針を広げた PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の E2E フィクスチャはそちらでも再利用できる
 - [dev-docs/ADR/2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) — `redirect:'error'` 方針の原本。適用範囲と決定理由（本 PBI の実測を追記済み）
 - [2026-10-18-01-fix-ai-fetch-redirect-policy.md](2026-10-18-01-fix-ai-fetch-redirect-policy.md) — AI 経路の修正。完了記録に「30x 実測の不在」が残存リスクとして記載（本 PBI で解消）
 - [2026-10-18-08-fix-obsidian-redirect-bearer.md](2026-10-18-08-fix-obsidian-redirect-bearer.md) — Obsidian 経路の修正。接続テストのガード非対称と実挙動未検証が残存リスクとして記載（本 PBI で解消）

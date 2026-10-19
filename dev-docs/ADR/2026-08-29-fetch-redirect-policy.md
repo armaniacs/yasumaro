@@ -77,18 +77,19 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   Obsidian の vault URL はユーザーが設定できる。2026-10-18 に AI 経路
   (要約・接続テスト) と Obsidian 経路 (日次ノートの read/write と接続テスト) へ
   同じ `redirect: 'error'` を適用した。
-- **残る fetch サイトと残存リスク（2026-10-19 追記）**: tranco と gist は初期 URL が
+- **gist / tranco への適用（2026-10-19 適用済み）**: tranco と gist は初期 URL が
   固定ホストだが、**「ホストが固定だから挙動不変」は言えない**。`gistSyncTarget.ts`
-  の 3 サイトは `Authorization: token <PAT>` を付けて platform 既定の
-  `redirect: 'follow'` のまま fetch するため、`api.github.com` が 30x を返すと PAT が
-  `Location` のホストへ再送される（tranco は資格情報を持たないが、やはり 30x を
-  追従する）。`api.github.com` は HSTS 付きの固定ホストで、GitHub 側か TLS が
-  破られない限り到達しないため**優先度は低い**が、この経路にも
-  `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。2026-10-19 に
-  PBI を起票した: `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md`
-  (適用したら本節を「適用済み」へ更新すること)。実挙動の検証は
-  `dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`（2026-10-19 完了）、宣言の一本化は
-  `dev-docs/archived/pbi/2026-10-19-05-fix-redirect-single-declaration.md`（2026-10-19 完了）で扱う。
+  の 3 サイトは `Authorization: token <PAT>` を付けており、platform 既定の
+  `redirect: 'follow'` のままだと `api.github.com` が 30x を返したときに PAT が
+  `Location` のホストへ再送される（同一 origin の付け替えでは `Authorization` は
+  剥がれないため、「クロスオリジンなら剥がれるから安全」も成り立たない）。tranco は
+  資格情報を持たないが、やはり 30x を追従していた。
+  PBI `2026-10-19-06` で 5 サイト（gist 3 / tranco 2）を `noRedirectInit` 経由に
+  寄せ、`redirect: 'error'` を適用した。テストは「発行されたリクエストが当初 URL の
+  1 件だけ」を platform の abort を模した mock で固定している
+  （`src/background/__tests__/gistSyncTarget.test.ts` の redirect policy 節、
+  `src/utils/trustDb/__tests__/trancoUpdater.test.ts`）。これで `fetch` を持つ
+  production 経路はすべて同じ 1 つの宣言を通る。
 - **実挙動の実測（2026-10-19 追記）**: それまでのテストは `init.redirect === 'error'`
   という**オプションの存在**を pin するだけで、30x が実際に来たときにブラウザが何を
   するかは測っていなかった。実サーバ（307 + リクエスト記録）と実ブラウザを使う E2E

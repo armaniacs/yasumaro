@@ -18,7 +18,7 @@ GitHub PAT を保存して Gist 同期を使うユーザーとして、**保存�
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-01](../dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](../dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md)（AI 経路・Obsidian 経路への `redirect:'error'` 適用）の完了後、独立レビューで「ADR 2026-08-29 の『tranco / gist は固定ホストのままで挙動不変』という記述は誤り」と指摘され、2026-10-19 に ADR の当該記述を訂正した。**コード側は未修正**のため本 PBI に切り出す。
+PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [2026-10-18-08](2026-10-18-08-fix-obsidian-redirect-bearer.md)（AI 経路・Obsidian 経路への `redirect:'error'` 適用）の完了後、独立レビューで「ADR 2026-08-29 の『tranco / gist は固定ホストのままで挙動不変』という記述は誤り」と指摘され、2026-10-19 に ADR の当該記述を訂正した。**コード側は未修正**だったため本 PBI に切り出した。
 
 ### 機構（コード上で確定）
 
@@ -71,13 +71,13 @@ Scenario: 4. 正常応答（200）では従来どおり動作する（回帰ガ�
 
 ## 受け入れ基準
 
-- [ ] `gistSyncTarget.ts` の 3 サイト（`/user` / `/gists` / `/gists/${gistId}`）が `NO_REDIRECT_FETCH_POLICY` を展開している
-- [ ] `trancoUpdater.ts` の 2 サイト（メタデータ / ダウンロード）が同ポリシーを展開している
-- [ ] 30x を返す mock で、**2 次リクエストが発行されない**（発行された URL が当初の 1 件だけである）ことをテストで固定する
-- [ ] 200 の通常経路で、リクエスト回数・ヘッダー・結果が修正前と同一である
-- [ ] リダイレクト拒否による失敗が既存の failure taxonomy（transport / network）に分類され、ユーザー向け文言が status 数値を漏らさない
-- [ ] ADR `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md:80-93` の「未適用の経路」記述が、本修正後に「適用済み」へ更新される
-- [ ] `npm run validate` が緑
+- [x] `gistSyncTarget.ts` の 3 サイト（`/user` / `/gists` / `/gists/${gistId}`）が共通ポリシーを展開している（`noRedirectInit` 経由）
+- [x] `trancoUpdater.ts` の 2 サイト（メタデータ / ダウンロード）が同ポリシーを展開している
+- [x] 30x を返す mock で、**2 次リクエストが発行されない**（発行された URL が当初の 1 件だけである）ことをテストで固定する（platform の abort を模した mock で `fetch` の呼び出し回数 1 を assert）
+- [x] 200 の通常経路で、リクエスト回数・ヘッダー・結果が修正前と同一である（既存テストが非退行）
+- [x] リダイレクト拒否による失敗が既存の failure taxonomy に分類され、ユーザー向け文言が status 数値を漏らさない（`describeHttpFailure` の既存経路。テストは `success:false` と文言の形を確認）
+- [x] ADR `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` の「未適用の経路」記述を「適用済み」へ更新
+- [x] `npm run validate` が緑（テスト全体 1096 files / 16437 tests / exit 0、型・lint とも緑）
 
 ## テスト戦略
 
@@ -135,11 +135,50 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜4 が自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] ADR 2026-08-29 の残存リスク記述が更新されている
-- [ ] コードレビュー完了
-- [ ] 完了記録に、30x の実挙動を検証できた範囲と残る限界（browser/E2E のみ観測可能な部分）を明記する
+- [x] BDDシナリオ 1〜4 が自動テストで実装されパス（1・2 は gist 3 サイト、3 は tranco 2 サイト、4 は既存テストの非退行）
+- [x] `npm run validate` が緑（1096 files / 16437 tests / exit 0）
+- [x] ADR 2026-08-29 の残存リスク記述が「適用済み」へ更新されている
+- [x] コードレビュー完了
+- [x] 完了記録に、30x の実挙動を検証できた範囲と残る限界（browser/E2E のみ観測可能な部分）を明記する
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ gist / tranco の 5 サイトだけが redirect 方針の外に残ったのか。
+
+1. **なぜ残ったのか** — 当初の適用（PBI 2026-10-18-01 / 08）は「**宛先をユーザーが設定できる経路**」を基準に選ばれた（AI の baseUrl、Obsidian の vault URL）。gist と tranco は**固定ホスト**なので対象外と判断された。
+2. **なぜ「固定ホストなら安全」と判断したのか** — 30x の危険を「攻撃者が宛先を差し替えること」と捉えていた。固定ホストなら差し替えられない、と。
+3. **なぜその捉え方が不十分なのか** — 危険の本体は「**自分で選んでいない宛先へ資格情報が送られること**」であり、ホストが固定でも `Location` の値は**相手が決める**。`api.github.com` が（侵害・設定ミス・将来の仕様変更で）別ホストを指せば PAT がそこへ飛ぶ。
+4. **なぜ「クロスオリジンなら剥がれる」で済ませなかったのか** — `Authorization` が剥がれるのは cross-origin のみで、**同一 origin 内の付け替え**（`api.github.com/a` → `api.github.com/b`）では保持される。「剥がれるかどうか」を判定基準にするとこの場合を見落とす。
+5. **なぜテストが無かったのか** — 適用対象の一覧を「ユーザー設定可能な URL か」で作り、**`fetch` 呼び出しの全数**と突き合わせる手順が無かった。5 サイトは「対象外」として静かに残った。
+
+**原因**: 適用範囲を「宛先をユーザーが設定できるか」という**入力の性質**で決め、**何を運ぶか**（資格情報・記録・本文）という**出力の性質**で決めなかったこと。
+
+**示唆**:
+- 判定基準は「その fetch が何を運ぶか」。資格情報や記録を運ぶなら、宛先が固定でも redirect を拒否する。
+- 「固定ホストだから安全」は、**相手が `Location` を決める**という事実の前では弱い。
+- 全数確認（`fetchWithTimeout` / `fetchWithRetry` の呼び出し一覧と適用済み一覧の突き合わせ）を手順に含める。
+- テストは「オプションを渡した」ではなく「**2 次リクエストが出ない**」を、platform の abort を模した mock で固定する。
+
+**解**: 5 サイトを `noRedirectInit` 経由にし、gist 3 + tranco 1 のテストで「当初 URL の 1 件だけ・`redirect:'error'`」を固定。ADR の「未適用」記述を「適用済み」へ更新し、これで **production の fetch 経路はすべて同じ 1 つの宣言を通る**。
+
+### 検証できた範囲と限界
+
+- **検証できた**: (a) 5 サイトすべてが `redirect: 'error'` を渡すこと、(b) 30x に対して `fetch` が**当初 URL の 1 回だけ**呼ばれ 2 次リクエストが出ないこと（mock が platform の abort を模す）、(c) 失敗が `success:false` / 例外として返り、ユーザー文言に status 数値が漏れないこと、(d) 200 経路の非退行。
+- **mock の限界**: mock は「`redirect:'error'` なら throw する」という**platform の契約を模しているだけ**で、実ブラウザの abort そのものは検証していない。実 abort・ヘッダー非到達は PBI [2026-10-19-04](2026-10-19-04-fix-redirect-real-behavior-e2e.md) の実サーバ E2E が同一ポリシー（同じ定数・同じ seam）について実測済みで、本 PBI はその**適用範囲を広げた**ものと位置づけられる。拡張機能内の gist / tranco 経路を E2E で駆動するところまでは行っていない（PBI 04 の完了記録に同じ限界を記載）。
+
+### 実装
+
+- `src/background/syncTargets/gistSyncTarget.ts` — 3 サイト（`/user` / `/gists` / `/gists/${gistId}`）を `noRedirectInit` 経由に。
+- `src/utils/trustDb/trancoUpdater.ts` — 2 サイト（メタデータ / リスト）を同様に。
+- テスト: `gistSyncTarget.test.ts` に redirect policy 節（3 本）、`trancoUpdater.test.ts` に 1 本。tranco のモックは `importOriginal` 化して実 seam を参照。
+- ADR 2026-08-29 — 当該節を「適用済み」へ。
+
+### テスト（Red → Green）
+
+- **Red**: `gistSyncTarget.ts` を revert すると新規 3 テストが失敗、`trancoUpdater.ts` を revert すると新規 1 テストが失敗。
+- 回帰: テスト全体 **1096 files / 16437 tests / exit 0**、`type-check` / `type-check:test:baseline`（456）とも緑。
 
 ## 関連
 
