@@ -12,7 +12,7 @@ import { logDebug, logInfo, logWarn, logError } from '../logger/api.js';
 import { backoffDelayMs } from '../backoff.js';
 import { waitForRetry, type SleepFn } from '../retryPredicate.js';
 import { withOptimisticLock } from '../storage/storageTransaction.js';
-import { mergeTrustDatabase } from './mergeTrustDatabase.js';
+import { mergeTrustDatabase, type TrustDbListOp } from './mergeTrustDatabase.js';
 import { TRANCO_VERSION as CURRENT_TRANCO_VERSION } from './presetDomains.js';
 import { SENSITIVE_DOMAINS_PRESETS as PRESETS, JP_ANCHOR_TLDS } from './presets.js';
 import { TrustDbVersion, DB_VERSION } from './trustDbVersion.js';
@@ -33,6 +33,8 @@ export interface TrustDbKernelOptions {
   };
   /** Retry wait between init attempts. Defaults to setTimeout-backed wait. */
   sleep?: SleepFn;
+  /** Retry wait between CAS attempts in save(). Defaults to setTimeout-backed wait. */
+  casRetrySleep?: SleepFn;
 }
 
 interface TrustDbState {
@@ -49,6 +51,14 @@ export class TrustDbKernel {
     initialized: false,
   };
 
+  /**
+   * Pending user operations recorded by the managed lists since the last
+   * successful save. The CAS merge applies them to the stored base so a
+   * removal survives the union-protected concurrent-add contract
+   * (PBI 2026-10-18-06).
+   */
+  private pendingOps: TrustDbListOp[] = [];
+
   private collections: ManagedCollections | null = null;
   private readonly policy: TrustPolicy;
   private readonly trustDbVersion: TrustDbVersion;
@@ -58,6 +68,7 @@ export class TrustDbKernel {
     setAll(items: Record<string, unknown>): Promise<void>;
   };
   private readonly sleep: SleepFn;
+  private readonly casRetrySleep: SleepFn;
 
   constructor(opts?: TrustDbKernelOptions) {
     const defaultReader = {
@@ -76,6 +87,7 @@ export class TrustDbKernel {
     };
     this.settingsReader = opts?.settingsReader ?? defaultReader;
     this.sleep = opts?.sleep ?? waitForRetry;
+    this.casRetrySleep = opts?.casRetrySleep ?? waitForRetry;
     this.policy = new TrustPolicy({ save: () => this.save() });
     this.trustDbVersion = new TrustDbVersion({ save: () => this.save() });
   }
@@ -176,7 +188,13 @@ export class TrustDbKernel {
     if (!db || !db.jpAnchor || !db.sensitive || !db.tranco) {
       throw new Error('TrustDb: database is corrupted (missing jpAnchor/sensitive/tranco)');
     }
-    this.collections = new ManagedCollections(db, () => this.save());
+    this.collections = new ManagedCollections(
+      db,
+      () => this.save(),
+      (op) => {
+        this.pendingOps.push(op);
+      }
+    );
   }
 
   private async createDefaultDatabase(): Promise<void> {
@@ -212,10 +230,47 @@ export class TrustDbKernel {
     this.state.database.bloomFilter = bloomData;
     this.state.database.lastUpdated = new Date().toISOString();
     const localSnapshot = this.state.database;
-    await withOptimisticLock<TrustDatabase>(STORAGE_KEY, (currentDb) => mergeTrustDatabase(currentDb, localSnapshot));
+    const pendingOps = this.pendingOps;
+    this.pendingOps = [];
+    let merged: TrustDatabase;
+    try {
+      merged = await withOptimisticLock<TrustDatabase>(STORAGE_KEY, (currentDb) =>
+        mergeTrustDatabase(currentDb, localSnapshot, pendingOps)
+      );
+    } catch (error) {
+      // CAS failed: keep the intents so the next save re-applies them.
+      this.pendingOps = [...pendingOps, ...this.pendingOps];
+      throw error;
+    }
+    this.applyMergedDatabase(merged);
     logDebug('TrustDb', {}, 'Database saved with optimistic lock');
     // keep policy in sync after save (bloom may have changed via updateTranco)
     this.policy.setState(this.state.database, this.state.bloomFilter, this.state.initialized);
+  }
+
+  /**
+   * Apply the merged result of the CAS write back onto the live in-memory
+   * database. Field-level assignment keeps the object identity, so holders of
+   * the previous reference (migrate/repair/policy) stay in sync; the managed
+   * lists are rebuilt because the merged lists are new arrays. This closes the
+   * in-memory vs storage divergence the old save() created by discarding the
+   * merge result (PBI 2026-10-18-06).
+   */
+  private applyMergedDatabase(merged: TrustDatabase): void {
+    const db = this.state.database;
+    if (!db) return;
+    db.version = merged.version;
+    db.lastUpdated = merged.lastUpdated;
+    db.tranco = merged.tranco;
+    db.bloomFilter = merged.bloomFilter;
+    db.jpAnchor = merged.jpAnchor;
+    db.sensitive = merged.sensitive;
+    try {
+      this.state.bloomFilter = bloomFilterFromData(merged.bloomFilter);
+    } catch {
+      // keep the in-memory filter this write was built from
+    }
+    this.buildManagedCollections();
   }
 
   // For testing: expose repair shim

@@ -11,6 +11,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { TrustDatabase } from '../trustDbSchema.js';
+import type { TrustDbListOp } from '../mergeTrustDatabase.js';
 import { mergeTrustDatabase } from '../mergeTrustDatabase.js';
 
 function makeDb(overrides: Partial<TrustDatabase> = {}): TrustDatabase {
@@ -173,5 +174,139 @@ describe('lock contract: 2-writer CAS integration (trustDb.save)', () => {
     expect(final.sensitive.userBlacklist).toEqual(
       expect.arrayContaining(['a.example', 'b.example'])
     );
+  });
+});
+
+describe('lock contract: intent-aware merge (mergeTrustDatabase, PBI 2026-10-18-06)', () => {
+  const whitelistOp = (kind: 'add' | 'remove', item: string): TrustDbListOp => ({
+    list: 'whitelist',
+    kind,
+    item,
+  });
+  const emptyPresets = { presets: { finance: [], gaming: [], sns: [] } };
+
+  it('a remove intent removes an element that still exists in the stored base', () => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['a.example.com', 'b.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['b.example.com'] },
+    });
+
+    const merged = mergeTrustDatabase(current, local, [whitelistOp('remove', 'a.example.com')]);
+
+    // RED without the intent-aware merge: union resurrects a.example.com.
+    expect(merged.sensitive.whitelist).toEqual(['b.example.com']);
+  });
+
+  it('an add intent unions an element the stored base lacks', () => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['a.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['a.example.com', 'b.example.com'] },
+    });
+
+    const merged = mergeTrustDatabase(current, local, [whitelistOp('add', 'b.example.com')]);
+
+    expect(merged.sensitive.whitelist).toEqual(['a.example.com', 'b.example.com']);
+  });
+
+  it('re-applying the same intents after a merge is idempotent (CAS retry contract)', () => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['x.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: [] },
+    });
+    const ops = [whitelistOp('remove', 'x.example.com'), whitelistOp('add', 'y.example.com')];
+
+    const once = mergeTrustDatabase(current, local, ops);
+    // CAS conflict retry re-invokes the updater with the latest value: the
+    // same intents must not double-apply.
+    const twice = mergeTrustDatabase(once, local, ops);
+
+    expect(twice.sensitive.whitelist).toEqual(once.sensitive.whitelist);
+    expect(twice.sensitive.whitelist).toEqual(['y.example.com']);
+  });
+
+  it('collections without intents keep the union contract (concurrent adds survive)', () => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: ['writer-a.example'], whitelist: ['x.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: ['writer-b.example'], whitelist: ['x.example.com'] },
+    });
+
+    const merged = mergeTrustDatabase(current, local, [whitelistOp('remove', 'x.example.com')]);
+
+    // whitelist: intent applied.
+    expect(merged.sensitive.whitelist).toEqual([]);
+    // userBlacklist: no intents, so the union contract keeps both deltas.
+    expect(merged.sensitive.userBlacklist).toEqual(
+      expect.arrayContaining(['writer-a.example', 'writer-b.example'])
+    );
+  });
+
+  it('does not mutate either argument or the ops when intents are given', () => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['a.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: [] },
+    });
+    const ops = [whitelistOp('remove', 'a.example.com')];
+    const currentCopy = structuredClone(current);
+    const localCopy = structuredClone(local);
+    const opsCopy = structuredClone(ops);
+
+    mergeTrustDatabase(current, local, ops);
+
+    expect(current).toEqual(currentCopy);
+    expect(local).toEqual(localCopy);
+    expect(ops).toEqual(opsCopy);
+  });
+
+  it('ignores intents on first write (current undefined) and returns the local snapshot', () => {
+    const local = makeDb();
+
+    const merged = mergeTrustDatabase(undefined, local, [whitelistOp('remove', 'a.example.com')]);
+
+    expect(merged).not.toBe(local);
+    expect(merged).toEqual(local);
+  });
+
+  it('keeps the more recent tranco snapshot even when intents are present', () => {
+    const current = makeDb({
+      lastUpdated: '2026-05-01T00:00:00.000Z',
+      tranco: { tier: 'top10k', domains: ['new.example'], count: 1, sizeBytes: 10 },
+    });
+    const local = makeDb({
+      lastUpdated: '2026-01-01T00:00:00.000Z',
+      tranco: { tier: 'top1k', domains: ['old.example'], count: 1, sizeBytes: 10 },
+    });
+
+    const merged = mergeTrustDatabase(current, local, [whitelistOp('add', 'z.example.com')]);
+
+    expect(merged.tranco.domains).toEqual(['new.example']);
+    expect(merged.lastUpdated).toBe('2026-05-01T00:00:00.000Z');
+  });
+
+  it.each([
+    { name: 'remove then add', ops: [whitelistOp('remove', 'x.example.com'), whitelistOp('add', 'y.example.com')], expected: ['y.example.com'] },
+    { name: 'add then remove', ops: [whitelistOp('add', 'y.example.com'), whitelistOp('remove', 'x.example.com')], expected: ['y.example.com'] },
+    { name: 'remove twice', ops: [whitelistOp('remove', 'x.example.com'), whitelistOp('remove', 'x.example.com')], expected: [] },
+    { name: 'add twice keeps the base element', ops: [whitelistOp('add', 'y.example.com'), whitelistOp('add', 'y.example.com')], expected: ['x.example.com', 'y.example.com'] },
+  ])('applies mixed add/remove intents in order: $name (Scenario 4)', ({ ops, expected }) => {
+    const current = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: ['x.example.com'] },
+    });
+    const local = makeDb({
+      sensitive: { ...emptyPresets, userBlacklist: [], whitelist: [] },
+    });
+
+    const merged = mergeTrustDatabase(current, local, ops);
+
+    expect(merged.sensitive.whitelist).toEqual(expected);
   });
 });

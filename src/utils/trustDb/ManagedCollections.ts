@@ -6,6 +6,7 @@
  */
 
 import type { TrustDatabase } from './trustDbSchema.js';
+import type { TrustDbListOp } from './mergeTrustDatabase.js';
 import { ManagedStringList } from './managedStringList.js';
 import { isValidDomain, isValidTld } from './domainValidation.js';
 
@@ -16,11 +17,24 @@ export class ManagedCollections {
 
   constructor(
     private readonly database: TrustDatabase,
-    save: () => Promise<void>
+    save: () => Promise<void>,
+    onOp?: (op: TrustDbListOp) => void
   ) {
     const db = database;
+    // Per-list intent recorder: forwards add/remove operations to the kernel's
+    // pending-ops queue so the CAS merge can apply them to the stored base.
+    const recordFor = (
+      list: TrustDbListOp['list']
+    ): ((kind: 'add' | 'remove', item: string) => void) | undefined =>
+      onOp
+        ? (kind, item) => {
+            onOp({ list, kind, item });
+          }
+        : undefined;
+
     this.userTlds = new ManagedStringList(db.jpAnchor.userTlds, {
       save,
+      recordOp: recordFor('userTlds'),
       duplicateErrorMessage: 'TLD already exists',
       notFoundErrorMessage: 'TLD not found',
       normalize: (tld) => (tld.startsWith('.') ? tld : '.' + tld),
@@ -41,6 +55,7 @@ export class ManagedCollections {
 
     this.sensitive = new ManagedStringList(db.sensitive.userBlacklist, {
       save,
+      recordOp: recordFor('userBlacklist'),
       normalize: (domain) => domain.toLowerCase().trim(),
       validate: (domain) => {
         if (!isValidDomain(domain)) {
@@ -56,6 +71,7 @@ export class ManagedCollections {
 
     this.whitelist = new ManagedStringList(db.sensitive.whitelist, {
       save,
+      recordOp: recordFor('whitelist'),
       normalize: (domain) => domain.toLowerCase().trim(),
       validate: (domain) => {
         if (!isValidDomain(domain)) {

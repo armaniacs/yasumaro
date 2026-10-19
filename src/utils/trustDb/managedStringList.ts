@@ -15,6 +15,12 @@ export interface ManagedStringListOptions {
   normalize?: (item: string) => string;
   /** Persist the owning database after a successful add/remove. */
   save: () => Promise<void>;
+  /**
+   * Record a pending add/remove intent before the save callback runs, so the
+   * kernel's CAS merge can apply the operation to the stored base (a pure
+   * union cannot express a removal). The item is the value as stored.
+   */
+  recordOp?: ((kind: 'add' | 'remove', item: string) => void) | undefined;
   /** Error message when the (normalized) item is already present. Defaults to 'Domain already exists'. */
   duplicateErrorMessage?: string;
   /** Error message when the item to remove is not present. Defaults to 'Domain not found'. */
@@ -42,6 +48,7 @@ export class ManagedStringList {
     }
 
     this.items.push(normalized);
+    this.options.recordOp?.('add', normalized);
     await this.options.save();
     return { success: true };
   }
@@ -53,6 +60,7 @@ export class ManagedStringList {
     }
 
     this.items.splice(index, 1);
+    this.options.recordOp?.('remove', item);
     await this.options.save();
     return { success: true };
   }
