@@ -138,7 +138,7 @@ Scenario: 抽出後も 3 パネルの SVG 出力が不変である
 - 見た目の差（色分け・class）を意図的なものとして維持する。単体パネルを単色から `--tag-hue` ベースの色分けへ統一すると、現行 UI 契約に反する。
 - `MAX_NODES` を共通定数へ寄せると、上限値の変更が 3 パネルに同時に波及する。意図した波及である旨を PR に記載する。
 - 既存の表示テストがあれば維持する。無ければ新規の golden 的 pin は最小限にし、過剰テストにしない。
-- 依存 PBI 2026-09-28-09 と 2026-09-28-11 が `src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts` を共有しているため、先にهماを実装してから着手する。
+- 依存 PBI 2026-09-28-09 と 2026-09-28-11 が `src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts` を共有しているため、先に両方を実装してから着手する。
 - `src/dashboard/panels/asyncData/tagClusterLoading.ts:15` の `SVG_NS` は描画パネルと別系統のファイルである。共通定数の参照先に含め忘れると宣言の重複が残る。
 - 共通化の差をオプションで吸収しきれず、共通関数に条件分岐を増やしかねない。分岐が増えた場合は共通化を見送る。
 

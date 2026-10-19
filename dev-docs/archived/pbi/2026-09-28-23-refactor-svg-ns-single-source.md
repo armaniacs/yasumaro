@@ -146,7 +146,7 @@ Scenario: 定数を参照するドキュメントの drift が解消される
 2. `SVG_NS` は DOM 非依存の純文字列定数のため `src/utils/svgNamespace.ts`（Layer 0・新規）へ置き、3 箇所を import へ置換する。`src/dashboard/tagClusterLoading.ts` から `panels/` 配下へ import する方向の逆転を発生させない。
 3. SSOT モジュールの最終的な配置（Layer 0 共有定数 vs dashboard 内共有定数）は、実装冒頭で既存の SVG 関連 util（`graphNodeA11y.ts` など）の配置を確認して決める。他に SVG 定数が増える見込みなら dashboard 内共有定数モジュールでもよい。
 4. `clusterGraphRenderer` の `SVG_NS` の `export` は 17 互換のため re-export で残せる。ただし本 PBI 内で全 import 更新まで完了させ、恒久的な二重公開を残さない。
-5. `SVG_NS` の値（`'http://www.w3.org/2000/svg'`）は変更しない。移設のみاوية目的とする。
+5. `SVG_NS` の値（`'http://www.w3.org/2000/svg'`）は変更しない。移設のみを目的とする。
 6. `MAX_NODES` は本 PBI の移設対象外である。`src/utils/computeLimits.ts:11` のコメントは参照先（実在する配置）を現状へ直すだけで、定数の実数は変えない。
 7. テストファイル内のローカルな `SVG_NS` 宣言は production の SSOT とは別系統であり、移設対象に含めない。
 8. 定数値の同一性は型と import で担保できるため、新規テストは追加しない。既存の関連テストを緑に保つことを DoD とする。宣言重複の静的 pin の要否は実装時に判断する。

@@ -312,7 +312,7 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 **PBI 2026-09-25-12（offline recovery の single owner）**
 - 依拠できるもの: `RetryPolicy.shouldEnqueueForOffline()` は `resolveFailure()` 経由の kind 判定だけを見る。`FAILURE_RETRY_PROFILE[kind].offlineRecovery` が唯一の資格表で、`network` / `timeout` のみ true。
 - 渡すべきもの: `http` の method 別 delayed recovery 判定。本 PBI は `http` を offline 対象から外しただけ。判定に必要な `method` は metadata に載っているので、`failureFromHttpStatus(status, 'PUT')` の形で kind と併せて使える。安全装置として `canResendSameRequest(kind, method)` が SSOT にあり、unsafe method での再送を構造的に拒否する。
-- 遗留: `RetryPolicy` の legacy marker 表（9 語）は「構造化 kind 不在の互換入力」専用として残した。Obsidian / AI 境界は retrofit 済みなので到達しないが、テストが message 文言に依存する箇所（`stepExecutor.test.ts` の `'AI service unavailable'` 等）がまだ 2〜3 個残る。完全撤去は別途判断。
+- 遺留: `RetryPolicy` の legacy marker 表（9 語）は「構造化 kind 不在の互換入力」専用として残した。Obsidian / AI 境界は retrofit 済みなので到達しないが、テストが message 文言に依存する箇所（`stepExecutor.test.ts` の `'AI service unavailable'` 等）がまだ 2〜3 個残る。完全撤去は別途判断。
 
 **PBI 2026-09-25-15（AI provider circuit breaker）**
 - 依拠できるもの: slot 単位の kind は `AISlotFailure.failure`、集約 result の kind は `AISummaryResult.failure`（`RemoteAIService` が「最初に kind を分類した slot」を採用する rule を明文化済み）。`AIProviderConnectionResult.debug.failure` も 401/403/429/5xx を保持する。

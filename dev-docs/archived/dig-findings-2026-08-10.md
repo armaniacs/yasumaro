@@ -13,7 +13,7 @@
 | PBI-04の応答型付けスコープ | 中 | 3アプローチ（完全型付け/共通shape/coercion集約）。SQLiteはクリティカルパスで、dashboard protocolが同じパターンを確立済み | **A: 完全型付け** |
 | PBI実行順序 | 中 | 依存関係: PBI-04→PBI-02→PBI-01（SQLite chain底辺から上へ） | **05→03a→03b→04→02→01** |
 | PBI-05の文字列→宣言移行 | 中 | 3対象stepと2 job種別は暗黙の契約。テストで挙動固定が必要 | **テスト固定→宣言化** |
-| PBI-05 metadata設計 | 中 | 3オプション（単一field/分離field/ErrorStrategy拡張）。presence/absenceでenabled表現が最も简洁 | **A洗練版: `offlineRetry?: { jobKind }`** |
+| PBI-05 metadata設計 | 中 | 3オプション（単一field/分離field/ErrorStrategy拡張）。presence/absenceでenabled表現が最も簡潔 | **A洗練版: `offlineRetry?: { jobKind }`** |
 
 ## 新たに発見したリスク
 

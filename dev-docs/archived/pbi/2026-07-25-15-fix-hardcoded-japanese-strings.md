@@ -52,7 +52,7 @@ Checking Team レビュー（2026-07-25）の i18n Expert からの指摘。`ent
 着手前に必ず実行すること:
 
 ```bash
-grep -rln "data-i18n" entrypoints/ | xargs grep -n "data-i18n=\"[a-zA-Z]*\">[^<]*[ぁ-んァ-ン一-龯]"
+grep -rln "data-i18n" entrypoints/ | xargs grep -Pn "data-i18n=\"[a-zA-Z]*\">[^<]*([ぁ-んァ-ン]|\p{Han})"
 ```
 
 `docs/i18n-guide.md` を先に読み、フォールバックテキストの扱い方針（意図的に残しているか、単なる見落としか）を確認する。意図的な設計であれば、このPBIはスコープを「見落としのみ修正」に絞る。

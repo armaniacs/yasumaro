@@ -13,7 +13,7 @@
 
 ## 背景（現状）
 
-- `src/dashboard/panels/DashboardBootstrapper.ts:131-133` ― sidebar click ハンドラ内で `void this.registry.navigate(panelId).catch(() => { /* Panel not yet migrated to new system; old navigation handles it */ })`。コメントが指す「未 migrate パネル」は `registerCatalog()`（:35-39）が `PANEL_CATALOG` 全件を登録する現状ではもう存在せず、catch は今は `NavigationRegistry.navigate()` の実エラーを無言で吞む
+- `src/dashboard/panels/DashboardBootstrapper.ts:131-133` ― sidebar click ハンドラ内で `void this.registry.navigate(panelId).catch(() => { /* Panel not yet migrated to new system; old navigation handles it */ })`。コメントが指す「未 migrate パネル」は `registerCatalog()`（:35-39）が `PANEL_CATALOG` 全件を登録する現状ではもう存在せず、catch は今は `NavigationRegistry.navigate()` の実エラーを無言で飲む
 - `src/dashboard/panels/staticForm/__tests__/staticPanels.test.ts:11-14` が機械的に担保する領域: id のタイプミスは `NavigationRegistry.navigate()` が throw するが、本 catch が飲むため該当タブだけが「押しても何も起きない」状態になり、console に何も出ない
 - `src/dashboard/main.ts:24` ― dashboard 側 main の `await bootstrapper.start(resolveInitialPanelId())` が top-level await。`registry.navigate()` が reject するとモジュール評価がそこで死に、後続の `applySectionDeepLink()`（:25）と `initDashboard()`（:27）が走らない。失敗はどこにも記録されない
 - 既存の通知経路: `src/dashboard/notificationService.ts` の `notify()`（chrome.notifications 依存、API 未導入環境で no-op、`src/dashboard/__tests__/notificationService.test.ts` でテスト済み）。asyncData パネルの `notices.showError` 慣習は panel container が解決済みであることが前提のため、bootstrap 時点では `notify()` が第一候補
@@ -84,7 +84,7 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 
 変更した内容:
 
-- `DashboardBootstrapper.ts` ― sidebar click ハンドラと `start()` の両方に 있던無言の catch を、共通の private `#reportNavigateFailure(panelId, error)` へ集約し、`console.error` で記録する形にした。「Panel not yet migrated」コメントは、`registerCatalog()` が `PANEL_CATALOG` 全件を登録する現在の事実に合わせて書き換えた
+- `DashboardBootstrapper.ts` ― sidebar click ハンドラと `start()` の両方にあった無言の catch を、共通の private `#reportNavigateFailure(panelId, error)` へ集約し、`console.error` で記録する形にした。「Panel not yet migrated」コメントは、`registerCatalog()` が `PANEL_CATALOG` 全件を登録する現在の事実に合わせて書き換えた
 - `start()` ― 初期 navigate を try/catch で包み、失敗を記録して resolve する形にした。`src/dashboard/main.ts:24` は top-level await で `start()` を待つため、従来は reject がモジュール評価ごとを殺して後続の `applySectionDeepLink()` / `initDashboard()` を巻き込んでいた
 
 追加したテスト（`DashboardBootstrapper.test.ts` の `navigate failures are recorded, not swallowed` describe）:
@@ -93,6 +93,6 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 - 初期 navigate の reject でも `start()` は reject せず `console.error` が呼ばれる
 - 正常系では `console.error` が一切呼ばれず active tab が更新される
 
-**逸脱（受け入れ基準 5）**: 失敗の記録は `console.error` のみ。`DashboardBootstrapper` は panel コンテナの解決前という bootstrap 時点に位置し、`notices.showError` の慣習が前提とする panel container を持ち得ない。用户可視の通知チャネルを新設すること（dashboard 全体の通知経路の設計）が本 PBI のスコープ外だったため、基準 1 の「少なくとも console に記録される」のみ充足とし、基準 5 は未達として残す。通知経路の追加は別 PBI の課題。
+**逸脱（受け入れ基準 5）**: 失敗の記録は `console.error` のみ。`DashboardBootstrapper` は panel コンテナの解決前という bootstrap 時点に位置し、`notices.showError` の慣習が前提とする panel container を持ち得ない。ユーザー可視の通知チャネルを新設すること（dashboard 全体の通知経路の設計）が本 PBI のスコープ外だったため、基準 1 の「少なくとも console に記録される」のみ充足とし、基準 5 は未達として残す。通知経路の追加は別 PBI の課題。
 
 検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。

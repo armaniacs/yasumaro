@@ -299,7 +299,7 @@ rg -n "PRESETS|cleanseMode" src/utils/aiSummaryCleaner/
 
 | 仮定 | リスク | 発見 | 決定 |
 |------|--------|------|------|
-| 「全BDDシナリオを自動テストで充足」= 既存 harness で足りる | 高・実現可能性 | e2e は real-extension Playwright（localhost + seed 実績）だが **AI モックの先例ゼロ**。フルロー（SWタブ→GET_CONTENT→AI→UPDATE）は AI route 拦拒の新規構築が必要。localhost は blockLocalhost で再生成が弾かれる | **フルローe2eを新規構築（Ask N1-B）** ― playwright `context.route` で (a) 非localhost の fixture ドメイン（例 `https://e2e-regenerate.test/**` → HTML を fulfill）、(b) AI provider エンドポイント（設定の baseUrl を routed ドメインに向けて canned 応答）を拦拒。設定 seed は options ページの storage 経由 |
+| 「全BDDシナリオを自動テストで充足」= 既存 harness で足りる | 高・実現可能性 | e2e は real-extension Playwright（localhost + seed 実績）だが **AI モックの先例ゼロ**。フルロー（SWタブ→GET_CONTENT→AI→UPDATE）は AI route 遮断の新規構築が必要。localhost は blockLocalhost で再生成が弾かれる | **フルローe2eを新規構築（Ask N1-B）** ― playwright `context.route` で (a) 非localhost の fixture ドメイン（例 `https://e2e-regenerate.test/**` → HTML を fulfill）、(b) AI provider エンドポイント（設定の baseUrl を routed ドメインに向けて canned 応答）を遮断。設定 seed は options ページの storage 経由 |
 | 「manual record と同じ checkRateLimit」 | 高・ユーザー行動 | キー = sender origin、**dashboard と popup が同一バケット**、既定 **5回/60秒** → 再生成6連打で popup 手動記録も 429 | **再生成専用バケットに分離（Ask N3-B）** ― `RateLimiter.check` に optional bucket 引数（既定 '' で現状互換・既存キー形式の pin を維持）、regenerate は `'regenerate'` バケット。**上限値の設定キーは共用（5/60s）**としキーは増やさない ― 「2系統の設定キー」はコストとして省略した解釈（要望なら +1 key で拡張可） |
 | GET_CONTENT への optional payload 追加が契約を壊す | 低 | `NO_PAYLOAD_TYPES` 施行は SW 入站のみ（`isServiceWorkerRequest` / `envelopePolicy`）。GET_CONTENT は SW 入站しないため影響なし。popup の bare envelope 契約テストも維持 | **解**: payload は optional 追加のみ、NO_PAYLOAD_TYPES は触らない |
 | needsForce 判定は `RecordingResult.reason` で可能 | 中 | `resultBuilder` が `error.reason` を伝播（recordingOutcome の PipelineError 経由） | **実装時検証事項**: gate 3種（domain-filter / trust / privacy-headers）の reason 値を特定し、その集合でのみ `needsForce: true` を返す。特定できなければ gate に識別子を追加 |
@@ -307,7 +307,7 @@ rg -n "PRESETS|cleanseMode" src/utils/aiSummaryCleaner/
 | saveSqliteStep に update 分岐を入れる | 中・アーキテクチャ | 現状常に INSERT | **Phase 4 で代替比較後に裁定** |
 
 ### 新たに発見したリスク
-- フルローe2e は **外部ドメイン・AI API の route 拦拒 + 設定 seed** を前提に構築する。拦拒漏れ時は flaky（→ 参加タイムアウトと明確な失敗メッセージで早期表面化させる）
+- フルローe2e は **外部ドメイン・AI API の route 遮断 + 設定 seed** を前提に構築する。遮断漏れ時は flaky（→ 参加タイムアウトと明確な失敗メッセージで早期表面化させる）
 - blockLocalhost（Ask Q1C 確定）と e2e fixture の相性: localhost フィクチャでは再生成が弾かれる → **e2e は必ず非localhost routable ドメインを使う**
 - レート制限分離は RateLimiter の既存 pin（キー形式テスト）に触れる ― optional 引数で既定挙動不変をテストで pin する
 
@@ -316,7 +316,7 @@ rg -n "PRESETS|cleanseMode" src/utils/aiSummaryCleaner/
 - AI 呼び出しの監査ログが privacy pipeline 経由で再生成にも自動記録されるか（実装時に確認、なければ追加）
 
 ### 決定事項
-1. **フルローe2eを新規構築**（AI route 拦拒 + 非localhost fixture ドメイン + 設定 seed）
+1. **フルローe2eを新規構築**（AI route 遮断 + 非localhost fixture ドメイン + 設定 seed）
 2. **レート制限は再生成専用バケット分離**（カウンタのみ分離・上限設定キーは共用）
 3. NO_PAYLOAD_TYPES は変更しない、needsForce は reason 特定後に実装、ladder 配置と update 分岐は Phase 4 裁定
 
@@ -327,14 +327,14 @@ rg -n "PRESETS|cleanseMode" src/utils/aiSummaryCleaner/
   - フルローe2e `testDir/e2e/regenerate-summary.spec.ts` **2/2 PASS** ― 同一行 UPDATE（マーカー着地・URL の行は常に1件）/ cleanseMode の永続化なし（settings クレンジングキー不変）/ invalid_url はエラーロウ + 強制ボタンなし
   - 回帰e2e: `overcut-guard-recording` + `content-script-recording`（baseline）含め 8/8 PASS、chromium プロジェクトの dashboard-ui + cleansing-preview-confirm 52/52 PASS
 - **e2e bring-up で確定した基盤判断**:
-  - 拡張が作るタブの**メインドキュメント要求は Playwright の route 拦拒に乗らない**（attach レース）→ `--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443` + 自己署名TLS fixture（`testDir/e2e/fixtures/dev-server-*.pem`）で実ナビゲーションをローカル完結させる
+  - 拡張が作るタブの**メインドキュメント要求は Playwright の route 遮断に乗らない**（attach レース）→ `--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443` + 自己署名TLS fixture（`testDir/e2e/fixtures/dev-server-*.pem`）で実ナビゲーションをローカル完結させる
   - AI mock は**固定ポート禁止**（1234 は実 LM Studio アプリが占有）→ `fixtures/localServers.ts` の許可ポート probe-pick（11434→27123→27124→1234）+ 明示 IPv4 bind + bind 待機
 - **Phase 7 レビュー（3体）で修正したもの**: in-flight の check-then-act レース（同期 add 化）/ UPDATE 失敗が success に化ける問題（`RegenerateUpdateError` → 終端エラー・pending 登録なし）/ `contentEnabled=false` 時の content 消し込み（key omit 化）/ レート制限メッセージの大文字不一致（case-insensitive + reason 経路）/ `fallback_reason` の読み取り到達（SEARCH_COLUMNS + FTS/LIKE SQL + legacy patch + enrichment、OPFS/light list も表示可能に）/ regenerate 時の tags マージ（replace 化）/ `.then` チェーン（.kilorules 違反）/ gateway のタイムアウト重複と共通化（`withRuntimeTimeout` + unhandled rejection 修正）/ fetcher の chrome 直叩き（DI 化）/ migrationBackup の列位置脆さ / HTML の save ボタン i18n キー破壊と status 要素削除の復元 / e2e ポート・bind 待機 / 文字数フロア min:1 / mode allowlist 単一情報源化
 - **意図的に残したもの（判断理由つき）**: offline×regenerate の enqueue は insert 経路のみから到達不能（update 分岐が先行 return ― 構造上 unreachable、payload passthrough は実装しない）/ firefox e2e プロジェクトは既存環境起動失敗（Nightly profile・本変更と無関係）/ `pageState.cleansingConfig` のスナップショット鮮度（落とし穴に記録・v1許容）
 - **/review 指摘（2026-09-22）で修正**: AI失敗時のリカバリ経路が UPDATE-only に反する問題 ― ①`StepExecutor.enqueueOfflineJob` が regenerate（targetEntryId あり）を offline 登録から除外、②`decideStepOutcome` の RETRY 終端で regenerate の pending page 登録をスキップ（どちらも INSERT 複製を防ぎ、失敗はエラー result + 通知で表面化）、③空 tags の再生成で legacy ミラーの tags を置換（`patch.tags = []` 明示・mergeTags=false は維持）― 単体テスト4件追加、validate/build 再グリーン
 - **AI失敗フォールバック hardening（2026-09-22 実利用報告を受けて）**: `buildResult` が常に `success:true` を返し、失敗プロバイダのエラー文が summary として保存→再生成で上書きされていた問題を修正。`PrivacyPipelineResult.aiSucceeded` を `RecordingResult` までスレッドし、失敗時は save 層（`saveSqliteStep` UPDATE スキップ）と handler 応答（`ai_failed` + i18n）の両方で非破壊を保証。RemoteAIService のスロットループ自体は既に全プロバイダ走査していたため、追加でスロット単位の WARN ログ（provider/model/index/total）で可観測化。単体9件 + e2e 2件（モデル判別 mock による cross-provider retry / 全滅時 non-destructive）追加
 - **/review 指摘（2026-09-22）で修正**: コントラスト不良（存在しない `--color-bg` トークンへのフォールバックで select/force ボタンが両モード白背景になり、star ボタンは UA デフォルト面 ― token 整備）+ AI全滅時に**試行したプロバイダ一覧**をエラーロウの detail 行で表示（`attemptedProviders` を `RecordingResult`/`RegenerateSummaryResponse.providersTried` までスレッド）。e2e 2件追加（cross-provider retry / 全滅時 non-destructive）、validate 13,179 緑 + e2e 5/5 緑
-- **スロット別エラー詳細の深掘り（2026-09-22 二度目のご報告を受けて）**: 「3プロバイダとも同じエラーに見える」正体は ①ループが `lastResult` のみ保持し **最後のスロット（built-in-ai）の `kErrorUnknown` だけが見えていた** こと、②実際の HTTP 失敗は `fetchWithRetry` が non-ok で **throw** するため `handleErrorResponse` は本番到達不能で、summary-flow の catch がメッセージを捨てていたこと、の2段。修正: (a) `AISlotFailure` 型を導入し `slotFailures`（provider/model/error・成功スロット以前の失敗も保持）を AISummaryResult→PrivacyPipelineResult→RecordingResult→`providersTried`+`slotFailures` 応答→エラーロウ detail（`formatRegenerateErrorDetail`・1行/スロット）までスレッド、(b) summary-flow catch が `error: msg(300字)` を保持（本番の HTTP status が初めて可視に）、(c) OpenAI/Gemini の `handleErrorResponse` は summary 綨文（セキュリティ pin 綨文）+ `error: HTTP <status>`、(d) スロット WARN ログに error 追加。`kErrorUnknown` 自体は Chrome オンデバイス Prompt API の汎用エラー（接続テストは1語プロンプトなので通り、実コンテンツで壊れる典型）。単体+10件・既存 pin 更新2件・validate 13,185 緑 + build 緑
+- **スロット別エラー詳細の深掘り（2026-09-22 二度目のご報告を受けて）**: 「3プロバイダとも同じエラーに見える」正体は ①ループが `lastResult` のみ保持し **最後のスロット（built-in-ai）の `kErrorUnknown` だけが見えていた** こと、②実際の HTTP 失敗は `fetchWithRetry` が non-ok で **throw** するため `handleErrorResponse` は本番到達不能で、summary-flow の catch がメッセージを捨てていたこと、の2段。修正: (a) `AISlotFailure` 型を導入し `slotFailures`（provider/model/error・成功スロット以前の失敗も保持）を AISummaryResult→PrivacyPipelineResult→RecordingResult→`providersTried`+`slotFailures` 応答→エラーロウ detail（`formatRegenerateErrorDetail`・1行/スロット）までスレッド、(b) summary-flow catch が `error: msg(300字)` を保持（本番の HTTP status が初めて可視に）、(c) OpenAI/Gemini の `handleErrorResponse` は summary 文言（セキュリティ pin 文言）+ `error: HTTP <status>`、(d) スロット WARN ログに error 追加。`kErrorUnknown` 自体は Chrome オンデバイス Prompt API の汎用エラー（接続テストは1語プロンプトなので通り、実コンテンツで壊れる典型）。単体+10件・既存 pin 更新2件・validate 13,185 緑 + build 緑
 - **根因の確定（2026-09-22 detail 行の実測で完了）**: openai / gemini は両者 `Monthly token limit reached (1,017,238 / 1,000,000)` ― **拡張自身の月間トークン上限（`max_monthly_tokens`・既定1,000,000・全HTTPプロバイダ共有の単一カウンタ）が `checkPreFlight` でブロック**しており、API には一切当たっていない。これが「AIテストは通るのに実行で落ちる」非対称の正体（`executeHttpTestFlow` は `checkPreFlight` を呼ばないため上限をスキップ）。built-in-ai は preflight スキップ設計（上限外）で、別要因の `kErrorUnknown`。対処: ①`mapRegenerateError` に slotFailures を渡し、monthly-limit 検出時は**専用メッセージ**を出す（「別のプロバイダーを試す」は全HTTPが同一上限共有のため誤アドバイス）― 日英 i18n + テスト2件追加
 - **三次目の深掘りで真因がさらに判明（2026-09-22）**: ユーザーは上限を「0 = 無制限」に設定済みなのにブロックされた → **writer/reader の保存先不一致**。UI（`recordingConditionsSettings`）は `SettingsRepository.setAll` で **`settings` ブロブ内**に書くのに、`aiUsageTracker.getMaxMonthlyTokens` は**誰も書かないトップレベルキー**を読んでいた → 0 も custom 値も全て無視され**常に既定 1,000,000** が適用されていた（この既定と使用量 1.017M が衝突したのが最初のエラー。`checkUsageWarning` も同一 getter を使うため同時に修正）。修正: 読み取り順を ①`settings` ブロブ（現行UI・0=無制限）→ ②旧トップレベルキー（移行前の書込み/テスト fixture）→ ③暗号化インストール用 SettingsRepository（dynamic import）→ ④既定 に変更。+4件の blob 優先順位テスト、validate/build 緑
 

@@ -21,49 +21,44 @@ PBI [2026-10-19-09](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojib
 
 ## 対応表（実測・2026-10-19）
 
-`dev-docs/archived/pbi/` の 13 ファイル。各行は「混入 → 復元」。いずれも韓国語の語・助詞が日本語に置き換わった形で、前後の文法が復元語を一意に決める。
+`dev-docs/archived/pbi/` の 13 ファイル。いずれも韓国語の語・助詞が日本語に置き換わった形で、前後の文法が復元語を一意に決める。**混入していた文字そのものは本ファイルに書かない**（規約上、範囲外文字を残せないため。修正前のバイト列は git 履歴 `git show <commit>:<file>` で参照できる）。以下は「どのファイルの・どの語を・どう直したか」の記録。
 
-| ファイル | 混入（現在） | 復元 |
-|---|---|---|
-| `2026-08-01-19-fix-offline-queue-save-frequency.md` | `過剰최適化` | `過剰最適化` |
-| `2026-08-23-03-refactor-messaging-validator-interface.md` | `既존 logic` | `既存 logic` |
-| 同 | `validator 추출` | `validator 抽出` |
-| 同 | `(새로 생성)` | `(新規作成)` |
-| 同 | `// handler에서 분산된 logic을 수집` | `// handler で分散した logic を収集` |
-| 同 | `Handler registry에 validator 등록` | `Handler registry に validator を登録` |
-| 同 | `(또는 DI layer)` | `(または DI layer)` |
-| 同 | `Handler에서 validator 호출` | `Handler で validator を呼び出し` |
-| 同 | `// Handler 구현에서` | `// Handler 実装で` |
-| 同 | `// Handler wrapper에서` | `// Handler wrapper で` |
-| `2026-08-27-13-feat-consolidate-recording-pipeline.md` | `  분류を導入する` | ` 分類を導入する` |
-| `2026-09-25-01-fix-transport-replay-safety.md` | `」재를 만들さない` | `」再送を起こさない` |
-| `2026-09-25-02-investigate-withlock-cas-deep-equal.md` | `冪等性뿐 아니라` | `冪等性だけでなく` |
-| `2026-09-25-20-doc-messaging-layer-decision-record.md` | `中立化되기前` | `中立化される前` |
-| `2026-09-25-24-investigate-privacy-reconsent-ux.md` | `再利用한다。` | `再利用する。` |
-| 同 | `経路は 필요하다。` | `経路は必要である。` |
-| `2026-09-25-31-fix-withlock-object-conflict-policy.md` | `非突然変異形이며` | `非突然変異形であり` |
-| `2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md` | `直接構築を 제거し` | `直接構築を除去し` |
-| `2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md` | `に見 구분されていた` | `に見区別されていた` |
-| `2026-10-01-10-fix-bootstrapper-silent-catch.md` | `両方に 있던無言の` | `両方にあった無言の` |
-| `2026-10-01-16-refactor-saved-url-retention-unification.md` | `ため 이를不変性` | `ためこれを不変性` |
-| `2026-10-01-23-refactor-storage-transaction-cas-unification.md` | `追加 이유는` | `追加の理由は` |
+| ファイル | 復元（適用済み） |
+|---|---|
+| `2026-08-01-19-fix-offline-queue-save-frequency.md` | 過剰最適化 |
+| `2026-08-23-03-refactor-messaging-validator-interface.md` | 既存 logic / validator 抽出 / (新規作成) |
+| 同 | `// handler で分散した logic を収集` |
+| 同 | `Handler registry に validator を登録` |
+| 同 | (または DI layer) / `Handler で validator を呼び出し` |
+| 同 | `// Handler 実装で` / `// Handler wrapper で` |
+| `2026-08-27-13-feat-consolidate-recording-pipeline.md` | ` 分類を導入する` |
+| `2026-09-25-01-fix-transport-replay-safety.md` | `」再送を起こさない` |
+| `2026-09-25-02-investigate-withlock-cas-deep-equal.md` | `冪等性だけでなく` |
+| `2026-09-25-20-doc-messaging-layer-decision-record.md` | `中立化される前` |
+| `2026-09-25-24-investigate-privacy-reconsent-ux.md` | `再利用する。` / `経路は必要である。` |
+| `2026-09-25-31-fix-withlock-object-conflict-policy.md` | `非突然変異形であり` |
+| `2026-09-28-13-refactor-layer-boundary-hygiene-bundle.md` | `直接構築を除去し` |
+| `2026-09-28-20-refactor-ai-summary-cleansing-settings-delta-write.md` | `に見区別されていた` |
+| `2026-10-01-10-fix-bootstrapper-silent-catch.md` | `両方にあった無言の` / `あった無言の catch` |
+| `2026-10-01-16-refactor-saved-url-retention-unification.md` | `ためこれを不変性` |
+| `2026-10-01-23-refactor-storage-transaction-cas-unification.md` | `追加の理由は` |
 
-## 進捗（2026-10-20 時点・中断状態）
+## 進捗（2026-10-20 時点）
 
-`node scripts/check-docs-chars.mjs` の実測で **326 → 270 箇所**まで修復済み（104 ファイル / 138 種類が残）。修正済みの内訳:
+`node scripts/check-docs-chars.mjs` の実測で **326 → 192 箇所**まで修復済み。修正済みの内訳:
 
 - 韓国語混入の塊（`2026-08-23-03` の code block 9 箇所、`2026-09-25-24` の 14 箇所、`2026-09-25-31` など）
-- 簡体字の単字（`分岐` `分離` `自体` `唯一` `一貫` `実在` `ボタン` `状況` `ユーザー` `バックアップ` `飲む` `飲み込み`）
-- grep の漢字レンジ `[ぁ-んァ-ヶ一-龯]` → `[ぁ-んァ-ヶ]|\p{Han}`（PCRE 前提に変更。意味は同じで CP932 内）
-- PBI 台帳側の参照（`2026-09-07-15` の `分岐`）
+- 簡体字の単字（分岐・分離・自体・唯一・一貫・実在・ボタン・状況・ユーザー・バックアップ・飲む・飲み込み）
+- grep の漢字レンジ（U+9FAF 等）→ `[ぁ-んァ-ヶ]|\p{Han}`（PCRE 前提に変更。意味は同じで CP932 内）
+- 本 PBI の対応表から混入文字そのものを削除（表は「復元（適用済み）」形式に変更）
 
-**再開手順**: 残りは `node scripts/check-docs-chars.mjs --list` の出力を上から順に、次の基準で 1 箇所ずつ直す。
+**進め方**: `node scripts/check-docs-chars.mjs --list` の出力を上から順に、次の基準で 1 箇所ずつ直す。
 
-1. 前後の文法から復元語が一意に決まるもの（`歧`→`岐`、`层`→`層`、`钮`→`ボタン`、`吞`→`飲む` など）は置換する
+1. 前後の文法から復元語が一意に決まるもの（簡体字の単字→対応する日本語の字、韓国語の助詞→日本語の助詞）は置換する
 2. 一意に決まらないものは、その語句だけ削除する（推測で文を作らない）
 3. 直したら `--list` を再実行し、件数が減ったことを確認する
 
-現在の残上位: `拦`×8（route 遮断）、`�`×7、`龯`×7（regex レンジ）、`层`×6、`이`×6、`时`×5、`분`×5、`绿`×5、`陈`×4、`现`×4、`를`×4。
+残りの大半は (a) 簡体字・ハングルの単字・語（`CHANGELOG.md` と `dev-docs/ADR/`、`dev-docs/archived/pbi/` に分散）、(b) U+FFFD（4 箇所、語の一部が欠落）、(c) アラビア文字の断片（2 ファイル）。
 
 ## 受け入れ基準
 

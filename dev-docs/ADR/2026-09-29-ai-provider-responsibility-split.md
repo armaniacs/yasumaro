@@ -25,7 +25,7 @@
 - `ProviderStrategy.ts` ― 送信手段に依存しない基底。設定の保持、名前と ID、schema 失敗と使用量計上という共有ポリシーだけを持つ。
 - `HttpProviderStrategy.ts`（新規）― 2 つの HTTP フロー。`executeHttpSummaryFlow` / `executeHttpTestFlow` と、その順序が必要とする送信前ガード（`checkPreFlight` / `sanitizeContent` / `buildTestDebugBase` / 許可 URL 導出）。Gemini と OpenAI 互換はこれを継承する。
 - `providerSettingsResolver.ts`（新規）― 設定解決の単一ラダー。`resolveProviderSetting` が「rung が値を返したら勝ち、返さなければ次」という順序だけを書き、3 つの設定はそこへ rung として載せる。rung が `undefined` を返した場合だけ次へ落ちるので、0 や NaN は「未設定」として扱われる。
-- `src/utils/httpFailureMessages.ts` ― HTTP 失敗の写像の総所在地。status から文面への表に加え、接続テストの封筒（`mapHttpConnectionFailure` / `mapHttpFetchFailure`）、timeout 判定（`isHttpTimeoutFailure`）、要約フローの失敗（`describeSummaryRequestFailure`）を持つ。Layer 0 のままで、依存するのは同为 Layer 0 の `failureTaxonomy` / `objectUtils` / `errorUtils` だけ。
+- `src/utils/httpFailureMessages.ts` ― HTTP 失敗の写像の総所在地。status から文面への表に加え、接続テストの封筒（`mapHttpConnectionFailure` / `mapHttpFetchFailure`）、timeout 判定（`isHttpTimeoutFailure`）、要約フローの失敗（`describeSummaryRequestFailure`）を持つ。Layer 0 のままで、依存するのは同じく Layer 0 の `failureTaxonomy` / `objectUtils` / `errorUtils` だけ。
 
 個別判断:
 
@@ -49,7 +49,7 @@
 
 ### Residual risks
 
-- **`isHttpTimeoutFailure` の和集合化は、transport 由来でない Error で観測できる差分を作る。** message に `timeout` を含む Error（例 `request timeout exceeded`）は、要約フローでは「汎用文 + 解決済みの kind」から「timeout 文」に変わる。production の transport は timeout を必ず `AbortError` 名 + `tagFailure(TIMEOUT)` 付きで投げる（`src/utils/fetch.ts:158-165`）ので到達しない。ただしこの判定は text sniff であり、Error を直接渡す外部呼び出し元があれば観測できる。retry 判断は structured kind しか読まない、という점은変わらない。
+- **`isHttpTimeoutFailure` の和集合化は、transport 由来でない Error で観測できる差分を作る。** message に `timeout` を含む Error（例 `request timeout exceeded`）は、要約フローでは「汎用文 + 解決済みの kind」から「timeout 文」に変わる。production の transport は timeout を必ず `AbortError` 名 + `tagFailure(TIMEOUT)` 付きで投げる（`src/utils/fetch.ts:158-165`）ので到達しない。ただしこの判定は text sniff であり、Error を直接渡す外部呼び出し元があれば観測できる。retry 判断は structured kind しか読まない、という点は変わらない。
 - **`!response.ok` ガードは到達不能のまま残る。** 存在目的は transport 契約が変わったときの破壊防止で、テストは「non-ok を渡しても parse されない」ことだけを固定する。transport が non-ok を resolve するようになったら、ガードと固定テストを合わせて見直す。
 - **parity テストの表に 4 行目を足すには、送信しない provider について「送信しないこと」以外の主張を書くことになる。** 現表は `reachesTransport` で分岐する形で、その provider の契約は transport に触れないことだけになる。
 - `src/messaging/messageTransport.ts` のコメントは削除した `ProviderStrategy.shouldRetrySummaryRequest` を参照したまま（別 effort の WIP 対象のため未編集）。

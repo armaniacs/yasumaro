@@ -8,7 +8,7 @@
 
 - 順位: 01 / 6
 - RICE スコア: 24.0（Reach=3 / Impact=2 / Confidence=80% / Effort=0.2 人週）
-- 根拠: 検証境界の drift が実在（import 3 値・append 2 値）し、diff が小さく機械的なため Confidence 高。意図的分歧（audit 1000 vs 100000）は名前付き変種として保持するだけ。
+- 根拠: 検証境界の drift が実在（import 3 値・append 2 値）し、diff が小さく機械的なため Confidence 高。意図的分岐（audit 1000 vs 100000）は名前付き変種として保持するだけ。
 - backlog: [2026-09-09-00-backlog-0909a.md](2026-09-09-00-backlog-0909a.md)
 - 依存: なし。ただし 02（update whitelist）が deps.ts / validators.ts を共有するため 01 を先に着地させる。
 
@@ -22,11 +22,11 @@ Scenario: import 行数上限が全経路で同一
   Then  3 経路とも同一の定数値を使用し、handler 側の 5000 と validator 側の 1000 という
         値の不一致は存在しない
 
-Scenario: 意図的な分歧は名前付き変種として残る
-  Given audit の上限が OPFS worker は 1000、IdbVfsBackend は 100000 という意図的分歧を持つ
+Scenario: 意図的な分岐は名前付き変種として残る
+  Given audit の上限が OPFS worker は 1000、IdbVfsBackend は 100000 という意図的分岐を持つ
   When  limits.ts を確認する
   Then  両者は名前付き定数（例: AUDIT_CAP_OPFS / AUDIT_CAP_IDB）として定義され、
-        分歧の理由がコメントで記録されている
+        分岐の理由がコメントで記録されている
 
 Scenario: 上限超過リクエストの挙動は現行と同一
   Given MAX_APPEND_IDS を超える ids 配列を送信する
@@ -39,7 +39,7 @@ Scenario: 上限超過リクエストの挙動は現行と同一
 - [x] `src/messaging/limits.ts`（または合意位置）に上限テーブルを新設: `MAX_IMPORT_ROWS` / `MAX_APPEND_IDS` / `QUERY_CAPS`（参照移管）/ `ARCHIVE_CHUNK_BYTES` / `RESTORE_BYTES` 等
 - [x] `deps.ts:9-13` の `MAX_APPEND_IDS` / `MAX_IMPORT_ROWS`、`validators.ts:42-59` の `VALIDATOR_LIMITS` 内の重複値、`importLogsService.ts:31` の `100_000`、`maintenanceBatchHandler.ts:33-34` の再定義を import に寄せる
 - [x] `readOnlyHandler.ts` の clampLimit リテラル（1000/100000/1000）が `QUERY_CAPS` 参照になる
-- [x] 意図的分歧（audit OPFS 1000 vs IDB 100000）は名前付き定数 + 理由コメントとして保持
+- [x] 意図的分岐（audit OPFS 1000 vs IDB 100000）は名前付き定数 + 理由コメントとして保持
 - [x] 振る舞い変更なし（上限値の緩和・厳格化をしない。値の統一が必要な場合は drift のどちらが正かを実装メモに記録してから統一）
 - [x] drift 検出テスト 1 本（同一概念の複数定義が再発したら fail する形、または limits.ts 参照の整合テスト）
 
@@ -52,7 +52,7 @@ Scenario: 上限超過リクエストの挙動は現行と同一
 
 1. `limits.ts` を新設（中立位置。`messaging/` なら messaging/validators・offscreen 双方から import 可能）
 2. 定数を移管し、各 authority を import に寄せる（値は現行の実効値 = 最厳値を保持）
-3. 意図的分歧に名前を付ける
+3. 意図的分岐に名前を付ける
 4. drift 検出テスト追加
 
 ## 見積もり
@@ -78,7 +78,7 @@ Scenario: 上限超過リクエストの挙動は現行と同一
 - `limits.ts` は `src/messaging/limits.ts` に新設（依存なしの純粋定数）。validators・background handlers・dashboard のいずれからも import 可能で、import グラフ上の循環なし（offscreen →
   messaging 方向の既存 edge と逆向きの edge は作っていない）。
 - `QUERY_CAPS` は `queryPlan.ts` から移動せず、`readOnlyHandler.ts` が既存 import を拡張して参照（query→`plain`、search→`fts`、audit→`plain`。いずれも値同一）。fallback 既定値（100/50/1000）は cap ではなく既定値のため据え置き。
-- audit の意図的分歧は `AUDIT_CAP_OPFS`（1000）/`AUDIT_CAP_IDB`（100000）として limits.ts に名前付きで文書化。実体（`opfsWorker/auditHandlers.ts:30`、`IdbVfsBackend.ts:390`）は対象外のため非接触。
+- audit の意図的分岐は `AUDIT_CAP_OPFS`（1000）/`AUDIT_CAP_IDB`（100000）として limits.ts に名前付きで文書化。実体（`opfsWorker/auditHandlers.ts:30`、`IdbVfsBackend.ts:390`）は対象外のため非接触。
 - `importLogsService.ts` の `100_000` はファイル全体の事前チェック（per-message 上限とは別概念）のため値を維持し、`IMPORT_TOTAL_ROW_CAP` に改名＋WHY コメント化。旧名の外部 import は存在しないことを確認済み。
 - `maintenanceBatchHandler.ts` の restore base64 上限リテラル（150MB）も値同一のまま `MAX_RESTORE_BASE64_BYTES` として limits.ts に移管（validator の 10MB 上限とは層が異なる旨をコメント化）。
 

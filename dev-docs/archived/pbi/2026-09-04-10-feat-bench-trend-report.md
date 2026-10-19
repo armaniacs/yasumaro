@@ -41,7 +41,7 @@ Scenario: 読み込めない・形式の古い JSON が混在する
 - [x] 履歴は保持ポリシー（ローリング 5 世代 + 週次アンカー）で存在する世代のみ使用し、系列は最大 26 世代に制限される
 - [x] 既存の自己完結性（`src=`/`href=` に外部 URL なし）と HTML エスケープが維持される
 - [x] `npm run bench:check` の挙動・終了コードが変わらない
-- [x] 既存テスト（contentExtractor / aiSummaryCleaner / htmlReport / trend）全绿、type-check / lint / build クリーン
+- [x] 既存テスト（contentExtractor / aiSummaryCleaner / htmlReport / trend）全緑、type-check / lint / build クリーン
 
 ## テスト戦略（t_wadaスタイル）
 

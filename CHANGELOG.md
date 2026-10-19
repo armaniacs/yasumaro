@@ -441,7 +441,7 @@ v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整
 
 ### Tested
 
-- 単体: `npm run validate` green（15,014 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 秘匿キーのキー名マスキング行列、AI 失敗の種別付け、OPFS デグ���の段階ラダー（fault injection）、SQLite 2 バックエンドの parity（stub と実 SQLite）、接続テスト runner、旧形式モジュールの destroy ライフサイクル
+- 単体: `npm run validate` green（15,014 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 秘匿キーのキー名マスキング行列、AI 失敗の種別付け、OPFS デグレの段階ラダー（fault injection）、SQLite 2 バックエンドの parity（stub と実 SQLite）、接続テスト runner、旧形式モジュールの destroy ライフサイクル
 - E2E: `npm run test:e2e` green（325 passed / 30 skipped）。KEK 切替の E2E を新設し、復号不能項目がある解除が中途半端な状態（チェックボックスとメタデータ・暗号文の維持）で止まることを確認
 
 ## [6.9.27] - 2026-09-26
@@ -509,7 +509,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 - **リサーチ・セッション パネル**: 時刻の近い記録をひとつの「調べもの」としてまとめます。セッションの区切りは 5 / 15 / 30 / 60 分から選べ、区切りを変えても再取得はしません
 - **遷移記録（オプトイン）**: 同じタブで直前に開いていたページと検索エンジンの検索語を記録し、Research Sessions の各行に表示します。設定 → Privacy で確認ダイアログに同意した場合のみ有効になり、既定は無効です。AI・Obsidian・エクスポートには含まれません
 - **探索パスと「迷いやすいトピック」**: 遷移記録が有効なら各セッションの展開部が経路（入れ子の `<ul>`）として描画され、検索から到達点までの平均ページ数・平均分をタグごとに集計した表が出ます
-- **CI に単体スイートのファイル単位コストゲートを追加** ― `npm run test:perf`（`make test-perf`）がスイートを 1 回走らせて `bench/baselines/test-perf.budget.json` と比較します。CI の validate ジョブは `npm test` の代わりにこれを使うため、追加の実行時間はゼロです。**合否を握るのはファイル数だけ**で、时间系は参考値として併記します。時間系は 8 コアのノート PC で較正值があり、4 vCPU の CI ランナーではコアあたりの速さが違うため、共有ファイルに閾値を持てばランナーの個体差で落ちてしまうからです。load average は計測の**直前**に読み、コア数を超えていれば「machine is busy」として判定そのものを保留します（スイートは実行中ずっと全コアを使い切るため、計測の直後との差で棄却する規則を文字通り適用すると全測定が棄却されます）
+- **CI に単体スイートのファイル単位コストゲートを追加** ― `npm run test:perf`（`make test-perf`）がスイートを 1 回走らせて `bench/baselines/test-perf.budget.json` と比較します。CI の validate ジョブは `npm test` の代わりにこれを使うため、追加の実行時間はゼロです。**合否を握るのはファイル数だけ**で、時間系は参考値として併記します。時間系は 8 コアのノート PC で較正值があり、4 vCPU の CI ランナーではコアあたりの速さが違うため、共有ファイルに閾値を持てばランナーの個体差で落ちてしまうからです。load average は計測の**直前**に読み、コア数を超えていれば「machine is busy」として判定そのものを保留します（スイートは実行中ずっと全コアを使い切るため、計測の直後との差で棄却する規則を文字通り適用すると全測定が棄却されます）
 - **レビューで判明した 6 件を修正** ― `release:check` の引数解析、`local/no-test-sleep` の遅延解決、SQLite 並行失敗テスト、依存検査の実インストール照合、`waitForRetry` の未使用 seam、`no-greedy-fake-timers` の件数の 6 項目（うち 1 件は CRITICAL 2 件）。詳細は下の `### Fixed` を参照
 
 ### Changed
@@ -1633,7 +1633,7 @@ Documentation has been brought up to date with the features introduced during v6
 - `docs/guides.html` を新設し、全ユーザーガイドの総覧ページを GitHub Pages に追加。`docs/index.html` のナビと README の文書一覧からリンク
 - FAQ に新しい質問を追加（Q49: 閲覧履歴のバックアップ/移行、Q50: クレンジング誤削除の報告、Q51: キーワード初期化の中身）し、既存の質問番号を振り直し
 - Q14（対応 AI プロバイダー）と docs/index.html の「対応AI」セクションに、`OpenAI Compatible (Models.dev)` 経由で 70 以上の OpenAI 互換プロバイダー（OpenRouter、Perplexity、DeepSeek 等）を選択できる旨を追記
-- CSP ガイドの見出しに混入していた簡体字「层」を「層」に修正し、翻訳調の文（「〜することはできません」）を自然な表現に修正
+- CSP ガイドの見出しに混入していた簡体字を「層」に修正し、翻訳調の文（「〜することはできません」）を自然な表現に修正
 - `docs/PRIVACY.md` の文言修正を `public/PRIVACY.md` に同期（Chrome Web Store 審査対象ファイルとの同一性を回復）
 
 ## [6.7.99] - 2026-09-01
@@ -1942,7 +1942,7 @@ Documentation has been brought up to date with the features introduced during v6
   - `StepExecutor.execute()` の未使用一括ラッパを削除し、`RecordingPipeline` は `executeWithStrategy` を直接呼ぶように
   - `PerUrlMutexMap` のインスタンス／静的両経路で重複していた try/finally クリーンアップを `runExclusiveOn` に集約（ロック定数と削除条件を単一化）
   - `src/utils/storage/encryptionSession.ts` の `getOrCreateHmacSecret()` がラップ済みシークレットの復号失敗時に例外を投げるのみだった問題を修正。`chrome.storage.session` クリア（拡張機能更新等）後も自己修復するよう try/catch を追加し、失敗時に新規シークレットを生成・保存するよう `hmacKeyStore` と同等の挙動に
-  - `ChromeStorageAdapter.setSettings` が `ensureStorageQuota` を呼ばずストレージクォータ超過時の退避が遗漏していた問題を修正（legacy `saveSettings` と整合）
+  - `ChromeStorageAdapter.setSettings` が `ensureStorageQuota` を呼ばずストレージクォータ超過時の退避が漏れていた問題を修正（legacy `saveSettings` と整合）
   - `storageFallback` の `insertBatch` がレコードごとにカウンタの `chrome.storage` 往復を行っていた問題を修正し、単一の `allocateIds` で一括確保するよう変更。テキスト検索の小文字化済み検索文字列をクエリ内でキャッシュ
 
 ## [6.7.68] - 2026-08-23
@@ -2777,7 +2777,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 ### Refactor / リファクタ
 
 - **キュー統合** ― `PersistentRetryQueue<T>` を新設し `pendingChromeStorageQueue` / `pendingSqliteQueue` / `offlineNetworkQueue` の重複する load/save/enqueue ロジックを共通化。ストレージは `ChromeStorageAdapter` で抽象化し、各キューはドメイン固有の flush 戦略だけを保持
-  - `src/background/persistentRetryQueue.ts` ― 深いキュー模块（TTL, retry count, per-cycle cap, payload check）を所有
+  - `src/background/persistentRetryQueue.ts` ― 深いキューモジュール（TTL, retry count, per-cycle cap, payload check）を所有
   - `src/background/queueStorageAdapter.ts` ― `QueueStorageAdapter` インターフェース + `ChromeStorageAdapter` 実装
   - `src/background/storageBackedQueue.ts` ― shallow wrapper のため削除
 - **ダッシュボード設定保存パイプラインの統合** ― `handleSaveOnly` / `handleTestAi` / `handleTestLocalMarkdown` の重複する read→merge→save→refresh を `saveDashboardSettings()` に統合
@@ -2924,7 +2924,7 @@ Tag Cluster パネルでタグノードをクリックしたとき、そのタ�
 ### Tests / テスト
 
 - **`shouldFallbackToTextSearch` の単体テスト 6 ケース** ― ソース判定・null ハンドリング・`#` 剥がし・空白トリム・空文字判定
-- **SQLite History パネルのフォールバック統合テスト 5 ケース** ― タグ未マッチ時フォールバック発動 / タグヒット時フォールバック不発 / 両側 0件時通知抑制 / ドメイン起点时不発 / タグクリア後のリセット
+- **SQLite History パネルのフォールバック統合テスト 5 ケース** ― タグ未マッチ時フォールバック発動 / タグヒット時フォールバック不発 / 両側 0件時通知抑制 / ドメイン起点時不発 / タグクリア後のリセット
 - 全 7504 単体テスト通過、TypeScript 型チェック正常、ビルド成功
 
 ### Chores / その他
@@ -3555,7 +3555,7 @@ This is the first v6.6.x stable release, transitioning from the v6.5.x feature s
 
 ### Added / 追加
 
-- **ダッシュボードサイドバーヘッダーをクリック可能に変更** ― サイドバー上部の「Yasumaro」ロゴ/タイトル领域をリンク化し、クリックで `https://armaniacs.github.io/yasumaro/` が新しいタブで開くようにした。セマンティック修正として `<a>` タグを `<nav role="tablist">` の外に移動し、`.sidebar-container` でラップ
+- **ダッシュボードサイドバーヘッダーをクリック可能に変更** ― サイドバー上部の「Yasumaro」ロゴ/タイトル領域をリンク化し、クリックで `https://armaniacs.github.io/yasumaro/` が新しいタブで開くようにした。セマンティック修正として `<a>` タグを `<nav role="tablist">` の外に移動し、`.sidebar-container` でラップ
 
 ### Changed / 変更
 
@@ -3960,7 +3960,7 @@ This release incorporates the PBI implemented on the same day.
 
 ### Chores / その他
 
-- **`package.json` / `wxt.config.ts` のバージョン同步** ― `6.5.30` → `6.5.31`
+- **`package.json` / `wxt.config.ts` のバージョン同期** ― `6.5.30` → `6.5.31`
 
 ## [6.5.30] - 2026-07-15
 
@@ -4168,7 +4168,7 @@ This release incorporates the PBI implemented on the same day.
 
 - **`backup_db` に確認トークン必須化** ― `TOKEN_REQUIRED_SUBTYPES` に `'backup_db'` を追加し、全DBバックアップ操作に確認トークンを要求（Red Team）
 - **`DASHBOARD_SQLITE` ハンドラに sender.id 検証を追加** ― defense-in-depth としてオフスクリーンドキュメントと同一パターンの送信元検証を実装（Red Team）
-- **中国語ハードコード「查询中...」を i18n 置き換え** ― `src/dashboard/dashboard.ts` の3箇所を `getMessage('searching')` に変更（i18n Expert / UI Expert）
+- **中国語ハードコード（「読み込み中」を意味する簡体字の文字列）を i18n 置き換え** ― `src/dashboard/dashboard.ts` の3箇所を `getMessage('searching')` に変更（i18n Expert / UI Expert）
 - **`purgeOldRecords` の削除件数カウントを実削除後に修正** ― `SELECT changes()` で実際の削除件数を取得（Data Integrity Expert）
 - **`auditLogPanel` の innerHTML を DOM 構築に変更** ― XSS 対策として `createElement` + `textContent` を使用（Blue Team）
 - **`insertBatch` の per-row SELECT changes() を除去** ― COMMIT 後に集計することで O(n) 余分クエリを削減（Tuning Expert）
@@ -4200,7 +4200,7 @@ This release incorporates the PBI implemented on the same day.
 ### Added / 追加
 
 - **Tag Cluster ローディングラベルの i18n 化** ― `tagClusterLoading.ts` のハードコード日本語を `getMessage` 経由に変更し、`_locales/{en,ja}/messages.json` に 4 キー追加
-- **ページ本文(content)の PII マスキング保存 + 初回同意** ― `RecordingPipeline` で content を `sanitizeRegex` 通过後に格納し、`CONTENT_STORAGE_ENABLED` が true の場合のみ保存。プライバシー同意モーダルに内容保存チェックボックスを追加。`CONTENT_RETENTION_DAYS` のデフォルトを 7 日に変更
+- **ページ本文(content)の PII マスキング保存 + 初回同意** ― `RecordingPipeline` で content を `sanitizeRegex` 通過後に格納し、`CONTENT_STORAGE_ENABLED` が true の場合のみ保存。プライバシー同意モーダルに内容保存チェックボックスを追加。`CONTENT_RETENTION_DAYS` のデフォルトを 7 日に変更
 - **ローカル Markdown 書き出しの idle 一括化** ― `saveLocalMarkdownStep` をバッファ蓄積のみに改修し、`chrome.idle.onStateChanged` による idle 時 or 30 分ごとのアラームで 1 日分をまとめてダウンロードするフッシャーを新規実装
 
 ### Fixed / 修正 (Checking Team Wave 3)
@@ -5127,7 +5127,7 @@ This release incorporates the PBI implemented on the same day.
 
 - **diagnoseDeficiencies 単体テスト 15件**: 全不足パターンのカバレッジ
 - **diagnosticsPanel BDD テスト 8件**: 不足診断表示、デバッグモード切替、乖離検出の統合テスト
-- **diagnosticsPanel テスト既存28件の復旧**: chrome mock 修正で全件パス回复
+- **diagnosticsPanel テスト既存28件の復旧**: chrome mock 修正で全件パス回復
 
 ### Chores / その他
 
@@ -5690,7 +5690,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ### Refactored
 
-- **planファイルの整理**: 完了・不要になったplanファイルを削除し、新方式进行で管理
+- **planファイルの整理**: 完了・不要になったplanファイルを削除し、新方式の運用で管理
   - `plans/2026-04-18-wtx.md`、`plans/2026-04-18-1115-review-vite-migration.md` を削除
   - 進行中のリファクタリング作業を追跡するための `plans/00-index.md` を追加
   - ポップアップリファクタリング計画 `plans/2026-04-26-popup-refactoring.md` を追加
