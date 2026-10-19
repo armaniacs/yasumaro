@@ -34,7 +34,7 @@ Scenario: ハンドラの依存追加が1箇所で完結する
 ## テスト戦略
 - E2E: Service Worker起動→メッセージディスパッチ→各ハンドラ応答の確認
 - 統合: `BackgroundServices` × `MessageHandlerRegistry` × 各ハンドラfactory
-- 单体: 各ハンドラfactoryの依存型が`Pick<>`で正しいフィールドのみ含むこと
+- 単体: 各ハンドラfactoryの依存型が`Pick<>`で正しいフィールドのみ含むこと
 
 ## 見積もり
 1.5人日

@@ -12,7 +12,7 @@
 Scenario: SettingsSchemaがStorageKeysとDOM要素をバインドする
   Given `SettingsSchema` が `StorageKeys` をCSSセレクタとバリデーションルールにバインドする
   When `loadSettingsToInputs()` が呼出される
-  Then スキーマからDOM要素を查找し、型安全に値を設定する
+  Then スキーマからDOM要素を検索し、型安全に値を設定する
 
 Scenario: typoがコンパイル時エラーになる
   Given 開発者が `data-storage-key` の値をtypoする

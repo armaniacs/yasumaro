@@ -79,7 +79,7 @@ Scenario: プロバイダー固有のロジックは個別に維持される
 
 ### 単体テスト
 - `AIProviderStrategy` の抽出したメソッドの単体テストを追加
-- `mapConnectionError()` の各ステータスコード对应的応答を検証
+- `mapConnectionError()` の各ステータスコードに対応する応答を検証
 - `checkPreFlight()` のガードシーケンスを検証
 
 ### 回帰テスト

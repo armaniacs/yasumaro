@@ -53,7 +53,7 @@ export function getTrustDb(): TrustDb {
 ### 修正方針: getTrustDbのみに責任を集中
 
 **決定:**
-- getTrustDb通过single instance patternを既に実装
+- getTrustDb は single instance pattern を既に実装
 - static initPromiseはgetTrustDb内で管理すべき
 - TrustDbクラスからinitPromiseを削除し、初期化責任をgetTrustDbに移動
 

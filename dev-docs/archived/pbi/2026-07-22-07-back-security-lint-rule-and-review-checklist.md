@@ -110,7 +110,7 @@ ls .eslintrc* .biomerc* tsconfig.json 2>/dev/null
 
 ### 落とし穴
 - markdown テンプレートが複数行にわたる場合、`sanitizeForObsidian` の呼び出しが同じブロック内にないと誤検出
-- `response.text()` の误検出を防ぐため、テストファイルは除外
+- `response.text()` の誤検出を防ぐため、テストファイルは除外
 - lint ルールのメンテナンスコストを考慮し、過度に厳しいルールは避ける
 
 ## Definition of Done

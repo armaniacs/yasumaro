@@ -21,7 +21,7 @@ grep -rn "export async function getSettings" src/utils/storageSettings.ts src/ut
 # → storageSettings.ts:157 と storage/settingsStore.ts:206 の両方に存在（新旧並行）
 
 grep -rn "export type Settings\|export interface Settings" src/utils/storageSettings.ts src/utils/storage/types.ts
-# → storageSettings.ts:74 (SettingsValue & ...) と storage/types.ts:428 (Partial<StorageKeyValues> & ...) の 2 定义
+# → storageSettings.ts:74 (SettingsValue & ...) と storage/types.ts:428 (Partial<StorageKeyValues> & ...) の 2 定義
 
 # 旧 storageSettings.ts の利用者
 grep -rln "storageSettings" src/ --include="*.ts" | grep -v "storageSettings.ts"
