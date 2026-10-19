@@ -237,6 +237,8 @@ function makeServiceWorkerDeps(overrides: Partial<SqliteClientBackedDeps> = {}):
     runBackfill: vi.fn().mockResolvedValue({ updated: 0, total: 0 }),
     runCleanup: vi.fn().mockResolvedValue({ removed: [], totalBytes: 0 }),
     runLegacyResync: vi.fn().mockResolvedValue({ examined: 0, written: 0, skipped: 0, total: 0 }),
+    // PBI 2026-10-19-11: the outbound append path re-reads consent.
+    isConsentGranted: vi.fn().mockResolvedValue(true),
     ...overrides,
   };
 }

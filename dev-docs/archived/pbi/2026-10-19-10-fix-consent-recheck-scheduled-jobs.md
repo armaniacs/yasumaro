@@ -251,7 +251,7 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 ## 関連
 
-- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](../../../pbi/2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する
+- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する（2026-10-19 完了・アーカイブ済み）
 - [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 8〜10（本 PBI）と行 11（PBI 11）。ルール 2（admission 時の同意は後の実行を許さない）が本 PBI の根拠
 - [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）
 - [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された

@@ -35,6 +35,9 @@ function defaultServiceWorkerDeps(): SqliteClientBackedDeps {
     runBackfill: async () => { throw new Error('Backfill not available'); },
     runCleanup: async () => { throw new Error('Cleanup not available'); },
     runLegacyResync: async () => { throw new Error('Resync not available'); },
+    // PBI 2026-10-19-11: existing tests exercise the consented path; a test that
+    // needs withdrawal passes `isConsentGranted` in `overrides`.
+    isConsentGranted: async () => true,
   };
 }
 

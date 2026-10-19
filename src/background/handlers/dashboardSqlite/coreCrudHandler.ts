@@ -87,6 +87,15 @@ export function createCoreCrudHandler(deps: CoreCrudDeps) {
           return { success: false, error: 'All IDs must be finite numbers' };
         }
 
+        // PBI 2026-10-19-11: this is an outbound path (rows leave for the
+        // Obsidian REST API), so consent is re-read here — the confirm token
+        // proves intent, not consent, and admission-time consent does not
+        // license a later export. Checked before getSettings/query so a
+        // withdrawn profile never even reads the rows.
+        if (!(await deps.isConsentGranted())) {
+          return { success: false, error: 'Privacy consent required to export to Obsidian' };
+        }
+
         const allSettings = await deps.getSettings();
         const apiKey = allSettings[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
         if (!apiKey || apiKey.length < 16) {

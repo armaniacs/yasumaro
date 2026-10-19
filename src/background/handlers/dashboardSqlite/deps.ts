@@ -85,6 +85,11 @@ export interface CoreCrudDeps {
   clearAll: () => Promise<DepsResult<void>>;
   query: (params: Record<string, unknown>) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
   getSettings: () => Promise<Record<string, unknown>>;
+  /**
+   * Re-read consent before an outbound export (PBI 2026-10-19-11). Supplied by
+   * the composition root; the handler must not implement its own consent check.
+   */
+  isConsentGranted: () => Promise<boolean>;
   formatEntriesToMarkdown: (entries: BrowsingLogEntry[]) => string | null;
   appendToDailyNote: (markdown: string) => Promise<void>;
 }
@@ -191,6 +196,13 @@ export interface SqliteClientBackedDeps {
   runBackfill: DashboardSqliteHandlerDeps['runBackfill'];
   runCleanup: DashboardSqliteHandlerDeps['runCleanup'];
   runLegacyResync: DashboardSqliteHandlerDeps['runLegacyResync'];
+  /**
+   * The consent source the Service Worker owns (PBI 2026-10-19-11). It lives in
+   * this bag rather than a new positional parameter so every existing caller of
+   * `createSqliteClientDeps` keeps its shape; the handler still receives it as an
+   * explicit `CoreCrudDeps` member and never reads the consent module itself.
+   */
+  isConsentGranted: () => Promise<boolean>;
 }
 
 /**
