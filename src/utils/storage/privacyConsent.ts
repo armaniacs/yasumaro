@@ -180,21 +180,24 @@ export async function savePrivacyConsent(version: string = PRIVACY_POLICY_VERSIO
 
 /**
  * ユーザーがプライバシーポリシーに同意しているか確認
+ *
+ * **ゲートとしての**読み出し口は 1 つ: `createBackgroundServices` が
+ * `isRecordingAllowed: () => hasPrivacyConsent()` を配線し、`RecordingAdmission`
+ * が記録の受付時にそれを見る。バッジ表示（`service-worker.ts` のタブバッジ、
+ * `consentBadge.ts`）とポップアップの表示（`popup.ts`）もこの関数を読むが、
+ * それらは表示であってゲートではない。
+ *
+ * 重要な原則: 受付時の同意は**その後の実行を許可しない**。タイマー・アラーム・
+ * キュー・通知から後で走る経路は、その時点で同意を読み直すこと（撤回は
+ * キューを消さないため、同意時に積まれた処理が撤回後に送信されうる）。
+ *
+ * 新しい外部送信経路を足すときは、同意モジュールを直接読む前に
+ * `dev-docs/SECURITY_REVIEW_GUIDE.md` の「Privacy-consent gating」表に
+ * その操作を足すこと（何が同意を要し、何が要さないかを 1 箇所に保つ）。
  */
 export async function hasPrivacyConsent(): Promise<boolean> {
     const state = await getPrivacyConsent();
     return state.hasConsented;
-}
-
-/**
- * 同意が必要な機能のガード関数
- * 同意していない場合、エラーをスロー
- */
-export async function requireConsent(): Promise<void> {
-    const hasConsent = await hasPrivacyConsent();
-    if (!hasConsent) {
-        throw new Error('Privacy consent required. Please accept the privacy policy to use this feature.');
-    }
 }
 
 /**
