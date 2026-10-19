@@ -52,6 +52,6 @@ M（0.3 人週）。種別: refactor（+ union 完成は fix）。
   - `StorageBackend.StatusResult` が extras を継承（handler の spread が型検査下に）
   - `sqliteValidators.decodeStatusExtras` を mapped decoder テーブル化（フィールド追加はコンパイルエラーで漏れ検出）+ `pickStatusExtras` 新設
   - `offscreenGateway.status()` の pick を `pickStatusExtras(r)` に置換（round 4 の手書き 11 フィールドを撤去）
-  - `dashboardSqliteService.getSqliteStatus` 戻り値型を `SqliteStatusResult`（fts5 は dashboard hop で requiredBoolean 保证のため再 narrow）に
+  - `dashboardSqliteService.getSqliteStatus` 戻り値型を `SqliteStatusResult`（fts5 は dashboard hop で requiredBoolean 保証のため再 narrow）に
   - `sqliteStatus.ts` の `SqliteMigrationExtras` を `Pick<SqliteStatusExtras, ...>` に
 - `OffscreenResponse` union に欠落していた 6 変数（ArchiveOpen/Query/Update/Save/Close/Status）を追加。

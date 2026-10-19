@@ -36,7 +36,7 @@ Scenario: payload エイリアスが 1 関数に統一される
   Given handleQuery / handleSearch が starred|isStarred / dateFrom|since / tag|tagFilter
         のエイリアスを受ける
   When  正規化関数 normalizeStorageQuery(payload) を通す
-  Then  同一の StorageQuery が得られ、handler 每の三項演算子の並びが消える
+  Then  同一の StorageQuery が得られ、handler ごとの三項演算子の並びが消える
 ```
 
 ## 受け入れ基準

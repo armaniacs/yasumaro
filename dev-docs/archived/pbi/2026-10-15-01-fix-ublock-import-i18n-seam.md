@@ -58,7 +58,7 @@ Scenario: console 警告が logger seam を経由する
 - [x] `throw new Error('日本語...')` 6 箇所 (`:91,95,97,107,150,158`) を `getMessageOr` 解決済みメッセージの throw に置換している。Error 型の interface は不変
 - [x] 新規キー (7 件目安) を `public/_locales/ja/messages.json` と `public/_locales/en/messages.json` の両方に追加している (en は英訳、ja は従来文言と同一)
 - [x] `sourceManager.ts:112,164` の `console.warn` を `logWarn` seam (PBI 2026-09-18-06 の確立 seam) に寄せている
-- [x] `src/dashboard/settings/ublockImport/` 配下の production TS に日本語 user-facing リテラルが残っていない (コメント・テストを除く。`rg '[一-鿿]'` で確認)
+- [x] `src/dashboard/settings/ublockImport/` 配下の production TS に日本語 user-facing リテラルが残っていない (コメント・テストを除く。`rg '\p{Han}'` で確認)
 - [x] 既存テスト (`sourceManager.test.ts` 等) が green。日本語断定の更新が必要になった場合は理由をコミットメッセージに記録する (期待値合わせではなく文言仕様変更として)
 - [x] `npm run validate` が green
 
@@ -66,7 +66,7 @@ Scenario: console 警告が logger seam を経由する
 
 - Why 日本語が EN に出るのか → throw/showStatus が辞書を経由せず直書きだから
 - Why 直書きが残ったのか → archloop-1010 NN05 の dashboard i18n sweep が `index.ts` (呼び出し側) 中心で `sourceManager.ts` (被呼び出し側) を見落としたから
-- Why 見落とされたのか → 同一機能でもファイルが分かれると sweep の網から漏れるから。解 = 機能単位 (uBlock import) で `rg '[一-鿿]'` をかけ、コメント以外をゼロにする
+- Why 見落とされたのか → 同一機能でもファイルが分かれると sweep の網から漏れるから。解 = 機能単位 (uBlock import) で `rg '\p{Han}'` をかけ、コメント以外をゼロにする
 - 行動可能な解: `getMessageOr(key, 従来文言)` + 辞書 7 件追加。テストの chrome.i18n mock が `''` を返す構成なら fallback で既存日本語断定は不変 (着手時に実測で確定させる)
 
 ## テスト戦略

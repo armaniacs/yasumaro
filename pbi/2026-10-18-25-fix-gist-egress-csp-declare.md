@@ -8,7 +8,7 @@
 
 - 順位: 25 / 25
 - RICE: 80（Reach=20 / Impact=0.25 / Confidence=100% / Effort=0.5）
-- 根拠: 監査25位で、25候補中 RICE が最も低い。Gist 同期の 3 つの fetch は `https://api.github.com` を叩くが `skipCspValidation: true` を渡してランタイムの CSPValidator を飛ばし、かつその origin は `cspDomains.ts` のどの導出にも載っていないため manifest の host_permissions にも extension_pages の connect-src にも宣言されていない。監査ref のダッシュボード meta CSP は connect-src を https://tranco-list.eu だけに固定しており、これは二层目の阻止層。ソースから見える効果方向は fail-closed で、出荷済みの Gist 機能が自分自身の宣言を Browser が禁じているという逆算であり、攻撃者の利得は示されていない。唯一の production 構築点はダッシュボードの接続テストで、sync() / syncBatch() には production 呼び出し元が無い。順位を最下位とするのは「対外 egress の安全側の不整合」であり「境界突破」ではないためであり、着手優先度は低い。ただし出荷済み機能が動作しないという事実自体はユーザーに見える不具合であり、影響的には軽微だが修正には意味がある。
+- 根拠: 監査25位で、25候補中 RICE が最も低い。Gist 同期の 3 つの fetch は `https://api.github.com` を叩くが `skipCspValidation: true` を渡してランタイムの CSPValidator を飛ばし、かつその origin は `cspDomains.ts` のどの導出にも載っていないため manifest の host_permissions にも extension_pages の connect-src にも宣言されていない。監査ref のダッシュボード meta CSP は connect-src を https://tranco-list.eu だけに固定しており、これは二層目の阻止層。ソースから見える効果方向は fail-closed で、出荷済みの Gist 機能が自分自身の宣言を Browser が禁じているという逆算であり、攻撃者の利得は示されていない。唯一の production 構築点はダッシュボードの接続テストで、sync() / syncBatch() には production 呼び出し元が無い。順位を最下位とするのは「対外 egress の安全側の不整合」であり「境界突破」ではないためであり、着手優先度は低い。ただし出荷済み機能が動作しないという事実自体はユーザーに見える不具合であり、影響的には軽微だが修正には意味がある。
 - 種別: 🔧非機能追加（fix）
 - 難易度: 🟢低
 - 副作用: 🔴あり（host_permissions と CSP に origin を追加するため、拡張機能の宣言範囲が広がる。api.github.com は manifest の常時許可ホストと connect-src の許可オリジンになり、ブラウザ側から見れば「この拡張は GitHub API へ接続できる」ことが宣言される。宣言を optional_host_permissions に逃がしてユーザー同意に委ねる選択肢もあるが、Gist は PAT を持つ自己完結型の egress であり chrome.permissions.request の UI 面における遅れを新たに背負うことになる。実害は「宣言範囲の拡大」に留まり、権限そのものは GitHub API の GET / POST / PATCH のみであり、任意サイトへの読み書きではない）
@@ -33,7 +33,7 @@ claimed root cause: `src/utils/cspDomains.ts` は manifest host_permissions と 
 - `src/utils/fetch.ts:118` ― 3つの Gist fetch は runtime origin allowlist を持たず、コード駆動の制御は validateUrl のみ
 - `src/dashboard/gistSettings.ts:44-48` ― `createSharedGistConnectionTester`（gistSyncTarget.js と offscreenGateway.js を動的 import し、`new GistSyncTarget(getSharedSqliteClient())` を返す）が GistSyncTarget の唯一の production 構築点。したがって実際の通信はダッシュボードのページコンテキストから PAT を送出する GET /user のみで、sync() / syncBatch() には production 呼び出し元が無い
 - `wxt.config.ts:270` ― extension_pages の CSP connect-src は `buildLocalConnectSrc()` + `buildConnectSrcDomains()` のみから合成され、api.github.com はブラウザが強制するポリシーに届かない
-- `entrypoints/options/index.html:7-8` ― 監査ref でのダッシュボード手書き meta CSP は connect-src を https://tranco-list.eu だけに固定しており、ダッシュボードコンテキストの Gist fetch に対する二层目の阻止層になっている
+- `entrypoints/options/index.html:7-8` ― 監査ref でのダッシュボード手書き meta CSP は connect-src を https://tranco-list.eu だけに固定しており、ダッシュボードコンテキストの Gist fetch に対する二層目の阻止層になっている
 
 ### 補足（SSOT ではない並列 derivation がある点）
 

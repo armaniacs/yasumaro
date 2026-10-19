@@ -32,7 +32,7 @@ Scenario: 既存テストの維持
 
 ## 受け入れ基準
 - [ ] RecordingLogic クラスが削除されている
-- [ ] RecordingLogic の责務（mutex、settings fetch、retryObsidianWrite）が RecordingPipeline に移動している
+- [ ] RecordingLogic の責務（mutex、settings fetch、retryObsidianWrite）が RecordingPipeline に移動している
 - [ ] retryObsidianWriteOnly がパイプラインのステップチェーンを再利用している
 - [ ] createBackgroundServices.ts が RecordingLogic の作成をしない
 - [ ] `npm run validate` が通過している

@@ -15,7 +15,7 @@
 
 | 順位 | PBI | RICEスコア | R / I / C / E | 根拠・依存関係 |
 |---|---|---|---|---|
-| 1 | 2026-09-14-09-feat-firefox-storage-port.md | **36.0** | 30 / 3 / 80% / 2人日 | プラットフォーム解锁の中核。最大リスク（VFS互換）はプローブで解消済み → Confidence 80%。Phase 1+2 を統合（manifest・ビルドは検証に不可欠なため） |
+| 1 | 2026-09-14-09-feat-firefox-storage-port.md | **36.0** | 30 / 3 / 80% / 2人日 | プラットフォーム拡張の中核。最大リスク（VFS互換）はプローブで解消済み → Confidence 80%。Phase 1+2 を統合（manifest・ビルドは検証に不可欠なため） |
 | 2 | 2026-09-14-10-test-firefox-e2e-ci.md | **32.0** | 20 / 1 / 80% / 0.5人日 | 回帰網の確保。**09 に依存**（gecko.id と動くビルドが前提） |
 | 3 | 2026-09-14-11-chore-firefox-release-readiness.md | **30.0** | 30 / 2 / 50% / 1人日 | 実機 QA の発見事項は工数不確実性が最大 → Confidence 50%。**09・10 に依存**。配布方針（AMO vs GitHub Releases）の意思決定を含む |
 

@@ -218,7 +218,7 @@ Scenario: バックエンドが tag フィルタを honor しない場合の挙�
 3. **backend 分岐 = 統合**（IdbVfsBackend / fallback / in-memory も tag を honor）。
    旧 PBI-34 の「INTENTIONAL divergence」は pinning test が存在しないことを確認済み
    （`query-backends-parametric.test.ts` の 3 divergence に tag は無い）。列投影の
-   33 vs 13 分歧は 2026-09-09-03 の決着どおり維持。
+   33 vs 13 の分岐は 2026-09-09-03 の決着どおり維持。
 
 ### 実装
 

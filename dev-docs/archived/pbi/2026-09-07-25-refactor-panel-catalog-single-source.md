@@ -4,7 +4,7 @@
 options ダッシュボードにパネルを追加・改名する開発者として、「どのパネルが存在するか」が HTML（sidebar ボタン 17 個・data-panel 33 ヒット）・TS descriptor 20 件（main.ts 直登録 11 + staticPanels.ts 9）・`sectionPanelMap`（dashboard.ts）・NavigationRegistry の 4 箇所に分散しているのを、パネルカタログ 1 テーブルから派生させたい、なぜならパネル追加・改名が HTML + main.ts/staticPanels.ts + map の 3-4 点更新になり、`DashboardBootstrapper.registerPanels` は registry.register のループだけの pass-through で、deep-link（`?tab=`）の追加も 3 点同期が必要だから
 
 ## 優先度
-- �順位: 06 / 6（本ラウンド）
+- 優先順位: 06 / 6（本ラウンド）
 - RICEスコア: **5.3**（Reach=2 / Impact=1 / Confidence=80% / Effort=0.3人週）
 - 根拠: パネル追加は頻発しないが、改名・並び替え・i18n キー対応のたびに 4 箇所の横断修正が発生している。registryContext の迂回クリック（`privacySettingsPanel.ts:92` の `document.querySelector('.sidebar-nav-btn[...]')?.click()`）という seam 迂回が実在し、`getRegistry().navigate()` への寄せと合わせて小さく解ける。
 

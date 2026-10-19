@@ -14,13 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 12件完了（01〜08・10〜12）＋派生 1件（13）未着手 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → 13(100)
+### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 13件すべて完了（01〜13） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → ~~13(100)~~
 
 PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**（01〜09）。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。その後 **PBI 02 の独立レビューが同意ゲートの穴を 4 件実証**し、10・11 として追加起票、inventory 中に別途見つけた同意レコードのエクスポートを 12 として起票した（NN は起票順のため RICE 順とは一致しない。`10` は RICE 480 で 03 に次ぐ 2 番目、`11` は 400 で 04/05 と同点、`12` は 300）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---:|---:|---:|---|
-| ⬜ 13 | [2026-10-19-13-fix-archived-ledger-hangul-residue.md](2026-10-19-13-fix-archived-ledger-hangul-residue.md) | fix | 100 | 0.5 | アーカイブ台帳に残るハングル混入 62 文字 / 13 ファイル（PBI 09 の棚卸しで発見） |
 
 進め方: **同意系（03 → 10 → 11 → 07）を先に**まとめると、同意の実効性（受付・実行時・表示）を 1 期で閉じられる。**redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。01・02 は完了・アーカイブ済み（2026-10-19）。
 
@@ -502,6 +501,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-10-20 PBI 2026-10-19-13 アーカイブ ― 台帳の文字化けを全量修復（326 箇所 / 104 ファイル）
+
+- 起点: アーカイブ済み PBI に残ったハングル 62 文字 / 13 ファイル（PBI 09 の棚卸しで発見）。実装時に検証スクリプトを新設して測り直し、対象が**326 箇所 / 141 種類 / 104 ファイル**（ハングル・簡体字・`U+FFFD`・アラビア文字）に広がっていたため、全量を修復した。
+- 判断基準: 文法から復元語が一意に決まるものは置換、決まらないものは**語句ごと削除**（推測で文を作らない）。製品が描画する記号 `∉`（バッジ）・`⏎`（ログ区切り）はコード span 内で維持。正規表現・grep の漢字レンジは `\p{Han}` へ置換（意味は同じで CP932 内）。
+- 再発防止: 規約を `AGENTS.md` / `CLAUDE.local.md` に明文化（PR #196）し、検査を `scripts/check-docs-chars.mjs` の 1 実装に集約して `npm run validate` に配線した。以後は CI で混入が落ちる。
+- 検証: `npm run check:docs-chars` → `1732 files scanned, 0 with violations`（exit 0）。
+
 ### 2026-10-19 security-audit run-2 B1/B3 一部 ― PBI 01・05・08 完了（3件アーカイブ済み）
 
 security-audit run-2（`d49d70a3`）の needs_validation 25件のうち 3件を実装・アーカイブ。
@@ -910,7 +916,7 @@ RICE 順・依存グラフ・ファイル非重複で判定し、触るファイ
 wave 1 に続き、RICE 順・依存グラフ・ファイル非重複で 3 件を並列実装し、docs 2 件は直接完了させた。**Playwright を実走** して初めて低成本で検出できる回帰を 1 件摘出した。統合検証: type-check PASS / lint 0 errors（145 warnings = baseline）/ **920 files・14245 tests passed**（21 skipped）/ build PASS / `type-check:test` 255 = HEAD baseline / `lint:adr-links` 55 ADR / `lint:layers-docs` 同期 / version 6.9.26 一致。
 
 - [2026-09-26-08-lint-e2e-tests.md](../dev-docs/archived/pbi/2026-09-26-08-lint-e2e-tests.md)（✅ 完了・**実走で回帰を 1 件検出**。`local/no-fixed-wait` を新設し `testDir/` を ignores から除外。`waitForTimeout` 12 件は条件待ち 9 件＋理由明示 opt-out 3 件。ただし lint と型検査だけでは置換の正しさは証明されず、Playwright 実走の結果 `content-script-recording.spec.ts:148` が失敗した。陰性判定「stay < 5s」の窓を 2.0s から 2.5s へ押す変更は閾値の境へ近づけるだけで意味を持たず、直前のステップですでに条件が成立しているため、そこを待った直後に判定する形へ戻した（`24e3e28f`）。`--repeat-each=5 --retries=0` で 25 件全通過。`bench:e2e` 3 passed で `autosave-latency` の mark 到位を実測。**残存**: pii-wasm spec の opt-out 1 件は `test.skip` により実走未検証。RICE 1.0）
-- [2026-09-25-11-refactor-structured-failure-taxonomy.md](../dev-docs/archived/pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md)（✅ 完了・**表示文言の 4 変化を統合で阻止**。retry 判断が `errorMessage(error).toLowerCase()` の 9 語一致で、Obsidian の 401/403 が「connection」を含む文言のために auth と誤認され offline queue に入っていた。`src/utils/failureTaxonomy.ts`（Layer 0）に 7 kind の SSOT を新設。実装当初から `classifyError()` を kind 起点に配線の影響を検査し、**Obsidian の 401/403・404・429・5xx の 4 つの表示が変わる**ことを確認。導入前の表示キーはメッセージ文面に依存していたため静态な kind→ErrorType 表で parity を再現できず、表示経路を kind から切り離した（`classifyError(with kind) === classifyError(without kind)` を 7 kind × 7 メッセージで固定）。文言修正は PBI 32 として分離。秘密情報非混入は実 API キー入り Error で固定。RICE 1.6）
+- [2026-09-25-11-refactor-structured-failure-taxonomy.md](../dev-docs/archived/pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md)（✅ 完了・**表示文言の 4 変化を統合で阻止**。retry 判断が `errorMessage(error).toLowerCase()` の 9 語一致で、Obsidian の 401/403 が「connection」を含む文言のために auth と誤認され offline queue に入っていた。`src/utils/failureTaxonomy.ts`（Layer 0）に 7 kind の SSOT を新設。実装当初から `classifyError()` を kind 起点に配線の影響を検査し、**Obsidian の 401/403・404・429・5xx の 4 つの表示が変わる**ことを確認。導入前の表示キーはメッセージ文面に依存していたため静的な kind→ErrorType 表で parity を再現できず、表示経路を kind から切り離した（`classifyError(with kind) === classifyError(without kind)` を 7 kind × 7 メッセージで固定）。文言修正は PBI 32 として分離。秘密情報非混入は実 API キー入り Error で固定。RICE 1.6）
 - [2026-09-25-17-fix-settings-migration-completion-state.md](../dev-docs/archived/pbi/2026-09-25-17-fix-settings-migration-completion-state.md)（✅ 完了・データ損失唯一の優先項目。完了フラグが truthy だけ、**かつバックアップ作成と legacy key 削除より先に書かれていた**ため、中断時に完了だけ立ち移行が永久に再実行されなかった。`SETTINGS_MIGRATION_SCHEMA_VERSION = 2` と `pending → backed_up → legacy_removed → completed` の単調増加 stage を導入し、完了記録を最後の 1 回-only に移した。legacy key 分類を `!key.includes('_version')` 文字列マッチから `StorageKeys` 実値判定へ変更（`gemini_api_version` が誤って legacy 扱いされていた）。削除直前に値と CAS generation を取り直し、動いていれば追従してやり直す。新規 31 tests で順序逆転・各中断段階・boolean true の非破壊修復を固定。**PBI 18 へ引き継ぎ**: `privacy_consent*` と `recording_triggers` 系は raw 直読みなのに nested へ移され raw が削除される同種のベクタが残る。RICE 1.2）
 - [2026-09-25-21-doc-ssrf-threat-model-residual-risk.md](../dev-docs/archived/pbi/2026-09-25-21-doc-ssrf-threat-model-residual-risk.md)（✅ 完了・docs only。Security Review Guide に SSRF ガードの検査範囲・4 入口・緩和策・DNS rebinding の残存リスク・MV3 の制約・受容者を記載。**着手時に PBI 本文と実装の食い違いを 1 件発見**: 本文は「4 入口すべてが redirect 先を再検証」と読めるが、`FETCH_URL` は `redirect: 'error'` を使い per-hop 再検証の `fetchWithRedirectGuard` はこの経路で未使用。入口ごとの差を表に明記。RICE 0.8）
 - [2026-09-25-19-doc-docs-catalog-accessibility-i18n.md](../dev-docs/archived/pbi/2026-09-25-19-doc-docs-catalog-accessibility-i18n.md)（✅ 完了・docs only。guides と i18n guide を README 日英 2 リスト（4 links）と Pages カタログ（2 cards、25→27）へ掲載。**PBI の 2 条件が実コードで両立せず裁定**: 「description も日英併記」vs「既存構造に合わせる」。既存 25 card の description は全件日本語のみで、CSS に `.card .d small` が無く `<small>` を入れても block にならず崩れるため既存形を優先し、**逸脱を DoD に未充足として明記**（推測で `[x]` にしていない）。RICE 1.0）
@@ -919,7 +925,7 @@ wave 1 に続き、RICE 順・依存グラフ・ファイル非重複で 3 件�
 ### 2026-09-25 残債ラウンド ― ✅ PBI 24 完了（アーカイブ済み）UX 裁定のみ・production code 無変更
 
 裁定により PBI 2026-09-26-03（遷移記録基盤）の `privacyConsent.ts` 競合が解消した。
-裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部備份境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
+裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部バックアップ境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
 
 - [2026-09-25-24-investigate-privacy-reconsent-ux.md](../dev-docs/archived/pbi/2026-09-25-24-investigate-privacy-reconsent-ux.md)（✅ 完了 ― 裁定記録のみ（production code 無変更）。裁定4件: ①再同意入口は dashboard の Privacy 画面（decline 後の案内が指す「設定画面」と一致し実在の導線になる。popup の常時バナーは 30 日抑制と衝突するため不採用）②明示操作は 30 日抑制を bypass するが、自動表示の抑制状態は書き換えない ③withdraw 後も履歴保持を許し、同意撤回と履歴削除を分離する ④バックアップからの履歴復元は促さない。`privacy_consent` は restore allowlist に無く、復元は同意済み状態にしない。`reconsentConsent()` は新設せず既存 API を組み合わせる。denial counter reset は `acceptConsent()` 冒頭の1行で、`resetConsentDeniedCount()` は既に存在するため後続 `fix` S-2（0.5 SP）へ切り出し。裁定により **PBI 2026-09-26-03 の `privacyConsent.ts` 競合が解消**（03 は `withdrawPrivacyConsent()` 直後、S-1 は dashboard panel、S-2 は `acceptConsent()` 冒頭で同一行を触らない））
 
@@ -1547,9 +1553,9 @@ round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 
 診断（HTML レポート: `/tmp/architecture-review-20260909.html`）→ RICE 採点 → 実装。バッチ1（並列: 01+02 / 03 / 04 / 06・ファイル非重複）→ バッチ2（05・02 着地後）。台帳据え置き 5 項目は `2026-09-05-00-backlog-future.md` の「2026-09-09 round 3 で台帳入り」節。なぜなぜ分析は `/tmp/kilo/whywhy/2026-09-09-0909a.md`。
 
-- 2026-09-09-01-fix-limits-ssot.md（✅ 完了・アーカイブ済 ― 上限定数を `src/messaging/limits.ts` に統合（validator/handler/dashboard 事前チェックが同一ソース参照）。実効値維持（validator が先走りのため MAX_IMPORT_ROWS=1000 / MAX_APPEND_IDS=100）、意図的分歧（audit 1000 vs 100000）は名前付き変種化、`importLogsService` の 100_000 は別概念 `IMPORT_TOTAL_ROW_CAP` として命名。drift ガードテスト新設。検証: type-check / lint / 285 tests green）
+- 2026-09-09-01-fix-limits-ssot.md（✅ 完了・アーカイブ済 ― 上限定数を `src/messaging/limits.ts` に統合（validator/handler/dashboard 事前チェックが同一ソース参照）。実効値維持（validator が先走りのため MAX_IMPORT_ROWS=1000 / MAX_APPEND_IDS=100）、意図的分岐（audit 1000 vs 100000）は名前付き変種化、`importLogsService` の 100_000 は別概念 `IMPORT_TOTAL_ROW_CAP` として命名。drift ガードテスト新設。検証: type-check / lint / 285 tests green）
 - 2026-09-09-02-refactor-update-whitelist-ssot.md（✅ 完了・アーカイブ済 ― `handleUpdate` の手写し 31 項を `UPDATABLE_FIELDS` import 化、dashboard 10 項を `DASHBOARD_MUTABLE_SUBSET` に命名し subset テストで固定、payload エイリアス 7 件を `normalizeStorageQuery` 純関数に統合、gateway フラット化 wire 契約を JSDoc 明示、`sqlite-security-integrity.test.ts` を SSOT import pin + ランタイム whitelist 検証に移行。検証: type-check / lint / 421 tests green）
-- 2026-09-09-03-refactor-row-codec.md（✅ 完了・アーカイブ済 ― `rowCodec.ts` 新設（mapNamed/mapPositional 統合・rank 注入点 1 箇所）、`buildPlainListStatements` の columns 必須化、IdbVfsBackend 3 mapper と worker 2 mapper を統合。**本番バグ検出・修正: insertBatch の OPFS worker 経路が最終 1 文のみ計数し `inserted/skipped` が wire で欠落（実機 SQLite で実測）**。33 vs 13 列分歧は dashboard 表示劣化を避け spec として維持・決着記録。検証: type-check / lint / 3250 tests green）
+- 2026-09-09-03-refactor-row-codec.md（✅ 完了・アーカイブ済 ― `rowCodec.ts` 新設（mapNamed/mapPositional 統合・rank 注入点 1 箇所）、`buildPlainListStatements` の columns 必須化、IdbVfsBackend 3 mapper と worker 2 mapper を統合。**本番バグ検出・修正: insertBatch の OPFS worker 経路が最終 1 文のみ計数し `inserted/skipped` が wire で欠落（実機 SQLite で実測）**。33 vs 13 列分岐は dashboard 表示劣化を避け spec として維持・決着記録。検証: type-check / lint / 3250 tests green）
 - 2026-09-09-04-refactor-export-validator-ssot.md（✅ 完了・アーカイブ済 ― `requiredKeys` 手写し 21 キーを `DEFAULT_SETTINGS` keys − `API_KEY_FIELDS` 派生に置換（旧リストの ~130 キー漏れを是正）、`apiKeyKeys` を SSOT 参照化、blob 保存 12 行 ×2 を `saveJsonToFile` に統合。移行同値テスト 8 件新設。検証: type-check / lint / utils 4348 tests green）
 - 2026-09-09-05-refactor-archive-op-codec.md（✅ 完了・アーカイブ済 ― `archiveWireTable.ts` を codec 携行の `ArchiveOpDescriptor` に拡張し、dashboard `callArchive` / SW `runArchive` / offscreen `ARCHIVE_DISPATCH` / worker `proxyArchive` / `StorageBackend` 型 / deps `as` キャストを全て行派生に統一（新 op = 1 行 + worker handler）。`as any` 0 件、コンパイル時双方向 assert 維持。公開 14 関数名・noRetry 契約・応答フィールドは不変。検証: type-check / lint / 5969 tests green + E2E archive 系 green）
 - 2026-09-09-06-refactor-strip-engine.md（✅ 完了・アーカイブ済 ― `SelectorRuleDef` テーブル + `stripBySelectors` エンジン新設、パターン系 23 関数をテーブル行化（news/ec/qa/video 4 コピー解消）、bespoke 11 関数は維持。stripCore 522→166 行 / stripExtended 1,049→493 行（−912 行 / −58%）。旧関数は 1 行 delegate として残置し既存テスト無改変でエンジンを検証。重複パターン棚卸し記録（テーブル内 5・cross-table 67、全て残置が正）。検証: type-check / lint / 895 tests green）
@@ -1622,7 +1628,7 @@ round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 
 ### 2026-09-06 アーカイブ 文言修正（着手完了）
 
-- 2026-09-06-06-fix-archive-backup-wording.md（✅ 完了・アーカイブ済 ― Archiveパネル説明を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ja/en）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピー ― 分析はPBI内参照）。i18n保洁テスト2件追加、SETUP_GUIDE/FAQ/READMEの用語統一）
+- 2026-09-06-06-fix-archive-backup-wording.md（✅ 完了・アーカイブ済 ― Archiveパネル説明を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ja/en）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピー ― 分析はPBI内参照）。i18nクリーンアップテスト2件追加、SETUP_GUIDE/FAQ/READMEの用語統一）
 
 ### 2026-09-06 アーカイブ 一時オープン（着手完了）
 
@@ -2500,8 +2506,8 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **47 ファイル（INDEX 1 / 2026-10-19 の 1〔13〕/ 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。01〜12 は完了・アーカイブ済み。2026-10-19 実測: `ls pbi/*.md` = 47）** |
-| アーカイブ済みPBI | 1420（`00-backlog` 台帳を含む。2026-10-19 実測） |
+| **`pbi/` 残存 PBI 合計** | **46 ファイル（INDEX 1 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 の 13 件はすべて完了・アーカイブ済み。2026-10-20 実測: `ls pbi/*.md` = 46）** |
+| アーカイブ済みPBI | 1421（`00-backlog` 台帳を含む。2026-10-20 実測） |
 | アーカイブ済み実装計画 | 187 |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。

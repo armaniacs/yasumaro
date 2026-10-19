@@ -55,7 +55,7 @@ Scenario: 契約の維持
 
 - policy の正（SSOT）は調査報告書 `dev-docs/archived/plans/2026-09-27-pbi13-obsidian-write-replay-idempotency-policy.md` §2〜§3
 - 同一内容検出は「時間に依存しない完全冪等」であり、dedupe window は設けない（裁定 Q4）
-- payload サイズ増（markdown 1 份）は queue 上限 50KB の既存チェックに含まれる
+- payload サイズ増（markdown 1 件分）は queue 上限 50KB の既存チェックに含まれる
 - 同じ URL を 2 回訪問した 2 件目の録画は新しい pipeline run が新しい payload（別 timestamp）を持つため、内容検出に引っかからない。同一 URL・同一秒の衝突は行内 URL 表記で区別される（後続 fix のテストで確認）
 
 ## Definition of Done

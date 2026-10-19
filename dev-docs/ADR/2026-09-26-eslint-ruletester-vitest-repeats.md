@@ -170,7 +170,7 @@ Vitest は `describe` の本体を**遅延実行**する。計測したところ
 
 スイート全体は 921 ファイル / 14,260 テストで green である。`shared` 全体も
 `--sequence.shuffle` を含めて green である。固定費用は 6 ファイル分だけ増えるが、
-[同为日の ADR](./2026-09-26-test-suite-execution-time-contract.md) の
+[同日の ADR](./2026-09-26-test-suite-execution-time-contract.md) の
 「固定費用はファイル数で増える」に照らすと 6 ファイル分は誤差の範囲である。
 
 なお本測定のマシンは 8 コアに対し load average が 17 から 22 の状態で、wall の

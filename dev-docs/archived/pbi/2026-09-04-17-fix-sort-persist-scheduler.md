@@ -26,7 +26,7 @@ Scenario: テストは即時スケジューラを注入して同期的に検証�
 - [x] PersistScheduler seam（defer(fn, ms) / cancel）が注入可能になる
 - [x] 本番既定は 500ms setTimeout、unmount で flush（既存挙動維持）
 - [x] sort-persistence テストが注入で同期検証に更新される
-- [x] 既存 asyncData suite 全绿
+- [x] 既存 asyncData suite 全緑
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト

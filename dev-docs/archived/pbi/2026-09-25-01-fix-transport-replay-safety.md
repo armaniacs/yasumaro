@@ -136,7 +136,7 @@ Scenario: 再実行禁止として明示された変更処理が再送されな�
 
 - `SQLITE_INSERT`: OPFS / IDB は通常の INSERT のため、1 回目が反映済みで応答だけ失われると 2 回目は UNIQUE 制約違反で `success: false` を返す。fallback は重複時に `id: -1` を返し後続 UPDATE の対象行を失う。`created_at` が欠落していると codec が再生成し UNIQUE キー自体が変わりうる。backend 間で最終状態が一致しないため retry-unsafe。
 - `SQLITE_INSERT_BATCH`: retry すると 2 回目は全件 duplicate 扱いで `inserted` / `count` が 0 になり、`legacyMigration` が `count < batch.length` を部分失敗と判定して `failed_permanently` になりうる。retry-unsafe。
-- 回復は外側の `pendingSqliteQueue` と migration retry に委ねる。transport 層で「安全に再送できないものを再送する」재를 만들さない。
+- 回復は外側の `pendingSqliteQueue` と migration retry に委ねる。transport 層で「安全に再送できないものを再送する」経路を作らない。
 - 3 backend の response contract 統一（重複時に既存行 ID を返す、inserted と processed を分離）は本 PBI のスコープ外であり、別 PBI を起こす候補。
 
 また retry policy を唯一の判定源にするため、archive descriptor の冗長な `noRetry` フラグと gateway の toggleStar hardcode を撤去した。`opts.noRetry` は低レベル transport の明示 override として残す（production の gateway からは渡されない）。

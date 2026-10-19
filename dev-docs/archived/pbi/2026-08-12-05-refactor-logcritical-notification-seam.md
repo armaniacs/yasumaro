@@ -27,7 +27,7 @@ PBI-1（core 分割）と並行して進められる。
 4. **Why 4**: 実利用は何箇所か → 調査で判明: 実利用は `sqliteAlert.ts:44` の 1 箇所のみ（他はテスト）。通知発火の起点は sqliteAlert であり logger は単なる実行者。
 5. **Why 5**: 分離の形は「logger から通知削除、sqliteAlert が直接通知」か → それだと将来 logCritical 利用箇所が増えた時に通知忘れが起きる。
 6. **Why 6**: では「logCritical は記録のみ、通知は adapter 経由で発火」か → そう。logCritical は onCriticalLog コールバック（または CriticalAlertSink adapter）を受け、記録後にそれを呼ぶ。
-7. **Why 7**: コールバック注入はどこか → logger は chrome ランタイムに依存しない純粋な記録层にしたい。initializeLogger({ criticalSink }) の初期化 seam で注入、または logCritical の引数に sink を受ける。
+7. **Why 7**: コールバック注入はどこか → logger は chrome ランタイムに依存しない純粋な記録層にしたい。initializeLogger({ criticalSink }) の初期化 seam で注入、または logCritical の引数に sink を受ける。
 8. **Why 8**: 引数に sink を受けると 159箇所の addLog には影響するか → しない。logCritical の呼び出し側（sqliteAlert）のみ変わるが実利用 1 箇所のみで影響小。
 9. **Why 9**: 二重クールダウンにならないか → logCritical 内のクールダウンを削除し、通知のクールダウンは sink 側（sqliteAlert または CriticalAlertSink）が責任を持つ。
 10. **Why 10**: テストは → 通知のテスト（クールダウン/i18n）が logger から分離され fake sink で検証可能。logCritical 自体は「記録+sink 呼び出し」のみをテスト。

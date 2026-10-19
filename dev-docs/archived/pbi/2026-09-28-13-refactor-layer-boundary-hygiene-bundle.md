@@ -131,7 +131,7 @@ Scenario: 偽 union の cast が局所 union に置き換わる
 ### 実装手順
 
 1. `rg` で `src/dashboard` から background runtime クラスを `new` する経路を再確認し、本 PBI の対象が (a) のみであることを確定する。
-2. **(a)**: `src/dashboard/gistSettings.ts` から runtime クラスの直接構築を 제거し、正規 singleton 経路（`getSharedSqliteClient`）かメッセージ経由の注入 seam で `testConnection` を実行する形に変える。3 責務の分離方針を決める。独立 commit 候補。
+2. **(a)**: `src/dashboard/gistSettings.ts` から runtime クラスの直接構築を除去し、正規 singleton 経路（`getSharedSqliteClient`）かメッセージ経由の注入 seam で `testConnection` を実行する形に変える。3 責務の分離方針を決める。独立 commit 候補。
 3. **(a) 検証**: 接続テストの成功・失敗の両経路で、正規 singleton と dashboard 経路が同一インスタンスを観測することを確認する。独立 commit 候補。
 4. **(b)**: `src/offscreen/opfsCapabilities.ts:10-52` の純関数を `src/utils/vfsCapabilities.ts` へ移し、`:54-71` の live wrapper を offscreen 側に残す。`src/dashboard/panels/diagnostic/DiagnosticsCollector.ts:21` の runtime import を純 core 経由へ置き換える。独立 commit 候補。
 5. **(b) 検証**: 純 core が live globals なしで同じ検出値を返すことを pin し、dashboard から offscreen への runtime edge が 0 件であることを確認する。

@@ -141,7 +141,7 @@ Scenario: 静的 pin が full-snapshot への回帰を検出する
 
 ## 決定事項
 
-1. 台帳が 2 経路（`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171`）と記録したのは、同一関数内の getAll スナップショット書き込みが「保存関数」と「復元関数」に見 구분されていたためである。実際は 1 本の関数であり、`:171` はその最終代入である。
+1. 台帳が 2 経路（`src/dashboard/settings/aiSummaryCleansingSettingsV2.ts:151` と `:171`）と記録したのは、同一関数内の getAll スナップショット書き込みが「保存関数」と「復元関数」に見分けられていたためである。実際は 1 本の関数であり、`:171` はその最終代入である。
 2. ここだけ残ったのは、PBI 2026-09-28-02 が seam 採用箇所を IIFE 形状で列挙し、IIFE でない full-snapshot writer を検出対象の外に置いていたためである。
 3. 今是正する必要が立っている理由は、本ファイルが delta-write 契約の違反形態（getAll スナップショットの書き戻し）を保持したまま production に残り、並行 writer の変更を巻き戻す余地を残しているためである。
 4. delta は `settings` 引数（フォームが組み立てた値オブジェクト）から構築し、`getAll()` を経由しない。

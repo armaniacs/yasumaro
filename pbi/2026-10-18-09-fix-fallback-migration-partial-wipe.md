@@ -24,7 +24,7 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 - [entrypoint] `src/offscreen/sqliteEngineHost.ts:235`（engine init）― `_doInit` のステップ4。`runMigrationBackup`（`:223`）と `runMigrationRestore`（`:232`）の後に `tryMigrateFallbackToSqlite(this.fallbackMigrationState)` を await する。engine 初期化は成功扱いで返る（`:236 return true`）ため、失敗は上位に伝播しない。
 - [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:29`（snapshot）― `new FallbackStorage()`（`:28`）が別インスタンスなので mutex も別（`storageFallback.ts:24 private readonly mutex = new Mutex()`）。稼働中の engine が持つ FallbackStorage とはロックを共有せず、`getAllRecords()`（`storageFallback.ts:475`）で全件を一度だけ読む。
 - [propagation] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:42`（migration loop）― 各レコードを `INSERT OR IGNORE`（`src/offscreen/schema.ts:145`）で `execWithCache`（`idbEngineLifecycle.ts:55`）経由の投入。失敗は `:47-48` の空 catch で飲み込まれ、`migrated++`（`:46`）は成功時のみ。ループは打ち切られない。
-- [sink] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53`（destruction）― `if (migrated > 0)`（`:51`）が成立すると `tempFallback.clearAll()` が `FALLBACK_STORAGE_DATA`（`storageFallback.ts:15`）を全消しする（`storageFallback.ts:361`、実体は `:57 mutate(() => ({ next: { records: [] } }))`）。INSERT に失敗したレコードもここで死ぬ。`:55` が `OPFS_FALLBACK_MODE` を落とし、残りが無かったことに两端が寄与する。
+- [sink] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:53`（destruction）― `if (migrated > 0)`（`:51`）が成立すると `tempFallback.clearAll()` が `FALLBACK_STORAGE_DATA`（`storageFallback.ts:15`）を全消しする（`storageFallback.ts:361`、実体は `:57 mutate(() => ({ next: { records: [] } }))`）。INSERT に失敗したレコードもここで死ぬ。`:55` が `OPFS_FALLBACK_MODE` を落とし、残りが無かったことに両端が寄与する。
 
 ### Evidence
 

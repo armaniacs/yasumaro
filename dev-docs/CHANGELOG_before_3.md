@@ -311,7 +311,7 @@ v3.0.0 以降の変更履歴は [CHANGELOG.md](CHANGELOG.md) を参照してく�
   - 1秒未満はミリ秒、1秒以上は秒（小数第1位）で自動切り替え
 
 ### Security
-- **プロンプトインジェクション対策の改善**: 危険なパターンを検出时的完全ブロックから、サニタイズ后的再評価に変更
+- **プロンプトインジェクション対策の改善**: 危険なパターンを検出時の完全ブロックから、サニタイズ後の再評価に変更
   - `src/background/ai/providers/GeminiProvider.ts`: サニタイズ後のコンテンツで危険度を再評価
   - `src/background/ai/providers/OpenAIProvider.ts`: 同様の再評価機能を実装
   - 危険な部分のみ[FILTERED]に置き換え、残りの安全なコンテンツをAIに送信

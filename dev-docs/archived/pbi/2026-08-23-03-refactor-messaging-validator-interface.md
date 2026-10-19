@@ -197,26 +197,26 @@ export class ValidationError extends Error {
 // sqliteValidators.ts
 export class SqliteMessageValidator implements MessageValidator<DashboardSqliteRequest> {
   validate(msg: unknown): DashboardSqliteRequest {
-    // 既존 logic を method に move
+    // 既存 logic を method に move
     if (!isSqliteOperation(msg)) throw new ValidationError('SqliteMessage', '...')
     return msg as DashboardSqliteRequest
   }
 }
 ```
 
-### Step 3: 新規 validator 추출（BrowsingLog, AIResponse など）
+### Step 3: 新規 validator 抽出（BrowsingLog, AIResponse など）
 ```typescript
-// src/messaging/browsingLogValidator.ts (새로 생성)
+// src/messaging/browsingLogValidator.ts (新規作成)
 export class BrowsingLogValidator implements MessageValidator<BrowsingLogMessage> {
   validate(msg: unknown): BrowsingLogMessage {
-    // handler에서 분산된 logic을 수집
+    // handler で分散した logic を収集
   }
 }
 ```
 
-### Step 4: Handler registry에 validator 등록
+### Step 4: Handler registry に validator を登録
 ```typescript
-// src/background/handlers/handlerRegistry.ts (또는 DI layer)
+// src/background/handlers/handlerRegistry.ts (または DI layer)
 const registry = new MessageHandlerRegistry()
   .registerValidator('sqlite', new SqliteMessageValidator())
   .registerValidator('browsing-log', new BrowsingLogValidator())
@@ -224,9 +224,9 @@ const registry = new MessageHandlerRegistry()
   .register('record', new RecordingHandler(registry.getValidator('browsing-log')))
 ```
 
-### Step 5: Handler에서 validator 호출
+### Step 5: Handler で validator を呼び出し
 ```typescript
-// Handler 구현에서
+// Handler 実装で
 class RecordingHandler {
   constructor(private validator: MessageValidator<BrowsingLogMessage>) {}
   
@@ -239,7 +239,7 @@ class RecordingHandler {
 
 ### Step 6: Error handling & logging
 ```typescript
-// Handler wrapper에서
+// Handler wrapper で
 try {
   const validated = validator.validate(msg)
   await handler.handle(validated)

@@ -224,14 +224,15 @@ forbidden characters.
 - Accented Latin letters (`Ō`, `ç`, `ó`, `á`) become the basic Latin letter (`Ō`→`O`, `ç`→`c`).
 - **Mojibake is never an exception.** Hangul, Simplified Chinese, `U+FFFD`, and Arabic text are
   corruption: rewrite the sentence instead of exempting it (tracked as PBI `2026-10-19-13`).
-- **Emoji: only the enumerated set below** (67 + flags + presentation modifiers `U+FE0F` / `U+20E3`):
+- **Emoji: only the enumerated set below** (68 + any national flag + presentation modifiers `U+FE0F` / `U+20E3`):
 
   ```
   ✅ 🟡 🟢 🎯 🔴 ✓ 🔧 ⬜ ❌ ⚙ 🔒 📝 ✗ ⚠ 📋 🔵 🔶 🤖 ♻ 🧹 📊 🏷 🌐 ✨
   🛡 🚧 🖱 🗄 💡 🐛 📱 🚫 ☁ 📌 📦 🔐 🔍 ❓ ⛅ 🌨 ✕ ☰ 🎉 📂 ✏ 🔔 🙏
-  🚀 ⛔ 📈 🕸 📉 🖥 🗑 🦋 📜 🟣 🗂 📖 💎 🔗 🔓 😀 🧪 ⏳ ⏸ ▶ 🇯🇵
+  🚀 ⛔ 📈 🕸 📉 🖥 🗑 🦋 📜 🟣 🗂 📖 💎 🔗 🔓 😀 🧪 ⏳ ⏸ ▶ 🦄
   ```
 
+  Any national flag is allowed (two regional indicators, `U+1F1E6`-`U+1F1FF`: 🇯🇵 🇺🇸 🇫🇷).
   Adding an emoji means updating this list first. It is enumerated, not a range, so the set cannot
   grow without a deliberate edit.
 - **Product glyphs are quoted on purpose:** `∉` (toolbar badge) and `⏎` (log line-break separator)

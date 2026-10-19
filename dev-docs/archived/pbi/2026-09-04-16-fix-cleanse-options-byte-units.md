@@ -27,7 +27,7 @@ Scenario: 単独呼び出しでは bytes が Blob 基準で入る
 - [x] extractor 経路（runAiSummaryCleanse）で Blob 直列化が 0 回になる
 - [x] bodyProtectionThreshold の既定値二重記載（120 vs 200）が 1 定数に統一される
 - [x] 単独呼び出し（measureBytes: true）の bytes が従来どおり
-- [x] contentExtractor / aiSummaryCleaner suite 全绿
+- [x] contentExtractor / aiSummaryCleaner suite 全緑
 
 ## テスト戦略（t_wadaスタイル）
 ### 単体テスト

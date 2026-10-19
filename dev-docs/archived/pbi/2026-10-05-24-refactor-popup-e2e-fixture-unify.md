@@ -13,7 +13,7 @@ E2E を保守する開発者として、popup 起動のフィクスチャを 1 �
 
 ## 背景（file:line 現状）
 
-- `testDir/e2e/fixtures/popup.fixture.ts:31-102`: context 起動・fixme ガード `:32-42` / extensionId `:44-47` / `pages()[0] ?? newPage()` `:51-52` / `window.close` スタブ `:62-63` / `chrome.tabs.create` スタブ `:68-73` / TEST_CONNECTION 拦截 `:76-93` / goto + dismiss `:96-98`
+- `testDir/e2e/fixtures/popup.fixture.ts:31-102`: context 起動・fixme ガード `:32-42` / extensionId `:44-47` / `pages()[0] ?? newPage()` `:51-52` / `window.close` スタブ `:62-63` / `chrome.tabs.create` スタブ `:68-73` / TEST_CONNECTION 遮断 `:76-93` / goto + dismiss `:96-98`
 - `testDir/e2e/fixtures/popup-pbi27.fixture.ts:21-106`: 同型（`:22-36` / `:38-41` / `:44-45` / `:57-59` / `:61-67` / `:85-97` / `:100-102`）、さらに `chrome.tabs.query` スタブ `:69-83`
 - `testDir/e2e/fixtures/cleansing-preview.fixture.ts:28-155`: 同型（`:29-43` / `:45-48` / `:51-52` / `:94-96` / TEST_CONNECTION `:128-132` / goto + dismiss `:140-142`、`chrome.tabs.query` スタブ `:66-80`）
 - 不一致: `popup.fixture.ts` は `chrome.tabs.query` をスタブしない、他 2 はする → 3 システムの被検体振る舞いが違う
@@ -36,7 +36,7 @@ Scenario: tabs.query スタブの有無が明示される
 ## 受け入れ基準
 
 - [x] `createPopupFixture({ seedPolicy, tabStub?, initScript? })` が 1 つ作られ、context / extensionId / `pages()[0]` / goto / dismiss を内包している
-- [x] 3 spec は差分（`tabs.create` 記録の有無、`GET_CONTENT` / `PREVIEW_RECORD` 拦截）だけを `initScript` で差し込んでいる
+- [x] 3 spec は差分（`tabs.create` 記録の有無、`GET_CONTENT` / `PREVIEW_RECORD` 遮断）だけを `initScript` で差し込んでいる
 - [x] `tabs.query` スタブの有無はオプション名で明示されている
 - [x] 既存 3 spec の観測結果が無変更である
 - [x] `npm run validate` が PASS する（最終ゲートで確認。E2E 自体はブラウザ要のため CI 範囲）

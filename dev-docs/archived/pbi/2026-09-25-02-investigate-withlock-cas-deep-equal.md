@@ -37,7 +37,7 @@ Scenario: value-level CAS を導入する場合の基準
 Scenario: Contracts を強化する場合の基準
   Given pre-write canonical deep-equal を導入しない方針が採用された
   When object write の利用契約と必要な変更を確認する
-  Then updateFn の純粋性と冪等性뿐 아니라、in-place mutation を禁止する境界を明記する
+  Then updateFn の純粋性と冪等性だけでなく、in-place mutation を禁止する境界を明記する
   And permissionManager の in-place updater について、変更するか対象外とするかを裁定する
   And version を唯一の durable conflict signal として残し、残存リスクを記録する
 ```

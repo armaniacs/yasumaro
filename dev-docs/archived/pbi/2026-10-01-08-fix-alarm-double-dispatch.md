@@ -101,7 +101,7 @@ Then `checkTimeout()` は呼ばれず、daily purge の `run` のみが走る
 変更した内容:
 
 - `SessionAlarmService.ts` ― `setupAlarmListener()` メソッド・`alarmListenerSetUp` フィールド・`startTimeoutChecker()` からの呼び出し・内部 `onAlarm` 登録を削除。`checkTimeout()` の doc コメントを「registry の run hook 経由が唯一の入口」に更新
-- `service-worker.ts` ― `init()` から `sessionAlarmService.initialize()` の直接呼び出しを撤去し、registry の `installAll()` → `sessionTimeoutInstallRef` を唯一の start 経路にした。`setSessionTimeoutRefs` の run 側を `await` 付きに整齐え、refs が session-timeout job の唯一の wire であることをコメントで明示
+- `service-worker.ts` ― `init()` から `sessionAlarmService.initialize()` の直接呼び出しを撤去し、registry の `installAll()` → `sessionTimeoutInstallRef` を唯一の start 経路にした。`setSessionTimeoutRefs` の run 側を `await` 付きに整え、refs が session-timeout job の唯一の wire であることをコメントで明示
 - `alarmRegistry.ts` ― `AlarmHandlerDeps` から未読の `sessionTimeoutChecker` を削除
 - `compositionManifest.ts` ― factory の `sessionTimeoutChecker` エントリを削除。`sessionAlarmService` の説明コメントを「生成はここ、dispatch は registry が所有」に更新
 

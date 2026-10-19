@@ -70,7 +70,7 @@ Scenario: バックアップ復元後に同意状態を混同しない
 - [x] 提示された3案、すなわち popup の常時表示バナー、dashboard の re-consent hub、記録停止と同意撤回・履歴削除の分離を比較し、採用案または採用組み合わせを裁定している。
 - [x] 拒否後の「設定画面から同意できる」文言に対応する、実在する再同意入口が特定されている。
 - [x] 撤回後は Withdraw Consent が hidden になる現状に対し、撤回済みの状態から再同意へ到達する経路が定義されている。
-- [x] 再同意は checkbox とポリシー確認を省略しない。少なくとも現在の明示同意 modal を再利用한다。
+- [x] 再同意は checkbox とポリシー確認を省略しない。少なくとも現在の明示同意 modal を再利用する。
 - [x] one-click で `acceptConsent({contentStorageEnabled})` を直接呼ぶ設計を採用していない。
 - [x] 未同意、1〜2回の拒否、3回拒否後の30日抑制、撤回済み、同意済みの各状態について、popup 自動表示と明示的な再同意操作の結果を表へ整理している。
 - [x] 30日抑制を明示操作で bypass するかどうかが裁定されている。
@@ -211,7 +211,7 @@ UX 裁定、状態遷移表、テスト契約、後続 PBI 分割を対象とす
 - Withdraw Consent を撤回済みで hidden にする既存処理を、再同意状態でも同じ destructive action として扱うと、復元と撤回を混同する。
 - 再同意を one-click `acceptConsent()` にすると、checkbox、ポリシー確認、`contentStorageEnabled` の明示を省略する。
 - 明示 button が 30日抑制を bypass した場合でも、自動 popup の抑制状態を同時に消すと、裁定していない状態変更が発生する。
-- 逆に、cooldown bypass を拒否する場合も、「設定画面」という既存案内に対応する実在する再同意経路は 필요하다。
+- 逆に、cooldown bypass を拒否する場合も、「設定画面」という既存案内に対応する実在する再同意経路は必要である。
 - 3回拒否、30日後の accept、直後の withdraw を確認せず、古い denial timestamp による新しい30日抑制を見落とす。
 - combined encrypted backup が DB を復元することから、同意状態と履歴まで復元されたと説明すると、現行の allowlist と一致しない。
 - ダウンロード済み Archive、Obsidian markdown、local Markdown が残ることを、撤回後に端末内履歴がすべて消えたと説明する。
@@ -234,29 +234,29 @@ UX 裁定、状態遷移表、テスト契約、後続 PBI 分割を対象とす
 
 #### 1. 三案の比較
 
-| 案 | 再同意入口 实在するか | 30日抑制との干渉 | 破壊的操作との混同 | 採用 |
+| 案 | 再同意入口 実在するか | 30日抑制との干渉 | 破壊的操作との混同 | 採用 |
 |---|---|---|---|---|
 | A. popup の常時表示バナー | 到達できる | 抑制期間と常時表示が衝突する。抑制ロジックへ凹凸が増える | なし | 不採用 |
-| B. dashboard の Privacy 画面に re-consent hub を置く | 到達できる（decline 後の案内が指す「設定画面」と一致） | 干渉しない。popup 自動表示とは別の surface なので判定を分けられる | Withdraw Consent と同じ panel 内に置き、選択的に分离できる | **採用** |
-| C. 記録停止と同意撤回・履歴削除の分離 | 撤回後に Withdraw が hidden となり到達不能な現状を補う | 干渉しない | 分離本身就是目的だが、単独では再同意への経路を与えない | B の補助原則として採用（§4） |
+| B. dashboard の Privacy 画面に re-consent hub を置く | 到達できる（decline 後の案内が指す「設定画面」と一致） | 干渉しない。popup 自動表示とは別の surface なので判定を分けられる | Withdraw Consent と同じ panel 内に置き、選択的に分離できる | **採用** |
+| C. 記録停止と同意撤回・履歴削除の分離 | 撤回後に Withdraw が hidden となり到達不能な現状を補う | 干渉しない | 分離自体が目的だが、単独では再同意への経路を与えない | B の補助原則として採用（§4） |
 
-採用は **B ＋ C**。decline 後の通知が「後から設定画面で同意できる」と表示している以上、その「設定画面」に対応する実在の導線を dashboard に置くのが唯一的首尾一贯した解である。
+採用は **B ＋ C**。decline 後の通知が「後から設定画面で同意できる」と表示している以上、その「設定画面」に対応する実在の導線を dashboard に置くのが唯一の首尾一貫した解である。
 
 #### 2. 30日抑制と明示操作の分離
 
 - **明示操作は自動表示の判定を共有しない。** `shouldPromptForConsent()` は popup 自動表示専用の判定であり、30日抑制を読む。dashboard の明示 button はこの判定を一切参照しない。
-- **明示操作は 30日抑制を bypass する。** 理由: 3回拒否的用户は「後から設定画面で同意できる」と案内されている。その導線が 30 日も開 whilst ない状况は、拒否を実質不可逆にし、案内と実装の不整合を温存する。抑制は「自動表示を邪魔しない」という自動表示の目的であり、利用者の明示操作を拒否する理由にはならない。
+- **明示操作は 30日抑制を bypass する。** 理由: 3回拒否のユーザーは「後から設定画面で同意できる」と案内されている。その導線が 30 日も開かれない状況は、拒否を実質不可逆にし、案内と実装の不整合を温存する。抑制は「自動表示を邪魔しない」という自動表示の目的であり、利用者の明示操作を拒否する理由にはならない。
 - **bypass は自動表示の抑制状態を書き換えない。** 明示操作で同意が成立した時点で `hasConsented === true` になるため `shouldPromptForConsent()` は false を返す。抑制カウンタを明示操作で消すと、同意直後の撤回で古い拒否履歴から新しい 30 日抑制が再発火する（§6）。
 
 #### 3. 状態遷移表
 
 | 現在状態 | popup 自動表示 | dashboard 明示操作 | 明示操作の到達先 |
 |---|---|---|---|
-| 未同意 | modal を表示 | re-consent 按钮を表示 | 既存の明示同意 modal |
-| 1〜2回拒否 | modal を表示 | re-consent 按钮を表示 | 既存の明示同意 modal |
-| 3回拒否・30日以内 | 抑制（表示しない） | re-consent 按钮を表示（bypass する） | 既存の明示同意 modal |
-| 3回拒否・30日経過 | modal を表示 | re-consent 按钮を表示 | 既存の明示同意 modal |
-| 撤回済み | modal を表示 | re-consent 按钮を表示。Withdraw は hidden のまま | 既存の明示同意 modal |
+| 未同意 | modal を表示 | re-consent ボタンを表示 | 既存の明示同意 modal |
+| 1〜2回拒否 | modal を表示 | re-consent ボタンを表示 | 既存の明示同意 modal |
+| 3回拒否・30日以内 | 抑制（表示しない） | re-consent ボタンを表示（bypass する） | 既存の明示同意 modal |
+| 3回拒否・30日経過 | modal を表示 | re-consent ボタンを表示 | 既存の明示同意 modal |
+| 撤回済み | modal を表示 | re-consent ボタンを表示。Withdraw は hidden のまま | 既存の明示同意 modal |
 | 同意済み | 表示しない | Withdraw Consent を表示。re-consent は表示しない | Withdraw |
 
 #### 4. withdraw と履歴削除の分離
@@ -265,7 +265,7 @@ UX 裁定、状態遷移表、テスト契約、後続 PBI 分割を対象とす
 - ただし**現在の実装は削除を伴っている**（`clearAllLogs()` → `withdrawPrivacyConsent()`）。この順序と文言（"Withdrawing consent will also permanently delete all previously recorded browsing history"）は本裁定の変更対象ではないため、**本 PBI では変更しない**。§10 の通り。
 - Withdraw は-destructive な操作であり、再同意の導線とは同一个 button にしない。撤回済みでは Withdraw が hidden となり、re-consent だけが残る。
 
-#### 5. 外部備份の境界
+#### 5. 外部バックアップの境界
 
 - **withdraw は端末内 SQLite を削除するが、ダウンロード済み Archive・Obsidian markdown・local Markdown は削除しない。** 現在の挙動を、撤回後の説明に明記する。「端末内の履歴がすべて消えた」と説明しない。
 - **再同意は履歴復元を意味しない。** re-consent の導線は同意状態を戻すだけで、履歴を復元しない。この二つは UI 上でも文言で分離する。
@@ -281,13 +281,13 @@ UX 裁定、状態遷移表、テスト契約、後続 PBI 分割を対象とす
 
 - `reconsentConsent()` は**新設しない**。既存の read（`getPrivacyConsent()`）/ accept（`acceptConsent({contentStorageEnabled})`）/ decline / withdraw の契約を組み合わせる。
 - 1-click `acceptConsent()` の直接呼び出しは**採用しない**。`contentStorageEnabled` の明示を省略し、既存同意履歴を上書きし得るため。後述の checkbox・ポリシー確認を通る必要がある。
-- dashboard の Privacy panel は既に `getPrivacyConsent()` を読み、状態表示を分岐している（`privacySettingsPanel.ts`）。`re-consent 按钮` は同じ読み取り結果から `!state.hasConsented` のときだけ表示するのが cheapest で、state model を二重化しない。
+- dashboard の Privacy panel は既に `getPrivacyConsent()` を読み、状態表示を分岐している（`privacySettingsPanel.ts`）。`re-consent ボタン` は同じ読み取り結果から `!state.hasConsented` のときだけ表示するのが cheapest で、state model を二重化しない。
 
 #### 8. 後続 PBI への分割（垂直 slice）
 
 | # | 種別 | 内容 | SP |
 |---|---|---|---|
-| S-1 | feat | dashboard の Privacy 画面に re-consent 按钮を追加し、既存の明示同意 modal を開く。checkbox・ポリシー確認・focus trap・keyboard order・aria-live・focus return・ESC の挙動を現在の modal から引き継ぐ。`data-i18n` で en/ja parity | 1.0 |
+| S-1 | feat | dashboard の Privacy 画面に re-consent ボタンを追加し、既存の明示同意 modal を開く。checkbox・ポリシー確認・focus trap・keyboard order・aria-live・focus return・ESC の挙動を現在の modal から引き継ぐ。`data-i18n` で en/ja parity | 1.0 |
 | S-2 | fix | `acceptConsent()` 冒頭で `resetConsentDeniedCount()` を呼ぶ。3回拒否 → 30日後の accept → 直後の withdraw の遷移を fake clock で検証 | 0.5 |
 | S-3 | docs | 撤回後に Archive・Obsidian markdown・local Markdown が残ることを re-consent 画面の説明へ反映。`public/PRIVACY.md` と `docs/PRIVACY.md` のバイト一致を維持 | 0.25 |
 

@@ -94,6 +94,6 @@ It must keep behavior: content 保持のセマンティクス（timestamp 降順
 
 cap 形（`MAX_URL_SET_SIZE` の昇順 tail 取り、`LEGACY_MAX_ENTRIES` の降順 head 取り）は、定数・順序・出力並び替えの有無が異なるため意図的に共通化していない（受け入れ基準 4 の「別シグニチャのヘルパとする」条件が成り立たない）。基準 4 は「共通化せず現行どおり保つ」ことを充足とする。
 
-追加したテスト: なし。受け入れ基準 5 の 3 ファイルが atomicity / branch / CAS merge をカバーしており、本 PBI は挙動維持の抽出のため 이를不変性の gate として使う。
+追加したテスト: なし。受け入れ基準 5 の 3 ファイルが atomicity / branch / CAS merge をカバーしており、本 PBI は挙動維持の抽出のためこれを不変性の gate として使う。
 
 検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。

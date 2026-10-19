@@ -35,13 +35,15 @@ const PRODUCT_GLYPHS = new Set(['∉', '⏎']);
  */
 const JIS_ONLY = new Set(['\t', '\r', '\n', '〜', '−', '‖', '∥', '¢', '£', '¬']);
 
-/** The enumerated emoji exception (67) + flag + presentation modifiers. */
+/** The enumerated emoji exception (68) + any flag + presentation modifiers. */
 const EMOJI = new Set(
   '✅🟡🟢🎯🔴✓🔧⬜❌⚙🔒📝✗⚠📋🔵🔶🤖♻🧹📊🏷🌐✨' +
     '🛡🚧🖱🗄💡🐛📱🚫☁📌📦🔐🔍❓⛅🌨✕☰🎉📂✏🔔🙏' +
-    '🚀⛔📈🕸📉🖥🗑🦋📜🟣🗂📖💎🔗🔓😀🧪⏳⏸▶🇯🇵' +
+    '🚀⛔📈🕸📉🖥🗑🦋📜🟣🗂📖💎🔗🔓😀🧪⏳⏸▶🦄' +
     '\uFE0F\u20E3',
 );
+// Any national flag is allowed: a pair of regional indicators (U+1F1E6..U+1F1FF).
+for (let cp = 0x1f1e6; cp <= 0x1f1ff; cp += 1) EMOJI.add(String.fromCodePoint(cp));
 
 const SKIP_DIRS = new Set([
   'node_modules',

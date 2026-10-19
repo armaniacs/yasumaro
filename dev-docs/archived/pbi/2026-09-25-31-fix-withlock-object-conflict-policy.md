@@ -67,7 +67,7 @@ Scenario: 既存契約が維持される
 - [ ] `src/utils/pendingStorage.ts:167` の `{ [PENDING_PAGES_KEY]: mergedPages }` を `withLock` 経由へ移しており、legacy migration の merge 意味論を保っている。
 - [ ] `src/utils/storage/savedUrlRepository.ts:478` の `{ savedUrlsWithTimestamps: cleaned }` を `withLock` 経由へ移しており、entry 上限とメタデータ strip の意味論を保っている。
 - [ ] version を増やさずに object lock key（`settings` / `savedUrls` / `savedUrlsWithTimestamps` / `pending_pages` / `denied_domains` / `trust_db`）へ `chrome.storage.local.set` する production 箇所が **0 件**である。
-- [ ] `src/utils/permissionManager.ts` の `recordDeniedVisit`（`:157-177`）、`recordDomainDismissal`（`:192-199`）、`removeDeniedDomain`（`:328-334`）、`evictOldestEntry`（`:65-79`）が新しいオブジェクトを返す非突然変異形이며、渡された `current` を変更しない。
+- [ ] `src/utils/permissionManager.ts` の `recordDeniedVisit`（`:157-177`）、`recordDomainDismissal`（`:192-199`）、`removeDeniedDomain`（`:328-334`）、`evictOldestEntry`（`:65-79`）が新しいオブジェクトを返す非突然変異形であり、渡された `current` を変更しない。
 - [ ] `src/utils/permissionManager.ts:92-94` の `saveDeniedDomains`（version 非 bumping な直接 set、呼び出し元なし）を削除している。
 - [ ] `InMemoryStoragePort`（`src/utils/storage/storagePort.ts:121,77-113`）が `get` / `set` の境界で structured clone 相当の新しい値を返し、保存済み object の同一性を保存しない。
 - [ ] `testDir/vitest.setup.ts:174-194` の `chrome.storage.local` mock が本番と同じく structured clone 相当の境界を持つ。

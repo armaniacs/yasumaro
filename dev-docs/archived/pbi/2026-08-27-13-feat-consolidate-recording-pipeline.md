@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 2 / 7
 - RICEスコア: 420（Reach=80 / Impact=3 / Confidence=70% / Effort=0.4）→ Phase A は 3pt、Phase B は 5pt で分割。Phase A は Strong かつ QueryPlanner と相乗で leverage 最大。
-- 根拠: 新AIプロバイダ/保存先追加ごとにステップが増えるホットスポット。Phase A で `StepExecutor` 統合と副作用境界を先に固め、Phase B で typed builder と `isNetworkError`  분류を導入する2段階が `leverage` と `locality` の両立で最短。
+- 根拠: 新AIプロバイダ/保存先追加ごとにステップが増えるホットスポット。Phase A で `StepExecutor` 統合と副作用境界を先に固め、Phase B で typed builder と `isNetworkError` 分類を導入する2段階が `leverage` と `locality` の両立で最短。
 
 ## なぜなぜ分析
 - なぜ bag が問題か: `RecordingContext = 7 intersection` で全ステップが全フィールドを可視

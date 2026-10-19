@@ -125,7 +125,7 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 2. 最大10スロット、built-in 3件、remote 7件、外部候補最大9件、provider 単体 retry 最大4回の関係を調査台帳へ整理する。
 3. 5 Whys を順に実施し、無条件な試行、health state の不在、責務配置の欠落、failure 分類の消失、policy parameter の未確定を裁定結果へつなげる。
 4. failure class matrix を作り、429、5xx、timeout、network error、auth failure、success を加算、無視、reset のいずれかへ割り当てる。
-5. threshold、cooldown、half-open probe、success reset、陈腐した state の扱い、testConnection の bypass および reset rule を数値と根拠付きで裁定する。
+5. threshold、cooldown、half-open probe、success reset、陳腐化した state の扱い、testConnection の bypass および reset rule を数値と根拠付きで裁定する。
 6. provider と model の key、session-scoped state shape、read-modify-write の直列化方式、module 再生成時の state 取得を設計する。
 7. 既存の `SessionStorePort`、buffered `SessionStore`、`sqliteAlert.ts` の直接 read および write および module rehydrate を、責務、testability、concurrency から比較する。
 8. RemoteAIService の要約 loop と接続試験 loop へ適用範囲を割り付ける。要約では breaker を試し、明示的な testConnection は skip せず、試験結果の状態反映を裁定どおりに扱う。
@@ -190,7 +190,7 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 1. 依存 PBI の完了と C28 の failure class 境界を確認し、breaker policy の入力を確定する。
 2. 最大10件、built-in 3件、remote 7件、外部候補最大9件、provider 単体 retry 最大4回の関係を表へ固定する。
 3. failure class ごとに加算、無視、reset の候補と、429、5xx、timeout、network error、auth failure の扱いを比較する。
-4. threshold、cooldown、half-open probe、success reset、陈腐した state の扱いを独立した decision として裁定し、根拠と残存リスクを記録する。
+4. threshold、cooldown、half-open probe、success reset、陳腐化した state の扱いを独立した decision として裁定し、根拠と残存リスクを記録する。
 5. provider と model の key shape、storage value、欠落および malformed state の扱い、browser close 時の消去を定義する。
 6. `SessionStorePort`、buffered `SessionStore`、直接 session adapter を concurrency、rehydrate、testability から比較し、採用方式を一つに決める。
 7. concurrent update の直列化を API contract と失敗時の fallback まで定義する。state update に失敗した場合、要約 fallback 全体を停止させない。

@@ -219,7 +219,7 @@ failure の carrier が 2 つあり、どちらも構造化された経路を持
 - 逆に CSP 拒否（`fetch.ts:120/123`）は文言に network 語が無く、kind 判定も成立しなかった。
 
 **Why 5: 根本原因**
-**failure の表現に「構造化工」と「表示文言」の 2 関心が 1 つの文字列に混在して残り、前者の contract がコードとして存在しなかった。** 文言はユーザー向けの出力であり、retry という制御フローの入力として使うべきではない。境界が文言だけを投げる設計だったため、结构化されていない情報を「下流で推測して再解釈する」以外の手段がなく、誤認も重複定義もそこから派生していた。
+**failure の表現に「構造化工」と「表示文言」の 2 関心が 1 つの文字列に混在して残り、前者の contract がコードとして存在しなかった。** 文言はユーザー向けの出力であり、retry という制御フローの入力として使うべきではない。境界が文言だけを投げる設計だったため、構造化されていない情報を「下流で推測して再解釈する」以外の手段がなく、誤認も重複定義もそこから派生していた。
 
 ## 2. SSOT の置き場所と選択理由
 
@@ -312,7 +312,7 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 **PBI 2026-09-25-12（offline recovery の single owner）**
 - 依拠できるもの: `RetryPolicy.shouldEnqueueForOffline()` は `resolveFailure()` 経由の kind 判定だけを見る。`FAILURE_RETRY_PROFILE[kind].offlineRecovery` が唯一の資格表で、`network` / `timeout` のみ true。
 - 渡すべきもの: `http` の method 別 delayed recovery 判定。本 PBI は `http` を offline 対象から外しただけ。判定に必要な `method` は metadata に載っているので、`failureFromHttpStatus(status, 'PUT')` の形で kind と併せて使える。安全装置として `canResendSameRequest(kind, method)` が SSOT にあり、unsafe method での再送を構造的に拒否する。
-- 遗留: `RetryPolicy` の legacy marker 表（9 語）は「構造化 kind 不在の互換入力」専用として残した。Obsidian / AI 境界は retrofit 済みなので到達しないが、テストが message 文言に依存する箇所（`stepExecutor.test.ts` の `'AI service unavailable'` 等）がまだ 2〜3 個残る。完全撤去は別途判断。
+- 遺留: `RetryPolicy` の legacy marker 表（9 語）は「構造化 kind 不在の互換入力」専用として残した。Obsidian / AI 境界は retrofit 済みなので到達しないが、テストが message 文言に依存する箇所（`stepExecutor.test.ts` の `'AI service unavailable'` 等）がまだ 2〜3 個残る。完全撤去は別途判断。
 
 **PBI 2026-09-25-15（AI provider circuit breaker）**
 - 依拠できるもの: slot 単位の kind は `AISlotFailure.failure`、集約 result の kind は `AISummaryResult.failure`（`RemoteAIService` が「最初に kind を分類した slot」を採用する rule を明文化済み）。`AIProviderConnectionResult.debug.failure` も 401/403/429/5xx を保持する。

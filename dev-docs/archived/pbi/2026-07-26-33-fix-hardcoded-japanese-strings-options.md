@@ -22,8 +22,8 @@ PBIとして起票する。
 着手前に必ず実行すること:
 
 ```bash
-grep -n "data-i18n=\"[a-zA-Z]*\">[^<]*[ぁ-んァ-ヶ一-龯]" entrypoints/options/index.html | wc -l
-grep -n "data-i18n=\"[a-zA-Z]*\">[^<]*[ぁ-んァ-ヶ一-龯]" entrypoints/options/index.html
+grep -Pn "data-i18n=\"[a-zA-Z]*\">[^<]*([ぁ-んァ-ヶ]|\p{Han})" entrypoints/options/index.html | wc -l
+grep -Pn "data-i18n=\"[a-zA-Z]*\">[^<]*([ぁ-んァ-ヶ]|\p{Han})" entrypoints/options/index.html
 ```
 
 件数が235件と多いため、以下のいずれかの方針を推奨する:
@@ -65,7 +65,7 @@ Scenario: 既存のi18nメッセージが引き続き正しく表示される
 
 ## 実装アプローチ
 
-1. `data-i18n=\"[a-zA-Z]*\">[^<]*[ぁ-んァ-ヶ一-龯]` で対象箇所を全て洗い出す
+1. 上の `grep -P` パターン（`data-i18n="[a-zA-Z]*">[^<]*([ぁ-んァ-ヶ]|\p{Han})`）で対象箇所を全て洗い出す
 2. 各キーが`_locales/en/messages.json`に存在するか確認するスクリプトを書く（または手動で少数ずつ確認）
 3. セクション単位で置換し、都度型チェック・テストを実行する
 

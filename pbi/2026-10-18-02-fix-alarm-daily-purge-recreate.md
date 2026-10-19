@@ -128,7 +128,7 @@ source-only 監査では到達できない2点が未解決のまま。**実装�
 
 - **B1**: 同名 `chrome.alarms.create` が発火予約済みの `periodInMinutes` アラームの scheduledTime をリセットするのか（リセットしないなら本 PBI の前提が崩れ、`staticSchedule` の設計自体を再検討）。
 - **B2**: アラーム発火によるコールドスタートで `main() → init() → installAll` が毎回走るのか（走らないなら再起動要因はオフラインキュー等の他経路のみに起因し、優先度再評価）。
-- 観測手順: 隔離テストプロファイルで展開版をロードし、`chrome.alarms.get('yasumaro-daily-purge').scheduledTime` を記録 → SW を強制停止 → アラーム起床または runtime メッセージで復帰 → 同値を再読込。`NEEDS-VALIDATION.md` 4番の validation plan と同一手順で、生产・共有データに触れない。
+- 観測手順: 隔離テストプロファイルで展開版をロードし、`chrome.alarms.get('yasumaro-daily-purge').scheduledTime` を記録 → SW を強制停止 → アラーム起床または runtime メッセージで復帰 → 同値を再読込。`NEEDS-VALIDATION.md` 4番の validation plan と同一手順で、本番・共有データに触れない。
 
 ### 既存テストの更新要否
 

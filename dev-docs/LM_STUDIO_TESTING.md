@@ -19,7 +19,7 @@ lms server start
 
 1. LM Studio でモデルを検索・ダウンロード
 2. 例: `llama-3.1-8b-instruct`, `mistral-7b-instruct`
-3. ダウンロード後、モデルを選択状态にする
+3. ダウンロード後、モデルを選択状態にする
 
 ---
 

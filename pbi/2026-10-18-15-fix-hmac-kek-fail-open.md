@@ -24,7 +24,7 @@ security-audit run-2 の needs_validation リード（run-1 持ち越し）。fi
 
 1. `src/utils/crypto/durableKeyStore.ts:53-61` ― `loadDurableWrappingKey` は `storage` が無ければ `:55`、`get()` が例外を投げれば `:59` で `null` を返す。ヘッダコメント `:21-24` がこれを「呼び出し側は新しいキーを生成する fallback にする」契約と明記している（意図された fail-open）。
 2. `src/utils/crypto/hmacKeyStore.ts:179-214` ― KEK 候補チェーン。session（`:180` 前後）→ legacy `localStored`（`:195-208`）→ durable IDB（`:209-213` で `loadDurableWrappingKey` を呼び、`null` なら `throw new Error('no durable KEK')`）。
-3. `src/utils/crypto/hmacKeyStore.ts:216-222` ― 候補ループが全滅を吞む。`:224` のコメント「All candidates exhausted (fresh install or post-restart with no durable key): generate a new KEK」に続き、`:227` で `webcrypto.getRandomValues` で新 KEK を生成し `saveDurableWrappingKey` で保存する。**fresh install と「永続ストア喪失」を同一視している**のが本件の核心。
+3. `src/utils/crypto/hmacKeyStore.ts:216-222` ― 候補ループが全滅を飲む。`:224` のコメント「All candidates exhausted (fresh install or post-restart with no durable key): generate a new KEK」に続き、`:227` で `webcrypto.getRandomValues` で新 KEK を生成し `saveDurableWrappingKey` で保存する。**fresh install と「永続ストア喪失」を同一視している**のが本件の核心。
 4. `src/utils/crypto/hmacKeyStore.ts:319-339` ― `getOrCreateWrappedHmacKeyLocked`。既存 envelope の unwrap に失敗すると `:331` で warn、`:333` で `${storageKey}${QUARANTINE_SUFFIX}`（`:89`）へ旧 envelope を隔離、`:335` で「HMAC key regenerated after unwrap failure; signatures made with the old key will no longer verify」を `CRYPTO_HMAC_FAILURE` で記録し、再生成へ落ちる。この経路は `getConsentHmacKey`（`:405`）と `getNotificationHmacKey`（`:414`）＝ `consentHmacSigner`（`:433`）/ `notificationHmacSigner`（`:424`）が使う。
 5. `src/utils/storage/encryptionSession.ts:904-943` ― `getOrCreateHmacSecret` の unwrap 失敗 catch（`:919`）は `:922` で「Failed to unwrap HMAC secret, regenerating」を記録し、`:924-926` で新規 secret を生成してラップし直し、**隔離せずに `:926` で `HMAC_SECRET` を上書き**する（旧 envelope は痕跡を残さず消える）。`:918-921` のコメントは今でも「The KEK lives in chrome.storage.session」と書かれており、`durableKeyStore` 導入前の前提で**既に stale**。`:942` の `cachedHmacSecret` でプロセス内キャッシュも更新される。`exportHmacSigner`（`:956`）はこの関数を毎回解決するため、回転は即座に picking up される。
 6. `src/utils/storage/privacyConsent.ts:94-105` ― `getPrivacyConsent` は署名検証に失敗すると `:104` で `{ hasConsented: false, needsReconsent: true, signatureInvalid: true }` を返す。**ユーザー向けの再同意プロンプトは原則出ない**（`:110-113` の版数不一致経路は `needsReconsent` を立てず、`signatureInvalid` は popup/background の UI 層で optional 扱い）。
@@ -40,7 +40,7 @@ security-audit run-2 の needs_validation リード（run-1 持ち越し）。fi
 
 **監査側の blocker（着手前に潰すべき owner 確認）**
 
-`findings.json.blockers[0]` _contractually_: 対象 Chromium/Edge/Firefox プロファイルで IndexedDB eviction / private-mode が `yasumaro-crypto` / `yasumaro-secret-crypto` ストアを実際に失うかどうかは、ソース外（ブラウザ/ストレージ保持）の決定的事実である。本 run は source-only 実行ポリシーで sandboxed 実行が利用できず、bounded な観測結果は確立できていない。**実装着手前に owner が `validation_plan.deployment` の手順で観測すること**（隔離テストプロファイル＋合成 fixture のみ。本番データ・生存靶の走査はしない）。
+`findings.json.blockers[0]` _contractually_: 対象 Chromium/Edge/Firefox プロファイルで IndexedDB eviction / private-mode が `yasumaro-crypto` / `yasumaro-secret-crypto` ストアを実際に失うかどうかは、ソース外（ブラウザ/ストレージ保持）の決定的事実である。本 run は source-only 実行ポリシーで sandboxed 実行が利用できず、bounded な観測結果は確立できていない。**実装着手前に owner が `validation_plan.deployment` の手順で観測すること**（隔離テストプロファイル＋合成 fixture のみ。本番データ・生存標的の走査はしない）。
 
 ## BDD受け入れシナリオ
 

@@ -15,7 +15,7 @@ TrustChecker・TrustDbは実装されていますが、recordingLogic.tsへの�
     - `canProceed`: 記録続行可否
     - `trustResult`: Trust判定結果
     - `showAlert`: 警告表示フラグ
-    - `reason`: 中了理由（��話Hash）
+    - `reason`: 一致理由（電話Hash）
 
 **問題点:**
 - TrustCheckerが提供する3段階チェック（Finance/Sensitive/Unverified警告）がrecordingLogicで使用されていない

@@ -8,7 +8,7 @@
 
 - 順位: 02 / 10
 - RICE スコア: 16.0（Reach=3 / Impact=2 / Confidence=80% / Effort=0.3 人週）
-- 根拠（2026-09-11 round 5 診断で全量スコープ確定）: pending セクションは `historyPendingPanel.ts`（298 行）のみに存在し、sqlite パネル（`panels/asyncData/sqlite*`）には pending/onChanged 相关コードがゼロ。`chrome.storage.onChanged` 購読も `historyPanel.ts:106-136` のみ。Record 契約は `MANUAL_RECORD` + `skipAi` の 1 タイプ（専用タイプ無し）。i18n キーは ja/en 既存（新規キー不要・check-i18n で確認済み）。whitelist 操作は popup 専属のため本 PBI のスコープ外。
+- 根拠（2026-09-11 round 5 診断で全量スコープ確定）: pending セクションは `historyPendingPanel.ts`（298 行）のみに存在し、sqlite パネル（`panels/asyncData/sqlite*`）には pending/onChanged 関連コードがゼロ。`chrome.storage.onChanged` 購読も `historyPanel.ts:106-136` のみ。Record 契約は `MANUAL_RECORD` + `skipAi` の 1 タイプ（専用タイプ無し）。i18n キーは ja/en 既存（新規キー不要・check-i18n で確認済み）。whitelist 操作は popup 専属のため本 PBI のスコープ外。
 
 ## BDD 受け入れシナリオ
 

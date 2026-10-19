@@ -27,7 +27,7 @@ AI プロバイダの共通基盤を改修する開発者として、プロバ�
 
 1. テスト用エラー写像（`:219-283`）を `src/utils/httpFailureMessages.ts` 側へ追い出し、summary フロー inline（`:372-385`）も同じヘルパーを参照させる。timeout 判定の文面 sniff は 2 箇所で揃えるか、構造化 `resolveFailure` に置き換える
 2. 設定解決 3 ラダー（`:465-471`,`:530-582`）を単一リゾルバに畳む。優先順位は既存挙動を保ったまま明文化する
-3. リトライ述語は `src/utils/fetch.ts` 側に一本化する（進行中 PBI 2026-09-28-29 と合流）。test フローの無配線（`:420-425`）が default を継承しているため、統一时にこの差分が意図かを必ず確認する
+3. リトライ述語は `src/utils/fetch.ts` 側に一本化する（進行中 PBI 2026-09-28-29 と合流）。test フローの無配線（`:420-425`）が default を継承しているため、統一時にこの差分が意図かを必ず確認する
 4. BuiltIn のような非 HTTP プロバイダはテンプレート非依存の小クラスに分離する。parity テスト（`src/__tests__/ai/providerParity.test.ts`）を interface ベースに書き直し、3 プロバイダで同じ契約が検証されるようにする
 5. `handleErrorResponse` は interface から削除するか、production 到達経路を持たせるかを ADR で裁定する。裁定前に interface 必須のまま放置しない
 

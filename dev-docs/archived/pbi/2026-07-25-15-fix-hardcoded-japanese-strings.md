@@ -32,9 +32,9 @@
 ただし実際の対象箇所を洗い出したところ、当初想定（popup.htmlの1箇所）を大幅に超える規模であることが判明した:
 
 ```bash
-grep -n "data-i18n=" entrypoints/popup/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]'   # → 12件
-grep -n "data-i18n=" entrypoints/options/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]'  # → 235件
-grep -n "data-i18n=" entrypoints/permissions/index.html | grep -cP '[ぁ-んァ-ヶ一-龯]' # → 0件
+grep -n "data-i18n=" entrypoints/popup/index.html | grep -cP '[ぁ-んァ-ヶ]|\p{Han}'   # → 12件
+grep -n "data-i18n=" entrypoints/options/index.html | grep -cP '[ぁ-んァ-ヶ]|\p{Han}'  # → 235件
+grep -n "data-i18n=" entrypoints/permissions/index.html | grep -cP '[ぁ-んァ-ヶ]|\p{Han}' # → 0件
 ```
 
 **合計247件**（popup 12件 + options 235件）。247件を一括で置換するのは影響範囲が広すぎるため、本セッションでは実装を見送り、次のPBIへ進んだ。着手する際は以下のいずれかの分割方針を推奨する:
@@ -52,7 +52,7 @@ Checking Team レビュー（2026-07-25）の i18n Expert からの指摘。`ent
 着手前に必ず実行すること:
 
 ```bash
-grep -rln "data-i18n" entrypoints/ | xargs grep -n "data-i18n=\"[a-zA-Z]*\">[^<]*[ぁ-んァ-ン一-龯]"
+grep -rln "data-i18n" entrypoints/ | xargs grep -Pn "data-i18n=\"[a-zA-Z]*\">[^<]*([ぁ-んァ-ン]|\p{Han})"
 ```
 
 `docs/i18n-guide.md` を先に読み、フォールバックテキストの扱い方針（意図的に残しているか、単なる見落としか）を確認する。意図的な設計であれば、このPBIはスコープを「見落としのみ修正」に絞る。

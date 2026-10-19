@@ -65,14 +65,14 @@ Scenario: 置き換えたテストが安定している
 - **2026-09-26 完了**: 全 40 件を処理し、`local/no-test-sleep` warning ゼロ化を達成
 - **eslint rule**: `warn` → `error` に昇格し、再発を機械的に防止する仕組み整備完了
 - **2026-09-26 検証**: `npm run validate` 通過（lint 0 errors）。`--repeats=20` で
-  変更テスト 13 ファイルすべて安定。检出されたテストは実際に変異が起きると
+  変更テスト 13 ファイルすべて安定。検出されたテストは実際に変異が起きると
   落ちることを確認済み（`main.ts` の tabId ガード、`trustSettings.ts` の
   null チェック、`sessionStore.ts` の isQuotaError 分岐、`statusPanel.ts` の
   tab.url ガード、`popup.ts` の pending.length ガード）
 
 ## 追加で施加された範囲（2026-09-26 レビュー後）
 
-本 PBI の现代化として、ルールのカバレッジと関連チェックを追加した。
+本 PBI の現代化として、ルールのカバレッジと関連チェックを追加した。
 
 - `local/no-test-sleep` が `const` 束縛の遅延も解決するようになった
   （`const DELAY_MS = 30; setTimeout(fn, DELAY_MS)` が検出対象）。

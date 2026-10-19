@@ -66,7 +66,7 @@ Scenario: 検証失敗時の報告が単一実装で決まる
 
 既存テストは 1 行も変更していない（受け入れ基準 4 の「変更なしで green」を満たす）。
 
-**逸脱（記録のみ）**: 共有 options に public な `sleep?: SleepFn` を追加した。既定値は既存の `waitForRetry`（`src/utils/retryPredicate.ts`）で、production の挙動は完全に同一。追加 이유는 TEST_RULE の実時間待ち禁止で、新しい再試行テストが試行回数を数えるのに壁時計を待たないためには注入できる必要があるため。`src/utils/retryPredicate.ts` 自体は変更していない（export されている `waitForRetry` を import しただけ）。
+**逸脱（記録のみ）**: 共有 options に public な `sleep?: SleepFn` を追加した。既定値は既存の `waitForRetry`（`src/utils/retryPredicate.ts`）で、production の挙動は完全に同一。追加の理由は TEST_RULE の実時間待ち禁止で、新しい再試行テストが試行回数を数えるのに壁時計を待たないためには注入できる必要があるため。`src/utils/retryPredicate.ts` 自体は変更していない（export されている `waitForRetry` を import しただけ）。
 
 検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。
 

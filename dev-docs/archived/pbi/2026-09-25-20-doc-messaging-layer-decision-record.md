@@ -147,7 +147,7 @@ Scenario: 再検討が必要になった条件を判断できる
 
 ### 5 Whys
 
-1. なぜ中立な messaging が background を import するのか。messageTypes は、中立化되기前の background に作成されたからである。
+1. なぜ中立な messaging が background を import するのか。messageTypes は、中立化される前の background に作成されたからである。
 2. なぜ循環がないのに実害もないのか。対象 module に Chrome API の副作用がなく、型と純粋な定数を中心にしているからである。
 3. なぜ単一の情報源を維持するのか。配列と union の二重定義を防ぐためである。
 4. なぜ構造上の負債を消さないのか。実害がないため、現状維持が妥当だからである。

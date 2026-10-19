@@ -210,7 +210,7 @@ PBI 本文は「redirect 先を URL 文字列として再検証する」こと�
 
 ### 保証の表現について
 
-「private IP リテラルと redirect を拒否する」以上の保証を記載していないことを自查した。
+「private IP リテラルと redirect を拒否する」以上の保証を記載していないことを自ら確認した。
 特に次を避けている: URL ガードが SSRF を防止するという表現、redirect hop の再検証を
 接続先 IP の再検査として説明すること、public hostname を許可するテストを DNS 応答の
 安全性に関する証拠として引用すること、MV3 Service Worker に利用制御可能な DNS resolver や

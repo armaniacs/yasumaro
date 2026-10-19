@@ -15,7 +15,7 @@ Scenario: 3 経路が同一の fallback ポリシーを使う
   When  extractMainContent を実行する
   Then  3 経路とも cleansedReason とフォールバック先が同一ロジックから決まる
 
-Scenario: returnInfo を渡さなくても诊断情報が取れる
+Scenario: returnInfo を渡さなくても診断情報が取れる
   Given 呼び出し側が returnInfo を渡さない
   When  extractMainContentWithInfo を実行する
   Then  ExtractResult に全診断フィールドが入る

@@ -19,7 +19,7 @@ Scenario: plain-list の列集合がバックエンド間で一致する
   Given buildPlainListStatements が columns を必須引数にした
   When  IdbVfsBackend と opfsWorker crudHandlers が同じ BROWSING_LOG_COLUMNS を渡す
   Then  両バックエンドの plain-list 応答が同一列集合になる
-        （現行の 33 vs 13 の無文書分歧は spec か bug かが実装メモに決着記録され、
+        （現行の 33 vs 13 の無文書分岐は spec か bug かが実装メモに決着記録され、
         決着に沿った列集合になる）
 
 Scenario: schema の列順変更で positional reader が壊れない
@@ -39,7 +39,7 @@ Scenario: FTS と LIKE の rank 差分だけが分岐になる
 - [x] `buildPlainListStatements` の `columns` を必須化（`'*'` 既定値削除）。呼び出し側（IdbVfsBackend / crudHandlers）が同じ定数を渡す
 - [x] `IdbVfsBackend.ts` の FTS（:92-104）/ LIKE（:128-141）/ plain（:435-471 `rowToEntry`）3 mapper を codec 経由に統合（`rank` 注入点のみ分岐）
 - [x] `searchHandlers.ts:36-50` / `crudHandlers.ts:47-61` の named mapper を codec 経由に統合
-- [x] 33 vs 13 列分歧の決着（spec として残すか named 13 に統一するか）を実装メモに記録し、決着に沿って実装
+- [x] 33 vs 13 列分岐の決着（spec として残すか named 13 に統一するか）を実装メモに記録し、決着に沿って実装
 - [x] `insertBatch` の `inserted/skipped` 集計差分（IdbVfsBackend 行毎 changes() vs crudHandlers 最終 1 回）を parametric テストで先に確定し、bug なら修正（bug なら本 PBI スコープで対応・CHANGELOG 記載）
 - [x] `queryPlan.ts:267` の `AS c` / `AS rank` エイリアスコメントが codec の保証（テスト）になる
 
@@ -55,11 +55,11 @@ Scenario: FTS と LIKE の rank 差分だけが分岐になる
 2. rowCodec 新設（列定数 + named/positional mapper）
 3. buildPlainListStatements columns 必須化 + 呼び出し側修正
 4. IdbVfsBackend 3 mapper 統合 → worker 側 2 mapper 統合
-5. 列分歧の決着記録
+5. 列分岐の決着記録
 
 ## 見積もり
 
-0.4 人週。難易度: 🟡中。副作用: 🟡軽微（列分歧の決着次第で応答列集合が変わり得る → dashboard の消費フィールド確認が必要）。種別: 🔧非機能追加（refactor）。
+0.4 人週。難易度: 🟡中。副作用: 🟡軽微（列分岐の決着次第で応答列集合が変わり得る → dashboard の消費フィールド確認が必要）。種別: 🔧非機能追加（refactor）。
 
 ## Definition of Done
 

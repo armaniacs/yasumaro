@@ -19,7 +19,7 @@ backlog: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic
   - `src/popup/errorUtils.ts:300` `handleError` / `:41` `ErrorMessages.CANCELLED`
 - dead seam: `src/dashboard/generalSettings/settingsForm.ts:173` `collectCurrentProviderPrioritySlots()` ― 呼び出し 0。同一規則（A/B レイアウト判定 → B スロット収集 → A フォールバック）が `src/dashboard/settingsPipeline.ts:139-193` に inline 再実装され、`src/dashboard/panels/staticForm/generalSettingsPanel.ts:183-191` に 3 つ目の部分コピーが残る
 - `src/utils/domainFilter/DomainFilter.ts:125-133` `cache(settings, now)` ― 本番呼び出し 0。`src/utils/storage/domainFilterCache.ts:82-88` が同じペイロードを自前で組み立てている
-- **DomainFilter の mode デフォルトが 3 種類ある**（2026-10-02 追記）: 設定既定は `src/utils/storage/defaults.ts:66` の `'blacklist'`、読み側フォールバックは `src/utils/storage/domainFilterCache.ts:37` の `'disabled'`、書き側フォールバックは同 `:84` と `DomainFilter.ts:126` の `'whitelist'`。**キャッシュ組立の 1 箇所化だけでは解けない**ため、フォールバック値は現挙動のまま固定し、「どのデフォルトが正」かの裁定は別 PBI とする（本 PBI では行为的変更をしない）
+- **DomainFilter の mode デフォルトが 3 種類ある**（2026-10-02 追記）: 設定既定は `src/utils/storage/defaults.ts:66` の `'blacklist'`、読み側フォールバックは `src/utils/storage/domainFilterCache.ts:37` の `'disabled'`、書き側フォールバックは同 `:84` と `DomainFilter.ts:126` の `'whitelist'`。**キャッシュ組立の 1 箇所化だけでは解けない**ため、フォールバック値は現挙動のまま固定し、「どのデフォルトが正」かの裁定は別 PBI とする（本 PBI では行動の変更をしない）
 - **未読 dep の追加**（2026-10-02 追記）: NN08 で兄弟の `sessionTimeoutChecker` を削除した際、`src/background/alarmRegistry.ts:42` の `sessionTimeoutInstall?: () => Promise<void>;` が未読のまま残った（JOBS 行は module scope の ref を使う）。本 PBI で併せて削除する
 
 ## BDD シナリオ

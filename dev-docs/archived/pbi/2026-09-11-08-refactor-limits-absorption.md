@@ -51,7 +51,7 @@ S-M（0.5 人週）。種別: refactor。
 2. 消費者 import 置換
 3. drift ガード + ADR note
 
-## 实装メモ（2026-09-11 round 5）
+## 実装メモ（2026-09-11 round 5）
 
 - limits.ts に 8 定数 + drift ガードが**発見した追加 6 定数**（MAX_IMPORT_TEXT_BYTES / MAX_PAYLOAD_STRING_BYTES / MAX_BATCH_TOTAL_BYTES / MAX_PAYLOAD_TOTAL_BYTES / IMPORT_TOTAL_ROW_CAP / MAX_SUMMARY_LENGTH）を取り込み。値は不変。
 - 消費者: sqliteEngineHost（re-export）/ systemHandlers（import + 境界コメント保持）/ archivePanel / recordingValidator / piiSanitizer / aiUsageTracker / encryptedBackupPanel / obsidianClient / payloadGuard / importLogsService。

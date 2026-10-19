@@ -117,7 +117,7 @@ Scenario: 完了済み移行を変更せず再実行する
 - `deferredMigrations.test.ts` で、未完了状態から再開でき、同一起動で直接 migration が1回だけ実行される契約を維持する。
 - `SettingsRepository.test.ts` と `settingsRepository-migration-parity.test.ts` で、migration 判定、全設定の読み出し、backup 復元、通常設定と top-level state の分離を確認する。
 - `privacyConsent-version.test.ts` と `trancoVersionTracker.test.ts` で、`PRIVACY_CONSENT_VERSION` と `TRANCO_VERSION` の値が移行前後で変わらないことを確認する。
-- raw key の追加と更新をバックアップ作成後、削除前に发生后、最新値を保持したまま完了する競合テストを追加する。
+- raw key の追加と更新をバックアップ作成後、削除前に発生させ、最新値を保持したまま完了する競合テストを追加する。
 - 復号経路の既存契約と競合しないよう、暗号化 secret を含む設定の移行テストを維持する。
 
 ### 単体テスト

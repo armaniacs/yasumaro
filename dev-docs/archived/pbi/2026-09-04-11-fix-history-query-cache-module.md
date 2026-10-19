@@ -25,7 +25,7 @@ Scenario: get は rows の防御コピーを返す
 - [x] `historyQueryCache.ts` に QueryCache クラス（cap/buildKey/get/set/clear）が抽出される
 - [x] sqliteHistoryModel は get/set/clear のみ呼び、キャッシュポリシーを保持しない
 - [x] rows の防御コピーが get 内に移動する
-- [x] 既存の asyncData suite が全绿
+- [x] 既存の asyncData suite が全緑
 - [x] tagInitiated を含むキー契約が維持される
 
 ## テスト戦略（t_wadaスタイル）
@@ -65,6 +65,6 @@ rg -n "queryCache|buildCacheKey|setCacheEntry|clearCache" src/dashboard/panels/a
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] 既存 asyncData suite 全绿
+- [x] 既存 asyncData suite 全緑
 - [x] コードレビュー完了
 - [x] ドキュメント更新（不要: 内部リファクタリング）
