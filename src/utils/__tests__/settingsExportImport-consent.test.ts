@@ -1,7 +1,9 @@
 /**
  * settingsExportImport-consent.test.ts — PBI 2026-10-19-12.
  *
- * @vitest-environment jsdom
+ * Runs in the node environment on purpose: the suite has a gated cap on jsdom
+ * files (`test-perf` "jsdom files" budget), and the export path only needs
+ * `document` / `URL` / `Blob` to be present — the stubs below stand in for them.
  *
  * Consent is an act the data subject performs on *this* device, so a settings
  * file must not carry it: an export would grant consent on the target profile,
@@ -107,17 +109,21 @@ function captureExport(): { text: () => string } {
       written.push(String(parts[0]));
     }
   }
-  vi.stubGlobal('Blob', CapturingBlob);
-  vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:captured');
-  vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
-  vi.spyOn(document, 'createElement').mockReturnValue({
+  const link = {
     href: '',
     download: '',
     style: { display: '' },
     click: vi.fn(),
-  } as unknown as HTMLElement);
-  vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node);
-  vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+  };
+  vi.stubGlobal('Blob', CapturingBlob);
+  vi.stubGlobal('URL', {
+    createObjectURL: vi.fn(() => 'blob:captured'),
+    revokeObjectURL: vi.fn(),
+  });
+  vi.stubGlobal('document', {
+    createElement: vi.fn(() => link),
+    body: { appendChild: vi.fn(), removeChild: vi.fn() },
+  });
   return {
     text: () => {
       expect(written).toHaveLength(1);
