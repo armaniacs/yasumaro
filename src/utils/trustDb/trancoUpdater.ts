@@ -178,7 +178,7 @@ export class TrancoUpdater {
     const domains: string[] = [];
 
     // tier に基づいて制限を設定
-    const limit = tier === 'top100k' ? 100000 : tier === 'top10k' ? 10000 : 1000;
+    const limit = TRANCO_TIER_COUNT[tier];
 
     for (const line of lines) {
       // CSV 形式: rank,domain

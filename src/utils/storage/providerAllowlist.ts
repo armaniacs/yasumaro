@@ -204,16 +204,18 @@ function dedupeDomains(domains: string[]): string[] {
  * single-row addition). Consumers derive their arrays from these; adding a
  * provider is one row here.
  */
-export function deriveRequiredDomains(rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS): string[] {
+function deriveDomainsForTier(tier: ProviderPermissionTier, rows: ReadonlyArray<ProviderAllowlistRow>): string[] {
   return dedupeDomains(
-    rows.filter((row) => row.permissionTier === 'required' && row.domain).map((row) => row.domain as string),
+    rows.filter((row) => row.permissionTier === tier && row.domain).map((row) => row.domain as string),
   );
 }
 
+export function deriveRequiredDomains(rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS): string[] {
+  return deriveDomainsForTier('required', rows);
+}
+
 export function deriveOptionalDomains(rows: ReadonlyArray<ProviderAllowlistRow> = PROVIDER_ALLOWLIST_ROWS): string[] {
-  return dedupeDomains(
-    rows.filter((row) => row.permissionTier === 'optional' && row.domain).map((row) => row.domain as string),
-  );
+  return deriveDomainsForTier('optional', rows);
 }
 
 export function deriveConditionalCspEntries(
@@ -320,8 +322,6 @@ export function isAllowedProviderBaseUrl(url: string, isLocal: boolean): boolean
       if (octets.length !== 4) return false;
       const a = octets[0]!;
       const b = octets[1]!;
-      const _c = octets[2]!;
-      const _d = octets[3]!;
       // 0.0.0.0/8, 127.0.0.0/8, 10.0.0.0/8, 192.168.0.0/16, 172.16.0.0/12, 169.254.0.0/16
       if (a === 0) return true;
       if (a === 127) return true;

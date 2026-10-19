@@ -93,6 +93,12 @@ export interface ArchiveOpDescriptor<S extends string = string, R = unknown> {
 
 type ArchiveOpRow = Omit<ArchiveOpDescriptor<string, unknown>, 'retryPolicy'>;
 
+const decodeDirty = (response: { success: true } & Record<string, unknown>): { dirty: boolean } => ({
+  dirty: response.dirty as boolean,
+});
+
+const projectDirty = (raw: unknown): Record<string, unknown> => ({ dirty: (raw as { dirty: boolean }).dirty });
+
 export function defineArchiveOp<const R extends ArchiveOpRow>(
   row: R,
 ): Omit<R, 'depsArgs'> & {
@@ -363,9 +369,9 @@ export const ARCHIVE_WIRE_TABLE = [
       id: number,
       changes: Record<string, unknown>,
     ): Extract<MaintainOp, { type: 'archiveUpdate' }> => ({ type: 'archiveUpdate', stagingName, id, changes }),
-    decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
+    decodeResponse: decodeDirty,
     backendArgs: (p) => [p.stagingName as string, p.id as number, p.changes as Record<string, unknown>],
-    project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
+    project: projectDirty,
   }),
   defineArchiveOp({
     op: 'archiveSave',
@@ -381,9 +387,9 @@ export const ARCHIVE_WIRE_TABLE = [
       type: 'archiveSave',
       stagingName,
     }),
-    decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
+    decodeResponse: decodeDirty,
     backendArgs: stagingNameArg,
-    project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
+    project: projectDirty,
   }),
   defineArchiveOp({
     op: 'archiveClose',
@@ -399,9 +405,9 @@ export const ARCHIVE_WIRE_TABLE = [
       type: 'archiveClose',
       stagingName,
     }),
-    decodeResponse: (response) => ({ dirty: response.dirty as boolean }),
+    decodeResponse: decodeDirty,
     backendArgs: stagingNameArg,
-    project: (raw) => ({ dirty: (raw as { dirty: boolean }).dirty }),
+    project: projectDirty,
   }),
   defineArchiveOp({
     op: 'archiveStatus',

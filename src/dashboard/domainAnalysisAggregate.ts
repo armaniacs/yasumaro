@@ -13,6 +13,8 @@
  * the UI notice.
  */
 
+import { compareStrings } from '../utils/compareStrings.js';
+
 /** Minimal row shape the aggregation reads (subset of BrowsingLogEntry). */
 export interface DomainAnalysisInput {
   domain?: string | null;
@@ -59,7 +61,7 @@ function toRanked(
   // WHY: equal counts are common on real corpora — count desc then name asc
   // keeps the order deterministic across reruns instead of input-order
   // dependent (Map iteration order).
-  all.sort((a, b) => b.count - a.count || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  all.sort((a, b) => b.count - a.count || compareStrings(a.name, b.name));
   return { rows: all.slice(0, topN), truncated: all.length > topN };
 }
 

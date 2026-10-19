@@ -42,8 +42,7 @@
  */
 
 import type { MaintainOp, MutateOp, QueryOp, AuditLogRecord } from './sqliteRpcClient.js';
-import type { SqliteMessageType } from './sqliteMessages.js';
-import type { SqliteStatusResult } from './sqliteMessages.js';
+import type { SqliteMessageType, SqliteStatusResult } from './sqliteMessages.js';
 import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 import type { ArchiveOpType } from './archiveWireTable.js';
 import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportRetryPolicy.js';
@@ -724,6 +723,10 @@ export function defineSqliteMaintainWireOp<const R extends SqliteMaintainWireOpR
   return { ...row, retryPolicy: getTransportRetryPolicy(row.messageType) };
 }
 
+const decodePurged = (response: WireSuccess): { purged: number } => ({
+  purged: response.purged as number,
+});
+
 export const SQLITE_MAINTAIN_WIRE_TABLE = [
   defineSqliteMaintainWireOp({
     op: 'init',
@@ -763,7 +766,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
       const o = op as Extract<MaintainOp, { type: 'purgeOldRecords' }>;
       return { retentionDays: o.retentionDays, maxRecords: o.maxRecords };
     },
-    decodeGateway: (response) => ({ purged: response.purged as number }),
+    decodeGateway: decodePurged,
   }),
   defineSqliteMaintainWireOp({
     op: 'purgeContent',
@@ -773,7 +776,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
       const o = op as Extract<MaintainOp, { type: 'purgeContent' }>;
       return { retentionDays: o.retentionDays, maxRecords: o.maxRecords, includeStarred: o.includeStarred };
     },
-    decodeGateway: (response) => ({ purged: response.purged as number }),
+    decodeGateway: decodePurged,
   }),
   defineSqliteMaintainWireOp({
     op: 'purgeAuditLog',
@@ -783,7 +786,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     // the handler distinguishes "no window" from a window of 0 by arity, not
     // by a missing key.
     encodePayload: (op) => ({ retentionDays: (op as Extract<MaintainOp, { type: 'purgeAuditLog' }>).retentionDays }),
-    decodeGateway: (response) => ({ purged: response.purged as number }),
+    decodeGateway: decodePurged,
   }),
   defineSqliteMaintainWireOp({
     op: 'healthCheck',

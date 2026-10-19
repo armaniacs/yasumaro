@@ -145,12 +145,15 @@ export function historyStateReducer(
       const trimmed = action.query.trim();
       const clearingRelevance = !trimmed && state.sortBy === 'relevance';
       const startingSearch = trimmed && !state.searchQuery.trim() && state.sortBy !== 'relevance';
+      let sortBy = state.sortBy;
+      if (clearingRelevance) sortBy = 'created_at';
+      else if (startingSearch) sortBy = 'relevance';
       return {
         ...state,
         searchQuery: action.query,
         currentPage: 0,
         pendingTagFallback: null,
-        sortBy: clearingRelevance ? 'created_at' : startingSearch ? 'relevance' : state.sortBy,
+        sortBy,
         sortDir: clearingRelevance ? 'DESC' : state.sortDir,
       };
     }
@@ -297,10 +300,6 @@ let sortPersistence: SortPreferencePersistence = createChromeSortPreferencePersi
 /** テスト用: sort 永続化 adapter を差し替える（null で chrome 実装に戻す）。 */
 export function setSortPersistenceOverride(persistence: SortPreferencePersistence | null): void {
     sortPersistence = persistence ?? createChromeSortPreferencePersistence();
-}
-
-async function loadPersistedSort(): Promise<{ sortBy: SqliteHistoryState['sortBy']; sortDir: SqliteHistoryState['sortDir'] } | null> {
-    return sortPersistence.load();
 }
 
 async function persistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
@@ -586,7 +585,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   async function loadPersistedSortIntoState(): Promise<void> {
-    const persistedSort = await loadPersistedSort();
+    const persistedSort = await sortPersistence.load();
     if (persistedSort) {
       state = { ...state, sortBy: persistedSort.sortBy, sortDir: persistedSort.sortDir };
     }
@@ -605,12 +604,6 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   //   discards in-flight queries.
   function invalidateCache(): void {
     cache.clear();
-  }
-
-  function bumpGenerationOnUnmount(): void {
-    guard.invalidate();
-    flushPendingPersist();
-    invalidateCache();
   }
 
   // Reset display filters (date/search/tag/page) so a fresh panel.load() shows
@@ -662,8 +655,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   function onNavigateOut(): void {
     // Flush (not drop) the debounced sort persist: the timer would otherwise
     // fire post-unmount. Flushing preserves the user's sort choice.
+    guard.invalidate();
     flushPendingPersist();
-    bumpGenerationOnUnmount();
+    invalidateCache();
     clearEntrySelection();
   }
 

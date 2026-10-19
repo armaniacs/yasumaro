@@ -254,6 +254,15 @@ export function validateUrlForFilterImport(url: string): void {
 export const ALLOWED_LOCALHOST_PORTS = new Set<number>(LOOPBACK_PORTS);
 
 /**
+ * URL の実効ポートを解決する（明示ポートが無ければプロトコル既定値）。
+ * https は 443、それ以外は 80。connect-src / SSRF 判定の共通解決に使う。
+ */
+export function resolveEffectivePort(url: URL): number {
+  if (url.port) return parseInt(url.port, 10);
+  return url.protocol === 'https:' ? 443 : 80;
+}
+
+/**
  * ローカルAI用ホスト名かどうか判定（localhost / 127.x.x.x / ::1）
  * Ollama、LM Studio等のローカルLLMサーバー向け
  * VULN-013 fix: ポート番号も検証し、許可されたポートのみ信頼する
@@ -299,7 +308,7 @@ export function validateUrlForAIRequests(url: string): void {
 
   const parsedUrl = new URL(url);
   const hostname = normalizeHostname(parsedUrl.hostname);
-  const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (parsedUrl.protocol === 'https:' ? 443 : 80);
+  const port = resolveEffectivePort(parsedUrl);
 
   // ローカルAI用アドレス（127.x.x.x / ::1 / localhost）は許可（ポート制限付き）。
   // isPrivateIpAddress('localhost') は false を返すため、ホスト名形式の localhost も

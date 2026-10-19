@@ -154,7 +154,11 @@ export function mountArchiveLifecycle(deps: ArchiveLifecycleDeps): void {
           deleted: data.deleted,
           remaining: data.remaining,
         });
-        showStatus(statusTarget(statusEl), data.vacuumOk ? done : `${done} ${localized('archiveVacuumNote')}`, data.vacuumOk ? 'success' : 'error');
+        if (data.vacuumOk) {
+          showStatus(statusTarget(statusEl), done, 'success');
+        } else {
+          showStatus(statusTarget(statusEl), `${done} ${localized('archiveVacuumNote')}`, 'error');
+        }
       },
       onError: (message) => showStatus(statusTarget(statusEl), `${localized('archivePurgeFailed')}: ${message}`, 'error'),
     });

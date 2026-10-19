@@ -228,10 +228,12 @@ export async function migrateLegacyPrivacyConsent(): Promise<boolean> {
             return false;
         }
 
-        const hasAlreadyConsented =
-            typeof consentValue === 'boolean' ? consentValue :
-            typeof consentValue === 'object' && consentValue !== null ? (consentValue as PrivacyConsentState).hasConsented === true :
-            false;
+        let hasAlreadyConsented = false;
+        if (typeof consentValue === 'boolean') {
+            hasAlreadyConsented = consentValue;
+        } else if (typeof consentValue === 'object' && consentValue !== null) {
+            hasAlreadyConsented = (consentValue as PrivacyConsentState).hasConsented === true;
+        }
 
         if (hasAlreadyConsented) {
             return false;
@@ -396,26 +398,23 @@ export function subscribeConsentChanges(listener: () => void): () => void {
     };
 }
 
+function logConsentNotifyFailure(error: unknown): void {
+    logWarn(
+        'Failed to notify consent state change',
+        { error: errorMessage(error) },
+        undefined,
+        'privacyConsent.ts'
+    );
+}
+
 function notifyConsentChanged(): void {
     try {
         if (typeof document !== 'undefined') {
             document.dispatchEvent(new CustomEvent(CONSENT_STATE_CHANGED_EVENT));
         }
-        sendFromPopup('CONSENT_STATE_CHANGED').catch((error) => {
-            logWarn(
-                'Failed to notify consent state change',
-                { error: errorMessage(error) },
-                undefined,
-                'privacyConsent.ts'
-            );
-        });
+        sendFromPopup('CONSENT_STATE_CHANGED').catch(logConsentNotifyFailure);
     } catch (error) {
-        logWarn(
-            'Failed to notify consent state change',
-            { error: errorMessage(error) },
-            undefined,
-            'privacyConsent.ts'
-        );
+        logConsentNotifyFailure(error);
     }
 }
 

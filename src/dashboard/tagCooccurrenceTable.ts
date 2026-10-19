@@ -14,6 +14,7 @@
  */
 
 import type { TagEdge, TagNode } from './tagCooccurrence.js';
+import { compareStrings } from '../utils/compareStrings.js';
 
 export interface CooccurrenceGraph {
   nodes: TagNode[];
@@ -87,8 +88,8 @@ export function buildCooccurrencePairRows(
 
   rows.sort((a, b) => {
     if (b.weight !== a.weight) return b.weight - a.weight;
-    if (a.tagA !== b.tagA) return a.tagA < b.tagA ? -1 : 1;
-    return a.tagB < b.tagB ? -1 : a.tagB > b.tagB ? 1 : 0;
+    if (a.tagA !== b.tagA) return compareStrings(a.tagA, b.tagA);
+    return compareStrings(a.tagB, b.tagB);
   });
 
   return {

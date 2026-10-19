@@ -379,14 +379,12 @@ export async function migrateToSingleSettingsObject(
         const remaining = legacyKeys.filter((key) => hasOwn(snapshot, key));
         if (remaining.length === 0) break;
 
-        if (await hasCoveringBackup(port, remaining)) {
-            stageIndex = await recordStage(port, 'backed_up', stageIndex);
-        } else {
+        if (!(await hasCoveringBackup(port, remaining))) {
             const backupData: Record<string, unknown> = {};
             for (const key of remaining) backupData[key] = snapshot[key];
             await writeAndVerifyBackup(port, backupData, now);
-            stageIndex = await recordStage(port, 'backed_up', stageIndex);
         }
+        stageIndex = await recordStage(port, 'backed_up', stageIndex);
 
         // Re-read immediately before the destructive step. A raw key that
         // changed after the backup — or a concurrent writer that moved the

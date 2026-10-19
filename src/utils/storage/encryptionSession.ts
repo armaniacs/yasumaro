@@ -466,14 +466,9 @@ async function reencryptApiKeysToKek(options: {
   );
   for (const item of plan.toReencrypt) {
     const current = byLocation.get(`${item.placement}:${item.field}`);
-    let roundTripped: string | null = null;
-    if (isEncrypted(current)) {
-      try {
-        roundTripped = await decryptApiKey(current, keys.next, item.field);
-      } catch {
-        roundTripped = null;
-      }
-    }
+    const roundTripped = isEncrypted(current)
+      ? await trialDecrypt(current, keys.next, item.field)
+      : null;
     if (roundTripped === null || !(await constantTimeCompare(roundTripped, item.plaintext))) {
       throw new Error(`REENCRYPT_VERIFY_FAILED: read-back mismatch for field ${item.field}`);
     }
@@ -650,6 +645,24 @@ export async function setMasterPassword(password: string): Promise<boolean> {
 }
 
 /**
+ * Shared atomic rehash: when a legacy hash was accepted, regenerate the hash
+ * and the KDF iteration count in one write.
+ */
+async function rehashMasterPasswordIfNeeded(
+    verifyResult: { needsRehash: boolean },
+    password: string,
+    salt: Uint8Array
+): Promise<void> {
+    if (!verifyResult.needsRehash) return;
+    const newHash = await hashPasswordWithPBKDF2(password, salt);
+    await chrome.storage.local.set({
+        [StorageKeys.MASTER_PASSWORD_HASH]: newHash,
+        [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
+    });
+    logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
+}
+
+/**
  * マスターパスワードを検証し、セッションをアンロックする
  * @param {string} password - マスターパスワード
  * @returns {Promise<boolean>} 成功した場合true
@@ -688,14 +701,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
 
     if (verifyResult.isValid) {
         // VULN-019 fix: re-hash with new iteration count if legacy hash was used
-        if (verifyResult.needsRehash) {
-            const newHash = await hashPasswordWithPBKDF2(password, salt);
-            await chrome.storage.local.set({
-                [StorageKeys.MASTER_PASSWORD_HASH]: newHash,
-                [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
-            });
-            logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
-        }
+        await rehashMasterPasswordIfNeeded(verifyResult, password, salt);
         // VULN-018 fix: reset failed attempts on successful authentication
         await resetFailedAttempts();
         // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
@@ -759,14 +765,7 @@ export async function verifyMasterPasswordWithRehash(
         // Same atomic rehash contract as unlockWithPassword: hash and KDF
         // iteration count move together, so a stale stored count can never
         // sit next to an envelope hash and reject the correct password.
-        if (verifyResult.needsRehash) {
-            const newHash = await hashPasswordWithPBKDF2(password, salt);
-            await chrome.storage.local.set({
-                [StorageKeys.MASTER_PASSWORD_HASH]: newHash,
-                [StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]: ENVELOPE_ITERATIONS,
-            });
-            logInfo('Migrated master password hash to stronger KDF (600,000 iterations)');
-        }
+        await rehashMasterPasswordIfNeeded(verifyResult, password, salt);
         return { success: true };
     } catch (e: unknown) {
         return { success: false, error: errorMessage(e) };
@@ -894,6 +893,15 @@ export function clearEncryptionKeyCache(): void {
     cachedHmacSecret = null;
 }
 
+/** 32バイトのランダムシークレットを生成し、ラップして local に保存して返す。 */
+async function generateAndStoreHmacSecret(): Promise<string> {
+    const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+    const secret = bytesToBase64(secretBytes);
+    const wrapped = await wrapSecretString(secret);
+    await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
+    return secret;
+}
+
 /**
  * HMAC Secretを取得または作成する。
  * chrome.storage.local には AES-GCM でラップした envelope 形式でのみ保存し、
@@ -920,10 +928,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
             // for existing users. Self-heal instead of throwing: generate a fresh
             // secret and persist it wrapped (mirrors hmacKeyStore recovery).
             await logError('Failed to unwrap HMAC secret, regenerating', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
-            const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-            secret = bytesToBase64(secretBytes);
-            const wrapped = await wrapSecretString(secret);
-            await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
+            secret = await generateAndStoreHmacSecret();
         }
     } else if (typeof stored === 'string' && stored.length > 0) {
         // Legacy plaintext secret: migrate to wrapped form.
@@ -931,12 +936,7 @@ export async function getOrCreateHmacSecret(): Promise<string> {
         const wrapped = await wrapSecretString(secret);
         await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
     } else {
-        // 32バイトのランダムシークレットを生成
-        const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-        secret = bytesToBase64(secretBytes);
-
-        const wrapped = await wrapSecretString(secret);
-        await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
+        secret = await generateAndStoreHmacSecret();
     }
 
     cachedHmacSecret = secret;

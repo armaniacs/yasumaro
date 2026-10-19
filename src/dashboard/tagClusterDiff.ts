@@ -6,6 +6,7 @@
  */
 
 import type { TagNode } from './tagCooccurrence.js';
+import { compareStrings } from '../utils/compareStrings.js';
 
 /** Per-tag count change for the increased/decreased sections. */
 export interface TagDelta {
@@ -69,12 +70,11 @@ export function computeTagDiff(beforeNodes: TagNode[], afterNodes: TagNode[]): T
     }
   }
 
-  const byNameAsc = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
   const byDeltaDescThenName = (a: TagDelta, b: TagDelta): number =>
-    b.delta - a.delta || byNameAsc(a.tag, b.tag);
+    b.delta - a.delta || compareStrings(a.tag, b.tag);
 
-  appeared.sort(byNameAsc);
-  disappeared.sort(byNameAsc);
+  appeared.sort(compareStrings);
+  disappeared.sort(compareStrings);
   increased.sort(byDeltaDescThenName);
   decreased.sort(byDeltaDescThenName);
 

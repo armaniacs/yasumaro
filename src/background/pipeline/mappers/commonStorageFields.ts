@@ -106,13 +106,14 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     ?? (d.maskedCount as number | undefined)
     ?? (privacy?.maskedCount as number | undefined)
     ?? null;
+  const tags = privacy?.tags as string[] | undefined;
 
   const fields: Omit<CommonStorageFields, 'toBrowsingLogRecord' | 'toMetadataPatch'> = {
     url: d.url as string,
     title: (d.title as string) || null,
     content: (d.content as string) || null,
     summary: (privacy?.summary as string) || null,
-    tagsArray: (privacy?.tags as string[] | undefined) && (privacy?.tags as string[]).length > 0 ? (privacy?.tags as string[]) : null,
+    tagsArray: tags && tags.length > 0 ? tags : null,
     providerName: (privacy?.providerName as string) ?? null,
     modelName: (privacy?.modelName as string) ?? null,
     privacyMode: (privacy?.mode as string) ?? null,

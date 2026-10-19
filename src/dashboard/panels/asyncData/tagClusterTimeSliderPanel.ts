@@ -40,6 +40,8 @@ import {
 } from '../../components/periodFilter.js';
 import { splitPeriodInHalves, type PeriodHalves } from '../../periodSplit.js';
 import { formatLocalDateString } from '../../../utils/localDate.js';
+import { clearElement } from '../../../utils/domClear.js';
+import { compareStrings } from '../../../utils/compareStrings.js';
 import { computeTagDiff, type TagDiffResult } from '../../tagClusterDiff.js';
 import { tagHue } from '../../tagClusterColor.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
@@ -81,10 +83,6 @@ function toDateInputValue(ts: number): string {
   return formatLocalDateString(ts);
 }
 
-function clearChildren(element: HTMLElement): void {
-  while (element.firstChild) element.removeChild(element.firstChild);
-}
-
 export function createTagClusterTimeSliderPanel(): PanelLifecycle {
   let startInput: HTMLInputElement | null = null;
   let endInput: HTMLInputElement | null = null;
@@ -117,9 +115,8 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
   function clearSideSvg(side: SideRefs): void {
     side.panZoom?.cleanup();
     side.panZoom = null;
-    if (!side.svg) return;
-    while (side.svg.firstChild) side.svg.removeChild(side.svg.firstChild);
-    side.svg.removeAttribute('viewBox');
+    clearElement(side.svg);
+    side.svg?.removeAttribute('viewBox');
   }
 
   /**
@@ -209,7 +206,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     const tags = new Set<string>();
     for (const node of firstNodes) tags.add(node.tag);
     for (const node of secondNodes) tags.add(node.tag);
-    const sorted = Array.from(tags).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+    const sorted = Array.from(tags).sort(compareStrings);
     return new Map(sorted.map((tag, index) => [tag, index]));
   }
 
@@ -293,7 +290,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
 
   function renderDiffList(diff: TagDiffResult): void {
     if (!diffListHost) return;
-    clearChildren(diffListHost);
+    clearElement(diffListHost);
     appendDiffSection(diffListHost, 'tagClusterDiffAppeared', 'Appeared tags', diff.appeared.map((tag) => ({ tag, delta: null })));
     appendDiffSection(diffListHost, 'tagClusterDiffDisappeared', 'Disappeared tags', diff.disappeared.map((tag) => ({ tag, delta: null })));
     appendDiffSection(diffListHost, 'tagClusterDiffIncreased', 'Increased tags', diff.increased.map((entry) => ({ tag: entry.tag, delta: entry.delta })));
@@ -321,7 +318,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
     // It runs before the input check so a rejected window still leaves no
     // stale comparison behind.
     lifecycle.resetNotices();
-    if (diffListHost) clearChildren(diffListHost);
+    if (diffListHost) clearElement(diffListHost);
 
     const startValue = startInput.value;
     const endValue = endInput.value;
@@ -418,8 +415,7 @@ export function createTagClusterTimeSliderPanel(): PanelLifecycle {
       ]);
       if (isStale()) return;
 
-      const bothOk = firstData !== null && firstData.ok && secondData !== null && secondData.ok;
-      if (bothOk && firstData && secondData) {
+      if (firstData !== null && firstData.ok && secondData !== null && secondData.ok) {
         const unionOrder = unionTagOrder(firstData.nodes, secondData.nodes);
         const unionCount = unionOrder.size;
         renderSide(first, 'tagClusterCompareFirstHalf', 'First half', firstData, unionOrder, unionCount, firstLoading);

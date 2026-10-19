@@ -255,8 +255,7 @@ export function buildCalendarDaysHtml(year: number, month: number, selectedDate:
 
 /** Builds the full panel shell HTML (header, search area, bulk bar, list/pagination containers). */
 export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryError: (error: string | null) => string): string {
-  const s = state;
-  const fallbackBanner = s.fallbackMode
+  const fallbackBanner = state.fallbackMode
     ? `<div class="sqlite-fallback-warning warning-banner" role="alert">
         ⚠️ ${t('fallbackStorageWarning')}
        </div>`
@@ -266,38 +265,38 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
     ${fallbackBanner}
     <div class="sqlite-history-header">
       <h3 data-i18n="sqliteHistoryTitle">SQLite History</h3>
-      <span class="sqlite-history-count">${t(getPluralKey('historyRecordCount', s.total), [String(s.total)])}</span>
+      <span class="sqlite-history-count">${t(getPluralKey('historyRecordCount', state.total), [String(state.total)])}</span>
     </div>
     <div class="sqlite-history-search">
       <input type="text" id="${SQLITE_HISTORY_IDS.searchInput}"
         placeholder="${t('historySearchPlaceholder')}"
-        value="${escapeHtml(s.searchQuery)}"
+        value="${escapeHtml(state.searchQuery)}"
         aria-label="${t('historySearchAriaLabel')}" />
       <div id="${SQLITE_HISTORY_IDS.sortControl}" class="sqlite-sort-control"></div>
       <div id="${SQLITE_HISTORY_IDS.calendarNav}" class="sqlite-calendar-nav"></div>
-      <div id="${SQLITE_HISTORY_IDS.error}" class="sqlite-history-error${s.error ? '' : ' hidden'}">
-        ${escapeHtml(translateHistoryError(s.error))}
+      <div id="${SQLITE_HISTORY_IDS.error}" class="sqlite-history-error${state.error ? '' : ' hidden'}">
+        ${escapeHtml(translateHistoryError(state.error))}
       </div>
     </div>
-    <div id="${SQLITE_HISTORY_IDS.bulkBar}" class="sqlite-bulk-bar${s.selectedIds.size > 0 ? '' : ' hidden'}">
+    <div id="${SQLITE_HISTORY_IDS.bulkBar}" class="sqlite-bulk-bar${state.selectedIds.size > 0 ? '' : ' hidden'}">
       <label class="sqlite-bulk-select-all">
         <input type="checkbox" id="${SQLITE_HISTORY_IDS.selectAll}" aria-label="${t('historySelectAll')}">
         <span data-i18n="historySelectAll">${t('historySelectAll')}</span>
       </label>
       <button type="button" id="${SQLITE_HISTORY_IDS.clearSelection}" class="secondary-btn" data-i18n="historyClearSelection">${t('historyClearSelection')}</button>
-      <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(s.selectedIds.size)])}</span>
+      <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(state.selectedIds.size)])}</span>
       <button type="button" id="${SQLITE_HISTORY_IDS.appendObsidian}" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
       <button type="button" id="${SQLITE_HISTORY_IDS.regenerateSelected}" class="btn-primary" data-i18n="historyRegenerateSelected">${t('historyRegenerateSelected')}</button>
       <button type="button" id="${SQLITE_HISTORY_IDS.deleteSelected}" class="danger-btn" data-i18n="historyDeleteSelected">${t('historyDeleteSelected')}</button>
       <span id="${SQLITE_HISTORY_IDS.deleteConfirm}" class="sqlite-delete-confirm hidden" role="group" aria-live="polite">
-        <span class="sqlite-delete-confirm-text">${t('historyDeleteSelectedConfirm', [String(s.selectedIds.size)])}</span>
+        <span class="sqlite-delete-confirm-text">${t('historyDeleteSelectedConfirm', [String(state.selectedIds.size)])}</span>
         <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmYes}" class="danger-btn" data-i18n="historyDeleteConfirmYes">${t('historyDeleteConfirmYes')}</button>
         <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmNo}" class="secondary-btn" data-i18n="cancel">${t('cancel')}</button>
       </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
-      ${s.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
+      ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
     <div id="${SQLITE_HISTORY_IDS.pagination}" class="sqlite-pagination"></div>
   `;
@@ -453,6 +452,17 @@ export function renderPendingRegion(
         const label = btn.textContent;
         btn.disabled = true;
         btn.textContent = t('processing') || '処理中...';
+        // Failure: restore the button and surface the reason in-row.
+        const fail = (message: string): void => {
+          btn.disabled = false;
+          btn.textContent = label;
+          if (!row) return;
+          row.querySelector('.record-error-message')?.remove();
+          const msg = document.createElement('div');
+          msg.className = 'record-error-message';
+          msg.textContent = message;
+          row.appendChild(msg);
+        };
         try {
           if (action === 'delete') {
             await actions.onDelete(url);
@@ -460,26 +470,9 @@ export function renderPendingRegion(
           }
           const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
           if (result.ok) return;
-          // Failure: restore the button and surface the reason in-row.
-          btn.disabled = false;
-          btn.textContent = label;
-          if (row) {
-            row.querySelector('.record-error-message')?.remove();
-            const msg = document.createElement('div');
-            msg.className = 'record-error-message';
-            msg.textContent = result.error ?? t('recordError');
-            row.appendChild(msg);
-          }
+          fail(result.error ?? t('recordError'));
         } catch (error) {
-          btn.disabled = false;
-          btn.textContent = label;
-          if (row) {
-            row.querySelector('.record-error-message')?.remove();
-            const msg = document.createElement('div');
-            msg.className = 'record-error-message';
-            msg.textContent = error instanceof Error ? error.message : t('recordError');
-            row.appendChild(msg);
-          }
+          fail(error instanceof Error ? error.message : t('recordError'));
         }
       })();
     });
@@ -584,14 +577,15 @@ function updateBulkBar(
     confirmText.textContent = t('historyDeleteSelectedConfirm', [String(selectedIds.size)]);
   }
 
+  const noSelection = selectedIds.size === 0;
   if (appendBtn) {
-    appendBtn.disabled = selectedIds.size === 0;
+    appendBtn.disabled = noSelection;
   }
   if (regenerateBtn) {
-    regenerateBtn.disabled = selectedIds.size === 0;
+    regenerateBtn.disabled = noSelection;
   }
   if (deleteBtn) {
-    deleteBtn.disabled = selectedIds.size === 0;
+    deleteBtn.disabled = noSelection;
   }
 }
 
@@ -619,9 +613,7 @@ function updateTagFilterBar(
       }
     }
   } else {
-    if (existingBar) {
-      existingBar.remove();
-    }
+    existingBar?.remove();
   }
 
   // Fallback notice: shown when a tag-initiated navigation matched nothing
@@ -640,9 +632,7 @@ function updateTagFilterBar(
       containerEl.appendChild(note);
     }
   } else {
-    if (existingNote) {
-      existingNote.remove();
-    }
+    existingNote?.remove();
   }
 }
 
@@ -674,16 +664,15 @@ export function wireEntryList(
       callbacks.onSelectionChange(id, checkbox.checked);
     });
   });
-  region.querySelectorAll('[data-action="star"]').forEach((el) => {
-    const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (!Number.isInteger(entryId)) return;
-    el.addEventListener('click', () => callbacks.onToggleStar(entryId));
-  });
-  region.querySelectorAll('[data-action="delete"]').forEach((el) => {
-    const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
-    if (!Number.isInteger(entryId)) return;
-    el.addEventListener('click', () => callbacks.onDelete(entryId));
-  });
+  const wireEntryClick = (action: string, onClick: (entryId: number) => void): void => {
+    region.querySelectorAll(`[data-action="${action}"]`).forEach((el) => {
+      const entryId = Number((el as HTMLElement).closest('.sqlite-entry')?.getAttribute('data-id'));
+      if (!Number.isInteger(entryId)) return;
+      el.addEventListener('click', () => onClick(entryId));
+    });
+  };
+  wireEntryClick('star', (entryId) => callbacks.onToggleStar(entryId));
+  wireEntryClick('delete', (entryId) => callbacks.onDelete(entryId));
   region.querySelectorAll('[data-action="regenerate"]').forEach((el) => {
     const entryEl = (el as HTMLElement).closest('.sqlite-entry');
     const entryId = Number(entryEl?.getAttribute('data-id'));
@@ -874,6 +863,25 @@ export function wirePanelShell(
   }
 }
 
+function wireDataRegions(
+  container: HTMLElement,
+  state: SqliteHistoryState,
+  callbacks: SqliteHistoryViewCallbacks,
+): void {
+  wireCalendarNav(container, state.selectedDate,
+    { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
+    callbacks);
+  wireSortControl(container, state.sortBy, state.sortDir, isFullTextSearchActive(state), callbacks);
+
+  const listRegion = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.entryList);
+  if (state.loading) {
+    if (listRegion) setElementHtml(listRegion, `<div class="loading">${t('historyLoading')}</div>`);
+    return;
+  }
+  wireEntryList(container, state.entries, state.selectedIds, state.activeTagFilter, callbacks);
+  wirePagination(container, state.currentPage, state.total, SQLITE_HISTORY_PAGE_SIZE, callbacks);
+}
+
 /** Full rebuild: shell + all regions + shell wiring. */
 function renderFull(
   container: HTMLElement,
@@ -883,12 +891,7 @@ function renderFull(
   setElementHtml(container, buildPanelShellHtml(state, callbacks.translateError));
 
   if (!state.loading) {
-    wireCalendarNav(container, state.selectedDate,
-      { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
-      callbacks);
-    wireSortControl(container, state.sortBy, state.sortDir, isFullTextSearchActive(state), callbacks);
-    wireEntryList(container, state.entries, state.selectedIds, state.activeTagFilter, callbacks);
-    wirePagination(container, state.currentPage, state.total, SQLITE_HISTORY_PAGE_SIZE, callbacks);
+    wireDataRegions(container, state, callbacks);
   }
 
   wirePanelShell(container, state, callbacks, { focusSearch: true });
@@ -935,30 +938,7 @@ function updateDynamicRegions(
     );
   }
 
-  wireCalendarNav(container, state.selectedDate,
-    { searchQuery: state.searchQuery, activeTagFilter: state.activeTagFilter },
-    callbacks);
-
-  wireSortControl(
-    container,
-    state.sortBy,
-    state.sortDir,
-    isFullTextSearchActive(state),
-    callbacks,
-  );
-
-  const listRegion = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.entryList);
-  if (listRegion) {
-    if (state.loading) {
-      setElementHtml(listRegion, `<div class="loading">${t('historyLoading')}</div>`);
-    } else {
-      wireEntryList(container, state.entries, state.selectedIds, state.activeTagFilter, callbacks);
-    }
-  }
-
-  if (!state.loading) {
-    wirePagination(container, state.currentPage, state.total, SQLITE_HISTORY_PAGE_SIZE, callbacks);
-  }
+  wireDataRegions(container, state, callbacks);
 
   updateBulkBar(container, state.selectedIds, state.entries);
 }

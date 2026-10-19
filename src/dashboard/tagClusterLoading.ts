@@ -90,7 +90,14 @@ export class TagClusterLoadingManager {
       const yOffset = idx * 35;
       const isCompleted = step.completed;
       const isCurrent = idx === this.currentStep && !isCompleted;
-      const color = isCompleted ? '#10b981' : isCurrent ? '#3b82f6' : '#9ca3af';
+      let color: string;
+      if (isCompleted) {
+        color = '#10b981';
+      } else if (isCurrent) {
+        color = '#3b82f6';
+      } else {
+        color = '#9ca3af';
+      }
 
       const marker = document.createElementNS(SVG_NS, 'text');
       marker.setAttribute('x', String(centerX - 90));

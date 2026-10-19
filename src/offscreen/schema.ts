@@ -115,31 +115,21 @@ export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${
 
 /**
  * Fields allowed in UPDATE SET clauses across all backends.
- * Must be kept in sync with the INSERT columns — any field that can be
- * inserted should also be updatable. Every update path iterates this list
+ * Derived from the INSERT columns — any field that can be inserted is also
+ * updatable, so adding a column to COLUMN_NAMES extends every update path
  * (IdbVfsBackend, FallbackStorage, the OPFS worker crud handlers, and the
- * offscreen SQLITE_UPDATE registry), so adding a column here extends all
- * of them at once. The dashboard route intentionally permits only the
- * narrower DASHBOARD_MUTABLE_SUBSET (background/handlers/dashboardSqlite).
+ * offscreen SQLITE_UPDATE registry) at once. The dashboard route
+ * intentionally permits only the narrower DASHBOARD_MUTABLE_SUBSET
+ * (background/handlers/dashboardSqlite).
  */
-export const UPDATABLE_FIELDS = [
-  'url', 'title', 'summary', 'tags', 'domain',
-  'visit_duration', 'scroll_ratio', 'is_starred', 'is_deleted',
-  'obsidian_synced', 'gist_synced',
-  'content', 'masked_count', 'cleansed_reason',
-  'ai_provider', 'ai_model', 'ai_duration_ms', 'obsidian_duration_ms',
-  'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
-  'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
-  'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
-  'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
-  'fallback_triggered',
-  'fallback_reason',
-  // WHY nav_source_url / search_query are absent despite the sync rule above:
-  // they are captured once when the record is made and describe how that
-  // visit happened. Letting an UPDATE rewrite them would let a later edit
-  // rewrite history, and a re-run regeneration would overwrite the original
-  // referrer (PBI 2026-09-26-03).
-];
+export const UPDATABLE_FIELDS = COLUMN_NAMES.filter(
+  (name) => name !== 'created_at' && name !== 'nav_source_url' && name !== 'search_query',
+);
+// WHY nav_source_url / search_query are absent despite the sync rule above:
+// they are captured once when the record is made and describe how that
+// visit happened. Letting an UPDATE rewrite them would let a later edit
+// rewrite history, and a re-run regeneration would overwrite the original
+// referrer (PBI 2026-09-26-03).
 
 /** INSERT OR IGNORE (for insertBatch() and migration). */
 export const INSERT_IGNORE_SQL = `INSERT OR IGNORE INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
@@ -266,43 +256,7 @@ export function buildInsertParams(
   record: InsertableRecord,
   domain: string | null
 ): (string | number | null)[] {
-  return [
-    record.url,
-    record.title ?? null,
-    record.summary ?? null,
-    record.tags ?? null,
-    record.created_at,
-    domain,
-    record.visit_duration ?? null,
-    record.scroll_ratio ?? null,
-    record.is_starred ?? 0,
-    record.is_deleted ?? 0,
-    record.obsidian_synced ?? 0,
-    record.gist_synced ?? 0,
-    record.content ?? null,
-    record.masked_count ?? null,
-    record.cleansed_reason ?? null,
-    record.ai_provider ?? null,
-    record.ai_model ?? null,
-    record.ai_duration_ms ?? null,
-    record.obsidian_duration_ms ?? null,
-    record.sent_tokens ?? null,
-    record.received_tokens ?? null,
-    record.original_tokens ?? null,
-    record.cleansed_tokens ?? null,
-    record.page_bytes ?? null,
-    record.candidate_bytes ?? null,
-    record.original_bytes ?? null,
-    record.cleansed_bytes ?? null,
-    record.ai_summary_original_bytes ?? null,
-    record.ai_summary_cleansed_bytes ?? null,
-    record.extracted_sentences_bytes ?? null,
-    record.extracted_sentences_original_bytes ?? null,
-    record.fallback_triggered ?? 0,
-    record.fallback_reason ?? null,
-    record.nav_source_url ?? null,
-    record.search_query ?? null,
-  ];
+  return Object.values(buildInsertRecordFields(record, domain));
 }
 
 /**

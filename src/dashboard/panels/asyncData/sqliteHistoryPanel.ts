@@ -4,7 +4,7 @@ import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
-import type { SqliteHistoryState, SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
+import type { SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
 import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
@@ -108,18 +108,10 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   let pendingPages: PendingPage[] = [];
   let unsubscribePendingStorage: (() => void) | null = null;
 
-  function state(): SqliteHistoryState {
-    return model.getState();
-  }
-
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
     if (!error) return '';
     return error.startsWith('Error: ') ? error : t(error);
-  }
-
-  async function handleToggleStar(id: number): Promise<void> {
-    await model.toggleStar(id);
   }
 
   async function handleDelete(id: number): Promise<void> {
@@ -174,7 +166,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     if (!container) return;
     if (regenerateInFlight.has(id)) return; // binding: 2件目以降は無視（AI呼び出しは1回だけ）
 
-    const entry = state().entries.find((e) => e.id === id);
+    const entry = model.getState().entries.find((e) => e.id === id);
     if (!entry?.url) return;
 
     clearEntryRegenerateError(container, id);
@@ -241,13 +233,13 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // renders at the document end (bottom-left, easy to miss).
   function handleDeleteSelected(): void {
     if (!container) return;
-    if (state().selectedIds.size === 0) return;
+    if (model.getState().selectedIds.size === 0) return;
     showDeleteConfirm(container);
   }
 
   async function handleDeleteSelectedConfirm(): Promise<void> {
     if (!container) return;
-    const total = state().selectedIds.size;
+    const total = model.getState().selectedIds.size;
     if (total === 0) {
       hideDeleteConfirm(container);
       return;
@@ -274,8 +266,9 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
 
   async function handleRegenerateSelected(): Promise<void> {
     if (bulkRegenerateInFlight) return;
-    const targets = state().entries.filter(
-      (e) => state().selectedIds.has(e.id) && !!e.url,
+    const { entries, selectedIds } = model.getState();
+    const targets = entries.filter(
+      (e) => selectedIds.has(e.id) && !!e.url,
     );
     if (targets.length === 0) return;
 
@@ -333,7 +326,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       onSearchInput: (query) => debouncedSearch(query),
       onSortChange: (sortBy, sortDir) => void model.changeSort(sortBy, sortDir),
       onPageChange: (page) => model.changePage(page),
-      onToggleStar: (id) => void handleToggleStar(id),
+      onToggleStar: (id) => void model.toggleStar(id),
       onDelete: (id) => void handleDelete(id),
       onSelectionChange: (id, selected) => model.selectEntry(id, selected),
       onTagFilterClick: (tag) => model.filterByTag(tag),
@@ -351,23 +344,19 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     };
   }
 
-  const debouncedSearch = (() => {
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    return (query: string) => {
-      if (timer) clearTimeout(timer);
-      timer = setTimeout(() => {
-        model.search(query);
-        timer = null;
-      }, 300);
-      searchDebounceTimer = timer;
-    };
-  })();
+  const debouncedSearch = (query: string): void => {
+    if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
+    searchDebounceTimer = setTimeout(() => {
+      model.search(query);
+      searchDebounceTimer = null;
+    }, 300);
+  };
 
   // Render ownership lives in the View (PBI 23): the diff/full decision is
   // view.render()'s single entry, so refresh() is a one-line delegation.
   function refresh(): void {
     if (!container) return;
-    renderHistoryView(container, state(), createCallbacks());
+    renderHistoryView(container, model.getState(), createCallbacks());
   }
 
   // --- Pending pages (PBI-P) ------------------------------------------------
@@ -382,14 +371,16 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     renderPending();
   }
 
+  async function removePendingAndReload(url: string): Promise<void> {
+    await removePendingPages([url]);
+    await loadPending();
+  }
+
   function createPendingActions(): PendingRegionActions {
     return {
       onRecord: (url) => recordPending(url, false),
       onRecordWithoutAi: (url) => recordPending(url, true),
-      onDelete: async (url) => {
-        await removePendingPages([url]);
-        await loadPending();
-      },
+      onDelete: (url) => removePendingAndReload(url),
     };
   }
 
@@ -399,8 +390,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     if (!page) return { ok: false, error: t('recordError') };
     const result = await recordPendingPage({ title: page.title, url: page.url, force: true, skipAi });
     if (result.success) {
-      await removePendingPages([url]);
-      await loadPending();
+      await removePendingAndReload(url);
       return { ok: true };
     }
     const error = result.error === PENDING_RECORD_TIMEOUT_ERROR

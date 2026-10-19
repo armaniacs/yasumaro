@@ -339,21 +339,16 @@ export function buildQuerySpec(
   const bareText = query.text ? sanitizeTextForFts5(query.text) : null;
   const useFts = bareText ? shouldUseFts5(fts5Available, bareText) : false;
 
-  let order: string;
-  let orderError: string | undefined;
+  let orderResult: { orderClause: string; error?: string };
   if (useFts) {
-    const r = buildFts5OrderClause(query);
-    order = r.orderClause;
-    orderError = r.error;
+    orderResult = buildFts5OrderClause(query);
   } else if (bareText) {
-    const r = buildLikeOrderClause(query);
-    order = r.orderClause;
-    orderError = r.error;
+    orderResult = buildLikeOrderClause(query);
   } else {
-    const r = buildOrderByClause(query);
-    order = r.orderClause;
-    orderError = r.error;
+    orderResult = buildOrderByClause(query);
   }
+  const order = orderResult.orderClause;
+  const orderError = orderResult.error;
   if (orderError) {
     return {
       where,

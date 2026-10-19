@@ -187,9 +187,10 @@ export async function finalizeImportedSettings(
   opts: FinalizeImportedSettingsOptions
 ): Promise<Settings> {
   const repo: SettingsImportRepo = opts.repo ?? settingsRepository;
-  const toSave = opts.apiKeyExcluded
-    ? stripImportedConsentKeys(stripDeviceLocalSecurityState(await mergeWithExistingApiKeys(importedSettings, repo)))
-    : stripImportedConsentKeys(stripDeviceLocalSecurityState(importedSettings));
+  const merged = opts.apiKeyExcluded
+    ? await mergeWithExistingApiKeys(importedSettings, repo)
+    : importedSettings;
+  const toSave = stripImportedConsentKeys(stripDeviceLocalSecurityState(merged));
   await repo.setAll(toSave);
   return toSave;
 }
@@ -207,6 +208,38 @@ async function mergeWithExistingApiKeys(
     (merged as Record<string, unknown>)[field] = existingSettings[field];
   }
   return merged;
+}
+
+async function isOverImportSizeCap(jsonData: string): Promise<boolean> {
+  if (new TextEncoder().encode(jsonData).length <= DEFAULT_IMPORT_SIZE_CAP_BYTES) return false;
+  await logError(
+    'Import rejected: file exceeds size cap',
+    {},
+    ErrorCode.SETTINGS_IMPORT_FAILURE,
+    'settingsExportImport.ts'
+  );
+  return true;
+}
+
+async function finalizeParsedImport(
+  parsed: ExportData,
+  opts?: ImportSettingsOptions
+): Promise<Settings | null> {
+  if (parsed.apiKeyExcluded) {
+    await logInfo(
+      'Imported settings have API keys excluded. Existing API keys will be preserved.',
+      { apiKeyExcluded: true },
+      'settingsExportImport.ts'
+    );
+    return finalizeImportedSettings(parsed.settings, {
+      apiKeyExcluded: true,
+      repo: opts?.repo,
+    });
+  }
+  return finalizeImportedSettings(parsed.settings, {
+    apiKeyExcluded: false,
+    repo: opts?.repo,
+  });
 }
 
 /**
@@ -276,13 +309,20 @@ export function saveJsonToFile(json: string, filename: string): void {
  */
 function getExportFilename(): string {
   const date = new Date();
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-  return `yasumaro-settings-${year}${month}${day}-${hours}${minutes}${seconds}.json`;
+  const pad = (value: number): string => String(value).padStart(2, '0');
+  const day = `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}`;
+  const time = `${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+  return `yasumaro-settings-${day}-${time}.json`;
+}
+
+async function buildExportData(): Promise<ExportData> {
+  const settings = await settingsRepository.getAll();
+  return {
+    version: EXPORT_VERSION,
+    exportedAt: new Date().toISOString(),
+    settings: sanitizeSettingsForExport(settings),
+    apiKeyExcluded: true,
+  };
 }
 
 /**
@@ -294,18 +334,7 @@ export async function exportEncryptedSettings(
   masterPassword: string
 ): Promise<{ success: boolean; encryptedData?: EncryptedExportData; error?: string }> {
   try {
-    const settings = await settingsRepository.getAll();
-
-    // APIキーを除外した設定でエクスポート
-    const sanitizedSettings = sanitizeSettingsForExport(settings);
-
-    const exportData: ExportData = {
-      version: EXPORT_VERSION,
-      exportedAt: new Date().toISOString(),
-      settings: sanitizedSettings,
-      apiKeyExcluded: true,
-    };
-
+    const exportData = await buildExportData();
     const json = JSON.stringify(exportData, null, 2);
 
     // ソルト生成
@@ -366,13 +395,7 @@ export async function importEncryptedSettings(
   try {
     // Size cap before any decode/KDF/decrypt work (VULN-034): a forged giant
     // file must not reach PBKDF2.
-    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
-      await logError(
-        'Import rejected: file exceeds size cap',
-        {},
-        ErrorCode.SETTINGS_IMPORT_FAILURE,
-        'settingsExportImport.ts'
-      );
+    if (await isOverImportSizeCap(jsonData)) {
       return null;
     }
 
@@ -479,22 +502,7 @@ export async function importEncryptedSettings(
     }
 
     // APIキーが除外されている場合
-    if (parsed.apiKeyExcluded) {
-      await logInfo(
-        'Imported settings have API keys excluded. Existing API keys will be preserved.',
-        { apiKeyExcluded: true },
-        'settingsExportImport.ts'
-      );
-      return await finalizeImportedSettings(parsed.settings, {
-        apiKeyExcluded: true,
-        repo: opts?.repo,
-      });
-    }
-
-    return await finalizeImportedSettings(parsed.settings, {
-      apiKeyExcluded: false,
-      repo: opts?.repo,
-    });
+    return finalizeParsedImport(parsed, opts);
   } catch (error) {
     await logError(
       'Failed to import encrypted settings',
@@ -521,23 +529,10 @@ export function isEncryptedExport(data: unknown): data is EncryptedExportData {
  * Export all settings to a JSON file
  */
 export async function exportSettings(): Promise<void> {
-  const settings = await settingsRepository.getAll();
-
-  // APIキーを除外した設定でエクスポート
-  const sanitizedSettings = sanitizeSettingsForExport(settings);
-
-  const exportData: ExportData = {
-    version: EXPORT_VERSION,
-    exportedAt: new Date().toISOString(),
-    settings: sanitizedSettings,
-    // APIキー除外フラグを追加
-    apiKeyExcluded: true,
-  };
-
-  const json = JSON.stringify(exportData, null, 2);
+  const exportData = await buildExportData();
 
   // HMAC署名を計算
-  const signature = await exportHmacSigner.sign(json);
+  const signature = await exportHmacSigner.sign(JSON.stringify(exportData, null, 2));
 
   // 署名付きエクスポートデータ
   const signedExportData: ExportData = {
@@ -756,13 +751,7 @@ export async function importSettings(
   opts?: ImportSettingsOptions
 ): Promise<Settings | null> {
   try {
-    if (new TextEncoder().encode(jsonData).length > DEFAULT_IMPORT_SIZE_CAP_BYTES) {
-      await logError(
-        'Import rejected: file exceeds size cap',
-        {},
-        ErrorCode.SETTINGS_IMPORT_FAILURE,
-        'settingsExportImport.ts'
-      );
+    if (await isOverImportSizeCap(jsonData)) {
       return null;
     }
 
@@ -814,22 +803,7 @@ export async function importSettings(
     }
 
     // APIキーが除外されている場合、インポートしない
-    if (parsed.apiKeyExcluded) {
-      await logInfo(
-        'Imported settings have API keys excluded. Existing API keys will be preserved.',
-        { apiKeyExcluded: true },
-        'settingsExportImport.ts'
-      );
-      return await finalizeImportedSettings(parsed.settings, {
-        apiKeyExcluded: true,
-        repo: opts?.repo,
-      });
-    }
-
-    return await finalizeImportedSettings(parsed.settings, {
-      apiKeyExcluded: false,
-      repo: opts?.repo,
-    });
+    return finalizeParsedImport(parsed, opts);
   } catch (error) {
     await logError(
       'Failed to import settings',

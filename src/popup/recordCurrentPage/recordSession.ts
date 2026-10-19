@@ -217,7 +217,11 @@ export class RecordSession {
   private showButtonResultState(recordBtn: HTMLButtonElement, state: 'done' | 'error'): void {
     this.sessionState = 'showing-result';
     recordBtn.disabled = true;
-    recordBtn.textContent = getMessageOr(state === 'done' ? 'recordNowDone' : 'recordNowError', (state === 'done' ? 'Saved!' : 'Failed'));
+    if (state === 'done') {
+      recordBtn.textContent = getMessageOr('recordNowDone', 'Saved!');
+    } else {
+      recordBtn.textContent = getMessageOr('recordNowError', 'Failed');
+    }
     if (this.resultTimer) clearTimeout(this.resultTimer);
     this.resultTimer = setTimeout(() => {
       this.resultTimer = null;

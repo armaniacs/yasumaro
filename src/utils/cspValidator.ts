@@ -11,7 +11,7 @@ import { ErrorCode } from './logger/types.js';
 import { logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { ALL_LIST_SOURCES } from './listSources.js';
-import { ALLOWED_LOCALHOST_PORTS } from './ssrfGuard.js';
+import { ALLOWED_LOCALHOST_PORTS, resolveEffectivePort } from './ssrfGuard.js';
 import { pickDefined } from './objectUtils.js';
 import { StorageKeys } from './storage/types.js';
 import {
@@ -291,7 +291,7 @@ export class CSPValidator {
 
       // VULN-013 fix: localhost/loopback with port allowlist
       // Only allow ports declared in host_permissions (single source: ssrfGuard.ts)
-      const port = parsed.port ? parseInt(parsed.port, 10) : (parsed.protocol === 'https:' ? 443 : 80);
+      const port = resolveEffectivePort(parsed);
 
       if (domain === 'localhost') {
         return ALLOWED_LOCALHOST_PORTS.has(port);

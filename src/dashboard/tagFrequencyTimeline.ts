@@ -23,6 +23,7 @@
 import { parseTagsForDisplay } from '../utils/tagUtils.js';
 import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
 import { formatLocalDateString } from '../utils/localDate.js';
+import { compareStrings } from '../utils/compareStrings.js';
 
 export type TimelineGranularity = 'week' | 'month';
 
@@ -142,7 +143,7 @@ export function computeTagFrequencyTimeline(
   // Deterministic ranking: count desc then name asc (domainAnalysisAggregate
   // convention — keeps reruns stable instead of input-order dependent).
   const ranked = [...totals.entries()]
-    .sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+    .sort((a, b) => b[1] - a[1] || compareStrings(a[0], b[0]))
     .map(([tag]) => tag);
   const topTags = ranked.slice(0, topN);
   const topSet = new Set(topTags);

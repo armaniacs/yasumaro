@@ -312,19 +312,20 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     if (deleteConfirm) deleteConfirm.hidden = true;
   }
 
+  function setRecordSelected(recordId: number, selected: boolean): void {
+    if (selected) selectedIds.add(recordId);
+    else selectedIds.delete(recordId);
+  }
+
   const selectionHooks: SelectionToggleHooks = {
     toggleSession: (index, checked) => {
       const session = lastSessions[index];
       if (!session) return;
-      for (const record of session.records) {
-        if (checked) selectedIds.add(record.id);
-        else selectedIds.delete(record.id);
-      }
+      for (const record of session.records) setRecordSelected(record.id, checked);
       refreshBulkBar();
     },
     togglePage: (recordId, checked) => {
-      if (checked) selectedIds.add(recordId);
-      else selectedIds.delete(recordId);
+      setRecordSelected(recordId, checked);
       refreshBulkBar();
     },
     toggleSubtree: (recordId, checked) => {
@@ -332,10 +333,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       // shared selector so a subtree check selects the whole branch below it.
       const trees = lastSessions.map((session) => buildSessionTree(session));
       const ids = expandSelectedIds(lastSessions, [{ kind: 'subtree', recordId }], trees);
-      for (const id of ids) {
-        if (checked) selectedIds.add(id);
-        else selectedIds.delete(id);
-      }
+      for (const id of ids) setRecordSelected(id, checked);
       refreshBulkBar();
     },
   };

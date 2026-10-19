@@ -142,6 +142,20 @@ function applyMetadataPatch(
     return result;
 }
 
+function replaceEntry(
+    entries: SavedUrlEntry[],
+    url: string,
+    update: (current: SavedUrlEntry) => SavedUrlEntry
+): SavedUrlEntry[] {
+    const idx = entries.findIndex((e) => e.url === url);
+    if (idx < 0) return entries;
+    const current = entries[idx];
+    if (current === undefined) return entries;
+    const updatedEntries = [...entries];
+    updatedEntries[idx] = update(current);
+    return updatedEntries;
+}
+
 // ============================================================================
 // Read operations
 // ============================================================================
@@ -158,8 +172,7 @@ export async function getSavedUrls(): Promise<Set<string>> {
  * Get the detailed URL entries with timestamps as a Map.
  */
 export async function getSavedUrlsWithTimestamps(): Promise<Map<string, number>> {
-    const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-    const entries = (result.savedUrlsWithTimestamps as SavedUrlEntry[]) || [];
+    const entries = await getSavedUrlEntries();
     const urlMap = new Map<string, number>();
     for (const entry of entries) {
         // WHY: hand-made entries can lack a timestamp; normalizing to 0 keeps
@@ -364,18 +377,9 @@ export async function updateSavedUrlEntry(
     url: string,
     updater: (entry: SavedUrlEntry) => SavedUrlEntry
 ): Promise<void> {
-    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
-        const entries = currentEntries || [];
-        const idx = entries.findIndex(e => e.url === url);
-        if (idx >= 0) {
-            const updatedEntries = [...entries];
-            const current = updatedEntries[idx];
-            if (current === undefined) return entries;
-            updatedEntries[idx] = updater(current);
-            return updatedEntries;
-        }
-        return entries;
-    });
+    await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) =>
+        replaceEntry(currentEntries || [], url, updater)
+    );
 }
 
 /**
@@ -390,19 +394,15 @@ export async function saveSavedUrlEntryMetadata(
 
     await withOptimisticLock('savedUrlsWithTimestamps', (currentEntries: SavedUrlEntry[]) => {
         const entries = currentEntries || [];
-        const idx = entries.findIndex(e => e.url === url);
-        if (idx < 0) {
+        const exists = entries.some((e) => e.url === url);
+        if (!exists) {
             if (!createIfMissing) return entries;
             return [...entries, applyMetadataPatch({ url, timestamp: timestamp ?? Date.now() }, patch, mergeTags)];
         }
-        const updatedEntries = [...entries];
-        const current = updatedEntries[idx];
-        if (current === undefined) return entries;
-        const merged = applyMetadataPatch(current, patch, mergeTags);
-        updatedEntries[idx] = refreshTimestamp
-            ? { ...merged, timestamp: timestamp ?? Date.now() }
-            : merged;
-        return updatedEntries;
+        return replaceEntry(entries, url, (current) => {
+            const merged = applyMetadataPatch(current, patch, mergeTags);
+            return refreshTimestamp ? { ...merged, timestamp: timestamp ?? Date.now() } : merged;
+        });
     });
 }
 
@@ -410,14 +410,16 @@ export async function saveSavedUrlEntryMetadata(
 // Tag operations
 // ============================================================================
 
+function withTags(entry: SavedUrlEntry, tags: string[]): SavedUrlEntry {
+    const { tags: _omit, ...rest } = entry;
+    return { ...rest, ...pickDefined({ tags: tags.length > 0 ? tags : undefined }) };
+}
+
 /**
  * Set tags for a URL entry.
  */
 export async function setUrlTags(url: string, tags: string[]): Promise<void> {
-    await updateSavedUrlEntry(url, (entry) => {
-        const { tags: _omit, ...rest } = entry;
-        return { ...rest, ...pickDefined({ tags: tags.length > 0 ? tags : undefined }) };
-    });
+    await updateSavedUrlEntry(url, (entry) => withTags(entry, tags));
 }
 
 /**
@@ -439,9 +441,7 @@ export async function addUrlTag(url: string, tag: string): Promise<void> {
 export async function removeUrlTag(url: string, tag: string): Promise<void> {
     await updateSavedUrlEntry(url, (entry) => {
         if (!entry.tags) return entry;
-        const filtered = entry.tags.filter(t => t !== tag);
-        const { tags: _omit, ...rest } = entry;
-        return { ...rest, ...pickDefined({ tags: filtered.length > 0 ? filtered : undefined }) };
+        return withTags(entry, entry.tags.filter(t => t !== tag));
     });
 }
 

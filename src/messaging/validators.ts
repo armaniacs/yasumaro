@@ -84,6 +84,28 @@ function assertContentLength(text: string, validatorName: string): void {
   }
 }
 
+function assertMessageObject(msg: unknown, validatorName: string): Record<string, unknown> {
+  if (!msg || typeof msg !== 'object') {
+    throw new ValidationError(validatorName, 'Message must be an object');
+  }
+  return msg as Record<string, unknown>;
+}
+
+function assertEnvelopeType(msg: unknown, validatorName: string, expectedType: string): Record<string, unknown> {
+  const m = assertMessageObject(msg, validatorName);
+  if (m.type !== expectedType) {
+    throw new ValidationError(validatorName, `type must be ${expectedType}`, 'type');
+  }
+  return m;
+}
+
+function assertPayloadObject(m: Record<string, unknown>, validatorName: string): Record<string, unknown> {
+  if (!m.payload || typeof m.payload !== 'object') {
+    throw new ValidationError(validatorName, 'payload is required', 'payload');
+  }
+  return m.payload as Record<string, unknown>;
+}
+
 // ------------------------------------------------------------------
 // ValidVisitValidator — VALID_VISIT payload validation
 // ------------------------------------------------------------------
@@ -144,17 +166,8 @@ function assertCleansedReasons(
 
 export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> {
   validate(msg: unknown): ValidVisitMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('ValidVisitValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'VALID_VISIT') {
-      throw new ValidationError('ValidVisitValidator', 'type must be VALID_VISIT', 'type');
-    }
-    if (!m.payload || typeof m.payload !== 'object') {
-      throw new ValidationError('ValidVisitValidator', 'payload is required', 'payload');
-    }
-    const payload = m.payload as Record<string, unknown>;
+    const m = assertEnvelopeType(msg, 'ValidVisitValidator', 'VALID_VISIT');
+    const payload = assertPayloadObject(m, 'ValidVisitValidator');
     if (typeof payload.content !== 'string') {
       throw new ValidationError('ValidVisitValidator', 'payload.content must be a string', 'content');
     }
@@ -511,10 +524,7 @@ export const STAGING_NAME_SUBTYPES: readonly string[] = Object.entries(DASHBOARD
 // ------------------------------------------------------------------
 export class DashboardSqliteValidator implements MessageValidator<DashboardSqliteRequest> {
   validate(msg: unknown): DashboardSqliteRequest {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('DashboardSqliteValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
+    const m = assertMessageObject(msg, 'DashboardSqliteValidator');
     // If the caller passes the full ExtensionMessage, unwrap payload
     const payload: unknown = (m.payload !== undefined ? m.payload : m) as unknown;
     if (!payload || typeof payload !== 'object') {
@@ -554,17 +564,8 @@ export class DashboardSqliteValidator implements MessageValidator<DashboardSqlit
 // ------------------------------------------------------------------
 export class FetchUrlValidator implements MessageValidator<FetchUrlMessage> {
   validate(msg: unknown): FetchUrlMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('FetchUrlValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'FETCH_URL') {
-      throw new ValidationError('FetchUrlValidator', 'type must be FETCH_URL', 'type');
-    }
-    if (!m.payload || typeof m.payload !== 'object') {
-      throw new ValidationError('FetchUrlValidator', 'payload is required', 'payload');
-    }
-    const payload = m.payload as Record<string, unknown>;
+    const m = assertEnvelopeType(msg, 'FetchUrlValidator', 'FETCH_URL');
+    const payload = assertPayloadObject(m, 'FetchUrlValidator');
     assertHttpUrl(payload.url, 'FetchUrlValidator');
     assertProtocolVersion(m, 'FetchUrlValidator');
     return msg as FetchUrlMessage;
@@ -576,18 +577,12 @@ export class FetchUrlValidator implements MessageValidator<FetchUrlMessage> {
 // ------------------------------------------------------------------
 export class ManualRecordValidator implements MessageValidator<ManualRecordMessage> {
   validate(msg: unknown): ManualRecordMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('ManualRecordValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
+    const m = assertMessageObject(msg, 'ManualRecordValidator');
     const allowedTypes = ['MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD'];
     if (typeof m.type !== 'string' || !allowedTypes.includes(m.type as string)) {
       throw new ValidationError('ManualRecordValidator', 'type must be MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORD', 'type');
     }
-    if (!m.payload || typeof m.payload !== 'object') {
-      throw new ValidationError('ManualRecordValidator', 'payload is required', 'payload');
-    }
-    const payload = m.payload as Record<string, unknown>;
+    const payload = assertPayloadObject(m, 'ManualRecordValidator');
     if (typeof payload.title !== 'string') {
       throw new ValidationError('ManualRecordValidator', 'payload.title must be string', 'title');
     }
@@ -615,17 +610,8 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
 // ------------------------------------------------------------------
 export class RegenerateSummaryValidator implements MessageValidator<RegenerateSummaryMessage> {
   validate(msg: unknown): RegenerateSummaryMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('RegenerateSummaryValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'REGENERATE_SUMMARY') {
-      throw new ValidationError('RegenerateSummaryValidator', 'type must be REGENERATE_SUMMARY', 'type');
-    }
-    if (!m.payload || typeof m.payload !== 'object') {
-      throw new ValidationError('RegenerateSummaryValidator', 'payload is required', 'payload');
-    }
-    const payload = m.payload as Record<string, unknown>;
+    const m = assertEnvelopeType(msg, 'RegenerateSummaryValidator', 'REGENERATE_SUMMARY');
+    const payload = assertPayloadObject(m, 'RegenerateSummaryValidator');
     if (typeof payload.id !== 'number' || !Number.isInteger(payload.id) || payload.id <= 0) {
       throw new ValidationError('RegenerateSummaryValidator', 'payload.id must be a positive integer', 'id');
     }
@@ -659,13 +645,7 @@ export class RegenerateSummaryValidator implements MessageValidator<RegenerateSu
 // ------------------------------------------------------------------
 export class CheckDomainValidator implements MessageValidator<ExtensionMessage> {
   validate(msg: unknown): ExtensionMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('CheckDomainValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'CHECK_DOMAIN') {
-      throw new ValidationError('CheckDomainValidator', 'type must be CHECK_DOMAIN', 'type');
-    }
+    const m = assertEnvelopeType(msg, 'CheckDomainValidator', 'CHECK_DOMAIN');
     // CHECK_DOMAIN must not have payload (NO_PAYLOAD_TYPES), but tolerate undefined
     if (m.payload !== undefined) {
       throw new ValidationError('CheckDomainValidator', 'CHECK_DOMAIN must not have payload', 'payload');
@@ -679,17 +659,8 @@ export class CheckDomainValidator implements MessageValidator<ExtensionMessage> 
 // ------------------------------------------------------------------
 export class ContentCleansingExecutedValidator implements MessageValidator<ContentCleansingExecutedMessage> {
   validate(msg: unknown): ContentCleansingExecutedMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('ContentCleansingExecutedValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'CONTENT_CLEANSING_EXECUTED') {
-      throw new ValidationError('ContentCleansingExecutedValidator', 'type must be CONTENT_CLEANSING_EXECUTED', 'type');
-    }
-    if (!m.payload || typeof m.payload !== 'object') {
-      throw new ValidationError('ContentCleansingExecutedValidator', 'payload is required', 'payload');
-    }
-    const p = m.payload as Record<string, unknown>;
+    const m = assertEnvelopeType(msg, 'ContentCleansingExecutedValidator', 'CONTENT_CLEANSING_EXECUTED');
+    const p = assertPayloadObject(m, 'ContentCleansingExecutedValidator');
     for (const field of ['hardStripRemoved', 'keywordStripRemoved', 'totalRemoved'] as const) {
       if (typeof p[field] !== 'number' || !Number.isFinite(p[field])) {
         throw new ValidationError('ContentCleansingExecutedValidator', `payload.${field} must be finite number`, field);
@@ -719,13 +690,7 @@ const TEST_OBSIDIAN_FIELD_CAPS = {
 
 export class TestObsidianValidator implements MessageValidator<ExtensionMessage> {
   validate(msg: unknown): ExtensionMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('TestObsidianValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'TEST_OBSIDIAN') {
-      throw new ValidationError('TestObsidianValidator', 'type must be TEST_OBSIDIAN', 'type');
-    }
+    const m = assertEnvelopeType(msg, 'TestObsidianValidator', 'TEST_OBSIDIAN');
     if (m.payload === undefined) {
       return msg as ExtensionMessage;
     }
@@ -744,7 +709,12 @@ export class TestObsidianValidator implements MessageValidator<ExtensionMessage>
       throw new ValidationError('TestObsidianValidator', 'payload.protocol must be "http" or "https"', 'protocol');
     }
     if (p.port !== undefined) {
-      const portNum = typeof p.port === 'number' ? p.port : typeof p.port === 'string' ? Number(p.port) : NaN;
+      let portNum = NaN;
+      if (typeof p.port === 'number') {
+        portNum = p.port;
+      } else if (typeof p.port === 'string') {
+        portNum = Number(p.port);
+      }
       if (!Number.isInteger(portNum) || portNum < 1 || portNum > 65535) {
         throw new ValidationError('TestObsidianValidator', 'payload.port must be an integer 1-65535', 'port');
       }
@@ -758,13 +728,7 @@ export class TestObsidianValidator implements MessageValidator<ExtensionMessage>
 // ------------------------------------------------------------------
 export class E2EProbeQueryValidator implements MessageValidator<OwE2eProbeQueryMessage> {
   validate(msg: unknown): OwE2eProbeQueryMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('E2EProbeQueryValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'OW_PROBE_QUERY') {
-      throw new ValidationError('E2EProbeQueryValidator', 'type must be OW_PROBE_QUERY', 'type');
-    }
+    const m = assertEnvelopeType(msg, 'E2EProbeQueryValidator', 'OW_PROBE_QUERY');
     // OW_PROBE_QUERY must not have payload (NO_PAYLOAD_TYPES), but tolerate undefined
     if (m.payload !== undefined) {
       throw new ValidationError('E2EProbeQueryValidator', 'OW_PROBE_QUERY must not have payload', 'payload');
@@ -793,13 +757,7 @@ const E2E_PROBE_STATE_KEYS: ReadonlySet<string> = new Set<string>([
 
 export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateMessage> {
   validate(msg: unknown): OwE2EProbeStateMessage {
-    if (!msg || typeof msg !== 'object') {
-      throw new ValidationError('E2EProbeStateValidator', 'Message must be an object');
-    }
-    const m = msg as Record<string, unknown>;
-    if (m.type !== 'OW_PROBE_STATE') {
-      throw new ValidationError('E2EProbeStateValidator', 'type must be OW_PROBE_STATE', 'type');
-    }
+    const m = assertEnvelopeType(msg, 'E2EProbeStateValidator', 'OW_PROBE_STATE');
     if (!m.payload || typeof m.payload !== 'object' || Array.isArray(m.payload)) {
       throw new ValidationError('E2EProbeStateValidator', 'payload is required', 'payload');
     }

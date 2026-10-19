@@ -1,7 +1,7 @@
 import { StatusInfo } from './statusChecker.js';
 import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { StorageKeys } from '../utils/storage/types.js';
+import { StorageKeys, type PrivacyMode } from '../utils/storage/types.js';
 import { normalizePrivacyMode } from '../utils/storage/defaults.js';
 import { addDomainToWhitelist, addPathToWhitelist, type WhitelistWriteResult } from './whitelistWriter.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
@@ -29,6 +29,14 @@ import { reportHandlerError, updateTrustStatus, initAllUrlsPermissionBanner } fr
 
 export { updateTrustStatus, initAllUrlsPermissionBanner };
 
+// Resolved privacy mode -> short badge label key (see types.ts PRIVACY_MODES).
+const PRIVACY_MODE_BADGE_KEYS: Record<PrivacyMode, string> = {
+  local_only: 'privacyModeLocalOnlyShort',
+  full_pipeline: 'privacyModeFullPipelineShort',
+  masked_cloud: 'privacyModeMaskedCloudShort',
+  cloud_only: 'privacyModeCloudOnlyShort',
+};
+
 // Show privacy mode badge (best-effort, guard against test environments)
 async function renderPrivacyModeBadge(): Promise<void> {
   try {
@@ -37,7 +45,7 @@ async function renderPrivacyModeBadge(): Promise<void> {
       const mode = normalizePrivacyMode(settings[StorageKeys.PRIVACY_MODE]);
       const modeBadge = document.getElementById('statusModeBadge');
       if (modeBadge) {
-        const modeKey = mode === 'local_only' ? 'privacyModeLocalOnlyShort' : mode === 'full_pipeline' ? 'privacyModeFullPipelineShort' : mode === 'masked_cloud' ? 'privacyModeMaskedCloudShort' : 'privacyModeCloudOnlyShort';
+        const modeKey = PRIVACY_MODE_BADGE_KEYS[mode];
         modeBadge.textContent = getMessageOr(modeKey, mode);
         modeBadge.className = `status-badge status-mode-badge mode-${mode}`;
       }

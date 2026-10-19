@@ -131,15 +131,21 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
     renderTimeline(timeline);
   }
 
+  function appendLegendItem(swatchClass: string): HTMLSpanElement {
+    const item = document.createElement('span');
+    item.className = 'tag-timeline-legend-item';
+    const swatch = document.createElement('span');
+    swatch.className = `tag-timeline-swatch ${swatchClass}`;
+    swatch.setAttribute('aria-hidden', 'true');
+    item.appendChild(swatch);
+    legendWrap!.appendChild(item);
+    return item;
+  }
+
   function renderLegend(timeline: TagFrequencyTimeline): void {
     if (!legendWrap) return;
     timeline.tags.forEach((tag, index) => {
-      const item = document.createElement('span');
-      item.className = 'tag-timeline-legend-item';
-      const swatch = document.createElement('span');
-      swatch.className = `tag-timeline-swatch ${seriesClass(index)}`;
-      swatch.setAttribute('aria-hidden', 'true');
-      item.appendChild(swatch);
+      const item = appendLegendItem(seriesClass(index));
       // WHY: top tags navigate to the history panel (tagClusterPanel
       // convention); "other" is an aggregate, so it stays plain text.
       const button = document.createElement('button');
@@ -148,19 +154,12 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
       button.textContent = `#${tag}`;
       button.addEventListener('click', () => navigateToHistoryWithTag(tag));
       item.appendChild(button);
-      legendWrap!.appendChild(item);
     });
     if (timeline.hasOther) {
-      const item = document.createElement('span');
-      item.className = 'tag-timeline-legend-item';
-      const swatch = document.createElement('span');
-      swatch.className = 'tag-timeline-swatch tag-timeline-series-other';
-      swatch.setAttribute('aria-hidden', 'true');
-      item.appendChild(swatch);
+      const item = appendLegendItem('tag-timeline-series-other');
       const label = document.createElement('span');
       label.textContent = otherLabel();
       item.appendChild(label);
-      legendWrap!.appendChild(item);
     }
   }
 
