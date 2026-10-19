@@ -28,9 +28,9 @@
 - **指摘者**: Red Team Leader, Governance/Risk
 - **場所**: `wxt.config.ts:65`
 - **修正内容**: `style-src` から `'unsafe-inline'` を削除。以下のインラインスタイルをCSSクラス/JS DOM操作に移行:
-  - `entrypoints/popup/index.html` — インラインstyle属性をCSSクラスに移行
-  - `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts` — `style="width:...%"` を `data-bar-width` + JS DOMに変更、`style="background:..."` を既存 `.warning-banner` CSSに変更、`style="display:none"` を `.hidden` クラスに変更
-  - `src/dashboard/recordingConditionsSettings.ts` — `style="display:none"` を `.hidden` クラスに変更、`style.display` 操作を `classList` に統一
+  - `entrypoints/popup/index.html` ― インラインstyle属性をCSSクラスに移行
+  - `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts` ― `style="width:...%"` を `data-bar-width` + JS DOMに変更、`style="background:..."` を既存 `.warning-banner` CSSに変更、`style="display:none"` を `.hidden` クラスに変更
+  - `src/dashboard/recordingConditionsSettings.ts` ― `style="display:none"` を `.hidden` クラスに変更、`style.display` 操作を `classList` に統一
 - **影響**: CSS インジェクションによる情報漏洩リスクを低減。ダッシュボードのCSP違反エラーを解消。
 
 ### ✅ [High] `chrome.storage.local.get()` 無引数呼び出し
@@ -129,6 +129,6 @@
 ## ビルド・テスト確認
 
 - [x] TypeScript 型チェック通過 (`npm run type-check`)
-- [x] テスト実行 (`npm test`) — 7167 passed / 373 files
-- [x] ビルド確認 (`npm build`) — dist/chromium-mv3 生成完了
+- [x] テスト実行 (`npm test`) ― 7167 passed / 373 files
+- [x] ビルド確認 (`npm build`) ― dist/chromium-mv3 生成完了
 - [x] Chrome 拡張機能での手動動作確認（CSPエラー解消、正常動作確認済み）

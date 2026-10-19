@@ -14,12 +14,12 @@
 - 解: `src/utils/text/tokenizer.ts` + `similarity.ts` に一本化。`contentDeduplicator` と `sentenceExtractor` は import するだけに。`Map<string,idx>` で重複文を分離
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 重複文が正しく分離される
+Scenario: ハッピーパス ― 重複文が正しく分離される
   Given 同文が2つあるテキストを渡す
   When `buildSentenceGraph` を呼ぶ
   Then 頂点が潰れずに 2つの独立した頂点として扱われる
 
-Scenario: エッジケース — 日本語 bi-gram が正しく混ざらない
+Scenario: エッジケース ― 日本語 bi-gram が正しく混ざらない
   Given 日本語と英語が混在する文を渡す
   When `toWordSet` を呼ぶ
   Then `words` と `bigrams` が無差別に混ざらず、閾値 `0.3` が言語間で安定する

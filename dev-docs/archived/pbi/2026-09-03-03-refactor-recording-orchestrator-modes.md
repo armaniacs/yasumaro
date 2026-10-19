@@ -1,4 +1,4 @@
-# PBI: RecordingOrchestrator deepening — triple-mode 分離と typed Context / RetryPolicy 抽出
+# PBI: RecordingOrchestrator deepening ― triple-mode 分離と typed Context / RetryPolicy 抽出
 
 ## ユーザーストーリー
 記録パイプラインを保守する開発者として、`RecordingOrchestrator.record(data, opts)` に同居する 3つの pipeline（normal / preview / retryObsidian）と untyped Context / heuristic offline 判定を deep な module にしたい、なぜなら現在は 1メソッド内で `mode` 分岐し retry は 13-step table を迂回して inline で 2 step を手組みし、`RecordingContext` は 7 union で順序違反が型で落ちず、offline 判定が `msg.toLowerCase().includes('ai ')` の文字列 heuristic に依存しているためバグが orchestration 層に隠れるから
@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 03 / 07
 - RICEスコア: **186**（Reach=80 / Impact=2 / Confidence=0.7 / Effort=0.6）
-- 根拠: 記録は全ユーザーの core flow（Reach 80）。Impact 2 は normal/preview/retry の分岐バグが silent data loss / duplicate entry / offline queue 誤載につながるため。PBI 01（storage 原子性）に依存 — 01 完了後に mutex スコープと offline heuristic を安全に修正できる。Effort 0.6人週は 3 entry point 分離＋typed Context＋RetryPolicy 抽出の設計変更を含む。
+- 根拠: 記録は全ユーザーの core flow（Reach 80）。Impact 2 は normal/preview/retry の分岐バグが silent data loss / duplicate entry / offline queue 誤載につながるため。PBI 01（storage 原子性）に依存 ― 01 完了後に mutex スコープと offline heuristic を安全に修正できる。Effort 0.6人週は 3 entry point 分離＋typed Context＋RetryPolicy 抽出の設計変更を含む。
 
 ## 背景 / なぜなぜ分析サマリ
 | 疑問 | 原因 → 示唆 → 解 |

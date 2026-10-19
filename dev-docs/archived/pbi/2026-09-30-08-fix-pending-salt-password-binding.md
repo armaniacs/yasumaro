@@ -16,13 +16,13 @@
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/storage/encryptionSession.ts` の `rotateToNewMasterPassword` — アンカー(`MASTER_PASSWORD_PENDING_SALT`)には salt 文字列のみを保存し、パスワード・hash との束縛がない
-- 同関数 — 再試行時も `anchoredSalt` を再利用し、`next` KEK は入力パスワード依存で導出される
-- `apiKeyTransition.ts` の `planKekTransition` — 旧 KEK でも新 KEK でも復号不能な field は `unrecoverable`
-- `encryptionSession.ts` の `reencryptApiKeysToKek` — `unrecoverable` があると `ReencryptionAbortedError` を投げて恒久 abort(異なるパスワードでの再試行時)
-- `rotateToNewMasterPassword` の `finally` — `MASTER_PASSWORD_SALT === saltBase64` のときだけアンカーを削除。metadata 未書き込みの abort ではアンカーが残り続ける(回復経路は閉じない — これ自体は resume 機構として正しい)
+- `src/utils/storage/encryptionSession.ts` の `rotateToNewMasterPassword` ― アンカー(`MASTER_PASSWORD_PENDING_SALT`)には salt 文字列のみを保存し、パスワード・hash との束縛がない
+- 同関数 ― 再試行時も `anchoredSalt` を再利用し、`next` KEK は入力パスワード依存で導出される
+- `apiKeyTransition.ts` の `planKekTransition` ― 旧 KEK でも新 KEK でも復号不能な field は `unrecoverable`
+- `encryptionSession.ts` の `reencryptApiKeysToKek` ― `unrecoverable` があると `ReencryptionAbortedError` を投げて恒久 abort(異なるパスワードでの再試行時)
+- `rotateToNewMasterPassword` の `finally` ― `MASTER_PASSWORD_SALT === saltBase64` のときだけアンカーを削除。metadata 未書き込みの abort ではアンカーが残り続ける(回復経路は閉じない ― これ自体は resume 機構として正しい)
 - `src/utils/storage/types.ts` の `MASTER_PASSWORD_PENDING_SALT` のコメントに「中止時に削除」とあるが abort 時削除の実装は存在しない(コードとドキュメントが矛盾)
-- 回復性: 同じ失敗パスワードの再入力なら、移行済み field は新 KEK で読めるため skip され収束する(`encryptionSession-reencrypt.test.ts` の `KEK rotation — resume` が回帰として固定。このテストはアンカーに salt だけを手植えするため、hash なしの旧形式アンカーも受理し続ける必要がある)
+- 回復性: 同じ失敗パスワードの再入力なら、移行済み field は新 KEK で読めるため skip され収束する(`encryptionSession-reencrypt.test.ts` の `KEK rotation ― resume` が回帰として固定。このテストはアンカーに salt だけを手植えするため、hash なしの旧形式アンカーも受理し続ける必要がある)
 
 ## BDD 受け入れシナリオ
 

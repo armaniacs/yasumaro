@@ -90,13 +90,13 @@ Scenario: ErrorCode リテラルの重複が factory に集約される
 ### 構文破壊の修復
 
 - 移行作業中に 476 箇所の `vi.mock` factory 呼び出し終端が `););` に破壊（167 ファイル全件）。tsc は `src/**/__tests__` と testDir を除外するため検出できず、vitest parse が全 167 ファイルで失敗する状態だった。
-- 修復: `sed 's/^););$/);/'` を 167 ファイルへ機械適用。改行コード維持（全 LF、CR 含有 50 src ファイルと零重複）。修復判定: SOUND — spy スタイル 1:1、呼び出し側 spy の verbatim パス、独自 ErrorCode リテラル保持をサンプル diff で確認。
+- 修復: `sed 's/^););$/);/'` を 167 ファイルへ機械適用。改行コード維持（全 LF、CR 含有 50 src ファイルと零重複）。修復判定: SOUND ― spy スタイル 1:1、呼び出し側 spy の verbatim パス、独自 ErrorCode リテラル保持をサンプル diff で確認。
 
 ### 検証
 
 - 段階バッチ検証（修復エージェント）: background/popup/dashboard/utils/content/offscreen/messaging の 26 移行ファイル 823 tests green + factory pin 8 tests green。
 - フルゲート（統合側実測）: `npx tsc --noEmit` 0 errors / `npm run lint` 0 errors（119 warnings は既存 no-greedy-fake-timers 等、新規 0）/ `npm test` 1022 files passed | 1 skipped・15602 tests passed | 21 skipped / `npm run validate` exit 0。
-- `type-check:test` 469 errors、HEAD 実測（NN34 適用前、worktree スナップショット）469 と同数。位置正規化（file: error TSxxxx 単位）でエラー集合完全一致 — NN34 による型エラー増減 0。pin 474 以下（delta 0）で baseline ゲート通過。
+- `type-check:test` 469 errors、HEAD 実測（NN34 適用前、worktree スナップショット）469 と同数。位置正規化（file: error TSxxxx 単位）でエラー集合完全一致 ― NN34 による型エラー増減 0。pin 474 以下（delta 0）で baseline ゲート通過。
 - テスト件数の移行前後一致: HEAD 実測 15609（15571 passed + 38 skipped）に対しツリー 15623（15602 + 21）。差分 +14 の内訳: NN34 分 +8（loggerMockFactory pin、テスト戦略どおり testDir 内に新設）、残り +6 は worktree アーティファクト（gitignored `src/utils/crypto/__tests__/tmp/verify-new.test.ts` 3 tests、untracked `.kilorules` 由来の `agent-poll-interval.test.ts` +3）で NN34 非帰属。skip 差 −17 は dist/ 非存在の worktree で wxt-build/manifest テストが skip になる環境差。移行対象 167 ファイルのテスト件数・結果は移行前後で一致（0 removed / 0 changed / 全 green）。
 
 ### 未達（残置）

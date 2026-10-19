@@ -30,7 +30,7 @@
 - ✓ ADR recorded for Wave 2 learnings
 
 **Pattern Checklist (from Wave 1):**
-1. ✓ Identify panel (19 changes in past month — 2nd hotspot)
+1. ✓ Identify panel (19 changes in past month ― 2nd hotspot)
 2. ✓ Create/adapt PanelLifecycle test file
 3. ✓ Update panel return object (rename lifecycle methods)
 4. ✓ Remove adapter wrapper in main.ts

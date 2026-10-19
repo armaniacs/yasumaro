@@ -14,8 +14,8 @@
 
 ## 背景 (evidence, verified)
 
-- `src/dashboard/panels/panelAction.ts:84-86` — catch 内で `onError?.()` を素呼び出ししており、onError 内の throw が新たな rejection として外に漏れる (`finally :87-91` は引き続き実行)。
-- 呼び出し 25 箇所: `void` 20、await-in-closure 3 (`archivePanel.ts:402`、`diagnosticsActions.ts:171,247`)、caught 2 (`settingsForm.ts:173,203` — `onPurgeClick` try/catch 経由、`generalSettingsPanel.ts:361-367`)。
+- `src/dashboard/panels/panelAction.ts:84-86` ― catch 内で `onError?.()` を素呼び出ししており、onError 内の throw が新たな rejection として外に漏れる (`finally :87-91` は引き続き実行)。
+- 呼び出し 25 箇所: `void` 20、await-in-closure 3 (`archivePanel.ts:402`、`diagnosticsActions.ts:171,247`)、caught 2 (`settingsForm.ts:173,203` ― `onPurgeClick` try/catch 経由、`generalSettingsPanel.ts:361-367`)。
 - await-in-closure の 3 箇所では onError の throw が unhandled rejection として漏れ得る。
 
 ## スコープ (file:line)
@@ -39,8 +39,8 @@ Scenario: エラー表示処理自体が失敗してもクラッシュしない
 
 ## 受け入れ基準 (file-scoped)
 
-- [x] `src/dashboard/panels/panelAction.ts:85-86` — `onError?.()` の呼び出しが guard され、onError 内の throw が新たな rejection として外に漏れない
-- [x] `src/dashboard/panels/panelAction.ts:87-91` — `finally` によるボタン復帰が引き続き実行される
+- [x] `src/dashboard/panels/panelAction.ts:85-86` ― `onError?.()` の呼び出しが guard され、onError 内の throw が新たな rejection として外に漏れない
+- [x] `src/dashboard/panels/panelAction.ts:87-91` ― `finally` によるボタン復帰が引き続き実行される
 - [x] onError が throw した場合の扱い (記録して握りつぶす方針とその WHY コメント) がコードとして明文化される
 - [x] await-in-closure 3 箇所 (`archivePanel.ts:402`、`diagnosticsActions.ts:171,247`) と caught 2 箇所 (`settingsForm.ts:173,203`) の現行ふるまいが不変である
 
@@ -65,4 +65,4 @@ Scenario: エラー表示処理自体が失敗してもクラッシュしない
 - `panelAction.ts:84-95`: catch 内の `onError?.()` 呼び出しを try/catch で guard。onError 内の throw は `console.error('runPanelAction: onError handler threw', ...)` で記録して握りつぶし、WHY コメント（呼び出し元の多くが `void` で受け、壊れたエラーハンドラの throw が新たな rejection になるのを防ぐ）を明文化。`finally` によるボタン復帰は不変。
 - テスト: `panelAction.test.ts` に 3 件を追加（onError throw で rejection が漏れないこと、console.error 記録、finally 実行）。修正前 RED 3 failed を確認。
 - 検証: tsc --noEmit 0 エラー / npm test 15,465 pass / npm run validate exit 0 / panels スイート 304/304。
-- 逸脱: `generalSettingsPanel-purge.test.ts` の characterization テスト 1 件を更新 — 旧テストが pin していた onError throw の漏れ経路は本修正により設計上除去されたため、新契約（握りつぶし + finally 復帰）に追随。production のふるまい変更は `panelAction.ts` 1 箇所のみ。
+- 逸脱: `generalSettingsPanel-purge.test.ts` の characterization テスト 1 件を更新 ― 旧テストが pin していた onError throw の漏れ経路は本修正により設計上除去されたため、新契約（握りつぶし + finally 復帰）に追随。production のふるまい変更は `panelAction.ts` 1 箇所のみ。

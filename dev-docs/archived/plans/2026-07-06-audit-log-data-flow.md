@@ -22,7 +22,7 @@
 ```typescript
 /**
  * Audit log for cloud AI provider send events.
- * Records provider name, target URL, and timestamp only — never content or PII.
+ * Records provider name, target URL, and timestamp only ― never content or PII.
  */
 export const AUDIT_LOG_SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS audit_log (
@@ -170,7 +170,7 @@ import type { AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 ```typescript
 /**
  * Insert an audit log entry (cloud AI provider send event).
- * Metadata only — never content or PII.
+ * Metadata only ― never content or PII.
  */
 export async function insertAuditLog(record: AuditLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
   try {
@@ -483,7 +483,7 @@ Expected: FAIL（`src/utils/auditLog.ts` が存在しない）
 /**
  * auditLog.ts
  * Records cloud AI provider send events for user-facing transparency.
- * Metadata only (provider, url, timestamp) — never content or PII.
+ * Metadata only (provider, url, timestamp) ― never content or PII.
  */
 
 import { SqliteClient } from '../background/sqliteClient.js';

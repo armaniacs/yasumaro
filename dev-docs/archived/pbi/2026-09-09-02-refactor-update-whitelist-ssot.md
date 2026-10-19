@@ -1,4 +1,4 @@
-# PBI 02: UPDATE 許可フィールド whitelist 統合 — seam の契約を侵入経路非依存に
+# PBI 02: UPDATE 許可フィールド whitelist 統合 ― seam の契約を侵入経路非依存に
 
 ## ユーザーストーリー
 

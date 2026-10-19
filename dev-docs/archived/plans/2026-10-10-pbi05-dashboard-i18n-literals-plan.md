@@ -16,7 +16,7 @@ dashboard のユーザー向け文言を `getMessageOr` 契約へ統一し、監
 - `_locales/en/messages.json`
 
 ## Validation
-`npx vitest run src/dashboard` — PASS（スコープ検証済み）。
+`npx vitest run src/dashboard` ― PASS（スコープ検証済み）。
 
 ## Rollback
 i18n 呼び出しとメッセージキーを戻せばロールバックできる。

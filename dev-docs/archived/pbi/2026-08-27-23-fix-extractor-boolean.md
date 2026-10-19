@@ -15,17 +15,17 @@
 - 解: `s[key] === true || s[key] === "true"` の strict 判定、または `String(s[key]).toLowerCase() === "true"` / `s[key] === true` の明示的パースに修正。数値・文字列の曖昧な truthy 変換を廃止
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — boolean true/false は正しく反映される
+Scenario: ハッピーパス ― boolean true/false は正しく反映される
   Given `chrome.storage.local.settings[StorageKeys.CONTENT_STRIP_HARD_ENABLED]` が `true` / `false`（boolean）である
   When `loadSettings()` を呼ぶ
   Then `pageState.cleansingConfig.contentStripHardEnabled` はそれぞれ `true` / `false` になる
 
-Scenario: バグ再現 — 文字列 "false" は false として扱われる
+Scenario: バグ再現 ― 文字列 "false" は false として扱われる
   Given storage に `aiSummaryCleansingEnabled: "false"`（文字列）が保存されている
   When `loadSettings()` を呼ぶ
   Then `pageState.cleansingConfig.aiSummaryCleansingEnabled` は `false` になる（従来は `Boolean("false") === true` で誤って `true` になっていた）
 
-Scenario: 境界 — 文字列 "true" は true、他は false
+Scenario: 境界 ― 文字列 "true" は true、他は false
   Given storage に `"true"` / `"0"` / `""` / `0` / `1` が保存されている
   When `loadSettings()` を呼ぶ
   Then `"true"` のみ `true`、`"0"` / `""` / `0` は `false`（または仕様で定義した厳密な真偽値）に正規化される
@@ -38,7 +38,7 @@ Scenario: 境界 — 文字列 "true" は true、他は false
 - [x] 文字列 `"false"` / `"true"` の回帰テストが1件以上追加されている
 
 ## テスト戦略
-- 単体: `loadSettings` の boolean パース分岐テスト — `chrome.storage.local.get` をモックし、`"false"`（文字列）/`"true"`（文字列）/`true`/`false`/`0`/`1`/`""` を投入して `pageState.cleansingConfig[prop]` の真偽値を検証
+- 単体: `loadSettings` の boolean パース分岐テスト ― `chrome.storage.local.get` をモックし、`"false"`（文字列）/`"true"`（文字列）/`true`/`false`/`0`/`1`/`""` を投入して `pageState.cleansingConfig[prop]` の真偽値を検証
 - 統合: 実際の `PageState` インスタンスで `loadSettings` → `extractPageContent` まで通し、クレンジングフラグが期待通りに反映されること
 - E2E: 不要
 

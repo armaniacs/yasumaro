@@ -27,7 +27,7 @@
   - Reach 1000: ページ→ノート経路は全 Obsidian 連携ユーザーに到達（録画は既定動作）
   - Impact 0.5: Medium。ノート内 HTML 実行は Obsidian レンダラ次第だが、偽装リンク・構造汚染は確実
   - Confidence 95%: link-text ヘルパーは既存・テスト済み。残るは境界関数へのエンティティ化追加＋適用漏れ 4 箇所
-  - Effort 0.1: エンティティ化 1 箇所＋タグ/legacy/sync-target の適用＋回帰テスト（当初 0.2 から半減 — ヘルパー新設が不要になったため）
+  - Effort 0.1: エンティティ化 1 箇所＋タグ/legacy/sync-target の適用＋回帰テスト（当初 0.2 から半減 ― ヘルパー新設が不要になったため）
 - 根拠: 前回レビューで link-text ヘルパーが導入済み。残タスクは「エンティティ化」と「適用漏れの解消」に限定される
 - 注: `2026-08-29-00-backlog-vulnhunt-audit.md` の当初スコアは 2375（Effort 0.2）。実装済み部分を除いた再評価で Effort 半減・スコア 4750 相当。着手順は 2 番目のまま（01 と同帯だが 01 の ReDoS が拡張全体停止で先着）
 
@@ -86,7 +86,7 @@ Scenario: クリップボード出力も同一境界を通る
 - **Red-Green-Refactor**: エンティティ化は既存エスケープの後段に追加し、出力差分を既存テストで固定
 
 ## 見積もり
-1pt（要チームでの見積もり — エンティティ化＋適用漏れ 4 箇所＋回帰テスト。link-text ヘルパーは既存のため新設不要）
+1pt（要チームでの見積もり ― エンティティ化＋適用漏れ 4 箇所＋回帰テスト。link-text ヘルパーは既存のため新設不要）
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 1 推奨）
@@ -114,7 +114,7 @@ rg -n "sanitize" src/dashboard/markdownExport.ts
 ### 落とし穴
 - エンティティ化と `sanitizeForMarkdownLinkText` は役割が違う（前者は HTML 無効化、後者は markdown 構造文字の無効化）。両方必要
 - Obsidian の wikilink `[[...]]` を壊さないこと（既存テストで固定）
-- `src/dashboard/markdownExport.ts` は summary に `sanitizeForObsidian`、タイトル/URL に link-text/url ヘルパーを既に使用（VULN-020）— 本 PBI では summary のエンティティ化強化のみが効く
+- `src/dashboard/markdownExport.ts` は summary に `sanitizeForObsidian`、タイトル/URL に link-text/url ヘルパーを既に使用（VULN-020）― 本 PBI では summary のエンティティ化強化のみが効く
 - `markdownFormatter.ts` には V1（`formatEntryToMarkdown`、旧・タイトルに `sanitizeForObsidian`）と V2（`sanitizeForMarkdownLinkText` 使用）が併存。V1 も対象
 
 ## Definition of Done

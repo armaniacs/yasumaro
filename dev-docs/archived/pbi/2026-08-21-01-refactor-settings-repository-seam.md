@@ -1,4 +1,4 @@
-# PBI: SettingsRepository Seam — storage barrelの浅さを深い moduleに
+# PBI: SettingsRepository Seam ― storage barrelの浅さを深い moduleに
 
 ## ユーザーストーリー
 開発者として、`get(key)/set(key,val)/getAll()/onChange(cb)` の4メソッドだけを知れば設定の永続化が完結する深い `SettingsRepository` module がほしい、なぜなら現在の `storage.ts` barrel は38 re-export を持つ shallow な interface で、キー1つ追加するたびに32箇所の呼び出し元とテストの `chrome.storage` mock が散り、v6.7.43のAPIキー消失のような設定周りのバグが複数モジュールに跨って再発するから
@@ -34,7 +34,7 @@ Scenario: 不正な設定値は seam 内で拒否される
 - [x] `SettingsRepository` の外部 interface が `get`/`set`/`getAll`/`onChange` の4メソッドのみである
 - [x] `storage.ts` barrel の re-export が削除され、直接 import が強制される（lintで検出可能）
 - [x] `InMemoryStorageAdapter` による interface 越しテストで `chrome.storage` mock が不要である
-- [x] `trustDb ↔ settingsStore` 循環が `TrancoVersionTracker` 注入で解消され、ADRが更新されている
+- [x] `trustDb ⇔ settingsStore` 循環が `TrancoVersionTracker` 注入で解消され、ADRが更新されている
 
 ## テスト戦略
 - E2E: 設定画面で値を変更し、再起動後も永続化されていること

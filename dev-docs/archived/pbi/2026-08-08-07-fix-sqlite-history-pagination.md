@@ -184,9 +184,9 @@ Scenario: 既存テストが全てパスする
 - `state.total` とページネーション表示の整合性
 
 ### 回帰テスト
-- `sqliteHistoryPanel-tagFallback.test.ts`（170行）— タグフォールバック
-- `sqliteHistoryPanel-formatDiagnosticMetadata.test.ts`（80行）— XSS エスケープ
-- `sqliteHistoryQuery.test.ts`（149行）— 抽出済み純関数
+- `sqliteHistoryPanel-tagFallback.test.ts`（170行）― タグフォールバック
+- `sqliteHistoryPanel-formatDiagnosticMetadata.test.ts`（80行）― XSS エスケープ
+- `sqliteHistoryQuery.test.ts`（149行）― 抽出済み純関数
 
 ## 実装アプローチ
 

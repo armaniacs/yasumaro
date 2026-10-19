@@ -9,8 +9,8 @@
 - 順位: 05 / 9
 - RICE スコア: 9.6（Reach=3 / Impact=2 / Confidence=80% / Effort=0.5 人週）
 - 根拠（round 6 診断・B6 検証込み）:
-  - `nsfw.oisd.nl` — `isDomainInWhitelist` で false（`urlWhitelist.ts:42-87` 未収録）なのに同一モジュールの `buildAllowedUrls` origin（:147）では許可 → OISD ソースの uBlock 登録が warn-skip される実害
-  - `tranco-list.eu` — manifest/CSP は許可、built allowedUrls には不在。Tranco 更新は `fetchWithTimeout` 直呼び（FETCH_URL 経由でない）ため CSP 許可内で動作することを検証済み — drift 自体は残る
+  - `nsfw.oisd.nl` ― `isDomainInWhitelist` で false（`urlWhitelist.ts:42-87` 未収録）なのに同一モジュールの `buildAllowedUrls` origin（:147）では許可 → OISD ソースの uBlock 登録が warn-skip される実害
+  - `tranco-list.eu` ― manifest/CSP は許可、built allowedUrls には不在。Tranco 更新は `fetchWithTimeout` 直呼び（FETCH_URL 経由でない）ため CSP 許可内で動作することを検証済み ― drift 自体は残る
   - provider 静的ドメインが `cspValidator.ts:27-71`（DEFAULT_ALLOWED_DOMAINS + PROVIDER_TO_DOMAIN）と `urlWhitelist.ts:42-87` で 3 重複（openrouter.ai の bare vs api. など entry 単位の不整合含む）
   - テストは各テーブル個別のみで cross-table 整合の pin 無し
 
@@ -52,7 +52,7 @@ M（0.5 人週）。種別: refactor（+fix 1 件）。
 
 ## 実装メモ（2026-09-11 round 6）
 
-- `src/utils/listSources.ts`（Layer 0）新設: `FILTER_LIST_SOURCES`（raw.githubusercontent.com / gitlab.com / easylist.to / pgl.yoyo.org / nsfw.oisd.nl の host+origin）+ `TRANCO_METADATA_SOURCE`（非 filter-list である理由を文書化 — updater は fetchWithTimeout 直呼び・FETCH_URL 非経由を round 5 で検証済み）。
-- urlWhitelist: ゲート hosts を `...ALL_LIST_SOURCES.map(host)` から派生（**OISD gate/grant 不一致を解消** — 旧ゲートは nsfw.oisd.nl を reject していた）+ buildAllowedUrls の 5 origin リテラルを派生に。
+- `src/utils/listSources.ts`（Layer 0）新設: `FILTER_LIST_SOURCES`（raw.githubusercontent.com / gitlab.com / easylist.to / pgl.yoyo.org / nsfw.oisd.nl の host+origin）+ `TRANCO_METADATA_SOURCE`（非 filter-list である理由を文書化 ― updater は fetchWithTimeout 直呼び・FETCH_URL 非経由を round 5 で検証済み）。
+- urlWhitelist: ゲート hosts を `...ALL_LIST_SOURCES.map(host)` から派生（**OISD gate/grant 不一致を解消** ― 旧ゲートは nsfw.oisd.nl を reject していた）+ buildAllowedUrls の 5 origin リテラルを派生に。
 - cspDomains: OPTIONAL 権限の 6 origin パターンを `ALL_LIST_SOURCES` 派生に。
 - conformance テスト `list-sources-conformance.test.ts`（6 件）: gate ⊇ sources / buildAllowedUrls ⊇ origins / manifest ⊇ origins / OISD 一致 regression pin / tranco 区別 pin / gate ⊇ CSP provider hosts。

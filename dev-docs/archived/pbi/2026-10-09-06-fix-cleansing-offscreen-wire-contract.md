@@ -26,11 +26,11 @@ content 側デリゲート（`cleanseViaOffscreen`）は Offscreen 応答 shape 
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/content/cleansingOffscreenDelegate.ts:85-92` — `sendMessage({...} as unknown as never) as unknown as { success: true; html: string } | { success: false; error: string } | undefined`（手書き弱 shape）
-- `src/content/cleansingOffscreenDelegate.ts:87` — `type: 'CLEANSING_OFFSCREEN'`（文字列ハードコード）
-- `src/offscreen/cleansingOffscreen.ts:13` — `export const CLEANSING_OFFSCREEN_TYPE`（SSOT 定数。使用は `src/offscreen/offscreen.ts:110` のみ）
-- `src/offscreen/cleansingOffscreen.ts:49` — `export type CleansingOffscreenResponse`（SSOT 型）
-- 同一ファイル内の重複キャスト: `src/content/cleansingOffscreenDelegate.ts:27` と `:80` — `(globalThis as unknown as { chrome?: typeof chrome }).chrome`
+- `src/content/cleansingOffscreenDelegate.ts:85-92` ― `sendMessage({...} as unknown as never) as unknown as { success: true; html: string } | { success: false; error: string } | undefined`（手書き弱 shape）
+- `src/content/cleansingOffscreenDelegate.ts:87` ― `type: 'CLEANSING_OFFSCREEN'`（文字列ハードコード）
+- `src/offscreen/cleansingOffscreen.ts:13` ― `export const CLEANSING_OFFSCREEN_TYPE`（SSOT 定数。使用は `src/offscreen/offscreen.ts:110` のみ）
+- `src/offscreen/cleansingOffscreen.ts:49` ― `export type CleansingOffscreenResponse`（SSOT 型）
+- 同一ファイル内の重複キャスト: `src/content/cleansingOffscreenDelegate.ts:27` と `:80` ― `(globalThis as unknown as { chrome?: typeof chrome }).chrome`
 
 対応方針（挙動不変）:
 
@@ -80,13 +80,13 @@ And 同期フォールバックのサイズ上限契約（MAX_CLEANSING_HTML_BYT
 
 ## 7. テスト戦略
 
-1. **既存デリゲートテストの green 維持**: `src/content/__tests__/contentKernel.offscreen.test.ts`（`cleanseViaOffscreen — delegation with fallback`）の pin（フォールバック、TOO_LARGE 拒否、サイズ上限）は無変更で維持し、変更中の安全網として使う。Offscreen 側の `src/offscreen/__tests__/cleansingOffscreen.test.ts` も無変更で green を維持する
+1. **既存デリゲートテストの green 維持**: `src/content/__tests__/contentKernel.offscreen.test.ts`（`cleanseViaOffscreen ― delegation with fallback`）の pin（フォールバック、TOO_LARGE 拒否、サイズ上限）は無変更で維持し、変更中の安全網として使う。Offscreen 側の `src/offscreen/__tests__/cleansingOffscreen.test.ts` も無変更で green を維持する
 2. **型レベルの pin**: `npm run type-check` で SSOT 型 import が効いていることを確認する。手書き shape・文字列ハードコードの再出現は型チェックとレビューで検出する（wire 契約の複製を作らない）
 3. **validate 通過**: `npm run validate`（type-check + test）で既存テスト全通過を確認する
 
 ## 8. 見積もり
 
-**1 SP** — import 差し替え・定数利用・ローカルヘルパー抽出のみでロジック変更なし。影響範囲は `src/content/cleansingOffscreenDelegate.ts` 1 ファイル
+**1 SP** ― import 差し替え・定数利用・ローカルヘルパー抽出のみでロジック変更なし。影響範囲は `src/content/cleansingOffscreenDelegate.ts` 1 ファイル
 
 ## 9. DoD
 

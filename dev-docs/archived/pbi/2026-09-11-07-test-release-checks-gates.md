@@ -9,10 +9,10 @@
 - 順位: 07 / 7
 - RICE スコア: 2.7（Reach=1 / Impact=1 / Confidence=80% / Effort=0.3 人週）
 - 根拠（round 7 監査）:
-  - `check-manifest.mjs:80` — 要求権限が storage/scripting の 2 件のみで、wxt.config.ts の 12 権限との drift で絶対に落ちない。`checkHostPermissions`（:116-130）は `<all_urls>` を warn して素通し。`checkWebAccessibleResources`（:226）は `[0]` のみ検査
-  - `check-e2e.mjs:29-34,74-81` — xvfb-run 無し環境で e2e skip が PASS と区別不能に緑表示
-  - `check-tests.mjs:50-52` — coverage-summary.json 欠落時も素通し。`:123` は `describe(` を test として数える水増し。`:103-111` の category map に src/privacy 等が無い
-  - `index.mjs:44-46` — `--category <name>`（space 形式）が silently all になる
+  - `check-manifest.mjs:80` ― 要求権限が storage/scripting の 2 件のみで、wxt.config.ts の 12 権限との drift で絶対に落ちない。`checkHostPermissions`（:116-130）は `<all_urls>` を warn して素通し。`checkWebAccessibleResources`（:226）は `[0]` のみ検査
+  - `check-e2e.mjs:29-34,74-81` ― xvfb-run 無し環境で e2e skip が PASS と区別不能に緑表示
+  - `check-tests.mjs:50-52` ― coverage-summary.json 欠落時も素通し。`:123` は `describe(` を test として数える水増し。`:103-111` の category map に src/privacy 等が無い
+  - `index.mjs:44-46` ― `--category <name>`（space 形式）が silently all になる
 
 ## BDD 受け入れシナリオ
 
@@ -49,7 +49,7 @@ check-tests の既存テストパターンに倣い各修正の単体テスト�
 
 S（0.3 人週）。種別: test。
 
-## 実装メモ（2026-09-11 round 7）— しきい値調整あり
+## 実装メモ（2026-09-11 round 7）― しきい値調整あり
 
 - check-manifest: 期待権限集合を wxt.config.ts から派生（旧: storage/scripting の 2 件のみで drift 不可）。
 - check-e2e: skip を明示化（`--skip-e2e` / `SKIP_E2E=1` 無しで xvfb 無し環境は fail）。

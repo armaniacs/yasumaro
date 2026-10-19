@@ -1,4 +1,4 @@
-# PBI: OPFS SQLite トランザクション整合性強化 — WAL mode・BEGIN IMMEDIATE・単一トランザクション
+# PBI: OPFS SQLite トランザクション整合性強化 ― WAL mode・BEGIN IMMEDIATE・単一トランザクション
 
 元指摘: Checking Team (High: Data Integrity Expert)
 
@@ -71,7 +71,7 @@ Feature: OPFS SQLite transaction integrity
 2pt（WAL 追加 + BEGIN IMMEDIATE + changes() 単一化 + purge トランザクション統合）
 
 ## 副作用
-🟡 軽微 — トランザクション挙動の変更。既存テストで件数アサーションが変わる可能性があるが、実態に即した正しい値となる。
+🟡 軽微 ― トランザクション挙動の変更。既存テストで件数アサーションが変わる可能性があるが、実態に即した正しい値となる。
 
 ## 落とし穴
 - `INSERT OR IGNORE` 時の `SELECT changes()` は、SQLite では ignore された行も「変更なし」としてカウントされない。これが期待動作。

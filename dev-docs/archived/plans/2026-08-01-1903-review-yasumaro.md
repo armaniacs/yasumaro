@@ -1,4 +1,4 @@
-# Checking Team レビューレポート — Yasumaro（プロジェクト全体）
+# Checking Team レビューレポート ― Yasumaro（プロジェクト全体）
 
 - レビュー日時: 2026-08-01
 - レビュー対象: プロジェクト全体（Manifest V3 Chrome 拡張機能、src/ 312ファイル + entrypoints/ 17ファイル、約 6 万行、テスト 383 件）

@@ -13,11 +13,11 @@ nav trail を opt-in で有効化したユーザーとして、localhost 以外�
 
 ## 背景（file:line 現状）
 
-- writer（通常サイトで no-op）: `src/background/service-worker.ts:268-281` — `chrome.tabs.onUpdated` リスナーの `if (changeInfo.url && !tab.incognito)`。`changeInfo.url` は `tabs` 権限か対象 URL の host permission があるときだけ配信され、manifest は通常サイトでどちらも持たない
-- reader（記録時）: `src/background/handlers/recordingHandlers.ts:122-124` — VALID_VISIT が `sender.tab.url`（MessageSender 由来・全 http(s) ページで読める）で `resolveNavTrailFields` を呼ぶが、map が空のため `navSourceUrl` / `searchQuery` は常に空
-- nav trail の実体: `src/background/navTrail/navTrailTracker.ts:69-93`（`onTabUrlChanged`）— consent ゲート・Mutex・reload/fragment 判定はここに既存
+- writer（通常サイトで no-op）: `src/background/service-worker.ts:268-281` ― `chrome.tabs.onUpdated` リスナーの `if (changeInfo.url && !tab.incognito)`。`changeInfo.url` は `tabs` 権限か対象 URL の host permission があるときだけ配信され、manifest は通常サイトでどちらも持たない
+- reader（記録時）: `src/background/handlers/recordingHandlers.ts:122-124` ― VALID_VISIT が `sender.tab.url`（MessageSender 由来・全 http(s) ページで読める）で `resolveNavTrailFields` を呼ぶが、map が空のため `navSourceUrl` / `searchQuery` は常に空
+- nav trail の実体: `src/background/navTrail/navTrailTracker.ts:69-93`（`onTabUrlChanged`）― consent ゲート・Mutex・reload/fragment 判定はここに既存
 - 語義変化: `changeInfo.url` は遷移の即時点、VALID_VISIT は記録条件（同意・エンゲージメント閾値）成立後。現行 writer は通常サイトで一度も発火していないため、no-op → 遅延化であり実質的な退化ではない
-- 裁定: ADR `dev-docs/ADR/2026-10-07-tab-url-permission-decision.md` — manifest 変更なし。badge URL 経路の no-op は受容済み（本 PBI の対象外）
+- 裁定: ADR `dev-docs/ADR/2026-10-07-tab-url-permission-decision.md` ― manifest 変更なし。badge URL 経路の no-op は受容済み（本 PBI の対象外）
 
 ## BDD受け入れシナリオ
 
@@ -44,7 +44,7 @@ Scenario: consent off の間は供給しない
 - [x] VALID_VISIT ハンドラから nav trail map への供給を追加する（admit 後・記録成否に依存しない位置。consent ゲート `isNavTrailActive` は `navTrailTracker` 内で維持）
 - [x] 語義変化を pin: テストで「記録条件成立後のみ map 更新」を固定する
 - [x] 同一タブ連続記録で `previous` が前回の `current` になる pin を維持（`navTrailTracker` の reload/fragment 判定は現状のまま）
-- [x] badge URL 経路（`tabEventHandlers.ts` / `service-worker.ts`）は no-op のまま受容 — 既存の ADR 根拠コメントを維持し、挙動変更しない
+- [x] badge URL 経路（`tabEventHandlers.ts` / `service-worker.ts`）は no-op のまま受容 ― 既存の ADR 根拠コメントを維持し、挙動変更しない
 - [x] `npm run validate` が PASS する（最終ゲートで確認）
 
 ## テスト戦略

@@ -31,7 +31,7 @@ PBI本文が「未確認」としていた依存関係を全て特定した。**
 
 | 機能 | popup側 | dashboard側（別実装） |
 |---|---|---|
-| Master Password | `src/popup/masterPasswordUi.ts`（`initMasterPasswordUi`, `loadMasterPasswordSettings`, `showPasswordAuthModal`） | `src/dashboard/masterPassword.ts`（`initMasterPasswordSettings`, `loadMasterPasswordSettings`）— **popup側と同名だが別ファイル・別実装** |
+| Master Password | `src/popup/masterPasswordUi.ts`（`initMasterPasswordUi`, `loadMasterPasswordSettings`, `showPasswordAuthModal`） | `src/dashboard/masterPassword.ts`（`initMasterPasswordSettings`, `loadMasterPasswordSettings`）― **popup側と同名だが別ファイル・別実装** |
 | Settings Export/Import | `src/popup/settingsExportImportUi.ts` | `src/dashboard/exportImport.ts`（`initExportImport`）+ `src/dashboard/encryptedBackupPanel.ts` + `src/dashboard/gistSettings.ts` |
 
 **この発見の重要性**: `masterPasswordUi.ts`と`settingsExportImportUi.ts`は**popup.tsからのみimportされている**（`grep -rn`で確認済み、dashboard側からの参照ゼロ）。つまりこれらはsettingsScreen専用の機能であり、popup.tsの`initPopup()`から呼び出しを削除しても、dashboard側は自身の独立実装（`masterPassword.ts`, `exportImport.ts`）で完全に代替できる。**機能欠落は発生しない。**

@@ -36,7 +36,7 @@ else                          { state.entries = result.rows; ... }
 
 ### 壊れている呼び出し側
 
-#### A. `exportLogsService.ts:16` — 最も深刻
+#### A. `exportLogsService.ts:16` ― 最も深刻
 
 ```typescript
 async function queryAllData() {
@@ -59,7 +59,7 @@ async function queryAllData() {
 **テスト状況**: `exportLogsService.test.ts` は22テストあるが、
 `error` という語が**1度も出てこない**。失敗経路は完全に未検証。
 
-#### B. `tagClusterPanel.ts:154` — リトライが無効化されている
+#### B. `tagClusterPanel.ts:154` ― リトライが無効化されている
 
 ```typescript
 const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
@@ -74,13 +74,13 @@ const result = await retryWithExponentialBackoff<BrowsingLogEntry[]>(
 ```
 
 `retryWithExponentialBackoff` は **`null` が返るか例外が出たときだけ**再試行する
-（`dashboard/utils/retry.ts:64` — `if (result !== null) return result;`）。
+（`dashboard/utils/retry.ts:64` ― `if (result !== null) return result;`）。
 
 末尾の `?? []` が `null` を**非 null の `[]`** に変えるため、
 本物の DB 障害では**1回目で即座に成功扱い**となりリトライ0回。
 `maxAttempts: 4` が効くのは `status.initialized` が false の経路だけ。
 
-#### C. `markdownExport.ts:160, 211` — 軽微
+#### C. `markdownExport.ts:160, 211` ― 軽微
 
 ```typescript
 if (!result || !('rows' in result) || result.rows.length === 0) break;      // 159-160

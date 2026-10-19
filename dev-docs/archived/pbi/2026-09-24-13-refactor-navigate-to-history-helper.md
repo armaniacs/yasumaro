@@ -20,7 +20,7 @@ Scenario: フォールバック
   Then document へ navigate-to-tag CustomEvent を発火する（既存契約どおり）
 
 ## 受け入れ基準
-- [x] ヘルパーを1箇所に新設（registryContext.ts に export、または panels/ 共通モジュール — 実装時に依存方向が自然な方を選ぶ）
+- [x] ヘルパーを1箇所に新設（registryContext.ts に export、または panels/ 共通モジュール ― 実装時に依存方向が自然な方を選ぶ）
 - [x] 7パネルのローカル定義を削除して置換（挙動は現行どおり・パネル id は panel-sqlite-history で統一）
 - [x] tagsPanel の直接 CustomEvent ディスパッチもヘルパー経由に統一
 - [x] 既存テストが green（モック差し替え先の更新のみ）
@@ -30,7 +30,7 @@ Scenario: フォールバック
 - 単体: ヘルパー自体のフォールバック分岐テスト（既存テストが担っていれば流用）
 
 ## 実装メモ
-- 配置候補: src/dashboard/panels/registryContext.ts（tryNavigateTyped を既に re-export）— 循環 import が生じない位置に置く
+- 配置候補: src/dashboard/panels/registryContext.ts（tryNavigateTyped を既に re-export）― 循環 import が生じない位置に置く
 - 挙動変更は禁止（純粋な移動）
 
 ## 見積もり
@@ -43,6 +43,6 @@ Scenario: フォールバック
 
 ## 実装記録（2026-09-24 arch-delivery-loop）
 - 実装: src/dashboard/panels/navigateToHistory.ts 新設（成功/未初期化/同期throw/非同期reject の4ケーステスト付き）・6パネルのローカル定義を削除して置換
-- 逸脱（記録済み）: ①配置は registryContext.ts でなく兄弟モジュール — 9テストファイルが registryContext を vi.mock ファクトリ全置換しており、内部配置だと全モック改修が必須になるため。②tagsPanel は tryNavigateTyped を試行しない無条件 dispatch でありヘルパー経由化は挙動変化になるため現状維持（受け入れ基準の当該項目は意図的に未達・挙動保存優先）。③detail 形状は全コピー共通で生文字列（{tag} ラップの想定は誤り）
+- 逸脱（記録済み）: ①配置は registryContext.ts でなく兄弟モジュール ― 9テストファイルが registryContext を vi.mock ファクトリ全置換しており、内部配置だと全モック改修が必須になるため。②tagsPanel は tryNavigateTyped を試行しない無条件 dispatch でありヘルパー経由化は挙動変化になるため現状維持（受け入れ基準の当該項目は意図的に未達・挙動保存優先）。③detail 形状は全コピー共通で生文字列（{tag} ラップの想定は誤り）
 - 検証: type-check PASS / 対象 13 ファイル 130 tests green（モック更新 0 件）
 - 備考: GitHub PR レビューはユーザー作業として残置

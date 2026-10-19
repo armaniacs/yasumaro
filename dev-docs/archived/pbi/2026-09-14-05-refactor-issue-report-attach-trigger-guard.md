@@ -80,7 +80,7 @@
       collectSnapshot,
     );
     controller.attachTrigger(dom.sidebarReportBtn);
-    controller.attachTrigger(dom.sidebarReportBtn); // 2回目 — 無視されること
+    controller.attachTrigger(dom.sidebarReportBtn); // 2回目 ― 無視されること
 
     dom.sidebarReportBtn.click();
     await Promise.resolve();
@@ -116,9 +116,9 @@ npx vitest run src/dashboard   # 回帰確認（2230件程度）
 
 ### 触ってはいけないもの
 
-- `diagnosticsPanel.ts:580-582` の `getIssueReportModalController()?.attachTrigger(...)` 呼び出し — 変更不要
-- `dashboard.ts` の controller 生成部分 — 変更不要
-- `buildIssueReportBody` / `buildIssueReportUrl` — サニタイズ契約があるため一切触らない
+- `diagnosticsPanel.ts:580-582` の `getIssueReportModalController()?.attachTrigger(...)` 呼び出し ― 変更不要
+- `dashboard.ts` の controller 生成部分 ― 変更不要
+- `buildIssueReportBody` / `buildIssueReportUrl` ― サニタイズ契約があるため一切触らない
 
 ---
 

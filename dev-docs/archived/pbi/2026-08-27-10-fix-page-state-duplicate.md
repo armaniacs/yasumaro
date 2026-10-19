@@ -14,12 +14,12 @@
 - 解: `src/utils/contentCleaner.ts` の `DEFAULT_KEYWORDS` を SSOT とし `pageState` は import して使用
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — デフォルトが一箇所から取得される
+Scenario: ハッピーパス ― デフォルトが一箇所から取得される
   Given `pageState` が `DEFAULT_KEYWORDS` を参照する
   When `loadSettings` 未取得で `isHardStripTarget` を呼ぶ
   Then `contentCleaner` と同じキーワードで判定される
 
-Scenario: エッジケース — 将来キーワード追加時の更新漏れが起きない
+Scenario: エッジケース ― 将来キーワード追加時の更新漏れが起きない
   Given `DEFAULT_KEYWORDS` に新語を追加する
   When 両モジュールで判定する
   Then 両方で同じ新語が有効になる
@@ -43,7 +43,7 @@ Scenario: エッジケース — 将来キーワード追加時の更新漏れ�
 
 ## 実装メモ（効果確認: 2026-09-01 の DoD 乖離監査 + 掃除）
 
-本 PBI のスコープ（`pageState.ts` ↔ `contentCleaner.ts`）は達成済み。
+本 PBI のスコープ（`pageState.ts` ⇔ `contentCleaner.ts`）は達成済み。
 2026-09-01 の監査で **スコープ外**の 3 つ目のコピーが見つかった:
 `src/dashboard/settings/contentSettings.ts` にダッシュボード設定 UI 用の
 `DEFAULT_KEYWORDS`（17 語）がハードコードされており、`contentCleaner.DEFAULT_KEYWORDS`

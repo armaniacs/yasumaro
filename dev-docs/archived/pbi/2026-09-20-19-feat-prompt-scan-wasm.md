@@ -93,7 +93,7 @@ STEP 0 プローブ（`bench/prompt-sanitize-transfer-probe.ts`、Node v26.7.0�
 
 判定の理由:
 
-1. **転送シェア 1〜2%** — 構造的には計算律速で、md-sanitize 型の転送律速除外には該当しない
+1. **転送シェア 1〜2%** ― 構造的には計算律速で、md-sanitize 型の転送律速除外には該当しない
 2. しかし**絶対値が小さい**: 60KB 最悪ケースでも TS 2.4ms。移植で3.9x（pii 実績）が出ても削減は ~1.8ms/リクエスト。RICE の Impact=1 の見立てより成果は小さい
 3. **パリティリスクが全候補中最大**: `sanitizePromptContent` は exec ループ内で `sanitized` を `replaceAll` により再代入しながら旧 `lastIndex` で次の exec を走める変異中イテレーション、`isInSafeContext` / `isMaliciousUsage` の文脈依存判定（JS 文字列操作に強く結合）が絡む。bit 等価移植の難所は PBI 立案時の見立てどおり
 4. **本 PBI の主価値（上限化・DoS 耐性）は TS だけで実現可能**: マッチ件数上限・replaceAll の一括化（範囲集計→1パス適用）・制御文字ループの regex 化は、WASM 不要で実装できる

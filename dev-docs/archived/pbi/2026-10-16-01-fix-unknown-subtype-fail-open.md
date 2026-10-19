@@ -1,7 +1,7 @@
 # PBI: 未知 subtype を黙って合格させる fail-open の解消
 
 ## ユーザーストーリー
-拡張機能の利用者として、dashboard–SQLite 系メッセージの subtype 検証が未知値を見逃さないでほしい。なぜなら未知 subtype のペイロードが検証を素通りすると、想定外データの書き込み・表示という実害につながるから。
+拡張機能の利用者として、dashboard-SQLite 系メッセージの subtype 検証が未知値を見逃さないでほしい。なぜなら未知 subtype のペイロードが検証を素通りすると、想定外データの書き込み・表示という実害につながるから。
 
 ## 優先度
 - 順位: 01 / 11
@@ -43,4 +43,4 @@ Scenario: 既知 subtype の正常系は変わらない
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了（差分点検済み：未知値拒否のみ、既知specless正常系不変）
-- [x] ドキュメント更新済み（不要ならその旨を記録）— 不要: docs/・dev-docs/ に対象挙動の記述なし。コード内 doc comment（`interpretSubtypeSpec`）のみ更新済み
+- [x] ドキュメント更新済み（不要ならその旨を記録）― 不要: docs/・dev-docs/ に対象挙動の記述なし。コード内 doc comment（`interpretSubtypeSpec`）のみ更新済み

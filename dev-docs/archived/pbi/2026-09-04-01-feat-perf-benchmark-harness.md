@@ -61,7 +61,7 @@ Scenario: ベースラインを更新する
 ## テスト戦略（t_wadaスタイル）
 
 ### 単体テスト
-- `bench/harness/__tests__/stats.test.ts`: percentile（既知の配列で P50/P95/P99）、trimmedMean、線形回帰の指数推定（y=x^1 と y=x^2 の合成データで exponent ≈ 1.0 / ≈ 2.0 を判定）
+- `bench/harness/__tests__/stats.test.ts`: percentile（既知の配列で P50/P95/P99）、trimmedMean、線形回帰の指数推定（y=x^1 と y=x^2 の合成データで exponent ≒ 1.0 / ≒ 2.0 を判定）
 - `bench/harness/__tests__/report.test.ts`: ベースライン比較ロジック（+15% ちょうど / 超過 / 改善 の 3 ケースで exit 判定）、Markdown 生成のスナップショット
 - `bench/harness/__tests__/domEnv.test.ts`: QSA カウンタと treeWalker カウンタが正しくインクリメントされ、teardown でプロトタイプが復元される
 

@@ -68,13 +68,13 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 ## 実装メモ（実装者向け）
 
 ### 対象ファイルと該当行
-- `src/background/ai/providers/HttpProviderStrategy.ts:245`（`executeHttpSummaryFlow`）と `:313`（`executeHttpTestFlow`）— `fetchWithRetry` に `redirect` オプションを渡していない（監査 evidence）。
-- `src/utils/fetch.ts:155` — プラットフォーム `fetch` に `redirect` オプションがなく、既定の `redirect: 'follow'` が効く（監査 sink）。
-- `src/utils/fetch.ts:380` — `fetchWithRetry` が各試行で呼び出し側のオプションをそのまま `fetchWithTimeout` に渡す（ Options の追加がそのまま伝わる場所）。
-- `src/utils/fetch.ts:128` — 事前ホップのゲート（CSP / allowedUrls）が初回 URL しか見ない。
-- `src/background/handlers/systemHandlers.ts:101-112` — 既存の正解例（フィルタリスト経路は `redirect: 'error'` + `response.redirected` の body ガード）。
-- `src/utils/fetch.ts:201-242`（`fetchWithRedirectGuard`）— ホップ毎再検証ヘルパー。production 呼び出し元はまだない。
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md:46` — 「他の 16 の fetch サイトは固定ホストで挙動不変」という記述が、OpenAI 互換行の `baseUrlKey` がユーザー設定可能（`src/utils/storage/providerAllowlist.ts`、`src/background/ai/providers/OpenAIProvider.ts:69-73`）であるために誤り。
+- `src/background/ai/providers/HttpProviderStrategy.ts:245`（`executeHttpSummaryFlow`）と `:313`（`executeHttpTestFlow`）― `fetchWithRetry` に `redirect` オプションを渡していない（監査 evidence）。
+- `src/utils/fetch.ts:155` ― プラットフォーム `fetch` に `redirect` オプションがなく、既定の `redirect: 'follow'` が効く（監査 sink）。
+- `src/utils/fetch.ts:380` ― `fetchWithRetry` が各試行で呼び出し側のオプションをそのまま `fetchWithTimeout` に渡す（ Options の追加がそのまま伝わる場所）。
+- `src/utils/fetch.ts:128` ― 事前ホップのゲート（CSP / allowedUrls）が初回 URL しか見ない。
+- `src/background/handlers/systemHandlers.ts:101-112` ― 既存の正解例（フィルタリスト経路は `redirect: 'error'` + `response.redirected` の body ガード）。
+- `src/utils/fetch.ts:201-242`（`fetchWithRedirectGuard`）― ホップ毎再検証ヘルパー。production 呼び出し元はまだない。
+- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md:46` ― 「他の 16 の fetch サイトは固定ホストで挙動不変」という記述が、OpenAI 互換行の `baseUrlKey` がユーザー設定可能（`src/utils/storage/providerAllowlist.ts`、`src/background/ai/providers/OpenAIProvider.ts:69-73`）であるために誤り。
 
 ### 最小変更の選択肢
 **A. `redirect: 'error'` を AI 経路の fetch オプションに追加する（推奨、最小）**
@@ -88,7 +88,7 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 
 **推奨**: A を採用し、既定の安全方針を `src/utils/fetch.ts` の AI 経路側に置く。PBI 08 と共通化する場合は、`redirect:'error'` の追加が両者共通の買い点になることを実装時に確認する。
 
-### ブロッカー（needs_validation の未解決事項）— 着手前に潰すべき検証
+### ブロッカー（needs_validation の未解決事項）― 着手前に潰すべき検証
 1. **ブラウザの実挙動（owner 確認）**: クロスオリジンリダイレクトでブラウザが Authorization / x-goog-api-key を除去するか、転送先が CORS 読み取り可能か（Chromium / Edge / Firefox）。これが「credential・prompt・response のどれがリダイレクトを越えるか」を決める。ローカルのモックテストだけでは決着しない。
 2. **修正方針の確定（owner 判断）**: A（`redirect:'error'`）か B（`fetchWithRedirectGuard` 統一）か。A を採用する場合でも、理由（既知プロバイダはリダイレクトに依存しない）を ADR に残す。
 3. **E2E フィクスチャ**: 許可済みプロバイダ origin から `http://127.0.0.1:27124` への 307 をモックし、要約が生成されずループバックリクエストも出ないことを確認する。
@@ -117,7 +117,7 @@ Scenario: 正当な http→https 昇格も今回は拒否される（トレー�
 
 - **判定**: 修正完了（PBI 08 と together 実装）。AI 経路の `fetchWithRetry` は `redirect:'error'` を明示し、platform 既定の `follow` に依存しない。
 - **実装**: `src/utils/fetch.ts` に共通 seam `NO_REDIRECT_FETCH_POLICY = { redirect: 'error' } as const` を追加し、`HttpProviderStrategy.ts` の `executeHttpSummaryFlow` / `executeHttpTestFlow` の `fetchWithRetry` オプションへ展開。片方だけ直して他方が抜け道になることを防ぐため定数を共有（PBI 08 の Obsidian 経路も同じ定数を使う）。
-- **監査 fingerprint**: `f1be34a51b1912bc2c7cf49b59b7d444a32dc9e864513c886ac96b24c295d195` — verdict を **FIXED（2026-10-19）** へ更新。
+- **監査 fingerprint**: `f1be34a51b1912bc2c7cf49b59b7d444a32dc9e864513c886ac96b24c295d195` ― verdict を **FIXED（2026-10-19）** へ更新。
 - **ADR**: `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` の適用範囲を AI 経路へ拡大し、「他の 16 の fetch サイトは固定ホストで挙動不変」という記述が誤り（OpenAI 互換行の `baseUrlKey` はユーザー設定可能）であることを結果セクションに記録。
 - **テスト**: `src/background/ai/providers/__tests__/httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` に redirect 拒否テストを追加（実装前に Red を確認）。`src/utils/__tests__/fetch.test.ts` に「ポリシーが platform fetch まで届く」ことを追加。`NO_REDIRECT_FETCH_POLICY` を 15 ファイルのモックファクトリへ追加（Vitest は undefined な named export で throw するため）。
 - **ゲート**: `npm run validate` exit 0。PR #180 の CI（validate / test / build / bench-check / wasm-test / a11y / firefox-storage / gitleaks / usability）すべて pass。

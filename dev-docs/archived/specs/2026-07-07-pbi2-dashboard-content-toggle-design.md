@@ -1,4 +1,4 @@
-# PBI-2: ダッシュボード SQLite 履歴パネルへの content 表示トグル追加 — 設計書
+# PBI-2: ダッシュボード SQLite 履歴パネルへの content 表示トグル追加 ― 設計書
 
 ## 概要
 
@@ -39,7 +39,7 @@ Settings インターフェースに追加:
 
 デフォルト値: `false`（初期状態では content トグルボタン自体は常に表示するが、本文プレビューはこの設定に関わらず展開時のみ描画。この設定は「一覧に content が存在するエントリにトグルボタンを出すかどうか」の可否スイッチとして使う。content が無いエントリ（`content == null`）はそもそもトグルボタンを出さない）。
 
-## sqliteHistoryPanel.ts — トグル追加
+## sqliteHistoryPanel.ts ― トグル追加
 
 `renderEntryList()` のテンプレートに、`entry.content` が存在する場合のみトグルボタンと展開エリアを追加する。`historyEntryRow.ts` の `createContentToggle()` と同じ開閉方式（`aria-expanded` + `.content-preview.hidden`）を採用するが、SQLite履歴パネルは文字列テンプレート方式（`innerHTML`）でレンダリングしているため、DOM生成関数ではなくHTML文字列として実装する:
 
@@ -84,7 +84,7 @@ SQLite履歴パネルのフィルタ/表示設定エリアに「content表示を
 ```
 
 ```typescript
-// dashboard.ts — 既存の select バインドパターンに倣う
+// dashboard.ts ― 既存の select バインドパターンに倣う
 [StorageKeys.SHOW_SQLITE_CONTENT]: el.sqliteShowContentToggle,
 ```
 

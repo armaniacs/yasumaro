@@ -1,10 +1,10 @@
-# PBI: TrustPolicy orphan singleton 解消 — fallback 撤廃と TrustDecision stale キャッシュ排除
+# PBI: TrustPolicy orphan singleton 解消 ― fallback 撤廃と TrustDecision stale キャッシュ排除
 
 ## ユーザーストーリー
 記録ゲートの整合性を担う開発者として、`getTrustPolicy()` の orphan fallback と `TrustDecision` の stale キャッシュを解消したい、なぜなら現在は `TrustDbKernel` 初期化前に `getTrustPolicy()` が生成する孤立した Policy インスタンスを `TrustDecision` が module-init 時に capture し、`TrustDbAdmin.initialize()` が Kernel 内の Policy だけを更新するため `trustDecision.policy` が永久に stale なままとなり、すべての `isTrusted()` 呼び出しが `UNVERIFIED` を返し whitelisted / sensitive 分類が全ページで誤判定されるから
 
 ## 優先度
-- 順位: 02（0902a ブランチレビュー — Critical business-logic finding）
+- 順位: 02（0902a ブランチレビュー ― Critical business-logic finding）
 - RICEスコア: **4.8**（Reach=High(1) / Impact=3 / Confidence=0.8 / Effort=0.5）
 - 根拠: Reach は全記録ページ（engagement event ごとに recording gate が実行されるため High）。Impact 3 は whitelisted / sensitive 分類が全ページで誤り trust bypass が恒常化する圧倒的な影響。Confidence 80% は `TrustPolicy.ts:103` / `TrustDecision.ts` / `TrustDbAdmin.ts` のコードパスで再現可能だが初期化順序の分岐が残るため。Effort 0.5人週は `getTrustPolicy()` の fallback 削除と `TrustDecision` の policy 参照を admin seam 経由に置換する小規模修正。
 
@@ -19,7 +19,7 @@
 
 ## BDD受け入れシナリオ
 
-### Scenario: Happy path — 初期化後は kernel の実際の verdict が返る
+### Scenario: Happy path ― 初期化後は kernel の実際の verdict が返る
   Given `TrustDbAdmin` が `initialize()` で `TrustDatabase` と `TrustBloomFilter` を load / repair 済みである
   And `TrustPolicy`（Kernel-backed）が `example.com` を `TRUSTED` と判定する状態である
   When `trustDecision.isTrusted('https://example.com/page')` または `getTrustPolicy().isDomainTrusted('example.com')` を呼ぶ
@@ -119,7 +119,7 @@ grep -rn "isTrusted\|trustDecision" src/ --include="*.ts" | head -n 30
    export function getTrustPolicy(): TrustPolicy {
      const gk = (globalThis as unknown as Record<string, unknown>).__trustDbKernel as { getPolicy?: () => TrustPolicy } | undefined;
      if (gk?.getPolicy) return gk.getPolicy();
-     // Kernel 未初期化時は throw — orphan を作らない
+     // Kernel 未初期化時は throw ― orphan を作らない
      throw new Error('TrustDb not initialized: call getTrustDbAdmin().initialize() first');
      // または: return getTrustDbAdmin().getPolicy(); // 循環に注意（lazy import で回避）
    }
@@ -139,7 +139,7 @@ grep -rn "isTrusted\|trustDecision" src/ --include="*.ts" | head -n 30
    ```
    コンストラクタの `policy = getTrustPolicy()` デフォルト引数による eager capture を削除し、`private get policy()` getter で `this.admin.getPolicy()` に委譲するか、フィールド自体を削除する。`export const trustDecision = new TrustDecision()` は維持するが、capture しないため安全になる。
 4. **単体テストで委譲を検証**: `getTrustPolicy()` が `new TrustPolicy` を呼ばないこと、`TrustDecision.isTrusted()` が呼び出しごとに `getPolicy()` を呼ぶことを spy で検証し GREEN にする。
-5. **リファクタリング**: `globalThis.__TrustPolicyClass` / `__trustDbKernel` の global registry が依然必要か確認し、可能なら `TrustDbAdmin` への直接 import（lazy）に置換。`src/utils/trustDb/TrustPolicy.ts:98` の `globalThis.__TrustPolicyClass = TrustPolicy` は Kernel の global-based instantiation のため残置 may be required — 削除可否は循環テストで確認。
+5. **リファクタリング**: `globalThis.__TrustPolicyClass` / `__trustDbKernel` の global registry が依然必要か確認し、可能なら `TrustDbAdmin` への直接 import（lazy）に置換。`src/utils/trustDb/TrustPolicy.ts:98` の `globalThis.__TrustPolicyClass = TrustPolicy` は Kernel の global-based instantiation のため残置 may be required ― 削除可否は循環テストで確認。
 6. **validate**: `npm run type-check` と `npm test -- src/utils/trustDb` で green を確認し、`grep -rn "new TrustPolicy" src/utils/trustDb/ --include="*.ts"` が test 以外で 0 件であることを確認。
 
 ### 落とし穴
@@ -159,10 +159,10 @@ grep -rn "isTrusted\|trustDecision" src/ --include="*.ts" | head -n 30
 - [ ] `npm run validate` green
 
 ## 参考資料
-- `src/utils/trustDb/TrustPolicy.ts:103` — `getTrustPolicy()` の fallback 生成
-- `src/utils/trustDb/TrustDecision.ts:31,144` — `new TrustDecision()` の module-init capture と `export const trustDecision`
-- `src/utils/trustDb/TrustDbAdmin.ts:123` — `getPolicy()` が Kernel の Policy を返す seam
-- `src/utils/trustDb/TrustDbKernel.ts` — `initialize()` / `getPolicy()` / `__trustDbKernel` global registry
-- ブランチ `0902a` レビュー — Critical business-logic finding（Trust bypass）
-- `dev-docs/archived/pbi/2026-09-03-04-refactor-trustdb-seam-split.md` — 前段の 2 seam 分割 PBI（本 PBI はそのフォローアップ）
+- `src/utils/trustDb/TrustPolicy.ts:103` ― `getTrustPolicy()` の fallback 生成
+- `src/utils/trustDb/TrustDecision.ts:31,144` ― `new TrustDecision()` の module-init capture と `export const trustDecision`
+- `src/utils/trustDb/TrustDbAdmin.ts:123` ― `getPolicy()` が Kernel の Policy を返す seam
+- `src/utils/trustDb/TrustDbKernel.ts` ― `initialize()` / `getPolicy()` / `__trustDbKernel` global registry
+- ブランチ `0902a` レビュー ― Critical business-logic finding（Trust bypass）
+- `dev-docs/archived/pbi/2026-09-03-04-refactor-trustdb-seam-split.md` ― 前段の 2 seam 分割 PBI（本 PBI はそのフォローアップ）
 

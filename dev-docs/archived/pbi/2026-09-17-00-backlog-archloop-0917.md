@@ -1,4 +1,4 @@
-# バックログ: arch-delivery-loop 0917 — アーキテクチャ診断（2026-09-17 第4回・archloop）
+# バックログ: arch-delivery-loop 0917 ― アーキテクチャ診断（2026-09-17 第4回・archloop）
 
 arch-delivery-loop Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260917-r17.html`）。直近 15 コミットのホットスポット（queue 失敗伝播・markdown/HTTP SSOT・testConnection テンプレ）+ 未踏領域（entrypoints 配線、dashboard settings クラスタ、messaging validators、SettingsRepository 書き込み経路）を探索し、live 台帳（2026-09-05-00-backlog-future / archloop-0915 / 0915b / arch-review-0917 系）のトリガー発火を全件再確認した。
 
@@ -12,8 +12,8 @@ arch-delivery-loop Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l5
 | i18n フォールバック 301 箇所 | トリガー（次回 popup UI 改修時）未発火で維持 |
 | ublock parse 2 関数 | トリガー（次回 ublock 改修時）未発火で維持 |
 | RecordSession branch prelude/tail | トリガー（次回 RecordSession 改修時）未発火で維持 |
-| statusPanel 分割 | **陳腐化確認** — 実測 429 行（旧台帳の 1456 行記載は過去）。項目は実質解消済み |
-| audit orphan cap | **解消確認** — `planAuditLog` seam で `AUDIT_CAP_OPFS` 配線済み（auditHandlers.ts:33） |
+| statusPanel 分割 | **陳腐化確認** ― 実測 429 行（旧台帳の 1456 行記載は過去）。項目は実質解消済み |
+| audit orphan cap | **解消確認** ― `planAuditLog` seam で `AUDIT_CAP_OPFS` 配線済み（auditHandlers.ts:33） |
 | reviewSummary 双子 / SessionStore durability | RICE 低のまま維持（実装に変化なし） |
 | MAX_PROVIDERS / utils 物理再配置 | arch-review-0917 台帳の再検討トリガー未発火で維持 |
 
@@ -43,7 +43,7 @@ arch-delivery-loop Phase 0 診断（HTML レポート: `/var/folders/b_/fzr253l5
 2. なぜ lock が防げないのか → `withLock` の fresh base に stale full blob が spread で勝つ
 3. なぜ full blob が渡るのか → `set()` が内部で `getAll()` を展開し、呼び出し側も panel 保持の `currentSettings` をそのまま渡す
 4. なぜその interface なのか → merge 機能の便宜で「snapshot-in」が許容されてきた
-5. なぜ今直すべきか → dashboard ↔ popup ↔ SW の並行書き手が実在し、CAS/version 機構の効力が interface の形で無効化されている
+5. なぜ今直すべきか → dashboard ⇔ popup ⇔ SW の並行書き手が実在し、CAS/version 機構の効力が interface の形で無効化されている
 → 解: `set()` は delta のみ、`setAll(partial)` は「partial = delta」契約、full-snapshot writer 4 ファイルを移行、交差書き込み回帰テスト新設
 
 ### PBI 18（validator schema）

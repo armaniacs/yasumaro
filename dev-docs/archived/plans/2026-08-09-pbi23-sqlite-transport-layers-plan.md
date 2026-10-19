@@ -84,8 +84,8 @@ it('SQLITE_MESSAGE_TYPES が SqliteMessage の全 type を網羅する', () => {
  * The message types, as values.
  *
  * This array is the single source: `SqliteMessageType` is derived from it.
- * The reverse (deriving the array from the union) is impossible — types are
- * erased at runtime — and the array is needed for the sender check in
+ * The reverse (deriving the array from the union) is impossible ― types are
+ * erased at runtime ― and the array is needed for the sender check in
  * offscreen.ts, so the array has to be the thing that is written by hand.
  */
 export const SQLITE_MESSAGE_TYPES = [

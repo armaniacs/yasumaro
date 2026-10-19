@@ -1,7 +1,7 @@
-# なぜなぜ分析 — offscreen-mutex
+# なぜなぜ分析 ― offscreen-mutex
 
 ## 現象
-`src/offscreen/offscreen.ts` に `SqliteWriteMutex` クラス（41–63行）と `sqliteWriteMutex` インスタンス（65行）が存在し、`handleOffscreenMessage` で `acquire/release` により SQLite 操作を直列化している。しかし `src/background/offscreenTransport.ts` の `ChromeOffscreenTransport.requestQueue`（`Mutex`、maxQueueSize・timeout 付き）が既にメッセージを直列化している。
+`src/offscreen/offscreen.ts` に `SqliteWriteMutex` クラス（41-63行）と `sqliteWriteMutex` インスタンス（65行）が存在し、`handleOffscreenMessage` で `acquire/release` により SQLite 操作を直列化している。しかし `src/background/offscreenTransport.ts` の `ChromeOffscreenTransport.requestQueue`（`Mutex`、maxQueueSize・timeout 付き）が既にメッセージを直列化している。
 
 ## 5 Whys
 1. なぜ `SqliteWriteMutex` が冗長なのか → `ChromeOffscreenTransport.msgOffscreen()` が `requestQueue.acquire()` → `sendOnce()` → `release()` の順で呼び出され、transport 層ですでに1-in-flight を保証しているため

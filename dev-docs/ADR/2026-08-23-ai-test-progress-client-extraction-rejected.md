@@ -1,4 +1,4 @@
-# ADR: aiTestProgressClient 抽出 — 保留条件の一部を却下
+# ADR: aiTestProgressClient 抽出 ― 保留条件の一部を却下
 
 **Date:** 2026-08-23
 **Status:** Rejected（該当トリガーのみ）

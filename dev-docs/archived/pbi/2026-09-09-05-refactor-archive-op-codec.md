@@ -1,8 +1,8 @@
-# PBI 05: Archive op codec — wire テーブルを routing 専用から codec 携行に拡張
+# PBI 05: Archive op codec ― wire テーブルを routing 専用から codec 携行に拡張
 
 ## ユーザーストーリー
 
-アーカイブ機能（preview / create / export / purge / restore / session / status の 14 op）を保守・拡張する開発者として、新しい op の追加が wire テーブル 1 行で完結してほしい。なぜなら現状は routing（op ↔ messageType ↔ workerType）は統合済みだが response shape の知識が 5 hop（dashboard decode ×14 / background 再投影 ×14 / offscreen pick / worker project lambda ×14 / 型 interface ×14）に重複し、1 op の理解に 6 モジュールを跨ぐから。
+アーカイブ機能（preview / create / export / purge / restore / session / status の 14 op）を保守・拡張する開発者として、新しい op の追加が wire テーブル 1 行で完結してほしい。なぜなら現状は routing（op ⇔ messageType ⇔ workerType）は統合済みだが response shape の知識が 5 hop（dashboard decode ×14 / background 再投影 ×14 / offscreen pick / worker project lambda ×14 / 型 interface ×14）に重複し、1 op の理解に 6 モジュールを跨ぐから。
 
 ## 優先度
 
@@ -42,7 +42,7 @@ Scenario: 既存 op の noRetry / token 契約が維持される
 - [x] `StorageBackend.ts:4-18` の 14 interface が `DescriptorResponse<D>` 派生型に置換
 - [x] `deps.ts:134-196` の 14 個の `as` キャストが descriptor 型から解決される
 - [x] `ARCHIVE_DISPATCH`（sqliteMessageHandlers.ts:309-394）が descriptor の pick 列を参照する形に統合（重複 pick の解消）
-- [x] コンパイル時網羅 assert（wire テーブル ↔ dispatch ↔ protocol 型）を維持・強化
+- [x] コンパイル時網羅 assert（wire テーブル ⇔ dispatch ⇔ protocol 型）を維持・強化
 - [x] 振る舞い変更なし（既存ユニットテスト群が無修正 green。E2E 未実行は下記メモ参照）
 
 ## テスト戦略
@@ -78,8 +78,8 @@ Scenario: 既存 op の noRetry / token 契約が維持される
 
 ## Definition of Done
 
-- [x] 全 BDD シナリオが自動テストとして実装されパスする（「新 op = 1 行」はランタイムのダミー op 追加ではなくコンパイル時網羅 assert（table ↔ union ↔ dispatch ↔ protocol の双方向）で構造的に担保。ダミー op を実 union に追加するテストは行動面の変更になるため不採用 — 実装メモ参照）
-- [x] type-check / lint / 全テスト / build green（E2E は make clean test で実施 — 実装メモ参照）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする（「新 op = 1 行」はランタイムのダミー op 追加ではなくコンパイル時網羅 assert（table ⇔ union ⇔ dispatch ⇔ protocol の双方向）で構造的に担保。ダミー op を実 union に追加するテストは行動面の変更になるため不採用 ― 実装メモ参照）
+- [x] type-check / lint / 全テスト / build green（E2E は make clean test で実施 ― 実装メモ参照）
 - [x] コードレビュー完了
 - [x] DESIGN_SPECIFICATIONS.md の SQLite gateway 節に codec 拡張を反映
 - [x] `00-INDEX.md` 更新

@@ -25,10 +25,10 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/utils/storage/settingsSnapshot.ts:27` — `readSettingsSnapshot(port): Promise<Settings>` の宣言。実体は無検証 Record
-- `src/utils/storage/settingsSnapshot.ts:42` — `return merged as Settings;`（`merged` は無検証 `Record<string, unknown>`）
-- `src/content/contentKernel.ts:161` — `(await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>`（二重キャスト）
-- `src/utils/storage/__tests__/settingsSnapshot-authority-parity.test.ts:35` と `:65` — テストも同一の二重キャスト
+- `src/utils/storage/settingsSnapshot.ts:27` ― `readSettingsSnapshot(port): Promise<Settings>` の宣言。実体は無検証 Record
+- `src/utils/storage/settingsSnapshot.ts:42` ― `return merged as Settings;`（`merged` は無検証 `Record<string, unknown>`）
+- `src/content/contentKernel.ts:161` ― `(await readSettingsSnapshot(this.storage)) as unknown as Record<string, unknown>`（二重キャスト）
+- `src/utils/storage/__tests__/settingsSnapshot-authority-parity.test.ts:35` と `:65` ― テストも同一の二重キャスト
 - **コメント drift**: `src/content/contentKernel.ts:159-160`（「migration-folded and defaults-filled」）vs `src/utils/storage/settingsSnapshot.ts:39-41`（「No DEFAULT_SETTINGS fill: callers keep their own fallbacks」）。実装は後者が正。スナップショット側はデフォルトを埋めない
 
 ## 5. BDD シナリオ
@@ -83,7 +83,7 @@ And settingsSnapshot.ts:39-41 の実装と矛盾していないこと
 
 ## 8. 見積もり
 
-**1.5 SP** — 型変更とキャスト削除、コメント訂正のみでロジック変更なし。影響範囲は `settingsSnapshot.ts`、`contentKernel.ts`、parity テストの 3 ファイル
+**1.5 SP** ― 型変更とキャスト削除、コメント訂正のみでロジック変更なし。影響範囲は `settingsSnapshot.ts`、`contentKernel.ts`、parity テストの 3 ファイル
 
 ## 9. DoD
 

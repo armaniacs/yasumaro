@@ -3,7 +3,7 @@
 NN08 中継化後の headed E2E（2026-10-11 ユーザー実行）で残った usability 3 件の
 失敗を切り分けて PBI 化する。いずれも NN08 差分（content probe・fixture・spec・
 wxt・release.yml）と無関係であることを実コードで確認済み（dashboard/export/i18n
-未接触）。ファイル番号は同日番号（01–15）との衝突回避のため NN16–17 を使用する。
+未接触）。ファイル番号は同日番号（01-15）との衝突回避のため NN16-17 を使用する。
 NN 昇順＝優先降順。
 
 ## RICE スコアリング

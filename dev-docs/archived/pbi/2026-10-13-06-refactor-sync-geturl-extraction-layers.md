@@ -38,12 +38,12 @@ Scenario: 両層が一致していれば green
 
 - [x] 両層の getURL 抽出正規表現の一致を pin するテストが新規ファイル（例: `src/__tests__/geturl-extraction-sync.test.ts`）に追加されている
 - [x] 片方だけ変更すると fail することを Red 確認して記録する
-- [x] pin テストが `npm run validate` / `npm test` に乗る（dist 依存なし — ファイル読み取りのみ）
+- [x] pin テストが `npm run validate` / `npm test` に乗る（dist 依存なし ― ファイル読み取りのみ）
 - [x] `npm run validate` が green
 
 ## 検証結果（2026-10-13 実施）
 
-- 実装: `src/__tests__/geturl-extraction-sync.test.ts` を新設。両層（`src/__tests__/manifest.test.ts:230` と `scripts/release-checks/check-manifest.mjs:352` — 実装時点の行番号）の `const getURLPattern = /getURL\(...\)/g;` リテラルをファイルテキストから抽出し一致を assert。リテラルが移動した場合は明示的なエラーメッセージで pin の更新を促す（`declared[1]` が取れない場合も別エラーで失敗 — `noUncheckedIndexedAccess` 下の `string | undefined` を暗黙 fallback で通さない）。
+- 実装: `src/__tests__/geturl-extraction-sync.test.ts` を新設。両層（`src/__tests__/manifest.test.ts:230` と `scripts/release-checks/check-manifest.mjs:352` ― 実装時点の行番号）の `const getURLPattern = /getURL\(...\)/g;` リテラルをファイルテキストから抽出し一致を assert。リテラルが移動した場合は明示的なエラーメッセージで pin の更新を促す（`declared[1]` が取れない場合も別エラーで失敗 ― `noUncheckedIndexedAccess` 下の `string | undefined` を暗黙 fallback で通さない）。
 - pin テストの設計判断: 共通ヘルパー化（scripts 層を src テストから import）は層の依存方向を曖昧にするため非推奨とし、ci-paths-filter.test.ts と同型の「ファイルをテキストとして読んでリテラル比較」の pin テストを採用。dist 依存なしで `npm test` / validate に乗る。
 - Red 確認: 生成物層の正規表現だけを 1 文字変更（`\)/g` → `\)\s*/g`）→ pin テスト FAILED（乖離を検出）→ Edit ツールで復元 → green 再確認。**片側だけの拡張が pin で検出されることの実証**。
 - 検証: `npx vitest run src/__tests__/geturl-extraction-sync.test.ts` → green。`npm run validate` → exit 0（1062 files / 16032 tests）。

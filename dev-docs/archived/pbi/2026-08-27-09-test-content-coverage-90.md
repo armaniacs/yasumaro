@@ -15,12 +15,12 @@
 - 解: `visitGate` に `InMemory` / fake clock を注入した unit + Playwright で `loader.ts` 経由の実DOM抽出 E2E を追加
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常ページで抽出が完了する
+Scenario: ハッピーパス ― 正常ページで抽出が完了する
   Given 有効な HTML ページがロードされている
   When `loader` が `extractor` を呼び出す
   Then `content` / `title` / `candidateBytes` が取得され `visitGate` で `shouldRecord=true` になる
 
-Scenario: エッジケース — 閾値未満は記録されない
+Scenario: エッジケース ― 閾値未満は記録されない
   Given `visit_duration < MIN_VISIT_DURATION` または `scroll_ratio < threshold` のページ
   When `visitGate.shouldRecord` を呼ぶ
   Then `false` を返し `validVisit` が発火しない

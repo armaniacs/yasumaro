@@ -1,4 +1,4 @@
-# Backlog — Branch `0902a` Review Findings（2026-09-04、重複・dead-code 7件）
+# Backlog ― Branch `0902a` Review Findings（2026-09-04、重複・dead-code 7件）
 
 `0902a` ブランチレビュー（`origin/main` 差分 11870行/211ファイル、6トラック並列）で検出された high-confidence findings 7件を 3 PBI に束ね、RICE 降順で着手順を決める。security / business logic / deploy safety / performance は NO_FINDINGS のため PBI 化しない。
 
@@ -36,8 +36,8 @@
 
 ## 推奨着手順
 
-1. **01 api-key-list SSOT** — 最小 Effort で最大 Impact。セキュリティ境界のドリフトを即座に塞ぐ
-2. **02 domain-filter duplication** — 次回 mode 変更時の回帰防止。mock 移行が鍵
-3. **03 dead-exports** — dev のみでユーザー影響なしのため最後にまとめてもよいが、01・02 と並行着手可
+1. **01 api-key-list SSOT** ― 最小 Effort で最大 Impact。セキュリティ境界のドリフトを即座に塞ぐ
+2. **02 domain-filter duplication** ― 次回 mode 変更時の回帰防止。mock 移行が鍵
+3. **03 dead-exports** ― dev のみでユーザー影響なしのため最後にまとめてもよいが、01・02 と並行着手可
 
 > 01〜03 はいずれも独立のため、レビュアー帯域があれば並行着手も可能。

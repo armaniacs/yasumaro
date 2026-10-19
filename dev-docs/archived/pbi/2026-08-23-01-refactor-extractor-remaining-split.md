@@ -35,10 +35,10 @@ Scenario: validVisitReporter が retry+dialog を正しく処理する
 
 ## 受け入れ基準
 
-- [x] `src/content/settingsLoader.ts` — `loadSettings(pageState: PageState): Promise<void>` 単一 seam。`CLEANSING_RULES.map` で32ルール導出
-- [x] `src/content/visitTracker.ts` — `VisitTracker` クラス（`updateMaxScroll/scroll/shouldRecord/start/stop`）
-- [x] `src/content/validVisitReporter.ts` — `ValidVisitReporter`（`reportValidVisit + GET_CONTENT handler` 1 seam）
-- [x] `src/utils/throttle.ts` — 汎用 `throttle<T>(fn, ms)` に昇格、extractor から分離
+- [x] `src/content/settingsLoader.ts` ― `loadSettings(pageState: PageState): Promise<void>` 単一 seam。`CLEANSING_RULES.map` で32ルール導出
+- [x] `src/content/visitTracker.ts` ― `VisitTracker` クラス（`updateMaxScroll/scroll/shouldRecord/start/stop`）
+- [x] `src/content/validVisitReporter.ts` ― `ValidVisitReporter`（`reportValidVisit + GET_CONTENT handler` 1 seam）
+- [x] `src/utils/throttle.ts` ― 汎用 `throttle<T>(fn, ms)` に昇格、extractor から分離
 - [x] `extractor.ts` は `init()` の委譲のみ（<100行）に縮小、re-export で後方互換
 - [x] 単体テスト: settingsLoader 6件 + visitTracker 8件 + validVisitReporter 4件
 - [x] `npm run type-check` / `npm test` PASS

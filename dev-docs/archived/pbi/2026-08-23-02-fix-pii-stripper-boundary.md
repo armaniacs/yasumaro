@@ -35,8 +35,8 @@ Scenario: レガシー録画データの後方互換性
 - [x] `src/background/pipeline/piiBoundary.ts` を新設し、`toExternalResult()` をエクスポート
 - [x] `RecordingPipeline.execute()` の戻り値が常に `StrippedMaskedItem[]` を含むように変更
 - [x] `recordingHandlers.ts` の3箇所の `stripPiiFromMaskedItems` 呼び出しを削除（パイプライン側で処理済み）
-- [x] `MaskedItem.original` を branded type にし、`RecordingResult` への直接代入がコンパイルエラーになるよう型守りを強化 — branded type は将来PBIで対応。現状は `toExternalResult` で境界を強制し、`piiStripper.ts` を deprecated shim に移行して段階的に移行
-- [x] `piiStripper.ts` を削除 — deprecated shim として維持（1 release 後に削除）。`piiBoundary.ts` が SSOT
+- [x] `MaskedItem.original` を branded type にし、`RecordingResult` への直接代入がコンパイルエラーになるよう型守りを強化 ― branded type は将来PBIで対応。現状は `toExternalResult` で境界を強制し、`piiStripper.ts` を deprecated shim に移行して段階的に移行
+- [x] `piiStripper.ts` を削除 ― deprecated shim として維持（1 release 後に削除）。`piiBoundary.ts` が SSOT
 - [x] 既存テスト全パス (`npm run validate`)
 
 ## テスト戦略

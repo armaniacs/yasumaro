@@ -11,12 +11,12 @@
 
 ## 背景（現状）
 
-- `src/background/alarmRegistry.ts:40` — `AlarmHandlerDeps.reviewSummaryGenerator?` は宣言のみで注入・参照ゼロの死んだ dep
-- `src/background/alarmRegistry.ts:152-170` — 実フックは module-level `reviewSummaryGeneratorRef` / `sessionTimeoutInstallRef` / `sessionTimeoutRunRef` を optional-chain で読む。破綻モードは「無音、no error、no log」で :160-166 に 30 行近いコメントで文書化
-- `src/background/alarmRegistryRefs.ts:12-21` — mutable module state（exported let）+ setter 2 本
-- `src/background/compositionManifest.ts:210-224` — alarmRegistry factory。`as AlarmRegistry` 冗長キャスト（:223）。`getOfflineNetworkQueue` は同じファイルで静的 import 済みの `offlineNetworkQueue.js`（:34）を `import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue)` で再 import（.kilorules 絶対規則3「.then() チェーン禁止」違反）
-- `src/background/alarmRegistry.ts:38,102` — `retryPendingChromeStorageWrite: (write: never)` の `never` パラメータが使用箇所に `as never` キャストを強制。正しい型 `QueuedChromeStorageWrite` は `src/background/pendingChromeStorageQueue.ts` に実在
-- `src/background/service-worker.ts:216-229` — `setSessionTimeoutRefs` / `setReviewSummaryGeneratorRef` 呼び出し + 評価順序保証コメント。`sessionAlarmService` / `reviewSummaryGenerator` はいずれもコンテナ登録済みエントリなので、ref を経由する理由が成立しない
+- `src/background/alarmRegistry.ts:40` ― `AlarmHandlerDeps.reviewSummaryGenerator?` は宣言のみで注入・参照ゼロの死んだ dep
+- `src/background/alarmRegistry.ts:152-170` ― 実フックは module-level `reviewSummaryGeneratorRef` / `sessionTimeoutInstallRef` / `sessionTimeoutRunRef` を optional-chain で読む。破綻モードは「無音、no error、no log」で :160-166 に 30 行近いコメントで文書化
+- `src/background/alarmRegistryRefs.ts:12-21` ― mutable module state（exported let）+ setter 2 本
+- `src/background/compositionManifest.ts:210-224` ― alarmRegistry factory。`as AlarmRegistry` 冗長キャスト（:223）。`getOfflineNetworkQueue` は同じファイルで静的 import 済みの `offlineNetworkQueue.js`（:34）を `import('./offlineNetworkQueue.js').then(m => m.sharedOfflineNetworkQueue)` で再 import（.kilorules 絶対規則3「.then() チェーン禁止」違反）
+- `src/background/alarmRegistry.ts:38,102` ― `retryPendingChromeStorageWrite: (write: never)` の `never` パラメータが使用箇所に `as never` キャストを強制。正しい型 `QueuedChromeStorageWrite` は `src/background/pendingChromeStorageQueue.ts` に実在
+- `src/background/service-worker.ts:216-229` ― `setSessionTimeoutRefs` / `setReviewSummaryGeneratorRef` 呼び出し + 評価順序保証コメント。`sessionAlarmService` / `reviewSummaryGenerator` はいずれもコンテナ登録済みエントリなので、ref を経由する理由が成立しない
 
 DESIGN_SPECIFICATIONS.md §2.2「Long-lived collaborators are wired in createBackgroundServices() so every message path observes the same shared references」からの逸脱。interface が implementation より複雑な shallow seam（ref 経路 + deps 経路 + 死んだ dep の 3 重）。
 
@@ -49,8 +49,8 @@ Scenario: ref 注入が欠けても構造的に失敗しない
 
 ## テスト戦略
 
-- unit: `src/background/__tests__/alarmRegistry*.test.ts` — deps 注入後のテスト更新（fixture: 既存テストのモック構成を再利用、実時間待ちは `testDir/waitPolicy.ts` のヘルパーに従う）
-- integration: service-worker 起動経路の `src/background/__tests__/service-worker.test.ts` — refs import が消えたことを構造的に pin（alarmRegistryRefs.ts の存在検査は不要、import 消失で十分）
+- unit: `src/background/__tests__/alarmRegistry*.test.ts` ― deps 注入後のテスト更新（fixture: 既存テストのモック構成を再利用、実時間待ちは `testDir/waitPolicy.ts` のヘルパーに従う）
+- integration: service-worker 起動経路の `src/background/__tests__/service-worker.test.ts` ― refs import が消えたことを構造的に pin（alarmRegistryRefs.ts の存在検査は不要、import 消失で十分）
 - 挙動不変: 各ジョブの発火パスは変更しない（table の run 経路は deps 参照先が変わるだけ）
 
 ## 見積もり

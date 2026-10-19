@@ -1,4 +1,4 @@
-# PBI: pii-sandbox 暗黙global依存解消 — ReferenceErrorと上書き対策（統合）
+# PBI: pii-sandbox 暗黙global依存解消 ― ReferenceErrorと上書き対策（統合）
 
 ## ユーザーストーリー
 開発者として、docsのPIIサンドボックスが暗黙のglobal `PiiSanitizer` に依存せず明示的にimportしてほしい、なぜなら `docs/assets/pii-sandbox.js:6` の `new PiiSanitizer()` が暗黙globalに依存すると、攻撃者が同一iframeで先に `window.PiiSanitizer` を上書きしたり、load順変更で `ReferenceError` が発生し、docsのデモが破綻するから
@@ -16,19 +16,19 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 正常なload順でsanitizeが動作する
+Scenario: 正常系 ― 正常なload順でsanitizeが動作する
   Given docsページが正常にロードされ、PiiSanitizerが正しくimportされている
   When ユーザーがテキストを入力しsanitizeを実行する
   Then 正常にマスクされた結果が返る
   And consoleにReferenceErrorが出ない
 
-Scenario: 境界ケース — PiiSanitizerが未定義でもページが壊れない
+Scenario: 境界ケース ― PiiSanitizerが未定義でもページが壊れない
   Given 攻撃者が先に window.PiiSanitizer = null を注入した（テストでモック）
   When docsページがロードされる
   Then 存在チェックで早期returnまたはエラーメッセージが表示され、ページ全体は壊れない
   And ReferenceErrorがthrowされない
 
-Scenario: エラーケース — import順が変わってもReferenceErrorにならない
+Scenario: エラーケース ― import順が変わってもReferenceErrorにならない
   Given docs/assets/pii-sandbox.js のload順を意図的に遅延させた（テストで遅延ロード）
   When ページがロードされる
   Then 明示importにより PiiSanitizer が解決され、ReferenceErrorが出ない
@@ -36,7 +36,7 @@ Scenario: エラーケース — import順が変わってもReferenceErrorにな
 ```
 
 ## 受け入れ基準
-- [ ] `docs-src/pii-sandbox.ts` が `src/utils/piiSanitizer.js` から `sanitizeRegex` 等を明示importしている（現状は `import { sanitizeRegex, MAX_INPUT_SIZE } from '../src/utils/piiSanitizer.js'` で既に明示 — 指摘の `new PiiSanitizer()` は旧成果物の残留か要確認）
+- [ ] `docs-src/pii-sandbox.ts` が `src/utils/piiSanitizer.js` から `sanitizeRegex` 等を明示importしている（現状は `import { sanitizeRegex, MAX_INPUT_SIZE } from '../src/utils/piiSanitizer.js'` で既に明示 ― 指摘の `new PiiSanitizer()` は旧成果物の残留か要確認）
 - [ ] `docs/assets/pii-sandbox.js` の成果物に `new PiiSanitizer()` の暗黙global参照が無い
 - [ ] 存在チェック `if (typeof PiiSanitizer === 'undefined')` または try-catch が追加されている（旧コードが残る場合）
 - [ ] `npm run build:docs-pii` 後の成果物で `grep -n "PiiSanitizer" docs/assets/pii-sandbox.js` が明示import由来のみである
@@ -61,7 +61,7 @@ Scenario: エラーケース — import順が変わってもReferenceErrorにな
 - **Red-Green-Refactor**: TDD
 
 ## 見積もり
-2pt（要チーム見積もり）— 現状 `docs-src/pii-sandbox.ts` は既に明示importしており、旧成果物の再ビルドで解消する可能性。調査を含むため2pt
+2pt（要チーム見積もり）― 現状 `docs-src/pii-sandbox.ts` は既に明示importしており、旧成果物の再ビルドで解消する可能性。調査を含むため2pt
 
 ## 技術的考慮事項
 - 依存関係: 10 window freeze の前提。暗黙globalを解消してからfreezeをかけると順序が自然。08 hardcoded demoと同バッチ
@@ -97,7 +97,7 @@ cat package.json | grep build:docs-pii
 ### 落とし穴
 - `esbuild --bundle` は `src/utils/piiSanitizer.ts` をinline展開するため、成果物に `class PiiSanitizer` が展開されるが、これは正常。問題は `new PiiSanitizer()` が bundle外のglobalを参照している場合
 - `docs/assets/pii-sandbox.js` は IIFE で `var PiiSandbox = (() => { ... })()` として生成される。`PiiSandbox` と `PiiSanitizer` を混同しない
-- 現行 `docs-src/pii-sandbox.ts` は `sanitizeRegex` を関数としてimportしており、クラス `PiiSanitizer` を直接 new していない。指摘は旧実装の可能性が高い — まず再現確認を徹底
+- 現行 `docs-src/pii-sandbox.ts` は `sanitizeRegex` を関数としてimportしており、クラス `PiiSanitizer` を直接 new していない。指摘は旧実装の可能性が高い ― まず再現確認を徹底
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする

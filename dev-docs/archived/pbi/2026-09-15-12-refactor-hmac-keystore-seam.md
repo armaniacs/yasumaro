@@ -1,4 +1,4 @@
-# PBI: hmacKeyStore 候補チェーンの内部 seam — implementation 単体テスト可能化
+# PBI: hmacKeyStore 候補チェーンの内部 seam ― implementation 単体テスト可能化
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -14,9 +14,9 @@
 
 ## 背景（診断結果）
 
-- `src/utils/crypto/hmacKeyStore.ts:106-191` — `getOrCreateHmacWrappingKeyLocked` 内の `candidates` 配列が session/local を chrome 直結合。durable のみ seam + override を持ちチェーン全体が interface 越しにテスト不能
+- `src/utils/crypto/hmacKeyStore.ts:106-191` ― `getOrCreateHmacWrappingKeyLocked` 内の `candidates` 配列が session/local を chrome 直結合。durable のみ seam + override を持ちチェーン全体が interface 越しにテスト不能
 - `localStored_Extract` の命名残滓（field アクセスのヘルパーとして不適切な名前）
-- Strategy パターンへの抽出は**しない**（One adapter means a hypothetical seam — チェーンの順序は1箇所に集約すべきで、必要なのは implementation 内部の storage 読み注入）
+- Strategy パターンへの抽出は**しない**（One adapter means a hypothetical seam ― チェーンの順序は1箇所に集約すべきで、必要なのは implementation 内部の storage 読み注入）
 
 ## 実装ガイド
 
@@ -34,7 +34,7 @@
 
 ### 触ってはいけないもの
 
-- チェーンの順序と候補の集合（本 PBI はテスト容易性のみ — ポリシー変更は別）
+- チェーンの順序と候補の集合（本 PBI はテスト容易性のみ ― ポリシー変更は別）
 - durableKeyStore.ts の API（`setDurableKeyStorageOverride` と同じパターンなので整合を保つ）
 
 ## BDD受け入れシナリオ

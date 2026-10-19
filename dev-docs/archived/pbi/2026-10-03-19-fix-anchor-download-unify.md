@@ -13,10 +13,10 @@
 
 ## 背景（file:line 現状）
 
-- 実装 A（SSOT 候補）: `src/dashboard/exportLogsService.ts:154-163` — `downloadBlob` は append + click + 60s bounded revoke。WHY コメント付きで exported。`DOWNLOAD_REVOKE_DELAY_MS`（:152）も export 済み
-- 実装 B（sync immediate revoke — 害あり）: `src/dashboard/encryptedBackupPanel.ts:36-47` — append + click + **即時** `URL.revokeObjectURL` → 長いダウンロードが切れる
-- 実装 C（sync revoke・append なし）: `src/dashboard/settings/ublockImport/index.ts:159-164` — append せず click して即時 revoke
-- 根拠ドキュメント: `src/dashboard/markdownExport.ts:286-293` — bounded-delay の rationale（revoke は後続 fetch のみをブロックする、timer は早すぎる/リークする）を文書化
+- 実装 A（SSOT 候補）: `src/dashboard/exportLogsService.ts:154-163` ― `downloadBlob` は append + click + 60s bounded revoke。WHY コメント付きで exported。`DOWNLOAD_REVOKE_DELAY_MS`（:152）も export 済み
+- 実装 B（sync immediate revoke ― 害あり）: `src/dashboard/encryptedBackupPanel.ts:36-47` ― append + click + **即時** `URL.revokeObjectURL` → 長いダウンロードが切れる
+- 実装 C（sync revoke・append なし）: `src/dashboard/settings/ublockImport/index.ts:159-164` ― append せず click して即時 revoke
+- 根拠ドキュメント: `src/dashboard/markdownExport.ts:286-293` ― bounded-delay の rationale（revoke は後続 fetch のみをブロックする、timer は早すぎる/リークする）を文書化
 - 統一しない場合の代替: markdownExport.ts の settle-driven 経路（chrome.downwards.download の完了シグナルを await）は anchor-click と事情が異なり変更不要
 
 ## BDD受け入れシナリオ
@@ -68,7 +68,7 @@ Scenario: domain-list エクスポートも同一ヘルパーを使う
 
 - 統一: `encryptedBackupPanel.ts` の `downloadJson`（sync immediate revoke）と `ublockImport/index.ts` の `handleExport`（sync revoke・append なし）を `exportLogsService.downloadBlob` への委譲に置換（両ファイルに SSOT コメント: 60s bounded revoke が唯一の anchor-click 方針）。ublockImport 側は downloadBlob が document.body へ append するため旧来の bare click 越しの差異も解消。統一で壊れる事情は判明せず、裁定理由は両ファイルの SSOT コメントと本記録に残す
 - 対象外の明記: `markdownExport.ts` の settle-driven 経路（chrome.downloads 完了シグナル）は事情が異なるため変更せず。回帰テストの doc コメントにも対象外（connectionTests.ts 含む）を記載
-- 回帰テスト: `exportLogsRevokeJustification.test.ts` に「anchor-click サイトの統一 pin」を新設（it.each — encryptedBackupPanel / ublockImport の 2 ファイルが downloadBlob を import し、ローカル revokeObjectURL を持たないことをソース pin）。`encryptedBackupPanel.test.ts` に 60s bounded revoke の挙動回帰（useTimerClock）を追加、`ublockImport/__tests__/index.test.ts` にエクスポート順序の pin を追加。実時間待ちはなし
+- 回帰テスト: `exportLogsRevokeJustification.test.ts` に「anchor-click サイトの統一 pin」を新設（it.each ― encryptedBackupPanel / ublockImport の 2 ファイルが downloadBlob を import し、ローカル revokeObjectURL を持たないことをソース pin）。`encryptedBackupPanel.test.ts` に 60s bounded revoke の挙動回帰（useTimerClock）を追加、`ublockImport/__tests__/index.test.ts` にエクスポート順序の pin を追加。実時間待ちはなし
 - 残骸確認: 対象 2 ファイルの `revokeObjectURL` grep は 0 件
-- 後続候補（本 PBI では未実施）: 統合検証中に範囲外の 4 つ目の sync-revoke サイトを確認 — `src/utils/settingsExportImport.ts:153-165` の `saveJsonToFile`（append + click + 即時 revoke の同一パターン）。後続 PBI 候補として台帳に記録推奨
+- 後続候補（本 PBI では未実施）: 統合検証中に範囲外の 4 つ目の sync-revoke サイトを確認 ― `src/utils/settingsExportImport.ts:153-165` の `saveJsonToFile`（append + click + 即時 revoke の同一パターン）。後続 PBI 候補として台帳に記録推奨
 - ゲート: `npx tsc --noEmit` 0 エラー / `npm run lint` 0 エラー / `npm test` 15583 passed・21 skipped / `npm run validate` PASS / 全 E2E 324 passed・31 skipped（`npm run build` 後。src/dashboard 変更を含む dist で検証）

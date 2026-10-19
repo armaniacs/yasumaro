@@ -69,7 +69,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Background processing | `src/background/` service-worker.ts | Use modular client classes |
 | Local AI Integration | `src/background/ai/LocalAIService.ts`, `src/background/builtInAIClient.ts` | Built-in AI (Chrome Gemini Nano / Edge Phi-mini); Ollama/LM Studio go through `src/background/ai/providers/OpenAIProvider.ts` |
 | Page interaction | `src/content/` extractor.ts | Consider CSP restrictions |
-| Storage | `src/utils/storage/` (SettingsRepository + SettingsKeys) | Settings blob read/write SSOT — `src/utils/storage.ts` is a retired re-export shim |
+| Storage | `src/utils/storage/` (SettingsRepository + SettingsKeys) | Settings blob read/write SSOT ― `src/utils/storage.ts` is a retired re-export shim |
 | API Key Encryption | `src/utils/crypto/` | PBKDF2 + AES-GCM encryption |
 | PII Masking | `src/utils/piiSanitizer.ts` | Privacy-preserving data handling |
 | DOM operations | `src/offscreen/` offscreen.ts | For operations requiring offscreen document |

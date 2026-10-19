@@ -1,4 +1,4 @@
-# PBI: Recording Pipeline Steps の内部化 — 13の shallow step を深い Pipeline に集約
+# PBI: Recording Pipeline Steps の内部化 ― 13の shallow step を深い Pipeline に集約
 
 ## ユーザーストーリー
 開発者として、`src/background/pipeline/steps/*.ts` の13のステップモジュール（`truncate`, `domainFilter`, `permission`, `trust`, `privacyHeaders`, `duplicate`, `privacyPipeline`, `extractSentences`, `formatMarkdown`, `saveObsidian`, `saveLocalMarkdown`, `saveSqlite`, `saveMetadata`）がそれぞれ `PipelineStep` interface（`context in → context out + ErrorStrategy`）を持つ浅いモジュールの集合になっている状態を解消したい。なぜなら、ステップ間の ordering・`force`/`skipDuplicateCheck`/`previewOnly` フラグの相互作用・`BEST_EFFORT` の握りつぶしといった本質的な不具合がどの単一ステップにも属さず `RecordingPipeline.execute()` の呼び出し方に宿り、バグの局所性（locality）が失われているからだ。
@@ -6,11 +6,11 @@
 ## 優先度
 - 順位: 02 / 5
 - RICEスコア: (Reach=10 × Impact=2 × Confidence=0.8) / Effort=3 = 5.3
-- 根拠: Reach 10（全録画パス — 自動記録・手動記録・プレビュー・offline retry の全てが通過する唯一のオーケストレータ）。Impact 2（フラグ相互作用のバグはユーザーの保存失敗・重複保存・プライバシー漏洩に直結するが、01の AI品質汚染ほどの直接的なデータ汚染ではない）。Confidence 80%（ステップは全て in-process で、外部依存は注入済み `UrlStore` / `OfflineNetworkQueue` のみ。deepening の seam は自明 — `record()` のみを公開）。Effort 3人日（13ステップの内部化 + `ErrorStrategy` dispatch の統合 + `RecordingContext` mutation のカプセル化 + テスト移行）。01と並列着手可能。
+- 根拠: Reach 10（全録画パス ― 自動記録・手動記録・プレビュー・offline retry の全てが通過する唯一のオーケストレータ）。Impact 2（フラグ相互作用のバグはユーザーの保存失敗・重複保存・プライバシー漏洩に直結するが、01の AI品質汚染ほどの直接的なデータ汚染ではない）。Confidence 80%（ステップは全て in-process で、外部依存は注入済み `UrlStore` / `OfflineNetworkQueue` のみ。deepening の seam は自明 ― `record()` のみを公開）。Effort 3人日（13ステップの内部化 + `ErrorStrategy` dispatch の統合 + `RecordingContext` mutation のカプセル化 + テスト移行）。01と並列着手可能。
 
 ## ビジネス価値
 - バグの局所化: `force + previewOnly` や `skipDuplicateCheck + force` の組み合わせ不具合が1モジュールに集約され、修正が1箇所で完結する。現状は `execute()` と各ステップの `ErrorStrategy` 定義の両方を追う必要がある。
-- テストの堅牢性: ステップの内部リファクタリング（例: `privacyPipeline` のリトライ回数変更）がテストを壊さない — テストは `RecordingResult`（interface の観測可能な出力）のみを検証するため。
+- テストの堅牢性: ステップの内部リファクタリング（例: `privacyPipeline` のリトライ回数変更）がテストを壊さない ― テストは `RecordingResult`（interface の観測可能な出力）のみを検証するため。
 - 測定方法: `force` / `skipDuplicateCheck` / `previewOnly` の全組み合わせ（8通り）に対する pipeline E2E テストがパスし、ステップ個別の unit テスト数（現行13ファイル）が0になりつつカバレッジが維持される。
 
 ## BDD受け入れシナリオ
@@ -76,7 +76,7 @@ Scenario: per-URL Mutex で競合が防がれる
 
 ## 技術的考慮事項
 - 依存関係: `UrlStore` / `OfflineNetworkQueue` / `SqliteClient` / `ObsidianClient` / `AIService` は既に注入済み。新たな外部依存は追加しない。
-- テスタビリティ: Pipeline は in-process だが `UrlStore` と `OfflineNetworkQueue` が local-substitutable な seam を持つ — テストでは InMemory 実装を注入。`chrome.storage` への直接依存は `RecordingCache` 経由ですでに抽象化済み。
+- テスタビリティ: Pipeline は in-process だが `UrlStore` と `OfflineNetworkQueue` が local-substitutable な seam を持つ ― テストでは InMemory 実装を注入。`chrome.storage` への直接依存は `RecordingCache` 経由ですでに抽象化済み。
 - 非機能要件: per-URL Mutex（`src/utils/Mutex.ts`）は Pipeline 内部に留める。`maxQueueSize: 5, timeoutMs: 60000` の設定は変更しない。
 - ADR整合性: `ADR-2026-07-13 architecture-phase2-deep-dig` の Candidate #5（Pipeline storage leak）は mapper 抽出のみに縮小されたが、本PBIはその残余（step 内部化）を扱う。矛盾しない。
 
@@ -98,9 +98,9 @@ ls -1 src/background/pipeline/steps/
 5. `src/background/pipeline/types.ts` から `PipelineStep` / `ErrorStrategy` / `RecordingContext` の export を削除（または `internal/types.ts` へ移動）。
 
 ### 落とし穴
-- `privacyPipeline` と `extractSentences` は `RETRY` 戦略で `delay` を伴う — 内部化時に `delay` のモックがテストで必要になる。`jest.useFakeTimers` または `delay` の注入を維持すること。
+- `privacyPipeline` と `extractSentences` は `RETRY` 戦略で `delay` を伴う ― 内部化時に `delay` のモックがテストで必要になる。`jest.useFakeTimers` または `delay` の注入を維持すること。
 - `saveObsidian` / `saveLocalMarkdown` / `saveSqlite` / `saveMetadata` は `BEST_EFFORT` で失敗を握りつぶすが、`notifyObsidianSaveSuccess` / `notifyRecordingError` の通知は握りつぶし後も行われる。内部化時に通知の順序を変えないこと。
-- `previewOnly` の early return は `privacyPipeline` の直後に位置する — 内部化時にこの位置を1行でもズラすと、書き込みステップが誤って実行される。E2E テストで `previewOnly=true` 時に `saveMetadata` が呼ばれないことを厳密に検証すること。
+- `previewOnly` の early return は `privacyPipeline` の直後に位置する ― 内部化時にこの位置を1行でもズラすと、書き込みステップが誤って実行される。E2E テストで `previewOnly=true` 時に `saveMetadata` が呼ばれないことを厳密に検証すること。
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする（フラグ8通り + BEST_EFFORT + Mutex）

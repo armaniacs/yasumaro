@@ -1,4 +1,4 @@
-# PBI: Storage Concurrency Primitive 統合 — optimisticLock と keySerializer を単一 deep module に
+# PBI: Storage Concurrency Primitive 統合 ― optimisticLock と keySerializer を単一 deep module に
 
 ## ユーザーストーリー
 ストレージ整合性を担う開発者として、`withOptimisticLock` / `withAtomicKeys` と `runSerialized` / `runSerializedMulti` を単一の deep module に統合したい、なぜなら現在は 307l と 75l の shallow な分離で 4 subsystem（SettingsRepository / TrustDbKernel / PermissionManager / savedUrlRepository）が同一CASロジックを分散所有し、TOCTOU修正1件が4箇所に波及し InMemoryPort が `_version` を模倣しないため contract が乖離しているから
@@ -23,7 +23,7 @@
   When 新しい `StorageTransaction.withLock('settings', updater)` が両方から呼ばれる
   Then 一方は成功し、もう一方は ConflictError を検出して指数バックオフでリトライし、最終的に両方の更新が直列化されて反映される
 
-### Scenario: 複数キー原子性 — savedUrls と savedUrlsWithTimestamps が同時更新される
+### Scenario: 複数キー原子性 ― savedUrls と savedUrlsWithTimestamps が同時更新される
   Given `savedUrls` と `savedUrlsWithTimestamps` を `withAtomic(['savedUrls','savedUrlsWithTimestamps'], updater)` で更新する
   When 並行して別コンテキストが片方のキーを更新する
   Then どちらのキーも単独で観測される中間状態がなく、両キーの version が同時にインクリメントされるか、ConflictError で全キーまとめてリトライされる

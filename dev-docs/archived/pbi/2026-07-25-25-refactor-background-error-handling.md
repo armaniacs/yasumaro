@@ -17,7 +17,7 @@
 経由に統一。`isSqliteHealthy()` には既存テストがなかったため新規に3件追加。
 
 sqliteClient全54件パス。**他ファイル（`migrationService.ts`, `sessionAlarmsManager.ts`,
-`service-worker.ts`, `recordingLogic.ts`）への展開は本セッションでは見送った** — それぞれ既存の
+`service-worker.ts`, `recordingLogic.ts`）への展開は本セッションでは見送った** ― それぞれ既存の
 try-catchパターンが `sqliteClient.ts` の `call()` ほど統一されていない可能性があり、個別の設計判断が
 必要なため、別PBIとして改めて起票することを推奨する。
 

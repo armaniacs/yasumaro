@@ -86,7 +86,7 @@ If a yellow warning banner appears at the top of the dashboard, the extension is
 
 ### Backend Migration
 
-When a higher-priority backend becomes available (e.g., after a browser update), data is automatically migrated in the background — no user action required.
+When a higher-priority backend becomes available (e.g., after a browser update), data is automatically migrated in the background ― no user action required.
 
 ### Version Notes
 

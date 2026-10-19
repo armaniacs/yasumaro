@@ -1,4 +1,4 @@
-# PBI: オフラインネットワークキュー — AI要約・Obsidian同期のオフライン耐性
+# PBI: オフラインネットワークキュー ― AI要約・Obsidian同期のオフライン耐性
 
 元指摘: Checking Team (Medium: Edge & Mobile Strategist)
 
@@ -44,20 +44,20 @@ RecordingPipeline
 ### コンポーネント
 
 1. **`OfflineNetworkQueue`** (`src/background/offlineNetworkQueue.ts`)
-   - `enqueue(job: OfflineJob): Promise<void>` — キューに追加（永続化）
-   - `dequeue(): Promise<OfflineJob | null>` — 次に処理するジョブを取得
-   - `retryAll(): Promise<void>` — 全ジョブを再試行
-   - `getQueueSize(): Promise<number>` — キューサイズ確認
+   - `enqueue(job: OfflineJob): Promise<void>` ― キューに追加（永続化）
+   - `dequeue(): Promise<OfflineJob | null>` ― 次に処理するジョブを取得
+   - `retryAll(): Promise<void>` ― 全ジョブを再試行
+   - `getQueueSize(): Promise<number>` ― キューサイズ確認
    - 最大保持件数: `MAX_QUEUED_JOBS = 200`
    - ジョブの寿命: `JOB_TTL_MS = 7 days`（期限切れは破棄）
 
 2. **`OfflineJob` 型**
    - `id: string`（一意ID）
-   - `type: 'ai_summary' | 'obsidian_sync'` — ジョブ種別
-   - `payload: unknown` — 各ジョブのペイロード
-   - `createdAt: number` — タイムスタンプ
-   - `retryCount: number` — 再試行回数
-   - `lastError?: string` — 最後のエラー
+   - `type: 'ai_summary' | 'obsidian_sync'` ― ジョブ種別
+   - `payload: unknown` ― 各ジョブのペイロード
+   - `createdAt: number` ― タイムスタンプ
+   - `retryCount: number` ― 再試行回数
+   - `lastError?: string` ― 最後のエラー
 
 3. **ネットワーク状態検出**
    - `navigator.onLine` の変化を `window.addEventListener('online'/'offline', ...)` で監視（Offscreen Document 経由で Service Worker に通知）

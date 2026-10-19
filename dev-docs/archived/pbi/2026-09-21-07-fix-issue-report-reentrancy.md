@@ -70,11 +70,11 @@ Scenario: 既に開いている表示への再表示で例外にならない
 ## 実装者向け注記
 
 ### 現状の証拠
-- 保護なしの押下処理: `src/dashboard/panels/diagnostic/issueReportLink.ts:139-145` — 押下受付が非同期で `collectSnapshot()` と `getLogs()` を待ってから `previewModal.showModal()` を呼ぶ。実行中判定がなく例外捕捉もない
-- 対比となる実行中判定: `src/dashboard/generalSettings/connectionTests.ts:185` — `aiTestInFlight` の宣言、`src/dashboard/generalSettings/connectionTests.ts:195` — 実行中なら即時帰還する判定
+- 保護なしの押下処理: `src/dashboard/panels/diagnostic/issueReportLink.ts:139-145` ― 押下受付が非同期で `collectSnapshot()` と `getLogs()` を待ってから `previewModal.showModal()` を呼ぶ。実行中判定がなく例外捕捉もない
+- 対比となる実行中判定: `src/dashboard/generalSettings/connectionTests.ts:185` ― `aiTestInFlight` の宣言、`src/dashboard/generalSettings/connectionTests.ts:195` ― 実行中なら即時帰還する判定
 - 開いている表示への再表示: `HTMLDialogElement.showModal()` は開いている表示に対して状態例外を投げるため、二度押しは未処理の拒否になる
 - 収集処理の拒否: `collectSnapshot()` の拒否経路も捕捉がなく未処理の拒否になる
-- 共有表示の配線: `src/dashboard/panels/diagnostic/issueReportLink.ts:105-147` — 確認表示と取消・閉鎖・開始の受付は作成時に一度だけ結線され、入口ボタンは `attachTrigger()` で複数付く構成
+- 共有表示の配線: `src/dashboard/panels/diagnostic/issueReportLink.ts:105-147` ― 確認表示と取消・閉鎖・開始の受付は作成時に一度だけ結線され、入口ボタンは `attachTrigger()` で複数付く構成
 
 ## Definition of Done
 - [x] 全BDDシナリオが実装され通過する

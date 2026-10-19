@@ -56,7 +56,7 @@ It must keep behavior: `persistReEncrypted` と `writeSettings` の書き込み�
 受け入れ基準:
 
 - [x] 1. `persistReEncrypted` と `writeSettings` の `new StorageTransaction(this.port)` + `tx.withLock<SettingsType>('settings', merge)` ブロックが、共通 private ヘルパ（`mergeSettingsBlob` + `persistMerged`）の単一実装を通る
-- [x] 2. `this.cached = null` の記述が write 経路では `persistMerged` 1 箇所に集約され、2 メソッドへの分散が消える。同一メソッド内の 2 箇所（write 前・write 後）は**意図的に残す**ため「1 箇所」という文言は成立しない — 判定は「write 経路の呼び出し口が `persistMerged` 1 本であること」で満たす（pre-write drop は merge 窓中の並行 `getAll()` が ≤1s TTL の pre-write snapshot を cache して served するのを防ぐため。タイミングの削除は不可）
+- [x] 2. `this.cached = null` の記述が write 経路では `persistMerged` 1 箇所に集約され、2 メソッドへの分散が消える。同一メソッド内の 2 箇所（write 前・write 後）は**意図的に残す**ため「1 箇所」という文言は成立しない ― 判定は「write 経路の呼び出し口が `persistMerged` 1 本であること」で満たす（pre-write drop は merge 窓中の並行 `getAll()` が ≦1s TTL の pre-write snapshot を cache して served するのを防ぐため。タイミングの削除は不可）
 - [x] 3. merge 関数の実体（`{ ...(current as object), ...patch } as SettingsType`）がコード上 1 箇所のみになる
 - [x] 4. 既存テストが green: `SettingsRepository.test.ts`・`settingsWriteDelta.test.ts`・`settingsRepository-migration-parity.test.ts`・`recordingCache-settingsCache.test.ts`
 - [x] 5. `npm run type-check` が green
@@ -82,19 +82,19 @@ It must keep behavior: `persistReEncrypted` と `writeSettings` の書き込み�
 - [x] `npm run validate`（type-check + test）が green
 - [x] `rg "new StorageTransaction" src/utils/storage/SettingsRepository.ts` が 1 件のみを示す
 - [x] `rg "cached = null" src/utils/storage/SettingsRepository.ts` が write 経路では `persistMerged` 内の 2 行のみ（`clearCache` と `observe` の無効化を除く）を示す
-- [ ] `graphify update .` を実行しグラフを現行コードに追従させる — 未実施（統合ステップのスコープ外）
-- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 13 を完了扱いに更新する — アーカイブ/台帳更新は別ステップで処理
+- [ ] `graphify update .` を実行しグラフを現行コードに追従させる ― 未実施（統合ステップのスコープ外）
+- [ ] backlog 台帳（./2026-10-01-00-backlog-holistic-1001.md）の NN 13 を完了扱いに更新する ― アーカイブ/台帳更新は別ステップで処理
 
 ## 実装記録（2026-10-02）
 
 変更した内容:
 
-- `SettingsRepository.ts` — private `mergeSettingsBlob(base, patch)`（`{ ...(current as object), ...patch } as SettingsType` のみ）と private `persistMerged(patch)`（`this.cached = null` → `new StorageTransaction(this.port).withLock('settings', ...)` → `this.cached = null`）を新設
+- `SettingsRepository.ts` ― private `mergeSettingsBlob(base, patch)`（`{ ...(current as object), ...patch } as SettingsType` のみ）と private `persistMerged(patch)`（`this.cached = null` → `new StorageTransaction(this.port).withLock('settings', ...)` → `this.cached = null`）を新設
 - `persistReEncrypted` は「空 patch の早期リターン + `persistMerged(reEncrypted)`」に、`writeSettings` の書き込み部は `persistMerged(toSave)` に縮約。暗号化（API_KEY_FIELDS の encryptApiKey）と quota チェックは `writeSettings` の現行位置に残したまま
 - 書き込みのトークンは `writeSettings` → `persistMerged` の 2 段になったが、`new StorageTransaction` と merge 実体、`this.cached = null` の write 経路は 1 箇所ずつに集約された
 
 追加したテスト: なし。本 PBI は挙動維持の抽出であり、受け入れ基準 4 が名指しする既存の delta-write 回帰テスト（`settingsWriteDelta.test.ts` ほか）がそのまま契約のゲートになる。`mergeSettingsBlob` の境界（base 空・patch 空・衝突時に patch 優先）は既存テストの delta write シナリオが既に覆っている。
 
-**逸脱（受け入れ基準 2）**: 基準の「1 箇所」という文言と実装が食い違うので、基準の文言を実装に合わせて書き換えた。`this.cached = null` は `persistMerged` 内に 2 行意図的に残す。pre-write の drop は、merge 窓中に走った並行 `getAll()` が pre-write snapshot を `this.cached` に詰めた場合、その TTL（≤1s）中は書き戻し後の値が served されないまま返るのを防ぐ責務を持つ。post-write の drop はその snapshot を discard する側の責務。どちらか一方を削ると「書けたのに古い値が返る」窓が開くため、両方残すのが正である。したがって「同一メソッド内 2 箇所の重複が消える」という記述は採用せず、充足条件を「write 経路の呼び出し口が `persistMerged` 1 本」＝「`new StorageTransaction` が 1 件」に読み替えた（`writeSettings` と `persistReEncrypted` の 2 メソッドから `persistMerged` へ収束）。
+**逸脱（受け入れ基準 2）**: 基準の「1 箇所」という文言と実装が食い違うので、基準の文言を実装に合わせて書き換えた。`this.cached = null` は `persistMerged` 内に 2 行意図的に残す。pre-write の drop は、merge 窓中に走った並行 `getAll()` が pre-write snapshot を `this.cached` に詰めた場合、その TTL（≦1s）中は書き戻し後の値が served されないまま返るのを防ぐ責務を持つ。post-write の drop はその snapshot を discard する側の責務。どちらか一方を削ると「書けたのに古い値が返る」窓が開くため、両方残すのが正である。したがって「同一メソッド内 2 箇所の重複が消える」という記述は採用せず、充足条件を「write 経路の呼び出し口が `persistMerged` 1 本」＝「`new StorageTransaction` が 1 件」に読み替えた（`writeSettings` と `persistReEncrypted` の 2 メソッドから `persistMerged` へ収束）。
 
 検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。

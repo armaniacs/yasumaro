@@ -26,8 +26,8 @@
 
 ## 実行順の逸脱理由（同点時の tie-break）
 
-- 5位 C3 = 6位 C7... ではなく C3=C12=C13 (8.0): リスク軽減効果順 — 層構造リスク（モジュール読み込み時 singleton）> unhandled rejection > メモリ微小増加
-- C10=C7=C9 (6.0): 現時点の実害の有無 — C10 は現在進行形の perf 劣化、C7/C9 は予防
+- 5位 C3 = 6位 C7... ではなく C3=C12=C13 (8.0): リスク軽減効果順 ― 層構造リスク（モジュール読み込み時 singleton）> unhandled rejection > メモリ微小増加
+- C10=C7=C9 (6.0): 現時点の実害の有無 ― C10 は現在進行形の perf 劣化、C7/C9 は予防
 - C1=C14 (4.0): 同一ファイル群（providerCatalog.ts）の順序依存で C1 を先
 - **注意**: 順位4の C2 は「実害が既に発生している唯一の候補」（バックアップ復元で4フラグ欠落）。RICE 順は維持するが、着手タイミングの観点で最優先扱いにして差し支えない
 
@@ -36,7 +36,7 @@
 - **バッチ1（5並列）**: 02 (perSiteOverrides) / 03 (urlUtils・headerDetector) / 04 (fieldValidation) / 05 (presets・restorableSettings) / 08 (contentKernel)
 - **バッチ2（5並列）**: 06 (auditLog・aiModelKey) / 07 (issueReportLink) / 09 (tagCooccurrenceHybrid) / 10 (OpenAI・Gemini・ProviderStrategy) / 12 (exportLogsService・markdownExport・connectionTests)
 - **バッチ3（直列チェーン・providerCatalog.ts 共有）**: 13 → 14 → 15
-- **バッチ4（2並列）**: 11 (privacyConsent・encryptionSession・messaging/types) / 16 (pageContentPipeline・pageState) — 16 は 08 と contentKernel.ts が重複するためバッチ1完了後
+- **バッチ4（2並列）**: 11 (privacyConsent・encryptionSession・messaging/types) / 16 (pageContentPipeline・pageState) ― 16 は 08 と contentKernel.ts が重複するためバッチ1完了後
 - 各バッチ後に統合検証: `npm run type-check` → `npm run lint` → `npm test` → `npm run build`
 
 ## 既存進行中 PBI の扱い（ユーザー裁定 2026-09-21）
@@ -46,8 +46,8 @@
 
 ## 台帳送り（実害未発生・再検討トリガー付き）
 
-- **tagCooccurrence.ts の dashboard 配置**（純粋関数がエントリポイント配下。wasm/tag-cooccur と offscreen テストが cross-import）— 再検討トリガー: compute を offscreen/パイプラインへ移設する時（dedup offscreen 移設の再評価と同時）
-- **Ollama 専用 Origin-strip 汎用化**（ollamaOriginRule + ollamaSettingsObserver が単一プロバイダ用 seam）— 再検討トリガー: 2つ目のローカルプロバイダーで CORS 対策が必要になった時
+- **tagCooccurrence.ts の dashboard 配置**（純粋関数がエントリポイント配下。wasm/tag-cooccur と offscreen テストが cross-import）― 再検討トリガー: compute を offscreen/パイプラインへ移設する時（dedup offscreen 移設の再評価と同時）
+- **Ollama 専用 Origin-strip 汎用化**（ollamaOriginRule + ollamaSettingsObserver が単一プロバイダ用 seam）― 再検討トリガー: 2つ目のローカルプロバイダーで CORS 対策が必要になった時
 
 ## 疑問の自律解決（なぜなぜ分析の要約）
 
@@ -62,7 +62,7 @@
 - コミット: 02 aec50dc / 03 e77dcd0 / 04 2fc5cd6 / 05 68ff4344 / 08 7fd06c17 / 06 9b9cbeb / 07 990978d / 09 e6057d7 / 10 162a613 / 11 3b8c9f9 / 12 94d554f / 13 33b555e / 14+15 03f1fc3（providerCatalog.ts 共有のため統合）/ 16 78d282f8
 - 実装中の発見: (a) PBI 05 の「32鍵」は実数33鍵（台帳表記は執筆時の誤記・実装は実テーブルから派生し問題なし）(b) PBI 02 の raw set は contentKernel 読み取り経路から冗長と実証 (c) PBI 13 の WHITELIST 旧順序は単一行順では再現不能（Set/includes/sorted UI のため実害なし・golden を set-equality に緩和）(d) lint の vitest/valid-expect エラー13件（expect 第2引数）を統合側で修正
 - 残務の統合側処理: aiModelKey shim 削除、未使用 import 削除（PBI 11 の sender 化副産物）、optionBuilder 型 import の新 SSOT 向け直（PBI 16）
-- 進行中 PBI（13/14/16/2026-09-19-08）の autonomous-task-closer 委託は未実施 — 次ラウンドで実施すること
+- 進行中 PBI（13/14/16/2026-09-19-08）の autonomous-task-closer 委託は未実施 ― 次ラウンドで実施すること
 
 ## 再検討結果（2026-09-22・差分スコープ再レビュー）
 

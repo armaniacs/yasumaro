@@ -37,7 +37,7 @@ Scenario: createBackgroundServices が messageRouter + recordingPipeline のみ�
 - **契約**: `createBackgroundServices` の出力が `MessageRouterDeps` + `RecordingPipeline` のみであることを型テストで検証
 
 ## 見積もり
-2 ストーリーポイント（中 — 2 人週程度）
+2 ストーリーポイント（中 ― 2 人週程度）
 
 ## 技術的考慮事項
 - **依存**: PBI-01（SettingsRepository shim 廃止）に依存

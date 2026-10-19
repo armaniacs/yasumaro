@@ -19,8 +19,8 @@ E2E 担当者として、プローブの session キー文字列が src と harn
 
 ## 背景（現状・証拠）
 
-- `src/content/e2eTestState.ts:27-30` — `E2E_PROBE_ENABLE_KEY = 'owE2eProbeEnabled'` / `E2E_PROBE_STATE_KEY = 'owE2eTestState'`。
-- `testDir/e2e/fixtures/e2eProbe.ts:17-18` — 同一文字列の手書き重複（"Mirrors" コメントのみ）。
+- `src/content/e2eTestState.ts:27-30` ― `E2E_PROBE_ENABLE_KEY = 'owE2eProbeEnabled'` / `E2E_PROBE_STATE_KEY = 'owE2eTestState'`。
+- `testDir/e2e/fixtures/e2eProbe.ts:17-18` ― 同一文字列の手書き重複（"Mirrors" コメントのみ）。
 - 片方のリネーム・typo が他方に波及せず、失敗は「プローブが armed されない／読めない」という無言の E2E 全滅になる。
 
 ## BDD 受け入れシナリオ
@@ -80,7 +80,7 @@ Scenario: 片方の文字列が変わる
 
 ## 検証結果（2026-10-11 autonomous-task-closer）
 
-- `npx vitest run testDir/__tests__/e2eProbeContract.test.ts` — 2 passed
+- `npx vitest run testDir/__tests__/e2eProbeContract.test.ts` ― 2 passed
 - Red 確認: fixture 側を一時変更で 1 failed / 1 passed（enable 側のみ red）→ revert 後 2 passed
 - `npx eslint testDir/__tests__/e2eProbeContract.test.ts` exit 0
 - 転記解消（fixture の src 直接 import）は見送り: E2E 実行時コードの変更で headed 検証不可のため。pin で閉じる判断を本節に記録する

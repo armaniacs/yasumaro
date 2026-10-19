@@ -1,4 +1,4 @@
-# PBI 2026-09-12-39 — selectTagFilter: tag filter 導出 5 箇所を path-aware seam に
+# PBI 2026-09-12-39 ― selectTagFilter: tag filter 導出 5 箇所を path-aware seam に
 
 - **種別**: 🔧非功能追加（refactor + hardening）
 - **優先度**: 2 位 / RICE **8.5**（R8 × I1 × C80% / E0.75人日）
@@ -43,7 +43,7 @@ then tags LIKE ? 条件になる（hardcode true による MATCH が発生しな
 
 ## 実装メモ（2026-09-12）
 
-- `selectTagFilter(tag, path, engineFts5Available)` を queryPlan.ts に新設。mapping: plain=(engine, 'id')・fts=(engine, 'b.id')・like=(false, —)
+- `selectTagFilter(tag, path, engineFts5Available)` を queryPlan.ts に新設。mapping: plain=(engine, 'id')・fts=(engine, 'b.id')・like=(false, ―)
 - 5 call site を委譲: queryPlan buildQuerySpec（plain）・IdbVfsBackend FTS/LIKE・opfsWorker searchHandlers FTS/LIKE
-- opfsWorker.ts から handleSearchFts/handleSearchLike へ fts5Available を threading（新 optional param・デフォルトは旧 hardcode 値）— 非 FTS engine で handleSearchFts を直接呼んでも tags LIKE ? になる
+- opfsWorker.ts から handleSearchFts/handleSearchLike へ fts5Available を threading（新 optional param・デフォルトは旧 hardcode 値）― 非 FTS engine で handleSearchFts を直接呼んでも tags LIKE ? になる
 - 検証: selectTagFilter 7 tests 新設（path×engine matrix + direct-call 保護 + undefined tag）・offscreen 全 78 ファイル 1074 tests green・type-check green・lint 0 errors

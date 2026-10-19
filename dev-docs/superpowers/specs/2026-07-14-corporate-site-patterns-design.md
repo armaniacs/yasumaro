@@ -1,4 +1,4 @@
-# Japanese Corporate Site "O-Sahou" Patterns — NAV Extension
+# Japanese Corporate Site "O-Sahou" Patterns ― NAV Extension
 
 **Date:** 2026-07-14
 **Branch:** feat/ai-summary-cleansing

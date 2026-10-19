@@ -1,4 +1,4 @@
-# SQLite Architecture Deepening — Implementation Plan
+# SQLite Architecture Deepening ― Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -38,7 +38,7 @@
 
 ---
 
-## Phase 1: PBI #4 — Error Propagation (1pt)
+## Phase 1: PBI #4 ― Error Propagation (1pt)
 
 ### Task 1: Structured error return from SqliteClient.call()
 
@@ -188,7 +188,7 @@ state.error = t('historyLoadError');
 state.error = result?.error || t('historyLoadError');
 ```
 
-Wait — `loadData()` receives results via `queryLogs()` / `searchLogs()`. Those currently return `null` on failure. We need to change them to also return error info.
+Wait ― `loadData()` receives results via `queryLogs()` / `searchLogs()`. Those currently return `null` on failure. We need to change them to also return error info.
 
 In `src/dashboard/dashboardSqliteService.ts`, change the return type:
 
@@ -234,7 +234,7 @@ git commit -m "fix(sqlite): propagate structured errors from SqliteClient.call()
 
 ---
 
-## Phase 2: PBI #1 — StorageBackend Adapter (5pt)
+## Phase 2: PBI #1 ― StorageBackend Adapter (5pt)
 
 ### Task 2: Define StorageBackend interface and NoopBackend
 
@@ -257,7 +257,7 @@ export interface PurgeResult { success: true; purged: number }
 export interface FtsSizeResult { success: true; count: number }
 export interface BackupResult { success: true; data: Uint8Array }
 export interface CountResult { success: true; count: number }
-export interface HealthResult { success: true } // healthCheck — success means alive, failure means error
+export interface HealthResult { success: true } // healthCheck ― success means alive, failure means error
 export interface AuditLogQueryResult { success: true; rows: AuditLogEntry[]; total: number }
 export type BackendOrError<T> = T | { success: false; error: string };
 
@@ -522,7 +522,7 @@ export class IdbVfsBackend implements StorageBackend {
     return { success: true, rows, total };
   }
 
-  // ... (remaining methods follow same pattern — each extracts logic from current
+  // ... (remaining methods follow same pattern ― each extracts logic from current
   //      recordsRepo.ts / dbMaintenance.ts / auditLogRepo.ts function bodies)
 
   async search(query: string, limit: number, offset: number): Promise<BackendOrError<SearchResult>> { /* [...FTS5 search + LIKE fallback from recordsRepo.search() body...] */ }
@@ -576,7 +576,7 @@ export class IdbVfsBackend implements StorageBackend {
 }
 ```
 
-**Note:** For the full implementation, extract each method body from the current `recordsRepo.ts`, `dbMaintenance.ts`, and `auditLogRepo.ts` — moving the SQL/business logic into the adapter, leaving only delegation in the repos.
+**Note:** For the full implementation, extract each method body from the current `recordsRepo.ts`, `dbMaintenance.ts`, and `auditLogRepo.ts` ― moving the SQL/business logic into the adapter, leaving only delegation in the repos.
 
 - [ ] **Step 2: Commit**
 
@@ -665,7 +665,7 @@ export class FallbackStorageAdapter implements StorageBackend {
   }
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
-    // FallbackStorage does not have audit log — create a simple implementation
+    // FallbackStorage does not have audit log ― create a simple implementation
     // or return error
     return { success: false, error: 'Audit log not supported in fallback mode' };
   }
@@ -708,7 +708,7 @@ Add to `SqliteEngineContext` class:
 
 ```ts
 import { StorageBackend, NoopBackend } from './StorageBackend.js';
-// (these imports will be added lazily to avoid circular deps — see note below)
+// (these imports will be added lazily to avoid circular deps ― see note below)
 
 private _backend: StorageBackend | null = null;
 
@@ -741,7 +741,7 @@ async getBackend(): Promise<StorageBackend> {
     return this._backend;
   }
 
-  // Null Object — never throw
+  // Null Object ― never throw
   this._backend = new NoopBackend();
   return this._backend;
 }
@@ -853,7 +853,7 @@ case 'SQL_QUERY': {
 }
 ```
 
-**Security note:** These types are for migrations only. They accept raw SQL, unlike the typed operation messages. They are intentionally not exposed through `StorageBackend` — only through `MigrationEngine` (PBI #5). Add a comment:
+**Security note:** These types are for migrations only. They accept raw SQL, unlike the typed operation messages. They are intentionally not exposed through `StorageBackend` ― only through `MigrationEngine` (PBI #5). Add a comment:
 
 ```ts
 // WARNING: SQL_EXEC / SQL_QUERY accept raw SQL strings.
@@ -907,7 +907,7 @@ git commit -m "refactor(sqlite): re-export adapter classes from sqlite.ts barrel
 
 ---
 
-## Phase 3: PBI #2 + #5 — Type Dedup + Shared Migrations (parallel)
+## Phase 3: PBI #2 + #5 ― Type Dedup + Shared Migrations (parallel)
 
 ### Task 10: Remove duplicate types from opfsWorker.ts
 
@@ -1021,7 +1021,7 @@ export async function runMigrations(engine: MigrationEngine): Promise<{ fts5Avai
     try {
       await engine.exec(step.sql);
     } catch {
-      // Column/target already exists — ignore
+      // Column/target already exists ― ignore
     }
   }
 
@@ -1109,7 +1109,7 @@ this.fts5Available = fts5Available;
 
 - [ ] **Step 2: Replace initSqliteInner() migration logic in opfsWorker.ts**
 
-Find the `initSqliteInner()` method (around line 150). Remove the `newColumns` array, the ALTER TABLE loop, the single obsidian_synced/gist_synced ALTER calls, the FTS rebuild logic. Keep the initial `SCHEMA_SQL` and `AUDIT_LOG_SCHEMA_SQL` execution (those are not migrations — they're the base DDL). Replace the rest with:
+Find the `initSqliteInner()` method (around line 150). Remove the `newColumns` array, the ALTER TABLE loop, the single obsidian_synced/gist_synced ALTER calls, the FTS rebuild logic. Keep the initial `SCHEMA_SQL` and `AUDIT_LOG_SCHEMA_SQL` execution (those are not migrations ― they're the base DDL). Replace the rest with:
 
 ```ts
 import { runMigrations, type MigrationEngine } from './migrations.js';
@@ -1152,7 +1152,7 @@ git commit -m "refactor(sqlite): replace duplicated migration logic with shared 
 
 ---
 
-## Phase 4: PBI #3 — Panel Parameterization (1pt)
+## Phase 4: PBI #3 ― Panel Parameterization (1pt)
 
 ### Task 13: Parameterize render functions in sqliteHistoryPanel.ts
 

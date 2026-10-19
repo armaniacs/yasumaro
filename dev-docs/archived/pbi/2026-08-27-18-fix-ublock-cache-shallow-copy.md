@@ -23,13 +23,13 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — キャッシュ取得後の変更が次回取得に影響しない
+Scenario: ハッピーパス ― キャッシュ取得後の変更が次回取得に影響しない
   Given `PARSER_CACHE` に key="abc" で `{ blockDomains: ["a.com"], count: 1 }` が保存されている
   When `getFromCache("abc")` で取得したオブジェクトの `blockDomains.push("evil.com")` を実行する
   And 再度 `getFromCache("abc")` を呼ぶ
   Then 2回目の結果の `blockDomains` は `["a.com"]` のままで `evil.com` を含まない
 
-Scenario: 攻撃 — ネスト配列のpushでキャッシュ汚染が再現し修正後は汚染されない
+Scenario: 攻撃 ― ネスト配列のpushでキャッシュ汚染が再現し修正後は汚染されない
   Given `saveToCache("k", { rules: { blockDomains: ["x.com"] } })` で保存済み
   When 攻撃者が `const v = getFromCache("k"); v.rules.blockDomains.push("attacker.com")` を実行する
   Then 修正前は `getFromCache("k").rules.blockDomains` が `attacker.com` を含んで汚染される（バグの再現）
@@ -78,7 +78,7 @@ grep -rn "getFromCache\|PARSER_CACHE" src/utils/ublockParser/
 ```
 
 ### 実装手順
-1. `src/utils/ublockParser/cache.ts:108-114` を読む — 現在 `return { ...(PARSER_CACHE.get(key) as Record<string, unknown>) }` の浅いコピーであることを確認
+1. `src/utils/ublockParser/cache.ts:108-114` を読む ― 現在 `return { ...(PARSER_CACHE.get(key) as Record<string, unknown>) }` の浅いコピーであることを確認
 2. 汚染再現テストを `src/utils/ublockParser/__tests__/cache.test.ts`（または既存テスト）に RED として追加
 3. `getFromCache` を `structuredClone` で deep clone する実装に置換:
    ```ts
@@ -99,9 +99,9 @@ grep -rn "getFromCache\|PARSER_CACHE" src/utils/ublockParser/
 5. `npm run type-check && npx vitest run src/utils/ublockParser` で検証
 
 ### 落とし穴
-- `structuredClone` は `function` をクローンできないが本キャッシュ値はデータのみなので問題なし — 誤って関数を含む値をキャッシュしないこと
+- `structuredClone` は `function` をクローンできないが本キャッシュ値はデータのみなので問題なし ― 誤って関数を含む値をキャッシュしないこと
 - `JSON` フォールバックは `undefined`/`Infinity` を失うため、将来キャッシュ値にそれらが含まれる場合は `structuredClone` 必須
-- テストで `Map` の内容を直接参照しないこと — 必ず `getFromCache` 経由で検証すること
+- テストで `Map` の内容を直接参照しないこと ― 必ず `getFromCache` 経由で検証すること
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

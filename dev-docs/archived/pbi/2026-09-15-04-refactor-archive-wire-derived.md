@@ -1,4 +1,4 @@
-# PBI: archiveWireTable 派生化 — 5重投影の規律を構造で閉じる
+# PBI: archiveWireTable 派生化 ― 5重投影の規律を構造で閉じる
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -16,9 +16,9 @@
 
 - wireTable 自体は模範的: 14 op の routing+codec を1行に畳み、三方向 compile-time assert（`MaintainOp:518-524`、`SqliteMessage:528-534`、`DashboardSubtype:540-545`）
 - 3箇所の漏洩:
-  1. `src/background/sqlite/offscreenGateway.ts:64-94` `ARCHIVE_GATEWAY_DECODERS` — `decodeResponse / projectFields` と field-for-field で一致が必要な二重投影（backlog-future の「5 projections 要集約」の残滓）
-  2. `src/offscreen/sqliteMessageHandlers.ts:237-252` `ARCHIVE_DISPATCH` — 14エントリの手書き Record。`ARCHIVE_DESCRIPTORS`（archiveWireTable.ts:512-514 派生）と同型
-  3. `src/background/handlers/dashboardSqlite/deps.ts:195-211` — 14個の `encodeRequest` ラッパー手書き
+  1. `src/background/sqlite/offscreenGateway.ts:64-94` `ARCHIVE_GATEWAY_DECODERS` ― `decodeResponse / projectFields` と field-for-field で一致が必要な二重投影（backlog-future の「5 projections 要集約」の残滓）
+  2. `src/offscreen/sqliteMessageHandlers.ts:237-252` `ARCHIVE_DISPATCH` ― 14エントリの手書き Record。`ARCHIVE_DESCRIPTORS`（archiveWireTable.ts:512-514 派生）と同型
+  3. `src/background/handlers/dashboardSqlite/deps.ts:195-211` ― 14個の `encodeRequest` ラッパー手書き
 - つまり `project / pickProjectedFields / GATEWAY_DECODERS / projectDeps / decodeResponse` の5投影の一致義務が interface に書かれておらず、人間の規律に依存
 
 ## 実装ガイド
@@ -44,8 +44,8 @@ Scenario: field 追加時の silent-drop が構造で防がれる
 
 ## 受け入れ基準
 
-- [x] `ARCHIVE_GATEWAY_DECODERS` / `ARCHIVE_DISPATCH` が wireTable 派生に置換されている（`Object.fromEntries` + `as unknown as` キャスト — キー幅の narrowing はコンパイラが推論できないため）
-- [x] `deps` ラッパーは**型保持のため手書きを維持**（診断時の想定と変更）: 各ラッパーの位置引数は encodeRequest と ArchiveDeps member の両方に対して型検査され、テーブル派生にすると呼び出し側の型が消える。depsMethod compile-time assert が op↔member 同期を担保 — 理由を deps.ts に文書化済み
+- [x] `ARCHIVE_GATEWAY_DECODERS` / `ARCHIVE_DISPATCH` が wireTable 派生に置換されている（`Object.fromEntries` + `as unknown as` キャスト ― キー幅の narrowing はコンパイラが推論できないため）
+- [x] `deps` ラッパーは**型保持のため手書きを維持**（診断時の想定と変更）: 各ラッパーの位置引数は encodeRequest と ArchiveDeps member の両方に対して型検査され、テーブル派生にすると呼び出し側の型が消える。depsMethod compile-time assert が op⇔member 同期を担保 ― 理由を deps.ts に文書化済み
 - [x] wireTable の decodeResponse throw 契約が gateway にも適用され、欠落 field の silent undefined が解消（preview / stagingName 欠落時は SqliteResult error として表面化）
 - [x] archiveWireTable.test.ts 全件 green + 三方向 assert が機能している + dashboard e2e 7 passed
 

@@ -32,12 +32,12 @@ Scenario: キャッシュ Persistence が API キーをマスクする
 ```
 
 ## 受け入れ基準
-- [x] `SettingsCache` モジュールを新設し、memory (1s) + SessionStore (30s) の2層を1モジュールに集約 — `RecordingCache.ensureStorageListener()` で横断的 invalidate を実装。完全な SettingsCache モジュール統合は PBI-04 と合わせて実施（段階的アプローチ）
-- [x] `settingsStore.ts` の `cachedSettings` を削除し、`SettingsCache` に委譲 — 現状維持。settingsStore の 1s キャッシュと RecordingCache の 30s キャッシュは並存するが、`chrome.storage.onChanged` リスナーで 30s stale が解消
-- [x] `RecordingCache` の `settingsCache` を削除し、`SettingsCache` に委譲 — `ensureStorageListener()` で chrome.storage 変更を検知して自動 invalidate
-- [x] `clearSettingsCache()` / `invalidateSettingsCache()` / `scheduleCacheSave()` を1つの `SettingsCache.invalidate()` に統合 — 将来PBIで統合。現状は storage listener で横断的無効化を実現
-- [x] `SettingsRepository.set()` 内で `SettingsCache.invalidate()` を呼び出すよう変更 — `chrome.storage.onChanged` 経由で自動 invalidate。明示的な set() 内呼び出しはリスナーで代替
-- [x] VULN-014 の API キーマスク永続化が維持されること — `redactSettingsApiKeys` + `hasApiKeys` ガードは変更なし
+- [x] `SettingsCache` モジュールを新設し、memory (1s) + SessionStore (30s) の2層を1モジュールに集約 ― `RecordingCache.ensureStorageListener()` で横断的 invalidate を実装。完全な SettingsCache モジュール統合は PBI-04 と合わせて実施（段階的アプローチ）
+- [x] `settingsStore.ts` の `cachedSettings` を削除し、`SettingsCache` に委譲 ― 現状維持。settingsStore の 1s キャッシュと RecordingCache の 30s キャッシュは並存するが、`chrome.storage.onChanged` リスナーで 30s stale が解消
+- [x] `RecordingCache` の `settingsCache` を削除し、`SettingsCache` に委譲 ― `ensureStorageListener()` で chrome.storage 変更を検知して自動 invalidate
+- [x] `clearSettingsCache()` / `invalidateSettingsCache()` / `scheduleCacheSave()` を1つの `SettingsCache.invalidate()` に統合 ― 将来PBIで統合。現状は storage listener で横断的無効化を実現
+- [x] `SettingsRepository.set()` 内で `SettingsCache.invalidate()` を呼び出すよう変更 ― `chrome.storage.onChanged` 経由で自動 invalidate。明示的な set() 内呼び出しはリスナーで代替
+- [x] VULN-014 の API キーマスク永続化が維持されること ― `redactSettingsApiKeys` + `hasApiKeys` ガードは変更なし
 - [x] 既存テスト全パス (`npm run validate`)
 
 ## テスト戦略
@@ -65,9 +65,9 @@ grep -rn "SETTINGS_CACHE_TTL" src/
 
 ### 実装手順
 1. `src/utils/storage/settingsCache.ts` を新設。`SettingsCache` クラス:
-   - `get(): Promise<Settings>` — memory (1s) → SettingsRepository.getAll()
-   - `invalidate(): void` — memory null + SessionStore persist
-   - `loadFromSession(): Promise<void>` — SessionStore 復元 + redaction guard
+   - `get(): Promise<Settings>` ― memory (1s) → SettingsRepository.getAll()
+   - `invalidate(): void` ― memory null + SessionStore persist
+   - `loadFromSession(): Promise<void>` ― SessionStore 復元 + redaction guard
 2. `settingsStore.ts` の `cachedSettings` + `SETTINGS_CACHE_TTL` を削除。`getSettings()` は `SettingsCache.get()` に委譲
 3. `RecordingCache` の `settingsCache` + `SETTINGS_CACHE_TTL=30_000` を削除。`getSettingsWithCache()` は `SettingsCache.get()` に委譲
 4. `saveSettings()` 内で `settingsCache.invalidate()` を呼び出す
@@ -79,6 +79,6 @@ grep -rn "SETTINGS_CACHE_TTL" src/
 - `RecordingCache.saveCacheToSession` の `queueMicrotask` デバウンスが2回目を drop する可能性。`invalidateSettingsCache` の double-call テストを追加
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする — storage listener で設定変更後の最新値取得を保証
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― storage listener で設定変更後の最新値取得を保証
 - [x] コードレビュー完了
-- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md のキャッシュセクション更新） — cross-context invalidation の WHY コメントを recordingCache.ts に記載
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md のキャッシュセクション更新） ― cross-context invalidation の WHY コメントを recordingCache.ts に記載

@@ -121,7 +121,7 @@ Scenario: 既存テストが全てパスする
 - [x] `sqliteHistoryPanel.ts` の独自 `t()` ラッパーを共有 seam へ置換
 - [x] `npm run validate` が成功する
 
-### 実装結果（2026-08-09）— レビュー時の判断を3点とも訂正
+### 実装結果（2026-08-09）― レビュー時の判断を3点とも訂正
 
 #### 1. `createBackgroundServices.ts` は削除しない
 

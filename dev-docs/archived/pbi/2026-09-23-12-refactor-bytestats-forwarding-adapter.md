@@ -1,4 +1,4 @@
-# PBI 2026-09-23-12 — ByteStats 転送 Adapter（録画リクエスト builder の所有完成）
+# PBI 2026-09-23-12 ― ByteStats 転送 Adapter（録画リクエスト builder の所有完成）
 
 **優先度**: 順位 12 / RICE 16.0（Reach 5 × Impact 2 × Confidence 80% ÷ Effort 0.5 人週）
 **根拠**: builder の Seam は既存で、新診断 field の 4 箇所同期という現在進行形の drift クラスを構造的に消す。VALID/MANUAL/SAVE/REGENERATE の乖離を型で防ぐ。
@@ -6,7 +6,7 @@
 
 ## 背景
 
-`src/background/recordRequestBuilder.ts:37-184` が `RecordDiagnosticFields` interface を所有済みなのに、`recordingHandlers.ts` の 4 呼び出し側（VALID_VISIT :145-164 / MANUAL :279-295 / SAVE :334-352 / REGENERATE :422-443）が同一 8–14 field（`pageBytes` / `candidateBytes` / `originalBytes` / `cleansedBytes` / `aiSummary*`、`fallbackTriggered` / `fallbackReason` / `cleansedReason`）を `pickDefined` で手列挙する。新 field の追加は 4 箇所の同期編集になり、忘れた面は型エラーにならず analytics が黙って劣化する。重複面は約 50 行。
+`src/background/recordRequestBuilder.ts:37-184` が `RecordDiagnosticFields` interface を所有済みなのに、`recordingHandlers.ts` の 4 呼び出し側（VALID_VISIT :145-164 / MANUAL :279-295 / SAVE :334-352 / REGENERATE :422-443）が同一 8-14 field（`pageBytes` / `candidateBytes` / `originalBytes` / `cleansedBytes` / `aiSummary*`、`fallbackTriggered` / `fallbackReason` / `cleansedReason`）を `pickDefined` で手列挙する。新 field の追加は 4 箇所の同期編集になり、忘れた面は型エラーにならず analytics が黙って劣化する。重複面は約 50 行。
 
 ## 実装戦略
 

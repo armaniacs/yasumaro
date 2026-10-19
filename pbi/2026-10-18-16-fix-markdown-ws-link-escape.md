@@ -21,12 +21,12 @@ security-audit run-2 の needs_validation リード。fingerprint: `5dd75a26909c
 
 claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)\[([^\]]*)\]\(([^)]+)\)/gi` (`markdownSanitizer.ts:56-58`, called from `sanitizeForObsidian:118`) requires `](` with no whitespace, and no normalization pass in the sanitize chain escapes or collapses the whitespace-separated spelling before the note write."
 
-- [entrypoint] `src/background/handlers/recordingHandlers.ts:144`（service worker）— `VALID_VISIT` は `ValidVisitValidator` が長さ（最大 1,000,000 文字の非空文字列）に上限を掛けるだけで `message.payload?.content` を受け入れる。攻撃者ページテキストは変換されずにパイプラインへ入る。
-- [propagation] `src/messaging/validators.ts:164` — `assertContentLength(payload.content, 'ValidVisitValidator')`。長さ境界のみ。内容変換はしない。
-- [propagation] `src/background/pipeline/steps/truncateContentStep.ts:30` — UTF-8 で 64 KB へ切り詰められたテキストは `sanitizeForObsidian`（`markdownFormatter` の `sanitizeSummary` → `markdownSanitizer` の `sanitizeAllMarkdownLinks`）を通過する。空白なしリンク綴り・wikilink・HTML エンティティはエスケープされるが、`[text] (url)` 形は対象外。
-- [propagation] `src/background/pipeline/steps/formatMarkdownStep.ts:59` — `buildEntryMarkdown(entryInput, 'obsidianList', entryOpts)`。summary は `markdownFormatter.ts:232` で `- ${timestamp} [${title}](${url})\n    - ${tags}${summary}` に埋め込まれる（インデント付きリスト行）。
-- [sink] `src/background/pipeline/steps/saveToObsidianStep.ts:65`（service worker → Obsidian Local REST API）— `obsidianClient.appendToDailyNote(markdown, context.traceId)` がノート文字列をデイリーノートへ書き込む（`:63` は replayWrite 分岐）。
-- [sink] `src/background/syncTargets/gistSyncTarget.ts:64-67` — 同じ cleanse 済み summary が `normalizeSummary: false` / `summaryFallback: null` で第2の派生シンク（gist plainLine、`markdownFormatter.ts:210` の `- [${title}](${url}): ${summary}`）へ到達する。
+- [entrypoint] `src/background/handlers/recordingHandlers.ts:144`（service worker）― `VALID_VISIT` は `ValidVisitValidator` が長さ（最大 1,000,000 文字の非空文字列）に上限を掛けるだけで `message.payload?.content` を受け入れる。攻撃者ページテキストは変換されずにパイプラインへ入る。
+- [propagation] `src/messaging/validators.ts:164` ― `assertContentLength(payload.content, 'ValidVisitValidator')`。長さ境界のみ。内容変換はしない。
+- [propagation] `src/background/pipeline/steps/truncateContentStep.ts:30` ― UTF-8 で 64 KB へ切り詰められたテキストは `sanitizeForObsidian`（`markdownFormatter` の `sanitizeSummary` → `markdownSanitizer` の `sanitizeAllMarkdownLinks`）を通過する。空白なしリンク綴り・wikilink・HTML エンティティはエスケープされるが、`[text] (url)` 形は対象外。
+- [propagation] `src/background/pipeline/steps/formatMarkdownStep.ts:59` ― `buildEntryMarkdown(entryInput, 'obsidianList', entryOpts)`。summary は `markdownFormatter.ts:232` で `- ${timestamp} [${title}](${url})\n    - ${tags}${summary}` に埋め込まれる（インデント付きリスト行）。
+- [sink] `src/background/pipeline/steps/saveToObsidianStep.ts:65`（service worker → Obsidian Local REST API）― `obsidianClient.appendToDailyNote(markdown, context.traceId)` がノート文字列をデイリーノートへ書き込む（`:63` は replayWrite 分岐）。
+- [sink] `src/background/syncTargets/gistSyncTarget.ts:64-67` ― 同じ cleanse 済み summary が `normalizeSummary: false` / `summaryFallback: null` で第2の派生シンク（gist plainLine、`markdownFormatter.ts:210` の `- [${title}](${url}): ${summary}`）へ到達する。
 
 **実装者が見落としやすい構造的ポイント（実ファイルで確認）**: `markdownFormatter.ts:77` の `normalizeSingleLine` は `.replace(/  +/g, ' ')` を含む。つまり `sanitizeSummary`（`:94` で `normalizeSingleLine` → `:95` で `sanitizeForObsidian`）は、**改行や連続スペースで `](` を分断していた攻撃者ペイロードを、能動的に `[text] (url)` という空白区切り形へ変換する**。`[text]\n(https://evil.example)` はノートの summary 行で `[text] (https://evil.example)` に正規化される。よって「攻撃者は最初から空白区切り綴りを書く必要はない」。エスケープする側を空白許容にするなら、`normalizeSingleLine` の**後**に掛ける必要がある。既存の呼び出し順（`:94` → `:95`）はこの条件を満たしているため、チェーンの順序変更は不要。
 
@@ -91,15 +91,15 @@ claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)
 
 | ファイル | 行 | 内容 |
 |---|---|---|
-| `src/utils/markdownSanitizer.ts` | 56 | `allMarkdownLinkPattern = /(!?)\[([^\]]*)\]\(([^)]+)\)/gi` — `]` と `(` の間に空白を許さない |
-| `src/utils/markdownSanitizer.ts` | 58 | `text.replace(allMarkdownLinkPattern, '$1\\[$2\\]\\($3\\)')` — 空白という概念が無いため、許容するとスペースが消える |
+| `src/utils/markdownSanitizer.ts` | 56 | `allMarkdownLinkPattern = /(!?)\[([^\]]*)\]\(([^)]+)\)/gi` ― `]` と `(` の間に空白を許さない |
+| `src/utils/markdownSanitizer.ts` | 58 | `text.replace(allMarkdownLinkPattern, '$1\\[$2\\]\\($3\\)')` ― 空白という概念が無いため、許容するとスペースが消える |
 | `src/utils/markdownSanitizer.ts` | 112-132 | `sanitizeForObsidian`。順序は 118 リンク → 121 wikilink → 126-129 HTML エンティティ |
 | `src/utils/markdownSanitizer.ts` | 72 | `escapeObsidianWikilinks` の `(!?)\[\[([^\]]*)\]\]`（空白無しの別系統。改変しない） |
 | `src/utils/markdownSanitizer.ts` | 26-37 | `sanitizeMarkdownLinks`（http/https 限定・旧実装。アクティブなチェーンでは未使用。変更しない） |
 | `src/utils/markdownFormatter.ts` | 76-78 | `normalizeSingleLine`。`:77` の `.replace(/  +/g, ' ')` が `[text]\n(url)` を `[text] (url)` へ**能動的に生成する** |
 | `src/utils/markdownFormatter.ts` | 91-96 | `sanitizeSummary`。`:94` で正規化 → `:95` で `sanitizeForObsidian`。順序は既に「正規化後・エスケープ後」で正しい |
 | `src/utils/markdownFormatter.ts` | 117 | tagPrefix も `sanitizeForObsidian` を通る（`#tag` の後ろに空白区切りリンクが来る余地） |
-| `src/utils/markdownFormatter.ts` | 232 | `obsidianList`。`- ${timestamp} [${title}](${url})\n    - ${tags}${summary}` — summary はインデント付きリスト行に載る |
+| `src/utils/markdownFormatter.ts` | 232 | `obsidianList`。`- ${timestamp} [${title}](${url})\n    - ${tags}${summary}` ― summary はインデント付きリスト行に載る |
 | `src/utils/markdownFormatter.ts` | 210 | `plainLine`。`- [${title}](${url}): ${summary}` |
 | `src/background/pipeline/steps/formatMarkdownStep.ts` | 59 | `buildEntryMarkdown(entryInput, 'obsidianList', entryOpts)` |
 | `src/background/handlers/recordingHandlers.ts` | 144 | `content: message.payload?.content \|\| ''`（入口。変換なし） |
@@ -107,7 +107,7 @@ claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)
 | `src/background/pipeline/steps/truncateContentStep.ts` | 30 | 64 KB 切り詰め。これ以降は縮まない |
 | `src/background/pipeline/steps/saveToObsidianStep.ts` | 63, 65 | `appendToDailyNote(markdown, ...)`（`:63` は replayWrite） |
 | `src/background/syncTargets/gistSyncTarget.ts` | 64-67 | `plainLine` + `normalizeSummary: false` + `summaryFallback: null`（第2シンク） |
-| 既存テスト | — | `src/utils/__tests__/markdownSanitizer.test.ts`（336行）/ `markdownSanitizerBoundary.test.ts`（63行）/ `markdownFormatter.test.ts`（378行）/ `src/background/pipeline/steps/__tests__/formatMarkdownStep.test.ts` |
+| 既存テスト | ― | `src/utils/__tests__/markdownSanitizer.test.ts`（336行）/ `markdownSanitizerBoundary.test.ts`（63行）/ `markdownFormatter.test.ts`（378行）/ `src/background/pipeline/steps/__tests__/formatMarkdownStep.test.ts` |
 
 ### 最小変更の選択肢
 

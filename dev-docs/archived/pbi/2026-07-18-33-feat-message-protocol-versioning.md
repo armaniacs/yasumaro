@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/background/messageTypes.ts` — `ExtensionMessage`型（123行目〜）、`VALID_MESSAGE_TYPES`（147行目〜）、`CONTENT_SCRIPT_ONLY_TYPES`（168行目〜）、`NO_PAYLOAD_TYPES`（173行目〜）が定義されている
+- `src/background/messageTypes.ts` ― `ExtensionMessage`型（123行目〜）、`VALID_MESSAGE_TYPES`（147行目〜）、`CONTENT_SCRIPT_ONLY_TYPES`（168行目〜）、`NO_PAYLOAD_TYPES`（173行目〜）が定義されている
 - 現状、いずれのメッセージ型にも `protocolVersion` フィールドは存在しない
 - 対処案（親レポートより）: `protocolVersion` を追加
 

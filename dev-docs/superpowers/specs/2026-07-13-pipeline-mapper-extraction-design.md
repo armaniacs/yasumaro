@@ -1,11 +1,11 @@
-# C5: Pipeline Mapper Extraction — Design Spec
+# C5: Pipeline Mapper Extraction ― Design Spec
 
 **Date:** 2026-07-13
 **Scope:** Extract the 30-field `BrowsingLogRecord` mapping from `RecordingPipeline.createSaveSqliteStep()` into a dedicated mapper module. Extract alarm/chrome.storage concerns from `saveLocalMarkdownStep` into a `MarkdownBufferManager`.
 
 ## Motivation
 
-`RecordingPipeline.createSaveSqliteStep()` contains 68 lines (155-223) that destructure 15+ context fields, call `sanitizeRegex()`, `extractDomain()`, read `StorageKeys`, and construct a `BrowsingLogRecord`. `saveLocalMarkdownStep` imports alarm constants and calls `chrome.alarms` directly. The 5-Why deep-dig identified that the accumulate-and-map pattern itself is fine — the problem is the mapper living inline in the pipeline. A `StorageAdapter` interface is YAGNI (only 2 output targets, no 3rd planned).
+`RecordingPipeline.createSaveSqliteStep()` contains 68 lines (155-223) that destructure 15+ context fields, call `sanitizeRegex()`, `extractDomain()`, read `StorageKeys`, and construct a `BrowsingLogRecord`. `saveLocalMarkdownStep` imports alarm constants and calls `chrome.alarms` directly. The 5-Why deep-dig identified that the accumulate-and-map pattern itself is fine ― the problem is the mapper living inline in the pipeline. A `StorageAdapter` interface is YAGNI (only 2 output targets, no 3rd planned).
 
 ## Decision
 
@@ -18,7 +18,7 @@ Extract two independent modules from the pipeline:
 
 /**
  * Maps the accumulated RecordingContext to a BrowsingLogRecord.
- * Pure function — no side effects, no storage access, no chrome APIs.
+ * Pure function ― no side effects, no storage access, no chrome APIs.
  */
 function mapToBrowsingLogRecord(context: RecordingContext): BrowsingLogRecord;
 ```
@@ -95,18 +95,18 @@ createSaveSqliteStep() {
 
 ### What Does NOT Change
 
-- `RecordingContext` shape — the accumulate-and-map pattern stays
-- `RecordingPipeline` orchestration — step ordering, conditional execution, error handling
-- `saveSqliteStep` function signature — it already accepts a `BrowsingLogRecord`
-- `saveToObsidianStep` — already clean, no mapping logic
+- `RecordingContext` shape ― the accumulate-and-map pattern stays
+- `RecordingPipeline` orchestration ― step ordering, conditional execution, error handling
+- `saveSqliteStep` function signature ― it already accepts a `BrowsingLogRecord`
+- `saveToObsidianStep` ― already clean, no mapping logic
 
 ### Tests
 
-- **Unit**: `mapToBrowsingLogRecord` — given a full context, assert all 30 fields mapped correctly
-- **Unit**: `mapToBrowsingLogRecord` — given partial context (content disabled), assert content field is empty
-- **Unit**: `mapToBrowsingLogRecord` — PII sanitized content flows through
-- **Unit**: `MarkdownBufferManager` — add/flush/schedule cycle
-- **Unit**: `MarkdownBufferManager` — deduplication of alarm scheduling
+- **Unit**: `mapToBrowsingLogRecord` ― given a full context, assert all 30 fields mapped correctly
+- **Unit**: `mapToBrowsingLogRecord` ― given partial context (content disabled), assert content field is empty
+- **Unit**: `mapToBrowsingLogRecord` ― PII sanitized content flows through
+- **Unit**: `MarkdownBufferManager` ― add/flush/schedule cycle
+- **Unit**: `MarkdownBufferManager` ― deduplication of alarm scheduling
 
 ### Future: StorageAdapter
 

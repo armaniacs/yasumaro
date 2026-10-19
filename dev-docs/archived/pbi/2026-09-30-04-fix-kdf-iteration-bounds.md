@@ -16,9 +16,9 @@
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/storage/encryptionSession.ts:616` — `storedIterations` はキャストのみで検証なし
-- `:625` → `src/utils/crypto/primitives.ts:395-400` — `iterations` をそのまま `hashPasswordWithPBKDF2` へ素通し。floor/ceiling/型チェックなし
-- `src/utils/storage/encryptionSession.ts:84-89` → `:108` — `deriveKeyFromPassword` の stored iterations も上限なしで導出へ直結
+- `src/utils/storage/encryptionSession.ts:616` ― `storedIterations` はキャストのみで検証なし
+- `:625` → `src/utils/crypto/primitives.ts:395-400` ― `iterations` をそのまま `hashPasswordWithPBKDF2` へ素通し。floor/ceiling/型チェックなし
+- `src/utils/storage/encryptionSession.ts:84-89` → `:108` ― `deriveKeyFromPassword` の stored iterations も上限なしで導出へ直結
 - `src/utils/crypto/envelope.ts` には `MIN_ENVELOPE_ITERATIONS` / `MAX_ENVELOPE_ITERATIONS`(1〜6,000,000)が存在するが、unlock / KEK 導出経路には掛からない
 - 正規の書き込み値は `ENVELOPE_ITERATIONS`(600k)のみのため、範囲外は必ず改変・破損
 

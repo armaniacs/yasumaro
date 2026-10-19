@@ -50,7 +50,7 @@ Scenario: utils 直下の分類が LAYERS 記述と一致する
 5ポイント（2.0日相当：過去調査の再確認＋約 30 ファイル超のテスト移行＋dead 候補洗い出しが中心）
 
 ## 実装者向け注記
-- barrel 実体: `src/utils/storage.ts:1-136`（`// @layer Barrel — Re-export (deprecated)`、全 export に `@deprecated`）。eslint 抑止: `eslint.config.js:45-57` の no-restricted-imports（warn のみで ban ではない）
+- barrel 実体: `src/utils/storage.ts:1-136`（`// @layer Barrel ― Re-export (deprecated)`、全 export に `@deprecated`）。eslint 抑止: `eslint.config.js:45-57` の no-restricted-imports（warn のみで ban ではない）
 - 参照実態（2026-09-05 時点の抜粋、全件は rg で再取得）: `rg -n "from ['\"].*utils/storage\.js['\"]" src tests --glob '*.ts'` で約 30 件超の test ファイルがヒット（例: `src/popup/__tests__/main.test.ts:145`、`src/background/__tests__/integration-robustness.test.ts:4`、`src/dashboard/__tests__/retention-settings.test.ts:79`）。prod 参照は LAYERS.md 上ゼロとされるが、作業開始時に `grep -v __tests__` で再確認すること
 - utils 直下は約 90 エントリのフラット配置: `ls src/utils/` で一覧化し、`dev-docs/LAYERS.md:17-98` の Layer 0/1/2 分類にないファイルを未分類候補とする。`storage/`・`trustDb/`・`crypto/`・`logger/` サブディレクトリ配下は分類済みのため対象外
 - 調査用 rg: `rg -ln "utils/storage\.js" src tests | sort`、`rg -n "from.*storage" src/utils/errorUtils.ts src/utils/objectUtils.ts src/utils/crypto/primitives.ts`（Layer 0 汚染チェック）、`grep -rn "@layer" src/utils/ | wc -l`（分類コメント網羅率）

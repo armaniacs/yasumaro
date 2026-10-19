@@ -28,21 +28,21 @@ security-audit run-2 の needs_validation リード。fingerprint: `session-auto
 
 **再現経路（trace）**
 
-1. `src/background/alarmRegistry.ts` — 監査ref（`git show d49d70a3:`）`:153-157` の job entry `{ name: 'check_session_timeout', install, run }` の `run`（**:156**）が `deps.sessionAlarmService.checkTimeout()` を呼ぶ。**現在 HEAD（56f1d7c1）では同じ entry が `:176-180`、`run` は `:179`**（`yasumaro-recording-resume` / `yasumaro-recording-pause-tick` が 2 件追加されたため +23 行）。`sessionAlarmService` の deps 宣言は HEAD `:34`。
-2. `src/background/SessionAlarmService.ts:115` — `checkTimeout()` が唯一の入口（`:110-114` のコメントどおり、ここに `onAlarm` を足すと 1 発火 2 実行になる）。`:125-127` で `MASTER_PASSWORD_ENABLED` が無ければ即 return、`:129-135` で `elapsed > SESSION_TIMEOUT_MS`（`:22` の 30 分）を判定し `:136` で `lockSession()`。
-3. `src/background/SessionAlarmService.ts:153-192` — 私有 `lockSession()`。`:155` で `IS_LOCKED: true` を書き、`:157-159` に VULN-017 のコメント（通知の目的を「キャッシュ済み復号鍵を自動ロック後に使用可能に留めないこと」と明記）、`:160-175` が 3 回リトライループ（`:160` `retries = LOCK_NOTIFICATION_MAX_RETRIES`（`:27` の 3）、`:162` `while (retries > 0 && !success)`、`:164-167` `sendMessage({ type: 'SESSION_LOCK_REQUEST', protocolVersion })`、**`:168` `success = true`（解決した時点で成功。応答値は破棄）**、`:169-174` catch で `retries--` と `:172` の `stepDelay(100ms)`）。`:176-183` の失敗ログも「Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey」と、最後の防御線がここであることを明示している。
-4. ハンドラ側 — `src/background/handlers/systemHandlers.ts:219-230` の `createSessionLockRequestHandler` が `:227` で `deps.lockSession()`、`:228` で `sendResponse({ success: true })`。配線をたどると `MessageRouter.ts:226`（`SESSION_LOCK_REQUEST: createSessionLockRequestHandler({ lockSession: deps.lockSession })`）→ `MessageRouter.ts:140` の deps 型 → `compositionManifest.ts:267`（`lockSession: () => lockSession()`、`:42` で `encryptionSession.js` から import）→ `encryptionSession.ts:779-783`。エクスポートは `service-worker.ts:153`。**しかし送信元は SW なので `chrome.runtime.onMessage`（`service-worker.ts:226`）には届かない**。
-5. 拡張ページ側の受信者は 3 箇所とも非対応 — `src/offscreen/offscreen.ts:62-69` は `!('target' in message)` で即 `return false`（送信側の envelope は `target` を持たない）、`src/dashboard/aiTestProgressClient.ts:66-73` は `sender.id` と `isAiTestProgressMessage(message) && runId` 一致で絞り込み、他に `src/content/extractor.ts:164`（content script 文脈）と `privacyConsent.ts:326-331`（`CONSENT_STATE_CHANGED` のみ）。
-6. sink — `src/utils/storage/encryptionSession.ts:566-591` の `getOrCreateEncryptionKey`。`:567` に VULN-017 コメント、**`:568` `if (cachedEncryptionKey)` の中にだけ `:569` `await authGuardIsLocked()` が居る**。`:570-572` で両キャッシュを null にして `ENCRYPTION_LOCKED: Session is locked` を投げる。キャッシュが null だと `:578-588` に進んで `MASTER_PASSWORD_ENABLED` を見るだけで、**`IS_LOCKED` を一切読まずに** `:586` `deriveKeyFromMasterPassword(salt)` → `:158-174`（`:162-164` は `!cachedMasterPassword` のときだけ throw、`:173` で `cachedMasterPassword` から PBKDF2 導出）→ **ロック後も鍵が返る**。`:606-609` の `isEncryptionLocked()` も `!cachedMasterPassword` しか見ないので `false` を返す。
+1. `src/background/alarmRegistry.ts` ― 監査ref（`git show d49d70a3:`）`:153-157` の job entry `{ name: 'check_session_timeout', install, run }` の `run`（**:156**）が `deps.sessionAlarmService.checkTimeout()` を呼ぶ。**現在 HEAD（56f1d7c1）では同じ entry が `:176-180`、`run` は `:179`**（`yasumaro-recording-resume` / `yasumaro-recording-pause-tick` が 2 件追加されたため +23 行）。`sessionAlarmService` の deps 宣言は HEAD `:34`。
+2. `src/background/SessionAlarmService.ts:115` ― `checkTimeout()` が唯一の入口（`:110-114` のコメントどおり、ここに `onAlarm` を足すと 1 発火 2 実行になる）。`:125-127` で `MASTER_PASSWORD_ENABLED` が無ければ即 return、`:129-135` で `elapsed > SESSION_TIMEOUT_MS`（`:22` の 30 分）を判定し `:136` で `lockSession()`。
+3. `src/background/SessionAlarmService.ts:153-192` ― 私有 `lockSession()`。`:155` で `IS_LOCKED: true` を書き、`:157-159` に VULN-017 のコメント（通知の目的を「キャッシュ済み復号鍵を自動ロック後に使用可能に留めないこと」と明記）、`:160-175` が 3 回リトライループ（`:160` `retries = LOCK_NOTIFICATION_MAX_RETRIES`（`:27` の 3）、`:162` `while (retries > 0 && !success)`、`:164-167` `sendMessage({ type: 'SESSION_LOCK_REQUEST', protocolVersion })`、**`:168` `success = true`（解決した時点で成功。応答値は破棄）**、`:169-174` catch で `retries--` と `:172` の `stepDelay(100ms)`）。`:176-183` の失敗ログも「Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey」と、最後の防御線がここであることを明示している。
+4. ハンドラ側 ― `src/background/handlers/systemHandlers.ts:219-230` の `createSessionLockRequestHandler` が `:227` で `deps.lockSession()`、`:228` で `sendResponse({ success: true })`。配線をたどると `MessageRouter.ts:226`（`SESSION_LOCK_REQUEST: createSessionLockRequestHandler({ lockSession: deps.lockSession })`）→ `MessageRouter.ts:140` の deps 型 → `compositionManifest.ts:267`（`lockSession: () => lockSession()`、`:42` で `encryptionSession.js` から import）→ `encryptionSession.ts:779-783`。エクスポートは `service-worker.ts:153`。**しかし送信元は SW なので `chrome.runtime.onMessage`（`service-worker.ts:226`）には届かない**。
+5. 拡張ページ側の受信者は 3 箇所とも非対応 ― `src/offscreen/offscreen.ts:62-69` は `!('target' in message)` で即 `return false`（送信側の envelope は `target` を持たない）、`src/dashboard/aiTestProgressClient.ts:66-73` は `sender.id` と `isAiTestProgressMessage(message) && runId` 一致で絞り込み、他に `src/content/extractor.ts:164`（content script 文脈）と `privacyConsent.ts:326-331`（`CONSENT_STATE_CHANGED` のみ）。
+6. sink ― `src/utils/storage/encryptionSession.ts:566-591` の `getOrCreateEncryptionKey`。`:567` に VULN-017 コメント、**`:568` `if (cachedEncryptionKey)` の中にだけ `:569` `await authGuardIsLocked()` が居る**。`:570-572` で両キャッシュを null にして `ENCRYPTION_LOCKED: Session is locked` を投げる。キャッシュが null だと `:578-588` に進んで `MASTER_PASSWORD_ENABLED` を見るだけで、**`IS_LOCKED` を一切読まずに** `:586` `deriveKeyFromMasterPassword(salt)` → `:158-174`（`:162-164` は `!cachedMasterPassword` のときだけ throw、`:173` で `cachedMasterPassword` から PBKDF2 導出）→ **ロック後も鍵が返る**。`:606-609` の `isEncryptionLocked()` も `!cachedMasterPassword` しか見ないので `false` を返す。
 7. 当該状態を遺すのは `unlockWithPassword`（`:657-715`、`:706` `cachedMasterPassword = password` / `:707` `cachedEncryptionKey = null` / `:708` `IS_LOCKED: false`）と `changeMasterPassword`（`:795-815`、`:797` で旧パスワードを `unlockWithPassword` し `:811-812` で新パスワードでセッションを引き継いでキャッシュを null にする）。補足: ダッシュボードの認証モーダル本体は `verifyMasterPasswordWithRehash`（`:732-774`、dashboard 側は `src/dashboard/masterPassword.ts:310`）で、**こちらは `cachedMasterPassword` を触らない**（検証のみ）。したがって「キャッシュ済みパスワードだけが残る状態」は主にパスワード変更/内部 unlock 経路で生じる。
 
 **既存テスト（現状 pin している挙動）**
 
-- `src/background/__tests__/SessionAlarmService.test.ts:150-165` — sendMessage が reject し続けると 3 回試行・`stepDelay` 2 回（100ms ずつ）を pin。`:167-193` — 2 回失敗 3 回目成功で試行が 3 回で終わることを pin。**「解決したら 1 回で成功」が前提のテストは無いが、リトライの打ち切り条件が固定されている**。
-- `src/background/pipeline/steps/__tests__/sessionAlarmsManager.test.ts:352-365` — `check_session_timeout` 発火で `IS_LOCKED: true` と `SESSION_LOCK_REQUEST` 送信を pin。`:404-418` — マスターパスワード未設定なら一切ロックしない（`SessionAlarmService.ts:125-127` の分岐）を pin。
-- `src/background/handlers/__tests__/systemHandlers.test.ts:348-353` — `SESSION_LOCK_REQUEST` が `deps.lockSession()` を呼ぶことを pin。`src/background/handlers/__tests__/senderTrustCoverage.test.ts:45` — 信頼レベルが `extension-only` であることを pin。
-- `src/background/__tests__/service-worker.test.ts:834,971,2905` ほか — SW の `SESSION_LOCK_REQUEST` ハンドラが応答することを pin（**これは「ハンドラが登録されている」ことの pin であり、「通知が届く」ことの pin ではない**）。
-- `src/utils/__tests__/storage-security.test.ts:455-467` — 「マスターパスワード未設定なら `IS_LOCKED: true` でもキャッシュ鍵を返す」を pin（＝`authGuard.isLocked` の `MASTER_PASSWORD_ENABLED &&` ガードの根拠）。`src/utils/storage/__tests__/encryptionSession-branch.test.ts:137-156` — `isEncryptionLocked()` の期待値。
+- `src/background/__tests__/SessionAlarmService.test.ts:150-165` ― sendMessage が reject し続けると 3 回試行・`stepDelay` 2 回（100ms ずつ）を pin。`:167-193` ― 2 回失敗 3 回目成功で試行が 3 回で終わることを pin。**「解決したら 1 回で成功」が前提のテストは無いが、リトライの打ち切り条件が固定されている**。
+- `src/background/pipeline/steps/__tests__/sessionAlarmsManager.test.ts:352-365` ― `check_session_timeout` 発火で `IS_LOCKED: true` と `SESSION_LOCK_REQUEST` 送信を pin。`:404-418` ― マスターパスワード未設定なら一切ロックしない（`SessionAlarmService.ts:125-127` の分岐）を pin。
+- `src/background/handlers/__tests__/systemHandlers.test.ts:348-353` ― `SESSION_LOCK_REQUEST` が `deps.lockSession()` を呼ぶことを pin。`src/background/handlers/__tests__/senderTrustCoverage.test.ts:45` ― 信頼レベルが `extension-only` であることを pin。
+- `src/background/__tests__/service-worker.test.ts:834,971,2905` ほか ― SW の `SESSION_LOCK_REQUEST` ハンドラが応答することを pin（**これは「ハンドラが登録されている」ことの pin であり、「通知が届く」ことの pin ではない**）。
+- `src/utils/__tests__/storage-security.test.ts:455-467` ― 「マスターパスワード未設定なら `IS_LOCKED: true` でもキャッシュ鍵を返す」を pin（＝`authGuard.isLocked` の `MASTER_PASSWORD_ENABLED &&` ガードの根拠）。`src/utils/storage/__tests__/encryptionSession-branch.test.ts:137-156` ― `isEncryptionLocked()` の期待値。
 - `src/background/__tests__/SessionAlarmService.test.ts` の `stepDelay` 注入（`:91` 付近のコンストラクタ）は PBI 2026-10-07-09（`dev-docs/archived/pbi/2026-10-07-09-refactor-sessionalarm-injectable-sleep.md`）で入れたもので、実時間待ち禁止のルールに従った状態。
 
 **監査側の blocker（着手前に潰すべき owner 確認）**
@@ -117,7 +117,7 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 | `src/background/SessionAlarmService.ts` | 22-27 | `SESSION_TIMEOUT_MS`（30分）/ `LOCK_NOTIFICATION_RETRY_DELAY_MS`（100）/ `LOCK_NOTIFICATION_MAX_RETRIES`（3） |
 | `src/background/SessionAlarmService.ts` | 29-33 | `SendMessageFn` 型と `defaultSendMessage`（`:31` `chrome.runtime.sendMessage`）、`realStepDelay` |
 | `src/background/SessionAlarmService.ts` | 36-42 | コンストラクタ。`:41` で `stepDelay` 注入（実時間待ち禁止のため必ず注入経路を使う） |
-| `src/background/SessionAlarmService.ts` | 115 | `checkTimeout()` — 唯一の入口（`:110-114` に「onAlarm を足すと二重実行になる」注釈） |
+| `src/background/SessionAlarmService.ts` | 115 | `checkTimeout()` ― 唯一の入口（`:110-114` に「onAlarm を足すと二重実行になる」注釈） |
 | `src/background/SessionAlarmService.ts` | 125-127 / 129-135 / 136 | 未設定ユーザーの gate / 経過時間判定 / `lockSession()` 呼び出し |
 | `src/background/SessionAlarmService.ts` | 153-192 | 私有 `lockSession()`。`:155` `IS_LOCKED: true` |
 | `src/background/SessionAlarmService.ts` | **157-159** | VULN-017 注釈（通知の目的を明記。実挙動と食い違っている） |
@@ -133,11 +133,11 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 | `src/utils/storage/encryptionSession.ts` | 68 / 75-76 | `authGuard.isLocked` の import / `cachedEncryptionKey`・`cachedMasterPassword` の module state |
 | `src/utils/storage/encryptionSession.ts` | 158-174 | `deriveKeyFromMasterPassword`。`:162-164` `!cachedMasterPassword` で throw、`:173` `cachedMasterPassword` から PBKDF2 導出 |
 | `src/utils/storage/encryptionSession.ts` | **566-591** | `getOrCreateEncryptionKey`。`:567` VULN-017 注釈、**`:568` `if (cachedEncryptionKey)` の中にだけ `:569` `authGuardIsLocked()` が居る**、`:570-572` クリア＋throw、`:578-588` は `IS_LOCKED` を読まない |
-| `src/utils/storage/encryptionSession.ts` | **606-609** | `isEncryptionLocked()` — `!cachedMasterPassword` のみを見るので、`cachedMasterPassword` 残存状態では false |
+| `src/utils/storage/encryptionSession.ts` | **606-609** | `isEncryptionLocked()` ― `!cachedMasterPassword` のみを見るので、`cachedMasterPassword` 残存状態では false |
 | `src/utils/storage/encryptionSession.ts` | 619-650 | `setMasterPassword`。`:635` `cachedMasterPassword = null`、`:639` `cachedEncryptionKey = null`（ロック状態で開始する意図） |
 | `src/utils/storage/encryptionSession.ts` | 657-715 | `unlockWithPassword`。**`:706` `cachedMasterPassword = password` / `:707` `cachedEncryptionKey = null`** / `:708` `IS_LOCKED: false`（← 残存状態の発生源） |
 | `src/utils/storage/encryptionSession.ts` | 732-774 | `verifyMasterPasswordWithRehash`（ダッシュボード認証モーダル本体）。`cachedMasterPassword` を触らない（検証のみ） |
-| `src/utils/storage/encryptionSession.ts` | 779-783 | `lockSession()` — 両キャッシュを null にして `IS_LOCKED: true` |
+| `src/utils/storage/encryptionSession.ts` | 779-783 | `lockSession()` ― 両キャッシュを null にして `IS_LOCKED: true` |
 | `src/utils/storage/encryptionSession.ts` | 795-815 | `changeMasterPassword`。`:797` `unlockWithPassword(old)`、**`:811-812` `cachedMasterPassword = newPassword` / `cachedEncryptionKey = null`**（← もう 1 つの残存状態の発生源） |
 | `src/utils/storage/authGuard.ts` | 10-18 | `isLocked()`。`:17` `MASTER_PASSWORD_ENABLED && IS_LOCKED`（**dead fan-out を生き延び唯一の cross-context 強制**） |
 | `src/utils/storage/encryptionLockedError.ts` | 17 | `isEncryptionLockedError`（UI 側が拾う識別子） |
@@ -148,9 +148,9 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 
 ### 最小変更の選択肢
 
-1. **fan-out の宛先を「実際に handler を持つコンテキスト」に修正する** — 拡張ページ（dashboard / popup）に `SESSION_LOCK_REQUEST` 用の `chrome.runtime.onMessage` リスナを足す。受信側が `encryptionSession.lockSession()` を呼ぶので「宛先=all contexts」の意味が実際に成立する。あるいは SW 内の直接呼び出し（`SessionAlarmService.ts:164` の送信を `encryptionSession.lockSession()` の直接呼び出しに置き換え、`SESSION_LOCK_REQUEST` は「手動ロック用」に残す）へ置き換える。**ノイズ：受信者は「ページが開いている間だけ」しか存在しないので、開いていないコンテキストは依然として解錠状態で残る。保証できるのは「開いているコンテキスト」だけ。**
-2. **リトライループの成功判定を「応答値を検証する」に改める**（`SessionAlarmService.ts:168`） — `src/messaging/types.ts:323` の応答型 `{ success: true }` を見て判定する。**これだけでは「受け手がゼロ」の場合は依然として無音**（findings の指摘どおり、リトライは受信者がゼロのときしか発火せず、そこで決して成功しない）。単独では**不十分**。
-3. **消費側（`getOrCreateEncryptionKey`）の `IS_LOCKED` 検査を `cachedEncryptionKey` 非 null に限定しない**（`encryptionSession.ts:568`） — 検査を `getOrCreateEncryptionKey` の先頭（キャッシュの有無に依存しない位置）へ移動すれば、**どのコンテキストでも、どのキャッシュ状態でも、ロック済みの次の暗号操作は必ず `ENCRYPTION_LOCKED` で止まる**。fan-out が死んでいても「context の鍵が使える」状態は再現しなくなる。変更は 1 ファイル内の条件式移動 + テスト期待値の更新で済み、受信者のライフサイクル（ページの開閉）に依存しない。
+1. **fan-out の宛先を「実際に handler を持つコンテキスト」に修正する** ― 拡張ページ（dashboard / popup）に `SESSION_LOCK_REQUEST` 用の `chrome.runtime.onMessage` リスナを足す。受信側が `encryptionSession.lockSession()` を呼ぶので「宛先=all contexts」の意味が実際に成立する。あるいは SW 内の直接呼び出し（`SessionAlarmService.ts:164` の送信を `encryptionSession.lockSession()` の直接呼び出しに置き換え、`SESSION_LOCK_REQUEST` は「手動ロック用」に残す）へ置き換える。**ノイズ：受信者は「ページが開いている間だけ」しか存在しないので、開いていないコンテキストは依然として解錠状態で残る。保証できるのは「開いているコンテキスト」だけ。**
+2. **リトライループの成功判定を「応答値を検証する」に改める**（`SessionAlarmService.ts:168`） ― `src/messaging/types.ts:323` の応答型 `{ success: true }` を見て判定する。**これだけでは「受け手がゼロ」の場合は依然として無音**（findings の指摘どおり、リトライは受信者がゼロのときしか発火せず、そこで決して成功しない）。単独では**不十分**。
+3. **消費側（`getOrCreateEncryptionKey`）の `IS_LOCKED` 検査を `cachedEncryptionKey` 非 null に限定しない**（`encryptionSession.ts:568`） ― 検査を `getOrCreateEncryptionKey` の先頭（キャッシュの有無に依存しない位置）へ移動すれば、**どのコンテキストでも、どのキャッシュ状態でも、ロック済みの次の暗号操作は必ず `ENCRYPTION_LOCKED` で止まる**。fan-out が死んでいても「context の鍵が使える」状態は再現しなくなる。変更は 1 ファイル内の条件式移動 + テスト期待値の更新で済み、受信者のライフサイクル（ページの開閉）に依存しない。
 
 **どれが「最小で確実か」**: **選択肢 3 を必須、選択肢 1 と 2 は推奨**。
 
@@ -195,7 +195,7 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/archived/pbi/2026-10-07-09-refactor-sessionalarm-injectable-sleep.md` — `stepDelay` 注入の経緯（本 PBI のリトライ変更の前提を持つ）
-- `dev-docs/archived/pbi/2026-10-01-08-fix-alarm-double-dispatch.md` — `checkTimeout()` が唯一の入口である契約の由来
+- `dev-docs/archived/pbi/2026-10-07-09-refactor-sessionalarm-injectable-sleep.md` ― `stepDelay` 注入の経緯（本 PBI のリトライ変更の前提を持つ）
+- `dev-docs/archived/pbi/2026-10-01-08-fix-alarm-double-dispatch.md` ― `checkTimeout()` が唯一の入口である契約の由来
 - ストレージ/鍵管理の領域として PBI 15（`2026-10-18-15-fix-hmac-kek-fail-open.md`、hmac kek fail-open）と併せて設計する。両者は同じ `encryptionSession.ts` の module state（`cachedEncryptionKey` / `cachedMasterPassword`）を触り、ロック状態の判定 (`IS_LOCKED`) を共有する。**PBI 15 と並行実装する場合は、順序と touch する行の競合を PR で明示すること**
-- `src/utils/storage/authGuard.ts` — 本 PBI が「唯一の cross-context 強制」として依存する seam
+- `src/utils/storage/authGuard.ts` ― 本 PBI が「唯一の cross-context 強制」として依存する seam

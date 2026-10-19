@@ -9,10 +9,10 @@
 - 順位: 04 / 9
 - RICE スコア: 25.6（Reach=4 / Impact=2 / Confidence=80% / Effort=0.25 人週）
 - 根拠（2026-09-11 診断）:
-  - `src/popup/recordCurrentPage/tabContentFetcher.ts:25-33` — Promise.race 5s timeout + permission ladder あり（唯一の深い実装）
-  - `src/popup/statusPanel.ts:51-55` / `:468-475` — 生 callback `chrome.tabs.sendMessage` で timeout 無し（2 コピー）
-  - `tabContentFetcher.ts:31-33` と `messageTransport.ts:71-74` — promise 版 `sendMessage` 後の `chrome.runtime.lastError` ポーリングは callback 時代の残骸で到達不能
-  - `statusPanel.ts:147` — 未許可 URL 描画のたびに `addEventListener('click', …)` を積み重ね（ハンドラ重複 → 二重 prompt / 二重記録の恐れ）
+  - `src/popup/recordCurrentPage/tabContentFetcher.ts:25-33` ― Promise.race 5s timeout + permission ladder あり（唯一の深い実装）
+  - `src/popup/statusPanel.ts:51-55` / `:468-475` ― 生 callback `chrome.tabs.sendMessage` で timeout 無し（2 コピー）
+  - `tabContentFetcher.ts:31-33` と `messageTransport.ts:71-74` ― promise 版 `sendMessage` 後の `chrome.runtime.lastError` ポーリングは callback 時代の残骸で到達不能
+  - `statusPanel.ts:147` ― 未許可 URL 描画のたびに `addEventListener('click', …)` を積み重ね（ハンドラ重複 → 二重 prompt / 二重記録の恐れ）
 
 ## BDD 受け入れシナリオ
 

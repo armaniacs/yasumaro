@@ -72,23 +72,23 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 | ファイル | 行 | 該当箇所 |
 |---|---|---|
 | `src/background/localMarkdownExportRetention.ts` | `:45` | `LOCAL_EXPORT_DOWNLOAD_IDS_KEY = 'local_md_export_download_ids'`（永続化の保存先） |
-| 同上 | `:47-51` | `DownloadRecord { downloadId; date; createdAt }` — **項目同定の情報が無い**ことの根拠（監査 evidence） |
+| 同上 | `:47-51` | `DownloadRecord { downloadId; date; createdAt }` ― **項目同定の情報が無い**ことの根拠（監査 evidence） |
 | 同上 | `:27` | `LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS = 30` |
 | 同上 | `:74-83` | `recordDownloadId`。`:75` で `{ downloadId, date, createdAt: Date.now() }` を生成し、`:77` の `withOptimisticLock` 内で append + cap |
 | 同上 | `:95` | `cutoff` の算出 |
 | 同上 | `:102` | 安価な事前判定（lock を取らない no-op パス） |
 | 同上 | `:104-113` | claim-then-erase の設計コメント。並行 append と crash 方向は扱うが、**ブラウザ再起動をまたぐ id 同一性は扱っていない**（監査 evidence） |
 | 同上 | `:114-121` | `withOptimisticLock` 内での claim。`:119` が `claimed = records.filter(r => r.createdAt <= cutoff)` |
-| 同上 | `:123` | `for (const record of claimed)` — 副作用ループ |
-| 同上 | `:125` | `await chrome.downloads.removeFile(record.downloadId)` — **sink 1**。照会なし直接逆参照 |
+| 同上 | `:123` | `for (const record of claimed)` ― 副作用ループ |
+| 同上 | `:125` | `await chrome.downloads.removeFile(record.downloadId)` ― **sink 1**。照会なし直接逆参照 |
 | 同上 | `:126-128` | removeFile の失敗を握りつぶす（harmless と明記） |
-| 同上 | `:130` | `await chrome.downloads.erase({ id: record.downloadId })` — **sink 2** |
+| 同上 | `:130` | `await chrome.downloads.erase({ id: record.downloadId })` ― **sink 2** |
 | 同上 | `:131-136` | erase 失敗時の `addLog(LogType.ERROR, 'Local Markdown download record erase failed', …)` |
 | `src/background/dailyPurgeHandler.ts` | `:8` | `purgeExpiredDownloadRecords` の import |
 | 同上 | `:152-154` | VULN-004 コメント + `await purgeExpiredDownloadRecords();`（**purge の唯一の呼び出し元**） |
 | 同上 | `:163-165` | 全体を囲む `try/catch`。照合処理の例外はここで吸われる |
 | `src/background/localMarkdownExportCore.ts` | `:61` | `const safeDir = resolveSafeExportDir(exportPath);` |
-| 同上 | `:62-69` | `chrome.downloads.download({ url: dataUrl, filename: \`${safeDir}/${date}.md\`, saveAs: false, conflictAction: 'overwrite' })` — **ファイル名は決定論的** |
+| 同上 | `:62-69` | `chrome.downloads.download({ url: dataUrl, filename: \`${safeDir}/${date}.md\`, saveAs: false, conflictAction: 'overwrite' })` ― **ファイル名は決定論的** |
 | 同上 | `:71-73` | `if (typeof downloadId === 'number') await recordDownloadId(downloadId, date);` |
 | `src/background/__tests__/localExportRetention.test.ts` | `:47-52` | `vi.stubGlobal('chrome', …)`。`downloads` は `erase` と `removeFile` のみ（**`search` なし**） |
 | 同上 | `:142-158` | 29/30/31 日境界 + erase 期待値（回帰ガード） |
@@ -127,9 +127,9 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 
 ここが移行で唯一厄介な論点。選択肢は 3 つ:
 
-- **(a) 旧レコードを照合なし削除（現状維持）** — 露見が残る。非推奨。
-- **(b) 旧レコードを削除しない** — 安全側だが、**削除されないエントリが無期限に残る**（`chrome://downloads` に 200 件超の残骸が滞留する）。PBI 21 と同じ「cap で落とされないエントリ」型の課題を持ち込むことになる。
-- **(c) 旧レコードは startTime 照合で判定する** — スキーマ変更なしで照合経路を通せる。**推奨。** `filename` が無い場合でも `createdAt` と `startTime` の比較だけで「id が 30 日後に別のダウンロードに回ってきた」ケースは確実に弾ける。
+- **(a) 旧レコードを照合なし削除（現状維持）** ― 露見が残る。非推奨。
+- **(b) 旧レコードを削除しない** ― 安全側だが、**削除されないエントリが無期限に残る**（`chrome://downloads` に 200 件超の残骸が滞留する）。PBI 21 と同じ「cap で落とされないエントリ」型の課題を持ち込むことになる。
+- **(c) 旧レコードは startTime 照合で判定する** ― スキーマ変更なしで照合経路を通せる。**推奨。** `filename` が無い場合でも `createdAt` と `startTime` の比較だけで「id が 30 日後に別のダウンロードに回ってきた」ケースは確実に弾ける。
 
 (c) を採るなら、**「旧レコードを恒久的に削除不能にしない」こと**は受け入れ基準項目として残す（= 「旧フォーマットを読んでも照合経路を通ること」）。
 
@@ -181,7 +181,7 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 
 - `pbi/00-INDEX.md`
 - 同じ retention 領域の PBI 21（cap で落ちた未削除エントリ）と同じファイルを変更するため、実装順とファイル所有に注意
-- `pbi/2026-10-18-07-fix-buffer-key-retention-sweep-noop.md` — 同じ retention 領域（`local_export_YYYY-MM-DD` バッファキー回収）。`dailyPurgeHandler.ts` の sweep 列処理順を共有するため、**purge 順序の競合に注意**。
-- `pbi/2026-10-18-13-fix-fallback-quota-purge-order.md` — 「消える前に判定する」同種の安全側方針。書式と guard の言い回しを揃える。
-- `pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md` — 「verify before delete」の先例（移行前に照合してから削除）。本 PBI も同じ型で、rollback 方針の記述を合わせられる。
+- `pbi/2026-10-18-07-fix-buffer-key-retention-sweep-noop.md` ― 同じ retention 領域（`local_export_YYYY-MM-DD` バッファキー回収）。`dailyPurgeHandler.ts` の sweep 列処理順を共有するため、**purge 順序の競合に注意**。
+- `pbi/2026-10-18-13-fix-fallback-quota-purge-order.md` ― 「消える前に判定する」同種の安全側方針。書式と guard の言い回しを揃える。
+- `pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md` ― 「verify before delete」の先例（移行前に照合してから削除）。本 PBI も同じ型で、rollback 方針の記述を合わせられる。
 - `src/background/localMarkdownExportRetention.ts`（VULN-004 の本体）/ `dev-docs/ARCHITECTURE_MAP.md` / `dev-docs/TEST_RULE.md`（テスト追加前に必読）

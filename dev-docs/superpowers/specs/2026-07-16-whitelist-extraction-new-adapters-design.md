@@ -1,4 +1,4 @@
-# Domain Whitelist Extraction Mode — 新規アダプタ追加（はてなブックマーク・食べログ）
+# Domain Whitelist Extraction Mode ― 新規アダプタ追加（はてなブックマーク・食べログ）
 
 **Date:** 2026-07-16
 **Branch:** feat/ai-summary-cleansing

@@ -48,7 +48,7 @@ Scenario: throttle と watchDynamicContent は kernel の外から利用でき�
 ```bash
 rg -n "deadlineMs|refreshCachesIfStale|throttle|watchDynamicContent" src/content/contentKernel.ts
 ```
-:373-423（scheduling）、:396-411（refreshCachesIfStale）、:496-530（throttle — rAF 汎用、他消費者あり）、:549-610（watchDynamicContent — MutationObserver スタンドアロン）。
+:373-423（scheduling）、:396-411（refreshCachesIfStale）、:496-530（throttle ― rAF 汎用、他消費者あり）、:549-610（watchDynamicContent ― MutationObserver スタンドアロン）。
 
 ### 実装手順
 1. `deadlineTimer.ts` を新設: `class DeadlineTimer(deps: { scheduler, clock, getPageState, isE2ETest })` が scheduleNextCheck/stop/refreshCachesIfStale を所有
@@ -57,9 +57,9 @@ rg -n "deadlineMs|refreshCachesIfStale|throttle|watchDynamicContent" src/content
 4. watchDynamicContent → `content/watchDynamicContent.ts` へ移動し kernel の 1 行ラッパを削除（import 直接）
 
 ### 落とし穴
-- throttle は extractor 側でも使う可能性（コメント記載「shared with extractor for backward compat」）— 移動先で両方 import できる位置に
-- watchDynamicContent の debounce 500ms は SPA 対応（6.7.89 30-13）の挙動 — 変更禁止
-- E2E フック（__OW_TEST_STATE / data-ow-test-state）は checkVisitConditions 側 — DeadlineTimer 移動で壊さない
+- throttle は extractor 側でも使う可能性（コメント記載「shared with extractor for backward compat」）― 移動先で両方 import できる位置に
+- watchDynamicContent の debounce 500ms は SPA 対応（6.7.89 30-13）の挙動 ― 変更禁止
+- E2E フック（__OW_TEST_STATE / data-ow-test-state）は checkVisitConditions 側 ― DeadlineTimer 移動で壊さない
 
 ## Definition of Done
 - [x] 既存 content suite 406 tests 無修正で green

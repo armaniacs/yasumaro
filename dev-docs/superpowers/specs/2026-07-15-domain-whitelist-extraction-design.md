@@ -1,4 +1,4 @@
-# Domain Whitelist Extraction Mode — サイト別ホワイトリスト抽出
+# Domain Whitelist Extraction Mode ― サイト別ホワイトリスト抽出
 
 **Date:** 2026-07-15
 **Branch:** feat/ai-summary-cleansing
@@ -6,7 +6,7 @@
 
 ## Motivation
 
-Category A（WordPressテーマ）・Category B（News/EC/QA/Video）は「引き算（ブラックリスト）方式」——本文候補をスコアリングで見つけ、ノイズ要素を除去する——でノイズを削減してきた。
+Category A（WordPressテーマ）・Category B（News/EC/QA/Video）は「引き算（ブラックリスト）方式」――本文候補をスコアリングで見つけ、ノイズ要素を除去する――でノイズを削減してきた。
 
 しかし、以下のサイトは周辺ノイズ（外部相互リンク網・大量のインフィード広告・投票UI・関連リンク敷き詰め）のテキスト量が本文の7〜8割を占め、引き算では綺麗な本文が残らない:
 

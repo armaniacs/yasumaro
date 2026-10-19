@@ -89,7 +89,7 @@ MV3 offscreen ドキュメント内で以下を検証し、採用方式を決め
 
 - 各機能は Red → Green → Refactor。実装前にテストを書く
 - 単体: VFS 抽象（モック）・変換マッピング・診断ロジック・サニタイズ
-- 統合: offscreen ⇄ background のメッセージ往復、移行の冪等性（再実行で重複しない）
+- 統合: offscreen ⇔ background のメッセージ往復、移行の冪等性（再実行で重複しない）
 - フォールバック経路: OPFS 不可時に FallbackStorage へ落ちることを検証
 - Chrome Extension API の制約上、OPFS/Worker の最終確認は実ブラウザで手動検証
 

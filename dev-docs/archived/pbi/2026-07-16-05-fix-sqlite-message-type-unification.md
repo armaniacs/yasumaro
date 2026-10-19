@@ -1,4 +1,4 @@
-# PBI: SW↔offscreen 間 SQLite メッセージ型の単一ソース化
+# PBI: SW⇔offscreen 間 SQLite メッセージ型の単一ソース化
 
 ## ユーザーストーリー
 
@@ -11,17 +11,17 @@
 
 ## スコープ
 
-**対象**: SW↔offscreen 間（`src/background/sqliteClient.ts` ↔ `src/offscreen/offscreen.ts`）の1境界のみ。
+**対象**: SW⇔offscreen 間（`src/background/sqliteClient.ts` ⇔ `src/offscreen/offscreen.ts`）の1境界のみ。
 
-**明示的スコープ外**: offscreen↔Worker 間（`src/offscreen/offscreen.ts` ↔ `src/offscreen/opfsWorker.ts`、`Worker.postMessage` 経由）。理由は下記「既実装確認」参照。
+**明示的スコープ外**: offscreen⇔Worker 間（`src/offscreen/offscreen.ts` ⇔ `src/offscreen/opfsWorker.ts`、`Worker.postMessage` 経由）。理由は下記「既実装確認」参照。
 
 ## ビジネス価値
 
-- `SQLITE_*` メッセージ型を1箇所に定義し、SW↔offscreen 間のプロトコル不整合（typo による実行時エラー）を型チェックの段階で防ぐ
+- `SQLITE_*` メッセージ型を1箇所に定義し、SW⇔offscreen 間のプロトコル不整合（typo による実行時エラー）を型チェックの段階で防ぐ
 - 存在しないメッセージ型を送信するコードがコンパイルエラーになることで、機能追加時の安全性を高める
-- Offscreen/OPFS 層の SW↔offscreen メッセージング契約をドキュメント化し、知識グラフ上の孤立ノード（`sqliteClient.ts`）による影響範囲見落としを防ぐ
+- Offscreen/OPFS 層の SW⇔offscreen メッセージング契約をドキュメント化し、知識グラフ上の孤立ノード（`sqliteClient.ts`）による影響範囲見落としを防ぐ
 
-## 既実装確認（brainstormingで実施済み — 元PBIの想定より実態が複雑だった）
+## 既実装確認（brainstormingで実施済み ― 元PBIの想定より実態が複雑だった）
 
 ```bash
 # sqliteClient.ts は SQLITE_ プレフィックス付き文字列リテラルで送信
@@ -43,7 +43,7 @@ grep -n "case '" src/offscreen/opfsWorker.ts
 2. `offscreen.ts`: `SQLITE_XXX` を if-else チェーンで受信し、`sqliteEngineContext` 等のメソッドを呼ぶか、Worker へ委譲
 3. `opfsWorker.ts`（Web Worker）: `XXX`（`SQLITE_` プレフィックスなし）で `Worker.postMessage` を受信
 
-**なぜなぜ分析の結論**: 型が散在した根本原因は、機能追加のたびに「1機能=1メッセージ型をその場で追記」するのが毎回最も低リスクに見え続けたことで、SW↔offscreen と offscreen↔Worker という2つの通信境界が一度も一元管理されなかったこと。offscreen↔Worker は offscreen.ts 内に閉じた実装詳細であり SW 側は関知しないため、**型統一の価値が高いのは SW↔offscreen の1境界のみ**と判断する。offscreen↔Worker の統一は本PBIのスコープ外とし、必要であれば別PBIとして扱う。
+**なぜなぜ分析の結論**: 型が散在した根本原因は、機能追加のたびに「1機能=1メッセージ型をその場で追記」するのが毎回最も低リスクに見え続けたことで、SW⇔offscreen と offscreen⇔Worker という2つの通信境界が一度も一元管理されなかったこと。offscreen⇔Worker は offscreen.ts 内に閉じた実装詳細であり SW 側は関知しないため、**型統一の価値が高いのは SW⇔offscreen の1境界のみ**と判断する。offscreen⇔Worker の統一は本PBIのスコープ外とし、必要であれば別PBIとして扱う。
 
 ```bash
 # src/messaging/ ディレクトリは既存（RecordingResult, MaskedItem 等の discriminated union 定義済み）
@@ -56,7 +56,7 @@ ls src/messaging/
 ## BDD受け入れシナリオ
 
 ```gherkin
-Feature: SQLITE_* メッセージ型の単一ソース化（SW↔offscreen間）
+Feature: SQLITE_* メッセージ型の単一ソース化（SW⇔offscreen間）
 
   Scenario: SW と offscreen が同一のメッセージ型を参照する
     Given src/background/sqliteClient.ts が 'SQLITE_INSERT' を送信する
@@ -69,7 +69,7 @@ Feature: SQLITE_* メッセージ型の単一ソース化（SW↔offscreen間）
     When  offscreen.ts のメッセージディスパッチを確認する
     Then  default ケースで unknown type としてログに記録され、クラッシュしない
 
-  Scenario: offscreen↔Worker 間は本PBIのスコープ外である
+  Scenario: offscreen⇔Worker 間は本PBIのスコープ外である
     Given src/offscreen/opfsWorker.ts が SQLITE_ プレフィックスなしの型名で switch している
     When  本PBIの変更範囲を確認する
     Then  opfsWorker.ts のメッセージ型は変更されていない
@@ -79,17 +79,17 @@ Feature: SQLITE_* メッセージ型の単一ソース化（SW↔offscreen間）
 ```gherkin
 Feature: Offscreen/OPFS メッセージング契約の可視化
 
-  Scenario: SW↔offscreen の注入経路がドキュメントに記載されている
+  Scenario: SW⇔offscreen の注入経路がドキュメントに記載されている
     Given 知識グラフで sqliteClient.ts が孤立ノードとして検出されている
     When  docs/ に Offscreen/OPFS アーキテクチャ図を追記する
     Then  SW → sendMessage(SQLITE_*) → offscreen.ts → (Worker へ委譲 or 直接処理) の
           経路が図示されている
-    And   offscreen↔Worker 間は別チャネル（Worker.postMessage）であり
+    And   offscreen⇔Worker 間は別チャネル（Worker.postMessage）であり
           型定義が独立している旨が明記されている
 ```
 
 ## 受け入れ基準
-- [ ] `src/messaging/sqliteMessages.ts` に SW↔offscreen 間の SQLite メッセージ型が discriminated union として定義されている
+- [ ] `src/messaging/sqliteMessages.ts` に SW⇔offscreen 間の SQLite メッセージ型が discriminated union として定義されている
 - [ ] `sqliteClient.ts` が `src/messaging/sqliteMessages.ts` の型をimportし、文字列リテラル直書きを廃止している
 - [ ] `offscreen.ts` が同じ型をimportし、if-elseチェーンが型安全な形（switch + discriminated union、または型ガード関数）に置き換わっている
 - [ ] 存在しないメッセージ型を送信するコードが型チェックでエラーになることを確認する
@@ -100,7 +100,7 @@ Feature: Offscreen/OPFS メッセージング契約の可視化
 ## テスト戦略（t_wadaスタイル）
 
 ### E2Eテスト
-- 対象外（ロジックはSW↔offscreen間のメッセージパッシングであり、統合テストで十分にカバーできる）
+- 対象外（ロジックはSW⇔offscreen間のメッセージパッシングであり、統合テストで十分にカバーできる）
 
 ### 統合テスト
 - `sqliteClient.ts` が送信したメッセージを `offscreen.ts` の `handleOffscreenMessage` が正しくディスパッチすることを確認するテスト（既存の `offscreen.ts` 単体テストを拡張）
@@ -141,7 +141,7 @@ cat src/messaging/types.ts | head -30
 5. Offscreen/OPFS のメッセージング経路図（SW → offscreen → Worker の2チャネル、境界の違い）を `dev-docs/` 配下に追記する
 
 ### 落とし穴
-- `offscreen.ts` の一部の `SQLITE_*` ハンドラは Worker へ委譲せず offscreen.ts 内で直接処理している（`sqliteEngineContext` 呼び出し）。型定義を作る際、Worker委譲の有無に関わらず SW↔offscreen 間の型は同じ discriminated union に含めること
+- `offscreen.ts` の一部の `SQLITE_*` ハンドラは Worker へ委譲せず offscreen.ts 内で直接処理している（`sqliteEngineContext` 呼び出し）。型定義を作る際、Worker委譲の有無に関わらず SW⇔offscreen 間の型は同じ discriminated union に含めること
 - opfsWorker.ts 側のリネームや型統一を「ついでに」行わないこと。スコープ外と明記した理由（実装詳細・SW非関知）を無視した変更は後続PBIとの重複作業になる
 
 ## Definition of Done

@@ -171,7 +171,7 @@ Scenario: 複雑なパネルは影響を受けない
 1. アダプタが `id` / `category: 'static-form'` を正しく設定する
 2. `mount` が指定した init 関数を呼ぶ
 3. `refresh` 未指定なら `refresh` プロパティが**存在しない**
-   （`StaticFormPanel.refresh` は optional。空実装を作らない — PBI 2026-08-08-03 の決定）
+   （`StaticFormPanel.refresh` は optional。空実装を作らない ― PBI 2026-08-08-03 の決定）
 4. 非同期 init（`initTagsPanel`）と同期 init（`initContentSettings`）の両方が扱える
 5. `settings` を要求する init（`initCustomPromptManager`）が扱える
 
@@ -191,7 +191,7 @@ Scenario: 複雑なパネルは影響を受けない
 
 ## 見積もり
 
-🟢小（2pt目安）— 対象9ファイル・133行。テストが存在しないため回帰リスクは手動確認に依存する点に注意。
+🟢小（2pt目安）― 対象9ファイル・133行。テストが存在しないため回帰リスクは手動確認に依存する点に注意。
 
 ---
 
@@ -280,7 +280,7 @@ PBI 2026-08-08-03 で「`refresh` は optional。持たないパネルは宣言�
 `<div id="panel-tags">` と `data-panel="panel-tags"` に対応する。
 **表に移す際に id をタイプミスすると、そのパネルだけ無言で開かなくなる**
 （`NavigationRegistry.navigate()` が throw するが、
-`DashboardBootstrapper.wireSidebar` が catch している — 57行目）。
+`DashboardBootstrapper.wireSidebar` が catch している ― 57行目）。
 
 → **全パネルidが HTML に存在することを検証するテストを追加すると安全。**
 
@@ -355,5 +355,5 @@ id・data-panel の対応、`category`、`mount` の存在、`refresh` を持つ
 ## 関連
 
 - アーキテクチャレビュー 2026-08-09（候補04）
-- PBI 2026-08-08-03（Panel 契約の整理・`refresh` optional 化）— 決定を踏襲する
-- PBI 2026-08-08-09（dual bootstrap）— 対象が異なるため競合しない
+- PBI 2026-08-08-03（Panel 契約の整理・`refresh` optional 化）― 決定を踏襲する
+- PBI 2026-08-08-09（dual bootstrap）― 対象が異なるため競合しない

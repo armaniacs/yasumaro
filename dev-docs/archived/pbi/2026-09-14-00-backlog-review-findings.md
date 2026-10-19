@@ -32,12 +32,12 @@
 
 ## 検証で却下された指摘（参考記録）
 
-- LIKEインジェクション相当（`buildLikePattern`の無エスケープ）— 既存仕様であり今回のリファクタリングが生んだ経路ではないため却下
-- `chrome.runtime.onMessage`のsender未検証（popup.ts）— 受信側が常にストレージへ再問い合わせする設計のため状態のなりすましに使えず却下
-- `innerHTML`使用箇所（renderCompileOptions）— データ源がSQLite compile optionsのみで攻撃者到達不可のため却下
-- `dashboard.ts`のcontroller複数生成によるリスナーリーク — `initDashboard()`が複数回呼ばれる経路が実際には存在しないため却下
-- `planQueryMode`の直接テスト欠如 — 実際には`queryDispatchRegression.test.ts`に境界値テストが存在するため却下
-- `OpfsWorkerBackend`の`planQueryMode`直接呼び出し vs `spec.mode`経由の非対称性 — 両者とも同一関数を参照しており実害シナリオを提示できないため却下
+- LIKEインジェクション相当（`buildLikePattern`の無エスケープ）― 既存仕様であり今回のリファクタリングが生んだ経路ではないため却下
+- `chrome.runtime.onMessage`のsender未検証（popup.ts）― 受信側が常にストレージへ再問い合わせする設計のため状態のなりすましに使えず却下
+- `innerHTML`使用箇所（renderCompileOptions）― データ源がSQLite compile optionsのみで攻撃者到達不可のため却下
+- `dashboard.ts`のcontroller複数生成によるリスナーリーク ― `initDashboard()`が複数回呼ばれる経路が実際には存在しないため却下
+- `planQueryMode`の直接テスト欠如 ― 実際には`queryDispatchRegression.test.ts`に境界値テストが存在するため却下
+- `OpfsWorkerBackend`の`planQueryMode`直接呼び出し vs `spec.mode`経由の非対称性 ― 両者とも同一関数を参照しており実害シナリオを提示できないため却下
 
 ## 出典
 - `/adversarial-code-review`によるアーキテクチャ深化ラウンド15（PBI 01〜04, 2026-09-14実装）のレビュー結果

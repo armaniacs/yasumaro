@@ -1,7 +1,7 @@
-# PBI: ProviderRegistry 導入 — OpenAIProvider 5分岐のテーブル駆動化
+# PBI: ProviderRegistry 導入 ― OpenAIProvider 5分岐のテーブル駆動化
 
 ## 概要
-- 優先度: 3 (RICE 11.2 — Reach 7 × Impact 2 × Confidence 80% / Effort 1.0w)
+- 優先度: 3 (RICE 11.2 ― Reach 7 × Impact 2 × Confidence 80% / Effort 1.0w)
 - 種別: refactor
 - 見積もり: 2pt
 - Recommendation: Strong
@@ -56,7 +56,7 @@ Scenario: 型レベルで未定義プロバイダが検出される
 2 ストーリーポイント
 
 ## 技術的考慮事項
-- 配置: `src/background/ai/providerRegistry.ts` // @layer 0 or 1 — ProviderRegistry table
+- 配置: `src/background/ai/providerRegistry.ts` // @layer 0 or 1 ― ProviderRegistry table
 - 互換: `ProviderId` union (7種) は 0824a で導入済み、registry はそこから導出
 - deferred 02 との関係: 02 が StorageKeys facade を進めるが、registry は AiConfig facade の先行実装として位置づけ可能。02完了後は AiConfig.getModel(provider) に統合
 - リスク: OpenAIProvider の削除は影響範囲広いため、旧クラスは @deprecated shim として1スプリント残置も可

@@ -2,7 +2,7 @@
 
 ## 1. タイトル + 種別
 
-- **タイトル**: `maintenanceBatchHandler` の `purge_now` / `content_purge_now` ツイン統合 — 複製された 17 行のパージフローを共通 runner に集約する
+- **タイトル**: `maintenanceBatchHandler` の `purge_now` / `content_purge_now` ツイン統合 ― 複製された 17 行のパージフローを共通 runner に集約する
 - **種別**: refactor（挙動不変・重複排除のみ）
 - **見積もり**: 1 SP
 
@@ -33,8 +33,8 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:72-87` — `purge_now` ケース。`SQLITE_RETENTION_DAYS` / `SQLITE_MAX_RECORDS` を読み、`deps.purgeOldRecords(days, max)` を呼ぶ
-- `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:88-105` — `content_purge_now` ケース。`CONTENT_RETENTION_DAYS` / `CONTENT_MAX_RECORDS` を読み、`deps.purgeContent(days, max, includeStarred)` を呼ぶ
+- `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:72-87` ― `purge_now` ケース。`SQLITE_RETENTION_DAYS` / `SQLITE_MAX_RECORDS` を読み、`deps.purgeOldRecords(days, max)` を呼ぶ
+- `src/background/handlers/dashboardSqlite/maintenanceBatchHandler.ts:88-105` ― `content_purge_now` ケース。`CONTENT_RETENTION_DAYS` / `CONTENT_MAX_RECORDS` を読み、`deps.purgeContent(days, max, includeStarred)` を呼ぶ
 
 改善案: `runSettingsPurge(readKeys, purge)` を 1 本置く。null → skipped ガードは runner に移る。既存の `toFailure` 変換と応答 shape は現行どおり保持。挙動不変。
 
@@ -87,7 +87,7 @@ Then toFailure(result) による変換が現行どおり行われること
 
 ## 8. 見積もり
 
-**1 SP** — 1 ハンドラファイル内の重複排除のみ。共通 runner の抽出、ガード移動、2 ケースの差分（ストレージキーと deps 引数）を引数化するだけでロジック変更なし。影響範囲は `maintenanceBatchHandler.ts` 1 ファイル
+**1 SP** ― 1 ハンドラファイル内の重複排除のみ。共通 runner の抽出、ガード移動、2 ケースの差分（ストレージキーと deps 引数）を引数化するだけでロジック変更なし。影響範囲は `maintenanceBatchHandler.ts` 1 ファイル
 
 ## 9. DoD
 

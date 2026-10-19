@@ -67,7 +67,7 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 | ファイル:行 | 内容 |
 |---|---|
 | `src/background/service-worker.ts:264` | `chrome.notifications.onButtonClicked` 登録。sender も router trust tier も無い独自イベント |
-| `src/background/service-worker.ts:194` | `createNotificationHandlers({ record: (data) => recordingPipeline.record(data) })` — admission seam を注入していない配線 |
+| `src/background/service-worker.ts:194` | `createNotificationHandlers({ record: (data) => recordingPipeline.record(data) })` ― admission seam を注入していない配線 |
 | `src/background/handlers/notificationHandlers.ts:33-35` | `NotificationHandlersDeps` が `record` のみ。`admit` が無い |
 | `src/background/handlers/notificationHandlers.ts:87-95` | `claimRecoveryOwner('manual')` → `deps.record(buildRecordRequest('notification-confirm', ...))`。この間に同意ゲートが無い |
 | `src/background/handlers/notificationHandlers.ts:50` | クリック時に `chrome.notifications.clear` を無条件実行（撤回済みでも通知は消える） |
@@ -76,7 +76,7 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 | `src/background/recordRequestBuilder.ts:77` | `'notification-confirm'` ポリシー `force: true` |
 | `src/utils/recordingGateTable.ts:82` 付近 | `decidePrivacy` 等は `force` で即 allow（domainFilter / trust / privacyHeaders が無効化） |
 | `src/background/pipeline/RecordingOrchestrator.ts:129` | sink: `record()` が13ステップ pipeline を実行 |
-| `src/utils/pendingStorage.ts:92` | `PENDING_MAX_TTL_MS = 24h` — 撤回と記録の窓（第4シナリオの前提） |
+| `src/utils/pendingStorage.ts:92` | `PENDING_MAX_TTL_MS = 24h` ― 撤回と記録の窓（第4シナリオの前提） |
 | `src/background/compositionManifest.ts:229-239` | `recordingAdmission` シングルトン定義（`isRecordingAllowed: () => hasPrivacyConsent()`） |
 | `src/background/createBackgroundServices.ts:116` | コンテナが `recordingAdmission` を返す（`service-worker.ts:104` の `services` から参照可能） |
 

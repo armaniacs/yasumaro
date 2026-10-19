@@ -19,7 +19,7 @@
   - `src/background/pipeline/RecordingOrchestrator.ts:119-127`
   - `src/background/confirmTokenManager.ts:53-56`
   - `src/utils/logger/core.ts:104` 周辺
-- `src/background/dailyPurgeHandler.ts:38-43` — `toCalendarDate` が `src/utils/localDate.ts:40-53` とバイト等価で重複。
+- `src/background/dailyPurgeHandler.ts:38-43` ― `toCalendarDate` が `src/utils/localDate.ts:40-53` とバイト等価で重複。
 
 ## BDD受け入れシナリオ
 
@@ -79,7 +79,7 @@ Scenario: toCalendarDate の重複は utils への委譲で解消される
 
 ## 実装記録
 
-- 新設: `src/utils/generateId.ts` — randomUUID 優先、フォールバックは hex-32（16 バイトの 16 進 32 文字）に統一。旧 offlineNetworkQueue の hex-32 フォールバックと logger core の Uint32Array base36 分岐を解消（決定事項: フォールバック形式は hex-32 に統一）。`hasSecureRandom()` を export し、confirmTokenManager 側の Math.random 由来の予測可能フォールバックは保持しない
+- 新設: `src/utils/generateId.ts` ― randomUUID 優先、フォールバックは hex-32（16 バイトの 16 進 32 文字）に統一。旧 offlineNetworkQueue の hex-32 フォールバックと logger core の Uint32Array base36 分岐を解消（決定事項: フォールバック形式は hex-32 に統一）。`hasSecureRandom()` を export し、confirmTokenManager 側の Math.random 由来の予測可能フォールバックは保持しない
 - 統一先（6 src ファイル）: `src/background/offlineNetworkQueue.ts`、`src/background/pipeline/RecordingOrchestrator.ts`、`src/background/confirmTokenManager.ts`、`src/utils/logger/core.ts`（上記 4 か所が generateId() に統一）、`src/background/dailyPurgeHandler.ts`（toCalendarDate を `utils/localDate.ts` の `formatLocalDate` へ委譲）、`src/utils/generateId.ts`
 - テスト（6 ファイル）: `src/utils/__tests__/generateId.test.ts` 新設、`src/background/__tests__/offlineNetworkQueue-id.test.ts` 新設（共有 ID ソース pin）、`confirmTokenManager.test.ts`・`RecordingPipeline.test.ts`・`orchestrator-surface.test.ts`・`core-branch.test.ts` 更新（randomUUID 伝播と統一フォールバックの pin）
 - follow-up（範囲外・未実施）: `src/background/feedbackQueue.ts:36-40` に Math.random フォールバックが残存。別 PBI 化の余地あり

@@ -92,7 +92,7 @@ STAGED 状態（public コピーなし・publicAssets なし・パネル未配�
 
 ### 実装手順
 
-1. `npm run build:wasm` で `public/wasm/tag_cooccur_bg.wasm` を生成・コミットする（build:wasm は tag-cooccur の public コピーを行わないため手動 `cp` が要る点に注意 — 配線時に build:wasm への public コピー追加も検討）
+1. `npm run build:wasm` で `public/wasm/tag_cooccur_bg.wasm` を生成・コミットする（build:wasm は tag-cooccur の public コピーを行わないため手動 `cp` が要る点に注意 ― 配線時に build:wasm への public コピー追加も検討）
 2. `wxt.config.ts` の `build:publicAssets` に dist 配布エントリを追加する（sentence-dedup 用の NOTE コメントが再開場所を示す）
 3. `tagClusterPanel.ts` の2呼び出しをハイブリッド版に置換し `await` する（`load()` は async 済み）
 4. `src/wasm/tag-cooccur/index.ts` の STAGED 注記を「配布中」に更新する
@@ -100,7 +100,7 @@ STAGED 状態（public コピーなし・publicAssets なし・パネル未配�
 
 ### 落とし穴
 
-- `new URL('./tag_cooccur_bg.wasm', import.meta.url)` への書き換えは厳禁（Vite が `data:` URI にインライン化し CSP で死ぬ — postprocess-wasm-glue.mjs が存在する理由）
+- `new URL('./tag_cooccur_bg.wasm', import.meta.url)` への書き換えは厳禁（Vite が `data:` URI にインライン化し CSP で死ぬ ― postprocess-wasm-glue.mjs が存在する理由）
 - public コピーと src コピーの二重管理: CI の `cmp` ゲート（PBI-22 実施後は自動検出）が片側コミットを検出する
 - `limitToTopNodes` は移植対象外（TS のまま残す）
 

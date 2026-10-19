@@ -1,4 +1,4 @@
-# PBI: データ整合性 — dual-write除去・settingsStore重複抽出・TOCTOU文書化
+# PBI: データ整合性 ― dual-write除去・settingsStore重複抽出・TOCTOU文書化
 
 元指摘: Checking Team (Medium: Data Integrity Expert, Refactoring Evangelist)
 

@@ -1,4 +1,4 @@
-# PBI: SqliteGateway fidelity 向上 — Offscreen / Dashboard の transport 分割と InMemory fidelity drift 解消
+# PBI: SqliteGateway fidelity 向上 ― Offscreen / Dashboard の transport 分割と InMemory fidelity drift 解消
 
 ## ユーザーストーリー
 SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 1クラスに同居する Offscreen hop と Dashboard hop の2語彙と `InMemoryTransport` の fidelity drift を解消したい、なぜなら現在は `query/mutate/maintain/status` の13 overloads と Dashboard confirm-token dance が1クラスに混在し、`SqliteClient` は 87l の pass-through shim で、`InMemoryTransport` が `buildExtraWhereSql` を再実装しつつ FTS は `substringIncludes` に short-circuit し `ORDER BY` が `(a[key] ?? 0)` で string 列の ordering を壊しているがテストが numeric `created_at` のみで drift を検出できないから
@@ -47,9 +47,9 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 - [x] `src/background/sqliteGateway.ts` の 390l 1クラスが `OffscreenGateway` と `DashboardGateway` に分割され、各 gateway が自身の hop（Offscreen / Dashboard）の語彙のみを持つ
 - [x] `buildExtraWhereSql` と FTS tokenizer が共有 module として抽出され、`InMemoryTransport` が再実装ではなく委譲している
 - [x] `InMemoryTransport` の `ORDER BY` が string 列でも正しくソートされる（`(a[key] ?? 0)` の数値 fallback が削除されている）
-- [x] `src/background/sqliteClient.ts` 87l shim が削除され、gateway の singleton に一本化されている — `grep -rn "from.*sqliteClient" src --include="*.ts"` == 0 件。36 callers を全て `offscreenGateway.js` に移行し `sqliteClient.ts` を物理削除（07b commit: 8f1d956d）
-- [x] Contract test が両 transport で同一 suite を実行し green — `src/background/__tests__/inMemoryTransport.test.ts` 14 tests green (うち PBI 07 追加の 6 contract tests を含む)
-- [x] `npm run validate` green — `npm run type-check` green / `inMemoryTransport.test.ts` 14 passed
+- [x] `src/background/sqliteClient.ts` 87l shim が削除され、gateway の singleton に一本化されている ― `grep -rn "from.*sqliteClient" src --include="*.ts"` == 0 件。36 callers を全て `offscreenGateway.js` に移行し `sqliteClient.ts` を物理削除（07b commit: 8f1d956d）
+- [x] Contract test が両 transport で同一 suite を実行し green ― `src/background/__tests__/inMemoryTransport.test.ts` 14 tests green (うち PBI 07 追加の 6 contract tests を含む)
+- [x] `npm run validate` green ― `npm run type-check` green / `inMemoryTransport.test.ts` 14 passed
 
 ## テスト戦略
 - 単体: `buildExtraWhereSql` の共有 builder が全 filter（domain / starred / date / FTS）の WHERE 生成を正しく行うことを unit test
@@ -62,8 +62,8 @@ SQLite アクセスを保守する開発者として、`SqliteGateway` の 390l 
 2 pt（要チームでの見積もり）
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする — 5シナリオ中 5シナリオ green: (1) Offscreen/Dashboard 分割 (2) InMemory が共有 builder に委譲 (3) ORDER BY string 列 (4) Contract test 6 tests green (5) SqliteClient shim 物理削除完了
-- [x] `SqliteGateway` 390l 1クラスが分割され `SqliteClient` shim が削除されている（`grep` で確認） — `grep -r "class SqliteGateway" src/` == 0、`grep -rn "from.*sqliteClient" src --include="*.ts"` == 0。`offscreenGateway.ts`（131l）+ `dashboardGateway.ts`（67l）に分割、`sqliteGateway.ts` は facade のみ、`sqliteClient.ts` は物理削除済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― 5シナリオ中 5シナリオ green: (1) Offscreen/Dashboard 分割 (2) InMemory が共有 builder に委譲 (3) ORDER BY string 列 (4) Contract test 6 tests green (5) SqliteClient shim 物理削除完了
+- [x] `SqliteGateway` 390l 1クラスが分割され `SqliteClient` shim が削除されている（`grep` で確認） ― `grep -r "class SqliteGateway" src/` == 0、`grep -rn "from.*sqliteClient" src --include="*.ts"` == 0。`offscreenGateway.ts`（131l）+ `dashboardGateway.ts`（67l）に分割、`sqliteGateway.ts` は facade のみ、`sqliteClient.ts` は物理削除済み
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み（`dev-docs/DESIGN_SPECIFICATIONS.md` §5.4 SqliteGateway 節を分割前提に更新）
 - [x] `npm run validate` green

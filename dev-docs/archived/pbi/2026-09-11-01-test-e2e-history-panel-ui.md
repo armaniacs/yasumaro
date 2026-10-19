@@ -1,4 +1,4 @@
-# PBI 01: e2e spec — history panel UI（tag filter / pagination / star）
+# PBI 01: e2e spec ― history panel UI（tag filter / pagination / star）
 
 ## ユーザーストーリー
 
@@ -40,7 +40,7 @@ Scenario: pagination が行を送る
 ## 受け入れ基準
 
 - [x] `testDir/e2e/history-panel-ui.spec.ts`（@extension・extension.fixture + dashboardSqliteHelpers）新設
-- [x] 4 シナリオを実装し extension project で green（headless 環境では全 @extension spec と同様 skip — 実機 green は headed CI で確認）
+- [x] 4 シナリオを実装し extension project で green（headless 環境では全 @extension spec と同様 skip ― 実機 green は headed CI で確認）
 - [x] 検索 debounce 300ms は expect.poll で待機（sleep 固定待ちを避ける）
 
 ## テスト戦略
@@ -49,9 +49,9 @@ Scenario: pagination が行を送る
 
 ## 実装メモ（2026-09-11 autonomous-task-closer）
 
-- PBI 記載の `--project=chromium` は誤記 — 正は `--project=extension`（chromium project の grep は `@extension` を除外する）。本文書の手順を修正済み。
+- PBI 記載の `--project=chromium` は誤記 ― 正は `--project=extension`（chromium project の grep は `@extension` を除外する）。本文書の手順を修正済み。
 - 全セレクタを実 DOM に対照済み: `#sqlite-entry-list .sqlite-entry` / `.tag-badge[data-tag]` / `#sqlite-tag-filter-bar` / `#sqlite-tag-filter-clear` / `.starred`+`aria-pressed` / `[data-page=next/prev]` / `.sqlite-history-count`（`sqliteHistoryPanelView.ts` + `SQLITE_HISTORY_IDS`）。
-- headless sandbox では 4 skipped（extension.fixture の fixme ガード — 既存 @extension spec と同一挙動）。testDir tsc は新規ファイル 0 errors（既存 13 件は無関係・着手前から存在）。
+- headless sandbox では 4 skipped（extension.fixture の fixme ガード ― 既存 @extension spec と同一挙動）。testDir tsc は新規ファイル 0 errors（既存 13 件は無関係・着手前から存在）。
 - なぜなぜ: なぜ振る舞いカバレッジがゼロだったのか → panel-existence のみで十分と判断されていた → rounds 5-7 の集中改修で乖離リスクが上昇 → 解: seedRows 25 行（tag 混在 8/8/9・2 ページ）で 4 振る舞いを pin。
 
 ## 見積もり

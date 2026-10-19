@@ -85,7 +85,7 @@ maskSensitiveData(data, 'partial'); // 部分マスク（ログ出力用）
 
 The implementation (`src/utils/sensitiveDataMask.ts`) classifies sensitive fields into two tiers.
 
-#### Level 1 (Secrets) — fully masked
+#### Level 1 (Secrets) ― fully masked
 
 API keys, tokens, passwords, and similar values. Fully masked on output with no residual value.
 
@@ -97,7 +97,7 @@ API keys, tokens, passwords, and similar values. Fully masked on output with no 
 - Client secrets (`client_secret`, `clientSecret`)
 - Internal signing/authentication secrets (`master_password_hash`, `hmac_secret`)
 
-#### Level 2 (User identifiers) — partially masked
+#### Level 2 (User identifiers) ― partially masked
 
 User-identifying information. Partially masked on output, keeping part of the value (e.g., email addresses become `u***@example.com`).
 

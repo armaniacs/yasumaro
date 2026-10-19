@@ -91,7 +91,7 @@ Scenario: トリガー未発火時は現状を維持する
 
 ## 見積もり
 
-2 SP（トリガー発火後の実施分。難易度 🟡中 — 本体の型エラーは実測 0 だが、lint パイプラインと typescript-eslint 新版の組合せ確認が必要）
+2 SP（トリガー発火後の実施分。難易度 🟡中 ― 本体の型エラーは実測 0 だが、lint パイプラインと typescript-eslint 新版の組合せ確認が必要）
 
 ## DoD
 
@@ -100,5 +100,5 @@ Scenario: トリガー未発火時は現状を維持する
 
 ## 参考
 
-- `docs/DEPENDINGS.md` — 依存棚卸しと未反映理由の記録
+- `docs/DEPENDINGS.md` ― 依存棚卸しと未反映理由の記録
 - 同型の監視 PBI: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（上流リリース待ちのトリガー型 PBI の先行例）

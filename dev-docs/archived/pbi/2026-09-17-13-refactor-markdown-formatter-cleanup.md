@@ -1,4 +1,4 @@
-# PBI: markdownFormatter の表面清掃 — 死んだ export 削除 + 形式明示命名
+# PBI: markdownFormatter の表面清掃 ― 死んだ export 削除 + 形式明示命名
 
 優先度: 順位 3 / 4（RICE: 6.0 = Reach 6 / Impact 0.5 / Confidence 1.0 / Effort 0.5 pt。全候補5件中4位・1位は台帳清掃）
 backlog: [2026-09-17-00-backlog-arch-review-0917b.md](2026-09-17-00-backlog-arch-review-0917b.md)（台帳）
@@ -12,9 +12,9 @@ backlog: [2026-09-17-00-backlog-arch-review-0917b.md](2026-09-17-00-backlog-arch
 ## 背景（現状と課題）
 `src/utils/markdownFormatter.ts` はサニタイズ列の SSOT であり、実装済み PBI（archived 2026-09-17-04）の SSOT 統合は完了している。残っているのは表面の清掃である。該当箇所はいずれも実在を確認済みである（以下、行番号ではなく関数名と概略位置で示す）。
 
-1. `formatEntriesToGenericMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。heading 形式を `---` で連結する） — 本番呼び出し元ゼロである。読み取りで確認した限り、参照は `src/utils/__tests__/markdownFormatter.test.ts` のテストのみであり、本番コードからの参照はない。SSOT 統合後に利用者が消えた死んだ export である。
-2. `formatEntryToMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。heading 形式1件を生成する。`src/utils/copyMarkdownButton.ts` のクリックハンドラ付近から使用されている） — 名前からは heading 形式であることが分からない。
-3. `formatEntriesToMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。obsidianList 形式の連結を生成する。`src/background/handlers/dashboardSqlite/` 配下の `deps.ts` の import・注入経由で append 系ハンドラから使用され、`src/dashboard/obsidianFormatter.ts` が re-export している） — 名前からは obsidianList 形式であることが分からず、上記 2 と単複の違いしかない。
+1. `formatEntriesToGenericMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。heading 形式を `---` で連結する） ― 本番呼び出し元ゼロである。読み取りで確認した限り、参照は `src/utils/__tests__/markdownFormatter.test.ts` のテストのみであり、本番コードからの参照はない。SSOT 統合後に利用者が消えた死んだ export である。
+2. `formatEntryToMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。heading 形式1件を生成する。`src/utils/copyMarkdownButton.ts` のクリックハンドラ付近から使用されている） ― 名前からは heading 形式であることが分からない。
+3. `formatEntriesToMarkdown`（`src/utils/markdownFormatter.ts` 内の公開関数。obsidianList 形式の連結を生成する。`src/background/handlers/dashboardSqlite/` 配下の `deps.ts` の import・注入経由で append 系ハンドラから使用され、`src/dashboard/obsidianFormatter.ts` が re-export している） ― 名前からは obsidianList 形式であることが分からず、上記 2 と単複の違いしかない。
 
 影響: 「Generic」という名前の死んだ関数が残っていることで、どれが現役の形式か判断しづらい。新規の呼び出し元が死んだ関数を掴む、あるいは逆に必要な関数を見つけられない恐れがある。ただし本 PBI は挙動変更を含まない清掃であり、サニタイズ列・出力内容には一切触れない。
 

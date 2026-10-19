@@ -1,4 +1,4 @@
-# PBI: 合成ルートの二重化解消 — service-worker.ts を thin root に
+# PBI: 合成ルートの二重化解消 ― service-worker.ts を thin root に
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -22,13 +22,13 @@
 
 1. **`sessionAlarmService` を manifest に追加**: `key: 'sessionAlarmService'`
 2. **`deferredMigrationRunner` を manifest に追加**: `key: 'deferredMigrationRunner'`
-3. **`alarmRegistry` を manifest に追加**: `key: 'alarmRegistry'` — deps に sessionAlarmService / settingsReader / reviewSummaryGenerator を注入
+3. **`alarmRegistry` を manifest に追加**: `key: 'alarmRegistry'` ― deps に sessionAlarmService / settingsReader / reviewSummaryGenerator を注入
 4. **service-worker.ts を thin root に**: init() は `createBackgroundServices()` + `alarmRegistry.installAll()` + Chrome event listener 登録のみ
 5. **Firefox 分岐は service-worker.ts に残す**（ビルド時条件分岐は DI の関心事ではない）
 
 ### 触ってはいけないもの
 
-- handler export 関数群（`handleValidVisit` 等 — 2600行のテストが依存）
+- handler export 関数群（`handleValidVisit` 等 ― 2600行のテストが依存）
 - `createBackgroundServices` の返却型（BackgroundServicesComposition）
 - Chrome event listener 登録の構造（SW root の責務）
 

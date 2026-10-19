@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 grep で確認済み:
-- `package.json:85` — `"uuid": ">=11.1.1"`（`overrides` セクション内）
+- `package.json:85` ― `"uuid": ">=11.1.1"`（`overrides` セクション内）
 - レビュー指摘L10とL16は同一指摘の重複記載（親レポート `findings-detail.md` では両方とも「uuid override が緩すぎる」で対処案も同一の `"^11.1.1"`）。本PBIで一括対応する
 
 ```bash

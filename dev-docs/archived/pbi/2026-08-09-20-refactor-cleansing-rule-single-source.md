@@ -75,10 +75,10 @@ PBI 2026-08-09-18 で `CLEANSING_RULES`（32行）を新設し、**ルールの�
 （`settingsStore.ts:253`）ので、dashboard 側は常に定義済みの値を受け取る。
 
 #### なぜ4: では他の3つはいつ読まれるのか
-- `contentExtractor:91` の分割代入 — 呼び出し側がキーを省略したとき
-- `rules.ts` の `defaultEnabled` — `isRuleEnabled()` が `typeof value === 'boolean'` で
+- `contentExtractor:91` の分割代入 ― 呼び出し側がキーを省略したとき
+- `rules.ts` の `defaultEnabled` ― `isRuleEnabled()` が `typeof value === 'boolean'` で
   false を返したとき（＝キー未指定）
-- `pageState.ts` — **content script が `chrome.storage.local.get(['settings'])` を
+- `pageState.ts` ― **content script が `chrome.storage.local.get(['settings'])` を
   直接読んでおり（`extractor.ts:174`）、`DEFAULT_SETTINGS` のマージを通らない。**
   該当キーが storage に無ければ `pageState.ts` の既定値がそのまま使われる。
 
@@ -94,8 +94,8 @@ PBI 2026-08-09-18 で `CLEANSING_RULES`（32行）を新設し、**ルールの�
 **`defaults.ts` の `true` は誤りではない。** マイグレーションと対になっている。
 
 `src/utils/migration.ts`:
-- `migrateJpLayoutDefault()` (221行) — 既存ユーザーには `jp_layout: false` を明示的に書き込む
-- `migrateCategoryBDefault()` (264行) — 既存ユーザーには Category B 4件に `false` を書き込む
+- `migrateJpLayoutDefault()` (221行) ― 既存ユーザーには `jp_layout: false` を明示的に書き込む
+- `migrateCategoryBDefault()` (264行) ― 既存ユーザーには Category B 4件に `false` を書き込む
 
 つまり設計意図は「**新規ユーザーは true、既存ユーザーは false**」であり、
 `defaults.ts` の `true` は新規ユーザー向けの正しい値。
@@ -223,14 +223,14 @@ Scenario: 既定値の不一致が検出される
 
 ## 見積もり
 
-🔴大（5pt目安）— 10ファイル・約280行に影響。ただし段階分割可能。
+🔴大（5pt目安）― 10ファイル・約280行に影響。ただし段階分割可能。
 
 ---
 
 ## 技術的考慮事項
 
 ### 依存関係
-- **前提**: PBI 2026-08-09-18（`CLEANSING_RULES` 新設）が完了済み — 済
+- **前提**: PBI 2026-08-09-18（`CLEANSING_RULES` 新設）が完了済み ― 済
 - 他PBIとの競合なし
 
 ### テスタビリティ
@@ -308,7 +308,7 @@ Step 2〜7 に沿って実施。実装順にコミットした:
 3. `content/extractor.ts` の `booleanKeys`（46行）を導出に置換
 4. `content/pageState.ts` の `DEFAULT_CLEANSING_CONFIG`（32行）を導出に置換
 5. `contentExtractor/index.ts` の37名分割代入＋3箇所の32行転記＋32件転記（計106行超）を解消
-6. `dashboard/settings/aiSummaryCleansingSettingsV2.ts` — **計画は3箇所を想定していたが実際は5箇所**
+6. `dashboard/settings/aiSummaryCleansingSettingsV2.ts` ― **計画は3箇所を想定していたが実際は5箇所**
    （get/save/apply/UI取得に加え、`updateAiSummaryCleansingCheckboxStates` の disable 切替と
    `setupAiSummaryCleansingEventListeners` のイベント登録用ID配列も同型の32行重複だった）
 
@@ -346,7 +346,7 @@ Step 2〜7 に沿って実施。実装順にコミットした:
 - `src/content/__tests__/pageState.test.ts` に `DEFAULT_CLEANSING_CONFIG` の完全性テストを追加
   （`as unknown as CleansingConfig` という型アサーションを使ったため、実行時保証が必要だった）
 - `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2-ruleDerivation.test.ts`（新規）
-  — 32ルールすべての HTML id が実際の `entrypoints/options/index.html` に存在することを検証、
+  ― 32ルールすべての HTML id が実際の `entrypoints/options/index.html` に存在することを検証、
   および get/apply/read/disable の往復が全ルールで正しいことを検証
 
 ### 検証結果
@@ -372,5 +372,5 @@ Step 2〜7 に沿って実施。実装順にコミットした:
 ## 関連
 
 - アーキテクチャレビュー 2026-08-09（候補01）
-- 先行PBI: 2026-08-09-18（クレンジングルール表の新設）— **本PBIの前提**
+- 先行PBI: 2026-08-09-18（クレンジングルール表の新設）― **本PBIの前提**
 - `src/utils/migration.ts` の3マイグレーション（設計意図の根拠）

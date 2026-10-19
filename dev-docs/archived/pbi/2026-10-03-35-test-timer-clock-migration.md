@@ -87,7 +87,7 @@ Scenario: 移行しない場合は理由を文書化する
 
 ### 検証（統合ゲート実測）
 
-- `npx tsc --noEmit` 0 errors / `npm run lint` 0 errors・0 warnings（no-greedy-fake-timers 119 → 0）/ `npm test` 1024 files passed | 1 skipped・15611 tests passed | 21 skipped / `npm run validate` exit 0（type-check:test baseline 469 ≤ pin 474）。
+- `npx tsc --noEmit` 0 errors / `npm run lint` 0 errors・0 warnings（no-greedy-fake-timers 119 → 0）/ `npm test` 1024 files passed | 1 skipped・15611 tests passed | 21 skipped / `npm run validate` exit 0（type-check:test baseline 469 ≦ pin 474）。
 - repeats 検証: PBI 背景で挙げられた移行対象（`testDir/dashboardGateway-transport`・`withRuntimeTimeout`・`regenerateSummaryGateway`・`settingsUiHelper`）を `--repeats=20` で 27 tests 全 run green（所要 ~1s・実時間待ちなし。production タイマーが useTimerClock 経由で駆動されている実測）。
 
 ### 後続候補

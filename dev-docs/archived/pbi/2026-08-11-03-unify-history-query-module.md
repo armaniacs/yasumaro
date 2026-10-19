@@ -2,7 +2,7 @@
 
 ## 実装状況
 
-**完了** — 2026-08-11。SQLite history panelへ統一query moduleを適用し、最新row限定enrichmentと既存tag fallbackを実装済み。
+**完了** ― 2026-08-11。SQLite history panelへ統一query moduleを適用し、最新row限定enrichmentと既存tag fallbackを実装済み。
 
 ## 親PBI
 

@@ -1,4 +1,4 @@
-# PBI: Copy-Markdown ボタンの dashboard ↔ popup 重複を factory に畳む
+# PBI: Copy-Markdown ボタンの dashboard ⇔ popup 重複を factory に畳む
 
 ## ユーザーストーリー
 clipboard 経由の entry 保存体験を保守する開発者として、entry → markdown 変換 → clipboard コピー → ✓/✗ 2 秒表示 → aria-label 更新という同一 4 ステップのボタン組み立てが dashboard と popup の 2 実装で重複しているのを 1 つの factory（深いモジュール）に畳みたい、なぜならコピー失敗時の表示・タイムアウト値・aria 更新の仕様変更が 2 箇所の同時更新になり、seam が存在しないため「clipboard ボタンの振る舞い」を 1 箇所で検証できないから
@@ -12,9 +12,9 @@ clipboard 経由の entry 保存体験を保守する開発者として、entry 
 | 疑問 | 原因 → 示唆 → 解 |
 |------|------------------|
 | なぜ 2 実装が重複したのか | dashboard（PBI 2026-09-05-14 由来）と popup（旧来）が別タイミングで同じ UX を実装し、共有 factory を作る seam が一度も設計されなかった |
-| なぜ seam がないのか | 共通依存（`formatEntryToMarkdown` + `copyTextToClipboard`）は utils にあるが、ボタン組み立て（成功表示・復帰タイマー・aria）は呼び出し側に散在 — locality 欠如 |
+| なぜ seam がないのか | 共通依存（`formatEntryToMarkdown` + `copyTextToClipboard`）は utils にあるが、ボタン組み立て（成功表示・復帰タイマー・aria）は呼び出し側に散在 ― locality 欠如 |
 | なぜ畳むべきか | deletion test で合格: factory を削除すると try/catch + setTimeout + aria 更新の定型約 30 行 ×2 が戻る = 本体の稼ぎがある |
-| なぜ今か | 2026-09-07 round 2 診断で「dashboard↔popup 重複」として指摘。PBI 23（sqliteHistoryPanel 描画統合）と PBI 24（popup StatusStore）が同じファイル群を触るため、**先に小さな抽出を着地させておくと後続 2 PBI の競合面が減る** |
+| なぜ今か | 2026-09-07 round 2 診断で「dashboard⇔popup 重複」として指摘。PBI 23（sqliteHistoryPanel 描画統合）と PBI 24（popup StatusStore）が同じファイル群を触るため、**先に小さな抽出を着地させておくと後続 2 PBI の競合面が減る** |
 | 解の粒度 | `createCopyMarkdownButton(entry, { labelKeys, timeoutMs? })` factory を `src/utils/` に置き、dashboard は `📋` ボタン、popup は `Copy Markdown` を引数差分として生成 |
 
 ## BDD受け入れシナリオ
@@ -43,7 +43,7 @@ clipboard 経由の entry 保存体験を保守する開発者として、entry 
 - [x] `npm run type-check` / `npm run lint` / dashboard + popup 関連テストが green
 
 ## テスト戦略
-- 単体: factory の新規テスト（`src/utils/__tests__/copyMarkdownButton.test.ts`）— 成功・失敗・タイマー復帰・aria 更新
+- 単体: factory の新規テスト（`src/utils/__tests__/copyMarkdownButton.test.ts`）― 成功・失敗・タイマー復帰・aria 更新
 - 回帰: 既存の dashboard sqliteHistoryPanel テストと popup recordSession テストが無修正で green（import 経路変更のみ許容）
 - 非対象: クリップボード API 自体のモック方式変更、markdown 形式の変更
 

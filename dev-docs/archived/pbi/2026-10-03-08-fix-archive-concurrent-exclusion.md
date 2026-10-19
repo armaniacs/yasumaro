@@ -9,7 +9,7 @@
 - 順位: 08/15
 - RICE: 3.6（R3 / I2 / C0.9 / E1.5）
 - 根拠: restore 中の誤ファイル preview/open/stage というデータ整合の実害（R3・I2）。file input をスコープへ足す + confirm-dialog 経路の構造修正（C0.9・E1.5）
-- 依存: rank-05（onError）PBI の完了後に着手 — `panelAction.ts` 共有の可能性
+- 依存: rank-05（onError）PBI の完了後に着手 ― `panelAction.ts` 共有の可能性
 
 ## 現状（証拠）
 
@@ -68,9 +68,9 @@ Scenario: confirm dialog 中もボタンが二重発火しない
 
 ## 実装記録（2026-10-03）
 
-- 裁定: 両方の防御を採用 — `restoreFileInput` を busy スコープ（controls）へ含め、かつ `runPanelAction` に `inFlightControls`（WeakSet）guard を導入して共有 control の二重開始を構造的に拒否
-- `src/dashboard/panels/panelAction.ts` — `buttons` 型を `HTMLInputElement` へ拡張（file input を格納可能に）、`inFlightControls` WeakSet で in-flight 中の共有 control を検出して return。finally は自分の control のみ restore（他実行を壊さない）
-- `src/dashboard/panels/diagnostic/archivePanel.ts` — `restoreFileInput` を controls に追加、staging name をローカル変数化（await 中の再 pick による共有クロージャ上書きを除去し、自分の名前で preview/open/stage）、`createWritable` を try 内へ移動（reject を abort 経路へ）、sessionClose の confirm dialog を run 内へ移動（dialog 中も controls disabled、キャンセルは `abortPanelAction`）
-- `src/dashboard/panels/diagnostic/diagnosticsActions.ts` — migrate/cleanup の confirm dialog を run 内へ移動（`abortPanelAction` でキャンセル中断）。purge（`archivePanel.ts:161`）も同型で run 内 + `abortPanelAction`
+- 裁定: 両方の防御を採用 ― `restoreFileInput` を busy スコープ（controls）へ含め、かつ `runPanelAction` に `inFlightControls`（WeakSet）guard を導入して共有 control の二重開始を構造的に拒否
+- `src/dashboard/panels/panelAction.ts` ― `buttons` 型を `HTMLInputElement` へ拡張（file input を格納可能に）、`inFlightControls` WeakSet で in-flight 中の共有 control を検出して return。finally は自分の control のみ restore（他実行を壊さない）
+- `src/dashboard/panels/diagnostic/archivePanel.ts` ― `restoreFileInput` を controls に追加、staging name をローカル変数化（await 中の再 pick による共有クロージャ上書きを除去し、自分の名前で preview/open/stage）、`createWritable` を try 内へ移動（reject を abort 経路へ）、sessionClose の confirm dialog を run 内へ移動（dialog 中も controls disabled、キャンセルは `abortPanelAction`）
+- `src/dashboard/panels/diagnostic/diagnosticsActions.ts` ― migrate/cleanup の confirm dialog を run 内へ移動（`abortPanelAction` でキャンセル中断）。purge（`archivePanel.ts:161`）も同型で run 内 + `abortPanelAction`
 - テスト: `panelAction.test.ts`（二重開始拒否 pin）、`archivePanel.test.ts`（restore 経路の file input 再操作・staging 分離）、`diagnosticsActions.test.ts`（dialog 経路 busy 状態）を更新・追加
 - 検証: tsc 0 エラー・lint 0 エラー・test 15,476 pass・validate exit 0・当該 53 tests green・repeats=20

@@ -42,13 +42,13 @@ Scenario: カタログ lookup の公開点が 1 つになる
 
 変更した内容:
 
-- `providerCatalog.ts` — 削除対象は `tryResolveCatalogEntry`（統合先は既存の `getRegistryEntry`）。同一実装の公開名 2 つを 1 名にするため、`tryResolveCatalogEntry` を削除し、`ProviderCatalog` オブジェクトのエイリアス `tryResolve` も `getRegistryEntry` に置き換えた。re-export ではなく削除
+- `providerCatalog.ts` ― 削除対象は `tryResolveCatalogEntry`（統合先は既存の `getRegistryEntry`）。同一実装の公開名 2 つを 1 名にするため、`tryResolveCatalogEntry` を削除し、`ProviderCatalog` オブジェクトのエイリアス `tryResolve` も `getRegistryEntry` に置き換えた。re-export ではなく削除
 - `getRegistryEntry` に「throw しない lookup の唯一の公開形態であり、entry が必ず欲しい呼び出し元は throw する `resolveCatalogEntry` を使う」という WHY の doc を追加
 - 呼び出し側の移行（削除したエイリアスの消費者）:
-  - `src/dashboard/cspSettings.ts` — `ProviderCatalog.tryResolve(provider)` を `getRegistryEntry(provider)` に。モジュール import も `ProviderCatalog` から `getRegistryEntry` の直接 import に変更（panel のバンドルから background 名前空間オブジェクトへの参照を外す）
-  - `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts` — 2 箇所の `ProviderCatalog.tryResolve(slot.provider)` を `getRegistryEntry(slot.provider)` に。`ProviderCatalog` は他用途で使われているため import は残置
-- `src/background/ai/__tests__/providerCatalog.test.ts` — `ProviderCatalog.tryResolve('bogus-provider')` を `ProviderCatalog.getRegistryEntry('bogus-provider')` に更新
-- `src/utils/storage/__tests__/providerLabelSso.test.ts` — ヘッダ WHY コメントが削除済みの `tryResolveCatalogEntry(provider)?.label` を参照していたため、生存している `getRegistryEntry(provider)?.label` に更新（コメントのみ）
+  - `src/dashboard/cspSettings.ts` ― `ProviderCatalog.tryResolve(provider)` を `getRegistryEntry(provider)` に。モジュール import も `ProviderCatalog` から `getRegistryEntry` の直接 import に変更（panel のバンドルから background 名前空間オブジェクトへの参照を外す）
+  - `src/dashboard/panels/diagnostic/DiagnosticsCollector.ts` ― 2 箇所の `ProviderCatalog.tryResolve(slot.provider)` を `getRegistryEntry(slot.provider)` に。`ProviderCatalog` は他用途で使われているため import は残置
+- `src/background/ai/__tests__/providerCatalog.test.ts` ― `ProviderCatalog.tryResolve('bogus-provider')` を `ProviderCatalog.getRegistryEntry('bogus-provider')` に更新
+- `src/utils/storage/__tests__/providerLabelSso.test.ts` ― ヘッダ WHY コメントが削除済みの `tryResolveCatalogEntry(provider)?.label` を参照していたため、生存している `getRegistryEntry(provider)?.label` に更新（コメントのみ）
 
 `cspSettings.ts` と `DiagnosticsCollector.ts` は、削除したエイリアスの呼び出し側移行であるため NN25 のコミットに含める（別 PBI のファイルではない）。
 

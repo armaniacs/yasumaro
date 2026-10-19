@@ -1,4 +1,4 @@
-# PBI: Settings Repository への統合 — 散在する StorageKeys アクセスを深いモジュールに集約
+# PBI: Settings Repository への統合 ― 散在する StorageKeys アクセスを深いモジュールに集約
 
 ## ユーザーストーリー
 開発者として、`StorageKeys` 定数（30+）が `src/utils/storage/types.ts`（463行）で定義されているものの、実際の `chrome.storage.local.get/set` 呼び出しが `generalSettingsPanel.ts`, `settingsFormBinding.ts`, `settingsPipeline.ts`, `obsidianClient.ts`, `aiServiceFactory.ts`, `contentExtractor` 等の30+箇所に散在し、各呼び出し元が個別にデフォルト値・暗号化要否・マイグレーション有無を再導出している状態を解消したい。なぜなら、1つの設定キー（例: `OBSIDIAN_API_KEY`）のデフォルト値を変更するのに6ファイルを編集する必要があり、`data-storage-key` の typo が silent fail として検出されないからだ（PBI 05 Settings Schema は DOM 側の typo は防ぐが、storage 側の散在は未解消）。
@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 05 / 5
 - RICEスコア: (Reach=5 × Impact=1 × Confidence=0.6) / Effort=3 = 1.0
-- 根拠: Reach 5（設定変更を行うユーザー + 設定を読み取る全 recording パス。だが設定変更自体は低頻度）。Impact 1（開発者生産性の向上に留まり、ユーザーの直接的な価値（保存成功・AI品質）には影響しない）。Confidence 60%（PBI 05 Settings Schema との責務境界が曖昧 — DOM 側の schema と storage 側の repository で2つの schema が並立するリスクがある。どちらが source of truth か未確定）。Effort 3人日（30箇所の呼び出し移行 + 暗号化/migration の内部化 + 型安全な get/set の実装）。04（Diagnostics Panel）の後に着手する方が効率的 — Panel Lifecycle が安定してから repository の `onChange` 購読を設計できる。依存: 04（Panel Lifecycle 安定後に `onChange` 設計）+ PBI 05（Settings Schema の shape 確定後）。
+- 根拠: Reach 5（設定変更を行うユーザー + 設定を読み取る全 recording パス。だが設定変更自体は低頻度）。Impact 1（開発者生産性の向上に留まり、ユーザーの直接的な価値（保存成功・AI品質）には影響しない）。Confidence 60%（PBI 05 Settings Schema との責務境界が曖昧 ― DOM 側の schema と storage 側の repository で2つの schema が並立するリスクがある。どちらが source of truth か未確定）。Effort 3人日（30箇所の呼び出し移行 + 暗号化/migration の内部化 + 型安全な get/set の実装）。04（Diagnostics Panel）の後に着手する方が効率的 ― Panel Lifecycle が安定してから repository の `onChange` 購読を設計できる。依存: 04（Panel Lifecycle 安定後に `onChange` 設計）+ PBI 05（Settings Schema の shape 確定後）。
 
 ## ビジネス価値
 - 保守性: 設定キーの追加・デフォルト変更・暗号化ポリシー変更が `SettingsRepository` の1箇所で完結する。各呼び出し元は `repo.get(StorageKeys.X)` の1行で済む。
@@ -53,7 +53,7 @@ Scenario: テストで InMemory adapter が使える
 - [ ] マイグレーション（`storageMaintenance.ts` / `settingsMigration.ts`）の呼び出しが `SettingsRepository` 内部に集約される。呼び出し元がマイグレーションを意識する必要がなくなる。
 - [ ] 既存の30+箇所の `chrome.storage.local.get/set` 直接呼び出しが `SettingsRepository` のメソッドに移行する。代表的な移行先: `generalSettingsPanel.ts`, `settingsFormBinding.ts`, `settingsPipeline.ts`, `obsidianClient.ts`, `contentExtractor` 等。
 - [ ] `chrome.storage.local` への直接アクセスが `SettingsRepository` 以外に存在しないことがテストまたは lint ルールで保証される（`no-restricted-import` または grep テスト）。
-- [ ] `data-storage-key` 属性（PBI 05 Settings Schema）との整合性が保たれる — Schema のキーが `StorageKeys` と一致することが型レベルで保証される。
+- [ ] `data-storage-key` 属性（PBI 05 Settings Schema）との整合性が保たれる ― Schema のキーが `StorageKeys` と一致することが型レベルで保証される。
 - [ ] InMemory adapter（`Map<string, unknown>` ベース）がテスト用に提供され、`SettingsRepository` のテストが `chrome.storage` をモックせずに実行できる。
 
 ## テスト戦略（t_wadaスタイル）
@@ -67,7 +67,7 @@ Scenario: テストで InMemory adapter が使える
 - `SettingsRepository` × `onChange` で、変更購読が正しく動作することを検証。
 
 ### 単体テスト
-- 本PBIでは repository 内部の単体テストを追加しない — 深いモジュールのテストは interface（`get/set/getAll/onChange`）でカバーする。境界値（未保存キー → デフォルト、暗号化キーの空文字）は interface テストで検証。
+- 本PBIでは repository 内部の単体テストを追加しない ― 深いモジュールのテストは interface（`get/set/getAll/onChange`）でカバーする。境界値（未保存キー → デフォルト、暗号化キーの空文字）は interface テストで検証。
 
 ## 実装アプローチ
 - **Outside-In**: まず `SettingsRepository` の E2E テスト（全キーの get/set）を RED にし、既存の `storage.ts` 実装を内部に移動して GREEN にする。
@@ -78,10 +78,10 @@ Scenario: テストで InMemory adapter が使える
 3人日
 
 ## 技術的考慮事項
-- 依存関係: `chrome.storage.local`（local-substitutable — InMemory Map で代替可能）、`encryptionSession.ts`（内部で使用）、`storageMaintenance.ts`（内部で使用）。新たな外部依存は追加しない。
+- 依存関係: `chrome.storage.local`（local-substitutable ― InMemory Map で代替可能）、`encryptionSession.ts`（内部で使用）、`storageMaintenance.ts`（内部で使用）。新たな外部依存は追加しない。
 - テスタビリティ: `SettingsRepository` は `StorageAdapter` interface（`get/set/onChanged`）を注入可能にする。テストでは InMemory adapter を注入。現状は1つの adapter（chrome.storage）のみなので、導入直後は seam が hypothetical だが、テスト用 InMemory adapter の追加で real になる（two adapters justify the seam）。
 - 非機能要件: `chrome.storage.local` のクォータ制限（5MB）は `SettingsRepository` 内部で `checkQuota` として隠蔽する（`savedUrlRepository` のパターンを再利用）。
-- ADR整合性: `ADR-2026-08-12 encryption-secret-storage-area-must-be-local` に準拠 — `ENCRYPTION_SECRET` は `chrome.storage.local` に保存することを維持。repository はこの決定を内部に隠蔽するが、再議論しない。
+- ADR整合性: `ADR-2026-08-12 encryption-secret-storage-area-must-be-local` に準拠 ― `ENCRYPTION_SECRET` は `chrome.storage.local` に保存することを維持。repository はこの決定を内部に隠蔽するが、再議論しない。
 - 前波との関係: PBI 05（Settings Schema Binding）は DOM 側の `data-storage-key` typo を防ぐ。本PBIは storage 側の散在を解消する。両者は補完的だが、同時に2つの schema を導入すると source of truth が二重になるため、PBI 05 の shape 確定後に着手する。
 
 ## 実装者向け注記
@@ -104,9 +104,9 @@ cat src/utils/storage/types.ts | head -80
 6. `SettingsSchema`（PBI 05）との整合性を型レベルで保証: `SettingsSchema[StorageKeys.X]` が `SettingsRepository` のキーと一致することを `tsc` で検証。
 
 ### 落とし穴
-- `chrome.storage.local` と `chrome.storage.session` は別領域 — `SettingsRepository` は `local` のみを扱い、`session`（`recordingCache`, `confirmToken` 等）は対象外。混同しないこと。
+- `chrome.storage.local` と `chrome.storage.session` は別領域 ― `SettingsRepository` は `local` のみを扱い、`session`（`recordingCache`, `confirmToken` 等）は対象外。混同しないこと。
 - `getSettings()` は現在 `clearSettingsCache()` と組み合わせてキャッシュを無効化するパターンがある（`aiServiceFactory` 等）。`SettingsRepository` 移行時に `onChange` 購読で自動更新されるようにし、`clearSettingsCache()` の手動呼び出しを不要にすること。
-- `data-storage-key` の値は `StorageKeys` の文字列値と一致するが、HTML 側の typo は PBI 05 の Schema で防ぐ。repository 側では `StorageKeys` の型安全性で防ぐ — 両者の二重管理にならないよう、`SettingsSchema` が `StorageKeys` を source of truth として参照する形にすること。
+- `data-storage-key` の値は `StorageKeys` の文字列値と一致するが、HTML 側の typo は PBI 05 の Schema で防ぐ。repository 側では `StorageKeys` の型安全性で防ぐ ― 両者の二重管理にならないよう、`SettingsSchema` が `StorageKeys` を source of truth として参照する形にすること。
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする（型安全 get/set + デフォルト + 暗号化 + onChange + InMemory adapter）

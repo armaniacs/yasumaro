@@ -83,7 +83,7 @@ Scenario: メッセージング契約は変更されない
 - **Red-Green-Refactor**: `statusPanel` が `buildRemovedCounts` の `aiSummary` を捨てている状態を Red として再現し、`enqueueFeedback` へ渡すよう拡張して Green にする。最後に view の描画分岐を加える。
 - **型の置き場所**: `aiSummary?: AiSummaryRemovedStats` は `CleansingFeedbackEntry`（`src/utils/storage/types.ts:526-533`）に置く。値の型は `src/utils/commonTypes.ts:45-53` の `AiSummaryRemovedStats` を再利用する（新しい型を定義しない）。
 - **加算的変更**: optional フィールドの追加のみであり、既存フィールドの型・順序・保存条件は変更しない。旧エントリは optional 欠落でそのまま読める。
-- **読み戻し経路の使い分け**: view は `entry.aiSummary` を第一優先とし、それが無い場合のみ既存の `readRemovedCounts(e.removedByReason)` による旧 wire レコードからの復元へフォールバックする。両方が同時に存在するágRMB な場合は optional 側を優先する。
+- **読み戻し経路の使い分け**: view は `entry.aiSummary` を第一優先とし、それが無い場合のみ既存の `readRemovedCounts(e.removedByReason)` による旧 wire レコードからの復元へフォールバックする。両方が同時に存在する場合は optional 側を優先する。
 - **スコープの限定**: storage 構造のキー名変更、既存データの移行、messaging 契約の変更は本 PBI の対象外とする。
 
 ## 見積もり

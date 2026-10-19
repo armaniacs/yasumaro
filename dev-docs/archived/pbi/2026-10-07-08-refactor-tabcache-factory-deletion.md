@@ -13,7 +13,7 @@ Service Worker の保守担当者として、参照されないパイロット�
 
 ## 背景（file:line 現状）
 
-- `src/background/tabCacheFactory.ts:1-24` — 自己記述のパイロット（「Once this pattern proves out…」）。`let instance: TabCache | null` の module-level singleton
+- `src/background/tabCacheFactory.ts:1-24` ― 自己記述のパイロット（「Once this pattern proves out…」）。`let instance: TabCache | null` の module-level singleton
 - 唯一の参照は自分のテスト: `src/background/__tests__/tabCacheFactory.test.ts:2`（リポジトリ全体 grep で他参照なし）
 - 代替済み: TabCache は `container.resolve<TabCache>('tabCache')`（`src/background/createBackgroundServices.ts:107`）経由で DI（ServiceContainer / compositionManifest）
 

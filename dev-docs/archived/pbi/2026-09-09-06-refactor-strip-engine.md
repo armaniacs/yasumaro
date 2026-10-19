@@ -99,7 +99,7 @@ Scenario: bespoke な strip は関数のまま残る
      テストを `index.ts` 公開入口へ re-point する方式は、per-rule 単体テストの単一性を崩すため不採用。
      PBI の「テーブル行 + エンジン呼び出しに置換」は delegate（1 行のエンジン呼び出し）として満たす。
 2. `CARD_PATTERNS` を `stripCore.ts` から `patterns.ts` へ移動し、`stripCore.ts` から再エクスポート。
-   delegate が `selectorRules.ts` を import すると `stripCore ⇄ selectorRules` の循環 import になり、
+   delegate が `selectorRules.ts` を import すると `stripCore ⇔ selectorRules` の循環 import になり、
    `SELECTOR_RULE_DEFS` のモジュール評価時に `CARD_PATTERNS` が TDZ で落ちるため。
    既存テストの `from '../stripCore.js'` import は再エクスポートで維持。
 3. 同値 scaffold のヘッダコメントを更新し、wiring-guard（delegate と行の対応付けの番人）として維持。

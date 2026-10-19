@@ -17,10 +17,10 @@ rust-wasm-migration skill による自律発見 (STEP 0) の計測ベース選�
 | 優先度 | 現実装位置 | アルゴリズム概要 | 実測・根拠 | 統合コスト | リスク | 判定 |
 |---|---|---|---|---|---|---|
 | P1 | `src/utils/markdownFormatter.ts:resolveTimestamp` 経由の export render | 行ごと ICU 時刻整形 × 最大 10,000 行 | **10k 行 p50 339.2ms、うち toLocaleTimeString 275.5ms (81%)**。転送フロアは 5% (`bench/export-render-probe-result.json`、`bench/export-render-breakdown-probe-result.json`) | 低 (async 経路・dashboard) | ICU parity (Rust 再実装で崩れる) | **TS 側メモ化で対応。WASM 化しない** → PBI 2026-10-15-02 |
-| — | `src/dashboard/keywordExtractor.ts` | Intl.Segmenter + フィルタ (O(tokens)) | 計測不要と判断: 分割本体が ICU ネイティブ、後段は単一パス。Rust に JA 辞書を持ち込むと MB 級バンドル増 | — | 辞書バンドル | 移植不適 (原則 1: ネイティブが最速) |
-| — | `src/dashboard/tagClusterLayout.ts` | force-directed 100iter × O(n²) | n は数十ノード想定で 100×1770 ペア ≈ 1ms 未満。WASM マーシャリングが支配する | — | なし | 移植不適 (小さすぎて leverage なし) |
-| — | `src/dashboard/revisitInsightsAggregate.ts` | 単一パス bucketing + 小規模 sort 群 | O(n log n) だが比較子は軽量。10k 行でも sort 支配は小さい | — | なし | 移植不適 |
-| — | `src/dashboard/importLogsService.ts` | バッチ import (I/O 律速) | バッチ + DownloadPort 分離済み。計算律速区間なし | — | なし | 移植不適 |
+| ― | `src/dashboard/keywordExtractor.ts` | Intl.Segmenter + フィルタ (O(tokens)) | 計測不要と判断: 分割本体が ICU ネイティブ、後段は単一パス。Rust に JA 辞書を持ち込むと MB 級バンドル増 | ― | 辞書バンドル | 移植不適 (原則 1: ネイティブが最速) |
+| ― | `src/dashboard/tagClusterLayout.ts` | force-directed 100iter × O(n^2) | n は数十ノード想定で 100×1770 ペア ≒ 1ms 未満。WASM マーシャリングが支配する | ― | なし | 移植不適 (小さすぎて leverage なし) |
+| ― | `src/dashboard/revisitInsightsAggregate.ts` | 単一パス bucketing + 小規模 sort 群 | O(n log n) だが比較子は軽量。10k 行でも sort 支配は小さい | ― | なし | 移植不適 |
+| ― | `src/dashboard/importLogsService.ts` | バッチ import (I/O 律速) | バッチ + DownloadPort 分離済み。計算律速区間なし | ― | なし | 移植不適 |
 
 ## 実装着手の判断
 

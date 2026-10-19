@@ -1,4 +1,4 @@
-# PBI 2026-09-12-14 — PreviewFlow の payload builder + SpinnerScope（3 リテラル統合）
+# PBI 2026-09-12-14 ― PreviewFlow の payload builder + SpinnerScope（3 リテラル統合）
 
 - **種別**: 🔧非機能追加（refactor）
 - **優先度**: 6 位 / RICE **10.7**（R10 × I2 × C80% / E1.5人日）

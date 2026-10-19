@@ -10,7 +10,7 @@ backlog: [2026-09-17-00-backlog-archloop-0917.md](2026-09-17-00-backlog-archloop
 
 ## 背景（現状と課題）
 
-- `src/messaging/validators.ts:205-289` — archive 系 subtype の検査が if-chain。`try { decodeStagingName(p.stagingName) } catch { throw new ValidationError(...) }` の同一ブロックが `archive_export` / `archive_delete_by_staging` / `archive_open|save|close|restore_preview|restore` / `archive_query` / `archive_update` の 6 箇所に複製。
+- `src/messaging/validators.ts:205-289` ― archive 系 subtype の検査が if-chain。`try { decodeStagingName(p.stagingName) } catch { throw new ValidationError(...) }` の同一ブロックが `archive_export` / `archive_delete_by_staging` / `archive_open|save|close|restore_preview|restore` / `archive_query` / `archive_update` の 6 箇所に複製。
 - `archive_query` の `limit 1..500` が limits.ts の上限レジストリ外の literal（PBI 2026-09-11-08 が駆除した「limits.ts 外の上限」の同型再発）。`MAX_TITLE_LENGTH = 500` とは無関係の別概念。
 - 上限 drift ガード（`limits-drift.test.ts` 系）は limits.ts を参照する形でのみ機能する。
 
@@ -47,7 +47,7 @@ Scenario: 既存の validation 挙動は不変
 
 ## 見積もり
 
-1 pt（🟢低）— 同一ファイル内の構造整理 + 定数 1 件の移動。
+1 pt（🟢低）― 同一ファイル内の構造整理 + 定数 1 件の移動。
 
 ## Definition of Done
 

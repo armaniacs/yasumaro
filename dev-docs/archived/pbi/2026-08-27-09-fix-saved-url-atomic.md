@@ -14,12 +14,12 @@
 - 解: 1回の `withOptimisticLock` で両キーを同時更新するトランザクション化
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 単一更新で両キーが整合する
+Scenario: ハッピーパス ― 単一更新で両キーが整合する
   Given 並行で同じ URL のタイムスタンプ更新を 2回呼ぶ
   When 両方が完了する
   Then `savedUrls` と `savedUrlWithTimestamps` のサイズと内容が一致する
 
-Scenario: エッジケース — 片方失敗時は両方ロールバック
+Scenario: エッジケース ― 片方失敗時は両方ロールバック
   Given 2回目の CAS が競合で失敗する
   When リトライする
   Then 1回目の更新が重複適用されない

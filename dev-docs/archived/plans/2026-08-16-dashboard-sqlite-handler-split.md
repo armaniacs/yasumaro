@@ -104,7 +104,7 @@ export interface ReadOnlyDeps {
   /**
    * Deliberately not a DepsResult: getStatus() reports initialization
    * failure inside its success value (as `initError`) so the diagnostics
-   * panel can display it, rather than as a DepsResult failure — see
+   * panel can display it, rather than as a DepsResult failure ― see
    * SqliteClient.getStatus().
    */
   getStatus: () => Promise<Record<string, unknown> | null>;
@@ -141,7 +141,7 @@ export interface MaintenanceBatchDeps {
   runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
 }
 
-/** Union of the three groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
+/** Union of the three groups ― what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
 export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps;
 
 /**
@@ -290,7 +290,7 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
             return { success: true, ...status };
           }
           // Unreachable via a real SqliteClient (getStatus() always resolves
-          // to an object, even on failure — see its doc comment), but the
+          // to an object, even on failure ― see its doc comment), but the
           // type keeps `| null` since deps.getStatus is not a DepsResult.
           return { success: false, error: 'Status check failed' };
         }
@@ -402,11 +402,11 @@ export function createCoreCrudHandler(deps: CoreCrudDeps) {
           if (!Array.isArray(ids) || ids.length === 0) {
             return { success: false, error: 'No IDs provided' };
           }
-          // Check 2: upper bound (before type check — safe on length property)
+          // Check 2: upper bound (before type check ― safe on length property)
           if (ids.length > MAX_APPEND_IDS) {
             return { success: false, error: `Maximum ${MAX_APPEND_IDS} IDs allowed` };
           }
-          // Check 3: all elements are finite numbers (safe — at most 100 elements)
+          // Check 3: all elements are finite numbers (safe ― at most 100 elements)
           if (!ids.every((id: unknown): id is number => typeof id === 'number' && Number.isFinite(id))) {
             return { success: false, error: 'All IDs must be finite numbers' };
           }
@@ -519,7 +519,7 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
           let skipped = 0;
           // Kept in a local instead of shared state: the reason belongs to
           // this call, not to whatever else on the client failed most
-          // recently — see the module doc comment in deps.ts.
+          // recently ― see the module doc comment in deps.ts.
           let lastInsertError: SqliteError | null = null;
           for (let i = 0; i < rows.length; i += BATCH) {
             const batch = rows.slice(i, i + BATCH);
@@ -743,7 +743,7 @@ export {
 
 ```typescript
 /**
- * Thin re-export. The implementation lives in ./dashboardSqlite/ — split into
+ * Thin re-export. The implementation lives in ./dashboardSqlite/ ― split into
  * a router plus three sub-handlers grouped by concern (read-only / core CRUD /
  * maintenance batch). This file exists only so existing import paths
  * (service-worker.ts, __tests__/*) keep working unchanged.

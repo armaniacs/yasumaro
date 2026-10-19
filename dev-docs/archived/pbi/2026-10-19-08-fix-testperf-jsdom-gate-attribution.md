@@ -81,7 +81,7 @@ Scenario: 3. ゲートの値と挙動は変わらない（回帰ガード）
 | `bench/baselines/test-perf.budget.json` | `_comment` | 規約を宣言している。推移と原因の置き場としても自然 |
 | `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` | `:327-345` | `2026-10-18` の追記。`jsdomFileCount` の改定に推移が無い |
 | `bench/baselines/test-perf.budget.json` | `gates.jsdomFileCount` | 362（**変更しない**） |
-| `testDir/testPartition.ts` | — | jsdom / node / shared の分類規則。2 ファイルの同定に使う |
+| `testDir/testPartition.ts` | ― | jsdom / node / shared の分類規則。2 ファイルの同定に使う |
 | `scripts/test-perf/report.mjs` | 240 / 256 | advisory とゲートの表示 |
 
 ### 実装手順
@@ -92,7 +92,7 @@ Scenario: 3. ゲートの値と挙動は変わらない（回帰ガード）
 3. `_comment` の末尾に、jsdom 側の推移を 1 文で足す（`fileCount` の推移が既に書かれているので並べる）。
 4. `npm run test:perf` でゲート判定が変わっていないことを確認する。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 1) jsdomFileCount の改定履歴（360 で導入 → 362 へ）
@@ -136,11 +136,11 @@ sed -n '327,350p' dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
 
 **疑問**: なぜ `jsdomFileCount` の改定に「推移と原因」が残らなかったのか。
 
-1. **なぜ残らなかったのか** — 改定コミット（`65057bf0`）は `fileCount` の降格という**主題**を持っていた。jsdom の値はその決定に付随する変更で、メッセージの紙幅は降格の理由（総数は固定コストを誤って価格付けする）に使われた。
-2. **なぜ「付随」と扱えたのか** — 降格の決定は「今後 jsdom だけをゲートにする」なので、**新しいゲートの初期値を決める**必要があった。初期値の決定は「今の実測値を入れる」という機械的な操作に見える。
-3. **なぜ機械的ではなかったのか** — 362 は実測だが、**その実測値がどこから来たか**（360 から +2 ではなく、**359 から +3**）は自明でない。359 は「1 ファイルが jsdom をやめた」という**逆向きの変化**を含む。
-4. **なぜ逆向きの変化が見えなかったのか** — `jsdomFileCount` は**集計値**で増減の内訳を持たない。1 ファイル減ってもゲートが据え置きなら「余裕がある」状態になるだけで、**余裕は誰も報告しない**。
-5. **なぜ規約が効かなかったのか** — 規約は `_comment` と ADR の 2 箇所に宣言されていたが、**検査する仕組みが無かった**（人の注意力に依存）。
+1. **なぜ残らなかったのか** ― 改定コミット（`65057bf0`）は `fileCount` の降格という**主題**を持っていた。jsdom の値はその決定に付随する変更で、メッセージの紙幅は降格の理由（総数は固定コストを誤って価格付けする）に使われた。
+2. **なぜ「付随」と扱えたのか** ― 降格の決定は「今後 jsdom だけをゲートにする」なので、**新しいゲートの初期値を決める**必要があった。初期値の決定は「今の実測値を入れる」という機械的な操作に見える。
+3. **なぜ機械的ではなかったのか** ― 362 は実測だが、**その実測値がどこから来たか**（360 から +2 ではなく、**359 から +3**）は自明でない。359 は「1 ファイルが jsdom をやめた」という**逆向きの変化**を含む。
+4. **なぜ逆向きの変化が見えなかったのか** ― `jsdomFileCount` は**集計値**で増減の内訳を持たない。1 ファイル減ってもゲートが据え置きなら「余裕がある」状態になるだけで、**余裕は誰も報告しない**。
+5. **なぜ規約が効かなかったのか** ― 規約は `_comment` と ADR の 2 箇所に宣言されていたが、**検査する仕組みが無かった**（人の注意力に依存）。
 
 **原因**: 集計値のゲートは**増減の内訳を失う**のに、引き上げの判断を「現在値の実測」だけで済ませられる手続きにしたこと。規約は文章で宣言され、検査されなかった。
 
@@ -168,8 +168,8 @@ sed -n '327,350p' dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
 
 ### 実装
 
-- `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` — 「`jsdomFileCount` の推移と 360 → 362 の内訳」と「次に引き上げるときの手順（6 ステップ、測定コマンド付き）」を追加。
-- `bench/baselines/test-perf.budget.json` — `_comment` に推移の要約を追記（ADR を参照）。**`gates.jsdomFileCount` は 362 のまま**。
+- `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` ― 「`jsdomFileCount` の推移と 360 → 362 の内訳」と「次に引き上げるときの手順（6 ステップ、測定コマンド付き）」を追加。
+- `bench/baselines/test-perf.budget.json` ― `_comment` に推移の要約を追記（ADR を参照）。**`gates.jsdomFileCount` は 362 のまま**。
 - コード・ゲート値・判定ロジックは変更していない。
 
 ### テスト（回帰）
@@ -181,7 +181,7 @@ sed -n '327,350p' dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` — 決定 3 と `2026-10-18` の追記（本 PBI の追記先）
-- `bench/baselines/test-perf.budget.json` — 予算と規約の宣言
-- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` / `...-08-fix-obsidian-redirect-bearer.md` — 独立レビューで本件が指摘された元 PBI
-- `dev-docs/PERFORMANCE_GUIDE.md` — 予算の位置づけ
+- `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` ― 決定 3 と `2026-10-18` の追記（本 PBI の追記先）
+- `bench/baselines/test-perf.budget.json` ― 予算と規約の宣言
+- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` / `...-08-fix-obsidian-redirect-bearer.md` ― 独立レビューで本件が指摘された元 PBI
+- `dev-docs/PERFORMANCE_GUIDE.md` ― 予算の位置づけ

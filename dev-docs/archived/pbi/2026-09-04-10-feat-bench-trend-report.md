@@ -67,7 +67,7 @@ Scenario: 読み込めない・形式の古い JSON が混在する
 ## 技術的考慮事項
 - 依存関係: なし（bench ハーネス内部で完結。Node 標準モジュールのみ）
 - テスタビリティ: `trend.mjs` は I/O（ファイル走査）と集約を分離し、集約関数は純関数として単体テスト可能に。`htmlReport.mjs` は引き続き純関数（history は opts 経由で注入）
-- 非機能要件: HTML サイズ — 系列は 26 世代 × 主要指標のみに制限し、既存レポート（約 43 KB）から概ね 2 倍以内に収める。外部参照ゼロ・全注入文字列のエスケープは既存テストで保証
+- 非機能要件: HTML サイズ ― 系列は 26 世代 × 主要指標のみに制限し、既存レポート（約 43 KB）から概ね 2 倍以内に収める。外部参照ゼロ・全注入文字列のエスケープは既存テストで保証
 
 ## 実装者向け注記
 
@@ -91,7 +91,7 @@ rg -n "opts\.(check|updateBaseline|filter|noOpen)" bench/harness/cli.mjs
 1. `bench/harness/trend.mjs` を新設: `loadTrendHistory(reportsDir, { cap = 26 })`
    - `readdirSync` で `micro-YYYY-MM-DD.json` を列挙（`DateSuffixRe` でフィルタ）
    - `JSON.parse` 失敗・`schemaVersion !== 1` はスキップ（skip 件数を返す）
-   - `{ date, node, generatedAt, benches }` に集約（`benches[id] = { wall: { p50, p95, p99 }, heap, counters, scalingExponent }` — L サイズ基準、counters は L のみ）
+   - `{ date, node, generatedAt, benches }` に集約（`benches[id] = { wall: { p50, p95, p99 }, heap, counters, scalingExponent }` ― L サイズ基準、counters は L のみ）
    - 日付昇順ソート後、新しい方から `cap` 件に制限
 2. `bench/harness/__tests__/trend.test.ts` を新設（先に赤）: 上記単体テスト一式
 3. `bench/harness/htmlReport.mjs` に Trend セクションを追加

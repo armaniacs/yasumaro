@@ -13,7 +13,7 @@ STATUS メッセージの保守担当者として、wire 上に誰もデコー�
 
 ## 背景（file:line 現状）
 
-- 計算: `src/offscreen/opfsWorker/statusHandlers.ts:15-16,23` — `'SELECT COUNT(*) AS c FROM browsing_logs'`（is_deleted フィルタなし）を count として返す
+- 計算: `src/offscreen/opfsWorker/statusHandlers.ts:15-16,23` ― `'SELECT COUNT(*) AS c FROM browsing_logs'`（is_deleted フィルタなし）を count として返す
 - 誰も読まない: `src/offscreen/StorageBackend.ts:57-62`（StatusResult に count なし）/ `src/messaging/sqliteMessages.ts:196-218`（SqliteStatusResult に count なし）/ `src/messaging/dashboardSqliteProtocol.ts:133-151`（dashboard status 応答に count なし）/ `src/background/sqlite/offscreenGateway.ts:202`（status pick が count を射影しない）
 - 語義不一致: canonical live count は `WHERE is_deleted = 0`（`crudHandlers.ts:102`）。誰かが status.count を読み始めると soft-deleted 行を含む
 

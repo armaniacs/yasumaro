@@ -32,7 +32,7 @@ Scenario: 既存 op の挙動は不変
 
 ## 受け入れ基準
 - [x] query/mutate サブセットが wire table 化され、当該 op の16箇所パターンが解体される
-- [x] archive と同型の compile-time sync assert(table↔message union↔deps 署名)が置かれる
+- [x] archive と同型の compile-time sync assert(table⇔message union⇔deps 署名)が置かれる
 - [x] maintain ops・archive の扱い(既存 table 維持)を明記し、全量 table 化するかの判断を記録する
 - [x] 既存テストの期待値変更なし
 
@@ -52,7 +52,7 @@ Scenario: 既存 op の挙動は不変
 
 ## 実装アプローチ
 - **Outside-In**: toggle_star を最初の移行対象に選び、16箇所→1行の変換を1 op で型として確立してから残りを展開
-- 模板は `src/messaging/archiveWireTable.ts`(596行) — ARCHIVE_GATEWAY_DECODERS・ARCHIVE_DISPATCH・callArchive・runArchive の導出構造を踏襲する
+- 模板は `src/messaging/archiveWireTable.ts`(596行) ― ARCHIVE_GATEWAY_DECODERS・ARCHIVE_DISPATCH・callArchive・runArchive の導出構造を踏襲する
 
 ## 見積もり
 3ストーリーポイント（要チームでの見積もり・段階1: query/mutate）

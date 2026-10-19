@@ -231,7 +231,7 @@ failure の carrier が 2 つあり、どちらも構造化された経路を持
 | `src/utils/errorClassification.ts` | 却下 | 未分類（LAYERS.md 分類表に無い）。同ファイルは `sensitiveDataMask` に依存し、Layer 0 として機械検査できない。また 9 値 popup 語彙（`VALIDATION` / `NOT_FOUND` / `DOMAIN_BLOCKED` を含む）を所有しており、7 kind の語彙と 1:1 ではない。 |
 | **`src/utils/failureTaxonomy.ts` を新設して Layer 0** | **採用** | 純関数・import ゼロ・chrome 非依存なので Layer 0 の条件を満たす。既に `httpFailureMessages.ts`（HTTP status→表示文言）と `backoff.ts`（backoff 遅延）が同じ Tier にある precedents がある。`utils/fetch.ts`・`obsidianConfigValidator.ts`（Layer 2）と `background/*` の双方が下向きに import できるため、逆辺も循環も発生しない。 |
 
-層の分類表（`dev-docs/LAYERS.md`）と lint の SSOT（`eslint/rules/utils-layer-boundary.mjs` の `LAYER0_FILES`）の両方へ登録済み。`npm run lint:layers-docs` → 「Checked 51 rule entries against LAYERS.md — layer lists in sync.」
+層の分類表（`dev-docs/LAYERS.md`）と lint の SSOT（`eslint/rules/utils-layer-boundary.mjs` の `LAYER0_FILES`）の両方へ登録済み。`npm run lint:layers-docs` → 「Checked 51 rule entries against LAYERS.md ― layer lists in sync.」
 
 SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP status→kind 分類、unsafe method 表、carrier への attach/read と唯一の正規化関数 `resolveFailure()`、および互換入力専用の retry 述語 2 つ。
 
@@ -240,7 +240,7 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 | kind | 入力（status / error name） | 即時 retry | offline recovery | 同一 request 再送 | 主な生成元 |
 |------|---------------------------|-----------|------------------|----------------|-----------|
 | `network` | `cause.name = 'NetworkError'`、`cause.name = 'TypeError'` の transport 失敗、Obsidian の `Failed to fetch` | ○ | ○ | ○ | `handleObsidianError`（`obsidianConfigValidator.ts`）、`parseAndMapFetchError` |
-| `timeout` | `name = 'AbortError'`（`fetchWithTimeout` の request timeout、`readBodyWithTimeout` の body-read timeout） | ○（attempt ≤ 1） | ○ | ○ | `fetch.ts:151-155`、`obsidianConfigValidator.ts`（body read）、`executeHttpSummaryFlow` catch |
+| `timeout` | `name = 'AbortError'`（`fetchWithTimeout` の request timeout、`readBodyWithTimeout` の body-read timeout） | ○（attempt ≦ 1） | ○ | ○ | `fetch.ts:151-155`、`obsidianConfigValidator.ts`（body read）、`executeHttpSummaryFlow` catch |
 | `http` | 400 / 404 / 422 / 5xx（`status >= 500` は transient） | ○（transient のとき） | × | method が unsafe でないときのみ | `obsidianClient._writeContent` / `_fetchExistingContent`、`fetchWithRetry` の `attemptError`、`parseAndMapFetchError`、`executeHttpTestFlow` |
 | `auth` | 401 / 403 | × | × | × | 同上（`classifyHttpStatus`） |
 | `rate_limit` | 429 | × | × | × | 同上（`classifyHttpStatus`）。`checkCredentials` が使う AI 側の kind は `configuration` |
@@ -255,30 +255,30 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 ## 4. 変更したファイル一覧（絶対パス）
 
 新規:
-- `/Users/yaar/Playground/obsidian-smart-history/src/utils/failureTaxonomy.ts` — SSOT（7 kind / retry profile / 分類 / carrier / 正規化 / 互換述語）
+- `/Users/yaar/Playground/obsidian-smart-history/src/utils/failureTaxonomy.ts` ― SSOT（7 kind / retry profile / 分類 / carrier / 正規化 / 互換述語）
 - `/Users/yaar/Playground/obsidian-smart-history/src/utils/__tests__/failureTaxonomy.test.ts`
 - `/Users/yaar/Playground/obsidian-smart-history/src/utils/__tests__/errorClassification-taxonomy.test.ts`
 - `/Users/yaar/Playground/obsidian-smart-history/src/background/__tests__/obsidianClient-failureTaxonomy.test.ts`
 - `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/__tests__/failureTaxonomy-contract.test.ts`
 
 変更:
-- `/Users/yaar/Playground/obsidian-smart-history/src/utils/fetch.ts` — AbortError→`timeout` metadata、CSP/allowlist 拒否→`csp`、`attemptError`→`failureFromHttpStatus`、`defaultShouldRetry` を SSOT 委譲に
-- `/Users/yaar/Playground/obsidian-smart-history/src/utils/obsidianConfigValidator.ts` — 設定不備→`configuration`、body-read timeout→`timeout`、`handleObsidianError` が kind を保持（文言は不変）
-- `/Users/yaar/Playground/obsidian-smart-history/src/utils/retryPredicate.ts` — kind 優先（前置き）に、marker 表は互換入力専用へ隔離
-- `/Users/yaar/Playground/obsidian-smart-history/src/utils/errorClassification.ts` — `classifyError()` が `resolveFailure()` を優先し、substring 表は fallback へ降格
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/obsidianClient.ts` — `_writeContent` / `_fetchExistingContent` が status→kind を保持
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/ProviderStrategy.ts` — `AISummaryResult.failure` / `AISlotFailure.failure` / `debug.failure`、`shouldRetrySummaryRequest` を SSOT 委譲に、credential 欠落→`configuration`
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/RemoteAIService.ts` — slot 失敗と集約 result に `failure` を保持（全 provider failure を throw にはしない）
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/privacyPipeline.ts` — `PrivacyPipelineResult.failure` を受け渡し（既存の summary error 分岐は不変）
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/retryPolicy.ts` — kind を正とする契約に、legacy marker は「構造化 kind 不在時のみ」に隔離
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/stepExecutor.ts` — thrown / summary の両 carrier を同じ `resolveFailure()` へ通し、`failureKind` をログに記録
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/__tests__/retryPolicy.test.ts` — 既存 legacy ケースを温存しつつ kind 駆動のケースを追加
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/__tests__/stepExecutor.test.ts` — 7 kind × offline 資格のケースを追加
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/__tests__/httpSummaryFlow.test.ts` — 表示 parity を保ちつつ `failure` 検証を追加
-- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/__tests__/httpTestFlow.test.ts` — 6 箇所の `debug` 期待値に `failure` を追加（文言は不変）
-- `/Users/yaar/Playground/obsidian-smart-history/dev-docs/LAYERS.md` — Layer 0 分類表に `failureTaxonomy.ts` を追加
-- `/Users/yaar/Playground/obsidian-smart-history/eslint/rules/utils-layer-boundary.mjs` — `LAYER0_FILES` に追加
-- `/Users/yaar/Playground/obsidian-smart-history/pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` — 本節
+- `/Users/yaar/Playground/obsidian-smart-history/src/utils/fetch.ts` ― AbortError→`timeout` metadata、CSP/allowlist 拒否→`csp`、`attemptError`→`failureFromHttpStatus`、`defaultShouldRetry` を SSOT 委譲に
+- `/Users/yaar/Playground/obsidian-smart-history/src/utils/obsidianConfigValidator.ts` ― 設定不備→`configuration`、body-read timeout→`timeout`、`handleObsidianError` が kind を保持（文言は不変）
+- `/Users/yaar/Playground/obsidian-smart-history/src/utils/retryPredicate.ts` ― kind 優先（前置き）に、marker 表は互換入力専用へ隔離
+- `/Users/yaar/Playground/obsidian-smart-history/src/utils/errorClassification.ts` ― `classifyError()` が `resolveFailure()` を優先し、substring 表は fallback へ降格
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/obsidianClient.ts` ― `_writeContent` / `_fetchExistingContent` が status→kind を保持
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/ProviderStrategy.ts` ― `AISummaryResult.failure` / `AISlotFailure.failure` / `debug.failure`、`shouldRetrySummaryRequest` を SSOT 委譲に、credential 欠落→`configuration`
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/RemoteAIService.ts` ― slot 失敗と集約 result に `failure` を保持（全 provider failure を throw にはしない）
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/privacyPipeline.ts` ― `PrivacyPipelineResult.failure` を受け渡し（既存の summary error 分岐は不変）
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/retryPolicy.ts` ― kind を正とする契約に、legacy marker は「構造化 kind 不在時のみ」に隔離
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/stepExecutor.ts` ― thrown / summary の両 carrier を同じ `resolveFailure()` へ通し、`failureKind` をログに記録
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/__tests__/retryPolicy.test.ts` ― 既存 legacy ケースを温存しつつ kind 駆動のケースを追加
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/pipeline/__tests__/stepExecutor.test.ts` ― 7 kind × offline 資格のケースを追加
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/__tests__/httpSummaryFlow.test.ts` ― 表示 parity を保ちつつ `failure` 検証を追加
+- `/Users/yaar/Playground/obsidian-smart-history/src/background/ai/providers/__tests__/httpTestFlow.test.ts` ― 6 箇所の `debug` 期待値に `failure` を追加（文言は不変）
+- `/Users/yaar/Playground/obsidian-smart-history/dev-docs/LAYERS.md` ― Layer 0 分類表に `failureTaxonomy.ts` を追加
+- `/Users/yaar/Playground/obsidian-smart-history/eslint/rules/utils-layer-boundary.mjs` ― `LAYER0_FILES` に追加
+- `/Users/yaar/Playground/obsidian-smart-history/pbi/2026-09-25-11-refactor-structured-failure-taxonomy.md` ― 本節
 
 ## 5. 既存 sanitized message の parity をどう担保したか
 
@@ -286,9 +286,9 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 
 1. **境界の実装で文言文字列を一切変更していない。** `obsidianConfigValidator.ts` の 3 文面（self-signed / timed out / generic）、`obsidianClient.ts` の 2 文面（read / write）、`executeHttpSummaryFlow` の 2 summary、`parseAndMapFetchError` の 4 文面、`describeHttpFailure` の全 preset はすべて byte 不変。
 2. **既存テストの文言依存を消さずに、`failure` 追加だけを追随させた。** `httpSummaryFlow.test.ts` の 2 箇所は `toEqual({...})` を「summary / error の個別アサーション + `failure` の個別アサーション」に分解し、文言は従来どおり完全一致で固定。`httpTestFlow.test.ts` の 6 箇所は `debug` 期待値に `failure` を足すだけで、`message` の期待値はそのまま。新規 parity テスト:
-   - `obsidianClient-failureTaxonomy.test.ts`「keeps the existing user-facing wording for every status」— 401/403/429/500 の 4 状態で文言を完全一致させ、status 数字が含まれないことも確認。
+   - `obsidianClient-failureTaxonomy.test.ts`「keeps the existing user-facing wording for every status」― 401/403/429/500 の 4 状態で文言を完全一致させ、status 数字が含まれないことも確認。
    - 同「keeps the https self-signed-certificate sentence」と「classifies a body read timeout as timeout and keeps its wording」。
-   - `errorClassification-taxonomy.test.ts`「user message parity」— 旧語彙の fallback sentence 5 種と、csp が `errorGeneric` のままであることを固定。
+   - `errorClassification-taxonomy.test.ts`「user message parity」― 旧語彙の fallback sentence 5 種と、csp が `errorGeneric` のままであることを固定。
    - `parseFetchErrorParity.test.ts` / `ProviderStrategy.test.ts` の message 専用アサーションは無改変で通過。
 3. **1 点だけ意図的に変えた表現がある**（文言ではなく i18n key の選択）: `classifyError()` が構造化 kind を使うため、Obsidian の 401/403（`auth`）は `errorNetwork` ではなく `errorAuth` を返すようになった。旧来その sanitized 文面が `errorNetwork` に対応していたのは誤分類であり、**文言自体は変更していない**。`csp` は文言 parity を優先して `UNKNOWN`（= `errorGeneric`）に割り当てている（`errorClassification.ts` の `FAILURE_KIND_TO_ERROR_TYPE` に理由コメントあり）。
 
@@ -321,7 +321,7 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 
 **PBI 2026-09-25-13（Obsidian write replay idempotency）**
 - 依拠できるもの: PUT の失敗は `failureFromHttpStatus(status, 'PUT')` として `method` 付きで届く。5xx は `http`、`429` は `rate_limit`、`401/403` は `auth` として既に確定しており、replay 方針の入力にそのまま使える。
-- 依拠できる保証: unsafe method の 5xx は同一 request 内で再送されない（`canResendSameRequest` + `defaultShouldRetry` / `shouldRetrySummaryRequest` の SSOT 委譲）。実測テスト: `obsidianClient-failureTaxonomy.test.ts`「never re-sends a 5xx inside the same request」— 503 応答時に PUT は 1 回だけ。
+- 依拠できる保証: unsafe method の 5xx は同一 request 内で再送されない（`canResendSameRequest` + `defaultShouldRetry` / `shouldRetrySummaryRequest` の SSOT 委譲）。実測テスト: `obsidianClient-failureTaxonomy.test.ts`「never re-sends a 5xx inside the same request」― 503 応答時に PUT は 1 回だけ。
 - 注意: `http` は offline recovery 対象外なので、5xx の PUT は offline queue に入らない（本 PBI の明示的な決定事項）。delayed replay を検討する場合は `FAILURE_RETRY_PROFILE.http.offlineRecovery` を変更する形で裁定すること。SSOT の表（PBI 13 が変更してよいのは `FAILURE_RETRY_PROFILE.http.offlineRecovery` の 1 フィールドだけ）以外は触れていない。
 
 ## 8. 検証結果
@@ -338,7 +338,7 @@ SSOT が持つもの: 7 kind の宣言、kind 単位の retry profile 表、HTTP
 
 補足: 作業途中/full suite 実行時に `eslint/__tests__/*` と `src/utils/**/storage*` 系が一度失敗したが、これは並行セッション側の進行中の変更に由来し、最終 run では green に戻っている（自分の変更ファイルとは無関係）。`--repeats` は当リポジトリの vitest 5.0.0 では件数に反映されなかったため、flakiness 確認は `--repeats=5` 指定で 3 回実行し 3 回とも pass で確認した。
 
-## 9. 統合側の修正 — 表示経路を kind から切り離した
+## 9. 統合側の修正 ― 表示経路を kind から切り離した
 
 実装直後、統合担当が以下を検出した。
 

@@ -10,16 +10,16 @@
 
 ## 背景
 adversarial-code-review (2026-10-16) の検証通過指摘 (保守 publish 17件中 SURVIVES 10件)。反証で各行を確認済み。ハッカー視点では穴0件（secrets・注入・SSRF・権限はいずれも不成立）。
-- [x] P3 `scripts/publish/cws.mjs:116` — `[...text].length` を bytes 表示。`Buffer.byteLength` に寄せる。
-- [x] P4 `scripts/publish/cws.mjs:140-143` — ポーリング枯渇時も終端失敗と同一文言。Edge (`edge.mjs:76-77` "did not finish in time") と parity を取る。
-- [x] P5 `scripts/publish/cws.mjs:59-61` / `edge.mjs:54-59` — ID 欠落を `?? ''` 化し空のまま投げる。token 空チェック (`cws.mjs:83-89`) にならい ID 事前検証＋fail-fast。
-- [x] P8 `scripts/publish/edge.mjs:82-88` — Location 最終断片を素取り。URL 解析で operationId を抽出（クエリ/末尾スラッシュ耐性）。
-- [x] P12 `scripts/publish/lib.mjs:213-221` — `defaultRun` が `console.error` 直書き。注入 `log` 経由に寄せる。
-- [x] P13 `scripts/publish/cws.mjs:131-135,175-179` — パース失敗分岐のテスト欠落。`publish-stores.test.ts` に対応ケース追加。
-- [x] P14 `scripts/publish/lib.mjs:192-197` — transport 失敗経路のテスト欠落。同上。
-- [x] P15 `scripts/__tests__/publish-stores.test.ts:46,279-302` — モック `includes` 順序依存。厳密マッチに寄せる。
-- [x] P16 `.github/workflows/release.yml:129,142` — Prepare 非 `always()` / Submit `always()+hashFiles` の非対称。対称化（両方に失敗時方針を明記）。
-- [x] P17 `scripts/publish/amo-submit.mjs:44-62` — ソース zip 存在確認なし・成功時ログゼロ。存在確認＋成功ログ追加。
+- [x] P3 `scripts/publish/cws.mjs:116` ― `[...text].length` を bytes 表示。`Buffer.byteLength` に寄せる。
+- [x] P4 `scripts/publish/cws.mjs:140-143` ― ポーリング枯渇時も終端失敗と同一文言。Edge (`edge.mjs:76-77` "did not finish in time") と parity を取る。
+- [x] P5 `scripts/publish/cws.mjs:59-61` / `edge.mjs:54-59` ― ID 欠落を `?? ''` 化し空のまま投げる。token 空チェック (`cws.mjs:83-89`) にならい ID 事前検証＋fail-fast。
+- [x] P8 `scripts/publish/edge.mjs:82-88` ― Location 最終断片を素取り。URL 解析で operationId を抽出（クエリ/末尾スラッシュ耐性）。
+- [x] P12 `scripts/publish/lib.mjs:213-221` ― `defaultRun` が `console.error` 直書き。注入 `log` 経由に寄せる。
+- [x] P13 `scripts/publish/cws.mjs:131-135,175-179` ― パース失敗分岐のテスト欠落。`publish-stores.test.ts` に対応ケース追加。
+- [x] P14 `scripts/publish/lib.mjs:192-197` ― transport 失敗経路のテスト欠落。同上。
+- [x] P15 `scripts/__tests__/publish-stores.test.ts:46,279-302` ― モック `includes` 順序依存。厳密マッチに寄せる。
+- [x] P16 `.github/workflows/release.yml:129,142` ― Prepare 非 `always()` / Submit `always()+hashFiles` の非対称。対称化（両方に失敗時方針を明記）。
+- [x] P17 `scripts/publish/amo-submit.mjs:44-62` ― ソース zip 存在確認なし・成功時ログゼロ。存在確認＋成功ログ追加。
 - 却下済み: token `[object Object]`・status 表示・timeout 未渡し・沈黙スキップ・202 厳密・表記厳密・StepFailed 契約はいずれも仕様・テスト・明示ログで反証済みのため対象外。
 
 ## BDD受け入れシナリオ

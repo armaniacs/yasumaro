@@ -1,4 +1,4 @@
-# PBI-3: content（本文）保存 + 保持ポリシー — 設計書
+# PBI-3: content（本文）保存 + 保持ポリシー ― 設計書
 
 ## 概要
 
@@ -59,7 +59,7 @@ PBI-1 で `content: null` と書いた部分を置き換える。content がな�
 
 影響行数は SQLite の `changes()` 関数で取得する（既存の `handlePurgeOldRecords` と同じ手法）。
 
-### sqlite.ts — `purgeContent()`
+### sqlite.ts ― `purgeContent()`
 
 既存の `purgeOldRecords()`（同ファイル内、`execWithCache()` ヘルパーを使用するパターン）に合わせる。`sqlite3!.exec(dbHandle!, sql, params)` や `sqlite3!.changes(dbHandle!)` という直接呼び出しは本プロジェクトには存在しないため使用しない。`changes()` は `SELECT changes()` をSQLとして実行しコールバックで受け取る。
 
@@ -133,7 +133,7 @@ export async function purgeContent(
 
 `purgeOldRecords()` と同様、`usingFallbackStorage` の分岐は本 PBI のスコープ外（設計書冒頭の「スコープ外」参照）。呼び出し元（`sqliteClient.ts`）は戻り値が `{success: false}` の場合を考慮すること。
 
-### opfsWorker.ts — `handleContentPurge()`
+### opfsWorker.ts ― `handleContentPurge()`
 
 ```typescript
 async function handleContentPurge(payload: {
@@ -276,7 +276,7 @@ content（本文）最大保持件数: [無制限 | 100 | 500 | 1,000 | 10,000]
 ### 設定値の読み取り・保存
 
 ```typescript
-// dashboard.ts — settings mapping
+// dashboard.ts ― settings mapping
 [StorageKeys.CONTENT_RETENTION_DAYS]: el.contentRetentionDaysSelect,
 [StorageKeys.CONTENT_MAX_RECORDS]: el.contentMaxRecordsSelect,
 
@@ -341,7 +341,7 @@ case 'CONTENT_PURGE_NOW': {
 
 ---
 
-## 深掘りセッション — 2026-07-07
+## 深掘りセッション ― 2026-07-07
 
 ### 挑戦した仮定
 
@@ -380,8 +380,8 @@ case 'CONTENT_PURGE_NOW': {
 
 ### 出典コード位置
 
-- `src/offscreen/offscreen.ts:195-216` — INSERT ハンドラ（10カラムのみ）
-- `src/offscreen/sqlite.ts:1175-1240` — purgeOldRecords()（パージパターン）
-- `src/offscreen/storageFallback.ts:38-106` — insert/insertBatch（10カラムのみ）
-- `src/background/dailyPurgeHandler.ts:1-29` — 現在の dailyPurgeHandler（単一 PurgeFn）
-- `src/background/dashboardSqliteHandlers.ts:204-216` — purge_now ハンドラパターン
+- `src/offscreen/offscreen.ts:195-216` ― INSERT ハンドラ（10カラムのみ）
+- `src/offscreen/sqlite.ts:1175-1240` ― purgeOldRecords()（パージパターン）
+- `src/offscreen/storageFallback.ts:38-106` ― insert/insertBatch（10カラムのみ）
+- `src/background/dailyPurgeHandler.ts:1-29` ― 現在の dailyPurgeHandler（単一 PurgeFn）
+- `src/background/dashboardSqliteHandlers.ts:204-216` ― purge_now ハンドラパターン

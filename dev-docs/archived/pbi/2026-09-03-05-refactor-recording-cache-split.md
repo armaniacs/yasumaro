@@ -1,4 +1,4 @@
-# PBI: RecordingCache 分割 — 3 TTLs を 3つの typed cache に、redact を StoragePort decorator に
+# PBI: RecordingCache 分割 ― 3 TTLs を 3つの typed cache に、redact を StoragePort decorator に
 
 ## ユーザーストーリー
 記録キャッシュを保守する開発者として、`RecordingCacheInstance` の 433l 1クラスに同居する 3つの TTL cache（settings 30s / url 60s / privacy 5m）を 3つの typed cache module に分割したい、なぜなら現在は 1つの `CacheState` と `saveQueueScheduled` microtask と `chrome.storage.onChanged` listener と `redactSettingsApiKeys`（VULN-014）が1クラスに混在し、cross-context invalidation が脆弱で TTL 変更が他 cache に波及するから

@@ -1,4 +1,4 @@
-# PBI: Settings 二重真実の解消 — SettingsRepository への単一化と versioned StoragePort
+# PBI: Settings 二重真実の解消 ― SettingsRepository への単一化と versioned StoragePort
 
 ## ユーザーストーリー
 開発者として、Settings の読み書きを単一の深い Module（SettingsRepository）経由に統一したい。なぜなら現在 34 箇所が `settingsStore.legacy` の 1s キャッシュ経由、6 箇所が `SettingsRepository` 経由の二重真実になっており、defaults / migration / encryption / quota の知識が分散し、テストでは InMemory が optimisticLock を再現せず prod と乖離しているから。
@@ -40,7 +40,7 @@ Scenario: legacy cache 経路が存在しない
   Then  0 件である（全 34 箇所が `SettingsRepository` / `SettingsReader` に置換済み）
   And   `src/utils/storage/settingsStore.legacy.ts` と `settingsStore.ts` shim が削除されている
 
-Scenario: 境界 — getBytesInUse 不可用でも getAll は成功する
+Scenario: 境界 ― getBytesInUse 不可用でも getAll は成功する
   Given `chrome.storage.local.getBytesInUse` が throw する環境（jsdom / 権限なし）
   When  `repo.getAll()` を呼ぶ
   Then  quota チェックはスキップされ、migration/decrypt は正常に完了する
@@ -59,7 +59,7 @@ Scenario: 境界 — getBytesInUse 不可用でも getAll は成功する
 - 単体: `applyMigrationsAndDecryptWithReEncrypt` 純粋関数テスト、cache TTL 境界（0ms / 999ms / 1001ms）、`tryRestoreFromBackupViaPort` の backup 復元、getBytesInUse throw 時のフォールバック
 
 ## 見積もり
-3 pt（要チームでの見積もり）— Port 拡張 1pt + repo cache 移設 1pt + 34 箇所置換と削除 1pt
+3 pt（要チームでの見積もり）― Port 拡張 1pt + repo cache 移設 1pt + 34 箇所置換と削除 1pt
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

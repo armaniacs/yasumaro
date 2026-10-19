@@ -14,12 +14,12 @@
 - 解: `SQL_EXEC`/`SQL_QUERY` ハンドラを削除し、Migration は worker 内で `SCHEMA_SQL` を直接実行
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正当な migration は成功する
+Scenario: ハッピーパス ― 正当な migration は成功する
   Given worker 内で `SCHEMA_SQL` を実行する
   When `initSqlite` を呼ぶ
   Then テーブルが作成される
 
-Scenario: 攻撃 — 外部から任意SQLは拒否される
+Scenario: 攻撃 ― 外部から任意SQLは拒否される
   Given `postMessage({type:'SQL_EXEC', payload:{sql:'DROP TABLE'}})` を送る
   When `handleRequest` が処理する
   Then `Unknown message type` で拒否される

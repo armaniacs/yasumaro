@@ -94,13 +94,13 @@ After:  makeHandler(mock, { getConfirmToken: async () => TOKEN })(payload)
 ### 位置引数から名前付き上書きへ
 
 ```typescript
-// Before — undefined が何を意味するか読めない
+// Before ― undefined が何を意味するか読めない
 handleDashboardSqlite({ subtype: 'clear_all' }, mock as any, undefined, VALID_TOKEN)
 // After
 dispatchDashboardSqlite({ subtype: 'clear_all' }, mock as any,
   { getConfirmToken: async () => VALID_TOKEN })
 
-// Before — 4番目と6番目が何か分からない
+// Before ― 4番目と6番目が何か分からない
 handleDashboardSqlite(payload, mock as any, undefined, VALID_TOKEN, undefined, runCleanup)
 // After
 dispatchDashboardSqlite(payload, mock as any,

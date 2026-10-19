@@ -1,4 +1,4 @@
-# PBI 2026-09-12-42 — テキスト検索回帰の多層防御テスト（症状回帰 + 構造対策）
+# PBI 2026-09-12-42 ― テキスト検索回帰の多層防御テスト（症状回帰 + 構造対策）
 
 - **種別**: ✅功能追加（test・検索回帰の恒久防止）
 - **優先度**: 1 位 / RICE **40.0**（R25 × I2 × C80% / E1.0人日）
@@ -70,9 +70,9 @@ text 保持 unit test（queryNormalize.test.ts 末尾 2 件）と OPFS routing p
 
 ### 落とし穴
 
-- 3 backend の stub では SQL が実行されない — symptom test は FallbackStorage（実 JS エンジン）で pin し、SQL backend は better-sqlite3 で実行する（round 14 の教訓: stub は shape のみ検証）
-- `pickDefined` は値が undefined のキーを落とす — 空文字 '' は保持されるため、text='' は「検索なし」扱いになる（正しい契約）。空文字で全件返ることを regression テストに明記
-- better-sqlite3 の trigram tokenizer は CJK 3 文字以上で動作 — 2 文字クエリは LIKE path を使う（shouldUseFts5 は charLen >= 3）
+- 3 backend の stub では SQL が実行されない ― symptom test は FallbackStorage（実 JS エンジン）で pin し、SQL backend は better-sqlite3 で実行する（round 14 の教訓: stub は shape のみ検証）
+- `pickDefined` は値が undefined のキーを落とす ― 空文字 '' は保持されるため、text='' は「検索なし」扱いになる（正しい契約）。空文字で全件返ることを regression テストに明記
+- better-sqlite3 の trigram tokenizer は CJK 3 文字以上で動作 ― 2 文字クエリは LIKE path を使う（shouldUseFts5 は charLen >= 3）
 
 ## Definition of Done
 

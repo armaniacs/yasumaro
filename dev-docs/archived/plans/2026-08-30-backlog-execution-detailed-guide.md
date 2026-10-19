@@ -1,4 +1,4 @@
-# 詳細実装ガイド — 積み残し全体実行計画 補足
+# 詳細実装ガイド ― 積み残し全体実行計画 補足
 
 > 親計画: `dev-docs/plans/2026-08-30-backlog-execution-plan.md`
 > ブランチ: `plan/0830-backlog-execution`
@@ -76,7 +76,7 @@ git mv pbi/2026-08-29-19-fix-cspvalidator-self-allow.md dev-docs/archived/pbi/
 
 **ブランチ**: `fix/trust-boundary-consistency`
 
-#### 1. `src/content/loader.ts` — e2e 分岐の await 化
+#### 1. `src/content/loader.ts` ― e2e 分岐の await 化
 
 現行（脆弱）:
 
@@ -107,13 +107,13 @@ if (document.documentElement.hasAttribute('data-ow-e2e-test')) {
 }
 ```
 
-#### 2. `src/background/offlineQueueProcessor.ts` — force 解除
+#### 2. `src/background/offlineQueueProcessor.ts` ― force 解除
 
 ```ts
 // Before
 await deps.recordingPipeline.record({ ...payload, force: true, skipDuplicateCheck: true });
 
-// After — 2ゲートを再評価
+// After ― 2ゲートを再評価
 await deps.recordingPipeline.record({
   ...payload,
   force: false, // 明示的にゲートを通す
@@ -133,7 +133,7 @@ await deps.recordingPipeline.record({
 case 'confirm_token':
   return { token: await confirmTokenManager.createToken() };
 
-// After — 削除（読み取りサブタイプ自体を廃止）
+// After ― 削除（読み取りサブタイプ自体を廃止）
 // dashboardSqliteService.ts 側で破壊的操作の直前に発行
 ```
 
@@ -149,7 +149,7 @@ async function deleteWithConfirm(id: string) {
 
 `confirmTokenManager.ts` は `chrome.storage.session` のみにし、TTL 60秒・単回使用を強制。
 
-#### 4. `src/popup/recordCurrentPage/tabContentFetcher.ts` — 権限ラダー
+#### 4. `src/popup/recordCurrentPage/tabContentFetcher.ts` ― 権限ラダー
 
 ```ts
 async function fetchWithPermissionFallback(tabId: number): Promise<string> {
@@ -169,8 +169,8 @@ async function fetchWithPermissionFallback(tabId: number): Promise<string> {
 
 #### テスト
 
-- `src/content/__tests__/loader.trustBoundary.test.ts` — コールドキャッシュで SW round-trip を await することを Fake Port で検証
-- `src/background/__tests__/offlineQueueProcessor.test.ts` — blocked.example が再送でスキップされる
+- `src/content/__tests__/loader.trustBoundary.test.ts` ― コールドキャッシュで SW round-trip を await することを Fake Port で検証
+- `src/background/__tests__/offlineQueueProcessor.test.ts` ― blocked.example が再送でスキップされる
 - `src/popup/__tests__/tabContentFetcher.permissionLadder.test.ts`
 
 #### 成果物
@@ -182,7 +182,7 @@ async function fetchWithPermissionFallback(tabId: number): Promise<string> {
 
 ### Track B-1: 30-12 多言語パターン拡充（1日）
 
-**触接**: `src/utils/aiSummaryCleaner/patterns.ts` のみ — 完全独立
+**触接**: `src/utils/aiSummaryCleaner/patterns.ts` のみ ― 完全独立
 
 ```ts
 // 追加例: フランス語・ドイツ語・中国語の広告/ソーシャル定型句
@@ -556,7 +556,7 @@ export const STORAGE_KEYS = { DOMAIN_CLEANSING_OVERRIDES: 'domain_cleansing_over
 | Storage | `passwordFailedAttempts` | local 永続化 | 29-12 |
 | package.json | `check:cleansing-corpus` | `node scripts/check-cleansing-corpus.mjs` | 30-09 |
 | package.json | `benchmark:cleansing` | `node scripts/benchmark-cleansing.mjs` | 30-04 |
-| manifest | 変更なし | — | 全 Wave |
+| manifest | 変更なし | ― | 全 Wave |
 
 ---
 

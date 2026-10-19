@@ -1,4 +1,4 @@
-# PBI: テスト型債務返済 5/5 — ゲート昇格（type-check:test を素 tsc に戻す）
+# PBI: テスト型債務返済 5/5 ― ゲート昇格（type-check:test を素 tsc に戻す）
 
 > **前提**: 08〜11 の全完了（baseline 空確認を本PBIの最初のステップとする）。ベースラインゲートの仕様は `pbi/2026-09-07-08-test-type-debt-background.md` の「ベースラインゲートの仕様」を参照（アーカイブ後も `dev-docs/archived/pbi/` から参照可）。
 
@@ -77,7 +77,7 @@ python3 -c "import json; b=json.load(open('testDir/type-check-baseline.json')); 
 
 ### 落とし穴
 - **削除対象の取り違え**: 削除するのはラッパー（check-type-baseline.mjs）と baseline.json のみ。`tsconfig.json` 修正（2026-09-07-04 で実施済み）は維持する
-- **CI の None 検知**: `test:type-safe` が CI で走るようになった場合、素 tsc がローカルより厳しい環境差（型の解決差）で落ちることがある — その場合は環境差の是正が本筋（ラッパーを戻さない）
+- **CI の None 検知**: `test:type-safe` が CI で走るようになった場合、素 tsc がローカルより厳しい環境差（型の解決差）で落ちることがある ― その場合は環境差の是正が本筋（ラッパーを戻さない）
 - **CHANGELOG**: ゲート昇格はユーザー向け機能ではないが「開発者向け / 非機能」節に記録する
 
 ## Definition of Done

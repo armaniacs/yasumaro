@@ -192,7 +192,7 @@ This extension is designed to meet the following WCAG 2.1 Level AA criteria:
 
 | Principle | Criterion | Status | Description |
 |-----------|----------|--------|-------------|
-| Perceivable | Contrast Minimum | ✅ | Text contrast ratio ≥4.5:1, large bold text ≥3:1 |
+| Perceivable | Contrast Minimum | ✅ | Text contrast ratio ≧4.5:1, large bold text ≧3:1 |
 | Perceivable | Reflow | ✅ | Content reflows (layout may change) so no two-dimensional scrolling is needed at 400% zoom |
 | Operable | Keyboard Accessibility | ✅ | All functions accessible via keyboard |
 | Operable | Enough Time | ✅ | No time limits, no important timeouts |
@@ -337,7 +337,7 @@ When adding new UI features, use the following checklist:
 #### Color and Vision
 
 - [ ] Information not conveyed solely by color (text also used)
-- [ ] Text-to-background contrast ratio ≥4.5:1
+- [ ] Text-to-background contrast ratio ≧4.5:1
 - [ ] Required fields, errors, success states clearly identifiable
 
 #### Modals and Focus Traps

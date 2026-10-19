@@ -26,7 +26,7 @@ RICE 20.0, 1pt, 依存なし, pure deletion
 
 ## 制約
 - Read → Edit 順守、git add -A 禁止
-- 他PBI (PBI-10 ProviderRegistry, PBI-07 offscreen guard) とファイル重複なし — 並列実行中のため src/background/ai/ と src/offscreen/ には触れない
+- 他PBI (PBI-10 ProviderRegistry, PBI-07 offscreen guard) とファイル重複なし ― 並列実行中のため src/background/ai/ と src/offscreen/ には触れない
 - コメントは WHY のみ、絵文字禁止
 - ワークツリー内で作業、pbi ファイルは一時的に pbi/ に再作成し、完了時にチェックボックス [x] に更新して archived へ git mv
 

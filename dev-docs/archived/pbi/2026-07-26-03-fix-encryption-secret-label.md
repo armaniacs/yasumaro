@@ -49,7 +49,7 @@ Scenario: 誤削除防止の注記が追加される
 
 ## 受け入れ基準
 - [ ] `ENCRYPTION_SECRET` の実際の使用状況（読み取りのみ/読み書き両方）を確認する
-- [ ] コメントラベルを実態に即した表現（例: `// Legacy encryption key — still read/written, do not remove without migration`）に変更する
+- [ ] コメントラベルを実態に即した表現（例: `// Legacy encryption key ― still read/written, do not remove without migration`）に変更する
 - [ ] 誤削除防止のため、削除する場合は新鍵管理スキームへのマイグレーションが必要である旨をコメントに明記する
 
 ## テスト戦略

@@ -1,15 +1,15 @@
-# 深掘りセッション — 2026-08-21 SettingsRepository Seam
+# 深掘りセッション ― 2026-08-21 SettingsRepository Seam
 
-対象: PBI 01 `SettingsRepository Seam — storage barrelの浅さを深い moduleに`  
-スコープ判定: 中規模（1 module、2pt、interface 4メソッド + 2 adapters）— 高・中リスクを1-2ラウンド深掘り
+対象: PBI 01 `SettingsRepository Seam ― storage barrelの浅さを深い moduleに`  
+スコープ判定: 中規模（1 module、2pt、interface 4メソッド + 2 adapters）― 高・中リスクを1-2ラウンド深掘り
 
 ## 挑戦した仮定
 
 | 仮定 | リスク | 発見 | 決定 |
 |------|--------|------|------|
-| `get<K>(key)` の generic 4メソッドで全呼び出し元を置換できる | 高（実現可能性） | `getSettings()` 全件取得派（20箇所）と `chrome.storage.local.get([key])` 単一取得派（7箇所）の2パターンが混在。単一取得派は `get(K)` で置換可能、全件派は `getAll()` で置換可能。ドメイン別ヘルパー（例: `getObsidianConfig()`）は `getAll()` + 分割代入で代替でき、interface を膨らませるだけで depth を損なう。既存 `SettingsRepository.ts` も generic で実装済み。 | **A: generic 4メソッドのみ** — `get`/`set`/`getAll`/`onChange` に絞る。ドメイン別ヘルパーは必要なら module 外の純粋関数として後から追加可能とし、core interface からは除外 |
-| `storage.ts` barrel を今回のPBIで物理削除できる | 中（スコープ） | barrel 削除は `grep -r "from.*storage.js" | wc -l` で27ファイルに波及。各ファイル1行変更だが、27ファイルは `vi.mock('../../utils/storage.js')` を使っているテスト100件以上に影響。直近の `RecordingPipeline` テストで barrel 直参照を `storage/types.js` に変えただけで5件失敗（`reviewSummaryGenerator` の `getSettings` mock が外れた）。物理削除は 0.5人月の Effort を超過し、PBIの本質（深さ）から逸れる。`dev-docs/LAYERS.md` Wave 3でも「barrel の段階的分割 — 各PBIで3-5ファイルずつ」と明記。 | **B: @deprecated 残置（段階的）** — 今回は Repository の深さに集中。barrel は `@deprecated` のまま残し、呼び出し元の移行が完了したことを `grep` で検証後に次PBIで削除。受け入れ基準の「re-export が削除され lintで検出可能」は「barrel への新規 import が lintで検出可能」に読み替え、 lint ルールで `from '../utils/storage.js'` を警告対象にする |
-| `trustDb ↔ settingsStore` 循環を `StorageAdapter` 注入で物理的に断てる | 中（依存関係） | 循環は2経路: `settingsStore.getSettings() → import('../trustDb') → db.initialize()`（legacy 分岐）と `trustDb.TrancoVersionTracker → getSettingsStore()`（バージョン永続化）。前者は `migrateUblockSettings` 等の legacy migration 完了後に `db.initialize()` を呼ぶ業務要件、後者は Tranco バージョンの source-of-truth が `settings` にある業務要件で、どちらも ADR 2026-08-20 で「業務ルール上不可避」と記録。物理的に断つには `trustDb` が `StorageAdapter` に依存する形にし、`settingsStore` 側の `import` を削除する必要があるが、その場合 `getSettings()` 初回実行時の `db.initialize()` タイミングが変わり、v6.7.43 の暗号化キー永続化（`chrome.storage.local` vs `session`）の救済マイグレーションに影響するリスク。Effort 0.5人月では検証不足。 | **B: 現状維持 + 文書化** — 動的 `await import()` のまま残し、`SettingsRepository` は `settingsStore.getSettings()` の薄いラッパーとして完成させる。循環は ADR 通りに保護し、物理的解消は `TrancoVersionTracker` の `StorageAdapter` 化を別PBIで検討。今回の受け入れ基準「ADRが更新されている」は、循環が `SettingsRepository` の adapter 経由で将来的に解消可能である旨を ADR に追記することで満たす |
+| `get<K>(key)` の generic 4メソッドで全呼び出し元を置換できる | 高（実現可能性） | `getSettings()` 全件取得派（20箇所）と `chrome.storage.local.get([key])` 単一取得派（7箇所）の2パターンが混在。単一取得派は `get(K)` で置換可能、全件派は `getAll()` で置換可能。ドメイン別ヘルパー（例: `getObsidianConfig()`）は `getAll()` + 分割代入で代替でき、interface を膨らませるだけで depth を損なう。既存 `SettingsRepository.ts` も generic で実装済み。 | **A: generic 4メソッドのみ** ― `get`/`set`/`getAll`/`onChange` に絞る。ドメイン別ヘルパーは必要なら module 外の純粋関数として後から追加可能とし、core interface からは除外 |
+| `storage.ts` barrel を今回のPBIで物理削除できる | 中（スコープ） | barrel 削除は `grep -r "from.*storage.js" | wc -l` で27ファイルに波及。各ファイル1行変更だが、27ファイルは `vi.mock('../../utils/storage.js')` を使っているテスト100件以上に影響。直近の `RecordingPipeline` テストで barrel 直参照を `storage/types.js` に変えただけで5件失敗（`reviewSummaryGenerator` の `getSettings` mock が外れた）。物理削除は 0.5人月の Effort を超過し、PBIの本質（深さ）から逸れる。`dev-docs/LAYERS.md` Wave 3でも「barrel の段階的分割 ― 各PBIで3-5ファイルずつ」と明記。 | **B: @deprecated 残置（段階的）** ― 今回は Repository の深さに集中。barrel は `@deprecated` のまま残し、呼び出し元の移行が完了したことを `grep` で検証後に次PBIで削除。受け入れ基準の「re-export が削除され lintで検出可能」は「barrel への新規 import が lintで検出可能」に読み替え、 lint ルールで `from '../utils/storage.js'` を警告対象にする |
+| `trustDb ⇔ settingsStore` 循環を `StorageAdapter` 注入で物理的に断てる | 中（依存関係） | 循環は2経路: `settingsStore.getSettings() → import('../trustDb') → db.initialize()`（legacy 分岐）と `trustDb.TrancoVersionTracker → getSettingsStore()`（バージョン永続化）。前者は `migrateUblockSettings` 等の legacy migration 完了後に `db.initialize()` を呼ぶ業務要件、後者は Tranco バージョンの source-of-truth が `settings` にある業務要件で、どちらも ADR 2026-08-20 で「業務ルール上不可避」と記録。物理的に断つには `trustDb` が `StorageAdapter` に依存する形にし、`settingsStore` 側の `import` を削除する必要があるが、その場合 `getSettings()` 初回実行時の `db.initialize()` タイミングが変わり、v6.7.43 の暗号化キー永続化（`chrome.storage.local` vs `session`）の救済マイグレーションに影響するリスク。Effort 0.5人月では検証不足。 | **B: 現状維持 + 文書化** ― 動的 `await import()` のまま残し、`SettingsRepository` は `settingsStore.getSettings()` の薄いラッパーとして完成させる。循環は ADR 通りに保護し、物理的解消は `TrancoVersionTracker` の `StorageAdapter` 化を別PBIで検討。今回の受け入れ基準「ADRが更新されている」は、循環が `SettingsRepository` の adapter 経由で将来的に解消可能である旨を ADR に追記することで満たす |
 
 ## なぜなぜ分析（徹底）
 
@@ -46,13 +46,13 @@
 - barrel を残置する場合、lint ルールが無いと新規コードが再び barrel を使ってしまうドリフトリスク
 
 ## 未解決の疑問
-- `onChange` の `changes['settings']` 以外のキー（例: `settings_migrated`）を無視する仕様で十分か — 現状の `onChanged` は `area === 'local'` の全変更を `settings` キーのみにフィルタしており、`TRANCO_VERSION` 等の個別キー変更は検出できない。次PBIで `StorageAdapter` が `settings` オブジェクト全体を監視する設計で十分か検証が必要
-- `set` の adapter 迂回を今回のPBIで修正すべきか — 修正すると `saveSettings` の暗号化・楽観ロック・クォータ検証を `SettingsRepository` 側に再実装する必要があり、Effort が 0.5人月を超過する可能性。今回は `set` を `saveSettings` 経由に直す最小修正に留めるか、次PBIに回すか要判断（Phase 3で仮定を置く）
+- `onChange` の `changes['settings']` 以外のキー（例: `settings_migrated`）を無視する仕様で十分か ― 現状の `onChanged` は `area === 'local'` の全変更を `settings` キーのみにフィルタしており、`TRANCO_VERSION` 等の個別キー変更は検出できない。次PBIで `StorageAdapter` が `settings` オブジェクト全体を監視する設計で十分か検証が必要
+- `set` の adapter 迂回を今回のPBIで修正すべきか ― 修正すると `saveSettings` の暗号化・楽観ロック・クォータ検証を `SettingsRepository` 側に再実装する必要があり、Effort が 0.5人月を超過する可能性。今回は `set` を `saveSettings` 経由に直す最小修正に留めるか、次PBIに回すか要判断（Phase 3で仮定を置く）
 
 ## 決定事項
 1. interface は generic 4メソッドのみ（A）
-2. barrel は @deprecated 残置で段階的削除（B）— lint ルールで新規利用を防止
-3. 循環は現状維持 + ADR 追記（B）— 物理的解消は次PBIで `TrancoVersionTracker` の adapter 化として分離
+2. barrel は @deprecated 残置で段階的削除（B）― lint ルールで新規利用を防止
+3. 循環は現状維持 + ADR 追記（B）― 物理的解消は次PBIで `TrancoVersionTracker` の adapter 化として分離
 4. `set` の adapter 迂回は今回のPBIで `saveSettings` 経由に修正し、`InMemory` でも `onChange` が発火するようにする（Phase 3の仮定として 4b で提示）
 
 ## 完全性チェック

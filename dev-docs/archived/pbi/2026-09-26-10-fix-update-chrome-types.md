@@ -63,5 +63,5 @@ Scenario: 依存ゲートが PASS する
 
 ## 参考
 
-- `docs/DEPENDINGS.md` — 依存棚卸しと未反映理由の記録
-- 同ラウンドの監視 PBI: [2026-09-26-12-backlog-typescript-7-adoption.md](2026-09-26-12-backlog-typescript-7-adoption.md)（typescript の peer 制約を踏まえた同時更新の要否は本 PBI に影響しない — `@types/chrome` は TypeScript 6/7 両方で動作することを実測済み）
+- `docs/DEPENDINGS.md` ― 依存棚卸しと未反映理由の記録
+- 同ラウンドの監視 PBI: [2026-09-26-12-backlog-typescript-7-adoption.md](2026-09-26-12-backlog-typescript-7-adoption.md)（typescript の peer 制約を踏まえた同時更新の要否は本 PBI に影響しない ― `@types/chrome` は TypeScript 6/7 両方で動作することを実測済み）

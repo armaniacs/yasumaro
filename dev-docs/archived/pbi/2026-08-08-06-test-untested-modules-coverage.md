@@ -12,7 +12,7 @@
 
 アーキテクチャレビュー（2026-08-08）で、**直近のリファクタで分離された新モジュールにテストが付いていない**ことが判明した。
 
-### 1. `recordingCache.ts` — 395行・テスト0
+### 1. `recordingCache.ts` ― 395行・テスト0
 
 ```bash
 find src -name "*recordingCache*"
@@ -28,7 +28,7 @@ commit `63bce1a`（RecordingLogic 分割）で切り出された新モジュー�
 
 呼び出し元は `service-worker.ts`（264・276・340・593行）と `handlers/lifecycleHandlers.ts`。
 
-### 2. `messageHandlers.ts` — 732行に対しテスト163行
+### 2. `messageHandlers.ts` ― 732行に対しテスト163行
 
 ```bash
 # messageHandlers.test.ts が import しているもの
@@ -40,7 +40,7 @@ grep -n "^import" src/background/handlers/__tests__/messageHandlers.test.ts
 
 残る16ファクトリは `service-worker.test.ts`（2415行）経由の間接検証のみ。とくに `createManualRecordHandler` / `createSaveRecordHandler` は `isSecureUrl` によるセキュリティチェック（368-377・466-475行）を持つ。
 
-### 3. `BuiltInAiProvider.ts` — 113行・テスト0
+### 3. `BuiltInAiProvider.ts` ― 113行・テスト0
 
 PBI `2026-08-08-05` で扱うため本PBIでは対象外（重複を避ける）。
 
@@ -112,7 +112,7 @@ Scenario: 既存テストが全てパスする
 
 - [x] 既存テストのカバー範囲を調査し、不足範囲を特定（重複テストを作らない）
 - [x] `src/background/__tests__/recordingCache-session.test.ts` を新規作成（17件）
-- [x] VULN-014（API キー redaction）のテストを含む — **永続化の境界**で検証
+- [x] VULN-014（API キー redaction）のテストを含む ― **永続化の境界**で検証
 - [x] TTL 期限切れ・キャッシュ無効化のテストを含む
 - [x] session storage 永続化・復元のテストを含む
 - [x] `createManualRecordHandler` / `createSaveRecordHandler` の `isSecureUrl` チェックのテストを追加（14件）
@@ -131,9 +131,9 @@ Scenario: 既存テストが全てパスする
 
 **実際に未カバーだった領域**（今回追加した箇所）:
 
-1. **session storage への永続化と復元の往復** — `loadCacheFromSession` / `scheduleCacheSave` は既存テストで一度も検証されていなかった
-2. **VULN-014 が「永続化の境界」で効いていること** — 既存テストは `redactSettingsApiKeys` を単体で呼ぶだけで、`saveCacheToSession` が実際にそれを通しているかは未検証だった
-3. **復元時のTTL判定** — 期限切れキャッシュを復元しないこと
+1. **session storage への永続化と復元の往復** ― `loadCacheFromSession` / `scheduleCacheSave` は既存テストで一度も検証されていなかった
+2. **VULN-014 が「永続化の境界」で効いていること** ― 既存テストは `redactSettingsApiKeys` を単体で呼ぶだけで、`saveCacheToSession` が実際にそれを通しているかは未検証だった
+3. **復元時のTTL判定** ― 期限切れキャッシュを復元しないこと
 4. **URLキャッシュのTTL・無効化**
 5. **privacy キャッシュの session storage フォールバック**（SW再起動からの復帰）
 

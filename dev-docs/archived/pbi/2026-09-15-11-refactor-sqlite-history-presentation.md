@@ -1,4 +1,4 @@
-# PBI: sqliteHistory presentation 抽出 — View と Model の二重所有解消
+# PBI: sqliteHistory presentation 抽出 ― View と Model の二重所有解消
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -14,8 +14,8 @@
 
 ## 背景（診断結果）
 
-- `src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts:33-50,74-78,80-155` — View にドメイン判定（削減率 fallback 連鎖・FTS 判定）が残留
-- `sqliteHistoryModel.ts:256-276,336-366` — Model 側にも類似判定があり二重所有
+- `src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts:33-50,74-78,80-155` ― View にドメイン判定（削減率 fallback 連鎖・FTS 判定）が残留
+- `sqliteHistoryModel.ts:256-276,336-366` ― Model 側にも類似判定があり二重所有
 - Model の sort 永続化が chrome.storage を直結（deps 注入の非対称）
 
 ## 実装ガイド
@@ -43,7 +43,7 @@ Scenario: 削減率の定義変更が1関数で完結する
 ## 受け入れ基準
 
 - [x] クレンジング削減率計算（fallback 連鎖含む）が純粋関数 module（`historyEntryPresentation.ts`）に集約されている
-- [x] View が抽出後の純粋関数を呼んでいる（FTS 判定 `isFullTextSearchActive` は既に純粋関数として View に単一所有 — Model 側に複製は無いことを確認し、本項は削減率のみ適用）
+- [x] View が抽出後の純粋関数を呼んでいる（FTS 判定 `isFullTextSearchActive` は既に純粋関数として View に単一所有 ― Model 側に複製は無いことを確認し、本項は削減率のみ適用）
 - [x] Model の sort 永続化が `SortPreferencePersistence` adapter 経由になっている（`setSortPersistenceOverride` で注入可能）
 - [x] sqliteHistoryPanel 関連テスト全件 green（248 passed）
 

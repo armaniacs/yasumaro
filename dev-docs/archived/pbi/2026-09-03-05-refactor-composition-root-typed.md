@@ -20,7 +20,7 @@ Scenario: global setter が不要
   Then  injected port から healthCheck を受ける
 
 ## 受け入れ基準
-- [x] global setter seam（setSqliteHealthCheck/getSqliteHealthCheck）を port injection 化 — token-branded 化は次ラウンドへ（19 factory の波及大）
+- [x] global setter seam（setSqliteHealthCheck/getSqliteHealthCheck）を port injection 化 ― token-branded 化は次ラウンドへ（19 factory の波及大）
 - [x] storageMaintenance の global setter を削除、fail-safe default のみに簡素化
 - [x] manifest onReady wiring を撤去（pendingWriteQueue 含む）
 

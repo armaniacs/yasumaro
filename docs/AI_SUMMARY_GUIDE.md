@@ -65,8 +65,8 @@ Yasumaro は、記録対象と判定されたページの本文を AI に送信�
 |------------|--------------------------|---------|
 | OpenAI互換（クラウド） | 10,000文字 | `OPENAI_CONTENT_CHARS`（デフォルト 10000） |
 | Gemini | 30,000文字 | `GEMINI_CONTENT_CHARS`（デフォルト 30000） |
-| OpenAI互換（ローカルURL） | 4,000文字 | —（ローカル判定時は固定） |
-| Built-in AI | 16,384文字 | —（セッションのコンテキストウィンドウが狭い場合はさらに切り詰め） |
+| OpenAI互換（ローカルURL） | 4,000文字 | ―（ローカル判定時は固定） |
+| Built-in AI | 16,384文字 | ―（セッションのコンテキストウィンドウが狭い場合はさらに切り詰め） |
 
 なお、65,536文字（64KB）はPIIサニタイザーの入力サイズ上限であり、AI送信時の切り詰め上限ではありません（詳細は [PII機能ガイド](PII_FEATURE_GUIDE.md) を参照）
 
@@ -138,7 +138,7 @@ Yasumaro sends the body text of pages that meet the recording criteria to an AI 
 | **Ollama** | Local Ollama (`http://localhost:11434/v1`) |
 | **OpenAI Compatible (Models.dev)** | Connect by selecting a model from the Models.dev catalog |
 
-Internally there are three provider strategies (`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`) — and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's LanguageModel API (formerly Prompt API) directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
+Internally there are three provider strategies (`GeminiProvider` / `GenericOpenAICompatibleProvider` / `BuiltInAiProvider`) ― and Groq, Anthropic, local LLMs, etc. are supported by swapping the Base URL within the "OpenAI Compatible" slot. Built-in AI uses the browser's LanguageModel API (formerly Prompt API) directly. See the [Setup Guide](SETUP_GUIDE.md) for detailed setup steps, and the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for Built-in AI specific steps.
 
 Provider base URLs are authorized per origin. Known AI-provider endpoints and local (loopback) addresses work without extra setup; any other origin is only usable after you explicitly allow it in the confirmation dialog shown at save time. The grant is device-local and is never included in settings exports or imports (re-allow the origin after importing settings on another device).
 
@@ -156,9 +156,9 @@ Provider base URLs are authorized per origin. Known AI-provider endpoints and lo
 5. Save to Obsidian / SQLite / local Markdown
 ```
 
-For the detailed cleansing order and what each feature does — including the Japanese site-specific options and the Domain Whitelist Extraction Mode — see [Cleansing Order](CLEANSING_ORDER.md).
+For the detailed cleansing order and what each feature does ― including the Japanese site-specific options and the Domain Whitelist Extraction Mode ― see [Cleansing Order](CLEANSING_ORDER.md).
 
-### Priority Fallback (Ranks 1–3)
+### Priority Fallback (Ranks 1-3)
 
 In the dashboard's "Initial Setup," you can configure AI providers with priority ranks 1 through 3. When generating a summary, providers are tried in order:
 
@@ -167,7 +167,7 @@ In the dashboard's "Initial Setup," you can configure AI providers with priority
 3. If it fails, or the summary is too short, fall back to the rank-2 provider and retry
 4. If rank 2 also fails, retry with rank 3
 
-A provider that keeps failing is paused for about 5–15 minutes and skipped during that time. Turning off "Pause providers that keep failing" in the AI provider settings (ON by default) disables the pause, so every provider is retried on each summary.
+A provider that keeps failing is paused for about 5-15 minutes and skipped during that time. Turning off "Pause providers that keep failing" in the AI provider settings (ON by default) disables the pause, so every provider is retried on each summary.
 
 If no priority list is configured, the single legacy "AI Provider" setting is used as before. This lets you run a local LLM as your primary provider and fall back to a cloud AI only on failure, for example.
 
@@ -181,8 +181,8 @@ If no priority list is configured, the single legacy "AI Provider" setting is us
 |----------|------------------------------|-------------|
 | OpenAI-compatible (cloud) | 10,000 chars | `OPENAI_CONTENT_CHARS` (default 10000) |
 | Gemini | 30,000 chars | `GEMINI_CONTENT_CHARS` (default 30000) |
-| OpenAI-compatible (local URL) | 4,000 chars | — (fixed when the URL is detected as local) |
-| Built-in AI | 16,384 chars | — (truncated further when the session context window is narrower) |
+| OpenAI-compatible (local URL) | 4,000 chars | ― (fixed when the URL is detected as local) |
+| Built-in AI | 16,384 chars | ― (truncated further when the session context window is narrower) |
 
 Note: 65,536 characters (64KB) is the PII sanitizer's input-size limit, not the AI send cap (see the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details)
 
@@ -198,7 +198,7 @@ Which provider received a summary request, and when, is recorded in the audit lo
 
 ### Usage Warnings
 
-When monthly usage exceeds a configured threshold, a warning is shown in the dashboard — a useful signal for adjusting prompt size or timeout settings to manage API costs.
+When monthly usage exceeds a configured threshold, a warning is shown in the dashboard ― a useful signal for adjusting prompt size or timeout settings to manage API costs.
 
 ### FAQ
 
@@ -230,6 +230,6 @@ You can choose how much to loosen cleansing for that one regeneration:
 
 The loosening applies **only to that single regeneration** and is never saved to settings (the next automatic recording still uses the global settings). There is no loosening knob for ① candidate selection in v1, and the over-cut guards keep firing during a loosened run.
 
-Regeneration updates the same row in place. It does not auto-append to Obsidian or local Markdown — use the existing "append" button if you want to send it again. Rate limiting uses a regenerate-only bucket, counted separately from normal recording.
+Regeneration updates the same row in place. It does not auto-append to Obsidian or local Markdown ― use the existing "append" button if you want to send it again. Rate limiting uses a regenerate-only bucket, counted separately from normal recording.
 
-**Bulk regeneration of a selection**: Check multiple entries in the list and press "Regenerate AI summaries" in the selection bar to re-run them sequentially with **current settings**. A toast reports succeeded/failed counts when the run finishes (rows already running are reported as skipped), then the list refreshes (the loosening choices and force option are header-only — use the per-entry header when you need them). The same regenerate-only rate-limit bucket applies.
+**Bulk regeneration of a selection**: Check multiple entries in the list and press "Regenerate AI summaries" in the selection bar to re-run them sequentially with **current settings**. A toast reports succeeded/failed counts when the run finishes (rows already running are reported as skipped), then the list refreshes (the loosening choices and force option are header-only ― use the per-entry header when you need them). The same regenerate-only rate-limit bucket applies.

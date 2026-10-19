@@ -1,4 +1,4 @@
-# PBI: queryPlanner ⇄ queryPlan の循環 import 解消
+# PBI: queryPlanner ⇔ queryPlan の循環 import 解消
 
 ## ステータス: ✅ 完了（2026-09-15）
 
@@ -16,7 +16,7 @@
 
 - 循環: `queryPlanner.ts:22` が `clampLimit, clampOffset` を plan から import、`queryPlan.ts:18` が `planQueryMode` を planner から import
 - `queryPlan.ts:315-317` の `clampLimit(query.limit, cap, 100)` は planner の `applyReadPolicy`（queryPlanner.ts:69-74）との**防御的再 clamp**であり、コメント自体がそれを認めている
-- 593行の集中自体は正当（FTS/LIKE/plain の文面と束縛順序は一体で変わる — PBI-34 の判断を支持）。削るべきは行数ではなく**循環**
+- 593行の集中自体は正当（FTS/LIKE/plain の文面と束縛順序は一体で変わる ― PBI-34 の判断を支持）。削るべきは行数ではなく**循環**
 
 ## 実装ガイド
 
@@ -35,7 +35,7 @@ Scenario: 依存が一方向になる
 
 ## 受け入れ基準
 
-- [x] plan が planner を import していない（grep で確認 — `planQueryMode` / `selectReadCap` / `DEFAULT_QUERY_LIMIT` / `QueryMode` は queryPlan に移動）
+- [x] plan が planner を import していない（grep で確認 ― `planQueryMode` / `selectReadCap` / `DEFAULT_QUERY_LIMIT` / `QueryMode` は queryPlan に移動）
 - [x] `AlreadyCappedQuery` ブランド型により `buildQuerySpec` が正規化済みクエリのみ受け付ける（worker 境界の構造化クローンでは brand が落ちるため、crudHandlers の1箇所だけ文書化キャスト）
 - [x] 既存の queryPlan / queryPlanner / backend テスト全件 green（26 passed）
 

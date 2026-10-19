@@ -13,12 +13,12 @@
 
 ## 背景（現状・証拠）
 
-- トリガ判定: `src/content/contentKernel.ts:64-66` — `document.documentElement.hasAttribute('data-ow-e2e-test')`。**低信頼側（Web ページ）が自分の `<html>` に付与できる属性**で決まる。
-- 出力: `src/content/e2eTestState.ts:30-36` — `document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state))`。publish 呼び出しは `src/content/contentKernel.ts:215-224` / `:230-233` / `:318-319`。
+- トリガ判定: `src/content/contentKernel.ts:64-66` ― `document.documentElement.hasAttribute('data-ow-e2e-test')`。**低信頼側（Web ページ）が自分の `<html>` に付与できる属性**で決まる。
+- 出力: `src/content/e2eTestState.ts:30-36` ― `document.documentElement.setAttribute('data-ow-test-state', JSON.stringify(state))`。publish 呼び出しは `src/content/contentKernel.ts:215-224` / `:230-233` / `:318-319`。
 - プロダクションビルドにも `publishE2eTestState()` がそのまま入っており、ビルド時の除去も無い。
 - ページ側 JS から読める情報:
-  - `minVisitDuration` / `minScrollDepth` — ユーザーが保存した「最小滞在時間・最小スクロール深度」（`visitGating.ts:163-166` で settings から読込）。拡張設定の外部オリジンへの開示・フィンガープリント材料。
-  - `isValidVisitReported` / `duration` / `maxScrollPercentage` — そのページが記録対象になったかどうか。ページは「あと何秒・何%で記録が発火するか」を正確に知り、記録を誘発／回避するよう振る舞いを調整できる（visit gate のゲーム化）。
+  - `minVisitDuration` / `minScrollDepth` ― ユーザーが保存した「最小滞在時間・最小スクロール深度」（`visitGating.ts:163-166` で settings から読込）。拡張設定の外部オリジンへの開示・フィンガープリント材料。
+  - `isValidVisitReported` / `duration` / `maxScrollPercentage` ― そのページが記録対象になったかどうか。ページは「あと何秒・何%で記録が発火するか」を正確に知り、記録を誘発／回避するよう振る舞いを調整できる（visit gate のゲーム化）。
 - isolated world の `window.__OW_TEST_STATE` はページから見えないが、DOM 属性は共有される。
 - `src/content/loader.ts:59-63` のコメントは「E2E 属性だけでは domain filter を bypass できない」ことのみを担保しており、プローブ出力の露出は塞いでいない。
 
@@ -85,7 +85,7 @@ C8 案を以下の形で確定した。`isE2E` はプローブ publish のゲー
   どちらも fail-silent ガードのため「無言の null 永続」になる。
 
 解: content script と session の間の脚を runtime message 中継に替える。
-harness↔SW 間は session のまま（fixture・spec・E2E 側の変更なし）。
+harness⇔SW 間は session のまま（fixture・spec・E2E 側の変更なし）。
 
 1. **新メッセージ型**: `OW_PROBE_QUERY`（無 payload）/ `OW_PROBE_STATE`
    （6 field 厳密検証）。`VALID_MESSAGE_TYPES`・`CONTENT_SCRIPT_ALLOWED_TYPES`・
@@ -158,12 +158,12 @@ harness↔SW 間は session のまま（fixture・spec・E2E 側の変更なし�
 ## 検証結果（2026-10-11 autonomous-task-closer）
 
 - `npx tsc --noEmit` exit 0
-- `npm run type-check:test:baseline` — 463（pinned 463、exit 0）
+- `npm run type-check:test:baseline` ― 463（pinned 463、exit 0）
 - `npx eslint`（変更 18 ファイル） exit 0
 - `npm run validate` exit 0（Test Files 1056 passed / Tests 15960 passed）
-- `npm run build`（既定）exit 0 — bundle に `owE2eProbeEnabled` / `owE2eTestState`
+- `npm run build`（既定）exit 0 ― bundle に `owE2eProbeEnabled` / `owE2eTestState`
   あり、`data-ow-test-state` / `data-ow-e2e-test` 文字列なし
-- `OW_E2E_PROBE=0 npx wxt build` exit 0 — probe 文字列すべて不在（死滅確認）
+- `OW_E2E_PROBE=0 npx wxt build` exit 0 ― probe 文字列すべて不在（死滅確認）
 - E2E 再実行は未実施（当環境に display / Playwright ブラウザがなく headed 実行不可）。
   実装手順: `npm run build` 後に headed 環境で
   `npx playwright test --config testDir/playwright.config.ts --grep @extension`

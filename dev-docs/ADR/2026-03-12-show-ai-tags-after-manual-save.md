@@ -31,8 +31,8 @@ Obsidian Weaveはタグ付き要約モード（`tagSummaryMode`）が有効な�
 
 ## 関連するADR
 
-- [2026-02-25-rename-to-obsidian-weave.md](./2026-02-25-rename-to-obsidian-weave.md) — プロジェクト名規定
-- [2026-02-21-privacy-detection-logic-refinement.md](./2026-02-21-privacy-detection-logic-refinement.md) — プライバシーパイプライン設計
+- [2026-02-25-rename-to-obsidian-weave.md](./2026-02-25-rename-to-obsidian-weave.md) ― プロジェクト名規定
+- [2026-02-21-privacy-detection-logic-refinement.md](./2026-02-21-privacy-detection-logic-refinement.md) ― プライバシーパイプライン設計
 
 ## 決定事項
 
@@ -82,16 +82,16 @@ Obsidian Weaveはタグ付き要約モード（`tagSummaryMode`）が有効な�
 
 ```
 変更対象ファイル（決定当時。WXT移行後の実際のパスは下記「実装状態」参照）:
-  src/popup/popup.html     — #tagResultPanel を #mainStatus 直後に追加
-  src/popup/styles.css     — .tag-result-panel / .tag-badge スタイルを追加
-  src/popup/main.ts        — 保存成功後に showTagResult(url) を呼び出す
-  _locales/ja/messages.json — aiTagsLabel キーを追加
-  _locales/en/messages.json — aiTagsLabel キーを追加
+  src/popup/popup.html     ― #tagResultPanel を #mainStatus 直後に追加
+  src/popup/styles.css     ― .tag-result-panel / .tag-badge スタイルを追加
+  src/popup/main.ts        ― 保存成功後に showTagResult(url) を呼び出す
+  _locales/ja/messages.json ― aiTagsLabel キーを追加
+  _locales/en/messages.json ― aiTagsLabel キーを追加
 
 変更しないファイル:
-  src/background/recordingLogic.ts — 変更なし
-  src/background/service-worker.ts — 変更なし
-  src/utils/storageUrls.ts         — 変更なし（getUrlTags をそのまま利用）
+  src/background/recordingLogic.ts ― 変更なし
+  src/background/service-worker.ts ― 変更なし
+  src/utils/storageUrls.ts         ― 変更なし（getUrlTags をそのまま利用）
 ```
 
 ## 結果
@@ -116,11 +116,11 @@ Obsidian Weaveはタグ付き要約モード（`tagSummaryMode`）が有効な�
 ### 影響範囲
 
 - 影響を受けるファイル:
-  - `src/popup/popup.html` — DOM追加
-  - `src/popup/styles.css` — スタイル追加
-  - `src/popup/main.ts` — 表示ロジック追加
-  - `_locales/ja/messages.json` — i18nキー追加
-  - `_locales/en/messages.json` — i18nキー追加
+  - `src/popup/popup.html` ― DOM追加
+  - `src/popup/styles.css` ― スタイル追加
+  - `src/popup/main.ts` ― 表示ロジック追加
+  - `_locales/ja/messages.json` ― i18nキー追加
+  - `_locales/en/messages.json` ― i18nキー追加
 
 ### 実装状態
 

@@ -14,8 +14,8 @@
 
 ## 背景 (evidence, verified)
 
-- 署名: `src/utils/logger/api.ts:61-64` — `logInfo(message, details?, source?)`。JSDoc `:57-59` は `message=メッセージ` / `source=出力元`。
-- 呼び出し `src/dashboard/settingsPipeline.ts:149` — `logInfo('settingsPipeline', { layout }, 'Provider priority collection failed; aborting save')` が本文メッセージを source スロットに入れ、モジュール名を message スロットに入れている (入れ替わり)。
+- 署名: `src/utils/logger/api.ts:61-64` ― `logInfo(message, details?, source?)`。JSDoc `:57-59` は `message=メッセージ` / `source=出力元`。
+- 呼び出し `src/dashboard/settingsPipeline.ts:149` ― `logInfo('settingsPipeline', { layout }, 'Provider priority collection failed; aborting save')` が本文メッセージを source スロットに入れ、モジュール名を message スロットに入れている (入れ替わり)。
 - 同様に `settingsPipeline.ts:230-234`、`trancoManager.ts:61` (systematic に入れ替わり)。
 - 正しい使用例は `logger-enhanced.test.ts:208` で pin 済み。
 
@@ -41,9 +41,9 @@ Scenario: 既存の正しい呼び出しは影響を受けない
 
 ## 受け入れ基準 (file-scoped)
 
-- [x] `src/dashboard/settingsPipeline.ts:149` — `logInfo` 呼び出しが `message` / `details` / `source` の契約 (`logger/api.ts:61-64`) に沿う
-- [x] `src/dashboard/settingsPipeline.ts:230-234` — 同上
-- [x] `src/dashboard/trancoManager.ts:61` — 同上
+- [x] `src/dashboard/settingsPipeline.ts:149` ― `logInfo` 呼び出しが `message` / `details` / `source` の契約 (`logger/api.ts:61-64`) に沿う
+- [x] `src/dashboard/settingsPipeline.ts:230-234` ― 同上
+- [x] `src/dashboard/trancoManager.ts:61` ― 同上
 - [x] `logger-enhanced.test.ts:208` が pin する正しい使用例との整合が維持される
 - [x] 入れ替わっていた 3 箇所の修正後に、message / source の位置を検証するテストが追加される
 

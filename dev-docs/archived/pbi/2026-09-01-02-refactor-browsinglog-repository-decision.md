@@ -1,4 +1,4 @@
-# PBI: BrowsingLogRepository の接続または削除 — dashboard SQLite アクセスの deep module 化を完遂 or 撤回
+# PBI: BrowsingLogRepository の接続または削除 ― dashboard SQLite アクセスの deep module 化を完遂 or 撤回
 
 ## ユーザーストーリー
 開発者として、dashboard から SQLite への読み書き経路を一つに絞りたい。なぜなら現在 `src/dashboard/dashboardSqliteService.ts`（live、20 弱の shallow 関数 + `DashboardSqliteGateway` 委譲）と `src/dashboard/BrowsingLogRepository.ts`（未接続、296 行の deep module、consumer / test ゼロ）が並存し、`ServiceResult` / `isServiceError` が両方に重複定義されているから。

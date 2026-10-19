@@ -37,7 +37,7 @@ Scenario: 非推奨の呼び方は型・実行時に拒否される
 - [x] 公開接口が `record` / `preview` / `retryObsidianWrite` の 3 つのみである（`orchestrator-surface.test.ts` で pin）
 - [x] `record(mode)` ラッパーと `retryObsidianWriteOnly` エイリアスが削除されている（`rg` で 0 件確認）
 - [x] `mode` 共用体型が公開型から消えている（`RecordMode` 削除・`rg` で 0 件確認）
-- [x] 呼び出し元 3 件（recordingHandlers / offlineQueueProcessor / notificationHandlers）が新接口でビルド・テスト green（変更が必要だったのは offlineQueueProcessor のみ — 他 2 件は既に `record()` のみ使用）
+- [x] 呼び出し元 3 件（recordingHandlers / offlineQueueProcessor / notificationHandlers）が新接口でビルド・テスト green（変更が必要だったのは offlineQueueProcessor のみ ― 他 2 件は既に `record()` のみ使用）
 - [x] `npm run type-check` と関連テストが green（type-check exit 0・関連 18 ファイル 324 passed）
 
 ## テスト戦略（t_wadaスタイル）
@@ -94,7 +94,7 @@ grep -rn "RecordingOrchestrator" src/ --include="*.ts" -l
 
 ### 落とし穴
 
-- offlineQueueProcessor のリトライ経路が旧エイリアスに依存している可能性 — 置換漏れは実行時ではなく型で検出すること
+- offlineQueueProcessor のリトライ経路が旧エイリアスに依存している可能性 ― 置換漏れは実行時ではなく型で検出すること
 - `mode` 共用体を参照するテスト型がある場合、テスト側の型修正が必要になる
 
 ## Definition of Done
@@ -108,5 +108,5 @@ grep -rn "RecordingOrchestrator" src/ --include="*.ts" -l
 
 - 削除: `RecordMode` 型・`RecordOptions.mode`・`recordFull`（本体を `record()` に折り畳み）・private `retryObsidian`（`mode:'retryObsidian'` 経由の到達のみで dead）・`retryObsidianWriteOnly` alias。変更呼び出し元は `offlineQueueProcessor.ts`（型 + 呼び出し）のみ。
 - `retryObsidianWrite-result.test.ts` の mode-path テスト 1 件を削除（削除した API の pin のため。振る舞い自体は `retryObsidianWrite` の既存 2 件で担保）。
-- 維持の判断: `previewOnly` data フラグは残す — `executeInternal` の breakpoint・`processPrivacyPipelineStep`・10 超のテストが data 層 seam として依存し、PBI の削除対象（mode 共用体・ラッパー・alias）には含まれない。`record()` の preview 委譲は data/opts の previewOnly のみを見る。
+- 維持の判断: `previewOnly` data フラグは残す ― `executeInternal` の breakpoint・`processPrivacyPipelineStep`・10 超のテストが data 層 seam として依存し、PBI の削除対象（mode 共用体・ラッパー・alias）には含まれない。`record()` の preview 委譲は data/opts の previewOnly のみを見る。
 - なぜなぜ: なぜ 5 通りの呼び方が生まれたのか → 後方互換のラッパーが「新接口」追加のたびに残置され、削除の責務がどの PBI にも無かった → 解: alias/wrapper を使う最後の呼び出し元（offlineQueue）を新スペルに寄せてから削除し、表面テストで再発を固定。

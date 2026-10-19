@@ -8,7 +8,7 @@ archive 機能を使う利用者として、confirm token が「破壊的パラ�
 
 - 順位: 01 / 9
 - RICE スコア: 96.0（Reach=4 / Impact=3 / Confidence=80% / Effort=0.1 人週）
-- 根拠: `src/messaging/sqliteOperationSecurity.ts:117-124` の `ARCHIVE_SCOPE_BY_SUBTYPE` は 6 subtype のみ。token 必須（`TOKEN_REQUIRED_SUBTYPES`、`sqliteOperationSecurity.ts:99-102`）でありながら scope 未バインドの archive subtype が 4 件残存（archive_open / archive_update / archive_save / archive_close — いずれも payload に `stagingName` を持つ: `archiveWireTable.ts` 各行・`dashboardSqliteService.ts:420-442`）。archive payload には `id` が無いため `index.ts:46` の `id` は常に undefined → subtype 単位で token が共用になる。送信側 `dashboardGateway.ts:48` と検証側 `index.ts:53` が同一 SSOT（`deriveScopeHash`）から派生するため、テーブル追記 1 箇所で両 hop が自動修復する。
+- 根拠: `src/messaging/sqliteOperationSecurity.ts:117-124` の `ARCHIVE_SCOPE_BY_SUBTYPE` は 6 subtype のみ。token 必須（`TOKEN_REQUIRED_SUBTYPES`、`sqliteOperationSecurity.ts:99-102`）でありながら scope 未バインドの archive subtype が 4 件残存（archive_open / archive_update / archive_save / archive_close ― いずれも payload に `stagingName` を持つ: `archiveWireTable.ts` 各行・`dashboardSqliteService.ts:420-442`）。archive payload には `id` が無いため `index.ts:46` の `id` は常に undefined → subtype 単位で token が共用になる。送信側 `dashboardGateway.ts:48` と検証側 `index.ts:53` が同一 SSOT（`deriveScopeHash`）から派生するため、テーブル追記 1 箇所で両 hop が自動修復する。
 
 ## BDD 受け入れシナリオ
 
@@ -50,7 +50,7 @@ S（0.1 人週）。種別: fix（セキュリティ）。
 ## 実装アプローチ
 
 1. `sqliteOperationSecurity.ts` の `ARCHIVE_SCOPE_BY_SUBTYPE` に 4 行追加 + prepare/cleanup 不バインドの理由コメント
-2. scope binding のテーブル整合テスト（ALL subtypes のうち stagingName を持つものが全て 'staging' 束縛を持つ drift ガード）を新設 — `archiveWireTable.ts` の payload 定義を参照して検証
+2. scope binding のテーブル整合テスト（ALL subtypes のうち stagingName を持つものが全て 'staging' 束縛を持つ drift ガード）を新設 ― `archiveWireTable.ts` の payload 定義を参照して検証
 3. 既存テスト実行
 
 ## 実装メモ（2026-09-11）

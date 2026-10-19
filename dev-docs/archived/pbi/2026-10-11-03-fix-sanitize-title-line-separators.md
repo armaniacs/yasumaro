@@ -13,7 +13,7 @@
 
 ## 背景（現状・証拠）
 
-- `src/utils/markdownFormatter.ts:62-67` — 正規化は `:66` の `raw.replace(/[\r\n]+/g, ' ')` のみ。
+- `src/utils/markdownFormatter.ts:62-67` ― 正規化は `:66` の `raw.replace(/[\r\n]+/g, ' ')` のみ。
 - 出力先は `src/utils/markdownFormatter.ts:160`（`# ${title}` の見出し行）と `:173`（`- [title](url)` の行）。
 - `title` は `sender.tab.title`（ページの `<title>` = 完全に外部入力）から `src/background/handlers/recordingHandlers.ts:142` 経由で入る。`sanitizeForMarkdownLinkText` は `[ ] ( )` しかエスケープしない（`src/utils/markdownSanitizer.ts:151-159`）。
 - したがって U+2028 LINE SEPARATOR / U+2029 PARAGRAPH SEPARATOR / U+0085 NEL はそのまま残る。U+2028/U+2029 は Unicode・JSON・JS の定義上の行終端であり、CodeMirror 系エディタ（Obsidian）はこれらでも行を分割する。ページ題名に `\u2028    - [forged](https://evil)` を仕込めば、日次ノートに偽の行を追加できる余地が残る。

@@ -32,22 +32,22 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 ### Trace（現在 HEAD `56f1d7c1` で実ファイル確認済み）
 
-- [entrypoint] `src/background/deferredMigrations.ts:62`（background service worker）— サービスワーカー起動ごとの一度限りの deferred ランナーが、最初のメッセージハンドラ発火時に `needsOpfsRecoveryMigration()` を呼ぶ。`:65` で `migrateOpfsRecovery()` を起動。ランナーは `:50` の `let ran = false` と `:53` の `if (ran) return;` で同一 SW ライフタイム中は1回だけ。`:53-54` は `await` の**前**に `ran = true` を立てるため、失敗しても同じ SW 内では再試行されない。
-- [propagation] `src/background/sqlite/offscreenGateway.ts:209`（status gate input）— `getStatus()` は `SQLITE_STATUS` が失敗すると、モード不明を返す代わりに `{ initialized: false, path: '', fallback: false, fts5: false, initError: ... }` を返す。ゲートが消費する fail-open 側の既定値。
-- [propagation] `src/background/migration/opfsRecovery.ts:94`（migration gate）— `if (!statusResult || statusResult.fallback === true) { return false; }`。`fallback` フラグしか見ておらず、失敗した status は素通りする。`initialized: false` は一度も読まれない。なお `initialized` は `src/messaging/sqliteMessages.ts:167` で `boolean`（任意ではない）として型付けされているので、fail-closed 判定に使える。
-- [propagation] `src/background/migration/opfsRecovery.ts:122`（snapshot）— `migrate()` は `FALLBACK_STORAGE_DATA` を1回だけ読む。この後を実行している残り時間の間、そのキーを保護するロック・マーカー・再読差分のいずれも存在しない。
-- [propagation] `src/offscreen/sqliteEngineHost.ts:404`（並行ライター）— セッション途中の OPFS degrade（`:373` の呼び出し → `#enterFallbackStorage`）が新しい `FallbackStorage` を作り、同じキーへのライブ書き込みを再開する。`:410` で `usingFallbackStorage = true` を立て、`init()` の早期 return（`:184`）と再初期化パスの早期 return（`:438`）により、このコンテキストは fallback から登り直さない。
-- [propagation] `src/background/migration/opfsRecovery.ts:137`（バッチ経路）— 各バッチは `sqliteClient.mutate({ type: 'insertBatch', records: batch })` で offscreen の**その時点の**バックエンドに送られる。エンジンが fallback なら `FallbackStorageAdapter.insertBatch`（`src/offscreen/FallbackStorageAdapter.ts:15-19`）に到達し、`{ success: true, inserted: 0, skipped: N }` を返す。
-- [propagation] `src/messaging/sqliteWireTable.ts:186`（結果正規化）— `count: (response.inserted as number | undefined) ?? (response.count as number)` により wire 上の `inserted` が `count` に読み替えられる。`:187` で `skipped` も正規化されるが、`opfsRecovery.ts:141` は `normalized.data.count` しか加算せず、`skipped` を読み飛ばす。
-- [sink] `src/background/migration/opfsRecovery.ts:159`（破壊）— `chrome.storage.local.remove(FALLBACK_STORAGE_KEY)` が snapshot 後に書かれたすべての行（循環ケースでは SQLite に1件も到達していない全行）を消す。`:160` が `OPFS_FALLBACK_MODE` を落とし、以後の移行による回復の可能性も消す。
+- [entrypoint] `src/background/deferredMigrations.ts:62`（background service worker）― サービスワーカー起動ごとの一度限りの deferred ランナーが、最初のメッセージハンドラ発火時に `needsOpfsRecoveryMigration()` を呼ぶ。`:65` で `migrateOpfsRecovery()` を起動。ランナーは `:50` の `let ran = false` と `:53` の `if (ran) return;` で同一 SW ライフタイム中は1回だけ。`:53-54` は `await` の**前**に `ran = true` を立てるため、失敗しても同じ SW 内では再試行されない。
+- [propagation] `src/background/sqlite/offscreenGateway.ts:209`（status gate input）― `getStatus()` は `SQLITE_STATUS` が失敗すると、モード不明を返す代わりに `{ initialized: false, path: '', fallback: false, fts5: false, initError: ... }` を返す。ゲートが消費する fail-open 側の既定値。
+- [propagation] `src/background/migration/opfsRecovery.ts:94`（migration gate）― `if (!statusResult || statusResult.fallback === true) { return false; }`。`fallback` フラグしか見ておらず、失敗した status は素通りする。`initialized: false` は一度も読まれない。なお `initialized` は `src/messaging/sqliteMessages.ts:167` で `boolean`（任意ではない）として型付けされているので、fail-closed 判定に使える。
+- [propagation] `src/background/migration/opfsRecovery.ts:122`（snapshot）― `migrate()` は `FALLBACK_STORAGE_DATA` を1回だけ読む。この後を実行している残り時間の間、そのキーを保護するロック・マーカー・再読差分のいずれも存在しない。
+- [propagation] `src/offscreen/sqliteEngineHost.ts:404`（並行ライター）― セッション途中の OPFS degrade（`:373` の呼び出し → `#enterFallbackStorage`）が新しい `FallbackStorage` を作り、同じキーへのライブ書き込みを再開する。`:410` で `usingFallbackStorage = true` を立て、`init()` の早期 return（`:184`）と再初期化パスの早期 return（`:438`）により、このコンテキストは fallback から登り直さない。
+- [propagation] `src/background/migration/opfsRecovery.ts:137`（バッチ経路）― 各バッチは `sqliteClient.mutate({ type: 'insertBatch', records: batch })` で offscreen の**その時点の**バックエンドに送られる。エンジンが fallback なら `FallbackStorageAdapter.insertBatch`（`src/offscreen/FallbackStorageAdapter.ts:15-19`）に到達し、`{ success: true, inserted: 0, skipped: N }` を返す。
+- [propagation] `src/messaging/sqliteWireTable.ts:186`（結果正規化）― `count: (response.inserted as number | undefined) ?? (response.count as number)` により wire 上の `inserted` が `count` に読み替えられる。`:187` で `skipped` も正規化されるが、`opfsRecovery.ts:141` は `normalized.data.count` しか加算せず、`skipped` を読み飛ばす。
+- [sink] `src/background/migration/opfsRecovery.ts:159`（破壊）― `chrome.storage.local.remove(FALLBACK_STORAGE_KEY)` が snapshot 後に書かれたすべての行（循環ケースでは SQLite に1件も到達していない全行）を消す。`:160` が `OPFS_FALLBACK_MODE` を落とし、以後の移行による回復の可能性も消す。
 
 ### Evidence
 
-- `src/background/sqlite/offscreenGateway.ts:209` — 失敗した status は `fallback:false` と `initialized:false` を返す。ゲートが消費する fail-open 方向。
-- `src/background/migration/opfsRecovery.ts:94` — ゲートは `fallback` フラグしか読まず、`initialized` は読まない。
-- `src/background/migration/opfsRecovery.ts:159` — 無条件の全キー remove（snapshot 読み込みは `:122`）。マーカーの remove は `:160`。
-- `src/offscreen/storageFallback.ts:138` — `const existingKeys = new Set(data.records.map(r => \`${r.url}\0${r.created_at}\`))`。`:143` で既存・バッチ内重複を弾き、`:149` で `return { success: true, count: 0 }` を返す（＝黙った no-op）。
-- `src/offscreen/sqliteEngineHost.ts:404` — `#enterFallbackStorage` はコンテキスト間の協調なしにライブ fallback 書き込みを再開する。`:184` が、このコンテキストが fallback モードを離れないことを示す。
+- `src/background/sqlite/offscreenGateway.ts:209` ― 失敗した status は `fallback:false` と `initialized:false` を返す。ゲートが消費する fail-open 方向。
+- `src/background/migration/opfsRecovery.ts:94` ― ゲートは `fallback` フラグしか読まず、`initialized` は読まない。
+- `src/background/migration/opfsRecovery.ts:159` ― 無条件の全キー remove（snapshot 読み込みは `:122`）。マーカーの remove は `:160`。
+- `src/offscreen/storageFallback.ts:138` ― `const existingKeys = new Set(data.records.map(r => \`${r.url}\0${r.created_at}\`))`。`:143` で既存・バッチ内重複を弾き、`:149` で `return { success: true, count: 0 }` を返す（＝黙った no-op）。
+- `src/offscreen/sqliteEngineHost.ts:404` ― `#enterFallbackStorage` はコンテキスト間の協調なしにライブ fallback 書き込みを再開する。`:184` が、このコンテキストが fallback モードを離れないことを示す。
 
 ### 補遺: 件数一致だけで守れない理由（実装時に必ず踏む）
 
@@ -176,7 +176,7 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 ### 既存テスト（書式と pin の追加位置）
 
-- **`src/background/__tests__/migrationService-opfs.test.ts`（全287行）— 主な追加先**
+- **`src/background/__tests__/migrationService-opfs.test.ts`（全287行）― 主な追加先**
   - `:12-36` の `vi.stubGlobal('chrome', ...)` がファイル内で `storageMock` プレーンオブジェクトを実装している（`get`/`set`/`remove`）。追加 pin はこの書式にそのまま足せる
   - `:83` `describe('needsOpfsRecoveryMigration')` に、**fail-closed** の pin を追加する。既存の `:104-110`（`fallback: true` で false）と `:128-134`（`getStatus` が reject で false）は別経路を既にカバーしている
   - `:137` `describe('migrateOpfsRecovery')` に、**削除前再読＋差分**の pin を追加する。`:206-212` の `mockImplementation` の中で `storageMock` に追記すれば、バッチループ中の追加書き込みを実時間待ちなしで再現できる
@@ -204,8 +204,8 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 **二か所、どちらも必須**:
 
-- **(A) ゲート** — `opfsRecovery.ts:94`（`needsMigration`）。「移行を始める前の判断」。fail-open を塞ぐ第一防衛線。
-- **(B) 実行直前と remove 直前** — `opfsRecovery.ts:117`（`migrate` 冒頭）と **`:159` の直前の再確認**。(B) の冒頭でバッチループ中の degrade（`sqliteEngineHost.ts:404`）を早期に検知し、remove 直前の再確認で「最後の瞬間まで無傷だったか」を確定してから捨てる。**remove 直前の確認を省略すると、その直前の数ミリ秒の間に起きた degrade を取り逃す**ので、両方必要。
+- **(A) ゲート** ― `opfsRecovery.ts:94`（`needsMigration`）。「移行を始める前の判断」。fail-open を塞ぐ第一防衛線。
+- **(B) 実行直前と remove 直前** ― `opfsRecovery.ts:117`（`migrate` 冒頭）と **`:159` の直前の再確認**。(B) の冒頭でバッチループ中の degrade（`sqliteEngineHost.ts:404`）を早期に検知し、remove 直前の再確認で「最後の瞬間まで無傷だったか」を確定してから捨てる。**remove 直前の確認を省略すると、その直前の数ミリ秒の間に起きた degrade を取り逃す**ので、両方必要。
 
 **(A) だけ**ではループ途中が抜け、**(B) だけ**では初回から無駄なバッチを fallback 側へ流して `storageFallback.ts:149` の circular no-op を生む。両方入れて初めて fail-open・循環 no-op・degrade 途中の隙間の三経路を塞げる。
 
@@ -254,9 +254,9 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 ## 関連
 
 - `pbi/00-INDEX.md`
-- 同じ移行領域の PBI 09（[fallback 移行の部分失敗](../pbi/2026-10-18-09-fix-fallback-migration-partial-wipe.md)）— offscreen 側。`migrated > 0` だけで `clearAll()` する問題の修正。「count を照合してから安全網を捨てる」方針元。**本 PBI の bg 側と対になる pair**
-- 同じ移行領域の PBI 10（[OPFS v2 verify-before-delete](../pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md)）— 「削除前に検証する」同じ方針の別実装例
-- 同じ移行領域の PBI 13（[fallback クォータ sweep の順序](../pbi/2026-10-18-13-fix-fallback-quota-purge-order.md)）— fallback ストアが枯渇したときの一時しのぎ。**副作用🔴の1で述べた「fail-closed 化により fallback 行が残り続ける」影響は本 PBI と PBI 13 で共有する論点**
-- `dev-docs/TEST_RULE.md` — 実時間待ちの禁止（シナリオ2の追加書き込み再現に wait を入れないこと）
-- `dev-docs/ARCHITECTURE_MAP.md` — OPFS/SQLite/fallback の構成
+- 同じ移行領域の PBI 09（[fallback 移行の部分失敗](../pbi/2026-10-18-09-fix-fallback-migration-partial-wipe.md)）― offscreen 側。`migrated > 0` だけで `clearAll()` する問題の修正。「count を照合してから安全網を捨てる」方針元。**本 PBI の bg 側と対になる pair**
+- 同じ移行領域の PBI 10（[OPFS v2 verify-before-delete](../pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md)）― 「削除前に検証する」同じ方針の別実装例
+- 同じ移行領域の PBI 13（[fallback クォータ sweep の順序](../pbi/2026-10-18-13-fix-fallback-quota-purge-order.md)）― fallback ストアが枯渇したときの一時しのぎ。**副作用🔴の1で述べた「fail-closed 化により fallback 行が残り続ける」影響は本 PBI と PBI 13 で共有する論点**
+- `dev-docs/TEST_RULE.md` ― 実時間待ちの禁止（シナリオ2の追加書き込み再現に wait を入れないこと）
+- `dev-docs/ARCHITECTURE_MAP.md` ― OPFS/SQLite/fallback の構成
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/NEEDS-VALIDATION.md` 17番 / `findings.json`

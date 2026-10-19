@@ -81,7 +81,7 @@ Scenario: 1ジョブの失敗が他の定期ジョブの登録を妨げない（
 
 ## テスト戦略
 
-**単体（Vitest / `src/background/__tests__/alarmRegistry.test.ts`）— 主戦場**
+**単体（Vitest / `src/background/__tests__/alarmRegistry.test.ts`）― 主戦場**
 
 - ハッピーパス: `chrome.alarms.get` が既存アラームを返したとき、`chrome.alarms.create` が呼ばれない（`toHaveBeenCalledTimes(0)` 相当）。アンカーを先に置き（既知ジョブの install フックが1回解決したことを確認してから）negative を判定する。
 - 境界: `chrome.alarms.get` が `undefined` を返したときだけ `create('yasumaro-daily-purge', { periodInMinutes: 1440 })` が1回呼ばれる。
@@ -94,7 +94,7 @@ Scenario: 1ジョブの失敗が他の定期ジョブの登録を妨げない（
 - `init()` → `alarmRegistry.installAll()` を複数回呼んでも、日次purgeの登録が1回きりの created に収束すること（冪等性の確認）。
 - 既存アサーションの維持: `installs the session alarm once per installAll`、`ignores unknown alarm names` などの周辺テストが緑のまま。
 
-**E2E（Playwright）— 最小限**
+**E2E（Playwright）― 最小限**
 
 - 展開版を隔離プロファイルで起動し、`chrome.alarms.get('yasumaro-daily-purge').scheduledTime` を記録 → SW を強制停止・復帰 → 再取得して**不変であること**を観測（ブロッカー B1/B2 の観測を E2E として固定する）。実時間 24h の待ち合わせは不要で、「値が保持されたこと」だけを検証する。
 - `--retries=0` で安定実行、`expect.poll` で待機する。
@@ -107,12 +107,12 @@ Scenario: 1ジョブの失敗が他の定期ジョブの登録を妨げない（
 |---|---|---|---|
 | `entrypoints/background/index.ts` | 14 | 8, 14, 16 | `persistent: false` / 動的 import / `init()` 呼び出し |
 | `src/background/service-worker.ts` | 66 | 66 | `void alarmRegistry.installAll()` |
-| `src/background/alarmRegistry.ts` | 82 | 78–85 | 「Chrome replaces same-name alarms」のコメント（置き換えセマンティクス） |
+| `src/background/alarmRegistry.ts` | 82 | 78-85 | 「Chrome replaces same-name alarms」のコメント（置き換えセマンティクス） |
 | `src/background/alarmRegistry.ts` | 138 | 161 | `yasumaro-daily-purge` の `staticSchedule: { periodInMinutes: 1440 }`（`when` なし） |
 | `src/background/alarmRegistry.ts` | 142 | 165 | `yasumaro-offline-network-retry` の `{ periodInMinutes: 5 }`（再起動の引き金） |
 | `src/background/alarmRegistry.ts` | 175 | 200 | `chrome.alarms.create(job.name, job.staticSchedule)` の無条件呼び出し |
-| `src/background/localMarkdownIdleFlusher.ts` | 95 | 91–105 | `ensureDailyFlushArmed()` の get-then-create ガード（模範） |
-| `src/background/dailyPurgeHandler.ts` | 141 | 140–141 | 監査ログ7日スキャンを含む日次purge本体 |
+| `src/background/localMarkdownIdleFlusher.ts` | 95 | 91-105 | `ensureDailyFlushArmed()` の get-then-create ガード（模範） |
+| `src/background/dailyPurgeHandler.ts` | 141 | 140-141 | 監査ログ7日スキャンを含む日次purge本体 |
 | `src/background/__tests__/alarmRegistry.test.ts` | 199 | 199 | 無条件再作成を pin している既存テスト |
 
 ### 最小変更方針

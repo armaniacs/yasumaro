@@ -57,4 +57,4 @@ Scenario: ライセンスチェックが引き続きパスする
 - [x] ドキュメント更新済み（third-party notices に反映が必要な場合のみ）
 
 ## 実装メモ（2026-09-05・branch 0905c）
-- 完了: npm `overrides` では license フィールドを注入できない（バージョン固定は直接依存と衝突、メタデータのみの override は無効 — 実測）ため、`scripts/generate-sbom.mjs` を新設（cyclonedx-npm 実行後に人間検証済みの license 補正テーブルを適用）。`generate-sbom` スクリプトを差し替え。sbom.json の wa-sqlite licenses が MIT を表明、check-licenses 541 packages PASS。MIT 文面確認の根拠はスクリプトの WHY コメントに記録。
+- 完了: npm `overrides` では license フィールドを注入できない（バージョン固定は直接依存と衝突、メタデータのみの override は無効 ― 実測）ため、`scripts/generate-sbom.mjs` を新設（cyclonedx-npm 実行後に人間検証済みの license 補正テーブルを適用）。`generate-sbom` スクリプトを差し替え。sbom.json の wa-sqlite licenses が MIT を表明、check-licenses 541 packages PASS。MIT 文面確認の根拠はスクリプトの WHY コメントに記録。

@@ -1,7 +1,7 @@
-# Design: StorageBackend Adapter — Unify Three-Backend Dispatch
+# Design: StorageBackend Adapter ― Unify Three-Backend Dispatch
 
 **Date:** 2026-07-13
-**Status:** Implemented (2026-07-13) — v6.5.27
+**Status:** Implemented (2026-07-13) ― v6.5.27
 **PBI:** [2026-07-13-01-fix-storage-backend-adapter](../pbi/2026-07-13-01-fix-storage-backend-adapter.md)
 
 ---
@@ -25,7 +25,7 @@ This pattern repeats ~20 times across 3 files (~240 lines of duplication). Addin
 
 ### Target State
 
-Introduce a `StorageBackend` interface with three adapter implementations. `SqliteEngineContext` selects the adapter once at init time. Repository functions delegate to `backend.operation()` — a single call.
+Introduce a `StorageBackend` interface with three adapter implementations. `SqliteEngineContext` selects the adapter once at init time. Repository functions delegate to `backend.operation()` ― a single call.
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -102,7 +102,7 @@ When all three backends fail to initialize, `getBackend()` returns `NoopBackend`
 
 ### Worker SQL backdoor (for migrations only)
 
-The OPFS Worker exposes `SQL_EXEC` and `SQL_QUERY` message types for schema operations. These are used by `MigrationEngine` (PBI #5) only — not by repository functions. Repository functions continue using typed operation messages (`INSERT`, `QUERY`, `SEARCH`) for type safety and SQL injection prevention.
+The OPFS Worker exposes `SQL_EXEC` and `SQL_QUERY` message types for schema operations. These are used by `MigrationEngine` (PBI #5) only ― not by repository functions. Repository functions continue using typed operation messages (`INSERT`, `QUERY`, `SEARCH`) for type safety and SQL injection prevention.
 
 ```ts
 // Worker handles these additional message types:
@@ -174,7 +174,7 @@ class FallbackStorageAdapter implements StorageBackend {
 
 ## Backend Selection Logic
 
-In `SqliteEngineContext`. Uses lazy initialization — the first repository call triggers `getBackend()`, which performs backend selection. This avoids offscreen document creation timeout (Chrome limits offscreen setup to 5-10s; WASM loading + OPFS init + migration can exceed this).
+In `SqliteEngineContext`. Uses lazy initialization ― the first repository call triggers `getBackend()`, which performs backend selection. This avoids offscreen document creation timeout (Chrome limits offscreen setup to 5-10s; WASM loading + OPFS init + migration can exceed this).
 
 ```ts
 class SqliteEngineContext {
@@ -190,14 +190,14 @@ class SqliteEngineContext {
     // Try Fallback
     try { this.backend = await this.tryInitFallback(); return this.backend; } catch {}
 
-    // Null Object — never throw. All operations return { success: false, error: 'Database not initialized' }
+    // Null Object ― never throw. All operations return { success: false, error: 'Database not initialized' }
     this.backend = new NoopBackend();
     return this.backend;
   }
 }
 ```
 
-**Backend selection is one-time per offscreen document lifetime.** The environment factors that cause backend failure (OPFS unsupported, WASM URL unresolvable) never change within a session. Re-selection would switch to a different physical database (OPFS file vs IndexedDB store), causing apparent data loss. This is an intentional constraint — not a missing feature.
+**Backend selection is one-time per offscreen document lifetime.** The environment factors that cause backend failure (OPFS unsupported, WASM URL unresolvable) never change within a session. Re-selection would switch to a different physical database (OPFS file vs IndexedDB store), causing apparent data loss. This is an intentional constraint ― not a missing feature.
 
 When the offscreen document is recreated (e.g., Chrome evicts it for memory), `SqliteEngineContext` is a new instance and re-selects from scratch.
 
@@ -259,7 +259,7 @@ All adapters return `{ success: false, error: string }` on failure. Repositories
 
 ## Rollback
 
-Each repo function change is independent. Can roll back any function individually by restoring the original four-way branch. No schema or data migration involved — purely code reorganization.
+Each repo function change is independent. Can roll back any function individually by restoring the original four-way branch. No schema or data migration involved ― purely code reorganization.
 
 ---
 

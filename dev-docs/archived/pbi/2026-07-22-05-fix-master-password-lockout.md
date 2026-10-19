@@ -82,7 +82,7 @@ masterPassword.ts [dashboard, community=48]
 ```
 **重要な発見**: 
 - `rateLimiter.ts` は `chrome.storage.session` に状態を保存 (`SessionStore` community=167 と連携)
-- `withOptimisticLock()` (`optimisticLock.ts`) がプロジェクトに存在 — レートリミットのアトミック化に最適なパターンが既に利用可能
+- `withOptimisticLock()` (`optimisticLock.ts`) がプロジェクトに存在 ― レートリミットのアトミック化に最適なパターンが既に利用可能
 - ポップアップ側 (`masterPasswordUi.ts`) は既にレートリミットを実装済み。ダッシュボード側との差分は「呼び出しの欠落」のみ。
 
 ### なぜなぜ分析（2026-07-22）
@@ -96,7 +96,7 @@ masterPassword.ts [dashboard, community=48]
 - **対策**: `rateLimiter.ts` にキー設計のコメントを追加し、「UI経路ごとに異なるキーを使用する」ことを明記する
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下が該当することを確認済み）
 ```bash
 grep -n "async function authenticatePassword\|verifyMasterPassword" src/dashboard/masterPassword.ts
 grep -n "checkRateLimit\|recordFailedAttempt\|resetFailedAttempts" src/popup/masterPasswordUi.ts src/utils/rateLimiter.ts

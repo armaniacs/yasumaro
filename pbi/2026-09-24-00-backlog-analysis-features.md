@@ -1,4 +1,4 @@
-# 2026-09-24 分析機能強化ラウンド — 採点台帳
+# 2026-09-24 分析機能強化ラウンド ― 採点台帳
 
 分析機能要求（タグクラスタ時間変化・ワードクラスタ・ドメイン分析）に、SQLite の既存カラムだけで実現可能な新規分析手法10案を加えた計14候補（不採用1案を除き13採用）を RICE 採点した。粒度は「上位から段階的に」とし、RICE 上位6件＋ユーザー明示要求2件（ワードクラスタ・スライダーは台帳順位から昇格）を個別 PBI 化し、残り5案＋不採用1案を本台帳で管理する。
 
@@ -21,7 +21,7 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は月間アクティブ
 | 11 | AI利用統計 | 2 | 1.0 | 80% | 1.5pt | 1.07 | 台帳送り |
 | 12 | プライバシー統計 | 2 | 1.0 | 50% | 1.5pt | 0.67 | 台帳送り |
 | 13 | タグクラスタ時間変化スライダー（ユーザー要求） | 2 | 1.0 | 50% | 5pt | 0.20 | PBI 08（昇格） |
-| — | scroll_ratio 読書分析（不採用） | 3 | 1.5 | 50% | 2pt | 1.13 | 不採用 |
+| ― | scroll_ratio 読書分析（不採用） | 3 | 1.5 | 50% | 2pt | 1.13 | 不採用 |
 
 ※ PBI 04 は共有期間フィルタ部品存在下の実質工数。素の Effort 2pt なら RICE 1.20。ユーザー要件「ワードクラスタ・ドメイン分析にも期間指定を持たせる」により期間指定が全分析機能の共通基盤と位置づけられたため、調整後スコアで採用順序を決めた。
 
@@ -50,12 +50,12 @@ RICE = (Reach × Impact × Confidence) / Effort。Reach は月間アクティブ
 
 いずれも採点済み。分析ラウンド（PBI 01-08）完遂後の次ラウンド入力候補。
 
-- **再訪分析**（RICE 2.13・1.5pt）— 2026-09-26 に [2026-09-26-01-feat-revisit-loop-time-capsule.md](../dev-docs/archived/pbi/2026-09-26-01-feat-revisit-loop-time-capsule.md) へ統合した（再訪ランキングはそのパネルの1区分）
-- **スター分析**（RICE 1.60・1pt）— スター記事のタグ/ドメイン分布（is_starred）。トリガー: 同上
-- **記録量・ストリーク**（RICE 1.60・1pt）— 日次記録数の折れ線＋連続記録日数（created_at）。トリガー: 同上
-- **AI利用統計**（RICE 1.07・1.5pt）— provider/model 別の要約回数・トークン消費・fallback 発生率の推移（ai_provider, ai_model, *_tokens, fallback_reason）。トリガー: AI コスト・品質の見える化需要が生じた時
-- **プライバシー統計**（RICE 0.67・1.5pt）— PII マスク件数・クレンジング理由の分布推移（masked_count, cleansed_reason）。トリガー: プライバシー設定の効果確認需要が生じた時
+- **再訪分析**（RICE 2.13・1.5pt）― 2026-09-26 に [2026-09-26-01-feat-revisit-loop-time-capsule.md](../dev-docs/archived/pbi/2026-09-26-01-feat-revisit-loop-time-capsule.md) へ統合した（再訪ランキングはそのパネルの1区分）
+- **スター分析**（RICE 1.60・1pt）― スター記事のタグ/ドメイン分布（is_starred）。トリガー: 同上
+- **記録量・ストリーク**（RICE 1.60・1pt）― 日次記録数の折れ線＋連続記録日数（created_at）。トリガー: 同上
+- **AI利用統計**（RICE 1.07・1.5pt）― provider/model 別の要約回数・トークン消費・fallback 発生率の推移（ai_provider, ai_model, *_tokens, fallback_reason）。トリガー: AI コスト・品質の見える化需要が生じた時
+- **プライバシー統計**（RICE 0.67・1.5pt）― PII マスク件数・クレンジング理由の分布推移（masked_count, cleansed_reason）。トリガー: プライバシー設定の効果確認需要が生じた時
 
 ## 不採用
 
-- **scroll_ratio 読書分析**（RICE 1.13・2pt）— 読み切り率・積読検出（scroll_ratio）。ユーザー選択外のため不採用。加えて scroll_ratio の記録品質が実データ未検証で Confidence 50%。再検討トリガー: scroll_ratio 記録品質の実データ検証完了＋ユーザー要求
+- **scroll_ratio 読書分析**（RICE 1.13・2pt）― 読み切り率・積読検出（scroll_ratio）。ユーザー選択外のため不採用。加えて scroll_ratio の記録品質が実データ未検証で Confidence 50%。再検討トリガー: scroll_ratio 記録品質の実データ検証完了＋ユーザー要求

@@ -3,7 +3,7 @@
 PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・production 変更なし）
 日付: 2026-09-27
 
-## 0. 調査台帳（現状の事実 — 実測行番号付き）
+## 0. 調査台帳（現状の事実 ― 実測行番号付き）
 
 ### 0.1 5プリセットの言語仕様（現状）
 
@@ -19,8 +19,8 @@ PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・pro
 
 ### 0.2 保存・解決経路
 
-- 有効化: `customPromptManager.ts:405-462` — `__preset__<id>` で upsert。**既存 entry は isActive のみ反転し、本文は現行定義で上書きしない**（スナップショット保持）。新規 entry は現行定義テキストを保存。
-- 適用: `customPromptUtils.ts:applyCustomPrompt` — 保存済み custom（`__preset__*` 含む）が active なら**保存テキストを verbatim 使用**し、systemPrompt のみ fallback（`getDefaultSystemPrompt(effectiveLocale)`）。`locale` 引数あり、未指定時は `getBrowserLocale()` の暗黙参照。
+- 有効化: `customPromptManager.ts:405-462` ― `__preset__<id>` で upsert。**既存 entry は isActive のみ反転し、本文は現行定義で上書きしない**（スナップショット保持）。新規 entry は現行定義テキストを保存。
+- 適用: `customPromptUtils.ts:applyCustomPrompt` ― 保存済み custom（`__preset__*` 含む）が active なら**保存テキストを verbatim 使用**し、systemPrompt のみ fallback（`getDefaultSystemPrompt(effectiveLocale)`）。`locale` 引数あり、未指定時は `getBrowserLocale()` の暗黙参照。
 - Default fallback（custom なし）: `getDefaultUserPrompt/SystemPrompt(effectiveLocale)` で locale 対応済み。
 - 複製: `createPrompt`（`:358-367`）で `prompt_<timestamp>_<random>` を採番。由来・locale・version フィールドなし（`types.ts:28-37` の `CustomPrompt` に該当フィールドなし）。
 - Default 複製は非推奨 JA 別名（`DEFAULT_USER_PROMPT`/`DEFAULT_SYSTEM_PROMPT` = `_JA`）を読む（manager `:484-485,571-574`）。
@@ -31,7 +31,7 @@ PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・pro
 - Built-in AI: `builtInAIClient.ts:71-81` の `EXPECTED_OUTPUTS languages: ['ja']` + system prompt JA 固定。**English プリセットを built-in-ai 経由で使っても出力は日本語**（既知の制約として記録）。
 - バックアップ: `custom_prompts` は暗号化バックアップの復元対象（`restorableSettings.ts:159-164`）。
 - 既存テスト: `customPromptUtils.test.ts` + `customPromptManager.test.ts`（99 件 green 確認済み）。`localeParity.test.ts` 存在。
-- PBI 09（popup-untranslated-title-token）はアーカイブ済み — `_locales` の共有編集競合は解消済み。表示名は name/nameJa フィールドのため `_locales` 変更自体が不要。
+- PBI 09（popup-untranslated-title-token）はアーカイブ済み ― `_locales` の共有編集競合は解消済み。表示名は name/nameJa フィールドのため `_locales` 変更自体が不要。
 
 ## 1. 5 Whys
 
@@ -53,7 +53,7 @@ PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・pro
 
 - **事実**: `__preset__*` は定義参照ではなく保存済みスナップショット。有効化時の upsert も既存 entry の本文を更新しない。
 - **判断材料**: stable ID 実行時 resolve / 保持 / 自動置換。
-- **裁定**: §3 — 自動置換は不採用（カスタマイズ意図の破壊）。stable ID resolve は「保存テキストが現行定義と byte-identical の場合のみ定義を使用」とし、それ以外は保存維持＋更新 affordance。
+- **裁定**: §3 ― 自動置換は不採用（カスタマイズ意図の破壊）。stable ID resolve は「保存テキストが現行定義と byte-identical の場合のみ定義を使用」とし、それ以外は保存維持＋更新 affordance。
 - **残存リスク**: byte-identical 判定は「ユーザーが1文字でも編集したら更新対象外」を意味するが、それは正しい（カスタマイズの保護）。
 
 ### Q4: なぜ全データを機械移行できないのか
@@ -80,7 +80,7 @@ PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・pro
 | English | **英語固定**（現状維持） | プリセットの存在意義そのもの。HTTP provider 経路では EN 出力になる |
 | Technical | **feature 固有言語（JA）で固定**（body も system も現状維持） | 「日本語で3点」が feature。EN system との混成は現行動作として変更しない |
 
-表示名（`getPromptDisplayName` の name/nameJa 分岐）は表示責務であり本文責務と独立 — 現状維持。本文の locale 分岐を `customPromptManager` に持ち込まない（責務境界維持）。
+表示名（`getPromptDisplayName` の name/nameJa 分岐）は表示責務であり本文責務と独立 ― 現状維持。本文の locale 分岐を `customPromptManager` に持ち込まない（責務境界維持）。
 
 ## 3. 保存済みスナップショットの移行方針
 
@@ -99,7 +99,7 @@ PBI: `pbi/2026-09-25-10-investigate-preset-prompt-locale.md`（investigate・pro
 1. Default プリセット定義の locale 対応（`getDefaultUserPrompt/SystemPrompt(effectiveLocale)` の結果を定義解決時に使用。`customPromptUtils` 内に閉じる）
 2. `applyCustomPrompt` の stable ID resolve（byte-identical 時のみ定義使用）+ locale 引数の明示化（呼び出し側で locale を渡す。`getBrowserLocale()` fallback は後方互換のため残す）
 3. 更新 affordance UI（`customPromptManager` の DOM/event のみ。定義解決は `customPromptUtils` の関数として提供し、manager に本文分岐を持ち込まない）
-4. en/ja parity 維持（`localeParity.test.ts` green 維持。`_locales` 変更は不要の見込み — 表示名は name/nameJa フィールド）
+4. en/ja parity 維持（`localeParity.test.ts` green 維持。`_locales` 変更は不要の見込み ― 表示名は name/nameJa フィールド）
 
 **BDD（Outside-In）**:
 - en/ja ロケール × 5 プリセットの有効化 → 送信 `userPrompt`/`systemPrompt` と要約言語の言語表どおり（§2）

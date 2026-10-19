@@ -98,7 +98,7 @@ Scenario: 4. Obsidian の read / write も 30x で 2 次リクエストを発行
 | `src/background/ai/providers/__tests__/httpTestFlow.test.ts` | 205 | 同上 |
 | `src/background/__tests__/obsidianClient-secure-fetch.test.ts` | 273 | read / write の pin |
 | `testDir/e2e/fixtures/localServers.ts` | 37 / 57 | `pickLoopbackPort` / `listenHttp`。30x サーバの起動に再利用 |
-| `testDir/playwright.config.ts` | — | E2E 設定（`testDir` 配下） |
+| `testDir/playwright.config.ts` | ― | E2E 設定（`testDir` 配下） |
 
 ### 実装手順
 
@@ -108,7 +108,7 @@ Scenario: 4. Obsidian の read / write も 30x で 2 次リクエストを発行
 4. **回帰ガード（シナリオ 3）**: 200 正常経路が 1 件のリクエストで成功することを固定する。
 5. **検証**: `npm run validate` を通し、対象 spec を `--repeat-each=10 --retries=0` で反復する。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 追加済みテストが「オプションが渡されたこと」だけを pin していること
@@ -165,11 +165,11 @@ grep -n "redirected\|_fetchConnectionResponse" src/background/obsidianClient.ts
 
 **疑問**: なぜ「redirect を拒否する」というセキュリティ方針が、テストで**実挙動**として確認されていなかったのか。
 
-1. **なぜ実挙動のテストが無かったのか** — 既存テストは `init.redirect === 'error'`（オプションが渡されたこと）を pin していた。オプションの存在は fetch mock で確認できるが、**30x が実際に来たときに何が起きるか**は mock では分からない。
-2. **なぜそれで十分とされたのか** — 「オプションを渡しているから方針は適用されている」という推論で足りるとした。**プラットフォームのセマンティクスを前提にした**（`redirect:'error'` が 2 次リクエストを止めるのは、このリポジトリのコードではなくブラウザの実装が決める）。
-3. **なぜ前提を確認しなかったのか** — ブラウザでしか確認できない領域（実 abort・ヘッダーの非到達）を試す置き場が E2E に無く、**「mock で再現できない」ことを未検証のまま許容**した。既存 E2E は拡張機能の起動を前提にしていた。
-4. **なぜ非対称が残ったのか** — Obsidian の read / write には `response.redirected` の多層防御があったが、**接続テストだけ抜けていた**。同じクライアントの同じ懸念なのに、経路ごとに足された防御がコピーされず、対称性を検査する仕組みが無かった。
-5. **なぜ気づけなかったのか** — 完了条件が「オプションを渡す」までで、**「そのオプションが何を保証するかを実測で示す」**という要件が無かった。
+1. **なぜ実挙動のテストが無かったのか** ― 既存テストは `init.redirect === 'error'`（オプションが渡されたこと）を pin していた。オプションの存在は fetch mock で確認できるが、**30x が実際に来たときに何が起きるか**は mock では分からない。
+2. **なぜそれで十分とされたのか** ― 「オプションを渡しているから方針は適用されている」という推論で足りるとした。**プラットフォームのセマンティクスを前提にした**（`redirect:'error'` が 2 次リクエストを止めるのは、このリポジトリのコードではなくブラウザの実装が決める）。
+3. **なぜ前提を確認しなかったのか** ― ブラウザでしか確認できない領域（実 abort・ヘッダーの非到達）を試す置き場が E2E に無く、**「mock で再現できない」ことを未検証のまま許容**した。既存 E2E は拡張機能の起動を前提にしていた。
+4. **なぜ非対称が残ったのか** ― Obsidian の read / write には `response.redirected` の多層防御があったが、**接続テストだけ抜けていた**。同じクライアントの同じ懸念なのに、経路ごとに足された防御がコピーされず、対称性を検査する仕組みが無かった。
+5. **なぜ気づけなかったのか** ― 完了条件が「オプションを渡す」までで、**「そのオプションが何を保証するかを実測で示す」**という要件が無かった。
 
 **原因**: 方針の適用を「オプションの存在」で確認したことにして、**プラットフォームの実挙動**と**経路間の対称性**を検証対象にしなかったこと。
 
@@ -210,8 +210,8 @@ E2E で実測したのは次の 3 点で、いずれも plain な fetch mock で
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) — 同じ `redirect` 方針の宣言箇所を 1 つに寄せる隣接 PBI（2026-10-19 完了・アーカイブ済み）。本 PBI はその宣言が実挙動として効いていることを測る
-- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同一クラスの経路（gist / tranco）へ方針を広げた PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の E2E フィクスチャはそちらでも再利用できる
-- [dev-docs/ADR/2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) — `redirect:'error'` 方針の原本。適用範囲と決定理由（本 PBI の実測を追記済み）
-- [2026-10-18-01-fix-ai-fetch-redirect-policy.md](2026-10-18-01-fix-ai-fetch-redirect-policy.md) — AI 経路の修正。完了記録に「30x 実測の不在」が残存リスクとして記載（本 PBI で解消）
-- [2026-10-18-08-fix-obsidian-redirect-bearer.md](2026-10-18-08-fix-obsidian-redirect-bearer.md) — Obsidian 経路の修正。接続テストのガード非対称と実挙動未検証が残存リスクとして記載（本 PBI で解消）
+- [2026-10-19-05-fix-redirect-single-declaration.md](2026-10-19-05-fix-redirect-single-declaration.md) ― 同じ `redirect` 方針の宣言箇所を 1 つに寄せる隣接 PBI（2026-10-19 完了・アーカイブ済み）。本 PBI はその宣言が実挙動として効いていることを測る
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) ― 同一クラスの経路（gist / tranco）へ方針を広げた PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の E2E フィクスチャはそちらでも再利用できる
+- [dev-docs/ADR/2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) ― `redirect:'error'` 方針の原本。適用範囲と決定理由（本 PBI の実測を追記済み）
+- [2026-10-18-01-fix-ai-fetch-redirect-policy.md](2026-10-18-01-fix-ai-fetch-redirect-policy.md) ― AI 経路の修正。完了記録に「30x 実測の不在」が残存リスクとして記載（本 PBI で解消）
+- [2026-10-18-08-fix-obsidian-redirect-bearer.md](2026-10-18-08-fix-obsidian-redirect-bearer.md) ― Obsidian 経路の修正。接続テストのガード非対称と実挙動未検証が残存リスクとして記載（本 PBI で解消）

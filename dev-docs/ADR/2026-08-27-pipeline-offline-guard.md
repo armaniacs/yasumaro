@@ -1,4 +1,4 @@
-# ADR: Pipeline Offline Guard — isNetworkError
+# ADR: Pipeline Offline Guard ― isNetworkError
 
 ## ステータス
 採用

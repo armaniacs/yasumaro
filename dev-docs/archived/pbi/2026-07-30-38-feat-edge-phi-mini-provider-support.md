@@ -1,4 +1,4 @@
-# PBI: Edge Built-in AI（Phi-mini）対応 — ブラウザ検出とコンテキスト上限吸収の実装計画
+# PBI: Edge Built-in AI（Phi-mini）対応 ― ブラウザ検出とコンテキスト上限吸収の実装計画
 
 > **対象バージョン: 未定**
 > 実機検証（2026-07-30、Edge 150.0.4078.105 安定版・Mac）により、Edge の Phi-mini Prompt API が Chrome の Gemini Nano（`LanguageModel`）と**同一のグローバル名・同一のAPI形状**を提供することが確認された。当初想定していた「ブラウザ専用Adapterを分離実装する」設計は過剰であり、既存 `BuiltInAIClient` を軽量な差分（ブラウザ検出・コンテキスト上限の動的化・案内文言の出し分け）で対応させる方針に転換する。
@@ -12,12 +12,12 @@
 | `edge://on-device-internals` の Foundational Model criteria | `device capable`/`disk space available`/`enabled by enterprise policy`/`enabled by feature`/`enabled by user setting` すべて `true`。VRAM 8192MiB（要件5500MiB）で条件を満たす |
 | `edge://flags/#edge-llm-prompt-api-for-phi-mini` | **安定版チャネルに既に存在し、デフォルトで `Enabled`**（Canary/Dev限定という当初想定は誤り。フラグ説明文に "Mac, Windows, Linux" と明記） |
 | `edge://flags/#edge-llm-summarization-api-for-phi-mini` | 安定版に存在するが初期値は `Disabled`。手動でEnabledに変更・再起動が必要 |
-| 拡張機能 Service Worker (`background.js`) から `typeof self.ai` | `"undefined"` — Edge独自の `self.ai.languageModel` 名前空間は**存在しない** |
-| 同コンテキストで `typeof self.LanguageModel` | `"function"` — **Chromeと同一のグローバル名で存在する** |
+| 拡張機能 Service Worker (`background.js`) から `typeof self.ai` | `"undefined"` ― Edge独自の `self.ai.languageModel` 名前空間は**存在しない** |
+| 同コンテキストで `typeof self.LanguageModel` | `"function"` ― **Chromeと同一のグローバル名で存在する** |
 | `await LanguageModel.availability()` | `'downloadable'`（Chromeと同一の4値ステータス体系） |
 | `LanguageModel.create({ monitor })` | `downloadprogress` イベントが `e.loaded` の割合で正常に発火（Chrome側の`BuiltInAIClient`設計がそのまま流用できる形） |
-| セッション生成後のプロパティ | `contextUsage: 0, contextWindow: 9216, oncontextoverflow: null, inputUsage: 0, inputQuota: 9216` — **Chrome向け実装が使っている `contextWindow`/`contextUsage`/`contextoverflow` と同一のプロパティ名** |
-| `session.prompt('こんにちは。自己紹介してください。')` | `'もちろん、あなたのためにここにいます。私はPhi、Microsoftが作成した人工知能です。...'` — Phi-miniモデル自身の応答を確認 |
+| セッション生成後のプロパティ | `contextUsage: 0, contextWindow: 9216, oncontextoverflow: null, inputUsage: 0, inputQuota: 9216` ― **Chrome向け実装が使っている `contextWindow`/`contextUsage`/`contextoverflow` と同一のプロパティ名** |
+| `session.prompt('こんにちは。自己紹介してください。')` | `'もちろん、あなたのためにここにいます。私はPhi、Microsoftが作成した人工知能です。...'` ― Phi-miniモデル自身の応答を確認 |
 
 **結論**: EdgeのPhi-mini実装は、Chromiumが実装するW3C Web Machine Learning Community Group策定中の Prompt API 仕様に、ChromeのGemini Nanoと足並みを揃えて追従している。API呼び出しコードそのものはブラウザ間で分岐不要。分岐が必要なのは以下の2点のみ。
 
@@ -123,12 +123,12 @@ Scenario: Edgeでフラグが無効化されている、または未対応環境
 - [x] 既存Chrome向けの単体テストが動的上限導入後も回帰していない（`npm test` 実行、無関係な既存の1件（バージョン不整合）を除き全件成功）
 - [x] トークン/文字の換算係数の根拠が実測値（Edge `contextWindow: 9216`）を踏まえた保守的な固定値としてコード上にコメント付きで残っている
 
-### 柱2: ブラウザ検出による案内文言（フラグURL）の出し分け — API呼び出し自体の分岐は行わない
+### 柱2: ブラウザ検出による案内文言（フラグURL）の出し分け ― API呼び出し自体の分岐は行わない
 
 - [x] ブラウザ判定は新規`detectBrowserKind()`ではなく、**コードベース調査で発見した既存の未使用関数 `getBrowserName()`（`src/utils/browserSupport.ts`、`navigator.userAgent`文字列判定）を再利用**する方針に変更（`userAgentData.brands`ベースの新規実装は行わない。理由: 重複するブラウザ判定ロジックをコードベースに増やさないため）。返り値型を`string`からリテラル型`'chrome'|'edge'|'brave'|'unknown'`に変更
 - [x] `LanguageModel` が `unavailable` の場合、検出したブラウザに応じたフラグURL・フラグ名を含む案内文言が表示される（Chrome: `chrome://flags/#prompt-api-for-gemini-nano`、Edge: `edge://flags/#edge-llm-prompt-api-for-phi-mini`。新設 `getBuiltInAIFlagGuidance()`、[browserSupport.ts](../src/utils/browserSupport.ts)）
 - [x] ブラウザが判定不能（`'brave'`/`'unknown'`）の場合、フラグURLを含まない汎用的な案内文言にフォールバックし、クラッシュしない
-- [x] **`LanguageModel.availability()` / `create()` / `summarize()` の呼び出しコード自体には一切ブラウザ分岐を入れていない** — 案内文言の組み立て（`buildUnavailableMessage()`）のみで分岐
+- [x] **`LanguageModel.availability()` / `create()` / `summarize()` の呼び出しコード自体には一切ブラウザ分岐を入れていない** ― 案内文言の組み立て（`buildUnavailableMessage()`）のみで分岐
 - [x] i18nキーを追加（`public/_locales/ja/messages.json` / `public/_locales/en/messages.json` 両方、`builtInAiUnavailableGeneric`/`builtInAiUnavailableWithFlag`。既存の`builtInAiHelp`もEdge対応を反映して更新）
 - [x] ダッシュボードUIは「Built-in AI（APIキー不要）」の表示のまま変更していない
 
@@ -137,7 +137,7 @@ Scenario: Edgeでフラグが無効化されている、または未対応環境
 ### 全体
 
 - [x] `BuiltInAIClient` の呼び出しコード（`globalThis.LanguageModel` 経由）はEdge向けの変更を一切加えていない（実機検証済みのAPI形状の一致を前提に据え置き）
-- [ ] Edge実機（安定版）での本変更後の動作確認（動的切り詰め・案内文言表示）は未実施 — 次のアクションとして残る
+- [ ] Edge実機（安定版）での本変更後の動作確認（動的切り詰め・案内文言表示）は未実施 ― 次のアクションとして残る
 - [x] `aiLimits.ts` の `'localai'` エントリはそのまま静的上限として残し、`contextWindow`由来の動的上限とのminを取る設計で決着
 - [x] 実装レビュー（simplicity/DRY, correctness, project conventionsの3観点）を実施し指摘事項を反映済み
 
@@ -197,7 +197,7 @@ const effectiveMaxChars = Math.min(staticMaxChars, dynamicMaxChars);
 ```
 
 **タスク**:
-1. トークン/文字換算係数（`CHARS_PER_TOKEN_ESTIMATE`）の実測ベース確定 — Edge実測`contextWindow: 9216`と実際に安全に送信できた文字数を突き合わせて暫定値を決める
+1. トークン/文字換算係数（`CHARS_PER_TOKEN_ESTIMATE`）の実測ベース確定 ― Edge実測`contextWindow: 9216`と実際に安全に送信できた文字数を突き合わせて暫定値を決める
 2. `oncontextoverflow` ハンドラの実装と`BuiltInAISummaryResult`への警告フラグ追加（既存の型を破壊しないよう、オプショナルフィールドとして追加）
 3. 既存Chromeでの回帰テスト（動的上限の導入で既存の要約結果が変わらないことを確認）
 

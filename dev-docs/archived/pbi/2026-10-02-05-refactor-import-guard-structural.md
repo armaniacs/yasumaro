@@ -11,8 +11,8 @@ dashboard を保守する開発者として、`exportImport.ts:179` の inline �
 
 ## 背景（現状）
 
-- 対象 1: `src/dashboard/exportImport.ts:179` — `importFromJson` の結果に対する `if ('error' in result)`（`:179-183`）。
-- 対象 2: `src/dashboard/importLogsService.ts:109-112` — `importFromJson` の戻り型 `Promise<{ inserted: number; skipped: number; total: number } | { error: string }>`。成功側に `data` ラッパーが無い。
+- 対象 1: `src/dashboard/exportImport.ts:179` ― `importFromJson` の結果に対する `if ('error' in result)`（`:179-183`）。
+- 対象 2: `src/dashboard/importLogsService.ts:109-112` ― `importFromJson` の戻り型 `Promise<{ inserted: number; skipped: number; total: number } | { error: string }>`。成功側に `data` ラッパーが無い。
 - canonical ガード: `src/dashboard/dashboardSqliteService.ts:55-56`（`export function isServiceError` at `:55`、`return 'error' in result` at `:56`）。引数型は `ServiceResult<T>`（`{ data: T } | { error: string }`）のため、そのまま渡せない。
 - 既存テスト（変更なしで green を保つ対象）:
   - `src/dashboard/__tests__/exportImport.test.ts`、`src/dashboard/__tests__/exportImport-r2.test.ts`
@@ -41,7 +41,7 @@ Scenario: import 成功がそのまま通過する
 
 ## 受け入れ基準
 
-- [x] D1: 三択のいずれかが実装される — (a) `isServiceError` の構造的 overload 追加 OR (b) 専用 narrow guard の新設 OR (c) 型証拠付きの codified 除外（除外理由 + 型差分の記録）
+- [x] D1: 三択のいずれかが実装される ― (a) `isServiceError` の構造的 overload 追加 OR (b) 専用 narrow guard の新設 OR (c) 型証拠付きの codified 除外（除外理由 + 型差分の記録）
 - [x] D1 が (a)/(b) 選択の場合: `src/dashboard/exportImport.ts:179` の inline 判定が新ガード経由になり、成功 / `{ error }` 失敗の両経路で現状と同一の表示になる
 - [x] D1 が (c) 選択の場合: 除外理由と型証拠（`importLogsService.ts:109-112` vs `dashboardSqliteService.ts:55-56` の型差分）が実装記録に残り、`exportImport.ts:179` の残存が意図的と明示される
 - [x] parity テストが存在し、成功 / `{ error }` 失敗の両経路で旧 inline 判定と同一の結果（error 表示 / complete 表示）を返すことを固定する（(c) 選択時は parity 追加不要だが除外の型証拠テストまたは記録で代替）

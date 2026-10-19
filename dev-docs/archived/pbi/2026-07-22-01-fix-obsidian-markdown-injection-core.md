@@ -6,7 +6,7 @@
 ## ビジネス価値
 - **セキュリティ**: VulnHunter監査（2026-07-21）で確認された CWE-79（Markdown注入）を、自動記録（VALID_VISIT）と手動記録（MANUAL_RECORD/PREVIEW_RECORD/SAVE_RECORD）という最も頻度の高い2つの入口点で解消する。
 - **信頼性**: 「閲覧履歴ノートは常に安全」という利用者の暗黙の信頼を裏切らない。
-- **再利用性**: 修正対象の `sanitizeForObsidian()` は他の書き込み経路（obsidianFormatter.ts, dashboard.ts — 本PBIの後続PBI Bで対応）からも利用される共有ヘルパーであり、ここで直すことが後続PBIの前提になる。
+- **再利用性**: 修正対象の `sanitizeForObsidian()` は他の書き込み経路（obsidianFormatter.ts, dashboard.ts ― 本PBIの後続PBI Bで対応）からも利用される共有ヘルパーであり、ここで直すことが後続PBIの前提になる。
 
 ## 対象Finding（VulnHunter監査結果より）
 監査結果一式: `obsidian-smart-history_VULNHUNT_RESULTS_2026-07-21-000000/README.md`
@@ -100,7 +100,7 @@ gistSyncTarget.ts → test → recordCurrentPage.ts → markdownFormatter.ts →
 - **対策**: ADRに「Markdown出力ルール」を追加し、新規ファイル作成時にサニタイザ適用を義務付ける
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下の行番号が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下の行番号が該当することを確認済み）
 ```bash
 grep -n "sanitizeMarkdownLinks\|sanitizeAllMarkdownLinks\|sanitizeForObsidian" src/utils/markdownSanitizer.ts
 grep -n "const { url, title } = data\|sanitizedTitle.*url" src/background/pipeline/steps/formatMarkdownStep.ts

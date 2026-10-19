@@ -100,9 +100,9 @@ wasm と sqlite のインスタンス生成も、推測していた主因では�
 
 | 状況 | 使うもの |
 |------|---------|
-| mock が呼ばれるのを待つ | `waitForMock()` — `vi.waitFor(..., { interval: 1, timeout: 1000 })` |
+| mock が呼ばれるのを待つ | `waitForMock()` ― `vi.waitFor(..., { interval: 1, timeout: 1000 })` |
 | 本番タイマーの期限を待つ | `useTimerClock()` と `vi.advanceTimersByTimeAsync(期限)` |
-| タイマーの無い経路で「起きなかった」ことを示す | `drainMacrotask()` — マクロタスク 1 ターン |
+| タイマーの無い経路で「起きなかった」ことを示す | `drainMacrotask()` ― マクロタスク 1 ターン |
 
 テストへの `setTimeout(resolve, N)` の直書きは禁止する。N が 20 未満、または 0 の
 場合だけ許可する。機械で強制するため `local/no-test-sleep` ルールを入れ、
@@ -169,7 +169,7 @@ PBKDF2 の 600,000 反復は 1 回 70ms で、`deriveKey` を 80 回呼ぶテス
   「machine is busy」を出して 0 で終わる。負荷下ではファイル所要時間が 3〜5 倍に
   膨らむため、負荷下の測定で予算を判定すると、正しい実装が遅いコードと区別でき
   なくなり、予算を上げるという最悪の対処格拉デーションに誘われるためである。
-  判定はこの load だけを見る。**計測の「後」で見てはいけない** — スイートは実行中
+  判定はこの load だけを見る。**計測の「後」で見てはいけない** ― スイートは実行中
   全コアを使い切るため、実行後に読んだ load は常に高くなり、静止したマシンでも
   必ず busy 判定になってゲートが一度も verdict を出さなくなる（実測: 8 コアで
   load 18.0）。R5 のとおり計測の前後で読み、前の値で判定する
@@ -317,7 +317,7 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
 ### 2026-10-13 の引き上げ（1060 → 1062）
 
 - **`gates.fileCount` を 1060 → 1062 に改定する**（決定 3 の手続きどおり本追記と
-  同時に改定）。clean checkout の実測は 1061 — review-followup2 で
+  同時に改定）。clean checkout の実測は 1061 ― review-followup2 で
   `src/__tests__/geturl-extraction-sync.test.ts`（getURL 抽出ルールの二層同期 pin）
   を新設したため。ローカルは gitignore された作業用ファイル込みで 1062。ゲートは
   1062 なのでどちらも通る。CI は 1061 / 1060 で赤（run `38315624155`）。

@@ -13,7 +13,7 @@
 
 ## 背景（file:line 現状）
 
-- 乖離: `src/offscreen/IdbVfsBackend.ts:170-194` — `if (f in changes) { params.push((changes[f] ?? null)) }` = undefined 値キーは NULL を書く。`src/offscreen/opfsWorker/crudHandlers.ts:61-83` — `if (val !== undefined)` = skip。同一 op で異なる行
+- 乖離: `src/offscreen/IdbVfsBackend.ts:170-194` ― `if (f in changes) { params.push((changes[f] ?? null)) }` = undefined 値キーは NULL を書く。`src/offscreen/opfsWorker/crudHandlers.ts:61-83` ― `if (val !== undefined)` = skip。同一 op で異なる行
 - 手写経した文: `'UPDATE browsing_logs SET is_starred = CASE ...'`（`IdbVfsBackend.ts:205` = `crudHandlers.ts:92`）/ `'DELETE FROM browsing_logs WHERE id = ?'`（`:198` = `:86`）/ `'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0'`（`:419` = `:102`、`queryPlan.ts:588` も）
 - テストの隙間: `sqliteBackendParity.realEngine.test.ts:200-201` の update は defined 値のみ（undefined 語義が未 pin）
 

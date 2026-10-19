@@ -12,7 +12,7 @@ purge ハンドラ経路のエラーコピー (`purgeNowFailed` / `contentPurgeN
 
 ## スコープ (file:line)
 
-- purge handlers (purge 失敗コピーを表示するハンドラ群 — `purgeNowFailed` / `contentPurgeNowFailed` を参照・表示する箇所)
+- purge handlers (purge 失敗コピーを表示するハンドラ群 ― `purgeNowFailed` / `contentPurgeNowFailed` を参照・表示する箇所)
 - `src/popup/statusPanel.ts:346`
 - `src/popup/statusPanel.ts:369`
 - `public/_locales/ja/messages.json`

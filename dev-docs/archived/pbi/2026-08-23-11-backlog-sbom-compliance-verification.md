@@ -1,4 +1,4 @@
-# PBI: SBOM準拠検証 — 誤検出の記録とCI担保（backlog）
+# PBI: SBOM準拠検証 ― 誤検出の記録とCI担保（backlog）
 
 ## ユーザーストーリー
 監査担当者として、SBOMがCycloneDX準拠でありCIで担保されていることを確認したい、なぜならレビューで「sbom.json:6 は非準拠・hash無し・1パッケージのみ」と指摘されたが、実ファイルはCycloneDX 1.6準拠でSHA-512 hashと1000行超のcomponentsを持つため、誤検出を記録し再発防止の検証を残したいから
@@ -26,20 +26,20 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — 現行sbom.jsonがCycloneDX準拠である
+Scenario: 正常系 ― 現行sbom.jsonがCycloneDX準拠である
   Given sbom.json が存在する
   When $schema のURLから取得したCycloneDX 1.6 schemaで検証する
   Then 検証がパスする
   And components に yasumaro 以外のパッケージ（例: @axe-core/playwright）が含まれる
   And 各componentに hashes.SHA-512 が含まれる
 
-Scenario: 境界ケース — componentsが1件のみなら警告が出る
+Scenario: 境界ケース ― componentsが1件のみなら警告が出る
   Given sbom.json の components が1件（yasumaroのみ）
   When 軽量検証を実行する
   Then 警告またはエラーが出る（将来の誤生成を検出）
   And CIでブロックされる
 
-Scenario: エラーケース — 非準拠SBOMはCIで失敗する
+Scenario: エラーケース ― 非準拠SBOMはCIで失敗する
   Given sbom.json の bomFormat が 'CycloneDX' でない（テストでモック）
   When 検証を実行する
   Then エラーで失敗し、該当フィールドが表示される
@@ -70,7 +70,7 @@ Scenario: エラーケース — 非準拠SBOMはCIで失敗する
 - **最小実装**: まずは軽量検証（`bomFormat` と `components.length`）のみ。厳密なschema検証は外部fetchが不安定なため後回し
 
 ## 見積もり
-1pt（要チーム見積もり）— 軽量検証スクリプトとCI組込みのみの小規模。厳密schema検証は別途
+1pt（要チーム見積もり）― 軽量検証スクリプトとCI組込みのみの小規模。厳密schema検証は別途
 
 ## 技術的考慮事項
 - 依存関係: なし。07 JSON schema CI と統合可能（`validate-json.mjs` に含める）

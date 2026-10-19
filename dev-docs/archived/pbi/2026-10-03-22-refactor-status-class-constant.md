@@ -14,8 +14,8 @@
 
 ## 背景
 
-- `src/popup/__tests__/main.test.ts:563,575,593,618,689,720,777,806,838,875,908,937,965,1014,1061` — 15 件超のアサーションがリテラル 'success' / 'error' を pin。
-- `src/popup/__tests__/recordOrchestrator.test.ts` — 同様のリテラル pin。
+- `src/popup/__tests__/main.test.ts:563,575,593,618,689,720,777,806,838,875,908,937,965,1014,1061` ― 15 件超のアサーションがリテラル 'success' / 'error' を pin。
+- `src/popup/__tests__/recordOrchestrator.test.ts` ― 同様のリテラル pin。
 - production 側のリテラル: `src/popup/errorUtils.ts:233,257`、`src/popup/privatePageDialog.ts:107-114`。
 
 ## BDD受け入れシナリオ
@@ -75,7 +75,7 @@ Scenario: クラス名のリネームは 1 箇所の変更で完結する
 **2026-10-03 完了。**
 
 - `src/popup/statusClasses.ts` を新設し `STATUS_CLASS` 定数（success / error）を定義
-- production 置換: `errorUtils.ts`（showError / showSuccess）、`privatePageDialog.ts`、`recordSession.ts`（`:333,350,524` — 起票時に記載のなかった 3 箇所目 `:524` の write site を実装中に発見し同時置換）
+- production 置換: `errorUtils.ts`（showError / showSuccess）、`privatePageDialog.ts`、`recordSession.ts`（`:333,350,524` ― 起票時に記載のなかった 3 箇所目 `:524` の write site を実装中に発見し同時置換）
 - テスト置換: `main.test.ts` 15 アサーション + showError モック自体も `:348` で定数化（モックが実コードと別のリテラルを pin していたため）、`recordOrchestrator.test.ts`
 - ゲート（2026-10-03）: `tsc --noEmit` 0 errors / `eslint` 0 errors / `vitest` 15,594 passed / `npm run validate` PASS
 - 逸脱: `popup-xss.test.ts` のリテラルは残置（XSS fixture の setup に使われるテストフィクスチャで、STATUS_CLASS 契約の pin 対象外）

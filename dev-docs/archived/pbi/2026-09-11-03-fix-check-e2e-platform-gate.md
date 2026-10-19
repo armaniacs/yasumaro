@@ -28,8 +28,8 @@ Scenario: Linux では従来どおり xvfb を要求する
 
 - [x] darwin/win32 では xvfb probe を skip し playwright を直接実行（xvfb-run prefix を外す）
 - [x] linux は従来動作（xvfb-run 要求）
-- [x] `--skip-e2e` / `SKIP_E2E=1` の明示 skip は維持（index.mjs が check 呼び出し自体を skip — 既存配線を維持）
-- [x] 本環境で `node scripts/release-checks/index.mjs`（e2e 込み）が green（headless sandbox では @extension spec が全 skip のため exit 0 — headed macOS/CI では実実行）
+- [x] `--skip-e2e` / `SKIP_E2E=1` の明示 skip は維持（index.mjs が check 呼び出し自体を skip ― 既存配線を維持）
+- [x] 本環境で `node scripts/release-checks/index.mjs`（e2e 込み）が green（headless sandbox では @extension spec が全 skip のため exit 0 ― headed macOS/CI では実実行）
 
 ## テスト戦略
 
@@ -38,7 +38,7 @@ Scenario: Linux では従来どおり xvfb を要求する
 ## 実装メモ（2026-09-11 autonomous-task-closer）
 
 - 差分: xvfb probe を linux 限定に + 非 linux は `test:e2e:ci`（xvfb-run wrap）ではなく `npx playwright test --config testDir/playwright.config.ts --grep @extension` を直接実行。重複変数 `onLinux`/`isLinux` を `isLinux` に統一。
-- 検証: `node --check` OK + 分岐ロジックを `process.platform` 実測で確認（darwin → npx 直接実行）。フル e2e 実実行は headless sandbox で headed Chrome が無く hang するため未実行 — 既存 @extension spec と同一制約。`--skip-e2e` 配線は index.mjs 側（呼び出し skip）で不変。
+- 検証: `node --check` OK + 分岐ロジックを `process.platform` 実測で確認（darwin → npx 直接実行）。フル e2e 実実行は headless sandbox で headed Chrome が無く hang するため未実行 ― 既存 @extension spec と同一制約。`--skip-e2e` 配線は index.mjs 側（呼び出し skip）で不変。
 - なぜなぜ: なぜ gate が全 platform で xvfb を見たのか → CI（Linux）前提で書かれ platform 分岐が無かった → macOS では `command -v xvfb-run` が必ず失敗 → 解: probe を linux 限定にし、他 OS は直接実行（round 7 の明示 skip 不変式は維持）。
 
 ## 見積もり

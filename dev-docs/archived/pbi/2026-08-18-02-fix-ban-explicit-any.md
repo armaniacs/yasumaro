@@ -18,14 +18,14 @@
 
 本番コード（`src/`、`__tests__` 除外）に現存する `any` は9件で、全て列挙済み:
 
-- `src/background/handlers/MessageHandlerRegistry.ts:6` / `:33` — `message: any`
-- `src/background/handlers/createMessageHandlerRegistry.ts:40` — `buildAllowedUrls: (settings: any) => Set<string>`
-- `src/background/handlers/createMessageHandlerRegistry.ts:41` — `getSettings: () => Promise<any>`
-- `src/background/handlers/createMessageHandlerRegistry.ts:44` — `notifyAiTestProgress: (progress: any) => void`
-- `src/background/handlers/createMessageHandlerRegistry.ts:45` — `getPrivacyCache: () => Map<string, any> | null`
-- `src/utils/i18n.ts:24` — `getMessage(key: string, substitutions: any): string`
-- `src/background/handlers/dashboardSqlite/deps.ts:114` — `record as any`
-- `src/dashboard/gistSettings.ts:39` — `} as any)`
+- `src/background/handlers/MessageHandlerRegistry.ts:6` / `:33` ― `message: any`
+- `src/background/handlers/createMessageHandlerRegistry.ts:40` ― `buildAllowedUrls: (settings: any) => Set<string>`
+- `src/background/handlers/createMessageHandlerRegistry.ts:41` ― `getSettings: () => Promise<any>`
+- `src/background/handlers/createMessageHandlerRegistry.ts:44` ― `notifyAiTestProgress: (progress: any) => void`
+- `src/background/handlers/createMessageHandlerRegistry.ts:45` ― `getPrivacyCache: () => Map<string, any> | null`
+- `src/utils/i18n.ts:24` ― `getMessage(key: string, substitutions: any): string`
+- `src/background/handlers/dashboardSqlite/deps.ts:114` ― `record as any`
+- `src/dashboard/gistSettings.ts:39` ― `} as any)`
 
 このうち大半は Chrome のメッセージパッシング境界（`chrome.runtime.onMessage` が `any` を返す）と i18n に集中しており、型を具体的にする余地がある。テストコードには `as any` 953件・`@ts-expect-error` 532件が存在するが、これらはモック用途で `eslint.config.js` の `ignores`（`src/**/__tests__/**`）で既に lint 対象外のため、本PBIのスコープ外とする。
 

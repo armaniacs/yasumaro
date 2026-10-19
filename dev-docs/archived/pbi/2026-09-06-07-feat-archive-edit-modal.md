@@ -15,7 +15,7 @@ yasumaroのユーザー（キーボード操作・スクリーンリーダー利
 | Esc閉じ・起動要素へのフォーカス復帰 | キーボード操作の完了ができない |
 | 入力値の検証（空文字・長さ） | 空タイトルでの保存が可能 |
 
-置き換え先は `focusTrapManager`（src/utils/ui/focusTrap.ts、実在・単体テスト済み）を再利用する — PBI-05 D-4 の「focusTrapManager 再利用」指示どおり。
+置き換え先は `focusTrapManager`（src/utils/ui/focusTrap.ts、実在・単体テスト済み）を再利用する ― PBI-05 D-4 の「focusTrapManager 再利用」指示どおり。
 
 ## ビジネス価値
 
@@ -49,7 +49,7 @@ Scenario: Escでキャンセルすると変更は破棄される
 
 - [x] モーダル: role="dialog" + aria-modal="true" + aria-labelledby
 - [x] Tab循環（focusTrapManager.trap）+ Esc でキャンセル + 閉時に起動要素へフォーカス復帰
-- [x] 保存: `archive_update(stagingName, id, { title })` — 空文字・65字超は拒否（ValidationError相当の画面内表示）
+- [x] 保存: `archive_update(stagingName, id, { title })` ― 空文字・65字超は拒否（ValidationError相当の画面内表示）
 - [x] キャンセル・Esc・保存のいずれでもフォーカスが起動要素に復帰する
 - [x] `window.prompt` の使用が archivePanel.ts から消える
 - [x] i18n（en/ja）: モーダルタイトル・ラベル・保存/キャンセルボタン
@@ -108,7 +108,7 @@ grep -n "trap(" src/utils/ui/focusTrap.ts | head -3
 ## 実装メモ（2026-09-06 自律実装）
 
 ### 実装したもの
-- `archivePanel.ts` 内に `openEditModal` クロージャを新設（mount スコープ内 — container/rowEl/renderSessionList をクロージャで参照）:
+- `archivePanel.ts` 内に `openEditModal` クロージャを新設（mount スコープ内 ― container/rowEl/renderSessionList をクロージャで参照）:
   - overlay + role="dialog" + aria-modal="true" + aria-labelledby のモーダルを動的生成
   - `focusTrapManager.trap(dialog, close)` で Tab 循環・Esc・フォーカス復帰を管理
   - `close()` は focusTrapManager.release + overlay.remove + **trigger.focus()**（起動要素への明示フォーカス復帰）

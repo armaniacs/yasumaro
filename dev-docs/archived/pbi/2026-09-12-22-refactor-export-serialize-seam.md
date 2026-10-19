@@ -1,4 +1,4 @@
-# PBI 2026-09-12-22 — Export serialize を StorageBackend interface へ（backend で export 形状が分岐する実バグ解消）
+# PBI 2026-09-12-22 ― Export serialize を StorageBackend interface へ（backend で export 形状が分岐する実バグ解消）
 
 - **種別**: 🔧非機能追加（refactor + fix・形状分岐の実バグ解消を伴う）
 - **優先度**: 6 位 / RICE **6.4**（R6 × I2 × C80% / E1.5人日）

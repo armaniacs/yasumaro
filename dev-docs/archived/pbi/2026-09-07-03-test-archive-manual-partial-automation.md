@@ -10,11 +10,11 @@ yasumaro の開発者として、`docs/MANUAL_TEST_ARCHIVE.md` の R5・R6・G6 
 
 | # | 既存カバレッジ | ファイル:内容 |
 |---|--------------|-------------|
-| R5 VACUUM 領域解放 | ✅ freelist before/after のロジック | `src/offscreen/__tests__/archivePurgeHandlers.test.ts` — `makeMainEngine` が `PRAGMA freelist_count` のシーケンスをモックし、`handleArchiveDeleteByStaging` が VACUUM をトランザクション外で実行して freelist を報告することを検証。VACUUM 失敗時の `vacuumOk=false` も `it('keeps the main DB intact when VACUUM fails')` でカバー |
-| R6 fail-closed | ✅ レジストリ消失・meta 不一致・incoming kind | 同ファイル — `it('fails closed when the staging is not registered (re-preview required)')`、`it('fails closed when the file meta disagrees with the registry')`、`it('fails closed on incoming staging')`。いずれも本体 DB 無傷を assert |
-| R6 quota 不足 | ✅ | 同ファイル — `it('rejects before the DELETE when quota is insufficient')` |
-| R6 single-flight | ✅ | 同ファイル — `it('blocks a second concurrent purge (single-flight)')` |
-| G6 孤児掃除 | ✅ 孤児削除 + 除外セット保護 | `src/offscreen/__tests__/archiveStaging.test.ts:95` — `describe('sweepOrphanStagings')` / `it('removes orphan staging files but protects the excluded set')` |
+| R5 VACUUM 領域解放 | ✅ freelist before/after のロジック | `src/offscreen/__tests__/archivePurgeHandlers.test.ts` ― `makeMainEngine` が `PRAGMA freelist_count` のシーケンスをモックし、`handleArchiveDeleteByStaging` が VACUUM をトランザクション外で実行して freelist を報告することを検証。VACUUM 失敗時の `vacuumOk=false` も `it('keeps the main DB intact when VACUUM fails')` でカバー |
+| R6 fail-closed | ✅ レジストリ消失・meta 不一致・incoming kind | 同ファイル ― `it('fails closed when the staging is not registered (re-preview required)')`、`it('fails closed when the file meta disagrees with the registry')`、`it('fails closed on incoming staging')`。いずれも本体 DB 無傷を assert |
+| R6 quota 不足 | ✅ | 同ファイル ― `it('rejects before the DELETE when quota is insufficient')` |
+| R6 single-flight | ✅ | 同ファイル ― `it('blocks a second concurrent purge (single-flight)')` |
+| G6 孤児掃除 | ✅ 孤児削除 + 除外セット保護 | `src/offscreen/__tests__/archiveStaging.test.ts:95` ― `describe('sweepOrphanStagings')` / `it('removes orphan staging files but protects the excluded set')` |
 
 **結論**: R5・R6・G6 は新規テストをほぼ必要としない。本PBIの作業は (1) 上記カバレッジを PBI 完了メモと手動テスト文書に明記する (2) 実 OPFS・実 SQLite での freelist 減少を **E2E 1本だけ**上乗せする (3) 手動チェックリストから R5・R6・G6 の大部分を削除、に絞る。
 
@@ -104,7 +104,7 @@ seed 3件では freelist が動かない可能性があるため、**R5 用に s
 
 ## 見積もり
 
-1pt（要チームでの見積もり）— R5 の E2E 1シナリオ追記 + 手動文書更新 + カバレッジ明文化。既存 vitest がほぼ全てをカバーしているため小さい
+1pt（要チームでの見積もり）― R5 の E2E 1シナリオ追記 + 手動文書更新 + カバレッジ明文化。既存 vitest がほぼ全てをカバーしているため小さい
 
 ## 技術的考慮事項
 
@@ -147,7 +147,7 @@ sed -n '145,191p' testDir/e2e/dashboard-archive.spec.ts   # 既存 Phase B の�
 
 ### 既存カバレッジ一覧（ファイル名 + it() 名）
 
-**R5（VACUUM 領域解放）— `src/offscreen/__tests__/archivePurgeHandlers.test.ts`**
+**R5（VACUUM 領域解放）― `src/offscreen/__tests__/archivePurgeHandlers.test.ts`**
 - `deletes with the 3-condition predicate and runs VACUUM outside the transaction`（freelist before/after の報告）
 - `keeps the main DB intact when VACUUM fails (vacuumOk=false)`
 
@@ -158,10 +158,10 @@ sed -n '145,191p' testDir/e2e/dashboard-archive.spec.ts   # 既存 Phase B の�
 - `rejects before the DELETE when quota is insufficient`
 - `blocks a second concurrent purge (single-flight)`
 
-**G6 孤児掃除 — `src/offscreen/__tests__/archiveStaging.test.ts` `describe('sweepOrphanStagings')`**
+**G6 孤児掃除 ― `src/offscreen/__tests__/archiveStaging.test.ts` `describe('sweepOrphanStagings')`**
 - `removes orphan staging files but protects the excluded set`
 - `protects staging files registered by the current session even without explicit exclude`
-- `sweeps multiple orphans of both kinds (incoming + outgoing) in one pass`（本PBIで追加 — 複数孤児×両kindが未カバーだった）
+- `sweeps multiple orphans of both kinds (incoming + outgoing) in one pass`（本PBIで追加 ― 複数孤児×両kindが未カバーだった）
 
 ### R5 の E2E 実測メモ
 

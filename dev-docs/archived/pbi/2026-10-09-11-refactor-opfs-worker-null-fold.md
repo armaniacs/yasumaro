@@ -112,7 +112,7 @@ Then onDegraded が 1 回だけ呼ばれる現行挙動が維持されること
 
 ## 8. 見積もり
 
-**1.5 SP** — 機械的な統合（ヘルパー 1 本追加 + 17 メソッドの置き換え）のみでロジック変更なし。`restoreDb`/`healthCheck` の対象外判断と pin テーブルとの照合が含まれるため 1 SP ではなく 1.5 SP。影響範囲は `src/offscreen/OpfsWorkerBackend.ts` 1 ファイル。
+**1.5 SP** ― 機械的な統合（ヘルパー 1 本追加 + 17 メソッドの置き換え）のみでロジック変更なし。`restoreDb`/`healthCheck` の対象外判断と pin テーブルとの照合が含まれるため 1 SP ではなく 1.5 SP。影響範囲は `src/offscreen/OpfsWorkerBackend.ts` 1 ファイル。
 
 ## 9. DoD
 

@@ -1,4 +1,4 @@
-# PBI 03: Logger Wave 4 — core 配線の注入化と barrel 分割
+# PBI 03: Logger Wave 4 ― core 配線の注入化と barrel 分割
 
 優先度: 3 位 / RICE 20.0 = (15 × 1 × 80%) / 0.6w / Strength: Strong
 backlog: [2026-09-05-00-backlog-arch3.md](2026-09-05-00-backlog-arch3.md)
@@ -71,7 +71,7 @@ grep -rn "from.*utils/logger.js" src/ --include="*.ts" | wc -l
 4. 全テスト green（chrome モック削減の差分を確認）
 
 ### 落とし穴
-- `scheduler.onFlushRequested(() => persistPending())`（:54）の登録タイミング — init 化で二重登録しないこと
+- `scheduler.onFlushRequested(() => persistPending())`（:54）の登録タイミング ― init 化で二重登録しないこと
 - offscreen の console フォールバック（:35-40）は adapter の責務に移すが、振る舞いは変えないこと
 - `storageAdapter.ts` の `runSerialized` 依存は維持（logger-free の storageTransaction 側を汚さない）
 

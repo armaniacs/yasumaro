@@ -89,7 +89,7 @@ Scenario: 読み込みに失敗したとき
 | 9 | `entrypoints/options/dashboard.css` | 変更 | `.revisit-insights-actions` を1つ追加する（それ以外は既存の `.data-table*` を使う） |
 | 10 | `public/_locales/{ja,en}/messages.json` | 変更 | i18n キーを追加する |
 | 11 | `src/dashboard/panels/__tests__/panelCatalog.test.ts` | 変更 | 固定 id リストに追加し、`SIDEBAR_PANELS` の長さを 24 から 25 にする |
-| 12 | テスト（新規3・変更1） | — | 下の「テストケース」を参照 |
+| 12 | テスト（新規3・変更1） | ― | 下の「テストケース」を参照 |
 | 13 | `docs/DATA_ANALYTICS_GUIDE.md` / `README.md` / `docs/guides.html` / `CHANGELOG.md` | 変更 | ドキュメント |
 
 ### 1. `fetchAllPeriodRows`（`src/dashboard/panels/fetchPeriodRows.ts`）
@@ -408,7 +408,7 @@ section は、`<section id="panel-domain-analysis" ...>` の閉じタグの直�
   </table>
 
   <h3 class="data-table-heading" data-i18n="revisitInsights_dormantTitle">Topics you have not revisited</h3>
-  <p class="data-table-notice is-muted" data-i18n="revisitInsights_dormantHint">Frequent 2–4 months ago, but no records in the last 30 days.</p>
+  <p class="data-table-notice is-muted" data-i18n="revisitInsights_dormantHint">Frequent 2-4 months ago, but no records in the last 30 days.</p>
   <table id="revisitInsightsDormantTable" class="data-table">
     <thead><tr>
       <th scope="col" data-i18n="revisitInsights_kindColumn">Kind</th>
@@ -471,9 +471,9 @@ section は、`<section id="panel-domain-analysis" ...>` の閉じタグの直�
 | `revisitInsights_openHistory` | 履歴で見る | View in history | Navigate to history button |
 | `revisitInsights_rankingTitle` | よく再訪するページ | Frequently revisited pages | Ranking heading |
 | `revisitInsights_dormantTitle` | 最近触れていないテーマ | Topics you have not revisited | Dormant heading |
-| `revisitInsights_dormantHint` | 2〜4か月前によく見ていたが、直近30日は記録がありません。 | Frequent 2–4 months ago, but no records in the last 30 days. | Dormant hint |
+| `revisitInsights_dormantHint` | 2〜4か月前によく見ていたが、直近30日は記録がありません。 | Frequent 2-4 months ago, but no records in the last 30 days. | Dormant hint |
 | `revisitInsights_capsuleTitle` | 1年前の今週 | This week, one year ago | Capsule heading |
-| `revisitInsights_capsuleRange` | {start} 〜 {end} | {start} – {end} | Capsule date range |
+| `revisitInsights_capsuleRange` | {start} 〜 {end} | {start} - {end} | Capsule date range |
 | `revisitInsightsError` | 再訪データの読み込みに失敗しました。 | Failed to load revisit data. | Load error |
 
 ### 9. ドキュメント
@@ -576,6 +576,6 @@ section は、`<section id="panel-domain-analysis" ...>` の閉じタグの直�
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `npm run validate` と `npm run build` が通る
-- [ ] コードレビュー完了（未実施 — ユーザー作業）
+- [ ] コードレビュー完了（未実施 ― ユーザー作業）
 - [x] `docs/DATA_ANALYTICS_GUIDE.md`（ja / en）・README・guides.html・CHANGELOG を更新済み
 - [x] `pbi/00-INDEX.md` を更新し、この PBI を `dev-docs/archived/pbi/` へ移動済み

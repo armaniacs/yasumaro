@@ -34,20 +34,20 @@ trace（entrypoint → sink、実ファイルで確認した行番号）:
 | 7 | `src/utils/storage/settingsMigration.ts:562` | propagation。`applyMigrationsAndDecryptWithReEncrypt` が `reEncrypted` を返す |
 | 8 | `src/utils/storage/SettingsRepository.ts:170-173` | propagation。`getAll` が `Object.keys(reEncrypted).length > 0` なら `await this.persistReEncrypted(reEncrypted)` を呼ぶ |
 | 9 | `src/utils/storage/SettingsRepository.ts:108-111` | propagation。`persistReEncrypted` が capture 済み record をそのまま patch として `persistMerged` に渡す |
-| 10 | `src/utils/storage/storageTransaction.ts:259` | propagation。`const newValue = updateFn(currentValue)` — merge は lock 内で fresh な current を取るが、patch は stale |
+| 10 | `src/utils/storage/storageTransaction.ts:259` | propagation。`const newValue = updateFn(currentValue)` ― merge は lock 内で fresh な current を取るが、patch は stale |
 | 11 | `src/utils/storage/storageTransaction.ts:368` | propagation。`performCasUpdate` の version チェック。**競合は正しく検出される**が、この経路では version は整合しているため何も起きない |
 | 12 | `src/utils/storage/storageTransaction.ts:374` | sink。`port.set({ [key]: newValue, ... })` が再暗号化旧値を commit。post-write verify（`:377`）もその値で成功判定するため ConflictError も post-write 不整合も表面化しない |
 
 evidence（実ファイルで確認した行番号）:
 
-- `src/utils/storage/settingsMigration.ts:320` — `migrateToSingleSettingsObject` が legacy 値を `assignSettingValue` でそのまま blob に写し込む（再暗号化なし）。したがって plaintext / legacy-100k 前提条件は移行済みプロファイルで実在し、再暗号化 write が着地するまで窓が開く。
-- `src/utils/storage/settingsRepository.ts:219-225` — delta-write 契約注釈。「Do NOT pass a full cached snapshot — its unrelated keys would overwrite concurrent writers' changes with stale values」。再暗号化 patch はまさに API キー項目についての captured-snapshot write であり、注釈が禁じている形そのもの。
-- `src/popup/whitelistWriter.ts:59` / `:65-67` — `settingsRepository.getAll()` で array を読み、`:65-67` で `[...whitelist, normalized]` を `setAll` に渡す。read と set の間に落ちた並行 whitelist write は黙って巻き戻り、同一 realm の `ConflictError` リトライも同じ stale array を再 merge する。
-- `src/utils/storage/settingsBackup.ts:30` / `:41` — `restoreLatestSettingsBackup` が `port.get(null)` で backup snapshot（`:30`）を読み、`:41` で `{ ...(current ?? {}), ...restored }` を `withLock` に渡す。前提条件は「空 blob + authoritative migration record」で、blob write path 自体からは到達しにくいエッジ状態。
-- `src/background/allowedUrlsSync.ts:48` — onChanged listener が settings 変化ごとに `getAll()` を再実行するため、blob が plaintext/legacy KDF ciphertext を持つ限り SW の再暗号化窓が乗算される。
-- `src/utils/crypto/cryptoParams.ts:11-12` — `PBKDF2_ITERATIONS: 600_000` / `LEGACY_PBKDF2_ITERATIONS: 100_000`。`getOrCreateEncryptionKey`（`src/utils/storage/encryptionSession.ts:566`）が PBKDF2-600k を派生させるため、trace の窓は数十〜数百 ms 規模になり得る。
-- `src/utils/crypto/primitives.ts:327` — `isEncrypted` は構造判定（object）であり、plaintext 文字列は false。
-- `src/utils/storage/apiKeyFields.ts` — `API_KEY_FIELD_NAMES`（`obsidian_api_key` / `gemini_api_key` / `openai_api_key` / `openai_2_api_key` / `provider_api_key` / `github_pat`）が patch が名指しするキー集合。
+- `src/utils/storage/settingsMigration.ts:320` ― `migrateToSingleSettingsObject` が legacy 値を `assignSettingValue` でそのまま blob に写し込む（再暗号化なし）。したがって plaintext / legacy-100k 前提条件は移行済みプロファイルで実在し、再暗号化 write が着地するまで窓が開く。
+- `src/utils/storage/settingsRepository.ts:219-225` ― delta-write 契約注釈。「Do NOT pass a full cached snapshot ― its unrelated keys would overwrite concurrent writers' changes with stale values」。再暗号化 patch はまさに API キー項目についての captured-snapshot write であり、注釈が禁じている形そのもの。
+- `src/popup/whitelistWriter.ts:59` / `:65-67` ― `settingsRepository.getAll()` で array を読み、`:65-67` で `[...whitelist, normalized]` を `setAll` に渡す。read と set の間に落ちた並行 whitelist write は黙って巻き戻り、同一 realm の `ConflictError` リトライも同じ stale array を再 merge する。
+- `src/utils/storage/settingsBackup.ts:30` / `:41` ― `restoreLatestSettingsBackup` が `port.get(null)` で backup snapshot（`:30`）を読み、`:41` で `{ ...(current ?? {}), ...restored }` を `withLock` に渡す。前提条件は「空 blob + authoritative migration record」で、blob write path 自体からは到達しにくいエッジ状態。
+- `src/background/allowedUrlsSync.ts:48` ― onChanged listener が settings 変化ごとに `getAll()` を再実行するため、blob が plaintext/legacy KDF ciphertext を持つ限り SW の再暗号化窓が乗算される。
+- `src/utils/crypto/cryptoParams.ts:11-12` ― `PBKDF2_ITERATIONS: 600_000` / `LEGACY_PBKDF2_ITERATIONS: 100_000`。`getOrCreateEncryptionKey`（`src/utils/storage/encryptionSession.ts:566`）が PBKDF2-600k を派生させるため、trace の窓は数十〜数百 ms 規模になり得る。
+- `src/utils/crypto/primitives.ts:327` ― `isEncrypted` は構造判定（object）であり、plaintext 文字列は false。
+- `src/utils/storage/apiKeyFields.ts` ― `API_KEY_FIELD_NAMES`（`obsidian_api_key` / `gemini_api_key` / `openai_api_key` / `openai_2_api_key` / `provider_api_key` / `github_pat`）が patch が名指しするキー集合。
 
 blockers（needs_validation、着手前に潰すべき owner 確認）:
 
@@ -190,10 +190,10 @@ Scenario: 6. settings インポート（意図的な full-payload 復元）は�
 
 ### 既存テストへの追加項目
 
-- `src/utils/storage/__tests__/SettingsRepository.test.ts` — 平文 API キーで seed し、read ゲートに並行 set を差込む新規 describe。**既存テストは改変しない**。
-- `src/utils/storage/__tests__/settingsMigration-port-unify.test.ts` / `settingsApiKeyFieldBinding.test.ts` / `settingsMigration-locked.test.ts` / `settingsMigration-unrecoverable.test.ts` — `reEncrypted` の戻り値形状を前提にしている可能性があるので、戻り値が変わらない場合でも**関数シグネチャが変わるなら更新**（形状を変える場合は 4 ファイルすべて）。
-- `src/popup/__tests__/whitelistWriter.test.ts` — 並行追加の describe を**新設**（既存は改変しない）。
-- `src/utils/storage/__tests__/settingsBackupRestoreParity.test.ts` / `settingsBackupLiteralPin.test.ts` — full-payload 復元が引き続き成立することの回帰 pin。
+- `src/utils/storage/__tests__/SettingsRepository.test.ts` ― 平文 API キーで seed し、read ゲートに並行 set を差込む新規 describe。**既存テストは改変しない**。
+- `src/utils/storage/__tests__/settingsMigration-port-unify.test.ts` / `settingsApiKeyFieldBinding.test.ts` / `settingsMigration-locked.test.ts` / `settingsMigration-unrecoverable.test.ts` ― `reEncrypted` の戻り値形状を前提にしている可能性があるので、戻り値が変わらない場合でも**関数シグネチャが変わるなら更新**（形状を変える場合は 4 ファイルすべて）。
+- `src/popup/__tests__/whitelistWriter.test.ts` ― 並行追加の describe を**新設**（既存は改変しない）。
+- `src/utils/storage/__tests__/settingsBackupRestoreParity.test.ts` / `settingsBackupLiteralPin.test.ts` ― full-payload 復元が引き続き成立することの回帰 pin。
 - AGENTS.md の test rule に従い、**実時間 sleep を追加しない**。並行ゲートは deferred Promise や `expect.poll` / `waitForMock()`（`testDir/waitPolicy.ts`）で表現する。
 
 ### ロールバック手順
@@ -218,13 +218,13 @@ Scenario: 6. settings インポート（意図的な full-payload 復元）は�
 
 - 判定: **CONFIRMED**（2 経路とも局所再現）
 - 決め手: (1) `getAll` の blob read を保持中に新キーをコミットすると、再暗号化 patch が新値を **`old-dummy-key` に巻き戻す**。(2) lock 内 read の保留中に writer B を完了させると、最終 whitelist が **`['one.example']` のみ**になり `two.example` が黙って欠落する
-- 影響: 実装メモに追記 — node 環境には IndexedDB が無く匿名 KEK 生成が fail-closed throw するため、テストでは `getOrCreateEncryptionKey` を固定キーに差し替え、`__resetStorageTransactionForTest` を afterEach で呼ぶ必要がある
+- 影響: 実装メモに追記 ― node 環境には IndexedDB が無く匿名 KEK 生成が fail-closed throw するため、テストでは `getOrCreateEncryptionKey` を固定キーに差し替え、`__resetStorageTransactionForTest` を afterEach で呼ぶ必要がある
 
 ## 関連
 
 - `pbi/00-INDEX.md`（本 PBI の登録先。完了後は `dev-docs/archived/pbi/` へ移動しアーカイブ履歴へ）
 - ストレージ CAS 領域の PBI との合流の整合を確認すること:
-  - PBI 06「信頼DB merge union」（`trust-db-save:merge-union-reverts-user-removals`）— 同じ「古いスナップショットが削除を殺す／復活させる」問題。merge 方策の原則を揃えること。
-  - PBI 18「withOptimisticLock cross-context window」（監査 #25: verify→set が context 跨ぎで非原子）— `storageTransaction.ts:35-46` の `chains` は module-level Map で context を跨げない。本 PBI の lock 内再導出は**同一 realm 内**の交錯しか防げないため、PBI 18 と組んで読むこと。
-  - PBI 20「session auto-lock」— 暗号化キーの availability と re-encrypt 窓の関連。
+  - PBI 06「信頼DB merge union」（`trust-db-save:merge-union-reverts-user-removals`）― 同じ「古いスナップショットが削除を殺す／復活させる」問題。merge 方策の原則を揃えること。
+  - PBI 18「withOptimisticLock cross-context window」（監査 #25: verify→set が context 跨ぎで非原子）― `storageTransaction.ts:35-46` の `chains` は module-level Map で context を跨げない。本 PBI の lock 内再導出は**同一 realm 内**の交錯しか防げないため、PBI 18 と組んで読むこと。
+  - PBI 20「session auto-lock」― 暗号化キーの availability と re-encrypt 窓の関連。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 21番、`findings.json`、`REPORT.md`）

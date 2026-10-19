@@ -8,7 +8,7 @@
 - `src/offscreen/__tests__/backendResolver-coverage.test.ts`
 
 ## Validation
-`npx vitest run src/offscreen` — PASS（スコープ検証済み）。
+`npx vitest run src/offscreen` ― PASS（スコープ検証済み）。
 
 ## Rollback
 削除したラッパーとテスト describe を復元すればロールバックできる。

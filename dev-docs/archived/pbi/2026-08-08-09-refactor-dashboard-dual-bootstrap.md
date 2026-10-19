@@ -56,12 +56,12 @@ import {
 | 28-161 | パネル遷移（クリック合成）・AI provider 要素探索 |
 | 162-211 | `loadGeneralSettings()` |
 | 216-419 | 接続テストのDOM生成・進捗表示 |
-| 420-545 | `handleTestAi()` — **126行**。単一最大の関数 |
+| 420-545 | `handleTestAi()` ― **126行**。単一最大の関数 |
 | 546-661 | ローカル Markdown テスト・日付変換 |
 | 662-824 | **Markdown エクスポート業務ロジック 約150行** |
 | 825-924 | 薄いハンドララッパー5件・purge 処理 |
 | 925-964 | i18n 初期化・`initDashboard()` |
-| 966 | `void initDashboard()` — トップレベル副作用 |
+| 966 | `void initDashboard()` ― トップレベル副作用 |
 
 ### 削除テスト
 
@@ -176,18 +176,18 @@ Scenario: 既存テストが全てパスする
 
 ## 受け入れ基準
 
-### Phase 1 — 完了（2026-08-09）
+### Phase 1 ― 完了（2026-08-09）
 - [x] `src/dashboard/markdownExport.ts` を新規作成し、業務ロジックを移動（244行）
 - [x] `chrome.downloads.download` を `DownloadPort` seam の裏に隠す
 - [x] `markdownExport` の単体テストを新規作成（22件）
 - [x] `npm run validate` が成功する
 
-### Phase 3 — 完了（2026-08-09、Phase 2 より先に実施）
+### Phase 3 ― 完了（2026-08-09、Phase 2 より先に実施）
 - [x] `openSettingsPanel()` のクリック合成を registry 経由に置換
 - [x] `initDashboard()` の `historyBtn.click()` を registry 経由に置換
 - [x] `npm run validate` が成功する
 
-### Phase 2 / Phase 4 — 未着手（本セッションでは見送り。理由は下記）
+### Phase 2 / Phase 4 ― 未着手（本セッションでは見送り。理由は下記）
 - [ ] 11個のハンドラを `generalSettingsPanel` へ移動
 - [ ] `generalSettingsPanel` から `dashboard.js` の import を削除
 - [ ] `generalSettingsPanel` の単体テストを新規作成（現状0）
@@ -204,7 +204,7 @@ Scenario: 既存テストが全てパスする
 
 `dashboard.ts`: 967行 → 827行。テスト22件を新規追加。
 
-### Phase 3: クリック合成の置換 — 「迂回」には理由があった
+### Phase 3: クリック合成の置換 ― 「迂回」には理由があった
 
 レビューでは「`NavigationRegistry` を import せずクリック合成している」を単なる設計の乱れとして挙げたが、**調査すると初期化順の制約への対処でもあった**。
 

@@ -10,7 +10,7 @@
 `src/messaging/types.ts` は、中立な messaging 層でありながら実行時定数を
 `src/background/messageTypes.ts` から import している。
 
-- `src/messaging/types.ts:156-157` — `VALID_MESSAGE_TYPES` と `NO_PAYLOAD_TYPES` を
+- `src/messaging/types.ts:156-157` ― `VALID_MESSAGE_TYPES` と `NO_PAYLOAD_TYPES` を
   `../background/messageTypes.js` から実行時 import し、`ExtensionMessage` を型として import する。
 - import 宣言は production で13件（対象11ファイル）、テスト込みで22件。
 
@@ -80,10 +80,10 @@
 - 文書のみの変更であり、テストの追加・変更は不要。
 
 ## 参照
-- `src/messaging/types.ts` — 逆依存の import 元
-- `src/background/messageTypes.ts` — import 先（Chrome API 副作用なし・re-export 専用）
-- `src/messaging/protocol.ts` — `CURRENT_PROTOCOL_VERSION` の正本
-- `src/messaging/__tests__/types.test.ts` — メッセージ型の整合
-- `src/__tests__/messaging-types-uniformity.test.ts` — import の一様性
-- `src/background/__tests__/message-types-consistency.test.ts` — 配列と union の一致
+- `src/messaging/types.ts` ― 逆依存の import 元
+- `src/background/messageTypes.ts` ― import 先（Chrome API 副作用なし・re-export 専用）
+- `src/messaging/protocol.ts` ― `CURRENT_PROTOCOL_VERSION` の正本
+- `src/messaging/__tests__/types.test.ts` ― メッセージ型の整合
+- `src/__tests__/messaging-types-uniformity.test.ts` ― import の一様性
+- `src/background/__tests__/message-types-consistency.test.ts` ― 配列と union の一致
 - PBI: `pbi/2026-09-25-20-doc-messaging-layer-decision-record.md`

@@ -14,12 +14,12 @@
 - 解: `recordsRepo` に FTS 可不可と `MAX_QUERY_LIMIT=100000` の 3分岐 unit、`backendResolver` に `detectLiveVfsStrategy` のモックで `None` パス、`opfsWorkerProxy` に `sendToOpfsWorker` のタイムアウト注入テストを追加
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — FTS ありで検索が FTS 経由になる
+Scenario: ハッピーパス ― FTS ありで検索が FTS 経由になる
   Given `fts5Available=true` かつ `query.text.length >=3` の検索
   When `recordsRepo.query` を呼ぶ
   Then `browsing_logs_fts MATCH` で結果が返る
 
-Scenario: エッジケース — OPFS/IDB 両方不可で NoopBackend にフォールバック
+Scenario: エッジケース ― OPFS/IDB 両方不可で NoopBackend にフォールバック
   Given `navigator.storage.getDirectory` が存在せず `indexedDB` も blocked
   When `backendResolver.resolveBackend` を呼ぶ
   Then `None` が選択され `NoopBackend` が返り `healthCheck` は `false` になる

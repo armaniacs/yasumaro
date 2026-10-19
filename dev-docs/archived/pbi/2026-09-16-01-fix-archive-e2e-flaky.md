@@ -28,7 +28,7 @@ v6.9.2（PR #137）のリリース確認中に発見。`usability` ジョブの�
 
 `testDir/e2e/archive-recommended-verification.spec.ts`
 
-- `G5: archive create runs while a recording is in flight — both succeed`（恒常的に failed、リトライ2回とも失敗）
+- `G5: archive create runs while a recording is in flight ― both succeed`（恒常的に failed、リトライ2回とも失敗）
 - `Y6: restore with deleted rows reports restoredDeleted`（flaky）
 - `Y5': reloading the options page reconnects the open session`（flaky）
 - `G3: archive_query treats % and _ as literals`（flaky）
@@ -97,8 +97,8 @@ MV3 の SW はアイドルで終了するため、トークン発行から検証
 
 実装は2箇所:
 
-- `src/messaging/dashboardGateway.ts` — 実アプリの経路。`withConfirmToken()` を抽出し、mismatch のときだけ1回再発行して再送する
-- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` — e2e はゲートウェイを経由せず自前でメッセージを組み立てるため（コメントに "Mirrors dashboardGateway.sendDashboard" と明記）、同じ回復処理を `dashboardMsg` に持たせた
+- `src/messaging/dashboardGateway.ts` ― 実アプリの経路。`withConfirmToken()` を抽出し、mismatch のときだけ1回再発行して再送する
+- `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` ― e2e はゲートウェイを経由せず自前でメッセージを組み立てるため（コメントに "Mirrors dashboardGateway.sendDashboard" と明記）、同じ回復処理を `dashboardMsg` に持たせた
 
 エラー文字列は `CONFIRM_TOKEN_MISMATCH_ERROR`（`src/messaging/sqliteOperationSecurity.ts`）として送受信で共有し、リテラルの重複を排した。e2e ヘルパーは src/ から import できないため、そこだけ同期コメント付きで文字列を複製している。
 

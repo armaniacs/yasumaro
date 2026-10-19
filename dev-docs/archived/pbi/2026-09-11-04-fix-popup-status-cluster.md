@@ -1,4 +1,4 @@
-# PBI 04: popup クラスタ修正 — recordBtn 二重所有解消・allUrls wiring ガード・spinner 所有権・LOCKED i18n
+# PBI 04: popup クラスタ修正 ― recordBtn 二重所有解消・allUrls wiring ガード・spinner 所有権・LOCKED i18n
 
 ## ユーザーストーリー
 
@@ -10,9 +10,9 @@ popup で記録する利用者として、権限状態の表示更新が記録�
 - RICE スコア: 10.7（Reach=3 / Impact=1 / Confidence=80% / Effort=0.3 人週）
 - 根拠（2026-09-11 直接検証済み）:
   - `statusPanel.ts:136`（LOCKED 時 disabled=true）と `:153` 付近（grant 時 disabled=false）が RecordSession.resetRecordButton（`recordSession.ts:108-121`、doc: 「Sole button writer ... the status panel only signals through the session entry points」）と競合。disabled=true は設計上の escape hatch「Record Anyway」（force 記録）まで塞ぐ
-  - `statusPanel.ts:444` — `btnRequestAllUrls` が裸 addEventListener（同ファイル `btnRequestPermission` は round 4 で dataset.wired ガード済み。同一クラスの修正が隣接関数に未伝播。現状 main.ts から 1 回呼びのため実害は小さいが再入で stack する）
-  - `contentFetchGateway.ts:69` — showSpinner を所有するが hide は呼び出し側 2 箇所の担当。executeScript 本体が Level1/Level2 で逐語重複（:92-96 vs :125-129）
-  - `statusPanel.ts:135` — `🔒 LOCKED` が i18n 素通り
+  - `statusPanel.ts:444` ― `btnRequestAllUrls` が裸 addEventListener（同ファイル `btnRequestPermission` は round 4 で dataset.wired ガード済み。同一クラスの修正が隣接関数に未伝播。現状 main.ts から 1 回呼びのため実害は小さいが再入で stack する）
+  - `contentFetchGateway.ts:69` ― showSpinner を所有するが hide は呼び出し側 2 箇所の担当。executeScript 本体が Level1/Level2 で逐語重複（:92-96 vs :125-129）
+  - `statusPanel.ts:135` ― `🔒 LOCKED` が i18n 素通り
 
 ## BDD 受け入れシナリオ
 
@@ -58,7 +58,7 @@ S-M（0.3 人週）。種別: fix（+refactor 1 件）。
 
 ## 実装メモ（2026-09-11 round 5）
 
-- statusPanel からの `recordBtn.disabled` 書き込み 2 箇所（LOCKED disable / grant enable）を削除 — RecordSession sole-writer 契約を回復。LOCKED はバナー + badge（`statusTrustLocked` キー新設 ja/en）で伝達。
+- statusPanel からの `recordBtn.disabled` 書き込み 2 箇所（LOCKED disable / grant enable）を削除 ― RecordSession sole-writer 契約を回復。LOCKED はバナー + badge（`statusTrustLocked` キー新設 ja/en）で伝達。
 - `btnRequestAllUrls` に dataset.wired ガード（btnRequestPermission と同一パターン）。
 - gateway から showSpinner を削除（spinner の show/hide ペアは record フロー側が所有）+ executeScript 本体の逐語重複を `executeScriptInnerText` adapter に統合。
 - 関連テスト更新: statusPanel（recordBtn pin を新契約に）/ tabContentFetcher（spinner 非所有を pin）/ extra（LOCKED i18n モック追加）。

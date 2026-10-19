@@ -35,7 +35,7 @@ Scenario: 不正なクエリ入力は境界で拒否される
 ## 受け入れ基準
 
 - [x] `QueryPlanner` モジュールが normalize-to-decode を単一 seam の背後に所有している（`src/offscreen/queryPlanner.ts` 新設: `planQuery` / `planSearch` / `applyReadPolicy`）
-- [x] 6 モジュール（queryPlan / queryNormalize / sqliteQueryBuilder / recordsRepo / rowCodec / browsingLogCodec）が internals として QueryPlanner 配下にある（所有関係を `queryPlanner.ts` ヘッダ + ARCHITECTURE_MAP に明記。物理移設は worker 境界のため見送り — 実装メモ参照）
+- [x] 6 モジュール（queryPlan / queryNormalize / sqliteQueryBuilder / recordsRepo / rowCodec / browsingLogCodec）が internals として QueryPlanner 配下にある（所有関係を `queryPlanner.ts` ヘッダ + ARCHITECTURE_MAP に明記。物理移設は worker 境界のため見送り ― 実装メモ参照）
 - [x] 外部からの直参照が QueryPlanner 経由に置換されている（`sqliteMessageHandlers` の handleQuery/handleSearch + `recordsRepo.query` が planner 経由に）
 - [x] 既存の読み取り結果と同一である（parametric backend 一致テスト + offscreen 全 973 tests green）
 - [x] `npm run type-check` と関連テストが green
@@ -99,13 +99,13 @@ grep -rn "queryPlan\|queryNormalize\|sqliteQueryBuilder\|recordsRepo\|rowCodec\|
 ## Definition of Done
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする（`queryPlanner.test.ts` 新設 7 件 + offscreen 全 973 green）
-- [x] コードレビュー完了（自律レビュー: backend 到達値は不変 — `applyReadPolicy` 冪等テストで保証）
+- [x] コードレビュー完了（自律レビュー: backend 到達値は不変 ― `applyReadPolicy` 冪等テストで保証）
 - [x] ドキュメント更新済み（ARCHITECTURE_MAP Quick Index に QueryPlanner 行を追加）
 - [x] ロールバック手段の検討（git revert で可能・振る舞い不変のため feature flag 不要）
 
 ## 実装メモ（2026-09-11 autonomous-task-closer）
 
 - スコープ調整: 6 ファイルの物理移設（`queryPlanner/` 配下化）は見送り。理由: `opfsWorker/*` が `queryPlan` / `rowCodec` / `sqliteQueryBuilder` を直接 import しており（worker バンドル境界）、移設はワーカー解決・12 importer への波及を伴う。代わりに `queryPlanner.ts` が読み取り政策（normalize→clamp→truncate）を単一所有し、6 モジュールを internals として文書固定。PBI-07（dispatch collapse）はこの安定した内側 seam にルーティング可能。
-- 実バグの芽を摘んだ記録: 初版で `MAX_QUERY_LIMIT` を `sqliteEngineHost` 経由で import したところ、32 テストの `vi.mock('../sqliteEngineHost.js')` が当該 export を持たず失敗。`MAX_QUERY_LIMIT` の正規の置き場所は `messaging/limits.ts`（round 3 SSOT）であり、planner はそちらを直接参照する形に修正 — 層境界の正しさを読者が誤らないよう重要。
+- 実バグの芽を摘んだ記録: 初版で `MAX_QUERY_LIMIT` を `sqliteEngineHost` 経由で import したところ、32 テストの `vi.mock('../sqliteEngineHost.js')` が当該 export を持たず失敗。`MAX_QUERY_LIMIT` の正規の置き場所は `messaging/limits.ts`（round 3 SSOT）であり、planner はそちらを直接参照する形に修正 ― 層境界の正しさを読者が誤らないよう重要。
 - テスト 3 件の更新は旧ハンドオフ形状の pin（handler→repo 間で limit 未設定）→ 新ハンドオフ（planner が limit:100 を付与）。backend 到達値は同一（旧 recordsRepo が後段で付けていた）。
 - なぜなぜ: なぜ政策が 2 ファイルに分裂したのか → 正規化（round 5）と上限丸め（round 6）が別ラウンド・別ファイルで追加され、合成の所有者が決まらなかった → 解: 合成だけを新 seam に寄せ、実行・復号は backend 境界に残す（層を跨ぐ移動はしない）。

@@ -11,21 +11,21 @@
 
 **スコープ内（3つの絡んだクリーンアップを1 PBI に束ねる）:**
 
-1. **test-support 再配置** — 本番ファイルに定義されたテスト専用コードをテストヘルパへ移す
+1. **test-support 再配置** ― 本番ファイルに定義されたテスト専用コードをテストヘルパへ移す
    - `src/content/extractor.ts:53` `getPageStateForTesting()`（本番参照ゼロ、5テストファイルのみ、多くが `as unknown as PageState` キャスト付き）
    - `src/content/extractor.ts:197` `export { kernel as __kernelForTesting }`（本番参照ゼロ）
    - `src/content/contentKernel.ts:85-113` `FakeScheduler` クラス（29行、本番参照ゼロ、`contentKernel.*.test.ts` のみ）
    - `src/content/domainPolicyPort.ts:82-117` `InMemoryDomainPolicyPort` クラス（36行、テスト専用）
-   - `src/utils/contentExtractor/optionBuilder.ts.bak` — コミットされたバックアップファイル。削除
+   - `src/utils/contentExtractor/optionBuilder.ts.bak` ― コミットされたバックアップファイル。削除
    - `src/` に test-support の置き場所規約が未確立（下記「未解決事項」1）
 
-2. **facade collapse** — `src/content/extractor.ts` の転送層を縮約し、entrypoint に組み立てを寄せる
+2. **facade collapse** ― `src/content/extractor.ts` の転送層を縮約し、entrypoint に組み立てを寄せる
    - `createVisitGate` が `extractor.ts:103` と `contentKernel.ts:336` に同一ロジックで2実装。一本化
    - `throttle` が extractor → contentKernel → `throttle.ts` の3段ラッパー。縮約（ただし `contentKernel.throttle` は `init()` 内で自己利用しており完全には潰せない）
    - `showPrivacyConfirmDialog` は `privacyDialog.ts` の素通し re-export
    - entrypoint（`entrypoints/content-extractor.ts`）が ContentKernel 組み立て + GET_CONTENT リスナー登録 + `init()` を直接行う形に寄せる
 
-3. **GET_CONTENT testability** — `src/content/extractor.ts:169-194` のインラインリスナー（`if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage)` ガード内のクロージャ）を、注入された kernel/extractor を引数に取る名前付き関数（例 `handleGetContentMessage(msg, sender, sendResponse, deps)`）に切り出す
+3. **GET_CONTENT testability** ― `src/content/extractor.ts:169-194` のインラインリスナー（`if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage)` ガード内のクロージャ）を、注入された kernel/extractor を引数に取る名前付き関数（例 `handleGetContentMessage(msg, sender, sendResponse, deps)`）に切り出す
    - 現状は `vi.resetModules()` → `globalThis.chrome = mock` → `await import` でリスナー再登録し `onMessage.addListener.mock.calls[0][0]` から引き抜くしかテスト手段がない（`extractor.test.ts:2037-2044`）
    - clock も注入経路に載せる
    - background 側に GET_CONTENT ハンドラは存在しない（content script が `chrome.tabs.sendMessage` で受ける。`messageTypes.ts:210-216,251` に型定義のみ）
@@ -94,7 +94,7 @@ Scenario: バックアップファイルがリポジトリから消える
 - [x] `showPrivacyConfirmDialog` の素通し re-export が解消される（呼び出し側が `privacyDialog.ts` を直接参照）
   - 実施: re-export 行を削除。`extractor.test.ts`・`extractor-extra.test.ts`・`extractor-r2.test.ts` は `../privacyDialog.js` からの import に付け替え（import パス変更のみ）。本番呼び出し側（`visitReporter.ts:180`）は元から `privacyDialog.ts` を直接参照しており無修正
 - [x] `src/content/extractor.ts:169-194` のインラインリスナーが `handleGetContentMessage(msg, sender, sendResponse, deps)` 相当の名前付き・deps 注入関数に切り出され、clock も注入経路に載る
-  - 実施: `src/content/getContentHandler.ts` を新設。`deps = { extractPageContent, applyExtractResultToPageState, pageState, runtimeId }`。chrome 依存は `runtimeId` 注入に畳んだ。clock はハンドラ本体が時刻不使用のため literal な `deps.clock` は持たせない——clock の注入経路は ContentKernel コンストラクタ注入であり（entrypoint が `() => Date.now()` を明示、本番 wiring は kernel 束縛クロージャを deps に渡す）、テストは fake-clock kernel を束縛して渡すことで決定性を得る。この解釈で基準を満たすものとする
+  - 実施: `src/content/getContentHandler.ts` を新設。`deps = { extractPageContent, applyExtractResultToPageState, pageState, runtimeId }`。chrome 依存は `runtimeId` 注入に畳んだ。clock はハンドラ本体が時刻不使用のため literal な `deps.clock` は持たせない――clock の注入経路は ContentKernel コンストラクタ注入であり（entrypoint が `() => Date.now()` を明示、本番 wiring は kernel 束縛クロージャを deps に渡す）、テストは fake-clock kernel を束縛して渡すことで決定性を得る。この解釈で基準を満たすものとする
 - [x] GET_CONTENT ハンドラの単体テストが `vi.resetModules()` / `onMessage.addListener.mock.calls` からの引き抜きに依存しない形に書き換わる
   - 実施: `extractor.test.ts` の sender-validation describe を直接呼び出しに書き換え（引き抜きブロック撤去）。新規 `getContentHandler.test.ts`（6ケース、chrome グローバル削除ケース含む）は chrome モックなしで成立
 - [x] entrypoint（`entrypoints/content-extractor.ts`）が ContentKernel 組み立て + GET_CONTENT リスナー登録 + `init()` を直接行う形になる
@@ -166,11 +166,11 @@ Scenario: バックアップファイルがリポジトリから消える
 - `showPrivacyConfirmDialog` は `privacyDialog.ts` の素通し re-export
 
 **test-support の実態:**
-- `extractor.ts:53` `getPageStateForTesting()` — 本番参照ゼロ、5テストファイルのみ、多くが `as unknown as PageState` キャスト付き
-- `extractor.ts:197` `export { kernel as __kernelForTesting }` — 本番参照ゼロ
-- `contentKernel.ts:85-113` `FakeScheduler` — 29行、本番参照ゼロ、`contentKernel.*.test.ts` のみ
-- `domainPolicyPort.ts:82-117` `InMemoryDomainPolicyPort` — 36行、テスト専用
-- `src/utils/contentExtractor/optionBuilder.ts.bak` — コミットされたバックアップファイル
+- `extractor.ts:53` `getPageStateForTesting()` ― 本番参照ゼロ、5テストファイルのみ、多くが `as unknown as PageState` キャスト付き
+- `extractor.ts:197` `export { kernel as __kernelForTesting }` ― 本番参照ゼロ
+- `contentKernel.ts:85-113` `FakeScheduler` ― 29行、本番参照ゼロ、`contentKernel.*.test.ts` のみ
+- `domainPolicyPort.ts:82-117` `InMemoryDomainPolicyPort` ― 36行、テスト専用
+- `src/utils/contentExtractor/optionBuilder.ts.bak` ― コミットされたバックアップファイル
 - `src/` に test-support の置き場所規約が未確立
 
 **GET_CONTENT の実態:**
@@ -201,7 +201,7 @@ Scenario: バックアップファイルがリポジトリから消える
 
 1. **test-support の置き場所規約が未定**（3案あり、設計判断必要）
    - ~~`src/**/__tests__/support/` 案 / `src/test-support/`（本番 tsconfig 除外）案 / `*.testkit.ts` サフィックス案~~
-   - **結論（実装）**: `src/**/__tests__/helpers/` に確定。既存の `src/background/__tests__/helpers/`・`src/dashboard/__tests__/helpers/` の前例に合わせ、`src/content/__tests__/helpers/` を新設。`src/test-support/` 案は本番 tsconfig 除外の管理コストがあるため不採用。`*.testkit.ts` 案は新サフィックス導入のコストに見合う識別利益がないため不採用（ただし helper 群の入口として `contentTestkit.ts` のファイル名は使用）。PBI 34 の `InMemoryTransport`（`src/background/` 直下残置）とは方針が分かれた——本 PBI は作業指示の決定（本番参照ゼロなので移設が筋、`@internal` 残置は避ける）に従い移設した。将来 PBI 34 側を helpers へ寄せるかは別途判断
+   - **結論（実装）**: `src/**/__tests__/helpers/` に確定。既存の `src/background/__tests__/helpers/`・`src/dashboard/__tests__/helpers/` の前例に合わせ、`src/content/__tests__/helpers/` を新設。`src/test-support/` 案は本番 tsconfig 除外の管理コストがあるため不採用。`*.testkit.ts` 案は新サフィックス導入のコストに見合う識別利益がないため不採用（ただし helper 群の入口として `contentTestkit.ts` のファイル名は使用）。PBI 34 の `InMemoryTransport`（`src/background/` 直下残置）とは方針が分かれた――本 PBI は作業指示の決定（本番参照ゼロなので移設が筋、`@internal` 残置は避ける）に従い移設した。将来 PBI 34 側を helpers へ寄せるかは別途判断
 2. **`FakeScheduler` / `InMemoryDomainPolicyPort` を移設 vs 本番ファイルに `@internal` で残す**（PBI 34 の `InMemoryTransport` 判断と同様の論点）
    - **結論（実装）**: 移設で確定。本番参照ゼロ・テストロジック含有のため `@internal` 残置の根拠なし。`__kernelForTesting` は参照ゼロのため削除（代わりにロジックなしの `kernel` インスタンス export を seam として残置）
 3. **`extractor.test.ts`（2000行超、GET_CONTENT 5 describe + リスナー引き抜きパターン）の書き換え規模**が Effort の主変動要因。着手時に実測して見積もりを更新する

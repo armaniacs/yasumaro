@@ -7,7 +7,7 @@
 - **順位**: 1（holistic-1009 / NN01）
 - **RICE**: 6.0（R4・I3・C1.0・E2）
   - R4: archive 系 messaging は四半期に複数回の保守関与がある
-  - I3: 実害解消 — untrusted 入力の拒否ゲートが silent に弱まり得る
+  - I3: 実害解消 ― untrusted 入力の拒否ゲートが silent に弱まり得る
   - C1.0: コードで確定（file:line 実読検証済み）
   - E2: M（2 SP）
 - **根拠**: 実害級の境界チェック drift。同一リクエストを通る 2 つの手書き検査の間で、archive_export の length 上限欠落と archive_query の定数参照漏れ（生リテラル）が既に発生している。parity pin が無いため、片方だけ緩むと untrusted 入力の拒否ゲートが silent に弱まる。

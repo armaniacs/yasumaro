@@ -1,8 +1,8 @@
-# バックログ優先度一覧 — 2026-08-29 VulnHunter 監査対応
+# バックログ優先度一覧 ― 2026-08-29 VulnHunter 監査対応
 
 ## 進捗（2026-08-30 時点）
 
-PR #67–#81 で対応。**完全着地 13 件は `dev-docs/archived/pbi/` へ移動済み**:
+PR #67-#81 で対応。**完全着地 13 件は `dev-docs/archived/pbi/` へ移動済み**:
 01 / 02 / 03 / 05 / 07 / 09 / 10 / 11 / 15 / 16 / 17 / 18（+ クレンジング系 30-15）。
 
 `pbi/` に残置（このバックログ内の記述は着手当時のもの、状態は `00-INDEX.md` 参照）:
@@ -44,7 +44,7 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 | C14 | Code Quality ハードニング一括（将来攻撃面6件） | CSPValidator 自己許可, urlWhitelist 自己許可, Gemini path, TSV 数式無害化, models-dev スキーマ検証, 旧a.hrefパネル | fix |
 | C15 | orphan-key 機能バグ（C14 から分離） | pending パネルのホワイトリスト追加が orphan キー `'domainWhitelist'` に書かれ無効 | fix |
 
-- 全 48 指摘 + Code Quality 9件が過不足なく C1–C15 に割り当て済み（トレーサビリティ表は下記）
+- 全 48 指摘 + Code Quality 9件が過不足なく C1-C15 に割り当て済み（トレーサビリティ表は下記）
 - 誤検知6件（VULN-014/020/031/032/033/043）とスイープ除去2件（VULN-045/046）は PBI 化対象外
   （045/046 のシンクは C2 にハードニングとして吸収）
 
@@ -56,12 +56,12 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 |---|---|---|---|---|
 | C1 | `DOMAIN_VALIDATION` を線形 label-wise 検証に置換、`matchesPattern` を `wildcardToRegex`（上限付き）に統一、フィルタ保存時バリデーション | 全利用者（第三者配信フィルタリストを購読する人） | 実測 8.3秒の指数 ReDoS が Service Worker を停止。1 regex 置換で消える最安の Medium | 正当なドメイン（`*.example.com` 等）を拒否しないこと、既存テスト 47件の互換維持 |
 | C2 | `sanitizeForObsidian` の HTML エンティティ化＋既存 `sanitizeForMarkdownLinkText` の適用漏れ解消（legacy formatter / 2 sync-target / タグ） | Obsidian 連携利用者全員 | ページ由来 HTML が日次ノートにそのまま書かれ、レンダラ次第で実行されうる。link-text ヘルパー自体は前回レビューで導入済み | ノートの可読性を損なわないエンティティ化、既存消費者の出力互換 |
-| C3 | `readBodyCapped(response, maxBytes)` を新設し 8 シンク（Obsidian/FETCH_URL/Tranco/AI×4/Gist）を置換 | 全利用者 | Content-Length 省略（chunked）で上限が無効化され SW メモリ枯渇（実証: 64–200MB 確保） | タイムアウト維持、post-read チェックは防御深度として残す |
+| C3 | `readBodyCapped(response, maxBytes)` を新設し 8 シンク（Obsidian/FETCH_URL/Tranco/AI×4/Gist）を置換 | 全利用者 | Content-Length 省略（chunked）で上限が無効化され SW メモリ枯渇（実証: 64-200MB 確保） | タイムアウト維持、post-read チェックは防御深度として残す |
 | C4 | 6 サイト（MarkdownBufferManager/pendingStorage/logger storageAdapter/PersistentRetryQueue/notificationHandlers/optimisticLock）に CAS/Mutex/単一実行を適用 | 全利用者（通常運用でデータ消失が起きうる） | MV3 のマルチコンテキスト並行性でエントリ消失・重複記録・ジョブロストが実証済み | 既存 `withOptimisticLock`/`Mutex` パターンの再利用、`aiUsageTracker` を正解パターンとする |
 | C5 | `queryPlan` と handler で `Math.max(1, Math.min(...))` に統一（4 シンク） | ダッシュボード利用者 | `LIMIT -1` が SQLite で無制限を意味し、監査ログ全件materialization が可能 | 読み取り系の既定値（100/50/1000）維持 |
 | C6 | loader 両ブランチで SW CHECK_DOMAIN 待ち、オフラインリプレイの force 解除、`confirm_token` サブタイプ廃止＋パーアクション発行、権限レベルラダー | 全利用者 | ページ属性・リプレイ・同一チャネル・権限要求の 4 経路が trust シームを迂回する | e2e テスト互換、破壊的操作 UX 維持、既存 PermissionManager 再利用 |
 | C7 | trancoUpdater を try/finally 化、trustDb updateFn を current マージ型に修正 | 全利用者 | 1 回の失敗で Tranco 更新が恒久ロックアウト、同時書き込みの差分が静黙に失われる | ロック API 契約の型表現 |
-| C8 | schema 駆動 payloadGuard、書き込み境界での truncate/cap（header value・tags・文数・ノード数）、`local_export_*` retention、`clearExpiredPages` 配線 | 全利用者 | 無限成長（8.9GB/5年モデル）と二次計算の O(n²) 爆発が実証済み | 上限値は既存 precedent（1024文字/50タグ等）に合わせる |
+| C8 | schema 駆動 payloadGuard、書き込み境界での truncate/cap（header value・tags・文数・ノード数）、`local_export_*` retention、`clearExpiredPages` 配線 | 全利用者 | 無限成長（8.9GB/5年モデル）と二次計算の O(n^2) 爆発が実証済み | 上限値は既存 precedent（1024文字/50タグ等）に合わせる |
 | C9 | FETCH_URL に `redirect: 'error'`（または manual + ホップ毎再検証）を適用 | フィルタリスト import 利用者 | 許可 URL → private IP へのリダイレクトで SW が内部応答を取得・返却（実証済み） | 正常なリダイレクト（同一オリジン http→https 等）の扱いを決める |
 | C10 | LOG_FORWARD の `_source` を sender 由来に、logger 境界で制御文字/ANSI 無害化 | 全利用者 | ログの偽装・多行注入が永続化される（実証済み）。障害解析の一次証跡が信頼できない | PII マスク維持、性能影響なし |
 | C11 | storageFallback に `mutate(fn)` ヘルパーを新設し 8 ミューテータ全てを経由させる | OPFS 不使用環境の利用者 | 6/8 ミューテータがロックなしで RMW → purge が取り消される等（実証済み） | OPFS 正常環境への影響ゼロ（フォールバック専用） |
@@ -75,11 +75,11 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 
 ---
 
-## 優先度付け（フェーズ2） — RICE
+## 優先度付け（フェーズ2） ― RICE
 
 ### スコアリング
 
-**計算式**: `RICE = (Reach × Impact × Confidence) / Effort`（Effort 単位: 人月。1pt ≈ 0.1人月）
+**計算式**: `RICE = (Reach × Impact × Confidence) / Effort`（Effort 単位: 人月。1pt ≒ 0.1人月）
 
 | 順位 | 候補 | Reach | Impact | Confidence | Effort | RICE | 根拠 |
 |---|---|---|---|---|---|---|---|
@@ -90,14 +90,14 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 | 5 | C5 limit 両側クランプ | 400 | 0.35 | 0.95 | 0.1 | **1330** | DASHBOARD_SQLITE は extension-only（Reach 抑制）だが監査ログ全件流出・無制限 materialization。修正は clamp 1 行系 |
 | 6 | C6 信頼境界一貫性 | 700 | 0.4 | 0.9 | 0.2 | **1260** | 002（任意ページがゲート迂回）を含む 4 指摘。セマンティクス変更（リプレイ force 解除等）で Confidence 0.9 |
 | 7 | C7 ロック/CAS 運用 | 500 | 0.25 | 0.9 | 0.1 | **1125** | 恒久ロックアウト＋CAS LWW。発生頻度は低いが復旧に手動介入が必要 |
-| 8 | C8 リソース上限・ライフサイクル | 800 | 0.3 | 0.9 | 0.2 | **1080** | 長期利用での無限成長（実測モデル 8.9GB/5年）＋O(n²) 爆発。全利用者の長期健全性 |
+| 8 | C8 リソース上限・ライフサイクル | 800 | 0.3 | 0.9 | 0.2 | **1080** | 長期利用での無限成長（実測モデル 8.9GB/5年）＋O(n^2) 爆発。全利用者の長期健全性 |
 | 9 | C9 リダイレクト SSRF | 300 | 0.35 | 0.95 | 0.1 | **1000** | FETCH_URL 経由（extension-only＋import ユーザー）だが private IP 到達は実証済み。fetch.ts 1 箇所修正 |
 | 10 | C10 ログ完全性 | 300 | 0.25 | 0.95 | 0.1 | **713** | ログ偽造は診断信頼性の問題（情報影響）。logger 1 境界＋handler 1 箇所 |
 | 11 | C11 storageFallback 統一 | 100 | 0.5 | 0.95 | 0.1 | **475** | Medium だがフォールバックモード（OPFS 不使用環境）限定で Reach 低。修正はヘルパー抽出 1 件 |
 | 12 | C12 暗号 SSOT | 400 | 0.4 | 0.85 | 0.3 | **453** | KEK 平文・100k KDF・レート制限迂回等の実質。ただし暗号変更は回帰リスクが高く Confidence/Effort を penalize |
 | 13 | C13 インポート安全化 | 300 | 0.3 | 0.9 | 0.2 | **405** | 署名なし履歴偽造（035）を含む。ファイル import ユーザー限定 |
 | 14 | C14 Code Quality ハードニング | 300 | 0.1 | 0.85 | 0.15 | **170** | 将来攻撃面 6 件。個々は小さいが束ねて 1 PBI（orphan-key バグは C15 に分離） |
-| — | C15 orphan-key 機能バグ | 300 | 0.4 | 0.95 | 0.05 | **2280** | pending パネルのホワイトリスト追加が沈黙。2 行の書き換え。Wave 1 で即着手 |
+| ― | C15 orphan-key 機能バグ | 300 | 0.4 | 0.95 | 0.05 | **2280** | pending パネルのホワイトリスト追加が沈黙。2 行の書き換え。Wave 1 で即着手 |
 
 ### 依存関係と並列性（Wave 提案）
 
@@ -105,13 +105,13 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 - **Wave 2（並列可）**: 04 storage-RMW / 07 lock-CAS / 08 resource-caps / 10 log-integrity / 11 fallback / 13 import
   - 注意: 03 / 09 / 10 はいずれも `src/background/handlers/systemHandlers.ts` を触る（03: FETCH_URL 応答読み取り ~98-108 行、09: FETCH_URL の fetch オプション ~87 行、10: LOG_FORWARD の `_source` ~258-264 行）→ 同一ブランチにまとめるか、03→09→10 の順にマージしコンフリクトを確認
   - 04（optimisticLock.ts）と 07（trustDb/trancoUpdater）は理論上 04 のロック強化が 07 の CAS 修正と相互作用 → 04 先着手を推奨
-- **Wave 3（高リスク・単独）**: 06 trust-boundary / 12 crypto-SSOT — 既存動作のセマンティクス変更を含むためレビュー強化
+- **Wave 3（高リスク・単独）**: 06 trust-boundary / 12 crypto-SSOT ― 既存動作のセマンティクス変更を含むためレビュー強化
 - **任意タイミング**: 14 code-quality（ハードニングのみ）
 
 ### 最終順位
 
 1. `2026-08-29-01-fix-regex-safety.md`（RICE 4750）
-2. `2026-08-29-02-fix-markdown-sanitizer-boundary.md`（4750 — 再評価。ファイル名連番は据え置き）
+2. `2026-08-29-02-fix-markdown-sanitizer-boundary.md`（4750 ― 再評価。ファイル名連番は据え置き）
 3. `2026-08-29-03-fix-response-body-caps.md`（1663）
 4. `2026-08-29-04-fix-storage-rmw-serialization.md`（1440）
 5. `2026-08-29-05-fix-query-limit-clamp.md`（1330）
@@ -123,17 +123,17 @@ VulnHunter 2026-08-29 スキャンで確認された **48件の脆弱性（Mediu
 11. `2026-08-29-11-fix-storagefallback-mutate.md`（475）
 12. `2026-08-29-12-fix-crypto-policy-ssot.md`（453）
 13. `2026-08-29-13-fix-import-pipeline-safety.md`（405）
-14. `2026-08-29-14-fix-security-hardening-code-quality.md`（170 — ハードニングのみ）
-15. `2026-08-29-15-fix-pending-whitelist-orphan-key.md`（2280 — C14 から分離。着手は Wave 1）
+14. `2026-08-29-14-fix-security-hardening-code-quality.md`（170 ― ハードニングのみ）
+15. `2026-08-29-15-fix-pending-whitelist-orphan-key.md`（2280 ― C14 から分離。着手は Wave 1）
 
 ### フォローアップ PBI（部分完了分から分離）
 
 Wave 2 / Wave 3 で着地しきれなかった残タスクを新規 PBI として切り出した。
 
-- `2026-08-29-16-fix-cas-verify-write-serialization.md` — 29-04 の残 4 サイト（buffer/pending/logger の CAS + `optimisticLock` の verify→write 直列化）。fake-timer 互換の key 粒度 Mutex 設計が主眼。VULN-003/005/012/050
-- `2026-08-29-17-fix-local-export-retention.md` — 29-08 の VULN-004。ローカル Markdown 自動エクスポートの retention（download 記録の purge + 日次バッファのエントリ上限）
-- `2026-08-29-18-fix-secondary-compute-input-caps.md` — 29-08 の VULN-041/051/053。タグ共起・TextRank・タグクラスタ配置の O(n²) 計算への入力 cap
-- `2026-08-29-19-fix-cspvalidator-self-allow.md` — 29-14 の AC1。`CSPValidator.initializeFromSettings` の設定由来 hostname 無条件許可を `isAllowedProviderBaseUrl` 相当のガード（private IP・metadata・非 https）で締め直す。「何を正当なカスタム API エンドポイントとみなすか」の設計判断を含む
+- `2026-08-29-16-fix-cas-verify-write-serialization.md` ― 29-04 の残 4 サイト（buffer/pending/logger の CAS + `optimisticLock` の verify→write 直列化）。fake-timer 互換の key 粒度 Mutex 設計が主眼。VULN-003/005/012/050
+- `2026-08-29-17-fix-local-export-retention.md` ― 29-08 の VULN-004。ローカル Markdown 自動エクスポートの retention（download 記録の purge + 日次バッファのエントリ上限）
+- `2026-08-29-18-fix-secondary-compute-input-caps.md` ― 29-08 の VULN-041/051/053。タグ共起・TextRank・タグクラスタ配置の O(n^2) 計算への入力 cap
+- `2026-08-29-19-fix-cspvalidator-self-allow.md` ― 29-14 の AC1。`CSPValidator.initializeFromSettings` の設定由来 hostname 無条件許可を `isAllowedProviderBaseUrl` 相当のガード（private IP・metadata・非 https）で締め直す。「何を正当なカスタム API エンドポイントとみなすか」の設計判断を含む
 
 **29-13 / 29-04 の HMAC 先行化（VULN-034）と log 署名（VULN-035）** は暗号エクスポート形式の変更
 （平文 JSON 署名 → ciphertext 署名）を伴うため、独立 PBI にせず `2026-08-29-12-fix-crypto-policy-ssot.md`
@@ -141,7 +141,7 @@ Wave 2 / Wave 3 で着地しきれなかった残タスクを新規 PBI とし�
 
 ---
 
-## 疑問の解決 — なぜなぜ分析（フェーズ3）
+## 疑問の解決 ― なぜなぜ分析（フェーズ3）
 
 各クラスタの「なぜその問題が存在するのか」を 5 Whys で根源まで掘り下げ、
 **原因 → 示唆 → 解** を導出した。PBI の修正方針はすべてこの解に基づく。
@@ -174,7 +174,7 @@ Wave 2 / Wave 3 で着地しきれなかった残タスクを新規 PBI とし�
 
 ### C3: なぜメモリが攻撃者の支配下にあるのか？
 
-1. **なぜメモリが尽きる？** → `response.text()/json()` が応答全体を SW メモリにバッファする（実証: 64–200MB 確保）。
+1. **なぜメモリが尽きる？** → `response.text()/json()` が応答全体を SW メモリにバッファする（実証: 64-200MB 確保）。
 2. **なぜ全体をバッファ？** → 上限チェックが Content-Length ヘッダの存在を前提とし、chunked（ヘッダ省略）で素通しする。
 3. **なぜヘッダ依存？** → サイズ上限が「検証」ではなく「読み取り後/読み取り前の条件分岐」として各所に手書きされている。
 4. **なぜ手書き？** → fetch ヘルパー層（`fetchWithTimeout`）が時間だけを抽象し、サイズの抽象を持たない。
@@ -234,7 +234,7 @@ Wave 2 / Wave 3 で着地しきれなかった残タスクを新規 PBI とし�
 
 **原因 → 示唆 → 解**:
 - 原因: 手続き的なロック運用（API が強制しない）。
-- 示唆: 8 CAS 呼び出しサイトのうち 7 は正しく current を消費（スイープ済み）— 誤用は 1 箇所のみ。
+- 示唆: 8 CAS 呼び出しサイトのうち 7 は正しく current を消費（スイープ済み）― 誤用は 1 箇所のみ。
 - 解: try/finally 化、updateFn のマージ実装、ロック API 契約テスト（finally カバレッジ・current 消費検証）を追加。
 
 ### C8: なぜリソースが無限に育つのか？
@@ -371,8 +371,8 @@ Code Quality 9件 → PBI 02（sync-target サニタイザ）、10（LOG_FORWARD
 上記順位で 15 PBI を `pbi/` に作成した（当初 14 + C14 から分離した 15）。各 PBI は `pbi-create-bdd` 準拠
 （ユーザーストーリー / ビジネス価値 / 優先度RICE / BDD シナリオ / 受け入れ基準 / テスト戦略 / 実装アプローチ / 見積もり / 技術的考慮事項 / 実装者向け注記 / DoD）。
 
-- `pbi/2026-08-29-00-backlog-vulnhunt-audit.md` — 本ファイル（候補列挙・RICE・なぜなぜ分析・トレーサビリティ）
+- `pbi/2026-08-29-00-backlog-vulnhunt-audit.md` ― 本ファイル（候補列挙・RICE・なぜなぜ分析・トレーサビリティ）
 - `pbi/2026-08-29-01-fix-regex-safety.md` ほか 14 件（ファイル名の `NN` が RICE 順位。着手は Wave 提案に従う）
 
-**出典**: VulnHunter 2026-08-29 スキャン結果（`*_VULNHUNT_RESULTS_2026-08-29-165536/` — `.gitignore` 除外のためリポジトリ外・ローカル未保管）。
+**出典**: VulnHunter 2026-08-29 スキャン結果（`*_VULNHUNT_RESULTS_2026-08-29-165536/` ― `.gitignore` 除外のためリポジトリ外・ローカル未保管）。
 攻撃の具体（実測値・シナリオ形状）は本ファイルの「なぜなぜ分析（フェーズ3）」各節に要約済み。各 PBI のテストは受け入れ基準（BDD シナリオ）から起こす。

@@ -15,22 +15,22 @@
 - 解: 両キーを単一の `withOptimisticLock` トランザクションに統合するか、`chrome.storage.local` の複数キー CAS を1回の `withOptimisticLock` でアトミックに扱う
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 単一更新で両キーが一致する
+Scenario: ハッピーパス ― 単一更新で両キーが一致する
   Given 空のストレージ
   When `setSavedUrlsWithTimestamps(map)` で `https://example.com` を保存
   Then `savedUrls` と `savedUrlsWithTimestamps` の両方に同URLが存在する
 
-Scenario: 競合 — 並行更新でも中間状態が観測されない
+Scenario: 競合 ― 並行更新でも中間状態が観測されない
   Given `updateUrlTimestamp` を2並行で実行（`urlA` と `urlB` を同時追加）
   When 両方の `Promise.all` が完了する
   Then `savedUrls` のサイズと `savedUrlsWithTimestamps` の件数が一致し、どちらも両URLを含む
 
-Scenario: 競合 — LRU 削除が両キーで一貫する
+Scenario: 競合 ― LRU 削除が両キーで一貫する
   Given `MAX_URL_SET_SIZE` 直前の状態で2並行追加
   When 同時に `addSavedUrl` を呼ぶ
   Then 古いエントリの削除が両キーで同一のURLに対して行われる
 
-Scenario: エッジ — 片方の CAS リトライでもう片方が重複更新されない
+Scenario: エッジ ― 片方の CAS リトライでもう片方が重複更新されない
   Given `withOptimisticLock` が1回リトライする条件
   When `setSavedUrlsWithTimestamps` を呼ぶ
   Then リトライ後も両キーが単一トランザクションとして再実行され、二重書き込みが発生しない

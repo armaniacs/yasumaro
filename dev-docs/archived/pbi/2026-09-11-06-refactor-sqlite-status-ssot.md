@@ -9,7 +9,7 @@
 - 順位: 06 / 9
 - RICE スコア: 12.8（Reach=4 / Impact=2 / Confidence=80% / Effort=0.5 人週）
 - 根拠（2026-09-11 診断）:
-  - legacy パス定数の drift: `src/offscreen/sqliteMessageHandlers.ts:138-163`（OLD_OPFS_POOL_DIR/OLD_OPFS_DB_FILENAME/OLD_IDB_NAME + 「must match」コメント）· `opfsMigrationV2Reader.ts:18-19`（OLD_POOL_DIR/OLD_DB_FILENAME）· `sqliteEngineContext/migrationBackup.ts:136-148`（OLD_IDB_NAME + 「do NOT change」）· `diagnosticsPanel.ts:223-291`（インライン 5 つ目）— 名前 3 流儀・計 4 ファイル
+  - legacy パス定数の drift: `src/offscreen/sqliteMessageHandlers.ts:138-163`（OLD_OPFS_POOL_DIR/OLD_OPFS_DB_FILENAME/OLD_IDB_NAME + 「must match」コメント）・ `opfsMigrationV2Reader.ts:18-19`（OLD_POOL_DIR/OLD_DB_FILENAME）・ `sqliteEngineContext/migrationBackup.ts:136-148`（OLD_IDB_NAME + 「do NOT change」）・ `diagnosticsPanel.ts:223-291`（インライン 5 つ目）― 名前 3 流儀・計 4 ファイル
   - `handleStatus`（sqliteMessageHandlers.ts:165-196）: `Promise.all` で 1 つでも throw すると catch で全 extras 消滅（fail-whole）。`oldIdbDbExists`（:156-163）は `indexedDB.databases` 未定義環境で silent false
   - interface の 2 重: `offscreenGateway.ts:215-224` の `status()/getStatus()` dual API、`sqliteValidators.ts:101-112` の `decodeStatusExtras` 分離、`StorageBackend.StatusResult`（:54-63）に extras フィールド無し（`...result` spread で未型付拡張）
 
@@ -61,7 +61,7 @@ M（0.5 人週）。種別: refactor（+ fail-whole 修正を含む fix）。
 ## 実装メモ（2026-09-11）
 
 - legacy パス定数を `sqliteMessages.ts`（STATUS 契約の共有語彙）に 1 箇所化。sqliteMessageHandlers / opfsMigrationV2Reader / migrationBackup / diagnosticsPanel が import。
-- `src/offscreen/sqliteStatus.ts` 新設: `collectMigrationExtras`（allSettled でフィールド隔離 — storage 読み失敗でもフラグ系 extras は生きる）+ プローブ群。`indexedDB.databases` 未実装環境はフィールド省略（旧: silent false → パネルが誤って「対象なし」表示）。 throw 時は null（確認済み不在）。
+- `src/offscreen/sqliteStatus.ts` 新設: `collectMigrationExtras`（allSettled でフィールド隔離 ― storage 読み失敗でもフラグ系 extras は生きる）+ プローブ群。`indexedDB.databases` 未実装環境はフィールド省略（旧: silent false → パネルが誤って「対象なし」表示）。 throw 時は null（確認済み不在）。
 - **追加で実バグ修正**: offscreenGateway.status() の extras pick が `idbMigrationV2Done` / `opfsLegacyDbPath` / `idbLegacyDbName` を落としており、dashboard 経路で IDB マイグレーション状態が常に欠落していた → 3 フィールドを追加。
 - drift ガードテスト（代入パターンの literal が sqliteMessages.ts のみ）+ field-isolation テスト新設。
 - スコープ調整: gateway の status/getStatus dual API は役割が異なる薄い委譲（SqliteResult vs plain|null）のため統合せず、実ドリフト（drop フィールド）の修正を優先。

@@ -72,10 +72,10 @@ Scenario: 格納値が正の場合はその値が優先される
 ## 実装者向け注記
 
 ### 現状の証拠
-- OpenAI 系の timeout 導出: `src/background/ai/providers/OpenAIProvider.ts:103-109` — `storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0)` が 0 以下の場合 `this.isLocal ? 120000 : 30000`
-- OpenAI 系の apiKeySource ログ: `src/background/ai/providers/OpenAIProvider.ts:88` — `void logDebug(\`API key resolved from: ${this.apiKeySource}\`, { provider: providerName })`
-- Gemini の timeout 導出: `src/background/ai/providers/GeminiProvider.ts:60-62` — 同形だが固定 `30000`（isLocal 分岐なし。Gemini は local になり得ないが意図が記録されていない）
-- Gemini の apiKeySource ログ: `src/background/ai/providers/GeminiProvider.ts:64-66` — 同一文言の `API key resolved from:` を `void logDebug` で記録
+- OpenAI 系の timeout 導出: `src/background/ai/providers/OpenAIProvider.ts:103-109` ― `storedTimeout = Number(s[StorageKeys.AI_TIMEOUT_MS] ?? 0)` が 0 以下の場合 `this.isLocal ? 120000 : 30000`
+- OpenAI 系の apiKeySource ログ: `src/background/ai/providers/OpenAIProvider.ts:88` ― `void logDebug(\`API key resolved from: ${this.apiKeySource}\`, { provider: providerName })`
+- Gemini の timeout 導出: `src/background/ai/providers/GeminiProvider.ts:60-62` ― 同形だが固定 `30000`（isLocal 分岐なし。Gemini は local になり得ないが意図が記録されていない）
+- Gemini の apiKeySource ログ: `src/background/ai/providers/GeminiProvider.ts:64-66` ― 同一文言の `API key resolved from:` を `void logDebug` で記録
 - 故障形態: timeout 既定値の変更が2箇所編集になる。Gemini の意図的分岐欠落が無記録で、将来の local-Gemini 系 variant が静かに誤既定値になる
 
 ## Definition of Done

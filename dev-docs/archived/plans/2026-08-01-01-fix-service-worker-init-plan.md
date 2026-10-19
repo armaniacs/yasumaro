@@ -1,4 +1,4 @@
-# PBI-01: Service Worker の init() を実際に呼び出す — Implementation Plan
+# PBI-01: Service Worker の init() を実際に呼び出す ― Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

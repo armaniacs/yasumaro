@@ -1,4 +1,4 @@
-# PBI: InMemoryTransport の DELETE セマンティクス乖離を明示 — ソフトデリート近似と製品ハードデリートの意図的 drift をドキュメント化
+# PBI: InMemoryTransport の DELETE セマンティクス乖離を明示 ― ソフトデリート近似と製品ハードデリートの意図的 drift をドキュメント化
 
 ## ユーザーストーリー
 SQLite アクセスとテストダブルを保守する開発者として、`InMemoryTransport` の `SQLITE_DELETE` がソフトデリート（`is_deleted=1` を立てるだけ）で製品バックエンド（`FallbackStorageAdapter` / `OpfsWorkerBackend` / `sqliteMessageHandlers`）のハードデリート（行を物理削除）と乖離していることを、コードとドキュメントで明示したい、なぜなら PBI 2026-09-03-07 が query / FTS / ORDER BY の fidelity drift を潰したのに DELETE は取りこぼしており、`inMemoryTransport.ts` の JSDoc は「delete も production と同じ seam を round-trip する」と読めて製品同一挙動を誤認させ、主要な削除テスト（`inMemoryTransport.test.ts:66` "count reflects inserts and soft-deletes"）が COUNT の減少しか見ないため乖離が顕在化せず、削除済みレコードへの再 UPDATE / 削除→再 INSERT の重複検出 / `getRecords()` アサーション / VACUUM・freelist 検証で将来の回帰リスクが残るから
@@ -71,7 +71,7 @@ SQLite アクセスとテストダブルを保守する開発者として、`InM
 1. `src/background/inMemoryTransport.ts` のクラス JSDoc を書き換え。「delete ... round-trip through the same seam production uses」の一節を、DELETE はソフトデリート近似で製品はハードデリート、統一しない方針である旨に改める（必須）
 2. `SQLITE_DELETE` case（現状 :104-109）にインラインコメントを追加。`select()` の drift 防止コメントと同水準で、ソフト/ハードの差・統一しない理由・製品側の実体（`FallbackStorageAdapter.ts` の `hardDelete` / `crudHandlers.ts` の `handleHardDelete` / `sqliteMessageHandlers.ts` の `handleDelete`）を指す
 3. `SQLITE_ARCHIVE_DELETE_BY_STAGING` case（現状 :148）にコメントを追加。VACUUM / freelist（`freelistBefore` / `freelistAfter`）は InMemory で検証不能、製品バックエンド（`opfsWorker.test.ts` / e2e）でテストせよ
-4. `inMemoryTransport.test.ts:66` のテスト名を乖離認識型に変更（例: "count query excludes soft-deleted rows — note: InMemory approximates DELETE as soft-delete, production hard-deletes"）またはテスト内に同趣旨のコメントを追加
+4. `inMemoryTransport.test.ts:66` のテスト名を乖離認識型に変更（例: "count query excludes soft-deleted rows ― note: InMemory approximates DELETE as soft-delete, production hard-deletes"）またはテスト内に同趣旨のコメントを追加
 5. `dev-docs/` に「テストダブルの意図的乖離一覧」ドキュメントを新設。DELETE を最初のエントリとして、下記「ソフト vs ハードの差」表・`is_deleted` カラムの正しい用途・製品側検証先を記載。DELETE 以外の乖離（アーカイブ全面非対応、OPFS spike 非対応等）も将来追加できる節構成にする
 6. （任意）ガードテストを `inMemoryTransport.test.ts` に追加し、乖離を仕様として固定
 7. `npm run validate` を通す
@@ -82,7 +82,7 @@ SQLite アクセスとテストダブルを保守する開発者として、`InM
 ## 実装者向け注記
 
 ### `InMemoryTransport` の DELETE 実装（`src/background/inMemoryTransport.ts`）
-- `SQLITE_DELETE`（:104-109）: `const row = this.records.find(r => r.id === id); if (row) row.is_deleted = 1;` — ソフトデリート（論理削除）。配列からは消さず `is_deleted=1` を立てるだけ。`select()`（:185）が `r.is_deleted` で除外
+- `SQLITE_DELETE`（:104-109）: `const row = this.records.find(r => r.id === id); if (row) row.is_deleted = 1;` ― ソフトデリート（論理削除）。配列からは消さず `is_deleted=1` を立てるだけ。`select()`（:185）が `r.is_deleted` で除外
 - `SQLITE_ARCHIVE_DELETE_BY_STAGING`（:148-149）: 未実装（`{ success: false, error: 'Archive is not supported by InMemoryTransport' }`）
 - `SQLITE_CLEAR_ALL`（:117-120）: `this.records = []` で物理削除（DELETE と非対称）
 - 利用箇所は `src/background/__tests__/inMemoryTransport.test.ts` のみ
@@ -102,7 +102,7 @@ SQLite アクセスとテストダブルを保守する開発者として、`InM
 | 件数カウント | is_deleted=0 の件数 | 行が消える | 一致 |
 | 削除済みレコードへの再UPDATE | `find` 成功、`Object.assign` 通る | no-op | **乖離** |
 | 削除→再INSERT で同一 URL | 旧行が残り重複検出テストが異なる | 旧行消滅 | **乖離** |
-| `getRecords()` アサーション | 削除済み行が含まれる | — | **乖離** |
+| `getRecords()` アサーション | 削除済み行が含まれる | ― | **乖離** |
 | VACUUM/freelist（`archiveDeleteByStaging` の freelistBefore/After） | 未実装 | 実際に DELETE + VACUUM | InMemory では検証不能 |
 
 現状この乖離が顕在化していない理由: 主要な削除テスト（`inMemoryTransport.test.ts:66-75` "count reflects inserts and soft-deletes"）が COUNT の減少しか見ていない。テスト名自体が "soft-deletes" で製品と異なる語彙を正当化しているのが drift の証拠。

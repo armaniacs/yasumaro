@@ -13,7 +13,7 @@ E2E の保守担当者として、重要パス の無主張テストをなくし
 
 ## 背景（file:line 現状）
 
-- `testDir/e2e/recording-traceId.spec.ts:18`（`test.skip` — 単一 recording の traceId 一致を検証する唯一の E2E。理由は logger flush タイミング）
+- `testDir/e2e/recording-traceId.spec.ts:18`（`test.skip` ― 単一 recording の traceId 一致を検証する唯一の E2E。理由は logger flush タイミング）
 - `testDir/e2e/privacy-consent.spec.ts:125,133,141,146`（同意インタラクション 4 テストが `fixme`）
 - `testDir/e2e/extension.spec.ts:286-295`（`test.fixme` の extractContent）、`:298-305`（空実装 2 テスト: コメントのみ）
 - `testDir/e2e/constant-time-compare-availability.spec.ts:41-46`（偽でも `console.warn` のみで assertion なし）

@@ -1,4 +1,4 @@
-# PBI: redirect ポリシーの宣言を 1 箇所に戻す — systemHandlers のリテラル、後置 redirect による黙った上書き、実定数を見ないテストの解消
+# PBI: redirect ポリシーの宣言を 1 箇所に戻す ― systemHandlers のリテラル、後置 redirect による黙った上書き、実定数を見ないテストの解消
 
 ## ユーザーストーリー
 
@@ -109,7 +109,7 @@ Scenario: 4. 定数の値を変えたらテストが検知する
 | `src/background/ai/providers/__tests__/httpSummaryFlow.test.ts` | 21-28 | モックファクトリ（自前リテラル） |
 | `src/background/ai/providers/__tests__/httpTestFlow.test.ts` | 39-47 | モックファクトリ（自前リテラル） |
 | `src/background/handlers/__tests__/systemHandlers.test.ts` | 154-171 | `opts.redirect === 'error'` のアサーション |
-| `eslint/rules/` / `eslint/plugin.mjs` / `eslint.config.js` | — | lint ルールを採る場合の追加先 |
+| `eslint/rules/` / `eslint/plugin.mjs` / `eslint.config.js` | ― | lint ルールを採る場合の追加先 |
 
 `NO_REDIRECT_FETCH_POLICY: { redirect: 'error' }` を自前で持つテストは 16 ファイル（実測）:
 
@@ -156,7 +156,7 @@ src/background/ai/providers/__tests__/apiKeyLocked.test.ts:25
 
 **確認済み（2026-10-19、scratch ファイルを tsc に掛けて実測）**: `Omit<RequestInit, 'redirect'>` を注入型にすると、後置の `redirect: 'follow'` は `error TS2353: Object literal may only specify known properties, and 'redirect' does not exist in type 'Omit<RequestInit, "redirect">'` で落ち、正しい形（spread のみ）は落ちない。ヘルパ関数の引数でも同じく落ちる。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 1) 定数の宣言は 1 箇所か（期待: fetch.ts:73 のみ。テストのモックは 16 件出る）
@@ -217,11 +217,11 @@ sed -n '75,82p' src/utils/fetch.ts
 
 **疑問**: なぜ「redirect 方針の宣言は 1 箇所」と書きながら、実際には上書きでき、`systemHandlers` は定数を共有していなかったのか。
 
-1. **なぜ上書きできたのか** — 定数を**先頭で spread** する書き方だったため、同じオブジェクトリテラルの後ろに `redirect:` を書けば JS の通常の後勝ちになる。TypeScript の excess property check は「型に無いプロパティ」しか見ないので、`RequestInit` で受ける場所では素通りする。
-2. **なぜ spread 方式を選んだのか** — 1 行で適用でき、既存オプションと自然に混ざり、呼び出し側の型を変えずに済む。
-3. **なぜ危険と認識されなかったのか** — 危険は「**将来の書き足し**」で発現する。現在のコードはすべて正しいので、レビューでもテストでも見えない。危険を表現する型（`Omit<…, 'redirect'>`）を当てていなかった。
-4. **なぜ systemHandlers が漏れたのか** — 5 サイトは共通定数へ寄せたが、FETCH_URL 経路は ADR の決定を**コメントで引用**してリテラルを書いていた。つまり共有の単位が**コードではなく文章**だった。
-5. **なぜテストが検知しなかったのか** — テストは各モックが自前で `{ redirect: 'error' }` を持っており、**実定数の値を誰も見ていなかった**。定数を弱めても全テストが green のままになる。
+1. **なぜ上書きできたのか** ― 定数を**先頭で spread** する書き方だったため、同じオブジェクトリテラルの後ろに `redirect:` を書けば JS の通常の後勝ちになる。TypeScript の excess property check は「型に無いプロパティ」しか見ないので、`RequestInit` で受ける場所では素通りする。
+2. **なぜ spread 方式を選んだのか** ― 1 行で適用でき、既存オプションと自然に混ざり、呼び出し側の型を変えずに済む。
+3. **なぜ危険と認識されなかったのか** ― 危険は「**将来の書き足し**」で発現する。現在のコードはすべて正しいので、レビューでもテストでも見えない。危険を表現する型（`Omit<…, 'redirect'>`）を当てていなかった。
+4. **なぜ systemHandlers が漏れたのか** ― 5 サイトは共通定数へ寄せたが、FETCH_URL 経路は ADR の決定を**コメントで引用**してリテラルを書いていた。つまり共有の単位が**コードではなく文章**だった。
+5. **なぜテストが検知しなかったのか** ― テストは各モックが自前で `{ redirect: 'error' }` を持っており、**実定数の値を誰も見ていなかった**。定数を弱めても全テストが green のままになる。
 
 **原因**: 「宣言は 1 箇所」を**散文の主張**として満たし、**型とテストで強制**していなかったこと。
 
@@ -240,7 +240,7 @@ sed -n '75,82p' src/utils/fetch.ts
 
 ```
 testDir/__tests__/noRedirectInit.test.ts(25,47): error TS2353: Object literal may only specify known properties, and 'redirect' does not exist in type 'NoRedirectFetchInit'.
-test type errors grew: 457 > pinned 456 — fix errors or lower testDir/type-check-baseline.json only by repaying debt
+test type errors grew: 457 > pinned 456 ― fix errors or lower testDir/type-check-baseline.json only by repaying debt
 ```
 
 `@ts-expect-error` を戻すと 456 / pinned 456 に戻る（＝ディレクティブが期待どおり 1 件を消費している）。ディレクティブは「エラーが消えた場合」も「不要になった場合」も tsc を落とすため、**両方向のガード**になっている。
@@ -249,14 +249,14 @@ test type errors grew: 457 > pinned 456 — fix errors or lower testDir/type-che
 
 ### 実装
 
-- `src/utils/fetch.ts` — `NoRedirectFetchInit`（= `Omit<FetchOptions,'redirect'>`）と `noRedirectInit` を追加。定数のコメントを seam の説明へ更新。
-- `src/background/handlers/systemHandlers.ts` — リテラルを削除し `noRedirectInit({...})` へ。コメントは ADR への参照を残しつつ「決定は定数に集約済み」と要約。
-- `src/background/ai/providers/HttpProviderStrategy.ts`（2 サイト）/ `src/background/obsidianClient.ts`（3 サイト）— `noRedirectInit` へ移行。`obsidianClient` の `const requestOptions: RequestInit`（唯一の後置上書き可能点）も seam 経由に。
-- `src/utils/__tests__/fetch.test.ts` — 実定数の値と形を pin するテストを追加し、素通しテストの渡す値を実定数へ寄せた。
-- `testDir/__tests__/noRedirectInit.test.ts` — 型 seam のテスト（正しい形は通り、後置上書きは `@ts-expect-error` で固定）。
-- `src/background/handlers/__tests__/systemHandlers.test.ts` — 期待値を実定数と比較する形へ（`opts.redirect === NO_REDIRECT_FETCH_POLICY.redirect`）。
-- `httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` — モックを `importOriginal` 化し、実定数と seam を参照。
-- ADR 2026-08-29 — 宣言の一本化を「適用済み」へ更新。
+- `src/utils/fetch.ts` ― `NoRedirectFetchInit`（= `Omit<FetchOptions,'redirect'>`）と `noRedirectInit` を追加。定数のコメントを seam の説明へ更新。
+- `src/background/handlers/systemHandlers.ts` ― リテラルを削除し `noRedirectInit({...})` へ。コメントは ADR への参照を残しつつ「決定は定数に集約済み」と要約。
+- `src/background/ai/providers/HttpProviderStrategy.ts`（2 サイト）/ `src/background/obsidianClient.ts`（3 サイト）― `noRedirectInit` へ移行。`obsidianClient` の `const requestOptions: RequestInit`（唯一の後置上書き可能点）も seam 経由に。
+- `src/utils/__tests__/fetch.test.ts` ― 実定数の値と形を pin するテストを追加し、素通しテストの渡す値を実定数へ寄せた。
+- `testDir/__tests__/noRedirectInit.test.ts` ― 型 seam のテスト（正しい形は通り、後置上書きは `@ts-expect-error` で固定）。
+- `src/background/handlers/__tests__/systemHandlers.test.ts` ― 期待値を実定数と比較する形へ（`opts.redirect === NO_REDIRECT_FETCH_POLICY.redirect`）。
+- `httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` ― モックを `importOriginal` 化し、実定数と seam を参照。
+- ADR 2026-08-29 ― 宣言の一本化を「適用済み」へ更新。
 
 ### テスト（Red → Green）
 
@@ -272,8 +272,8 @@ test type errors grew: 457 > pinned 456 — fix errors or lower testDir/type-che
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) — 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
-- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同じ seam を gist / tranco の 5 サイトへ展開した PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の型 seam がその受け皿になった
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — `:90-93` に systemHandlers が定数を共有していない旨を記載済み
-- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` — 共通 seam を導入した PBI（AI 経路）
-- `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` — 同じ seam を Obsidian 経路へ広げた PBI
+- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](2026-10-19-04-fix-redirect-real-behavior-e2e.md) ― 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) ― 同じ seam を gist / tranco の 5 サイトへ展開した PBI（2026-10-19 完了・アーカイブ済み）。本 PBI の型 seam がその受け皿になった
+- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` ― `:90-93` に systemHandlers が定数を共有していない旨を記載済み
+- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` ― 共通 seam を導入した PBI（AI 経路）
+- `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` ― 同じ seam を Obsidian 経路へ広げた PBI

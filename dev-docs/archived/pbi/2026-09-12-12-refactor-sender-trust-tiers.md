@@ -1,4 +1,4 @@
-# PBI 2026-09-12-12 — senderTrust を 3 tier に昇格（strict 判定の router 漏出を回収）
+# PBI 2026-09-12-12 ― senderTrust を 3 tier に昇格（strict 判定の router 漏出を回収）
 
 - **種別**: 🔧非機能追加（refactor・security-adjacent）
 - **優先度**: 4 位 / RICE **12.8**（R10 × I2 × C80% / E1.25人日）

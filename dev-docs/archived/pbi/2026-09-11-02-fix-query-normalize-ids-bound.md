@@ -8,7 +8,7 @@
 
 - 順位: 02 / 9
 - RICE スコア: 20.0（Reach=2 / Impact=1 / Confidence=100% / Effort=0.05 人週）
-- 根拠（round 6 診断 B7）: `queryNormalize.ts:33-37` — `map(Number).filter(isFinite && >= 0)` は要素数無制限・float 通過。wire から `ids: [1e9 × N]` で巨大 `IN (…)` を作れる。
+- 根拠（round 6 診断 B7）: `queryNormalize.ts:33-37` ― `map(Number).filter(isFinite && >= 0)` は要素数無制限・float 通過。wire から `ids: [1e9 × N]` で巨大 `IN (…)` を作れる。
 
 ## BDD 受け入れシナリオ
 

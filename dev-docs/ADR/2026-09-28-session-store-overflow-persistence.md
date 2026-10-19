@@ -1,4 +1,4 @@
-# ADR: session store フラッシュ上限の裁定 — 3 MiB 引き上げ + 恒久滞留ループの構造的断絶
+# ADR: session store フラッシュ上限の裁定 ― 3 MiB 引き上げ + 恒久滞留ループの構造的断絶
 
 ## ステータス
 採用（裁定のみ。実装は後続 PBI）
@@ -153,7 +153,7 @@ JSON バイト長ではないため、1x（JSON）と 2x（UTF-16 保守上界�
 
 ## 決定事項
 
-### 1. 採用：① cap の引き上げ — `SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024`（3,145,728 バイト）
+### 1. 採用：① cap の引き上げ ― `SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024`（3,145,728 バイト）
 
 - 10,000 件（`MAX_URL_SET_SIZE`）を **293 文字までの URL** で必ず session に書き切れる
   （実測 A/B。83 文字の 1 MiB に対し 3.5 倍の余裕）。
@@ -162,7 +162,7 @@ JSON バイト長ではないため、1x（JSON）と 2x（UTF-16 保守上界�
 - 名前付き export 定数化し、`1MB` というログ文言（`sessionStore.ts:183`）も実際の値参照に変える。
   値は本 ADR を典拠としてコメントで残す。
 
-### 2. 採用：③ 滞留検知と非優先 drop — 恒久ループを構造的に不可能にする安全網
+### 2. 採用：③ 滞留検知と非優先 drop ― 恒久ループを構造的に不可能にする安全網
 
 3 MiB でも 10,000 件 × 320 文字超（実測 A）で超過するため、cap 引き上げだけでは
 恒久ループを再発しうる。**「同じキーが N 回連続で overflow 分岐を通ったら writeQueue へ戻さない」**
@@ -170,7 +170,7 @@ JSON バイト長ではないため、1x（JSON）と 2x（UTF-16 保守上界�
 保守的に **連続 2 回**とし、`addLog(LogType.WARN, ...)` で drop したキーと回数を残す。
 これで **恒久ループは構造的に存在しなくなる**（N 回で必ずキューから消える）。
 
-### 3. 保留：④ `estimateStorageSize` の per-entry / per-key キャッシュ — 主策にしない
+### 3. 保留：④ `estimateStorageSize` の per-entry / per-key キャッシュ ― 主策にしない
 
 - 実測 D/F より、flush コストは 1.0 ms/flush・0.4〜0.9 秒/日で、**記録ホットパスのボトルネックではない**。
 - マイクロベンチでは per-key サイズキャッシュは 1 万件で 1,000 倍以上速い（0.001 ms vs 1.3 ms）だが、
@@ -275,6 +275,6 @@ Node から観測できなかった `chrome.storage.session.getBytesInUse()` の
 判定:
 
 - 実係数 1.308 は 1x（JSON バイト長）想定と 2x（UTF-16 保守上界）の**中間だが 1x 寄り**。UTF-16 の 2.0 は発生しない。
-- 1x 見積もり 3.46 MiB（recordingCache 3 MiB + 他キー 0.463 MiB）→ 実際は **≈ 4.5 MiB（quota の 43%）**。
+- 1x 見積もり 3.46 MiB（recordingCache 3 MiB + 他キー 0.463 MiB）→ 実際は **≒ 4.5 MiB（quota の 43%）**。
 - 2x 保守上界 6.93 MiB は起きないことが実証された。cap 3 MiB の裁定は変更なし（より強く支持される）。
 - cap 相当 payload の `set()` がエラーなしで通るため、flush 経路が quota エラーで落ちるケースも実機で否定された。

@@ -31,7 +31,7 @@ Scenario: TabCache が SessionStorePort インターフェース越しに Sessio
   When TabCache が compositionManifest から注入を受ける
   Then TabCache は具象クラス SessionStore ではなく SessionStorePort 型で依存を受け取る
 
-Scenario: 境界 — get 失敗時の挙動が統合後も現行と同一
+Scenario: 境界 ― get 失敗時の挙動が統合後も現行と同一
   Given chrome.storage.session の get が例外を投げる状態
   When SessionStorePort.get() を呼び出す
   Then 現行と同じく例外は握りつぶされ null が返る（挙動変更なし、型のみ明示化）

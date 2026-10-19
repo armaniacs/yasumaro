@@ -2,19 +2,19 @@
 
 > `2026-08-29-08-fix-resource-boundary-caps.md` から分離。PR #75 では書き込み境界の
 > cap（payloadGuard / Cache-Control / pending 剪定）が着地した。本 PBI は
-> 既に保存されたデータが O(n²) 計算に無制限に流入する経路を扱う。
+> 既に保存されたデータが O(n^2) 計算に無制限に流入する経路を扱う。
 
 ## ユーザーストーリー
-利用者として、大量のタグや文を持つ履歴が蓄積してもダッシュボードのタグ共起グラフ・要約抽出・タグクラスタ配置が固まらないようにしたい、なぜなら悪意ある/肥大化したページ内容由来のタグ・文が上限なく O(n²) 計算に入り、実測で「入力 4 倍 → 時間 29 倍、116GB エッジモデル」になるから
+利用者として、大量のタグや文を持つ履歴が蓄積してもダッシュボードのタグ共起グラフ・要約抽出・タグクラスタ配置が固まらないようにしたい、なぜなら悪意ある/肥大化したページ内容由来のタグ・文が上限なく O(n^2) 計算に入り、実測で「入力 4 倍 → 時間 29 倍、116GB エッジモデル」になるから
 
 ## 背景
 
-### 対象の O(n²) 計算
+### 対象の O(n^2) 計算
 | 経路 | ファイル | 爆発点 |
 |---|---|---|
 | VULN-041 タグ共起 | `src/dashboard/tagCooccurrence.ts` `computeTagCooccurrence` | エントリ毎の `for i { for j>i }` 二重ループ。1 レコード 500 タグ → 約 125k 反復/レコード。エッジ数は `C(n,2)` |
-| VULN-051 要約抽出 | `src/utils/sentenceExtractor.ts` TextRank | `const n = nodes.length` の類似度行列 O(n²)。文数上限なし |
-| VULN-053 タグクラスタ配置 | `src/dashboard/tagClusterLayout.ts` | 力学配置の反復 × ノード数²。`limitToTopNodes` はあるが呼び出し前に共起計算が走る |
+| VULN-051 要約抽出 | `src/utils/sentenceExtractor.ts` TextRank | `const n = nodes.length` の類似度行列 O(n^2)。文数上限なし |
+| VULN-053 タグクラスタ配置 | `src/dashboard/tagClusterLayout.ts` | 力学配置の反復 × ノード数^2。`limitToTopNodes` はあるが呼び出し前に共起計算が走る |
 
 ### PR #75 で見送った理由
 3 ファイル × 性能テスト（次数低下の実測）で範囲が広く、`tagClusterLayout` は
@@ -81,12 +81,12 @@ Scenario: 計算時間の次数が下がる
 - **Red-Green-Refactor**: cap 定数を 1 モジュール（`src/utils/computeLimits.ts` 仮称）に集約
 
 ## 見積もり
-2pt（要チームでの見積もり — 3 経路の cap 1.5 + 性能/境界テスト 0.5）
+2pt（要チームでの見積もり ― 3 経路の cap 1.5 + 性能/境界テスト 0.5）
 
 ## 技術的考慮事項
 - 依存関係: なし（PR #75 とは別ファイル。`sqliteMessageHandlers.ts` のタグ cap のみ #75 と近いが未着手部分）
 - `tagCooccurrence` のエッジ数自体も `C(cap, 2)` で有界化されるので、`limitToTopNodes` の前段が軽くなる
-- 文数 cap は「要約品質」とのトレードオフ — 200 文で十分か、記事の長さ分布を確認
+- 文数 cap は「要約品質」とのトレードオフ ― 200 文で十分か、記事の長さ分布を確認
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
@@ -108,9 +108,9 @@ rg -n "tags.*cap|MAX_TAGS|slice.*50" src/offscreen/sqliteMessageHandlers.ts
 6. 性能テスト + 境界テスト、`npm run validate`
 
 ### 落とし穴
-- タグ cap は「どのタグを残すか」の順序が問題 — 出現頻度順 or 元の順序。要約の代表性を損なわない選択を
-- TextRank の文数 cap で「記事後半の重要文が落ちる」可能性 — スコアリング前の cap なので位置バイアスに注意
-- `tagClusterLayout` の力学配置は反復回数もパラメータ — ノード cap と反復 cap の両方を検討
+- タグ cap は「どのタグを残すか」の順序が問題 ― 出現頻度順 or 元の順序。要約の代表性を損なわない選択を
+- TextRank の文数 cap で「記事後半の重要文が落ちる」可能性 ― スコアリング前の cap なので位置バイアスに注意
+- `tagClusterLayout` の力学配置は反復回数もパラメータ ― ノード cap と反復 cap の両方を検討
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

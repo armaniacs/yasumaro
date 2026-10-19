@@ -1,4 +1,4 @@
-# PBI: SQLite Gateway 統一 — 二重 RPC と 3-Backend extraWhereSql 同期負債の解消
+# PBI: SQLite Gateway 統一 ― 二重 RPC と 3-Backend extraWhereSql 同期負債の解消
 
 ## ユーザーストーリー
 開発者として、SQLite への全アクセスを単一の深い Module `SqliteGateway`（`query / mutate / maintain / status`）に統一したい。なぜなら現在 `SqliteClient.callInternal` と `dashboardSqliteService.callDashboard` が同じ RPC を二重実装し Result 型が乖離（`SqliteRpcResult vs ServiceResult`）、3 backends（IdbVfs / OpfsWorker / storageFallback）が `extraWhereSql` を各自で再実装しコメント `keep in sync` が人手同期を要求、しかも dashboard → SW → offscreen → engine → backend の 5 hops を追わないと一つの query を理解できないから。
@@ -39,7 +39,7 @@ Scenario: エラー時に統一 Result で categorize される
   When  エラーが返る
   Then  `{ ok: false, error: { kind: 'PayloadTooLarge', retryable: false } }` が統一 `SqliteError` で返り、dashboard と SW で同じ文言が表示される
 
-Scenario: 境界 — limit clamp が gateway で一元化される
+Scenario: 境界 ― limit clamp が gateway で一元化される
   Given `gateway.query({ limit: NaN })` / `limit: -5` / `limit: 999999`
   When  query を実行する
   Then  `clampLimit` が `queryPlan` で 1 回だけ適用され、backend 側の再 clamp は不要になる
@@ -57,7 +57,7 @@ Scenario: Transport が Adapter として差し替え可能
 - [x] `buildExtraWhereSql` / `clampLimit` / `buildQuerySpec` が `queryPlan.ts` 1 ファイルに集約され、`IdbVfsBackend` / `opfsWorker/searchHandlers` の個別実装が削除される
 - [x] `StorageBackend` が `Queryable` と `Mutable` の 2 facet に分割される
 - [x] `categorizeError` が Gateway 経由で一元化され、dashboard/SW の 2 hop が同一分類（dashboard 失敗レスポンスの二重 categorize を修正）。live な `isServiceError` は `dashboardSqliteService.ts` の 1 箇所。`BrowsingLogRepository.ts` の同名定義は PR #87 由来の未接続コード（consumer / test なし）で、本 PBI の対象外 → 別途「dead code 整理」として扱う
-- [x] Transport は `OffscreenTransport` interface として抽出済み。adapter は `ChromeOffscreenTransport`（本番）と `InMemoryTransport`（`src/background/inMemoryTransport.ts` — stateful な in-memory store。offscreen / chrome.* を起動せず insert→query→count→status が round-trip する）の 2 実装
+- [x] Transport は `OffscreenTransport` interface として抽出済み。adapter は `ChromeOffscreenTransport`（本番）と `InMemoryTransport`（`src/background/inMemoryTransport.ts` ― stateful な in-memory store。offscreen / chrome.* を起動せず insert→query→count→status が round-trip する）の 2 実装
 - [x] `sqliteClient` / `dashboardSqliteService` / `IdbVfsBackend` のテストが Gateway 経由で green
 
 ## テスト戦略
@@ -66,11 +66,11 @@ Scenario: Transport が Adapter として差し替え可能
 - 単体: `queryPlan.buildQuerySpec` の WHERE 生成、clampLimit 境界（NaN/0/負/上限超）、`SqliteError` の retryable 判定
 
 ## 見積もり
-5 pt（要チームでの見積もり）— Gateway 統一 2pt + queryPlan 集約 1pt + Backend seam 分割 1pt + Transport Adapter 化 1pt
+5 pt（要チームでの見積もり）― Gateway 統一 2pt + queryPlan 集約 1pt + Backend seam 分割 1pt + Transport Adapter 化 1pt
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] コードレビュー完了（offscreen / dashboard / background の影響確認 — 2026-09-01）
+- [x] コードレビュー完了（offscreen / dashboard / background の影響確認 ― 2026-09-01）
 - [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §5.4 に Unified gateway / Query plan / Backend facets を追記。ADR 2026-06-17 opfs-fts5-coexistence は VFS/FTS5 エンジン選定の ADR で RPC 層は対象外のため追記せず）
 - [x] `npm run validate` が green
 

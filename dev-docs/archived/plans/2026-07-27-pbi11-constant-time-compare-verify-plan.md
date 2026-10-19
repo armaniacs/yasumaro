@@ -34,11 +34,11 @@ sed -n '50,91p' src/utils/crypto.ts
  * statistically significant timing difference (PBI-11).
  *
  * This must be run inside the actual Chrome extension runtime (Service
- * Worker devtools console) to be meaningful — Node.js's V8 may JIT-optimize
+ * Worker devtools console) to be meaningful ― Node.js's V8 may JIT-optimize
  * differently than the extension's Service Worker context. See the
  * "Manual execution in Chrome" section below for how to run it there.
  *
- * Usage (Node.js, for local sanity-checking only — NOT the final verdict):
+ * Usage (Node.js, for local sanity-checking only ― NOT the final verdict):
  *   node scripts/benchmark-constant-time-compare.mjs
  */
 

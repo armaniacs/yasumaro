@@ -63,7 +63,7 @@ rg -n "getCacheState|resetCacheState" src/background/recordingCache.ts
 4. 全 cache テスト green
 
 ### 落とし穴
-- `cacheVersion` を直接書き換える overflow テストが少なくとも1件ある — 先に移行すること
+- `cacheVersion` を直接書き換える overflow テストが少なくとも1件ある ― 先に移行すること
 - `resetCacheState` の呼び出し側は残す（純粋委譲であり削除対象外）
 
 ## Definition of Done

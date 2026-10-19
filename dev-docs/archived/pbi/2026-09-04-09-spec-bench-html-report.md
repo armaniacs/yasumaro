@@ -28,7 +28,7 @@ micro ベンチの実行結果（最新実行 + baseline 比較）を、依存�
 
 ### 対象外
 
-- 履歴トレンドビュー（日付横断の推移グラフ）— `micro-<日付>.json` の蓄積を素材に将来拡張する
+- 履歴トレンドビュー（日付横断の推移グラフ）― `micro-<日付>.json` の蓄積を素材に将来拡張する
 - e2e 結果の HTML レンダリング（JSON 出力のみでよい）
 - `scripts/benchmark-cleansing.mjs`（単一ベンチの互換ラッパ。Markdown 出力のまま）
 - `bench:check` の終了コード体系・ゲート対象メトリクスの変更
@@ -53,7 +53,7 @@ micro ベンチの実行結果（最新実行 + baseline 比較）を、依存�
 
 ### 3.2 `bench/harness/htmlReport.mjs`（新規）
 
-`renderHtml(results, opts) => string`。既存 `renderMarkdown` と同じ入力（`results` 配列 + `comparison` オブジェクト）を受け取る純関数。I/O なし（ファイル・ネットワーク I/O を行わない。ヘッダの生成日時表示のため `new Date()` / `process.version` の環境読み取りは行う — `renderMarkdown` と同パターン）。
+`renderHtml(results, opts) => string`。既存 `renderMarkdown` と同じ入力（`results` 配列 + `comparison` オブジェクト）を受け取る純関数。I/O なし（ファイル・ネットワーク I/O を行わない。ヘッダの生成日時表示のため `new Date()` / `process.version` の環境読み取りは行う ― `renderMarkdown` と同パターン）。
 
 - インライン CSS + 最小限のインライン JS のみ。`src=` / `href=` に外部 URL を一切含まない
 - 注入するすべての文字列を HTML エスケープする
@@ -92,8 +92,8 @@ micro ベンチの実行結果（最新実行 + baseline 比較）を、依存�
 
 **CLI:**
 
-- `npm run bench:clean` — 上記ポリシーを適用
-- `npm run bench:clean -- --all` — `bench/reports/` を全消去
+- `npm run bench:clean` ― 上記ポリシーを適用
+- `npm run bench:clean -- --all` ― `bench/reports/` を全消去
 
 **e2e への配線:** Playwright bench config（`bench/playwright.bench.config.ts`）の `globalTeardown` で `pruneReports()` を呼ぶ。
 

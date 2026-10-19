@@ -13,9 +13,9 @@ dashboard の検索保守担当者として、IDB フォールバック経路の
 
 ## 背景（file:line 現状）
 
-- `src/offscreen/rowCodec.ts:23-46` — SEARCH_COLUMNS は 13 列（`nav_source_url`:41 / `search_query`:42 含む）、`SEARCH_COLUMNS_WITH_RANK`（:46）は 14 名
-- `src/offscreen/queryPlan.ts:500` — FTS rows SQL は 12 セル（`rank` は index 11）。`:535` — LIKE rows SQL は 11 セル
-- `src/offscreen/IdbVfsBackend.ts:76` — `mapPositional(row, SEARCH_COLUMNS_WITH_RANK)` が 12 セル行を 14 名と zip
+- `src/offscreen/rowCodec.ts:23-46` ― SEARCH_COLUMNS は 13 列（`nav_source_url`:41 / `search_query`:42 含む）、`SEARCH_COLUMNS_WITH_RANK`（:46）は 14 名
+- `src/offscreen/queryPlan.ts:500` ― FTS rows SQL は 12 セル（`rank` は index 11）。`:535` ― LIKE rows SQL は 11 セル
+- `src/offscreen/IdbVfsBackend.ts:76` ― `mapPositional(row, SEARCH_COLUMNS_WITH_RANK)` が 12 セル行を 14 名と zip
 - 影響: IDB FTS 経路で `nav_source_url` = String(rank)、`search_query` = null、`rank` = 0
 - pin テストの隙間: `sqliteBackendParity.realEngine.test.ts:95-98` の SHARED_FIELDS が rank/nav_source_url/search_query を除外、`rowCodec.test.ts:106-108` は codec 順の 14 セル手作り fixture
 

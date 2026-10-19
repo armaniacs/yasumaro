@@ -101,7 +101,7 @@ grep -rn "viewBox\|panZoom\|wheel\|pointerdown" src/dashboard/*.ts
 ### 実装手順
 1. `src/dashboard/tagClusterLayout.ts` に座標空間サイズを計算する関数を追加する（例：`computeCanvasSize(nodeCount: number): { width: number; height: number }`）。式の目安は `width = Math.min(2400, Math.max(800, 400 + nodeCount * 40))`、`height` も同様の比率で計算し、上限でキャップする。この関数の戻り値を `computeLayout()` と `viewBox` 初期化の両方にそのまま渡す（変換層は挟まない、Deep-dig決定事項）
 2. `src/dashboard/tagClusterPanZoom.ts` を新規作成し、`TagClusterPanZoomController` クラスを実装する（`TagClusterLoadingManager` と同じ設計パターン：コンストラクタでDOM要素受け取り、privateフィールドで状態保持、`attach()`/`cleanup()`ライフサイクル）。コンストラクタで `SVGSVGElement` と座標空間サイズ（`computeCanvasSize()`の戻り値）を受け取り、`viewBox` の初期値をこの座標空間サイズと同一にする
-3. コントローラ内で以下のイベントリスナーをSVG要素に登録する（**`MouseEvent`/`wheel`/`TouchEvent`ベース、`PointerEvent`は使わない** — Deep-dig決定事項）：
+3. コントローラ内で以下のイベントリスナーをSVG要素に登録する（**`MouseEvent`/`wheel`/`TouchEvent`ベース、`PointerEvent`は使わない** ― Deep-dig決定事項）：
    - `wheel`：`event.deltaY` の符号でズームイン/アウト、`event.clientX/Y` から SVG 座標系への変換でカーソル位置中心ズームを実装
    - `mousedown` → `mousemove` → `mouseup`：ドラッグ開始位置との差分で `viewBox.x/y` を更新。ただし累積移動距離が閾値（例：5px）未満ならクリックとみなし `navigate-to-tag` の発火を妨げない
    - ピンチズーム：`touchstart`/`touchmove`/`touchend` で2点のタッチを追跡し、2点間距離の変化率でズーム倍率を計算

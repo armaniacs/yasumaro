@@ -63,8 +63,8 @@ SW (sqliteClient.ts) ── sendMessage(SQLITE_*) ──> offscreen (sqliteEngin
 
 | チャネル | プロトコル | 型定義 | 備考 |
 |---|---|---|---|
-| SW ↔ offscreen | `chrome.runtime.sendMessage`（`target: 'offscreen'`） | `src/messaging/sqliteMessages.ts`（`SqliteMessage` discriminated union） | `sqliteClient.ts`（送信）と `offscreen.ts`（受信、`handleSqliteMessage` の `switch`）が共通の型ソースを import。存在しない type はコンパイルエラーになる |
-| offscreen ↔ Worker | `Worker.postMessage` | `opfsWorker.ts` 内のローカルな type 名（`SQLITE_` プレフィックスなし、例: `INIT`/`INSERT`） | offscreen.ts に閉じた実装詳細で SW 側は関知しない。意図的に `SqliteMessage` の対象外（PBI: 2026-07-16-05） |
+| SW ⇔ offscreen | `chrome.runtime.sendMessage`（`target: 'offscreen'`） | `src/messaging/sqliteMessages.ts`（`SqliteMessage` discriminated union） | `sqliteClient.ts`（送信）と `offscreen.ts`（受信、`handleSqliteMessage` の `switch`）が共通の型ソースを import。存在しない type はコンパイルエラーになる |
+| offscreen ⇔ Worker | `Worker.postMessage` | `opfsWorker.ts` 内のローカルな type 名（`SQLITE_` プレフィックスなし、例: `INIT`/`INSERT`） | offscreen.ts に閉じた実装詳細で SW 側は関知しない。意図的に `SqliteMessage` の対象外（PBI: 2026-07-16-05） |
 
 未知の SQLite メッセージ type（`SQLITE_` プレフィックスの有無に関わらず `SqliteMessage` に含まれない type）を受信した場合、`offscreen.ts` は `isSqliteMessageType()` の判定結果に応じて既存の「Unknown message type」応答にフォールスルーし、クラッシュしない。
 
@@ -81,7 +81,7 @@ SW (sqliteClient.ts) ── sendMessage(SQLITE_*) ──> offscreen (sqliteEngin
 | `src/offscreen/sqliteEngine.ts` | `@subframe7536/sqlite-wasm` の薄いラッパ（`createEngine`/`exec`/`query`/`queryValue`）。`opfsWorker.ts`（Worker側・OPFS パス専用）が使用し、`sqliteEngineContext.ts`（offscreen document側・IDB/フォールバック管理）とは別レイヤー |
 | `src/offscreen/opfsWorker.ts` | `sqliteEngine.ts` 経由で新エンジンを利用、FTS5（trigram）スキーマ + トリガー、SEARCH ハンドラ、3 文字未満 LIKE フォールバック |
 | `src/offscreen/opfsMigrationV2.ts` / `opfsMigrationV2Reader.ts` | 旧 DB → 新 DB の冪等移行（旧 wa-sqlite 依存をリーダに限定） |
-| `src/messaging/sqliteMessages.ts` | SW↔offscreen 間 `SQLITE_*` メッセージ型の単一ソース（`SqliteMessage` discriminated union）。`sqliteClient.ts`/`offscreen.ts` が共有 |
+| `src/messaging/sqliteMessages.ts` | SW⇔offscreen 間 `SQLITE_*` メッセージ型の単一ソース（`SqliteMessage` discriminated union）。`sqliteClient.ts`/`offscreen.ts` が共有 |
 | `src/utils/storage/types.ts` / `defaults.ts` | `OPFS_MIGRATION_V2_DONE` キー追加 |
 
 ### トークナイザ選定（検討した代替案）

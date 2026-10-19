@@ -68,7 +68,7 @@ Scenario: 更新後の全テストが PASS する
 
 ## 見積もり
 
-1 SP（難易度 🟢低〜🟡中。副作用 🟡軽微 — クレンジング動作は同一のはずだが、セレクタ実行が複数回になるため要検証点）
+1 SP（難易度 🟢低〜🟡中。副作用 🟡軽微 ― クレンジング動作は同一のはずだが、セレクタ実行が複数回になるため要検証点）
 
 ## DoD
 
@@ -77,6 +77,6 @@ Scenario: 更新後の全テストが PASS する
 
 ## 参考
 
-- `docs/DEPENDINGS.md` — 未反映理由の記録
-- `src/utils/aiSummaryCleaner/selectorRules.ts` — `stripBySelectors` / `SELECTOR_RULE_DEFS`
-- `src/utils/aiSummaryCleaner/helpers.ts` — `buildClassIdSelectors`（セレクタ生成源）
+- `docs/DEPENDINGS.md` ― 未反映理由の記録
+- `src/utils/aiSummaryCleaner/selectorRules.ts` ― `stripBySelectors` / `SELECTOR_RULE_DEFS`
+- `src/utils/aiSummaryCleaner/helpers.ts` ― `buildClassIdSelectors`（セレクタ生成源）

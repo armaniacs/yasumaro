@@ -30,7 +30,7 @@ Scenario: wire cap との整合
 - 回帰: 3パネルの lifecycle テスト（cap 通知文言は不変）
 
 ## 実装メモ
-- computeLimits の caps はダッシュボード側 O(n) 入力上限であり wire cap とは別 concern（相互参照コメント済み）— 今回は「wire cap と等値であること」を pin するだけ
+- computeLimits の caps はダッシュボード側 O(n) 入力上限であり wire cap とは別 concern（相互参照コメント済み）― 今回は「wire cap と等値であること」を pin するだけ
 - PBI 10 の fetchPeriodRows がこの定数を消費する形にする
 
 ## 見積もり

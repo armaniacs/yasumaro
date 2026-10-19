@@ -5,7 +5,7 @@
 
 ## 優先度
 - 順位: 1 / 7
-- RICEスコア: 288（Reach=80 / Impact=3 / Confidence=60% / Effort=0.5）— 共有理解で確定: Fallback を含めつつ `QuerySpec` 構造体で統一。`LIMIT` は 2種温存を ADR 化し、`searchHandlers` 先行修正を前提に 5pt で着手。
+- RICEスコア: 288（Reach=80 / Impact=3 / Confidence=60% / Effort=0.5）― 共有理解で確定: Fallback を含めつつ `QuerySpec` 構造体で統一。`LIMIT` は 2種温存を ADR 化し、`searchHandlers` 先行修正を前提に 5pt で着手。
 - 根拠: 全記録が通過する最ホットパス。`QuerySpec` (`where/order/limit/cap/ftsTag`) を 3バックエンド共通で生成すれば重複100行削減、E2E `wasm-boundary` の不安定要因を解消。`grilling` で Fallback 含めることに合意。
 
 ## なぜなぜ分析
@@ -14,12 +14,12 @@
 - 解: `QueryPlanner: buildQuerySpec(query, {caps, fts5Available}) -> QuerySpec` を SSOT とし、Idb/OPFS は `QuerySpec` から `sql` を組み立て、Fallback は同じ `QuerySpec` から `Array.filter` 述語を組み立てる。`LIMIT` は `fts:100000 / plain:1000` の2種を `QuerySpec.cap` として明示し、`shouldUseFts5` の結果で選択。`searchHandlers` の extra filter 欠落は本PBI着手前に先行修正
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — text検索が 3バックエンドで統一される
+Scenario: ハッピーパス ― text検索が 3バックエンドで統一される
   Given `query({text:"hello", limit:10})` を渡す
   When `QueryPlanner.buildQuerySpec(query, {caps, fts5Available})` が `QuerySpec` を生成する
   Then Idb/OPFS は `QuerySpec` から `sql` を、Fallback は同じ `QuerySpec` から `Array.filter` 述語を生成し、3者で同じ `where`/`limit` が使われる
 
-Scenario: エッジケース — alias 乖離が解消される
+Scenario: エッジケース ― alias 乖離が解消される
   Given `is_starred` / `starred` の旧 alias を渡す
   When `QueryPlanner` が正規化する
   Then 3バックエンドで同じ結果を返す。`searchHandlers.ts` の domain/starred 無視バグは本PBI着手前に先行修正済み
@@ -36,7 +36,7 @@ Scenario: エッジケース — alias 乖離が解消される
 - E2E: `wasm-boundary-comprehensive` で永続化と検索が 3バックエンドで一致することを検証
 
 ## 見積もり
-5pt（要チームでの見積もり） — 共有理解で確定したスコープ (Fallback 含む QuerySpec + LIMIT 2種温存 + searchHandlers 先行修正) を含む
+5pt（要チームでの見積もり） ― 共有理解で確定したスコープ (Fallback 含む QuerySpec + LIMIT 2種温存 + searchHandlers 先行修正) を含む
 
 ## Definition of Done
 - [ ] 全BDDシナリオが自動テストとして実装されパスする

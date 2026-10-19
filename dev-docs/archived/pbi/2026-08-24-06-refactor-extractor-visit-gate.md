@@ -1,8 +1,8 @@
-# PBI-06: Extractor VisitGate純粋化 — 576行のGating分離
+# PBI-06: Extractor VisitGate純粋化 ― 576行のGating分離
 
 優先度: 2位 / RICE 16.8 (Reach 8 × Impact 3 × Conf 70% / Effort 0.90w)
 種別: refactor
-依存: THRESHOLD_RULES(6.7.76) — PBI-01の1ループ化完了後はVisitGate抽出が可能。ServiceContainerはcontent isolated worldで恩恵なし
+依存: THRESHOLD_RULES(6.7.76) ― PBI-01の1ループ化完了後はVisitGate抽出が可能。ServiceContainerはcontent isolated worldで恩恵なし
 ファイル触接: `src/content/extractor.ts:203-263,323-339` (gating), `src/content/visitGate.ts` (新設), `src/content/pageState.ts` (注入)
 Effort: 0.90w (M)
 

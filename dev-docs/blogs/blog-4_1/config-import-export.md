@@ -1,5 +1,5 @@
 ---
-title: "設定を丸ごと引っ越す — Obsidian Weave 4.1 の設定エクスポート/インポート"
+title: "設定を丸ごと引っ越す ― Obsidian Weave 4.1 の設定エクスポート/インポート"
 emoji: "📦"
 type: "idea"
 topics: ["obsidian", "chrome拡張", "browsing", "productivity"]

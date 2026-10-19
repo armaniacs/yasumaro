@@ -45,9 +45,9 @@ Tech CNNのバー欠落（PBI 2026-09-18-20）とEpsonの3行欠落（PBI 2026-0
   いずれかが満たされたら本ADRを置換するADRを起票する。
 
 ## Implements
-- `src/dashboard/panels/asyncData/historyEntryPresentation.ts` — 欠測理由の判定（単一所有）
-- `src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts` — 診断行のHTML化（理由行の描画）
-- `entrypoints/options/dashboard.css` — 欠測バーのプレースホルダー表示
+- `src/dashboard/panels/asyncData/historyEntryPresentation.ts` ― 欠測理由の判定（単一所有）
+- `src/dashboard/panels/asyncData/sqliteHistoryPanelView.ts` ― 診断行のHTML化（理由行の描画）
+- `entrypoints/options/dashboard.css` ― 欠測バーのプレースホルダー表示
 
 ## 参照
 - PBI: `pbi/2026-09-18-20-fix-history-progress-bar-consistency.md`

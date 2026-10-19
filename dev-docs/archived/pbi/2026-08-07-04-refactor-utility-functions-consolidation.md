@@ -12,7 +12,7 @@
 
 コードレビューで、同一目的のユーティリティ関数が複数ファイルに散在することが発見された。
 
-### 重複1: `escapeHtml()` — 5つの独立した実装
+### 重複1: `escapeHtml()` ― 5つの独立した実装
 
 | ファイル | 実装 |
 |---------|------|
@@ -24,7 +24,7 @@
 
 **リスク**: `privacy/privacy.ts` と `domainSearchPanel.ts` のバージョンは不完全。属性コンテキストで使用した場合、属性インジェクションの可能性がある。
 
-### 重複2: `bytesToBase64()` / `base64ToBytes()` — 4つの完全コピー
+### 重複2: `bytesToBase64()` / `base64ToBytes()` ― 4つの完全コピー
 
 | ファイル | 行 |
 |---------|---|
@@ -35,7 +35,7 @@
 
 全てbyte-for-byte同一。`crypto/index.ts` にはprivate関数として既に存在。
 
-### 重複3: `showStatus()` — 5つの同一パターン
+### 重複3: `showStatus()` ― 5つの同一パターン
 
 | ファイル | 実装 |
 |---------|------|
@@ -45,7 +45,7 @@
 | `dashboard/markdownTemplateManager.ts:415-427` | キャプチャした要素へのクロージャ |
 | `dashboard/panels/diagnostic/exportLogsPanel.ts:17-23` | インライン |
 
-### 重複4: `shouldRetry` リトライポリシー — 2箇所
+### 重複4: `shouldRetry` リトライポリシー ― 2箇所
 
 | ファイル | 内容 |
 |---------|------|

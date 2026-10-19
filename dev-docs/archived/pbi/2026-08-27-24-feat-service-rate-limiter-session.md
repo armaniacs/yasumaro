@@ -14,12 +14,12 @@
 - 解: `RateLimitService(Clock+StoragePort)` と `SessionAlarmService(AlarmPort+Clock+StoragePort)` にクラス化し `encryptionSession` からは `authGuard.isLocked()` 1 seam のみを呼ぶ
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — ブルートフォースが正しく制限される
+Scenario: ハッピーパス ― ブルートフォースが正しく制限される
   Given `RateLimitService` を生成する
   When 5回失敗する
   Then 30分ロックされる
 
-Scenario: エッジケース — 自動ロックが正しく動作する
+Scenario: エッジケース ― 自動ロックが正しく動作する
   Given `SessionAlarmService` を生成する
   When 30分経過する
   Then `lockSession` が呼ばれ、3回 retry される

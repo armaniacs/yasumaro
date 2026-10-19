@@ -13,8 +13,8 @@ PBI 番号は本日の通し連番（第1ラウンド 01-05 の続き、0918b �
 | 8 | 08 VisitGating Module | 5 | 2 | 80% | 0.75 | 10.7 | 実装 |
 | 9 | 09 ExtractionReport Module | 5 | 2 | 80% | 1.0 | 8.0 | 実装 |
 | 10 | 10 TrustLookup Module | 6 | 2 | 50% | 1.0 | 6.0 | 実装 |
-| — | CleansingRuleView（view 3 重列挙） | 6 | 1 | 80% | 1.0 | 4.8 | live 台帳 |
-| — | KeyDerivation（KDF 知識 3 箇所＋cache 3 系統） | 5 | 1 | 50% | 1.0 | 2.5 | live 台帳 |
+| ― | CleansingRuleView（view 3 重列挙） | 6 | 1 | 80% | 1.0 | 4.8 | live 台帳 |
+| ― | KeyDerivation（KDF 知識 3 箇所＋cache 3 系統） | 5 | 1 | 50% | 1.0 | 2.5 | live 台帳 |
 
 06 の高スコアは Effort 0.1 のマイクロタスク効果であり、ラウンド冒頭で片付けるクイックウィンとして正当。
 
@@ -38,4 +38,4 @@ PBI 番号は本日の通し連番（第1ラウンド 01-05 の続き、0918b �
 
 ## 実装記録（Phase 2 完了後）
 
-Phase 2 の実行順: 06 → 07 → 08 → 09 → 10（RICE 降順・依存なし）。完了済み — 結果は各 PBI（dev-docs/archived/pbi/ の実装記録節）と `pbi/00-INDEX.md` のアーカイブ履歴（2026-09-23 第2ラウンド）に記載済み。
+Phase 2 の実行順: 06 → 07 → 08 → 09 → 10（RICE 降順・依存なし）。完了済み ― 結果は各 PBI（dev-docs/archived/pbi/ の実装記録節）と `pbi/00-INDEX.md` のアーカイブ履歴（2026-09-23 第2ラウンド）に記載済み。

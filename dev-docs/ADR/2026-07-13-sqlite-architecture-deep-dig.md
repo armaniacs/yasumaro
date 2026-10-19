@@ -1,4 +1,4 @@
-# Deep Dig Findings — SQLite Architecture Deepening
+# Deep Dig Findings ― SQLite Architecture Deepening
 
 **Date:** 2026-07-13
 **Scope:** 5 PBIs for SQLite layer architecture improvement

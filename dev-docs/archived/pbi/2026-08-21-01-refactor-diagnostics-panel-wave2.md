@@ -1,4 +1,4 @@
-# PBI: Dashboard Panel Abstraction Wave 2 — diagnosticsPanel Direct Implementation
+# PBI: Dashboard Panel Abstraction Wave 2 ― diagnosticsPanel Direct Implementation
 
 **Date:** 2026-08-21  
 **Priority:** High (2nd hotspot: 19 commits)  

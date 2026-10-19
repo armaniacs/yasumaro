@@ -94,11 +94,11 @@ fallback ラダーを「決定」と「副作用」に分けて、決定は既�
 
 ### 変更ファイル
 
-- `src/offscreen/OpfsWorkerBackend.ts` — 定数 2 個（`OPFS_WORKER_UNAVAILABLE_ERROR` / `OPFS_DEGRADE_FAILURE_THRESHOLD`）、`callWorker()`、degrade 通知、11 箇所のリテラルを 1 箇所へ集約
-- `src/offscreen/sqliteEngineHost.ts` — `degradeFromOpfs()` / `#runDegrade()` / `#reinitWithoutOpfs()` / `#enterFallbackStorage()`、`resolverState`、`_doInit({ skipOpfs })`、`resetBackend()` の production 到達性のコメント
-- `src/offscreen/backendResolver.ts` — `opfs` factory から `() => context.degradeFromOpfs()` を注入
-- `src/offscreen/__tests__/opfsWorkerBackend-degradation.test.ts`（新規）— adapter 側 22 件
-- `src/offscreen/__tests__/opfsDegradation.integration.test.ts`（新規）— host 側 13 件
+- `src/offscreen/OpfsWorkerBackend.ts` ― 定数 2 個（`OPFS_WORKER_UNAVAILABLE_ERROR` / `OPFS_DEGRADE_FAILURE_THRESHOLD`）、`callWorker()`、degrade 通知、11 箇所のリテラルを 1 箇所へ集約
+- `src/offscreen/sqliteEngineHost.ts` ― `degradeFromOpfs()` / `#runDegrade()` / `#reinitWithoutOpfs()` / `#enterFallbackStorage()`、`resolverState`、`_doInit({ skipOpfs })`、`resetBackend()` の production 到達性のコメント
+- `src/offscreen/backendResolver.ts` ― `opfs` factory から `() => context.degradeFromOpfs()` を注入
+- `src/offscreen/__tests__/opfsWorkerBackend-degradation.test.ts`（新規）― adapter 側 22 件
+- `src/offscreen/__tests__/opfsDegradation.integration.test.ts`（新規）― host 側 13 件
 
 ### テスト
 

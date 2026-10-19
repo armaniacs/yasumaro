@@ -2,24 +2,24 @@
 
 ## 優先度・backlog 出所・依存
 
-- 優先度: 中（RICE 10.0 — R 5 / I 2 / C 1.0 / Eff 1.0）
+- 優先度: 中（RICE 10.0 ― R 5 / I 2 / C 1.0 / Eff 1.0）
 - backlog 出所: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) NN17（順位 10, fix）。バッチB の `generalSettingsPanel` チェーン先頭。
 - 依存: NN20（MutationObserver 蓄積解消）が同一ファイル `src/dashboard/panels/staticForm/generalSettingsPanel.ts` を触るため直列。本 PBI → NN20 の順で着手する。他のバッチB 候補（NN09 の `generalSettingsPanel` 部分、NN12, NN19）とはファイル非重複。
 
 ## ユーザーストーリー
 
-dashboard の設定パネルを使うユーザーとして、パネルの再読込や別経路（popup・onboarding wizard・他パネル）による settings 更新の後でも、A↔B layout 切替時に自分が設定した最新の provider 設定がフォームに反映されてほしい。mount 時の古いスナップショットから入力が再構築され、設定が巻き戻ったように見える状態を避けたい。
+dashboard の設定パネルを使うユーザーとして、パネルの再読込や別経路（popup・onboarding wizard・他パネル）による settings 更新の後でも、A⇔B layout 切替時に自分が設定した最新の provider 設定がフォームに反映されてほしい。mount 時の古いスナップショットから入力が再構築され、設定が巻き戻ったように見える状態を避けたい。
 
 ## 背景（file:line 付き現状）
 
-- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:54` — mount 内で `const settings = await settingsRepository.getAll()` を取得し、以降は mount closure で保持する。
+- `src/dashboard/panels/staticForm/generalSettingsPanel.ts:54` ― mount 内で `const settings = await settingsRepository.getAll()` を取得し、以降は mount closure で保持する。
 - この closure 変数が layout toggle path で使用される:
-  - `generalSettingsPanel.ts:189-190` — B priority view 構築時、DOM 収集（`collectProviderPrioritySlots()`）が空だった場合のフォールバック `settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST]`
-  - `generalSettingsPanel.ts:192` — `createBPriorityListView(bListContainer, existingSlots, settings)`（B priority view 本体）
-  - `generalSettingsPanel.ts:200` — accordion populate `loadSettingsToInputs(bAccordionContainer, settings, GENERAL_SETTINGS_SCHEMA)`
-  - `generalSettingsPanel.ts:209` — B→A 後の A reload `loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA)`
+  - `generalSettingsPanel.ts:189-190` ― B priority view 構築時、DOM 収集（`collectProviderPrioritySlots()`）が空だった場合のフォールバック `settings[StorageKeys.AI_PROVIDER_PRIORITY_LIST]`
+  - `generalSettingsPanel.ts:192` ― `createBPriorityListView(bListContainer, existingSlots, settings)`（B priority view 本体）
+  - `generalSettingsPanel.ts:200` ― accordion populate `loadSettingsToInputs(bAccordionContainer, settings, GENERAL_SETTINGS_SCHEMA)`
+  - `generalSettingsPanel.ts:209` ― B→A 後の A reload `loadSettingsToInputs(container, settings, GENERAL_SETTINGS_SCHEMA)`
 - 一方、`refresh()`（`generalSettingsPanel.ts:336-343`）は `getAll()` を新ローカルに再読込して `loadSettingsToInputs` に渡すのみで、mount closure の `settings` を更新しない。
-- 結果: `refresh()` や外部 settings 書き込みの後、A↔B 切替が stale スナップショットから入力を再構築する。初回 mount 後に settings が変わっていなければ影響しないが、refresh 後・外部書き込み後の切替は必ず旧値になる。
+- 結果: `refresh()` や外部 settings 書き込みの後、A⇔B 切替が stale スナップショットから入力を再構築する。初回 mount 後に settings が変わっていなければ影響しないが、refresh 後・外部書き込み後の切替は必ず旧値になる。
 - このバグクラスは本来 `src/dashboard/settingsPipeline.ts:218-237` の empty-overwrite ガードが防ぐ対象と同型の UI-desync である。同ガードのコメント（`settingsPipeline.ts:220-221`）は「e.g. the B-layout accordion regression」と明記しており、実際起きたクラス。ただしガードは provider connection フィールドの空値上書きのみを止め、stale 値での再構築までは防げない。
 
 ## BDD
@@ -40,9 +40,9 @@ dashboard の設定パネルを使うユーザーとして、パネルの再読�
 
 ## 実装宣言・受け入れ基準
 
-It must keep behavior: 成功経路の UI 挙動は不変 — 初回 mount・layout toggle・保存フローの表示と入力の組立は現行と同一で、「stale からの再構築」が「最新からの再構築」に置き換わるだけであること。
+It must keep behavior: 成功経路の UI 挙動は不変 ― 初回 mount・layout toggle・保存フローの表示と入力の組立は現行と同一で、「stale からの再構築」が「最新からの再構築」に置き換わるだけであること。
 
-- [x] `refresh()` 後の A↔B 切替が最新 settings から再構築する
+- [x] `refresh()` 後の A⇔B 切替が最新 settings から再構築する
 - [x] layout toggle path（`generalSettingsPanel.ts:189-192`, `:200`, `:209`）が mount closure を参照せず、常に最新を読む
 - [x] closure 更新漏れが構造的に起こらない形に統一されている（mount と `refresh()` が同じ module スコープの単一フィールドへ代入する）
 - [x] 成功経路の UI 挙動は不変（初回 mount・トグル・保存フローの見た目は変わらない）
@@ -79,7 +79,7 @@ It must keep behavior: 成功経路の UI 挙動は不変 — 初回 mount・lay
 
 ### 変更点
 
-- `src/dashboard/panels/staticForm/generalSettingsPanel.ts` — mount 時の `const settings` を、factory closure 内の可変フィールド `currentSettings: Settings` に置き換えた。`mount()` と `refresh()` の両方が `currentSettings = await settingsRepository.getAll()` で上書きし、layout toggle path（B priority view の stored フォールバック・`createBPriorityListView`・accordion populate・B→A 後の A reload）はすべて `currentSettings` を読む。`panelContainer` と同じ closure スコープに置いたので、インスタンスごとに 1 つのスナップショットが共有される。
+- `src/dashboard/panels/staticForm/generalSettingsPanel.ts` ― mount 時の `const settings` を、factory closure 内の可変フィールド `currentSettings: Settings` に置き換えた。`mount()` と `refresh()` の両方が `currentSettings = await settingsRepository.getAll()` で上書きし、layout toggle path（B priority view の stored フォールバック・`createBPriorityListView`・accordion populate・B→A 後の A reload）はすべて `currentSettings` を読む。`panelContainer` と同じ closure スコープに置いたので、インスタンスごとに 1 つのスナップショットが共有される。
 - `StorageKeys` の import に `type Settings` を追加。旧 :189 にあった二重キャスト（`settings[...] as unknown as typeof existingSlots | undefined`）は削除。`Array.isArray(stored)` がそのまま絞るため閉塞が必要なくなった。
 - `settingsRepository`・`loadSettingsToInputs`・ビュー API（`createBPriorityListView` / `createBProviderAccordionView`）には触れていない。
 

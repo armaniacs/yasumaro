@@ -19,7 +19,7 @@
 
 ## 背景（現状・証拠）
 
-- `src/content/e2eTestState.ts:24` — `export const E2E_PROBE_COMPILED_IN`。利用箇所は同ファイル内の `isE2EProbeEnabled`（line 64）・`publishE2eTestState`（line 82）のみ。テストからの参照はない。
+- `src/content/e2eTestState.ts:24` ― `export const E2E_PROBE_COMPILED_IN`。利用箇所は同ファイル内の `isE2EProbeEnabled`（line 64）・`publishE2eTestState`（line 82）のみ。テストからの参照はない。
 - 注意: NN14 が本定数を `contentKernel.ts` から import する形で実装された場合、本 PBI の前提（内部利用のみ）が崩れる。その場合は本 PBI を取り下げ、NN14 の実装に吸収された旨を台帳に記録して閉じる。
 
 ## BDD 受け入れシナリオ

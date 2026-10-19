@@ -12,9 +12,9 @@ AI プロバイダを追加する開発者として、応答抽出の schema gua
 
 testConnection テンプレ統合（PBI 2026-09-17-10）の残りとして extract 側の双子が残っている（着手時に行番号を再確認すること）：
 
-1. `_extractSummary` の3段階 schema guard — `GeminiProvider.ts`（297-309行目付近）と `OpenAIProvider.ts`（221-237行目付近）で同一構造 + 同一ユーザ文言（`Error: Invalid API response format - unexpected schema.`）
-2. test `extractResponse` の debug 組み立て — Gemini（229-245行目付近）と OpenAI（205-216行目付近）で `pickDefined` による同一パターン（modelName/statusCode/hasContent/response + usage tokens + 空時 error）
-3. buildRequest 内の同一コメント — Gemini（158-159行目付近）と OpenAI（180-181行目付近）の「モデル一覧ではなく実際に推論を走らせる」旨
+1. `_extractSummary` の3段階 schema guard ― `GeminiProvider.ts`（297-309行目付近）と `OpenAIProvider.ts`（221-237行目付近）で同一構造 + 同一ユーザ文言（`Error: Invalid API response format - unexpected schema.`）
+2. test `extractResponse` の debug 組み立て ― Gemini（229-245行目付近）と OpenAI（205-216行目付近）で `pickDefined` による同一パターン（modelName/statusCode/hasContent/response + usage tokens + 空時 error）
+3. buildRequest 内の同一コメント ― Gemini（158-159行目付近）と OpenAI（180-181行目付近）の「モデル一覧ではなく実際に推論を走らせる」旨
 
 対応方針: 基底 `src/background/ai/providers/ProviderStrategy.ts` に `failInvalidSchema(reason, traceId)` と `buildTestDebugBase(ctx, extras)` を新設し、両 provider から委譲する。フロー順序・token 記録・ユーザ文言・debug shape は不変。flow テンプレ自体には触れない。
 

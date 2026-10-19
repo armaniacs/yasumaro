@@ -67,23 +67,23 @@ npm run docs:watch
 
 主な対象モジュール：
 
-- `src/background/aiClient.ts` — AI クライアント
-- `src/background/obsidianClient.ts` — Obsidian REST API クライアント
-- `src/background/privacyPipeline.ts` — プライバシーパイプライン
-- `src/background/pipeline/RecordingPipeline.ts` — 録画パイプライン
-- `src/background/recordingLogic.ts` — 録画ロジック
-- `src/background/localAiClient.ts` — ローカル AI クライアント
-- `src/background/Mutex.ts` — Mutex
-- `src/messaging/types.ts` — メッセージング型定義
-- `src/utils/storage/types.ts` — ストレージ型定義
-- `src/privacy/privacy.ts` — PII サニタイザ
+- `src/background/aiClient.ts` ― AI クライアント
+- `src/background/obsidianClient.ts` ― Obsidian REST API クライアント
+- `src/background/privacyPipeline.ts` ― プライバシーパイプライン
+- `src/background/pipeline/RecordingPipeline.ts` ― 録画パイプライン
+- `src/background/recordingLogic.ts` ― 録画ロジック
+- `src/background/localAiClient.ts` ― ローカル AI クライアント
+- `src/background/Mutex.ts` ― Mutex
+- `src/messaging/types.ts` ― メッセージング型定義
+- `src/utils/storage/types.ts` ― ストレージ型定義
+- `src/privacy/privacy.ts` ― PII サニタイザ
 
 新しいモジュールを追加する場合、`typedoc.json` の `entryPoints` にパスを追加してください。
 
 ### GitHub Pages との関係
 
-- `docs/` — GitHub Pages デプロイ対象（公開ドキュメント）
-- `dev-docs/` — 開発者内部ドキュメント
+- `docs/` ― GitHub Pages デプロイ対象（公開ドキュメント）
+- `dev-docs/` ― 開発者内部ドキュメント
 
 **typedoc の公開フロー:**
 

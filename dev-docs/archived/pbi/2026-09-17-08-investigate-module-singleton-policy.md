@@ -10,12 +10,12 @@ backlog: [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-
 ## 背景（現状と課題）
 Service Worker の依存は composition root（`src/background/createBackgroundServices.ts` の `createBackgroundServices` + `src/background/compositionManifest.ts` の `compositionManifest`、`ServiceContainer` による singleton 管理）に統一されている。一方で、以下の module 級 singleton が並存する（いずれも該当ファイルを読んで現状確認済み）：
 
-1. `src/background/obsidianClient.ts` — module スコープの `globalWriteMutex`（`ObsidianClient` のコンストラクタ引数 `options.mutex` が未指定時の既定値、テスト用アクセサ `_globalWriteMutex` あり）
-2. `src/background/pendingChromeStorageQueue.ts` — module スコープの `activeQueue` + `setPendingWriteQueue()` による注入点（`getActiveQueue` が未設定時は `ChromeStorageAdapter` で遅延構築、テストでは InMemory 系 adapter に差し替え）。なお `compositionManifest` には `pendingWriteQueue` の登録（`createPendingWriteQueue(new ChromeStorageAdapter())` を factory とする entry）も存在する
-3. `src/background/offlineNetworkQueue.ts` — ファイル末尾で構築される `sharedOfflineNetworkQueue`（`compositionManifest` の `recordingPipeline` entry と `alarmRegistry` entry の `getOfflineNetworkQueue` が import して使う）
-4. `src/utils/storage/SettingsRepository.ts` — ファイル末尾の `settingsRepository` シングルトン（`new SettingsRepository()` 既定構築）。`compositionManifest` には別途 `settingsRepository` entry（`new SettingsRepository(new SettingsChromeStorageAdapter())`）もあるが、`manualRecordDeps` / `saveRecordDeps` / `messageRouter` の各 entry 内では直接 `settingsRepository.getAll()` / `clearCache()` を参照している箇所がある
-5. `src/messaging/messageTransport.ts` — ファイル末尾の `messageTransport`（`new MessageTransport()` 既定構築）
-6. `src/background/sqlite/offscreenGateway.ts` — ファイル末尾の `getSharedSqliteClient()`（module 内 `sharedInstance` の lazy 初期化）。`compositionManifest` の `sqliteClient` entry の factory はこれを呼ぶ
+1. `src/background/obsidianClient.ts` ― module スコープの `globalWriteMutex`（`ObsidianClient` のコンストラクタ引数 `options.mutex` が未指定時の既定値、テスト用アクセサ `_globalWriteMutex` あり）
+2. `src/background/pendingChromeStorageQueue.ts` ― module スコープの `activeQueue` + `setPendingWriteQueue()` による注入点（`getActiveQueue` が未設定時は `ChromeStorageAdapter` で遅延構築、テストでは InMemory 系 adapter に差し替え）。なお `compositionManifest` には `pendingWriteQueue` の登録（`createPendingWriteQueue(new ChromeStorageAdapter())` を factory とする entry）も存在する
+3. `src/background/offlineNetworkQueue.ts` ― ファイル末尾で構築される `sharedOfflineNetworkQueue`（`compositionManifest` の `recordingPipeline` entry と `alarmRegistry` entry の `getOfflineNetworkQueue` が import して使う）
+4. `src/utils/storage/SettingsRepository.ts` ― ファイル末尾の `settingsRepository` シングルトン（`new SettingsRepository()` 既定構築）。`compositionManifest` には別途 `settingsRepository` entry（`new SettingsRepository(new SettingsChromeStorageAdapter())`）もあるが、`manualRecordDeps` / `saveRecordDeps` / `messageRouter` の各 entry 内では直接 `settingsRepository.getAll()` / `clearCache()` を参照している箇所がある
+5. `src/messaging/messageTransport.ts` ― ファイル末尾の `messageTransport`（`new MessageTransport()` 既定構築）
+6. `src/background/sqlite/offscreenGateway.ts` ― ファイル末尾の `getSharedSqliteClient()`（module 内 `sharedInstance` の lazy 初期化）。`compositionManifest` の `sqliteClient` entry の factory はこれを呼ぶ
 
 これらは MV3 Service Worker の再起動モデル（module state は SW 終了で消え、復帰時に再構築される。lazy singleton は SW 生存期間のキャッシュとして機能）と整合しており、動的な実害はない。ただし「依存を構築する経路が2つある」状態は、新規機能の実装者がどちらに寄せるべきかを判断できず、`onReady` での初期化順序という暗黙の時間結合を生む。
 

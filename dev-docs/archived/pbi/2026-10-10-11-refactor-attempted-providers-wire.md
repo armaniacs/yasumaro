@@ -11,11 +11,11 @@
 
 ## 背景（現状）
 
-- `src/messaging/types.ts:135` — `RecordingResult.attemptedProviders`（resultBuilder が流す名前）
-- `src/messaging/types.ts:109` — `RegenerateSummaryResponse.providersTried`（dashboard が読む名前）
-- `src/background/handlers/recordingHandlers.ts:417-418` — `attemptedProviders → providersTried` の手動リネーム spread（同一コメント付き）
-- `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts:205-209` — `providersTried` のみを読む
-- `src/background/privacyPipeline.ts:69,306` — `attemptedProviders` を `aiResult` から RecordingResult へ流す
+- `src/messaging/types.ts:135` ― `RecordingResult.attemptedProviders`（resultBuilder が流す名前）
+- `src/messaging/types.ts:109` ― `RegenerateSummaryResponse.providersTried`（dashboard が読む名前）
+- `src/background/handlers/recordingHandlers.ts:417-418` ― `attemptedProviders → providersTried` の手動リネーム spread（同一コメント付き）
+- `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts:205-209` ― `providersTried` のみを読む
+- `src/background/privacyPipeline.ts:69,306` ― `attemptedProviders` を `aiResult` から RecordingResult へ流す
 
 同一概念の wire フィールド名二重定義 + 手動リネーム変換層。deletion test: リネーム adapter を削除しても複雑さが再出現しない（契約統一で消える）。
 
@@ -53,7 +53,7 @@ Scenario: 手動リネーム adapter が残らない
 
 ## 技術的考慮事項
 
-- Confidence 0.8: dashboard API の互換維持意図（2 名前をわざと分けた経緯）が残る可能性 — 同一コメント（PBI 2026-09-22-04 follow-up）が同一概念を示すため統一と判断
+- Confidence 0.8: dashboard API の互換維持意図（2 名前をわざと分けた経緯）が残る可能性 ― 同一コメント（PBI 2026-09-22-04 follow-up）が同一概念を示すため統一と判断
 - プライバシー保証: 変更なし
 
 ## 実装者向け注記

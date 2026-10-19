@@ -14,9 +14,9 @@
 
 | File | Responsibility |
 |------|---------------|
-| `src/utils/logger/api.ts` | **Modify** — remove `resolveLogSource`, pass `source` through |
-| `src/utils/logger.ts` | **Modify** — drop `resolveLogSource` from re-export |
-| `src/utils/__tests__/logger-source.test.ts` | **Modify** — delete resolveLogSource tests, keep extractSourceFromImportMetaUrl |
+| `src/utils/logger/api.ts` | **Modify** ― remove `resolveLogSource`, pass `source` through |
+| `src/utils/logger.ts` | **Modify** ― drop `resolveLogSource` from re-export |
+| `src/utils/__tests__/logger-source.test.ts` | **Modify** ― delete resolveLogSource tests, keep extractSourceFromImportMetaUrl |
 
 ---
 
@@ -45,7 +45,7 @@ describe('log source passthrough', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/logSourcePassthrough.test.ts`
-Expected: FAIL — `resolveLogSource` is still exported (not undefined)
+Expected: FAIL ― `resolveLogSource` is still exported (not undefined)
 
 - [ ] **Step 3: Delete resolveLogSource and update call sites**
 
@@ -68,7 +68,7 @@ const entry = createStructuredLog(LogType.SANITIZE, message, details, errorCode,
 const entry = createStructuredLog(LogType.ERROR, message, details, errorCode, source);
 ```
 
-`createStructuredLog` itself already accepts `source?: string` and assigns it directly — no change needed there.
+`createStructuredLog` itself already accepts `source?: string` and assigns it directly ― no change needed there.
 
 - [ ] **Step 4: Run test to verify it passes**
 

@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 grep で確認済み:
-- `package.json:79` — `"wa-sqlite": "^1.0.0"`
+- `package.json:79` ― `"wa-sqlite": "^1.0.0"`
 - side-effects.md M29判定: 「package-lock.jsonが既に事実上固定。npm ci運用なら実害小」（副作用軽微、対処自体は安全）
 - 対処案（親レポートより）: `"wa-sqlite": "1.0.0"` に変更し、明示的なアップグレードのみ許容
 

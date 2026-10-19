@@ -12,9 +12,9 @@ backlog: [2026-09-18-00-backlog-archloop-0918.md](2026-09-18-00-backlog-archloop
 
 `src/utils/allowedUrls.ts`（105行）は `src/utils/storage/urlWhitelist.ts` の古いコピーで、以下の3関数が重複する:
 
-1. `buildAllowedUrls` — urlWhitelist 版は `FILTER_LIST_SOURCES` SSOT を使用（PBI 2026-09-11-05）、allowedUrls 版は 5 literal 残留（`raw.githubusercontent.com` / `gitlab.com` / `easylist.to` / `pgl.yoyo.org` / `nsfw.oisd.nl`）
-2. `computeUrlsHash` — 同一実装の複製
-3. `getAllowedUrls` — allowedUrls 版は key パラメータ付き、urlWhitelist 版は `StorageKeys.ALLOWED_URLS` 固定
+1. `buildAllowedUrls` ― urlWhitelist 版は `FILTER_LIST_SOURCES` SSOT を使用（PBI 2026-09-11-05）、allowedUrls 版は 5 literal 残留（`raw.githubusercontent.com` / `gitlab.com` / `easylist.to` / `pgl.yoyo.org` / `nsfw.oisd.nl`）
+2. `computeUrlsHash` ― 同一実装の複製
+3. `getAllowedUrls` ― allowedUrls 版は key パラメータ付き、urlWhitelist 版は `StorageKeys.ALLOWED_URLS` 固定
 
 実測の生存経路（全て死）:
 

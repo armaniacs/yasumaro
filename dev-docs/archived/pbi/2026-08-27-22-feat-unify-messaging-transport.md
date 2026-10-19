@@ -14,12 +14,12 @@
 - 解: `MessageTransport { send<T>(msg, {retries, clock}) }` に `MessageValidator` 登録と `RetryPolicy` (Clock注入) を統合。`types.ts` の3ラッパは薄いエイリアスに縮退
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 1 seam でリトライとバージョン付与が完結する
+Scenario: ハッピーパス ― 1 seam でリトライとバージョン付与が完結する
   Given `MessageTransport` を生成する
   When `send({type:'VALID_VISIT', payload})` を呼ぶ
   Then `protocolVersion` が自動付与され、リトライ可能なエラーのみ指数バックオフで再送される
 
-Scenario: エッジケース — 型安全性が失われない
+Scenario: エッジケース ― 型安全性が失われない
   Given `retryHelper` 経路で `VALID_VISIT` を送る
   When 送信する
   Then `protocolVersion` 付与と `ResponseForType` 型チェックが維持される

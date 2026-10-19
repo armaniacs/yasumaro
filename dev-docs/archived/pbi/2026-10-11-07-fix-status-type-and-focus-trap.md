@@ -15,7 +15,7 @@
 
 ### 進行中メッセージが success 型
 
-- `src/dashboard/generalSettings/connectionTests.ts:270`, `:298`, `:441` — 本ブランチの status 契約統一で `showStatus(statusDiv, '接続テスト中...', 'success', { autoClear: false })` になり、(1)「テスト中」が成功色（緑背景＋緑枠）で表示され、(2) `showStatus(statusDiv, '', 'success', ...)` は空文字でも `.status-message.success` の padding 10px/12px + border + 背景が付くため、保存処理の間だけ高さ約 42px の**空の緑ボックス**が点滅する。
+- `src/dashboard/generalSettings/connectionTests.ts:270`, `:298`, `:441` ― 本ブランチの status 契約統一で `showStatus(statusDiv, '接続テスト中...', 'success', { autoClear: false })` になり、(1)「テスト中」が成功色（緑背景＋緑枠）で表示され、(2) `showStatus(statusDiv, '', 'success', ...)` は空文字でも `.status-message.success` の padding 10px/12px + border + 背景が付くため、保存処理の間だけ高さ約 42px の**空の緑ボックス**が点滅する。
 - `status-message` は `min-height: 20px` を持つ（`entrypoints/options/dashboard.css:886-895`）ため `:empty` でも消えない。
 - CSS には未使用の `.status-message.updating` が既に存在する（`entrypoints/options/dashboard.css:951`）。
 - `src/dashboard/panels/diagnostic/exportLogsPanel.ts:28,38,48,58` の `onStart` も同じ誤用をしている。
@@ -23,16 +23,16 @@
 
 ### focusTrap が disabled 要素を除外しない
 
-- `src/utils/ui/focusTrap.ts:12` — `FOCUSABLE_SELECTOR` が `button` / `input` 等を `:not([disabled])` なしで列挙。
-- `:19-23` — `getFocusableElements` の絞り込みは `.hidden, [hidden]` のみ。
-- `:121-123` / `:147-149` — trap 時に first/last を固定取得。`:56` — 折り返し条件が `document.activeElement === last`。
+- `src/utils/ui/focusTrap.ts:12` ― `FOCUSABLE_SELECTOR` が `button` / `input` 等を `:not([disabled])` なしで列挙。
+- `:19-23` ― `getFocusableElements` の絞り込みは `.hidden, [hidden]` のみ。
+- `:121-123` / `:147-149` ― trap 時に first/last を固定取得。`:56` ― 折り返し条件が `document.activeElement === last`。
 - disabled 要素は focus を持てないため、DOM 順で最後のフォーカス可能要素が disabled だと折り返し条件が永遠に真にならず、Tab が `preventDefault()` されない＝`aria-modal="true"` のモーダルから背後の設定画面へフォーカスが抜ける（WCAG 2.1 AA の 2.4.3 / 2.1.1 に抵触）。
 - 実経路: `src/dashboard/masterPassword.ts:318` は保存中に `submitBtn.disabled = true` にするため、保存中に Tab を押すとモーダル外へ抜ける。first が disabled の場合は `:148` の `firstFocusable.focus()` が no-op となり初期フォーカスも移らない。
 - `confirmDialog`（`src/utils/ui/confirmDialog.ts:31-38`）は `button:not([disabled])` を使い除外済み。本ブランチは逆にこの差異をテストで pin している（`src/utils/ui/__tests__/focusTrap.test.ts:200-217` 「keeps disabled controls in the focusable set」）。
 
 ### confirmDialog の初期フォーカスが破壊的ボタン
 
-- `src/utils/ui/confirmDialog.ts:125` — 初期フォーカスが最後のボタン＝破壊的操作の確認ボタンで、誤 Enter による削除が起きやすい（本ブランチの変更行ではないが、同ファイルを触る今回が直し時）。
+- `src/utils/ui/confirmDialog.ts:125` ― 初期フォーカスが最後のボタン＝破壊的操作の確認ボタンで、誤 Enter による削除が起きやすい（本ブランチの変更行ではないが、同ファイルを触る今回が直し時）。
 
 ## BDD 受け入れシナリオ
 

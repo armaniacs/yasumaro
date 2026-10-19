@@ -1,4 +1,4 @@
-# Checking Team レビュー報告 — ワークスペース全量（main HEAD）
+# Checking Team レビュー報告 ― ワークスペース全量（main HEAD）
 
 - 実行日: 2026-09-24
 - 対象: ワークスペース全体（差分レビューではなく全量レビュー。3,235ファイル、HEAD `02e74628` = main、v6.9.23 相当。ブランチ `0924b` は main と完全一致）
@@ -29,7 +29,7 @@
 
 ## 重要指摘事項（優先度順）
 
-### [High] インタラクティブな SVG グラフがポインタ専用で、アクセシブルな名前も無い — **修正済み（Wave 3）**
+### [High] インタラクティブな SVG グラフがポインタ専用で、アクセシブルな名前も無い ― **修正済み（Wave 3）**
 - 指摘者: Accessibility Advocate（Test Experts が対処・テスト追加）
 - 場所: src/dashboard/tagClusterLayout.ts:148 / entrypoints/options/index.html:1759, 2085, 2097
 - 影響: 「ノードをクリックして履歴をフィルタ」がグラフの主要インタラクションなのにキーボードで到達・操作不可（WCAG 2.1.1 Level A 違反）。tagClusterSvg/比較 SVG は名前無しグラフィックで WCAG 1.1.1 未達。docs/ACCESSIBILITY.md の主張と実装が矛盾
@@ -47,7 +47,7 @@
 - 影響: 日本語版は暗号化キーの保存先を誤って記載しており、プライバシーポリシーの法的・信頼上の正確性を損なう
 - 対処: ja 版 L145 を英語版と同じ「chrome.storage.local に平文で保持され、拡張機能内アクセスは防げない」記述に修正し、PRIVACY.md と実装を突き合わせるリリースチェックを release:check に追加
 
-### [Medium] 🎯 Obsidian REST API のエラーレスポンスボディを生のままログへ連結 — **修正済み（Wave 3）**
+### [Medium] 🎯 Obsidian REST API のエラーレスポンスボディを生のままログへ連結 ― **修正済み（Wave 3）**
 - 指摘者: Red Team Leader
 - 場所: src/background/obsidianClient.ts:171, 203
 - 影響: サーバ制御の最大1MBボディがログストレージ（unlimitedStorage）に膨張し、TSV エクスポート破壊・PII 二次漏洩の面に
@@ -126,7 +126,7 @@
 - 対処: ci.yml に paths フィルタ付きの `npm run bench:check` ステップを追加（ゲート対象は決定論的カウンタのため安定）
 
 ### [Medium] ci.yml の node_modules キャッシュが npm ci と矛盾して純粋な無駄
-- 指摘者: SRE/Ops Specialist（DX Advocate が同指摘 — 重複）
+- 指摘者: SRE/Ops Specialist（DX Advocate が同指摘 ― 重複）
 - 場所: .github/workflows/ci.yml:23-32、180-189
 - 影響: npm ci は node_modules を必ず削除再生成するため restore が全損。job あたり数十秒の無駄
 - 対処: node_modules キャッシュを削除し setup-node の npm キャッシュに一本化
@@ -149,7 +149,7 @@
 - 影響: 10スロットを順に廻り、障害継続中も外部 AI API への無駄送信が続く
 - 対処: プロバイダ×モデル単位の連続失敗カウンタを chrome.storage.session に永続化し、K 回連続失敗スロットを N 分間スキップ（rateLimiter.ts の flushImmediately パターン流用可）
 
-### [Medium] 🎯 Content-SW プロトコルバージョンのハードコード複製 — **修正済み（Wave 3）**
+### [Medium] 🎯 Content-SW プロトコルバージョンのハードコード複製 ― **修正済み（Wave 3）**
 - 指摘者: API & Contract Negotiator（Test Experts が対処）
 - 場所: wxt.config.ts:100（`JSON.stringify(1)`）vs src/messaging/protocol.ts:20
 - 影響: protocol bump 時に片側だけ上がるドリフトがコメント頼みだった
@@ -175,7 +175,7 @@
 
 ### [Medium] 🎯 data-i18n SSOT を迂回する生フォールバック `getMessage(...) || '日本語'` が約60箇所残存
 - 指摘者: i18n Expert
-- 場所: src/dashboard/domainFilterTagUI.ts:64-68, 91, 110, 115 / generalSettings/connectionTests.ts（15件）/ trancoConsent.ts（7件）/ panels/asyncData/sqliteHistoryPanelView.ts（14件）/ src/popup/statusPanel.ts:421, 423 — 計12ファイル以上
+- 場所: src/dashboard/domainFilterTagUI.ts:64-68, 91, 110, 115 / generalSettings/connectionTests.ts（15件）/ trancoConsent.ts（7件）/ panels/asyncData/sqliteHistoryPanelView.ts（14件）/ src/popup/statusPanel.ts:421, 423 ― 計12ファイル以上
 - 影響: フォールバックヘルパー getMessageOr に SSOT 化済みなのに旧パターンが残存。キー削除・リネーム時に en ユーザーへ日本語が静かに表示。domainFilterTagUI.ts:91 の aria-label は常時日本語テンプレートで en 読み上げも日本語になる
 - 対処: `getMessageOr(key, fallback)` への機械的置換。aria-label は `{domain}` プレースホルダー付きキー新設
 
@@ -234,22 +234,22 @@
 - 対処: canonical 説明を recordingGateTable.ts のみに置き、他2箇所は SSOT 参照の1行リンクに縮約
 
 ### [Low] 主要な残り指摘（16件・スコア影響なし）
-- setElementHtml の `<script>` 削除のみの防御層が過剰な安全確認を誘発（Red Team）— htmlFragment.ts:72
-- SSRF ガードが DNS 解決結果を検査しない（リバインディング残存）（Blue Team）— ssrfGuard.ts（SW に DNS API がなく完全解消困難、脅威モデル受容として明記方向）
-- messaging → background の逆依存（System Architect）— src/messaging/types.ts（実害ゼロ・ADR 記録済み）
-- dashboard 内に formatBytes の独立実装が2つ（Maintainability）— cleansingStatsView.ts / entryByteDelta.ts
-- migrateToSingleSettingsObject の完了フラグ先書きと `_version` 部分一致ヒューリスティック（Legacy Bridge）— settingsMigration.ts:58
-- trustChecker の SAFETY_MODE / TRANCO_TIER レガシー散在パスがデッドコード残存（Legacy Bridge）— trustChecker.ts:182-212
-- トークン経由外ハードコードと未翻訳 tooltip（UI）— popup/index.html:186, 39
-- ドキュメント総覧に ACCESSIBILITY.md / i18n-guide.md 未掲載（Documentation）— README.md:497-555, docs/guides.html
-- ci.yml に paths フィルタがなく docs-only 変更でも全ジョブが走る（FinOps）— ci.yml:3-7
-- 同意拒否後の再同意 UI の操作負荷非対称（Ethics）— PRIVACY.md:135
-- wasm ship バイナリの再現性検証は gate 依存（Supply Chain）— 現状で許容と判定
-- オフライン enqueue 判定がエラーメッセージ部分文字列依存（Domain Logic）— retryPolicy.ts:16-37
-- pendingSqliteQueue の失敗がバッチ粒度で毒レコードが健全レコードを道連れ（Data Integrity）— pendingSqliteQueue.ts:80-92
-- previewOnly の二重検出と cast ハック（Refactoring）— RecordingOrchestrator.ts:136, 144
-- 非推奨エイリアス・互換 shim の解約日未定（Refactoring）— check-deprecated-aliases.mjs
-- ci.yml の node_modules キャッシュ効果なし（DX — SRE Medium と同一対象）
+- setElementHtml の `<script>` 削除のみの防御層が過剰な安全確認を誘発（Red Team）― htmlFragment.ts:72
+- SSRF ガードが DNS 解決結果を検査しない（リバインディング残存）（Blue Team）― ssrfGuard.ts（SW に DNS API がなく完全解消困難、脅威モデル受容として明記方向）
+- messaging → background の逆依存（System Architect）― src/messaging/types.ts（実害ゼロ・ADR 記録済み）
+- dashboard 内に formatBytes の独立実装が2つ（Maintainability）― cleansingStatsView.ts / entryByteDelta.ts
+- migrateToSingleSettingsObject の完了フラグ先書きと `_version` 部分一致ヒューリスティック（Legacy Bridge）― settingsMigration.ts:58
+- trustChecker の SAFETY_MODE / TRANCO_TIER レガシー散在パスがデッドコード残存（Legacy Bridge）― trustChecker.ts:182-212
+- トークン経由外ハードコードと未翻訳 tooltip（UI）― popup/index.html:186, 39
+- ドキュメント総覧に ACCESSIBILITY.md / i18n-guide.md 未掲載（Documentation）― README.md:497-555, docs/guides.html
+- ci.yml に paths フィルタがなく docs-only 変更でも全ジョブが走る（FinOps）― ci.yml:3-7
+- 同意拒否後の再同意 UI の操作負荷非対称（Ethics）― PRIVACY.md:135
+- wasm ship バイナリの再現性検証は gate 依存（Supply Chain）― 現状で許容と判定
+- オフライン enqueue 判定がエラーメッセージ部分文字列依存（Domain Logic）― retryPolicy.ts:16-37
+- pendingSqliteQueue の失敗がバッチ粒度で毒レコードが健全レコードを道連れ（Data Integrity）― pendingSqliteQueue.ts:80-92
+- previewOnly の二重検出と cast ハック（Refactoring）― RecordingOrchestrator.ts:136, 144
+- 非推奨エイリアス・互換 shim の解約日未定（Refactoring）― check-deprecated-aliases.mjs
+- ci.yml の node_modules キャッシュ効果なし（DX ― SRE Medium と同一対象）
 
 ## コンフリクト調整結果
 
@@ -285,7 +285,7 @@ Edge & Mobile Strategist（モバイル/PWA/レスポンシブ対応コードが
 ### 修正済み（計23指摘）
 
 - **High 3件すべて修正済み**
-  - SVG グラフのキーボード操作・アクセシブル名（Wave 3 Test Experts — `graphNodeA11y.ts` 新設 + 14テスト）
+  - SVG グラフのキーボード操作・アクセシブル名（Wave 3 Test Experts ― `graphNodeA11y.ts` 新設 + 14テスト）
   - options の data-i18n 違反ハードコード（9キー追加、en/ja 同期）
   - PRIVACY.md 日本語版の暗号化キー記述（英語版と同一化。`diff public/PRIVACY.md docs/PRIVACY.md` 空を確認）
 - **Medium 19件修正済み**
@@ -296,7 +296,7 @@ Edge & Mobile Strategist（モバイル/PWA/レスポンシブ対応コードが
   - 連動修正: `testDir/e2e/recording-traceId.spec.ts` の PRIVACY_POLICY_VERSION ミラー定数を同期
 - Obsidian ログ切り詰め（`logTruncate.ts`）と protocol バージョン導出化は Wave 3 で修正済み（上記 Medium 計上に含む）
 
-### 確認待ち（15 Medium — 破壊的変更・設計判断を伴うためユーザー確認を保留）
+### 確認待ち（15 Medium ― 破壊的変更・設計判断を伴うためユーザー確認を保留）
 
 | 指摘 | 観点 | 確認が必要な理由 |
 |------|------|------------------|

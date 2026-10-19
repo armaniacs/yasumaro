@@ -18,7 +18,7 @@ backlog: [2026-09-17-00-backlog-arch-review-0917.md](2026-09-17-00-backlog-arch-
 
 規模の問題もある。utils 配下は約120モジュールに達し、48ファイルが `chrome.*` を直接参照する（多くは Layer 1 として正当だが、分類自体が人力判断）。循環回避の dynamic import も複数箇所に存在する（`settingsStore` と `trustDb` の相互参照、`trancoConsentManager` から `settingsStore` への遅延参照、`storageMaintenance` から `background/sqliteClient` への遅延参照）。
 
-一方で土台はある。`eslint/` ディレクトリにカスタムプラグイン（`plugin.mjs` が `rules/` 配下の3ルール — `require-sanitized-markdown`、`require-response-size-limit`、`no-tautology-expect` — を束ねる構成）と `__tests__/` 配下の RuleTester によるテスト慣習が既にある。また `eslint.config.js` では `no-restricted-imports` による Barrel（`storage.js`・`logger.js`）の新規利用抑制と、`src/background/` から UI 層（popup/dashboard）への上向き依存禁止が既に warn レベルで動いている。本 PBI はこの流れを層境界全体に広げる。
+一方で土台はある。`eslint/` ディレクトリにカスタムプラグイン（`plugin.mjs` が `rules/` 配下の3ルール ― `require-sanitized-markdown`、`require-response-size-limit`、`no-tautology-expect` ― を束ねる構成）と `__tests__/` 配下の RuleTester によるテスト慣習が既にある。また `eslint.config.js` では `no-restricted-imports` による Barrel（`storage.js`・`logger.js`）の新規利用抑制と、`src/background/` から UI 層（popup/dashboard）への上向き依存禁止が既に warn レベルで動いている。本 PBI はこの流れを層境界全体に広げる。
 
 対応方針は、LAYERS.md の層定義を機械検査に落とすこと。Layer 0 は外部依存禁止（chrome 参照禁止・Layer 2 参照禁止）、Layer 1 は Layer 0 のみ import 可、Barrel からの新規 import 抑制等をルール化する。実装は既存カスタムプラグインへのルール追加か `eslint-plugin-boundaries` の導入かを判断し、理由を本 PBI に記録する。既存コードでルールに抵触する箇所は (a) コード側で是正するか (b) LAYERS.md の分類を現実に合わせて訂正＋ADR 記録するかを個別に判断し、その判断記録を本 PBI に残す。
 

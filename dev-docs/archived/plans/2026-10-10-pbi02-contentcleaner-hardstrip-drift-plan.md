@@ -8,7 +8,7 @@ hard-strip の収集処理を共有化し、hidden 要素の recount と実際�
 - `src/utils/__tests__/contentCleaner*.test.ts`
 
 ## Validation
-`npx vitest run src/utils` — PASS（スコープ検証済み）。
+`npx vitest run src/utils` ― PASS（スコープ検証済み）。
 
 ## Rollback
 収集ヘルパー統合差分を戻せば旧挙動へ復旧できる。

@@ -236,7 +236,7 @@ function applyMetadataPatch(
  * Omit<...> type already excludes them: the Omit is a compile-time-only
  * contract. A future caller that passes external data through an `as`
  * cast (e.g. an import/restore feature) could bypass it, so this function
- * — the last line of defense before storage — enforces it at runtime too.
+ * ― the last line of defense before storage ― enforces it at runtime too.
  */
 function applyMetadataPatch(
     current: SavedUrlEntry,
@@ -292,7 +292,7 @@ export async function saveSavedUrlEntryMetadata(
 ```typescript
         const idx = entries.findIndex(e => e.url === url);
         // New entries always get Date.now() (or the explicit `timestamp`
-        // option) here — there is no prior timestamp to "not refresh", so
+        // option) here ― there is no prior timestamp to "not refresh", so
         // `refreshTimestamp` is intentionally not consulted on this branch.
         if (idx < 0) {
             if (!createIfMissing) return entries;

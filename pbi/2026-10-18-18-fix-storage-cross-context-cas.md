@@ -26,11 +26,11 @@ security-audit run-2 の needs_validation リード。fingerprint: `withOptimist
 
 ### 再現経路（trace / evidence、行番号は実ファイルで確認したもの）
 
-1. **module-level chain（シリアライズは 1 コンテキスト内のみ）** — `src/utils/storage/storageTransaction.ts:33` の `const chains: ChainMap = new Map();`。`:35` の `runSerialized(key, fn)` がこの Map を介して per-key のマイクロタスクチェーンを張るが、Map は module-level なので **service worker / popup / dashboard はそれぞれ自分の module インスタンスを持ち、合流しない**。
-2. **CAS のクリティカルセクションが 2 回の別 IPC にまたがる** — `src/utils/storage/storageTransaction.ts:364` の `await port.get([key, \`${key}_version\`])`（verify read）と `:374` の `await port.set({ [key]: newValue, ... })`（set）は別々の await 済み IPC で、その間に browser-level の CAS は存在しない。バージョン比較は `:368` の `if (verifyVersion !== currentVersion) throw new ConflictError(...)`。
-3. **port 層は素通し** — `src/utils/storage/storagePort.ts:53-55` の `ChromeStoragePort.set` は `await chrome.storage.local.set(items)` を呼ぶだけ。storage 側の CAS も排他も無い（`get` は `:50-52` で同じく素通し）。
-4. **post-write 検証の範囲** — `src/utils/storage/storageTransaction.ts:376` の注釈「post-write verification always enabled — closes TOCTOU window」と `:377` の `await verifyPostWrite(port, [key], [newValue], [newVersion])`。`verifyPostWrite`（`:199-214`）は**自分の set の後**に読み直し、自分が書き込んだ version と値を照合する。つまり検出できるのは「**自分の set と自分の verify の間に落ちた**上書き」だけで、**verify read（`:364`）と自分の set（`:374`）の間に落ちた上書きは検出できない**。注釈が主張する範囲と実装の範囲に乖離がある。
-5. **エントリポイント（複数コンテキストから同じキーへ）** — `src/popup/pendingPages.ts:166`（保存フローの `removePendingPages`）、同 `:214`（discard 経路）。これらは `src/utils/pendingStorage.ts:288` の `removePendingPages` から `withOptimisticLock(PENDING_PAGES_KEY, ...)` に入り、`:221` の `addPendingPage`（service worker 側の自動記録）と**同じ `pending_pages` キー**に対して CAS する。
+1. **module-level chain（シリアライズは 1 コンテキスト内のみ）** ― `src/utils/storage/storageTransaction.ts:33` の `const chains: ChainMap = new Map();`。`:35` の `runSerialized(key, fn)` がこの Map を介して per-key のマイクロタスクチェーンを張るが、Map は module-level なので **service worker / popup / dashboard はそれぞれ自分の module インスタンスを持ち、合流しない**。
+2. **CAS のクリティカルセクションが 2 回の別 IPC にまたがる** ― `src/utils/storage/storageTransaction.ts:364` の `await port.get([key, \`${key}_version\`])`（verify read）と `:374` の `await port.set({ [key]: newValue, ... })`（set）は別々の await 済み IPC で、その間に browser-level の CAS は存在しない。バージョン比較は `:368` の `if (verifyVersion !== currentVersion) throw new ConflictError(...)`。
+3. **port 層は素通し** ― `src/utils/storage/storagePort.ts:53-55` の `ChromeStoragePort.set` は `await chrome.storage.local.set(items)` を呼ぶだけ。storage 側の CAS も排他も無い（`get` は `:50-52` で同じく素通し）。
+4. **post-write 検証の範囲** ― `src/utils/storage/storageTransaction.ts:376` の注釈「post-write verification always enabled ― closes TOCTOU window」と `:377` の `await verifyPostWrite(port, [key], [newValue], [newVersion])`。`verifyPostWrite`（`:199-214`）は**自分の set の後**に読み直し、自分が書き込んだ version と値を照合する。つまり検出できるのは「**自分の set と自分の verify の間に落ちた**上書き」だけで、**verify read（`:364`）と自分の set（`:374`）の間に落ちた上書きは検出できない**。注釈が主張する範囲と実装の範囲に乖離がある。
+5. **エントリポイント（複数コンテキストから同じキーへ）** ― `src/popup/pendingPages.ts:166`（保存フローの `removePendingPages`）、同 `:214`（discard 経路）。これらは `src/utils/pendingStorage.ts:288` の `removePendingPages` から `withOptimisticLock(PENDING_PAGES_KEY, ...)` に入り、`:221` の `addPendingPage`（service worker 側の自動記録）と**同じ `pending_pages` キー**に対して CAS する。
 
 ### 既存テストとの区別（重要）
 
@@ -78,19 +78,19 @@ Scenario: 同一コンテキスト内の既存直列化は引き続き保証さ�
 
 | 場所 | 行 | 内容 |
 |---|---|---|
-| `src/utils/storage/storageTransaction.ts` | `:33` | `const chains: ChainMap = new Map();` — module-level。cross-context では直列化にならない |
-| 同 | `:35-46` | `runSerialized(key, fn)` — per-realm のチェーン。module をまたげない |
-| 同 | `:48` | `runSerializedMulti` — 複数キーの順序保証（`withAtomicKeys` 用） |
-| 同 | `:199-214` | `verifyPostWrite` — 自分の set の**後**に読み直して照合。検出範囲は自分の set と自分の verify の間だけ |
-| 同 | `:226` | `export class StorageTransaction` — port を注入可能な単一 writer クラス |
-| 同 | `:262` | `await runSerialized(key, () => performCasUpdate(...))` — 直列化はこの 1 コンテキスト内のみ |
-| 同 | `:364` | `await port.get([key, \`${key}_version\`])` — verify read（IPC 1回目） |
-| 同 | `:368` | `if (verifyVersion !== currentVersion) throw new ConflictError(...)` — version 比較 |
-| 同 | `:374` | `await port.set({ [key]: newValue, [\`${key}_version\`]: newVersion })` — set（IPC 2回目）。隙間に CAS が無い |
-| 同 | `:376` | 注釈「post-write verification always enabled — closes TOCTOU window」— **実装より広い主張。要修正** |
+| `src/utils/storage/storageTransaction.ts` | `:33` | `const chains: ChainMap = new Map();` ― module-level。cross-context では直列化にならない |
+| 同 | `:35-46` | `runSerialized(key, fn)` ― per-realm のチェーン。module をまたげない |
+| 同 | `:48` | `runSerializedMulti` ― 複数キーの順序保証（`withAtomicKeys` 用） |
+| 同 | `:199-214` | `verifyPostWrite` ― 自分の set の**後**に読み直して照合。検出範囲は自分の set と自分の verify の間だけ |
+| 同 | `:226` | `export class StorageTransaction` ― port を注入可能な単一 writer クラス |
+| 同 | `:262` | `await runSerialized(key, () => performCasUpdate(...))` ― 直列化はこの 1 コンテキスト内のみ |
+| 同 | `:364` | `await port.get([key, \`${key}_version\`])` ― verify read（IPC 1回目） |
+| 同 | `:368` | `if (verifyVersion !== currentVersion) throw new ConflictError(...)` ― version 比較 |
+| 同 | `:374` | `await port.set({ [key]: newValue, [\`${key}_version\`]: newVersion })` ― set（IPC 2回目）。隙間に CAS が無い |
+| 同 | `:376` | 注釈「post-write verification always enabled ― closes TOCTOU window」― **実装より広い主張。要修正** |
 | 同 | `:377` | `await verifyPostWrite(port, [key], [newValue], [newVersion])` |
-| `src/utils/storage/storagePort.ts` | `:50-52` | `ChromeStoragePort.get` — `chrome.storage.local.get` へ素通し |
-| 同 | `:53-55` | `ChromeStoragePort.set` — `chrome.storage.local.set` へ素通し（排他なし） |
+| `src/utils/storage/storagePort.ts` | `:50-52` | `ChromeStoragePort.get` ― `chrome.storage.local.get` へ素通し |
+| 同 | `:53-55` | `ChromeStoragePort.set` ― `chrome.storage.local.set` へ素通し（排他なし） |
 | `src/popup/pendingPages.ts` | `:166`, `:214` | popup コンテキストからの `removePendingPages`（保存フロー / discard） |
 | `src/utils/pendingStorage.ts` | `:68` | `PENDING_PAGES_KEY = 'pending_pages'` |
 | 同 | `:221` | `addPendingPage` の `withOptimisticLock`（service worker 側の同一キーへの書き込み） |

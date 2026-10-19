@@ -6,7 +6,7 @@ arch-delivery-loop skill によるコードベース全体（差分スコープ�
 
 - 診断レポート: `/tmp/architecture-review-2026-10-10T0522.md`
 - 差分スコープ: 過去台帳（holistic-1005 32件 / archloop-1006 23件 / archloop-1007 18件 / holistic-1009 20件）で閉じたテーマは対象外
-- 台帳送り消費: F14（cleansingStatsView i18n — i18n カバレッジ改善時トリガー発火 → NN05）、F17（exportLogsPanel limit — export logs panel 触るトリガー発火 → NN05）、F19（connectionTests syncStatusToTop 冗長 — connection tests 触るトリガー発火 → NN13）
+- 台帳送り消費: F14（cleansingStatsView i18n ― i18n カバレッジ改善時トリガー発火 → NN05）、F17（exportLogsPanel limit ― export logs panel 触るトリガー発火 → NN05）、F19（connectionTests syncStatusToTop 冗長 ― connection tests 触るトリガー発火 → NN13）
 
 ## RICE スコアリング
 
@@ -37,8 +37,8 @@ Effort: ストーリーポイント
 ## 実行順（確定）とバッチ計画
 
 RICE 降順（依存を尊重）。同点は「リスク軽減 → 緊急性」の順:
-- **8.0 の 2-way**: NN02（fix、実挙動 drift 解消）を先頭 — 種別規則（fix > refactor）。以後 NN03。
-- **4.0 の 2-way**: NN08（drift 整合、05 依存なし）を先頭 — NN09 は 05 依存のため後 anyway。以後 NN09。
+- **8.0 の 2-way**: NN02（fix、実挙動 drift 解消）を先頭 ― 種別規則（fix > refactor）。以後 NN03。
+- **4.0 の 2-way**: NN08（drift 整合、05 依存なし）を先頭 ― NN09 は 05 依存のため後 anyway。以後 NN09。
 - **3.2 の 2-way**: NN10（fix、allowlist 分類の意図的変更）を先頭。以後 NN11。
 
 | Wave | NN | 内容 | 非重複根拠 |

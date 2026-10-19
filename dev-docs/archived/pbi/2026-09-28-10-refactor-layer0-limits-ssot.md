@@ -120,7 +120,7 @@ git status --short                                       # 期待: 空
 1. 「4. テスト先行」の `src/utils/__tests__/limits-parity.test.ts` を作る。この時点の import は旧パス。`npx vitest run src/utils/__tests__/limits-parity.test.ts` が緑であることを確認する。
 
 **Phase 1: 新モジュール作成と shim 化（コミット 2）**
-2. `src/utils/limits.ts` を作る。中身は `src/messaging/limits.ts` の全 export をそのままコピーする（値・名前・`as const` を変えない）。1 行目の `// @layer 0 — Foundation: pure constants, no dependencies` は残す。ヘッダの `messaging/limits.ts` という名前は `utils/limits.ts` に直す。
+2. `src/utils/limits.ts` を作る。中身は `src/messaging/limits.ts` の全 export をそのままコピーする（値・名前・`as const` を変えない）。1 行目の `// @layer 0 ― Foundation: pure constants, no dependencies` は残す。ヘッダの `messaging/limits.ts` という名前は `utils/limits.ts` に直す。
 3. コピーしたファイル内の 2 つのコメントを直す。(a) 「Round 5 ... A consumer that cannot import messaging (Layer 0 modules) re-declares locally and is caught by the drift guard.」は誤りなので、見出し全体を `// Caps absorbed from per-module literals; each value keeps its original number.` の 1 行に置き換える。(b) `QUERY_CAPS` 直上の「`queryPlan.ts` re-exports this object for the OPFS worker boundary, which cannot import the messaging layer directly.」の段落を削除する（`Both caps live next to MAX_QUERY_LIMIT ...` の文は残す）。
 4. `src/messaging/limits.ts` の全内容を次の 1 行に置き換える。
 
@@ -290,7 +290,7 @@ git commit -m "docs(pbi): 09-28 PBI 10(Layer 0 cap 定数の SSOT 化)をアー�
 
 ## 技術的考慮事項（file:line 付き）
 
-- `src/messaging/limits.ts` の 1 行目は `// @layer 0 — Foundation: pure constants, no dependencies` と自己申告しているが、実態は import 0 の純定数であり、`LAYERS.md` の Layer 0 定義（`src/utils/` 配下の純粋モジュール）から外れる。
+- `src/messaging/limits.ts` の 1 行目は `// @layer 0 ― Foundation: pure constants, no dependencies` と自己申告しているが、実態は import 0 の純定数であり、`LAYERS.md` の Layer 0 定義（`src/utils/` 配下の純粋モジュール）から外れる。
 - 消費は production 23 ファイル（`src/messaging/validators.ts` の `./limits.js` を含む）と test 6 ファイル前後（着手時に `grep -rln "messaging/limits" src` で確定する）。うち `src/utils/crypto/envelope.ts` は `LAYER0_FILES`（`eslint/rules/utils-layer-boundary.mjs`）と `dev-docs/LAYERS.md` の Layer 0 ブロックに載るファイルで、`messaging/limits` を import しており Layer 0 → messaging の逆辺になっている。
 - lint が見逃す構造: `checkStaticImport` の `inLayer0` 分岐は `LAYER1_FILES` / `LAYER2_MODULES` / `BARREL_MODULES` との照合しか行わない。`checkReverseEdge` の `FORBIDDEN_TARGET_LAYERS` は `src/messaging/` を意図的に含まない（`utils/auditLog.ts` の再 export シムが指すため）。結果として Layer 0 ファイルから `src/messaging/*` への static import はどのチェックにも掛からない。
 - コメント drift: `src/messaging/limits.ts` の「Round 5」見出しコメントは「Layer 0 modules can't import messaging → re-declare locally and get caught by drift guard」と主張するが、実際は `envelope.ts` が import している。drift guard はこのケースを検出していない。

@@ -14,12 +14,12 @@
 - 解: `SyncBatchRunner` が `SyncTarget` 2実装を `listPending(limit)` + `markSynced` port に委譲し `isConfigured` は `SettingsReader` 注入に統一。`BATCH_SIZE` 政策を runner に一元化
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — バッチサイズが runner で一元管理される
+Scenario: ハッピーパス ― バッチサイズが runner で一元管理される
   Given `SyncBatchRunner` を生成する
   When `syncBatch` を呼ぶ
   Then Gist と Obsidian で同じ `BATCH_SIZE` 政策が適用される
 
-Scenario: エッジケース — sanitize と成功マークが重複しない
+Scenario: エッジケース ― sanitize と成功マークが重複しない
   Given `syncBatch` で sanitized データを投入する
   When 完了する
   Then `sanitizeForObsidian` と `sqliteClient.mutate` が1箇所で完結する

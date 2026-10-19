@@ -15,21 +15,21 @@
 
 ### 未定義キー参照（英語フォールバック）
 
-- `src/dashboard/settings/perSiteOverrides.ts:148`, `:178` — `getMessageOr('domainRequired', 'Domain is required')`。
+- `src/dashboard/settings/perSiteOverrides.ts:148`, `:178` ― `getMessageOr('domainRequired', 'Domain is required')`。
 - `domainRequired` は `public/_locales/ja/messages.json` にも `public/_locales/en/messages.json` にも存在しない（両ロケール確認済み）。常に英語フォールバックが出る。
 - 本ブランチの追加行で未定義キーを参照しているのはこの 1 件のみ。キー総数は ja 1566 = en 1566、プレースホルダ名不一致 0、新規 42 キーは全て使用済み。
 
 ### 無関係キーの流用（意味が反転）
 
-- `src/dashboard/settings/perSiteOverrides.ts:184` — 削除成功時に `getMessageOr('promptDeleted', 'Deleted')`。ja の実値は「プロンプトを削除しました」（プロンプト管理用キー）。per-site override 削除時にこの文言が出る。
-- `src/dashboard/settings/perSiteOverrides.ts:196` — 「入力ドメインに override が無い」場合に `noPerSiteOverrides` を再利用。ja の実値は「サイト別の上書き設定はありません。」＝**一覧全体が空**の意味。ユーザーが目の前に一覧を見ているのに「設定はありません」と言われる。
+- `src/dashboard/settings/perSiteOverrides.ts:184` ― 削除成功時に `getMessageOr('promptDeleted', 'Deleted')`。ja の実値は「プロンプトを削除しました」（プロンプト管理用キー）。per-site override 削除時にこの文言が出る。
+- `src/dashboard/settings/perSiteOverrides.ts:196` ― 「入力ドメインに override が無い」場合に `noPerSiteOverrides` を再利用。ja の実値は「サイト別の上書き設定はありません。」＝**一覧全体が空**の意味。ユーザーが目の前に一覧を見ているのに「設定はありません」と言われる。
 - 旧実装は `'Deleted'` / `'No override for domain'` の直書きで、少なくとも意味は正しかった。
 
 ### ロケール判定の三系統分裂
 
-- 新規 `getUiLocale()`: `src/dashboard/settings/customPromptManager.ts:62-65` — `navigator.language.startsWith('ja') ? 'ja' : 'en'`（既定 `'en'`）。4 つの inline コピーを集約したと称しつつ**公開関数として export** されたため、以後この基準が正典化する。
-- `getUserLocale()`: `src/utils/localeUtils.ts:16-27` — `chrome.i18n.getUILanguage()` 基準。`docs/i18n-guide.md:49` が正典として案内。
-- `getBrowserLocale()`: `src/utils/customPromptUtils.ts:81-86` — `navigator.language` 基準・既定 `'ja'`。既定値も `getUiLocale` と逆。
+- 新規 `getUiLocale()`: `src/dashboard/settings/customPromptManager.ts:62-65` ― `navigator.language.startsWith('ja') ? 'ja' : 'en'`（既定 `'en'`）。4 つの inline コピーを集約したと称しつつ**公開関数として export** されたため、以後この基準が正典化する。
+- `getUserLocale()`: `src/utils/localeUtils.ts:16-27` ― `chrome.i18n.getUILanguage()` 基準。`docs/i18n-guide.md:49` が正典として案内。
+- `getBrowserLocale()`: `src/utils/customPromptUtils.ts:81-86` ― `navigator.language` 基準・既定 `'ja'`。既定値も `getUiLocale` と逆。
 - Chrome の UI 言語が日本語で `navigator.language` が `en-US` の環境では、プロンプト名・既定システムプロンプト（`customPromptUtils.ts:57`）だけ英語になり、周囲のラベルは日本語になる。
 
 ## BDD 受け入れシナリオ

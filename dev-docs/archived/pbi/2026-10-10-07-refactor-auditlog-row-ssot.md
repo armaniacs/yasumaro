@@ -13,14 +13,14 @@
 
 `{ id: number; provider: string; url: string; created_at: number }` という wire 契約が 8 箇所で宣言:
 
-1. `src/messaging/sqliteRpcClient.ts:111` — `AuditLogRecord`
-2. `src/messaging/sqliteValidators.ts:76` — `AuditLogEntryView`（同一ディレクトリで再宣言）
-3. `src/messaging/auditLogGateway.ts:17` — `AuditLogEntry`
-4. `src/messaging/dashboardSqliteProtocol.ts:161` — インライン（`rows: Array<{...}>`）
-5. `src/background/handlers/dashboardSqlite/deps.ts:75` — インライン
-6. `src/dashboard/dashboardSqliteService.ts:476` — インライン
-7. `src/dashboard/utils/auditLogTsv.ts:10` — `AuditLogEntry`（同名別定義）
-8. `src/utils/sqlite-types.ts:140` — `AuditLogRecord` + `AuditLogEntry`（既に所有候補として実在。`AuditLogEntry extends AuditLogRecord`）
+1. `src/messaging/sqliteRpcClient.ts:111` ― `AuditLogRecord`
+2. `src/messaging/sqliteValidators.ts:76` ― `AuditLogEntryView`（同一ディレクトリで再宣言）
+3. `src/messaging/auditLogGateway.ts:17` ― `AuditLogEntry`
+4. `src/messaging/dashboardSqliteProtocol.ts:161` ― インライン（`rows: Array<{...}>`）
+5. `src/background/handlers/dashboardSqlite/deps.ts:75` ― インライン
+6. `src/dashboard/dashboardSqliteService.ts:476` ― インライン
+7. `src/dashboard/utils/auditLogTsv.ts:10` ― `AuditLogEntry`（同名別定義）
+8. `src/utils/sqlite-types.ts:140` ― `AuditLogRecord` + `AuditLogEntry`（既に所有候補として実在。`AuditLogEntry extends AuditLogRecord`）
 
 field 追加 1 件が 8 ファイル編集を要求。クローズ済み「audit_log codec twins」（decode 関数の双子）とは別角度（型宣言の重複）。
 
@@ -59,7 +59,7 @@ Scenario: 型検査が wire 契約の drift を捉える
 ## 技術的考慮事項
 
 - `dashboardSqliteProtocol.ts` の条件型内のインライン行形状は `AuditLogEntry` 参照に置換（`rows: Array<AuditLogEntry>`）
-- utils/sqlite-types.ts の `AuditLogRecord` は `id` を持たない派生元（`AuditLogEntry extends AuditLogRecord` で id を追加）— 所有先として既に正しい形
+- utils/sqlite-types.ts の `AuditLogRecord` は `id` を持たない派生元（`AuditLogEntry extends AuditLogRecord` で id を追加）― 所有先として既に正しい形
 - プライバシー保証: 変更なし
 
 ## 実装者向け注記

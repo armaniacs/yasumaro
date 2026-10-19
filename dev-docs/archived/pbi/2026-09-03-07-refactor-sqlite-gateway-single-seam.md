@@ -15,7 +15,7 @@ Scenario: dashboard と background が同一 interface
   Then  background と同一の SqliteResult が返る
 
 ## 受け入れ基準
-- [x] sendDashboard の重複 race を sendDashboardRaw に統一（timeout 重複解消）— 全面統合は次ラウンドへ
+- [x] sendDashboard の重複 race を sendDashboardRaw に統一（timeout 重複解消）― 全面統合は次ラウンドへ
 - [x] confirm-token 2重 fetch の race 重複を解消（decorator 化は全面統合時）
 
 ## テスト戦略

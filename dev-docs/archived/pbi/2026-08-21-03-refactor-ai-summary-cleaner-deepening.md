@@ -1,4 +1,4 @@
-# PBI: AiSummaryCleaner — 32ルール表の浅い分散を深い Cleaner moduleに
+# PBI: AiSummaryCleaner ― 32ルール表の浅い分散を深い Cleaner moduleに
 
 ## ユーザーストーリー
 開発者として、`clean(html, opts) → CleanResult` の1メソッドだけを知れば要約のクレンジングが完結する深い `AiSummaryCleaner` module がほしい、なぜなら現在の `CLEANSING_RULES` 表が `storage/defaults.ts` / `rules.ts` / `content/pageState.ts` 等10層に手書き重複し、うち3表で既定値が7ルール食い違い（v6.7.29で修正）、`buildExtractionOptions` 6フラグ→`CleanseOptions` 変換と `content/extractor.ts` 46行のキー一覧にバグが潜むが、各ルールは純粋関数としてテストしやすく真のバグの locality が無いから

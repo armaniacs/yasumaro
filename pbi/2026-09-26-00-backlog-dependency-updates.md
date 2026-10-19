@@ -1,4 +1,4 @@
-# 依存更新ラウンド（2026-09-26）— 未反映 3 件の PBI 化と優先度付け
+# 依存更新ラウンド（2026-09-26）― 未反映 3 件の PBI 化と優先度付け
 
 ## 経緯
 
@@ -27,11 +27,11 @@
 
 ## 実測で確認した技術的事実（2026-09-26）
 
-### `@types/chrome` 0.3.0 — ドロップイン互換を実証
+### `@types/chrome` 0.3.0 ― ドロップイン互換を実証
 
 0.3.0 を仮適用した状態で `npm run type-check`（本体）がエラー 0 件、`npm run type-check:test` の型エラー発生箇所リストが 0.2.9 時点と完全一致。メジャー更新だが実質的な影響はゼロ。
 
-### `jsdom` 30.1.1 — 根因と回避不能性を特定
+### `jsdom` 30.1.1 ― 根因と回避不能性を特定
 
 - 30.1.1 が同梱する `@asamuzakjp/dom-selector` 9.x がセレクタ長上限 `MAX_LENGTH = 2048` を導入
 - 超過セレクタは `buildClassIdSelectors` が生成する結合セレクタのうち `deep`（4191 文字）と `jpLayout`（4714 文字）。他は 1013〜1464 文字で余裕がない
@@ -39,7 +39,7 @@
 - 上限は dom-selector 固有で、Chrome 本体の `querySelectorAll` には存在しない（拡張機能の実行時挙動には無関係）
 - 仮適用時の失敗: 15 ファイル 86 テスト（aiSummaryCleaner 系が中心）。30.0.1 へ戻すと全 PASS
 
-### `typescript` 7.0.2 — 上流ブロッカーを発見
+### `typescript` 7.0.2 ― 上流ブロッカーを発見
 
 - `@typescript-eslint/eslint-plugin@8.70.1`（npm latest）の peer 範囲は `typescript >=4.8.4 <6.1.0`
 - TS 7.0.2 を入れた状態で他パッケージの `npm install` を実行すると ERESOLVE で失敗（実測）。現状の適用はツールチェーン全体を不動化する

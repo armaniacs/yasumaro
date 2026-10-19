@@ -1,5 +1,5 @@
 ---
-title: "Obsidian Weave をはじめよう — ブラウザ閲覧をAI要約付きでObsidianに自動保存する"
+title: "Obsidian Weave をはじめよう ― ブラウザ閲覧をAI要約付きでObsidianに自動保存する"
 emoji: "🕸️"
 type: "idea"
 topics: ["obsidian", "chrome拡張機能", "ai", "生産性", "pkm"]

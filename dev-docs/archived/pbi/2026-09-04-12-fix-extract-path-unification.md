@@ -66,9 +66,9 @@ rg -n "runAiSummaryCleanse|_isTooShort|_overCleansed" src/utils/contentExtractor
 5. archived `2026-08-23-07-refactor-return-info-trap.md` の完遂として INDEX 履歴に注記
 
 ### 落とし穴
-- `_overCleansed` 判定は `aiSummaryOriginalBytes`（preCleanseText のバイト）を使う — PBI 04 でゲート化した値。ByteMeter 移行時に 0 になるとフォールバック判定が変わる（回帰テスト: newsIntegration の本文保護ケース）
-- `content = document.body?.innerText` フォールバックは jsdom で innerText 非実装の可能性 — 既存挙動を壊さないこと
-- ~100 テスト呼び出し site が returnInfo を直接渡している — 互換のため旧引数は受理しつつ無視するか、テストをまとめて移行する（後者を推奨）
+- `_overCleansed` 判定は `aiSummaryOriginalBytes`（preCleanseText のバイト）を使う ― PBI 04 でゲート化した値。ByteMeter 移行時に 0 になるとフォールバック判定が変わる（回帰テスト: newsIntegration の本文保護ケース）
+- `content = document.body?.innerText` フォールバックは jsdom で innerText 非実装の可能性 ― 既存挙動を壊さないこと
+- ~100 テスト呼び出し site が returnInfo を直接渡している ― 互換のため旧引数は受理しつつ無視するか、テストをまとめて移行する（後者を推奨）
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

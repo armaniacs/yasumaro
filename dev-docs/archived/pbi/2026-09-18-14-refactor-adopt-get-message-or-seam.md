@@ -12,7 +12,7 @@ backlog: [2026-09-18-00-backlog-holistic-0918c.md](2026-09-18-00-backlog-holisti
 
 `src/utils/i18n.ts` の `getMessageOr(key, fallback, substitutions?)` は `getMessage(key) || fallback` idiom の SSOT である（i18n.ts 60行目付近のコメントに設計意図を明記）。だが同一 idiom が残存する（着手時に行番号を再確認すること）:
 
-- `src/dashboard/panels/staticForm/privacySettingsPanel.ts`（約16サイト — consented / confirmWithdraw 系 / clearAll 系）
+- `src/dashboard/panels/staticForm/privacySettingsPanel.ts`（約16サイト ― consented / confirmWithdraw 系 / clearAll 系）
 - `src/content/privacyDialog.ts`（title/body/saveLabel/cancelLabel/statusLabel）
 - `src/background/notificationHelper.ts`（obsidianSyncFailed / notifyPrivacyConfirm 系）
 - `src/background/pipeline/resultBuilder.ts`（recordingFailed / saveToObsidian）
@@ -21,7 +21,7 @@ backlog: [2026-09-18-00-backlog-holistic-0918c.md](2026-09-18-00-backlog-holisti
 - `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts`（settingsSaved / settingsSaveError）
 - `src/content/visitReporter.ts`（連鎖 fallback: getMessage(k1) || getMessage(k2) || literal）
 - `src/background/handlers/contextMenuHandlers.ts`（contextMenuRecord）
-- `src/background/handlers/recordingHandlers.ts`（resolver コールバック経由 — 要確認）
+- `src/background/handlers/recordingHandlers.ts`（resolver コールバック経由 ― 要確認）
 
 対象外: fallback 無しの素 `chrome.i18n.getMessage(key)` 呼び出し（privatePageDialog・pendingPages の一部）、`popup/errorUtils.ts` の `getMsgWithCache`（キャッシュ機構が目的）、`utils/i18n.ts`・`i18nPlural.ts`・`localeUtils.ts` 自身。
 

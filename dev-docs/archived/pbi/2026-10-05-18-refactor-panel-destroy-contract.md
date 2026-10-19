@@ -1,4 +1,4 @@
-# PBI: `PanelLifecycle.destroy` は一度も呼ばれず、`deactivate` は実装者がゼロ — 契約と実装が逆向きにずれている
+# PBI: `PanelLifecycle.destroy` は一度も呼ばれず、`deactivate` は実装者がゼロ ― 契約と実装が逆向きにずれている
 
 ## ユーザーストーリー
 

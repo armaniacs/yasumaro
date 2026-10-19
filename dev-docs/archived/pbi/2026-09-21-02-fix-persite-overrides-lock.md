@@ -70,11 +70,11 @@ Scenario: 削除書き込みが単一 writer 経由で行われ、失敗が可�
 ## 実装者向け注記
 
 ### 現状の証拠
-- upsert 経路の二重書き込み: `src/dashboard/settings/perSiteOverrides.ts:176-184` — `loadOverrides` と `upsertDomainOverride` で `next` を作り `saveOverrides(next)` した後に `setStatus('Saved')` を表示し、その後で raw の `await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next })` を実行して `catch {}` で握り潰す
-- delete 経路の二重書き込み: `src/dashboard/settings/perSiteOverrides.ts:190-199` — `saveOverrides(next)` 後に `setStatus('Deleted')` を表示し、その後で raw の `await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next })` を実行して `catch {}` で握り潰す
-- repository 経由の正規書き込み: `src/dashboard/settings/perSiteOverrides.ts:70-76` — `saveOverrides` は `settingsRepository.setAll` による delta 書き込み
-- lock 規律: `src/utils/storage/SettingsRepository.ts:199-228` — `writeSettings` が `StorageTransaction` の `withLock('settings', ...)` 経由で保存する。raw set はこの規律を迂回するロック無しフル値書き込み
-- lock 無しの RMW: `src/dashboard/settings/perSiteOverrides.ts:63-68` — `loadOverrides` は `settingsRepository.getAll` の読み取りであり、`loadOverrides` から `upsert` を経て `saveOverrides` に至る RMW 自体は optimistic lock を使わない
+- upsert 経路の二重書き込み: `src/dashboard/settings/perSiteOverrides.ts:176-184` ― `loadOverrides` と `upsertDomainOverride` で `next` を作り `saveOverrides(next)` した後に `setStatus('Saved')` を表示し、その後で raw の `await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next })` を実行して `catch {}` で握り潰す
+- delete 経路の二重書き込み: `src/dashboard/settings/perSiteOverrides.ts:190-199` ― `saveOverrides(next)` 後に `setStatus('Deleted')` を表示し、その後で raw の `await chrome.storage.local.set({ [StorageKeys.DOMAIN_CLEANSING_OVERRIDES]: next })` を実行して `catch {}` で握り潰す
+- repository 経由の正規書き込み: `src/dashboard/settings/perSiteOverrides.ts:70-76` ― `saveOverrides` は `settingsRepository.setAll` による delta 書き込み
+- lock 規律: `src/utils/storage/SettingsRepository.ts:199-228` ― `writeSettings` が `StorageTransaction` の `withLock('settings', ...)` 経由で保存する。raw set はこの規律を迂回するロック無しフル値書き込み
+- lock 無しの RMW: `src/dashboard/settings/perSiteOverrides.ts:63-68` ― `loadOverrides` は `settingsRepository.getAll` の読み取りであり、`loadOverrides` から `upsert` を経て `saveOverrides` に至る RMW 自体は optimistic lock を使わない
 - 失敗像: dashboard 複数タブや別フローとの並行書き込みで、raw set が lock 経由の delta 書き込みと相互に上書きする(last-writer-wins)。quota 等で raw set が throw しても利用者には既に `Saved` が表示済みで黙ってロストする
 
 ## Definition of Done

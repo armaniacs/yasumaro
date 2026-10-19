@@ -97,9 +97,9 @@ Scenario: 4. 未使用の export が残っていない（裁定の反映）
 | `src/background/recordingAdmission.ts` | 78 / 91 | 同意ゲートの実使用箇所（記録の受付判定） |
 | `src/background/handlers/tabBadgeResolver.ts` | 57 | 同意ゲートの実使用箇所（バッジ表示） |
 | `src/background/handlers/MessageRouter.ts` | 260-262 | 手動保存系のメッセージ登録 |
-| `src/background/handlers/recordingHandlers.ts` | — | 手動保存の経路（`recordingAdmission` を通る） |
-| `src/background/syncTargets/gistSyncTarget.ts` | — | Gist 同期の入口（記録を送る） |
-| `dev-docs/SECURITY_REVIEW_GUIDE.md` | — | 一覧の記載先（同意ゲートの節があるか確認する） |
+| `src/background/handlers/recordingHandlers.ts` | ― | 手動保存の経路（`recordingAdmission` を通る） |
+| `src/background/syncTargets/gistSyncTarget.ts` | ― | Gist 同期の入口（記録を送る） |
+| `dev-docs/SECURITY_REVIEW_GUIDE.md` | ― | 一覧の記載先（同意ゲートの節があるか確認する） |
 
 ### 最小変更の選択肢
 
@@ -113,7 +113,7 @@ Scenario: 4. 未使用の export が残っていない（裁定の反映）
 
 **推奨: 1 を主とし、非記録の外部送信に新たにゲートが要る操作が見つかった場合だけ 2 を部分適用する。** どちらを選んでも「一覧の文書化」と「ゲート対象のテスト固定」は必須。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 1) requireConsent の呼び出し元（production は 0 のはず）
@@ -159,11 +159,11 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 **疑問**: なぜ同意ゲートの実入口が `isRecordingAllowed` に一本化されているのに、未使用の `requireConsent()` が残っているのか。
 
-1. **なぜ存在するのか** — v4.1.3 で「同意が必要な機能のガード」として作られた。`git log -S "requireConsent("` の結果は定義コミット `e68f27fd` とテスト追加コミット `bca3d211` の 2 件だけで、**呼び出し元のコミットが存在しない**（＝生まれた時から未配線）。
-2. **なぜ呼ばれないのか** — 記録の入口は `RecordingAdmission` が同意を判定し `{ rejected: { reason: 'privacy_consent_required' } }` を返す契約。throw するガードはこれに合わず、message handler では未処理 rejection になる。
-3. **なぜ削除されずに残ったのか** — export され、専用テスト 2 件まで付いていた。**テストが green であることが「使われている」という錯覚を支え**、未使用の可視化を妨げた。
-4. **なぜ残ることが問題か** — 新しい外部送信の入口を足す実装者が「これを使えばよい」と誤解する。実際の seam は記録の語彙（`isRecordingAllowed`）に埋もれており、再利用すべき入口が分からない。
-5. **なぜゲート漏れにつながるのか** — **「同意が無いときに実行してはいけない操作」の一覧がどこにも無い**。判断が実装者の記憶に依存し、レビューでも照合できない。
+1. **なぜ存在するのか** ― v4.1.3 で「同意が必要な機能のガード」として作られた。`git log -S "requireConsent("` の結果は定義コミット `e68f27fd` とテスト追加コミット `bca3d211` の 2 件だけで、**呼び出し元のコミットが存在しない**（＝生まれた時から未配線）。
+2. **なぜ呼ばれないのか** ― 記録の入口は `RecordingAdmission` が同意を判定し `{ rejected: { reason: 'privacy_consent_required' } }` を返す契約。throw するガードはこれに合わず、message handler では未処理 rejection になる。
+3. **なぜ削除されずに残ったのか** ― export され、専用テスト 2 件まで付いていた。**テストが green であることが「使われている」という錯覚を支え**、未使用の可視化を妨げた。
+4. **なぜ残ることが問題か** ― 新しい外部送信の入口を足す実装者が「これを使えばよい」と誤解する。実際の seam は記録の語彙（`isRecordingAllowed`）に埋もれており、再利用すべき入口が分からない。
+5. **なぜゲート漏れにつながるのか** ― **「同意が無いときに実行してはいけない操作」の一覧がどこにも無い**。判断が実装者の記憶に依存し、レビューでも照合できない。
 
 **原因**: 同意ゲートの**適用範囲が文書化されていない**こと。その空白を、名前だけがそれらしい未使用の関数が埋め、「入口は 2 つある」という誤った印象を与えていた。
 
@@ -185,10 +185,10 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 ### 実装
 
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 「Privacy-consent gating: what must ask, and what must not」節を追加（seam の説明＋上表＋新規経路の判定ルール）。
-- `src/utils/storage/privacyConsent.ts` — `requireConsent()` を削除。`hasPrivacyConsent()` の doc に「同意状態の読み出し口は 1 つ（composition → `isRecordingAllowed` → `RecordingAdmission`）。新しい外部送信経路は一覧に足すこと」を明記。
-- `src/popup/__tests__/privacyConsent.test.ts` — `requireConsent` の import と `describe` ブロック（2 テスト）を削除。
-- `src/background/__tests__/backgroundComposition.test.ts` — 同意 seam の配線を pin するテストを追加（同意なし → `admit('valid-visit')` が `privacy_consent_required` で拒否）。
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― 「Privacy-consent gating: what must ask, and what must not」節を追加（seam の説明＋上表＋新規経路の判定ルール）。
+- `src/utils/storage/privacyConsent.ts` ― `requireConsent()` を削除。`hasPrivacyConsent()` の doc に「同意状態の読み出し口は 1 つ（composition → `isRecordingAllowed` → `RecordingAdmission`）。新しい外部送信経路は一覧に足すこと」を明記。
+- `src/popup/__tests__/privacyConsent.test.ts` ― `requireConsent` の import と `describe` ブロック（2 テスト）を削除。
+- `src/background/__tests__/backgroundComposition.test.ts` ― 同意 seam の配線を pin するテストを追加（同意なし → `admit('valid-visit')` が `privacy_consent_required` で拒否）。
 
 ### 検証
 
@@ -218,10 +218,10 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 | # | 指摘 | 深刻度 | 起票先 |
 |---|---|---|---|
-| 1 | `offlineQueueProcessor.ts:119,140` — オフライン再送アラームが、同意撤回後もキューに残った記録を AI / Obsidian へ送る（撤回はキューを消さない。TTL 7 日、アラームは約 5 分ごと） | HIGH | PBI 2026-10-19-10 |
-| 2 | `service-worker.ts:194` — プライバシー確認通知の「保存」ボタンが `admit()` を通さず `recordingPipeline.record` を呼ぶ（撤回後のクリックで再記録される） | HIGH | PBI 2026-10-19-10 |
-| 3 | `reviewSummaryGenerator.ts:299` — 週次/月次レビュー要約が `REVIEW_SUMMARY_ENABLED` しか見ず、期間内の全記録を AI へ送る | HIGH | PBI 2026-10-19-10 |
-| 4 | `handlers/dashboardSqlite/coreCrudHandler.ts:114` — ダッシュボードの「Obsidian へ追記」が `RecordingAdmission` の外で既存行を Obsidian へ送る（dashboardSqlite に同意コードが 1 つも無い） | HIGH | PBI 2026-10-19-11 |
+| 1 | `offlineQueueProcessor.ts:119,140` ― オフライン再送アラームが、同意撤回後もキューに残った記録を AI / Obsidian へ送る（撤回はキューを消さない。TTL 7 日、アラームは約 5 分ごと） | HIGH | PBI 2026-10-19-10 |
+| 2 | `service-worker.ts:194` ― プライバシー確認通知の「保存」ボタンが `admit()` を通さず `recordingPipeline.record` を呼ぶ（撤回後のクリックで再記録される） | HIGH | PBI 2026-10-19-10 |
+| 3 | `reviewSummaryGenerator.ts:299` ― 週次/月次レビュー要約が `REVIEW_SUMMARY_ENABLED` しか見ず、期間内の全記録を AI へ送る | HIGH | PBI 2026-10-19-10 |
+| 4 | `handlers/dashboardSqlite/coreCrudHandler.ts:114` ― ダッシュボードの「Obsidian へ追記」が `RecordingAdmission` の外で既存行を Obsidian へ送る（dashboardSqlite に同意コードが 1 つも無い） | HIGH | PBI 2026-10-19-11 |
 
 **教訓（記録）**: 「ゲートは 1 箇所」という主張は、**受付（admit）と実行（execute）を混同すると嘘になる**。同意は状態であり、受付時の真偽はその後も真であり続けない（撤回できる）。一覧を書くときは「いつ読むか」を列として持つ必要がある。
 
@@ -232,7 +232,7 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 独立レビューで本件が指摘された元 PBI
-- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う（前者は 2026-10-19 完了）
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 同意ゲート一覧の記載先
+- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` ― 独立レビューで本件が指摘された元 PBI
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](2026-10-19-06-fix-gist-tranco-redirect-policy.md) / `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` ― 同じ `gistSyncTarget.ts`。Gist 同期の同意要件を扱う（前者は 2026-10-19 完了）
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 同意状態の読み出しの前提（同じ `hasPrivacyConsent()` を共有）
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― 同意ゲート一覧の記載先

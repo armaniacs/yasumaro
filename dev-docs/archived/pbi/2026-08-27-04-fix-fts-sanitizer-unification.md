@@ -15,12 +15,12 @@
 - 解: SSOT を `sanitizeFtsTerm` に集約し operator 除去を含めるか、tag 側に委譲するかを決定し両テストを一致させる
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 正常語は保持される
+Scenario: ハッピーパス ― 正常語は保持される
   Given クエリ `hello world 日本語` を渡す
   When `sanitizeFtsTerm` を呼ぶ
   Then 入力と同値が返る
 
-Scenario: セキュリティ — FTS 演算子は無害化される
+Scenario: セキュリティ ― FTS 演算子は無害化される
   Given クエリ `foo OR bar AND baz` を渡す
   When `sanitizeFtsTerm` を呼ぶ
   Then `OR`/`AND` は除去または空白化され `foo bar baz` になる

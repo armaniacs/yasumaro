@@ -1,4 +1,4 @@
-# PBI 2026-09-12-37 — PreviewView の dead interface 4 メンバー削除
+# PBI 2026-09-12-37 ― PreviewView の dead interface 4 メンバー削除
 
 - **種別**: 🔧非功能追加（refactor・interface 縮小）
 - **優先度**: 5 位 / RICE **6.4**（R4 × I0.5 × C80% / E0.25人日）
@@ -6,7 +6,7 @@
 
 ## 背景（なぜ）
 
-`PreviewView` interface は 12 メンバーを宣伝するが production は 8 を使用（previewPresenter.ts は show/close を inline 化 — :197-205,:248-255）。`setCleansingInfo` は空 body（previewView.ts:125-128）、`resetBodyWidth` は presenter の `DEFAULT_WIDTH` を重複（:130-132、ハードコード '320px'）。唯一の caller は previewView.test.ts:168-171 で dead behavior を assert している。
+`PreviewView` interface は 12 メンバーを宣伝するが production は 8 を使用（previewPresenter.ts は show/close を inline 化 ― :197-205,:248-255）。`setCleansingInfo` は空 body（previewView.ts:125-128）、`resetBodyWidth` は presenter の `DEFAULT_WIDTH` を重複（:130-132、ハードコード '320px'）。唯一の caller は previewView.test.ts:168-171 で dead behavior を assert している。
 
 ## スコープ
 

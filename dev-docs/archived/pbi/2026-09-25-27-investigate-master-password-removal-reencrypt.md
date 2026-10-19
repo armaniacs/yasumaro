@@ -18,7 +18,7 @@
 ## 優先度
 
 - 順位: 27 / 30
-- RICEスコア: 0.33（Reach=1 / Impact=2 / Confidence=50% / Effort=3 SP）— 依存（25 完了後）
+- RICEスコア: 0.33（Reach=1 / Impact=2 / Confidence=50% / Effort=3 SP）― 依存（25 完了後）
 
 ## BDD受け入れシナリオ
 

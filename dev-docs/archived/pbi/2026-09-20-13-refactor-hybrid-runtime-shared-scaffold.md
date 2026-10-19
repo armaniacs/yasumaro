@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 2 / 5
 - RICEスコア: 6.4（Reach=8 / Impact=1 / Confidence=80% / Effort=1.0週）
-- 根拠: 現在3ファイルが動いているため Impact は 1 だが、テキスト処理クラスタは直近最多変更領域で、dedup 本番統合(コミット 0ed11095 の NOTE)の着手が近い。統合の直前に runtime を整えると二度手間が消える。旧候補5(インデックス再マップ契約)を統合 — split ゲートの所有者はこの runtime に宿るため
+- 根拠: 現在3ファイルが動いているため Impact は 1 だが、テキスト処理クラスタは直近最多変更領域で、dedup 本番統合(コミット 0ed11095 の NOTE)の着手が近い。統合の直前に runtime を整えると二度手間が消える。旧候補5(インデックス再マップ契約)を統合 ― split ゲートの所有者はこの runtime に宿るため
 
 ## ビジネス価値
 4つ目の WASM コア追加コストが「儀式コピー ~100行 + 手順4点」から「コア呼び出し + 固有ポリシー」に減る。ログ方針・ガード意味論・split ゲートの修正が1箇所に集約される(locality)
@@ -69,8 +69,8 @@ Scenario: PII サイズ上限エラー文字列が1箇所で定義される
 ## 実装者向け注記
 
 ### 現状の証拠
-- 儀式の逐語コピー: `src/background/pipeline/piiSanitizeHybrid.ts`(187行) / `src/utils/sentenceExtractorHybrid.ts`(136行) / `src/utils/contentDedupHybrid.ts`(178行) — `wasmAvailable` probe ~25行×3、`U32_MAX` ガード(同コメント)×3、catch→warn→addLog→TS fallback 末尾×3
-- remap 慣習: `sentenceExtractorHybrid.ts:109-127` / `contentDedupHybrid.ts:146-169` — split 総数一致ゲート+範囲チェックが各 hybrid 内の ~10行
+- 儀式の逐語コピー: `src/background/pipeline/piiSanitizeHybrid.ts`(187行) / `src/utils/sentenceExtractorHybrid.ts`(136行) / `src/utils/contentDedupHybrid.ts`(178行) ― `wasmAvailable` probe ~25行×3、`U32_MAX` ガード(同コメント)×3、catch→warn→addLog→TS fallback 末尾×3
+- remap 慣習: `sentenceExtractorHybrid.ts:109-127` / `contentDedupHybrid.ts:146-169` ― split 総数一致ゲート+範囲チェックが各 hybrid 内の ~10行
 - PII エラー文字列の二重所有: `piiSanitizeHybrid.ts:105-116,161-170` が `piiSanitizer.ts` の上限メッセージを手動再現
-- wrapper 層: `src/wasm/{pii-sanitizer,textrank,sentence-dedup}/index.ts` — `initExtensionWasm` 1行 + try/catch は薄く、対象外
+- wrapper 層: `src/wasm/{pii-sanitizer,textrank,sentence-dedup}/index.ts` ― `initExtensionWasm` 1行 + try/catch は薄く、対象外
 - 手順漏れの実績: dedup は public コピー延期中で本番呼び出しは 404 になる(wxt.config.ts publicAssets の NOTE 参照)

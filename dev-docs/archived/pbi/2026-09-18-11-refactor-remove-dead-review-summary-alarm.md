@@ -12,9 +12,9 @@ backlog: [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holisti
 
 alarmRegistry 移行（PBI 2026-09-15-15）後、`src/background/reviewSummaryAlarm.ts`（103行）の production import はゼロである（実測: `grep -rn reviewSummaryAlarm src testDir` は自ファイルとテストのみを指す）。以下が残存する:
 
-1. `reviewSummaryAlarm.ts` — `initializeReviewSummaryAlarms` / `setupReviewSummaryAlarmListener` が `alarmRegistry.ts` の `installReviewSummary` と同じ weekly/monthly アラームを clear/create する第2経路。`getNextMondayAt` / `getNextMonthFirstDayAt` も byte-identical で複製（reviewSummaryAlarm.ts 75-103行目付近 対 alarmRegistry.ts 102-120行目付近）
-2. `src/background/__tests__/reviewSummaryAlarm.test.ts` — 死モジュール専用テスト（約133行）
-3. `src/background/__tests__/service-worker.test.ts` — 防御的 mock（`mockReviewSummaryAlarm` 定義・`vi.mock`）と、`expect(mockReviewSummaryAlarm).toBeDefined()` のみを行う形骸テスト（'shares one review summary generator between the alarm and message paths'）。実 wiring は alarmRegistry.test.ts が pin 済み
+1. `reviewSummaryAlarm.ts` ― `initializeReviewSummaryAlarms` / `setupReviewSummaryAlarmListener` が `alarmRegistry.ts` の `installReviewSummary` と同じ weekly/monthly アラームを clear/create する第2経路。`getNextMondayAt` / `getNextMonthFirstDayAt` も byte-identical で複製（reviewSummaryAlarm.ts 75-103行目付近 対 alarmRegistry.ts 102-120行目付近）
+2. `src/background/__tests__/reviewSummaryAlarm.test.ts` ― 死モジュール専用テスト（約133行）
+3. `src/background/__tests__/service-worker.test.ts` ― 防御的 mock（`mockReviewSummaryAlarm` 定義・`vi.mock`）と、`expect(mockReviewSummaryAlarm).toBeDefined()` のみを行う形骸テスト（'shares one review summary generator between the alarm and message paths'）。実 wiring は alarmRegistry.test.ts が pin 済み
 
 削除テスト: 3ファイルを削除すると、複製された install ロジック・schedule helper・二重経路が消え、production 挙動は不変（production import が存在しないため）。
 
@@ -53,5 +53,5 @@ Scenario: 形骸テストの除去後も generator 共有は pin され続ける
 ## 実装ガイド
 
 - 着手時点での確認ポイント: `grep -rn "reviewSummaryAlarm"` で参照ゼロを再確認してから削除する（本 PBI 作成時に実測済みだが行番号はズレる）
-- `sessionAlarmsManager.ts` は別物（compat shim として compositionManifest が使用中）— 触れないこと
+- `sessionAlarmsManager.ts` は別物（compat shim として compositionManifest が使用中）― 触れないこと
 - git mv による pbi アーカイブ・INDEX 編集は統合側が行う

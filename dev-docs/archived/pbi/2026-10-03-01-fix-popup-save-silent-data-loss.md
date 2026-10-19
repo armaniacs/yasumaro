@@ -14,8 +14,8 @@
 
 ## 背景 (evidence, verified)
 
-- `src/popup/pendingPages.ts:116-125` — `recordPendingPage` の戻り値を検査せず、`removePendingPages` を無条件実行。gateway (`src/messaging/pendingRecordGateway.ts:75-84`) は全失敗を `{success:false}` に正規化して reject しないため、外側 catch (`:127-129`) は reject 時にしか発火しない → データが消えたのに UI は成功扱い。
-- `src/popup/pendingPages.ts:94,96` — `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を無視 (`invalid-pattern` は本番到達可能 / `no-domain` はテスト限定、writer `src/popup/whitelistWriter.ts:46-58`)。
+- `src/popup/pendingPages.ts:116-125` ― `recordPendingPage` の戻り値を検査せず、`removePendingPages` を無条件実行。gateway (`src/messaging/pendingRecordGateway.ts:75-84`) は全失敗を `{success:false}` に正規化して reject しないため、外側 catch (`:127-129`) は reject 時にしか発火しない → データが消えたのに UI は成功扱い。
+- `src/popup/pendingPages.ts:94,96` ― `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を無視 (`invalid-pattern` は本番到達可能 / `no-domain` はテスト限定、writer `src/popup/whitelistWriter.ts:46-58`)。
 - 部分成功: バッチ内で reject すると `removePendingPages` が未実行のまま残り、記録済み URL が pending に残留 → 再試行で重複記録。
 - バックグラウンドの再登録 fire-and-forget (`recordingOutcome.ts:64` の `void addPendingPage`) が `PENDING_PAGES_KEY` 上の last-write 競合になり得る。
 
@@ -47,10 +47,10 @@ Scenario: 白リスト追加に失敗したことが表示される
 
 ## 受け入れ基準 (file-scoped)
 
-- [x] `src/popup/pendingPages.ts:116-123` — `recordPendingPage` の戻り値 `{success:false}` を検査し、失敗を `reportActionFailure` 経由で報告する (現在は無視)
-- [x] `src/popup/pendingPages.ts:125` — `removePendingPages` を記録結果に応じて実行し、失敗 URL が pending に残る仕様を明文化する
-- [x] `src/popup/pendingPages.ts:127-129` — reject 経由だけでなく result 経由の失敗でも報告が到達する
-- [x] `src/popup/pendingPages.ts:94,96` — `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を検査して報告する (現在は無視)
+- [x] `src/popup/pendingPages.ts:116-123` ― `recordPendingPage` の戻り値 `{success:false}` を検査し、失敗を `reportActionFailure` 経由で報告する (現在は無視)
+- [x] `src/popup/pendingPages.ts:125` ― `removePendingPages` を記録結果に応じて実行し、失敗 URL が pending に残る仕様を明文化する
+- [x] `src/popup/pendingPages.ts:127-129` ― reject 経由だけでなく result 経由の失敗でも報告が到達する
+- [x] `src/popup/pendingPages.ts:94,96` ― `addDomainToWhitelist` / `addPathToWhitelist` の `{ok:false}` を検査して報告する (現在は無視)
 - [x] 一括保存で一部のみ成功した場合、未成功 URL が pending に残り、再試行で重複記録が起きないことがテストで固定される (`recordingOutcome.ts:64` の fire-and-forget 登録との last-write 競合を考慮)
 
 ## テスト戦略

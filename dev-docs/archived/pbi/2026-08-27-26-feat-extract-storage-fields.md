@@ -14,12 +14,12 @@
 - 解: `CommonStorageFields` に `toMetadataPatch(opts)`/`toBrowsingLogRecord(contentEnabled)` を生やし `saveMetadataStep` の20本 `if` を削除
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 40 field が正しく抽出される
+Scenario: ハッピーパス ― 40 field が正しく抽出される
   Given 40 field を持つ `BrowsingLogRecord` を渡す
   When `CommonStorageFields.toMetadataPatch()` を呼ぶ
   Then `maskedCount:0` が `null` に潰れず正しく保持される
 
-Scenario: エッジケース — `contentEnabled` で分岐が正しく動作する
+Scenario: エッジケース ― `contentEnabled` で分岐が正しく動作する
   Given `contentEnabled: false` の場合
   When `toBrowsingLogRecord` を呼ぶ
   Then `content` が正しく除外される

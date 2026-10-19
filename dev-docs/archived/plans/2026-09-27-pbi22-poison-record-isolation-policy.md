@@ -10,15 +10,15 @@ PBI: `pbi/2026-09-25-22-investigate-pending-queue-poison-record.md`（investigat
 
 | 項目 | PBI 前提 | 実測現状 |
 |---|---|---|
-| キュー上限 | 5,000 件 | **500 件**（`MAX_PENDING_RECORDS`）— ドリフト |
-| chunk | 50 件 | 50 件（`BATCH_SIZE`）— 一致 |
-| retry 上限 | 5 回 drop | 5 回（`MAX_RETRY_COUNT`）— 一致 |
-| TTL | 7 日 | **24 時間**（`TTL_MS`）— ドリフト |
-| 「50KB・200 件・TTL 7 日・1 cycle 20 件」 | 本キューの制約として記載 | **別キュー（offlineNetworkQueue）の制約**。pendingSqliteQueue には存在しない — 前提の混同 |
-| throw 時の挙動 | catch されず flush 全体が止まる | **`flushBatch` が chunk 単位で catch し継続**（`persistentRetryQueue.ts:311-327`）— ドリフト。records は storage に残る点は一致 |
+| キュー上限 | 5,000 件 | **500 件**（`MAX_PENDING_RECORDS`）― ドリフト |
+| chunk | 50 件 | 50 件（`BATCH_SIZE`）― 一致 |
+| retry 上限 | 5 回 drop | 5 回（`MAX_RETRY_COUNT`）― 一致 |
+| TTL | 7 日 | **24 時間**（`TTL_MS`）― ドリフト |
+| 「50KB・200 件・TTL 7 日・1 cycle 20 件」 | 本キューの制約として記載 | **別キュー（offlineNetworkQueue）の制約**。pendingSqliteQueue には存在しない ― 前提の混同 |
+| throw 時の挙動 | catch されず flush 全体が止まる | **`flushBatch` が chunk 単位で catch し継続**（`persistentRetryQueue.ts:311-327`）― ドリフト。records は storage に残る点は一致 |
 | success response の件数照合 | `inserted + skipped < chunk.length` を確認せず捨てる | 一致。`SqliteClientLike` 型は `success` のみ参照し `count` すら読まない |
-| row error の扱い | 成功 response に畳み込まれる | 一致（`crudHandlers.ts:121-140` — per-row catch で何も加算せず通過） |
-| flush call site | 3 箇所（enqueue・startup・periodic） | flush は **2 箇所**（lifecycleHandlers・alarmRegistry）。saveSqliteStep は enqueue のみ — 呼称のドリフト |
+| row error の扱い | 成功 response に畳み込まれる | 一致（`crudHandlers.ts:121-140` ― per-row catch で何も加算せず通過） |
+| flush call site | 3 箇所（enqueue・startup・periodic） | flush は **2 箇所**（lifecycleHandlers・alarmRegistry）。saveSqliteStep は enqueue のみ ― 呼称のドリフト |
 | 混合 chunk・件数不一致のテスト | 存在しない | 一致（存在しないことを確認） |
 
 ## 1. 5 Whys（事実 → 裁定 → 根拠 → 残存リスク）
@@ -63,7 +63,7 @@ PBI: `pbi/2026-09-25-22-investigate-pending-queue-poison-record.md`（investigat
 ### Q5: 実データなしに裁定できるのか
 
 - **事実**: production の poison incident データは存在しない（「実データ待ち」の正体）。
-- **裁定**: synthetic poison（制約違反 row を混ぜた 1+N 混合 chunk）による推論と code facts で裁定する。実データは不要 — 方式の正しさは response 契約と判定表で決まり、個別の poison 内容には依存しない。
+- **裁定**: synthetic poison（制約違反 row を混ぜた 1+N 混合 chunk）による推論と code facts で裁定する。実データは不要 ― 方式の正しさは response 契約と判定表で決まり、個別の poison 内容には依存しない。
 - **根拠**: 分離方式は「失敗の特定方法」の設計であり、特定の poison 標本を必要としない。
 - **残存リスク**: 未知の failure mode（想定外の row error 種別）は (B) の index に載らず count mismatch 側に落ちる。mismatch を「残す」扱いにすることで安全側に倒している。
 

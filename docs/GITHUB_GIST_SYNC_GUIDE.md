@@ -66,7 +66,7 @@ The PAT is encrypted before storage, just like other API keys.
 
 ### Relationship to Obsidian Sync
 
-GitHub Gist sync and Obsidian sync run in parallel as independent sync targets. A failure in one does not affect the other. You can enable both simultaneously — for example, using Obsidian as your primary record while also keeping a Gist copy for access when you're away from your main machine.
+GitHub Gist sync and Obsidian sync run in parallel as independent sync targets. A failure in one does not affect the other. You can enable both simultaneously ― for example, using Obsidian as your primary record while also keeping a Gist copy for access when you're away from your main machine.
 
 ### Troubleshooting
 

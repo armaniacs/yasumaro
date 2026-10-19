@@ -10,8 +10,8 @@ PBI 2026-09-01-03（06b）でデータソースを `PROVIDER_REGISTRY` に統合
 - [x] `ProviderRegistryEntry` に UI メタデータを追加: `labelI18nKey` / `fieldPlaceholders?` / `supportsCustomPrompt` / `settingsBlockKind`（`'generic' | 'models-dev' | 'built-in-ai'`）。Catalog は局所化文字列を持たず i18n キー名のみ。registry の Map 挿入順を dropdown 順（gemini, openai, openai2, lm-studio, ollama, openai-compatible, built-in-ai）に
 - [x] 新規 `src/dashboard/aiProviderCatalogView.ts`:
   - `providerIdsInOrder()` = `[...PROVIDER_CATALOG.keys()]`
-  - `renderProviderOptions(sel, { includeNone?, customPrompt? })` — 現在値を保持しつつ `<option>` を再生成。`customPrompt` は `supportsCustomPrompt` のみ + `<option value="all">`
-  - `renderProviderSettings(container, providerId)` — `settingsBlockKind` で分岐して DOM を構築。element id / `data-storage-key` / `data-i18n-input-placeholder` は旧静的マークアップと完全一致（`KEY_TO_INPUT_ID` map）。末尾で `applyI18n(container)` を呼ぶ（生成ノードへの i18n 適用）
+  - `renderProviderOptions(sel, { includeNone?, customPrompt? })` ― 現在値を保持しつつ `<option>` を再生成。`customPrompt` は `supportsCustomPrompt` のみ + `<option value="all">`
+  - `renderProviderSettings(container, providerId)` ― `settingsBlockKind` で分岐して DOM を構築。element id / `data-storage-key` / `data-i18n-input-placeholder` は旧静的マークアップと完全一致（`KEY_TO_INPUT_ID` map）。末尾で `applyI18n(container)` を呼ぶ（生成ノードへの i18n 適用）
 - [x] B レイアウト: `priorityListView.ts` の `PROVIDER_OPTIONS` / `providerAccordionView.ts` の `PROVIDER_DETAILS` を削除し builder に接続。static div の reparent を廃止し自前 DOM 構築に
 - [x] `settings/aiProvider.ts`: `AIProviderElements` を `{ select; settings: Record<string, HTMLElement | undefined> }` に一般化。`updateAIProviderVisibility{,Multi}` を `providerIdsInOrder()` loop に。`PROVIDER_URLS` を `providerPermissionUrl(id)`（`entry.cspDomain` / `entry.defaultBaseUrl` 由来）に置換
 - [x] `aiProviderLayoutManager.ts`: `PROVIDER_SETTINGS_MAP` を `settingsDivId(id)` + catalog loop に置換
@@ -26,7 +26,7 @@ PBI 2026-09-01-03（06b）でデータソースを `PROVIDER_REGISTRY` に統合
 - `npm run test:e2e` 全 spec pass（185 passed / 8 skipped）
 
 ## 見積もり
-9 pt（基本 8 + custom-prompt 型拡張 & 保存パス検証 +1）— 10 src + `index.html` + 約 10 test、A/B 両レイアウト、live e2e
+9 pt（基本 8 + custom-prompt 型拡張 & 保存パス検証 +1）― 10 src + `index.html` + 約 10 test、A/B 両レイアウト、live e2e
 
 ## Definition of Done
 - [x] provider 追加 = `PROVIDER_REGISTRY` 1 行 + i18n キー

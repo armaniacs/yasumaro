@@ -8,7 +8,7 @@
 
 - 順位: 06 / 10
 - RICE スコア: 9.6（Reach=3 / Impact=2 / Confidence=80% / Effort=0.5 人週）
-- 根拠: `buildFtsSearchStatements` / `buildLikeSearchStatements`（`queryPlan.ts:279-323`）は `ExtraWhere` のみ受ける — `QuerySpec.tagFilter` を消費するのは plain path（:335-351）のみ。`IdbVfsBackend.ts:73-128` と `opfsWorker/searchHandlers.ts:25-89` は tag を thread しない。逆に `storageFallback.ts:198-320` は `ids` を一切フィルタせず、`matchesExtraWhere` を呼ばず手写しフィルタ列（date/starred/domain/gist）を持つ — 「どのフィルタが存在するか」の真実が 2 箇所。
+- 根拠: `buildFtsSearchStatements` / `buildLikeSearchStatements`（`queryPlan.ts:279-323`）は `ExtraWhere` のみ受ける ― `QuerySpec.tagFilter` を消費するのは plain path（:335-351）のみ。`IdbVfsBackend.ts:73-128` と `opfsWorker/searchHandlers.ts:25-89` は tag を thread しない。逆に `storageFallback.ts:198-320` は `ids` を一切フィルタせず、`matchesExtraWhere` を呼ばず手写しフィルタ列（date/starred/domain/gist）を持つ ― 「どのフィルタが存在するか」の真実が 2 箇所。
 
 ## BDD 受け入れシナリオ
 
@@ -49,7 +49,7 @@ M（0.5 人週）。種別: fix（silent 誤結果解消）。
 ## 実装メモ（2026-09-11 round 5）
 
 - `buildFtsSearchStatements` / `buildLikeSearchStatements` に `tagFilter` opts を追加（plain path と同一 shape）。
-- `buildTagFilterCondition` に `idColumn`（'id' | 'b.id'）option — FTS search は JOIN context のため `b.id IN (...)`。
+- `buildTagFilterCondition` に `idColumn`（'id' | 'b.id'）option ― FTS search は JOIN context のため `b.id IN (...)`。
 - IdbVfsBackend（FTS/LIKE 両 branch）と opfsWorker/searchHandlers（Fts/Like 両 handler）が payload.tag を thread。wrapper `handleSearchFts/handleSearchLike` に payload 引数を追加（テスト用 wrapper の契約拡張）。
 - `storageFallback.query` の手書しフィルタ列（domain/starred/gist/date）を `matchesExtraWhere` 委譲に置換し **ids 述語が効く** ように。excludeDeleted と is_starred エイリアスquirk は base-shape として local 保持。
 - parametric テスト: text+tag（FTS/LIKE 両方・idb/opfs 同一 params）+ ids の backend 間一致を pin。

@@ -104,7 +104,7 @@ Scenario: 4. 正常応答（200）では従来どおり動作する（回帰ガ�
 3. mock fetch が `init` を検査するテストを足し、**30x を返す応答で 2 次リクエストが出ない**ことも固定する（`redirect: 'error'` は mock では abort しないため、実装側が投げる失敗の扱いまで確認する）。
 4. ADR の残存リスク節を「適用済み」に更新し、適用日を書く。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 1) ポリシーを使っているサイト（現状: HttpProviderStrategy 2 + obsidianClient 3 + systemHandlers はリテラル）
@@ -147,11 +147,11 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/
 
 **疑問**: なぜ gist / tranco の 5 サイトだけが redirect 方針の外に残ったのか。
 
-1. **なぜ残ったのか** — 当初の適用（PBI 2026-10-18-01 / 08）は「**宛先をユーザーが設定できる経路**」を基準に選ばれた（AI の baseUrl、Obsidian の vault URL）。gist と tranco は**固定ホスト**なので対象外と判断された。
-2. **なぜ「固定ホストなら安全」と判断したのか** — 30x の危険を「攻撃者が宛先を差し替えること」と捉えていた。固定ホストなら差し替えられない、と。
-3. **なぜその捉え方が不十分なのか** — 危険の本体は「**自分で選んでいない宛先へ資格情報が送られること**」であり、ホストが固定でも `Location` の値は**相手が決める**。`api.github.com` が（侵害・設定ミス・将来の仕様変更で）別ホストを指せば PAT がそこへ飛ぶ。
-4. **なぜ「クロスオリジンなら剥がれる」で済ませなかったのか** — `Authorization` が剥がれるのは cross-origin のみで、**同一 origin 内の付け替え**（`api.github.com/a` → `api.github.com/b`）では保持される。「剥がれるかどうか」を判定基準にするとこの場合を見落とす。
-5. **なぜテストが無かったのか** — 適用対象の一覧を「ユーザー設定可能な URL か」で作り、**`fetch` 呼び出しの全数**と突き合わせる手順が無かった。5 サイトは「対象外」として静かに残った。
+1. **なぜ残ったのか** ― 当初の適用（PBI 2026-10-18-01 / 08）は「**宛先をユーザーが設定できる経路**」を基準に選ばれた（AI の baseUrl、Obsidian の vault URL）。gist と tranco は**固定ホスト**なので対象外と判断された。
+2. **なぜ「固定ホストなら安全」と判断したのか** ― 30x の危険を「攻撃者が宛先を差し替えること」と捉えていた。固定ホストなら差し替えられない、と。
+3. **なぜその捉え方が不十分なのか** ― 危険の本体は「**自分で選んでいない宛先へ資格情報が送られること**」であり、ホストが固定でも `Location` の値は**相手が決める**。`api.github.com` が（侵害・設定ミス・将来の仕様変更で）別ホストを指せば PAT がそこへ飛ぶ。
+4. **なぜ「クロスオリジンなら剥がれる」で済ませなかったのか** ― `Authorization` が剥がれるのは cross-origin のみで、**同一 origin 内の付け替え**（`api.github.com/a` → `api.github.com/b`）では保持される。「剥がれるかどうか」を判定基準にするとこの場合を見落とす。
+5. **なぜテストが無かったのか** ― 適用対象の一覧を「ユーザー設定可能な URL か」で作り、**`fetch` 呼び出しの全数**と突き合わせる手順が無かった。5 サイトは「対象外」として静かに残った。
 
 **原因**: 適用範囲を「宛先をユーザーが設定できるか」という**入力の性質**で決め、**何を運ぶか**（資格情報・記録・本文）という**出力の性質**で決めなかったこと。
 
@@ -170,10 +170,10 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/
 
 ### 実装
 
-- `src/background/syncTargets/gistSyncTarget.ts` — 3 サイト（`/user` / `/gists` / `/gists/${gistId}`）を `noRedirectInit` 経由に。
-- `src/utils/trustDb/trancoUpdater.ts` — 2 サイト（メタデータ / リスト）を同様に。
+- `src/background/syncTargets/gistSyncTarget.ts` ― 3 サイト（`/user` / `/gists` / `/gists/${gistId}`）を `noRedirectInit` 経由に。
+- `src/utils/trustDb/trancoUpdater.ts` ― 2 サイト（メタデータ / リスト）を同様に。
 - テスト: `gistSyncTarget.test.ts` に redirect policy 節（3 本）、`trancoUpdater.test.ts` に 1 本。tranco のモックは `importOriginal` 化して実 seam を参照。
-- ADR 2026-08-29 — 当該節を「適用済み」へ。
+- ADR 2026-08-29 ― 当該節を「適用済み」へ。
 
 ### テスト（Red → Green）
 
@@ -183,6 +183,6 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` / `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` — 同じ共通 seam を導入した先行 PBI（残存リスクとして本件を記録済み）
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — 本 PBI が適用範囲を完成させる ADR
-- `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` — 同じ `gistSyncTarget.ts` を触る。実装順は本 PBI を先にすると競合が小さい（1 行追加のみ）
+- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` / `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` ― 同じ共通 seam を導入した先行 PBI（残存リスクとして本件を記録済み）
+- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` ― 本 PBI が適用範囲を完成させる ADR
+- `pbi/2026-10-18-25-fix-gist-egress-csp-declare.md` ― 同じ `gistSyncTarget.ts` を触る。実装順は本 PBI を先にすると競合が小さい（1 行追加のみ）

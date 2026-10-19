@@ -1,4 +1,4 @@
-# AI Provider Settings Accordion — Design Spec
+# AI Provider Settings Accordion ― Design Spec
 
 **Date:** 2026-07-14
 **Scope:** Convert AI provider priority settings from flat display to accordion pattern.
@@ -30,10 +30,10 @@ AI プロバイダー
 ```
 AI プロバイダー
 ─────────────────────────────────
-▼ 優先度1位（必須）— Gemini
+▼ 優先度1位（必須）― Gemini
   [Gemini] [API キー] [モデル名]
-▶ 優先度2位（任意）— OpenAI
-▶ 優先度3位（任意）— Ollama
+▶ 優先度2位（任意）― OpenAI
+▶ 優先度3位（任意）― Ollama
 ─────────────────────────────────
 ```
 
@@ -53,7 +53,7 @@ AI プロバイダー
   <summary class="priority-details-summary">
     <span class="priority-number">1</span>
     <span class="priority-label">優先度1位（必須）</span>
-    <span class="priority-provider-name">— Gemini</span>
+    <span class="priority-provider-name">― Gemini</span>
   </summary>
   <div class="priority-details-content">
     <select id="aiProvider">...</select>
@@ -72,7 +72,7 @@ AI プロバイダー
 aiProviderSelect.addEventListener('change', () => {
   const selectedOption = aiProviderSelect.options[aiProviderSelect.selectedIndex];
   const providerName = selectedOption.textContent;
-  summaryElement.querySelector('.priority-provider-name').textContent = `— ${providerName}`;
+  summaryElement.querySelector('.priority-provider-name').textContent = `― ${providerName}`;
 });
 ```
 

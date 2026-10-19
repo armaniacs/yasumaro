@@ -1,4 +1,4 @@
-# PBI 2026-09-12-33 — CacheInitializedFlag の restore-once（round 12 PBI 25 の half-fix 解消 + Proxy echo 除去）
+# PBI 2026-09-12-33 ― CacheInitializedFlag の restore-once（round 12 PBI 25 の half-fix 解消 + Proxy echo 除去）
 
 - **種別**: 🔧非機能追加（fix・perf 回帰修正）
 - **優先度**: 1 位 / RICE **40.0**（R25 × I1 × C80% / E0.5人日）

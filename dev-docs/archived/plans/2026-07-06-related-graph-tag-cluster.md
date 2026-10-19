@@ -317,7 +317,7 @@ Expected: FAIL（`src/dashboard/tagClusterLayout.ts` が存在しない）
 /**
  * tagClusterLayout.ts
  * Minimal force-directed layout: repulsion between all nodes + attraction along edges.
- * Not a general-purpose physics engine — sized for a few dozen tag nodes.
+ * Not a general-purpose physics engine ― sized for a few dozen tag nodes.
  */
 
 import type { TagNode, TagEdge } from './tagCooccurrence.js';

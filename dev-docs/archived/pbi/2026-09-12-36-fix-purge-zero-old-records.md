@@ -1,4 +1,4 @@
-# PBI 2026-09-12-36 — planPurge(0,0) が SQLITE_PURGE 経路でデフォルト purge になる（round 12 契約の追半分）
+# PBI 2026-09-12-36 ― planPurge(0,0) が SQLITE_PURGE 経路でデフォルト purge になる（round 12 契約の追半分）
 
 - **種別**: 🔧非功能追加（fix・破壊的操作の契約確定）
 - **優先度**: 4 位 / RICE **19.2**（R6 × I2 × C80% / E0.5人日）
@@ -39,12 +39,12 @@ then 現行と同一の結果が返る
 
 ## 見積もり
 
-🟢低（1pt目安） / 副作用: 🟡軽微（`0` が「全件削除」から「スキップ」に確定 — UI は 0 を送らないため実害なし）
+🟢低（1pt目安） / 副作用: 🟡軽微（`0` が「全件削除」から「スキップ」に確定 ― UI は 0 を送らないため実害なし）
 
 ## 実装メモ（2026-09-12）
 
 - `purgeOldRecords` を 3 backend（IdbVfsBackend / opfsWorker purgeHandlers / storageFallback）で `!= null && > 0` スキップガードに統一（purgeContent と同一契約）。StorageBackend interface の引数を optional 化
-- IdbVfsBackend は statements を無条件生成（plain SQL strings）し実行のみを gate — purgeCutoffMs の NaN bind を構造排除
+- IdbVfsBackend は statements を無条件生成（plain SQL strings）し実行のみを gate ― purgeCutoffMs の NaN bind を構造排除
 - opfsWorker purgeHandlers / storageFallback に同一ガード。dbMaintenance はダミー引数除去（backend がガード担当）
 - `handlePurge`（planPurge → sqlitePurgeOldRecords）の E2E pin: (0,0) → backend purge 未実行（punged:0）
 - 検証: offscreen 全 77 ファイル 1068 tests green・type-check green・lint 0 errors

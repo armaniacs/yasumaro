@@ -33,7 +33,7 @@ Scenario: 正常時は従来通り判定が保存される
 - [x] type-check が通る
 
 ## DoD 補足（アーカイブ時）
-- BDDシナリオ「ストレージ書き込み失敗時」のテストを追加済み（headerDetector.test.ts「falls back to in-memory cache when the session write fails」— logDebug 記録＋インメモリ継続を検証、21 passed）
+- BDDシナリオ「ストレージ書き込み失敗時」のテストを追加済み（headerDetector.test.ts「falls back to in-memory cache when the session write fails」― logDebug 記録＋インメモリ継続を検証、21 passed）
 
 ## テスト戦略（t_wadaスタイル）
 

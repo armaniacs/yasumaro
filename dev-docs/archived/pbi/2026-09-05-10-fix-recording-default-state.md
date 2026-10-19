@@ -48,7 +48,7 @@ Scenario: オンボーディングで記録範囲が説明される
 - 新規の記録方式追加や保存先の変更は含まない
 
 ## 実装メモ
-- 2026-09-05 完了。検証結果: ①初回 OFF は既に成立 — 全記録ハンドラ（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD）が `isRecordingAllowed()` = `hasPrivacyConsent()`（デフォルト false）でゲートされ、未同意では `privacy_consent_required` で拒否される。storage-defaults にピン留めテスト追加。②常時可視はギャップだった — `handleTabActivated` の記録可能タブ（非プライベート・非除外）の分岐に、同意済みなら `●`（緑）バッジを表示するよう変更（`TabHandlerContext.isRecordingAllowed` を新設し service-worker から `hasPrivacyConsent` を配線）。同意が無ければ無表示を維持。③オンボーディングの type ステップに記録範囲の説明（`wizardRecordingScope`・en/ja）を追加。
+- 2026-09-05 完了。検証結果: ①初回 OFF は既に成立 ― 全記録ハンドラ（VALID_VISIT / MANUAL_RECORD / SAVE_RECORD）が `isRecordingAllowed()` = `hasPrivacyConsent()`（デフォルト false）でゲートされ、未同意では `privacy_consent_required` で拒否される。storage-defaults にピン留めテスト追加。②常時可視はギャップだった ― `handleTabActivated` の記録可能タブ（非プライベート・非除外）の分岐に、同意済みなら `●`（緑）バッジを表示するよう変更（`TabHandlerContext.isRecordingAllowed` を新設し service-worker から `hasPrivacyConsent` を配線）。同意が無ければ無表示を維持。③オンボーディングの type ステップに記録範囲の説明（`wizardRecordingScope`・en/ja）を追加。
 - 既存利用者: 同意状態は保存値が優先されるため上書きなし。バッジの '!'（プライベート）/ '∉'（除外）/ '◎'（保存済み）の優先順は不変。
 - テスト: service-worker の handleTabActivated 3 ケース更新・新設、storage-defaults 2 件、onboardingWizard 1 件新設。4 スイート 194 tests green + check-i18n PASS。
 

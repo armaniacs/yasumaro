@@ -9,7 +9,7 @@
 ## 優先度
 
 - 順位: 後続（PBI 15 完了直後）
-- RICEスコア: 1.5（Reach=9 / Impact=1 / Confidence=90% / Effort=3 SP）— policy 確定済みのため Confidence 50% → 90%
+- RICEスコア: 1.5（Reach=9 / Impact=1 / Confidence=90% / Effort=3 SP）― policy 確定済みのため Confidence 50% → 90%
 - 見積もり: 3 SP
 
 ## BDD受け入れシナリオ
@@ -85,6 +85,6 @@ Scenario: 同時に到着した失敗と成功を競合なく反映する
 
 - 新規 module `src/background/ai/providerBreaker.ts`: policy §3 matrix・§4 parameter table を SSOT として実装（threshold 3・cooldown 5 分 / auth 15 分 / rate_limit 10 分・probe は lazy half-open のみ）
 - state は `SESSION_KEYS.AI_PROVIDER_BREAKER = 'sw:aiProviderBreaker'` で `SessionStorePort` 経由（書き込みは `flushImmediately: true`）。key は `${provider}::${model}` のみ
-- `RemoteAIService` は `config.breaker` 注入（既定は disabled — 既存テストは無変更で green）。loop は試行前 skip + 結果後 update（成功 reset / taxonomy 付き失敗のみ加算）。testConnection は無変更（bypass only）
+- `RemoteAIService` は `config.breaker` 注入（既定は disabled ― 既存テストは無変更で green）。loop は試行前 skip + 結果後 update（成功 reset / taxonomy 付き失敗のみ加算）。testConnection は無変更（bypass only）
 - 新規テスト 37 件（unit 30・integration 6・wiring 1）。Red/Green 検証済み（module 未作成で import 失敗を確認後に Green）
 - 副作用: 既存 composition テスト 2 件の sessionStore mock が `SESSION_KEYS` を落としていたため `importOriginal` spread に修正（production 変更なし）

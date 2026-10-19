@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/offscreen/sqliteEngineContext.ts:32-35` — `MIGRATION_BACKUP_COLUMNS` 定数が12カラムのみ列挙: `url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced`
+- `src/offscreen/sqliteEngineContext.ts:32-35` ― `MIGRATION_BACKUP_COLUMNS` 定数が12カラムのみ列挙: `url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, is_deleted, obsidian_synced, gist_synced`
 - 同ファイルで `import { ... buildInsertParams } from './schema.js'` されており、`schema.ts` に全カラムを定義する `COLUMN_NAMES` 相当の定数が存在する可能性が高い（要確認）
 - 関連して既に修正済みのH4（`convertFallbackRecord()` を11→31フィールドに拡張）と同じ思想の対処
 

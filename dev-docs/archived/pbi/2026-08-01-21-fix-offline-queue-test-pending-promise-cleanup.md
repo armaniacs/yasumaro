@@ -15,7 +15,7 @@
 const retryAllPromise = queue.retryAll(async (job) => {
   if ((job.payload as { url: string }).url === 'https://b.com') {
     resolveSecondJob?.();
-    // Never resolves — simulates the Service Worker being torn down
+    // Never resolves ― simulates the Service Worker being torn down
     // while the second job is still in flight.
     return new Promise<boolean>(() => {});
   }

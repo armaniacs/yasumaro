@@ -3,7 +3,7 @@
 ## 優先度・backlog 出所・依存
 
 - **優先度**: RICE 48.0（R=8 / I=3 / C=1.0 / Eff=0.5）、backlog 順位 1、NN08
-- **出所**: [backlog: holistic-1001](./2026-10-01-00-backlog-holistic-1001.md) — holistic-code-review（holistic-code-improvement フェーズA）で検証済みの候補
+- **出所**: [backlog: holistic-1001](./2026-10-01-00-backlog-holistic-1001.md) ― holistic-code-review（holistic-code-improvement フェーズA）で検証済みの候補
 - **依存**: なし（バッチA・ファイル非重複）。`compositionManifest.ts` / `service-worker.ts` を触る他候補との同時改修は避ける
 - **種別**: fix
 
@@ -15,19 +15,19 @@
 
 PBI 2026-09-15-15 の registry 移行で内部リスナーが撤去されず、両経路が wire された結果、`check_session_timeout` が発火するたびに `checkTimeout()` が 2 回実行される。
 
-- `src/background/SessionAlarmService.ts:63` — `startTimeoutChecker()` が `setupAlarmListener()` を呼ぶ
-- `src/background/SessionAlarmService.ts:191-202` — 内部 `alarms.onAlarm` リスナーが `checkTimeout()` を呼ぶ（`alarmListenerSetUp` ガード付き・1 リスナーのみ）
-- `src/background/alarmRegistry.ts:141-145` — registry job `check_session_timeout` の `run` → `sessionTimeoutRunRef?.()` → `checkTimeout()`
-- `src/background/service-worker.ts:189-192` — `setSessionTimeoutRefs()` が `checkTimeout` を run 側に wire
-- `src/background/service-worker.ts:269` — `chrome.alarms.onAlarm.addListener(handleAlarm)` で registry が購読
-- `src/background/service-worker.ts:42` — `sessionAlarmService.initialize()` → `startTimeoutChecker()`
-- `src/background/service-worker.ts:48` — `alarmRegistry.installAll()` → job `install` → `sessionTimeoutInstallRef?.()` → `startTimeoutChecker()`
+- `src/background/SessionAlarmService.ts:63` ― `startTimeoutChecker()` が `setupAlarmListener()` を呼ぶ
+- `src/background/SessionAlarmService.ts:191-202` ― 内部 `alarms.onAlarm` リスナーが `checkTimeout()` を呼ぶ（`alarmListenerSetUp` ガード付き・1 リスナーのみ）
+- `src/background/alarmRegistry.ts:141-145` ― registry job `check_session_timeout` の `run` → `sessionTimeoutRunRef?.()` → `checkTimeout()`
+- `src/background/service-worker.ts:189-192` ― `setSessionTimeoutRefs()` が `checkTimeout` を run 側に wire
+- `src/background/service-worker.ts:269` ― `chrome.alarms.onAlarm.addListener(handleAlarm)` で registry が購読
+- `src/background/service-worker.ts:42` ― `sessionAlarmService.initialize()` → `startTimeoutChecker()`
+- `src/background/service-worker.ts:48` ― `alarmRegistry.installAll()` → job `install` → `sessionTimeoutInstallRef?.()` → `startTimeoutChecker()`
 
 結果:
 
-1. **alarm 発火ごとに `checkTimeout()` が 2 回実行される** — registry 経路（`handleAlarm` → `run`）と内部リスナー経路の両方が同じ alarm を受ける
-2. **SW 起動時に `startTimeoutChecker()` が 2 回実行される** — :42 の直接呼び出し + :48 の install 経路 → `alarms.clear` / `alarms.create` も 2 回ずつ走る
-3. `src/background/alarmRegistry.ts:42` — `sessionTimeoutChecker?: () => Promise<void>` が宣言のみで未読。`src/background/compositionManifest.ts:205` はそのためにだけ存在する死んだ wire
+1. **alarm 発火ごとに `checkTimeout()` が 2 回実行される** ― registry 経路（`handleAlarm` → `run`）と内部リスナー経路の両方が同じ alarm を受ける
+2. **SW 起動時に `startTimeoutChecker()` が 2 回実行される** ― :42 の直接呼び出し + :48 の install 経路 → `alarms.clear` / `alarms.create` も 2 回ずつ走る
+3. `src/background/alarmRegistry.ts:42` ― `sessionTimeoutChecker?: () => Promise<void>` が宣言のみで未読。`src/background/compositionManifest.ts:205` はそのためにだけ存在する死んだ wire
 
 ## BDDシナリオ
 
@@ -73,19 +73,19 @@ Then `checkTimeout()` は呼ばれず、daily purge の `run` のみが走る
 ## テスト戦略
 
 - **単体**（Vitest・注入済み `AlarmPort` / chrome global mock）:
-  - `src/background/__tests__/SessionAlarmService.test.ts` — `startTimeoutChecker()` が `onAlarm` を登録しないことを監視。既存の clear/create アサーションは 1 回の実行で 1 回ずつを確認
-  - `src/background/__tests__/alarmRegistry.test.ts` — `check_session_timeout` 発火で `run` が 1 回だけ走ること、`checkTimeout` spy の呼び出し回数が正確に 1 であることを明示（「2 回でも動く」では満たさない）
-  - `src/background/pipeline/steps/__tests__/sessionAlarmsManager.test.ts` — 既存互換の green 確認
+  - `src/background/__tests__/SessionAlarmService.test.ts` ― `startTimeoutChecker()` が `onAlarm` を登録しないことを監視。既存の clear/create アサーションは 1 回の実行で 1 回ずつを確認
+  - `src/background/__tests__/alarmRegistry.test.ts` ― `check_session_timeout` 発火で `run` が 1 回だけ走ること、`checkTimeout` spy の呼び出し回数が正確に 1 であることを明示（「2 回でも動く」では満たさない）
+  - `src/background/pipeline/steps/__tests__/sessionAlarmsManager.test.ts` ― 既存互換の green 確認
 - **繰り返しゲート**（[TEST_RULE](../dev-docs/TEST_RULE.md) / AGENTS.md の Definition of done）: `npx vitest run src/background/__tests__/SessionAlarmService.test.ts src/background/__tests__/alarmRegistry.test.ts --repeats=20` を全回 green
 - **コミット前ゲート**: `npm run validate`
 
 ## 実装内容
 
-1. `src/background/SessionAlarmService.ts` — `startTimeoutChecker()` から `setupAlarmListener()` 呼び出しを削除し、`setupAlarmListener()` メソッド・`alarmListenerSetUp` フィールド・内部 `onAlarm` 登録を削除。`checkTimeout()` の doc コメント（:111）は「registry 経由の唯一の入口」であることを明記
-2. `src/background/service-worker.ts` — :42 の `sessionAlarmService.initialize()` 直接呼び出しを撤去し、registry install（`sessionTimeoutInstallRef` → `startTimeoutChecker`）を唯一の start 経路にする。:40-47 のコメントを現状に合わせて更新。`initialize()` 自体は使用がゼロになれば削除してよい（テストが参照する場合は残す）
-3. `src/background/alarmRegistry.ts` — `AlarmHandlerDeps` から未読の `sessionTimeoutChecker` を削除
-4. `src/background/compositionManifest.ts` — factory から `sessionTimeoutChecker` エントリ（:205）を削除。`sessionTimeoutInstall`（:206）は読まれているため残す
-5. 関連コメントの整合 — 「the alarm creation + listener live in the registry」など、内部リスナー撤去後と乖離する表現を更新
+1. `src/background/SessionAlarmService.ts` ― `startTimeoutChecker()` から `setupAlarmListener()` 呼び出しを削除し、`setupAlarmListener()` メソッド・`alarmListenerSetUp` フィールド・内部 `onAlarm` 登録を削除。`checkTimeout()` の doc コメント（:111）は「registry 経由の唯一の入口」であることを明記
+2. `src/background/service-worker.ts` ― :42 の `sessionAlarmService.initialize()` 直接呼び出しを撤去し、registry install（`sessionTimeoutInstallRef` → `startTimeoutChecker`）を唯一の start 経路にする。:40-47 のコメントを現状に合わせて更新。`initialize()` 自体は使用がゼロになれば削除してよい（テストが参照する場合は残す）
+3. `src/background/alarmRegistry.ts` ― `AlarmHandlerDeps` から未読の `sessionTimeoutChecker` を削除
+4. `src/background/compositionManifest.ts` ― factory から `sessionTimeoutChecker` エントリ（:205）を削除。`sessionTimeoutInstall`（:206）は読まれているため残す
+5. 関連コメントの整合 ― 「the alarm creation + listener live in the registry」など、内部リスナー撤去後と乖離する表現を更新
 
 ## Definition of Done
 
@@ -100,14 +100,14 @@ Then `checkTimeout()` は呼ばれず、daily purge の `run` のみが走る
 
 変更した内容:
 
-- `SessionAlarmService.ts` — `setupAlarmListener()` メソッド・`alarmListenerSetUp` フィールド・`startTimeoutChecker()` からの呼び出し・内部 `onAlarm` 登録を削除。`checkTimeout()` の doc コメントを「registry の run hook 経由が唯一の入口」に更新
-- `service-worker.ts` — `init()` から `sessionAlarmService.initialize()` の直接呼び出しを撤去し、registry の `installAll()` → `sessionTimeoutInstallRef` を唯一の start 経路にした。`setSessionTimeoutRefs` の run 側を `await` 付きに整齐え、refs が session-timeout job の唯一の wire であることをコメントで明示
-- `alarmRegistry.ts` — `AlarmHandlerDeps` から未読の `sessionTimeoutChecker` を削除
-- `compositionManifest.ts` — factory の `sessionTimeoutChecker` エントリを削除。`sessionAlarmService` の説明コメントを「生成はここ、dispatch は registry が所有」に更新
+- `SessionAlarmService.ts` ― `setupAlarmListener()` メソッド・`alarmListenerSetUp` フィールド・`startTimeoutChecker()` からの呼び出し・内部 `onAlarm` 登録を削除。`checkTimeout()` の doc コメントを「registry の run hook 経由が唯一の入口」に更新
+- `service-worker.ts` ― `init()` から `sessionAlarmService.initialize()` の直接呼び出しを撤去し、registry の `installAll()` → `sessionTimeoutInstallRef` を唯一の start 経路にした。`setSessionTimeoutRefs` の run 側を `await` 付きに整齐え、refs が session-timeout job の唯一の wire であることをコメントで明示
+- `alarmRegistry.ts` ― `AlarmHandlerDeps` から未読の `sessionTimeoutChecker` を削除
+- `compositionManifest.ts` ― factory の `sessionTimeoutChecker` エントリを削除。`sessionAlarmService` の説明コメントを「生成はここ、dispatch は registry が所有」に更新
 
 追加・更新したテスト:
 
-- `SessionAlarmService.test.ts` — 「`startTimeoutChecker` が alarm リスナーを一切登録しない」を `listenerCount === 0` で固定（従来の「1 リスナー」前提は撤去）。`FakeAlarmPort.fire()` と `drainMacrotask()` / `vi.waitFor()` を削除し、チェック経路を `await service.checkTimeout()` で直接駆動するよう変更
-- `alarmRegistry.test.ts` — `check_session_timeout` 発火で `run` がちょうど 1 回、他 job では 0 回、`installAll()` で install がちょうど 1 回（run は 0 回）の 3 ケースを追加
+- `SessionAlarmService.test.ts` ― 「`startTimeoutChecker` が alarm リスナーを一切登録しない」を `listenerCount === 0` で固定（従来の「1 リスナー」前提は撤去）。`FakeAlarmPort.fire()` と `drainMacrotask()` / `vi.waitFor()` を削除し、チェック経路を `await service.checkTimeout()` で直接駆動するよう変更
+- `alarmRegistry.test.ts` ― `check_session_timeout` 発火で `run` がちょうど 1 回、他 job では 0 回、`installAll()` で install がちょうど 1 回（run は 0 回）の 3 ケースを追加
 
 逸脱なし。`initialize()` は `src/background/sessionAlarmsManager.ts:27` から引き続き参照されるため実装内容 2 の「削除してよい」ではなく温存した。検証: `npx vitest run <11 batch-A テストファイル> --repeats=20` → 155 passed / 11 files passed、`npm run validate` green。

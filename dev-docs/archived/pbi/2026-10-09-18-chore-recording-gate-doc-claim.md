@@ -25,7 +25,7 @@
 
 該当箇所（全 file:line 検証済み）:
 
-- `src/utils/recordingGateTable.ts:250`（「It mirrors tabUtils.isRecordable byte-for-byte.」— `:247` の「shared by popup (isRecordable)」も同様に実体なし）
+- `src/utils/recordingGateTable.ts:250`（「It mirrors tabUtils.isRecordable byte-for-byte.」― `:247` の「shared by popup (isRecordable)」も同様に実体なし）
 - `src/popup/tabUtils.ts:1-33`（実装は `getCurrentTab` / `getActiveTabUrl` / `getDomainForUrl` のみ。`isRecordable` は存在しないことを全文読んで確認済み）
 - 現実の消費者: `src/popup/recordCurrentPage/recordSession.ts:94` の `isRecordableTab` 利用
 
@@ -62,7 +62,7 @@ Then type-check とテストが green であること
 
 ## 8. 見積もり
 
-**0.5 SP** — コメント 1〜2 行の修正。
+**0.5 SP** ― コメント 1〜2 行の修正。
 
 ## 9. DoD
 

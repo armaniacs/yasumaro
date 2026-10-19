@@ -11,8 +11,8 @@ raw access 実サイトは 4 箇所（PBI 本文の「6 実アクセスサイト
 
 | キー | reader | writer | migration | export/import |
 |---|---|---|---|---|
-| `denied_domains`（top-level 専用キー） | `permissionManager.ts:85`（`getDeniedDomains()` raw `chrome.storage.local.get`。呼び出し経路: getSuggestions / recordDeniedVisit / recordDomainDismissal の 3 経路） | `permissionManager.ts:98-105`（`updateDeniedDomains()` — **top-level に対する専用 `withOptimisticLock`**、updater は non-mutating 契約 pin 済み） | `settingsMigration` の nested `settings` blob には含まれない（top-level に残留）。PBI 17 の stage 分類では実値判定により `denied_domains` は legacy raw key 扱いにならない | `restorableSettings.ts` の `RESTORABLE_KEY_SPECS` に**意図的に含まれない**（閲覧履歴扱い） |
-| `permission_notify_threshold`（nested `settings` blob のメンバー、DEFAULT_SETTINGS で 3） | `permissionManager.ts:281`（raw `chrome.storage.local.get` + クランプ 1-50） | `trustSettings.ts:565`（UI change ハンドラから **raw `chrome.storage.local.set`** — settings blob 全体ではなく 1 キーだけの top-level 上書き） | nested `settings` へは `settingsMigration`（PBI 17 の stage 機構）が管理。top-level 単キー write は blob と独立したキーになるため、migration 完了後は blob 側が正本 | `restorableSettings` に含まれる（`'permission_notify_threshold': { type: 'number' }`） |
+| `denied_domains`（top-level 専用キー） | `permissionManager.ts:85`（`getDeniedDomains()` raw `chrome.storage.local.get`。呼び出し経路: getSuggestions / recordDeniedVisit / recordDomainDismissal の 3 経路） | `permissionManager.ts:98-105`（`updateDeniedDomains()` ― **top-level に対する専用 `withOptimisticLock`**、updater は non-mutating 契約 pin 済み） | `settingsMigration` の nested `settings` blob には含まれない（top-level に残留）。PBI 17 の stage 分類では実値判定により `denied_domains` は legacy raw key 扱いにならない | `restorableSettings.ts` の `RESTORABLE_KEY_SPECS` に**意図的に含まれない**（閲覧履歴扱い） |
+| `permission_notify_threshold`（nested `settings` blob のメンバー、DEFAULT_SETTINGS で 3） | `permissionManager.ts:281`（raw `chrome.storage.local.get` + クランプ 1-50） | `trustSettings.ts:565`（UI change ハンドラから **raw `chrome.storage.local.set`** ― settings blob 全体ではなく 1 キーだけの top-level 上書き） | nested `settings` へは `settingsMigration`（PBI 17 の stage 機構）が管理。top-level 単キー write は blob と独立したキーになるため、migration 完了後は blob 側が正本 | `restorableSettings` に含まれる（`'permission_notify_threshold': { type: 'number' }`） |
 
 型付き契約: `types.ts:144-145`（StorageKeys）、`types.ts:390-391`（CustomStorageShape）、`defaults.ts:109-110`（DEFAULT_SETTINGS）。`SettingsRepository` は型付き get/set + delta write 契約（`SettingsRepository.ts:181-227`）を持つ。
 
@@ -34,21 +34,21 @@ raw access 実サイトは 4 箇所（PBI 本文の「6 実アクセスサイト
 
 ### Q3: denied_domains は閲覧履歴か設定か
 
-- **事実**: 値は `{ [domain]: { count, lastDenied, lastDismissed? } }` — ユーザーが「許可しない」と選んだ記録の訪問回数カウンタ（LRU 100 件上限、DoS 対策付き）。`restorableSettings` から意図的に除外されている。
+- **事実**: 値は `{ [domain]: { count, lastDenied, lastDismissed? } }` ― ユーザーが「許可しない」と選んだ記録の訪問回数カウンタ（LRU 100 件上限、DoS 対策付き）。`restorableSettings` から意図的に除外されている。
 - **裁定**: **閲覧履歴（端末固有データ）**。nested `settings` への統合は行わない。export/import 対象にもしない（現状の意図的除外を正とする）。
-- **根拠**: (1) 値が訪問・拒否の履歴カウンタであり設定値ではない（2) 端末固有の閲覧履歴をエクスポートすると PII 境界（`restorableSettings` の除外設計）と矛盾する（3) C16 の裁定で value-level CAS は不採用のため、nested 化した場合の高頻度更新は `withLock('settings')` を通る — object conflict の誤検出と遅延のリスクが、統合の利益（キーの一元化）を上回る。
+- **根拠**: (1) 値が訪問・拒否の履歴カウンタであり設定値ではない（2) 端末固有の閲覧履歴をエクスポートすると PII 境界（`restorableSettings` の除外設計）と矛盾する（3) C16 の裁定で value-level CAS は不採用のため、nested 化した場合の高頻度更新は `withLock('settings')` を通る ― object conflict の誤検出と遅延のリスクが、統合の利益（キーの一元化）を上回る。
 - **残存リスク**: 専用 store のままでは settings 一覧 UI・型付き契約から漏れる。`CustomStorageShape`（`types.ts:390`）に型付き契約が存在するため型安全性は確保済み。
 
 ### Q4: top-level dedicated key を残す根拠は何か（3 候補の検証）
 
-- **(a) repository object CAS の回避 — 採用**: `recordDeniedVisit` は権限拒否のたびに呼ばれる高頻度 write。nested 化すると `withLock('settings')` を経由し、settings blob の他の write（設定保存・migration）と競合する。専用 `withOptimisticLock(DENIED_DOMAINS)` は lock 域が独立しており競合しない。**これが存続の本質的根拠**。
-- **(b) 独立 quota — 不採用**: 100 件 LRU 上限（`MAX_DENIED_DOMAINS`）により volume は小さく、quota の独立性は実質的な利益にならない。確認できる根拠として採用しない（PBI 決定事項 2 の「確認できない理由を存続根拠にしない」に従う）。
-- **(c) 履歴保持 — 部分採用**: settings blob の migration stage 機構から切り離されていることは意味がある（migration 中断時の消失・再実行リスクを負わない）。ただし (a) が主根拠で、これは副次的根拠として記録する。
+- **(a) repository object CAS の回避 ― 採用**: `recordDeniedVisit` は権限拒否のたびに呼ばれる高頻度 write。nested 化すると `withLock('settings')` を経由し、settings blob の他の write（設定保存・migration）と競合する。専用 `withOptimisticLock(DENIED_DOMAINS)` は lock 域が独立しており競合しない。**これが存続の本質的根拠**。
+- **(b) 独立 quota ― 不採用**: 100 件 LRU 上限（`MAX_DENIED_DOMAINS`）により volume は小さく、quota の独立性は実質的な利益にならない。確認できる根拠として採用しない（PBI 決定事項 2 の「確認できない理由を存続根拠にしない」に従う）。
+- **(c) 履歴保持 ― 部分採用**: settings blob の migration stage 機構から切り離されていることは意味がある（migration 中断時の消失・再実行リスクを負わない）。ただし (a) が主根拠で、これは副次的根拠として記録する。
 
 ### Q5: migration 中の writer precedence はどうなるか
 
 - **事実**: PBI 17 により migration は `pending → backed_up → legacy_removed → completed` の単調 stage で進み、完了後は nested `settings` blob が正本。
-- **裁定**: (1) `denied_domains` は migration 対象外（top-level 専用キー維持）なので migration と競合する経路が存在しない。(2) `permission_notify_threshold` は canonical writer を repository に一本化した時点で、旧 raw set 経路は**削除**（受理・変換ではなく廃止）。旧経路を「残す条件」は存在しない — UI change ハンドラのみが唯一の呼び出し箇所であり、後続 refactor で同時に直す。
+- **裁定**: (1) `denied_domains` は migration 対象外（top-level 専用キー維持）なので migration と競合する経路が存在しない。(2) `permission_notify_threshold` は canonical writer を repository に一本化した時点で、旧 raw set 経路は**削除**（受理・変換ではなく廃止）。旧経路を「残す条件」は存在しない ― UI change ハンドラのみが唯一の呼び出し箇所であり、後続 refactor で同時に直す。
 - **根拠**: PBI 落とし穴「migration 完了前に旧 top-level write と新 nested write の両方を許可すると、二つの writer が再導入される」。旧経路の呼び出し箇所が 1 箇所のみであることを棚卸しで確認済み（§1）。
 - **残存リスク**: dashboard の他の raw set が将来追加された場合に再発する。後続 refactor で「`trustSettings.ts` 内の `chrome.storage.local.set` 直接呼び出し 0 件」を lint/sweep で pin する契約を含める（§5）。
 
@@ -61,7 +61,7 @@ raw access 実サイトは 4 箇所（PBI 本文の「6 実アクセスサイト
 | top-level dedicated key の存続根拠 | (a) 高頻度 write の lock 域独立性（本質）+ (c) migration stage 機構からの切り離し（副次）。(b) 独立 quota は不採用 |
 | `permission_notify_threshold` の canonical writer | `SettingsRepository`（delta write）。reader も repository に統一 |
 | 旧 raw set（trustSettings.ts:565） | 後続 refactor で repository 呼び出しに置換し、**廃止**（受理・変換しない） |
-| C16（object conflict policy）との関係 | denied_domains の nested 統合は C16 + PBI 02 の評価が前提という PBI 条件は**既に満たされている**（両方完了済み）。裁定は「統合しない」で確定 — 統合前提の評価は不要になった |
+| C16（object conflict policy）との関係 | denied_domains の nested 統合は C16 + PBI 02 の評価が前提という PBI 条件は**既に満たされている**（両方完了済み）。裁定は「統合しない」で確定 ― 統合前提の評価は不要になった |
 | キー名変更 | 行わない（`denied_domains` / `permission_notify_threshold` の両方維持） |
 
 ## 4. 性能検証の基準（高頻度 CAS）

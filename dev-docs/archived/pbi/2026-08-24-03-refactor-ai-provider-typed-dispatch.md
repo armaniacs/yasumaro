@@ -37,7 +37,7 @@ Scenario: ProviderRegistry がモデル解決を一元化する
 - **契約**: `ProviderId` union に無効な文字列を代入した場合の型エラー検証（`tsd` または型テスト）
 
 ## 見積もり
-1 ストーリーポイント（低 — 1 人週程度）
+1 ストーリーポイント（低 ― 1 人週程度）
 
 ## 技術的考慮事項
 - **依存**: なし（SettingsRepository shim の完了を待たない）

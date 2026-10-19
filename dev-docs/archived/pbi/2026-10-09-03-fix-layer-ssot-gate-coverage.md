@@ -2,7 +2,7 @@
 
 ## 1. タイトル + 種別
 
-- **タイトル**: レイヤー SSOT ゲートの管轄穴解消 — 実在 `@layer` 宣言ファイル群の SSOT 収載 + Barrel stale エントリ除去・filesystem 検査・`@layer` 宣言照合検査の追加（2 候補の統合 PBI）
+- **タイトル**: レイヤー SSOT ゲートの管轄穴解消 ― 実在 `@layer` 宣言ファイル群の SSOT 収載 + Barrel stale エントリ除去・filesystem 検査・`@layer` 宣言照合検査の追加（2 候補の統合 PBI）
 - **種別**: fix（lint のみの変更 + ドキュメント修正。挙動不変）
 - **見積もり**: 2 SP
 
@@ -11,7 +11,7 @@
 - **優先度**: 順位 3
 - **RICE**: R5 / I2 / C1.0 / E2 → **5.0**
 - **根拠**:
-  - 前ラウンドで新設した SSOT ゲート自体に管轄穴がある。コード側の `@layer` 宣言を検査するゲートは存在せず、宣言すれば純粋性検査を素通りできる構造。また、ルールリストと LAYERS.md が同じ stale エントリを共有している限り drift 照合は常に pass する — ゲートの検出能力そのものに関わる
+  - 前ラウンドで新設した SSOT ゲート自体に管轄穴がある。コード側の `@layer` 宣言を検査するゲートは存在せず、宣言すれば純粋性検査を素通りできる構造。また、ルールリストと LAYERS.md が同じ stale エントリを共有している限り drift 照合は常に pass する ― ゲートの検出能力そのものに関わる
   - 保守関与頻度が最大（R5）: `src/utils/` は Wave 単位で新規ファイルが増え続け、ゲートが新規ファイル・宣言を追跡できないと層境界の drift が蓄積する
 - **依存**: なし。ただし NN15・NN16 が新規 utils ファイル（`clearElement`・`computeScopeHash` の移設先）を作るため、それらの着地後に統合側が本 PBI で整備した SSOT（LAYER0_FILES / LAYERS.md 分類表）への登録を行うこと（台帳「バッチ計画」節の共通ファイル運用。NN03 のゲートが新規ファイルを追跡するため）
 
@@ -32,19 +32,19 @@
   - **`@layer 2`**: `src/utils/promptSafety.ts:1`・`src/utils/trustDb/TrustLookup.ts:1`・`src/utils/trustDb/TrustDecision.ts:1`
   - **`@layer 1`**: `src/utils/trustDb/TrustDbAdmin.ts:1`・`src/utils/keySerializer.ts:1`・`src/utils/ui/confirmDialog.ts:1`・`src/utils/copyMarkdownButton.ts:1`
 - コード側の `@layer` 宣言を検査するゲートは存在せず、宣言すれば純粋性検査を素通りできる構造
-- 新規ファイル配置チェックリスト（`dev-docs/LAYERS.md:263-272`、`@layer` 項目は `:271`）は `@layer` コメント付与のみを要求し、LAYER0_FILES / LAYERS.md 分類表への追加ステップが無い。宣言形式は `// @layer N — <purpose>` と `// @layer N` の両方がある（`cleansingBadge.ts:1`・`listSources.ts:1` は後者）
+- 新規ファイル配置チェックリスト（`dev-docs/LAYERS.md:263-272`、`@layer` 項目は `:271`）は `@layer` コメント付与のみを要求し、LAYER0_FILES / LAYERS.md 分類表への追加ステップが無い。宣言形式は `// @layer N ― <purpose>` と `// @layer N` の両方がある（`cleansingBadge.ts:1`・`listSources.ts:1` は後者）
 - 根因（台帳 5 Whys）: 配置チェックリストが「@layer コメント付与」のみを要求し、LAYER0_FILES/LAYERS.md への追加ステップが無かったため、宣言が SSOT 外に増えた
 - 注記: `// @layer 1` 自己宣言を持つ `src/utils/domainFilter/DomainFilter.ts:1` は `dev-docs/LAYERS.md:250` に既知の未分類（`domainUtils` 経由で Layer 2 に到達）として記載されており、宣言照合検査はこれも検出する。収載先の判断（Layer 2 への分類か検査側の許可リストか）を実装に含めること
 
 ### B. Barrel 節が削除済みファイルを参照
 
 - `src/utils/storage.ts`・`src/utils/logger.ts` barrel は削除済みだが、以下に残る:
-  - `dev-docs/LAYERS.md:160-161`（「Barrel — Re-export (retired)」節で現存のように記載。storage.ts は「テストのレガシー mock 経路のみが参照」とまで記載）
+  - `dev-docs/LAYERS.md:160-161`（「Barrel ― Re-export (retired)」節で現存のように記載。storage.ts は「テストのレガシー mock 経路のみが参照」とまで記載）
   - `dev-docs/LAYERS.md:165`（「`storage.ts` への import は lint が警告する」）
   - `dev-docs/LAYERS.md:291`（削除済み storage.ts のファイルヘッダ指定）
-  - `eslint/rules/utils-layer-boundary.mjs:116` — `BARREL_MODULES` 3 要素中 2 本が削除済み（`crypto/index.ts` のみ現存）
-- `scripts/lint-layers-docs.mjs:116-142` は rule↔docs の双方向照合のみで、filesystem 照合（existsSync）が同ファイル内に皆無 — 両者が同じ stale エントリを持つ限り常に pass する
-- 対照的に `scripts/lint-adr-links.mjs` は ADR の Implements パスを existsSync で検証する（`:12`・`:42`）— 同種の検査の既存パターンがリポジトリ内にある
+  - `eslint/rules/utils-layer-boundary.mjs:116` ― `BARREL_MODULES` 3 要素中 2 本が削除済み（`crypto/index.ts` のみ現存）
+- `scripts/lint-layers-docs.mjs:116-142` は rule⇔docs の双方向照合のみで、filesystem 照合（existsSync）が同ファイル内に皆無 ― 両者が同じ stale エントリを持つ限り常に pass する
+- 対照的に `scripts/lint-adr-links.mjs` は ADR の Implements パスを existsSync で検証する（`:12`・`:42`）― 同種の検査の既存パターンがリポジトリ内にある
 - 補足: `dev-docs/LAYERS.md:283-284`（将来の移行計画）は両 barrel の削除完了を既に記載しており、`:160-161`・`:165`・`:291` は同一ドキュメント内の自己矛盾
 
 ## 5. BDD シナリオ
@@ -64,7 +64,7 @@ And 全パスが実在する場合は green であること
 Given LAYERS.md の Barrel 節と BARREL_MODULES から削除済み 2 本が除去されている
 When npm run lint:layers-docs を実行する
 Then Barrel 節は現存する crypto/index.ts のみを収載していること
-And rule↔docs の双方向照合と filesystem 検査の両方が green であること
+And rule⇔docs の双方向照合と filesystem 検査の両方が green であること
 ```
 
 ### シナリオ 3: `@layer` 宣言が SSOT と一致する
@@ -96,7 +96,7 @@ And 宣言付きファイル群が適切なレイヤーの SSOT に収載され�
 
 ## 8. 見積もり
 
-**2 SP** — 検査 2 件の追加（filesystem 照合・`@layer` 宣言照合）と 12+ ファイルの SSOT 収載、stale 除去。1 エントリあたりの変更は機械的だが、宣言レイヤーと実 import の整合確認（背景 A のファイル数 + DomainFilter.ts の判断）を含むため M。影響ファイル: `scripts/lint-layers-docs.mjs`、`eslint/rules/utils-layer-boundary.mjs`、`dev-docs/LAYERS.md`（+ 必要に応じて `DOCS_ONLY_ALLOWLIST`）
+**2 SP** ― 検査 2 件の追加（filesystem 照合・`@layer` 宣言照合）と 12+ ファイルの SSOT 収載、stale 除去。1 エントリあたりの変更は機械的だが、宣言レイヤーと実 import の整合確認（背景 A のファイル数 + DomainFilter.ts の判断）を含むため M。影響ファイル: `scripts/lint-layers-docs.mjs`、`eslint/rules/utils-layer-boundary.mjs`、`dev-docs/LAYERS.md`（+ 必要に応じて `DOCS_ONLY_ALLOWLIST`）
 
 ## 9. DoD
 
@@ -112,4 +112,4 @@ And 宣言付きファイル群が適切なレイヤーの SSOT に収載され�
 - holistic-1009 ラウンド（[台帳](2026-10-09-00-backlog-holistic-1009.md)）
 - RICE 順位 3（R5 / I2 / C1.0 / E2 → 5.0）。台帳の主な構造的課題 (3)「ラウンドで新設した SSOT ゲート自体の管轄穴（@layer 未収載・filesystem 照合欠落）」に対応
 - 依存: なし。NN15・NN16 の新規 utils ファイル着地後、統合側が本 PBI で整備した SSOT へ登録すること（台帳「バッチ計画」節）
-- バッチ: W1（01 / 02 / 03 / 12 — LAYERS + eslint rules）
+- バッチ: W1（01 / 02 / 03 / 12 ― LAYERS + eslint rules）

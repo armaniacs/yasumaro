@@ -9,7 +9,7 @@
 
 ## 既実装確認（Phase 0）
 - `src/utils/contentExtractor/index.ts:38` `getByteSize(str) { return new TextEncoder().encode(str).length; }`
-- 呼び出し箇所: `index.ts` の `:57 :152 :159 :182 :192 :260 :287 :322 :331 :340 :379 :414 :420` — `pageBytes` / `candidateBytes` / `originalBytes` / `cleansedBytes` / `_contentBytes` / フォールバック再計算
+- 呼び出し箇所: `index.ts` の `:57 :152 :159 :182 :192 :260 :287 :322 :331 :340 :379 :414 :420` ― `pageBytes` / `candidateBytes` / `originalBytes` / `cleansedBytes` / `_contentBytes` / フォールバック再計算
 - `pageBytes = getByteSize(document.body.textContent || '')`（`:152` `:331`）が最重量（body 全体）
 - `src/utils/aiSummaryCleaner/index.ts:67` `const bytesBefore = new Blob([element.outerHTML || '']).size;` / `:92` `bytesAfter`
 - これらのバイト値は `ExtractResult` に格納され、最終的に診断パネル（`src/dashboard/panels/diagnostic/`）・ファネル表示でのみ消費される。`returnInfo=false`（通常の自動保存経路）では `ExtractResult` すら返さず `content` 文字列だけ返す（`index.ts:527`）

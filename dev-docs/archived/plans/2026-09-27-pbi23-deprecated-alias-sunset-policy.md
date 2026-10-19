@@ -1,7 +1,7 @@
 # PBI 23 調査報告: 非推奨エイリアスと互換 shim の sunset 基準
 
 PBI: `pbi/2026-09-25-23-investigate-deprecated-alias-sunset.md`（investigate・production 変更なし）
-依存: PBI 14（完了・アーカイブ済み — `check-deprecated-aliases` は `validate` と CI に接続済み）
+依存: PBI 14（完了・アーカイブ済み ― `check-deprecated-aliases` は `validate` と CI に接続済み）
 日付: 2026-09-27
 
 ## 0. inventory 突合（2026-09-27 実測）
@@ -10,20 +10,20 @@ PBI 起票時の前提（38 tags / 17 ファイル / `Sunset:` 4 / 未記載 34�
 
 | ファイル | tags | `Sunset:` |
 |---|---|---|
-| src/utils/storage.ts | 18 | — |
-| src/utils/redaction.ts | 4 | — |
-| src/utils/markdownFormatter.ts | 2 | — |
+| src/utils/storage.ts | 18 | ― |
+| src/utils/redaction.ts | 4 | ― |
+| src/utils/markdownFormatter.ts | 2 | ― |
 | src/utils/crypto/primitives.ts | 1 | 1 |
-| src/utils/customPromptUtils.ts | 1 | — |
-| src/utils/logMasker.ts | 1 | — |
-| src/utils/migration.ts | 1 | — |
-| src/offscreen/queryPlan.ts | 1 | — |
-| src/utils/storage/domainFilterCache.ts | 1 | — |
-| src/utils/storage/savedUrlStore.ts | 1 | — |
-| src/utils/storage/SettingsRepository.ts | 1 | — |
-| src/dashboard/panels/asyncData/sqliteHistoryModel.ts | 1 | — |
-| src/dashboard/panels/asyncData/sqliteHistoryPanelController.ts | 1 | — |
-| src/background/handlers/dashboardSqlite/deps.ts | 1 | — |
+| src/utils/customPromptUtils.ts | 1 | ― |
+| src/utils/logMasker.ts | 1 | ― |
+| src/utils/migration.ts | 1 | ― |
+| src/offscreen/queryPlan.ts | 1 | ― |
+| src/utils/storage/domainFilterCache.ts | 1 | ― |
+| src/utils/storage/savedUrlStore.ts | 1 | ― |
+| src/utils/storage/SettingsRepository.ts | 1 | ― |
+| src/dashboard/panels/asyncData/sqliteHistoryModel.ts | 1 | ― |
+| src/dashboard/panels/asyncData/sqliteHistoryPanelController.ts | 1 | ― |
+| src/background/handlers/dashboardSqlite/deps.ts | 1 | ― |
 | src/background/rateLimiter.ts | 1 | 1 |
 | src/background/ai/providers/ProviderStrategy.ts | 1 | 1 |
 | src/background/ai/providers/OpenAIProvider.ts | 1 | 1 |
@@ -60,12 +60,12 @@ PBI 起票時の前提（38 tags / 17 ファイル / `Sunset:` 4 / 未記載 34�
 | 15 | matchesWildcardPattern | D | 0 call（`storage.ts:89` の re-export のみ） | re-export と併せて削除。canonical `matchesDomainPattern` は別経路で利用中 |
 | 16 | StorageAdapter（型） | D | 0（型 alias はコンパイル時に消える） | 削除は機械的。`StoragePort` への置換と同時 |
 | 17 | getConfirmToken?（deps.ts:54） | I | "kept for test compat" の interface メンバ | テスト互換のための型。production 削除不可。production 影響なし |
-| 18-19 | sqliteHistoryModel/Controller の onStateChange | M | Controller ↔ Model の shim pair（内部） | `subscribe()` 移行後に削除。pair で同時に扱う |
+| 18-19 | sqliteHistoryModel/Controller の onStateChange | M | Controller ⇔ Model の shim pair（内部） | `subscribe()` 移行後に削除。pair で同時に扱う |
 | 20-37 | storage.ts 18 exports | I | trancoConsentManager（静的 StorageKeys・動的 getSettings/saveSettings ×3）、trancoVersionTracker（typeof のみ） | 下記 §3。循環回避の意図的設計のため据え置き |
 
 ## 3. storage.ts 18 exports の裁定（最大の塊）
 
-- **分類: internal shim（恒久据え置き）**。consumer は trustDb 系の 2 ファイルに限定され、いずれも storage↔trustDb 循環を回避する意図的設計（`storage.ts` ヘッダ・ADR 2026-08-20・LAYERS.md「Layer 1-循環」に記録済み）。
+- **分類: internal shim（恒久据え置き）**。consumer は trustDb 系の 2 ファイルに限定され、いずれも storage⇔trustDb 循環を回避する意図的設計（`storage.ts` ヘッダ・ADR 2026-08-20・LAYERS.md「Layer 1-循環」に記録済み）。
 - 削除条件: trustDb 側が `SettingsRepository` / `StoragePort` の静的 import に切替可能になったとき（循環の解消が前提）。本 PBI および後続 refactor の範囲外。
 - `restorableSettings` の意図的除外と同様、export 対象の変更は行わない。
 - owner: storage 基盤（SettingsRepository canonical）。再確認日: trustDb 循環解消の ADR 更新時。

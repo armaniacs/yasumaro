@@ -69,12 +69,12 @@ Scenario: GET_CONTENT の応答型が messaging 層で解決される
 ## 実装者向け注記
 
 ### 現状の証拠
-- 手書き送信1: `src/utils/storage/privacyConsent.ts:331` — `chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION })` を手書き
-- shim 経由 import: `src/utils/storage/privacyConsent.ts:13` — `CURRENT_PROTOCOL_VERSION` を `../../background/messageTypes.js` から import。正本は `src/messaging/protocol.ts` で `src/background/messageTypes.ts:22-26` の doc に「正本は `src/messaging/protocol.ts`」「後方互換のために再エクスポート」と明記
-- 正しい姉妹例: `src/utils/storage/encryptionSession.ts:9` — `../../messaging/protocol.js` から直参照している
-- 手書き送信2: `src/utils/storage/encryptionSession.ts:351` — `chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} })` を手書き
+- 手書き送信1: `src/utils/storage/privacyConsent.ts:331` ― `chrome.runtime.sendMessage({ type: 'CONSENT_STATE_CHANGED', protocolVersion: CURRENT_PROTOCOL_VERSION })` を手書き
+- shim 経由 import: `src/utils/storage/privacyConsent.ts:13` ― `CURRENT_PROTOCOL_VERSION` を `../../background/messageTypes.js` から import。正本は `src/messaging/protocol.ts` で `src/background/messageTypes.ts:22-26` の doc に「正本は `src/messaging/protocol.ts`」「後方互換のために再エクスポート」と明記
+- 正しい姉妹例: `src/utils/storage/encryptionSession.ts:9` ― `../../messaging/protocol.js` から直参照している
+- 手書き送信2: `src/utils/storage/encryptionSession.ts:351` ― `chrome.runtime.sendMessage({ type: 'ACTIVITY_UPDATE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} })` を手書き
 - 型付きセンダーの迂回: `src/messaging/types.ts:320-332` の `sendServiceWorkerMessage` と `src/messaging/types.ts:348-355` の `sendFromPopup` を両者とも使わず、手書きのため payload 形状変更がコンパイル時検査されない
-- 型循環: `src/messaging/types.ts:110` が `import type { ContentResponse } from '../popup/mainTypes.js'`、`src/popup/mainTypes.ts:1` が逆方向の `import type { MaskedItem } from '../messaging/types.js'` — popup と messaging の型循環
+- 型循環: `src/messaging/types.ts:110` が `import type { ContentResponse } from '../popup/mainTypes.js'`、`src/popup/mainTypes.ts:1` が逆方向の `import type { MaskedItem } from '../messaging/types.js'` ― popup と messaging の型循環
 - wire 応答型の所有: `src/messaging/types.ts:297` 付近の `T extends 'GET_CONTENT' ? ContentResponse` が popup 所有型で解決される
 
 ## Definition of Done

@@ -12,8 +12,8 @@ backlog: [2026-09-18-00-backlog-holistic-0918.md](2026-09-18-00-backlog-holistic
 
 以下の握りつぶし・seam 迂回がある（着手時に行番号を再確認すること）：
 
-1. `src/background/confirmTokenManager.ts` の 133・146・184行目付近 — `saveMap`・`session.remove` の失敗を空 `catch {}` で無視する
-2. `src/messaging/dashboardGateway.ts` の 32行目付近（`console.error`）・133行目付近（`console.error`）・143/148行目付近（`console.warn`） — logger seam（`utils/logger.js` の logError/logWarn + `utils/errorUtils.ts` の errorMessage）を迂回している
+1. `src/background/confirmTokenManager.ts` の 133・146・184行目付近 ― `saveMap`・`session.remove` の失敗を空 `catch {}` で無視する
+2. `src/messaging/dashboardGateway.ts` の 32行目付近（`console.error`）・133行目付近（`console.error`）・143/148行目付近（`console.warn`） ― logger seam（`utils/logger.js` の logError/logWarn + `utils/errorUtils.ts` の errorMessage）を迂回している
 
 対応方針: confirmToken 系 catch は logger 経由の可視化に置換する（token 意味論・再発行政策は変えない）。dashboardGateway の console 直呼びも同一 logger seam に寄せる。送信経路・retry 政策の変更は PBI 10 の範囲であり本 PBI では行わない。
 

@@ -1,4 +1,4 @@
-# PBI: background → dashboard seam leak の解消 — markdown formatting の utils 集約
+# PBI: background → dashboard seam leak の解消 ― markdown formatting の utils 集約
 
 ## ユーザーストーリー
 開発者として、background の `dashboardSqlite/deps.ts` が `dashboard/obsidianFormatter.ts` に依存する seam leak を解消し、共通の `utils/markdownFormatter.ts` seam に集約したい、なぜなら background と dashboard は別コンテキストであり、background が dashboard に依存すると dashboard 変更が background を壊し、seam の方向が逆転するから
@@ -26,12 +26,12 @@ Scenario: seam leak が存在しない
   When "from.*dashboard/obsidianFormatter" を検索する
   Then ヒットが0件である
 
-Scenario: 境界 — dashboard 固有の formatting が utils に漏れない
+Scenario: 境界 ― dashboard 固有の formatting が utils に漏れない
   Given dashboard 固有の UI 整形（例: panel の HTML 構築）が存在する
   When background が utils/markdownFormatter を import する
   Then dashboard 固有の UI ロジックは utils に含まれず、共有の markdown 生成のみが utils にある
 
-Scenario: エラー — formatting 失敗時の挙動が一貫する
+Scenario: エラー ― formatting 失敗時の挙動が一貫する
   Given formatEntriesToMarkdown が空配列や不正な entry で null を返す
   When background の append_to_obsidian と dashboard の preview がそれぞれ呼ぶ
   Then 両方とも同じ null ハンドリング（"No matching entries" などの一貫したエラー）で応答する
@@ -63,7 +63,7 @@ Scenario: エラー — formatting 失敗時の挙動が一貫する
 - **Red-Green-Refactor**: 既存の `src/utils/markdownFormatter.ts` が既に存在する場合は移動ではなく re-export で済むため、差分は小さい。`obsidianFormatter.ts` が独自ロジックを持つ場合は utils に統合
 
 ## 見積もり
-1pt（要チームでの見積もり）— import 置換と re-export 整理のみ、振る舞い変化なし
+1pt（要チームでの見積もり）― import 置換と re-export 整理のみ、振る舞い変化なし
 - **確認**: src/background/handlers/dashboardSqlite/deps.ts:2 に seam leak が実在
   - `import { formatEntriesToMarkdown } from '../../../dashboard/obsidianFormatter.js'`
 

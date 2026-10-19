@@ -1,4 +1,4 @@
-# PBI: テスト型債務返済 4/5 — popup + offscreen + content + testDir（704 errors / 73 ファイル）
+# PBI: テスト型債務返済 4/5 ― popup + offscreen + content + testDir（704 errors / 73 ファイル）
 
 > **開始前に必読**: `pbi/2026-09-07-08-test-type-debt-background.md` の「前提環境」「ベースラインゲートの仕様」「baseline.json の編集規約」「共通実装手順」「修復パターン（実例つき）」「禁止事項」「コミット規約」を読み、同一手順を適用すること（08 完了・アーカイブ後も `dev-docs/archived/pbi/` から参照可）。本ファイルはバッチ固有の差分のみを記載する。
 
@@ -8,9 +8,9 @@ yasumaroの開発者として、`src/popup`（XSS・マスク可視化テスト�
 
 ## 分析: 本バッチのスコープ（実測 2026-09-07、インベントリ = testDir/type-check-baseline.json）
 
-- スコープ: **`src/popup/**` + `src/offscreen/**` + `src/content/**` + `testDir/**` の baseline エントリ** — 451 + 154 + 68 + 31 = 704 errors / 73 files
+- スコープ: **`src/popup/**` + `src/offscreen/**` + `src/content/**` + `testDir/**` の baseline エントリ** ― 451 + 154 + 68 + 31 = 704 errors / 73 files
 - 上位ファイル: `popup/__tests__/main.test.ts`(132)・`content/__tests__/extractor-comprehensive.test.ts`(49)・`offscreen/__tests__/sqliteMessageHandlers-coverage.test.ts`(46)・`popup/__tests__/mask-visualization.test.ts`(47)・`popup/__tests__/popup-xss.test.ts`(44)
-- `testDir/**` は E2E fixture 6 ファイル（31 errors — popup.fixture.ts 10・popup-pbi27.fixture.ts 9・dashboard.fixture.ts 6 ほか）
+- `testDir/**` は E2E fixture 6 ファイル（31 errors ― popup.fixture.ts 10・popup-pbi27.fixture.ts 9・dashboard.fixture.ts 6 ほか）
 - 依存なし・他バッチと並行可
 
 ## ビジネス価値
@@ -47,7 +47,7 @@ Scenario: popup + offscreen + content + testDir 配下の型エラーが 0 に�
 ## 実装アプローチ
 
 1. `type-check:test:raw` の出力を同配下でフィルタし、エラー数の多い順に返済
-2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 — INDEX セクション参照）
+2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 ― INDEX セクション参照）
 3. `popup/main.test.ts`（132 件）は段階分割を推奨（describe 単位で複数コミット）
 
 ## 見積もり
@@ -69,7 +69,7 @@ npm run type-check:test:raw 2>&1 | grep -E "src/(popup|offscreen|content)|testDi
 
 ### 落とし穴
 - **popup/main.test.ts の mock メソッド系（TS2339 ×多数）**: `vi.mock('...')` されたモジュール関数への `mockImplementation` は `vi.mocked(x).mockImplementation(...)` で包む。vi.mock ファクトリが返すオブジェクトの型は `vi.mocked` の深い推論に任せる
-- **popup-xss.test.ts の期待値**: XSS 防御の回帰テスト — 期待値文字列は絶対に変更しない
+- **popup-xss.test.ts の期待値**: XSS 防御の回帰テスト ― 期待値文字列は絶対に変更しない
 - **testDir fixture（page.evaluate の境界）**: fixture 内のクロージャは page 内で直列化されるため、型はシリアライズ可能な値に限定（PagePayload のジェネリクス活用）
 
 ## Definition of Done

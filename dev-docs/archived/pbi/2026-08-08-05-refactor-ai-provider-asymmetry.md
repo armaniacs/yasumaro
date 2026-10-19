@@ -36,9 +36,9 @@ commit `2026-08-07-01`（provider 共通ロジック抽出）で error mapping�
 
 `BuiltInAiProvider.ts`（113行）は `AIProviderStrategy` を継承しているが、以下を**一切呼んでいない**：
 
-- `checkPreFlight()` — ハードリミット / 使用量警告 / レート制限
-- `sanitizeContent()` — **プロンプトインジェクション検出と高危険度ブロック**
-- `getMaxTokens()` / `getMaxContentChars()` — 上限解決
+- `checkPreFlight()` ― ハードリミット / 使用量警告 / レート制限
+- `sanitizeContent()` ― **プロンプトインジェクション検出と高危険度ブロック**
+- `getMaxTokens()` / `getMaxContentChars()` ― 上限解決
 
 継承は `aiClient.ts:99` のレジストリ契約を満たすためだけに行われており、`settings` フィールドは継承したまま未読。
 

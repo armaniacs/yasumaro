@@ -41,12 +41,12 @@ Scenario: SettingsLoader が32ルールを正しくマッピングする
 ```
 
 ## 受け入れ基準
-- [ ] `src/content/visitTracker.ts` を新設。`createVisitTracker(pageState, {onValidVisit})` をエクスポート — 将来PBIで段階的に抽出
-- [x] `src/content/privacyDialog.ts` を新設。`showPrivacyConfirmDialog(statusCode, reasonLabel)` をエクスポート — 抽出済み。extractor.ts から import に変更し、後方互換 re-export を維持
-- [ ] `src/content/settingsLoader.ts` を新設。`loadCleansingConfig(): Promise<CleansingConfig>` をエクスポート — 将来PBIで抽出。32ルールマッピングは pageState と密結合のため慎重に
-- [x] `extractor.ts` を200行以下に縮小し、上記3モジュール + reportValidVisit の thin composer に — privacyDialog 120行を抽出し extractor を 596行に縮小。残りは段階的に
-- [x] 各モジュールに単体テストを追加（visitTracker: throttle/threshold、privacyDialog: DOM構築、settingsLoader: ルールマッピング） — privacyDialog は DOM 依存のため手動テストで検証
-- [x] E2E テスト (`data-ow-e2e-test` 属性) が依然として動作すること — data-ow-e2e-test / data-ow-test-state contract を維持
+- [ ] `src/content/visitTracker.ts` を新設。`createVisitTracker(pageState, {onValidVisit})` をエクスポート ― 将来PBIで段階的に抽出
+- [x] `src/content/privacyDialog.ts` を新設。`showPrivacyConfirmDialog(statusCode, reasonLabel)` をエクスポート ― 抽出済み。extractor.ts から import に変更し、後方互換 re-export を維持
+- [ ] `src/content/settingsLoader.ts` を新設。`loadCleansingConfig(): Promise<CleansingConfig>` をエクスポート ― 将来PBIで抽出。32ルールマッピングは pageState と密結合のため慎重に
+- [x] `extractor.ts` を200行以下に縮小し、上記3モジュール + reportValidVisit の thin composer に ― privacyDialog 120行を抽出し extractor を 596行に縮小。残りは段階的に
+- [x] 各モジュールに単体テストを追加（visitTracker: throttle/threshold、privacyDialog: DOM構築、settingsLoader: ルールマッピング） ― privacyDialog は DOM 依存のため手動テストで検証
+- [x] E2E テスト (`data-ow-e2e-test` 属性) が依然として動作すること ― data-ow-e2e-test / data-ow-test-state contract を維持
 - [x] 既存テスト全パス (`npm run validate`)
 
 ## テスト戦略
@@ -96,6 +96,6 @@ grep -rn "data-ow-e2e-test" src/content/
 - `loader.ts` の `import(chrome.runtime.getURL('content-extractor.js'))` は `web_accessible_resources` に依存。ファイル名変更不可
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする — privacyDialog の Shadow DOM 抽出を完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― privacyDialog の Shadow DOM 抽出を完了
 - [x] コードレビュー完了
-- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の content script アーキテクチャ更新） — 段階的抽出を記載
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md の content script アーキテクチャ更新） ― 段階的抽出を記載

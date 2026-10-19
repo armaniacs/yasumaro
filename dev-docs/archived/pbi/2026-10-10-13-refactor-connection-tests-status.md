@@ -2,9 +2,9 @@
 
 - 種別: refactor
 - RICE: 2.0（R4 × I0.5 × C1.0 / E1.0）
-- 依存: NN05（messages.json のキーを参照するのみ — NN05 着地後に実装）
+- 依存: NN05（messages.json のキーを参照するのみ ― NN05 着地後に実装）
 - バッチ: W4
-- 台帳送り消費: F19（connectionTests の syncStatusToTop 冗長呼び出し — 次に connection tests を触る時トリガー発火）
+- 台帳送り消費: F19（connectionTests の syncStatusToTop 冗長呼び出し ― 次に connection tests を触る時トリガー発火）
 
 ## ユーザーストーリー
 
@@ -12,10 +12,10 @@
 
 ## 背景（現状）
 
-- `src/dashboard/generalSettings/connectionTests.ts:302-303,350-360,421-431,448-471,490-515` — `textContent + className='error' + syncStatusToTop()` の status 書き込みブロックが 5 重複、`syncStatusToTop()` 冗長呼び出し 15 箇所
-- `src/utils/ui/settingsUiHelper.ts:93-95` — seam 側が「`showStatus('status', …)` は自動ミラー。手呼び `syncStatusToTop` は冪等な残骸」と宣言済みの移行先回り
-- `:302-303,448-450` — `clearElement + className='' + textContent` の onStart 前置き
-- `showSaveError`（:49）は既に `showStatus` 経由 — 形は社内で実証済み
+- `src/dashboard/generalSettings/connectionTests.ts:302-303,350-360,421-431,448-471,490-515` ― `textContent + className='error' + syncStatusToTop()` の status 書き込みブロックが 5 重複、`syncStatusToTop()` 冗長呼び出し 15 箇所
+- `src/utils/ui/settingsUiHelper.ts:93-95` ― seam 側が「`showStatus('status', …)` は自動ミラー。手呼び `syncStatusToTop` は冪等な残骸」と宣言済みの移行先回り
+- `:302-303,448-450` ― `clearElement + className='' + textContent` の onStart 前置き
+- `showSaveError`（:49）は既に `showStatus` 経由 ― 形は社内で実証済み
 
 ## BDD 受け入れシナリオ
 
@@ -41,7 +41,7 @@ Scenario: 冗長な手呼びミラーが残らない
 
 ## テスト戦略
 
-- unit: `src/dashboard/generalSettings/__tests__/connectionTests*.test.ts` — status アサーションが showStatus 契約に追従（既存の期待値は表示内容が不変のため変更なし設計）
+- unit: `src/dashboard/generalSettings/__tests__/connectionTests*.test.ts` ― status アサーションが showStatus 契約に追従（既存の期待値は表示内容が不変のため変更なし設計）
 - 挙動不変: 表示される文言・タイミングは不変（書き込み経路の統合のみ）
 
 ## 見積もり

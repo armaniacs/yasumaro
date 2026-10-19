@@ -1,4 +1,4 @@
-# PBI 2026-09-12-26 — planPurge の 0-vs-absent 契約確定（2 つの破壊的操作が逆動作する実バグ解消）
+# PBI 2026-09-12-26 ― planPurge の 0-vs-absent 契約確定（2 つの破壊的操作が逆動作する実バグ解消）
 
 - **種別**: 🔧非機能追加（fix + hardening）
 - **優先度**: 2 位 / RICE **19.2**（R6 × I2 × C80% / E0.5人日）
@@ -39,11 +39,11 @@ then 正常値は通過・NaN/-1 は fail-closed（回帰なし）
 
 ## 実装メモ（2026-09-12）
 
-- `planPurge` が `0` を `undefined`（次元スキップ）に正規化 — backend の既存 `!= null && > 0` ガードと契約が一致（backend 側の変更なし）
+- `planPurge` が `0` を `undefined`（次元スキップ）に正規化 ― backend の既存 `!= null && > 0` ガードと契約が一致（backend 側の変更なし）
 - `PlanPurgeResult` 型に `| undefined` を明示（exactOptionalPropertyTypes 対応）
 - planPurge テストの 0 ケースを新契約に更新
 - 検証: planPurge + coverage 100 tests green・offscreen 全 76 ファイル 1055 tests green・type-check green
 
 ## 見積もり
 
-🟢低（1pt目安） / 副作用: 🟡軽微（`0` の意味が「全件削除」から「スキップ」に確定 — UI は 0 を送らないため実害なし）
+🟢低（1pt目安） / 副作用: 🟡軽微（`0` の意味が「全件削除」から「スキップ」に確定 ― UI は 0 を送らないため実害なし）

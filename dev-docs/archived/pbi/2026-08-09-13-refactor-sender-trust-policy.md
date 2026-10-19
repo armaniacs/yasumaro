@@ -59,10 +59,10 @@ VULN-004 / 009 / 018 / 019 / 020 のコメントが handler ごとに点在し�
 
 無防備な4型のうち：
 
-- `PING` — 実害はほぼ無い
-- `CHECK_DOMAIN` — ドメイン可否を返すだけ。情報漏洩は限定的
-- `CONTENT_CLEANSING_EXECUTED` — バッジ更新のみ
-- `REFRESH_LOCAL_MARKDOWN_SCHEDULER` — スケジューラを起動する。**要検討**
+- `PING` ― 実害はほぼ無い
+- `CHECK_DOMAIN` ― ドメイン可否を返すだけ。情報漏洩は限定的
+- `CONTENT_CLEANSING_EXECUTED` ― バッジ更新のみ
+- `REFRESH_LOCAL_MARKDOWN_SCHEDULER` ― スケジューラを起動する。**要検討**
 
 **緊急の脆弱性ではなく、構造の問題**として扱う。
 本 PBI の主目的は「新しい handler が既定で安全側になる」ことである。

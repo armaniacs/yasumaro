@@ -13,7 +13,7 @@ content・popup の保守担当者として、ログ経路を 1 つにしたい�
 
 ## 背景（file:line 現状）
 
-- `src/content/visitReporter.ts:165`（`console.info` 開始）と `:184`（`console.info` 応答）— 直前・直後に `logInfo`/`logDebug` があり重複
+- `src/content/visitReporter.ts:165`（`console.info` 開始）と `:184`（`console.info` 応答）― 直前・直後に `logInfo`/`logDebug` があり重複
 - `src/content/contentKernel.ts:232`（`console.info` 自動保存トリガー）
 - `src/content/loader.ts:79`（`warn` コールバックが `console.warn` 直結）
 - `src/popup/spinner.ts:17,36`（`console.warn` 要素不在 2 箇所）

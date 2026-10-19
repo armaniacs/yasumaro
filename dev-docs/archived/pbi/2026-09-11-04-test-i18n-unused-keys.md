@@ -39,9 +39,9 @@ check-i18n 拡張の自己テスト + 全 UI テスト green。
 
 S（0.2 人週）。種別: test（+ doc）。
 
-## 実装メモ（2026-09-11 round 6）— スコープ調整あり
+## 実装メモ（2026-09-11 round 6）― スコープ調整あり
 
 - i18n-core に `checkUnusedLocaleKeys` を追加（data-i18n / __MSG_ / getMessage・getMessageOr・getPluralKey・localized・t の第一引数リテラルを走査、plural family 展開、動的キー allowlist）。check-i18n.mjs に配線。
-- **検出器の実行で 2 つの真の発見**: (a) 「参照されているがロケールに無い」キー 50 件 — ja/en に追加（文言は call site の fallback リテラルから導出。archiveModalTitle はモーダル見出しがキー名で表示される実バグだった）。(b) `getMessage('locale')` が存在しないキーを読む潜在バグ（`||` の優先順位と組み合わさり偶然動作）— navigator.language 直参照に修正。
-- **スコープ調整**: 未使用キー検出は静的スキャンで over-approximate（union 型のキー名リスト・ternary label map が false positive — aiProviderCatalogView の labelKey 等）。**310 件の候補は warn インベントリとして記録し、削除は手動 per-key パスに回す**（check-i18n は非ゲート warn）。
+- **検出器の実行で 2 つの真の発見**: (a) 「参照されているがロケールに無い」キー 50 件 ― ja/en に追加（文言は call site の fallback リテラルから導出。archiveModalTitle はモーダル見出しがキー名で表示される実バグだった）。(b) `getMessage('locale')` が存在しないキーを読む潜在バグ（`||` の優先順位と組み合わさり偶然動作）― navigator.language 直参照に修正。
+- **スコープ調整**: 未使用キー検出は静的スキャンで over-approximate（union 型のキー名リスト・ternary label map が false positive ― aiProviderCatalogView の labelKey 等）。**310 件の候補は warn インベントリとして記録し、削除は手動 per-key パスに回す**（check-i18n は非ゲート warn）。
 - customPromptManager-r2 テスト更新（locale 検出の新契約）。

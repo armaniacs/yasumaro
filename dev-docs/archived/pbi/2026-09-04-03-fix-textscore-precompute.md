@@ -8,7 +8,7 @@
 - `innerText` による強制リフローを排除し、抽出中のページ描画への干渉を減らす
 
 ## 既実装確認（Phase 0）
-- `src/utils/contentExtractor/scoring.ts:83` `candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a))` — 同ファイル `:97` `:117` にも同一パターンが計 3 箇所
+- `src/utils/contentExtractor/scoring.ts:83` `candidates.sort((a, b) => calculateTextScore(b) - calculateTextScore(a))` ― 同ファイル `:97` `:117` にも同一パターンが計 3 箇所
 - `calculateTextScore`（`scoring.ts:13-64`）: `innerText`（`:17`）+ TreeWalker で全 ELEMENT 走査、`a` 要素ごとに `innerText?.length`（`:46`）
 - ファイル冒頭コメント（`scoring.ts:11`）は「DOM 走査を一度に集約し querySelectorAll 呼び出しを削減」と既に最適化を謳っているが、ソート比較内の再計算でその効果が相殺されている
 - `div, section` 全取得経路（`scoring.ts:88`）では候補が数百規模になりうる
@@ -79,7 +79,7 @@ grep -rn "calculateTextScore\|innerText" src/utils/contentExtractor/
 4. テスト追加
 
 ### 落とし穴
-- `slice(0, 1)` / `slice(0, 3)` の take 数がケースで異なる（article/main は 1、asian/hierarchical は 3）— `scoreAndSort` の引数で吸収
+- `slice(0, 1)` / `slice(0, 3)` の take 数がケースで異なる（article/main は 1、asian/hierarchical は 3）― `scoreAndSort` の引数で吸収
 - `innerText` を消すと jsdom テストではむしろ挙動が安定する（jsdom の innerText 実装は不完全）。実ブラウザとの差異は「不可視要素のテキストを含むか」だけで、相対順序への影響は軽微
 
 ## Definition of Done

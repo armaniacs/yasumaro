@@ -42,7 +42,7 @@ Scenario: 正常完了時の既存の解除動作に影響しない
 
 ## 見積もり
 
-0.25 pt（🟢極小）— タイムアウト分岐に `removeListener` 呼び出しを1行追加する程度の修正。
+0.25 pt（🟢極小）― タイムアウト分岐に `removeListener` 呼び出しを1行追加する程度の修正。
 
 ## Definition of Done
 

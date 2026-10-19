@@ -1,4 +1,4 @@
-# Yasumaro の AI 要約クレンジングはどう動いているか — ソースコードを 5 周して見つけた設計判断と潜在リスク
+# Yasumaro の AI 要約クレンジングはどう動いているか ― ソースコードを 5 周して見つけた設計判断と潜在リスク
 
 [日本語](#日本語) | [English](#english)
 
@@ -161,7 +161,7 @@ export function calculateReadabilityScore(element: Element): number {
 
 コードを 5 周した結論として、このクレンジングシステムは「**実用的な堅牢さと、そこかしこの粗さ**」が混在している、というのが正直な感想です。
 
-意図的に広く取ったパターン、それをカバーする二重の安全弁、そしてデフォルト値の揺れ——これらは Yasumaro が拡張機能であるという制約（ユーザーの環境で動く、DOM に直接アクセスできる、でも完璧なサイト適応は不可能）の中で取れる現実的なバランスなのだと思います。
+意図的に広く取ったパターン、それをカバーする二重の安全弁、そしてデフォルト値の揺れ――これらは Yasumaro が拡張機能であるという制約（ユーザーの環境で動く、DOM に直接アクセスできる、でも完璧なサイト適応は不可能）の中で取れる現実的なバランスなのだと思います。
 
 ---
 
@@ -205,7 +205,7 @@ I was looking at the cleansing statistics on the dashboard, and something caught
 
 "The percentage of pages where the AI summary cleansing removed elements seems unusually high. And all I can see is 'alt' or 'multiple' as the reason. Is this actually working?"
 
-Yasumaro has two kinds of cleansing. **Content Cleansing** removes sensitive information like passwords and credit card numbers before saving to browsing history. **AI Summary Cleansing** removes noise — ads, navigation, metadata — from the HTML before sending it to the AI for summarization. This article is about the latter.
+Yasumaro has two kinds of cleansing. **Content Cleansing** removes sensitive information like passwords and credit card numbers before saving to browsing history. **AI Summary Cleansing** removes noise ― ads, navigation, metadata ― from the HTML before sending it to the AI for summarization. This article is about the latter.
 
 I decided to read through the entire source code and dig deep from five different angles. I found some elegant design decisions and a few "wait, is this right?" moments.
 
@@ -263,7 +263,7 @@ export const SOCIAL_CLASS_PATTERNS = [
 
 Yasumaro counters this with **Body Protection**. Before cleansing, it scores each element's "article-likeness." High-scoring elements get a no-delete marker. Every time `safeRemoveElement()` is called, it checks `isBodyProtected()`, skipping protected elements.
 
-The strategy is "cast a wide net, then verify before deleting." This makes the system reasonably robust across different sites. The tradeoff is two passes over the DOM — one for scoring, one for cleansing — every single time.
+The strategy is "cast a wide net, then verify before deleting." This makes the system reasonably robust across different sites. The tradeoff is two passes over the DOM ― one for scoring, one for cleansing ― every single time.
 
 ---
 
@@ -279,11 +279,11 @@ Before cleansing, every element gets a readability score based on five factors: 
 
 If cleansing reduces content to under 20% of the original, or the absolute size drops below 300 bytes, the system automatically reverts to the pre-cleansing text. If it gets worse (under 100 characters), it falls back to `document.body.innerText`.
 
-This two-layer safety is well-designed. The one edge case: the 20% threshold may trigger too often on noise-heavy pages where 80%+ of the DOM is actually ads and widgets — exactly the pages that need cleansing most.
+This two-layer safety is well-designed. The one edge case: the 20% threshold may trigger too often on noise-heavy pages where 80%+ of the DOM is actually ads and widgets ― exactly the pages that need cleansing most.
 
 ---
 
-### Finding 4: Default Values Are Defined in 4 Places — and They Don't Always Match
+### Finding 4: Default Values Are Defined in 4 Places ― and They Don't Always Match
 
 This is the most concerning discovery. Default values for cleansing settings are defined in four separate locations:
 
@@ -304,7 +304,7 @@ Most values are consistent. Some are not:
 | enhancedHiddenEnabled | false | false | **true** (in comment) |
 | emptyElemEnabled | false | false | **true** (in comment) |
 
-The storage defaults for `deepEnabled` and `linkDensityEnabled` are `true`, while every other layer says `false`. New users might have these features active without realizing it. If that's intentional — "new users benefit from more aggressive cleansing" — that's a valid choice. But the inconsistency between documentation and code will confuse future maintainers.
+The storage defaults for `deepEnabled` and `linkDensityEnabled` are `true`, while every other layer says `false`. New users might have these features active without realizing it. If that's intentional ― "new users benefit from more aggressive cleansing" ― that's a valid choice. But the inconsistency between documentation and code will confuse future maintainers.
 
 ```typescript
 // defaults.ts
@@ -335,7 +335,7 @@ export function calculateReadabilityScore(element: Element): number {
 
 Hitting the 200 threshold requires 8 `<p>` tags, 4 headings, or 2000+ characters of text. Typical articles clear this easily, but short posts or list-heavy content may fall below the bar and lose protection.
 
-The scoring itself calls `querySelectorAll` — adding two more DOM traversals on top of everything else. The "two safety nets" are also "two extra DOM passes."
+The scoring itself calls `querySelectorAll` ― adding two more DOM traversals on top of everything else. The "two safety nets" are also "two extra DOM passes."
 
 ---
 
@@ -348,7 +348,7 @@ The scoring itself calls `querySelectorAll` — adding two more DOM traversals o
 | Over-cleansed fallback | Quantitative safety net | Prevents total data loss | May neutralize cleansing on noisy pages |
 | Clone-based execution | Operates on a DOM copy | Zero page impact | 2x memory per extraction |
 
-After five rounds of code study, my honest take is that this cleansing system is a mix of **pragmatic robustness and scattered rough edges**. The intentionally broad patterns, the two-layer safety net, the drifting default values — they all reflect the reality of building a browser extension that must work everywhere without site-specific adaptation.
+After five rounds of code study, my honest take is that this cleansing system is a mix of **pragmatic robustness and scattered rough edges**. The intentionally broad patterns, the two-layer safety net, the drifting default values ― they all reflect the reality of building a browser extension that must work everywhere without site-specific adaptation.
 
 ---
 
@@ -366,11 +366,11 @@ After five rounds of code study, my honest take is that this cleansing system is
 
 After writing this article, we went ahead and implemented all four items. Re-checking the code before starting turned up an error in one of the original findings, which we're correcting here too.
 
-1. **Default value / comment mismatch**: We aligned the comments for `deepEnabled` / `linkDensityEnabled` with the actual implementation (`true`). However, `enhancedHiddenEnabled` / `emptyElemEnabled`, which the article originally flagged, turned out on re-inspection to already have matching comments and implementation (both `false`) — that part of the article was wrong, and we apologize for the error. We also added a comment to the module-level initial values in `extractor.ts` (e.g. `let deepEnabled = false`) clarifying that these are temporary placeholders until `chrome.storage` loads, and are not meant to match the storage defaults by design.
+1. **Default value / comment mismatch**: We aligned the comments for `deepEnabled` / `linkDensityEnabled` with the actual implementation (`true`). However, `enhancedHiddenEnabled` / `emptyElemEnabled`, which the article originally flagged, turned out on re-inspection to already have matching comments and implementation (both `false`) ― that part of the article was wrong, and we apologize for the error. We also added a comment to the module-level initial values in `extractor.ts` (e.g. `let deepEnabled = false`) clarifying that these are temporary placeholders until `chrome.storage` loads, and are not meant to match the storage defaults by design.
 
 2. **Unit tests for pattern lists**: It turned out `helpers.test.ts` already had a fair number of false-positive-prevention tests for functions like `isLikelyAd()`. What was missing was an integration-style test that applies pattern arrays (e.g. `AD_CLASS_PATTERNS`) to real DOM elements via `buildClassIdSelectors()`. We added that, verifying for example that a class name like `address-book` doesn't false-positive against the `ad-` pattern.
 
-3. **Consolidated querySelectorAll pass**: We decided against the full rewrite (restructuring all 34 functions into a single DOM traversal) — without measured performance data, the risk didn't seem to justify the payoff. Instead we made a smaller, targeted fix: caching the selector strings that `buildClassIdSelectors()` builds from immutable patterns, computed once at module load instead of rebuilt on every call. The number of `querySelectorAll` calls is unchanged, but the redundant string-building and escaping work is gone. Functions that use dynamic, user-configurable custom patterns were excluded from this caching.
+3. **Consolidated querySelectorAll pass**: We decided against the full rewrite (restructuring all 34 functions into a single DOM traversal) ― without measured performance data, the risk didn't seem to justify the payoff. Instead we made a smaller, targeted fix: caching the selector strings that `buildClassIdSelectors()` builds from immutable patterns, computed once at module load instead of rebuilt on every call. The number of `querySelectorAll` calls is unchanged, but the redundant string-building and escaping work is gone. Functions that use dynamic, user-configurable custom patterns were excluded from this caching.
 
 4. **Configurable fallback thresholds**: We added `AI_SUMMARY_CLEANSING_FALLBACK_RATIO` (default 20%) and `AI_SUMMARY_CLEANSING_FALLBACK_MIN_BYTES` (default 300 bytes) as new settings, with sliders in the dashboard's AI Summary Cleansing panel. Users can now tune these thresholds themselves on noise-heavy sites where the fallback was neutralizing the cleansing effect.
 
@@ -379,8 +379,8 @@ After writing this article, we went ahead and implemented all four items. Re-che
 ### For Users: What You Can Do Today
 
 - Check the "Cleansing Statistics" on your dashboard to see what's being removed and how much
-- Make sure **Body Protection** is ON in your AI Summary Cleansing settings — it's your primary safety net
-- Advanced options like `jpLayoutEnabled` are OFF by default. If you browse a lot of WordPress sites, you can try turning them on — but start slow and observe
+- Make sure **Body Protection** is ON in your AI Summary Cleansing settings ― it's your primary safety net
+- Advanced options like `jpLayoutEnabled` are OFF by default. If you browse a lot of WordPress sites, you can try turning them on ― but start slow and observe
 
 ---
 

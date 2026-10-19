@@ -10,7 +10,7 @@
 
 `src/background/ai/providers/ProviderStrategy.ts` は 632 行で 12 の責務を 1 ファイルに持っていた。3 つの不整合が重なっていた。
 
-1. **`handleErrorResponse` が production 到達不能な必須フックだった。** interface の必須要素だったが、`fetchWithRetry` は non-ok 応答を必ず throw する（`src/utils/fetch.ts:380` の `throw attemptError` と、関数末尾の `throw lastError`）。したがって要約フローの `if (!response.ok)` 分岐には到達せず、`OpenAIProvider.ts` と `GeminiProvider.ts` にあった 2 つの実装はどちらも死んでいた。実装しないと型エラーになるのに、書いても誰も読まない — 新しいプロバイダに到達しない分岐の文面を書かせている。
+1. **`handleErrorResponse` が production 到達不能な必須フックだった。** interface の必須要素だったが、`fetchWithRetry` は non-ok 応答を必ず throw する（`src/utils/fetch.ts:380` の `throw attemptError` と、関数末尾の `throw lastError`）。したがって要約フローの `if (!response.ok)` 分岐には到達せず、`OpenAIProvider.ts` と `GeminiProvider.ts` にあった 2 つの実装はどちらも死んでいた。実装しないと型エラーになるのに、書いても誰も読まない ― 新しいプロバイダに到達しない分岐の文面を書かせている。
 
 2. **HTTP 失敗の写像が 3 系統に分かれていた。** 応答経路の `mapConnectionError`、throw 経路の `parseAndMapFetchError`（message の逆パース）、そして要約フロー catch の inline 分岐。timeout 判定は前 2 者でも一致しておらず、parse 経路は `AbortError` / `timed out` / `timeout`、要約フローは `AbortError` / `timed out` のみを見ていた。同じ transport 由来の失敗が、受け取ったフローによって別の kind になる可能性が残っていた。
 
@@ -22,10 +22,10 @@
 
 責務を「送信するか」で分割する。継承の段は名前ではなく到達範囲で決める。
 
-- `ProviderStrategy.ts` — 送信手段に依存しない基底。設定の保持、名前と ID、schema 失敗と使用量計上という共有ポリシーだけを持つ。
-- `HttpProviderStrategy.ts`（新規）— 2 つの HTTP フロー。`executeHttpSummaryFlow` / `executeHttpTestFlow` と、その順序が必要とする送信前ガード（`checkPreFlight` / `sanitizeContent` / `buildTestDebugBase` / 許可 URL 導出）。Gemini と OpenAI 互換はこれを継承する。
-- `providerSettingsResolver.ts`（新規）— 設定解決の単一ラダー。`resolveProviderSetting` が「rung が値を返したら勝ち、返さなければ次」という順序だけを書き、3 つの設定はそこへ rung として載せる。rung が `undefined` を返した場合だけ次へ落ちるので、0 や NaN は「未設定」として扱われる。
-- `src/utils/httpFailureMessages.ts` — HTTP 失敗の写像の総所在地。status から文面への表に加え、接続テストの封筒（`mapHttpConnectionFailure` / `mapHttpFetchFailure`）、timeout 判定（`isHttpTimeoutFailure`）、要約フローの失敗（`describeSummaryRequestFailure`）を持つ。Layer 0 のままで、依存するのは同为 Layer 0 の `failureTaxonomy` / `objectUtils` / `errorUtils` だけ。
+- `ProviderStrategy.ts` ― 送信手段に依存しない基底。設定の保持、名前と ID、schema 失敗と使用量計上という共有ポリシーだけを持つ。
+- `HttpProviderStrategy.ts`（新規）― 2 つの HTTP フロー。`executeHttpSummaryFlow` / `executeHttpTestFlow` と、その順序が必要とする送信前ガード（`checkPreFlight` / `sanitizeContent` / `buildTestDebugBase` / 許可 URL 導出）。Gemini と OpenAI 互換はこれを継承する。
+- `providerSettingsResolver.ts`（新規）― 設定解決の単一ラダー。`resolveProviderSetting` が「rung が値を返したら勝ち、返さなければ次」という順序だけを書き、3 つの設定はそこへ rung として載せる。rung が `undefined` を返した場合だけ次へ落ちるので、0 や NaN は「未設定」として扱われる。
+- `src/utils/httpFailureMessages.ts` ― HTTP 失敗の写像の総所在地。status から文面への表に加え、接続テストの封筒（`mapHttpConnectionFailure` / `mapHttpFetchFailure`）、timeout 判定（`isHttpTimeoutFailure`）、要約フローの失敗（`describeSummaryRequestFailure`）を持つ。Layer 0 のままで、依存するのは同为 Layer 0 の `failureTaxonomy` / `objectUtils` / `errorUtils` だけ。
 
 個別判断:
 

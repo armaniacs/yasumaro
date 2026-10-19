@@ -1,5 +1,5 @@
 ---
-title: "Yasumaro v6.3.7 — Obsidian REST API のプロトコル設定を正しく反映するようになりました"
+title: "Yasumaro v6.3.7 ― Obsidian REST API のプロトコル設定を正しく反映するようになりました"
 emoji: "🔐"
 type: "tech"
 topics: ["yasumaro", "chrome拡張機能", "obsidian", "リリースノート"]
@@ -45,7 +45,7 @@ _validateProtocol(protocol: string | undefined | null): 'http' | 'https' {
     throw new Error('Protocol must be "http" or "https".');
   }
   if (normalized === 'http') {
-    addLog(LogType.WARN, 'HTTP protocol selected — API key and data will be sent in plaintext...');
+    addLog(LogType.WARN, 'HTTP protocol selected ― API key and data will be sent in plaintext...');
   }
   return normalized;
 }

@@ -11,11 +11,11 @@
 
 ## 背景（現状）
 
-- `src/utils/contentCleaner.ts:133-181` — `stripHardStripElements` は 3 パス（タグ / 属性 / `HIDDEN_ELEMENT_SELECTOR`）で要素を収集し remove。hidden パスは :168-172
-- `src/utils/contentCleaner.ts:276-323` — `countCleanseTargets` はタグ + 属性の 2 パスのみで `HIDDEN_ELEMENT_SELECTOR` パスが欠落（:286-311）
+- `src/utils/contentCleaner.ts:133-181` ― `stripHardStripElements` は 3 パス（タグ / 属性 / `HIDDEN_ELEMENT_SELECTOR`）で要素を収集し remove。hidden パスは :168-172
+- `src/utils/contentCleaner.ts:276-323` ― `countCleanseTargets` はタグ + 属性の 2 パスのみで `HIDDEN_ELEMENT_SELECTOR` パスが欠落（:286-311）
 - 消費者: `src/utils/contentExtractor/extractionReport.ts:547`（診断 recount）、`src/utils/contentExtractor/extractPipeline.ts:344`
 
-双子が drift 済み — hidden div が存在する場合、診断 recount の `hardStripRemoved` / `totalRemoved` が実際の strip 契約より過小報告する。keyword 系は既に正解形（`collectKeywordElements` :223 を strip/count で共有）なので、hard-strip 側に同形を複製する。
+双子が drift 済み ― hidden div が存在する場合、診断 recount の `hardStripRemoved` / `totalRemoved` が実際の strip 契約より過小報告する。keyword 系は既に正解形（`collectKeywordElements` :223 を strip/count で共有）なので、hard-strip 側に同形を複製する。
 
 ## BDD 受け入れシナリオ
 
@@ -43,7 +43,7 @@ Scenario: hidden 要素が存在しないページで見込み数は従来どお
 
 ## テスト戦略
 
-- unit: `src/utils/__tests__/contentCleaner*.test.ts` — fixture 先行（hidden 要素を含む DOM で recount < strip が再現する落ちるテストを先に追加してから直す）
+- unit: `src/utils/__tests__/contentCleaner*.test.ts` ― fixture 先行（hidden 要素を含む DOM で recount < strip が再現する落ちるテストを先に追加してから直す）
 - 境界値: hidden セレクタの各形態（`[hidden]` / `[aria-hidden="true"]` / `[style*="display:none"]`）を個別に pin
 - 挙動不変: strip 側の除去順序・削除数は変更しない（収集を 1 本化するだけ）
 

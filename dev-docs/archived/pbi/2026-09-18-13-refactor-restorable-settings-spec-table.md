@@ -12,10 +12,10 @@ backlog: [2026-09-18-00-backlog-holistic-0918b.md](2026-09-18-00-backlog-holisti
 
 `src/utils/storage/restorableSettings.ts` に以下の並列テーブルがある（着手時に行番号を再確認すること）:
 
-1. `RESTORABLE_KEYS`（Set、110キー）— 許可リスト
-2. `KEY_TYPES`（Record）— 基本型検査
-3. `CLEANSING_BOOLEAN_KEYS`（Array）— クレンジング boolean 特別検査
-4. `CLEANSING_NUMERIC_KEYS`（Record of {min,max}）— 数値範囲検査
+1. `RESTORABLE_KEYS`（Set、110キー）― 許可リスト
+2. `KEY_TYPES`（Record）― 基本型検査
+3. `CLEANSING_BOOLEAN_KEYS`（Array）― クレンジング boolean 特別検査
+4. `CLEANSING_NUMERIC_KEYS`（Record of {min,max}）― 数値範囲検査
 
 実測（作成時点）: allowlist・types・boolean・numeric の間に drift は存在しない。だが整合は手動であり、drift テストもない。`validateRestorableSettings` の検査順序は allowlist → KEY_TYPES 型検査 → CLEANSING_BOOLEAN boolean 検査 → 範囲検査。重要な挙動: **CLEANSING_NUMERIC_KEYS は型検査を持たず、範囲検査は `typeof value === 'number'` のときのみ適用される**（非数値は素通しする現行挙動を維持すること）。
 

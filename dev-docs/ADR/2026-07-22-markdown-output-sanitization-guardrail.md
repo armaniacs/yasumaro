@@ -60,7 +60,7 @@ exportLogsService）でサニタイズ漏れが発生した。
 
 ## 影響を受けるコンポーネント
 - 新規/変更される全 `src/**/*.ts` ファイルでmarkdown出力を行うもの
-- ESLint設定（`eslint.config.js`）— カスタムルールの継続的メンテナンスが必要
+- ESLint設定（`eslint.config.js`）― カスタムルールの継続的メンテナンスが必要
 
 ## 将来の改善案
  - ~~将来的に~~ lint rule を `error` レベルに引き上げ、CIをブロックする（2026-07-22 実施済み）
@@ -68,10 +68,10 @@ exportLogsService）でサニタイズ漏れが発生した。
   サニタイズを義務化するアーキテクチャへの移行
 
 ## 関連ADR
-- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) — リソース枯渇対策の独立ADR
+- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) ― リソース枯渇対策の独立ADR
 
 ## 関連 ADR
-- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) — リソース枯渇対策の独立したガードレール
+- [Response Size Limit Guardrail](2026-07-22-response-size-limit-guardrail.md) ― リソース枯渇対策の独立したガードレール
 
 ## Security Considerations
 

@@ -8,9 +8,9 @@
 
 本 PBI は「logger に移すと logger → crypto の依存が生まれ層構造が変わる」ことを着手条件としていたが、前提が成り立たなかった。
 
-1. **crypto は logger を import していない** — 逆方向の依存がなく循環参照は起きない
-2. **logger は既に外部モジュールに依存している** — `../piiSanitizer.js` / `../objectUtils.js` / `../storage/storageTransaction.js`。「logger は依存の浅い層」という前提が誤りだった
-3. **先例がある** — `piiSanitizer.ts` はプライバシー保護目的のマスキングで `utils/` 直下に置かれ、logger がそれを import している
+1. **crypto は logger を import していない** ― 逆方向の依存がなく循環参照は起きない
+2. **logger は既に外部モジュールに依存している** ― `../piiSanitizer.js` / `../objectUtils.js` / `../storage/storageTransaction.js`。「logger は依存の浅い層」という前提が誤りだった
+3. **先例がある** ― `piiSanitizer.ts` はプライバシー保護目的のマスキングで `utils/` 直下に置かれ、logger がそれを import している
 
 そのうえで案B（`utils/` 直下の独立モジュール）を採った。依存の向きは問題ないと判明したが、`hashUrl` は logger 以外からも使いうる性質なので、logger に内包するより独立している方が素直と判断した。
 

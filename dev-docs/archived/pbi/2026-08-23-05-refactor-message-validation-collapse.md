@@ -33,10 +33,10 @@ Scenario: 不正なプロトコルバージョンのメッセージが拒否さ�
 ```
 
 ## 受け入れ基準
-- [x] `messageHandler.ts` の `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ONLY_TYPES` / `protocolVersion` チェックを `MessageRouter` に統合 — 完全統合は将来PBIで実施。現状は trust table の single source に集中
-- [x] `messageTypes.ts` に `CONTENT_SCRIPT_ALLOWED_TYPES` を定義し、MessageRouter の trust table がそこから派生するよう変更 — `CONTENT_SCRIPT_ALLOWED_TYPES` (4要素) を SSOT として定義し、MessageRouter は `new Set(CONTENT_SCRIPT_ALLOWED_TYPES)` で派生
-- [x] `messageHandler.ts` は `runDeferredStartupMigrations` + `tabCache.initialize()` のオーケストレーションのみを残す — messageHandler の検証と MessageRouter の trust が二重定義されなくなったことで、将来の完全統合が容易に
-- [x] `ServiceWorkerRequestValidator` を9番目の validator として `MessageRouter` に接続 — validators は既に MessageRouter 内で8種登録済み。ServiceWorkerRequestValidator は generic 検証のため messageHandler 側に残置
+- [x] `messageHandler.ts` の `VALID_MESSAGE_TYPES` / `CONTENT_SCRIPT_ONLY_TYPES` / `protocolVersion` チェックを `MessageRouter` に統合 ― 完全統合は将来PBIで実施。現状は trust table の single source に集中
+- [x] `messageTypes.ts` に `CONTENT_SCRIPT_ALLOWED_TYPES` を定義し、MessageRouter の trust table がそこから派生するよう変更 ― `CONTENT_SCRIPT_ALLOWED_TYPES` (4要素) を SSOT として定義し、MessageRouter は `new Set(CONTENT_SCRIPT_ALLOWED_TYPES)` で派生
+- [x] `messageHandler.ts` は `runDeferredStartupMigrations` + `tabCache.initialize()` のオーケストレーションのみを残す ― messageHandler の検証と MessageRouter の trust が二重定義されなくなったことで、将来の完全統合が容易に
+- [x] `ServiceWorkerRequestValidator` を9番目の validator として `MessageRouter` に接続 ― validators は既に MessageRouter 内で8種登録済み。ServiceWorkerRequestValidator は generic 検証のため messageHandler 側に残置
 - [x] 既存テスト全パス (`npm run validate`)
 
 ## テスト戦略
@@ -79,4 +79,4 @@ grep -rn "CONTENT_SCRIPT_ONLY_TYPES\|CONTENT_SCRIPT_ALLOWED" src/
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] コードレビュー完了
-- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md のメッセージフロー更新） — CONTENT_SCRIPT_ALLOWED_TYPES の SSOT を記載
+- [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md のメッセージフロー更新） ― CONTENT_SCRIPT_ALLOWED_TYPES の SSOT を記載

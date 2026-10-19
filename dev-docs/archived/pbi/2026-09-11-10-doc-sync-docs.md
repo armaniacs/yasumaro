@@ -9,11 +9,11 @@
 - 順位: 10 / 10
 - RICE スコア: 5.0（Reach=2 / Impact=0.5 / Confidence=100% / Effort=0.2 人週）
 - 根拠（2026-09-11 診断で drift 確認）:
-  - `dev-docs/ERROR_CODES.md` — enum（`src/utils/logger/types.ts:7-76`）に存在する TRUST_DB_* / TRANCO_* / BLOOM_FILTER_ERROR / UNKNOWN_AI_PROVIDER / BADGE_UPDATE_FAILED / PERMISSION_REQUIRED など 8+ コードが未収録。:152 の「コード定義: `src/utils/logger.ts`」は誤り（正: `types.ts`）
-  - `dev-docs/ARCHITECTURE_MAP.md` — round 4 モジュール（sqliteStatus.ts / contentFetchGateway.ts / cleansingBadge.ts / archiveWireTable.ts / queryPlan）が不在。`Storage` 行が retired shim `src/utils/storage.ts` を指す（正: `src/utils/storage/SettingsRepository.ts`）。Content Scripts ツリーが contentKernel/deadlineTimer/throttle 分割を未反映
-  - `dev-docs/DESIGN_SPECIFICATIONS.md` §5.4:109 — STATUS を「fts5/fallback/path のみ」と記載（PBI 06 で extras 8+ フィールドが実装済み）。:107 の `opfsWorker.ts` 単数パスは現状ディレクトリと不一致
-  - `dev-docs/ADR/2026-08-27-limit-policy.md` — SSOT 主張と `sqliteEngineHost.ts:56` の二重定義が乖離（PBI 08 で解消されるため status note を追記）
-  - `src/utils/cleansingBadge.ts` — LAYERS.md チェックリスト要件の `// @layer 0` ヘッダ欠落
+  - `dev-docs/ERROR_CODES.md` ― enum（`src/utils/logger/types.ts:7-76`）に存在する TRUST_DB_* / TRANCO_* / BLOOM_FILTER_ERROR / UNKNOWN_AI_PROVIDER / BADGE_UPDATE_FAILED / PERMISSION_REQUIRED など 8+ コードが未収録。:152 の「コード定義: `src/utils/logger.ts`」は誤り（正: `types.ts`）
+  - `dev-docs/ARCHITECTURE_MAP.md` ― round 4 モジュール（sqliteStatus.ts / contentFetchGateway.ts / cleansingBadge.ts / archiveWireTable.ts / queryPlan）が不在。`Storage` 行が retired shim `src/utils/storage.ts` を指す（正: `src/utils/storage/SettingsRepository.ts`）。Content Scripts ツリーが contentKernel/deadlineTimer/throttle 分割を未反映
+  - `dev-docs/DESIGN_SPECIFICATIONS.md` §5.4:109 ― STATUS を「fts5/fallback/path のみ」と記載（PBI 06 で extras 8+ フィールドが実装済み）。:107 の `opfsWorker.ts` 単数パスは現状ディレクトリと不一致
+  - `dev-docs/ADR/2026-08-27-limit-policy.md` ― SSOT 主張と `sqliteEngineHost.ts:56` の二重定義が乖離（PBI 08 で解消されるため status note を追記）
+  - `src/utils/cleansingBadge.ts` ― LAYERS.md チェックリスト要件の `// @layer 0` ヘッダ欠落
 
 ## BDD 受け入れシナリオ
 

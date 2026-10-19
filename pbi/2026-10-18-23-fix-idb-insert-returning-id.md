@@ -18,10 +18,10 @@ security-audit run-2 の needs_validation リード。fingerprint: `IdbVfsBacken
 
 - 判定: `needs_validation`（NEEDS-VALIDATION.md 3番）
 - claimed root cause: 番号の読み出しが insert と atomic でない（トランザクションも insert 経路の RETURNING も無い）。一方でリポジトリは atomic な RETURNING 形式（`schema.ts:154`）を既に持ち、batch 書き込みは `withTransaction` で包んでいる。
-- entrypoint: `src/offscreen/offscreen.ts:96` — メッセージ 1 件ごとに独立した async IIFE を立てる（`:96-128`）。同時 `SQLITE_INSERT` は直列化されず、mutex も共有しない。
-- propagation: `src/offscreen/sqliteMessageHandlers.ts:344` — `SQLITE_INSERT` は `handleSqliteWire('insert', …)` を通り `recordsRepo.insert`（`recordsRepo.ts:17-19`）経由で `backend.insert` に到達する。振り分け経路に直列化キューは無い（`offscreen.ts:34-59` の `dispatchSqliteMessage` はサイズ検査と Map 引きのみ）。
-- propagation: `src/offscreen/IdbVfsBackend.ts:100-101` — `await execWithCache(INSERT_SQL, params)` の後に `await this.scalar('SELECT last_insert_rowid()')` を別 await で実行し、その間にトランザクションが無い。対照的に `insertBatch` は `:111-119` で `withTransaction` に包んでいる。`execWithCache`（`idbEngineLifecycle.ts:55-69`）はキューを通さずそのまま wasm エンジンへ渡す。
-- sink: `src/background/pipeline/steps/saveSqliteStep.ts:91` — 返された番号をキーにした `update { id: mutateResult.data.id, changes: { obsidian_synced } }` が走るため、同時挿入された行が `obsidian_synced=1` になり、実際に Mirroring した行は未マークのまま残る。
+- entrypoint: `src/offscreen/offscreen.ts:96` ― メッセージ 1 件ごとに独立した async IIFE を立てる（`:96-128`）。同時 `SQLITE_INSERT` は直列化されず、mutex も共有しない。
+- propagation: `src/offscreen/sqliteMessageHandlers.ts:344` ― `SQLITE_INSERT` は `handleSqliteWire('insert', …)` を通り `recordsRepo.insert`（`recordsRepo.ts:17-19`）経由で `backend.insert` に到達する。振り分け経路に直列化キューは無い（`offscreen.ts:34-59` の `dispatchSqliteMessage` はサイズ検査と Map 引きのみ）。
+- propagation: `src/offscreen/IdbVfsBackend.ts:100-101` ― `await execWithCache(INSERT_SQL, params)` の後に `await this.scalar('SELECT last_insert_rowid()')` を別 await で実行し、その間にトランザクションが無い。対照的に `insertBatch` は `:111-119` で `withTransaction` に包んでいる。`execWithCache`（`idbEngineLifecycle.ts:55-69`）はキューを通さずそのまま wasm エンジンへ渡す。
+- sink: `src/background/pipeline/steps/saveSqliteStep.ts:91` ― 返された番号をキーにした `update { id: mutateResult.data.id, changes: { obsidian_synced } }` が走るため、同時挿入された行が `obsidian_synced=1` になり、実際に Mirroring した行は未マークのまま残る。
 
 補足（実ファイルで確認した事実）:
 
@@ -81,13 +81,13 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 |---|---|---|
 | `src/offscreen/IdbVfsBackend.ts` | `:96-103` | `insert()` の全体。`:100` が `await this.engine.execWithCache(INSERT_SQL, params)`、`:101` が `const id = await this.scalar('SELECT last_insert_rowid()')`、`:102` が `{ success: true, id }` を返す |
 | 同上 | `:74-78` | `scalar()` ヘルパー。`:76` が `execWithCache(sql, params, callback)` で第 1 セルを `Number()` で取る |
-| 同上 | `:62-64` | `transaction` ゲッター。`{ exec: (sql) => this.engine.execWithCache(sql) }` — `withTransaction` に渡す実体 |
-| 同上 | `:105-121` | `insertBatch()`。`:111-119` が `withTransaction(this.transaction, async () => { … })`、`:114` が `INSERT_IGNORE_SQL`、`:115` が `SELECT changes()` — **本件が包まれている対照実装** |
+| 同上 | `:62-64` | `transaction` ゲッター。`{ exec: (sql) => this.engine.execWithCache(sql) }` ― `withTransaction` に渡す実体 |
+| 同上 | `:105-121` | `insertBatch()`。`:111-119` が `withTransaction(this.transaction, async () => { … })`、`:114` が `INSERT_IGNORE_SQL`、`:115` が `SELECT changes()` ― **本件が包まれている対照実装** |
 | 同上 | `:302-310` | `insertAuditLog()`。`:304-307` が `AUDIT_INSERT_SQL`、`:308` が `const newId = await this.scalar('SELECT last_insert_rowid()')`、`:309` が番号を返す |
-| 同上 | `:11` | `import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js'` — 差し替え時に触る import |
+| 同上 | `:11` | `import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js'` ― 差し替え時に触る import |
 | `src/offscreen/schema.ts` | `:114` | `INSERT_SQL`。`RETURNING` を持たない（監査 evidence） |
 | 同上 | `:145` | `INSERT_IGNORE_SQL` |
-| 同上 | `:154` | `INSERT_IGNORE_RETURNING_SQL` — **リポジトリが既に持つ atomic 形式**。`:147-153` のコメントが RETURNING の正しさを論証 |
+| 同上 | `:154` | `INSERT_IGNORE_RETURNING_SQL` ― **リポジトリが既に持つ atomic 形式**。`:147-153` のコメントが RETURNING の正しさを論証 |
 | `src/offscreen/sqliteEngineContext/idbEngineLifecycle.ts` | `:55-69` | `execWithCache`。`:61-64` はコールバック無しで `idbEngine.exec`、`:65-68` はコールバック有りで `idbEngine.query`。**キューを通さずそのまま渡す** |
 | `src/offscreen/sqliteBoot.ts` | `:74-103` | `wrapDb`。`:80-82` の `exec` と `:84-86` の `query` が**両方とも** `db.run(sql, params)` を呼ぶ。RETURNING を `query` 経由で取る経路が存在する根拠 |
 | `src/offscreen/offscreen.ts` | `:34-59` | `dispatchSqliteMessage`。`:42-46` のサイズ検査、`:48-51` の Map 引き。**直列化が無い** |
@@ -98,22 +98,22 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 | `src/offscreen/recordsRepo.ts` | `:17-20` | `insert()` → `backend.insert(record)` |
 | `src/offscreen/auditLogRepo.ts` | `:17-19` | `insertAuditLog()` → `backend.insertAuditLog(record)` |
 | `src/offscreen/queryPlan.ts` | `:668-669` | `AUDIT_INSERT_SQL`。RETURNING を持たない |
-| `src/background/pipeline/steps/saveSqliteStep.ts` | `:75` | `mutate({ type: 'insert', … })` — 番号を取得する最初の呼び出し |
-| 同上 | `:90-92` | `:91` が `update { id: mutateResult.data.id, changes: { obsidian_synced } }` — **sink** |
-| `src/background/pipeline/savePhase.ts` | `:83` | `obsidianSynced: context.obsidianDuration !== undefined ? true : undefined` — 印が付く条件の出所 |
+| `src/background/pipeline/steps/saveSqliteStep.ts` | `:75` | `mutate({ type: 'insert', … })` ― 番号を取得する最初の呼び出し |
+| 同上 | `:90-92` | `:91` が `update { id: mutateResult.data.id, changes: { obsidian_synced } }` ― **sink** |
+| `src/background/pipeline/savePhase.ts` | `:83` | `obsidianSynced: context.obsidianDuration !== undefined ? true : undefined` ― 印が付く条件の出所 |
 | `src/messaging/auditLogGateway.ts` | `:43-53` | `recordAuditLog`。`:46` で insert を呼ぶが、返却 id を参照しない |
-| `src/offscreen/opfsWorker/crudHandlers.ts` | `:22-28` | OPFS 側の `handleInsert`。`:24` が `INSERT_SQL`、`:26` が `SELECT last_insert_rowid() AS id` — **同型の非 atomic 組（キューが守っている）** |
-| 同上 | `:113` | `INSERT_IGNORE_RETURNING_SQL` の使用箇所 — RETURNING が OPFS 経路で既に動く証拠 |
+| `src/offscreen/opfsWorker/crudHandlers.ts` | `:22-28` | OPFS 側の `handleInsert`。`:24` が `INSERT_SQL`、`:26` が `SELECT last_insert_rowid() AS id` ― **同型の非 atomic 組（キューが守っている）** |
+| 同上 | `:113` | `INSERT_IGNORE_RETURNING_SQL` の使用箇所 ― RETURNING が OPFS 経路で既に動く証拠 |
 | `src/offscreen/opfsWorker.ts` | `:386-392` | リクエスト直列化キューの宣言。`:400` が `MAX_QUEUED_REQUESTS = 200` |
-| 同上 | `:448-458` | `processQueue` — 逐次実行ループ。**IDB ラングに無いもの** |
+| 同上 | `:448-458` | `processQueue` ― 逐次実行ループ。**IDB ラングに無いもの** |
 | `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts` | `:14-29` / `:32-49` / `:52-65` | 実エンジン fixture。better-sqlite3 と `bootSqliteEngine` で `IdbVfsBackend` を組み立てる |
-| 同上 | `:65` | `(idb as unknown as { ensureDb: () => void }).ensureDb = () => {}` — テスト側の差し替え点 |
+| 同上 | `:65` | `(idb as unknown as { ensureDb: () => void }).ensureDb = () => {}` ― テスト側の差し替え点 |
 | `src/offscreen/__tests__/idbScalarRead-golden.test.ts` | `:56-59` | insert の golden 固定。`toEqual({ success: true, id: 1 })` と `id: 2` |
 | 同上 | `:89-92` | insertAuditLog の golden 固定。`id: 1` と `id: 2` |
 | `src/offscreen/__tests__/schema-comprehensive.test.ts` | `:116-131` | `INSERT_SQL` の 3 制約（placeholder 数 / 全カラムを含む / `OR IGNORE` を含まない） |
 | 同上 | `:133-143` | `INSERT_IGNORE_SQL` の 2 制約 |
 | `src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts` | `:44-49` | `queryMock` が既に `sql.includes('RETURNING')` を分岐し `[{ id: 1 }]` を返す |
-| 同上 | `:107` | `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` — **完全一致の赤化候補** |
+| 同上 | `:107` | `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` ― **完全一致の赤化候補** |
 | `src/offscreen/__tests__/search-sort-parametric.test.ts` | `:29-32` | Idb の `execWithCache` スタブ。`/SELECT COUNT\|SELECT changes\|last_insert_rowid/i` に一致したときだけ `callback([0])` |
 | `src/offscreen/__tests__/query-backends-parametric.test.ts` | `:34` | 同じ正規表現のスタブ |
 | `src/background/pipeline/__tests__/saveSqliteStep.test.ts` | `:91-114` | `obsidian_synced` 更新の固定（`id: 1` 固定） |
@@ -143,11 +143,11 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 
 ### 既存テストが赤くなる可能性（先出し）
 
-- **`src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts:107`** — `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` は**完全一致**。`:44-49` の `queryMock` は既に `RETURNING` を分岐して `[{ id: 1 }]` を返すので `insertBatch`（`:113` の `INSERT_IGNORE_RETURNING_SQL`）は現状も緑。`insert` 側を RETURNING にしてもこのテストは `insertBatch` だけを実行している想定で、**基本は緑のはず**。赤になったら「`insert` も同じモックを通るようになった」ことによる想定外の失敗である可能性が高いので、**期待値を書き換えて通すのではなく、モック側の不足を特定する**。
-- **`src/offscreen/__tests__/schema-comprehensive.test.ts:116-131`** — `INSERT_SQL` 自体の 3 制約。選択肢 1 は `INSERT_SQL` を**書き換えず** `INSERT_RETURNING_SQL` を**追加**するなら、この 3 制約は緑のまま。**`INSERT_SQL` 自体に `RETURNING` を足す実装を選ぶと**、`crudHandlers.ts:24` や `rowCodec.test.ts:170` が参照する `INSERT_SQL` の意味が変わるため、`INSERT_SQL` は触らず新定数を追加する形を推奨する。
-- **`src/offscreen/__tests__/idbScalarRead-golden.test.ts:56-59` / `:89-92`** — `toEqual({ success: true, id: 1 })` と `id: 2`。RETURNING へ寄せても**同じ番号が返るため緑のまま**が正しい。ただしこのテストの `makeBackend`（`:30-49`）は `execWithCache` を better-sqlite3 に直接繋いでおり、`:40` は `/^\s*SELECT/i` で分岐している。`INSERT ... RETURNING` は `SELECT` で始まらないため `:44` の `db.prepare(sql).run(…)` に落ち、**コールバックが発火せず id が 0 になる**。つまりこのスタブは「RETURNING を読む」能力を持っていない。**実装前にこのスタブを RETURNING 対応に直すか、テストの分岐条件（`RETURNING` や `PRAGMA` など `SELECT` 以外の読み出し経路）にも広げる必要がある**。ここを直さないと「RETURNING に直したのに golden が赤くなる」という混乱が起きる。
-- **`src/offscreen/__tests__/search-sort-parametric.test.ts:31` / `query-backends-parametric.test.ts:34`** — Idb の `execWithCache` スタブが `/SELECT COUNT|SELECT changes|last_insert_rowid/i` に一致したときだけ `callback([0])` を呼ぶ。この正規表現は `INSERT ... RETURNING id` に一致しない。ただし現状この 2 ファイルで `insert()` を呼んでいるのは `FallbackStorage`（`search-sort-parametric.test.ts:61-63`）だけで、IdbVfsBackend の `insert()` は通っていないため**現状は緑のまま**。ただし **「RETURNING で id を取るスタブ」を書くとコールバックが発火せず id が黙って 0 になる**型の見えない罠なので、正規表現に `/RETURNING/i` を含めておくのが安全。
-- **`src/background/pipeline/__tests__/saveSqliteStep.test.ts:91-114`** — `id: 1` 固定のモック。本 PBI の変更で `saveSqliteStep.ts` 自体は触らない（呼び出し規約が変わらない）ので緑のままのはず。
+- **`src/offscreen/__tests__/opfsWorker-transactionIntegrity.test.ts:107`** ― `expect(result.result).toEqual({ count: 1, inserted: 1, skipped: 0 })` は**完全一致**。`:44-49` の `queryMock` は既に `RETURNING` を分岐して `[{ id: 1 }]` を返すので `insertBatch`（`:113` の `INSERT_IGNORE_RETURNING_SQL`）は現状も緑。`insert` 側を RETURNING にしてもこのテストは `insertBatch` だけを実行している想定で、**基本は緑のはず**。赤になったら「`insert` も同じモックを通るようになった」ことによる想定外の失敗である可能性が高いので、**期待値を書き換えて通すのではなく、モック側の不足を特定する**。
+- **`src/offscreen/__tests__/schema-comprehensive.test.ts:116-131`** ― `INSERT_SQL` 自体の 3 制約。選択肢 1 は `INSERT_SQL` を**書き換えず** `INSERT_RETURNING_SQL` を**追加**するなら、この 3 制約は緑のまま。**`INSERT_SQL` 自体に `RETURNING` を足す実装を選ぶと**、`crudHandlers.ts:24` や `rowCodec.test.ts:170` が参照する `INSERT_SQL` の意味が変わるため、`INSERT_SQL` は触らず新定数を追加する形を推奨する。
+- **`src/offscreen/__tests__/idbScalarRead-golden.test.ts:56-59` / `:89-92`** ― `toEqual({ success: true, id: 1 })` と `id: 2`。RETURNING へ寄せても**同じ番号が返るため緑のまま**が正しい。ただしこのテストの `makeBackend`（`:30-49`）は `execWithCache` を better-sqlite3 に直接繋いでおり、`:40` は `/^\s*SELECT/i` で分岐している。`INSERT ... RETURNING` は `SELECT` で始まらないため `:44` の `db.prepare(sql).run(…)` に落ち、**コールバックが発火せず id が 0 になる**。つまりこのスタブは「RETURNING を読む」能力を持っていない。**実装前にこのスタブを RETURNING 対応に直すか、テストの分岐条件（`RETURNING` や `PRAGMA` など `SELECT` 以外の読み出し経路）にも広げる必要がある**。ここを直さないと「RETURNING に直したのに golden が赤くなる」という混乱が起きる。
+- **`src/offscreen/__tests__/search-sort-parametric.test.ts:31` / `query-backends-parametric.test.ts:34`** ― Idb の `execWithCache` スタブが `/SELECT COUNT|SELECT changes|last_insert_rowid/i` に一致したときだけ `callback([0])` を呼ぶ。この正規表現は `INSERT ... RETURNING id` に一致しない。ただし現状この 2 ファイルで `insert()` を呼んでいるのは `FallbackStorage`（`search-sort-parametric.test.ts:61-63`）だけで、IdbVfsBackend の `insert()` は通っていないため**現状は緑のまま**。ただし **「RETURNING で id を取るスタブ」を書くとコールバックが発火せず id が黙って 0 になる**型の見えない罠なので、正規表現に `/RETURNING/i` を含めておくのが安全。
+- **`src/background/pipeline/__tests__/saveSqliteStep.test.ts:91-114`** ― `id: 1` 固定のモック。本 PBI の変更で `saveSqliteStep.ts` 自体は触らない（呼び出し規約が変わらない）ので緑のままのはず。
 
 ### 着手前に潰すべき owner 確認（ブロッカー）
 

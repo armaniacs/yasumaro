@@ -1,4 +1,4 @@
-# PBI: Logger の Service Worker 終了耐性強化 — alarms ベース flush
+# PBI: Logger の Service Worker 終了耐性強化 ― alarms ベース flush
 
 元指摘: Checking Team (High: SRE/Ops Specialist)
 
@@ -71,7 +71,7 @@ Feature: Logger service worker resilience
 3pt（alarms 移行 + onSuspend 強化 + テスト）
 
 ## 副作用
-🟡 軽微 — `chrome.alarms` の最小間隔は 1分（Chrome 制限）であり、現状の数秒単位の flush 遅延を維持する場合は即時 flush ベースに変更する必要がある。アラームを使う場合、ログの遅延は長くなる。
+🟡 軽微 ― `chrome.alarms` の最小間隔は 1分（Chrome 制限）であり、現状の数秒単位の flush 遅延を維持する場合は即時 flush ベースに変更する必要がある。アラームを使う場合、ログの遅延は長くなる。
 
 ## 落とし穴
 - `chrome.alarms` は最小 1分間隔。現状の「数秒後にバッチ flush」という挙動を維持したい場合、alarms は向かない。その場合は「バッファサイズ到達時に即時 flush」する設計に変更する必要がある。

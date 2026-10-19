@@ -12,9 +12,9 @@
 
 ## 背景（現状・証拠）
 
-- `src/utils/markdownSanitizer.ts:151-160` — `sanitizeForMarkdownLinkText`は`[ ] ( )`のみエスケープし`\r\n`を処理しない
-- `src/utils/markdownFormatter.ts:62-69` — `sanitizeTitle`も改行無処理（対照的にsummary `:75-81`は`\n`→空白正規化、tag `:94`は`[\r\n]`除去の片手落ち）
-- `src/utils/markdownFormatter.ts:174` — `obsidianList`テンプレートに改行入りtitleが割って入る。heading（`:161`の`# title`）も同経路で割れる
+- `src/utils/markdownSanitizer.ts:151-160` ― `sanitizeForMarkdownLinkText`は`[ ] ( )`のみエスケープし`\r\n`を処理しない
+- `src/utils/markdownFormatter.ts:62-69` ― `sanitizeTitle`も改行無処理（対照的にsummary `:75-81`は`\n`→空白正規化、tag `:94`は`[\r\n]`除去の片手落ち）
+- `src/utils/markdownFormatter.ts:174` ― `obsidianList`テンプレートに改行入りtitleが割って入る。heading（`:161`の`# title`）も同経路で割れる
 - titleはページ`<title>`（攻撃者制御）由来。validatorは長さのみ（`src/messaging/validators.ts:512-517`、VALID_VISITはtitle検査自体なし）
 - 反証検証SURVIVES＋目視確認済み
 

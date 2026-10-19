@@ -1,4 +1,4 @@
-# PBI: Recording Pipeline — 浅い step群を深い Pipeline moduleに
+# PBI: Recording Pipeline ― 浅い step群を深い Pipeline moduleに
 
 ## ユーザーストーリー
 開発者として、`record(ctx) → Result` の1メソッドだけを知れば記録が完結する深い `RecordingPipeline` module がほしい、なぜなら現在の各 step は `execute(context: RecordingContext)` という大きな context を受けつつ実装は20-40行の薄い委譲で、真のバグ（呼び出し順・ErrorStrategy・per-URL Mutex・BEST_EFFORT の相互作用）は step の外に潜み、テストは各 step を個別に mock するため locality が無く、`force`/`skipDuplicateCheck`/`previewOnly` の8通りを `record()` の1 seam でしか検証できないから

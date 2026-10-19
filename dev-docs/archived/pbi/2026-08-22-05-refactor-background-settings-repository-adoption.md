@@ -1,4 +1,4 @@
-# PBI: background 側 SettingsRepository 採用 — RemoteAIService を起点に読み取りを型付き seam へ移行
+# PBI: background 側 SettingsRepository 採用 ― RemoteAIService を起点に読み取りを型付き seam へ移行
 
 ## ユーザーストーリー
 開発者として、background 側の設定読み取りを `SettingsRepository`（既存 deep module）経由に移行したい、なぜなら `(settings[StorageKeys.X] as string) || 'gemini'` のキャストとインラインデフォルトが background の各モジュールに複製され、デフォルト値の一元ソース（DEFAULT_SETTINGS）と乖離したフォールバックが残り続けているから

@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/background/sessionStore.ts:19-21` — `sw:` プレフィクスのキーを `chrome.storage.local` に保存
+- `src/background/sessionStore.ts:19-21` ― `sw:` プレフィクスのキーを `chrome.storage.local` に保存
 - 親レポートの対処案: `SessionStore` のバックエンドを `chrome.storage.session` に変更。容量制限（~1MB）に注意
 - **旧データ移行の考慮が必要**: side-effects.md M9判定で「`chrome.storage.session`の容量制限、offscreenからのアクセス設定、旧データ移行が必要」と明記されている
 

@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 Read で確認済み:
-- `src/popup/popup.ts:37-75`（`initTabNavigation`）— タブボタンクリック時に `active` クラス・`aria-selected`・`aria-hidden`・`inert` 属性の切り替えは実装済みだが、フォーカス移動処理はない
+- `src/popup/popup.ts:37-75`（`initTabNavigation`）― タブボタンクリック時に `active` クラス・`aria-selected`・`aria-hidden`・`inert` 属性の切り替えは実装済みだが、フォーカス移動処理はない
 - 対処案（親レポートより）: パネル切替後に以下を追加
   ```ts
   activePanel.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')?.focus()

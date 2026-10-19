@@ -121,8 +121,8 @@ git commit -m "feat(i18n): add English messages for tag normalization UI"
 ### Task 3: Add tagFilter to Type Definitions
 
 **Files:**
-- Modify: `src/utils/sqlite-types.ts` — add `tagFilter` to `QueryOptions`
-- Modify: `src/offscreen/opfsWorker.ts` — add `tagFilter` to `QueryPayload`
+- Modify: `src/utils/sqlite-types.ts` ― add `tagFilter` to `QueryOptions`
+- Modify: `src/offscreen/opfsWorker.ts` ― add `tagFilter` to `QueryPayload`
 
 - [ ] **Step 1: Add tagFilter to QueryOptions**
 
@@ -237,7 +237,7 @@ Add after the `ids` condition (around line 652):
     }
 ```
 
-The tagFilter value is the raw tag name (no `#` prefix, e.g., `"AI"`). The FTS5 match expression wraps it as `"#AI"` — `#` prefix matches the stored format, quotes ensure exact phrase match.
+The tagFilter value is the raw tag name (no `#` prefix, e.g., `"AI"`). The FTS5 match expression wraps it as `"#AI"` ― `#` prefix matches the stored format, quotes ensure exact phrase match.
 
 - [ ] **Step 2: Commit**
 
@@ -251,9 +251,9 @@ git commit -m "feat: implement FTS5 tag filter in IDB query handler"
 ### Task 6: Forward tagFilter Through the Message Chain
 
 **Files:**
-- Modify: `src/offscreen/sqlite.ts` — pass `tagFilter` to OPFS proxy and IDB call
-- Modify: `src/dashboard/dashboardSqliteService.ts` — accept `tagFilter` in `queryLogs()`
-- Modify: `src/background/handlers/dashboardSqliteHandlers.ts` — forward `tagFilter` to `sqliteClient.query()`
+- Modify: `src/offscreen/sqlite.ts` ― pass `tagFilter` to OPFS proxy and IDB call
+- Modify: `src/dashboard/dashboardSqliteService.ts` ― accept `tagFilter` in `queryLogs()`
+- Modify: `src/background/handlers/dashboardSqliteHandlers.ts` ― forward `tagFilter` to `sqliteClient.query()`
 
 - [ ] **Step 1: Forward tagFilter in sqlite.ts proxy**
 
@@ -352,14 +352,14 @@ In the `queryLogs` call branch (when `!options.search`), pass `tagFilter:
     });
 ```
 
-When search is active, use the existing `searchLogs` path — tagFilter doesn't apply in search mode (FTS5 search already covers tags).
+When search is active, use the existing `searchLogs` path ― tagFilter doesn't apply in search mode (FTS5 search already covers tags).
 
 - [ ] **Step 2: Update tag badge click handler to call `loadData({ tagFilter })`**
 
 Replace the client-side filter logic in the tag badge click handler with a server-side load:
 
 ```typescript
-  // Wire tag filter buttons — server-side via loadData
+  // Wire tag filter buttons ― server-side via loadData
   listEl.querySelectorAll('[data-action="tag-filter"]').forEach((el) => {
     el.addEventListener('click', () => {
       const tag = (el as HTMLElement).getAttribute('data-tag');
@@ -374,7 +374,7 @@ Replace the client-side filter logic in the tag badge click handler with a serve
 
 - [ ] **Step 3: Update `updateTagFilterBar()` to work with server-side filter**
 
-The `updateTagFilterBar()` function already manages the filter bar DOM. No changes needed — `state.activeTagFilter` is still the source of truth for the bar visibility. The clear button handler should call `loadData({ tagFilter: undefined })`:
+The `updateTagFilterBar()` function already manages the filter bar DOM. No changes needed ― `state.activeTagFilter` is still the source of truth for the bar visibility. The clear button handler should call `loadData({ tagFilter: undefined })`:
 
 ```typescript
       const clearBtn = bar.querySelector('#sqlite-tag-filter-clear') as HTMLButtonElement | null;
@@ -401,7 +401,7 @@ In `renderEntryList()`, remove the `displayEntries` filter block (lines 463-469)
   const displayEntries = state.entries;
 ```
 
-Keep the rest of `renderEntryList()` unchanged — it already uses `state.activeTagFilter` for badge highlighting (`.filter-active` class) and `displayEntries` for iteration.
+Keep the rest of `renderEntryList()` unchanged ― it already uses `state.activeTagFilter` for badge highlighting (`.filter-active` class) and `displayEntries` for iteration.
 
 - [ ] **Step 5: Run type check**
 

@@ -15,7 +15,7 @@
 
 - `src/background/pipeline/steps/extractSentencesStep.ts:128-152`（catch 内でログ＋errors 追記して正常 context 復帰。`strategy: BEST_EFFORT` を自称）
 - `src/background/pipeline/steps/saveSqliteStep.ts:74-82` と `:104-111`（log-and-rethrow 2 箇所）
-- `src/background/pipeline/RecordingOrchestrator.ts:104-105`（`privacyPipeline`/`extractSentences` に `RETRY,maxRetries:3,offlineRetry ai_summary` 付与 — 実質不発）
+- `src/background/pipeline/RecordingOrchestrator.ts:104-105`（`privacyPipeline`/`extractSentences` に `RETRY,maxRetries:3,offlineRetry ai_summary` 付与 ― 実質不発）
 - `src/background/pipeline/stepExecutor.ts:49-60`（RETRY 再試行＋backoff の正規所有者）
 - 競合なし: `savePhase.ts:52-57` の型スキップとは無関係
 

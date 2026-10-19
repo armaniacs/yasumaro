@@ -18,9 +18,9 @@
 
 呼び出し連鎖(関数名基準。行番号は目安):
 
-- `applyMigrationsCore`(`src/utils/storage/settingsMigration.ts`)— `keyProvider()` の呼び出しが try 内。catch が `logError(..., CRYPTO_KEY_DERIVE_FAILURE)` のみで `return { settings: merged, reEncrypted, unrecoverable }` し、`merged` の API キーは `EncryptedData` のまま
-- `compositionManifest.ts` の `settingsRepository` エントリ — `new SettingsRepository(new SettingsChromeStorageAdapter())` で keyProvider 注入なし。`SettingsRepository.resolveKeyProvider` が `encryptionSession.js` の `getOrCreateEncryptionKey` を動的 import する
-- `getOrCreateEncryptionKey` → `deriveKeyFromMasterPassword` — SW では `cachedMasterPassword` が常に null のため `throw new Error('ENCRYPTION_LOCKED: Master password required')`。IS_LOCKED 経路は `'ENCRYPTION_LOCKED: Session is locked'`。専用エラークラスは無く、メッセージ接頭辞のみ
+- `applyMigrationsCore`(`src/utils/storage/settingsMigration.ts`)― `keyProvider()` の呼び出しが try 内。catch が `logError(..., CRYPTO_KEY_DERIVE_FAILURE)` のみで `return { settings: merged, reEncrypted, unrecoverable }` し、`merged` の API キーは `EncryptedData` のまま
+- `compositionManifest.ts` の `settingsRepository` エントリ ― `new SettingsRepository(new SettingsChromeStorageAdapter())` で keyProvider 注入なし。`SettingsRepository.resolveKeyProvider` が `encryptionSession.js` の `getOrCreateEncryptionKey` を動的 import する
+- `getOrCreateEncryptionKey` → `deriveKeyFromMasterPassword` ― SW では `cachedMasterPassword` が常に null のため `throw new Error('ENCRYPTION_LOCKED: Master password required')`。IS_LOCKED 経路は `'ENCRYPTION_LOCKED: Session is locked'`。専用エラークラスは無く、メッセージ接頭辞のみ
 - `unlockWithPassword` の本番呼び出しは `changeMasterPassword` 内のみ。background/popup/messaging に SW 向けアンロック経路は無い(SW は復号できない)
 - AI: `RemoteAIService.loadSettings` → `repo.getAll()` → `processSummarySlot` が `factory(effectiveSettings)`(= `createProviderStrategy`)を try 内で構築し、catch が汎用文言 `Error: Failed to generate summary...` に潰す。`GenericOpenAICompatibleProvider` コンストラクタ(`OpenAIProvider.ts`)は `this.apiKey = s[entry.apiKeyKey] as string | undefined`(型検証なし)で、object のまま `Bearer ${this.apiKey}` になる。`GeminiProvider` も `settings[StorageKeys.GEMINI_API_KEY] as string | undefined` で同様(`x-goog-api-key` に object が入る)
 - Obsidian: `saveToObsidianStep` → `ObsidianClient.appendToDailyNote` → `_getConfig` → `buildObsidianConfig` の `buildFromSettings` が `typeof apiKey === 'object'` を「`Error: API key is missing. Please check your Obsidian settings.`」として投げる(ロックが原因と分からない)。`buildFromOverride` 側は `typeof apiKey !== 'string'` で `API key is missing`

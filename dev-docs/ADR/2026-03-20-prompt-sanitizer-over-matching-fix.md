@@ -22,9 +22,9 @@ const INJECTION_PATTERNS = [
 4. False Positiveの許容範囲が不明
 
 **影響例:**
-- "Provide the following code" ↔ "PROVIDE"パターンに誤マッチ
-- "System Administrator" ↔ "SYSTEM", "ADMIN"パターン誤マッチ
-- "Now let's analyze..." ↔ "now"パターン誤マッチ
+- "Provide the following code" ⇔ "PROVIDE"パターンに誤マッチ
+- "System Administrator" ⇔ "SYSTEM", "ADMIN"パターン誤マッチ
+- "Now let's analyze..." ⇔ "now"パターン誤マッチ
 
 ## Decision
 

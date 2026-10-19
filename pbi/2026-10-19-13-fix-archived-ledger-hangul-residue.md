@@ -7,8 +7,8 @@ PBI 台帳の読者として、**アーカイブ済み PBI に残ったハング
 - RICE: 100（Reach=50 / Impact=1 / Confidence=100% / Effort=0.5）
   - Reach: 50。影響は台帳の読者に限られる（live ではなくアーカイブ）
   - Impact: 1。読みにくさは残るが、live の判断には直接効かない（PBI 09 が live 側を復元済み）
-  - Confidence: 100%。13 ファイル / 62 文字を実測し、各断片の復元語を文脈から確定済み（下記の対応表）
-  - Effort: 0.5 SP。13 ファイルの局所置換。判断は済んでいる
+  - Confidence: 100%。**破損 326 箇所 / 141 種類**を `node scripts/check-docs-chars.mjs --list` で機械的に列挙できる（下記の対応表はそのうち判断済みの 21 行）
+  - Effort: 0.5 SP。局所置換。判断は表の範囲では済んでいる
 - 種別: 🔧非機能追加（fix）
 - 難易度: 🟢低（対応表どおりに置換するだけ。ただし 1 箇所ずつ読む）
 - 副作用: 🟢なし（アーカイブの Markdown のみ）
@@ -16,6 +16,8 @@ PBI 台帳の読者として、**アーカイブ済み PBI に残ったハング
 ## 背景（発見の経緯）
 
 PBI [2026-10-19-09](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) の棚卸しで、非 CJK 文字の走査をアーカイブまで回したところ **Hangul 62 文字 / 13 ファイル**が残っていた。PBI 09 の背景にある「クラス 1（非 CJK 混入）はクリーン」は **live `pbi/` についてのみ正しく、アーカイブは未走査**だった。PBI 09 はスコープ判断（アーカイブは棚卸しのみ）に従って復元せず、本 PBI として切り出した。
+
+2026-10-20 の文字規約導入（`AGENTS.md` / `CLAUDE.local.md` の「Documentation Characters」）で検証スクリプト `scripts/check-docs-chars.mjs` が入り、**破損の全量が機械的に出るようになった**。現在の実測は **326 箇所 / 141 種類**（ハングル・簡体字・`U+FFFD`・アラビア文字）。対応表はそのうち判断済みの 21 行で、残りは `--list` の出力を見ながら同じ基準（前後の文法が復元語を一意に決めるか）で進める。
 
 ## 対応表（実測・2026-10-19）
 
@@ -62,6 +64,6 @@ PBI [2026-10-19-09](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojib
 
 ## 関連
 
-- [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) — 発見の現場（live の深い断片を復元し、アーカイブの残存を切り出した）
-- `pbi/00-INDEX.md` — 台帳
-- `dev-docs/DOCUMENTATION_GUIDE.md` — ドキュメントの方針
+- [2026-10-19-09-fix-ledger-deep-mojibake-restore.md](../dev-docs/archived/pbi/2026-10-19-09-fix-ledger-deep-mojibake-restore.md) ― 発見の現場（live の深い断片を復元し、アーカイブの残存を切り出した）
+- `pbi/00-INDEX.md` ― 台帳
+- `dev-docs/DOCUMENTATION_GUIDE.md` ― ドキュメントの方針

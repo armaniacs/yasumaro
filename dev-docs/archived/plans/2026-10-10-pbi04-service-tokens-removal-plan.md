@@ -9,7 +9,7 @@
 - `DESIGN_SPECIFICATIONS.md`
 
 ## Validation
-`npx vitest run src/background` — PASS（スコープ検証済み）。
+`npx vitest run src/background` ― PASS（スコープ検証済み）。
 
 ## Rollback
 `ServiceTokens` とテスト参照を復元すればロールバックできる。

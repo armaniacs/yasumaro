@@ -10,7 +10,7 @@
 ## 実装者向け注記（フェーズ0の既実装確認結果）
 
 grep で確認済み:
-- `src/background/pipeline/RecordingPipeline.ts:295` — `logError(...)` 呼び出しで `source` パラメータなし
+- `src/background/pipeline/RecordingPipeline.ts:295` ― `logError(...)` 呼び出しで `source` パラメータなし
 - 対象は「`RecordingPipeline.ts`, `saveSqliteStep.ts` 他多数」（親レポート記載）と広範囲
 - 対処案（親レポートより）: `import.meta.url` から自動補完するヘルパーを導入
 

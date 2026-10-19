@@ -9,12 +9,12 @@ Dashboard 履歴パネルの遷移挙動を保守する開発者として、遷�
 
 ## 現状の遷移 choreography（2026-09-05 ファクトチェック済み）
 
-- `NavigationRegistry.ts:56-66` — mount-once、タブ切替では `init → load` のみ（`destroy` は teardown 時のみ・設計）
-- `sqliteHistoryPanel.ts:558-598` —
+- `NavigationRegistry.ts:56-66` ― mount-once、タブ切替では `init → load` のみ（`destroy` は teardown 時のみ・設計）
+- `sqliteHistoryPanel.ts:558-598` ―
   - `init(initParams)`: searchTag → `activateWithTag` / searchDomain → `activateWithDomain` / else → `resetFiltersForFreshLoad`
   - `load()`: `checkFallbackStatus` → `loadPersistedSortIntoState` → `renderState()` → `consumePendingInit` → `retryInitialLoad`
   - `destroy()`: debounce 解除 + unsubscribe + `bumpGenerationOnUnmount` + `clearEntrySelection`
-- `sqliteHistoryModel.ts` — interface 27 method、うち lifecycle 配管 8（上記 6 + activateWithTag / activateWithDomain）。cache.clear() が 5 箇所（`:550` / `:566` / `:582` / `:602` / `:612`）に散在
+- `sqliteHistoryModel.ts` ― interface 27 method、うち lifecycle 配管 8（上記 6 + activateWithTag / activateWithDomain）。cache.clear() が 5 箇所（`:550` / `:566` / `:582` / `:602` / `:612`）に散在
 
 ## なぜなぜ分析（設計判断の導出）
 
@@ -30,7 +30,7 @@ Dashboard 履歴パネルの遷移挙動を保守する開発者として、遷�
 
 1. なぜ 5 箇所あるのか → 無効化の契機が 3 種あるため（unmount / fresh-load の stale / mutation 後）。
 2. なぜ散在が friction か → 「どの契機で無効化が必要か」の規則がコードから読み取れず、新規 mutation 追加時に cache.clear() を足し忘れて stale cache バグを生む（fresh-load の stale コメント `:560-564` はまさにその手の過去バグの記録）。
-3. → 解: internal に `invalidateCache(reason)` を新設し、規則（3 契約機）を 1 箇所に文書化。5 call site はヘルパー経由に。generation bump との組み合わせは現行どおり（mutation sites は bump しない — in-flight query 保護の意味論を変えない）
+3. → 解: internal に `invalidateCache(reason)` を新設し、規則（3 契約機）を 1 箇所に文書化。5 call site はヘルパー経由に。generation bump との組み合わせは現行どおり（mutation sites は bump しない ― in-flight query 保護の意味論を変えない）
 
 ## BDD受け入れシナリオ
 
@@ -68,7 +68,7 @@ Scenario: 遷移 2 method の外から lifecycle 配管に触れない
 ### 単体テスト
 - Model 契約テスト新設: onNavigateIn の 3 分岐（tag / domain / plain）× 取得パラメータ、onNavigateOut の副作用 4 点
 ### 統合テスト
-- Panel+Model+Registry の順序契約テスト（init→load 順序・onNavigateIn 1 回・destroy 経由の onNavigateOut）を 1 本に集約 — 現状の Panel 単体テストの白盒部分を置換
+- Panel+Model+Registry の順序契約テスト（init→load 順序・onNavigateIn 1 回・destroy 経由の onNavigateOut）を 1 本に集約 ― 現状の Panel 単体テストの白盒部分を置換
 ### 例外ハンドリング
 - checkFallbackStatus の失敗無視・retryInitialLoad の backoff は現行実装のまま（既存テストが担保）
 
@@ -100,10 +100,10 @@ rg -n "activateWithTag|activateWithDomain|consumePendingInit|bumpGenerationOnUnm
 5. lifecycle 系テストを契約テストに移行（他は無修正 green を確認）
 
 ### 落とし穴
-- `activateWithTag` は呼んだ**直後**に fetchData を発火し、かつ pendingInit を積む（後の retryInitialLoad が同じ条件を再取得する — 今日の意図的挙動）。onNavigateIn 内でこの二段構えを崩すと取得回数が変わる。現行の呼び出し回数を契約テストで固定してから動かすこと
+- `activateWithTag` は呼んだ**直後**に fetchData を発火し、かつ pendingInit を積む（後の retryInitialLoad が同じ条件を再取得する ― 今日の意図的挙動）。onNavigateIn 内でこの二段構えを崩すと取得回数が変わる。現行の呼び出し回数を契約テストで固定してから動かすこと
 - `resetFiltersForFreshLoad` は sort だけ保存して残りを初期化する（`:567-568`）。onNavigateIn 内での実行順（status/sort より前）を維持する
 - Panel.init は `container` 未設定でも呼ばれ得る（registry の init→load 順序）。initParams の保持のみにし副作用を持たせない
-- `sqliteHistoryPanelController.test.ts` が consumePendingInit の exactly-once を検証している — shim 経由のこのテストは契約テスト移行後も意味が通る形に調整する
+- `sqliteHistoryPanelController.test.ts` が consumePendingInit の exactly-once を検証している ― shim 経由のこのテストは契約テスト移行後も意味が通る形に調整する
 
 ### 実装メモ
 - 二重 init の stale-tag 漏れを意図的に修正：旧実装は `init(tag)→init()` でも `pendingInit` が残るため、素の再訪が stale tag で再取得し得た。新実装は Panel が `pendingNavParams` を後勝ちで保持し `load()` で exactly-once 消費するため最後の init が勝つ（`sqliteHistoryPanel.navigate.test.ts` の二重 init テストで担保）。純粋リファクタを超える振る舞い修正として記録する。

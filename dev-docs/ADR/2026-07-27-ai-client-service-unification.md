@@ -72,7 +72,7 @@ Checking Team レビュー（`plans/2026-07-23-1038-review-fix-0723.md`）で、
 `AIService` インターフェースには `generateSummary` と `getSupportedModes` しか無く、**接続テストの入口が存在しなかった**。そのため `service-worker.ts` は接続テストだけ抽象を迂回して `aiClient` を直接参照せざるを得なかった。
 
 ```typescript
-// 修正前 — 要約は aiService、接続テストは aiClient と2経路に分かれていた
+// 修正前 ― 要約は aiService、接続テストは aiClient と2経路に分かれていた
 testAi: () => aiClient.testConnection(),
 testConnection: (onProgress, runId) => aiClient.testConnection(onProgress, runId),
 ```

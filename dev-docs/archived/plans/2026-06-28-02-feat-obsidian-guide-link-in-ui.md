@@ -59,7 +59,7 @@ Scenario: Obsidianが無効化されている場合はリンクも非表示
 `src/dashboard/__tests__/dashboard-obsidian-enabled.test.ts` を以下のように更新：
 
 ```typescript
-// 1. モックHTML更新 — テスト内の document.body.innerHTML に以下を追加
+// 1. モックHTML更新 ― テスト内の document.body.innerHTML に以下を追加
 // <div class="form-group">
 //   <label for="apiKey">Obsidian API Key</label>
 //   <input type="password" id="apiKey">

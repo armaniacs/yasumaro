@@ -37,7 +37,7 @@ Scenario: 既存 spec は共通化しても同じ結果になる
 
 - [x] `testDir/e2e/fixtures/dashboardSqliteHelpers.ts` に `openOptionsPage`（既存3 spec の重複を統合）と `migrationSettled`（warm-up → `legacyStoreReadOnly` 待ち → `yasumaro_migration_status` 封印）を追加
 - [x] 既存 3 spec（`archive-required-verification` / `archive-recommended-verification` / `dashboard-archive`）が共通 fixture を import する形にリファクタ（グリーン後のリファクタリング段階として、テスト件数・アサーションは不変）
-- [x] `seedRows` の冪等性（UNIQUE 制約で再送安全）を JSDoc で明文化（seedRows も共通化 — 2 spec の同一実装を統合し JSDoc を付与）
+- [x] `seedRows` の冪等性（UNIQUE 制約で再送安全）を JSDoc で明文化（seedRows も共通化 ― 2 spec の同一実装を統合し JSDoc を付与）
 - [x] テスト専用 subtype / フラグは追加しない
 - [x] `npm run validate` + 全 `@extension` E2E がグリーン（テストの実行順序依存が無いことを `-g` での個別実行でも確認）
 
@@ -53,12 +53,12 @@ Scenario: 既存 spec は共通化しても同じ結果になる
 - 3 spec の private `openOptionsPage` を削除（dashboard-archive は inline 2 箇所）
 - G4 のインライン手順 → `migrationSettled` 1 行
 - R1〜R3 の seed を `seedRows` へ（アサーション同値・失敗メッセージ改善のみ）
-- 推奨側の `DashboardSqliteClient.scopeHash` の parts 型に `boolean` を追加（`includeDeleted` を scope に含めるため — 実態は String() 結合で挙動不変）
+- 推奨側の `DashboardSqliteClient.scopeHash` の parts 型に `boolean` を追加（`includeDeleted` を scope に含めるため ― 実態は String() 結合で挙動不変）
 
 ### 検証
 - 全 `@extension` E2E: 34 passed / 1 skipped
 - `-g` 個別実行（R1/R3/G4/G5 と R2 群）で順序非依存を確認
-- ベースラインゲートが helper への新規型エラー（scopeHash parts 型に boolean 足りない等 4 件）を即検出 — PBI-04 のゲートが機能している実証。修正して exit 0 維持
+- ベースラインゲートが helper への新規型エラー（scopeHash parts 型に boolean 足りない等 4 件）を即検出 ― PBI-04 のゲートが機能している実証。修正して exit 0 維持
 
 ## テスト戦略
 

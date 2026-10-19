@@ -1,7 +1,7 @@
-# Fix VULN-001 & VULN-002 — Design Document (Final)
+# Fix VULN-001 & VULN-002 ― Design Document (Final)
 
 **Date**: 2026-07-30
-**Source**: VulnHunter Security Audit — `obsidian-smart-history_VULNHUNT_RESULTS_2026-07-30-203440`
+**Source**: VulnHunter Security Audit ― `obsidian-smart-history_VULNHUNT_RESULTS_2026-07-30-203440`
 **Codebase convention**: constants in UPPER_SNAKE_CASE, English error messages, `deps.query()` accepts `Record<string, unknown>`, `chrome.storage` has no cross-store transactions
 
 ---
@@ -35,13 +35,13 @@ No upper bound. Attacker sends 100K-element array → 100K `?` placeholders in S
 
 ### Fix
 
-Three checks applied in this **exact order** (order is security-critical — check 1 gates check 2):
+Three checks applied in this **exact order** (order is security-critical ― check 1 gates check 2):
 
-**Check 1: Array + non-empty + max length** — `ids.length === 0 || ids.length > MAX_APPEND_IDS` — gates both checks below. DoS-safe: rejects oversized arrays without iteration.
+**Check 1: Array + non-empty + max length** ― `ids.length === 0 || ids.length > MAX_APPEND_IDS` ― gates both checks below. DoS-safe: rejects oversized arrays without iteration.
 
-**Check 2: Element type** — `ids.every(id => typeof id === 'number')` — fast, O(n) on at-most-100 elements. Without this, an attacker could inject strings into `params.push(...ids)` at `opfsWorker.ts:282`, bypassing SQL parameterization assumptions.
+**Check 2: Element type** ― `ids.every(id => typeof id === 'number')` ― fast, O(n) on at-most-100 elements. Without this, an attacker could inject strings into `params.push(...ids)` at `opfsWorker.ts:282`, bypassing SQL parameterization assumptions.
 
-**Check 3: Finite values** — `ids.every(id => Number.isFinite(id))` — rejects `NaN`, `Infinity`, `-Infinity` which SQLite cannot bind. Combined with Check 2 into a single predicate: `ids.every(id => typeof id === 'number' && Number.isFinite(id))`.
+**Check 3: Finite values** ― `ids.every(id => Number.isFinite(id))` ― rejects `NaN`, `Infinity`, `-Infinity` which SQLite cannot bind. Combined with Check 2 into a single predicate: `ids.every(id => typeof id === 'number' && Number.isFinite(id))`.
 
 Constant placement (same module scope as existing `ALLOWED_UPDATE_FIELDS` at line 10):
 ```typescript
@@ -59,7 +59,7 @@ case 'append_to_obsidian': {
   if (ids.length > MAX_APPEND_IDS) {
     return { success: false, error: `Maximum ${MAX_APPEND_IDS} IDs allowed` };
   }
-  // Check 2+3: element types (safe — array is ≤100 elements at this point)
+  // Check 2+3: element types (safe ― array is ≦100 elements at this point)
   if (!ids.every(id => typeof id === 'number' && Number.isFinite(id))) {
     return { success: false, error: 'All IDs must be finite numbers' };
   }
@@ -81,13 +81,13 @@ case 'append_to_obsidian': {
 
 | Test case | Expected |
 |---|---|
-| `ids: []` | rejected — "No IDs provided" |
+| `ids: []` | rejected ― "No IDs provided" |
 | `ids: [1]` | accepted |
 | `ids: [...]` (100 elements) | accepted |
-| `ids: [...]` (101 elements) | rejected — "Maximum 100 IDs allowed" |
-| `ids: [1, "a", 3]` | rejected — "All IDs must be finite numbers" |
-| `ids: [NaN]` | rejected — "All IDs must be finite numbers" |
-| `ids: [Infinity]` | rejected — "All IDs must be finite numbers" |
+| `ids: [...]` (101 elements) | rejected ― "Maximum 100 IDs allowed" |
+| `ids: [1, "a", 3]` | rejected ― "All IDs must be finite numbers" |
+| `ids: [NaN]` | rejected ― "All IDs must be finite numbers" |
+| `ids: [Infinity]` | rejected ― "All IDs must be finite numbers" |
 | `ids: [1.5, 2.7]` | accepted (floats are finite numbers; cast to integer by SQLite) |
 
 ---
@@ -102,7 +102,7 @@ case 'append_to_obsidian': {
 
 Persist `LOCKED_UNTIL` to `chrome.storage.local`. Fail-safes and merge strategy below.
 
-#### 1. `checkRateLimit()` — Read Phase
+#### 1. `checkRateLimit()` ― Read Phase
 
 Read `LOCKED_UNTIL` from **both** stores. Merge strategy:
 ```typescript
@@ -119,15 +119,15 @@ const lockedUntil = Math.max(sessionLockedUntil, localLockedUntil);
 - Session = 0, local = 1700000000000 → 1700000000000 (prior session lockout, restored after restart)
 - Both = 0 → 0 (no lockout)
 
-The existing check `if (lockedUntil && now < lockedUntil)` at line 36 handles this value correctly. If `lockedUntil` is expired (in the past), `now < lockedUntil` is false — lockout correctly skipped. The stale local value stays until `resetFailedAttempts()` cleans it up (see §3).
+The existing check `if (lockedUntil && now < lockedUntil)` at line 36 handles this value correctly. If `lockedUntil` is expired (in the past), `now < lockedUntil` is false ― lockout correctly skipped. The stale local value stays until `resetFailedAttempts()` cleans it up (see §3).
 
-#### 2. Lockout Trigger — Write Phase
+#### 2. Lockout Trigger ― Write Phase
 
 When `attempts >= RATE_LIMIT_ATTEMPTS` and within window (existing line 49-54):
 
 **Write order: local FIRST, then session.** Rationale:
 - If local write succeeds but session fails: lockout survives restart (local has it), current session loses the immediate lockout but it's re-read from local on next `checkRateLimit()` call (this session has the local value merged in).
-- If local write fails: session write still happens → current session protected → restart resets (acceptable, same risk as before fix, but now rare — one write failure vs every restart).
+- If local write fails: session write still happens → current session protected → restart resets (acceptable, same risk as before fix, but now rare ― one write failure vs every restart).
 
 ```typescript
 // Write order: local first, then session (fail-safe)
@@ -136,7 +136,7 @@ await chrome.storage.local.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
 await chrome.storage.session.set({ [STORAGE_KEYS.LOCKED_UNTIL]: lockoutTime });
 ```
 
-#### 3. `resetFailedAttempts()` — Cleanup Phase
+#### 3. `resetFailedAttempts()` ― Cleanup Phase
 
 Remove `LOCKED_UNTIL` from **both** stores:
 ```typescript
@@ -157,13 +157,13 @@ export async function resetFailedAttempts(): Promise<void> {
 | `checkRateLimit()` reads | FAILED_ATTEMPTS, FIRST_ATTEMPT_TIME, LOCKED_UNTIL | LOCKED_UNTIL → merge via `Math.max` |
 | Lockout trigger writes | LOCKED_UNTIL | LOCKED_UNTIL (written first) |
 | `resetFailedAttempts()` removes | FAILED_ATTEMPTS, FIRST_ATTEMPT_TIME, LOCKED_UNTIL | LOCKED_UNTIL |
-| `recordFailedAttempt()` writes | FAILED_ATTEMPTS, FIRST_ATTEMPT_TIME | — (no change) |
+| `recordFailedAttempt()` writes | FAILED_ATTEMPTS, FIRST_ATTEMPT_TIME | ― (no change) |
 
 ### Rationale
 
 | Decision | Why |
 |---|---|
-| Only `LOCKED_UNTIL` needs persistence | Counters reset on restart is fine — the lockout timestamp blocks entry regardless of counter state |
+| Only `LOCKED_UNTIL` needs persistence | Counters reset on restart is fine ― the lockout timestamp blocks entry regardless of counter state |
 | `Math.max` merge | Handles `0` correctly (vs `??` which treats `0` as present) |
 | Write local BEFORE session | Local failure → session still protects current session; session failure → local protects after restart. Reverse order would lose persistence on session success+local failure. |
 | No transaction needed | `chrome.storage` doesn't support cross-store transactions. Accept the two-step write; fail-safe ordering covers the gap. |

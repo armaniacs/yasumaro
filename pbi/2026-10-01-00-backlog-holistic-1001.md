@@ -3,7 +3,7 @@
 ## 出所
 
 - 大局的レビュー: holistic-code-review（holistic-code-improvement スキル・フェーズA）。3 領域の地図用 agent（popup+content / dashboard panels / background+utils）の検証済み 32 候補を TOP 5 テーマに統合。
-- スコープ: 差分 — 過去台帳（archloop-1001 等）で閉じたテーマは再レビュー対象外。
+- スコープ: 差分 ― 過去台帳（archloop-1001 等）で閉じたテーマは再レビュー対象外。
 
 ## RICE 採点表と最終順位（依存優先）
 
@@ -40,7 +40,7 @@
   - 08 は compositionManifest・service-worker を触る。他候補は非重複。
 - **バッチB（settingsForm/generalSettingsPanel チェーン直列 + popup 並列）**: 09 → 17 → 20（同一ファイルチェーン）∥ 12 / 14 / 19（popup・connectionTests、チェーンと非重複）
   - 21（死んだシーム撤去）は settingsForm を触るため 09 の settingsForm 部分完了後。
-- **バッチC（並列 2 件）**: 22 ∥ 26 — 21 完了後（settingsForm 非重複化）。
+- **バッチC（並列 2 件）**: 22 ∥ 26 ― 21 完了後（settingsForm 非重複化）。
 
 ## 実装フェーズで追加した PBI（2026-10-02）
 
@@ -50,8 +50,8 @@
 |---|---|---|---|
 | 27 | [2026-10-01-27-fix-cleansing-slider-double-binding](../dev-docs/archived/pbi/2026-10-01-27-fix-cleansing-slider-double-binding.md) | fix | NN11 の実装後、`aiSummaryCleansingPanel.ts:29` が V2 の setup を呼び `:43-59` でも同じ 4 スライダーを束縛しており、V2 側の full-form 書き込み（`aiSummaryCleansingSettingsV2.ts:475-478`）が先に発火して巻き戻しが残っていた。NN11 の新テストはパネル単体 mount で V2 を経由しないため検出できなかった |
 | 28 | [2026-10-01-28-fix-cleansing-sliders-unwired](../dev-docs/archived/pbi/2026-10-01-28-fix-cleansing-sliders-unwired.md) | fix | NN27 の検証中、`entrypoints/options/index.html:1236,1246` に実在する 2 スライダー（`fallback-ratio` / `fallback-min-bytes`）が `rangeConfigs` に無く保存されないこと、および `popup-body-protection-threshold` 行に HTML 要素が存在しないことを発見 |
-| — | [2026-10-02-01-refactor-provider-priority-slots-consolidation](../dev-docs/archived/pbi/2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | NN21 の積み残し（`collectCurrentProviderPrioritySlots()` の inline コピー集約）。✅ 実装済み（レビュー待ち） |
-| — | [2026-10-02-02-refactor-nn22-guard-sweep](../dev-docs/archived/pbi/2026-10-02-02-refactor-nn22-guard-sweep.md) | refactor | NN22 の積み残し（`'error' in result` 残存 8 箇所の共有ガード寄せ、`exportImport.ts:179` は D1 除外）。✅ 実装済み（レビュー待ち） |
+| ― | [2026-10-02-01-refactor-provider-priority-slots-consolidation](../dev-docs/archived/pbi/2026-10-02-01-refactor-provider-priority-slots-consolidation.md) | refactor | NN21 の積み残し（`collectCurrentProviderPrioritySlots()` の inline コピー集約）。✅ 実装済み（レビュー待ち） |
+| ― | [2026-10-02-02-refactor-nn22-guard-sweep](../dev-docs/archived/pbi/2026-10-02-02-refactor-nn22-guard-sweep.md) | refactor | NN22 の積み残し（`'error' in result` 残存 8 箇所の共有ガード寄せ、`exportImport.ts:179` は D1 除外）。✅ 実装済み（レビュー待ち） |
 
 ## 台帳送り（積み残し → 次ラウンド予約）
 

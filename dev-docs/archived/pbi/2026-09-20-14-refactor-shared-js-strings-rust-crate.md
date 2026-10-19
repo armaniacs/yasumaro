@@ -6,7 +6,7 @@
 ## 優先度
 - 順位: 3 / 5
 - RICEスコア: 3.2（Reach=6 / Impact=1 / Confidence=80% / Effort=1.5週）
-- 根拠: SqliteClient alias 化と同点(3.2)。リスク軽減効果の tie-break で上位 — hot 領域(3クレート)の意味論 drift は進行中で、alias 化は純機械的。ADR-017 決定8(スタンドアロン維持・共有基盤抽出は別途)の実行 PBI
+- 根拠: SqliteClient alias 化と同点(3.2)。リスク軽減効果の tie-break で上位 ― hot 領域(3クレート)の意味論 drift は進行中で、alias 化は純機械的。ADR-017 決定8(スタンドアロン維持・共有基盤抽出は別途)の実行 PBI
 
 ## ビジネス価値
 「JS 文字列セマンティクスをどうモデルするか」の理解が 2言語・5+ モジュールの往復から1実装+2差分パラメータに減る(navigability)。whitespace/lowercase/bigram の修正が1箇所に集約される(locality)
@@ -57,15 +57,15 @@ Scenario: 再現ビルドゲートが機能し続ける
 3ストーリーポイント（要チームでの見積もり）
 
 ## 技術的考慮事項
-- 依存関係: なし(PBI 13 とは層が違う — Rust 側)。ただし wasm-pack 3クレートのリビルドとバイナリ再コミットを伴う
+- 依存関係: なし(PBI 13 とは層が違う ― Rust 側)。ただし wasm-pack 3クレートのリビルドとバイナリ再コミットを伴う
 - 遵守すべき ADR: ADR-017(決定4・8)。本 PBI は決定8の「共有基盤抽出は別途」の実行
 - 非機能要件: 再現ビルドゲート(ci.yml wasm-test)の単位を崩さない
 
 ## 実装者向け注記
 
 ### 現状の証拠
-- クローン: `wasm/textrank/src/jsstring.rs`(263行) vs `wasm/sentence-dedup/src/jsstring.rs`(288行) — 差分は doc と split 変種のみで、is_js_ws/is_word_separator/to_lowercase_utf16/contains_japanese は同型
-- トークナイザ: 両 `tokenize.rs` — ~60行の同一ループ内に2行の意図的差分(strip 有無・bigram case 源)。`jaccard_similarity` はロジック完全重複
+- クローン: `wasm/textrank/src/jsstring.rs`(263行) vs `wasm/sentence-dedup/src/jsstring.rs`(288行) ― 差分は doc と split 変種のみで、is_js_ws/is_word_separator/to_lowercase_utf16/contains_japanese は同型
+- トークナイザ: 両 `tokenize.rs` ― ~60行の同一ループ内に2行の意図的差分(strip 有無・bigram case 源)。`jaccard_similarity` はロジック完全重複
 - drift 実績: dedup のみ FxHash(`wasm/sentence-dedup/Cargo.toml` コメント)。textrank は std hasher
 - 第3の whitespace 実装: `wasm/pii-sanitizer/src/patterns/common.rs` の `js_ws_len`
 

@@ -32,7 +32,7 @@ Scenario: legacy entry が adapter として動く
 
 - [x] `pageContentPipeline.preparePageContent` を唯一の外部 seam とする（config-in → `ExtractResult`-out）（本番呼出は contentKernel → preparePageContent の 1 本のみ）
 - [x] `index.ts` の旧 entry は内部 seam へ格下げし、`extractMainContentWithInfo` は legacy 互換 adapter、`extractMainContent` string entry は bench 計測 adapter として残す（削除禁止・bench 再計測まで。bench c1/c4 の参照は不変）
-- [x] `runCleanseAndExtract` を closure から `extractPipeline.ts` へ移し builder/byte seam の所有者を 1 箇所にする（cleanseContent/extractTextFromElement を値 import、ExtractionReportBuilder は type-only import — ランタイム循環なし。meter 呼び出し順・エンコード回数は完全同一）
+- [x] `runCleanseAndExtract` を closure から `extractPipeline.ts` へ移し builder/byte seam の所有者を 1 箇所にする（cleanseContent/extractTextFromElement を値 import、ExtractionReportBuilder は type-only import ― ランタイム循環なし。meter 呼び出し順・エンコード回数は完全同一）
 - [x] ADR-017（exact-port/parity）を維持し、振舞い変更なし（既存 parity テスト・エンコード回数 pin・fallback 境界 pin は一切変更せず通過）
 
 ## テスト戦略

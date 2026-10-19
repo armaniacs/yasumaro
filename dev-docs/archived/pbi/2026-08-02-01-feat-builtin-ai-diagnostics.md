@@ -77,7 +77,7 @@ Scenario: フラグ未有効化などで内蔵AIが利用できない
 
 ### 現状コードの確認
 
-（着手前に必ず実行すること — 本PBI作成時に実施済み。以下は調査結果）
+（着手前に必ず実行すること ― 本PBI作成時に実施済み。以下は調査結果）
 
 ```bash
 grep -rn "診断\|diagnos" src/ dashboard/ entrypoints/
@@ -122,7 +122,7 @@ grep -rn "builtInAI\|LanguageModel\|window.ai" src/ dashboard/ entrypoints/
 ### 落とし穴
 
 - `LanguageModel.create()`の`monitor`コールバックはPrompt API仕様のオプション引数。現在の`LanguageModelGlobal`インターフェース（`builtInAIClient.ts:42-45`）に`monitor`オプションが定義されていないため、型定義の拡張が必要
-- ダウンロード進捗をダッシュボードにリアルタイム表示する場合、Service Worker側で`LanguageModel.create()`を実行しているなら`chrome.runtime.sendMessage`の単発応答では進捗を送れない。`chrome.runtime.connect`によるPort通信か、ダッシュボード（Optionsページ）側で直接`LanguageModel`を呼ぶ設計に変更するかを検討すること（Optionsページは拡張機能のトップレベルコンテキストなので`self.LanguageModel`に直接アクセス可能なはず — 実機検証が必要）
+- ダウンロード進捗をダッシュボードにリアルタイム表示する場合、Service Worker側で`LanguageModel.create()`を実行しているなら`chrome.runtime.sendMessage`の単発応答では進捗を送れない。`chrome.runtime.connect`によるPort通信か、ダッシュボード（Optionsページ）側で直接`LanguageModel`を呼ぶ設計に変更するかを検討すること（Optionsページは拡張機能のトップレベルコンテキストなので`self.LanguageModel`に直接アクセス可能なはず ― 実機検証が必要）
 - `manifest.json`の`web_accessible_resources`更新は今回はモジュール分割を伴わないため不要（`CLAUDE.local.md`のルール参照）
 - i18nキー追加時は`_locales/ja/messages.json`と`_locales/en/messages.json`（存在する場合は他言語も）を両方更新すること
 

@@ -49,7 +49,7 @@ i18n.tsは`getMessage()`等の翻訳取得関数を提供し、i18n-dom.tsが`ap
 - `getUserLocale()` - 現在のロケールを取得（`localeUtils.ts`）
 - `getUiLanguage()` - UI ロケールを `'ja' | 'en'` に射影（`localeUtils.ts`）
 
-**ロケール判定の正典（PBI 2026-10-11-04）**: ロケールは `getUserLocale()`（`chrome.i18n.getUILanguage()`）だけを基準にする。文言を `'ja' | 'en'` に落とす必要がある箇所は `getUiLanguage()` を使う。`navigator.language` から独自に判定してはならない — UI ラベル（`chrome.i18n`）とプロンプト既定文言で言語が食い違い、日本語 UI の一部だけ英語になる。`getBrowserLocale()` は後方互換のため `getUiLanguage()` へ委譲するだけの非推奨エイリアス。
+**ロケール判定の正典（PBI 2026-10-11-04）**: ロケールは `getUserLocale()`（`chrome.i18n.getUILanguage()`）だけを基準にする。文言を `'ja' | 'en'` に落とす必要がある箇所は `getUiLanguage()` を使う。`navigator.language` から独自に判定してはならない ― UI ラベル（`chrome.i18n`）とプロンプト既定文言で言語が食い違い、日本語 UI の一部だけ英語になる。`getBrowserLocale()` は後方互換のため `getUiLanguage()` へ委譲するだけの非推奨エイリアス。
 
 ### 翻訳キーの命名規則
 

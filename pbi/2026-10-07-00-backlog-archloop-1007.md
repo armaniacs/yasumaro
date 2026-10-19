@@ -5,8 +5,8 @@
 - arch-delivery-loop の closed loop（診断→PBI化→自律実装→検証→版上げ）をコードベース全体（差分スコープ）に対して実行する継続ラウンド。
 - 4 系統の並列 explore agent 調査（bench+background misc / query+codec 契約+offscreen / S5 残留モジュール / 設計約束乖離スイープ）+ 統合側による file:line 実コード裏取り。主要候補 10 件は統合側が直接裏取り済み。
 - 診断レポート: `/tmp/architecture-review-2026-10-07-archloop-1007.md`
-- 差分スコープ: 過去台帳（holistic-1005 32件 / archloop-1006 23件）で閉じたテーマは対象外。archloop-1006 台帳送り S3–S6 を優先入力に含めた（S3→NN15、S4→NN01/05/10、S5→NN11/16、S6→NN13）。
-- NN01–NN17 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
+- 差分スコープ: 過去台帳（holistic-1005 32件 / archloop-1006 23件）で閉じたテーマは対象外。archloop-1006 台帳送り S3-S6 を優先入力に含めた（S3→NN15、S4→NN01/05/10、S5→NN11/16、S6→NN13）。
+- NN01-NN17 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
 
 ## RICE 採点表（RICE 降順）
 
@@ -34,10 +34,10 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次 / 4=四半期頻
 
 ## 同点の順位根拠（tie-break）
 
-- **6.0（NN05 と NN06）**: NN05 先行 — 同一 op 異結果のデータ乖離は計測の false confidence よりリスク軽減（リスク軽減→緊急性）
+- **6.0（NN05 と NN06）**: NN05 先行 ― 同一 op 異結果のデータ乖離は計測の false confidence よりリスク軽減（リスク軽減→緊急性）
 - **3.0（NN09 と NN10）**: 受領順（調査報告順）を維持。ファイル重複なし
-- **2.0（NN12 / NN13 / NN14 / NN15 の 4-way）**: リスク軽減順 — trust boundary の fail-open（NN12）→ S6 継続テーマ（NN13）→ dead computation（NN14）→ bench 派生（NN15）
-- **1.6（NN16 と NN17）**: NN16 先行 — CSP ゲートの規則はレート制限の既定値よりリスク軽減
+- **2.0（NN12 / NN13 / NN14 / NN15 の 4-way）**: リスク軽減順 ― trust boundary の fail-open（NN12）→ S6 継続テーマ（NN13）→ dead computation（NN14）→ bench 派生（NN15）
+- **1.6（NN16 と NN17）**: NN16 先行 ― CSP ゲートの規則はレート制限の既定値よりリスク軽減
 
 ## 純 RICE 順からの逸脱（1 件）
 
@@ -49,7 +49,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次 / 4=四半期頻
 - **NN10 は NN05 の後に**（`IdbVfsBackend.ts` の編集競合回避）
 - 上記以外は依存なし・並列可
 
-## バッチ計画（B1–B5・ファイル排他）
+## バッチ計画（B1-B5・ファイル排他）
 
 | Wave | NN | 内容 |
 |---|---|---|
@@ -74,7 +74,7 @@ RICE = R × I × C / E。Reach は保守関与頻度（5=月次 / 4=四半期頻
 | L7 | visitReporter のリトライ backoff（visitReporter.ts:150,245）を SleepFn 注入化 | Speculative | visitReporter のテスト追加時 |
 | L8 | 同名ファイル `src/offscreen/archiveStaging.ts` と `src/offscreen/opfsWorker/archiveStaging.ts` の worker 側リネーム（例: stagingNameRegistry.ts） | Speculative | archive staging を触る時 |
 
-- archloop-1006 の S1–S2（errorClassification / messageTransport の意図的層分離）は引き続き対象外。S3–S6 は本ラウンドの NN01/05/10/11/13/15/16 で消費済み。
+- archloop-1006 の S1-S2（errorClassification / messageTransport の意図的層分離）は引き続き対象外。S3-S6 は本ラウンドの NN01/05/10/11/13/15/16 で消費済み。
 
 ## DoD 反映漏れ
 

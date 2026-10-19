@@ -57,14 +57,14 @@ Scenario: リモート経路の挙動は不変
 
 ## 技術的考慮事項
 - 依存関係: なし(本台帳5候補中で唯一の独立 fix)
-- 遵守すべき ADR: ADR-015(AI Provider Abstraction) — この PBI は抽象化の未完成部分を埋める
+- 遵守すべき ADR: ADR-015(AI Provider Abstraction) ― この PBI は抽象化の未完成部分を埋める
 - 非機能要件: リモート経路の byte レベル挙動不変。sanitize ラベル変更はログ解析・テストの期待値更新を伴う
 
 ## 実装者向け注記
 
 ### 現状の証拠
-- `src/background/ai/LocalAIService.ts`(96行): `generateSummary(content, _options?)` — options を無視、customPromptUtils 未 import、usage 未記録
+- `src/background/ai/LocalAIService.ts`(96行): `generateSummary(content, _options?)` ― options を無視、customPromptUtils 未 import、usage 未記録
 - `src/background/ai/providers/BuiltInAiProvider.ts`(151行): sanitizeContent + applyCustomPrompt + recordUsageIfPresent を適用
-- ラベル不一致: `'built-in-ai'`(Provider) vs `'builtin-input'`(client) — `BuiltInAiProvider.ts:34-39` / `builtInAIClient.ts:200-203`
+- ラベル不一致: `'built-in-ai'`(Provider) vs `'builtin-input'`(client) ― `BuiltInAiProvider.ts:34-39` / `builtInAIClient.ts:200-203`
 - 経路: `src/background/privacyPipeline.ts:146-156,195` → `src/background/ai/FallbackAIService.ts:22`
 - カタログ宣言: `src/background/ai/providerCatalog.ts:230-231`

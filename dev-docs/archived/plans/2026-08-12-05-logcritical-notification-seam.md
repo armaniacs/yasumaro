@@ -14,10 +14,10 @@
 
 | File | Responsibility |
 |------|---------------|
-| `src/utils/logger/criticalAlertSink.ts` | **Create** — `CriticalAlertSink` interface + `ChromeNotificationCriticalSink` + `FakeCriticalSink` |
-| `src/utils/logger/api.ts` | **Modify** — `logCritical` drops notifications/cooldown, calls sink |
-| `src/background/sqliteAlert.ts` | **Modify** — passes `ChromeNotificationCriticalSink` (or leaves default) |
-| `src/utils/__tests__/criticalAlertSink.test.ts` | **Create** — sink unit tests |
+| `src/utils/logger/criticalAlertSink.ts` | **Create** ― `CriticalAlertSink` interface + `ChromeNotificationCriticalSink` + `FakeCriticalSink` |
+| `src/utils/logger/api.ts` | **Modify** ― `logCritical` drops notifications/cooldown, calls sink |
+| `src/background/sqliteAlert.ts` | **Modify** ― passes `ChromeNotificationCriticalSink` (or leaves default) |
+| `src/utils/__tests__/criticalAlertSink.test.ts` | **Create** ― sink unit tests |
 
 ---
 
@@ -57,7 +57,7 @@ describe('ChromeNotificationCriticalSink cooldown', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/criticalAlertSink.test.ts`
-Expected: FAIL — cannot find module
+Expected: FAIL ― cannot find module
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -69,7 +69,7 @@ export interface CriticalAlertSink {
   raise(message: string, details: Record<string, unknown>, errorCode: ErrorCodeValues): void;
 }
 
-/** Test fake — records raised alerts without side effects */
+/** Test fake ― records raised alerts without side effects */
 export class FakeCriticalSink implements CriticalAlertSink {
   raised: Array<{ message: string; details: Record<string, unknown>; errorCode: ErrorCodeValues }> = [];
   raise(message: string, details: Record<string, unknown>, errorCode: ErrorCodeValues): void {
@@ -79,7 +79,7 @@ export class FakeCriticalSink implements CriticalAlertSink {
 
 const COOLDOWN_MS = 5 * 60 * 1000;
 
-/** Production sink — fires chrome.notifications with a cooldown */
+/** Production sink ― fires chrome.notifications with a cooldown */
 export class ChromeNotificationCriticalSink implements CriticalAlertSink {
   private lastNotificationTime = 0;
   private readonly now: () => number;
@@ -103,7 +103,7 @@ export class ChromeNotificationCriticalSink implements CriticalAlertSink {
     try {
       const notifications = this.notifications ?? (typeof chrome !== 'undefined' ? chrome.notifications : undefined);
       if (!notifications || typeof notifications.create !== 'function') return;
-      const title = chrome.i18n?.getMessage('criticalAlertTitle') || 'Yasumaro — Critical Error';
+      const title = chrome.i18n?.getMessage('criticalAlertTitle') || 'Yasumaro ― Critical Error';
       const body = chrome.i18n?.getMessage('criticalAlertBody', [message]) || message;
       const iconUrl = (typeof chrome.runtime !== 'undefined' && typeof chrome.runtime.getURL === 'function')
         ? chrome.runtime.getURL('icons/icon48.png')
@@ -171,7 +171,7 @@ describe('logCritical', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/logCritical.test.ts`
-Expected: FAIL — `logCritical` does not accept a 5th `sink` argument
+Expected: FAIL ― `logCritical` does not accept a 5th `sink` argument
 
 - [ ] **Step 3: Modify logCritical**
 
@@ -206,7 +206,7 @@ export async function logCritical<T extends object = Record<string, unknown>>(
 }
 ```
 
-Remove the old `CRITICAL_NOTIFICATION_COOLDOWN_MS` / `lastCriticalNotificationTime` constants and the `chrome.notifications.create` block — those now live in `ChromeNotificationCriticalSink`.
+Remove the old `CRITICAL_NOTIFICATION_COOLDOWN_MS` / `lastCriticalNotificationTime` constants and the `chrome.notifications.create` block ― those now live in `ChromeNotificationCriticalSink`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -229,7 +229,7 @@ git commit -m "refactor(logger): strip notifications from logCritical into sink"
 
 - [ ] **Step 1: Verify current call**
 
-Read `src/background/sqliteAlert.ts:44` — current: `void logCritical('SQLite persistent failure in ${component}', {...}, ErrorCode.STORAGE_READ_FAILURE, 'sqliteAlert');`
+Read `src/background/sqliteAlert.ts:44` ― current: `void logCritical('SQLite persistent failure in ${component}', {...}, ErrorCode.STORAGE_READ_FAILURE, 'sqliteAlert');`
 
 - [ ] **Step 2: Update the call to pass the sink explicitly**
 

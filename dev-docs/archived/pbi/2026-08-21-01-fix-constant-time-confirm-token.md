@@ -15,7 +15,7 @@
   - Impact 0.25: 現行では exploitable ではない defense-in-depth（極小）。将来リスク軽減が主目的
   - Confidence 100%: 修正箇所は `index.ts:42` の1行に特定済み、置換先 `constantTimeCompare` は既存・テスト済み（`src/utils/crypto/primitives.ts:67`、`crypto.test.ts:274`）
   - Effort 0.1: async 化とテスト追加を含めて 0.5日程度（Mutex やストレージ変更は不要）
-- WSJF参考: Cost of Delay = 1.5（BV 0.5 + 緊急性 0.5 + リスク軽減 0.5）/ Job Size 0.1 = 15 — 低緊急度
+- WSJF参考: Cost of Delay = 1.5（BV 0.5 + 緊急性 0.5 + リスク軽減 0.5）/ Job Size 0.1 = 15 ― 低緊急度
 - 根拠: 単一候補のため相対比較は不要。依存関係なし。唯一の gate 漏れ（タイミング安全でない比較）を最も安価に塞げるため、バックログ先頭で即時対応が合理的。VulnHunter Code Quality 推奨の直接対応でもある
 
 ## BDD受け入れシナリオ
@@ -62,7 +62,7 @@ Scenario: 読み取り系はトークン不要のまま動作する（回帰防�
 - `src/background/handlers/dashboardSqlite/index.ts` の handler 統合テスト: `deps.getConfirmToken` をモックし、正/不正/未指定トークンでの分岐を `createDashboardSqliteHandler` 経由で検証。読み取り系がトークン不要のままであることも同一スイートで検証
 
 ### 単体テスト
-- `constantTimeCompare` 自体は既存 `src/utils/crypto/__tests__/crypto.test.ts:274` でカバー済み — 追加不要
+- `constantTimeCompare` 自体は既存 `src/utils/crypto/__tests__/crypto.test.ts:274` でカバー済み ― 追加不要
 - 新規: `src/background/handlers/dashboardSqlite/__tests__/confirmTokenConstantTime.test.ts`（仮）
   - ビジネスロジック: 有効トークンと一致/不一致の真偽が正しいこと
   - 境界値: 空文字、長さ違い、先頭/末尾のみ違い、undefined
@@ -73,7 +73,7 @@ Scenario: 読み取り系はトークン不要のまま動作する（回帰防�
 - **Red-Green-Refactor**: 各テストを1シナリオずつ追加し、最小差分で置換。`hmacKeyStore.ts:314-321` の個別ループを再利用せず `primitives.ts:67` に集約
 
 ## 見積もり
-1pt（要チームでの見積もり — 実装は1行置換 + テスト1ファイル。0.5日以内）
+1pt（要チームでの見積もり ― 実装は1行置換 + テスト1ファイル。0.5日以内）
 
 ## 技術的考慮事項
 - 依存関係: なし（`src/utils/crypto/primitives.ts:67` は既存安定モジュール）
@@ -95,7 +95,7 @@ sed -n '67,85p' src/utils/crypto/primitives.ts
 
 - 現状: `index.ts:42` で `providedToken !== validConfirmToken`（非定数時間）
 - 置換先: `src/utils/crypto/primitives.ts:67` の `constantTimeCompare(a,b): Promise<boolean>`（長さ差も timing-safe）
-- 既実装確認: 未実装（定数時間比較への置換は未対応）— VulnHunter 2026-08-21 でも Code Quality として指摘されたまま
+- 既実装確認: 未実装（定数時間比較への置換は未対応）― VulnHunter 2026-08-21 でも Code Quality として指摘されたまま
 
 ### 実装手順
 1. `src/background/handlers/dashboardSqlite/index.ts` 先頭で `import { constantTimeCompare } from '../../../utils/crypto/primitives.js'` を追加（既存 import 群に追記。パスは `src/utils/crypto/index.ts` 経由の re-export でも可）
@@ -104,14 +104,14 @@ sed -n '67,85p' src/utils/crypto/primitives.ts
 4. `npm run type-check && npm run validate` で回帰確認。`grep -rn "validConfirmToken" src --include="*.ts"` で `!==` が消えたことを確認
 
 ### 落とし穴
-- `constantTimeCompare` は `Promise<boolean>` を返す — `await` を忘れると常に truthy になり全トークンが通過する。必ず `await` すること
+- `constantTimeCompare` は `Promise<boolean>` を返す ― `await` を忘れると常に truthy になり全トークンが通過する。必ず `await` すること
 - `providedToken` が undefined のとき `constantTimeCompare(undefined, ...)` を呼ばないようガード順序を維持すること（`!providedToken` を先に評価）
-- `hmacKeyStore.ts` の手動ループをコピペしないこと — `primitives.ts` に一本化されているため重複実装を増やさない
-- テストでタイミング計測を厳密にやろうとしないこと — 単体テストでは「比較が定数時間関数を経由している」ことの呼び出し検証で十分（実タイミング計測は不安定）
+- `hmacKeyStore.ts` の手動ループをコピペしないこと ― `primitives.ts` に一本化されているため重複実装を増やさない
+- テストでタイミング計測を厳密にやろうとしないこと ― 単体テストでは「比較が定数時間関数を経由している」ことの呼び出し検証で十分（実タイミング計測は不安定）
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
 - [x] コードレビュー完了
 - [x] リファクタリング完了（グリーン後）
-- [x] ドキュメント更新済み（必要なら dev-docs/ERROR_CODES.md 等 — 本PBIでは不要想定）
+- [x] ドキュメント更新済み（必要なら dev-docs/ERROR_CODES.md 等 ― 本PBIでは不要想定）

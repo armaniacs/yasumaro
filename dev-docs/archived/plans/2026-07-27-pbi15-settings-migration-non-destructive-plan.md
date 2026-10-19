@@ -33,7 +33,7 @@ find src/utils -iname "*settingsStore*test*"
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { migrateToSingleSettingsObject, LEGACY_SETTINGS_BACKUP_KEY } from '../settingsStore.js';
 
-describe('migrateToSingleSettingsObject — non-destructive backup', () => {
+describe('migrateToSingleSettingsObject ― non-destructive backup', () => {
   let storageData: Record<string, unknown>;
 
   beforeEach(() => {
@@ -61,7 +61,7 @@ describe('migrateToSingleSettingsObject — non-destructive backup', () => {
     } as unknown as typeof chrome;
   });
 
-  it('does not immediately remove legacy per-key data — stores it as a backup instead', async () => {
+  it('does not immediately remove legacy per-key data ― stores it as a backup instead', async () => {
     await migrateToSingleSettingsObject();
 
     // Legacy keys should be gone from their original location...
@@ -124,7 +124,7 @@ Expected: PASS
 - [ ] **Step 1: 失敗するテストを追加する**
 
 ```typescript
-describe('getSettings — recovery from backup on corruption', () => {
+describe('getSettings ― recovery from backup on corruption', () => {
   // settings オブジェクトが存在するが空 or 必須キー欠落の状態をシミュレート
   it('restores from the most recent backup when settings object is empty/corrupted', async () => {
     const now = Date.now();

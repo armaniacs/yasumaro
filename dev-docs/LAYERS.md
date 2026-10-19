@@ -14,7 +14,7 @@
 
 ## ファイル分類
 
-### Layer 0 — Foundation (依存なし)
+### Layer 0 ― Foundation (依存なし)
 
 ```
 src/utils/errorUtils.ts
@@ -53,8 +53,8 @@ src/utils/recordingGateTable.ts
 src/utils/listSources.ts
 src/utils/cleansingBadge.ts
 src/utils/registrableDomain.ts
-src/utils/domClear.ts — Element クリアの共有 seam（popup から re-export、dashboard も直接利用。document/chrome 非依存の純関数）
-src/utils/scopeHash.ts — confirm token の scope SHA-256 計算（chrome 非依存の純関数。background と messaging が共有、PBI 2026-10-09-16）
+src/utils/domClear.ts ― Element クリアの共有 seam（popup から re-export、dashboard も直接利用。document/chrome 非依存の純関数）
+src/utils/scopeHash.ts ― confirm token の scope SHA-256 計算（chrome 非依存の純関数。background と messaging が共有、PBI 2026-10-09-16）
 ```
 
 注記:
@@ -73,21 +73,21 @@ src/utils/scopeHash.ts — confirm token の scope SHA-256 計算（chrome 非�
 `crypto/hmacKeyStore.ts` は `chrome.storage` への副作用を持つため Layer 1 に分類する
 （旧分類 Layer 0 は誤り。PBI 2026-09-17-05 で訂正）。
 
-### Layer 1 — Infrastructure (Layer 0 のみ依存)
+### Layer 1 ― Infrastructure (Layer 0 のみ依存)
 
 ```
 src/utils/storage/types.ts
 src/utils/storage/defaults.ts
 src/utils/storage/encryptionSession.ts
-src/utils/storage/SettingsRepository.ts — 旧 settingsStore.ts の後継。trustDb 系との循環は dynamic import で回避（Layer 1-循環の後継関係）
+src/utils/storage/SettingsRepository.ts ― 旧 settingsStore.ts の後継。trustDb 系との循環は dynamic import で回避（Layer 1-循環の後継関係）
 src/utils/storage/savedUrlRepository.ts
 src/utils/storage/domainFilterCache.ts
-src/utils/storage/privacyConsent.ts — 同意状態ロジック。background/popup/dashboard から直接 import する中立配置
+src/utils/storage/privacyConsent.ts ― 同意状態ロジック。background/popup/dashboard から直接 import する中立配置
 src/utils/storage/quota.ts
 src/utils/storage/storageMaintenance.ts
-src/utils/storage/settingsSnapshot.ts — 復号なし設定スナップショット。content scripts 用の読み専用経路
-src/utils/storage/rotationLock.ts — KEK 回転のクロスコンテキスト排他(Web Locks)
-src/utils/storage/storageTransaction.ts — withOptimisticLock 等（旧 optimisticLock.ts の後継）
+src/utils/storage/settingsSnapshot.ts ― 復号なし設定スナップショット。content scripts 用の読み専用経路
+src/utils/storage/rotationLock.ts ― KEK 回転のクロスコンテキスト排他(Web Locks)
+src/utils/storage/storageTransaction.ts ― withOptimisticLock 等（旧 optimisticLock.ts の後継）
 src/utils/Mutex.ts
 src/utils/rateLimiter.ts
 src/utils/trustDb/domainValidation.ts
@@ -101,17 +101,17 @@ src/utils/storage/providerAllowlist.ts
 src/utils/storage/providerDefaultBaseUrls.ts
 src/utils/storage/storagePort.ts
 src/utils/storage/structuredCloneBoundary.ts
-src/utils/crypto/hmacKeyStore.ts — chrome.storage への副作用を持つため Layer 0 から移動（PBI 2026-09-17-05）
-src/utils/masterPassword.ts — chrome.storage への副作用を持つ Infrastructure として Layer 1 に分類（PBI 2026-09-17-05）
-src/utils/i18nPlural.ts — chrome.i18n を参照するため Layer 0 から移動（PBI 2026-09-17-05）
+src/utils/crypto/hmacKeyStore.ts ― chrome.storage への副作用を持つため Layer 0 から移動（PBI 2026-09-17-05）
+src/utils/masterPassword.ts ― chrome.storage への副作用を持つ Infrastructure として Layer 1 に分類（PBI 2026-09-17-05）
+src/utils/i18nPlural.ts ― chrome.i18n を参照するため Layer 0 から移動（PBI 2026-09-17-05）
 ```
 
 旧 `settingsStore.ts`・旧 `optimisticLock.ts` は削除済み（後継は上記の通り）。旧分類表に残っていた
 `src/utils/buffer.ts` は存在しないファイルのため削除（`logger/buffer.ts` は Layer 0 として存続）。
 
-### Layer 1-循環 — Infrastructure (循環あり・例外)
+### Layer 1-循環 ― Infrastructure (循環あり・例外)
 
-旧 `settingsStore.ts` ↔ 旧 `trustDb.ts` は分割済み。現行の後継関係（PBI 2026-09-17-05 で確認）:
+旧 `settingsStore.ts` ⇔ 旧 `trustDb.ts` は分割済み。現行の後継関係（PBI 2026-09-17-05 で確認）:
 
 ```
 src/utils/trustDb/TrustDbKernel.ts → src/utils/storage/SettingsRepository.ts (dynamic のみ)
@@ -150,7 +150,7 @@ utils 側は再 export シムだけになった。シムが指すのは sibling 
 DASHBOARD_SQLITE の wire 契約は `src/messaging/dashboardSqliteProtocol.ts` に配置し、
 `src/background/messageTypes.ts` は re-export シムである。
 
-### Layer 2 — High-level Utilities (Layer 0/1 依存)
+### Layer 2 ― High-level Utilities (Layer 0/1 依存)
 
 ```
 src/utils/pageContentPipeline.ts
@@ -160,23 +160,23 @@ src/utils/promptSanitizer.ts
 src/utils/piiSanitizer.ts
 src/utils/markdownFormatter.ts
 src/utils/obsidianConfigValidator.ts
-src/utils/fetch.ts  — ssrfGuard.ts への委譲あり
+src/utils/fetch.ts  ― ssrfGuard.ts への委譲あり
 src/utils/ssrfGuard.ts
 src/utils/cspValidator.ts
-src/utils/trustDb/  — 上記循環を除き Layer 0/1 のみに依存するモジュール群
+src/utils/trustDb/  ― 上記循環を除き Layer 0/1 のみに依存するモジュール群
 src/utils/ublockParser/
 src/utils/ublockMatcher.ts
-src/utils/domainUtils.ts — Layer 2 の ublockMatcher を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
-src/utils/logger/sanitize.ts — Layer 2 の piiSanitizer を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
+src/utils/domainUtils.ts ― Layer 2 の ublockMatcher を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
+src/utils/logger/sanitize.ts ― Layer 2 の piiSanitizer を静的に import するため Layer 2 に分類（PBI 2026-09-17-05）
 src/utils/promptSafety.ts
 src/utils/trustDb/TrustLookup.ts
 src/utils/trustDb/TrustDecision.ts
 ```
 
-### Barrel — Re-export (retired)
+### Barrel ― Re-export (retired)
 
 ```
-src/utils/crypto/index.ts — crypto/* からの再エクスポート
+src/utils/crypto/index.ts ― crypto/* からの再エクスポート
 ```
 
 新規コードは barrel 経由ではなく各モジュールから直接 import すること。`storage.ts`・`logger.ts` の barrel は削除済み（下記「将来の移行計画」）。
@@ -234,7 +234,7 @@ CI 組み込み判断（PBI 2026-09-17-14）: `npm run validate` への配線は
 （Node 標準のみ）の手動実行で足りるため。分類を変更する PBI では実行を Definition of Done
 に含めること。
 
-検査範囲（v1 — 最大の利益・最小のリスト）:
+検査範囲（v1 ― 最大の利益・最小のリスト）:
 
 - Layer 0: `chrome` グローバル参照の禁止（AST の MemberExpression 検出のため、
   コメント・文字列リテラル内の `chrome.*` 言及は誤検出しない。ローカル変数の
@@ -285,25 +285,25 @@ comm -23 <(find src/utils -name '*.ts' -not -path '*__tests__*' | sort) <(grep -
 - [ ] `chrome.storage` や永続化を伴うか？ → Layer 1
 - [ ] `storage` / `trustDb` / `repositories` を import するか？ → Layer 2
 - [ ] どれにも当てはまらない純粋関数か？ → Layer 0
-- [ ] ファイル先頭に `// @layer N — <purpose>` コメントを付与したか？
+- [ ] ファイル先頭に `// @layer N ― <purpose>` コメントを付与したか？
 - [ ] 宣言レイヤーをルールリスト（`LAYER0_FILES` / `LAYER1_FILES` / `LAYER2_MODULES`）または本分類表に登録したか？（`lint:layers-docs` が宣言と収載を照合する。未収載の宣言は drift として報告される）
 - [ ] 循環が必要な場合は ADR に記録したか？
 
 例:
 
 ```typescript
-// @layer 1 — Infrastructure: domain filter cache
+// @layer 1 ― Infrastructure: domain filter cache
 export function getDomainFilterCacheSync() { ... }
 ```
 
 ## 将来の移行計画
 
-* **Wave 3**: `storage.ts` barrel — 完了（PBI 2026-08-21-04 + PBI-28）後、唯一の利用者 `trancoConsentManager.ts` 系の削除（PBI 2026-09-28-25）に伴い barrel 本体を削除。`eslint.config.js` の対応する禁止エントリも削除済み
-* **Wave 4**: `logger.ts` barrel の同様の分割 — 完了（PBI 2026-09-05-03 で配線、PBI 2026-09-18-19 で呼び出し側133箇所の直接 import 移行と barrel 削除）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。logger への import は `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接参照のみ
+* **Wave 3**: `storage.ts` barrel ― 完了（PBI 2026-08-21-04 + PBI-28）後、唯一の利用者 `trancoConsentManager.ts` 系の削除（PBI 2026-09-28-25）に伴い barrel 本体を削除。`eslint.config.js` の対応する禁止エントリも削除済み
+* **Wave 4**: `logger.ts` barrel の同様の分割 ― 完了（PBI 2026-09-05-03 で配線、PBI 2026-09-18-19 で呼び出し側133箇所の直接 import 移行と barrel 削除）。`core.ts` が `LoggerWiring`（`initLogger` 注入・lazy chrome デフォルト・`resetLoggerWiring`）を受け、offscreen console フォールバックは `ChromeStorageLogAdapter` に移動。logger への import は `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接参照のみ
 * 循環の解消は業務ルール上不可のため、dynamic import による回避を維持し、ADR で保護する
 
 ## 参考
 
-* ADR 2026-08-20-utils-layer-circular-dependency — 循環依存の詳細と保護理由
-* ADR 2026-07-26-domain-filter-layer-map — ドメインフィルタ専用の4層モデル
+* ADR 2026-08-20-utils-layer-circular-dependency ― 循環依存の詳細と保護理由
+* ADR 2026-07-26-domain-filter-layer-map ― ドメインフィルタ専用の4層モデル
 

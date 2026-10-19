@@ -1,4 +1,4 @@
-# PBI: CAS verify→write 区間の直列化 — fake-timer 互換の Mutex 設計（VULN-003/005/012/050）
+# PBI: CAS verify→write 区間の直列化 ― fake-timer 互換の Mutex 設計（VULN-003/005/012/050）
 
 > `2026-08-29-04-fix-storage-rmw-serialization.md` から分離。29-04 の PR #74 では
 > `persistentRetryQueue` と `notificationHandlers` の 2 サイトのみ着地した。
@@ -84,10 +84,10 @@ Scenario: logger の並行 append でログが消えない
 - **Red-Green-Refactor**: key 粒度 Mutex を先に確立し、その上で 4 サイトを 1 つずつ
 
 ## 見積もり
-3pt（要チームでの見積もり — 直列化機構の設計・実装 1.5 + 4 サイト適用 1 + 回帰テスト 0.5）
+3pt（要チームでの見積もり ― 直列化機構の設計・実装 1.5 + 4 サイト適用 1 + 回帰テスト 0.5）
 
 ## 技術的考慮事項
-- 依存関係: PBI 07（lock-cas-correctness）と `optimisticLock.ts` を共有 — 本 PBI を先に完了推奨
+- 依存関係: PBI 07（lock-cas-correctness）と `optimisticLock.ts` を共有 ― 本 PBI を先に完了推奨
 - PR #75（29-08）の `pendingStorage.ts` 剪定ロジックとマージ順に注意（剪定を CAS updater 内へ）
 - key 粒度 Mutex の Map はメモリリークに注意（使い終わったキーのエントリを削除、または WeakRef 不可のため参照カウント）
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること

@@ -16,12 +16,12 @@
 
 ## 証拠(レビュー由来・反証済み)
 
-- `src/utils/crypto/durableKeyStore.ts:110-118` — `saveDurableWrappingKey` は失敗時 `false` を返す
-- `src/utils/crypto/hmacKeyStore.ts:225` — 呼び出し側が戻り値を無視(`await saveDurableWrappingKey(key);` のみ)
-- `src/utils/crypto/hmacKeyStore.ts:306-312` — unwrap 失敗は `console.warn` のみで fall-through
-- `:331-337` — 新キーを生成し旧 envelope を `chrome.storage.local.set` で上書き破壊(取り返し不可)
-- `src/utils/storage/privacyConsent.ts:94-103` — 署名検証失敗で `hasConsented: false` を返す(再署名・migration なし)
-- `src/background/compositionManifest.ts:214` — `isRecordingAllowed: () => hasPrivacyConsent()` により記録ゲートが停止
+- `src/utils/crypto/durableKeyStore.ts:110-118` ― `saveDurableWrappingKey` は失敗時 `false` を返す
+- `src/utils/crypto/hmacKeyStore.ts:225` ― 呼び出し側が戻り値を無視(`await saveDurableWrappingKey(key);` のみ)
+- `src/utils/crypto/hmacKeyStore.ts:306-312` ― unwrap 失敗は `console.warn` のみで fall-through
+- `:331-337` ― 新キーを生成し旧 envelope を `chrome.storage.local.set` で上書き破壊(取り返し不可)
+- `src/utils/storage/privacyConsent.ts:94-103` ― 署名検証失敗で `hasConsented: false` を返す(再署名・migration なし)
+- `src/background/compositionManifest.ts:214` ― `isRecordingAllowed: () => hasPrivacyConsent()` により記録ゲートが停止
 - トリガー: IndexedDB の site data 消去・プロファイル破損 + 再起動(session キャッシュの消失)
 
 ## BDD 受け入れシナリオ
@@ -58,7 +58,7 @@
 
 ## 実装アプローチ
 
-1. `hmacKeyStore` の再生パスに隔離退避とログを追加する(再生自体の fail-open 仕様は維持 — 可用性のため)
+1. `hmacKeyStore` の再生パスに隔離退避とログを追加する(再生自体の fail-open 仕様は維持 ― 可用性のため)
 2. `privacyConsent` に「署名検証失敗で consent をリセットした」事実を示すフラグを追加し、dashboard/popup がそれを購読して再同意を促す
 
 ## 制約

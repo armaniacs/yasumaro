@@ -1,4 +1,4 @@
-# PBI: インポート経路の安全化 — 認証→上限→パース→検証（VULN-023/030/034/035/036, CWE-400/347/94）
+# PBI: インポート経路の安全化 ― 認証→上限→パース→検証（VULN-023/030/034/035/036, CWE-400/347/94）
 
 ## ユーザーストーリー
 利用者として、settings・logs・backup の各インポートで悪意あるファイルが署名検証前にリソースを消費せず、偽造履歴が受け入れられず、エクスポートの frontmatter が汚染されないようにしたい、なぜなら 3 系統が独立実装で順序規約がなく、logs import は署名ゲート自体が存在しないから
@@ -47,7 +47,7 @@ Scenario: エクスポート frontmatter の注入は無効化される
 ## 受け入れ基準
 - [ ] 共通インポートプリミティブ（仮称 `importPipeline`: authenticate→sizeCap→parse→validate）が新設され、settings/logs/backup の 3 系統から使用される
 - [ ] `src/utils/settingsExportImport.ts:163-178` が HMAC 検証を decode/KDF/復号より前に移動し、10MB の読み込み cap と typed-array decode（atob 増幅の除去）を適用している
-- [ ] `src/dashboard/importLogsService.ts:27-33,41-77` に settings と同等の HMAC ゲート（export 側で署名付与）と file.size ≤ 10MB、rows ≤ 100k、総行数 cap が実装されている
+- [ ] `src/dashboard/importLogsService.ts:27-33,41-77` に settings と同等の HMAC ゲート（export 側で署名付与）と file.size ≦ 10MB、rows ≦ 100k、総行数 cap が実装されている
 - [ ] `validateRow` が全 9 フィールド（日付 parse、数値範囲、文字列長 cap）を検証する
 - [ ] `src/dashboard/encryptedBackupPanel.ts:72-79` が file.size チェックを parse 前に行い、envelope 長検証を境界に移動している
 - [ ] `src/dashboard/exportLogsService.ts:62-71` に YAML エスケープヘルパー（url/title/tags）が適用されている
@@ -73,13 +73,13 @@ Scenario: エクスポート frontmatter の注入は無効化される
 - **Red-Green-Refactor**: 既存 HMAC 実装（settingsExportImport.ts:377-407）をプリミティブに昇格させる（再実装しない）
 
 ## 見積もり
-2pt（要チームでの見積もり — プリミティブ＋3 系統移行＋署名付与＋テスト）
+2pt（要チームでの見積もり ― プリミティブ＋3 系統移行＋署名付与＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: Wave 2。PBI 12（crypto SSOT）の iterations に依存しうるが、本 PBI 単独でも着手可能（既定 iterations のまま）
 - テスタビリティ: File/Blob は jsdom で生成可能
-- 非機能要件: 正当ファイルの import/export 互換を壊さない（署名なき旧 log ファイルの扱いを仕様として決める — 移行期間の許可フラグ or 拒否）
-- 注意: log export に署名を付けると旧拡張バージョンとの相互運用が変わる — CHANGELOG と PRIVACY ドキュメントの更新を含める
+- 非機能要件: 正当ファイルの import/export 互換を壊さない（署名なき旧 log ファイルの扱いを仕様として決める ― 移行期間の許可フラグ or 拒否）
+- 注意: log export に署名を付けると旧拡張バージョンとの相互運用が変わる ― CHANGELOG と PRIVACY ドキュメントの更新を含める
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
@@ -103,7 +103,7 @@ sed -n '58,75p' src/dashboard/exportLogsService.ts
 
 ### 落とし穴
 - HMAC 先行化で「envelope 全体に対する署名」の対象バイト範囲を既存実装と厳密一致させること（ずれると正当ファイルが拒否される）
-- validateRow の厳格化で過去バージョンの正当 log ファイルが拒否される可能性 — 旧形式フィールドの許容範囲を先に棚卸しすること
+- validateRow の厳格化で過去バージョンの正当 log ファイルが拒否される可能性 ― 旧形式フィールドの許容範囲を先に棚卸しすること
 - YAML エスケープは `summary` の既存サニタイザ（exportLogsService.ts:69）と重複させず、1 ヘルパーに統一すること
 
 ## Definition of Done

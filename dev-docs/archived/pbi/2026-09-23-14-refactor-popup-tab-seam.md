@@ -1,4 +1,4 @@
-# PBI 2026-09-23-14 — popup active-tab 読取の一元化
+# PBI 2026-09-23-14 ― popup active-tab 読取の一元化
 
 **優先度**: 順位 14 / RICE 6.4（Reach 4 × Impact 1 × Confidence 80% ÷ Effort 0.5 人週）
 **根拠**: `getCurrentTab()` helper・同一ファイル内の素 `chrome.tabs.query` ×2・場当たり hostname パースの 3 綴りが同居。単一 Seam 化で null-tab・不正 URL 扱いを 1 箇所に集め、約 30 テスト mock を収束させる。

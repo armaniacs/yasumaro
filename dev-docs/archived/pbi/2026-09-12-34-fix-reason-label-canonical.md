@@ -1,4 +1,4 @@
-# PBI 2026-09-12-34 — reason-label の canonical 解決を 3 surface 全体に（raw slug 表示実バグ）
+# PBI 2026-09-12-34 ― reason-label の canonical 解決を 3 surface 全体に（raw slug 表示実バグ）
 
 - **種別**: 🔧非功能追加（fix・表示バグ解消）
 - **優先度**: 2 位 / RICE **32.0**（R10 × I2 × C80% / E0.5人日）

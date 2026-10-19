@@ -1,4 +1,4 @@
-# 深掘りセッション — 2026-08-20 Feature Dev (PBI 3件)
+# 深掘りセッション ― 2026-08-20 Feature Dev (PBI 3件)
 
 対象: 推奨順 PBI 3件の自律実装
 - 2026-08-21-01 diagnosticsPanel Wave2
@@ -9,9 +9,9 @@
 
 | 仮定 | リスク | 発見 | 決定 |
 |------|--------|------|------|
-| diagnosticsPanel Wave2 は Collector 統合まで含むべき | 高 | DiagnosticsCollector は 2026-08-20-04 で深モジュールとして新設済みだが、diagnosticsPanel.ts は依然 loadAndPopulate() で直接 getSettings/getSqliteStatus を呼ぶ。PBI 2026-08-21-01 の受け入れ基準は「PanelLifecycle直接実装＋adaptLegacyPanel削除＋lifecycleテスト」のみで Collector への委譲は含まれない。Collector 統合は別責務であり、同時に行うと 681行の描画ロジックと lifecycle 移行の2つの変更理由が混在し、レビュー時の差分が 500行超になる。Wave1 sqliteHistoryPanel も controller 分離と lifecycle 移行を別 PBI に分けていた | **A: ライフサイクルのみ** — mount/load/destroy への移行とラッパー削除に限定。Collector 統合は次 Wave の候補として記録。loadAndPopulate は load() に移動するが、内部実装は維持 |
-| utils layer 形式化はドキュメントのみで十分 | 中 | src/utils/storage.ts は 88行38exportの barrel で 36箇所から参照、logger.ts も ~120箇所。barrel を一気に分割すると破壊的変更。一方で「ドキュメントのみ」ではコード上で layer 違反を grep 検証できず、PBI の「形式化（comment marking）」要件を満たさない。trustDb↔settingsStore 循環は双方 dynamic import で回避済みだが、なぜそうなっているかがコードに残らないと将来削除されるリスク | **B: ドキュメント＋コメントマーキング** — dev-docs/LAYERS.md 作成＋ADR に循環記録＋全 utils ファイル先頭に // Layer 0/1/2 コメント付与。barrel 分割は行わない。grep で layer 違反を検出可能な最小のコード変更 |
-| messaging validator は 5 validator を throw で統一 | 中 | 実コードでは sqliteValidators.ts の pure helpers 以外に独立 validator ファイルは存在せず、handler 内に散在する inline check (isSecureUrl, MAX_* 上限, confirmToken ゲート, rateLimiter など) のみ。PBI の「5ファイル」は歴史的記述で実態は 3 domain (SQLite, BrowsingLog, AIResponse) に集約可能。既存の requiredFiniteNumber は throw、Dashboard の ServiceResult は {error} 返却だが、MessageHandlerRegistry.dispatch は handler の throw を catch して {success:false} で応答する設計のため throw が自然。Result 型は既存 ServiceResult と紛らわしく、二重の型が発生する | **A: throw統一・SQLite中心** — MessageValidator<T> { validate(msg:unknown):T } を throw ValidationError で定義。対象は SqliteMessage/BrowsingLog/AIResponse の3つに絞り、残りは inline のまま。Handler registry で validator を DI し、throw を catch して structured log に記録 |
+| diagnosticsPanel Wave2 は Collector 統合まで含むべき | 高 | DiagnosticsCollector は 2026-08-20-04 で深モジュールとして新設済みだが、diagnosticsPanel.ts は依然 loadAndPopulate() で直接 getSettings/getSqliteStatus を呼ぶ。PBI 2026-08-21-01 の受け入れ基準は「PanelLifecycle直接実装＋adaptLegacyPanel削除＋lifecycleテスト」のみで Collector への委譲は含まれない。Collector 統合は別責務であり、同時に行うと 681行の描画ロジックと lifecycle 移行の2つの変更理由が混在し、レビュー時の差分が 500行超になる。Wave1 sqliteHistoryPanel も controller 分離と lifecycle 移行を別 PBI に分けていた | **A: ライフサイクルのみ** ― mount/load/destroy への移行とラッパー削除に限定。Collector 統合は次 Wave の候補として記録。loadAndPopulate は load() に移動するが、内部実装は維持 |
+| utils layer 形式化はドキュメントのみで十分 | 中 | src/utils/storage.ts は 88行38exportの barrel で 36箇所から参照、logger.ts も ~120箇所。barrel を一気に分割すると破壊的変更。一方で「ドキュメントのみ」ではコード上で layer 違反を grep 検証できず、PBI の「形式化（comment marking）」要件を満たさない。trustDb⇔settingsStore 循環は双方 dynamic import で回避済みだが、なぜそうなっているかがコードに残らないと将来削除されるリスク | **B: ドキュメント＋コメントマーキング** ― dev-docs/LAYERS.md 作成＋ADR に循環記録＋全 utils ファイル先頭に // Layer 0/1/2 コメント付与。barrel 分割は行わない。grep で layer 違反を検出可能な最小のコード変更 |
+| messaging validator は 5 validator を throw で統一 | 中 | 実コードでは sqliteValidators.ts の pure helpers 以外に独立 validator ファイルは存在せず、handler 内に散在する inline check (isSecureUrl, MAX_* 上限, confirmToken ゲート, rateLimiter など) のみ。PBI の「5ファイル」は歴史的記述で実態は 3 domain (SQLite, BrowsingLog, AIResponse) に集約可能。既存の requiredFiniteNumber は throw、Dashboard の ServiceResult は {error} 返却だが、MessageHandlerRegistry.dispatch は handler の throw を catch して {success:false} で応答する設計のため throw が自然。Result 型は既存 ServiceResult と紛らわしく、二重の型が発生する | **A: throw統一・SQLite中心** ― MessageValidator<T> { validate(msg:unknown):T } を throw ValidationError で定義。対象は SqliteMessage/BrowsingLog/AIResponse の3つに絞り、残りは inline のまま。Handler registry で validator を DI し、throw を catch して structured log に記録 |
 
 ## なぜなぜ分析サマリ
 
@@ -34,13 +34,13 @@
 - 解: MessageValidator<T> を単一 interface として定義し、handler registry に登録することで「どの handler がどの validator を使うか」を明示する
 
 ## 新たに発見したリスク
-- diagnosticsPanel の NavigationRegistry 呼び出しは category==='async-data' のみ load() を自動実行するが、diagnostic は static 的に扱われるため load() が自動で呼ばれない可能性がある — appConstants 的に diagnostic は mount で完結する設計のため、load() をどこで呼ぶかを設計で決める必要がある
-- utils の storage/storageMaintenance.ts が background/sqliteClient.ts に dynamic import で依存しており、utils→background の逆方向依存が層違反 — LAYERS.md で明示的に例外として記録する必要がある
+- diagnosticsPanel の NavigationRegistry 呼び出しは category==='async-data' のみ load() を自動実行するが、diagnostic は static 的に扱われるため load() が自動で呼ばれない可能性がある ― appConstants 的に diagnostic は mount で完結する設計のため、load() をどこで呼ぶかを設計で決める必要がある
+- utils の storage/storageMaintenance.ts が background/sqliteClient.ts に dynamic import で依存しており、utils→background の逆方向依存が層違反 ― LAYERS.md で明示的に例外として記録する必要がある
 - messaging の DASHBOARD_SQLITE は 20 subtype が既に sqliteOperationSecurity.ts で SSOT 化されているため、新 validator はそれと整合させる必要がある
 
 ## 未解決の疑問
-- diagnosticsPanel の refresh() を load() に統合するか、別途残すか — 既存は refresh?() を持つが NavigationRegistry は refresh を呼ばない。今回は load() に統合し refresh は削除する方針で進める
-- utils の Layer 1 に trustDb を含めるか — trustDb は storage に依存するが循環するため「Layer 1 (循環あり)」として例外扱いにする
+- diagnosticsPanel の refresh() を load() に統合するか、別途残すか ― 既存は refresh?() を持つが NavigationRegistry は refresh を呼ばない。今回は load() に統合し refresh は削除する方針で進める
+- utils の Layer 1 に trustDb を含めるか ― trustDb は storage に依存するが循環するため「Layer 1 (循環あり)」として例外扱いにする
 
 ## 決定事項
 1. Wave2 diagnosticsPanel は lifecycle 移行のみ (A)

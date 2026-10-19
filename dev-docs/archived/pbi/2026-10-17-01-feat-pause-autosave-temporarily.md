@@ -109,7 +109,7 @@ grep -n "chrome.alarms.create\|onAlarm" src/background/alarmRegistry.ts src/back
 - [ ] リファクタリング完了（グリーン後）
 - [ ] ドキュメント更新済み（`pbi/00-INDEX.md` の行更新を含む）
 
-## 深掘りセッション — 2026-10-17
+## 深掘りセッション ― 2026-10-17
 
 ### 挑戦した仮定
 | 仮定 | リスク | 発見 | 決定 |

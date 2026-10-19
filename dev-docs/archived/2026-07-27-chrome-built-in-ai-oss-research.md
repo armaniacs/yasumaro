@@ -35,10 +35,10 @@
 
 戻り値4種（既存の3種 `'readily'/'after-download'/'no'` から仕様変更されている）:
 
-- `'unavailable'` — このデバイスでは利用不可
-- `'downloadable'` — ダウンロード可能（未実施）
-- `'downloading'` — ダウンロード中
-- `'available'` — 即利用可能
+- `'unavailable'` ― このデバイスでは利用不可
+- `'downloadable'` ― ダウンロード可能（未実施）
+- `'downloading'` ― ダウンロード中
+- `'available'` ― 即利用可能
 
 `availability()` に渡すオプション（`expectedInputs` 等）は `create()` に渡すものと**同一にする必要がある**（モダリティ・言語サポートがオプションに依存するため）。
 
@@ -83,7 +83,7 @@
 
 ### 1.8 セキュリティ注意点
 
-- 「モデル出力は信頼できない入力として扱い、マークアップとしてパースしてはならない」— `innerHTML` ではなく `textContent` を使うこと
+- 「モデル出力は信頼できない入力として扱い、マークアップとしてパースしてはならない」― `innerHTML` ではなく `textContent` を使うこと
 - 既存 `offscreen.ts` はモデル出力（`session.prompt()` の戻り値）をそのまま `sendResponse` で返しているのみで、DOM挿入はしていないため直接のXSSリスクは低いが、呼び出し元（`aiSummaryCleaner.ts` 等）でのDOM挿入経路がある場合は要確認
 
 ---
@@ -102,12 +102,12 @@
 
 ### 2.2 [marianocodes/ai-local-gemini-nano-and-summarize](https://github.com/marianocodes/ai-local-gemini-nano-and-summarize)（Angular、拡張機能ではないが最新API仕様の実例として有用）
 
-- `declare const Summarizer: any; declare const LanguageModel: any;` — **グローバル直下**の宣言。`window.ai` 経由ではない（現行仕様に準拠）
+- `declare const Summarizer: any; declare const LanguageModel: any;` ― **グローバル直下**の宣言。`window.ai` 経由ではない（現行仕様に準拠）
 - **Summarizer API と Prompt API の併用パターン**: まず `Summarizer.create({type:'key-points', length:'short', ...})` で要約 → その結果を `LanguageModel.create({initialPrompts:[{role:'system',...}]})` に渡し、`responseConstraint`（JSON Schema）で構造化データに変換
 - 各セッションは使用後に必ず `destroy()` している
 - **示唆**: 要約特化なら `Summarizer` API、汎用対話や構造化出力には `LanguageModel` という役割分担が公式の想定パターンと考えられる。Yasumaroは要約用途のみだが、`Summarizer` APIの方が `Prompt API` より適している可能性がある（現状は `Prompt API` のみ使用）
 
-### 2.3 [GoogleChrome/chrome-extensions-samples](https://github.com/GoogleChrome/chrome-extensions-samples) — `functional-samples/ai.gemini-on-device-alt-texter`（Google公式）
+### 2.3 [GoogleChrome/chrome-extensions-samples](https://github.com/GoogleChrome/chrome-extensions-samples) ― `functional-samples/ai.gemini-on-device-alt-texter`（Google公式）
 
 - **最重要**: `background.js`（Service Worker）内で **`self.LanguageModel.create(...)` を直接呼び出している**。Offscreen Documentは一切使っていない
   ```js
@@ -144,7 +144,7 @@ const session = await self.LanguageModel.create(); // throws
 
 | 項目 | 結果 |
 |---|---|
-| `'LanguageModel' in self`（Service Worker グローバルスコープ） | `true` — **オブジェクト自体は存在する** |
+| `'LanguageModel' in self`（Service Worker グローバルスコープ） | `true` ― **オブジェクト自体は存在する** |
 | `self.LanguageModel.availability()` | 例外を投げず `'unavailable'` を正常に返す |
 | `self.LanguageModel.create()` | `NotSupportedError: "Unable to create a text session because the service is not running."` |
 

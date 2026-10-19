@@ -23,7 +23,7 @@ backlog: [2026-09-05-00-backlog-arch5.md](2026-09-05-00-backlog-arch5.md)
 
 - **本番の抽出経路は 1 本**: `contentKernel.extractPageContent()` → `preparePageContent()` → `extractMainContentWithInfo()`。string entry `extractMainContent` の本番呼び出しは**ゼロ**（grep 済み）
 - しかし string entry は**bench 計測面**である: `bench/micro/c1-bytesize.bench.mjs` と `c4-clonenode.bench.mjs` が非診断 path の計測に使用（「Measures extractMainContent() on the non-diagnostic path」と自己文書化）
-- つまり「boolean trap が caller に危険」という arch レポートの指摘は弱まる — 本番 caller は string path を選べない。trap は将来の caller に対する潜在的リスクに留まる
+- つまり「boolean trap が caller に危険」という arch レポートの指摘は弱まる ― 本番 caller は string path を選べない。trap は将来の caller に対する潜在的リスクに留まる
 
 ## なぜなぜ分析（entry 削減を「やらない」と判断した根拠）
 
@@ -115,7 +115,7 @@ rg -n "extractMainContent" bench/micro/
 - dual payload（`originalContent`）の登録タイミングが candidate path と body path で微妙に違う（:226-232 vs :434-441）。step 内で「まだ未登録なら登録」の現行順序を維持すること
 - `resolvePreAiBytes` の第 3 引数（text/bytes ペアの再利用）は候補 text と body text で出所が違う。step に渡す前に解決して渡す
 - body path の「cleanse 無効 + AI のみ」分岐（:329-361）は clone の有無が candidate path と非対称。step のパラメータで吸収できる形にしてから統合する（無理なら先に理由判定だけ統合して段階的に）
-- meter（ByteMeter）は withDiagnostics 依存。step 内の meter 呼び出し順を変えると bench c1 の計測対象が変わる — 計測ブロック（`meter.enabled` ガード）の位置は動かさない
+- meter（ByteMeter）は withDiagnostics 依存。step 内の meter 呼び出し順を変えると bench c1 の計測対象が変わる ― 計測ブロック（`meter.enabled` ガード）の位置は動かさない
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

@@ -1,7 +1,7 @@
 # Design: Shared Migration Module
 
 **Date:** 2026-07-13
-**Status:** Implemented (2026-07-13) — v6.5.27
+**Status:** Implemented (2026-07-13) ― v6.5.27
 **PBI:** [2026-07-13-05-fix-shared-migration-module](../pbi/2026-07-13-05-fix-shared-migration-module.md)
 **Depends on:** PBI #1 (StorageBackend Adapter)
 
@@ -12,14 +12,14 @@
 ### Current State (Problem)
 
 Schema migration logic is duplicated between:
-- `sqliteEngineContext._doInit()` (lines 253–332): ALTER TABLE loop, FTS5 schema, FTS rebuild
-- `opfsWorker.initSqliteInner()` (lines 150–239): Identical ALTER TABLE loop, FTS5 statements, FTS rebuild
+- `sqliteEngineContext._doInit()` (lines 253-332): ALTER TABLE loop, FTS5 schema, FTS rebuild
+- `opfsWorker.initSqliteInner()` (lines 150-239): Identical ALTER TABLE loop, FTS5 statements, FTS rebuild
 
 Both contain:
-- 19-column `newColumns` array — identical
-- `ALTER TABLE ADD COLUMN` idempotent loop — identical
-- `FTS5_STATEMENTS` execution — already shared via `schema.ts`
-- FTS index rebuild logic — nearly identical
+- 19-column `newColumns` array ― identical
+- `ALTER TABLE ADD COLUMN` idempotent loop ― identical
+- `FTS5_STATEMENTS` execution ― already shared via `schema.ts`
+- FTS index rebuild logic ― nearly identical
 
 Adding a column (e.g., PBI-11's `gist_synced`) required editing both files in lockstep.
 
@@ -65,7 +65,7 @@ export interface MigrationEngine {
 }
 ```
 
-Minimal interface — only what migrations need. Two methods, no type parameterization.
+Minimal interface ― only what migrations need. Two methods, no type parameterization.
 
 ### IDB VFS adapter
 
@@ -84,7 +84,7 @@ const idbEngine: MigrationEngine = {
 
 ### OPFS Worker adapter
 
-The Worker provides `SQL_EXEC` / `SQL_QUERY` backdoor message types (added in PBI #1). These accept raw SQL — used only by MigrationEngine for schema operations:
+The Worker provides `SQL_EXEC` / `SQL_QUERY` backdoor message types (added in PBI #1). These accept raw SQL ― used only by MigrationEngine for schema operations:
 
 ```ts
 const workerEngine: MigrationEngine = {
@@ -111,7 +111,7 @@ export async function runMigrations(engine: MigrationEngine): Promise<void> {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes('duplicate column name')) continue;
-      throw err; // Unexpected error — surface it
+      throw err; // Unexpected error ― surface it
     }
   }
 
@@ -197,5 +197,5 @@ After `runMigrations()` is in place, remove from each context:
 ## Dependencies
 
 - **Blocks**: Nothing directly
-- **Blocked by**: PBI #1 (StorageBackend adapter — because `MigrationEngine` interface is similar to `StorageBackend.exec()`)
-- **Parallel with**: PBI #2 (opfsWorker type dedup — both touch opfsWorker imports)
+- **Blocked by**: PBI #1 (StorageBackend adapter ― because `MigrationEngine` interface is similar to `StorageBackend.exec()`)
+- **Parallel with**: PBI #2 (opfsWorker type dedup ― both touch opfsWorker imports)

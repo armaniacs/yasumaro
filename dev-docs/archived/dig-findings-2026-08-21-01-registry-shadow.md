@@ -1,7 +1,7 @@
-# なぜなぜ分析 — message-handler-registry-shadow
+# なぜなぜ分析 ― message-handler-registry-shadow
 
 ## 現象
-`src/background/handlers/createMessageHandlerRegistry.ts`（deprecated wrapper）と `MessageHandlerRegistry.ts`（旧 shallow registry クラス）が残存。`createBackgroundServices.ts` は同一内容の deps リテラルを2回構築し（168–196行 / 198–226行）、`messageHandler.ts` は `deps.router` 任意＋`registry.dispatch` fallback の二重 dispatch パスを持つ。wrapper は `as unknown as { handlers: Map }` cast で private フィールドを吸い出している。
+`src/background/handlers/createMessageHandlerRegistry.ts`（deprecated wrapper）と `MessageHandlerRegistry.ts`（旧 shallow registry クラス）が残存。`createBackgroundServices.ts` は同一内容の deps リテラルを2回構築し（168-196行 / 198-226行）、`messageHandler.ts` は `deps.router` 任意＋`registry.dispatch` fallback の二重 dispatch パスを持つ。wrapper は `as unknown as { handlers: Map }` cast で private フィールドを吸い出している。
 
 ## 5 Whys
 1. なぜ二重構築・二重 dispatch パスが存在するのか → MessageRouter 導入時に旧 registry を「後方互換」として残したため、composition root が両方を構築し続けている

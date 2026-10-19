@@ -81,7 +81,7 @@ Scenario: 本文が1〜2文と極端に短い増田記事でも本文のみが�
 - 新規ロジック（`matchWhitelistAdapter` / `extractWhitelistedContent`）の追加は不要。既存関数はドメイン非依存の汎用実装のため、`WHITELIST_ADAPTERS` 配列にエントリを1件追加するのみで完結する
 
 ## 見積もり
-1pt（🟢低）— 既存パターンへのデータ追加+テストのみ。新規ロジック実装なし。
+1pt（🟢低）― 既存パターンへのデータ追加+テストのみ。新規ロジック実装なし。
 
 ## 技術的考慮事項
 - 依存関係: なし。既存の `WhitelistAdapter` インターフェース・`matchWhitelistAdapter`・`extractWhitelistedContent` をそのまま利用

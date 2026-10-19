@@ -86,7 +86,7 @@ Scenario: 読み込みに失敗したとき
 | 6 | `entrypoints/options/dashboard.css` | 変更 | `.research-sessions-*` を追加 |
 | 7 | `public/_locales/{ja,en}/messages.json` | 変更 | i18n |
 | 8 | `src/dashboard/panels/__tests__/panelCatalog.test.ts` | 変更 | 固定 id リストと件数（01 の後なら 25 から 26） |
-| 9 | テスト（新規 2） | — | 下の「テスト戦略」を参照 |
+| 9 | テスト（新規 2） | ― | 下の「テスト戦略」を参照 |
 | 10 | `docs/DATA_ANALYTICS_GUIDE.md` / `README.md` / `docs/guides.html` / `CHANGELOG.md` | 変更 | ドキュメント |
 
 ### 1. 定数（`src/utils/computeLimits.ts`）
@@ -202,7 +202,7 @@ export function createResearchSessionsPanel(): PanelLifecycle
   7. 各セッションについて `renderSession(session)` を呼び、返ってきた `<li>` を追加する。
 - **renderSession(session): HTMLLIElement**
   - 構造: `<li class="research-sessions-item"><details><summary>…</summary><ol class="research-sessions-records">…</ol></details></li>`
-  - summary の文字列は、次の各部分を `' · '` でつなぐ。
+  - summary の文字列は、次の各部分を `' ・ '` でつなぐ。
     1. `new Date(startAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })`
     2. `msg('researchSessions_pages', { n: records.length }, '{n} pages')`
     3. `msg('researchSessions_minutes', { n: sessionDurationMinutes(durationMs) }, '{n} min')`
@@ -319,7 +319,7 @@ section は、`panel-revisit-insights` の section の直後に置く。
 | `researchSessions_description` | 記録どうしの間隔が選択した時間以内のページを、ひとつの調べものとしてまとめます。時間は最初と最後の記録の間隔で、実際の閲覧時間とは異なります。 | Groups pages recorded within the selected gap of each other into one research session. The duration is the time between the first and last record, not actual reading time. |
 | `researchSessions_gapLabel` | セッションの区切り | Session gap |
 | `researchSessions_gapOption` | {n}分 | {n} min |
-| `researchSessions_summary` | {sessions} 件のセッション・単独ページ {singles} 件 | {sessions} sessions · {singles} single pages |
+| `researchSessions_summary` | {sessions} 件のセッション・単独ページ {singles} 件 | {sessions} sessions ・ {singles} single pages |
 | `researchSessions_pages` | {n}ページ | {n} pages |
 | `researchSessions_minutes` | {n}分 | {n} min |
 | `researchSessions_starred` | スター付き | Starred |
@@ -408,6 +408,6 @@ section は、`panel-revisit-insights` の section の直後に置く。
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] `npm run validate` と `npm run build` が通る
-- [ ] コードレビュー完了（未実施 — ユーザー作業）
+- [ ] コードレビュー完了（未実施 ― ユーザー作業）
 - [x] ドキュメント更新済み（ガイド ja / en、README、guides.html、CHANGELOG）
 - [x] `pbi/00-INDEX.md` を更新し、アーカイブ済み

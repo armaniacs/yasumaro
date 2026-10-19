@@ -17,13 +17,13 @@
 
 | # | 変数名 | 行 | 型 | export |
 |---|---|---|---|---|
-| 1 | `minVisitDuration` | 46 | `number` | – |
-| 2 | `minScrollDepth` | 47 | `number` | – |
-| 3 | `startTime` | 48 | `number` | – |
-| 4 | `maxScrollPercentage` | 49 | `number` | – |
-| 5 | `isValidVisitReported` | 50 | `boolean` | – |
-| 6 | `checkIntervalId` | 51 | `number \| null` | – |
-| 7 | `cleansingConfig` | 153 | `CleansingConfig`（50プロパティの巨大オブジェクト） | – |
+| 1 | `minVisitDuration` | 46 | `number` | - |
+| 2 | `minScrollDepth` | 47 | `number` | - |
+| 3 | `startTime` | 48 | `number` | - |
+| 4 | `maxScrollPercentage` | 49 | `number` | - |
+| 5 | `isValidVisitReported` | 50 | `boolean` | - |
+| 6 | `checkIntervalId` | 51 | `number \| null` | - |
+| 7 | `cleansingConfig` | 153 | `CleansingConfig`（50プロパティの巨大オブジェクト） | - |
 | 8 | `lastCleansedReason` | 156 | `'hard'\|'keyword'\|'both'\|'none'` | **export** |
 | 9 | `lastCleanseStats` | 157 | `{hardStripRemoved, keywordStripRemoved, totalRemoved}` | **export**（PBI本文が見落としていた変数） |
 | 10 | `lastByteStats` | 163 | `{pageBytes, candidateBytes, originalBytes, cleansedBytes}` | **export** |
@@ -55,7 +55,7 @@ checkVisitConditions()
 updateMaxScroll()
   → 書き込み: maxScrollPercentage
 
-reportValidVisit() [推定、要Read確認 — 555行以降]
+reportValidVisit() [推定、要Read確認 ― 555行以降]
   → 書き込み: isValidVisitReported = true（551行、実際はcheckVisitConditions呼び出し元ではなくreportValidVisit内での代入と推定。着手前に要再確認）
 
 scheduleNextCheck() / startPeriodicCheck() / stopPeriodicCheck()

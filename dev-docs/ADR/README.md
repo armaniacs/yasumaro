@@ -36,14 +36,14 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | 015 | [AI Provider Abstraction Architecture](./2026-04-21-ai-provider-abstraction.md) | 2026-04-21 | 完了 |
 | 014 | [OPFS永続化とFTS5全文検索の両立（@subframe7536/sqlite-wasm + trigram）](./2026-06-17-opfs-fts5-coexistence.md) | 2026-06-17 | 採用済み |
 | - | [SQLite と chrome.storage の二重書き込みとクォータ対策](./2026-07-07-sqlite-chrome-storage-dual-write.md) | 2026-07-07 | 採用済み |
-| - | [Deep Dig Findings — Architecture Phase 2](./2026-07-13-architecture-phase2-deep-dig.md) | 2026-07-13 | 調査記録 |
-| - | [Deep Dig Findings — SQLite Architecture Deepening](./2026-07-13-sqlite-architecture-deep-dig.md) | 2026-07-13 | 調査記録 |
+| - | [Deep Dig Findings ― Architecture Phase 2](./2026-07-13-architecture-phase2-deep-dig.md) | 2026-07-13 | 調査記録 |
+| - | [Deep Dig Findings ― SQLite Architecture Deepening](./2026-07-13-sqlite-architecture-deep-dig.md) | 2026-07-13 | 調査記録 |
 | - | [Markdown出力経路へのサニタイズ適用ルール](./2026-07-22-markdown-output-sanitization-guardrail.md) | 2026-07-22 | 承認済み |
 | - | [Response Size Limit Guardrail](./2026-07-22-response-size-limit-guardrail.md) | 2026-07-22 | 承認済み |
 | - | [暗号化秘密値（ENCRYPTION_SECRET）は chrome.storage.local に保存する](./2026-08-12-encryption-secret-storage-area-must-be-local.md) | 2026-08-12 | 採用済み |
-| - | [Pipeline Offline Guard — isNetworkError](./2026-08-27-pipeline-offline-guard.md) | 2026-08-27 | 採用 |
-| - | [FETCH_URL Redirect Policy — redirect: 'error'](./2026-08-29-fetch-redirect-policy.md) | 2026-08-29 | 採用 |
-| - | [built-in AI 二重アダプタの裁定 — LocalAIService と BuiltInAiProvider の併存](./2026-09-17-builtin-ai-dual-adapter.md) | 2026-09-17 | 採用 |
+| - | [Pipeline Offline Guard ― isNetworkError](./2026-08-27-pipeline-offline-guard.md) | 2026-08-27 | 採用 |
+| - | [FETCH_URL Redirect Policy ― redirect: 'error'](./2026-08-29-fetch-redirect-policy.md) | 2026-08-29 | 採用 |
+| - | [built-in AI 二重アダプタの裁定 ― LocalAIService と BuiltInAiProvider の併存](./2026-09-17-builtin-ai-dual-adapter.md) | 2026-09-17 | 採用 |
 | - | [storage/defaults.ts → aiSummaryCleaner/rules.ts の暫定許可の裁定](./2026-09-17-defaults-cleansing-rules-provisional-allow.md) | 2026-09-17 | 採用 |
 | - | [module 級 singleton と composition root の併存方針](./2026-09-17-module-singleton-policy.md) | 2026-09-17 | 採用 |
 | - | [履歴の診断行は欠測時も理由付きで常に表示する](./2026-09-18-history-diagnostic-rows-always-visible.md) | 2026-09-18 | 採用 |
@@ -52,7 +52,7 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [`withLock` の object 競合検知は version を唯一の durable signal とし、value-level CAS は採用しない](./2026-09-26-withlock-object-conflict-policy.md) | 2026-09-26 | 採用 |
 | - | [ユニットテストの実行時間を契約として管理する](./2026-09-26-test-suite-execution-time-contract.md) | 2026-09-26 | 採用 |
 | - | [ESLint ルールテストの `vitest --repeats` 対応は `RuleTester` の describe/it 注入点で行う](./2026-09-26-eslint-ruletester-vitest-repeats.md) | 2026-09-26 | 採用 |
-| - | [tabs 権限なしで参照される tab.url の制約 — manifest 変更なしで nav trail を記録由来に再配線する裁定](./2026-10-07-tab-url-permission-decision.md) | 2026-10-07 | 採用 |
+| - | [tabs 権限なしで参照される tab.url の制約 ― manifest 変更なしで nav trail を記録由来に再配線する裁定](./2026-10-07-tab-url-permission-decision.md) | 2026-10-07 | 採用 |
 
 ---
 

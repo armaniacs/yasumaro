@@ -23,11 +23,11 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 【コンテンツスクリプト: 抽出パイプライン（ページ訪問時）】
 1. コンテンツ抽出（ページ本文の主要部分を選択）
    ↓
-2. Content Cleansing（有効な場合）— DOMクローンに対して実行
+2. Content Cleansing（有効な場合）― DOMクローンに対して実行
    - Hard Strip: 不要なタグ・属性を削除
    - Keyword Strip: ID/クラス名に特定キーワードを含む要素を削除
    ↓
-3. AI Summary Cleansing（有効な場合）— 同一クローンに対して連続実行
+3. AI Summary Cleansing（有効な場合）― 同一クローンに対して連続実行
    - 画像alt属性・メタデータ・広告・ナビゲーション・ソーシャルウィジェットを削除
    - 固定バナー・おすすめセクション・ページネーション・ポップアップ等（各オプションによる）
    ↓
@@ -161,13 +161,13 @@ Yasumaro には、2つのクレンジング機能があります。それぞれ�
 
 単一のフォールバックポリシー（`extractPipeline.ts` の `applyFallback`）の上に3つのガードが乗ります。勝者の優先順は **② > ③ > 短文本文** です。
 
-- **① 候補フロアガード（コンテンツ抽出）** — スコア順付け後、take 分割の**前**に、文字数フロア（`ai_summary_cleansing_fallback_min_chars`、デフォルト **100**）を満たす最初の候補を採用します。全候補がフロア未満なら抽出は「候補ゼロ」の本文パスへフォールバックし、エントリには `fallback_reason = candidate_too_small` が記録されます（棄却したトップ候補は `candidate_bytes` に残る — 透明な棄却）。
-- **② コンテンツクレンジング過剰削減ガード** — クレンジング後が削減率（`fallback_ratio`）または文字数フロアを下回ったとき、**クレンジング前の候補テキスト**へ復元し `fallback_reason = content_overcut` を記録します（③の診断も破棄されます — 復元は②前テキストへの巻き戻し）。候補ソースのみ: 本文ソースの復元は生の `textContent` を送ることになるため対象外。
-- **③ AI要約クレンジング過剰削減フォールバック** — 変更なし: pre-AI サイズの0.20倍未満または300バイト未満で pre-AI テキスト（`over_cleansed`）、100文字未満でライブ本文（`short_content`）へ復元。
-- **ホワイトリスト抽出は v1 では意図的にガード対象外** — whitelist アダプタは `applyFallback` より前に return するため、この経路にはどのガードもかかりません。
-- **設定**: Dashboard → AI Summary Cleansing タブ → **過剰削減ガード** セクション — 既定ONのトグル2つ（①候補 / ②コンテンツクレンジング）と共有の文字数フロア。ロールバックはトグルOFF。閾値は既存のフォールバック設定と共有。
+- **① 候補フロアガード（コンテンツ抽出）** ― スコア順付け後、take 分割の**前**に、文字数フロア（`ai_summary_cleansing_fallback_min_chars`、デフォルト **100**）を満たす最初の候補を採用します。全候補がフロア未満なら抽出は「候補ゼロ」の本文パスへフォールバックし、エントリには `fallback_reason = candidate_too_small` が記録されます（棄却したトップ候補は `candidate_bytes` に残る ― 透明な棄却）。
+- **② コンテンツクレンジング過剰削減ガード** ― クレンジング後が削減率（`fallback_ratio`）または文字数フロアを下回ったとき、**クレンジング前の候補テキスト**へ復元し `fallback_reason = content_overcut` を記録します（③の診断も破棄されます ― 復元は②前テキストへの巻き戻し）。候補ソースのみ: 本文ソースの復元は生の `textContent` を送ることになるため対象外。
+- **③ AI要約クレンジング過剰削減フォールバック** ― 変更なし: pre-AI サイズの0.20倍未満または300バイト未満で pre-AI テキスト（`over_cleansed`）、100文字未満でライブ本文（`short_content`）へ復元。
+- **ホワイトリスト抽出は v1 では意図的にガード対象外** ― whitelist アダプタは `applyFallback` より前に return するため、この経路にはどのガードもかかりません。
+- **設定**: Dashboard → AI Summary Cleansing タブ → **過剰削減ガード** セクション ― 既定ONのトグル2つ（①候補 / ②コンテンツクレンジング）と共有の文字数フロア。ロールバックはトグルOFF。閾値は既存のフォールバック設定と共有。
 - **診断**: `fallback_reason` カラム（`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`）は履歴エントリに「フォールバック理由」行として表示されます。
-- **単位の境界**: `fallbackMinChars`（文字数・ホットパス — エンコードしない）は `fallbackMinBytes`（バイト — ③と診断専用）と分離しています。
+- **単位の境界**: `fallbackMinChars`（文字数・ホットパス ― エンコードしない）は `fallbackMinBytes`（バイト ― ③と診断専用）と分離しています。
 
 ### 再生成時のクレンジング緩和
 
@@ -202,11 +202,11 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 [Content script: extraction pipeline (on page visit)]
 1. Content Extraction (selects the main body of the page)
    ↓
-2. Content Cleansing (if enabled) — applied to a DOM clone
+2. Content Cleansing (if enabled) ― applied to a DOM clone
    - Hard Strip: Remove unnecessary tags and attributes
    - Keyword Strip: Remove elements whose ID/class names contain specific keywords
    ↓
-3. AI Summary Cleansing (if enabled) — sequentially, on the same clone
+3. AI Summary Cleansing (if enabled) ― sequentially, on the same clone
    - Remove image alt attributes, metadata, ads, navigation, social widgets
    - Fixed banners, recommendation sections, pagination, popups, etc. (per individual options)
    ↓
@@ -243,7 +243,7 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
   - Elements matching these attribute patterns are removed **along with the entire element**, not just the attribute.
 
 - **Keyword Strip**: Remove **entire elements** whose ID, class names, or `data-*` attribute names contain specific keywords (`data-*` matches attribute-name substrings)
-  - The default keyword list covers both Japanese and English patterns (`balance`, `account`, `meisai` (statement), `login`, `card-number`, `keiyaku` (contract), `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase`, and more — 50+ words in total)
+  - The default keyword list covers both Japanese and English patterns (`balance`, `account`, `meisai` (statement), `login`, `card-number`, `keiyaku` (contract), `password`, `payment`, `billing`, `mynumber`, `ssn`, `credit-card`, `seed-phrase`, and more ― 50+ words in total)
   - Fresh installs start with a 17-word subset. "Reset" in the settings UI restores the full list (`contentCleaner.DEFAULT_KEYWORDS`, 50+ words)
   - Keywords are customizable
 
@@ -257,7 +257,7 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 
 **Purpose**: Remove unnecessary information from content to be sent to AI summarization, improving summary accuracy and efficiency.
 
-> **Processing timing**: AI Summary Cleansing runs **immediately after** Content Cleansing on the same clone (inside the extraction pipeline). Elements already removed by Content Cleansing are not targets for AI Summary Cleansing. AI summarization itself runs later in the background recording pipeline, after PII masking — but the body entering the summary is already cleansed here.
+> **Processing timing**: AI Summary Cleansing runs **immediately after** Content Cleansing on the same clone (inside the extraction pipeline). Elements already removed by Content Cleansing are not targets for AI Summary Cleansing. AI summarization itself runs later in the background recording pipeline, after PII masking ― but the body entering the summary is already cleansed here.
 
 **Settings**:
 - **Image alt attributes**: Remove `alt` attribute values from images (attribute only; element remains)
@@ -296,7 +296,7 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 
 ### Domain Whitelist Extraction Mode
 
-**Purpose**: For sites where surrounding noise is so extreme that the removal-based approach above cannot leave a clean article body — Togetter, 5channel matome blogs, Girls Channel, Yahoo! Chiebukuro, novel-serialization sites (Syosetu/Kakuyomu), recipe sites (Cookpad/Kurashiru), Hatena Bookmark, Tabelog, Wikipedia, CNN.co.jp, NHK News, Qiita, Zenn, and Anond — this mode extracts only the content inside pre-defined classes/IDs, rather than removing noise from the whole page.
+**Purpose**: For sites where surrounding noise is so extreme that the removal-based approach above cannot leave a clean article body ― Togetter, 5channel matome blogs, Girls Channel, Yahoo! Chiebukuro, novel-serialization sites (Syosetu/Kakuyomu), recipe sites (Cookpad/Kurashiru), Hatena Bookmark, Tabelog, Wikipedia, CNN.co.jp, NHK News, Qiita, Zenn, and Anond ― this mode extracts only the content inside pre-defined classes/IDs, rather than removing noise from the whole page.
 
 **How it works**:
 1. This mode activates when the current page's `hostname` matches a target domain (exact or subdomain match), or when a site-specific selector (e.g., Syosetu's `#novel_honbun`) is found in the DOM
@@ -310,14 +310,14 @@ Cleansing works across a two-stage pipeline. Content Cleansing and AI Summary Cl
 
 | Aspect | Description |
 |---|---|
-| **Settings** | Independent — each can be enabled/disabled separately |
-| **Data** | Sequential pipeline — AI Summary Cleansing receives the output of Content Cleansing |
+| **Settings** | Independent ― each can be enabled/disabled separately |
+| **Data** | Sequential pipeline ― AI Summary Cleansing receives the output of Content Cleansing |
 | **Clone** | One clone created even when both are enabled |
 | **Original page** | Cleansing never affects the original web page |
 
 ### Presets and Dynamic Content Handling
 
-- **Presets**: The 33 AI Summary Cleansing toggles switch as a group via four presets — `minimal` (3 on) / `balanced` (9 on, default) / `aggressive` (25 on) / `custom`. Changing any toggle individually switches to `custom` (the 8 rules off in `aggressive`: `jsonLd`, `lazyLoad`, `skipLink`, `card`, `fixed`, `pagination`, `platform`, `author`)
+- **Presets**: The 33 AI Summary Cleansing toggles switch as a group via four presets ― `minimal` (3 on) / `balanced` (9 on, default) / `aggressive` (25 on) / `custom`. Changing any toggle individually switches to `custom` (the 8 rules off in `aggressive`: `jsonLd`, `lazyLoad`, `skipLink`, `card`, `fixed`, `pagination`, `platform`, `author`)
 - **Cookie consent banners**: The `cookie` rule removes boilerplate from OneTrust-style banners (`onetrust` / `ot-sdk` / `optanon`). Detection is primarily text-based, with some class-name patterns also in use
 - **SPA / dynamic content**: A `MutationObserver` (500ms debounce) detects post-render content changes. The current rules do not recurse into `shadowRoot` or iframes on the hot path
 - **Observability**: The dashboard shows a breakdown of which rule removed how many elements (`removedByReason`) and a payload diff before and after cleansing
@@ -336,13 +336,13 @@ See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) for wo
 
 Layered on top of the single fallback policy (`applyFallback` in `extractPipeline.ts`), with winner priority **② > ③ > short body**:
 
-- **① candidate floor guard** — after score-ordering, the first candidate at or above the character floor (`ai_summary_cleansing_fallback_min_chars`, default **100**) is adopted *before* the take-slice. If every candidate misses the floor, extraction joins the candidate-zero body path and the entry records `fallback_reason = candidate_too_small` (the rejected top candidate stays measurable in `candidate_bytes` — transparent discard).
-- **② Content Cleansing over-cut guard** — when Content Cleansing leaves the candidate below the reduction ratio (`fallback_ratio`) or the character floor, the **pre-cleansing candidate text** is restored with `fallback_reason = content_overcut` (this also discards the ③ diagnostics — the restore undoes everything after the pre-② text). Candidate sources only: a body-source restore would ship raw `textContent`.
-- **③ AI Summary Cleansing over-reduction fallback** — unchanged: below 0.20 of the pre-AI size or under 300 bytes restores the pre-AI text (`over_cleansed`); under 100 characters restores the live body (`short_content`).
-- **Whitelist extraction is intentionally unguarded (v1)** — whitelist adapters return before `applyFallback`, so none of the guards run on that path.
-- **Settings**: Dashboard → AI Summary Cleansing tab → **Over-cut Guards** section — two default-ON toggles (① candidate / ② Content Cleansing) plus the shared character floor. Rollback = toggle off; limits are shared with the existing fallback thresholds.
+- **① candidate floor guard** ― after score-ordering, the first candidate at or above the character floor (`ai_summary_cleansing_fallback_min_chars`, default **100**) is adopted *before* the take-slice. If every candidate misses the floor, extraction joins the candidate-zero body path and the entry records `fallback_reason = candidate_too_small` (the rejected top candidate stays measurable in `candidate_bytes` ― transparent discard).
+- **② Content Cleansing over-cut guard** ― when Content Cleansing leaves the candidate below the reduction ratio (`fallback_ratio`) or the character floor, the **pre-cleansing candidate text** is restored with `fallback_reason = content_overcut` (this also discards the ③ diagnostics ― the restore undoes everything after the pre-② text). Candidate sources only: a body-source restore would ship raw `textContent`.
+- **③ AI Summary Cleansing over-reduction fallback** ― unchanged: below 0.20 of the pre-AI size or under 300 bytes restores the pre-AI text (`over_cleansed`); under 100 characters restores the live body (`short_content`).
+- **Whitelist extraction is intentionally unguarded (v1)** ― whitelist adapters return before `applyFallback`, so none of the guards run on that path.
+- **Settings**: Dashboard → AI Summary Cleansing tab → **Over-cut Guards** section ― two default-ON toggles (① candidate / ② Content Cleansing) plus the shared character floor. Rollback = toggle off; limits are shared with the existing fallback thresholds.
 - **Diagnostics**: the `fallback_reason` column (`short_content` | `over_cleansed` | `content_overcut` | `candidate_too_small`) renders as a "Fallback reason" row in history entries.
-- **Unit boundaries**: `fallbackMinChars` (chars, hot path — never encodes) is separate from `fallbackMinBytes` (bytes — ③ and diagnostics only).
+- **Unit boundaries**: `fallbackMinChars` (chars, hot path ― never encodes) is separate from `fallbackMinBytes` (bytes ― ③ and diagnostics only).
 
 ### Cleansing Loosening During Regeneration
 

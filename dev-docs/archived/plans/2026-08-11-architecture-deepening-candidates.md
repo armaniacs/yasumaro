@@ -26,15 +26,15 @@
 ```text
 Phase 0: validate current working tree
     ↓
-Phase 1: Candidate 1 — SQLite result contract completion
+Phase 1: Candidate 1 ― SQLite result contract completion
     ↓
-Phase 2: Candidate 4 — Dashboard handler result mapping locality
+Phase 2: Candidate 4 ― Dashboard handler result mapping locality
     ↓
-Phase 3: Candidate 3 — Dashboard SQLite response decoding completion
+Phase 3: Candidate 3 ― Dashboard SQLite response decoding completion
     ↓
-Phase 4: Candidate 2 — Background composition root and shared RecordingPipeline
+Phase 4: Candidate 2 ― Background composition root and shared RecordingPipeline
     ↓
-Phase 5: Candidate 5 — RecordingPipeline offline policy completion
+Phase 5: Candidate 5 ― RecordingPipeline offline policy completion
     ↓
 Phase 6: full validation and documentation synchronization
 ```
@@ -96,7 +96,7 @@ Expected: the output is attached to the implementation notes and is used to defi
 
 ---
 
-### Task 2: Complete Candidate 1 — SQLite result contract
+### Task 2: Complete Candidate 1 ― SQLite result contract
 
 **Files:**
 - Modify: `src/background/sqliteClient.ts`
@@ -193,7 +193,7 @@ Expected: same tests pass after dead-code cleanup.
 
 ---
 
-### Task 3: Complete Candidate 4 — Dashboard handler result mapping
+### Task 3: Complete Candidate 4 ― Dashboard handler result mapping
 
 **Files:**
 - Modify: `src/background/handlers/dashboardSqliteHandlers.ts`
@@ -261,7 +261,7 @@ Expected: all handler tests pass and `npm run type-check` succeeds.
 
 ---
 
-### Task 4: Complete Candidate 3 — Dashboard SQLite strict response decoding
+### Task 4: Complete Candidate 3 ― Dashboard SQLite strict response decoding
 
 **Files:**
 - Modify: `src/dashboard/dashboardSqliteService.ts`
@@ -347,7 +347,7 @@ Expected: all Dashboard tests pass and `npm run type-check` succeeds.
 
 ---
 
-### Task 5: Candidate 2 preparation — Add a production composition contract test
+### Task 5: Candidate 2 preparation ― Add a production composition contract test
 
 **Files:**
 - Create or modify: `src/background/__tests__/backgroundComposition.test.ts`
@@ -453,7 +453,7 @@ Expected: all tests, type-check, and build pass.
 
 ---
 
-### Task 6: Candidate 5 — Complete RecordingPipeline offline policy locality
+### Task 6: Candidate 5 ― Complete RecordingPipeline offline policy locality
 
 **Files:**
 - Modify: `src/background/pipeline/types.ts`
@@ -604,7 +604,7 @@ If an implementation or test failure occurs, first classify it as one of:
 3. invalid assumption about an existing ADR or lifecycle;
 4. environment/tool invocation error.
 
-For categories 1–3, perform at least 15 why rounds before selecting a fix. Record the root cause and chosen correction next to the task in the implementation session, then continue from the failed step. For category 4, correct the command or environment without changing production behavior.
+For categories 1-3, perform at least 15 why rounds before selecting a fix. Record the root cause and chosen correction next to the task in the implementation session, then continue from the failed step. For category 4, correct the command or environment without changing production behavior.
 
 ## Completion criteria
 
@@ -625,9 +625,9 @@ Recorded on 2026-08-11 against the working tree.
 | Check | Result |
 |---|---|
 | `npm run type-check` | pass (`tsc --noEmit`, no diagnostics) |
-| `npm run validate` | pass — 427 test files, 7778 tests passed, 18 skipped |
-| `npm run build` | pass — `dist/chromium-mv3`, 6.79 MB total |
-| `src/background` focused suite | pass — 119 files, 1681 tests, 8 skipped |
+| `npm run validate` | pass ― 427 test files, 7778 tests passed, 18 skipped |
+| `npm run build` | pass ― `dist/chromium-mv3`, 6.79 MB total |
+| `src/background` focused suite | pass ― 119 files, 1681 tests, 8 skipped |
 
 Invariants confirmed by grep over `src/` and `entrypoints/`:
 
@@ -637,9 +637,9 @@ Invariants confirmed by grep over `src/` and `entrypoints/`:
 
 ## Remaining scope
 
-Candidates 1–5 are complete. The following were deliberately left out of this plan.
+Candidates 1-5 are complete. The following were deliberately left out of this plan.
 
-**Composition root.** Dependency construction is unified in `createBackgroundServices`, but handler registration is not: the 26 `registry.register(TYPE, handler, trustLevel)` calls still live in `service-worker.ts`. Moving them would give the composition module responsibility for MV3 startup ordering, which top-level synchronous listener registration constrains. The prerequisite for any such move is a test that covers the trust level of all 26 registrations — trust level errors are caught by neither the type checker nor the current representative-case tests. Do the coverage first, then reconsider the move.
+**Composition root.** Dependency construction is unified in `createBackgroundServices`, but handler registration is not: the 26 `registry.register(TYPE, handler, trustLevel)` calls still live in `service-worker.ts`. Moving them would give the composition module responsibility for MV3 startup ordering, which top-level synchronous listener registration constrains. The prerequisite for any such move is a test that covers the trust level of all 26 registrations ― trust level errors are caught by neither the type checker nor the current representative-case tests. Do the coverage first, then reconsider the move.
 
 **Offline retry payload.** Behavior was fixed by contract test, not changed. `obsidian_sync` retries regenerate Markdown from `summary`/`tags`; `maskedCount` is carried in the payload but unused, and the SQLite/metadata steps do not re-run on that path.
 

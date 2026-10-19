@@ -73,7 +73,7 @@ rg -n "PrivatePageError|DuplicateError|buildErrorResult|notifyRecordingError|add
 5. 既存テスト green → 新規マトリクステスト追加
 
 ### 落とし穴
-- `buildErrorResult` のコメントは「pure」と主張するが実際は副作用あり — コメントも同時に修正すること
+- `buildErrorResult` のコメントは「pure」と主張するが実際は副作用あり ― コメントも同時に修正すること
 - Duplicate の早期リターン形状（:265）は `buildResult` 形状と微妙に異なる（`skipped/reason`）。ポリシー内で明示的に分岐し、潰さないこと
 - `previewOnly` 短絡（:262）は outcome 対象外。触らないこと
 

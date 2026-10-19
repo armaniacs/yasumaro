@@ -13,7 +13,7 @@
 
 ## 背景（file:line 現状）
 
-- manifest: `wxt.config.ts:223-235` — permissions に `tabs` なし（storage/activeTab 等）。host_permissions は localhost + AI provider ドメインのみ
+- manifest: `wxt.config.ts:223-235` ― permissions に `tabs` なし（storage/activeTab 等）。host_permissions は localhost + AI provider ドメインのみ
 - 生参照: `src/background/handlers/tabEventHandlers.ts:42-44,52,70-75`（`tab.url` → バッジ更新が URL 読めないと early return）/ `src/background/service-worker.ts:257-259,268-279`（`changeInfo.url` → nav trail が通常サイトで未作成）
 - nav trail の唯一の writer: `src/background/navTrail/navTrailTracker.ts:69-93`（`onTabUrlChanged`）
 - 制約の文書化済み例: `src/background/regenerateContentFetcher.ts:11-13`（「manifest has no tabs permission…」）

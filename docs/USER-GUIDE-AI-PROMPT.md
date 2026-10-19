@@ -42,10 +42,10 @@ Only use information explicitly stated in the provided content. Do not add facts
 
 1. 設定画面の「AIプロンプト」タブを開きます
 2. 「プロンプトエディタ」で以下の項目を入力します
-   - **プロンプト名** — 識別しやすい名前を設定します
-   - **適用プロバイダー** — 全プロバイダー共通、またはプロバイダー別に設定できます。カスタムプロンプトに対応しているのは gemini / openai / openai2 / lm-studio / ollama / built-in-ai です。Models.dev 方式の OpenAI Compatible 枠のみ非対応です（選択肢に表示されません）
-   - **システムプロンプト** — OpenAI互換プロバイダー向けのシステムプロンプト（オプション）
-   - **ユーザープロンプト** — 要約指示の本文。ページ内容の挿入位置として `{{content}}` を使用してください
+   - **プロンプト名** ― 識別しやすい名前を設定します
+   - **適用プロバイダー** ― 全プロバイダー共通、またはプロバイダー別に設定できます。カスタムプロンプトに対応しているのは gemini / openai / openai2 / lm-studio / ollama / built-in-ai です。Models.dev 方式の OpenAI Compatible 枠のみ非対応です（選択肢に表示されません）
+   - **システムプロンプト** ― OpenAI互換プロバイダー向けのシステムプロンプト（オプション）
+   - **ユーザープロンプト** ― 要約指示の本文。ページ内容の挿入位置として `{{content}}` を使用してください
 3. 「プロンプトを保存」をクリックします
 4. 保存済みプロンプト一覧で「有効化」をクリックすると、そのプロンプトがAI要約に使用されます
 
@@ -164,16 +164,16 @@ The guard paragraph inside the `<content>` tags is a prompt-injection countermea
 
 1. Open the "AI Prompt" tab in the settings screen
 2. Fill in the following fields in the "Prompt Editor"
-   - **Prompt Name** — An identifying name for the prompt
-   - **Apply to Provider** — All providers, or configure per-provider. Custom prompts are supported for gemini / openai / openai2 / lm-studio / ollama / built-in-ai. Only the Models.dev-based OpenAI Compatible slot does not support custom prompts (it is hidden from the choices)
-   - **System Prompt** — Optional system prompt for OpenAI-compatible providers
-   - **User Prompt** — The summarization instruction body. Use `{{content}}` as a placeholder for the page content
+   - **Prompt Name** ― An identifying name for the prompt
+   - **Apply to Provider** ― All providers, or configure per-provider. Custom prompts are supported for gemini / openai / openai2 / lm-studio / ollama / built-in-ai. Only the Models.dev-based OpenAI Compatible slot does not support custom prompts (it is hidden from the choices)
+   - **System Prompt** ― Optional system prompt for OpenAI-compatible providers
+   - **User Prompt** ― The summarization instruction body. Use `{{content}}` as a placeholder for the page content
 3. Click "Save Prompt"
 4. Click "Activate" in the saved prompt list to use that prompt for AI summarization
 
 ### About the `{{content}}` Placeholder
 
-`{{content}}` in the user prompt is replaced with the body text of the web page being summarized. A prompt without `{{content}}` still passes validation (warning only), but in that case the page content is not sent — only the instruction text reaches the AI. Always include it when you want the page summarized.
+`{{content}}` in the user prompt is replaced with the body text of the web page being summarized. A prompt without `{{content}}` still passes validation (warning only), but in that case the page content is not sent ― only the instruction text reaches the AI. Always include it when you want the page summarized.
 
 ### Customization Examples
 

@@ -21,9 +21,9 @@ PBI [2026-10-18-05](2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md)（�
 
 ### 機構（コード上で確定）
 
-1. `src/utils/storage/settingsMigration.ts:143-167` — `TOP_LEVEL_ONLY_KEYS` は「所有モジュールが `chrome.storage.local` を直接読むキー」を保護する allowlist。列挙されているのは `ENCRYPTION_*` / `HMAC_SECRET` / `MASTER_PASSWORD_*` / `PRIVACY_CONSENT_VERSION` / `TRANCO_VERSION` / `RECORDING_TRIGGERS` / `SNAPSHOT_INTERVAL_MINUTES` / `TRUST_DB`。
+1. `src/utils/storage/settingsMigration.ts:143-167` ― `TOP_LEVEL_ONLY_KEYS` は「所有モジュールが `chrome.storage.local` を直接読むキー」を保護する allowlist。列挙されているのは `ENCRYPTION_*` / `HMAC_SECRET` / `MASTER_PASSWORD_*` / `PRIVACY_CONSENT_VERSION` / `TRANCO_VERSION` / `RECORDING_TRIGGERS` / `SNAPSHOT_INTERVAL_MINUTES` / `TRUST_DB`。
    - **`PRIVACY_CONSENT` / `PRIVACY_CONSENT_DENIED_COUNT` / `PRIVACY_CONSENT_LAST_DENIAL_TIME` は入っていない。** コメント（`:155-158`）は「Version-managed state read straight from storage (privacyConsent.ts, trancoConsentManager.ts)」と、まさに同意モジュールを allowlist の根拠に挙げているのに、同意レコード本体と拒否カウンタが漏れている。
-2. `settingsMigration.ts:176-179` — `isMigratableStorageKey` は `STORAGE_KEY_VALUES`（`src/utils/storage/settingsBackup.ts:8` の `Object.values(StorageKeys)` 全値）に含まれ、allowlist に無ければ移行対象。よって上記 3 キーは移行対象。
+2. `settingsMigration.ts:176-179` ― `isMigratableStorageKey` は `STORAGE_KEY_VALUES`（`src/utils/storage/settingsBackup.ts:8` の `Object.values(StorageKeys)` 全値）に含まれ、allowlist に無ければ移行対象。よって上記 3 キーは移行対象。
 3. `settingsMigration.ts:313-315` でそれらが `legacyKeys` に入り、`:319-328` で `settings` ブロブへ畳まれ、`:363` で top-level から削除される。
 4. 同意を読む側は**すべて top-level 直読み**: `src/utils/storage/privacyConsent.ts` の `getPrivacyConsent`（`:95`）/ `migrateLegacyPrivacyConsent`（`:207-212`）/ `getConsentWithdrawalHistory`（`:338`）/ `getConsentDeniedCount`（`:459`）。ブロブ側の読み出しは無い。
 
@@ -95,7 +95,7 @@ Scenario: 5. 既にブロブへ畳まれたプロファイルでも同意状態�
 - [x] `getConsentWithdrawalHistory()` が移行を跨いで `null` にならない
 - [x] `getConsentDeniedCount()` が移行を跨いで値を保持する
 - [x] 同意の署名検証（`buildSignaturePayload`）と同意版数比較（`PRIVACY_POLICY_VERSION`）の意味論を変えない（同意モジュールのコードは触っていない）
-- [x] `npm run validate` が緑。`settingsMigration` の既存テスト（`settingsMigration-completion-state.test.ts` / `settingsMigration-port-unify.test.ts` / `settingsBackupRestoreParity.test.ts`）が非退行 — **注**: 集約実行はホスト負荷による worker 起動タイムアウトで exit 1 になった。構成要素はすべて単独で緑、テストは 1095 files / 16423 tests で exit 0（詳細は「ゲート」節）
+- [x] `npm run validate` が緑。`settingsMigration` の既存テスト（`settingsMigration-completion-state.test.ts` / `settingsMigration-port-unify.test.ts` / `settingsBackupRestoreParity.test.ts`）が非退行 ― **注**: 集約実行はホスト負荷による worker 起動タイムアウトで exit 1 になった。構成要素はすべて単独で緑、テストは 1095 files / 16423 tests で exit 0（詳細は「ゲート」節）
 
 ## テスト戦略
 
@@ -126,11 +126,11 @@ Scenario: 5. 既にブロブへ畳まれたプロファイルでも同意状態�
    - 既にブロブへ畳まれたプロファイル（＝今日までの全プロファイルの一部）を救う唯一の方法。ブロブを読める層（`settingsMigration` 自身）で行う。`privacy_consent` がブロブにあり top-level に無い場合に書き戻す。
    - 副作用: 既存プロファイルの storage を書き換える。冪等にし、「ブロブに無い / 既に top-level にある」場合は何もしない。ロールバックは「書き戻しを止める」だけで、書き戻した値は同意状態として正しいため害が出ない。
 3. **同意モジュール側をブロブ対応にする（repository 経由の読み出し）**
-   - 根本的だが、`privacyConsent.ts` は「@layer 1 — Layer 0 only」を宣言しており、`SettingsRepository`（同じ Layer 1）を import すると層の制約に触れる。seam を上位層から注入する設計変更になるため、単独では推奨しない。
+   - 根本的だが、`privacyConsent.ts` は「@layer 1 ― Layer 0 only」を宣言しており、`SettingsRepository`（同じ Layer 1）を import すると層の制約に触れる。seam を上位層から注入する設計変更になるため、単独では推奨しない。
 
 **推奨: 1 を主、2 を併用。** 2 の救済を入れない場合は、受け入れ基準のとおり「救済しない」判断とその理由（既存プロファイルは再同意モーダル 1 回で回復するため許容）を完了記録に残す。
 
-### 実装者向け注記 — 現状コードの確認（着手前に必ず実行）
+### 実装者向け注記 ― 現状コードの確認（着手前に必ず実行）
 
 ```bash
 # 同意系キーが移行対象かどうか（期待: consent / denied_count / last_denial = true, ack = false）
@@ -180,11 +180,11 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
 
 **疑問**: なぜ設定移行は同意状態を 2 箇所に分裂させたのか。
 
-1. **なぜ同意が消えるのか** — `privacy_consent` が `settings` ブロブへ畳まれ、`getPrivacyConsent()`（`privacyConsent.ts:95` で **top-level のみ**読む）が `undefined` を見て「未同意」を返す。`hasPrivacyConsent()` も false になり、記録ゲートが閉じる。
-2. **なぜ畳まれたのか** — `isMigratableStorageKey()` は「`StorageKeys` の値で allowlist に無いもの」を移行対象とする。`PRIVACY_CONSENT` は allowlist に無かった。
-3. **なぜ allowlist に無かったのか** — allowlist は「**読者が直接読むキー**」という観点で作られており、コメントにも "Version-managed state read straight from storage (privacyConsent.ts, …)" と書かれている。`PRIVACY_CONSENT_VERSION` は同意モジュールが版数比較に使うため拾われたが、**レコード本体は settings の一部に見えた**。
-4. **なぜその観点が失敗するのか** — 同意状態は「レコード＋ack 版数＋拒否カウンタ」で **1 つの単位**としてのみ意味を持つ。版数だけ残すと「vX で確認済み」という ack だけが残り、本体は別の場所に隠れる。**分類の単位が「覚えているキー」であって「一緒に残すべき保存単位」ではなかった**。
-5. **なぜテストで捕まらなかったのか** — 移行テストは settings キーと既知の allowlist キーを見ており、**「同意状態が移行を跨いで生き残る」ことを誰も assert していなかった**。同意モジュールのテストは移行を走らせない。2 つのテスト群の隙間に落ちていた。
+1. **なぜ同意が消えるのか** ― `privacy_consent` が `settings` ブロブへ畳まれ、`getPrivacyConsent()`（`privacyConsent.ts:95` で **top-level のみ**読む）が `undefined` を見て「未同意」を返す。`hasPrivacyConsent()` も false になり、記録ゲートが閉じる。
+2. **なぜ畳まれたのか** ― `isMigratableStorageKey()` は「`StorageKeys` の値で allowlist に無いもの」を移行対象とする。`PRIVACY_CONSENT` は allowlist に無かった。
+3. **なぜ allowlist に無かったのか** ― allowlist は「**読者が直接読むキー**」という観点で作られており、コメントにも "Version-managed state read straight from storage (privacyConsent.ts, …)" と書かれている。`PRIVACY_CONSENT_VERSION` は同意モジュールが版数比較に使うため拾われたが、**レコード本体は settings の一部に見えた**。
+4. **なぜその観点が失敗するのか** ― 同意状態は「レコード＋ack 版数＋拒否カウンタ」で **1 つの単位**としてのみ意味を持つ。版数だけ残すと「vX で確認済み」という ack だけが残り、本体は別の場所に隠れる。**分類の単位が「覚えているキー」であって「一緒に残すべき保存単位」ではなかった**。
+5. **なぜテストで捕まらなかったのか** ― 移行テストは settings キーと既知の allowlist キーを見ており、**「同意状態が移行を跨いで生き残る」ことを誰も assert していなかった**。同意モジュールのテストは移行を走らせない。2 つのテスト群の隙間に落ちていた。
 
 **原因**: allowlist の分類単位が「記憶しているキー」であり、「一緒に残さなければならない保存単位」ではなかったこと。
 
@@ -197,7 +197,7 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
 
 ### 実装
 
-- `src/utils/storage/settingsMigration.ts` — `TOP_LEVEL_ONLY_KEYS` に `PRIVACY_CONSENT` / `PRIVACY_CONSENT_DENIED_COUNT` / `PRIVACY_CONSENT_LAST_DENIAL_TIME` を追加し、「同意状態は 1 つの単位」であることをコメントに明記。`promoteFoldedConsentState()` を追加し、`migrateToSingleSettingsObject` の**完了判定より前**で呼ぶ。
+- `src/utils/storage/settingsMigration.ts` ― `TOP_LEVEL_ONLY_KEYS` に `PRIVACY_CONSENT` / `PRIVACY_CONSENT_DENIED_COUNT` / `PRIVACY_CONSENT_LAST_DENIAL_TIME` を追加し、「同意状態は 1 つの単位」であることをコメントに明記。`promoteFoldedConsentState()` を追加し、`migrateToSingleSettingsObject` の**完了判定より前**で呼ぶ。
 - **救済を選んだ理由（owner 裁定の記録）**: 救済しない場合の実害は「移行直後に再同意モーダルが出る」だけではない。`hasPrivacyConsent()` が false になるため**記録ゲートが閉じ、撤回履歴・拒否カウンタも読めなくなる**（同意の実効性以前に、同意の状態そのものが失われる）。一方のコストは「冪等な書き戻し 1 回」だけで、書き戻す値は同意状態として正しい。よって救済する。
 - **ブロブ側のコピーは残す**（削除には移行経路内での CAS 書き換えが要るため）。何も読まない場所であり、唯一表に出うる経路（設定エクスポート）は PBI [2026-10-19-12](2026-10-19-12-fix-settings-export-consent-record.md) で除外した（2026-10-19 完了）。
 
@@ -208,8 +208,8 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
   - 「以前の実行で畳まれた同意の単位を top-level へ戻す」（`settings_migrated` が completed でも救済が走り、移行自体は `false` を返す）
   - 「一度も同意していないプロファイルは触らない（冪等）」
 - `src/utils/storage/__tests__/settingsMigration-completion-state.test.ts`
-  - 「同意の単位全体が top-level（版数キーだけでなく）」— 分類の pin
-  - 「移行後も実リーダー（`getConsentWithdrawalHistory` / `getConsentDeniedCount`）で読める」— chrome モックを駆動する harness 経由で、移行を実ポートで走らせてから読む
+  - 「同意の単位全体が top-level（版数キーだけでなく）」― 分類の pin
+  - 「移行後も実リーダー（`getConsentWithdrawalHistory` / `getConsentDeniedCount`）で読める」― chrome モックを駆動する harness 経由で、移行を実ポートで走らせてから読む
 - **Red の確認**: `settingsMigration.ts` の変更を revert すると新規 4 テストすべてが失敗（`expected {} to deeply equal { privacy_consent: … }` ほか）。
 - 回帰: `src/utils/storage/__tests__/` と `src/utils/__tests__/storage.test.ts`、`src/popup/__tests__/privacyConsent.test.ts` の 62 ファイル / 599 テストが緑。
 
@@ -227,6 +227,6 @@ owner 判断が 1 点だけある: **既にブロブへ畳まれたプロファ�
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` — 本 PBI を切り出した元 PBI（ack ガードが再付与を止める。完了記録の「残課題」に本件の詳細）
-- `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` — 移行の port 統一。本 PBI はその移行対象キーの集合を触る
-- `pbi/2026-10-18-04-fix-notification-consent-prestage.md` — 同じ consent lifecycle。`hasPrivacyConsent()` の読み出し前提が共通
+- `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` ― 本 PBI を切り出した元 PBI（ack ガードが再付与を止める。完了記録の「残課題」に本件の詳細）
+- `dev-docs/archived/pbi/2026-10-16-12-refactor-migration-port-unify.md` ― 移行の port 統一。本 PBI はその移行対象キーの集合を触る
+- `pbi/2026-10-18-04-fix-notification-consent-prestage.md` ― 同じ consent lifecycle。`hasPrivacyConsent()` の読み出し前提が共通

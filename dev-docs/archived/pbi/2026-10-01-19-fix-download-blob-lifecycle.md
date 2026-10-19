@@ -2,7 +2,7 @@
 
 ## 優先度・backlog 出所・依存
 
-- 優先度: 中（RICE 8.0 — R 4 / I 2 / C 1.0 / Eff 0.5）
+- 優先度: 中（RICE 8.0 ― R 4 / I 2 / C 1.0 / Eff 0.5）
 - backlog 出所: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md) NN19（順位 12, fix）。バッチB で popup・connectionTests 側の並列候補（NN12, NN14 と同グループ）。
 - 依存: なし。`src/dashboard/generalSettings/connectionTests.ts` とそのテストのみを触る。NN17 → NN20 の `generalSettingsPanel` チェーンとファイル非重複（wiring 側の `generalSettingsPanel.ts` は参照のみで変更しない）。
 
@@ -14,10 +14,10 @@
 
 - 対象は `src/dashboard/generalSettings/connectionTests.ts:404` の `handleTestLocalMarkdown(repo)`（export 済み、既定引数 `settingsRepository`）。所在は grep `handleTestLocalMarkdown` で確認済み。
 - 現行の流れ:
-  - `connectionTests.ts:447-448` — `new Blob([testContent], { type: 'text/markdown' })` → `const blobUrl = URL.createObjectURL(blob)`
-  - `connectionTests.ts:452-459` — `await chrome.downloads.download({ url: blobUrl, filename, saveAs: false, conflictAction: 'overwrite' })`
-  - `connectionTests.ts:461` — `setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)`（固定 1 秒 timer による解放）
-  - `connectionTests.ts:465-467` — catch は status 表示のみで `URL.revokeObjectURL` を呼ばない
+  - `connectionTests.ts:447-448` ― `new Blob([testContent], { type: 'text/markdown' })` → `const blobUrl = URL.createObjectURL(blob)`
+  - `connectionTests.ts:452-459` ― `await chrome.downloads.download({ url: blobUrl, filename, saveAs: false, conflictAction: 'overwrite' })`
+  - `connectionTests.ts:461` ― `setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)`（固定 1 秒 timer による解放）
+  - `connectionTests.ts:465-467` ― catch は status 表示のみで `URL.revokeObjectURL` を呼ばない
 - 問題 1（リーク）: `chrome.downloads.download` が reject した場合、または `:454` の `resolveSafeExportDir(exportPath)` が throw した場合、catch path が revoke せず object URL がリークする。blob 生成（`:448`）より前の early return（`:420-423` の save 失敗、`:430-434` の disabled）ではリークしない。
 - 問題 2（固定待ち）: `:461` の固定 1 秒 timer は「download が 1 秒以内に開始済みである」という仮定に依存する実時間待ちであり、AGENTS.md「Async / Timing Failures」の観点で promise 連動の解放に置き換えるべき形。production 側の待ち目的が実時間ではなくライフサイクル管理のため、完了シグナル連動で代替できる。
 - wiring（参照のみ、変更しない）: `src/dashboard/panels/staticForm/generalSettingsPanel.ts:261`（`#testLocalMarkdownBtnTop`）, `:329`（`#testLocalMarkdownBtnBottom`）
@@ -81,7 +81,7 @@ It must keep behavior: download の成功・失敗に関係なく、status 表�
 
 ### 変更点
 
-- `src/dashboard/generalSettings/connectionTests.ts` の `handleTestLocalMarkdown` — `URL.createObjectURL(blob)` 以降の download 実行と成功 status 表示を try で包み、`finally` で `URL.revokeObjectURL(blobUrl)` する形に変更。`setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)` を削除した。成功・失敗・サニタイザの throw のいずれでも revoke される。
+- `src/dashboard/generalSettings/connectionTests.ts` の `handleTestLocalMarkdown` ― `URL.createObjectURL(blob)` 以降の download 実行と成功 status 表示を try で包み、`finally` で `URL.revokeObjectURL(blobUrl)` する形に変更。`setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)` を削除した。成功・失敗・サニタイザの throw のいずれでも revoke される。
 - catch は従来どおり status 表示のみに留め、revoke は `finally` に一本化している（`実装内容` 3 の方針どおり）。revoke の適用範囲は blobUrl 生成後のブロックに限っており、生成前の early return では undefined に対する revoke は発生しない。
 - `resolveSafeExportDir` / `saveDashboardSettings` / wiring 側（`generalSettingsPanel.ts`）は未変更。
 

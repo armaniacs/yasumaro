@@ -15,10 +15,10 @@ Obsidian 連携を使う利用者として、保存した Obsidian API キーが
 - 監査エビデンス: obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/README.md の VULN-001（PoC: poc/VULN-001_obsidian_key_to_attacker_host.md、テスト: exploit_tests/test_vuln_001_obsidian_key_to_attacker_host.test.ts）。
 
 ## 修正戦略
-1. `obsidianConfigBuilder.ts:106-126` — host が override された場合は保存済みキーのフォールバックを禁止する（保存キーと上書きホストのペアリングを構造的に排除）。
-2. `obsidianConfigValidator.ts:42-67` — ループバック規則を https にも適用する。
-3. `obsidianConfigValidator.ts:76-108` — ホスト検証を文字ブロックリストから実質的な検証へ強化する。
-4. `obsidianClient.ts:159-165,188-195,244-250` — `skipCspValidation:true, allowedUrls:null` を除去し通常の CSP ゲートへ流す。
+1. `obsidianConfigBuilder.ts:106-126` ― host が override された場合は保存済みキーのフォールバックを禁止する（保存キーと上書きホストのペアリングを構造的に排除）。
+2. `obsidianConfigValidator.ts:42-67` ― ループバック規則を https にも適用する。
+3. `obsidianConfigValidator.ts:76-108` ― ホスト検証を文字ブロックリストから実質的な検証へ強化する。
+4. `obsidianClient.ts:159-165,188-195,244-250` ― `skipCspValidation:true, allowedUrls:null` を除去し通常の CSP ゲートへ流す。
 5. 防御深度（Code Quality 由来）: `src/background/handlers/MessageRouter.ts:206-213` に TEST_OBSIDIAN のバリデータ行を追加（兄弟型との対称性）。ダッシュボードの UI ミラー `src/dashboard/settings/fieldValidation.ts:267-302` と SW 側バリデータの実装を共有化しドリフトを防ぐ。
 
 ## 設計上の制約

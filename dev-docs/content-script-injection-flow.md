@@ -32,7 +32,7 @@ manifest.json
 
 ## Message Types / メッセージ型
 
-Content Script ↔ Service Worker 間の全メッセージ型は `src/background/messageTypes.ts` で単一管理されている。
+Content Script ⇔ Service Worker 間の全メッセージ型は `src/background/messageTypes.ts` で単一管理されている。
 
 | direction | type | defined in | source file |
 |-----------|------|------------|-------------|
@@ -45,4 +45,4 @@ Content scripts 内で文字列リテラル (`'CHECK_DOMAIN'`, `'VALID_VISIT'`) 
 
 ## Related ADRs / 関連ADR
 
-- [ADR-013: WXT への移行](../ADR/2026-04-19-wxt-migration.md) — `content_scripts` 設定は `wxt.config.ts` が生成
+- [ADR-013: WXT への移行](../ADR/2026-04-19-wxt-migration.md) ― `content_scripts` 設定は `wxt.config.ts` が生成

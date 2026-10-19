@@ -13,7 +13,7 @@
 
 ## 背景（file:line 現状）
 
-- 生待ち: `src/background/SessionAlarmService.ts:169` — `await new Promise((resolve) => setTimeout(resolve, LOCK_NOTIFICATION_RETRY_DELAY_MS))`（100ms × 最大 3 リトライ）
+- 生待ち: `src/background/SessionAlarmService.ts:169` ― `await new Promise((resolve) => setTimeout(resolve, LOCK_NOTIFICATION_RETRY_DELAY_MS))`（100ms × 最大 3 リトライ）
 - canonical seam: `src/background/pipeline/stepExecutor.ts:19-22` の `StepDelayFn`（「Injectable clock seam for the retry backoff」）
 - モジュール doc は注入を宣言: `SessionAlarmService.ts:4-6`（AlarmPort / Clock / StoragePort を注入）
 - テストの隙間: `src/background/__tests__/SessionAlarmService.test.ts` に SESSION_LOCK_REQUEST ケースなし（リトライ経路が未テスト）

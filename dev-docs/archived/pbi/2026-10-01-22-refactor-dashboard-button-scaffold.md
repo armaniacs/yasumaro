@@ -2,7 +2,7 @@
 
 優先度: 15 / RICE 7.2 / 実行順: NN21 の完了後
 backlog: [2026-10-01-00-backlog-holistic-1001.md](2026-10-01-00-backlog-holistic-1001.md)（holistic-code-review テーマ「ハンドラ足場のコピー群」）
-依存: **NN21（死んだシーム撤去）** — 同じ `src/dashboard/generalSettings/settingsForm.ts` を触るため先に倒す
+依存: **NN21（死んだシーム撤去）** ― 同じ `src/dashboard/generalSettings/settingsForm.ts` を触るため先に倒す
 
 ## ユーザーストーリー
 
@@ -12,11 +12,11 @@ dashboard の保守操作（移行・エクスポート・アーカイブ・削�
 
 共通形状は `src/dashboard/panels/diagnostic/diagnosticsActions.ts:56` にコメントとして記述されているが、コードとして抽出されていない。
 
-- `src/dashboard/panels/diagnostic/diagnosticsActions.ts:71-92, 128-154, 157-186, 189-210, 215-236, 239-268` — 4 系統（migrate / backfill / resync / cleanup）がほぼ同一の 30 行ブロック
-- `src/dashboard/panels/diagnostic/archivePanel.ts:92-113, 115-144, 146-157, 159-191, 193-208, 377-386, 388-402, 404-426, 430-493, 495-519` — 10 箇所の `setBusy(true)` スコープが同形
-- `src/dashboard/panels/diagnostic/exportLogsPanel.ts:21-30, 32-41, 43-52, 54-67`（+ TSV 版 `:74-110`）— 4 箇所の byte 類似
+- `src/dashboard/panels/diagnostic/diagnosticsActions.ts:71-92, 128-154, 157-186, 189-210, 215-236, 239-268` ― 4 系統（migrate / backfill / resync / cleanup）がほぼ同一の 30 行ブロック
+- `src/dashboard/panels/diagnostic/archivePanel.ts:92-113, 115-144, 146-157, 159-191, 193-208, 377-386, 388-402, 404-426, 430-493, 495-519` ― 10 箇所の `setBusy(true)` スコープが同形
+- `src/dashboard/panels/diagnostic/exportLogsPanel.ts:21-30, 32-41, 43-52, 54-67`（+ TSV 版 `:74-110`）― 4 箇所の byte 類似
 - 結果 unwrap `if ('error' in result) throw new Error(result.error)` が `archivePanel.ts:82, 100, 128, 176, 198, 218, 394, 418, 501`（9 回）、`exportLogsService.ts:44, 130`、`markdownExport.ts:187, 247` に inline 再実装。一方、共有ガード `isServiceError` は `src/dashboard/dashboardSqliteService.ts:56` に既に存在する
-- `src/dashboard/generalSettings/settingsForm.ts:188-208, 210-229` — さらに 2 コピー
+- `src/dashboard/generalSettings/settingsForm.ts:188-208, 210-229` ― さらに 2 コピー
 - 既に起きた drift: purge 系は catch 欠落（NN09 の修正対象）、`exportLogsPanel.ts:106` のみ `String(err)` で他は `errorMessage`
 
 ## BDD シナリオ
@@ -63,7 +63,7 @@ Scenario: unwrap 判定が共有ガードを通る
 
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] type-check / lint / test が通る
-- [x] コードレビュー完了（verdict KEEP — 下記追記参照）
+- [x] コードレビュー完了（verdict KEEP ― 下記追記参照）
 
 ## 実装記録（2026-10-02）
 

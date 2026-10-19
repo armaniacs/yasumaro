@@ -22,22 +22,22 @@ security-audit run-2 の needs_validation リード。fingerprint: `opfsRecovery
 
 ### 再現経路（trace・行番号は実ファイルで確認済み）
 
-1. `src/background/deferredMigrations.ts:62-71` — `needsOpfsRecoveryMigration()` が真なら `:65` で `migrateOpfsRecovery()` を呼ぶ。
-2. `src/background/migration/opfsRecovery.ts:134` — `records.slice(i, i + BATCH_SIZE).map(convertFallbackRecord)` でバッチ変換。
-3. `src/background/migration/opfsRecovery.ts:28-67` — `convertFallbackRecord` が 34 項目を列挙し `fallback_reason` を落とす（**:61 `fallback_triggered` の次が :64 `nav_source_url`** — この間が抜けている）。
-4. `src/offscreen/schema.ts:302` — `buildInsertParams` は `record.fallback_reason ?? null` を適用し、欠落した値は NULL として永続化される。
-5. `src/background/migration/opfsRecovery.ts:159` — `chrome.storage.local.remove(FALLBACK_STORAGE_KEY)` が元の行を削除し、落ちた値は復元不能になる。
+1. `src/background/deferredMigrations.ts:62-71` ― `needsOpfsRecoveryMigration()` が真なら `:65` で `migrateOpfsRecovery()` を呼ぶ。
+2. `src/background/migration/opfsRecovery.ts:134` ― `records.slice(i, i + BATCH_SIZE).map(convertFallbackRecord)` でバッチ変換。
+3. `src/background/migration/opfsRecovery.ts:28-67` ― `convertFallbackRecord` が 34 項目を列挙し `fallback_reason` を落とす（**:61 `fallback_triggered` の次が :64 `nav_source_url`** ― この間が抜けている）。
+4. `src/offscreen/schema.ts:302` ― `buildInsertParams` は `record.fallback_reason ?? null` を適用し、欠落した値は NULL として永続化される。
+5. `src/background/migration/opfsRecovery.ts:159` ― `chrome.storage.local.remove(FALLBACK_STORAGE_KEY)` が元の行を削除し、落ちた値は復元不能になる。
 
 ### 兄弟経路との非対称（乖離の実体）
 
-- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:45` — 兄弟経路は `buildInsertParams(record, domain)` へ **生レコードをそのまま渡す**ため、`fallback_reason` は保持される。
-- `src/offscreen/storageFallback.ts:118`（および `:162`）— 蓄えられた fallback 行は `{ id, ...buildInsertRecordFields(record, domain) }` で生成されるため、**保存済みの行は `fallback_reason` を実際に保持している**（`:393`）。落ちているのは移行側の写しだけ。
+- `src/offscreen/sqliteEngineContext/fallbackMigration.ts:45` ― 兄弟経路は `buildInsertParams(record, domain)` へ **生レコードをそのまま渡す**ため、`fallback_reason` は保持される。
+- `src/offscreen/storageFallback.ts:118`（および `:162`）― 蓄えられた fallback 行は `{ id, ...buildInsertRecordFields(record, domain) }` で生成されるため、**保存済みの行は `fallback_reason` を実際に保持している**（`:393`）。落ちているのは移行側の写しだけ。
 
 ### 既存テスト（現状のカバー状況）
 
 - `src/background/migration/__tests__/` に `legacyMigration.test.ts` / `legacyResync.test.ts` / `migrationState-coverage.test.ts` はあるが、**`opfsRecovery` / `OpfsRecoveryService` / `convertFallbackRecord` を参照するテストはリポジトリ全体で 1 件も存在しない**（`find . -name "*.test.ts" | xargs grep -l` で 0 件）。このドリフトを検出できるテストが存在しないことが放置の直接原因。
-- `src/offscreen/sqliteEngineContext/__tests__/fallbackMigration.test.ts` — 兄弟経路のテスト。`vi.mock` で FallbackStorage と `execWithCache` を差し替え、`globalThis.chrome` を自前で組み立てるパターンが存在し、今回の単体テストはこれに倣える。
-- `src/offscreen/__tests__/schema-insertParams.test.ts` — `buildInsertParams` の列挙 pin がある。
+- `src/offscreen/sqliteEngineContext/__tests__/fallbackMigration.test.ts` ― 兄弟経路のテスト。`vi.mock` で FallbackStorage と `execWithCache` を差し替え、`globalThis.chrome` を自前で組み立てるパターンが存在し、今回の単体テストはこれに倣える。
+- `src/offscreen/__tests__/schema-insertParams.test.ts` ― `buildInsertParams` の列挙 pin がある。
 
 ### なぜコンパイラが黙るのか（実装上の要点）
 

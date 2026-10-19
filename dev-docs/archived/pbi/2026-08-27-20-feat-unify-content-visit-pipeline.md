@@ -14,12 +14,12 @@
 - 解: `ContentKernel` (注入 `StoragePort`, `DomainPolicyPort`, `Clock`, `Scheduler`) + `ScrollMonitor` (純粋 `updateMaxScroll`) + `VisitReporter` (単一 `VALID_VISIT` 送信) に深掘り
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — ページ内容が正しく抽出される
+Scenario: ハッピーパス ― ページ内容が正しく抽出される
   Given 有効な HTML ページがロードされている
   When `ContentKernel` が `extractor` を呼ぶ
   Then `content` / `title` / `candidateBytes` が正しく取得される
 
-Scenario: エッジケース — ドメインポリシーが一貫する
+Scenario: エッジケース ― ドメインポリシーが一貫する
   Given `domainPolicy` のキャッシュが無効な場合
   When `ContentKernel` が `shouldSkipUrl` を呼ぶ
   Then `loader` と `domainPolicy` で同じ判定が返る

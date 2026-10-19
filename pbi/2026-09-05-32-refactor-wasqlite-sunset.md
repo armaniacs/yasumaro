@@ -97,11 +97,11 @@ grep -rn "wa-sqlite" src/ package.json    # 残存確認（コメントのみに
 
 ### 触ってはいけないもの
 
-- `src/utils/domainUtils.ts` の `extractDomain` 本体 — 現役の汎用ユーティリティ
-- `src/offscreen/migrations.ts` — ファイル冒頭に「This file is NOT part of the wa-sqlite legacy sunset investigated in PBI 03」と明記されている
-- `backfillMetadata` — レガシー（非 SQLite）ストアの別機能。混同しないこと
-- `src/background/offscreenTransport.ts:97` の permission justification 文言 — ユーザーに見える文字列。削除ではなく文言修正の要否を別途判断する
-- `@subframe7536/sqlite-wasm` — 現行エンジン。wa-sqlite とは別物
+- `src/utils/domainUtils.ts` の `extractDomain` 本体 ― 現役の汎用ユーティリティ
+- `src/offscreen/migrations.ts` ― ファイル冒頭に「This file is NOT part of the wa-sqlite legacy sunset investigated in PBI 03」と明記されている
+- `backfillMetadata` ― レガシー（非 SQLite）ストアの別機能。混同しないこと
+- `src/background/offscreenTransport.ts:97` の permission justification 文言 ― ユーザーに見える文字列。削除ではなく文言修正の要否を別途判断する
+- `@subframe7536/sqlite-wasm` ― 現行エンジン。wa-sqlite とは別物
 
 ---
 

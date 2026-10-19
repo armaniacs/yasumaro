@@ -4,7 +4,7 @@
 
 **Goal:** Add a sort dropdown (new/old/relevance) to the SQLite history dashboard panel, threading `orderBy`/`orderDir` through the full-text search path (which currently only sorts by FTS5 rank) end-to-end from UI to every storage backend, and persist the user's choice in `chrome.storage.local`.
 
-**Architecture:** The non-search query path (`queryLogs`) already accepts `orderBy`/`orderDir` — only the full-text search path (`searchLogs`) needs new parameters threaded through 7 layers: dashboardSqliteService → protocol types → background handler → recordsRepo → 3 storage backends (IdbVfsBackend, OPFS Worker, FallbackStorage). The panel's reducer gains `sortBy`/`sortDir` state and a `sortChange` action; a new `<select>` next to the search box drives it, with the "relevance" option only present while a search query is active.
+**Architecture:** The non-search query path (`queryLogs`) already accepts `orderBy`/`orderDir` ― only the full-text search path (`searchLogs`) needs new parameters threaded through 7 layers: dashboardSqliteService → protocol types → background handler → recordsRepo → 3 storage backends (IdbVfsBackend, OPFS Worker, FallbackStorage). The panel's reducer gains `sortBy`/`sortDir` state and a `sortChange` action; a new `<select>` next to the search box drives it, with the "relevance" option only present while a search query is active.
 
 **Tech Stack:** TypeScript, Vitest, Chrome Extension Manifest V3, SQLite (FTS5) via three backend implementations (OPFS Worker, IndexedDB VFS, chrome.storage.local fallback).
 
@@ -39,7 +39,7 @@
 
 ---
 
-### Task 1: State layer — `sortBy`/`sortDir` in the reducer
+### Task 1: State layer ― `sortBy`/`sortDir` in the reducer
 
 **Files:**
 - Modify: `src/dashboard/panels/asyncData/sqliteHistoryPanelState.ts`
@@ -50,7 +50,7 @@
 Add to `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanelState.test.ts` (append near the end, before the final closing of the file):
 
 ```ts
-describe('historyStateReducer — sort', () => {
+describe('historyStateReducer ― sort', () => {
   it('createInitialHistoryState defaults to created_at DESC', () => {
     const state = createInitialHistoryState();
     expect(state.sortBy).toBe('created_at');
@@ -134,7 +134,7 @@ describe('createInitialHistoryState', () => {
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanelState.test.ts`
-Expected: FAIL — `sortBy`/`sortDir` undefined, `sortChange` action type not recognized (TS compile error surfaces as a test failure).
+Expected: FAIL ― `sortBy`/`sortDir` undefined, `sortChange` action type not recognized (TS compile error surfaces as a test failure).
 
 - [ ] **Step 3: Implement the state changes**
 
@@ -145,7 +145,7 @@ Add to the `SqliteHistoryState` interface (after `pendingTagFallback`):
 ```ts
   /**
    * 'relevance' is only meaningful while a search query is active (FTS5 rank
-   * has no meaning outside a MATCH query) — see the `search` action below for
+   * has no meaning outside a MATCH query) ― see the `search` action below for
    * the fallback rule that keeps this invariant.
    */
   sortBy: 'created_at' | 'relevance';
@@ -180,7 +180,7 @@ Add to the `SqliteHistoryAction` union (after `'pageChange'`):
   | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
 ```
 
-Update the `'search'` case to add the relevance-fallback rule. This rule runs **both directions**: clearing the query while sorted by relevance falls back to `created_at DESC` (relevance has no meaning without a query), and starting a search while sorted by `created_at` switches to `relevance` (PBI scenario: "relevance becomes the default when a search starts"). Without the second direction, a user who last picked "oldest first" and then types a search term keeps seeing `created_at ASC` results instead of relevance-ranked ones — the relevance `<option>` appears in the UI (Task 10) but is not auto-selected, contradicting the BDD scenario.
+Update the `'search'` case to add the relevance-fallback rule. This rule runs **both directions**: clearing the query while sorted by relevance falls back to `created_at DESC` (relevance has no meaning without a query), and starting a search while sorted by `created_at` switches to `relevance` (PBI scenario: "relevance becomes the default when a search starts"). Without the second direction, a user who last picked "oldest first" and then types a search term keeps seeing `created_at ASC` results instead of relevance-ranked ones ― the relevance `<option>` appears in the UI (Task 10) but is not auto-selected, contradicting the BDD scenario.
 
 ```ts
     case 'search': {
@@ -191,7 +191,7 @@ Update the `'search'` case to add the relevance-fallback rule. This rule runs **
       const clearingRelevance = !trimmed && state.sortBy === 'relevance';
       // Starting a search (query goes from empty to non-empty) switches to
       // relevance by default, per the PBI's "becomes the default when a
-      // search starts" requirement — this only fires on the empty→non-empty
+      // search starts" requirement ― this only fires on the empty→non-empty
       // transition so it does not override a sort the user explicitly picked
       // while already mid-search (e.g. deliberately staying on created_at
       // DESC/ASC while refining search terms).
@@ -228,7 +228,7 @@ git commit -m "feat: add sortBy/sortDir state to history panel reducer"
 
 ---
 
-### Task 2: Query layer — thread `sortBy`/`sortDir` through `queryHistory`
+### Task 2: Query layer ― thread `sortBy`/`sortDir` through `queryHistory`
 
 **Files:**
 - Modify: `src/dashboard/panels/asyncData/sqliteHistoryQuery.ts`
@@ -236,7 +236,7 @@ git commit -m "feat: add sortBy/sortDir state to history panel reducer"
 
 - [ ] **Step 1: Write the failing tests**
 
-Add to `src/dashboard/panels/asyncData/__tests__/sqliteHistoryQuery.test.ts` (in the `describe('queryHistory', ...)` block — find it by searching for `describe('queryHistory'` in the file; add these `it` blocks inside it):
+Add to `src/dashboard/panels/asyncData/__tests__/sqliteHistoryQuery.test.ts` (in the `describe('queryHistory', ...)` block ― find it by searching for `describe('queryHistory'` in the file; add these `it` blocks inside it):
 
 ```ts
   it('passes sortBy=created_at/sortDir=ASC through to queryLogs as orderBy/orderDir on the non-search path', async () => {
@@ -277,7 +277,7 @@ Add to `src/dashboard/panels/asyncData/__tests__/sqliteHistoryQuery.test.ts` (in
 - [ ] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/dashboard/panels/asyncData/__tests__/sqliteHistoryQuery.test.ts`
-Expected: FAIL — `queryLogs`/`searchLogs` called without the expected `orderBy`/`orderDir` args (current `searchLogs` call only passes 3 positional args).
+Expected: FAIL ― `queryLogs`/`searchLogs` called without the expected `orderBy`/`orderDir` args (current `searchLogs` call only passes 3 positional args).
 
 - [ ] **Step 3: Implement the query layer changes**
 
@@ -291,7 +291,7 @@ Update `UnifiedHistoryQueryOptions` (add after `tagInitiated?`):
   sortDir?: 'ASC' | 'DESC';
 ```
 
-Update `HistoryQuerySources.searchLogs` type — since `searchLogs`'s real signature changes in Task 3, this interface just mirrors it (no edit needed here beyond `typeof searchLogs`, which already tracks the real function).
+Update `HistoryQuerySources.searchLogs` type ― since `searchLogs`'s real signature changes in Task 3, this interface just mirrors it (no edit needed here beyond `typeof searchLogs`, which already tracks the real function).
 
 In `queryHistory()`, replace the search-path branch:
 
@@ -317,18 +317,18 @@ And in the non-search branch, replace the hardcoded `orderBy: 'created_at', orde
       until: options.until,
       orderBy: 'created_at',
       orderDir: options.sortDir ?? 'DESC',
-      tagFilter: undefined, // unchanged — keep existing code below this line intact
+      tagFilter: undefined, // unchanged ― keep existing code below this line intact
     });
 ```
 
-Wait — re-check: the existing code already builds `queryRows({...})` with the tag-filter branching intact below it. Only change the two `orderBy`/`orderDir` lines inside that existing call:
+Wait ― re-check: the existing code already builds `queryRows({...})` with the tag-filter branching intact below it. Only change the two `orderBy`/`orderDir` lines inside that existing call:
 
 ```ts
       orderBy: 'created_at',
       orderDir: options.sortDir ?? 'DESC',
 ```
 
-(Leave every other line of that call — `limit`, `offset`, `since`, `until`, `tagFilter` — exactly as they are in the current file.)
+(Leave every other line of that call ― `limit`, `offset`, `since`, `until`, `tagFilter` ― exactly as they are in the current file.)
 
 Also update the fallback search call inside the tag-filter branch (the one that fires when `shouldFallbackToTextSearch` returns a term) to pass the same `orderBy`/`orderDir`:
 
@@ -340,7 +340,7 @@ Also update the fallback search call inside the tag-filter branch (the one that 
         const searchResult = await searchRows(fallbackTerm, options.limit, options.offset, { orderBy, orderDir });
 ```
 
-**Known limitation surfaced by this change — document, do not silently fix:** when a tag filter is active, `useServerPaging` is `false` and the `queryRows({...})` call above fetches only `TAG_FILTER_FETCH_LIMIT` (5000) rows before `filterRowsByTag` runs client-side. Before this task, that fetch was always `orderDir: 'DESC'`, so the 5000-row cap consistently meant "the most recent 5000 rows, tag-filtered client-side" — a stable, well-understood limitation. Once `orderDir` becomes user-controlled, selecting "oldest first" while a tag filter is active flips the fetch to `ASC`, so the cap instead means "the *oldest* 5000 rows" — any tagged entries newer than the 5000th-oldest row are silently excluded from that view, which is a *new* failure mode (recent tagged entries disappearing) that didn't exist under the old fixed-DESC behavior. This plan does not change `TAG_FILTER_FETCH_LIMIT` or the tag-filter fetch strategy — that would be a separate, larger change. Instead:
+**Known limitation surfaced by this change ― document, do not silently fix:** when a tag filter is active, `useServerPaging` is `false` and the `queryRows({...})` call above fetches only `TAG_FILTER_FETCH_LIMIT` (5000) rows before `filterRowsByTag` runs client-side. Before this task, that fetch was always `orderDir: 'DESC'`, so the 5000-row cap consistently meant "the most recent 5000 rows, tag-filtered client-side" ― a stable, well-understood limitation. Once `orderDir` becomes user-controlled, selecting "oldest first" while a tag filter is active flips the fetch to `ASC`, so the cap instead means "the *oldest* 5000 rows" ― any tagged entries newer than the 5000th-oldest row are silently excluded from that view, which is a *new* failure mode (recent tagged entries disappearing) that didn't exist under the old fixed-DESC behavior. This plan does not change `TAG_FILTER_FETCH_LIMIT` or the tag-filter fetch strategy ― that would be a separate, larger change. Instead:
 
 - Add a code comment at the `TAG_FILTER_FETCH_LIMIT` fetch (where `orderDir` is now threaded through) noting this asymmetry explicitly, so a future reader investigating "tagged entries missing under oldest-first" finds the explanation immediately instead of re-deriving it.
 - Add a test in `sqliteHistoryQuery.test.ts` asserting that `orderDir` is forwarded into the tag-filter fetch call (not hardcoded to `DESC`), so the behavior is at least intentional and verified rather than accidental:
@@ -355,7 +355,7 @@ Also update the fallback search call inside the tag-filter branch (the one that 
   });
 ```
 
-- Do not attempt to fix the underlying cap/ordering interaction in this PBI — flag it to the user as a follow-up if it comes up during manual verification (Task 11).
+- Do not attempt to fix the underlying cap/ordering interaction in this PBI ― flag it to the user as a follow-up if it comes up during manual verification (Task 11).
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -371,7 +371,7 @@ git commit -m "feat: thread sortBy/sortDir through queryHistory"
 
 ---
 
-### Task 3: Service layer — `searchLogs()` gains `orderBy`/`orderDir`
+### Task 3: Service layer ― `searchLogs()` gains `orderBy`/`orderDir`
 
 **Files:**
 - Modify: `src/dashboard/dashboardSqliteService.ts`
@@ -399,12 +399,12 @@ Find the existing `describe('searchLogs', ...)` block in `src/dashboard/__tests_
   });
 ```
 
-If the test file mocks `sendDashboardMessage` under a different name, use that name instead of `mockSendMessage` — check the top of the file for the existing mock setup (`vi.mock(...)` and the imported mock function) and match it exactly.
+If the test file mocks `sendDashboardMessage` under a different name, use that name instead of `mockSendMessage` ― check the top of the file for the existing mock setup (`vi.mock(...)` and the imported mock function) and match it exactly.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/dashboard/__tests__/dashboardSqliteService.test.ts -t "orderBy"`
-Expected: FAIL — `searchLogs` does not accept a 4th argument, payload has no `orderBy`/`orderDir`.
+Expected: FAIL ― `searchLogs` does not accept a 4th argument, payload has no `orderBy`/`orderDir`.
 
 - [ ] **Step 3: Implement the service layer change**
 
@@ -454,7 +454,7 @@ export async function searchLogs(
 }
 ```
 
-Keep the rest of the function (the final `return` after the loop, if present in the original) unchanged — only the signature and the `sendDashboardMessage` call body change.
+Keep the rest of the function (the final `return` after the loop, if present in the original) unchanged ― only the signature and the `sendDashboardMessage` call body change.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -495,7 +495,7 @@ Match `baseDeps` to whatever fixture/helper the existing tests in this file alre
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/background/__tests__/dashboardSqliteHandlers.test.ts -t "orderBy"`
-Expected: FAIL — `deps.search` is called with the old 3-arg signature.
+Expected: FAIL ― `deps.search` is called with the old 3-arg signature.
 
 - [ ] **Step 3: Implement the protocol and handler changes**
 
@@ -511,7 +511,7 @@ In `src/background/handlers/dashboardSqliteHandlers.ts`, find the `DashboardSqli
   search: (query: string, limit: number, offset: number, options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }) => Promise<DepsResult<{ rows: unknown[]; total: number }>>;
 ```
 
-Match the existing `DepsResult<...>` return type used by the other deps methods in that interface — check the surrounding lines for the exact generic shape already in use (likely `{ rows: SearchResult[]; total: number }` or similar) and reuse it rather than `unknown[]`.
+Match the existing `DepsResult<...>` return type used by the other deps methods in that interface ― check the surrounding lines for the exact generic shape already in use (likely `{ rows: SearchResult[]; total: number }` or similar) and reuse it rather than `unknown[]`.
 
 Update the `case 'search'` block:
 
@@ -550,12 +550,12 @@ git commit -m "feat: thread orderBy/orderDir through search protocol and handler
 
 ### Task 4.5: `sqliteClient.searchResult` + `createSqliteClientDeps` wiring
 
-**Plan gap found during Task 4 implementation (2026-08-16):** this task was missing from the original plan. Task 4 wires `orderBy`/`orderDir` from the protocol payload into `deps.search(...)`, but the production `DashboardSqliteHandlerDeps` object is NOT hand-built — it comes from `createSqliteClientDeps(sqliteClient, ...)` in `dashboardSqliteHandlers.ts` (confirmed as the actual production wiring: `service-worker.ts` imports and calls it, not a test-only stub). That function's `search` field is `search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)` — it silently drops any 4th argument. `SqliteClient.searchResult()` itself only accepts `(query, limit, offset)` and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload — no `orderBy`/`orderDir` field at all. Without this task, Tasks 1-10 would all pass their own unit tests (each mocks its direct caller) while the feature does nothing in production, because this one link in the chain drops the parameters before they ever reach the offscreen document.
+**Plan gap found during Task 4 implementation (2026-08-16):** this task was missing from the original plan. Task 4 wires `orderBy`/`orderDir` from the protocol payload into `deps.search(...)`, but the production `DashboardSqliteHandlerDeps` object is NOT hand-built ― it comes from `createSqliteClientDeps(sqliteClient, ...)` in `dashboardSqliteHandlers.ts` (confirmed as the actual production wiring: `service-worker.ts` imports and calls it, not a test-only stub). That function's `search` field is `search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)` ― it silently drops any 4th argument. `SqliteClient.searchResult()` itself only accepts `(query, limit, offset)` and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload ― no `orderBy`/`orderDir` field at all. Without this task, Tasks 1-10 would all pass their own unit tests (each mocks its direct caller) while the feature does nothing in production, because this one link in the chain drops the parameters before they ever reach the offscreen document.
 
 **Files:**
 - Modify: `src/background/sqliteClient.ts`
 - Modify: `src/background/handlers/dashboardSqliteHandlers.ts` (the `createSqliteClientDeps` function, not the `case 'search'` handler already fixed in Task 4)
-- Test: `src/background/__tests__/sqliteClient.test.ts` (check this file exists first — see Step 1)
+- Test: `src/background/__tests__/sqliteClient.test.ts` (check this file exists first ― see Step 1)
 
 - [ ] **Step 1: Confirm the existing test file and message-sending pattern**
 
@@ -563,18 +563,18 @@ Run: `find src/background/__tests__ -iname "*sqliteclient*"`
 Run: `grep -n "searchResult\|SQLITE_SEARCH" src/background/sqliteClient.ts`
 Run: `grep -n "async search\|SQLITE_QUERY" -A 15 src/background/sqliteClient.ts | head -40`
 
-Confirm the exact shape of the `call<T, R>()` private helper's third argument (the payload object literal) used by `queryResult` (which already forwards `orderBy`/`orderDir` — it's the sibling method to model this change after) versus `searchResult` (which does not yet).
+Confirm the exact shape of the `call<T, R>()` private helper's third argument (the payload object literal) used by `queryResult` (which already forwards `orderBy`/`orderDir` ― it's the sibling method to model this change after) versus `searchResult` (which does not yet).
 
 - [ ] **Step 2: Write the failing tests**
 
-If `src/background/__tests__/sqliteClient.test.ts` exists, add tests there following its existing mocking pattern for `SqliteClient` (however it stubs `chrome.runtime.sendMessage` or the underlying transport — match that exactly rather than inventing a new mock). If no such file exists, create it, modeling the mock setup after a sibling test file in the same directory that already tests another `SqliteClient` method calling `chrome.runtime.sendMessage`.
+If `src/background/__tests__/sqliteClient.test.ts` exists, add tests there following its existing mocking pattern for `SqliteClient` (however it stubs `chrome.runtime.sendMessage` or the underlying transport ― match that exactly rather than inventing a new mock). If no such file exists, create it, modeling the mock setup after a sibling test file in the same directory that already tests another `SqliteClient` method calling `chrome.runtime.sendMessage`.
 
 Add tests asserting:
 
 ```ts
   it('searchResult forwards orderBy/orderDir into the SQLITE_SEARCH payload', async () => {
     // Arrange: mock the underlying message-send call this file uses (see Step 1's
-    // findings for the exact mock target — likely chrome.runtime.sendMessage or
+    // findings for the exact mock target ― likely chrome.runtime.sendMessage or
     // an internal `call()` helper spy).
     // Act:
     await sqliteClient.searchResult('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
@@ -595,18 +595,18 @@ Also add a test for `createSqliteClientDeps`'s `search` field specifically:
   it('createSqliteClientDeps wires deps.search to forward orderBy/orderDir to sqliteClient.searchResult', async () => {
     const mockSearchResult = vi.fn().mockResolvedValue({ success: true, data: { rows: [], total: 0 } });
     const fakeSqliteClient = { searchResult: mockSearchResult } as unknown as import('../sqliteClient.js').SqliteClient;
-    const deps = createSqliteClientDeps(fakeSqliteClient, /* minimal serviceWorkerDeps stub — check createSqliteClientDeps's second param shape and provide only what TypeScript requires */);
+    const deps = createSqliteClientDeps(fakeSqliteClient, /* minimal serviceWorkerDeps stub ― check createSqliteClientDeps's second param shape and provide only what TypeScript requires */);
     await deps.search('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
     expect(mockSearchResult).toHaveBeenCalledWith('kddi', 20, 0, { orderBy: 'created_at', orderDir: 'ASC' });
   });
 ```
 
-Check `SqliteClientBackedDeps` (the second parameter type of `createSqliteClientDeps`) before writing this test — construct the minimal stub it requires by reading the type definition, not by guessing field names.
+Check `SqliteClientBackedDeps` (the second parameter type of `createSqliteClientDeps`) before writing this test ― construct the minimal stub it requires by reading the type definition, not by guessing field names.
 
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run src/background/__tests__/sqliteClient.test.ts`
-Expected: FAIL — `searchResult` does not accept a 4th argument yet; `createSqliteClientDeps`'s `search` field does not forward one.
+Expected: FAIL ― `searchResult` does not accept a 4th argument yet; `createSqliteClientDeps`'s `search` field does not forward one.
 
 - [ ] **Step 4: Implement the fix**
 
@@ -658,14 +658,14 @@ git commit -m "fix: forward orderBy/orderDir through sqliteClient.searchResult a
 
 ---
 
-### Task 5: recordsRepo — pass `orderBy`/`orderDir` to the backend
+### Task 5: recordsRepo ― pass `orderBy`/`orderDir` to the backend
 
-**Plan gap found during Task 4 investigation (2026-08-16), folded into this task:** the offscreen document's message dispatcher (`src/offscreen/offscreen.ts`) has its own `SQLITE_SEARCH` case that reads `msg.payload` and calls `sqliteSearch(searchQuery, limit, offset)` — `sqliteSearch` is this file's `search` function, imported under an alias (`import { search as sqliteSearch } from './recordsRepo.js'`). This is the final hop before `recordsRepo.search()` — without updating it, `orderBy`/`orderDir` would reach the offscreen document (once Task 4.5 fixes the `sqliteClient`/message-sending side) but be silently dropped right before reaching this file's `search()` function. Originally missing from the plan's File Map; added here since it is directly adjacent to this task's change (same `search()` call, one layer up).
+**Plan gap found during Task 4 investigation (2026-08-16), folded into this task:** the offscreen document's message dispatcher (`src/offscreen/offscreen.ts`) has its own `SQLITE_SEARCH` case that reads `msg.payload` and calls `sqliteSearch(searchQuery, limit, offset)` ― `sqliteSearch` is this file's `search` function, imported under an alias (`import { search as sqliteSearch } from './recordsRepo.js'`). This is the final hop before `recordsRepo.search()` ― without updating it, `orderBy`/`orderDir` would reach the offscreen document (once Task 4.5 fixes the `sqliteClient`/message-sending side) but be silently dropped right before reaching this file's `search()` function. Originally missing from the plan's File Map; added here since it is directly adjacent to this task's change (same `search()` call, one layer up).
 
 **Files:**
 - Modify: `src/offscreen/recordsRepo.ts`
-- Modify: `src/offscreen/offscreen.ts` (the `case 'SQLITE_SEARCH':` message handler — see the plan-gap note above)
-- Modify: `src/messaging/sqliteMessages.ts` (the `SQLITE_SEARCH` payload type — see Step 1b's plan-gap note)
+- Modify: `src/offscreen/offscreen.ts` (the `case 'SQLITE_SEARCH':` message handler ― see the plan-gap note above)
+- Modify: `src/messaging/sqliteMessages.ts` (the `SQLITE_SEARCH` payload type ― see Step 1b's plan-gap note)
 - Test: none required for `recordsRepo.ts` specifically (it is a thin passthrough); covered end-to-end by Task 6-8 backend tests. Verify manually with a type-check. For `offscreen.ts`, check for an existing test file first (see Step 1a).
 
 - [ ] **Step 1: Implement the recordsRepo.ts change**
@@ -694,7 +694,7 @@ export async function search(
 
 - [ ] **Step 1a: Implement the offscreen.ts SQLITE_SEARCH handler change**
 
-Run: `find src/offscreen/__tests__ -iname "*offscreen*"` to check for an existing test file covering this message dispatcher. If one exists and already tests other `case '...':` branches by constructing a fake `msg` and calling the exported dispatch function, add a test there for `SQLITE_SEARCH` forwarding `orderBy`/`orderDir`, following that file's existing pattern exactly. If none exists, do not create one for this narrow change — the behavior is already covered end-to-end by Task 6-8's backend-level tests plus Task 11's manual verification; note this decision in your report rather than skipping silently.
+Run: `find src/offscreen/__tests__ -iname "*offscreen*"` to check for an existing test file covering this message dispatcher. If one exists and already tests other `case '...':` branches by constructing a fake `msg` and calling the exported dispatch function, add a test there for `SQLITE_SEARCH` forwarding `orderBy`/`orderDir`, following that file's existing pattern exactly. If none exists, do not create one for this narrow change ― the behavior is already covered end-to-end by Task 6-8's backend-level tests plus Task 11's manual verification; note this decision in your report rather than skipping silently.
 
 In `src/offscreen/offscreen.ts`, update the `case 'SQLITE_SEARCH':` block:
 
@@ -711,7 +711,7 @@ In `src/offscreen/offscreen.ts`, update the `case 'SQLITE_SEARCH':` block:
         }
 ```
 
-- [ ] **Step 1b: Fix the root cause of the `msg.payload.orderBy` type error — `sqliteMessages.ts`**
+- [ ] **Step 1b: Fix the root cause of the `msg.payload.orderBy` type error ― `sqliteMessages.ts`**
 
 **Second plan gap found, during Task 5's own implementation (2026-08-16):** the `as 'rank' | 'created_at' | undefined` / `as 'ASC' | 'DESC' | undefined` casts in Step 1a exist only because `msg.payload`'s real type doesn't have those fields. Run:
 
@@ -723,7 +723,7 @@ You will find the `SqliteMessage` discriminated union's `SQLITE_SEARCH` variant 
 | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number }; traceId?: string }
 ```
 
-This is the actual source type `msg.payload` in `offscreen.ts`'s `case 'SQLITE_SEARCH':` resolves to (via `SqliteMessage` narrowing) — it does not include `orderBy`/`orderDir`, which is why Step 1a's code needs `as` casts to compile at all, and why `npx tsc --noEmit` will still report 2 errors at those cast lines even after Step 1a's code is in place (the casts silence the immediate assignment but the underlying payload type is still wrong, so anything downstream that inspects `msg.payload` directly — not through the cast variables — stays unsound).
+This is the actual source type `msg.payload` in `offscreen.ts`'s `case 'SQLITE_SEARCH':` resolves to (via `SqliteMessage` narrowing) ― it does not include `orderBy`/`orderDir`, which is why Step 1a's code needs `as` casts to compile at all, and why `npx tsc --noEmit` will still report 2 errors at those cast lines even after Step 1a's code is in place (the casts silence the immediate assignment but the underlying payload type is still wrong, so anything downstream that inspects `msg.payload` directly ― not through the cast variables ― stays unsound).
 
 Fix the type at its source instead of casting around it. Update the `SQLITE_SEARCH` variant in `src/messaging/sqliteMessages.ts`:
 
@@ -731,7 +731,7 @@ Fix the type at its source instead of casting around it. Update the `SQLITE_SEAR
 | { type: 'SQLITE_SEARCH'; payload: { query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }; traceId?: string }
 ```
 
-Then simplify Step 1a's `offscreen.ts` code to drop the now-unnecessary `as` casts — `msg.payload.orderBy`/`msg.payload.orderDir` are now correctly typed without them:
+Then simplify Step 1a's `offscreen.ts` code to drop the now-unnecessary `as` casts ― `msg.payload.orderBy`/`msg.payload.orderDir` are now correctly typed without them:
 
 ```ts
         case 'SQLITE_SEARCH': {
@@ -747,14 +747,14 @@ Then simplify Step 1a's `offscreen.ts` code to drop the now-unnecessary `as` cas
         }
 ```
 
-Run: `npx tsc --noEmit` and confirm the 2 errors previously at `offscreen.ts`'s `orderBy`/`orderDir` cast lines are now gone (only the expected, separate `recordsRepo.ts`→`backend.search()` 4-arg mismatch should remain — that one is Task 6's responsibility, not this task's).
+Run: `npx tsc --noEmit` and confirm the 2 errors previously at `offscreen.ts`'s `orderBy`/`orderDir` cast lines are now gone (only the expected, separate `recordsRepo.ts`→`backend.search()` 4-arg mismatch should remain ― that one is Task 6's responsibility, not this task's).
 
-Note (superseded by Step 1b below — read Step 1b before writing final code): `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so any casts used here are compile-time only, same caveat as elsewhere in this plan — the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation. Fixing the source type in Step 1b removes the need for `as` casts entirely; the note about runtime validation still applies (the type fix does not add runtime validation, it only removes an unnecessary compile-time cast).
+Note (superseded by Step 1b below ― read Step 1b before writing final code): `msg.payload.orderBy`/`msg.payload.orderDir` cross a `chrome.runtime.sendMessage` boundary, so any casts used here are compile-time only, same caveat as elsewhere in this plan ― the actual runtime validation happens downstream in `IdbVfsBackend.search()`/`opfsWorker.ts`'s whitelist checks (Task 6/Task 7), not here. This handler is a pure passthrough and does not need its own validation. Fixing the source type in Step 1b removes the need for `as` casts entirely; the note about runtime validation still applies (the type fix does not add runtime validation, it only removes an unnecessary compile-time cast).
 
 - [ ] **Step 2: Type-check**
 
 Run: `npm run type-check`
-Expected after Step 1b's fix: the `msg.payload.orderBy`/`orderDir` errors in `offscreen.ts` are gone. You will still see an error in `recordsRepo.ts` where `backend.search(...)` is called with 4 args but `StorageBackend.search()` still expects 3 — that is expected and is Task 6's responsibility, not this task's. Confirm via `git stash` / `npm run type-check` / `git stash pop` (or equivalent) that no OTHER new errors were introduced beyond that one expected one.
+Expected after Step 1b's fix: the `msg.payload.orderBy`/`orderDir` errors in `offscreen.ts` are gone. You will still see an error in `recordsRepo.ts` where `backend.search(...)` is called with 4 args but `StorageBackend.search()` still expects 3 ― that is expected and is Task 6's responsibility, not this task's. Confirm via `git stash` / `npm run type-check` / `git stash pop` (or equivalent) that no OTHER new errors were introduced beyond that one expected one.
 
 - [ ] **Step 3: Commit**
 
@@ -765,7 +765,7 @@ git commit -m "feat: pass orderBy/orderDir from recordsRepo.search to the backen
 
 ---
 
-### Task 6: `StorageBackend` interface + `IdbVfsBackend` — branch `ORDER BY`
+### Task 6: `StorageBackend` interface + `IdbVfsBackend` ― branch `ORDER BY`
 
 **Files:**
 - Modify: `src/offscreen/StorageBackend.ts`
@@ -778,7 +778,7 @@ Run: `grep -n "search(" src/offscreen/StorageBackend.ts`
 
 - [ ] **Step 2: Write the failing test**
 
-First, check how existing `IdbVfsBackend` tests (if any) set up an in-memory/mock engine — search:
+First, check how existing `IdbVfsBackend` tests (if any) set up an in-memory/mock engine ― search:
 
 Run: `grep -rln "IdbVfsBackend" src/offscreen/__tests__/`
 
@@ -810,7 +810,7 @@ function makeStubEngine(overrides: { fts5Available?: boolean } = {}) {
   return { engine, calls };
 }
 
-describe('IdbVfsBackend.search — ORDER BY branch', () => {
+describe('IdbVfsBackend.search ― ORDER BY branch', () => {
   it('orders by rank when orderBy is omitted (default relevance)', async () => {
     const { engine, calls } = makeStubEngine();
     const backend = new IdbVfsBackend(engine as never);
@@ -869,12 +869,12 @@ Check the actual constructor signature of `IdbVfsBackend` first:
 
 Run: `grep -n "class IdbVfsBackend\|constructor" src/offscreen/IdbVfsBackend.ts`
 
-Adjust the test's `new IdbVfsBackend(engine as never)` call to match — if the constructor takes the engine positionally as shown in `recordsRepo.ts`'s usage pattern (`new IdbVfsBackend(this)` in `sqliteEngineContext.ts`), the single-arg form above is correct. If `ensureDb` is not a private no-op method needing a stub (check its implementation), remove that override line.
+Adjust the test's `new IdbVfsBackend(engine as never)` call to match ― if the constructor takes the engine positionally as shown in `recordsRepo.ts`'s usage pattern (`new IdbVfsBackend(this)` in `sqliteEngineContext.ts`), the single-arg form above is correct. If `ensureDb` is not a private no-op method needing a stub (check its implementation), remove that override line.
 
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run src/offscreen/__tests__/IdbVfsBackend-search-sort.test.ts`
-Expected: FAIL — `search()` does not accept a 4th argument yet, and the SQL always says `ORDER BY rank`.
+Expected: FAIL ― `search()` does not accept a 4th argument yet, and the SQL always says `ORDER BY rank`.
 
 - [ ] **Step 4: Update the `StorageBackend` interface**
 
@@ -889,13 +889,13 @@ In `src/offscreen/StorageBackend.ts`, find the `search` method signature and cha
   ): Promise<BackendOrError<SearchResult>>;
 ```
 
-(Match whatever the existing return type alias is named — it appeared as `BackendOrError<SearchResult>` in `IdbVfsBackend.ts` and `FallbackStorageAdapter.ts`; use the same import/alias already present in this file.)
+(Match whatever the existing return type alias is named ― it appeared as `BackendOrError<SearchResult>` in `IdbVfsBackend.ts` and `FallbackStorageAdapter.ts`; use the same import/alias already present in this file.)
 
 - [ ] **Step 5: Implement the `IdbVfsBackend.search()` branch**
 
-**Security correction (2026-08-16 self-review):** the TypeScript type `orderDir?: 'ASC' | 'DESC'` on this method's `options` parameter is a compile-time constraint only. `orderDir` arrives here after crossing a `chrome.runtime.sendMessage` boundary (dashboard → service worker → offscreen document), which serializes to JSON — TypeScript's type checking does not survive that boundary, so a compromised or buggy sender could put any string in that field at runtime. The original version of this step used `const dir = options.orderDir ?? 'DESC'`, which only guards against `undefined` — a runtime string like `"DESC; DROP TABLE browsing_logs; --"` would pass through `??` unchanged and land directly in the template literal below. This file's existing `query()` method (line ~77-85) already has exactly this problem solved via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist arrays checked with `.includes(...)` before building its `ORDER BY` clause — `search()` must use the same pattern for consistency and for actual (not merely type-level) safety.
+**Security correction (2026-08-16 self-review):** the TypeScript type `orderDir?: 'ASC' | 'DESC'` on this method's `options` parameter is a compile-time constraint only. `orderDir` arrives here after crossing a `chrome.runtime.sendMessage` boundary (dashboard → service worker → offscreen document), which serializes to JSON ― TypeScript's type checking does not survive that boundary, so a compromised or buggy sender could put any string in that field at runtime. The original version of this step used `const dir = options.orderDir ?? 'DESC'`, which only guards against `undefined` ― a runtime string like `"DESC; DROP TABLE browsing_logs; --"` would pass through `??` unchanged and land directly in the template literal below. This file's existing `query()` method (line ~77-85) already has exactly this problem solved via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist arrays checked with `.includes(...)` before building its `ORDER BY` clause ― `search()` must use the same pattern for consistency and for actual (not merely type-level) safety.
 
-In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The current method (from line 104) has two paths — FTS5 and LIKE fallback — each with a hardcoded `ORDER BY`. Update the signature and both `ORDER BY` clauses, validating `orderDir` against the file's existing `ALLOWED_ORDER_DIRECTIONS` whitelist (defined at the top of this file, already used by `query()`) before it ever reaches a template literal:
+In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The current method (from line 104) has two paths ― FTS5 and LIKE fallback ― each with a hardcoded `ORDER BY`. Update the signature and both `ORDER BY` clauses, validating `orderDir` against the file's existing `ALLOWED_ORDER_DIRECTIONS` whitelist (defined at the top of this file, already used by `query()`) before it ever reaches a template literal:
 
 ```ts
   async search(
@@ -911,7 +911,7 @@ In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The curre
       return { success: true, rows: [], total: 0 };
     }
 
-    // Runtime whitelist check — options.orderDir crosses a
+    // Runtime whitelist check ― options.orderDir crosses a
     // chrome.runtime.sendMessage boundary where the 'ASC'|'DESC' TypeScript
     // type is not enforced at runtime; reuse this file's existing
     // ALLOWED_ORDER_DIRECTIONS (already used by query() above) rather than
@@ -1000,7 +1000,7 @@ In `src/offscreen/IdbVfsBackend.ts`, replace the `search` method body. The curre
   }
 ```
 
-Note: `${dir}`/`${orderClause}` are built from a closed set of internal string literals (`'ASC'`/`'DESC'`, `'created_at'`/`'rank'`), never from raw user input, so this is not a SQL-injection risk — the search term itself continues to go through parameterized `?` placeholders exactly as before.
+Note: `${dir}`/`${orderClause}` are built from a closed set of internal string literals (`'ASC'`/`'DESC'`, `'created_at'`/`'rank'`), never from raw user input, so this is not a SQL-injection risk ― the search term itself continues to go through parameterized `?` placeholders exactly as before.
 
 - [ ] **Step 6: Run tests to verify they pass**
 
@@ -1021,14 +1021,14 @@ git commit -m "feat: branch IdbVfsBackend.search ORDER BY on orderBy/orderDir"
 
 ---
 
-### Task 7: OPFS Worker backend — same branch
+### Task 7: OPFS Worker backend ― same branch
 
 **Files:**
 - Modify: `src/offscreen/opfsWorker.ts`
-- Modify: `src/offscreen/OpfsWorkerBackend.ts` (the `StorageBackend` implementation that proxies to the worker — confirm this file exists and implements `search`)
+- Modify: `src/offscreen/OpfsWorkerBackend.ts` (the `StorageBackend` implementation that proxies to the worker ― confirm this file exists and implements `search`)
 - Test: `src/offscreen/__tests__/opfsWorker-search-sort.test.ts` (new file)
 
-**Correction (2026-08-16 self-review):** an earlier version of this task said "skip the dedicated unit test if no harness exists." That was wrong — `src/offscreen/__tests__/opfsWorker.test.ts` already exists and directly imports and tests module-level functions from `opfsWorker.ts` (`handleRestore`) by mocking `createEngine` from `../sqliteEngine.js` and stubbing `chrome.storage.local`. The only reason `handleSearchFts`/`handleSearchLike` aren't unit-tested today is that they are not `export`ed — the same fix `handleRestore` already got (adding `export`) applies here. Do not skip this test.
+**Correction (2026-08-16 self-review):** an earlier version of this task said "skip the dedicated unit test if no harness exists." That was wrong ― `src/offscreen/__tests__/opfsWorker.test.ts` already exists and directly imports and tests module-level functions from `opfsWorker.ts` (`handleRestore`) by mocking `createEngine` from `../sqliteEngine.js` and stubbing `chrome.storage.local`. The only reason `handleSearchFts`/`handleSearchLike` aren't unit-tested today is that they are not `export`ed ― the same fix `handleRestore` already got (adding `export`) applies here. Do not skip this test.
 
 - [ ] **Step 1: Locate the caller-side backend and confirm the existing test harness pattern**
 
@@ -1036,9 +1036,9 @@ Run: `grep -n "class OpfsWorkerBackend" -A 5 src/offscreen/OpfsWorkerBackend.ts`
 Run: `grep -n "search" src/offscreen/OpfsWorkerBackend.ts`
 Run: `sed -n '1,40p' src/offscreen/__tests__/opfsWorker.test.ts`
 
-The last command shows the existing mocking pattern: `vi.mock('../sqliteEngine.js', () => ({ createEngine: vi.fn(), SqliteEngine: class {} }))` plus a `chrome.storage.local` stub. Reuse this exact pattern — don't invent a different mocking approach.
+The last command shows the existing mocking pattern: `vi.mock('../sqliteEngine.js', () => ({ createEngine: vi.fn(), SqliteEngine: class {} }))` plus a `chrome.storage.local` stub. Reuse this exact pattern ― don't invent a different mocking approach.
 
-Note one extra wrinkle versus `handleRestore`: `handleSearchFts` only runs when the module-level `fts5Available` flag is `true`, and that flag is set inside `initSqlite()` via `runMigrations(...)`, not by `createEngine` alone. For a unit test that wants to exercise `handleSearchFts` directly (rather than through `initSqlite()`), export `fts5Available` as a mutable test seam instead of routing through full initialization — see Step 4.
+Note one extra wrinkle versus `handleRestore`: `handleSearchFts` only runs when the module-level `fts5Available` flag is `true`, and that flag is set inside `initSqlite()` via `runMigrations(...)`, not by `createEngine` alone. For a unit test that wants to exercise `handleSearchFts` directly (rather than through `initSqlite()`), export `fts5Available` as a mutable test seam instead of routing through full initialization ― see Step 4.
 
 - [ ] **Step 2: Update `OpfsWorkerBackend.search()` passthrough**
 
@@ -1056,7 +1056,7 @@ Update its signature to match the `StorageBackend` interface from Task 6 and for
     options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
   ): Promise<BackendOrError<SearchResult>> {
     // Keep whatever this method already does to reach the worker (e.g.
-    // this.engine.sendToOpfsWorker('SEARCH', {...})) — only add orderBy and
+    // this.engine.sendToOpfsWorker('SEARCH', {...})) ― only add orderBy and
     // orderDir to the payload object passed to that call, alongside the
     // existing searchQuery/limit/offset fields.
   }
@@ -1084,9 +1084,9 @@ interface SearchPayload {
 }
 ```
 
-(Adjust to match however the type is actually declared — it may be inline in the message-handling switch rather than a named interface; if inline, add the fields at that call site instead.)
+(Adjust to match however the type is actually declared ― it may be inline in the message-handling switch rather than a named interface; if inline, add the fields at that call site instead.)
 
-Update `handleSearch`, adding `export` (it was module-private before; exporting it — and the two helpers below — is required to unit-test the ORDER BY branch directly, matching the pattern `handleRestore` already uses in this file):
+Update `handleSearch`, adding `export` (it was module-private before; exporting it ― and the two helpers below ― is required to unit-test the ORDER BY branch directly, matching the pattern `handleRestore` already uses in this file):
 
 ```ts
 export async function handleSearch(payload: SearchPayload): Promise<{ rows: SearchResult[]; total: number }> {
@@ -1108,7 +1108,7 @@ Instead, add a narrow test-only seam: a setter that assigns `engine` and `fts5Av
 
 ```ts
 /**
- * Test seam only — lets tests inject a fake engine and fts5Available value
+ * Test seam only ― lets tests inject a fake engine and fts5Available value
  * without driving the full initSqlite() path (schema creation, migrations,
  * chrome.storage-dependent V2 migration). Not called from any production
  * code path.
@@ -1121,11 +1121,11 @@ export function __setEngineForTesting(fakeEngine: SqliteEngine | null, fts5: boo
 
 This is additive only (one new exported function, zero changes to existing behavior or call paths) and named with the `__...ForTesting` convention to make it unmistakable that production code must never call it.
 
-**Security correction (2026-08-16 self-review):** same issue as `IdbVfsBackend.search()` above — `orderDir` here arrives via `Worker.postMessage`, which structured-clones the payload; the `'ASC' | 'DESC'` TypeScript type is not enforced at that boundary either.
+**Security correction (2026-08-16 self-review):** same issue as `IdbVfsBackend.search()` above ― `orderDir` here arrives via `Worker.postMessage`, which structured-clones the payload; the `'ASC' | 'DESC'` TypeScript type is not enforced at that boundary either.
 
-**Follow-up correction (same self-review pass):** the first version of this fix used an `ALLOWED_ORDER_DIRECTIONS.includes(...)` + `throw` pattern copied from `IdbVfsBackend.ts`. That's wrong for *this* file specifically: `opfsWorker.ts`'s own `handleQuery` (the existing non-search path, line ~258-269) already validates `orderDir` a different way — `const dir = orderDir === 'ASC' ? 'ASC' : 'DESC'`, a ternary that silently normalizes anything that isn't exactly `'ASC'` to `'DESC'` rather than throwing. Match that existing convention instead of introducing a second, inconsistent pattern in the same file. There's also a concrete reason to prefer the ternary here over throwing: `OpfsWorkerBackend.search()` calls the worker through `this.engine.tryOpfsProxy(...)`, which catches any error the worker throws and collapses it to a generic `{ success: false, error: 'OPFS Worker unavailable' }` (see `OpfsWorkerBackend.ts:25-29`) — a `throw new Error('Invalid orderDir: ...')` would arrive at the caller as an indistinguishable "worker unavailable" message, discarding the actual reason. The ternary avoids depending on that lossy error path entirely: an unexpected value never reaches SQL, and the call still succeeds with a safe default order instead of failing opaquely.
+**Follow-up correction (same self-review pass):** the first version of this fix used an `ALLOWED_ORDER_DIRECTIONS.includes(...)` + `throw` pattern copied from `IdbVfsBackend.ts`. That's wrong for *this* file specifically: `opfsWorker.ts`'s own `handleQuery` (the existing non-search path, line ~258-269) already validates `orderDir` a different way ― `const dir = orderDir === 'ASC' ? 'ASC' : 'DESC'`, a ternary that silently normalizes anything that isn't exactly `'ASC'` to `'DESC'` rather than throwing. Match that existing convention instead of introducing a second, inconsistent pattern in the same file. There's also a concrete reason to prefer the ternary here over throwing: `OpfsWorkerBackend.search()` calls the worker through `this.engine.tryOpfsProxy(...)`, which catches any error the worker throws and collapses it to a generic `{ success: false, error: 'OPFS Worker unavailable' }` (see `OpfsWorkerBackend.ts:25-29`) ― a `throw new Error('Invalid orderDir: ...')` would arrive at the caller as an indistinguishable "worker unavailable" message, discarding the actual reason. The ternary avoids depending on that lossy error path entirely: an unexpected value never reaches SQL, and the call still succeeds with a safe default order instead of failing opaquely.
 
-No new whitelist constant needed — `orderBy`'s existing `ALLOWED_ORDER_COLUMNS` (line 74-77) stays as-is for `handleQuery`; `handleSearchFts`/`handleSearchLike` only need the `orderDir` ternary.
+No new whitelist constant needed ― `orderBy`'s existing `ALLOWED_ORDER_COLUMNS` (line 74-77) stays as-is for `handleQuery`; `handleSearchFts`/`handleSearchLike` only need the `orderDir` ternary.
 
 Update `handleSearchFts`:
 
@@ -1197,7 +1197,7 @@ async function handleSearchLike(
     (row) => { total = Number(row.c); }
   );
 
-  // Same ternary approach as handleSearchFts above — orderDir only ever
+  // Same ternary approach as handleSearchFts above ― orderDir only ever
   // becomes exactly 'ASC' or 'DESC', regardless of what arrives at runtime.
   const dir = orderBy === 'created_at' && orderDir === 'ASC' ? 'ASC' : 'DESC';
 
@@ -1228,13 +1228,13 @@ async function handleSearchLike(
 }
 ```
 
-Also find where `handleSearch` is invoked from the worker's `onmessage` dispatch (search for `case 'SEARCH'` or similar in `opfsWorker.ts`) and confirm the payload passed through already includes whatever `OpfsWorkerBackend.search()` sends — no change needed there if it forwards the whole payload object as-is.
+Also find where `handleSearch` is invoked from the worker's `onmessage` dispatch (search for `case 'SEARCH'` or similar in `opfsWorker.ts`) and confirm the payload passed through already includes whatever `OpfsWorkerBackend.search()` sends ― no change needed there if it forwards the whole payload object as-is.
 
-Export `handleSearchFts` and `handleSearchLike` too (add `export` in front of both `async function` declarations shown above) — testing them directly, rather than only through `handleSearch`, avoids needing to drive `fts5Available` through the real `initSqlite()` path for every test case.
+Export `handleSearchFts` and `handleSearchLike` too (add `export` in front of both `async function` declarations shown above) ― testing them directly, rather than only through `handleSearch`, avoids needing to drive `fts5Available` through the real `initSqlite()` path for every test case.
 
 - [ ] **Step 4: Write the failing tests**
 
-Create `src/offscreen/__tests__/opfsWorker-search-sort.test.ts`, using the `__setEngineForTesting` seam added in Step 3 (no need for `vi.mock('../sqliteEngine.js', ...)` or a `chrome.storage.local` stub — those exist in `opfsWorker.test.ts` only because `handleRestore`/`initSqlite()` need them; this test bypasses `initSqlite()` entirely):
+Create `src/offscreen/__tests__/opfsWorker-search-sort.test.ts`, using the `__setEngineForTesting` seam added in Step 3 (no need for `vi.mock('../sqliteEngine.js', ...)` or a `chrome.storage.local` stub ― those exist in `opfsWorker.test.ts` only because `handleRestore`/`initSqlite()` need them; this test bypasses `initSqlite()` entirely):
 
 ```ts
 /**
@@ -1242,7 +1242,7 @@ Create `src/offscreen/__tests__/opfsWorker-search-sort.test.ts`, using the `__se
  * Verifies handleSearchFts/handleSearchLike switch their ORDER BY clause
  * based on orderBy/orderDir instead of always sorting by FTS5 rank.
  * Uses __setEngineForTesting to inject a fake engine directly, bypassing
- * initSqlite() (schema creation, migrations, chrome.storage) entirely —
+ * initSqlite() (schema creation, migrations, chrome.storage) entirely ―
  * this test only cares about the SQL string sqlQuery() builds.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -1251,7 +1251,7 @@ import { handleSearchFts, handleSearchLike, __setEngineForTesting } from '../opf
 function makeStubEngine() {
   const calls: { sql: string; params: unknown[] }[] = [];
   // Matches the real SqliteEngine interface (src/offscreen/sqliteEngine.ts:9-14):
-  // exec/query/queryValue/close — confirmed by reading that file directly.
+  // exec/query/queryValue/close ― confirmed by reading that file directly.
   const engine = {
     exec: vi.fn(async () => undefined),
     query: vi.fn(async (sql: string, params: unknown[] = []) => {
@@ -1265,7 +1265,7 @@ function makeStubEngine() {
   return { engine, calls };
 }
 
-describe('opfsWorker handleSearchFts/handleSearchLike — ORDER BY branch', () => {
+describe('opfsWorker handleSearchFts/handleSearchLike ― ORDER BY branch', () => {
   beforeEach(() => {
     __setEngineForTesting(null, false);
   });
@@ -1332,7 +1332,7 @@ describe('opfsWorker handleSearchFts/handleSearchLike — ORDER BY branch', () =
 });
 ```
 
-The `makeStubEngine()` shape above (`exec`/`query`/`queryValue`/`close`) was confirmed against the real `SqliteEngine` interface in `src/offscreen/sqliteEngine.ts:9-14` — no `as unknown as SqliteEngine`-style lying cast is needed; `engine as never` in the test above is only there because `__setEngineForTesting`'s first parameter type is `SqliteEngine | null` and the stub is a plain object literal, not a class instance — if TypeScript accepts the stub structurally without the cast when you write this, remove `as never`.
+The `makeStubEngine()` shape above (`exec`/`query`/`queryValue`/`close`) was confirmed against the real `SqliteEngine` interface in `src/offscreen/sqliteEngine.ts:9-14` ― no `as unknown as SqliteEngine`-style lying cast is needed; `engine as never` in the test above is only there because `__setEngineForTesting`'s first parameter type is `SqliteEngine | null` and the stub is a plain object literal, not a class instance ― if TypeScript accepts the stub structurally without the cast when you write this, remove `as never`.
 
 - [ ] **Step 5: Run tests to verify they fail, then pass**
 
@@ -1342,7 +1342,7 @@ Expected: FAIL first (ORDER BY always says `rank`, or `orderBy`/`orderDir` param
 - [ ] **Step 6: Type-check**
 
 Run: `npm run type-check`
-Expected: No errors in `opfsWorker.ts` or `OpfsWorkerBackend.ts`. If `FallbackStorageAdapter.ts` still shows an error, that's expected — fixed in Task 8.
+Expected: No errors in `opfsWorker.ts` or `OpfsWorkerBackend.ts`. If `FallbackStorageAdapter.ts` still shows an error, that's expected ― fixed in Task 8.
 
 - [ ] **Step 7: Commit**
 
@@ -1353,7 +1353,7 @@ git commit -m "feat: branch OPFS worker search ORDER BY on orderBy/orderDir"
 
 ---
 
-### Task 8: FallbackStorage backend — sort `matched` in-memory
+### Task 8: FallbackStorage backend ― sort `matched` in-memory
 
 **Files:**
 - Modify: `src/offscreen/storageFallback.ts`
@@ -1400,7 +1400,7 @@ function seedRecords(records: Array<{ id: number; url: string; created_at: numbe
   };
 }
 
-describe('FallbackStorage.search — sort', () => {
+describe('FallbackStorage.search ― sort', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -1444,7 +1444,7 @@ Adjust `STORAGE_KEY` in the test to match the real key used by `loadData()`/`sav
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run src/offscreen/__tests__/storageFallback-search-sort.test.ts`
-Expected: FAIL — `search()` does not accept a 4th argument, and results come back in insertion order (id 1, 2, 3) instead of sorted.
+Expected: FAIL ― `search()` does not accept a 4th argument, and results come back in insertion order (id 1, 2, 3) instead of sorted.
 
 - [ ] **Step 4: Implement the `FallbackStorage.search()` sort**
 
@@ -1473,7 +1473,7 @@ In `src/offscreen/storageFallback.ts`, update the `search` method:
       });
 
       // No FTS5 rank exists in the fallback path, so 'relevance' has nothing
-      // to sort by — only an explicit created_at request changes the order;
+      // to sort by ― only an explicit created_at request changes the order;
       // otherwise keep the existing insertion-order behavior unchanged.
       if (options.orderBy === 'created_at') {
         const dir = options.orderDir ?? 'DESC';
@@ -1542,17 +1542,17 @@ git commit -m "feat: sort FallbackStorage.search results by orderBy/orderDir"
 
 ### Task 9: `StorageKeys` + i18n messages
 
-**Plan gap found during Task 11 validation (2026-08-16), fixed as part of this task:** `npm run validate` (Task 11's own Step 1) failed one test — `src/utils/__tests__/storage-keys.test.ts`'s `'StorageKeysのみを取得する'` case asserts that `getSettings()`'s return value has a property for every `StorageKeys` entry EXCEPT those explicitly listed in that test's own `internalKeys` array (keys that are app-internal state, never round-tripped through `getSettings()`/`saveSettings()`/settings export-import). `HISTORY_SORT_PREFERENCE` was added to `StorageKeys` in this task but never added to that `internalKeys` list, and it genuinely belongs there: Task 10's `loadPersistedSort()`/`persistSort()` read/write it via direct `chrome.storage.local.get`/`set` calls, never through `getSettings()`/`saveSettings()` — the same pattern as the already-listed `OPFS_FALLBACK_MODE` key. Fixed by adding `StorageKeys.HISTORY_SORT_PREFERENCE` to `storage-keys.test.ts`'s `internalKeys` array (Step 4 below).
+**Plan gap found during Task 11 validation (2026-08-16), fixed as part of this task:** `npm run validate` (Task 11's own Step 1) failed one test ― `src/utils/__tests__/storage-keys.test.ts`'s `'StorageKeysのみを取得する'` case asserts that `getSettings()`'s return value has a property for every `StorageKeys` entry EXCEPT those explicitly listed in that test's own `internalKeys` array (keys that are app-internal state, never round-tripped through `getSettings()`/`saveSettings()`/settings export-import). `HISTORY_SORT_PREFERENCE` was added to `StorageKeys` in this task but never added to that `internalKeys` list, and it genuinely belongs there: Task 10's `loadPersistedSort()`/`persistSort()` read/write it via direct `chrome.storage.local.get`/`set` calls, never through `getSettings()`/`saveSettings()` ― the same pattern as the already-listed `OPFS_FALLBACK_MODE` key. Fixed by adding `StorageKeys.HISTORY_SORT_PREFERENCE` to `storage-keys.test.ts`'s `internalKeys` array (Step 4 below).
 
 **Files:**
 - Modify: `src/utils/storage/types.ts`
 - Modify: `public/_locales/ja/messages.json`
 - Modify: `public/_locales/en/messages.json`
-- Modify: `src/utils/__tests__/storage-keys.test.ts` (`internalKeys` array — see plan-gap note above)
+- Modify: `src/utils/__tests__/storage-keys.test.ts` (`internalKeys` array ― see plan-gap note above)
 
 - [ ] **Step 1: Add the storage key**
 
-In `src/utils/storage/types.ts`, inside the `StorageKeys` object, add a new entry near other dashboard/UI-preference keys (search for a logical grouping — if none fits cleanly, add it right after `OBSIDIAN_DAILY_PATH` or at the end of the object before the closing `}`):
+In `src/utils/storage/types.ts`, inside the `StorageKeys` object, add a new entry near other dashboard/UI-preference keys (search for a logical grouping ― if none fits cleanly, add it right after `OBSIDIAN_DAILY_PATH` or at the end of the object before the closing `}`):
 
 ```ts
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
@@ -1608,7 +1608,7 @@ In `src/utils/__tests__/storage-keys.test.ts`, find the `internalKeys: StorageKe
       StorageKeys.HISTORY_SORT_PREFERENCE,
 ```
 
-This key is read/written directly via `chrome.storage.local.get`/`set` in the history panel (`loadPersistedSort()`/`persistSort()`, added in Task 10) — never through `getSettings()`/`saveSettings()` — so it belongs on this internal-keys exclusion list alongside `OPFS_FALLBACK_MODE`, not in the set of keys `getSettings()` is expected to surface.
+This key is read/written directly via `chrome.storage.local.get`/`set` in the history panel (`loadPersistedSort()`/`persistSort()`, added in Task 10) ― never through `getSettings()`/`saveSettings()` ― so it belongs on this internal-keys exclusion list alongside `OPFS_FALLBACK_MODE`, not in the set of keys `getSettings()` is expected to surface.
 
 Run: `npx vitest run src/utils/__tests__/storage-keys.test.ts`
 Expected: PASS (the `'StorageKeysのみを取得する'` case, previously failing once `HISTORY_SORT_PREFERENCE` existed in `StorageKeys` without a matching entry here, now passes)
@@ -1622,13 +1622,13 @@ git commit -m "feat: add HISTORY_SORT_PREFERENCE storage key and sort i18n label
 
 ---
 
-### Task 10: UI — sort `<select>` in the panel, persistence
+### Task 10: UI ― sort `<select>` in the panel, persistence
 
-**Plan gap found during Task 10 implementation (2026-08-16), fixed as part of this task:** running the full `asyncData` test directory (per Step 6's regression check) surfaced 4 pre-existing failures in `sqliteHistoryPanel-tagFallback.test.ts` (lines 97, 160, 178, 200) — each asserted `searchLogs` was called with only 3 positional args, but Task 2's change to `queryHistory()` in `sqliteHistoryQuery.ts` made a 4th `{orderBy, orderDir}` argument unconditional. These failures predate Task 10 (independently reproduced via `git checkout` to the post-Task-9 state — same 4 assertions fail identically there) but were never caught because Task 2's own review scope was limited to `sqliteHistoryQuery.test.ts`, not this sibling panel-level test file. Fixed as part of Task 10 rather than deferred to Task 11: all 4 assertions updated to expect `{ orderBy: 'created_at', orderDir: 'DESC' }` as the 4th argument — this is the panel's own default sort state (`sortBy: 'created_at'` from `createInitialHistoryState()`, Task 1), not `queryHistory()`'s internal `'relevance'` fallback, since the panel always passes an explicit `sortBy` once Task 10 wires it through.
+**Plan gap found during Task 10 implementation (2026-08-16), fixed as part of this task:** running the full `asyncData` test directory (per Step 6's regression check) surfaced 4 pre-existing failures in `sqliteHistoryPanel-tagFallback.test.ts` (lines 97, 160, 178, 200) ― each asserted `searchLogs` was called with only 3 positional args, but Task 2's change to `queryHistory()` in `sqliteHistoryQuery.ts` made a 4th `{orderBy, orderDir}` argument unconditional. These failures predate Task 10 (independently reproduced via `git checkout` to the post-Task-9 state ― same 4 assertions fail identically there) but were never caught because Task 2's own review scope was limited to `sqliteHistoryQuery.test.ts`, not this sibling panel-level test file. Fixed as part of Task 10 rather than deferred to Task 11: all 4 assertions updated to expect `{ orderBy: 'created_at', orderDir: 'DESC' }` as the 4th argument ― this is the panel's own default sort state (`sortBy: 'created_at'` from `createInitialHistoryState()`, Task 1), not `queryHistory()`'s internal `'relevance'` fallback, since the panel always passes an explicit `sortBy` once Task 10 wires it through.
 
 **Files:**
 - Modify: `src/dashboard/panels/asyncData/sqliteHistoryPanel.ts`
-- Modify: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-tagFallback.test.ts` (4 assertions updated — see plan-gap note above)
+- Modify: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-tagFallback.test.ts` (4 assertions updated ― see plan-gap note above)
 - Test: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-sort.test.ts` (new file)
 
 - [ ] **Step 1: Check the existing jsdom test setup pattern for this panel**
@@ -1639,7 +1639,7 @@ This shows how `createSqliteHistoryPanel`, `queryHistory` mocking, `mount`/`load
 
 - [ ] **Step 2: Write the failing tests**
 
-Create `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-sort.test.ts`, following the setup pattern discovered in Step 1. Adapt the mock module paths and `chrome` global stub exactly as done in `sqliteHistoryPanel-tagFallback.test.ts` — the skeleton below shows the required assertions; fill in the exact mock wiring to match that file's conventions:
+Create `src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-sort.test.ts`, following the setup pattern discovered in Step 1. Adapt the mock module paths and `chrome` global stub exactly as done in `sqliteHistoryPanel-tagFallback.test.ts` ― the skeleton below shows the required assertions; fill in the exact mock wiring to match that file's conventions:
 
 ```ts
 /**
@@ -1657,7 +1657,7 @@ import * as sqliteHistoryQuery from '../sqliteHistoryQuery.js';
 // exports this panel calls during mount/loadData, and stub `chrome.storage.local`
 // / `chrome.runtime` / `chrome.notifications` as globals before each test.
 
-describe('createSqliteHistoryPanel — sort control', () => {
+describe('createSqliteHistoryPanel ― sort control', () => {
   let container: HTMLElement;
 
   beforeEach(() => {
@@ -1716,12 +1716,12 @@ describe('createSqliteHistoryPanel — sort control', () => {
 });
 ```
 
-Note the exact `queryHistory` mock signature must match `sqliteHistoryPanel-tagFallback.test.ts`'s existing `vi.mock('../sqliteHistoryQuery.js', ...)` factory (this file uses `vi.spyOn` above only as a placeholder illustration — replace with whatever mocking mechanism that sibling test file actually uses, since `sqliteHistoryQuery.js` is very likely already `vi.mock`'d at module level there, which conflicts with `vi.spyOn` on the same module in a fresh test file; copy the sibling file's `vi.mock` block verbatim into this file's top-level, adjusting only the assertions).
+Note the exact `queryHistory` mock signature must match `sqliteHistoryPanel-tagFallback.test.ts`'s existing `vi.mock('../sqliteHistoryQuery.js', ...)` factory (this file uses `vi.spyOn` above only as a placeholder illustration ― replace with whatever mocking mechanism that sibling test file actually uses, since `sqliteHistoryQuery.js` is very likely already `vi.mock`'d at module level there, which conflicts with `vi.spyOn` on the same module in a fresh test file; copy the sibling file's `vi.mock` block verbatim into this file's top-level, adjusting only the assertions).
 
 - [ ] **Step 3: Run tests to verify they fail**
 
 Run: `npx vitest run src/dashboard/panels/asyncData/__tests__/sqliteHistoryPanel-sort.test.ts`
-Expected: FAIL — no `#sqlite-sort-select` element exists yet.
+Expected: FAIL ― no `#sqlite-sort-select` element exists yet.
 
 - [ ] **Step 4: Implement the UI changes**
 
@@ -1856,7 +1856,7 @@ Thread `sortBy`/`sortDir` into every `fetchData` call's `queryHistory` invocatio
       });
 ```
 
-(Leave the rest of `fetchData` — the `if (generation !== requestGeneration) return;` block onward — unchanged.)
+(Leave the rest of `fetchData` ― the `if (generation !== requestGeneration) return;` block onward ― unchanged.)
 
 Add the sort control's mount point to the panel's HTML template. In `renderState()`, find the `.sqlite-history-search` div and add a container inside it, right after the search `<input>`:
 
@@ -1874,16 +1874,16 @@ Add the sort control's mount point to the panel's HTML template. In `renderState
       </div>
 ```
 
-**Correction found in a follow-up adversarial pass (2026-08-16):** `Boolean(state.searchQuery.trim())` is not the right condition for "a full-text search is actually running." When a tag is clicked (`tagInitiated` action, or `onActivate`'s `init.searchTag` branch), `state.searchQuery` is set to the tag name as a *display label*, but `fetchData` is called with `tagFilter` only — `search` is never passed, so `queryHistory` takes the non-search (`queryLogs`) path where `orderBy` is always `created_at` (see Task 2's non-search branch). In that state, `state.searchQuery` is non-empty but no FTS5 `rank` exists, so showing "relevance" as a selectable option is misleading — picking it has no effect, since the non-search path ignores `sortBy` entirely.
+**Correction found in a follow-up adversarial pass (2026-08-16):** `Boolean(state.searchQuery.trim())` is not the right condition for "a full-text search is actually running." When a tag is clicked (`tagInitiated` action, or `onActivate`'s `init.searchTag` branch), `state.searchQuery` is set to the tag name as a *display label*, but `fetchData` is called with `tagFilter` only ― `search` is never passed, so `queryHistory` takes the non-search (`queryLogs`) path where `orderBy` is always `created_at` (see Task 2's non-search branch). In that state, `state.searchQuery` is non-empty but no FTS5 `rank` exists, so showing "relevance" as a selectable option is misleading ― picking it has no effect, since the non-search path ignores `sortBy` entirely.
 
-This is not simply "hide relevance whenever a tag filter is active" either: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` gets set — see `sqliteHistoryQuery.ts`'s `tagFallback` handling), a real FTS5 search *is* running even though `activeTagFilter` is still non-null (clearing the tag filter is a separate user action). Hiding relevance in that case would incorrectly suppress a legitimate option.
+This is not simply "hide relevance whenever a tag filter is active" either: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` gets set ― see `sqliteHistoryQuery.ts`'s `tagFallback` handling), a real FTS5 search *is* running even though `activeTagFilter` is still non-null (clearing the tag filter is a separate user action). Hiding relevance in that case would incorrectly suppress a legitimate option.
 
 Add this helper near `sortSelectValue`/`parseSortSelectValue`:
 
 ```ts
   /**
    * True only when queryHistory will actually take the FTS5 search path
-   * (searchLogs, with a real `rank`) — not merely when the search box has
+   * (searchLogs, with a real `rank`) ― not merely when the search box has
    * text in it. A tag click populates the search box as a display label
    * without running a full-text search (see fetchData's tagInitiated path,
    * which passes tagFilter but never search); relevance sort has nothing to
@@ -1957,7 +1957,7 @@ Add these cases to `sqliteHistoryPanel-sort.test.ts` (Step 2 below), alongside t
   });
 ```
 
-The second test requires the mocked `queryHistory` (from this file's `vi.mock('../sqliteHistoryQuery.js', ...)` block, copied from `sqliteHistoryPanel-tagFallback.test.ts` per Step 1) to return a `tagFallback` payload with a non-null `pendingTagFallback` for the `nonexistent-tag` call — mirror the mock setup used in `sqliteHistoryPanel-tagFallback.test.ts`'s "falls back to searchLogs and shows a notice" test case.
+The second test requires the mocked `queryHistory` (from this file's `vi.mock('../sqliteHistoryQuery.js', ...)` block, copied from `sqliteHistoryPanel-tagFallback.test.ts` per Step 1) to return a `tagFallback` payload with a non-null `pendingTagFallback` for the `nonexistent-tag` call ― mirror the mock setup used in `sqliteHistoryPanel-tagFallback.test.ts`'s "falls back to searchLogs and shows a notice" test case.
 
 Finally, load the persisted sort preference before the initial fetch. In the panel's `loadData()` method:
 
@@ -2029,52 +2029,52 @@ Expected: Build succeeds, `dist/chromium-mv3` is populated.
 7. Clear the search box and confirm the select reverts to "新しい順" and the relevance option disappears.
 8. Reload the dashboard page entirely and confirm the previously selected sort (from step 5, "古い順") is still applied on the initial load.
 9. Combine sort with a date-range preset button (e.g. "過去7日間") and confirm both filters apply together correctly.
-10. If your history has more than 5000 tagged entries: click a tag badge to activate the tag filter, switch sort to "古い順", and check whether recently-tagged entries you expect to see are missing (see the "Known limitation" note in Task 2 — this is an accepted, documented gap in this PBI, not a bug to fix here, but confirm it behaves as documented rather than crashing or returning wrong data silently).
-11. Click a tag badge to activate the tag filter (a tag with matches, so no fallback triggers) and confirm "関連度順" does NOT appear in the sort options while the tag filter is active — only "新しい順"/"古い順" should be selectable, since no full-text search is running.
+10. If your history has more than 5000 tagged entries: click a tag badge to activate the tag filter, switch sort to "古い順", and check whether recently-tagged entries you expect to see are missing (see the "Known limitation" note in Task 2 ― this is an accepted, documented gap in this PBI, not a bug to fix here, but confirm it behaves as documented rather than crashing or returning wrong data silently).
+11. Click a tag badge to activate the tag filter (a tag with matches, so no fallback triggers) and confirm "関連度順" does NOT appear in the sort options while the tag filter is active ― only "新しい順"/"古い順" should be selectable, since no full-text search is running.
 12. If you have a tag with zero direct matches that triggers the tag-fallback full-text search (the fallback notice banner appears), confirm "関連度順" DOES appear as an option in that state, since a real FTS5 search is running underneath the tag fallback.
 
 - [ ] **Step 4: Report results**
 
-No commit for this task — it is verification only. If any manual check fails, return to the relevant task above and fix before proceeding.
+No commit for this task ― it is verification only. If any manual check fails, return to the relevant task above and fix before proceeding.
 
 ---
 
 ## Self-Review Notes
 
 - **Spec coverage:** Sort dropdown (Tasks 1, 2, 10) ✓; relevance-only-during-search (Tasks 1, 10) ✓; persistence to chrome.storage.local (Tasks 9, 10) ✓; existing date-preset buttons left untouched (no task modifies `renderCalendarNav`'s button markup) ✓; all three backends covered (Tasks 6, 7, 8) ✓.
-- **Type consistency:** `sortBy: 'created_at' | 'relevance'`, `sortDir: 'ASC' | 'DESC'` used identically across Tasks 1, 2, 3, 4, 5, 6, 7, 8, 10. The wire-level `orderBy: 'rank' | 'created_at'` (used only from Task 2 downstream through the backends) is a distinct but related type — `sortBy: 'relevance'` maps to `orderBy: 'rank'`, `sortBy: 'created_at'` maps to `orderBy: 'created_at'`; this mapping is made explicit in Task 2 Step 3 and consistent thereafter.
-- **No placeholders:** All code blocks contain complete, concrete implementations. Where a task step depends on inspecting existing code first (Tasks 4, 6, 7, 8, 10), the step includes the exact `grep`/`find` command to run and explains how to adapt the shown code to what's found — this is necessary because the exact current shape of `DashboardSqliteHandlerDeps`, `IdbVfsBackend`'s constructor, and existing test mocking conventions could not be fully confirmed from static reading and must be verified live during implementation.
+- **Type consistency:** `sortBy: 'created_at' | 'relevance'`, `sortDir: 'ASC' | 'DESC'` used identically across Tasks 1, 2, 3, 4, 5, 6, 7, 8, 10. The wire-level `orderBy: 'rank' | 'created_at'` (used only from Task 2 downstream through the backends) is a distinct but related type ― `sortBy: 'relevance'` maps to `orderBy: 'rank'`, `sortBy: 'created_at'` maps to `orderBy: 'created_at'`; this mapping is made explicit in Task 2 Step 3 and consistent thereafter.
+- **No placeholders:** All code blocks contain complete, concrete implementations. Where a task step depends on inspecting existing code first (Tasks 4, 6, 7, 8, 10), the step includes the exact `grep`/`find` command to run and explains how to adapt the shown code to what's found ― this is necessary because the exact current shape of `DashboardSqliteHandlerDeps`, `IdbVfsBackend`'s constructor, and existing test mocking conventions could not be fully confirmed from static reading and must be verified live during implementation.
 
 ### Adversarial review findings (2026-08-15), addressed inline above
 
-- **Task 1 — `search` action only handled the clear direction.** The original reducer logic only reset `relevance` → `created_at` when a query was cleared; it never switched `created_at` → `relevance` when a search *started*, contradicting the PBI's "becomes the default when a search starts" scenario. Fixed by adding the `startingSearch` branch (empty→non-empty transition only, so it doesn't override a sort chosen mid-search) and three new test cases covering start / refine-with-created_at / refine-with-relevance.
-- **Task 2 — tag-filter + `TAG_FILTER_FETCH_LIMIT` + sort direction interaction was unaddressed.** Making `orderDir` user-controlled on the tag-filter over-fetch query silently changes what the 5000-row cap means: previously a stable "most recent 5000, tag-filtered" limitation, it becomes "oldest 5000" under an ASC sort, making recently-tagged entries vanish from that view — a new failure mode this plan did not originally flag. Not fixed (would require a larger change to the tag-filter fetch strategy, out of scope for this PBI); instead documented as a known limitation with an explicit code comment, a test asserting `orderDir` is forwarded (not hardcoded), and a manual-verification checklist item (Task 11, item 10) so it surfaces as expected behavior rather than a surprise bug report.
-- **Not fixed, tracked as pre-existing/out-of-scope:** `sqliteHistoryPanel.ts` has two separate, hand-duplicated implementations of the calendar nav's `onRangeSelect`/`onClearFilters` callbacks (`renderState` and `updateDynamicRegions`), one of which bypasses the reducer entirely with direct `state.x = ...` mutation. This plan's Task 10 only wires `renderSortControl` into both existing call sites without touching this duplication — deeper unification is a separate refactor, not part of this PBI's scope.
+- **Task 1 ― `search` action only handled the clear direction.** The original reducer logic only reset `relevance` → `created_at` when a query was cleared; it never switched `created_at` → `relevance` when a search *started*, contradicting the PBI's "becomes the default when a search starts" scenario. Fixed by adding the `startingSearch` branch (empty→non-empty transition only, so it doesn't override a sort chosen mid-search) and three new test cases covering start / refine-with-created_at / refine-with-relevance.
+- **Task 2 ― tag-filter + `TAG_FILTER_FETCH_LIMIT` + sort direction interaction was unaddressed.** Making `orderDir` user-controlled on the tag-filter over-fetch query silently changes what the 5000-row cap means: previously a stable "most recent 5000, tag-filtered" limitation, it becomes "oldest 5000" under an ASC sort, making recently-tagged entries vanish from that view ― a new failure mode this plan did not originally flag. Not fixed (would require a larger change to the tag-filter fetch strategy, out of scope for this PBI); instead documented as a known limitation with an explicit code comment, a test asserting `orderDir` is forwarded (not hardcoded), and a manual-verification checklist item (Task 11, item 10) so it surfaces as expected behavior rather than a surprise bug report.
+- **Not fixed, tracked as pre-existing/out-of-scope:** `sqliteHistoryPanel.ts` has two separate, hand-duplicated implementations of the calendar nav's `onRangeSelect`/`onClearFilters` callbacks (`renderState` and `updateDynamicRegions`), one of which bypasses the reducer entirely with direct `state.x = ...` mutation. This plan's Task 10 only wires `renderSortControl` into both existing call sites without touching this duplication ― deeper unification is a separate refactor, not part of this PBI's scope.
 
 ### Second-pass findings (2026-08-16, root-cause "why" analysis on the first-pass fixes), addressed inline above
 
-- **Task 10 — `hasActiveSearch` conflated "search box has text" with "an FTS5 search is actually running."** `state.searchQuery` is set to the tag name as a display label by the `tagInitiated` action / `onActivate`'s `searchTag` branch, but `fetchData` never passes `search` in that path — only `tagFilter` — so `queryHistory` takes the non-search `queryLogs` branch where `orderBy` is hardcoded to `created_at` (Task 2) and `sortBy: 'relevance'` has no effect. The original `Boolean(state.searchQuery.trim())` condition would show "関連度順" as a selectable option in this state even though selecting it changes nothing — a silently-broken UI control. A naive fix ("hide relevance whenever `activeTagFilter` is set") would introduce the opposite bug: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` set), a real FTS5 search *is* running while `activeTagFilter` is still non-null, so relevance must still be offered there. Fixed by replacing the boolean expression with an `isFullTextSearchActive(state)` helper that accounts for both cases, plus two new UI test cases (tag-active-without-fallback hides relevance; tag-fallback-active shows it).
-- **Scope boundary confirmed, not changed:** editing the search box while a tag filter is active (`state.searchQuery` starts as the tag-label string, non-empty) does not trigger the `startingSearch`→`relevance` auto-switch, because the reducer only checks "was `searchQuery` empty before." This is left as existing tag-filter/search-box coupling behavior — introducing a scenario for "user edits the search box while a tag filter is active" would require redesigning what `searchQuery` means when a tag filter is active (it currently serves double duty as both a label and, later, a fallback search term), which is a larger pre-existing design question this PBI does not take on.
-- **Task 6/7 — `orderDir` was not validated at runtime, an actual SQL injection path.** The original `const dir = options.orderDir ?? 'DESC'` (Task 6) / `const dir = orderDir ?? 'DESC'` (Task 7) only guards against `undefined`. `orderDir`'s `'ASC' | 'DESC'` TypeScript type is a compile-time constraint that does not survive the `chrome.runtime.sendMessage` (dashboard→service worker→offscreen) or `Worker.postMessage` (opfsWorker.ts) boundaries — both serialize/structured-clone the payload, so a malformed or compromised sender could put an arbitrary string in that field at runtime, which would then land directly inside the `ORDER BY ${...}` template literal.
-  - **Task 6 fix:** `IdbVfsBackend.ts` already solves this exact problem for its non-search `query()` method via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist constants checked with `.includes(...)`, returning `{success:false, error:...}` on a miss — a pattern this file's callers (`recordsRepo.search()` → `dashboardSqliteHandlers.ts`'s `toFailure()`) already propagate correctly. `search()` now reuses that exact pattern instead of the unvalidated `??` fallback.
-  - **Task 7 fix, revised twice:** first attempt copied the same whitelist+`throw` pattern into `opfsWorker.ts`, but that file already validates its own `orderDir` differently — `handleQuery` (the existing non-search path) uses a ternary (`orderDir === 'ASC' ? 'ASC' : 'DESC'`) that silently normalizes instead of throwing. Matching that existing in-file convention was the right call, not just for consistency: `OpfsWorkerBackend.search()` reaches the worker through `tryOpfsProxy(...)`, which catches any thrown error and collapses it to a generic `'OPFS Worker unavailable'` message (`OpfsWorkerBackend.ts:25-29`) — a thrown "Invalid orderDir" would have been silently swallowed into that unrelated message, so throwing would have been both inconsistent with the file's own conventions *and* practically undebuggable through the real call chain. Settled on the ternary form for both `handleSearchFts` and `handleSearchLike`.
-  - `FallbackStorage.search()` (Task 8) was checked and confirmed safe as originally written — its `dir` variable only feeds a `===` comparison inside an in-memory `Array.sort()` comparator, never a SQL string, so an unexpected value there can at most produce a wrong sort order, not an injection. No change needed there.
-- **Task 7 test plan initially assumed a seam that didn't exist.** The first draft said "skip the unit test if no harness exists," based on an incomplete check — `opfsWorker.test.ts` does exist and tests other module-private functions (`handleRestore`) by mocking `createEngine`. But `handleSearchFts`/`handleSearchLike` reach the database through a module-level `engine` variable only populated by the full `initSqlite()` path (schema creation, migrations, chrome.storage-dependent V2 migration) — disproportionate to drive just for an ORDER BY test. Resolved by adding a narrow `__setEngineForTesting()` export that bypasses `initSqlite()` entirely, and writing out the actual test file content (verified the stub engine shape against the real `SqliteEngine` interface in `sqliteEngine.ts:9-14` rather than guessing it).
+- **Task 10 ― `hasActiveSearch` conflated "search box has text" with "an FTS5 search is actually running."** `state.searchQuery` is set to the tag name as a display label by the `tagInitiated` action / `onActivate`'s `searchTag` branch, but `fetchData` never passes `search` in that path ― only `tagFilter` ― so `queryHistory` takes the non-search `queryLogs` branch where `orderBy` is hardcoded to `created_at` (Task 2) and `sortBy: 'relevance'` has no effect. The original `Boolean(state.searchQuery.trim())` condition would show "関連度順" as a selectable option in this state even though selecting it changes nothing ― a silently-broken UI control. A naive fix ("hide relevance whenever `activeTagFilter` is set") would introduce the opposite bug: when a tag filter matches nothing and falls back to full-text search (`pendingTagFallback` set), a real FTS5 search *is* running while `activeTagFilter` is still non-null, so relevance must still be offered there. Fixed by replacing the boolean expression with an `isFullTextSearchActive(state)` helper that accounts for both cases, plus two new UI test cases (tag-active-without-fallback hides relevance; tag-fallback-active shows it).
+- **Scope boundary confirmed, not changed:** editing the search box while a tag filter is active (`state.searchQuery` starts as the tag-label string, non-empty) does not trigger the `startingSearch`→`relevance` auto-switch, because the reducer only checks "was `searchQuery` empty before." This is left as existing tag-filter/search-box coupling behavior ― introducing a scenario for "user edits the search box while a tag filter is active" would require redesigning what `searchQuery` means when a tag filter is active (it currently serves double duty as both a label and, later, a fallback search term), which is a larger pre-existing design question this PBI does not take on.
+- **Task 6/7 ― `orderDir` was not validated at runtime, an actual SQL injection path.** The original `const dir = options.orderDir ?? 'DESC'` (Task 6) / `const dir = orderDir ?? 'DESC'` (Task 7) only guards against `undefined`. `orderDir`'s `'ASC' | 'DESC'` TypeScript type is a compile-time constraint that does not survive the `chrome.runtime.sendMessage` (dashboard→service worker→offscreen) or `Worker.postMessage` (opfsWorker.ts) boundaries ― both serialize/structured-clone the payload, so a malformed or compromised sender could put an arbitrary string in that field at runtime, which would then land directly inside the `ORDER BY ${...}` template literal.
+  - **Task 6 fix:** `IdbVfsBackend.ts` already solves this exact problem for its non-search `query()` method via `ALLOWED_ORDER_COLUMNS`/`ALLOWED_ORDER_DIRECTIONS` whitelist constants checked with `.includes(...)`, returning `{success:false, error:...}` on a miss ― a pattern this file's callers (`recordsRepo.search()` → `dashboardSqliteHandlers.ts`'s `toFailure()`) already propagate correctly. `search()` now reuses that exact pattern instead of the unvalidated `??` fallback.
+  - **Task 7 fix, revised twice:** first attempt copied the same whitelist+`throw` pattern into `opfsWorker.ts`, but that file already validates its own `orderDir` differently ― `handleQuery` (the existing non-search path) uses a ternary (`orderDir === 'ASC' ? 'ASC' : 'DESC'`) that silently normalizes instead of throwing. Matching that existing in-file convention was the right call, not just for consistency: `OpfsWorkerBackend.search()` reaches the worker through `tryOpfsProxy(...)`, which catches any thrown error and collapses it to a generic `'OPFS Worker unavailable'` message (`OpfsWorkerBackend.ts:25-29`) ― a thrown "Invalid orderDir" would have been silently swallowed into that unrelated message, so throwing would have been both inconsistent with the file's own conventions *and* practically undebuggable through the real call chain. Settled on the ternary form for both `handleSearchFts` and `handleSearchLike`.
+  - `FallbackStorage.search()` (Task 8) was checked and confirmed safe as originally written ― its `dir` variable only feeds a `===` comparison inside an in-memory `Array.sort()` comparator, never a SQL string, so an unexpected value there can at most produce a wrong sort order, not an injection. No change needed there.
+- **Task 7 test plan initially assumed a seam that didn't exist.** The first draft said "skip the unit test if no harness exists," based on an incomplete check ― `opfsWorker.test.ts` does exist and tests other module-private functions (`handleRestore`) by mocking `createEngine`. But `handleSearchFts`/`handleSearchLike` reach the database through a module-level `engine` variable only populated by the full `initSqlite()` path (schema creation, migrations, chrome.storage-dependent V2 migration) ― disproportionate to drive just for an ORDER BY test. Resolved by adding a narrow `__setEngineForTesting()` export that bypasses `initSqlite()` entirely, and writing out the actual test file content (verified the stub engine shape against the real `SqliteEngine` interface in `sqliteEngine.ts:9-14` rather than guessing it).
 
-### Plan gap found during implementation (2026-08-16, Task 4 execution) — new Task 4.5 inserted, Task 5 extended
+### Plan gap found during implementation (2026-08-16, Task 4 execution) ― new Task 4.5 inserted, Task 5 extended
 
-While implementing Task 4, the implementer subagent correctly noticed that the production `DashboardSqliteHandlerDeps` object comes from `createSqliteClientDeps(sqliteClient, ...)` (confirmed as production wiring — `service-worker.ts` calls it directly, it is not a test-only stub), and that function's `search` field (`search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)`) drops any 4th argument. Investigating further (controller, not the subagent) surfaced two more drops in the same chain that the original plan's File Map never listed:
-- `SqliteClient.searchResult()` (`src/background/sqliteClient.ts:304-313`) only accepts 3 params and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload — no `orderBy`/`orderDir` field at all.
-- `offscreen.ts`'s `case 'SQLITE_SEARCH':` handler (`src/offscreen/offscreen.ts:210-217`) reads `msg.payload.query`/`limit`/`offset` but not `orderBy`/`orderDir`, and calls `sqliteSearch(searchQuery, limit, offset)` (3 args) — dropping the parameters one hop before they'd reach `recordsRepo.search()` (Task 5).
+While implementing Task 4, the implementer subagent correctly noticed that the production `DashboardSqliteHandlerDeps` object comes from `createSqliteClientDeps(sqliteClient, ...)` (confirmed as production wiring ― `service-worker.ts` calls it directly, it is not a test-only stub), and that function's `search` field (`search: (query, limit, offset) => sqliteClient.searchResult(query, limit, offset)`) drops any 4th argument. Investigating further (controller, not the subagent) surfaced two more drops in the same chain that the original plan's File Map never listed:
+- `SqliteClient.searchResult()` (`src/background/sqliteClient.ts:304-313`) only accepts 3 params and sends `{ query, limit, offset }` as the `SQLITE_SEARCH` message payload ― no `orderBy`/`orderDir` field at all.
+- `offscreen.ts`'s `case 'SQLITE_SEARCH':` handler (`src/offscreen/offscreen.ts:210-217`) reads `msg.payload.query`/`limit`/`offset` but not `orderBy`/`orderDir`, and calls `sqliteSearch(searchQuery, limit, offset)` (3 args) ― dropping the parameters one hop before they'd reach `recordsRepo.search()` (Task 5).
 
-Without fixing these three spots, every other task (1-3, 4, 6-10) would pass its own unit tests — each mocks its direct caller/callee, so a broken link elsewhere in the chain is invisible to any single task's tests — while the feature does nothing in production: `orderBy`/`orderDir` would be silently dropped at the `sqliteClient`/message-layer boundary before ever reaching the offscreen document's backends. This is exactly the kind of gap the plan's own Task 11 manual verification step exists to catch, but catching it there (after all 11 tasks are believed done) would be far more expensive than catching it now.
+Without fixing these three spots, every other task (1-3, 4, 6-10) would pass its own unit tests ― each mocks its direct caller/callee, so a broken link elsewhere in the chain is invisible to any single task's tests ― while the feature does nothing in production: `orderBy`/`orderDir` would be silently dropped at the `sqliteClient`/message-layer boundary before ever reaching the offscreen document's backends. This is exactly the kind of gap the plan's own Task 11 manual verification step exists to catch, but catching it there (after all 11 tasks are believed done) would be far more expensive than catching it now.
 
-Resolution: inserted a new **Task 4.5** (`sqliteClient.searchResult` + `createSqliteClientDeps` wiring) between Task 4 and Task 5, and folded the `offscreen.ts` fix into **Task 5** (adjacent to that task's existing `recordsRepo.ts` change — same `search()` call, one layer up). File Map updated to list all three previously-missing files.
+Resolution: inserted a new **Task 4.5** (`sqliteClient.searchResult` + `createSqliteClientDeps` wiring) between Task 4 and Task 5, and folded the `offscreen.ts` fix into **Task 5** (adjacent to that task's existing `recordsRepo.ts` change ― same `search()` call, one layer up). File Map updated to list all three previously-missing files.
 
-### Second plan gap found during Task 5's own implementation (2026-08-16) — `sqliteMessages.ts`
+### Second plan gap found during Task 5's own implementation (2026-08-16) ― `sqliteMessages.ts`
 
-While implementing Task 5's `offscreen.ts` change (per the brief's own written code, using `as 'rank' | 'created_at' | undefined` casts on `msg.payload.orderBy`/`orderDir`), the implementer correctly ran `npx tsc --noEmit` per Step 2 and found 2 unexplained errors beyond the one expected `recordsRepo.ts`→`backend.search()` mismatch (that one is Task 6's, already anticipated). Root cause, traced by the controller: `src/messaging/sqliteMessages.ts`'s `SqliteMessage` discriminated union types the `SQLITE_SEARCH` variant's `payload` as `{ query: string; limit?: number; offset?: number }` — no `orderBy`/`orderDir` fields — which is the actual source of `msg.payload`'s type in `offscreen.ts` after `SqliteMessage` narrowing. The brief's `as` casts compiled around this locally but did not fix the underlying type, meaning `tsc --noEmit` still failed at those exact cast lines (a cast on an already-`any`-shaped access does not make the assignment type-correct when the source object's declared type lacks the field being cast).
+While implementing Task 5's `offscreen.ts` change (per the brief's own written code, using `as 'rank' | 'created_at' | undefined` casts on `msg.payload.orderBy`/`orderDir`), the implementer correctly ran `npx tsc --noEmit` per Step 2 and found 2 unexplained errors beyond the one expected `recordsRepo.ts`→`backend.search()` mismatch (that one is Task 6's, already anticipated). Root cause, traced by the controller: `src/messaging/sqliteMessages.ts`'s `SqliteMessage` discriminated union types the `SQLITE_SEARCH` variant's `payload` as `{ query: string; limit?: number; offset?: number }` ― no `orderBy`/`orderDir` fields ― which is the actual source of `msg.payload`'s type in `offscreen.ts` after `SqliteMessage` narrowing. The brief's `as` casts compiled around this locally but did not fix the underlying type, meaning `tsc --noEmit` still failed at those exact cast lines (a cast on an already-`any`-shaped access does not make the assignment type-correct when the source object's declared type lacks the field being cast).
 
 This third file was also absent from the original plan's File Map. Resolution: folded into Task 5 as a new **Step 1b**, which fixes `sqliteMessages.ts`'s `SQLITE_SEARCH` payload type directly and removes the now-unnecessary `as` casts from Step 1a's `offscreen.ts` code, restoring genuine type safety instead of casting around a wrong type. File Map updated to list `sqliteMessages.ts`.
 
-**Pattern across both plan gaps:** each was found by actually running `tsc --noEmit` / following the exact code the plan specified rather than assuming it would compile — the first (Task 4.5) surfaced from the controller independently reading the production wiring code the plan never mentioned; the second (this one) surfaced from an implementer correctly executing the plan's own Step 2 type-check instruction and not dismissing an unexplained error as someone else's problem. Both suggest the original plan's authoring pass (three prior review rounds, all document-level) under-verified the message-passing/wiring layer specifically — code that lives between the layers explicitly named in the File Map, rather than in any single named file.
+**Pattern across both plan gaps:** each was found by actually running `tsc --noEmit` / following the exact code the plan specified rather than assuming it would compile ― the first (Task 4.5) surfaced from the controller independently reading the production wiring code the plan never mentioned; the second (this one) surfaced from an implementer correctly executing the plan's own Step 2 type-check instruction and not dismissing an unexplained error as someone else's problem. Both suggest the original plan's authoring pass (three prior review rounds, all document-level) under-verified the message-passing/wiring layer specifically ― code that lives between the layers explicitly named in the File Map, rather than in any single named file.

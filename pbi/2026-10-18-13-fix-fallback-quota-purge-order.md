@@ -21,11 +21,11 @@ security-audit run-2 の needs_validation リード。fingerprint: `storageFallb
 
 claimed root cause（監査原文）: "The purge is ordered before the dedupe/insert outcome and is not conditioned on the write actually landing, and it drops the oldest rows without the `is_starred` guard its sibling purge applies."
 
-- [entrypoint] `src/background/pendingSqliteQueue.ts:147`（recording and retry ingress）— `sqliteClient.mutate({ type: 'insertBatch', records })`。`MAX_RETRY_COUNT = 5`（`:37`、`:57` で `maxRetryCount` として適用）が1回の記録ごとに最大5試行まで放大する。
-- [propagation] `src/offscreen/FallbackStorageAdapter.ts:11` — `insert` は素通しで、判定を挟まない。`:15-19` の `insertBatch` は `{ inserted, skipped }` に写すだけで、`:134` の purge は素通りする。
-- [propagation] `src/offscreen/storageFallback.ts:107` / `:134` — `ensureQuotaSpace()` が `loadData()` と dedupe 判定より**前**に走る。
-- [propagation] `src/offscreen/storageFallback.ts:90-94` — 最古10%を ①star exempt 無し・②byte ではなく行数基準・③`:94` で即 `saveData` して永続化、の形で実行する。
-- [sink] `src/offscreen/storageFallback.ts:111`（`return { success: true, id: -1 }`）/ `:149`（`return { success: true, count: 0 }`）— dedupe 経路は「成功」を返し、その前に走った purge を取り消さない。
+- [entrypoint] `src/background/pendingSqliteQueue.ts:147`（recording and retry ingress）― `sqliteClient.mutate({ type: 'insertBatch', records })`。`MAX_RETRY_COUNT = 5`（`:37`、`:57` で `maxRetryCount` として適用）が1回の記録ごとに最大5試行まで放大する。
+- [propagation] `src/offscreen/FallbackStorageAdapter.ts:11` ― `insert` は素通しで、判定を挟まない。`:15-19` の `insertBatch` は `{ inserted, skipped }` に写すだけで、`:134` の purge は素通りする。
+- [propagation] `src/offscreen/storageFallback.ts:107` / `:134` ― `ensureQuotaSpace()` が `loadData()` と dedupe 判定より**前**に走る。
+- [propagation] `src/offscreen/storageFallback.ts:90-94` ― 最古10%を ①star exempt 無し・②byte ではなく行数基準・③`:94` で即 `saveData` して永続化、の形で実行する。
+- [sink] `src/offscreen/storageFallback.ts:111`（`return { success: true, id: -1 }`）/ `:149`（`return { success: true, count: 0 }`）― dedupe 経路は「成功」を返し、その前に走った purge を取り消さない。
 
 **ロスト応答リトライとの接続**: `src/background/sqlite/offscreenGateway.ts:105-107` に "Retry safety is owned by the neutral policy table. A lost response can follow a committed write" と書かれており、応答ロストは「コミット済み write の後に起こりうる」ことが transports 側で明示されている。`src/background/pipeline/steps/saveSqliteStep.ts:75` が insert を発行し、`:76-78` で失敗時に `enqueuePendingRecord` へ積む。つまり「同じ batch を再度 insertBatch する」経路は正常系として存在する。
 
@@ -91,33 +91,33 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 | `src/offscreen/storageFallback.ts` | 17 | `QUOTA_BYTES_LIMIT = 5 * 1024 * 1024; // 5MB warning threshold`。`unlimitedStorage` があるため自己申告的な閾値 |
 | `src/offscreen/storageFallback.ts` | 25-34 | `loadData()` / `saveData()`。`saveData` は `chrome.storage.local.set` 1回 |
 | `src/offscreen/storageFallback.ts` | 85-95 | `ensureQuotaSpace()` 本体 |
-| `src/offscreen/storageFallback.ts` | 86 | `getBytesInUse(null)` — 全 `chrome.storage.local` キーの合計を測る。下ろすのは `FALLBACK_STORAGE_DATA` だけ |
+| `src/offscreen/storageFallback.ts` | 86 | `getBytesInUse(null)` ― 全 `chrome.storage.local` キーの合計を測る。下ろすのは `FALLBACK_STORAGE_DATA` だけ |
 | `src/offscreen/storageFallback.ts` | 87 | `if (bytesInUse <= QUOTA_BYTES_LIMIT) return;` |
-| `src/offscreen/storageFallback.ts` | 90 | `purgeCount = Math.max(1, Math.floor(data.records.length * 0.1))` — **行数**で Byte を測っている |
+| `src/offscreen/storageFallback.ts` | 90 | `purgeCount = Math.max(1, Math.floor(data.records.length * 0.1))` ― **行数**で Byte を測っている |
 | `src/offscreen/storageFallback.ts` | 91-93 | `created_at` 昇順で最古 `purgeCount` 行を id 集合で除去。`is_starred` による除外は無い |
-| `src/offscreen/storageFallback.ts` | 94 | `await this.saveData(data)` — ここで purge が永続化される。以降の dedupe return で取り消されない |
+| `src/offscreen/storageFallback.ts` | 94 | `await this.saveData(data)` ― ここで purge が永続化される。以降の dedupe return で取り消されない |
 | `src/offscreen/storageFallback.ts` | 99-103 | 「dedupe 判定 THEN ID 確保」の順序が `mutate` を使えない理由として書かれたコメント（PBI 2026-08-27-06）。順序変更時に要更新 |
 | `src/offscreen/storageFallback.ts` | 104-125 | `insert()`。`:107` = `ensureQuotaSpace()`、`:108` = `loadData()`、`:109` = dedupe 判定、`:111` = `{ success: true, id: -1 }`、`:122` = 実際の `saveData` |
 | `src/offscreen/storageFallback.ts` | 131-170 | `insertBatch()`。`:134` = `ensureQuotaSpace()`、`:137` = `existingKeys` 構築、`:148-150` = 全件重複で `{ success: true, count: 0 }`、`:167` = 実際の `saveData` |
 | `src/offscreen/storageFallback.ts` | 371-400 | `purgeOldRecords()`。`:382` = 保持期間分岐の `if (r.is_starred === 1 || r.is_deleted === 1) return true;`（**兄弟の exempt 基準**） |
 | `src/offscreen/storageFallback.ts` | 393-395 | 同じ関数の `maxRecords` 分岐。`is_deleted === 0` のみ抽出し、`is_starred` は exempt していない（**本 PBI で揃えるか裁定が必要**） |
-| `src/offscreen/storageFallback.ts` | 427 / 444 | `purgeContent()` の `filter(r => r.is_starred !== 1)` — 2つ目の star exempt の先例 |
+| `src/offscreen/storageFallback.ts` | 427 / 444 | `purgeContent()` の `filter(r => r.is_starred !== 1)` ― 2つ目の star exempt の先例 |
 | `src/offscreen/FallbackStorageAdapter.ts` | 11-13 | `insert` は `this.fallback.insert(record)` を素通し |
 | `src/offscreen/FallbackStorageAdapter.ts` | 15-19 | `insertBatch` は `{ inserted, skipped }` へ写像するのみ |
 | `src/background/pendingSqliteQueue.ts` | 37 / 57 | `MAX_RETRY_COUNT = 5` / `maxRetryCount` の適用 |
-| `src/background/pendingSqliteQueue.ts` | 143-154 | `flushBatch` 内の `sqliteClient.mutate({ type: 'insertBatch', records })`（`:147`）— 同じ batch の再送経路 |
-| `src/background/sqlite/offscreenGateway.ts` | 105-107 | 「A lost response can follow a committed write」— リトライが再入する根拠 |
+| `src/background/pendingSqliteQueue.ts` | 143-154 | `flushBatch` 内の `sqliteClient.mutate({ type: 'insertBatch', records })`（`:147`）― 同じ batch の再送経路 |
+| `src/background/sqlite/offscreenGateway.ts` | 105-107 | 「A lost response can follow a committed write」― リトライが再入する根拠 |
 | `src/background/pipeline/steps/saveSqliteStep.ts` | 75-78 | insert の発行と、失敗時の `enqueuePendingRecord` |
-| `wxt.config.ts` | 231 | `'unlimitedStorage'` — 5MB は自己申告的 |
-| `src/offscreen/__tests__/storageFallback-branches.test.ts` | 33-68 | `describe('FallbackStorage quota management')` — purge の既存 pin 2件 |
+| `wxt.config.ts` | 231 | `'unlimitedStorage'` ― 5MB は自己申告的 |
+| `src/offscreen/__tests__/storageFallback-branches.test.ts` | 33-68 | `describe('FallbackStorage quota management')` ― purge の既存 pin 2件 |
 | `src/offscreen/__tests__/storageFallback-branches.test.ts` | 34-54 | 「新規 insert で最古1行が purge される」pin。新順序でも緑になるはず |
 | `src/offscreen/__tests__/storageFallback.test.ts` | 24-27 | 重複 insert が `{ success: true, id: -1 }` を返す pin |
 
 ### 最小変更の選択肢
 
-1. **`ensureQuotaSpace` を dedupe 判定の後、実際に書き込みが確定したときに限り呼ぶ** — 推奨。`insert` は `:108-111` の dedupe 早期 return の後、`getNextId()`（`:112`）の前。`insertBatch` は `:148-150` の `toInsert.length === 0` return の後、`allocateIds`（`:153`）の前。`:99-103` のコメントが述べる「dedupe 判定 THEN ID 確保」の順序にそのまま素直に一致し、`mutate` の純関数契約も破らない。
-2. **`is_starred` exempt を追加して兄弟 purge（`:382`）と揃える** — `:92` の `sorted` を作る時点で `r.is_starred !== 1` を除外する。`:427` / `:444` の `filter(r => r.is_starred !== 1)` と同じ形の表現に寄せる。
-3. **`getBytesInUse(null)` ではなく対象キー指定のバイト数を使い、「行数」で Byte を測っている部分を修正** — `getBytesInUse(STORAGE_KEY)`（`:86`）で Fallback キー自身のバイト数を測る。`:90` の `purgeCount` を「何バイト減らしたいか」から逆算するのが本筋だが `JSON.stringify` の実測コストがあるため、まず「閾値判定の粒度を正しくする（対象キー指定）」だけを最小変更とし、間引き量のバイト基準化は別 PBI に分ける。**どちらの粒度までやるかを痕跡記録すること。**
+1. **`ensureQuotaSpace` を dedupe 判定の後、実際に書き込みが確定したときに限り呼ぶ** ― 推奨。`insert` は `:108-111` の dedupe 早期 return の後、`getNextId()`（`:112`）の前。`insertBatch` は `:148-150` の `toInsert.length === 0` return の後、`allocateIds`（`:153`）の前。`:99-103` のコメントが述べる「dedupe 判定 THEN ID 確保」の順序にそのまま素直に一致し、`mutate` の純関数契約も破らない。
+2. **`is_starred` exempt を追加して兄弟 purge（`:382`）と揃える** ― `:92` の `sorted` を作る時点で `r.is_starred !== 1` を除外する。`:427` / `:444` の `filter(r => r.is_starred !== 1)` と同じ形の表現に寄せる。
+3. **`getBytesInUse(null)` ではなく対象キー指定のバイト数を使い、「行数」で Byte を測っている部分を修正** ― `getBytesInUse(STORAGE_KEY)`（`:86`）で Fallback キー自身のバイト数を測る。`:90` の `purgeCount` を「何バイト減らしたいか」から逆算するのが本筋だが `JSON.stringify` の実測コストがあるため、まず「閾値判定の粒度を正しくする（対象キー指定）」だけを最小変更とし、間引き量のバイト基準化は別 PBI に分ける。**どちらの粒度までやるかを痕跡記録すること。**
 
 **推奨: 1 と 2 を必ず実装し、3 は「対象キー指定」までを本 PBI のスコープにする。** 4（ロールバック）は選択肢1を採用すれば構造的に不要になる（purge 後の dedupe return が起きなくなるため）。ただし purge 後に `saveData` が失敗し得ることを受け入れ基準で明示し、半書き防止を担保する。
 
@@ -136,9 +136,9 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
-1. **実行環境で 5MB のソフト閾値を実際に超えることを観測できるか** — needs_validation の blockers そのもの。`wxt.config.ts:231` の `unlimitedStorage` があるため 5MB は自己申告的で、`chrome.storage.local` の実際の制約ではない。**owner が OPFS 無効環境で 5MB 以上の fallback データを実際に作れるか（どの操作で、どの程度の記録数・どの record で到達するか）** が未観測であり、これが Reach=200 の前提そのものである。到達できなければ、発火条件が現実のユーザー体験として到達可能かを裁定し、Reach / Impact を再採点する。
-2. **全行がスター済みのときの実害** — 選択肢2の exempt 導入後、間引き対象が0行になるケースが現実にあるか（採点履歴をユーザーが全てスターする使い方はあるか）。無ければシナリオ5は「明示的な失敗」に縮約してよいが、「黙って既存データを壊さない」ことは守る。
-3. **`purgeOldRecords` の `maxRecords` 分岐（`:393-395`）を本 PBI で揃えるか** — 受け入れ基準2の「兄弟 purge と同一の基準」を完全にするにはこの分岐にも star exempt が必要だが、`maxRecords` の意味論（明示的に上限件数で切る）は保持期間と異なり、スター行を残すと上限件数が守られない。**どちらの意図が正しいかを owner が裁定する**（本 PBI のスコープ外と裁定するなら、理由をコードコメントと `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` に記録する）。
+1. **実行環境で 5MB のソフト閾値を実際に超えることを観測できるか** ― needs_validation の blockers そのもの。`wxt.config.ts:231` の `unlimitedStorage` があるため 5MB は自己申告的で、`chrome.storage.local` の実際の制約ではない。**owner が OPFS 無効環境で 5MB 以上の fallback データを実際に作れるか（どの操作で、どの程度の記録数・どの record で到達するか）** が未観測であり、これが Reach=200 の前提そのものである。到達できなければ、発火条件が現実のユーザー体験として到達可能かを裁定し、Reach / Impact を再採点する。
+2. **全行がスター済みのときの実害** ― 選択肢2の exempt 導入後、間引き対象が0行になるケースが現実にあるか（採点履歴をユーザーが全てスターする使い方はあるか）。無ければシナリオ5は「明示的な失敗」に縮約してよいが、「黙って既存データを壊さない」ことは守る。
+3. **`purgeOldRecords` の `maxRecords` 分岐（`:393-395`）を本 PBI で揃えるか** ― 受け入れ基準2の「兄弟 purge と同一の基準」を完全にするにはこの分岐にも star exempt が必要だが、`maxRecords` の意味論（明示的に上限件数で切る）は保持期間と異なり、スター行を残すと上限件数が守られない。**どちらの意図が正しいかを owner が裁定する**（本 PBI のスコープ外と裁定するなら、理由をコードコメントと `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` に記録する）。
 
 いずれも owner 確認として着手前に対応する（source-only 実行境界のもと未確認のまま「直した」としない）。
 
@@ -170,7 +170,7 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` — fallback の 5MB 警告閾値・10% 自動 purge を記述している既存ドキュメント（DoD の更新対象）
-- `dev-docs/archived/pbi/2026-07-18-19-fix-storage-quota-unlimited-storage-check.md` — `unlimitedStorage` 権限下での 5MB 定数そのものを対象にした先例 PBI（`src/utils/storage/quota.ts` 側）。本 PBI の「自己申告的な閾値」論点と共有する
-- `src/offscreen/__tests__/storageFallback-branches.test.ts:33-68` — quota purge の既存 pin（修正後に緑でなければならない）
+- `dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` ― fallback の 5MB 警告閾値・10% 自動 purge を記述している既存ドキュメント（DoD の更新対象）
+- `dev-docs/archived/pbi/2026-07-18-19-fix-storage-quota-unlimited-storage-check.md` ― `unlimitedStorage` 権限下での 5MB 定数そのものを対象にした先例 PBI（`src/utils/storage/quota.ts` 側）。本 PBI の「自己申告的な閾値」論点と共有する
+- `src/offscreen/__tests__/storageFallback-branches.test.ts:33-68` ― quota purge の既存 pin（修正後に緑でなければならない）
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`findings.json` / `NEEDS-VALIDATION.md` 23番 / `FINDINGS-DETAIL.md`）

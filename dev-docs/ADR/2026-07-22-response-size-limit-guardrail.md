@@ -67,8 +67,8 @@ Establish the following 3-layer guardrail as a permanent rule:
 
 ## Affected Components
 - All `src/**/*.ts` files that make HTTP requests and consume response bodies
-- ESLint configuration (`eslint.config.js`) — requires ongoing maintenance of the custom rule
-- `src/privacy/privacy.ts` — example of a file that was updated to include size validation
+- ESLint configuration (`eslint.config.js`) ― requires ongoing maintenance of the custom rule
+- `src/privacy/privacy.ts` ― example of a file that was updated to include size validation
 
 ## Future Improvements
 - Refactor the lint rule to use AST-based statement inspection instead of token-based matching
@@ -78,4 +78,4 @@ Establish the following 3-layer guardrail as a permanent rule:
 - Consider adding runtime size limits in addition to compile-time checks
 
 ## Related ADRs
-- [Markdown Output Sanitization Guardrail](2026-07-22-markdown-output-sanitization-guardrail.md) — companion guardrail for XSS prevention
+- [Markdown Output Sanitization Guardrail](2026-07-22-markdown-output-sanitization-guardrail.md) ― companion guardrail for XSS prevention

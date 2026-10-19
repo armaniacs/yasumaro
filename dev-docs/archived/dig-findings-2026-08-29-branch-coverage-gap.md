@@ -1,4 +1,4 @@
-# なぜなぜ分析 — branches カバレッジ 83.4% → 87.84% の残差
+# なぜなぜ分析 ― branches カバレッジ 83.4% → 87.84% の残差
 
 ## 現象
 `npm run test:coverage` の branches カバレッジが 90% ゲートを下回っている（PBI 作成時 83.4% → 現在 87.84%、残 ~263 branches）。
@@ -26,7 +26,7 @@
 
 ### Phase A: 低コスト・高インパクト（~100 branches）
 対象: 未テストファイルのうち、small pure functions を含むもの
-- `dashboard/historyBadges.ts`（19 uncovered）↔ テスト済（追加済）
+- `dashboard/historyBadges.ts`（19 uncovered）⇔ テスト済（追加済）
 - `dashboard/historyState.ts`（1 uncovered）
 - `popup/spinner.ts`（1 uncovered）
 - `popup/domUtils.ts`（1 uncovered）
@@ -41,7 +41,7 @@
 
 ### Phase B: 中〜高コスト（~163 branches）
 対象: DOM コントローラー・非同期パイプラインの複合分岐
-- `dashboard/masterPassword.ts`（37 uncovered）— 120 total branches、最も大きな単体ファイルの gap
+- `dashboard/masterPassword.ts`（37 uncovered）― 120 total branches、最も大きな単体ファイルの gap
 - `dashboard/historyPendingPanel.ts`（26 uncovered）
 - `utils/migration.ts`（25 uncovered）
 - `utils/promptSanitizer.ts`（25 uncovered）

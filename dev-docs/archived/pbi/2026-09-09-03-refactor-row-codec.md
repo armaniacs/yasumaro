@@ -1,4 +1,4 @@
-# PBI 03: 行シェイプ codec — rowMapper 4 コピーの統合と列集合 drift の解消
+# PBI 03: 行シェイプ codec ― rowMapper 4 コピーの統合と列集合 drift の解消
 
 ## ユーザーストーリー
 

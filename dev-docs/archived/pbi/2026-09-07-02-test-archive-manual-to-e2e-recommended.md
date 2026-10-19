@@ -9,8 +9,8 @@ yasumaro の開発者として、`docs/MANUAL_TEST_ARCHIVE.md` の 🟡推奨・
 ## 前提
 
 本PBIは 2026-09-07-01 に依存する。特に以下を再利用する:
-- `archiveDbReader.ts`（export バイト列を SQLite で open するヘルパ）— Y3 で使用
-- 01 で新設する DEV ガード機構 + 本番混入検出の枠組み — Y2・G8 のテスト専用フックで使用
+- `archiveDbReader.ts`（export バイト列を SQLite で open するヘルパ）― Y3 で使用
+- 01 で新設する DEV ガード機構 + 本番混入検出の枠組み ― Y2・G8 のテスト専用フックで使用
 
 **注意**: 「テスト専用フラグは 01 で導入済みのパターンを踏襲」と本文に書いているが、01 着手前の時点で `archiveStaging.ts` / `opfsWorker.ts` の既存シーム（`resetArchiveStagingForTesting` 等）に DEV ガードは**存在しない**。01 がガード機構を作ることが前提。
 
@@ -35,7 +35,7 @@ yasumaro の開発者として、`docs/MANUAL_TEST_ARCHIVE.md` の 🟡推奨・
 
 | # | 理由 |
 |---|------|
-| Y1 ロケール切替（ja↔en） | `chrome.i18n.getMessage` の言語は拡張起動時のブラウザ UI 言語で固定。Playwright の `locale` は `navigator.language` を変えるが `chrome.i18n` には効かない。拡張再ロードが必要で E2E の1コンテキスト内では不可 |
+| Y1 ロケール切替（ja⇔en） | `chrome.i18n.getMessage` の言語は拡張起動時のブラウザ UI 言語で固定。Playwright の `locale` は `navigator.language` を変えるが `chrome.i18n` には効かない。拡張再ロードが必要で E2E の1コンテキスト内では不可 |
 | Y5 再読み込み後のセッション再接続（file://） | ダウンロード済み .db を file:// で開いた復元セッションの検証。拡張ページ外の file:// では拡張 JS が走らない。※拡張ページ内での reload → STATUS 再接続は別途 E2E 化可能なので、その部分だけ切り出して Y5' として自動化を検討（本PBIでは対象外） |
 | G1 トークン失効（60秒） | 60秒待ちが E2E タイムアウト（60s）と衝突。`Date.now` モックは SW/worker 内に届かない。トークン TTL のロジック自体は `confirmTokenManager` のユニットテストでカバー済み |
 | G2 モーダルの実キーボード操作 | 「実キーボードと jsdom の一致」の担保。Playwright の `keyboard.press` は合成イベントで実キーボード担保にならない。フォーカストラップのロジックは `focusTrapManager` のユニットと `archive-edit-modal` のテストでカバー済み |
@@ -120,14 +120,14 @@ Scenario: G8 VACUUM 失敗時は vacuumOk:false と注記が出る
 | subtype | token | scope parts |
 |---|---|---|
 | `archive_open` | 必須 | scope 無し（`ARCHIVE_SCOPE_BY_SUBTYPE` に無い） |
-| `archive_query` | 不要（exempt） | — |
+| `archive_query` | 不要（exempt） | ― |
 | `archive_update` | 必須 | scope 無し |
 | `archive_save` | 必須 | scope 無し |
 | `archive_restore` | 必須 | `[stagingName]` |
 | `archive_restore_preview` | 必須 | `[stagingName]` |
 | `archive_prepare_incoming` | 必須 | scope 無し |
 
-（`archive_open` 系の scope が「無し」の場合、`tokenFor` は scopeHash を付けずにトークンだけ取る — `dashboard-archive.spec.ts:56-67` の分岐がそれ）
+（`archive_open` 系の scope が「無し」の場合、`tokenFor` は scopeHash を付けずにトークンだけ取る ― `dashboard-archive.spec.ts:56-67` の分岐がそれ）
 
 ### Y2 の前提訂正（重要）
 
@@ -144,8 +144,8 @@ Scenario: G8 VACUUM 失敗時は vacuumOk:false と注記が出る
 
 ### Y4 復元後の値照合
 
-- `archiveRestoreHandlers.ts:84` — アーカイブ .db から `ARCHIVE_SELECT_COLUMNS`（id 含む全カラム）を読み、メイン engine に **`INSERT OR IGNORE`**。メイン DB の `UNIQUE(url, created_at)` で重複スキップ
-- **`INSERT OR IGNORE` は全カラムをそのまま挿入**するので、`is_starred` / `is_deleted` はアーカイブの値が保持される（別処理で上書きしていない — `archiveRestoreHandlers.ts` を読んで確認）
+- `archiveRestoreHandlers.ts:84` ― アーカイブ .db から `ARCHIVE_SELECT_COLUMNS`（id 含む全カラム）を読み、メイン engine に **`INSERT OR IGNORE`**。メイン DB の `UNIQUE(url, created_at)` で重複スキップ
+- **`INSERT OR IGNORE` は全カラムをそのまま挿入**するので、`is_starred` / `is_deleted` はアーカイブの値が保持される（別処理で上書きしていない ― `archiveRestoreHandlers.ts` を読んで確認）
 - 検証: 本体を空（またはアーカイブ対象 URL が無い状態）にしてから復元 → `query` subtype または `get_count` で値を照合
 - `restoredDeleted` は `is_deleted === 1` の行数（`archiveRestoreHandlers.ts:129`）
 
@@ -175,7 +175,7 @@ Scenario: G8 VACUUM 失敗時は vacuumOk:false と注記が出る
 
 ### G8 VACUUM 失敗時の注記
 
-- UI: `archivePanel.ts:185` — `result.data.vacuumOk` が false なら `${done} ${localized('archiveVacuumNote')}` を error スタイルで表示
+- UI: `archivePanel.ts:185` ― `result.data.vacuumOk` が false なら `${done} ${localized('archiveVacuumNote')}` を error スタイルで表示
 - worker: `archivePurgeHandlers.ts` が `VACUUM` SQL で throw を catch して `vacuumOk: false` を返す（`archivePurgeHandlers.test.ts` の `makeMainEngine({ vacuumError })` でモック済み）
 - **VACUUM 失敗のロジックは vitest でカバー済み**。E2E で「実エンジンで VACUUM を失敗させる」のは困難（`__setEngineForTesting` は offscreen worker 内でE2Eから呼べない）
 - → G8 は「vitest でカバー済み」を明文化。E2E は不要か、やるなら `dashboard-archive.spec.ts` で `vacuumOk` フィールドの存在だけ確認
@@ -188,7 +188,7 @@ Scenario: G8 VACUUM 失敗時は vacuumOk:false と注記が出る
 
 ## 見積もり
 
-2pt（要チームでの見積もり）— 大半は既存 subtype への assert 追加。Y2・G8 は既存 vitest カバレッジで済む可能性が高く、その場合さらに小さくなる。**テスト専用 subtype/フラグは追加しない**方針
+2pt（要チームでの見積もり）― 大半は既存 subtype への assert 追加。Y2・G8 は既存 vitest カバレッジで済む可能性が高く、その場合さらに小さくなる。**テスト専用 subtype/フラグは追加しない**方針
 
 ## 技術的考慮事項
 
@@ -257,9 +257,9 @@ E2E 新規は不要と判断。`archivePurgeHandlers.test.ts` の `keeps the mai
 
 ### 追加で見つかった本番バグ（E2E の Red で検出・修正済み）
 
-1. `archive_prepare_incoming` の応答が二重ラップ（`{stagingName: {stagingName}}`）— `OpfsWorkerBackend` が worker のオブジェクト応答を文字列扱いしていた。ファイル復元フローが本番で壊れていた（`archive_open` の名前検証で必ず拒否される）
+1. `archive_prepare_incoming` の応答が二重ラップ（`{stagingName: {stagingName}}`）― `OpfsWorkerBackend` が worker のオブジェクト応答を文字列扱いしていた。ファイル復元フローが本番で壊れていた（`archive_open` の名前検証で必ず拒否される）
 2. `archive_cleanup` も同様の二重ラップ。両方 `OpfsWorkerBackend` でフィールドを取り出すよう修正
-3. `archive_update` の confirmToken は行 id にバインドされる（`create_confirm_token` に id が必要）— dashboardGateway は payload.id から自動で取るが、生 sendMessage では明示が必要
+3. `archive_update` の confirmToken は行 id にバインドされる（`create_confirm_token` に id が必要）― dashboardGateway は payload.id から自動で取るが、生 sendMessage では明示が必要
 4. G4 seed では deferred レガシーマイグレーションが先に走るため、最初の DASHBOARD_SQLITE 呼び出しで `legacyStoreReadOnly` セットを待ってから `yasumaro_migration_status: 'completed'` を封印する必要がある
 
 ### G5 の実装ノート

@@ -131,16 +131,16 @@ Displayed information:
 - **OPFS path / IDB path**: Status of each path. The value shown is one of:
   - **Done**: Either migrated, or there was never any legacy data to migrate
   - **Not applicable (no legacy data)**: A live existence check confirmed there is no legacy database to migrate. Not shown as a warning
-  - **Checking...** (OPFS path only): A legacy database exists, but the migration routine has not run yet — a transient state (see below)
+  - **Checking...** (OPFS path only): A legacy database exists, but the migration routine has not run yet ― a transient state (see below)
   - **Pending**: A legacy database exists but migration genuinely has not completed
 - **OPFS legacy DB detected / IDB legacy DB detected**: A live check of whether the legacy database file actually exists in this browser right now (Yes/No). When present, the browser-internal virtual path / identifier is also shown
 - **OPFS last attempted / OPFS completed at / OPFS records migrated**: Detailed log fields for when the OPFS migration routine has run
 
-Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API — both live inside the browser's storage sandbox, and this is an intentional browser restriction, not a limitation of this extension. The "OPFS path" / "IDB path" values shown in the diagnostics panel are the most specific browser-internal identifiers available.
+Neither OPFS nor IndexedDB exposes an OS-level absolute file path via any Web API ― both live inside the browser's storage sandbox, and this is an intentional browser restriction, not a limitation of this extension. The "OPFS path" / "IDB path" values shown in the diagnostics panel are the most specific browser-internal identifiers available.
 
 ### When "Checking..." or "Not Completed" Is Shown
 
-If you see "Not applicable (no legacy data)", the live existence check has already confirmed there is nothing to migrate — no action needed.
+If you see "Not applicable (no legacy data)", the live existence check has already confirmed there is nothing to migrate ― no action needed.
 
 Steps to resolve a genuine "Checking..." (OPFS path only) or "Pending" state:
 

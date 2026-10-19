@@ -2,7 +2,7 @@
 
 ## 実装状況
 
-**完了** — 2026-08-11。DOM非依存state seam、request generation guard、unmount後のstale response防止、既存UI回帰テストを実装済み。
+**完了** ― 2026-08-11。DOM非依存state seam、request generation guard、unmount後のstale response防止、既存UI回帰テストを実装済み。
 
 ## 親PBI
 

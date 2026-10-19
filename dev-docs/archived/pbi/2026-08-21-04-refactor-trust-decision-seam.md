@@ -1,4 +1,4 @@
-# PBI: TrustDecision Seam — 4モジュール往復を1つの判断 moduleに
+# PBI: TrustDecision Seam ― 4モジュール往復を1つの判断 moduleに
 
 ## ユーザーストーリー
 開発者として、`isTrusted(url) → Decision` の1メソッドだけを知ればドメインの信頼判定が完結する深い `TrustDecision` module がほしい、なぜなら現在は `isDomainTrusted` を呼ぶたびに `trustDb → permissionManager → ManagedStringList → domainUtils → extractDomain` と4モジュールを往復し、seam が分散して呼び出し元がどのモジュールのどのメソッドを呼ぶべきかを知る必要があり、`trustDb` 558行の interface は `isTrusted`/`add`/`remove` が薄く広く、真のバグは呼び出し順に潜むから
@@ -10,7 +10,7 @@
 
 ## なぜなぜ分析
 - **疑問**: なぜ 4モジュールを往復する必要があるのか → なぜ: 信頼判定の責務が `trustDb`/`permissionManager`/`ManagedStringList`/`domainUtils` に分散し、単一の seam が無いから
-- **なぜ** `permissionManager ↔ trustDb` の責務が曖昧なのか → なぜ: ADR 2026-03-20で分離したが、運用で再び密結合し、どちらが正のリストを管理するかが不明確になったから
+- **なぜ** `permissionManager ⇔ trustDb` の責務が曖昧なのか → なぜ: ADR 2026-03-20で分離したが、運用で再び密結合し、どちらが正のリストを管理するかが不明確になったから
 - **解**: `TrustDecision` の seam に `TrustDb`/`PermissionManager`/`DomainFilter` を adapters として注入し、`isTrusted(url)` の1 seam で完結させる
 
 ## BDD受け入れシナリオ

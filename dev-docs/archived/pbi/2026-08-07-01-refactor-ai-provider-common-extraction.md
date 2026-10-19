@@ -28,9 +28,9 @@
    - `fetchWithRetry()` の同一リトライ設定（`maxRetryCount:3, initialDelayMs:1000, backoffMultiplier:2, maxDelayMs:60000`）
    - キャッチ：`AbortError` → "timed out" メッセージ、その他汎用エラーメッセージ
 
-3. **`_getAllowedUrls()`** — 両方とも `getAllowedUrls()` を呼ぶだけの同一メソッド
+3. **`_getAllowedUrls()`** ― 両方とも `getAllowedUrls()` を呼ぶだけの同一メソッド
 
-4. **`_extractSummary()`** — スキーマ検証のカスケードパターンが構造的に同一
+4. **`_extractSummary()`** ― スキーマ検証のカスケードパターンが構造的に同一
 
 ### 既存の基底クラス
 

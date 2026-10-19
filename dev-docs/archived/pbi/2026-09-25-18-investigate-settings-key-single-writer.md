@@ -14,7 +14,7 @@
 ## 優先度
 
 - 順位: 18 / 30
-- RICEスコア: 1.5（Reach=6 / Impact=1 / Confidence=50% / Effort=2 SP）— 依存（02・17 完了後）で降格
+- RICEスコア: 1.5（Reach=6 / Impact=1 / Confidence=50% / Effort=2 SP）― 依存（02・17 完了後）で降格
 
 ## BDD受け入れシナリオ
 

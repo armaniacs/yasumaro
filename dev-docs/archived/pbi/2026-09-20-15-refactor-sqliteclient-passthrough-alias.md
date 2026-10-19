@@ -55,6 +55,6 @@ Scenario: op 追加時の更新箇所が減る
 ## 実装者向け注記
 
 ### 現状の証拠
-- `src/background/sqlite/offscreenGateway.ts:222-258` — query×5 / mutate×6 / maintain×16 / status の1行委譲 overload + キャスト(:229,235,255)
+- `src/background/sqlite/offscreenGateway.ts:222-258` ― query×5 / mutate×6 / maintain×16 / status の1行委譲 overload + キャスト(:229,235,255)
 - 正直な版が同ファイル既存: `export const SqliteGateway = OffscreenGateway`(:217)
 - 呼び出し元: `createSqliteClientDeps` 経由が `SqliteRpcClient` interface のみを必要とする。`RecordingOrchestrator`・pipeline steps・migration・wiring が `SqliteClient | null` 型

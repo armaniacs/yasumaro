@@ -16,11 +16,11 @@ dashboard のプライバシー設定を使うユーザーとして、checkbox �
 
 ## 証拠(レビュー由来・配線を直接確認済み)
 
-- `src/dashboard/masterPassword.ts:204` — `wasChecked` を save 時(トグル後)に読むため、set モードでは常に true
-- `:227` — catch 側のロールバックは `checked = wasChecked`(true → true)で観測効果ゼロ。storage 上は `MASTER_PASSWORD_ENABLED` 未書き込みのまま checkbox が ON に残る
-- `:249-258` — `closePasswordAuthModal` は checkbox を復元しない。cancel 経路(`:381`/`:382`/`:387-389`/Escape)は全てここに着地する
+- `src/dashboard/masterPassword.ts:204` ― `wasChecked` を save 時(トグル後)に読むため、set モードでは常に true
+- `:227` ― catch 側のロールバックは `checked = wasChecked`(true → true)で観測効果ゼロ。storage 上は `MASTER_PASSWORD_ENABLED` 未書き込みのまま checkbox が ON に残る
+- `:249-258` ― `closePasswordAuthModal` は checkbox を復元しない。cancel 経路(`:381`/`:382`/`:387-389`/Escape)は全てここに着地する
 - 再同期は mount 時のみ(`privacySettingsPanel.ts:19`)。`refresh()`(`:110-112`)は `loadPrivacySettings()` のみで本番呼び出しゼロ
-- `:137` と `:141` — change モードで `confirmPasswordGroup` を表示しながら `masterPasswordConfirm` input を隠す(逆方向)。`entrypoints/options/index.html:2455-2459` のラベルが孤立表示される
+- `:137` と `:141` ― change モードで `confirmPasswordGroup` を表示しながら `masterPasswordConfirm` input を隠す(逆方向)。`entrypoints/options/index.html:2455-2459` のラベルが孤立表示される
 - 対象テストの問題(本番到達不能シナリオ)は順位 10 の PBI で扱う
 
 ## BDD 受け入れシナリオ

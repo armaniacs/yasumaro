@@ -113,7 +113,7 @@ Scenario: 静的 pin が full-snapshot への回帰を検出する
 - `:171` は同関数の最終代入であり第 2 の writer ではない。ファイル全体を実読して 2 本目が無いことを確認し、結果を判断記録に残す。
 - `ruleOptionKey(rule)` は settings オブジェクト上のキー名（`<ruleKey>Enabled`）を返す。保存時の動的アクセスには WHY コメント（実行時に生成されるルールキーのため）が既に付いている。
 - `getAiSummaryCleansingSettings()`（同ファイルの上部）は読み取り側であり本 PBI では変更しない。読み取りが `getAll()` を通ることは契約違反ではない（違反は「書き戻す」ことにのみある）。
-- `src/dashboard/settingsPipeline.ts:241-245` と `src/dashboard/settings/contentSettings.ts:72-73` は「フォームが所有するキーだけを delta にして setAll へ渡す」形の参照実装である。コメント書式（`// Delta write (PBI 2026-09-17-17) — ...`）も揃える。
+- `src/dashboard/settingsPipeline.ts:241-245` と `src/dashboard/settings/contentSettings.ts:72-73` は「フォームが所有するキーだけを delta にして setAll へ渡す」形の参照実装である。コメント書式（`// Delta write (PBI 2026-09-17-17) ― ...`）も揃える。
 - `src/utils/aiSummaryCleaner/cleansingPresetStore.ts:191-205` は「preset が所有するキーだけ」を delta 変数に積み上げ `setAll` へ渡す形の参照実装である。同じ「所有キーを明示する」規律が読める。
 
 ### 実装手順
@@ -122,7 +122,7 @@ Scenario: 静的 pin が full-snapshot への回帰を検出する
 2. 「対象ファイルに `settingsRepository.getAll()` が残っていない」ことを検証する局所静的 pin を追加し、現在の full-snapshot 構文で Red になることを確認する。
 3. pin には negative control（構文を再導入した文字列で検出できること）を 1 件添え、単に Green に固定されたアサーションにしない。
 4. `saveAiSummaryCleansingSettings` を、`getAll()` を呼ばず `settings` 引数から delta を組み立てて `setAll` へ渡す形に変更する。`CLEANSING_RULES` のループで動的キーを列挙し、既存の `?? false` を維持する。
-5. `// Delta write (PBI 2026-09-17-17) — ...` の WHY コメントを delta 構築箇所に付ける（正規実装と同じ書式）。
+5. `// Delta write (PBI 2026-09-17-17) ― ...` の WHY コメントを delta 構築箇所に付ける（正規実装と同じ書式）。
 6. 不要になった `getAll()` 呼び出しと未使用になった import がないかを確認する。
 7. `src/dashboard/settings/__tests__/aiSummaryCleansingSettingsV2.test.ts:207-218` ほか、getAll スナップショットの流転を前提としたアサーションを洗い出し、delta 前提（無関係なキーが含まれない）へ更新する。
 8. 局所 pin を採用した理由を判断記録に残す。

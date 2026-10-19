@@ -26,14 +26,14 @@
 
 ## ファイル構成
 
-- Create: `scripts/metrics/collect.mjs` — 1タグ分のメトリクス計測ロジック（純粋関数 + gitラッパー）
-- Create: `scripts/metrics/updateHistory.mjs` — history.json への追記・ソート・書き戻しロジック + CLIエントリポイント
-- Create: `scripts/metrics/backfill.mjs` — 18タグを順に処理するCLIスクリプト
-- Create: `scripts/metrics/__tests__/collect.test.ts` — collect.mjs の純粋関数の単体テスト
-- Create: `scripts/metrics/__tests__/updateHistory.test.ts` — updateHistory.mjs のマージ・ソートロジックの単体テスト
-- Create: `dev-docs/metrics/history.json` — メトリクス履歴データ（初回はbackfillで生成）
-- Modify: `package.json` — `metrics:collect` / `metrics:backfill` npm script 追加
-- Modify: `.github/workflows/release.yml` — メトリクス計測・コミット・pushステップ追加
+- Create: `scripts/metrics/collect.mjs` ― 1タグ分のメトリクス計測ロジック（純粋関数 + gitラッパー）
+- Create: `scripts/metrics/updateHistory.mjs` ― history.json への追記・ソート・書き戻しロジック + CLIエントリポイント
+- Create: `scripts/metrics/backfill.mjs` ― 18タグを順に処理するCLIスクリプト
+- Create: `scripts/metrics/__tests__/collect.test.ts` ― collect.mjs の純粋関数の単体テスト
+- Create: `scripts/metrics/__tests__/updateHistory.test.ts` ― updateHistory.mjs のマージ・ソートロジックの単体テスト
+- Create: `dev-docs/metrics/history.json` ― メトリクス履歴データ（初回はbackfillで生成）
+- Modify: `package.json` ― `metrics:collect` / `metrics:backfill` npm script 追加
+- Modify: `.github/workflows/release.yml` ― メトリクス計測・コミット・pushステップ追加
 
 ---
 
@@ -71,7 +71,7 @@ describe('countLines', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `Cannot find module '../collect.mjs'` (ファイルが存在しない)
+Expected: FAIL ― `Cannot find module '../collect.mjs'` (ファイルが存在しない)
 
 - [ ] **Step 3: Write minimal implementation for `countLines`**
 
@@ -128,7 +128,7 @@ describe('countTestCalls', () => {
 - [ ] **Step 6: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `countTestCalls is not a function`
+Expected: FAIL ― `countTestCalls is not a function`
 
 - [ ] **Step 7: Write minimal implementation for `countTestCalls`**
 
@@ -176,7 +176,7 @@ describe('countFunctionDefinitions', () => {
 - [ ] **Step 10: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `countFunctionDefinitions is not a function`
+Expected: FAIL ― `countFunctionDefinitions is not a function`
 
 - [ ] **Step 11: Write minimal implementation for `countFunctionDefinitions`**
 
@@ -225,7 +225,7 @@ describe('countDependencies', () => {
 - [ ] **Step 14: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `countDependencies is not a function`
+Expected: FAIL ― `countDependencies is not a function`
 
 - [ ] **Step 15: Write minimal implementation for `countDependencies`**
 
@@ -306,7 +306,7 @@ describe('isTestFile', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `listSourceFiles is not a function`
+Expected: FAIL ― `listSourceFiles is not a function`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -391,7 +391,7 @@ describe('collectMetricsForRef', () => {
 - [ ] **Step 6: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: FAIL — `collectMetricsForRef is not a function`
+Expected: FAIL ― `collectMetricsForRef is not a function`
 
 - [ ] **Step 7: Write minimal implementation**
 
@@ -484,7 +484,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 - [ ] **Step 10: Run the full test suite for this file once more**
 
 Run: `npx vitest run scripts/metrics/__tests__/collect.test.ts`
-Expected: PASS (18 tests) — CLI追加部分はexportされる純粋関数を変更しないため、既存テストは影響を受けない
+Expected: PASS (18 tests) ― CLI追加部分はexportされる純粋関数を変更しないため、既存テストは影響を受けない
 
 - [ ] **Step 11: Manually verify against the real repository**
 
@@ -539,7 +539,7 @@ describe('mergeRecord', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/updateHistory.test.ts`
-Expected: FAIL — `Cannot find module '../updateHistory.mjs'`
+Expected: FAIL ― `Cannot find module '../updateHistory.mjs'`
 
 - [ ] **Step 3: Write minimal implementation**
 
@@ -596,7 +596,7 @@ describe('formatHistoryFile', () => {
 - [ ] **Step 6: Run test to verify it fails**
 
 Run: `npx vitest run scripts/metrics/__tests__/updateHistory.test.ts`
-Expected: FAIL — `readHistoryFile is not a function`
+Expected: FAIL ― `readHistoryFile is not a function`
 
 - [ ] **Step 7: Write minimal implementation**
 

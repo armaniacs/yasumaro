@@ -1,4 +1,4 @@
-# PBI: vite modulePreload 回避策の棚卸し — 陳腐化検証
+# PBI: vite modulePreload 回避策の棚卸し ― 陳腐化検証
 
 ## ユーザーストーリー
 開発者として、`wxt.config.ts:14` の `vite.build.modulePreload: false` が依然として必要か定期的に検証したい、なぜならこの設定はChrome MV3で `modulepreload <link>` が `cross-world extension resource mismatch` 警告を出すことへのworkaroundであり、wxt/vite/Chromeの更新で不要になれば除去すべきだが、検証が無いまま残り続けると将来の性能最適化（preload）の機会を失うから
@@ -16,20 +16,20 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: 正常系 — workaroundが依然として必要ならコメントとTODOが残る
+Scenario: 正常系 ― workaroundが依然として必要ならコメントとTODOが残る
   Given wxt.config.ts:14 に modulePreload:false がある
   When コードを検査する
   Then コメントに「なぜ必要か（cross-world mismatch）」と「検証条件（Chrome XX / wxt YY で再検証）」が記載されている
   And TODOに再検証のバージョン条件が明記されている
 
-Scenario: 境界ケース — workaroundが不要になれば除去される
+Scenario: 境界ケース ― workaroundが不要になれば除去される
   Given modulePreload:false を除去してビルドした
   When Chrome拡張をロードし、エラーログを確認する
   Then cross-world警告が出ない
   And 拡張機能の全ページが正常にロードされる
   And modulePreload:false を除去したPRが作成される
 
-Scenario: エラーケース — workaroundを除去して警告が再発すればrevertする
+Scenario: エラーケース ― workaroundを除去して警告が再発すればrevertする
   Given modulePreload:false を除去した
   When Chrome拡張をロードする
   Then cross-world警告が再発する
@@ -58,7 +58,7 @@ Scenario: エラーケース — workaroundを除去して警告が再発すれ�
 - **Red-Green-Refactor**: TDDは軽量に。主は手動検証
 
 ## 見積もり
-1pt（要チーム見積もり）— 検証とコメント更新のみの最小規模
+1pt（要チーム見積もり）― 検証とコメント更新のみの最小規模
 
 ## 技術的考慮事項
 - 依存関係: なし。独立して実施可能。01-06のwxt.config.tsバッチに含めても良いが、検証は別途手動E2Eが必要
@@ -99,7 +99,7 @@ cat package.json | grep -E "wxt|vite"
 4. 警告が出なければ除去、出ればrevertし再検証日をコメントに記録
 
 ### 落とし穴
-- `modulePreload: false` を除去すると `dist` の `manifest.json` には影響しないが、生成される `html` の `<link rel="modulepreload">` が復活する。Chromeの警告は `chrome://extensions` のErrorsタブでのみ確認でき、通常のconsoleには出ない場合あり — 必ず `chrome://extensions` の「Errors」ボタンから確認
+- `modulePreload: false` を除去すると `dist` の `manifest.json` には影響しないが、生成される `html` の `<link rel="modulepreload">` が復活する。Chromeの警告は `chrome://extensions` のErrorsタブでのみ確認でき、通常のconsoleには出ない場合あり ― 必ず `chrome://extensions` の「Errors」ボタンから確認
 - wxtのバージョンによっては `vite.build.modulePreload` の型が `false | { polyfill: boolean }` に変わる可能性。型エラーが出たらwxt docsを確認
 - 本PBIは最下位のため、01-11の対応後に余裕があれば着手。単独でPRを作るほどの価値は低く、他PBIのwxt.config.ts変更時に併せてコメント更新するのが効率的
 

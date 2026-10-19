@@ -1,7 +1,7 @@
 # Design: sqliteClient.call() Error Propagation
 
 **Date:** 2026-07-13
-**Status:** Implemented (2026-07-13) — v6.5.27
+**Status:** Implemented (2026-07-13) ― v6.5.27
 **PBI:** [2026-07-13-04-fix-sqlite-client-error-propagation](../pbi/2026-07-13-04-fix-sqlite-client-error-propagation.md)
 
 ---
@@ -95,7 +95,7 @@ async query(options: QueryOptions): Promise<QueryResult | null> {
 }
 ```
 
-Note: `SqliteClient` still returns `null` to the SW handler — the SW handler extracts error info from `this.lastError` when constructing the response.
+Note: `SqliteClient` still returns `null` to the SW handler ― the SW handler extracts error info from `this.lastError` when constructing the response.
 
 ### dashboardSqliteService.ts
 

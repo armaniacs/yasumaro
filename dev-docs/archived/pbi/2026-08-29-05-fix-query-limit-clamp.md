@@ -67,13 +67,13 @@ Scenario: engine 直呼び（recordsRepo）でも下限が強制される
 - **Red-Green-Refactor**: clamp ヘルパーを queryPlan に 1 本置き、各所から呼ぶ（重複実装を増やさない）
 
 ## 見積もり
-1pt（要チームでの見積もり — clamp ヘルパー＋4 シンク＋テスト）
+1pt（要チームでの見積もり ― clamp ヘルパー＋4 シンク＋テスト）
 
 ## 技術的考慮事項
 - 依存関係: なし（Wave 1 推奨）
 - テスタビリティ: 純粋関数化されているため境界値テストが容易
 - 非機能要件: 既定値（100/50/1000/10000）と cap 値の変更なし
-- 注意: `FallbackStorage.ts:256` の `slice(offset, offset+limit)` は JS slice セマンティクスで負値が安全（スイープ済み）— 触れない
+- 注意: `FallbackStorage.ts:256` の `slice(offset, offset+limit)` は JS slice セマンティクスで負値が安全（スイープ済み）― 触れない
 - 行番号は監査時点（2026-08-29）のもの。着手時に該当シンボルで再確認すること
 
 ## 実装者向け注記
@@ -92,7 +92,7 @@ sed -n '24,30p' src/background/handlers/dashboardSqlite/readOnlyHandler.ts
 
 ### 落とし穴
 - `Math.floor(Number(payload.limit)) || fallback` を忘れると `0.5` が `0` → `Math.max(1,…)` で 1 になるが、既定値意図（100）とズレる。仕様は「非有限/非正は既定値」として handler で先に正規化すること
-- audit 系の cap（1000）と records 系（MAX_QUERY_LIMIT）は別 cap — 統一しないこと（既存 ADR の LIMIT 2 種温存方針）
+- audit 系の cap（1000）と records 系（MAX_QUERY_LIMIT）は別 cap ― 統一しないこと（既存 ADR の LIMIT 2 種温存方針）
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

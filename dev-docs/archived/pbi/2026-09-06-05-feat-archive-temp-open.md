@@ -115,7 +115,7 @@ grep -rn "subtype: 'update'\|'update'" src/background/handlers/ src/messaging/sq
 ### 実装手順
 1. E2EテストをRedで書く（開く→編集→保存→閉じる→再オープン）
 2. 統合テストをRedで書く（一時オープンのバリデーション4系統、一時エンジンへの query/update、クリーンアップ）
-3. offscreen/opfsWorker に一時アーカイブ機構を追加（**大容量はOPFSステージング経由。バイト列をメッセージに載せない** — deep-dig 2026-09-06 決定）:
+3. offscreen/opfsWorker に一時アーカイブ機構を追加（**大容量はOPFSステージング経由。バイト列をメッセージに載せない** ― deep-dig 2026-09-06 決定）:
    - dashboard 側: ユーザーが選んだファイルを `file.arrayBuffer()` → OPFS の `archive_incoming_<nonce>.db` へ書き込む（optionsページも同一オリジンでOPFSにアクセス可能）→ `ARCHIVE_OPEN` メッセージは**ステージングファイル名のみ**を運ぶ
    - `ARCHIVE_OPEN`: 指定されたステージングファイルを `createEngine` で開く（**DDLフリー。opfsWorker.ts:116-120 のメインエンジン初期化ヘルパー（SCHEMA_SQL適用）を流用しない**）→ バリデーション（`sqlite_master` に `browsing_logs` / `yasumaro_archive_meta` があること + **トリガー数 0**。`restore_db` の検証 backupHandlers.ts:90-95 と同一方針）→ ハンドラ側に一時エンジン参照を保持
    - `ARCHIVE_QUERY` / `ARCHIVE_UPDATE` / `ARCHIVE_SAVE` / `ARCHIVE_CLOSE`: 明示的に一時エンジン宛ての新メッセージ種別として分離し、メインエンジンのハンドラとはルーティングを混在させない
@@ -203,16 +203,16 @@ grep -rn "subtype: 'update'\|'update'" src/background/handlers/ src/messaging/sq
 ```
 
 **新規ファイル**（PBI-02 で作った基盤に追加）:
-- `src/dashboard/fileSystemAccess.ts` — `isSupported()` / `pickSaveFile()` / `saveToHandle(handle, bytes)` のモック可能ラッパー
+- `src/dashboard/fileSystemAccess.ts` ― `isSupported()` / `pickSaveFile()` / `saveToHandle(handle, bytes)` のモック可能ラッパー
 - `src/dashboard/panels/asyncData/archiveHistoryModel.ts` or 既存 `createSqliteHistoryModel` の deps 差し替えヘルパー
-- `src/dashboard/archiveEditModal.ts` — レコード編集モーダル（A2-1、新規 UI）
+- `src/dashboard/archiveEditModal.ts` ― レコード編集モーダル（A2-1、新規 UI）
 - `src/offscreen/opfsWorker/archiveSessionHandlers.ts` に `handleArchiveOpen/Query/Update/Save/Close` を追加（`archiveEngine` 保有をこのファイルに閉じ込める）
 
 **subtype 追加**: `archive_open` `archive_query`（read-only + exempt）`archive_update` `archive_save` `archive_close`。詳細は PBI-02 §D の表。
 
 ### C. PBI-05 の主要な設計判断（なぜなぜ分析の結論）
 
-#### C2-1. データソースの分離 — 「アーカイブモード」フラグ + 別 model インスタンス
+#### C2-1. データソースの分離 ― 「アーカイブモード」フラグ + 別 model インスタンス
 
 BDD「オープン中、メインDB宛ての操作がアーカイブ側へ誤ルーティングされない」。
 
@@ -225,7 +225,7 @@ BDD「オープン中、メインDB宛ての操作がアーカイブ側へ誤ル
 
 これにより「メインDB宛ての操作がアーカイブへ誤ルーティング」が構造的に起きない（そもそもアーカイブモードではメイン model が存在しない）。
 
-#### C2-2. 一時エンジンの隔離 — `archiveSessionHandlers.ts` 内の専用参照
+#### C2-2. 一時エンジンの隔離 ― `archiveSessionHandlers.ts` 内の専用参照
 
 なぜなぜ（A2-2 の深掘り）:
 - opfsWorker の全ハンドラは `handlerCtx.engine`（module-level `engine` の getter）を見る。
@@ -234,7 +234,7 @@ BDD「オープン中、メインDB宛ての操作がアーカイブ側へ誤ル
 
 → `archiveSessionHandlers.ts` に `let archiveEngine: SqliteEngine | null = null` を持ち、`ARCHIVE_*` ハンドラは**専用の SQL 実行**（`archiveEngine.query(...)` を直接呼ぶ）。メインの `crudHandlers` / `searchHandlers` は一切流用しない。LIKE 検索の SQL 組み立ては `queryPlan.ts` の `buildLikeSearchStatements`（`browsing_logs` 単体、FTS JOIN なし）を流用可能。
 
-#### C2-3. 書き戻し — 両経路実装、E2E は DL 経路
+#### C2-3. 書き戻し ― 両経路実装、E2E は DL 経路
 
 なぜなぜ分析（当初「主経路を入れ替える」と表現したのは誤り。正しくは以下）:
 - PBI は「FS Access を主経路、DL をフォールバック」と記載。
@@ -278,8 +278,8 @@ PBI との矛盾なし（PBI は「フォールバックを対等にテスト」
 
 ### E. ドキュメント追記事項
 
-- 「書き戻しの衝突検知はしない」— オープン中にユーザーが元ファイルを外部で書き換えていても保存は上書き（PBI 落とし穴）。UI 文言とガイドに明記。
-- 「編集は一時エンジンにしか反映されない」— 保存忘れで編集消失。閉じる時の未保存警告。
+- 「書き戻しの衝突検知はしない」― オープン中にユーザーが元ファイルを外部で書き換えていても保存は上書き（PBI 落とし穴）。UI 文言とガイドに明記。
+- 「編集は一時エンジンにしか反映されない」― 保存忘れで編集消失。閉じる時の未保存警告。
 
 ### F2. PBI-05 のスパイク（必須・着手条件）
 
@@ -291,17 +291,17 @@ PBI スパイク節の詳細化。**PBI-02 完遂後、PBI-05 実装コードを
 | 第2エンジンで `query` / `update` / `wal_checkpoint(TRUNCATE)` / `close` を連続実行 | 全てエラーなし | 同上 |
 | オープン中もメインエンジンの `INSERT` / `query` / `delete` が正常応答 | 全て正常 | オープン中は「処理中」表示 + キュー直列化に委ねる（機能縮退） |
 | メモリ使用量（`performance.memory` or DevTools）と OPFS sync access handle の同時オープン上限（Chromium 制限、A2-5） | 実用範囲、handle 上限に達しない | メモリVFS 方式 |
-| 時間box: 上記項目を一通り確認したら打ち切り。環境で再現不能なら不合格扱い | — | メモリVFS 方式にフォールバックして PBI-05 を進める |
+| 時間box: 上記項目を一通り確認したら打ち切り。環境で再現不能なら不合格扱い | ― | メモリVFS 方式にフォールバックして PBI-05 を進める |
 
 **不合格時の代替案は PBI-03 と共通化する**（PBI-03 も同じ第2エンジンを使う）。
 
 ### G2. レビューで意見が欲しい点
 
-1. **G2-1: アーカイブファイルのサイズ上限**（C2-5）— 200MB は妥当か。10万件の実履歴DBのサイズ実測が要る。
-2. **G2-2: 8pt の再分割**（A2-1）— レコード編集 UI がゼロからなので、「参照のみ（開く・一覧・検索）」を先行 PBI にし、「編集・書き戻し」を別 PBI にする方が安全か。
-3. **G2-3: FS Access ラッパーの提示条件**（C2-3）— feature-detect だけで UI 出し分けするか、設定で明示的にオプトインさせるか。
-4. **G2-4: アーカイブモードでの操作制限**（C2-1）— star / delete / Obsidian 追記ボタンを「非表示」にするか「無効化（グレーアウト + ツールチップ）」にするか。
-5. **G2-5: スパイク不合格時**（F2）— メモリVFS 方式にすると、編集したアーカイブ全体をメモリに載せる。10万件アーカイブで実用に耐えるか。専用 Worker 方式の方が筋が良いか。
+1. **G2-1: アーカイブファイルのサイズ上限**（C2-5）― 200MB は妥当か。10万件の実履歴DBのサイズ実測が要る。
+2. **G2-2: 8pt の再分割**（A2-1）― レコード編集 UI がゼロからなので、「参照のみ（開く・一覧・検索）」を先行 PBI にし、「編集・書き戻し」を別 PBI にする方が安全か。
+3. **G2-3: FS Access ラッパーの提示条件**（C2-3）― feature-detect だけで UI 出し分けするか、設定で明示的にオプトインさせるか。
+4. **G2-4: アーカイブモードでの操作制限**（C2-1）― star / delete / Obsidian 追記ボタンを「非表示」にするか「無効化（グレーアウト + ツールチップ）」にするか。
+5. **G2-5: スパイク不合格時**（F2）― メモリVFS 方式にすると、編集したアーカイブ全体をメモリに載せる。10万件アーカイブで実用に耐えるか。専用 Worker 方式の方が筋が良いか。
 
 ## 敵対的レビュー反映（2026-09-06・adversarial-code-review / 検証済み指摘に基づく規定。以下が本文と矛盾する場合は本節を優先）
 
@@ -320,13 +320,13 @@ PBI スパイク節の詳細化。**PBI-02 完遂後、PBI-05 実装コードを
 ## Checking Team レビュー反映（2026-09-06・High/Medium 対応。本文と矛盾する場合は本節を優先）
 
 1. **ARCHIVE_UPDATE の url 検証＋描画ポリシー（High/Red Team）**: `url` 変更時は PBI-03 と同一の `isHttpUrl` 検証（PBI-02 でSSOT化する共通ヘルパー）を必須化（`javascript:`/`data:` 拒否）。アーカイブ一時ビュー・編集モーダルは `makeHistoryEntryRow`（`isSecureUrl`＋`textContent`、src/dashboard/historyEntryRow.ts）の再利用または同等描画ポリシーを設計要件化し、行内容の `innerHTML` 埋め込みを禁止（dashboard には innerHTML 使用箇所が多数あるため本パネルでは使わない規約化）。url 不正行は警告表示
-2. **archive_query の per-subtype 検証（Medium/Blue Team）**: `validators.ts` に追加 — query は `MAX_SEARCH_QUERY_LENGTH`（1_000字）以下、limit 500 以下・offset 非負整数、LIKE 特殊文字（`%`/`_`/`\`）はサーバ側エスケープ方針を明記。meta 由来表示値（cutoff_date / yasumaro_version）の dashboard 描画は `textContent` 限定。テスト: validators.test.ts ＋ sqlite-security-integrity.test.ts の exempt マトリクスに上限超過拒否ケース
+2. **archive_query の per-subtype 検証（Medium/Blue Team）**: `validators.ts` に追加 ― query は `MAX_SEARCH_QUERY_LENGTH`（1_000字）以下、limit 500 以下・offset 非負整数、LIKE 特殊文字（`%`/`_`/`\`）はサーバ側エスケープ方針を明記。meta 由来表示値（cutoff_date / yasumaro_version）の dashboard 描画は `textContent` 限定。テスト: validators.test.ts ＋ sqlite-security-integrity.test.ts の exempt マトリクスに上限超過拒否ケース
 3. **実行中UI（Medium/UI）**: 実行中は実行ボタン・日付入力・ファイル選択を `disabled` 化し、既存 status-message パターン（`aria-live="polite"` ＋ `aria-busy`）で「処理中・他の操作は待機」を通知。single-flight 拒否時も同領域に理由を表示。プログレスバー新規部品は作らない
 4. **archiveEditModal のフォーカス管理（Medium/A11y）**: `showConfirmDialog`（src/dashboard/utils/confirmDialog.ts）と同等のフォーカス管理（role="dialog" + aria-modal="true" + Tab trap + Esc + 閉時に起動要素へ復帰）を必須化し、`src/popup/utils/focusTrap.ts` の focusTrapManager を再利用。テスト: archiveEditModal.test.ts 新規（F-4）
 5. **件数・日時表示のi18n（Medium/i18n）**: 件数は単一メッセージキー＋プレースホルダー（`data-i18n-args`、既存 ruleCount 先例）。日時は `getUserLocale()` のロケール形式で整形（生の "YYYY-MM-DD"/ms を表示しない）。新規キーは camelCase・接頭辞グループ化
 6. **200MB 上限の worker 側強制（Medium/FinOps）**: dashboard 側 file.size に加え、worker 側でも staging ファイルサイズを再検証（PBI-02/03 と共通定数）。dashboard は `blob.stream()` → OPFS writable への逐次チャンク書き込み（一括 `arrayBuffer` の二重メモリOOMを防ぐ）
 7. **アイドルTTLは初版不採用（Medium/SRE調整）**: 再接続仕様（敵対的反映§4）により放置エンジンは可視化・回収可能なため、TTLは将来候補。代わりに `ARCHIVE_STATUS` で open 中を常に可視化し明示 close を促す。フェーズ系操作の構造化ログは PBI-02 の受入基準に含む
-8. **共通モジュール使用必須（High/Maintainability）**: allowlist 検証・staging 発行/レジストリ/掃除は **PBI-01（アーカイブ共通基盤）** で新設される `archiveValidation.ts` / `archiveStaging.ts` を使用（重複実装禁止）。単一オープン制限は offscreen 側 module-level ガードで強制（タブ横断有効 — 検証済み）
+8. **共通モジュール使用必須（High/Maintainability）**: allowlist 検証・staging 発行/レジストリ/掃除は **PBI-01（アーカイブ共通基盤）** で新設される `archiveValidation.ts` / `archiveStaging.ts` を使用（重複実装禁止）。単一オープン制限は offscreen 側 module-level ガードで強制（タブ横断有効 ― 検証済み）
 9. **テスト戦略への追加（Test Experts ケース群 D/F/H）**:
     - D `src/offscreen/__tests__/archiveValidation.test.ts`（新規・sqliteTestApi）: (D-1) sqlite_master 全行列挙で view/trigger/仮想テーブル（rootpage=0）を1つでも検出したら拒否・close→removeEntry 順 (D-2) table_xinfo の hidden/generated・列不一致は拒否（meta.record_count 不一致は警告表示で開続行） (D-3) 現行より1列少ない自作アーカイブは `migrateArchiveStaging` 補完で開ける
     - F `validators.test.ts` マージ: url=javascript:/data: 拒否（F-1）・query 1001字/limit 501/負 offset/LIKE 連打の拒否またはエスケープ・応答 500行/10MB 上限（F-2）。`historyEntryRow.test.ts` マージ: アーカイブ行の描画ポリシー（F-3）。`archiveEditModal.test.ts` 新規: フォーカス管理（F-4）

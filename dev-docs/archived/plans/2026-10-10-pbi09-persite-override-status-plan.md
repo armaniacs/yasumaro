@@ -8,7 +8,7 @@ per-site override の status 表示を `showStatus` と NN05 の i18n キーへ�
 - `src/dashboard/settings/__tests__/`
 
 ## Validation
-`npx vitest run src/dashboard` — PASS（スコープ検証済み）。
+`npx vitest run src/dashboard` ― PASS（スコープ検証済み）。
 
 ## Rollback
 status 呼び出しとテストの置換を戻せばロールバックできる。

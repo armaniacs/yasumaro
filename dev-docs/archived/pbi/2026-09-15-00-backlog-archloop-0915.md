@@ -1,4 +1,4 @@
-# バックログ: arch-delivery-loop 0915 — アーキテクチャ診断（2026-09-15）
+# バックログ: arch-delivery-loop 0915 ― アーキテクチャ診断（2026-09-15）
 
 `arch-delivery-loop` による Phase 0 診断（3つのサブエージェント探索 + HTML レポート `/tmp/architecture-review-20260915.html`）で抽出した11候補の RICE スコア表。上位4件を PBI 化（02〜05・**2026-09-15 実装完了・アーカイブ済み**）、次点3件を第2ループで PBI 化（06〜08・2026-09-15）、残り4件は将来候補。
 
@@ -7,7 +7,7 @@
 | スコア順 | 候補 | R | I | C | E(人週) | RICE | 判定 |
 |---|---|---|---|---|---|---|---|
 | 1 | 送信者検証 seam の一本化（AuthorizedSqliteSender） | 6 | 2 | 0.8 | 0.2 | **48.0** | ✅ PBI 02 完了 |
-| 2 | queryPlanner⇄queryPlan 循環 import 解消 | 4 | 1 | 0.8 | 0.1 | **32.0** | ✅ PBI 03 完了 |
+| 2 | queryPlanner⇔queryPlan 循環 import 解消 | 4 | 1 | 0.8 | 0.1 | **32.0** | ✅ PBI 03 完了 |
 | 3 | archiveWireTable 派生化（5重投影の規律を構造で閉じる） | 14 | 1 | 0.8 | 0.4 | **28.0** | ✅ PBI 04 完了 |
 | 4 | CleansingPresetStore 抽出（順序制約を interface に隠す） | 5 | 2 | 0.8 | 0.4 | **20.0** | ✅ PBI 05 完了 |
 | 5 | diagnostics section のデータ駆動化 | 6 | 1 | 0.8 | 0.3 | 16.0 | → **PBI 06**（第2ループ） |

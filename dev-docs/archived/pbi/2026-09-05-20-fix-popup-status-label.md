@@ -44,9 +44,9 @@ Scenario: スクリーンリーダーで状態が読み上げられる
 
 ## 実装者向け注記
 - 確認済み現状: `src/popup/statusPanel.ts:201-231` の `renderStatusPanel` が `statusDomainIcon` / `statusPrivacyIcon` の状態を `className = 'status-icon status-success|error|warning|muted'` と `updateStatusIcon(domUtils.ts:15)` のSVG形状のみで表現している。可視テキストは詳細欄（`statusDomainState:233-246`）にのみあり、サマリーアイコン自体に文字ラベルがない
-- 形状はあるが色連動: `rg -n "updateStatusIcon|status-svg" src/popup/domUtils.ts src/popup/statusPanel.ts` — SVGのチェック/バツ/感嘆符は描かれるが、凡例なしでは意味が伝わらない
-- aria-labelは既存: `rg -n "aria-label" src/popup/statusPanel.ts` — `statusRecordable / statusBlocked / statusPrivateDetected / statusPublicPage / statusNoInfo` が設定済み。可視ラベルには同じキーを使うこと
-- テスト期待値: `rg -n "status-success|status-warning|status-muted" src/popup/__tests__/statusPanel.test.ts src/popup/__tests__/main.test.ts` — classNameアサーションが中心のため、ラベル追加で壊れる箇所は少ない見込み
+- 形状はあるが色連動: `rg -n "updateStatusIcon|status-svg" src/popup/domUtils.ts src/popup/statusPanel.ts` ― SVGのチェック/バツ/感嘆符は描かれるが、凡例なしでは意味が伝わらない
+- aria-labelは既存: `rg -n "aria-label" src/popup/statusPanel.ts` ― `statusRecordable / statusBlocked / statusPrivateDetected / statusPublicPage / statusNoInfo` が設定済み。可視ラベルには同じキーを使うこと
+- テスト期待値: `rg -n "status-success|status-warning|status-muted" src/popup/__tests__/statusPanel.test.ts src/popup/__tests__/main.test.ts` ― classNameアサーションが中心のため、ラベル追加で壊れる箇所は少ない見込み
 - スコープ補正なし。本PBIはサマリーアイコン2箇所のみとし、詳細欄の文言変更は含めない
 
 ## Definition of Done

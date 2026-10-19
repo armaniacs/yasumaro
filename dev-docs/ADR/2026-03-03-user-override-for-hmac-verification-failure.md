@@ -1,7 +1,7 @@
 # ADR: HMAC署名検証失敗時のユーザー確認によるインポート許可
 
 ## ステータス
-**撤回済み** — VULN-010（改ざんされた設定ファイルのインポートバイパス）修正により、本ADRが決定した`confirm()`による強制インポート機能は完全に削除されました。現在は`src/utils/settingsExportImport.ts`でHMAC検証失敗時に無条件で`null`を返し、インポートを拒否します。i18nキー`hmacVerificationFailedConfirm`は未使用のまま残存しています。以下は撤回前の意思決定記録です。
+**撤回済み** ― VULN-010（改ざんされた設定ファイルのインポートバイパス）修正により、本ADRが決定した`confirm()`による強制インポート機能は完全に削除されました。現在は`src/utils/settingsExportImport.ts`でHMAC検証失敗時に無条件で`null`を返し、インポートを拒否します。i18nキー`hmacVerificationFailedConfirm`は未使用のまま残存しています。以下は撤回前の意思決定記録です。
 
 ---
 

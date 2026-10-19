@@ -1,4 +1,4 @@
-# 要素クリア規約の 2 系統分裂解消 — clearElement の utils 移設と dashboard 直書き統合（refactor）
+# 要素クリア規約の 2 系統分裂解消 ― clearElement の utils 移設と dashboard 直書き統合（refactor）
 
 ## 1. タイトル + 種別
 
@@ -81,7 +81,7 @@ Then 変更なしで動作し、popup/privacy の既存テストが green であ
 
 ## 8. 見積もり
 
-**2 SP** — utils 移設 + re-export + 13 箇所の置換 + gate スクリプトの TARGET_DIRS 拡張 + SSOT 登録。置換は機械的だが対象ファイル数が多い。
+**2 SP** ― utils 移設 + re-export + 13 箇所の置換 + gate スクリプトの TARGET_DIRS 拡張 + SSOT 登録。置換は機械的だが対象ファイル数が多い。
 
 ## 9. DoD
 

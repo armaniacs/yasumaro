@@ -65,8 +65,8 @@ module state を根拠にできない以上、version は唯一の durable signa
 object lock key に対して、version を増やさずに直接 `chrome.storage.local.set` する箇所が
 **2 箇所**残っている。どちらも `withLock` を完全に迂回している。
 
-- `src/utils/pendingStorage.ts:167` — `{ [PENDING_PAGES_KEY]: mergedPages }`
-- `src/utils/storage/savedUrlRepository.ts:478` — `{ savedUrlsWithTimestamps: cleaned }`
+- `src/utils/pendingStorage.ts:167` ― `{ [PENDING_PAGES_KEY]: mergedPages }`
+- `src/utils/storage/savedUrlRepository.ts:478` ― `{ savedUrlsWithTimestamps: cleaned }`
 
 （`src/utils/permissionManager.ts:92-94` の `saveDeniedDomains` も version を増やさずに
 `denied_domains` を直接 set するが、呼び出し元が存在しない dead code である。）

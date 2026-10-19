@@ -2,7 +2,7 @@
 
 ## 1. タイトル + 種別
 
-- **タイトル**: B優先度の重複検出 + 警告描画 2 実装の一本化と死蔵コード削除 — row-aware 検出を `validateBContainer` に集約し、`validateBSlots` を削除する（S-M）
+- **タイトル**: B優先度の重複検出 + 警告描画 2 実装の一本化と死蔵コード削除 ― row-aware 検出を `validateBContainer` に集約し、`validateBSlots` を削除する（S-M）
 - **種別**: refactor（挙動不変・重複排除 + 死蔵コード削除のみ）
 - **見積もり**: 1.5 SP
 
@@ -27,12 +27,12 @@
 
 該当箇所（重複ループ 3 実装 + warn 生成 4 箇所、全 file:line 検証済み）:
 
-- `src/dashboard/aiProviderB/priorityListView.ts:56-69` — `validateBSlots`。未使用（src/テスト両方に import なし）
-- `src/dashboard/aiProviderB/priorityListView.ts:75-96` — `validateBContainer`。row-aware 検出の本体
-- `src/dashboard/aiProviderB/priorityListView.ts:216-235` — validate クロージャ内の同一ループ
-- `src/dashboard/aiProviderB/priorityListView.ts:236-250` — has-error toggle + duplicate warn 生成
-- `src/dashboard/aiProviderB/priorityListView.ts:251-265` — req-warn 生成
-- `src/dashboard/settingsPipeline.ts:87-118` — `renderBPriorityWarnings`。`validateBContainer` 呼び出し後に `:91` has-error toggle、`:92-103` duplicate warn、`:104-116` req-warn を再実装
+- `src/dashboard/aiProviderB/priorityListView.ts:56-69` ― `validateBSlots`。未使用（src/テスト両方に import なし）
+- `src/dashboard/aiProviderB/priorityListView.ts:75-96` ― `validateBContainer`。row-aware 検出の本体
+- `src/dashboard/aiProviderB/priorityListView.ts:216-235` ― validate クロージャ内の同一ループ
+- `src/dashboard/aiProviderB/priorityListView.ts:236-250` ― has-error toggle + duplicate warn 生成
+- `src/dashboard/aiProviderB/priorityListView.ts:251-265` ― req-warn 生成
+- `src/dashboard/settingsPipeline.ts:87-118` ― `renderBPriorityWarnings`。`validateBContainer` 呼び出し後に `:91` has-error toggle、`:92-103` duplicate warn、`:104-116` req-warn を再実装
 
 改善案:
 
@@ -103,7 +103,7 @@ Then src/ およびテストに validateBSlots への参照が存在しないこ
 
 ## 8. 見積もり
 
-**1.5 SP** — 2 ファイルにまたがるがロジック変更なし。検出ロジックの一本化、描画関数の移動、`settingsPipeline` 側を呼び出しのみに縮小、死蔵コード 1 関数の削除のみ。影響範囲は `priorityListView.ts` と `settingsPipeline.ts` の 2 ファイル
+**1.5 SP** ― 2 ファイルにまたがるがロジック変更なし。検出ロジックの一本化、描画関数の移動、`settingsPipeline` 側を呼び出しのみに縮小、死蔵コード 1 関数の削除のみ。影響範囲は `priorityListView.ts` と `settingsPipeline.ts` の 2 ファイル
 
 ## 9. DoD
 

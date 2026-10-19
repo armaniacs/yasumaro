@@ -1,4 +1,4 @@
-# PBI 2026-09-23-15 — preset dual-write の repository 移行
+# PBI 2026-09-23-15 ― preset dual-write の repository 移行
 
 **優先度**: 順位 15 / RICE 4.0（Reach 4 × Impact 2 × Confidence 50% ÷ Effort 1.0 人週）
 **根拠**: preset store の素 storage 接触 7 箇所と dual-write race を除去し、keystroke 毎の全読みを targeted read にする。Confidence 50% は race 敏感領域のため。

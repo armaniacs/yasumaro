@@ -21,19 +21,19 @@ claimed root cause: `src/utils/cspDomains.ts` は manifest host_permissions と 
 
 ### Trace（実ファイルで確認した行番号）
 
-- [entrypoint] `src/background/syncTargets/gistSyncTarget.ts:21` — `const GIST_API_BASE = 'https://api.github.com'`。これが testConnection（`:134` の GET /user、PAT を `Authorization: token <pat>` で送出）、createGist（`:162` の POST /gists）、updateGist（`:191` の PATCH /gists/{gistId}）の3本の呼び出し元になっている
-- [propagation] `src/background/syncTargets/gistSyncTarget.ts:141`（3本すべて: `:141` / `:164` / `:193`）— 3つの fetch すべてが `skipCspValidation: true` を渡し、`allowedUrls` も渡さないため、runtime の origin allowlist は1件も評価されない
-- [propagation] `src/utils/fetch.ts:118` — `if (!skipCspValidation)` が CSPValidator チェック（`:128` の `CSPValidator.isUrlAllowed`）を丸ごとスキップさせる。残るコード側の制御は validateUrl（`:112`）のスキーム／プライベートIPガードのみ
-- [sink] `src/utils/cspDomains.ts:75` — `buildConnectSrcDomains()` は `AI_PROVIDER_HOST_PERMISSIONS`（`:26`）と `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:31`、`:35` で `ALL_LIST_SOURCES` から導出）を末尾の `/*` を剥がして連結するだけの純関数であり、api.github.com はどちらにも含まれない
+- [entrypoint] `src/background/syncTargets/gistSyncTarget.ts:21` ― `const GIST_API_BASE = 'https://api.github.com'`。これが testConnection（`:134` の GET /user、PAT を `Authorization: token <pat>` で送出）、createGist（`:162` の POST /gists）、updateGist（`:191` の PATCH /gists/{gistId}）の3本の呼び出し元になっている
+- [propagation] `src/background/syncTargets/gistSyncTarget.ts:141`（3本すべて: `:141` / `:164` / `:193`）― 3つの fetch すべてが `skipCspValidation: true` を渡し、`allowedUrls` も渡さないため、runtime の origin allowlist は1件も評価されない
+- [propagation] `src/utils/fetch.ts:118` ― `if (!skipCspValidation)` が CSPValidator チェック（`:128` の `CSPValidator.isUrlAllowed`）を丸ごとスキップさせる。残るコード側の制御は validateUrl（`:112`）のスキーム／プライベートIPガードのみ
+- [sink] `src/utils/cspDomains.ts:75` ― `buildConnectSrcDomains()` は `AI_PROVIDER_HOST_PERMISSIONS`（`:26`）と `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:31`、`:35` で `ALL_LIST_SOURCES` から導出）を末尾の `/*` を剥がして連結するだけの純関数であり、api.github.com はどちらにも含まれない
 
 ### 証拠
 
-- `src/utils/cspDomains.ts:26-28` — `AI_PROVIDER_HOST_PERMISSIONS` は `deriveRequiredDomains()` から `https://${domain}/*` を生成するだけ。GitHub API ホストに対応する row は存在しない
-- `src/utils/listSources.ts:42-45` — `ALL_LIST_SOURCES` は `FILTER_LIST_SOURCES`（`:23-29` の raw.githubusercontent.com / gitlab.com / easylist.to / pgl.yoyo.org / nsfw.oisd.nl）と `TRANCO_METADATA_SOURCE`（`:37-40` の tranco-list.eu）の合成であり、api.github.com は無い
-- `src/utils/fetch.ts:118` — 3つの Gist fetch は runtime origin allowlist を持たず、コード駆動の制御は validateUrl のみ
-- `src/dashboard/gistSettings.ts:44-48` — `createSharedGistConnectionTester`（gistSyncTarget.js と offscreenGateway.js を動的 import し、`new GistSyncTarget(getSharedSqliteClient())` を返す）が GistSyncTarget の唯一の production 構築点。したがって実際の通信はダッシュボードのページコンテキストから PAT を送出する GET /user のみで、sync() / syncBatch() には production 呼び出し元が無い
-- `wxt.config.ts:270` — extension_pages の CSP connect-src は `buildLocalConnectSrc()` + `buildConnectSrcDomains()` のみから合成され、api.github.com はブラウザが強制するポリシーに届かない
-- `entrypoints/options/index.html:7-8` — 監査ref でのダッシュボード手書き meta CSP は connect-src を https://tranco-list.eu だけに固定しており、ダッシュボードコンテキストの Gist fetch に対する二层目の阻止層になっている
+- `src/utils/cspDomains.ts:26-28` ― `AI_PROVIDER_HOST_PERMISSIONS` は `deriveRequiredDomains()` から `https://${domain}/*` を生成するだけ。GitHub API ホストに対応する row は存在しない
+- `src/utils/listSources.ts:42-45` ― `ALL_LIST_SOURCES` は `FILTER_LIST_SOURCES`（`:23-29` の raw.githubusercontent.com / gitlab.com / easylist.to / pgl.yoyo.org / nsfw.oisd.nl）と `TRANCO_METADATA_SOURCE`（`:37-40` の tranco-list.eu）の合成であり、api.github.com は無い
+- `src/utils/fetch.ts:118` ― 3つの Gist fetch は runtime origin allowlist を持たず、コード駆動の制御は validateUrl のみ
+- `src/dashboard/gistSettings.ts:44-48` ― `createSharedGistConnectionTester`（gistSyncTarget.js と offscreenGateway.js を動的 import し、`new GistSyncTarget(getSharedSqliteClient())` を返す）が GistSyncTarget の唯一の production 構築点。したがって実際の通信はダッシュボードのページコンテキストから PAT を送出する GET /user のみで、sync() / syncBatch() には production 呼び出し元が無い
+- `wxt.config.ts:270` ― extension_pages の CSP connect-src は `buildLocalConnectSrc()` + `buildConnectSrcDomains()` のみから合成され、api.github.com はブラウザが強制するポリシーに届かない
+- `entrypoints/options/index.html:7-8` ― 監査ref でのダッシュボード手書き meta CSP は connect-src を https://tranco-list.eu だけに固定しており、ダッシュボードコンテキストの Gist fetch に対する二层目の阻止層になっている
 
 ### 補足（SSOT ではない並列 derivation がある点）
 
@@ -104,15 +104,15 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 
 | ファイル | 行 | 現状 |
 |---|---|---|
-| `src/background/syncTargets/gistSyncTarget.ts` | 21 | `const GIST_API_BASE = 'https://api.github.com'` — SSOT 外のハードコード定数 |
+| `src/background/syncTargets/gistSyncTarget.ts` | 21 | `const GIST_API_BASE = 'https://api.github.com'` ― SSOT 外のハードコード定数 |
 | `src/background/syncTargets/gistSyncTarget.ts` | 134 / 141 | testConnection の GET /user。skipCspValidation は true |
 | `src/background/syncTargets/gistSyncTarget.ts` | 162 / 164 | createGist の POST /gists（閲覧履歴 markdown を body に含む）。skipCspValidation は true |
 | `src/background/syncTargets/gistSyncTarget.ts` | 191 / 193 | updateGist の PATCH /gists/{gistId}。skipCspValidation は true |
 | `src/utils/fetch.ts` | 107 / 118 / 128 | skipCspValidation の既定 false、`if (!skipCspValidation)` のゲート、`CSPValidator.isUrlAllowed` 判定。`:112` が validateUrl、`:140-143` が allowedUrls |
-| `src/utils/cspDomains.ts` | 26-28 | `AI_PROVIDER_HOST_PERMISSIONS`（deriveRequiredDomains 由来）— GitHub API host なし |
-| `src/utils/cspDomains.ts` | 31-36 | `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:35` で ALL_LIST_SOURCES を導出）— 延伸の余地あり |
-| `src/utils/cspDomains.ts` | 75-79 | `buildConnectSrcDomains()` — CSP connect-src の唯一の供給元 |
-| `src/utils/cspDomains.ts` | 85-100 | `validateCspDomains()` — wxt.config.ts:25 から呼ばれ、空白・引用符・セミコロン・非 URL を拒否 |
+| `src/utils/cspDomains.ts` | 26-28 | `AI_PROVIDER_HOST_PERMISSIONS`（deriveRequiredDomains 由来）― GitHub API host なし |
+| `src/utils/cspDomains.ts` | 31-36 | `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:35` で ALL_LIST_SOURCES を導出）― 延伸の余地あり |
+| `src/utils/cspDomains.ts` | 75-79 | `buildConnectSrcDomains()` ― CSP connect-src の唯一の供給元 |
+| `src/utils/cspDomains.ts` | 85-100 | `validateCspDomains()` ― wxt.config.ts:25 から呼ばれ、空白・引用符・セミコロン・非 URL を拒否 |
 | `src/utils/listSources.ts` | 23-29 / 37-40 / 42-45 | `FILTER_LIST_SOURCES` / `TRANCO_METADATA_SOURCE` / `ALL_LIST_SOURCES`。api.github.com は無い |
 | `src/utils/cspValidator.ts` | 47 / 80-83 / 100-101 / 135-199 | runtime gate 側の別系統 derivation。既定許可は required providers、任意許可は ALL_LIST_SOURCES の2ホストのみ |
 | `src/dashboard/gistSettings.ts` | 43-49 / 92-100 | 唯一の production 構築点と、接続テストボタンの click ハンドラ |
@@ -133,9 +133,9 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 
 ### 最小変更の選択肢
 
-1. **cspDomains.ts の導出に api.github.com を追加する（SSOT 一箇所で manifest と CSP の両方が更新される）** — **推奨**。`wxt.config.ts:246` の host_permissions と `:270` の connect-src が同時に更新され、放置すると確実に再発する「片方だけ更新」型のドリフトを防ぐ。実装上は `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:31-36`）に1行足す形が最も小さいが、意味的には Gist は filter list でも AI プロバイダでもないため、**「Gist は同期ターゲットが使う egress 先であり、filter list でも AI provider でもない」**というコメントを必ず残すこと
-2. **既存のリストソース（listSources.ts の ALL_LIST_SOURCES）か、AI プロバイダ行（`src/utils/storage/providerAllowlist.ts:69` の PROVIDER_ALLOWLIST_ROWS）のどちらかに Gist を置くかを決める** — **推奨は「どちらも置かない」**。ALL_LIST_SOURCES は FILTER_LIST_SOURCES と Tranco metadata を含み、urlWhitelist のゲート・buildAllowedUrls・OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS・CSPValidator へ横断して波及する（list-sources-conformance.test.ts の cross-table pin がその波及を固定している）。ここに Gist を足すと、ユーザーは「uBlock のフィルタリスト」として GitHub API を登録できてしまうという意味の誤った性質になり、攻撃面ではないという前提の urlWhitelist ゲートに API origin が入る。PROVIDER_ALLOWLIST_ROWS は AI プロバイダの UI 一覧（id / label / domain / permissionTier / conditionalCsp）駆動であり、Gist の行は要約機能の選択肢として表示され得る。**Gist がどちらにも属さない egress であることを明示したうえで、cspDomains.ts 内に「同期ターゲット由来の egress」導出を新設するか、syncTargets 側の定数表を SSOT にして cspDomains がそれを参照する形にする**のが意味的に正しい。どちらが正しいかを実装時に WHY 付きのコメントとして固定すること
-3. **skipCspValidation をそのまま残すか、宣言後は外すかを決める** — **推奨は外す**。SSOT 主義の目的は「宣言と実ゲートを一致させる」ことであり、宣言したのに runtime gate は通らないまま無条件スキップで迂回していると、宣言と実ゲートの乖離が残ったままになる。ただし cspDomains.ts を直しても cspValidator.ts 側は自動更新されない（DEFAULT_ALLOWED_DOMAINS は deriveRequiredDomains 由来、任意許可は ALL_LIST_SOURCES の2ホストのみ）ため、外す場合は runtime gate 側にも api.github.com を宣言する必要がある。**この2系統を同時に入れないと「SSOT では宣言した、しかし gate は別表でブロックする、結局スキップを外せない」という完全な行き止まりが発生する。** 逆に外さない判断をする場合は、その乖離をコードコメントで明示し、受け入れ基準の注記として残す
+1. **cspDomains.ts の導出に api.github.com を追加する（SSOT 一箇所で manifest と CSP の両方が更新される）** ― **推奨**。`wxt.config.ts:246` の host_permissions と `:270` の connect-src が同時に更新され、放置すると確実に再発する「片方だけ更新」型のドリフトを防ぐ。実装上は `OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS`（`:31-36`）に1行足す形が最も小さいが、意味的には Gist は filter list でも AI プロバイダでもないため、**「Gist は同期ターゲットが使う egress 先であり、filter list でも AI provider でもない」**というコメントを必ず残すこと
+2. **既存のリストソース（listSources.ts の ALL_LIST_SOURCES）か、AI プロバイダ行（`src/utils/storage/providerAllowlist.ts:69` の PROVIDER_ALLOWLIST_ROWS）のどちらかに Gist を置くかを決める** ― **推奨は「どちらも置かない」**。ALL_LIST_SOURCES は FILTER_LIST_SOURCES と Tranco metadata を含み、urlWhitelist のゲート・buildAllowedUrls・OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS・CSPValidator へ横断して波及する（list-sources-conformance.test.ts の cross-table pin がその波及を固定している）。ここに Gist を足すと、ユーザーは「uBlock のフィルタリスト」として GitHub API を登録できてしまうという意味の誤った性質になり、攻撃面ではないという前提の urlWhitelist ゲートに API origin が入る。PROVIDER_ALLOWLIST_ROWS は AI プロバイダの UI 一覧（id / label / domain / permissionTier / conditionalCsp）駆動であり、Gist の行は要約機能の選択肢として表示され得る。**Gist がどちらにも属さない egress であることを明示したうえで、cspDomains.ts 内に「同期ターゲット由来の egress」導出を新設するか、syncTargets 側の定数表を SSOT にして cspDomains がそれを参照する形にする**のが意味的に正しい。どちらが正しいかを実装時に WHY 付きのコメントとして固定すること
+3. **skipCspValidation をそのまま残すか、宣言後は外すかを決める** ― **推奨は外す**。SSOT 主義の目的は「宣言と実ゲートを一致させる」ことであり、宣言したのに runtime gate は通らないまま無条件スキップで迂回していると、宣言と実ゲートの乖離が残ったままになる。ただし cspDomains.ts を直しても cspValidator.ts 側は自動更新されない（DEFAULT_ALLOWED_DOMAINS は deriveRequiredDomains 由来、任意許可は ALL_LIST_SOURCES の2ホストのみ）ため、外す場合は runtime gate 側にも api.github.com を宣言する必要がある。**この2系統を同時に入れないと「SSOT では宣言した、しかし gate は別表でブロックする、結局スキップを外せない」という完全な行き止まりが発生する。** 逆に外さない判断をする場合は、その乖離をコードコメントで明示し、受け入れ基準の注記として残す
 
 ### 評価の明示（なぜ最下位か）
 
@@ -148,10 +148,10 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
-1. **Chrome MV3 が extension_pages connect-src とダッシュボードの meta CSP を適用して api.github.com/user を拒否するのか** — これはブラウザ政策の挙動で、ソースからは観測不能。needs_validation の留保理由そのもの。実ビルドとブラウザでの観測なしに「直した」としないこと
-2. **sync() / syncBatch() の production 呼び出し元が無いのは意図か、それとも配線漏れか** — 呼び出し元が無いなら、本 PBI の実害はダッシュボードの接続テストのみ。ただし「配線漏れ」なら本 PBI の範囲が「宣言の追従」から「未接続機能の配線」まで広がるため、着手前に owner が確定させること
-3. **ダッシュボードの meta CSP は意図的に tranco-list.eu だけなのか** — 意図的である場合、本 PBI の実装はそのコメントの趣旨と衝突する。意図的であれば meta CSP にも api.github.com を足すか、あるいは meta CSP を wxt.config.ts の SSOT から生成するか（ダッシュボードはすべての egress を extension_pages CSP に委ねる方針が本来はクリーン）この判断を owner に求める
-4. **宣言先を host_permissions（常時許可）にするか optional_host_permissions（ユーザー同意）にするか** — optional にすると Gist 機能の利用前に同意 UI が発生し、ダッシュボードの UX が変わる。常時許可のままでよいか（Gist は PAT を送る egress で、ブラウザ警告の影響は限定的）を owner が判断すること
+1. **Chrome MV3 が extension_pages connect-src とダッシュボードの meta CSP を適用して api.github.com/user を拒否するのか** ― これはブラウザ政策の挙動で、ソースからは観測不能。needs_validation の留保理由そのもの。実ビルドとブラウザでの観測なしに「直した」としないこと
+2. **sync() / syncBatch() の production 呼び出し元が無いのは意図か、それとも配線漏れか** ― 呼び出し元が無いなら、本 PBI の実害はダッシュボードの接続テストのみ。ただし「配線漏れ」なら本 PBI の範囲が「宣言の追従」から「未接続機能の配線」まで広がるため、着手前に owner が確定させること
+3. **ダッシュボードの meta CSP は意図的に tranco-list.eu だけなのか** ― 意図的である場合、本 PBI の実装はそのコメントの趣旨と衝突する。意図的であれば meta CSP にも api.github.com を足すか、あるいは meta CSP を wxt.config.ts の SSOT から生成するか（ダッシュボードはすべての egress を extension_pages CSP に委ねる方針が本来はクリーン）この判断を owner に求める
+4. **宣言先を host_permissions（常時許可）にするか optional_host_permissions（ユーザー同意）にするか** ― optional にすると Gist 機能の利用前に同意 UI が発生し、ダッシュボードの UX が変わる。常時許可のままでよいか（Gist は PAT を送る egress で、ブラウザ警告の影響は限定的）を owner が判断すること
 
 いずれも owner 確認として PBI の冒頭に置き、実装着手の前に対応する。
 
@@ -164,10 +164,10 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 
 ### ドキュメントの現状（本 PBI で更新が必要）
 
-- `PERMISSIONS.md:151` — all_urls についての行のみ。Gist の記載は**1件も無い**
-- `PERMISSIONS.md` の Reviewer Notes 2 — 「データ送信先は 2 種類のみ（AI プロバイダーと Obsidian Local REST API）」と書かれているが、Gist は第三の送信先であり、宣言を行った後は記述と実態が食い違う。更新が必要
-- `SECURITY.md` — Scope 節（`:23-32`）に CSP は含まれるが、egress 方針の節は存在しない。Gist を含む送信先の記述を追加するか、`dev-docs/SECURITY_REVIEW_GUIDE.md` 側へ寄せるかを決めること
-- `public/PRIVACY.md` と `docs/PRIVACY.md` — 同一内容を保つ規程があるため、Gist を送信先として列挙するなら両方を同時に更新すること
+- `PERMISSIONS.md:151` ― all_urls についての行のみ。Gist の記載は**1件も無い**
+- `PERMISSIONS.md` の Reviewer Notes 2 ― 「データ送信先は 2 種類のみ（AI プロバイダーと Obsidian Local REST API）」と書かれているが、Gist は第三の送信先であり、宣言を行った後は記述と実態が食い違う。更新が必要
+- `SECURITY.md` ― Scope 節（`:23-32`）に CSP は含まれるが、egress 方針の節は存在しない。Gist を含む送信先の記述を追加するか、`dev-docs/SECURITY_REVIEW_GUIDE.md` 側へ寄せるかを決めること
+- `public/PRIVACY.md` と `docs/PRIVACY.md` ― 同一内容を保つ規程があるため、Gist を送信先として列挙するなら両方を同時に更新すること
 
 ## 見積もり
 
@@ -190,8 +190,8 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 ## 関連
 
 - `pbi/00-INDEX.md`
-- PBI 08（Obsidian 経路の redirect ガード）— **別の論点**。PBI 08 は「宣言済みの origin が 30x でどこへ行くか（redirect の hop 毎再検証）」の話であり、本 PBI は「api.github.com という origin そのものを宣言する層（host_permissions と connect-src）」の話である。両者は同じ egress を対象とするが、修正点が別（redirect オプションか CSP 宣言か）であり、実装を同時に行っても単一の根本原因には収まらない。両方を触る場合は `src/utils/fetch.ts` を共有するため hunk 分割すること
-- `src/utils/listSources.ts` — SSOT 追加の置き場所候補（選択肢2 参照）
-- `src/utils/cspValidator.ts` — runtime gate 側の別系統 derivation（選択肢3 参照）
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — CSP と egress の脅威モデル
+- PBI 08（Obsidian 経路の redirect ガード）― **別の論点**。PBI 08 は「宣言済みの origin が 30x でどこへ行くか（redirect の hop 毎再検証）」の話であり、本 PBI は「api.github.com という origin そのものを宣言する層（host_permissions と connect-src）」の話である。両者は同じ egress を対象とするが、修正点が別（redirect オプションか CSP 宣言か）であり、実装を同時に行っても単一の根本原因には収まらない。両方を触る場合は `src/utils/fetch.ts` を共有するため hunk 分割すること
+- `src/utils/listSources.ts` ― SSOT 追加の置き場所候補（選択肢2 参照）
+- `src/utils/cspValidator.ts` ― runtime gate 側の別系統 derivation（選択肢3 参照）
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― CSP と egress の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json と NEEDS-VALIDATION.md 11番）

@@ -31,7 +31,7 @@ SQLite 永続化 layer を 1 人で保守する開発者として、スキーマ
 ### 3. CRUD の 2 実装
 
 - `IdbVfsBackend.ts:42-50` / `:182-227` / `:407-413` と `opfsWorker/crudHandlers.ts:17-103` に同等の処理が重複
-- `crudHandlers.ts:65` がコメント「Whitelist validation — same as IdbVfsBackend.update()」と自認しており、正本は片側だと認識されている
+- `crudHandlers.ts:65` がコメント「Whitelist validation ― same as IdbVfsBackend.update()」と自認しており、正本は片側だと認識されている
 
 ### 4. 検索骨格の 2 実装
 
@@ -101,25 +101,25 @@ Scenario: boot 手順が共通化されている
 
 ### 追加したモジュール
 
-- `src/offscreen/dbFilename.ts` — `DB_FILENAME` の単一宣言。`LEGACY_OPFS_DB_FILENAME` は `src/messaging/sqliteMessages.ts` に残し、名前を変えない旨をコメントで固定。
-- `src/offscreen/sqliteBoot.ts` — 両 VFS 共通の boot 手順。`BOOT_PRAGMAS`（`journal_mode=WAL` → `wal_autocheckpoint=1000`）、`BOOT_SCHEMA_SQL`、`createMigrationEngine()`（null 合体）、`bootSqliteEngine()`（pragma → schema → migration → compile options）。各バックエンド固有の後処理（IDB の migration backup/restore、worker の runMigrationV2）とエラー方針は呼び出し側に残した。
+- `src/offscreen/dbFilename.ts` ― `DB_FILENAME` の単一宣言。`LEGACY_OPFS_DB_FILENAME` は `src/messaging/sqliteMessages.ts` に残し、名前を変えない旨をコメントで固定。
+- `src/offscreen/sqliteBoot.ts` ― 両 VFS 共通の boot 手順。`BOOT_PRAGMAS`（`journal_mode=WAL` → `wal_autocheckpoint=1000`）、`BOOT_SCHEMA_SQL`、`createMigrationEngine()`（null 合体）、`bootSqliteEngine()`（pragma → schema → migration → compile options）。各バックエンド固有の後処理（IDB の migration backup/restore、worker の runMigrationV2）とエラー方針は呼び出し側に残した。
 
 ### 変更したファイル
 
-- `src/offscreen/sqliteEngineContext/idbEngineLifecycle.ts` — `DB_FILENAME` を import し `sqliteEngineHost` / `migrationBackup` 互換のため re-export のみ維持。boot 本体を `bootSqliteEngine()` に委譲。compile options の `String(Object.values(row)[0] ?? '')` も同じ実装に揃えた（`?? ''` 側へ統一。空値は発生しないが 2 実装を残す理由がない）。
-- `src/offscreen/opfsWorker.ts` — 同上。boot を `bootSqliteEngine()` に委譲し、migration engine アダプタを削除。
-- `src/offscreen/opfsWorker/backupHandlers.ts` / `statusHandlers.ts` — `DB_FILENAME` を import。
-- `src/offscreen/searchExecution.ts` — `runOpfsSearch(ctx, ...)` をバックエンド中立の `runSearch({ reader, input, query, limit, offset, orderBy, orderDir, onInvalid, extraQualification, fts5Available })` に置換。`opfsWorker/handlers.js` への import をやめたので、`IdbVfsBackend` から中性モジュールとして参照できる。旧ヘッダの「IdbVfsBackend is intentionally NOT migrated」注記は、未統一として残した 3 点（行形状 / invalid-order 方針 / 別名投影の要否）を明記する形に更新。
-- `src/offscreen/opfsWorker/searchHandlers.ts` — worker 側の `SearchRowSource`（named row / `row.c` / `mapNamed`）と `runOpfsSearch` を担うようにした。生成 SQL は不変。
-- `src/offscreen/IdbVfsBackend.ts` — FTS / LIKE 両パスを `runSearch()` に委譲（`searchRowSource` = positional row / `row[0]` / `mapPositional`、`extraQualification: 'per-path'`）。purge 3 種を `withTransaction(this.transaction, ...)` で wrap。`clearAll` は wrap しない（理由下記）。
-- `src/offscreen/opfsWorker/purgeHandlers.ts` — `handleContentPurge` の cap パスを `SELECT changes()` 計数に変更（算出超過の加算をやめる）、`handleContentPurge` / `handleAuditLogPurge` を transaction wrap。ファイル冒頭に transaction 方針と計数規則の WHY を記載。
-- `src/offscreen/queryPlan.ts` — `buildExtraWhereSql` の引数型を `ExtraWhereQuery` として切り出し（`searchExecution` から再利用）。`buildContentPurgeStatements` の計数注記を「両バックエンドとも changes()」へ更新。
+- `src/offscreen/sqliteEngineContext/idbEngineLifecycle.ts` ― `DB_FILENAME` を import し `sqliteEngineHost` / `migrationBackup` 互換のため re-export のみ維持。boot 本体を `bootSqliteEngine()` に委譲。compile options の `String(Object.values(row)[0] ?? '')` も同じ実装に揃えた（`?? ''` 側へ統一。空値は発生しないが 2 実装を残す理由がない）。
+- `src/offscreen/opfsWorker.ts` ― 同上。boot を `bootSqliteEngine()` に委譲し、migration engine アダプタを削除。
+- `src/offscreen/opfsWorker/backupHandlers.ts` / `statusHandlers.ts` ― `DB_FILENAME` を import。
+- `src/offscreen/searchExecution.ts` ― `runOpfsSearch(ctx, ...)` をバックエンド中立の `runSearch({ reader, input, query, limit, offset, orderBy, orderDir, onInvalid, extraQualification, fts5Available })` に置換。`opfsWorker/handlers.js` への import をやめたので、`IdbVfsBackend` から中性モジュールとして参照できる。旧ヘッダの「IdbVfsBackend is intentionally NOT migrated」注記は、未統一として残した 3 点（行形状 / invalid-order 方針 / 別名投影の要否）を明記する形に更新。
+- `src/offscreen/opfsWorker/searchHandlers.ts` ― worker 側の `SearchRowSource`（named row / `row.c` / `mapNamed`）と `runOpfsSearch` を担うようにした。生成 SQL は不変。
+- `src/offscreen/IdbVfsBackend.ts` ― FTS / LIKE 両パスを `runSearch()` に委譲（`searchRowSource` = positional row / `row[0]` / `mapPositional`、`extraQualification: 'per-path'`）。purge 3 種を `withTransaction(this.transaction, ...)` で wrap。`clearAll` は wrap しない（理由下記）。
+- `src/offscreen/opfsWorker/purgeHandlers.ts` ― `handleContentPurge` の cap パスを `SELECT changes()` 計数に変更（算出超過の加算をやめる）、`handleContentPurge` / `handleAuditLogPurge` を transaction wrap。ファイル冒頭に transaction 方針と計数規則の WHY を記載。
+- `src/offscreen/queryPlan.ts` ― `buildExtraWhereSql` の引数型を `ExtraWhereQuery` として切り出し（`searchExecution` から再利用）。`buildContentPurgeStatements` の計数注記を「両バックエンドとも changes()」へ更新。
 
 ### transaction 方針の決定
 
 **「purge は 1 操作 = 1 transaction。唯一の例外は `clearAll`」** を両バックエンドで採用した。
 
-- 理由: purge は必ず「書き込みの合間に読む」— `SELECT changes()` が報告値を決め、cap 経路の `COUNT(*)` が次の文の LIMIT を決める。記録が 2 文の間に入り込めば、報告した件数と実際に消した集合が別のスナップショットを，也就は嘘になる。wrap しないとその窓が開く。
+- 理由: purge は必ず「書き込みの合間に読む」― `SELECT changes()` が報告値を決め、cap 経路の `COUNT(*)` が次の文の LIMIT を決める。記録が 2 文の間に入り込めば、報告した件数と実際に消した集合が別のスナップショットを，也就は嘘になる。wrap しないとその窓が開く。
 - 例外 `clearAll`: 読み書きが絡まない無条件 DELETE の列で、transaction で得られる一貫性がない。IDB 側は末尾の `PRAGMA wal_checkpoint(TRUNCATE)` が transaction 内で失敗するため、wrap すると片側だけ別の挙動になる。
 - 適用先: `purgeOldRecords` / `purgeContent` / `purgeAuditLog` を両バックエンドで wrap。`insertBatch` は元から両側 wrap 済みで据え置き。
 
@@ -131,8 +131,8 @@ Scenario: boot 手順が共通化されている
 
 ### テスト
 
-- `src/offscreen/__tests__/sqliteBackendUnification.test.ts`（16 tests, 新規）— スタブエンジン。ファイル名の単一宣言を `src/**/*.ts` の grep で固定、boot 手順の逐語一致（STATUS の行数取得は boot 外なので `PRAGMA compile_options` までを比較）、`createMigrationEngine` の null / undefined → null、purge 計数（`changes()` を算出超過とは異なる値で返し、両側がエンジン値をそのまま報告することを要求）、purge 3 種の transaction wrap と `clearAll` の非 wrap、search の文・バインド・行一致。
-- `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts`（15 tests, 新規）— better-sqlite3 の実エンジンで両バックエンドを production boot 経路から駆動。検索 6 ケース + FTS 経路の同定 + plain listing、CRUD（insert / batch 重複 / update / star / delete / count）、purge（content cap / content age / record cap / age+cap / starred 保護 / clear_all）。BDD の「purged 数が一致する」シナリオを実データで担保。
+- `src/offscreen/__tests__/sqliteBackendUnification.test.ts`（16 tests, 新規）― スタブエンジン。ファイル名の単一宣言を `src/**/*.ts` の grep で固定、boot 手順の逐語一致（STATUS の行数取得は boot 外なので `PRAGMA compile_options` までを比較）、`createMigrationEngine` の null / undefined → null、purge 計数（`changes()` を算出超過とは異なる値で返し、両側がエンジン値をそのまま報告することを要求）、purge 3 種の transaction wrap と `clearAll` の非 wrap、search の文・バインド・行一致。
+- `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts`（15 tests, 新規）― better-sqlite3 の実エンジンで両バックエンドを production boot 経路から駆動。検索 6 ケース + FTS 経路の同定 + plain listing、CRUD（insert / batch 重複 / update / star / delete / count）、purge（content cap / content age / record cap / age+cap / starred 保護 / clear_all）。BDD の「purged 数が一致する」シナリオを実データで担保。
 - 既存の byte 単位 SQL スナップショット（`opfs-search-skeleton-pin.test.ts`）は無改変で green のまま = 検索のユーザー可視挙動と SQL 文字列は変わっていない。
 
 ### コマンドと結果

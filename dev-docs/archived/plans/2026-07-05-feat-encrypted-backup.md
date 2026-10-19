@@ -101,7 +101,7 @@ describe('restoreDb', () => {
 - [ ] **Step 3: テストを実行して失敗を確認する**
 
 Run: `npx vitest run src/background/__tests__/sqliteClient-unit.test.ts -t restoreDb`
-Expected: FAIL — `client.restoreDb is not a function`
+Expected: FAIL ― `client.restoreDb is not a function`
 
 - [ ] **Step 4: SqliteClient.restoreDb を実装する**
 
@@ -173,7 +173,7 @@ describe('restoreDb', () => {
 - [ ] **Step 3: テスト実行し失敗を確認する**
 
 Run: `npx vitest run src/offscreen/__tests__/sqlite.test.ts -t restoreDb`
-Expected: FAIL — `restoreDb is not a function` または import エラー
+Expected: FAIL ― `restoreDb is not a function` または import エラー
 
 - [ ] **Step 4: sqlite.ts に restoreDb を実装する**
 
@@ -318,7 +318,7 @@ describe('handleRestore', () => {
 - [ ] **Step 3: テストを実行して失敗を確認する**
 
 Run: `npx vitest run src/offscreen/__tests__/opfsWorker.test.ts -t handleRestore`
-Expected: FAIL — `handleRestore is not defined` / importエラー
+Expected: FAIL ― `handleRestore is not defined` / importエラー
 
 - [ ] **Step 4: opfsWorker.ts に handleRestore を実装する**
 
@@ -511,7 +511,7 @@ describe('restore_db subtype', () => {
 - [ ] **Step 3: テストを実行して失敗を確認する**
 
 Run: `npx vitest run src/background/__tests__/dashboardSqliteHandlers.test.ts -t restore_db`
-Expected: FAIL — `restore_db` は `TOKEN_REQUIRED_SUBTYPES` に含まれておらず、switch文にもcaseがないため最初のテストは通るが2番目・3番目が失敗する
+Expected: FAIL ― `restore_db` は `TOKEN_REQUIRED_SUBTYPES` に含まれておらず、switch文にもcaseがないため最初のテストは通るが2番目・3番目が失敗する
 
 - [ ] **Step 4: restore_db を TOKEN_REQUIRED_SUBTYPES に追加する**
 
@@ -580,7 +580,7 @@ git commit -m "feat(sqlite): restore_db subtypeをdashboardSqliteハンドラに
 
 ---
 
-## Task 5: encryptedBackupService.ts — ペイロード構築・暗号化・復号ロジック
+## Task 5: encryptedBackupService.ts ― ペイロード構築・暗号化・復号ロジック
 
 **Files:**
 - Create: `src/dashboard/encryptedBackupService.ts`
@@ -692,7 +692,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 - [ ] **Step 3: テストを実行して失敗を確認する**
 
 Run: `npx vitest run src/dashboard/__tests__/encryptedBackupService.test.ts`
-Expected: FAIL — モジュールが存在しない
+Expected: FAIL ― モジュールが存在しない
 
 - [ ] **Step 4: encryptedBackupService.ts を実装する**
 
@@ -846,7 +846,7 @@ git commit -m "feat(backup): 履歴+設定の暗号化バックアップペイ�
 
 ---
 
-## Task 6: ダッシュボードUI — 「暗号化バックアップ」ボタンとモーダル
+## Task 6: ダッシュボードUI ― 「暗号化バックアップ」ボタンとモーダル
 
 **Files:**
 - Create: `src/dashboard/encryptedBackupPanel.ts`
@@ -962,7 +962,7 @@ describe('initEncryptedBackupPanel', () => {
 - [ ] **Step 5: テストを実行して失敗を確認する**
 
 Run: `npx vitest run src/dashboard/__tests__/encryptedBackupPanel.test.ts`
-Expected: FAIL — モジュールが存在しない
+Expected: FAIL ― モジュールが存在しない
 
 - [ ] **Step 6: encryptedBackupPanel.ts を実装する**
 

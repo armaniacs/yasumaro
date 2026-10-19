@@ -11,10 +11,10 @@
 
 ## 背景（2026-10-14 時点の現状）
 - `.github/workflows/release.yml:14` に `timeout-minutes: 15`。
-- CWS ステップの最悪ケース: OAuth curl max-time 30 秒（:99-103）+ upload curl max-time 300 秒（:110-115）+ ポーリング 30 回 ×（sleep 10 秒 + curl max-time 30 秒）= 1200 秒（:125-132）+ publish curl max-time 60 秒 ≈ 26.5 分。
-- Edge ステップの最悪ケース: upload curl max-time 300 秒（:194-198）+ `wait_for_operation` 2 ループ（各 30 回 × 40 秒 = 1200 秒、:172-188）+ publish 60 秒 ≈ 46 分。
+- CWS ステップの最悪ケース: OAuth curl max-time 30 秒（:99-103）+ upload curl max-time 300 秒（:110-115）+ ポーリング 30 回 ×（sleep 10 秒 + curl max-time 30 秒）= 1200 秒（:125-132）+ publish curl max-time 60 秒 ≒ 26.5 分。
+- Edge ステップの最悪ケース: upload curl max-time 300 秒（:194-198）+ `wait_for_operation` 2 ループ（各 30 回 × 40 秒 = 1200 秒、:172-188）+ publish 60 秒 ≒ 46 分。
 - ビルド最悪 ~10 分（3 × wxt zip、通常は実測 96 秒: v6.9.43 の release ジョブ run 38525033887 は 06:55:02→06:56:38）。
-- 合計最悪 ≈ 82.5 分 > 15 分。CWS ポーリングが伸びるだけで 15 分を消費し、`if: always() && hashFiles(...)` で独立に設計された Edge ステップ（:156）と AMO ステップ（:230）が途中で強制終了される。
+- 合計最悪 ≒ 82.5 分 > 15 分。CWS ポーリングが伸びるだけで 15 分を消費し、`if: always() && hashFiles(...)` で独立に設計された Edge ステップ（:156）と AMO ステップ（:230）が途中で強制終了される。
 - AMO ステップ（web-ext sign、`--approval-timeout 0`）は明示ループなしでもアップロード自体は無限待ち可能性があり、90 分でカバーされる。
 
 ## BDDシナリオ
@@ -29,7 +29,7 @@ Scenario: ストア API 遅延時も独立性が保たれる
   Then ジョブタイムアウト（90 分）は Edge の完走（最悪約 46 分）を阻害しない
 
 ## 受け入れ基準
-- [x] `timeout-minutes` が 15 から 90 になり、根拠（ポーリング最悪ケースの計算: CWS 26.5 分 + Edge 46 分 + ビルド余裕 ≈ 82.5 分をカバー）が行コメントで記録されている
+- [x] `timeout-minutes` が 15 から 90 になり、根拠（ポーリング最悪ケースの計算: CWS 26.5 分 + Edge 46 分 + ビルド余裕 ≒ 82.5 分をカバー）が行コメントで記録されている
 - [x] ステップ順序・ステップ内容・他のフィールドは一切変更していない（diff は timeout-minutes 行のみ）
 - [x] ポーリング最悪ケースの計算内訳が本 PBI に記録されている
 - [x] release.yml の YAML 構文が有効である

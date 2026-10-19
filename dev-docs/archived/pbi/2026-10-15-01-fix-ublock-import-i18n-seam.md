@@ -71,7 +71,7 @@ Scenario: console 警告が logger seam を経由する
 
 ## テスト戦略
 
-- unit: `src/dashboard/settings/ublockImport/__tests__/sourceManager.test.ts` — 既存 523 行スイートで回帰 pin。locale 解決の実測を先に確認し、必要なら en 解決の新規ケースを 2 件追加 (削除メッセージ・throw メッセージの en 断定)
+- unit: `src/dashboard/settings/ublockImport/__tests__/sourceManager.test.ts` ― 既存 523 行スイートで回帰 pin。locale 解決の実測を先に確認し、必要なら en 解決の新規ケースを 2 件追加 (削除メッセージ・throw メッセージの en 断定)
 - 辞書: 両 locale の JSON validity は `validate:json` が担保。新規キーの ja/en 存在は目視 + `jq` で確認
 - 手動確認 (DoD 分離): 実ブラウザ Load unpacked → dashboard → uBlock インポート → EN ロケールで削除・再読込失敗・保存の英語表示を確認、JA で従来表示を確認 (`dev-docs/TESTING_GUIDE.md` 手順)
 

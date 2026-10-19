@@ -1,4 +1,4 @@
-# PBI-1: SQLite への診断メタデータ永続化 — 設計書
+# PBI-1: SQLite への診断メタデータ永続化 ― 設計書
 
 ## 概要
 
@@ -54,8 +54,8 @@ fallback_triggered INTEGER DEFAULT 0,
 
 ### 除外したフィールド（YAGNI）
 
-- `ai_summary_cleansed_elements` — 診断用、価値が薄い
-- `ai_summary_cleansed_reason` / `ai_summary_cleansed_reasons` — 同上
+- `ai_summary_cleansed_elements` ― 診断用、価値が薄い
+- `ai_summary_cleansed_reason` / `ai_summary_cleansed_reasons` ― 同上
 - L0 抽出関連のニッチな値は extracted_* のみ保存
 
 ## マイグレーション戦略

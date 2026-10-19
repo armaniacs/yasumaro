@@ -13,9 +13,9 @@
 
 ## 背景（現状・証拠）
 
-- `src/utils/piiSanitizer.ts:57-69` — `sampleMiddleForScan`が100文字毎に末尾1文字を`#`に置換
-- `src/utils/piiSanitizer.ts:287,305` — 検出は`scanText`（`#`混じり）上で実行されるため`#`を跨ぐPIIは正規表現に一致しない
-- `src/utils/piiSanitizer.ts:322` — 値は原文から切り出すため、未検出PIIは生のまま残りAI送信される
+- `src/utils/piiSanitizer.ts:57-69` ― `sampleMiddleForScan`が100文字毎に末尾1文字を`#`に置換
+- `src/utils/piiSanitizer.ts:287,305` ― 検出は`scanText`（`#`混じり）上で実行されるため`#`を跨ぐPIIは正規表現に一致しない
+- `src/utils/piiSanitizer.ts:322` ― 値は原文から切り出すため、未検出PIIは生のまま残りAI送信される
 - コメント（`:320-321`「`#`はどのパターンにも含まれないため影響しない」）は境界跨ぎを見落とした誤読
 - 再現入力（nodeで同ロジック再現済み）: `'A'.repeat(150)+'user@example.com'+'B'.repeat(150)`系の空白なし長トークン
 - 反証検証SURVIVES＋目視確認済み
@@ -76,6 +76,6 @@ Scenario: ReDoS耐性が維持される
 
 ## Definition of Done
 
-- [x] 再現入力のPIIがマスクされる（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer.test.ts` 72/72 green — full `validate` run + targeted re-run）
-- [x] timeout系テストがgreen（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer-redos.test.ts` 18/18 green — full `validate` run + targeted re-run）
-- [x] `npm run validate`がgreen（2026-10-10 Task 6 second run: exit 0。Test Files 1053 passed / 1 skipped、Tests 15893 passed / 21 skipped。Task 4で失敗したparity 7件を含む全件green — Task 5のRust移植＋WASM再ビルド 7e328646 による。`npm run type-check` も exit 0。Task 4のBLOCKED注記は本runで解消）
+- [x] 再現入力のPIIがマスクされる（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer.test.ts` 72/72 green ― full `validate` run + targeted re-run）
+- [x] timeout系テストがgreen（2026-10-10 Task 4: `src/utils/__tests__/piiSanitizer-redos.test.ts` 18/18 green ― full `validate` run + targeted re-run）
+- [x] `npm run validate`がgreen（2026-10-10 Task 6 second run: exit 0。Test Files 1053 passed / 1 skipped、Tests 15893 passed / 21 skipped。Task 4で失敗したparity 7件を含む全件green ― Task 5のRust移植＋WASM再ビルド 7e328646 による。`npm run type-check` も exit 0。Task 4のBLOCKED注記は本runで解消）

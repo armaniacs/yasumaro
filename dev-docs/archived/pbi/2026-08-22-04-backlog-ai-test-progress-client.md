@@ -1,10 +1,10 @@
-# PBI (backlog): AI 接続テスト進捗 protocol の client 抽出 — 第2消費者出現時の引き金付き
+# PBI (backlog): AI 接続テスト進捗 protocol の client 抽出 ― 第2消費者出現時の引き金付き
 
 ## ユーザーストーリー
 開発者として、TEST_AI 進捗の broadcast listener・改造メッセージガード・runId 相関を `aiTestProgressClient` という deep module に抽出したい、なぜなら protocol 処理が generalSettings 専用モジュールに閉じ込められており、2つ目の UI 面（popup のクイックテスト等）が出た時点で複製を強いられるから
 
 ## 優先度
-- 順位: 4 / 4（pass 2）— **保留（backlog）**
+- 順位: 4 / 4（pass 2）― **保留（backlog）**
 - RICEスコア: 10（Reach=20 / Impact=0.5 / Confidence=50% / Effort=0.5人週）
 - 根拠: 現消費者は connectionTests.ts（434行）の1件のみで deletion test 不合格（1 adapter = hypothetical seam）。第2消費者の出現が real seam の成立条件。即時実施は YAGNI
 
@@ -54,7 +54,7 @@ Scenario: runId 相関とタイムアウト
 
 ## 技術的考慮事項
 - 依存関係: なし（保留中）。着手時は `aiTestResultView.ts`（formatting 専用、84行）との役割分担を維持し、client はデータ受信のみ・view は描画のみに分ける
-- 現状のガード実装: `connectionTests.ts:158-179` の `isAiTestProgressMessage`。ブロードキャストは全 extension context に届くため防御は必須 — 抽出時に基準を一切緩めない
+- 現状のガード実装: `connectionTests.ts:158-179` の `isAiTestProgressMessage`。ブロードキャストは全 extension context に届くため防御は必須 ― 抽出時に基準を一切緩めない
 - メッセージ定義: `AI_TEST_PROGRESS_MESSAGE_TYPE` は `background/aiTestProgressNotifier.ts` 由来。client はこの型のみに依存し、dashboard 固有の DOM に触れない
 
 ## Definition of Done（着手時）

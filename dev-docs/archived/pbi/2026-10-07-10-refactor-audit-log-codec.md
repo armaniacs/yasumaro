@@ -13,8 +13,8 @@
 
 ## 背景（file:line 現状）
 
-- 位置デコード: `src/offscreen/IdbVfsBackend.ts:376-388` — `id: Number(row[0])...` 手書き
-- 名前デコード: `src/offscreen/opfsWorker/auditHandlers.ts:36-49` — `id: Number(row.id)...` 手書き
+- 位置デコード: `src/offscreen/IdbVfsBackend.ts:376-388` ― `id: Number(row[0])...` 手書き
+- 名前デコード: `src/offscreen/opfsWorker/auditHandlers.ts:36-49` ― `id: Number(row.id)...` 手書き
 - 同一 statement: `'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)'`（`IdbVfsBackend.ts:358` = `auditHandlers.ts:18`、`queryPlan.ts:653-663` の buildAuditLogStatements）
 - 影響: audit_log への schema 変更（列追加等）が 2 つの読み手に手動反映必須。compile 時に一緒に壊れない
 

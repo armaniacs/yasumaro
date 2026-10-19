@@ -85,7 +85,7 @@ Expected: FAIL（`../debugModeStore.js` が存在しない）
 ```typescript
 // src/dashboard/panels/diagnostic/debugModeStore.ts
 /**
- * debugModeStore — thin persistence port for the dashboard debug mode flag.
+ * debugModeStore ― thin persistence port for the dashboard debug mode flag.
  * Centralizes the 'debugMode' storage key so neither the collector nor the
  * panel imports chrome.storage directly.
  */
@@ -142,7 +142,7 @@ vi.mock('../../dashboardSqliteService.js', () => ({
 ファイル末尾に新しい describe を追加:
 
 ```typescript
-describe('DiagnosticsCollector — snapshot extensions', () => {
+describe('DiagnosticsCollector ― snapshot extensions', () => {
   const baseDeps = () => ({
     getLogCount: vi.fn().mockResolvedValue({ data: 1 }),
     checkBuiltInAiAvailability: vi.fn().mockResolvedValue(null),
@@ -279,7 +279,7 @@ describe('DiagnosticsCollector — snapshot extensions', () => {
 - [x] **Step 2: テストが失敗することを確認**
 
 Run: `npx vitest run src/dashboard/panels/diagnostic/__tests__/DiagnosticsCollector.test.ts`
-Expected: FAIL — `settingsLoadFailed` / `extInfo` / `divergence` が undefined、リトライテストは call count 不一致
+Expected: FAIL ― `settingsLoadFailed` / `extInfo` / `divergence` が undefined、リトライテストは call count 不一致
 
 - [x] **Step 3: Collector を拡張する**
 
@@ -335,7 +335,7 @@ settings 取得を失敗フラグ付きに変更（Promise.all 内の該当行�
 ```typescript
     let settingsLoadFailed = false;
 
-    // Parallel gathering — faster than sequential awaits in the old panel
+    // Parallel gathering ― faster than sequential awaits in the old panel
     const [settings, sqliteStatus, logCountResult, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
       getSettingsFn().catch(() => {
         settingsLoadFailed = true;
@@ -536,7 +536,7 @@ Expected: FAIL（`../diagnosticsActions.js` が存在しない）
 ```typescript
 // src/dashboard/panels/diagnostic/diagnosticsActions.ts
 /**
- * diagnosticsActions — user-triggered operations for the diagnostics panel.
+ * diagnosticsActions ― user-triggered operations for the diagnostics panel.
  *
  * Owns every button click handler: the three connection tests, the OPFS spike,
  * the destructive maintenance operations (with confirm dialogs), and the
@@ -736,7 +736,7 @@ export function createDiagnosticActions(
       if ('data' in result) {
         const report = result.data;
         const header = `${report.passed ? '✓' : '✗'} strategy=${report.strategy} (${report.durationMs}ms)`;
-        const lines = report.steps.map(s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` — ${s.detail}` : ''}`);
+        const lines = report.steps.map(s => `  ${s.ok ? '✓' : '✗'} ${s.name}${s.detail ? ` ― ${s.detail}` : ''}`);
         opfsSpikeResult.textContent = [header, ...lines].join('\n');
         opfsSpikeResult.style.color = report.passed ? successColor() : errorColor();
       } else {
@@ -895,7 +895,7 @@ git commit -m "feat: diagnosticsActions を新設しボタンハンドラ群を�
 ```typescript
 // src/dashboard/panels/diagnostic/diagnosticsPanel.ts
 /**
- * diagnosticsPanel — render-only panel over DiagnosticsSnapshot.
+ * diagnosticsPanel ― render-only panel over DiagnosticsSnapshot.
  *
  * Data collection happens exclusively inside DiagnosticsCollector.collect().
  * This file renders each section from the snapshot and wires the interactive
@@ -1102,7 +1102,7 @@ function renderSqliteSection(el: HTMLElement | null, snap: DiagnosticsSnapshot):
         ? ` (${new Date(st.opfsMigrationV2CompletedAt).toLocaleString()})`
         : '';
       const count = st.opfsMigrationV2RecordCount
-        ? ` — ${st.opfsMigrationV2RecordCount} records`
+        ? ` ― ${st.opfsMigrationV2RecordCount} records`
         : '';
       el.appendChild(makeStatRow(migrationLabel, `✓ Completed${completed}${count}`));
     } else if (st.opfsMigrationV2LastAttemptedAt) {
@@ -1172,7 +1172,7 @@ export function createDiagnosticsPanel(): PanelLifecycle {
     if (sections.diagDeficiencyStats && snapshot.sqlite) {
       const deficiencies = snapshot.deficiencies;
       if (deficiencies.length === 0) {
-        sections.diagDeficiencyStats.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies — all features are enabled.', '✓'));
+        sections.diagDeficiencyStats.appendChild(makeStatRow(getMessage('diagDeficiencyNone') || 'No deficiencies ― all features are enabled.', '✓'));
       } else {
         for (const item of deficiencies) {
           const severityLabel = getSeverityLabel(item.severity);
@@ -1347,7 +1347,7 @@ git mv pbi/2026-08-22-02-refactor-diagnostics-panel-deepening.md dev-docs/archiv
 2. アーカイブ履歴の「2026-08-22 アーキテクチャ深掘り pass2 レジストリ完成 + MigrationService 分割」セクションに追記:
 
 ```markdown
-- 2026-08-22-02-refactor-diagnostics-panel-deepening.md (RICE 160 — diagnosticsPanel 683行を collect() → DiagnosticsSnapshot → render の1 seam に再構成。収集は collector に完全集約（extInfo/divergence/settingsLoadFailed 追加、sqlite リトライ内蔵）、操作は diagnosticsActions へ分離、debugMode は port 経由。パネル400行未満・getSettings/chrome.storage 直 import ゼロ)
+- 2026-08-22-02-refactor-diagnostics-panel-deepening.md (RICE 160 ― diagnosticsPanel 683行を collect() → DiagnosticsSnapshot → render の1 seam に再構成。収集は collector に完全集約（extInfo/divergence/settingsLoadFailed 追加、sqlite リトライ内蔵）、操作は diagnosticsActions へ分離、debugMode は port 経由。パネル400行未満・getSettings/chrome.storage 直 import ゼロ)
 ```
 
 - [x] **Step 4: コミット**

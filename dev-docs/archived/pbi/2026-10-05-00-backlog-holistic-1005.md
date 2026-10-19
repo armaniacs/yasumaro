@@ -5,7 +5,7 @@
 - holistic-code-improvement skill による大局的レビューラウンド（6.9.36 時点）。
 - 4 領域の地図用 agent（dashboard / popup+content / background+offscreen+messaging / shared infra）の並列発見をテーマ TOP に統合。
 - 差分スコープ: 過去台帳（holistic-1003b・adversarial-1003・holistic-1001・archloop-1001・leftover-1002）で閉じたテーマは再レビュー対象外。進行中 PBI 11 件は全件ゲート付き/監視中/トリガー待ちのため候補に含めない（着手可能 0 件）。
-- 実残 32 件を NN01–NN32 に起票。本台帳は RICE 採点・同点の順位根拠・依存・バッチ計画の SSOT。
+- 実残 32 件を NN01-NN32 に起票。本台帳は RICE 採点・同点の順位根拠・依存・バッチ計画の SSOT。
 - テーマの file:line はフェーズA 受領時に統合側が実測で裏取り済み。実装着手時は行番号がズレるため「関数名+概略位置」で読むこと。
 
 ## RICE 採点表（RICE 降順）
@@ -49,12 +49,12 @@ RICE = R × I × C / E。Reach は 1 年間の保守作業での関与頻度（1
 
 ## 同点の順位根拠（tie-break）
 
-- **8.0（05 と 06）**: NN05 先行 — Reach 大（8 vs 4）。入口の dynamic import 失敗はログすら残らない検出不能性が、ポート表の drift より先行する。
-- **6.0（09 と 10）**: NN09 先行 — Reach 6 vs 3。status 経路は popup のほぼ全表示に波及する。
+- **8.0（05 と 06）**: NN05 先行 ― Reach 大（8 vs 4）。入口の dynamic import 失敗はログすら残らない検出不能性が、ポート表の drift より先行する。
+- **6.0（09 と 10）**: NN09 先行 ― Reach 6 vs 3。status 経路は popup のほぼ全表示に波及する。
 - **5.0（17）と 4.0 群**: 純 RICE では NN17(5.0) > NN11(4.0)。**依存で順序を逆転**（下記逸脱1）。表中は RICE 降順を維持し、実行順は W 計画が正。
 - **4.0（11 / 12 / 13 / 14 / 15 / 16 / 26 の 7-way）**: 種別 fix > refactor → 実害有無 → Reach 降順。順: 11（並行ダウンロード成立・fix）→ 12（真夜中フック不成立・fix）→ 13（契約乖離・R5）→ 26（設定反映漏れ・R5）→ 14 / 15 / 16（R4・S 規模）。
-- **3.2（18 と 22）**: NN22 先行 — リスク軽減効果。`providedToken === valid` の弱い比較が本番分岐に残る方が、destroy 到達不能（リークは漸進的）より先行。
-- **3.0（23 と 27）**: NN27 先行 — 型ガード喪失は新規パネル追加時に発火し、切断文言コピーはパターン追加時のみ。
+- **3.2（18 と 22）**: NN22 先行 ― リスク軽減効果。`providedToken === valid` の弱い比較が本番分岐に残る方が、destroy 到達不能（リークは漸進的）より先行。
+- **3.0（23 と 27）**: NN27 先行 ― 型ガード喪失は新規パネル追加時に発火し、切断文言コピーはパターン追加時のみ。
 - **2.0（19 / 24 / 25）**: Reach 降順（19=5 → 25=5 → 24=3）。同 Reach の 19 と 25 は Confidence 同値のため 19 先行（保存パイプラインは他候補の解放に効く）。
 - **1.6（30 / 31 / 32）**: NN32 は NN09 依存のため末端。30 → 31 → 32 の順で残す。
 
@@ -65,17 +65,17 @@ RICE = R × I × C / E。Reach は 1 年間の保守作業での関与頻度（1
 
 ## 依存マップ（実行順の制約）
 
-- **connectionTests チェーン（直列）**: 11 → 17 — 同一ファイル `connectionTests.ts`。
-- **compositionManifest チェーン（直列）**: 22 → 26 — 同一ファイル。
-- **messageTransport（直列）**: 13 → 23 — 同一ファイル `messageTransport.ts`。
-- **settingsPipeline / fieldDescriptor チェーン（直列）**: 07 → 19、07 → 20 — `settingsPipeline.ts` と `fieldDescriptor.ts` を 07 が先行占有。
-- **destroy 到達路**: 18 → 29 — 29 の新規約 `destroy()` が実際に生きるよう、18 で到達路を先に確定する。
-- **popup status / テスト群**: 09 → 32、09 → 28 — `recordSession.ts` の経路競合と status class pin 更新。
-- **i18n mock**: 21 → 28 — 同一の popup テストファイル群。21 の機械置換を先に行い、28 で DOM 脚手架だけを再構成する。
-- **fieldDescriptor**: 07 → 20 — 同一ファイル。
+- **connectionTests チェーン（直列）**: 11 → 17 ― 同一ファイル `connectionTests.ts`。
+- **compositionManifest チェーン（直列）**: 22 → 26 ― 同一ファイル。
+- **messageTransport（直列）**: 13 → 23 ― 同一ファイル `messageTransport.ts`。
+- **settingsPipeline / fieldDescriptor チェーン（直列）**: 07 → 19、07 → 20 ― `settingsPipeline.ts` と `fieldDescriptor.ts` を 07 が先行占有。
+- **destroy 到達路**: 18 → 29 ― 29 の新規約 `destroy()` が実際に生きるよう、18 で到達路を先に確定する。
+- **popup status / テスト群**: 09 → 32、09 → 28 ― `recordSession.ts` の経路競合と status class pin 更新。
+- **i18n mock**: 21 → 28 ― 同一の popup テストファイル群。21 の機械置換を先に行い、28 で DOM 脚手架だけを再構成する。
+- **fieldDescriptor**: 07 → 20 ― 同一ファイル。
 - 上記以外（01 / 02 / 03 / 04 / 05 / 06 / 08 / 10 / 12 / 14 / 15 / 16 / 21 / 24 / 25 / 27 / 30 / 31）は依存なし・並列可。
 
-## バッチ計画（W1–W7・ファイル排他）
+## バッチ計画（W1-W7・ファイル排他）
 
 | Wave | NN | 内容 |
 |---|---|---|
@@ -93,7 +93,7 @@ RICE = R × I × C / E。Reach は 1 年間の保守作業での関与頻度（1
 
 | NN | 状態 |
 |---|---|
-| 01–32 | ✅ 実装・アーカイブ済み（最終ゲート green） |
+| 01-32 | ✅ 実装・アーカイブ済み（最終ゲート green） |
 
 ## 台帳送り（積み残し → 次ラウンド予約）
 

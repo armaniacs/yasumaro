@@ -105,13 +105,13 @@ Adjust the following in the dashboard's **Recording Conditions** panel:
 | Setting | Range | Default |
 |---------|-------|---------|
 | **Min Visit Duration** | 1 second or more | 5 seconds |
-| **Min Scroll Depth** | 0–100% | 50% |
-| **Max Tokens Per Prompt** | 10–16,000 | 1,000 |
-| **AI Timeout** | 10–600 seconds, blank for auto | Auto |
+| **Min Scroll Depth** | 0-100% | 50% |
+| **Max Tokens Per Prompt** | 10-16,000 | 1,000 |
+| **AI Timeout** | 10-600 seconds, blank for auto | Auto |
 | **Max Monthly Tokens** | 0 or more (no upper limit; 0 = unlimited) | 1,000,000 |
-| **AI Rate Limit** (requests/min) | 1–60 | 10 |
-| **OpenAI Max Content Characters** | 1,000–100,000 | 10,000 |
-| **Gemini Max Content Characters** | 1,000–100,000 | 30,000 |
+| **AI Rate Limit** (requests/min) | 1-60 | 10 |
+| **OpenAI Max Content Characters** | 1,000-100,000 | 10,000 |
+| **Gemini Max Content Characters** | 1,000-100,000 | 30,000 |
 | **Obsidian Host** | Obsidian REST API hostname | 127.0.0.1 |
 | **Gemini API Version** | Gemini API version string | v1beta |
 

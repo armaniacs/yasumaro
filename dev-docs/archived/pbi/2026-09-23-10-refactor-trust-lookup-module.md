@@ -1,4 +1,4 @@
-# PBI 2026-09-23-10 — TrustLookup Module（lookup 二重経路＋sync 双子の統一）
+# PBI 2026-09-23-10 ― TrustLookup Module（lookup 二重経路＋sync 双子の統一）
 
 **優先度**: 順位 10 / RICE 6.0（Reach 6 × Impact 2 × Confidence 50% ÷ Effort 1.0 人週）
 **根拠**: `checkDomain`（TrustDecision 経由＋fallback）と `getTrustLevelDisplay`（admin+policy 直呼び）の 2 経路が乖離しうる。単一 async interface に統一し、lookup×alert 行列を storage mock なしの約 12 テストに畳む。Confidence 50% は sync 呼び出し側の移行コストのため。
@@ -6,7 +6,7 @@
 
 ## 背景
 
-`TrustChecker.checkDomain`（trustChecker.ts:161-186）は dynamic `TrustDecision.isTrusted()`＋nested try/catch fallback（`getTrustDbAdmin()`＋`getTrustPolicy().isDomainTrusted()`）で解決する一方、`getTrustLevelDisplay`（:279-303）は `TrustDecision` を bypass して admin+policy を直呼びする。permissionManager/host-permission leg は片方の経路でのみ走る。interface には sync/async 双子（`getAlertConfig` :134 vs `getAlertConfigSync` :145、`shouldSaveAbortedPages` :347 vs `…Sync` :355）と SafetyMode↔TrancoTier 結合（:316-332）が混入し、`TrustDecision` コンストラクタ（:40-80）は 2 つの legacy-compat 分岐を抱える。
+`TrustChecker.checkDomain`（trustChecker.ts:161-186）は dynamic `TrustDecision.isTrusted()`＋nested try/catch fallback（`getTrustDbAdmin()`＋`getTrustPolicy().isDomainTrusted()`）で解決する一方、`getTrustLevelDisplay`（:279-303）は `TrustDecision` を bypass して admin+policy を直呼びする。permissionManager/host-permission leg は片方の経路でのみ走る。interface には sync/async 双子（`getAlertConfig` :134 vs `getAlertConfigSync` :145、`shouldSaveAbortedPages` :347 vs `…Sync` :355）と SafetyMode⇔TrancoTier 結合（:316-332）が混入し、`TrustDecision` コンストラクタ（:40-80）は 2 つの legacy-compat 分岐を抱える。
 
 ## 実装戦略
 

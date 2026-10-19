@@ -93,12 +93,12 @@ grep -rn "module_or_path: bytes" src/background src/dashboard src/utils src/wasm
 
 ### 証拠
 
-- `src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts:18-30` — `fileURLToPath` とローカル `initPromise` メモと `readFile` から `initWasmModule({ module_or_path })` を呼ぶ13行手書き。`sanitizePii` を glue から直接 import（`vi.importActual` ではなく）しており、移行後も `return` 形状は維持すること
-- `src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts:21-33` — 同一形状の残サイト。`vi.importActual` spread で `initTagCooccurWasm` だけを上書きしており、移行後も `return` 形状は維持すること
-- `src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts:15-20` — 移行済み創型。`createNodeWasmInit(initWasmModule, new URL(...))` の6行に集約済み。2ファイルの置換はこの形式をテンプレートにすること
-- `src/wasm/testing/initWasmForNode.ts:47-58` — メモ factory の所有者。`createNodeWasmInit` が singleton 意味論を閉じ込めており、呼び出し側に `initPromise` を残さないこと
-- `wasm/tag-cooccur/src/cooccur.rs:18-19` — `The predicate below spells out` の記述が共有クレートへの委譲前前提のまま。委譲に更新すること
-- `wasm/js-strings/src/jsstring.rs:1-2` — `shared by the textrank and sentence-dedup WASM cores` の記述が `tag-cooccur` と `pii-sanitizer` の追加前前提のまま。委譲先一覧に追加すること
+- `src/background/pipeline/__tests__/piiSanitizeHybrid.wasm-success.test.ts:18-30` ― `fileURLToPath` とローカル `initPromise` メモと `readFile` から `initWasmModule({ module_or_path })` を呼ぶ13行手書き。`sanitizePii` を glue から直接 import（`vi.importActual` ではなく）しており、移行後も `return` 形状は維持すること
+- `src/dashboard/__tests__/tagCooccurrenceHybrid.wasm-success.test.ts:21-33` ― 同一形状の残サイト。`vi.importActual` spread で `initTagCooccurWasm` だけを上書きしており、移行後も `return` 形状は維持すること
+- `src/utils/__tests__/contentDedupHybrid.wasm-success.test.ts:15-20` ― 移行済み創型。`createNodeWasmInit(initWasmModule, new URL(...))` の6行に集約済み。2ファイルの置換はこの形式をテンプレートにすること
+- `src/wasm/testing/initWasmForNode.ts:47-58` ― メモ factory の所有者。`createNodeWasmInit` が singleton 意味論を閉じ込めており、呼び出し側に `initPromise` を残さないこと
+- `wasm/tag-cooccur/src/cooccur.rs:18-19` ― `The predicate below spells out` の記述が共有クレートへの委譲前前提のまま。委譲に更新すること
+- `wasm/js-strings/src/jsstring.rs:1-2` ― `shared by the textrank and sentence-dedup WASM cores` の記述が `tag-cooccur` と `pii-sanitizer` の追加前前提のまま。委譲先一覧に追加すること
 
 ### 実装手順
 

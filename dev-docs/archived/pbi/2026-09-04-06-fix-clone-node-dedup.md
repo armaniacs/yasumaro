@@ -11,8 +11,8 @@
 - `src/utils/contentExtractor/index.ts:179` `const clone = firstCandidate.cloneNode(true) as Element;`（cleanseEnabled 経路）
 - `index.ts:267` `const clone = firstCandidate.cloneNode(true) as Element;`（AI 要約のみ経路）
 - `index.ts:328` `const clone = document.body.cloneNode(true) as Element;`（候補なしフォールバック）
-- `src/utils/aiSummaryCleaner/index.ts:127` `const clone = element.cloneNode(true) as Element;` — **呼び出し側が既に clone を渡しているのに内部で再クローン**
-- `aiSummaryCleaner/index.ts:67` `:92` `new Blob([element.outerHTML || '']).size` — HTML 全体シリアライズ 2 回（PBI 04 と関連）
+- `src/utils/aiSummaryCleaner/index.ts:127` `const clone = element.cloneNode(true) as Element;` ― **呼び出し側が既に clone を渡しているのに内部で再クローン**
+- `aiSummaryCleaner/index.ts:67` `:92` `new Blob([element.outerHTML || '']).size` ― HTML 全体シリアライズ 2 回（PBI 04 と関連）
 
 ## BDD受け入れシナリオ
 
@@ -83,7 +83,7 @@ sed -n '55,135p' src/utils/aiSummaryCleaner/index.ts
 5. 新旧一致テストを厚めに
 
 ### 落とし穴
-- `cleanseAISummaryContent` が返す `preCleanseText`（フォールバック用）は「クレンジング前のテキスト」。内部クローンを外すと `element.textContent` を**変更前に**キャプチャする必要がある（`runAiSummaryCleanse:55` は既に `preCleanseText = clone.textContent` を先に取っている — 順序を維持）
+- `cleanseAISummaryContent` が返す `preCleanseText`（フォールバック用）は「クレンジング前のテキスト」。内部クローンを外すと `element.textContent` を**変更前に**キャプチャする必要がある（`runAiSummaryCleanse:55` は既に `preCleanseText = clone.textContent` を先に取っている ― 順序を維持）
 - `countAISummaryTargets` と `cleanseAISummaryContent` でコードパスが分岐している場合、count 側に `alreadyCloned` を誤って適用しない
 - E2E の要約テキスト（`recording-traceId.spec.ts` 等）が変わらないこと
 

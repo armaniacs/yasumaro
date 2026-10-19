@@ -253,7 +253,7 @@ Scenario: owner の引き継ぎ中に Service Worker が終了した場合
 - [x] owner 確定ごとにユーザー向け通知が1回だけで、二重通知がない（offline owner 期間は通知なし。終端失敗 handover 時に新 i18n キー `pendingRecoveryReady`（ja/en）で 1 回通知）
 - [x] queue の50KB / 200件 / TTL 7日 / 1 cycle 20件、5分 alarm、3回再試行の既存制約が維持される（既存テスト green で確認）
 - [x] API key、summary 本文、content が recovery log に出ない（handover は payload の url/title のみ）
-- [x] すべての関連 BDD シナリオが E2E、統合テスト、単体テストで自動検証され、パスする（統合・単体で固定: recordingOutcome 4 新規 + offlineQueueProcessor 4 新規 + recoveryClaimStore 8 新規。**E2E は未実施** — 本番配線の E2E は次ラウンドでの追加を残す）
+- [x] すべての関連 BDD シナリオが E2E、統合テスト、単体テストで自動検証され、パスする（統合・単体で固定: recordingOutcome 4 新規 + offlineQueueProcessor 4 新規 + recoveryClaimStore 8 新規。**E2E は未実施** ― 本番配線の E2E は次ラウンドでの追加を残す）
 - [x] `recordingOutcome.test.ts:257-267` を含む既存テストの期待値が新しい owner 裁定に合わせて更新される（既存「normal RETRY failure still registers the pending page」は enqueue info なしのケースとして新裁定でも正しいため維持。enqueue ありのケースを新規追加）
 - [x] 依存 PBI 11 と後続 PBI 13 の依存関係が実装計画に反映されている（11 の `resolveFailure` / `shouldEnqueueForOffline` を前提に維持。13 は owner 裁定が安定した時点で着手可能に）
 - [x] `async` / `await` と ESM の `.js` import の規約が実装全体で維持されている

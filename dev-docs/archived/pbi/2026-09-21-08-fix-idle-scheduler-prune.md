@@ -66,10 +66,10 @@ Scenario: cancel 済み id への二重 delete は安全である
 ## 実装者向け注記
 
 ### 現状の証拠
-- `src/content/contentKernel.ts:34-36` — IdleScheduler が `timeoutIds` / `idleIds` の2つの Set で追跡する
-- `src/content/contentKernel.ts:40-55` — schedule が `timeoutIds.add`（delayMs 経路・fallback 経路）と `idleIds.add`（requestIdleCallback 経路）を行う
-- `src/content/contentKernel.ts:57-83` — 現状の delete は cancel 経路のみで、発火経路に cleanup が存在しない
-- `src/content/contentKernel.ts:426-429` — 発火済み one-shot の一例（遅延 untrusted-scroll チェック）。周期チェックと同様に発火後も id が残留する
+- `src/content/contentKernel.ts:34-36` ― IdleScheduler が `timeoutIds` / `idleIds` の2つの Set で追跡する
+- `src/content/contentKernel.ts:40-55` ― schedule が `timeoutIds.add`（delayMs 経路・fallback 経路）と `idleIds.add`（requestIdleCallback 経路）を行う
+- `src/content/contentKernel.ts:57-83` ― 現状の delete は cancel 経路のみで、発火経路に cleanup が存在しない
+- `src/content/contentKernel.ts:426-429` ― 発火済み one-shot の一例（遅延 untrusted-scroll チェック）。周期チェックと同様に発火後も id が残留する
 
 ## Definition of Done
 - [x] 全BDDシナリオ実装+パス

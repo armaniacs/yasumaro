@@ -1,4 +1,4 @@
-# PBI: Firefox AMO 公開 — アドオンストアへの申請と署名配布
+# PBI: Firefox AMO 公開 ― アドオンストアへの申請と署名配布
 
 ## ステータス: ✅ 公開済み（2026-09-23 審査通過）
 
@@ -13,7 +13,7 @@ main は 6.9.26 まで進んでおり、AMO への提出は 6.9.17 で止まっ�
 
 Firefox ユーザーとして、addons.mozilla.org（AMO）から通常インストールしたい。なぜなら Developer Edition や署名無効化の手順なしに、安定版 Firefox へ導入したいから。
 
-## 優先度（参考値 — 着手時に再採点すること）
+## 優先度（参考値 ― 着手時に再採点すること）
 
 - RICEスコア（参考）: 12.0（Reach=30 / Impact=2 / Confidence=40% / Effort=2人日）
 - 根拠: 到達範囲は Firefox ユーザー全体だが、審査対応の工数不確実性が大きいため Confidence 40%。Effort には審査待ち・指摘対応のバッファを含む。**これは着手順を決める値ではない**（着手条件未達のため）
@@ -22,9 +22,9 @@ Firefox ユーザーとして、addons.mozilla.org（AMO）から通常インス
 
 - [x] PBI 09・10・11 が完了していること
 - [x] PBI 11 の配布方針で AMO 採用が決定していること（2026-09-23 ユーザー指示）
-- [x] v6.9.0 の Firefox 対応が安定稼働していること（実機 QA 済み — 4 不具合修正済み）
+- [x] v6.9.0 の Firefox 対応が安定稼働していること（実機 QA 済み ― 4 不具合修正済み）
 
-## 着手記録（2026-09-23 — 提出前修正）
+## 着手記録（2026-09-23 ― 提出前修正）
 
 addons-linter（AMO アップロード検証と同一チェッカー）とビルド検証の結果:
 
@@ -32,7 +32,7 @@ addons-linter（AMO アップロード検証と同一チェッカー）とビル
 - **`MISSING_DATA_COLLECTION_PERMISSIONS` 警告**: AMO データ開示ポリシー対応として `browser_specific_settings.gecko.data_collection_permissions: { required: ['none'] }` を追加（PRIVACY.md の「開発者への送信なし・ローカル完結、AI 送信はユーザー設定先のみ」主張と整合）
 - **`strict_min_version: '140.0'`**: `data_collection_permissions` は Firefox 140 導入キーで、128 など低い最小バージョンを宣言すると AMO 検証が「未対応キー」として警告するため 140 に設定。本ビルドが必要とする機能（MV3 event page・declarativeNetRequest・module workers）はすべて 140 未満で利用可能
 - **Firefox for Android は対象外**: Android は MV3 event page background が非対応で本拡張機能は動作しない。AMO 提出時の互換対象は**デスクトップ Firefox のみ**を選択すること（Android 向けの linter 警告 1 件は想定内）
-- **検証結果（2026-09-23 2 回目）**: addons-linter **0 errors / 0 warnings / 0 notices**。初回 lint で残った 38 警告を解消 — `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION` は `gecko_android.strict_min_version: '142.0'`（Android は 142 で data_collection_permissions 対応。デスクトップは 140 維持）、`UNSAFE_VAR_ASSIGNMENT` 37 件は動的 innerHTML 代入の排除（新設 `src/utils/htmlFragment.ts` `setElementHtml()` — DOMParser + テーブル文脈 wrap + replaceChildren、script 除去。no-unsanitized ルールは全エスケープ関数を無効化しているため DOM API 化が唯一の解消路）。`npm run validate` green（13,209 passed）
+- **検証結果（2026-09-23 2 回目）**: addons-linter **0 errors / 0 warnings / 0 notices**。初回 lint で残った 38 警告を解消 ― `KEY_FIREFOX_ANDROID_UNSUPPORTED_BY_MIN_VERSION` は `gecko_android.strict_min_version: '142.0'`（Android は 142 で data_collection_permissions 対応。デスクトップは 140 維持）、`UNSAFE_VAR_ASSIGNMENT` 37 件は動的 innerHTML 代入の排除（新設 `src/utils/htmlFragment.ts` `setElementHtml()` ― DOMParser + テーブル文脈 wrap + replaceChildren、script 除去。no-unsanitized ルールは全エスケープ関数を無効化しているため DOM API 化が唯一の解消路）。`npm run validate` green（13,209 passed）
 - **dist/ の古い署名成果物**（`yasumaro-6.7.81.zip`・`yasumaro-public.pem` がプロジェクトルートに残留）は sources zip 除外済み。AMO への旧バージョン（6.7.x 系）申請履歴の有無はユーザー側で要確認
 
 ### 完了記録（2026-09-26 確認）

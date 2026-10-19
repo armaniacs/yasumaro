@@ -53,9 +53,9 @@ Scenario: 層規約が機械的に保護される
   - `src/background/compositionManifest.ts:38`（`hasPrivacyConsent`）
   - `src/background/consentBadge.ts:9`（`hasPrivacyConsent`）
   - `src/background/handlers/lifecycleHandlers.ts:10`（`migrateLegacyPrivacyConsent`）
-- 実体: `rg -n "export (async )?function" src/popup/privacyConsent.ts` — `hasPrivacyConsent:156`・`migrateLegacyPrivacyConsent:176`
-- テストのmock更新が必要: `rg -ln "popup/privacyConsent" src/background/` — `__tests__/service-worker.test.ts:477,522`、`__tests__/consentBadge.test.ts:13`、`__tests__/createBackgroundServices.test.ts:51`、`__tests__/backgroundComposition.test.ts:60`、`handlers/__tests__/lifecycleHandlers-ollamaOriginRule.test.ts:52`、`handlers/__tests__/lifecycleHandlers-pendingQueue.test.ts:53` の `vi.mock` パスを新配置に合わせる
-- 層規約: `rg -n "逆方向依存" dev-docs/LAYERS.md`（110行目）— utils→background 禁止の前例文言。background→UI層の禁止を同節に追記する
+- 実体: `rg -n "export (async )?function" src/popup/privacyConsent.ts` ― `hasPrivacyConsent:156`・`migrateLegacyPrivacyConsent:176`
+- テストのmock更新が必要: `rg -ln "popup/privacyConsent" src/background/` ― `__tests__/service-worker.test.ts:477,522`、`__tests__/consentBadge.test.ts:13`、`__tests__/createBackgroundServices.test.ts:51`、`__tests__/backgroundComposition.test.ts:60`、`handlers/__tests__/lifecycleHandlers-ollamaOriginRule.test.ts:52`、`handlers/__tests__/lifecycleHandlers-pendingQueue.test.ts:53` の `vi.mock` パスを新配置に合わせる
+- 層規約: `rg -n "逆方向依存" dev-docs/LAYERS.md`（110行目）― utils→background 禁止の前例文言。background→UI層の禁止を同節に追記する
 - スコープ補正: 当初「層逆転」と呼ばれたが実態は同意ロジック1モジュールへの4箇所依存であり、UI描画コードへの依存ではない。移動対象を `privacyConsent.ts` の同意状態ロジックに限定する
 
 ## Definition of Done

@@ -72,7 +72,7 @@ sed -n '285,295p' src/background/ai/providers/ProviderStrategy.ts
 4. ProviderStrategy の dynamic import を静的に戻し、provider 全テスト green
 
 ### 落とし穴
-- `PROVIDER_CATALOG` を import しているテストモックが多数ある — re-export を維持すれば無修正で通る。削除しないこと
+- `PROVIDER_CATALOG` を import しているテストモックが多数ある ― re-export を維持すれば無修正で通る。削除しないこと
 - allow 述語の整数/hex/IPv4 デコード分岐（2026-09-03-01 の 38 件）は振る舞いを変えないこと。テーブル移行は述語コードの移動に留める
 - `getAllowedUrls()` の chrome.storage 読取は urlWhitelist 側の責務のまま。テーブルは純粋データ＋純粋述語に限定する
 

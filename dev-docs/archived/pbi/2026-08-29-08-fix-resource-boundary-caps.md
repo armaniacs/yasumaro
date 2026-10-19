@@ -1,14 +1,14 @@
 # PBI: リソース上限とライフサイクルの境界強制（VULN-004/006/007/024/041/051/053, CWE-400/459）
 
 ## ユーザーストーリー
-利用者として、拡張のストレージとメモリが長期利用で際限なく膨らんだり、悪意あるページ内容が二次計算を爆発させたりしないようにしたい、なぜなら自動エクスポートが削除されず、purge が死蔵コードで、書き込み境界に上限がなく、AI タグ・文リストが O(n²) 計算に無制限に入るから
+利用者として、拡張のストレージとメモリが長期利用で際限なく膨らんだり、悪意あるページ内容が二次計算を爆発させたりしないようにしたい、なぜなら自動エクスポートが削除されず、purge が死蔵コードで、書き込み境界に上限がなく、AI タグ・文リストが O(n^2) 計算に無制限に入るから
 
 ## ビジネス価値
 - VULN-004: 自動 `local_export_*` ダウンロードが削除されず 8.9GB/5年モデル（実証）
 - VULN-006: `clearExpiredPages` が 0 呼び出しで期限切れ pending が永久滞留（実証: 1000 件滞留）
 - VULN-007: 攻撃者 Cache-Control 値が無 cap で storage.session に永続化（実証: 6 応答で quota 超過）
 - VULN-024: payloadGuard が 3/7 TEXT 列のみ cap（実証: 1000MB tags 通過）
-- VULN-041/051/053: 無 cap タグ/文が O(n²) 計算に流入（実証: x4 n で x29 時間、116GB edge model）
+- VULN-041/051/053: 無 cap タグ/文が O(n^2) 計算に流入（実証: x4 n で x29 時間、116GB edge model）
 - 測定方法: 書き込み境界での cap 強制、purge 配線、schema 駆動 guard の 3 点
 
 ## 優先度
@@ -77,7 +77,7 @@ Scenario: 無制限タグ/文は二次計算に入る前に cap される
 - **Red-Green-Refactor**: cap 値は既存 precedent に合わせ、新規判断を持ち込まない
 
 ## 見積もり
-2pt（要チームでの見積もり — 配線 2、truncate 1、guard 再構築 1、cap 3）
+2pt（要チームでの見積もり ― 配線 2、truncate 1、guard 再構築 1、cap 3）
 
 ## 技術的考慮事項
 - 依存関係: Wave 2。PBI 05（limit clamp）とは別ファイル（conflict なし）
@@ -107,7 +107,7 @@ sed -n '118,168p' src/offscreen/sqliteMessageHandlers.ts
 ### 落とし穴
 - payloadGuard の schema 駆動化で `changes`（update 用）経路もカバーすること（既存は INSERT 系のみ）
 - retention の削除は chrome.downloads.removeFile + removeDownload の API 制約を確認（ID の記録形式）
-- 文数 cap は 64KB truncation 後に効く（sentence 数は budget 依存）— cap は minLength 越え文に限定すること
+- 文数 cap は 64KB truncation 後に効く（sentence 数は budget 依存）― cap は minLength 越え文に限定すること
 
 ## Definition of Done
 - [ ] 全 BDD シナリオが自動テストとして実装されパスする

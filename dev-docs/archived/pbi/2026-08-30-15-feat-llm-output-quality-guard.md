@@ -6,7 +6,7 @@
 
 ## 優先度
 
-- 順位: 15 / 15（ファイル名連番。安全装置のため実際の着手は前倒し推奨 — `2026-08-30-00-backlog-cleansing.md` の推奨実行順を参照。29系 Wave 1 と並行可）
+- 順位: 15 / 15（ファイル名連番。安全装置のため実際の着手は前倒し推奨 ― `2026-08-30-00-backlog-cleansing.md` の推奨実行順を参照。29系 Wave 1 と並行可）
 - RICE: Reach 7 / Impact 3 / Confidence 0.8 / Effort 2日 = 8.4
 - 根拠: 画像の事例は gemma3:1b という軽量モデルで発生。小モデルや低 temperature 設定、クレンジング後の短い入力(2014 bytes)で縮退は再現性がある。保存前の1箇所で抑止できれば全プロバイダで効果があり、Effort は純粋関数1つで小さい。
 
@@ -74,7 +74,7 @@ Scenario: フォールバック時は再試行できる（将来拡張）
 - [ ] 検出は少なくとも以下を満たす
   - [ ] 同一 n-gram(例: `豚肉`)の出現率が閾値超(例: 全トークンの30%超が同一単語)で `repetition` と判定
   - [ ] `|` 区切り等のデリミタで分割した要素のユニーク率が閾値未満(例: 10%未満)で `lowDiversity` と判定
-  - [ ] 圧縮率(例: `lz-string` や簡易 RLE)で高圧縮可能(例: 10:1超)なら `highlyCompressible` と判定 — いずれか1つで縮退とみなす
+  - [ ] 圧縮率(例: `lz-string` や簡易 RLE)で高圧縮可能(例: 10:1超)なら `highlyCompressible` と判定 ― いずれか1つで縮退とみなす
   - [ ] 日本語の文としての最低要件(例: 句点 `。` または `です/ます/だ` 等の述語を含む)を満たさない場合は `notSentence` として補助的に判定（単独では縮退としない）
 - [ ] `privacyPipeline.ts:_processCloudResult` または `RecordingPipeline` の保存直前でガードが呼ばれ、縮退時は `summary` をフォールバック文字列に置換する
 - [ ] フォールバック時は `addLog(LogType.WARN, 'Degenerate LLM output detected', { reason, repetitionRate, providerName })` で観測可能にする

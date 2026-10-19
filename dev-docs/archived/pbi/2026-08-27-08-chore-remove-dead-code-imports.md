@@ -14,12 +14,12 @@
 - 解: 単純削除で `validate` に影響なし
 
 ## BDD受け入れシナリオ
-Scenario: ハッピーパス — 未使用 import が削除される
+Scenario: ハッピーパス ― 未使用 import が削除される
   Given `migrations-comprehensive.test.ts:7` の `vi` import がある
   When ファイルを保存する
   Then `grep "vi\."` が 0 件で `type-check` がパスする
 
-Scenario: エッジケース — 死んだ変数が削除される
+Scenario: エッジケース ― 死んだ変数が削除される
   Given `migrations-comprehensive.test.ts:95-115` の `shouldThrow.set`/`origExec`/`queryCallCount` がある
   When 該当 3 行を削除する
   Then テストは依然パスし `knip` や `eslint` の未使用警告が消える

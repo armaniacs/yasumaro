@@ -36,9 +36,9 @@ trace（entrypoint → sink）。**行番号は現在の実ファイルで確認
 
 判定に効く条件式:
 
-- `migrationBackup.ts:370` — `if (actualCount >= expectedCount && expectedCount > 0)` すでに正常分岐で「件数が期待値に達したか」でバックアップを捨てている（`:372`）。**不一致分岐だけがこの規律から外れている**。
-- `migrationBackup.ts:416` — 復元後に `actualCount >= expectedCount` を再判定してログを出し分けるという判定がすでに存在するが、これは**ログのためだけ**で、削除の判断には使われていない。ここに削除条件の判定材料がある。
-- `migrationBackup.ts:360-365` — 0 件のときの一端子分岐。**この分岐は触らない**（0 件で照合条件を永久に満たさない不具合を既に回避している）。
+- `migrationBackup.ts:370` ― `if (actualCount >= expectedCount && expectedCount > 0)` すでに正常分岐で「件数が期待値に達したか」でバックアップを捨てている（`:372`）。**不一致分岐だけがこの規律から外れている**。
+- `migrationBackup.ts:416` ― 復元後に `actualCount >= expectedCount` を再判定してログを出し分けるという判定がすでに存在するが、これは**ログのためだけ**で、削除の判断には使われていない。ここに削除条件の判定材料がある。
+- `migrationBackup.ts:360-365` ― 0 件のときの一端子分岐。**この分岐は触らない**（0 件で照合条件を永久に満たさない不具合を既に回避している）。
 
 ## BDD受け入れシナリオ
 
@@ -132,10 +132,10 @@ Scenario 1 が本 PBI の核心です。Scenario 4 は既存分岐（`:400-411`�
 
 | ファイル:行 | 役割 |
 |---|---|
-| `sqliteEngineHost.ts:223` | `await runMigrationBackup(this.migrationBackupState)` — done が立っていれば `:202-203` で早期 return |
-| `sqliteEngineHost.ts:232` | `await runMigrationRestore(this.migrationBackupState)` — **done を読まない**。バックアップキーが残っていれば毎回走る |
-| `migrationBackup.ts:238-248` | `isIdbMigrationDone()` — 呼び出し元は `runMigrationBackup:202` のみ |
-| `migrationBackup.ts:250-258` | `setIdbMigrationDone()` — 書き込み失敗は warn のみで握りつぶす（自己修復） |
+| `sqliteEngineHost.ts:223` | `await runMigrationBackup(this.migrationBackupState)` ― done が立っていれば `:202-203` で早期 return |
+| `sqliteEngineHost.ts:232` | `await runMigrationRestore(this.migrationBackupState)` ― **done を読まない**。バックアップキーが残っていれば毎回走る |
+| `migrationBackup.ts:238-248` | `isIdbMigrationDone()` ― 呼び出し元は `runMigrationBackup:202` のみ |
+| `migrationBackup.ts:250-258` | `setIdbMigrationDone()` ― 書き込み失敗は warn のみで握りつぶす（自己修復） |
 | `migrationBackup.ts:296-297` | バックアップ payload の生成。`{ version: 1, createdAt: Date.now(), records }` を `IDB_MIGRATION_BACKUP` に JSON 文字列で保存 |
 
 **参照のみ（壊さない）**
@@ -203,9 +203,9 @@ Scenario 1 が本 PBI の核心です。Scenario 4 は既存分岐（`:400-411`�
 
 - **抑制される（例外にならず、0 行だけ無視される）**: `NOT NULL`（`:11,15`）、`UNIQUE`（`:44`）、`CHECK`（`:19-21`）、`PRIMARY KEY` 衝突。**これらは `restored++`（`:384`）で数えられるものの実際には 1 行も入らないため、`restored` は過大報告になる**（Scenario 5）。
 - **抑制されない（`execWithCache` が reject し、`catch {}`（`:385`）に落ちる）**:
-  - `SQLITE_MISMATCH` — 型不一致。INTEGER 列に非数値文字列`、`REAL` 列に非数値など。**旧 wa-sqlite DB は列型が緩い（SQL の型強制なし）ため、旧レコードの値が新スキーマの REAL/INTEGER と食い違う可能性が source だけでは否定できない**。
-  - `SQLITE_TOOBIG` — 文字列や blob がサイズ上限超過（`title` / `summary` / `content` は `TEXT`）。
-  - `SQLITE_FULL` / `SQLITE_IOERR` / `SQLITE_NOLFS` — IndexedDB 側のクォータ・I/O 障害。**IDB エンジン固有であり、この経路は現実にも起こりうる**。
+  - `SQLITE_MISMATCH` ― 型不一致。INTEGER 列に非数値文字列`、`REAL` 列に非数値など。**旧 wa-sqlite DB は列型が緩い（SQL の型強制なし）ため、旧レコードの値が新スキーマの REAL/INTEGER と食い違う可能性が source だけでは否定できない**。
+  - `SQLITE_TOOBIG` ― 文字列や blob がサイズ上限超過（`title` / `summary` / `content` は `TEXT`）。
+  - `SQLITE_FULL` / `SQLITE_IOERR` / `SQLITE_NOLFS` ― IndexedDB 側のクォータ・I/O 障害。**IDB エンジン固有であり、この経路は現実にも起こりうる**。
   - エンジンが既に閉じている/未初期化（`execWithCache` の前提違反）。
 - **結論**: `catch {}`（`:385`）が意味を持っていること自体が、失敗モードの存在を示す。`INSERT OR IGNORE` が制約違反を抑制するから **`restored` は過大報告になる**が、**一件も入らない等原因**（I/O・型不一致・サイズ超過）は別枠で reject されうる。したがって「監査の根本原因（削除条件が `reverifyOk`）」は **抑制されうる制約違反とは別の、独立して正しい指摘**である。
 - なお `check` 制約が問題になるなら、それは **PBI 19（field drift）** の領域であり、本 PBI の修正（削除条件）を独立に正しいものとして実装できる。**blocker は「実装を止める理由」ではなく「ログの粒度（`failed` を数えるか否か）を決める材料」** と位置づける。
@@ -214,7 +214,7 @@ Scenario 1 が本 PBI の核心です。Scenario 4 は既存分岐（`:400-411`�
 
 needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 13番）:
 
-> Bounded local observation that a per-row INSERT can fail during the mismatch restore while the COUNT read succeeds — the unreachable-row outcome is deterministic given a partial failure, but confirming the failure mode occurs requires executing the engine, which is unavailable in this source-only run.
+> Bounded local observation that a per-row INSERT can fail during the mismatch restore while the COUNT read succeeds ― the unreachable-row outcome is deterministic given a partial failure, but confirming the failure mode occurs requires executing the engine, which is unavailable in this source-only run.
 
 したがって**実装着手前に**、次の 2 段階を潰すこと。
 
@@ -254,11 +254,11 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 13番）:
 
 - `pbi/00-INDEX.md`（本 PBI の登録先）
 - 同じ移行領域の PBI との整合を確認すること:
-  - **PBI 09「fallback partial wipe」**（`pbi/2026-10-18-09-fix-fallback-migration-partial-wipe.md`）— 同種の中核問題。fallback 経路も「部分失敗を投げて clearAll で消す」型。**「失敗ゼロを確認してから消す」規律を両者に適用**する必要がある。
-  - **PBI 10「legacy count」**（`pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md`）— **最も近い兄弟**。OPFS V2 経路は「件数を検証せず旧 DB を消す」問題で、その PBI の「選択肢 3」は **`migrationBackup.ts:370` 、つまり本 PBI の正常分岐を模範としている**。逆に言えば **本 PBI が直すと、兄弟が依拠している模範がさらに明示的になる**。PBI 10 に書かれた「`legacyMigration.ts:169` も同じ規律を持つ」という 3 者比較を再確認すること。
-  - **PBI 17「rec snapshot」**（`pbi/2026-10-18-17-fix-recovery-migration-snapshot-remove.md`）— スナップショット除去のウィンドウが fail-open で status ゲートを通る問題。**同じく「安全網を捨てるタイミング」の判定漏れ**。3 件（本 + 09 + 17）で方策を揃えるべき。
-  - **PBI 19「field drift」**（`pbi/2026-10-18-19-fix-recovery-field-mapping-drift.md`）— 旧レコードのフィールドが新スキーマに合わない問題。**本 PBI の「収束しないプロファイル」仮説の供給源**。19 が直せば選択肢 1 の欠点 1（永続ループ）の実在率が下がり、本 PBI は選択肢 1 単独で十分になる。**順序は 19 → 24 を推奨**。
-  - `src/background/migration/legacyMigration.ts:169-175` / `:204-217` — 3 つ目の移行経路。「部分成功は失敗」「original data preserved（元データを消さない）」という同じ規律を持つ。3 者比較の中継点。
-  - `src/offscreen/sqliteStatus.ts:82,103` — done フラグの表示側。done の意味を変えていないことの確認先。
-- 既存テスト `src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts:135-166` — 現行挙動を pin しており、**本 PBI の修正で意図が反転する**唯一のテスト。
+  - **PBI 09「fallback partial wipe」**（`pbi/2026-10-18-09-fix-fallback-migration-partial-wipe.md`）― 同種の中核問題。fallback 経路も「部分失敗を投げて clearAll で消す」型。**「失敗ゼロを確認してから消す」規律を両者に適用**する必要がある。
+  - **PBI 10「legacy count」**（`pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md`）― **最も近い兄弟**。OPFS V2 経路は「件数を検証せず旧 DB を消す」問題で、その PBI の「選択肢 3」は **`migrationBackup.ts:370` 、つまり本 PBI の正常分岐を模範としている**。逆に言えば **本 PBI が直すと、兄弟が依拠している模範がさらに明示的になる**。PBI 10 に書かれた「`legacyMigration.ts:169` も同じ規律を持つ」という 3 者比較を再確認すること。
+  - **PBI 17「rec snapshot」**（`pbi/2026-10-18-17-fix-recovery-migration-snapshot-remove.md`）― スナップショット除去のウィンドウが fail-open で status ゲートを通る問題。**同じく「安全網を捨てるタイミング」の判定漏れ**。3 件（本 + 09 + 17）で方策を揃えるべき。
+  - **PBI 19「field drift」**（`pbi/2026-10-18-19-fix-recovery-field-mapping-drift.md`）― 旧レコードのフィールドが新スキーマに合わない問題。**本 PBI の「収束しないプロファイル」仮説の供給源**。19 が直せば選択肢 1 の欠点 1（永続ループ）の実在率が下がり、本 PBI は選択肢 1 単独で十分になる。**順序は 19 → 24 を推奨**。
+  - `src/background/migration/legacyMigration.ts:169-175` / `:204-217` ― 3 つ目の移行経路。「部分成功は失敗」「original data preserved（元データを消さない）」という同じ規律を持つ。3 者比較の中継点。
+  - `src/offscreen/sqliteStatus.ts:82,103` ― done フラグの表示側。done の意味を変えていないことの確認先。
+- 既存テスト `src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts:135-166` ― 現行挙動を pin しており、**本 PBI の修正で意図が反転する**唯一のテスト。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 13番、`findings.json`、`REPORT.md`）

@@ -1,4 +1,4 @@
-# PBI: Obsidianマークダウン注入 — 派生サーフェス（Vault追記・ローカルエクスポート・ダッシュボードリンク表示）の修正
+# PBI: Obsidianマークダウン注入 ― 派生サーフェス（Vault追記・ローカルエクスポート・ダッシュボードリンク表示）の修正
 
 ## ユーザーストーリー
 拡張機能の利用者として、ダッシュボードから「Obsidianへ追記」機能やローカルMarkdownエクスポート機能を使ったとき、あるいはダッシュボードの履歴一覧で記録済みURLをクリックしたときに、悪意あるページ由来のデータによってVaultの汚染やタブ乗っ取り（tabnabbing）が起きないことを望む。なぜなら、これらの機能は前提PBI（PBI A）とは異なる独自のコードパスを持ち、PBI Aの修正だけではカバーされないためである。
@@ -93,7 +93,7 @@ exportLogsService.ts → dashboardSqliteService.ts → dashboardSqliteHandlers-a
 - **対策**: PBI-01の新規 URL-safe サニタイズ関数を汎用的に設計し、PBI-02 でも独立して実装できるようにする
 
 ### 現状コードの確認
-（着手前に必ず実行すること — 2026-07-21監査時点で以下の行番号が該当することを確認済み）
+（着手前に必ず実行すること ― 2026-07-21監査時点で以下の行番号が該当することを確認済み）
 ```bash
 grep -n "const url = entry.url\|sanitizeForObsidian(entry.title" src/dashboard/obsidianFormatter.ts
 grep -n "function formatEntryToMarkdown\|^import" src/dashboard/dashboard.ts

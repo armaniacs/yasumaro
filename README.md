@@ -39,7 +39,7 @@ Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)
 
 フォークの最初のきっかけは、ごく単純な不満でした。オリジナルはGemini APIのみに対応しており、GroqやOllama、さくらのAIエンジンといったOpenAI互換APIを使いたい自分には合わなかったのです。まずはそこを直すつもりでした。
 
-ただ、実際に自分で毎日使い始めると、次から次へと「ここが気になる」が出てきました。手動で今すぐ記録したい、プライベートなページはうっかり残したくない、Obsidianを開いていなくても記録だけは止めたくない——そのひとつひとつに手を入れているうちに、気づけば当初の目的だったAPI対応は全体のごく一部になっていました。
+ただ、実際に自分で毎日使い始めると、次から次へと「ここが気になる」が出てきました。手動で今すぐ記録したい、プライベートなページはうっかり残したくない、Obsidianを開いていなくても記録だけは止めたくない――そのひとつひとつに手を入れているうちに、気づけば当初の目的だったAPI対応は全体のごく一部になっていました。
 
 いまのYasumaroは、閲覧履歴をSQLite（OPFS + FTS5）にローカル保存する基盤を持ち、Obsidianを一切セットアップしなくてもMarkdownファイルとして記録を残せます。PIIマスキングやプライベートページの自動検出、監査ログといったプライバシー機能も、実際に自分が「これがないと怖くて使えない」と感じた部分から生まれたものです。日々の変更履歴は [CHANGELOG.md](CHANGELOG.md) にすべて残しています。
 
@@ -268,9 +268,9 @@ Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動�
 
 **"Turn fluid browsing into structured, immutable records."**
 
-A powerful tool for engineers and researchers who read technical documentation, papers, and long-form articles — a Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
+A powerful tool for engineers and researchers who read technical documentation, papers, and long-form articles ― a Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
-### About the Original — Obsidian Smart History
+### About the Original ― Obsidian Smart History
 Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901). Credit goes to the original author for a simple, genuinely useful idea.
 
 ### Why I Keep Building This
@@ -279,7 +279,7 @@ The fork started from a small frustration: the original only supported Gemini, a
 
 Then I actually started using it every day, and one small annoyance led to another. I wanted to record a page right now, not wait for the auto-detection. I didn't want private pages accidentally saved. I wanted history to keep working even when Obsidian wasn't open. Fixing each of those, one at a time, quietly turned the original API-compatibility goal into a small fraction of what the project became.
 
-Today, Yasumaro persists your browsing history locally in SQLite (OPFS + FTS5), and can write daily Markdown files without any Obsidian setup at all. The privacy features — PII masking, automatic private-page detection, the audit log — all came from moments where I thought "I wouldn't trust this without that." Every change along the way is recorded in [CHANGELOG.md](CHANGELOG.md).
+Today, Yasumaro persists your browsing history locally in SQLite (OPFS + FTS5), and can write daily Markdown files without any Obsidian setup at all. The privacy features ― PII masking, automatic private-page detection, the audit log ― all came from moments where I thought "I wouldn't trust this without that." Every change along the way is recorded in [CHANGELOG.md](CHANGELOG.md).
 
 I use this tool myself, every day, so I don't want to cut corners on it. That's really the whole reason I keep working on it. If you've ever wanted your browsing history to turn into something worth keeping, with a little help from AI, give it a try. If you'd like to add another API provider, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -346,7 +346,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🤖 **Built-in AI Support**: Browser-integrated AI summarization using Chrome's Gemini Nano or Edge's Phi-mini. No API key required, works offline (requires supported browser, enabled flags, and downloaded model). See [Built-in AI Setup Guide](docs/BUILT_IN_AI_SETUP_GUIDE.md).
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
-- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard — a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), side-by-side tag cluster comparison, a revisits & time capsule view that groups what you keep re-researching, and research sessions that group records close together in time. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
+- 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard ― a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), side-by-side tag cluster comparison, a revisits & time capsule view that groups what you keep re-researching, and research sessions that group records close together in time. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)
@@ -392,7 +392,7 @@ The Firefox build works for recording, saving, and search (including FTS5) as of
 3. Click "Load Temporary Add-on…" and select `manifest.json` inside the unzipped folder.
 4. Temporary installs are removed when Firefox restarts. For persistent use, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`.
 
-> Firefox is experimental support — it is less thoroughly tested than Chromium-based builds. Please report issues via GitHub issues.
+> Firefox is experimental support ― it is less thoroughly tested than Chromium-based builds. Please report issues via GitHub issues.
 
 #### Option 4: Build from Source (For Developers)
 

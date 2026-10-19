@@ -15,8 +15,8 @@
 ## 背景（2026-08-18 調査済み）
 `tsconfig.json` には以下のフラグが未設定（`strict: true` には含まれない追加フラグ）:
 
-- `exactOptionalPropertyTypes` — オプショナルプロパティへの明示的な `undefined` 代入を禁止する
-- `noImplicitReturns` — 全経路で return を強制する
+- `exactOptionalPropertyTypes` ― オプショナルプロパティへの明示的な `undefined` 代入を禁止する
+- `noImplicitReturns` ― 全経路で return を強制する
 
 両フラグとも有効化すると既存コードへの波及が大きく、特にオプショナルプロパティを多用する設定オブジェクト・メッセージ型・ストレージ境界で多数の型エラーが発生すると見込まれる。進行中の refactor0817 や PBI 02〜05 と同時に進めるとレビュー不能になるため、独立した最終タスクとして段階導入する。
 

@@ -21,15 +21,15 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 
 ### Trace（監査記録）
 
-- [entrypoint] `src/utils/obsidianValidator` 相当 — `validateObsidianHost`（実ファイル `src/utils/obsidianConfigValidator.ts:84`）。空白・`/`・`\`・`@`・`%` と純粋に不正な IPv4 を拒否した後、RFC-1123 ラベルを受理する。`0x7f000001` / `0x7f.0.0.1` は通常のホスト名として通る。
+- [entrypoint] `src/utils/obsidianValidator` 相当 ― `validateObsidianHost`（実ファイル `src/utils/obsidianConfigValidator.ts:84`）。空白・`/`・`\`・`@`・`%` と純粋に不正な IPv4 を拒否した後、RFC-1123 ラベルを受理する。`0x7f000001` / `0x7f.0.0.1` は通常のホスト名として通る。
 - [propagation] `buildFromSettings`（`src/utils/obsidianConfigBuilder.ts:66`）。検証済み host を `baseUrl`（`:91`）に組み立て、`Authorization` Bearer（`:94`）を付ける。CSP の `savedObsidianOrigins` 導出（`src/utils/cspValidator.ts:186-200`）も同じ validator を通る。
-- [sink] `_writeContent`（`src/background/obsidianClient.ts:305-306`）— vault Bearer とノート本文を伴う PUT。GET は `:274-275`。URL パーサが解決したアドレスへ送られる。
+- [sink] `_writeContent`（`src/background/obsidianClient.ts:305-306`）― vault Bearer とノート本文を伴う PUT。GET は `:274-275`。URL パーサが解決したアドレスへ送られる。
 
 ### Evidence（監査記録）
 
-- `src/utils/obsidianConfigValidator.ts:124` — `isValidDnsHostname` は英数字＋ハイフンのラベルを受理する。digit-or-digit ガードは `:117-122` にあり「数字とドットのみ」の形しか覆わない。
-- `src/utils/ssrfGuard.ts:12` — fetch 経路向けの拒否族（`BLOCKED_PATTERNS`、`providerAllowlist` の `decodeNumericIPv4`）は存在するが `obsidianConfigValidator` に等価物がない。かつ Obsidian 経路の `fetchWithTimeout` は `blockLocalhost:false` で `validateUrl` を呼ぶため `BLOCKED_PATTERNS` は発動しない。
-- `src/utils/cspValidator.ts:186` — `savedObsidianOrigins` は同じ validator 経由で導出され、`isUrlAllowed`（`:259`）の `savedObsidianOrigins.has(parsed.origin)`（`:288`）も両辺とも `new URL` を通すので、fetch ゲートはパーサ解決側を「許可」する側に回る。
+- `src/utils/obsidianConfigValidator.ts:124` ― `isValidDnsHostname` は英数字＋ハイフンのラベルを受理する。digit-or-digit ガードは `:117-122` にあり「数字とドットのみ」の形しか覆わない。
+- `src/utils/ssrfGuard.ts:12` ― fetch 経路向けの拒否族（`BLOCKED_PATTERNS`、`providerAllowlist` の `decodeNumericIPv4`）は存在するが `obsidianConfigValidator` に等価物がない。かつ Obsidian 経路の `fetchWithTimeout` は `blockLocalhost:false` で `validateUrl` を呼ぶため `BLOCKED_PATTERNS` は発動しない。
+- `src/utils/cspValidator.ts:186` ― `savedObsidianOrigins` は同じ validator 経由で導出され、`isUrlAllowed`（`:259`）の `savedObsidianOrigins.has(parsed.origin)`（`:288`）も両辺とも `new URL` を通すので、fetch ゲートはパーサ解決側を「許可」する側に回る。
 
 ### 本checkout での実測（source-only / オフライン）
 
@@ -67,13 +67,13 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
    - **Then** 組み立てられた `baseUrl` を `new URL()` で再解釈し、解決された hostname が検証器の判定と一致することを確かめること
    - **And** 不一致なら `Authorization: Bearer` を組み立てる前に拒否され、`fetch` が 1 本も発行されないこと
 
-4. **Scenario: 回帰ガード — 正規ホストは従来どおり通る**
+4. **Scenario: 回帰ガード ― 正規ホストは従来どおり通る**
    - **Given** ホストに `127.0.0.1` / `localhost` / `::1` / `192.168.1.10` / `example.com` / `vault.example.com` を設定した
    - **When** 設定を保存して日次ノート追記を実行する
    - **Then** 従来どおり検証を通過し、`https://<host>:27124` の baseUrl で GET と PUT が送られること
    - **And** リモート https ワークスペース（`vault.example.com`）が引き続き設定可能であること
 
-5. **Scenario: 誤拒否ガード — `0x` を含む正当な DNS 名を巻き込まない**
+5. **Scenario: 誤拒否ガード ― `0x` を含む正当な DNS 名を巻き込まない**
    - **Given** ホストに `0x7f000001.nip.io` のような、`0x` を含むが IPv4 には解決しない正当な DNS 名を設定した
    - **When** 設定を保存する
    - **Then** 検証を通過し、従来どおり保存されること（ラベル単位の `0x` 検査で弾かない）
@@ -111,13 +111,13 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 | `src/utils/obsidianConfigValidator.ts` | 111-113 | `/[\s\/\\@%]/` 拒否（userinfo / percent エンコードの既存ガード） |
 | `src/utils/obsidianConfigValidator.ts` | 117-122 | digit-dot ガード `/^[0-9.]+$/` → `isValidIpv4Address`。**10進単独形・8進形を既にここで捕まえている** |
 | `src/utils/obsidianConfigValidator.ts` | 124-126 | `isValidDnsHostname` 検査。**Findings の穴はこの行**（`0x7f000001` / `0x7f.0.0.1` がここで通る） |
-| `src/utils/obsidianConfigValidator.ts` | 134-145 | `isValidIpv4Address` — 4 オクテット必須。この制約が10進単独形の拒否理由 |
+| `src/utils/obsidianConfigValidator.ts` | 134-145 | `isValidIpv4Address` ― 4 オクテット必須。この制約が10進単独形の拒否理由 |
 | `src/utils/obsidianConfigValidator.ts` | 152-159 | `isValidDnsHostname` のラベルパターン `/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/`。`x` を許容するため hex ラベルが通過する |
 | `src/utils/obsidianConfigBuilder.ts` | 66 / 73 / 91 / 94 | `buildFromSettings` / `validateObsidianHost` 呼び出し / `baseUrl` 組み立て / `Authorization: Bearer` |
 | `src/utils/obsidianConfigBuilder.ts` | 111 / 114 / 130 / 133 | `buildFromOverride`（接続テスト）/ host 検証 / `baseUrl` / Bearer |
-| `src/background/obsidianClient.ts` | 305-306 | `_writeContent` — `fetchWithTimeout(url, { method:'PUT', headers, body })`（sink） |
-| `src/background/obsidianClient.ts` | 274-275 | `_fetchExistingContent` — GET。同じ URL 解決結果に従う |
-| `src/background/obsidianClient.ts` | 356 | `_fetchConnectionResponse` — 接続テスト GET（3 つ目のサイト） |
+| `src/background/obsidianClient.ts` | 305-306 | `_writeContent` ― `fetchWithTimeout(url, { method:'PUT', headers, body })`（sink） |
+| `src/background/obsidianClient.ts` | 274-275 | `_fetchExistingContent` ― GET。同じ URL 解決結果に従う |
+| `src/background/obsidianClient.ts` | 356 | `_fetchConnectionResponse` ― 接続テスト GET（3 つ目のサイト） |
 | `src/utils/ssrfGuard.ts` | 12-19 | `BLOCKED_PATTERNS`。`/^0x7f\./i` は.hex ドット形のみをカバーし、**`0x7f000001`（ドット無し）はカバーしない** |
 | `src/utils/ssrfGuard.ts` | 49 / 63-67 | `BLOCKED_PATTERNS` のループは `if (blockLocalhost)` 内にあり、`blockLocalhost:false` の Obsidian 経路では**構造的に発動しない** |
 | `src/utils/fetch.ts` | 105 / 112 | `blockLocalhost = false` の既定と `validateUrl(url, { requireValidProtocol, blockLocalhost })` 呼び出し |
@@ -127,20 +127,20 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 | `src/utils/cspValidator.ts` | 395 | リセット（`Set` を空に戻す） |
 | `src/utils/storage/providerAllowlist.ts` | 307 | `isAllowedProviderBaseUrl`（デコード族の置き場所） |
 | `src/utils/storage/providerAllowlist.ts` | 319-333 | `isBlockedIPv4` ローカルヘルパ |
-| `src/utils/storage/providerAllowlist.ts` | 336-372 | `decodeNumericIPv4` — 10進整数 / hex 整数 / ドット付き hex・8進の 3 系統。**本 PBI が mirror すべき既存実装** |
+| `src/utils/storage/providerAllowlist.ts` | 336-372 | `decodeNumericIPv4` ― 10進整数 / hex 整数 / ドット付き hex・8進の 3 系統。**本 PBI が mirror すべき既存実装** |
 | `src/utils/storage/providerAllowlist.ts` | 375-376 | デコード結果のブロック判定（`isBlockedIPv4` を通す） |
-| `src/dashboard/settings/fieldDescriptor.ts` | 96-103 | `validateObsidianHostValue` — `validateObsidianHost` へ委譲（single ownership）。dashboard の保存 UI 側の入口 |
+| `src/dashboard/settings/fieldDescriptor.ts` | 96-103 | `validateObsidianHostValue` ― `validateObsidianHost` へ委譲（single ownership）。dashboard の保存 UI 側の入口 |
 
 既存テストの置き場所:
-- `src/utils/__tests__/obsidianHostCredentialPairing.test.ts:94-122`（`validateObsidianHost substantive validation` describe — 受け入れ/拒否ケースの主置き場）
-- `src/utils/__tests__/obsidianHostCredentialPairing.test.ts:124-155`（`saved-Obsidian-origin CSP gate` describe — `savedObsidianOrigins` 導出の検証）
+- `src/utils/__tests__/obsidianHostCredentialPairing.test.ts:94-122`（`validateObsidianHost substantive validation` describe ― 受け入れ/拒否ケースの主置き場）
+- `src/utils/__tests__/obsidianHostCredentialPairing.test.ts:124-155`（`saved-Obsidian-origin CSP gate` describe ― `savedObsidianOrigins` 導出の検証）
 - `src/utils/__tests__/obsidianProtocolLoopback.test.ts:29-41`（userinfo bypass guards）
 - `src/dashboard/settings/__tests__/fieldValidation.test.ts:325`、`src/dashboard/settings/__tests__/fieldDescriptor.test.ts:145-147`（dashboard 側の委譲確認）
 
 ### 最小変更の選択肢
 
-1. **`validateObsidianHost` で IPv4 表現可能なエンコードラベルを拒否する（`ssrfGuard` / `providerAllowlist` の既存デコード族を Write する形で Mirroring）** — 推奨。`providerAllowlist.ts:336-372` の `decodeNumericIPv4` はローカル関数なのでそのままでは共有できないが、同じ3系統（10進整数 / hex 整数 / ドット付き hex・8進）を `src/utils/` の共有ヘルパへ移す形が素直。判定は「ホスト**全体**が4オクテット IPv4 に解決しうる形」だけに絞り、`0x7f000001.nip.io` を巻き込まないこと（実測済み）。変更は `obsidianConfigValidator.ts` に閉じる。
-2. **検証器の判定と URL パーサの解決結果が一致することを、Bearer を付ける前に必須にする（`new URL` で再解釈してから照合）** — `obsidianConfigBuilder.ts:91` と `:130` の `baseUrl` 組み立て後に `new URL(baseUrl).hostname` を検証器の判定と突き合わせる。hex 形=April 生涯に型レベルではなく実行時の do-not-care になるため、`baseUrl` に `Authorization` を結線する前に失敗させる。これは 1 の**補完**で、単独でも防御になるが、判定基準が「パーサが 127.0.0.1 に落としたか」になるため将来の parser 挙動変化に追随する副作用がある。
+1. **`validateObsidianHost` で IPv4 表現可能なエンコードラベルを拒否する（`ssrfGuard` / `providerAllowlist` の既存デコード族を Write する形で Mirroring）** ― 推奨。`providerAllowlist.ts:336-372` の `decodeNumericIPv4` はローカル関数なのでそのままでは共有できないが、同じ3系統（10進整数 / hex 整数 / ドット付き hex・8進）を `src/utils/` の共有ヘルパへ移す形が素直。判定は「ホスト**全体**が4オクテット IPv4 に解決しうる形」だけに絞り、`0x7f000001.nip.io` を巻き込まないこと（実測済み）。変更は `obsidianConfigValidator.ts` に閉じる。
+2. **検証器の判定と URL パーサの解決結果が一致することを、Bearer を付ける前に必須にする（`new URL` で再解釈してから照合）** ― `obsidianConfigBuilder.ts:91` と `:130` の `baseUrl` 組み立て後に `new URL(baseUrl).hostname` を検証器の判定と突き合わせる。hex 形=April 生涯に型レベルではなく実行時の do-not-care になるため、`baseUrl` に `Authorization` を結線する前に失敗させる。これは 1 の**補完**で、単独でも防御になるが、判定基準が「パーサが 127.0.0.1 に落としたか」になるため将来の parser 挙動変化に追随する副作用がある。
 
 **推奨: 選択肢 1 を必須とし、選択肢 2 を同じ変更で併せて入れる（deep defense）。** 1 単体でも BDD シナリオ 1/2/5 を満たす。2 を入れる場合は `buildFromOverride` にも同じチェックを適用し、接続テスト経路だけ緩まないことをテストで固定する。
 
@@ -163,9 +163,9 @@ PBI 08（Obsidian 経路の redirect ガード）と**同一ファイル群**（
 
 ### ブロッカー（着手前に潰すべき owner 確認）
 
-1. **`new URL()` の実行時挙動の実ブラウザ観測** — 本 PBI の source-only 実行（Node WHATWG パーサ）では `0x7f000001` / `0x7f.0.0.1` / `0X7F.0.0.1` がいずれも `127.0.0.1` に再解釈されることを確認済み。**残る未観測事実は (a) Chromium/Extension service worker 上のパーサが Node と同じ解決を返すか、(b) その解釈先に実際にリスナがいるか**。needs_validation の留保理由もここ。production data を使わない隔離プロファイルで owner が観測し、非テスト対象へのプローブは行わない。
-2. **settings 汚染経路の到達性** — cross-principal チェーンには settings 汚染（dashboard XSS の既知限界）が必要条件。ソース上 `OBSIDIAN_HOST` は拡張内専用設定（`src/dashboard/settings/fieldDescriptor.ts:171` が storageKey を宣言）であり、低信頼 principal が書き込める経路は未確定。owner が「到達可能な経路があるか」を確認し、無い場合でも本 PBI は**多層防御の1枚**として実装してよい（影響評価の断定に使わない）。
-3. **`0x` を含む正当 DNS 名を誤拒否してよいか** — `0x7f000001.nip.io` のように実在するワイルドカード DNS サービスがあり得る。選択肢 1 の判定を「ホスト全体が IPv4 に解決しうる形」に絞れば通る（実測済み）。運用上の許容方針を owner が 1 行で示すこと。
+1. **`new URL()` の実行時挙動の実ブラウザ観測** ― 本 PBI の source-only 実行（Node WHATWG パーサ）では `0x7f000001` / `0x7f.0.0.1` / `0X7F.0.0.1` がいずれも `127.0.0.1` に再解釈されることを確認済み。**残る未観測事実は (a) Chromium/Extension service worker 上のパーサが Node と同じ解決を返すか、(b) その解釈先に実際にリスナがいるか**。needs_validation の留保理由もここ。production data を使わない隔離プロファイルで owner が観測し、非テスト対象へのプローブは行わない。
+2. **settings 汚染経路の到達性** ― cross-principal チェーンには settings 汚染（dashboard XSS の既知限界）が必要条件。ソース上 `OBSIDIAN_HOST` は拡張内専用設定（`src/dashboard/settings/fieldDescriptor.ts:171` が storageKey を宣言）であり、低信頼 principal が書き込める経路は未確定。owner が「到達可能な経路があるか」を確認し、無い場合でも本 PBI は**多層防御の1枚**として実装してよい（影響評価の断定に使わない）。
+3. **`0x` を含む正当 DNS 名を誤拒否してよいか** ― `0x7f000001.nip.io` のように実在するワイルドカード DNS サービスがあり得る。選択肢 1 の判定を「ホスト全体が IPv4 に解決しうる形」に絞れば通る（実測済み）。運用上の許容方針を owner が 1 行で示すこと。
 
 いずれも owner 確認として本 PBI の冒頭に置き、実装着手の前に対応する（source-only 実行境界のもと未確認のまま「直した」としない）。
 
@@ -197,8 +197,8 @@ PBI 08（Obsidian 経路の redirect ガード）と**同一ファイル群**（
 ## 関連
 
 - `pbi/00-INDEX.md`
-- PBI 08（Obsidian 経路の redirect ガード）— 実装時に together できるか検討（同一ファイル群。hunk は非重複）
-- `src/utils/storage/providerAllowlist.ts:336-372`（`decodeNumericIPv4` — mirror 元）
-- `src/utils/ssrfGuard.ts:12-19`（`BLOCKED_PATTERNS` — 比較対象。ただし Obsidian 経路では発動しない）
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — SSRF / CWE-918 の脅威モデル
+- PBI 08（Obsidian 経路の redirect ガード）― 実装時に together できるか検討（同一ファイル群。hunk は非重複）
+- `src/utils/storage/providerAllowlist.ts:336-372`（`decodeNumericIPv4` ― mirror 元）
+- `src/utils/ssrfGuard.ts:12-19`（`BLOCKED_PATTERNS` ― 比較対象。ただし Obsidian 経路では発動しない）
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― SSRF / CWE-918 の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json `$[1]` / NEEDS-VALIDATION.md 1番）

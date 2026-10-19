@@ -1,4 +1,4 @@
-# PBI: Archive ガードの seam 統合 — cutoff ペア検証の 1 箇所化 + StagingName branded type
+# PBI: Archive ガードの seam 統合 ― cutoff ペア検証の 1 箇所化 + StagingName branded type
 
 ## ユーザーストーリー
 アーカイブ機能の wire 層を保守する開発者として、「cutoffDate と cutoffMs のペアが正しい」「staging 名が有効」という 2 つの検証概念を 1 箇所（`archiveGuards.ts`）と 1 つの型（`StagingName`）に集約したい、なぜなら現状 4 層（panel / validator / SW handler / worker）で検証の強さがバラバラであり、「どこで偽造ペアや未登録 staging 名が落ちるか」が層の通過順序の知識になっていて interface から読めず、弱い層（SW handler の形状チェックのみ）は削除しても何も起きない pass-through だから
@@ -13,7 +13,7 @@
 |------|------------------|
 | なぜ cutoff 検証が 4 層に散在するのか | PBI 2026-09-06-02 で archive 機能を層ごとに実装した際、各層が自己防衛的に検証を足した。純粋関数 `cutoffMsFromLocalDate` は抽出済みだが、実際の不一致ペアの可否は呼び出し側の組み合わせに潜む（locality 欠如の典型） |
 | なぜ SW handler のチェックが弱いのか | validator 層（`src/messaging/validators.ts:193-212`）が厳密再導出を行うため、handler は「形状だけ確認しておくか」になっている。同一ファイル内で `archive_create` のみ `yasumaroVersion` 長さ検査を追加し、preview と create で非対称 |
-| なぜ staging 名が string のままか | validator は registry を知らない（utils 層）、handler は正規表現を見ない、worker で初めて両方見る — 2 段ゲートの分担が層境界で断裂。branded type があれば「正規表現を通過した名前」だけが型として存在する |
+| なぜ staging 名が string のままか | validator は registry を知らない（utils 層）、handler は正規表現を見ない、worker で初めて両方見る ― 2 段ゲートの分担が層境界で断裂。branded type があれば「正規表現を通過した名前」だけが型として存在する |
 | なぜ `void isValidStagingName;` があるのか | session handlers は registry 発行名しか受け取らないことを文書化するために使っていない import を残している。型で表現できない制約をコメントで誤魔化した跡 |
 | 解の粒度 | `assertCutoffPair(cutoffDate, cutoffMs): cutoffMs`（導出 + 一致 + 範囲を一括）を archiveGuards に置き、validator / worker / panel がそれを呼ぶ。`StagingName` branded type を導入し、発行側 `issueName()` と境界デコード 1 箇所でのみ生成可。SW handler の弱チェック 9 箇所と `void` 文を削除 |
 

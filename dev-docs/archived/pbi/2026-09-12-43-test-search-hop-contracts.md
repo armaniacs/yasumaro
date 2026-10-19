@@ -1,8 +1,8 @@
-# PBI 2026-09-12-43 — テキスト検索のホップ契約 + rank 実行保証テスト
+# PBI 2026-09-12-43 ― テキスト検索のホップ契約 + rank 実行保証テスト
 
 - **種別**: ✅功能追加（test・境界契約の pin）
 - **優先度**: 2 位 / RICE **20.0**（R20 × I1 × C80% / E0.8人日）
-- **出典**: round 13/14 のなぜなぜ分析 連鎖 B/C/H/J — テキストが通過する全ホップで契約を pin し、どの hop で落としても即特定できるようにする
+- **出典**: round 13/14 のなぜなぜ分析 連鎖 B/C/H/J ― テキストが通過する全ホップで契約を pin し、どの hop で落としても即特定できるようにする
 
 ## ユーザーストーリー
 
@@ -94,9 +94,9 @@ grep -n "export function planQuery" src/offscreen/queryPlanner.ts
 
 ### 落とし穴
 
-- gateway の `callInternal` は private メソッド — vi.spyOn では (gateway as any).callInternal を spy するか、offscreen への postMessage モックで検証する（後者が契約に忠実）
-- readOnlyHandler の buildSearchParams は純粋関数 — import して直接 assert できる
-- `orderBy:'rank'` は plain listing（buildOrderByClause）では `Invalid orderBy` エラーになる（意図的）— 本テストは search path（buildFts5OrderClause）のみを検証する
+- gateway の `callInternal` は private メソッド ― vi.spyOn では (gateway as any).callInternal を spy するか、offscreen への postMessage モックで検証する（後者が契約に忠実）
+- readOnlyHandler の buildSearchParams は純粋関数 ― import して直接 assert できる
+- `orderBy:'rank'` は plain listing（buildOrderByClause）では `Invalid orderBy` エラーになる（意図的）― 本テストは search path（buildFts5OrderClause）のみを検証する
 
 ## Definition of Done
 
@@ -108,6 +108,6 @@ grep -n "export function planQuery" src/offscreen/queryPlanner.ts
 ## 実装メモ（2026-09-12）
 
 - `searchHopContracts.test.ts` 新設（6 tests）: hop 1（buildSearchParams query→text 写像 2 件）+ hop 2（gateway kind:search → SQLITE_QUERY ペイロード text 保持 2 件）+ hop 3（planQuery text 保持 2 件・単独 + 組合せフィルタ）
-- `realEngineLikeSearch.test.ts` に rank 実行保証テスト追加（FTS JOIN + `ORDER BY rank` が better-sqlite3 実エンジンで実行できること — trigram 3 文字境界のため 'run' を使用）
+- `realEngineLikeSearch.test.ts` に rank 実行保証テスト追加（FTS JOIN + `ORDER BY rank` が better-sqlite3 実エンジンで実行できること ― trigram 3 文字境界のため 'run' を使用）
 - `makeDb()` に FTS テーブル + FTS index row を追加（rank JOIN の JOIN 先が必要）
 - 検証: searchHopContracts 6 + realEngineLikeSearch 7 tests green

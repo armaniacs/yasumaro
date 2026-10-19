@@ -31,7 +31,7 @@
 
 ## Required Permissions / 必須パーミッション
 
-> **Note on content_scripts / コンテンツスクリプトについて**: This extension declares `content_scripts` with `matches: ['<all_urls>']` to detect page visits, track engagement (scroll depth, visit duration), and optionally extract page content when recording conditions are met. The content script is the entry point — it first checks domain filters, and only activates the full extractor on allowed domains. This design ensures automatic browsing log recording works on any page the user visits, which is the extension's core feature. No content is extracted or transmitted without passing through domain allowlist/blocklist checks and user-configured thresholds.
+> **Note on content_scripts / コンテンツスクリプトについて**: This extension declares `content_scripts` with `matches: ['<all_urls>']` to detect page visits, track engagement (scroll depth, visit duration), and optionally extract page content when recording conditions are met. The content script is the entry point ― it first checks domain filters, and only activates the full extractor on allowed domains. This design ensures automatic browsing log recording works on any page the user visits, which is the extension's core feature. No content is extracted or transmitted without passing through domain allowlist/blocklist checks and user-configured thresholds.
 >
 > **コンテンツスクリプトについて**: 本拡張機能は `content_scripts` に `matches: ['<all_urls>']` を宣言しています。これはページ訪問の検出、エンゲージメント（スクロール深度、滞在時間）の追跡、記録条件が満たされた場合のコンテンツ抽出のために必要です。コンテンツスクリプトは入口として機能し、まずドメインフィルタをチェックし、許可されたドメインでのみフルの抽出機能を有効化します。この設計により、拡張機能の核心機能である自動ブラウジングログ記録がユーザーの訪問先すべてで動作します。コンテンツの抽出や送信は、ドメインの許可リスト/拒否リストとユーザー設定の閾値を通過した場合のみ行われます。
 

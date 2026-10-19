@@ -14,7 +14,7 @@
 
 - 種別: test
 - 順位: 01 / 08
-- RICEスコア: —（統合 PBI 2026-09-26-00 が「独立した PBI として扱う」と明記した未起票項目を引き継ぐ枠。個別 RICE 採点は未実施）
+- RICEスコア: ―（統合 PBI 2026-09-26-00 が「独立した PBI として扱う」と明記した未起票項目を引き継ぐ枠。個別 RICE 採点は未実施）
 
 ## 問題の実測（2026-09-26 時点）
 
@@ -91,7 +91,7 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 | `require-response-size-limit.test.ts` | 17 | 17 |
 | `require-sanitized-markdown.test.ts` | 12 | 12 |
 | `utils-layer-boundary.test.ts` | 20 | 20 |
-| `repeatSafeRuleTester.test.ts`（新規） | — | 5 |
+| `repeatSafeRuleTester.test.ts`（新規） | ― | 5 |
 | **合計** | **107** | **112** |
 
 ルールのケースは 107 件から 1 件も減っていない。+5 は共有機構の回帰固定テスト
@@ -165,9 +165,9 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 
 候補（着手時に 1 つを選び、却下理由を記録する）:
 
-1. **RuleTester ラッパーを共有する** — `eslint/__tests__/` 用の薄いラッパーを用意し、`RuleTester` の `describe` / `it` 静的注入を周回ごとに作り直す。vitest の `beforeEach` などで `describe` 本体を再実行する方法がないため、**ラッパーだけでは解決しない**見込みが高い。着手時に PoC で確認すること。
-2. **`RuleTester` を使わない** — ルールを `Linter` に直接適用し、`lint()` 相当の検証を素の `it()` 内で書く。vitest 標準の「1 ファイル 1 周回」形状に寄るため repeats と相性が良い。ケースの書き換え量が多い。
-3. **vitest の pool / isolate 設定で周回ごとに module graph を作り直す** — `--pool=forks` や `isolate` の挙動を確認して、ルールテストだけ周回ごとにプロセスを分離できるなら 它が最小変更。設定が test 全体へ波及しないことを必ず確認する。
+1. **RuleTester ラッパーを共有する** ― `eslint/__tests__/` 用の薄いラッパーを用意し、`RuleTester` の `describe` / `it` 静的注入を周回ごとに作り直す。vitest の `beforeEach` などで `describe` 本体を再実行する方法がないため、**ラッパーだけでは解決しない**見込みが高い。着手時に PoC で確認すること。
+2. **`RuleTester` を使わない** ― ルールを `Linter` に直接適用し、`lint()` 相当の検証を素の `it()` 内で書く。vitest 標準の「1 ファイル 1 周回」形状に寄るため repeats と相性が良い。ケースの書き換え量が多い。
+3. **vitest の pool / isolate 設定で周回ごとに module graph を作り直す** ― `--pool=forks` や `isolate` の挙動を確認して、ルールテストだけ周回ごとにプロセスを分離できるなら 它が最小変更。設定が test 全体へ波及しないことを必ず確認する。
 
  whichever を選ぶ場合も、**7 ファイル一括で適用できる**ことを条件とする。個別ファイルへの後始末は受け入れ基準を満たさない。
 
@@ -193,6 +193,6 @@ Scenario: 新規ルールのテストが最初からゲートに乗る
 - [x] `AGENTS.md` / `dev-docs/TEST_RULE.md` の反復コマンド記載が本件の実態に一致している。
 - [x] **未実施（ユーザー作業）**: GitHub PR レビュー。
 
-## 未実施 — ユーザー作業
+## 未実施 ― ユーザー作業
 
 - GitHub PR レビュー。

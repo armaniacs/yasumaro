@@ -1,4 +1,4 @@
-# PBI: pageContentPipeline の content/pageState 値 import（utils↔content 循環）を解消する
+# PBI: pageContentPipeline の content/pageState 値 import（utils⇔content 循環）を解消する
 
 ## ユーザーストーリー
 開発者として、preparePageContent を content script 文脈なしで再利用したい、なぜなら現状は utils 層のパイプラインが content 層の PageState を値 import しており、デフォルト config の所有者が曖昧で utils と content entrypoint が実行時参照で循環しているから
@@ -68,10 +68,10 @@ Scenario: 明示 config 供給時は従来通り動作する
 ## 実装者向け注記
 
 ### 現状の証拠
-- 値 import(循環の起点): `src/utils/pageContentPipeline.ts:19-20` — `import type { CleansingConfig }` に加えて `import { PageState } from '../content/pageState.js'` を値 import
-- デフォルト解決の所有者曖昧: `src/utils/pageContentPipeline.ts:52-53` — `config ?? new PageState().cleansingConfig`
-- 逆方向の参照: `src/content/pageState.ts:11-13` — `../utils/aiSummaryCleaner/rules.js` の値 import と `../utils/contentCleaner.js` の値 importにより utils と content entrypoint が実行時参照で循環
-- 正規の型消し形状: `src/utils/contentExtractor/optionBuilder.ts:12` — `import type { CleansingConfig }` の型のみ import
+- 値 import(循環の起点): `src/utils/pageContentPipeline.ts:19-20` ― `import type { CleansingConfig }` に加えて `import { PageState } from '../content/pageState.js'` を値 import
+- デフォルト解決の所有者曖昧: `src/utils/pageContentPipeline.ts:52-53` ― `config ?? new PageState().cleansingConfig`
+- 逆方向の参照: `src/content/pageState.ts:11-13` ― `../utils/aiSummaryCleaner/rules.js` の値 import と `../utils/contentCleaner.js` の値 importにより utils と content entrypoint が実行時参照で循環
+- 正規の型消し形状: `src/utils/contentExtractor/optionBuilder.ts:12` ― `import type { CleansingConfig }` の型のみ import
 - production 呼び出し元は content 側のみ: `src/content/contentKernel.ts:18` の `preparePageContent` import と `src/content/contentKernel.ts:141-142` の `extractPageContent` からの委譲付近
 
 ## Definition of Done

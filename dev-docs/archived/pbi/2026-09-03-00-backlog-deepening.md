@@ -1,4 +1,4 @@
-# Backlog — Architecture Deepening Round 2026-09-03b
+# Backlog ― Architecture Deepening Round 2026-09-03b
 
 Phase 0 診断（6候補）を RICE 採点した 7 PBI。実行順 = RICE 降順（依存を尊重）。
 

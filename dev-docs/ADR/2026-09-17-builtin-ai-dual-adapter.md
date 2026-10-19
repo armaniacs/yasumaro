@@ -1,4 +1,4 @@
-# ADR: built-in AI 二重アダプタの裁定 — LocalAIService と BuiltInAiProvider の併存
+# ADR: built-in AI 二重アダプタの裁定 ― LocalAIService と BuiltInAiProvider の併存
 
 ## ステータス
 採用
@@ -90,15 +90,15 @@ mode `local_only` で `aiService.generateSummary(..., { mode: 'local_only' })` �
   本 PBI のスコープは調査・記録のみである。
 
 ## 参照
-- `src/background/ai/LocalAIService.ts` — `local_only` 専任、`BuiltInAIClient.summarize` へ直結
-- `src/background/ai/providers/BuiltInAiProvider.ts` — Strategy アダプタ、`sanitizeContent` 内蔵
-- `src/background/builtInAIClient.ts` — 単一クライアント（Prompt API 直呼び）
-- `src/background/ai/FallbackAIService.ts` — `local_only` 直結 / `full_pipeline`・`masked_cloud` は remote
-- `src/background/ai/aiServiceFactory.ts` — `createAIService` 組み立て
-- `src/background/ai/RemoteAIService.ts` — slot loop（`built-in-ai` はここからのみ到達）
-- `src/background/ai/providerCatalog.ts` — `built-in-ai` エントリ、`createProviderStrategy`
-- `src/background/privacyPipeline.ts` — `_buildSanitizedSettings`、`_performLocalSummarization`
-- `dev-docs/ADR/2026-04-21-ai-provider-abstraction.md` — ADR-015 Strategy-only 方針
-- `dev-docs/ADR/2026-07-27-ai-client-service-unification.md` — AIClient・AIService 統一方針
+- `src/background/ai/LocalAIService.ts` ― `local_only` 専任、`BuiltInAIClient.summarize` へ直結
+- `src/background/ai/providers/BuiltInAiProvider.ts` ― Strategy アダプタ、`sanitizeContent` 内蔵
+- `src/background/builtInAIClient.ts` ― 単一クライアント（Prompt API 直呼び）
+- `src/background/ai/FallbackAIService.ts` ― `local_only` 直結 / `full_pipeline`・`masked_cloud` は remote
+- `src/background/ai/aiServiceFactory.ts` ― `createAIService` 組み立て
+- `src/background/ai/RemoteAIService.ts` ― slot loop（`built-in-ai` はここからのみ到達）
+- `src/background/ai/providerCatalog.ts` ― `built-in-ai` エントリ、`createProviderStrategy`
+- `src/background/privacyPipeline.ts` ― `_buildSanitizedSettings`、`_performLocalSummarization`
+- `dev-docs/ADR/2026-04-21-ai-provider-abstraction.md` ― ADR-015 Strategy-only 方針
+- `dev-docs/ADR/2026-07-27-ai-client-service-unification.md` ― AIClient・AIService 統一方針
 - PBI: `pbi/2026-09-17-07-investigate-builtin-ai-dual-adapter.md`
 - 5 Whys: `/tmp/whywhy/pbi07-builtin-ai-dual-adapter.md`

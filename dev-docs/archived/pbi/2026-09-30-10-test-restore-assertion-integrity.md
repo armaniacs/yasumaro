@@ -18,11 +18,11 @@
 
 現状の空振り assertion(テスト名で特定する。行番号は目安):
 
-- `src/dashboard/__tests__/masterPassword-branches.test.ts:276`(テスト「mode=set requires matching confirm password (returns early on mismatch)」)— 唯一の assertion が `expect(setMasterPassword).not.toHaveBeenCalled()`。`setMasterPassword` は utils 版のモック(`:41-49` の `vi.mock('../../utils/masterPassword.js')`)で、本番コントローラが呼ぶのは `setMasterPasswordService`(`:95` の `setMasterPassword as setMasterPasswordService`、encryptionSession 版)のため常に成立する
-- `src/dashboard/__tests__/masterPassword.test.ts:788` / `:812` / `:901`(テスト「should show validation error when validatePasswordRequirements fails」「should show match error when passwords do not match in set mode」「should do nothing when masterPasswordInput element is null」)— 同じく utils 版 `setMasterPassword` への `not.toHaveBeenCalled()`。前 2 件は直前の DOM assertion が本番を検証しており、末尾の not-called だけが空振り。`:901` は not-called が唯一の assertion
-- `src/dashboard/__tests__/masterPassword.test.ts:864-884`(テスト「should restore the checkbox when the service throws during save」)— `checkbox.checked = false` を手動で構築し、`preToggleChecked` の初期値も `false` のため false→false になる。本番の復元(`savePasswordInner` の catch 内 `checked = this.preToggleChecked`)を削除しても通る
-- `src/utils/storage/encryptionSession.ts` の `reencryptApiKeysToKek` 末尾(`REENCRYPT_VERIFY_FAILED` を throw する箇所)— リポジトリ内でこの文字列に一致するのは本番コードの 1 箇所のみで、テストは 0 件。「認証メタデータは read back 確認が通るまで書かない」(`setMasterPassword` の JSDoc)という契約の失敗側が未検証
-- `src/utils/storage/__tests__/encryptionSession-reencrypt.test.ts:6` — ヘッダが「untouched until read-back verification passes」を謳うが、失敗経路のテストは無い
+- `src/dashboard/__tests__/masterPassword-branches.test.ts:276`(テスト「mode=set requires matching confirm password (returns early on mismatch)」)― 唯一の assertion が `expect(setMasterPassword).not.toHaveBeenCalled()`。`setMasterPassword` は utils 版のモック(`:41-49` の `vi.mock('../../utils/masterPassword.js')`)で、本番コントローラが呼ぶのは `setMasterPasswordService`(`:95` の `setMasterPassword as setMasterPasswordService`、encryptionSession 版)のため常に成立する
+- `src/dashboard/__tests__/masterPassword.test.ts:788` / `:812` / `:901`(テスト「should show validation error when validatePasswordRequirements fails」「should show match error when passwords do not match in set mode」「should do nothing when masterPasswordInput element is null」)― 同じく utils 版 `setMasterPassword` への `not.toHaveBeenCalled()`。前 2 件は直前の DOM assertion が本番を検証しており、末尾の not-called だけが空振り。`:901` は not-called が唯一の assertion
+- `src/dashboard/__tests__/masterPassword.test.ts:864-884`(テスト「should restore the checkbox when the service throws during save」)― `checkbox.checked = false` を手動で構築し、`preToggleChecked` の初期値も `false` のため false→false になる。本番の復元(`savePasswordInner` の catch 内 `checked = this.preToggleChecked`)を削除しても通る
+- `src/utils/storage/encryptionSession.ts` の `reencryptApiKeysToKek` 末尾(`REENCRYPT_VERIFY_FAILED` を throw する箇所)― リポジトリ内でこの文字列に一致するのは本番コードの 1 箇所のみで、テストは 0 件。「認証メタデータは read back 確認が通るまで書かない」(`setMasterPassword` の JSDoc)という契約の失敗側が未検証
+- `src/utils/storage/__tests__/encryptionSession-reencrypt.test.ts:6` ― ヘッダが「untouched until read-back verification passes」を謳うが、失敗経路のテストは無い
 
 着地済み(本 PBI では触らない。前提として利用する):
 
@@ -204,10 +204,10 @@ it('should restore the checkbox to OFF when the service throws during a set save
 
 read-back は `reencryptApiKeysToKek` 内の 2 回目の `readApiKeyPlacements`(`port.get(['settings', ...API_KEY_FIELD_NAMES])`)で、`port` は `ChromeStoragePort`(実体は `chrome.storage.local`)。テストのグローバル `chrome.storage.local.get` / `set` は `vi.fn` なので、「ciphertext を書いた後の get だけ値を汚す」ラッパで注入する。この注入コードは実機で未検証のため、通らない場合は手順末尾の診断に従う。
 
-ファイル末尾の `describe('KEK rotation — resume', ...)` の後(最外 `describe` の内側)に追加する。
+ファイル末尾の `describe('KEK rotation ― resume', ...)` の後(最外 `describe` の内側)に追加する。
 
 ```ts
-describe('KEK rotation — read-back failure', () => {
+describe('KEK rotation ― read-back failure', () => {
   // Corrupts only reads issued after the rotation wrote ciphertext, so the
   // pre-write plan sees real data and the verification sees a mismatch.
   function corruptReadBackAfterWrite(field: string): () => void {

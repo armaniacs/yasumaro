@@ -1,4 +1,4 @@
-# PBI: SessionStore 耐久性向上 — local→session fallback・waitForFlush再設計・suspend flush・モバイルクォータ対処
+# PBI: SessionStore 耐久性向上 ― local→session fallback・waitForFlush再設計・suspend flush・モバイルクォータ対処
 
 元指摘: Checking Team (High: Legacy Bridge Architect, Edge & Mobile Strategist; Medium: System Architect, Tuning Expert, SRE/Ops Specialist)
 

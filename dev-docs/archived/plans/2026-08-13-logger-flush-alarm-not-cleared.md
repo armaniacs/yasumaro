@@ -263,7 +263,7 @@ export interface LogFlushScheduler {
   flushNow(): Promise<void>;
 }
 
-/** Chrome runtime implementation — uses chrome.alarms + onSuspend */
+/** Chrome runtime implementation ― uses chrome.alarms + onSuspend */
 export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
   private handler: (() => Promise<void>) | null = null;
 
@@ -282,7 +282,7 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
         ]);
         if (!flushCompleted) {
           console.error(
-            '[Logger] Flush timed out during suspend — pending log entries may not have been persisted'
+            '[Logger] Flush timed out during suspend ― pending log entries may not have been persisted'
           );
         }
       });
@@ -304,7 +304,7 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
   }
 }
 
-/** Test fake — runs handler synchronously/immediately */
+/** Test fake ― runs handler synchronously/immediately */
 export class ImmediateFlushScheduler implements LogFlushScheduler {
   private handler: (() => Promise<void>) | null = null;
 
@@ -317,7 +317,7 @@ export class ImmediateFlushScheduler implements LogFlushScheduler {
   }
 
   clear(): void {
-    // No real alarm exists in this fake — nothing to cancel.
+    // No real alarm exists in this fake ― nothing to cancel.
   }
 
   async flushNow(): Promise<void> {

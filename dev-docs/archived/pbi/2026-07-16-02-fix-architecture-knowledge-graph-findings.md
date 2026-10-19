@@ -2,7 +2,7 @@
 
 ## ユーザーストーリー
 
-開発者として、Yasumaro のアーキテクチャを知識グラフで可視化した際に浮上した構造的課題（設定モジュールの新旧重複、ドキュメント↔コードの分断、コンテンツスクリプト層の孤立、ログ→PII 依存の非可視化）を解消したい。なぜならこれらを放置すると、設定変更時の回帰バグ・「ADR の意図がコードに反映されているか」の追跡不能・影響範囲調査の抜けにより、将来の誤修正やデバッグ時間の増大につながるから。
+開発者として、Yasumaro のアーキテクチャを知識グラフで可視化した際に浮上した構造的課題（設定モジュールの新旧重複、ドキュメント⇔コードの分断、コンテンツスクリプト層の孤立、ログ→PII 依存の非可視化）を解消したい。なぜならこれらを放置すると、設定変更時の回帰バグ・「ADR の意図がコードに反映されているか」の追跡不能・影響範囲調査の抜けにより、将来の誤修正やデバッグ時間の増大につながるから。
 
 出典: `docs/blog-6_5/architecture-knowledge-graph-deep-dive.md`「開発者の方向け: すぐに効く改善案」4 項目。
 
@@ -31,7 +31,7 @@ grep -rln "storageSettings" src/ --include="*.ts" | grep -v "storageSettings.ts"
 grep -rln "settingsStore" src/ --include="*.ts" | grep -v "settingsStore.ts"
 # → storage.ts / quota.ts が新系統を使用
 
-# ドキュメント↔コードの分断確認（graphify 出力）
+# ドキュメント⇔コードの分断確認（graphify 出力）
 # 連結成分 605 個のうち、最大 2 つ = コード島(3358) + ドキュメント島(1327)
 # origin=None の 396 ノードのうち 383 が .md で、393 が孤立(deg0)
 ```
@@ -66,7 +66,7 @@ Feature: 設定モジュール統合（PBI-1）
 ```
 
 ```gherkin
-Feature: ドキュメント↔コード逆リンク（PBI-2）
+Feature: ドキュメント⇔コード逆リンク（PBI-2）
 
   Scenario: ADR から対応コードへの references エッジが存在する
     Given ADR 2026-03-20-default-settings-single-source.md が存在する
@@ -86,7 +86,7 @@ Feature: コンテンツスクリプト注入経路の可視化（PBI-3）
   Scenario: コンテンツスクリプトと SW のメッセージ契約が型で定義されている
     Given src/content/loader.ts が service-worker.ts から注入される
     When  src/messaging/types.ts を確認する
-    Then  content script ↔ SW 間のメッセージ型が 1 箇所に定義され、
+    Then  content script ⇔ SW 間のメッセージ型が 1 箇所に定義され、
           loader.ts と service-worker.ts の両方がそれを import している
 
   Scenario: 注入経路がドキュメントに記載されている

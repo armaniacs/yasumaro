@@ -1,8 +1,8 @@
-# PBI-01: StorageKeys Slice A — Obsidian/AI/Privacy facade
+# PBI-01: StorageKeys Slice A ― Obsidian/AI/Privacy facade
 
 優先度: 1位 / RICE 32.0 (Reach 9 × Impact 2 × Conf 80% / Effort 0.45w)
 種別: refactor
-依存: —（Slice B完了、ServiceContainer完了でenabler満たし）。Slice Cの前提
+依存: ―（Slice B完了、ServiceContainer完了でenabler満たし）。Slice Cの前提
 ファイル触接: `src/utils/storage/SettingsRepository.ts`, `src/utils/storage/types.ts`, `src/background/serviceContainer.ts`
 Effort: 0.45w (M)
 

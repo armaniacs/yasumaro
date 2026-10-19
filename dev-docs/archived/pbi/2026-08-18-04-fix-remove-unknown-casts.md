@@ -16,10 +16,10 @@
 ## 背景（2026-08-18 調査済み）
 本番コード（`__tests__` 除外）に `as unknown as` が31件存在する。主な分布:
 
-- `src/background/sqliteClient.ts`（8件）— `Record<string, unknown>` へのキャスト
-- `src/offscreen/opfsWorker.ts` / `src/offscreen/opfsWorker/backupHandlers.ts` / `src/offscreen/opfsMigrationV2Reader.ts` / `src/offscreen/sqliteEngineContext/migrationBackup.ts` — OPFS / WASM / `DedicatedWorkerGlobalScope` 境界
-- `src/dashboard/settings/ublockImport/sourceManager.ts`（3件）— `mergedRules as unknown as UblockRules`
-- `src/dashboard/panels/staticForm/staticPanelAdapter.ts:35` — `(undefined as unknown as Settings)` ※設計見直し対象
+- `src/background/sqliteClient.ts`（8件）― `Record<string, unknown>` へのキャスト
+- `src/offscreen/opfsWorker.ts` / `src/offscreen/opfsWorker/backupHandlers.ts` / `src/offscreen/opfsMigrationV2Reader.ts` / `src/offscreen/sqliteEngineContext/migrationBackup.ts` ― OPFS / WASM / `DedicatedWorkerGlobalScope` 境界
+- `src/dashboard/settings/ublockImport/sourceManager.ts`（3件）― `mergedRules as unknown as UblockRules`
+- `src/dashboard/panels/staticForm/staticPanelAdapter.ts:35` ― `(undefined as unknown as Settings)` ※設計見直し対象
 - その他: `resultBuilder.ts:39` / `RecordingPipeline.ts:421` / `content/extractor.ts` / `customPromptUtils.ts:84` 等
 
 分類の方針:

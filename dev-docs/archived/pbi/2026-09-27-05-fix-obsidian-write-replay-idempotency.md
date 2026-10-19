@@ -9,7 +9,7 @@
 ## 優先度
 
 - 順位: 後続（PBI 13 完了直後）
-- RICEスコア: 2.0（Reach=2 / Impact=2 / Confidence=90% / Effort=1.5 SP）— 方式確定済みのため Confidence 50% → 90%
+- RICEスコア: 2.0（Reach=2 / Impact=2 / Confidence=90% / Effort=1.5 SP）― 方式確定済みのため Confidence 50% → 90%
 - 見積もり: 1.5 SP
 
 ## BDD受け入れシナリオ
@@ -40,7 +40,7 @@ Scenario: 契約の維持
 
 - [x] `saveToObsidianStep` 失敗時の offline enqueue で、payload に**完成済み markdown**（`formatMarkdownStep` の出力）を保存する（`extractOfflinePayload` に `markdown: context.markdown` を追加。saveObsidian 実行時は format 済みのため確定済み）
 - [x] `RecordingOrchestrator.retryObsidianWrite` / `executeRetrySubset` で、obsidian_sync replay は formatMarkdownStep を再実行せず payload の markdown を使用する（`RetryJobInput.markdown` → `createRetryContext` → `formatMarkdownStep` の frozen guard。`formatMarkdownStep.test.ts` で固定）
-- [x] `NoteSectionEditor.insertIntoSection` に新オプション（`dedupe?: boolean`、既定 false）を追加し、true 時は section 範囲内（DEFAULT_SECTION_HEADER から次の `#` まで）の同一 content 行を検出して再挿入しない（`_sectionContains` — 連続行一致のため部分・順序違い・境界跨ぎは挿入される）
+- [x] `NoteSectionEditor.insertIntoSection` に新オプション（`dedupe?: boolean`、既定 false）を追加し、true 時は section 範囲内（DEFAULT_SECTION_HEADER から次の `#` まで）の同一 content 行を検出して再挿入しない（`_sectionContains` ― 連続行一致のため部分・順序違い・境界跨ぎは挿入される）
 - [x] `appendToDailyNote` はオプションを透過する。dashboard append（`dashboardSqlite/deps.ts:237-240`）は無指定（現状維持・後方互換）
 - [x] offline replay 経路のみ dedupe 有効（`retryObsidianWrite` が dedupe 付き obsidian ラッパを注入。初回 pipeline・dashboard は既定 false のまま）
 - [x] `noteSectionEditor.test.ts` の「常に挿入する」既存 pin は**残したまま**、dedupe 有効時の新テスト 6 件を追加（不一致・部分一致・section 境界跨ぎ・header 欠落を含む）

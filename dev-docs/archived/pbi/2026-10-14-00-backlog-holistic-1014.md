@@ -6,7 +6,7 @@
 - 差分スコープ: `49ca0c62..HEAD`（2026-10-14 の CI リリースパイプライン + 動的 import 統一）。過去 5 ラウンド（holistic-1009 20件 / archloop-1010 13件 / checking-team-1010 10件 / review-followup 5+7件 / skipped-test-cleanup 4件）で src/ 全域をレビュー済みのため、未レビュー material に限定した。台帳送り F1-F24・L2-L8 の再検討トリガーは今回の変更（release.yml / build-crx3.mjs / check-docs.mjs / 動的 import 6 ファイル）で**未発火**を確認済み。
 - 調査方法: 差分コミットの全ファイル実読（release.yml 277 行 / build-crx3.mjs 95 行 / pin テスト 112 行 / 動的 import diff）+ CWS v2 API ドキュメント（UploadState enum）確認 + GitHub Actions ラン実績確認（`gh run list/view`）+ 過去台帳の除外リスト照合。規模が狭く直接読了で完結したため graphify query は不使用。
 - レビュー報告書: 本台帳「レビュー報告書サマリー」節に要約。
-- NN01–NN04 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
+- NN01-NN04 に起票。本台帳は RICE 採点・順位根拠・依存・バッチ計画の SSOT。
 
 ## RICE 採点表（RICE 降順）
 
@@ -46,10 +46,10 @@ RICE = R × I × C / E。Reach はリリースパイプラインへの関与頻�
 
 W1（01 → 02 → 03 → 04）を統合側が逐次実装（全員 release.yml のため直列・hunk 分離コミットで PBI 毎に分割）。実装コミットは `31b2c15`（01）/ `0c864cc`（02）/ `cb1bc53`（03）/ `4c48b33`（04）。全 4 件最終ゲート `npm run validate` exit 0（1063 files / 16036 tests passed）+ `npm run build` PASS でアーカイブ。
 
-- **NN01** — `timeout-minutes: 15` → `90` + 予算根拠コメント（`release.yml:14-18`）。YAML パース検証。
-- **NN02** — publish ブロックを Edge 同型の `-w '%{http_code}'` パターンに統一。モック curl で 5 シナリオ（transport fail / 400 / 200+error / 200 ok / 200 非 JSON）を実証し、false success 経路の閉鎖を確認。
-- **NN03** — Edge ビルド直後に `check-bundle-size -- edge-mv3` を追加。
-- **NN04** — `git mv` で scripts/build-crx3.mjs に移設。pin テスト 4/4 green、release.yml と pin テスト（SCRIPT 定数 + doc コメント）の参照パス更新。
+- **NN01** ― `timeout-minutes: 15` → `90` + 予算根拠コメント（`release.yml:14-18`）。YAML パース検証。
+- **NN02** ― publish ブロックを Edge 同型の `-w '%{http_code}'` パターンに統一。モック curl で 5 シナリオ（transport fail / 400 / 200+error / 200 ok / 200 非 JSON）を実証し、false success 経路の閉鎖を確認。
+- **NN03** ― Edge ビルド直後に `check-bundle-size -- edge-mv3` を追加。
+- **NN04** ― `git mv` で scripts/build-crx3.mjs に移設。pin テスト 4/4 green、release.yml と pin テスト（SCRIPT 定数 + doc コメント）の参照パス更新。
 
 PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリンクもアーカイブ先）。ユーザー作業（CWS publish 拒否の Dashboard 対応）は 2026-10-14 にユーザー実施済みで完了。
 
@@ -63,7 +63,7 @@ PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリン�
 
 ## ユーザー作業（自動化外の残項目）
 
-- **CWS publish 拒否（v6.9.43、run 38525033887）**: ✅ 完了（2026-10-14 ユーザー報告）。store 側要件事項による拒否でコード欠陥ではない。"Your submission does not meet the requirements to be published in the store. Check the Developer Dashboard for steps to resolve." — Developer Dashboard での対応で解決。本ラウンドの PBI 化対象外（外部サービス操作）。
+- **CWS publish 拒否（v6.9.43、run 38525033887）**: ✅ 完了（2026-10-14 ユーザー報告）。store 側要件事項による拒否でコード欠陥ではない。"Your submission does not meet the requirements to be published in the store. Check the Developer Dashboard for steps to resolve." ― Developer Dashboard での対応で解決。本ラウンドの PBI 化対象外（外部サービス操作）。
 
 ## DoD 反映漏れ
 
@@ -72,7 +72,7 @@ PBI ファイルは `dev-docs/archived/pbi/` へ移動済み（下表のリン�
 ## レビュー報告書サマリー（4 観点）
 
 - **強み**: CRX3 署名は依存ゼロの最小 protobuf エンコーダで、NUL 終端の理由が doc コメントに記録され、pin テストが正例・負例の両方を pin（`scripts/__tests__/build-crx3.test.ts:92-98`）。秘密鍵は mktemp + trap、派生トークンは add-mask、workflow コンテキスト値は env 経由（CI_SECURITY_CHECKLIST 準拠）、自動 publish はリポジトリ変数ゲート付き。ストア 3 ステップは `always()` + `hashFiles` ガードで相互独立、GitHub Release はストア処理前に作成。動的 import 統一（ba6793fc）は 6 ファイル最小差分。
-- **主な構造的課題**: (1) CWS publish のエラー検出が JSON フィールドのみに依存し、pipefail なしのシェルで curl 通信失敗を「publish 成功」として通す経路が存在（Edge ステップは HTTP コード検出で解決済み — 同一ファイル内で解決パターンが不均一） (2) ジョブタイムアウト 15 分がポーリング最悪ケース（CWS 26.5 分 + Edge 46 分）を下回り、always() 独立設計がタイムアウトで崩れる (3) CRX3 署名ロジックが workflow ディレクトリに置かれ、pin テストが逆方向に横断 (4) Edge ビルドのバンドルサイズチェック欠落。
+- **主な構造的課題**: (1) CWS publish のエラー検出が JSON フィールドのみに依存し、pipefail なしのシェルで curl 通信失敗を「publish 成功」として通す経路が存在（Edge ステップは HTTP コード検出で解決済み ― 同一ファイル内で解決パターンが不均一） (2) ジョブタイムアウト 15 分がポーリング最悪ケース（CWS 26.5 分 + Edge 46 分）を下回り、always() 独立設計がタイムアウトで崩れる (3) CRX3 署名ロジックが workflow ディレクトリに置かれ、pin テストが逆方向に横断 (4) Edge ビルドのバンドルサイズチェック欠落。
 
 ## 5 Whys サマリー（主要テーマ）
 

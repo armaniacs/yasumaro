@@ -1,5 +1,5 @@
 ---
-title: "Yasumaro とは何か — Obsidianがなくても、Chrome拡張だけで動くAI閲覧記録ツール"
+title: "Yasumaro とは何か ― Obsidianがなくても、Chrome拡張だけで動くAI閲覧記録ツール"
 emoji: "📜"
 type: "tech"
 topics: ["chrome拡張機能", "ai", "sqlite", "ブラウザ", "productivity"]

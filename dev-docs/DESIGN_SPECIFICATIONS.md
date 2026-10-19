@@ -28,9 +28,9 @@ To prevent unauthorized or unexpected message processing in the Service Worker:
 ### 2.2 Service Worker Composition Root
 Long-lived collaborators are wired in `createBackgroundServices()` so every message path observes the same shared references (one `SqliteClient`, one `RecordingPipeline`, …).
 
-- **`compositionManifest.ts`**: a declarative `CompositionEntry[]` — `{ key, factory(container), singleton, onReady?(container) }`. Adding a background dependency is one entry; there is no separate `register()` block, keys union, or subset-check type to keep in sync.
+- **`compositionManifest.ts`**: a declarative `CompositionEntry[]` ― `{ key, factory(container), singleton, onReady?(container) }`. Adding a background dependency is one entry; there is no separate `register()` block, keys union, or subset-check type to keep in sync.
 - **`ServiceContainer`** (`serviceContainer.ts`): a ~50-line string-keyed DI container. `createBackgroundServices` registers every manifest entry the container does not already have (so a test can `container.override(key, fake)` first), resolves them all, then runs each entry's `onReady` once.
-- **`onReady`** is where cross-layer side effects live — `setPendingWriteQueue` and `setSqliteHealthCheck` (utils→background boundary) are declared next to the entry they depend on, not scattered through the composition body.
+- **`onReady`** is where cross-layer side effects live ― `setPendingWriteQueue` and `setSqliteHealthCheck` (utils→background boundary) are declared next to the entry they depend on, not scattered through the composition body.
 - **`dashboardSqliteHandler`** is an internal wiring value: it is a container key and reaches `MessageRouterDeps`, but it is not a field on `BackgroundServicesComposition`. Consumers get the handler via `messageRouter.getHandler('DASHBOARD_SQLITE')`.
 
 ## 3. UI Implementation Standards
@@ -74,7 +74,7 @@ Settings access goes through the `SettingsRepository` deep module (`src/utils/st
 
 - **Single source of defaults**: `DEFAULT_SETTINGS` in `src/utils/storage/defaults.ts` is the only source of fallback values.
 - **No inline fallbacks**: Callers must not use `|| 'default'` after reading settings.
-- **Delta writes**: `repo.set(key, value)` / `repo.setAll(partial)` write only the given keys; unspecified keys keep their stored values, re-read fresh under the write lock at save time. Do NOT pass a full cached snapshot — its unrelated keys would revert concurrent writers' changes (the full-payload case is the settings import).
+- **Delta writes**: `repo.set(key, value)` / `repo.setAll(partial)` write only the given keys; unspecified keys keep their stored values, re-read fresh under the write lock at save time. Do NOT pass a full cached snapshot ― its unrelated keys would revert concurrent writers' changes (the full-payload case is the settings import).
 - **Partial reads**: use `repo.getMany([StorageKeys.X, StorageKeys.Y])`.
 - **Full reads**: use `repo.getAll()` when loading an entire form.
 - **Testability**: tests inject `InMemoryStorageAdapter` via `SettingsReader` (`Pick<SettingsRepository, 'getMany' | 'getAll'>`) so they do not depend on `chrome.storage` mocks.
@@ -89,15 +89,15 @@ Key groups:
 
 ### 5.1.1 Key placement: nested settings vs. top level
 
-`migrateToSingleSettingsObject()` folds raw top-level keys into the `settings` blob and then deletes them, so a key's placement decides whether its owner can still see it. Classification is by **stored value**, never by name pattern — `isMigratableStorageKey()` accepts a key only when it is a `StorageKeys` value *and* is absent from the explicit `TOP_LEVEL_ONLY_KEYS` allowlist in `settingsMigration.ts`.
+`migrateToSingleSettingsObject()` folds raw top-level keys into the `settings` blob and then deletes them, so a key's placement decides whether its owner can still see it. Classification is by **stored value**, never by name pattern ― `isMigratableStorageKey()` accepts a key only when it is a `StorageKeys` value *and* is absent from the explicit `TOP_LEVEL_ONLY_KEYS` allowlist in `settingsMigration.ts`.
 
-Do not reintroduce substring tests such as `key.includes('_version')`. They classify by appearance, which both misclassifies settings whose name merely ends in `_version` (`gemini_api_version`, a dashboard-editable value) and says nothing about the CAS records (`settings_version`) they were meant to exclude — those are already rejected because they are not `StorageKeys` values.
+Do not reintroduce substring tests such as `key.includes('_version')`. They classify by appearance, which both misclassifies settings whose name merely ends in `_version` (`gemini_api_version`, a dashboard-editable value) and says nothing about the CAS records (`settings_version`) they were meant to exclude ― those are already rejected because they are not `StorageKeys` values.
 
 A key belongs on the allowlist when its owning module reads or writes it directly through `chrome.storage.local`, because migrating it deletes the only copy that owner can see. Current members:
 
 | Key | Owner |
 |-----|-------|
-| `encryption_salt`, `encryption_secret`, `hmac_secret`, `master_password_salt`, `master_password_hash` | keyring in `storage/encryptionSession.ts` — relocating strands the ciphertext |
+| `encryption_salt`, `encryption_secret`, `hmac_secret`, `master_password_salt`, `master_password_hash` | keyring in `storage/encryptionSession.ts` ― relocating strands the ciphertext |
 | `privacy_consent_version` | `storage/privacyConsent.ts` |
 | `tranco_version` | `trustDb/trancoConsentManager.ts` |
 | `trust_db:json` | `trustDb/TrustDbKernel.ts` (persists it with its own `withOptimisticLock` on the raw key) |
@@ -117,23 +117,23 @@ Invariants:
 
 - **Backup before deletion.** `legacy_settings_backup_*` is written *and read back* before any raw key is removed, so `tryRestoreFromBackup()` never loses its restore source.
 - **Resume reuses the verified backup.** A run that finds a backup already covering the remaining keys reuses it instead of stacking a duplicate; a run interrupted after a partial removal finishes the rest.
-- **The blob wins on fill.** The merge only fills keys the blob lacks — the blob is the only writer once migration has started. The one exception is the pre-removal race, where a raw key observed changing after the backup is the newest copy and overwrites.
+- **The blob wins on fill.** The merge only fills keys the blob lacks ― the blob is the only writer once migration has started. The one exception is the pre-removal race, where a raw key observed changing after the backup is the newest copy and overwrites.
 - **Pre-removal race check.** Values (and the blob's CAS generation) are re-read immediately before the destructive step. On drift the run follows the latest values, refreshes the backup and retries, bounded by `MAX_REMOVE_ATTEMPTS`; exhausting the retries leaves the state short of `completed` so the next start retries.
 - **Completion is version-compared, never truthiness.** `isSettingsMigrationComplete()` accepts only `stage === 'completed'` at the current schema version or newer. A partial stage is truthy, which is the defect the versioned record replaces.
 - **The legacy boolean is unverified, not complete.** `true` predates the backup, so it proves nothing: the migration repairs it (blob first, gaps backfilled from raw or a valid backup) and rewrites it as a versioned record. `SettingsRepository` uses `isSettingsBlobAuthoritative()` instead, which accepts the boolean so existing installs keep reading their blob while the repair runs.
-- **State lives in `chrome.storage.local` via `StoragePort`,** never in module state — a Service Worker restart must not lose the stage.
+- **State lives in `chrome.storage.local` via `StoragePort`,** never in module state ― a Service Worker restart must not lose the stage.
 
 ### 5.2 URL History Limits
 - **Maximum URLs**: `MAX_URL_SET_SIZE = 10,000`
 - **Warning Threshold**: `URL_WARNING_THRESHOLD = 8,000`
 - When limit is exceeded, recording is rejected with user notification
-- When approaching threshold (≥ 8,000), warning is logged
+- When approaching threshold (≧ 8,000), warning is logged
 
 ### 5.3 Cache Strategy
-RecordingCache is implemented as `RecordingCacheInstance` — a **facade composing 3 typed caches** (`src/background/cache/SettingsCache.ts` / `UrlCache.ts` / `PrivacyCache.ts`, each owning its TTL and `isStale()`), with injected `RecordingCacheStore` (no global state):
-- **SettingsCache**: 30-second TTL (`SETTINGS_CACHE_TTL`) — `SettingsCache` owns `get()` / `invalidate()` / `isStale()`, cache version tracking
-- **UrlCache**: 60-second TTL (`URL_CACHE_TTL`) — `UrlCache` owns `Map<string,number>` and `isStale()`
-- **PrivacyCache**: 5-minute TTL (`PRIVACY_CACHE_TTL`) — `PrivacyCache` owns `Map<string,PrivacyInfo>` and `getWithFallback()` (session fallback `privacyCache_<url>` with TTL eviction)
+RecordingCache is implemented as `RecordingCacheInstance` ― a **facade composing 3 typed caches** (`src/background/cache/SettingsCache.ts` / `UrlCache.ts` / `PrivacyCache.ts`, each owning its TTL and `isStale()`), with injected `RecordingCacheStore` (no global state):
+- **SettingsCache**: 30-second TTL (`SETTINGS_CACHE_TTL`) ― `SettingsCache` owns `get()` / `invalidate()` / `isStale()`, cache version tracking
+- **UrlCache**: 60-second TTL (`URL_CACHE_TTL`) ― `UrlCache` owns `Map<string,number>` and `isStale()`
+- **PrivacyCache**: 5-minute TTL (`PRIVACY_CACHE_TTL`) ― `PrivacyCache` owns `Map<string,PrivacyInfo>` and `getWithFallback()` (session fallback `privacyCache_<url>` with TTL eviction)
 - **Cross-context invalidation**: `ensureStorageListener()` is owned once by the facade and broadcasts `invalidateSettingsCache()` on `chrome.storage.onChanged` (`settings` key), with `dispose()` for deregistration
 - **Redaction**: `redactSettingsApiKeys` in `src/utils/storage/storagePort.ts` empties API-key fields before session persistence; cache modules are unaware of API-key redaction (VULN-014)
 - Cache persists across Service Worker restarts via `SessionStoreRecordingCacheStore`; tests use `InMemoryRecordingCacheStore` for isolation
@@ -143,27 +143,27 @@ A local SQLite database acts as a **secondary store for browsing/search**, indep
 
 - **Engine**: `@subframe7536/sqlite-wasm` (`OPFSCoopSyncVFS` + FTS5-enabled WASM, SQLite 3.53.0). `createSyncAccessHandle` requires a Worker context, so all OPFS SQLite work happens in the `src/offscreen/opfsWorker/` directory (dispatch, CRUD/search handlers, archive validation).
 - **Persistence + full-text search coexist** in the same database (previously mutually exclusive with the old `wa-sqlite` npm builds).
-- **3-tier fallback**: OPFS Worker → IndexedDB (`wa-sqlite` async, also FTS5-capable) → `chrome.storage.local`. Status is reported per active path via the `STATUS` message: base shape (`initialized` / `path` / `fallback` / `fts5`) plus migration extras (`opfsMigrationV2*` flags, `idbMigrationV2Done`, legacy-DB probes `opfsLegacyDbPath` / `idbLegacyDbName`). Extras are collected field-isolated by `src/offscreen/sqliteStatus.ts` (`collectMigrationExtras`, `allSettled`) — a failing probe omits its field instead of discarding all extras; the legacy storage-location constants live in `sqliteMessages.ts` as the shared contract.
+- **3-tier fallback**: OPFS Worker → IndexedDB (`wa-sqlite` async, also FTS5-capable) → `chrome.storage.local`. Status is reported per active path via the `STATUS` message: base shape (`initialized` / `path` / `fallback` / `fts5`) plus migration extras (`opfsMigrationV2*` flags, `idbMigrationV2Done`, legacy-DB probes `opfsLegacyDbPath` / `idbLegacyDbName`). Extras are collected field-isolated by `src/offscreen/sqliteStatus.ts` (`collectMigrationExtras`, `allSettled`) ― a failing probe omits its field instead of discarding all extras; the legacy storage-location constants live in `sqliteMessages.ts` as the shared contract.
 - **Full-text search**: FTS5 virtual table `browsing_logs_fts` (external content, synced by triggers) with the **`trigram` tokenizer** to support Japanese/CJK substring search. Queries shorter than 3 code points fall back to LIKE (trigram cannot match < 3 chars). User input is whitelisted and phrase-quoted (`sanitizeFtsTerm`) to prevent FTS5 operator injection.
 - **Migration**: existing users' old `AccessHandlePoolVFS` database is migrated once (idempotent) into the new DB via `opfsMigrationV2.ts` (old `wa-sqlite` dependency is confined to `opfsMigrationV2Reader.ts`). Tracked by `StorageKeys.OPFS_MIGRATION_V2_DONE`.
 - **Dashboard access**: the dashboard talks to the store via `DASHBOARD_SQLITE` messages (subtypes `query`/`search`/`status`/`import`/...). All read handlers wrap results as `{ success: true, rows, total }` so the dashboard service can distinguish success from failure.
-- **Unified gateway — hop split** (`src/background/sqlite/offscreenGateway.ts` + `src/messaging/dashboardGateway.ts`, facade `src/background/sqliteGateway.ts` re-exports the offscreen hop): both RPC hops share the single result vocabulary `SqliteResult<T>` but each hop has its own locality. `OffscreenGateway` (background → offscreen) exposes `query` / `mutate` / `maintain` / `status` via `ChromeOffscreenTransport`; `DashboardGateway` (dashboard → service worker) is the sole `DASHBOARD_SQLITE` sender — it owns the `tokenExempt` confirm-token dance, `DASHBOARD_SQLITE_TIMEOUT=10000`, and the opt-in query/search retry (2 attempts, 1000ms, throw-or-`retriable`, never on decode failure). `TEST_AI` / `TEST_OBSIDIAN` sends live only in `src/dashboard/generalSettings/connectionTests.ts`. Sender placement is pinned by `dashboardSenderGuard.test.ts`. `SqliteClient` is a thin shim delegating to `OffscreenGateway` so error classification never drifts.
+- **Unified gateway ― hop split** (`src/background/sqlite/offscreenGateway.ts` + `src/messaging/dashboardGateway.ts`, facade `src/background/sqliteGateway.ts` re-exports the offscreen hop): both RPC hops share the single result vocabulary `SqliteResult<T>` but each hop has its own locality. `OffscreenGateway` (background → offscreen) exposes `query` / `mutate` / `maintain` / `status` via `ChromeOffscreenTransport`; `DashboardGateway` (dashboard → service worker) is the sole `DASHBOARD_SQLITE` sender ― it owns the `tokenExempt` confirm-token dance, `DASHBOARD_SQLITE_TIMEOUT=10000`, and the opt-in query/search retry (2 attempts, 1000ms, throw-or-`retriable`, never on decode failure). `TEST_AI` / `TEST_OBSIDIAN` sends live only in `src/dashboard/generalSettings/connectionTests.ts`. Sender placement is pinned by `dashboardSenderGuard.test.ts`. `SqliteClient` is a thin shim delegating to `OffscreenGateway` so error classification never drifts.
   - The Service Worker hop classifies transport failures with `categorizeError`.
   - The Dashboard hop passes failure-response reasons through **verbatim** (the Service Worker already classified them); it only runs `categorizeError` on its own transport-level exceptions.
-- **Query plan — single SSOT** (`src/offscreen/queryPlan.ts`): `buildQuerySpec` / `clampLimit` / `buildExtraWhereSql` / `matchesExtraWhere` / `QUERY_CAPS` (plain 1000 / FTS 100000) are the single source of truth for WHERE-clause generation and limit clamping. `IdbVfsBackend` and `opfsWorker/searchHandlers` consume them; `InMemoryTransport` now delegates to `matchesExtraWhere` and `sanitizeFtsTerm` instead of reimplementing, and uses `QUERY_CAPS` + `clampLimit` for limits. `ORDER BY` is string-aware (`localeCompare` for strings, numeric for numbers) so `InMemoryTransport` fidelity matches the real FTS ordering. Row shape is owned by `rowCodec.ts` (`BROWSING_LOG_COLUMNS_SQL` + `mapNamed` / `mapPositional`): both backends pass explicit column lists to `buildPlainListStatements` (the `columns` parameter is required), so a schema column reorder cannot silently break positional readers.
-- **Request limits — single registry** (`src/utils/limits.ts`): `MAX_IMPORT_ROWS` / `MAX_APPEND_IDS` / restore ceilings and the named audit-cap variants (`AUDIT_CAP_OPFS` / `AUDIT_CAP_IDB`) live in one dependency-free table; `validators.ts`, the dashboard-SQLite handlers, and dashboard pre-checks all import from it, so a limit cannot drift between hops.
-- **Archive ops — codec-carrying wire table** (`src/messaging/archiveWireTable.ts`): each archive op is one `ArchiveOpDescriptor` row carrying `messageType` / `workerType` / `noRetry` / request encoding / response decode / field projection. All hops derive from the row — dashboard `callArchive`, service-worker `runArchive`, offscreen `ARCHIVE_DISPATCH`, and `OpfsWorkerBackend.proxyArchive` — and `StorageBackend` archive result types derive from `DescriptorResponse<D>`. Adding an archive op is one table row plus its worker handler; compile-time asserts pin table ↔ message union ↔ dispatch ↔ protocol.
+- **Query plan ― single SSOT** (`src/offscreen/queryPlan.ts`): `buildQuerySpec` / `clampLimit` / `buildExtraWhereSql` / `matchesExtraWhere` / `QUERY_CAPS` (plain 1000 / FTS 100000) are the single source of truth for WHERE-clause generation and limit clamping. `IdbVfsBackend` and `opfsWorker/searchHandlers` consume them; `InMemoryTransport` now delegates to `matchesExtraWhere` and `sanitizeFtsTerm` instead of reimplementing, and uses `QUERY_CAPS` + `clampLimit` for limits. `ORDER BY` is string-aware (`localeCompare` for strings, numeric for numbers) so `InMemoryTransport` fidelity matches the real FTS ordering. Row shape is owned by `rowCodec.ts` (`BROWSING_LOG_COLUMNS_SQL` + `mapNamed` / `mapPositional`): both backends pass explicit column lists to `buildPlainListStatements` (the `columns` parameter is required), so a schema column reorder cannot silently break positional readers.
+- **Request limits ― single registry** (`src/utils/limits.ts`): `MAX_IMPORT_ROWS` / `MAX_APPEND_IDS` / restore ceilings and the named audit-cap variants (`AUDIT_CAP_OPFS` / `AUDIT_CAP_IDB`) live in one dependency-free table; `validators.ts`, the dashboard-SQLite handlers, and dashboard pre-checks all import from it, so a limit cannot drift between hops.
+- **Archive ops ― codec-carrying wire table** (`src/messaging/archiveWireTable.ts`): each archive op is one `ArchiveOpDescriptor` row carrying `messageType` / `workerType` / `noRetry` / request encoding / response decode / field projection. All hops derive from the row ― dashboard `callArchive`, service-worker `runArchive`, offscreen `ARCHIVE_DISPATCH`, and `OpfsWorkerBackend.proxyArchive` ― and `StorageBackend` archive result types derive from `DescriptorResponse<D>`. Adding an archive op is one table row plus its worker handler; compile-time asserts pin table ⇔ message union ⇔ dispatch ⇔ protocol.
 - **Backend facets** (`src/offscreen/StorageBackend.ts`): the storage backend interface is split into `Queryable` (read) and `Mutable` (write) so callers import only the facet they need.
-- **History panel lifecycle** (`src/dashboard/panels/asyncData/sqliteHistoryModel.ts` / `sqliteHistoryPanel.ts`): the `SqliteHistoryModel` interface exposes 21 methods; panel transitions go through exactly 2 — `onNavigateIn(initParams?)` (filter branch → fallback check → persisted sort → initial fetch with retry) and `onNavigateOut()` (generation bump + persist flush + cache clear + selection clear). The Panel only stashes `initParams` in `init()` and decides *when* to call; the Model owns the order. Cache invalidation funnels through the internal `invalidateCache(reason)` helper (`unmount` / `fresh-load` / `mutation`).
+- **History panel lifecycle** (`src/dashboard/panels/asyncData/sqliteHistoryModel.ts` / `sqliteHistoryPanel.ts`): the `SqliteHistoryModel` interface exposes 21 methods; panel transitions go through exactly 2 ― `onNavigateIn(initParams?)` (filter branch → fallback check → persisted sort → initial fetch with retry) and `onNavigateOut()` (generation bump + persist flush + cache clear + selection clear). The Panel only stashes `initParams` in `init()` and decides *when* to call; the Model owns the order. Cache invalidation funnels through the internal `invalidateCache(reason)` helper (`unmount` / `fresh-load` / `mutation`).
 - **Transport adapters** (`OffscreenTransport` interface): `ChromeOffscreenTransport` manages the real offscreen-document lifecycle in production; `InMemoryTransport` is a stateful in-memory store so `OffscreenGateway` can be exercised in tests via the shared `queryPlan` SSOT without an offscreen document or any `chrome.*` API.
 
 ### 5.5 Trust DB
 
-Domain trust verification (used by the recording pipeline's trust step) is stored under `chrome.storage.local` key `trust_db:json` (canonical value `StorageKeys.TRUST_DB` in `src/utils/storage/types.ts`) and split into three deep modules plus a 2-seam façade:
+Domain trust verification (used by the recording pipeline's trust step) is stored under `chrome.storage.local` key `trust_db:json` (canonical value `StorageKeys.TRUST_DB` in `src/utils/storage/types.ts`) and split into three deep modules plus a 2-seam facade:
 
-- **`TrustDbKernel`** (`src/utils/trustDb/TrustDbKernel.ts`): owns the lifecycle — `initialize` / `save` / `rebuildCaches`. The **only** place that reads `chrome.storage.local.get(STORAGE_KEY)` where `STORAGE_KEY = StorageKeys.TRUST_DB`. `save()` uses a single `withOptimisticLock` (no separate lock for the Bloom filter). Settings access (Tranco version/domains) goes through an injectable `settingsReader` port; the default delegates to `settingsRepository.getAll()` / `setAll()` (i.e. the `SettingsRepository` / `StoragePort` path with cache / encryption / migration), not a direct `chrome.storage.local.get('settings')` — resolves circular #1 in [ADR 2026-08-20](ADR/2026-08-20-utils-layer-circular-dependency.md) without bypassing the repository seam.
-- **`TrustPolicy`** (`src/utils/trustDb/TrustPolicy.ts`): the **readonly seam** — `isDomainTrusted` / `isTrancoDomain` only, **storage-free** (`grep -rn "chrome.storage" src/utils/trustDb/TrustPolicy.ts` is 0). Hides `DomainVerifier` / `BloomFilterManager` / `TrancoManager` as private collaborators. Readonly callers (e.g. pipeline trust step) should import only this seam.
-- **`TrustDbAdmin`** (`src/utils/trustDb/TrustDbAdmin.ts`): the **mutation seam** — `addToWhitelist` / `addSensitiveDomain` / `updateTranco` / `save` / `repairDatabase` etc. Owns the persistence key via `export const TRUST_DB_STORAGE_KEY = StorageKeys.TRUST_DB` (re-exported from `StorageKeys`; Kernel consumes the same constant) and delegates to the Kernel, which persists through `StoragePort`/`withOptimisticLock`. Callers that mutate trust state (dashboard, whitelist updates) use this seam.
+- **`TrustDbKernel`** (`src/utils/trustDb/TrustDbKernel.ts`): owns the lifecycle ― `initialize` / `save` / `rebuildCaches`. The **only** place that reads `chrome.storage.local.get(STORAGE_KEY)` where `STORAGE_KEY = StorageKeys.TRUST_DB`. `save()` uses a single `withOptimisticLock` (no separate lock for the Bloom filter). Settings access (Tranco version/domains) goes through an injectable `settingsReader` port; the default delegates to `settingsRepository.getAll()` / `setAll()` (i.e. the `SettingsRepository` / `StoragePort` path with cache / encryption / migration), not a direct `chrome.storage.local.get('settings')` ― resolves circular #1 in [ADR 2026-08-20](ADR/2026-08-20-utils-layer-circular-dependency.md) without bypassing the repository seam.
+- **`TrustPolicy`** (`src/utils/trustDb/TrustPolicy.ts`): the **readonly seam** ― `isDomainTrusted` / `isTrancoDomain` only, **storage-free** (`grep -rn "chrome.storage" src/utils/trustDb/TrustPolicy.ts` is 0). Hides `DomainVerifier` / `BloomFilterManager` / `TrancoManager` as private collaborators. Readonly callers (e.g. pipeline trust step) should import only this seam.
+- **`TrustDbAdmin`** (`src/utils/trustDb/TrustDbAdmin.ts`): the **mutation seam** ― `addToWhitelist` / `addSensitiveDomain` / `updateTranco` / `save` / `repairDatabase` etc. Owns the persistence key via `export const TRUST_DB_STORAGE_KEY = StorageKeys.TRUST_DB` (re-exported from `StorageKeys`; Kernel consumes the same constant) and delegates to the Kernel, which persists through `StoragePort`/`withOptimisticLock`. Callers that mutate trust state (dashboard, whitelist updates) use this seam.
 - **`ManagedCollections`** (`src/utils/trustDb/ManagedCollections.ts`): bundles the `userTlds` / `sensitive` / `whitelist` string lists behind one module. `ManagedStringList` remains the internal implementation; exposed to callers only through `TrustDbAdmin`.
 - **`repairTrustDatabase`** (`src/utils/trustDb/trustDbRepair.ts`): a pure function that back-fills every missing field of a corrupted DB without in-place mutation.
 - **Compatibility shim** (`src/utils/trustDb/trustDb.ts`): re-exports the 2-seam API (`getTrustPolicy()` / `getTrustDbAdmin()`) and keeps `getTrustDb()` for backward compatibility until all callers migrate. New code should not use the god object.
@@ -178,7 +178,7 @@ All 4 gates that answer "is this URL allowed?" converge on one deep module `Doma
 |------|---------------|-----|
 | Background live read | `domainUtils.isDomainAllowed` | `DomainFilter.isAllowed(url)` |
 | Content-script 5-min TTL | `domainFilterCache` callback cache | `DomainFilterCacheAdapter.isAllowed(url)` |
-| Dashboard textarea | `domainFilter.ts` textarea ↔ storage | `DomainFilter.parse(text)` / `parseAndValidate(list)` |
+| Dashboard textarea | `domainFilter.ts` textarea ⇔ storage | `DomainFilter.parse(text)` / `parseAndValidate(list)` |
 | Content extractor callback | `loader` callback cache | `DomainFilter.isAllowedCached` |
 
 - **Single wildcard engine**: `wildcardToRegex` (`src/utils/wildcardToRegex.ts`) is the only implementation with the `MAX_WILDCARDS_PER_PATTERN` ReDoS guard. `domainUtils.isValidDomain` and `matchesPattern`, `urlSkipper.matchesPattern`, and `storage/domainFilterCache.matchesWildcardPattern` all delegate to it (the latter two are deprecated wrappers).
@@ -243,7 +243,7 @@ All Obsidian write operations are serialized via global mutex:
 
 ### 8.3 Recording Pipeline
 
-All recording paths go through **`RecordingOrchestrator`** (`src/background/pipeline/RecordingOrchestrator.js`) — **3 distinct entry points** compiled at construction:
+All recording paths go through **`RecordingOrchestrator`** (`src/background/pipeline/RecordingOrchestrator.js`) ― **3 distinct entry points** compiled at construction:
 
 ```
 record(data: RecordingData, opts?: RecordOptions)            // normal: full 13 steps (previewOnly data/opts delegates to preview())
@@ -251,15 +251,15 @@ preview(data, opts)                                          // preview: short-c
 retryObsidianWrite(job: { title, url, summary, tags? })      // retry: 2-step subset `retrySteps` (formatMarkdown + saveObsidian) compiled at construction, no AI re-run
 ```
 
-- The `RecordMode` union (`normal`/`preview`/`retryObsidian`), the `record(mode)` wrapper branch, `recordFull`, the private `retryObsidian`, and the `retryObsidianWriteOnly` alias were removed (PBI 2026-09-11-04) — the 3 methods above are the entire public surface (pinned by `orchestrator-surface.test.ts`). The `previewOnly` data flag remains as the step-level breakpoint seam (read by `executeInternal` and `processPrivacyPipelineStep`).
+- The `RecordMode` union (`normal`/`preview`/`retryObsidian`), the `record(mode)` wrapper branch, `recordFull`, the private `retryObsidian`, and the `retryObsidianWriteOnly` alias were removed (PBI 2026-09-11-04) ― the 3 methods above are the entire public surface (pinned by `orchestrator-surface.test.ts`). The `previewOnly` data flag remains as the step-level breakpoint seam (read by `executeInternal` and `processPrivacyPipelineStep`).
 - `opts.settings` bypasses `getSettingsWithCache`; the manual/preview record handlers pass their already-resolved settings this way so a concurrent cache refresh cannot race them.
 - **Typed context** (`src/background/pipeline/contextBuilder.ts`): the canonical context is `StagedContext<S>` (brand type `ContextStage` = `initial`/`checked`/`privacy`/`extracted`/`formatted`) with `createInitialContext` / `createRetryContext` / `createStepDeps` / `createSaveSqliteParams`. The 7-way `RecordingContext` intersection in `types.ts` is superseded; `pickDefined` conditional spreads are replaced by explicit `if (x !== undefined)` builders so `exactOptionalPropertyTypes` is satisfied and out-of-order reads become type errors.
 - **`RetryPolicy`** (`src/background/pipeline/retryPolicy.ts`): `isNetworkError` / `shouldEnqueueForOffline` (string heuristic including `'ai '`) is extracted from `StepExecutor` so the policy is unit-testable without network; `StepExecutor` is injected with `RetryPolicy` (default `defaultRetryPolicy`) and no longer owns the heuristic.
 - The step list, `PipelineKernel`, and `StepExecutor` are private implementation. Callers only see the 3 entry points / `RecordingData` / `RecordingResult`.
-- **`RecordingOutcome`** (`src/background/pipeline/recordingOutcome.ts`): the single outcome-policy seam — `decideStepOutcome()` (catch path: PrivatePage / Duplicate / FATAL+RETRY mapping) and `finalizeSuccess()` (success path: non-fatal summary log, obsidian_sync recovery, save-success notice). Pending registration and user notices hide behind injectable `OutcomeNotifier` / `OutcomePendingWriter` adapters (production: chrome + storage; tests: in-memory fakes). `resultBuilder.ts` keeps pure shape construction only.
+- **`RecordingOutcome`** (`src/background/pipeline/recordingOutcome.ts`): the single outcome-policy seam ― `decideStepOutcome()` (catch path: PrivatePage / Duplicate / FATAL+RETRY mapping) and `finalizeSuccess()` (success path: non-fatal summary log, obsidian_sync recovery, save-success notice). Pending registration and user notices hide behind injectable `OutcomeNotifier` / `OutcomePendingWriter` adapters (production: chrome + storage; tests: in-memory fakes). `resultBuilder.ts` keeps pure shape construction only.
 - Handler deps use the narrow `RecordingRunner` interface (`{ record }`), not the concrete class.
 
-**Per-URL serialization** — `record()` runs each URL's work inside `PerUrlMutexMap` (`src/background/pipeline/perUrlMutex.js`):
+**Per-URL serialization** ― `record()` runs each URL's work inside `PerUrlMutexMap` (`src/background/pipeline/perUrlMutex.js`):
 - Each map instance owns a `Map<string, Mutex>` (per-URL, `maxQueueSize: 5`, `timeoutMs: 60000`).
 - The map entry is dropped only when its mutex is fully idle (no current lock, no queued waiters), so a URL with a pending concurrent recording keeps its entry.
 - **One shared instance**: registered as a container singleton (`perUrlMutexMap`) and wired into the orchestrator's deps by `compositionManifest.ts`. An orchestrator constructed without it falls back to a private map, losing cross-instance serialization and re-opening the duplicate-entry race.
@@ -295,8 +295,8 @@ Uses placeholder substitution with `buildDailyNotePath()`:
 - **Length Limit**: Maximum 10,000 characters
 - **Normalization**: Consecutive whitespace → single space
 - **Trigger Conditions**:
-  - Visit duration ≥ `MIN_VISIT_DURATION` (default: 5s)
-  - Scroll depth ≥ `MIN_SCROLL_DEPTH` (default: 50%)
+  - Visit duration ≧ `MIN_VISIT_DURATION` (default: 5s)
+  - Scroll depth ≧ `MIN_SCROLL_DEPTH` (default: 50%)
 - **Frequency Check**: Every 1 second + on scroll events
 - **Performance**: Stop periodic checking after conditions met
 
@@ -325,7 +325,7 @@ Timestamp in Japanese locale (HH:MM format):
 - **Badge notification**: `ExtractResult.cleansingExecuted` is set only in the
   actual-cleansing branches (the diagnostic recount never sets it), and
   `contentKernel.extractPageContent` sends `CONTENT_CLEANSING_EXECUTED` via the
-  injected `MessageSender` seam when it is true — `utils/` stays chrome-free
+  injected `MessageSender` seam when it is true ― `utils/` stays chrome-free
   and recount-only pages never fire the badge.
 
 ## 11. Local AI (Chrome Prompt API)
@@ -346,8 +346,8 @@ Timestamp in Japanese locale (HH:MM format):
 
 `ProviderCatalog` (`src/background/ai/providerCatalog.ts`) is the single seam for per-provider wiring. `resolve(id)` / `tryResolve(id)` return one entry describing a provider:
 
-- `baseUrlKey` / `apiKeyKey` / `modelKey` — the `StorageKeys` holding that provider's config
-- `isLocal` — whether the base URL is expected to be a localhost address
+- `baseUrlKey` / `apiKeyKey` / `modelKey` ― the `StorageKeys` holding that provider's config
+- `isLocal` ― whether the base URL is expected to be a localhost address
 - `defaultModel`, `cspDomain`, `label`, `contentCharsKey`
 
 The catalog is built from `PROVIDER_REGISTRY` (wiring data) augmented with `cspDomain` / `label` / `contentCharsKey`. Consumers derive from the catalog instead of hard-coded switches:
@@ -449,7 +449,7 @@ Users can add domains/paths to the whitelist from the confirmation dialog:
 
 ### 14.1 Valid Message Types (`VALID_MESSAGE_TYPES`)
 - `VALID_VISIT`: Content Script → Service Worker (automatic visit recording)
-- `GET_CONTENT`: Popup ↔ Content Script (manual content fetch)
+- `GET_CONTENT`: Popup ⇔ Content Script (manual content fetch)
 - `FETCH_URL`: Popup → Service Worker (CORS bypass fetch)
 - `MANUAL_RECORD`: Popup → Service Worker (manual record)
 - `PREVIEW_RECORD`: Popup → Service Worker (preview with PII masking)

@@ -64,11 +64,11 @@
 
 ## 再利用する既存資産
 
-- `src/background/pipeline/steps/saveLocalMarkdownStep.ts` — ダウンロード機構パターン
-- `src/utils/storage/`（`StorageKeys`、`defaults.ts`）— 新規設定キー追加パターン
-- `src/background/sessionAlarmsManager.ts` — alarms/起動検知パターン
-- 既存AIクライアント — メタ要約生成
-- `src/utils/urlEntry.ts`の`SavedUrlEntry` — 統計集計の元データ
+- `src/background/pipeline/steps/saveLocalMarkdownStep.ts` ― ダウンロード機構パターン
+- `src/utils/storage/`（`StorageKeys`、`defaults.ts`）― 新規設定キー追加パターン
+- `src/background/sessionAlarmsManager.ts` ― alarms/起動検知パターン
+- 既存AIクライアント ― メタ要約生成
+- `src/utils/urlEntry.ts`の`SavedUrlEntry` ― 統計集計の元データ
 
 ## テスト戦略（概要、詳細はPBI文書側で定義）
 

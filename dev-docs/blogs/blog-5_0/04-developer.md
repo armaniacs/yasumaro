@@ -1,4 +1,4 @@
-# Obsidian Weave v5.0 — 実装者が振り返る v4.2 → v5.0 の設計判断
+# Obsidian Weave v5.0 ― 実装者が振り返る v4.2 → v5.0 の設計判断
 
 > 対象読者: Chrome 拡張開発者、TypeScript/Service Worker 開発者、同プロジェクトへのコントリビュータ
 
@@ -10,7 +10,7 @@ v4.2.0 から v5.0（internal: v4.10.x）まで、3 週間足らずで相当量�
 
 ---
 
-## 1. 権限モデル変更 — `<all_urls>` を剥がすということ
+## 1. 権限モデル変更 ― `<all_urls>` を剥がすということ
 
 今回の変更で最も波及範囲が広かったのが、`host_permissions: ["<all_urls>"]` の削除です。
 
@@ -39,7 +39,7 @@ manifest.json 変更
 
 ---
 
-## 2. Trust Database — Bloom Filter を選んだ理由
+## 2. Trust Database ― Bloom Filter を選んだ理由
 
 Tranco Top 10,000 ドメインのリストを毎回線形検索するのは現実的ではありません（O(n)）。
 
@@ -60,7 +60,7 @@ Chrome 拡張の Service Worker はメモリに制約があり、かつ **再起
 Service Worker 再起動後に `trancoSet`（O(1) 検索用の `Set<string>` キャッシュ）を再構築していなかったため、Tranco による信頼判定が常に失敗するというバグが v4.10.3 まで残存しました。
 
 ```typescript
-// trustDb.ts — initialize() 内に追記が必要だった
+// trustDb.ts ― initialize() 内に追記が必要だった
 this.trancoSet = new Set(this.trancoList.map(d => d.toLowerCase()));
 ```
 
@@ -284,7 +284,7 @@ async function showTagResult(url: string): Promise<void> {
 
 ---
 
-## 10. 「記録できなかったページ」の手動記録 — バグ起因の機能追加
+## 10. 「記録できなかったページ」の手動記録 ― バグ起因の機能追加
 
 ### 発端
 

@@ -53,11 +53,11 @@ graphify 知識グラフ（14,404 nodes / 22,238 edges）の god node 分析に�
 
 ## 実装内容
 
-1. 新規 `src/utils/logger/buffer.ts` — `LogBuffer` 内部 module（in-memory ring、上限管理、getPending/clear）
-2. 新規 `src/utils/logger/sanitize.ts` — `LogSanitize` 内部 module（core.ts の sanitizeLogDetails/sanitizeArray を移動、piiSanitizer.sanitizeRegex を直接使用）
-3. 新規 `src/utils/logger/storageAdapter.ts` — `LogStorageAdapter` interface + `ChromeStorageLogAdapter`（chrome.storage.local 実装）+ `InMemoryLogAdapter`（テスト用）
-4. 新規 `src/utils/logger/flushScheduler.ts` — `LogFlushScheduler` interface + `ChromeAlarmFlushScheduler`（alarms/onSuspend 実装）+ `ImmediateFlushScheduler`（テスト用）
-5. `core.ts` をオーケストレータに変更 — `addLog`/`getLogs`/`clearLogs`/`flushLogs` の export は維持、内部で上記 module/adapter を呼ぶ
+1. 新規 `src/utils/logger/buffer.ts` ― `LogBuffer` 内部 module（in-memory ring、上限管理、getPending/clear）
+2. 新規 `src/utils/logger/sanitize.ts` ― `LogSanitize` 内部 module（core.ts の sanitizeLogDetails/sanitizeArray を移動、piiSanitizer.sanitizeRegex を直接使用）
+3. 新規 `src/utils/logger/storageAdapter.ts` ― `LogStorageAdapter` interface + `ChromeStorageLogAdapter`（chrome.storage.local 実装）+ `InMemoryLogAdapter`（テスト用）
+4. 新規 `src/utils/logger/flushScheduler.ts` ― `LogFlushScheduler` interface + `ChromeAlarmFlushScheduler`（alarms/onSuspend 実装）+ `ImmediateFlushScheduler`（テスト用）
+5. `core.ts` をオーケストレータに変更 ― `addLog`/`getLogs`/`clearLogs`/`flushLogs` の export は維持、内部で上記 module/adapter を呼ぶ
 6. `core.ts` の `chrome.alarms` / `chrome.runtime.onSuspend` リスナ登録を `flushScheduler` の adapter 実装に移動
 
 ## 受け入れ基準

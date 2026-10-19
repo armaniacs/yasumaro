@@ -1,4 +1,4 @@
-# Obsidian Weave v5.0 — ユーザー向け新機能ガイド
+# Obsidian Weave v5.0 ― ユーザー向け新機能ガイド
 
 > 対象読者: Obsidian Weave を日常的に使っているユーザー
 
@@ -43,7 +43,7 @@
 
 ---
 
-### 4. 記録前にページを「掃除」できる — Content Cleansing 🧹
+### 4. 記録前にページを「掃除」できる ― Content Cleansing 🧹
 
 ネットバンキングや SaaS のページには、フォーム・残高表示・スクリプトタグなど、AIに送りたくない情報が大量に含まれています。**Content Cleansing** を有効にすると、記録前にこれらを自動削除します。
 
@@ -58,7 +58,7 @@
 
 ---
 
-### 5. AI要約のノイズをさらに削減 — AI Summary Cleansing / Deep Cleansing 📉
+### 5. AI要約のノイズをさらに削減 ― AI Summary Cleansing / Deep Cleansing 📉
 
 Content Cleansing に加えて、**AI Summary Cleansing** は AI へ送るコンテンツからナビゲーション・広告・ソーシャルウィジェットを除去します。さらに実験的な **Deep Cleansing** を有効にすると、非表示要素・空要素・リンク密度の高いリストも削除対象になります。
 

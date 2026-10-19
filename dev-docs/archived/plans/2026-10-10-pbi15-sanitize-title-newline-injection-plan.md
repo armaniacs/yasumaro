@@ -14,8 +14,8 @@
 
 ## File Structure
 
-- Modify: `src/utils/markdownFormatter.ts:62-69` — add newline-to-space normalization inside `sanitizeTitle` only.
-- Modify: `src/utils/__tests__/markdownFormatter.test.ts` — add two tests (obsidianList + heading). No other files.
+- Modify: `src/utils/markdownFormatter.ts:62-69` ― add newline-to-space normalization inside `sanitizeTitle` only.
+- Modify: `src/utils/__tests__/markdownFormatter.test.ts` ― add two tests (obsidianList + heading). No other files.
 
 ## PBI
 
@@ -29,7 +29,7 @@
 - Modify: `src/utils/__tests__/markdownFormatter.test.ts`
 - Test: `src/utils/__tests__/markdownFormatter.test.ts`
 
-The existing imports already include `buildEntryMarkdown` (`:3`). `EntryMarkdownStyle` includes `'obsidianList'` (`src/utils/markdownFormatter.ts:13`). The default branch (`:173-174`) renders `- <timestamp> [<title>](<url>)\n    - <tags><summary>`, i.e. exactly 2 lines for a tag-free entry — a newline in the title adds a third line, which is the assertion.
+The existing imports already include `buildEntryMarkdown` (`:3`). `EntryMarkdownStyle` includes `'obsidianList'` (`src/utils/markdownFormatter.ts:13`). The default branch (`:173-174`) renders `- <timestamp> [<title>](<url>)\n    - <tags><summary>`, i.e. exactly 2 lines for a tag-free entry ― a newline in the title adds a third line, which is the assertion.
 
 - [x] **Step 1: Append the failing test inside `describe('buildEntryMarkdown (PBI-04 SSOT)', ...)`**
 
@@ -47,7 +47,7 @@ The existing imports already include `buildEntryMarkdown` (`:3`). `EntryMarkdown
 - [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/utils/__tests__/markdownFormatter.test.ts -t "normalizes newlines in title"`
-Expected: FAIL — the title keeps the raw `\n`, the output has 3 lines, and the injected `    - injected` row is present.
+Expected: FAIL ― the title keeps the raw `\n`, the output has 3 lines, and the injected `    - injected` row is present.
 
 - [x] **Step 3: Commit the red test**
 
@@ -75,7 +75,7 @@ function sanitizeTitle(input: BuildEntryMarkdownInput, opts?: BuildEntryMarkdown
 }
 ```
 
-Notes: `sanitizeForMarkdownLinkText` itself is NOT modified. `input.title as string` cast for the `titleFallback === false` branch is preserved from the original. `\r`-only line endings are covered by `\r?\n+` only when followed by `\n`; a lone `\r` is additionally neutralized because `sanitizeForMarkdownLinkText` output is single-line by contract — if you find a lone-`\r` case in tests, extend the first regex to `/[\r\n]+/g` instead.
+Notes: `sanitizeForMarkdownLinkText` itself is NOT modified. `input.title as string` cast for the `titleFallback === false` branch is preserved from the original. `\r`-only line endings are covered by `\r?\n+` only when followed by `\n`; a lone `\r` is additionally neutralized because `sanitizeForMarkdownLinkText` output is single-line by contract ― if you find a lone-`\r` case in tests, extend the first regex to `/[\r\n]+/g` instead.
 
 - [x] **Step 2: Run the tests to verify green**
 
@@ -94,7 +94,7 @@ git commit -m "fix: normalize newlines in sanitizeTitle (injection safety)"
 **Files:**
 - Modify: `src/utils/__tests__/markdownFormatter.test.ts`
 
-The `heading` branch (`:160-171`) renders `# <title>` as its first line from the same `sanitizeTitle` output, so this test should already pass — it pins the second style.
+The `heading` branch (`:160-171`) renders `# <title>` as its first line from the same `sanitizeTitle` output, so this test should already pass ― it pins the second style.
 
 - [x] **Step 1: Append the test next to the obsidianList one**
 
@@ -112,7 +112,7 @@ The `heading` branch (`:160-171`) renders `# <title>` as its first line from the
 - [x] **Step 2: Run to verify green**
 
 Run: `npx vitest run src/utils/__tests__/markdownFormatter.test.ts`
-Expected: PASS. If the exact spacing differs (collapse rule `  +` → single space), adjust only the expected string in the test — never the implementation — and re-run.
+Expected: PASS. If the exact spacing differs (collapse rule `  +` → single space), adjust only the expected string in the test ― never the implementation ― and re-run.
 
 - [x] **Step 3: Commit**
 

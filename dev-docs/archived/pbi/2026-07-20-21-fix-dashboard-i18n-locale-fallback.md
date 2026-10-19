@@ -69,7 +69,7 @@ Feature: Dashboard i18n and locale fallback
 2pt（HTML i18n + messages.json + locale fallback + title 動的化 + テスト）
 
 ## 副作用
-🟢 なし — 既存の日本語ユーザーには変更不要。英語/中国語ユーザー向けの改善。
+🟢 なし ― 既存の日本語ユーザーには変更不要。英語/中国語ユーザー向けの改善。
 
 ## 落とし穴
 - `data-i18n` 追加時に既存のキーと重複しないよう注意（`confirmImport` の重複を参考に）

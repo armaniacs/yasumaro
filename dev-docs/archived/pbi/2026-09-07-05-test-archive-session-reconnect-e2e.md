@@ -43,7 +43,7 @@ Scenario: 未保存編集の dirty 状態が reload 後も保持される
 ### Y5' E2E（archive-recommended-verification.spec.ts に追記・一発グリーン）
 
 検証フロー:
-1. Y3 流用（seedRows → runPhaseA → exportStagingBytes → stageIncomingBytes → archive_open）でセッションを開く — この間パネルは mount していない（direct message パス）
+1. Y3 流用（seedRows → runPhaseA → exportStagingBytes → stageIncomingBytes → archive_open）でセッションを開く ― この間パネルは mount していない（direct message パス）
 2. `archive_status`（TOKEN_EXEMPT）で open/stagingName/dirty=false を assert
 3. `page.reload()` → `archive_status` で open/stagingName 保持を assert（SW・offscreen worker は生き続けるため）
 4. `archive_query` が動作（セッション実体が生きている証拠）
@@ -51,8 +51,8 @@ Scenario: 未保存編集の dirty 状態が reload 後も保持される
 6. dirty フロー: `archive_update`（dirty=true）→ 再 reload → `archive_status` の dirty=true 保持
 
 ### 実装確認メモ
-- パネルは NavigationRegistry の navigate 時に**初回 mount**（遅延） — reload 後のタブクリックが mount プローブの発火点になる
-- `archiveDirtyLocal` は閉じる確認ダイアログ用の内部状態で視覚表示なし — dirty の assert は `archive_status` レベルで実施
+- パネルは NavigationRegistry の navigate 時に**初回 mount**（遅延） ― reload 後のタブクリックが mount プローブの発火点になる
+- `archiveDirtyLocal` は閉じる確認ダイアログ用の内部状態で視覚表示なし ― dirty の assert は `archive_status` レベルで実施
 - dirty=true のまま reload しても SW 側 `archiveDirty` は保持される（worker のモジュール状態）
 
 ## テスト戦略

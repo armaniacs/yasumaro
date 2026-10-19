@@ -86,9 +86,9 @@ Scenario: 同意判定は同一ルールを使う
 ### (a) Tranco 同意判定の統合（受け入れ基準 4・5 実装済み）
 
 - 共通モジュール: `src/utils/storage/trancoConsent.ts`（`navTrailConsent.ts` と同じ storage 層の同意モジュールに置く）
-  - `evaluateTrancoConsent(snapshot, now)` — 30 日ルール判定の唯一の持ち主。`alreadyGranted` / `hasDenial` / `needsConsent` / `daysUntilRetry` を返す
-  - `needsTrancoConsent(snapshot, now)` — popup 用の boolean 表現（判定は `evaluateTrancoConsent` に委譲）
-  - `persistTrancoConsentGrant(version)` / `persistTrancoConsentDeny(deniedAt)` — 3 キー delta write。書き込み先は従来どおり `saveSettingsAndRefreshDomainFilterCache`
+  - `evaluateTrancoConsent(snapshot, now)` ― 30 日ルール判定の唯一の持ち主。`alreadyGranted` / `hasDenial` / `needsConsent` / `daysUntilRetry` を返す
+  - `needsTrancoConsent(snapshot, now)` ― popup 用の boolean 表現（判定は `evaluateTrancoConsent` に委譲）
+  - `persistTrancoConsentGrant(version)` / `persistTrancoConsentDeny(deniedAt)` ― 3 キー delta write。書き込み先は従来どおり `saveSettingsAndRefreshDomainFilterCache`
 - 呼び出し側: popup は boolean、dashboard は 5 状態（`ALREADY_GRANTED` / `PENDING` / `DENIED` / `RETRY_NEEDED`）への写像だけを残し、日数演算は両方から消えた
 - 境界の定義を 1 つに揃えた: popup の `elapsedDays >= 30`（実ミリ秒比較）を正とし、dashboard の `Math.ceil(elapsedDays)` は採用しない。判定結果が変わるのは 29 日超 30 日未満（例 29.5 日）で、この間だけ dashboard が `RETRY_NEEDED`（再提示）から `DENIED`（残り 1 日）に変わる。30 日ルールは「30 日が満了するまで再提示しない」であり、切り上げは早すぎる再提示になるため
 - テスト: 29/30/31 日（および 30 日境界の 1ms 前・ちょうど）を `src/utils/storage/__tests__/trancoConsent.test.ts` に集約。両呼び出し側のテストは自分の写像（PBI テスト戦略どおり境界は 1 箇所だけ）。`trancoConsentRuleOwnership.test.ts` はソース走査で呼び出し側に日数演算・`'deny'` リテラルが戻っていないことを固定
@@ -97,8 +97,8 @@ Scenario: 同意判定は同一ルールを使う
 ### (b) AI 接続テスト runner の抽出（受け入れ基準 1-3 実装済み）
 
 - 新規モジュール: `src/dashboard/aiTestRunner.ts`（共有 view と同じ `src/dashboard/` 直下に置く）
-  - `runAiConnectionTest(options): Promise<AiTestRunOutcome>` — guard → runId 生成 → 進捗購読 → 経過時間 interval → `prepare` → `run(runId)` → 結果描画。戻り値は `'ran' | 'aborted' | 'failed' | 'guarded'`
-  - `renderAiTestProviderLines(target, providers)` — `aiTestResultView` の整形結果を DOM 化する共有描画（両面が完全に同一だった部分）
+  - `runAiConnectionTest(options): Promise<AiTestRunOutcome>` ― guard → runId 生成 → 進捗購読 → 経過時間 interval → `prepare` → `run(runId)` → 結果描画。戻り値は `'ran' | 'aborted' | 'failed' | 'guarded'`
+  - `renderAiTestProviderLines(target, providers)` ― `aiTestResultView` の整形結果を DOM 化する共有描画（両面が完全に同一だった部分）
   - in-flight guard はモジュールスコープ 1 個。`finally` で必ず解放する（例外終了時も解放）
   - `intervalMs`（既定 200ms）を引数で注入できる
 - 注入引数: `target`（描画先）/ `run`（TEST_AI 送信）/ `draw`（`elapsedMirror`・`onProviderAnnounced`・`onProgressStarted`・`multiProviderSummary`・`singleProviderSummary`・`onResultRendered`・`onError`）/ `prepare` / `onStart` / `onFinish`
@@ -118,19 +118,19 @@ Scenario: 同意判定は同一ルールを使う
 
 #### (a) Tranco 同意判定（受け入れ基準 4・5）
 
-- `npx vitest run src/utils/storage/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/trancoConsentRuleOwnership.test.ts src/popup/__tests__/trancoNotification.test.ts src/dashboard/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/domainFilterCacheSaveSeamContract.test.ts` — 63 tests passed
-- 同 5 ファイルを 20 回連続実行 — 全回 green
-- `npx vitest run src/popup/__tests__ src/utils/storage/__tests__`（81 files / 1255 tests）、`npx vitest run src/dashboard/__tests__`（86 files / 1121 tests）— いずれも passed
-- `npx tsc --noEmit`、変更ファイルへの `npx eslint` — エラーなし
+- `npx vitest run src/utils/storage/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/trancoConsentRuleOwnership.test.ts src/popup/__tests__/trancoNotification.test.ts src/dashboard/__tests__/trancoConsent.test.ts src/utils/storage/__tests__/domainFilterCacheSaveSeamContract.test.ts` ― 63 tests passed
+- 同 5 ファイルを 20 回連続実行 ― 全回 green
+- `npx vitest run src/popup/__tests__ src/utils/storage/__tests__`（81 files / 1255 tests）、`npx vitest run src/dashboard/__tests__`（86 files / 1121 tests）― いずれも passed
+- `npx tsc --noEmit`、変更ファイルへの `npx eslint` ― エラーなし
 
 #### (b) AI 接続テスト runner（受け入れ基準 1-3）
 
-- `npx vitest run src/dashboard/__tests__/aiTestRunner.test.ts src/dashboard/__tests__/aiTestRunnerOwnership.test.ts src/dashboard/generalSettings/__tests__/connectionTests.test.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts` — 4 files / 135 tests passed
-- 同 4 ファイルを 10 回連続実行 — 全回 green
-- `npx vitest run src/dashboard/__tests__` — 89 files / 1160 tests passed
-- `npx vitest run src/dashboard`（配下の `__tests__` を含む全 dashboard テスト）— 199 files / 2927 tests passed
-- `npx vitest run src/dashboard/__tests__/dashboard-handlers.test.ts src/dashboard/__tests__/dashboard.test.ts` — 2 files / 56 tests passed（進捗購読と statusTop の経過時間ミラーの既存テストが、runner 経由でも同じ挙動であることを確認）
-- `npx tsc --noEmit`、変更 6 ファイルへの `npx eslint` — エラーなし（`connectionTests.test.ts` の `vi.useFakeTimers()` 警告は既存の `handleTestLocalMarkdown` 側のもので本次の触れていない範囲）
+- `npx vitest run src/dashboard/__tests__/aiTestRunner.test.ts src/dashboard/__tests__/aiTestRunnerOwnership.test.ts src/dashboard/generalSettings/__tests__/connectionTests.test.ts src/dashboard/panels/diagnostic/__tests__/diagnosticsActions.test.ts` ― 4 files / 135 tests passed
+- 同 4 ファイルを 10 回連続実行 ― 全回 green
+- `npx vitest run src/dashboard/__tests__` ― 89 files / 1160 tests passed
+- `npx vitest run src/dashboard`（配下の `__tests__` を含む全 dashboard テスト）― 199 files / 2927 tests passed
+- `npx vitest run src/dashboard/__tests__/dashboard-handlers.test.ts src/dashboard/__tests__/dashboard.test.ts` ― 2 files / 56 tests passed（進捗購読と statusTop の経過時間ミラーの既存テストが、runner 経由でも同じ挙動であることを確認）
+- `npx tsc --noEmit`、変更 6 ファイルへの `npx eslint` ― エラーなし（`connectionTests.test.ts` の `vi.useFakeTimers()` 警告は既存の `handleTestLocalMarkdown` 側のもので本次の触れていない範囲）
 - 備考: `npx vitest run <file> --repeats=20` は本リポジトリの `projects` 設定では回数が反映されない（wall clock も変わらない）ため、連続 10 回のプロセス実行で代替した
 
 ### 未完了（DoD）

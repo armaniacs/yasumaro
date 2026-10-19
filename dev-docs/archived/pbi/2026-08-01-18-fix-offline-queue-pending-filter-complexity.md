@@ -9,13 +9,13 @@
 
 ## 背景
 
-直前のコードレビュー（fix-0801bブランチ、PBI-14/15実装分）での指摘。`src/background/offlineNetworkQueue.ts` の `retryAll()` 内、ループの各イテレーションで `pending` 配列全体を `filter` しており、ループ全体でO(n²)になっている。
+直前のコードレビュー（fix-0801bブランチ、PBI-14/15実装分）での指摘。`src/background/offlineNetworkQueue.ts` の `retryAll()` 内、ループの各イテレーションで `pending` 配列全体を `filter` しており、ループ全体でO(n^2)になっている。
 
 ```ts
 let pending = [...jobsToProcess];
 ...
 for (const job of jobsToProcess) {
-  pending = pending.filter((j) => j.id !== job.id);  // O(n) × n回 = O(n²)
+  pending = pending.filter((j) => j.id !== job.id);  // O(n) × n回 = O(n^2)
   ...
 }
 ```
@@ -100,13 +100,13 @@ for (const job of jobsToProcess) {
 - `shift()`案を採用する場合、`jobsToProcess`の反復順序とforループのfor-of反復順序が一致していることが前提。配列のfor-ofはインデックス順で反復されるため通常は問題ないが、将来ループの実装が変わった場合に暗黙の前提が壊れるリスクがある。コメントで前提条件を明記すること。
 
 ## Definition of Done
-- [x] `pending`除去処理がO(n²)からO(n)に改善されている
+- [x] `pending`除去処理がO(n^2)からO(n)に改善されている
 - [x] 既存の`offlineNetworkQueue`関連テストが全てパスする
 - [x] `pbi/00-INDEX.md` が更新されている
 
 ## 実装メモ（2026-08-01完了）
 
-`pending.filter((j) => j.id !== job.id)` を `pending.shift()` に置き換えた。`jobsToProcess`（`queue.slice(0, MAX_JOBS_PER_CYCLE)`由来）とforループの反復順序が一致することを利用し、O(n²)からO(n)に改善。挙動（保存内容・順序）は変更前と完全に同一であることを既存17件のテストで確認済み。`npm run validate`（型チェック+vitest全件7336件）成功。
+`pending.filter((j) => j.id !== job.id)` を `pending.shift()` に置き換えた。`jobsToProcess`（`queue.slice(0, MAX_JOBS_PER_CYCLE)`由来）とforループの反復順序が一致することを利用し、O(n^2)からO(n)に改善。挙動（保存内容・順序）は変更前と完全に同一であることを既存17件のテストで確認済み。`npm run validate`（型チェック+vitest全件7336件）成功。
 
 ## 関連
 - コードレビュー: fix-0801bブランチ未コミット変更（PBI-13〜16実装）に対するレビュー、Suggestions #1（Performance）

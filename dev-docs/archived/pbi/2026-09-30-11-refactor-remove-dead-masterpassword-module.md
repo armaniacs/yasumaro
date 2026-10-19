@@ -22,12 +22,12 @@
 - `buildSetStorageFn`(`utils/masterPasswordUiCore.ts:48`)の参照元は `utils/__tests__/masterPasswordUiCore.test.ts` のみ。`buildGetStorageFn` は `dashboard/masterPassword.ts:303` が使用中で残す
 - `utils/masterPassword.ts` を module mock している dashboard テスト 4 件(`src/dashboard/__tests__/masterPassword.test.ts` / `-r2` / `-branches` / `-enhanced`)が死蔵 `setMasterPassword` をモックしており、`expect(setMasterPassword).not.toHaveBeenCalled()` は本番経路(encryptionSession 版)を検証しない空のアサーションになっている
 - manifest の `web_accessible_resources` は `wxt.config.ts` で生成され、`content-extractor.js` と `icons/icon48.png` のみ。masterPassword 系は含まれない。ファイルを削除しないため変更不要
-- `utils/masterPassword.ts:105` `setMasterPassword` — metadata を直接書くだけで既存 ciphertext を再暗号化しない
-- `:183` `changeMasterPassword` — `:235` の per-field 書き込みが `:239-241` の metadata 書き込みに先行する非アトミック、catch(`:244`)で途中失敗すると一部だけ新 KEK の不整合が残る
-- `:220` — `['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key']` の 4 件ハードコードで canonical 6 件(`storage/apiKeyFields.ts:15-22`、`provider_api_key` / `github_pat` 欠落)と不一致。nested `settings` blob も未対応
-- `:188` — `_reencryptFn` は JSDoc(`:180`)に反して一度も呼ばれない
-- `:208` — salt 欠損時にランダム salt で oldKey を導出し全再暗号化を壊す
-- `:163-166` — rehash が `MASTER_PASSWORD_KDF_ITERATIONS` を更新せず、encryptionSession 版(`:630-634`)と乖離
+- `utils/masterPassword.ts:105` `setMasterPassword` ― metadata を直接書くだけで既存 ciphertext を再暗号化しない
+- `:183` `changeMasterPassword` ― `:235` の per-field 書き込みが `:239-241` の metadata 書き込みに先行する非アトミック、catch(`:244`)で途中失敗すると一部だけ新 KEK の不整合が残る
+- `:220` ― `['obsidian_api_key', 'gemini_api_key', 'openai_api_key', 'openai_2_api_key']` の 4 件ハードコードで canonical 6 件(`storage/apiKeyFields.ts:15-22`、`provider_api_key` / `github_pat` 欠落)と不一致。nested `settings` blob も未対応
+- `:188` ― `_reencryptFn` は JSDoc(`:180`)に反して一度も呼ばれない
+- `:208` ― salt 欠損時にランダム salt で oldKey を導出し全再暗号化を壊す
+- `:163-166` ― rehash が `MASTER_PASSWORD_KDF_ITERATIONS` を更新せず、encryptionSession 版(`:630-634`)と乖離
 - 本実装の由来: commit 988b6157 で dashboard の import が encryptionSession 版へ切り替わり死蔵化
 
 ## BDD 受け入れシナリオ

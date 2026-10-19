@@ -1,7 +1,7 @@
 # PBI-21: SQLite 変更系の Result union 化と lastError 廃止 実装計画
 
 > **Source PBI:** `pbi/2026-08-09-21-refactor-sqlite-write-result-union.md`（フェーズ0調査済み・2026-08-09）
-> **前提PBI:** 2026-08-09-19（読み取り系の `CallResult` 化）完了済み — **本計画の手本**
+> **前提PBI:** 2026-08-09-19（読み取り系の `CallResult` 化）完了済み ― **本計画の手本**
 
 **Goal:** SQLite 変更系メソッドを `CallResult` 化し、
 共有可変状態 `lastError` を完全に削除する。あわせて変更系失敗時の
@@ -319,8 +319,8 @@ async function handleDelete(id: number): Promise<void> {
 ```
 
 - [ ] **`state.error` の描画は既存の仕組みがある**（確認済み）
-  - `sqliteHistoryPanel.ts:610-611` — `errorEl.textContent` / `display` 制御
-  - `sqliteHistoryPanel.ts:928-929` — `#sqlite-error` 要素の初期描画
+  - `sqliteHistoryPanel.ts:610-611` ― `errorEl.textContent` / `display` 制御
+  - `sqliteHistoryPanel.ts:928-929` ― `#sqlite-error` 要素の初期描画
 
 - [ ] Step 1 のテストを実行 → **通ること**を確認（Green）
 - [ ] `npm run validate`

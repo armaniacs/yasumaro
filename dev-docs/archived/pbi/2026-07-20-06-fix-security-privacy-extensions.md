@@ -1,4 +1,4 @@
-# PBI: セキュリティ・プライバシー拡張 — PII EUカバレッジ・暗号化キーUX・AIコスト追跡
+# PBI: セキュリティ・プライバシー拡張 ― PII EUカバレッジ・暗号化キーUX・AIコスト追跡
 
 元指摘: Checking Team (Medium: FinOps Consultant, Compliance & Privacy Guard, Ethics & Bias Auditor)
 

@@ -23,13 +23,13 @@
 ## BDD受け入れシナリオ
 
 ```gherkin
-Scenario: ハッピーパス — 正常ドメインは記録される
+Scenario: ハッピーパス ― 正常ドメインは記録される
   Given `denied_domains` が空の状態
   When `recordDeniedVisit("example.com")` を呼ぶ
   Then `getDeniedDomains()` に `example.com: { count: 1 }` が保存される
   And `recordDeniedVisit("example.com")` を再度呼ぶと `count: 2` にインクリメントされる
 
-Scenario: 攻撃 — 異常長ドメインと大量キーは拒否/制限される
+Scenario: 攻撃 ― 異常長ドメインと大量キーは拒否/制限される
   Given `denied_domains` に既に100件のエントリが存在する状態
   When 攻撃者が `recordDeniedVisit("a".repeat(10000))`（10000文字の巨大キー）を呼ぶ
   Then 長さ検証により保存が拒否され `denied_domains` に巨大キーは追加されない
@@ -72,7 +72,7 @@ Scenario: 攻撃 — 異常長ドメインと大量キーは拒否/制限され�
 - 依存関係: `permissionManager.ts` は `optimisticLock.ts` 経由で `chrome.storage.local` に依存。バリデーションはストレージアクセス前に行い不要な `withOptimisticLock` 呼び出しを避ける
 - テスタビリティ: `chrome.storage.local` は `vitest` で `chrome` グローバルをモックして検証。`isValidDomain` は純粋関数のため直接テスト可能
 - 非機能要件: バリデーションは同期処理で性能影響なし。上限100件は `Object.keys(deniedDomains).length` の O(n) チェックで十分（n=100で無視可能）
-- 既存データ: 既に保存された不正キー（異常長キー）が存在する場合のマイグレーション — `getDeniedDomains` 取得時に不正キーをフィルタするか、次回 `cleanup` で除去する方針を決める
+- 既存データ: 既に保存された不正キー（異常長キー）が存在する場合のマイグレーション ― `getDeniedDomains` 取得時に不正キーをフィルタするか、次回 `cleanup` で除去する方針を決める
 - セキュリティ: 本修正はDoS対策であり、XSS等の直接的なコード実行を防ぐものではない。ドメイン表示時のエスケープは別途 `dashboard` 側で担保されているか確認すること
 
 ## 実装者向け注記
@@ -86,7 +86,7 @@ grep -rn "recordDeniedVisit" src/ --include="*.ts" | head -n 20
 ```
 
 ### 実装手順
-1. `src/utils/permissionManager.ts:105-127` の `recordDeniedVisit` を読む — バリデーションが一切ないことを確認
+1. `src/utils/permissionManager.ts:105-127` の `recordDeniedVisit` を読む ― バリデーションが一切ないことを確認
 2. ドメイン検証ヘルパーを追加:
    ```ts
    private isValidDomain(domain: string): boolean {
@@ -112,12 +112,12 @@ grep -rn "recordDeniedVisit" src/ --include="*.ts" | head -n 20
      // 上限チェック: updater 内で Object.keys(deniedDomains).length >= 100 なら古いエントリを削除
    }
    ```
-4. 上限ロジックを `updateDeniedDomains` の `updater` 内に実装 — 例: `if (Object.keys(deniedDomains).length >= 100 && !deniedDomains[domain]) { /* 最も古い lastDenied を1件削除 */ }`
+4. 上限ロジックを `updateDeniedDomains` の `updater` 内に実装 ― 例: `if (Object.keys(deniedDomains).length >= 100 && !deniedDomains[domain]) { /* 最も古い lastDenied を1件削除 */ }`
 5. 異常系テストを追加し `npm run type-check && npx vitest run src/utils/__tests__/permissionManager.test.ts` で検証
 
 ### 落とし穴
 - `domain` は `new URL(url).hostname` 由来で通常は正規だが、将来の呼び出し元で `userInput` が直接渡される可能性を考慮し、必ず検証すること
-- `chrome.storage.local` の quota は `chrome.storage.local.getBytesInUse` で確認可能だが、本PBIでは件数上限で予防する — quota 自体の監視は別PBIで検討
+- `chrome.storage.local` の quota は `chrome.storage.local.getBytesInUse` で確認可能だが、本PBIでは件数上限で予防する ― quota 自体の監視は別PBIで検討
 - `updateDeniedDomains` は `withOptimisticLock` で競合リトライするため、バリデーションは `updateDeniedDomains` の外側（ストレージアクセス前）で行い、不要なリトライを避けること
 
 ## Definition of Done

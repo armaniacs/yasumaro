@@ -1,4 +1,4 @@
-# PBI: SavedUrlRepository への統合 — Legacy Dual-Write メタデータ蓄積の崩壊
+# PBI: SavedUrlRepository への統合 ― Legacy Dual-Write メタデータ蓄積の崩壊
 
 ## ユーザーストーリー
 開発者として、`savedUrlStore.ts`（552行）が5つの責任を抱え、`SavedUrlEntry`が30+オプションフィールドを持つ問題を解消したい。なぜなら、ADR-2026-07-27でSQLite単独移行が不可能と結論されたため、このモジュールは仍将に成長し続けるからだ。

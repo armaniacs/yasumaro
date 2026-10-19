@@ -26,7 +26,7 @@
 該当箇所（全 file:line 検証済み）:
 
 - `src/dashboard/settings/customPromptManager.ts:191-216`（`createPresetPromptItem`）、`:222-244`（`createDefaultPromptItem`）、`:251-272`（`createPromptListItem`）
-- `src/dashboard/markdownTemplateManager.ts:157-185`（`createTemplateListItem` — 同一の prompt-item 構造）
+- `src/dashboard/markdownTemplateManager.ts:157-185`（`createTemplateListItem` ― 同一の prompt-item 構造）
 - locale 判定の重複: `src/dashboard/settings/customPromptManager.ts:128`、`:227`、`:450`、`:498`
 
 改善案: prompt-item 行の共通ビルダー 1 つに統合する（id prefix / provider label / edit-delete の有無を引数化）。`escapeHtml` の適用位置・`data-i18n` 属性・badge の条件は現行どおりで、生成される文字列は同一。locale 判定は 1 か所のヘルパーにする。render 後の `applyI18n` 呼び出しは現位置保持。挙動不変（生成 HTML 文字列は byte 同一）。
@@ -74,7 +74,7 @@ And 単一ヘルパーが参照されていること
 
 ## 8. 見積もり
 
-**2 SP** — 4 関数の統合 + locale 判定の集約 + golden pin の確認。影響範囲は customPromptManager / markdownTemplateManager の 2 ファイル。
+**2 SP** ― 4 関数の統合 + locale 判定の集約 + golden pin の確認。影響範囲は customPromptManager / markdownTemplateManager の 2 ファイル。
 
 ## 9. DoD
 

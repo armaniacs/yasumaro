@@ -155,7 +155,7 @@ export function normalizeNavUrl(url: string): string | null {
 }
 ```
 
-`src/utils/` に置く理由: dashboard（04）と background の両方から import するため。ESLint の層境界ルールにより、background ↔ dashboard の相互 import はできない。
+`src/utils/` に置く理由: dashboard（04）と background の両方から import するため。ESLint の層境界ルールにより、background ⇔ dashboard の相互 import はできない。
 
 ### 2. `src/utils/searchQuery.ts`
 

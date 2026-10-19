@@ -74,13 +74,13 @@ t_wada スタイルの Outside-In で進める。まず `decideSaveSkip` と `de
 
 ## 実装者向け注記
 
-- `src/background/pipeline/steps/saveToObsidianStep.ts:36-40` — `obsidianEnabled === false` の場合に `skipping save` として早期 return する skip 分岐。`decideSaveSkip` に合流させる対象
-- `src/background/pipeline/steps/saveToObsidianStep.ts:43-47` — `deps.obsidian` 不在の場合に `skipping save` として早期 return する skip 分岐。`decideSaveSkip` に合流させる対象
-- `src/background/pipeline/steps/extractSentencesStep.ts:31-36` — `l0Enabled` が falsy の場合に早期 return する skip 分岐。`decideL0` に合流させる対象
-- `src/background/pipeline/steps/checkDomainFilterStep.ts:24` — verdict を `decideDomainFilter` に委譲済みの同型 gate。今回の委譲の前例とする
-- `src/background/pipeline/recordingDecision.ts:35-39` — `decideDomainFilter` の純粋判定の実装。新規 predicate の形状の規範とする
-- `src/background/pipeline/steps/checkDuplicateStep.ts:57-64` — warning-threshold のログ出力。verdict ではなく logging のため対象外
-- `src/background/pipeline/steps/truncateContentStep.ts:30` — `MAX_RECORD_SIZE` による size gate。verdict ではなく size-policy のため対象外
+- `src/background/pipeline/steps/saveToObsidianStep.ts:36-40` ― `obsidianEnabled === false` の場合に `skipping save` として早期 return する skip 分岐。`decideSaveSkip` に合流させる対象
+- `src/background/pipeline/steps/saveToObsidianStep.ts:43-47` ― `deps.obsidian` 不在の場合に `skipping save` として早期 return する skip 分岐。`decideSaveSkip` に合流させる対象
+- `src/background/pipeline/steps/extractSentencesStep.ts:31-36` ― `l0Enabled` が falsy の場合に早期 return する skip 分岐。`decideL0` に合流させる対象
+- `src/background/pipeline/steps/checkDomainFilterStep.ts:24` ― verdict を `decideDomainFilter` に委譲済みの同型 gate。今回の委譲の前例とする
+- `src/background/pipeline/recordingDecision.ts:35-39` ― `decideDomainFilter` の純粋判定の実装。新規 predicate の形状の規範とする
+- `src/background/pipeline/steps/checkDuplicateStep.ts:57-64` ― warning-threshold のログ出力。verdict ではなく logging のため対象外
+- `src/background/pipeline/steps/truncateContentStep.ts:30` ― `MAX_RECORD_SIZE` による size gate。verdict ではなく size-policy のため対象外
 
 ## Definition of Done
 

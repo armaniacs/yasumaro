@@ -87,6 +87,6 @@ Scenario: 開始時点が終了時点より後になった場合は補正され�
 
 ## 実装記録（2026-09-24 autonomous-task-closer）
 - 実装: `src/dashboard/periodSplit.ts`（前半/後半分割・逆転スワップ・非有限ガード）、`src/dashboard/tagClusterDiff.ts`（出現/消失/増加/減少+delta・決定的順序）、`src/dashboard/tagClusterColor.ts`（FNV-1a→hue・S/L 固定定数・light S65%/L28% 最悪 hue 4.81:1・dark S55%/L72%・CSS カスタムプロパティ `--tag-hue`）、`src/dashboard/panels/asyncData/tagClusterTimeSliderPanel.ts`（2×SVG side-by-side・PanZoom 2 インスタンス・union ソート順による同一初期配置・diff 4 区画・行 cap 通知×2・aria-live 完了サマリー）、配線（catalog/factories/index.html/locales 20キー×2/dashboard.css/panelCatalog pinned 24→25）
-- 設計決定（記録済み逸脱）: ①時点指定は dual-handle slider でなく native `<input type="date">`×2 + 明示 Compare（PBI 許容の「同等の2時点指定UI」・1 操作 1 確定のため debounce は不要と判断し、ロード世代ガード（loadSeq）で連打レースを遮断 — レーステストで stale 側が第2クエリを発火しないことを検証）。②片側エラー時は diff をクリア（失敗側を空扱いすると全タグが appeared と偽表示されるため）。③アニメーションはユーザー確定どおりスコープ外
+- 設計決定（記録済み逸脱）: ①時点指定は dual-handle slider でなく native `<input type="date">`×2 + 明示 Compare（PBI 許容の「同等の2時点指定UI」・1 操作 1 確定のため debounce は不要と判断し、ロード世代ガード（loadSeq）で連打レースを遮断 ― レーステストで stale 側が第2クエリを発火しないことを検証）。②片側エラー時は diff をクリア（失敗側を空扱いすると全タグが appeared と偽表示されるため）。③アニメーションはユーザー確定どおりスコープ外
 - 検証: type-check PASS / 対象 71 tests green / lint 0 errors / 全体 13,784 tests green / build PASS
 - 備考: GitHub PR レビューはユーザー作業として残置。PBI 04 で延期された aria-live 再計算通知を本パネルで実装済み

@@ -57,10 +57,10 @@
 
 | 機能 | opfs | idb | fallback | none |
 |---|---|---|---|---|
-| FTS5 検索 | あり | あり (`fts5Available`) | なし (LIKE 線形探索、`rank` 常時 0) | — |
-| バイナリ backup/restore | あり | なし (明示拒否) | なし (明示拒否) | — |
-| audit log | あり | あり | なし (明示拒否) | — |
-| 永続先 | OPFS (`yasumaro.db`) | IndexedDB (`yasumaro.db`) | `chrome.storage.local` (5MB 警告閾値・10% 自動 purge) | — |
+| FTS5 検索 | あり | あり (`fts5Available`) | なし (LIKE 線形探索、`rank` 常時 0) | ― |
+| バイナリ backup/restore | あり | なし (明示拒否) | なし (明示拒否) | ― |
+| audit log | あり | あり | なし (明示拒否) | ― |
+| 永続先 | OPFS (`yasumaro.db`) | IndexedDB (`yasumaro.db`) | `chrome.storage.local` (5MB 警告閾値・10% 自動 purge) | ― |
 
 ## 重複と整理候補
 
@@ -104,7 +104,7 @@
 
 - 推奨: **Option A**。PBI 03/04 の計画済みサンセットと整合し、リスクなく依存と移行系を消せる。B は検索品質の縮退を伴うため、fallback-only ユーザー規模の測定なしに決定すべきでない。C は A 完了後の独立 PBI として有効。
 - 実装 PBI への切り出し案 (いずれも未起票):
-  1. `PBI-A: wa-sqlite レガシー・サンセット実行` — 対象: `src/offscreen/sqliteEngineContext/migrationBackup.ts`、`src/offscreen/opfsMigrationV2.ts`、`src/offscreen/opfsMigrationV2Reader.ts`、`src/offscreen/opfsWorker/migrationV2.ts`、`package.json` (`wa-sqlite`)、`sqliteMessageHandlers.ts` の `OPFS_MIGRATION_V2_*` 公開部。S。
-  2. `PBI-C1: VfsStrategy/BackendType 不整合の解消 + sqliteEngineContext 別名削除` — 対象: `src/offscreen/opfsCapabilities.ts`、`src/offscreen/backendResolver.ts`、`src/offscreen/sqliteEngineContext.ts` と輸入元。S。
-  3. `PBI-C2: IdbVfsBackend/opfsWorker ハンドラのクエリ共通化` — 対象: `src/offscreen/IdbVfsBackend.ts`、`src/offscreen/opfsWorker/searchHandlers.ts` + `crudHandlers.ts`、`src/offscreen/queryPlan.ts`、3 系統の search-sort テスト。M。
-  4. `PBI-B (判断保留): IDB 層廃止の可否判断` — 前提: fallback-only 到達率の測定 (診断 STATUS の `compileOptionsSource` 集計はプライバシー制約下で要設計)。測定後に go/no-go。
+  1. `PBI-A: wa-sqlite レガシー・サンセット実行` ― 対象: `src/offscreen/sqliteEngineContext/migrationBackup.ts`、`src/offscreen/opfsMigrationV2.ts`、`src/offscreen/opfsMigrationV2Reader.ts`、`src/offscreen/opfsWorker/migrationV2.ts`、`package.json` (`wa-sqlite`)、`sqliteMessageHandlers.ts` の `OPFS_MIGRATION_V2_*` 公開部。S。
+  2. `PBI-C1: VfsStrategy/BackendType 不整合の解消 + sqliteEngineContext 別名削除` ― 対象: `src/offscreen/opfsCapabilities.ts`、`src/offscreen/backendResolver.ts`、`src/offscreen/sqliteEngineContext.ts` と輸入元。S。
+  3. `PBI-C2: IdbVfsBackend/opfsWorker ハンドラのクエリ共通化` ― 対象: `src/offscreen/IdbVfsBackend.ts`、`src/offscreen/opfsWorker/searchHandlers.ts` + `crudHandlers.ts`、`src/offscreen/queryPlan.ts`、3 系統の search-sort テスト。M。
+  4. `PBI-B (判断保留): IDB 層廃止の可否判断` ― 前提: fallback-only 到達率の測定 (診断 STATUS の `compileOptionsSource` 集計はプライバシー制約下で要設計)。測定後に go/no-go。

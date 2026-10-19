@@ -129,11 +129,11 @@ Then B の同意状態はインポート前のままである（撤回が伝播�
 
 **疑問**: なぜ設定ファイルが同意状態を運べてしまうのか。
 
-1. **なぜエクスポートに入るのか** — `sanitizeSettingsForExport` は「API キー」と「端末ローカルの security state（`confirmed_provider_origins`）」を剥がす設計で、**同意はどちらの分類にも入っていなかった**（秘密でも、security state とも呼ばれていなかった）。
-2. **なぜ分類から漏れたのか** — 除外対象を「**漏れると危険な秘密**」という基準で選んでいた。同意は秘密ではないので対象外に見える。
-3. **なぜ「秘密ではないから除外不要」が誤りなのか** — 危険は漏洩ではなく**転写**。同意は「この端末で、この人が行った行為」であり、ファイルに写れば別端末の行為になる。撤回済みのファイルを持ち込めば、相手の有効な同意を消せる。
-4. **なぜ import 側でも気づかなかったのか** — import は「設定の復元」で、`setAll` は**部分更新（マージ）**。payload に同意があれば「設定の一部」として上書きされる。同意だけが特別扱いされる理由がコード上に無かった。
-5. **なぜ自動同意の経路が残ったのか** — `migrateLegacyPrivacyConsent` は「同意機能より前からの利用者」を救う移行で、材料は `privacy_mode` などの**設定の存在**。移行は「端末の履歴」を意図しているのに、材料が設定ファイルに含まれるため、**ファイルが履歴の代わりになってしまう**。
+1. **なぜエクスポートに入るのか** ― `sanitizeSettingsForExport` は「API キー」と「端末ローカルの security state（`confirmed_provider_origins`）」を剥がす設計で、**同意はどちらの分類にも入っていなかった**（秘密でも、security state とも呼ばれていなかった）。
+2. **なぜ分類から漏れたのか** ― 除外対象を「**漏れると危険な秘密**」という基準で選んでいた。同意は秘密ではないので対象外に見える。
+3. **なぜ「秘密ではないから除外不要」が誤りなのか** ― 危険は漏洩ではなく**転写**。同意は「この端末で、この人が行った行為」であり、ファイルに写れば別端末の行為になる。撤回済みのファイルを持ち込めば、相手の有効な同意を消せる。
+4. **なぜ import 側でも気づかなかったのか** ― import は「設定の復元」で、`setAll` は**部分更新（マージ）**。payload に同意があれば「設定の一部」として上書きされる。同意だけが特別扱いされる理由がコード上に無かった。
+5. **なぜ自動同意の経路が残ったのか** ― `migrateLegacyPrivacyConsent` は「同意機能より前からの利用者」を救う移行で、材料は `privacy_mode` などの**設定の存在**。移行は「端末の履歴」を意図しているのに、材料が設定ファイルに含まれるため、**ファイルが履歴の代わりになってしまう**。
 
 **原因**: 同意を「設定値の一種」として扱い、**端末に属する状態**として分類しなかったこと。除外の基準が「秘密かどうか」で、**行為の主体が誰か**ではなかった。
 
@@ -158,7 +158,7 @@ Then B の同意状態はインポート前のままである（撤回が伝播�
 
 ### 実装
 
-- `src/utils/settingsExportImport.ts` — `CONSENT_RECORD_KEYS`（export/import 共通で除外）と `IMPORT_ONLY_IGNORED_KEYS`（import のみ）を追加。`sanitizeSettingsForExport` と `finalizeImportedSettings` の両経路に適用（暗号化エクスポートも同じ `sanitizeSettingsForExport` を通ることを確認済み）。
+- `src/utils/settingsExportImport.ts` ― `CONSENT_RECORD_KEYS`（export/import 共通で除外）と `IMPORT_ONLY_IGNORED_KEYS`（import のみ）を追加。`sanitizeSettingsForExport` と `finalizeImportedSettings` の両経路に適用（暗号化エクスポートも同じ `sanitizeSettingsForExport` を通ることを確認済み）。
 - `REQUIRED_EXPORT_KEYS` から同意レコード 4 キーを除外。
 - テスト: `src/utils/__tests__/settingsExportImport-consent.test.ts`（3 本: export / import / 往復）。
 - ドキュメント: `dev-docs/SECURITY_REVIEW_GUIDE.md` の表に 13 行目を追加し、「同意は端末ローカル」の段落を追記。
@@ -185,8 +185,8 @@ Then B の同意状態はインポート前のままである（撤回が伝播�
 ## 関連
 
 - `pbi/00-INDEX.md`
-- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 発見の現場（同意ゲートの inventory）。同 PBI の独立レビュー由来の穴は 10・11 として起票済み
-- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意キーが settings ブロブへ畳まれる問題。本 PBI の「ブロブ経由」の前提
-- [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) / [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「同意は状態であり、移動・遅延して使われうる」族（どちらも 2026-10-19 完了・アーカイブ済み）
-- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 「Privacy-consent gating」節
-- `pbi/2026-10-18-00-backlog-security-audit-run2.md` — 発見の記録
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) ― 発見の現場（同意ゲートの inventory）。同 PBI の独立レビュー由来の穴は 10・11 として起票済み
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) ― 同意キーが settings ブロブへ畳まれる問題。本 PBI の「ブロブ経由」の前提
+- [2026-10-19-10-fix-consent-recheck-scheduled-jobs.md](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) / [2026-10-19-11-fix-dashboard-obsidian-export-consent.md](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) ― 同じ「同意は状態であり、移動・遅延して使われうる」族（どちらも 2026-10-19 完了・アーカイブ済み）
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` ― 「Privacy-consent gating」節
+- `pbi/2026-10-18-00-backlog-security-audit-run2.md` ― 発見の記録

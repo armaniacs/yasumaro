@@ -1,4 +1,4 @@
-# Checking Team レビュー指摘 — 副作用調査結果
+# Checking Team レビュー指摘 ― 副作用調査結果
 
 > 親レポート: [2026-07-18-0522-review-findings-detail.md](2026-07-18-0522-review-findings-detail.md)
 > 調査実施: 2026-07-18 | 対象: High未解決2件・Medium33件・Low16件（H3〜H5は修正済みのため対象外）
@@ -9,14 +9,14 @@
 ## 凡例
 
 ```
-🔴 副作用あり  — 実施すると既存機能・既存ユーザーに実害が出る可能性がある
-🟡 副作用軽微  — コスト増や要検証点はあるが致命的ではない
-🟢 副作用なし  — 安全に対処可能
+🔴 副作用あり  ― 実施すると既存機能・既存ユーザーに実害が出る可能性がある
+🟡 副作用軽微  ― コスト増や要検証点はあるが致命的ではない
+🟢 副作用なし  ― 安全に対処可能
 ```
 
 ---
 
-## 🔴 副作用「あり」— 慎重な検討が必要（21件）
+## 🔴 副作用「あり」― 慎重な検討が必要（21件）
 
 | ID | 指摘 | 副作用の内容 |
 |---|---|---|
@@ -82,7 +82,7 @@
 
 **調査結果**: 重複ではなく、片方が完全なデッドコードだった。
 
-- `src/dashboard/main.ts:8,32` — `createSqliteHistoryPanel()` を `./panels/asyncData/sqliteHistoryPanel.js` からimportし、`DashboardBootstrapper.registerPanels()` に登録。**これが実際にダッシュボードへ描画される現行アクティブなパネル**。
+- `src/dashboard/main.ts:8,32` ― `createSqliteHistoryPanel()` を `./panels/asyncData/sqliteHistoryPanel.js` からimportし、`DashboardBootstrapper.registerPanels()` に登録。**これが実際にダッシュボードへ描画される現行アクティブなパネル**。
 - `src/dashboard/sqliteHistoryPanel.ts`（トップレベル、1149行）は `main.ts` から一切参照されていない。
 - この旧ファイルの唯一のexport利用先は `src/dashboard/historyPanel.ts`（`searchForTagInSqliteHistory` をimport、10行目・177行目）。
 - しかし `src/dashboard/historyPanel.ts` 自体もどこからもimportされていない。`main.ts:7` は代わりに `./panels/asyncData/historyPanel.js` を使用している。
@@ -97,11 +97,11 @@
 
 **調査結果**: コールチェーンを実装まで追跡。
 
-- `saveSqliteStep.ts:18-22` — `withOptimisticLock` の戻り値は完全に破棄されており、後続の `params.sqliteClient.insert(params.record)`（24行目）には一切渡されていない。指摘通り本当に無意味。
+- `saveSqliteStep.ts:18-22` ― `withOptimisticLock` の戻り値は完全に破棄されており、後続の `params.sqliteClient.insert(params.record)`（24行目）には一切渡されていない。指摘通り本当に無意味。
 - `sqliteClient.insert()` → offscreen `SQLITE_INSERT` メッセージ → `recordsRepo.ts: insert()` → `IdbVfsBackend.ts:28-36` を実装まで確認。
-- `IdbVfsBackend.ts:32` — 単体 `insert()` は **`INSERT_SQL`（`INSERT OR IGNORE` ではない）** を使用。
+- `IdbVfsBackend.ts:32` ― 単体 `insert()` は **`INSERT_SQL`（`INSERT OR IGNORE` ではない）** を使用。
 - `INSERT_IGNORE_SQL` を使うのは `insertBatch`（48行目）のみ。
-- `schema.ts:43` — `UNIQUE(url, created_at)` 制約はテーブル定義でDBレベルに常時存在。
+- `schema.ts:43` ― `UNIQUE(url, created_at)` 制約はテーブル定義でDBレベルに常時存在。
 
 **結論**: UNIQUE制約はDBレベルで常に有効なため、楽観的ロックの有無に関わらず重複行がDBに2件入ることはない。ただし単体insert経路は `INSERT OR IGNORE` ではないため、重複挿入の試行は「静かにスキップ」ではなく「例外throw」という挙動になる（`saveSqliteStep.ts:35-40` でログ記録後re-throw）。この挙動はロックの有無と無関係に既に発生している。**ロック単純削除の副作用はなし**。ただし対処のついでに `insert()` 側を `INSERT_IGNORE_SQL` に変更する場合は、呼び出し元の `if (!insertResult)` 分岐や後続の `update()` 呼び出しの挙動が変わるため、その変更は別途検証が必要。
 
@@ -120,9 +120,9 @@
 ### 対処優先度の所見
 
 - **着手しやすい候補**: M31（デッドコード削除、実行時影響なし）、M1（sender.id検証追加）
-- **最重要な検討事項**: M25・M27（デフォルト値の破壊的変更、既存ユーザーの動作が静かに変わる） — 実施するなら移行期間・アナウンスを伴う設計が必須
+- **最重要な検討事項**: M25・M27（デフォルト値の破壊的変更、既存ユーザーの動作が静かに変わる） ― 実施するなら移行期間・アナウンスを伴う設計が必須
 - **要追加確認**: なし（M31・M32は本調査で確定）
 
 ---
 
-*Generated from 2026-07-18-0522-review-findings-detail.md — 51件の指摘に対する副作用調査（2並列サブエージェント + 深掘り2件）*
+*Generated from 2026-07-18-0522-review-findings-detail.md ― 51件の指摘に対する副作用調査（2並列サブエージェント + 深掘り2件）*

@@ -10,8 +10,8 @@ bench ハーネスのレポート出力を保守する開発者として、trend
 ## 対象（2026-09-05 ファクトチェック済み）
 
 - `bench/harness/htmlReport.mjs`（253 行）のうち:
-  - `sparkline`（:137-164、~28 行）— multi-series sparkline
-  - `trendSection`（:166-220、~55 行）— Trend テーブル本体
+  - `sparkline`（:137-164、~28 行）― multi-series sparkline
+  - `trendSection`（:166-220、~55 行）― Trend テーブル本体
   - trend CSS 4 ルール（:55-58、`.sparkline .trend-line-*` / `.trend-vals`）
   - wire-up 1 箇所（:247 `${trendSection(history)}`）
 - 共有 helper は既に分離済み: `fmtNum` / `fmtKB` は `bench/harness/format.mjs`（htmlReport.mjs:9 が import）
@@ -26,7 +26,7 @@ bench ハーネスのレポート出力を保守する開発者として、trend
 2. なぜその時に分離しなかったのか → その時点では trend セクションが小さく、分離の leverage が見えなかったから（arch2 も「1 importer のみで leverage が小さい」と評価）。
 3. なぜ今が着手時か → arch2 が条件付けた「trend UI を拡張する次ラウンド」は PBI 10 で発生済みで、trend UI は ~80 行に成長。arch2 の遡及条件は満たされており、見送り継続には新しい理由が必要だから。
 4. なぜ分離に価値が出たのか → 次の trend 拡張（指標追加・期間選択等）のたびにレポート本体（benchCard / comparisonTable）と差競合する構造が続き、locality が壊れたままだから。
-5. → 解: sparkline + trendSection + trend CSS を `trendReport.mjs` に移動（`renderTrendSection(history)`）。`escapeHtml` は format.mjs に移動（htmlReport と trendReport の両方が使う format 系 helper の自然な家）。削除テスト: 新 module を消すと trend UI がレポート本体に戻るだけ — complexity は移動であり集中ではないが、**次の trend 変更の局所化**が本 PBI の価値（leverage は小さいが friction の予防として妥当）
+5. → 解: sparkline + trendSection + trend CSS を `trendReport.mjs` に移動（`renderTrendSection(history)`）。`escapeHtml` は format.mjs に移動（htmlReport と trendReport の両方が使う format 系 helper の自然な家）。削除テスト: 新 module を消すと trend UI がレポート本体に戻るだけ ― complexity は移動であり集中ではないが、**次の trend 変更の局所化**が本 PBI の価値（leverage は小さいが friction の予防として妥当）
 
 ## BDD受け入れシナリオ
 
@@ -50,7 +50,7 @@ Scenario: 既存のレポート生成テストが無修正で green
 ## 受け入れ基準
 - [x] `bench/harness/trendReport.mjs` が新設され、`renderTrendSection(history)`（sparkline + trendSection を含む）を export する
 - [x] `htmlReport.mjs` から sparkline / trendSection / trend CSS 4 ルールが削除され、`renderHtml` は `renderTrendSection` を 1 箇所で呼ぶ（htmlReport.mjs は ~170 行に縮減）
-- [x] `escapeHtml` が `bench/harness/format.mjs` に移動し、htmlReport / trendReport の両方が import する（htmlReport からの re-export は不要 — consumer は htmlReport 本体と htmlReport.test.ts のみ、test の import を付け替え）
+- [x] `escapeHtml` が `bench/harness/format.mjs` に移動し、htmlReport / trendReport の両方が import する（htmlReport からの re-export は不要 ― consumer は htmlReport 本体と htmlReport.test.ts のみ、test の import を付け替え）
 - [x] trend 関連のテスト（htmlReport.test.ts の trend セクション assert）が trendReport 側のテストに移行する
 - [x] `bench` / `bench:check` が PASS（レポート出力のバイト差は CSS/HTML の移動に由来する同一内容であること）
 
@@ -87,9 +87,9 @@ rg -n "escapeHtml|fmtNum|fmtKB" bench/harness/*.mjs bench/harness/__tests__/*
 4. trend 関連テストを移行 → bench / bench:check PASS
 
 ### 落とし穴
-- trend CSS は htmlReport の `CSS` 定数に連結されている — 移動後は `CSS + trendCss` の連結順が変わらないよう差し込む位置に注意（出力 HTML の diff を最小化）
+- trend CSS は htmlReport の `CSS` 定数に連結されている ― 移動後は `CSS + trendCss` の連結順が変わらないよう差し込む位置に注意（出力 HTML の diff を最小化）
 - `trend.mjs`（pure-data）と `trendReport.mjs`（presentation）の役割分担をファイル header に明記すること（data と presentation の seam を混同しない）
-- htmlReport.test.ts の trend assert はレポート全体の文字列検査の可能性 — 移行時に assert 対象を trendReport 単体に切り出すだけで、renderHtml 側は「trend セクションが含まれる」程度の疎 assert に保つ
+- htmlReport.test.ts の trend assert はレポート全体の文字列検査の可能性 ― 移行時に assert 対象を trendReport 単体に切り出すだけで、renderHtml 側は「trend セクションが含まれる」程度の疎 assert に保つ
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする

@@ -130,8 +130,8 @@ Create a GitHub Pages page where cautious users can verify Yasumaro's PII maskin
 
 ### 6.1 新規ファイル
 
-- `docs-src/pii-sandbox.ts` — エントリーポイント。`sanitizeRegex()` をラップし、HTML から `PiiSandbox.*` として呼び出せる関数を IIFE グローバルに公開する
-- `docs/pii-sandbox.html` — ページ
+- `docs-src/pii-sandbox.ts` ― エントリーポイント。`sanitizeRegex()` をラップし、HTML から `PiiSandbox.*` として呼び出せる関数を IIFE グローバルに公開する
+- `docs/pii-sandbox.html` ― ページ
 
 ### 6.2 ビルドコマンド
 
@@ -170,12 +170,12 @@ Create a GitHub Pages page where cautious users can verify Yasumaro's PII maskin
 - `docs/pii-sandbox.html`
 
 ### 変更
-- `src/utils/piiSanitizer.ts` — `includeIndices` オプション追加
-- `package.json` — `build:docs-pii` スクリプトと `esbuild` devDependency 追加
-- `package-lock.json` — 依存更新
-- `.github/workflows/pages.yml` — ビルドステップ追加
-- `docs/index.html` — ナビゲーションリンク追加
-- `docs/PII_FEATURE_GUIDE.md` — リンク追加
+- `src/utils/piiSanitizer.ts` ― `includeIndices` オプション追加
+- `package.json` ― `build:docs-pii` スクリプトと `esbuild` devDependency 追加
+- `package-lock.json` ― 依存更新
+- `.github/workflows/pages.yml` ― ビルドステップ追加
+- `docs/index.html` ― ナビゲーションリンク追加
+- `docs/PII_FEATURE_GUIDE.md` ― リンク追加
 
 ## 10. リスクと対応 / Risks
 

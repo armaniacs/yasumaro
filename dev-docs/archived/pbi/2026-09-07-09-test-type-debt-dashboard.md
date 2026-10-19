@@ -1,4 +1,4 @@
-# PBI: テスト型債務返済 2/5 — dashboard（585 errors / 61 ファイル）
+# PBI: テスト型債務返済 2/5 ― dashboard（585 errors / 61 ファイル）
 
 > **開始前に必読**: `pbi/2026-09-07-08-test-type-debt-background.md` の「前提環境」「ベースラインゲートの仕様」「baseline.json の編集規約」「共通実装手順」「修復パターン（実例つき）」「禁止事項」「コミット規約」を読み、同一手順を適用すること（08 完了・アーカイブ後も `dev-docs/archived/pbi/` から参照可）。本ファイルはバッチ固有の差分のみを記載する。
 
@@ -8,9 +8,9 @@ yasumaroの開発者として、`src/dashboard` 配下のテスト（設定・�
 
 ## 分析: 本バッチのスコープ（実測 2026-09-07、インベントリ = testDir/type-check-baseline.json）
 
-- スコープ: **`src/dashboard/**` の baseline エントリ** — 585 errors / 61 files
+- スコープ: **`src/dashboard/**` の baseline エントリ** ― 585 errors / 61 files
 - 上位ファイル: `settings/__tests__/customPromptManager.test.ts`(150・シリーズ最大)・`historyEntryRow.test.ts`(52)・`cspSettings.test.ts`(52)・`settings/ublockImport/__tests__/uiRenderer.test.ts`(41)
-- エラー内訳（ディレクトリ傾向）: 暗黙 any（TS7006 — コールバックのパラメータ型漏れ）、リテラル型不一致（TS2322 — `CustomPrompt[]` 等の型注釈漏れ）、null 安全性
+- エラー内訳（ディレクトリ傾向）: 暗黙 any（TS7006 ― コールバックのパラメータ型漏れ）、リテラル型不一致（TS2322 ― `CustomPrompt[]` 等の型注釈漏れ）、null 安全性
 - 依存なし・他バッチと並行可
 
 ## ビジネス価値
@@ -47,7 +47,7 @@ Scenario: dashboard 配下の型エラーが 0 になる
 ## 実装アプローチ
 
 1. `type-check:test:raw` の出力を `src/dashboard` でフィルタし、エラー数の多い順に返済
-2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 — INDEX セクション参照）
+2. 返済パターンは 2026-09-07-08 と同一（シリーズ共通 ― INDEX セクション参照）
 3. `customPromptManager.test.ts`（150 件）は段階分割を推奨: describe ブロック単位で複数コミットに分けてもよい（1コミット = 1〜3ファイルの原則はあくまで目安。同ファイル内の分割は 1 コミット = 1 describe ブロック相当）
 
 ## 見積もり

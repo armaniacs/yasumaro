@@ -13,9 +13,9 @@ CSP 設定の保守担当者として、「1 行で provider を追加する」�
 
 ## 背景（file:line 現状）
 
-- inline 規則: `src/utils/cspValidator.ts:257-260` と `:326-329` — `domain.endsWith('.openai.com')` が 2 箇所。唯一の表外ワイルドカード規則（`api.openai.com` の行は `providerAllowlist.ts:75` が pin）
-- 表示用複製: `src/dashboard/settings/fieldValidation.ts:222-226` — majorProviders / sakuraDomains の手書きヒントリスト（ゲート自体は `:220` で isDomainInWhitelist 派生・正）
-- 再宣言: `src/background/ai/providers/GeminiProvider.ts:26` — `GEMINI_PINNED_ORIGIN` が行のドメインを scheme 付きで再宣言
+- inline 規則: `src/utils/cspValidator.ts:257-260` と `:326-329` ― `domain.endsWith('.openai.com')` が 2 箇所。唯一の表外ワイルドカード規則（`api.openai.com` の行は `providerAllowlist.ts:75` が pin）
+- 表示用複製: `src/dashboard/settings/fieldValidation.ts:222-226` ― majorProviders / sakuraDomains の手書きヒントリスト（ゲート自体は `:220` で isDomainInWhitelist 派生・正）
+- 再宣言: `src/background/ai/providers/GeminiProvider.ts:26` ― `GEMINI_PINNED_ORIGIN` が行のドメインを scheme 付きで再宣言
 - 表の契約: `src/utils/providerAllowlist.ts:195-197`（「adding a provider is one row here」）
 
 ## BDD受け入れシナリオ

@@ -1,4 +1,4 @@
-# PBI: RecordingPipeline 深層化 — RecordingOrchestrator 単一 Seam 化と二重 Mutex 解消
+# PBI: RecordingPipeline 深層化 ― RecordingOrchestrator 単一 Seam 化と二重 Mutex 解消
 
 ## ユーザーストーリー
 開発者として、Recording の全経路（通常 / preview / retry）を単一の深い Module `RecordingOrchestrator.record(data)` で実行したい。なぜなら現在 `RecordingPipeline` が 4 methods + 3 factory closures + 二重 PerUrlMutex（instance/static 互換）を公開し、Caller はどの method を使うべきか学ばされる上に、`saveSqliteStep` の closure 注入と他 step の `StepDeps` 注入が不統一で、retry / previewBreakpoint / BEST_EFFORT の結合テストが同じ Seam で検証できないから。
@@ -16,7 +16,7 @@
 ## 背景 / なぜなぜ分析
 - 表層: `pipeline/record` と `pipeline/retryObsidianWriteOnly` の使い分けが不明
 - なぜ1: 歴史的に `retryObsidianWriteOnly` が static mutex 経由で追加され、instance mutex と別経路になった
-- なぜ2: `createSaveSqliteStep` が `this.sqliteClient` を closure し、`createSaveToObsidianStep` が `StepDeps` を経由 — 注入スタイルの決定が各 step に委ねられている
+- なぜ2: `createSaveSqliteStep` が `this.sqliteClient` を closure し、`createSaveToObsidianStep` が `StepDeps` を経由 ― 注入スタイルの決定が各 step に委ねられている
 - なぜ3: `buildRecordingPipelineDeps` が 6 LOC の identity 関数として shallow に残り、deletion test で価値が証明できない
 - なぜ4: `PipelineKernel` と `StepExecutor` の責務（loop/retry/offline vs execute）が caller から不可視で、previewBreakpoint の short-circuit が kernel 内に埋もれている
 - 解: 単一 Orchestrator が PerUrlMutex / Kernel / Executor / 13 steps registry を private に束ね、Interface を `record(data)` 一つに。retry は `mode` で吸収。PerUrlMutex static 互換と identity deps を削除。
@@ -41,13 +41,13 @@ Scenario: retry が同一 Seam で動作する
   Then  `formatMarkdown` → `saveToObsidian` のみが実行され、他 steps はスキップされる
   And   以前の `retryObsidianWriteOnly` と同等の結果が得られる
 
-Scenario: 境界 — 同一 URL の並行 record で mutex タイムアウト
+Scenario: 境界 ― 同一 URL の並行 record で mutex タイムアウト
   Given 同一 URL で 2 つの `record()` が同時に呼ばれる
   When  一方が mutex を長時間保持する
   Then  他方はタイムアウトせず待機し、先行が完了後に実行される
   And   traceId は各実行で一意に生成される
 
-Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
+Scenario: エラー ― SqliteClient 未設定でも BEST_EFFORT で継続
   Given `sqliteClient = null` の Orchestrator
   When  `record(data)` を呼ぶ
   Then  saveSqlite step は WARN ログを残して skip し、後続の saveMetadata は実行される
@@ -66,11 +66,11 @@ Scenario: エラー — SqliteClient 未設定でも BEST_EFFORT で継続
 - 単体: Step registry の 13 steps 列挙テスト、traceId 生成（randomUUID / fallback）、StepDeps 注入の統一性、mutex タイムアウト待機
 
 ## 見積もり
-5 pt（要チームでの見積もり）— Orchestrator 集約 2pt + Mutex 単一化 1pt + Step 注入統一と registry 化 2pt
+5 pt（要チームでの見積もり）― Orchestrator 集約 2pt + Mutex 単一化 1pt + Step 注入統一と registry 化 2pt
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする
-- [x] コードレビュー完了（pipeline / handlers / service-worker の影響確認 — 2026-09-01。`perUrlMutexMap` 未配線による duplicate-entry race を発見・修正）
+- [x] コードレビュー完了（pipeline / handlers / service-worker の影響確認 ― 2026-09-01。`perUrlMutexMap` 未配線による duplicate-entry race を発見・修正）
 - [x] ドキュメント更新済み（DESIGN_SPECIFICATIONS.md §8.3 Per-URL Recording Serialization を新設。pipeline の step registry は Orchestrator private のため章追加は見送り）
 - [x] `npm run validate` が green
 
