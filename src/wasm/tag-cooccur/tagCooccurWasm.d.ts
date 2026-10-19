@@ -2,22 +2,37 @@
 /* eslint-disable */
 
 /**
+ * Type-only import (erased at runtime, no runtime dependency): the raw
+ * wasm transfer shapes are owned and validated by the TS wrapper
+ * (src/wasm/tag-cooccur/index.ts), so the declarations import them instead
+ * of re-declaring the structures here. RawCooccurResult decodes via
+ * decodeCooccurResult() into the `computeTagCooccurrence(entries)` reference
+ * shape; RawNarrowResult's `joined` re-splits into the
+ * `narrowEntriesToTopTags(entries, limit)` reference shape.
+ */
+import type { RawCooccurResult, RawNarrowResult } from './index.js';
+
+/**
  * Computes tag cooccurrence over `entry_count` raw tags strings
- * `\n`-joined into `joined`.
+ * `\n`-joined into `joined`, returning the RAW transfer object
+ * `{ tags, counts, edgeA, edgeB, weights }` — NOT the decoded
+ * `{ nodes, edges }` reference shape; the wrapper decodes that.
  *
  * Mirrors `computeTagCooccurrence(entries)` where each entry contributes
  * its raw `tags` string (`null` normalized to `""` by the wrapper).
  */
-export function computeCooccurrence(joined: string, entry_count: number): any;
+export function computeCooccurrence(joined: string, entry_count: number): RawCooccurResult;
 
 /**
- * Narrows records to the top-`limit` cross-record tags.
+ * Narrows records to the top-`limit` cross-record tags, returning the RAW
+ * transfer object `{ unchanged, joined }` — NOT the rebuilt `T[]` reference
+ * shape; the wrapper re-splits `joined` into it.
  *
  * Mirrors `narrowEntriesToTopTags(entries, limit)`. `limit` arrives as u32;
  * the wrapper bypasses non-integer/negative limits to the TS path because
  * the JS→WASM boundary would silently wrap them via ToUint32.
  */
-export function narrowToTopTags(joined: string, entry_count: number, limit: number): any;
+export function narrowToTopTags(joined: string, entry_count: number, limit: number): RawNarrowResult;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 

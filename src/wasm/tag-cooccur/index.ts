@@ -69,7 +69,12 @@ export interface RawCooccurResult {
     weights: number[];
 }
 
-interface RawNarrowResult {
+/**
+ * Raw wasm narrow transfer shape. Exported so the hand-maintained
+ * tagCooccurWasm.d.ts can import it type-only (single source of truth for
+ * the wasm boundary contract this module validates).
+ */
+export interface RawNarrowResult {
     unchanged: boolean;
     joined: string;
 }

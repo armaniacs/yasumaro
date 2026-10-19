@@ -2,11 +2,18 @@
 /* eslint-disable */
 
 /**
+ * Type-only import (erased at runtime, no runtime dependency): the return
+ * shape is derived from `SanitizeResult` in piiSanitizer.ts instead of being
+ * re-declared here, so the two cannot drift apart.
+ */
+import type { SanitizeResult } from '../../utils/piiSanitizer.js';
+
+/**
  * Sanitizes `text`, returning a JS object `{ text, maskedItems }` matching
  * the shape of `SanitizeResult` in piiSanitizer.ts (minus `error`, which the
  * TS wrapper layers on for size/timeout handling before calling this).
  */
-export function sanitizePii(text: string): any;
+export function sanitizePii(text: string): Omit<SanitizeResult, 'error'>;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 

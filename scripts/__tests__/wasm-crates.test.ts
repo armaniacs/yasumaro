@@ -170,10 +170,12 @@ describe('buildPlan equivalence with the pre-manifest shell chain', () => {
             ['wasm/sentence-dedup/pkg/sentence_dedup_bg.wasm', 'src/wasm/sentence-dedup/sentence_dedup_bg.wasm'],
             ['wasm/sentence-dedup/pkg/sentence_dedup.d.ts', 'src/wasm/sentence-dedup/sentenceDedupWasm.d.ts'],
         ],
+        // tag-cooccur's src d.ts is hand-maintained (PBI 2026-10-20-04
+        // replaced the generated `any` returns with the wrapper-owned
+        // boundary types), so it has no pkg dts copy — same as pii-sanitizer.
         'tag-cooccur': [
             ['wasm/tag-cooccur/pkg/tag_cooccur_bg.wasm', 'src/wasm/tag-cooccur/tag_cooccur_bg.wasm'],
             ['wasm/tag-cooccur/pkg/tag_cooccur_bg.wasm', 'public/wasm/tag_cooccur_bg.wasm'],
-            ['wasm/tag-cooccur/pkg/tag_cooccur.d.ts', 'src/wasm/tag-cooccur/tagCooccurWasm.d.ts'],
         ],
     };
 

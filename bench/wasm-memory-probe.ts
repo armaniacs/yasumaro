@@ -205,8 +205,7 @@ async function main(): Promise<void> {
     {
         const piiText = piiCorpus();
         await initPiiModule({ module_or_path: await readBinary('../src/wasm/pii-sanitizer/pii_sanitizer_bg.wasm') });
-        const wasm = (): { text: string; maskedItems: { length: number } } =>
-            sanitizePiiWasm(piiText) as { text: string; maskedItems: { length: number } };
+        const wasm = () => sanitizePiiWasm(piiText);
         // Full parity is enforced by the dedicated 218-case suite through the
         // hybrid; this probe compares the essentials only (async TS API).
         const tsOut = await sanitizeRegex(piiText);
