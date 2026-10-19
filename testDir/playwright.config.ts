@@ -51,14 +51,30 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      grep: /^(?!.*@(?:interaction|extension|a11y))/,
+      grep: /^(?!.*@(?:interaction|extension|a11y|redirect))/,
       use: { ...devices['Desktop Chrome'] },
     },
 
     {
       name: 'firefox',
-      grep: /^(?!.*@(?:interaction|extension|a11y))/,
+      grep: /^(?!.*@(?:interaction|extension|a11y|redirect))/,
       use: { ...devices['Desktop Firefox'] },
+    },
+
+    {
+      // PBI 2026-10-19-04: the redirect-policy spec binds a fixture HTTP server on
+      // one of the four PERMITTED loopback ports. Four ports cannot support a
+      // worker pool, so the spec runs alone (`workers: 1`) instead of racing for
+      // them — a second parallel worker otherwise fails with "no permitted
+      // loopback port is free".
+      name: 'redirect-policy',
+      testDir: './e2e',
+      grep: /@redirect/,
+      fullyParallel: false,
+      workers: 1,
+      timeout: 30_000,
+      expect: { timeout: 5_000 },
+      use: { ...devices['Desktop Chrome'] },
     },
 
     {
