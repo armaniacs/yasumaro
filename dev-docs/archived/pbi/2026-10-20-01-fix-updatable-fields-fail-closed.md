@@ -57,11 +57,11 @@ Scenario: dashboard 側の縮小セットは影響を受けない
 
 ## 受け入れ基準
 
-- [ ] offscreen schema テスト（`src/offscreen/__tests__/schema-comprehensive.test.ts:147` の UPDATABLE_FIELDS describe を拡張、または新規ファイル）に fail-closed ピンがある。COLUMN_NAMES の各列が `UPDATABLE_FIELDS` か `NOT_UPDATABLE_COLUMNS` のどちらかに明示されていないとき、テストがその列名を指して落ちる
-- [ ] `NOT_UPDATABLE_COLUMNS`（名称は任意）が schema.ts 内の明示的な定数として抽出され、現行の 3 例外がそこに移っている。WHY コメントは定数の直後に維持する
-- [ ] 派生式が `COLUMN_NAMES.filter((name) => !NOT_UPDATABLE_COLUMNS.has(name))` の形になり、現行の 32 項目と同一の内容・順序であることを既存テストが確認している
-- [ ] dashboard 側の `DASHBOARD_MUTABLE_SUBSET` と sqlite-security-integrity 検証が影響を受けていない
-- [ ] `npm run validate` が緑
+- [x] offscreen schema テスト（`src/offscreen/__tests__/schema-comprehensive.test.ts:147` の UPDATABLE_FIELDS describe を拡張、または新規ファイル）に fail-closed ピンがある。COLUMN_NAMES の各列が `UPDATABLE_FIELDS` か `NOT_UPDATABLE_COLUMNS` のどちらかに明示されていないとき、テストがその列名を指して落ちる
+- [x] `NOT_UPDATABLE_COLUMNS`（名称は任意）が schema.ts 内の明示的な定数として抽出され、現行の 3 例外がそこに移っている。WHY コメントは定数の直後に維持する
+- [x] 派生式が `COLUMN_NAMES.filter((name) => !NOT_UPDATABLE_COLUMNS.has(name))` の形になり、現行の 32 項目と同一の内容・順序であることを既存テストが確認している
+- [x] dashboard 側の `DASHBOARD_MUTABLE_SUBSET` と sqlite-security-integrity 検証が影響を受けていない
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -125,13 +125,19 @@ schema.ts に `NOT_UPDATABLE_COLUMNS = new Set(['created_at', 'nav_source_url', 
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（シナリオ 1 は RED→GREEN を確認。シナリオ 2・3 は対照）
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（該当すれば dev-docs/ARCHITECTURE_MAP.md の offscreen の記述）
+- [x] BDDシナリオが自動テストで実装されパス（シナリオ 1 は RED→GREEN を確認。シナリオ 2・3 は対照）
+- [x] `npm run validate` が緑
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（該当すれば dev-docs/ARCHITECTURE_MAP.md の offscreen の記述）
 
 ## 関連
 
 - pbi/00-INDEX.md
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 code-review Suggestion 1（ブランチ 1020a の簡素化パス差分レビュー）
+
+## 完了記録（2026-10-20）
+
+- 実装: `NOT_UPDATABLE_COLUMNS` を src/offscreen/schema.ts:116-121 に新設（WHY コメント維持・移設）、派生式を :137-139 で統一。UPDATABLE_FIELDS 32 項目は HEAD と esbuild トランスパイル比較で byte 一致。テストに fail-closed pin（:162-177）と subset pin（除外列の残骸検知、実装段階で追加）を置いた。
+- 観察: 現行の全域派生の下では fail-closed pin は恒真的に緑（新列はどちらかの集合に入る。PBI Pros に明記した設計判断）。red 経路（非全域な式への置換・オプトインへの反転）はシミュレーションで検証済み、メッセージに列名を含む。subset pin が列リネーム時の fail-open 再発を検知する実質防御を担う。
+- 検証: schema-comprehensive 58 件 / 消費者 18 件 / type-check / eslint / npm run validate（フルゲート 16,453 テスト）全緑。レビュー（未コミット diff 164+/41- の全行精読）実害なし。

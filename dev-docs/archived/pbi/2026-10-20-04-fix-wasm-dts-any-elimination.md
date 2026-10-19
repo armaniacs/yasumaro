@@ -45,12 +45,12 @@ Scenario: 実行時の挙動が変わらない
 
 ## 受け入れ基準
 
-- [ ] `src/wasm/pii-sanitizer/piiSanitizerWasm.d.ts:9` が `any` ではなく `SanitizeResult` から error を除いた形（または同等の明示的な interface）を返す
-- [ ] `src/wasm/tag-cooccur/tagCooccurWasm.d.ts:11,20` が `any` ではなく `computeTagCooccurrence` / `narrowEntriesToTopTags` の戻り値形を返す
-- [ ] 呼び出し側で any 由来の黙認されていたアクセスがあれば修正する（type-check が通るまで）
-- [ ] `src/wasm/*/__tests__/parity.test.ts` が無修正で通る
-- [ ] `wasm/*.rs` と `wasm/*/pkg/`（生成物）を変更していない
-- [ ] `npm run validate` が緑
+- [x] `src/wasm/pii-sanitizer/piiSanitizerWasm.d.ts:9` が `any` ではなく `SanitizeResult` から error を除いた形（または同等の明示的な interface）を返す
+- [x] `src/wasm/tag-cooccur/tagCooccurWasm.d.ts:11,20` が `any` ではなく `computeTagCooccurrence` / `narrowEntriesToTopTags` の戻り値形を返す
+- [x] 呼び出し側で any 由来の黙認されていたアクセスがあれば修正する（type-check が通るまで）
+- [x] `src/wasm/*/__tests__/parity.test.ts` が無修正で通る
+- [x] `wasm/*.rs` と `wasm/*/pkg/`（生成物）を変更していない
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -90,13 +90,20 @@ Scenario: 実行時の挙動が変わらない
 
 ## Definition of Done
 
-- [ ] type-check が緑（any の黙認アクセスが 0）
-- [ ] パリティテスト無修正で緑
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了
+- [x] type-check が緑（any の黙認アクセスが 0）
+- [x] パリティテスト無修正で緑
+- [x] `npm run validate` が緑
+- [x] コードレビュー完了
 
 ## 関連
 
 - pbi/00-INDEX.md
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 簡素化パス 未適用発見（wasm d.ts の any）
+
+## 完了記録（2026-10-20）
+
+- 実装: pii を `Omit<SanitizeResult, 'error'>` 型に（src/utils/piiSanitizer.ts からの type-only import、実行時依存なし）。tag-cooccur を wrapper 所有の raw 契約型（`RawCooccurResult` / `RawNarrowResult`、後者を新たに export）で型付け。bench の obsolete cast 1 件を削除。実行時の戻り値の実体は不変。
+- PBI 前提からの逸脱（2 点・archive 判断の根拠）: (1) tagCooccurWasm.d.ts は手書きではなく pkg 生成物との byte 一致コピーで、crates.json（pkgDts/dtsCopy）が SSOT。手編集は wasm ゲートの fresh build 後に上書きされるため、pii-sanitizer と同じ hand-maintained 構成（pkgDts/dtsCopy=null）に変換し expectedCopies を更新した。(2) 指定の mirror 元関数の戻り値形（decode 後形）は runtime の raw 形と異なるため mirror 形ではなく raw 契約型を採用（嘘の型を避け、mirror 関係は doc comment に明記）。
+- 5 Whys の根本原因: .d.ts の維持方式が crate ごとに異なる SSOT（crates.json）が any 監査・PBI 作成のワークフローから参照されていなかった。教訓: 生成コピーの d.ts を直す前に hand-maintained 化するか postprocess パッチかを決めるステップを監査に足す。
+- 検証: type-check / grep ': any' 0 件 / src/wasm 346 テスト（パリティ無修正） / wasm-crates 18 件 / wasm-success 14 件 / eslint / npm run validate（フルゲート 16,453 テスト）全緑。wasm/*.rs と wasm/*/pkg/ は未変更。レビュー実害なし（Rust の serde 契約と型の一致を照合）。

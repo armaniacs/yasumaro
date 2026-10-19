@@ -39,10 +39,10 @@ Scenario: 上限以下のインポートでは拒否ログが出ない
 
 ## 受け入れ基準
 
-- [ ] `src/utils/settingsExportImport.ts:213` の関数が、副作用を持つことが名前から分かる（動詞名）か、または副作用を分離して述語が純粋になっている
-- [ ] 2 呼び出し箇所（`:398` / `:754`）の契約（拒否時に null、ログ 1 回）が変わっていない
-- [ ] 既存テスト `src/utils/__tests__/settingsExportImport.test.ts` が無修正で通る（挙動不変の対照）
-- [ ] `npm run validate` が緑
+- [x] `src/utils/settingsExportImport.ts:213` の関数が、副作用を持つことが名前から分かる（動詞名）か、または副作用を分離して述語が純粋になっている
+- [x] 2 呼び出し箇所（`:398` / `:754`）の契約（拒否時に null、ログ 1 回）が変わっていない
+- [x] 既存テスト `src/utils/__tests__/settingsExportImport.test.ts` が無修正で通る（挙動不変の対照）
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -95,12 +95,18 @@ Scenario: 上限以下のインポートでは拒否ログが出ない
 
 ## Definition of Done
 
-- [ ] `npm run validate` が緑
-- [ ] 既存テスト無修正で通る
-- [ ] コードレビュー完了
+- [x] `npm run validate` が緑
+- [x] 既存テスト無修正で通る
+- [x] コードレビュー完了
 
 ## 関連
 
 - pbi/00-INDEX.md
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 code-review Suggestion 3（ブランチ 1020a の簡素化パス差分レビュー）
+
+## 完了記録（2026-10-20）
+
+- 実装: 述語を同期・純粋化（src/utils/settingsExportImport.ts:213-215、ログ副作用なし）、logError を `logImportSizeCapExceeded()`（:217-224）に分離、2 呼び出し箇所でログ呼び出しを明示（:400-402, :757-759）。拒否条件・ログ文・戻り値・VULN-034 入口の早期リターンタイミングはすべて不変。
+- 5 Whys の根本原因: DRY の適用単位を「重複しているコード片全体」にしたため、制御フローの契約と副作用が丸ごと関数化され、述語名が嘘になった。再発防止として NAMING_GUIDELINES への規約 1 文追加（述語名は副作用を持たない）を将来課題として記録。
+- 検証: settingsExportImport 37 件と関連 13 ファイル 173 件が無修正で緑 / type-check / eslint / npm run validate 全緑。レビュー実害なし（判定境界 `<= CAP` ⇔ `> CAP` 同値、ログ順序同一を確認）。

@@ -41,10 +41,10 @@ Scenario: refreshTimestamp の意味が変わらない
 
 ## 受け入れ基準
 
-- [ ] `saveSavedUrlEntryMetadata` が配列を 1 回の `findIndex`（または等価な単一走査）で分岐・置換する
-- [ ] `replaceEntry` と `updateSavedUrlEntry` の既存契約が変わっていない（`updateSavedUrlEntry` は現行のまま）
-- [ ] 既存テスト（savedUrl 系 113 件）が無修正で通る
-- [ ] `npm run validate` が緑
+- [x] `saveSavedUrlEntryMetadata` が配列を 1 回の `findIndex`（または等価な単一走査）で分岐・置換する
+- [x] `replaceEntry` と `updateSavedUrlEntry` の既存契約が変わっていない（`updateSavedUrlEntry` は現行のまま）
+- [x] 既存テスト（savedUrl 系 113 件）が無修正で通る
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -90,12 +90,18 @@ savedUrl 系既存テスト（113 件）が挙動を固定。呼び出し回数�
 
 ## Definition of Done
 
-- [ ] `npm run validate` が緑
-- [ ] 既存テスト無修正で通る
-- [ ] コードレビュー完了
+- [x] `npm run validate` が緑
+- [x] 既存テスト無修正で通る
+- [x] コードレビュー完了
 
 ## 関連
 
 - pbi/00-INDEX.md
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 code-review Suggestion 2（ブランチ 1020a の簡素化パス差分レビュー）
+
+## 完了記録（2026-10-20）
+
+- 実装: `saveSavedUrlEntryMetadata` の updater を findIndex 1 回の単一走査に統一（src/utils/storage/savedUrlRepository.ts:395-411、WHY コメント付き）。create 分岐・防御ガード・refreshTimestamp・配列コピー・`timestamp ?? Date.now()` の評価位置はすべて旧実装と同値。`replaceEntry` / `updateSavedUrlEntry` は未変更。
+- 5 Whys の根本原因: 共有ヘルパー replaceEntry の戻り値契約に「見つかった位置」がなく、分岐する呼び出し側が some() で事前確認するしかなかった。教訓（簡素化パスの受入基準に 1 行追加）: 分岐を伴う更新でヘルパーを再利用するときは、呼び出し側の分岐に必要な情報が戻り値で供給されているかを変更前に確認する。
+- 検証: savedUrl 関連 5 ファイル 63 件 + 直接呼び出し元 4 ファイル 85 件が無修正で緑 / type-check / eslint / npm run validate 全緑。レビュー実害なし（重複 url も最初の 1 件のみ更新で旧と同値を確認）。

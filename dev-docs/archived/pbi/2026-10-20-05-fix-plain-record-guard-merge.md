@@ -48,12 +48,12 @@ Scenario: 統合後も両ファイルの挙動が変わらない
 
 ## 受け入れ基準
 
-- [ ] 統合前に両ガードの同一性（null / typeof / Array.isArray 条件）を実ファイルで再確認し、結果を完了記録に残す。**条件がズレていた場合は統合せず、この PBI を却下または再設計する**
-- [ ] 共通ガードが `src/utils/objectUtils.ts`（`pickDefined` の在処）に追加される、または同等の既存 util モジュールに置かれる
-- [ ] 両ファイルの呼び出しが共通ガードに向き、ローカル定義が消えている
-- [ ] 暗号系・マイグレーション系の既存テストが無修正で通る
-- [ ] manifest.json を変更していない（呼び出しは background 系コードのみで、content script の動的 import が発生しないことを grep で確認）
-- [ ] `npm run validate` が緑
+- [x] 統合前に両ガードの同一性（null / typeof / Array.isArray 条件）を実ファイルで再確認し、結果を完了記録に残す。**条件がズレていた場合は統合せず、この PBI を却下または再設計する**
+- [x] 共通ガードが `src/utils/objectUtils.ts`（`pickDefined` の在処）に追加される、または同等の既存 util モジュールに置かれる
+- [x] 両ファイルの呼び出しが共通ガードに向き、ローカル定義が消えている
+- [x] 暗号系・マイグレーション系の既存テストが無修正で通る
+- [x] manifest.json を変更していない（呼び出しは background 系コードのみで、content script の動的 import が発生しないことを grep で確認）
+- [x] `npm run validate` が緑
 
 ## テスト戦略
 
@@ -99,12 +99,19 @@ Scenario: 統合後も両ファイルの挙動が変わらない
 
 ## Definition of Done
 
-- [ ] `npm run validate` が緑
-- [ ] 同一性再確認の結果が完了記録に残っている
-- [ ] コードレビュー完了
+- [x] `npm run validate` が緑
+- [x] 同一性再確認の結果が完了記録に残っている
+- [x] コードレビュー完了
 
 ## 関連
 
 - pbi/00-INDEX.md
 - pbi/2026-10-20-00-backlog-review-findings.md
 - 出典: 2026-10-20 簡素化パス サブエージェント報告 未適用発見 8
+
+## 完了記録（2026-10-20）
+
+- 同一性再確認: 両ガードの 3 条件（null / typeof 'object' / !Array.isArray）が実装時点で完全一致。差は戻り値規約のみ。
+- 実装: objectUtils.ts:28-37 に型述語 `isPlainRecord` を追加、encryptionSession の asRecord ローカル定義を削除して唯一の呼び出し箇所を `isPlainRecord(settings) ? settings : undefined` に置換、settingsMigration のローカル定義を削除して import に統一（hasOwn は対象外につき未触）。条件ロジックは objectUtils.ts の 1 箇所のみ。
+- 挙動メモ: Date は `typeof 'object'` で旧実装と同一にガードを通るため true をテストで固定（BDD の「日付は record として扱われない」は同一条件では満たされないため、挙動不変を優先）。Date 除外は条件強化が必要で将来 PBI 候補。同種の統合候補として storageTransaction.ts:88 / aiUsageTracker.ts:80,309 / i18n.ts:40 も実装時に特定。
+- 検証: 17 テストファイル 164 件が無修正で緑（objectUtils 境界テスト追加を除く） / type-check / eslint / manifest.json 未変更 / npm run validate 全緑。レビュー実害なし（asRecord 残存参照なし、層違反・循環なしを確認）。
