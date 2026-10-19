@@ -22,7 +22,7 @@ import { DB_FILENAME } from './dbFilename.js';
 import type { WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
-import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleInsertBatch } from './opfsWorker/crudHandlers.js';
+import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleCountAllRows, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
 import { handleBackup, handleSerialize, handleRestore as handleRestoreImpl } from './opfsWorker/backupHandlers.js';
 import {
@@ -146,6 +146,7 @@ async function initSqliteInner(): Promise<void> {
   // Migrate old AccessHandlePoolVFS database (one-time, idempotent)
   const migrationCtx: MigrationContext = {
     handleInsertBatch: (records) => handleInsertBatch(handlerCtx, records, postWorkerLog, ensureEngine),
+    countNewDbRecords: () => handleCountAllRows(handlerCtx),
     postLog: postWorkerLog,
   };
   await runMigrationV2(migrationCtx);

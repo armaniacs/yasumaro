@@ -11,7 +11,9 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 
 export interface MigrationContext {
-  handleInsertBatch: (records: BrowsingLogRecord[]) => Promise<{ count: number }>;
+  handleInsertBatch: (records: BrowsingLogRecord[]) => Promise<{ count: number; skipped?: number }>;
+  /** Reads the current total row count of the NEW database (entity verification). */
+  countNewDbRecords: () => Promise<number>;
   postLog: (level: 'warn' | 'error' | 'info', message: string, details?: Record<string, unknown>) => void;
 }
 
@@ -51,6 +53,7 @@ export async function runMigrationV2(ctx: MigrationContext): Promise<void> {
       },
       readOldRecords: readOldDbRecords,
       insertBatch: ctx.handleInsertBatch,
+      countNewDbRecords: ctx.countNewDbRecords,
       deleteOldDb: deleteOldDbFile,
     });
 

@@ -90,6 +90,18 @@ export async function handleGetCount(ctx: HandlerContext): Promise<number> {
   return count;
 }
 
+/**
+ * Total row count of browsing_logs in the NEW database, including soft-deleted
+ * rows (migrated records may carry is_deleted = 1, so LIVE_COUNT_SQL's
+ * is_deleted = 0 filter would under-report). Used by the V2 migration
+ * orchestrator to verify the claimed inserts before the old db is deleted.
+ */
+export async function handleCountAllRows(ctx: HandlerContext): Promise<number> {
+  let count = 0;
+  await sqlQuery(ctx, 'SELECT COUNT(*) AS c FROM browsing_logs', [], (row) => { count = Number(row.c); });
+  return count;
+}
+
 export async function handleInsertBatch(
   ctx: HandlerContext,
   records: BrowsingLogRecord[],
