@@ -565,7 +565,7 @@ import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logWarn } from '../../utils/logger/api.js';
-import { resetVisitRateLimiter } from '../recordingAdmission.js';
+import { resetVisitRateLimiter, RecordingAdmission } from '../recordingAdmission.js';
 import type {
     ValidVisitMessage,
     FetchUrlMessage,
@@ -1619,6 +1619,55 @@ describe('service-worker handlers', () => {
             );
 
             expect(pendingStorage.removePendingPages).not.toHaveBeenCalled();
+        });
+
+        // PBI 2026-10-18-04: the notification Save path runs the same
+        // RecordingAdmission singleton as the registry routes — the handler has
+        // no consent source of its own, so a withdrawn profile is refused with
+        // privacy_consent_required before any record or pending removal.
+        it('refuses a Save click through the shared RecordingAdmission when consent was withdrawn', async () => {
+            vi.mocked(hasPrivacyConsent).mockResolvedValueOnce(false);
+            vi.mocked(pendingStorage.getPendingPages).mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' } as Awaited<
+                    ReturnType<typeof pendingStorage.getPendingPages>
+                >[number],
+            ]);
+            const admitSpy = vi.spyOn(RecordingAdmission.prototype, 'admit');
+            const crypto = await import('../../utils/crypto/index.js');
+            vi.mocked(crypto.notificationHmacSigner.verify).mockResolvedValueOnce(true);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+
+            expect(admitSpy).toHaveBeenCalledWith('save', expect.anything());
+            expect(logWarn).toHaveBeenCalledWith(
+                expect.stringContaining('privacy_consent_required'),
+                expect.objectContaining({ reason: 'privacy_consent_required' }),
+                undefined,
+                'service-worker'
+            );
+            expect(RecordingOrchestrator.prototype.record).not.toHaveBeenCalled();
+            expect(pendingStorage.removePendingPages).not.toHaveBeenCalled();
+            admitSpy.mockRestore();
+        });
+
+        it('admits a Save click through the shared RecordingAdmission when consent is granted', async () => {
+            vi.mocked(pendingStorage.getPendingPages).mockResolvedValue([
+                { url: 'https://example.com', title: 'Example Page' } as Awaited<
+                    ReturnType<typeof pendingStorage.getPendingPages>
+                >[number],
+            ]);
+            const admitSpy = vi.spyOn(RecordingAdmission.prototype, 'admit');
+            const crypto = await import('../../utils/crypto/index.js');
+            vi.mocked(crypto.notificationHmacSigner.verify).mockResolvedValueOnce(true);
+
+            const notificationId = 'privacy-confirm-aHR0cHM6Ly9leGFtcGxlLmNvbQ.testSig';
+            await serviceWorker.handleNotificationButtonClicked(notificationId, 0);
+
+            expect(admitSpy).toHaveBeenCalledWith('save', expect.anything());
+            expect(RecordingOrchestrator.prototype.record).toHaveBeenCalledTimes(1);
+            expect(pendingStorage.removePendingPages).toHaveBeenCalledWith(['https://example.com']);
+            admitSpy.mockRestore();
         });
 
         it('should handle getPendingPages error gracefully', async () => {

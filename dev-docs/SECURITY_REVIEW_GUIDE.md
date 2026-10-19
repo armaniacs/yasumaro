@@ -141,10 +141,12 @@ kinds of gate** read point:
    (`src/background/recordingAdmission.ts` → `reason: 'privacy_consent_required'`).
 2. **Outbound gates** ― paths that leave the admission flow entirely (the dashboard
    Obsidian export in `src/background/handlers/dashboardSqlite/coreCrudHandler.ts`,
-   the alarm replay / notification / review-digest paths in PBI `2026-10-19-10`).
+   the alarm replay / review-digest paths in PBI `2026-10-19-10`).
    These take an injected `isConsentGranted: () => Promise<boolean>` from the
    composition root, whose body is the same one-line read of `hasPrivacyConsent()`.
    The handler never implements its own judgement; it only calls the injected seam.
+   The notification Save re-run used to be an outbound gate; PBI `2026-10-18-04`
+   moved it onto the admission gate (kind 1) instead.
 
 Other production readers are **not gates** and are fine to add:
 the global consent badge (`src/background/consentBadge.ts:22`) and the popup's
@@ -173,7 +175,7 @@ Two rules for a new outbound path:
 | 6 | AI / Obsidian / Gist connection tests | No | Send only the configuration the user typed (URL, API key, PAT). Blocking them would stop an unconsented user from validating settings before deciding |
 | 7 | Tranco metadata / list download | No | Public list metadata; no user data |
 | 8 | Offline retry replay (`src/background/offlineQueueProcessor.ts`) | **Yes ― at execution time** | The `yasumaro-offline-network-retry` alarm re-reads consent before the cycle and skips the whole queue when it is withdrawn (a per-job skip would burn retries and starve consented jobs). Pinned by `src/background/__tests__/offlineQueueProcessor.test.ts` ("does not replay queued jobs after the user withdrew consent", "replays the same jobs once consent is granted again") |
-| 9 | Notification "save" re-run (`src/background/handlers/notificationHandlers.ts`) | **Yes ― at click time** | A privacy-confirm notification outlives the consent it was raised under; the Save button re-reads consent and keeps the pending page so a re-consented user can retry. Pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts` ("does not record a pending page after consent was withdrawn") |
+| 9 | Notification "save" re-run (`src/background/handlers/notificationHandlers.ts`) | **Yes ― at click time** | A privacy-confirm notification outlives the consent it was raised under; the Save button runs the shared `RecordingAdmission` pre-stage (`admit('save')`, PBI `2026-10-18-04`) and is refused with `privacy_consent_required`, keeping the pending page so a re-consented user can retry. Pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts` ("does not record a pending page after consent was withdrawn") |
 | 10 | Weekly / monthly review digest (`src/background/reviewSummaryGenerator.ts`) | **Yes ― at execution time** | The digest joins every row in the period, so consent is re-read after the `REVIEW_SUMMARY_ENABLED` check; nothing is sent and `REVIEW_SUMMARY_LAST_GENERATED_*` stays untouched, so a re-granted consent can still build the period. Pinned by `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ("does not send the digest to AI when consent was withdrawn") |
 | 11 | Dashboard "append selected to Obsidian" (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts`) | **Yes ― at execution time** | Rows leave for the Obsidian REST API, outside `RecordingAdmission`. The append case reads the injected `isConsentGranted` (wired in `src/background/dashboardSqliteWiring.ts` from `hasPrivacyConsent`) after input validation and **before** `getSettings`/`query`, so a withdrawn profile neither sends nor reads the rows. All other dashboardSqlite subtasks stay ungated (local-only). Pinned by `src/background/__tests__/dashboardSqliteHandlers-append.test.ts` ("refuses to append when consent was withdrawn (and reads no rows)", "still appends when consent is granted (regression guard)") |
 | 12 | `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
@@ -184,9 +186,12 @@ Two rules for a new outbound path:
 its name implied a second seam that does not exist. The rows marked **gap** were
 what that name was hiding: paths that never saw the gate at all. Rows 8-11 are all
 closed as of 2026-10-19 (PBI `2026-10-19-10` for the scheduled/queued paths, PBI
-`2026-10-19-11` for the dashboard export). Every one of those re-checks takes an
-injected `isConsentGranted: () => Promise<boolean>` from the composition ― do not
-import the consent module from the handler itself.
+`2026-10-19-11` for the dashboard export). The scheduled/queued/dashboard re-checks
+take an injected `isConsentGranted: () => Promise<boolean>` from the composition ― do not
+import the consent module from the handler itself. The notification Save re-run
+(row 9) moved onto the shared `RecordingAdmission` pre-stage instead (PBI
+`2026-10-18-04`): the same `hasPrivacyConsent()` read at execution time, behind the
+one gate every recording path shares.
 
 **Consent is device-local, not portable** (row 13, PBI `2026-10-19-12`). Treat any
 path that copies settings between profiles as an outbound path for consent: a

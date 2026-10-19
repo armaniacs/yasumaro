@@ -191,11 +191,17 @@ export const handleStartup = _lifecycleHandlers.handleStartup;
 // Notification Handlers
 // ============================================================================
 export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
+// Notifications carry no MessageSender; the admission pre-stage only narrows
+// the sender inside its rate branch, and kind 'save' is not counter-limited
+// (KIND_RATE_BUCKET.save === null), so the empty sender is never read.
+const NOTIFICATION_SENDER: chrome.runtime.MessageSender = {};
 const _notificationHandlers = createNotificationHandlers({
   record: (data) => recordingPipeline.record(data),
-  // PBI 2026-10-19-10: the privacy-confirm notification re-reads consent at
-  // click time; a withdrawal must stop the re-run it was raised under.
-  isConsentGranted: () => hasPrivacyConsent(),
+  // PBI 2026-10-18-04: the notification Save path runs the same
+  // RecordingAdmission singleton as the registry routes (messageRouter
+  // resolves the same manifest entry). A withdrawn consent is refused with
+  // privacy_consent_required before any record, like every other path.
+  admit: (kind) => services.recordingAdmission.admit(kind, NOTIFICATION_SENDER),
 });
 export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
 export const handleNotificationClicked = _notificationHandlers.onClicked;

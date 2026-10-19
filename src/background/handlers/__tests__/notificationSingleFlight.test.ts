@@ -80,9 +80,9 @@ describe('notification button single-flight (VULN-009)', () => {
     const record = vi.fn(async () => ({ success: true }) as never);
     const { onButtonClicked } = createNotificationHandlers({
       record,
-      // PBI 2026-10-19-10: the click handler re-reads consent; these tests
-      // exercise the consented path.
-      isConsentGranted: async () => true,
+      // PBI 2026-10-18-04: the click handler runs the common admission
+      // pre-stage; these tests exercise the admitted (consented) path.
+      admit: async () => ({ settings: {} }),
     });
 
     const p1 = onButtonClicked('privacy-confirm-abc', 0);

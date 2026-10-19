@@ -7,6 +7,7 @@ import { logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { buildRecordRequest } from '../recordRequestBuilder.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
+import type { AdmissionOutcome, RecordAdmissionKind } from '../recordingAdmission.js';
 import type { RecordingData, RecordingResult } from '../../messaging/types.js';
 
 const ALLOWED_URL_SCHEMES = ['http:', 'https:', 'chrome-extension:', 'moz-extension:', 'edge:'];
@@ -33,12 +34,18 @@ export function isValidNotificationUrl(url: string): boolean {
 export interface NotificationHandlersDeps {
   record: (data: RecordingData) => Promise<RecordingResult>;
   /**
-   * Re-read consent at execution time (PBI 2026-10-19-10). The privacy-confirm
-   * notification outlives the consent it was raised under: if the user withdraws
-   * and then clicks Save, recording must not resume. Wired from the
-   * composition's consent seam, never read here directly.
+   * PBI 2026-10-18-04: the common RecordingAdmission pre-stage shared with the
+   * registry routes (VALID_VISIT / MANUAL_RECORD / SAVE_RECORD / REGENERATE),
+   * resolved from the composition's `recordingAdmission` singleton — never a
+   * locally built admission. The notification click carries no sender, so the
+   * composition root binds an empty one; kind 'save' is not counter-limited
+   * (`KIND_RATE_BUCKET.save === null`), so the sender is never read.
+   * Supersedes the bare consent re-read of PBI 2026-10-19-10: the admission
+   * gate reads the same `hasPrivacyConsent()` at execution time, so a
+   * withdrawn profile is still refused, now through the same gate every other
+   * recording path is refused by (`privacy_consent_required`).
    */
-  isConsentGranted: () => Promise<boolean>;
+  admit: (kind: RecordAdmissionKind) => Promise<AdmissionOutcome>;
 }
 
 export function createNotificationHandlers(deps: NotificationHandlersDeps) {
@@ -82,15 +89,19 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
 
             await inFlightByUrl.run(url, async () => {
                 if (buttonIndex === 0) {
-                    // PBI 2026-10-19-10: consent is re-read here. A withdrawn
-                    // profile must not record from a notification raised while
-                    // consented. The pending page is deliberately left in place
-                    // (same policy as a held recovery claim) so re-consenting
-                    // lets the user retry the same action.
-                    if (!(await deps.isConsentGranted())) {
+                    // PBI 2026-10-18-04: the common admission pre-stage runs
+                    // before any pending lookup or recovery claim, exactly where
+                    // the PBI 2026-10-19-10 consent re-read used to sit. A
+                    // withdrawn profile is refused with the same
+                    // `privacy_consent_required` rejection every registry route
+                    // returns, and the pending page is deliberately left in
+                    // place (same policy as a held recovery claim) so
+                    // re-consenting lets the user retry the same action.
+                    const admitted = await deps.admit('save');
+                    if ('rejected' in admitted) {
                         await logWarn(
-                            'Notification re-run skipped: privacy consent not granted',
-                            { url: url.substring(0, 10) + '...' },
+                            `Notification Save rejected by recording admission: ${admitted.rejected.reason}`,
+                            { url: url.substring(0, 10) + '...', reason: admitted.rejected.reason },
                             undefined,
                             'service-worker',
                         );
