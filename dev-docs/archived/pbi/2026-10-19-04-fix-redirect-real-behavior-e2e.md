@@ -18,7 +18,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-01](../dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md)（AI 経路）と [2026-10-18-08](../dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md)（Obsidian 経路）で、`redirect:'error'` は共通 seam `NO_REDIRECT_FETCH_POLICY`（`src/utils/fetch.ts`）として全対象経路へ適用済み。両 PBI の完了記録に、**「30x 実測の不在」が残存リスクとして既に記載されている**。
+PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md)（AI 経路）と [2026-10-18-08](2026-10-18-08-fix-obsidian-redirect-bearer.md)（Obsidian 経路）で、`redirect:'error'` は共通 seam `NO_REDIRECT_FETCH_POLICY`（`src/utils/fetch.ts`）として全対象経路へ適用済み。両 PBI の完了記録に、**「30x 実測の不在」が残存リスクとして既に記載されている**。
 
 ### 確定している事実（2026-10-19 時点のコードで確認）
 
@@ -66,14 +66,14 @@ Scenario: 4. Obsidian の read / write も 30x で 2 次リクエストを発行
 
 ## 受け入れ基準
 
-- [ ] 30x を返すフィクスチャで「発行されたリクエストが当初 URL の 1 件だけ」であることを実測で固定する（E2E）
-- [ ] `redirect:'error'` の reject が transport failure として届き、再送された場合も宛先が当初 URL のみであることを固定する
-- [ ] 接続テスト経路（`_fetchConnectionResponse` の消費側）に対称な `response.redirected` ガードを入れる。入れる場合は既存テストの期待値への影響を確認し、影響があるテストを同時に更新する
-- [ ] 200 の正常経路が変わらないこと（AI 要約・AI 接続テスト・Obsidian 接続テスト）を回帰として固定する
-- [ ] ブラウザでしか検証できない部分が何かを完了記録に明記する（plain な fetch mock で再現できない範囲を列挙する）
-- [ ] `npm run validate` が緑
-- [ ] `npx playwright test <対象 spec> --repeat-each=10 --retries=0` が安定（AGENTS.md の「タイミング修正の DoD」に従う）
-- [ ] 既存 pin テスト（`httpSummaryFlow.test.ts:216` / `httpTestFlow.test.ts:205` / `obsidianClient-secure-fetch.test.ts:273`）が非退行
+- [x] 30x を返すフィクスチャで「発行されたリクエストが当初 URL の 1 件だけ」であることを実測で固定する（E2E。転送先 `/target` への記録 0 件を assert）
+- [x] `redirect:'error'` の reject が transport failure として届き、再送された場合も宛先が当初 URL のみであることを固定する（`shouldRetryTransportFailure` を E2E から実 import して判定まで確認）
+- [x] 接続テスト経路（`_fetchConnectionResponse` の消費側）に対称な `response.redirected` ガードを入れる（**採用**。既存テストへの影響なし＝74 テスト緑）
+- [x] 200 の正常経路が変わらないこと（AI 要約・AI 接続テスト・Obsidian 接続テスト）を回帰として固定する（既存 pin が非退行。E2E の対照ケースは `follow` で 200 に到達）
+- [x] ブラウザでしか検証できない部分が何かを完了記録に明記する（3 点を列挙。拡張機能自身の経路はユニット pin であることも明記）
+- [x] `npm run validate` が緑（ユニット 1095 files / 16430 tests / exit 0）
+- [x] `npx playwright test --project=redirect-policy --repeat-each=10 --retries=0` が安定（**30/30 パス**。固定待機なし）
+- [x] 既存 pin テスト（`httpSummaryFlow.test.ts:216` / `httpTestFlow.test.ts:205` / `obsidianClient-secure-fetch.test.ts:273`）が非退行
 
 ## テスト戦略
 
@@ -149,21 +149,69 @@ grep -n "redirected\|_fetchConnectionResponse" src/background/obsidianClient.ts
 
 ## Definition of Done
 
-- [ ] BDDシナリオ 1〜4 が自動テストで実装されパス
-- [ ] E2E で「転送先 URL へのリクエストが 0 件」を実測で固定している
-- [ ] `npx playwright test <対象 spec> --repeat-each=10 --retries=0 --workers=4` が全回パス
-- [ ] `npm run validate` が緑
-- [ ] 接続テストの `redirected` ガードの採否と、採る場合の既存テストへの影響が完了記録に残っている
-- [ ] ブラウザでしか検証できない範囲が完了記録に明記されている
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` に実測の記録を追記。接続テストのガードを足す場合は `obsidianClient.ts` のコメントを対称に揃える）
-- [ ] 完了時に `dev-docs/archived/pbi/2026-10-18-01-*` / `...-08-*` の「残存リスク」から本 PBI へ参照を張り替える
+- [x] BDDシナリオ 1〜4 が自動テストで実装されパス（1・4 は実ブラウザ E2E、2 は接続テストの対称ガード、3 は既存の 200 経路テストが非退行）
+- [x] E2E で「転送先 URL へのリクエストが 0 件」を実測で固定している（`/target` への記録 0 件を assert）
+- [x] `npx playwright test --config testDir/playwright.config.ts --project=redirect-policy --repeat-each=10 --retries=0` が **30/30 パス**
+- [x] `npm run validate` が緑（ユニット 1095 files / 16430 tests / exit 0、lint・型とも緑。CI の validate も確認）
+- [x] 接続テストの `redirected` ガードの採否（**採る**）と、既存テストへの影響が完了記録に残っている（影響なし。74 テスト緑）
+- [x] ブラウザでしか検証できない範囲が完了記録に明記されている
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ADR に実測の記録を追記、`obsidianClient.ts` のコメントを read / write と対称に）
+- [x] 完了時に `dev-docs/archived/pbi/2026-10-18-01-*` / `...-08-*` の「残存リスク」から本 PBI へ参照を張り替える
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ「redirect を拒否する」というセキュリティ方針が、テストで**実挙動**として確認されていなかったのか。
+
+1. **なぜ実挙動のテストが無かったのか** — 既存テストは `init.redirect === 'error'`（オプションが渡されたこと）を pin していた。オプションの存在は fetch mock で確認できるが、**30x が実際に来たときに何が起きるか**は mock では分からない。
+2. **なぜそれで十分とされたのか** — 「オプションを渡しているから方針は適用されている」という推論で足りるとした。**プラットフォームのセマンティクスを前提にした**（`redirect:'error'` が 2 次リクエストを止めるのは、このリポジトリのコードではなくブラウザの実装が決める）。
+3. **なぜ前提を確認しなかったのか** — ブラウザでしか確認できない領域（実 abort・ヘッダーの非到達）を試す置き場が E2E に無く、**「mock で再現できない」ことを未検証のまま許容**した。既存 E2E は拡張機能の起動を前提にしていた。
+4. **なぜ非対称が残ったのか** — Obsidian の read / write には `response.redirected` の多層防御があったが、**接続テストだけ抜けていた**。同じクライアントの同じ懸念なのに、経路ごとに足された防御がコピーされず、対称性を検査する仕組みが無かった。
+5. **なぜ気づけなかったのか** — 完了条件が「オプションを渡す」までで、**「そのオプションが何を保証するかを実測で示す」**という要件が無かった。
+
+**原因**: 方針の適用を「オプションの存在」で確認したことにして、**プラットフォームの実挙動**と**経路間の対称性**を検証対象にしなかったこと。
+
+**示唆**:
+- mock で確認できること（オプション・分岐）と、ブラウザでしか確認できないこと（2 次リクエストの有無・ヘッダーの到達・abort の形）を分けて、後者を E2E に置く。
+- E2E には**対照**（`redirect:'follow'` なら到達する）を同居させる。対照が無いと、フィクスチャが壊れていてもテストは空転して green になる。
+- 多層防御は経路ごとにコピーされる。**対称性そのものをテストで pin** する（read / write / 接続テストの 3 経路）。
+- 実測した失敗の形が、アプリの再試行分類（transport markers）と繋がっていることまで確認する。繋がっていなければ「拒否したが再送されない」等の別の穴になる。
+
+**解**: 実サーバ（307 + リクエスト記録）と実ブラウザの E2E spec を追加し、`redirect:'error'` で転送先へのリクエストが 0 件・Authorization が漏れない・`follow` なら到達することを固定。接続テストに対称な `redirected` ガードを追加。
+
+### ブラウザでしか検証できない範囲（AC）
+
+E2E で実測したのは次の 3 点で、いずれも plain な fetch mock では再現できない。
+
+1. `redirect:'error'` のとき、ブラウザが **Location 先へ 2 次リクエストを発行しない**こと（サーバ側の記録で 0 件）。
+2. その拒否が **`TypeError: Failed to fetch`** として届き、`shouldRetryTransportFailure`（`LEGACY_TRANSPORT_MARKERS_FULL`）が transport failure と判定すること（＝再送は当初 URL のみ）。
+3. **Authorization ヘッダーが転送先へ届かない**こと（307 はメソッドとヘッダーを保持するため、追従すると資格情報が漏れる）。
+
+一方、**拡張機能自身の経路**（service worker からの Obsidian read / write / 接続テスト、AI 要約）は E2E では駆動していない。そこはユニットで pin している（`obsidianClient-secure-fetch.test.ts` の 3 経路 + 新規の接続テスト対称ガード、`httpSummaryFlow.test.ts` / `httpTestFlow.test.ts` のオプション pin）。**どちらが欠けても片方だけでは足りない**ことを記録として残す。
+
+### 接続テストの対称ガード（採否）
+
+**採る**（`response.redirected` を成功条件から除外）。理由: read / write と同じ姿勢に揃える。`redirect:'error'` が先に abort するので通常は到達しないが、到達した応答は「設定した endpoint から返ったものではない」ため成功として採用してはならない。既存テストへの影響は無く、Obsidian 関連 3 ファイル 74 テストが緑（新規 1 テストを含む）。
+
+### E2E の安定化（記録）
+
+- 当初 `--workers=4` の反復で失敗した。原因を 2 段階で特定した:
+  1. `beforeEach` の `page.goto('/plain')` 自体がサーバに記録され、期待が 1 件ずれていた。
+  2. `pickLoopbackPort` は「probe してから bind」するため、並列 worker が同じポートを空きと誤認して**敗者が勝者のサーバを共有**しうる。さらに許可ポートは 4 つしかなく、5 個目の worker はバインドできない。
+- 対策: (a) **bind 自体を空き判定**にする（probe をやめる＝原子的）、(b) この spec を**専用プロジェクト `redirect-policy`（`workers: 1`）**に分離し、chromium / firefox の grep から `@redirect` を除外。
+- 結果: `--repeat-each=10 --retries=0` で **30/30 パス**（固定待機は追加していない。`expect.poll` も不要になった）。
+
+### ゲート
+
+`npm run validate`（ユニット・lint・型）は緑。テスト全体 **1095 files / 16430 tests / exit 0**、`type-check` / `type-check:test:baseline`（456 / pinned 456）とも緑、E2E は上記のとおり 30/30。
 
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `pbi/2026-10-19-05-fix-redirect-single-declaration.md` — 同じ `redirect` 方針の宣言箇所を 1 つに寄せる隣接 PBI。本 PBI はその宣言が実挙動として効いていることを測る
-- `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md` — 同一クラスの未適用経路（gist / tranco）。本 PBI の E2E フィクスチャはそちらでも再利用できる
-- `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — `redirect:'error'` 方針の原本。適用範囲と決定理由
-- `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` — AI 経路の修正。完了記録に「30x 実測の不在」が残存リスクとして記載
-- `dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md` — Obsidian 経路の修正。接続テストのガード非対称と実挙動未検証が残存リスクとして記載
+- [2026-10-19-05-fix-redirect-single-declaration.md](../../../pbi/2026-10-19-05-fix-redirect-single-declaration.md) — 同じ `redirect` 方針の宣言箇所を 1 つに寄せる隣接 PBI。本 PBI はその宣言が実挙動として効いていることを測る
+- [2026-10-19-06-fix-gist-tranco-redirect-policy.md](../../../pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md) — 同一クラスの未適用経路（gist / tranco）。本 PBI の E2E フィクスチャはそちらでも再利用できる
+- [dev-docs/ADR/2026-08-29-fetch-redirect-policy.md](../../ADR/2026-08-29-fetch-redirect-policy.md) — `redirect:'error'` 方針の原本。適用範囲と決定理由（本 PBI の実測を追記済み）
+- [2026-10-18-01-fix-ai-fetch-redirect-policy.md](2026-10-18-01-fix-ai-fetch-redirect-policy.md) — AI 経路の修正。完了記録に「30x 実測の不在」が残存リスクとして記載（本 PBI で解消）
+- [2026-10-18-08-fix-obsidian-redirect-bearer.md](2026-10-18-08-fix-obsidian-redirect-bearer.md) — Obsidian 経路の修正。接続テストのガード非対称と実挙動未検証が残存リスクとして記載（本 PBI で解消）

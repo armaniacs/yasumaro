@@ -87,8 +87,20 @@ Obsidian 経路 (`src/background/obsidianClient.ts`) の read/write には、
   `NO_REDIRECT_FETCH_POLICY` を適用するのが本 ADR の趣旨に沿う。2026-10-19 に
   PBI を起票した: `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md`
   (適用したら本節を「適用済み」へ更新すること)。実挙動の検証は
-  `pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`、宣言の一本化は
+  `dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`（2026-10-19 完了）、宣言の一本化は
   `pbi/2026-10-19-05-fix-redirect-single-declaration.md` で扱う。
+- **実挙動の実測（2026-10-19 追記）**: それまでのテストは `init.redirect === 'error'`
+  という**オプションの存在**を pin するだけで、30x が実際に来たときにブラウザが何を
+  するかは測っていなかった。実サーバ（307 + リクエスト記録）と実ブラウザを使う E2E
+  `testDir/e2e/redirect-policy-real-behavior.spec.ts` を追加し、次を実測で固定した:
+  (1) `redirect:'error'` では `Location` 先へ**2 次リクエストが 0 件**、
+  (2) 拒否は `TypeError: Failed to fetch` として届き `LEGACY_TRANSPORT_MARKERS_FULL`
+  経由で transport failure と判定される（再送は当初 URL のみ）、
+  (3) 307 で `Authorization` ヘッダーが転送先へ**届かない**。
+  対照として `redirect:'follow'` なら到達することも同じ spec で固定している（これが
+  無いとフィクスチャが壊れていても green になる）。同時に、Obsidian 接続テストに
+  read / write と対称な `response.redirected` ガードを追加した（それまで接続テストだけ
+  抜けていた）。詳細は `dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md`。
 - `src/background/handlers/systemHandlers.ts` は今も `redirect: 'error'` を
   リテラルで書いており、上記の `NO_REDIRECT_FETCH_POLICY` を共有していない。
   FETCH_URL 経路の挙動は正しいが、「宣言は 1 箇所」という整理は厳密には

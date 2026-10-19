@@ -341,5 +341,25 @@ describe('ObsidianClient: Obsidian REST API プロトコル設定', () => {
         }, 'note body')
       ).rejects.toThrow();
     });
+
+    // PBI 2026-10-19-04: the connection test used to accept `ok: true` as
+    // success even when the platform marked the response as redirected, unlike
+    // the read/write paths above. A redirected answer did not come from the
+    // configured endpoint, so it must not be reported as a working connection.
+    it('does not report success for a redirected connection-test response', async () => {
+      // @ts-expect-error - vi.fn() type narrowing issue
+      global.fetch.mockResolvedValue({
+        ok: true,
+        redirected: true,
+        status: 200,
+        statusText: 'OK',
+        text: () => Promise.resolve('')
+      });
+
+      const result = await obsidianClient.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(result.message).toMatch(/redirect/i);
+    });
   });
 });

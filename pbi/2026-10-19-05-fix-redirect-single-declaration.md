@@ -214,7 +214,7 @@ sed -n '75,82p' src/utils/fetch.ts
 ## 関連
 
 - `pbi/00-INDEX.md`
-- `pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md` — 同点（400）。security control の実効性検証を担うため上位
+- [2026-10-19-04-fix-redirect-real-behavior-e2e.md](../dev-docs/archived/pbi/2026-10-19-04-fix-redirect-real-behavior-e2e.md) — 同点（400）。security control の実効性検証を担うため上位（2026-10-19 完了・アーカイブ済み。実測済みの E2E フィクスチャは本 PBI の検証にも使える）
 - `pbi/2026-10-19-06-fix-gist-tranco-redirect-policy.md` — 同じ seam を gist / tranco の 5 サイトへ展開する。本 PBI の型 seam はその受け皿になる
 - `dev-docs/ADR/2026-08-29-fetch-redirect-policy.md` — `:90-93` に systemHandlers が定数を共有していない旨を記載済み
 - `dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md` — 共通 seam を導入した PBI（AI 経路）

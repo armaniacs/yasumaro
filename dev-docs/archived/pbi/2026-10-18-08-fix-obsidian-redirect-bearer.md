@@ -144,8 +144,8 @@ claimed root cause: `_fetchExistingContent` と `_writeContent` は redirect オ
 - **テスト**: `src/background/__tests__/obsidianClient-secure-fetch.test.ts` に `describe('redirect policy')` を新設（5 テスト、実装前に Red を確認）。GET / PUT / 接続テストの 3 経路で fetch 引数を pin し、`response.redirected` の body 拒否も pin。
 - **ゲート**: `npm run validate` exit 0。PR #180 の CI すべて pass。`obsidianClient*.test.ts` の既存テストは非互換なし。
 - **レビュー**: PBI 01・08 のコミット列を独立レビューで確認（結果は本ファイルの「コードレビュー完了」に反映）。正確性・セキュリティの欠陥は無し。残存:
-  - **`response.redirected` の多層防御は実リダイレクトでは未検証**: `redirect:'error'` が有効な限り platform は Response を返す前に拒否するため、このガードは到達しない（テストは mock で `redirected:true` を注入して pin している）。実挙動の確認はブラウザ／E2E のみ可能。
-  - **接続テスト経路（`_fetchConnectionResponse`）には `redirected` ガードを置いていない**（read/write のみ）。`redirect:'error'` が主防御であり、接続テストは本文を採用しないため実害は無いが、対称性としては残る。
+  - **`response.redirected` の多層防御は実リダイレクトでは未検証**: `redirect:'error'` が有効な限り platform は Response を返す前に拒否するため、このガードは到達しない（テストは mock で `redirected:true` を注入して pin している）。実挙動の確認はブラウザ／E2E のみ可能。→ **2026-10-19 に PBI [2026-10-19-04](2026-10-19-04-fix-redirect-real-behavior-e2e.md) で実測を追加**（転送先へのリクエスト 0 件・Authorization 非到達。多層防御そのものは mock 注入の pin のまま）。
+  - **接続テスト経路（`_fetchConnectionResponse`）には `redirected` ガードを置いていない**（read/write のみ）。`redirect:'error'` が主防御であり、接続テストは本文を採用しないため実害は無いが、対称性としては残る。→ **2026-10-19 に PBI [2026-10-19-04](2026-10-19-04-fix-redirect-real-behavior-e2e.md) で read / write と対称なガードを追加**（`obsidianClient.ts` の接続テスト消費側。既存テストへの影響なし）。
   - PBI 01 の完了記録にある残存リスク（30x 実測の不在、定数の共有範囲、テストが実定数を見ない点、gist / tranco 未適用）は本 PBI にも同様に当てはまる。
 
 ## 関連

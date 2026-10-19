@@ -424,6 +424,17 @@ export class ObsidianClient {
 
             const response = await this._fetchConnectionResponse(baseUrl, headers);
 
+            if (response.redirected) {
+                // PBI 2026-10-19-04: defence in depth, symmetric with the read
+                // (`_fetchExistingContent`) and write (`_writeContent`) guards.
+                // `redirect: 'error'` already aborts a 30x before this point; if a
+                // response still arrives marked as redirected it did not come from
+                // the configured endpoint, so it is never adopted as success.
+                const redirectedMsg = 'Connection failed: response was redirected away from the configured endpoint';
+                addLog(LogType.ERROR, `Connection test failed: ${redirectedMsg}`);
+                return { success: false, message: redirectedMsg };
+            }
+
             if (response.ok) {
                 return { success: true, message: 'Success! Connected to Obsidian. Settings Saved.' };
             } else {
