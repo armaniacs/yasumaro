@@ -36,14 +36,17 @@ vi.mock('../../../../utils/customPromptUtils.js', () => ({
   })),
   getDefaultSystemPrompt: vi.fn(() => 'Default system prompt.'),
 }));
-vi.mock('../../../../utils/fetch.js', () => ({
-  CONNECTION_TEST_CACHE_MODE: 'no-store',
-  // Mirrors the real export so the strategy can spread the shared redirect
-  // policy without reaching a transport.
-  NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
-  fetchWithRetry: vi.fn(),
-  validateUrlForAIRequests: vi.fn(),
-}));
+vi.mock('../../../../utils/fetch.js', async (importOriginal) => {
+  // PBI 2026-10-19-05: the real module supplies the shared redirect policy and
+  // the `noRedirectInit` seam, so a policy change reaches these tests.
+  const actual = await importOriginal<typeof import('../../../../utils/fetch.js')>();
+  return {
+    ...actual,
+    CONNECTION_TEST_CACHE_MODE: 'no-store',
+    fetchWithRetry: vi.fn(),
+    validateUrlForAIRequests: vi.fn(),
+  };
+});
 vi.mock('../../../../utils/storage/urlWhitelist.js', () => ({
   buildAllowedUrls: vi.fn((): Set<string> => new Set<string>()),
 }));

@@ -22,6 +22,8 @@ const { fetchWithRetryMock, readJsonCappedMock, applyCustomPromptMock } = vi.hoi
 
 vi.mock('../../../../utils/fetch.js', () => ({
   NO_REDIRECT_FETCH_POLICY: { redirect: 'error' },
+  // PBI 2026-10-19-05: outbound paths take the policy through this seam.
+  noRedirectInit: (options: Record<string, unknown> = {}) => ({ redirect: 'error', ...options }),
   fetchWithRetry: fetchWithRetryMock,
   fetchWithTimeout: vi.fn(),
   validateUrlForAIRequests: vi.fn(),

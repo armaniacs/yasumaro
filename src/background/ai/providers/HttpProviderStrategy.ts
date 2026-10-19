@@ -23,7 +23,7 @@
 
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { fetchWithRetry, NO_REDIRECT_FETCH_POLICY } from '../../../utils/fetch.js';
+import { fetchWithRetry, noRedirectInit } from '../../../utils/fetch.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
 import { checkPromptSafety } from '../../../utils/promptSafety.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
@@ -242,14 +242,13 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
       // No `shouldRetry`: the transport's own predicate is the single
       // implementation, so the summary flow cannot drift from the connection
       // test. It reads the structured kind only.
-      const response = await fetchWithRetry(prepared.url, {
-        ...NO_REDIRECT_FETCH_POLICY,
+      const response = await fetchWithRetry(prepared.url, noRedirectInit({
         method: 'POST',
         headers: prepared.headers,
         body: prepared.body,
         allowedUrls,
         timeoutMs: hooks.timeoutMs,
-      }, {
+      }), {
         maxRetryCount: 3,
         initialDelayMs: 1000,
         backoffMultiplier: 2,
@@ -311,14 +310,13 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
     try {
       const allowedUrls = await this.getAllowedUrlsForRequests();
 
-      const response = await fetchWithRetry(built.url, {
-        ...NO_REDIRECT_FETCH_POLICY,
+      const response = await fetchWithRetry(built.url, noRedirectInit({
         method: 'POST',
         headers: built.headers,
         body: built.body,
         allowedUrls,
         timeoutMs: hooks.timeoutMs,
-      }, {
+      }), {
         maxRetryCount: 1,
         initialDelayMs: 500,
         backoffMultiplier: 2,

@@ -1,13 +1,22 @@
 // src/background/__tests__/integration-robustness.test.js
 import { ObsidianClient } from '../obsidianClient.js';
-import { vi } from 'vitest';
+import { vi, beforeEach } from 'vitest';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { installTestSecretKek } from '../../utils/crypto/__tests__/secretKekHelper.js';
 import { GeminiProvider } from '../ai/providers/GeminiProvider.js';
-import { fetchWithRetry } from '../../utils/fetch.js';
+import { fetchWithRetry, noRedirectInit } from '../../utils/fetch.js';
 
 vi.mock('../../utils/fetch.js');
+// PBI 2026-10-19-05: the automock stubs the redirect seam, and a stub returns
+// `undefined` — which would strip the injected options before the assertion on
+// them. Restore the real one-line behaviour; the transport functions stay
+// automocked spies.
+beforeEach(() => {
+  vi.mocked(noRedirectInit).mockImplementation(
+    (options: Record<string, unknown> = {}) => ({ redirect: 'error', ...options }) as RequestInit,
+  );
+});
 vi.mock('../../utils/logger/types.js');;vi.mock('../../utils/logger/core.js');;vi.mock('../../utils/logger/api.js');
 vi.mock('../../utils/customPromptUtils.js', () => ({
   applyCustomPrompt: vi.fn((settings, provider, content) => ({
