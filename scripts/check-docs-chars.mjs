@@ -63,7 +63,12 @@ function inScope(relPath) {
   // AGENTS.md, so all three are out of scope.
   if (relPath === 'CLAUDE.local.md' || relPath === 'AGENTS.md' || relPath === 'CLAUDE.md') return false;
   if (relPath.endsWith('.md') && !relPath.includes('/')) return true;
-  return relPath.startsWith('pbi/') || relPath.startsWith('dev-docs/') || relPath.startsWith('docs/');
+  return (
+    relPath.startsWith('pbi/') ||
+    relPath.startsWith('dev-docs/') ||
+    relPath.startsWith('docs/') ||
+    relPath.startsWith('public/') // PRIVACY.md is user-facing and must stay byte-identical to docs/PRIVACY.md
+  );
 }
 
 function classify(ch) {

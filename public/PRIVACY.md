@@ -259,14 +259,14 @@ Yasumaro ("the Extension") is committed to protecting your privacy. This policy 
 ### Data Collection
 The Extension collects the following data **locally on your device**:
 - Browsing history data (URLs, titles, duration, scroll depth, content)
-- Navigation trail data (previous page URL, search-engine search terms) — **only when you opt in**
+- Navigation trail data (previous page URL, search-engine search terms) ― **only when you opt in**
 - Configuration data (API keys, connection settings)
 
 ### Storage
 - Browsing history data is stored in **SQLite DB on OPFS (Origin Private File System)** on your device.
 - All configuration data is stored in **Chrome's local storage** on your device.
 - Browsing history entries are also saved to **your local Obsidian vault**.
-- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30–365 days) and/or a maximum record count (1,000–100,000) in the settings under "History Retention Policy". When either setting is configured, an automatic purge runs every 24 hours.
+- **Data Retention Policy**: By default, browsing history is retained **indefinitely** (no automatic deletion). You can optionally configure a retention period (30-365 days) and/or a maximum record count (1,000-100,000) in the settings under "History Retention Policy". When either setting is configured, an automatic purge runs every 24 hours.
   - **Automatic Deletion Mechanism**: Non-starred entries older than the configured retention period are physically deleted. If the total count exceeds the configured maximum, the oldest non-starred entries are additionally removed. Starred entries are exempt from automatic deletion. A "Purge now" button is also available for immediate manual purge.
   - **PII Sanitization**: Fetched page content is processed through a PII (Personally Identifiable Information) sanitizer before storage. Email addresses, credit card numbers, phone numbers (Japan, US, China, Korea), My Number (Japan), SSN (US Social Security Numbers), and other PII patterns are automatically masked.
 - **Migration from older versions**: Data migration from older versions is performed against the SQLite DB on OPFS. After migration is complete, data in the old storage is deleted.
@@ -330,11 +330,11 @@ An optional feature behind the "Research Sessions" panel, which shows which page
 
 1. **What is stored** (two values per record):
    - `nav_source_url`: the URL of the page previously open in the same tab, with the fragment (everything from `#`) removed
-   - `search_query`: only when the referrer is a search engine (Google, Bing, DuckDuckGo, Yahoo! Japan, Yahoo!, Brave, Ecosia) — the search term, passed through the PII sanitizer and truncated to 200 characters
+   - `search_query`: only when the referrer is a search engine (Google, Bing, DuckDuckGo, Yahoo! Japan, Yahoo!, Brave, Ecosia) ― the search term, passed through the PII sanitizer and truncated to 200 characters
 
 2. **Excluded domains**: when the referrer matches the domain exclusion list (`isDomainAllowed` returns false), only the **origin** is stored, not the full URL. Otherwise the trail would carry out the very history the exclusion removed.
 
-3. **Where it lives**: the values are stored only in the on-device SQLite database. They are **never included in what is sent to AI providers, in the Markdown written to Obsidian, or in CSV / JSON exports.** One boundary does carry them: the **encrypted combined backup** you export yourself contains the whole SQLite database, so the values travel inside that backup file. A backup is separate from the normal settings export, and the consent state (`privacy_consent`) is not in the restore allowlist — so restoring onto another device does not turn the trail on there.
+3. **Where it lives**: the values are stored only in the on-device SQLite database. They are **never included in what is sent to AI providers, in the Markdown written to Obsidian, or in CSV / JSON exports.** One boundary does carry them: the **encrypted combined backup** you export yourself contains the whole SQLite database, so the values travel inside that backup file. A backup is separate from the normal settings export, and the consent state (`privacy_consent`) is not in the restore allowlist ― so restoring onto another device does not turn the trail on there.
 
 4. **Managing consent**:
    - To enable: a confirmation dialog appears in the settings Privacy tab; the feature turns on only if you agree

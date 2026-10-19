@@ -211,7 +211,7 @@ Documentation inventory, i18n formatting rules, and the documentation update che
 
 ## Documentation Characters (Shift-JIS + enumerated emoji)
 
-Documents must survive a Shift-JIS round trip. Scope: `pbi/`, `dev-docs/`, `docs/`, and root `*.md`.
+Documents must survive a Shift-JIS round trip. Scope: `pbi/`, `dev-docs/`, `docs/`, `public/`, and root `*.md`.
 Out of scope: generated files (`THIRD_PARTY_NOTICES.md`, `graphify-out/`, `bench/reports/`), agent
 scratch directories (`.superpowers/`, `.kilo/`, `.checking-team-tmp/`, `plans/`, `bench/`), and these
 rule files themselves (`AGENTS.md` / `CLAUDE.md` symlink / `CLAUDE.local.md`) because they quote the
