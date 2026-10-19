@@ -188,6 +188,6 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 - [dev-docs/SECURITY_REVIEW_GUIDE.md](../dev-docs/SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
 - [pbi/2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
 - dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
-- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
+- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同意レコードの読み出し先（top-level 直読み）に関わる。`getSettings` を同意の読み出しに流用しない理由
 - [pbi/00-INDEX.md](00-INDEX.md)
 - [dev-docs/TEST_RULE.md](../dev-docs/TEST_RULE.md) — 実時間待ちの禁止と、注入 seam の使い方

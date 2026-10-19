@@ -33,6 +33,7 @@ import {
     type SettingsMigrationState,
 } from '../settingsMigration.js';
 import { StorageKeys } from '../types.js';
+import { getConsentDeniedCount, getConsentWithdrawalHistory } from '../privacyConsent.js';
 
 const RAW_PORT = '27123';
 const RAW_KEYS = 'plain-key-1234567890';
@@ -207,6 +208,15 @@ describe('settings migration — key classification is by stored value, not by n
         expect(isMigratableStorageKey(StorageKeys.PRIVACY_CONSENT_VERSION)).toBe(false);
     });
 
+    // PBI 2026-10-19-03: allowlisting only the version split the consent unit
+    // across two stores. The record and the denial counters are read top-level by
+    // privacyConsent.ts, so they belong to the same "do not migrate" class.
+    it('keeps the whole consent unit at the top level, not only its version key', () => {
+        expect(isMigratableStorageKey(StorageKeys.PRIVACY_CONSENT)).toBe(false);
+        expect(isMigratableStorageKey(StorageKeys.PRIVACY_CONSENT_DENIED_COUNT)).toBe(false);
+        expect(isMigratableStorageKey(StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME)).toBe(false);
+    });
+
     it('keeps the keyring and the device-local trust database at the top level', () => {
         expect(isMigratableStorageKey(StorageKeys.ENCRYPTION_SALT)).toBe(false);
         expect(isMigratableStorageKey(StorageKeys.ENCRYPTION_SECRET)).toBe(false);
@@ -244,6 +254,31 @@ describe('settings migration — key classification is by stored value, not by n
 });
 
 describe('settings migration — happy path', () => {
+    // PBI 2026-10-19-03: the unit staying top-level is only worth anything if the
+    // real readers (which read top-level storage, not the port) still see it
+    // after the migration ran through the default ChromeStoragePort.
+    it('leaves the consent unit readable through its real readers after migrating', async () => {
+        harness.data = {
+            ...legacyStorage(),
+            [StorageKeys.PRIVACY_CONSENT]: {
+                hasConsented: false,
+                withdrawal: { withdrawalDate: '2026-09-30T00:00:00Z' },
+            },
+            [StorageKeys.PRIVACY_CONSENT_DENIED_COUNT]: 2,
+        };
+
+        await migrateToSingleSettingsObject();
+
+        // Unrelated keys moved into the blob...
+        expect(blob()[StorageKeys.OBSIDIAN_PORT]).toBe(RAW_PORT);
+        expect(harness.data[StorageKeys.OBSIDIAN_PORT]).toBeUndefined();
+        // ...the consent unit did not, and its readers still resolve.
+        expect(harness.data[StorageKeys.PRIVACY_CONSENT]).toBeDefined();
+        expect(blob()[StorageKeys.PRIVACY_CONSENT]).toBeUndefined();
+        await expect(getConsentWithdrawalHistory()).resolves.not.toBeNull();
+        expect(await getConsentDeniedCount()).toBe(2);
+    });
+
     it('moves raw settings into the blob, backs them up, removes them, then records completion', async () => {
         harness.data = legacyStorage();
 

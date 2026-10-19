@@ -210,6 +210,6 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 - [pbi/2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）
 - dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
 - [pbi/2026-10-18-04-fix-notification-consent-prestage.md](2026-10-18-04-fix-notification-consent-prestage.md) — 通知 Save への admission pre-stage。本 PBI の通知アームと重複するため実装順を決める
-- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同じ同意 lifecycle。同意レコードの読み出し前提が共通
+- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同じ同意 lifecycle。同意レコードの読み出し前提が共通
 - [pbi/00-INDEX.md](00-INDEX.md)
 - [dev-docs/TEST_RULE.md](../dev-docs/TEST_RULE.md) — 実時間待ちの禁止と、注入した時計 / sleep の使い方
