@@ -10,7 +10,7 @@ import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { SqliteClient } from '../sqlite/offscreenGateway.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import type { BrowsingLogEntry, BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { MigrationStatePort } from './migrationState.js';
 import { MIGRATION_PROGRESS_KEY, MIGRATION_RETRY_COUNT_KEY } from './migrationState.js';
 
@@ -263,11 +263,13 @@ export class LegacyMigrationService {
    * Backfill diagnostic metadata for already-migrated SQLite entries
    * that are missing metric fields. Reads from chrome.storage.local
    * (savedUrlsWithTimestamps) and updates matching SQLite rows.
+   *
+   * The stages (read → detect → transform → verify → write) are extracted
+   * as module-private helpers below; behavior is unchanged.
    */
   async backfillDiagnosticMetadata(): Promise<{ updated: number; total: number }> {
     try {
-      const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
-      const storageEntries = (result.savedUrlsWithTimestamps as LegacyUrlEntry[]) || [];
+      const storageEntries = await readLegacyStorageEntries();
 
       if (storageEntries.length === 0) {
         return { updated: 0, total: 0 };
@@ -275,16 +277,7 @@ export class LegacyMigrationService {
 
       addLog(LogType.INFO, 'Backfill: starting', { storageEntries: storageEntries.length });
 
-      // Build lookup map: url+timestamp (rounded to minute) → entry
-      const storageMap = new Map<string, LegacyUrlEntry>();
-      for (const entry of storageEntries) {
-        const key = `${entry.url}|${Math.floor(entry.timestamp / 60000)}`;
-        const hasData = entry.sentTokens != null || entry.receivedTokens != null ||
-          entry.pageBytes != null || entry.aiProvider != null;
-        if (hasData) {
-          storageMap.set(key, entry);
-        }
-      }
+      const storageMap = collectDiagnosticEntryMap(storageEntries);
 
       if (storageMap.size === 0) {
         addLog(LogType.INFO, 'Backfill: no storage entries with diagnostic data');
@@ -300,46 +293,7 @@ export class LegacyMigrationService {
         return { updated: 0, total: 0 };
       }
 
-      let updated = 0;
-
-      for (const sqliteRow of allResult.data.rows) {
-        const record = sqliteRow as BrowsingLogRecord;
-        if (record.id == null) continue;
-
-        // Skip entries that already have diagnostic data
-        if (record.sent_tokens != null || record.received_tokens != null) continue;
-
-        // Look up in storage map
-        const key = `${record.url}|${Math.floor(record.created_at / 60000)}`;
-        const entry = storageMap.get(key);
-        if (!entry) continue;
-
-        // Build update payload
-        const changes: Record<string, unknown> = {};
-        if (entry.sentTokens != null) changes.sent_tokens = entry.sentTokens;
-        if (entry.receivedTokens != null) changes.received_tokens = entry.receivedTokens;
-        if (entry.originalTokens != null) changes.original_tokens = entry.originalTokens;
-        if (entry.cleansedTokens != null) changes.cleansed_tokens = entry.cleansedTokens;
-        if (entry.pageBytes != null) changes.page_bytes = entry.pageBytes;
-        if (entry.candidateBytes != null) changes.candidate_bytes = entry.candidateBytes;
-        if (entry.originalBytes != null) changes.original_bytes = entry.originalBytes;
-        if (entry.cleansedBytes != null) changes.cleansed_bytes = entry.cleansedBytes;
-        if (entry.aiSummaryOriginalBytes != null) changes.ai_summary_original_bytes = entry.aiSummaryOriginalBytes;
-        if (entry.aiSummaryCleansedBytes != null) changes.ai_summary_cleansed_bytes = entry.aiSummaryCleansedBytes;
-        if (entry.aiProvider != null) changes.ai_provider = entry.aiProvider;
-        if (entry.aiModel != null) changes.ai_model = entry.aiModel;
-        if (entry.aiDuration != null) changes.ai_duration_ms = entry.aiDuration;
-        if (entry.obsidianDuration != null) changes.obsidian_duration_ms = entry.obsidianDuration;
-        if (entry.content != null) changes.content = entry.content;
-        if (entry.maskedCount != null) changes.masked_count = entry.maskedCount;
-        if (entry.cleansedReason != null) changes.cleansed_reason = entry.cleansedReason;
-        if (entry.fallbackTriggered != null) changes.fallback_triggered = entry.fallbackTriggered ? 1 : 0;
-
-        if (Object.keys(changes).length === 0) continue;
-
-        const ok = await this.sqliteClient.mutate({ type: 'update', id: record.id, changes });
-        if (ok.success) updated++;
-      }
+      const updated = await writeDiagnosticUpdates(this.sqliteClient, storageMap, allResult.data.rows);
 
       addLog(LogType.INFO, 'Backfill: completed', { updated, total: allResult.data.rows.length });
       return { updated, total: allResult.data.rows.length };
@@ -371,4 +325,127 @@ export class LegacyMigrationService {
       return { removed: [], totalBytes: 0 };
     }
   }
+}
+
+/**
+ * Read stage: load the legacy savedUrlsWithTimestamps key, normalizing an
+ * absent key to an empty array.
+ */
+async function readLegacyStorageEntries(): Promise<LegacyUrlEntry[]> {
+  const result = await chrome.storage.local.get('savedUrlsWithTimestamps');
+  return (result.savedUrlsWithTimestamps as LegacyUrlEntry[]) || [];
+}
+
+/**
+ * Detect stage: build the url+timestamp (rounded to minute) lookup map from
+ * legacy entries that carry diagnostic data.
+ */
+function collectDiagnosticEntryMap(storageEntries: LegacyUrlEntry[]): Map<string, LegacyUrlEntry> {
+  const storageMap = new Map<string, LegacyUrlEntry>();
+  for (const entry of storageEntries) {
+    const key = `${entry.url}|${Math.floor(entry.timestamp / 60000)}`;
+    const hasData = entry.sentTokens != null || entry.receivedTokens != null ||
+      entry.pageBytes != null || entry.aiProvider != null;
+    if (hasData) {
+      storageMap.set(key, entry);
+    }
+  }
+  return storageMap;
+}
+
+/**
+ * Verify stage: a SQLite row is eligible for backfill when it has an id and
+ * is still missing the sent/received token metrics.
+ */
+function needsDiagnosticBackfill(record: BrowsingLogRecord): record is BrowsingLogEntry {
+  // Skip entries that already have diagnostic data
+  return record.id != null && record.sent_tokens == null && record.received_tokens == null;
+}
+
+/**
+ * Transform stage: build the update payload from a legacy entry. The field
+ * groups below merge in the same key order as the original single-function
+ * implementation.
+ */
+function buildDiagnosticChanges(entry: LegacyUrlEntry): Record<string, unknown> {
+  return {
+    ...diagnosticTokenChanges(entry),
+    ...diagnosticByteChanges(entry),
+    ...diagnosticAiChanges(entry),
+    ...diagnosticContentChanges(entry),
+  };
+}
+
+/** Token metric changes (sent/received/original/cleansed). */
+function diagnosticTokenChanges(entry: LegacyUrlEntry): Record<string, unknown> {
+  const changes: Record<string, unknown> = {};
+  if (entry.sentTokens != null) changes.sent_tokens = entry.sentTokens;
+  if (entry.receivedTokens != null) changes.received_tokens = entry.receivedTokens;
+  if (entry.originalTokens != null) changes.original_tokens = entry.originalTokens;
+  if (entry.cleansedTokens != null) changes.cleansed_tokens = entry.cleansedTokens;
+  return changes;
+}
+
+/** Byte metric changes (page/candidate/original/cleansed/ai summary bytes). */
+function diagnosticByteChanges(entry: LegacyUrlEntry): Record<string, unknown> {
+  const changes: Record<string, unknown> = {};
+  if (entry.pageBytes != null) changes.page_bytes = entry.pageBytes;
+  if (entry.candidateBytes != null) changes.candidate_bytes = entry.candidateBytes;
+  if (entry.originalBytes != null) changes.original_bytes = entry.originalBytes;
+  if (entry.cleansedBytes != null) changes.cleansed_bytes = entry.cleansedBytes;
+  if (entry.aiSummaryOriginalBytes != null) changes.ai_summary_original_bytes = entry.aiSummaryOriginalBytes;
+  if (entry.aiSummaryCleansedBytes != null) changes.ai_summary_cleansed_bytes = entry.aiSummaryCleansedBytes;
+  return changes;
+}
+
+/** AI/obsidian metadata changes (provider/model/durations). */
+function diagnosticAiChanges(entry: LegacyUrlEntry): Record<string, unknown> {
+  const changes: Record<string, unknown> = {};
+  if (entry.aiProvider != null) changes.ai_provider = entry.aiProvider;
+  if (entry.aiModel != null) changes.ai_model = entry.aiModel;
+  if (entry.aiDuration != null) changes.ai_duration_ms = entry.aiDuration;
+  if (entry.obsidianDuration != null) changes.obsidian_duration_ms = entry.obsidianDuration;
+  return changes;
+}
+
+/** Content-processing changes (content/masking/cleansing/fallback flag). */
+function diagnosticContentChanges(entry: LegacyUrlEntry): Record<string, unknown> {
+  const changes: Record<string, unknown> = {};
+  if (entry.content != null) changes.content = entry.content;
+  if (entry.maskedCount != null) changes.masked_count = entry.maskedCount;
+  if (entry.cleansedReason != null) changes.cleansed_reason = entry.cleansedReason;
+  if (entry.fallbackTriggered != null) changes.fallback_triggered = entry.fallbackTriggered ? 1 : 0;
+  return changes;
+}
+
+/**
+ * Write stage: iterate the queried SQLite rows and apply the matching update
+ * payload for every eligible row. Returns the number of successful updates.
+ */
+async function writeDiagnosticUpdates(
+  sqliteClient: SqliteClient,
+  storageMap: Map<string, LegacyUrlEntry>,
+  rows: BrowsingLogRecord[],
+): Promise<number> {
+  let updated = 0;
+
+  for (const sqliteRow of rows) {
+    const record = sqliteRow as BrowsingLogRecord;
+    if (!needsDiagnosticBackfill(record)) continue;
+
+    // Look up in storage map
+    const key = `${record.url}|${Math.floor(record.created_at / 60000)}`;
+    const entry = storageMap.get(key);
+    if (!entry) continue;
+
+    // Build update payload
+    const changes: Record<string, unknown> = buildDiagnosticChanges(entry);
+
+    if (Object.keys(changes).length === 0) continue;
+
+    const ok = await sqliteClient.mutate({ type: 'update', id: record.id, changes });
+    if (ok.success) updated++;
+  }
+
+  return updated;
 }
