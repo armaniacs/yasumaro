@@ -9,7 +9,7 @@
 - 根拠: 発火は将来バージョン跨ぎの復元時のみだが、拒否の不透明さはデータ保全上の不安。設計判断（stamp 形式）が残るため Confidence 0.8。
 
 ## 背景
-`src/utils/settingsExportImport.ts:502-509` は未知の `privacy_mode` を備份全体の不正として拒否する（fail-closed 自体は正しい）が、破損と将来値の区別がなく理由も伝わらない。レビュー指摘 Low #12（Data Integrity）。
+`src/utils/settingsExportImport.ts:502-509` は未知の `privacy_mode` をバックアップ全体の不正として拒否する（fail-closed 自体は正しい）が、破損と将来値の区別がなく理由も伝わらない。レビュー指摘 Low #12（Data Integrity）。
 
 ## BDD受け入れシナリオ
 Scenario: 未知の privacy_mode は理由付きで拒否される

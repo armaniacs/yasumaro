@@ -96,7 +96,7 @@ Then src/ およびテストに validateBSlots への参照が存在しないこ
 ## 7. テスト戦略
 
 1. **警告 DOM の golden pin 先行**: 着手前に `.b-priority-warn` / `.b-priority-req-warn` の生成条件（クラス構成、role=alert、i18n キー、textContent）と has-error toggle の挙動を pin し、リファクタリング中の安全網として使う
-2. **既存 provider settings テストの green 綍持**: pin は無変更で維持する。一本化により pin が一切失敗しないことを確認する
+2. **既存 provider settings テストの green 維持**: pin は無変更で維持する。一本化により pin が一切失敗しないことを確認する
 3. **BDD シナリオの担保**: 検出・描画の同一パス性、重複時の警告生成、解消時の削除が pin テストで担保されていることを確認し、不足があれば同一系統テストに追加する
 4. **死蔵コード削除の確認**: `validateBSlots` 削除後、src/テスト両方に参照が残らず型エラーが発生しないことを確認する
 5. **挙動不変の確認**: `npm run validate`（type-check + test）で既存テスト全通過を確認する

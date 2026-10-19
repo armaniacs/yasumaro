@@ -181,5 +181,5 @@ description は日本語）を選んだ。25 件中 2 件だけ description を�
 なるため行っていない。英語圏の読者がガイドを見分ける経路は日英併記の `title` で担保される。
 
 **DoD の該当項目は-description の日英併記について未充足**。英語圏向け description を
-另行検討する場合は、`.card .d small` の CSS を更新したうえで 25 card 全体を”一斉に”
+別途検討する場合は、`.card .d small` の CSS を更新したうえで 25 card 全体を”一斉に”
 英訳するのが整合する。部分的英訳は本 PBI の範囲外とする。

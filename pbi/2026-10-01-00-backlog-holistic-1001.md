@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|---|---|---:|---|
 | 1 | 08 | alarm 二重ディスパッチ解消 | fix | 8 | 3 | 1.0 | 0.5 | 48.0 | check_session_timeout が毎回 2 回実行 |
 | 2 | 09 | dashboard purge catch 追加 | fix | 6 | 3 | 1.0 | 0.5 | 36.0 | settingsForm 2 カ所 + generalSettingsPanel |
-| 3 | 10 | Bootstrapper サイレント catch 解消 | fix | 5 | 3 | 1.0 | 0.5 | 30.0 | 歴史的理由の catch が実エラーを吞む |
+| 3 | 10 | Bootstrapper サイレント catch 解消 | fix | 5 | 3 | 1.0 | 0.5 | 30.0 | 歴史的理由の catch が実エラーを飲む |
 | 4 | 11 | aiSummaryCleansingPanel delta-write 化 | fix | 5 | 2 | 1.0 | 0.5 | 20.0 | 兄弟キー 32 個の巻き戻しレース |
 | 5 | 12 | popup async エラー境界 | fix | 8 | 3 | 1.0 | 1.5 | 16.0 | ~11 ハンドラに同ファイル既存パターン |
 | 6 | 13 | SettingsRepository merge 統一 | refactor | 7 | 1 | 1.0 | 0.5 | 14.0 | merge-under-lock 2 重化 + cached 二重クリア |

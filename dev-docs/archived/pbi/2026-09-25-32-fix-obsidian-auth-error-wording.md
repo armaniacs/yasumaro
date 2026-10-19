@@ -90,7 +90,7 @@ Scenario: 新しい文言の出現がない
 - [ ] PBI 2026-09-25-11 の「表示は kind に依存しない」不変条件テストを、
       本 PBI の裁定に合わせて更新する（両者は排他ではない）。
 - [ ] `src/utils/errorClassification.ts` の `FAILURE_KIND_TO_ERROR_TYPE` が
-      実行経路に戻されるか、変更的话は表と実装が食い違わないことを明記する。
+      実行経路に戻されるか、変更の場合は表と実装が食い違わないことを明記する。
 - [ ] CHANGELOG にユーザー表示が変わることを記載する。
 - [ ] `npm run type-check` と `npm run validate` が成功する。
 - [ ] コードレビューが完了している。

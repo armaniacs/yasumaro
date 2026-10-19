@@ -13,7 +13,7 @@ SQLite 永続化 layer を 1 人で保守する開発者として、スキーマ
 
 - 順位: 7 / 10
 - RICE スコア: 2.4（Reach=4 / Impact=1.5 / Confidence=80% / Effort=2.0）
-- 根拠: PBI 38 と同点 2.4 だが、本件は purge 計数の意味乖離により「実際に消えた行数」の報告がバックエンドによって真偽が異なるという正確性の欠陥を含み、リスク軽減効果で先行させる。用户可視挙動の大半は不変の refactor なので Impact は 1.5 に留める。Confidence 80% は parity テストの既存 `dashboardSqliteMock` 規約があるためだが、`searchExecution` を IDB 側へ適用する段階では位置づけの不整合が出る可能性があるため。
+- 根拠: PBI 38 と同点 2.4 だが、本件は purge 計数の意味乖離により「実際に消えた行数」の報告がバックエンドによって真偽が異なるという正確性の欠陥を含み、リスク軽減効果で先行させる。ユーザー可視挙動の大半は不変の refactor なので Impact は 1.5 に留める。Confidence 80% は parity テストの既存 `dashboardSqliteMock` 規約があるためだが、`searchExecution` を IDB 側へ適用する段階では位置づけの不整合が出る可能性があるため。
 
 ## 現状と問題（file:line 証拠付き）
 

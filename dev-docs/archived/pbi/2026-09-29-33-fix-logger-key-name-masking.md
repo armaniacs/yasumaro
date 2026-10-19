@@ -22,7 +22,7 @@
 - 一方、`src/utils/sensitiveDataMask.ts:16-40` の `LEVEL1_FIELDS` は API キー系（`src/utils/storage/apiKeyFields.ts:15-22` に列挙された `obsidian_api_key` / `gemini_api_key` / `openai_api_key` / `openai_2_api_key` / `provider_api_key` / `github_pat` は `settingsMigration.ts:356` の `API_KEY_FIELDS` 経由で取り込まれる）に加え、`apiKey` / `fullKey` / `authToken` / `auth` / `password` / `token` / `master_password_hash` / `hmac_secret` / `private_key` / `client_secret` 等を含む
 - 同じファイルの `maskValue`（`sensitiveDataMask.ts:85-107`、LEVEL1 判定は `:90`）はキー名の部分一致（`lowerKey.includes(k)`）で値を `***`（partial）/ `[REDACTED]`（full）に置換する。しかし logger からは import されていない
 - したがって秘匿の保証は呼び出し側記憶に依存する。`addLog` の呼び出しは 750 超（`rg addLog src` で 752 件 / 157 ファイル）あり、漏れは 1 箇所の追加だけで起きる
-- 現行の漏洩 call site は grep 上ゼロ: `src/background/ai/providers/ProviderStrategy.ts:477-479` の `logApiKeySource` はキーの値ではなく解決元（source 名）しか出さない（本 PBI の主题は「いま漏れている」ではなく「漏れる余地を残さない」）
+- 現行の漏洩 call site は grep 上ゼロ: `src/background/ai/providers/ProviderStrategy.ts:477-479` の `logApiKeySource` はキーの値ではなく解決元（source 名）しか出さない（本 PBI の主題は「いま漏れている」ではなく「漏れる余地を残さない」）
 - 二重実装の整理は済んでいる: `src/utils/logMasker.ts:1-19` は `sensitiveDataMask` への deprecated shim であり、中身は 1 つの委譲だけ。SSOT は `sensitiveDataMask` 側にある
 
 ## 改善方針（方向性）

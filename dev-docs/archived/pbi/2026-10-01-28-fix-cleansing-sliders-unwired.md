@@ -26,7 +26,7 @@ NN27 後の書き込み束縛は `src/dashboard/settings/aiSummaryCleansingSetti
 
 ```gherkin
 Scenario: 画面上のすべての Thomson-スライダーが保存される
-  Given 画面上にあるすべての阈值スライダーを列挙する
+  Given 画面上にあるすべての閾値スライダーを列挙する
   When 各スライダーを change する
   Then それぞれが 1 キーの delta-write を行う
 

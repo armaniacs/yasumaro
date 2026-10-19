@@ -14,13 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 12件完了（01〜08・10〜12）＋派生 1件（13）未着手 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → 13(100)
+### 2026-10-19 PBI 05 の実装・独立レビュー由来の発見（12件） ― ✅ 13件すべて完了（01〜13） 🔧非機能追加 RICE順: ~~01~~ → ~~02~~ → ~~03(600)~~ → ~~10(480)~~ → ~~11(400)~~ → ~~04(400)~~ → ~~05(400)~~ → ~~06(320)~~ → ~~12(300)~~ → ~~07(160)~~ → ~~08(100)~~ → ~~09(67)~~ → ~~13(100)~~
 
 PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後の検証で見つかった **run-2 の 25 件には含まれない新規発見 9 件**（01〜09）。RICE で採点し、ファイル名の NN を着手順とした（同日中の起票なので、当初 01 / 02 として作った 2 件は採点し直して 03 / 06 に振り直した）。その後 **PBI 02 の独立レビューが同意ゲートの穴を 4 件実証**し、10・11 として追加起票、inventory 中に別途見つけた同意レコードのエクスポートを 12 として起票した（NN は起票順のため RICE 順とは一致しない。`10` は RICE 480 で 03 に次ぐ 2 番目、`11` は 400 で 04/05 と同点、`12` は 300）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---:|---:|---:|---|
-| ⬜ 13 | [2026-10-19-13-fix-archived-ledger-hangul-residue.md](2026-10-19-13-fix-archived-ledger-hangul-residue.md) | fix | 100 | 0.5 | アーカイブ台帳に残るハングル混入 62 文字 / 13 ファイル（PBI 09 の棚卸しで発見） |
 
 進め方: **同意系（03 → 10 → 11 → 07）を先に**まとめると、同意の実効性（受付・実行時・表示）を 1 期で閉じられる。**redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。01・02 は完了・アーカイブ済み（2026-10-19）。
 
@@ -502,6 +501,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-10-20 PBI 2026-10-19-13 アーカイブ ― 台帳の文字化けを全量修復（326 箇所 / 104 ファイル）
+
+- 起点: アーカイブ済み PBI に残ったハングル 62 文字 / 13 ファイル（PBI 09 の棚卸しで発見）。実装時に検証スクリプトを新設して測り直し、対象が**326 箇所 / 141 種類 / 104 ファイル**（ハングル・簡体字・`U+FFFD`・アラビア文字）に広がっていたため、全量を修復した。
+- 判断基準: 文法から復元語が一意に決まるものは置換、決まらないものは**語句ごと削除**（推測で文を作らない）。製品が描画する記号 `∉`（バッジ）・`⏎`（ログ区切り）はコード span 内で維持。正規表現・grep の漢字レンジは `\p{Han}` へ置換（意味は同じで CP932 内）。
+- 再発防止: 規約を `AGENTS.md` / `CLAUDE.local.md` に明文化（PR #196）し、検査を `scripts/check-docs-chars.mjs` の 1 実装に集約して `npm run validate` に配線した。以後は CI で混入が落ちる。
+- 検証: `npm run check:docs-chars` → `1732 files scanned, 0 with violations`（exit 0）。
+
 ### 2026-10-19 security-audit run-2 B1/B3 一部 ― PBI 01・05・08 完了（3件アーカイブ済み）
 
 security-audit run-2（`d49d70a3`）の needs_validation 25件のうち 3件を実装・アーカイブ。
@@ -919,7 +925,7 @@ wave 1 に続き、RICE 順・依存グラフ・ファイル非重複で 3 件�
 ### 2026-09-25 残債ラウンド ― ✅ PBI 24 完了（アーカイブ済み）UX 裁定のみ・production code 無変更
 
 裁定により PBI 2026-09-26-03（遷移記録基盤）の `privacyConsent.ts` 競合が解消した。
-裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部備份境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
+裁定の内訳と後続 PBI 分割（S-1 dashboard re-consent 入口 / S-2 denial counter reset / S-3 外部バックアップ境界の説明）はアーカイブ済み PBI の裁定結果節を参照。
 
 - [2026-09-25-24-investigate-privacy-reconsent-ux.md](../dev-docs/archived/pbi/2026-09-25-24-investigate-privacy-reconsent-ux.md)（✅ 完了 ― 裁定記録のみ（production code 無変更）。裁定4件: ①再同意入口は dashboard の Privacy 画面（decline 後の案内が指す「設定画面」と一致し実在の導線になる。popup の常時バナーは 30 日抑制と衝突するため不採用）②明示操作は 30 日抑制を bypass するが、自動表示の抑制状態は書き換えない ③withdraw 後も履歴保持を許し、同意撤回と履歴削除を分離する ④バックアップからの履歴復元は促さない。`privacy_consent` は restore allowlist に無く、復元は同意済み状態にしない。`reconsentConsent()` は新設せず既存 API を組み合わせる。denial counter reset は `acceptConsent()` 冒頭の1行で、`resetConsentDeniedCount()` は既に存在するため後続 `fix` S-2（0.5 SP）へ切り出し。裁定により **PBI 2026-09-26-03 の `privacyConsent.ts` 競合が解消**（03 は `withdrawPrivacyConsent()` 直後、S-1 は dashboard panel、S-2 は `acceptConsent()` 冒頭で同一行を触らない））
 
@@ -1622,7 +1628,7 @@ round 9 診断（HTML レポート: `/var/folders/b_/fzr253l50g58s5p7d94nxjmc000
 
 ### 2026-09-06 アーカイブ 文言修正（着手完了）
 
-- 2026-09-06-06-fix-archive-backup-wording.md（✅ 完了・アーカイブ済 ― Archiveパネル説明を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ja/en）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピー ― 分析はPBI内参照）。i18n保洁テスト2件追加、SETUP_GUIDE/FAQ/READMEの用語統一）
+- 2026-09-06-06-fix-archive-backup-wording.md（✅ 完了・アーカイブ済 ― Archiveパネル説明を「退避します…削除できます」→「バックアップします…削除も可能です」に修正（ja/en）。**文言のみ・実装ロジック変更なし**（フェーズAは既に本体不変のコピー ― 分析はPBI内参照）。i18nクリーンアップテスト2件追加、SETUP_GUIDE/FAQ/READMEの用語統一）
 
 ### 2026-09-06 アーカイブ 一時オープン（着手完了）
 
@@ -2500,8 +2506,8 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **47 ファイル（INDEX 1 / 2026-10-19 の 1〔13〕/ 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。01〜12 は完了・アーカイブ済み。2026-10-19 実測: `ls pbi/*.md` = 47）** |
-| アーカイブ済みPBI | 1420（`00-backlog` 台帳を含む。2026-10-19 実測） |
+| **`pbi/` 残存 PBI 合計** | **46 ファイル（INDEX 1 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 の 13 件はすべて完了・アーカイブ済み。2026-10-20 実測: `ls pbi/*.md` = 46）** |
+| アーカイブ済みPBI | 1421（`00-backlog` 台帳を含む。2026-10-20 実測） |
 | アーカイブ済み実装計画 | 187 |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。
