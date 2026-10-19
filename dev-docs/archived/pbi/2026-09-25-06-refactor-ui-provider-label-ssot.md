@@ -158,7 +158,7 @@ Scenario: dashboard の custom prompt 表示名
 3. projection が無いのは、`providerAllowlist` が「host_permissions / CSP 用の domain 行を保持するallowlist」として書かれており、「UI が読む表示メタデータの SSOT」を担う責務が割り当てられていなかったから。
 4. 責務が未割り当てのままだったのは、表示名を `providerCatalog` から引くという選択が常に便利で、二重定義に見えなかったから。かつ `providerCatalog` は 3 strategy を **static import** するため、引数 1 つの Map lookup には見えにくい。
 5. popup への巻き込みが CI で検出されなかったのは、`local/utils-layer-boundary` が utils 内 Layer 0/1 のみを対象としており、popup→background の逆依存を検査対象外にしていたから。
-   → 解は **「UI 用の新しい label 表を作らず、中立テーブルの既存 row を唯一の宣言元とする read-only projection を中立テーブル側に设ける」** こと。加えて `providerCatalog` 側の重複した `labelI18nKey` リテラルを中立 row からの合成に置き換え、二重 SSOT を解消した。
+   → 解は **「UI 用の新しい label 表を作らず、中立テーブルの既存 row を唯一の宣言元とする read-only projection を中立テーブル側に設ける」** こと。加えて `providerCatalog` 側の重複した `labelI18nKey` リテラルを中立 row からの合成に置き換え、二重 SSOT を解消した。
 
 ### 実装内容
 

@@ -20,7 +20,7 @@ Firefox ユーザー（技術ドキュメントや論文、長文記事をよく
 
 - 順位: 1 / 全候補数 3
 - RICEスコア: 36.0（Reach=30 / Impact=3 / Confidence=80% / Effort=2人日）
-- 根拠: プラットフォーム解锁の中核。最大の不確実要素（Firefox での wa-sqlite OPFS VFS 互換性）は VFS プローブ（main 済み）で解消済み。Phase 1（コンテナ抽象化）と Phase 2（manifest/build）を統合する ― manifest なしでは移植の検証ができないため
+- 根拠: プラットフォーム拡張の中核。最大の不確実要素（Firefox での wa-sqlite OPFS VFS 互換性）は VFS プローブ（main 済み）で解消済み。Phase 1（コンテナ抽象化）と Phase 2（manifest/build）を統合する ― manifest なしでは移植の検証ができないため
 
 ## 背景（検証済み事実）
 

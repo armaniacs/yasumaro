@@ -2,7 +2,7 @@
 
 ## ユーザーストーリー
 
-タグで絞り込みつつ全文検索する利用者として、text+tag の組み合わせがどのバックエンドでも同じ結果を返すことを知りたい。なぜなら round 4 の tag 移行が plain path しか貫通しておらず、text+tag は OPFS/IDB でタグ無視（fallback は honor）の 2-vs-1 分歧になっているから。
+タグで絞り込みつつ全文検索する利用者として、text+tag の組み合わせがどのバックエンドでも同じ結果を返すことを知りたい。なぜなら round 4 の tag 移行が plain path しか貫通しておらず、text+tag は OPFS/IDB でタグ無視（fallback は honor）の 2-vs-1 分岐になっているから。
 
 ## 優先度
 

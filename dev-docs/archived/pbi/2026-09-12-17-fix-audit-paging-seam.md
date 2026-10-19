@@ -47,7 +47,7 @@ Then backend ごとの cap が 1 箇所のテーブルで決まり、limit/offse
 
 ## 実装メモ（2026-09-12）
 
-- **主張の訂正（直接検証）**: 「NaN bind で sendResponse されず silent-hang」は誤り ― offscreen dispatch の外側 try/catch（offscreen.ts:113-117）と worker 顶层 try/catch が catch し `success:false` を返す。実害は (a) garbage offset が「Unknown error」応答になる UX 劣化（offset 政策不在）、(b) cap 3 値分岐による TSV 部分配布（Export Logs が {limit:100000} でも OPFS 1000 / dashboard 事前 clamp 10000 で切り詰められ total は全件のまま成功表示）
+- **主張の訂正（直接検証）**: 「NaN bind で sendResponse されず silent-hang」は誤り ― offscreen dispatch の外側 try/catch（offscreen.ts:113-117）と worker 最上位 try/catch が catch し `success:false` を返す。実害は (a) garbage offset が「Unknown error」応答になる UX 劣化（offset 政策不在）、(b) cap 3 値分岐による TSV 部分配布（Export Logs が {limit:100000} でも OPFS 1000 / dashboard 事前 clamp 10000 で切り詰められ total は全件のまま成功表示）
 - `planAuditLog(options, cap)` を queryPlanner に新設（clampLimit + clampOffset）。`IdbVfsBackend.queryAuditLog` は AUDIT_CAP_IDB、worker `handleAuditLogQuery` は AUDIT_CAP_OPFS を planAuditLog 経由で使用（未使用定数だった AUDIT_CAP_* を実配線）
 - dashboard hop（readOnlyHandler）の事前 clamp を削除し pass-through に（backend が policy 所有）。`query`/`search` hop の pre-clamp は QUERY_CAPS 同値で planner と同期済みのため不変
 - `exportLogsPanel` の audit TSV に `total > rows.length` ガードを追加（queryAllData と同一の部分配布防止・明示メッセージ）

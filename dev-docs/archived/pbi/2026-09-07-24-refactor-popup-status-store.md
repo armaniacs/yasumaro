@@ -25,7 +25,7 @@ Popup の記録体験を保守する開発者として、statusPanel の初期�
   Then `checkPageStatus` の呼び出し回数が 1 回であり、statusPanel と recordSession が同一スナップショットを受け取る（テストで検証）
 
 ### Scenario: domainFilter 判定がボタンと表示で一致する
-  Given domainFilter が不允许な URL のタブ
+  Given domainFilter が許可されない URL のタブ
   When popup を開く
   Then ボタン文言（forceRecordAnyway）と status 表示（filtered 状態）が同一スナップショット由来で一致する
 
