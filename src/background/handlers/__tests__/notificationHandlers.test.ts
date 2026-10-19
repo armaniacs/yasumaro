@@ -13,6 +13,14 @@ vi.mock('../../../utils/pendingStorage.js', () => ({
   removePendingPages: vi.fn(async () => {}),
 }));
 
+// PBI 2026-10-19-10: pin the durable claim so the consent gate is the only
+// reason the re-run can stop. Without this the claim can fail for unrelated
+// reasons and the withdrawal test would pass even with the gate removed.
+vi.mock('../../../utils/recoveryClaimStore.js', () => ({
+  claimRecoveryOwner: vi.fn(async () => true),
+  releaseRecoveryOwner: vi.fn(async () => {}),
+}));
+
 vi.mock('../../notificationHelper.js', () => ({
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX: 'privacy-confirm-',
 }));
@@ -89,6 +97,8 @@ describe('isValidNotificationUrl', () => {
 describe('createNotificationHandlers', () => {
   const mockRecordingLogic = {
     record: vi.fn(async () => ({ success: true })),
+    // PBI 2026-10-19-10: the click handler re-reads consent at execution time.
+    isConsentGranted: vi.fn(async () => true),
   };
 
   beforeEach(() => {
@@ -130,5 +140,22 @@ describe('createNotificationHandlers', () => {
     const { onButtonClicked } = createNotificationHandlers(mockRecordingLogic as never);
     await onButtonClicked('privacy-confirm-encoded', 1);
     expect(mockRecordingLogic.record).not.toHaveBeenCalled();
+  });
+
+  // PBI 2026-10-19-10: the notification outlives the consent it was raised
+  // under. A withdrawn profile must not record on Save, and the pending page has
+  // to survive so a re-consented user can retry the same action.
+  it('does not record a pending page after consent was withdrawn', async () => {
+    const pendingStorage = await import('../../../utils/pendingStorage.js');
+    vi.mocked(pendingStorage.getPendingPages).mockResolvedValueOnce([
+      { title: 't', url: 'https://example.com/page' },
+    ] as never);
+    mockRecordingLogic.isConsentGranted.mockResolvedValueOnce(false);
+    const { onButtonClicked } = createNotificationHandlers(mockRecordingLogic as never);
+
+    await onButtonClicked('privacy-confirm-encoded', 0);
+
+    expect(mockRecordingLogic.record).not.toHaveBeenCalled();
+    expect(pendingStorage.removePendingPages).not.toHaveBeenCalled();
   });
 });

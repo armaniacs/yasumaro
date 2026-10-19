@@ -204,6 +204,8 @@ describe('production composition contract', () => {
     expect(mocks.createReviewSummaryGenerator).toHaveBeenCalledWith({
       aiService: { fallbackAIService: true },
       sqliteClient: { sqlite: true },
+      // PBI 2026-10-19-10: the digest re-reads consent at execution time.
+      isConsentGranted: expect.any(Function),
     });
   });
 

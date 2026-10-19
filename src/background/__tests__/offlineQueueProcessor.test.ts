@@ -1,6 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createOfflineQueueProcessor } from '../offlineQueueProcessor.js';
+import {
+    createOfflineQueueProcessor as createProcessor,
+    type OfflineQueueProcessorDeps,
+} from '../offlineQueueProcessor.js';
 import type { OfflineJob } from '../offlineNetworkQueue.js';
+
+/**
+ * PBI 2026-10-19-10: the processor re-reads consent before every replay cycle.
+ * Every pre-existing test in this file exercises the consented path, so the gate
+ * defaults to "granted" here; the withdrawal tests override it explicitly.
+ */
+const createOfflineQueueProcessor = (
+    deps: Omit<OfflineQueueProcessorDeps, 'isConsentGranted'> & { isConsentGranted?: () => Promise<boolean> },
+) => createProcessor({ isConsentGranted: () => Promise.resolve(true), ...deps });
 
 const CLAIMS_KEY = 'recording_recovery_claims';
 
@@ -457,6 +469,58 @@ describe('createOfflineQueueProcessor', () => {
 
             expect(notifyError).toHaveBeenCalledTimes(1);
             expect(notifyError).toHaveBeenCalledWith('t', expect.any(String));
+        });
+    });
+
+    // PBI 2026-10-19-10: a job is queued while consented and can outlive the
+    // consent (withdrawal does not purge the queue). Replaying it would send the
+    // stored summary/content to the AI provider or Obsidian after withdrawal.
+    describe('consent is re-read at execution time', () => {
+        it('does not replay queued jobs after the user withdrew consent', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWrite = vi.fn().mockResolvedValue(true);
+            const retryAll = vi.fn();
+
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+                isConsentGranted: () => Promise.resolve(false),
+            });
+
+            await processQueue();
+
+            // The whole cycle is skipped: nothing reaches the network, and the
+            // queue is left untouched so a re-granted consent replays it.
+            expect(retryAll).not.toHaveBeenCalled();
+            expect(record).not.toHaveBeenCalled();
+            expect(retryObsidianWrite).not.toHaveBeenCalled();
+        });
+
+        it('replays the same jobs once consent is granted again', async () => {
+            const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
+            const retryObsidianWrite = vi.fn().mockResolvedValue(true);
+            let granted = false;
+            const retryAll = vi.fn(async (handler: (job: OfflineJob) => Promise<boolean>) => {
+                await handler({
+                    type: 'obsidian_sync',
+                    payload: { title: 't', url: 'https://example.com', content: 'c', summary: 's' },
+                } as OfflineJob);
+            });
+
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: { retryAll },
+                recordingPipeline: { record, retryObsidianWrite },
+                isConsentGranted: () => Promise.resolve(granted),
+            });
+
+            await processQueue();
+            expect(retryAll).not.toHaveBeenCalled();
+
+            granted = true;
+            await processQueue();
+
+            expect(retryAll).toHaveBeenCalledTimes(1);
+            expect(retryObsidianWrite).toHaveBeenCalledTimes(1);
         });
     });
 });

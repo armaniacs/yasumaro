@@ -114,18 +114,18 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 ## 受け入れ基準
 
-- [ ] 3 経路すべてで、**実行時点**に同意を再確認する。admission 時の同意判定に依存しない
-- [ ] 撤回状態では、オフライン再送が AI プロバイダ / Obsidian のどちらへも送らない（シナリオ 1・2）
-- [ ] 撤回状態では、確認通知の Save が `record()` を呼ばない（シナリオ 3）
-- [ ] 撤回状態では、定期要約が `aiService.generateSummary` を呼ばず、`REVIEW_SUMMARY_LAST_GENERATED_*` を進めない（シナリオ 4）
-- [ ] 同意済み状態では 3 経路とも従来どおり動く（シナリオ 5。既存テストが非退行）
-- [ ] 同意の欠如を「送信失敗」として扱わない。具体的には、同意を理由にスキップしたジョブで `retryCount` を消費しない（消費すると 5 分 × 3 回でジョブが恒久破棄され、terminal failure の回復通知まで出る。`src/background/persistentRetryQueue.ts:196-203` / `offlineNetworkQueue.ts:28`）
-- [ ] キューを保持するか撤回時に破棄するかを**明示的に決めて記録**する。保持する場合、撤回中は送らず、再同意後に通常再送されることをテストで固定する（シナリオ 6）
-- [ ] 通知経路で拒否した場合、pending ページを削除しない（再同意後に再試行できる）
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8・9・10 を「Yes」に更新し、「Why / where」列に**固定しているテストのファイル名**を書く（例: `src/background/__tests__/offlineQueueProcessor.test.ts` の同意スキップ、`src/background/handlers/__tests__/notificationHandlers.test.ts` の拒否、`src/background/__tests__/reviewSummaryGenerator-extra.test.ts` の同意ガード）。`dev-docs/SECURITY_REVIEW_GUIDE.md:149-153` のルール 2 と整合させる
-- [ ] 実行時再確認は `RecordingAdmission` のシングルトン（`src/background/compositionManifest.ts:229-235`）または `hasPrivacyConsent` のどちらか一方に統一し、handler / processor 内で新しい同意判定を作らない
-- [ ] 実時間待ちを追加しない（`dev-docs/TEST_RULE.md`）。5 分 / 7 日の経過は注入した時計で動かす
-- [ ] `npm run validate` が緑
+- [x] 3 経路すべてで、**実行時点**に同意を再確認する。admission 時の同意判定に依存しない
+- [x] 撤回状態では、オフライン再送が AI プロバイダ / Obsidian のどちらへも送らない（シナリオ 1・2）
+- [x] 撤回状態では、確認通知の Save が `record()` を呼ばない（シナリオ 3）
+- [x] 撤回状態では、定期要約が `aiService.generateSummary` を呼ばず、`REVIEW_SUMMARY_LAST_GENERATED_*` を進めない（シナリオ 4）
+- [x] 同意済み状態では 3 経路とも従来どおり動く（シナリオ 5。既存テストが非退行）
+- [x] 同意の欠如を「送信失敗」として扱わない。**サイクル全体をスキップしてキューに触らない**ため `retryCount` は消費されない（per-job の `false` を返す実装は 5 分 × 3 回で恒久破棄され、terminal failure の回復通知まで出す）
+- [x] キューを保持するか撤回時に破棄するかを**明示的に決めて記録**する（**保持**。理由は完了記録）。撤回中は送らず、再同意後に通常再送されることをテストで固定した（シナリオ 6）
+- [x] 通知経路で拒否した場合、pending ページを削除しない（再同意後に再試行できる）
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8・9・10 を「Yes」に更新し、「Why / where」列に**固定しているテストのファイル名**を書く（3 行とも実施）。`dev-docs/SECURITY_REVIEW_GUIDE.md:149-153` のルール 2 と整合
+- [x] 実行時再確認は composition から注入した `isConsentGranted`（実体は `hasPrivacyConsent`）に統一し、handler / processor 内で新しい同意判定を作らない
+- [x] 実時間待ちを追加しない（`dev-docs/TEST_RULE.md`）。同意判定は注入した関数で決定的にした
+- [x] `npm run validate` が緑（CI。ローカルは負荷の影響で集約実行が不安定なため構成要素を個別確認）
 
 ## テスト戦略
 
@@ -194,22 +194,68 @@ Scenario: 6. 撤回 → 再同意のあいだキューを保持する（設計�
 
 ## Definition of Done
 
-- [ ] BDD シナリオ 1〜6 が自動テストで実装されパス（シナリオ 6 は設計判断 A / B のどちらを採ったかを明記したうえで）
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8・9・10 が「Yes」になり、各行に固定テスト名が書かれている
-- [ ] キューを保持するか破棄するかの判断と理由が完了記録に残っている
-- [ ] 同意の欠如を送信失敗として数えないことがテストで固定されている
-- [ ] 実時間待ちが追加されていない（`dev-docs/TEST_RULE.md`）
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（ガイドの表、必要なら `src/background/offlineQueueProcessor.ts` / `reviewSummaryGenerator.ts` のコメント）
+- [x] BDD シナリオ 1〜6 が自動テストで実装されパス（設計判断は **A（実行時再確認）** を採用。シナリオ 6 を保持のテストで固定）
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の表の行 8・9・10 が「Yes」になり、各行に固定テスト名が書かれている
+- [x] キューを保持するか破棄するかの判断と理由が完了記録に残っている（**保持**）
+- [x] 同意の欠如を送信失敗として数えないことがテストで固定されている（サイクル全体をスキップし、キューに触らない）
+- [x] 実時間待ちが追加されていない（`dev-docs/TEST_RULE.md`。同意判定はすべて注入した関数で決定的）
+- [x] `npm run validate` が緑（CI の validate で確認。ローカルは後述のとおり負荷の影響あり）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（ガイドの表 8〜10、3 ファイルのコメント）
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ同意を撤回した後も、記録に由来するデータが外部へ出ていくのか。
+
+1. **なぜ送信されるのか** — 3 経路（オフライン再送アラーム・通知の Save・定期要約）は、**受付時に同意を確認した後**に走る処理を、数分〜数週間後に独立して実行する。実行時点では同意を読まない。
+2. **なぜ実行時に読まなかったのか** — 同意を「記録を始めてよいか」という**入口の判定**として設計し、`RecordingAdmission` に集約した。この設計自体は正しいが、**「入口の判定」と「外部送信の許可」を同一視**した。
+3. **なぜ同一視が起きたのか** — 同意を「状態（撤回できる）」ではなく「ゲート通過の事実」として扱っていた。状態は時間で変わるが、事実は変わらない。後から走る経路は「事実」を前提にしていた。
+4. **なぜそれが見えなかったのか** — 3 経路はどれも admission の**下流**にあるため、コードを読むと「記録が同意済みだから安全」に見える。**下流の実行時点が admission より後である**ことが、一覧でもレビューでも表現されていなかった（PBI 02 の表も「継承」と書いた）。
+5. **なぜテストで捕まらないのか** — 3 経路のテストは「同意済み」の状態だけを再現していた。**撤回という遷移**を、キュー・通知・アラームという時間差の対象と組み合わせたテストが無かった。
+
+**原因**: 同意を「入口の判定（事実）」として扱い、「実行時の状態」として扱わなかったこと。
+
+**示唆**:
+- 同意は状態であり、**送信の直前**に読む。受付時の真偽は実行時の許可ではない。
+- 再確認は「失敗」と区別する。失敗にすると `retryCount` を消費し、5 分 × 3 回でジョブが恒久破棄され「再試行が尽きました」と誤通知する。同意の欠如は**中止**であって失敗ではない。
+- キューは破棄しない。撤回は取り消せる行為で、破棄すると再同意しても作業が戻らない。**保持して送らない**のが正しい。
+- 同意の読み出しは composition から注入する（`isConsentGranted`）。ハンドラ内に新しい同意判定を作らない。
+
+**解**: 3 経路に `isConsentGranted` を注入し、実行時に読む。撤回中は送らない／生成済みの印を進めない／pending ページを消さない。オフライン再送は**サイクル全体**をスキップする（per-job の `false` は再試行回数を消費し、1 サイクル 20 件の枠も塞ぐため）。
+
+### 設計判断（A か B か）
+
+**A（実行時再確認）を採用し、B（撤回時のキュー破棄）は採らない。** 撤回の意味である「以降の処理を停止する」は「送らないこと」で満たせる。B は同意済みユーザーの正当な積み残しを失い、撤回 → 再同意で戻ってこない（撤回は取り消せる行為なので、破壊は過剰）。キューは TTL 7 日で自然消滅する。
+
+### 実装
+
+- `src/background/offlineQueueProcessor.ts` — `isConsentGranted` を必須の dep に追加し、`retryAll` を呼ぶ前に判定。撤回中は 1 件も処理せず**キューに触らない**（`retryCount` も 20 件枠も消費しない）。
+- `src/background/handlers/notificationHandlers.ts` — `isConsentGranted` を dep に追加し、`buttonIndex === 0` の先頭で判定。撤回中は `record` を呼ばず、**pending ページを残す**（既存の「claim が取れないときは残す」方針と同じ）。
+- `src/background/reviewSummaryGenerator.ts` — `isConsentGranted` を options に追加し、`REVIEW_SUMMARY_ENABLED` の後・クエリの前に判定。撤回中は `generateSummary` を呼ばず、`REVIEW_SUMMARY_LAST_GENERATED_*` も更新しない（再同意後にその期間を生成できる）。
+- 配線: `alarmRegistry.ts`（`AlarmHandlerDeps` に追加して再送へ渡す）、`compositionManifest.ts`（要約生成器と alarm deps に `() => hasPrivacyConsent()`）、`service-worker.ts`（通知ハンドラ）。
+- `dev-docs/SECURITY_REVIEW_GUIDE.md` — 表の行 8〜10 を「Yes — at execution time」にし、固定しているテスト名を記載。行 11 は未着手のまま（PBI 11）。
+
+### テスト（Red → Green）
+
+- `src/background/__tests__/offlineQueueProcessor.test.ts` — 「撤回中は 1 件も再送しない（`retryAll` 自体を呼ばない）」「再同意後に同じジョブが再送される」
+- `src/background/handlers/__tests__/notificationHandlers.test.ts` — 「撤回中は pending ページから記録せず、pending も消さない」（claim をモックして**同意だけが理由**で止まることを保証）
+- `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` — 「撤回中は AI へ送らず、生成済みの印も進めない」
+- **Red の確認**: 3 実装を revert すると新規 4 テストが失敗（offline 2・review 1・通知 1）。通知は当初、claim の失敗で偶然とおってしまったため claim をモックして判別力を確保した。
+- 回帰: `src/background/__tests__/` と `src/background/handlers/__tests__/` の 152 ファイル 2019 テストが緑。型は `type-check` / `type-check:test:baseline`（456 / pinned 456）ともに緑。
+
+### ゲート
+
+`npm run validate` は CI（GitHub ランナー）で緑。ローカルの集約実行は前 PBI と同じくホスト負荷による vitest worker 起動タイムアウトの影響を受けるため、構成要素（lint / 各 check / type-check / type-check:test:baseline）と対象スイートを個別に緑確認した。
 
 ## 関連
 
-- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する
-- [dev-docs/SECURITY_REVIEW_GUIDE.md](../dev-docs/SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 8〜10（本 PBI）と行 11（PBI 11）。ルール 2（admission 時の同意は後の実行を許さない）が本 PBI の根拠
-- [pbi/2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）
-- dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
-- [pbi/2026-10-18-04-fix-notification-consent-prestage.md](2026-10-18-04-fix-notification-consent-prestage.md) — 通知 Save への admission pre-stage。本 PBI の通知アームと重複するため実装順を決める
-- [pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](../dev-docs/archived/pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同じ同意 lifecycle。同意レコードの読み出し前提が共通
-- [pbi/00-INDEX.md](00-INDEX.md)
-- [dev-docs/TEST_RULE.md](../dev-docs/TEST_RULE.md) — 実時間待ちの禁止と、注入した時計 / sleep の使い方
+- [PBI 2026-10-19-11: ダッシュボードの「Obsidian へ追記」が同意ゲートを通らない問題の修正](../../../pbi/2026-10-19-11-fix-dashboard-obsidian-export-consent.md) — 同じ「admission 後の外部送信」クラス。タブルの行 11 を担当する
+- [dev-docs/SECURITY_REVIEW_GUIDE.md](../../SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 8〜10（本 PBI）と行 11（PBI 11）。ルール 2（admission 時の同意は後の実行を許さない）が本 PBI の根拠
+- [pbi/2026-10-18-00-backlog-security-audit-run2.md](../../../pbi/2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）
+- [2026-10-19-02-fix-consent-gate-wiring-coverage.md](2026-10-19-02-fix-consent-gate-wiring-coverage.md) — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された
+- [pbi/2026-10-18-04-fix-notification-consent-prestage.md](../../../pbi/2026-10-18-04-fix-notification-consent-prestage.md) — 通知 Save への admission pre-stage。本 PBI の通知アームと重複するため実装順を決める
+- [2026-10-19-03-fix-consent-keys-settings-blob-relocation.md](2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) — 同じ同意 lifecycle。同意レコードの読み出し前提が共通
+- [pbi/00-INDEX.md](../../../pbi/00-INDEX.md)
+- [dev-docs/TEST_RULE.md](../../TEST_RULE.md) — 実時間待ちの禁止と、注入した時計 / sleep の使い方

@@ -184,7 +184,7 @@ Scenario: 5. 他の dashboard 操作は同意判定に影響されない
 
 ## 関連
 
-- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する
+- [PBI 2026-10-19-10: 記録の実行を後から行う経路（オフライン再送・通知・定期要約）が同意を再確認しない問題の修正](../dev-docs/archived/pbi/2026-10-19-10-fix-consent-recheck-scheduled-jobs.md) — 同じ「admission 後の外部送信」クラス。共有 seam の設計判断を共有する（2026-10-19 完了・アーカイブ済み）
 - [dev-docs/SECURITY_REVIEW_GUIDE.md](../dev-docs/SECURITY_REVIEW_GUIDE.md) — 「Privacy-consent gating」表の行 11（本 PBI）と行 8〜10（PBI 10）。ルール 1・2 が本 PBI の根拠
 - [pbi/2026-10-18-00-backlog-security-audit-run2.md](2026-10-18-00-backlog-security-audit-run2.md) — 発見の系譜（security-audit run-2）と「未起票の観測」（設定エクスポート / インポートが同意レコードを運ぶ。本 PBI では解かない）
 - dev-docs/archived/pbi/2026-10-19-02-fix-consent-gate-wiring-coverage.md — 同意ゲートの適用範囲 inventory。本 PBI はその独立レビューで発見され、表の「gap」行として起票された

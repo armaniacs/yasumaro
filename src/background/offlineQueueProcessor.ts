@@ -75,6 +75,15 @@ function createProdTerminalFailureHandler(
 export interface OfflineQueueProcessorDeps {
     offlineNetworkQueue: OfflineNetworkQueueLike;
     recordingPipeline: RecordingPipelineLike;
+    /**
+     * Re-read consent at execution time (PBI 2026-10-19-10).
+     *
+     * Admission-time consent does not license a replay: withdrawal does not purge
+     * the queue, so a job queued while consented would otherwise send the stored
+     * summary/content to the AI provider or Obsidian afterwards. Wired from the
+     * composition's consent seam (`hasPrivacyConsent`), never read here directly.
+     */
+    isConsentGranted: () => Promise<boolean>;
     terminalFailureHandler?: TerminalFailureHandler;
     /**
      * User-notification seam. Defaults to the outcome policy's notifier
@@ -89,6 +98,16 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
     const notifyError = deps.notifyError ?? ((title, message) => notifyRecordingError(title, message));
     const terminalFailureHandler = deps.terminalFailureHandler ?? createProdTerminalFailureHandler(notifyError);
     return async function processOfflineNetworkQueue(): Promise<void> {
+        // PBI 2026-10-19-10: skip the whole cycle, not one job at a time. The
+        // queue contract counts a `false` handler result as a send failure and
+        // burns a retry (three strikes ≈ 15 minutes, then a "retries exhausted"
+        // recovery notification), and a per-job skip would also let withheld
+        // jobs consume MAX_JOBS_PER_CYCLE and starve consented ones. Leaving the
+        // queue untouched keeps the jobs for a re-granted consent.
+        if (!(await deps.isConsentGranted())) {
+            logWarn('Offline retry skipped: privacy consent not granted', {}, undefined, 'service-worker');
+            return;
+        }
         await deps.offlineNetworkQueue.retryAll(async (job: OfflineJob) => {
             // PBI 2026-09-12-11: the payload shape is owned by the shared
             // field table (OfflineJobPayload) — no third spelling here.

@@ -143,6 +143,8 @@ export const compositionManifest: readonly CompositionEntry[] = [
     factory: (c) => createReviewSummaryGenerator({
       aiService: c.resolve<AIService>('aiService'),
       sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
+      // PBI 2026-10-19-10: the digest re-reads consent at execution time.
+      isConsentGranted: () => hasPrivacyConsent(),
     }),
   },
   {
@@ -218,6 +220,8 @@ export const compositionManifest: readonly CompositionEntry[] = [
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
         recordingPipeline: c.resolve<RecordingOrchestrator>('recordingPipeline'),
         getOfflineNetworkQueue: () => sharedOfflineNetworkQueue,
+        // PBI 2026-10-19-10: alarm-driven replays re-read consent at execution time.
+        isConsentGranted: () => hasPrivacyConsent(),
         retryPendingChromeStorageWrite,
         settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
         reviewSummaryGenerator: c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator'),

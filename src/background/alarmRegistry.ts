@@ -29,6 +29,12 @@ export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
   recordingPipeline: RecordingOrchestrator;
   getOfflineNetworkQueue: () => OfflineNetworkQueue;
+  /**
+   * Re-read consent at execution time (PBI 2026-10-19-10). Alarm-driven work can
+   * outlive the consent it was armed under, so the replay path asks this before
+   * sending anything.
+   */
+  isConsentGranted: () => Promise<boolean>;
   retryPendingChromeStorageWrite: (write: QueuedChromeStorageWrite) => Promise<boolean>;
   reviewSummaryGenerator: ReviewSummaryGenerator;
   sessionAlarmService: SessionAlarmService;
@@ -112,6 +118,7 @@ async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
   const processOfflineNetworkQueue = createOfflineQueueProcessor({
     offlineNetworkQueue,
     recordingPipeline: deps.recordingPipeline,
+    isConsentGranted: deps.isConsentGranted,
   });
   await Promise.allSettled([
     processOfflineNetworkQueue(),

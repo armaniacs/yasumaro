@@ -191,7 +191,12 @@ export const handleStartup = _lifecycleHandlers.handleStartup;
 // Notification Handlers
 // ============================================================================
 export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
-const _notificationHandlers = createNotificationHandlers({ record: (data) => recordingPipeline.record(data) });
+const _notificationHandlers = createNotificationHandlers({
+  record: (data) => recordingPipeline.record(data),
+  // PBI 2026-10-19-10: the privacy-confirm notification re-reads consent at
+  // click time; a withdrawal must stop the re-run it was raised under.
+  isConsentGranted: () => hasPrivacyConsent(),
+});
 export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 

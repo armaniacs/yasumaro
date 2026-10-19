@@ -78,6 +78,8 @@ function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
     sqliteClient: { maintain: vi.fn(async () => ({ success: true })) } as never,
     recordingPipeline: {} as never,
     getOfflineNetworkQueue: () => ({}) as never,
+    // PBI 2026-10-19-10: alarm-driven replays re-read consent at execution time.
+    isConsentGranted: async () => true,
     retryPendingChromeStorageWrite: vi.fn(async () => true),
     reviewSummaryGenerator: makeReviewGenerator(),
     sessionAlarmService: makeSessionAlarmService(),

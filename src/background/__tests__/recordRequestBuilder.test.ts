@@ -78,6 +78,8 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
     const record = vi.fn().mockResolvedValue({ success: true, skipped: false });
     const retryObsidianWrite = vi.fn().mockResolvedValue(true);
     const processor = createOfflineQueueProcessor({
+      // PBI 2026-10-19-10: replay re-reads consent at execution time.
+      isConsentGranted: async () => true,
       offlineNetworkQueue: {
         retryAll: async (handler) => {
           await handler({
@@ -159,6 +161,8 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
     const logErrorSpy = vi.spyOn(logger, 'logError').mockResolvedValue(undefined);
 
     const processor = createOfflineQueueProcessor({
+      // PBI 2026-10-19-10: replay re-reads consent at execution time.
+      isConsentGranted: async () => true,
       offlineNetworkQueue: {
         retryAll: async (handler) => {
           await handler({
