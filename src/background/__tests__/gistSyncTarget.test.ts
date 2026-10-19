@@ -308,4 +308,67 @@ describe('GistSyncTarget', () => {
     expect(result.success).toBe(false);
     expect(result.message).toContain('not configured');
   });
+
+  // PBI 2026-10-19-06: these requests carry the PAT, so a 30x must not be
+  // followed (a same-origin redirect keeps the header, a cross-origin one leaks
+  // it). The mock plays the platform's part: with `redirect: 'error'` a 30x
+  // rejects instead of returning a response, so a second request can only appear
+  // if the option is missing.
+  describe('redirect policy', () => {
+    const PAT = 'ghp_test123';
+
+    function platformLikeFetch(): ReturnType<typeof vi.fn> {
+      return vi.fn((_url: string, init?: RequestInit) => {
+        if (init?.redirect === 'error') {
+          return Promise.reject(new TypeError('Failed to fetch'));
+        }
+        return Promise.resolve({
+          ok: false,
+          status: 302,
+          statusText: 'Found',
+          json: () => Promise.resolve({}),
+        } as Response);
+      });
+    }
+
+    it('does not follow a redirect on the connection test (one request, failure)', async () => {
+      mockGetAll.mockResolvedValue({ github_pat: PAT } as any);
+      const fetchMock = platformLikeFetch();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const result = await target.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe('error');
+      expect(String((fetchMock.mock.calls[0]?.[0] as string))).toContain('/user');
+    });
+
+    it('does not follow a redirect when creating a gist', async () => {
+      mockGetAll.mockResolvedValue({ github_pat: PAT } as any);
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
+      const fetchMock = platformLikeFetch();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
+
+      expect(result.success).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe('error');
+    });
+
+    it('does not follow a redirect when updating an existing gist', async () => {
+      mockGetAll.mockResolvedValue({ github_pat: PAT, gist_id: 'existing-id' } as any);
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
+      const fetchMock = platformLikeFetch();
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const result = await target.sync(1, 'https://example.com', 'Test', 'Summary');
+
+      expect(result.success).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).redirect).toBe('error');
+      expect(String((fetchMock.mock.calls[0]?.[0] as string))).toContain('/gists/existing-id');
+    });
+  });
 });

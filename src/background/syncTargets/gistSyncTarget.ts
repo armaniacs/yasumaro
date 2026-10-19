@@ -12,7 +12,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { settingsRepository, type SettingsReader, type SettingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { buildEntryMarkdown } from '../../utils/markdownFormatter.js';
-import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout } from '../../utils/fetch.js';
+import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
 import { readJsonCapped } from '../../utils/readBodyCapped.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
 import { describeHttpFailure } from '../../utils/httpFailureMessages.js';
@@ -131,7 +131,10 @@ export class GistSyncTarget implements SyncTarget {
       const settings = await this.settingsReader.getAll();
       const pat = settings[StorageKeys.GITHUB_PAT] as string;
 
-      const response = await fetchWithTimeout(`${GIST_API_BASE}/user`, {
+      // PBI 2026-10-19-06: this request carries the PAT. A 30x must not be
+      // followed — even a same-origin one keeps the header, and a cross-origin
+      // Location would leak it to a host no gate checked.
+      const response = await fetchWithTimeout(`${GIST_API_BASE}/user`, noRedirectInit({
         headers: {
           Authorization: `token ${pat}`,
           'User-Agent': 'yasumaro-extension',
@@ -139,7 +142,7 @@ export class GistSyncTarget implements SyncTarget {
         },
         cache: CONNECTION_TEST_CACHE_MODE,
         skipCspValidation: true,
-      });
+      }));
 
       if (response.ok) {
         return { success: true, message: 'Connected to GitHub successfully' };
@@ -159,7 +162,8 @@ export class GistSyncTarget implements SyncTarget {
   }
 
   private async createGist(content: string, pat: string): Promise<string> {
-    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists`, {
+    // PBI 2026-10-19-06: the PAT rides along, so a 30x must not be followed.
+    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists`, noRedirectInit({
       method: 'POST',
       skipCspValidation: true,
       headers: {
@@ -177,7 +181,7 @@ export class GistSyncTarget implements SyncTarget {
           },
         },
       }),
-    });
+    }));
 
     if (!response.ok) {
       throw new Error(`GitHub Gist creation failed: ${response.status}`);
@@ -188,7 +192,8 @@ export class GistSyncTarget implements SyncTarget {
   }
 
   private async updateGist(gistId: string, content: string, pat: string): Promise<void> {
-    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists/${gistId}`, {
+    // PBI 2026-10-19-06: same policy as the create/connection-test sites.
+    const response = await fetchWithTimeout(`${GIST_API_BASE}/gists/${gistId}`, noRedirectInit({
       method: 'PATCH',
       skipCspValidation: true,
       headers: {
@@ -204,7 +209,7 @@ export class GistSyncTarget implements SyncTarget {
           },
         },
       }),
-    });
+    }));
 
     if (!response.ok) {
       throw new Error(`GitHub Gist update failed: ${response.status}`);

@@ -11,7 +11,7 @@ import { getTrustDbAdmin } from './TrustDbAdmin.js';
 import { ErrorCode } from '../logger/types.js';
 import { logInfo, logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
-import { fetchWithTimeout } from '../fetch.js';
+import { fetchWithTimeout, noRedirectInit } from '../fetch.js';
 import { readBodyCapped } from '../readBodyCapped.js';
 import { backoffDelayMs } from '../backoff.js';
 import { waitForRetry, type SleepFn } from '../retryPredicate.js';
@@ -130,7 +130,9 @@ export class TrancoUpdater {
   private async fetchTrancoList(tier: TrancoTier): Promise<string[]> {
     // Step 1: 最新リストIDを取得
     logInfo('TrancoUpdater', {}, `Fetching latest Tranco list ID`);
-    const metaResponse = await fetchWithTimeout(TRANCO_API_LATEST, { method: 'GET' }, TRANCO_FETCH_TIMEOUT);
+    // PBI 2026-10-19-06: a 30x must not be followed. The metadata URL is fixed,
+    // but following a redirect could still land on a host no gate checked.
+    const metaResponse = await fetchWithTimeout(TRANCO_API_LATEST, noRedirectInit({ method: 'GET' }), TRANCO_FETCH_TIMEOUT);
     if (!metaResponse.ok) {
       throw new Error(`Tranco API returned status ${metaResponse.status}: ${metaResponse.statusText}`);
     }
@@ -145,7 +147,9 @@ export class TrancoUpdater {
     const url = `https://tranco-list.eu/download/${listId}/${count}`;
     logInfo('TrancoUpdater', { url }, `Fetching CSV from: ${url}`);
 
-    const response = await fetchWithTimeout(url, { method: 'GET' }, TRANCO_FETCH_TIMEOUT);
+    // PBI 2026-10-19-06: same policy for the list download (its URL is built
+    // from the API response).
+    const response = await fetchWithTimeout(url, noRedirectInit({ method: 'GET' }), TRANCO_FETCH_TIMEOUT);
     if (!response.ok) {
       throw new Error(`Tranco CSV returned status ${response.status}: ${response.statusText}`);
     }
