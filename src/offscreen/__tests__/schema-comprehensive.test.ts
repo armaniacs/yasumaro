@@ -181,7 +181,7 @@ describe('UPDATABLE_FIELDS', () => {
   // NOT_UPDATABLE_COLUMNS would silently drop the exclusion from the
   // derivation and re-enable UPDATE for the renamed provenance column.
   it('keeps NOT_UPDATABLE_COLUMNS a subset of COLUMN_NAMES', () => {
-    const columnNames = new Set(COLUMN_NAMES);
+    const columnNames = new Set<string>(COLUMN_NAMES);
     const stale = [...NOT_UPDATABLE_COLUMNS].filter((name) => !columnNames.has(name));
     expect(
       stale.length === 0
