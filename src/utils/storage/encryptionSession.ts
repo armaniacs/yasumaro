@@ -44,6 +44,7 @@ import { API_KEY_FIELD_NAMES } from './apiKeyFields.js';
 import { constantTimeCompare, decryptApiKey, encryptApiKey, isEncrypted } from '../crypto/index.js';
 import { StorageTransaction } from './storageTransaction.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
+import { isPlainRecord } from '../objectUtils.js';
 
 export { ReencryptionAbortedError };
 import { withRotationLock, RotationInProgressError } from './rotationLock.js';
@@ -378,12 +379,6 @@ async function withPreservedSessionCache<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-function asRecord(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === 'object' && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
 /** Read both API-key placements in one round trip. */
 async function readApiKeyPlacements(
   port: StoragePort,
@@ -395,7 +390,8 @@ async function readApiKeyPlacements(
       scattered[field] = stored[field];
     }
   }
-  return { nested: asRecord(stored['settings']), scattered };
+  const settings = stored['settings'];
+  return { nested: isPlainRecord(settings) ? settings : undefined, scattered };
 }
 
 /**

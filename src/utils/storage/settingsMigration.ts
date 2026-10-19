@@ -15,6 +15,7 @@ import { StorageKeys } from './types.js';
 import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
+import { isPlainRecord } from '../objectUtils.js';
 import {
     PROVIDER_ALLOWLIST_ROWS,
     isAllowedProviderBaseUrl,
@@ -189,10 +190,6 @@ export function isMigratableStorageKey(key: string): boolean {
 
 function hasOwn(record: Record<string, unknown>, key: string): boolean {
     return Object.prototype.hasOwnProperty.call(record, key);
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-    return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 export interface MigrateSettingsOptions {

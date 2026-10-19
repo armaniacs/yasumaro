@@ -24,3 +24,14 @@ export function pickDefined<T extends object>(obj: T): PickDefinedResult<T> {
     }
     return result;
 }
+
+/**
+ * 値が null でないオブジェクト（配列を除く）かを判定する共通ガード。
+ *
+ * storage 系モジュールが untrusted な unknown 値（暗号封筒・レガシー設定など）を
+ * プレーンオブジェクトへ絞り込むための 1 箇所の条件であり、null / typeof / 配列の
+ * 判定はここだけに置く（PBI: asRecord と isPlainRecord の共通ガード統合）。
+ */
+export function isPlainRecord(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
