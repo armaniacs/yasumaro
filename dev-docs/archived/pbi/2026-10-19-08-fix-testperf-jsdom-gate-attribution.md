@@ -18,7 +18,7 @@
 
 ## 背景（発見の経緯）
 
-PBI [2026-10-18-01](../dev-docs/archived/pbi/2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [08](../dev-docs/archived/pbi/2026-10-18-08-fix-obsidian-redirect-bearer.md) の独立レビューで「demotion 自体は妥当だが、`jsdomFileCount` の 360 → 362 は予算コメント自身が求める『推移と原因』を欠いている」と指摘された。レビューはこれ以外に test-perf の指摘を出していない。
+PBI [2026-10-18-01](2026-10-18-01-fix-ai-fetch-redirect-policy.md) / [08](2026-10-18-08-fix-obsidian-redirect-bearer.md) の独立レビューで「demotion 自体は妥当だが、`jsdomFileCount` の 360 → 362 は予算コメント自身が求める『推移と原因』を欠いている」と指摘された。レビューはこれ以外に test-perf の指摘を出していない。
 
 ### 確認した事実
 
@@ -58,12 +58,12 @@ Scenario: 3. ゲートの値と挙動は変わらない（回帰ガード）
 
 ## 受け入れ基準
 
-- [ ] `360 → 362` の 2 ファイルが特定され、ファイル名と jsdom 側に分類される理由（`testDir/testPartition.ts` の判定）が記録されている
-- [ ] 推移（`jsdomFileCount` がいつ 360 になり、いつ 362 になったか）が ADR の `2026-10-18` 追記に書かれている
-- [ ] 原因（2 ファイルを追加した変更 / コミット）が書かれている。特定できなかった場合は「特定できなかった」と根拠付きで記録する（推測で埋めない）
-- [ ] `_comment` と ADR の記述が矛盾しない（「同じ規約を 2 箇所で宣言している」状態を保つ）
-- [ ] `gates.jsdomFileCount` の値は 362 のまま。`npm run test:perf` の判定が変わらない
-- [ ] `npm run validate` が緑
+- [x] `360 → 362` の内訳が特定され、ファイル名と jsdom 側に分類される理由（`report.mjs` の `JSDOM_DOCBLOCK` = `testDir/testPartition.ts` と同じ規則）が記録されている。**実測では 2 ファイル増ではなく「1 減 + 3 増」**だった（`manifest.test.ts` が jsdom を離脱）
+- [x] 推移（`jsdomFileCount` がいつ 360 になり、いつ 362 になったか）が ADR の `2026-10-18` 追記に書かれている
+- [x] 原因（3 ファイル追加 + 1 ファイル離脱）が書かれている。実測で特定した（推測で埋めていない）
+- [x] `_comment` と ADR の記述が矛盾しない（`_comment` は推移を要約し ADR を参照）
+- [x] `gates.jsdomFileCount` の値は 362 のまま。`npm run test:perf` の判定が変わらない（`ok jsdom files: 362 / 362`、exit 0）
+- [x] `npm run validate` が緑（CI）
 
 ## テスト戦略
 
@@ -123,12 +123,60 @@ sed -n '327,350p' dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
 
 ## Definition of Done
 
-- [ ] BDD シナリオ 1〜3 が満たされる（シナリオ 3 は `npm run test:perf` の実行で確認）
-- [ ] ADR の `2026-10-18` 追記に `jsdomFileCount` の推移と原因が書かれている
-- [ ] `_comment` の記述と ADR の記述が矛盾しない
-- [ ] `npm run validate` が緑（`validate:json` を含む）
-- [ ] コードレビュー完了
-- [ ] 完了記録に、2 ファイルの同定方法と（特定できた場合は）そのファイル名を残す
+- [x] BDD シナリオ 1〜3 が満たされる（シナリオ 3 は `npm run test:perf` の実行で確認: `ok jsdom files: 362 / 362`、exit 0）
+- [x] ADR の `2026-10-18` 追記に `jsdomFileCount` の推移と原因が書かれている
+- [x] `_comment` の記述と ADR の記述が矛盾しない（`_comment` は推移を要約し ADR を参照）
+- [x] `npm run validate` が緑（`validate:json` を含む）
+- [x] コードレビュー完了
+- [x] 完了記録に、2 ファイルの同定方法と（特定できた場合は）そのファイル名を残す
+
+## 完了記録（2026-10-19）
+
+### なぜなぜ分析（原因 → 示唆 → 解）
+
+**疑問**: なぜ `jsdomFileCount` の改定に「推移と原因」が残らなかったのか。
+
+1. **なぜ残らなかったのか** — 改定コミット（`65057bf0`）は `fileCount` の降格という**主題**を持っていた。jsdom の値はその決定に付随する変更で、メッセージの紙幅は降格の理由（総数は固定コストを誤って価格付けする）に使われた。
+2. **なぜ「付随」と扱えたのか** — 降格の決定は「今後 jsdom だけをゲートにする」なので、**新しいゲートの初期値を決める**必要があった。初期値の決定は「今の実測値を入れる」という機械的な操作に見える。
+3. **なぜ機械的ではなかったのか** — 362 は実測だが、**その実測値がどこから来たか**（360 から +2 ではなく、**359 から +3**）は自明でない。359 は「1 ファイルが jsdom をやめた」という**逆向きの変化**を含む。
+4. **なぜ逆向きの変化が見えなかったのか** — `jsdomFileCount` は**集計値**で増減の内訳を持たない。1 ファイル減ってもゲートが据え置きなら「余裕がある」状態になるだけで、**余裕は誰も報告しない**。
+5. **なぜ規約が効かなかったのか** — 規約は `_comment` と ADR の 2 箇所に宣言されていたが、**検査する仕組みが無かった**（人の注意力に依存）。
+
+**原因**: 集計値のゲートは**増減の内訳を失う**のに、引き上げの判断を「現在値の実測」だけで済ませられる手続きにしたこと。規約は文章で宣言され、検査されなかった。
+
+**示唆**:
+- 集計値のゲートを引き上げる時は、**前回値からの差分をファイル単位で説明する**（増だけでなく減も）。
+- 規約を 2 箇所に書くなら**同じ手順を指す**ようにし、手順そのものを 1 箇所にまとめる。
+- 「余裕ができた」（ゲート未満）は誰も報告しないので、引き上げ時に**履歴を再構成する**。
+
+**解**: git 履歴から推移を実測して ADR と `_comment` に記録し、引き上げ手順を ADR の 1 箇所にまとめた。
+
+### 実測した推移（推測なし）と同定方法
+
+測定は `git grep -lE '@(vitest|jest)-environment[[:space:]]+jsdom' <rev> -- '*test.ts' | wc -l` を各 rev で実行し、集合差分（`comm -23` / `comm -13`）で増減をファイル単位に落とした。分類規則は `scripts/test-perf/report.mjs` の `JSDOM_DOCBLOCK` と同じ。
+
+| 時点 | 件数 | 何が動いたか |
+|---|---:|---|
+| `c2e28943`（2026-10-13、ゲート新設 `360`） | 360 | 当時の実測 = 360（新設値は正しかった） |
+| `004b05c7` / `375f60a9` | 359 | `src/__tests__/manifest.test.ts` が `@jest-environment jsdom` を落とした。checked-in `manifest.json` ではなく `wxt.config.ts` を検証する形に書き換わり（旧ゲートは常に false で全 skip だった）、DOM が不要になった |
+| `7a3a39e0`（2026-10-16） | +1 | `src/offscreen/__tests__/opfsWorker-loadShedRetry.test.ts` |
+| `b9f9df3c`（2026-10-17） | +1 | `src/popup/__tests__/pausePanel.test.ts` |
+| `ce410903`（2026-10-17） | +1 | `src/background/handlers/dashboardSqlite/__tests__/maintenanceBatchHandler-purge-plan.test.ts` |
+| `65057bf0`（2026-10-18） | 362 | 359 + 3。CI の実測も `OVER jsdom files: 362 / 360 (101%)` で一致 |
+
+**結論**: **362 という値自体は正しく、欠けていたのは「そこに至る履歴」だけ**だった。3 ファイルはいずれも DOM を直接使う（offscreen の OPFS worker 経路、popup の pause UI、dashboard の purge 計画 UI）。減った 1 ファイルも理由が特定できた（「減った」ことを見落とすと 360 → 362 が「2 増」に見え、実際は「1 減 + 3 増」）。
+
+### 実装
+
+- `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` — 「`jsdomFileCount` の推移と 360 → 362 の内訳」と「次に引き上げるときの手順（6 ステップ、測定コマンド付き）」を追加。
+- `bench/baselines/test-perf.budget.json` — `_comment` に推移の要約を追記（ADR を参照）。**`gates.jsdomFileCount` は 362 のまま**。
+- コード・ゲート値・判定ロジックは変更していない。
+
+### テスト（回帰）
+
+- `npm run test:perf` → `ok jsdom files: 362 / 362 (100%) [gated]`、`test-perf: within budget`、exit 0（シナリオ 3）。
+- `npm run validate:json` 緑。`scripts/__tests__/` に予算構造を検証するテストは無い（確認済み）。
+- `npm run validate` は CI で確認。
 
 ## 関連
 
