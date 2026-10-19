@@ -9,12 +9,12 @@
 
 ## ユーザーストーリー
 
-開発者として、パネル遷移の失敗が devtools console に記録されてほしい。なぜなら、歴史的理由で入った catch が実エラーを無言で吞むと、パネル id のタイプミスや `panel.mount()` の throw が「押しても何も起きない」状態になり、原因追跡ができないから。
+開発者として、パネル遷移の失敗が devtools console に記録されてほしい。なぜなら、歴史的理由で入った catch が実エラーを無言で飲むと、パネル id のタイプミスや `panel.mount()` の throw が「押しても何も起きない」状態になり、原因追跡ができないから。
 
 ## 背景（現状）
 
 - `src/dashboard/panels/DashboardBootstrapper.ts:131-133` ― sidebar click ハンドラ内で `void this.registry.navigate(panelId).catch(() => { /* Panel not yet migrated to new system; old navigation handles it */ })`。コメントが指す「未 migrate パネル」は `registerCatalog()`（:35-39）が `PANEL_CATALOG` 全件を登録する現状ではもう存在せず、catch は今は `NavigationRegistry.navigate()` の実エラーを無言で吞む
-- `src/dashboard/panels/staticForm/__tests__/staticPanels.test.ts:11-14` が機械的に担保する領域: id のタイプミスは `NavigationRegistry.navigate()` が throw するが、本 catch が吞むため該当タブだけが「押しても何も起きない」状態になり、console に何も出ない
+- `src/dashboard/panels/staticForm/__tests__/staticPanels.test.ts:11-14` が機械的に担保する領域: id のタイプミスは `NavigationRegistry.navigate()` が throw するが、本 catch が飲むため該当タブだけが「押しても何も起きない」状態になり、console に何も出ない
 - `src/dashboard/main.ts:24` ― dashboard 側 main の `await bootstrapper.start(resolveInitialPanelId())` が top-level await。`registry.navigate()` が reject するとモジュール評価がそこで死に、後続の `applySectionDeepLink()`（:25）と `initDashboard()`（:27）が走らない。失敗はどこにも記録されない
 - 既存の通知経路: `src/dashboard/notificationService.ts` の `notify()`（chrome.notifications 依存、API 未導入環境で no-op、`src/dashboard/__tests__/notificationService.test.ts` でテスト済み）。asyncData パネルの `notices.showError` 慣習は panel container が解決済みであることが前提のため、bootstrap 時点では `notify()` が第一候補
 
@@ -25,7 +25,7 @@
 ```gherkin
 Given sidebar が wire されている
 When `registry.navigate()` が reject する
-Then サイレント吞み込みは発生せず、console.error に失敗が記録される
+Then サイレント飲み込みは発生せず、console.error に失敗が記録される
 ```
 
 ### Scenario: 正常な navigation は従来どおり
@@ -53,7 +53,7 @@ Then 失敗が console に記録され、dashboard の残りの初期化（`appl
 ### 受け入れ基準
 
 - [x] 1. `navigate` 失敗が少なくとも console に記録される
-- [x] 2. サイレント吞み込み（空の catch + 「未 migrate」コメント）が消える
+- [x] 2. サイレント飲み込み（空の catch + 「未 migrate」コメント）が消える
 - [x] 3. `start()` の初期 navigate 失敗も記録される
 - [x] 4. 正常系の navigation 挙動（active tab / aria-selected / settings subgroup 同期）が変わらない
 - [ ] 5. 失敗時に既存の通知経路（`notify()`）または同等のユーザー可視経路が出る ― **未達**（実装記録参照）
