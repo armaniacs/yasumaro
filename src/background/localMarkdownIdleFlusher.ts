@@ -12,6 +12,7 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { flushBufferedExports } from './localMarkdownExportCore.js';
+import { shouldCreateStandingAlarm } from './standingAlarmGuard.js';
 import { formatLocalDateString } from '../utils/localDate.js';
 
 export const IDLE_FALLBACK_ALARM = 'yasumaro-local-md-flush';
@@ -93,11 +94,13 @@ export async function initExportScheduler(): Promise<void> {
  * MarkdownBufferManager): if DAILY_FLUSH_ALARM is already armed its midnight
  * `when` is left untouched, otherwise it is armed once with the same spec
  * initExportScheduler uses. Never recreates an armed alarm, so recordings
- * cannot shift the daily timing off midnight.
+ * cannot shift the daily timing off midnight. The create decision is the
+ * shared shouldCreateStandingAlarm (standingAlarmGuard.ts) — the same guard
+ * the registry's installDailyPurge uses for the daily retention purge.
  */
 export async function ensureDailyFlushArmed(): Promise<void> {
   const existing = await chrome.alarms.get(DAILY_FLUSH_ALARM);
-  if (existing) return;
+  if (!shouldCreateStandingAlarm(DAILY_FLUSH_ALARM, existing)) return;
   chrome.alarms.create(DAILY_FLUSH_ALARM, {
     when: getNextMidnightTimestamp(),
     periodInMinutes: 1440,

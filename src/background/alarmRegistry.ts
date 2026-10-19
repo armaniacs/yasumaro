@@ -18,6 +18,7 @@ import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
+import { shouldCreateStandingAlarm } from './standingAlarmGuard.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
@@ -57,6 +58,27 @@ async function runDailyPurge(deps: AlarmHandlerDeps): Promise<void> {
     undefined,
     (days) => deps.sqliteClient.maintain({ type: 'purgeAuditLog', retentionDays: days } as { type: 'purgeAuditLog'; retentionDays?: number }),
   );
+}
+
+/** The standing daily-retention purge alarm the registry table owns. */
+const DAILY_PURGE_ALARM = 'yasumaro-daily-purge';
+
+/**
+ * Get-then-create install for the standing daily purge, the same guard as
+ * ensureDailyFlushArmed (localMarkdownIdleFlusher.ts) through the same pure
+ * shouldCreateStandingAlarm decision: Chrome cancels and replaces a same-name
+ * alarm and recomputes a periodInMinutes-only alarm's first firing from
+ * creation time, so recreating the 24h purge on every Service Worker startup
+ * would reset its countdown, and the 5-minute offline-retry alarm keeps
+ * waking the worker (PBI 2026-10-18-02). An already-registered alarm is left
+ * untouched so its scheduledTime survives restarts; a missing one (fresh
+ * install, alarm lost to a profile move) is created with the standing
+ * 1440-minute period, so the purge re-arms instead of stalling forever.
+ */
+async function installDailyPurge(): Promise<void> {
+  const existing = await chrome.alarms.get(DAILY_PURGE_ALARM);
+  if (!shouldCreateStandingAlarm(DAILY_PURGE_ALARM, existing)) return;
+  chrome.alarms.create(DAILY_PURGE_ALARM, { periodInMinutes: 1440 });
 }
 
 /** Shared body for yasumaro-local-md-flush and yasumaro-local-md-immediate. */
@@ -165,7 +187,7 @@ function getNextMonthFirstDayAt(hour: number, minute: number): number {
 // Factory, not a module constant: conditional install hooks capture deps
 // (the review-summary jobs need deps.settingsReader to read the enabled flag).
 const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
-  { name: 'yasumaro-daily-purge', staticSchedule: { periodInMinutes: 1440 }, run: runDailyPurge },
+  { name: DAILY_PURGE_ALARM, install: installDailyPurge, run: runDailyPurge },
   { name: 'yasumaro-local-md-flush', install: installLocalMdScheduler, run: runLocalMdFlush },
   { name: 'yasumaro-local-md-immediate', install: installLocalMdImmediate, run: runLocalMdFlush },
   { name: 'yasumaro-local-md-daily-flush', install: installLocalMdScheduler, run: runLocalMdDailyFlush },

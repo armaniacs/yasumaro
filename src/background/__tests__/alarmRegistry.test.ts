@@ -103,14 +103,19 @@ function alarm(name: string): chrome.alarms.Alarm {
 function stubChromeAlarms(): {
   create: ReturnType<typeof vi.fn>;
   clear: ReturnType<typeof vi.fn>;
+  get: ReturnType<typeof vi.fn>;
   restore: () => void;
 } {
   const globalRef = globalThis as unknown as { chrome?: unknown };
   const savedChrome = globalRef.chrome;
   const create = vi.fn();
   const clear = vi.fn();
-  globalRef.chrome = { alarms: { create, clear } };
-  return { create, clear, restore: () => { globalRef.chrome = savedChrome; } };
+  // PBI 2026-10-18-02: the daily purge installs through a get-then-create
+  // guard, so every installAll stub needs alarms.get. Default (undefined
+  // return) reads as "not registered": the guard then creates the alarm.
+  const get = vi.fn();
+  globalRef.chrome = { alarms: { create, clear, get } };
+  return { create, clear, get, restore: () => { globalRef.chrome = savedChrome; } };
 }
 
 beforeEach(() => {
@@ -188,21 +193,129 @@ describe('createAlarmRegistry', () => {
     expect(addLogMock).not.toHaveBeenCalled();
   });
 
-  it('installAll creates the two unconditional alarms and runs install hooks', async () => {
-    const globalRef = globalThis as unknown as { chrome?: unknown };
-    const savedChrome = globalRef.chrome;
-    const create = vi.fn();
-    const clear = vi.fn();
-    globalRef.chrome = { alarms: { create, clear } };
+  it('installAll arms the daily purge when missing, keeps offline-retry unconditional, and runs install hooks', async () => {
+    // Updated by PBI 2026-10-18-02: this test used to pin the unconditional
+    // re-create of the daily purge on every installAll. The purge now
+    // installs through the get-then-create guard, so the unregistered case
+    // (fresh install) is pinned here and the registered case below.
+    const { create, get, restore } = stubChromeAlarms();
     try {
       const registry = createAlarmRegistry(makeDeps());
       await registry.installAll();
 
+      // Unregistered: the guard consults chrome.alarms.get and creates the
+      // standing 24h alarm exactly once.
+      expect(get).toHaveBeenCalledWith('yasumaro-daily-purge');
       expect(create).toHaveBeenCalledWith('yasumaro-daily-purge', { periodInMinutes: 1440 });
+      // The offline-retry row keeps its unconditional re-create (unchanged).
       expect(create).toHaveBeenCalledWith('yasumaro-offline-network-retry', { periodInMinutes: 5 });
     } finally {
-      globalRef.chrome = savedChrome;
+      restore();
     }
+  });
+
+  describe('daily-purge get-then-create guard (PBI 2026-10-18-02)', () => {
+    it('keeps an already-registered daily purge so its scheduledTime survives restarts', async () => {
+      const { create, get, restore } = stubChromeAlarms();
+      try {
+        // Already armed: chrome.alarms.get finds the standing purge alarm, so
+        // the guard leaves it untouched (Chrome would otherwise cancel and
+        // replace the same-name alarm, resetting the 24h countdown).
+        get.mockImplementation(async (name: string) => {
+          if (name !== 'yasumaro-daily-purge') return undefined;
+          return { name, scheduledTime: Date.now() + 86_400_000 };
+        });
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        expect(get).toHaveBeenCalledWith('yasumaro-daily-purge');
+        expect(create).not.toHaveBeenCalledWith('yasumaro-daily-purge', expect.anything());
+        // Scenario 1: the offline-retry row still installs exactly as before.
+        expect(create).toHaveBeenCalledWith('yasumaro-offline-network-retry', { periodInMinutes: 5 });
+      } finally {
+        restore();
+      }
+    });
+
+    it('survives repeated installAll runs (SW restarts) with one create, and re-arms a lost alarm', async () => {
+      const { create, get, restore } = stubChromeAlarms();
+      try {
+        // Stateful fake: once created, the alarm is visible to
+        // chrome.alarms.get, as it would be across real SW restarts.
+        const armed = new Set<string>();
+        get.mockImplementation(async (name: string) => {
+          if (!armed.has(name)) return undefined;
+          return { name } as chrome.alarms.Alarm;
+        });
+        create.mockImplementation((name: string) => {
+          armed.add(name);
+        });
+
+        const registry = createAlarmRegistry(makeDeps());
+        // Repeated alarm wake-ups of the same worker generation.
+        await registry.installAll();
+        await registry.installAll();
+        await registry.installAll();
+
+        const dailyPurgeCreates = create.mock.calls.filter((call) => call[0] === 'yasumaro-daily-purge');
+        expect(dailyPurgeCreates).toHaveLength(1);
+        // The offline-retry row keeps its unconditional re-create every time.
+        const retryCreates = create.mock.calls.filter((call) => call[0] === 'yasumaro-offline-network-retry');
+        expect(retryCreates).toHaveLength(3);
+
+        // Scenario 3: an alarm lost to a profile move re-arms on the next start.
+        armed.delete('yasumaro-daily-purge');
+        await registry.installAll();
+        expect(create.mock.calls.filter((call) => call[0] === 'yasumaro-daily-purge')).toHaveLength(2);
+      } finally {
+        restore();
+      }
+    });
+
+    it('records the failure when the guard cannot read alarms and keeps installing the rest', async () => {
+      const { create, get, restore } = stubChromeAlarms();
+      try {
+        get.mockRejectedValue(new Error('alarms unavailable'));
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        // Not silently treated as success: the failure lands in the job's own
+        // try/catch log under its name...
+        expect(addLogMock).toHaveBeenCalledWith(
+          'ERROR',
+          expect.stringContaining('yasumaro-daily-purge'),
+          expect.anything(),
+        );
+        expect(create).not.toHaveBeenCalledWith('yasumaro-daily-purge', expect.anything());
+        // ...and the remaining jobs still install (uniform failure policy).
+        expect(create).toHaveBeenCalledWith('yasumaro-offline-network-retry', { periodInMinutes: 5 });
+        expect(initExportSchedulerMock).toHaveBeenCalled();
+      } finally {
+        restore();
+      }
+    });
+
+    // The behavior change is limited to the daily purge: the remaining
+    // staticSchedule rows keep their unconditional re-create until their
+    // re-arm semantics are decided (PBI scope guard).
+    it.each([
+      { name: 'yasumaro-offline-network-retry', spec: { periodInMinutes: 5 } },
+    ])('$name keeps its unconditional re-create even when already registered', async ({ name, spec }) => {
+      const { create, get, restore } = stubChromeAlarms();
+      try {
+        // Every name reports a registered alarm: the offline-retry row has no
+        // guard, so it still re-creates exactly as before the PBI.
+        get.mockImplementation(async (queried: string) => {
+          return { name: queried, scheduledTime: Date.now() };
+        });
+        const registry = createAlarmRegistry(makeDeps());
+        await registry.installAll();
+
+        expect(create).toHaveBeenCalledWith(name, spec);
+      } finally {
+        restore();
+      }
+    });
   });
 
   describe('check_session_timeout (the only session-timeout dispatch path)', () => {
@@ -231,7 +344,7 @@ describe('createAlarmRegistry', () => {
     it('installs the session alarm once per installAll', async () => {
       const globalRef = globalThis as unknown as { chrome?: unknown };
       const savedChrome = globalRef.chrome;
-      globalRef.chrome = { alarms: { create: vi.fn(), clear: vi.fn() } };
+      globalRef.chrome = { alarms: { create: vi.fn(), clear: vi.fn(), get: vi.fn() } };
       const service = makeSessionAlarmService();
       try {
         const registry = createAlarmRegistry(makeDeps({ sessionAlarmService: service }));
