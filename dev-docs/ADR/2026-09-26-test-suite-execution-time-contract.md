@@ -344,3 +344,37 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
   `file count` を外し、`advisories` の先頭へ移した。
 - 今後の `jsdomFileCount` の引き上げは、決定 3 の手続き（本 ADR への追記と
   同時に改定）に従う。
+
+#### `jsdomFileCount` の推移と 360 → 362 の内訳（2026-10-19 追記）
+
+`65057bf0` は値を 362 に改定したが、決定 3 が求める「推移と原因」を残してい
+なかった。PBI `2026-10-19-08` で履歴を実測して埋めた（推測は使っていない）。
+
+| 時点 | 件数 | 何が動いたか |
+|---|---:|---|
+| `c2e28943`（2026-10-13、`jsdomFileCount: 360` の新設） | 360 | 新設値はその時点の実測と一致していた（`git grep` で 360） |
+| `004b05c7` / `375f60a9`（manifest 権限ゲートの復旧） | 359 | `src/__tests__/manifest.test.ts` が `@jest-environment jsdom` を落とした。checked-in の `manifest.json` ではなく `wxt.config.ts` を検証する形に書き換わり、DOM が不要になったため（node 側へ移動）。ゲートは据え置きなので 1 ファイル分の余裕が生まれた |
+| `7a3a39e0`（2026-10-16） | +1 | `src/offscreen/__tests__/opfsWorker-loadShedRetry.test.ts` |
+| `b9f9df3c`（2026-10-17） | +1 | `src/popup/__tests__/pausePanel.test.ts` |
+| `ce410903`（2026-10-17） | +1 | `src/background/handlers/dashboardSqlite/__tests__/maintenanceBatchHandler-purge-plan.test.ts` |
+| `65057bf0`（2026-10-18） | 362 | 上記 3 ファイル追加（359 + 3）。CI の実測も `362 / 360 (101%)` で一致 |
+
+3 ファイルはいずれも DOM を必要とする（`document` / `window` を直接操作する、
+または popup・offscreen の UI 経路を検証する）ため、`scripts/test-perf/report.mjs`
+の `JSDOM_DOCBLOCK` 判定で jsdom 側に分類される。**362 という値自体は正しく、
+欠けていたのは「そこに至る履歴」だけ**だった。
+
+#### 次に `jsdomFileCount` を引き上げるときの手順（1 箇所にまとめる）
+
+1. `npm run test:perf` の `OVER jsdom files: N / M` で現状値を確認する。
+2. 増えた分を**ファイル単位で特定**する:
+   `git grep -lE '@(vitest|jest)-environment[[:space:]]+jsdom' <前回改定の rev> -- '*test.ts'`
+   と現在の同コマンドの差分を取る（削除・docblock 除去も必ず拾う）。
+3. 各ファイルについて「なぜ jsdom なのか」（DOM を直接使う／UI 経路を検証す
+   る）を 1 行で書く。**特定できなかった場合は「特定できなかった」と根拠を
+   書く**（推測で埋めない）。
+4. 本 ADR に**推移表の行を足す**（時点・件数・何が動いたか）。
+5. `bench/baselines/test-perf.budget.json` の `_comment` の推移文を同じ内容に
+   更新する（2 箇所が矛盾しないように）。
+6. `gates.jsdomFileCount` の値だけを改定し、`npm run test:perf` で `ok jsdom
+   files: N / N` を確認する。
