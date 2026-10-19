@@ -161,16 +161,20 @@ Two rules for a new outbound path:
 | 5 | Obsidian export inside the recording pipeline | Inherited **at record time** | Export is a step of the pipeline |
 | 6 | AI / Obsidian / Gist connection tests | No | Send only the configuration the user typed (URL, API key, PAT). Blocking them would stop an unconsented user from validating settings before deciding |
 | 7 | Tranco metadata / list download | No | Public list metadata; no user data |
-| 8 | **Offline retry replay** (`src/background/offlineQueueProcessor.ts:119,140`) | **No — gap** | The `yasumaro-offline-network-retry` alarm replays queued records to AI/Obsidian; withdrawal does not purge the queue, so a job queued while consented is sent afterwards. Filed as PBI `2026-10-19-10` |
-| 9 | **Notification "save" re-run** (`src/background/service-worker.ts:194`) | **No — gap** | The privacy-confirm notification's save button calls `recordingPipeline.record(data)` directly, without `admit()`. Filed as PBI `2026-10-19-10` |
-| 10 | **Weekly / monthly review digest** (`src/background/reviewSummaryGenerator.ts:299`) | **No — gap** | Only `REVIEW_SUMMARY_ENABLED` is checked; the digest joins every row in the period and sends it to the AI service. Filed as PBI `2026-10-19-10` |
+| 8 | Offline retry replay (`src/background/offlineQueueProcessor.ts`) | **Yes — at execution time** | The `yasumaro-offline-network-retry` alarm re-reads consent before the cycle and skips the whole queue when it is withdrawn (a per-job skip would burn retries and starve consented jobs). Pinned by `src/background/__tests__/offlineQueueProcessor.test.ts` ("does not replay queued jobs after the user withdrew consent", "replays the same jobs once consent is granted again") |
+| 9 | Notification "save" re-run (`src/background/handlers/notificationHandlers.ts`) | **Yes — at click time** | A privacy-confirm notification outlives the consent it was raised under; the Save button re-reads consent and keeps the pending page so a re-consented user can retry. Pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts` ("does not record a pending page after consent was withdrawn") |
+| 10 | Weekly / monthly review digest (`src/background/reviewSummaryGenerator.ts`) | **Yes — at execution time** | The digest joins every row in the period, so consent is re-read after the `REVIEW_SUMMARY_ENABLED` check; nothing is sent and `REVIEW_SUMMARY_LAST_GENERATED_*` stays untouched, so a re-granted consent can still build the period. Pinned by `src/background/__tests__/reviewSummaryGenerator-extra.test.ts` ("does not send the digest to AI when consent was withdrawn") |
 | 11 | **Dashboard "append selected to Obsidian"** (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts:114`) | **No — gap** | Exports existing rows straight to the Obsidian REST API, outside `RecordingAdmission` and with no consent read in any dashboardSqlite handler. Filed as PBI `2026-10-19-11` |
 | 12 | `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
 
 `requireConsent()` used to exist as an unused "guard the caller" helper
 (`privacyConsent.ts`); it was removed on 2026-10-19 because nothing called it and
 its name implied a second seam that does not exist. The rows marked **gap** above
-are what that name was hiding: paths that never saw the gate at all.
+are what that name was hiding: paths that never saw the gate at all. Rows 8–10
+were closed on 2026-10-19 by PBI `2026-10-19-10` (execution-time re-check); row 11
+is still open. Several of these re-checks take an injected
+`isConsentGranted: () => Promise<boolean>` from the composition — do not import the
+consent module from the handler itself.
 
 ## Regular Audits
 

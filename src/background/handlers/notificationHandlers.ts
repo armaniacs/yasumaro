@@ -32,6 +32,13 @@ export function isValidNotificationUrl(url: string): boolean {
 
 export interface NotificationHandlersDeps {
   record: (data: RecordingData) => Promise<RecordingResult>;
+  /**
+   * Re-read consent at execution time (PBI 2026-10-19-10). The privacy-confirm
+   * notification outlives the consent it was raised under: if the user withdraws
+   * and then clicks Save, recording must not resume. Wired from the
+   * composition's consent seam, never read here directly.
+   */
+  isConsentGranted: () => Promise<boolean>;
 }
 
 export function createNotificationHandlers(deps: NotificationHandlersDeps) {
@@ -75,6 +82,20 @@ export function createNotificationHandlers(deps: NotificationHandlersDeps) {
 
             await inFlightByUrl.run(url, async () => {
                 if (buttonIndex === 0) {
+                    // PBI 2026-10-19-10: consent is re-read here. A withdrawn
+                    // profile must not record from a notification raised while
+                    // consented. The pending page is deliberately left in place
+                    // (same policy as a held recovery claim) so re-consenting
+                    // lets the user retry the same action.
+                    if (!(await deps.isConsentGranted())) {
+                        await logWarn(
+                            'Notification re-run skipped: privacy consent not granted',
+                            { url: url.substring(0, 10) + '...' },
+                            undefined,
+                            'service-worker',
+                        );
+                        return;
+                    }
                     const pages = await getPendingPages();
                     const page = pages.find(p => p.url === url);
                     if (page) {

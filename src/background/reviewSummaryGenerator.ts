@@ -38,6 +38,13 @@ export interface CreateReviewSummaryGeneratorOptions {
   sqliteClient: Pick<SqliteClient, 'query'>;
   /** 設定の読み書き先。テストでは InMemory repo を注入する。 */
   repo?: Pick<SettingsRepository, 'getMany' | 'getAll' | 'set'>;
+  /**
+   * Re-read consent at execution time (PBI 2026-10-19-10). The weekly/monthly
+   * digest joins every record in the period and sends it to the AI service, so a
+   * withdrawal that happened after REVIEW_SUMMARY_ENABLED was turned on must stop
+   * it. Wired from the composition's consent seam, never read here directly.
+   */
+  isConsentGranted: () => Promise<boolean>;
 }
 
 /**
@@ -259,6 +266,16 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
       const enabled = settings[StorageKeys.REVIEW_SUMMARY_ENABLED];
       if (!enabled) {
         addLog(LogType.INFO, `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review summary is disabled`);
+        return false;
+      }
+
+      // PBI 2026-10-19-10: re-read consent at execution time. The digest joins
+      // every record in the period, so a withdrawal must stop it even though
+      // the setting is still on. Returning here also leaves
+      // REVIEW_SUMMARY_LAST_GENERATED_* untouched, so a re-granted consent can
+      // still generate this period once.
+      if (!(await options.isConsentGranted())) {
+        addLog(LogType.INFO, `${periodNoun === 'weekly' ? 'Weekly' : 'Monthly'} review summary skipped: privacy consent not granted`);
         return false;
       }
 

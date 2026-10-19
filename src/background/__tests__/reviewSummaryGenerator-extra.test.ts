@@ -236,7 +236,7 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
 }
 
 /** AIService fake + fake SQLite queryを注入したgeneratorを組み立てる */
-function createHarness(repo?: GeneratorRepo) {
+function createHarness(repo?: GeneratorRepo, isConsentGranted: () => Promise<boolean> = () => Promise.resolve(true)) {
   const generateSummary = vi.fn<(content: string) => Promise<AISummaryResult>>();
   const aiService = {
     generateSummary,
@@ -248,7 +248,14 @@ function createHarness(repo?: GeneratorRepo) {
     queryMockFn,
     query: vi.fn().mockImplementation((op: any) => queryMockFn(op)),
   } as unknown as SqliteClient;
-  const generator = createReviewSummaryGenerator({ aiService, sqliteClient, ...(repo ? { repo } : {}) });
+  const generator = createReviewSummaryGenerator({
+    aiService,
+    sqliteClient,
+    // PBI 2026-10-19-10: the digest re-reads consent at execution time; the
+    // default exercises the consented path and a test can override it.
+    isConsentGranted,
+    ...(repo ? { repo } : {}),
+  });
   return { generateSummary, queryMock: queryMockFn, sqliteClient, generator };
 }
 
@@ -320,6 +327,29 @@ describe('generateWeeklySummary', () => {
       expect.stringContaining('週次振り返りダイジェスト')
     );
     expect(mockSet).toHaveBeenCalled();
+  });
+
+  // PBI 2026-10-19-10: the digest joins every record in the period and sends it
+  // to the AI service, so a withdrawal must stop it even with the setting on.
+  it('does not send the digest to AI when consent was withdrawn', async () => {
+    const { generator, generateSummary, queryMock } = createHarness(undefined, () => Promise.resolve(false));
+    mockGetAll.mockResolvedValue({
+      review_summary_enabled: true,
+      local_markdown_export_path: 'Yasumaro',
+    } as any);
+    queryMock.mockResolvedValueOnce(
+      mockRows([makeEntry({ summary: 'First page summary' }), makeEntry({ summary: 'Second page summary' })])
+    );
+
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
+
+    expect(result).toBe(false);
+    expect(generateSummary).not.toHaveBeenCalled();
+    // Nothing is marked as generated, so a re-granted consent can still build
+    // this period's digest.
+    expect(mockSet).not.toHaveBeenCalledWith(
+      expect.objectContaining({ review_summary_last_generated_week: expect.anything() }),
+    );
   });
 
   it('uses fallback digest when all entry summaries are null', async () => {

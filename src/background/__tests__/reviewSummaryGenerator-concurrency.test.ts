@@ -65,6 +65,8 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
             aiService: mockAiService,
             sqliteClient: mockSqliteClient,
             repo: mockRepo,
+            // PBI 2026-10-19-10: this suite pins the mutex, not the gate.
+            isConsentGranted: () => Promise.resolve(true),
         } as unknown as Parameters<typeof createReviewSummaryGenerator>[0]);
 
         // Fire two concurrent weekly summary requests for the same week
@@ -98,6 +100,8 @@ describe('VULN-002: TOCTOU race in review summary generation', () => {
             aiService: mockAiService,
             sqliteClient: mockSqliteClient,
             repo: mockRepo,
+            // PBI 2026-10-19-10: this suite pins the mutex, not the gate.
+            isConsentGranted: () => Promise.resolve(true),
         } as unknown as Parameters<typeof createReviewSummaryGenerator>[0]);
 
         const targetDate = new Date('2026-07-15');
