@@ -203,6 +203,28 @@ grep -rn "fetchWithTimeout(\|fetchWithRetry(" src/ | grep -v __tests__
 
 **1 回目のフル実行が失敗した原因（記録）**: 最初の `npm run validate` は 8 エラー・6 失敗（`storagePort` の新テスト群）を出した。これは**同じ作業ツリーで、実行中にブランチを切り替えて rebase したため**、vitest が「PBI 01 のテスト」と「マージ前の `storagePort.ts`」を混ぜて読んだのが原因だった（作業ツリーを動かさずに録り直すと 16418/16418 で exit 0）。負荷（load average 27 / 8 コア）でフル実行が 39 分かかったことは事実だが、**失敗の原因は負荷ではなく作業ツリーの移動**である。教訓: テスト実行中は作業ツリーを触らない（ブランチ操作は実行前後に分ける）。
 
+### 独立レビューの反映（2026-10-19）
+
+レビューの verdict は「`requireConsent()` の削除は挙動中立で正しい。**ただし置き換えた inventory は事実として誤り**」。最初に書いた「`RecordingAdmission` がすべての記録経路の手前で同意を見る」という主張は成立せず、**同意ゲートを通らない経路が 4 件**見つかった。誤った保証を文書に残すのは、削除した未使用関数より悪いので、すべて反映した。
+
+**修正した指摘（文書・コメント）**:
+
+- **MEDIUM**: 表の中心的主張と列挙が誤り。`REGENERATE_SUMMARY` は直接ゲートされる記録経路（`recordingHandlers.ts:360`）でありながら「AI 要約（継承）」に隠れていた。→ 表を 12 行に作り直し、正規表現を明示し、**「受付時の同意はその後の実行を許可しない」原則**を独立したルールとして追加（アラーム・キュー・通知は実行時に読み直す）。
+- **LOW**: 新しいテストのコメントが「同意を別の呼び出し口から読むと落ちる」と過大な主張をしていた。→ pin の範囲（composition の配線を `valid-visit` 経路で固定する）に限定し、per-kind は `recordingAdmission.test.ts` にあることを明記。
+- **LOW**: ブログ `dev-docs/blogs/blog-4_2/privacy-consent.md` が現在形で `requireConsent()` の使用を促し、削除した実装をそのまま載せていた。→ 当時の設計案であることと削除の事実を追記し、現在のゲートとガイドを参照させた。
+- **LOW**: `hasPrivacyConsent()` の「読み出し口は 1 つだけ」が誤り（バッジ・ポップアップの表示も読む）。→ 「**ゲートとしての**読み出し口は 1 つ。バッジ・ポップアップは表示であってゲートではない」に訂正し、実行時再確認の原則を doc にも書いた。
+
+**起票した指摘（コードの修正が必要なため別 PBI）**:
+
+| # | 指摘 | 深刻度 | 起票先 |
+|---|---|---|---|
+| 1 | `offlineQueueProcessor.ts:119,140` — オフライン再送アラームが、同意撤回後もキューに残った記録を AI / Obsidian へ送る（撤回はキューを消さない。TTL 7 日、アラームは約 5 分ごと） | HIGH | PBI 2026-10-19-10 |
+| 2 | `service-worker.ts:194` — プライバシー確認通知の「保存」ボタンが `admit()` を通さず `recordingPipeline.record` を呼ぶ（撤回後のクリックで再記録される） | HIGH | PBI 2026-10-19-10 |
+| 3 | `reviewSummaryGenerator.ts:299` — 週次/月次レビュー要約が `REVIEW_SUMMARY_ENABLED` しか見ず、期間内の全記録を AI へ送る | HIGH | PBI 2026-10-19-10 |
+| 4 | `handlers/dashboardSqlite/coreCrudHandler.ts:114` — ダッシュボードの「Obsidian へ追記」が `RecordingAdmission` の外で既存行を Obsidian へ送る（dashboardSqlite に同意コードが 1 つも無い） | HIGH | PBI 2026-10-19-11 |
+
+**教訓（記録）**: 「ゲートは 1 箇所」という主張は、**受付（admit）と実行（execute）を混同すると嘘になる**。同意は状態であり、受付時の真偽はその後も真であり続けない（撤回できる）。一覧を書くときは「いつ読むか」を列として持つ必要がある。
+
 ### inventory 中に見つけた別件（本 PBI のスコープ外・未起票）
 
 **設定のエクスポート/インポートが同意レコードを運ぶ。** `sanitizeSettingsForExport`（`src/utils/settingsExportImport.ts:89-97`）は `CONFIRMED_PROVIDER_ORIGINS` と API キーフィールドしか剥がさず、`exportSettings` / `exportEncryptedSettings` は `settingsRepository.getAll()` から payload を作る（`:236` / `:463`）。`privacy_consent` は settings ブロブに畳まれている（PBI [2026-10-19-03](../../../pbi/2026-10-19-03-fix-consent-keys-settings-blob-relocation.md) の症状）か、scattered merge 経由で top-level から読まれるため、**どちらの状態でも同意レコードが書き出され、インポート先で同意が付与/撤回される**。同意はデバイス・データ主体ごとの行為なので、エクスポート時の除外とインポート時の扱い（再同意を求める）を決める必要がある。後続 PBI 候補。

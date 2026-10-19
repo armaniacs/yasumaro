@@ -177,11 +177,12 @@ describe('production composition contract', () => {
     expect(mocks.hasPrivacyConsent).not.toHaveBeenCalled();
   });
 
-  // The consent gate has exactly one seam: composition wires
+  // The consent gate's admission seam: composition wires
   // `isRecordingAllowed: () => hasPrivacyConsent()` and RecordingAdmission calls
-  // it before every record path. This pins the wiring itself, so cutting it (or
-  // reading consent from a second call site) fails here rather than silently
-  // letting records through. Inventory: dev-docs/SECURITY_REVIEW_GUIDE.md
+  // it for every record kind. This pins that wiring for the valid-visit branch,
+  // so cutting it fails here instead of silently letting records through
+  // (per-kind coverage lives in recordingAdmission.test.ts).
+  // Inventory of what else needs the gate: dev-docs/SECURITY_REVIEW_GUIDE.md
   // "Privacy-consent gating".
   it('wires the consent seam so an unconsented profile is refused at admission', async () => {
     mocks.hasPrivacyConsent.mockResolvedValue(false);

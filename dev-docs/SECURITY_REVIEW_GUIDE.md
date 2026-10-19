@@ -131,30 +131,46 @@ that is a design question, not a guard change.
 
 ### Privacy-consent gating: what must ask, and what must not
 
-`hasPrivacyConsent()` is the single source of truth, and it is consumed through
-exactly one seam: `createBackgroundServices()` wires
+`hasPrivacyConsent()` is the single source of truth. It has exactly one **gate**
+read point: `createBackgroundServices()` wires
 `isRecordingAllowed: () => hasPrivacyConsent()`
-(`src/background/compositionManifest.ts`, `src/background/service-worker.ts`), and
-`RecordingAdmission` calls that gate before every record path
+(`src/background/compositionManifest.ts:41`, `src/background/service-worker.ts:177`),
+and `RecordingAdmission` calls that gate before admitting a record
 (`src/background/recordingAdmission.ts` → `reason: 'privacy_consent_required'`).
-Reading the consent module from a new call site is a review red flag: add the
-operation to the table below instead.
+Other production readers are **not gates** and are fine to add:
+the global consent badge (`src/background/consentBadge.ts:22`) and the popup's
+own consent state (`src/entrypoints/popup/popup.ts:18`).
 
-| Operation | Gated? | Why |
-|---|---|---|
-| Automatic recording (`VALID_VISIT`) | Yes | Writes browsing history; `RecordingAdmission` rejects it |
-| Manual record / preview / save (`MANUAL_RECORD`, `PREVIEW_RECORD`, `SAVE_RECORD`) | Yes | Same admission pre-stage (`src/background/handlers/recordingHandlers.ts`) |
-| AI summarization of a record | Inherited | Runs only downstream of an admitted record |
-| Obsidian export of a record | Inherited | Export is a step inside the recording pipeline |
-| AI / Obsidian / Gist connection tests | No | Send only the configuration the user just typed (URL, API key, PAT). No browsing data — and blocking them would stop an unconsented user from validating settings before deciding |
-| Tranco metadata / list download | No | Public list metadata; no user data |
-| `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
+Two rules for a new outbound path:
 
-Rule for a new outbound path: if it can carry a recorded row, a page body, or a
-derived summary, it needs the gate; if it carries only configuration the user
-typed, it does not. `requireConsent()` used to exist as an unused "guard the
-caller" helper (`privacyConsent.ts`); it was removed on 2026-10-19 because
-nothing called it and its name implied a second seam that does not exist.
+1. **Is it allowed to run at all without consent?** If it can carry a recorded
+   row, a page body, or a derived summary, it needs the gate; if it carries only
+   configuration the user just typed, it does not.
+2. **When is the gate read?** Admission-time consent does **not** license later
+   execution. Anything that runs on a timer, an alarm, a queue, or a user
+   interaction *after* the record was admitted must re-read consent at that
+   moment, because consent can be withdrawn in between (withdrawal does not purge
+   queues). This is the failure mode behind rows 8–10 below.
+
+| # | Operation | Gated? | Why / where |
+|---|---|---|---|
+| 1 | Automatic recording (`VALID_VISIT`) | Yes | Writes browsing history; `RecordingAdmission` rejects it (`recordingAdmission.ts:78-80`) |
+| 2 | Manual record / preview / save (`MANUAL_RECORD`, `PREVIEW_RECORD`, `SAVE_RECORD`) | Yes | Same admission pre-stage (`src/background/handlers/recordingHandlers.ts`) |
+| 3 | Regenerate summary (`REGENERATE_SUMMARY`) | Yes | Its own `admit('regenerate')` call (`recordingHandlers.ts:360`) |
+| 4 | AI summarization inside the recording pipeline | Inherited **at record time** | Runs downstream of an admitted record |
+| 5 | Obsidian export inside the recording pipeline | Inherited **at record time** | Export is a step of the pipeline |
+| 6 | AI / Obsidian / Gist connection tests | No | Send only the configuration the user typed (URL, API key, PAT). Blocking them would stop an unconsented user from validating settings before deciding |
+| 7 | Tranco metadata / list download | No | Public list metadata; no user data |
+| 8 | **Offline retry replay** (`src/background/offlineQueueProcessor.ts:119,140`) | **No — gap** | The `yasumaro-offline-network-retry` alarm replays queued records to AI/Obsidian; withdrawal does not purge the queue, so a job queued while consented is sent afterwards. Filed as PBI `2026-10-19-10` |
+| 9 | **Notification "save" re-run** (`src/background/service-worker.ts:194`) | **No — gap** | The privacy-confirm notification's save button calls `recordingPipeline.record(data)` directly, without `admit()`. Filed as PBI `2026-10-19-10` |
+| 10 | **Weekly / monthly review digest** (`src/background/reviewSummaryGenerator.ts:299`) | **No — gap** | Only `REVIEW_SUMMARY_ENABLED` is checked; the digest joins every row in the period and sends it to the AI service. Filed as PBI `2026-10-19-10` |
+| 11 | **Dashboard "append selected to Obsidian"** (`src/background/handlers/dashboardSqlite/coreCrudHandler.ts:114`) | **No — gap** | Exports existing rows straight to the Obsidian REST API, outside `RecordingAdmission` and with no consent read in any dashboardSqlite handler. Filed as PBI `2026-10-19-11` |
+| 12 | `GistSyncTarget.sync` / `syncBatch` | **Not wired yet** | These send recorded rows, so they need the gate **when they get a production caller**. As of 2026-10-19 the only production use of `GistSyncTarget` is the dashboard connection test (`src/dashboard/gistSettings.ts:48`) |
+
+`requireConsent()` used to exist as an unused "guard the caller" helper
+(`privacyConsent.ts`); it was removed on 2026-10-19 because nothing called it and
+its name implied a second seam that does not exist. The rows marked **gap** above
+are what that name was hiding: paths that never saw the gate at all.
 
 ## Regular Audits
 
