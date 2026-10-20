@@ -63,25 +63,36 @@ const threeRecords: BrowsingLogRecord[] = [
 ];
 
 function makeDeps(overrides: Partial<MigrationDeps> = {}): { deps: MigrationDeps; mocks: Record<string, ReturnType<typeof vi.fn>> } {
+  // Entity-verification stub: models the NEW db row count. Starts EMPTY and
+  // the insertBatch wrapper below adds each self-reported count, so a test
+  // that claims N inserts sees the row delta grow by N and passes the
+  // delta gate (after - before >= count). Tests that need a different shape
+  // (pre-existing unrelated rows, over-report with nothing persisted)
+  // override countNewDbRecords directly.
+  let newDbRows = 0;
+  const baseInsertBatch = (overrides.insertBatch ??
+    vi.fn().mockResolvedValue({ count: 0 })) as ReturnType<typeof vi.fn>;
+  const insertBatch: MigrationDeps['insertBatch'] = async (records) => {
+    const result = await baseInsertBatch(records);
+    newDbRows += result.count;
+    return result;
+  };
   const mocks = {
     isMigrationDone: vi.fn().mockResolvedValue(false),
     setMigrationDone: vi.fn().mockResolvedValue(undefined),
     readOldRecords: vi.fn().mockResolvedValue([]),
-    insertBatch: vi.fn().mockResolvedValue({ count: 0 }),
-    // Entity-verification stub: the fixture models a NEW db that holds exactly
-    // the sample records, so tests that claim a full insert pass the gate.
-    countNewDbRecords: vi.fn().mockResolvedValue(sampleRecords.length),
+    insertBatch: baseInsertBatch,
+    countNewDbRecords: vi.fn(async () => newDbRows),
     deleteOldDb: vi.fn().mockResolvedValue(undefined),
   };
 
   const deps: MigrationDeps = {
-    isMigrationDone: mocks.isMigrationDone,
-    setMigrationDone: mocks.setMigrationDone,
-    readOldRecords: mocks.readOldRecords,
-    insertBatch: mocks.insertBatch,
-    countNewDbRecords: mocks.countNewDbRecords,
-    deleteOldDb: mocks.deleteOldDb,
-    ...overrides,
+    isMigrationDone: overrides.isMigrationDone ?? mocks.isMigrationDone,
+    setMigrationDone: overrides.setMigrationDone ?? mocks.setMigrationDone,
+    readOldRecords: overrides.readOldRecords ?? mocks.readOldRecords,
+    insertBatch,
+    countNewDbRecords: overrides.countNewDbRecords ?? mocks.countNewDbRecords,
+    deleteOldDb: overrides.deleteOldDb ?? mocks.deleteOldDb,
   };
 
   return { deps, mocks };
@@ -206,7 +217,7 @@ describe('migrateOldOpfsDb', () => {
 
     expect(mocks.deleteOldDb).not.toHaveBeenCalled();
     expect(mocks.setMigrationDone).not.toHaveBeenCalled();
-    expect(countNewDbRecords).toHaveBeenCalledOnce();
+    expect(countNewDbRecords).toHaveBeenCalledTimes(2);
     expect(result.migrated).toBe(0);
     expect(result.error).toBeDefined();
     expect(result.error).toContain('old rows=3');
@@ -220,7 +231,6 @@ describe('migrateOldOpfsDb', () => {
     const { deps, mocks } = makeDeps({
       readOldRecords: vi.fn().mockResolvedValue(threeRecords),
       insertBatch: vi.fn().mockResolvedValue({ count: 1, inserted: 1, skipped: 2 }),
-      countNewDbRecords: vi.fn().mockResolvedValue(3),
     });
 
     const result = await migrateOldOpfsDb(deps);
@@ -248,5 +258,26 @@ describe('migrateOldOpfsDb', () => {
     expect(result.migrated).toBe(0);
     expect(result.error).toBeDefined();
     expect(result.error).toContain('new db rows=0');
+  });
+
+  // A previous failed attempt lets the worker start recording while the old db
+  // is preserved, so the NEW db can hold UNRELATED rows. An absolute count
+  // would be satisfied by those rows even when the insert over-reports after a
+  // ROLLBACK (count=3, nothing persisted) — only the delta over the
+  // pre-insert baseline must cover the claim.
+  it('keeps the old db when unrelated rows already exist and the insert over-reports after a rollback', async () => {
+    const { deps, mocks } = makeDeps({
+      readOldRecords: vi.fn().mockResolvedValue(threeRecords),
+      insertBatch: vi.fn().mockResolvedValue({ count: 3, inserted: 3, skipped: 0 }),
+      countNewDbRecords: vi.fn().mockResolvedValueOnce(5).mockResolvedValueOnce(5),
+    });
+
+    const result = await migrateOldOpfsDb(deps);
+
+    expect(mocks.deleteOldDb).not.toHaveBeenCalled();
+    expect(mocks.setMigrationDone).not.toHaveBeenCalled();
+    expect(result.migrated).toBe(0);
+    expect(result.error).toBeDefined();
+    expect(result.error).toContain('new db rows=5->5');
   });
 });

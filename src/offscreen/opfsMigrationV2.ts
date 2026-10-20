@@ -59,7 +59,9 @@ export interface MigrationResult {
  * Completion — and with it discarding the safety net (deleteOldDb +
  * setMigrationDone) — requires verification: every row read from the old db
  * must be accounted for (inserted-claimed or duplicate-skipped) AND the NEW
- * db must hold at least the claimed inserts. On failure or mismatch the done
+ * db row delta over the pre-insert baseline must hold at least the claimed
+ * inserts (an unrelated row left by an earlier failed attempt must not
+ * satisfy the claim). On failure or mismatch the done
  * flag is NOT set so the migration retries on next init, and the old db is
  * preserved (the data it holds is the last restore opportunity).
  */
@@ -76,6 +78,11 @@ export async function migrateOldOpfsDb(deps: MigrationDeps): Promise<MigrationRe
       return { migrated: 0, skipped: false };
     }
 
+    // Baseline BEFORE any insert: the NEW db may already hold unrelated rows
+    // (a previous failed migration attempt lets the worker start recording
+    // while the old db is preserved), so only the delta counts toward the
+    // claim.
+    const beforeCount = await deps.countNewDbRecords();
     const { count, skipped = 0 } = await deps.insertBatch(records);
 
     // Verify before discarding the safety net (same discipline as
@@ -85,16 +92,17 @@ export async function migrateOldOpfsDb(deps: MigrationDeps): Promise<MigrationRe
     //   count + skipped < records.length means rows were neither inserted
     //   nor duplicate-skipped;
     // - the inserted counter survives a ROLLBACK, so count can be
-    //   over-reported while nothing persisted — the NEW db row count must
-    //   cover the claim.
+    //   over-reported while nothing persisted — the NEW db row delta over the
+    //   pre-insert baseline must cover the claim (an absolute count would be
+    //   satisfied by unrelated rows a previous attempt left behind).
     // On either mismatch the old db is KEPT and the done flag is NOT set, so
     // the migration retries on the next init.
-    const newDbCount = await deps.countNewDbRecords();
-    if (count + skipped !== records.length || newDbCount < count) {
+    const afterCount = await deps.countNewDbRecords();
+    if (count + skipped !== records.length || afterCount - beforeCount < count) {
       return {
         migrated: 0,
         skipped: false,
-        error: `V2 migration incomplete: old rows=${records.length}, reported inserted=${count} skipped=${skipped}, new db rows=${newDbCount}`,
+        error: `V2 migration incomplete: old rows=${records.length}, reported inserted=${count} skipped=${skipped}, new db rows=${beforeCount}->${afterCount}`,
       };
     }
 
