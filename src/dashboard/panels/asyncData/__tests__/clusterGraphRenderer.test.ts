@@ -11,7 +11,6 @@ import {
   MAX_NODES,
   limitClusterNodes,
   renderClusterGraph,
-  showRowCapNotice,
 } from '../clusterGraphRenderer.js';
 import { SVG_NS } from '../../../../utils/svgNamespace.js';
 import { PanelNotices } from '../../PanelNotices.js';
@@ -206,29 +205,6 @@ describe('clusterGraphRenderer', () => {
       expect(limited.nodes).toHaveLength(NODES.length);
       expect(limited.edges).toHaveLength(EDGES.length);
       expect(element.hidden).toBe(true);
-    });
-  });
-
-  describe('showRowCapNotice', () => {
-    it('publishes the capped fetch with its substitutions in the panel notice', () => {
-      const element = document.createElement('div');
-      element.hidden = true;
-      document.body.appendChild(element);
-      const notices = new PanelNotices();
-      notices.register('rowCap', element);
-
-      showRowCapNotice({
-        notices,
-        messageKey: 'wordClusterRowCapNotice',
-        fallback: 'unused',
-        shown: 10_000,
-        total: 12_345,
-        limit: 10_000,
-      });
-
-      expect(element.hidden).toBe(false);
-      expect(element.textContent).toContain('12345');
-      expect(element.textContent).toContain('10000');
     });
   });
 });

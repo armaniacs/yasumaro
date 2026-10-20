@@ -37,6 +37,7 @@ import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import { showRowCapNotice } from '../rowCapNotice.js';
 import {
   aggregateDomainAnalysis,
   UNKNOWN_DOMAIN_LABEL,
@@ -177,13 +178,14 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
           );
           notices.show('unknown');
         }
-        if (capped && rowCapNotice) {
-          rowCapNotice.textContent = msg(
-            'domainAnalysis_rowCap',
-            { max: MAX_DOMAIN_ANALYSIS_ROWS },
-            'Reached the {max}-record analysis limit — showing a partial aggregation.',
-          );
-          notices.show('rowCap');
+        if (capped) {
+          showRowCapNotice({
+            notices,
+            messageKey: 'domainAnalysis_rowCap',
+            fallback: 'Reached the {max}-record analysis limit — showing a partial aggregation.',
+            shown: rows.length,
+            limit: MAX_DOMAIN_ANALYSIS_ROWS,
+          });
         }
         if (agg.domainsTruncated && domainTruncated) {
           domainTruncated.textContent = msg(

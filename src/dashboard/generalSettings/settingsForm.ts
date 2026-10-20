@@ -17,34 +17,38 @@ import { getPluralKey } from '../../utils/i18nPlural.js';
 import { getAiProviderElements, updateAIProviderVisibilityMulti } from '../settings/aiProvider.js';
 import { providerIdsInOrder } from '../aiProviderCatalogView.js';
 import { updateProviderSettingsLayout } from '../aiProviderLayoutManager.js';
-import { purgeOldRecordsNow, purgeContentNow } from '../dashboardSqliteService.js';
+import { purgeOldRecordsNow, purgeContentNow, type ServiceResult } from '../dashboardSqliteService.js';
 import { runPanelAction, unwrapServiceResult } from '../panels/panelAction.js';
 
 const SETTINGS_FORM_SELECTOR = '#panel-general';
 
 /**
- * 優先度1〜3位のセレクト・モデル入力欄からProviderSlot[]を組み立てる
+ * Priority slot element ids (1-3): the select + model input pair per slot.
+ * One definition so the three identical slots cannot drift on an id rename
+ * (PBI 2026-10-20-17).
+ */
+const PRIORITY_SLOT_INPUTS: ReadonlyArray<{ readonly selectId: string; readonly modelId: string }> = [
+  { selectId: 'aiProvider', modelId: 'aiProviderPriority1Model' },
+  { selectId: 'aiProviderPriority2', modelId: 'aiProviderPriority2Model' },
+  { selectId: 'aiProviderPriority3', modelId: 'aiProviderPriority3Model' },
+];
+
+/**
+ * Assemble ProviderSlot[] from the priority 1-3 selects and model inputs.
+ * One loop over PRIORITY_SLOT_INPUTS replaces the three identical
+ * per-slot blocks; the order and the with/without-model push shape are
+ * unchanged.
  */
 export function collectProviderPrioritySlots(): ProviderSlot[] {
-  const aiProviderSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
-  const aiProviderPriority1ModelInput = document.getElementById('aiProviderPriority1Model') as HTMLInputElement | null;
-  const aiProviderPriority2Select = document.getElementById('aiProviderPriority2') as HTMLSelectElement | null;
-  const aiProviderPriority2ModelInput = document.getElementById('aiProviderPriority2Model') as HTMLInputElement | null;
-  const aiProviderPriority3Select = document.getElementById('aiProviderPriority3') as HTMLSelectElement | null;
-  const aiProviderPriority3ModelInput = document.getElementById('aiProviderPriority3Model') as HTMLInputElement | null;
   const slots: ProviderSlot[] = [];
 
-  if (aiProviderSelect?.value) {
-    const model = aiProviderPriority1ModelInput?.value.trim();
-    slots.push(model ? { provider: aiProviderSelect.value, model } : { provider: aiProviderSelect.value });
-  }
-  if (aiProviderPriority2Select?.value) {
-    const model = aiProviderPriority2ModelInput?.value.trim();
-    slots.push(model ? { provider: aiProviderPriority2Select.value, model } : { provider: aiProviderPriority2Select.value });
-  }
-  if (aiProviderPriority3Select?.value) {
-    const model = aiProviderPriority3ModelInput?.value.trim();
-    slots.push(model ? { provider: aiProviderPriority3Select.value, model } : { provider: aiProviderPriority3Select.value });
+  for (const { selectId, modelId } of PRIORITY_SLOT_INPUTS) {
+    const select = document.getElementById(selectId) as HTMLSelectElement | null;
+    const modelInput = document.getElementById(modelId) as HTMLInputElement | null;
+    if (select?.value) {
+      const model = modelInput?.value.trim();
+      slots.push(model ? { provider: select.value, model } : { provider: select.value });
+    }
   }
 
   return slots;
@@ -218,22 +222,46 @@ export function setupRetentionUnlimitedWarning(): void {
   updateRetentionUnlimitedWarning();
 }
 
-export async function handlePurgeNow(): Promise<void> {
-  const purgeNowBtn = document.getElementById('purgeNowBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('purgeNowStatus');
-  if (!purgeNowBtn || !statusEl) return;
+/**
+ * One purge scaffold behind both manual purge buttons: the button/status
+ * ids, the service call, and the three localized status wordings are the
+ * per-action differences; the runPanelAction skeleton and the result
+ * branches (skipped / plural success / failure-with-reason) are shared, so
+ * a policy change to one purge status cannot drift from the other
+ * (PBI 2026-10-20-17).
+ */
+interface PurgeActionSpec {
+  readonly buttonId: string;
+  readonly statusId: string;
+  readonly run: () => Promise<ServiceResult<{ purged: number; skipped: boolean }>>;
+  readonly skippedKey: string;
+  readonly skippedFallback: string;
+  readonly successKey: string;
+  readonly successFallback: (purged: number) => string;
+  readonly failedKey: string;
+  readonly failedFallback: string;
+}
+
+async function runPurgeAction(spec: PurgeActionSpec): Promise<void> {
+  const button = document.getElementById(spec.buttonId) as HTMLButtonElement | null;
+  const statusEl = document.getElementById(spec.statusId);
+  if (!button || !statusEl) return;
 
   await runPanelAction({
-    buttons: [purgeNowBtn],
+    buttons: [button],
     onStart: () => {
       statusEl.textContent = '';
     },
-    run: async () => unwrapServiceResult(await purgeOldRecordsNow()),
+    run: async () => unwrapServiceResult(await spec.run()),
     onSuccess: (data) => {
       if (data.skipped) {
-        statusEl.textContent = getMessageOr('purgeNowSkipped', '保持ポリシーが未設定のため、削除をスキップしました');
+        statusEl.textContent = getMessageOr(spec.skippedKey, spec.skippedFallback);
       } else {
-        statusEl.textContent = getMessageOr(getPluralKey('purgeNowSuccess', data.purged), `${data.purged} 件を削除しました`, [String(data.purged)]);
+        statusEl.textContent = getMessageOr(
+          getPluralKey(spec.successKey, data.purged),
+          spec.successFallback(data.purged),
+          [String(data.purged)],
+        );
       }
     },
     // A rejected gateway call never reaches the ServiceResult branches above, so
@@ -241,35 +269,37 @@ export async function handlePurgeNow(): Promise<void> {
     // The technical reason is preserved after a localized prefix so a missing
     // translation never swallows the failure silently.
     onError: (message) => {
-      const prefix = getMessageOr('purgeNowFailed', 'Purge failed');
+      const prefix = getMessageOr(spec.failedKey, spec.failedFallback);
       const detail = (message || '').trim();
       statusEl.textContent = detail ? `${prefix}: ${detail}` : prefix;
     },
   });
 }
 
-export async function handleContentPurgeNow(): Promise<void> {
-  const contentPurgeNowBtn = document.getElementById('contentPurgeNowBtn') as HTMLButtonElement | null;
-  const statusEl = document.getElementById('contentPurgeNowStatus');
-  if (!contentPurgeNowBtn || !statusEl) return;
+export function handlePurgeNow(): Promise<void> {
+  return runPurgeAction({
+    buttonId: 'purgeNowBtn',
+    statusId: 'purgeNowStatus',
+    run: purgeOldRecordsNow,
+    skippedKey: 'purgeNowSkipped',
+    skippedFallback: '保持ポリシーが未設定のため、削除をスキップしました',
+    successKey: 'purgeNowSuccess',
+    successFallback: (purged) => `${purged} 件を削除しました`,
+    failedKey: 'purgeNowFailed',
+    failedFallback: 'Purge failed',
+  });
+}
 
-  await runPanelAction({
-    buttons: [contentPurgeNowBtn],
-    onStart: () => {
-      statusEl.textContent = '';
-    },
-    run: async () => unwrapServiceResult(await purgeContentNow()),
-    onSuccess: (data) => {
-      if (data.skipped) {
-        statusEl.textContent = getMessageOr('contentPurgeNowSkipped', 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました');
-      } else {
-        statusEl.textContent = getMessageOr(getPluralKey('contentPurgeNowSuccess', data.purged), `${data.purged} 件の content を削除しました`, [String(data.purged)]);
-      }
-    },
-    onError: (message) => {
-      const prefix = getMessageOr('contentPurgeNowFailed', 'Content purge failed');
-      const detail = (message || '').trim();
-      statusEl.textContent = detail ? `${prefix}: ${detail}` : prefix;
-    },
+export function handleContentPurgeNow(): Promise<void> {
+  return runPurgeAction({
+    buttonId: 'contentPurgeNowBtn',
+    statusId: 'contentPurgeNowStatus',
+    run: purgeContentNow,
+    skippedKey: 'contentPurgeNowSkipped',
+    skippedFallback: 'コンテンツ保持ポリシーが未設定のため、削除をスキップしました',
+    successKey: 'contentPurgeNowSuccess',
+    successFallback: (purged) => `${purged} 件の content を削除しました`,
+    failedKey: 'contentPurgeNowFailed',
+    failedFallback: 'Content purge failed',
   });
 }

@@ -18,6 +18,7 @@
  */
 
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import { showRowCapNotice } from '../rowCapNotice.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
@@ -514,15 +515,14 @@ export function createResearchSessionsPanel(): PanelLifecycle {
         lastRows = res.rows;
 
         if (res.capped) {
-          notices.setMessage(
-            'rowCap',
-            msg(
-              'researchSessions_rowCap',
-              { shown: res.rows.length },
-              'Grouped only the newest {shown} records. Shorten the period to include all records.',
-            ),
-          );
-          notices.show('rowCap');
+          showRowCapNotice({
+            notices,
+            messageKey: 'researchSessions_rowCap',
+            fallback: 'Grouped only the newest {shown} records. Shorten the period to include all records.',
+            shown: res.rows.length,
+            total: res.total,
+            limit: MAX_RESEARCH_SESSION_ROWS,
+          });
         }
 
         if (res.rows.length === 0) {

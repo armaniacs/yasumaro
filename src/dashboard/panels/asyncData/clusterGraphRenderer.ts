@@ -23,7 +23,6 @@ import { TagClusterPanZoomController, type PanZoomButtons } from '../../tagClust
 import { tagHue } from '../../tagClusterColor.js';
 import { makeGraphNodeAccessible } from '../../graphNodeA11y.js';
 import { navigateToHistoryWithTag } from '../navigateToHistory.js';
-import { getMessageWithSubstitutions } from '../../../utils/i18n.js';
 import { SVG_NS } from '../../../utils/svgNamespace.js';
 import type { PanelNotices } from '../PanelNotices.js';
 
@@ -181,38 +180,4 @@ export function renderClusterGraph(
   panZoom = new TagClusterPanZoomController(svg, canvasSize, options.buttons);
   panZoom.attach();
   return panZoom;
-}
-
-export interface RowCapNoticeOptions {
-  /** Notice scope owning the panel's registered `rowCap` element. */
-  notices: PanelNotices;
-  messageKey: string;
-  /** Panel-specific tail wording, used when the key has no translation. */
-  fallback: string;
-  /** Rows this fetch actually returned. */
-  shown: number;
-  /** Rows the period holds in total. */
-  total: number;
-  /** The fetch limit that was hit. */
-  limit: number;
-}
-
-/**
- * Publishes the fetch-cap notice for a cluster panel.
- *
- * WHY shared: queryLogs caps every fetch, so a period holding more rows than
- * the cap analyzes a prefix, and both capped cluster panels had to say so
- * with the same substitutions. Only the key and the fallback tail differ
- * (the compare panel adds "in this half"), so those stay with the panel.
- */
-export function showRowCapNotice(options: RowCapNoticeOptions): void {
-  options.notices.setMessage(
-    'rowCap',
-    getMessageWithSubstitutions(
-      options.messageKey,
-      { max: options.limit, shown: options.shown, total: options.total },
-      options.fallback,
-    ),
-  );
-  options.notices.show('rowCap');
 }

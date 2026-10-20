@@ -25,6 +25,7 @@ import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import { showRowCapNotice } from '../rowCapNotice.js';
 import {
   computeTagFrequencyTimeline,
   formatBucketDate,
@@ -395,13 +396,18 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
           return;
         }
 
-        if (fetched.capped && capNotice) {
-          capNotice.textContent = msg(
-            'dashboardTagTimelineCapNote',
-            { max: MAX_TAG_TIMELINE_ROWS },
-            'Reached the {max}-record query limit — showing a partial aggregation.',
-          );
-          notices.show('cap');
+        if (fetched.capped) {
+          // WHY: the timeline previously showed this notice under the 'cap'
+          // scope key while every other panel used 'rowCap' — the drift the
+          // shared publisher now makes impossible (PBI 2026-10-20-17).
+          showRowCapNotice({
+            notices,
+            messageKey: 'dashboardTagTimelineCapNote',
+            fallback: 'Reached the {max}-record query limit — showing a partial aggregation.',
+            shown: rows.length,
+            total: fetched.total,
+            limit: MAX_TAG_TIMELINE_ROWS,
+          });
         }
 
         const timeline = computeTagFrequencyTimeline(rows, {
@@ -438,7 +444,7 @@ export function createTagFrequencyTimelinePanel(): PanelLifecycle {
         i18nKey: 'dashboardTagTimelineEmpty',
         fallbackText: 'No tagged records in this period.',
       });
-      notices.register('cap', capNotice, { fetchScoped: true });
+      notices.register('rowCap', capNotice, { fetchScoped: true });
       setGranularityButtons();
 
       lifecycle.mount(container);

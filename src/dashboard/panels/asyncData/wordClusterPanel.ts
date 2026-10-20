@@ -37,8 +37,8 @@ import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import {
   limitClusterNodes,
   renderClusterGraph,
-  showRowCapNotice,
 } from './clusterGraphRenderer.js';
+import { showRowCapNotice } from '../rowCapNotice.js';
 import { type PanelLifecycle } from '../types.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';

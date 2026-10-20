@@ -18,6 +18,7 @@ import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { type PanelLifecycle } from '../types.js';
 import { diagnosticsCollector } from './DiagnosticsCollector.js';
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
+import { isOpfsWorkerStatus } from './opfsWorkerStatus.js';
 import { getDebugMode, setDebugMode } from './debugModeStore.js';
 import { createDiagnosticActions, type DiagnosticActionElements } from './diagnosticsActions.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
@@ -310,7 +311,7 @@ function getCurrentEngineLabel(snap: DiagnosticsSnapshot): string {
   const st = snap.sqlite;
   if (!st) return getMessageOr('diagMigrationEngineUnknown', 'Unknown');
   if (st.fallback) return `${getMessageOr('diagMigrationEngineFallback', 'Fallback (chrome.storage)')} — ${FALLBACK_STORAGE_NAME}`;
-  const isOpfs = st.compileOptionsSource === 'opfs-worker' || st.path.startsWith('OPFS:');
+  const isOpfs = isOpfsWorkerStatus(st);
   if (isOpfs) return `${getMessageOr('diagMigrationEngineOpfs', 'OPFS')} (${getMessageOr('diagMigrationRecommended', 'recommended')}) — ${OPFS_DB_FILE}`;
   if (st.compileOptionsSource === 'idb') return `${getMessageOr('diagMigrationEngineIdb', 'IndexedDB')} — ${IDB_DB_NAME}`;
   return getMessageOr('diagMigrationEngineUnknown', 'Unknown');

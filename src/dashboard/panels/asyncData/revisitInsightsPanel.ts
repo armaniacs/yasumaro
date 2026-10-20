@@ -28,6 +28,7 @@ import { DAY_MS } from '../../components/periodFilter.js';
 import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
+import { showRowCapNotice } from '../rowCapNotice.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { copyTextToClipboard } from '../../../utils/clipboard.js';
@@ -375,15 +376,13 @@ export function createRevisitInsightsPanel(): PanelLifecycle {
         renderCapsule(insights);
 
         if (capped) {
-          notices.setMessage(
-            'rowCap',
-            msg(
-              'revisitInsights_rowCap',
-              { shown: rows.length },
-              'Aggregated only the newest {shown} records; older counts may be understated.',
-            ),
-          );
-          notices.show('rowCap');
+          showRowCapNotice({
+            notices,
+            messageKey: 'revisitInsights_rowCap',
+            fallback: 'Aggregated only the newest {shown} records; older counts may be understated.',
+            shown: rows.length,
+            limit: MAX_REVISIT_INSIGHTS_ROWS,
+          });
         }
       } catch (error) {
         // 構造化ログ移行 (ログ指摘 2026-10-15): console.error → 標準の logError セアム

@@ -24,6 +24,7 @@ import { pickDefined } from '../../../utils/objectUtils.js';
 import { withRuntimeTimeout } from '../../../messaging/withRuntimeTimeout.js';
 import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import { getDebugMode } from './debugModeStore.js';
+import { isOpfsWorkerStatus } from './opfsWorkerStatus.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
 import { ProviderCatalog, getRegistryEntry } from '../../../background/ai/providerCatalog.js';
 
@@ -202,7 +203,7 @@ export class DiagnosticsCollector {
     // Deficiency diagnosis needs sqliteStatus
     let deficiencies: DiagnosticsSnapshot['deficiencies'] = [];
     if (sqliteStatus) {
-      const isOpfsWorker = (sqliteStatus.compileOptionsSource === 'opfs-worker') || sqliteStatus.path.startsWith('OPFS:');
+      const isOpfsWorker = isOpfsWorkerStatus(sqliteStatus);
       const offscreenStrategy: DiagnosticInput['vfsStrategy'] = sqliteStatus.fallback
         ? 'fallback'
         : isOpfsWorker ? 'opfs-sync-worker' : 'idb';
