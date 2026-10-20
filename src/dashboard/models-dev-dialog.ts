@@ -5,14 +5,12 @@
 
 import type { ModelsDevProvider, ModelsDevModel } from '../utils/modelsDevApi.js';
 import {
-    loadModelsDevData,
     getApiKeyEnvName,
     getApiKeyUrl,
     isHttpsUrl,
 } from '../utils/modelsDevApi.js';
-import { settingsRepository } from '../utils/storage/SettingsRepository.js';
-import { StorageKeys, type Settings } from '../utils/storage/types.js';
-import { confirmNewProviderBaseUrls } from './providerOriginConfirmation.js';
+import { ModelsDevCatalog, type ProviderTab } from './models-dev-dialog-data.js';
+import { persistProviderConnection } from './models-dev-dialog-save.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
@@ -32,14 +30,12 @@ interface DialogOptions {
 
 export class ModelsDevDialog {
     private dialog: HTMLElement | null = null;
-    private providers: ModelsDevProvider[] = [];
-    private filteredProviders: ModelsDevProvider[] = [];
     private selectedProvider: ModelsDevProvider | null = null;
     private selectedModel: ModelsDevModel | null = null;
-    private currentTab: 'all' | 'aggregators' | 'others' = 'all';
-    private searchQuery: string = '';
-    private filterFreeTier: boolean = false;
     private options: DialogOptions;
+    // Data seam (PBI 24): catalog state and the tab/search/free-tier filter
+    // live in ModelsDevCatalog; this class renders it and owns the dialog DOM.
+    private readonly catalog = new ModelsDevCatalog();
 
     // Cached DOM element references
     private listEl: HTMLElement | null = null;
@@ -244,14 +240,14 @@ export class ModelsDevDialog {
         // Search input
         const searchInput = document.getElementById('provider-search') as HTMLInputElement;
         searchInput?.addEventListener('input', (e) => {
-            this.searchQuery = (e.target as HTMLInputElement).value.toLowerCase();
+            this.catalog.setSearchQuery((e.target as HTMLInputElement).value.toLowerCase());
             this.filterProviders();
         });
 
         // Free tier filter
         const filterCheckbox = document.getElementById('filter-free-tier') as HTMLInputElement;
         filterCheckbox?.addEventListener('change', (e) => {
-            this.filterFreeTier = (e.target as HTMLInputElement).checked;
+            this.catalog.setFreeTierOnly((e.target as HTMLInputElement).checked);
             this.filterProviders();
         });
 
@@ -281,13 +277,7 @@ export class ModelsDevDialog {
         this.countEl.textContent = '';
 
         try {
-            const data = await loadModelsDevData();
-            if (!data) {
-                throw new Error('Failed to load provider data');
-            }
-
-            this.providers = data.providers;
-            this.filteredProviders = [...this.providers];
+            await this.catalog.load();
             this.filterProviders();
 
             this.loadingEl.classList.add('hidden');
@@ -301,8 +291,8 @@ export class ModelsDevDialog {
     /**
      * Switch tabs
      */
-    private switchTab(tab: 'all' | 'aggregators' | 'others'): void {
-        this.currentTab = tab;
+    private switchTab(tab: ProviderTab): void {
+        this.catalog.setTab(tab);
 
         document.querySelectorAll('.tab-btn').forEach(btn => {
             const btnEl = btn as HTMLElement;
@@ -321,35 +311,7 @@ export class ModelsDevDialog {
      * Filter providers based on current tab, search, and filters
      */
     private filterProviders(): void {
-        this.filteredProviders = this.providers.filter(provider => {
-            // Tab filter
-            if (this.currentTab === 'aggregators' && !provider.isAggregator) {
-                return false;
-            }
-            if (this.currentTab === 'others' && provider.isAggregator) {
-                return false;
-            }
-
-            // Search filter
-            if (this.searchQuery) {
-                const query = this.searchQuery;
-                if (!provider.name.toLowerCase().includes(query) &&
-                    !provider.id.toLowerCase().includes(query)) {
-                    return false;
-                }
-            }
-
-            // Free tier filter
-            if (this.filterFreeTier) {
-                const hasFreeModel = provider.models.some(m => m.isFreeTier);
-                if (!hasFreeModel) {
-                    return false;
-                }
-            }
-
-            return true;
-        });
-
+        this.catalog.applyFilters();
         this.renderProviders();
     }
 
@@ -360,9 +322,9 @@ export class ModelsDevDialog {
         if (!this.listEl || !this.countEl) return;
 
         clearElement(this.listEl);
-        this.countEl.textContent = `${this.filteredProviders.length} providers`;
+        this.countEl.textContent = `${this.catalog.getFilteredProviders().length} providers`;
 
-        this.filteredProviders.forEach(provider => {
+        this.catalog.getFilteredProviders().forEach(provider => {
             const item = document.createElement('div');
             item.className = 'provider-item';
             if (this.selectedProvider?.id === provider.id) {
@@ -401,7 +363,7 @@ export class ModelsDevDialog {
 
         // Update UI - optimize by finding index first, then updating in one pass
         const providerItems = this.listEl?.querySelectorAll('.provider-item') || [];
-        const index = this.filteredProviders.findIndex(p => p.id === provider.id);
+        const index = this.catalog.getFilteredProviders().findIndex(p => p.id === provider.id);
 
         providerItems.forEach((item, i) => {
             item.classList.toggle('selected', i === index);
@@ -467,24 +429,15 @@ export class ModelsDevDialog {
         }
 
         // Save settings — delta write (PBI 2026-09-17-17): only the provider
-        // connection keys this dialog owns enter the payload.
+        // connection keys this dialog owns enter the payload. The delta
+        // construction, origin confirmation, and the write itself live in the
+        // persistence seam (models-dev-dialog-save.ts, PBI 24).
         try {
-            // The catalog endpoint is fetched content, so the selected origin
-            // must pass the same explicit-confirmation policy as a hand-typed
-            // base URL before any credential is bound to it.
-            const delta: Partial<Settings> = {
-                [StorageKeys.AI_PROVIDER]: 'openai-compatible',
-                [StorageKeys.PROVIDER_TYPE]: this.selectedProvider.id,
-                [StorageKeys.PROVIDER_BASE_URL]: this.selectedProvider.api,
-                [StorageKeys.PROVIDER_API_KEY]: apiKey,
-                [StorageKeys.PROVIDER_MODEL]: model,
-            };
-            const originConfirmation = await confirmNewProviderBaseUrls(delta);
-            if (originConfirmation === 'cancelled') {
+            const outcome = await persistProviderConnection(this.selectedProvider, apiKey, model);
+            if (outcome === 'cancelled') {
                 this.showError(getMessageOr('providerOriginSaveBlocked', 'Endpoint not allowed — settings were not saved'));
                 return;
             }
-            await settingsRepository.setAll(delta);
 
             // OnSave callback
             this.options.onSave?.(

@@ -1,7 +1,7 @@
 import { loadActiveTabStatus, type ActiveTabStatusSnapshot } from '../statusStore.js';
 import { startAutoCloseTimer } from '../autoClose.js';
 import { getCurrentTab } from '../tabUtils.js';
-import { isRecordableTab } from '../../utils/recordingGateTable.js';
+import { fetchCurrentTab, renderCurrentTabPage, isTabRecordable } from './currentTabPage.js';
 import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
@@ -68,32 +68,17 @@ export class RecordSession {
   }
 
   async loadCurrentTab(): Promise<void> {
-    const tab = await getCurrentTab();
+    // PBI 24: tab acquisition, page-info rendering, and the recordability
+    // check live in currentTabPage.ts — this method only wires the result to
+    // the button state machine (sole button writer contract).
+    const tab = await fetchCurrentTab();
     if (!tab) return;
 
-    const faviconUrl = new URL(chrome.runtime.getURL('/_favicon/'));
-    if (tab.url) {
-      faviconUrl.searchParams.set('pageUrl', tab.url);
-    }
-    faviconUrl.searchParams.set('size', '32');
-    const faviconEl = document.getElementById('favicon') as HTMLImageElement;
-    if (faviconEl) {
-      faviconEl.src = faviconUrl.toString();
-    }
-
-    const pageTitleEl = document.getElementById('pageTitle');
-    if (pageTitleEl) {
-      pageTitleEl.textContent = tab.title || getMessage('noTitle');
-    }
-    const url = tab.url || '';
-    const pageUrlEl = document.getElementById('pageUrl');
-    if (pageUrlEl) {
-      pageUrlEl.textContent = url.length > 50 ? url.substring(0, 50) + '...' : url;
-    }
+    renderCurrentTabPage(tab);
 
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
     if (recordBtn) {
-      if (!isRecordableTab(tab)) {
+      if (!isTabRecordable(tab)) {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('cannotRecordPage');
       } else {
@@ -197,7 +182,7 @@ export class RecordSession {
     this.sessionState = 'idle';
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     const currentTab = await getCurrentTab();
-    if (btn && currentTab && isRecordableTab(currentTab)) {
+    if (btn && currentTab && isTabRecordable(currentTab)) {
       await this.resetRecordButton(btn);
     }
     return true;
@@ -209,7 +194,7 @@ export class RecordSession {
     this.sessionState = 'idle';
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     const currentTab = await getCurrentTab();
-    if (btn && currentTab && isRecordableTab(currentTab)) {
+    if (btn && currentTab && isTabRecordable(currentTab)) {
       await this.resetRecordButton(btn);
     }
   }
@@ -484,7 +469,7 @@ export class RecordSession {
       const tab = await getCurrentTab();
       if (!tab || !tab.id) throw new Error('No active tab found');
 
-      if (!isRecordableTab(tab)) {
+      if (!isTabRecordable(tab)) {
         throw new Error(getMessage('cannotRecordPage'));
       }
 

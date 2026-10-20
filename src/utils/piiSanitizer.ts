@@ -202,17 +202,13 @@ interface Range {
 }
 
 /**
- * テキストからPIIを検出してマスクする
- * 【パフォーマンス改善】: 1回のスキャンで全パターンを検出
- * @param {string} text - 対象テキスト
- * @param {SanitizeOptions} options - オプション
- * @param {number} options.timeout - タイムアウト時間（ミリ秒）、デフォルト5000ms
- * @param {boolean} options.skipSizeLimit - サイズ制限をスキップするか（デフォルトfalse）
- * @returns {Promise<SanitizeResult>} { text: string, maskedItems: Array<{type: string, original: string}>, error?: string }
+ * validate responsibility: guard the input before any scan runs.
+ * Returns the rejection result for empty/oversized input, or null when the
+ * scan may proceed. Error wording and skipSizeLimit semantics are pinned:
+ * the WASM-first hybrid (piiSanitizeHybrid.ts) reproduces them without
+ * re-running the scan.
  */
-export async function sanitizeRegex(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
-    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false, includeIndices = false } = options;
-
+function validateInput(text: string, skipSizeLimit: boolean): SanitizeResult | null {
     // null/undefinedチェック
     if (!text || typeof text !== 'string') {
         return { text: '', maskedItems: [] };
@@ -239,166 +235,224 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
         }
     }
 
-    const startTime = Date.now();
-    try {
-        const _maskedItems: MaskedItem[] = [];
-        const replacements: Replacement[] = [];
+    return null;
+}
 
-        // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン
-        // 同じタイプのパターンを統合して名前付きグループの重複を避ける
-        const typeGroups: string[] = [];
-        const seenTypes = new Set<string>();
-        for (const { type } of PII_PATTERNS) {
-            if (seenTypes.has(type)) continue;
-            seenTypes.add(type);
-            const patternsForType = PII_PATTERNS
-                .filter(p => p.type === type)
-                .map(p => `(?:${p.pattern.source})`);
-            typeGroups.push(`(?<${type}>${patternsForType.join('|')})`);
-        }
-        const combinedSource = typeGroups.join('|');
-        const combinedRegex = new RegExp(combinedSource, 'g');
-        const probeRegex = new RegExp(`(?:${combinedSource})`, 'y');
+/**
+ * detect responsibility: single-pass pattern scan over overlapping chunks.
+ * Collects candidate replacements (unsorted, possibly overlapping) and owns
+ * the ReDoS guards (timeout + match-count limit) and the Luhn verification.
+ */
+function detectPii(text: string, startTime: number, timeout: number): Replacement[] {
+    const replacements: Replacement[] = [];
 
-        let match: RegExpExecArray | null;
-        let matchCount = 0;
-        const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
-        for (let offset = 0; offset < text.length; offset += step) {
-            const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
-            combinedRegex.lastIndex = 0;
-            while ((match = combinedRegex.exec(chunk)) !== null) {
-                // 前チャンクと重なる領域 [0, OVERLAP) に完全収録されるマッチは
-                // 前チャンクで検出済みのため、カウント前にスキップする。
-                // 長さ200未満のPIIは前チャンクに完全包含される（OVERLAP前提）ため
-                // 検出漏れは生じない。これがないと重複検出が matchCount を浪費し
-                // MAX_MATCH_COUNT に誤到達する。
-                // TS は UTF-16 コード単位の slice でチャンクを切るため、この相対判定は
-                // 前チャンクの実カバー終端と厳密に一致する。Rust 側はバイト境界への
-                // クランプがあるため「前チャンクの実終端」基準で判定する（同じ条件に
-                // なるのは ASCII のみ。PBI 2026-10-11-01）。
-                if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
-                    continue;
-                }
-                // 原文上の真のマッチ長をstickyプローブで確定させる。
-                // 真の長さが現マッチより長く200以下の場合、現マッチは
-                // 切断prefix/断片であり、完全形は別チャンクで数えられる
-                // ためここではスキップする（重複カウントの排除）。
-                // 真の長さが等しい場合は完全一致として数える。
-                // 真の長さが200超の場合は残存リスク枠として切断形を数える。
-                probeRegex.lastIndex = offset + match.index;
-                const fullProbe = probeRegex.exec(text);
-                if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
-                    continue;
-                }
-                // 原文上で何にもマッチしない開始位置は、チャンク端の
-                // `\b` 等が作った純粋なアーティファクトであり、真のPIIは
-                // その完全包含チャンクで数えられるためスキップする。
-                if (!fullProbe) {
-                    continue;
-                }
-                matchCount++;
-                // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
-                if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
-                    throw new Error(`Operation timed out after ${timeout}ms`);
-                }
-                // 【ReDoS対策】マッチ件数制限を追加
-                if (matchCount > MAX_MATCH_COUNT) {
-                    throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
-                }
+    // 【パフォーマンス改善】: 全パターンを1つの正規表現に統合して1パスでスキャン
+    // 同じタイプのパターンを統合して名前付きグループの重複を避ける
+    const typeGroups: string[] = [];
+    const seenTypes = new Set<string>();
+    for (const { type } of PII_PATTERNS) {
+        if (seenTypes.has(type)) continue;
+        seenTypes.add(type);
+        const patternsForType = PII_PATTERNS
+            .filter(p => p.type === type)
+            .map(p => `(?:${p.pattern.source})`);
+        typeGroups.push(`(?<${type}>${patternsForType.join('|')})`);
+    }
+    const combinedSource = typeGroups.join('|');
+    const combinedRegex = new RegExp(combinedSource, 'g');
+    const probeRegex = new RegExp(`(?:${combinedSource})`, 'y');
 
-                // チャンクは原文の slice のため、チャンク内マッチ位置に
-                // チャンク先頭オフセットを加算すれば原文位置と1対1で一致する。
-                // 値は原文から取得する（従来の scanText 由来切り出しと同等）。
-                const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
-                const startIndex = offset + match.index;
+    let match: RegExpExecArray | null;
+    let matchCount = 0;
+    const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+    for (let offset = 0; offset < text.length; offset += step) {
+        const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
+        combinedRegex.lastIndex = 0;
+        while ((match = combinedRegex.exec(chunk)) !== null) {
+            // 前チャンクと重なる領域 [0, OVERLAP) に完全収録されるマッチは
+            // 前チャンクで検出済みのため、カウント前にスキップする。
+            // 長さ200未満のPIIは前チャンクに完全包含される（OVERLAP前提）ため
+            // 検出漏れは生じない。これがないと重複検出が matchCount を浪費し
+            // MAX_MATCH_COUNT に誤到達する。
+            // TS は UTF-16 コード単位の slice でチャンクを切るため、この相対判定は
+            // 前チャンクの実カバー終端と厳密に一致する。Rust 側はバイト境界への
+            // クランプがあるため「前チャンクの実終端」基準で判定する（同じ条件に
+            // なるのは ASCII のみ。PBI 2026-10-11-01）。
+            if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
+                continue;
+            }
+            // 原文上の真のマッチ長をstickyプローブで確定させる。
+            // 真の長さが現マッチより長く200以下の場合、現マッチは
+            // 切断prefix/断片であり、完全形は別チャンクで数えられる
+            // ためここではスキップする（重複カウントの排除）。
+            // 真の長さが等しい場合は完全一致として数える。
+            // 真の長さが200超の場合は残存リスク枠として切断形を数える。
+            probeRegex.lastIndex = offset + match.index;
+            const fullProbe = probeRegex.exec(text);
+            if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
+                continue;
+            }
+            // 原文上で何にもマッチしない開始位置は、チャンク端の
+            // `\b` 等が作った純粋なアーティファクトであり、真のPIIは
+            // その完全包含チャンクで数えられるためスキップする。
+            if (!fullProbe) {
+                continue;
+            }
+            matchCount++;
+            // 【ReDoS対策】タイムアウトチェックをより頻繁に実行（5マッチごと）
+            if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
+                throw new Error(`Operation timed out after ${timeout}ms`);
+            }
+            // 【ReDoS対策】マッチ件数制限を追加
+            if (matchCount > MAX_MATCH_COUNT) {
+                throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
+            }
 
-                // どのグループがマッチしたか特定
-                let matchedType = 'unknown';
-                if (match.groups) {
-                    for (const type of Object.keys(match.groups)) {
-                        if (match.groups[type]) {
-                            matchedType = type;
-                            break;
-                        }
+            // チャンクは原文の slice のため、チャンク内マッチ位置に
+            // チャンク先頭オフセットを加算すれば原文位置と1対1で一致する。
+            // 値は原文から取得する（従来の scanText 由来切り出しと同等）。
+            const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
+            const startIndex = offset + match.index;
+
+            // どのグループがマッチしたか特定
+            let matchedType = 'unknown';
+            if (match.groups) {
+                for (const type of Object.keys(match.groups)) {
+                    if (match.groups[type]) {
+                        matchedType = type;
+                        break;
                     }
                 }
-
-                // Luhn検証で偽陽性のクレジットカード番号を除外
-                if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
-                    continue;
-                }
-
-                replacements.push({
-                    index: startIndex,
-                    length: matchedValue.length,
-                    mask: `[MASKED:${matchedType}]`,
-                    type: matchedType,
-                    original: matchedValue
-                });
             }
-        }
 
-        // 念のため重複やオーバーラップを排除（1パスなら基本発生しないが、複雑なパターンの場合への備え）
-        replacements.sort((a, b) => b.length - a.length);
-        const resolvedReplacements: Replacement[] = [];
-        const usedRanges: Range[] = [];
-
-        for (const r of replacements) {
-            const rStart = r.index;
-            const rEnd = r.index + r.length;
-            const overlaps = usedRanges.some(range => !(rEnd <= range.start || rStart >= range.end));
-
-            if (!overlaps) {
-                resolvedReplacements.push(r);
-                usedRanges.push({ start: rStart, end: rEnd });
+            // Luhn検証で偽陽性のクレジットカード番号を除外
+            if (matchedType === 'creditCard' && !validateLuhn(matchedValue)) {
+                continue;
             }
+
+            replacements.push({
+                index: startIndex,
+                length: matchedValue.length,
+                mask: `[MASKED:${matchedType}]`,
+                type: matchedType,
+                original: matchedValue
+            });
         }
+    }
 
-        // 2. インデックスの降順でソート（後ろから置換することでインデックスのずれを防止）
-        resolvedReplacements.sort((a, b) => b.index - a.index);
+    return replacements;
+}
 
-        let processedText = text;
-        const finalMaskedItems: MaskedItem[] = [];
+/**
+ * replace responsibility: resolve overlaps and apply the masks.
+ * Longest-match-wins overlap resolution, then one descending-index pass
+ * builds the masked text and the masked-item list (occurrence order).
+ */
+function replacePii(
+    text: string,
+    replacements: Replacement[]
+): { processedText: string; maskedItems: MaskedItem[] } {
+    // 念のため重複やオーバーラップを排除（1パスなら基本発生しないが、複雑なパターンの場合への備え）
+    replacements.sort((a, b) => b.length - a.length);
+    const resolvedReplacements: Replacement[] = [];
+    const usedRanges: Range[] = [];
 
-        // 文字列ベースの効率的な置換（インデックス降順で処理してインデックスのずれを防止）
-        // これにより、split/joinオーバーヘッドを回避できる
-        resolvedReplacements.sort((a, b) => b.index - a.index); // 降順ソート（既にソート済みだが、念のため）
-        for (const r of resolvedReplacements) {
-            processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
-            finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
+    for (const r of replacements) {
+        const rStart = r.index;
+        const rEnd = r.index + r.length;
+        const overlaps = usedRanges.some(range => !(rEnd <= range.start || rStart >= range.end));
+
+        if (!overlaps) {
+            resolvedReplacements.push(r);
+            usedRanges.push({ start: rStart, end: rEnd });
         }
-        // 出現順（インデックス昇順）に並べ替えて返す
-        finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+    }
 
-        // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
-        finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
-        const resultItems = finalMaskedItems.map(item =>
+    // 2. インデックスの降順でソート（後ろから置換することでインデックスのずれを防止）
+    resolvedReplacements.sort((a, b) => b.index - a.index);
+
+    let processedText = text;
+    const finalMaskedItems: MaskedItem[] = [];
+
+    // 文字列ベースの効率的な置換（インデックス降順で処理してインデックスのずれを防止）
+    // これにより、split/joinオーバーヘッドを回避できる
+    resolvedReplacements.sort((a, b) => b.index - a.index); // 降順ソート（既にソート済みだが、念のため）
+    for (const r of resolvedReplacements) {
+        processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
+        finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
+    }
+    // 出現順（インデックス昇順）に並べ替えて返す
+    finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+    // 3. 実際に置換された項目を出現順（インデックス昇順）に並べ替えて返す
+    finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+
+    return { processedText, maskedItems: finalMaskedItems };
+}
+
+/**
+ * report responsibility: output-size gate and the includeIndices mapping.
+ * Truncates the masked text to MAX_OUTPUT_SIZE and keeps only the items
+ * inside the kept range, exactly as the former inline tail of sanitizeRegex.
+ */
+function reportResult(processedText: string, maskedItems: MaskedItem[], includeIndices: boolean): SanitizeResult {
+    // 出力サイズチェック（置換によりサイズが大きくなる可能性があるため）
+    const outputSize = processedText.length;
+    if (outputSize > MAX_OUTPUT_SIZE) {
+        // 元のテキストの範囲に切り詰め
+        const trimmedText = processedText.substring(0, MAX_OUTPUT_SIZE);
+        // 切り詰められた範囲内のマスク項目のみを保持
+        const trimmedMaskedItems = maskedItems.filter(item =>
+            (item.index || 0) < MAX_OUTPUT_SIZE
+        );
+        return {
+            text: trimmedText,
+            maskedItems: trimmedMaskedItems.map(item =>
+                includeIndices
+                    ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) }
+                    : { type: item.type, original: item.original }
+            ),
+            error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
+        };
+    }
+
+    return {
+        text: processedText,
+        maskedItems: maskedItems.map(item =>
             includeIndices
                 ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) }
                 : { type: item.type, original: item.original }
-        );
+        )
+    };
+}
 
-        // 出力サイズチェック（置換によりサイズが大きくなる可能性があるため）
-        const outputSize = processedText.length;
-        if (outputSize > MAX_OUTPUT_SIZE) {
-            // 元のテキストの範囲に切り詰め
-            processedText = processedText.substring(0, MAX_OUTPUT_SIZE);
-            // 切り詰められた範囲内のマスク項目のみを保持
-            const trimmedMaskedItems = finalMaskedItems.filter(item =>
-                (item.index || 0) < MAX_OUTPUT_SIZE
-            );
-            return {
-                text: processedText,
-                maskedItems: trimmedMaskedItems.map(item =>
-                    includeIndices
-                        ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) }
-                        : { type: item.type, original: item.original }
-                ),
-                error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
-            };
-        }
+/**
+ * テキストからPIIを検出してマスクする
+ * validate / detect / replace / report の 4 責務へ委譲するファサード
+ * （PBI 24: SRP 分割。シグネチャ・戻り値・エラー意味論は不変）。
+ * 【パフォーマンス改善】: 1回のスキャンで全パターンを検出
+ * @param {string} text - 対象テキスト
+ * @param {SanitizeOptions} options - オプション
+ * @param {number} options.timeout - タイムアウト時間（ミリ秒）、デフォルト5000ms
+ * @param {boolean} options.skipSizeLimit - サイズ制限をスキップするか（デフォルトfalse）
+ * @returns {Promise<SanitizeResult>} { text: string, maskedItems: Array<{type: string, original: string}>, error?: string }
+ */
+export async function sanitizeRegex(text: string, options: SanitizeOptions = {}): Promise<SanitizeResult> {
+    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false, includeIndices = false } = options;
 
-        return { text: processedText, maskedItems: resultItems };
+    // 検証: 入力サイズ制限（拒否時はスキャンに入らず早期リターン）
+    const rejection = validateInput(text, skipSizeLimit);
+    if (rejection) return rejection;
+
+    // タイムアウト予算の起点はスキャンに入る前に確定する
+    const startTime = Date.now();
+    try {
+        // 検出: パターン走査（ReDoS 対策は detect 側に属する）
+        const replacements = detectPii(text, startTime, timeout);
+        // 置換: 重複解消とマスク適用
+        const { processedText, maskedItems } = replacePii(text, replacements);
+        // レポート: 出力サイズゲートと includeIndices マッピング
+        return reportResult(processedText, maskedItems, includeIndices);
     } catch (error: unknown) {
         // PII サニタイズ失敗時はエラーをスローしてパイプラインを中断する。
         // [SANITIZATION_FAILED] プレースホルダーを返すと、ゴミデータが保存されるため。
