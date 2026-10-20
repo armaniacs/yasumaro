@@ -58,14 +58,14 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 
 ## 受け入れ基準
 
-- [ ] `IdbVfsBackend.insert()`（`IdbVfsBackend.ts:96-103`）が返す `id` は、その呼び出し自身が `browsing_logs` に書いた行の `id` であること。実装は `INSERT ... RETURNING id` へ差し替える、または INSERT と SELECT を同一トランザクションで包む、のいずれか。
-- [ ] `saveSqliteStep.ts:91` の後続 update が、Scenario 1 の条件（保存が重なって走った場合）でも実際に Mirroring した行に付くことを統合テストで固定すること。**`npm run validate` が緑であることは受け入れの必須条件**とする。
-- [ ] 単発の insert が従来と同じ番号を返すこと（回帰ガード）。既存の golden 固定 `idbScalarRead-golden.test.ts:56-59`（番号が 1 と 2）がそのまま緑であることを確認し、期待値を書き換えて通さないこと。
-- [ ] `insertAuditLog`（`IdbVfsBackend.ts:302-310`）にも同型の非 atomic な組が残らないこと。返された番号が現状使われていない（`auditLogGateway.ts:43-53` は参照しない）である点を理由に**据え置かない**。一方だけ直して同じ誤り方が 2 箇所に残る状態を禁止する。
-- [ ] IDB ラングと OPFS ラングで「insert が返す番号」の意味が一致すること。現状 `opfsWorker/crudHandlers.ts:22-28` にも同型の組があるが、`opfsWorker.ts:386-392` の直列化キューが守っているため実害はない。**守っているものを理由に IDB 側を放置しない**一方、OPFS 側を本 PBI で書き換えても差し支えはないことを明記する。
-- [ ] `obsidian_synced` の印が外れる側の失敗（実際に Mirroring した行が未印のまま残る）が存在しないこと。Scenario 1 の最後の `And` がその保証であり、期待値は「印が付く」であること。
-- [ ] 実害の向きを片側に倒さないこと。本件の失敗は片方向（未マークの行が残る）で、印が意図しない行に付いただけではない。両方向をテストで書き分けていること。
-- [ ] 変更が `manifest.json` の権限、`web_accessible_resources`、ストレージキーの構造、`browsing_logs` のスキーマのいずれにも触れていないこと（いずれも変更不要。`npm run build` と `npm run validate` の緑で担保する）。
+- [x] `IdbVfsBackend.insert()`（`IdbVfsBackend.ts:96-103`）が返す `id` は、その呼び出し自身が `browsing_logs` に書いた行の `id` であること。実装は `INSERT ... RETURNING id` へ差し替える、または INSERT と SELECT を同一トランザクションで包む、のいずれか。
+- [x] `saveSqliteStep.ts:91` の後続 update が、Scenario 1 の条件（保存が重なって走った場合）でも実際に Mirroring した行に付くことを統合テストで固定すること。**`npm run validate` が緑であることは受け入れの必須条件**とする。
+- [x] 単発の insert が従来と同じ番号を返すこと（回帰ガード）。既存の golden 固定 `idbScalarRead-golden.test.ts:56-59`（番号が 1 と 2）がそのまま緑であることを確認し、期待値を書き換えて通さないこと。
+- [x] `insertAuditLog`（`IdbVfsBackend.ts:302-310`）にも同型の非 atomic な組が残らないこと。返された番号が現状使われていない（`auditLogGateway.ts:43-53` は参照しない）である点を理由に**据え置かない**。一方だけ直して同じ誤り方が 2 箇所に残る状態を禁止する。
+- [x] IDB ラングと OPFS ラングで「insert が返す番号」の意味が一致すること。現状 `opfsWorker/crudHandlers.ts:22-28` にも同型の組があるが、`opfsWorker.ts:386-392` の直列化キューが守っているため実害はない。**守っているものを理由に IDB 側を放置しない**一方、OPFS 側を本 PBI で書き換えても差し支えはないことを明記する。
+- [x] `obsidian_synced` の印が外れる側の失敗（実際に Mirroring した行が未印のまま残る）が存在しないこと。Scenario 1 の最後の `And` がその保証であり、期待値は「印が付く」であること。
+- [x] 実害の向きを片側に倒さないこと。本件の失敗は片方向（未マークの行が残る）で、印が意図しない行に付いただけではない。両方向をテストで書き分けていること。
+- [x] 変更が `manifest.json` の権限、`web_accessible_resources`、ストレージキーの構造、`browsing_logs` のスキーマのいずれにも触れていないこと（いずれも変更不要。`npm run build` と `npm run validate` の緑で担保する）。
 
 ## テスト戦略
 
@@ -176,11 +176,11 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 
 ## Definition of Done
 
-- [ ] BDDシナリオ（3 本）が自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `IdbVfsBackend.insert:last-insert-rowid-interleave` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] BDDシナリオ（3 本）が自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `IdbVfsBackend.insert:last-insert-rowid-interleave` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
 
 ## 調査結果（2026-10-18）
 
@@ -195,3 +195,11 @@ Scenario: 3: 境界値（同時に走るのは何件でも、各呼び出しは�
 - `src/background/pipeline/steps/saveSqliteStep.ts`（返却 id を使う sink）
 - `src/offscreen/__tests__/sqliteBackendParity.realEngine.test.ts`（実エンジン fixture の参照先）/ `dev-docs/TEST_RULE.md`（テスト追加前に必読。`--repeats` の扱いを含む）
 - `dev-docs/ARCHITECTURE_MAP.md`（IDB ラングと OPFS ラングの位置づけ）
+
+## 完了記録（2026-10-20）
+
+- 実装: `IdbVfsBackend` の insert / insertAuditLog を「INSERT とは別 await で SELECT last_insert_rowid()」から「INSERT ... RETURNING id の 1 await」へ置換（schema.ts に INSERT_RETURNING_SQL、queryPlan.ts に AUDIT_INSERT_RETURNING_SQL を新規追加。INSERT_SQL 自体は OPFS handleInsert が継続使用のため未変更）。OPFS 側は processQueue 直列化キューが守るため触らず、その旨をコメント明記（選択肢 4）。
+- テスト: 実エンジン parity 3 シナリオ（2 件の重なり insert で各自の行 id・obsidian_synced 印が Mirroring した行に付く / 単発 1,2,3 回帰 / 10 件重なりで重複なし 1 対 1）+ saveSqliteStep の sink 統合テスト（実 IdbVfsBackend を SqliteClient 裏に置き raw テーブルで検証）。既存期待値は未変更（idbScalarRead-golden に RETURNING 経路を追加、parametric 2 件のスタブ正規表現に |RETURNING を追加）。
+- 5 Whys: obsidian_synced が別行に付くのは saveSqliteStep が insert の返却 id をキーに update するため → 返却 id が間違うのは IdbVfsBackend.insert が INSERT とは別 await で SELECT last_insert_rowid() を読むため → last_insert_rowid() は接続スコープで IDB ラングの dispatch は直列化キューを持たないため。解: 2 await を 1 await の RETURNING に置換し窓そのものを消した。
+- 検証: 7 ファイル 132 テスト + 隣接 7 ファイル 64 テスト緑 / 新規テスト --repeats=20 緑 / type-check / eslint / npm run validate 緑（1,102 ファイル 16,465 テスト。2 件の errors は fork プール起動タイムアウトの既知負荷時フレークでテスト失敗ではない）/ graphify 済み。
+- 残置: wire 経路（handleSqliteWire の重複 SQLITE_INSERT）は実 wasm エンジンを要する module-level シングルトンで注入シームが無く直接テスト不可。同一 interleave 窓は backend レベルで決定論的に固定済み。

@@ -77,14 +77,14 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
 
 ## 受け入れ基準
 
-- [ ] `recordDownloadId`（`src/background/localMarkdownExportRetention.ts:79-80`）が最古レコードを落とす際、その `downloadId` が**必ず削除経路に渡る**。リストから外すだけで終わらせない（選択肢1の削除待ちキュー／選択肢2の上書き防止／選択肢3の sweep のいずれか。採用案を実装ノートに明記する）
-- [ ] `:29-31` のヘッダ注釈が訂正され、**「200 ≒ 30日分の想定は使用量の見積もりであり、強制された per-day 上限ではない」**という事実が明記される。加えて `:7` の `(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)` が、落ちたレコードの扱いを正しく記述するよう更新される
-- [ ] 削除待ちキューなど**新たな永続状態を追加する場合**、service worker 再起動を跨いで復元され、`src/background/localMarkdownExportRetention.ts:104-113` が説明する「claim してから lock 外で erase する」という設計意図（クラッシュ方向は回復可能）と矛盾しない。既存コメントの「クラッシュするとエントリが残る forever が回復可能方向」という記述が、本修正後も事実であるか再検証され、違うならコメントごと更新される
-- [ ] `chrome.downloads.search` を採用する場合（選択肢3）、照合キーが `DownloadRecord` に存在しない問題（現状の形状は `{downloadId, date, createdAt}`。`src/background/localMarkdownExportRetention.ts:47-51`）を先に解消し、**照合できないエントリを削除に回さない**（fail-closed on delete）。ユーザーが自分の無関係なダウンロードを消さないことをテストで pin する
-- [ ] 既存テスト `src/background/__tests__/localExportRetention.test.ts:117-131` の期待値が、本修正の挙動に合わせて**明示的に書き換えられ**、書き換えた理由がコメントで残る。あわせて `:142-158`（29/30/31 日境界）、`:160-168`（removeFile 失敗時も erase）、`:188-252`（read-modify-write 競合）が引き続き緑であることを確認する
-- [ ] 新規/変更テストは `chrome.downloads` のスタブを拡張する場合、`src/background/__tests__/localExportRetention.test.ts:47-52` に `search` 等の追加分の mock が含まれ、実時間待ち（`sleep` / `waitForTimeout`）を一切含まない（`dev-docs/TEST_RULE.md`／AGENTS.md「Async / Timing Failures」）
-- [ ] ロールバック時に旧追跡リスト形式が壊れないこと（読み取り不能・壊れ データ の migration を起こさない）。キュー等の新キーは**読み取りを伴わない追加キー**にして、ロールバック後も無害である
-- [ ] `manifest` の権限追加が発生しないことを確認する（`wxt.config.ts:240` の `'downloads'` が既に `chrome.downloads.search` を包含する。`downloads` 権限があれば search は追加権限なしで利用できる）
+- [x] `recordDownloadId`（`src/background/localMarkdownExportRetention.ts:79-80`）が最古レコードを落とす際、その `downloadId` が**必ず削除経路に渡る**。リストから外すだけで終わらせない（選択肢1の削除待ちキュー／選択肢2の上書き防止／選択肢3の sweep のいずれか。採用案を実装ノートに明記する）
+- [x] `:29-31` のヘッダ注釈が訂正され、**「200 ≒ 30日分の想定は使用量の見積もりであり、強制された per-day 上限ではない」**という事実が明記される。加えて `:7` の `(capped at MAX_DOWNLOAD_RECORDS, oldest dropped)` が、落ちたレコードの扱いを正しく記述するよう更新される
+- [x] 削除待ちキューなど**新たな永続状態を追加する場合**、service worker 再起動を跨いで復元され、`src/background/localMarkdownExportRetention.ts:104-113` が説明する「claim してから lock 外で erase する」という設計意図（クラッシュ方向は回復可能）と矛盾しない。既存コメントの「クラッシュするとエントリが残る forever が回復可能方向」という記述が、本修正後も事実であるか再検証され、違うならコメントごと更新される
+- [x] `chrome.downloads.search` を採用する場合（選択肢3）、照合キーが `DownloadRecord` に存在しない問題（現状の形状は `{downloadId, date, createdAt}`。`src/background/localMarkdownExportRetention.ts:47-51`）を先に解消し、**照合できないエントリを削除に回さない**（fail-closed on delete）。ユーザーが自分の無関係なダウンロードを消さないことをテストで pin する
+- [x] 既存テスト `src/background/__tests__/localExportRetention.test.ts:117-131` の期待値が、本修正の挙動に合わせて**明示的に書き換えられ**、書き換えた理由がコメントで残る。あわせて `:142-158`（29/30/31 日境界）、`:160-168`（removeFile 失敗時も erase）、`:188-252`（read-modify-write 競合）が引き続き緑であることを確認する
+- [x] 新規/変更テストは `chrome.downloads` のスタブを拡張する場合、`src/background/__tests__/localExportRetention.test.ts:47-52` に `search` 等の追加分の mock が含まれ、実時間待ち（`sleep` / `waitForTimeout`）を一切含まない（`dev-docs/TEST_RULE.md`／AGENTS.md「Async / Timing Failures」）
+- [x] ロールバック時に旧追跡リスト形式が壊れないこと（読み取り不能・壊れ データ の migration を起こさない）。キュー等の新キーは**読み取りを伴わない追加キー**にして、ロールバック後も無害である
+- [x] `manifest` の権限追加が発生しないことを確認する（`wxt.config.ts:240` の `'downloads'` が既に `chrome.downloads.search` を包含する。`downloads` 権限があれば search は追加権限なしで利用できる）
 
 ## テスト戦略
 
@@ -171,11 +171,11 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（シナリオ 1〜4 すべて）
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `export-download-cap:oldest-drop-leaks-unerased-entries` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`src/background/localMarkdownExportRetention.ts` のヘッダ注釈 `:7` と `:29-31` ― 「200 ≒ 30日分は使用量の見積もりであり強制された上限ではない」ことを明記）
+- [x] BDDシナリオが自動テストで実装されパス（シナリオ 1〜4 すべて）
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `export-download-cap:oldest-drop-leaks-unerased-entries` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`src/background/localMarkdownExportRetention.ts` のヘッダ注釈 `:7` と `:29-31` ― 「200 ≒ 30日分は使用量の見積もりであり強制された上限ではない」ことを明記）
 
 ## 調査結果（2026-10-18）
 
@@ -190,3 +190,11 @@ Scenario: 4. 30 日を越えて残ったエクスポートの痕跡は定期 swe
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` の needs_validation エントリ / `NEEDS-VALIDATION.md:189-219` の「## 7.」/ 同 `:221-249` の「## 8.」＝ PBI 22）
 - 先行 PBI: `2026-10-18-02-fix-alarm-daily-purge-recreate.md`（日次パージアラーム側の retention 接続点、`dailyPurgeHandler.ts:154`）
 - 先行 PBI: `2026-10-18-07-fix-buffer-key-retention-sweep-noop.md`（同じ retention 領域の buffer キー側の sweep）
+
+## 完了記録（2026-10-20）
+
+- 実装: `recordDownloadId` を withOptimisticLock（単一キー）から withAtomicKeys（リスト+キュー）にし、cap スライスで落ちたレコードを同一アトミック更新で新キー `local_md_export_erase_queue` へ永続化（リストから消すだけの取り違えを直接解消）。`purgeExpiredDownloadRecords` は erase-then-claim でキュー排出（claim はこの実行が実際に erase したレコードと同一性一致のみ削除。erase 後 claim 前のクラッシュではキュー無傷で次回 purge が冪等に再 erase して回収。claim-first だとクラッシュで永久取りこぼし）。リスト snapshot に期限切れが無ければリスト claim を skip（キューのみの排出がリスト version を無駄に bump しない）。キューは意図的に cap なし（oldest-drop を付けると「消されるはずだったレコードが永久に消されない」＝本件と同じリークが再発。保持率×flush レートで有界かつ毎 purge で排出）。
+- PBI 22 の着地点: `eraseDownloadRecord` ヘルパー抽出により erase 成否を返し、キューは消せたレコードのみ claim する構造。PBI 22 の identity 照合追加はこの 1 箇所に確保。
+- 5 Whys: 30 日超えエントリが残るのは cap 落ちレコードが全削除経路から不可視だったため → recordDownloadId が素の slice で落とし、唯一の erase 経路（purge）が現リストからのみ claim するため → MarkdownBufferManager の「oldest-drop 無害」を倣ったが、あちらは日付ファイルの上書きで有界でありダウンロード履歴は成立しないため。解: 削除待ちキューへの永続化 + erase-then-claim。
+- 検証: 3 ファイル 40 テスト緑（シナリオ 1 タイマー駆動 / 2 回帰ガード / 3 SW 再起動跨ぎ / クラッシュ復元 / erase 失敗リトライ保持）、--repeats=10（190 実行）全緑 / type-check / eslint 全緑。
+- 残置: 選択肢 3（chrome.downloads.search sweep）は PBI の推奨どおり別 PBI に切り出し未実装。

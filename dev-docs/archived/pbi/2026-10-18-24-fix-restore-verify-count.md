@@ -84,14 +84,14 @@ Scenario 1 が本 PBI の核心です。Scenario 4 は既存分岐（`:400-411`�
 
 ## 受け入れ基準
 
-- [ ] `migrationBackup.ts:412` のバックアップ削除条件が、**再検証の COUNT 読み込みが成功し、かつ `actualCount >= expectedCount` の両方**を要求すること（現状は `reverifyOk` のみ）
-- [ ] 件数が期待値に達しなかった場合、`chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP)` を**呼ばない**こと
-- [ ] バックアップが残る場合、復元が完了していない旨を `logWarn` で残すこと（`ErrorCode.MIGRATION_ROLLBACK_FAILED` を継続して使用する）
-- [ ] 既存分岐「再検証の READ が throw した場合」（`:401-411`、バックアップを forensics 用に保留し `logError`）の挙動を**変更しない**こと。件数不足とは別の原因として区別してログ・テストで固定する
-- [ ] `expectedCount === 0` の早期 return 分岐（`:360-365`、バックアップ削除 + done）と、件数一致で早期 return する分岐（`:370-376`）の挙動を**変更しない**こと
-- [ ] `setIdbMigrationDone()` を、`runMigrationRestore` が done を読む仕組みを**新規に増やさない**こと（現状どおり done は `runMigrationBackup:202` だけが読む。バックアップ残置を理由に done を倒す実装に変更しない）
-- [ ] `StorageKeys` のキー構造・`chrome.storage` への書き込み方式・schema・wire 契約を変更しないこと（既存プロファイルが読める）
-- [ ] 既存テスト `__tests__/migrationBackup.test.ts` のうち **`:135-166`「terminates after a mismatched restore so the next launch does not replay it」は、現行の（不正な）挙動を pin しているため修正が必要**であることを認識し、Scenario 1/2 の契約に読み替えること（`:94-107` の件数一致テスト、`:168-196` の再検証 throw テストは**改変せず残す**）
+- [x] `migrationBackup.ts:412` のバックアップ削除条件が、**再検証の COUNT 読み込みが成功し、かつ `actualCount >= expectedCount` の両方**を要求すること（現状は `reverifyOk` のみ）
+- [x] 件数が期待値に達しなかった場合、`chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP)` を**呼ばない**こと
+- [x] バックアップが残る場合、復元が完了していない旨を `logWarn` で残すこと（`ErrorCode.MIGRATION_ROLLBACK_FAILED` を継続して使用する）
+- [x] 既存分岐「再検証の READ が throw した場合」（`:401-411`、バックアップを forensics 用に保留し `logError`）の挙動を**変更しない**こと。件数不足とは別の原因として区別してログ・テストで固定する
+- [x] `expectedCount === 0` の早期 return 分岐（`:360-365`、バックアップ削除 + done）と、件数一致で早期 return する分岐（`:370-376`）の挙動を**変更しない**こと
+- [x] `setIdbMigrationDone()` を、`runMigrationRestore` が done を読む仕組みを**新規に増やさない**こと（現状どおり done は `runMigrationBackup:202` だけが読む。バックアップ残置を理由に done を倒す実装に変更しない）
+- [x] `StorageKeys` のキー構造・`chrome.storage` への書き込み方式・schema・wire 契約を変更しないこと（既存プロファイルが読める）
+- [x] 既存テスト `__tests__/migrationBackup.test.ts` のうち **`:135-166`「terminates after a mismatched restore so the next launch does not replay it」は、現行の（不正な）挙動を pin しているため修正が必要**であることを認識し、Scenario 1/2 の契約に読み替えること（`:94-107` の件数一致テスト、`:168-196` の再検証 throw テストは**改変せず残す**）
 
 ## テスト戦略
 
@@ -238,11 +238,11 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 13番）:
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（Scenario 1〜5 の 5 件、うち Scenario 3/4 は既存テストの改変なし流用）
-- [ ] `npm run validate` が緑（type-check + lint + 全テスト）。安定性は `npx vitest run src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts --repeats=20` で確認
-- [ ] 監査 fingerprint `migrationBackup.runMigrationRestore:backup-removed-on-incomplete-restore` を完了記録（CHANGELOG / 監査 ledger）に残す
-- [ ] コードレビュー完了（Security Review 観点: データ復元手段の破棄 = all-or-nothing な操作である。「より安全でない方向」には決して変わらないことを確認。かつ「残す分岐」（再検証 throw）と「新設する分岐」（件数不足）でログレベルと原因の区別が付いているか）
-- [ ] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`migrationBackup.ts` の JSDoc（`:395-399` の「Terminal guarantee」コメント）に「バックアップを捨てるには件数一致も必要」であることを明記、`CHANGELOG.md`）
+- [x] BDDシナリオが自動テストで実装されパス（Scenario 1〜5 の 5 件、うち Scenario 3/4 は既存テストの改変なし流用）
+- [x] `npm run validate` が緑（type-check + lint + 全テスト）。安定性は `npx vitest run src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts --repeats=20` で確認
+- [x] 監査 fingerprint `migrationBackup.runMigrationRestore:backup-removed-on-incomplete-restore` を完了記録（CHANGELOG / 監査 ledger）に残す
+- [x] コードレビュー完了（Security Review 観点: データ復元手段の破棄 = all-or-nothing な操作である。「より安全でない方向」には決して変わらないことを確認。かつ「残す分岐」（再検証 throw）と「新設する分岐」（件数不足）でログレベルと原因の区別が付いているか）
+- [x] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`migrationBackup.ts` の JSDoc（`:395-399` の「Terminal guarantee」コメント）に「バックアップを捨てるには件数一致も必要」であることを明記、`CHANGELOG.md`）
 
 ## 調査結果（2026-10-18）
 
@@ -262,3 +262,10 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 13番）:
   - `src/offscreen/sqliteStatus.ts:82,103` ― done フラグの表示側。done の意味を変えていないことの確認先。
 - 既存テスト `src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts:135-166` ― 現行挙動を pin しており、**本 PBI の修正で意図が反転する**唯一のテスト。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 13番、`findings.json`、`REPORT.md`）
+
+## 完了記録（2026-10-20）
+
+- 実装: 削除条件を `if (reverifyOk)` から `if (reverifyOk && actualCount >= expectedCount)` に変更（選択肢 1）。件数不足時はバックアップ保持 + logWarn「SQLite: IDB migration restore incomplete, backup retained for next launch retry」（ErrorCode.MIGRATION_ROLLBACK_FAILED 継続使用、forensics 用 logError とレベル/メッセージを分離）。「Terminal guarantee」JSDoc を「削除には READ 成功 AND 件数一致が必要」に更新。runMigrationRestore は done を読まないため保持されたバックアップは次回起動で自動再試行される（done は据え置き）。
+- テスト: 旧挙動 pin テスト（不一致で backup 削除）を PBI 明示どおり Scenario 1+2 契約に読み替え（remove 不呼び出し + logWarn pin + 2 回目起動で復元再実行）。Scenario 3 回帰ガード（不一致 → 復元全件成功 → 再検証で件数一致 → 削除 + done）を追加。idb-migration.test.ts の統合テストも契約反転に読み替え。
+- 5 Whys: バックアップが消えたのは削除条件が再検証 READ の成否だけで件数を見ていなかったため → per-row INSERT の失敗行が空 catch で黙って飛ばされ「件数不足は収束しないので再試行無意味」という前提で端末扱いされていたため（旧テストが pin）→ その前提が誤りなのは INSERT OR IGNORE が制約違反を無言スキップ（restored 過大報告）し、I/O・型不一致・サイズ超過は reject されうる＝件数不足は現実に起こる欠陥状態なため。解: 削除条件に件数一致を要求し、不足時はバックアップ保持 + 観測ログ。
+- 検証: Red-first（修正前に 1 failed で不一致でも remove が呼ばれる現行バグを局所再現）→ 10 ファイル 80 テスト / 全スイート 1,104 ファイル 16,565 テスト緑 / migrationBackup と idb-migration の --repeats=20 緑 / type-check / eslint / docs-chars 全緑。受入基準 8 項目すべて達成。
