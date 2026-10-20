@@ -5,9 +5,12 @@
  * and never leak the raw timer error. Follows pendingRecordGateway.test.ts:
  * fake clock + advanceTimersByTimeAsync, no real-time waits.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, expectTypeOf, vi, beforeEach, afterEach } from 'vitest';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { sendWithPolicy } from '../sendWithPolicy.js';
+import type { SendFailure } from '../sendWithPolicy.js';
+import type { PendingRecordResult } from '../pendingRecordGateway.js';
+import type { ResponseForType } from '../types.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 
 interface ProbeResult {
@@ -101,5 +104,17 @@ describe('sendWithPolicy', () => {
     await vi.advanceTimersByTimeAsync(1000);
 
     await expect(pending).resolves.toEqual({ success: false, error: 'wrapped:GATEWAY_TIMEOUT' });
+  });
+
+  // eslint-disable-next-line vitest/expect-expect -- expectTypeOf() below IS the assertion (compile-time check, not counted by the rule)
+  it('type-level: the default failure envelope is success: false + error and fits every gateway response contract (PBI 2026-10-20-11)', () => {
+    // Compile-time assertion: defaultMapError returns SendFailure with no
+    // cast, so the failure shape is checked against each gateway's response
+    // type at the gateway boundary. If a response contract ever stops
+    // accepting `{ success: false; error: string }`, these pins fail to
+    // compile and the gateway must map the failure explicitly.
+    expectTypeOf<SendFailure>().toEqualTypeOf<{ success: false; error: string }>();
+    expectTypeOf<SendFailure>().toExtend<PendingRecordResult>();
+    expectTypeOf<SendFailure>().toExtend<ResponseForType<'REGENERATE_SUMMARY'>>();
   });
 });
