@@ -35,6 +35,37 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.50] - 2026-10-21
+
+このリリースはアーキテクチャのリファクタリングです。yasumaro-refactor の診断（DRY / SRP / 不要 as 排除 / 副作用分離 / テスト容易性）で 24 件の改善テーマを RICE 採点・PBI 化し、24 件全件を実装しました。実行時の挙動は一切変えていません（公開機能・拒否の意味論・マスク挙動はすべて不変）。各 PBI の実装記録は `dev-docs/archived/pbi/` を参照してください。
+
+### 修正
+
+- 同値二重定義の定数を各レイヤーの owner に統合する。CRYPTO_PARAMS の AES key/IV・24h TTL ×3 → PENDING_MAX_TTL_MS・日次 ms → trancoConsent.MS_PER_DAY・DEFAULT_TIMEOUT_MS・`local_export_` / `privacy-confirm-` プレフィックス・StorageKeys ×2・PAGE_SIZE・保持既定 90/1000 → queryPlanner SSOT ほか 14 組を 1 定義へ畳み、等価性をパリティ pin で機械化する（PBI 2026-10-20-04）
+- エラー正規化を errorMessage / toError に統一する。String(error) 28 箇所・18 ファイル → errorMessage、instanceof Error 再ラップ 13 箇所 → toError に置換する（PBI 2026-10-20-02）
+- console 直書き 43 箇所 / 24 ファイルを logger seam（logError / logWarn / logInfo）に統一する（PBI 2026-10-20-03）
+- ログ引数の並びを canonical 形（message=description, ..., source=moduleName）に統一する。38 箇所 / 9 ファイル（PBI 2026-10-20-01）
+- 本番呼び出し 0 件の死にコード 19 件を削除する。SQLITE_EXPORT 到達不能契約の保守チェーン一括・watchDynamicContent.ts・optionBuilder.ts.bak ほか -1100 行（PBI 2026-10-20-07）
+- cspValidator のキュー実行マシンと safeFetch を削除する。本番 0 件の再確認の上で -136 行とし、cspSettings のハードコード origin を listSources.ts SSOT 派生の完全一致 lookup に置換する（fail-closed 維持）（PBI 2026-10-20-08）
+- トランコ変化検知の削除済みファイル（trancoChangeDetector.ts 271 行）と通知 flag 3 箇所を撤去する（PBI 2026-10-20-09）
+- encryptionSession 内の 3 重複を共有プリミティブへ統合する。鍵導出・auth-meta 読み取り・secret 生成を primitives 経由に委譲し、AES-GCM クロス復号で等価性を pin する（PBI 2026-10-20-10）
+- cryptoParams / masterPassword のスコア計算複製を 1 実装へ統一する（PBI 2026-10-20-15）
+- 設定読み取りのラダー（readNumberSetting / toLadderValue）を aiUsageTracker に導入する（PBI 2026-10-20-05）
+- WASM 資産 URL を wasmAssets.ts SSOT に統合する（PBI 2026-10-20-06）
+- ダッシュボード／ポップアップのスカフォールド（settingsForm・rowCapNotice・opfsWorkerStatus）を共通化する（PBI 2026-10-20-17）
+- messaging の SendFailure 型制約を sendWithPolicy.ts の実パスに導入する（PBI 2026-10-20-11）
+- i18n 既定モックを実 Chrome 挙動（未知キーは '' を返す）に揃え、initWasmForNode の失敗時リセットを導入する（PBI 2026-10-20-13）
+- 空 catch・catch { return false }・.catch(() => undefined) 計 7 箇所に logError を追加して失敗を可視化する（戻り値・制御フロー不変）（PBI 2026-10-20-14）
+- 不要な as を境界ガード（isTrancoTier / isSafetyMode / isFilterMode）・直接参照に置換する 11 箇所（実行時の形不変）（PBI 2026-10-20-20）
+- 責務ごとのステップ関数・クラスへ SRP 分割する。sanitizeRegex を 4 責務関数へ、ModelsDevDialog を ModelsDevCatalog + persistProviderConnection へ、loadCurrentTab を currentTabPage.ts の 3 ステップへ（既存テスト無修正）（PBI 2026-10-20-24）
+- settingsMigration の boolean 合同を core シグネチャに統合し、as ×4 / as never ×2 を排除する（PBI 2026-10-20-16）
+- fetchWithRetry の 2 同形ブロックを decideRetryAndBackoff に、ssrfGuard の localhost 判定 ×3 を isLocalhostHostname に、埋め込み IPv4 変換複製を classifyEmbeddedIpv4 に統合する（判定厳格さ不変）（PBI 2026-10-20-18）
+- 生タイマー・クロックを注入可能 seam（SleepFn・{ now }・reload 注入）へ置換する 5 箇所 + domClear / compareStrings の canonical 単体テスト新規（PBI 2026-10-20-19）
+- sqlite ハンドラのディスパッチを SQLITE_WIRE_TABLE 派生に統合し、stagingBackend の動的ディスパッチを型付きテーブルに置換する（PBI 2026-10-20-23）
+- 虚偽コメント・誤解を招く命名の long tail 22 箇所を整備する（診断面のみ・挙動不変）（PBI 2026-10-20-12）
+- 残り DRY 9 組を統合する。ID 生成 SSOT 準拠・promptSafety 6 点目・escapeRegex 委譲・eslint AST 走査 4 重複 → ast-walk.mjs ほか（PBI 2026-10-20-21）
+- テスト型エラーのベースラインを 453 に固定し、ラウンド内の新規混入を都度返済する（PBI 2026-10-20-20・23 由来の 5 件を修正）
+
 ## [6.9.49] - 2026-10-17
 
 このリリースは調べもの整理の新機能2件です。リサーチ・セッションの壁打ち2候補を RICE 採点・PBI 化し、deep-dig の仮定検証を経て Subagent-Driven で実装しました。ポップアップの一時停止 UI は目検フィードバックを受けてプレス式＋ツールバーバッジ表示に作り替えています。
