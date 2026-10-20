@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 9件完了・アーカイブ済み（01・03・05・06・09・11・13・17・22） / ⬜ 15件残 🔧非機能追加 RICE順: ~~01(76)~~ → 02(60) → ~~03(58)~~ → 04(50) → ~~05(48)~~ → ~~06(42)~~ → 07(38) → 08(32) → ~~09(30)~~ → 10(30) → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → ~~17(18)~~ → 18(15) → 19(14) → 20(14) → 21(13) → ~~22(12)~~ → 23(12) → 24(8)
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 13件完了・アーカイブ済み（01・02・03・05・06・09・10・11・13・15・17・19・22） / ⬜ 11件残 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → 04(50) → ~~05(48)~~ → ~~06(42)~~ → 07(38) → 08(32) → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → ~~15(20)~~ → 16(18) → ~~17(18)~~ → 18(15) → ~~19(14)~~ → 20(14) → 21(13) → ~~22(12)~~ → 23(12) → 24(8)
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
@@ -23,13 +23,10 @@
 | ⬜ 04 | [2026-10-20-04-refactor-constant-ssot-consolidation.md](2026-10-20-04-refactor-constant-ssot-consolidation.md) | refactor | 50 | 2.0 | 同値二重定義・mirror 契約 14 組（KEY_LENGTH・day-ms・24h TTL・timeout 30000・'local_export_' ほか） |
 | ⬜ 07 | [2026-10-20-07-refactor-dead-code-removal.md](2026-10-20-07-refactor-dead-code-removal.md) | refactor | 38 | 2.0 | production 呼び出し 0 件のエクスポート・死に契約 19 件（SQLITE_EXPORT 到達不能契約・watchDynamicContent ほか） |
 | ⬜ 08 | [2026-10-20-08-refactor-csp-queue-machine-removal.md](2026-10-20-08-refactor-csp-queue-machine-removal.md) | refactor | 32 | 1.0 | cspValidator キュー実行マシン ~90 行（本番 0 件）+ cspSettings 未接続・ハードコード origin |
-| ⬜ 10 | [2026-10-20-10-refactor-encryption-session-dedup.md](2026-10-20-10-refactor-encryption-session-dedup.md) | refactor | 30 | 2.0 | encryptionSession 内 3 重複（PBKDF2 ボイラープレート・4 キー読み取り ×3・secret 生成 ×2） |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
 | ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
-| ⬜ 15 | [2026-10-20-15-refactor-crypto-params-score-ssot.md](2026-10-20-15-refactor-crypto-params-score-ssot.md) | refactor | 20 | 1.0 | cryptoParams scorePassword（mirror 実装）と masterPassword calculatePasswordStrength の複製を 1 実装へ |
 | ⬜ 16 | [2026-10-20-16-refactor-settings-migration-types.md](2026-10-20-16-refactor-settings-migration-types.md) | refactor | 18 | 2.0 | settingsMigration の boolean 合同 as ×4 + as never ×2 を core シグネチャへ統合 |
 | ⬜ 18 | [2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md](2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md) | refactor | 15 | 2.0 | fetchWithRetry の 2 同形ブロック（:434-450 / :455-470）+ ssrfGuard localhost 判定 ×3 |
-| ⬜ 19 | [2026-10-20-19-refactor-testability-seams.md](2026-10-20-19-refactor-testability-seams.md) | refactor | 14 | 2.0 | 生 setTimeout・Date.now() の注入化 5 箇所 + domClear/compareStrings（canonical seam・テストなし） |
 | ⬜ 20 | [2026-10-20-20-refactor-type-safety-cleanup.md](2026-10-20-20-refactor-type-safety-cleanup.md) | refactor | 14 | 2.0 | 不要 as 11 箇所（RecordingOrchestrator as never・urlEntry Record|Map 二重表現・trustSettings 境界ガードなし ほか） |
 | ⬜ 21 | [2026-10-20-21-refactor-remaining-dry-consolidation.md](2026-10-20-21-refactor-remaining-dry-consolidation.md) | refactor | 13 | 2.0 | 残り DRY（ID 生成 SSOT 未準拠・promptSafety 6 点目・escapeRegex・OWTestState ほか） |
 | ⬜ 23 | [2026-10-20-23-refactor-sqlite-handler-types.md](2026-10-20-23-refactor-sqlite-handler-types.md) | refactor | 12 | 1.0 | sqlite ハンドラの動的ディスパッチ・手書き 9 対応・worker type 生リテラル（同期ルール非対称） |
@@ -517,6 +514,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 02・10・15・19 アーカイブ ― リファクタリング診断 24件のうち 13件完了（01・02・03・05・06・09・10・11・13・15・17・19・22）
+
+- **02-refactor-error-normalization-unification**（`8921b810`）: toError を errorUtils.ts:25 に新設し、String(error) 28 箇所 / 18 ファイル → errorMessage、instanceof Error 再ラップ 13 箇所 / 12 ファイル → toError に統一。旧形式 pin 4 件は正規化後の形式へ更新（主目的 pin 不変）。
+- **10-refactor-encryption-session-dedup**（`437b727c`）: deriveKeyFromPassword を primitives.deriveKey へ委譲、auth-meta 読み取り ×3 を readAuthMeta() に、secret 生成 ×2 を generateSecretBase64() に統合。鍵導出等価性を AES-GCM クロス復号で pin する新規テスト 4 件。検証呼び出し位置はエラー優先順位の差異を保つため各パスに維持。
+- **15-refactor-crypto-params-score-ssot**（`01a27da3`）: masterPassword.calculatePasswordStrength のスコア計算複製を cryptoParams.scorePassword へ委譲（PasswordStrengthLevel 型 narrow、LEVEL_TO_STRENGTH 変換）。SSOT 等価 pin 追加。
+- **19-refactor-testability-seams**（`9e73bfb6`）: 生 setTimeout / Date.now() 5 箇所を注入可能 seam へ（SleepFn・{ now }・reload 注入。既定値は旧生呼び出しと同一）。domClear・compareStrings の canonical 単体テスト新規。
 
 ### 2026-10-21 PBI 03・06・09・22 アーカイブ ― リファクタリング診断 24件のうち 9件完了（01・03・05・06・09・11・13・17・22）
 

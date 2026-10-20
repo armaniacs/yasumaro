@@ -38,6 +38,12 @@ Scenario: canonical seam の境界
 2 pt（RICE: 14 = Reach 7 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 生 setTimeout / Date.now() が注入可能 seam になる
-- [ ] domClear・compareStrings の単体テストが通過
-- [ ] npm run validate 通過
+- [x] 生 setTimeout / Date.now() が注入可能 seam になる
+- [x] domClear・compareStrings の単体テストが通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 現在地訂正: dashboardGateway は src/messaging/、visitReporter は src/content/、aiSummaryCleansingSettingsV2 は src/dashboard/settings/、privacySettingsPanel は src/dashboard/panels/staticForm/ 配下
+- 注入化 5 箇所: dashboardGateway の DashboardRetryOptions.sleep?: SleepFn、visitReporter の VisitReporterDeps.sleep?: SleepFn、settingsMigration の cleanupExpiredSettingsBackups(port, { now })、aiSummaryCleansingSettingsV2 の createDashboardPresetStore({ holdInitialRenderWindow })、privacySettingsPanel の DELETE_ALL_RELOAD_DELAY_MS 定数 + reload?: () => void（全て既定値は旧生呼び出しと同一・実行時挙動不変）
+- 新規テスト: src/utils/__tests__/domClear.test.ts（jsdom 6 tests）と compareStrings.test.ts（node 10 tests）で canonical 契約を pin
+- 検証: 担当モジュール全テスト green、npm test 全体 1110 ファイル / 16614 テスト green、type-check 通過（新規エラーゼロ）、validate:fast green

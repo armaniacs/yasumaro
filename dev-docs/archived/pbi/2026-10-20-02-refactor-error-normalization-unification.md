@@ -36,6 +36,12 @@ Scenario: toError は Error を壊さない
 2 pt（RICE: 60 = Reach 30 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] toError の単体テスト追加（Error 突入・非 Error 突入）通過
-- [ ] 置換後の既存テスト全通過
-- [ ] npm run validate 通過
+- [x] toError の単体テスト追加（Error 突入・非 Error 突入）通過
+- [x] 置換後の既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- canonical 追加: toError を src/utils/errorUtils.ts:25 に新設（Error は同一インスタンス＝スタック保持、非 Error は new Error(errorMessage(error))）。単体テスト 6 件追加
+- String(error)/String(err) → errorMessage: 28 箇所 / 18 ファイル（ログ用 16・sqliteHistoryPanel 2・storageFallback 10）。instanceof Error 再ラップ → toError: 13 箇所 / 12 ファイル（throw 系 4・wasm 層 9）。allowedUrlsSync 2 箇所は errorMessage(再ラップ) → errorMessage(error) に数学的同一の簡約
+- 旧形式 pin テスト 4 件（storageFallbackMutate:173・deferredMigrations:172/184・ollamaSettingsObserver:71）を正規化後の形式へ更新（各テストの主目的 pin は不変、仕様変更の直接の帰結）。errorUtils を vi.mock する 3 テストに toError mock 定義を補完
+- 検証: PBI 対象 23 ファイルで対象パターン 0 件、フルスイート 16613/16614（失敗 1 件は ReDoS 壁時計測定の負荷由来、単独 --repeats=5 で 75/75 green）、type-check 通過、validate:fast green（772 ファイル / 11964 テスト）

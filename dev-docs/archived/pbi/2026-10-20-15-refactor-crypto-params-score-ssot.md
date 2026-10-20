@@ -34,6 +34,11 @@ Scenario: 検証と UI の整合
 1 pt（RICE: 20 = Reach 5 × Impact 2 × Confidence 1.0 ÷ Effort 0.5 人日）
 
 ## DoD
-- [ ] mirror 複製が消え、1 実装経由になる
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] mirror 複製が消え、1 実装経由になる
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 実ファイルは src/utils/masterPassword.ts（src/utils/crypto/ 配下ではない）。calculatePasswordStrength 内のスコア計算複製（重み 20/10/20/20/30・上限 100・閾値 40/80）を削除し cryptoParams.scorePassword へ委譲。scorePassword をエクスポートし level を PasswordStrengthLevel 型に narrow、masterPassword 側は LEVEL_TO_STRENGTH マップで enum 変換（返り値形・文言不変、依存方向 masterPassword → cryptoParams のまま）
+- pin テスト: cryptoParamsSSOT.test.ts に SSOT 等価 describe（境界 8 ケース・同一入力同値・policy 拒否とスコアの一貫性）追加、masterPassword.test.ts にスコア境界 pin 3 件追加（Red/Green 検証済み）
+- 検証: 両ファミリー 28 ファイル 446 tests 全 green、type-check 通過、type-check:test:baseline 453 維持、validate:fast green
