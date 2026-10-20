@@ -11,6 +11,7 @@ import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { buildQuerySpec, matchesExtraWhere, type AlreadyCappedQuery } from './queryPlan.js';
 import { QUERY_CAPS } from '../utils/limits.js';
+import { forwardWarn } from './offscreenLogger.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
@@ -82,34 +83,93 @@ export class FallbackStorage {
     return start;
   }
 
-  private async ensureQuotaSpace(): Promise<void> {
-    const bytesInUse = await chrome.storage.local.getBytesInUse(null);
+  /**
+   * Trim the caller's snapshot when the fallback key alone is over the soft
+   * quota threshold, so the write that is about to land frees its own space.
+   *
+   * PBI 2026-10-18-13 ordering contract (audit fingerprint
+   * `storageFallback.ensureQuotaSpace:purge-before-dedupe-unstarred`):
+   * - Runs only AFTER the caller's dedupe check returned "not a duplicate",
+   *   so a duplicate insert or an all-duplicate insertBatch can never trigger
+   *   - let alone persist - a purge. That call-site move is the rollback-free
+   *   way to keep a purge from surviving a "nothing written" outcome; no
+   *   explicit rollback of a purge is needed or possible here.
+   * - Mutates the SAME snapshot the caller saves: the trim and the new record
+   *   land in ONE `saveData`, so the caller's own save can never resurrect
+   *   purged rows from a stale snapshot, and a failed `saveData` leaves the
+   *   persisted blob untouched (no half-written blob, per the saveData
+   *   contract above).
+   * - Measures `getBytesInUse(STORAGE_KEY)` (the fallback blob itself), not
+   *   `getBytesInUse(null)` - unrelated `chrome.storage.local` keys (settings,
+   *   savedUrls) must not decide whether browsing history is dropped.
+   * - Exempts `is_starred === 1` rows, the same standard as the sibling
+   *   purges (`purgeOldRecords` retention branch, `purgeContent`).
+   * - Thins 10% of the non-starred candidates (minimum 1), logged via
+   *   `forwardWarn` so the owner can trace what was dropped and when.
+   *
+   * Throws when the store is over threshold and every remaining record is
+   * starred (no purge candidate): the caller's catch converts this into the
+   * explicit quota failure instead of silently dropping starred rows.
+   */
+  private async ensureQuotaSpace(data: StoredData): Promise<void> {
+    const bytesInUse = await chrome.storage.local.getBytesInUse(STORAGE_KEY);
     if (bytesInUse <= QUOTA_BYTES_LIMIT) return;
 
-    const data = await this.loadData();
-    const purgeCount = Math.max(1, Math.floor(data.records.length * 0.1));
-    const sorted = [...data.records].sort((a, b) => a.created_at - b.created_at);
+    const candidates = data.records.filter(r => r.is_starred !== 1);
+    if (candidates.length === 0) {
+      forwardWarn(
+        'Fallback storage quota exceeded: no purge candidate (all records starred)',
+        {
+          bytesInUse,
+          quotaBytesLimit: QUOTA_BYTES_LIMIT,
+          recordCount: data.records.length,
+        },
+        'storageFallback',
+      );
+      throw new Error(
+        'Fallback storage quota exceeded: all records are starred; refusing to purge starred records to free space',
+      );
+    }
+
+    const purgeCount = Math.max(1, Math.floor(candidates.length * 0.1));
+    const sorted = [...candidates].sort((a, b) => a.created_at - b.created_at);
     const toRemove = new Set(sorted.slice(0, purgeCount).map(r => r.id));
     data.records = data.records.filter(r => !toRemove.has(r.id));
-    await this.saveData(data);
+    forwardWarn('Fallback storage quota purge: dropped oldest non-starred records', {
+      purged: toRemove.size,
+      purgedIds: [...toRemove].slice(0, 50),
+      bytesInUse,
+      quotaBytesLimit: QUOTA_BYTES_LIMIT,
+      remainingRecords: data.records.length,
+    }, 'storageFallback');
   }
 
   // insert / insertBatch keep bespoke locking rather than routing through
   // `mutate`, but on the SAME `this.mutex`, so they still serialize against
   // every other mutator. They cannot use `mutate`'s pure-fn contract because
   // the "dedupe-check THEN allocate IDs" ordering (PBI 2026-08-27-06) requires
-  // side-effecting storage I/O in the middle of the RMW: `ensureQuotaSpace`
-  // and `allocateIds` both touch chrome.storage and must run after the dedupe
-  // check but before the records are appended.
+  // side-effecting storage I/O in the middle of the RMW: `allocateIds` touches
+  // chrome.storage and must run after the dedupe check but before the records
+  // are appended.
+  //
+  // PBI 2026-10-18-13: `ensureQuotaSpace` moved into the same slot - after the
+  // dedupe check, only when the write actually lands. It trims the snapshot
+  // this method saves, so the purge and the new records land in ONE saveData:
+  // a dedupe return (`id: -1` / `count: 0`) can never persist a purge, and
+  // this method's own save can never resurrect purged rows from a stale
+  // snapshot.
   async insert(record: BrowsingLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
     await this.mutex.acquire();
     try {
-      await this.ensureQuotaSpace();
       const data = await this.loadData();
       const exists = data.records.some(r => r.url === record.url && r.created_at === record.created_at);
       if (exists) {
         return { success: true, id: -1 };
       }
+      // Quota trim runs only for a record that will actually be written
+      // (PBI 2026-10-18-13): the dedupe return above has already left, so
+      // this purge is always conditioned on a landing write.
+      await this.ensureQuotaSpace(data);
       const id = await this.getNextId();
       const domain = record.domain || this.extractDomain(record.url);
 
@@ -131,7 +191,6 @@ export class FallbackStorage {
   async insertBatch(records: BrowsingLogRecord[]): Promise<{ success: true; count: number } | { success: false; error: string }> {
     await this.mutex.acquire();
     try {
-      await this.ensureQuotaSpace();
       const data = await this.loadData();
 
       // Deduplicate against existing data and within-batch duplicates before allocating IDs
@@ -148,6 +207,11 @@ export class FallbackStorage {
       if (toInsert.length === 0) {
         return { success: true, count: 0 };
       }
+
+      // Quota trim runs only for records that will actually be written
+      // (PBI 2026-10-18-13): an all-duplicate batch returns above before any
+      // purge can run or persist.
+      await this.ensureQuotaSpace(data);
 
       const startId = await this.allocateIds(toInsert.length);
       let insertedCount = 0;
@@ -388,6 +452,15 @@ export class FallbackStorage {
           });
         }
 
+        // PBI 2026-10-18-13 decision (recorded): this maxRecords branch keeps
+        // NO star exemption on purpose. maxRecords is an explicit count cap -
+        // the one purge knob where exempting starred rows would break the
+        // contract, because a starred-heavy store could never be capped. The
+        // retention branch above and the quota trim in ensureQuotaSpace share
+        // the soft age-based standard (`is_starred === 1` exempt); this
+        // branch is the deliberate exception, already pinned as INTENTIONAL
+        // by query-backends-parametric.test.ts and documented in
+        // dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md.
         if (maxRecords != null && maxRecords > 0) {
           const activeRecords = data.records.filter(r => r.is_deleted === 0);
           if (activeRecords.length > maxRecords) {

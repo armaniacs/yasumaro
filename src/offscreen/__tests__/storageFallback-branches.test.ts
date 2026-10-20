@@ -67,6 +67,159 @@ describe('FallbackStorage quota management', () => {
   });
 });
 
+// ── quota purge ordering (PBI 2026-10-18-13) ────────────────────────────
+// The quota trim runs only AFTER the dedupe check and only when the write
+// actually lands, exempts `is_starred === 1` rows (same standard as the
+// sibling purges), and measures the fallback key's own bytes instead of
+// `getBytesInUse(null)`.
+
+describe('FallbackStorage quota purge ordering (PBI 2026-10-18-13)', () => {
+  // Spy style follows the existing quota tests above. mockClear() drops the
+  // call history the seeding inserts already recorded on the shared mock, so
+  // call-count assertions only see the calls under test. Each test restores
+  // the spy explicitly in `finally` — vi.restoreAllMocks() here would leave
+  // the setup's getBytesInUse implementation unset for the following suites.
+  function spyBytesInUse(): ReturnType<typeof vi.spyOn> {
+    const spy = vi.spyOn(chrome.storage.local, 'getBytesInUse');
+    (spy as unknown as { mockResolvedValue: (v: number) => unknown }).mockResolvedValue(6 * 1024 * 1024);
+    spy.mockClear();
+    return spy;
+  }
+
+  async function seedRows(count: number, starredIndices: readonly number[] = []): Promise<void> {
+    for (let i = 1; i <= count; i++) {
+      await storage.insert(
+        makeRecord({ url: `https://seed-${i}.com`, created_at: i, is_starred: starredIndices.includes(i) ? 1 : 0 }),
+      );
+    }
+  }
+
+  it('keeps every row and id stable when a duplicate insert repeats under quota pressure', async () => {
+    await seedRows(20);
+    const before = await storage.getAllRecords();
+    expect(before.length).toBe(20);
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      // Re-record an existing newer-side row: the dedupe path must return
+      // id:-1 without the quota trim even running (MAX_RETRY_COUNT = 5 scale).
+      const dupTarget = before.find(r => r.url === 'https://seed-20.com')!;
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const result = await storage.insert(makeRecord({ url: dupTarget.url, created_at: dupTarget.created_at }));
+        expect(result).toEqual({ success: true, id: -1 });
+      }
+      // No quota measurement on the dedupe path at all.
+      expect(getBytesSpy).not.toHaveBeenCalled();
+
+      const after = await storage.getAllRecords();
+      expect(after.length).toBe(20);
+      expect(after.map(r => r.id).sort((a, b) => a - b)).toEqual(before.map(r => r.id).sort((a, b) => a - b));
+      expect(after.map(r => r.url).sort()).toEqual(before.map(r => r.url).sort());
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+
+  it('thins only non-starred rows when a new record actually needs space', async () => {
+    // Oldest row starred: the trim must skip it and take the next candidate.
+    await seedRows(20, [1]);
+    const before = await storage.getAllRecords();
+    const starredIds = before.filter(r => r.is_starred === 1).map(r => r.id);
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      const result = await storage.insert(makeRecord({ url: 'https://brand-new.com', created_at: 999 }));
+      expect(result.success).toBe(true);
+
+      const after = await storage.getAllRecords();
+      // candidates = 19 non-starred rows -> 10% floor = 1 purged; 20 - 1 + 1 = 20
+      expect(after.length).toBe(20);
+      for (const id of starredIds) {
+        expect(after.some(r => r.id === id)).toBe(true);
+      }
+      const removed = before.filter(r => !after.some(a => a.id === r.id));
+      expect(removed.length).toBe(1);
+      expect(removed.every(r => r.is_starred !== 1)).toBe(true);
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+
+  it('returns count:0 and deletes nothing when insertBatch is fully duplicate under quota pressure', async () => {
+    await seedRows(20);
+    const before = await storage.getAllRecords();
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      const batch = before.slice(0, 10).map(r => makeRecord({ url: r.url, created_at: r.created_at }));
+      const result = await storage.insertBatch(batch);
+      expect(result).toEqual({ success: true, count: 0 });
+      expect(getBytesSpy).not.toHaveBeenCalled();
+
+      const after = await storage.getAllRecords();
+      expect(after.length).toBe(before.length);
+      expect(after.map(r => r.id).sort((a, b) => a - b)).toEqual(before.map(r => r.id).sort((a, b) => a - b));
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+
+  it('measures the fallback key itself, not all chrome.storage.local keys', async () => {
+    await seedRows(20);
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      const result = await storage.insert(makeRecord({ url: 'https://brand-new.com', created_at: 999 }));
+      expect(result.success).toBe(true);
+
+      expect(getBytesSpy).toHaveBeenCalledWith('FALLBACK_STORAGE_DATA');
+      expect(getBytesSpy).not.toHaveBeenCalledWith(null);
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+
+  it('fails explicitly instead of dropping starred rows when no purge candidate exists', async () => {
+    await seedRows(5, [1, 2, 3, 4, 5]);
+    const before = await storage.getAllRecords();
+    expect(before.length).toBe(5);
+    expect(before.every(r => r.is_starred === 1)).toBe(true);
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      const result = await storage.insert(makeRecord({ url: 'https://brand-new.com', created_at: 999 }));
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error).toContain('quota');
+      }
+
+      const after = await storage.getAllRecords();
+      expect(after.length).toBe(before.length);
+      expect(after.every(r => r.is_starred === 1)).toBe(true);
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+
+  it('applies the same explicit failure to insertBatch when no purge candidate exists', async () => {
+    await seedRows(5, [1, 2, 3, 4, 5]);
+    const before = await storage.getAllRecords();
+    expect(before.length).toBe(5);
+
+    const getBytesSpy = spyBytesInUse();
+    try {
+      const result = await storage.insertBatch([makeRecord({ url: 'https://brand-new.com', created_at: 999 })]);
+      expect(result.success).toBe(false);
+
+      const after = await storage.getAllRecords();
+      expect(after.length).toBe(before.length);
+      expect(after.every(r => r.is_starred === 1)).toBe(true);
+    } finally {
+      getBytesSpy.mockRestore();
+    }
+  });
+});
+
 // ── query(): spec.error path (line 165) ─────────────────────────────────
 
 describe('FallbackStorage query error handling', () => {

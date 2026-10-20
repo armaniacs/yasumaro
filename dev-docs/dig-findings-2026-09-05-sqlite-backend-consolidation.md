@@ -30,7 +30,7 @@
 | `src/offscreen/opfsWorker.ts` + `src/offscreen/opfsWorker/` (`handlers`, `crudHandlers`, `searchHandlers`, `auditHandlers`, `backupHandlers`, `purgeHandlers`, `statusHandlers`, `migrationV2`, `types`) | Worker 内の実 SQL 実装。`@subframe7536/sqlite-wasm` + OPFSCoopSyncVFS + FTS5。唯一バイナリ backup/restore 対応 | `OpfsWorkerBackend`, `sqliteEngineContext/opfsWorkerProxy.ts` |
 | `src/offscreen/IdbVfsBackend.ts` | IDB VFS 上の直 SQL 実装 (`engine.execWithCache`)。FTS5 対応。backup/restore は `Binary backup requires OPFS storage.` で拒否 | `createBackend('idb')` 経由で repos が間接利用 |
 | `src/offscreen/sqliteEngine.ts` | `SqliteEngine` ラッパ (`exec` / `query` / `queryValue` / `close`) と `createEngine` (OPFS) / `createIdbEngine` (IDB)。`@subframe7536/sqlite-wasm` の `useOpfsStorage` / `useIdbStorage` を使用 | `idbEngineLifecycle.ts`, OPFS Worker |
-| `src/offscreen/storageFallback.ts` | `FallbackStorage`: `chrome.storage.local` ベース。線形探索 (FTS なし)、Mutex 直列化、5MB クォータ退避 | `FallbackStorageAdapter`, `fallbackMigration.ts` |
+| `src/offscreen/storageFallback.ts` | `FallbackStorage`: `chrome.storage.local` ベース。線形探索 (FTS なし)、Mutex 直列化、5MB クォータ退避 (dedupe 判定の後・書き込み確定時のみ、star 行 exempt、対象キー byte 判定、候補なし時は明示的 quota 失敗。PBI 2026-10-18-13) | `FallbackStorageAdapter`, `fallbackMigration.ts` |
 | `src/offscreen/FallbackStorageAdapter.ts` | `FallbackStorage` の `StorageBackend` 適合アダプタ。`insertBatch` の `{count}` → `{inserted, skipped}` 変換、audit log / backup の unsupported スタブ | `createBackend('fallback')` |
 | `src/offscreen/sqliteEngineHost.ts` (+ 別名 `src/offscreen/sqliteEngineContext.ts`) | `SqliteEngineHost`: `#state` 集約、Mutex 直列化 init、`getBackend()` キャッシュ (`_backend`) | `recordsRepo.ts`, `dbMaintenance.ts`, `auditLogRepo.ts`, `sqliteMessageHandlers.ts` |
 | `src/offscreen/sqliteEngineContext/opfsWorkerProxy.ts` | Worker 生成・送受信・15s タイムアウト・`initOpfsWorker` | `sqliteEngineHost._doInit` |
@@ -60,7 +60,13 @@
 | FTS5 検索 | あり | あり (`fts5Available`) | なし (LIKE 線形探索、`rank` 常時 0) | ― |
 | バイナリ backup/restore | あり | なし (明示拒否) | なし (明示拒否) | ― |
 | audit log | あり | あり | なし (明示拒否) | ― |
-| 永続先 | OPFS (`yasumaro.db`) | IndexedDB (`yasumaro.db`) | `chrome.storage.local` (5MB 警告閾値・10% 自動 purge) | ― |
+| 永続先 | OPFS (`yasumaro.db`) | IndexedDB (`yasumaro.db`) | `chrome.storage.local` (5MB 警告閾値・書き込み確定時のみ非スター行を 10% purge、star exempt。PBI 2026-10-18-13) | ― |
+
+## 2026-10-20 更新（PBI 2026-10-18-13 実装）
+
+`ensureQuotaSpace` のクォータ purge を dedupe 判定の後・書き込み確定時のみに移動し、保持期間 purge (`purgeOldRecords` の保持期間分岐) と同じ `is_starred === 1` exempt を導入した。byte 判定は `getBytesInUse(null)` から `getBytesInUse(STORAGE_KEY)` (Fallback キー自身) に変更。間引き候補が無い場合 (全行 star 済み) は star 行を削除せず、明示的な quota 失敗を返す。削除行は `forwardWarn` でログ記録される (監査 fingerprint: `storageFallback.ensureQuotaSpace:purge-before-dedupe-unstarred`)。
+
+**裁定 (記録)**: `purgeOldRecords` の `maxRecords` 分岐には star exempt を入れない (本 PBI のスコープ外)。maxRecords は明示的な上限件数 enforcement であり、star 行を exempt すると star 主体のストアで上限が守れなくなる。quota purge と保持期間分岐は「年齢ベースのソフト整理」として star exempt を共有し、maxRecords は意図的な例外とする。既存の INTENTIONAL テスト (`query-backends-parametric.test.ts` の「fallback purge cap-delete can remove starred rows, SQL backends never do」) がこの差分を固定している。
 
 ## 重複と整理候補
 
