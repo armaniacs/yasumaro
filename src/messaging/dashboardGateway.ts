@@ -7,6 +7,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logWarn } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { backoffDelayMs } from '../utils/backoff.js';
+import type { SleepFn } from '../utils/retryPredicate.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
@@ -40,7 +41,21 @@ export function resetDashboardTransportForTesting(): void {
 export interface DashboardRetryOptions {
   retryAttempts?: number;
   retryDelayMs?: number;
+  /**
+   * Injected inter-attempt wait (PBI 19 / AGENTS.md wait policy: production
+   * waits on purpose, tests never wait in real time). Defaults to the same
+   * real setTimeout wrapper the loop used before this seam existed, so the
+   * retry series is unchanged.
+   */
+  sleep?: SleepFn;
 }
+
+/**
+ * Default inter-attempt wait: the real setTimeout wrapper every retry loop
+ * uses. Tests inject `DashboardRetryOptions.sleep` instead, so the delay path
+ * never forces a real-time wait.
+ */
+const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function getDashboardConfirmToken(action: string, id?: number, scopeHash?: string): Promise<string | null> {
   try {
@@ -148,8 +163,9 @@ export class DashboardGateway {
   async callDashboard<T extends DashboardSqliteRequest, R>(payload: T, decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R, defaultErrorMessage: string, retry?: DashboardRetryOptions): Promise<SqliteResult<R>> {
     const attempts = Math.max(1, retry?.retryAttempts ?? 1);
     const delayMs = retry?.retryDelayMs ?? 1000;
+    const sleep = retry?.sleep ?? defaultSleep;
     const waitBetweenAttempts = (attempt: number): Promise<void> =>
-      new Promise(resolve => setTimeout(resolve, backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 })));
+      sleep(backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 }));
     for (let attempt = 0; attempt < attempts; attempt++) {
       const last = attempt + 1 >= attempts;
       let response: DashboardSqliteResponseFor<T['subtype']>;

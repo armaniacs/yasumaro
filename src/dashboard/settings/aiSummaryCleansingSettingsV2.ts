@@ -11,7 +11,7 @@ import { getMessageOr } from '../../utils/i18n.js';
 import { CLEANSING_RULES, type CleansingRule } from '../../utils/aiSummaryCleaner/rules.js';
 import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
-import { createCleansingPresetStore } from './cleansingPresetStore.js';
+import { createCleansingPresetStore, type CleansingPresetStore } from './cleansingPresetStore.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
@@ -19,9 +19,35 @@ import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 // Preset/detectPreset moved there too — re-exported for backward compat.
 export { migrateToPreset, detectPreset } from './cleansingPresetStore.js';
 
-export const presetStore = createCleansingPresetStore();
+/**
+ * Construction options for the dashboard's preset store (PBI 19). The
+ * module-scope side effect used to be a bare `presetStore.holdBusy()` at
+ * import; it is now a named, injectable decision so a test can construct a
+ * store without the guard instead of waiting out the real release timer.
+ */
+export interface DashboardPresetStoreOptions {
+    /**
+     * Open the initial-render guard window right after construction.
+     * Production keeps the default (true): the window must cover module load
+     * → setup + 300ms. A test that needs the custom transition reachable
+     * passes false instead of waiting in real time.
+     */
+    holdInitialRenderWindow?: boolean;
+}
+
+/**
+ * Construct the dashboard's preset store with the import-time guard side
+ * effect injectable (PBI 19). The module singleton below keeps today's exact
+ * behaviour: constructed and held at module load.
+ */
+export function createDashboardPresetStore(options: DashboardPresetStoreOptions = {}): CleansingPresetStore {
+    const store = createCleansingPresetStore();
+    if (options.holdInitialRenderWindow ?? true) store.holdBusy();
+    return store;
+}
+
+export const presetStore = createDashboardPresetStore();
 // Guard window: module load → setup + 300ms (replaces _initialRenderGuard).
-presetStore.holdBusy();
 
 /**
  * Rule key -> checkbox element id, e.g. `jsonLd` -> `ai-summary-cleansing-json-ld`.

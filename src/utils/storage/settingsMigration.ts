@@ -612,11 +612,23 @@ export async function tryRestoreFromBackup(port: StoragePort = new ChromeStorage
     return restoreLatestSettingsBackup(port);
 }
 
+/**
+ * Clock seam for the backup expiry cutoff (PBI 19). Same seam as
+ * MigrateSettingsOptions.now: cleanupExpiredSettingsBackups read Date.now()
+ * directly, which forced a real clock into any test of the expiry boundary.
+ * Defaults to `Date.now`, so production behaviour is unchanged.
+ */
+export interface CleanupExpiredSettingsBackupsOptions {
+    now?: () => number;
+}
+
 export async function cleanupExpiredSettingsBackups(
     port: StoragePort = new ChromeStoragePort(),
+    options: CleanupExpiredSettingsBackupsOptions = {},
 ): Promise<void> {
     const all = await port.get(null);
-    const cutoff = Date.now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const now = options.now ?? (() => Date.now());
+    const cutoff = now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
     const expiredKeys = listSettingsBackupKeys(all).filter((k) => {
         const entry = all[k] as { createdAt?: number } | undefined;
         return typeof entry?.createdAt === 'number' && entry.createdAt < cutoff;

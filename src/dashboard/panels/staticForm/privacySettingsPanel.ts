@@ -15,7 +15,24 @@ import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { clearAllLogs, isServiceError } from '../../dashboardSqliteService.js';
 import { clearAllLocalData } from '../../../utils/storage/storageMaintenance.js';
 
-export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () => Promise<void> } {
+/**
+ * Delay before the page reloads after a successful delete-all (PBI 19: the
+ * inline 2000 magic number is now a named constant next to the reload seam).
+ */
+const DELETE_ALL_RELOAD_DELAY_MS = 2000;
+
+/**
+ * Reload seam for the delete-all path (PBI 19). The dashboard performs
+ * location.reload in exactly one place; tests inject a spy here so the
+ * reload and its delay never touch the real page. Default is unchanged.
+ */
+export interface PrivacySettingsPanelOptions {
+    /** Page reload used after a successful delete-all. Defaults to location.reload. */
+    reload?: () => void;
+}
+
+export function createPrivacySettingsPanel(options: PrivacySettingsPanelOptions = {}): PanelLifecycle & { refresh?: () => Promise<void> } {
+  const reload = options.reload ?? (() => window.location.reload());
   return {
     id: 'panel-privacy',
     category: 'static-form',
@@ -144,7 +161,7 @@ export function createPrivacySettingsPanel(): PanelLifecycle & { refresh?: () =>
           }
           const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
           if (statusEl2) statusEl2.textContent = chrome.i18n.getMessage('deleteAllDataSuccess');
-          setTimeout(() => window.location.reload(), 2000);
+          setTimeout(() => reload(), DELETE_ALL_RELOAD_DELAY_MS);
         } catch {
           const statusEl2 = container.querySelector('#deleteAllDataStatus') as HTMLElement | null;
           if (statusEl2) statusEl2.textContent = getMessageOr('deleteAllDataFailed', 'Failed to delete all data.');

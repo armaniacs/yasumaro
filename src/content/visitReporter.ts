@@ -13,6 +13,7 @@ import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStat
 import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logWarn, logError, logDebug } from '../utils/logger/api.js';
+import type { SleepFn } from '../utils/retryPredicate.js';
 import { toValidVisitPayload } from './visitPayload.js';
 import type { RecordingResult } from '../messaging/types.js';
 
@@ -131,7 +132,17 @@ export interface VisitReporterDeps {
      * content-side trace (extract/send) is produced while paused.
      */
     isPaused?: () => boolean;
+    /**
+     * Injected inter-attempt wait for the bounded retry (PBI 19 / AGENTS.md
+     * wait policy: production waits on purpose, tests never wait in real
+     * time). Defaults to the same real setTimeout wrapper the retry used
+     * before this seam existed, so the delay is unchanged.
+     */
+    sleep?: SleepFn;
 }
+
+/** Default retry wait: the real setTimeout wrapper every retry loop uses. */
+const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
 function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback: string): string {
@@ -249,7 +260,7 @@ export class VisitReporter {
             await logWarn('Failed to report valid visit', { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'visitReporter');
             if (retryLeft > 0) {
                 retryLeft -= 1;
-                await new Promise((resolve) => setTimeout(resolve, VisitReporter.RETRY_DELAY_MS));
+                await (this.deps.sleep ?? defaultSleep)(VisitReporter.RETRY_DELAY_MS);
                 await this.attempt(retryLeft);
             }
         }
