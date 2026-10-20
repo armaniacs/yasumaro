@@ -6,8 +6,9 @@
 
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys, Settings } from './storage/types.js';
-import { LogType } from './logger/types.js';
+import { LogType, ErrorCode } from './logger/types.js';
 import { addLog } from './logger/core.js';
+import { logError } from './logger/api.js';
 import { assertApiKeyResolved } from './storage/encryptionLockedError.js';
 import { redactSensitiveData } from './redaction.js';
 import { FailureKind, createFailure, tagFailure } from './failureTaxonomy.js';
@@ -82,9 +83,11 @@ async function buildFromSettings(): Promise<ObsidianConfig> {
 
     assertApiKeyResolved(apiKey);
     if (!apiKey || apiKey === '' || typeof apiKey === 'object') {
-        console.error('[ObsidianClient] API Key is missing or invalid!', redactSensitiveData({
+        // redactSensitiveData is typed unknown; the seam's details field is a
+        // plain record, so narrow it once here (value-based masking already ran).
+        void logError('[ObsidianClient] API Key is missing or invalid', redactSensitiveData({
             apiKey: typeof apiKey
-        }));
+        }) as Record<string, unknown>, ErrorCode.API_AUTH_FAILURE, 'obsidianConfigBuilder');
         addLog(LogType.WARN, 'Obsidian API Key is missing or invalid', { apiKey: typeof apiKey });
         throw new Error('Error: API key is missing. Please check your Obsidian settings.');
     }

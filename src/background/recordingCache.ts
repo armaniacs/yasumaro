@@ -10,8 +10,10 @@
  * SESSION_KEYS.RECORDING_CACHE entry so the microtask saveQueue stays atomic.
  */
 
-import { LogType } from '../utils/logger/types.js';
+import { LogType, ErrorCode } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
+import { logWarn } from '../utils/logger/api.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { Settings } from '../utils/storage/types.js';
@@ -272,7 +274,7 @@ export class RecordingCacheInstance {
       try {
         await this.saveCacheToSession();
       } catch (err) {
-        console.warn('[RecordingCache] Failed to persist cache to session storage:', err);
+        void logWarn('[RecordingCache] Failed to persist cache to session storage', { error: errorMessage(err) }, ErrorCode.STORAGE_WRITE_FAILURE, 'recordingCache');
       }
     });
   }

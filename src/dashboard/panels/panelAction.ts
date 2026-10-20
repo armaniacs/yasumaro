@@ -10,6 +10,8 @@
  */
 
 import { errorMessage } from '../../utils/errorUtils.js';
+import { logError } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
 import { isServiceError, type ServiceResult } from '../dashboardSqliteService.js';
 
 /** Which failure path produced the message handed to `onError`. */
@@ -102,7 +104,7 @@ export async function runPanelAction<TData>(spec: PanelActionSpec<TData>): Promi
       if (err instanceof PanelActionFailure) onError?.(err.reason, 'service', err.reason);
       else onError?.(errorMessage(err), 'thrown', err);
     } catch (handlerError) {
-      console.error('runPanelAction: onError handler threw', handlerError);
+      void logError('runPanelAction: onError handler threw', { error: errorMessage(handlerError) }, ErrorCode.INTERNAL_ERROR, 'panelAction');
     }
   } finally {
     for (const control of controls) {

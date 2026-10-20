@@ -16,6 +16,7 @@
 
 import { MIGRATION_COLUMNS, MIGRATION_SEQUENCE, FTS5_STATEMENTS, GIST_SYNCED_INDEX_SQL } from './schema.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { forwardWarn } from './offscreenLogger.js';
 
 export interface MigrationEngine {
   exec(sql: string): Promise<void>;
@@ -94,7 +95,7 @@ export async function runMigrations(engine: MigrationEngine): Promise<{ fts5Avai
     }
     fts5Available = true;
   } catch (err) {
-    console.warn('FTS5 unavailable:', errorMessage(err));
+    forwardWarn('FTS5 unavailable', { error: errorMessage(err) }, 'migrations');
   }
 
   // 4. FTS index rebuild
@@ -108,7 +109,7 @@ export async function runMigrations(engine: MigrationEngine): Promise<{ fts5Avai
         await engine.exec("INSERT INTO browsing_logs_fts(browsing_logs_fts) VALUES('rebuild')");
       }
     } catch (rebuildErr) {
-      console.warn('FTS rebuild check failed:', errorMessage(rebuildErr));
+      forwardWarn('FTS rebuild check failed', { error: errorMessage(rebuildErr) }, 'migrations');
     }
   }
 

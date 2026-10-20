@@ -20,6 +20,9 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { clearElement } from '../utils/domClear.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 interface DialogOptions {
     onSave?: (providerId: string, baseUrl: string, apiKey: string, model: string) => void;
@@ -289,7 +292,7 @@ export class ModelsDevDialog {
 
             this.loadingEl.classList.add('hidden');
         } catch (error) {
-            console.error('Failed to load providers:', error);
+            void logError('Failed to load providers', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'modelsDevDialog');
             this.loadingEl.classList.add('hidden');
             this.showError(getMessageOr('modelsDevLoadProvidersError', 'Failed to load providers. Please try again.'));
         }
@@ -493,7 +496,7 @@ export class ModelsDevDialog {
 
             this.hide();
         } catch (error) {
-            console.error('Failed to save settings:', error);
+            void logError('Failed to save settings', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'modelsDevDialog');
             this.showError(getMessageOr('modelsDevSaveSettingsError', 'Failed to save settings'));
         }
     }

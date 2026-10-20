@@ -7,6 +7,8 @@
 
 import { maskSensitiveData } from './sensitiveDataMask.js';
 import { resolveFailure, type FailureKindValue } from './failureTaxonomy.js';
+import { logError } from './logger/api.js';
+import { ErrorCode } from './logger/types.js';
 
 // ─── Error types ───────────────────────────────────────────────────────
 
@@ -300,12 +302,12 @@ export function createErrorResponse(error: unknown, context: Record<string, unkn
 
   // ログには詳細情報を含める（ただしAPIキーなどの機密情報は除く）
   const err = error instanceof Error ? error : null;
-  console.error('[Service Worker Error]', {
+  void logError('[Service Worker Error]', {
     type: errorType,
     name: err?.name,
     message: err?.message,
     context: maskSensitiveData(context, 'full')
-  });
+  }, ErrorCode.INTERNAL_ERROR, 'errorClassification');
 
   // ユーザーには簡潔なメッセージのみ返す
   return {

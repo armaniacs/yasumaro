@@ -331,7 +331,7 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
                 const wrappingKey = await getOrCreateHmacWrappingKey();
                 return await unwrapHmacKey(stored.wrapped, stored.iv, wrappingKey);
             } catch (error: unknown) {
-                console.warn(`Failed to unwrap HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+                await safeLog(() => logWarn(`Failed to unwrap HMAC key (${storageKey}), generating new one`, { error: errorMessage(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'hmacKeyStore.ts'));
                 // One generation only; storage.local.set below would otherwise destroy the old envelope.
                 await chrome.storage.local.set({ [`${storageKey}${QUARANTINE_SUFFIX}`]: stored }).catch(() => undefined);
                 await safeLog(() => logError(
@@ -352,11 +352,11 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
                 await chrome.storage.local.set({ [storageKey]: wrapped, [versionKey]: '1' });
                 return await importHmacKey(keyData, false);
             } catch (error: unknown) {
-                console.warn(`Failed to migrate plaintext HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+                await safeLog(() => logWarn(`Failed to migrate plaintext HMAC key (${storageKey}), generating new one`, { error: errorMessage(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'hmacKeyStore.ts'));
             }
         }
     } catch (error: unknown) {
-        console.warn(`Failed to load HMAC key (${storageKey}), generating new one:`, errorMessage(error));
+        await safeLog(() => logWarn(`Failed to load HMAC key (${storageKey}), generating new one`, { error: errorMessage(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'hmacKeyStore.ts'));
     }
 
     // Generate a fresh key and persist only its wrapped form

@@ -15,7 +15,7 @@
 import { countCleanseTargets } from '../contentCleaner.js';
 import { countAISummaryTargets, type AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import type { AiSummaryCleansedReason } from '../commonTypes.js';
-import { logSanitize, logDebug } from '../logger/api.js';
+import { logSanitize, logDebug, logInfo } from '../logger/api.js';
 import { deriveCleansedReason, removedRecordToMap, resolveCleanseReason } from './cleansedReason.js';
 import { makeByteMeter, type AiCleanseApplied, type ByteMeter, type FallbackDecision } from './extractPipeline.js';
 import type { ExtractResult, FallbackReason } from './types.js';
@@ -469,8 +469,8 @@ export class ExtractionReportBuilder {
             this.#totalRemoved = cleanseResult.totalRemoved;
             this.#cleansingExecuted = true;
 
-            console.log(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
-                + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`);
+            void logInfo(`[ContentExtractor] Cleansed ${cleanseResult.totalRemoved} elements `
+                + `(Hard: ${cleanseResult.hardStripRemoved}, Keyword: ${cleanseResult.keywordStripRemoved})`, {}, 'contentExtractor');
 
             void logSanitize(
                 'Content cleansing executed',

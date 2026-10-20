@@ -62,6 +62,9 @@ vi.mock('../../utils/logger/types.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
     LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
+    // PBI 03: the missing-API-key error path carries an ErrorCode through the
+    // seam, so the mock must expose it.
+    ErrorCode: { API_AUTH_FAILURE: 'API_AUTH_001' },
   }),
 );
 vi.mock('../../utils/logger/core.js', async () =>
@@ -73,6 +76,8 @@ vi.mock('../../utils/logger/core.js', async () =>
 vi.mock('../../utils/logger/api.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
+    // PBI 03: the missing-API-key error path routes through the seam.
+    logError: 'fn',
     LogType: { DEBUG: 'DEBUG', INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR' },
   }),
 );

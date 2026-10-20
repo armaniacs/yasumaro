@@ -31,6 +31,9 @@ import {
   resolvePanelIdForTab,
 } from './panels/panelCatalog.js';
 import { initIssueReportEntry } from './panels/diagnostic/issueReportEntry.js';
+import { logInfo, logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 /**
  * Which panel the page should open on, from ?tab= / ?section=.
@@ -76,15 +79,15 @@ export function applySectionDeepLink(search: string = window.location.search): v
 
 /** Page-level wiring that does not depend on any panel being mounted. */
 export async function initDashboard(): Promise<void> {
-  console.log('[Dashboard] Starting initialization...');
+  void logInfo('[Dashboard] Starting initialization...', {}, 'dashboard');
 
   document.getElementById('historyExportAllMarkdownBtn')?.addEventListener('click', handleHistoryExportLocalMarkdown);
   document.getElementById('exportLocalMarkdownBtn')?.addEventListener('click', handleExportLocalMarkdown);
-  try { await initTrancoConsentPanel(); } catch (e) { console.error('[Dashboard] initTrancoConsentPanel error:', e); }
+  try { await initTrancoConsentPanel(); } catch (e) { void logError('[Dashboard] initTrancoConsentPanel error', { error: errorMessage(e) }, ErrorCode.INTERNAL_ERROR, 'dashboard'); }
 
   // Sidebar + panel "Report a Bug" entry points — the shared controller and
   // the queued-button flush live in panels/diagnostic/issueReportEntry.ts.
   initIssueReportEntry();
 
-  console.log('[Dashboard] Initialization complete');
+  void logInfo('[Dashboard] Initialization complete', {}, 'dashboard');
 }

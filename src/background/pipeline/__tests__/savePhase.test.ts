@@ -14,18 +14,20 @@ vi.mock('../../../utils/logger/core.js', async () =>
   (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
     logError: 'fn',
+    logInfo: 'fn',
   }),
 );
 vi.mock('../../../utils/logger/types.js', async () =>
   (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     LogType: { INFO: 'INFO', WARN: 'WARN', ERROR: 'ERROR', DEBUG: 'DEBUG' },
-    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001' },
+    ErrorCode: { INTERNAL_ERROR: 'INT_001', UNKNOWN_ERROR: 'UNKN_001', STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
   }),
 );
 vi.mock('../../../utils/logger/api.js', async () =>
   (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
     logError: 'fn',
+    logInfo: 'fn',
   }),
 );
 

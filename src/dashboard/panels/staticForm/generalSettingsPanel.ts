@@ -19,6 +19,9 @@ import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVe
 import { createAiProviderLayoutController } from './generalSettingsLayout.js';
 import { mountWizardReopen } from './generalSettingsWizard.js';
 import { mountModelsDevDialog } from './generalSettingsModelsDev.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 const REVIEW_SUMMARY_BUTTONS: ReadonlyArray<{ btnId: string; periodType: 'weekly' | 'monthly' }> = [
   { btnId: 'generateWeeklySummaryBtn', periodType: 'weekly' },
@@ -113,7 +116,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         try {
           await handler();
         } catch (error) {
-          console.error('General settings: purge failed', error);
+          void logError('General settings: purge failed', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'generalSettingsPanel');
         }
       };
       document.getElementById('purgeNowBtn')?.addEventListener('click', onPurgeClick(handlePurgeNow));
@@ -131,7 +134,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         try {
           await reloadFromRepository();
         } catch (error) {
-          console.error('General settings: reload after import/restore failed', error);
+          void logError('General settings: reload after import/restore failed', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'generalSettingsPanel');
         }
       });
     },

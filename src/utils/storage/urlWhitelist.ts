@@ -6,6 +6,8 @@
 
 import { normalizeUrl } from '../urlUtils.js';
 import { errorMessage } from '../errorUtils.js';
+import { logWarn } from '../logger/api.js';
+import { ErrorCode } from '../logger/types.js';
 import { StorageKeys } from './types.js';
 import { ALL_LIST_SOURCES, FILTER_LIST_SOURCES } from '../listSources.js';
 import type { Settings } from './types.js';
@@ -39,10 +41,10 @@ export function addProviderBaseUrls(
             try {
                 allowedUrls.add(normalizeUrl(rawUrl));
             } catch (e) {
-                console.warn(`Invalid ${entry.label} Base URL, skipping: ${rawUrl}, error: ${errorMessage(e)}`);
+                void logWarn(`Invalid ${entry.label} Base URL, skipping: ${rawUrl}, error: ${errorMessage(e)}`, {}, ErrorCode.INVALID_INPUT, 'urlWhitelist');
             }
         } else {
-            console.warn(`${entry.label} Base URL not authorized, skipped: ${rawUrl}`);
+            void logWarn(`${entry.label} Base URL not authorized, skipped: ${rawUrl}`, {}, ErrorCode.INVALID_INPUT, 'urlWhitelist');
         }
     }
 }
@@ -90,12 +92,12 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://127.0.0.1:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (127.0.0.1), skipping: ${errorMessage(e)}`);
+        void logWarn(`Invalid Obsidian URL (127.0.0.1), skipping: ${errorMessage(e)}`, {}, ErrorCode.INVALID_INPUT, 'urlWhitelist');
     }
     try {
         allowedUrls.add(normalizeUrl(`${protocol}://localhost:${port}`));
     } catch (e) {
-        console.warn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`);
+        void logWarn(`Invalid Obsidian URL (localhost), skipping: ${errorMessage(e)}`, {}, ErrorCode.INVALID_INPUT, 'urlWhitelist');
     }
     // Pinned fixed-endpoint provider domains are always legitimate targets —
     // they mirror the manifest host_permissions (required tier, gemini's
@@ -116,7 +118,7 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
                 if (isDomainInWhitelist(source.url)) {
                     allowedUrls.add(normalizeUrl(parsed.origin));
                 } else {
-                    console.warn(`uBlock source origin not in whitelist, skipped: ${parsed.origin}`);
+                    void logWarn(`uBlock source origin not in whitelist, skipped: ${parsed.origin}`, {}, ErrorCode.INVALID_INPUT, 'urlWhitelist');
                 }
             } catch (_e) {
                 // ignore invalid URL

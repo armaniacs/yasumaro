@@ -1,6 +1,28 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, it, expect, vi } from 'vitest';
+
+const mockLogError = vi.hoisted(() => vi.fn());
+
+// createErrorResponse logs through the logger seam (PBI 03); the mock keeps
+// the assertion on the seam call instead of console.
+vi.mock('../logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+
 import {
   ErrorType,
   classifyError,
@@ -137,15 +159,12 @@ describe('convertKnownErrorMessage', () => {
 
 describe('createErrorResponse', () => {
   it('creates error response with user message', () => {
-    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const response = createErrorResponse(new Error('network error'), { url: 'https://example.com' });
 
     expect(response.success).toBe(false);
     expect(response.errorType).toBe(ErrorType.NETWORK);
     expect(response.error).toBe('A network error occurred.');
-    expect(consoleErrorSpy).toHaveBeenCalled();
-
-    consoleErrorSpy.mockRestore();
+    expect(mockLogError).toHaveBeenCalled();
   });
 
   it('creates error response for non-Error values', () => {

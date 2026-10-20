@@ -24,6 +24,9 @@ import {
   type BuiltInAiDiagnosticsResult,
 } from '../../builtInAiDiagnosticsService.js';
 import { runAiConnectionTest } from '../../aiTestRunner.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 export interface DiagnosticActionElements {
   testObsidianBtn: HTMLButtonElement | null;
@@ -118,7 +121,7 @@ export function createDiagnosticActions(
             target.className = `diag-result ${ai.success ? 'diag-success' : 'diag-error'}`;
           },
           onError: (target, err) => {
-            console.error('Diagnostics: AI test failed', err);
+            void logError('Diagnostics: AI test failed', { error: errorMessage(err) }, ErrorCode.API_REQUEST_FAILURE, 'diagnosticsActions');
             target.textContent = getMessageOr('testError', 'Connection test failed.');
             target.className = 'diag-result diag-error';
           },

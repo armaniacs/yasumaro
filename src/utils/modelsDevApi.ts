@@ -3,6 +3,10 @@
  * Type definitions and utilities for models.dev provider data
  */
 
+import { logWarn } from './logger/api.js';
+import { ErrorCode } from './logger/types.js';
+import { errorMessage } from './errorUtils.js';
+
 export interface ModelsDevModel {
     id: string;
     name: string;
@@ -106,17 +110,17 @@ export async function loadModelsDevData(): Promise<ModelsDevData | null> {
     try {
         const response = await fetch(chrome.runtime.getURL('data/models-dev-openai-compatible.json'));
         if (!response.ok) {
-            console.warn('[ModelsDev] Failed to load provider data:', response.status);
+            void logWarn('[ModelsDev] Failed to load provider data', { status: response.status }, ErrorCode.API_REQUEST_FAILURE, 'modelsDevApi');
             return null;
         }
         const parsed = parseModelsDevData(await response.json());
         if (!parsed) {
-            console.warn('[ModelsDev] Provider data failed schema validation');
+            void logWarn('[ModelsDev] Provider data failed schema validation', {}, ErrorCode.INVALID_INPUT, 'modelsDevApi');
             return null;
         }
         return parsed;
     } catch (error) {
-        console.warn('[ModelsDev] Error loading provider data:', error);
+        void logWarn('[ModelsDev] Error loading provider data', { error: errorMessage(error) }, ErrorCode.API_REQUEST_FAILURE, 'modelsDevApi');
         return null;
     }
 }

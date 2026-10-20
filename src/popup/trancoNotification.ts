@@ -7,7 +7,7 @@ import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { needsTrancoConsent, persistTrancoConsentDeny, persistTrancoConsentGrant } from '../utils/storage/trancoConsent.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { ErrorCode } from '../utils/logger/types.js';
-import { logError } from '../utils/logger/api.js';
+import { logError, logInfo, logWarn } from '../utils/logger/api.js';
 import { getMessage } from '../utils/i18n.js';
 import { clearElement } from './domUtils.js';
 
@@ -17,7 +17,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
     const actions = document.getElementById('trancoUpdateActions');
 
     if (!banner || !desc || !actions) {
-        console.warn('[Popup] Tranco update banner elements not found');
+        void logWarn('[Popup] Tranco update banner elements not found', {}, ErrorCode.MISSING_REQUIRED_FIELD, 'trancoNotification');
         return;
     }
 
@@ -61,7 +61,7 @@ async function initTrancoUpdateNotification(): Promise<void> {
         actions.appendChild(acceptBtn);
         actions.appendChild(denyBtn);
 
-        console.log('[Popup] Tranco update notification shown');
+        void logInfo('[Popup] Tranco update notification shown', {}, 'trancoNotification');
     } catch (error) {
         logError('[Popup] Error initializing Tranco update notification', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
@@ -76,7 +76,7 @@ async function handleTrancoGrant(version: string): Promise<void> {
             banner.classList.add('hidden');
         }
 
-        console.log('[Popup] Tranco consent granted');
+        void logInfo('[Popup] Tranco consent granted', {}, 'trancoNotification');
     } catch (error) {
         logError('[Popup] Error granting Tranco consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
@@ -91,7 +91,7 @@ async function handleTrancoDeny(): Promise<void> {
             banner.classList.add('hidden');
         }
 
-        console.log('[Popup] Tranco consent denied');
+        void logInfo('[Popup] Tranco consent denied', {}, 'trancoNotification');
     } catch (error) {
         logError('[Popup] Error denying Tranco consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }

@@ -58,6 +58,9 @@ vi.mock('../../utils/logger/types.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
     LogType: { WARN: 'warn', ERROR: 'error', INFO: 'info', DEBUG: 'debug', SANITIZE: 'sanitize' },
+    // PBI 03: the missing-API-key error path carries an ErrorCode through the
+    // seam, so the mock must expose it.
+    ErrorCode: { API_AUTH_FAILURE: 'API_AUTH_001' },
     logError: 'fn',
     logWarn: 'fn',
     logInfo: 'fn',

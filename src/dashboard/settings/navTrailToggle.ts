@@ -18,6 +18,9 @@ import {
   getNavTrailConsent,
   isNavTrailActive,
 } from '../../utils/storage/navTrailConsent.js';
+import { logError } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 export async function initNavTrailToggle(container: HTMLElement): Promise<void> {
   const input = container.querySelector<HTMLInputElement>('#navTrailEnabled');
@@ -48,7 +51,7 @@ export async function initNavTrailToggle(container: HTMLElement): Promise<void> 
               'Could not save the setting.',
             );
           }
-          console.error('[navTrailToggle] disable failed:', error);
+          void logError('[navTrailToggle] disable failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'navTrailToggle');
         }
         return;
       }
@@ -72,7 +75,7 @@ export async function initNavTrailToggle(container: HTMLElement): Promise<void> 
         if (status) {
           status.textContent = getMessageOr('navTrailSaveFailed', 'Could not save the setting.');
         }
-        console.error('[navTrailToggle] enable failed:', error);
+        void logError('[navTrailToggle] enable failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'navTrailToggle');
       }
     })();
   });

@@ -5,6 +5,10 @@
  * (Offscreen Document setup + WASM loading).
  */
 
+import { logWarn } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+import { errorMessage } from '../../utils/errorUtils.js';
+
 /**
  * Default configuration for retryWithExponentialBackoff.
  */
@@ -15,7 +19,7 @@ export interface RetryOptions {
   baseDelayMs?: number;
   /** Maximum delay in ms (cap). */
   maxDelayMs?: number;
-  /** Optional label for console.warn logging. */
+  /** Optional label for the logWarn failure line. */
   label?: string;
 }
 
@@ -67,7 +71,7 @@ export async function retryWithExponentialBackoff<T>(
       lastError = undefined; // fn returned null, not an error
     } catch (err) {
       lastError = err;
-      console.warn(`[${opts.label}] attempt ${attempt + 1}/${opts.maxAttempts} failed:`, err);
+      void logWarn(`[${opts.label}] attempt ${attempt + 1}/${opts.maxAttempts} failed`, { error: errorMessage(err) }, ErrorCode.UNKNOWN_ERROR, 'retry');
     }
   }
 

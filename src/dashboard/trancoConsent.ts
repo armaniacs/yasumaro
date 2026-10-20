@@ -8,7 +8,7 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
 import { evaluateTrancoConsent, persistTrancoConsentDeny, persistTrancoConsentGrant } from '../utils/storage/trancoConsent.js';
-import { logError } from '../utils/logger/api.js';
+import { logError, logInfo, logWarn } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 
@@ -21,14 +21,14 @@ interface TrancoConsentState {
 }
 
 export async function initTrancoConsentPanel(repo: SettingsReader = settingsRepository): Promise<void> {
-  console.log('[Dashboard] Initializing Tranco Consent Panel');
+  void logInfo('[Dashboard] Initializing Tranco Consent Panel', {}, 'trancoConsent');
 
   const currentVersionEl = document.getElementById('trancoCurrentVersion');
   const domainCountEl = document.getElementById('trancoDomainCount');
   const consentStatusEl = document.getElementById('trancoConsentStatus');
 
   if (!currentVersionEl || !domainCountEl || !consentStatusEl) {
-    console.warn('[Dashboard] Tranco UI elements not found');
+    void logWarn('[Dashboard] Tranco UI elements not found', {}, ErrorCode.MISSING_REQUIRED_FIELD, 'trancoConsent');
     return;
   }
 

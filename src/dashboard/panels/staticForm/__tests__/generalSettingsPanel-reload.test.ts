@@ -16,6 +16,29 @@ const { mockGetAll, mockPortGet, mockSet } = vi.hoisted(() => ({
   mockSet: vi.fn(),
 }));
 
+const mockLogError = vi.hoisted(() => vi.fn());
+
+// The contained reload failure routes through the logger seam (PBI 03); the
+// mock keeps the assertion on the seam call instead of console.
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    logWarn: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+
 vi.mock('../../../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
@@ -80,15 +103,18 @@ describe('generalSettingsPanel — reload-general-settings wiring', () => {
 
   it('contains a reload failure so the dispatching flow stays intact', async () => {
     await mountPanel();
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     mockGetAll.mockRejectedValue(new Error('storage down'));
     expect(() => document.dispatchEvent(new CustomEvent('reload-general-settings'))).not.toThrow();
 
     await waitForMock(() =>
-      expect(errorSpy).toHaveBeenCalledWith('General settings: reload after import/restore failed', expect.any(Error)),
+      expect(mockLogError).toHaveBeenCalledWith(
+        'General settings: reload after import/restore failed',
+        expect.objectContaining({ error: 'storage down' }),
+        'INT_001',
+        'generalSettingsPanel',
+      ),
     );
-    errorSpy.mockRestore();
   });
 
   it('refresh() re-reads the repository into the mounted inputs', async () => {

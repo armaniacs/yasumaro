@@ -1,4 +1,7 @@
 import { defineBackground } from 'wxt/utils/define-background';
+import { logError } from '../../src/utils/logger/api.js';
+import { ErrorCode } from '../../src/utils/logger/types.js';
+import { errorMessage } from '../../src/utils/errorUtils.js';
 
 /**
  * Background service worker entry point
@@ -16,7 +19,7 @@ export default defineBackground({
         init();
       })
       .catch((error: unknown) => {
-        console.error('[yasumaro] background service-worker load failed', error);
+        void logError('[yasumaro] background service-worker load failed', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       });
   },
 });

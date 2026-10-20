@@ -5,6 +5,10 @@
  * ユーザーの言語設定を動的に取得し、i18n対応のインフラを提供します。
  */
 
+import { logWarn } from './logger/api.js';
+import { ErrorCode } from './logger/types.js';
+import { errorMessage } from './errorUtils.js';
+
 /**
  * ユーザーロケールを取得します
  *
@@ -20,7 +24,7 @@ export function getUserLocale(): string {
     }
   } catch (e) {
     // Chrome APIのアクセスに失敗した場合
-    console.warn('Failed to get user locale:', e);
+    void logWarn('Failed to get user locale', { error: errorMessage(e) }, ErrorCode.INTERNAL_ERROR, 'localeUtils');
   }
   // フォールバック: デフォルトは英語
   return 'en-US';

@@ -22,6 +22,9 @@ import {
   type IssueReportModalController,
 } from './issueReportLink.js';
 import { diagnosticsCollector } from './DiagnosticsCollector.js';
+import { logError } from '../../../utils/logger/api.js';
+import { ErrorCode } from '../../../utils/logger/types.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 
 let controller: IssueReportModalController | null = null;
 
@@ -69,5 +72,5 @@ export function initIssueReportEntry(): void {
     for (const btn of pending.splice(0)) {
       created.attachTrigger(btn);
     }
-  } catch (e) { console.error('[Dashboard] issueReportModalController (sidebar) error:', e); }
+  } catch (e) { void logError('[Dashboard] issueReportModalController (sidebar) error', { error: errorMessage(e) }, ErrorCode.INTERNAL_ERROR, 'issueReportEntry'); }
 }

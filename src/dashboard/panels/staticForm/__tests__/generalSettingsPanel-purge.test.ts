@@ -9,6 +9,29 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 import { waitForMock } from '../../../../../testDir/waitPolicy.js';
 
+const mockLogError = vi.hoisted(() => vi.fn());
+
+// The failure paths route through the logger seam (PBI 03); the mock keeps the
+// assertions on the seam calls instead of console.
+vi.mock('../../../../utils/logger/types.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/core.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../../utils/logger/api.js', async () =>
+  (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    logWarn: 'fn',
+    logInfo: 'fn',
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+
 vi.mock('../../../dashboardSqliteService.js', async (importOriginal) => {
   const orig = (await importOriginal()) as Record<string, unknown>;
   return { ...orig, purgeOldRecordsNow: vi.fn(), purgeContentNow: vi.fn() };
@@ -63,7 +86,6 @@ describe('generalSettingsPanel — purge error boundary', () => {
   });
 
   it('records a throw from the failure path in runPanelAction without reaching the outer boundary', async () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(sqliteService.purgeOldRecordsNow).mockResolvedValue({ data: { purged: 1, skipped: false } } as never);
 
     await mountPanel();
@@ -81,10 +103,19 @@ describe('generalSettingsPanel — purge error boundary', () => {
     btn.click();
 
     await waitForMock(() =>
-      expect(errorSpy).toHaveBeenCalledWith('runPanelAction: onError handler threw', expect.any(Error)),
+      expect(mockLogError).toHaveBeenCalledWith(
+        'runPanelAction: onError handler threw',
+        expect.objectContaining({ error: 'render failed' }),
+        'INT_001',
+        'panelAction',
+      ),
     );
-    expect(errorSpy).not.toHaveBeenCalledWith('General settings: purge failed', expect.anything());
+    expect(mockLogError).not.toHaveBeenCalledWith(
+      'General settings: purge failed',
+      expect.anything(),
+      expect.anything(),
+      expect.anything(),
+    );
     expect(btn.disabled).toBe(false);
-    errorSpy.mockRestore();
   });
 });

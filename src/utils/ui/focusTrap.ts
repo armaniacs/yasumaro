@@ -3,6 +3,9 @@
  * フォーカストラップ実装 - モーダルのフォーカス管理
  */
 
+import { logWarn } from '../../utils/logger/api.js';
+import { ErrorCode } from '../../utils/logger/types.js';
+
 interface TrapInfo {
   element: HTMLElement;
   handler: (e: KeyboardEvent) => void;
@@ -174,7 +177,7 @@ class FocusTrapManager {
     // bound mean a release path was forgotten; warn instead of growing silently.
     if (this.handlers.size >= FOCUS_TRAP_MAX_LIVE) {
       // Tripwire: only reachable when a release path leaks.
-      console.warn(`focusTrap: ${this.handlers.size} live traps exceed ${FOCUS_TRAP_MAX_LIVE} — a release() is missing`);
+      void logWarn(`focusTrap: ${this.handlers.size} live traps exceed ${FOCUS_TRAP_MAX_LIVE} — a release() is missing`, {}, ErrorCode.INTERNAL_ERROR, 'focusTrap');
     }
 
     // キーボードハンドラ。フォーカス可能集合は keydown ごとに取り直す:

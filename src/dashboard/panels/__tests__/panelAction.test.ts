@@ -7,6 +7,28 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { errorMessage } from '../../../utils/errorUtils.js';
+
+const mockLogError = vi.hoisted(() => vi.fn());
+
+// The scaffold routes the swallowed handler failure through the logger seam
+// (PBI 03); the mock keeps the assertion on the seam call instead of console.
+vi.mock('../../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+
 import { abortPanelAction, runPanelAction, unwrapServiceResult } from '../panelAction.js';
 
 function makeButton(label = 'Go'): HTMLButtonElement {
@@ -121,9 +143,7 @@ describe('runPanelAction', () => {
     expect(button.disabled).toBe(false);
   });
 
-  it('records a throw from onError through console.error', async () => {
-    const logged = vi.spyOn(console, 'error').mockImplementation(() => {});
-
+  it('records a throw from onError through the logError seam', async () => {
     await runPanelAction({
       run: async () => {
         throw new Error('gateway down');
@@ -133,8 +153,12 @@ describe('runPanelAction', () => {
       },
     });
 
-    expect(logged).toHaveBeenCalledWith(expect.any(String), expect.any(Error));
-    logged.mockRestore();
+    expect(mockLogError).toHaveBeenCalledWith(
+      'runPanelAction: onError handler threw',
+      expect.objectContaining({ error: 'error display blew up' }),
+      'INT_001',
+      'panelAction',
+    );
   });
 
   it('swaps the first button label while busy and puts it back afterwards', async () => {

@@ -59,7 +59,9 @@ vi.mock('../../utils/logger/core.js', async () =>
 vi.mock('../../utils/logger/api.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
+    logWarn: 'fn',
     LogType: { ERROR: 'error', WARN: 'warn', INFO: 'info', DEBUG: 'debug' },
+    ErrorCode: { STORAGE_WRITE_FAILURE: 'STRG_WR_001' },
   }),
 );
 

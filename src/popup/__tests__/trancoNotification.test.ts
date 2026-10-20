@@ -13,6 +13,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 const mockGetSettings = vi.hoisted(() => vi.fn());
 const mockSaveSettingsWithAllowedUrls = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
+const mockLogWarn = vi.hoisted(() => vi.fn());
+const mockLogInfo = vi.hoisted(() => vi.fn());
 const mockGetMessage = vi.hoisted(() => vi.fn());
 const mockUpdateDomainFilterCache = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 
@@ -197,19 +199,21 @@ vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
 vi.mock('../../utils/logger/types.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: mockLogError,
-    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', MISSING_REQUIRED_FIELD: 'VAL_REQ_001' },
   }),
 );
 vi.mock('../../utils/logger/core.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: mockLogError,
-    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', MISSING_REQUIRED_FIELD: 'VAL_REQ_001' },
   }),
 );
 vi.mock('../../utils/logger/api.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     logError: mockLogError,
-    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR' },
+    logWarn: mockLogWarn,
+    logInfo: mockLogInfo,
+    ErrorCode: { INTERNAL_ERROR: 'INTERNAL_ERROR', MISSING_REQUIRED_FIELD: 'VAL_REQ_001' },
   }),
 );
 
@@ -259,12 +263,15 @@ describe('initTrancoUpdateNotification', () => {
 
   it('should return early when banner elements are missing', async () => {
     document.body.innerHTML = '';
-    console.warn = vi.fn();
 
     await initTrancoUpdateNotification();
 
-    expect(console.warn).toHaveBeenCalledWith(
-      '[Popup] Tranco update banner elements not found'
+    // PBI 03: the missing-banner warn routes through the logger seam.
+    expect(mockLogWarn).toHaveBeenCalledWith(
+      '[Popup] Tranco update banner elements not found',
+      {},
+      'VAL_REQ_001',
+      'trancoNotification',
     );
     expect(mockGetSettings).not.toHaveBeenCalled();
   });

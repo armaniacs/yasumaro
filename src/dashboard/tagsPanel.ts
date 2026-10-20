@@ -14,6 +14,9 @@ import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 import { createTagChip } from './tagChip.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 /**
  * Initialize the tag settings panel.
@@ -223,7 +226,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
         'success'
       );
     } catch (error) {
-      console.error('[TagsPanel] Failed to save tag settings:', error);
+      void logError('[TagsPanel] Failed to save tag settings', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'tagsPanel');
       showStatus('exportImportStatus', getMessageOr('saveError', '保存エラー'), 'error');
     }
   }

@@ -5,6 +5,8 @@
  */
 
 import { errorMessage } from './errorUtils.js';
+import { logWarn } from './logger/api.js';
+import { ErrorCode } from './logger/types.js';
 
 /**
  * 許可された文字とパターン
@@ -189,7 +191,7 @@ export function sanitizePathForUrl(pathRaw: string): string {
 
     return result;
   } catch (error: unknown) {
-    console.warn('Path sanitization failed:', errorMessage(error));
+    void logWarn('Path sanitization failed', { error: errorMessage(error) }, ErrorCode.INVALID_INPUT, 'pathSanitizer');
     return '';
   }
 }

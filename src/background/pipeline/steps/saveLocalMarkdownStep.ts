@@ -7,8 +7,9 @@
  * in chrome.storage.local per day and re-downloaded after each recording.
  */
 
-import { LogType } from '../../../utils/logger/types.js';
+import { LogType, ErrorCode } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
+import { logInfo, logError } from '../../../utils/logger/api.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
@@ -59,7 +60,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
     return context;
   }
 
-  console.log('[LocalMD] Step reached:', { url, hasMarkdownEntryData: !!context.markdownEntryData });
+  void logInfo('[LocalMD] Step reached', { url, hasMarkdownEntryData: !!context.markdownEntryData }, 'saveLocalMarkdownStep');
 
   if (!context.markdownEntryData) {
     addLog(LogType.WARN, '[LocalMD] No markdownEntryData to save locally', { url, traceId: context.traceId });
@@ -111,7 +112,7 @@ export const saveLocalMarkdownStep: PipelineStepFunction = async (
 
     return context;
   } catch (error: unknown) {
-    console.error('[LocalMD] FAILED:', errorMessage(error));
+    void logError('[LocalMD] FAILED', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'saveLocalMarkdownStep');
     addLog(LogType.ERROR, 'Failed to save to local Markdown', {
       error: errorMessage(error),
       url,
