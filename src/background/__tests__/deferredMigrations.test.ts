@@ -130,6 +130,13 @@ describe('createDeferredMigrationRunner', () => {
     );
   });
 
+  it('does not trigger OPFS recovery when the gate returns false (fail-closed defense in depth)', async () => {
+    mockNeedsOpfsRecoveryMigration.mockResolvedValue(false);
+    const runner = createDeferredMigrationRunner({} as any);
+    await runner();
+    expect(mockMigrateOpfsRecovery).not.toHaveBeenCalled();
+  });
+
   it('triggers OPFS recovery when needed and fails', async () => {
     mockNeedsOpfsRecoveryMigration.mockResolvedValue(true);
     mockMigrateOpfsRecovery.mockResolvedValue({ success: false, error: 'disk full' });

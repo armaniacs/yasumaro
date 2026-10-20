@@ -18,6 +18,33 @@ const FALLBACK_STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 
 const BATCH_SIZE = 100;
 
+/** getStatus() の snapshot（失敗時の fail-open 側既定値を含む） */
+type SqliteStatusSnapshot = Awaited<ReturnType<SqliteClient['getStatus']>>;
+
+/**
+ * True only when the engine is confirmed to be SQLite: initialized and not in
+ * fallback mode. A null status or the gateway's failure shape
+ * ({initialized: false, fallback: false}) must fail closed — the recovery's
+ * final remove destroys the fallback store, the only remaining copy of the
+ * rows, so "unknown" means "do not migrate".
+ *
+ * This gate is also the retry-chain cap for a permanently degraded engine:
+ * while the engine stays in fallback mode, needsMigration() never passes it,
+ * so migrate() is never invoked again on later service worker startups.
+ */
+function isSqliteEngineConfirmed(status: SqliteStatusSnapshot | null | undefined): boolean {
+  return !!status && status.initialized === true && status.fallback !== true;
+}
+
+/**
+ * Identity of a fallback row. Mirrors the dedupe key the fallback store itself
+ * uses (storageFallback.ts: `${url}\0${created_at}`), so a row that was written
+ * after the snapshot is never confused with a snapshot row.
+ */
+function fallbackRecordKey(record: BrowsingLogRecord): string {
+  return `${record.url}\0${record.created_at}`;
+}
+
 /**
  * フォールバックデータを BrowsingLogRecord 形式に変換
  *
@@ -155,10 +182,10 @@ export class OpfsRecoveryService {
         return false;
       }
 
-      // 2. SQLite が利用可能かチェック
+      // 2. SQLite が利用可能かチェック（fail-closed: status が不明でも移行しない）
       const statusResult = await this.sqliteClient.getStatus();
-      if (!statusResult || statusResult.fallback === true) {
-        // まだフォールバックモードのまま
+      if (!isSqliteEngineConfirmed(statusResult)) {
+        // まだフォールバックモードのまま、または status が不明（未初期化・取得失敗）
         return false;
       }
 
@@ -184,7 +211,20 @@ export class OpfsRecoveryService {
     let totalMigrated = 0;
 
     try {
-      // フォールバックデータを取得
+      // 0. 実行直前の status 再確認（fail-closed）。needsMigration() のゲートを
+      // 迂回して呼ばれても、fallback モード・未初期化・status 取得失敗のいずれ
+      // でも insertBatch を 1 回も発行せず中断し、ストアは一切削除しない
+      const initialStatus = await this.sqliteClient.getStatus();
+      if (!isSqliteEngineConfirmed(initialStatus)) {
+        addLog(LogType.WARN, 'OPFS recovery: engine not confirmed, deferring migration', {});
+        return {
+          success: false,
+          migrated: 0,
+          error: 'SQLite engine not confirmed (fallback mode or status unknown)',
+        };
+      }
+
+      // フォールバックデータを取得（snapshot。この配列が移行対象の確定値）
       const dataResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
       const fallbackData = dataResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
 
@@ -221,7 +261,38 @@ export class OpfsRecoveryService {
         }
       }
 
-      // 移行完了 — まずデータを削除し、最後にフラグをクリアする
+      // 1. remove 直前の status 再確認: バッチループ中にエンジンが fallback へ
+      // degrade した場合、その後のバッチは fallback アダプタで no-op になるため、
+      // 破壊的経路（remove）に入る前に中断する
+      const finalStatus = await this.sqliteClient.getStatus();
+      if (!isSqliteEngineConfirmed(finalStatus)) {
+        addLog(LogType.WARN, 'OPFS recovery: engine degraded during migration, deferring', {});
+        return {
+          success: false,
+          migrated: totalMigrated,
+          error: 'SQLite engine degraded during recovery',
+        };
+      }
+
+      // 2. 最終削除の直前に FALLBACK_STORAGE_DATA を再読し、snapshot に含まれる
+      // 行だけを間引く。snapshot 後に書かれた行（移行対象外）は必ず残す
+      const recheckResult = await chrome.storage.local.get(FALLBACK_STORAGE_KEY);
+      const currentData = recheckResult[FALLBACK_STORAGE_KEY] as { records: BrowsingLogRecord[] } | undefined;
+
+      if (currentData && currentData.records && Array.isArray(currentData.records) && currentData.records.length > 0) {
+        const snapshotKeys = new Set(records.map(fallbackRecordKey));
+        const surviving = currentData.records.filter((record) => !snapshotKeys.has(fallbackRecordKey(record)));
+
+        if (surviving.length > 0) {
+          // 完全移行ではない: snapshot 行だけを間引き、マーカーは落とさない
+          // （次のサービスワーカー起動で残りを再試行できる状態を維持する）
+          await chrome.storage.local.set({ [FALLBACK_STORAGE_KEY]: { records: surviving } });
+          addLog(LogType.INFO, 'OPFS recovery: migration completed with deferred rows', { migrated: totalMigrated, deferred: surviving.length });
+          return { success: true, migrated: totalMigrated };
+        }
+      }
+
+      // 3. 全件着地（または再読時にストアが空）— まずデータを削除し、最後にフラグをクリアする
       await chrome.storage.local.remove(FALLBACK_STORAGE_KEY);
       await chrome.storage.local.remove(StorageKeys.OPFS_FALLBACK_MODE);
 

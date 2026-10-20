@@ -109,6 +109,37 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             expect(result).toBe(false);
         });
 
+        it('should return false when SQLite status returns the gateway failure shape (fail-closed)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            storageMock['FALLBACK_STORAGE_DATA'] = {
+                records: [{ url: 'https://example.com', created_at: 123 }],
+            };
+            // The real gateway (offscreenGateway.getStatus) RETURNS this shape on
+            // transport failure instead of throwing. A failed status must not
+            // pass the gate: the failure shape is {initialized: false, fallback: false}.
+            mockSqliteClient.getStatus.mockResolvedValue({
+                initialized: false,
+                path: '',
+                fallback: false,
+                fts5: false,
+                initError: 'transport failed',
+            });
+
+            const result = await migrationService.needsOpfsRecoveryMigration();
+            expect(result).toBe(false);
+        });
+
+        it('should return false when SQLite status is null (fail-closed)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            storageMock['FALLBACK_STORAGE_DATA'] = {
+                records: [{ url: 'https://example.com', created_at: 123 }],
+            };
+            mockSqliteClient.getStatus.mockResolvedValue(null);
+
+            const result = await migrationService.needsOpfsRecoveryMigration();
+            expect(result).toBe(false);
+        });
+
         it('should return false when no fallback data exists', async () => {
             storageMock['opfs_fallback_mode'] = true;
             // FALLBACK_STORAGE_DATA is not set
@@ -282,6 +313,143 @@ describe('PBI-25: OPFS Recovery Migration', () => {
             expect(storageMock['FALLBACK_STORAGE_DATA']).toBeDefined();
 
             vi.restoreAllMocks();
+        });
+
+        it('should defer without inserting or deleting when status is the gateway failure shape (scenario 1)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const seed = { url: 'https://example.com', created_at: 123 };
+            storageMock['FALLBACK_STORAGE_DATA'] = { records: [seed] };
+            // Even when the caller bypasses needsMigration(), migrate() must
+            // re-check the status first and fail closed on the gateway's
+            // failure shape ({initialized: false, fallback: false}).
+            mockSqliteClient.getStatus.mockResolvedValue({
+                initialized: false,
+                path: '',
+                fallback: false,
+                fts5: false,
+                initError: 'transport failed',
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            expect(mockSqliteClient.mutate).not.toHaveBeenCalled();
+            const stored = storageMock['FALLBACK_STORAGE_DATA'] as { records: Array<{ url: string; created_at: number }> };
+            expect(stored.records).toEqual([seed]);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+        });
+
+        it('should prune only snapshot rows and keep rows written during the batch loop (scenario 2)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const first = { url: 'https://example.com', created_at: 123, title: 'Test' };
+            const second = { url: 'https://test.com', created_at: 456, title: 'Test 2' };
+            const third = { url: 'https://third.com', created_at: 789 };
+            storageMock['FALLBACK_STORAGE_DATA'] = { records: [first, second] };
+
+            mockSqliteClient.mutate.mockImplementation(() => {
+                // A live fallback write lands while the batch loop is running.
+                // The real chrome.storage hands out structured clones, so a
+                // live write replaces the stored value with a fresh array.
+                storageMock['FALLBACK_STORAGE_DATA'] = { records: [first, second, third] };
+                return Promise.resolve({ success: true, data: { count: 2, skipped: 0 } });
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(true);
+            expect(result.migrated).toBe(2);
+            expect(mockSqliteClient.mutate).toHaveBeenCalledTimes(1);
+            const batchOp = mockSqliteClient.mutate.mock.calls[0]?.[0] as { records: Array<{ url: string }> };
+            expect(batchOp.records.map((record) => record.url)).toEqual(['https://example.com', 'https://test.com']);
+
+            // Snapshot rows are thinned out; the row written mid-loop survives
+            // and the marker stays for the next service worker startup.
+            const stored = storageMock['FALLBACK_STORAGE_DATA'] as { records: Array<{ url: string }> };
+            expect(stored.records.map((record) => record.url)).toEqual(['https://third.com']);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+        });
+
+        it('should defer without inserting when the engine is still in fallback mode (scenario 3)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const seed = { url: 'https://example.com', created_at: 123 };
+            storageMock['FALLBACK_STORAGE_DATA'] = { records: [seed] };
+            // FallbackStorageAdapter.getStatus() reports this shape.
+            mockSqliteClient.getStatus.mockResolvedValue({
+                initialized: true,
+                path: 'chrome.storage.local',
+                fallback: true,
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            expect(mockSqliteClient.mutate).not.toHaveBeenCalled();
+            const stored = storageMock['FALLBACK_STORAGE_DATA'] as { records: Array<{ url: string }> };
+            expect(stored.records).toHaveLength(1);
+            // The marker survives so the next service worker startup can retry.
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+        });
+
+        it('should keep every row on partial batch failure without judging by count match (scenario 4)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const records = Array.from({ length: 150 }, (_, i) => ({
+                url: `https://example${i}.com`,
+                created_at: i,
+            }));
+            storageMock['FALLBACK_STORAGE_DATA'] = { records };
+
+            let callCount = 0;
+            mockSqliteClient.mutate.mockImplementation(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return Promise.resolve({ success: true, data: { count: 100 } });
+                }
+                return Promise.resolve({ success: false, error: { kind: 'sqlite_error', message: 'insert failed', retriable: false } });
+            });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            expect(result.migrated).toBe(100);
+            const stored = storageMock['FALLBACK_STORAGE_DATA'] as { records: unknown[] };
+            expect(stored.records).toHaveLength(150);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
+        });
+
+        it('should not treat skipped rows as failure and still finish when the engine is confirmed (scenario 4 regression guard)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const seed = { url: 'https://example.com', created_at: 123 };
+            storageMock['FALLBACK_STORAGE_DATA'] = { records: [seed] };
+            // Retry after a partial failure: the row already landed in SQLite,
+            // so insertBatch reports skipped instead of inserted. A count match
+            // would fail here; only the backend identity decides.
+            mockSqliteClient.mutate.mockResolvedValue({ success: true, data: { count: 0, skipped: 1 } });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(true);
+            expect(result.migrated).toBe(0);
+            expect(storageMock['FALLBACK_STORAGE_DATA']).toBeUndefined();
+            expect(storageMock['opfs_fallback_mode']).toBeUndefined();
+        });
+
+        it('should abort before remove when the engine degrades mid-loop (scenario 6)', async () => {
+            storageMock['opfs_fallback_mode'] = true;
+            const seed = { url: 'https://example.com', created_at: 123 };
+            storageMock['FALLBACK_STORAGE_DATA'] = { records: [seed] };
+            mockSqliteClient.mutate.mockResolvedValue({ success: true, data: { count: 1 } });
+            // First call (migrate entry) is healthy; the engine degrades before
+            // the final remove, so the pre-remove re-check sees fallback mode.
+            mockSqliteClient.getStatus
+                .mockResolvedValueOnce({ fallback: false, initialized: true })
+                .mockResolvedValueOnce({ initialized: true, path: 'chrome.storage.local', fallback: true });
+
+            const result = await migrationService.migrateOpfsRecovery();
+
+            expect(result.success).toBe(false);
+            const stored = storageMock['FALLBACK_STORAGE_DATA'] as { records: Array<{ url: string }> };
+            expect(stored.records).toHaveLength(1);
+            expect(storageMock['opfs_fallback_mode']).toBe(true);
         });
     });
 });
