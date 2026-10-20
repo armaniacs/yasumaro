@@ -5,6 +5,7 @@ import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord,
 import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type ArchiveOpType, type DescriptorResponse } from '../messaging/archiveWireTable.js';
 import { planQueryMode } from './queryPlan.js';
+import type { WorkerMessageType } from './opfsWorker/types.js';
 
 /**
  * The one reason string for "the worker proxy answered null". Every proxy call
@@ -100,8 +101,17 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
    * clearAll) route through it too. `sendToOpfsWorker` throws raw rejections
    * and never reaches this counter, so a mutation that bypasses this method
    * fails forever without tripping the degrade ladder onto IDB.
+   *
+   * The type parameter is bound to WORKER_MESSAGE_TYPES (PBI 2026-10-20-23):
+   * the 17 non-archive methods used to pass raw `string` literals that
+   * compiled even when misspelled, so a wire-side type rename or a new
+   * WORKER_MESSAGE_TYPES entry had no compile-time coupling here. A literal
+   * that is not a key of the SSOT array is now a type error; the runtime
+   * enumeration sync lives in opfsWorkerBackend-workerTypeSync.test.ts (the
+   * ARCHIVE_* side stays synced by archiveWireTable.test.ts, because
+   * archiveWireTable.ts must not import offscreen).
    */
-  private async callWorker<T>(type: string, payload?: unknown): Promise<T | null> {
+  private async callWorker<T>(type: WorkerMessageType, payload?: unknown): Promise<T | null> {
     const result = await this.engine.tryOpfsProxy<T>(type, payload);
     if (result === null) {
       this.#consecutiveFailures += 1;
@@ -143,7 +153,14 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     descriptor: D,
     payload: unknown,
   ): Promise<BackendOrError<DescriptorResponse<D>>> {
-    const result = await this.callWorker<unknown>(descriptor.workerType, payload);
+    const result = await this.callWorker<unknown>(
+      // archiveWireTable.ts keeps workerType as a string literal on purpose
+      // (messaging must not import offscreen); archiveWireTable.test.ts pins
+      // every ARCHIVE_* worker type to WORKER_MESSAGE_TYPES, so the runtime
+      // value is a valid key even though the descriptor type cannot say so.
+      descriptor.workerType as WorkerMessageType,
+      payload,
+    );
     if (result === null) return { success: false, error: OPFS_WORKER_UNAVAILABLE_ERROR };
     return { success: true, ...descriptor.project(result) } as DescriptorResponse<D>;
   }
@@ -156,7 +173,7 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
    * degrade signal stay in `callWorker` — this only folds its result.
    */
   private async callWorkerOk<T, R>(
-    type: string,
+    type: WorkerMessageType,
     payload: unknown,
     project: (result: T) => R,
   ): Promise<BackendOrError<R>> {
@@ -184,7 +201,7 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     // text search on the OPFS backend returned empty. Dispatch is decided
     // once by queryPlanner.planQueryMode (PBI 2026-09-14-01) and mirrored by
     // IdbVfsBackend.query's `spec.mode` check and FallbackStorage.query's.
-    const workerType = planQueryMode(q) === 'search' ? 'SEARCH' : 'QUERY';
+    const workerType: WorkerMessageType = planQueryMode(q) === 'search' ? 'SEARCH' : 'QUERY';
     return this.callWorkerOk<{ rows: (BrowsingLogEntry & { rank: number })[]; total: number }, QuerySearchResult>(
       workerType,
       q,

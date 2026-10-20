@@ -26,7 +26,7 @@ import {
 } from './dbMaintenance.js';
 import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
 import { ARCHIVE_DESCRIPTORS, ARCHIVE_WIRE_TABLE, pickProjectedFields } from '../messaging/archiveWireTable.js';
-import { sqliteWireFor, type SqliteWireDescriptor, type SqliteWireOp } from '../messaging/sqliteWireTable.js';
+import { SQLITE_WIRE_TABLE, type SqliteWireDescriptor, type SqliteWireOp } from '../messaging/sqliteWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
@@ -116,12 +116,14 @@ const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unk
   ),
 };
 
-async function handleSqliteWire(op: SqliteWireOp, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const row = sqliteWireFor(op);
-  if (!row) {
-    sendResponse({ success: false, error: `Unknown sqlite op: ${op}` });
-    return;
-  }
+/**
+ * Shared wire runner (PBI 2026-10-20-23): receives its wire-table descriptor
+ * row directly from the BY_MESSAGE-derived registry below instead of looking
+ * the op up by string. The row is the dispatch key, so the former string
+ * lookup and its unreachable unknown-op guard are gone — every caller is
+ * built from a real table row.
+ */
+async function handleSqliteWire(row: SqliteWireDescriptor, msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const payload = (msg as { payload?: Record<string, unknown> }).payload ?? {};
   const run = SQLITE_REPO_RUNNERS[row.repoMethod as SqliteRepoMethod];
   sendResponse(await run(payload));
@@ -246,8 +248,65 @@ const _checkTableBackendMethods: _TableBackendMethodsLive = true;
 
 type ArchiveBackendResult = { success: true; [field: string]: unknown } | { success: false; error: string };
 
+/**
+ * Typed staging-backend callers (PBI 2026-10-20-23).
+ *
+ * handleArchive used to read the method off the backend with
+ * `(stagingBackend as unknown as Record<string, unknown>)[entry.method]` and
+ * re-bind it — a runtime string lookup that compiled even when a wire row
+ * named a method the staging backend did not have. Each entry here invokes
+ * the real backend method with its real parameter types, so a renamed or
+ * removed method is a type error at this table instead of a runtime miss.
+ * The Record forces all 14 ArchiveBackendMethods to be listed, and the
+ * `_checkTableBackendMethods` assert above pins the wire-table rows to the
+ * same union: a row whose method loses its caller fails to compile.
+ *
+ * Member calls bind `this` by construction, so the former unbound extraction
+ * + .bind dance is gone. The WHY it carried — extracting the method unbound
+ * drops `this` and OpfsWorkerBackend's archive methods read this.proxyArchive
+ * (CI e2e @extension failure) — is structurally impossible now;
+ * archiveWireDispatch.test.ts keeps the pin.
+ */
+type ArchiveStagingBackend = StorageBackend & ArchiveStaging;
+
+type ArchiveBackendCaller = (
+  backend: ArchiveStagingBackend,
+  args: unknown[],
+) => Promise<ArchiveBackendResult>;
+
+const ARCHIVE_BACKEND_CALLS: Record<ArchiveBackendMethod, ArchiveBackendCaller> = {
+  archivePreview: (backend, args) =>
+    backend.archivePreview(...(args as Parameters<ArchiveStagingBackend['archivePreview']>)),
+  archiveCreate: (backend, args) =>
+    backend.archiveCreate(...(args as Parameters<ArchiveStagingBackend['archiveCreate']>)),
+  archiveCleanup: (backend, args) =>
+    backend.archiveCleanup(...(args as Parameters<ArchiveStagingBackend['archiveCleanup']>)),
+  archiveExportChunk: (backend, args) =>
+    backend.archiveExportChunk(...(args as Parameters<ArchiveStagingBackend['archiveExportChunk']>)),
+  archivePrepareIncoming: (backend, args) =>
+    backend.archivePrepareIncoming(...(args as Parameters<ArchiveStagingBackend['archivePrepareIncoming']>)),
+  archiveRestorePreview: (backend, args) =>
+    backend.archiveRestorePreview(...(args as Parameters<ArchiveStagingBackend['archiveRestorePreview']>)),
+  archiveRestore: (backend, args) =>
+    backend.archiveRestore(...(args as Parameters<ArchiveStagingBackend['archiveRestore']>)),
+  archiveDeleteByStaging: (backend, args) =>
+    backend.archiveDeleteByStaging(...(args as Parameters<ArchiveStagingBackend['archiveDeleteByStaging']>)),
+  archiveOpen: (backend, args) =>
+    backend.archiveOpen(...(args as Parameters<ArchiveStagingBackend['archiveOpen']>)),
+  archiveQuery: (backend, args) =>
+    backend.archiveQuery(...(args as Parameters<ArchiveStagingBackend['archiveQuery']>)),
+  archiveUpdate: (backend, args) =>
+    backend.archiveUpdate(...(args as Parameters<ArchiveStagingBackend['archiveUpdate']>)),
+  archiveSave: (backend, args) =>
+    backend.archiveSave(...(args as Parameters<ArchiveStagingBackend['archiveSave']>)),
+  archiveClose: (backend, args) =>
+    backend.archiveClose(...(args as Parameters<ArchiveStagingBackend['archiveClose']>)),
+  archiveStatus: (backend, args) =>
+    backend.archiveStatus(...(args as Parameters<ArchiveStagingBackend['archiveStatus']>)),
+};
+
 interface ArchiveDispatchEntry {
-  method: ArchiveBackendMethod;
+  call: ArchiveBackendCaller;
   args: (payload: Record<string, unknown>) => unknown[];
   /** Success-field projection; null means the backend returned no data. */
   pick: (result: { success: true; [field: string]: unknown }) => Record<string, unknown> | null;
@@ -256,7 +315,9 @@ interface ArchiveDispatchEntry {
 
 function archiveDispatchEntry(descriptor: ArchiveDescriptor): ArchiveDispatchEntry {
   return {
-    method: descriptor.backendMethod as ArchiveBackendMethod,
+    // The `_checkTableBackendMethods` assert pins the rows' backendMethod
+    // literals to the ArchiveBackendMethod union, so this lookup needs no cast.
+    call: ARCHIVE_BACKEND_CALLS[descriptor.backendMethod],
     args: descriptor.backendArgs,
     pick: (result) => pickProjectedFields(result, descriptor),
     emptyError: descriptor.emptyError,
@@ -284,14 +345,10 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
     sendResponse({ success: false, error: ARCHIVE_UNSUPPORTED_ERROR });
     return;
   }
-  const stagingBackend = backend as StorageBackend & ArchiveStaging;
-  // WHY: extracting the method unbound drops `this` — OpfsWorkerBackend's
-  // archive methods read this.proxyArchive, so a bare call threw
-  // "Cannot read properties of undefined (reading 'proxyArchive')" in
-  // OPFS mode (e2e @extension suite). Bind before invoking.
-  const raw = (stagingBackend as unknown as Record<string, unknown>)[entry.method];
-  const call = (raw as (...args: unknown[]) => Promise<ArchiveBackendResult>).bind(backend);
-  const result = await call(...entry.args(payload));
+  // supportsArchive narrowed `backend` to StorageBackend & ArchiveStaging; the
+  // callers table invokes the method as a member call, so `this` stays bound
+  // to the backend instance by construction.
+  const result = await entry.call(backend, entry.args(payload));
   if (!result.success) {
     sendResponse({ success: false, error: result.error });
     return;
@@ -303,6 +360,41 @@ async function handleArchive(op: ArchiveOpType, msg: SqliteMessage, sendResponse
   }
   sendResponse({ success: true, ...fields });
 }
+
+/**
+ * BY_MESSAGE-derived wire registry entries (PBI 2026-10-20-23).
+ *
+ * The 9 `SQLITE_*` query/mutate lambdas used to be hand-written in
+ * handlerRecord below, duplicating SQLITE_WIRE_TABLE's messageType⇔op
+ * pairing op-for-op — the same drift class archiveMessageHandlers already
+ * folded for the archive group. Each entry is now built from its table row:
+ * the row owns the message type and the op, and the shared handleSqliteWire
+ * runner owns the rest. Adding an op is one wire-table row (plus one repo
+ * runner only when it needs a new repo call shape); a stale hand entry
+ * cannot shadow the table.
+ *
+ * The 'search' row is excluded on purpose: its messageType is SQLITE_QUERY,
+ * shared with 'records', and the SQLITE_QUERY handler must stay the records
+ * runner — planQueryOrSearch routes the gateway's kind:'search' marker to
+ * planSearch, while the search row would call planSearch unconditionally and
+ * change the listing default (100 → 50). The search op keeps its
+ * hand-written SQLITE_SEARCH handler below (sqliteWireTable.ts header note).
+ * wireOpEnumerationDerived.test.ts pins the fold.
+ */
+type GatewayWireOp = Exclude<SqliteWireOp, 'search'>;
+type GatewayWireMessageType = Extract<SqliteWireDescriptor, { op: GatewayWireOp }>['messageType'];
+
+function isGatewayWireRow(row: SqliteWireDescriptor): row is Extract<SqliteWireDescriptor, { op: GatewayWireOp }> {
+  return row.op !== 'search';
+}
+
+const wireMessageHandlers = Object.fromEntries(
+  SQLITE_WIRE_TABLE.filter(isGatewayWireRow).map((row) => [
+    row.messageType,
+    ((msg: SqliteMessage, sendResponse: (response: unknown) => void) =>
+      handleSqliteWire(row, msg, sendResponse)) as SqliteHandler,
+  ]),
+) as Record<GatewayWireMessageType, SqliteHandler>;
 
 /**
  * BY_MESSAGE-derived archive registry entries (PBI 2026-10-16-08).
@@ -327,6 +419,11 @@ export const archiveMessageHandlers = Object.fromEntries(
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
  *
+ * Query/mutate entries come from `wireMessageHandlers` (PBI 2026-10-20-23):
+ * the 9 hand-written lambdas duplicated SQLITE_WIRE_TABLE op-for-op, so they
+ * are now spread from the BY_MESSAGE-derived map — adding an op is one wire
+ * row, and a stale hand entry cannot shadow the table.
+ *
  * Archive entries come from `archiveMessageHandlers` below (PBI 2026-10-16-08):
  * the 14 hand-written lambdas duplicated the wire table op-for-op, so they
  * are now spread from the BY_MESSAGE-derived map — adding an op is one table
@@ -335,17 +432,9 @@ export const archiveMessageHandlers = Object.fromEntries(
 const handlerRecord = {
   SQLITE_HEALTH_CHECK: handleHealthCheck,
   SQLITE_INIT: handleInit,
-  SQLITE_INSERT: (msg, sendResponse) => handleSqliteWire('insert', msg, sendResponse),
-  SQLITE_INSERT_BATCH: (msg, sendResponse) => handleSqliteWire('insertBatch', msg, sendResponse),
-  SQLITE_QUERY: (msg, sendResponse) => handleSqliteWire('records', msg, sendResponse),
-  SQLITE_AUDIT_LOG_INSERT: (msg, sendResponse) => handleSqliteWire('insertAuditLog', msg, sendResponse),
-  SQLITE_AUDIT_LOG_QUERY: (msg, sendResponse) => handleSqliteWire('auditLog', msg, sendResponse),
+  ...wireMessageHandlers,
   SQLITE_AUDIT_LOG_PURGE: handleAuditLogPurge,
   SQLITE_SEARCH: handleSearch,
-  SQLITE_UPDATE: (msg, sendResponse) => handleSqliteWire('update', msg, sendResponse),
-  SQLITE_DELETE: (msg, sendResponse) => handleSqliteWire('delete', msg, sendResponse),
-  SQLITE_TOGGLE_STAR: (msg, sendResponse) => handleSqliteWire('toggleStar', msg, sendResponse),
-  SQLITE_COUNT: (msg, sendResponse) => handleSqliteWire('count', msg, sendResponse),
   SQLITE_STATUS: handleStatus,
   SQLITE_CLEAR_ALL: handleClearAll,
   SQLITE_BACKUP: handleBackup,
