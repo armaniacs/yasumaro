@@ -520,8 +520,15 @@ export async function purgeLegacyStorage(
         const legacyKeys = ['savedUrls'];
         try {
             await chrome.storage.local.remove(legacyKeys);
-        } catch {
-            // Ignore errors during cleanup
+        } catch (error) {
+            // Cleanup continues after a failed key removal; the return contract
+            // is unchanged and only the diagnostic is added (PBI 14).
+            await logError(
+                'Failed to remove legacy savedUrls key during cleanup',
+                { error: errorMessage(error) },
+                ErrorCode.STORAGE_WRITE_FAILURE,
+                'storage/savedUrlRepository.ts'
+            );
         }
 
         const after = await getStorageUsage();

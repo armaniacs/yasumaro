@@ -21,6 +21,9 @@ import { INITIAL_KEYWORDS, type CleanseOptions } from '../contentCleaner.js';
 import type { AiSummaryCleanseOptions } from '../aiSummaryCleaner/index.js';
 import { THRESHOLD_DEFAULTS } from '../aiSummaryCleaner/rules.js';
 import { deduplicateContent } from '../contentDeduplicator.js';
+import { errorMessage } from '../errorUtils.js';
+import { ErrorCode } from '../logger/types.js';
+import { logError } from '../logger/api.js';
 import type { ExtractResult } from './types.js';
 import { runCleanseAndExtract } from './extractPipeline.js';
 import { createReportBuilder, ExtractionReport, type ExtractionReportBuilder } from './extractionReport.js';
@@ -260,8 +263,10 @@ function extractInternal(
                 }
             }
         }
-     } catch (_error) {
-         // エラー時は安全なフォールバック
+     } catch (error) {
+         // Safe fallback unchanged; the failure is logged so diagnostics keep it
+         // visible (PBI 14). Fire-and-forget: extractInternal stays synchronous.
+         void logError('[ContentExtractor] Content extraction failed; falling back to body text', { error: errorMessage(error) }, ErrorCode.CONTENT_EXTRACTION_FAILURE, 'contentExtractor');
          content = document.body?.innerText || '';
      }
 

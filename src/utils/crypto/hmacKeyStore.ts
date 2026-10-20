@@ -336,7 +336,9 @@ async function getOrCreateWrappedHmacKeyLocked(storageKey: string, versionKey: s
             } catch (error: unknown) {
                 await safeLog(() => logWarn(`Failed to unwrap HMAC key (${storageKey}), generating new one`, { error: errorMessage(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'hmacKeyStore.ts'));
                 // One generation only; storage.local.set below would otherwise destroy the old envelope.
-                await chrome.storage.local.set({ [`${storageKey}${QUARANTINE_SUFFIX}`]: stored }).catch(() => undefined);
+                // Fail-open diagnostics: a quarantine write failure is logged via the safeLog seam
+                // and never blocks key regeneration (PBI 14).
+                await chrome.storage.local.set({ [`${storageKey}${QUARANTINE_SUFFIX}`]: stored }).catch((error: unknown) => safeLog(() => logError(`Failed to quarantine the unwrapped HMAC key envelope (${storageKey})`, { error: errorMessage(error) }, ErrorCode.CRYPTO_HMAC_FAILURE, 'hmacKeyStore.ts')));
                 await safeLog(() => logError(
                     'HMAC key regenerated after unwrap failure; signatures made with the old key will no longer verify',
                     { storageKey, reason: errorMessage(error) },

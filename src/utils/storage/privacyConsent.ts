@@ -464,7 +464,14 @@ export async function getConsentDeniedCount(): Promise<number> {
     try {
         const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_DENIED_COUNT);
         return Number(result[StorageKeys.PRIVACY_CONSENT_DENIED_COUNT] ?? 0);
-    } catch {
+    } catch (error) {
+        // Fail-open diagnostics: the 0 return contract is unchanged (PBI 14).
+        await logError(
+            'Failed to read consent denied count',
+            { error: errorMessage(error) },
+            ErrorCode.STORAGE_READ_FAILURE,
+            'privacyConsent.ts'
+        );
         return 0;
     }
 }
@@ -474,7 +481,14 @@ export async function getLastConsentDenialTime(): Promise<number | null> {
     try {
         const result = await chrome.storage.local.get(StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME);
         return (result[StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME] as number) ?? null;
-    } catch {
+    } catch (error) {
+        // Fail-open diagnostics: the null return contract is unchanged (PBI 14).
+        await logError(
+            'Failed to read last consent denial time',
+            { error: errorMessage(error) },
+            ErrorCode.STORAGE_READ_FAILURE,
+            'privacyConsent.ts'
+        );
         return null;
     }
 }

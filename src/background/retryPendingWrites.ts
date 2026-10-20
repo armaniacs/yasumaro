@@ -8,7 +8,9 @@ import { withOptimisticLock } from '../utils/storage/storageTransaction.js';
 import type { SavedUrlEntry } from '../utils/urlEntry.js';
 import { saveSavedUrlEntryMetadata } from '../utils/storage/savedUrlRepository.js';
 import type { QueuedChromeStorageWrite, PendingMetadataPatchWrite } from './pendingChromeStorageQueue.js';
-import { logWarn } from '../utils/logger/api.js';
+import { logWarn, logError } from '../utils/logger/api.js';
+import { errorMessage } from '../utils/errorUtils.js';
+import { ErrorCode } from '../utils/logger/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 
 export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageWrite): Promise<boolean> {
@@ -24,7 +26,9 @@ export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageW
         return [...list, entry];
       });
       return true;
-    } catch {
+    } catch (error) {
+      // Diagnostics only: the false return contract is unchanged (PBI 14).
+      await logError('Failed to retry legacy saved URL entry write', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'retryPendingWrites');
       return false;
     }
   }
@@ -41,7 +45,9 @@ export async function retryPendingChromeStorageWrite(write: QueuedChromeStorageW
       timestamp: write.timestamp,
     }));
     return true;
-  } catch {
+  } catch (error) {
+    // Diagnostics only: the false return contract is unchanged (PBI 14).
+    await logError('Failed to retry saved URL metadata patch', { url: write.url, error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'retryPendingWrites');
     return false;
   }
 }
