@@ -217,10 +217,11 @@ export class VisitReporter {
                             legacyReasonMessageKey(response.reason),
                             response.reason || 'unknown',
                         );
+                    // showPrivacyConfirmDialog shares the confirmDialog seam's
+                    // signature, so no cast is needed to unify the two.
                     const confirm = this.deps.confirmDialog
-                        ? this.deps.confirmDialog
-                        : (await import('./privacyDialog.js')).showPrivacyConfirmDialog;
-                    const userConfirmed = await (confirm as (a: string, b: string) => Promise<boolean>)(statusCode, reasonLabel);
+                        ?? (await import('./privacyDialog.js')).showPrivacyConfirmDialog;
+                    const userConfirmed = await confirm(statusCode, reasonLabel);
                     if (userConfirmed) {
                         try {
                             // PBI 2026-09-15-14: the force re-send uses the same

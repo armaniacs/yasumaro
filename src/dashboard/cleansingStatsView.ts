@@ -254,11 +254,11 @@ export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | nu
 
 /**
  * 30-14: ルール別削除件数をテーブルで描画する。
- * Map または Record のいずれも受け付け、空なら「除去なし」メッセージを表示。
+ * wire 型は Record（urlEntry.removedByReason）に統一済みで、空なら「除去なし」メッセージを表示。
  */
 export function renderRemovedByReason(
   container: HTMLElement,
-  removedByReason?: Map<string, number> | Record<string, number> | null,
+  removedByReason?: Record<string, number> | null,
 ): void {
   clearElement(container);
   container.className = 'cleansing-removed-breakdown';
@@ -269,10 +269,7 @@ export function renderRemovedByReason(
     return;
   }
 
-  const entries: Array<[string, number]> =
-    removedByReason instanceof Map
-      ? [...removedByReason.entries()]
-      : Object.entries(removedByReason as Record<string, number>);
+  const entries: Array<[string, number]> = Object.entries(removedByReason);
 
   const filtered = entries.filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
 

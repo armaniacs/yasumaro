@@ -11,6 +11,12 @@ import { hashUrl } from '../utils/urlHash.js';
 import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { normalizeUrlSafe } from '../utils/urlUtils.js';
+import type { PrivacyInfo } from '../utils/privacyChecker.js';
+
+/** Boundary guard for the persisted domain_filter_mode (PBI 20). */
+function isFilterMode(value: unknown): value is 'disabled' | 'whitelist' | 'blacklist' {
+  return value === 'disabled' || value === 'whitelist' || value === 'blacklist';
+}
 
 export interface StatusInfo {
   domainFilter: {
@@ -124,7 +130,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     await logDebug('Checking status for URL', { originalHash, normalizedHash, source: 'statusChecker' });
 
     // Service Workerからプライバシーキャッシュを取得
-    type PrivacyInfo = { isPrivate?: boolean; reason?: 'cache-control' | 'set-cookie' | 'authorization'; headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } };
+    // PrivacyInfo は canonical 型（privacyChecker.ts）を再利用 — 手書きコピーを置かない。
     let privacyInfo: PrivacyInfo | null = null;
     try {
       const response = (await messageTransport.send({ type: 'GET_PRIVACY_CACHE' })) as {
@@ -134,7 +140,7 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
       await logDebug('Privacy cache response', { success: response?.success, cacheSize: response?.cache?.length, source: 'statusChecker' });
 
       if (response && response.success && response.cache) {
-        const cacheMap = new Map<string, PrivacyInfo>(response.cache as Array<[string, PrivacyInfo]>);
+        const cacheMap = new Map<string, PrivacyInfo>(response.cache);
         privacyInfo = cacheMap.get(normalizedUrl) ?? null;
         await logDebug('Found privacy info in cache', { isPrivate: privacyInfo?.isPrivate, reason: privacyInfo?.reason, source: 'statusChecker' });
       }
@@ -150,7 +156,9 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
     ]);
 
     // ドメインフィルタチェック
-    const mode: 'disabled' | 'whitelist' | 'blacklist' = (settings.domain_filter_mode || 'disabled') as 'disabled' | 'whitelist' | 'blacklist';
+    // Persisted values are untrusted: an unknown mode fails closed to
+    // 'disabled' (same pattern as PRIVACY_MODES), so no bare cast is needed.
+    const mode = isFilterMode(settings.domain_filter_mode) ? settings.domain_filter_mode : 'disabled';
     const whitelist = settings.domain_whitelist || [];
     const blacklist = settings.domain_blacklist || [];
     const domain = extractDomain(url);

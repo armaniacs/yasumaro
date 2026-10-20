@@ -35,6 +35,16 @@ function asTrustCategory(value: unknown, fallback: TrustCategory = 'finance'): T
     return isTrustCategory(value) ? value : fallback;
 }
 
+/** Boundary guard for the Tranco tier select: unknown strings must not reach the updater (PBI 20). */
+export function isTrancoTier(value: unknown): value is TrancoTier {
+    return value === 'top1k' || value === 'top10k' || value === 'top100k';
+}
+
+/** Boundary guard for the safety mode select: unknown strings must not drive the tier sync (PBI 20). */
+export function isSafetyMode(value: unknown): value is SafetyMode {
+    return value === 'strict' || value === 'balanced' || value === 'relaxed';
+}
+
 export interface TrustPermissionSuggestEntry {
     domain: string;
     count: number;
@@ -327,7 +337,10 @@ export function createTrustSettings(): TrustSettingsController {
         const tierSelect = dom?.trancoTierSelect;
         if (!tierSelect) return;
 
-        const tier = tierSelect.value as TrancoTier;
+        // Boundary guard (isTrustCategory pattern): a malformed select value
+        // must not reach the Tranco updater.
+        if (!isTrancoTier(tierSelect.value)) return;
+        const tier = tierSelect.value;
         const updater = getTrancoUpdater();
 
         if (updater.isUpdateInProgress()) {
@@ -362,8 +375,9 @@ export function createTrustSettings(): TrustSettingsController {
         const { safetyModeSelect, trancoTierSelect } = dom ?? {};
         if (!safetyModeSelect || !trancoTierSelect) return;
 
-        const mode = safetyModeSelect.value as SafetyMode;
-        const targetTier = SAFETY_MODE_TO_TIER[mode];
+        // Boundary guard: a malformed select value must not drive the tier sync.
+        if (!isSafetyMode(safetyModeSelect.value)) return;
+        const targetTier = SAFETY_MODE_TO_TIER[safetyModeSelect.value];
 
         trancoTierSelect.value = targetTier;
         trustStatus(getMessageOr('safetyModeChanged', 'Safety mode changed'), 'success');
@@ -373,7 +387,9 @@ export function createTrustSettings(): TrustSettingsController {
         const { safetyModeSelect, trancoTierSelect } = dom ?? {};
         if (!safetyModeSelect || !trancoTierSelect) return;
 
-        const tier = trancoTierSelect.value as TrancoTier;
+        // Boundary guard: a malformed select value must not drive the mode sync.
+        if (!isTrancoTier(trancoTierSelect.value)) return;
+        const tier = trancoTierSelect.value;
         const targetMode = TIER_TO_SAFETY_MODE[tier];
 
         safetyModeSelect.value = targetMode;

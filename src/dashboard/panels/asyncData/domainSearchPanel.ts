@@ -2,7 +2,6 @@ import { getMessageOr } from '../../../utils/i18n.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { extractDomain, isDomainAllowed } from '../../../utils/domainUtils.js';
-import type { Settings } from '../../../utils/storage/types.js';
 import { type PanelLifecycle } from '../types.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { clearElement } from '../../../utils/domClear.js';
@@ -56,8 +55,9 @@ async function runFilterSearch(searchInput: HTMLInputElement | null, matchesEl: 
   if (!query) return;
 
   const settings = await settingsRepository.getAll();
-  const blacklist: string[] = (settings[StorageKeys.DOMAIN_BLACKLIST as keyof Settings] as string[]) || [];
-  const whitelist: string[] = (settings[StorageKeys.DOMAIN_WHITELIST as keyof Settings] as string[]) || [];
+  // Direct typed index: Settings already maps both keys to string[] (PBI 20).
+  const blacklist: string[] = settings[StorageKeys.DOMAIN_BLACKLIST] || [];
+  const whitelist: string[] = settings[StorageKeys.DOMAIN_WHITELIST] || [];
 
   const blackMatches = blacklist.filter(d => d.toLowerCase().includes(query));
   const whiteMatches = whitelist.filter(d => d.toLowerCase().includes(query));

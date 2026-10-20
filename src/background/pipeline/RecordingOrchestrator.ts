@@ -182,7 +182,7 @@ export class RecordingOrchestrator {
       urlStore: this.urlStore,
       sqliteClient: this.sqliteClient,
     });
-    let context: RecordingContext = { data, settings, force: data.force || false, aiService: deps.aiService as never, traceId, errors: [] };
+    let context: RecordingContext = { data, settings, force: data.force || false, aiService: deps.aiService, traceId, errors: [] };
 
     for (const step of this.preSaveSteps) {
       try {

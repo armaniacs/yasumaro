@@ -175,7 +175,8 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   const currentSettings = await settingsRepository.getAll();
   // A/B collection lives in collectCurrentProviderPrioritySlots; the gate
   // below only guards the B validation UI + P1 save block, not collection.
-  const layout = (currentSettings as Record<string, unknown>)[StorageKeys.AI_PROVIDER_LAYOUT] as 'a' | 'b' | undefined;
+  // Direct typed index: Settings already maps this key to 'a' | 'b'.
+  const layout = currentSettings[StorageKeys.AI_PROVIDER_LAYOUT];
   const bList = document.getElementById('bPriorityList') as HTMLElement | null;
   // Throw semantics (PBI 2026-10-02-09; B-throw unified): any collector
   // failure (A or B) propagates out of collectCurrentProviderPrioritySlots.

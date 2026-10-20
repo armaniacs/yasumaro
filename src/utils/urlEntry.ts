@@ -46,7 +46,10 @@ export interface SavedUrlEntry {
     /** PBI 05: フォールバック発動理由（未発動時は null でクリアされる） */
     fallbackReason?: string | null;
     // 30-14: 観測性ファネル
-    removedByReason?: Record<string, number> | Map<string, number>;
+    // Wire type is the saved Record (storage/types.ts CleansingFeedbackEntry).
+    // The extractor's in-memory Map never crosses into a SavedUrlEntry, so
+    // only one representation exists here (PBI 20: no dual Record|Map).
+    removedByReason?: Record<string, number>;
     funnel?: { pageBytes: number; candidateBytes: number; cleansedBytes: number };
     // 30-11: 二重ペイロード
     originalContent?: string;

@@ -7,7 +7,7 @@
 import type { RecordingContext } from '../types.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 import type { SavedUrlEntryMetadataPatch } from '../../../utils/storage/savedUrlRepository.js';
-import type { AiSummaryCleansedReason } from '../../../utils/commonTypes.js';
+import type { AiSummaryCleansedReason, RecordType } from '../../../utils/commonTypes.js';
 import { extractDomain } from '../../../utils/domainUtils.js';
 import {
   MAX_BYTE_STAT_BYTES,
@@ -53,7 +53,7 @@ export interface CommonStorageFields {
   extractedSentencesBytes: number | null;
   extractedSentencesOriginalBytes: number | null;
   cleansedReason: string | null;
-  recordType: string;
+  recordType: RecordType;
 
   /**
    * Builds the SQLite BrowsingLogRecord shape. `contentEnabled` gates whether
@@ -100,52 +100,55 @@ function clampCleansedReasons(value: unknown): string[] | null {
 
 export function extractCommonStorageFields(context: RecordingContext): CommonStorageFields {
   const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
-  const privacy = privacyResult as unknown as Record<string, unknown> | undefined;
-  const d = data as unknown as Record<string, unknown>;
-  const rawMasked = (d.precomputedMaskedCount as number | undefined)
-    ?? (d.maskedCount as number | undefined)
-    ?? (privacy?.maskedCount as number | undefined)
+  // Typed context access: RecordingData / PrivacyPipelineResult already
+  // declare every field read below, so no Record widening or bare cast is
+  // needed (PBI 20: the former `as unknown as Record<string, unknown>` chain
+  // is gone; the byte-stat clamps below stay the second-layer guard).
+  const privacy = privacyResult;
+  const rawMasked = data.precomputedMaskedCount
+    ?? data.maskedCount
+    ?? privacy?.maskedCount
     ?? null;
-  const tags = privacy?.tags as string[] | undefined;
+  const tags = privacy?.tags;
 
   const fields: Omit<CommonStorageFields, 'toBrowsingLogRecord' | 'toMetadataPatch'> = {
-    url: d.url as string,
-    title: (d.title as string) || null,
-    content: (d.content as string) || null,
-    summary: (privacy?.summary as string) || null,
+    url: data.url,
+    title: data.title || null,
+    content: data.content || null,
+    summary: privacy?.summary || null,
     tagsArray: tags && tags.length > 0 ? tags : null,
-    providerName: (privacy?.providerName as string) ?? null,
-    modelName: (privacy?.modelName as string) ?? null,
-    privacyMode: (privacy?.mode as string) ?? null,
+    providerName: privacy?.providerName ?? null,
+    modelName: privacy?.modelName ?? null,
+    privacyMode: privacy?.mode ?? null,
     // `?? null` (not `||`) so a legitimate 0 maskedCount survives instead of collapsing to null.
     maskedCount: rawMasked ?? null,
     maskedCountForPatch: rawMasked && rawMasked > 0 ? rawMasked : undefined,
-    sentTokens: (privacy?.sentTokens as number) ?? null,
-    receivedTokens: (privacy?.receivedTokens as number) ?? null,
-    originalTokens: (privacy?.originalTokens as number) ?? null,
-    cleansedTokens: (privacy?.cleansedTokens as number) ?? null,
-    pageBytes: clampByteStat(d.pageBytes, MAX_BYTE_STAT_BYTES),
-    candidateBytes: clampByteStat(d.candidateBytes, MAX_BYTE_STAT_BYTES),
-    originalBytes: clampByteStat(d.originalBytes, MAX_BYTE_STAT_BYTES),
-    cleansedBytes: clampByteStat(d.cleansedBytes, MAX_BYTE_STAT_BYTES),
-    aiSummaryOriginalBytes: clampByteStat(d.aiSummaryOriginalBytes, MAX_BYTE_STAT_BYTES),
-    aiSummaryCleansedBytes: clampByteStat(d.aiSummaryCleansedBytes, MAX_BYTE_STAT_BYTES),
-    aiSummaryCleansedElements: clampByteStat(d.aiSummaryCleansedElements, MAX_CLEANSED_ELEMENTS),
-    aiSummaryCleansedReason: clampCleansedReason(d.aiSummaryCleansedReason),
-    aiSummaryCleansedReasons: clampCleansedReasons(d.aiSummaryCleansedReasons),
-    fallbackTriggered: !!d.fallbackTriggered,
-    fallbackTriggeredInt: d.fallbackTriggered ? 1 : 0 as 0 | 1,
-    fallbackReason: (d.fallbackReason as string | undefined) ?? null,
+    sentTokens: privacy?.sentTokens ?? null,
+    receivedTokens: privacy?.receivedTokens ?? null,
+    originalTokens: privacy?.originalTokens ?? null,
+    cleansedTokens: privacy?.cleansedTokens ?? null,
+    pageBytes: clampByteStat(data.pageBytes, MAX_BYTE_STAT_BYTES),
+    candidateBytes: clampByteStat(data.candidateBytes, MAX_BYTE_STAT_BYTES),
+    originalBytes: clampByteStat(data.originalBytes, MAX_BYTE_STAT_BYTES),
+    cleansedBytes: clampByteStat(data.cleansedBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryOriginalBytes: clampByteStat(data.aiSummaryOriginalBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryCleansedBytes: clampByteStat(data.aiSummaryCleansedBytes, MAX_BYTE_STAT_BYTES),
+    aiSummaryCleansedElements: clampByteStat(data.aiSummaryCleansedElements, MAX_CLEANSED_ELEMENTS),
+    aiSummaryCleansedReason: clampCleansedReason(data.aiSummaryCleansedReason),
+    aiSummaryCleansedReasons: clampCleansedReasons(data.aiSummaryCleansedReasons),
+    fallbackTriggered: !!data.fallbackTriggered,
+    fallbackTriggeredInt: data.fallbackTriggered ? 1 : 0,
+    fallbackReason: data.fallbackReason ?? null,
     // `?? null` not `|| ''`: an empty referrer is a real 'none' and must not
     // become a string that the row codec would render.
-    navSourceUrl: typeof d.navSourceUrl === 'string' ? d.navSourceUrl : null,
-    searchQuery: typeof d.searchQuery === 'string' ? d.searchQuery : null,
-    aiDuration: (aiDuration as number) ?? null,
-    obsidianDuration: (obsidianDuration as number) ?? null,
-    extractedSentencesBytes: (extractedSentencesBytes as number) ?? null,
-    extractedSentencesOriginalBytes: (extractedSentencesOriginalBytes as number) ?? null,
-    cleansedReason: (d.cleansedReason as string) ?? null,
-    recordType: (d.recordType as string) ?? 'auto',
+    navSourceUrl: data.navSourceUrl ?? null,
+    searchQuery: data.searchQuery ?? null,
+    aiDuration: aiDuration ?? null,
+    obsidianDuration: obsidianDuration ?? null,
+    extractedSentencesBytes: extractedSentencesBytes ?? null,
+    extractedSentencesOriginalBytes: extractedSentencesOriginalBytes ?? null,
+    cleansedReason: data.cleansedReason ?? null,
+    recordType: data.recordType ?? 'auto',
   };
 
   return {
@@ -191,7 +194,7 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
 
     toMetadataPatch(): SavedUrlEntryMetadataPatch {
       const patch: SavedUrlEntryMetadataPatch = {};
-      (patch as Record<string, unknown>).recordType = fields.recordType;
+      patch.recordType = fields.recordType;
 
       if (fields.maskedCountForPatch !== undefined) patch.maskedCount = fields.maskedCountForPatch;
       if (fields.content) patch.content = fields.content;
@@ -220,7 +223,7 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
 
       if (fields.providerName) patch.aiProvider = fields.providerName;
       if (fields.modelName) patch.aiModel = fields.modelName;
-      if (fields.privacyMode) (patch as Record<string, unknown>).privacyMode = fields.privacyMode;
+      if (fields.privacyMode) patch.privacyMode = fields.privacyMode;
 
       if (fields.extractedSentencesBytes !== null) patch.extractedSentencesBytes = fields.extractedSentencesBytes;
       if (fields.extractedSentencesOriginalBytes !== null) patch.extractedSentencesOriginalBytes = fields.extractedSentencesOriginalBytes;

@@ -115,11 +115,11 @@ export function createExportImport(): ExportImportController {
     interface ImportPreviewSummary {
       version: string;
       exportedAt: string;
-      obsidian_protocol?: string;
-      obsidian_port?: string;
-      ai_provider?: string;
-      domain_filter_mode?: string;
-      privacy_mode?: string;
+      obsidian_protocol?: string | undefined;
+      obsidian_port?: string | undefined;
+      ai_provider?: string | undefined;
+      domain_filter_mode?: string | undefined;
+      privacy_mode?: string | undefined;
       domain_count?: string;
     }
     const summary: ImportPreviewSummary = {
@@ -127,11 +127,14 @@ export function createExportImport(): ExportImportController {
       exportedAt: new Date(data.exportedAt).toLocaleString(),
     };
     const s = data.settings;
-    summary.obsidian_protocol = s.obsidian_protocol as string;
-    summary.obsidian_port = s.obsidian_port as string;
-    summary.ai_provider = s.ai_provider as string;
-    summary.domain_filter_mode = s.domain_filter_mode as string;
-    summary.privacy_mode = s.privacy_mode as string;
+    // Typed Settings access: every field below is already string-typed, so no
+    // cast is needed (PBI 20). A missing value stays undefined and JSON.stringify
+    // drops it, exactly as before.
+    summary.obsidian_protocol = s.obsidian_protocol;
+    summary.obsidian_port = s.obsidian_port;
+    summary.ai_provider = s.ai_provider;
+    summary.domain_filter_mode = s.domain_filter_mode;
+    summary.privacy_mode = s.privacy_mode;
     summary.domain_count = String((s.domain_whitelist?.length || 0) + (s.domain_blacklist?.length || 0));
     const summaryMsg = getMessageOr('importPreviewSummary', 'Summary:');
     const noteMsg = getMessageOr('importPreviewNote', 'API keys and lists are included.');

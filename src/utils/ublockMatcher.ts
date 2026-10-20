@@ -194,9 +194,9 @@ export interface UblockMatcherContext {
  * @param {string} url - The URL to evaluate.
  * @param {UblockRules} ublockRules - 軽量化版ルールセットまたは旧形式
  * @param {UblockMatcherContext} [context={}] - Optional matching context (軽量版では未使用).
- * @returns {Promise<boolean>} - true if the URL is blocked, false otherwise.
+ * @returns {boolean} - true if the URL is blocked, false otherwise.
  */
-export async function isUrlBlocked(url: string, ublockRules: UblockRules, context: UblockMatcherContext = {}): Promise<boolean> {
+export function isUrlBlocked(url: string, ublockRules: UblockRules, context: UblockMatcherContext = {}): boolean {
   // Guard against invalid input – safe fallback to not block.
   if (typeof url !== 'string' || !url) {
     return false;
@@ -208,12 +208,10 @@ export async function isUrlBlocked(url: string, ublockRules: UblockRules, contex
   }
 
   // Get or create rule index for performance (UF-302 optimization)
-  // Cast to object to use WeakMap key
-  const rulesObj = ublockRules as object;
-  let index = RULE_INDEX_CACHE.get(rulesObj);
+  let index = RULE_INDEX_CACHE.get(ublockRules);
   if (!index) {
     index = new RuleIndex(ublockRules);
-    RULE_INDEX_CACHE.set(rulesObj, index);
+    RULE_INDEX_CACHE.set(ublockRules, index);
   }
 
   // Perform matching with context
