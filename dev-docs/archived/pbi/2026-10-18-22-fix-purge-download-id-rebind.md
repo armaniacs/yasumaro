@@ -51,13 +51,13 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 
 ## 受け入れ基準
 
-- [ ] `purgeExpiredDownloadRecords` が `removeFile` / `erase` を呼ぶ前に、**その `downloadId` が記録項目に紐づくことを確認する**こと。確認できない場合は両方とも呼ばない。
-- [ ] **誤ってユーザーのファイルを消さないことを保証する**: 照合が通らない経路では `chrome.downloads.removeFile` の呼び出し回数が 0 であることを単体テストで pin し、readiness を gate にする（`npm run validate` で緑が必須）。
-- [ ] 同一セッション内で記録され 30 日を超えた項目は、従来どおり `removeFile` → `erase` が呼ばれること（回帰ガード）。既存の 29/30/31 日境界テストと「removeFile が reject しても erase を試す」テストの意図を弱めない。
-- [ ] 照合失敗と項目不一致はログで区別できること（現状の `Local Markdown download record erase failed`（`:132`）とは別のイベントとして）。
-- [ ] 既存レコード（項目同定情報を持たない旧フォーマット）を読み込んだ場合にも、同一の照合経路を通ること。旧レコードのために削除が恒久的に無効化されないこと。
-- [ ] 照合の実装は `downloads` 権限の追加を必要としないこと（`wxt.config.ts:240` の `'downloads'` は無条件。Chromium / Firefox 両ビルド）。
-- [ ] 30 日を超えた purge で「照合が通らず消せなかったエントリ」をユーザーが自分で救える手段があること（残った `chrome://downloads` エントリはユーザーが手動で消せる。黙って消さないことが主眼で、テストか仕様で示すこと）。
+- [x] `purgeExpiredDownloadRecords` が `removeFile` / `erase` を呼ぶ前に、**その `downloadId` が記録項目に紐づくことを確認する**こと。確認できない場合は両方とも呼ばない。
+- [x] **誤ってユーザーのファイルを消さないことを保証する**: 照合が通らない経路では `chrome.downloads.removeFile` の呼び出し回数が 0 であることを単体テストで pin し、readiness を gate にする（`npm run validate` で緑が必須）。
+- [x] 同一セッション内で記録され 30 日を超えた項目は、従来どおり `removeFile` → `erase` が呼ばれること（回帰ガード）。既存の 29/30/31 日境界テストと「removeFile が reject しても erase を試す」テストの意図を弱めない。
+- [x] 照合失敗と項目不一致はログで区別できること（現状の `Local Markdown download record erase failed`（`:132`）とは別のイベントとして）。
+- [x] 既存レコード（項目同定情報を持たない旧フォーマット）を読み込んだ場合にも、同一の照合経路を通ること。旧レコードのために削除が恒久的に無効化されないこと。
+- [x] 照合の実装は `downloads` 権限の追加を必要としないこと（`wxt.config.ts:240` の `'downloads'` は無条件。Chromium / Firefox 両ビルド）。
+- [x] 30 日を超えた purge で「照合が通らず消せなかったエントリ」をユーザーが自分で救える手段があること（残った `chrome://downloads` エントリはユーザーが手動で消せる。黙って消さないことが主眼で、テストか仕様で示すこと）。
 
 ## テスト戦略
 
@@ -165,11 +165,11 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 
 ## Definition of Done
 
-- [ ] BDDシナリオ（3 本）が自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `export-purge-erase:stale-session-download-id-dereference` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] BDDシナリオ（3 本）が自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `export-purge-erase:stale-session-download-id-dereference` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
 
 ## 調査結果（2026-10-18）
 
@@ -185,3 +185,10 @@ Scenario: 3: 照合そのものの不確定（search が空・search が失敗�
 - `pbi/2026-10-18-13-fix-fallback-quota-purge-order.md` ― 「消える前に判定する」同種の安全側方針。書式と guard の言い回しを揃える。
 - `pbi/2026-10-18-10-fix-opfs-v2-verify-before-delete.md` ― 「verify before delete」の先例（移行前に照合してから削除）。本 PBI も同じ型で、rollback 方針の記述を合わせられる。
 - `src/background/localMarkdownExportRetention.ts`（VULN-004 の本体）/ `dev-docs/ARCHITECTURE_MAP.md` / `dev-docs/TEST_RULE.md`（テスト追加前に必読）
+
+## 完了記録（2026-10-20）
+
+- 実装: `eraseDownloadRecord` を `verifyDownloadIdentity`（chrome.downloads.search({id}) → 空結果/パス不一致/startTime 不一致で mismatch、search 例外で search-failed）による identity 再照合のゲートに変更（返り値は 'erased' | 'mismatch' | 'search-failed' | 'erase-failed'。未照合なら removeFile も erase も呼ばない）。パス照合は DownloadItem.filename が絶対パス・OS 区切り文字のため正規化してサフィックス一致（matchesRecordedPath）。DOWNLOAD_START_TIME_TOLERANCE_MS = 5 分。search 失敗と項目不一致を WARN ログの別イベントで区別。キュー排出は erased または確定的 mismatch のみ claim、search-failed / erase-failed はキュー保持で次回 purge が再照合。リスト側 claim 済みレコードとキュー内レコードの両方が同一の照合関数を通す設計に統一。
+- 5 Whys: 誤削除の直接原因は eraseDownloadRecord が保存済み downloadId を照会なしで逆参照したこと → レコードに項目同定情報がなく claim の createdAt フィルタはレコードの年齢しか確定しないため → chrome.downloads の id がセッション内保証のみ（Firefox は起動時に再採番）で再起動をまたぐと別ダウンロードに再割当されるため。解: 削除副作用の直前に filename（新レコード）+ startTime 対 createdAt（旧レコード）の両基準で再照合し、確認できないものは削除しないで閉じ、エントリはユーザーが自分で消せる形に残す。
+- 検証: 4 ファイル 53 テスト（identity 再照合 describe 9 テスト含む）/ retention ファイル --repeats=10（290 実行）緑 / type-check / eslint / npm run validate（1,104 ファイル 16,584 テスト）全緑。
+- 残置（owner 観測）: Firefox 隔離プロファイルでの id 再割当観測（E2E 相当）は owner タスク。
