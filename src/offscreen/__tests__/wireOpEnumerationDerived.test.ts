@@ -117,7 +117,7 @@ describe('derived wire registry: one entry per gateway wire-table row', () => {
   const gatewayRows = SQLITE_WIRE_TABLE.filter((row) => row.op !== 'search');
 
   it('registers every gateway row message type', () => {
-    const keys = new Set([...sqliteMessageHandlers.keys()]);
+    const keys = new Set<string>([...sqliteMessageHandlers.keys()]);
     for (const row of gatewayRows) {
       expect(keys.has(row.messageType)).toBe(true);
     }
@@ -133,7 +133,7 @@ describe('derived wire registry: one entry per gateway wire-table row', () => {
     ]);
     const handWritten = SQLITE_MESSAGE_TYPES.filter((t) => !tableDerived.has(t));
 
-    const keys = new Set([...sqliteMessageHandlers.keys()]);
+    const keys = new Set<string>([...sqliteMessageHandlers.keys()]);
     expect(keys.size).toBe(tableDerived.size + handWritten.length);
     for (const t of tableDerived) expect(keys.has(t)).toBe(true);
     for (const t of handWritten) expect(keys.has(t)).toBe(true);
