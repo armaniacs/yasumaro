@@ -59,9 +59,13 @@ export async function flushBufferedExports(
         // PBI 27: exportPath はユーザー設定の自由文字列。filename 組み立て
         // 時に sanitize し、失敗時は既定フォルダにフォールバックする。
         const safeDir = resolveSafeExportDir(exportPath);
+        // PBI 2026-10-18-22: the same relative filename goes to download() and
+        // to the record, so the purge's identity re-check can match the
+        // chrome.downloads item against what this flush actually asked for.
+        const filename = `${safeDir}/${date}.md`;
         const downloadId = await chrome.downloads.download({
           url: dataUrl,
-          filename: `${safeDir}/${date}.md`,
+          filename,
           saveAs: false,
           // PBI 27 上書きガード方針: 日付キーの冪等な再書き込みが正しい
           // 動作のため明示 'overwrite'（全 4 箇所で統一）。
@@ -69,7 +73,7 @@ export async function flushBufferedExports(
         });
 
         if (typeof downloadId === 'number') {
-          await recordDownloadId(downloadId, date);
+          await recordDownloadId(downloadId, date, filename);
         }
 
         // VULN-004: drop the daily buffer key now that it is safely written, so

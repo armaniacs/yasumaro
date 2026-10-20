@@ -11,6 +11,11 @@
  *    behind (window: LOCAL_MARKDOWN_BUFFER_RETENTION_DAYS, swept from
  *    dailyPurgeHandler)
  *
+ * Every deletion the purge runs is gated by an identity re-check: a recorded
+ * downloadId is erased only while chrome.downloads still resolves it to the
+ * recorded file (PBI 2026-10-18-22, audit fingerprint
+ * export-purge-erase:stale-session-download-id-dereference).
+ *
  * Retention start point is the download creation time (`createdAt`), not the
  * file's calendar date. The buffer keys are the exception: they are named after
  * the day they hold, so their window is a calendar-day comparison.
@@ -67,6 +72,16 @@ export interface DownloadRecord {
   downloadId: number;
   date: string;
   createdAt: number;
+  /**
+   * Item-identity info stamped at download time (PBI 2026-10-18-22): the
+   * relative filename the flush passed to chrome.downloads.download().
+   * DownloadItem.filename is the absolute local path with platform separators,
+   * so the identity re-check suffix-matches this against the item's normalized
+   * path. Records written before the re-check existed carry no filename and
+   * fall back to the startTime criterion - old records are re-verified through
+   * the same checkpoint, never permanently un-erasable.
+   */
+  filename?: string;
 }
 
 function toRecords(value: unknown): DownloadRecord[] {
@@ -81,16 +96,131 @@ async function readPending(): Promise<{ records: DownloadRecord[]; queued: Downl
   };
 }
 
+// How far the recorded `createdAt` stamp and the download's `startTime` may
+// drift and still describe the same download (PBI 2026-10-18-22). The stamp is
+// taken right after chrome.downloads.download resolves, so a fresh auto-export
+// download differs by milliseconds and this only covers service-worker
+// scheduling. A rebound id resolves to a download that began at least
+// LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS after the record was stamped, orders of
+// magnitude beyond this tolerance, so the time criterion alone rejects it.
+const DOWNLOAD_START_TIME_TOLERANCE_MS = 5 * 60 * 1000;
+
 /**
- * Best-effort delete of one download record: `chrome.downloads.removeFile`
- * fails if the user already moved/deleted the file or the item is not
- * `complete`; that failure is swallowed. The history-record removal
- * (`chrome.downloads.erase`, the actual API — the PBI's "removeDownload" is not
- * a real method name) is always attempted regardless. Returns whether the
- * history record was actually erased, so the erase queue only claims records
- * that were.
+ * Verdict of the identity re-check: 'verified' when the id still refers to the
+ * recorded download, 'mismatch' when a criterion conclusively fails (item
+ * gone, different file, different start time), 'search-failed' when the
+ * verification could not run. Only 'verified' may reach a deletion call.
  */
-async function eraseDownloadRecord(record: DownloadRecord): Promise<boolean> {
+type DownloadIdentityCheck = 'verified' | 'mismatch' | 'search-failed';
+
+/**
+ * Whether `itemPath` is the recorded filename. DownloadItem.filename is the
+ * absolute local path with platform separators, while the record holds the
+ * relative path the flush passed to download(), so normalize separators and
+ * require a path-separator boundary around the recorded path (not a bare
+ * suffix, which would let a same-tailed sibling directory match).
+ */
+function matchesRecordedPath(itemPath: string, recorded: string): boolean {
+  const normalized = itemPath.replace(/\\/g, '/');
+  return normalized === recorded || normalized.endsWith(`/${recorded}`);
+}
+
+/**
+ * Re-check that `record.downloadId` still refers to the download this record
+ * describes, BEFORE any deletion side effect (PBI 2026-10-18-22, audit
+ * fingerprint export-purge-erase:stale-session-download-id-dereference).
+ *
+ * chrome.downloads ids are only guaranteed within a browser session, so a
+ * record read after a browser restart can carry an id the platform re-assigned
+ * to an unrelated download; erasing on it would delete a file this extension
+ * never created. Every available criterion must hold: the item's path ends
+ * with the recorded filename (records the current flush writes carry one), and
+ * the download began when the record was stamped (DownloadItem.startTime vs
+ * createdAt) - the only criterion old records without a filename have. A
+ * rebound id resolves to a download that started at least a retention window
+ * after the record was stamped, so the time criterion alone already rejects it.
+ *
+ * Search failure and item mismatch are logged as separate events so a skipped
+ * purge can be triaged; both leave the chrome://downloads entry untouched for
+ * the user to inspect and delete by hand.
+ */
+async function verifyDownloadIdentity(record: DownloadRecord): Promise<DownloadIdentityCheck> {
+  let items: chrome.downloads.DownloadItem[];
+  try {
+    items = await chrome.downloads.search({ id: record.downloadId });
+  } catch (error: unknown) {
+    addLog(LogType.WARN, 'Local Markdown download identity search failed', {
+      downloadId: record.downloadId,
+      error: String(error),
+    });
+    return 'search-failed';
+  }
+
+  const item = items[0];
+  if (!item) {
+    addLog(LogType.WARN, 'Local Markdown download identity mismatch', {
+      downloadId: record.downloadId,
+      reason: 'not-found',
+    });
+    return 'mismatch';
+  }
+
+  if (record.filename !== undefined && !matchesRecordedPath(item.filename, record.filename)) {
+    addLog(LogType.WARN, 'Local Markdown download identity mismatch', {
+      downloadId: record.downloadId,
+      reason: 'path-mismatch',
+      filename: item.filename,
+    });
+    return 'mismatch';
+  }
+
+  const startedAt = Date.parse(item.startTime);
+  if (
+    !Number.isFinite(startedAt) ||
+    Math.abs(startedAt - record.createdAt) > DOWNLOAD_START_TIME_TOLERANCE_MS
+  ) {
+    addLog(LogType.WARN, 'Local Markdown download identity mismatch', {
+      downloadId: record.downloadId,
+      reason: 'start-time-mismatch',
+      startTime: item.startTime,
+    });
+    return 'mismatch';
+  }
+
+  return 'verified';
+}
+
+/**
+ * What one erase attempt settled on:
+ *  - 'erased': identity verified and the history record was erased
+ *  - 'mismatch': the identity re-check conclusively showed the id no longer
+ *    refers to the recorded download - nothing may ever be erased for it, so
+ *    the erase queue claims the record and leaves the (unrelated)
+ *    chrome://downloads entry to the user
+ *  - 'search-failed': the identity re-check could not run - nothing erased and
+ *    the record still owes an erase, so the erase queue keeps it for the next
+ *    purge to re-check
+ *  - 'erase-failed': identity verified but the erase API rejected - kept for
+ *    retry, unchanged from before the identity check
+ */
+type EraseRecordOutcome = 'erased' | 'mismatch' | 'search-failed' | 'erase-failed';
+
+/**
+ * Best-effort delete of one download record, gated by an identity re-check:
+ * `chrome.downloads.search({ id })` must still resolve `downloadId` to the
+ * recorded download before either deletion call runs (PBI 2026-10-18-22, audit
+ * fingerprint export-purge-erase:stale-session-download-id-dereference). The
+ * tracked list and the erase queue share this one checkpoint.
+ *
+ * `chrome.downloads.removeFile` fails if the user already moved/deleted the
+ * file or the item is not `complete`; that failure is swallowed. The
+ * history-record removal (`chrome.downloads.erase`, the actual API - the PBI's
+ * "removeDownload" is not a real method name) runs only after the re-check
+ * passes, and its failure keeps the record queued for a retry.
+ */
+async function eraseDownloadRecord(record: DownloadRecord): Promise<EraseRecordOutcome> {
+  const identity = await verifyDownloadIdentity(record);
+  if (identity !== 'verified') return identity;
   try {
     await chrome.downloads.removeFile(record.downloadId);
   } catch {
@@ -98,20 +228,22 @@ async function eraseDownloadRecord(record: DownloadRecord): Promise<boolean> {
   }
   try {
     await chrome.downloads.erase({ id: record.downloadId });
-    return true;
+    return 'erased';
   } catch (error: unknown) {
     addLog(LogType.ERROR, 'Local Markdown download record erase failed', {
       downloadId: record.downloadId,
       error: String(error),
     });
-    return false;
+    return 'erase-failed';
   }
 }
 
 /**
  * Identity of one queued record. The erase queue's claim matches the exact
- * records this run erased (downloadId + date + createdAt) so it can never
- * remove a record a concurrent cap-drop appended after the erase read.
+ * records this run erased or conclusively identified as not ours (downloadId +
+ * date + createdAt), so it can never remove a record a concurrent cap-drop
+ * appended after the erase read, and never drops a record that still owes an
+ * erase (a search failure or an erase rejection stays queued).
  */
 function queueEntryKey(record: DownloadRecord): string {
   return `${record.downloadId}:${record.date}:${record.createdAt}`;
@@ -120,6 +252,12 @@ function queueEntryKey(record: DownloadRecord): string {
 /**
  * Append a generated download id, dropping the oldest records once the list
  * exceeds MAX_DOWNLOAD_RECORDS.
+ *
+ * `filename` is the relative path the flush passed to chrome.downloads.download
+ * (PBI 2026-10-18-22): the item-identity info the purge's re-check matches the
+ * chrome.downloads item against before erasing. Records written without one
+ * (the pre-PBI format) are verified through the startTime criterion instead -
+ * old records fall back, they are not permanently un-erasable.
  *
  * The read, the append and the cap all run as one updater, and the records the
  * cap drops land in the erase queue in the SAME update: withAtomicKeys covers
@@ -137,8 +275,11 @@ function queueEntryKey(record: DownloadRecord): string {
  * predated this id and drop it. `createdAt` is stamped before the lock so a CAS
  * retry re-applies the same record instead of re-reading the clock.
  */
-export async function recordDownloadId(downloadId: number, date: string): Promise<void> {
-  const record: DownloadRecord = { downloadId, date, createdAt: Date.now() };
+export async function recordDownloadId(downloadId: number, date: string, filename?: string): Promise<void> {
+  const record: DownloadRecord =
+    filename === undefined
+      ? { downloadId, date, createdAt: Date.now() }
+      : { downloadId, date, createdAt: Date.now(), filename };
 
   await withAtomicKeys<[DownloadRecord[], DownloadRecord[]]>(
     [LOCAL_EXPORT_DOWNLOAD_IDS_KEY, LOCAL_EXPORT_ERASE_QUEUE_KEY],
@@ -159,10 +300,11 @@ export async function recordDownloadId(downloadId: number, date: string): Promis
  * LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS, from the tracked list and from the
  * erase queue the cap drops records into (PBI 2026-10-18-21).
  *
- * `chrome.downloads.removeFile` fails if the user already moved/deleted the file
- * or the item is not `complete`; that failure is swallowed. The history-record
- * removal (`chrome.downloads.erase`, the actual API — the PBI's "removeDownload"
- * is not a real method name) is always attempted regardless.
+ * Every record passes eraseDownloadRecord's identity re-check before any
+ * deletion side effect (PBI 2026-10-18-22): the tracked list and the queue
+ * share one checkpoint, and a record the re-check cannot confirm is never
+ * erased - its chrome://downloads entry is left for the user to delete by
+ * hand, and the skip is logged as its own event.
  */
 export async function purgeExpiredDownloadRecords(): Promise<void> {
   const cutoff = Date.now() - LOCAL_MARKDOWN_EXPORT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
@@ -186,13 +328,18 @@ export async function purgeExpiredDownloadRecords(): Promise<void> {
   // Awaiting removeFile/erase inside the updater would hold the list's
   // serialization for the whole round trip, and — the actual lost update — a
   // flush's recordDownloadId landing in that window would be overwritten by a
-  // kept-list computed before the await. Claiming first also means a concurrent
-  // append can only add to the kept list, so a claimed record can never be
-  // resurrected. The cost of claiming before erasing is that a crash in between
-  // leaves the download entry in chrome://downloads forever, which is the
-  // recoverable direction of that trade. The erase queue below does not change
-  // that: it only holds records the cap dropped, so a claim lost to a crash
-  // here still has nothing left tracking it.
+  // kept-list computed before the await. The identity re-check
+  // (eraseDownloadRecord) is part of those side effects: a
+  // chrome.downloads.search inside the updater would hold the serialization
+  // the same way. Claiming first also means a concurrent append can only add
+  // to the kept list, so a claimed record can never be resurrected. The cost
+  // of claiming before erasing is that a crash in between leaves the download
+  // entry in chrome://downloads forever, which is the recoverable direction of
+  // that trade — and a record whose identity re-check cannot confirm it is
+  // never erased, leaving the entry for the user by design (PBI
+  // 2026-10-18-22). The erase queue below does not change that: it only holds
+  // records the cap dropped, so a claim lost to a crash here still has
+  // nothing left tracking it.
   //
   // Skipped when this read saw no expired list records: list appends are always
   // stamped with a current `createdAt` and a cap-drop moves expired records to
@@ -215,25 +362,30 @@ export async function purgeExpiredDownloadRecords(): Promise<void> {
   }
 
   // Drain the erase queue in the opposite order — erase first, claim after.
-  // Its claim matches the exact records THIS run erased (queueEntryKey), so a
-  // record a concurrent cap-drop appended after the read can never be claimed
-  // without an erase, and a crash between the erase and the claim leaves the
-  // queue intact: the next purge retries the erase (removeFile rejects on a
-  // gone item, erase resolves empty — both harmless) and claims then. Claiming
-  // first, like the list above does, would instead drop the record on that
-  // crash with no tracking left to erase it, and an erase failure would lose
-  // the retry — the queue keeps a failed record for the next run.
+  // The claim matches the records THIS run settled (queueEntryKey): erased, or
+  // conclusively identified as not ours — a mismatched record can never owe an
+  // erase again, so keeping it would only re-run the same re-check every
+  // purge. Records still owing an erase (search failed, or erase rejected)
+  // stay queued. A record a concurrent cap-drop appended after the read can
+  // never be claimed without an erase-or-mismatch, and a crash between the
+  // erase and the claim leaves the queue intact: the next purge retries the
+  // erase (removeFile rejects on a gone item, erase resolves empty — both
+  // harmless) and claims then. Claiming first, like the list above does,
+  // would instead drop the record on that crash with no tracking left to
+  // erase it, and an erase failure would lose the retry — the queue keeps a
+  // failed record for the next run.
   const expiredQueued = pending.queued.filter((r) => r.createdAt <= cutoff);
-  const erased: DownloadRecord[] = [];
+  const settled: DownloadRecord[] = [];
   for (const record of expiredQueued) {
-    if (await eraseDownloadRecord(record)) erased.push(record);
+    const outcome = await eraseDownloadRecord(record);
+    if (outcome === 'erased' || outcome === 'mismatch') settled.push(record);
   }
-  if (erased.length > 0) {
+  if (settled.length > 0) {
     await withOptimisticLock<DownloadRecord[]>(LOCAL_EXPORT_ERASE_QUEUE_KEY, (current) => {
-      const erasedKeys = new Set(erased.map(queueEntryKey));
+      const settledKeys = new Set(settled.map(queueEntryKey));
       // Recomputed from `current` on every CAS retry: a record appended
-      // concurrently is not in `erasedKeys` and survives the claim.
-      return toRecords(current).filter((r) => !erasedKeys.has(queueEntryKey(r)));
+      // concurrently is not in `settledKeys` and survives the claim.
+      return toRecords(current).filter((r) => !settledKeys.has(queueEntryKey(r)));
     });
   }
 }

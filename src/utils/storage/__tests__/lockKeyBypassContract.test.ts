@@ -34,6 +34,11 @@ const LOCK_KEYS: ReadonlyArray<{ key: string; aliases: readonly string[] }> = [
   { key: 'trust_db', aliases: ['StorageKeys.TRUST_DB'] },
   { key: 'recording_recovery_claims', aliases: ['CLAIMS_KEY'] },
   { key: 'local_md_export_download_ids', aliases: ['LOCAL_EXPORT_DOWNLOAD_IDS_KEY'] },
+  // PBI 2026-10-18-21 added the erase-queue lock without listing it here: the
+  // coversEveryLockKey scan below is the mechanism that forces this update,
+  // and the queue key is written only through withAtomicKeys/withOptimisticLock
+  // (no direct set bypasses it).
+  { key: 'local_md_export_erase_queue', aliases: ['LOCAL_EXPORT_ERASE_QUEUE_KEY'] },
   { key: 'cleansing_feedback_queue', aliases: ['StorageKeys.CLEANSING_FEEDBACK_QUEUE', 'QUEUE_KEY'] },
 ];
 

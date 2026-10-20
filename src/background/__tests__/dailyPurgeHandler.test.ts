@@ -34,9 +34,16 @@ vi.mock('../../utils/logger/api.js', async () =>
 
 describe('handleDailyPurgeAlarm', () => {
   let storageData: Record<string, unknown>;
+  // PBI 2026-10-18-22: downloads this fixture "recorded", kept outside
+  // storageData on purpose. The purge claims a record out of the tracked list
+  // (removing it from storage) BEFORE eraseDownloadRecord searches for its id,
+  // and chrome.downloads is a separate API that still has the item — so the
+  // search stand-in answers from this registry, not from storageData.
+  let recordedDownloads: Map<number, { downloadId: number; date: string; createdAt: number; filename?: string }>;
 
   beforeEach(() => {
     storageData = {};
+    recordedDownloads = new Map();
     settingsRepository.clearCache();
     globalThis.chrome = {
       storage: {
@@ -65,6 +72,24 @@ describe('handleDailyPurgeAlarm', () => {
       downloads: {
         erase: vi.fn(() => Promise.resolve([])),
         removeFile: vi.fn(() => Promise.resolve()),
+        // PBI 2026-10-18-22: the purge re-checks every record's identity
+        // through downloads.search before erasing. A download the fixture
+        // recorded still resolves to the recorded item (relative filename
+        // under a fake download directory + a startTime equal to the record's
+        // createdAt stamp), so the verified path of the re-check is exercised
+        // end to end here.
+        search: vi.fn((query: { id?: number }) => {
+          const record = query.id === undefined ? undefined : recordedDownloads.get(query.id);
+          return Promise.resolve(
+            record
+              ? [{
+                  id: record.downloadId,
+                  filename: `/downloads/${record.filename ?? `${record.date}.md`}`,
+                  startTime: new Date(record.createdAt).toISOString(),
+                }]
+              : [],
+          );
+        }),
       },
     } as unknown as typeof chrome;
   });
@@ -104,12 +129,17 @@ describe('handleDailyPurgeAlarm', () => {
   it('VULN-004: erases local-export download records older than the retention window', async () => {
     const now = Date.now();
     const FORTY_DAYS_MS = 40 * 24 * 60 * 60 * 1000;
+    // The seeded downloads exist in the fixture's chrome.downloads, so the
+    // identity re-check verifies both records (only id 11 is expired and
+    // claimed; id 22 stays inside the window).
+    const seeded = [
+      { downloadId: 11, date: 'old', createdAt: now - FORTY_DAYS_MS },
+      { downloadId: 22, date: 'recent', createdAt: now - 1000 },
+    ];
     storageData = {
-      local_md_export_download_ids: [
-        { downloadId: 11, date: 'old', createdAt: now - FORTY_DAYS_MS },
-        { downloadId: 22, date: 'recent', createdAt: now - 1000 },
-      ],
+      local_md_export_download_ids: structuredClone(seeded),
     };
+    for (const record of seeded) recordedDownloads.set(record.downloadId, record);
 
     const purgeFn = vi.fn().mockResolvedValue({ success: true, data: { purged: 0 } });
     await handleDailyPurgeAlarm(purgeFn);
