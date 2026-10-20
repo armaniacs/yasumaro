@@ -12,6 +12,10 @@ import { logInfo, logWarn, logError } from '../logger/api.js';
 import { consentHmacSigner } from '../crypto/index.js';
 import { pickDefined } from '../objectUtils.js';
 import { sendFromPopup } from '../../messaging/types.js';
+// Day unit for the 30-day consent grace — SSOT via trancoConsent.MS_PER_DAY
+// (the pinned rule owner), so the grace arithmetic cannot disagree with the
+// consent rule's day unit.
+import { MS_PER_DAY } from './trancoConsent.js';
 
 /** プライバシーポリシーバージョン定数。PRIVACY.md の「最終更新日」と同期させること */
 // Bump only when consent scope changes for every user; opt-in features carry
@@ -517,7 +521,7 @@ export async function shouldPromptForConsent(): Promise<boolean> {
         // After 3+ rejections, wait 30 days before showing the modal again
         if (denialCount >= 3) {
             const lastDenialTime = await getLastConsentDenialTime();
-            const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+            const THIRTY_DAYS_MS = 30 * MS_PER_DAY;
             if (lastDenialTime && (Date.now() - lastDenialTime < THIRTY_DAYS_MS)) {
                 return false;
             }

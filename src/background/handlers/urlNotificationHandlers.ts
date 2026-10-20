@@ -8,6 +8,7 @@ import { notificationHmacSigner, textToBase64Url, base64UrlToText } from '../../
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logWarn } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { PRIVACY_CONFIRM_NOTIFICATION_PREFIX } from '../notificationHelper.js';
 
 // Constants for URL encoding
 const MAX_ENCODED_LENGTH = 5000;
@@ -22,7 +23,7 @@ export async function encodeUrlSafeBase64(
   url: string,
   maxLength: number = 256
 ): Promise<string> {
-  const prefix = 'privacy-confirm-';
+  const prefix = PRIVACY_CONFIRM_NOTIFICATION_PREFIX;
   const prefixLength = prefix.length;
 
   if (!url || typeof url !== 'string') {
@@ -56,7 +57,7 @@ export async function encodeUrlSafeBase64(
  * @returns デコードされたURL
  */
 export async function decodeUrlFromNotificationId(notificationId: string): Promise<string> {
-  const prefix = 'privacy-confirm-';
+  const prefix = PRIVACY_CONFIRM_NOTIFICATION_PREFIX;
 
   if (!notificationId || typeof notificationId !== 'string') {
     throw new Error('Invalid notification ID');

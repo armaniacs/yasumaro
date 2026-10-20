@@ -5,7 +5,7 @@
  * so the LM Studio host can never drift again (localhost vs 127.0.0.1).
  */
 import { describe, it, expect } from 'vitest';
-import { PROVIDER_DEFAULT_BASE_URLS } from '../providerDefaultBaseUrls.js';
+import { PROVIDER_DEFAULT_BASE_URLS, OPENAI_2_DEFAULT_BASE_URL } from '../providerDefaultBaseUrls.js';
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
 import { DEFAULT_SETTINGS } from '../defaults.js';
 import { StorageKeys } from '../types.js';
@@ -27,5 +27,10 @@ describe('PROVIDER_DEFAULT_BASE_URLS — local-provider default URL SSOT', () =>
   it('DEFAULT_SETTINGS derive the local defaults from the table', () => {
     expect(DEFAULT_SETTINGS[StorageKeys.LM_STUDIO_BASE_URL]).toBe(PROVIDER_DEFAULT_BASE_URLS['lm-studio']);
     expect(DEFAULT_SETTINGS[StorageKeys.OLLAMA_BASE_URL]).toBe(PROVIDER_DEFAULT_BASE_URLS['ollama']);
+  });
+
+  it('DEFAULT_SETTINGS derives the openai_2 preset from the module (PBI 04 SSOT)', () => {
+    expect(OPENAI_2_DEFAULT_BASE_URL).toBe('http://127.0.0.1:11434/v1');
+    expect(DEFAULT_SETTINGS[StorageKeys.OPENAI_2_BASE_URL]).toBe(OPENAI_2_DEFAULT_BASE_URL);
   });
 });

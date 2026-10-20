@@ -19,7 +19,7 @@
 import { LogType, ErrorCode } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { logError } from '../../utils/logger/api.js';
-import { addPendingPage } from '../../utils/pendingStorage.js';
+import { addPendingPage, PENDING_MAX_TTL_MS } from '../../utils/pendingStorage.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import {
   buildErrorResult,
@@ -81,7 +81,12 @@ export type StepOutcome =
   | { done: true; result: RecordingResult }
   | { done: false; pipelineError: PipelineError };
 
-const PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+/**
+ * Pending-entry lifetime — SSOT via pendingStorage's PENDING_MAX_TTL_MS.
+ * The offline-queue handover (offlineQueueProcessor) assigns the same TTL, so
+ * one constant keeps every recovery path's expiry inside the same clamp.
+ */
+const PENDING_TTL_MS = PENDING_MAX_TTL_MS;
 
 function pendingEntry(
   context: RecordingContext,

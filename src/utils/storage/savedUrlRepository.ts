@@ -22,6 +22,10 @@ import { pickDefined } from '../objectUtils.js';
 import { ErrorCode } from '../logger/types.js';
 import { logWarn, logError } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
+// Day unit for the URL-retention cutoff — SSOT via trancoConsent.MS_PER_DAY
+// (the pinned rule owner), so the retention arithmetic cannot disagree with
+// the consent rule's day unit.
+import { MS_PER_DAY } from './trancoConsent.js';
 
 export { MAX_URL_SET_SIZE, URL_WARNING_THRESHOLD, URL_RETENTION_DAYS, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 export type { SavedUrlEntry } from '../urlEntry.js';
@@ -311,7 +315,7 @@ async function updateUrlTimestamp(url: string, recordType?: RecordType): Promise
             // verdict for hand-made entries the explicit "oldest → expired"
             // policy. NaN >= cutoff happens to drop them too, but only by
             // accident of the comparison, not by policy.
-            const cutoff = Date.now() - URL_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+            const cutoff = Date.now() - URL_RETENTION_DAYS * MS_PER_DAY;
             entries = entries.filter(entry => (entry.timestamp || 0) >= cutoff);
 
             if (entries.length > MAX_URL_SET_SIZE) {

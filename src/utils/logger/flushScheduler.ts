@@ -1,5 +1,7 @@
 const LOGGER_ALARM_NAME = 'yasumaro-logger-flush';
 const BATCH_FLUSH_ALARM_MINUTES = 1;
+/** How long onSuspend waits for the flush before giving up (and reporting). */
+const SUSPEND_FLUSH_TIMEOUT_MS = 3000;
 
 export interface LogFlushScheduler {
   onFlushRequested(handler: () => Promise<void>): void;
@@ -32,7 +34,7 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
         // Await flush with a timeout so pending logs are not lost when the SW dies.
         const flushCompleted = await Promise.race([
           this.flushNow().then(() => true),
-          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 3000)),
+          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), SUSPEND_FLUSH_TIMEOUT_MS)),
         ]);
         if (!flushCompleted) {
           console.error(

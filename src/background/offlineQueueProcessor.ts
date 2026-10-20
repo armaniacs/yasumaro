@@ -16,13 +16,15 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logError, logWarn } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
-import { addPendingPage } from '../utils/pendingStorage.js';
+import { addPendingPage, PENDING_MAX_TTL_MS } from '../utils/pendingStorage.js';
 import { claimRecoveryOwner, releaseRecoveryOwner } from '../utils/recoveryClaimStore.js';
 import { notifyRecordingError } from './pipeline/resultBuilder.js';
 import { buildOfflineRetryRequest, type OfflineJobPayload } from './recordRequestBuilder.js';
 
-/** Same pending recovery TTL the outcome policy uses (recordingOutcome). */
-const HANDOVER_PENDING_TTL_MS = 24 * 60 * 60 * 1000;
+// Pending-recovery handover TTL — the same PENDING_MAX_TTL_MS the outcome
+// policy (recordingOutcome) and the pending_pages clamp assign, by one shared
+// constant instead of a per-file copy (PBI 04).
+const HANDOVER_PENDING_TTL_MS = PENDING_MAX_TTL_MS;
 
 interface OfflineNetworkQueueLike {
     retryAll(

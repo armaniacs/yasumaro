@@ -11,6 +11,12 @@ export const CRYPTO_PARAMS = {
   PBKDF2_ITERATIONS: 600_000,
   LEGACY_PBKDF2_ITERATIONS: 100_000,
   ENVELOPE_VERSION: 2,
+  // AES parameters — one definition for every crypto consumer. primitives.ts
+  // (deriveKey / generateIV) and hmacKeyStore.ts (wrap/unwrap, KEK import)
+  // used to restate both values; a one-sided edit would have changed the key
+  // size or the nonce length in one context only.
+  AES_KEY_LENGTH_BITS: 256,
+  AES_GCM_IV_LENGTH_BYTES: 12,
 } as const;
 
 /**

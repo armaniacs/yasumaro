@@ -19,6 +19,9 @@ import {
   REGENERATE_CLEANSE_MODES,
   type RegenerateCleanseMode,
 } from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
+// Page size — SSOT via the model so the query limit and the pagination
+// control share one definition (PBI 04).
+import { SQLITE_HISTORY_PAGE_SIZE } from './sqliteHistoryModel.js';
 
 /**
  * Adapter (PBI 2026-09-23-01): the bar definition lives behind
@@ -309,8 +312,8 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
 // すべての DOM 取得は container スコープで行う。
 // ---------------------------------------------------------------------------
 
-/** Page size shared by the panel shell and pagination wiring. */
-export const SQLITE_HISTORY_PAGE_SIZE = 20;
+// SQLITE_HISTORY_PAGE_SIZE (page size) lives in sqliteHistoryModel.ts —
+// the model owns the query defaults and this view imports the same constant.
 
 /**
  * Sole owner of every DOM id the SQLite history view creates.

@@ -9,7 +9,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
 import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
-import { buildQuerySpec, matchesExtraWhere, type AlreadyCappedQuery } from './queryPlan.js';
+import { buildQuerySpec, matchesExtraWhere, purgeCutoffMs, type AlreadyCappedQuery } from './queryPlan.js';
 import { QUERY_CAPS } from '../utils/limits.js';
 import { forwardWarn } from './offscreenLogger.js';
 
@@ -441,7 +441,8 @@ export class FallbackStorage {
         let count = 0;
 
         if (retentionDays != null && retentionDays > 0) {
-          const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+          // Retention cutoff — shared with the SQL backends via purgeCutoffMs.
+          const cutoffMs = purgeCutoffMs(retentionDays);
           data.records = data.records.filter(r => {
             if (r.is_starred === 1 || r.is_deleted === 1) return true;
             if (r.created_at < cutoffMs) {
@@ -502,7 +503,8 @@ export class FallbackStorage {
 
         // 1. Days-based
         if (retentionDays != null && retentionDays > 0) {
-          const cutoffMs = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+          // Retention cutoff — shared with the SQL backends via purgeCutoffMs.
+          const cutoffMs = purgeCutoffMs(retentionDays);
           const toPurge = candidates.filter(r => r.created_at < cutoffMs);
           for (const r of toPurge) {
             r.content = null;

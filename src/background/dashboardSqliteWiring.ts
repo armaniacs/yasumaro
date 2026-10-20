@@ -11,6 +11,7 @@ import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import { MigrationService } from './migrationService.js';
 import { createConfirmToken as createConfirmTokenImpl, verifyConfirmToken as verifyConfirmTokenImpl } from './confirmTokenManager.js';
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
+import { StorageKeys } from '../utils/storage/types.js';
 
 export interface DashboardSqliteWiringDeps {
   sqliteClient: SqliteClient;
@@ -32,8 +33,8 @@ export function createDashboardSqliteMessageHandler(deps: DashboardSqliteWiringD
     createSqliteClientDeps(deps.sqliteClient, {
       runMigration: async () => {
         await chrome.storage.local.remove([
-          'yasumaro_migration_status',
-          'yasumaro_migration_progress',
+          StorageKeys.YASUMARO_MIGRATION_STATUS,
+          StorageKeys.YASUMARO_MIGRATION_PROGRESS,
         ]);
         const beforeCount = await deps.sqliteClient.query({ kind: 'count' });
         await migrationService.run();

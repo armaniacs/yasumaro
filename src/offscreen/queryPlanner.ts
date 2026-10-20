@@ -26,7 +26,13 @@ import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 
-/** Retention defaults for the purge seam (mirror dbMaintenance's values). */
+/**
+ * Retention defaults for the purge seam — the SSOT (PBI 04). dbMaintenance's
+ * executor defaults (purgeOldRecords) import these, the same executor ->
+ * planner direction recordsRepo (applyReadPolicy) and IdbVfsBackend
+ * (planAuditLog) already use, so the wire defaults and the executor defaults
+ * cannot drift apart. Pinned by purgeDefaultsParity.test.ts.
+ */
 export const DEFAULT_RETENTION_DAYS = 90;
 export const DEFAULT_MAX_RECORDS = 1000;
 /**

@@ -13,7 +13,16 @@
 import { StorageKeys } from './types.js';
 import { saveSettingsAndRefreshDomainFilterCache } from './domainFilterCache.js';
 
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
+/**
+ * Milliseconds in one day — the storage-layer unit for retention arithmetic.
+ * Shared so the day-based cutoffs (tranco consent, URL retention, the 30-day
+ * consent grace) cannot disagree on the unit. The arithmetic stays in this
+ * file on purpose: trancoConsentRuleOwnership.test.ts pins the rule owner as
+ * the one copy of the day arithmetic (PBI 2026-09-29-38). Settings migration
+ * imports localDate.DAY_MS instead — coupling this graph into the settings
+ * repository's mock graph breaks the partial-mock tests.
+ */
+export const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 /** 拒否の記録から再提示を許すまでの日数。 */
 export const TRANCO_CONSENT_RETRY_INTERVAL_DAYS = 30;

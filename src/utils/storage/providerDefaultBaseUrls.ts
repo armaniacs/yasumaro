@@ -13,3 +13,14 @@ export const PROVIDER_DEFAULT_BASE_URLS = {
   'lm-studio': 'http://127.0.0.1:1234/v1',
   'ollama': 'http://localhost:11434/v1',
 } as const;
+
+/**
+ * Shipped openai_2_base_url preset — a loopback Ollama-compatible endpoint
+ * (127.0.0.1, deliberately not the 'ollama' localhost host; the value is
+ * pinned by tests and must not be unified with the 'ollama' entry).
+ *
+ * Not a PROVIDER_DEFAULT_BASE_URLS key on purpose: that table's keys are the
+ * dashboard preset-button ids (generalSettings/providerPresets derives
+ * ProviderPresetId from them), and there is no openai2 preset button.
+ */
+export const OPENAI_2_DEFAULT_BASE_URL = 'http://127.0.0.1:11434/v1';

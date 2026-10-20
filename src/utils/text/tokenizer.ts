@@ -70,7 +70,7 @@ export function toWordSet(sentence: string): Set<string> {
   const cleaned = sentence.replace(/[。！？.!?]$/, '');
   const words = cleaned
     .toLowerCase()
-    .split(/[\s　、。，．！？、。，．！？,.!?\-_:;()\[\]{}""''「」]+/)
+    .split(/[\s　、。，．！？,.!?\-_:;()\[\]{}""''「」]+/)
     .filter(w => w.length >= 2);
 
   if (containsJapanese(cleaned)) {

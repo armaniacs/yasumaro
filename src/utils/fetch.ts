@@ -42,6 +42,9 @@ export {
 
 const MIN_TIMEOUT_MS = 100;      // 最小100ms
 const MAX_TIMEOUT_MS = 300000;   // 最大5分
+/** 既定のリクエストタイムアウト（ミリ秒）。各ラッパーのデフォルト引数と
+ *  呼び出し側のフォールバックで 1 定義を共有する（PBI 04）。 */
+const DEFAULT_TIMEOUT_MS = 30000;
 
 /**
  * 接続テスト用の fetch キャッシュポリシー。
@@ -135,7 +138,7 @@ function validateTimeout(timeoutMs: number): void {
  * @returns {Promise<Response>} fetchレスポンス
  * @throws {Error} 無効なURL、タイムアウト、またはネットワークエラー
  */
-export async function fetchWithTimeout(url: string, options: FetchOptions = {}, timeoutMs: number = 30000): Promise<Response> {
+export async function fetchWithTimeout(url: string, options: FetchOptions = {}, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<Response> {
   // URL検証（オプション - デフォルトではlocalhostを許可）
   const {
     requireValidProtocol = true,
@@ -238,7 +241,7 @@ const REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
 export async function fetchWithRedirectGuard(
   url: string,
   options: FetchOptions = {},
-  timeoutMs: number = 30000,
+  timeoutMs: number = DEFAULT_TIMEOUT_MS,
 ): Promise<Response> {
   let currentUrl = url;
 
@@ -414,7 +417,7 @@ export async function fetchWithRetry(
 
   for (let attempt = 0; attempt <= maxRetryCount; attempt++) {
     try {
-      const response = await fetchWithTimeout(url, options, options.timeoutMs || 30000);
+      const response = await fetchWithTimeout(url, options, options.timeoutMs || DEFAULT_TIMEOUT_MS);
 
       // レスポンスが正常な場合は返却
       if (response.ok) {

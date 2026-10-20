@@ -15,8 +15,8 @@ import { CRYPTO_PARAMS } from './cryptoParams.js';
 
 // 定数設定 — SSOT via cryptoParams.ts
 const PBKDF2_ITERATIONS = CRYPTO_PARAMS.PBKDF2_ITERATIONS;
-const KEY_LENGTH = 256; // bits
-const IV_LENGTH = 12; // bytes (recommended for AES-GCM)
+const KEY_LENGTH = CRYPTO_PARAMS.AES_KEY_LENGTH_BITS;
+const IV_LENGTH = CRYPTO_PARAMS.AES_GCM_IV_LENGTH_BYTES;
 const HASH_ALGORITHM = 'SHA-256';
 const ENCRYPTION_ALGORITHM = 'AES-GCM';
 const SALT_LENGTH = 16; // bytes

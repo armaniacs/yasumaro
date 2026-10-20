@@ -178,6 +178,9 @@ vi.mock('../../utils/fetch.js', () => ({
 
 vi.mock('../../utils/pendingStorage.js', () => ({
   addPendingPage: vi.fn(),
+  // PBI 04: pendingSqliteQueue imports the pending-pages clamp constant, so
+  // the mock must expose it (value pinned by pendingStorage.test.ts).
+  PENDING_MAX_TTL_MS: 24 * 60 * 60 * 1000,
 }));
 
 vi.mock('../../utils/redaction.js', () => ({

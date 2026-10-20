@@ -10,6 +10,7 @@ import { errorMessage } from '../errorUtils.js';
 import { ErrorCode } from '../logger/types.js';
 import { logError, logWarn } from '../logger/api.js';
 import { Mutex } from '../Mutex.js';
+import { CRYPTO_PARAMS } from './cryptoParams.js';
 import {
     getWebCrypto,
     ENVELOPE_ITERATIONS,
@@ -68,8 +69,10 @@ function wrappingKeyStores(): WrappingKeyCandidateStores {
 const signingKeyMutex = new Mutex();
 const wrappingKeyMutex = new Mutex();
 
-const KEY_LENGTH = 256; // bits
-const IV_LENGTH = 12; // bytes (recommended for AES-GCM)
+// Same AES parameters primitives.ts derives/wraps with — SSOT via
+// cryptoParams.ts so the KEK and the HMAC key never drift to a different size.
+const KEY_LENGTH = CRYPTO_PARAMS.AES_KEY_LENGTH_BITS;
+const IV_LENGTH = CRYPTO_PARAMS.AES_GCM_IV_LENGTH_BYTES;
 
 const HMAC_SIGNATURE_KEY_STORAGE = 'notification-signature-key';
 const HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rotation

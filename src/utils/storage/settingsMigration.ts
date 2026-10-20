@@ -16,6 +16,10 @@ import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
 import { isPlainRecord } from '../objectUtils.js';
+// Day unit for the backup-retention cutoff — the existing SSOT is
+// localDate.DAY_MS (Layer 0, pure), imported directly so this module does not
+// couple to the tranco consent graph (which pulls the domain-filter cache).
+import { DAY_MS } from '../localDate.js';
 import {
     PROVIDER_ALLOWLIST_ROWS,
     isAllowedProviderBaseUrl,
@@ -628,7 +632,7 @@ export async function cleanupExpiredSettingsBackups(
 ): Promise<void> {
     const all = await port.get(null);
     const now = options.now ?? (() => Date.now());
-    const cutoff = now() - BACKUP_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    const cutoff = now() - BACKUP_RETENTION_DAYS * DAY_MS;
     const expiredKeys = listSettingsBackupKeys(all).filter((k) => {
         const entry = all[k] as { createdAt?: number } | undefined;
         return typeof entry?.createdAt === 'number' && entry.createdAt < cutoff;

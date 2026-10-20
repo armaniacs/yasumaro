@@ -10,7 +10,14 @@ export interface MarkdownEntry {
   entryData: MarkdownTemplateEntryData;
 }
 
-const DEFAULT_STORAGE_PREFIX = 'local_export_';
+/**
+ * Storage key prefix for daily entry buffers. One definition for every
+ * `local_export_YYYY-MM-DD` consumer: this buffer writes the keys, and the
+ * retention sweep (dailyPurgeHandler) and the export core read them through
+ * saveLocalMarkdownStep's re-export — a per-file copy could rename one side
+ * and strand the buffered keys outside the sweep.
+ */
+export const DAILY_BUFFER_PREFIX = 'local_export_';
 // Single source for the daily flush alarm name (alarmRegistry.ts handles it).
 // The old inline 'yasumaro-local-md-daily' had no handler — a dead alarm.
 export const DEFAULT_DAILY_FLUSH_ALARM = DAILY_FLUSH_ALARM;
@@ -27,7 +34,7 @@ export class MarkdownBufferManager {
   private readonly storagePrefix: string;
 
   constructor(storagePrefix?: string) {
-    this.storagePrefix = storagePrefix ?? DEFAULT_STORAGE_PREFIX;
+    this.storagePrefix = storagePrefix ?? DAILY_BUFFER_PREFIX;
   }
 
   add(entry: MarkdownEntry): void {

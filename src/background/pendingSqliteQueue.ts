@@ -9,6 +9,7 @@
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { PENDING_MAX_TTL_MS } from '../utils/pendingStorage.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
 import type { QueueStorageAdapter } from './queueStorageAdapter.js';
 import { measureFlush } from './pendingChromeStorageQueue.js';
@@ -36,8 +37,10 @@ const BATCH_SIZE = 50;
 /** Maximum number of retries before a pending record is dropped. */
 const MAX_RETRY_COUNT = 5;
 
-/** Time-to-live for pending records (24 hours). */
-const TTL_MS = 24 * 60 * 60 * 1000;
+/** Time-to-live for pending records — the same 24h pending-entry lifetime the
+ * pending_pages clamp (pendingStorage.PENDING_MAX_TTL_MS) enforces, by one
+ * shared constant so the two recovery buffers never drift apart (PBI 04). */
+const TTL_MS = PENDING_MAX_TTL_MS;
 
 /**
  * Internal type: BrowsingLogRecord enriched with retry metadata.

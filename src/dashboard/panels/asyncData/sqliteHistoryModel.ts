@@ -34,6 +34,7 @@ import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
+import { StorageKeys } from '../../../utils/storage/types.js';
 
 // ---------------------------------------------------------------------------
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
@@ -257,8 +258,15 @@ export function historyStateReducer(
 // Model
 // ---------------------------------------------------------------------------
 
-const PAGE_SIZE = 20;
-const HISTORY_SORT_STORAGE_KEY = 'history_sort_preference';
+/**
+ * Page size shared by the query defaults (this model) and the pagination
+ * wiring (sqliteHistoryPanelView imports it) — one constant so the listing
+ * limit and the pagination control cannot disagree (PBI 04).
+ */
+export const SQLITE_HISTORY_PAGE_SIZE = 20;
+// Sort persistence key — SSOT via StorageKeys.HISTORY_SORT_PREFERENCE so the
+// panel's storage-key table stays the only place the key name lives.
+const HISTORY_SORT_STORAGE_KEY = StorageKeys.HISTORY_SORT_PREFERENCE;
 
 /** Sort 永続化の adapter（PBI 2026-09-15-11）: chrome.storage 直結を interface
  *  の後ろに隠し、テストで注入可能に。既定は chrome.storage.local 実装。 */
@@ -488,7 +496,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     notify();
 
     try {
-      const limit = PAGE_SIZE;
+      const limit = SQLITE_HISTORY_PAGE_SIZE;
       const offset = page * limit;
 
       const result: UnifiedHistoryQueryResult = await runQueryHistory({
@@ -544,7 +552,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
-  async function retryInitialLoad(fetchOpts: FetchDataOptions = { limit: PAGE_SIZE }): Promise<void> {
+  async function retryInitialLoad(fetchOpts: FetchDataOptions = { limit: SQLITE_HISTORY_PAGE_SIZE }): Promise<void> {
     await retryWithExponentialBackoff<boolean>(
       async () => {
         await fetchData(fetchOpts);
@@ -561,11 +569,11 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     if (!init) return null;
     if (typeof init.searchTag === 'string') {
       const tag = init.searchTag;
-      return { ...pickDefined({ tagFilter: tag || undefined }), tagInitiated: true, limit: PAGE_SIZE };
+      return { ...pickDefined({ tagFilter: tag || undefined }), tagInitiated: true, limit: SQLITE_HISTORY_PAGE_SIZE };
     }
     if (typeof init.searchDomain === 'string') {
       const q = init.searchDomain.trim();
-      if (q) return { search: q, limit: PAGE_SIZE };
+      if (q) return { search: q, limit: SQLITE_HISTORY_PAGE_SIZE };
     }
     return null;
   }
@@ -649,7 +657,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     await checkFallbackStatus();
     await loadPersistedSortIntoState();
     const fetchOpts = consumePendingInit();
-    await retryInitialLoad(fetchOpts ?? { limit: PAGE_SIZE });
+    await retryInitialLoad(fetchOpts ?? { limit: SQLITE_HISTORY_PAGE_SIZE });
   }
 
   function onNavigateOut(): void {

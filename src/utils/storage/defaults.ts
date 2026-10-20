@@ -6,7 +6,7 @@
  */
 
 import { StorageKeys, isPrivacyMode } from './types.js';
-import { PROVIDER_DEFAULT_BASE_URLS } from './providerDefaultBaseUrls.js';
+import { PROVIDER_DEFAULT_BASE_URLS, OPENAI_2_DEFAULT_BASE_URL } from './providerDefaultBaseUrls.js';
 import type { PrivacyMode, Settings } from './types.js';
 import type { DeepReadonly } from '../typeUtils.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../aiSummaryCleaner/rules.js';
@@ -46,7 +46,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1',
     [StorageKeys.OPENAI_API_KEY]: '',
     [StorageKeys.OPENAI_MODEL]: 'openai/gpt-oss-20b',
-    [StorageKeys.OPENAI_2_BASE_URL]: 'http://127.0.0.1:11434/v1',
+    [StorageKeys.OPENAI_2_BASE_URL]: OPENAI_2_DEFAULT_BASE_URL,
     [StorageKeys.OPENAI_2_API_KEY]: '',
     [StorageKeys.OPENAI_2_MODEL]: 'llama3',
     [StorageKeys.LM_STUDIO_BASE_URL]: PROVIDER_DEFAULT_BASE_URLS['lm-studio'],

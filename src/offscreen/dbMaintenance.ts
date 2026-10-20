@@ -8,9 +8,11 @@
  */
 
 import { engine } from './sqliteEngineHost.js';
-
-const DEFAULT_RETENTION_DAYS = 90;
-const DEFAULT_MAX_RECORDS = 1000;
+// Retention defaults — SSOT via queryPlanner (PBI 04): one definition for the
+// wire defaults (planPurge) and these executor defaults, so a one-sided edit
+// cannot leave a destructive purge purging on a different default. Pinned by
+// purgeDefaultsParity.test.ts.
+import { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } from './queryPlanner.js';
 
 /**
  * Purge old browsing log records based on retention policy.

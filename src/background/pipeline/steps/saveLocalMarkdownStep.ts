@@ -19,8 +19,10 @@ import { renderFileTemplate } from '../../../utils/markdownTemplateUtils.js';
 import { scheduleImmediateFlush } from '../../localMarkdownIdleFlusher.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../../../utils/types.js';
 
-/** Storage key prefix for daily entry buffers */
-export const DAILY_BUFFER_PREFIX = 'local_export_';
+// The `local_export_` prefix is owned by the buffer (MarkdownBufferManager
+// writes the `local_export_YYYY-MM-DD` keys); re-exported here so the
+// retention sweep and the export core keep their existing import surface.
+export { DAILY_BUFFER_PREFIX } from '../buffers/MarkdownBufferManager.js';
 
 /**
  * Build complete daily markdown from accumulated entries using the given template.
