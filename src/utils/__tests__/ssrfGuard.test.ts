@@ -8,6 +8,7 @@ import {
   isPrivateIpAddress,
   normalizeIpHostname,
   normalizeHostname,
+  isLocalhostHostname,
   isLocalhostAddress,
   ALLOWED_LOCALHOST_PORTS,
   validateUrl,
@@ -116,6 +117,22 @@ describe('ssrfGuard', () => {
         expect(isLocalhostAddress('127.0.0.1', port)).toBe(true);
       }
       expect(isLocalhostAddress('127.0.0.1', 9999)).toBe(false);
+    });
+  });
+
+  describe('isLocalhostHostname', () => {
+    it('recognizes the canonical loopback domain forms', () => {
+      expect(isLocalhostHostname('localhost')).toBe(true);
+      expect(isLocalhostHostname('sub.localhost')).toBe(true);
+    });
+
+    it('rejects non-localhost hostnames, IP literals, and suffix-adjacent names', () => {
+      expect(isLocalhostHostname('example.com')).toBe(false);
+      expect(isLocalhostHostname('sub.example.com')).toBe(false);
+      expect(isLocalhostHostname('localhost.evil.com')).toBe(false);
+      expect(isLocalhostHostname('notlocalhost')).toBe(false);
+      expect(isLocalhostHostname('127.0.0.1')).toBe(false);
+      expect(isLocalhostHostname('::1')).toBe(false);
     });
   });
 

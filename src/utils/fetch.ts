@@ -379,6 +379,74 @@ function defaultShouldRetry(error: Error, attempt: number, response: Response | 
 }
 
 /**
+ * Everything one retry decision inside {@link fetchWithRetry} needs. The
+ * loop-level values are the same for both failure paths; only `attempt`,
+ * `logPrefix`, and `kindData` differ per path.
+ */
+interface RetryDecisionContext {
+  url: string;
+  /** 0-origin index of the attempt that failed. */
+  attempt: number;
+  maxRetryCount: number;
+  sleepFn: SleepFn;
+  initialDelayMs: number;
+  backoffMultiplier: number;
+  maxDelayMs: number;
+  /** Log wording shared by the retrying and exhausted messages. */
+  logPrefix: string;
+  /** Failure-kind fields merged into both log payloads (`status` / `error`). */
+  kindData: Record<string, unknown>;
+}
+
+/**
+ * One shared "retry, wait, or give up" step for {@link fetchWithRetry} (PBI 18).
+ *
+ * The HTTP-status path and the catch path used to hold identical copies of
+ * this block, so a fix to the shouldRetry condition or the backoff formula
+ * applied to one copy could silently miss the other. Both paths now call this
+ * single helper; only the log wording and the failure-kind log fields differ.
+ *
+ * Contract (unchanged): while retries remain and shouldRetry allows the next
+ * attempt, log the retry through backoffWait and wait
+ * `backoffDelayMs(attempt, ...)` on the injected SleepFn; otherwise log one
+ * warn line and throw the given error with no further sleep.
+ */
+async function decideRetryAndBackoff(
+  shouldRetry: NonNullable<RetryOptions['shouldRetry']>,
+  error: Error,
+  response: Response | null,
+  method: string,
+  ctx: RetryDecisionContext,
+): Promise<void> {
+  if (ctx.attempt < ctx.maxRetryCount && shouldRetry(error, ctx.attempt + 1, response, method)) {
+    const delay = backoffDelayMs(ctx.attempt, {
+      baseMs: ctx.initialDelayMs,
+      multiplier: ctx.backoffMultiplier,
+      maxMs: ctx.maxDelayMs,
+    });
+    await backoffWait(ctx.sleepFn, delay, {
+      message: `${ctx.logPrefix}, retrying in ${delay}ms...`,
+      data: {
+        url: ctx.url,
+        attempt: ctx.attempt + 1,
+        maxRetryCount: ctx.maxRetryCount,
+        delay,
+        ...ctx.kindData,
+      },
+    });
+    return;
+  }
+
+  logWarn(`${ctx.logPrefix}, no more retries`, {
+    url: ctx.url,
+    attempt: ctx.attempt,
+    maxRetryCount: ctx.maxRetryCount,
+    ...ctx.kindData,
+  }, undefined, 'fetchWithRetry');
+  throw error;
+}
+
+/**
  * 指数バックオフ付きリトライ機能付きフェッチ
  * ネットワークエラーや5xxエラー時に自動リトライ
  *
@@ -435,43 +503,34 @@ export async function fetchWithRetry(
         new Error(`HTTP ${response.status}: ${response.statusText}`),
         failureFromHttpStatus(response.status, requestMethod),
       );
-      if (attempt < maxRetryCount && shouldRetry(attemptError, attempt + 1, response, requestMethod)) {
-        // リトライ遅延（catch 経路と同一の指数バックオフ）
-        lastError = attemptError;
-        const delay = backoffDelayMs(attempt, {
-          baseMs: initialDelayMs,
-          multiplier: backoffMultiplier,
-          maxMs: maxDelayMs,
-        });
-        await backoffWait(sleepFn, delay, {
-          message: `HTTP error, retrying in ${delay}ms...`,
-          data: { url, attempt: attempt + 1, maxRetryCount, delay, status: response.status },
-        });
-      } else {
-        // リトライなしまたは全リトライ失敗
-        logWarn(`HTTP error, no more retries`, { url, attempt, maxRetryCount, status: response.status }, undefined, 'fetchWithRetry');
-        throw attemptError;
-      }
+      lastError = attemptError;
+      // リトライ判定・バックオフ・諦めは catch 経路と同一の decideRetryAndBackoff で行う
+      await decideRetryAndBackoff(shouldRetry, attemptError, response, requestMethod, {
+        url,
+        attempt,
+        maxRetryCount,
+        sleepFn,
+        initialDelayMs,
+        backoffMultiplier,
+        maxDelayMs,
+        logPrefix: 'HTTP error',
+        kindData: { status: response.status },
+      });
     } catch (error: unknown) {
       lastError = toError(error);
 
-      // リトライ条件チェック
-      if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null, requestMethod)) {
-        // リトライ遅延（指数バックオフ）
-        const delay = backoffDelayMs(attempt, {
-          baseMs: initialDelayMs,
-          multiplier: backoffMultiplier,
-          maxMs: maxDelayMs,
-        });
-        await backoffWait(sleepFn, delay, {
-          message: `Request failed, retrying in ${delay}ms...`,
-          data: { url, attempt: attempt + 1, maxRetryCount, delay, error: lastError.message },
-        });
-      } else {
-        // リトライなしまたは全リトライ失敗
-        logWarn(`Request failed, no more retries`, { url, attempt, maxRetryCount, error: lastError.message }, undefined, 'fetchWithRetry');
-        throw lastError;
-      }
+      // response を null で渡すのは catch 経路の既定（transport 失敗として判定）
+      await decideRetryAndBackoff(shouldRetry, lastError, null, requestMethod, {
+        url,
+        attempt,
+        maxRetryCount,
+        sleepFn,
+        initialDelayMs,
+        backoffMultiplier,
+        maxDelayMs,
+        logPrefix: 'Request failed',
+        kindData: { error: lastError.message },
+      });
     }
   }
 

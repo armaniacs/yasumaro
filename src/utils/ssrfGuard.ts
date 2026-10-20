@@ -56,7 +56,7 @@ export function validateUrl(url: string, options: ValidateUrlOptions = {}): void
       throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to private network is not allowed.`);
     }
     // ドメイン名形式の localhost は isPrivateIpAddress では検出できないため明示的にブロック
-    if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    if (isLocalhostHostname(hostname)) {
       throw new Error(`Blocked hostname: ${parsedUrl.hostname}. Access to localhost is not allowed.`);
     }
     // 代替表現 (0x7f., ::1 bracket 等) は BLOCKED_PATTERNS でカバー
@@ -93,6 +93,53 @@ export function normalizeIpHostname(hostname: string): string {
  */
 export function normalizeHostname(hostname: string): string {
   return normalizeIpHostname(hostname).toLowerCase().replace(/\.+$/, '');
+}
+
+/**
+ * Whether a canonicalized hostname is the loopback domain form: the bare
+ * `localhost` name or any `*.localhost` subdomain.
+ *
+ * `isPrivateIpAddress` only classifies IP literals, so it cannot detect the
+ * domain form of localhost; every policy that blocks localhost by name combines
+ * the IP classification with this predicate. The check used to be written out
+ * inline in validateUrl, validateUrlForFilterImport, and isLocalhostAddress
+ * (PBI 18); sharing one predicate keeps their semantics from drifting apart.
+ *
+ * @param hostname - an already-canonicalized hostname (see {@link normalizeHostname})
+ */
+export function isLocalhostHostname(hostname: string): boolean {
+  return hostname === 'localhost' || hostname.endsWith('.localhost');
+}
+
+/**
+ * Classify the IPv4 tail embedded after a well-known IPv6 prefix
+ * (IPv4-mapped `::ffff:` /96 or NAT64 `64:ff9b::` /96).
+ *
+ * The tail is either a dotted IPv4 literal (`10.0.0.1`) or hex groups
+ * (`a00:1`, `a000001`) encoding the 32-bit address; both are converted to
+ * dotted IPv4 and classified with the same IPv4 rules, so an attacker cannot
+ * slip past the guard by re-encoding the address (SSRF / CWE-918). The hex
+ * conversion used to be written out twice inside isPrivateIpAddress (PBI 18).
+ *
+ * @param embedded - the regex-captured tail after the well-known prefix
+ */
+function classifyEmbeddedIpv4(embedded: string): boolean {
+  if (embedded.includes('.')) {
+    return isPrivateIpAddress(embedded);
+  }
+  const hexParts = embedded.split(':');
+  // One hex group holds the full 32-bit address; two groups hold the
+  // high:low 16-bit halves. JS `<<` is 32-bit signed, so `>>> 0`
+  // re-normalizes the combined value to unsigned before the octet split.
+  const high = Number.parseInt(hexParts[0] ?? '', 16);
+  const ipv4Hex = (hexParts.length === 2
+    ? (high << 16) | Number.parseInt(hexParts[1] ?? '', 16)
+    : high) >>> 0;
+  const a = (ipv4Hex >>> 24) & 0xff;
+  const b = (ipv4Hex >>> 16) & 0xff;
+  const c = (ipv4Hex >>> 8) & 0xff;
+  const d = ipv4Hex & 0xff;
+  return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
 }
 
 /**
@@ -164,25 +211,8 @@ export function isPrivateIpAddress(hostname: string): boolean {
     /^::ffff:((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{1,4}:[0-9a-f]{1,4}|[0-9a-f]{1,8})$/
   );
   if (ipv4MappedMatch) {
-    const embeddedIpv4 = ipv4MappedMatch[1] ?? '';
-    // ドット区切り IPv4 (::ffff:10.0.0.1)
-    if (embeddedIpv4.includes('.')) {
-      return isPrivateIpAddress(embeddedIpv4);
-    }
-    // 16進の IPv4-mapped。2グループ (::ffff:aaaa:bbbb) または 1グループ (::ffff:aabbccdd) で、
-    // 32bit IPv4 を表現する。→ ドット区切り IPv4 に変換して再帰判定。
-    // 注意: JS の << は 32bit 符号付き整数を返すため、最上位ビットが立つと負数になる。
-    //        >>> 0 で符号なし 32bit に正規化する。
-    const hexParts = embeddedIpv4.split(':');
-    const ipv4Int = Number.parseInt(hexParts[0] ?? '', 16);
-    const ipv4Hex = (hexParts.length === 2
-      ? (ipv4Int << 16) | Number.parseInt(hexParts[1] ?? '', 16)
-      : ipv4Int) >>> 0;
-    const a = (ipv4Hex >>> 24) & 0xff;
-    const b = (ipv4Hex >>> 16) & 0xff;
-    const c = (ipv4Hex >>> 8) & 0xff;
-    const d = ipv4Hex & 0xff;
-    return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
+    // ドット区切り / 16進（2グループまたは1グループ）の両方を同一ヘルパーで判定する
+    return classifyEmbeddedIpv4(ipv4MappedMatch[1] ?? '');
   }
 
   // NAT64 well-known prefix (64:ff9b::/96)。末尾 32bit が NAT64 ゲートウェイの
@@ -192,18 +222,8 @@ export function isPrivateIpAddress(hostname: string): boolean {
     /^64:ff9b::((?:\d{1,3}\.){3}\d{1,3}|[0-9a-f]{1,4}:[0-9a-f]{1,4})$/
   );
   if (nat64Match) {
-    const embedded = nat64Match[1] ?? '';
-    if (embedded.includes('.')) {
-      return isPrivateIpAddress(embedded);
-    }
-    const [highStr, lowStr] = embedded.split(':');
-    const embeddedHex =
-      ((Number.parseInt(highStr ?? '', 16) << 16) | Number.parseInt(lowStr ?? '', 16)) >>> 0;
-    const a = (embeddedHex >>> 24) & 0xff;
-    const b = (embeddedHex >>> 16) & 0xff;
-    const c = (embeddedHex >>> 8) & 0xff;
-    const d = embeddedHex & 0xff;
-    return isPrivateIpAddress(`${a}.${b}.${c}.${d}`);
+    // IPv4-mapped 経路と同一の classifyEmbeddedIpv4 で判定する
+    return classifyEmbeddedIpv4(nat64Match[1] ?? '');
   }
 
   // fe80::/10 - リンクローカルアドレス (fe80:: ~ febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff)
@@ -243,7 +263,7 @@ export function validateUrlForFilterImport(url: string): void {
   }
 
   // ドメイン名形式のlocalhostチェック（フィルターインポートのみ）
-  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+  if (isLocalhostHostname(hostname)) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
   }
 }
@@ -273,8 +293,7 @@ export function isLocalhostAddress(hostname: string, port?: number): boolean {
   // localhost / *.localhost / 127.x.x.x (ループバックIPv4) / ::1 (IPv6ループバック) /
   // :: (IPv6 unspecified — 0.0.0.0 と同様に自分自身へ解決される) / ::ffff:127.x.x.x (IPv4マップ)
   const isLocalhost =
-    normalized === 'localhost' ||
-    normalized.endsWith('.localhost') ||
+    isLocalhostHostname(normalized) ||
     /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(normalized) ||
     normalized === '::1' ||
     normalized === '::' ||
