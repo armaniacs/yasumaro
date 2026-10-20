@@ -280,7 +280,19 @@ export async function handleSaveOnly(): Promise<void> {
 
       if (!result.success) {
         showSaveError(statusDiv, result.error);
+      } else if (result.conflictCoalesced) {
+        // PBI 2026-10-18-12 (Scenario 5): a coalesced conflict lands the
+        // user's delta on the re-derived base, so the form may not match what
+        // is stored — say so instead of reporting a plain silent success.
+        showStatus(statusDiv, getMessageOr('saveConflictCoalesced', '競合を検出したため最新の設定にマージして保存しました。反映は再読み込み後に確認できます。'), 'success', { autoClear: false });
       }
+    },
+    // A CAS budget exhausted in the write path rejects; without onError the
+    // failure renders nothing (runPanelAction swallows it) and the click
+    // looks like a no-op (PBI 2026-10-18-12: no silent success when the
+    // conflict cannot be coalesced).
+    onError: () => {
+      showSaveError(statusDiv, undefined);
     },
   });
 }

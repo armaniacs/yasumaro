@@ -38,7 +38,23 @@ export async function restoreLatestSettingsBackup(port: StoragePort): Promise<Se
     }
     if (Object.keys(restored).length > 0) {
         const tx = new StorageTransaction(port);
-        await tx.withLock<Settings>('settings', (current) => ({ ...(current ?? {}), ...restored }));
+        // INTENTIONAL full-payload exception to the delta-write contract
+        // (PBI 2026-10-18-12, Scenario 6): a backup restore replaces the
+        // settings blob with the snapshot on purpose. The restore precondition
+        // is an EMPTY blob plus an authoritative migration record, and it is
+        // verified inside the lock: a write that landed between the caller's
+        // empty read and this lock must not be reverted by the snapshot
+        // spread, so a non-empty current blob wins and nothing is reported.
+        let landed = true;
+        await tx.withLock<Settings>('settings', (current) => {
+            const base = current ?? ({} as Settings);
+            if (Object.keys(base).length > 0) {
+                landed = false;
+                return base;
+            }
+            return restored;
+        });
+        if (!landed) return null;
     }
     return restored;
 }

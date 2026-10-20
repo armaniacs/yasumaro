@@ -1353,6 +1353,9 @@
   "saveSuccess": {
     "message": "保存成功"
   },
+  "saveConflictCoalesced": {
+    "message": "競合を検出したため最新の設定にマージして保存しました。反映は再読み込み後に確認できます。"
+  },
   "domainAddedToWhitelist": {
     "message": "ドメインをホワイトリストに追加しました"
   },

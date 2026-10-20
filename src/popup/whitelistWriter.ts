@@ -56,15 +56,21 @@ async function addToWhitelist(entry: string): Promise<WhitelistWriteResult> {
     return { ok: false, reason: 'invalid-pattern', error: errors[0] ?? '' };
   }
 
+  // Fast-path dedup read only: it never builds the patch. The array itself is
+  // read inside the lock (updateDomainWhitelist), so an add that landed in the
+  // read→write window cannot be reverted (PBI 2026-10-18-12, Scenario 4).
   const settings = await settingsRepository.getAll();
   const whitelist = (settings[StorageKeys.DOMAIN_WHITELIST] as string[]) || [];
   if (whitelist.includes(normalized)) {
     return { ok: true, entry: normalized, added: false };
   }
 
-  await settingsRepository.setAll({
-    [StorageKeys.DOMAIN_WHITELIST]: [...whitelist, normalized],
-  });
+  const { changed } = await settingsRepository.updateDomainWhitelist((current) =>
+    current.includes(normalized) ? current : [...current, normalized],
+  );
+  if (!changed) {
+    return { ok: true, entry: normalized, added: false };
+  }
   await updateDomainFilterCache(await settingsRepository.getAll());
   return { ok: true, entry: normalized, added: true };
 }

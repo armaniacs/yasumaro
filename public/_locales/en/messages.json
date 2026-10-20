@@ -1407,6 +1407,9 @@
   "saveSuccess": {
     "message": "Saved successfully"
   },
+  "saveConflictCoalesced": {
+    "message": "A settings conflict was detected and merged into the latest settings. Reload to see the stored values."
+  },
   "domainAddedToWhitelist": {
     "message": "Domain added to whitelist"
   },

@@ -109,6 +109,13 @@ export interface SaveSettingsOptions {
 export interface SaveSettingsResult {
   success: boolean;
   error?: string;
+  /**
+   * True when the write landed after coalescing at least one CAS conflict —
+   * the delta was re-applied on the re-derived fresh base (PBI 2026-10-18-12,
+   * Scenario 5). Callers surface it so a coalesced save never looks like a
+   * plain silent success.
+   */
+  conflictCoalesced?: boolean;
 }
 
 /**
@@ -235,10 +242,17 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
   // Delta write (PBI 2026-09-17-17): only the extracted form keys enter the
   // payload — merging the full currentSettings snapshot here would revert
   // unrelated keys a concurrent writer changed. setAll already merges the
-  // delta over freshly-read storage under the write lock.
-  await saveSettingsAndRefreshDomainFilterCache(newSettings);
+  // delta over freshly-read storage under the write lock. A coalesced CAS
+  // conflict is surfaced to the caller instead of reporting a silent success
+  // on a base the form did not show (PBI 2026-10-18-12, Scenario 5).
+  let conflictCoalesced = false;
+  await saveSettingsAndRefreshDomainFilterCache(newSettings, {
+    onConflictCoalesced: () => {
+      conflictCoalesced = true;
+    },
+  });
 
   options.onSuccess?.();
 
-  return { success: true };
+  return { success: true, conflictCoalesced };
 }

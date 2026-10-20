@@ -8,6 +8,7 @@
 
 import { StorageKeys } from './types.js';
 import type { Settings } from './types.js';
+import type { SettingsWriteOptions } from './SettingsRepository.js';
 import { matchesDomainPattern, extractHostname } from '../wildcardToRegex.js';
 import { DomainFilter } from '../domainFilter/DomainFilter.js';
 
@@ -93,10 +94,21 @@ export async function updateDomainFilterCache(settings: Settings): Promise<void>
  * settings + refresh cache" — replaces the copy-pasted
  * `setAll(s); updateDomainFilterCache(await getAll())` IIFE.
  * settingsRepository is imported lazily to keep this module's static
- * dependency graph at Layer 0 only (PBI 2026-09-17-17).
+ * dependency graph at Layer 0 only (PBI 2026-10-17-17); the write options are
+ * forwarded so callers can surface a coalesced CAS conflict
+ * (PBI 2026-10-18-12, Scenario 5). The type-only import above is erased at
+ * runtime, so the Layer 0 graph is unchanged.
  */
-export async function saveSettingsAndRefreshDomainFilterCache(delta: Partial<Settings>): Promise<void> {
+export async function saveSettingsAndRefreshDomainFilterCache(delta: Partial<Settings>, opts?: SettingsWriteOptions): Promise<void> {
     const { settingsRepository } = await import('./SettingsRepository.js');
-    await settingsRepository.setAll(delta);
+    // Only forward the options when present: an explicit `undefined` second
+    // argument would change the observable write call shape for callers that
+    // save without conflict feedback (PBI 2026-10-18-12 keeps their
+    // single-argument contract intact).
+    if (opts === undefined) {
+        await settingsRepository.setAll(delta);
+    } else {
+        await settingsRepository.setAll(delta, opts);
+    }
     await updateDomainFilterCache(await settingsRepository.getAll());
 }

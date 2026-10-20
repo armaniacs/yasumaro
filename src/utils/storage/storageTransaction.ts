@@ -242,6 +242,14 @@ export class StorageTransaction {
    * detected by the version check, not by value equality. Do not "fix" this
    * by switching the CAS to deep-equal without a reviewed design — the
    * storage layer treats the version as the conflict signal.
+   *
+   * The `currentValue` handed to `updateFn` is read fresh under the lock, and
+   * the retry loop re-invokes `updateFn` with the re-read latest value. An
+   * updater that ignores `currentValue` in favor of a patch captured from a
+   * read taken before the lock re-merges the same stale patch on every retry —
+   * the version check passes, so the conflict detection cannot help. Callers
+   * that need a read-modify-write must derive the new value from
+   * `currentValue` (PBI 2026-10-18-12).
    */
   async withLock<T>(
     key: string,

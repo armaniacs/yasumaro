@@ -16,7 +16,7 @@ import { ChromeStoragePort, InMemoryStoragePort, type StoragePort } from './stor
 // Static import (PBI 2026-10-16-12): no import cycle — none of
 // settingsMigration's transitive deps import SettingsRepository back.
 import { applyMigrationsAndDecryptWithReEncrypt, isSettingsBlobAuthoritative, API_KEY_FIELDS } from './settingsMigration.js';
-import { StorageTransaction } from './storageTransaction.js';
+import { StorageTransaction, deepEqual, type CasRetryOptions } from './storageTransaction.js';
 import { ErrorCode } from '../logger/types.js';
 import { logError } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
@@ -24,6 +24,13 @@ import { errorMessage } from '../errorUtils.js';
 /** Options forwarded to the storage write path. */
 export interface SettingsWriteOptions {
   sqliteHealthCheck?: SqliteHealthCheck;
+  /**
+   * Called once when the write landed after coalescing at least one CAS
+   * conflict — the updater (or delta) was re-applied on the re-derived fresh
+   * base. Callers surface it so a coalesced save never reports a silent
+   * success (PBI 2026-10-18-12, Scenario 5).
+   */
+  onConflictCoalesced?: () => void;
 }
 
 /** @deprecated Use StoragePort — kept for migration compat */
@@ -97,17 +104,92 @@ export class SettingsRepository {
    * both drops land. The epoch stamp invalidates such an entry on the next
    * cache hit instead.
    */
-  private async persistMerged(patch: Record<string, unknown>): Promise<void> {
+  private async persistMerged(patch: Record<string, unknown>, opts?: SettingsWriteOptions): Promise<void> {
     this.cached = null;
     const tx = new StorageTransaction(this.port);
-    await tx.withLock<SettingsType>('settings', (current) => this.mergeSettingsBlob(current, patch));
+    // The retry diagnostic is the CAS's own signal that a conflict was
+    // detected and the merge re-ran on the re-derived base (Scenario 5).
+    let coalescedConflict = false;
+    await tx.withLock<SettingsType>('settings', (current) => this.mergeSettingsBlob(current, patch), {
+      onRetryDiagnostic: (msg) => {
+        if (msg.endsWith('retrying')) coalescedConflict = true;
+      },
+    });
+    this.writeEpoch++;
+    this.cached = null;
+    if (coalescedConflict) opts?.onConflictCoalesced?.();
+  }
+
+  /**
+   * Persist re-encryption results without carrying a patch generation across
+   * the lock (PBI 2026-10-18-12): `reEncrypted` maps each field to the value
+   * the migration produced from the read snapshot `source` — it is a map of
+   * TRANSFORMED VALUES, not a map of intents. Inside the lock the current blob
+   * is re-read, and a transformed value is written only while the stored field
+   * still holds the exact value the transform was derived from. A field a
+   * concurrent writer already changed is left untouched: that writer encrypted
+   * it with the current KDF, so it needs no re-encryption. Merging the
+   * captured value itself is what used to revert a committed credential save.
+   */
+  private async persistReEncrypted(reEncrypted: Record<string, unknown>, source: SettingsType): Promise<void> {
+    if (Object.keys(reEncrypted).length === 0) return;
+    this.cached = null;
+    const tx = new StorageTransaction(this.port);
+    await tx.withLock<SettingsType>('settings', (current) => this.mergeReEncryptedBlob(current, reEncrypted, source));
     this.writeEpoch++;
     this.cached = null;
   }
 
-  private async persistReEncrypted(reEncrypted: Record<string, unknown>): Promise<void> {
-    if (Object.keys(reEncrypted).length === 0) return;
-    await this.persistMerged(reEncrypted);
+  /**
+   * Value-level CAS merge: a re-encryption result applies only to the stored
+   * value it was derived from. `reEncrypted` holds transformed values keyed by
+   * field; `source` is the read snapshot they were derived from. A field whose
+   * current value differs keeps whatever the concurrent writer stored.
+   */
+  private mergeReEncryptedBlob(current: unknown, reEncrypted: Record<string, unknown>, source: SettingsType): SettingsType {
+    const base = (current as Record<string, unknown>) || {};
+    const next: Record<string, unknown> = { ...base };
+    const derivedFrom = source as Record<string, unknown>;
+    for (const field of Object.keys(reEncrypted)) {
+      const original = derivedFrom[field];
+      if (original !== undefined && deepEqual(base[field], original)) {
+        next[field] = reEncrypted[field];
+      }
+    }
+    return next as SettingsType;
+  }
+
+  /**
+   * Read-modify-write for the DOMAIN_WHITELIST array: the updater receives the
+   * whitelist read fresh under the write lock, so an add that raced another
+   * context's add cannot wipe it (PBI 2026-10-18-12, Scenario 4). The CAS
+   * retry re-runs the updater on the re-derived base, so two concurrent adds
+   * both survive; keep the updater pure and idempotent (see
+   * StorageTransaction.withLock). The lock-time current is coerced to an
+   * array: a blob written before the whitelist key existed reads as undefined.
+   */
+  async updateDomainWhitelist(
+    updater: (current: string[]) => string[],
+    options?: CasRetryOptions
+  ): Promise<{ whitelist: string[]; changed: boolean }> {
+    this.cached = null;
+    const tx = new StorageTransaction(this.port);
+    let changed = false;
+    let whitelist: string[] = [];
+    // The whitelist lives inside the settings blob, so the lock guards the
+    // whole blob and the updater operates on its DOMAIN_WHITELIST array.
+    await tx.withLock<SettingsType>('settings', (current) => {
+      const base = (current as Record<string, unknown>) || {};
+      const stored = base[StorageKeys.DOMAIN_WHITELIST];
+      const currentList = Array.isArray(stored) ? (stored as string[]) : [];
+      const nextList = updater(currentList);
+      changed = !deepEqual(currentList, nextList);
+      whitelist = nextList;
+      return { ...base, [StorageKeys.DOMAIN_WHITELIST]: nextList } as SettingsType;
+    }, options);
+    this.writeEpoch++;
+    this.cached = null;
+    return { whitelist, changed };
   }
 
   /**
@@ -169,7 +251,7 @@ export class SettingsRepository {
       }
       const { settings: migrated, reEncrypted } = await applyMigrationsAndDecryptWithReEncrypt(filtered, { getEncryptionKey: keyProvider, ...masterFlag });
       if (Object.keys(reEncrypted).length > 0) {
-        await this.persistReEncrypted(reEncrypted);
+        await this.persistReEncrypted(reEncrypted, filtered);
       }
       migratedResult = migrated;
     } else {
@@ -200,7 +282,7 @@ export class SettingsRepository {
       isMasterPasswordEnabled: Boolean(scattered[StorageKeys.MASTER_PASSWORD_ENABLED]),
     });
     if (Object.keys(reEncrypted).length > 0) {
-      await this.persistReEncrypted(reEncrypted);
+      await this.persistReEncrypted(reEncrypted, scattered as SettingsType);
     }
     return migrated;
   }
@@ -220,8 +302,20 @@ export class SettingsRepository {
    * Write the given keys as a delta: unspecified keys keep their stored
    * values, re-read fresh under the write lock at save time. Do NOT pass a
    * full cached snapshot — its unrelated keys would overwrite concurrent
-   * writers' changes with stale values (settings import is the intended
-   * full-payload case).
+   * writers' changes with stale values.
+   *
+   * Patch generation must not be carried across the lock (PBI 2026-10-18-12):
+   * a patch whose content was captured from a read taken before the lock is
+   * re-merged as-is when the CAS retries, so the retry lands the same stale
+   * patch on the fresh base and the conflict detection cannot help. The write
+   * path therefore accepts two shapes only:
+   *   - a delta of user-intent values (this method — the values ARE the
+   *     intent, e.g. the form's input or an encrypted caller value), and
+   *   - an updater applied to the lock-internal current blob
+   *     (updateDomainWhitelist / persistReEncrypted).
+   * A re-encryption style patch that re-derives stored state must go through
+   * the updater shape; full-payload replacement stays the intended exception
+   * for settings import / backup restore (see settingsBackup.ts).
    */
   async setAll(settings: Partial<SettingsType>, opts?: SettingsWriteOptions): Promise<void> {
     await this.writeSettings(settings, opts);
@@ -245,7 +339,7 @@ export class SettingsRepository {
       throw e;
     }
     await ensureStorageQuota(toSave, opts?.sqliteHealthCheck);
-    await this.persistMerged(toSave);
+    await this.persistMerged(toSave, opts);
   }
 
   /**
