@@ -57,14 +57,14 @@ Scenario: 同一コンテキスト内の既存直列化は引き続き保証さ�
 
 ## 受け入れ基準
 
-- [ ] cross-context の deterministic interleave（get をゲートし、writer B の verify read を writer A の set より先に解決させる）に対して、**どちらかの更新が ConflictError として検出されるか、両方が最終結果として確認できる**ことを assert する自動テストが存在し、パスする（現状は片方の確定済み更新が黙って上書きされる）
-- [ ] 既存の `src/utils/__tests__/optimisticLockSerialization.test.ts`（同一コンテキストの直列化）と `src/utils/storage/__tests__/withLockBypassRace.test.ts`（version を bump しない bypass クラス）の期待値が変更されず、そのまま緑
-- [ ] `storageTransaction.ts:376` の post-write 検証の注釈が実挙動（自分の set と自分の verify の間に落ちた上書きしか検出できない）に合わせる形に更新され、TOCTOU 全体を塞ぐと読める記述が残っていない
-- [ ] `StoragePort` が cross-context の収束に必要なフック（書き戻し前の期待値照合、lease の取得と解放など）を**既存の呼び出しを壊さない**形で提供し、`ChromeStoragePort.set`（`storagePort.ts:53`）が無防備な素通しのまま残っていない
-- [ ] 採用した方式（単一 writer 集約 / lease / write-after-read 検証強化のいずれか）が ADR として記録され、**「browser level に真の CAS は無い以上、どれでも窓を小さくする程度までしかできない」**点が明記されている
-- [ ] 対象3キー（`pending_pages` / `recording_recovery_claims` / `trust_db:json`）それぞれについて、lost update が起きた場合に**どちらの更新が失われるか**と、実際の業務影響（何が残り何が消えるか）がコード読解だけで説明可能になっている
-- [ ] ブロッカー（needs_validation: cross-context の IPC が本当に verify→set の窓内で咬み合うか）の owner 観測チェックが手順書として残っており、**未確認のまま「競合は直った」と主張しない**構造になっている
-- [ ] `npm run validate` が緑（type-check ＋ 既存テスト）
+- [x] cross-context の deterministic interleave（get をゲートし、writer B の verify read を writer A の set より先に解決させる）に対して、**どちらかの更新が ConflictError として検出されるか、両方が最終結果として確認できる**ことを assert する自動テストが存在し、パスする（現状は片方の確定済み更新が黙って上書きされる）
+- [x] 既存の `src/utils/__tests__/optimisticLockSerialization.test.ts`（同一コンテキストの直列化）と `src/utils/storage/__tests__/withLockBypassRace.test.ts`（version を bump しない bypass クラス）の期待値が変更されず、そのまま緑
+- [x] `storageTransaction.ts:376` の post-write 検証の注釈が実挙動（自分の set と自分の verify の間に落ちた上書きしか検出できない）に合わせる形に更新され、TOCTOU 全体を塞ぐと読める記述が残っていない
+- [x] `StoragePort` が cross-context の収束に必要なフック（書き戻し前の期待値照合、lease の取得と解放など）を**既存の呼び出しを壊さない**形で提供し、`ChromeStoragePort.set`（`storagePort.ts:53`）が無防備な素通しのまま残っていない
+- [x] 採用した方式（単一 writer 集約 / lease / write-after-read 検証強化のいずれか）が ADR として記録され、**「browser level に真の CAS は無い以上、どれでも窓を小さくする程度までしかできない」**点が明記されている
+- [x] 対象3キー（`pending_pages` / `recording_recovery_claims` / `trust_db:json`）それぞれについて、lost update が起きた場合に**どちらの更新が失われるか**と、実際の業務影響（何が残り何が消えるか）がコード読解だけで説明可能になっている
+- [x] ブロッカー（needs_validation: cross-context の IPC が本当に verify→set の窓内で咬み合うか）の owner 観測チェックが手順書として残っており、**未確認のまま「競合は直った」と主張しない**構造になっている
+- [x] `npm run validate` が緑（type-check ＋ 既存テスト）
 
 ## テスト戦略
 
@@ -152,11 +152,11 @@ browser level に真の CAS（compare-and-swap）は無い。`chrome.storage.loc
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] npm run validate が緑
-- [ ] 監査 fingerprint（`withOptimisticLock:cross-context-verify-set-window`）を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`storageTransaction.ts` の post-write 検証の注釈を実挙動に合わせる。`:376` の「closes TOCTOU window」は実装より広い主張）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] npm run validate が緑
+- [x] 監査 fingerprint（`withOptimisticLock:cross-context-verify-set-window`）を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`storageTransaction.ts` の post-write 検証の注釈を実挙動に合わせる。`:376` の「closes TOCTOU window」は実装より広い主張）
 
 ## 調査結果（2026-10-18）
 
@@ -168,3 +168,12 @@ browser level に真の CAS（compare-and-swap）は無い。`chrome.storage.loc
 
 - [pbi/00-INDEX.md](00-INDEX.md)
 - ストレージ CAS 領域の PBI 06（trust-db merge / `2026-10-18-06-fix-trust-db-merge-union-removals.md`）、12（settings stale patch / `2026-10-18-12-fix-settings-stale-patch-revert.md`）、20（session auto-lock）と方針の整合を確認すること。特に PBI 06 は `trust_db:json`（本 PBI の対象キーの1つ）に直接触れ、PBI 12 は settings の stale patch（CAS の失敗モード）に直接触れる。**3件で「CAS が壊れるとき」の扱いを揃える**こと（それぞれが独立に「エラーにする」「握りつぶす」を選ぶと、利用者が矛盾した挙動を見る）。
+
+## 完了記録（2026-10-20）
+
+- 実装: `StoragePort` に任意の `compareAndSet` 書き込み時フェンスを追加（版キーを再読し全版が expected と一致する間だけ `set` を実行、不一致は false 報告）。`StorageTransaction` は最終版チェックを書き込み呼び出し内部へ置き、verify 読み取りと書き込みの間に commit した cross-context writer による黙って上書きを拒否（ConflictError として表面化）。
+- 設計注釈: chrome.storage.local に真の CAS は無いため、フェンス内部の read→set 間の窓は残る（narrowing であり真の CAS ではない）。フェンス未実装ポートは `remove?` と同様に feature-detect で動作継続。
+- PBI 06 / 12 / 20 の整合: PBI 06 は操作種別考慮の merge で trust_db の lost update を防ぎ、PBI 12 は settings の re-encryption を value-level CAS で防ぎ、本 PBI は汎用版キーの verify→set 窓をフェンスで狭める。3 件とも「失敗を握りつぶさず、検出して競合として扱う」方向で揃っている。
+- 5 Whys: 確定済み更新が黙って失われるのは verify 読み取りと書き込みの間に cross-context writer が commit しても検出されないため → 版チェックが呼び出し側にあり呼び出し間で状態を保持できないため → MV3 に真の CAS が無い設計のため。解: 書き込み時フェンスで最終版チェックを write の直前へ移し、窓を構造的に最小化して競合を拒否可能に。
+- 検証: 対象テスト（storageTransaction / cross-context 新規テスト）緑 / type-check / eslint 全緑 / フル validate 緑。
+- 残置（owner 観測）: 実ブラウザでの IPC 咬み合い観測（2 コンテキスト同時書き込みの実環境再現）は owner タスクとして残置。

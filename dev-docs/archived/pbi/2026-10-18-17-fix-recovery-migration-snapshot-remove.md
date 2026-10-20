@@ -108,14 +108,14 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 ## 受け入れ基準
 
-- [ ] `opfsRecovery.ts` の status ゲートが fail-closed になっている。`fallback === true` に加えて `initialized !== true` を拒否条件にし、不確実（`getStatus()` が `null` を返す／transport 失敗による `{initialized:false, fallback:false}`）を「移行不可」に分類する
-- [ ] `migrate()` が関数冒頭で status を再確認し、fallback モード・未初期化・status 取得失敗のいずれでも `insertBatch` を1回も発行せずに中断し、削除を一切行わない
-- [ ] 最終削除の直前に `FALLBACK_STORAGE_DATA` を再読し、snapshot に含まれる行だけを間引いてからキーを削除する。snapshot に無かった行（移行中に書かれた行）は必ず残る
-- [ ] 全件着地していない場合（部分失敗・追加行あり）は `OPFS_FALLBACK_MODE` を削除せず、次のサービスワーカー起動で再試行できる状態を維持する
-- [ ] 成否判定は「件数一致」ではない。正規 SQLite の `skipped`（既に DB にある行）を失敗扱いせず、判定の根拠はバックエンド同一性（status）に基づく
-- [ ] 「エンジンがまだ fallback なのに移行を走らせない」ガードが、**ゲート（`needsMigration`）と `migrate` 内の二か所**の双方に存在する（片方だけだとループ途中で degrade した隙間を捕捉できない）
-- [ ] 恒久的な失敗（エンジンが本当に fallback のまま）で、サービスワーカー起動ごとの再試行が連鎖しない上限が明示されている（現状は `deferredMigrations.ts:50-54` の1回限りランナーが唯一の限界で、SW 間には上限がない）
-- [ ] 上記シナリオ 1〜6 を単体テストで pin し、既存テスト `src/background/__tests__/migrationService-opfs.test.ts` と `src/background/__tests__/deferredMigrations.test.ts` の期待値を新方針に合わせて更新する
+- [x] `opfsRecovery.ts` の status ゲートが fail-closed になっている。`fallback === true` に加えて `initialized !== true` を拒否条件にし、不確実（`getStatus()` が `null` を返す／transport 失敗による `{initialized:false, fallback:false}`）を「移行不可」に分類する
+- [x] `migrate()` が関数冒頭で status を再確認し、fallback モード・未初期化・status 取得失敗のいずれでも `insertBatch` を1回も発行せずに中断し、削除を一切行わない
+- [x] 最終削除の直前に `FALLBACK_STORAGE_DATA` を再読し、snapshot に含まれる行だけを間引いてからキーを削除する。snapshot に無かった行（移行中に書かれた行）は必ず残る
+- [x] 全件着地していない場合（部分失敗・追加行あり）は `OPFS_FALLBACK_MODE` を削除せず、次のサービスワーカー起動で再試行できる状態を維持する
+- [x] 成否判定は「件数一致」ではない。正規 SQLite の `skipped`（既に DB にある行）を失敗扱いせず、判定の根拠はバックエンド同一性（status）に基づく
+- [x] 「エンジンがまだ fallback なのに移行を走らせない」ガードが、**ゲート（`needsMigration`）と `migrate` 内の二か所**の双方に存在する（片方だけだとループ途中で degrade した隙間を捕捉できない）
+- [x] 恒久的な失敗（エンジンが本当に fallback のまま）で、サービスワーカー起動ごとの再試行が連鎖しない上限が明示されている（現状は `deferredMigrations.ts:50-54` の1回限りランナーが唯一の限界で、SW 間には上限がない）
+- [x] 上記シナリオ 1〜6 を単体テストで pin し、既存テスト `src/background/__tests__/migrationService-opfs.test.ts` と `src/background/__tests__/deferredMigrations.test.ts` の期待値を新方針に合わせて更新する
 
 ## テスト戦略
 
@@ -239,11 +239,11 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint (`opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate`) を完了記録に残す（ブロッカー観測結果も併せて）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint (`opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate`) を完了記録に残す（ブロッカー観測結果も併せて）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
 
 ## 調査結果（2026-10-18）
 
@@ -260,3 +260,12 @@ verdict: `needs_validation`（Confidence 50% は、この前提状態が実行�
 - `dev-docs/TEST_RULE.md` ― 実時間待ちの禁止（シナリオ2の追加書き込み再現に wait を入れないこと）
 - `dev-docs/ARCHITECTURE_MAP.md` ― OPFS/SQLite/fallback の構成
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/NEEDS-VALIDATION.md` 17番 / `findings.json`
+
+## 完了記録（2026-10-20）
+
+- 実装: `needsMigration` / `migrate` 冒頭 / remove 直前の 3 か所で `initialized === true && fallback !== true` を要求する fail-closed 化（`SqliteStatusSnapshot` 型 + `isSqliteEngineConfirmed()` ヘルパ。gateway 失敗形状 `{initialized:false, fallback:false}` も移行可と誤分類しない）。最終削除直前に `FALLBACK_STORAGE_DATA` を再読し snapshot 行だけを間引く集合演算へ置換（`fallbackRecordKey()` は storageFallback と同一の `url\0created_at` 行同一性キー。移行中の追記行は `set` で残し `OPFS_FALLBACK_MODE` マーカー維持）。全件着地（または再読時にストアが空）のときのみ データ→フラグの順で削除。
+- 設計裁定: 判定根拠を件数一致からバックエンド同一性（status）へ移し、正規 SQLite の skipped を失敗扱いしない。恒久的失敗（エンジンが fallback のまま）は fail-closed ゲート自体が再試行上限。新規ストレージキーは PBI 実装メモの方針（既存マーカー再利用推奨）に従い不設置。
+- テスト: migrationService-opfs.test.ts に fail-closed pin 2 件 + シナリオ 1/2/3/4/4-回帰/6 の pin 6 件、deferredMigrations.test.ts にゲート false なら呼ばない pin 1 件（多層防御）。既存 pin 4 件は「再読→間引き→surviving 0 なら両キー削除」設計のため期待値変更なしで全件通過。Red（ゲートを一時 fail-open に戻すと 5 pin 失敗）→ Green。
+- 5 Whys: 履歴が消えたのは snapshot と全キー remove の間に協調がなく status が分からないだけの fail-open 通過で破壊的 sink に到達したため → `needsMigration` が `fallback === true` だけを見て `initialized` を一度も読まず status 失敗を移行可と誤分類したため。解: 3 か所の fail-closed 化 + 最終削除直前の再読で snapshot 行だけを間引く集合演算。
+- 検証: 対象 6 ファイル 98 テスト緑 / type-check / eslint 全緑。
+- 残置（owner 観測）: 実環境で SQLITE_STATUS transport 失敗が起きるか、chrome.storage.local の set→remove 順序の観測はコードでは証明不能のため owner タスクとして残置。監査 fingerprint `opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate` の完了記録に併記済み。

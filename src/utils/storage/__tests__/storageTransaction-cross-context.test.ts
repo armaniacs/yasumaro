@@ -106,25 +106,28 @@ describe('StorageTransaction cross-context CAS fence (PBI 2026-10-18-18)', () =>
       let setCalls = 0;
       port.get = async (keys) => {
         if (isValueAndVersionRead(keys, PAGES_KEY)) {
-          verifyReads += 1;
+          // Capture the read's sequence at entry: both writers enter their
+          // verify reads synchronously, so a counter re-read at continuation
+          // time would misidentify which read this is.
+          const n = ++verifyReads;
           const result = await realGet(keys);
-          if (verifyReads === 2) bVerified.resolve(); // B observed version 0
-          if (verifyReads === 3) aPostVerified.resolve(); // A's post-write verify
+          if (n === 2) bVerified.resolve(); // B observed version 0
+          if (n === 3) aPostVerified.resolve(); // A's post-write verify
           return result;
         }
         if (isVersionOnlyRead(keys, [`${PAGES_KEY}_version`])) {
-          fenceReads += 1;
-          if (fenceReads === 1) await bVerified.promise; // A's fence read waits for B's verify read
-          if (fenceReads === 2) await aCommitted.promise; // B's fence read waits for A's commit
+          const f = ++fenceReads;
+          if (f === 1) await bVerified.promise; // A's fence read waits for B's verify read
+          if (f === 2) await aCommitted.promise; // B's fence read waits for A's commit
         }
         return realGet(keys);
       };
       port.set = async (items) => {
-        setCalls += 1;
-        if (setCalls === 1) await bVerified.promise; // A's write parks in the verify->write window
-        if (setCalls === 2) await aPostVerified.promise; // (legacy path) B writes after A fully committed
+        const s = ++setCalls;
+        if (s === 1) await bVerified.promise; // A's write parks in the verify->write window
+        if (s === 2) await aPostVerified.promise; // (legacy path) B writes after A fully committed
         await realSet(items);
-        if (setCalls === 1) aCommitted.resolve();
+        if (s === 1) aCommitted.resolve();
       };
 
       // Two independent module instances share only the storage: the per-key
@@ -183,8 +186,10 @@ describe('StorageTransaction cross-context CAS fence (PBI 2026-10-18-18)', () =>
       const stored = await realGet(['a', 'b', 'a_version', 'b_version']);
       expect(stored.a).toEqual(['x', 'other', 'mine']);
       expect(stored.b).toEqual(['y', 'mine']);
+      // Each key bumps from its own current version: a went 0 -> 1 (the other
+      // context) -> 2 (the retry), b went 0 -> 1 (the retry).
       expect(stored.a_version).toBe(2);
-      expect(stored.b_version).toBe(2);
+      expect(stored.b_version).toBe(1);
     });
   });
 

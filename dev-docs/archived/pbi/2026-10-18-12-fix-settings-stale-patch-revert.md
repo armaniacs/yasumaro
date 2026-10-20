@@ -102,14 +102,14 @@ Scenario: 6. settings インポート（意図的な full-payload 復元）は�
 
 ## 受け入れ基準
 
-- [ ] `persistMerged` / `persistReEncrypted` が「呼び出し側が lock 取得前に capture した patch 定数」を merge する経路を持たないこと。具体的には `SettingsRepository.ts:108-111` / `:170-173` / `:198-204` の 3 箇所が、lock 内で fresh read → 変換 → merge を行う形（patch 世代を持ち越さない形）に変わっている
-- [ ] `StorageRepository.getAll` の再暗号化副作用が、lock 内で current blob を読み直してから「現行 KDF で読めない値」だけを再暗号化するように変わり、lock 外で capture した値を書かないこと。現行の `reEncrypted` は「変換後の値の map」であり「意図の map」ではない、という区別がコードと注釈で明示されている
-- [ ] `src/popup/whitelistWriter.ts:59-67` の array patch が、lock 内で current whitelist を読む `setAll` 系（例: `updateDomainWhitelist(updater)`）に置き換わり、read→set の窓に落ちた並行追加が失われないこと（Scenario 4 が自動テストで pass）
-- [ ] `src/utils/storage/settingsBackup.ts:30-41` の snapshot spread が、空 blob 前提を明示的に検証する（「current が空 or backup 側が authoritative」でなければ触らない）形に guard されるか、あるいは PBI 06 の merge 方策と揃えた意向ベースの merge に置き換わること。full-payload 復元が意図的例外である旨が注釈に書かれる
-- [ ] delta-write 契約注釈（`SettingsRepository.ts:219-225`）が更新され、「patch 世代を持ち越さない」新しい契約（lock 内 read→変換→merge）と、許される full-payload 例外（settings import / backup restore）が明記されている
-- [ ] 競合を coalesce できなかった場合に UI が無言成功しない。保存通知（dashboard / popup の API キー保存経路）に conflict feedback が 1 経路以上増える（Scenario 5）。i18n は `_locales/ja` と `_locales/en` の両方に追加されている
-- [ ] 既存契約テストが緑のまま: 並行 delta 追加が両ライターの分に残る契約、`performCasUpdate` の post-write verify、`withLock` の「updateFn MUST be pure and idempotent」契約（`storageTransaction.ts:230-244`）。変更によって既存の `ConflictError` リトライ経路が黙って無効化されていない
-- [ ] `npm run validate`（type-check + lint + 全テスト）が緑。競合系テストは `npx vitest run <file> --repeats=20` で安定（AGENTS.md の「実時間 sleep 禁止」に従い、並行は in-flight Promise のゲートで表現する）
+- [x] `persistMerged` / `persistReEncrypted` が「呼び出し側が lock 取得前に capture した patch 定数」を merge する経路を持たないこと。具体的には `SettingsRepository.ts:108-111` / `:170-173` / `:198-204` の 3 箇所が、lock 内で fresh read → 変換 → merge を行う形（patch 世代を持ち越さない形）に変わっている
+- [x] `StorageRepository.getAll` の再暗号化副作用が、lock 内で current blob を読み直してから「現行 KDF で読めない値」だけを再暗号化するように変わり、lock 外で capture した値を書かないこと。現行の `reEncrypted` は「変換後の値の map」であり「意図の map」ではない、という区別がコードと注釈で明示されている
+- [x] `src/popup/whitelistWriter.ts:59-67` の array patch が、lock 内で current whitelist を読む `setAll` 系（例: `updateDomainWhitelist(updater)`）に置き換わり、read→set の窓に落ちた並行追加が失われないこと（Scenario 4 が自動テストで pass）
+- [x] `src/utils/storage/settingsBackup.ts:30-41` の snapshot spread が、空 blob 前提を明示的に検証する（「current が空 or backup 側が authoritative」でなければ触らない）形に guard されるか、あるいは PBI 06 の merge 方策と揃えた意向ベースの merge に置き換わること。full-payload 復元が意図的例外である旨が注釈に書かれる
+- [x] delta-write 契約注釈（`SettingsRepository.ts:219-225`）が更新され、「patch 世代を持ち越さない」新しい契約（lock 内 read→変換→merge）と、許される full-payload 例外（settings import / backup restore）が明記されている
+- [x] 競合を coalesce できなかった場合に UI が無言成功しない。保存通知（dashboard / popup の API キー保存経路）に conflict feedback が 1 経路以上増える（Scenario 5）。i18n は `_locales/ja` と `_locales/en` の両方に追加されている
+- [x] 既存契約テストが緑のまま: 並行 delta 追加が両ライターの分に残る契約、`performCasUpdate` の post-write verify、`withLock` の「updateFn MUST be pure and idempotent」契約（`storageTransaction.ts:230-244`）。変更によって既存の `ConflictError` リトライ経路が黙って無効化されていない
+- [x] `npm run validate`（type-check + lint + 全テスト）が緑。競合系テストは `npx vitest run <file> --repeats=20` で安定（AGENTS.md の「実時間 sleep 禁止」に従い、並行は in-flight Promise のゲートで表現する）
 
 ## テスト戦略
 
@@ -208,11 +208,11 @@ Scenario: 6. settings インポート（意図的な full-payload 復元）は�
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（Scenario 1〜6 の 6 件）
-- [ ] `npm run validate` が緑（type-check + lint + 全テスト）。競合系は `npx vitest run <file> --repeats=20` で安定
-- [ ] 監査 fingerprint `settings-blob:stale-patch-prelock-read-revert` を完了記録（CHANGELOG / 監査 ledger）に残す
-- [ ] コードレビュー完了（Security Review 観点: credential の消失経路が全て塞がれたか、i18n 両言語追加、delta-write 契約が強化されたか）
-- [ ] ドキュメント更新済み（`SettingsRepository.ts:219-225` の delta-write 契約注釈を新しい「patch を lock 内で導出せよ」に更新、`pbi/00-INDEX.md` への行追加、`CHANGELOG.md`）
+- [x] BDDシナリオが自動テストで実装されパス（Scenario 1〜6 の 6 件）
+- [x] `npm run validate` が緑（type-check + lint + 全テスト）。競合系は `npx vitest run <file> --repeats=20` で安定
+- [x] 監査 fingerprint `settings-blob:stale-patch-prelock-read-revert` を完了記録（CHANGELOG / 監査 ledger）に残す
+- [x] コードレビュー完了（Security Review 観点: credential の消失経路が全て塞がれたか、i18n 両言語追加、delta-write 契約が強化されたか）
+- [x] ドキュメント更新済み（`SettingsRepository.ts:219-225` の delta-write 契約注釈を新しい「patch を lock 内で導出せよ」に更新、`pbi/00-INDEX.md` への行追加、`CHANGELOG.md`）
 
 ## 調査結果（2026-10-18）
 
@@ -228,3 +228,9 @@ Scenario: 6. settings インポート（意図的な full-payload 復元）は�
   - PBI 18「withOptimisticLock cross-context window」（監査 #25: verify→set が context 跨ぎで非原子）― `storageTransaction.ts:35-46` の `chains` は module-level Map で context を跨げない。本 PBI の lock 内再導出は**同一 realm 内**の交錯しか防げないため、PBI 18 と組んで読むこと。
   - PBI 20「session auto-lock」― 暗号化キーの availability と re-encrypt 窓の関連。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 21番、`findings.json`、`REPORT.md`）
+
+## 完了記録（2026-10-20 補足）
+
+- コミット: `6fcd0ec9`（コア修正）+ `b7e95e96`（既存テスト適応）。実装・検証の詳細は上記 完了記録（実装記録）のとおり。
+- 5 Whys: 資格情報セーブが巻き戻る → re-encryption patch が lock 前読み取りの blob snapshot を無条件 spread → persistMerged の CAS は settings_version だけ比較し値を比較しない → patch が「どの元値から派生したか」を記録していない → マージに値レベルの資格検証が欠落。解: re-encryption は lock 内 fresh read に対し元値が現行 stored 値と deep-equal の間だけ適用（value-level CAS）、whitelist 追加は lock 内 updater seam で CAS 再試行時に再適用、backup restore は lock 内 empty-blob 前提の再検証。UI は onConflictCoalesced で競合マージ保存を明示し CAS 枯渇時は onError 表示。
+- 検証: 対象モジュール 68 ファイル 733 テスト / フルスイート 1,102 ファイル 16,542 テスト / type-check / eslint / リピートゲート --repeats=20 全緑。
