@@ -122,35 +122,12 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array, iterati
         )
         : undefined;
     const iterationsToUse = iterations ?? storedIterations ?? ENVELOPE_ITERATIONS;
-    // globalThis: the dashboard bundle has no Node `global` shim, and bare
-    // `global` throws ReferenceError there. globalThis exists everywhere.
-    const webcrypto = globalThis.crypto;
-    const encoder = new TextEncoder();
-    const passwordBuffer = encoder.encode(password);
-
-    const baseKey = await webcrypto.subtle.importKey(
-        'raw',
-        passwordBuffer,
-        'PBKDF2',
-        false,
-        ['deriveKey']
-    );
-
-    return webcrypto.subtle.deriveKey(
-        {
-            name: 'PBKDF2',
-            salt: salt as BufferSource,
-            iterations: iterationsToUse,
-            hash: 'SHA-256'
-        },
-        baseKey,
-        {
-            name: 'AES-GCM',
-            length: 256
-        },
-        false,
-        ['encrypt', 'decrypt']
-    );
+    // The importKey/deriveKey PBKDF2 boilerplate lives once in the shared
+    // primitive (PBI 10): SHA-256 hash, AES-GCM 256-bit KEK, and the
+    // encrypt/decrypt usages are identical to the inline block this replaced,
+    // so the derived key is byte-identical for the same password, salt, and
+    // iteration count (pinned by encryptionSession-kdf-delegation-pin).
+    return deriveKey(password, salt, iterationsToUse);
 }
 
 /**
@@ -192,13 +169,21 @@ async function restoreSecretFromSessionIfPresent(): Promise<string | undefined> 
     return sessionSecret;
 }
 
+/**
+ * One shared 32-byte random secret, base64-encoded (PBI 10). The encryption
+ * secret and the HMAC signing secret use the same length and format, so the
+ * generation lives in this single helper and cannot drift apart.
+ */
+function generateSecretBase64(): string {
+    const secretBytes = crypto.getRandomValues(new Uint8Array(32));
+    return bytesToBase64(secretBytes);
+}
+
 /** 初回: ランダムなソルトとシークレットを生成し、ラップ済み envelope として保存する。 */
 async function generateAndPersistSecret(): Promise<{ saltBase64: string; secret: string }> {
     const salt = generateSalt();
     const saltBase64 = bytesToBase64(salt);
-    // 32バイトのランダムシークレットを生成
-    const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-    const secret = bytesToBase64(secretBytes);
+    const secret = generateSecretBase64();
 
     // PBI 25-25: 平文 Base64 を local に置かない。専用 KEK でラップした
     // envelope のみ保存する。KEK 利用不可時は fail closed（明示エラー） —
@@ -675,6 +660,36 @@ async function rehashMasterPasswordIfNeeded(
 }
 
 /**
+ * One read of the master-password auth metadata shared by the three verify
+ * paths (unlock / auth-modal self-verify / remove self-verify). The requested
+ * key set and the parsed shape are the same as what each path read inline
+ * before (PBI 10). The stored iteration count is returned raw on purpose:
+ * the three paths report a corrupt record at different points (before or
+ * after the enabled and presence checks), so each caller keeps its own
+ * validateStoredIterations position and the error precedence is unchanged.
+ */
+async function readAuthMeta(): Promise<{
+    enabled: boolean;
+    storedHash: string | undefined;
+    saltBase64: string | undefined;
+    /** Raw stored value; each caller validates it with validateStoredIterations. */
+    storedIterations: unknown;
+}> {
+    const meta = await chrome.storage.local.get([
+        StorageKeys.MASTER_PASSWORD_ENABLED,
+        StorageKeys.MASTER_PASSWORD_HASH,
+        StorageKeys.MASTER_PASSWORD_SALT,
+        StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
+    ]);
+    return {
+        enabled: Boolean(meta[StorageKeys.MASTER_PASSWORD_ENABLED]),
+        storedHash: meta[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined,
+        saltBase64: meta[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined,
+        storedIterations: meta[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS],
+    };
+}
+
+/**
  * マスターパスワードを検証し、セッションをアンロックする
  * @param {string} password - マスターパスワード
  * @returns {Promise<boolean>} 成功した場合true
@@ -686,25 +701,19 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         throw new Error(rateLimitResult.error || 'Too many attempts. Please try again later.');
     }
 
-    const result = await chrome.storage.local.get([
-        StorageKeys.MASTER_PASSWORD_HASH,
-        StorageKeys.MASTER_PASSWORD_SALT,
-        StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
-        StorageKeys.MASTER_PASSWORD_ENABLED
-    ]);
+    const meta = await readAuthMeta();
 
-    const enabled = result[StorageKeys.MASTER_PASSWORD_ENABLED] as boolean;
-    if (!enabled) {
+    if (!meta.enabled) {
         throw new Error('Master password not enabled');
     }
 
-    const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string;
-    const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string;
+    const storedHash = meta.storedHash;
+    const saltBase64 = meta.saltBase64;
 
     if (!storedHash || !saltBase64) {
         throw new Error('Master password data corrupted');
     }
-    const storedIterations = validateStoredIterations(result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
+    const storedIterations = validateStoredIterations(meta.storedIterations);
 
     const salt = base64ToBytes(saltBase64);
     // Pass stored iterations to enable constant-time verification:
@@ -751,23 +760,16 @@ export async function verifyMasterPasswordWithRehash(
     password: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const result = await chrome.storage.local.get([
-            StorageKeys.MASTER_PASSWORD_ENABLED,
-            StorageKeys.MASTER_PASSWORD_HASH,
-            StorageKeys.MASTER_PASSWORD_SALT,
-            StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
-        ]);
-        if (!result[StorageKeys.MASTER_PASSWORD_ENABLED]) {
+        const meta = await readAuthMeta();
+        if (!meta.enabled) {
             return { success: false, error: 'Master password not set' };
         }
-        const storedHash = result[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined;
-        const saltBase64 = result[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined;
+        const storedHash = meta.storedHash;
+        const saltBase64 = meta.saltBase64;
         if (!storedHash || !saltBase64) {
             return { success: false, error: 'Master password data corrupted' };
         }
-        const storedIterations = validateStoredIterations(
-            result[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]
-        );
+        const storedIterations = validateStoredIterations(meta.storedIterations);
         const salt = base64ToBytes(saltBase64);
         // Stored iterations enable the constant-time verify (one PBKDF2 pass).
         const verifyResult = await verifyPasswordWithPBKDF2(password, storedHash, salt, storedIterations);
@@ -840,13 +842,8 @@ export async function removeMasterPassword(password?: string): Promise<void> {
 }
 
 async function removeMasterPasswordUnlocked(password?: string): Promise<void> {
-    const meta = await chrome.storage.local.get([
-        StorageKeys.MASTER_PASSWORD_ENABLED,
-        StorageKeys.MASTER_PASSWORD_SALT,
-        StorageKeys.MASTER_PASSWORD_HASH,
-        StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
-    ]);
-    if (!meta[StorageKeys.MASTER_PASSWORD_ENABLED]) {
+    const meta = await readAuthMeta();
+    if (!meta.enabled) {
         // Idempotent cleanup when no master password is set: nothing is
         // encrypted under a master KEK, so there is nothing to migrate.
         await chrome.storage.local.remove([...DISABLE_REMOVED_KEYS]);
@@ -855,9 +852,9 @@ async function removeMasterPasswordUnlocked(password?: string): Promise<void> {
         cachedEncryptionKey = null;
         return;
     }
-    const storedHash = meta[StorageKeys.MASTER_PASSWORD_HASH] as string | undefined;
-    const saltBase64 = meta[StorageKeys.MASTER_PASSWORD_SALT] as string | undefined;
-    const storedIterations = validateStoredIterations(meta[StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS]);
+    const storedHash = meta.storedHash;
+    const saltBase64 = meta.saltBase64;
+    const storedIterations = validateStoredIterations(meta.storedIterations);
     if (!storedHash || !saltBase64) {
         throw new Error('CORRUPTION: master password metadata incomplete');
     }
@@ -907,8 +904,7 @@ export function clearEncryptionKeyCache(): void {
 
 /** 32バイトのランダムシークレットを生成し、ラップして local に保存して返す。 */
 async function generateAndStoreHmacSecret(): Promise<string> {
-    const secretBytes = crypto.getRandomValues(new Uint8Array(32));
-    const secret = bytesToBase64(secretBytes);
+    const secret = generateSecretBase64();
     const wrapped = await wrapSecretString(secret);
     await chrome.storage.local.set({ [StorageKeys.HMAC_SECRET]: wrapped });
     return secret;
