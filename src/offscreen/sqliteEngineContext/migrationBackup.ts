@@ -393,10 +393,16 @@ export async function runMigrationRestore(state: MigrationBackupState): Promise<
       'sqlite'
     );
     // Terminal guarantee: re-verify once after the restore, then set done.
-    // The backup is removed only when the re-verify read itself succeeded:
+    // The backup is removed only when the re-verify read itself succeeded
+    // AND the count reached the backup's expected count (PBI 2026-10-18-24):
     // if COUNT throws here the engine is unhealthy and the backup is kept
-    // for forensics (done still ends the replay loop; the error below keeps
-    // it visible instead of silently discarding the safety net).
+    // for forensics; if rows are still missing (INSERT OR IGNORE skips
+    // constraint violations silently and failed INSERTs are swallowed by the
+    // loop above) discarding the backup would make those rows permanently
+    // unreachable; the retained backup replays on the next launch instead
+    // (runMigrationRestore does not read the done flag). The error below
+    // keeps the unhealthy-engine case visible instead of silently discarding
+    // the safety net.
     let reverifyOk = true;
     try {
       await execWithCache(state.idbEngine!, 'SELECT COUNT(*) FROM browsing_logs', [], (row) => { actualCount = Number(row[0]); });
@@ -409,8 +415,18 @@ export async function runMigrationRestore(state: MigrationBackupState): Promise<
         'sqlite'
       );
     }
-    if (reverifyOk) {
+    if (reverifyOk && actualCount >= expectedCount) {
       await chrome.storage.local.remove(StorageKeys.IDB_MIGRATION_BACKUP);
+    } else if (reverifyOk) {
+      // Count shortfall after a healthy re-verify read: keep the backup so
+      // the next launch retries the restore. Distinct level and message from
+      // the forensics logError above so the two causes stay separable.
+      logWarn(
+        'SQLite: IDB migration restore incomplete, backup retained for next launch retry',
+        { expectedCount, actualCount, restored },
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
     }
     await setIdbMigrationDone();
     if (actualCount >= expectedCount && expectedCount > 0) {

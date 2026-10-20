@@ -288,7 +288,7 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
     );
   });
 
-  it('restores from backup via INSERT OR IGNORE and terminates (backup cleared, done set) on count mismatch', async () => {
+  it('restores from backup via INSERT OR IGNORE and keeps the backup for retry on count mismatch', async () => {
     vi.stubGlobal('indexedDB', {
       databases: vi.fn().mockResolvedValue([{ name: 'idb-batch-atomic', version: 5 }]),
     });
@@ -307,11 +307,14 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
 
     // execWithCache with INSERT_IGNORE_SQL should have been attempted via exec()
     expect(mockIdbExec).toHaveBeenCalled();
-    // Terminal: the backup is cleared and done is set even though the counts
-    // never converged (uninsertable rows cannot converge by retrying).
-    expect(chromeMock.storage.local.remove).toHaveBeenCalledWith('idb_migration_backup');
+    // Terminal: done is set even though the counts never converged...
     expect(chromeMock.storage.local.set).toHaveBeenCalledWith(
       expect.objectContaining({ idb_migration_v2_done: true })
     );
+    // ...but the backup is retained (PBI 2026-10-18-24): discarding it on a
+    // count shortfall would make the unrestored rows permanently unreachable.
+    // runMigrationRestore does not read the done flag, so the retained backup
+    // replays on the next launch.
+    expect(chromeMock.storage.local.remove).not.toHaveBeenCalledWith('idb_migration_backup');
   });
 });

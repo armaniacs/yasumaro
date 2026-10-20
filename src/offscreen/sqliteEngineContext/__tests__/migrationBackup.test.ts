@@ -132,20 +132,75 @@ describe('migrationBackup', () => {
       expect(mockLogWarn).not.toHaveBeenCalled();
     });
 
-    it('terminates after a mismatched restore so the next launch does not replay it', async () => {
+    it('keeps the backup after a partial restore and replays it on the next launch', async () => {
       const backup = JSON.stringify({
         version: 1,
         createdAt: 0,
-        records: [{ url: 'https://a.com' }, { url: 'https://b.com' }],
+        records: [{ url: 'https://a.com' }, { url: 'https://b.com' }, { url: 'https://c.com' }],
       });
       (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
         [StorageKeys.IDB_MIGRATION_BACKUP]: backup,
       });
-      // Fake engine: COUNT stays below expected even after INSERTs succeed
-      // (uninsertable rows never converge, so retrying every launch is futile).
+      // Fake engine: the first INSERT rejects, so only 2 of 3 rows restore
+      // and the re-verify COUNT reads 2 (< expected 3). INSERT OR IGNORE
+      // also skips constraint violations silently, so a count shortfall is
+      // a real outcome; discarding the backup here would make the missing
+      // row permanently unreachable (PBI 2026-10-18-24).
+      let insertCalls = 0;
       mockExecWithCache.mockImplementation(async (_engine, sql, _params, callback) => {
         if (typeof sql === 'string' && sql.startsWith('SELECT COUNT')) {
-          callback?.([1]);
+          callback?.([2]);
+          return;
+        }
+        insertCalls += 1;
+        if (insertCalls === 1) {
+          throw new Error('insert failed');
+        }
+      });
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      // The backup survives the incomplete restore...
+      expect(chrome.storage.local.remove).not.toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
+      // ...and the shortfall is visible as a warning, not silent.
+      expect(mockLogWarn).toHaveBeenCalledWith(
+        expect.stringContaining('restore incomplete'),
+        expect.objectContaining({ expectedCount: 3, actualCount: 2, restored: 2 }),
+        ErrorCode.MIGRATION_ROLLBACK_FAILED,
+        'sqlite'
+      );
+      // The done flag still ends the outer loop (exit contract unchanged).
+      expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
+
+      // Next launch: the backup is still there, so the restore runs again
+      // (runMigrationRestore does not read the done flag; the retained
+      // backup replays and can pick up the missing row).
+      mockExecWithCache.mockClear();
+      insertCalls = 0;
+
+      await runMigrationRestore({ idbEngine: {} as never });
+
+      expect(mockExecWithCache).toHaveBeenCalled();
+      expect(chrome.storage.local.remove).not.toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
+    });
+
+    it('deletes the backup after a mismatched restore once the re-verify count reaches expected', async () => {
+      const backup = JSON.stringify({
+        version: 1,
+        createdAt: 0,
+        records: [{ url: 'https://a.com' }, { url: 'https://b.com' }, { url: 'https://c.com' }],
+      });
+      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({
+        [StorageKeys.IDB_MIGRATION_BACKUP]: backup,
+      });
+      // First COUNT is 0 (mismatch branch), every row restores, and the
+      // re-verify COUNT reads 3 — the count reached the expected value, so
+      // deleting the backup stays correct.
+      let countReads = 0;
+      mockExecWithCache.mockImplementation(async (_engine, sql, _params, callback) => {
+        if (typeof sql === 'string' && sql.startsWith('SELECT COUNT')) {
+          countReads += 1;
+          callback?.([countReads === 1 ? 0 : 3]);
         }
       });
 
@@ -153,16 +208,6 @@ describe('migrationBackup', () => {
 
       expect(chrome.storage.local.remove).toHaveBeenCalledWith(StorageKeys.IDB_MIGRATION_BACKUP);
       expect(chrome.storage.local.set).toHaveBeenCalledWith({ [StorageKeys.IDB_MIGRATION_V2_DONE]: true });
-
-      // Second launch: the backup is gone, so no restore replay and no warn.
-      (chrome.storage.local.get as ReturnType<typeof vi.fn>).mockResolvedValue({});
-      mockExecWithCache.mockClear();
-      mockLogWarn.mockClear();
-
-      await runMigrationRestore({ idbEngine: {} as never });
-
-      expect(mockExecWithCache).not.toHaveBeenCalled();
-      expect(mockLogWarn).not.toHaveBeenCalled();
     });
 
     it('keeps the backup for forensics but still ends the loop when the re-verify read fails', async () => {
