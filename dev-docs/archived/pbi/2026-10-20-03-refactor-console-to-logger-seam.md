@@ -37,6 +37,13 @@ Scenario: 意図的 console は残る
 2 pt（RICE: 58 = Reach 44 × Impact 2 × Confidence 1.0 ÷ Effort 1.5 人日）
 
 ## DoD
-- [ ] 移行対象 44 箇所で console 直呼びが 0 になる（対象外 2 箇所を除く）
-- [ ] 移行後の既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 移行対象 44 箇所で console 直呼びが 0 になる（対象外 2 箇所を除く）
+- [x] 移行後の既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 移行 43 箇所 / 本番 24 ファイル（PBI 列挙 39 + Grep 全列挙の追加発見 4: hmacKeyStore.ts x3・entrypoints/background/index.ts x1）。dashboard/popup/utils/background は logError/logWarn/logInfo の canonical 形へ、offscreen migrations.ts は既存 seam forwardWarn（LOG_FORWARD 経由）へ
+- ErrorCode は既存コードのみから選択（対応表: STORAGE_WRITE_FAILURE・INTERNAL_ERROR・API_REQUEST_FAILURE・INVALID_INPUT・MISSING_REQUIRED_FIELD・UNKNOWN_ERROR・API_AUTH_FAILURE・CRYPTO_HMAC_FAILURE。新規追加なし）
+- 対象外 2 箇所（piiSanitizeHybrid の wasmHybridRuntime 出力点・issueReportLink.ts:202）は未変更を確認
+- console pin を持つ 5 テストは seam モック assert へ置換（本 PBI が明示する出力先変更要件）+ mock 完全性修正 5 件
+- 検証: フルスイート 1107 ファイル / 16581 テスト全通過、type-check exit 0、eslint exit 0、validate:fast green（684 ファイル / 10311 テスト）

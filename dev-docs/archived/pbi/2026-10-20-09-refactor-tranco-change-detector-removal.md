@@ -34,6 +34,11 @@ Scenario: 死にキーの除去
 1 pt（RICE: 30 = Reach 5 × Impact 3 × Confidence 1.0 ÷ Effort 0.5 人日）
 
 ## DoD
-- [ ] 削除直前に本番 import 0 件を再確認
-- [ ] npm run validate 通過
-- [ ] npm run build 通過
+- [x] 削除直前に本番 import 0 件を再確認
+- [x] npm run validate 通過
+- [x] npm run build 通過
+
+## 実装記録（2026-10-21）
+- 本番 import 0 件を Grep で再確認（唯一の参照はテスト import）した上で trancoChangeDetector.ts（271 行）とそのテストを削除
+- 死にキー TRANCO_NOTIFICATION_SHOWN（'tranco_notification_shown'）を StorageKeys 宣言・Settings 型フィールド・DEFAULT_SETTINGS の 3 箇所から削除（読み書き実装 0 件を列挙確認）。STORAGE_KEY_VALUES / isMigratableStorageKey は Object.values(StorageKeys) 派生のため移行対象キー集合は自動 1 減、実効値の変化なし
+- 検証: trustDb・storage 系 750 テスト + key-set 派生 56 テスト全 green、type-check 通過、type-check:test:baseline 453 維持、validate green（1107 ファイル / 16581 テスト）

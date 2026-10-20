@@ -35,6 +35,10 @@ Scenario: クレート名変更の波及
 1 pt（RICE: 42 = Reach 7 × Impact 3 × Confidence 1.0 ÷ Effort 0.5 人日）
 
 ## DoD
-- [ ] 7 箇所のリテラルが消え、1 定数モジュール経由になる
-- [ ] npm run build 通過（web_accessible_resources の整合確認）
-- [ ] npm run validate 通過
+- [x] 7 箇所のリテラルが消え、1 定数モジュール経由になる
+- [x] npm run build 通過（web_accessible_resources の整合確認）
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 新規 src/offscreen/wasmAssets.ts に WASM_ASSET_URLS（opfsEngineWasm / idbEngineWasm / idbEngineWasmPublicPath）を定義し 7 箇所を SSOT 参照へ置換。追加で service-worker.ts の Firefox INIT オーバーライド public パスも SSOT 経由へ（Chromium background のグラフ不変をビルド済み出力で確認）
+- 検証: npm run build（chromium 1.09s / firefox 1.30s）通過、アセット構成は変更前と同一、type-check 通過、validate green（1107 ファイル / 16581 テスト）

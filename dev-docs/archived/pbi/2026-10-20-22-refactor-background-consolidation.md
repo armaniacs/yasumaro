@@ -38,6 +38,10 @@ Scenario: pause ゲートの等価性
 1 pt（RICE: 12 = Reach 6 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 4 つの複製が 1 実装経由になる
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 4 つの複製が 1 実装経由になる
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- rateLimiter loadState(clearExisting) / RemoteAIService summarizeCaughtError（実体は src/background/ai/RemoteAIService.ts） / sqliteEngineHost #enterFallbackStorage 集約 / ublockMatcher RuleIndex.indexRules / pause ゲートは新規 src/background/recordingPauseGate.ts の isRecordingPaused へ共有（isPaused(null)=false を根拠に等価簡約、fail-open と manual_save バイパス不変）
+- 検証: 担当モジュール既存テスト全 green（rateLimiter 25 / RemoteAIService 36 / ublockMatcher 27 / admission 26 / triggerManager 23 / sqliteEngineHost 137）、npm run validate 通過（1107 ファイル / 16581 テスト）、eslint 通過

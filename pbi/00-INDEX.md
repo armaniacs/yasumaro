@@ -14,19 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 5件完了・アーカイブ済み（01・05・11・13・17） / ⬜ 19件残 🔧非機能追加 RICE順: ~~01(76)~~ → 02(60) → 03(58) → 04(50) → ~~05(48)~~ → 06(42) → 07(38) → 08(32) → 09(30) → 10(30) → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → ~~17(18)~~ → 18(15) → 19(14) → 20(14) → 21(13) → 22(12) → 23(12) → 24(8)
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 9件完了・アーカイブ済み（01・03・05・06・09・11・13・17・22） / ⬜ 15件残 🔧非機能追加 RICE順: ~~01(76)~~ → 02(60) → ~~03(58)~~ → 04(50) → ~~05(48)~~ → ~~06(42)~~ → 07(38) → 08(32) → ~~09(30)~~ → 10(30) → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → ~~17(18)~~ → 18(15) → 19(14) → 20(14) → 21(13) → ~~22(12)~~ → 23(12) → 24(8)
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 02 | [2026-10-20-02-refactor-error-normalization-unification.md](2026-10-20-02-refactor-error-normalization-unification.md) | refactor | 60 | 2.0 | String(error) 15 箇所/8 ファイル + instanceof Error 再ラップ 4 実装 + wasm 6 重複。errorMessage/toError へ統一 |
-| ⬜ 03 | [2026-10-20-03-refactor-console-to-logger-seam.md](2026-10-20-03-refactor-console-to-logger-seam.md) | refactor | 58 | 2.0 | console 直呼び約 44 箇所（dashboard/popup/utils/background/offscreen）。logger seam へ機械的移行 |
 | ⬜ 04 | [2026-10-20-04-refactor-constant-ssot-consolidation.md](2026-10-20-04-refactor-constant-ssot-consolidation.md) | refactor | 50 | 2.0 | 同値二重定義・mirror 契約 14 組（KEY_LENGTH・day-ms・24h TTL・timeout 30000・'local_export_' ほか） |
-| ⬜ 06 | [2026-10-20-06-refactor-wasm-url-ssot.md](2026-10-20-06-refactor-wasm-url-ssot.md) | refactor | 42 | 1.0 | WASM アセット URL リテラル 7 箇所。1 定数へ集約 |
 | ⬜ 07 | [2026-10-20-07-refactor-dead-code-removal.md](2026-10-20-07-refactor-dead-code-removal.md) | refactor | 38 | 2.0 | production 呼び出し 0 件のエクスポート・死に契約 19 件（SQLITE_EXPORT 到達不能契約・watchDynamicContent ほか） |
 | ⬜ 08 | [2026-10-20-08-refactor-csp-queue-machine-removal.md](2026-10-20-08-refactor-csp-queue-machine-removal.md) | refactor | 32 | 1.0 | cspValidator キュー実行マシン ~90 行（本番 0 件）+ cspSettings 未接続・ハードコード origin |
-| ⬜ 09 | [2026-10-20-09-refactor-tranco-change-detector-removal.md](2026-10-20-09-refactor-tranco-change-detector-removal.md) | refactor | 30 | 1.0 | TrancoChangeDetector 271 行（本番 import 0）+ 死にキー TRANCO_NOTIFICATION_SHOWN + 恒偽分岐 |
 | ⬜ 10 | [2026-10-20-10-refactor-encryption-session-dedup.md](2026-10-20-10-refactor-encryption-session-dedup.md) | refactor | 30 | 2.0 | encryptionSession 内 3 重複（PBKDF2 ボイラープレート・4 キー読み取り ×3・secret 生成 ×2） |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
 | ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
@@ -36,7 +32,6 @@
 | ⬜ 19 | [2026-10-20-19-refactor-testability-seams.md](2026-10-20-19-refactor-testability-seams.md) | refactor | 14 | 2.0 | 生 setTimeout・Date.now() の注入化 5 箇所 + domClear/compareStrings（canonical seam・テストなし） |
 | ⬜ 20 | [2026-10-20-20-refactor-type-safety-cleanup.md](2026-10-20-20-refactor-type-safety-cleanup.md) | refactor | 14 | 2.0 | 不要 as 11 箇所（RecordingOrchestrator as never・urlEntry Record|Map 二重表現・trustSettings 境界ガードなし ほか） |
 | ⬜ 21 | [2026-10-20-21-refactor-remaining-dry-consolidation.md](2026-10-20-21-refactor-remaining-dry-consolidation.md) | refactor | 13 | 2.0 | 残り DRY（ID 生成 SSOT 未準拠・promptSafety 6 点目・escapeRegex・OWTestState ほか） |
-| ⬜ 22 | [2026-10-20-22-refactor-background-consolidation.md](2026-10-20-22-refactor-background-consolidation.md) | refactor | 12 | 1.0 | background 内同形複製 4 組（rateLimiter initialize/reload・RemoteAIService catch ほか） |
 | ⬜ 23 | [2026-10-20-23-refactor-sqlite-handler-types.md](2026-10-20-23-refactor-sqlite-handler-types.md) | refactor | 12 | 1.0 | sqlite ハンドラの動的ディスパッチ・手書き 9 対応・worker type 生リテラル（同期ルール非対称） |
 | ⬜ 24 | [2026-10-20-24-refactor-srp-splits.md](2026-10-20-24-refactor-srp-splits.md) | refactor | 8 | 3.0 | SRP 分割 3 単位（piiSanitizer sanitizeRegex 4 責務・ModelsDevDialog 507 行・recordSession loadCurrentTab） |
 
@@ -522,6 +517,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 03・06・09・22 アーカイブ ― リファクタリング診断 24件のうち 9件完了（01・03・05・06・09・11・13・17・22）
+
+- **03-refactor-console-to-logger-seam**（`21d00c21`）: console 直呼び 43 箇所 / 24 ファイルを logger seam の canonical 形へ機械移行（追加発見 4 箇所含む）。ErrorCode は既存コードのみから選択、対象外 2 箇所（回帰ガード・開発者コンソール専用）は未変更。console pin を持つ 5 テストは seam モック assert へ置換。
+- **06-refactor-wasm-url-ssot**（`76c92b9c`）: WASM アセット URL リテラル 7 箇所 + Firefox public パスを新規 src/offscreen/wasmAssets.ts の WASM_ASSET_URLS に集約。chromium/firefox 両ビルドでアセット構成不変を確認。
+- **09-refactor-tranco-change-detector-removal**（`d253fcc2`）: 本番 import 0 件を再確認の上で死にクラス 271 行とそのテスト、死にキー TRANCO_NOTIFICATION_SHOWN 3 箇所を削除。移行対象キー集合は自動 1 減（実効値不変）。
+- **22-refactor-background-consolidation**（`bb1cff48`）: rateLimiter loadState / RemoteAIService summarizeCaughtError / sqliteEngineHost #enterFallbackStorage / ublockMatcher RuleIndex.indexRules / pause ゲート（新規 recordingPauseGate.ts）の 5 組を 1 実装へ。
 
 ### 2026-10-21 PBI 01・05・11・17 アーカイブ ― リファクタリング診断 24件のうち 5件完了（01・05・11・13・17）
 
