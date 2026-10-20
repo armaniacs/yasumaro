@@ -205,6 +205,15 @@ export interface MigrateSettingsOptions {
 }
 
 /**
+ * Shared clock-seam resolution (PBI 2026-10-20-21): the injected `now` when
+ * given, `Date.now` otherwise. One implementation for every Options type in
+ * this module that carries a `now` seam.
+ */
+function resolveNow(now?: () => number): () => number {
+    return now ?? (() => Date.now());
+}
+
+/**
  * Merge `delta` into the `settings` blob.
  *
  * `overwriteExisting === false` is the resume/repair rule: a key the blob
@@ -325,7 +334,7 @@ export async function migrateToSingleSettingsObject(
     options: MigrateSettingsOptions = {},
 ): Promise<boolean> {
     const port = options.port ?? new ChromeStoragePort();
-    const now = options.now ?? (() => Date.now());
+    const now = resolveNow(options.now);
     const tx = new StorageTransaction(port);
     // Port unification (PBI 2026-10-16-12): removal goes through the Port.
     // A Port without remove() used to fall back to chrome.storage.local
@@ -635,7 +644,7 @@ export async function cleanupExpiredSettingsBackups(
     options: CleanupExpiredSettingsBackupsOptions = {},
 ): Promise<void> {
     const all = await port.get(null);
-    const now = options.now ?? (() => Date.now());
+    const now = resolveNow(options.now);
     const cutoff = now() - BACKUP_RETENTION_DAYS * DAY_MS;
     const expiredKeys = listSettingsBackupKeys(all).filter((k) => {
         const entry = all[k] as { createdAt?: number } | undefined;

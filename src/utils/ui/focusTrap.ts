@@ -5,6 +5,10 @@
 
 import { logWarn } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
+// PBI 2026-10-20-21: opaque-ID generation follows the SSOT (128-bit random,
+// crypto.randomUUID when available). The `focusTrap_` prefix stays so trap
+// ids remain self-describing in logs; the id itself is never parsed.
+import { generateId } from '../generateId.js';
 
 interface TrapInfo {
   element: HTMLElement;
@@ -240,11 +244,11 @@ class FocusTrapManager {
   }
 
   /**
-   * ユニークIDを生成
+   * ユニークIDを生成（SSOT generateId + focusTrap_ プレフィックス）
    * @returns {string}
    */
   generateId(): string {
-    return `focusTrap_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+    return `focusTrap_${generateId()}`;
   }
 
   /**

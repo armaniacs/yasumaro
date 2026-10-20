@@ -17,6 +17,21 @@ export interface RendererDeps {
   esc: (value: string) => string;
 }
 
+/**
+ * Build an i18n key from a runtime value: `prefix` + case-normalized value
+ * (PBI 2026-10-20-21: previously two hand-rolled conversions, one per panel).
+ * `lowercaseRest` selects the normalization the value arrives with:
+ * - false: UpperFirst - first char uppercased, rest untouched
+ *   (domain-filter modes arrive lowercase: 'whitelist' -> 'Whitelist').
+ * - true: first char kept, rest lowercased
+ *   (trust labels arrive uppercase: 'TRUSTED' -> 'Trusted').
+ */
+export function i18nKeyFromValue(prefix: string, value: string, lowercaseRest = false): string {
+  return lowercaseRest
+    ? `${prefix}${value.charAt(0)}${value.slice(1).toLowerCase()}`
+    : `${prefix}${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+}
+
 export function renderCleansingHtml(
   cleanseStats: ContentResponse['cleanseStats'],
   cleansedReason: ContentResponse['cleansedReason'],
@@ -52,7 +67,7 @@ export function renderTrustHtml(
   check: { showAlert?: boolean; trustResult?: { category?: string } },
   deps: RendererDeps,
 ): string {
-  const levelKey = `statusTrust${display.level.charAt(0) + display.level.slice(1).toLowerCase()}` as
+  const levelKey = i18nKeyFromValue('statusTrust', display.level, true) as
     'statusTrustTrusted' | 'statusTrustSensitive' | 'statusTrustUnverified';
   const levelText = deps.t(levelKey) || display.level;
 

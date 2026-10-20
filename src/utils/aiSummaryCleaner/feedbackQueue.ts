@@ -2,6 +2,10 @@ import { StorageKeys } from '../storage/types.js';
 import type { CleansingFeedbackEntry } from '../storage/types.js';
 import type { AiSummaryRemovedStats } from '../commonTypes.js';
 import { withOptimisticLock } from '../storage/storageTransaction.js';
+// PBI 2026-10-20-21: opaque-ID generation follows the SSOT (128-bit random,
+// crypto.randomUUID when available) instead of a local preamble whose
+// fallback format had drifted from every other storage-key site.
+import { generateId } from '../generateId.js';
 
 const QUEUE_KEY = StorageKeys.CLEANSING_FEEDBACK_QUEUE;
 const MAX_QUEUE_SIZE = 50;
@@ -31,13 +35,6 @@ function clampAiSummary(stats: AiSummaryRemovedStats): AiSummaryRemovedStats {
       .slice(0, MAX_AI_REASONS)
       .map(reason => reason.slice(0, MAX_AI_REASON_CHARS)),
   };
-}
-
-function generateId(): string {
-  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-    return crypto.randomUUID();
-  }
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
 async function readQueue(): Promise<CleansingFeedbackEntry[]> {

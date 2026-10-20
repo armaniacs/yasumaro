@@ -7,6 +7,8 @@
  * Uses AST-based detection to find size validation patterns in preceding statements.
  */
 
+import { walkAst } from './ast-walk.mjs';
+
 export default {
   meta: {
     type: 'suggestion',
@@ -64,35 +66,19 @@ export default {
      * Recursively collect all statements that appear before the target node
      */
     function collectPrecedingStatements(node, targetStart, statements) {
-      if (!node || typeof node !== 'object') return;
-
-      // If this node is a statement and it's before the target
-      if (isStatement(node) && node.range && node.range[1] <= targetStart) {
-        statements.push(node);
-      }
-
-      // Recurse into child nodes
-      for (const key of Object.keys(node)) {
-        if (key === 'parent' || key === 'range' || key === 'loc') continue;
-        const child = node[key];
-        if (Array.isArray(child)) {
-          for (const item of child) {
-            if (item && typeof item === 'object' && item.type) {
-              collectPrecedingStatements(item, targetStart, statements);
-            }
-          }
-        } else if (child && typeof child === 'object' && child.type) {
-          collectPrecedingStatements(child, targetStart, statements);
+      // PBI 2026-10-20-21: the subtree walk is shared
+      // (eslint/rules/ast-walk.mjs); previously duplicated inline here.
+      walkAst(node, (n) => {
+        if (isStatement(n) && n.range && n.range[1] <= targetStart) {
+          statements.push(n);
         }
-      }
+      });
     }
 
     /**
-     * Recursively check if an AST node contains size-related patterns
+     * Check a single AST node for one of the size-related patterns.
      */
-    function hasSizePattern(node) {
-      if (!node || typeof node !== 'object') return false;
-
+    function isSizePatternNode(node) {
       // Check for content-length string literal
       if (node.type === 'Literal' && typeof node.value === 'string') {
         if (/content.?length/i.test(node.value)) return true;
@@ -117,22 +103,20 @@ export default {
         if (node.value === 1024 || node.value >= 1024 * 1024) return true;
       }
 
-      // Recurse into child nodes
-      for (const key of Object.keys(node)) {
-        if (key === 'parent' || key === 'range' || key === 'loc') continue;
-        const child = node[key];
-        if (Array.isArray(child)) {
-          for (const item of child) {
-            if (item && typeof item === 'object' && item.type) {
-              if (hasSizePattern(item)) return true;
-            }
-          }
-        } else if (child && typeof child === 'object' && child.type) {
-          if (hasSizePattern(child)) return true;
-        }
-      }
-
       return false;
+    }
+
+    /**
+     * Recursively check if an AST node contains size-related patterns
+     */
+    function hasSizePattern(node) {
+      let found = false;
+      // PBI 2026-10-20-21: the subtree walk is shared
+      // (eslint/rules/ast-walk.mjs); previously duplicated inline here.
+      walkAst(node, (n) => {
+        if (!found && isSizePatternNode(n)) found = true;
+      });
+      return found;
     }
 
     /**

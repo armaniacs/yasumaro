@@ -2,11 +2,11 @@
 /**
  * promptSafety.ts — single seam for prompt-injection policy.
  *
- * Five call sites used to hand-roll the same shape (evaluate once, branch on
+ * Six call sites used to hand-roll the same shape (evaluate once, branch on
  * level, log, block-or-continue) with subtly different stakes: block input
  * vs warn on output, ERROR vs WARN, traceId present or not. MEDIUM was
  * silently ignored everywhere. This module evaluates once per call and
- * dispatches through one explicit per-context table, so adding a sixth site
+ * dispatches through one explicit per-context table, so adding a seventh site
  * cannot re-invent the ordering and MEDIUM's pass-through is a decision, not
  * an accident.
  *
@@ -30,7 +30,8 @@ export type PromptSafetyContext =
   | 'local-summary'
   | 'cloud-summary'
   | 'provider-input'
-  | 'builtin-input';
+  | 'builtin-input'
+  | 'custom-input';
 
 export interface SafetyExtra {
   traceId?: string | undefined;
@@ -125,6 +126,21 @@ const SAFETY_POLICY: Record<PromptSafetyContext, SafetyHandler> = {
       addLog(LogType.WARN, 'Low-risk prompt injection detected in built-in AI input', {
         warnings,
         source: 'BuiltInAI',
+        dangerLevel: level,
+        category: 'generic_term',
+      });
+    }
+    // MEDIUM: explicit pass-through.
+    return false;
+  },
+  // PBI 2026-10-20-21 (sixth site): dashboard custom prompts. HIGH is rejected
+  // by the caller (validatePrompt builds the verdict string itself, so the
+  // handler logs nothing — the pre-migration code logged nothing either).
+  // LOW warns with the same message and fields; MEDIUM passes through.
+  'custom-input': (warnings, level) => {
+    if (level === 'low') {
+      addLog(LogType.WARN, 'Low-risk prompt injection detected in custom prompt', {
+        warnings,
         dangerLevel: level,
         category: 'generic_term',
       });

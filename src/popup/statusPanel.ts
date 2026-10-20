@@ -23,7 +23,7 @@ import './statusClasses.js';
 // Popup-only TTL for the cleansing-feedback surface (see statusClasses.ts
 // for the 'mainStatus' binding).
 statusChannel.register('reportCleansingFeedbackStatus', { defaultTtlMs: 2000 });
-import { renderCleansingHtml, renderDomainStateHtml, renderPrivacyHtml, renderCacheHtml, renderLastSavedHtml } from './statusRenderers.js';
+import { renderCleansingHtml, renderDomainStateHtml, renderPrivacyHtml, renderCacheHtml, renderLastSavedHtml, i18nKeyFromValue } from './statusRenderers.js';
 import type { ContentResponse } from './mainTypes.js';
 import { reportHandlerError, updateTrustStatus, initAllUrlsPermissionBanner } from './trustPanel.js';
 
@@ -197,7 +197,9 @@ function renderStatusPanel(status: StatusInfo): void {
   }
 
   if (domainMode) {
-    const modeKey = `statusFilterMode${status.domainFilter.mode.charAt(0).toUpperCase()}${status.domainFilter.mode.slice(1)}`;
+    // PBI 2026-10-20-21: key build goes through the shared i18nKeyFromValue
+    // (same seam as renderTrustHtml) instead of a hand-rolled conversion.
+    const modeKey = i18nKeyFromValue('statusFilterMode', status.domainFilter.mode);
     setElementHtml(domainMode, `<span class="status-value status-muted">${getMessage(modeKey)}</span>`);
   }
 

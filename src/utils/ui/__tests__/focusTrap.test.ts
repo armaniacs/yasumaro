@@ -131,7 +131,9 @@ describe('focusTrap', () => {
             const id1 = manager.generateId();
             const id2 = manager.generateId();
 
-            expect(id1).toMatch(/^focusTrap_\d+_[a-z0-9]+$/);
+            // PBI 2026-10-20-21: the opaque part follows the SSOT
+            // (crypto.randomUUID or 128-bit hex) behind the focusTrap_ prefix.
+            expect(id1).toMatch(/^focusTrap_/);
             expect(id1).not.toBe(id2);
         });
     });

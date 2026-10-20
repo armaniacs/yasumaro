@@ -4,6 +4,10 @@
  * Canonical implementation for all domain-matching call sites.
  */
 
+// PBI 2026-10-20-21: regex escaping is owned by string.ts (single
+// implementation, previously duplicated here).
+import { escapeRegExp } from './string.js';
+
 /**
  * Upper bound on `*` occurrences in a single pattern. Patterns above this are
  * rejected (return `null`) as a ReDoS guard — each `*` becomes `.*`, and many
@@ -19,20 +23,13 @@ export const MAX_WILDCARDS_PER_PATTERN = 5;
  */
 export function wildcardToRegex(pattern: string): RegExp | null {
     if (!pattern || !pattern.includes('*')) {
-        return pattern ? new RegExp(`^${escapeRegex(pattern)}$`, 'i') : null;
+        return pattern ? new RegExp(`^${escapeRegExp(pattern)}$`, 'i') : null;
     }
     const wildcardCount = (pattern.match(/\*/g) || []).length;
     if (wildcardCount > MAX_WILDCARDS_PER_PATTERN) return null;
-    const escaped = escapeRegex(pattern);
+    const escaped = escapeRegExp(pattern);
     const regexPattern = escaped.replace(/\\\*/g, '.*');
     return new RegExp(`^${regexPattern}$`, 'i');
-}
-
-/**
- * Escape regex special characters so a string is matched literally.
- */
-function escapeRegex(s: string): string {
-    return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**

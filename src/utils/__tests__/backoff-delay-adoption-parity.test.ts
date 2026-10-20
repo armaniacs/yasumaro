@@ -58,4 +58,12 @@ describe('backoffDelayMs adoption parity (PBI 12)', () => {
     expect(legacy).toEqual([1000, 2000, 4000, 8000]);
     expect(delegated).toEqual(legacy);
   });
+
+  it('reproduces the dashboard retryWithExponentialBackoff series (500 * 2^attempt, cap 8000; attempt is 0-origin, PBI 2026-10-20-21)', () => {
+    const attempts = [0, 1, 2, 3];
+    const legacy = attempts.map((a) => Math.min(500 * Math.pow(2, a), 8000));
+    const delegated = attempts.map((a) => backoffDelayMs(a, { baseMs: 500, maxMs: 8000 }));
+    expect(legacy).toEqual([500, 1000, 2000, 4000]);
+    expect(delegated).toEqual(legacy);
+  });
 });

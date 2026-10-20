@@ -100,7 +100,9 @@ export class CSPValidator {
     // ユーザーが選択したAIプロバイダードメインを追加
     const allowedProviders = settings.conditional_csp_providers as string[] || [];
     for (const provider of allowedProviders) {
-      const domain = CSPValidator.extractDomainFromProvider(provider);
+      // PBI 2026-10-20-21: single implementation — getProviderDomain is the
+      // one PROVIDER_TO_DOMAIN lookup; the private duplicate was removed.
+      const domain = CSPValidator.getProviderDomain(provider);
       if (domain && !CSPValidator.allowedDomains.has(domain)) {
         CSPValidator.allowedDomains.add(domain);
       } else if (!domain) {
@@ -263,15 +265,6 @@ export class CSPValidator {
       );
       return false;
     }
-  }
-
-  /**
-   * AIプロバイダー名からドメインを抽出
-   * @param provider - プロバイダーID
-   * @returns ドメイン or null
-   */
-  private static extractDomainFromProvider(provider: string): string | null {
-    return PROVIDER_TO_DOMAIN[provider] || null;
   }
 
   /**

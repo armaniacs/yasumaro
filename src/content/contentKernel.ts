@@ -28,8 +28,9 @@ import { StorageKeys } from '../utils/storage/types.js';
 // Probe relay (PBI 2026-10-11-08 follow-up): content scripts cannot reach
 // chrome.storage.session, so arming/state travel as runtime messages via the
 // service worker. Only the state shape is imported (type-only, erased).
-import { queryProbeArmed, relayProbeState, markProbeVisitReported } from './e2eProbeRelay.js';
-import type { OWTestState } from '../utils/e2eTestState.js';
+// PBI 2026-10-20-21: the OWTestState field mapping is owned by
+// buildProbeState in e2eProbeRelay.js — the two literals here were merged.
+import { queryProbeArmed, relayProbeState, markProbeVisitReported, buildProbeState } from './e2eProbeRelay.js';
 
 // Compat re-exports (PBI 2026-09-23-08): the implementation lives in
 // scheduler.js; existing import paths keep working unmodified.
@@ -283,15 +284,7 @@ export class ContentKernel {
         // Probe relay: state travels to the service worker as a runtime
         // message (content scripts cannot reach chrome.storage.session).
         if (this.gating.isE2E) {
-            const state: OWTestState = {
-                maxScrollPercentage: visitState.maxScrollPercentage,
-                isValidVisitReported: visitState.isValidVisitReported,
-                startTime: visitState.startTime,
-                minVisitDuration: thresholds.minDuration,
-                minScrollDepth: thresholds.minScroll,
-                duration,
-            };
-            relayProbeState(this.sender, state);
+            relayProbeState(this.sender, buildProbeState(visitState, thresholds, duration));
         }
 
         // PBI 2026-10-17-01 (Task 5): second gate layer — never auto-report
@@ -409,14 +402,10 @@ export class ContentKernel {
         this.startPeriodicCheck();
 
         if (this.gating.isE2E) {
-            relayProbeState(this.sender, {
-                maxScrollPercentage: this.pageState.maxScrollPercentage,
-                isValidVisitReported: this.pageState.isValidVisitReported,
-                startTime: this.pageState.startTime,
-                minVisitDuration: this.pageState.minVisitDuration,
-                minScrollDepth: this.pageState.minScrollDepth,
-                duration: 0,
-            });
+            relayProbeState(
+                this.sender,
+                buildProbeState(this.pageState.toVisitState(), this.pageState.toVisitGateThresholds(), 0),
+            );
         }
     }
 

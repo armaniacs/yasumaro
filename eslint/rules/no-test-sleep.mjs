@@ -14,6 +14,8 @@
  *
  * See dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md
  */
+import { walkAst } from './ast-walk.mjs';
+
 const DEFAULT_THRESHOLD_MS = 1;
 
 function isPromiseConstructor(node) {
@@ -58,26 +60,21 @@ function createDelayResolver(sourceCode) {
 /** Finds `setTimeout(<resolver>, <resolvable literal>)` anywhere inside a function body. */
 function findFixedSleep(fnNode, resolveDelay) {
   let found = null;
+  // PBI 2026-10-20-21: the subtree walk is shared (eslint/rules/ast-walk.mjs);
+  // previously duplicated inline here.
   const visit = (node) => {
-    if (found || !node || typeof node.type !== 'string') return;
+    if (found) return;
     if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'setTimeout') {
       const delay = resolveDelay(node.arguments[1]);
       if (delay !== undefined && delay >= DEFAULT_THRESHOLD_MS) {
         found = node;
-        return;
       }
-    }
-    for (const key of Object.keys(node)) {
-      if (key === 'parent') continue;
-      const child = node[key];
-      if (Array.isArray(child)) child.forEach(visit);
-      else if (child && typeof child.type === 'string') visit(child);
     }
   };
   for (const param of fnNode.params) {
-    if (param && typeof param.type === 'string') visit(param);
+    if (param && typeof param.type === 'string') walkAst(param, visit);
   }
-  if (fnNode.body) visit(fnNode.body);
+  if (fnNode.body) walkAst(fnNode.body, visit);
   return found;
 }
 

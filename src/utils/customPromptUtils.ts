@@ -5,7 +5,9 @@
  */
 
 import { Settings, StorageKeys } from './storage/types.js';
-import { sanitizePromptContent, DangerLevel } from './promptSanitizer.js';
+// PBI 2026-10-20-21: injection policy goes through the promptSafety seam
+// (sixth site) instead of a direct sanitizePromptContent call.
+import { checkPromptSafety } from './promptSafety.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 import { CustomPrompt } from './types.js';
@@ -227,20 +229,14 @@ export function validatePrompt(prompt: string): { valid: boolean; error?: string
         addLog(LogType.WARN, 'Prompt does not contain {{content}} placeholder. Content will be appended.');
     }
 
-    // プロンプトインジェクションパターンのチェック
-    const { dangerLevel, warnings } = sanitizePromptContent(prompt);
-    if (dangerLevel === DangerLevel.HIGH) {
-        return { 
-            valid: false, 
-            error: `Potentially unsafe prompt: ${warnings.join('; ')}` 
+    // プロンプトインジェクションパターンのチェック — promptSafety seam 経由
+    // (HIGH は seam が blocked を返し、LOW/MEDIUM のログは seam の policy が担う)
+    const verdict = checkPromptSafety(prompt, 'custom-input');
+    if (verdict.blocked) {
+        return {
+            valid: false,
+            error: `Potentially unsafe prompt: ${verdict.warnings.join('; ')}`,
         };
-    }
-    if (dangerLevel === DangerLevel.LOW) {
-        addLog(LogType.WARN, 'Low-risk prompt injection detected in custom prompt', {
-            warnings,
-            dangerLevel,
-            category: 'generic_term',
-        });
     }
 
     return { valid: true };

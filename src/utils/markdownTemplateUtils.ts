@@ -4,6 +4,10 @@
  */
 
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.js';
+// PBI 2026-10-20-21: opaque-ID generation follows the SSOT (128-bit random,
+// crypto.randomUUID when available). The `mdtpl_` prefix stays so template
+// ids remain self-describing in storage; the id itself is never parsed.
+import { generateId } from './generateId.js';
 
 export type { MarkdownExportTemplate, MarkdownTemplateEntryData } from './types.js';
 
@@ -118,10 +122,10 @@ export function validateTemplate(template: MarkdownExportTemplate): TemplateVali
 }
 
 /**
- * 一意のテンプレートIDを生成する
+ * 一意のテンプレートIDを生成する（SSOT generateId + mdtpl_ プレフィックス）
  */
 function generateTemplateId(): string {
-  return `mdtpl_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  return `mdtpl_${generateId()}`;
 }
 
 /**

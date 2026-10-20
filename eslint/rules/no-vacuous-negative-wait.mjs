@@ -18,6 +18,8 @@
  *   // eslint-disable-next-line local/no-vacuous-negative-wait -- <why this is a change-detection wait>
  *   await vi.waitFor(() => expect(el.textContent).not.toBe(marker));
  */
+import { walkAst } from './ast-walk.mjs';
+
 const WAIT_NAMES = new Set(['waitFor', 'waitForMock', 'waitUntil', 'until', 'eventually']);
 
 function isWaitCall(node) {
@@ -69,21 +71,13 @@ function classifyMatcher(callee) {
   return names.includes('not') ? 'negative' : 'positive';
 }
 
-function walk(node, visit) {
-  if (!node || typeof node.type !== 'string') return;
-  visit(node);
-  for (const key of Object.keys(node)) {
-    if (key === 'parent') continue;
-    const child = node[key];
-    if (Array.isArray(child)) child.forEach((c) => walk(c, visit));
-    else if (child && typeof child.type === 'string') walk(child, visit);
-  }
-}
+// PBI 2026-10-20-21: the subtree walk is shared (eslint/rules/ast-walk.mjs);
+// previously duplicated inline here.
 
 /** Classifies the assertions inside a wait callback as negative / positive counts. */
 function classifyCallback(body) {
   const counts = { negative: 0, positive: 0 };
-  walk(body, (node) => {
+  walkAst(body, (node) => {
     if (node.type !== 'CallExpression') return;
     const kind = classifyMatcher(node.callee);
     if (kind) counts[kind] += 1;

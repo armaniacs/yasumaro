@@ -8,6 +8,10 @@
 import { logWarn } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+// PBI 2026-10-20-21: the backoff arithmetic follows the shared formula in
+// utils/backoff.ts — only the delay computation is delegated here; the
+// jitter and the retry-or-not decision stay in this module.
+import { backoffDelayMs } from '../../utils/backoff.js';
 
 /**
  * Default configuration for retryWithExponentialBackoff.
@@ -32,10 +36,11 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
 
 /**
  * Sleep for a given duration with full jitter.
- * delay = min(baseDelay * 2^attempt, maxDelay) * (0.5 + Math.random() * 0.5)
+ * The exponential series comes from the shared backoffDelayMs (attempt is
+ * 0-origin, multiplier 2); jitter halves it uniformly upward.
  */
 function sleepWithJitter(attempt: number, baseDelayMs: number, maxDelayMs: number): Promise<void> {
-  const exponential = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs);
+  const exponential = backoffDelayMs(attempt, { baseMs: baseDelayMs, maxMs: maxDelayMs });
   const jitter = exponential * (0.5 + Math.random() * 0.5);
   return new Promise(resolve => setTimeout(resolve, jitter));
 }

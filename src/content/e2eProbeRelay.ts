@@ -17,6 +17,7 @@
  */
 
 import type { MessageSender } from './visitReporter.js';
+import type { VisitState } from './visitGate.js';
 import type { OWTestState } from '../utils/e2eTestState.js';
 
 declare const __OW_E2E_PROBE__: boolean | undefined;
@@ -67,6 +68,26 @@ export function relayProbeState(sender: MessageSender, state: OWTestState): void
     } catch {
         // Probe output must not break the pipeline.
     }
+}
+
+/**
+ * Build the OWTestState payload from a visit projection, thresholds, and the
+ * elapsed duration (PBI 2026-10-20-21). Single owner of the field mapping:
+ * ContentKernel used to duplicate this literal at the gate check and at init.
+ */
+export function buildProbeState(
+    visit: VisitState,
+    thresholds: { minDuration: number; minScroll: number },
+    duration: number,
+): OWTestState {
+    return {
+        maxScrollPercentage: visit.maxScrollPercentage,
+        isValidVisitReported: visit.isValidVisitReported,
+        startTime: visit.startTime,
+        minVisitDuration: thresholds.minDuration,
+        minScrollDepth: thresholds.minScroll,
+        duration,
+    };
 }
 
 /**
