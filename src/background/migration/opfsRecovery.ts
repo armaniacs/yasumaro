@@ -23,7 +23,11 @@ const BATCH_SIZE = 100;
  *
  * Maps all fields from the stored record (which was originally converted
  * via buildInsertRecordFields in schema.ts) with proper null/default handling.
- * Must stay in sync with all 31 fields of InsertRecordFields/schema.ts.
+ * Must stay in sync with COLUMN_NAMES / InsertRecordFields (schema.ts) — the
+ * mapping enumerates all 35 fields, and
+ * __tests__/opfsRecovery.test.ts pins the output key set against
+ * COLUMN_NAMES, so a new schema column fails CI until it is mapped here
+ * (the field count is not hand-maintained; COLUMN_NAMES is the SSOT).
  *
  * The flat field mapping is split into field-group helpers below; the merge
  * order matches the original property order, so the produced object is
@@ -111,12 +115,16 @@ function byteFallbackFields(
   };
 }
 
-/** Fallback flag and PBI 03 trail fields. */
+/** Fallback flag/reason and PBI 03 trail fields. */
 function trailFallbackFields(
   record: BrowsingLogRecord,
-): Pick<BrowsingLogRecord, 'fallback_triggered' | 'nav_source_url' | 'search_query'> {
+): Pick<BrowsingLogRecord, 'fallback_triggered' | 'fallback_reason' | 'nav_source_url' | 'search_query'> {
   return {
     fallback_triggered: record.fallback_triggered ?? 0,
+    // PBI 05: the opt-in diagnosis reason is the only evidence of why the
+    // autosave rejected the content — dropping it here NULLs the column for
+    // every recovered row while the original store is deleted right after.
+    fallback_reason: record.fallback_reason ?? null,
     // PBI 03: records written before the opt-in existed carry no trail; null
     // keeps the recovery insert aligned with the new columns.
     nav_source_url: record.nav_source_url ?? null,
