@@ -12,7 +12,6 @@ import { logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { ALL_LIST_SOURCES } from './listSources.js';
 import { ALLOWED_LOCALHOST_PORTS, resolveEffectivePort } from './ssrfGuard.js';
-import { pickDefined } from './objectUtils.js';
 import { StorageKeys } from './storage/types.js';
 import {
   validateObsidianHost,
@@ -27,14 +26,6 @@ import {
   PROVIDER_ALLOWLIST_ROWS,
   type ProviderAllowlistRow,
 } from './storage/providerAllowlist.js';
-
-class CspError extends Error {
-    code: string;
-    constructor(message: string, code: string) {
-        super(message);
-        this.code = code;
-    }
-}
 
 /**
  * デフォルトAIプロバイダードメイン（常に許可）
@@ -83,16 +74,6 @@ const OPTIONAL_DOMAINS = ALL_LIST_SOURCES
   .map((source) => source.host);
 
 /**
- * キュー内のリクエスト情報
- */
-interface QueuedRequest {
-  url: string;
-  options?: RequestInit;
-  resolve: (value: Response) => void;
-  reject: (reason?: unknown) => void;
-}
-
-/**
  * CSP Validator クラス
  * 設定したAIプロバイダーのみCSPに含めるためのURL検証
  */
@@ -107,26 +88,6 @@ export class CSPValidator {
    * origin equality while unsaved origins stay blocked.
    */
   private static savedObsidianOrigins: Set<string> = new Set();
-
-  // 初期化Promiseとリクエストキュー（レースコンディション修正用）
-  private static initPromise: Promise<void> | null = null;
-  private static resolveInit: (() => void) | null = null;
-  private static requestQueue: QueuedRequest[] = [];
-  public static readonly REQUEST_QUEUE_LIMIT = 100; // キュー上限（テスト用に公開）
-  private static initializing = false; // 初期化中フラグ
-
-  /**
-   * 初期化の準備（非同期初期化用）
-   * このメソッドを呼ぶと、それ以降のsafeFetchはキューイングされる
-   */
-  static prepareInitialization(): void {
-    if (!CSPValidator.initPromise && !CSPValidator.initialized) {
-      CSPValidator.initializing = true;
-      CSPValidator.initPromise = new Promise<void>((resolve) => {
-        CSPValidator.resolveInit = resolve;
-      });
-    }
-  }
 
   /**
    * 設定ファイルから許可ドメインを初期化
@@ -200,55 +161,6 @@ export class CSPValidator {
     }
 
     CSPValidator.initialized = true; // 初回ロードフラグ（fetch.ts内での重複初期化抑制用）
-    CSPValidator.initializing = false;
-
-    // 初期化完了を通知し、キュー内のリクエストを処理
-    CSPValidator.completeInitialization();
-  }
-
-  /**
-   * 初期化完了を通知し、キュー内のリクエストを処理
-   */
-  private static completeInitialization(): void {
-    if (CSPValidator.resolveInit) {
-      CSPValidator.resolveInit();
-      CSPValidator.resolveInit = null;
-    }
-    CSPValidator.processQueue();
-  }
-
-  /**
-   * キュー内のリクエストを処理
-   */
-  private static processQueue(): void {
-    const queue = [...CSPValidator.requestQueue];
-    CSPValidator.requestQueue = [];
-
-    for (const { url, options, resolve, reject } of queue) {
-      // 許可チェック後に直接fetchを実行（再帰的なsafeFetch呼び出しを回避）
-      if (CSPValidator.isUrlAllowed(url)) {
-        fetch(url, options).then(resolve).catch(reject);
-      } else {
-        const error = new CspError(`URL blocked by CSP policy: ${url}`, 'CSP_BLOCKED');
-        reject(error);
-      }
-    }
-  }
-
-  /**
-   * リクエストをキューに追加（キュー上限チェック含む）
-   * @param url - リクエストURL
-   * @param options - Fetchオプション
-   * @returnsPromise<Response> - リクエストPromise or エラー
-   */
-  static enqueueQueuedRequest(url: string, options?: RequestInit): Promise<Response> {
-    if (CSPValidator.requestQueue.length >= CSPValidator.REQUEST_QUEUE_LIMIT) {
-      throw new CspError(`Request queue full: ${url}`, 'CSP_QUEUE_FULL');
-    }
-
-    return new Promise((resolve, reject) => {
-      CSPValidator.requestQueue.push({ url, ...pickDefined({ options }), resolve, reject });
-    });
   }
 
   /**
@@ -394,10 +306,6 @@ export class CSPValidator {
     CSPValidator.allowedDomains = new Set(DEFAULT_ALLOWED_DOMAINS);
     CSPValidator.savedObsidianOrigins = new Set();
     CSPValidator.initialized = false;
-    CSPValidator.initializing = false;
-    CSPValidator.initPromise = null;
-    CSPValidator.resolveInit = null;
-    CSPValidator.requestQueue = [];
   }
 
   /**
@@ -407,50 +315,6 @@ export class CSPValidator {
   static isInitialized(): boolean {
     return CSPValidator.initialized;
   }
-
-  /**
-   * 初期化中かどうかを取得
-   * @returns 初期化中かどうか
-   */
-  static isInitializing(): boolean {
-    return CSPValidator.initializing;
-  }
-
-  /**
-   * 初期化Promiseを取得（テスト用）
-   * @returns 初期化Promise
-   */
-  static getInitPromise(): Promise<void> | null {
-    return CSPValidator.initPromise;
-  }
-
-  /**
-   * キュー内のリクエスト数を取得（テスト用）
-   * @returns キュー内のリクエスト数
-   */
-  static getQueueSize(): number {
-    return CSPValidator.requestQueue.length;
-  }
-}
-
-/**
- * fetch実行前にURL検証を行う安全なfetch関数
- * @param url - リクエスト先URL
- * @param options - Fetchオプション
- * @returns Fetchレスポンス
- * @throws 未許可URLの場合エラー
- */
-export async function safeFetch(url: string, options?: RequestInit): Promise<Response> {
-  // 初期化中はリクエストをキューイング
-  if (CSPValidator.isInitializing()) {
-    return CSPValidator.enqueueQueuedRequest(url, options);
-  }
-
-  // 初期化済みの通常処理
-  if (!CSPValidator.isUrlAllowed(url)) {
-    throw new CspError('URL blocked by CSP policy', 'CSP_BLOCKED');
-  }
-  return fetch(url, options);
 }
 
 /**

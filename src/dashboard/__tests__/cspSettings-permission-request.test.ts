@@ -10,6 +10,7 @@
 
 import { vi } from 'vitest';;
 import type { Mock } from 'vitest';
+import { OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS } from '../../utils/cspDomains.js';
 
 // Mock chrome.permissions API
 global.chrome = {
@@ -70,25 +71,34 @@ describe('CspSettingsController - Permission Request', () => {
   });
 
   describe('requestEssentialPermission', () => {
-    it('should request permission for GitHub Raw Content', async () => {
+    it('should request the GitHub Raw origin from the optional permissions SSOT', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
       const granted = await CspSettingsController.requestEssentialPermission('github-raw');
 
-      expect(chrome.permissions.request).toHaveBeenCalledWith({
-        origins: ['https://raw.githubusercontent.com/*']
-      });
+      // The origin must be selected from OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS
+      // (SSOT-derived from listSources.ts), not a hand-copied literal in
+      // cspSettings.ts — a drifted duplicate must fail this assertion.
+      expect(chrome.permissions.request).toHaveBeenCalledTimes(1);
+      const requested = (chrome.permissions.request as Mock).mock.calls[0]![0] as { origins: string[] };
+      expect(requested.origins).toHaveLength(1);
+      const [origin] = requested.origins;
+      expect(OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS).toContain(origin);
+      expect(origin.startsWith('https://raw.githubusercontent.com/')).toBe(true);
       expect(granted).toBe(true);
     });
 
-    it('should request permission for Tranco List', async () => {
+    it('should request the Tranco List origin from the optional permissions SSOT', async () => {
       const { CspSettingsController } = await import('../cspSettings.js');
 
       const granted = await CspSettingsController.requestEssentialPermission('tranco');
 
-      expect(chrome.permissions.request).toHaveBeenCalledWith({
-        origins: ['https://tranco-list.eu/*']
-      });
+      expect(chrome.permissions.request).toHaveBeenCalledTimes(1);
+      const requested = (chrome.permissions.request as Mock).mock.calls[0]![0] as { origins: string[] };
+      expect(requested.origins).toHaveLength(1);
+      const [origin] = requested.origins;
+      expect(OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS).toContain(origin);
+      expect(origin.startsWith('https://tranco-list.eu/')).toBe(true);
       expect(granted).toBe(true);
     });
 

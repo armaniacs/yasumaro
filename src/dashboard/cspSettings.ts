@@ -10,6 +10,7 @@
 import { StorageKeys } from '../utils/storage/types.js';
 import { clearElement } from '../utils/domClear.js';
 import { CSPValidator } from '../utils/cspValidator.js';
+import { OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS } from '../utils/cspDomains.js';
 import { settingsRepository, SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
@@ -43,6 +44,17 @@ function resolveDefaultDomRefs(): CspSettingsDomRefs {
     cspResetMessage: document.getElementById('cspResetMessage'),
   };
 }
+
+/**
+ * Essential permission types and the list-source host each one requests.
+ * The requested origin is looked up in OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS
+ * (SSOT-derived from listSources.ts), so the mapping only records the host
+ * semantic of each type and never a second copy of the origin value.
+ */
+const ESSENTIAL_PERMISSION_HOSTS: Record<string, string> = {
+  'github-raw': 'raw.githubusercontent.com',
+  'tranco': 'tranco-list.eu',
+};
 
 /**
  * CSP設定UI管理コントローラー。
@@ -269,15 +281,23 @@ export class CspSettingsController {
 
   static async requestEssentialPermission(type: string): Promise<boolean> {
     try {
-      let origins: string[];
-      switch (type) {
-        case 'github-raw': origins = ['https://raw.githubusercontent.com/*']; break;
-        case 'tranco': origins = ['https://tranco-list.eu/*']; break;
-        default:
-          addLog(LogType.WARN, 'Unknown essential permission type', { type });
-          return false;
+      const host = ESSENTIAL_PERMISSION_HOSTS[type];
+      if (!host) {
+        addLog(LogType.WARN, 'Unknown essential permission type', { type });
+        return false;
       }
-      const granted = await chrome.permissions.request({ origins });
+      // The origin pattern is selected from the manifest optional permissions
+      // SSOT (cspDomains.ts, derived from listSources.ts) instead of a
+      // hand-copied literal: a host change in the SSOT updates the request,
+      // and a source that leaves the optional permissions fails closed.
+      const origin = OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS.find(
+        (pattern) => pattern === `https://${host}/*`,
+      );
+      if (!origin) {
+        addLog(LogType.WARN, 'Essential permission origin is not declared as an optional host permission', { type });
+        return false;
+      }
+      const granted = await chrome.permissions.request({ origins: [origin] });
       return granted === true;
     } catch (error) {
       addLog(LogType.ERROR, 'Failed to request essential permission', { type, error: errorMessage(error) });

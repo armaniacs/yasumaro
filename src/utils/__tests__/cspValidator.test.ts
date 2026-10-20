@@ -21,7 +21,9 @@ describe('CSPValidator - P1 - Module Loading', () => {
     expect(cspValidatorModule).toBeDefined();
     expect(typeof cspValidatorModule.CSPValidator).toBe('function'); // Class
     expect(typeof cspValidatorModule.CSPValidator.isUrlAllowed).toBe('function');
-    expect(typeof cspValidatorModule.safeFetch).toBe('function');
+    // The queue-execution machine and safeFetch were removed (PBI 2026-10-20-08):
+    // 0 production callers, so the export surface keeps only the allow-check API.
+    expect(cspValidatorModule.safeFetch).toBeUndefined();
   });
 
   it('should getAvailableProviders', async () => {
@@ -270,55 +272,6 @@ describe('CSPValidator - P1 - Helper Functions', () => {
     // 解決策: initializeFromSettingsでユーザープロバイダーが追加されるロジックは封管着
     // テスト失敗の根本原因は静的メソッドのテスト順序・インスタンスの管理 complexity
     // 修正: getAllowedDomains()の正確性をデフォルトドメインのみで検証する
-  });
-});
-
-describe('CSPValidator - P1 - safeFetch', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    CSPValidator.reset();
-  });
-
-  it('should call fetch for allowed URLs', async () => {
-    const { safeFetch } = cspValidatorModule;
-
-    // モックfetch
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({})
-    });
-
-    const settings = { conditional_csp_providers: [] };
-    CSPValidator.initializeFromSettings(settings);
-
-    await safeFetch('https://api.openai.com/v1/models');
-
-    expect(fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', undefined);
-  });
-
-  it('should throw error for blocked URLs', async () => {
-    const { safeFetch } = cspValidatorModule;
-
-    const settings = { conditional_csp_providers: [] };
-    CSPValidator.initializeFromSettings(settings);
-
-    await expect(safeFetch('https://api-inference.huggingface.co/models')).rejects.toThrow(
-      'URL blocked by CSP policy'
-    );
-  });
-
-  it('should throw error with CSP_BLOCKED code', async () => {
-    const { safeFetch } = cspValidatorModule;
-
-    const settings = { conditional_csp_providers: [] };
-    CSPValidator.initializeFromSettings(settings);
-
-    try {
-      await safeFetch('https://api-inference.huggingface.co/models');
-      expect.fail('Should have thrown');
-    } catch (error: any) {
-      expect(error.code).toBe('CSP_BLOCKED');
-    }
   });
 });
 
