@@ -48,6 +48,6 @@ Scenario: mirror 契約のパリティ
 
 ## 実装記録（2026-10-21）
 - 14 組すべて統合: CRYPTO_PARAMS の AES key/IV（PBI 10/15 済みの KeyLength から移動先修正）、24h TTL ×3 → PENDING_MAX_TTL_MS、日次 ms → trancoConsent.MS_PER_DAY（privacyConsent・savedUrlRepository が参照。settingsMigration は既存 Layer 0 SSOT localDate.DAY_MS を直接 import）、DEFAULT_TIMEOUT_MS、local_export_ プレフィックス → MarkdownBufferManager.DAILY_BUFFER_PREFIX、privacy-confirm- プレフィックス、StorageKeys ×2、PAGE_SIZE、保持既定 90/1000 → queryPlanner SSOT、openai2 preset、purgeCutoffMs、tokenizer 文字クラス重複除去、SUSPEND_FLUSH_TIMEOUT_MS
-- 設計判断 4 件: queryPlanner↔dbMaintenance は executor→planner 方向（4 モジュール循環回避）、settingsMigration → trancoConsent エッジは不採用（部分モック 3 テストを壊すことを実証）、pendingStorage 部分 mock 4 ファイルに定数 1 行追加（mock 適応）、openai2 は preset-id 型結合回避のためテーブル key にしない
+- 設計判断 4 件: queryPlanner / dbMaintenance は executor→planner 方向（4 モジュール循環回避）、settingsMigration → trancoConsent エッジは不採用（部分モック 3 テストを壊すことを実証）、pendingStorage 部分 mock 4 ファイルに定数 1 行追加（mock 適応）、openai2 は preset-id 型結合回避のためテーブル key にしない
 - pin テスト: purgeDefaultsParity.test.ts（新規 3 tests）・aesParamsParity.test.ts（新規 4 tests）・providerDefaultBaseUrls.test.ts（1 it 追加）
 - 検証: フルスイート 1111 ファイル / 16612 テスト全 green、type-check pass、eslint（27 ファイル）pass、validate:fast green（758 ファイル / 11490 テスト）
