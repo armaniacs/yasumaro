@@ -139,7 +139,9 @@ export function assertPayloadSize(
     case 'SQLITE_INSERT_BATCH': {
       const rawRecords = (msg.payload as { records?: unknown }).records;
       if (!Array.isArray(rawRecords)) {
-        return `Payload too large: maximum ${limits.maxBatchRecords} records per batch`;
+        // Type rejection, not a size rejection: the wording must not claim the
+        // payload was too large when the shape itself is wrong.
+        return `Payload rejected: records must be an array (maximum ${limits.maxBatchRecords} records per batch)`;
       }
       if (rawRecords.length > limits.maxBatchRecords) {
         return `Payload too large: maximum ${limits.maxBatchRecords} records per batch`;

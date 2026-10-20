@@ -5,7 +5,7 @@ import {
   matchesWildcardPattern,
   updateDomainFilterCache
 } from '../storage/domainFilterCache.js';
-import { buildAllowedUrls, computeUrlsHash } from '../storage/urlWhitelist.js';
+import { buildAllowedUrls, buildUrlsKey } from '../storage/urlWhitelist.js';
 import { deriveRequiredDomains } from '../storage/providerAllowlist.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
@@ -351,15 +351,15 @@ describe('buildAllowedUrls - edge cases', () => {
   });
 });
 
-describe('computeUrlsHash', () => {
-  it('returns hash for empty set', () => {
-    const hash = computeUrlsHash(new Set());
-    expect(hash).toBe('');
+describe('buildUrlsKey', () => {
+  it('returns an empty key for an empty set', () => {
+    const key = buildUrlsKey(new Set());
+    expect(key).toBe('');
   });
 
   it('returns sorted, pipe-joined URLs', () => {
     const urls = new Set(['https://z.com', 'https://a.com', 'https://m.com']);
-    const hash = computeUrlsHash(urls);
-    expect(hash).toBe('https://a.com|https://m.com|https://z.com');
+    const key = buildUrlsKey(urls);
+    expect(key).toBe('https://a.com|https://m.com|https://z.com');
   });
 });

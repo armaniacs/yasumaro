@@ -7,7 +7,7 @@
  */
 
 import { StorageKeys, type Settings } from '../utils/storage/types.js';
-import { buildAllowedUrls, computeUrlsHash } from '../utils/storage/urlWhitelist.js';
+import { buildAllowedUrls, buildUrlsKey } from '../utils/storage/urlWhitelist.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError, logWarn } from '../utils/logger/api.js';
@@ -15,14 +15,14 @@ import { errorMessage } from '../utils/errorUtils.js';
 
 /**
  * Recompute the allowlist from the given settings and persist it together
- * with its change-detection hash. Idempotent and self-healing: running it on
+ * with its change-detection key. Idempotent and self-healing: running it on
  * every settings write (and at startup) repairs stale or missing entries.
  */
 export async function syncAllowedUrlsFromSettings(settings: Settings): Promise<void> {
     const urls = buildAllowedUrls(settings);
     await chrome.storage.local.set({
         [StorageKeys.ALLOWED_URLS]: Array.from(urls),
-        [StorageKeys.ALLOWED_URLS_HASH]: computeUrlsHash(urls),
+        [StorageKeys.ALLOWED_URLS_HASH]: buildUrlsKey(urls),
     });
 }
 

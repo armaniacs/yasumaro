@@ -3,7 +3,7 @@
  * 許可URLリスト構築のテスト
  */
 
-import { buildAllowedUrls, computeUrlsHash, isDomainInWhitelist } from '../storage/urlWhitelist.js';
+import { buildAllowedUrls, buildUrlsKey, isDomainInWhitelist } from '../storage/urlWhitelist.js';
 import { StorageKeys } from '../storage/types.js';
 
 // Mock chrome API
@@ -181,19 +181,19 @@ describe('storage - buildAllowedUrls', () => {
         });
     });
 
-    describe('computeUrlsHash', () => {
-        it('should compute hash for sorted URLs', () => {
+    describe('buildUrlsKey', () => {
+        it('should build the key for sorted URLs', () => {
             const urls = new Set(['https://b.com', 'https://a.com', 'https://c.com']);
-            const hash = computeUrlsHash(urls);
-            
-            expect(hash).toBe('https://a.com|https://b.com|https://c.com');
+            const key = buildUrlsKey(urls);
+
+            expect(key).toBe('https://a.com|https://b.com|https://c.com');
         });
 
         it('should handle empty set', () => {
             const urls = new Set<string>();
-            const hash = computeUrlsHash(urls);
-            
-            expect(hash).toBe('');
+            const key = buildUrlsKey(urls);
+
+            expect(key).toBe('');
         });
     });
 

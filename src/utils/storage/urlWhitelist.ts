@@ -133,7 +133,12 @@ export function buildAllowedUrls(settings: Settings): Set<string> {
     return allowedUrls;
 }
 
-export function computeUrlsHash(urls: Set<string>): string {
+/**
+ * Sorted, pipe-joined key over the URL set, used for change detection
+ * (ALLOWED_URLS_HASH). Not a hash in the digest sense: callers compare the
+ * key byte-for-byte, which is why the name describes what it builds.
+ */
+export function buildUrlsKey(urls: Set<string>): string {
     const sortedUrls = Array.from(urls).sort();
     return sortedUrls.join('|');
 }

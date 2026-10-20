@@ -204,12 +204,6 @@ export interface MigrateSettingsOptions {
     now?: () => number;
 }
 
-/** Options for storage-adjacent one-shot migration helpers (port unification). */
-export interface MigrationStorageOptions {
-    /** Storage seam; defaults to a ChromeStoragePort (chrome.storage.local). */
-    port?: StoragePort;
-}
-
 /**
  * Merge `delta` into the `settings` blob.
  *
@@ -671,7 +665,7 @@ export async function cleanupExpiredSettingsBackups(
  * grandfather.
  */
 export async function migrateLoopbackProviderOriginConfirmations(
-    options: MigrationStorageOptions = {},
+    options: MigrateSettingsOptions = {},
 ): Promise<boolean> {
     const port = options.port ?? new ChromeStoragePort();
     const done = await port.get(PROVIDER_LOOPBACK_GRANDFATHER_DONE_KEY);

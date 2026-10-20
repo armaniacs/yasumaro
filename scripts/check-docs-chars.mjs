@@ -83,14 +83,8 @@ function classify(ch) {
 }
 
 function isShiftJis(ch) {
-  try {
-    // TextEncoder has no Shift-JIS; test against a CP932 table shipped with
-    // Node's ICU via TextDecoder round-trip would be lossy, so use the same
-    // practical check the rule documents: encode through a CP932 decoder.
-    return cp932.has(ch);
-  } catch {
-    return false;
-  }
+  // cp932.has() (Set membership) never throws, so no try/catch is needed.
+  return cp932.has(ch);
 }
 
 /**

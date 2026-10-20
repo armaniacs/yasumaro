@@ -5,7 +5,10 @@
  * identifier/member chains can never fail, so the assertion carries no
  * regression signal.
  */
-const COMPARISON_METHODS = new Set(['toBe', 'toEqual', 'toStrictEqual', 'toBeStrictEqual']);
+// Only the real Vitest comparison matchers: a call to a name outside this set
+// is not a tautological assertion this rule can judge (it would fail at
+// runtime with "matcher not found", so no tautology can pass silently).
+const COMPARISON_METHODS = new Set(['toBe', 'toEqual', 'toStrictEqual']);
 
 function getExpectCall(node) {
   // expect(...) may be wrapped in .not/.resolves/.rejects member chains

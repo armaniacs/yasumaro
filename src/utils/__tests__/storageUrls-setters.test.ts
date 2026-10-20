@@ -204,21 +204,21 @@ describe('setUrlTags / addUrlTag / removeUrlTag', () => {
   });
 });
 
-describe('computeUrlsHash', () => {
-  it('computes the hash of URLs', async () => {
-    const { computeUrlsHash } = await import('../storage/urlWhitelist.js');
+describe('buildUrlsKey', () => {
+  it('builds the pipe-joined key of URLs', async () => {
+    const { buildUrlsKey } = await import('../storage/urlWhitelist.js');
 
     const urls = new Set(['https://b.com', 'https://a.com']);
-    const hash = computeUrlsHash(urls);
+    const key = buildUrlsKey(urls);
 
-    expect(hash).toBe('https://a.com|https://b.com');
+    expect(key).toBe('https://a.com|https://b.com');
   });
 
   it('returns an empty string for an empty set', async () => {
-    const { computeUrlsHash } = await import('../storage/urlWhitelist.js');
+    const { buildUrlsKey } = await import('../storage/urlWhitelist.js');
 
-    const hash = computeUrlsHash(new Set());
+    const key = buildUrlsKey(new Set());
 
-    expect(hash).toBe('');
+    expect(key).toBe('');
   });
 });

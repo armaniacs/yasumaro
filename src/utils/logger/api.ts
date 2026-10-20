@@ -11,6 +11,11 @@ import { persistableLogText } from './sanitize.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
 
+/** Max characters of any string detail kept in the CRITICAL console line. */
+const CRITICAL_LOG_MAX_DETAIL_CHARS = 128;
+/** Strings longer than this that look like base64 are redacted in the CRITICAL line. */
+const CRITICAL_LOG_REDACT_THRESHOLD_CHARS = 40;
+
 /**
  * Extract a short file name from an import.meta.url-style URL.
  * Strips query strings/fragments, removes the `.js` extension, and returns
@@ -121,10 +126,8 @@ export async function logDebug<T extends object = Record<string, unknown>>(
     }
     await writeStructuredLog(LogType.DEBUG, message, details, undefined, source);
 
-    // 開発環境ではconsole.debugにも出力
-    if (isDevelopment()) {
-        console.debug(`[DEBUG] ${message}`, details);
-    }
+    // Unconditional: the early return above already gated this path on development
+    console.debug(`[DEBUG] ${message}`, details);
 }
 
 /**
@@ -160,10 +163,10 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     await flushLogs(true);
 
     console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details, (key, value) => {
-        if (typeof value === 'string' && value.length > 128) {
-            return value.slice(0, 128) + '...[truncated]';
+        if (typeof value === 'string' && value.length > CRITICAL_LOG_MAX_DETAIL_CHARS) {
+            return value.slice(0, CRITICAL_LOG_MAX_DETAIL_CHARS) + '...[truncated]';
         }
-        if (typeof value === 'string' && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value) && value.length > 40) {
+        if (typeof value === 'string' && /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value) && value.length > CRITICAL_LOG_REDACT_THRESHOLD_CHARS) {
             return value.slice(0, 8) + '...[redacted]';
         }
         return value;

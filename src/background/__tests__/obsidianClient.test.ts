@@ -356,35 +356,35 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
     });
   });
 
-  describe('_validatePort', () => {
+  describe('validatePort', () => {
     it('returns the default port for undefined', () => {
-      expect(obsidianClient._validatePort(undefined)).toBe('27124');
+      expect(obsidianClient.validatePort(undefined)).toBe('27124');
     });
 
     it('returns the default port for null', () => {
-      expect(obsidianClient._validatePort(null)).toBe('27124');
+      expect(obsidianClient.validatePort(null)).toBe('27124');
     });
 
     it('returns the default port for an empty string', () => {
-      expect(obsidianClient._validatePort('')).toBe('27124');
+      expect(obsidianClient.validatePort('')).toBe('27124');
     });
 
     it('throws for non-numeric values', () => {
-      expect(() => obsidianClient._validatePort('abc')).toThrow('Port must be a valid number');
+      expect(() => obsidianClient.validatePort('abc')).toThrow('Port must be a valid number');
     });
 
     it('throws for non-integer values', () => {
-      expect(() => obsidianClient._validatePort(3.14)).toThrow('Port must be an integer');
+      expect(() => obsidianClient.validatePort(3.14)).toThrow('Port must be an integer');
     });
 
     it('throws for out-of-range values', () => {
-      expect(() => obsidianClient._validatePort(0)).toThrow('Port must be between');
-      expect(() => obsidianClient._validatePort(70000)).toThrow('Port must be between');
+      expect(() => obsidianClient.validatePort(0)).toThrow('Port must be between');
+      expect(() => obsidianClient.validatePort(70000)).toThrow('Port must be between');
     });
 
     it('returns valid port numbers as strings', () => {
-      expect(obsidianClient._validatePort(3000)).toBe('3000');
-      expect(obsidianClient._validatePort('8080')).toBe('8080');
+      expect(obsidianClient.validatePort(3000)).toBe('3000');
+      expect(obsidianClient.validatePort('8080')).toBe('8080');
     });
   });
 
@@ -586,7 +586,7 @@ describe('ObsidianClient: FEATURE-001 エラーハンドリングの一貫性と
        expect(result.message).toContain('Connection error');
      });
 
-     it('returns an appropriate message when _getConfig raises an API key error', async () => {
+     it('returns an appropriate message when getConfig raises an API key error', async () => {
        mockGetSettings.mockResolvedValue({
          OBSIDIAN_API_KEY: '',
          OBSIDIAN_PROTOCOL: 'http',
@@ -847,7 +847,7 @@ describe('ObsidianClient: connection check retry policy', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow('Protocol must be "http" or "https"');
+      await expect(obsidianClient.getConfig()).rejects.toThrow('Protocol must be "http" or "https"');
     });
   });
   describe('testConnection override defaults to https', () => {

@@ -176,7 +176,7 @@ describe('Obsidian boundary → RetryPolicy', () => {
   it('an invalid Obsidian port never enters offline recovery', async () => {
     const error = (() => {
       try {
-        client._validatePort('not-a-port');
+        client.validatePort('not-a-port');
         return new Error('unreachable');
       } catch (e) {
         return e as Error;

@@ -160,7 +160,7 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         // VULN-008 fix: reject oversized base64 payload before decoding
         // 100MB raw → ~134MB base64; use 150MB base64 as safe ceiling
         if (data.length > MAX_RESTORE_BASE64_BYTES) {
-          return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > 100MB)` };
+          return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > ${Math.round(MAX_RESTORE_BASE64_BYTES / 1024 / 1024)}MB)` };
         }
         const result = await deps.restoreDb(base64ToBytes(data));
         if (!result.success) {

@@ -135,7 +135,11 @@ async function deriveKeyFromPassword(password: string, salt: Uint8Array, iterati
  * @throws {Error} マスターパスワード未入力、またはsaltが破損している場合
  */
 async function deriveKeyFromMasterPassword(passwordSaltBase64: string | undefined): Promise<CryptoKey> {
-    // 【セキュリティ修正】マスターパスワードが設定されている場合は強制的にロック
+    // Module-var mutation: marks the session state as master-password protected
+    // for the rest of the session. isEncryptionLocked() reads this flag together
+    // with MASTER_PASSWORD_ENABLED and the cached password, so flipping it here
+    // (before the throw below) is what turns a restart without a cached password
+    // into a lock after the first key-derivation attempt.
     isMasterPasswordRequired = true;
 
     if (!cachedMasterPassword) {

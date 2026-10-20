@@ -8,12 +8,11 @@
  */
 
 import type { Settings } from './types.js';
-import { API_KEY_FIELD_NAMES, isApiKeyField } from './apiKeyFields.js';
+import { isApiKeyField } from './apiKeyFields.js';
 import { cloneAtStorageBoundary as cloneAtBoundary } from './structuredCloneBoundary.js';
 
 // Canonical list lives in apiKeyFields.ts (dependency-free so this module
 // stays importable under hoisted vi.mock of SettingsRepository).
-const API_KEY_FIELDS: readonly string[] = API_KEY_FIELD_NAMES;
 
 /**
  * Payload shape of `set`, derived from the existing signature so the CAS
@@ -54,16 +53,16 @@ export interface StoragePort {
  * VULN-014 (CWE-312): return a shallow copy of settings with every API-key
  * field emptied. Extracted from RecordingCache so cache modules do not need
  * to know about redaction.
+ *
+ * One loop over the present keys is enough: isApiKeyField normalizes case and
+ * underscores, so every exact snake-case canonical field matches it too — the
+ * second exact-name loop this used to run was a subset no-op.
  */
 export function redactSettingsApiKeys(settings: Settings | null): Settings | null {
   if (!settings) return null;
   const copy = { ...settings } as Record<string, unknown>;
   for (const field of Object.keys(copy)) {
     if (isApiKeyField(field)) copy[field] = '';
-  }
-  // Also handle exact snake-case fields for completeness
-  for (const field of API_KEY_FIELDS) {
-    if (field in copy) copy[field] = '';
   }
   return copy as Settings;
 }

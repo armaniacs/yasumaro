@@ -113,7 +113,7 @@ export class TagClusterLoadingManager {
       label.setAttribute('y', String(startY + yOffset + 5));
       label.setAttribute('font-size', '14');
       label.setAttribute('fill', color);
-      label.textContent = `${step.number}/4: ${step.label}`;
+      label.textContent = `${step.number}/${LOADING_STEP_KEYS.length}: ${step.label}`;
       textGroup.appendChild(label);
     });
   }

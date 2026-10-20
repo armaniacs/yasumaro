@@ -50,9 +50,10 @@ export const MAX_RESEARCH_SESSION_ROWS = QUERY_CAPS.plain;
 
 /**
  * Max rows fetched for the domain-analysis panel (user-selected period+tag).
- * queryLogs caps a single page at 10000 rows, so the panel paginates with
- * offset until this total cap; the panel shows a cap notice when the last
- * page comes back full (more rows likely exist beyond it).
+ * The panel pages with a keyset cursor (inclusive `until` = the oldest
+ * created_at of the previous page) until this total cap; the panel shows a
+ * cap notice when the last page comes back full (more rows likely exist
+ * beyond it).
  */
 export const MAX_DOMAIN_ANALYSIS_ROWS = 50000;
 

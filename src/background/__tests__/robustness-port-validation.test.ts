@@ -113,7 +113,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
           OBSIDIAN_DAILY_PATH: ''
         });
 
-        const config = await obsidianClient._getConfig();
+        const config = await obsidianClient.getConfig();
         expect(config.baseUrl).toContain(`:${port}`);
       }
     });
@@ -133,7 +133,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         });
 
         // 実装後はエラーがスローされる
-        await expect(obsidianClient._getConfig()).rejects.toThrow();
+        await expect(obsidianClient.getConfig()).rejects.toThrow();
       }
     });
   });
@@ -149,7 +149,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow();
+      await expect(obsidianClient.getConfig()).rejects.toThrow();
     });
 
     it('throws when the port number exceeds 65535', async () => {
@@ -162,7 +162,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow();
+      await expect(obsidianClient.getConfig()).rejects.toThrow();
     });
 
     it('throws when the port number is negative', async () => {
@@ -174,7 +174,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow();
+      await expect(obsidianClient.getConfig()).rejects.toThrow();
     });
 
     it('throws when the port number is non-numeric', async () => {
@@ -186,7 +186,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow();
+      await expect(obsidianClient.getConfig()).rejects.toThrow();
     });
 
     it('throws when the port number is fractional', async () => {
@@ -198,7 +198,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow();
+      await expect(obsidianClient.getConfig()).rejects.toThrow();
     });
   });
 
@@ -212,7 +212,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      const config = await obsidianClient._getConfig();
+      const config = await obsidianClient.getConfig();
       expect(config.baseUrl).toContain(':27124');
     });
 
@@ -225,7 +225,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      const config = await obsidianClient._getConfig();
+      const config = await obsidianClient.getConfig();
       expect(config.baseUrl).toContain(':27124');
     });
   });
@@ -240,7 +240,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow(
+      await expect(obsidianClient.getConfig()).rejects.toThrow(
         'Invalid port number. Port must be between 1 and 65535.'
       );
     });
@@ -254,7 +254,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
         OBSIDIAN_DAILY_PATH: ''
       });
 
-      await expect(obsidianClient._getConfig()).rejects.toThrow(
+      await expect(obsidianClient.getConfig()).rejects.toThrow(
         'Invalid port number. Port must be a valid number.'
       );
     });
@@ -294,7 +294,7 @@ describe('ObsidianClient: ポート番号の検証（P1）', () => {
       });
 
       const validateSpy = vi.spyOn(validator, 'validateObsidianPort');
-      await obsidianClient._getConfig();
+      await obsidianClient.getConfig();
       expect(validateSpy).toHaveBeenCalledWith('999');
       validateSpy.mockRestore();
     });

@@ -32,7 +32,11 @@ export function createTabEventHandlers(ctx: TabHandlerContext) {
         // determination) re-prunes against the post-removal tab set.
         ctx.autoSavedBadgeTabs.resetRestoreOnce?.();
         await ctx.autoSavedBadgeTabs.restore();
-        ctx.tabCache.removeAndFlush ? await ctx.tabCache.removeAndFlush(tabId) : ctx.tabCache.remove(tabId);
+        if (ctx.tabCache.removeAndFlush) {
+            await ctx.tabCache.removeAndFlush(tabId);
+        } else {
+            ctx.tabCache.remove(tabId);
+        }
         ctx.autoSavedBadgeTabs.delete(tabId);
     }
 

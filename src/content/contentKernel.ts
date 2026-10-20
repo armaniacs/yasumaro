@@ -75,10 +75,11 @@ export class ContentKernel {
         opts: ContentKernelOptions = {},
     ) {
         this.pageState = opts.pageState ?? new PageState();
-        // Align startTime with injected clock when the default PageState was created with real Date.now
-        // Tests that freeze Date.now will construct PageState after stubbing, so this is a no-op in practice,
-        // but for explicit clock injection we ensure startTime tracks the fake clock's epoch.
-        // Only override if clock is not the default Date.now reference and pageState is fresh.
+        // No startTime alignment happens here: startTime is owned by PageState
+        // and captured with the real wall clock (pageState.ts). Tests that
+        // inject a fake clock set pageState.startTime themselves (or pass an
+        // explicit PageState); the injected clock only feeds ScrollMonitor,
+        // VisitGating and DeadlineTimer below.
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
         this.sender = opts.sender ?? createContentMessageSender(2);
         this.e2eSessionResolveNeeded = opts.isE2ETest === undefined;

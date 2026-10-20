@@ -9,7 +9,9 @@ import { getUserErrorMessage } from './errorUtils.js';
 import { statusChannel } from '../utils/ui/statusChannel.js';
 import { renderLockedHtml, renderTrustHtml, renderTrustFallbackHtml } from './statusRenderers.js';
 
-/** Per-element toast timer — rapid double-deny used to start two competing chains (PBI 2026-09-12-41). */
+/** Module-level toast timer token — one denial chain at a time. The panel owns a single
+ * permissionDeniedMessage element, so one token covers it; rapid double-deny used to
+ * start two competing chains (PBI 2026-09-12-41). */
 let errorToastTimer: ReturnType<typeof setTimeout> | undefined = undefined;
 
 /**
@@ -71,7 +73,7 @@ export async function updateTrustStatus(url: string): Promise<void> {
                   requestAnimationFrame(() => {
                     errorMsg.classList.add('visible');
                   });
-                  // PBI 2026-09-12-41: per-element timer token — rapid double-deny
+                  // PBI 2026-09-12-41: module-level timer token — rapid double-deny
                   // used to start two competing toast chains.
                   if (errorToastTimer !== undefined) clearTimeout(errorToastTimer);
                   errorToastTimer = setTimeout(() => {

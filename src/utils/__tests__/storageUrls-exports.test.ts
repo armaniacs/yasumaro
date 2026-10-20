@@ -47,7 +47,7 @@ vi.mock('../storage/types.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -70,7 +70,7 @@ vi.mock('../storage/defaults.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -93,7 +93,7 @@ vi.mock('../storage/encryptionSession.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -116,7 +116,7 @@ vi.mock('../storage/savedUrlRepository.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -139,7 +139,7 @@ vi.mock('../storage/domainFilterCache.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -162,7 +162,7 @@ vi.mock('../storage/quota.js', async (importOriginal) => {
 
       isDomainInWhitelist: vi.fn((url: string) => url.includes('allowed.com')),
       normalizeUrl: vi.fn((url: string) => url.replace(/\/$/, '').toLowerCase()),
-      computeUrlsHash: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
+      buildUrlsKey: vi.fn((urls: Set<string>) => Array.from(urls).sort().join('|')),
       Settings: {}
 
   } as Record<string, unknown>;
@@ -194,7 +194,7 @@ import {
     addUrlTag,
     removeUrlTag
 } from '../storageUrls.js';
-import { computeUrlsHash } from '../storage/urlWhitelist.js';
+import { buildUrlsKey } from '../storage/urlWhitelist.js';
 
 describe('storageUrls exports', () => {
 
@@ -273,23 +273,23 @@ describe('storageUrls exports', () => {
         });
     });
 
-    describe('computeUrlsHash', () => {
-        test('returns the hash of a URL set', () => {
+    describe('buildUrlsKey', () => {
+        test('builds a key from a URL set', () => {
             const urls = new Set(['https://a.com', 'https://b.com']);
-            const hash = computeUrlsHash(urls);
-            expect(typeof hash).toBe('string');
-            expect(hash.length).toBeGreaterThan(0);
+            const key = buildUrlsKey(urls);
+            expect(typeof key).toBe('string');
+            expect(key.length).toBeGreaterThan(0);
         });
 
-        test('returns the same hash for the same URL set', () => {
+        test('builds the same key for the same URL set', () => {
             const urls1 = new Set(['https://a.com', 'https://b.com']);
             const urls2 = new Set(['https://b.com', 'https://a.com']);
-            expect(computeUrlsHash(urls1)).toBe(computeUrlsHash(urls2));
+            expect(buildUrlsKey(urls1)).toBe(buildUrlsKey(urls2));
         });
 
         test('returns an empty string for an empty set', () => {
-            const hash = computeUrlsHash(new Set());
-            expect(hash).toBe('');
+            const key = buildUrlsKey(new Set());
+            expect(key).toBe('');
         });
     });
 

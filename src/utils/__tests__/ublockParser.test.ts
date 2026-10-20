@@ -170,7 +170,6 @@ describe('ublockParser', () => {
       // 【テスト目的】: 文字セットバリデーション機能の確認
       // 【テスト内容】: ドメインとして不適切な文字（例: @, / 等）を含むパターンをテスト
       // 【期待される動作】: "||example@invalid^"を入力するとnullが返される
-      // 🟡 信頼性レベル: plan/UII/10-data-structures.md に記載される制約
 
       // 【テストデータ準備】: 不正な文字@を含むドメインパターンを用意
       const input = '||example@invalid^';
@@ -711,7 +710,6 @@ describe('ublockParser', () => {
       // 【テスト目的】: 重要フラグオプションのパース
       // 【テスト内容】: `$important` オプションを正しく論理フラグに変換できることを確認
       // 【期待される動作】: `"important"` を入力すると、`important=true` が設定されたオブジェクトが返される
-      // 🟢 信頼性レベル: plan/UII/10-data-structures.md に記載されるデータ構造
 
       // 【テストデータ準備】: 重要フラグオプションを用意
       const input = 'important';
@@ -805,7 +803,6 @@ describe('ublockParser', () => {
       // 【テスト目的】: 除外ドメインオプションのパース
       // 【テスト内容】: `~domain=` で特定ドメインをルール適用から除外する機能を確認
       // 【期待される動作】: `domain=~trusted.com|safe.com` を入力すると、`negatedDomains` に配列として設定される
-      // 🟢 信頼性レベル: plan/UII/10-data-structures.md に記載されるデータ構造
 
       // 【テストデータ準備】: 除外ドメインオプションを用意
       const input = 'domain=~trusted.com|safe.com';

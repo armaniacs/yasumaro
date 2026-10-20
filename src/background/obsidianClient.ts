@@ -192,7 +192,7 @@ export class ObsidianClient {
     /**
      * 設定オブジェクトを取得する
      */
-    async _getConfig(): Promise<ObsidianConfig> {
+    async getConfig(): Promise<ObsidianConfig> {
         return buildObsidianConfig();
     }
 
@@ -202,7 +202,7 @@ export class ObsidianClient {
      * @returns {'http'|'https'} 有効なプロトコル
      * @throws {Error} プロトコルが無効な場合
      */
-    _validateProtocol(protocol: string | undefined | null): ObsidianProtocol {
+    validateProtocol(protocol: string | undefined | null): ObsidianProtocol {
         return validateObsidianProtocol(protocol);
     }
 
@@ -211,7 +211,7 @@ export class ObsidianClient {
      * @param {string|undefined|null} host - Obsidian Local REST API のホスト
      * @returns {string} 有効なホスト名
      */
-    _validateHost(host: string | undefined | null): string {
+    validateHost(host: string | undefined | null): string {
         return validateObsidianHost(host);
     }
 
@@ -221,7 +221,7 @@ export class ObsidianClient {
      * @param {string} host - 判定対象の文字列
      * @returns {boolean} IPv6アドレスの場合true
      */
-    _isIpv6Address(host: string): boolean {
+    isIpv6Address(host: string): boolean {
         return isIpv6Address(host);
     }
 
@@ -231,7 +231,7 @@ export class ObsidianClient {
      * @returns {string} 有効なポート番号（文字列）
      * @throws {Error} ポート番号が無効な場合
      */
-    _validatePort(port: string | number | undefined | null): string {
+    validatePort(port: string | number | undefined | null): string {
         return validateObsidianPort(port);
     }
 
@@ -244,7 +244,7 @@ export class ObsidianClient {
         await this.mutex.acquire();
 
         try {
-            const { baseUrl, headers, settings } = await this._getConfig();
+            const { baseUrl, headers, settings } = await this.getConfig();
 
             // Settings型は StorageKeys でアクセス可能
             const dailyPathRaw = settings[StorageKeys.OBSIDIAN_DAILY_PATH]
@@ -418,7 +418,7 @@ export class ObsidianClient {
                     });
                 }
             } else {
-                ({ baseUrl, headers } = await this._getConfig());
+                ({ baseUrl, headers } = await this.getConfig());
             }
             addLog(LogType.DEBUG, `Testing Obsidian connection to: ${baseUrl}`);
 

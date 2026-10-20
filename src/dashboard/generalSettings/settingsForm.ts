@@ -207,7 +207,10 @@ export function updateRetentionUnlimitedWarning(): void {
   if (!warning) return;
   const daysEl = document.getElementById('sqliteRetentionDays') as HTMLSelectElement | null;
   const maxEl = document.getElementById('sqliteMaxRecords') as HTMLSelectElement | null;
-  const unlimited = (daysEl?.value ?? '365') === '' && (maxEl?.value ?? '') === '';
+  // `?? '365'` on daysEl was dead: a null element read as '365', which never
+  // equals the Unlimited value ''. The `?? ''` on maxEl is load-bearing — a
+  // missing max-records select reads as Unlimited (''), so keep it.
+  const unlimited = daysEl?.value === '' && (maxEl?.value ?? '') === '';
   warning.hidden = !unlimited;
 }
 

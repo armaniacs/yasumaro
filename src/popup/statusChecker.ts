@@ -117,7 +117,10 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
 }
 
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
-  // 特殊URLのチェック
+  // Special URLs. This popup-side list is a deliberate subset of the
+  // content-script SSOT SKIPPED_PROTOCOLS (src/content/urlSkipper.ts):
+  // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows,
+  // and data:/file:// URLs never reach the popup status check.
   if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')) {
     return null;
   }

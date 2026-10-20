@@ -65,7 +65,8 @@ export function createReadOnlyHandler(deps: ReadOnlyDeps) {
   return async (payload: DashboardSqliteRequest): Promise<unknown> => {
     const subtype = payload.subtype;
     switch (subtype) {
-      case 'create_confirm_token': {        const action = (payload as { action?: string }).action;
+      case 'create_confirm_token': {
+        const action = (payload as { action?: string }).action;
         const id = (payload as { id?: number }).id;
         const scopeHash = (payload as { scopeHash?: unknown }).scopeHash;
         if (!action || typeof action !== 'string') {

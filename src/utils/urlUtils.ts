@@ -5,11 +5,13 @@
 import { isHttpUrl } from './archiveGuards.js';
 
 /**
- * URLの正規化
- * 末尾のスラッシュを削除し、プロトコルを小文字に正規化
- * @param {string} url - 正規化するURL
- * @returns {string} 正規化されたURL
- * @throws {Error} URLが無効な場合
+ * URL normalization
+ * Strips the trailing slash. Scheme lowercasing needs no replace: the URL
+ * parser already normalizes the scheme to lowercase, so any replace over
+ * parsedUrl.href would be a no-op.
+ * @param {string} url - The URL to normalize
+ * @returns {string} The normalized URL
+ * @throws {Error} When the URL is invalid
  */
 export function normalizeUrl(url: string): string {
     let parsedUrl: URL;
@@ -18,12 +20,8 @@ export function normalizeUrl(url: string): string {
     } catch (_e) {
         throw new Error('Invalid URL');
     }
-    // 末尾のスラッシュを削除
-    let normalized = parsedUrl.href.replace(/\/$/, '');
-    // プロトコルを小文字に正規化
-    normalized = normalized.replace(/^https:/i, 'https:');
-    normalized = normalized.replace(/^http:/i, 'http:');
-    return normalized;
+    // Strip the trailing slash
+    return parsedUrl.href.replace(/\/$/, '');
 }
 
 /**

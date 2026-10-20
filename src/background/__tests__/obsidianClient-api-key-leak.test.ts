@@ -125,7 +125,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
   it('puts a valid key in the Authorization header without ever logging it', async () => {
     mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: RAW_KEY });
 
-    const config = await client._getConfig();
+    const config = await client.getConfig();
 
     // The key legitimately reaches the header...
     expect(String((config.headers as Record<string, string>)['Authorization'])).toBe(`Bearer ${RAW_KEY}`);
@@ -142,7 +142,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
   it('redacts the key in the error path when it is missing', async () => {
     mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: '' });
 
-    await expect(client._getConfig()).rejects.toThrow(/API key is missing/);
+    await expect(client.getConfig()).rejects.toThrow(/API key is missing/);
 
     // Console output must not contain the raw key (it only ever carries the type).
     for (const call of consoleErrorSpy.mock.calls) {
@@ -154,7 +154,7 @@ describe('ObsidianClient — API key must never leak to logs (PBI 2026-08-02-04)
     // Simulates a locked session: an undecrypted envelope reaches the consumer.
     mockGetSettings.mockResolvedValue({ OBSIDIAN_API_KEY: { fullKey: RAW_KEY } });
 
-    await expect(client._getConfig()).rejects.toBeInstanceOf(EncryptionLockedError);
+    await expect(client.getConfig()).rejects.toBeInstanceOf(EncryptionLockedError);
 
     for (const call of consoleErrorSpy.mock.calls) {
       expect(JSON.stringify(call)).not.toContain(RAW_KEY);

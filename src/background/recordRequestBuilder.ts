@@ -228,7 +228,8 @@ export function pickRecordDiagnostics(
   });
 }
 
-export function buildRecordRequest(  source: RecordRequestSource,
+export function buildRecordRequest(
+  source: RecordRequestSource,
   fields: {
     title: string;
     url: string;

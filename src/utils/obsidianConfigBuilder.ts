@@ -1,7 +1,7 @@
 /**
  * obsidianConfigBuilder.ts
  * Shared config-building logic extracted from ObsidianClient.
- * Used by both _getConfig() and testConnection() to eliminate duplication.
+ * Used by both getConfig() and testConnection() to eliminate duplication.
  */
 
 import { settingsRepository } from './storage/SettingsRepository.js';
