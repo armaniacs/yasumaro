@@ -41,8 +41,10 @@ export async function initWasmForNode(
  * Memoized variant for `vi.mock` factories, where each mocked wrapper
  * exposes its own named init (`initSentenceDedupWasm`, `initTextrankWasm`,
  * …) with singleton/retry semantics. Concurrent callers share the
- * in-flight promise; use a fresh factory per mock so failures do not leak
- * across suites.
+ * in-flight promise; a failure resets the singleton so a later call can
+ * retry (e.g. transient read error), matching the production contract of
+ * `initExtensionWasm` in `src/wasm/initWasm.ts`. Use a fresh factory per
+ * mock so a memoized success does not leak across suites.
  */
 export function createNodeWasmInit(
     glueInit: NodeWasmGlueInit,
@@ -51,7 +53,13 @@ export function createNodeWasmInit(
     let initPromise: Promise<void> | null = null;
     return (): Promise<void> => {
         if (!initPromise) {
-            initPromise = initWasmForNode(glueInit, wasmUrl);
+            initPromise = initWasmForNode(glueInit, wasmUrl).then(
+                () => undefined,
+                (error: unknown) => {
+                    initPromise = null;
+                    throw error;
+                }
+            );
         }
         return initPromise;
     };

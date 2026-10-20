@@ -45,6 +45,11 @@ import { createStorageAreaMock } from './storageMock.js';
 // unexpanded in that case. Chrome's native positional `$NAME$` placeholders
 // only apply when an array of substitutions is passed directly to
 // `chrome.i18n.getMessage`.
+// Unknown keys return `''`, matching real Chrome. The wrapper treats a falsy
+// return as "missing" (`if (!message) return ""`, src/utils/i18n.ts) and
+// `getMessageOr` / `tOrKey` fall back on `message || fallback`, so a
+// key-echoing mock would keep every fallback branch dead under this default
+// double.
 type MessagesJson = Record<
   string,
   { message: string; placeholders?: Record<string, { content: string }> }
@@ -68,7 +73,7 @@ function buildGetMessageMock() {
   return vi.fn((key: string, substitutions?: string | Array<string | number>): string => {
     const messages = localeMessages();
     const entry = messages[key];
-    if (!entry) return key;
+    if (!entry) return '';
 
     let message = entry.message;
     if (substitutions !== undefined && entry.placeholders) {
@@ -152,19 +157,6 @@ Object.defineProperty(global, 'CSS', {
   },
   writable: true,
   configurable: true,
-});
-
-// ============================================================================
-// Vite Environment Variables Mock
-// ============================================================================
-
-// import.meta.env mock for Vitest (used by logger.ts isDevelopment)
-vi.stubGlobal('import.meta', {
-  env: {
-    DEV: process.env.NODE_ENV === 'development',
-    PROD: process.env.NODE_ENV === 'production',
-    MODE: process.env.NODE_ENV || 'test',
-  },
 });
 
 // ============================================================================

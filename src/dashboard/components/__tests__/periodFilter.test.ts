@@ -199,11 +199,15 @@ describe('createPeriodFilter', () => {
   });
 
   it('injects custom label keys; omitting labelKeys keeps the periodFilter* defaults', () => {
+    const requested = vi.spyOn(chrome.i18n, 'getMessage');
     const injected = createPeriodFilter({
       initialPreset: 'last7',
       now: () => NOW,
-      // Unknown keys surface as the key itself (missing-translation convention),
-      // proving the injected namespace is consulted instead of the default one.
+      // The injected keys are unknown to the locale. Under the production
+      // contract (unknown key -> '', getMessageOr falls back to the English
+      // literal, same as real Chrome) the rendered text cannot distinguish
+      // namespaces, so the injection is pinned at the API seam: the component
+      // must request the injected keys, not the default ones.
       labelKeys: {
         today: 'panelXPeriodToday',
         last7: 'panelXPeriodLast7',
@@ -217,8 +221,18 @@ describe('createPeriodFilter', () => {
     const injectedLabel = (
       injected.element.querySelector('button[data-preset="last7"]') as HTMLButtonElement
     ).textContent;
-    expect(injectedLabel).toBe('panelXPeriodLast7');
+    // Unknown injected key resolves to '' and getMessageOr falls back.
+    expect(injectedLabel).toBe('Last 7 days');
+    const injectedKeys = requested.mock.calls.map((c) => c[0]);
+    expect(injectedKeys, 'component never requested the injected label key').toContain(
+      'panelXPeriodLast7',
+    );
+    expect(
+      injectedKeys,
+      'component consulted the default namespace despite injected labelKeys',
+    ).not.toContain('periodFilterLast7Days');
     injected.destroy();
+    requested.mockClear();
 
     const defaulted = createPeriodFilter({
       initialPreset: 'last7',
@@ -231,6 +245,11 @@ describe('createPeriodFilter', () => {
     ).textContent;
     // The en mock resolves the unchanged periodFilterLast7Days key.
     expect(defaultLabel).toBe('Last 7 days');
+    const defaultedKeys = requested.mock.calls.map((c) => c[0]);
+    expect(defaultedKeys, 'component never requested the default label key').toContain(
+      'periodFilterLast7Days',
+    );
+    requested.mockRestore();
     defaulted.destroy();
   });
 
