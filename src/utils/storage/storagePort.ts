@@ -15,9 +15,31 @@ import { cloneAtStorageBoundary as cloneAtBoundary } from './structuredCloneBoun
 // stays importable under hoisted vi.mock of SettingsRepository).
 const API_KEY_FIELDS: readonly string[] = API_KEY_FIELD_NAMES;
 
+/**
+ * Payload shape of `set`, derived from the existing signature so the CAS
+ * fence and `set` stay in step without widening the port's value types.
+ */
+type StorageSetItems = Parameters<StoragePort['set']>[0];
+
 export interface StoragePort {
   get(keys: string | string[] | null): Promise<Record<string, unknown>>;
   set(items: Record<string, unknown>): Promise<void>;
+  /**
+   * Optional write-time fence for the CAS path (PBI 2026-10-18-18): re-reads
+   * the version keys, writes `items` only when every observed version still
+   * matches `expectedVersions`, and reports `false` otherwise. It lets
+   * `StorageTransaction` place its last version check inside the write call
+   * itself, so a cross-context writer that committed between the
+   * transaction's verify read and its write is rejected instead of silently
+   * overwritten. It is a narrowing, not a true CAS: the window between this
+   * internal read and the internal `set` remains, because chrome.storage.local
+   * has no compare-and-swap. Ports that do not implement it keep working;
+   * callers must feature-detect like `remove?`.
+   */
+  compareAndSet?(
+    items: StorageSetItems,
+    expectedVersions: Readonly<Record<string, number>>
+  ): Promise<boolean>;
   /**
    * Optional because only the destructive paths need it (legacy-key cleanup
    * in the settings migration). Ports that do not implement it keep working;
@@ -46,12 +68,40 @@ export function redactSettingsApiKeys(settings: Settings | null): Settings | nul
   return copy as Settings;
 }
 
+/**
+ * Shared body of `compareAndSet` for both concrete ports: one version-only
+ * read, then the write only when every observed version still matches. The
+ * missing-version default is 0, matching the transaction's INITIAL_VERSION.
+ * Reading and writing go through the instance's own `get`/`set`, so tests
+ * that patch those members on the instance observe the fence too.
+ */
+async function compareAndSetViaGetSet(
+  port: Pick<StoragePort, 'get' | 'set'>,
+  items: StorageSetItems,
+  expectedVersions: Readonly<Record<string, number>>
+): Promise<boolean> {
+  const versionKeys = Object.keys(expectedVersions);
+  const current = await port.get(versionKeys);
+  for (const [versionKey, expected] of Object.entries(expectedVersions)) {
+    const observed = current[versionKey];
+    if ((typeof observed === 'number' ? observed : 0) !== expected) return false;
+  }
+  await port.set(items);
+  return true;
+}
+
 export class ChromeStoragePort implements StoragePort {
   async get(keys: string | string[] | null): Promise<Record<string, unknown>> {
     return chrome.storage.local.get(keys) as Promise<Record<string, unknown>>;
   }
   async set(items: Record<string, unknown>): Promise<void> {
     await chrome.storage.local.set(items);
+  }
+  async compareAndSet(
+    items: StorageSetItems,
+    expectedVersions: Readonly<Record<string, number>>
+  ): Promise<boolean> {
+    return compareAndSetViaGetSet(this, items, expectedVersions);
   }
   async remove(keys: string | string[]): Promise<void> {
     await chrome.storage.local.remove(keys);
@@ -125,6 +175,13 @@ export class InMemoryStoragePort implements StoragePort {
     const changes: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(items)) changes[k] = cloneAtBoundary(v);
     for (const cb of this.listeners) cb(changes);
+  }
+
+  async compareAndSet(
+    items: StorageSetItems,
+    expectedVersions: Readonly<Record<string, number>>
+  ): Promise<boolean> {
+    return compareAndSetViaGetSet(this, items, expectedVersions);
   }
 
   async remove(keys: string | string[]): Promise<void> {

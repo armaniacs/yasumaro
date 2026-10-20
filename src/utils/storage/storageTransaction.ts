@@ -3,8 +3,10 @@
  * StorageTransaction — deep module hiding serialized CAS + versioning + post-write verification.
  *
  * Single seam for all storage read-modify-write: `withLock` (single key) and `withAtomic` (multi-key).
- * Internally owns key-granular serialization (microtask chain), versioned CAS, canonical equality,
- * and post-write verification (always on). Callers learn 2 methods; all 4 subsystems share one fix.
+ * Internally owns key-granular serialization (microtask chain), versioned CAS with a write-time
+ * fence (port.compareAndSet, narrowing but not closing the cross-context verify->write window),
+ * canonical equality, and post-write verification (always on). Callers learn 2 methods; all
+ * subsystems share one fix.
  *
  * Why microtask-only: timer-backed mutex does not progress under vi.useFakeTimers().
  * Why logger-independent: optimisticLock -> logger -> storageAdapter cycle is broken by keeping this free of logger barrel
@@ -213,6 +215,65 @@ async function verifyPostWrite(
   }
 }
 
+/**
+ * Write-time fence behind both CAS shapes (PBI 2026-10-18-18). The commit goes
+ * through `port.compareAndSet` when the port provides it, so the last version
+ * check happens inside the write call: a cross-context writer that committed
+ * between the verify read above and this write is rejected here (reported as a
+ * ConflictError the retry shell re-derives from) instead of being silently
+ * overwritten. Ports without the hook keep the legacy write path (plain `set`
+ * plus post-write verification), so existing call sites and hand-rolled test
+ * doubles are unaffected.
+ *
+ * Residual window (documented, not fixed): chrome.storage.local has no true
+ * compare-and-swap, so a commit landing between the fence's internal version
+ * read and its internal `set` is still not detectable here. The fence narrows
+ * the cross-context window to the two back-to-back IPCs of one port call; it
+ * does not close it.
+ *
+ * Lost-update impact per target key, readable from which writer loses (its
+ * fence rejects and it retries) and which keeps its commit:
+ * - `pending_pages`: popup saves (removePendingPages) and service-worker
+ *   automatic recording (addPendingPage) write the same key. The rejected
+ *   writer re-reads and re-merges, so the removal and the addition both
+ *   survive; without the fence the second write erased whichever update
+ *   landed first, silently dropping a saved page or a queued recording.
+ * - `recording_recovery_claims`: recovery claims are ownership claims. The
+ *   rejected claimant observes a ConflictError and retries, so exactly one
+ *   writer ends up owning the claim instead of two callers both believing
+ *   they own it (a recovery running twice or never).
+ * - `trust_db:json`: domain trust decisions. The rejected writer re-applies
+ *   its decision on top of the committed one, so a user's trust flip survives
+ *   instead of silently reverting to the other context's stale view.
+ */
+async function commitWithCasFence(
+  port: StoragePort,
+  items: Parameters<StoragePort['set']>[0],
+  expectedVersions: Record<string, number>,
+  conflictKey: string
+): Promise<void> {
+  if (typeof port.compareAndSet !== 'function') {
+    await port.set(items);
+    return;
+  }
+  const written = await port.compareAndSet(items, expectedVersions);
+  if (written) return;
+  // The version moved between the verify read and the write: surface the
+  // observed version in the conflict so the retry shell re-derives from it.
+  const versionKeys = Object.keys(expectedVersions);
+  const observed = await port.get(versionKeys);
+  for (const versionKey of versionKeys) {
+    const actual = observed[versionKey];
+    const actualVersion = typeof actual === 'number' ? actual : INITIAL_VERSION;
+    if (actualVersion !== expectedVersions[versionKey]) {
+      throw new ConflictError(conflictKey, expectedVersions[versionKey] ?? -1, actualVersion);
+    }
+  }
+  // The version moved and moved back inside the fence's own residual window;
+  // still report a conflict so the retry shell re-derives from fresh state.
+  throw new ConflictError(conflictKey, -1, -1);
+}
+
 // ---------------------------------------------------------------------------
 // Port resolution — default is ChromeStoragePort wrapping chrome.storage.local
 // ---------------------------------------------------------------------------
@@ -310,11 +371,13 @@ export class StorageTransaction {
             throw new ConflictError(conflictKey, currentVersions[conflictIndex] ?? -1, verifyVersions[conflictIndex] ?? -1);
           }
           const writePayload: Record<string, unknown> = {};
+          const expectedVersions: Record<string, number> = {};
           keyList.forEach((k, i) => {
             writePayload[k] = newValues[i];
             writePayload[`${k}_version`] = newVersions[i];
+            expectedVersions[`${k}_version`] = verifyVersions[i] ?? INITIAL_VERSION;
           });
-          await port.set(writePayload);
+          await commitWithCasFence(port, writePayload, expectedVersions, conflictKey);
 
           await verifyPostWrite(port, keyList, newValues, newVersions);
           return newValues;
@@ -379,9 +442,17 @@ async function performCasUpdate<T>(
     throw new ConflictError(key, currentVersion, verifyVersion);
   }
 
-  await port.set({ [key]: newValue, [`${key}_version`]: newVersion });
+  await commitWithCasFence(
+    port,
+    { [key]: newValue, [`${key}_version`]: newVersion },
+    { [`${key}_version`]: verifyVersion },
+    key
+  );
 
-  // post-write verification always enabled — closes TOCTOU window
+  // Post-write verification always enabled. It detects only an overwrite that
+  // lands between the write above and this re-read (the post-write window);
+  // the verify-read -> write window is narrowed by commitWithCasFence, not
+  // closed, because chrome.storage.local has no true compare-and-swap.
   await verifyPostWrite(port, [key], [newValue], [newVersion]);
 }
 
