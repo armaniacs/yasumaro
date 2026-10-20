@@ -5,7 +5,7 @@
 
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
-import { errorMessage } from '../../../utils/errorUtils.js';
+import { errorMessage, toError } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { Settings } from '../../../utils/storage/types.js';
 import { PrivacyPipeline } from '../../privacyPipeline.js';
@@ -91,7 +91,7 @@ export function createProcessPrivacyPipelineStep(
       };
     }
 
-    throw error instanceof Error ? error : new Error(errorMessage(error));
+    throw toError(error);
   }
   };
 }

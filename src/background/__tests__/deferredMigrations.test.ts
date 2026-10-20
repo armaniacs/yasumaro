@@ -169,7 +169,7 @@ describe('createDeferredMigrationRunner', () => {
     await runner();
     expect(mockLogError).toHaveBeenCalledWith(
       'Deferred startup migration failed',
-      { error: 'Error: runtime fail' },
+      { error: 'runtime fail' },
       'STORAGE_MIGRATION_FAILURE',
       'service-worker'
     );
@@ -181,7 +181,7 @@ describe('createDeferredMigrationRunner', () => {
     await runner();
     expect(mockLogError).toHaveBeenCalledWith(
       'SessionStore migration failed',
-      { error: 'Error: session fail' },
+      { error: 'session fail' },
       'STORAGE_MIGRATION_FAILURE',
       'service-worker'
     );

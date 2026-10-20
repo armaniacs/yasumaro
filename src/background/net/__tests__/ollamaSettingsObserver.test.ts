@@ -68,7 +68,7 @@ describe('createOllamaSettingsObserver', () => {
     await vi.waitFor(() => {
       expect(mockLogWarn).toHaveBeenCalledWith(
         'Ollama Origin header rule sync failed on settings change',
-        { error: 'Error: updateDynamicRules failed' },
+        { error: 'updateDynamicRules failed' },
         undefined,
         'service-worker',
       );

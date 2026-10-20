@@ -12,3 +12,16 @@
 export function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
+
+/**
+ * Normalize any thrown value into an Error for re-throw.
+ * Error instances are returned as-is (stack preserved); every other value is
+ * wrapped in a new Error carrying `errorMessage(value)`.
+ *
+ * Canonical replacement (PBI 2026-10-20-02) for the scattered
+ * `error instanceof Error ? error : new Error(String(error))` re-wrap, whose
+ * four independent implementations disagreed on stack preservation.
+ */
+export function toError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(errorMessage(error));
+}

@@ -39,7 +39,7 @@ export async function initAllowedUrlsSync(): Promise<void> {
         // so a failed seed must stay loud but never block SW startup.
         logError(
             'ALLOWED_URLS seed failed — FETCH_URL and provider allowlist stay fail-closed',
-            { error: errorMessage(error instanceof Error ? error : new Error(String(error))) },
+            { error: errorMessage(error) },
             ErrorCode.STORAGE_WRITE_FAILURE,
             'allowedUrlsSync',
         );
@@ -53,7 +53,7 @@ export async function initAllowedUrlsSync(): Promise<void> {
             } catch (error: unknown) {
                 logWarn(
                     'ALLOWED_URLS re-sync failed',
-                    { error: errorMessage(error instanceof Error ? error : new Error(String(error))) },
+                    { error: errorMessage(error) },
                     undefined,
                     'allowedUrlsSync',
                 );

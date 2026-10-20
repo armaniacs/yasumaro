@@ -55,7 +55,7 @@ export function createDeferredMigrationRunner(sqliteClient: SqliteClient): () =>
     try {
       await runMigration();
       SessionStore.migrateFromLocalStorage().catch((err) => {
-        logError('SessionStore migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+        logError('SessionStore migration failed', { error: errorMessage(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
       });
       const migrationService = new MigrationService(sqliteClient);
       await migrationService.run();
@@ -70,7 +70,7 @@ export function createDeferredMigrationRunner(sqliteClient: SqliteClient): () =>
         }
       }
     } catch (err) {
-      logError('Deferred startup migration failed', { error: String(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
+      logError('Deferred startup migration failed', { error: errorMessage(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     }
   };
 }

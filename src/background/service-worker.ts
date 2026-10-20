@@ -71,7 +71,7 @@ export function init(): void {
         const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
         await initExportScheduler();
       } catch (err) {
-        logError('Failed to init export scheduler', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+        logError('Failed to init export scheduler', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
     })();
 
@@ -95,7 +95,7 @@ export function init(): void {
           setSqliteWasmUrlOverride(chrome.runtime.getURL(WASM_ASSET_URLS.idbEngineWasmPublicPath));
           await import('../offscreen/offscreen.js');
         } catch (err) {
-          logError('Failed to start in-page offscreen host', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+          logError('Failed to start in-page offscreen host', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
         }
       })();
     }

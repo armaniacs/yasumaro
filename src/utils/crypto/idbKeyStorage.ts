@@ -14,6 +14,8 @@
  * nothing at the call site telling them apart.
  */
 
+import { toError } from '../errorUtils.js';
+
 /** Read/write surface for a single keyed CryptoKey record. */
 export interface IdbKeyStorage {
   get(): Promise<CryptoKey | null>;
@@ -61,7 +63,7 @@ async function runOnStore<T>(
     request = start(db.transaction(descriptor.storeName, mode).objectStore(descriptor.storeName));
   } catch (e) {
     db.close();
-    throw e instanceof Error ? e : new Error(String(e));
+    throw toError(e);
   }
   try {
     return await new Promise<T>((resolve, reject) => {

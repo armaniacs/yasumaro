@@ -182,7 +182,7 @@ export class FallbackStorage {
       await this.saveData(data);
       return { success: true, id };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     } finally {
       this.mutex.release();
     }
@@ -231,7 +231,7 @@ export class FallbackStorage {
       await this.saveData(data);
       return { success: true, count: insertedCount };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     } finally {
       this.mutex.release();
     }
@@ -357,7 +357,7 @@ export class FallbackStorage {
 
       return { success: true, rows, total };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -377,7 +377,7 @@ export class FallbackStorage {
       });
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -389,7 +389,7 @@ export class FallbackStorage {
       });
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -408,7 +408,7 @@ export class FallbackStorage {
       }
       return { success: true, is_starred: nextStarred };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -418,7 +418,7 @@ export class FallbackStorage {
       const count = data.records.filter(r => r.is_deleted === 0).length;
       return { success: true, count };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -428,7 +428,7 @@ export class FallbackStorage {
       await chrome.storage.local.set({ [STORAGE_KEY_COUNTER]: 0 });
       return { success: true };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -480,7 +480,7 @@ export class FallbackStorage {
       });
       return { success: true, purged };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 
@@ -532,7 +532,7 @@ export class FallbackStorage {
       });
       return { success: true, purged: totalPurged };
     } catch (error) {
-      return { success: false, error: String(error) };
+      return { success: false, error: errorMessage(error) };
     }
   }
 

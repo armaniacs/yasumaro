@@ -41,7 +41,7 @@ import initWasmModule, {
     narrowToTopTags as narrowToTopTagsWasm,
 } from './tagCooccurWasm.js';
 import { initExtensionWasm } from '../initWasm.js';
-import { errorMessage } from '../../utils/errorUtils.js';
+import { toError } from '../../utils/errorUtils.js';
 import type { TagNode, TagEdge } from '../../dashboard/tagCooccurrence.js';
 
 /**
@@ -110,7 +110,7 @@ export async function computeCooccurrenceWithWasm(
         ) as RawCooccurResult;
         return decodeCooccurResult(raw);
     } catch (error: unknown) {
-        throw error instanceof Error ? error : new Error(errorMessage(error));
+        throw toError(error);
     }
 }
 
@@ -210,6 +210,6 @@ export async function narrowEntriesToTopTagsWithWasm<
         }
         return entries.map((entry, i) => ({ ...entry, tags: pieces[i]! }));
     } catch (error: unknown) {
-        throw error instanceof Error ? error : new Error(errorMessage(error));
+        throw toError(error);
     }
 }

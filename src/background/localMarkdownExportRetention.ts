@@ -23,6 +23,7 @@
 
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { withOptimisticLock, withAtomicKeys } from '../utils/storage/storageTransaction.js';
 
 // Kept as a constant rather than a settings-UI knob: local Markdown export is an
@@ -151,7 +152,7 @@ async function verifyDownloadIdentity(record: DownloadRecord): Promise<DownloadI
   } catch (error: unknown) {
     addLog(LogType.WARN, 'Local Markdown download identity search failed', {
       downloadId: record.downloadId,
-      error: String(error),
+      error: errorMessage(error),
     });
     return 'search-failed';
   }
@@ -232,7 +233,7 @@ async function eraseDownloadRecord(record: DownloadRecord): Promise<EraseRecordO
   } catch (error: unknown) {
     addLog(LogType.ERROR, 'Local Markdown download record erase failed', {
       downloadId: record.downloadId,
-      error: String(error),
+      error: errorMessage(error),
     });
     return 'erase-failed';
   }

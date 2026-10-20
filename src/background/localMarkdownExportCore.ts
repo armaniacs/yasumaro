@@ -11,6 +11,7 @@ import { DEFAULT_SETTINGS } from '../utils/storage/defaults.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { DAILY_BUFFER_PREFIX, buildDailyMarkdown } from './pipeline/steps/saveLocalMarkdownStep.js';
 import { getActiveTemplate } from '../utils/markdownTemplateUtils.js';
 import { recordDownloadId } from './localMarkdownExportRetention.js';
@@ -86,10 +87,10 @@ export async function flushBufferedExports(
           entryCount: entries.length
         });
       } catch (error: unknown) {
-        addLog(LogType.ERROR, 'Local Markdown flush failed for date', { date, error: String(error) });
+        addLog(LogType.ERROR, 'Local Markdown flush failed for date', { date, error: errorMessage(error) });
       }
     }
   } catch (error: unknown) {
-    addLog(LogType.ERROR, 'Local Markdown flush failed', { error: String(error) });
+    addLog(LogType.ERROR, 'Local Markdown flush failed', { error: errorMessage(error) });
   }
 }

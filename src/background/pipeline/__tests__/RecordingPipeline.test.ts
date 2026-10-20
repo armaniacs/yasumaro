@@ -59,6 +59,7 @@ vi.mock('../../../utils/storage/domainFilterCache.js');
 vi.mock('../../../utils/storage/quota.js');
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+  toError: vi.fn((e: unknown) => (e instanceof Error ? e : new Error(String(e)))),
 }));
 vi.mock('../../../utils/pendingStorage.js', () => ({
   addPendingPage: vi.fn().mockResolvedValue(undefined),

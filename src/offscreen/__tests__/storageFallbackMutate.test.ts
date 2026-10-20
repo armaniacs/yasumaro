@@ -170,7 +170,7 @@ describe('FallbackStorage.mutate serialization', () => {
         },
       ) as Partial<BrowsingLogRecord>;
       const res = await storage.update(1, hostile);
-      expect(res).toEqual({ success: false, error: 'Error: boom' });
+      expect(res).toEqual({ success: false, error: 'boom' });
 
       const ok = await storage.hardDelete(1);
       expect(ok).toEqual({ success: true });

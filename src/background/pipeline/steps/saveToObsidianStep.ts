@@ -5,7 +5,7 @@
 
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
-import { errorMessage } from '../../../utils/errorUtils.js';
+import { errorMessage, toError } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
 import { decideSaveSkip } from '../recordingDecision.js';
 import type { RecordingContext, StepDeps } from '../types.js';
@@ -75,6 +75,6 @@ export const saveToObsidianStep = async (
       title,
       traceId: context.traceId
     });
-    throw error instanceof Error ? error : new Error(errorMessage(error));
+    throw toError(error);
   }
 };

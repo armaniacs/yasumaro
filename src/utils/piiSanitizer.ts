@@ -7,7 +7,7 @@
 
 import { MAX_PII_INPUT_SIZE, MAX_PII_OUTPUT_SIZE } from './limits.js';
 import { validateLuhn } from './luhn.js';
-import { errorMessage } from './errorUtils.js';
+import { toError } from './errorUtils.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { pickDefined } from './objectUtils.js';
 
@@ -402,6 +402,6 @@ export async function sanitizeRegex(text: string, options: SanitizeOptions = {})
     } catch (error: unknown) {
         // PII サニタイズ失敗時はエラーをスローしてパイプラインを中断する。
         // [SANITIZATION_FAILED] プレースホルダーを返すと、ゴミデータが保存されるため。
-        throw error instanceof Error ? error : new Error(errorMessage(error));
+        throw toError(error);
     }
 }

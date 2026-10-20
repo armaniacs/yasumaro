@@ -6,7 +6,7 @@ import { NoteSectionEditor } from './noteSectionEditor.js';
 import { Mutex } from '../utils/Mutex.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
-import { errorMessage } from '../utils/errorUtils.js';
+import { errorMessage, toError } from '../utils/errorUtils.js';
 import { CONNECTION_TEST_CACHE_MODE, noRedirectInit, fetchWithTimeout } from '../utils/fetch.js';
 import {
     isRetryableNetworkError,
@@ -263,7 +263,7 @@ export class ObsidianClient {
 
                 await this._writeContent(targetUrl, headers, newContent, traceId);
             } catch (error: unknown) {
-                throw this._handleError(error instanceof Error ? error : new Error(String(error)), targetUrl, traceId);
+                throw this._handleError(toError(error), targetUrl, traceId);
             }
         } finally {
             // 確実にロックを解放

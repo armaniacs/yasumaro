@@ -7,7 +7,7 @@ import { clearElement } from '../domUtils.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
 import { logWarn } from '../../utils/logger/api.js';
-import { errorMessage } from '../../utils/errorUtils.js';
+import { errorMessage, toError } from '../../utils/errorUtils.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
 import type { ContentResponse } from '../mainTypes.js';
 import { showSpinner, hideSpinner } from '../spinner.js';
@@ -412,7 +412,7 @@ export class RecordSession {
       return await this.tabContentFetcher.fetch(tab, force);
     } catch (e: unknown) {
       if (force) return { content: '' };
-      throw e instanceof Error ? e : new Error(String(e));
+      throw toError(e);
     }
   }
 

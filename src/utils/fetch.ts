@@ -13,6 +13,7 @@
 
 import { normalizeUrl } from './urlUtils.js';
 import { CSPValidator, getCspErrorMessage } from './cspValidator.js';
+import { toError } from './errorUtils.js';
 import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { StorageKeys } from './storage/types.js';
@@ -449,7 +450,7 @@ export async function fetchWithRetry(
         throw attemptError;
       }
     } catch (error: unknown) {
-      lastError = error instanceof Error ? error : new Error(String(error));
+      lastError = toError(error);
 
       // リトライ条件チェック
       if (attempt < maxRetryCount && shouldRetry(lastError, attempt + 1, null, requestMethod)) {

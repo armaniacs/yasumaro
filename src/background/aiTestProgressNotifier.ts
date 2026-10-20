@@ -15,6 +15,7 @@
 
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import {
     AI_TEST_PROGRESS_MESSAGE_TYPE,
     type AiTestProgressMessage,
@@ -34,10 +35,10 @@ export function notifyAiTestProgress(progress: AiTestProgressMessage['progress']
             chrome.runtime.sendMessage({ type: AI_TEST_PROGRESS_MESSAGE_TYPE, progress } satisfies AiTestProgressMessage)
         ).catch((err: unknown) => {
             // No receiver listening (Dashboard closed / SW context invalidated).
-            addLog(LogType.WARN, `AI_TEST_PROGRESS discard: ${String(err)}`);
+            addLog(LogType.WARN, `AI_TEST_PROGRESS discard: ${errorMessage(err)}`);
         });
     } catch (err) {
         // sendMessage can throw synchronously (e.g. extension context invalidated).
-        addLog(LogType.WARN, `AI_TEST_PROGRESS discard (sync): ${String(err)}`);
+        addLog(LogType.WARN, `AI_TEST_PROGRESS discard (sync): ${errorMessage(err)}`);
     }
 }

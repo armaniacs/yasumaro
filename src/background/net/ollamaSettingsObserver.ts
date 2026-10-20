@@ -8,6 +8,7 @@
 import { StorageKeys } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { logWarn } from '../../utils/logger/api.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 export function createOllamaSettingsObserver(
   syncFn: (baseUrl: string) => Promise<void>,
@@ -22,7 +23,7 @@ export function createOllamaSettingsObserver(
     void syncFn(nextOllamaBaseUrl).catch((error) => {
       logWarn(
         'Ollama Origin header rule sync failed on settings change',
-        { error: String(error) },
+        { error: errorMessage(error) },
         undefined,
         'service-worker',
       );

@@ -16,7 +16,7 @@
  * the glue directly, mirroring the pii-sanitizer pattern.
  */
 
-import { errorMessage } from '../utils/errorUtils.js';
+import { toError } from '../utils/errorUtils.js';
 
 /**
  * Resolves a wasm binary's extension URL. Extension-context only
@@ -62,7 +62,7 @@ export function initExtensionWasm(
         () => undefined,
         (error: unknown) => {
             initPromises.delete(fileName);
-            throw error instanceof Error ? error : new Error(errorMessage(error));
+            throw toError(error);
         }
     );
     initPromises.set(fileName, promise);

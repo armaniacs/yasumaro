@@ -413,7 +413,7 @@ export class SessionStore implements SessionStorePort {
     } catch (error) {
       addLog(LogType.ERROR, 'SessionStore: failed to migrate single key from local storage', {
         key,
-        error: String(error),
+        error: errorMessage(error),
       });
       return false;
     }
@@ -448,7 +448,7 @@ export class SessionStore implements SessionStorePort {
       return true;
     } catch (error) {
       addLog(LogType.ERROR, 'SessionStore: failed to migrate session data', {
-        error: String(error),
+        error: errorMessage(error),
       });
       return false;
     }

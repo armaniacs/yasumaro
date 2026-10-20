@@ -37,7 +37,7 @@ import initWasmModule, {
     deduplicateIndices as deduplicateIndicesWasm,
 } from './sentenceDedupWasm.js';
 import { initExtensionWasm } from '../initWasm.js';
-import { errorMessage } from '../../utils/errorUtils.js';
+import { toError } from '../../utils/errorUtils.js';
 
 /**
  * Initializes the wasm module. Safe to call repeatedly (idempotent) and
@@ -87,6 +87,6 @@ export async function deduplicateIndicesWithWasm(
             sentenceCount: result.sentenceCount,
         };
     } catch (error: unknown) {
-        throw error instanceof Error ? error : new Error(errorMessage(error));
+        throw toError(error);
     }
 }

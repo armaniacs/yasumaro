@@ -18,6 +18,7 @@ import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import type { OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import type { RecordingOrchestrator } from './pipeline/RecordingOrchestrator.js';
 import { createOfflineQueueProcessor } from './offlineQueueProcessor.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { shouldCreateStandingAlarm } from './standingAlarmGuard.js';
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
@@ -232,7 +233,7 @@ export function createAlarmRegistry(deps: AlarmHandlerDeps): AlarmRegistry {
             await job.install();
           }
         } catch (err: unknown) {
-          addLog(LogType.ERROR, `Alarm job ${job.name} install failed`, { error: String(err) });
+          addLog(LogType.ERROR, `Alarm job ${job.name} install failed`, { error: errorMessage(err) });
         }
       }
     },
@@ -242,7 +243,7 @@ export function createAlarmRegistry(deps: AlarmHandlerDeps): AlarmRegistry {
       void job
         .run(deps)
         .catch((err: unknown) =>
-          addLog(LogType.ERROR, `Alarm job ${job.name} failed`, { error: String(err) }),
+          addLog(LogType.ERROR, `Alarm job ${job.name} failed`, { error: errorMessage(err) }),
         );
     },
   };

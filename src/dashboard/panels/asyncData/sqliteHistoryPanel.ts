@@ -1,4 +1,5 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
@@ -218,7 +219,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       );
     } catch (e: unknown) {
       if (container) {
-        showEntryRegenerateError(container, id, mapRegenerateError(e instanceof Error ? e.message : String(e), false));
+        showEntryRegenerateError(container, id, mapRegenerateError(errorMessage(e), false));
       }
     } finally {
       regenerateInFlight.delete(id);
@@ -307,7 +308,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     } catch (e: unknown) {
       notify(
         t('historyRegenerateSelected'),
-        mapRegenerateError(e instanceof Error ? e.message : String(e), false),
+        mapRegenerateError(errorMessage(e), false),
       );
     } finally {
       bulkRegenerateInFlight = false;
