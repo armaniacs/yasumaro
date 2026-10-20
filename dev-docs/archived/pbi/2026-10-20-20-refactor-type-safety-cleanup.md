@@ -43,6 +43,11 @@ Scenario: 二重表現の統一
 2 pt（RICE: 14 = Reach 14 × Impact 2 × Confidence 1.0 ÷ Effort 2.0 人日）
 
 ## DoD
-- [ ] 対象 11 箇所の不要 as が消える（二重表現 1 件を含む）
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 対象 11 箇所の不要 as が消える（二重表現 1 件を含む）
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 11 箇所整備（実行時の形は不変・型レベルのみ）: RecordingOrchestrator as never 削除、urlEntry の Record|Map 二重表現を Record に統一（cleansingStatsView の instanceof Map 防御的分岐も削除）、commonStorageFields の as unknown as 連鎖排除 + recordType を RecordType 型に、statusChecker の手書き PrivacyInfo を canonical 型 import に置換 + isFilterMode 境界ガード、settingsPipeline / domainSearchPanel の二重キャストを直接インデックスに、exportImport の as string 5 つ削除（optional 型明示）、trustSettings の 3 キャストを isTrancoTier / isSafetyMode 境界ガードに、ublockMatcher の非同期不要を同期化 + as object 削除、visitReporter の confirm 関数キャスト削除
+- 別 PBI 候補として報告: panels/types.ts:16 の Record → PanelInitMap は NavigationRegistry の wide navigate() が pin する init パススルー契約と不整合のため型レベルのみでは完結しない
+- 検証: 担当モジュールのテスト全 green、npm run type-check exit 0、eslint（11 ファイル）エラーなし、validate:fast green

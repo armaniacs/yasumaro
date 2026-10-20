@@ -14,23 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 13件完了・アーカイブ済み（01・02・03・05・06・09・10・11・13・15・17・19・22） / ⬜ 11件残 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → 04(50) → ~~05(48)~~ → ~~06(42)~~ → 07(38) → 08(32) → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → ~~15(20)~~ → 16(18) → ~~17(18)~~ → 18(15) → ~~19(14)~~ → 20(14) → 21(13) → ~~22(12)~~ → 23(12) → 24(8)
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 17件完了・アーカイブ済み（01・02・03・04・05・06・08・09・10・11・13・15・17・19・20・22・24） / ⬜ 7件残（07・12・14・16・18・21・23） 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → 07(38) → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → ~~15(20)~~ → 16(18) → ~~17(18)~~ → 18(15) → ~~19(14)~~ → ~~20(14)~~ → 21(13) → ~~22(12)~~ → 23(12) → ~~24(8)~~
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 04 | [2026-10-20-04-refactor-constant-ssot-consolidation.md](2026-10-20-04-refactor-constant-ssot-consolidation.md) | refactor | 50 | 2.0 | 同値二重定義・mirror 契約 14 組（KEY_LENGTH・day-ms・24h TTL・timeout 30000・'local_export_' ほか） |
 | ⬜ 07 | [2026-10-20-07-refactor-dead-code-removal.md](2026-10-20-07-refactor-dead-code-removal.md) | refactor | 38 | 2.0 | production 呼び出し 0 件のエクスポート・死に契約 19 件（SQLITE_EXPORT 到達不能契約・watchDynamicContent ほか） |
-| ⬜ 08 | [2026-10-20-08-refactor-csp-queue-machine-removal.md](2026-10-20-08-refactor-csp-queue-machine-removal.md) | refactor | 32 | 1.0 | cspValidator キュー実行マシン ~90 行（本番 0 件）+ cspSettings 未接続・ハードコード origin |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
 | ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
 | ⬜ 16 | [2026-10-20-16-refactor-settings-migration-types.md](2026-10-20-16-refactor-settings-migration-types.md) | refactor | 18 | 2.0 | settingsMigration の boolean 合同 as ×4 + as never ×2 を core シグネチャへ統合 |
 | ⬜ 18 | [2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md](2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md) | refactor | 15 | 2.0 | fetchWithRetry の 2 同形ブロック（:434-450 / :455-470）+ ssrfGuard localhost 判定 ×3 |
-| ⬜ 20 | [2026-10-20-20-refactor-type-safety-cleanup.md](2026-10-20-20-refactor-type-safety-cleanup.md) | refactor | 14 | 2.0 | 不要 as 11 箇所（RecordingOrchestrator as never・urlEntry Record|Map 二重表現・trustSettings 境界ガードなし ほか） |
 | ⬜ 21 | [2026-10-20-21-refactor-remaining-dry-consolidation.md](2026-10-20-21-refactor-remaining-dry-consolidation.md) | refactor | 13 | 2.0 | 残り DRY（ID 生成 SSOT 未準拠・promptSafety 6 点目・escapeRegex・OWTestState ほか） |
 | ⬜ 23 | [2026-10-20-23-refactor-sqlite-handler-types.md](2026-10-20-23-refactor-sqlite-handler-types.md) | refactor | 12 | 1.0 | sqlite ハンドラの動的ディスパッチ・手書き 9 対応・worker type 生リテラル（同期ルール非対称） |
-| ⬜ 24 | [2026-10-20-24-refactor-srp-splits.md](2026-10-20-24-refactor-srp-splits.md) | refactor | 8 | 3.0 | SRP 分割 3 単位（piiSanitizer sanitizeRegex 4 責務・ModelsDevDialog 507 行・recordSession loadCurrentTab） |
 
 実行順の推奨: RICE 順。**02 と 03 は同じ catch ブロックを触ることが多いため 1 ブランチでの同時実施を推奨**。07（死にコード削除）を先にすると 08・21 が縮小する。対象外リスト（fix 型・17 件）と依存グラフは [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
@@ -514,6 +510,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 04・08・20・24 アーカイブ ― リファクタリング診断 24件のうち 17件完了（01-06・08-11・13・15・17・19・20・22・24）
+
+- **04-refactor-constant-ssot-consolidation**（`4bb1cce4`）: 同値二重定義 14 組を各レイヤーの owner に統合（CRYPTO_PARAMS key/IV・PENDING_MAX_TTL_MS・MS_PER_DAY・DEFAULT_TIMEOUT_MS・DAILY_BUFFER_PREFIX・StorageKeys ×2・PAGE_SIZE・queryPlanner 保持既定 ほか）。設計判断 4 件（循環回避方向・部分モック保護の実証ほか）を 5 Whys に記録。パリティ pin 2 本新規。
+- **08-refactor-csp-queue-machine-removal**（`6c683207`）: 本番 0 件再確認の上でキューマシン + safeFetch を削除（-136 行）、cspSettings のハードコード origin を listSources.ts SSOT 派生の完全一致 lookup に置換（fail-closed）。race-condition テスト 7 件（キュー挙動 pin）を削除。
+- **20-refactor-type-safety-cleanup**（`68cba9bd`）: 不要 as 11 箇所を境界ガード（isTrancoTier/isSafetyMode/isFilterMode）・直接参照に置換（実行時の形不変）。panels/types.ts:16 は NavigationRegistry の wide 契約と不整合のため別 PBI 候補として報告。
+- **24-refactor-srp-splits**（`2e43ef82`）: sanitizeRegex を 4 責務関数へ、ModelsDevDialog を ModelsDevCatalog + persistProviderConnection へ、loadCurrentTab を currentTabPage.ts の 3 ステップへ分割（ファサード維持・既存テスト無修正・574 テスト全 green）。
 
 ### 2026-10-21 PBI 02・10・15・19 アーカイブ ― リファクタリング診断 24件のうち 13件完了（01・02・03・05・06・09・10・11・13・15・17・19・22）
 

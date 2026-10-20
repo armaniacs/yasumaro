@@ -35,6 +35,13 @@ Scenario: origin の SSOT 派生
 1 pt（RICE: 32 = Reach 8 × Impact 2 × Confidence 1.0 ÷ Effort 0.5 人日）
 
 ## DoD
-- [ ] 削除直前に safeFetch/enqueueQueuedRequest の本番呼び出し 0 件を再確認
-- [ ] npm run validate 通過
-- [ ] npm run build 通過
+- [x] 削除直前に safeFetch/enqueueQueuedRequest の本番呼び出し 0 件を再確認
+- [x] npm run validate 通過
+- [x] npm run build 通過
+
+## 実装記録（2026-10-21）
+- 本番 0 件を再確認（safeFetch / enqueueQueuedRequest / prepareInitialization の本番呼び出し 0 件、requestEssentialPermission の呼び出し元もテストのみ）し、owner 判断として削除を選択（復活時も現行の事前初期化経路と同じ形になるためキュー再導入は設計変更時の実装で足りる）
+- cspValidator.ts を 476→340 行に（QueuedRequest・キューマシン状態 9 項目・safeFetch・CspError クラスを削除。本番の validate 部分は不変。isInitialized は fetch.test.ts がモックするため維持）
+- cspSettings.ts のハードコード origin を ESSENTIAL_PERMISSION_HOSTS + OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS（listSources.ts SSOT 派生）からの完全一致 lookup に置換（実効 origin 不変、消失時は warn して fail-closed）
+- pin 更新: safeFetch export チェックを「削除済み pin」に更新、race-condition テスト 7 件（削除対象のキュー挙動 pin）を削除、permission-request テストをリテラル pin → SSOT pin
+- 検証: cspValidator / cspSettings 系 11 ファイル 250 テスト全 green、type-check 通過、validate:fast green

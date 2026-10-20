@@ -35,6 +35,13 @@ Scenario: 呼び出し側のシグネチャ不変
 3 pt（RICE: 8 = Reach 3 × Impact 3 × Confidence 0.5 ÷ Effort 2.0 人日）
 
 ## DoD
-- [ ] 分割後も parity テスト・既存 4 スイート全通過
-- [ ] 呼び出し側のシグネチャが不変であること
-- [ ] npm run validate 通過
+- [x] 分割後も parity テスト・既存 4 スイート全通過
+- [x] 呼び出し側のシグネチャが不変であること
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- piiSanitizer sanitizeRegex を validateInput / detectPii / replacePii / reportResult の 4 関数へ分割（ファサード維持、シグネチャ・戻り値・エラー意味論・MAX_* 定数不変）
+- ModelsDevDialog を分割: 新規 src/dashboard/models-dev-dialog-data.ts（ModelsDevCatalog 92 行）と models-dev-dialog-save.ts（persistProviderConnection 42 行）、ファサードは DOM ライフサイクルを保持（テストが参照する private メンバ維持）
+- recordSession loadCurrentTab を分割: 新規 src/popup/recordCurrentPage/currentTabPage.ts（fetchCurrentTab / renderCurrentTabPage / isTabRecordable 57 行）、loadCurrentTab は 3 ステップのファサード
+- manifest.json の WAR 更新は不要（src/utils 配下はファイル分割なし、新規ファイルは content script から動的 import されない）。npm run build 通過で配線確認
+- 検証: 担当 3 単位の既存テスト無修正で 14 ファイル / 574 テスト全 green、npm run build（chromium）通過、type-check clean、validate:fast green
