@@ -29,7 +29,7 @@ PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後�
 
 進め方: **同意系（03 → 10 → 11 → 07）を先に**まとめると、同意の実効性（受付・実行時・表示）を 1 期で閉じられる。**redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。01・02 は完了・アーカイブ済み（2026-10-19）。
 
-### 2026-10-18 security-audit run-2（25件） ― 🔶 3件完了（01/05/08）・22件未着手 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
+### 2026-10-18 security-audit run-2（25件） ― 🔶 15件完了・アーカイブ済み / ⬜ 10件残（12/15/17/18/20/21/22/23/24/25） 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
 
 security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: standard）の needs_validation 25件を RICE 採点して PBI 化。**confirmed 0件**（OS-enforced sandbox 不在の source-only 実行のため confirmed は原理的に出ない）。rejected 4件はソース反証済みで PBI 化せず。
 
@@ -39,22 +39,10 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 02 | [2026-10-18-02-fix-alarm-daily-purge-recreate.md](2026-10-18-02-fix-alarm-daily-purge-recreate.md) | fix | 5600 | 0.5 | daily-purge の 24h カウントダウンリセット。既存ガードと共通化 |
-| ⬜ 03 | [2026-10-18-03-fix-npm-mirror-lockfile-registry.md](2026-10-18-03-fix-npm-mirror-lockfile-registry.md) | fix | 4800 | 3.0 | npm ミラーの無宣言依存。発生機構（~/.npmrc + replace-registry-host）特定済み |
-| ⬜ 04 | [2026-10-18-04-fix-notification-consent-prestage.md](2026-10-18-04-fix-notification-consent-prestage.md) | fix | 4800 | 1.0 | 通知 Save に同意 pre-stage 欠落。05 と整合 |
-| ⬜ 06 | [2026-10-18-06-fix-trust-db-merge-union-removals.md](2026-10-18-06-fix-trust-db-merge-union-removals.md) | fix | 4000 | 5.0 | 信頼DB merge を和集合から操作種別考慮へ |
-| ⬜ 07 | [2026-10-18-07-fix-buffer-key-retention-sweep-noop.md](2026-10-18-07-fix-buffer-key-retention-sweep-noop.md) | fix | 3000 | 0.5 | buffer key sweep の恒久 no-op。195ff96 再発。テストモックの偽セマンティクス解消が本体 |
-| ⬜ 09 | [2026-10-18-09-fix-fallback-migration-partial-wipe.md](2026-10-18-09-fix-fallback-migration-partial-wipe.md) | fix | 1500 | 1.0 | fallback 移行の partial failure 時の clearAll。既存テストの期待値書き換え必須 |
-| ⬜ 10 | [2026-10-18-10-fix-opfs-v2-verify-before-delete.md](2026-10-18-10-fix-opfs-v2-verify-before-delete.md) | fix | 1500 | 3.0 | OPFS V2 移行の件数未検証削除。件数一致ガード不成立を明記 |
-| ⬜ 11 | [2026-10-18-11-fix-logger-pii-size-gate.md](2026-10-18-11-fix-logger-pii-size-gate.md) | fix | 1500 | 1.0 | PII サイズゲート超過時の原文永続化。3 sink に閉じれば低リスク |
 | ⬜ 12 | [2026-10-18-12-fix-settings-stale-patch-revert.md](2026-10-18-12-fix-settings-stale-patch-revert.md) | fix | 1200 | 2.0 | pre-lock read の stale patch で資格情報セーブが巻き戻る |
-| ⬜ 13 | [2026-10-18-13-fix-fallback-quota-purge-order.md](2026-10-18-13-fix-fallback-quota-purge-order.md) | fix | 1000 | 1.5 | quota purge の順序と star exempt。maxRecords 分岐の裁定が要る |
-| ⬜ 14 | [2026-10-18-14-fix-obsidian-host-encoded-ip.md](2026-10-18-14-fix-obsidian-host-encoded-ip.md) | fix | 1000 | 0.1 | Obsidian ホスト検証の parser-differential |
 | ⬜ 15 | [2026-10-18-15-fix-hmac-kek-fail-open.md](2026-10-18-15-fix-hmac-kek-fail-open.md) | fix | 750 | 2.0 | KEK fail-open による署名鍵の暗黙失効。選択肢2のみ先行切り出し可 |
-| ⬜ 16 | [2026-10-18-16-fix-markdown-ws-link-escape.md](2026-10-18-16-fix-markdown-ws-link-escape.md) | fix | 750 | 0.3 | 空白区切り markdown リンク綴りのエスケープ |
-| ⬜ 17 | [2026-10-18-17-fix-recovery-migration-snapshot-remove.md](2026-10-18-17-fix-recovery-migration-snapshot-remove.md) | fix | 600 | 2.0 | OPFS 復旧移行の fail-open ゲートと snapshot-remove 窓 |
+| ⬜ 17 | [2026-10-18-17-fix-recovery-migration-snapshot-remove.md](2026-10-18-17-fix-recovery-migration-snapshot-remove.md) | fix | 600 | 2.0 | OPFS 復旧移行の fail-open ゲートと snapshot-remove 窓。19 完了後のため未着手 |
 | ⬜ 18 | [2026-10-18-18-fix-storage-cross-context-cas.md](2026-10-18-18-fix-storage-cross-context-cas.md) | fix | 600 | 8.0 | クロスコンテキスト CAS の verify→set 窓。MV3 に真の CAS 無しの難度 🔴 |
-| ⬜ 19 | [2026-10-18-19-fix-recovery-field-mapping-drift.md](2026-10-18-19-fix-recovery-field-mapping-drift.md) | fix | 600 | 1.0 | 復旧移行のフィールド対応漏れ。既存テストが1件も無い |
 | ⬜ 20 | [2026-10-18-20-fix-session-lock-fanout.md](2026-10-18-20-fix-session-lock-fanout.md) | fix | 400 | 1.0 | 自動ロック通知の fan-out に受け手が無い。宛先修正は別 PBI に分岐 |
 | ⬜ 21 | [2026-10-18-21-fix-download-cap-unerased-entries.md](2026-10-18-21-fix-download-cap-unerased-entries.md) | fix | 333 | 1.5 | cap 落ちレコードが erase 経路から消える。22 と同一関数を触るため直列 |
 | ⬜ 22 | [2026-10-18-22-fix-purge-download-id-rebind.md](2026-10-18-22-fix-purge-download-id-rebind.md) | fix | 300 | 3.0 | purge が downloadId を再照合せず個人ファイルを削除しうる |
@@ -62,7 +50,7 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 | ⬜ 24 | [2026-10-18-24-fix-restore-verify-count.md](2026-10-18-24-fix-restore-verify-count.md) | fix | 300 | 1.0 | 復元件数不一致でもバックアップを削除する |
 | ⬜ 25 | [2026-10-18-25-fix-gist-egress-csp-declare.md](2026-10-18-25-fix-gist-egress-csp-declare.md) | fix | 80 | 1.0 | Gist の origin 未宣言。fail-closed 側で出荷済み機能が動作しない |
 
-実行順（B1→B5）: B1 = ~~01/08~~(2026-10-19 完了)/14/16/23 → B2 = 02/04/07/09/11/24 → B3 = ~~05~~(2026-10-19 完了)/13/20/21/22（21→22 は直列）→ B4 = 03/06/10/12/15/17/19 → B5 = 18/25（単独・工数大）。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
+実行順（B1→B5）: B1 = ~~01/08~~(2026-10-19 完了)/~~14/16/23~~(2026-10-20 完了) → B2 = ~~02/04/07/09/11/24~~(24 は残) → B3 = ~~05~~(2026-10-19 完了)/~~13/20/21/22~~(13 完了・20/21/22 は残、21→22 は直列) → B4 = 03/06/10/12/15/17/19 のうち ~~03/06/10/17/19~~ 完了・12/15 は残 → B5 = 18/25（単独・工数大）。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
 
 ### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） ― ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
 
