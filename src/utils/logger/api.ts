@@ -7,6 +7,7 @@ import { addLog, flushLogs, isDevelopment } from './core.js';
 import { defaultCriticalSink, type CriticalAlertSink } from './criticalAlertSink.js';
 import { ErrorCode, ErrorCodeValues, LogType, LogTypeValues } from './types.js';
 import { sanitizeRegex } from '../piiSanitizer.js';
+import { persistableLogText } from './sanitize.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
 
@@ -170,7 +171,10 @@ export async function logCritical<T extends object = Record<string, unknown>>(
 
     // OS通知は chrome.storage への保存経路（addLog）とは別経路のため、
     // ここでも明示的にサニタイズする。addLog内のサニタイズは通知には効かない。
+    // PBI 2026-10-18-11: 保存経路と通知経路を乖離させない。PII サイズゲート超過
+    // （error あり・マスク 0 件）の原文も通知本文に載せない。優先判断は
+    // 「PII を残さない」（persistableLogText のコメント参照）。
     const sanitizedMessage = await sanitizeRegex(message);
-    const notificationMessage = sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message;
+    const notificationMessage = await persistableLogText(message, sanitizedMessage);
     sink.raise(notificationMessage, details as Record<string, unknown>, errorCode);
 }

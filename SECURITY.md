@@ -27,6 +27,7 @@ This security policy covers:
 - The Yasumaro Chrome extension (Manifest V3)
 - API key storage and encryption
 - PII handling and sanitization
+- Diagnostic log PII handling (see `dev-docs/SECURITY_REVIEW_GUIDE.md`)
 - Content Security Policy
 - Third-party dependency vulnerabilities
 

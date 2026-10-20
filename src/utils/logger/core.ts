@@ -10,7 +10,7 @@
 import { sanitizeRegex } from '../piiSanitizer.js';
 import { neutralizeLogText } from './neutralize.js';
 import { LogBuffer } from './buffer.js';
-import { sanitizeLogDetails } from './sanitize.js';
+import { persistableLogText, sanitizeLogDetails } from './sanitize.js';
 import { ChromeStorageLogAdapter, type LogStorageAdapter } from './storageAdapter.js';
 import { ChromeAlarmFlushScheduler, type LogFlushScheduler } from './flushScheduler.js';
 import { LogEntry, LogTypeValues } from './types.js';
@@ -96,6 +96,8 @@ export async function addLog<T extends object = Record<string, unknown>>(
 
     // Order: PII mask first (matches on original text), then neutralize control
     // bytes / ANSI / line breaks in the persisted result. See neutralize.ts.
+    // persistableLogText: PII サイズゲート超過（error あり・マスク 0 件）の原文は
+    // 切り詰め＋再マスクして保存する。「PII を残さない」を優先（PBI 2026-10-18-11）。
     const sanitizedMessage = await sanitizeRegex(message);
     const { traceId: traceIdValue, ...restDetails } = details as Record<string, unknown>;
     const traceId = typeof traceIdValue === 'string' ? traceIdValue : undefined;
@@ -104,9 +106,7 @@ export async function addLog<T extends object = Record<string, unknown>>(
       id: generateId(),
       timestamp: Date.now(),
       type,
-      message: neutralizeLogText(
-        sanitizedMessage.maskedItems.length > 0 ? sanitizedMessage.text : message,
-      ),
+      message: neutralizeLogText(await persistableLogText(message, sanitizedMessage)),
       details: await sanitizeLogDetails(restDetails),
       ...pickDefined({ traceId }),
     };

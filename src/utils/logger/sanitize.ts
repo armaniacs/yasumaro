@@ -1,6 +1,7 @@
-import { sanitizeRegex } from '../piiSanitizer.js';
+import { sanitizeRegex, type SanitizeResult } from '../piiSanitizer.js';
 import { maskSecretValueByKey } from '../sensitiveDataMask.js';
 import { neutralizeLogText } from './neutralize.js';
+import { truncateForLog } from '../logTruncate.js';
 
 // セキュリティ強化: log sanitization への深度制限と循環参照保護
 // redaction.ts と整合
@@ -9,6 +10,36 @@ const SANITIZE_RESULT = {
   TOO_DEEP: '[SANITIZED: too deep]',
   CIRCULAR_REF: '[SANITIZED: circular reference]',
 } as const;
+
+/**
+ * ログに永続化するテキストを sanitizeRegex の結果から決める（3 sink 共通の判定）。
+ * neutralizeLogText は呼び出し側の最終段のまま（順序契約: PII マスクが先、
+ * 中立化が後）なので、ここでは含めない。
+ *
+ * PBI 2026-10-18-11（fingerprint: pii-mask:logger-sinks-keep-original-above-size-gate）
+ * の優先判断: 「PII を残さない」を「ログを詳細に残したい（診断価値）」より優先する。
+ * PII サニタイザの ReDoS サイズゲート（MAX_INPUT_SIZE = 65536 code units）は
+ * 超過入力に対して「原文 ＋ 空の maskedItems ＋ error」を返す。その原文を保存すると、
+ * クエリ先頭付近のメールアドレスのように切り詰めでは除去できない高価値 PII が
+ * 平文のまま残るため、error が立って maskedItems が空のときは truncateForLog で
+ * 境界を切り（LOG_TRUNCATION_MARKER 付きで可視化し、「黙って短くなった」状態に
+ * しない）、境界内の残部を再マスクしてから返す。診断上の損失は「長大すぎた
+ * 文字列の末尾」だけで、冒頭・ホスト名・エラーコードは残る。
+ */
+async function persistableLogText(original: string, result: SanitizeResult): Promise<string> {
+  if (result.maskedItems.length > 0) {
+    return result.text;
+  }
+  if (result.error) {
+    // Size gate exceeded: result.text is the unmasked original. The
+    // truncateForLog output is bounded well below MAX_INPUT_SIZE (65536),
+    // so the re-mask cannot hit the gate again.
+    const bounded = truncateForLog(original);
+    const remasked = await sanitizeRegex(bounded);
+    return remasked.text;
+  }
+  return original;
+}
 
 /**
  * ログの詳細情報をサニタイズする（キー名による秘匿マスキングと PII 検出・マスキング）。
@@ -83,11 +114,9 @@ async function sanitizeLogDetails(
     if (typeof value === 'string') {
       // Order: PII mask first, then neutralize control bytes / ANSI / newlines.
       const result = await sanitizeRegex(value);
+      sanitized[key] = neutralizeLogText(await persistableLogText(value, result));
       if (result.maskedItems.length > 0) {
-        sanitized[key] = neutralizeLogText(result.text);
         sanitized[`${key}_maskedTypes`] = result.maskedItems.map((m) => (typeof m === 'string' ? m : m.type));
-      } else {
-        sanitized[key] = neutralizeLogText(value);
       }
     } else if (typeof value === 'object') {
       if (Array.isArray(value)) {
@@ -133,11 +162,7 @@ async function sanitizeArray(
 
     if (typeof item === 'string') {
       const result = await sanitizeRegex(item);
-      if (result.maskedItems.length > 0) {
-        sanitized.push(neutralizeLogText(result.text));
-      } else {
-        sanitized.push(neutralizeLogText(item));
-      }
+      sanitized.push(neutralizeLogText(await persistableLogText(item, result)));
     } else if (typeof item === 'object') {
       // 配列要素にはキー名が無いため、秘匿マスキングはオブジェクト要素を
       // sanitizeLogDetails に渡した再帰の中でだけ効く。生の文字列要素は
@@ -161,4 +186,4 @@ async function sanitizeArray(
   return sanitized;
 }
 
-export { sanitizeLogDetails, sanitizeArray };
+export { sanitizeLogDetails, sanitizeArray, persistableLogText };

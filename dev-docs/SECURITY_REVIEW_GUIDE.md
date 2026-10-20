@@ -130,6 +130,32 @@ that is a design question, not a guard change.
 - All API keys encrypted in storage (PBKDF2 + AES-GCM)
 - API-key ciphertext is AAD-bound to the settings field it lives under (`EncryptedData.version: 2`), so moving an envelope between fields fails to decrypt instead of sending the key to the wrong provider. The binding is passed by the reader, never stored in the envelope; AAD-less envelopes (v1) stay readable until rewritten.
 
+### Diagnostic log PII handling: what the sinks persist
+
+`chrome.storage.local['sanitization_logs']` (`src/utils/logger/storageAdapter.ts`,
+3-day retention, 500-entry cap) is the diagnostic log every logger sink writes
+into. Its PII contract (PBI `2026-10-18-11`, fingerprint
+`pii-mask:logger-sinks-keep-original-above-size-gate`):
+
+- The three sinks (`src/utils/logger/sanitize.ts` details/array branch,
+  `src/utils/logger/core.ts` message path, `src/utils/logger/api.ts` OS
+  notification) resolve the persisted text through `persistableLogText`, which
+  branches on the PII sanitizer's `error` as well as `maskedItems.length`.
+- **PII non-persistence wins over diagnostic completeness.** The sanitizer's
+  ReDoS size gate (`MAX_INPUT_SIZE` = 65536 code units) returns the original
+  text with empty `maskedItems` and `error` set; the sinks never persist that
+  original. The value is bounded with `truncateForLog` (visible
+  `LOG_TRUNCATION_MARKER`, so nothing is silently shortened) and the bounded
+  remainder is re-masked. Head-positioned PII (a query-string email) cannot
+  survive truncation; the diagnostic loss is only the tail of an over-long
+  string.
+- Inputs at or below the gate keep the exact legacy shape: `[MASKED:email]`
+  plus the `*_maskedTypes` field, no truncation marker.
+- Any new reader that surfaces `sanitization_logs` content (export, sync, AI
+  prompt) must re-audit this contract first. The only production reader is the
+  bug-report builder's `summarizeErrorCodes`, which sends error-code names and
+  counts only.
+
 ### Privacy-consent gating: what must ask, and what must not
 
 `hasPrivacyConsent()` is the single source of truth, and there are exactly **two
