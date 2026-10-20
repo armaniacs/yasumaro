@@ -36,6 +36,12 @@ Scenario: ssrfGuard 判定の等価性
 2 pt（RICE: 15 = Reach 5 × Impact 3 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 2 同形ブロックが 1 ヘルパー経由になり、ssrfGuard の複製が消える
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 2 同形ブロックが 1 ヘルパー経由になり、ssrfGuard の複製が消える
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- fetchWithRetry の 2 同形ブロック（HTTP ステータス経路 / catch 経路）を decideRetryAndBackoff ヘルパーに統合（差分 logPrefix / kindData をパラメータ化、リトライ回数・指数バックオフ・SleepFn・最終失敗 throw 契約不変）
+- ssrfGuard の localhost 判定 ×3 を isLocalhostHostname に統合（validateUrl / validateUrlForFilterImport / isLocalhostAddress）、IPv4-mapped IPv6 / NAT64 の埋め込み IPv4 変換同形複製も classifyEmbeddedIpv4 に統合（判定厳格さは不変）
+- isLocalhostHostname の直接契約テスト 2 件追加、既存 43+ tests で pin、--repeats=20 リピートゲート全 green
+- 検証: fetch 系 4 ファイル 205 tests 全 green、type-check 通過、validate:fast green

@@ -45,6 +45,12 @@ Scenario: 誤用の再発防止
 2 pt（RICE: 38 = Reach 19 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 各削除の直前に再 grep で production 呼び出し 0 件を確認
-- [ ] 削除後の npm run validate 通過
-- [ ] npm run build 通過
+- [x] 各削除の直前に再 grep で production 呼び出し 0 件を確認
+- [x] 削除後の npm run validate 通過
+- [x] npm run build 通過
+
+## 実装記録（2026-10-21）
+- 死にコード 19 件を削除（-1100 行）: sanitizeMarkdownLinks、convertKnownErrorMessage（不具合側 golden 固定テスト込み）、isMaskedItem、isMasterPasswordSet、getDomainFilterCacheSync、getAllowedUrls、SettingsCache.get / UrlCache.get、validateDomainList、DomainFilter.parse、promptSanitizer の _normalizedContent+normalizeUnicode / formatWarnings、makeCleansingProgressBar、watchDynamicContent.ts（ファイル削除）、getDefaultCategories、optionBuilder.ts.bak（ファイル削除）、SQLITE_EXPORT 到達不能契約 5 箇所（union・配列・retry 行・handler・fake）、tagClusterPanel init?.focusTag 死に分岐、check-version-consistency.js の manifest.json 到達不能分岐
+- 削除に伴う pin テスト更新（types 長 34→33・handler Map 34→33・retry policy 期待値ほか）
+- 付随所見: handleExport 削除により recordsRepo.serialize が本番到達不能（後続 PBI 候補として記録のみ）
+- 検証: 担当モジュールのテスト全 green（4 バッチ計 2802 tests）、check-deprecated-aliases OK、type-check 通過、build 通過、validate:fast green

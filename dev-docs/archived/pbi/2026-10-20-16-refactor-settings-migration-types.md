@@ -34,6 +34,12 @@ Scenario: オプション追加の型保護
 2 pt（RICE: 18 = Reach 6 × Impact 3 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] as キャスト ×4 と as never ×2 が消える
-- [ ] settingsMigration 系の既存テスト全通過
-- [ ] npm run validate 通過
+- [x] as キャスト ×4 と as never ×2 が消える
+- [x] settingsMigration 系の既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- boolean 合同を ApplyMigrationsOptionsContract = ApplyMigrationsOptions | boolean として core シグネチャに統合し、applyMigrationsCore 冒頭で 1 回正規化（以後完全に型付き、パラメータ再代入とキャストを排除）
+- ラッパー 2 本（applyMigrationsAndDecrypt / applyMigrationsAndDecryptWithReEncrypt）は core へ直接転送、tryDecryptWithLegacyFallback の第 1 パラメータを EncryptedData に（isEncrypted(value) 済みという事実を型に反映、as never ×2 排除）
+- PBI 提案の recordCompletion: boolean はリポジトリに存在しないため不採用（デッドコードになる）
+- 検証: settingsMigration 系 6 ファイル 64 テスト全 green、type-check exit 0、validate:fast green

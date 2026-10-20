@@ -14,17 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 17件完了・アーカイブ済み（01・02・03・04・05・06・08・09・10・11・13・15・17・19・20・22・24） / ⬜ 7件残（07・12・14・16・18・21・23） 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → 07(38) → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → ~~15(20)~~ → 16(18) → ~~17(18)~~ → 18(15) → ~~19(14)~~ → ~~20(14)~~ → 21(13) → ~~22(12)~~ → 23(12) → ~~24(8)~~
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 21件完了・アーカイブ済み（01-06・08-11・13-20・22・24） / ⬜ 3件残（12・21・23） 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → ~~07(38)~~ → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → ~~14(20)~~ → ~~15(20)~~ → ~~16(18)~~ → ~~17(18)~~ → ~~18(15)~~ → ~~19(14)~~ → ~~20(14)~~ → 21(13) → ~~22(12)~~ → 23(12) → ~~24(8)~~
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 07 | [2026-10-20-07-refactor-dead-code-removal.md](2026-10-20-07-refactor-dead-code-removal.md) | refactor | 38 | 2.0 | production 呼び出し 0 件のエクスポート・死に契約 19 件（SQLITE_EXPORT 到達不能契約・watchDynamicContent ほか） |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
-| ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
-| ⬜ 16 | [2026-10-20-16-refactor-settings-migration-types.md](2026-10-20-16-refactor-settings-migration-types.md) | refactor | 18 | 2.0 | settingsMigration の boolean 合同 as ×4 + as never ×2 を core シグネチャへ統合 |
-| ⬜ 18 | [2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md](2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md) | refactor | 15 | 2.0 | fetchWithRetry の 2 同形ブロック（:434-450 / :455-470）+ ssrfGuard localhost 判定 ×3 |
 | ⬜ 21 | [2026-10-20-21-refactor-remaining-dry-consolidation.md](2026-10-20-21-refactor-remaining-dry-consolidation.md) | refactor | 13 | 2.0 | 残り DRY（ID 生成 SSOT 未準拠・promptSafety 6 点目・escapeRegex・OWTestState ほか） |
 | ⬜ 23 | [2026-10-20-23-refactor-sqlite-handler-types.md](2026-10-20-23-refactor-sqlite-handler-types.md) | refactor | 12 | 1.0 | sqlite ハンドラの動的ディスパッチ・手書き 9 対応・worker type 生リテラル（同期ルール非対称） |
 
@@ -510,6 +506,14 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 07・14・16・18 アーカイブ ― リファクタリング診断 24件のうち 21件完了（01-06・08-11・13-20・22・24）
+
+- **07-refactor-dead-code-removal**（`1d5fee42`）: 本番 0 件再確認の上で死にコード 19 件を削除（-1100 行。SQLITE_EXPORT 到達不能契約の保守チェーン一括・watchDynamicContent.ts・optionBuilder.ts.bak ほか）。recordsRepo.serialize の本番到達不能を後続 PBI 候補として記録。
+- **14-refactor-silent-catch-visualization**（`fe363174`）: 空 catch・catch { return false }・.catch(() => undefined) 計 7 箇所に logError を追加（ErrorCode は既存コードのみ、戻り値・制御フロー不変）。
+- **16-refactor-settings-migration-types**（`266a99ef`）: boolean 合同を ApplyMigrationsOptionsContract として core シグネチャに統合し as ×4 / as never ×2 を排除（EncryptedData パラメータ化）。
+- **18-refactor-fetch-retry-ssrf-consolidation**（`5930ecc0`）: fetchWithRetry の 2 同形ブロックを decideRetryAndBackoff に、ssrfGuard の localhost 判定 ×3 を isLocalhostHostname に、埋め込み IPv4 変換複製を classifyEmbeddedIpv4 に統合（判定厳格さ不変）。
+- 付随修正（`707f26a5`）: PBI 08・20 由来の test コード型エラー 4 件を修正し type-check:test:baseline 453 を回復。
 
 ### 2026-10-21 PBI 04・08・20・24 アーカイブ ― リファクタリング診断 24件のうち 17件完了（01-06・08-11・13・15・17・19・20・22・24）
 
