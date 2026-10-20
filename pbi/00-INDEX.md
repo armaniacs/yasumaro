@@ -29,7 +29,7 @@ PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後�
 
 進め方: **同意系（03 → 10 → 11 → 07）を先に**まとめると、同意の実効性（受付・実行時・表示）を 1 期で閉じられる。**redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。01・02 は完了・アーカイブ済み（2026-10-19）。
 
-### 2026-10-18 security-audit run-2（25件） ― ✅ 15件完了・アーカイブ済み / 🔶 20 部分実装 / ⬜ 9件残（12/15/17/18/21/22/23/24/25） 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
+### 2026-10-18 security-audit run-2（25件） ― ✅ 18件完了・アーカイブ済み / 🔶 15・20 部分実装（owner 判断待ち） / ⬜ 5件残（21/22/23/24/25） 🔧非機能追加（ブロッカー調査済・実行順はバックログ参照）
 
 security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: standard）の needs_validation 25件を RICE 採点して PBI 化。**confirmed 0件**（OS-enforced sandbox 不在の source-only 実行のため confirmed は原理的に出ない）。rejected 4件はソース反証済みで PBI 化せず。
 
@@ -39,10 +39,7 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 12 | [2026-10-18-12-fix-settings-stale-patch-revert.md](2026-10-18-12-fix-settings-stale-patch-revert.md) | fix | 1200 | 2.0 | pre-lock read の stale patch で資格情報セーブが巻き戻る |
-| ⬜ 15 | [2026-10-18-15-fix-hmac-kek-fail-open.md](2026-10-18-15-fix-hmac-kek-fail-open.md) | fix | 750 | 2.0 | KEK fail-open による署名鍵の暗黙失効。選択肢2のみ先行切り出し可 |
-| ⬜ 17 | [2026-10-18-17-fix-recovery-migration-snapshot-remove.md](2026-10-18-17-fix-recovery-migration-snapshot-remove.md) | fix | 600 | 2.0 | OPFS 復旧移行の fail-open ゲートと snapshot-remove 窓。19 完了後のため未着手 |
-| ⬜ 18 | [2026-10-18-18-fix-storage-cross-context-cas.md](2026-10-18-18-fix-storage-cross-context-cas.md) | fix | 600 | 8.0 | クロスコンテキスト CAS の verify→set 窓。MV3 に真の CAS 無しの難度 🔴 |
+| 🔶 15 | [2026-10-18-15-fix-hmac-kek-fail-open.md](2026-10-18-15-fix-hmac-kek-fail-open.md) | fix | 750 | 2.0 | KEK fail-open による署名鍵の暗黙失効。選択肢2（quarantine 隔離）は完了・1/3 は owner 判断待ち |
 | 🔶 20 | [2026-10-18-20-fix-session-lock-fanout.md](2026-10-18-20-fix-session-lock-fanout.md) | fix | 400 | 1.0 | 自動ロック通知の fan-out に受け手が無い。宛先修正は別 PBI に分岐 |
 | ⬜ 21 | [2026-10-18-21-fix-download-cap-unerased-entries.md](2026-10-18-21-fix-download-cap-unerased-entries.md) | fix | 333 | 1.5 | cap 落ちレコードが erase 経路から消える。22 と同一関数を触るため直列 |
 | ⬜ 22 | [2026-10-18-22-fix-purge-download-id-rebind.md](2026-10-18-22-fix-purge-download-id-rebind.md) | fix | 300 | 3.0 | purge が downloadId を再照合せず個人ファイルを削除しうる |
@@ -50,7 +47,7 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 | ⬜ 24 | [2026-10-18-24-fix-restore-verify-count.md](2026-10-18-24-fix-restore-verify-count.md) | fix | 300 | 1.0 | 復元件数不一致でもバックアップを削除する |
 | ⬜ 25 | [2026-10-18-25-fix-gist-egress-csp-declare.md](2026-10-18-25-fix-gist-egress-csp-declare.md) | fix | 80 | 1.0 | Gist の origin 未宣言。fail-closed 側で出荷済み機能が動作しない |
 
-実行順（B1→B5）: B1 = ~~01/08~~(2026-10-19 完了)/~~14/16/23~~(2026-10-20 完了) → B2 = ~~02/04/07/09/11/24~~(24 は残) → B3 = ~~05~~(2026-10-19 完了)/~~13~~(完了)・20(🔶 部分実装・宛先修正は別 PBI TODO)/21/22 は残（21→22 は直列） → B4 = 03/06/10/12/15/17/19 のうち ~~03/06/10/17/19~~ 完了・12/15 は残 → B5 = 18/25（単独・工数大）。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
+実行順（B1→B5）: B1 = ~~01/08~~(2026-10-19 完了)/~~14/16/23~~(23 は残) → B2 = ~~02/04/07/09/11~~完了/24 は残 → B3 = ~~05~~(2026-10-19 完了)/~~13~~(完了)/20(🔶 部分実装・宛先修正は別 PBI TODO)/21/22 は残（21→22 は直列） → B4 = 03/06/10/12/15/17/19 のうち ~~03/06/10/12/17/19~~ 完了・15 は部分実装（選択肢 2 のみ） → B5 = ~~18~~(完了)/25 は残。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
 
 TODO（未起票）: **fan-out 宛先修正**（PBI 20 実装メモの選択肢 1。拡張ページへの `SESSION_LOCK_REQUEST` リスナ追加 or SW 内直接呼び出しへの差替え）は「開いているコンテキストを能動的にロックする」UX 挙動（副作用 🔴）を伴うため、PBI 20 の記載どおり別 PBI として起票する。2026-10-20 時点で PBI 20 は選択肢 2（応答本文での成功判定）+ 選択肢 3（消費側の `IS_LOCKED` 検査をキャッシュ非依存へ移動）のみ実装済みで、宛先修正は未実施。
 
