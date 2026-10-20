@@ -9,6 +9,7 @@ import { logError, logWarn } from '../logger/api.js';
 import { errorMessage } from '../errorUtils.js';
 import { isEncryptionLockedError } from './encryptionLockedError.js';
 import { isEncrypted, encryptApiKey, decryptApiKey } from '../crypto/index.js';
+import type { EncryptedData } from '../crypto/types.js';
 import { StorageTransaction, deepEqual } from './storageTransaction.js';
 import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
@@ -447,13 +448,13 @@ export interface LegacyDecryptFallbackOptions {
 }
 
 async function tryDecryptWithLegacyFallback(
-    encryptedValue: unknown,
+    encryptedValue: EncryptedData,
     currentKey: CryptoKey,
     field: StorageKey,
     fallback?: LegacyDecryptFallbackOptions,
 ): Promise<{ decrypted: string | null; legacySucceeded: boolean }> {
     try {
-        const decrypted = await decryptApiKey(encryptedValue as never, currentKey, field);
+        const decrypted = await decryptApiKey(encryptedValue, currentKey, field);
         return { decrypted, legacySucceeded: false };
     } catch {
         // Try legacy 100k iteration fallback
@@ -476,7 +477,7 @@ async function tryDecryptWithLegacyFallback(
             const derive = fallback?.deriveLegacyKey ?? deriveLegacyKeyFromStoredSecret;
             const legacyKey = await derive();
             if (!legacyKey) return { decrypted: null, legacySucceeded: false };
-            const decrypted = await decryptApiKey(encryptedValue as never, legacyKey, field);
+            const decrypted = await decryptApiKey(encryptedValue, legacyKey, field);
             return { decrypted, legacySucceeded: true };
         } catch {
             return { decrypted: null, legacySucceeded: false };
@@ -497,6 +498,14 @@ export interface ApplyMigrationsOptions extends LegacyDecryptFallbackOptions {
   getEncryptionKey?: () => Promise<CryptoKey>;
 }
 
+/**
+ * Legacy boolean contract for the options parameter (the old `rawEncrypted`
+ * flag). Callers that predate the options object may pass `true`/`false`;
+ * both mean "no options". Declared on the core so the wrappers forward the
+ * caller's argument without a cast.
+ */
+type ApplyMigrationsOptionsContract = ApplyMigrationsOptions | boolean;
+
 export interface ApplyMigrationsResult {
   settings: Settings;
   /** Fields that were plaintext and were re-encrypted — caller should persist via StoragePort */
@@ -515,10 +524,12 @@ export interface ApplyMigrationsResult {
 
 async function applyMigrationsCore(
     rawSettings: Settings,
-    opts?: ApplyMigrationsOptions
+    opts?: ApplyMigrationsOptionsContract
 ): Promise<ApplyMigrationsResult> {
-    // BackwardCompat: if opts is boolean (legacy rawEncrypted) treat as no-op
-    if (typeof opts === 'boolean') opts = undefined as unknown as ApplyMigrationsOptions;
+    // BackwardCompat: a boolean (legacy rawEncrypted flag) is a no-op —
+    // normalize once so the body below stays fully typed.
+    const options: ApplyMigrationsOptions | undefined =
+        typeof opts === 'boolean' ? undefined : opts;
     const merged = { ...DEFAULT_SETTINGS, ...rawSettings };
     if (!(StorageKeys.OBSIDIAN_ENABLED in rawSettings)) {
         const apiKey = merged[StorageKeys.OBSIDIAN_API_KEY] as string | undefined;
@@ -536,12 +547,12 @@ async function applyMigrationsCore(
     const unrecoverable: StorageKey[] = [];
     let locked = false;
     try {
-        const keyProvider = (opts as ApplyMigrationsOptions | undefined)?.getEncryptionKey ?? getOrCreateEncryptionKey;
+        const keyProvider = options?.getEncryptionKey ?? getOrCreateEncryptionKey;
         const key = await keyProvider();
         for (const field of API_KEY_FIELDS) {
             const value = merged[field];
             if (isEncrypted(value)) {
-                const attempt = await tryDecryptWithLegacyFallback(value, key, field, opts);
+                const attempt = await tryDecryptWithLegacyFallback(value, key, field, options);
                 if (attempt.decrypted !== null) {
                     (merged as Record<StorageKey, StorageKeyValues[StorageKey]>)[field] = attempt.decrypted as StorageKeyValues[StorageKey];
                     // If legacy fallback succeeded, re-encrypt with current key for migration
@@ -599,17 +610,16 @@ async function applyMigrationsCore(
  */
 export async function applyMigrationsAndDecrypt(
     rawSettings: Settings,
-    opts?: ApplyMigrationsOptions | boolean
+    opts?: ApplyMigrationsOptionsContract
 ): Promise<Settings> {
-    const core = await applyMigrationsCore(rawSettings, opts as ApplyMigrationsOptions);
-    return core.settings;
+    return (await applyMigrationsCore(rawSettings, opts)).settings;
 }
 
 export async function applyMigrationsAndDecryptWithReEncrypt(
     rawSettings: Settings,
-    opts?: ApplyMigrationsOptions | boolean
+    opts?: ApplyMigrationsOptionsContract
 ): Promise<ApplyMigrationsResult> {
-    return applyMigrationsCore(rawSettings, opts as ApplyMigrationsOptions);
+    return applyMigrationsCore(rawSettings, opts);
 }
 
 export async function tryRestoreFromBackup(port: StoragePort = new ChromeStoragePort()): Promise<Settings | null> {
