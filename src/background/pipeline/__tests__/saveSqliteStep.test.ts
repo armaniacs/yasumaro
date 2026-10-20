@@ -22,6 +22,13 @@ vi.mock('../../../utils/logger/api.js', async () =>
 import { saveSqliteStep } from '../steps/saveSqliteStep.js';
 import type { SqliteClient } from '../../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
+import Database from 'better-sqlite3';
+import { IdbVfsBackend, type IdbVfsBackendHost } from '../../../offscreen/IdbVfsBackend.js';
+import { execWithCache } from '../../../offscreen/sqliteEngineContext/idbEngineLifecycle.js';
+import { bootSqliteEngine } from '../../../offscreen/sqliteBoot.js';
+import type { SqliteEngine, SqliteRow, SqliteValue } from '../../../offscreen/sqliteEngine.js';
+import type { SqliteResult } from '../../sqlite/offscreenGateway.js';
+import type { MutateOp } from '../../../messaging/sqliteRpcClient.js';
 
 function makeMockSqlite(overrides: Partial<Record<string, any>> = {}): SqliteClient {
   const mutate = (overrides as any).mutate ?? vi.fn().mockImplementation((op: any) => {
@@ -215,5 +222,96 @@ describe('saveSqliteStep — diagnostic metadata', () => {
     expect(inserted.ai_duration_ms).toBe(5000);
     expect(inserted.sent_tokens).toBe(100);
     expect(inserted.fallback_triggered).toBe(1);
+  });
+});
+
+/**
+ * PBI 2026-10-18-23 sink integration: two overlapping saves through one real
+ * SQLite backend. The obsidian_synced update is keyed on the id each save's
+ * own insert returned, so the mark lands on the row that save actually
+ * mirrored — the mirrored row is never left unmarked while another row gets
+ * the mark. The old two-step insert (INSERT, then a separate
+ * SELECT last_insert_rowid()) handed the first overlapping call the second
+ * row's id, and its mark went to the wrong row.
+ */
+describe('saveSqliteStep — overlapping saves mark their own rows (PBI 2026-10-18-23)', () => {
+  function makeRawEngine(): SqliteEngine {
+    const db = new Database(':memory:');
+    return {
+      async exec(sql, params = []) {
+        if (params.length > 0) db.prepare(sql).run(...params);
+        else db.exec(sql);
+      },
+      async query(sql, params = []) {
+        return db.prepare(sql).all(...params) as SqliteRow[];
+      },
+      async queryValue(sql, params = []) {
+        const row = db.prepare(sql).get(...params) as SqliteRow | undefined;
+        if (!row) return null;
+        return (Object.values(row)[0] ?? null) as SqliteValue;
+      },
+      async close() { db.close(); },
+    };
+  }
+
+  async function makeBackend() {
+    const raw = makeRawEngine();
+    const boot = await bootSqliteEngine(raw);
+    const host: IdbVfsBackendHost = {
+      idbEngine: raw,
+      fts5Available: boot.fts5Available,
+      cachedCompileOptions: boot.compileOptions,
+      execWithCache: (sql, params, callback) => execWithCache(raw, sql, params, callback),
+    };
+    return { backend: new IdbVfsBackend(host), raw };
+  }
+
+  /** The real backend behind the SqliteClient seam saveSqliteStep consumes. */
+  function makeBackendBackedClient(backend: IdbVfsBackend): SqliteClient {
+    const mutate = async (op: MutateOp): Promise<SqliteResult<{ id: number }> | SqliteResult<void>> => {
+      if (op.type === 'insert') {
+        const res = await backend.insert(op.record);
+        if (res.success) return { success: true, data: { id: res.id } };
+        return { success: false, error: { kind: 'sqlite_error', message: res.error, retriable: false } };
+      }
+      if (op.type === 'update') {
+        const res = await backend.update(op.id, op.changes);
+        if (res.success) return { success: true, data: undefined };
+        return { success: false, error: { kind: 'sqlite_error', message: res.error, retriable: false } };
+      }
+      return { success: false, error: { kind: 'sqlite_error', message: `op not wired in this test: ${op.type}`, retriable: false } };
+    };
+    return { mutate } as SqliteClient;
+  }
+
+  it('keys the obsidian_synced mark on each overlapping save\'s own returned id', async () => {
+    const { backend, raw } = await makeBackend();
+    const client = makeBackendBackedClient(backend);
+
+    // Both saves started before either is awaited — the overlap the sink's
+    // Scenario 1 describes.
+    const first = saveSqliteStep({
+      recordId: 1,
+      record: { url: 'https://a.example.com/one', created_at: 100 },
+      sqliteClient: client,
+      obsidianSynced: true,
+    });
+    const second = saveSqliteStep({
+      recordId: 2,
+      record: { url: 'https://b.example.com/two', created_at: 200 },
+      sqliteClient: client,
+      obsidianSynced: true,
+    });
+    await first;
+    await second;
+
+    // The marked set equals the mirrored set: each save marked the row its
+    // own insert wrote, no mirrored row was left unmarked, and no other row
+    // received a mark.
+    const rows = await raw.query('SELECT url, obsidian_synced FROM browsing_logs ORDER BY id');
+    expect(rows.map((r) => [r.url, r.obsidian_synced])).toEqual([
+      ['https://a.example.com/one', 1],
+      ['https://b.example.com/two', 1],
+    ]);
   });
 });

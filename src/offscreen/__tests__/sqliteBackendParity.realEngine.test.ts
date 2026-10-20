@@ -27,6 +27,7 @@ import {
 import type { HandlerContext } from '../opfsWorker/handlers.js';
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import type { BrowsingLogRecord, StorageQuery } from '../../utils/sqlite-types.js';
+import type { BackendOrError, InsertResult } from '../StorageBackend.js';
 
 /** better-sqlite3 behind the engine interface both backends are written against. */
 function openEngine(): SqliteEngine {
@@ -448,6 +449,105 @@ describe('purge parity on a real engine', () => {
     } finally {
       await idb.close();
       await opfs.close();
+    }
+  });
+});
+
+/**
+ * PBI 2026-10-18-23: the insert used to be two steps — INSERT, then a
+ * separate `SELECT last_insert_rowid()` — with no transaction around the
+ * pair, and last_insert_rowid() is connection-scoped. Started together, the
+ * second insert landed before the first call's read, so the first call
+ * received the second row's id and the obsidian_synced mark keyed on it
+ * landed on the wrong row. The insert now takes the id from
+ * INSERT ... RETURNING: each call receives the id of the row it wrote itself.
+ */
+describe('concurrent insert returns each call its own row id (PBI 2026-10-18-23)', () => {
+  const record = (n: number, url: string): BrowsingLogRecord => ({
+    url,
+    title: `Row ${n}`,
+    created_at: 1000 + n,
+    content: `body ${n}`,
+  });
+
+  it('two overlapping saves each receive the id of the row they wrote (scenario 1)', async () => {
+    const b = await makeBackends();
+    try {
+      // Both promises started before either is awaited — the overlap the
+      // two-step form exposed. The first save's INSERT lands, then the second
+      // save's INSERT lands before the first save reads back its id.
+      const first = b.idb.insert(record(1, 'https://a.example.com/one'));
+      const second = b.idb.insert(record(2, 'https://b.example.com/two'));
+      const firstRes = await first;
+      const secondRes = await second;
+
+      expect(firstRes.success).toBe(true);
+      expect(secondRes.success).toBe(true);
+      if (!firstRes.success || !secondRes.success) return;
+      expect(firstRes.id).not.toBe(secondRes.id);
+
+      // Each returned id resolves to the row its own call wrote, not the
+      // other call's row.
+      const rowOfFirst = await b.idbRaw.query('SELECT url FROM browsing_logs WHERE id = ?', [firstRes.id]);
+      const rowOfSecond = await b.idbRaw.query('SELECT url FROM browsing_logs WHERE id = ?', [secondRes.id]);
+      expect(rowOfFirst[0]?.url).toBe('https://a.example.com/one');
+      expect(rowOfSecond[0]?.url).toBe('https://b.example.com/two');
+
+      // The obsidian_synced mark keyed on each returned id lands on the row
+      // that call actually mirrored: the marked set equals the mirrored set,
+      // so the mirrored row is never left unmarked while another row is.
+      await b.idb.update(firstRes.id, { obsidian_synced: 1 });
+      await b.idb.update(secondRes.id, { obsidian_synced: 1 });
+      const markedUrls = await b.idbRaw.query(
+        'SELECT url FROM browsing_logs WHERE obsidian_synced = 1 ORDER BY id',
+      );
+      expect(markedUrls.map((r) => r.url)).toEqual([
+        'https://a.example.com/one',
+        'https://b.example.com/two',
+      ]);
+    } finally {
+      await b.close();
+    }
+  });
+
+  it('a single save keeps the legacy numbering (scenario 2)', async () => {
+    const b = await makeBackends();
+    try {
+      expect(await b.idb.insert(record(1, 'https://a.example.com/1')))
+        .toEqual({ success: true, id: 1 });
+      expect(await b.idb.insert(record(2, 'https://a.example.com/2')))
+        .toEqual({ success: true, id: 2 });
+      expect(await b.idb.insert(record(3, 'https://a.example.com/3')))
+        .toEqual({ success: true, id: 3 });
+    } finally {
+      await b.close();
+    }
+  });
+
+  it('10 overlapping saves map 1:1 onto the 10 inserted rows (scenario 3)', async () => {
+    const b = await makeBackends();
+    try {
+      const urls = Array.from({ length: 10 }, (_v, i) => `https://p.example.com/${i}`);
+      const pending = urls.map((url, i) => b.idb.insert(record(i + 1, url)));
+      const results: BackendOrError<InsertResult>[] = [];
+      for (const p of pending) results.push(await p);
+
+      const ids: number[] = [];
+      for (const res of results) {
+        expect(res.success).toBe(true);
+        if (res.success) ids.push(res.id);
+      }
+      // 10 ids, no duplicates, 1:1 with the inserted rows.
+      expect(ids).toHaveLength(10);
+      expect(new Set(ids).size).toBe(10);
+
+      // Each id resolves back to the url its own call carried.
+      for (const [i, id] of ids.entries()) {
+        const row = await b.idbRaw.query('SELECT url FROM browsing_logs WHERE id = ?', [id]);
+        expect(row[0]?.url).toBe(urls[i]);
+      }
+    } finally {
+      await b.close();
     }
   });
 });

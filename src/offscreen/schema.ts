@@ -114,6 +114,18 @@ const INSERT_PLACEHOLDERS = COLUMN_NAMES.map(() => '?').join(', ');
 export const INSERT_SQL = `INSERT INTO browsing_logs (${INSERT_COLS}) VALUES (${INSERT_PLACEHOLDERS})`;
 
 /**
+ * INSERT ... RETURNING (for IdbVfsBackend.insert()): exactly the row this very
+ * statement wrote reaches the result set, so the returned id can never be a
+ * concurrent insert's row (PBI 2026-10-18-23) — the former
+ * `SELECT last_insert_rowid()` follow-up read a connection-scoped value that
+ * another insert could move between the two queries. Same RETURNING argument
+ * as INSERT_IGNORE_RETURNING_SQL. Requires SQLite >= 3.35 (the bundled wasm
+ * ships 3.53.2). INSERT_SQL stays RETURNING-free: the OPFS worker's
+ * handleInsert still emits it, guarded by the worker's request queue.
+ */
+export const INSERT_RETURNING_SQL = `${INSERT_SQL} RETURNING id`;
+
+/**
  * INSERT columns that are never allowed in UPDATE SET clauses across any
  * backend — the explicit exceptions to the "insertable implies updatable"
  * sync rule that UPDATABLE_FIELDS below derives from COLUMN_NAMES.

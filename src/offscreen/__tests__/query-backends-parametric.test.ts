@@ -31,7 +31,7 @@ function makeIdbStub(fts5Available = true, countResult = 0) {
     fts5Available,
     execWithCache: vi.fn(async (sql: string, params: unknown[] = [], callback?: (row: unknown[]) => void) => {
       calls.push({ sql, params });
-      if (callback && /SELECT COUNT|SELECT changes|last_insert_rowid/i.test(sql)) callback([countResult]);
+      if (callback && /SELECT COUNT|SELECT changes|last_insert_rowid|RETURNING/i.test(sql)) callback([countResult]);
     }),
   };
   const backend = new IdbVfsBackend(engine as never);

@@ -663,6 +663,16 @@ export const LIVE_COUNT_SQL = 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_
 export const AUDIT_INSERT_SQL =
   'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)';
 
+/**
+ * Audit-log INSERT ... RETURNING for IdbVfsBackend.insertAuditLog: the id
+ * comes back from the very statement that wrote the row, so the former
+ * two-step `SELECT last_insert_rowid()` cannot interleave with a concurrent
+ * insert and hand back the other row's id (PBI 2026-10-18-23). AUDIT_INSERT_SQL
+ * stays RETURNING-free: the OPFS worker's audit handler still emits it, under
+ * the worker's request queue.
+ */
+export const AUDIT_INSERT_RETURNING_SQL = `${AUDIT_INSERT_SQL} RETURNING id`;
+
 /** Parameter array for AUDIT_INSERT_SQL, in column order (buildArchiveInsertParams convention). */
 export function buildAuditInsertParams(record: { provider: string; url: string; created_at: number }): SqliteValue[] {
   return [record.provider, record.url, record.created_at];

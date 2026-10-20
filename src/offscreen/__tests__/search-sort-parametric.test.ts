@@ -28,7 +28,7 @@ function makeIdb(fts5Available = true) {
     fts5Available,
     execWithCache: vi.fn(async (sql: string, params: unknown[] = [], callback?: (row: unknown[]) => void) => {
       calls.push({ sql, params });
-      if (callback && /SELECT COUNT|SELECT changes|last_insert_rowid/i.test(sql)) callback([0]);
+      if (callback && /SELECT COUNT|SELECT changes|last_insert_rowid|RETURNING/i.test(sql)) callback([0]);
     }),
   };
   const backend = new IdbVfsBackend(engine as never);

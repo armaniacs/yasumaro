@@ -37,7 +37,10 @@ function makeBackend(db: Database.Database): IdbVfsBackend {
       params: SqliteValue[] = [],
       callback?: (row: SqliteValue[]) => void,
     ): Promise<void> => {
-      if (/^\s*SELECT/i.test(sql)) {
+      // RETURNING statements are reads: the engine hands their result rows
+      // back through the same positional path as SELECT (the idb insert now
+      // takes its id from INSERT ... RETURNING, PBI 2026-10-18-23).
+      if (/^\s*SELECT/i.test(sql) || /\bRETURNING\b/i.test(sql)) {
         const rows = db.prepare(sql).raw(true).all(...(params as (string | number | null)[])) as SqliteValue[][];
         for (const row of rows) callback?.(row);
       } else {
@@ -52,7 +55,7 @@ describe('IdbVfsBackend scalar reads: golden pin (pre/post scalar() refactor)', 
   it('insert/insertBatch/query total/getCount/toggleStar/getFtsIndexSize keep their numbers', async () => {
     const backend = makeBackend(makeDb());
 
-    // insert → SELECT last_insert_rowid()
+    // insert → INSERT ... RETURNING id
     expect(await backend.insert({ url: 'https://a.test/1', title: 'A', created_at: 1000, content: 'a' }))
       .toEqual({ success: true, id: 1 });
     expect(await backend.insert({ url: 'https://a.test/2', title: 'B', created_at: 2000, content: 'b' }))
@@ -85,7 +88,7 @@ describe('IdbVfsBackend scalar reads: golden pin (pre/post scalar() refactor)', 
   it('audit log insert id and query total keep their numbers', async () => {
     const backend = makeBackend(makeDb());
 
-    // insertAuditLog → SELECT last_insert_rowid()
+    // insertAuditLog → INSERT ... RETURNING id
     expect(await backend.insertAuditLog({ provider: 'gemini', url: 'https://a.test/1', created_at: 1000 }))
       .toEqual({ success: true, id: 1 });
     expect(await backend.insertAuditLog({ provider: 'openai', url: 'https://a.test/2', created_at: 2000 }))

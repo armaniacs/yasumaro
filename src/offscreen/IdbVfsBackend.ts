@@ -8,7 +8,7 @@ import type {
 } from './StorageBackend.js';
 import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
-import { INSERT_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
+import { INSERT_RETURNING_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
   buildQuerySpec, buildPlainListStatements, buildFtsMatchQuery,
@@ -16,7 +16,7 @@ import {
   contentPurgeStarredClause, buildContentPurgeStatements,
   buildAuditLogStatements, buildAuditLogPurgeStatements, runPurgeSequence,
   DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL,
-  AUDIT_INSERT_SQL, buildAuditInsertParams, buildUpdateByIdStatements,
+  AUDIT_INSERT_RETURNING_SQL, buildAuditInsertParams, buildUpdateByIdStatements,
   type AlreadyCappedQuery, type PurgeExecutor,
 } from './queryPlan.js';
 import { QUERY_CAPS } from '../utils/limits.js';
@@ -97,8 +97,14 @@ export class IdbVfsBackend implements StorageBackend {
     this.ensureDb();
     const domain = record.domain || extractDomain(record.url);
     const params = buildInsertParams(record, domain);
-    await this.engine.execWithCache(INSERT_SQL, params);
-    const id = await this.scalar('SELECT last_insert_rowid()');
+    // INSERT ... RETURNING: the id comes back from the very statement that
+    // wrote the row. The former two-step form (INSERT, then a separate
+    // `SELECT last_insert_rowid()`) had no transaction around the pair, and
+    // last_insert_rowid() is connection-scoped — a concurrent insert between
+    // the two queries handed back the other row's id, and the obsidian_synced
+    // mark keyed on it landed on the wrong row (PBI 2026-10-18-23). One await:
+    // the window itself is gone, no transaction needed.
+    const id = await this.scalar(INSERT_RETURNING_SQL, params);
     return { success: true, id };
   }
 
@@ -301,11 +307,12 @@ export class IdbVfsBackend implements StorageBackend {
 
   async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
     this.ensureDb();
-    await this.engine.execWithCache(
-      AUDIT_INSERT_SQL,
-      buildAuditInsertParams(record)
-    );
-    const newId = await this.scalar('SELECT last_insert_rowid()');
+    // Same RETURNING form as insert(): one statement writes the row and hands
+    // back its own id, so the insert/read interleave window the two-step form
+    // had is gone here too (PBI 2026-10-18-23). The returned id is currently
+    // only echoed back through the wire response, but a future consumer must
+    // not inherit the old race.
+    const newId = await this.scalar(AUDIT_INSERT_RETURNING_SQL, buildAuditInsertParams(record));
     return { success: true, id: newId };
   }
 

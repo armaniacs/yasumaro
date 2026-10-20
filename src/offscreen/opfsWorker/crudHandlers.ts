@@ -20,6 +20,14 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { extractDomain } from '../../utils/domainUtils.js';
 
 export async function handleInsert(ctx: HandlerContext, record: BrowsingLogRecord): Promise<{ id: number }> {
+  // The two-step form (INSERT, then `SELECT last_insert_rowid()`) is safe
+  // HERE only because the worker's request serialization queue
+  // (opfsWorker processQueue) runs one request at a time — no concurrent
+  // insert can move the connection-scoped rowid between the two statements.
+  // The IDB rung has no such queue, so it takes the id from
+  // INSERT ... RETURNING instead (PBI 2026-10-18-23). Both rungs therefore
+  // return "the id of the row this call wrote"; rewriting this handler the
+  // same way would be fine but is not required while the queue holds.
   const domain = record.domain || extractDomain(record.url);
   await sqlExec(ctx, INSERT_SQL, buildInsertParams(record, domain));
   let id = 0;
