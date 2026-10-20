@@ -129,6 +129,32 @@ export class RemoteAIService implements AIService {
     return model ? model : undefined;
   }
 
+  /**
+   * One catch body for both fallible seams in processSummarySlot (strategy
+   * creation and generateSummary): locked keys are a configuration skip, any
+   * other throw is a generic failure result that still carries its taxonomy
+   * classification. The response contract is unchanged.
+   */
+  private summarizeCaughtError(error: unknown, traceId: string): AISummaryResult {
+    if (isEncryptionLockedError(error)) {
+      addLog(LogType.WARN, 'AI provider slot skipped: API keys are locked', { traceId });
+      return {
+        success: false,
+        summary: `Error: ${errorMessage(error)}`,
+        failure: createFailure(FailureKind.CONFIGURATION),
+      };
+    }
+    addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
+    const result: AISummaryResult = {
+      success: false,
+      summary: "Error: Failed to generate summary. Please try again.",
+    };
+    // A provider that threw instead of returning a result must not lose its
+    // classification on the way out.
+    const failure = resolveFailure(error);
+    return failure ? { ...result, failure } : result;
+  }
+
   private async processSummarySlot(
     slot: ProviderSlot,
     settings: Settings,
@@ -150,21 +176,7 @@ export class RemoteAIService implements AIService {
           failure: createFailure(FailureKind.CONFIGURATION),
         };
       }
-      if (isEncryptionLockedError(error)) {
-        addLog(LogType.WARN, 'AI provider slot skipped: API keys are locked', { traceId });
-        return {
-          success: false,
-          summary: `Error: ${errorMessage(error)}`,
-          failure: createFailure(FailureKind.CONFIGURATION),
-        };
-      }
-      addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
-      const result: AISummaryResult = {
-        success: false,
-        summary: "Error: Failed to generate summary. Please try again.",
-      };
-      const failure = resolveFailure(error);
-      return failure ? { ...result, failure } : result;
+      return this.summarizeCaughtError(error, traceId);
     }
 
     void recordAuditLog({ provider: slot.provider, url });
@@ -173,23 +185,7 @@ export class RemoteAIService implements AIService {
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
       return result;
     } catch (error: unknown) {
-      if (isEncryptionLockedError(error)) {
-        addLog(LogType.WARN, 'AI provider slot skipped: API keys are locked', { traceId });
-        return {
-          success: false,
-          summary: `Error: ${errorMessage(error)}`,
-          failure: createFailure(FailureKind.CONFIGURATION),
-        };
-      }
-      addLog(LogType.ERROR, `Generate summary failed: ${errorMessage(error)}`, { traceId });
-      const result: AISummaryResult = {
-        success: false,
-        summary: "Error: Failed to generate summary. Please try again.",
-      };
-      // A provider that threw instead of returning a result must not lose its
-      // classification on the way out.
-      const failure = resolveFailure(error);
-      return failure ? { ...result, failure } : result;
+      return this.summarizeCaughtError(error, traceId);
     }
   }
 

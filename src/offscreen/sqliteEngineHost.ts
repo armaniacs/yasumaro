@@ -238,22 +238,8 @@ export class SqliteEngineHost {
     } catch (error) {
       this.#state.lastInitError = errorMessage(error);
       logError('SQLite: init failed', { error: errorMessage(error) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'sqlite');
-      this.#state.idbEngine = null;
-      this.#state.initPromise = null;
-
-      // If OPFS Worker was created but failed, clean it up
-      if (this.#state.opfsWorker) {
-        this.terminateOpfsWorker();
-      }
-
       // Fall back to chrome.storage.local when both OPFS and IDB are unavailable
-      this.#state.usingFallbackStorage = true;
-      this.#state.fallbackStorage = new FallbackStorage();
-      try {
-        await chrome.storage.local.set({ [StorageKeys.OPFS_FALLBACK_MODE]: true });
-      } catch {
-        /* offscreen context */
-      }
+      await this.#enterFallbackStorage();
       return false;
     }
   }
@@ -397,11 +383,15 @@ export class SqliteEngineHost {
   }
 
   /**
-   * Enter chrome.storage.local fallback storage directly, skipping the IDB rung.
-   * Mirrors what _doInit's catch does on a cold start, so both entries into
-   * fallback mode set the same flags and the same durable marker.
+   * The single fallback-entry implementation: tear down any live engine, set
+   * the fallback flags, and write the durable marker. Both entries into
+   * fallback mode go through here — _doInit's catch (cold start with both
+   * OPFS and IDB unavailable) delegates to it, and the degradation path calls
+   * it directly to skip the IDB rung — so the flags, their order, and the
+   * marker cannot drift between the two.
    */
   async #enterFallbackStorage(): Promise<void> {
+    // If OPFS Worker was created but failed, clean it up
     if (this.#state.opfsWorker) {
       this.terminateOpfsWorker();
     }

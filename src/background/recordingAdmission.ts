@@ -2,6 +2,7 @@ import type { Settings } from '../utils/storage/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { MessageSenderLike, RateLimiter } from './rateLimiter.js';
 import { visitRateLimiter } from './visitRateLimiter.js';
+import { isRecordingPaused } from './recordingPauseGate.js';
 
 /** The recording kinds the admission pre-stage serves. */
 export type RecordAdmissionKind = 'valid-visit' | 'manual' | 'save' | 'regenerate';
@@ -78,11 +79,10 @@ export class RecordingAdmission {
       if (!(await this.deps.isRecordingAllowed())) {
         return { rejected: { success: false, reason: 'privacy_consent_required' } };
       }
-      // Paused auto-recording gate: storage errors fail open (null => not
-      // paused) so admit() never throws out of its union contract.
-      const { createChromePauseStorage, isPaused } = await import('./recordingPause.js');
-      const until = await createChromePauseStorage().getPausedUntil().catch(() => null);
-      if (isPaused(until, Date.now())) {
+      // Paused auto-recording gate (shared with recordingTriggerManager):
+      // storage errors fail open (null => not paused) so admit() never throws
+      // out of its union contract.
+      if (await isRecordingPaused()) {
         return { rejected: { success: false, reason: 'recording_paused' } };
       }
       return { settings: await this.deps.getSettings() };

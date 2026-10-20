@@ -10,6 +10,7 @@ import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { decideRecordingTrigger } from './pipeline/recordingDecision.js';
 import { readSettingsSnapshot } from '../utils/storage/settingsSnapshot.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
+import { isRecordingPaused } from './recordingPauseGate.js';
 
 // ============================================================================
 // Types
@@ -120,9 +121,9 @@ export class RecordingTriggerManager {
    * （storage 読みの I/O はここに残す）。
    */
   async shouldRecord(event: RecordingEvent): Promise<boolean> {
-    const { createChromePauseStorage, isPaused } = await import('./recordingPause.js');
-    const pausedUntil = await createChromePauseStorage().getPausedUntil().catch(() => null);
-    if (pausedUntil !== null && isPaused(pausedUntil, Date.now()) && event.type !== 'manual_save') {
+    // Paused auto-recording gate (shared with recordingAdmission): storage
+    // errors fail open, and manual saves bypass the pause.
+    if ((await isRecordingPaused()) && event.type !== 'manual_save') {
       return false;
     }
     const triggers = await this.loadTriggers();

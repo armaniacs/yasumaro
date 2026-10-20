@@ -42,6 +42,29 @@ class RuleIndex {
   }
 
   /**
+   * Place normalized rules into the wildcard list or the exact-domain map
+   * (UF-302 index construction). The single loop behind all four rule sets
+   * (legacy/new × block/exception), so wildcard and map handling cannot
+   * drift. The built index is unchanged.
+   */
+  private indexRules(
+    entries: RuleWithDomain[],
+    wildcardRules: RuleWithDomain[],
+    byDomain: Map<string, RuleWithDomain[]>,
+  ): void {
+    for (const entry of entries) {
+      if (entry.domain.includes('*')) {
+        wildcardRules.push(entry);
+      } else {
+        if (!byDomain.has(entry.domain)) {
+          byDomain.set(entry.domain, []);
+        }
+        byDomain.get(entry.domain)!.push(entry);
+      }
+    }
+  }
+
+  /**
    * Build indices from rule sets.
    * @param {UblockRules} ublockRules - 軽量化版ルールセット（ドメイン配列）または旧形式
    */
@@ -64,38 +87,24 @@ class RuleIndex {
     }
 
     if (shouldProcessBlockRules && rules.blockRules) {
-      // Handle blockRules (old format)
-      for (const rule of rules.blockRules) {
-        if (!rule.domain) continue;
-        // Normalize to RuleWithDomain
-        const ruleObj: RuleWithDomain = {
-          domain: rule.domain,
-          options: (rule.options || {}) as UblockRuleOptions
-        };
-
-        if (rule.domain.includes('*')) {
-          this.wildcardBlockRules.push(ruleObj);
-        } else {
-          if (!this.blockRulesByDomain.has(rule.domain)) {
-            this.blockRulesByDomain.set(rule.domain, []);
-          }
-          this.blockRulesByDomain.get(rule.domain)!.push(ruleObj);
-        }
-      }
+      // Handle blockRules (old format): skip entries without a domain,
+      // defaulting the rule options the same way as before.
+      this.indexRules(
+        rules.blockRules
+          .filter((rule) => rule.domain)
+          .map((rule) => ({ domain: rule.domain, options: (rule.options || {}) as UblockRuleOptions })),
+        this.wildcardBlockRules,
+        this.blockRulesByDomain,
+      );
     }
 
     // Handle blockDomains (new lightweight format)
     if (rules.blockDomains) {
-      for (const domain of rules.blockDomains) {
-        if (domain.includes('*')) {
-          this.wildcardBlockRules.push({ domain, options: {} });
-        } else {
-          if (!this.blockRulesByDomain.has(domain)) {
-            this.blockRulesByDomain.set(domain, []);
-          }
-          this.blockRulesByDomain.get(domain)!.push({ domain, options: {} });
-        }
-      }
+      this.indexRules(
+        rules.blockDomains.map((domain) => ({ domain, options: {} })),
+        this.wildcardBlockRules,
+        this.blockRulesByDomain,
+      );
     }
 
     // 【優先度設定】: 例外ルールについても同様の優先度設定
@@ -112,36 +121,22 @@ class RuleIndex {
 
     if (shouldProcessExceptionRules && rules.exceptionRules) {
       // Handle exceptionRules (old format)
-      for (const rule of rules.exceptionRules) {
-        if (!rule.domain) continue;
-        const ruleObj: RuleWithDomain = {
-          domain: rule.domain,
-          options: (rule.options || {}) as UblockRuleOptions
-        };
-
-        if (rule.domain.includes('*')) {
-          this.wildcardExceptionRules.push(ruleObj);
-        } else {
-          if (!this.exceptionRulesByDomain.has(rule.domain)) {
-            this.exceptionRulesByDomain.set(rule.domain, []);
-          }
-          this.exceptionRulesByDomain.get(rule.domain)!.push(ruleObj);
-        }
-      }
+      this.indexRules(
+        rules.exceptionRules
+          .filter((rule) => rule.domain)
+          .map((rule) => ({ domain: rule.domain, options: (rule.options || {}) as UblockRuleOptions })),
+        this.wildcardExceptionRules,
+        this.exceptionRulesByDomain,
+      );
     }
 
     // Handle exceptionDomains (new lightweight format)
     if (rules.exceptionDomains) {
-      for (const domain of rules.exceptionDomains) {
-        if (domain.includes('*')) {
-          this.wildcardExceptionRules.push({ domain, options: {} });
-        } else {
-          if (!this.exceptionRulesByDomain.has(domain)) {
-            this.exceptionRulesByDomain.set(domain, []);
-          }
-          this.exceptionRulesByDomain.get(domain)!.push({ domain, options: {} });
-        }
-      }
+      this.indexRules(
+        rules.exceptionDomains.map((domain) => ({ domain, options: {} })),
+        this.wildcardExceptionRules,
+        this.exceptionRulesByDomain,
+      );
     }
   }
 

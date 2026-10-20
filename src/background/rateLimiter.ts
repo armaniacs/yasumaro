@@ -43,10 +43,21 @@ export class RateLimiter {
     this.sessionStore = sessionStore;
   }
 
-  async initialize(): Promise<void> {
+  /**
+   * Read persisted rate-limit entries and hydrate the in-memory state,
+   * dropping entries whose window has already expired. `clearExisting`
+   * selects reload semantics (state emptied before hydration); when storage
+   * returns no entries the current state is left untouched. One helper for
+   * initialize() and reload() so the read + initialization sequence cannot
+   * drift between the two.
+   */
+  private async loadState(clearExisting: boolean): Promise<void> {
     const entries = await this.sessionStore.get<[string, RateLimitEntry][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
     if (entries) {
       const now = Date.now();
+      if (clearExisting) {
+        this.state.clear();
+      }
       for (const [key, val] of entries) {
         if (now < val.resetTime) {
           this.state.set(key, val);
@@ -55,17 +66,12 @@ export class RateLimiter {
     }
   }
 
+  async initialize(): Promise<void> {
+    return this.loadState(false);
+  }
+
   async reload(): Promise<void> {
-    const entries = await this.sessionStore.get<[string, RateLimitEntry][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
-    if (entries) {
-      const now = Date.now();
-      this.state.clear();
-      for (const [key, val] of entries) {
-        if (now < val.resetTime) {
-          this.state.set(key, val);
-        }
-      }
-    }
+    return this.loadState(true);
   }
 
   async check(
