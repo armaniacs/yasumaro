@@ -21,6 +21,7 @@ import type {
   ArchiveExportPayload,
 } from './types.js';
 import { createEngine } from '../sqliteBoot.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { SqliteEngine, SqliteValue } from '../sqliteEngine.js';
 import {
   SCHEMA_SQL,
@@ -44,7 +45,6 @@ import {
   ARCHIVE_FORMAT_VERSION,
 } from '../../utils/archiveGuards.js';
 
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 // Exported so the f3 micro bench (bench/micro/f3-archive.bench.mjs) consumes
 // this constant via importFromSource instead of hand-copying the batch size —
 // a production change must propagate to what the bench measures.
@@ -164,7 +164,7 @@ export async function handleArchiveCreate(
     await ctx.engine.exec('PRAGMA wal_checkpoint(TRUNCATE)');
 
     stagingName = await prepareOutgoing();
-    archiveEngine = await createEngine(stagingName, WASM_URL);
+    archiveEngine = await createEngine(stagingName, WASM_ASSET_URLS.opfsEngineWasm);
 
     // Archive schema: browsing_logs + indexes, NO FTS5, NO triggers, no audit_log.
     await archiveEngine.exec(SCHEMA_SQL);

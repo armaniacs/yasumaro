@@ -88,8 +88,11 @@ export function init(): void {
           // The Firefox worker bundle inlines its wasm as data: (unusable
           // under the extension CSP) — point the engine at the stable public
           // asset instead. Propagates to the worker via the INIT payload.
+          // Dynamic import keeps the asset refs out of the Chromium
+          // background graph (this branch is dead-code eliminated there).
           const { setSqliteWasmUrlOverride } = await import('../offscreen/sqliteBoot.js');
-          setSqliteWasmUrlOverride(chrome.runtime.getURL('wasm/wa-sqlite-async.wasm'));
+          const { WASM_ASSET_URLS } = await import('../offscreen/wasmAssets.js');
+          setSqliteWasmUrlOverride(chrome.runtime.getURL(WASM_ASSET_URLS.idbEngineWasmPublicPath));
           await import('../offscreen/offscreen.js');
         } catch (err) {
           logError('Failed to start in-page offscreen host', { error: String(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');

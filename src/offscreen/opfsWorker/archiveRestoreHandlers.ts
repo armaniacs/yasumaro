@@ -26,6 +26,7 @@ import type { HandlerContext } from './handlers.js';
 import { sqlExec, withTransaction } from './handlers.js';
 import type { ArchiveRestorePreviewPayload, ArchiveRestorePayload } from './types.js';
 import { createEngine } from '../sqliteBoot.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import { COLUMN_NAMES, INSERT_IGNORE_SQL, buildInsertParams } from '../schema.js';
 import { validateArchiveEngine } from './archiveValidation.js';
@@ -44,7 +45,6 @@ import {
 } from './archiveStaging.js';
 import { extractDomain } from '../../utils/domainUtils.js';
 
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const RESTORE_BATCH = 5000;
 
 let archiveRestoreInFlight = false;
@@ -86,7 +86,7 @@ export async function handleArchiveRestorePreview(
   newest: number | null;
 }> {
   assertRegisteredStagingName(payload.stagingName);
-  const engine = await createEngine(payload.stagingName, WASM_URL);
+  const engine = await createEngine(payload.stagingName, WASM_ASSET_URLS.opfsEngineWasm);
   try {
     const validation = await validateArchiveEngine(engine, { recordCountMismatch: 'reject' });
     const meta = validation.meta;
@@ -124,7 +124,7 @@ export async function handleArchiveRestore(
   archiveRestoreInFlight = true;
   try {
     assertRegisteredStagingName(payload.stagingName);
-    const archiveEngine = await createEngine(payload.stagingName, WASM_URL);
+    const archiveEngine = await createEngine(payload.stagingName, WASM_ASSET_URLS.opfsEngineWasm);
     try {
       const validation = await validateArchiveEngine(archiveEngine, {
         recordCountMismatch: 'reject',

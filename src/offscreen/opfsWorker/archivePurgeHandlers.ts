@@ -22,6 +22,7 @@ import type { HandlerContext } from './handlers.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlExec, withTransaction } from './handlers.js';
 import { createEngine } from '../sqliteBoot.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { SqliteEngine, SqliteValue } from '../sqliteEngine.js';
 import { validateArchiveEngine } from './archiveValidation.js';
 import {
@@ -29,7 +30,6 @@ import {
   releaseStaging,
   assertRegisteredStagingName,
 } from './archiveStaging.js';
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 
 type LogFn = (level: 'warn' | 'error' | 'info', message: string, details?: Record<string, unknown>) => void;
 
@@ -106,7 +106,7 @@ export async function handleArchiveDeleteByStaging(
     }
 
     // 3. Read the archive file's meta and cross-check against the registry.
-    const archiveEngine = await createEngine(payload.stagingName, WASM_URL);
+    const archiveEngine = await createEngine(payload.stagingName, WASM_ASSET_URLS.opfsEngineWasm);
     let meta: {
       cutoffMs: number;
       includeDeleted: boolean;

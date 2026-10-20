@@ -8,9 +8,9 @@ import { sqlQuery, type HandlerContext } from './handlers.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
 import { DB_FILENAME } from '../dbFilename.js';
 import { createEngine } from '../sqliteBoot.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { NamedRow } from '../rowCodec.js';
 
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
 
 export async function handleSerialize(ctx: HandlerContext): Promise<Uint8Array> {
@@ -73,7 +73,7 @@ export async function handleRestore(
 
   // 2. Validate as SQLite
   try {
-    const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_URL);
+    const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_ASSET_URLS.opfsEngineWasm);
     await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
     // PBI 2026-09-06-01: an archive-format .db carries yasumaro_archive_meta
     // and must NOT be accepted by the full restore (it would overwrite the

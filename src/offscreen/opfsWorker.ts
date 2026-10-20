@@ -18,6 +18,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import type { SleepFn } from '../utils/retryPredicate.js';
 import { bootSqliteEngine } from './sqliteBoot.js';
 import { DB_FILENAME } from './dbFilename.js';
+import { WASM_ASSET_URLS } from './wasmAssets.js';
 
 import type { WorkerRequestMessage, WorkerResponseMessage, WorkerLogMessage } from './opfsWorker/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -93,12 +94,6 @@ export async function handleRestore(data: Uint8Array): Promise<{ restored: true 
 }
 
 // ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
-
-// ---------------------------------------------------------------------------
 // Module state
 // ---------------------------------------------------------------------------
 
@@ -137,7 +132,7 @@ async function initSqlite(): Promise<void> {
 }
 
 async function initSqliteInner(): Promise<void> {
-  engine = await createEngine(DB_FILENAME, WASM_URL);
+  engine = await createEngine(DB_FILENAME, WASM_ASSET_URLS.opfsEngineWasm);
 
   const booted = await bootSqliteEngine(engine);
   fts5Available = booted.fts5Available;

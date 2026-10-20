@@ -20,8 +20,8 @@
  *
  * Fix: the binary is copied to a stable public path (public/wasm/, see
  * wxt.config.ts's `build:publicAssets` hook) and fetched via
- * `chrome.runtime.getURL()`, mirroring the working pattern
- * `sqliteEngine.ts` already uses for `wasm/wa-sqlite-async.wasm`. This
+ * `chrome.runtime.getURL()`, mirroring the working pattern the sqlite-wasm
+ * asset SSOT (`src/offscreen/wasmAssets.ts`) uses for the engine binaries. This
  * sidesteps Vite's asset pipeline entirely — the file is served as an
  * ordinary same-origin extension:// resource, which the CSP already
  * allows. The URL resolution and singleton/retry logic live in the shared

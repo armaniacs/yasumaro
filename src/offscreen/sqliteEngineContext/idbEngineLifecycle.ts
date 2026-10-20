@@ -12,13 +12,12 @@ import { createIdbEngine } from '../sqliteBoot.js';
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';
 import { bootSqliteEngine } from '../sqliteBoot.js';
 import { DB_FILENAME } from '../dbFilename.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 
 // Re-exported, not declared: the host facade and the pre-migration backup
 // still import the name from here, and the declaration belongs to
 // dbFilename.ts alongside the two worker-side readers of the same file.
 export { DB_FILENAME };
-
-const IDB_WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm-async', import.meta.url).href;
 
 export interface IdbeEngineState {
   idbEngine: SqliteEngine | null;
@@ -34,7 +33,7 @@ export interface IdbeEngineState {
  */
 export async function initIdbEngine(state: IdbeEngineState): Promise<boolean> {
   try {
-    state.idbEngine = await createIdbEngine(DB_FILENAME, IDB_WASM_URL);
+    state.idbEngine = await createIdbEngine(DB_FILENAME, WASM_ASSET_URLS.idbEngineWasm);
 
     const { fts5Available, compileOptions } = await bootSqliteEngine(state.idbEngine);
     state.fts5Available = fts5Available;

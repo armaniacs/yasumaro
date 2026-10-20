@@ -29,6 +29,7 @@ import type {
   ArchiveClosePayload,
 } from './types.js';
 import { createEngine } from '../sqliteBoot.js';
+import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { SqliteEngine, SqliteValue } from '../sqliteEngine.js';
 import { UPDATABLE_FIELDS } from '../schema.js';
 import {
@@ -43,7 +44,6 @@ import {
 } from './archiveStaging.js';
 import { isHttpUrl } from '../../utils/archiveGuards.js';
 
-const WASM_URL = new URL('@subframe7536/sqlite-wasm/wasm', import.meta.url).href;
 const ARCHIVE_QUERY_LIMIT = 500;
 
 let sessionEngine: SqliteEngine | null = null;
@@ -91,7 +91,7 @@ export async function handleArchiveOpen(
     );
   }
 
-  const engine = await createEngine(payload.stagingName, WASM_URL);
+  const engine = await createEngine(payload.stagingName, WASM_ASSET_URLS.opfsEngineWasm);
   try {
     // Older archives may lack newer columns — complete before validating.
     await migrateArchiveStaging(engine);
