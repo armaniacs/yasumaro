@@ -37,6 +37,11 @@ Scenario: escapeRegex の委譲
 2 pt（RICE: 13 = Reach 10 × Impact 2 × Confidence 1.0 ÷ Effort 1.5 人日）
 
 ## DoD
-- [ ] 表の全複製が 1 実装経由になる
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 表の全複製が 1 実装経由になる
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 9 組統合: ID 生成 SSOT 準拠（generateTemplateId / FocusTrapManager.generateId / feedbackQueue のローカル generateId → src/utils/generateId.ts SSOT。プレフィックス保持、テストの ID 形式 pin 1 行更新）、promptSafety 6 点目（customPromptUtils.validatePrompt → checkPromptSafety(prompt, 'custom-input')。verdict・ログはバイト同一）、escapeRegex → string.ts escapeRegExp 委譲、cspValidator の extractDomainFromProvider 削除（getProviderDomain に一本化）、OWTestState 統合（e2eProbeRelay.buildProbeState）、retry の exponential 部を backoffDelayMs に委譲（parity pin 追加）、i18n キー変換統合（statusRenderers.i18nKeyFromValue）、eslint ツール層の AST 走査 4 重複を ast-walk.mjs に統合、settingsMigration の clock seam 二重定義を resolveNow に統合
+- 統合済みだった組（触らず報告）: DomainFilter.parse（PBI 07 で統合済み）、contentExtractor 14 フィールド重複（PBI 24 で解消済み）、previewPresenter PII_TYPE_LABELS（統合先 validTypes が現行に存在せず piiSanitizer はプライバシー保証領域のため不触）
+- 検証: フルスイート 1112 ファイル / 16560 テスト全 green、type-check 通過、eslint（19 ファイル）通過、validate:fast green
