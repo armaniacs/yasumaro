@@ -45,7 +45,12 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 
 実行順（B1→B5）: B1 = ~~01/08/14/16~~(2026-10-19・20 完了)/~~23~~(完了) → B2 = ~~02/04/07/09/11/24~~ 完了 → B3 = ~~05/13/20/21/22~~ 完了（20 は部分実装・宛先修正は別 PBI TODO） → B4 = ~~03/06/10/12/17/19~~ 完了/15 は部分実装（選択肢 2 のみ） → B5 = ~~18~~(完了)/25 は owner ブラウザ観測が残る。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
 
-TODO（未起票）: **fan-out 宛先修正**（PBI 20 実装メモの選択肢 1。拡張ページへの `SESSION_LOCK_REQUEST` リスナ追加 or SW 内直接呼び出しへの差替え）は「開いているコンテキストを能動的にロックする」UX 挙動（副作用 🔴）を伴うため、PBI 20 の記載どおり別 PBI として起票する。2026-10-20 時点で PBI 20 は選択肢 2（応答本文での成功判定）+ 選択肢 3（消費側の `IS_LOCKED` 検査をキャッシュ非依存へ移動）のみ実装済みで、宛先修正は未実施。
+TODO（起票済み 2026-10-20）: **fan-out 宛先修正**は [2026-10-20-feat-session-lock-fanout-destination.md](2026-10-20-feat-session-lock-fanout-destination.md) として起票済み（選択肢 1 vs 2 の裁定と実機観測は owner 判断）。2026-10-20 時点で PBI 20 は選択肢 2（応答本文での成功判定）+ 選択肢 3（消費側の `IS_LOCKED` 検査をキャッシュ非依存へ移動）実装済みで、宛先修正は本新 PBI へ引き継ぎ。
+
+### 2026-10-20 トリガー検証（外部ブロッカー再確認） ― 🔵 監視継続
+
+- **TypeScript 7 移行**（2026-09-26-12）: typescript-eslint 最新は v8.72.0（2026-10-19 リリース）で TS7（tsgo）対応のリリースは未発行。トリガー未発火を再確認。
+- **Stryker Vitest 5 runner**（2026-09-27-02）: [stryker-js#6210](https://github.com/stryker-mutator/stryker-js/issues/6210) は open のまま（2026-10-14 更新）。名前フィルタ問題の修正リリースは未発行。トリガー未発火を再確認。
 
 ### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） ― ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
 
