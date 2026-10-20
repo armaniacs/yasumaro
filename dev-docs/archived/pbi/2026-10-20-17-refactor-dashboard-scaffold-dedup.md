@@ -36,6 +36,12 @@ Scenario: purge 動作の不変性
 2 pt（RICE: 18 = Reach 9 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 4 つの複製が 1 実装になり、通知キー不整合が解消される
-- [ ] 既存テスト全通過
-- [ ] npm run validate 通過
+- [x] 4 つの複製が 1 実装になり、通知キー不整合が解消される
+- [x] 既存テスト全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- settingsForm の現在地は src/dashboard/generalSettings/settingsForm.ts（以前の PBI で移動済み）。PRIORITY_SLOT_INPUTS 1 定義 + collectProviderPrioritySlots 1 ループ化、PurgeActionSpec + runPurgeAction 集約
+- showRowCapNotice を新規 src/dashboard/panels/rowCapNotice.ts へ移動し手書き 4 パネルを置換。通知キー 'cap' → 'rowCap' に統一。'cap'/'rowCap' は _locales に存在しない要素スコープキーで表示テキスト解決に関与しないことを確認（4 パネルの i18n キーは解決テキストが異なるため統一せず、スコープキーのみ統一）
+- OPFS 判定述語を新規 src/dashboard/panels/diagnostic/opfsWorkerStatus.ts の isOpfsWorkerStatus へ共有
+- 検証: 担当領域のテスト全 green（rowCap 77 / settingsForm+purge 62 / diagnostics 76 / asyncData 865 / generalSettings 251）、type-check exit 0、eslint exit 0、validate:fast green

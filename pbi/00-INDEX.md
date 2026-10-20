@@ -14,28 +14,24 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 1件完了・アーカイブ済み（13） / ⬜ 23件残 🔧非機能追加 RICE順: 01(76) → 02(60) → 03(58) → 04(50) → 05(48) → 06(42) → 07(38) → 08(32) → 09(30) → 10(30) → 11(24) → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → 17(18) → 18(15) → 19(14) → 20(14) → 21(13) → 22(12) → 23(12) → 24(8)
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 5件完了・アーカイブ済み（01・05・11・13・17） / ⬜ 19件残 🔧非機能追加 RICE順: ~~01(76)~~ → 02(60) → 03(58) → 04(50) → ~~05(48)~~ → 06(42) → 07(38) → 08(32) → 09(30) → 10(30) → ~~11(24)~~ → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → ~~17(18)~~ → 18(15) → 19(14) → 20(14) → 21(13) → 22(12) → 23(12) → 24(8)
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-20-01-refactor-log-argument-swap.md](2026-10-20-01-refactor-log-argument-swap.md) | refactor | 76 | 2.0 | logWarn/logError/logInfo の引数 Swap 38 箇所/9 ファイル（permissionManager ほか）。診断 UI の検索・ErrorCode 集計が壊れる |
 | ⬜ 02 | [2026-10-20-02-refactor-error-normalization-unification.md](2026-10-20-02-refactor-error-normalization-unification.md) | refactor | 60 | 2.0 | String(error) 15 箇所/8 ファイル + instanceof Error 再ラップ 4 実装 + wasm 6 重複。errorMessage/toError へ統一 |
 | ⬜ 03 | [2026-10-20-03-refactor-console-to-logger-seam.md](2026-10-20-03-refactor-console-to-logger-seam.md) | refactor | 58 | 2.0 | console 直呼び約 44 箇所（dashboard/popup/utils/background/offscreen）。logger seam へ機械的移行 |
 | ⬜ 04 | [2026-10-20-04-refactor-constant-ssot-consolidation.md](2026-10-20-04-refactor-constant-ssot-consolidation.md) | refactor | 50 | 2.0 | 同値二重定義・mirror 契約 14 組（KEY_LENGTH・day-ms・24h TTL・timeout 30000・'local_export_' ほか） |
-| ⬜ 05 | [2026-10-20-05-refactor-settings-read-ladder.md](2026-10-20-05-refactor-settings-read-ladder.md) | refactor | 48 | 2.0 | aiUsageTracker の 3 段ラッダー複製（:64-111 / :296-341）。片側だけの硬化が届かない実例あり |
 | ⬜ 06 | [2026-10-20-06-refactor-wasm-url-ssot.md](2026-10-20-06-refactor-wasm-url-ssot.md) | refactor | 42 | 1.0 | WASM アセット URL リテラル 7 箇所。1 定数へ集約 |
 | ⬜ 07 | [2026-10-20-07-refactor-dead-code-removal.md](2026-10-20-07-refactor-dead-code-removal.md) | refactor | 38 | 2.0 | production 呼び出し 0 件のエクスポート・死に契約 19 件（SQLITE_EXPORT 到達不能契約・watchDynamicContent ほか） |
 | ⬜ 08 | [2026-10-20-08-refactor-csp-queue-machine-removal.md](2026-10-20-08-refactor-csp-queue-machine-removal.md) | refactor | 32 | 1.0 | cspValidator キュー実行マシン ~90 行（本番 0 件）+ cspSettings 未接続・ハードコード origin |
 | ⬜ 09 | [2026-10-20-09-refactor-tranco-change-detector-removal.md](2026-10-20-09-refactor-tranco-change-detector-removal.md) | refactor | 30 | 1.0 | TrancoChangeDetector 271 行（本番 import 0）+ 死にキー TRANCO_NOTIFICATION_SHOWN + 恒偽分岐 |
 | ⬜ 10 | [2026-10-20-10-refactor-encryption-session-dedup.md](2026-10-20-10-refactor-encryption-session-dedup.md) | refactor | 30 | 2.0 | encryptionSession 内 3 重複（PBKDF2 ボイラープレート・4 キー読み取り ×3・secret 生成 ×2） |
-| ⬜ 11 | [2026-10-20-11-refactor-sendwithpolicy-type-constraint.md](2026-10-20-11-refactor-sendwithpolicy-type-constraint.md) | refactor | 24 | 1.0 | sendWithPolicy の unconstrained R + as unknown as R を R extends { success: boolean } へ |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
 | ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
 | ⬜ 15 | [2026-10-20-15-refactor-crypto-params-score-ssot.md](2026-10-20-15-refactor-crypto-params-score-ssot.md) | refactor | 20 | 1.0 | cryptoParams scorePassword（mirror 実装）と masterPassword calculatePasswordStrength の複製を 1 実装へ |
 | ⬜ 16 | [2026-10-20-16-refactor-settings-migration-types.md](2026-10-20-16-refactor-settings-migration-types.md) | refactor | 18 | 2.0 | settingsMigration の boolean 合同 as ×4 + as never ×2 を core シグネチャへ統合 |
-| ⬜ 17 | [2026-10-20-17-refactor-dashboard-scaffold-dedup.md](2026-10-20-17-refactor-dashboard-scaffold-dedup.md) | refactor | 18 | 2.0 | dashboard 同型スカフォールド 4 組（優先度スロット ×3・purge ×2・cap 通知手書き 4 パネル・判定述語 ×2） |
 | ⬜ 18 | [2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md](2026-10-20-18-refactor-fetch-retry-ssrf-consolidation.md) | refactor | 15 | 2.0 | fetchWithRetry の 2 同形ブロック（:434-450 / :455-470）+ ssrfGuard localhost 判定 ×3 |
 | ⬜ 19 | [2026-10-20-19-refactor-testability-seams.md](2026-10-20-19-refactor-testability-seams.md) | refactor | 14 | 2.0 | 生 setTimeout・Date.now() の注入化 5 箇所 + domClear/compareStrings（canonical seam・テストなし） |
 | ⬜ 20 | [2026-10-20-20-refactor-type-safety-cleanup.md](2026-10-20-20-refactor-type-safety-cleanup.md) | refactor | 14 | 2.0 | 不要 as 11 箇所（RecordingOrchestrator as never・urlEntry Record|Map 二重表現・trustSettings 境界ガードなし ほか） |
@@ -526,6 +522,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 01・05・11・17 アーカイブ ― リファクタリング診断 24件のうち 5件完了（01・05・11・13・17）
+
+- **01-refactor-log-argument-swap**（`7c1f364d`）: ログ引数 Swap 38 箇所 / 9 ファイルを canonical 形へ。説明文が無い 7 箇所は ErrorCode 対の説明文を補完。pin テスト新規。535 件全通過。
+- **05-refactor-settings-read-ladder**（`82f3cf4c`）: aiUsageTracker の 3 段ラッダー複製を readNumberSetting / toLadderValue に集約。全層・両関数で数字列を正規化（変更前は monthly blob 層のみ）。Red/Green + 変異チェック。
+- **11-refactor-sendwithpolicy-type-constraint**（`bc3ad059`）: SendFailure 型を新規所有し戻り型を Promise<R | SendFailure> へ widening。defaultMapError はキャストゼロ（as unknown as R 排除）。型レベル pin 追加。
+- **17-refactor-dashboard-scaffold-dedup**（`688dc4ac`）: 優先度スロット・purge スカフォールド・cap 通知（'cap'→'rowCap' スコープキー統一。表示テキストは 4 パネルの i18n キーで異なるため据え置き）・OPFS 判定述語の 4 組を 1 実装へ。
 
 ### 2026-10-20 PBI 13 アーカイブ ― リファクタリング診断 24件のうち 1件完了
 

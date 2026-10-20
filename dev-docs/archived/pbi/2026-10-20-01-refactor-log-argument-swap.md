@@ -35,6 +35,11 @@ Scenario: 診断パネルの source 検索
 2 pt（RICE: 76 = Reach 38 × Impact 2 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 38 箇所すべてで引数順が canonical と一致する
-- [ ] message/source 形を pin するテストを 1 本追加し通過
-- [ ] npm run validate 通過（既存テスト全通過）
+- [x] 38 箇所すべてで引数順が canonical と一致する
+- [x] message/source 形を pin するテストを 1 本追加し通過
+- [x] npm run validate 通過（既存テスト全通過）
+
+## 実装記録（2026-10-21）
+- 38 箇所 / 9 ファイルを canonical 形（message=説明・source=モジュール名）へ入れ替え。説明文が無い 7 箇所は ErrorCode と対になる説明文を補い、モジュール名を source へ移動
+- pin テスト: src/utils/__tests__/permissionManager-log-argument-form.test.ts（新規）。旧逆順を pin する既存テストは存在せず、期待値変更は不要
+- 検証: 担当モジュール 535 件全通過、type-check pass、eslint pass、validate:fast green（196 ファイル / 2853 テスト）

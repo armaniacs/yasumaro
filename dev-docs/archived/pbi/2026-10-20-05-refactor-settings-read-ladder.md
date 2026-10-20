@@ -35,6 +35,11 @@ Scenario: 文字列数値は両関数で数値化される
 2 pt（RICE: 48 = Reach 8 × Impact 3 × Confidence 1.0 ÷ Effort 0.5 人日）
 
 ## DoD
-- [ ] 2 関数が共通ヘルパーを使い、ラッダー複製が消える
-- [ ] 既存テスト（aiUsageTracker.test.ts）全通過
-- [ ] npm run validate 通過
+- [x] 2 関数が共通ヘルパーを使い、ラッダー複製が消える
+- [x] 既存テスト（aiUsageTracker.test.ts）全通過
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- ヘルパー readNumberSetting / toLadderValue を aiUsageTracker.ts:69-140 に抽出。getRateLimitMax・getMaxMonthlyTokens の両方が 1 実装経由。blob / legacy / SettingsRepository の全層で数字列を Number 化（変更前は monthly の blob 層のみ）。有効性述語（>0 / >=0）は呼び出し側に残し 0 の意味論の共有を回避
+- Red/Green: 変更前挙動を pin する Red 3 本を実装前に確認（3 failed / 50 passed）→ ヘルパー後 53/53 green。変異チェック済み（blob 層無効化で blob 優先系 7 テストが全 Red）
+- 検証: type-check pass、eslint pass、validate:fast green
