@@ -9,6 +9,19 @@ import { describe, test, expect, beforeEach, vi } from 'vitest';
 import { SessionAlarmService } from '../SessionAlarmService.js';
 import type { Clock, StoragePort, StorageArea, AlarmPort } from '../../utils/ports.js';
 
+// PBI 2026-10-18-20: the unconfirmed-delivery failure log is the observable
+// contract of BDD scenario 3 (no silent success). Wrap the real logger in
+// spies so tests can assert on it without changing logger behavior.
+vi.mock('../../utils/logger/api.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../../utils/logger/api.js')>();
+    return {
+        ...actual,
+        logInfo: vi.fn(actual.logInfo),
+        logWarn: vi.fn(actual.logWarn),
+        logError: vi.fn(actual.logError),
+    };
+});
+
 class InMemoryStorageArea implements StorageArea {
   private data = new Map<string, unknown>();
 
@@ -86,8 +99,12 @@ describe('SessionAlarmService', () => {
     clock = new FakeClock(1_000_000);
     storage = createInMemoryStoragePort();
     alarms = new FakeAlarmPort();
-    sendMessage = vi.fn().mockResolvedValue(undefined);
-    stepDelay = vi.fn<ConstructorParameters<typeof SessionAlarmService>[4]>(async () => {});
+    // PBI 2026-10-18-20: success is judged by the response body, so the base
+    // fake is a confirming receiver ({ success: true }, the response contract
+    // in messaging/types.ts). Tests that need the receiver-less or rejecting
+    // shape override below.
+    sendMessage = vi.fn().mockResolvedValue({ success: true });
+    stepDelay = vi.fn<Exclude<ConstructorParameters<typeof SessionAlarmService>[4], undefined>>(async () => {});
     service = new SessionAlarmService(
       alarms,
       clock,
@@ -164,7 +181,13 @@ describe('SessionAlarmService', () => {
     expect(stepDelay).toHaveBeenNthCalledWith(2, 100);
   });
 
-  test('drives the SESSION_LOCK_REQUEST retry wait through the injected delay and succeeds on the third attempt', async () => {
+  test('drives the SESSION_LOCK_REQUEST retry wait through the injected delay and succeeds when the third attempt confirms delivery', async () => {
+    // PBI 2026-10-18-20: the success criterion changed from "sendMessage
+    // resolved" to "the response body confirms receipt ({ success: true })".
+    // The third attempt must therefore answer with the confirming body
+    // instead of a bare resolution, so the base fake now provides it after
+    // the two rejections (the old mock resolved with undefined, which the new
+    // criterion treats as an unconfirmed receiver-less delivery).
     sendMessage
       .mockRejectedValueOnce(new Error('no receiver'))
       .mockRejectedValueOnce(new Error('no receiver'));
@@ -190,6 +213,79 @@ describe('SessionAlarmService', () => {
     expect(stepDelay).toHaveBeenCalledTimes(2);
     expect(stepDelay).toHaveBeenNthCalledWith(1, 100);
     expect(stepDelay).toHaveBeenNthCalledWith(2, 100);
+  });
+
+  test('treats a receiver-less resolution (undefined response) as unconfirmed and ends in an explicit failure log', async () => {
+    // PBI 2026-10-18-20, BDD scenario 3: Chrome resolves a receiver-less
+    // sendMessage with undefined (and the sender's own onMessage never fires,
+    // the same platform fact recorded in privacyConsent.ts), so the old
+    // "resolved = success" marked a lock nobody applied. The unconfirmed send
+    // must retry to the ceiling and leave the observable failure log instead
+    // of a silent success.
+    sendMessage.mockResolvedValue(undefined);
+    await storage.local.set({
+      [MASTER_PASSWORD_ENABLED_KEY]: true,
+      session_last_activity: clock.now(),
+    });
+    await service.startTimeoutChecker();
+
+    clock.advance(31 * 60 * 1000);
+    await service.checkTimeout();
+
+    expect(sendMessage).toHaveBeenCalledTimes(3);
+    expect(stepDelay).toHaveBeenCalledTimes(2);
+    const { logError } = await import('../../utils/logger/api.js');
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining('never confirmed'),
+      expect.objectContaining({ confirmed: false }),
+      expect.any(String),
+      expect.any(String)
+    );
+  });
+
+  test('treats a { success: false } response body as unconfirmed', async () => {
+    // PBI 2026-10-18-20, unit strategy: the three response shapes
+    // (undefined / { success: true } / { success: false }) pin that the
+    // success decision reads the response body, not the resolution.
+    sendMessage.mockResolvedValue({ success: false });
+    await storage.local.set({
+      [MASTER_PASSWORD_ENABLED_KEY]: true,
+      session_last_activity: clock.now(),
+    });
+    await service.startTimeoutChecker();
+
+    clock.advance(31 * 60 * 1000);
+    await service.checkTimeout();
+
+    expect(sendMessage).toHaveBeenCalledTimes(3);
+    expect(stepDelay).toHaveBeenCalledTimes(2);
+    const { logError } = await import('../../utils/logger/api.js');
+    expect(logError).toHaveBeenCalledWith(
+      expect.stringContaining('never confirmed'),
+      expect.objectContaining({ confirmed: false }),
+      expect.any(String),
+      expect.any(String)
+    );
+  });
+
+  test('stops after the first attempt when the response body confirms receipt', async () => {
+    // PBI 2026-10-18-20, BDD scenario 5: a context with a
+    // SESSION_LOCK_REQUEST handler answers { success: true }, so one attempt
+    // suffices and no retry wait is scheduled.
+    sendMessage.mockResolvedValue({ success: true });
+    await storage.local.set({
+      [MASTER_PASSWORD_ENABLED_KEY]: true,
+      session_last_activity: clock.now(),
+    });
+    await service.startTimeoutChecker();
+
+    clock.advance(31 * 60 * 1000);
+    await service.checkTimeout();
+
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(stepDelay).not.toHaveBeenCalled();
+    const { logError } = await import('../../utils/logger/api.js');
+    expect(logError).not.toHaveBeenCalled();
   });
 
   test('does not lock when the timeout has not elapsed', async () => {

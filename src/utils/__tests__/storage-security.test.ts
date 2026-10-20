@@ -439,7 +439,12 @@ describe('Master Password Security', () => {
         test('throws a lock error when a master password is set', async () => {
             await setMasterPassword('StrongPass123!@#');
 
-            await expect(getOrCreateEncryptionKey()).rejects.toThrow('ENCRYPTION_LOCKED: Master password required');
+            // PBI 2026-10-18-20: the IS_LOCKED check now runs at the top of
+            // getOrCreateEncryptionKey in every cache state, so the lock is
+            // detected before deriveKeyFromMasterPassword's "Master password
+            // required" throw and reports the canonical message from the
+            // acceptance criteria ("ENCRYPTION_LOCKED: Session is locked").
+            await expect(getOrCreateEncryptionKey()).rejects.toThrow('ENCRYPTION_LOCKED: Session is locked');
         });
 
         test('retrieves the key after unlocking', async () => {

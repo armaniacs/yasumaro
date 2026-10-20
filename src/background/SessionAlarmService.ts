@@ -10,6 +10,7 @@ import { logInfo, logWarn, logError } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
+import { isPlainRecord } from '../utils/objectUtils.js';
 import {
   SYSTEM_CLOCK,
   CHROME_STORAGE_PORT,
@@ -154,29 +155,38 @@ export class SessionAlarmService {
     try {
       await this.storage.local.set({ [StorageKeys.IS_LOCKED]: true });
 
-      // VULN-017 fix: retry lock notification up to 3 times to ensure
-      // encryption session receives the lock signal, preventing stale
-      // cached decryption keys from remaining usable after auto-lock.
+      // VULN-017 fix (PBI 2026-10-18-20): retry the lock notification up to 3
+      // times so extension-page contexts holding a cached key can drop it.
+      // Platform fact (same one recorded in privacyConsent.ts):
+      // chrome.runtime.sendMessage is never delivered to the sender's own
+      // context, so the SW's own MessageRouter handler cannot receive this
+      // send. Delivery is confirmed only by the response body
+      // ({ success: true }, messaging/types.ts): a receiver-less fan-out also
+      // resolves, so marking success on resolution would report a lock nobody
+      // applied.
       let retries = LOCK_NOTIFICATION_MAX_RETRIES;
-      let success = false;
-      while (retries > 0 && !success) {
+      let confirmed = false;
+      while (retries > 0 && !confirmed) {
         try {
-          await this.sendMessage({
+          const response = await this.sendMessage({
             type: 'SESSION_LOCK_REQUEST',
             protocolVersion: CURRENT_PROTOCOL_VERSION,
           });
-          success = true;
+          confirmed = isPlainRecord(response) && response['success'] === true;
         } catch {
+          // A rejected send is an unconfirmed delivery too.
+        }
+        if (!confirmed) {
           retries--;
           if (retries > 0) {
             await this.stepDelay(LOCK_NOTIFICATION_RETRY_DELAY_MS);
           }
         }
       }
-      if (!success) {
+      if (!confirmed) {
         logError(
-          'Failed to deliver lock notification after retries. Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey.',
-          { retries },
+          'Lock notification was never confirmed: no context with a SESSION_LOCK_REQUEST handler responded. Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey.',
+          { retries, confirmed: false },
           ErrorCode.INTERNAL_ERROR,
           'SessionAlarmService.ts'
         );

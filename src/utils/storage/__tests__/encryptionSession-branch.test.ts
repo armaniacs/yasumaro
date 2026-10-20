@@ -46,6 +46,13 @@ vi.mock('../authGuard.js', () => ({
 beforeEach(async () => {
     clearEncryptionKeyCache();
     vi.clearAllMocks();
+    // PBI 2026-10-18-20: the IS_LOCKED check now runs at the top of
+    // getOrCreateEncryptionKey in every cache state, so the authGuard mock
+    // must be reset per test. clearAllMocks keeps implementations, and the
+    // "clears cache and throws when authGuard reports locked" test below
+    // overrides isLocked to true.
+    const { isLocked } = await import('../authGuard.js');
+    vi.mocked(isLocked).mockResolvedValue(false);
     // PBI 25-25: fresh secret generation wraps with the dedicated KEK.
     // Install the in-memory backend (stands in for IndexedDB).
     const { getWebCrypto } = await import('../../crypto/primitives.js');
@@ -77,6 +84,25 @@ describe('getOrCreateEncryptionKey branches', () => {
         vi.mocked(isLocked).mockResolvedValue(true);
 
         await expect(getOrCreateEncryptionKey()).rejects.toThrow('ENCRYPTION_LOCKED');
+    });
+
+    it('throws when locked even in the residual unlock state (cached password, null key)', async () => {
+        // Residual state from unlockWithPassword / changeMasterPassword:
+        // cachedMasterPassword stays set while cachedEncryptionKey is null.
+        // The IS_LOCKED check used to live inside `if (cachedEncryptionKey)`,
+        // so this state skipped it and re-derived the key from the cached
+        // password after auto-lock (PBI 2026-10-18-20, VULN-017 follow-up).
+        await setMasterPassword('StrongP@ssw0rd123!');
+        await unlockWithPassword('StrongP@ssw0rd123!');
+
+        // Auto-lock fired in the service worker: IS_LOCKED=true in storage.
+        const { isLocked } = await import('../authGuard.js');
+        vi.mocked(isLocked).mockResolvedValue(true);
+
+        await expect(getOrCreateEncryptionKey()).rejects.toThrow('ENCRYPTION_LOCKED: Session is locked');
+        // Both caches are cleared on detection, so the module state reports
+        // locked and the UI can tell the session is locked.
+        expect(await isEncryptionLocked()).toBe(true);
     });
 
     it('uses stored KDF iterations when present', async () => {

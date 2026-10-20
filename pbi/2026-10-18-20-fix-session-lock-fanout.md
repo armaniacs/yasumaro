@@ -92,13 +92,13 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 
 ## 受け入れ基準
 
-- [ ] `getOrCreateEncryptionKey`（`encryptionSession.ts:566-591`）の `IS_LOCKED` 検査が、`cachedEncryptionKey` が非 null のときだけ走る構造を**廃する**。`cachedMasterPassword` だけが残る残存状態（`:706-707` / `:811-812`）でも検査が走り、検出時は両キャッシュを null 化して `ENCRYPTION_LOCKED: Session is locked` を投げる（`authGuard.isLocked` を `storage.local` を読む唯一の seam として維持する）
-- [ ] `SessionAlarmService.lockSession`（`:160-175`）の成功判定が「`sendMessage` が解決した」だけで成立しなくなり、**応答本文で受付を確認する**（`src/messaging/types.ts:323` の `SESSION_LOCK_REQUEST` 応答は `{ success: true }` なので、本文を見て判定する）。判定不能な「無音」を残さないため、確認できない場合は明示的な観測結果（ログ/エラーコード）として残る
+- [x] `getOrCreateEncryptionKey`（`encryptionSession.ts:566-591`）の `IS_LOCKED` 検査が、`cachedEncryptionKey` が非 null のときだけ走る構造を**廃する**。`cachedMasterPassword` だけが残る残存状態（`:706-707` / `:811-812`）でも検査が走り、検出時は両キャッシュを null 化して `ENCRYPTION_LOCKED: Session is locked` を投げる（`authGuard.isLocked` を `storage.local` を読む唯一の seam として維持する）
+- [x] `SessionAlarmService.lockSession`（`:160-175`）の成功判定が「`sendMessage` が解決した」だけで成立しなくなり、**応答本文で受付を確認する**（`src/messaging/types.ts:323` の `SESSION_LOCK_REQUEST` 応答は `{ success: true }` なので、本文を見て判定する）。判定不能な「無音」を残さないため、確認できない場合は明示的な観測結果（ログ/エラーコード）として残る
 - [ ] `SESSION_LOCK_REQUEST` の fan-out 宛先が「**実際に handler を持つコンテキスト**」に修正される。採用した方式（拡張ページのリスナ追加 or SW 内の直接呼び出しへ差替え）をコメントで残し、リポジトリ全体で「送信者は producer のみ」だった状態を終わらせる
-- [ ] 既存テストの期待値が本修正の挙動に合わせて**明示的に書き換えられ**、書き換えた理由が各テストにコメントで残る（`SessionAlarmService.test.ts:150-193` / `sessionAlarmsManager.test.ts:352-365` / `storage-security.test.ts:455-467` / `encryptionSession-branch.test.ts:137-156`）。特に「解決したら成功」の前提をしていたテストがあれば、それを「応答本文で判定する」期待値へ変更する
+- [x] 既存テストの期待値が本修正の挙動に合わせて**明示的に書き換えられ**、書き換えた理由が各テストにコメントで残る（`SessionAlarmService.test.ts:150-193` / `sessionAlarmsManager.test.ts:352-365` / `storage-security.test.ts:455-467` / `encryptionSession-branch.test.ts:137-156`）。特に「解決したら成功」の前提をしていたテストがあれば、それを「応答本文で判定する」期待値へ変更する
 - [ ] ロック済み時の UI・データ保護の挙動が owner によって確認され、結果が記録に残る（隔離プロファイル + ダミーデータ。BDD シナリオ 1〜4 の E2E 相当）。`settingsMigration.ts:538` / `obsidianClient.ts:148` / `RemoteAIService.ts:153,176` の `isEncryptionLockedError` 経路が想定どおり（パスワード入力の誘発／想定外の例外）に振る舞うこと
-- [ ] マスターパスワード未設定ユーザー（`SessionAlarmService.ts:125-127` のゲート、`authGuard.isLocked` の `MASTER_PASSWORD_ENABLED &&` ガード）の挙動が一切変わらない（`storage-security.test.ts:455-467` が引き続き緑）
-- [ ] `src/utils/storage/encryptionSession.ts` / `src/background/SessionAlarmService.ts` の VULN-017 注釈が実挙動に更新される（現状 `:157-159` は「通知を 3 回リトライして暗号セッションにロックシグナルが届くことを保証する」前提だが、宛先と成功判定のどちらもそれを保証していない）。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で注釈に残す
+- [x] マスターパスワード未設定ユーザー（`SessionAlarmService.ts:125-127` のゲート、`authGuard.isLocked` の `MASTER_PASSWORD_ENABLED &&` ガード）の挙動が一切変わらない（`storage-security.test.ts:455-467` が引き続き緑）
+- [x] `src/utils/storage/encryptionSession.ts` / `src/background/SessionAlarmService.ts` の VULN-017 注釈が実挙動に更新される（現状 `:157-159` は「通知を 3 回リトライして暗号セッションにロックシグナルが届くことを保証する」前提だが、宛先と成功判定のどちらもそれを保証していない）。MV3 のプラットフォーム事実（送信者自身には届かない）を `privacyConsent.ts:310-314` と同じ形で注釈に残す
 
 ## テスト戦略
 
@@ -191,6 +191,15 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 - 判定: **CONFIRMED**（局所再現 + 仕様確定）
 - 決め手: `unlockWithPassword()` 成功後（cachedMasterPassword あり・cachedEncryptionKey null）に `IS_LOCKED=true` を立てて `getOrCreateEncryptionKey()` を呼ぶと **鍵が導出され（`derivedKeyReturned:true`）、`ENCRYPTION_LOCKED` は不発、`isEncryptionLocked()` は false**。IS_LOCKED 検査が cachedEncryptionKey 非 null のときしか走らない構造を実証。加えて Chrome docs により「送信者自身のフレームには配送されない」「リスナあり無応答は null で resolve」が確定し、fan-out が成功と誤判定する機構も説明できた
 - 影響: 選択肢 3（消費側の検査をキャッシュ非依存にする）が単一ファイルで確実な最小修正であることが裏付けられた
+
+## 実装記録（2026-10-20）
+
+- 裁定: 実装メモの**選択肢 3（必須）+ 選択肢 2（推奨）を実装**。選択肢 1（fan-out 宛先修正）は「開いているコンテキストを能動的にロックする」UX 挙動（副作用 🔴）を伴うため、PBI の記載どおり**別 PBI に分岐**し、TODO を `pbi/00-INDEX.md` に残した（本 PBI では宛先は変更していない）。
+- 実装:
+  - `src/utils/storage/encryptionSession.ts` ― `getOrCreateEncryptionKey` の `IS_LOCKED` 検査を先頭（キャッシュの有無に依存しない位置）へ移動。検出時は両キャッシュを null 化して `ENCRYPTION_LOCKED: Session is locked` を投げる（`authGuard.isLocked` を唯一の seam として維持）。回転中の fail-closed 動作（`withPreservedSessionCache` による事前状態復元と pending-salt anchor の resume）を注釈に記載。
+  - `src/background/SessionAlarmService.ts` ― リトライループの成功判定を「応答本文 `{ success: true }`」へ変更（解決だけでは success にしない）。未確認のまま上限に達した場合は「never confirmed」の観測可能なログ（`confirmed: false`、既存ログと矛盾しない文面）を残す。MV3 の自己配送なしのプラットフォーム事実を `privacyConsent.ts` と同じ形で注釈。
+- テスト: Red 先行（残存状態で鍵が導出される現状を pin → 修正後 Green）。新規 4 テスト（残存状態のロック検出と `isEncryptionLocked()` の true / `undefined` 応答の未確認扱い / `{ success: false }` 応答の未確認扱い / 応答本文 `{ success: true }` で 1 回で終了）と、既存期待値のうち PBI が明示した分のみ更新（`storage-security.test.ts` のロックエラーメッセージを本修正の `Session is locked` へ、`SessionAlarmService.test.ts` の 3 回目成功を「応答本文で確認」へ、`sessionAlarmsManager.test.ts` の `stepDelay` 注入、`encryptionSession-branch.test.ts` の `authGuard` モック初期化）。
+- 未実施: 受入基準 5 の owner による UI・データ保護確認（隔離プロファイル + ダミーデータの E2E 相当）。選択肢 1 の宛先修正（別 PBI）。
 
 ## 関連
 

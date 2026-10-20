@@ -86,7 +86,10 @@ const CONSENT_HMAC_SIGNATURE_KEY_VERSION = '1'; // Version tracking for key rota
 
 const HMAC_WRAPPING_KEY_SESSION = 'hmac-wrapping-key';
 
-const QUARANTINE_SUFFIX = '-quarantine';
+// Shared with encryptionSession (HMAC_SECRET quarantine): one constant keeps
+// the "-quarantine" key naming identical across the consent, notification, and
+// settings-export signing keys (PBI 2026-10-18-15).
+export const QUARANTINE_SUFFIX = '-quarantine';
 
 // Logging must never block key regeneration (fail-open availability).
 async function safeLog(fn: () => Promise<void>): Promise<void> {

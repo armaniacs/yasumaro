@@ -25,6 +25,7 @@ import {
 import { assertValidStoredKdfIterations } from '../crypto/primitives.js';
 import { validatePasswordPolicy } from '../crypto/cryptoParams.js';
 import { hmacSignerForSecret, type HmacSigner } from '../crypto/hmacSigner.js';
+import { QUARANTINE_SUFFIX } from '../crypto/hmacKeyStore.js';
 import {
   getOrCreateSecretWrappingKey,
   loadSecretWrappingKey,
@@ -552,16 +553,31 @@ async function rotateToNewMasterPassword(options: {
  * マスターパスワード未設定の場合は従来の方式でマイグレーション準備
  *
  * @returns {Promise<CryptoKey>} 導出された暗号化キー
- * @throws {Error} ロックされている場合（マスターパスワード未入力）
+ * @throws {Error} ロックされている場合（IS_LOCKED=true。キャッシュの有無に依存せず先頭で検査する）
  */
 export async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
-    // VULN-017 fix: check IS_LOCKED before returning cached key.
+    // VULN-017 fix (PBI 2026-10-18-20): the IS_LOCKED check sits at the top so
+    // it runs in every cache state. It used to live inside
+    // `if (cachedEncryptionKey)`, so the residual state left by
+    // unlockWithPassword / changeMasterPassword (cachedMasterPassword kept,
+    // cachedEncryptionKey null) skipped the check entirely and re-derived the
+    // key from the cached password after auto-lock. authGuard.isLocked stays
+    // the only seam reading storage.local for the lock state, and it returns
+    // false when MASTER_PASSWORD_ENABLED is unset, so users without a master
+    // password are never blocked here. During set / change rotations this
+    // check passes legitimately: set resolves the previous key before the
+    // metadata write (MASTER_PASSWORD_ENABLED still unset), and change's
+    // unlockWithPassword has already written IS_LOCKED=false. If auto-lock
+    // fires mid-rotation the rotation aborts fail-closed instead of
+    // bypassing the lock: withPreservedSessionCache restores the pre-call
+    // session and the pending-salt anchor survives for resume.
+    if (await authGuardIsLocked()) {
+        cachedEncryptionKey = null;
+        cachedMasterPassword = null;
+        throw new Error('ENCRYPTION_LOCKED: Session is locked');
+    }
+
     if (cachedEncryptionKey) {
-        if (await authGuardIsLocked()) {
-            cachedEncryptionKey = null;
-            cachedMasterPassword = null;
-            throw new Error('ENCRYPTION_LOCKED: Session is locked');
-        }
         return cachedEncryptionKey;
     }
 
@@ -919,11 +935,22 @@ export async function getOrCreateHmacSecret(): Promise<string> {
         try {
             secret = await unwrapSecretString(stored);
         } catch (e) {
-            // The KEK lives in chrome.storage.session and is cleared on browser/
-            // extension restart, so unwrapping an already-wrapped secret can fail
-            // for existing users. Self-heal instead of throwing: generate a fresh
-            // secret and persist it wrapped (mirrors hmacKeyStore recovery).
+            // The KEK lives outside storage.local (session cache plus the durable
+            // IndexedDB store), so unwrapping an already-wrapped secret can fail
+            // when the KEK is lost (e.g. browser restart with no durable key).
+            // Self-heal instead of throwing: quarantine the old envelope FIRST —
+            // the same "-quarantine" path as the consent and notification HMAC
+            // keys — then generate a fresh secret and persist it wrapped.
+            // Without the quarantine, the overwrite below would destroy the old
+            // envelope without a trace (PBI 2026-10-18-15).
             await logError('Failed to unwrap HMAC secret, regenerating', { error: errorMessage(e as Error) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+            try {
+                await chrome.storage.local.set({ [`${StorageKeys.HMAC_SECRET}${QUARANTINE_SUFFIX}`]: stored });
+            } catch (quarantineError) {
+                // Not swallowed: the quarantined envelope is the only trace of the
+                // previous secret, so a quarantine failure must stay observable.
+                await logError('Failed to quarantine the old HMAC secret envelope before regenerating', { error: errorMessage(quarantineError) }, ErrorCode.CRYPTO_ENCRYPTION_FAILURE);
+            }
             secret = await generateAndStoreHmacSecret();
         }
     } else if (typeof stored === 'string' && stored.length > 0) {

@@ -219,7 +219,12 @@ async function loadFreshService() {
   setupChromeAlarms();
   setupStorageMocks();
   const { SessionAlarmService } = await import('../../../SessionAlarmService.js');
-  return new SessionAlarmService();
+  // PBI 2026-10-18-20: lock delivery is confirmed by the response body, and
+  // the global callback-style runtime mock answers a promise-style sender
+  // with undefined, which the producer now treats as unconfirmed and retries
+  // through its real backoff. Inject the no-op delay so the retry loop stays
+  // injectable and these tests never wait in real time (AGENTS.md wait rule).
+  return new SessionAlarmService(undefined, undefined, undefined, undefined, async () => {});
 }
 
 describe('sessionAlarmsManager', () => {
