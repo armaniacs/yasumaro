@@ -363,7 +363,7 @@ describe('GistSyncTarget - extended coverage', () => {
       const result = await target.sync(1, 'https://example.com', 'Test', 'click [here]\n(https://evil.example/phish)');
 
       expect(result.success).toBe(true);
-      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      const callBody = JSON.parse(fetchMock.mock.calls[0]?.[1].body as string);
       expect(callBody.files['yasumaro-history.md'].content).toBe(
         '- [Test](https://example.com): click \\[here\\]\n\\(https://evil.example/phish\\)',
       );

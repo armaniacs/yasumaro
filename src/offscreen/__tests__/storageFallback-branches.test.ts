@@ -113,7 +113,7 @@ describe('FallbackStorage quota purge ordering (PBI 2026-10-18-13)', () => {
 
       const after = await storage.getAllRecords();
       expect(after.length).toBe(20);
-      expect(after.map(r => r.id).sort((a, b) => a - b)).toEqual(before.map(r => r.id).sort((a, b) => a - b));
+      expect(after.map(r => r.id ?? 0).sort((a, b) => a - b)).toEqual(before.map(r => r.id ?? 0).sort((a, b) => a - b));
       expect(after.map(r => r.url).sort()).toEqual(before.map(r => r.url).sort());
     } finally {
       getBytesSpy.mockRestore();
@@ -158,7 +158,7 @@ describe('FallbackStorage quota purge ordering (PBI 2026-10-18-13)', () => {
 
       const after = await storage.getAllRecords();
       expect(after.length).toBe(before.length);
-      expect(after.map(r => r.id).sort((a, b) => a - b)).toEqual(before.map(r => r.id).sort((a, b) => a - b));
+      expect(after.map(r => r.id ?? 0).sort((a, b) => a - b)).toEqual(before.map(r => r.id ?? 0).sort((a, b) => a - b));
     } finally {
       getBytesSpy.mockRestore();
     }

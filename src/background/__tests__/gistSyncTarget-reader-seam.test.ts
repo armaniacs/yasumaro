@@ -16,10 +16,10 @@ import { StorageKeys } from '../../utils/storage/types.js';
 vi.mock('../../utils/storage/storagePort.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../utils/storage/storagePort.js')>();
   class TripwirePort extends actual.ChromeStoragePort {
-    async get(): Promise<Record<string, unknown>> {
+    override async get(): Promise<Record<string, unknown>> {
       throw new Error('real chrome.storage touched (get)');
     }
-    async set(): Promise<void> {
+    override async set(): Promise<void> {
       throw new Error('real chrome.storage touched (set)');
     }
   }
