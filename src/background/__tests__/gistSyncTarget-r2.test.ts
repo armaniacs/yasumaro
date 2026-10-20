@@ -350,6 +350,24 @@ describe('GistSyncTarget - extended coverage', () => {
       const callBody = JSON.parse((global.fetch as any).mock.calls[0][1].body);
       expect(callBody.files['yasumaro-history.md'].content).toBe('# Custom markdown');
     });
+
+    // PBI 2026-10-18-16: the gist path keeps the raw newline (normalizeSummary:
+    // false, gistSyncTarget.ts plainLine branch) but the whitespace-separated
+    // link spelling must still be escaped before the gist body is written.
+    it('escapes a newline-split link spelling in the gist body (normalizeSummary: false)', async () => {
+      mockGetAll.mockResolvedValue({ github_pat: 'ghp_test' });
+      const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ id: 'gist-1' }) } as Response);
+      global.fetch = fetchMock;
+      mockSqliteClient.mutate.mockResolvedValue({ success: true, data: undefined });
+
+      const result = await target.sync(1, 'https://example.com', 'Test', 'click [here]\n(https://evil.example/phish)');
+
+      expect(result.success).toBe(true);
+      const callBody = JSON.parse(fetchMock.mock.calls[0][1].body);
+      expect(callBody.files['yasumaro-history.md'].content).toBe(
+        '- [Test](https://example.com): click \\[here\\]\n\\(https://evil.example/phish\\)',
+      );
+    });
   });
 
   describe('syncBatch', () => {

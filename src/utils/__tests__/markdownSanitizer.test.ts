@@ -107,6 +107,75 @@ describe('markdownSanitizer', () => {
         });
     });
 
+    // PBI 2026-10-18-16: whitespace-separated link spellings must be escaped
+    // before a note write. CommonMark / GFM / Obsidian render `[text] (url)` as
+    // literal text, so the value pinned here is the escaped notation itself,
+    // with the inner whitespace preserved (no space deletion).
+    describe('sanitizeAllMarkdownLinks - whitespace-separated link spelling (PBI 2026-10-18-16)', () => {
+        it('escapes the whitespace-separated [text] (url) spelling (BDD scenario 1)', () => {
+            const input = 'click [here] (https://evil.example/phish)';
+            const expected = 'click \\[here\\] \\(https://evil.example/phish\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('leaves no raw whitespace-separated spelling after escaping (BDD scenario 1)', () => {
+            const result = sanitizeAllMarkdownLinks('click [here] (https://evil.example/phish)');
+            expect(result).not.toMatch(/\[here\] \(/);
+        });
+
+        it('keeps the no-whitespace spelling output unchanged (BDD scenario 2 regression)', () => {
+            const input = 'click [here](https://example.com/page)';
+            const expected = 'click \\[here\\]\\(https://example.com/page\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('does not delete the space between link text and destination (BDD scenario 2 regression)', () => {
+            expect(sanitizeAllMarkdownLinks('[here](https://example.com/page)')).toBe('\\[here\\]\\(https://example.com/page\\)');
+            expect(sanitizeAllMarkdownLinks('[here] (https://example.com/page)')).toBe('\\[here\\] \\(https://example.com/page\\)');
+        });
+
+        it('escapes a newline-split payload while keeping the raw newline (BDD scenario 3, gist route)', () => {
+            // \s matches \n, so the gist route (normalizeSummary: false) keeps
+            // the raw newline and only the brackets are escaped.
+            const input = 'click [here]\n(https://evil.example/phish)';
+            const expected = 'click \\[here\\]\n\\(https://evil.example/phish\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('escapes the whitespace-separated image syntax keeping ! in place (BDD scenario 4)', () => {
+            const input = '![alt] (https://evil.example/track.png)';
+            const expected = '!\\[alt\\] \\(https://evil.example/track.png\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('keeps the no-whitespace image syntax output unchanged (BDD scenario 4 regression)', () => {
+            const input = '![alt](https://example.com/a.png)';
+            const expected = '!\\[alt\\]\\(https://example.com/a.png\\)';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('does not collapse English parenthetical prose (BDD scenario 5)', () => {
+            // Meaning pin: every original bracket survives in the same order,
+            // only escaped, and the space before the destination is not rounded
+            // away by a whitespace-collapsing implementation.
+            const input = 'the three options [sic] (see the appendix (page 3))';
+            const expected = 'the three options \\[sic\\] \\(see the appendix (page 3\\))';
+            expect(sanitizeAllMarkdownLinks(input)).toBe(expected);
+        });
+
+        it('absorbs 2 spaces, tab and full-width space between ] and ( (BDD scenario 6)', () => {
+            expect(sanitizeAllMarkdownLinks('[here]  (https://evil.example)')).toBe('\\[here\\]  \\(https://evil.example\\)');
+            expect(sanitizeAllMarkdownLinks('[here]\t(https://evil.example)')).toBe('\\[here\\]\t\\(https://evil.example\\)');
+            expect(sanitizeAllMarkdownLinks('[here]\u3000(https://evil.example)')).toBe('\\[here\\]\u3000\\(https://evil.example\\)');
+        });
+
+        it('keeps the later sanitizeForObsidian stages working after a whitespace-separated match (BDD scenario 6 And)', () => {
+            const input = 'click [here] (https://evil.example) see [[Note]] & <tag>';
+            const expected = 'click \\[here\\] \\(https://evil.example\\) see \\[\\[Note\\]\\] &amp; &lt;tag&gt;';
+            expect(sanitizeForObsidian(input)).toBe(expected);
+        });
+    });
+
     describe('sanitizeForObsidian', () => {
         it('should apply all sanitization rules', () => {
             const input = 'Visit [malicious](https://bad.com) for more info';

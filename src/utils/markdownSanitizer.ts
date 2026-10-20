@@ -52,10 +52,18 @@ export function sanitizeAllMarkdownLinks(text: string): string {
         return text;
     }
 
-    // All [text](url) and ![alt](url) patterns regardless of URL scheme (VULN-006)
-    const allMarkdownLinkPattern = /(!?)\[([^\]]*)\]\(([^)]+)\)/gi;
+    // All [text](url) and ![alt](url) patterns regardless of URL scheme (VULN-006).
+    // PBI 2026-10-18-16: `]\s*(` also catches the whitespace-separated spelling
+    // `[text] (url)` (1+ spaces, tab, full-width space) and the newline-split
+    // form normalizeSingleLine actively produces (`[text]\n(url)`). CommonMark,
+    // GFM and Obsidian render that spelling as literal text, so the value here
+    // is keeping the fake-link notation out of notes, not stopping a clickable
+    // link.
+    const allMarkdownLinkPattern = /(!?)\[([^\]]*)\](\s*)\(([^)]+)\)/gi;
 
-    return text.replace(allMarkdownLinkPattern, '$1\\[$2\\]\\($3\\)');
+    // The captured whitespace group ($3) is kept verbatim so the note body
+    // preserves its original spacing; only the brackets are escaped.
+    return text.replace(allMarkdownLinkPattern, '$1\\[$2\\]$3\\($4\\)');
 }
 
 /**

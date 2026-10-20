@@ -163,6 +163,26 @@ describe('buildEntryMarkdown (PBI-04 SSOT)', () => {
     expect(md).toContain('](https://example.com)');
   });
 
+  // PBI 2026-10-18-16: the Obsidian route (formatMarkdownStep obsidianList) and
+  // the gist route (plainLine, normalizeSummary: false) share this SSOT chain,
+  // so both stop the whitespace-separated link spelling here.
+  it('escapes the whitespace-separated link spelling in the summary (obsidianList route)', () => {
+    const md = buildEntryMarkdown(
+      { title: 'T', url: 'https://example.com', summary: 'click [here] (https://evil.example/phish)', timestamp: '09:30' },
+      'obsidianList',
+    );
+    expect(md).toBe('- 09:30 [T](https://example.com)\n    - click \\[here\\] \\(https://evil.example/phish\\)');
+  });
+
+  it('escapes a newline-split payload on the gist route while keeping the raw newline (plainLine, normalizeSummary: false)', () => {
+    const md = buildEntryMarkdown(
+      { title: 'T', url: 'https://example.com', summary: 'click [here]\n(https://evil.example/phish)' },
+      'plainLine',
+      { normalizeSummary: false, summaryFallback: null },
+    );
+    expect(md).toBe('- [T](https://example.com): click \\[here\\]\n\\(https://evil.example/phish\\)');
+  });
+
   it('normalizes newlines in title to spaces (obsidianList injection safety)', () => {
     const md = buildEntryMarkdown(
       { title: 'Line one\n    - injected', url: 'https://example.com/article', summary: 's' },

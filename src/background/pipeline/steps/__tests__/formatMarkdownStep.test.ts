@@ -201,6 +201,29 @@ describe('formatMarkdownStep', () => {
     });
   });
 
+  // PBI 2026-10-18-16: the step's markdown is the value saveToObsidianStep
+  // passes to appendToDailyNote, so the whitespace-separated link spelling
+  // must be escaped here. The real sanitizer is restored for this test
+  // (the module mock above replaces sanitizeForObsidian with an identity spy).
+  describe('PBI 2026-10-18-16 whitespace-separated link escape', () => {
+    it('does not let the whitespace-separated [text] (url) spelling reach the note markdown', async () => {
+      const actual = await vi.importActual<typeof import('../../../../utils/markdownSanitizer.js')>(
+        '../../../../utils/markdownSanitizer.js',
+      );
+      mockSanitize.mockImplementation((text: string) => actual.sanitizeForObsidian(text));
+
+      const context = makeContext({
+        data: { title: 'Test Page', url: 'https://example.com/page', content: '' },
+        sanitizedSummary: 'click [here] (https://evil.example/phish)',
+      });
+
+      const result = await formatMarkdownStep(context);
+
+      expect(result.markdown).not.toMatch(/\[here\] \(/);
+      expect(result.markdown).toContain('\\[here\\] \\(https://evil.example/phish\\)');
+    });
+  });
+
   describe('markdown 形式', () => {
     it('renders correct markdown format without tags', async () => {
       const context = makeContext({

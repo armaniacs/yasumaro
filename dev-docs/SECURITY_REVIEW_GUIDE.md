@@ -30,6 +30,7 @@
 | PKI/Certificate | HTTPS with protocol/port validation |
 | SSRF via user-supplied URL | Per-entry-point URL guard (`src/utils/ssrfGuard.ts`); **DNS rebinding remains** ― see below |
 | Forged extension messages | No `externally_connectable`; `sender.id` match; `extension-only` registration |
+| Forged Markdown links in note writes | Entry-markdown SSOT escapes link syntax before the note write (`src/utils/markdownSanitizer.ts`): `sanitizeAllMarkdownLinks` blocks `[text](url)` **and** the whitespace-separated `[text] (url)` spelling (CommonMark / GFM / Obsidian render the latter as literal text, so the target is the fake-link notation itself) |
 
 ### Who can invoke destructive DASHBOARD_SQLITE operations
 
