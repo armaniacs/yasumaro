@@ -129,7 +129,7 @@ export class TrustDbKernel {
         }
       }
     }
-    logError('TrustDb', { error: lastError }, ErrorCode.TRUST_DB_INIT_FAILED);
+    logError('TrustDb initialization failed', { error: lastError }, ErrorCode.TRUST_DB_INIT_FAILED, 'TrustDb');
     throw lastError;
   }
 
@@ -164,11 +164,11 @@ export class TrustDbKernel {
         // sync policy state
         this.policy.setState(this.state.database, this.state.bloomFilter, false);
 
-        logInfo('TrustDb', { version: this.state.database.version, domainCount: this.state.database.tranco.count }, 'Loaded existing database');
+        logInfo('Loaded existing database', { version: this.state.database.version, domainCount: this.state.database.tranco.count }, 'TrustDb');
 
         if (wasRepaired) {
           await this.save();
-          logInfo('TrustDb', {}, 'Repaired corrupted database and persisted');
+          logInfo('Repaired corrupted database and persisted', {}, 'TrustDb');
         }
       } else {
         await this.createDefaultDatabase();
@@ -178,7 +178,7 @@ export class TrustDbKernel {
       this.state.initialized = true;
       this.policy.setState(this.state.database, this.state.bloomFilter, true);
     } catch (error) {
-      logError('TrustDb', { error }, ErrorCode.TRUST_DB_INIT_FAILED);
+      logError('TrustDb initialization failed', { error }, ErrorCode.TRUST_DB_INIT_FAILED, 'TrustDb');
       throw error;
     }
   }
@@ -219,7 +219,7 @@ export class TrustDbKernel {
     this.policy.rebuildCachesFromDatabase(db);
     this.policy.setState(db, this.state.bloomFilter, false);
     await this.save();
-    logInfo('TrustDb', {}, 'Created default database');
+    logInfo('Created default database', {}, 'TrustDb');
   }
 
   async save(): Promise<void> {
@@ -375,13 +375,13 @@ export class TrustDbKernel {
       [StorageKeys.TRANCO_VERSION]: version,
       [StorageKeys.TRANCO_DOMAINS]: domains,
     } as unknown as Record<string, unknown>);
-    logInfo('TrustDb', { version, domainCount: domains.length }, 'Tranco version updated');
+    logInfo('Tranco version updated', { version, domainCount: domains.length }, 'TrustDb');
   }
   async checkTrancoUpdate(): Promise<{ hasUpdate: boolean; oldVersion: string | null; newVersion: string }> {
     const savedVersion = await this.getSavedTrancoVersion();
     const currentVersion = this.getCurrentTrancoVersion();
     if (savedVersion !== currentVersion) {
-      logInfo('TrustDb', { savedVersion, currentVersion }, 'Tranco version update detected');
+      logInfo('Tranco version update detected', { savedVersion, currentVersion }, 'TrustDb');
       return { hasUpdate: true, oldVersion: savedVersion, newVersion: currentVersion };
     }
     return { hasUpdate: false, oldVersion: savedVersion, newVersion: currentVersion };

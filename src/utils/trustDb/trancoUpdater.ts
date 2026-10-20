@@ -68,11 +68,11 @@ export class TrancoUpdater {
     try {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        logInfo('TrancoUpdater', { tier, attempt, maxRetries }, `Starting Tranco update for tier: ${tier}`);
+        logInfo(`Starting Tranco update for tier: ${tier}`, { tier, attempt, maxRetries }, 'TrancoUpdater');
 
         // 1. API から取得
         const domains = await this.fetchTrancoList(tier);
-        logInfo('TrancoUpdater', { count: domains.length }, `Fetched ${domains.length} domains from Tranco`);
+        logInfo(`Fetched ${domains.length} domains from Tranco`, { count: domains.length }, 'TrancoUpdater');
 
         // 2. データベースを更新
         const db = getTrustDbAdmin();
@@ -80,7 +80,7 @@ export class TrancoUpdater {
         await db.updateTranco(domains, tier);
 
         const duration = performance.now() - startTime;
-        logInfo('TrancoUpdater', { tier, count: domains.length, duration: duration.toFixed(0) }, `Tranco update completed in ${duration.toFixed(0)}ms`);
+        logInfo(`Tranco update completed in ${duration.toFixed(0)}ms`, { tier, count: domains.length, duration: duration.toFixed(0) }, 'TrancoUpdater');
 
         return {
           success: true,
@@ -93,7 +93,7 @@ export class TrancoUpdater {
 
         // 最終試行でエラー
         if (attempt === maxRetries) {
-          logError('TrancoUpdater', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED);
+          logError('Tranco update failed', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED, 'TrancoUpdater');
           return {
             success: false,
             domainsCount: 0,
@@ -129,7 +129,7 @@ export class TrancoUpdater {
    */
   private async fetchTrancoList(tier: TrancoTier): Promise<string[]> {
     // Step 1: 最新リストIDを取得
-    logInfo('TrancoUpdater', {}, `Fetching latest Tranco list ID`);
+    logInfo(`Fetching latest Tranco list ID`, {}, 'TrancoUpdater');
     // PBI 2026-10-19-06: a 30x must not be followed. The metadata URL is fixed,
     // but following a redirect could still land on a host no gate checked.
     const metaResponse = await fetchWithTimeout(TRANCO_API_LATEST, noRedirectInit({ method: 'GET' }), TRANCO_FETCH_TIMEOUT);
@@ -145,7 +145,7 @@ export class TrancoUpdater {
     // Step 2: CSV をダウンロード
     const count = TRANCO_TIER_COUNT[tier];
     const url = `https://tranco-list.eu/download/${listId}/${count}`;
-    logInfo('TrancoUpdater', { url }, `Fetching CSV from: ${url}`);
+    logInfo(`Fetching CSV from: ${url}`, { url }, 'TrancoUpdater');
 
     // PBI 2026-10-19-06: same policy for the list download (its URL is built
     // from the API response).
@@ -159,7 +159,7 @@ export class TrancoUpdater {
     const text = await readBodyCapped(response, MAX_TRANCO_SIZE);
     const domains = this.parseTrancoCSV(text, tier);
 
-    logInfo('TrancoUpdater', { tier, count: domains.length }, `Parsed ${domains.length} domains for tier: ${tier}`);
+    logInfo(`Parsed ${domains.length} domains for tier: ${tier}`, { tier, count: domains.length }, 'TrancoUpdater');
 
     return domains;
   }

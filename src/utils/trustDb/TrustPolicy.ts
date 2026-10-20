@@ -57,7 +57,7 @@ export class TrustPolicy {
   // ---- Public seam ----
   isDomainTrusted(domain: string): TrustResult {
     if (!this.initialized || !this.database || !this.bloomFilter) {
-      logError('TrustDb', {}, ErrorCode.TRUST_DB_NOT_INITIALIZED);
+      logError('Trust database not initialized', {}, ErrorCode.TRUST_DB_NOT_INITIALIZED, 'TrustDb');
       return {
         level: DomainTrustLevel.UNVERIFIED,
         source: 'unknown',

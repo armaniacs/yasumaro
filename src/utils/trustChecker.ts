@@ -90,7 +90,7 @@ export class TrustChecker {
       this.alertConfigInitialized = true;
       await logDebug('TrustChecker', { alertConfig: this.alertConfig }, 'Alert settings loaded');
     } catch (error) {
-      await logWarn('TrustChecker', { error: errorMessage(error) }, undefined, 'Failed to load alert settings');
+      await logWarn('Failed to load alert settings', { error: errorMessage(error) }, undefined, 'TrustChecker');
       // エラーの場合も初期化済みフラグを立てて、デフォルト値を使用する
       this.alertConfigInitialized = true;
     }

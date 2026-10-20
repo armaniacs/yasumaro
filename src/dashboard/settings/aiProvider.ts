@@ -81,7 +81,7 @@ async function requestAIProviderPermission(provider: string): Promise<boolean> {
 
     const granted = await permManager.requestPermission(url);
     if (!granted) {
-        logWarn('AIProvider', { provider, url }, undefined, 'AI provider permission denied by user');
+        logWarn('AI provider permission denied by user', { provider, url }, undefined, 'AIProvider');
     }
     return granted;
 }
@@ -92,7 +92,7 @@ export function setupAIProviderChangeListener(elements: AIProviderElements): voi
         const provider = elements.select.value;
         if (provider !== 'openai-compatible') {
             requestAIProviderPermission(provider).catch((error) => {
-                logWarn('AIProvider', { error: errorMessage(error), provider }, undefined, 'Failed to request AI provider permission');
+                logWarn('Failed to request AI provider permission', { error: errorMessage(error), provider }, undefined, 'AIProvider');
             });
         }
     });

@@ -343,13 +343,13 @@ export function createTrustSettings(): TrustSettingsController {
             if (result.success) {
                 await loadTrustSettings(); // Reload settings to reflect changes
                 trustStatus(getMessageOr('trancoUpdateSuccess', 'Tranco list updated successfully'), 'success');
-                logInfo('TrustSettings', { tier, count: result.domainsCount }, `Tranco update completed`);
+                logInfo(`Tranco update completed`, { tier, count: result.domainsCount }, 'TrustSettings');
             } else {
-                logError('TrustSettings', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED);
+                logError('Tranco update failed', { error: result.error }, ErrorCode.TRANCO_FETCH_FAILED, 'TrustSettings');
                 updateTrancoStatus({ error: result.error || 'Update failed' });
             }
         } catch (error) {
-            logError('TrustSettings', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED);
+            logError('Tranco update failed', { error: errorMessage(error) }, ErrorCode.TRANCO_FETCH_FAILED, 'TrustSettings');
             updateTrancoStatus({ error: errorMessage(error) });
         }
     }
@@ -417,7 +417,7 @@ export function createTrustSettings(): TrustSettingsController {
         // Note: Trust Database changes are already saved immediately when modified
         trustStatus(getMessageOr('settingsSaved', 'Settings saved'), 'success');
         const alertConfig = await checker.getAlertConfig();
-        logInfo('TrustSettings', { alertConfig }, 'Trust settings saved');
+        logInfo('Trust settings saved', { alertConfig }, 'TrustSettings');
     }
 
     // ============================================================================
@@ -568,7 +568,7 @@ export function createTrustSettings(): TrustSettingsController {
         // Save Settings button
         listen(saveTrustSettingsBtn, 'click', () => void saveTrustSettings());
 
-        logInfo('TrustSettings', {}, 'Trust settings module initialized');
+        logInfo('Trust settings module initialized', {}, 'TrustSettings');
 
         // P0: 許可検討セクションのイベントリスナー
         if (thresholdInput) {

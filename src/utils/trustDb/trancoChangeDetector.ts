@@ -233,7 +233,7 @@ export class TrancoChangeDetector {
       [this.STORAGE_KEY_LAST_NOTIFICATION]: Date.now().toString()
     });
 
-    logInfo('TrancoChangeDetector', { version }, 'Tranco notification recorded');
+    logInfo('Tranco notification recorded', { version }, 'TrancoChangeDetector');
   }
 
   /**

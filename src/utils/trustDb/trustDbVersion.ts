@@ -51,7 +51,7 @@ export class TrustDbVersion {
     const currentVersion = db.version || '0.0.0';
     const targetVersion = DB_VERSION;
 
-    logInfo('TrustDb', { from: currentVersion, to: targetVersion }, 'Starting database migration');
+    logInfo('Starting database migration', { from: currentVersion, to: targetVersion }, 'TrustDb');
 
     try {
       // バージョン比較とマイグレーションパスの実行
@@ -68,10 +68,10 @@ export class TrustDbVersion {
         // バージョン更新を保存
         await this.deps.save();
 
-        logInfo('TrustDb', { to: targetVersion }, 'Database migration completed');
+        logInfo('Database migration completed', { to: targetVersion }, 'TrustDb');
       }
     } catch (error) {
-      logError('TrustDb', { from: currentVersion, to: targetVersion, error }, ErrorCode.TRUST_DB_MIGRATION_FAILED);
+      logError('Database migration failed', { from: currentVersion, to: targetVersion, error }, ErrorCode.TRUST_DB_MIGRATION_FAILED, 'TrustDb');
       throw error;
     }
   }

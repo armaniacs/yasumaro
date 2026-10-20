@@ -125,7 +125,7 @@ export class PermissionManager {
       if (!origin) return false; // nullの場合は許可されていないとみなす
       return await chrome.permissions.contains({ origins: [origin] });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), url }, undefined, 'Failed to check host permission');
+      logWarn('Failed to check host permission', { error: errorMessage(error), url }, undefined, 'PermissionManager');
       return false;
     }
   }
@@ -141,7 +141,7 @@ export class PermissionManager {
       if (!origin) return false; // nullの場合は許可を要求しない
       return await chrome.permissions.request({ origins: [origin] });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), url }, undefined, 'Failed to request permission');
+      logWarn('Failed to request permission', { error: errorMessage(error), url }, undefined, 'PermissionManager');
       return false;
     }
   }
@@ -154,7 +154,7 @@ export class PermissionManager {
   async recordDeniedVisit(domain: string): Promise<void> {
     // バリデーションはストレージアクセス前に行い、不要な withOptimisticLock 呼び出しを避ける
     if (!this.isValidDomain(domain)) {
-      logWarn('PermissionManager', { domain: String(domain).slice(0, 100) }, undefined, 'Invalid domain rejected');
+      logWarn('Invalid domain rejected', { domain: String(domain).slice(0, 100) }, undefined, 'PermissionManager');
       return;
     }
     try {
@@ -181,7 +181,7 @@ export class PermissionManager {
       const deniedDomains = await this.getDeniedDomains();
       logDebug('PermissionManager', { domain, count: deniedDomains[domain]?.count }, `Recorded denied visit for ${domain}`);
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), domain }, undefined, 'Failed to record denied visit');
+      logWarn('Failed to record denied visit', { error: errorMessage(error), domain }, undefined, 'PermissionManager');
     }
   }
 
@@ -200,7 +200,7 @@ export class PermissionManager {
         return { ...deniedDomains, [domain]: { ...existing, lastDismissed: nowISO } };
       });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), domain }, undefined, 'Failed to record domain dismissal');
+      logWarn('Failed to record domain dismissal', { error: errorMessage(error), domain }, undefined, 'PermissionManager');
     }
   }
 
@@ -230,7 +230,7 @@ export class PermissionManager {
         logDebug('PermissionManager', { removedCount, totalRemoved: removedCount }, `Cleaned up ${removedCount} old denied domain entries`);
       }
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), days }, undefined, 'Failed to cleanup old denied entries');
+      logWarn('Failed to cleanup old denied entries', { error: errorMessage(error), days }, undefined, 'PermissionManager');
     }
   }
 
@@ -270,7 +270,7 @@ export class PermissionManager {
         logDebug('PermissionManager', { removedCount }, `Cleaned up ${removedCount} dismissed domain entries (>${days} days old)`);
       }
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), days }, undefined, 'Failed to cleanup dismissed entries');
+      logWarn('Failed to cleanup dismissed entries', { error: errorMessage(error), days }, undefined, 'PermissionManager');
     }
   }
 
@@ -321,7 +321,7 @@ export class PermissionManager {
        entries.sort((a, b) => b.count - a.count);
        return entries;
      } catch (error) {
-       logWarn('PermissionManager', { error: errorMessage(error) }, undefined, 'Failed to get frequent denied domains');
+       logWarn('Failed to get frequent denied domains', { error: errorMessage(error) }, undefined, 'PermissionManager');
        return [];
      }
    }
@@ -339,7 +339,7 @@ export class PermissionManager {
         return remaining;
       });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error), domain }, undefined, 'Failed to remove denied domain');
+      logWarn('Failed to remove denied domain', { error: errorMessage(error), domain }, undefined, 'PermissionManager');
     }
   }
 
@@ -356,7 +356,7 @@ export class PermissionManager {
     try {
       return await chrome.permissions.contains({ origins: ['<all_urls>'] });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error) }, undefined, 'Failed to check <all_urls> permission');
+      logWarn('Failed to check <all_urls> permission', { error: errorMessage(error) }, undefined, 'PermissionManager');
       return false;
     }
   }
@@ -369,7 +369,7 @@ export class PermissionManager {
     try {
       return await chrome.permissions.request({ origins: ['<all_urls>'] });
     } catch (error) {
-      logWarn('PermissionManager', { error: errorMessage(error) }, undefined, 'Failed to request <all_urls> permission');
+      logWarn('Failed to request <all_urls> permission', { error: errorMessage(error) }, undefined, 'PermissionManager');
       return false;
     }
   }
