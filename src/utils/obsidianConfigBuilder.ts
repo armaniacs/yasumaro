@@ -10,10 +10,12 @@ import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
 import { assertApiKeyResolved } from './storage/encryptionLockedError.js';
 import { redactSensitiveData } from './redaction.js';
+import { FailureKind, createFailure, tagFailure } from './failureTaxonomy.js';
 import {
     validateObsidianProtocol,
     validateObsidianHost,
     validateObsidianPort,
+    baseUrlAgreesWithUrlParser,
     OBSIDIAN_DEFAULT_PORT,
     OBSIDIAN_DEFAULT_HOST,
 } from './obsidianConfigValidator.js';
@@ -87,8 +89,17 @@ async function buildFromSettings(): Promise<ObsidianConfig> {
         throw new Error('Error: API key is missing. Please check your Obsidian settings.');
     }
 
+    const baseUrl = `${protocol}://${host}:${port}`;
+
+    // PBI-14: the validator's judgment must survive the URL parser before the
+    // Bearer header exists. On disagreement the config is refused here, so no
+    // fetch is ever issued with a credential pointed at an unjudged address.
+    if (!baseUrlAgreesWithUrlParser(baseUrl, host)) {
+        throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
+    }
+
     return {
-        baseUrl: `${protocol}://${host}:${port}`,
+        baseUrl,
         headers: {
             ...BASE_HEADERS,
             'Authorization': `Bearer ${apiKey}`
@@ -126,8 +137,16 @@ async function buildFromOverride(override: ObsidianConfigOverride): Promise<Obsi
         throw new Error('API key is missing');
     }
 
+    const baseUrl = `${protocol}://${host}:${port}`;
+
+    // PBI-14: same parser-agreement gate as the stored-config path, so the
+    // connection-test route is never looser than saved configs.
+    if (!baseUrlAgreesWithUrlParser(baseUrl, host)) {
+        throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
+    }
+
     return {
-        baseUrl: `${protocol}://${host}:${port}`,
+        baseUrl,
         headers: {
             ...BASE_HEADERS,
             'Authorization': `Bearer ${apiKey}`

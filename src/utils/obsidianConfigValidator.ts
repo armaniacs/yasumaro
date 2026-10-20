@@ -125,6 +125,16 @@ export function validateObsidianHost(host: string | undefined | null): string {
         throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
     }
 
+    // PBI-14: parser-differential guard. The WHATWG URL parser reinterprets
+    // hex-encoded IPv4 labels ("0x7f000001", "0x7f.0.0.1", "0X7F.0.0.1") as
+    // IPv4 literals, so a string this validator would approve as a DNS name
+    // can resolve to an address the validator never judged. The criterion is
+    // the whole host, not a per-label "0x" check, so "0x7f000001.nip.io"
+    // (never reinterpreted by the parser) stays configurable.
+    if (!agreesWithUrlParser(trimmed)) {
+        throw tagFailure(new Error('Obsidian host contains invalid characters.'), createFailure(FailureKind.CONFIGURATION));
+    }
+
     return trimmed;
 }
 
@@ -156,6 +166,71 @@ function isValidDnsHostname(host: string): boolean {
     }
     const labelPattern = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?$/;
     return name.split('.').every((label) => labelPattern.test(label));
+}
+
+/**
+ * PBI-14: parser-differential guard.
+ * The WHATWG URL parser reinterprets hex-encoded IPv4 labels ("0x7f000001",
+ * "0x7f.0.0.1", "0X7F.0.0.1") as IPv4 literals, while this validator would
+ * approve them as DNS names. A host is parser-agreeable only when the parser
+ * resolves it to the same address/name this validator judged, so the approved
+ * string and the address actually contacted never diverge.
+ * @param approvedHost - Host value already accepted by validateObsidianHost
+ * @returns true when the parser resolution matches the approved value
+ */
+export function agreesWithUrlParser(approvedHost: string): boolean {
+    let parsed: URL;
+    try {
+        parsed = new URL(`https://${approvedHost}/`);
+    } catch {
+        // Fail closed: an unparseable approved host has no agreed resolution.
+        return false;
+    }
+    return isSameResolvedAddress(approvedHost, parsed.hostname);
+}
+
+/**
+ * PBI-14: builder-side gate. Re-interprets the built baseUrl with the URL
+ * parser and requires the resolved hostname to match the approved host before
+ * a Bearer header is attached to it. Defense in depth against future validator
+ * drift: the builder refuses any config whose parser resolution differs from
+ * the validator's judgment, so no fetch is ever issued with a credential
+ * pointed at an unjudged address.
+ * @param baseUrl - Fully built origin URL (protocol, host, port)
+ * @param approvedHost - Host value already accepted by validateObsidianHost
+ * @returns true when the parser resolution matches the approved host
+ */
+export function baseUrlAgreesWithUrlParser(baseUrl: string, approvedHost: string): boolean {
+    let parsed: URL;
+    try {
+        parsed = new URL(baseUrl);
+    } catch {
+        // Fail closed: an unbuildable baseUrl never carries the Bearer.
+        return false;
+    }
+    return isSameResolvedAddress(approvedHost, parsed.hostname);
+}
+
+/**
+ * Compare the approved host with the parser-resolved hostname on the same
+ * footing: case-insensitive, trailing DNS root dot removed on both sides, and
+ * leading-zero IPv4 spellings compared as octets (the parser merely re-spells
+ * "1.2.3.04" as "1.2.3.4" without changing the address, which is agreement,
+ * while "010.0.0.1" resolves to a different address and is not).
+ */
+function isSameResolvedAddress(approvedHost: string, resolvedHostname: string): boolean {
+    const approved = approvedHost.toLowerCase().replace(/\.+$/, '');
+    const resolved = resolvedHostname.toLowerCase().replace(/\.+$/, '');
+    if (resolved === approved) {
+        return true;
+    }
+    if (/^\d+(\.\d+)*$/.test(approved) && /^\d+(\.\d+)*$/.test(resolved)) {
+        const approvedOctets = approved.split('.').map(Number);
+        const resolvedOctets = resolved.split('.').map(Number);
+        return approvedOctets.length === resolvedOctets.length &&
+            approvedOctets.every((octet, index) => octet === resolvedOctets[index]);
+    }
+    return false;
 }
 
 /**
