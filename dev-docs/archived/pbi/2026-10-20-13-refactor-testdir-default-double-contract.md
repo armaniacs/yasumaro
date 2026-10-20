@@ -34,6 +34,12 @@ Scenario: initWasmForNode の再試行可能契約
 2 pt（RICE: 20 = Reach 20 × Impact 2 × Confidence 1.0 ÷ Effort 2.0 人日）
 
 ## DoD
-- [ ] モック変更後の破れるテストを本番契約側へ修正し全テスト通過
-- [ ] import.meta 死スタブの削除とコメント修正
-- [ ] npm run validate 通過
+- [x] モック変更後の破れるテストを本番契約側へ修正し全テスト通過
+- [x] import.meta 死スタブの削除とコメント修正
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-20）
+- testDir/vitest.setup.ts: 既定 getMessage モックの未知キーを '' に変更（契約をコメントに明文化）、import.meta 死スタブと虚偽コメントを削除
+- src/wasm/testing/initWasmForNode.ts: createNodeWasmInit に reset-on-failure を付与（本番 initWasm.ts と同一契約）。新規単体テスト src/wasm/testing/__tests__/initWasmForNode.test.ts（4 tests）
+- 破れて修正したテスト: src/dashboard/components/__tests__/periodFilter.test.ts（key-echo 期待を本番契約側に修正 + vi.spyOn で注入 pin を強化）
+- 検証: npx vitest run 全体 1105 files / 16588 tests 全通過、type-check pass、type-check:test:baseline 453 = 453、eslint pass、validate:fast green

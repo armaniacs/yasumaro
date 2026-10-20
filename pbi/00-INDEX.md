@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ⬜ 24件未着手 🔧非機能追加 RICE順: 01(76) → 02(60) → 03(58) → 04(50) → 05(48) → 06(42) → 07(38) → 08(32) → 09(30) → 10(30) → 11(24) → 12(24) → 13(20) → 14(20) → 15(20) → 16(18) → 17(18) → 18(15) → 19(14) → 20(14) → 21(13) → 22(12) → 23(12) → 24(8)
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 1件完了・アーカイブ済み（13） / ⬜ 23件残 🔧非機能追加 RICE順: 01(76) → 02(60) → 03(58) → 04(50) → 05(48) → 06(42) → 07(38) → 08(32) → 09(30) → 10(30) → 11(24) → 12(24) → ~~13(20)~~ → 14(20) → 15(20) → 16(18) → 17(18) → 18(15) → 19(14) → 20(14) → 21(13) → 22(12) → 23(12) → 24(8)
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
@@ -32,7 +32,6 @@
 | ⬜ 10 | [2026-10-20-10-refactor-encryption-session-dedup.md](2026-10-20-10-refactor-encryption-session-dedup.md) | refactor | 30 | 2.0 | encryptionSession 内 3 重複（PBKDF2 ボイラープレート・4 キー読み取り ×3・secret 生成 ×2） |
 | ⬜ 11 | [2026-10-20-11-refactor-sendwithpolicy-type-constraint.md](2026-10-20-11-refactor-sendwithpolicy-type-constraint.md) | refactor | 24 | 1.0 | sendWithPolicy の unconstrained R + as unknown as R を R extends { success: boolean } へ |
 | ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
-| ⬜ 13 | [2026-10-20-13-refactor-testdir-default-double-contract.md](2026-10-20-13-refactor-testdir-default-double-contract.md) | refactor | 20 | 2.0 | vitest.setup の i18n モック乖離（未知キーで key を返す）+ import.meta 死スタブ + initWasmForNode 契約乖離 |
 | ⬜ 14 | [2026-10-20-14-refactor-silent-catch-visualization.md](2026-10-20-14-refactor-silent-catch-visualization.md) | refactor | 20 | 1.0 | 空 catch・catch { return false }・.catch(() => undefined) の 5 箇所に logError 追加（戻り値不変） |
 | ⬜ 15 | [2026-10-20-15-refactor-crypto-params-score-ssot.md](2026-10-20-15-refactor-crypto-params-score-ssot.md) | refactor | 20 | 1.0 | cryptoParams scorePassword（mirror 実装）と masterPassword calculatePasswordStrength の複製を 1 実装へ |
 | ⬜ 16 | [2026-10-20-16-refactor-settings-migration-types.md](2026-10-20-16-refactor-settings-migration-types.md) | refactor | 18 | 2.0 | settingsMigration の boolean 合同 as ×4 + as never ×2 を core シグネチャへ統合 |
@@ -527,6 +526,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-20 PBI 13 アーカイブ ― リファクタリング診断 24件のうち 1件完了
+
+- **13-refactor-testdir-default-double-contract**（`712b1de5`）: 既定 getMessage モックを本番契約（未知キー ''）に変更、import.meta 死スタブ削除、createNodeWasmInit に reset-on-failure 付与 + 新規 4 tests。破れ 1 件（periodFilter.test.ts の key-echo 期待）を本番契約側に修正。全体 16588 tests 全通過・validate:fast green。5 Whys の後続候補: setup ダブル自体への pin テスト（testDir/__tests__/）。
 
 ### 2026-10-20 PBI 01-06 アーカイブ ― code-review・簡素化パス由来の発見 6件完了
 
