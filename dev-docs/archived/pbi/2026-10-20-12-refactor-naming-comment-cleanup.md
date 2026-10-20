@@ -50,6 +50,12 @@ Scenario: rename 後のテスト整合
 2 pt（RICE: 24 = Reach 24 × Impact 1 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 全箇所で診断面の修正が完了し、実行時挙動が不変であることを確認
-- [ ] npm run validate 通過
-- [ ] node scripts/check-docs-chars.mjs 通過（コメント変更時）
+- [x] 全箇所で診断面の修正が完了し、実行時挙動が不変であることを確認
+- [x] npm run validate 通過
+- [x] node scripts/check-docs-chars.mjs 通過（コメント変更時）
+
+## 実装記録（2026-10-21）
+- 22 箇所修正（診断面のみ・挙動不変）: rename（computeUrlsHash → buildUrlsKey、ObsidianClient の underscore-prefix public メソッド 5 件）、虚偽コメント訂正（contentKernel の clock 整列・ublockParser transform の FNV-1a・computeLimits の offset ページング・trustPanel の per-element トークン）、文言修正（payloadGuard 非配列時・restore 上限 150MB 派生）、デッドコード削除（urlUtils の no-op 置換・logDebug 恒真条件・デッドデフォルト ?? '365'・redact 冗長第 2 ループ・check-docs-chars.mjs の死んだ catch・実在しないマッチャー toBeStrictEqual）、formatting・可読性、コメント追加（encryptionSession・statusChecker SSOT subset）
+- 整備済みだった箇所: checkRateLimit 同名競合は PBI 22 で解消済み
+- テスト調整は rename の機械的追随のみ。eslint ルールテストの toBeStrictEqual case を invalid → valid へ移動（ルール変更の直接の帰結）
+- 検証: フルスイート 1112 ファイル / 16559 tests 全 green、type-check 通過、eslint（35 ファイル）通過、check-docs-chars.mjs 通過、validate:fast green

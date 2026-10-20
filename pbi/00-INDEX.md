@@ -14,15 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 21件完了・アーカイブ済み（01-06・08-11・13-20・22・24） / ⬜ 3件残（12・21・23） 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → ~~07(38)~~ → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → 12(24) → ~~13(20)~~ → ~~14(20)~~ → ~~15(20)~~ → ~~16(18)~~ → ~~17(18)~~ → ~~18(15)~~ → ~~19(14)~~ → ~~20(14)~~ → 21(13) → ~~22(12)~~ → 23(12) → ~~24(8)~~
+### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 23件完了・アーカイブ済み（01-06・08-11・13-20・22-24） / ⬜ 1件残（21） 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → ~~07(38)~~ → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → ~~12(24)~~ → ~~13(20)~~ → ~~14(20)~~ → ~~15(20)~~ → ~~16(18)~~ → ~~17(18)~~ → ~~18(15)~~ → ~~19(14)~~ → ~~20(14)~~ → 21(13) → ~~22(12)~~ → ~~23(12)~~ → ~~24(8)~~
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 12 | [2026-10-20-12-refactor-naming-comment-cleanup.md](2026-10-20-12-refactor-naming-comment-cleanup.md) | refactor | 24 | 2.0 | コメント虚偽・誤解を招く命名・死んだ catch 等の long tail 24 箇所（診断面のみ・挙動不変） |
 | ⬜ 21 | [2026-10-20-21-refactor-remaining-dry-consolidation.md](2026-10-20-21-refactor-remaining-dry-consolidation.md) | refactor | 13 | 2.0 | 残り DRY（ID 生成 SSOT 未準拠・promptSafety 6 点目・escapeRegex・OWTestState ほか） |
-| ⬜ 23 | [2026-10-20-23-refactor-sqlite-handler-types.md](2026-10-20-23-refactor-sqlite-handler-types.md) | refactor | 12 | 1.0 | sqlite ハンドラの動的ディスパッチ・手書き 9 対応・worker type 生リテラル（同期ルール非対称） |
 
 実行順の推奨: RICE 順。**02 と 03 は同じ catch ブロックを触ることが多いため 1 ブランチでの同時実施を推奨**。07（死にコード削除）を先にすると 08・21 が縮小する。対象外リスト（fix 型・17 件）と依存グラフは [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
 
@@ -506,6 +504,11 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 12・23 アーカイブ ― リファクタリング診断 24件のうち 23件完了（01-06・08-11・13-20・22-24）
+
+- **12-refactor-naming-comment-cleanup**（`84c4b691`）: 虚偽コメント・誤解を招く命名の long tail 22 箇所を診断面のみで整備（computeUrlsHash → buildUrlsKey、ObsidianClient underscore-prefix メソッド 5 件、clock 整列・FNV-1a・offset ページングの虚偽訂正、デッドコード削除ほか）。実行時挙動不変。
+- **23-refactor-sqlite-handler-types**（`47fc6c06`）: 手書き 9 lambda を SQLITE_WIRE_TABLE 派生に、stagingBackend の動的ディスパッチを型付きテーブル ARCHIVE_BACKEND_CALLS に、worker type を WorkerMessageType 結合に統合。列挙同期 pin 2 本新規。
 
 ### 2026-10-21 PBI 07・14・16・18 アーカイブ ― リファクタリング診断 24件のうち 21件完了（01-06・08-11・13-20・22・24）
 

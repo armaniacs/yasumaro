@@ -35,6 +35,13 @@ Scenario: 列挙同期の非対称解消
 1 pt（RICE: 12 = Reach 4 × Impact 3 × Confidence 1.0 ÷ Effort 1.0 人日）
 
 ## DoD
-- [ ] 手書き対応が wire table 派生になり、動的ディスパッチが型付きテーブルになる
-- [ ] 列挙同期テストが非 archive 側にも付く
-- [ ] npm run validate 通過
+- [x] 手書き対応が wire table 派生になり、動的ディスパッチが型付きテーブルになる
+- [x] 列挙同期テストが非 archive 側にも付く
+- [x] npm run validate 通過
+
+## 実装記録（2026-10-21）
+- 手書き 9 lambda を SQLITE_WIRE_TABLE の BY_MESSAGE 派生で生成（archive 側と同一パターン。'search' 行は records と messageType を共有するため意図的に除外、既定 limit 100 を維持）
+- stagingBackend の as unknown as Record 動的ディスパッチを ARCHIVE_BACKEND_CALLS: Record<ArchiveBackendMethod, ArchiveBackendCaller> の型付きテーブルに置換（this 束縛を構造的に保証、backendMethod 変更はコンパイルエラーに）
+- OpfsWorkerBackend の callWorker/callWorkerOk 第一引数を WorkerMessageType（keyof WORKER_MESSAGE_TYPES）に結合（非 archive 側の生リテラルを SSOT に対して型検査）
+- 新規 pin テスト: wireOpEnumerationDerived.test.ts（registry 構成・行ごと runner ルーティング・records>search の shadow 防止）、opfsWorkerBackend-workerTypeSync.test.ts（非 archive 列挙同期の両方向一致）
+- 検証: 対象 12 スイート 261 テスト全 green、フルスイート 1112 ファイル / 16558 tests 全 green、type-check 通過、validate:fast green
