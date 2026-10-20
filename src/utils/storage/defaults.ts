@@ -141,7 +141,6 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_SUMMARY_CLEANSING_BODY_PROTECTION_THRESHOLD]: 200,
     [StorageKeys.TRANCO_VERSION]: '',
     [StorageKeys.TRANCO_DOMAINS]: [],
-    [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: null,
     [StorageKeys.TRANCO_CONSENT_GRANTED]: null,
     [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: null,
     [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: null,

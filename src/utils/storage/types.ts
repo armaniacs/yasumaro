@@ -227,7 +227,6 @@ export const StorageKeys = {
     // Tranco List Update Notification (Phase 1)
     TRANCO_VERSION: 'tranco_version', // 現在の Tranco リストバージョン（ISO 8601形式）
     TRANCO_DOMAINS: 'tranco_domains', // 保存された Tranco ドメインリスト（旧リスト保持用）
-    TRANCO_NOTIFICATION_SHOWN: 'tranco_notification_shown', // 通知が表示されたバージョン（7日抑制制御用）
     TRANCO_CONSENT_GRANTED: 'tranco_consent_granted', // 同意が与えられたバージョン
     TRANCO_CONSENT_DENIED_REASON: 'tranco_consent_denied_reason', // 同意拒否の理由
     TRANCO_CONSENT_DENIED_TIMESTAMP: 'tranco_consent_denied_timestamp', // 同意拒否タイムスタンプ（30日再確認用）
@@ -483,7 +482,6 @@ export interface StorageKeyValues {
     [StorageKeys.MIGRATION_WHITELIST_EXTRACTION_DEFAULT_DONE]: boolean;
     [StorageKeys.TRANCO_VERSION]: string;
     [StorageKeys.TRANCO_DOMAINS]: string[];
-    [StorageKeys.TRANCO_NOTIFICATION_SHOWN]: string | null;
     [StorageKeys.TRANCO_CONSENT_GRANTED]: string | null;
     [StorageKeys.TRANCO_CONSENT_DENIED_REASON]: string | null;
     [StorageKeys.TRANCO_CONSENT_DENIED_TIMESTAMP]: number | null;
