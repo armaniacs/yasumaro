@@ -82,7 +82,7 @@ describe('CspSettingsController - Permission Request', () => {
       expect(chrome.permissions.request).toHaveBeenCalledTimes(1);
       const requested = (chrome.permissions.request as Mock).mock.calls[0]![0] as { origins: string[] };
       expect(requested.origins).toHaveLength(1);
-      const [origin] = requested.origins;
+      const origin = requested.origins[0]!;
       expect(OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS).toContain(origin);
       expect(origin.startsWith('https://raw.githubusercontent.com/')).toBe(true);
       expect(granted).toBe(true);
@@ -96,7 +96,7 @@ describe('CspSettingsController - Permission Request', () => {
       expect(chrome.permissions.request).toHaveBeenCalledTimes(1);
       const requested = (chrome.permissions.request as Mock).mock.calls[0]![0] as { origins: string[] };
       expect(requested.origins).toHaveLength(1);
-      const [origin] = requested.origins;
+      const origin = requested.origins[0]!;
       expect(OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS).toContain(origin);
       expect(origin.startsWith('https://tranco-list.eu/')).toBe(true);
       expect(granted).toBe(true);

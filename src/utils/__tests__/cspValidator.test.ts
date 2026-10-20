@@ -23,7 +23,7 @@ describe('CSPValidator - P1 - Module Loading', () => {
     expect(typeof cspValidatorModule.CSPValidator.isUrlAllowed).toBe('function');
     // The queue-execution machine and safeFetch were removed (PBI 2026-10-20-08):
     // 0 production callers, so the export surface keeps only the allow-check API.
-    expect(cspValidatorModule.safeFetch).toBeUndefined();
+    expect('safeFetch' in cspValidatorModule).toBe(false);
   });
 
   it('should getAvailableProviders', async () => {

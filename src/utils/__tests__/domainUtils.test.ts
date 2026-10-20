@@ -227,7 +227,7 @@ describe('domainUtils', () => {
       } as Settings);
 
   
-      mockedIsUrlBlocked.mockImplementation(async (url) => {
+      mockedIsUrlBlocked.mockImplementation((url) => {
         if (url.includes('blocked-ublock.com')) return true;
         return false;
       });
