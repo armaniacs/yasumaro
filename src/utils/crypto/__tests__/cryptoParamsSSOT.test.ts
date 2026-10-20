@@ -5,7 +5,8 @@
 
 import { describe, test, expect, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
-import { CRYPTO_PARAMS, validatePasswordPolicy } from '../cryptoParams.js';
+import { CRYPTO_PARAMS, validatePasswordPolicy, scorePassword } from '../cryptoParams.js';
+import { calculatePasswordStrength, PasswordStrength } from '../../masterPassword.js';
 import {
   hashPasswordWithPBKDF2,
   verifyPasswordWithPBKDF2,
@@ -98,6 +99,63 @@ describe('validatePasswordPolicy (strict)', () => {
     // 代わりに 12文字未満ケースで score が40でも長さで拒否されることを確認
     const r = validatePasswordPolicy('Abc1!def');
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('scorePassword SSOT equivalence (PBI 15)', () => {
+  // Pinned from the pre-refactor duplicated implementations. Weights are
+  // multiples of 10, so the 39/40 and 79/80 thresholds land on 30/40/70/80.
+  const boundaryCases: ReadonlyArray<{ password: string; score: number; level: 'Weak' | 'Medium' | 'Strong' }> = [
+    { password: '', score: 0, level: 'Weak' },
+    { password: 'abcdefgh', score: 20, level: 'Weak' },
+    { password: 'abcdefghijkl', score: 30, level: 'Weak' }, // just below 40
+    { password: 'abcd1234', score: 40, level: 'Medium' }, // at 40
+    { password: 'Abcdefgh', score: 40, level: 'Medium' },
+    { password: 'Abcdefgh1234', score: 70, level: 'Medium' }, // just below 80
+    { password: 'abcdefgh1234!@', score: 80, level: 'Strong' }, // at 80
+    { password: 'Abcdef1!Ghijk', score: 100, level: 'Strong' }, // cap
+  ];
+
+  test('scorePassword returns the pinned boundary scores and levels', () => {
+    for (const { password, score, level } of boundaryCases) {
+      expect(scorePassword(password)).toEqual({ score, level });
+    }
+  });
+
+  test('calculatePasswordStrength and scorePassword agree on every boundary case', () => {
+    for (const { password } of boundaryCases) {
+      const result = calculatePasswordStrength(password);
+      const ssot = scorePassword(password);
+      expect(result.score).toBe(ssot.score);
+      expect(result.text).toBe(ssot.level);
+      const expectedLevel =
+        ssot.level === 'Weak'
+          ? PasswordStrength.WEAK
+          : ssot.level === 'Medium'
+            ? PasswordStrength.MEDIUM
+            : PasswordStrength.STRONG;
+      expect(result.level).toBe(expectedLevel);
+    }
+  });
+
+  test('calculatePasswordStrength and scorePassword agree on mixed arbitrary inputs', () => {
+    const inputs = ['p', 'Password', 'Password1', 'Password1!', 'aB1!', 'abcdefghijklmnop', '!!!!', 'A1!aaaa'];
+    for (const password of inputs) {
+      const result = calculatePasswordStrength(password);
+      const ssot = scorePassword(password);
+      expect(result.score).toBe(ssot.score);
+      expect(result.text).toBe(ssot.level);
+    }
+  });
+
+  test('every password scoring below 40 is rejected by validatePasswordPolicy', () => {
+    // The policy and the UI strength meter must reference the same scoring:
+    // anything the SSOT scores as weak must not pass the policy either.
+    const weak = ['', 'abcdefgh', 'abcdefghijkl'];
+    for (const password of weak) {
+      expect(scorePassword(password).score).toBeLessThan(40);
+      expect(validatePasswordPolicy(password).ok).toBe(false);
+    }
   });
 });
 

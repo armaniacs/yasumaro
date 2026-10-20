@@ -5,7 +5,7 @@
  * utils/storage/encryptionSession.js, the single canonical implementation.
  */
 
-import { validatePasswordPolicy } from './crypto/cryptoParams.js';
+import { scorePassword, validatePasswordPolicy, type PasswordStrengthLevel } from './crypto/cryptoParams.js';
 
 // パスワード強度レベル
 export enum PasswordStrength {
@@ -20,46 +20,23 @@ export interface PasswordStrengthResult {
     text: string;
 }
 
+/** SSOT level ('Weak'/'Medium'/'Strong') to the PasswordStrength enum. */
+const LEVEL_TO_STRENGTH: Readonly<Record<PasswordStrengthLevel, PasswordStrength>> = {
+    Weak: PasswordStrength.WEAK,
+    Medium: PasswordStrength.MEDIUM,
+    Strong: PasswordStrength.STRONG
+};
+
 /**
- * パスワード強度を計算
- * @param {string} password - パスワード
- * @returns {PasswordStrengthResult} パスワード強度結果
+ * Calculates password strength by delegating to the SSOT scorePassword
+ * in cryptoParams.ts (single implementation of the scoring weights and
+ * the 40/80 level thresholds).
+ * @param {string} password - password to score
+ * @returns {PasswordStrengthResult} password strength result
  */
 export function calculatePasswordStrength(password: string): PasswordStrengthResult {
-    let score = 0;
-
-    // 長さチェック
-    if (password.length >= 8) score += 20;
-    if (password.length >= 12) score += 10;
-
-    // 大文字小文字混在
-    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 20;
-
-    // 数字を含む
-    if (/\d/.test(password)) score += 20;
-
-    // 特殊文字を含む
-    if (/[^a-zA-Z0-9]/.test(password)) score += 30;
-
-    // 最大値を100に制限
-    score = Math.min(score, 100);
-
-    // レベル判定
-    let level: PasswordStrength;
-    let text: string;
-
-    if (score < 40) {
-        level = PasswordStrength.WEAK;
-        text = 'Weak';
-    } else if (score < 80) {
-        level = PasswordStrength.MEDIUM;
-        text = 'Medium';
-    } else {
-        level = PasswordStrength.STRONG;
-        text = 'Strong';
-    }
-
-    return { score, level, text };
+    const { score, level } = scorePassword(password);
+    return { score, level: LEVEL_TO_STRENGTH[level], text: level };
 }
 
 /**

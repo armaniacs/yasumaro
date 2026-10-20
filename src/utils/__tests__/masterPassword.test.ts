@@ -81,6 +81,32 @@ describe('masterPassword', () => {
             expect(result.level).toBe(PasswordStrength.STRONG);
             expect(result.text).toBe('Strong');
         });
+
+        // PBI 15 pin: score boundaries. Weights are multiples of 10, so the
+        // 39/40 and 79/80 thresholds land on 30/40/70/80.
+        test('rates score 30 (just below the 40 threshold) as WEAK', () => {
+            // 12 lowercase chars: 20(len>=8) + 10(len>=12) = 30
+            const result = calculatePasswordStrength('abcdefghijkl');
+            expect(result.score).toBe(30);
+            expect(result.level).toBe(PasswordStrength.WEAK);
+            expect(result.text).toBe('Weak');
+        });
+
+        test('rates score 70 (just below the 80 threshold) as MEDIUM', () => {
+            // 12 chars, mixed case + digit: 20 + 10 + 20 + 20 = 70
+            const result = calculatePasswordStrength('Abcdefgh1234');
+            expect(result.score).toBe(70);
+            expect(result.level).toBe(PasswordStrength.MEDIUM);
+            expect(result.text).toBe('Medium');
+        });
+
+        test('rates exactly score 80 as STRONG', () => {
+            // 14 chars, lowercase + digit + special: 20 + 10 + 20 + 30 = 80
+            const result = calculatePasswordStrength('abcdefgh1234!@');
+            expect(result.score).toBe(80);
+            expect(result.level).toBe(PasswordStrength.STRONG);
+            expect(result.text).toBe('Strong');
+        });
     });
 
     describe('validatePasswordRequirements', () => {

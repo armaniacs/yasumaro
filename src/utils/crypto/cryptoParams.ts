@@ -14,10 +14,13 @@ export const CRYPTO_PARAMS = {
 } as const;
 
 /**
- * Internal strength scoring — mirrors masterPassword.ts:calculatePasswordStrength
- * so this module remains dependency-free (avoids circular imports).
+ * Strength scoring — single source of truth for the password score
+ * (length and character-class weights, 40/80 level thresholds).
+ * masterPassword.ts:calculatePasswordStrength delegates here.
  */
-function scorePassword(password: string): { score: number; level: string } {
+export type PasswordStrengthLevel = 'Weak' | 'Medium' | 'Strong';
+
+export function scorePassword(password: string): { score: number; level: PasswordStrengthLevel } {
   let score = 0;
   if (password.length >= 8) score += 20;
   if (password.length >= 12) score += 10;
@@ -25,7 +28,7 @@ function scorePassword(password: string): { score: number; level: string } {
   if (/\d/.test(password)) score += 20;
   if (/[^a-zA-Z0-9]/.test(password)) score += 30;
   score = Math.min(score, 100);
-  let level: string;
+  let level: PasswordStrengthLevel;
   if (score < 40) level = 'Weak';
   else if (score < 80) level = 'Medium';
   else level = 'Strong';
