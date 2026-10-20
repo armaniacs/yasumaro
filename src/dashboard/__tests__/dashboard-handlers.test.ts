@@ -499,8 +499,10 @@ describe('handleTestAi', () => {
 
     await handleTestAi();
 
+    // PBI 2026-10-18-12: the write options carry the coalesced-conflict hook.
     expect(mockSetAll).toHaveBeenCalledWith(
-      expect.objectContaining(expectedSettings)
+      expect.objectContaining(expectedSettings),
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) })
     );
   });
 

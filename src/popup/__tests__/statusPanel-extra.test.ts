@@ -27,6 +27,9 @@ const {
 }));
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockSetAll = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+// PBI 2026-10-18-12: the whitelist array is written through the lock-internal
+// updater seam (updateDomainWhitelist), so the whitelist-write pins target it.
+const mockUpdateWhitelist = vi.hoisted(() => vi.fn().mockResolvedValue({ whitelist: [], changed: true }));
 const mockGetMany = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockRecordDeniedVisit = vi.hoisted(() => vi.fn());
@@ -54,7 +57,7 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
 });
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = await importOriginal() as any;
-  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany, updateDomainWhitelist: mockUpdateWhitelist }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany; updateDomainWhitelist = mockUpdateWhitelist } };
 });
 
 vi.mock('../../utils/i18n.js', async () => {
@@ -1092,6 +1095,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     });
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline', domain_whitelist: [] });
     mockSetAll.mockResolvedValue(undefined);
+    mockUpdateWhitelist.mockResolvedValue({ whitelist: [], changed: true });
     mockExtractDomain.mockImplementation((url: string) => {
       try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
     });
@@ -1128,9 +1132,12 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
       expect(document.getElementById('mainStatus')!.textContent).toContain('Domain added');
     });
     expect(mockExtractDomain).toHaveBeenCalledWith('https://example.com/page');
-    expect(mockSetAll).toHaveBeenCalled();
-    const savedArg = mockSetAll.mock.calls[0]![0];
-    expect(savedArg.domain_whitelist).toContain('example.com');
+    // The whitelist array is written through the lock-internal updater seam
+    // (PBI 2026-10-18-12): the updater appends the entry to the CURRENT
+    // whitelist it receives.
+    expect(mockUpdateWhitelist).toHaveBeenCalled();
+    const updater = mockUpdateWhitelist.mock.calls[0]![0] as (current: string[]) => string[];
+    expect(updater([])).toContain('example.com');
     expect(document.getElementById('mainStatus')!.className).toBe('status-message success');
   });
 
@@ -1181,7 +1188,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addDomain: tab.url undefined — early return', async () => {
@@ -1191,7 +1198,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addDomain: getCurrentTab returns null — early return', async () => {
@@ -1201,7 +1208,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns null — early return', async () => {
@@ -1210,7 +1217,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addDomain: extractDomain returns empty string — early return', async () => {
@@ -1219,7 +1226,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addDomain: whitelist undefined falls back to []', async () => {
@@ -1228,8 +1235,10 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-    expect(mockSetAll.mock.calls[0]![0].domain_whitelist).toContain('example.com');
+    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
+    const updater = mockUpdateWhitelist.mock.calls[0]![0] as (current: string[]) => string[];
+    // The updater coerces a missing whitelist to [] before appending.
+    expect(updater([])).toContain('example.com');
   });
 
   it('addDomain: statusDiv missing — still saves but no DOM update', async () => {
@@ -1239,7 +1248,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     document.getElementById('mainStatus')!.remove();
     const btn = document.getElementById('statusAddDomain') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
+    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
   });
 
   it('addDomain: getMessage fallback when empty', async () => {
@@ -1263,11 +1272,11 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     expect(btn).toBeTruthy();
     btn.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-    const savedArg = mockSetAll.mock.calls[0]![0] as any;
+    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
+    const updater = mockUpdateWhitelist.mock.calls[0]![0] as (current: string[]) => string[];
     // The historical raw-URL entry could never match any whitelist consumer
     // (all match hostnames) — the writer normalizes to the hostname.
-    expect(savedArg.domain_whitelist).toContain('example.com');
+    expect(updater([])).toContain('example.com');
     expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');
   });
 
@@ -1277,7 +1286,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addPath: tab.url undefined — early return', async () => {
@@ -1287,7 +1296,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addPath: tab is null — early return', async () => {
@@ -1297,7 +1306,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
     await drainMacrotask();
-    expect(mockSetAll).not.toHaveBeenCalled();
+    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
   });
 
   it('addPath: whitelist undefined fallback', async () => {
@@ -1305,7 +1314,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     await initPrivatePanel();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
+    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
   });
 
   it('addPath: statusDiv missing — still saves', async () => {
@@ -1314,7 +1323,7 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     document.getElementById('mainStatus')!.remove();
     const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
     btn.click();
-    await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
+    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
   });
 
   it('addPath: getMessage fallback when empty', async () => {
@@ -1550,6 +1559,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     mockGetMessage.mockImplementation((key: string) => defaultMessages[key] || key);
     mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline', domain_whitelist: [] });
     mockSetAll.mockResolvedValue(undefined);
+    mockUpdateWhitelist.mockResolvedValue({ whitelist: [], changed: true });
     mockExtractDomain.mockImplementation((url: string) => {
       try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
     });
@@ -1581,7 +1591,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
   }
 
   it('addDomain: a rejected whitelist write lands on mainStatus and the log', async () => {
-    mockSetAll.mockRejectedValue(new Error('settings are locked'));
+    mockUpdateWhitelist.mockRejectedValue(new Error('settings are locked'));
     await initPrivatePanel();
 
     document.getElementById('statusAddDomain')!.click();
@@ -1591,7 +1601,7 @@ describe('statusPanel async handlers — rejected dependencies', () => {
   });
 
   it('addPath: a rejected whitelist write lands on mainStatus and the log', async () => {
-    mockSetAll.mockRejectedValue(new Error('settings are locked'));
+    mockUpdateWhitelist.mockRejectedValue(new Error('settings are locked'));
     await initPrivatePanel();
 
     document.getElementById('statusAddPath')!.click();

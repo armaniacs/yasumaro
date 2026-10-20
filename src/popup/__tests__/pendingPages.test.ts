@@ -148,6 +148,9 @@ vi.mock('../../utils/storage/SettingsRepository.js', () => ({
         getAll: vi.fn().mockResolvedValue({}),
         setAll: vi.fn().mockResolvedValue(undefined),
         set: vi.fn().mockResolvedValue(undefined),
+        // PBI 2026-10-18-12: the whitelist array is written through the
+        // lock-internal updater seam (updateDomainWhitelist).
+        updateDomainWhitelist: vi.fn().mockResolvedValue({ whitelist: [], changed: true }),
     },
 }));
 vi.mock('../../utils/storage/quota.js', async (importOriginal) => {
@@ -364,19 +367,18 @@ describe('saveSelectedPages', () => {
         ]);
         const sendMessageSpy = (vi.spyOn(chrome.runtime, 'sendMessage') as unknown as { mockResolvedValue: (v: unknown) => { mock: { calls: unknown[][] } } }).mockResolvedValue({});
         await saveSelectedPages('path');
-        expect(settingsRepository.setAll).toHaveBeenCalledWith(
-            expect.objectContaining({
-                // The historical anchored-regex entry could never match any
-                // whitelist consumer (all match hostnames) — the writer
-                // normalizes to the hostname.
-                domain_whitelist: expect.arrayContaining(['example.com']),
-            }),
-        );
+        // The whitelist array is written through the lock-internal updater
+        // seam (PBI 2026-10-18-12); the updater appends the normalized
+        // hostname — the historical anchored-regex entry could never match
+        // any whitelist consumer (all match hostnames).
+        const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
+        expect(updater([])).toEqual(['example.com']);
+        expect(settingsRepository.setAll).not.toHaveBeenCalled();
         expect(updateDomainFilterCache).toHaveBeenCalled();
         expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'MANUAL_RECORD' }));
     });
 
-    it('writes whitelist entries through settingsRepository.setAll, never a top-level scattered key', async () => {
+    it('writes whitelist entries through the lock-internal updater seam, never a top-level scattered key', async () => {
         document.body.innerHTML += `
             <input type="checkbox" class="pending-checkbox" value="https://example.com/page" checked>
         `;
@@ -389,13 +391,14 @@ describe('saveSelectedPages', () => {
 
         await saveSelectedPages('domain');
 
-        // The settings blob path is used — not chrome.storage.local.set with a
-        // scattered 'domain_whitelist' key that getAll() never reads post-migration.
-        expect(settingsRepository.setAll).toHaveBeenCalledWith(
-            expect.objectContaining({
-                domain_whitelist: ['old.example.com', 'example.com'],
-            }),
-        );
+        // The updater seam is used (PBI 2026-10-18-12) — the updater appends
+        // the entry to the CURRENT whitelist it receives, and no prebuilt
+        // array patch is passed to setAll. Not chrome.storage.local.set with a
+        // scattered 'domain_whitelist' key that getAll() never reads
+        // post-migration.
+        const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
+        expect(updater(['old.example.com'])).toEqual(['old.example.com', 'example.com']);
+        expect(settingsRepository.setAll).not.toHaveBeenCalled();
         expect(storageSetSpy).not.toHaveBeenCalledWith(expect.objectContaining({ domain_whitelist: expect.anything() }));
     });
 });
@@ -497,7 +500,7 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(settingsRepository.setAll).toHaveBeenCalled();
+            expect(settingsRepository.updateDomainWhitelist).toHaveBeenCalled();
             expect(sendMessageSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'MANUAL_RECORD' }));
         });
     });

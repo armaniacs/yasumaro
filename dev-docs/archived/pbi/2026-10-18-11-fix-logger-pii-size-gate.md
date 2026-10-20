@@ -91,14 +91,14 @@ Scenario: 既存ピンの整合性（sanitizeRegex の戻り値契約が意図�
 
 ## 受け入れ基準
 
-- [ ] `src/utils/logger/sanitize.ts:86-91`（および配列枝 `:135-140`）が `maskedItems.length > 0` のみで分岐せず、`result.error` を判定材料に含んでいる。サイズゲート超過時は**マスクせず切り詰めた値**（既存の `truncateForLog` を流用）を保存する
-- [ ] `src/utils/logger/core.ts:107-109` の message 経路が同様に `sanitizedMessage.error` を判定材料に含み、ゲート超過時に原文を保存しない
-- [ ] `src/utils/logger/api.ts:173-175` の OS 通知経路も同じ扱いとなり、通知本文にゲート超過の原文が載らない（storage 経路と通知経路が乖離しない）
-- [ ] 上記 BDD Scenario 1〜4 が自動テストとして実装されパスしている。Scenario 2（ゲート以下・従来挙動の不変）が対照として必ず同居している
-- [ ] 切り詰めが発生した場合はログ上でそれが分かる（既存 `LOG_TRUNCATION_MARKER` 相当のマーカー、または `error` 由来のフィールド）―「黙って短くなった」状態にしない。`src/utils/logTruncate.ts:15` のマーカー規約を再利用すること
-- [ ] `MAX_INPUT_SIZE = 65536`（`src/utils/piiSanitizer.ts:15` ← `src/utils/limits.ts:81`）自体を変更していない。gate の値を変える場合は `src/utils/__tests__/limits-drift.test.ts` と併せてレビューする
-- [ ] 既存テスト `src/utils/__tests__/piiSanitizer-optimization.test.ts:170-178`（`error` 定義・`maskedItems` 0 件を固定）と矛盾しない。矛盾する場合は expectation を緩めるのではなく**意図を明記したうえで**書き換える
-- [ ] 「ログを詳細に残したい（診断価値）」という運用上の意図と「PII を残さない」をどちらを優先したかが、コード中コメントと本 PBI の完了記録に明記されている（下記「どちらを優先するか」の節を参照）。`npm run validate` が緑
+- [x] `src/utils/logger/sanitize.ts:86-91`（および配列枝 `:135-140`）が `maskedItems.length > 0` のみで分岐せず、`result.error` を判定材料に含んでいる。サイズゲート超過時は**マスクせず切り詰めた値**（既存の `truncateForLog` を流用）を保存する
+- [x] `src/utils/logger/core.ts:107-109` の message 経路が同様に `sanitizedMessage.error` を判定材料に含み、ゲート超過時に原文を保存しない
+- [x] `src/utils/logger/api.ts:173-175` の OS 通知経路も同じ扱いとなり、通知本文にゲート超過の原文が載らない（storage 経路と通知経路が乖離しない）
+- [x] 上記 BDD Scenario 1〜4 が自動テストとして実装されパスしている。Scenario 2（ゲート以下・従来挙動の不変）が対照として必ず同居している
+- [x] 切り詰めが発生した場合はログ上でそれが分かる（既存 `LOG_TRUNCATION_MARKER` 相当のマーカー、または `error` 由来のフィールド）―「黙って短くなった」状態にしない。`src/utils/logTruncate.ts:15` のマーカー規約を再利用すること
+- [x] `MAX_INPUT_SIZE = 65536`（`src/utils/piiSanitizer.ts:15` ← `src/utils/limits.ts:81`）自体を変更していない。gate の値を変える場合は `src/utils/__tests__/limits-drift.test.ts` と併せてレビューする
+- [x] 既存テスト `src/utils/__tests__/piiSanitizer-optimization.test.ts:170-178`（`error` 定義・`maskedItems` 0 件を固定）と矛盾しない。矛盾する場合は expectation を緩めるのではなく**意図を明記したうえで**書き換える
+- [x] 「ログを詳細に残したい（診断価値）」という運用上の意図と「PII を残さない」をどちらを優先したかが、コード中コメントと本 PBI の完了記録に明記されている（下記「どちらを優先するか」の節を参照）。`npm run validate` が緑
 
 ## テスト戦略
 
@@ -210,13 +210,13 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（Scenario 1〜4。Scenario 2 の対照が同居していること）
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `pii-mask:logger-sinks-keep-original-above-size-gate` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（デバッグログの取り扱い方針を `SECURITY.md` / `dev-docs/SECURITY_REVIEW_GUIDE.md` に追記）
-- [ ] ブロッカー観測（65,536 超 `sender.tab.url` の成立可否）の結果が記録に残されている
-- [ ] 「PII を残さない」優先か否かの価値判断がコードコメントと完了記録に明記されている
+- [x] BDDシナリオが自動テストで実装されパス（Scenario 1〜4。Scenario 2 の対照が同居していること）
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `pii-mask:logger-sinks-keep-original-above-size-gate` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（デバッグログの取り扱い方針を `SECURITY.md` / `dev-docs/SECURITY_REVIEW_GUIDE.md` に追記）
+- [x] ブロッカー観測（65,536 超 `sender.tab.url` の成立可否）の結果が記録に残されている
+- [x] 「PII を残さない」優先か否かの価値判断がコードコメントと完了記録に明記されている
 
 ## 調査結果（2026-10-18）
 
@@ -231,3 +231,20 @@ owner 観測（テストプロファイル・ライブターゲットへの prob
 - サイズ系リミットの SSOT: `src/utils/limits.ts:73-75, 81-82`（`MAX_LOG_FORWARD_*` / `MAX_PII_INPUT_SIZE` / `MAX_PII_OUTPUT_SIZE`）― ドリフト pin は `src/utils/__tests__/limits-drift.test.ts`
 - 既存 Sink（参考・本件の変更対象外）: `src/background/handlers/systemHandlers.ts:309-318`（`LOG_FORWARD` の境界処理。message は 65,536、details preview は 262,144 まで運ぶ）
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` `root[20]`, `NEEDS-VALIDATION.md` 18番）
+
+## 完了記録（2026-10-20）
+
+- 実装方針: 選択肢 1（3 sink が `result.error` を判定材料に含める）。`sanitizeRegex` の戻り値契約（`SanitizeResult`）・ゲート定数（`MAX_INPUT_SIZE = 65536`）・`limits.ts` は不変。
+- 変更ファイル:
+  - `src/utils/logger/sanitize.ts`: 3 sink 共通判定 `persistableLogText` を新設（文字列枝・配列枝から利用）。判定は「maskedItems あり → マスク結果 / error あり（マスク 0 件）→ 切り詰め＋再マスク / それ以外 → 原文」の 3 段。
+  - `src/utils/logger/core.ts`: message 経路を同じ 3 段判定に統一。
+  - `src/utils/logger/api.ts`: OS 通知経路を同じ 3 段判定に統一（保存経路と通知経路の乖離を解消）。
+- 受入基準「マスクせず切り詰めた値」の取扱い: BDD Scenario 1/3 の Then（永続化エントリに `user@example.com` が現れない）とテスト戦略の主検証（`details.url` にメールが含まれないこと）を満たすには切り詰めだけでは不十分である。メールは URL 先頭付近（`https://attacker.example/?email=` の直後）に位置し、500 文字の切り詰めに残るため。**シナリオを優先**し、ゲート超過時は `truncateForLog` で 500 文字＋`LOG_TRUNCATION_MARKER` に境界を切った上で、境界内の残部を再マスクして保存する。
+- 価値判断: **「PII を残さない」を優先した**。診断上の損失は「長大すぎる文字列の末尾」が見えないことのみで、冒頭・ホスト名・エラーコード・タイムスタンプは残る。切り詰めは `LOG_TRUNCATION_MARKER`（`src/utils/logTruncate.ts` の規約を再利用）付きで可視化し、「黙って短くなった」状態にしない。同旨をコード中コメント（`persistableLogText` の JSDoc、`core.ts`・`api.ts` の呼び出し箇所）にも明記。
+- テスト: `src/utils/logger/__tests__/piiSizeGate.test.ts` を新設（6 件）。BDD Scenario 1〜4 に加え、配列枝・message 経路の固定と対照（Scenario 2: ゲート以下は従来どおり `[MASKED:email]` ＋ `url_maskedTypes`、マーカーなし）を同居。検証は storage adapter の中身（永続化後のエントリ）で行い、buffer peek は使わない。
+- 監査 fingerprint: `pii-mask:logger-sinks-keep-original-above-size-gate` … 解消。
+- ブロッカー観測（65,536 超 `sender.tab.url` の成立可否）: 「調査結果（2026-10-18）」に記録済み（CONFIRMED、局所再現）。70000 文字 URL が `addLog` → storage まで到達することが実測済み。実ブラウザのタブ URL 長上限の追加観測は owner タスクとして残置（PBI 記載のとおり、選択肢 1 の実装判断には影響しない）。
+- 他の `sanitizeRegex` 呼び出し元（選択肢 1 の Cons の確認）: logger 外では `src/background/navTrail/navTrailTracker.ts:152`、`src/background/manualContentFetcher.ts:92`、`src/dashboard/settings/privacySettings.ts:158` が該当。いずれも診断ログの sink ではないため本 PBI のスコープ外（別 PBI 候補）。
+- ドキュメント: デバッグログの取り扱い方針を `dev-docs/SECURITY_REVIEW_GUIDE.md`（Privacy Features 配下に「Diagnostic log PII handling」節）と `SECURITY.md`（Scope）に追記。
+- 検証結果（2026-10-20）: 対象テスト 13 ファイル・247 件 GREEN（logger パイプライン / 3 sink / logCritical / criticalAlertSink / logTruncate / logger-seam を含む）＋ piiSanitizer 系 5 ファイル・130 件 GREEN（`piiSanitizer-optimization.test.ts:170-178` の既存ピンを含む契約不変を確認）。`npm run type-check` 成功。`npx eslint` 変更 4 ファイルで指摘 0 件。`node scripts/check-docs-chars.mjs` 成功。
+- 5 Whys（連鎖の要約）: 1) なぜ原文が残るか → サイズゲート超過で `sanitizeRegex` が原文＋error を返すため。2) なぜそれが保存されるか → 3 sink が `maskedItems.length > 0` しか見ず `error` を読まないため。3) なぜ sink は error を読まないか → ゲートの戻り値契約が sink 側で fail-open に扱われてきたため。4) なぜ fail-open か → ゲートは「性能制約」であって「マスク省略」を意味しないという契約が明記されていなかったため。5) なぜ明記されていなかったか → ゲート追加時に呼び出し元のマスク保証の見直しが漏れたため。最終解: 3 sink が `error` を判定に含め、ゲート超過時は切り詰め（可視マーカー付き）＋再マスクで保存する。

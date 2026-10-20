@@ -124,14 +124,19 @@ describe('settings backup restore parity', () => {
     expect(bBlob).toEqual(a.restored);
   });
 
-  it('merges into the existing blob (migration path only)', async () => {
+  it('skips the snapshot spread when the blob is no longer empty (concurrent write wins)', async () => {
+    // PBI 2026-10-18-12: the restore precondition (empty blob + authoritative
+    // migration record) is verified inside the lock. A write that landed
+    // between the caller's empty read and the restore's lock must not be
+    // reverted by the snapshot spread, so the fresh blob stays and the
+    // restore reports nothing.
     const seed = {
       settings: { [HOST]: 'keep', [PORT]: 'old' },
       legacy_settings_backup_1750000000000: backupEntry({ [PORT]: 'new-port' }, 1750000000000),
     };
     const a = await runPathA({ ...seed });
-    expect(a.restored).toEqual({ [PORT]: 'new-port' });
-    expect(a.blob).toEqual({ [HOST]: 'keep', [PORT]: 'new-port' });
+    expect(a.restored).toBeNull();
+    expect(a.blob).toEqual({ [HOST]: 'keep', [PORT]: 'old' });
   });
 
   it('returns null without a backup and leaves the blob empty', async () => {

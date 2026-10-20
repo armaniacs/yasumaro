@@ -98,12 +98,16 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
       getAll: hoistedMockGet,
       setAll: hoistedMockSave,
       getMany: hoistedMockGet,
+      // PBI 2026-10-18-12: the whitelist array is written through the
+      // lock-internal updater seam (updateDomainWhitelist).
+      updateDomainWhitelist: vi.fn().mockResolvedValue({ whitelist: [], changed: true }),
       clearCache: vi.fn(),
     },
     SettingsRepository: class {
       getAll = hoistedMockGet;
       setAll = hoistedMockSave;
       getMany = hoistedMockGet;
+      updateDomainWhitelist = vi.fn().mockResolvedValue({ whitelist: [], changed: true });
       clearCache = vi.fn();
     },
   };
@@ -505,9 +509,11 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-domain')!.click();
 
       await vi.waitFor(() => {
-        expect(settingsRepository.setAll).toHaveBeenCalledWith(
-          { domain_whitelist: ['example.com'] }
-        );
+        // The whitelist array is written through the lock-internal updater
+        // seam (PBI 2026-10-18-12); the updater appends to the CURRENT
+        // whitelist it receives.
+        const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
+        expect(updater([])).toEqual(['example.com']);
       });
 
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalledWith({
@@ -574,9 +580,9 @@ describe('privatePageDialog', () => {
       document.getElementById('dialog-save-path')!.click();
 
       await vi.waitFor(() => {
-        expect(settingsRepository.setAll).toHaveBeenCalledWith(
-          expect.objectContaining({ domain_whitelist: ['example.com'] })
-        );
+        // The updater seam appends the URL hostname (the only matchable form).
+        const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
+        expect(updater([])).toEqual(['example.com']);
       });
 
       expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
@@ -711,7 +717,7 @@ describe('privatePageDialog', () => {
     it('reports a rejected domain write after the dialog is already closed', async () => {
       const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
       (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
-      (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
+      (settingsRepository.updateDomainWhitelist as any).mockRejectedValueOnce(new Error('settings are locked'));
 
       const mod = await import('../privatePageDialog.js');
       mod.wireDialogButtons();
@@ -728,7 +734,7 @@ describe('privatePageDialog', () => {
     it('reports a rejected path write', async () => {
       const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
       (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
-      (settingsRepository.setAll as any).mockRejectedValueOnce(new Error('settings are locked'));
+      (settingsRepository.updateDomainWhitelist as any).mockRejectedValueOnce(new Error('settings are locked'));
 
       const mod = await import('../privatePageDialog.js');
       mod.wireDialogButtons();

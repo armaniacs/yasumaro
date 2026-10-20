@@ -85,14 +85,14 @@ claimed root cause: `validateObsidianHost` の digit-or-dot ガードは「数�
 
 ## 受け入れ基準
 
-- [ ] `validateObsidianHost` が、IPv4 を表現しうるエンコード付きホスト（`0x` 整数形、`0x` 含有ドット区切り形、`0X` 大文字変種を含む）を拒否すること。判定は「ホスト全体が 4 オクテットの IPv4 に解決しうる形」で行い、ラベル単位の `0x` 検査ではないこと（`0x7f000001.nip.io` を通すこと）
-- [ ] 監査の訂正が実装に引き継がれていること（10進単独形 `2130706433` と 8進形 `0177.0.0.1` は**すでに** digit-dot ガード `:117-122` で拒否済みであり、本 PBI で新たに追加する必要がないこと。この事実をテストとして pin し、誤って「今回追加した」と記録しないこと）
-- [ ] `buildFromSettings`（`src/utils/obsidianConfigBuilder.ts:91`）が、Bearer ヘッダーを組み立てる**前に**組み立て済み `baseUrl` を `new URL()` で再解釈し、解決 hostname と検証器の判定が一致することを必須にすること。不一致時は fetch 発行前に失敗し、既存の `failureTaxonomy` kind を持つエラーになること
-- [ ] `buildFromOverride`（接続テスト経路、`:130` / `:133`）も同じ再解釈チェックを共有すること（override だけ緩まない経路を作らない）
-- [ ] 拒否・不一致時のユーザ向け文言が既存の CONFIGURATION エラー体系に載り、`status` や内部 URL などの情報を漏らさないこと。`validateObsidianHost` の既存メッセージ（`invalid characters`）は維持すること
-- [ ] `cspValidator.ts:186-200` の `savedObsidianOrigins` 導出が、検証器の強化により不正保存設定に対して空集合を寄与し続けること（`savedObsidianOrigins` が parser 解決 origin を許可しないこと）
-- [ ] 既存テスト（`src/utils/__tests__/obsidianHostCredentialPairing.test.ts:94-122`、`:124-155`、`src/utils/__tests__/obsidianProtocolLoopback.test.ts:29-41`、`src/dashboard/settings/__tests__/fieldValidation.test.ts:325`）が緑で、正規ホスト・IPv6・loopback の受け入れが壊れないこと
-- [ ] `npm run validate` が緑であること
+- [x] `validateObsidianHost` が、IPv4 を表現しうるエンコード付きホスト（`0x` 整数形、`0x` 含有ドット区切り形、`0X` 大文字変種を含む）を拒否すること。判定は「ホスト全体が 4 オクテットの IPv4 に解決しうる形」で行い、ラベル単位の `0x` 検査ではないこと（`0x7f000001.nip.io` を通すこと）
+- [x] 監査の訂正が実装に引き継がれていること（10進単独形 `2130706433` と 8進形 `0177.0.0.1` は**すでに** digit-dot ガード `:117-122` で拒否済みであり、本 PBI で新たに追加する必要がないこと。この事実をテストとして pin し、誤って「今回追加した」と記録しないこと）
+- [x] `buildFromSettings`（`src/utils/obsidianConfigBuilder.ts:91`）が、Bearer ヘッダーを組み立てる**前に**組み立て済み `baseUrl` を `new URL()` で再解釈し、解決 hostname と検証器の判定が一致することを必須にすること。不一致時は fetch 発行前に失敗し、既存の `failureTaxonomy` kind を持つエラーになること
+- [x] `buildFromOverride`（接続テスト経路、`:130` / `:133`）も同じ再解釈チェックを共有すること（override だけ緩まない経路を作らない）
+- [x] 拒否・不一致時のユーザ向け文言が既存の CONFIGURATION エラー体系に載り、`status` や内部 URL などの情報を漏らさないこと。`validateObsidianHost` の既存メッセージ（`invalid characters`）は維持すること
+- [x] `cspValidator.ts:186-200` の `savedObsidianOrigins` 導出が、検証器の強化により不正保存設定に対して空集合を寄与し続けること（`savedObsidianOrigins` が parser 解決 origin を許可しないこと）
+- [x] 既存テスト（`src/utils/__tests__/obsidianHostCredentialPairing.test.ts:94-122`、`:124-155`、`src/utils/__tests__/obsidianProtocolLoopback.test.ts:29-41`、`src/dashboard/settings/__tests__/fieldValidation.test.ts:325`）が緑で、正規ホスト・IPv6・loopback の受け入れが壊れないこと
+- [x] `npm run validate` が緑であること
 
 ## テスト戦略
 
@@ -182,11 +182,11 @@ PBI 08（Obsidian 経路の redirect ガード）と**同一ファイル群**（
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint を完了記録に残す（`0ee29ec604d1788f7f73156689eeddf065be733a861cd5924f7c776636f8d19c`）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/SECURITY_REVIEW_GUIDE.md` の SSRF / CWE-918 脅威モデルに「validator と URL パーサの解決一致」項目を追記）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint を完了記録に残す（`0ee29ec604d1788f7f73156689eeddf065be733a861cd5924f7c776636f8d19c`）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/SECURITY_REVIEW_GUIDE.md` の SSRF / CWE-918 脅威モデルに「validator と URL パーサの解決一致」項目を追記）
 
 ## 調査結果（2026-10-18）
 
@@ -202,3 +202,10 @@ PBI 08（Obsidian 経路の redirect ガード）と**同一ファイル群**（
 - `src/utils/ssrfGuard.ts:12-19`（`BLOCKED_PATTERNS` ― 比較対象。ただし Obsidian 経路では発動しない）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` ― SSRF / CWE-918 の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json `$[1]` / NEEDS-VALIDATION.md 1番）
+
+## 完了記録（2026-10-20）
+
+- 実装: `validateObsidianHost` に `agreesWithUrlParser`（ホスト全体がパーサにより IPv4 に再解釈される形を拒否、ラベル単位ではないため `0x7f000001.nip.io` は通る）を必須化。新規ヘルパ 3 本（`agreesWithUrlParser` / `baseUrlAgreesWithUrlParser` / `isSameResolvedAddress`）は小文字化・末尾ドット除去・先頭 0 付き IPv4 のオクテット比較で表記ゆれと実差分を区別し、`new URL` throw 時は fail-closed。さらに `obsidianConfigBuilder` の buildFromSettings / buildFromOverride 両方で baseUrl を `new URL()` で再解釈し、Bearer ヘッダー組み立て前に tagFailure(CONFIGURATION) で多層照合。
+- テスト: obsidianHostCredentialPairing.test.ts に 12 テスト追加（hex 4 形の拒否 + `new URL().hostname === '127.0.0.1'` の実測アサーション / 監査訂正の回帰 pin / 誤拒否ガード / CSP ゲートの hex 保存ホストで空集合維持 / 両 builder 経路の fetch spy 0 本 / 第 2 層ゲートの純関数 pin）。既存テストの期待値は 0 変更。
+- 5 Whys: Bearer が意図しないアドレスへ流れるのは検証器が hex 形を RFC-1123 DNS 名として受理しつつ WHATWG パーサが 127.0.0.1 に再解釈する parser-differential のため。すり抜けたのは「ホスト全体がパーサにより再解釈される形」を拒否する規則がなく、Obsidian 経路は fetchWithTimeout が blockLocalhost:false で ssrfGuard が構造的に発動しないため。解: 検証器にパーサ一致判定を必須化 + Builder で多層照合。
+- 検証: obsidian/ssrf 関連 25 ファイル 424 テスト全緑（pairing 単体 41 テスト）/ 3 コアファイル --repeats=20 で 110 テスト全緑 / 全スイート npx vitest run 1,100 ファイル 16,530 テスト全緑 / type-check / eslint 全緑。※Vitest 5 では --retries は無効（--retry、既定 0）。

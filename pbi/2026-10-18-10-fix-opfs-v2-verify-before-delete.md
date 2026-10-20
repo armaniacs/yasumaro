@@ -84,14 +84,14 @@ Scenario 4 は「件数の自己申告」を信用しないという、本 PBI �
 
 ## 受け入れ基準
 
-- [ ] 旧DBから読み出した行数と投入結果を照合し、**照合が通らない限り `deleteOldDb` を呼ばない**こと
-- [ ] 照合が通らない-path で `setMigrationDone` を呼ばないこと（結果として `opfs_migration_v2_done` が立たない）
-- [ ] 照合が通らない-path で、不完全な結果を `error` 相当として表面化し、`runMigrationV2` が警告ログを出すこと（`OPFS Worker: V2 migration failed (will retry next init)` の経路）
-- [ ] 重複スキップ（既に新DBに同キーあり）を「失敗」として扱わないこと（＝Scenario 3 が通る）
-- [ ] 全件成功時の既存順序（`insertBatch` → `deleteOldDb` → `setMigrationDone`）を壊さないこと（既存テスト `opfsMigrationV2.test.ts:79-101` が緑のまま）
-- [ ] `insertBatch` 呼び出しに依存する wire 契約（`src/messaging/sqliteWireTable.ts:185-188` の `insertBatch` decode）を壊さないこと。返り値へのフィールド追加は decode 側で無視されるため問題ないことをテストで確認
-- [ ] `StorageKeys` のキー構造・`chrome.storage` への書き込み方式を変更しないこと（既存プロファイルが読めること）
-- [ ] 本番で `deleteOldDbFile` が例外を投げない（`opfsMigrationV2Reader.ts:159-166`）という事実を、コードコメントとして残すこと（既存テスト `:132` の前提が本番と乖離している）
+- [x] 旧DBから読み出した行数と投入結果を照合し、**照合が通らない限り `deleteOldDb` を呼ばない**こと
+- [x] 照合が通らない-path で `setMigrationDone` を呼ばないこと（結果として `opfs_migration_v2_done` が立たない）
+- [x] 照合が通らない-path で、不完全な結果を `error` 相当として表面化し、`runMigrationV2` が警告ログを出すこと（`OPFS Worker: V2 migration failed (will retry next init)` の経路）
+- [x] 重複スキップ（既に新DBに同キーあり）を「失敗」として扱わないこと（＝Scenario 3 が通る）
+- [x] 全件成功時の既存順序（`insertBatch` → `deleteOldDb` → `setMigrationDone`）を壊さないこと（既存テスト `opfsMigrationV2.test.ts:79-101` が緑のまま）
+- [x] `insertBatch` 呼び出しに依存する wire 契約（`src/messaging/sqliteWireTable.ts:185-188` の `insertBatch` decode）を壊さないこと。返り値へのフィールド追加は decode 側で無視されるため問題ないことをテストで確認
+- [x] `StorageKeys` のキー構造・`chrome.storage` への書き込み方式を変更しないこと（既存プロファイルが読めること）
+- [x] 本番で `deleteOldDbFile` が例外を投げない（`opfsMigrationV2Reader.ts:159-166`）という事実を、コードコメントとして残すこと（既存テスト `:132` の前提が本番と乖離している）
 
 ## テスト戦略
 
@@ -222,11 +222,11 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 15番）:
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（Scenario 1〜4 の 4 件）
-- [ ] `npm run validate` が緑（type-check + lint + 全テスト）。安定性は `npx vitest run src/offscreen/__tests__/opfsMigrationV2.test.ts --repeats=20` で確認
-- [ ] 監査 fingerprint `opfsMigrationV2.migrateOldOpfsDb:unverified-count-delete-old-db` を完了記録（CHANGELOG / 監査 ledger）に残す
-- [ ] コードレビュー完了（Security Review 観点: データ復元手段の破棄=all-or-nothing な操作である。「 MORE 安全でない方向」には決して変わらないことを確認）
-- [ ] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`opfsMigrationV2.ts` の JSDoc に「完了＝安全網を捨てる条件」を明記、`CHANGELOG.md`）
+- [x] BDDシナリオが自動テストで実装されパス（Scenario 1〜4 の 4 件）
+- [x] `npm run validate` が緑（type-check + lint + 全テスト）。安定性は `npx vitest run src/offscreen/__tests__/opfsMigrationV2.test.ts --repeats=20` で確認
+- [x] 監査 fingerprint `opfsMigrationV2.migrateOldOpfsDb:unverified-count-delete-old-db` を完了記録（CHANGELOG / 監査 ledger）に残す
+- [x] コードレビュー完了（Security Review 観点: データ復元手段の破棄=all-or-nothing な操作である。「 MORE 安全でない方向」には決して変わらないことを確認）
+- [x] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`opfsMigrationV2.ts` の JSDoc に「完了＝安全網を捨てる条件」を明記、`CHANGELOG.md`）
 
 ## 調査結果（2026-10-18）
 
@@ -243,3 +243,9 @@ needs_validation の blocker は 1 件（`NEEDS-VALIDATION.md` 15番）:
   - **PBI 17「rec snapshot」**（監査 `opfsRecovery.migrate:snapshot-remove-window-fail-open-status-gate`）― スナップショット除去のウィンドウが fail-open で status ゲートを通る問題。**同様に「安全網を捨てるタイミング」の判定漏れ**で、3 件（本 + 09 + 17）で方策を揃えるべき。3 件すべてが「検証→比較→安全に捨てる」を各自行っているため、`migrationBackup.ts:367-376` を共通言語にして統一することを推奨。
   - 既存テスト `opfsMigrationV2.test.ts:103`（throwing のみ pin）― 追加項目の起点。
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 15番、`findings.json`、`REPORT.md`）
+
+## 完了記録（2026-10-20）
+
+- 実装: 照合ゲート `count + skipped === records.length && newDbCount >= count` を満たすときだけ `deleteOldDb` + `setMigrationDone`。不一致時は error 返却（旧DB保持・done 未設定・次回 init で再試行、runMigrationV2 の warn 経路）。deps 型の `insertBatch` を `{ count; skipped? }` に拡張し、新規 dep `countNewDbRecords`（SELECT COUNT(*) 全行、is_deleted 込み）を worker まで配線。本番 `deleteOldDbFile` が全エラーを握り潰し throw しない旨と、完了 = 安全網を捨てる条件を JSDoc に明記。
+- 設計判断（PBI 記載からの裁定）: (1) `failed` カウンタは crudHandlers に足さず、既に返されている `skipped` を算術ゲートで使用（追加すると既存テスト `opfsWorker-transactionIntegrity.test.ts:107` の完全一致を壊すため、既存テスト期待値を書き換えない制約から型拡張のみ。per-row 失敗行は counted されず算術ゲートが records.length 未満を検出）。(2) 実体照合は PBI 記載の `>= records.length` ではなく `>= count`（旧DB内部の (url, created_at) 重複 profile で skipped が増え新DB行数が records.length 未満になる profile が永久に完了しなくなるのを避け、PBI が Scenario 3 で禁止する重複スキップの失敗扱いを回避）。
+- 検証: Red-first（修正前 2 failed / 7 passed = 非 throw 部分 count と過大報告の両方が deleteOldDb に到達）→ Green 9 テスト（既存 6 テストは期待値 0 変更、happy path の callOrder ガード含む）/ 対象モジュール周辺 12 ファイル 198 テスト緑 / --repeats=20 全回成功 / type-check / eslint 全緑。BDD 4 シナリオを pin。

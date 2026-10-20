@@ -70,14 +70,14 @@ claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)
 
 ## 受け入れ基準
 
-- [ ] `src/utils/markdownSanitizer.ts:56` の `allMarkdownLinkPattern` が、リンクテキストと宛先の間の空白を許容する形（`]\s*(`）に変更されていること。空白なし形が引き続きマッチすることを既存テストで担保すること
-- [ ] `src/utils/markdownSanitizer.ts:58` の置換が、**間にある空白を保持する**形になっていること。現状の置換は `$1\\[$2\\]\\($3\\)` で空白という概念が無いため、空白許容にすると `[text] (url)` → `\[text\]\(url\)` となりノート本文からスペースが消える。`(!?)\[([^\]]*)\](\s*)\(([^)]+)\)` のように空白キャプチャのグループを持たせ、`$1\\[$2\\]$3\\($4\\)` のように**空白を残して**置換することが副作用 🟡軽微 を最小にする
-- [ ] `src/utils/markdownSanitizer.ts:112-132` の `sanitizeForObsidian` 内の順序（`:118` リンク → `:121` wikilink → `:126-129` HTML エンティティ）が維持されていること。特にエスケープが HTML エンティティ化の**前**である理由（`&` を先にエンコードしないと後続の `;` が再エンコードされる）をコメントで残すこと
-- [ ] Obsidian 経路と gist 経路の**両方**で空白区切り形が停止していること。統合確認先は `src/background/pipeline/steps/formatMarkdownStep.ts:59`（`obsidianList`、summary は `markdownFormatter.ts:232` でインデント付きリスト行に埋め込まれる）と `src/background/syncTargets/gistSyncTarget.ts:64-67`（`plainLine`、`normalizeSummary: false`）の両方
-- [ ] 既存テスト `src/utils/__tests__/markdownSanitizer.test.ts`（336行）・`markdownSanitizerBoundary.test.ts`（63行）・`src/utils/__tests__/markdownFormatter.test.ts`（378行）の期待値が**一切変更されていない**こと。差分が出るなら、それは回帰ではなく意図した挙動変更として BDD シナリオで明示されていること
-- [ ] `sanitizeMarkdownLinks`（`markdownSanitizer.ts:26-37`、http/https 限定・旧実装）は、本 PBI のスコープ外として変更しないこと。アクティブなチェーンは `sanitizeAllMarkdownLinks` のみであり、両者を同居させると「どちらが効くか」の混乱が増える
-- [ ] ブロッカー（下記）が解消され、解消結果が PR 記述と監査 fingerprint `5dd75a26909c05452fb8bc16f24f6f7d4e8255c1fb71a0318ce27051dbae9062` の隣に記録されていること。未解消のまま実装に進んだ場合は `needs_validation` のままなので、その旨を実装メモに残すこと
-- [ ] `dev-docs/SECURITY_REVIEW_GUIDE.md` の Markdown/ノート書き込みのサニタイズ節に「空白区切りリンク綴りも停止対象」と1行追記されていること（攻撃面の記述が実装とずれるのを防ぐ）
+- [x] `src/utils/markdownSanitizer.ts:56` の `allMarkdownLinkPattern` が、リンクテキストと宛先の間の空白を許容する形（`]\s*(`）に変更されていること。空白なし形が引き続きマッチすることを既存テストで担保すること
+- [x] `src/utils/markdownSanitizer.ts:58` の置換が、**間にある空白を保持する**形になっていること。現状の置換は `$1\\[$2\\]\\($3\\)` で空白という概念が無いため、空白許容にすると `[text] (url)` → `\[text\]\(url\)` となりノート本文からスペースが消える。`(!?)\[([^\]]*)\](\s*)\(([^)]+)\)` のように空白キャプチャのグループを持たせ、`$1\\[$2\\]$3\\($4\\)` のように**空白を残して**置換することが副作用 🟡軽微 を最小にする
+- [x] `src/utils/markdownSanitizer.ts:112-132` の `sanitizeForObsidian` 内の順序（`:118` リンク → `:121` wikilink → `:126-129` HTML エンティティ）が維持されていること。特にエスケープが HTML エンティティ化の**前**である理由（`&` を先にエンコードしないと後続の `;` が再エンコードされる）をコメントで残すこと
+- [x] Obsidian 経路と gist 経路の**両方**で空白区切り形が停止していること。統合確認先は `src/background/pipeline/steps/formatMarkdownStep.ts:59`（`obsidianList`、summary は `markdownFormatter.ts:232` でインデント付きリスト行に埋め込まれる）と `src/background/syncTargets/gistSyncTarget.ts:64-67`（`plainLine`、`normalizeSummary: false`）の両方
+- [x] 既存テスト `src/utils/__tests__/markdownSanitizer.test.ts`（336行）・`markdownSanitizerBoundary.test.ts`（63行）・`src/utils/__tests__/markdownFormatter.test.ts`（378行）の期待値が**一切変更されていない**こと。差分が出るなら、それは回帰ではなく意図した挙動変更として BDD シナリオで明示されていること
+- [x] `sanitizeMarkdownLinks`（`markdownSanitizer.ts:26-37`、http/https 限定・旧実装）は、本 PBI のスコープ外として変更しないこと。アクティブなチェーンは `sanitizeAllMarkdownLinks` のみであり、両者を同居させると「どちらが効くか」の混乱が増える
+- [x] ブロッカー（下記）が解消され、解消結果が PR 記述と監査 fingerprint `5dd75a26909c05452fb8bc16f24f6f7d4e8255c1fb71a0318ce27051dbae9062` の隣に記録されていること。未解消のまま実装に進んだ場合は `needs_validation` のままなので、その旨を実装メモに残すこと
+- [x] `dev-docs/SECURITY_REVIEW_GUIDE.md` の Markdown/ノート書き込みのサニタイズ節に「空白区切りリンク綴りも停止対象」と1行追記されていること（攻撃面の記述が実装とずれるのを防ぐ）
 
 ## テスト戦略
 
@@ -143,11 +143,11 @@ claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（単体 6 シナリオ + 統合 2 経路）
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint（`5dd75a26909c05452fb8bc16f24f6f7d4e8255c1fb71a0318ce27051dbae9062`）を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/SECURITY_REVIEW_GUIDE.md` のサニタイズ節、`dev-docs/TESTING_GUIDE.md` の手動テストチェックリスト）
+- [x] BDDシナリオが自動テストで実装されパス（単体 6 シナリオ + 統合 2 経路）
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint（`5dd75a26909c05452fb8bc16f24f6f7d4e8255c1fb71a0318ce27051dbae9062`）を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/SECURITY_REVIEW_GUIDE.md` のサニタイズ節、`dev-docs/TESTING_GUIDE.md` の手動テストチェックリスト）
 
 ## 調査結果（2026-10-18）
 
@@ -160,3 +160,10 @@ claimed root cause（監査原文）: "`sanitizeAllMarkdownLinks` pattern `/(!?)
 - pbi/00-INDEX.md
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/NEEDS-VALIDATION.md` 2番
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/findings.json`（fingerprint `5dd75a26909c05452fb8bc16f24f6f7d4e8255c1fb71a0318ce27051dbae9062`）
+
+## 完了記録（2026-10-20）
+
+- 実装: 全Markdownリンクパターンを `]\\(` から `]\\s*\\(` に空白許容化（空白 1+・タブ・全角スペース・改行）、置換を空白キャプチャ保持の `$1\\[$2\\]$3\\($4\\)` に変更（ノート本文からスペースを消さない=PBI の落とし穴 #1 を回避）。調査裁定（どのレンダラでも非リンク → 価値は偽リンク表記の防止に縮小、Impact 0.5→0.25）をコメント記録し、SECURITY_REVIEW_GUIDE の Threat Model に「Forged Markdown links in note writes」行を追記。
+- テスト: BDD シナリオ 1-6 を markdownSanitizer.test.ts に固定し、SSOT チェーンと両シンクを markdownFormatter.test.ts（obsidianList + gist 経路）・gistSyncTarget-r2.test.ts（GistSyncTarget.sync 実経路）・formatMarkdownStep.test.ts（ステップ経路、実サニタイザを importActual で復元）で pin。既存テストの期待値は 0 変更。
+- 5 Whys: 攻撃ページの空白区切り綴りが生で残るのは全リンクパターンが空白なししかマッチしないため。前提が崩れるのは markdownFormatter の normalizeSingleLine が改行・連続スペースを能動的に畳み `[text]\\n(url)` を `[text] (url)` 形へ生成するため（エスケープは正規化後に掛かる既存順序で正しい）。解: パターン空白許容化 + 空白キャプチャ保持の 1 ファイル 2 hunk。
+- 検証: Red（パターンの \\s* を一時除去 = 21 failed で回帰を検出）→ 156 テスト緑（5 ファイル）/ type-check / eslint 全緑 / graphify 済み。recordingPipeline-impl.test.ts への推奨追加は同ファイルが identity モックのため実サニタイザ復元が必要で、同一チェーンの 1 層上の再検証は冗長として省略（3 統合テストで固定済み）。

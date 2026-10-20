@@ -45,14 +45,14 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 
 ## 受け入れ基準
 
-- [ ] `NotificationHandlersDeps` に共通 RecordingAdmission 由来の `admit` seam が追加され、`deps.record(...)` の**前**に実行される（`src/background/handlers/notificationHandlers.ts:33` / `:91`）
-- [ ] 同意撤回状態（`admit` が `{ rejected: { reason: 'privacy_consent_required' } }` を返す）では `deps.record` が一度も呼ばれない
-- [ ] 同意済みでは従来どおり記録が実行され、既存の pending 削除・join・recovery claim の挙動に回帰がない
-- [ ] 拒否時は `removePendingPages([url])` を呼ばない（同意し直せば再試行できる。拒否で pending を消さない）
-- [ ] `admit` は compositionManifest の `recordingAdmission` シングルトン（`src/background/compositionManifest.ts:229` 付近）を単一共有する（handler 内で新しい RecordingAdmission を生成しない）
-- [ ] `src/background/handlers/__tests__/notificationHandlers.test.ts` に consent 拒否 / 許可の2系統が pin され、`src/background/handlers/__tests__/notificationSingleFlight.test.ts:81` の deps 構築が新 deps に合わせて更新される
-- [ ] 通知クリックが無反応にならないフィードバック（i18n メッセージ、または `privacy_consent_required` を明示したログ）が用意されている（副作用 🟡軽微 の緩和策）
-- [ ] `npm run validate` が緑（type-check / lint / test すべて）
+- [x] `NotificationHandlersDeps` に共通 RecordingAdmission 由来の `admit` seam が追加され、`deps.record(...)` の**前**に実行される（`src/background/handlers/notificationHandlers.ts:33` / `:91`）
+- [x] 同意撤回状態（`admit` が `{ rejected: { reason: 'privacy_consent_required' } }` を返す）では `deps.record` が一度も呼ばれない
+- [x] 同意済みでは従来どおり記録が実行され、既存の pending 削除・join・recovery claim の挙動に回帰がない
+- [x] 拒否時は `removePendingPages([url])` を呼ばない（同意し直せば再試行できる。拒否で pending を消さない）
+- [x] `admit` は compositionManifest の `recordingAdmission` シングルトン（`src/background/compositionManifest.ts:229` 付近）を単一共有する（handler 内で新しい RecordingAdmission を生成しない）
+- [x] `src/background/handlers/__tests__/notificationHandlers.test.ts` に consent 拒否 / 許可の2系統が pin され、`src/background/handlers/__tests__/notificationSingleFlight.test.ts:81` の deps 構築が新 deps に合わせて更新される
+- [x] 通知クリックが無反応にならないフィードバック（i18n メッセージ、または `privacy_consent_required` を明示したログ）が用意されている（副作用 🟡軽微 の緩和策）
+- [x] `npm run validate` が緑（type-check / lint / test すべて）
 
 ## テスト戦略
 
@@ -122,11 +122,11 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `notificationHandlers.onButtonClicked::missing-consent-admission-prestage` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（consent lifecycle の FEATURE.md 等。撤回後に通知クリックが拒否される旨を追記）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `notificationHandlers.onButtonClicked::missing-consent-admission-prestage` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（consent lifecycle の FEATURE.md 等。撤回後に通知クリックが拒否される旨を追記）
 
 ## 調査結果（2026-10-18）
 
@@ -139,3 +139,9 @@ Scenario: 記録対象が無い／別ボタンの挙動は不変
 - `pbi/00-INDEX.md`
 - 同じ consent 領域の PBI 05（2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` / privacyConsent migration の再付与阻止）と実装時に window の整合を取ること（撤回後に legacy migration が同意を復活させると、本修正が無効化される。両者は同じ `hasPrivacyConsent()` を読むため、順序とテスト条件を共有する）
 - `src/utils/pendingStorage.ts:92` の TTL（本 PBI の「通知が残る窓」の根拠）
+
+## 完了記録（2026-10-20）
+
+- 実装: deps の `isConsentGranted` を共通 RecordingAdmission 由来の `admit` seam に置換し、composition root（service-worker.ts）で空 sender を bind した `admit('save')` を注入。buttonIndex 0 先頭（getPendingPages/claim の前）で実行し、rejected なら `privacy_consent_required` を明示した logWarn のみで return（removePendingPages 不呼び出し = pending 保持）。SECURITY_REVIEW_GUIDE（outbound gate → admission gate への移動）と TESTING_GUIDE（手動観測 1 行）を更新。
+- 設計判断: PBI 実装メモの「claim 成功後・record 直前」ではなく、既存の同意再読み込み位置（claim 前）で bare seam を置換。アーカイブ済み PBI 2026-10-19-10 の配置と本 PBI の落とし穴（claim 消費後の拒否で不整合）を両方満たし、受入シナリオの観測挙動は同一。
+- 検証: 4 テストファイル 189 件緑（新規 3 本: 同意済み happy path のソースポリシー pin / 撤回 → record 未呼び出し・pending 保持 / 配線 2 本）/ type-check / eslint / docs-chars 0 違反 / graphify 済み。

@@ -150,13 +150,17 @@ describe('saveDashboardSettings', () => {
     expect(result.success).toBe(true);
     // Delta contract (PBI 2026-09-17-17): only the extracted form keys enter
     // the payload — stored keys absent from the form are not re-written.
-    expect(mockSaveSettings).toHaveBeenCalledWith({
-      ai_provider_priority_list: ['gemini'],
-      sqlite_retention_days: 7,
-      sqlite_max_records: 1000,
-      content_retention_days: 30,
-      content_max_records: 500,
-    });
+    // PBI 2026-10-18-12: the write options carry the coalesced-conflict hook.
+    expect(mockSaveSettings).toHaveBeenCalledWith(
+      {
+        ai_provider_priority_list: ['gemini'],
+        sqlite_retention_days: 7,
+        sqlite_max_records: 1000,
+        content_retention_days: 30,
+        content_max_records: 500,
+      },
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) }),
+    );
   });
 
   it('does not blank a stored provider connection field with an empty extracted value', async () => {
@@ -264,6 +268,7 @@ describe('saveDashboardSettings', () => {
     await saveDashboardSettings();
     expect(mockSaveSettings).toHaveBeenCalledWith(
       expect.objectContaining({ local_markdown_export_timing: 'on_save' }),
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) }),
     );
   });
 
@@ -283,6 +288,7 @@ describe('saveDashboardSettings', () => {
         content_retention_days: 30,
         content_max_records: null,
       }),
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) }),
     );
   });
 
@@ -302,6 +308,7 @@ describe('saveDashboardSettings', () => {
         content_retention_days: 60,
         content_max_records: 1000,
       }),
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) }),
     );
   });
 
@@ -353,6 +360,7 @@ describe('saveDashboardSettings', () => {
       expect.objectContaining({
         ai_provider_priority_list: [{ provider: 'openai', model: 'gpt-4o' }],
       }),
+      expect.objectContaining({ onConflictCoalesced: expect.any(Function) }),
     );
   });
 });

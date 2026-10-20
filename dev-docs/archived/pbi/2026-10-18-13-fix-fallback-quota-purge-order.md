@@ -67,14 +67,14 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 
 ## 受け入れ基準
 
-- [ ] `src/offscreen/storageFallback.ts:107`（`insert`）と `:134`（`insertBatch`）の `ensureQuotaSpace()` 呼び出しが、dedupe 判定の**後**、書き込みが確定する位置へ移っていること。`:99-103` のコメント（PBI 2026-08-27-06 の「dedupe 判定 THEN ID 確保」順序）は新順序に合わせて更新すること
-- [ ] quota purge が `is_starred === 1` を exempt しており、兄弟 purge（`purgeOldRecords` の保持期間分岐 `:381-382`、`purgeContent` の `:427` / `:444`）と同一の基準で表現されていること。`purgeOldRecords` の `maxRecords` 分岐（`:393-395`）が star を exempt していない点は、**本 PBI で揃えるか対象外として理由を記録するか**を実装時に裁定すること
-- [ ] quota 判定が `getBytesInUse(null)`（`:86`）ではなく対象キー指定、または行数ベースの推定ではなくバイト実績を使っていること
-- [ ] dedupe 経路（`:111` の `id: -1` / `:149` の `count: 0`）から purge の結果が永続化されないこと。実装方式（呼び出し位置の変更で自然に解消するか、明示的なロールバックが必要か）を裁定し、裁定内容をコードコメントに残すこと
-- [ ] purge 後・書き込み確定後に `saveData` が失敗した場合、`:31` の `saveData` 契約（失敗した書き込みは永続化されない）と整合し、半書きの blob が生じないこと
-- [ ] purge による削除が観測できること（ログまたは戻り値）。現状は不可視なので、owner が事後に「何がいつ消えたか」を追えること
-- [ ] 既存 pin が壊れないこと: `storageFallback-branches.test.ts:34-54`（「新規 insert で最古1行が purge される」。新規 URL を使うため新順序でも成立する）と `storageFallback.test.ts:24-27`（重複 insert が `{ success: true, id: -1 }`）
-- [ ] 「quota 超過中の重複 insert では1行も消えない」pin が追加され、`npm run validate` が緑であること。対象テストは `npx vitest run src/offscreen/__tests__/storageFallback.test.ts src/offscreen/__tests__/storageFallback-branches.test.ts --repeats=20 --retries=0` で緑（AGENTS.md の繰返し実行規約）。実時間待ち・固定 sleep・retry 数の持ち上げをテストに導入していないこと
+- [x] `src/offscreen/storageFallback.ts:107`（`insert`）と `:134`（`insertBatch`）の `ensureQuotaSpace()` 呼び出しが、dedupe 判定の**後**、書き込みが確定する位置へ移っていること。`:99-103` のコメント（PBI 2026-08-27-06 の「dedupe 判定 THEN ID 確保」順序）は新順序に合わせて更新すること
+- [x] quota purge が `is_starred === 1` を exempt しており、兄弟 purge（`purgeOldRecords` の保持期間分岐 `:381-382`、`purgeContent` の `:427` / `:444`）と同一の基準で表現されていること。`purgeOldRecords` の `maxRecords` 分岐（`:393-395`）が star を exempt していない点は、**本 PBI で揃えるか対象外として理由を記録するか**を実装時に裁定すること
+- [x] quota 判定が `getBytesInUse(null)`（`:86`）ではなく対象キー指定、または行数ベースの推定ではなくバイト実績を使っていること
+- [x] dedupe 経路（`:111` の `id: -1` / `:149` の `count: 0`）から purge の結果が永続化されないこと。実装方式（呼び出し位置の変更で自然に解消するか、明示的なロールバックが必要か）を裁定し、裁定内容をコードコメントに残すこと
+- [x] purge 後・書き込み確定後に `saveData` が失敗した場合、`:31` の `saveData` 契約（失敗した書き込みは永続化されない）と整合し、半書きの blob が生じないこと
+- [x] purge による削除が観測できること（ログまたは戻り値）。現状は不可視なので、owner が事後に「何がいつ消えたか」を追えること
+- [x] 既存 pin が壊れないこと: `storageFallback-branches.test.ts:34-54`（「新規 insert で最古1行が purge される」。新規 URL を使うため新順序でも成立する）と `storageFallback.test.ts:24-27`（重複 insert が `{ success: true, id: -1 }`）
+- [x] 「quota 超過中の重複 insert では1行も消えない」pin が追加され、`npm run validate` が緑であること。対象テストは `npx vitest run src/offscreen/__tests__/storageFallback.test.ts src/offscreen/__tests__/storageFallback-branches.test.ts --repeats=20 --retries=0` で緑（AGENTS.md の繰返し実行規約）。実時間待ち・固定 sleep・retry 数の持ち上げをテストに導入していないこと
 
 ## テスト戦略
 
@@ -155,11 +155,11 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint を完了記録に残す（`storageFallback.ensureQuotaSpace:purge-before-dedupe-unstarred`）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` の「`chrome.storage.local`（5MB 警告閾値・10% 自動 purge）」という記述を実装後の挙動に合わせる）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint を完了記録に残す（`storageFallback.ensureQuotaSpace:purge-before-dedupe-unstarred`）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/dig-findings-2026-09-05-sqlite-backend-consolidation.md:33, :63` の「`chrome.storage.local`（5MB 警告閾値・10% 自動 purge）」という記述を実装後の挙動に合わせる）
 
 ## 調査結果（2026-10-18）
 
@@ -174,3 +174,11 @@ claimed root cause（監査原文）: "The purge is ordered before the dedupe/in
 - `dev-docs/archived/pbi/2026-07-18-19-fix-storage-quota-unlimited-storage-check.md` ― `unlimitedStorage` 権限下での 5MB 定数そのものを対象にした先例 PBI（`src/utils/storage/quota.ts` 側）。本 PBI の「自己申告的な閾値」論点と共有する
 - `src/offscreen/__tests__/storageFallback-branches.test.ts:33-68` ― quota purge の既存 pin（修正後に緑でなければならない）
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`findings.json` / `NEEDS-VALIDATION.md` 23番 / `FINDINGS-DETAIL.md`）
+
+## 完了記録（2026-10-20）
+
+- 実装: `ensureQuotaSpace` を insert / insertBatch の dedupe 早期 return 後へ移動（重複書き込みや全件重複 batch は purge に到達しない、purge は新規書き込みと同じ 1 回の saveData に同乗され書き込み確定時に永続化 = 明示的ロールバック不要）。`getBytesInUse(null)` を `getBytesInUse(STORAGE_KEY)` に修正し、`is_starred !== 1` の star exempt を兄弟 purge（purgeContent）と同一表現で共有。候補 0 行時は star 行を消さず `forwardWarn` + 明示的な quota Error を throw（Math.max(1,...) による star 1 行消失の落とし穴を回避）。間引き量は候補数の 10%（min 1）、purge を forwardWarn で観測可能に。
+- maxRecords 分岐の裁定: star exempt を入れない（スコープ外）。maxRecords は明示的な上限件数 enforcement で、star exempt を入れると star 主体のストアで上限が守れない。既存 INTENTIONAL テスト（query-backends-parametric「fallback purge cap-delete can remove starred rows」）がこの差分を固定済み。コードコメントと dig-findings に記録。
+- テスト: storageFallback-branches.test.ts に新 describe 6 pin（重複 insert 5 連続の行数・id 不変 + getBytesInUse 未呼び出し / 新規 insert で 20 行維持・star 行のみ残存・削除は非 star のみ / insertBatch 全件重複で count:0 / spy 引数の直接 assert / 全行 star で明示的失敗）。既存 pin 2 件は期待値変更なしで green。
+- 5 Whys: 古い履歴が消えたのは ensureQuotaSpace が dedupe 判定前に走り purge を永続化していたため → 呼び出しが insert の先頭に置かれ書き込み成否と無関係に発火する構造だった → star 込みで消えたのは兄弟 purge の exempt が quota 側に only 無かった → 全キーで byte を測っていたのは getBytesInUse(null) の流用 → purge にログも戻り値もなく不可視だった。解: 呼び出し移動 + star exempt + 対象キー byte 判定 + 候補なし時の明示的失敗 + 観測ログを同一スナップポイントに集約。
+- 検証: 6 スイート 186 テスト緑 / 指定 2 ファイルを連続 20 プロセス実行で 20/20 全 green（--repeats は本リポジトリでは no-op の既知事実のため連続プロセスで代替）/ type-check（自ファイル 0 エラー）/ eslint / graphify 済み。

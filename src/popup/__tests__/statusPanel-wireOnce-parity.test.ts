@@ -22,6 +22,9 @@ const {
 }));
 const mockGetAll = vi.hoisted(() => vi.fn());
 const mockSetAll = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+// PBI 2026-10-18-12: the whitelist array is written through the lock-internal
+// updater seam (updateDomainWhitelist), so the write-count pins target it.
+const mockUpdateWhitelist = vi.hoisted(() => vi.fn().mockResolvedValue({ whitelist: [], changed: true }));
 const mockGetMany = vi.hoisted(() => vi.fn());
 const mockLogError = vi.hoisted(() => vi.fn());
 const mockExtractDomain = vi.hoisted(() => vi.fn((url: string) => {
@@ -43,7 +46,7 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
 });
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = await importOriginal() as any;
-  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany, updateDomainWhitelist: mockUpdateWhitelist }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany; updateDomainWhitelist = mockUpdateWhitelist } };
 });
 
 vi.mock('../../utils/i18n.js', async () => {
@@ -196,8 +199,8 @@ describe('statusPanel wireOnce parity — re-init does not duplicate whitelist w
       const visibleBtn = document.getElementById('statusAddDomain') as HTMLButtonElement;
       expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
       visibleBtn.click();
-      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-      expect(mockSetAll).toHaveBeenCalledTimes(1);
+      await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
+      expect(mockUpdateWhitelist).toHaveBeenCalledTimes(1);
     } finally {
       observed.restore();
     }
@@ -214,8 +217,8 @@ describe('statusPanel wireOnce parity — re-init does not duplicate whitelist w
       const visibleBtn = document.getElementById('statusAddPath') as HTMLButtonElement;
       expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
       visibleBtn.click();
-      await waitForMock(() => expect(mockSetAll).toHaveBeenCalled());
-      expect(mockSetAll).toHaveBeenCalledTimes(1);
+      await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
+      expect(mockUpdateWhitelist).toHaveBeenCalledTimes(1);
     } finally {
       observed.restore();
     }

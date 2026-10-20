@@ -90,14 +90,14 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 ## 受け入れ基準
 
-- [ ] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:51` の `clearAll` 条件が `migrated > 0` ではなく「全件成功（`failed === 0`）」または「投入済みレコード数と SQLite 側実数が一致」を要求するものになっていること
-- [ ] per-record の失敗が `:47-48` の空 catch で消えず、件数（failed）と失敗理由（先頭 N 件のエラー文字列）が `logError` / `logWarn` 経由で残るか、既存のメトリクス経路に載ること
-- [ ] 部分失敗時に `clearAll` が呼ばれず、失敗レコードが fallback ストアに残ることを、既存テストの書式に沿って固定する単体テストが1件以上増えること
-- [ ] 全件成功時に `clearAll` が 1 回呼ばれストアが空になること（既存テスト `fallbackMigration.test.ts:51-62` が緑のまま）、かつ既存テスト `:64-75` の壊れた期待値（部分失敗でも `toHaveBeenCalledOnce()`）が正しい期待値へ変更されていること
-- [ ] 破棄判断を SQLite 側の実数で検証する場合、検証に使うクエリが `migrationBackup.ts:368` の `SELECT COUNT(*) FROM browsing_logs` と同じ意味論であり、判定形が `:370` と揃っていること（同一モジュール内で 2 系統の廃止方針を作らない）
-- [ ] engine 初期化は部分失敗でも `return true` のまま（`:236`）で、`OPFS_FALLBACK_MODE` の扱いが不整合にならないこと。保持方針を変えた場合、`:55` のフラグ削除が「残存レコードあり」のケースで正しいか判断し、その理由がコードコメントに残ること
-- [ ] 孤児レコード（SQLite には着地済みだが fallback ストアに残る）の扱いを明示し、選定した方針（次回移行で `INSERT OR IGNORE` により無害に吸収／明示削除）がコメントまたは doc として記録されていること
-- [ ] `npx vitest run src/offscreen/sqliteEngineContext/__tests__/fallbackMigration.test.ts src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts --repeats=20 --retries=0` が 0 失敗で通ること（`npm run validate` 緑）
+- [x] `src/offscreen/sqliteEngineContext/fallbackMigration.ts:51` の `clearAll` 条件が `migrated > 0` ではなく「全件成功（`failed === 0`）」または「投入済みレコード数と SQLite 側実数が一致」を要求するものになっていること
+- [x] per-record の失敗が `:47-48` の空 catch で消えず、件数（failed）と失敗理由（先頭 N 件のエラー文字列）が `logError` / `logWarn` 経由で残るか、既存のメトリクス経路に載ること
+- [x] 部分失敗時に `clearAll` が呼ばれず、失敗レコードが fallback ストアに残ることを、既存テストの書式に沿って固定する単体テストが1件以上増えること
+- [x] 全件成功時に `clearAll` が 1 回呼ばれストアが空になること（既存テスト `fallbackMigration.test.ts:51-62` が緑のまま）、かつ既存テスト `:64-75` の壊れた期待値（部分失敗でも `toHaveBeenCalledOnce()`）が正しい期待値へ変更されていること
+- [x] 破棄判断を SQLite 側の実数で検証する場合、検証に使うクエリが `migrationBackup.ts:368` の `SELECT COUNT(*) FROM browsing_logs` と同じ意味論であり、判定形が `:370` と揃っていること（同一モジュール内で 2 系統の廃止方針を作らない）
+- [x] engine 初期化は部分失敗でも `return true` のまま（`:236`）で、`OPFS_FALLBACK_MODE` の扱いが不整合にならないこと。保持方針を変えた場合、`:55` のフラグ削除が「残存レコードあり」のケースで正しいか判断し、その理由がコードコメントに残ること
+- [x] 孤児レコード（SQLite には着地済みだが fallback ストアに残る）の扱いを明示し、選定した方針（次回移行で `INSERT OR IGNORE` により無害に吸収／明示削除）がコメントまたは doc として記録されていること
+- [x] `npx vitest run src/offscreen/sqliteEngineContext/__tests__/fallbackMigration.test.ts src/offscreen/sqliteEngineContext/__tests__/migrationBackup.test.ts --repeats=20 --retries=0` が 0 失敗で通ること（`npm run validate` 緑）
 
 ## テスト戦略
 
@@ -159,11 +159,11 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint を完了記録に残す（`fallbackMigration.tryMigrateFallbackToSqlite:partial-failure-clearall-wipe`）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`fallbackMigration.ts` のヘッダコメントの「移行して clearAll する」記述と、本 PBI で採用した保持方針の整合。`pbi/00-INDEX.md` の本エントリ）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint を完了記録に残す（`fallbackMigration.tryMigrateFallbackToSqlite:partial-failure-clearall-wipe`）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`fallbackMigration.ts` のヘッダコメントの「移行して clearAll する」記述と、本 PBI で採用した保持方針の整合。`pbi/00-INDEX.md` の本エントリ）
 
 ## 調査結果（2026-10-18）
 
@@ -180,3 +180,9 @@ claimed root cause: 移行ループの per-record catch が後始末の判断と
 - `src/offscreen/sqliteEngineHost.ts:235` ― 呼び出し点。`_doInit` のステップ4
 - run-2 の companion プロトコル DATA-ISOLATION-AND-LIFECYCLE（`/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/agents/hunter-offscreen/` の結果）― 「唯一のコピーを破壊する」ライフサイクル評価の根拠
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json / NEEDS-VALIDATION.md 10番 / run-metadata.json の `source_ref: d49d70a3`）
+
+## 完了記録（2026-10-20）
+
+- 実装: `clearAll` 条件を `migrated > 0` から `failed === 0`（全件着地）へ変更。per-record の空 catch を解消して `failed++` と先頭 3 件の失敗理由（`MAX_LOGGED_FAILURE_REASONS = 3`）を収集し、部分失敗時は `logWarn`（{migrated, failed, total, failureReasons}）で観測可能に。成功時のみ logInfo + clearAll。孤児レコード（SQLite 着地済みで fallback に残る分）は次回移行の INSERT OR IGNORE により無害に吸収する方針をコメントで明示。`OPFS_FALLBACK_MODE` は残存レコードがあっても削除する判断と理由（step 4 はフラグ非依存で毎回残存分を再読み、opfsRecovery の誤認防止）をコメントで記録。
+- 既存テストの期待値書き換え（PBI 明示どおり）: 旧「skips a failed record insert and continues」テストは部分失敗でも `mockClearAll` の 1 回呼び出しを pin して壊れた挙動を固定していたため、「clearAll 不呼び出し + logWarn 観測」に書き換え（ケースは削除せず、Given を BDD シナリオ 1 に合わせた）。Red/Green 検証済み: 修正前に新規 3 ケースが FAIL（欠陥の局所再現、調査結果 CONFIRMED と一致）。
+- 検証: 対象 2 ファイル 14 テスト緑 / AC ゲート --repeats=20 --retry=0 で 0 失敗（Vitest 5 では --retries ではなく --retry）/ 同ディレクトリ全体回帰 5 ファイル 44 テスト緑 / type-check / eslint 全緑。

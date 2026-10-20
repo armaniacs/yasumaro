@@ -75,13 +75,13 @@ Scenario: 4. COLUMN_NAMES に列が追加されたらコンパイルエラーま
 
 ## 受け入れ基準
 
-- [ ] `convertFallbackRecord`（`opfsRecovery.ts:28-67`）が `fallback_reason` を含め、`InsertRecordFields` の **35 項目すべて**を列挙している（`fallback_triggered` の直後 = `COLUMN_NAMES` の並び順 `fallback_triggered` → `fallback_reason` → `nav_source_url` に合わせる）
-- [ ] 決定コメント（`opfsRecovery.ts:21-27`）の `"Must stay in sync with all 31 fields"` が実数（35）に直され、さらに件数を**二重管理しない**仕組み（COLUMN_NAMES 起点の生成、または網羅性アサーションのいずれか）に差し替えられている
-- [ ] `fallback_reason` を持たない旧行で `fallback_reason` が `null` になること（`undefined` → `'null'` や空文字への変換をしない）が pin されている
-- [ ] 新規単体テスト `src/background/migration/__tests__/opfsRecovery.test.ts` が `chrome.storage.local` の mock と `sqliteClient` の mock（`insertBatch` payload の捕捉）で、移行後のレコードの `fallback_reason` が NULL でないことを検証している
-- [ ] 網羅性テストが `convertFallbackRecord` の出力キーを `COLUMN_NAMES` と集合比較し、差分があれば失敗する（将来ドリフトを 1 つ残らず検知）
-- [ ] `SCHEMA_SQL` の `browsing_logs` 定義、`rowCodec.ts`、`storageFallback.ts` に**別の同種ドリフトが latent として残っていない**ことを確認済みである（結果を残し、残っていれば別 PBI とする）
-- [ ] `npm run validate`（type-check + lint + 全テスト）が緑
+- [x] `convertFallbackRecord`（`opfsRecovery.ts:28-67`）が `fallback_reason` を含め、`InsertRecordFields` の **35 項目すべて**を列挙している（`fallback_triggered` の直後 = `COLUMN_NAMES` の並び順 `fallback_triggered` → `fallback_reason` → `nav_source_url` に合わせる）
+- [x] 決定コメント（`opfsRecovery.ts:21-27`）の `"Must stay in sync with all 31 fields"` が実数（35）に直され、さらに件数を**二重管理しない**仕組み（COLUMN_NAMES 起点の生成、または網羅性アサーションのいずれか）に差し替えられている
+- [x] `fallback_reason` を持たない旧行で `fallback_reason` が `null` になること（`undefined` → `'null'` や空文字への変換をしない）が pin されている
+- [x] 新規単体テスト `src/background/migration/__tests__/opfsRecovery.test.ts` が `chrome.storage.local` の mock と `sqliteClient` の mock（`insertBatch` payload の捕捉）で、移行後のレコードの `fallback_reason` が NULL でないことを検証している
+- [x] 網羅性テストが `convertFallbackRecord` の出力キーを `COLUMN_NAMES` と集合比較し、差分があれば失敗する（将来ドリフトを 1 つ残らず検知）
+- [x] `SCHEMA_SQL` の `browsing_logs` 定義、`rowCodec.ts`、`storageFallback.ts` に**別の同種ドリフトが latent として残っていない**ことを確認済みである（結果を残し、残っていれば別 PBI とする）
+- [x] `npm run validate`（type-check + lint + 全テスト）が緑
 
 ## テスト戦略
 
@@ -187,11 +187,11 @@ export function assertColumnCoverage(fields: Record<ColumnName, unknown>): void 
 
 ## Definition of Done
 
-- [ ] BDDシナリオ（4 件）が自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `opfsRecovery.convertFallbackRecord:fallback-reason-field-drift` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`opfsRecovery.ts` の対応表ドキュメントコメントを実数 35 に合わせる。加えて `dev-docs/` 内の移行経路の記述に「2 経路の乖離」についての記載がないことを確認し、必要なら追記する）
+- [x] BDDシナリオ（4 件）が自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `opfsRecovery.convertFallbackRecord:fallback-reason-field-drift` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`opfsRecovery.ts` の対応表ドキュメントコメントを実数 35 に合わせる。加えて `dev-docs/` 内の移行経路の記述に「2 経路の乖離」についての記載がないことを確認し、必要なら追記する）
 
 ## 調査結果（2026-10-18）
 
@@ -205,3 +205,10 @@ export function assertColumnCoverage(fields: Record<ColumnName, unknown>): void 
 - 同じ移行領域の PBI 09（`2026-10-18-09-fix-fallback-migration-partial-wipe.md`・fallback partial wipe）、10（legacy count）、17（rec snapshot）と方針の整合を確認
 - `src/offscreen/sqliteEngineContext/fallbackMigration.ts:45`（兄弟経路）
 - `src/offscreen/schema.ts:72-108` / `:270-305` / `:313-349` / `:356-397`（列定義の正準）
+
+## 完了記録（2026-10-20）
+
+- 実装: `trailFallbackFields` に `fallback_reason: record.fallback_reason ?? null` を COLUMN_NAMES 順どおり（fallback_triggered → fallback_reason → nav_source_url）に挿入し、Pick 型に 'fallback_reason' を追加（列挙 34 → 35 = InsertRecordFields と一致）。対応表コメントの「31 fields」を COLUMN_NAMES/InsertRecordFields（SSOT）参照＋網羅性テストへのポインタに差し替え（件数の手動管理を廃止）。
+- 網羅性テスト: 新規 opfsRecovery.test.ts 4 本（fallback_reason 保持＋既定値＋削除順序 pin / offscreen 兄弟経路との全 35 列同値比較 / 旧行は null pin / 出力キー集合 vs COLUMN_NAMES 集合比較＋新列追加時の差分検知 pin）。Red → Green 確認済み（修正前 4/4 失敗、カバレージ差分は正確に fallback_reason 1 キー欠落を表示）、--repeats=20（80 実行）全パス。
+- 5 Whys: NULL 化は 6 フィールドグループ分割で trailFallbackFields が fallback_triggered → nav_source_url を直列に並べ fallback_reason がどのグループにも属さず落ちたため。fallback_reason が省略可能（sqlite-types.ts:46）でコンパイルエラーにならず、対応表を検証するテストも皆無だった。解: 列追加 + SSOT 集合比較の網羅性テストで将来ドリフトを CI が検知する構造に。
+- latent drift チェック: SCHEMA_SQL / rowCodec（BROWSING_LOG_FULL_COLUMNS は COLUMN_NAMES 由来の SSOT）/ storageFallback（buildInsertRecordFields 経由で保持）/ browsingLogCodec を全て確認し、別の同種ドリフトは残っていない。

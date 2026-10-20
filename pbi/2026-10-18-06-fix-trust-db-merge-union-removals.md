@@ -76,13 +76,13 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 
 ## 受け入れ基準
 
-- [ ] `mergeTrustDatabase` が「追加のみ union」の純粋 union ではなく、操作種別（add / remove / 一括置換）を区別して merge し、remove intent が base に残った要素を上書き除去できる
-- [ ] `removeFromWhitelist` / `removeSensitiveDomain` / `removeUserTld` / `removeJpAnchorTld` のいずれも、ストレージに書き戻した値から対象要素が消えていることをテストで pin する（3リスト × 4remove 経路）
-- [ ] `TrustDbKernel.save()` が `withOptimisticLock` の**戻り値（merged）**を受け取り、in-memory `state.database` を merged に寄せる。現状（`TrustDbKernel.ts:215` は戻り値を無視）は in-memory とストレージが乖離する構造なので、その乖離が解消されていることを pin する
-- [ ] 既存契約「並行追加の両ライターの delta が残る」（`lockContract.test.ts:133`）が壊れないことを維持し、remove 競合のケースを新規 pin として追加する
-- [ ] `trustDb.test.ts:443` 付近の既存 remove テストは `chrome.storage.local.get` が `{}` を返すモックのままで**union 再追加が露出しない**ことを把握した上で、populated `trust_db` を返すケースを別途追加する（既存テストの書き換えによる証拠の抹消は禁止）
-- [ ] `checkSensitive` の判定順序（whitelist 優先）と、`checkTrustDomainStep` の `DOMAIN_NOT_TRUSTED` ゲートの挙動を変えていない（Scenario 5 は merge 修正の副次効果として成立する）
-- [ ] `npm run validate`（type-check + lint + 全テスト）が緑。競合系テストは `npx vitest run <file> --repeats=20` で安定
+- [x] `mergeTrustDatabase` が「追加のみ union」の純粋 union ではなく、操作種別（add / remove / 一括置換）を区別して merge し、remove intent が base に残った要素を上書き除去できる
+- [x] `removeFromWhitelist` / `removeSensitiveDomain` / `removeUserTld` / `removeJpAnchorTld` のいずれも、ストレージに書き戻した値から対象要素が消えていることをテストで pin する（3リスト × 4remove 経路）
+- [x] `TrustDbKernel.save()` が `withOptimisticLock` の**戻り値（merged）**を受け取り、in-memory `state.database` を merged に寄せる。現状（`TrustDbKernel.ts:215` は戻り値を無視）は in-memory とストレージが乖離する構造なので、その乖離が解消されていることを pin する
+- [x] 既存契約「並行追加の両ライターの delta が残る」（`lockContract.test.ts:133`）が壊れないことを維持し、remove 競合のケースを新規 pin として追加する
+- [x] `trustDb.test.ts:443` 付近の既存 remove テストは `chrome.storage.local.get` が `{}` を返すモックのままで**union 再追加が露出しない**ことを把握した上で、populated `trust_db` を返すケースを別途追加する（既存テストの書き換えによる証拠の抹消は禁止）
+- [x] `checkSensitive` の判定順序（whitelist 優先）と、`checkTrustDomainStep` の `DOMAIN_NOT_TRUSTED` ゲートの挙動を変えていない（Scenario 5 は merge 修正の副次効果として成立する）
+- [x] `npm run validate`（type-check + lint + 全テスト）が緑。競合系テストは `npx vitest run <file> --repeats=20` で安定
 
 ## テスト戦略
 
@@ -164,11 +164,11 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス（Scenario 1〜6 の 6 件）
-- [ ] `npm run validate` が緑（type-check + lint + 全テスト）。競合系は `npx vitest run <file> --repeats=20` で安定
-- [ ] 監査 fingerprint `trust-db-save:merge-union-reverts-user-removals` を完了記録（CHANGELOG / 監査 ledger）に残す
-- [ ] コードレビュー完了（Security Review 観点：信頼設定 = プライバシー防衛線。merge 変更が「より信頼する」方向にのみ働くことを確認）
-- [ ] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`trustDb` 配下に merge 方策の 1 段落ドキュメント、`CHANGELOG.md`）
+- [x] BDDシナリオが自動テストで実装されパス（Scenario 1〜6 の 6 件）
+- [x] `npm run validate` が緑（type-check + lint + 全テスト）。競合系は `npx vitest run <file> --repeats=20` で安定
+- [x] 監査 fingerprint `trust-db-save:merge-union-reverts-user-removals` を完了記録（CHANGELOG / 監査 ledger）に残す
+- [x] コードレビュー完了（Security Review 観点：信頼設定 = プライバシー防衛線。merge 変更が「より信頼する」方向にのみ働くことを確認）
+- [x] ドキュメント更新済み（`pbi/00-INDEX.md` への行追加、`trustDb` 配下に merge 方策の 1 段落ドキュメント、`CHANGELOG.md`）
 
 ## 調査結果（2026-10-18）
 
@@ -185,3 +185,9 @@ Scenario: 6. 初回書き込みと一括置換（tranco / bloomFilter）は既�
   - 既存の同種マージ先行例: `src/utils/storage/savedUrlRepository.ts:353` `mergeSavedUrlEntry` / `:363` `updateSavedUrlEntry`（CAS 内で要素単位 updater を適用する前例。本 PBI の選択肢 1 と構造が近い）
   - `src/utils/storage/storageTransaction.ts:230`（updateFn は pure かつ idempotent であるべきという契約コメント）
 - 監査成果物: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（`NEEDS-VALIDATION.md` 24番、`findings.json`、`REPORT.md`）
+
+## 完了記録（2026-10-20）
+
+- 実装: `TrustDbListOp`（追加/削除の操作意図）を `ManagedStringList` が記録し、`mergeList` が current に対して意図の順序どおり適用（remove は filter 全一致除去、add は集合和集合で冪等 = CAS リトライで二重適用なし）。`save()` は CAS 戻り値 merged を in-memory state に寄せ（参照同一性維持で UI/ストレージ乖離も解消）、`casRetrySleep` 注入 seam で実時間待ちテストを排除。intent 無しリストと presets（ユーザー編集不可）は既存 union 契約を維持。
+- 検証: Red 観測（修正前 11 failed / 11 passed = union 復活の局所再現）→ trustDb 配下 24 ファイル 403 テスト緑 / 競合系 --repeats=20 全成功 / type-check / eslint 全緑。既存テストは 0 変更（lockContract に新 describe 9 本、実 CAS 経由の永続化テストを新規ファイル 11 本で pin）。
+- 5 Whys: 削除したドメインの記録が続く → CAS が merged を version bump 付きで書き戻す → mergeTrustDatabase が user-editable リストを純粋和集合し「削除」が union に生き残れない → `ManagedStringList` の splice が操作の意味（追加/削除）を捨てていた。解: 操作意図を記録して merge で適用。PBI 12（stale patch）と 18（cross-context window）は相互参照済みの別 PBI。

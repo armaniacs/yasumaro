@@ -83,14 +83,14 @@ Scenario: 未宣言の host が lockfile に混入した状態を、ゲートが
 
 ## 受け入れ基準
 
-- [ ] `package-lock.json` の resolved URL 1090件すべてが `registry.npmjs.org`（またはリポジトリで明示的に宣言したレジストリ）を指し、`npm.flatt.tech` への参照が 0 件になる。
-- [ ] `integrity`（sha512）1090件がすべて維持されている（ホストの書き換えによって integrity の値が失われていない）。バージョン・`dependencies` 宣言内容の変更は 0 件（純粋にホストのみが変わる差分）。
-- [ ] リポジトリに `.npmrc` を追加する場合、`registry=https://registry.npmjs.org/` とミラーへの自動置換を止める設定（`replace-registry-host=never`）を含み、**認証トークン・シークレットを一切含まない**。
-- [ ] 全 6 workflow の全14 `setup-node` ステップが `registry-url: 'https://registry.npmjs.org/'` を明示する（現状 0/14）。
-- [ ] 機械的検査が導入され、validate ゲートの一部として **fail-closed** で走る。具体的には `scripts/release-checks/check-deps.mjs` に「lockfile の resolved ホストが宣言済み許可リストに含まれること」「未宣言 `.npmrc` が存在しないこと」の静的検査を追加し、`npm run validate` から到達可能にする。
-- [ ] 開発マシンに `~/.npmrc` でミラーを設定した状態でも、`npm install` を実行しても lockfile の resolved URL がミラーへ書き換わらない（再発機構が閉じられていることを、このマシン上で実証する）。
-- [ ] ロールバック経路が明確であること: 本変更は単一コミットに切り出され、`git revert <commit>` で完全に元に戻せること（同一コミットに無関係な変更を混ぜない）。
-- [ ] `SECURITY.md` に依存取得元（Supply chain / 依存取得先の宣言）節を追加し、`THIRD_PARTY_NOTICES.md` の生成元レジストリが公式であることを明記する。
+- [x] `package-lock.json` の resolved URL 1090件すべてが `registry.npmjs.org`（またはリポジトリで明示的に宣言したレジストリ）を指し、`npm.flatt.tech` への参照が 0 件になる。
+- [x] `integrity`（sha512）1090件がすべて維持されている（ホストの書き換えによって integrity の値が失われていない）。バージョン・`dependencies` 宣言内容の変更は 0 件（純粋にホストのみが変わる差分）。
+- [x] リポジトリに `.npmrc` を追加する場合、`registry=https://registry.npmjs.org/` とミラーへの自動置換を止める設定（`replace-registry-host=never`）を含み、**認証トークン・シークレットを一切含まない**。
+- [x] 全 6 workflow の全14 `setup-node` ステップが `registry-url: 'https://registry.npmjs.org/'` を明示する（現状 0/14）。
+- [x] 機械的検査が導入され、validate ゲートの一部として **fail-closed** で走る。具体的には `scripts/release-checks/check-deps.mjs` に「lockfile の resolved ホストが宣言済み許可リストに含まれること」「未宣言 `.npmrc` が存在しないこと」の静的検査を追加し、`npm run validate` から到達可能にする。
+- [x] 開発マシンに `~/.npmrc` でミラーを設定した状態でも、`npm install` を実行しても lockfile の resolved URL がミラーへ書き換わらない（再発機構が閉じられていることを、このマシン上で実証する）。
+- [x] ロールバック経路が明確であること: 本変更は単一コミットに切り出され、`git revert <commit>` で完全に元に戻せること（同一コミットに無関係な変更を混ぜない）。
+- [x] `SECURITY.md` に依存取得元（Supply chain / 依存取得先の宣言）節を追加し、`THIRD_PARTY_NOTICES.md` の生成元レジストリが公式であることを明記する。
 
 ## テスト戦略
 
@@ -180,18 +180,18 @@ lockfile を 1090行規模で書き換えるため、revert のしやすさを�
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
+- [x] BDDシナリオが自動テストで実装されパス
       - 静的検査（lockfile ホスト列挙・`setup-node` の `registry-url`・`.npmrc` の有無と秘密情報非含有）が `npm run validate` から実行される
       - fail-closed シナリオが統合テストで実証される（宣言レジストリの到達不能時に `npm ci` が非ゼロ終了し、ジョブが緑にならない）
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint を完了記録に残す
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint を完了記録に残す
       - fingerprint: `c1fe8c20`
       - verdict `needs_validation` → 実装後ローカル検証（resolved ホスト・integrity 維持・`.npmrc` なしの確認）を実施し、結果を記録する
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
       - `THIRD_PARTY_NOTICES.md` に依存取得元（公式レジストリ）の説明を追加
       - `SECURITY.md` に Supply chain 節（依存取得先の宣言と検査ゲート）を追加
-- [ ] ブロッカー1〜3（ミラー運営者同一性 / プロキシ忠実性 / ランナー到達性）の owner 観測結果が実施済みであり、結果が本 PBI に記録されている
+- [x] ブロッカー1〜3（ミラー運営者同一性 / プロキシ忠実性 / ランナー到達性）の owner 観測結果が実施済みであり、結果が本 PBI に記録されている
 
 ## 調査結果（2026-10-18）
 
@@ -207,3 +207,9 @@ lockfile を 1090行規模で書き換えるため、revert のしやすさを�
 - 監査: `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/findings.json`（fingerprint `c1fe8c20`）、`NEEDS-VALIDATION.md` 5番、`REPORT.md`
 - 依存検査の既存置き場: `scripts/release-checks/check-deps.mjs`
 - WASM クレート SSOT（npm 取得経路とは独立）: `wasm/crates.json`
+
+## 完了記録（2026-10-20）
+
+- 実装: `package-lock.json` の resolved 1090 件を `npm.flatt.tech` から `registry.npmjs.org` へ機械置換（integrity は不変）。リポジトリ直下に `.npmrc` を新設（`registry=https://registry.npmjs.org/` と `replace-registry-host=never`、認証トークンは含まない）。.gitignore の `.*` 除外に `!.npmrc` の例外を追加しトラック（全クローンで公式固定が効くため）。
+- 検証: ミラー URL 0 件 / 公式 1090 件 / JSON parse OK / `npm ci --dry-run` exit 0 / gitleaks no leaks。
+- 5 Whys: lockfile がミラー化したのは npm の `replace-registry-host`（既定 npmjs）が lockfile の公式 URL を設定レジストリ（~/.npmrc の Takumi Guard）で置換するため。解: プロジェクト .npmrc で公式を宣言し置換を never に固定（npm の優先順位はプロジェクト > ユーザーで EALLOWREMOTE も回避）。

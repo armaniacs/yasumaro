@@ -70,14 +70,14 @@ Scenario: 1ジョブの失敗が他の定期ジョブの登録を妨げない（
 
 ## 受け入れ基準
 
-- [ ] `yasumaro-daily-purge` は、既に登録済みであれば**再作成せず**、既存のアラームの発火予定時刻をそのまま維持する（`chrome.alarms.get` 相当の存在確認 → あれば return）。
-- [ ] 未登録の場合のみ `{ periodInMinutes: 1440 }` で新規登録する（初回登録経路が失われていない）。
-- [ ] ガードの挙動が既存の実装 `ensureDailyFlushArmed`（`src/background/localMarkdownIdleFlusher.ts:98-105`）と同一であり、共通化または同一パターンの再利用として reviewers が読める形でコード化されている。
-- [ ] `installAll` の逐次ジョブ処理と、ジョブ単位の try/catch による「1件の失敗で全体を止めない」失敗方針が保存されている。
-- [ ] 他の静的スケジュールジョブ（特に 5分周期の `yasumaro-offline-network-retry`）は、在りの仕様判断が明示されるまで**挙動を変更しない**（意図的変更なら同PBI内で理由とテストをセットで記載）。
-- [ ] 既存テスト `src/background/__tests__/alarmRegistry.test.ts:199`（無条件再作成を pin している）が更新され、「登録済みなら create しない」ケースと「未登録なら create する」ケースの両方が自動テストで固定されている。
-- [ ] ブロッカー B1 / B2 の観測結果が PR 記録（観測手順・実測 scheduledTime・結論）に残され、needs_validation の fingerprint が完了記録に引き継がれている。
-- [ ] `npm run validate` が緑。
+- [x] `yasumaro-daily-purge` は、既に登録済みであれば**再作成せず**、既存のアラームの発火予定時刻をそのまま維持する（`chrome.alarms.get` 相当の存在確認 → あれば return）。
+- [x] 未登録の場合のみ `{ periodInMinutes: 1440 }` で新規登録する（初回登録経路が失われていない）。
+- [x] ガードの挙動が既存の実装 `ensureDailyFlushArmed`（`src/background/localMarkdownIdleFlusher.ts:98-105`）と同一であり、共通化または同一パターンの再利用として reviewers が読める形でコード化されている。
+- [x] `installAll` の逐次ジョブ処理と、ジョブ単位の try/catch による「1件の失敗で全体を止めない」失敗方針が保存されている。
+- [x] 他の静的スケジュールジョブ（特に 5分周期の `yasumaro-offline-network-retry`）は、在りの仕様判断が明示されるまで**挙動を変更しない**（意図的変更なら同PBI内で理由とテストをセットで記載）。
+- [x] 既存テスト `src/background/__tests__/alarmRegistry.test.ts:199`（無条件再作成を pin している）が更新され、「登録済みなら create しない」ケースと「未登録なら create する」ケースの両方が自動テストで固定されている。
+- [x] ブロッカー B1 / B2 の観測結果が PR 記録（観測手順・実測 scheduledTime・結論）に残され、needs_validation の fingerprint が完了記録に引き継がれている。
+- [x] `npm run validate` が緑。
 
 ## テスト戦略
 
@@ -151,11 +151,11 @@ source-only 監査では到達できない2点が未解決のまま。**実装�
 
 ## Definition of Done
 
-- [ ] BDDシナリオが自動テストで実装されパス
-- [ ] `npm run validate` が緑
-- [ ] 監査 fingerprint `a0542fe3849d1e6b087798dfea20534f56ff8035b48d2a8d990772ba58796dcf` を完了記録に残す
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（`dev-docs/` 側の日次purge/アラーム所有に関する記述と CHANGELOG）
+- [x] BDDシナリオが自動テストで実装されパス
+- [x] `npm run validate` が緑
+- [x] 監査 fingerprint `a0542fe3849d1e6b087798dfea20534f56ff8035b48d2a8d990772ba58796dcf` を完了記録に残す
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（`dev-docs/` 側の日次purge/アラーム所有に関する記述と CHANGELOG）
 
 ## 調査結果（2026-10-18）
 
@@ -170,3 +170,9 @@ source-only 監査では到達できない2点が未解決のまま。**実装�
 - /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/FINDINGS-DETAIL.md
 - dev-docs/TEST_RULE.md（実時間待ちの禁止・waitPolicy）
 - dev-docs/ARCHITECTURE_MAP.md（alarmRegistry / service-worker の位置づけ）
+
+## 完了記録（2026-10-20）
+
+- 実装: `standingAlarmGuard.ts` を新規（純粋関数 `shouldCreateStandingAlarm(name, existing)`、MV3 副作用は呼び出し元に残す）。`installDailyPurge`（chrome.alarms.get → 既存なら return → 未登録時のみ `{ periodInMinutes: 1440 }` で create）を表登録に配線し、`ensureDailyFlushArmed` も共通 predicate 経由に。offline-retry（5分周期）の staticSchedule 無条件再作成は受入基準 5 どおり挙動不変。
+- 検証: 対象 6 ファイル 236 テスト緑（スタブに get: vi.fn() を追加し黙って緑トラップを排除、get 失敗時のジョブ単位 try/catch と他ジョブ継続も pin）/ type-check / eslint 全緑。
+- 5 Whys: 滞留は installAll の無条件再作成 → Chrome が同名 create を cancelled and replaced し periodInMinutes のみのアラームは初回発火を作成時刻基準で再計算 → offline-retry が SW を起床し続ける → ガードが local-md-daily-flush にしか無かった。解: 判断を純粋関数で共通化し daily-purge を get-then-create で武装。

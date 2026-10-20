@@ -49,7 +49,7 @@ const mockSetAll = vi.hoisted(() => vi.fn());
 const mockGetMany = vi.hoisted(() => vi.fn());
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   const actual = await importOriginal() as any;
-  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany } };
+  return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany, updateDomainWhitelist: vi.fn().mockResolvedValue({ whitelist: [], changed: true }) }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany; updateDomainWhitelist = vi.fn().mockResolvedValue({ whitelist: [], changed: true }) } };
 });
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -1690,9 +1690,11 @@ describe('main', () => {
 
       // PBI 2026-09-11-03: whitelist writes go through the SettingsRepository
       // seam (settings blob), not a top-level scattered key.
-      expect(settingsRepository.setAll).toHaveBeenCalledWith(
-        expect.objectContaining({ domain_whitelist: expect.arrayContaining(['example.com']) })
-      );
+      // PBI 2026-10-18-12: the array is written through the lock-internal
+      // updater seam; the updater appends the entry to the CURRENT whitelist.
+      const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
+      expect(updater([])).toEqual(expect.arrayContaining(['example.com']));
+      expect(settingsRepository.setAll).not.toHaveBeenCalled();
     });
   });
 
