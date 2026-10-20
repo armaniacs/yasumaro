@@ -3,7 +3,7 @@
  * AI使用状況トラッキング・レート制限管理
  */
 
-import { StorageKeys } from './storage/types.js';
+import { StorageKeys, type StorageKey } from './storage/types.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { LogType } from './logger/types.js';
 import { addLog } from './logger/core.js';
@@ -14,6 +14,8 @@ const RATE_LIMIT_WINDOW_MS = 60000; // 1分
 // values, so a change there propagates without editing this constant.
 // `as number`: Settings is Partial, but DEFAULT_SETTINGS always populates this key.
 const DEFAULT_RATE_LIMIT_MAX = DEFAULT_SETTINGS[StorageKeys.AI_RATE_LIMIT_MAX] as number;
+// Same derivation for the monthly token cap read by getMaxMonthlyTokens.
+const DEFAULT_MAX_MONTHLY_TOKENS = DEFAULT_SETTINGS[StorageKeys.MAX_MONTHLY_TOKENS] as number;
 
 // VULN-010 (CWE-362): a promise-chain mutex serializes the read-modify-write
 // of the rate-limit / monthly-usage counters. Without it, two concurrent calls
@@ -58,28 +60,55 @@ export function resetClockForTesting(): void {
 }
 
 /**
- * レート制限チェック
- * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
+ * Normalizes a stored setting value into a number accepted by `isValid`.
+ * Digit strings (legacy JSON writes and fixtures) are numericized so the same
+ * normalization applies in every tier of the ladder below; non-finite numbers
+ * and non-digit strings yield undefined. The sign policy (whether 0 counts as
+ * a value) stays with the caller through `isValid`.
  */
-async function getRateLimitMax(): Promise<number> {
-  // "> 0", deliberately not shared with getMaxMonthlyTokens' ">= 0": there 0
-  // means unlimited, while a 0 requests/minute cap would deny every AI call,
-  // so sharing one predicate would silently make 0 the strictest setting.
-  const isValid = (v: unknown): v is number =>
-    typeof v === 'number' && Number.isFinite(v) && v > 0;
+function toLadderValue(
+  value: unknown,
+  isValid: (candidate: number) => boolean,
+): number | undefined {
+  if (typeof value === 'number') {
+    if (!Number.isFinite(value)) return undefined;
+    return isValid(value) ? value : undefined;
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) return undefined;
+    const parsed = Number(trimmed);
+    if (!Number.isFinite(parsed)) return undefined;
+    return isValid(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
 
-  // 1) Canonical 'settings' blob (writer/reader mismatch fix 2026-09-28, the
-  //    same defect the 2026-09-22 getMaxMonthlyTokens fix repaired for
-  //    MAX_MONTHLY_TOKENS): the recording-conditions UI saves through
-  //    settingsRepository.setAll into the blob, while this getter read only a
-  //    top-level key that nothing writes — every custom cap fell back to the
-  //    10/min default and the rate limit was effectively disarmed.
+/**
+ * Shared 3-tier settings read ladder used by getRateLimitMax and
+ * getMaxMonthlyTokens: 'settings' blob → legacy top-level key →
+ * SettingsRepository. One implementation means a writer/reader mismatch fix
+ * (blob tier 2026-09-22 / 2026-09-28) and the digit-string normalization land
+ * in both functions at once. The blob property and the legacy top-level key
+ * share the same StorageKeys name, so one `key` parameter covers both tiers.
+ * Returns `fallback` when no tier yields a value.
+ */
+async function readNumberSetting(
+  key: StorageKey,
+  fallback: number,
+  isValid: (candidate: number) => boolean,
+): Promise<number> {
+  // 1) Canonical 'settings' blob (writer/reader mismatch fixes 2026-09-22 and
+  //    2026-09-28): the recording-conditions UI saves through
+  //    settingsRepository.setAll into the blob, while earlier getters read
+  //    only top-level keys that nothing writes — every custom cap silently
+  //    fell back to the defaults and the limits were effectively disarmed.
   try {
     const result = await chrome.storage.local.get('settings');
     const blob = result['settings'];
     if (blob && typeof blob === 'object' && !Array.isArray(blob)) {
-      const value = (blob as Record<string, unknown>)[StorageKeys.AI_RATE_LIMIT_MAX];
-      if (isValid(value)) return value;
+      const value = toLadderValue((blob as Record<string, unknown>)[key], isValid);
+      if (value !== undefined) return value;
     }
   } catch {
     // fall through
@@ -88,9 +117,9 @@ async function getRateLimitMax(): Promise<number> {
   // 2) Legacy top-level key: writes from before the UI moved into the blob,
   //    plus test fixtures.
   try {
-    const result = await chrome.storage.local.get(StorageKeys.AI_RATE_LIMIT_MAX);
-    const legacy = result[StorageKeys.AI_RATE_LIMIT_MAX];
-    if (isValid(legacy)) return legacy;
+    const result = await chrome.storage.local.get(key);
+    const value = toLadderValue(result[key], isValid);
+    if (value !== undefined) return value;
   } catch {
     // fall through
   }
@@ -101,13 +130,28 @@ async function getRateLimitMax(): Promise<number> {
   try {
     const { settingsRepository } = await import('./storage/SettingsRepository.js');
     const settings = await settingsRepository.getAll();
-    const value = settings[StorageKeys.AI_RATE_LIMIT_MAX];
-    if (isValid(value)) return value;
+    const value = toLadderValue(settings[key], isValid);
+    if (value !== undefined) return value;
   } catch {
     // fall through
   }
 
-  return DEFAULT_RATE_LIMIT_MAX;
+  return fallback;
+}
+
+/**
+ * レート制限チェック
+ * @returns {Promise<{allowed: boolean; remaining: number; resetTime: number}>}
+ */
+async function getRateLimitMax(): Promise<number> {
+  // "> 0", deliberately not shared with getMaxMonthlyTokens' ">= 0": there 0
+  // means unlimited, while a 0 requests/minute cap would deny every AI call,
+  // so sharing one predicate would silently make 0 the strictest setting.
+  return readNumberSetting(
+    StorageKeys.AI_RATE_LIMIT_MAX,
+    DEFAULT_RATE_LIMIT_MAX,
+    (value) => value > 0,
+  );
 }
 
 export function checkRateLimit(): Promise<{
@@ -294,50 +338,13 @@ export function getRateLimitMessage(resetTime: number): string {
 }
 
 async function getMaxMonthlyTokens(): Promise<number> {
-  const DEFAULT_MAX = DEFAULT_SETTINGS[StorageKeys.MAX_MONTHLY_TOKENS] as number;
-  const isValid = (v: unknown): v is number =>
-    typeof v === 'number' && Number.isFinite(v) && v >= 0;
-
-  // 1) Canonical 'settings' blob (writer/reader mismatch fix 2026-09-22): the
-  //    recording-conditions UI writes via SettingsRepository.setAll into the
-  //    'settings' object, while this function only read a top-level key that
-  //    nothing writes — every custom value (including 0 = unlimited) silently
-  //    fell back to the 1,000,000 default and blocked real sessions.
-  try {
-    const result = await chrome.storage.local.get('settings');
-    const blob = result['settings'];
-    if (blob && typeof blob === 'object' && !Array.isArray(blob)) {
-      const value = (blob as Record<string, unknown>)[StorageKeys.MAX_MONTHLY_TOKENS];
-      if (isValid(value)) return value;
-      if (typeof value === 'string' && /^\d+$/.test(value.trim())) return Number(value.trim());
-    }
-  } catch {
-    // fall through
-  }
-
-  // 2) Legacy top-level key: writes from before the UI moved into the blob,
-  //    plus test fixtures.
-  try {
-    const result = await chrome.storage.local.get(StorageKeys.MAX_MONTHLY_TOKENS);
-    const legacy = result[StorageKeys.MAX_MONTHLY_TOKENS];
-    if (isValid(legacy)) return legacy;
-  } catch {
-    // fall through
-  }
-
-  // 3) Encrypted-at-rest installs: the repository decrypts the blob for us.
-  //    Dynamic import keeps SettingsRepository's module-load side effects out
-  //    of test setups that stub chrome.storage before importing this module.
-  try {
-    const { settingsRepository } = await import('./storage/SettingsRepository.js');
-    const settings = await settingsRepository.getAll();
-    const value = settings[StorageKeys.MAX_MONTHLY_TOKENS];
-    if (isValid(value)) return value;
-  } catch {
-    // fall through
-  }
-
-  return DEFAULT_MAX;
+  // ">= 0", deliberately not shared with getRateLimitMax's "> 0": here 0
+  // means unlimited, so rejecting it would silently re-arm the monthly cap.
+  return readNumberSetting(
+    StorageKeys.MAX_MONTHLY_TOKENS,
+    DEFAULT_MAX_MONTHLY_TOKENS,
+    (value) => value >= 0,
+  );
 }
 
 export interface HardLimitResult {

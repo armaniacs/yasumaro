@@ -593,13 +593,14 @@ describe('checkRateLimit — settings blob limit (writer/reader fix)', () => {
   });
 
   // MAX_MONTHLY_TOKENS treats 0 as unlimited; AI_RATE_LIMIT_MAX must not.
-  // A digit string and a non-finite number are equally unusable as a cap.
+  // 0, a negative value and a non-finite number are equally unusable as a
+  // cap. A digit string used to fall back too; PBI 2026-10-20-05 numericizes
+  // it in both functions, so it is asserted separately below.
   it.each([
     { label: '0 (unlimited for MAX_MONTHLY_TOKENS, not here)', value: 0 },
     { label: 'a negative value', value: -3 },
     { label: 'Infinity', value: Number.POSITIVE_INFINITY },
     { label: 'NaN', value: Number.NaN },
-    { label: 'a numeric string', value: '5' },
   ])('falls back to the default for $label', async ({ value }) => {
     mockStorage['settings'] = { [StorageKeys.AI_RATE_LIMIT_MAX]: value };
     mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = value; // both tiers
@@ -613,5 +614,148 @@ describe('checkRateLimit — settings blob limit (writer/reader fix)', () => {
     const overCap = await checkRateLimit();
     expect(overCap.allowed).toBe(false);
     expect(overCap.remaining).toBe(0);
+  });
+
+  // PBI 2026-10-20-05 behavior change: the shared ladder numericizes digit
+  // strings, so a string cap is honored instead of silently falling back to
+  // the default the way the fallback cases above do. The pre-PBI code
+  // returned the default for the same fixture.
+  it('numericizes a digit-string cap instead of falling back to the default', async () => {
+    mockStorage['settings'] = { [StorageKeys.AI_RATE_LIMIT_MAX]: '5' };
+    mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = '5'; // both tiers
+
+    seedWindow(5);
+    const atCap = await checkRateLimit();
+    expect(atCap.allowed).toBe(false);
+    expect(atCap.remaining).toBe(0);
+  });
+});
+
+// PBI 2026-10-20-05: getRateLimitMax and getMaxMonthlyTokens share one
+// 3-tier read ladder (blob → legacy top-level → SettingsRepository). These
+// tests pin the shared contract: the blob tier wins over a stale legacy key,
+// the legacy tier is used when the blob is absent, every tier falls back to
+// the default, and digit strings are numericized by BOTH functions
+// (previously only getMaxMonthlyTokens' blob tier parsed them).
+describe('settings read ladder (shared helper)', () => {
+  beforeEach(() => {
+    Object.keys(mockStorage).forEach((key) => delete mockStorage[key]);
+    settingsRepository.clearCache();
+    resetCounterLockForTesting();
+    resetClockForTesting();
+    setClockForTesting(() => FIXED_NOW);
+  });
+
+  afterEach(() => {
+    resetClockForTesting();
+    resetCounterLockForTesting();
+  });
+
+  /** Puts the rate counter inside the open window at `count`. */
+  function seedWindow(count: number): void {
+    mockStorage[StorageKeys.AI_RATE_LIMIT_WINDOW_START] = FIXED_NOW;
+    mockStorage[StorageKeys.AI_RATE_LIMIT_COUNT] = count;
+  }
+
+  /** Seeds the monthly usage counters for the current month at `total`. */
+  function seedMonthlyUsage(total: number): void {
+    const n = new Date();
+    mockStorage[StorageKeys.AI_USAGE_MONTH] =
+      `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+    mockStorage[StorageKeys.AI_USAGE_TOKENS_SENT] = total;
+    mockStorage[StorageKeys.AI_USAGE_TOKENS_RECEIVED] = 0;
+  }
+
+  describe('blob tier wins over a stale legacy key', () => {
+    test('getRateLimitMax uses the blob cap', async () => {
+      mockStorage['settings'] = { [StorageKeys.AI_RATE_LIMIT_MAX]: 3 };
+      mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = 20; // stale pre-migration write
+
+      seedWindow(3);
+      const result = await checkRateLimit();
+      // The blob cap of 3 denies at count 3; the stale legacy 20 would allow.
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+
+    test('getMaxMonthlyTokens uses the blob cap', async () => {
+      mockStorage['settings'] = { [StorageKeys.MAX_MONTHLY_TOKENS]: 100 };
+      mockStorage[StorageKeys.MAX_MONTHLY_TOKENS] = 500; // stale legacy write
+
+      seedMonthlyUsage(100);
+      const result = await checkHardLimit(1); // 101 projected
+      expect(result.blocked).toBe(true);
+      // Proves the blob cap was used (the stale legacy 500 would not block).
+      expect(result.message).toContain('100');
+    });
+  });
+
+  describe('legacy top-level fallback when the blob is absent', () => {
+    test('getRateLimitMax uses the legacy cap', async () => {
+      mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = 5;
+
+      seedWindow(5);
+      const result = await checkRateLimit();
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+
+    test('getMaxMonthlyTokens uses the legacy cap', async () => {
+      mockStorage[StorageKeys.MAX_MONTHLY_TOKENS] = 100;
+
+      seedMonthlyUsage(100);
+      const result = await checkHardLimit(1);
+      expect(result.blocked).toBe(true);
+      expect(result.message).toContain('100');
+    });
+  });
+
+  describe('digit strings are numericized by both functions', () => {
+    test('getRateLimitMax numericizes a digit string in the blob', async () => {
+      mockStorage['settings'] = { [StorageKeys.AI_RATE_LIMIT_MAX]: '5' };
+
+      seedWindow(5);
+      const result = await checkRateLimit();
+      // The numericized cap of 5 denies at count 5; the pre-PBI fallback
+      // (default 10) would have allowed the call.
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+
+    test('getRateLimitMax numericizes a digit string in the legacy tier', async () => {
+      mockStorage[StorageKeys.AI_RATE_LIMIT_MAX] = '5';
+
+      seedWindow(5);
+      const result = await checkRateLimit();
+      expect(result.allowed).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+
+    test('getMaxMonthlyTokens numericizes a digit string in the legacy tier', async () => {
+      mockStorage[StorageKeys.MAX_MONTHLY_TOKENS] = '100';
+
+      seedMonthlyUsage(100);
+      const result = await checkHardLimit(1);
+      // The numericized cap of 100 blocks at 101 projected; the pre-PBI
+      // default (1,000,000) would not have blocked.
+      expect(result.blocked).toBe(true);
+      expect(result.message).toContain('100');
+    });
+  });
+
+  describe('falls back to the default when no tier yields a value', () => {
+    test('getRateLimitMax returns the default cap', async () => {
+      seedWindow(9);
+      const result = await checkRateLimit();
+      expect(result.allowed).toBe(true);
+      expect(result.remaining).toBe(0);
+    });
+
+    test('getMaxMonthlyTokens returns the default cap', async () => {
+      seedMonthlyUsage(900_000);
+      const result = await checkHardLimit(100_001); // 1,000,001 projected
+      expect(result.blocked).toBe(true);
+      expect(result.message).toContain('1,000,000');
+    });
   });
 });
