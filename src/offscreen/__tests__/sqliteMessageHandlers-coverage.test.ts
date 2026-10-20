@@ -22,7 +22,6 @@ const recordsRepoMock = vi.hoisted(() => ({
   toggleStar: vi.fn().mockResolvedValue({ success: true, is_starred: 1 }),
   getCount: vi.fn().mockResolvedValue({ success: true, count: 5 }),
   getStatus: vi.fn().mockResolvedValue({ success: true, initialized: true, path: 'test.db', fallback: false, fts5: true }),
-  serialize: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([1, 2, 3]) }),
   clearAll: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -53,7 +52,6 @@ vi.mock('../recordsRepo.js', () => ({
   toggleStar: recordsRepoMock.toggleStar,
   getCount: recordsRepoMock.getCount,
   getStatus: recordsRepoMock.getStatus,
-  serialize: recordsRepoMock.serialize,
   clearAll: recordsRepoMock.clearAll,
 }));
 
@@ -85,14 +83,14 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 34 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(34);
+  it('Map contains all 33 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(33);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
       'SQLITE_AUDIT_LOG_PURGE',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
-      'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL', 'SQLITE_EXPORT',
+      'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL',
       'SQLITE_BACKUP', 'SQLITE_RESTORE', 'SQLITE_PURGE', 'CONTENT_PURGE',
       'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
       'SQLITE_ARCHIVE_CLEANUP', 'SQLITE_ARCHIVE_EXPORT',
@@ -147,14 +145,6 @@ describe('sqliteMessageHandlers — simple handlers', () => {
     recordsRepoMock.clearAll.mockResolvedValue({ success: true });
     const res = await callHandler('SQLITE_CLEAR_ALL') as { success: boolean };
     expect(res.success).toBe(true);
-  });
-
-  it('SQLITE_EXPORT forwards serialize', async () => {
-    const data = new Uint8Array([10, 20]);
-    recordsRepoMock.serialize.mockResolvedValue({ success: true, data });
-    const res = await callHandler('SQLITE_EXPORT') as { success: boolean; data: Uint8Array };
-    expect(res.success).toBe(true);
-    expect(res.data).toEqual(data);
   });
 
   it('SQLITE_DELETE forwards hardDelete with Number(id)', async () => {

@@ -26,7 +26,6 @@ export type SqliteMessage =
   | { type: 'SQLITE_COUNT'; payload?: never; traceId?: string }
   | { type: 'SQLITE_STATUS'; payload?: never; traceId?: string }
   | { type: 'SQLITE_CLEAR_ALL'; payload?: never; traceId?: string }
-  | { type: 'SQLITE_EXPORT'; payload?: never; traceId?: string }
   | { type: 'SQLITE_BACKUP'; payload?: never; traceId?: string }
   | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
   | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
@@ -70,7 +69,6 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_COUNT',
   'SQLITE_STATUS',
   'SQLITE_CLEAR_ALL',
-  'SQLITE_EXPORT',
   'SQLITE_BACKUP',
   'SQLITE_RESTORE',
   'SQLITE_PURGE',

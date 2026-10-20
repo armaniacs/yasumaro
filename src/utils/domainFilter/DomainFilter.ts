@@ -66,14 +66,6 @@ export class DomainFilter {
   }
 
   /**
-   * Parse textarea content (one domain per line) — single place for splitting.
-   */
-  parse(text: string): string[] {
-    if (!text) return [];
-    return text.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
-  }
-
-  /**
    * Validate a domain list — single place for ReDoS guard via wildcardToRegex.
    */
   validate(list: string[]): string[] {

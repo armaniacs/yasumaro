@@ -5,7 +5,6 @@
 
 import {
     DEFAULT_CATEGORIES,
-    getDefaultCategories,
     getAllCategories,
     isValidCategory,
     parseTagsFromSummary,
@@ -24,26 +23,6 @@ describe('tagUtils', () => {
             for (const cat of DEFAULT_CATEGORIES) {
                 expect(typeof cat).toBe('string');
                 expect(cat.length).toBeGreaterThan(0);
-            }
-        });
-    });
-
-    describe('getDefaultCategories', () => {
-        test('returns TagCategory[] format', () => {
-            const result = getDefaultCategories();
-            expect(result).toHaveLength(10);
-            for (const cat of result) {
-                expect(cat.name).toBeDefined();
-                expect(cat.isDefault).toBe(true);
-                expect(cat.createdAt).toBeGreaterThan(0);
-            }
-        });
-
-        test('includes every category name from DEFAULT_CATEGORIES', () => {
-            const result = getDefaultCategories();
-            const names = result.map(c => c.name);
-            for (const name of DEFAULT_CATEGORIES) {
-                expect(names).toContain(name);
             }
         });
     });

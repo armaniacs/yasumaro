@@ -4,7 +4,7 @@
  * デフォルトカテゴリ定義、タグパース、カテゴリバリデーション
  */
 
-import type { TagCategory, TagNormalizationEntry } from './types.js';
+import type { TagNormalizationEntry } from './types.js';
 import type { Settings } from './storage/types.js';
 
 /**
@@ -22,18 +22,6 @@ export const DEFAULT_CATEGORIES = [
     'クリエイティブ・アート',
     'ヘルス・ウェルネス',
 ] as const;
-
-/**
- * デフォルトカテゴリを TagCategory 配列として取得
- * @returns {TagCategory[]} デフォルトカテゴリの配列
- */
-export function getDefaultCategories(): TagCategory[] {
-    return DEFAULT_CATEGORIES.map(name => ({
-        name,
-        isDefault: true,
-        createdAt: Date.now()
-    }));
-}
 
 /**
  * 設定から全カテゴリ（デフォルト + ユーザー追加）を取得

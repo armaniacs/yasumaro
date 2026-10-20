@@ -34,11 +34,10 @@ describe('tagClusterPanel — PanelLifecycle', () => {
     expect(panel.category).toBe('async-data');
   });
 
-  it('exposes mount/load/destroy/init', () => {
+  it('exposes mount/load/destroy', () => {
     expect(panel.mount).toBeDefined();
     expect(panel.load).toBeDefined();
     expect(panel.destroy).toBeDefined();
-    expect(panel.init).toBeDefined();
   });
 
   it('mount does not throw', () => {
@@ -67,16 +66,8 @@ describe('tagClusterPanel — PanelLifecycle', () => {
     expect(() => panel.destroy?.()).not.toThrow();
   });
 
-  it('init handles focusTag', () => {
+  it('lifecycle mount→load→destroy', async () => {
     panel.mount(container);
-    expect(() => panel.init?.({ focusTag: 'test' })).not.toThrow();
-    expect(() => panel.init?.({})).not.toThrow();
-    expect(() => panel.init?.()).not.toThrow();
-  });
-
-  it('lifecycle mount→init→load→destroy', async () => {
-    panel.mount(container);
-    panel.init?.({ focusTag: 'ai' });
     const pr = panel.load?.();
     expect(pr).toBeInstanceOf(Promise);
     expect(() => panel.destroy?.()).not.toThrow();

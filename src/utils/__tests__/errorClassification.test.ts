@@ -28,7 +28,6 @@ import {
   classifyError,
   getErrorI18nKey,
   getUserMessage,
-  convertKnownErrorMessage,
   createErrorResponse,
 } from '../errorClassification.js';
 
@@ -128,32 +127,6 @@ describe('getUserMessage', () => {
   it('falls back to default message when i18n returns empty string', () => {
     const i18n = vi.fn(() => '');
     expect(getUserMessage(new Error('network error'), i18n)).toBe('A network error occurred.');
-  });
-});
-
-describe('convertKnownErrorMessage', () => {
-  it('returns generic message for empty/non-string input', () => {
-    expect(convertKnownErrorMessage('')).toBe('An error occurred.');
-    expect(convertKnownErrorMessage(null as any)).toBe('An error occurred.');
-  });
-
-  it('matches known patterns', () => {
-    expect(convertKnownErrorMessage('URL is not allowed')).toBe('Error: /url.*not allowed/i');
-    expect(convertKnownErrorMessage('Domain blocked')).toBe('Error: /domain.*block/i');
-    expect(convertKnownErrorMessage('URL invalid')).toBe('Error: /url.*invalid/i');
-    expect(convertKnownErrorMessage('Obsidian connection failed')).toBe('Error: /obsidian.*connection/i');
-    expect(convertKnownErrorMessage('Daily note not found')).toBe('Error: /daily note/i');
-    expect(convertKnownErrorMessage('AI summarization failed')).toBe('Error: /ai.*summar/i');
-    expect(convertKnownErrorMessage('Content is empty')).toBe('Error: /content.*empty/i');
-  });
-
-  it('uses i18n getter when provided for known patterns', () => {
-    const i18n = vi.fn((key: string) => `i18n:${key}`);
-    expect(convertKnownErrorMessage('URL is not allowed', i18n)).toBe('i18n:errorUrlNotAllowed');
-  });
-
-  it('falls back to classification for unmatched messages', () => {
-    expect(convertKnownErrorMessage('network error')).toBe('A network error occurred.');
   });
 });
 

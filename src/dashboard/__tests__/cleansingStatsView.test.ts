@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { computeCleansingStats, renderStatsSummary, renderFunnelChart, makeCleansingProgressBar } from '../cleansingStatsView.js';
+import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';
 
 describe('computeCleansingStats', () => {
@@ -86,110 +86,6 @@ describe('renderFunnelChart', () => {
     ];
     const stats = computeCleansingStats(entries);
     expect(() => renderFunnelChart(canvas, stats)).not.toThrow();
-  });
-});
-
-describe('makeCleansingProgressBar', () => {
-  it('returns null when pageBytes is missing', () => {
-    const entry: SavedUrlEntry = { url: 'https://a.com', timestamp: 1 };
-    expect(makeCleansingProgressBar(entry)).toBeNull();
-  });
-
-  it('returns null when only pageBytes is present', () => {
-    const entry: SavedUrlEntry = { url: 'https://a.com', timestamp: 1, pageBytes: 10000 };
-    expect(makeCleansingProgressBar(entry)).toBeNull();
-  });
-
-  it('returns an HTMLElement when pageBytes and aiSummaryOriginalBytes are present', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 10000,
-      aiSummaryOriginalBytes: 4000,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    expect(el!.querySelector('.cleansing-progress-bar')).not.toBeNull();
-    const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
-    expect(bar.style.width).toBe('40%');
-    expect(el!.textContent).toContain('60.0% reduction');
-  });
-
-  it('works when aiSummaryCleansedBytes is absent but cleansedBytes is present', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 8000,
-      cleansedBytes: 2000,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
-    expect(bar.style.width).toBe('25%');
-    expect(el!.textContent).toContain('75.0% reduction');
-  });
-
-  it('returns null when pageBytes is 0', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 0,
-      cleansedBytes: 0,
-    };
-    expect(makeCleansingProgressBar(entry)).toBeNull();
-  });
-
-  it('uses cleansedBytes as sentToAI when fallbackTriggered is true', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 10000,
-      cleansedBytes: 3000,
-      aiSummaryCleansedBytes: 500,
-      fallbackTriggered: true,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    // fallback時は aiSummaryCleansedBytes ではなく cleansedBytes (3000) を使う
-    const bar = el!.querySelector('.cleansing-progress-bar') as HTMLElement;
-    expect(bar.style.width).toBe('30%');
-    expect(el!.textContent).toContain('70.0% reduction');
-  });
-
-  it('formats byte display in MB correctly (>= 1MB)', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 3 * 1024 * 1024,
-      cleansedBytes: 1 * 1024 * 1024,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    expect(el!.textContent).toContain('MB');
-  });
-
-  it('formats byte display in KB correctly (>= 1KB, < 1MB)', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 5000,
-      cleansedBytes: 2000,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    expect(el!.textContent).toContain('KB');
-  });
-
-  it('formats byte display in B correctly (< 1KB)', () => {
-    const entry: SavedUrlEntry = {
-      url: 'https://a.com',
-      timestamp: 1,
-      pageBytes: 800,
-      cleansedBytes: 200,
-    };
-    const el = makeCleansingProgressBar(entry);
-    expect(el).not.toBeNull();
-    expect(el!.textContent).toContain(' B');
   });
 });
 

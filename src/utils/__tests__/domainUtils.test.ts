@@ -12,8 +12,7 @@ import {
   isDomainInList,
   isValidDomain,
   isDomainAllowed,
-  parseDomainList,
-  validateDomainList
+  parseDomainList
 } from '../domainUtils.js';
 import { isUrlBlocked } from '../ublockMatcher.js';
 import type { Settings as SettingsType } from '../storage/types.js';
@@ -520,18 +519,6 @@ describe('domainUtils', () => {
       expect(result).toHaveLength(1000);
       expect(result[0]).toBe('domain0.com');
       expect(result[999]).toBe('domain999.com');
-    });
-  });
-
-  describe('validateDomainList', () => {
-    test('reports errors correctly for a list mixing valid and invalid domains', () => {
-      const domainList = ['valid.com', 'invalid<>.com', 'another-valid.com', 'bad domain'];
-      const errors = validateDomainList(domainList);
-      expect(errors).toHaveLength(2);
-      expect(errors[0]).toContain('2行目');
-      expect(errors[0]).toContain('invalid<>.com');
-      expect(errors[1]).toContain('4行目');
-      expect(errors[1]).toContain('bad domain');
     });
   });
 });

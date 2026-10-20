@@ -247,42 +247,6 @@ function getFallbackMessage(errorType: ErrorTypeValues): string {
   }
 }
 
-/**
- * 既知のエラーパターンをユーザー向けに変換する。
- *
- * @param errorMessage - 元のエラーメッセージ
- * @param i18n - i18nメッセージ取得関数
- * @returns ユーザー向けメッセージ
- */
-export function convertKnownErrorMessage(errorMessage: string, i18n?: I18nGetter): string {
-  if (!errorMessage || typeof errorMessage !== 'string') {
-    return getUserMessage(null, i18n);
-  }
-
-  const lowerMessage = errorMessage.toLowerCase();
-
-  const knownPatterns: Array<{ pattern: RegExp; i18nKey: string }> = [
-    { pattern: /url.*not allowed/i, i18nKey: 'errorUrlNotAllowed' },
-    { pattern: /domain.*block/i, i18nKey: 'errorDomainBlocked' },
-    { pattern: /url.*invalid/i, i18nKey: 'errorInvalidUrlGeneric' },
-    { pattern: /obsidian.*connection/i, i18nKey: 'errorObsidianConnection' },
-    { pattern: /daily note/i, i18nKey: 'errorDailyNoteSave' },
-    { pattern: /ai.*summar/i, i18nKey: 'errorAiSummarize' },
-    { pattern: /content.*empty/i, i18nKey: 'errorContentEmpty' },
-  ];
-
-  for (const { pattern, i18nKey } of knownPatterns) {
-    if (pattern.test(lowerMessage)) {
-      if (i18n) {
-        return i18n(i18nKey) || `Error: ${pattern}`;
-      }
-      return `Error: ${pattern}`;
-    }
-  }
-
-  return getUserMessage({ message: errorMessage, name: 'Error' }, i18n);
-}
-
 // ─── Error response ────────────────────────────────────────────────────
 
 export interface ErrorResponse {

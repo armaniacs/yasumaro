@@ -30,14 +30,6 @@ function decodeHtmlEntities(text: string): string {
 }
 
 /**
- * Unicode正規化を行う
- * 同じ文字の異なる表現（結合文字など）を統一する
- */
-function normalizeUnicode(text: string): string {
-  return text.normalize('NFC');
-}
-
-/**
  * プロンプトインジェクションパターン
  * エンコード回避対策として、より包括的なパターンを使用
  */
@@ -330,9 +322,8 @@ export function sanitizePromptContent(content: string): SanitizeResult {
   // クレジットカード番号、銀行口座等のPIIはpiiSanitizerで処理済みと想定
   // ここではプロンプトインジェクションのみを対象
 
-  // 0. 前処理: HTMLエンティティデコードとUnicode正規化（エンコード回避対策）
+  // 0. 前処理: HTMLエンティティデコード（エンコード回避対策）
   const decodedContent = decodeHtmlEntities(sanitized);
-  const _normalizedContent = normalizeUnicode(decodedContent);
 
   // デコード後のコンテンツでもチェック（エンコード回避対策）
   if (decodedContent !== sanitized) {
@@ -449,16 +440,4 @@ export function sanitizePromptContent(content: string): SanitizeResult {
     dangerLevel,
     warnings,
   };
-}
-
-/**
- * 検出された警告をログ用にフォーマット
- * @param {string[]} warnings - 警告メッセージ配列
- * @returns {string} フォーマットされたメッセージ
- */
-export function formatWarnings(warnings: string[]): string {
-  if (!warnings || warnings.length === 0) {
-    return '';
-  }
-  return warnings.join('; ');
 }

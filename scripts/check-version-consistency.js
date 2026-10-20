@@ -26,12 +26,6 @@ export function extractVersion(content, filePath) {
     return match ? match[1] : null;
   }
 
-  // manifest.json: "version": "5.1.14"
-  if (filePath.includes('manifest.json')) {
-    const match = content.match(/"version"\s*:\s*"([^"]+)"/);
-    return match ? match[1] : null;
-  }
-
   // wxt.config.ts: version: '5.1.14' or pkg.version (SSOT)
   if (filePath.includes('wxt.config.ts')) {
     if (content.includes('pkg.version')) {

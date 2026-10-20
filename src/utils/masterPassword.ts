@@ -61,15 +61,3 @@ export function validatePasswordMatch(password: string, confirmPassword: string)
     }
     return null;
 }
-
-/**
- * マスターパスワードが設定されているかチェック
- * @param {(keys: string[]) => Promise<Record<string, unknown>>} getStorageFn - ストレージ取得関数
- * @returns {Promise<boolean>} 設定されている場合はtrue
- */
-export async function isMasterPasswordSet(
-    getStorageFn: (keys: string[]) => Promise<Record<string, unknown>>
-): Promise<boolean> {
-    const result = await getStorageFn(['master_password_enabled']);
-    return Boolean(result['master_password_enabled']);
-}

@@ -86,10 +86,9 @@ describe('messaging transport retry policy', () => {
       expect(TRANSPORT_RETRY_POLICIES.has(type)).toBe(true);
     }
     expect(TRANSPORT_RETRY_POLICIES.size).toBe(unionTypes.length);
-    // The two handler-backed types without a wire route carry an explicit
+    // The one handler-backed type without a wire route carries an explicit
     // unconfigured decision instead of relying on the lookup fallback.
     expect(getTransportRetryPolicy('SQLITE_SEARCH')).toBe(RETRY_UNCONFIGURED);
-    expect(getTransportRetryPolicy('SQLITE_EXPORT')).toBe(RETRY_UNCONFIGURED);
   });
 
   it('keeps insert and insertBatch retry-unsafe', () => {
@@ -123,7 +122,7 @@ describe('messaging transport retry policy', () => {
   });
 
   it('does not retry unknown message types and honors explicit noRetry', () => {
-    for (const type of ['SQLITE_FUTURE_OPERATION', 'SQLITE_SEARCH', 'SQLITE_EXPORT']) {
+    for (const type of ['SQLITE_FUTURE_OPERATION', 'SQLITE_SEARCH']) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_UNCONFIGURED);
       expect(shouldRetryTransport(type)).toBe(false);
     }

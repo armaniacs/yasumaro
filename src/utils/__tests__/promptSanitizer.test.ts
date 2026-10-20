@@ -5,7 +5,7 @@
  */
 
 
-import { sanitizePromptContent, DangerLevel, formatWarnings, isInSafeContext } from '../promptSanitizer.js';
+import { sanitizePromptContent, DangerLevel, isInSafeContext } from '../promptSanitizer.js';
 
 describe('promptSanitizer', () => {
   describe('sanitizePromptContent - 正常系', () => {
@@ -263,27 +263,6 @@ describe('promptSanitizer', () => {
       // 制御文字はLOW dangerLevelなので、再評価ではLOWになる
       // (これは正常な動作 - 制御文字除去後のコンテンツは安全)
       expect(reSanitized.dangerLevel).not.toBe(DangerLevel.HIGH);
-    });
-  });
-
-  describe('formatWarnings', () => {
-    test('returns empty string for an empty warnings array', () => {
-      // 【テスト目的】: formatWarnings関数の基本動作
-      // 【テスト内容】: 空配列
-      // 【期待される動作】: 空文字列
-
-      const result = formatWarnings([]);
-      expect(result).toBe('');
-    });
-
-    test('joins warnings with semicolons', () => {
-      // 【テスト目的】: 警告フォーマット確認
-      // 【テスト内容】: 複数の警告
-      // 【期待される動作】: セミコロン区切りで連結
-
-      const warnings = ['Warning 1', 'Warning 2', 'Warning 3'];
-      const result = formatWarnings(warnings);
-      expect(result).toBe('Warning 1; Warning 2; Warning 3');
     });
   });
 

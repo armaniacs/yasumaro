@@ -12,7 +12,6 @@ import {
     calculatePasswordStrength,
     validatePasswordRequirements,
     validatePasswordMatch,
-    isMasterPasswordSet,
     PasswordStrength
 } from '../masterPassword.js';
 
@@ -142,30 +141,6 @@ describe('masterPassword', () => {
 
         test('treats two empty strings as matching', () => {
             expect(validatePasswordMatch('', '')).toBeNull();
-        });
-    });
-
-    describe('isMasterPasswordSet', () => {
-        test('returns true when the flag is true', async () => {
-            const mockGet = vi.fn(async () => ({
-                'master_password_enabled': true
-            }));
-            const result = await isMasterPasswordSet(mockGet);
-            expect(result).toBe(true);
-        });
-
-        test('returns false when the flag is false', async () => {
-            const mockGet = vi.fn(async () => ({
-                'master_password_enabled': false
-            }));
-            const result = await isMasterPasswordSet(mockGet);
-            expect(result).toBe(false);
-        });
-
-        test('returns false when the flag is unset (undefined)', async () => {
-            const mockGet = vi.fn(async () => ({}));
-            const result = await isMasterPasswordSet(mockGet);
-            expect(result).toBe(false);
         });
     });
 });

@@ -1,13 +1,12 @@
 /**
  * messaging-types.test.ts
  * Tests for messaging/types.ts runtime type functions
- * Target: isMaskedItem, isServiceWorkerRequest, isSuccessResponse, isErrorResponse,
+ * Target: isServiceWorkerRequest, isSuccessResponse, isErrorResponse,
  *         sendServiceWorkerMessage, sendFromContentScript, sendFromPopup
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-    isMaskedItem,
     isServiceWorkerRequest,
     isSuccessResponse,
     isErrorResponse,
@@ -17,98 +16,6 @@ import {
 } from '../types.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from '../messageTypeRegistry.js';
-
-describe('messaging/types: isMaskedItem', () => {
-    it('returns false for null', () => {
-        expect(isMaskedItem(null)).toBe(false);
-    });
-
-    it('returns false for undefined', () => {
-        expect(isMaskedItem(undefined)).toBe(false);
-    });
-
-    it('returns false for string', () => {
-        expect(isMaskedItem('email')).toBe(false);
-    });
-
-    it('returns false for array', () => {
-        expect(isMaskedItem([{ type: 'email' }])).toBe(false);
-    });
-
-    it('returns false when type property is missing', () => {
-        expect(isMaskedItem({})).toBe(false);
-    });
-
-    it('returns false when type is not a string', () => {
-        expect(isMaskedItem({ type: 123 })).toBe(false);
-    });
-
-    it('returns false for unknown type value', () => {
-        expect(isMaskedItem({ type: 'unknown' })).toBe(false);
-    });
-
-    it('returns true for valid email type', () => {
-        expect(isMaskedItem({ type: 'email' })).toBe(true);
-    });
-
-    it('returns true for valid creditCard type', () => {
-        expect(isMaskedItem({ type: 'creditCard' })).toBe(true);
-    });
-
-    it('returns true for valid phoneJp type', () => {
-        expect(isMaskedItem({ type: 'phoneJp' })).toBe(true);
-    });
-
-    it('returns true for valid myNumber type', () => {
-        expect(isMaskedItem({ type: 'myNumber' })).toBe(true);
-    });
-
-    it('returns true for valid bankAccount type', () => {
-        expect(isMaskedItem({ type: 'bankAccount' })).toBe(true);
-    });
-
-    it('returns true for valid price type', () => {
-        expect(isMaskedItem({ type: 'price' })).toBe(true);
-    });
-
-    it('returns false when position is not a string', () => {
-        expect(isMaskedItem({ type: 'email', position: 42 })).toBe(false);
-    });
-
-    it('returns true when position is a string', () => {
-        expect(isMaskedItem({ type: 'email', position: 'header' })).toBe(true);
-    });
-
-    it('returns true when position is undefined', () => {
-        expect(isMaskedItem({ type: 'email', position: undefined })).toBe(true);
-    });
-
-    it('returns false when original is not a string', () => {
-        expect(isMaskedItem({ type: 'email', original: 42 })).toBe(false);
-    });
-
-    it('returns true when original is a string', () => {
-        expect(isMaskedItem({ type: 'email', original: 'test@test.com' })).toBe(true);
-    });
-
-    it('returns false when index is not a number', () => {
-        expect(isMaskedItem({ type: 'email', index: '0' })).toBe(false);
-    });
-
-    it('returns true when index is a number', () => {
-        expect(isMaskedItem({ type: 'email', index: 0 })).toBe(true);
-    });
-
-    it('returns true for fully populated MaskedItem', () => {
-        const item = {
-            type: 'email',
-            position: 'body',
-            original: 'foo@bar.com',
-            index: 3,
-        };
-        expect(isMaskedItem(item)).toBe(true);
-    });
-});
 
 describe('messaging/types: isServiceWorkerRequest', () => {
     it('returns false for null', () => {

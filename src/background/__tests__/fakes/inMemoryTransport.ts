@@ -158,7 +158,6 @@ export class InMemoryTransport implements OffscreenTransport {
         return { success: true, purged: 0 };
 
       case 'SQLITE_BACKUP':
-      case 'SQLITE_EXPORT':
         return { success: true, data: [] };
 
       case 'SQLITE_ARCHIVE_EXPORT':

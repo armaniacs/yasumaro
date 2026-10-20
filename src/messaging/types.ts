@@ -69,49 +69,6 @@ export interface ContentResponse {
   fallbackReason?: string;
 }
 
-/**
- * MaskedItem 型ガード関数
- * unknown 型から MaskedItem 型かどうかを判定する
- * @param item - 判定対象のアイテム
- * @returns MaskedItem 型の場合は true
- */
-export function isMaskedItem(item: unknown): item is MaskedItem {
-  if (typeof item !== 'object' || item === null || Array.isArray(item)) {
-    return false;
-  }
-  
-  // Cast to Record<string, unknown> to safely access object properties
-  const maskedItem: Record<string, unknown> = item as Record<string, unknown>;
-  
-  // Required type property - must be a string and one of the known types
-  if (!('type' in maskedItem) || typeof maskedItem.type !== 'string') {
-    return false;
-  }
-  
-  // Validate type is one of the known MaskedItem types
-  const validTypes = ['email', 'creditCard', 'phoneJp', 'myNumber', 'bankAccount', 'price'];
-  if (!validTypes.includes(maskedItem.type)) {
-    return false;
-  }
-  
-  // Optional position property
-  if ('position' in maskedItem && maskedItem.position !== undefined && typeof maskedItem.position !== 'string') {
-    return false;
-  }
-  
-  // original property (required on MaskedItem, absent on StrippedMaskedItem)
-  if ('original' in maskedItem && typeof maskedItem.original !== 'string') {
-    return false;
-  }
-
-  // Optional index property
-  if ('index' in maskedItem && maskedItem.index !== undefined && typeof maskedItem.index !== 'number') {
-    return false;
-  }
-  
-  return true;
-}
-
 /** PBI 04 の wire 応答。gate 拒否時のみ needsForce=true（強制再生成の提示用）。 */
 export type RegenerateSummaryResponse = RecordingResult & {
   needsForce?: boolean;

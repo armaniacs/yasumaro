@@ -60,7 +60,6 @@ const RETRY_POLICY_TABLE: Record<TransportMessageType, TransportRetryPolicy> = {
   // Handler-backed but not routed through any wire table (no gateway
   // sender); an explicit decision keeps the table exhaustive.
   SQLITE_SEARCH: RETRY_UNCONFIGURED,
-  SQLITE_EXPORT: RETRY_UNCONFIGURED,
 };
 
 export const TRANSPORT_RETRY_POLICIES: ReadonlyMap<string, TransportRetryPolicy> = new Map(

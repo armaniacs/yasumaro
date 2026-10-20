@@ -202,51 +202,6 @@ export function renderFunnelChart(canvas: HTMLCanvasElement, stats: CleansingSta
   ctx.fillText(`${t('cleansingFunnelFooter')} ${stats.avgReductionRate.toFixed(1)}%`, W / 2, H - 4);
 }
 
-/**
- * 案C: 1エントリ分のクレンジングプログレスバー要素を生成する。
- * pageBytes がない、または最終バイトがない場合は null を返す。
- */
-export function makeCleansingProgressBar(entry: SavedUrlEntry): HTMLElement | null {
-  // base: ページの元のDOMサイズ（コンテンツ抽出開始点）
-  const base = entry.pageBytes;
-
-  // sentToAI: AIに実際に送られたバイト数
-  // フォールバック発動時は aiSummaryCleansedBytes は無効 → cleansedBytes / originalBytes を使う
-  // aiSummaryOriginalBytes がある場合は、AI要約クレンジング前のバイト数を最終バイト数として使用
-  const sentToAI = (entry.fallbackTriggered ?? false)
-    ? (entry.cleansedBytes ?? entry.originalBytes)
-    : (entry.aiSummaryCleansedBytes ?? entry.aiSummaryOriginalBytes ?? entry.cleansedBytes ?? entry.originalBytes);
-
-  if (base === undefined || sentToAI === undefined) return null;
-  if (base === 0) return null;
-
-  const sentRatio = Math.min(sentToAI / base, 1);
-  // 100.0%（完全削減に見える）は誤解を招くため99.9%でキャップ
-  const reductionRate = Math.min((1 - sentRatio) * 100, 99.9);
-
-  const wrapper = document.createElement('div');
-  wrapper.className = 'cleansing-progress-wrapper';
-
-  const track = document.createElement('div');
-  track.className = 'cleansing-progress';
-
-  const bar = document.createElement('div');
-  bar.className = 'cleansing-progress-bar';
-  bar.style.width = `${Math.max(sentRatio * 100, 0.2).toFixed(1)}%`; // 最小0.2%でバーを見えるように
-
-  track.appendChild(bar);
-
-  const label = document.createElement('span');
-  label.className = 'cleansing-progress-label';
-  // "1.76 MB → 16 KB (99.1% 削減)" のような表示
-  label.textContent = `${formatBytes(base)} → ${formatBytes(sentToAI)} (${reductionRate.toFixed(1)}% ${t('cleansingReduction')})`;
-
-  wrapper.appendChild(track);
-  wrapper.appendChild(label);
-
-  return wrapper;
-}
-
 // ---------------------------------------------------------------------------
 // 30-14: 観測性ファネル — ルール別削除件数のテーブル表示
 // 30-11: 二重ペイロード — originalContent 差分表示

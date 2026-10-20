@@ -137,9 +137,3 @@ export function computeUrlsHash(urls: Set<string>): string {
     const sortedUrls = Array.from(urls).sort();
     return sortedUrls.join('|');
 }
-
-export async function getAllowedUrls(): Promise<Set<string>> {
-    const result = await chrome.storage.local.get(StorageKeys.ALLOWED_URLS);
-    const urls = (result[StorageKeys.ALLOWED_URLS] as string[]) || [];
-    return new Set(urls);
-}

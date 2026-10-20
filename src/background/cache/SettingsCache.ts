@@ -19,24 +19,6 @@ export class SettingsCache {
 
   constructor(private readonly repo: SettingsReader = settingsRepository) {}
 
-  async get(): Promise<Settings> {
-    const now = Date.now();
-    if (this.cache && this.timestamp && now - this.timestamp < SETTINGS_CACHE_TTL) {
-      addLog(LogType.DEBUG, 'Settings cache hit', { age: `${now - this.timestamp}ms` });
-      return this.cache;
-    }
-    return this.fetchAndCache(now);
-  }
-
-  private async fetchAndCache(now: number): Promise<Settings> {
-    const settings = await this.repo.getAll();
-    this.cache = settings;
-    this.timestamp = now;
-    this.version++;
-    addLog(LogType.DEBUG, 'Settings cache updated', { cacheVersion: this.version });
-    return settings;
-  }
-
   invalidate(): void {
     addLog(LogType.DEBUG, 'Settings cache invalidated');
     this.cache = null;

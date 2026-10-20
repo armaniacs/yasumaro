@@ -168,10 +168,5 @@ export function createTagClusterPanel(): PanelLifecycle {
     destroy() {
       lifecycle.destroy();
     },
-    init(init?: Record<string, unknown>) {
-      if (init?.focusTag) {
-        // focus on a specific tag — data will be reloaded via load
-      }
-    },
   };
 }

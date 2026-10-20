@@ -10,33 +10,6 @@
  */
 
 /**
- * Markdownリンク形式をエスケープする
- * 
- * 【対象パターン】:
- * - [text](url) 形式のMarkdownリンク
- * - [text] 形式のリンクテキスト（URLの直後にあるもの）
- * 
- * 【処理内容】:
- * - [text](url) パターンを検出し、角括弧と丸括弧をエスケープ
- * - 例: [悪意あるリンク](https://malicious.com) → \[悪意あるリンク\]\(https://malicious.com\)
- * 
- * @param {string} text - サニタイズするテキスト
- * @returns {string} サニタイズされたテキスト
- */
-export function sanitizeMarkdownLinks(text: string): string {
-    if (!text || typeof text !== 'string') {
-        return text;
-    }
-
-    // Markdownリンクパターン: [text](url)
-    // URLとして妥当な形式（http:// または https:// で始まる）のみを対象
-    const markdownLinkPattern = /\[([^\]]*)\]\((https?:\/\/[^)]+)\)/gi;
-
-    // リンク形式をエスケープ: [text](url) → \[text\]\(url\)
-    return text.replace(markdownLinkPattern, '\\[$1\\]\\($2\\)');
-}
-
-/**
  * より包括的なMarkdown特殊文字のエスケープ
  * 
  * 【注意】:

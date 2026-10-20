@@ -15,7 +15,6 @@ import {
   toggleStar as sqliteToggleStar,
   getCount as sqliteGetCount,
   getStatus as sqliteGetStatus,
-  serialize as sqliteSerialize,
   clearAll as sqliteClearAll,
 } from './recordsRepo.js';
 import {
@@ -149,11 +148,6 @@ async function handleStatus(_msg: SqliteMessage, sendResponse: (r: unknown) => v
 
 async function handleClearAll(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const result = await sqliteClearAll();
-  sendResponse(result);
-}
-
-async function handleExport(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const result = await sqliteSerialize();
   sendResponse(result);
 }
 
@@ -354,7 +348,6 @@ const handlerRecord = {
   SQLITE_COUNT: (msg, sendResponse) => handleSqliteWire('count', msg, sendResponse),
   SQLITE_STATUS: handleStatus,
   SQLITE_CLEAR_ALL: handleClearAll,
-  SQLITE_EXPORT: handleExport,
   SQLITE_BACKUP: handleBackup,
   SQLITE_RESTORE: handleRestore,
   SQLITE_PURGE: handlePurge,

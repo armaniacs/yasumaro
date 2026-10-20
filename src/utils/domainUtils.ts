@@ -141,25 +141,3 @@ export function parseDomainList(text: string): string[] {
         .map(line => line.trim())
         .filter(line => line.length > 0);
 }
-
-/**
- * Validate domain list and return errors
- * @param {string[]} domainList - The domain list to validate
- * @returns {string[]} - Array of error messages
- */
-export function validateDomainList(domainList: string[]): string[] {
-    const errors: string[] = [];
-
-    if (!Array.isArray(domainList)) {
-        errors.push('ドメインリストが不正な形式です');
-        return errors;
-    }
-
-    domainList.forEach((domain, index) => {
-        if (!isValidDomain(domain)) {
-            errors.push(`${index + 1}行目: "${domain}" は無効なドメイン形式です`);
-        }
-    });
-
-    return errors;
-}

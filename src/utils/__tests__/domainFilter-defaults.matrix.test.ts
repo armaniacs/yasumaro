@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
-import { getDomainFilterCacheSync } from '../storage/domainFilterCache.js';
 import { DomainFilter } from '../domainFilter/DomainFilter.js';
 
 // PBI 2026-10-02-08: the domain filter default lived in three places with
@@ -11,24 +10,10 @@ import { DomainFilter } from '../domainFilter/DomainFilter.js';
 // 'blacklist': it is the only default paired with data (DEFAULT_SETTINGS
 // ships a non-empty DOMAIN_BLACKLIST while DOMAIN_WHITELIST is empty, so
 // 'whitelist' would deny everything on a fresh install and 'disabled' would
-// ignore the curated blacklist).
+// ignore the curated blacklist). The callback-based sync read
+// (getDomainFilterCacheSync) was removed as a production-dead contract
+// (PBI 2026-10-20-07), so the matrix now covers the two live legs.
 const ADJUDICATED_DEFAULT = 'blacklist';
-
-function readSyncMode(stored: Record<string, unknown>): Promise<string> {
-  const mockStorage = {
-    local: {
-      get: vi.fn((_keys: unknown, callback: (r: Record<string, unknown>) => void) => {
-        callback(stored);
-        return Promise.resolve(stored);
-      }),
-    },
-  };
-  // @ts-ignore chrome global in node env
-  global.chrome = { storage: mockStorage } as any;
-  return new Promise<string>((resolve) => {
-    getDomainFilterCacheSync((data) => resolve(data.mode));
-  });
-}
 
 describe('domainFilter defaults matrix (PBI 2026-10-02-08)', () => {
   afterEach(() => {
@@ -42,10 +27,6 @@ describe('domainFilter defaults matrix (PBI 2026-10-02-08)', () => {
       expect(DEFAULT_SETTINGS[StorageKeys.DOMAIN_FILTER_MODE]).toBe(ADJUDICATED_DEFAULT);
     });
 
-    it('getDomainFilterCacheSync falls back to blacklist when nothing is stored', async () => {
-      await expect(readSyncMode({})).resolves.toBe(ADJUDICATED_DEFAULT);
-    });
-
     it('DomainFilter.cache falls back to blacklist when mode is missing', () => {
       const filter = new DomainFilter();
       const record = filter.cache({} as Settings);
@@ -53,12 +34,11 @@ describe('domainFilter defaults matrix (PBI 2026-10-02-08)', () => {
     });
   });
 
-  describe('matrix: all three legs agree', () => {
-    it('defaults, sync-read fallback, and cache fallback are a single value', async () => {
+  describe('matrix: all legs agree', () => {
+    it('defaults and cache fallback are a single value', () => {
       const fromDefaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_FILTER_MODE] as string;
-      const fromSyncRead = await readSyncMode({});
       const fromCache = new DomainFilter().cache({} as Settings).mode;
-      expect(new Set([fromDefaults, fromSyncRead, fromCache])).toEqual(new Set([ADJUDICATED_DEFAULT]));
+      expect(new Set([fromDefaults, fromCache])).toEqual(new Set([ADJUDICATED_DEFAULT]));
     });
 
     it('the adjudicated default is operative: fresh-install shape caches the default blacklist', () => {

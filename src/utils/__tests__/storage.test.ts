@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
-  getDomainFilterCacheSync,
   isDomainFilterCacheValid,
   normalizeDomainUrl,
   matchesWildcardPattern,
   updateDomainFilterCache
 } from '../storage/domainFilterCache.js';
-import { buildAllowedUrls, getAllowedUrls, computeUrlsHash } from '../storage/urlWhitelist.js';
+import { buildAllowedUrls, computeUrlsHash } from '../storage/urlWhitelist.js';
 import { deriveRequiredDomains } from '../storage/providerAllowlist.js';
 import { StorageKeys } from '../storage/types.js';
 import type { Settings } from '../storage/types.js';
@@ -32,69 +31,6 @@ describe('storage', () => {
     };
     // @ts-ignore
     global.chrome = { storage: mockStorage } as any;
-  });
-
-  describe('getDomainFilterCacheSync', () => {
-    it('calls callback with cache data from storage', async () => {
-      const mockAllowedDomains = ['example.com'];
-      const mockTimestamp = Date.now();
-      const mockMode = 'blacklist';
-      const mockStorage = {
-        local: {
-          get: vi.fn((keys, callback) => {
-            if (callback) {
-              callback({
-                domain_filter_cache: mockAllowedDomains,
-                domain_filter_cache_timestamp: mockTimestamp,
-                domain_filter_mode: mockMode
-              });
-            }
-            return Promise.resolve({
-              domain_filter_cache: mockAllowedDomains,
-              domain_filter_cache_timestamp: mockTimestamp,
-              domain_filter_mode: mockMode
-            });
-          }),
-        },
-      };
-      // @ts-ignore
-      global.chrome = { storage: mockStorage } as any;
-
-      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string; matchSubdomains: boolean }>((resolve) => {
-        getDomainFilterCacheSync(resolve);
-      });
-
-      expect(result).toEqual({
-        allowedDomains: mockAllowedDomains,
-        blockedDomains: [],
-        cachedAt: mockTimestamp,
-        mode: mockMode,
-        matchSubdomains: false
-      });
-    });
-
-    it('calls callback with empty data when cache not found', async () => {
-      const mockStorage = {
-        local: {
-          get: vi.fn((keys, callback) => {
-            if (callback) {
-              callback({});
-            }
-            return Promise.resolve({});
-          }),
-        },
-      };
-      // @ts-ignore
-      global.chrome = { storage: mockStorage } as any;
-
-      const result = await new Promise<{ allowedDomains: string[]; blockedDomains: string[]; cachedAt: number; mode: string; matchSubdomains: boolean }>((resolve) => {
-        getDomainFilterCacheSync(resolve);
-      });
-
-      // PBI 2026-10-02-08: read-path fallback adjudicated to 'blacklist'
-      // (was 'disabled', which ignored the curated default blacklist).
-      expect(result).toEqual({ allowedDomains: [], blockedDomains: [], cachedAt: 0, mode: 'blacklist', matchSubdomains: false });
-    });
   });
 
   describe('isDomainFilterCacheValid', () => {
@@ -300,27 +236,6 @@ describe('storage', () => {
         expect.objectContaining({ [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist' })
       );
     });
-
-    it('keeps "blacklist" as the read-path fallback', async () => {
-      // PBI 2026-10-02-08: adjudicated default is 'blacklist' (was 'disabled').
-      // @ts-ignore
-      global.chrome = {
-        storage: {
-          local: {
-            get: vi.fn((_keys, callback) => {
-              callback({});
-              return Promise.resolve({});
-            }),
-          },
-        },
-      } as any;
-
-      const mode = await new Promise<string>((resolve) => {
-        getDomainFilterCacheSync((data) => resolve(data.mode));
-      });
-
-      expect(mode).toBe('blacklist');
-    });
   });
 });
 
@@ -433,47 +348,6 @@ describe('buildAllowedUrls - edge cases', () => {
     const allowedUrls = await buildAllowedUrls(settings);
 
     expect(allowedUrls.has('https://example.com')).toBe(false);
-  });
-});
-
-describe('getAllowedUrls', () => {
-  it('returns empty Set when storage has no URLs', async () => {
-    const mockStorage = {
-      local: {
-        get: vi.fn((keys, callback) => {
-          if (callback) {
-            callback({});
-          }
-          return Promise.resolve({});
-        }),
-      },
-    };
-    // @ts-ignore
-    global.chrome = { storage: mockStorage } as any;
-
-    const urls = await getAllowedUrls();
-    expect(urls).toBeInstanceOf(Set);
-    expect(urls.size).toBe(0);
-  });
-
-  it('returns Set from storage', async () => {
-    const mockStorage = {
-      local: {
-        get: vi.fn((keys, callback) => {
-          if (callback) {
-            callback({ allowed_urls: ['https://example.com', 'https://test.com'] });
-          }
-          return Promise.resolve({ allowed_urls: ['https://example.com', 'https://test.com'] });
-        }),
-      },
-    };
-    // @ts-ignore
-    global.chrome = { storage: mockStorage } as any;
-
-    const urls = await getAllowedUrls();
-    expect(urls.size).toBe(2);
-    expect(urls.has('https://example.com')).toBe(true);
-    expect(urls.has('https://test.com')).toBe(true);
   });
 });
 
