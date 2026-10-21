@@ -78,7 +78,13 @@ describe('Trust Database - Domain/TLD Validation', () => {
     await trustDb.initialize?.();
   });
 
-  describe('addUserTld - Current Validation (INCOMPLETE)', () => {
+  /**
+   * PBI 2026-10-21-07: add-time TLD validation is unified with the JP-Anchor
+   * preset format (multi-label). The former "Current Validation (INCOMPLETE)"
+   * self-acknowledgment is completed: '.go.jp'-format values are accepted and
+   * '..go.jp' / '*.jp' style inputs are rejected.
+   */
+  describe('addUserTld - Add-Time Validation (multi-label unified)', () => {
     test('should add valid TLD with dot prefix', async () => {
       const result = await trustDb.addUserTld('.com');
       expect(result.success).toBe(true);
@@ -87,6 +93,22 @@ describe('Trust Database - Domain/TLD Validation', () => {
     test('should add valid TLD without dot prefix (auto-adds dot)', async () => {
       const result = await trustDb.addUserTld('com');
       expect(result.success).toBe(true);
+    });
+
+    test('should add multi-label TLD in the preset format', async () => {
+      const result = await trustDb.addUserTld('.ed.jp');
+      expect(result.success).toBe(true);
+    });
+
+    test('should add multi-label TLD without dot prefix (auto-adds dot)', async () => {
+      const result = await trustDb.addUserTld('ne.jp');
+      expect(result.success).toBe(true);
+    });
+
+    test('should reject an exact preset TLD as duplicate', async () => {
+      const result = await trustDb.addUserTld('.go.jp');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('already exists');
     });
 
     test('should reject TLD that is too short (less than 3 chars total)', async () => {
@@ -110,6 +132,24 @@ describe('Trust Database - Domain/TLD Validation', () => {
     test('should reject TLD with spaces', async () => {
       const result = await trustDb.addUserTld('.com test');
       expect(result.success).toBe(false);
+    });
+
+    test('should reject TLD with double dots', async () => {
+      const result = await trustDb.addUserTld('..go.jp');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid TLD format');
+    });
+
+    test('should reject TLD with a trailing dot', async () => {
+      const result = await trustDb.addUserTld('.go.jp.');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid TLD format');
+    });
+
+    test('should reject wildcard TLD', async () => {
+      const result = await trustDb.addUserTld('*.jp');
+      expect(result.success).toBe(false);
+      expect(result.error).toContain('Invalid TLD format');
     });
 
     test('should reject overly long TLD (>63 chars after dot)', async () => {

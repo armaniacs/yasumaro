@@ -3198,7 +3198,7 @@
     "message": "先頭のドット（.）を含めて入力してください"
   },
   "jpAnchorInvalidFormat": {
-    "message": "無効なTLD形式です。ドット（.）で始まる必要があります"
+    "message": "無効なTLD形式です。英数字・ハイフン・ドットのみを使用してください（例: .com、.go.jp）"
   },
   "jpAnchorDuplicate": {
     "message": "このTLDはすでに存在します"

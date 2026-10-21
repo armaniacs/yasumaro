@@ -31,24 +31,41 @@ export function isValidDomain(domain: string): boolean {
 }
 
 /**
- * TLD バリデーション
- * @param tld バリデーション対象のTLD（.を含むか含まない）
- * @returns 有効なTLDの場合 true、それ以外の場合 false
+ * TLD validation (add-time contract, unified with the JP-Anchor presets).
+ *
+ * PBI 2026-10-21-07: accepts multi-label TLDs so the UI can add values in the
+ * same '.go.jp' format as the JP-Anchor presets. The verification-time
+ * validator (DomainVerifier's private isValidTld) keeps its own multi-label
+ * rules and is intentionally not shared with this add-time path.
+ *
+ * Contract:
+ * - Empty / "*" / wildcard-containing input is rejected
+ * - A leading dot is allowed and stripped before validation (".go.jp" -> "go.jp")
+ * - RFC label rules: 1-63 characters per label, letters/digits/hyphens,
+ *   no leading/trailing hyphen
+ * - Multi-label TLDs (e.g. "go.jp") are accepted; total length is 2-253
  */
 export function isValidTld(tld: string): boolean {
-  const normalized = tld.trim();
+  const trimmed = tld.trim();
 
-  if (!normalized.startsWith('.')) {
-    return isValidTld('.' + normalized);
-  }
+  if (!trimmed) return false;
+  if (trimmed.includes('*')) return false;
 
-  const tldWithoutDot = normalized.slice(1);
+  const normalized = trimmed.startsWith('.') ? trimmed.slice(1) : trimmed;
 
-  if (tldWithoutDot.length < 2) return false;
-  if (tldWithoutDot.length > 63) return false;
+  if (!normalized) return false;
+  if (normalized.length < 2) return false;
+  if (normalized.length > 253) return false;
+  if (normalized.startsWith('.') || normalized.endsWith('.')) return false;
+  if (normalized.includes('..')) return false;
 
   const labelRegex = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/i;
-  return labelRegex.test(tldWithoutDot);
+  for (const label of normalized.split('.')) {
+    if (!label || label.length > 63) return false;
+    if (!labelRegex.test(label)) return false;
+  }
+
+  return true;
 }
 
 /**

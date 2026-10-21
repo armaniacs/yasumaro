@@ -43,7 +43,7 @@ export class ManagedCollections {
           return {
             valid: false,
             error:
-              'Invalid TLD format. TLD must contain only letters, numbers, and hyphens, must start/end with a letter or number, and be 2-63 characters long (e.g., .com, .jp, .ai)',
+              'Invalid TLD format. TLD must be one or more dot-separated labels containing only letters, numbers, and hyphens, must start/end with a letter or number (e.g., .com, .jp, .go.jp)',
           };
         }
         if (db.jpAnchor.tlds.includes(tld)) {

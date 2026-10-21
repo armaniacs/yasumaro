@@ -3283,7 +3283,7 @@
     "message": "Include the leading dot (.)"
   },
   "jpAnchorInvalidFormat": {
-    "message": "Invalid TLD format. Must start with dot (.)"
+    "message": "Invalid TLD format. Must contain only letters, numbers, hyphens, and dots (e.g., .com, .go.jp)"
   },
   "jpAnchorDuplicate": {
     "message": "TLD already exists"
