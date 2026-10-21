@@ -61,6 +61,24 @@ describe('ContentFetchGateway null contract', () => {
     );
   });
 
+  // PBI 2026-10-21-01: the legacy 'allowAllUrlsOptIn' raw-literal fallback was
+  // removed — StorageKeys.ALLOW_ALL_URLS_OPT_IN is the single name this reader
+  // accepts. A profile that only carries the legacy spelling (a name nothing
+  // has written since the gateway collapsed) must not unlock Level 2.
+  it('reads the SSOT key alone: a legacy allowAllUrlsOptIn copy does not unlock Level 2', async () => {
+    chrome.permissions.contains = vi.fn().mockResolvedValue(false);
+    chrome.permissions.request = vi.fn().mockResolvedValue(false);
+    // Only the legacy raw key is set — the SSOT key is absent.
+    chrome.storage.local.get = vi.fn().mockResolvedValue({ allowAllUrlsOptIn: true });
+    chrome.scripting.executeScript = vi.fn().mockResolvedValue([{ result: 'should not reach' }]);
+
+    await expect(new ContentFetchGateway().fetch(tab, false)).rejects.toThrow(
+      'errorContentScriptNotAvailable',
+    );
+    expect(chrome.permissions.request).not.toHaveBeenCalledWith({ origins: ['<all_urls>'] });
+    expect(chrome.scripting.executeScript).not.toHaveBeenCalled();
+  });
+
   it('fetch with force degrades to empty content when the tab answers null and extraction fails', async () => {
     chrome.permissions.contains = vi.fn().mockImplementation((req: { origins: string[] }) => {
       if (req.origins[0] === '*://example.com/*') return Promise.resolve(true);

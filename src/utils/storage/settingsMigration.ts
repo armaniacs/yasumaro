@@ -179,6 +179,41 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // Device-local trust database owned by TrustDbKernel, which persists it
     // with its own withOptimisticLock on the raw key and has no blob-side reader.
     StorageKeys.TRUST_DB,
+    // AI usage counters (aiUsageTracker.ts): checkRateLimit and recordUsage
+    // read/write these six keys straight from top-level storage with no
+    // blob-side tier. Migrating them into the settings blob would make the
+    // reader see undefined, which it cannot distinguish from "the month
+    // changed", so the counters would silently reset on every migration re-run.
+    // (AI_RATE_LIMIT_MAX / MAX_MONTHLY_TOKENS stay migratable: readNumberSetting
+    // keeps a blob tier, so a migrated copy is still read.)
+    StorageKeys.AI_USAGE_MONTH,
+    StorageKeys.AI_USAGE_TOKENS_SENT,
+    StorageKeys.AI_USAGE_TOKENS_RECEIVED,
+    StorageKeys.AI_USAGE_REQUEST_COUNT,
+    StorageKeys.AI_RATE_LIMIT_WINDOW_START,
+    StorageKeys.AI_RATE_LIMIT_COUNT,
+    // SQLite engine migration state (sqliteEngineHost.ts, opfsWorker/
+    // migrationV2.ts, migrationBackup.ts, fallbackMigration.ts,
+    // migrationState.ts, sqliteStatus.ts): every one is read, written or
+    // removed directly through chrome.storage.local by its owning module and
+    // has no blob-side reader. Migrating them would hide the record of the
+    // engine migration (status/progress/retry/backup/done) from its owner, so
+    // the engine would re-run the migration or skip recovery on the next start.
+    StorageKeys.YASUMARO_MIGRATION_STATUS,
+    StorageKeys.YASUMARO_MIGRATION_PROGRESS,
+    StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT,
+    StorageKeys.OPFS_FALLBACK_MODE,
+    StorageKeys.OPFS_MIGRATION_V2_DONE,
+    StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
+    StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
+    StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
+    StorageKeys.IDB_MIGRATION_V2_DONE,
+    StorageKeys.IDB_MIGRATION_BACKUP,
+    // Permission-ladder opt-in (contentFetchGateway.ts): the reader reads this
+    // key straight from top-level storage and has no blob-side tier, so a
+    // migrated copy would make the <all_urls> level of the record-flow ladder
+    // permanently deny even for a profile that opted in.
+    StorageKeys.ALLOW_ALL_URLS_OPT_IN,
 ]);
 
 /**

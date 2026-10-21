@@ -251,6 +251,42 @@ describe('settings migration — key classification is by stored value, not by n
         expect(isMigratableStorageKey(StorageKeys.RECORDING_TRIGGERS)).toBe(false);
         expect(isMigratableStorageKey(StorageKeys.SNAPSHOT_INTERVAL_MINUTES)).toBe(false);
     });
+
+    // PBI 2026-10-21-01: the AI usage counters, the SQLite engine migration
+    // flags and the <all_urls> opt-in are read, written or removed straight
+    // from top-level storage by their owning modules (aiUsageTracker.ts,
+    // migrationState.ts, sqliteEngineHost.ts, opfsWorker/migrationV2.ts,
+    // migrationBackup.ts, fallbackMigration.ts, sqliteStatus.ts,
+    // contentFetchGateway.ts) and have no blob-side reader, so they belong to
+    // the same "do not migrate" class as RECORDING_TRIGGERS above.
+    it('keeps the AI usage counters, engine migration flags and the <all_urls> opt-in at the top level', () => {
+        for (const key of [
+            StorageKeys.AI_USAGE_MONTH,
+            StorageKeys.AI_USAGE_TOKENS_SENT,
+            StorageKeys.AI_USAGE_TOKENS_RECEIVED,
+            StorageKeys.AI_USAGE_REQUEST_COUNT,
+            StorageKeys.AI_RATE_LIMIT_WINDOW_START,
+            StorageKeys.AI_RATE_LIMIT_COUNT,
+            StorageKeys.YASUMARO_MIGRATION_STATUS,
+            StorageKeys.YASUMARO_MIGRATION_PROGRESS,
+            StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT,
+            StorageKeys.OPFS_FALLBACK_MODE,
+            StorageKeys.OPFS_MIGRATION_V2_DONE,
+            StorageKeys.OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT,
+            StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT,
+            StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT,
+            StorageKeys.IDB_MIGRATION_V2_DONE,
+            StorageKeys.IDB_MIGRATION_BACKUP,
+            StorageKeys.ALLOW_ALL_URLS_OPT_IN,
+        ]) {
+            expect(isMigratableStorageKey(key)).toBe(false);
+        }
+        // The two caps are deliberately not on the allowlist: readNumberSetting
+        // keeps a blob tier, so a migrated copy is still read (the aiUsageTracker
+        // ladder pins that three-tier read).
+        expect(isMigratableStorageKey(StorageKeys.AI_RATE_LIMIT_MAX)).toBe(true);
+        expect(isMigratableStorageKey(StorageKeys.MAX_MONTHLY_TOKENS)).toBe(true);
+    });
 });
 
 describe('settings migration — happy path', () => {
@@ -277,6 +313,54 @@ describe('settings migration — happy path', () => {
         expect(blob()[StorageKeys.PRIVACY_CONSENT]).toBeUndefined();
         await expect(getConsentWithdrawalHistory()).resolves.not.toBeNull();
         expect(await getConsentDeniedCount()).toBe(2);
+    });
+
+    // PBI 2026-10-21-01: the unit staying top-level is only worth anything if
+    // the real readers (which read top-level storage, not the port) still see
+    // it after the migration ran through the default ChromeStoragePort. Same
+    // pin as the consent unit above, for the AI usage counters, the engine
+    // migration flags and the <all_urls> opt-in.
+    it('leaves the AI usage counters and engine migration flags readable through their top-level readers after migrating', async () => {
+        harness.data = {
+            ...legacyStorage(),
+            [StorageKeys.AI_USAGE_MONTH]: '2026-10',
+            [StorageKeys.AI_USAGE_TOKENS_SENT]: 1234,
+            [StorageKeys.AI_USAGE_REQUEST_COUNT]: 7,
+            [StorageKeys.AI_RATE_LIMIT_WINDOW_START]: 1000,
+            [StorageKeys.AI_RATE_LIMIT_COUNT]: 3,
+            [StorageKeys.YASUMARO_MIGRATION_STATUS]: 'completed',
+            [StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT]: 1,
+            [StorageKeys.OPFS_FALLBACK_MODE]: true,
+            [StorageKeys.OPFS_MIGRATION_V2_DONE]: true,
+            [StorageKeys.IDB_MIGRATION_V2_DONE]: false,
+            [StorageKeys.IDB_MIGRATION_BACKUP]: '{"records":[]}',
+            [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: true,
+        };
+
+        // The migration still completes: the surviving top-level keys are not
+        // migratable, so they never block the completion check.
+        await expect(migrateToSingleSettingsObject()).resolves.toBe(true);
+
+        // Unrelated keys moved into the blob...
+        expect(blob()[StorageKeys.OBSIDIAN_PORT]).toBe(RAW_PORT);
+        expect(harness.data[StorageKeys.OBSIDIAN_PORT]).toBeUndefined();
+        // ...the counters and flags did not: their top-level readers would read
+        // undefined as "the month changed" / "migration never ran" / "opt-out".
+        expect(harness.data[StorageKeys.AI_USAGE_MONTH]).toBe('2026-10');
+        expect(harness.data[StorageKeys.AI_USAGE_TOKENS_SENT]).toBe(1234);
+        expect(harness.data[StorageKeys.AI_USAGE_REQUEST_COUNT]).toBe(7);
+        expect(harness.data[StorageKeys.AI_RATE_LIMIT_WINDOW_START]).toBe(1000);
+        expect(harness.data[StorageKeys.AI_RATE_LIMIT_COUNT]).toBe(3);
+        expect(harness.data[StorageKeys.YASUMARO_MIGRATION_STATUS]).toBe('completed');
+        expect(harness.data[StorageKeys.YASUMARO_MIGRATION_RETRY_COUNT]).toBe(1);
+        expect(harness.data[StorageKeys.OPFS_FALLBACK_MODE]).toBe(true);
+        expect(harness.data[StorageKeys.OPFS_MIGRATION_V2_DONE]).toBe(true);
+        expect(harness.data[StorageKeys.IDB_MIGRATION_V2_DONE]).toBe(false);
+        expect(harness.data[StorageKeys.IDB_MIGRATION_BACKUP]).toBe('{"records":[]}');
+        expect(harness.data[StorageKeys.ALLOW_ALL_URLS_OPT_IN]).toBe(true);
+        // None of them leaked into the blob either.
+        expect(blob()[StorageKeys.AI_USAGE_MONTH]).toBeUndefined();
+        expect(blob()[StorageKeys.ALLOW_ALL_URLS_OPT_IN]).toBeUndefined();
     });
 
     it('moves raw settings into the blob, backs them up, removes them, then records completion', async () => {

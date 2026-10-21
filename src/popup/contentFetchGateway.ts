@@ -105,16 +105,23 @@ export class ContentFetchGateway {
         }
       }
 
-      // Level 2: <all_urls> only when explicitly opted-in via settings
+      // Level 2: <all_urls> only when explicitly opted-in via settings.
+      // Reader-only by design: nothing writes ALLOW_ALL_URLS_OPT_IN at runtime
+      // (DEFAULT_SETTINGS is the only source), so this flag stays false unless
+      // the profile explicitly carries it. The banner path (trustPanel) does
+      // not consult this flag either — it calls requestAllUrls directly — so
+      // the record flow (gated) and the banner flow (ungated) are intentionally
+      // asymmetric, and adding a writer here was rejected: it would gate a flow
+      // that is meant to stay one-click. The legacy 'allowAllUrlsOptIn'
+      // raw-literal fallback was removed: the StorageKeys constant is the only
+      // name this reader accepts, and a second spelling is exactly the drift
+      // the gateway collapsed. The key is on the migration allowlist
+      // (TOP_LEVEL_ONLY_KEYS), so a settings migration re-run no longer deletes
+      // it and the reader no longer degrades to permanently false.
       let allowAllUrlsOptIn = false;
       try {
         const stored = await chrome.storage.local.get(StorageKeys.ALLOW_ALL_URLS_OPT_IN) as Record<string, boolean | undefined>;
         allowAllUrlsOptIn = !!stored[StorageKeys.ALLOW_ALL_URLS_OPT_IN];
-        if (!allowAllUrlsOptIn) {
-          // fallback to legacy raw key used by older code/tests
-          const legacy = await chrome.storage.local.get('allowAllUrlsOptIn') as Record<string, boolean | undefined>;
-          allowAllUrlsOptIn = !!legacy['allowAllUrlsOptIn'];
-        }
       } catch { /* storage unavailable */ }
 
       if (allowAllUrlsOptIn) {
