@@ -180,3 +180,12 @@ Scenario: 4. 新規インストール（初回 ever）では KEK チェーン終
 - consent lifecycle 領域の PBI 05（migration 再付与阻止。2026-10-19 完了・アーカイブ済み: `dev-docs/archived/pbi/2026-10-18-05-fix-privacy-consent-withdrawal-regrant.md` ― `needsReconsent` 判定が交差する）
 - 監査成果物: /Users/yaar/security-audit-skill/obsidian-smart-history/run-2/（`findings.json` / `NEEDS-VALIDATION.md:156`〜）
 - PBI 2026-09-14-09（durableKeyStore 導入の元 PBI。ヘッダコメントが本件の前提を記述している）
+
+## 実装記録（2026-10-21・owner 判断込みで完了）
+
+- 選択肢 2（HMAC_SECRET の隔離）: **実装済み**（先行 PR）commit `ef36ce32`。encryptionSession の getOrCreateHmacSecret に `${storageKey}-quarantine` 退避経路が入り、退避→上書きの順序を pin（専用テスト 4 件）
+- 選択肢 3（durableKeyStore の判別 union 化）: **実装済み** PBI 2026-10-21-10（commit `bfdfec18`）。loadDurableWrappingKey の戻り値を DurableWrappingKeyOutcome（absent / failure + error / loaded）に変更、catch での丸めを排除、唯一の production 呼び出し点（hmacKeyStore KEK 候補チェーン終端）で failure 理由を safeLog → logError（CRYPTO_HMAC_FAILURE）で観測可能に。挙動不変・観測性のみ
+- 選択肢 1（HEK 回復 UX）: owner 判断（2026-10-21）で **consent 再同意流用のみ** と裁定。既存の signatureInvalid → needsReconsent → shouldPromptForConsent → モーダル経路（privacyConsent.ts:522-546 → privacyConsentController.ts:53-63）で説明と再同意が完結し、追加 UI は不要。master password による KEK 再導出（deriveHmacWrappingKey）は production 呼び出し元 0 件で未配線のため、実装不採用
+- 受け入れ基準の対応: シナリオ 1（consent 暗黙リセット保護）は既存の再同意経路で到達、シナリオ 2（エクスポート拒否の理由提示）は VULN-009 の無条件拒否を維持するため変更なし、シナリオ 3（HMAC_SECRET 隔離）は選択肢 2 で実装済み、シナリオ 4（fresh install 回帰）は hmacKeyStoreChain / Regeneration / Restart / Concurrency の既存 pin が PBI 10 で無改変のまま全 green を実証
+- 検証: PBI 10 の 267 テスト全 green、validate:fast green、type-check 通過。PRIVACY.md は挙動不変・観測性のみの変更のため更新なし
+- 残置（owner 手動確認）: 監査 blocker の IDB eviction 実機観測（unlimitedStorage 付与済みのため eviction 免除。失われる経路はプライベートモード・拡張削除・プロファイル削除に限られる）

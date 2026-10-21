@@ -66,3 +66,11 @@ Scenario: ロック通知の再試行は親 PBI の契約を維持する
 - `src/utils/messaging/types.ts`（`SESSION_LOCK_REQUEST` の応答契約 `{ success: true }`）
 - `src/utils/storage/authGuard.ts`（拡張ページ側のロック状態の参照先）
 - `dev-docs/ARCHITECTURE_MAP.md`（popup / dashboard のエントリ位置）
+
+## 実装記録（2026-10-21・owner 判断込みで完了）
+
+- 製品判断（ブロッカー）: owner 判断（2026-10-21）で **選択肢 1（拡張ページへのリスナ追加）を採用**（選択肢 2 は IS_LOCKED オブザーバが存在せず既存 pin の書き換えが不可避なため不採用）
+- **実装済み** PBI 2026-10-21-12（commit `edc187bc`）。受け手モジュール `src/utils/storage/sessionLockReceiver.ts` を新設: isSessionLockRequestMessage（純粋形状ガード）・handleSessionLockRequest（seam 経由ハンドラ・注入した authGuard 再読み込みでロック判定・locked → clearKeyCache + onLocked）、subscribeSessionLockRequest（実配線・chrome.runtime.id ガード・return true でポート保持 → 再読み込み確定後に sendResponse。失敗時は { success: false } で親 PBI の再試行契約（3 試行/2 待機/never confirmed ログ）を維持。disposer で removeListener 解放）
+- エントリ配線: popup（initPopup 内・鍵キャッシュ破棄が効果・pagehide で解放）、dashboard（main.ts・onLocked でマスターパスワードパネル再読み込みし UI をストレージ状態へ反映・pagehide disposer を registry.destroyAll に統合）
+- テスト: 新規 15 件（形状ガード・seam ハンドラ・配線・応答本文契約）+ popup 1 件。統合テストは SessionAlarmService.test.ts を触らない制約のため同 fixture を再現し SW 送信側 × ページ受け手を in-memory ワイヤで接続（初回確認・3 試行/2 待機/never confirmed の両方向を観測）。--repeats=10 でも全 green。関連スイート 253 ファイル 3269 テスト全 green
+- 残置（owner 手動確認）: 実機観測（開いている拡張ページでのロック反映）。dashboard の onLocked は loadMasterPasswordSettings()（パネルの refresh と同一関数）で実装 ― 実機観測で不足があれば onLocked の中身だけ差し替え可能。popup が encryptionSession.js を静的 import（clearEncryptionKeyCache 用・popup は鍵の消費者）

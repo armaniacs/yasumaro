@@ -195,3 +195,15 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 - `src/utils/cspValidator.ts` ― runtime gate 側の別系統 derivation（選択肢3 参照）
 - `dev-docs/SECURITY_REVIEW_GUIDE.md` ― CSP と egress の脅威モデル
 - `/Users/yaar/security-audit-skill/obsidian-smart-history/run-2/`（findings.json と NEEDS-VALIDATION.md 11番）
+
+## 実装記録（2026-10-21・owner 判断込みで完了）
+
+- **実装済み** PBI 2026-10-21-11（commit `e179bc8a`）。宣言フェーズ → skip 削除フェーズの 2 系統同時修正制約（調査結果の記載どおり）を厳守して実装
+- 宣言先の置き場所（選択肢 2）: **egress 専用定数を新設**（GIST_EGRESS_HOSTS / GIST_EGRESS_HOST_PERMISSIONS。ALL_LIST_SOURCES にも PROVIDER_ALLOWLIST_ROWS にも置かない。「Gist は同期ターゲットが使う egress であり filter list でも AI provider でもない」を PBI 記載の判断材料として採用）
+- ブロッカー 4（host_permissions vs optional）: **host_permissions に常時宣言**（https://api.github.com/*。optional への逃がしは同意 UI 配線が新規に要るため不採用）
+- 選択肢 3（skipCspValidation）: **外す**。cspValidator に egress 用 static set + isUrlAllowed 1 チェック行を追加したうえで、gistSyncTarget の 3 箇所（testConnection / createGist / updateGist）の skipCspValidation を削除（fetchWithRedirectGuard は意図的 skip のためオプション自体は維持）
+- ブロッカー 3（meta CSP の tranco 固定）: **connect-src 指示子を削除し extension_pages CSP に一任**（tranco は SSOT 経由で connect-src に載るため二重管理を解消）
+- ブロッカー 2（sync / syncBatch の未配線）: **意図的未配線と裁定**（production 呼び出し元 0 件・testConnection のみ使用）。宣言追従に限定し、配線は別 PBI 候補として記録
+- テスト: cspDomains / cspValidator に宣言 pin・ゲート pin・派生整合 pin、manifest.test.ts に host_permissions SSOT 合成 pin（31/40）、gistSyncTarget に「skip が渡らない」BDD pin。csp/gistSyncTarget 系 12 ファイル 168 テスト green
+- ドキュメント更新（受け入れ基準の最終行）: PERMISSIONS.md に Gist egress の節（13. host_permissions）を新設し Reviewer Notes のデータ送信先を 3 種類に更新、SECURITY.md の Scope に egress destinations を追記（2026-10-21）
+- 残置（owner 手動確認）: ブロッカー 1 ― MV3 が extension_pages CSP と meta CSP を api.github.com に適用するかの実機確認（E2E 相当）

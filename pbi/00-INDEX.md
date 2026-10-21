@@ -512,6 +512,14 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 - **11-fix-gist-egress-declaration**（`e179bc8a`）: Gist egress を host_permissions（https://api.github.com/* 常時宣言）と CSP（GIST_EGRESS_HOSTS 定数 + cspValidator static set）に宣言、gistSyncTarget の skipCspValidation 3 箇所を削除、meta CSP から connect-src 指示子を削除（extension_pages CSP に一任）。
 - **12-feat-session-lock-fanout-destination**（`edc187bc`）: SESSION_LOCK_REQUEST の受け手モジュール sessionLockReceiver.ts を新設（seam 経由ハンドラ・chrome.runtime.id ガード・失敗時 { success: false } で再試行契約維持）、popup / dashboard エントリに配線（鍵キャッシュ破棄 + マスターパスワードパネル再読み込み）、統合テスト 15 件新規。
 
+### 2026-10-21 owner 判断 PBI 15・25・feat + 親 PBI 2026-10-18-20 アーカイブ ― owner 判断 PBI 4件すべて完了
+
+- **15-fix-hmac-kek-fail-open**（選択肢 2 実装済み `ef36ce32` + 選択肢 3 実装済み `bfdfec18`/PBI 2026-10-21-10、選択肢 1 は owner 判断で consent 再同意流用のみと裁定）: HMAC_SECRET 隔離 + durableKeyStore 判別 union（absent/failure/loaded）+ KEK チェーン終端の failure ログ。挙動不変・観測性のみ。PERMISSIONS.md / SECURITY.md 更新なし
+- **25-fix-gist-egress-csp-declare**（PBI 2026-10-21-11 で実装 `e179bc8a`）: 4 ブロッカーの裁定済み（host_permissions 常時宣言・meta CSP 指示子削除・sync 意図的未配線・実機確認残置）。PERMISSIONS.md に Gist egress 節新設 + データ送信先 3 種類へ更新、SECURITY.md に egress destinations 追記
+- **feat-session-lock-fanout-destination**（PBI 2026-10-21-12 で実装 `edc187bc`）: 選択肢 1 採用（owner 判断）。受け手モジュール + popup / dashboard 配線 + 統合テスト 15 件
+- **20-fix-session-lock-fanout**（親 PBI・選択肢 2+3 実装済み 2026-10-20）: 分岐先の選択肢 1 が PBI 2026-10-21-12 で完了したため委託項目すべて完了
+- 残置（owner 手動確認）: MV3 meta CSP 実機確認、ロック fan-out の拡張ページ実機観測、IDB eviction 実機観測（unlimitedStorage で eviction 免除済み）
+
 ### 2026-10-21 PBI 07・09・10 アーカイブ ― 対象外・owner 判断処理 12件のうち 10件完了
 
 - **07-fix-tld-validation-multilabel**（`ef262d30`）: TLD 追加時検証を multi-label に統一（プリセット '.go.jp' 形式を UI から受理・検証時経路は不変）、i18n エラー文言を en/ja 更新、INCOMPLETE 自認 describe を完成化。

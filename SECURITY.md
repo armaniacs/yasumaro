@@ -29,6 +29,7 @@ This security policy covers:
 - PII handling and sanitization
 - Diagnostic log PII handling (see `dev-docs/SECURITY_REVIEW_GUIDE.md`)
 - Content Security Policy
+- Egress destinations: user-selected AI providers, user-configured Obsidian Local REST API, and the opt-in Gist sync feature (`api.github.com`, PAT-based) ― declared in `wxt.config.ts` host_permissions and derived from `src/utils/cspDomains.ts`; undeclared origins are blocked by the runtime CSP validator and browser declarations
 - Third-party dependency vulnerabilities
 
 ## Supported Versions

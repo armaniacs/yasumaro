@@ -201,6 +201,11 @@ Scenario: 5. 受信者が存在する構成では 1 回目でハンドラが動�
 - テスト: Red 先行（残存状態で鍵が導出される現状を pin → 修正後 Green）。新規 4 テスト（残存状態のロック検出と `isEncryptionLocked()` の true / `undefined` 応答の未確認扱い / `{ success: false }` 応答の未確認扱い / 応答本文 `{ success: true }` で 1 回で終了）と、既存期待値のうち PBI が明示した分のみ更新（`storage-security.test.ts` のロックエラーメッセージを本修正の `Session is locked` へ、`SessionAlarmService.test.ts` の 3 回目成功を「応答本文で確認」へ、`sessionAlarmsManager.test.ts` の `stepDelay` 注入、`encryptionSession-branch.test.ts` の `authGuard` モック初期化）。
 - 未実施: 受入基準 5 の owner による UI・データ保護確認（隔離プロファイル + ダミーデータの E2E 相当）。選択肢 1 の宛先修正（別 PBI）。
 
+## 実装記録（追記・2026-10-21）
+
+- 分岐先の選択肢 1（宛先修正）は **PBI 2026-10-21-12 で完了**（commit `edc187bc`。sessionLockReceiver 新設・popup / dashboard 配線・統合テスト 15 件。実機観測のみ owner 残置）。本 PBI の委託項目はすべて完了
+- 未実施だった受入基準 5 の owner 確認は、PBI 2026-10-21-12 の実機観測残置分（開いている拡張ページでのロック反映）と併せて owner 手動確認として残置
+
 ## 関連
 
 - `pbi/00-INDEX.md`

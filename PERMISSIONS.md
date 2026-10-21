@@ -132,6 +132,32 @@
 
 ---
 
+## 13. `host_permissions`
+
+**Why we need it / なぜ必要か**
+
+- ユーザーが選択した AI プロバイダーへの要約生成リクエスト、ユーザーが設定した Obsidian Local REST API へのデイリーノート保存、および Gist 同期機能の `https://api.github.com/*`（接続テストの GET /user、Gist 作成の POST /gists、Gist 更新の PATCH /gists/{id}）のために宣言
+- Gist egress は閲覧リストの allowlist でも AI プロバイダでもない独立の同期ターゲット由来の egress であり、`cspDomains.ts` の `GIST_EGRESS_HOST_PERMISSIONS` から導出される（`ALL_LIST_SOURCES` / `PROVIDER_ALLOWLIST_ROWS` には置かない）
+
+**What it enables / 有効化される機能**
+
+- Gist 同期機能（オプトイン・PAT をユーザーが設定した場合のみ）による Gist の作成・更新と接続テスト
+- リクエスト先は `api.github.com` のみ。任意サイトへの読み書きは含まない
+
+**Privacy safeguards / プライバシー保護**
+
+- Gist 機能はオプトインで、PAT を設定したユーザーのみが対象
+- 送出するのは PAT・Gist本文（ユーザーが明示的に選択した同期対象）のみで、PAT がログやエラーメッセージへ漏れない（既存の describeHttpFailure と i18n 経路を維持）
+- 宣言されていない origin へのリクエストは引き続き CSPValidator とブラウザ宣言で遮断される（fail-closed 回帰ガード pin 済み）
+
+**Code references / コード参照**
+
+- `src/utils/cspDomains.ts`（`GIST_EGRESS_HOSTS` / `GIST_EGRESS_HOST_PERMISSIONS`）
+- `src/background/syncTargets/gistSyncTarget.ts`
+- `src/utils/cspValidator.ts`（runtime gate 側の egress static set）
+
+---
+
 ## Permissions We Do NOT Request / 要求しないパーミッション
 
 以下は明示的に要求**しない**パーミッションです。透明性のため記載します:
@@ -155,7 +181,7 @@
 ## Reviewer Notes / 審査担当者向け注記
 
 1. **本拡張機能は Manifest V3 のみを使用**しています。MV2 への後方互換は提供しません。
-2. **データ送信先は 2 種類のみ**: ユーザーが選択した AI プロバイダー（要約生成時）と、ユーザーが設定した Obsidian Local REST API（デイリーノート保存時）。開発者のサーバーには一切送信しません。
+2. **データ送信先は 3 種類のみ**: ユーザーが選択した AI プロバイダー（要約生成時）、ユーザーが設定した Obsidian Local REST API（デイリーノート保存時）、および Gist 同期機能の `api.github.com`（オプトイン・PAT を設定した場合のみ）。開発者のサーバーには一切送信しません。
 3. **すべての主要機能はローカル完結**で、AI 要約を無効化しても閲覧ログの SQLite 保存は可能です。
 4. **ソースコードは公開リポジトリ**で管理: <https://github.com/armaniacs/yasumaro>
 5. **プライバシーポリシー**: <https://armaniacs.github.io/yasumaro/PRIVACY.md>
@@ -165,6 +191,7 @@
 
 ## Update History / 更新履歴
 
+- **2026-10-21**: host_permissions に Gist 同期の `https://api.github.com/*` を追加（PBI 2026-10-21-11）。Gist egress の節を新設し、Reviewer Notes のデータ送信先を 3 種類に更新。
 - **2026-10-16**: 対象バージョンを v6.9.45（`package.json` / `manifest.json` と一致）に更新。冒頭文の重複語を修正。
 - **2026-10-14**: Chrome Web Store 配布を再開（6.9.42 でタグ push ごとの CRX3 署名付き自動アップロードを追加、6.9.43 で署名の不具合を修正）。本書の配布案内を Chrome Web Store / Edge Add-ons の両対応に更新。配布は 2026-09-08（v6.8.1）に終了していたため、終了→再開の経緯はこの追記行に記録する（過去エントリの遡及編集はしない）。
 - **2026-09-08**: 対象バージョンを v6.8.0 に更新。`declarativeNetRequest`（Ollama への `Origin` ヘッダー削除）を文書化。`downloads` に閲覧履歴アーカイブファイルの書き出し用途を追記。
