@@ -51,10 +51,10 @@ RICE = Reach（影響する呼び出し箇所・モジュール数）× Impact�
 3. **unhandled rejection・偽成功表示**（fix）: customPromptManager handleSavePrompt（361-418）/ markdownTemplateManager handleSaveClick（357-407）/ trustSettings saveTrustSettings（:411 + void ハンドラ :507-565）/ onboardingWizard（:111）/ service-worker.ts:278 の alarm リスナ guard 未適用 / flushScheduler の guard 未適用 + suspend タイムアウト 3000ms ハードコード / entrypoints/content/index.ts:9 の floating promise（catch も void もなし）
 4. **statusPanel outerHTML フォールバック**（fix）: src/popup/statusPanel.ts:370-372 が popup 自身の HTML を送る誤データ
 5. **checkPermissionStep の raw TypeError**（fix）: src/background/pipeline/steps/checkPermissionStep.ts:52、INVALID_URL 正規化
-6. **TRANCO_NOTIFICATION_SHOWN キー統一**: SSOT 宣言キー（'tranco_notification_shown'）と実装の生リテラル（'tranco_last_notification'）の二重管理。PBI 09 の削除で解消
+6. **TRANCO_NOTIFICATION_SHOWN キー統一**: SSOT 宣言キー（'tranco_notification_shown'）と実装の生リテラル（'tranco_last_notification'）の二重管理。PBI 09 の削除で解消。**検証済み（2026-10-21）**: PBI 09（`d253fcc2`）で trancoChangeDetector と StorageKeys.TRANCO_NOTIFICATION_SHOWN 3 箇所を削除済み、残留リテラル 0 件を Grep で確認（/tmp/whywhy/outofscope-B.md 分析 1-2）
 7. **settingsBackup 辞書順ソート問題**: src/utils/storage/settingsBackup.ts:24-27 が lexicographic で _9 > _10（kept-as-is コメント付き、owner 判断）
 8. **restorableSettings allowlist 行**: 'safety_mode' / 'tranco_tier'（src/utils/storage/restorableSettings.ts:114-115、owner 判断）
-9. **ALLOW_ALL_URLS_OPT_IN writer 不在**: src/utils/contentFetchGateway.ts:111-117 が唯一の reader で writer なし（import-only パス、製品判断。reader の blob 経由整合は PBI 04 で扱う）
+9. **ALLOW_ALL_URLS_OPT_IN writer 不在**: reader の実パスは **src/popup/contentFetchGateway.ts:108-118**（当初記載の src/utils/ は誤り）。writer なし（導入コミット `d898cd42` から存在せず）。さらに 'allow_all_urls_opt_in' は allowlist（対象外 1）未収載のため migration で top-level から削除され、reader が恒久的に false になる。**「PBI 04 で扱う」は不正確**（archived PBI 04 は 14 組の定数統合のみでこの整合を扱っていない）。banner 経路（trustPanel.ts）は opt-in フラグを参照せず requestAllUrls を直接呼ぶため 2 経路が非対称（/tmp/whywhy/outofscope-B.md 分析 6-7）
 10. **ublockParser 2 構文統合・transform ID 形式**: negatedDomains の 2 分枝文法（src/utils/ublockParser/options.ts:92-121）、ID 形式変更
 11. **trustDb isValidTld 挙動不一致の統一**: domainVerifier（multi-label true）vs domainValidation（single-label false）の判定差、統一は挙動変更。共通部分の抽出は PBI 21 で扱う
 12. **i18n 直書き 3 ファイル**: src/dashboard/researchSessionsPanel.ts / priorityListView.ts / models-dev-dialog.ts の aria-label 英語（data-i18n キー追加は挙動変更）
@@ -63,6 +63,32 @@ RICE = Reach（影響する呼び出し箇所・モジュール数）× Impact�
 15. **markdownTemplateUtils getHostname 並行定義**: フォーマット契約が異なる（'' vs '[INVALID_URL]'）ため統一は挙動変更
 16. **markdownFormatter toLocaleString ロケール**: src/utils/markdownFormatter.ts:214 の heading スタイル、出力が環境依存（修正は挙動変更）
 17. **exportLogsPanel の UTC 日付残存**: src/dashboard/panels/diagnostic/exportLogsPanel.ts:23,109 + localMarkdownExport.ts:62 + background/reviewSummaryGenerator.ts:144。PBI 2026-09-21-12 の SSOT（localDate.ts）と不整合、修正は出力契約に触れる（fix 型として別途起票推奨）
+
+## 対象外・owner 判断の処理記録（2026-10-21）
+
+なぜなぜ分析を 4 体の解析サブエージェントで**計 43 回**実施（/tmp/whywhy/outofscope-A.md 15 分析・outofscope-B.md 7 分析・outofscope-C.md 12 分析・owner-pbi.md 9 分析）。各分析に現在地（実測 file:line）・呼び出し元実数（Grep）・なぜx5・推奨解・テスト pin の有無・判断要否を記録した。
+
+owner 判断の結果（2026-10-21・全 13 項目で推奨案を採用）:
+
+| 項目 | 裁定 |
+|---|---|
+| 対象外 4 statusPanel fallback | fallback 削除 + エラー表示（pin 1 件書き換え） |
+| 対象外 7 settingsBackup ソート | 数値 comparator に修正（本番不変） |
+| 対象外 8 restorableSettings 2 行 | 2 行削除 + 「allowlist ⊆ StorageKeys」不変テスト追加 |
+| 対象外 9 opt-in reader | 意図明文化 + fallback 削除 + allowlist 収載（writer 追加・ゲート削除は不採用） |
+| 対象外 11 TLD 統一 | 追加時も multi-label に統一（検証側は変更禁止・プリセット全滅回避） |
+| 対象外 14 confirmDialog | 呼び出し側明示化（デフォルト pin は維持） |
+| 対象外 16 heading ロケール | getUserLocale() に統一 |
+| 対象外 17 UTC 日付 | 全 5 箇所を localDate SSOT に統一 |
+| 対象外 15 getHostname 並行定義 | 統一ではなく意図的契約の文書化（分析で判明: 統一だと出力契約が変わる） |
+| 対象外 6 TRANCO_NOTIFICATION_SHOWN | 解消済みを検証（PBI 09・`d253fcc2`、残留リテラル 0 件） |
+| 対象外 2(b) TEST_AI | sender 修正 + envelopePolicy 例外削除（fail-closed 統一・pin 2 件書き換え） |
+| 対象外 1(a)(b) allowlist | 6 キー + 10 キーを個別追加（分類型分割は将来 PBI 候補） |
+| owner PBI 15 | 選択肢 2 は実装済み（`ef36ce32`）。選択肢 3（判別 union）を実装、選択肢 1 は consent 再同意流用のみ（追加 UI なし）と裁定 |
+| owner PBI 25 | host_permissions 常時宣言 + connect-src 指示子削除 + cspDomains/cspValidator の SSOT 追加 + Gist 3 箇所の skip 削除。sync 未配線は意図的と裁定し宣言追従に限定 |
+| owner feat（lock fan-out 宛先） | 選択肢 1（popup / dashboard にリスナ追加）を採用 |
+
+上記を fix/feat 型 PBI 12 件として起票した: [2026-10-21-01](2026-10-21-01-fix-migration-allowlist-coverage.md)〜[2026-10-21-12](2026-10-21-12-feat-session-lock-fanout-destination.md)。未実装で残るもの: MV3 が meta CSP を extension_pages に適用するかの実機確認（owner 手動確認）、lock fan-out の E2E 相当の実機確認（owner 手動確認）。
 
 ## 飽和の根拠と打ち切り
 
