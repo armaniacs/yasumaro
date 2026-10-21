@@ -18,12 +18,17 @@
  * a different store than chrome.storage.local, so the "plaintext adjacency"
  * concern of VULN-010 does not apply.
  *
- * Fail-open contract: any IndexedDB absence or error resolves to null /
- * false, and callers fall back to generating a fresh key (the pre-fix
- * behavior). secretWrappingKey talks to the same helper with the opposite
- * contract — the difference lives in these wrappers, not in the plumbing.
+ * Contract: loadDurableWrappingKey reports a missing record (absent) and a
+ * failed store (failure) as different outcomes (DurableWrappingKeyOutcome) —
+ * a fresh install and a lost persistence store are different facts, and
+ * collapsing them is the caller's decision (PBI 2026-10-21-10).
+ * saveDurableWrappingKey stays fail-open: false on any failure, and the
+ * caller keeps the in-memory key. secretWrappingKey talks to the same helper
+ * with the opposite contract — the difference lives in these wrappers, not
+ * in the plumbing.
  */
 
+import { toError } from '../errorUtils.js';
 import { createIdbKeyStorage, type IdbKeyStorage } from './idbKeyStorage.js';
 
 const DB_NAME = 'yasumaro-crypto';
@@ -47,16 +52,32 @@ function activeStorage(): DurableKeyStorage | null {
 }
 
 /**
- * Load the durable wrapping key. Fail-open: absent or broken IndexedDB is
- * null, which this module's callers read as "generate a fresh key".
+ * Outcome of loading the durable wrapping key. `absent` covers both "no
+ * durable storage in this environment" and "the record is not there yet" — a
+ * fresh install, safe to regenerate. `failure` means the durable store
+ * itself rejected (open or read): persistence may be lost, and reading that
+ * as absent would orphan every wrapped key while looking like a fresh
+ * install (PBI 2026-10-21-10). Collapsing the two is the caller's decision.
  */
-export async function loadDurableWrappingKey(): Promise<CryptoKey | null> {
+export type DurableWrappingKeyOutcome =
+  | { readonly outcome: 'absent' }
+  | { readonly outcome: 'failure'; readonly error: Error }
+  | { readonly outcome: 'loaded'; readonly key: CryptoKey };
+
+/**
+ * Load the durable wrapping key and report what happened: absent (no durable
+ * storage here, or no record yet), failure (the store rejected), or the
+ * loaded key. No catch-and-round: a failed read is a failure, not an absent
+ * record.
+ */
+export async function loadDurableWrappingKey(): Promise<DurableWrappingKeyOutcome> {
   const storage = activeStorage();
-  if (!storage) return null;
+  if (!storage) return { outcome: 'absent' };
   try {
-    return await storage.get();
-  } catch {
-    return null;
+    const key = await storage.get();
+    return key ? { outcome: 'loaded', key } : { outcome: 'absent' };
+  } catch (e) {
+    return { outcome: 'failure', error: toError(e) };
   }
 }
 

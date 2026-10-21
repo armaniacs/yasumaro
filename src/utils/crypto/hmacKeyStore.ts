@@ -213,8 +213,20 @@ async function getOrCreateHmacWrappingKeyLocked(): Promise<CryptoKey> {
             throw new Error('no legacy local KEK');
         },
         async () => {
-            const key = await loadDurableWrappingKey();
-            if (key) return key;
+            const result = await loadDurableWrappingKey();
+            if (result.outcome === 'loaded') return result.key;
+            if (result.outcome === 'failure') {
+                // Behavior unchanged (PBI 2026-10-21-10): the failure still
+                // falls through to the next candidate and eventually a fresh
+                // KEK. Only the reason is recorded, so a lost durable store is
+                // not invisible behind a fresh install.
+                await safeLog(() => logError(
+                    'Failed to load the durable HMAC wrapping key; treating it as absent',
+                    { error: errorMessage(result.error) },
+                    ErrorCode.CRYPTO_HMAC_FAILURE,
+                    'hmacKeyStore.ts'
+                ));
+            }
             throw new Error('no durable KEK');
         },
     ];

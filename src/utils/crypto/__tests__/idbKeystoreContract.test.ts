@@ -2,9 +2,10 @@
  * idbKeystoreContract.test.ts (PBI 2026-09-30-13)
  *
  * durableKeyStore と secretWrappingKey は同一の IndexedDB 実装
- * (idbKeyStorage) を共有するが、null / false の読み方が正反対だ。
+ * (idbKeyStorage) を共有するが、raw outcome の読み方が正反対だ。
  * ヘルパー側にポリシーを埋め込まないことで各ラッパーに残った契約を pin する:
- * 壊れた IndexedDB で片方が「再生成してよい」、もう片方が「中断せよ」であること。
+ * durableKeyStore は absent / failure を区別して返し、呼び出し側が壊れた
+ * IndexedDB を「再生成してよい」と判断する。secretWrappingKey は「中断せよ」。
  *
  * Real WebCrypto, fake IndexedDB, no override seam — this is the path unit
  * tests previously never reached because every suite swapped in a backend.
@@ -34,17 +35,21 @@ describe('IndexedDB keystore contracts', () => {
     vi.unstubAllGlobals();
   });
 
-  describe('loadDurableWrappingKey (fail-open)', () => {
-    it('treats a failed open as "no key yet" so the caller may regenerate', async () => {
+  describe('loadDurableWrappingKey (absent / failure union)', () => {
+    it('reports a failed open as failure, distinguishable from absent', async () => {
       installFakeIndexedDB({ openError: new Error('open denied') });
 
-      expect(await loadDurableWrappingKey()).toBeNull();
+      const result = await loadDurableWrappingKey();
+      if (result.outcome !== 'failure') throw new Error(`expected failure, got: ${result.outcome}`);
+      expect(result.error.message).toBe('open denied');
     });
 
-    it('treats a failed read as "no key yet" instead of propagating', async () => {
+    it('reports a failed read as failure instead of rounding it to absent', async () => {
       installFakeIndexedDB({ getError: new Error('read denied') });
 
-      expect(await loadDurableWrappingKey()).toBeNull();
+      const result = await loadDurableWrappingKey();
+      if (result.outcome !== 'failure') throw new Error(`expected failure, got: ${result.outcome}`);
+      expect(result.error.message).toBe('read denied');
     });
 
     it('round-trips a persisted key through the real IndexedDB path', async () => {
@@ -52,7 +57,7 @@ describe('IndexedDB keystore contracts', () => {
       const key = await sampleKey();
 
       expect(await saveDurableWrappingKey(key)).toBe(true);
-      expect(await loadDurableWrappingKey()).toBe(key);
+      expect(await loadDurableWrappingKey()).toEqual({ outcome: 'loaded', key });
       expect(fake.records().get('yasumaro-crypto')?.get('hmac-wrapping-key')?.get('kek-v1')).toBe(key);
     });
   });
