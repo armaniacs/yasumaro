@@ -207,3 +207,7 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 - テスト: cspDomains / cspValidator に宣言 pin・ゲート pin・派生整合 pin、manifest.test.ts に host_permissions SSOT 合成 pin（31/40）、gistSyncTarget に「skip が渡らない」BDD pin。csp/gistSyncTarget 系 12 ファイル 168 テスト green
 - ドキュメント更新（受け入れ基準の最終行）: PERMISSIONS.md に Gist egress の節（13. host_permissions）を新設し Reviewer Notes のデータ送信先を 3 種類に更新、SECURITY.md の Scope に egress destinations を追記（2026-10-21）
 - 残置（owner 手動確認）: ブロッカー 1 ― MV3 が extension_pages CSP と meta CSP を api.github.com に適用するかの実機確認（E2E 相当）
+
+## 追記（2026-10-21・統合側検証で発見・修正）
+
+- 実装（PBI 2026-10-21-11）の初回では api.github.com が host_permissions のみに反映され、extension_pages CSP connect-src に漏れていた（BDD シナリオ 1 の SSOT 一括更新を満たさない・options ページからの fetch が CSP で遮られる）。commit `857be356` で buildConnectSrcDomains() に GIST_EGRESS_HOST_PERMISSIONS を追加し、SSOT 1 箇所の変更で host_permissions と connect-src の両方が更新される契約を pin で固定。make build で manifest connect-src に api.github.com が反映されることを確認済み

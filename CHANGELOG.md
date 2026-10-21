@@ -51,7 +51,7 @@ All notable changes to this project will be documented in this file.
 - i18n 直書きを解消し日本語固定フォールバックを英語化する。静的 aria-label 2 箇所に data-i18n-aria-label、動的 5 箇所を名前付き置換に統一、新キー 7 個 en/ja 追加、dead branch の日本語フォールバックを英語化（PBI 2026-10-21-08）
 - 出力契約をロケール明示・localDate SSOT に統一する。UTC 日付 5 箇所を localDate SSOT に（JST 朝の「昨日」ファイル名・前日既定範囲を解消）、heading 日付を getUserLocale() 明示に、getHostname 2 定義の契約意図をコメント明文化（PBI 2026-10-21-09）
 - durableKeyStore 戻り値を判別 union 化する。absent（fresh install）/ failure（永続ストア喪失）/ loaded を区別し catch の丸めを排除、KEK チェーン終端に failure ログ（挙動不変・観測性のみ）（PBI 2026-10-21-10）
-- Gist egress を宣言する。host_permissions に https://api.github.com/* を常時宣言、cspDomains に GIST_EGRESS_HOSTS 新設、cspValidator に egress static set + isUrlAllowed、gistSyncTarget の skipCspValidation 3 箇所を削除、meta CSP から connect-src 指示子を削除（PBI 2026-10-21-11）
+- Gist egress を宣言する。host_permissions に https://api.github.com/* を常時宣言、cspDomains に GIST_EGRESS_HOSTS 新設、cspValidator に egress static set + isUrlAllowed、gistSyncTarget の skipCspValidation 3 箇所を削除、meta CSP から connect-src 指示子を削除。api.github.com を buildConnectSrcDomains に追加し、SSOT 1 箇所の変更で host_permissions と extension_pages CSP connect-src の両方が更新される契約を pin で固定（PBI 2026-10-21-11）
 - 自動ロック fan-out の宛先を popup と dashboard に追加する。SESSION_LOCK_REQUEST の受け手モジュール sessionLockReceiver.ts 新設（seam 経由ハンドラ・chrome.runtime.id ガード・失敗時 { success: false } で再試行契約維持）、鍵キャッシュ破棄 + マスターパスワードパネル再読み込みを配線（PBI 2026-10-21-12）
 - テスト型エラー 3 件（新規混入）を返済し baseline を 452 に引き下げ
 

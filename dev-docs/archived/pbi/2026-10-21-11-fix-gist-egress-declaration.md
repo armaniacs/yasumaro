@@ -61,3 +61,8 @@ Scenario: meta CSP の二重管理が消える
 - 検証: csp/gistSyncTarget 系 12 ファイル 168 テスト green、reader-seam は --repeats=3 でも安定、type-check 通過、check-docs-chars 0 violations、eslint 通過、validate:fast green
 - プライバシー: host_permissions は api.github.com の GET / POST / PATCH のみで任意サイトへの読み書きは含まない
 - 残置（owner 手動確認）: MV3 が meta CSP を extension_pages に適用するかの実機確認。sync / syncBatch 未配線は意図的未配線と裁定済み（配線は別 PBI 候補）
+
+## 追記（2026-10-21・統合側検証で発見・修正）
+
+- 統合側の make build 検証で、api.github.com が extension_pages CSP connect-src に反映されていないことを発見（host_permissions のみに載っていた）。ダッシュボードは extension page であり、明示 connect-src + default-src 'none' の CSP が options ページからの Gist fetch を遮るため、PBI 2026-10-18-25 の BDD シナリオ 1（「api.github.com が SSOT に 1 箇所で追加され、host_permissions と extension_pages CSP connect-src の両方が同時に更新される」）を満たしていなかった
+- 修正（commit `857be356`）: buildConnectSrcDomains() に GIST_EGRESS_HOST_PERMISSIONS を追加（SSOT 一括更新）。cspDomains.test.ts に connect-src 収載 pin を追加し、順序 pin を required-then-optional-then-egress に更新。make build で manifest の connect-src に api.github.com が反映されることを確認（53 テスト green・validate:fast green）
