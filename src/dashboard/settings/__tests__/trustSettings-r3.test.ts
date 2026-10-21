@@ -327,6 +327,23 @@ describe('trustSettings-r3: cover remaining branches', () => {
     expect(status.textContent).toBe('Domains: 42 | Tier: Top 10,000 | Last updated: 2025-01-01');
   });
 
+  it('renders the local calendar day of a UTC ISO timestamp (PBI 2026-10-21-09 family)', async () => {
+    setupFullDOM();
+    // The DB stores `toISOString()` whose date part is the UTC date: a
+    // JST-evening update displayed as the UTC-morning timestamp. Local 00:30
+    // of Mar 16 sits on the UTC date Mar 15 west of Greenwich, so the old raw
+    // display showed the previous day. Fixture and expectation both derive
+    // from local components (localDate.test.ts pattern), so the pin holds in
+    // any timezone.
+    const iso = new Date(2026, 2, 16, 0, 30).toISOString();
+    mockGetMessage.mockImplementation(() => '');
+    mockGetDatabase.mockReturnValue({ tranco: { tier: 'top10k', count: 42, lastUpdated: iso }, lastUpdated: iso } as any);
+    const { loadTrustSettings } = await import('../trustSettings.js');
+    await loadTrustSettings();
+    const status = document.getElementById('trancoStatus')!;
+    expect(status.textContent).toBe('Domains: 42 | Tier: Top 10,000 | Last updated: 2026-03-16');
+  });
+
   it('covers addJpAnchor error fallback paths', async () => {
     setupFullDOM();
     // case 1: getMessage returns '' and result.error defined -> should show result.error

@@ -20,6 +20,7 @@ import { ErrorCode } from '../../utils/logger/types.js';
 import { logInfo, logError } from '../../utils/logger/api.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
+import { formatLocalDateString, parseLocalDateStart } from '../../utils/localDate.js';
 import { getTrustChecker } from '../../utils/trustChecker.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { createTagChip } from '../tagChip.js';
@@ -198,7 +199,24 @@ export function createTrustSettings(): TrustSettingsController {
         }
 
         const count = status.count ?? 0;
-        const lastUpdated = (status.lastUpdated ?? getMessageOr('trancoNotUpdated', 'Not updated')) || 'Not updated';
+        // The DB stores ISO 8601 UTC (`toISOString`), whose date part is the
+        // UTC date: a JST-evening update displayed as the 10:25Z morning
+        // timestamp. Render the local calendar day via the localDate SSOT
+        // (PBI 2026-10-21-09 output-contract family). Bare `YYYY-MM-DD`
+        // values pin to local midnight (a bare `new Date()` is UTC midnight,
+        // which lands on the previous local day in negative offsets); ISO
+        // strings with a time parse unambiguously. Unparseable values fall
+        // back to the raw string.
+        const rawLastUpdated = status.lastUpdated;
+        let lastUpdated: string;
+        if (rawLastUpdated) {
+            const parsedMs = /^\d{4}-\d{2}-\d{2}$/.test(rawLastUpdated)
+                ? parseLocalDateStart(rawLastUpdated)
+                : new Date(rawLastUpdated).getTime();
+            lastUpdated = Number.isNaN(parsedMs) ? rawLastUpdated : formatLocalDateString(parsedMs);
+        } else {
+            lastUpdated = getMessageOr('trancoNotUpdated', 'Not updated') || 'Not updated';
+        }
         const tierObj: Record<TrancoTier | string, string> = {
             top1k: getMessageOr('trancoTierTop1k', 'Top 1,000'),
             top10k: getMessageOr('trancoTierTop10k', 'Top 10,000'),

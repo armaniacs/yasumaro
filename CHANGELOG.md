@@ -53,6 +53,7 @@ All notable changes to this project will be documented in this file.
 - durableKeyStore 戻り値を判別 union 化する。absent（fresh install）/ failure（永続ストア喪失）/ loaded を区別し catch の丸めを排除、KEK チェーン終端に failure ログ（挙動不変・観測性のみ）（PBI 2026-10-21-10）
 - Gist egress を宣言する。host_permissions に https://api.github.com/* を常時宣言、cspDomains に GIST_EGRESS_HOSTS 新設、cspValidator に egress static set + isUrlAllowed、gistSyncTarget の skipCspValidation 3 箇所を削除。api.github.com を buildConnectSrcDomains に追加し、SSOT 1 箇所の変更で host_permissions と extension_pages CSP connect-src の両方が更新される契約を pin で固定（PBI 2026-10-21-11）
 - 拡張ページから meta CSP タグを削除する。owner の実機確認で MV3 が extension page 内の meta CSP を適用することが判明し、connect-src を持たない meta CSP の default-src 'none' フォールバックがダッシュボード／ポップアップからの全 fetch（tranco 更新・Gist 接続テスト）を遮断していたため、manifest extension_pages CSP に完全に一任（script-src 等は manifest と同一内容で防御は不変）（PBI 2026-10-21-11）
+- tranco ステータスの「最終更新」表示を localDate SSOT 経由にする。Trust DB の ISO 8601 UTC タイムスタンプを生表示していたため、JST 夜の更新が UTC 午前の時刻に見えた。保存値（機械比較用の ISO 8601 UTC）は不変で、表示のみローカル暦日に（PBI 2026-10-21-09 出力契約ファミリー）
 - 自動ロック fan-out の宛先を popup と dashboard に追加する。SESSION_LOCK_REQUEST の受け手モジュール sessionLockReceiver.ts 新設（seam 経由ハンドラ・chrome.runtime.id ガード・失敗時 { success: false } で再試行契約維持）、鍵キャッシュ破棄 + マスターパスワードパネル再読み込みを配線（PBI 2026-10-21-12）
 - テスト型エラー 3 件（新規混入）を返済し baseline を 452 に引き下げ
 
