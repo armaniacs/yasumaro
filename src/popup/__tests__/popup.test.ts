@@ -449,3 +449,14 @@ describe('initPopup coverage', () => {
         expect(wireDialogButtons).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('initPopup: SESSION_LOCK_REQUEST receiver (PBI 2026-10-21-12)', () => {
+    it('registers the fan-out receiver listener once', async () => {
+        const addListener = chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>;
+        addListener.mockClear();
+        await initPopup();
+        // The popup is a real fan-out destination: one runtime listener for
+        // SESSION_LOCK_REQUEST, registered by initPopup's subscribe call.
+        expect(addListener).toHaveBeenCalledTimes(1);
+    });
+});

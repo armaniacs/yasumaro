@@ -3,6 +3,12 @@ import { DashboardBootstrapper } from './panels/DashboardBootstrapper.js';
 import { createPanelById } from './panels/panelFactories.js';
 import { setRegistry } from './panels/registryContext.js';
 import { initDashboard, resolveInitialPanelId, applySectionDeepLink } from './dashboard.js';
+// PBI 2026-10-21-12: the dashboard is a real fan-out destination for the
+// auto-lock notification (receiver seam + real lock reads below).
+import { subscribeSessionLockRequest } from '../utils/storage/sessionLockReceiver.js';
+import { isLocked as isSessionLocked } from '../utils/storage/authGuard.js';
+import { clearEncryptionKeyCache } from '../utils/storage/encryptionSession.js';
+import { loadMasterPasswordSettings } from './masterPassword.js';
 
 const registry = new NavigationRegistry();
 setRegistry(registry);
@@ -33,6 +39,24 @@ void initDashboard();
 await bootstrapper.start(resolveInitialPanelId());
 applySectionDeepLink();
 
+// PBI 2026-10-21-12: the dashboard is a real fan-out destination for the
+// auto-lock notification. SESSION_LOCK_REQUEST carries no payload, so the
+// receiver re-reads authGuard's lock state: a locked re-read drops the
+// dashboard's cached key and reloads the master-password panel so the UI
+// reflects the locked state instead of the stale (unlocked) cache. The
+// response body confirms delivery to the sender's retry contract.
+const disposeSessionLockReceiver = subscribeSessionLockRequest({
+  isLocked: isSessionLocked,
+  clearKeyCache: clearEncryptionKeyCache,
+  onLocked: () => {
+    void loadMasterPasswordSettings();
+  },
+});
+
 // Cleanup mounted panels exactly once on page unload. Navigation never
-// calls destroy, so display transitions are unaffected.
-window.addEventListener('pagehide', () => registry.destroyAll(), { once: true });
+// calls destroy, so display transitions are unaffected. The fan-out
+// receiver's runtime listener is released on the same single destroy.
+window.addEventListener('pagehide', () => {
+  disposeSessionLockReceiver();
+  registry.destroyAll();
+}, { once: true });

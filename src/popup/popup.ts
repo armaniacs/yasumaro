@@ -16,6 +16,9 @@ import { loadPendingPages, setupEventListeners } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog, wireDialogButtons } from './privatePageDialog.js';
 import { getPrivacyConsent, subscribeConsentChanges } from '../utils/storage/privacyConsent.js';
+import { subscribeSessionLockRequest } from '../utils/storage/sessionLockReceiver.js';
+import { isLocked as isSessionLocked } from '../utils/storage/authGuard.js';
+import { clearEncryptionKeyCache } from '../utils/storage/encryptionSession.js';
 import { hasCompletedWizard, initOnboardingWizard } from '../utils/ui/onboardingWizard.js';
 
 // ============================================================================
@@ -105,6 +108,21 @@ export async function initPopup(): Promise<void> {
     subscribeConsentChanges(() => {
         void maybeShowOnboardingWizard();
     });
+
+    // PBI 2026-10-21-12: the popup is a real fan-out destination for the
+    // auto-lock notification. SESSION_LOCK_REQUEST carries no payload, so the
+    // receiver re-reads authGuard's lock state: a locked re-read drops this
+    // context's cached key, so the next getOrCreateEncryptionKey() call
+    // re-derives instead of decrypting with the stale cached key (VULN-017's
+    // extension-page half). The popup shows no lock UI of its own, so no UI
+    // transition callback is wired; the response body confirms delivery to
+    // the sender's retry contract. The listener is released on pagehide so
+    // a closed popup leaves no dangling runtime listener.
+    const disposeSessionLockReceiver = subscribeSessionLockRequest({
+        isLocked: isSessionLocked,
+        clearKeyCache: clearEncryptionKeyCache,
+    });
+    window.addEventListener('pagehide', () => disposeSessionLockReceiver(), { once: true });
 }
 
 // PBI 2026-09-11-04 (round 7): the import-time auto-run is gone — the
