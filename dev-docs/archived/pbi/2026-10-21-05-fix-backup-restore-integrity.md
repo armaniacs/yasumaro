@@ -39,3 +39,11 @@ Scenario: 復元 allowlist は StorageKeys の部分集合である
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 7・8・処理記録）
 - src/utils/storage/restorableSettings.ts（allowlist）
+
+## 実装記録（2026-10-21）
+
+- selectLatestSettingsBackupKey を数値 comparator に修正（backupKeyGeneration を導入・epoch ms を /^\d+$/ でパースして数値比較。非数 suffix は最も古い扱い、同世代同値は辞書順 tie-break で入力順非依存。本番 13 桁同桁数では選択結果は完全に不変）
+- restorableSettings の 'safety_mode' / 'tranco_tier' 2 行を削除（削除箇所に Trust DB 一本化 b9ee19cc の配線漏れである旨を記録）
+- テスト: settingsBackupSelectLatest.test.ts 新規 10 件（mixed-length・13 桁 epoch ms・入力順非依存・bare key・非数 suffix ほか）、restorableSettings-spec-table.test.ts に「allowlist ⊆ StorageKeys」不変テスト追加（違反キー一覧を failure に出す）
+- pin 更新 1 件（fixture-first で発見・owner 承認済み）: settingsBackupRestoreParity.test.ts:85-96 が mixed-length の辞書順≠数値順の組を現行挙動＝数値的に古い方で pin しており、PBI の BDD 契約更新としてテスト名と期待値を修正後の挙動（'ten'）に明示更新
+- 検証: 対象 10 ファイル 150 tests 全 green、storage/__tests__ 全 65 ファイル 558 tests 全 green、type-check 通過、eslint 通過、validate:fast green

@@ -41,3 +41,13 @@ Scenario: en ロケールで日本語フォールバックが露出しない
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 12・13・処理記録）
 - docs/i18n-guide.md（data-i18n 契約）
+
+## 実装記録（2026-10-21）
+
+- 静的 aria-label 2 箇所 → data-i18n-aria-label + 静的フォールバック（models-dev-dialog.ts:114 の tablist、researchSessionsPanel.ts の subtree チェック。JS 生成要素は setAttribute + applyI18n(listEl) 再適用パターン）
+- 動的補間 aria-label 5 箇所 → getMessageWithSubstitutions 経由（researchSessionsPanel.ts:76・203、priorityListView.ts:139・164・170 を名前付き置換に統一）
+- 新キー 7 個を en/ja 両方に追加（modelsDevCategoriesAriaLabel・researchSessions_selectPage/Subtree/SessionAriaLabel・aiProviderPrioritySelect/MoveUp/MoveDownAriaLabel。locale parity ゲート通過）
+- 英語化（dead branch の言語統一・キー追加なし）: settingsPipeline saveErrorText → 'Save error'、trustSettings permissionSuggest* → ' visits' / '🔓 Allow' / 'Dismiss (hide for 14 days)'
+- pin 更新（PBI の意図した契約変更として PBI コメント付き）: connectionTests.test.ts 4 箇所・trustSettings-r3.test.ts 3 箇所
+- 追加発見（改修せず報告のみ・PBI 候補）: checkSourceI18nKeys が data-i18n-aria-label を missing-key チェック対象にしていない。getMessageWithSubstitutions 経由のキーは静的走査で「potentially unused」warn インベントリに入る
+- 検証: 担当 8 テストファイル 330 tests 全 green、locale parity 3 green、check-i18n ALL CHECKS PASSED、check-docs-chars 0 violations、type-check 通過、validate:fast green
