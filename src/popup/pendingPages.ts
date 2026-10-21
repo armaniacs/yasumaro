@@ -206,9 +206,12 @@ export function setupEventListeners(): void {
     }
 
     // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
+    // PBI 2026-10-21-04: an explicit discard label — the dialog's default
+    // 'Delete' would mislabel the confirmed action.
     try {
       const confirmed = await showConfirmDialog({
         message: chrome.i18n.getMessage('warningConfirmSave'),
+        confirmLabel: getMessageOr('btnDiscard', 'Discard'),
       });
       if (confirmed) {
         await removePendingPages(urls);

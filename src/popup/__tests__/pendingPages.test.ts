@@ -541,7 +541,10 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(mockShowConfirmDialog).toHaveBeenCalledWith({ message: 'mock_warningConfirmSave' });
+            expect(mockShowConfirmDialog).toHaveBeenCalledWith({
+                message: 'mock_warningConfirmSave',
+                confirmLabel: 'btnDiscard',
+            });
             expect(removeSpy).toHaveBeenCalledWith(['https://example.com']);
         });
 
@@ -560,7 +563,10 @@ describe('DOM Event Listeners', () => {
             // Wait for async operations
             await new Promise(resolve => setTimeout(resolve, 0));
 
-            expect(mockShowConfirmDialog).toHaveBeenCalledWith({ message: 'mock_warningConfirmSave' });
+            expect(mockShowConfirmDialog).toHaveBeenCalledWith({
+                message: 'mock_warningConfirmSave',
+                confirmLabel: 'btnDiscard',
+            });
             expect(removeSpy).not.toHaveBeenCalled();
         });
     });

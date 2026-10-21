@@ -23,16 +23,20 @@ export const checkPermissionStep: PipelineStepFunction = async (
   const permissionManager = getPermissionManager();
   const permitted = await permissionManager.isHostPermitted(url);
 
-  if (!permitted) {
-    // Permission denied - extract domain and record
-    let domain: string | null;
-    try {
-      domain = extractDomain(url) || new URL(url).hostname;
-    } catch {
-      addLog(LogType.ERROR, 'Failed to extract domain from URL', { url, traceId: context.traceId });
-      throw new Error('INVALID_URL');
-    }
+  // PBI 2026-10-21-04: derive the domain once for both the denial branch and
+  // the success result. The guard normalizes an invalid URL to INVALID_URL on
+  // every path, so a later `new URL(url)` can never surface as a raw TypeError
+  // if isHostPermitted ever returns true for an unparsable URL.
+  let domain: string | null;
+  try {
+    domain = extractDomain(url) || new URL(url).hostname;
+  } catch {
+    addLog(LogType.ERROR, 'Failed to extract domain from URL', { url, traceId: context.traceId });
+    throw new Error('INVALID_URL');
+  }
 
+  if (!permitted) {
+    // Permission denied - record
     // PBI 2026-09-19-08: verdict は recordingDecision.decidePermission に委譲
     // PBI 2026-09-23-05: shared gate table row への adapter（I/O はこの step に残す）
     const verdict = decideGate('permission', { permitted, domain });
@@ -49,7 +53,7 @@ export const checkPermissionStep: PipelineStepFunction = async (
 
   const result: PermissionCheckResult = {
     permitted: true,
-    domain: extractDomain(url) || new URL(url).hostname
+    domain
   };
 
   return {

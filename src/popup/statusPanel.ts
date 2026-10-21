@@ -369,8 +369,13 @@ function initCleansingFeedbackButton(): void {
         removedByReason = counts.byReason;
         aiSummary = counts.aiSummary;
       }
+      // PBI 2026-10-21-04: no popup-HTML fallback. The old
+      // `document.documentElement.outerHTML` fallback stored the popup's own
+      // markup as if it were page content, which corrupted the feedback
+      // entry. An empty snippet (content script did not run, e.g. on
+      // chrome:// pages) is an error, not something to report.
       if (!htmlSnippet) {
-        htmlSnippet = document.documentElement.outerHTML.slice(0, 500);
+        throw new Error('NO_CONTENT');
       }
       const { enqueueFeedback } = await import('../utils/aiSummaryCleaner/feedbackQueue.js');
       await enqueueFeedback({ url, domain, htmlSnippet, removedByReason, ...(aiSummary ? { aiSummary } : {}) });

@@ -179,7 +179,12 @@ export async function handleFileImport(
       const warningMsg =
         getMessageOr('importPasswordRequired', 'Master password is required to import encrypted settings.');
       // Accessible dialog seam (PBI 2026-09-17-19) replaces native confirm().
-      const confirmed = await showConfirmDialog({ message: warningMsg });
+      // PBI 2026-10-21-04: an explicit import label — the dialog's default
+      // 'Delete' would mislabel the confirmed action.
+      const confirmed = await showConfirmDialog({
+        message: warningMsg,
+        confirmLabel: getMessageOr('confirmImport', 'Import'),
+      });
       if (confirmed) {
         showPasswordAuthModal('import', handleEncryptedImport);
       }

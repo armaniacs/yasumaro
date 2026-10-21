@@ -129,9 +129,18 @@ describe('statusPanel cleansing feedback synthesis', () => {
     expect(mockEnqueueFeedback.mock.calls[0][0].removedByReason).toEqual({});
   });
 
-  it('stores an empty count map when the content request fails', async () => {
-    await clickReport(null);
-    expect(mockEnqueueFeedback.mock.calls[0][0].removedByReason).toEqual({});
+  it('shows an error and never enqueues when the content request fails', async () => {
+    mockRequestContentFromTab.mockResolvedValue(null);
+    await initStatusPanel();
+    document.getElementById('reportCleansingFeedbackBtn')?.click();
+    // PBI 2026-10-21-04: the popup-HTML fallback is gone. An empty snippet
+    // (content script did not run, e.g. chrome:// pages) reports an error
+    // through the same status-message contract instead of enqueuing the
+    // popup's own markup as if it were page content.
+    const status = document.getElementById('reportCleansingFeedbackStatus')!;
+    await waitForMock(() => expect(status.className).toBe('status-message error'));
+    expect(status.textContent).toBeTruthy();
+    expect(mockEnqueueFeedback).not.toHaveBeenCalled();
   });
 });
 
@@ -173,7 +182,9 @@ describe('statusPanel cleansing feedback status render', () => {
   it('keeps the popup-only 2000ms clear and the status-message contract', async () => {
     useTimerClock();
     try {
-      mockRequestContentFromTab.mockResolvedValue(null);
+      // PBI 2026-10-21-04: a real content response, since an empty snippet is
+      // an error under the no-fallback contract and would never reach success.
+      mockRequestContentFromTab.mockResolvedValue({ content: '<p>hello</p>' });
       await initStatusPanel();
       document.getElementById('reportCleansingFeedbackBtn')?.click();
       // 0ms advances, never a guessed duration: the clock has to stay below the
@@ -200,7 +211,10 @@ describe('statusPanel cleansing feedback status render', () => {
   it('renders the error message through the same contract', async () => {
     useTimerClock();
     try {
-      mockRequestContentFromTab.mockResolvedValue(null);
+      // PBI 2026-10-21-04: a real content response — this test pins the error
+      // contract for a rejected enqueue, which the no-fallback flow reaches
+      // only after the content fetch succeeds.
+      mockRequestContentFromTab.mockResolvedValue({ content: '<p>hello</p>' });
       mockEnqueueFeedback.mockRejectedValueOnce(new Error('queue full'));
       await initStatusPanel();
       document.getElementById('reportCleansingFeedbackBtn')?.click();
