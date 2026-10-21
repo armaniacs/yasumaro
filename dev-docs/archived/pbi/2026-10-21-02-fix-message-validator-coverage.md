@@ -48,3 +48,13 @@ Scenario: manual 系メッセージの byte-stat が検証される
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 2・処理記録）
 - dev-docs/archived/pbi/2026-10-20-24-refactor-srp-splits.md（messageTypes の ByteStatsPayload 結合）
+
+## 実装記録（2026-10-21）
+
+- 2a: GenerateReviewSummaryValidator を validators.ts に追加（periodType 必須 + weekly/monthly 列挙）。systemHandlers の monthly→weekly silent フォールバック（三項演算子）を撤去し、契約外 periodType は拒否
+- 2b: connectionTests の payload:{} 送出を削除（bare envelope 契約）。envelopePolicy の NO_PAYLOAD legacy 例外を削除し shape gate を唯一の受理権威に
+- 2c: ManualRecordValidator に ByteStatsPayload 検証を追加（BYTE_STAT_FIELDS ループ × MAX_BYTE_STAT_BYTES、aiSummaryCleansedElements、assertCleansedReasons ほか。MANUAL / PREVIEW / SAVE_RECORD の 3 型に 1 か所で適用、ValidVisit と同一の reject ポリシー）
+- 2d: LogForwardValidator を追加（level info/warn/error 列挙）。handler の else 分岐は 'info' 専用に狭窄
+- 逸脱（報告済み・理由付き）: MessageRouter に setValidator 2 行（登録サイトがここしかないため）、ACTIVITY_UPDATE sender 2 箇所（recordSession・encryptionSession）の payload:{} 削除（例外削除の直の波及・機能後退防止。なぜなぜ分析が取りこぼしていた分）
+- pin 書き換え: connectionTests.test.ts（sender pin → bare envelope）、systemHandlers.test.ts:402（silent フォールバック pin → periodType 明示化 + 拒否テスト 2 件）、envelopePolicy.test.ts（migration-skip + shape matrix）、systemHandlers.test.ts:485（降格 pin の改名・期待値不変）。統合側: envelopeShape.ts の stale コメント訂正
+- 検証: 対象 7 スイート 315 tests 全 green、フルスイート 1115 ファイル / 16603 tests 全 green、type-check 通過、eslint 通過、validate:fast green

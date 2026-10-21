@@ -41,3 +41,11 @@ Scenario: インポート許可の確認が「Delete」にならない
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 4・5・14・処理記録）
 - src/utils/htmlEscape.ts（escapeHtml canonical）
+
+## 実装記録（2026-10-21）
+
+- statusPanel: outerHTML fallback を削除し throw new Error('NO_CONTENT') に変更（catch が既存の reportCleansingFeedbackError 表示 + logError を担う。誤データゼロ）
+- checkPermissionStep: domain 導出を isHostPermitted の直後に 1 箇所へ集約し、success result 側の無防備な new URL を廃止（latent TypeError 解消。decideGate の INVALID_URL 分岐は維持）
+- confirmDialog 呼び出し側 2 箇所を明示: settingsExportImportUiCore は getMessageOr('confirmImport', 'Import')（既存キー en/ja 存在）、pendingPages は getMessageOr('btnDiscard', 'Discard')（既存キー）。i18n キー追加なし・デフォルト 'Delete' pin 維持
+- pin 書き換え: statusPanel-cleansingFeedback.test.ts（enqueue pin → エラー表示 + not.toHaveBeenCalled 契約、resp=null → 有効 content）、pendingPages.test.ts（strict toHaveBeenCalledWith に confirmLabel 追加）。新規: settingsExportImportUiCore.test.ts（呼び出し側 contract pin）
+- 検証: 担当 10 ファイル 207 tests 全 green、type-check 通過、eslint 通過、validate:fast green

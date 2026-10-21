@@ -47,3 +47,10 @@ Scenario: オプトインフラグが migration で消えない
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 1・9・処理記録）
 - dev-docs/archived/pbi/2026-10-20-04-refactor-constant-ssot-consolidation.md（allowlist の既存構造）
+
+## 実装記録（2026-10-21）
+
+- allowlist に 17 キーを追加: AI 使用量カウンタ 6 キー（AI_USAGE_MONTH / TOKENS_SENT / TOKENS_RECEIVED / REQUEST_COUNT / AI_RATE_LIMIT_WINDOW_START / AI_RATE_LIMIT_COUNT。AI_RATE_LIMIT_MAX / MAX_MONTHLY_TOKENS は blob tier が生きているため含めず、テストで migratable=true を pin）、移行フラグ 10 キー（YASUMARO_MIGRATION_STATUS / PROGRESS / RETRY_COUNT、OPFS_FALLBACK_MODE、OPFS_MIGRATION_V2_DONE / LAST_ATTEMPTED_AT / COMPLETED_AT / RECORD_COUNT、IDB_MIGRATION_V2_DONE / IDB_MIGRATION_BACKUP）、ALLOW_ALL_URLS_OPT_IN
+- contentFetchGateway の legacy 生リテラル fallback（'allowAllUrlsOptIn' 二度読み）を削除し、reader-only の意図を英語コメントで明文化
+- テスト: settingsMigration-completion-state.test.ts に「allowlist 収載 17 キーは移行されない」分類テスト + 実 seam happy-path pin、contentFetchGateway.contract.test.ts に「SSOT キーだけを読む」pin を追加
+- 検証: 対象 136 tests 全 green、フルスイート 1112 ファイル / 16563 tests 全 green、type-check 通過、eslint 通過、validate:fast green

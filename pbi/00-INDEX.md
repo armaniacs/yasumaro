@@ -14,6 +14,8 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-21 対象外・owner 判断処理（なぜなぜ分析 43 回、fix/feat 12件） ― Batch 1 ✅ 完了・アーカイブ済み（01・02・03・04） / ⬜ 8件残（05・06・07・08・09・10・11・12） 実施順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → 05 → 06 → 08 → 07 → 09 → 10 → 11 → 12
+
 ### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 24件完了・アーカイブ済み（01-06・08-11・13-24） / ⬜ 0件残 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → ~~07(38)~~ → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → ~~12(24)~~ → ~~13(20)~~ → ~~14(20)~~ → ~~15(20)~~ → ~~16(18)~~ → ~~17(18)~~ → ~~18(15)~~ → ~~19(14)~~ → ~~20(14)~~ → ~~21(13)~~ → ~~22(12)~~ → ~~23(12)~~ → ~~24(8)~~
 
 `/yasumaro-refactor` による読み取り専用診断（7 レンズ、リポジトリ全体、4 パス: 9 体の走査 + 主スレッド横断）で約 190 件の発見を 24 PBI + 対象外 17 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)。
@@ -504,6 +506,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-21 PBI 01・02・03・04 アーカイブ ― 対象外・owner 判断処理 12件のうち 4件完了
+
+- **01-fix-migration-allowlist-coverage**（`312b6e55`）: migration allowlist に未収載 17 キーを収載（AI カウンタ 6・移行フラグ 10・opt-in 1）。contentFetchGateway の legacy fallback を削除し reader-only 意図を明文化。
+- **02-fix-message-validator-coverage**（`568fcd02`）: GENERATE_REVIEW_SUMMARY / LOG_FORWARD validator 追加、TEST_AI の 3 者食い違いを fail-closed に統一（sender 修正 + NO_PAYLOAD 例外削除）、MANUAL/PREVIEW/SAVE_RECORD の byte-stat 検証追加。
+- **03-fix-unhandled-rejection**（`12129683`）: unhandled rejection と偽成功表示を 7 箇所で解消（fire-and-forget 安全網の標準化・失敗パス 7 テスト新規）。
+- **04-fix-misleading-data-labels**（`ca49d376`）: statusPanel の誤データ fallback を撤去、checkPermissionStep の latent TypeError 解消、confirmDialog 呼び出し側 2 箇所を明示。
 
 ### 2026-10-21 PBI 21 アーカイブ ― リファクタリング診断 24件すべて完了（01-06・08-11・13-24）
 

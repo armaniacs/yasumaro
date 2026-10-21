@@ -45,3 +45,10 @@ Scenario: 失敗しても画面が固まらない
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 3・処理記録）
 - dev-docs/archived/pbi/2026-10-20-14-refactor-silent-catch-visualization.md（safeLog + logError の seam 規約）
+
+## 実装記録（2026-10-21）
+
+- 7 箇所を解消: customPromptManager（success 表示を await set 後へ・try/catch + saveError 表示・async 直接 addEventListener を onSavePromptClick ラッパに是正）、markdownTemplateManager（try/catch + showFieldError、成功時のみ closeEditor）、trustSettings（saveTrustSettings に try/catch + safeLog → logError STORAGE_WRITE_FAILURE、fire-and-forget 16 か所を新設 runQuietly に統一 → INTERNAL_ERROR）、onboardingWizard（try/catch/finally で closeWizard を finally へ）、service-worker.ts:281 の alarm リスナに guard(handleAlarm, 'handleAlarm')、flushScheduler（alarm listener に catch、onSuspend は race 全体を try/catch。console.error は意図的例外として維持）、entrypoints/content/index.ts（startContentLoader に切り出し・try/catch + console.error）
+- 失敗パスのテストを 7 箇所分新規追加（customPromptManager・markdownTemplateSave・trustSettings・onboardingWizard・flushScheduler・entrypoints/content・service-worker TEST_CONNECTIONS 修正）
+- Timing DoD: --repeats=20（retries 無効）で表示タイミング関係 6 ファイル全 green。固定時間待ちは追加せず（microtask 順序で既存 pin は自然に成立することを実測）
+- 検証: 担当 19 ファイル 571 tests 全 green、type-check 通過、eslint 14 ファイル 0 errors、validate:fast green
