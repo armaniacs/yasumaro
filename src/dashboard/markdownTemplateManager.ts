@@ -395,7 +395,15 @@ export function createMarkdownTemplateManager(): MarkdownTemplateManager {
 
     // Delta write (PBI 2026-09-17-17) — only the template list enters the payload.
     currentSettings[StorageKeys.MARKDOWN_EXPORT_TEMPLATES] = updated;
-    await settingsRepository.set(StorageKeys.MARKDOWN_EXPORT_TEMPLATES, updated);
+    try {
+      await settingsRepository.set(StorageKeys.MARKDOWN_EXPORT_TEMPLATES, updated);
+    } catch {
+      // A rejected write previously left the editor open with no feedback and
+      // skipped closeEditor/renderTemplateList entirely (silent failure,
+      // PBI 03). Show the error inline and keep the draft for a retry.
+      showFieldError(getMessageOr('saveError', 'Save error'));
+      return;
+    }
 
     showStatus(dom?.statusEl ?? 'markdownTemplateStatus',
       getMessageOr(editingTemplateId ? 'markdownTemplateUpdated' : 'markdownTemplateCreated', (editingTemplateId ? 'Template updated' : 'Template created')),

@@ -391,7 +391,6 @@ export function createCustomPromptManager(): CustomPromptManager {
                 prompt: promptText,
                 ...pickDefined({ systemPrompt })
             });
-            showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptUpdated', 'Prompt updated'), 'success');
         } else {
             // Create new prompt
             const newPrompt = createPrompt({
@@ -402,14 +401,26 @@ export function createCustomPromptManager(): CustomPromptManager {
                 ...pickDefined({ systemPrompt })
             });
             prompts.push(newPrompt);
-            showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('promptCreated', 'Prompt created'), 'success');
         }
 
         // Save to settings — delta write: only CUSTOM_PROMPTS enters the payload,
         // so the panel's long-lived currentSettings snapshot cannot revert
         // unrelated keys a concurrent writer changed (PBI 2026-09-17-17).
         currentSettings[StorageKeys.CUSTOM_PROMPTS] = prompts;
-        await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
+        try {
+            await settingsRepository.set(StorageKeys.CUSTOM_PROMPTS, prompts);
+        } catch {
+            // A rejected write must not leave an "updated/created" success
+            // message standing (PBI 03): show the failure instead.
+            showStatus(promptStatusDiv ?? 'promptStatus', getMessageOr('saveError', 'Save error'), 'error');
+            return;
+        }
+
+        // Success display lands after the write settles — showing it before the
+        // await was a fake success whenever the write rejected (PBI 03).
+        showStatus(promptStatusDiv ?? 'promptStatus',
+            getMessageOr(editingId ? 'promptUpdated' : 'promptCreated', editingId ? 'Prompt updated' : 'Prompt created'),
+            'success');
 
         // Reset form and re-render
         resetForm();
@@ -638,6 +649,15 @@ export function createCustomPromptManager(): CustomPromptManager {
     }
 
     /**
+     * Non-async click wrapper: the async handler must not be the listener
+     * itself, or a rejection becomes a silent unhandled rejection (PBI 03).
+     * handleSavePrompt shows its own failure status.
+     */
+    function onSavePromptClick(): void {
+        void handleSavePrompt();
+    }
+
+    /**
      * Reset the prompt editor form
      */
     function resetForm(): void {
@@ -665,7 +685,7 @@ export function createCustomPromptManager(): CustomPromptManager {
         if (promptProviderSelect) renderProviderOptions(promptProviderSelect, { customPrompt: true });
 
         if (savePromptBtn) {
-            savePromptBtn.addEventListener('click', handleSavePrompt);
+            savePromptBtn.addEventListener('click', onSavePromptClick);
         }
         if (cancelPromptBtn) {
             cancelPromptBtn.addEventListener('click', handleCancelEdit);
@@ -685,7 +705,7 @@ export function createCustomPromptManager(): CustomPromptManager {
     }
 
     function destroy(): void {
-        dom?.savePromptBtn?.removeEventListener('click', handleSavePrompt);
+        dom?.savePromptBtn?.removeEventListener('click', onSavePromptClick);
         dom?.cancelPromptBtn?.removeEventListener('click', handleCancelEdit);
         dom = null;
         currentSettings = null;

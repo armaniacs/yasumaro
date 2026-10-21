@@ -129,6 +129,7 @@ vi.mock('../../../utils/i18n.js', async () => {
       promptActivated: 'Prompt activated',
       promptDuplicated: 'Prompt copied to editor',
       confirmDeletePrompt: 'Are you sure you want to delete this prompt?',
+      saveError: 'Save error',
     };
     return key in messages ? messages[key] : key;
   });
@@ -482,6 +483,34 @@ describe('customPromptManager', () => {
       await vi.waitFor(() => {
         expect(mockSetAll).toHaveBeenCalled();
       });
+    });
+
+    // PBI 03: a rejected write must not look like a save. The success display
+    // moved after the await, so the failure path shows an error status instead.
+    it('should show a failure status instead of a fake success when the write rejects', async () => {
+      const { initCustomPromptManager } = await import('../customPromptManager.js');
+
+      const settings: { custom_prompts: CustomPrompt[] } = { custom_prompts: [] };
+      initCustomPromptManager(asSettings(settings));
+
+      const nameInput = el('promptName');
+      const textInput = el('promptText');
+      nameInput.value = 'My Custom Prompt';
+      textInput.value = 'Summarize {{content}}';
+
+      mockSetAll.mockRejectedValueOnce(new Error('quota exceeded'));
+
+      el('savePromptBtn').click();
+      await vi.waitFor(() => {
+        const statusDiv = el('promptStatus');
+        expect(statusDiv.textContent).toBe('Save error');
+        expect(statusDiv.className).toBe('status-message error');
+      });
+
+      // The success message never appears for a rejected write
+      expect(el('promptStatus').className).not.toContain('success');
+      // The draft survives for a retry (no form reset on failure)
+      expect(nameInput.value).toBe('My Custom Prompt');
     });
   });
 

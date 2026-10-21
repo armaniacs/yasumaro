@@ -108,8 +108,14 @@ export function initOnboardingWizard(skipNavigation = false): void {
     btn.addEventListener('click', async () => {
       const type = btn.getAttribute('data-type') as WizardType;
       if (type === 'minimal') {
-        await completeWizard('minimal');
-        closeWizard(wizard);
+        try {
+          await completeWizard('minimal');
+        } catch (error) {
+          logError('[OnboardingWizard] Failed to complete the wizard', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
+        } finally {
+          // A rejected completion must not leave the focus trap armed (PBI 03).
+          closeWizard(wizard);
+        }
         return;
       }
       showStep(wizard, type);
@@ -126,10 +132,16 @@ export function initOnboardingWizard(skipNavigation = false): void {
     btn.addEventListener('click', async () => {
       const step = wizard.querySelector('.wizard-step:not(.hidden)');
       const type = step?.getAttribute('data-step') as WizardType || 'minimal';
-      await completeWizard(type);
-      closeWizard(wizard);
-      if (!skipNavigation) {
-        openDashboardSection(type);
+      try {
+        await completeWizard(type);
+        if (!skipNavigation) {
+          openDashboardSection(type);
+        }
+      } catch (error) {
+        logError('[OnboardingWizard] Failed to complete the wizard', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
+      } finally {
+        // A rejected completion must not leave the focus trap armed (PBI 03).
+        closeWizard(wizard);
       }
     }, { signal });
   });
@@ -169,8 +181,14 @@ function closeWizard(wizard: HTMLElement): void {
 }
 
 async function skipWizard(wizard: HTMLElement): Promise<void> {
-  await completeWizard('minimal');
-  closeWizard(wizard);
+  try {
+    await completeWizard('minimal');
+  } catch (error) {
+    logError('[OnboardingWizard] Failed to complete the wizard', { cause: error }, ErrorCode.STORAGE_WRITE_FAILURE);
+  } finally {
+    // A rejected completion must not leave the focus trap armed (PBI 03).
+    closeWizard(wizard);
+  }
 }
 
 function openDashboardSection(type: WizardType): void {

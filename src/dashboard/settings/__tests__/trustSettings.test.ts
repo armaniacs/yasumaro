@@ -201,7 +201,7 @@ vi.mock('../../../utils/logger/types.js', async () =>
     logInfo: mockLogInfo,
     logWarn: mockLogWarn,
     logError: mockLogError,
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED', STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
   }),
 );
 vi.mock('../../../utils/logger/core.js', async () =>
@@ -210,7 +210,7 @@ vi.mock('../../../utils/logger/core.js', async () =>
     logInfo: mockLogInfo,
     logWarn: mockLogWarn,
     logError: mockLogError,
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED', STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
   }),
 );
 vi.mock('../../../utils/logger/api.js', async () =>
@@ -219,7 +219,7 @@ vi.mock('../../../utils/logger/api.js', async () =>
     logInfo: mockLogInfo,
     logWarn: mockLogWarn,
     logError: mockLogError,
-    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED' },
+    ErrorCode: { TRANCO_FETCH_FAILED: 'TRANCO_FETCH_FAILED', STORAGE_WRITE_FAILURE: 'STRG_WR_001', INTERNAL_ERROR: 'INT_001' },
   }),
 );
 
@@ -242,6 +242,7 @@ vi.mock('../../../utils/i18n.js', async () => {
       trancoUpdateSuccess: 'Tranco list updated successfully',
       safetyModeChanged: 'Safety mode changed',
       settingsSaved: 'Settings saved',
+      saveError: 'Save error',
       permissionSuggestCount: ' visits',
       permissionSuggestAdd: 'Allow',
       permissionSuggestDismiss: 'Dismiss',
@@ -1075,6 +1076,58 @@ describe('trustSettings.ts', () => {
       expect(statusDiv.className).toBe('status-message');
 
       vi.useRealTimers();
+    });
+  });
+
+  // =========================================================================
+  // PBI 03: unhandled rejection / fake success
+  // =========================================================================
+  describe('saveTrustSettings failure path (PBI 03)', () => {
+    test('shows the save error instead of a fake success and logs the failure', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      mockSaveAlertSettings.mockRejectedValueOnce(new Error('storage down'));
+
+      document.getElementById('saveTrustSettings')!.click();
+      await vi.waitFor(() => {
+        const statusDiv = document.getElementById('trustSettingsStatus')!;
+        expect(statusDiv.textContent).toBe('Save error');
+        expect(statusDiv.className).toBe('status-message error');
+        expect(mockLogError).toHaveBeenCalledWith(
+          'Trust settings save failed',
+          { error: 'storage down' },
+          'STRG_WR_001',
+          'trustSettings',
+        );
+      });
+
+      // The success message never appears for a rejected save
+      expect(document.getElementById('trustSettingsStatus')!.className).not.toContain('success');
+    });
+  });
+
+  describe('fire-and-forget handlers (PBI 03)', () => {
+    test('a rejection from an unawaited add handler is logged, not silent', async () => {
+      setupFullDOM();
+      const { init } = await import('../trustSettings.js');
+      init();
+
+      mockAddJpAnchorTld.mockRejectedValueOnce(new Error('db down'));
+
+      const input = document.getElementById('jpAnchorAdd') as HTMLInputElement;
+      input.value = '.org';
+      document.getElementById('jpAnchorAddBtn')!.click();
+
+      await vi.waitFor(() => {
+        expect(mockLogError).toHaveBeenCalledWith(
+          'Trust settings async operation failed',
+          { error: 'db down' },
+          'INT_001',
+          'trustSettings',
+        );
+      });
     });
   });
 });

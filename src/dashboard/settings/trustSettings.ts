@@ -50,6 +50,28 @@ export interface TrustPermissionSuggestEntry {
     count: number;
 }
 
+// Logging must never block the primary operation (fail-open availability,
+// PBI 2026-10-20-14 seam convention).
+async function safeLog(fn: () => Promise<void>): Promise<void> {
+    try {
+        await fn();
+    } catch {
+        // Ignored on purpose.
+    }
+}
+
+/**
+ * Fire-and-forget wrapper for the panel's async handlers: an unawaited
+ * rejection is silent in the page (only an unhandled-rejection entry, PBI 03).
+ * The handlers show their own failure status; this outer catch keeps the
+ * rejection observable in diagnostics.
+ */
+function runQuietly(operation: () => Promise<void>): void {
+    void operation().catch(async (error: unknown) => {
+        await safeLog(() => logError('Trust settings async operation failed', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'trustSettings'));
+    });
+}
+
 interface TrustDom {
     safetyModeSelect: HTMLSelectElement | null;
     trancoTierSelect: HTMLSelectElement | null;
@@ -208,7 +230,7 @@ export function createTrustSettings(): TrustSettingsController {
                     removeAriaLabel: `Remove ${tld}`,
                     removeDataset: { tld },
                     onRemove: () => {
-                        void removeJpAnchorTld(tld);
+                        runQuietly(() => removeJpAnchorTld(tld));
                     },
                 }),
             );
@@ -261,9 +283,9 @@ export function createTrustSettings(): TrustSettingsController {
                     removeDataset: { domain },
                     onRemove: () => {
                         if (isWhitelist) {
-                            void removeWhitelistDomain(domain);
+                            runQuietly(() => removeWhitelistDomain(domain));
                         } else {
-                            void removeSensitiveDomain(domain, currentCategory);
+                            runQuietly(() => removeSensitiveDomain(domain, currentCategory));
                         }
                     },
                 }),
@@ -412,7 +434,8 @@ export function createTrustSettings(): TrustSettingsController {
         });
 
         const db = getTrustDbAdmin();
-        void db.initialize().then(() => {
+        runQuietly(async () => {
+            await db.initialize();
             renderSensitiveList(db.getSensitiveDomains(category));
         });
     }
@@ -424,16 +447,23 @@ export function createTrustSettings(): TrustSettingsController {
     async function saveTrustSettings(): Promise<void> {
         const { alertFinanceCheckbox, alertSensitiveCheckbox, alertUnverifiedCheckbox } = dom ?? {};
         const checker = getTrustChecker();
-        await checker.saveAlertSettings({
-            alertFinance: alertFinanceCheckbox?.checked ?? false,
-            alertSensitive: alertSensitiveCheckbox?.checked ?? false,
-            alertUnverified: alertUnverifiedCheckbox?.checked ?? false
-        });
+        try {
+            await checker.saveAlertSettings({
+                alertFinance: alertFinanceCheckbox?.checked ?? false,
+                alertSensitive: alertSensitiveCheckbox?.checked ?? false,
+                alertUnverified: alertUnverifiedCheckbox?.checked ?? false
+            });
 
-        // Note: Trust Database changes are already saved immediately when modified
-        trustStatus(getMessageOr('settingsSaved', 'Settings saved'), 'success');
-        const alertConfig = await checker.getAlertConfig();
-        logInfo('Trust settings saved', { alertConfig }, 'TrustSettings');
+            // Note: Trust Database changes are already saved immediately when modified
+            trustStatus(getMessageOr('settingsSaved', 'Settings saved'), 'success');
+            const alertConfig = await checker.getAlertConfig();
+            logInfo('Trust settings saved', { alertConfig }, 'TrustSettings');
+        } catch (error: unknown) {
+            // A rejected save previously surfaced only as an unhandled
+            // rejection with the success message missing (PBI 03).
+            trustStatus(getMessageOr('saveError', 'Save error'), 'error');
+            await safeLog(() => logError('Trust settings save failed', { error: errorMessage(error) }, ErrorCode.STORAGE_WRITE_FAILURE, 'trustSettings'));
+        }
     }
 
     // ============================================================================
@@ -517,12 +547,12 @@ export function createTrustSettings(): TrustSettingsController {
         listen(trancoTierSelect, 'change', onTrancoTierChange);
 
         // Tranco Update button
-        listen(updateTrancoBtn, 'click', () => void updateTrancoList());
+        listen(updateTrancoBtn, 'click', () => runQuietly(() => updateTrancoList()));
 
         // JP-Anchor Add button
         listen(jpAnchorAddBtn, 'click', () => {
             if (jpAnchorAddInput) {
-                void addJpAnchorTld(jpAnchorAddInput.value.trim());
+                runQuietly(() => addJpAnchorTld(jpAnchorAddInput.value.trim()));
             }
         });
 
@@ -531,7 +561,7 @@ export function createTrustSettings(): TrustSettingsController {
             listen(jpAnchorAddInput, 'keypress', ((e: KeyboardEvent) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    void addJpAnchorTld(jpAnchorAddInput.value.trim());
+                    runQuietly(() => addJpAnchorTld(jpAnchorAddInput.value.trim()));
                 }
             }) as EventListener);
         }
@@ -548,7 +578,7 @@ export function createTrustSettings(): TrustSettingsController {
         // Sensitive Domain Add button
         listen(sensitiveAddBtn, 'click', () => {
             if (sensitiveAddInput && sensitiveCategorySelect) {
-                void addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value));
+                runQuietly(() => addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value)));
             }
         });
 
@@ -558,7 +588,7 @@ export function createTrustSettings(): TrustSettingsController {
                 if (e.key === 'Enter') {
                     e.preventDefault();
                     if (sensitiveCategorySelect) {
-                        void addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value));
+                        runQuietly(() => addSensitiveDomain(sensitiveAddInput.value.trim(), asTrustCategory(sensitiveCategorySelect.value)));
                     }
                 }
             }) as EventListener);
@@ -567,7 +597,7 @@ export function createTrustSettings(): TrustSettingsController {
         // Whitelist Add button
         listen(whitelistAddBtn, 'click', () => {
             if (whitelistAddInput) {
-                void addWhitelistDomain(whitelistAddInput.value.trim());
+                runQuietly(() => addWhitelistDomain(whitelistAddInput.value.trim()));
             }
         });
 
@@ -576,38 +606,42 @@ export function createTrustSettings(): TrustSettingsController {
             listen(whitelistAddInput, 'keypress', ((e: KeyboardEvent) => {
                 if (e.key === 'Enter') {
                     e.preventDefault();
-                    void addWhitelistDomain(whitelistAddInput.value.trim());
+                    runQuietly(() => addWhitelistDomain(whitelistAddInput.value.trim()));
                 }
             }) as EventListener);
         }
 
         // Save Settings button
-        listen(saveTrustSettingsBtn, 'click', () => void saveTrustSettings());
+        listen(saveTrustSettingsBtn, 'click', () => runQuietly(() => saveTrustSettings()));
 
         logInfo('Trust settings module initialized', {}, 'TrustSettings');
 
         // P0: 許可検討セクションのイベントリスナー
         if (thresholdInput) {
-            listen(thresholdInput, 'change', (async (e: Event) => {
+            listen(thresholdInput, 'change', (e: Event) => {
                 const newValue = parseInt((e.target as HTMLInputElement).value, 10);
                 if (!Number.isNaN(newValue) && newValue >= 1 && newValue <= 50) {
-                    // PBI 27-04: canonical writer is SettingsRepository (delta write
-                    // into the nested settings blob). The old raw top-level single-key
-                    // write is removed — it forked from the blob the migration owns.
-                    await settingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, newValue);
-                    await renderPermissionSuggestList(); // 再描画
+                    runQuietly(async () => {
+                        // PBI 27-04: canonical writer is SettingsRepository (delta write
+                        // into the nested settings blob). The old raw top-level single-key
+                        // write is removed — it forked from the blob the migration owns.
+                        await settingsRepository.set(StorageKeys.PERMISSION_NOTIFY_THRESHOLD, newValue);
+                        await renderPermissionSuggestList(); // 再描画
+                    });
                 }
-            }) as EventListener);
+            });
         }
 
-        listen(document.getElementById('dismissAllPermissions'), 'click', (async () => {
-            const { recordDomainDismissal } = await import('../../utils/permissionManager.js');
-            const denied = await renderPermissionSuggestList();
-            for (const { domain } of denied) {
-                await recordDomainDismissal(domain);
-            }
-            await renderPermissionSuggestList(); // 再描画
-        }) as EventListener);
+        listen(document.getElementById('dismissAllPermissions'), 'click', () => {
+            runQuietly(async () => {
+                const { recordDomainDismissal } = await import('../../utils/permissionManager.js');
+                const denied = await renderPermissionSuggestList();
+                for (const { domain } of denied) {
+                    await recordDomainDismissal(domain);
+                }
+                await renderPermissionSuggestList(); // 再描画
+            });
+        });
     }
 
     // ============================================================================
@@ -630,7 +664,7 @@ export function createTrustSettings(): TrustSettingsController {
             const domain = (btn.closest('.permission-suggest-row') as HTMLElement | null)?.dataset.domain;
             if (!domain) return;
             if (btn.classList.contains('permission-suggest-allow')) {
-                void (async () => {
+                runQuietly(async () => {
                     const { requestPermission, removeDeniedDomain } =
                         await import('../../utils/permissionManager.js');
                     const granted = await requestPermission(`https://${domain}`);
@@ -638,14 +672,14 @@ export function createTrustSettings(): TrustSettingsController {
                         await removeDeniedDomain(domain);
                         await renderPermissionSuggestList(); // 再描画
                     }
-                })();
+                });
             } else if (btn.classList.contains('permission-suggest-dismiss')) {
-                void (async () => {
+                runQuietly(async () => {
                     const { recordDomainDismissal } =
                         await import('../../utils/permissionManager.js');
                     await recordDomainDismissal(domain);
                     await renderPermissionSuggestList(); // 再描画
-                })();
+                });
             }
         });
     }

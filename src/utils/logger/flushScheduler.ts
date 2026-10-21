@@ -26,20 +26,31 @@ export class ChromeAlarmFlushScheduler implements LogFlushScheduler {
     this.listenersRegistered = true;
     if (typeof chrome !== 'undefined' && chrome.alarms && chrome.alarms.onAlarm) {
       chrome.alarms.onAlarm.addListener((alarm) => {
-        if (alarm.name === LOGGER_ALARM_NAME) void this.handler?.();
+        if (alarm.name === LOGGER_ALARM_NAME) {
+          void this.handler?.().catch((error: unknown) => {
+            // console.error on purpose: this module is part of the logger, so
+            // routing the failure back through logError would recurse.
+            console.error('[Logger] Scheduled flush failed', error);
+          });
+        }
       });
     }
     if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.onSuspend) {
       chrome.runtime.onSuspend.addListener(async () => {
-        // Await flush with a timeout so pending logs are not lost when the SW dies.
-        const flushCompleted = await Promise.race([
-          this.flushNow().then(() => true),
-          new Promise<boolean>((resolve) => setTimeout(() => resolve(false), SUSPEND_FLUSH_TIMEOUT_MS)),
-        ]);
-        if (!flushCompleted) {
-          console.error(
-            '[Logger] Flush timed out during suspend — pending log entries may not have been persisted'
-          );
+        try {
+          // Await flush with a timeout so pending logs are not lost when the SW dies.
+          const flushCompleted = await Promise.race([
+            this.flushNow().then(() => true),
+            new Promise<boolean>((resolve) => setTimeout(() => resolve(false), SUSPEND_FLUSH_TIMEOUT_MS)),
+          ]);
+          if (!flushCompleted) {
+            console.error(
+              '[Logger] Flush timed out during suspend — pending log entries may not have been persisted'
+            );
+          }
+        } catch (error: unknown) {
+          // Same logger-recursion exception as the alarm listener above.
+          console.error('[Logger] Flush during suspend failed', error);
         }
       });
     }

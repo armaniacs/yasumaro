@@ -278,5 +278,5 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
     chrome.notifications.onButtonClicked.addListener(guard(handleNotificationButtonClicked, 'notificationButtonClicked'));
     chrome.notifications.onClicked.addListener(guard(handleNotificationClicked, 'notificationClicked'));
 
-    chrome.alarms.onAlarm.addListener(handleAlarm);
+    chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'));
 }

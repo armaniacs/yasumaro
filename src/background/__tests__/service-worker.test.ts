@@ -1120,7 +1120,10 @@ describe('service-worker handlers', () => {
         it('should handle TEST_CONNECTIONS message', async () => {
             const handler = serviceWorker.createMessageHandler();
             const sendResponse = vi.fn();
-            const message = { type: 'TEST_CONNECTIONS', payload: {} };
+            // Bare envelope: TEST_CONNECTIONS has no production sender, so the
+            // legacy `payload: {}` input only survived via the NO_PAYLOAD
+            // exception that PBI 02 removed (integration-side wave, 2026-10-21).
+            const message = { type: 'TEST_CONNECTIONS' };
 
             handler(message, {} as any, sendResponse);
             await vi.waitFor(
@@ -1866,6 +1869,33 @@ describe('service-worker handlers', () => {
 
             // Leave no seeded queue behind for other tests.
             await chrome.storage.local.remove('pending_chrome_storage_writes');
+        });
+    });
+
+    describe('listener guard (PBI 03)', () => {
+        it('logs a rejecting listener handler through logError without an unhandled rejection', async () => {
+            const guarded = serviceWorker.guard(
+                vi.fn(() => Promise.reject(new Error('alarm handler exploded'))),
+                'unitGuardTag',
+            );
+            // Fire-and-forget: the guard call itself must not throw
+            expect(() => guarded()).not.toThrow();
+
+            await vi.waitFor(() => {
+                expect(logError).toHaveBeenCalledWith(
+                    'Listener failed: unitGuardTag',
+                    { error: 'alarm handler exploded' },
+                    ErrorCode.INTERNAL_ERROR,
+                    'service-worker',
+                );
+            }, { interval: 1 });
+        });
+
+        it('guards the alarm listener like every other listener in the block', async () => {
+            // Structural pin: the alarm listener was the only unguarded one in
+            // the top-level block (PBI 03).
+            const src = await readFile(new URL('../service-worker.ts', import.meta.url), 'utf8');
+            expect(src).toContain("chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'))");
         });
     });
 

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { shouldShowWizard, completeWizard, initOnboardingWizard } from '../onboardingWizard.js';
+import { settingsRepository } from '../../storage/SettingsRepository.js';
 import { StorageKeys } from '../../storage/types.js';
 import { focusTrapManager } from '../focusTrap.js';
 
@@ -246,5 +247,38 @@ describe('onboardingWizard', () => {
     initOnboardingWizard();
 
     expect(document.getElementById('wizardTitle')?.textContent).toBe('Welcome to Yasumaro');
+  });
+
+  // ── PBI 03: a rejected completion must not leave the wizard/trap stuck ──
+  it('closes the wizard and releases the focus trap when completion fails', async () => {
+    initOnboardingWizard(true);
+    vi.mocked(settingsRepository.setAll).mockRejectedValueOnce(new Error('storage unavailable'));
+    const releaseSpy = vi.spyOn(focusTrapManager, 'release');
+
+    const minimalBtn = document.querySelector('[data-type="minimal"]') as HTMLButtonElement;
+    minimalBtn.click();
+
+    // The handler closes the wizard in finally and logs instead of rejecting
+    await vi.waitFor(() => {
+      expect(document.getElementById('onboardingWizard')?.classList.contains('hidden')).toBe(true);
+    });
+    expect(releaseSpy).toHaveBeenCalled();
+    // The completion flag was NOT persisted
+    expect(mockStorage.get(StorageKeys.ONBOARDING_WIZARD_COMPLETED)).toBeUndefined();
+    releaseSpy.mockRestore();
+  });
+
+  it('closes the wizard without navigating when finishing a step fails', async () => {
+    initOnboardingWizard(true);
+    vi.mocked(settingsRepository.setAll).mockRejectedValueOnce(new Error('storage unavailable'));
+
+    (document.querySelector('[data-type="obsidian"]') as HTMLButtonElement).click();
+    (document.querySelector('[data-step="obsidian"] .wizard-next') as HTMLButtonElement).click();
+
+    await vi.waitFor(() => {
+      expect(document.getElementById('onboardingWizard')?.classList.contains('hidden')).toBe(true);
+    });
+    // The failed completion does not open the dashboard section
+    expect(chrome.tabs.create).not.toHaveBeenCalled();
   });
 });
