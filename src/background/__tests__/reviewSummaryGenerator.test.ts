@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import {
   getISOWeekNumber,
   getISOWeekYear,
@@ -132,6 +133,40 @@ describe('reviewSummaryGenerator', () => {
     it('handles empty entries gracefully', () => {
       const markdown = generateReviewMarkdown('Week 28 (2026)', [], 'No digest');
       expect(markdown).toContain('No entries in this period.');
+    });
+  });
+
+  /**
+   * PBI 2026-10-21-09: date output pins for the review summary Markdown.
+   * The clock is faked with a fixture built from local date components, so
+   * both pins hold in any timezone (localDate.test.ts pattern). The global
+   * chrome mock exposes getUILanguage -> 'en', which is what getUserLocale()
+   * reads here. No fixed-time waits.
+   */
+  describe('generateReviewMarkdown date outputs (PBI 2026-10-21-09)', () => {
+    beforeEach(() => {
+      useTimerClock();
+      // Local 00:30 on Oct 21: the old UTC "Generated on" rendered the
+      // previous day's date in positive-offset zones (JST mornings).
+      vi.setSystemTime(new Date(2026, 9, 21, 0, 30, 0).getTime());
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('renders Generated on with the local date, not the UTC date', () => {
+      const markdown = generateReviewMarkdown('Week 43 (2026)', [], 'No digest');
+      expect(markdown).toContain('Generated on: 2026-10-21');
+    });
+
+    it('renders each entry Date with the explicit user locale, not the environment default', () => {
+      const entries = [makeEntry({ created_at: new Date(2026, 9, 21, 0, 15, 0).getTime() })];
+      const markdown = generateReviewMarkdown('Week 43 (2026)', entries, 'No digest');
+      // The locale is the explicit getUserLocale() ('en' from the global chrome
+      // mock), so the fixed-format pin is the CLDR en default date for the
+      // entry's own local day — not a mirror call.
+      expect(markdown).toContain('**Date:** 10/21/2026');
     });
   });
 });

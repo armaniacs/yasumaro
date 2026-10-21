@@ -21,6 +21,8 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import { formatLocalDateString } from '../utils/localDate.js';
+import { getUserLocale } from '../utils/localeUtils.js';
 import { Mutex } from '../utils/Mutex.js';
 
 type ReviewLogEntry = BrowsingLogRecord & { id: number };
@@ -141,14 +143,20 @@ function generateReviewMarkdown(
   entries: ReviewLogEntry[],
   digest: string
 ): string {
-  const dateStr = new Date().toISOString().split('T')[0];
+  // PBI 2026-10-21-09: "Generated on" is the LOCAL calendar date (SSOT
+  // formatLocalDateString), not the UTC date the old toISOString().split('T')[0]
+  // emitted — a JST-morning digest was dated the previous day.
+  const dateStr = formatLocalDateString(Date.now());
 
   const entryList = entries.map((e, i) => {
     const title = sanitizeForObsidian(e.title || e.url || 'Untitled');
     const domain = e.domain || new URL(e.url).hostname;
     const summary = sanitizeForObsidian(e.summary || 'No summary available');
     const url = sanitizeForObsidian(e.url);
-    return `### ${i + 1}. ${title}\n\n**URL:** ${url}\n**Domain:** ${domain}\n**Date:** ${new Date(e.created_at).toLocaleDateString()}\n\n${summary}`;
+    // Same contract as the markdownFormatter heading Date line (PBI 16):
+    // explicit user locale instead of the no-arg toLocaleDateString, whose
+    // output was decided by the host's default Intl locale.
+    return `### ${i + 1}. ${title}\n\n**URL:** ${url}\n**Domain:** ${domain}\n**Date:** ${new Date(e.created_at).toLocaleDateString(getUserLocale())}\n\n${summary}`;
   }).join('\n\n---\n\n');
 
   return `# Yasumaro Review: ${periodLabel}

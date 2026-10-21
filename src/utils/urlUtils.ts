@@ -57,6 +57,14 @@ export function isSecureUrl(url: string): boolean {
 
 /**
  * URLをログ記録用にサニタイズ（ドメインのみを抽出）
+ *
+ * Deliberate contract (do NOT unify with markdownTemplateUtils.getHostname):
+ * the '[INVALID_URL]' sentinel is the logging contract. This value lands in
+ * log lines only, where an empty domain would hide that the URL was
+ * unparseable and lose the diagnostic. markdownTemplateUtils.getHostname
+ * returns '' on purpose because its output is user-facing: it is rendered
+ * into the daily Markdown export, where a sentinel would be visible.
+ *
  * @param {string} url - サニタイズするURL
  * @returns {string} ドメインのみの安全な文字列
  */

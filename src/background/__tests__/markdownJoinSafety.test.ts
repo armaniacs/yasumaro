@@ -95,8 +95,10 @@ describe('markdown join safety - title `](url)` suffix cannot break out', () => 
  * Parity pins for PBI-04 (entry -> Markdown SSOT).
  * WHY: each golden below records the CURRENT output byte-for-byte, so the
  * delegation refactor can prove zero behavior change by keeping this file
- * unmodified and green. Timestamps use the same Intl calls as production
- * (TZ-independent); every sanitized fragment is a fixed literal.
+ * unmodified and green. obsidianList timestamps use the same Intl call as
+ * production ('ja-JP', TZ-independent); the heading Date line is pinned as a
+ * fixed literal (PBI 2026-10-21-09 — the test must not re-implement the
+ * production formatting); every sanitized fragment is a fixed literal.
  */
 describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
   const FIXED_NOW = new Date('2026-03-15T09:30:00.000Z').getTime();
@@ -133,9 +135,14 @@ describe('markdown entry parity - golden pins (PBI-04 SSOT)', () => {
       tags: 'tech,ai',
       created_at: FIXED_CREATED,
     } as unknown as BrowsingLogEntry;
-    const dateStr = new Date(FIXED_CREATED).toLocaleString();
+    // PBI 2026-10-21-09: fixed-format pin. The Date line is formatted with the
+    // explicit user locale (this file mocks getUserLocale to 'ja-JP'), so the
+    // expected value is the CLDR ja-JP toLocaleString default for
+    // FIXED_CREATED — not a mirror call that would re-implement production.
+    // FIXED_CREATED is built from a local-time literal, so the pin holds in
+    // any timezone.
     expect(formatEntryToHeadingMarkdown(entry)).toBe(
-      `# Example Article\n\n- URL: https://example.com/article\n- Date: ${dateStr}\n- Tags: #tech #ai\n\n## Summary\n\nThis is a summary.\n`,
+      `# Example Article\n\n- URL: https://example.com/article\n- Date: 2026/3/10 12:34:56\n- Tags: #tech #ai\n\n## Summary\n\nThis is a summary.\n`,
     );
   });
 

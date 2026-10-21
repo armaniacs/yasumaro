@@ -6,6 +6,7 @@ import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
 import { AUDIT_CAP_IDB } from '../../../utils/limits.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
 
 export function createExportLogsPanel(): PanelLifecycle {
   return {
@@ -20,7 +21,11 @@ export function createExportLogsPanel(): PanelLifecycle {
 
       const statusTarget = statusEl ?? 'export-status';
 
-      const exportToday = (ext: string): string => `yasumaro_export_${new Date().toISOString().split('T')[0]}.${ext}`;
+      // PBI 2026-10-21-09: the filename carries the LOCAL calendar date (SSOT
+      // formatLocalDateString), not the UTC date the old
+      // toISOString().split('T')[0] emitted. In JST mornings (00:00-08:59) the
+      // UTC date is the previous day, so the filename said "yesterday".
+      const exportToday = (ext: string): string => `yasumaro_export_${formatLocalDateString(Date.now())}.${ext}`;
 
       jsonBtn?.addEventListener('click', () => {
         void runPanelAction({
@@ -106,7 +111,8 @@ export function createExportLogsPanel(): PanelLifecycle {
                 return;
               }
               const tsv = toTsvString(rows);
-              const filename = `yasumaro-audit-log-${new Date().toISOString().split('T')[0]}.tsv`;
+              // Same local-date contract as exportToday above (PBI 2026-10-21-09).
+              const filename = `yasumaro-audit-log-${formatLocalDateString(Date.now())}.tsv`;
               downloadText(tsv, filename, 'text/tab-separated-values');
               if (auditStatusEl) {
                 auditStatusEl.textContent = getMessageWithSubstitutions('exportLogsAuditDownloaded', { count: rows.length }, '{count} 件をダウンロードしました');

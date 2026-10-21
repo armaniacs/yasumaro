@@ -8,10 +8,12 @@
  */
 
 import type { AuditLogEntry } from '../../utils/sqlite-types.js';
-
-function toIsoDate(ms: number): string {
-  return new Date(ms).toISOString();
-}
+// PBI 2026-10-21-09: the created_at column is the LOCAL calendar date (SSOT
+// formatLocalDateString), not the UTC ISO instant the old toIsoDate emitted.
+// A UTC instant dated a JST-morning audit log with the previous day; the local
+// calendar date keeps the column aligned with what the user sees elsewhere
+// (e.g. the panel's download filename).
+import { formatLocalDateString } from '../../utils/localDate.js';
 
 function escapeTsvField(value: string): string {
   let str = value;
@@ -30,7 +32,7 @@ function escapeTsvField(value: string): string {
 export function toTsvString(rows: AuditLogEntry[]): string {
   const header = 'id\tprovider\turl\tcreated_at';
   const lines = rows.map((r) =>
-    `${r.id}\t${escapeTsvField(r.provider)}\t${escapeTsvField(r.url)}\t${toIsoDate(r.created_at)}`
+    `${r.id}\t${escapeTsvField(r.provider)}\t${escapeTsvField(r.url)}\t${formatLocalDateString(r.created_at)}`
   );
   return header + '\n' + lines.join('\n') + '\n';
 }

@@ -887,6 +887,29 @@ describe('exportLocalMarkdownCore behavior parity (M15)', () => {
         expect(document.getElementById('localExportManualStatus')?.textContent).toBe('指定期間に記録がありません。');
     });
 
+    it('resolves an empty date range to the local day bounds of today (PBI 2026-10-21-09)', async () => {
+        useTimerClock();
+        try {
+            // Local 00:30 on Oct 21: the old UTC default (toISOString().split('T')[0])
+            // resolved to the previous day in positive-offset zones, exporting
+            // yesterday's records. The fixture is built from local components,
+            // so the pin is TZ-independent (localDate.test.ts pattern).
+            vi.setSystemTime(new Date(2026, 9, 21, 0, 30, 0).getTime());
+            mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
+            (document.getElementById('localExportStartDate') as HTMLInputElement).value = '';
+            (document.getElementById('localExportEndDate') as HTMLInputElement).value = '';
+
+            await handleManualLocalMarkdownExport();
+
+            expect(mockQueryLogs).toHaveBeenCalledWith(expect.objectContaining({
+                since: new Date(2026, 9, 21, 0, 0, 0, 0).getTime(),
+                until: new Date(2026, 9, 21, 23, 59, 59).getTime(),
+            }));
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
     it('handleExportLocalMarkdown uses its own DOM element IDs and date-range query', async () => {
         mockQueryLogs.mockResolvedValue({ data: { rows: [], total: 0 } });
 

@@ -10,6 +10,7 @@
 
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { formatLocalDateString } from '../utils/localDate.js';
 import {
   loadExportConfig,
   exportFullHistoryInBatches,
@@ -59,7 +60,11 @@ async function exportLocalMarkdownCore(options: LocalMarkdownExportOptions): Pro
       const startDateInput = document.getElementById(options.dateRange.startDateId) as HTMLInputElement | null;
       const endDateInput = document.getElementById(options.dateRange.endDateId) as HTMLInputElement | null;
 
-      const startDate = startDateInput?.value || new Date().toISOString().split('T')[0]!;
+      // PBI 2026-10-21-09: the empty-input default is TODAY'S LOCAL date (SSOT
+      // formatLocalDateString), not the UTC date — a late-night run used to
+      // default the range to the previous day and export yesterday's records.
+      // exportDateRange reads the string as a local date (parseLocalDateStart).
+      const startDate = startDateInput?.value || formatLocalDateString(Date.now());
       const endDate = endDateInput?.value || startDate;
 
       result = await exportDateRange(config, startDate, endDate, chromeDownloadPort);

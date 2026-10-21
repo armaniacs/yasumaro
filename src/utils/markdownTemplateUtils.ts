@@ -195,6 +195,16 @@ export function getActiveTemplate(
 
 /**
  * URLからホスト名を抽出する。無効なURLは空文字を返す。
+ *
+ * Deliberate contract (do NOT unify with urlUtils.sanitizeUrlForLogging):
+ * this is the user-facing output contract. The returned hostname becomes the
+ * `domain` field of template entry data, which is rendered into the daily
+ * Markdown export (markdownEntryData -> MarkdownBufferManager -> the daily
+ * export file), so an unparseable URL must degrade to an invisible '' rather
+ * than print a sentinel the user would see. urlUtils.sanitizeUrlForLogging
+ * and urlWithoutPath use '[INVALID_URL]' on purpose for log lines, where an
+ * empty domain would hide that the URL was unparseable.
+ *
  * @param url 対象のURL文字列
  * @returns ホスト名、または空文字
  */

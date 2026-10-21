@@ -1,5 +1,6 @@
 import { sanitizeForObsidian, sanitizeForMarkdownLinkText, sanitizeUrlForMarkdownTarget } from './markdownSanitizer.js';
 import { getHostname } from './markdownTemplateUtils.js';
+import { getUserLocale } from './localeUtils.js';
 import { SUMMARY_EMPTY_FALLBACK } from './summaryFallback.js';
 import type { BrowsingLogEntry } from './sqlite-types.js';
 import type { MarkdownTemplateEntryData } from './types.js';
@@ -211,7 +212,15 @@ export function buildEntryMarkdown(
   }
   if (style === 'heading') {
     const sanitizedParts = sanitizeParts(input, opts);
-    const date = new Date(input.createdAt ?? Date.now()).toLocaleString();
+    // PBI 2026-10-21-09: the heading Date line is formatted with the explicit
+    // user locale (formatMarkdownStep contract) instead of the no-arg
+    // toLocaleString, whose output was decided by the host's default Intl
+    // locale. The format shape stays toLocaleString's default; only the locale
+    // source is pinned. Contrast with obsidianList (resolveTimestamp): that
+    // path deliberately uses the timestampLocale option with a 'ja-JP' default
+    // plus the minute-bucket cache, because it formats one value per row of a
+    // bulk export while the heading Date line is a single value.
+    const date = new Date(input.createdAt ?? Date.now()).toLocaleString(getUserLocale());
     const tagsLine = sanitizedParts.tagPrefix ? `- Tags: ${sanitizedParts.tagPrefix.trim()}` : '';
     // NOTE: no .filter(Boolean) here — the '' entries are intentional blank
     // lines between heading/meta/Summary; only the empty tagsLine is omitted.
