@@ -778,7 +778,7 @@ describe('handleTestAi', () => {
         // The i18n util is module-mocked to return keys; re-implement it for this
         // test so the interpolated provider value is observable in the label.
         const { getMessage } = await import('../../utils/i18n.js');
-        const previousGetMessage = getMessage.getMockImplementation();
+        const previousGetMessage = vi.mocked(getMessage).getMockImplementation();
         try {
             vi.mocked(getMessage).mockImplementation((key: string, substitutions?: unknown) => {
                 const subst = substitutions as Record<string, string> | undefined;

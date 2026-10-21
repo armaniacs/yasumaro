@@ -345,7 +345,9 @@ describe('GistSyncTarget', () => {
       // PBI 2026-10-21-11: the fetch runs through the standard CSP gate — no
       // skipCspValidation reaches fetchWithTimeout (BDD: fetch に
       // skipCspValidation は渡らない).
-      expect((fetchMock.mock.calls[0]?.[1] as RequestInit).skipCspValidation).toBeUndefined();
+      expect(Object.keys(fetchMock.mock.calls[0]?.[1] as Record<string, unknown>)).not.toContain(
+        'skipCspValidation',
+      );
     });
 
     it('does not follow a redirect when creating a gist', async () => {

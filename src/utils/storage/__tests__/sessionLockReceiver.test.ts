@@ -16,7 +16,7 @@ import {
 } from '../sessionLockReceiver.js';
 import type { SessionLockReceiverDeps } from '../sessionLockReceiver.js';
 import { SessionAlarmService } from '../../../background/SessionAlarmService.js';
-import type { Clock, StoragePort, StorageArea, AlarmPort } from '../../../ports.js';
+import type { Clock, StoragePort, StorageArea, AlarmPort } from '../../ports.js';
 import { StorageKeys } from '../types.js';
 
 // The unconfirmed-delivery failure log is the observable sender contract of
