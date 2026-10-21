@@ -4,12 +4,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <!-- No connect-src directive: this page's connections are governed by the
-       MV3 extension_pages CSP in wxt.config.ts, and tranco-list.eu rides it
-       via the list-source SSOT (PBI 2026-10-21-11). Whether MV3 applies a meta
-       CSP to extension pages is owner-verified manually. -->
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
+  <!-- No meta CSP: this page's connections are governed by the MV3
+       extension_pages CSP in wxt.config.ts, and tranco-list.eu and
+       api.github.com ride it via the SSOT constants. A meta CSP here was
+       removed per owner decision 2026-10-21: real-browser verification
+       confirmed MV3 applies meta CSP to extension pages, and a meta policy
+       with default-src 'none' but no connect-src blocked every page fetch
+       through the default-src fallback (PBI 2026-10-21-11 / 2026-10-18-25
+       blocker 1). -->
   <title>Yasumaro Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="models-dev-dialog.css">

@@ -66,3 +66,9 @@ Scenario: meta CSP の二重管理が消える
 
 - 統合側の make build 検証で、api.github.com が extension_pages CSP connect-src に反映されていないことを発見（host_permissions のみに載っていた）。ダッシュボードは extension page であり、明示 connect-src + default-src 'none' の CSP が options ページからの Gist fetch を遮るため、PBI 2026-10-18-25 の BDD シナリオ 1（「api.github.com が SSOT に 1 箇所で追加され、host_permissions と extension_pages CSP connect-src の両方が同時に更新される」）を満たしていなかった
 - 修正（commit `857be356`）: buildConnectSrcDomains() に GIST_EGRESS_HOST_PERMISSIONS を追加（SSOT 一括更新）。cspDomains.test.ts に connect-src 収載 pin を追加し、順序 pin を required-then-optional-then-egress に更新。make build で manifest の connect-src に api.github.com が反映されることを確認（53 テスト green・validate:fast green）
+
+## 追記 2（2026-10-21・owner 実機確認で発見・修正）
+
+- owner の実機確認（options ページ Console で `fetch('https://api.github.com/zen')` を実行）で、MV3 が extension page 内の meta CSP を適用することが確定。ブロック元は meta CSP の `default-src 'none'` フォールバック（「connect-src was not explicitly set, so default-src is used as a fallback」）。manifest CSP は connect-src を明示し api.github.com を含むため、manifest CSP がブロック元ではない
+- 本 PBI の初回実装では meta CSP から connect-src 指示子のみを削除していたが、これは meta CSP が connect に効かないという誤った前提だった。実機では meta CSP の default-src フォールバックで**ダッシュボード／ポップアップからの全 fetch が遮断**されており（tranco fetch も regress）、Gist 修正もブラウザレベルで不完全だった
+- 修正（owner 判断: 選択肢 1）: meta CSP タグ自体を options / popup の 2 拡張ページから削除し、manifest extension_pages CSP に完全に一任。script-src / style-src / img-src は manifest と同一内容のため防御は減らない。make build でビルド後 HTML から meta CSP が消えることを確認（csp 系 72 テスト green）。最終検証は owner が同一 console テストを再実行（fetch 成功＝manifest CSP が効いていることの確認）

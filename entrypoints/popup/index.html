@@ -3,8 +3,12 @@
 
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
+  <!-- No meta CSP: this page is governed by the MV3 extension_pages CSP in
+       wxt.config.ts. A meta CSP here was removed per owner decision
+       2026-10-21: MV3 applies meta CSP to extension pages, and a meta policy
+       with default-src 'none' but no connect-src blocked every page fetch
+       through the default-src fallback (PBI 2026-10-21-11 / 2026-10-18-25
+       blocker 1). -->
   <title>Yasumaro Settings</title>
   <link rel="stylesheet" href="styles.css">
 </head>
