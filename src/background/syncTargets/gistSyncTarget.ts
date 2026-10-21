@@ -134,6 +134,9 @@ export class GistSyncTarget implements SyncTarget {
       // PBI 2026-10-19-06: this request carries the PAT. A 30x must not be
       // followed — even a same-origin one keeps the header, and a cross-origin
       // Location would leak it to a host no gate checked.
+      // PBI 2026-10-21-11: no skipCspValidation — api.github.com is declared
+      // always in host_permissions (GIST_EGRESS_HOST_PERMISSIONS) and allowed
+      // by the runtime gate, so the fetch runs through the standard CSP gate.
       const response = await fetchWithTimeout(`${GIST_API_BASE}/user`, noRedirectInit({
         headers: {
           Authorization: `token ${pat}`,
@@ -141,7 +144,6 @@ export class GistSyncTarget implements SyncTarget {
           Accept: 'application/vnd.github.v3+json',
         },
         cache: CONNECTION_TEST_CACHE_MODE,
-        skipCspValidation: true,
       }));
 
       if (response.ok) {
@@ -163,9 +165,9 @@ export class GistSyncTarget implements SyncTarget {
 
   private async createGist(content: string, pat: string): Promise<string> {
     // PBI 2026-10-19-06: the PAT rides along, so a 30x must not be followed.
+    // PBI 2026-10-21-11: no skipCspValidation — the standard CSP gate runs.
     const response = await fetchWithTimeout(`${GIST_API_BASE}/gists`, noRedirectInit({
       method: 'POST',
-      skipCspValidation: true,
       headers: {
         Authorization: `token ${pat}`,
         'User-Agent': 'yasumaro-extension',
@@ -193,9 +195,9 @@ export class GistSyncTarget implements SyncTarget {
 
   private async updateGist(gistId: string, content: string, pat: string): Promise<void> {
     // PBI 2026-10-19-06: same policy as the create/connection-test sites.
+    // PBI 2026-10-21-11: no skipCspValidation — the standard CSP gate runs.
     const response = await fetchWithTimeout(`${GIST_API_BASE}/gists/${gistId}`, noRedirectInit({
       method: 'PATCH',
-      skipCspValidation: true,
       headers: {
         Authorization: `token ${pat}`,
         'User-Agent': 'yasumaro-extension',

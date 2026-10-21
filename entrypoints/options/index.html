@@ -4,8 +4,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- No connect-src directive: this page's connections are governed by the
+       MV3 extension_pages CSP in wxt.config.ts, and tranco-list.eu rides it
+       via the list-source SSOT (PBI 2026-10-21-11). Whether MV3 applies a meta
+       CSP to extension pages is owner-verified manually. -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none'; connect-src https://tranco-list.eu;">
+    content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' chrome-extension: data:; object-src 'none';">
   <title>Yasumaro Dashboard</title>
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="models-dev-dialog.css">

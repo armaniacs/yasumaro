@@ -6,6 +6,7 @@
 
 import { vi } from 'vitest';
 import * as cspValidatorModule from '../cspValidator.js';
+import { GIST_EGRESS_HOST_PERMISSIONS } from '../cspDomains.js';
 
 const { CSPValidator } = cspValidatorModule;
 
@@ -196,6 +197,42 @@ describe('CSPValidator - P1 - Non-AI Domains', () => {
 
     expect(CSPValidator.isUrlAllowed('https://evil-api.com/v1/models')).toBe(false);
     expect(CSPValidator.isUrlAllowed('https://random-site.net/page')).toBe(false);
+  });
+});
+
+describe('CSPValidator - Gist Egress (PBI 2026-10-21-11)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    CSPValidator.reset();
+  });
+
+  it('should allow the declared Gist egress origin without user settings', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    // Gist sync's only outbound channel (PAT connection test + gist
+    // create/update) is declared always in host_permissions, so the runtime
+    // gate passes it like every other declared origin.
+    expect(CSPValidator.isUrlAllowed('https://api.github.com/user')).toBe(true);
+    expect(CSPValidator.isUrlAllowed('https://api.github.com/gists')).toBe(true);
+  });
+
+  it('should block lookalike hosts outside the declared Gist egress origin', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    expect(CSPValidator.isUrlAllowed('https://api.github.com.evil.example/user')).toBe(false);
+    expect(CSPValidator.isUrlAllowed('https://api-github.com/user')).toBe(false);
+    expect(CSPValidator.isUrlAllowed('https://github.com/user')).toBe(false);
+  });
+
+  it('should allow every host permission the SSOT declares for Gist egress (derivation-consistency pin)', async () => {
+    const { CSPValidator } = await import('../cspValidator.js');
+
+    // cspValidator is a separate derivation from cspDomains: updating the SSOT
+    // there does not refresh this gate. This pin fails when the static set and
+    // the declared host permissions drift apart.
+    for (const perm of GIST_EGRESS_HOST_PERMISSIONS) {
+      expect(CSPValidator.isUrlAllowed(`${new URL(perm).origin}/user`)).toBe(true);
+    }
   });
 });
 

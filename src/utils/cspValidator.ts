@@ -74,6 +74,19 @@ const OPTIONAL_DOMAINS = ALL_LIST_SOURCES
   .map((source) => source.host);
 
 /**
+ * Gist egress hosts (PBI 2026-10-21-11). Gist sync is a shipped outbound
+ * channel (PAT connection test + gist create/update); api.github.com is
+ * declared always in host_permissions (GIST_EGRESS_HOST_PERMISSIONS in
+ * cspDomains.ts), so the runtime gate allows it without user settings.
+ *
+ * This module is a separate derivation from cspDomains.ts — updating the SSOT
+ * there does not refresh this gate, so the two must be edited in step. The
+ * derivation-consistency test pins that every declared Gist egress host
+ * passes isUrlAllowed.
+ */
+const GIST_EGRESS_HOSTS: ReadonlySet<string> = new Set(['api.github.com']);
+
+/**
  * CSP Validator クラス
  * 設定したAIプロバイダーのみCSPに含めるためのURL検証
  */
@@ -193,6 +206,11 @@ export class CSPValidator {
       // 非AIドメイン（Tranco, uBlock）— LIST_SOURCES SSOT から派生
       // （Checking Team 2026-09-22: Maintainability Medium — 旧4ドメイン直書きを廃止）
       if (LIST_SOURCE_HOSTS.has(domain)) {
+        return true;
+      }
+
+      // Gist egress (api.github.com) — host_permissions に常時宣言された origin
+      if (GIST_EGRESS_HOSTS.has(domain)) {
         return true;
       }
 

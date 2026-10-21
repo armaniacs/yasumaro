@@ -10,6 +10,7 @@ import { describe, it, expect } from 'vitest';
 import {
   AI_PROVIDER_HOST_PERMISSIONS,
   OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS,
+  GIST_EGRESS_HOST_PERMISSIONS,
   buildConnectSrcDomains,
   buildLocalConnectSrc,
   buildLocalHostPermissions,
@@ -46,6 +47,26 @@ describe('buildConnectSrcDomains', () => {
     const expectedLast = OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS[OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS.length - 1]!.replace(/\/\*$/, '');
     expect(domains[0]).toBe(expectedFirst);
     expect(domains[domains.length - 1]).toBe(expectedLast);
+  });
+});
+
+describe('GIST_EGRESS_HOST_PERMISSIONS', () => {
+  it('declares the Gist egress origin as an always-granted host permission', () => {
+    expect([...GIST_EGRESS_HOST_PERMISSIONS]).toEqual(['https://api.github.com/*']);
+  });
+
+  it('is not folded into the AI provider or opt-in host permission lists', () => {
+    // PBI 2026-10-21-11: Gist egress is a separate concept from the
+    // browsing-list allowlist — it is neither an AI provider nor a filter-list
+    // source, so it must stay its own constant instead of a table row.
+    for (const perm of GIST_EGRESS_HOST_PERMISSIONS) {
+      expect(AI_PROVIDER_HOST_PERMISSIONS).not.toContain(perm);
+      expect(OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS).not.toContain(perm);
+    }
+  });
+
+  it('passes validateCspDomains (https scheme, URL-parseable)', () => {
+    expect(() => validateCspDomains([...GIST_EGRESS_HOST_PERMISSIONS])).not.toThrow();
   });
 });
 

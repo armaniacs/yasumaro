@@ -35,6 +35,22 @@ export const OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS: readonly string[] = [
   ...ALL_LIST_SOURCES.map((source) => `${source.origin}/*`),
 ];
 
+/**
+ * Gist egress hosts (PBI 2026-10-21-11). Gist sync is a shipped outbound
+ * channel (PAT connection test + gist create/update via GET/POST/PATCH to
+ * api.github.com), a different concept from the browsing-list allowlist: it is
+ * neither an AI provider nor a filter-list or metadata source, so it does not
+ * belong in ALL_LIST_SOURCES or PROVIDER_ALLOWLIST_ROWS and gets its own
+ * constant here. Hosts missing from this list stay undeclared in the manifest
+ * even when the runtime gate (cspValidator.ts) allows them.
+ */
+export const GIST_EGRESS_HOSTS: readonly string[] = ['api.github.com'];
+
+/** Always-granted Gist egress host permissions (manifest `host_permissions`). */
+export const GIST_EGRESS_HOST_PERMISSIONS: readonly string[] = GIST_EGRESS_HOSTS.map(
+  (host) => `https://${host}/*`,
+);
+
 /** Local service ports that host_permissions and CSP connect-src must allow. */
 export const LOCAL_PORTS = LOOPBACK_PORTS;
 

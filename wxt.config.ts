@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import {
   AI_PROVIDER_HOST_PERMISSIONS,
   OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS,
+  GIST_EGRESS_HOST_PERMISSIONS,
   buildConnectSrcDomains,
   buildLocalHostPermissions,
   buildLocalConnectSrc,
@@ -243,7 +244,15 @@ export default defineConfig({
     // ホスト単位の追加許可は実行時に chrome.permissions.request({ origins }) で
     // 対象オリジンのみを都度要求する。
     optional_host_permissions: [...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS],
-    host_permissions: [...buildLocalHostPermissions(), ...AI_PROVIDER_HOST_PERMISSIONS],
+    // Gist egress is an always-granted host permission (PBI 2026-10-21-11):
+    // Gist sync's only outbound channel is api.github.com (GET/POST/PATCH for
+    // the PAT connection test and gist create/update), declared mandatorily
+    // instead of escaping into optional_host_permissions.
+    host_permissions: [
+      ...buildLocalHostPermissions(),
+      ...AI_PROVIDER_HOST_PERMISSIONS,
+      ...GIST_EGRESS_HOST_PERMISSIONS,
+    ],
     content_security_policy: {
       // wasm-unsafe-eval is required by:
       //   - @subframe7536/sqlite-wasm (wa-sqlite) in the offscreen document

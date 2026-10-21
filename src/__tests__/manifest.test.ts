@@ -36,6 +36,7 @@ import { join } from 'node:path';
 import {
   AI_PROVIDER_HOST_PERMISSIONS,
   OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS,
+  GIST_EGRESS_HOST_PERMISSIONS,
   buildLocalHostPermissions,
 } from '../utils/cspDomains.js';
 import type { UserManifest } from 'wxt';
@@ -97,10 +98,11 @@ function declaredOptionalHostPermissions(): string[] {
 
 /* ------------------------------------------------------ SSOT-derived inputs */
 
-/** What wxt.config.ts must pass as host_permissions: local service origins plus always-granted AI providers. */
+/** What wxt.config.ts must pass as host_permissions: local service origins, always-granted AI providers, and the Gist egress origin. */
 const EXPECTED_HOST_PERMISSIONS: readonly string[] = [
   ...buildLocalHostPermissions(),
   ...AI_PROVIDER_HOST_PERMISSIONS,
+  ...GIST_EGRESS_HOST_PERMISSIONS,
 ];
 
 /** What wxt.config.ts must pass as optional_host_permissions: the opt-in SSOT list verbatim. */
@@ -136,13 +138,14 @@ const ESSENTIAL_NON_AI_HOSTS = [
 
 /**
  * host_permissions = 16 local service origins + 14 always-granted AI provider
- * domains = 30 today. The cap leaves headroom for a handful of provider
- * additions and fails on creep of 10 or more entries (the pre-WXT manifest
- * carried 2000+ domains; the original unenforceable "<30" cap never ran).
+ * domains + 1 Gist egress origin (api.github.com, PBI 2026-10-21-11) = 31
+ * today. The cap leaves headroom for a handful of provider additions and fails
+ * on creep of 10 or more entries (the pre-WXT manifest carried 2000+ domains;
+ * the original unenforceable "<30" cap never ran).
  */
 const MAX_HOST_PERMISSIONS = 40;
 
-/** host_permissions + optional_host_permissions = 62 today. */
+/** host_permissions + optional_host_permissions = 63 today. */
 const MAX_TOTAL_HOST_PERMISSIONS = 100;
 
 /* --------------------------------------- declared localhost removals (PBI 2026-10-16-10) */
@@ -358,6 +361,15 @@ describe('Manifest - Host Permissions Minimization', () => {
       }
     });
 
+    it('contains the Gist egress origin as an always-granted host permission', () => {
+      // PBI 2026-10-21-11: Gist sync's only outbound channel is declared
+      // mandatorily, not escaped into optional_host_permissions.
+      const host = declaredHostPermissions();
+      for (const pattern of GIST_EGRESS_HOST_PERMISSIONS) {
+        expect(host).toContain(pattern);
+      }
+    });
+
     it('never contains <all_urls>', () => {
       expect(declaredHostPermissions()).not.toContain('<all_urls>');
     });
@@ -395,11 +407,11 @@ describe('Manifest - Host Permissions Minimization', () => {
   });
 
   describe('permission count caps', () => {
-    it('keeps host_permissions under the 40-entry cap (16 local + 14 AI provider domains today)', () => {
+    it('keeps host_permissions under the 40-entry cap (16 local + 14 AI provider + 1 Gist egress today)', () => {
       expect(declaredHostPermissions().length).toBeLessThan(MAX_HOST_PERMISSIONS);
     });
 
-    it('keeps the total host permissions under 100 (62 today)', () => {
+    it('keeps the total host permissions under 100 (63 today)', () => {
       const total =
         declaredHostPermissions().length + declaredOptionalHostPermissions().length;
       expect(total).toBeLessThan(MAX_TOTAL_HOST_PERMISSIONS);

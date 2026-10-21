@@ -26,6 +26,23 @@ vi.mock('../../utils/storage/storagePort.js', async (importOriginal) => {
   return { ...actual, ChromeStoragePort: TripwirePort, ChromeStorageAdapter: TripwirePort };
 });
 
+vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../utils/storage/SettingsRepository.js')>();
+  // PBI 2026-10-21-11: the CSP gate inside fetchWithTimeout reads module-level
+  // settings before every fetch. This suite's subject is the *injected*
+  // settings reader, so the gate reads a benign empty blob instead of the
+  // tripwired real store. The SettingsRepository class stays real, so an
+  // inline `new SettingsRepository()` regression still trips the
+  // ChromeStoragePort mock above.
+  return {
+    ...actual,
+    settingsRepository: {
+      getAll: vi.fn(async () => ({}) as Record<string, unknown>),
+    },
+  };
+});
+
 vi.mock('../../utils/logger/types.js', async () =>
   (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
     addLog: 'fn',
