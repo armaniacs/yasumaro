@@ -50,8 +50,8 @@ describe('buildConnectSrcDomains', () => {
 
   it('produces a space-joined string matching required-then-optional-then-egress order', () => {
     const domains = buildConnectSrcDomains();
-    const expectedFirst = AI_PROVIDER_HOST_PERMISSIONS[0].replace(/\/\*$/, '');
-    const expectedLast = GIST_EGRESS_HOST_PERMISSIONS[GIST_EGRESS_HOST_PERMISSIONS.length - 1].replace(
+    const expectedFirst = AI_PROVIDER_HOST_PERMISSIONS[0]!.replace(/\/\*$/, '');
+    const expectedLast = GIST_EGRESS_HOST_PERMISSIONS[GIST_EGRESS_HOST_PERMISSIONS.length - 1]!.replace(
       /\/\*$/,
       ''
     );
