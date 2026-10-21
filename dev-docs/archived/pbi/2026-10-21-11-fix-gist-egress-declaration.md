@@ -50,3 +50,14 @@ Scenario: meta CSP の二重管理が消える
 
 - [pbi/2026-10-18-25-fix-gist-egress-csp-declare.md](2026-10-18-25-fix-gist-egress-csp-declare.md)（親 PBI・4 ブロッカーの裁定済み）
 - src/utils/cspDomains.ts・src/utils/cspValidator.ts・src/background/syncTargets/gistSyncTarget.ts
+
+## 実装記録（2026-10-21）
+
+- 宣言フェーズ → skip 削除フェーズの 2 系統同時修正制約を厳守して実装
+- 宣言: cspDomains に GIST_EGRESS_HOSTS / GIST_EGRESS_HOST_PERMISSIONS を新設（ALL_LIST_SOURCES / PROVIDER_ALLOWLIST_ROWS には置かない）、cspValidator に egress 用 static set + isUrlAllowed 1 チェック行、wxt.config.ts の host_permissions に https://api.github.com/* を常時宣言（optional 不採用）。csp 系 5 ファイル 91 テスト green を確認してから次フェーズへ
+- skip 削除: gistSyncTarget の 3 箇所（testConnection / createGist / updateGist）の skipCspValidation を削除（fetchWithRedirectGuard は意図的 skip のためオプション自体は維持）
+- meta CSP: options/index.html から connect-src 指示子を削除し extension_pages CSP に一任
+- テスト: cspDomains/cspValidator に宣言 pin・ゲート pin・派生整合 pin 追加、manifest.test.ts の EXPECTED_HOST_PERMISSIONS に Gist egress 追加（SSOT 合成と完全一致 pin・31/40）、gistSyncTarget に「skip が渡らない」BDD pin、reader-seam に benign 部分モック（SettingsRepository 実物は維持・tripwire の意図維持）
+- 検証: csp/gistSyncTarget 系 12 ファイル 168 テスト green、reader-seam は --repeats=3 でも安定、type-check 通過、check-docs-chars 0 violations、eslint 通過、validate:fast green
+- プライバシー: host_permissions は api.github.com の GET / POST / PATCH のみで任意サイトへの読み書きは含まない
+- 残置（owner 手動確認）: MV3 が meta CSP を extension_pages に適用するかの実機確認。sync / syncBatch 未配線は意図的未配線と裁定済み（配線は別 PBI 候補）
