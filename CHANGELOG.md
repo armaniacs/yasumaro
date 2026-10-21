@@ -35,6 +35,37 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.51] - 2026-10-21
+
+このリリースは対象外 17 件（挙動変更テーマ）と owner 判断 PBI 4 件の解決です。なぜなぜ分析を計 43 回おこない、12 件の fix/feat 型 PBI に起票して全件を実装しました。各 PBI の実装記録は `dev-docs/archived/pbi/` を参照してください。
+
+### 修正
+
+- migration allowlist に未収載 17 キーを収載する。AI 使用量カウンタ 6 キー・sqlite 移行フラグ 10 キー・URL 許可オプトイン 1 キーを TOP_LEVEL_ONLY_KEYS に追加し、migration 再実行後のサイレントリセットを解消。contentFetchGateway の legacy 生リテラル fallback を削除し reader-only 意図を明文化（PBI 2026-10-21-01）
+- メッセージバリデータを fail-closed に統一する。GENERATE_REVIEW_SUMMARY / LOG_FORWARD validator 追加・monthly→weekly silent フォールバック撤去・未知 level 降格の狭窄、TEST_AI の 3 者食い違い（sender / gate / 例外）を fail-closed に統一、MANUAL / PREVIEW / SAVE_RECORD の byte-stat 検証追加（PBI 2026-10-21-02）
+- unhandled rejection と偽成功表示を 7 箇所で解消する。customPromptManager の成功表示を await 後へ移動、markdownTemplateManager / trustSettings / onboardingWizard に try/catch、service-worker の alarm リスナに guard、flushScheduler の onSuspend race を catch、content エントリの動的 import に catch。fire-and-forget 安全網を runQuietly に標準化し失敗パス 7 テスト新規（PBI 2026-10-21-03）
+- 誤データ・誤ラベル・latent guard を修正する。statusPanel の outerHTML fallback を撤去（誤データゼロ）、checkPermissionStep の domain 導出重複と無防備な new URL を解消、confirmDialog 非削除確認 2 箇所に confirmLabel を明示（PBI 2026-10-21-04）
+- バックアップ選択を数値 comparator にし復元 allowlist の SSOT 整合を回復する。selectLatestSettingsBackupKey を数値比較（本番 13 桁同桁数では選択結果不変）、restorableSettings の Trust DB 残留 2 行を削除、「allowlist ⊆ StorageKeys」不変テスト追加（PBI 2026-10-21-05）
+- ublockParser の negatedDomains 文法を等価統合し write-only ID を削除する。`~domain=` を `domain=~` に正規化して単一パース経路に（フィルタ解釈不変）、transform の ID（UUID 偽装ハッシュ）を削除、ublockMatcher の誤解を招くコメント訂正（PBI 2026-10-21-06）
+- TLD 追加時検証を multi-label に統一する。プリセットと同一形式 '.go.jp' を UI から受理（検証時経路は不変）、i18n エラー文言を en/ja 更新、INCOMPLETE 自認テストを完成化（PBI 2026-10-21-07）
+- i18n 直書きを解消し日本語固定フォールバックを英語化する。静的 aria-label 2 箇所に data-i18n-aria-label、動的 5 箇所を名前付き置換に統一、新キー 7 個 en/ja 追加、dead branch の日本語フォールバックを英語化（PBI 2026-10-21-08）
+- 出力契約をロケール明示・localDate SSOT に統一する。UTC 日付 5 箇所を localDate SSOT に（JST 朝の「昨日」ファイル名・前日既定範囲を解消）、heading 日付を getUserLocale() 明示に、getHostname 2 定義の契約意図をコメント明文化（PBI 2026-10-21-09）
+- durableKeyStore 戻り値を判別 union 化する。absent（fresh install）/ failure（永続ストア喪失）/ loaded を区別し catch の丸めを排除、KEK チェーン終端に failure ログ（挙動不変・観測性のみ）（PBI 2026-10-21-10）
+- Gist egress を宣言する。host_permissions に https://api.github.com/* を常時宣言、cspDomains に GIST_EGRESS_HOSTS 新設、cspValidator に egress static set + isUrlAllowed、gistSyncTarget の skipCspValidation 3 箇所を削除、meta CSP から connect-src 指示子を削除（PBI 2026-10-21-11）
+- 自動ロック fan-out の宛先を popup と dashboard に追加する。SESSION_LOCK_REQUEST の受け手モジュール sessionLockReceiver.ts 新設（seam 経由ハンドラ・chrome.runtime.id ガード・失敗時 { success: false } で再試行契約維持）、鍵キャッシュ破棄 + マスターパスワードパネル再読み込みを配線（PBI 2026-10-21-12）
+- テスト型エラー 3 件（新規混入）を返済し baseline を 452 に引き下げ
+
+### ドキュメント
+
+- PERMISSIONS.md に Gist egress の節（13. host_permissions）を新設し、Reviewer Notes のデータ送信先を 3 種類に更新
+- SECURITY.md の Scope に egress destinations（AI プロバイダー・Obsidian Local REST API・Gist）を追記
+
+### 残置（owner 手動確認）
+
+- MV3 が meta CSP を extension_pages に適用するかの実機確認
+- 自動ロック fan-out の開いている拡張ページでの実機観測
+- IndexedDB eviction の実機観測（unlimitedStorage で eviction 免除済み）
+
 ## [6.9.50] - 2026-10-21
 
 このリリースはアーキテクチャのリファクタリングです。yasumaro-refactor の診断（DRY / SRP / 不要 as 排除 / 副作用分離 / テスト容易性）で 24 件の改善テーマを RICE 採点・PBI 化し、24 件全件を実装しました。実行時の挙動は一切変えていません（公開機能・拒否の意味論・マスク挙動はすべて不変）。各 PBI の実装記録は `dev-docs/archived/pbi/` を参照してください。
