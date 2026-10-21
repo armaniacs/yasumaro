@@ -730,7 +730,10 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         // VULN-018 fix: reset failed attempts on successful authentication
         await resetFailedAttempts();
         // アクティビティ通知を送信（sessionAlarmsManager.tsへ）
-        sendFromPopup('ACTIVITY_UPDATE', {}).catch((error) => {
+        // PBI 2026-10-21-02: bare envelope — ACTIVITY_UPDATE is a NO_PAYLOAD
+        // type and the legacy `payload: {}` emission no longer flows through
+        // the strict shape gate.
+        sendFromPopup('ACTIVITY_UPDATE').catch((error) => {
             // 送信失敗は無視（Service Workerが起動していない可能性）
             logDebug('Failed to send activity update', { error: error.message }, 'storage/encryptionSession.ts');
         });

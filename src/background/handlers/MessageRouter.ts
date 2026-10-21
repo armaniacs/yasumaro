@@ -64,6 +64,8 @@ import {
   testObsidianValidator,
   e2eProbeQueryValidator,
   e2eProbeStateValidator,
+  generateReviewSummaryValidator,
+  logForwardValidator,
 } from '../../messaging/validators.js';
 import type { TabCache } from '../tabCache.js';
 import type { AIService, AiTestProgress } from '../ai/AIService.js';
@@ -266,6 +268,11 @@ export class MessageRouter {
     this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
     this.setValidator('OW_PROBE_QUERY', e2eProbeQueryValidator);
     this.setValidator('OW_PROBE_STATE', e2eProbeStateValidator);
+    // PBI 2026-10-21-02: GENERATE_REVIEW_SUMMARY / LOG_FORWARD had handlers
+    // but no registered validator, so dispatch's fail-open skip let invalid
+    // payloads reach them unexamined.
+    this.setValidator('GENERATE_REVIEW_SUMMARY', generateReviewSummaryValidator);
+    this.setValidator('LOG_FORWARD', logForwardValidator);
   }
 
   /**

@@ -399,7 +399,10 @@ describe('createConsentStateChangedHandler', () => {
 });
 
 describe('createGenerateReviewSummaryHandler', () => {
-  it('generates weekly summary by default', async () => {
+  // PBI 2026-10-21-02: the old test pinned the silent fallback itself —
+  // `payload: {}` (undefined periodType) was expected to generate weekly.
+  // The silent fallback is gone, so the valid value is now explicit.
+  it('generates weekly summary when requested', async () => {
     const deps = {
       generateWeeklySummary: vi.fn().mockResolvedValue(true),
       generateMonthlySummary: vi.fn(),
@@ -407,9 +410,40 @@ describe('createGenerateReviewSummaryHandler', () => {
     const handler = createGenerateReviewSummaryHandler(deps);
     const sendResponse = vi.fn();
 
-    await handler({ payload: {} } as any, {} as any, sendResponse);
+    await handler({ payload: { periodType: 'weekly' } } as any, {} as any, sendResponse);
     expect(deps.generateWeeklySummary).toHaveBeenCalled();
     expect(sendResponse).toHaveBeenCalledWith({ success: true, generated: true });
+  });
+
+  it('rejects an undefined periodType instead of falling back to weekly (PBI 2026-10-21-02)', async () => {
+    const deps = {
+      generateWeeklySummary: vi.fn(),
+      generateMonthlySummary: vi.fn(),
+    };
+    const handler = createGenerateReviewSummaryHandler(deps);
+    const sendResponse = vi.fn();
+
+    await handler({ payload: {} } as any, {} as any, sendResponse);
+    expect(deps.generateWeeklySummary).not.toHaveBeenCalled();
+    expect(deps.generateMonthlySummary).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: 'payload.periodType must be one of weekly, monthly',
+    });
+  });
+
+  it('rejects a periodType outside the wire contract (PBI 2026-10-21-02)', async () => {
+    const deps = {
+      generateWeeklySummary: vi.fn(),
+      generateMonthlySummary: vi.fn(),
+    };
+    const handler = createGenerateReviewSummaryHandler(deps);
+    const sendResponse = vi.fn();
+
+    await handler({ payload: { periodType: 'yearly' } } as any, {} as any, sendResponse);
+    expect(deps.generateWeeklySummary).not.toHaveBeenCalled();
+    expect(deps.generateMonthlySummary).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
   });
 
   it('generates monthly summary when requested', async () => {
@@ -482,7 +516,9 @@ describe('createLogForwardHandler', () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: true });
   });
 
-  it('forwards debug level logs for unknown levels', async () => {
+  // PBI 2026-10-21-02: the else branch is 'info' only — the registered
+  // LogForwardValidator rejects unknown levels before dispatch.
+  it('forwards info level logs to the debug sink', async () => {
     const handler = createLogForwardHandler();
     const sendResponse = vi.fn();
 

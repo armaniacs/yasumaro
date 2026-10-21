@@ -7,6 +7,8 @@ import {
   CheckDomainValidator,
   ContentCleansingExecutedValidator,
   TestObsidianValidator,
+  GenerateReviewSummaryValidator,
+  LogForwardValidator,
   ValidationError,
   validVisitValidator,
   dashboardSqliteValidator,
@@ -15,7 +17,10 @@ import {
   checkDomainValidator,
   contentCleansingExecutedValidator,
   testObsidianValidator,
+  generateReviewSummaryValidator,
+  logForwardValidator,
 } from '../validators.js';
+import { MAX_BYTE_STAT_BYTES, MAX_CLEANSED_ELEMENTS } from '../../utils/limits.js';
 
 describe('MessageValidator interface', () => {
   it('singletons are instances of correct classes', () => {
@@ -217,6 +222,63 @@ describe('ManualRecordValidator', () => {
   });
 });
 
+describe('ManualRecordValidator — ByteStatsPayload fields (PBI 2026-10-21-02)', () => {
+  const v = new ManualRecordValidator();
+  const base = { title: 't', url: 'https://example.com', content: 'c' };
+
+  it('accepts valid byte-stat fields on all three manual types', () => {
+    const payload = {
+      ...base,
+      pageBytes: 1024,
+      candidateBytes: 512,
+      originalBytes: 400,
+      cleansedBytes: 350,
+      aiSummaryOriginalBytes: 300,
+      aiSummaryCleansedBytes: 250,
+      aiSummaryCleansedElements: 3,
+      aiSummaryCleansedReason: 'ads',
+      aiSummaryCleansedReasons: ['ads'],
+      fallbackTriggered: false,
+      fallbackReason: 'none',
+    };
+    for (const type of ['MANUAL_RECORD', 'PREVIEW_RECORD', 'SAVE_RECORD']) {
+      expect(() => v.validate({ type, payload }), `${type} should accept byte stats`).not.toThrow();
+    }
+  });
+
+  it('rejects a negative or fractional byte field', () => {
+    expect(() => v.validate({ type: 'MANUAL_RECORD', payload: { ...base, pageBytes: -1 } })).toThrow(ValidationError);
+    expect(() => v.validate({ type: 'MANUAL_RECORD', payload: { ...base, pageBytes: 1.5 } })).toThrow(ValidationError);
+    expect(() => v.validate({ type: 'MANUAL_RECORD', payload: { ...base, pageBytes: '1024' } })).toThrow(ValidationError);
+  });
+
+  it('rejects a byte field above MAX_BYTE_STAT_BYTES', () => {
+    expect(() =>
+      v.validate({ type: 'SAVE_RECORD', payload: { ...base, cleansedBytes: MAX_BYTE_STAT_BYTES + 1 } }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects aiSummaryCleansedElements above MAX_CLEANSED_ELEMENTS', () => {
+    expect(() =>
+      v.validate({ type: 'PREVIEW_RECORD', payload: { ...base, aiSummaryCleansedElements: MAX_CLEANSED_ELEMENTS + 1 } }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects a non-boolean fallbackTriggered and a non-string fallbackReason', () => {
+    expect(() => v.validate({ type: 'MANUAL_RECORD', payload: { ...base, fallbackTriggered: 'yes' } })).toThrow(ValidationError);
+    expect(() => v.validate({ type: 'MANUAL_RECORD', payload: { ...base, fallbackReason: 5 } })).toThrow(ValidationError);
+  });
+
+  it('rejects an over-long aiSummaryCleansedReason and a non-array reasons list', () => {
+    expect(() =>
+      v.validate({ type: 'MANUAL_RECORD', payload: { ...base, aiSummaryCleansedReason: 'x'.repeat(129) } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'MANUAL_RECORD', payload: { ...base, aiSummaryCleansedReasons: 'ads' } }),
+    ).toThrow(ValidationError);
+  });
+});
+
 describe('new singletons', () => {
   it('fetchUrlValidator and manualRecordValidator are instances', () => {
     expect(fetchUrlValidator).toBeInstanceOf(FetchUrlValidator);
@@ -374,5 +436,98 @@ describe('DashboardSqliteValidator — archive subtypes (PBI 2026-09-06-02)', ()
     expect(() =>
       dashboardSqliteValidator.validate({ ...BASE, payload: { subtype: 'archive_export', stagingName: name, offset: 0, length: 9 * 1024 * 1024 } }),
     ).toThrow(/length/);
+  });
+});
+
+describe('GenerateReviewSummaryValidator (PBI 2026-10-21-02)', () => {
+  const v = new GenerateReviewSummaryValidator();
+
+  it('accepts weekly and monthly', () => {
+    expect(() =>
+      v.validate({ type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'weekly' }, protocolVersion: 1 }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'monthly' }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('rejects a periodType outside the contract (was a silent weekly fallback)', () => {
+    expect(() =>
+      v.validate({ type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'yearly' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'GENERATE_REVIEW_SUMMARY', payload: {}, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects a missing payload', () => {
+    expect(() => v.validate({ type: 'GENERATE_REVIEW_SUMMARY', protocolVersion: 1 })).toThrow(ValidationError);
+  });
+
+  it('rejects wrong type', () => {
+    expect(() =>
+      v.validate({ type: 'PING', payload: { periodType: 'weekly' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('generateReviewSummaryValidator singleton is an instance', () => {
+    expect(generateReviewSummaryValidator).toBeInstanceOf(GenerateReviewSummaryValidator);
+  });
+});
+
+describe('LogForwardValidator (PBI 2026-10-21-02)', () => {
+  const v = new LogForwardValidator();
+
+  it('accepts info, warn and error', () => {
+    for (const level of ['info', 'warn', 'error']) {
+      expect(() =>
+        v.validate({ type: 'LOG_FORWARD', payload: { level, message: 'm', source: 'offscreen' }, protocolVersion: 1 }),
+        `level ${level} should be valid`,
+      ).not.toThrow();
+    }
+  });
+
+  it('rejects an unknown level (was a silent debug downgrade)', () => {
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'verbose', message: 'm', source: 'offscreen' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: undefined, message: 'm', source: 'offscreen' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects non-string message and source', () => {
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'info', message: 1, source: 'offscreen' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'info', message: 'm', source: 2 }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('accepts optional details and rejects non-object details', () => {
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'info', message: 'm', details: { a: 1 }, source: 'offscreen' }, protocolVersion: 1 }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'info', message: 'm', details: 'x', source: 'offscreen' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'LOG_FORWARD', payload: { level: 'info', message: 'm', details: ['x'], source: 'offscreen' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects a missing payload', () => {
+    expect(() => v.validate({ type: 'LOG_FORWARD', protocolVersion: 1 })).toThrow(ValidationError);
+  });
+
+  it('rejects wrong type', () => {
+    expect(() =>
+      v.validate({ type: 'PING', payload: { level: 'info', message: 'm', source: 'x' }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('logForwardValidator singleton is an instance', () => {
+    expect(logForwardValidator).toBeInstanceOf(LogForwardValidator);
   });
 });

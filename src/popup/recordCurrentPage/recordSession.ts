@@ -313,7 +313,10 @@ export class RecordSession {
   private reportActivity(): void {
     // Activity loss means session tracking gaps; keep it visible in
     // diagnostic logs (was silent).
-    messageTransport.send({ type: 'ACTIVITY_UPDATE', payload: {} }).catch((error: unknown) => {
+    // PBI 2026-10-21-02: bare envelope — ACTIVITY_UPDATE is a NO_PAYLOAD type
+    // and the legacy `payload: {}` emission no longer flows through the
+    // strict shape gate.
+    messageTransport.send({ type: 'ACTIVITY_UPDATE' }).catch((error: unknown) => {
       void logWarn('recordSession: failed to report activity', { error: errorMessage(error) }, undefined, 'recordSession');
     });
   }

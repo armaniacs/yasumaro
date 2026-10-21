@@ -21,7 +21,7 @@ import {
   CURRENT_PROTOCOL_VERSION,
   PROTOCOL_VERSION_WINDOW_SIZE,
 } from '../../messaging/protocol.js';
-import { isValidEnvelopeShape, isNoPayloadType } from '../../messaging/envelopeShape.js';
+import { isValidEnvelopeShape } from '../../messaging/envelopeShape.js';
 import { logInfo } from '../../utils/logger/api.js';
 
 export const INVALID_MESSAGE_ERROR = { success: false, error: 'Invalid message' };
@@ -127,14 +127,12 @@ export async function checkEnvelope(
 ): Promise<EnvelopeOutcome> {
   // Shape gate is single-sourced in messaging/envelopeShape.js: the strict
   // rule accepts TEST_OBSIDIAN / DASHBOARD_SQLITE without a payload
-  // (optional-object裁定). The NO_PAYLOAD legacy exception below stays:
-  // TEST_AI and ACTIVITY_UPDATE send `payload: {}` and must keep flowing
-  // until the senders are fixed.
+  // (optional-object verdict). Fail-closed: an envelope that fails the shape
+  // rule is rejected. The NO_PAYLOAD legacy exception is gone (PBI
+  // 2026-10-21-02) — the TEST_AI and ACTIVITY_UPDATE senders it existed for
+  // now ship bare envelopes, so the shape declaration is the only authority.
   if (!isValidEnvelopeShape(rawMessage)) {
-    const type = (rawMessage as { type?: unknown } | null | undefined)?.type;
-    if (!(typeof type === 'string' && isNoPayloadType(type))) {
-      return { accepted: false, response: INVALID_MESSAGE_ERROR };
-    }
+    return { accepted: false, response: INVALID_MESSAGE_ERROR };
   }
   const msg = rawMessage as Record<string, unknown>;
   // The shape gate above accepted the envelope, so type is a known string.

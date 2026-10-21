@@ -76,10 +76,12 @@ describe('checkEnvelope', () => {
   });
 
   it('skips migrations for test/diagnostic types', async () => {
+    // PBI 2026-10-21-02: the NO_PAYLOAD legacy exception is gone, so the
+    // inputs are bare envelopes — the shape the production senders ship.
     for (const type of ['TEST_CONNECTIONS', 'TEST_OBSIDIAN', 'TEST_AI', 'CHECK_DOMAIN']) {
       const deps = makeDeps();
       const outcome = await checkEnvelope(
-        { type, protocolVersion: CURRENT_PROTOCOL_VERSION, payload: {} },
+        { type, protocolVersion: CURRENT_PROTOCOL_VERSION },
         sender(),
         deps,
       );
@@ -129,14 +131,18 @@ describe('checkEnvelope', () => {
 });
 
 describe('envelope shape agreement (PBI 2026-10-05-13)', () => {
-  // 同一入力リテラルは messaging-types-uniformity.test.ts の shapeCases と
-  // 一字一句同じ（null / 非 object は既存テストが pin するため行列から除く）。
-  // checkEnvelope の受理は shape と一致する。唯一の例外は NO_PAYLOAD + payload
-  //（TEST_AI / ACTIVITY_UPDATE が `payload: {}` を送る legacy）のみ受理する。
+  // The input literals are byte-identical to the shapeCases in
+  // messaging-types-uniformity.test.ts (null / non-object rows are excluded
+  // there). checkEnvelope acceptance agrees with the shape gate. The
+  // NO_PAYLOAD legacy exception was removed (PBI 2026-10-21-02): the TEST_AI /
+  // ACTIVITY_UPDATE senders it existed for ship bare envelopes now, so a
+  // NO_PAYLOAD envelope carrying a payload is rejected like every other
+  // shape violation.
   const cases: Array<{ input: Record<string, unknown>; accepted: boolean }> = [
     { input: { type: 'PING' }, accepted: true },
     { input: { type: 'PING', payload: undefined }, accepted: true },
-    { input: { type: 'PING', payload: {} }, accepted: true },
+    { input: { type: 'PING', payload: {} }, accepted: false },
+    { input: { type: 'TEST_AI', payload: {} }, accepted: false },
     { input: { type: 'TEST_OBSIDIAN' }, accepted: true },
     { input: { type: 'TEST_OBSIDIAN', payload: undefined }, accepted: true },
     { input: { type: 'TEST_OBSIDIAN', payload: {} }, accepted: true },

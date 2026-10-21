@@ -330,6 +330,9 @@ export function createLogForwardHandler() {
     } else if (level === 'warn') {
       await logWarn(boundedMessage, enrichedDetails, undefined, derivedSource);
     } else {
+      // PBI 2026-10-21-02: narrowed to 'info' only. The registered
+      // LogForwardValidator rejects unknown levels before dispatch, so this
+      // branch is the declared 'info' value — not an anything-else downgrade.
       await logDebug(boundedMessage, enrichedDetails, derivedSource);
     }
     sendResponse({ success: true });
@@ -344,7 +347,16 @@ export function createGenerateReviewSummaryHandler(deps: GenerateReviewSummaryHa
   ): Promise<void> => {
     // Sender authorization is enforced by the registry ('extension-only').
     try {
+      // PBI 2026-10-21-02: the old ternary silently fell back to weekly for
+      // anything but 'monthly' (undefined and garbage included). The wire
+      // contract is 'weekly' | 'monthly'; anything else is a rejection, and
+      // the registered GenerateReviewSummaryValidator rejects it before
+      // dispatch.
       const periodType = message.payload?.periodType;
+      if (periodType !== 'weekly' && periodType !== 'monthly') {
+        sendResponse({ success: false, error: 'payload.periodType must be one of weekly, monthly' });
+        return;
+      }
       const generated = periodType === 'monthly'
         ? await deps.generateMonthlySummary()
         : await deps.generateWeeklySummary();

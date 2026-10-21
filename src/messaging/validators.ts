@@ -24,6 +24,8 @@ import type {
   RegenerateSummaryMessage,
   OwE2eProbeQueryMessage,
   OwE2EProbeStateMessage,
+  GenerateReviewSummaryMessage,
+  LogForwardMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
@@ -601,6 +603,32 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     if (payload.force !== undefined && typeof payload.force !== 'boolean') {
       throw new ValidationError('ManualRecordValidator', 'payload.force must be boolean', 'force');
     }
+    // PBI 2026-10-21-02: the three payload types are `{...} & ByteStatsPayload`
+    // unions, so the byte-stat fields are wire-reachable even though the popup
+    // sender does not ship them today. Same reject (never clamp) policy as
+    // ValidVisitValidator — an invalid value is a wire-contract violation.
+    if (payload.fallbackTriggered !== undefined && typeof payload.fallbackTriggered !== 'boolean') {
+      throw new ValidationError('ManualRecordValidator', 'payload.fallbackTriggered must be boolean', 'fallbackTriggered');
+    }
+    if (payload.fallbackReason !== undefined && typeof payload.fallbackReason !== 'string') {
+      throw new ValidationError('ManualRecordValidator', 'payload.fallbackReason must be a string', 'fallbackReason');
+    }
+    for (const field of BYTE_STAT_FIELDS) {
+      assertByteStatField(payload, field, MAX_BYTE_STAT_BYTES, 'ManualRecordValidator');
+    }
+    assertByteStatField(payload, 'aiSummaryCleansedElements', MAX_CLEANSED_ELEMENTS, 'ManualRecordValidator');
+    if (
+      payload.aiSummaryCleansedReason !== undefined &&
+      (typeof payload.aiSummaryCleansedReason !== 'string' ||
+        payload.aiSummaryCleansedReason.length > MAX_CLEANSED_REASON_CHARS)
+    ) {
+      throw new ValidationError(
+        'ManualRecordValidator',
+        `payload.aiSummaryCleansedReason must be a string of at most ${MAX_CLEANSED_REASON_CHARS} chars`,
+        'aiSummaryCleansedReason',
+      );
+    }
+    assertCleansedReasons(payload, 'ManualRecordValidator');
     return msg as ManualRecordMessage;
   }
 }
@@ -788,6 +816,70 @@ export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateM
   }
 }
 
+// ------------------------------------------------------------------
+// GenerateReviewSummaryValidator — GENERATE_REVIEW_SUMMARY (PBI 2026-10-21-02)
+// ------------------------------------------------------------------
+/**
+ * Wire-shape gate for GENERATE_REVIEW_SUMMARY. The payload type is required
+ * (`periodType: 'weekly' | 'monthly'`), but the message had no registered
+ * validator, so dispatch's fail-open skip let undefined and garbage fall
+ * through to the handler's silent weekly fallback. The enum is the whole
+ * contract; anything else is a rejection.
+ */
+export class GenerateReviewSummaryValidator implements MessageValidator<GenerateReviewSummaryMessage> {
+  validate(msg: unknown): GenerateReviewSummaryMessage {
+    const m = assertEnvelopeType(msg, 'GenerateReviewSummaryValidator', 'GENERATE_REVIEW_SUMMARY');
+    const payload = assertPayloadObject(m, 'GenerateReviewSummaryValidator');
+    if (payload.periodType !== 'weekly' && payload.periodType !== 'monthly') {
+      throw new ValidationError(
+        'GenerateReviewSummaryValidator',
+        'payload.periodType must be one of weekly, monthly',
+        'periodType',
+      );
+    }
+    assertProtocolVersion(m, 'GenerateReviewSummaryValidator');
+    return msg as GenerateReviewSummaryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
+// LogForwardValidator — LOG_FORWARD (PBI 2026-10-21-02)
+// ------------------------------------------------------------------
+/**
+ * Wire-shape gate for LOG_FORWARD. The offscreen document is the expected
+ * caller and the handler is the trust boundary, so level is checked against
+ * the declared enum (unknown levels were silently demoted to debug before
+ * this row existed) and the remaining fields are type-checked to match the
+ * declared payload shape.
+ */
+export class LogForwardValidator implements MessageValidator<LogForwardMessage> {
+  validate(msg: unknown): LogForwardMessage {
+    const m = assertEnvelopeType(msg, 'LogForwardValidator', 'LOG_FORWARD');
+    const payload = assertPayloadObject(m, 'LogForwardValidator');
+    if (payload.level !== 'error' && payload.level !== 'warn' && payload.level !== 'info') {
+      throw new ValidationError(
+        'LogForwardValidator',
+        'payload.level must be one of info, warn, error',
+        'level',
+      );
+    }
+    if (typeof payload.message !== 'string') {
+      throw new ValidationError('LogForwardValidator', 'payload.message must be string', 'message');
+    }
+    if (
+      payload.details !== undefined &&
+      (typeof payload.details !== 'object' || payload.details === null || Array.isArray(payload.details))
+    ) {
+      throw new ValidationError('LogForwardValidator', 'payload.details must be an object', 'details');
+    }
+    if (typeof payload.source !== 'string') {
+      throw new ValidationError('LogForwardValidator', 'payload.source must be string', 'source');
+    }
+    assertProtocolVersion(m, 'LogForwardValidator');
+    return msg as LogForwardMessage;
+  }
+}
+
 // Convenience singletons for registry wiring
 export const validVisitValidator = new ValidVisitValidator();
 export const dashboardSqliteValidator = new DashboardSqliteValidator();
@@ -799,3 +891,5 @@ export const contentCleansingExecutedValidator = new ContentCleansingExecutedVal
 export const testObsidianValidator = new TestObsidianValidator();
 export const e2eProbeQueryValidator = new E2EProbeQueryValidator();
 export const e2eProbeStateValidator = new E2EProbeStateValidator();
+export const generateReviewSummaryValidator = new GenerateReviewSummaryValidator();
+export const logForwardValidator = new LogForwardValidator();

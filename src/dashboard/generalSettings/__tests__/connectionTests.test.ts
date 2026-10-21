@@ -259,10 +259,15 @@ describe('testAiConnection', () => {
     const sendMessage = vi.fn().mockResolvedValue({ ai: { success: true, message: 'OK', providers: [] } });
     setupChrome({ runtime: { sendMessage, onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     const res = await testAiConnection();
-    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'TEST_AI', payload: {} }));
-    // ensure runId not present
+    // PBI 2026-10-21-02: TEST_AI is a NO_PAYLOAD type, so the bare envelope is
+    // the contract. The legacy `payload: {}` emission this test used to pin is
+    // gone — the strict shape gate rejects it and checkEnvelope no longer
+    // carries a NO_PAYLOAD exception.
+    expect(sendMessage).toHaveBeenCalledWith(expect.objectContaining({ type: 'TEST_AI' }));
+    // ensure runId not present and no payload key
     const arg = sendMessage.mock.calls[0]?.[0];
     expect(arg.runId).toBeUndefined();
+    expect(arg.payload).toBeUndefined();
     expect(res.success).toBe(true);
   });
 

@@ -13,11 +13,9 @@
  *   (`typeof` check only, matching the historic gate — deeper field checks
  *   stay in the per-type validators).
  *
- * Production exception (pinned, not fixed here): checkEnvelope still skips
- * the payload inspection for NO_PAYLOAD envelopes because TEST_AI and
- * ACTIVITY_UPDATE send `payload: {}`. Tightening that corner needs the
- * sender fixes, which are out of scope — the exception lives in
- * envelopePolicy, never in this module.
+ * Production exception removed (PBI 2026-10-21-02): the NO_PAYLOAD skip in
+ * envelopePolicy is gone — TEST_AI and ACTIVITY_UPDATE no longer send
+ * `payload: {}`, and every SW-bound envelope is inspected by shape.
  */
 
 import { VALID_MESSAGE_TYPES, NO_PAYLOAD_TYPES } from './messageTypeRegistry.js';

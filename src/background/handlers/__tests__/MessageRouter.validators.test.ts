@@ -163,4 +163,73 @@ describe('MessageRouter — validator integration', () => {
     expect(result).toBe(false);
     expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
   });
+
+  // PBI 2026-10-21-02: GENERATE_REVIEW_SUMMARY / LOG_FORWARD had handlers but
+  // no registered validator, so dispatch's fail-open skip let invalid payloads
+  // reach them unexamined.
+  it('rejects a GENERATE_REVIEW_SUMMARY payload outside the period contract before the handler runs', () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const result = router.dispatch(
+      { type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'yearly' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(result).toBe(false);
+    expect(deps.generateWeeklySummary).not.toHaveBeenCalled();
+    expect(deps.generateMonthlySummary).not.toHaveBeenCalled();
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+  });
+
+  it('passes a valid GENERATE_REVIEW_SUMMARY through the validator to its handler', async () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const handled = router.dispatch(
+      { type: 'GENERATE_REVIEW_SUMMARY', payload: { periodType: 'weekly' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(handled).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
+  });
+
+  it('rejects a LOG_FORWARD payload with an unknown level before the handler runs', () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const result = router.dispatch(
+      { type: 'LOG_FORWARD', payload: { level: 'verbose', message: 'm', source: 'offscreen' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(result).toBe(false);
+    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: false }));
+  });
+
+  it('passes a valid LOG_FORWARD through the validator to its handler', async () => {
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const handled = router.dispatch(
+      { type: 'LOG_FORWARD', payload: { level: 'info', message: 'm', source: 'offscreen' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(handled).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ success: true }));
+    });
+  });
 });

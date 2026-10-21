@@ -251,9 +251,12 @@ export async function testObsidianConnection(apiKey: string): Promise<ObsidianTe
 }
 
 export async function testAiConnection(runId?: string): Promise<MultiProviderTestResult> {
+  // PBI 2026-10-21-02: TEST_AI is a NO_PAYLOAD type — the bare envelope is the
+  // contract. The legacy `payload: {}` emission is gone; the strict shape gate
+  // has rejected it since the envelope-shape change, and checkEnvelope no
+  // longer carries a NO_PAYLOAD exception to let it through.
   const testResult = await messageTransport.send({
     type: 'TEST_AI',
-    payload: {},
     ...(runId !== undefined ? { runId } : {}),
   }) as { ai?: MultiProviderTestResult };
 
