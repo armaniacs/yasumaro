@@ -22,6 +22,7 @@ import { showRowCapNotice } from '../rowCapNotice.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
 import { getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
+import { applyI18n } from '../../../utils/i18n-dom.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { MAX_RESEARCH_SESSION_ROWS } from '../../../utils/computeLimits.js';
@@ -73,7 +74,10 @@ function populateRecord(
   pageCheck.type = 'checkbox';
   pageCheck.className = 'rsess-select-page';
   pageCheck.dataset.recordId = String(record.id);
-  pageCheck.setAttribute('aria-label', `select page ${record.title || record.url}`);
+  pageCheck.setAttribute(
+    'aria-label',
+    msg('researchSessions_selectPageAriaLabel', { page: record.title || record.url }, 'select page {page}'),
+  );
   pageCheck.addEventListener('change', () => hooks.togglePage(record.id, pageCheck.checked));
   li.prepend(pageCheck);
 
@@ -149,6 +153,10 @@ function renderTree(nodes: SessionTreeNode[], hooks: SelectionToggleHooks): HTML
       subtreeCheck.type = 'checkbox';
       subtreeCheck.className = 'rsess-select-subtree';
       subtreeCheck.dataset.recordId = String(node.record.id);
+      // Same shape as the static dialog twin (models-dev-dialog): the
+      // data-i18n-aria-label key supplies the label and the attribute keeps
+      // the untranslated fallback until applyI18n resolves the key.
+      subtreeCheck.setAttribute('data-i18n-aria-label', 'researchSessions_selectSubtreeAriaLabel');
       subtreeCheck.setAttribute('aria-label', 'select pages below this page');
       subtreeCheck.addEventListener('change', () =>
         hooks.toggleSubtree(node.record.id, subtreeCheck.checked),
@@ -192,7 +200,10 @@ function renderSession(
   const sessionCheck = document.createElement('input');
   sessionCheck.type = 'checkbox';
   sessionCheck.className = 'rsess-select-session';
-  sessionCheck.setAttribute('aria-label', `select session ${index + 1}`);
+  sessionCheck.setAttribute(
+    'aria-label',
+    msg('researchSessions_selectSessionAriaLabel', { n: index + 1 }, 'select session {n}'),
+  );
   sessionCheck.addEventListener('change', () => hooks.toggleSession(index, sessionCheck.checked));
   // The checkbox lives inside <summary>: without this its click bubbles to
   // the disclosure and toggles the <details> open/closed. No preventDefault —
@@ -426,6 +437,11 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     agg.sessions.forEach((session, index) => {
       target.appendChild(renderSession(session, index, selectionHooks));
     });
+    // The tree checkboxes carry data-i18n-aria-label; the page-level
+    // applyI18n ran at load, before these nodes existed, so the rendered
+    // list re-applies it on its own subtree (same reason every JS builder
+    // in the dashboard does).
+    applyI18n(listEl);
 
     renderSearchToGoal(agg.sessions);
   }

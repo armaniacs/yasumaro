@@ -719,18 +719,18 @@ export function createTrustSettings(): TrustSettingsController {
             row.dataset.domain = domain;
 
             const span = document.createElement('span');
-            span.textContent = `${domain} — ${count}${getMessageOr('permissionSuggestCount', '回訪問')}`;
+            span.textContent = `${domain} — ${count}${getMessageOr('permissionSuggestCount', ' visits')}`;
 
             const allowed = await isHostPermitted(`https://${domain}`);
             if (!allowed) {
                 const allowBtn = document.createElement('button');
                 allowBtn.className = 'btn-secondary btn-sm permission-suggest-allow';
-                allowBtn.textContent = getMessageOr('permissionSuggestAdd', '🔓 許可する');
+                allowBtn.textContent = getMessageOr('permissionSuggestAdd', '🔓 Allow');
 
                 const dismissBtn = document.createElement('button');
                 dismissBtn.className = 'btn-icon permission-suggest-dismiss';
                 dismissBtn.textContent = '×';
-                dismissBtn.title = getMessageOr('permissionSuggestDismiss', '無視する（14日表示しない）');
+                dismissBtn.title = getMessageOr('permissionSuggestDismiss', 'Dismiss (hide for 14 days)');
 
                 row.appendChild(span);
                 row.appendChild(allowBtn);

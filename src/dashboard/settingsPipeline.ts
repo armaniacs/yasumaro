@@ -92,7 +92,7 @@ export function renderBPriorityWarnings(bList: HTMLElement): { p1Empty: boolean 
 export function saveErrorText(error: string | undefined): string {
   const entry = error ? SAVE_ERROR_MESSAGES[error] : undefined;
   if (entry) return getMessageOr(entry[0], entry[1]);
-  return getMessageOr('saveError', '設定の保存に失敗しました。');
+  return getMessageOr('saveError', 'Save error');
 }
 
 export interface SaveSettingsOptions {

@@ -134,6 +134,18 @@
   "aiProviderPriority1Required": {
     "message": "Priority 1 is required"
   },
+  "aiProviderPrioritySelectAriaLabel": {
+    "message": "Priority {n}",
+    "description": "Aria label of a B-layout priority provider select"
+  },
+  "aiProviderPriorityMoveUpAriaLabel": {
+    "message": "Move priority {n} up",
+    "description": "Aria label of the B-layout move-up button"
+  },
+  "aiProviderPriorityMoveDownAriaLabel": {
+    "message": "Move priority {n} down",
+    "description": "Aria label of the B-layout move-down button"
+  },
   "aiProviderLayoutToggleLabel": {
     "message": "AI provider layout"
   },
@@ -2601,6 +2613,18 @@
     "message": "Deleted {n} pages. Failed partway.",
     "description": "Partial bulk delete error"
   },
+  "researchSessions_selectPageAriaLabel": {
+    "message": "select page {page}",
+    "description": "Aria label of a Research Sessions page checkbox"
+  },
+  "researchSessions_selectSubtreeAriaLabel": {
+    "message": "select pages below this page",
+    "description": "Aria label of a Research Sessions subtree checkbox"
+  },
+  "researchSessions_selectSessionAriaLabel": {
+    "message": "select session {n}",
+    "description": "Aria label of a Research Sessions session checkbox"
+  },
   "navTrailLabel": {
     "message": "Record navigation trail (source page and search terms)",
     "description": "Navigation trail opt-in checkbox label"
@@ -4563,6 +4587,10 @@
   },
   "modelsDevDialogTitle": {
     "message": "OpenAI-Compatible Provider"
+  },
+  "modelsDevCategoriesAriaLabel": {
+    "message": "Provider categories",
+    "description": "Aria label of the Models.dev dialog tab list"
   },
   "tabAll": {
     "message": "All"

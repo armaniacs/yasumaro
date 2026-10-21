@@ -350,7 +350,9 @@ describe('handleSaveOnly', () => {
     mockedGetMessage.mockReturnValue('' as any);
     mockedSaveDashboardSettings.mockResolvedValue({ success: false, error: 'validation_failed' } as any);
     await handleSaveOnly();
-    expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
+    // PBI 2026-10-21-08: the saveError fallback is English; the ja locale
+    // supplies the Japanese wording, so the fallback pin is English too.
+    expect(document.getElementById('status')!.textContent).toBe('Save error');
     expect(document.getElementById('status')!.className).toBe('status-message error');
   });
 
@@ -368,7 +370,7 @@ describe('handleSaveOnly', () => {
   it.each([
     ['aiProviderPriority1Required', 'Priority 1 is required'],
     ['aiProviderPriorityDuplicateWarning', 'Duplicate provider and model'],
-    ['http_confirm_cancelled', '設定の保存に失敗しました。'],
+    ['http_confirm_cancelled', 'Save error'],
   ])('derives the save-error wording for %s from the shared definition', async (error, expected) => {
     document.body.innerHTML = `<div id="status"></div><div id="statusTop"></div>`;
     mockedGetMessage.mockReturnValue('' as any);
@@ -718,7 +720,8 @@ describe('handleTestAi', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     setupChrome({ runtime: { sendMessage: vi.fn(), onMessage: { addListener: vi.fn(), removeListener: vi.fn() } } });
     await handleTestAi();
-    expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
+    // PBI 2026-10-21-08: English saveError fallback (same contract as above).
+    expect(document.getElementById('status')!.textContent).toBe('Save error');
     expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testAiBtn') as HTMLButtonElement).disabled).toBe(false);
     expect((document.getElementById('testAiBtnTop') as HTMLButtonElement).disabled).toBe(false);
@@ -1033,7 +1036,8 @@ describe('handleTestLocalMarkdown', () => {
     mockedSaveDashboardSettings.mockResolvedValue({ success: false } as any);
     const repo: SettingsReader = { getMany: vi.fn(), getAll: vi.fn() };
     await handleTestLocalMarkdown(repo);
-    expect(document.getElementById('status')!.textContent).toBe('設定の保存に失敗しました。');
+    // PBI 2026-10-21-08: English saveError fallback (same contract as above).
+    expect(document.getElementById('status')!.textContent).toBe('Save error');
     expect(document.getElementById('status')!.className).toBe('status-message error');
     expect((document.getElementById('testLocalMarkdownBtnTop') as HTMLButtonElement).disabled).toBe(false);
   });

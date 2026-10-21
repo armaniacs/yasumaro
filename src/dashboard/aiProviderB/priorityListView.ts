@@ -1,5 +1,5 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
-import { getMessageOr } from '../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { clearElement } from '../../utils/domClear.js';
 import { getRegistryEntry } from '../../background/ai/providerCatalog.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
@@ -136,7 +136,10 @@ function createRow(index: number, slot: ProviderSlot | undefined, settings?: Mod
   num.textContent = String(index + 1);
 
   const select = document.createElement('select');
-  select.setAttribute('aria-label', `Priority ${index + 1}`);
+  select.setAttribute(
+    'aria-label',
+    getMessageWithSubstitutions('aiProviderPrioritySelectAriaLabel', { n: index + 1 }, 'Priority {n}'),
+  );
   renderProviderOptions(select, { includeNone: true });
   select.value = slot?.provider ?? '';
 
@@ -158,13 +161,19 @@ function createRow(index: number, slot: ProviderSlot | undefined, settings?: Mod
   upBtn.type = 'button';
   upBtn.className = 'small-btn';
   upBtn.textContent = '↑';
-  upBtn.setAttribute('aria-label', `Move priority ${index + 1} up`);
+  upBtn.setAttribute(
+    'aria-label',
+    getMessageWithSubstitutions('aiProviderPriorityMoveUpAriaLabel', { n: index + 1 }, 'Move priority {n} up'),
+  );
 
   const downBtn = document.createElement('button');
   downBtn.type = 'button';
   downBtn.className = 'small-btn';
   downBtn.textContent = '↓';
-  downBtn.setAttribute('aria-label', `Move priority ${index + 1} down`);
+  downBtn.setAttribute(
+    'aria-label',
+    getMessageWithSubstitutions('aiProviderPriorityMoveDownAriaLabel', { n: index + 1 }, 'Move priority {n} down'),
+  );
 
   row.append(handle, num, select, modelInput, upBtn, downBtn);
   return row;

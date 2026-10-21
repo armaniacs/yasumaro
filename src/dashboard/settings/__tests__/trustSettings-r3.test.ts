@@ -592,7 +592,9 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { renderPermissionSuggestList } = await import('../trustSettings.js');
     await renderPermissionSuggestList();
     const span = document.querySelector('.permission-suggest-row span')!;
-    expect(span.textContent).toContain('回訪問');
+    // PBI 2026-10-21-08: the permissionSuggest fallbacks are English; the ja
+    // locale supplies the Japanese wording.
+    expect(span.textContent).toContain(' visits');
   });
 
   it('covers permissionSuggestAdd fallback', async () => {
@@ -603,7 +605,8 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { renderPermissionSuggestList } = await import('../trustSettings.js');
     await renderPermissionSuggestList();
     const btn = document.querySelector('.permission-suggest-allow') as HTMLButtonElement;
-    expect(btn.textContent).toBe('🔓 許可する');
+    // PBI 2026-10-21-08: English permissionSuggest fallback (see above).
+    expect(btn.textContent).toBe('🔓 Allow');
   });
 
   it('covers permissionSuggestDismiss fallback', async () => {
@@ -614,7 +617,8 @@ describe('trustSettings-r3: cover remaining branches', () => {
     const { renderPermissionSuggestList } = await import('../trustSettings.js');
     await renderPermissionSuggestList();
     const btn = document.querySelector('.permission-suggest-dismiss') as HTMLButtonElement;
-    expect(btn.title).toBe('無視する（14日表示しない）');
+    // PBI 2026-10-21-08: English permissionSuggest fallback (see above).
+    expect(btn.title).toBe('Dismiss (hide for 14 days)');
   });
 
   it('covers init category tabs missing dataset', async () => {

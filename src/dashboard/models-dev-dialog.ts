@@ -111,7 +111,7 @@ export class ModelsDevDialog {
                 </div>
 
                 <!-- Tabs -->
-                <div class="tabs" role="tablist" aria-label="Provider categories">
+                <div class="tabs" role="tablist" data-i18n-aria-label="modelsDevCategoriesAriaLabel" aria-label="Provider categories">
                     <button type="button" class="tab-btn active" data-tab="all"
                         role="tab" aria-selected="true" aria-controls="provider-list" id="tab-all"
                         data-i18n="tabAll">All</button>

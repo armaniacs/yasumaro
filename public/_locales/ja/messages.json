@@ -134,6 +134,18 @@
   "aiProviderPriority1Required": {
     "message": "優先度1位は必須です"
   },
+  "aiProviderPrioritySelectAriaLabel": {
+    "message": "優先度 {n}",
+    "description": "Aria label of a B-layout priority provider select"
+  },
+  "aiProviderPriorityMoveUpAriaLabel": {
+    "message": "優先度 {n} を上へ移動",
+    "description": "Aria label of the B-layout move-up button"
+  },
+  "aiProviderPriorityMoveDownAriaLabel": {
+    "message": "優先度 {n} を下へ移動",
+    "description": "Aria label of the B-layout move-down button"
+  },
   "aiProviderLayoutToggleLabel": {
     "message": "AIプロバイダ表示切替"
   },
@@ -2519,6 +2531,18 @@
     "message": "{n} ページ削除しました。途中で失敗しました。",
     "description": "Partial bulk delete error"
   },
+  "researchSessions_selectPageAriaLabel": {
+    "message": "ページ {page} を選択",
+    "description": "Aria label of a Research Sessions page checkbox"
+  },
+  "researchSessions_selectSubtreeAriaLabel": {
+    "message": "このページ配下のページを選択",
+    "description": "Aria label of a Research Sessions subtree checkbox"
+  },
+  "researchSessions_selectSessionAriaLabel": {
+    "message": "セッション {n} を選択",
+    "description": "Aria label of a Research Sessions session checkbox"
+  },
   "navTrailLabel": {
     "message": "遷移記録（流入元ページと検索語）を記録する",
     "description": "Navigation trail opt-in checkbox label"
@@ -4545,6 +4569,10 @@
   },
   "modelsDevDialogTitle": {
     "message": "OpenAI互換プロバイダー"
+  },
+  "modelsDevCategoriesAriaLabel": {
+    "message": "プロバイダーカテゴリー",
+    "description": "Aria label of the Models.dev dialog tab list"
   },
   "tabAll": {
     "message": "すべて"
