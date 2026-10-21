@@ -4,7 +4,6 @@
  */
 
 import {
-  generateRuleId,
   buildRuleObject,
   createEmptyRuleset,
   transformParseDomainList
@@ -15,37 +14,15 @@ import type { UblockRule, ParsedUblockRuleset } from '../ublockParser/transform.
 
 describe('ublockParser - Transform Module', () => {
   // ============================================================================
-  // generateRuleId
-  // ============================================================================
-
-  describe('generateRuleId', () => {
-    test('generates the same ID from the same input', () => {
-      const id1 = generateRuleId('||example.com^');
-      const id2 = generateRuleId('||example.com^');
-      expect(id1).toBe(id2);
-    });
-
-    test('generates different IDs from different inputs', () => {
-      const id1 = generateRuleId('||example.com^');
-      const id2 = generateRuleId('||another.com^');
-      expect(id1).not.toBe(id2);
-    });
-
-    test('generates a unique string ID', () => {
-      const id = generateRuleId('||test.com^');
-      expect(typeof id).toBe('string');
-      expect(id.length).toBeGreaterThan(0);
-    });
-  });
-
-  // ============================================================================
   // buildRuleObject
   // ============================================================================
 
   describe('buildRuleObject', () => {
     test('builds a minimal rule object', () => {
       const rule = buildRuleObject('||example.com^', 'block', 'example.com');
-      expect(rule).toHaveProperty('id');
+      // 【PBI 2026-10-21-06】: the write-only id field was removed from the
+      // intermediate format, so the rule object must not carry an id.
+      expect(rule).not.toHaveProperty('id');
       expect(rule).toHaveProperty('domain', 'example.com');
       expect(rule).toHaveProperty('options');
       expect(rule).toHaveProperty('type');
@@ -165,26 +142,14 @@ describe('ublockParser - Transform Module', () => {
   // ============================================================================
 
   describe('Rule Object Consistency', () => {
-    test('generates unique IDs across many inputs', () => {
-      const ids = new Set<string>();
-      const pattern = '||example.com^';
-      const domain = 'example.com';
-
-      for (let i = 0; i < 100; i++) {
-        const id = generateRuleId(`${pattern}${i}`);
-        ids.add(id);
-      }
-
-      expect(ids.size).toBe(100);
-    });
-
-    test('builds a mutable rule object', () => {
-      // 修正: buildRuleObjectには3つの引数が必要
+    test('builds a rule object without an ID field', () => {
+      // 【PBI 2026-10-21-06】: the 32bit-hash id (disguised as a UUID) was removed
+      // because it is write-only. The pin asserts the intermediate format carries
+      // no id field instead of the former uniqueness pin at lines 186-187.
       const rule = buildRuleObject('||example.com^', 'block', 'example.com');
-      // UblockRule型にはisActiveプロパティがないため、このテストはスキップ
-      // 必要に応じてUblockRuleインターフェースにisActiveを追加してください
-      expect(rule.id).toBeDefined();
-      expect(typeof rule.id).toBe('string');
+      expect(rule).not.toHaveProperty('id');
+      expect(rule).toHaveProperty('rawLine', '||example.com^');
+      expect(rule).toHaveProperty('pattern', 'example.com');
     });
   });
 });

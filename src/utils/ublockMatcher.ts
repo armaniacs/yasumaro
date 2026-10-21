@@ -236,11 +236,12 @@ function evaluateOptions(rule: RuleWithDomain, context: UblockMatcherContext): b
     if (!allowed) return false;
   }
 
-  // $~domain=example.com|other.com – block when currentDomain matches any of the list.
+  // $~domain=example.com|other.com – skip the rule when currentDomain matches any
+  // of the list: the listed domains are excluded from this rule, not blocked by it.
   if (opts.negatedDomains && Array.isArray(opts.negatedDomains) && opts.negatedDomains.length > 0) {
     if (!context.currentDomain) return false;
-    const blocked = opts.negatedDomains.some((d: string) => matchesPattern(context.currentDomain!, d));
-    if (blocked) return false;
+    const isExcludedDomain = opts.negatedDomains.some((d: string) => matchesPattern(context.currentDomain!, d));
+    if (isExcludedDomain) return false;
   }
 
   // $3p – only match when request is third‑party.

@@ -79,44 +79,37 @@ export function parseOptions(optionsString: string): OptionValues {
       continue;
     }
 
-    // 【domainオプション処理】: `domain=` または `~domain=` 形式のパース 🟢
-    if (processedToken.startsWith(OPTION_TYPES.DOMAIN_PREFIX)) {
-      const domainValue = processedToken.substring(OPTION_TYPES.DOMAIN_PREFIX.length); // `domain=` 以降を抽出
+    // 【domain option handling】: parse `domain=` and `~domain=` tokens in one path.
+    // 【equivalent merge (PBI 2026-10-21-06)】: the two syntaxes map to the same
+    // negatedDomains, so `~domain=` is normalized into a single parse path and the
+    // duplicated second grammar branch is removed.
+    const isNegatedDomainOption = processedToken.startsWith(
+      OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX + OPTION_TYPES.DOMAIN_PREFIX
+    );
+    if (isNegatedDomainOption || processedToken.startsWith(OPTION_TYPES.DOMAIN_PREFIX)) {
+      // 【normalization】: rewrite `~domain=X` into the equivalent `domain=~X` value
+      const domainValue = isNegatedDomainOption
+        ? OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX + processedToken.substring((OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX + OPTION_TYPES.DOMAIN_PREFIX).length)
+        : processedToken.substring(OPTION_TYPES.DOMAIN_PREFIX.length); // value after `domain=`
 
-      // 【空ドメインスキップ】: 値がない場合はスキップ 🟢
+      // 【empty domain skip】: nothing to parse when there is no value
       if (domainValue === '') {
         continue;
       }
 
-      // 【除外ドメイン判定】: `~` プレフィックスで除外ドメインとして処理 🟢
+      // 【negated domain detection】: a `~` prefix marks excluded domains
       if (domainValue.startsWith(OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX)) {
-        const negatedList = domainValue.substring(1); // `~` 以降を抽出
+        const negatedList = domainValue.substring(OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX.length); // value after `~`
         const negatedDomains = parseDomainList(negatedList);
         if (negatedDomains.length > 0) {
           result.negatedDomains = negatedDomains;
         }
       } else {
-        // 【許可ドメイン処理】: ヘルパー関数でドメインリストをパース 🟢
+        // 【allowed domain handling】: parse the domain list with the helper
         const domains = parseDomainList(domainValue);
         if (domains.length > 0) {
           result.domains = domains;
         }
-      }
-    }
-
-    // 【~domainオプション処理】: `~domain=` 形式のパース 🟢
-    else if (processedToken.startsWith(OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX + OPTION_TYPES.DOMAIN_PREFIX)) {
-      const domainValue = processedToken.substring((OPTION_TYPES.EXCLUDE_DOMAIN_PREFIX + OPTION_TYPES.DOMAIN_PREFIX).length); // `~domain=` 以降を抽出
-
-      // 【空ドメインスキップ】: 値がない場合はスキップ 🟢
-      if (domainValue === '') {
-        continue;
-      }
-
-      // 【除外ドメイン処理】: ヘルパー関数でドメインリストをパース 🟢
-      const negatedDomains = parseDomainList(domainValue);
-      if (negatedDomains.length > 0) {
-        result.negatedDomains = negatedDomains;
       }
     }
 

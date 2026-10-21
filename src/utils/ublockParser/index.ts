@@ -11,7 +11,7 @@
 import { DEFAULT_METADATA, RULE_TYPES } from './constants.js';
 import { errorMessage } from '../errorUtils.js';
 import { isValidString, isCommentLine, isEmptyLine, validateDomain, isValidRulePattern } from './validation.js';
-import { createEmptyRuleset, generateRuleId, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, ParsedUblockRuleset } from './transform.js';
+import { createEmptyRuleset, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, ParsedUblockRuleset } from './transform.js';
 import { parseUblockFilterLine } from './parsing.js';
 import {
     cleanupCache,
@@ -38,7 +38,6 @@ export {
 
 // Re-export transform functions
 export {
-    generateRuleId,
     buildRuleObject,
     createEmptyRuleset,
     transformParseDomainList

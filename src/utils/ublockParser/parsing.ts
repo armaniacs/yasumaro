@@ -10,7 +10,7 @@
 
 import { PATTERNS, RULE_TYPES, PREFIXES, RuleType } from './constants.js';
 import { isValidString, validateDomain } from './validation.js';
-import { buildRuleObject, generateRuleId, UblockRule } from './transform.js';
+import { buildRuleObject, UblockRule } from './transform.js';
 import { pickDefined } from '../objectUtils.js';
 
 // ============================================================================
@@ -132,7 +132,6 @@ function parseHostsLine(rawLine: string, hostsPart: string): UblockRule | { type
   // uBlock形式に変換してルールオブジェクトを構築
   const convertedLine = `||${domain}^`;
   return {
-    id: generateRuleId(convertedLine),
     rawLine: convertedLine,
     originalLine: rawLine, // 元のhosts形式を保持
     type: RULE_TYPES.BLOCK,

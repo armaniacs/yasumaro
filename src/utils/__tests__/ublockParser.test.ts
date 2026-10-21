@@ -13,8 +13,7 @@ import {
   isCommentLine,
   isEmptyLine,
   isValidRulePattern,
-  parseOptions,
-  generateRuleId
+  parseOptions
 } from '../ublockParser/index.js';
 
 describe('ublockParser', () => {
@@ -581,43 +580,6 @@ describe('ublockParser', () => {
     });
   });
 
-  describe('ヘルパー関数 - generateRuleId', () => {
-    test('generates the same ID from the same input', () => {
-      // 【テスト目的】: generateRuleId関数の一貫性を確認
-      // 【テスト内容】: 同じ入力に対して常に同じIDが生成されることを確認
-      // 【期待される動作】: 同じ入力を2回渡すと同じIDが返される
-      // 🟡 信頼性レベル:一般的なID生成機能から妥当な推測
-
-      // 【テストデータ準備】: ルール文字列を用意
-      const input = '||example.com^';
-
-      // 【実際の処理実行】: 同じ入力で2回generateRuleId関数を呼び出し
-      const id1 = generateRuleId(input);
-      const id2 = generateRuleId(input);
-
-      // 【結果検証】: 同じIDが生成されることを確認
-      expect(id1).toBe(id2); // 【確認内容】: 同じ入力から同じIDが生成されること 🟡
-    });
-
-    test('generates different IDs from different inputs', () => {
-      // 【テスト目的】: generateRuleId関数の一意性を確認
-      // 【テスト内容】: 異なる入力に対して異なるIDが生成されることを確認
-      // 【期待される動作】: 異なる入力を渡すと異なるIDが返される
-      // 🟡 信頼性レベル:一般的なID生成機能から妥当な推測
-
-      // 【テストデータ準備】: 異なる2つのルール文字列を用意
-      const input1 = '||example.com^';
-      const input2 = '||different.com^';
-
-      // 【実際の処理実行】: 異なる入力でgenerateRuleId関数を呼び出し
-      const id1 = generateRuleId(input1);
-      const id2 = generateRuleId(input2);
-
-      // 【結果検証】: 異なるIDが生成されることを確認
-      expect(id1).not.toBe(id2); // 【確認内容】: 異なる入力から異なるIDが生成されること 🟡
-    });
-  });
-
   describe('ヘルパー関数 - parseOptions', () => {
     test('returns an empty object for a rule without options', () => {
       // 【テスト目的】: parseOptions関数の基本動作（オプションなし）を確認
@@ -813,6 +775,26 @@ describe('ublockParser', () => {
       // 【結果検証】: 除外ドメインリストが正しく設定されることを確認
       expect(result).toHaveProperty('negatedDomains'); // 【確認内容】: negatedDomainsプロパティが含まれること 🟢
       expect(result.negatedDomains).toEqual(['trusted.com', 'safe.com']); // 【確認内容】: 全てのドメインが正確に配列として格納されること 🟢
+    });
+
+    // 【UF-102 added test 9b】: `~domain=` prefix syntax (equivalent merge pin)
+    test('parses the tilde-prefixed negated-domain option', () => {
+      // 【purpose】: pin the `~domain=` branch (PBI 2026-10-21-06). The branch was
+      // merged into the single `domain=` path, so this syntax must keep mapping to
+      // the same negatedDomains as `domain=~...` and must not be read as an allow-list.
+      // 【expectation】: `~domain=trusted.com|safe.com` sets negatedDomains to
+      // ['trusted.com', 'safe.com'] and leaves domains unset.
+
+      // 【input】: `~domain=` prefixed negated domain option
+      const input = '~domain=trusted.com|safe.com';
+
+      // 【execute】: call parseOptions with the tilde-prefixed syntax
+      const result = parseOptions(input);
+
+      // 【verify】: the negated domain list is set and no allow-list is produced
+      expect(result).toHaveProperty('negatedDomains');
+      expect(result.negatedDomains).toEqual(['trusted.com', 'safe.com']);
+      expect(result).not.toHaveProperty('domains');
     });
 
     // 【UF-102追加テスト10】複合オプションに不明トークンを含む場合
