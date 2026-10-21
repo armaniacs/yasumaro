@@ -45,3 +45,11 @@ Scenario: heading の日付形式がユーザーロケールで決まる
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 15・16・17・処理記録）
 - src/utils/localDate.ts（SSOT。PBI 2026-09-28-11 で導入）
+
+## 実装記録（2026-10-21）
+
+- 対象外 15: markdownTemplateUtils getHostname（'' 契約）と urlUtils sanitizeUrlForLogging（'[INVALID_URL]' 契約）の両 JSDoc に契約意図を明文化（統一はしない・コード不変）
+- 対象外 16: markdownFormatter の heading Date 行を no-arg toLocaleString() → toLocaleString(getUserLocale()) に統一（formatMarkdownStep.ts:45 と同一契約・シェイプ不変でロケールソースのみ固定）
+- 対象外 17: UTC 日付 5 箇所を localDate SSOT に統一（exportLogsPanel exportToday + audit TSV ファイル名、localMarkdownExport 既定範囲、reviewSummaryGenerator Generated on + entry Date 行、auditLogTsv toIsoDate → formatLocalDateString。JST 朝の「昨日」ファイル名・前日既定範囲を解消）
+- pin 置き換え: markdownJoinSafety.test.ts の鏡像式 pin を固定形式 pin に置換、auditLogTsv.test.ts fixture をローカル日付構成に（TZ 独立化）、dashboard-handlers.test.ts に当日ローカル境界 pin、exportLogsPanel.dateFilename.test.ts 新規（ローカル 00:30 の偽時計）
+- 検証: 担当 13 ファイル 256 tests 全 green、タイマー依存 pin は --repeats=20 でも全 green、type-check 通過、check-docs-chars 通過、eslint 通過、validate:fast green

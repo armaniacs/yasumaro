@@ -40,3 +40,11 @@ Scenario: 検証時の挙動は変わらない
 
 - [pbi/2026-10-20-00-backlog-refactor-scan.md](2026-10-20-00-backlog-refactor-scan.md)（対象外 11・処理記録）
 - src/utils/domainVerifier.ts・src/utils/domainValidation.ts（common 抽出は PBI 21 済み）
+
+## 実装記録（2026-10-21）
+
+- 追加時の TLD 検証（domainValidation isValidTld）を multi-label に統一（先頭ドットを剥がし各ラベルに RFC ラベル規則 1-63 文字・合計 2-253・空文字/'*'/'..'/末尾ドットを拒否。single-label '.com' / 'com' は従来どおり有効）
+- 検証時経路（domainVerifier 本体）は変更なし
+- エラー文言を新契約に更新: ManagedCollections 追加時文言（e.g., .com, .jp, .go.jp）、i18n jpAnchorInvalidFormat を en/ja 両方更新（旧「Must start with dot」は新契約と矛盾していたため）
+- trustDb-validation.test.ts の INCOMPLETE 自認 describe を完成化（multi-label unified・'.ed.jp'/'ne.jp' 追加成功・プリセット duplicate 拒否・無効値拒否）。新規 contract テスト 17 件（isValidTld 契約 11 + 追加経路 5 + 追加/検証の対称性 1）
+- 検証: 対象 24 ファイル 373 tests 全 green、type-check 通過、check-docs-chars 0 violations、eslint 通過、validate:fast green

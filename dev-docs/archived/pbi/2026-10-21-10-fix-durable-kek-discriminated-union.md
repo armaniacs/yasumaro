@@ -50,3 +50,10 @@ Scenario: 呼び出し側の挙動は変わらない
 
 - [pbi/2026-10-18-15-fix-hmac-kek-fail-open.md](2026-10-18-15-fix-hmac-kek-fail-open.md)（親 PBI・選択肢 2 実装済み）
 - src/utils/crypto/durableKeyStore.ts・src/utils/crypto/hmacKeyStore.ts
+
+## 実装記録（2026-10-21）
+
+- loadDurableWrappingKey の戻り値を判別 union DurableWrappingKeyOutcome に変更（absent = IDB 無し or レコード未存在、failure = open/get reject + error 保持（既存 canonical toError）、loaded = キー。catch での丸めを排除・本番コード any/unknown なし）。saveDurableWrappingKey は対象外のため不変
+- 唯一の production 呼び出し点（hmacKeyStore KEK 候補チェーン終端）で分岐（loaded → キー返却、failure → safeLog → logError CRYPTO_HMAC_FAILURE 従来どおり throw、absent → そのまま throw。挙動不変・観測性のみ。全滅→新 KEK 生成の pin 済み挙動はそのまま）
+- テスト: durableKeyStoreOutcome.test.ts 新規 8 件（Red-first で 6 failed → 実装後全 green）、idbKeystoreContract.test.ts の pin 更新（PBI 明示分 + 型変更で不可避な round-trip pin 1 行）
+- 検証: crypto 系 + secretEnvelope + quarantine 20 ファイル 267 tests 全 green（hmacKeyStoreRegeneration/Chain/Restart/Concurrency の既存 pin は無改変で通過 = 挙動不変の証拠）、type-check 通過、eslint 通過、validate:fast green
