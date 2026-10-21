@@ -14,8 +14,15 @@
  *   chrome-error page → no content script → GET_CONTENT "receiving end").
  *   Mapping the host to the spec's local TLS server lets tabs.create
  *   navigation resolve locally without interception. Only api.openai.com:443
- *   is remapped (no spec tests that origin); --ignore-certificate-errors only
- *   matters for TLS and every other spec talks plain http://localhost.
+ *   is remapped for that purpose (no spec tests that origin's real network);
+ *   --ignore-certificate-errors only matters for TLS and every other spec
+ *   talks plain http://localhost. Two more additive mappings serve the Gist
+ *   egress spec (gist-egress.spec.ts): api.github.com:443 → 127.0.0.1:8444
+ *   (the declared egress origin resolves to the spec's TLS mock — the
+ *   extension_pages CSP matches the ORIGIN string, not the resolved IP, so
+ *   the browser CSP gate still runs) and example.com:443 → 127.0.0.1:9 (a
+ *   dead port, so the undeclared-origin CSP pin never touches the real
+ *   network even if the CSP were not enforcing).
  *
  * Callers own the fixme: a null return means "this environment cannot run
  * extension tests" (headless CI, SSH, background processes) and the fixture
@@ -169,7 +176,7 @@ export async function launchExtensionContext(
     `--load-extension=${EXTENSION_PATH}`,
     '--no-first-run',
     '--no-default-browser-check',
-    '--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443',
+    '--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443,MAP api.github.com:443 127.0.0.1:8444,MAP example.com:443 127.0.0.1:9',
     '--ignore-certificate-errors',
   ];
   if (options.locale) args.push(`--lang=${options.locale}`);
