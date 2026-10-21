@@ -95,7 +95,7 @@ owner 判断の結果（2026-10-21・全 13 項目で推奨案を採用）:
 - 12 件すべて実装・検証・コミット・アーカイブ済み（`dev-docs/archived/pbi/2026-10-21-01〜12`）。コミット: `312b6e55` / `568fcd02` / `12129683` / `ca49d376`（Batch 1）、`f0823aa2` / `d67b48e2` / `50e4368f`（Batch 2）、`ef262d30` / `d1367958` / `bfdfec18`（Batch 3）、`e179bc8a` / `edc187bc`（Batch 4）。owner 判断 PBI 15・25・feat と親 PBI 2026-10-18-20 も完了・アーカイブ済み（実装コミット `ef36ce32`・`bfdfec18`・`e179bc8a`・`edc187bc`）
 - 統合側検証で発見・修正: Gist egress が extension_pages CSP connect-src に漏れていた点（`857be356`。PBI 2026-10-18-25 の BDD シナリオ 1 の SSOT 一括更新を pin で固定）
 - 最終ゲート: `make clean test` 全パス（1120 ファイル / 16669 tests）。テスト型エラー baseline は 453 → 451 に引き下げ（新規混入 4 件を返済）。版は 6.9.51 に引き上げ（manifest 検証済み）
-- 未実装で残るもの（owner 手動確認）: MV3 が meta CSP を extension_pages に適用するかの実機確認、lock fan-out の開いている拡張ページでの実機観測、IndexedDB eviction の実機観測（unlimitedStorage で eviction 免除済み）
+- 未実装で残るもの（owner 手動確認）: lock fan-out の開いている拡張ページでの実機観測、IndexedDB eviction の実機観測（unlimitedStorage で eviction 免除済み）。※「MV3 が meta CSP を extension_pages に適用するかの実機確認」は 2026-10-21 の owner 実機確認で解決（meta CSP は適用される・options/popup から meta CSP タグを削除し extension_pages CSP に一任。commit `27e4cd66`）
 - 将来 PBI 候補として記録（本ラウンドでは実装しない）: checkSourceI18nKeys が data-i18n-aria-label を missing-key チェック対象にしていないゲート隙間、StorageKeys の分類型（設定 / ランタイム状態）分割、sync / syncBatch の配線、getMessageWithSubstitutions 経由キーの静的走査 warn インベントリ整備
 
 ## 飽和の根拠と打ち切り
