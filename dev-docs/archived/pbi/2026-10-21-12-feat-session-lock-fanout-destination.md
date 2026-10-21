@@ -64,4 +64,4 @@ Scenario: ロック通知の再試行は親 PBI の契約を維持する
 - テスト: 新規 15 件（形状ガード・seam ハンドラ・配線・応答本文契約）+ popup 1 件。統合テストは親 PBI の SessionAlarmService.test.ts を触らないため同 fixture を再現し SW 送信側 × ページ受け手を in-memory ワイヤで接続（初回試行で確認 / 3 試行・2 待機・never confirmed の両方向を観測）
 - 既存 pin 無変更で green（messageTypeRegistry に SESSION_LOCK_REQUEST は登録済み）。送信側 SessionAlarmService.ts 本体は未触
 - 検証: 新規テスト 15 件 + 関連スイート 253 ファイル 3269 tests 全 green（--repeats=10 でも全回 green）、type-check 通過、eslint 通過、validate:fast green
-- 残置（owner 手動確認）: 開いている拡張ページでのロック反映の実機観測。dashboard の onLocked は loadMasterPasswordSettings()（パネルの refresh と同一関数）で実装 — 実機観測で不足があれば onLocked の中身だけ差し替え可能。popup が encryptionSession.js を静的 import（clearEncryptionKeyCache 用・popup は鍵の消費者）
+- 残置（owner 手動確認）: 開いている拡張ページでのロック反映の実機観測。dashboard の onLocked は loadMasterPasswordSettings()（パネルの refresh と同一関数）で実装 ― 実機観測で不足があれば onLocked の中身だけ差し替え可能。popup が encryptionSession.js を静的 import（clearEncryptionKeyCache 用・popup は鍵の消費者）
