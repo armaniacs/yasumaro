@@ -216,4 +216,4 @@ Scenario: 4: PAT を添えた egress 経路が従来どおり実ゲートを通�
 
 - **ブロッカー 1 解決（owner 実機確認 2026-10-21）**: MV3 は extension page 内の meta CSP を適用する。options ページ Console での `fetch('https://api.github.com/zen')` が meta CSP の `default-src 'none'` フォールバックでブロックされることを owner が観測（manifest CSP は connect-src を明示し api.github.com を含むため、ブロック元は meta CSP）
 - 対応（owner 判断: 選択肢 1）: meta CSP タグを options / popup の 2 拡張ページから削除し、manifest extension_pages CSP に完全に一任（script-src / style-src / img-src は manifest と同一内容）。本 PBI 初回の「meta CSP から connect-src 指示子のみ削除」は、meta CSP の default-src フォールバックで全 page fetch を遮断する regress だったため、タグごとの削除に置き換え
-- 残置: owner が同一 console テストを再実行し、fetch 成功（＝manifest CSP がダッシュボードの fetch を許可している）を最終確認
+- 残置: owner が同一 console テストを再実行し、fetch 成功（＝manifest CSP がダッシュボードの fetch を許可している）を最終確認 → **完了（2026-10-21）**: meta CSP 削除後の再読み込みで `fetch('https://api.github.com/zen')` が応答本文（"Practicality beats purity."）を返すことを owner が確認。ブロッカー 1 は解決済み。残る実機観測は Gist 接続テストの実 PAT での動作確認（通常のユーザーフロー）のみ

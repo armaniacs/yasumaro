@@ -63,7 +63,7 @@ All notable changes to this project will be documented in this file.
 
 ### 残置（owner 手動確認）
 
-- 自動ロック fan-out の開いている拡張ページでの実機観測（meta CSP 遮断の解消後、同一 console テストで fetch 成功を確認）
+- 自動ロック fan-out の開いている拡張ページでの実機観測
 - IndexedDB eviction の実機観測（unlimitedStorage で eviction 免除済み）
 
 ## [6.9.50] - 2026-10-21
