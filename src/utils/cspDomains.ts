@@ -85,13 +85,19 @@ export function buildLocalConnectSrc(): string[] {
 }
 
 /**
- * Strips the manifest `/*` suffix from each required + optional host
- * permission, producing the domain list for CSP's connect-src directive.
+ * Strips the manifest `/*` suffix from each required + optional + Gist egress
+ * host permission, producing the domain list for CSP's connect-src directive.
+ * The Gist egress must ride the same SSOT: the dashboard is an extension
+ * page, so its fetch to api.github.com is governed by the extension_pages CSP
+ * connect-src in addition to host_permissions (PBI 2026-10-18-25 BDD
+ * scenario 1).
  */
 export function buildConnectSrcDomains(): string[] {
-  return [...AI_PROVIDER_HOST_PERMISSIONS, ...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS].map(
-    (perm) => perm.replace(/\/\*$/, '')
-  );
+  return [
+    ...AI_PROVIDER_HOST_PERMISSIONS,
+    ...OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS,
+    ...GIST_EGRESS_HOST_PERMISSIONS,
+  ].map((perm) => perm.replace(/\/\*$/, ''));
 }
 
 /**

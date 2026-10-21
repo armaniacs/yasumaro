@@ -41,10 +41,20 @@ describe('buildConnectSrcDomains', () => {
     }
   });
 
-  it('produces a space-joined string matching required-then-optional order', () => {
+  it('includes the Gist egress origin (PBI 2026-10-18-25: the dashboard is an extension page, so its fetch is governed by extension_pages connect-src)', () => {
+    const domains = buildConnectSrcDomains();
+    for (const perm of GIST_EGRESS_HOST_PERMISSIONS) {
+      expect(domains).toContain(perm.replace(/\/\*$/, ''));
+    }
+  });
+
+  it('produces a space-joined string matching required-then-optional-then-egress order', () => {
     const domains = buildConnectSrcDomains();
     const expectedFirst = AI_PROVIDER_HOST_PERMISSIONS[0].replace(/\/\*$/, '');
-    const expectedLast = OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS[OPTIONAL_AI_PROVIDER_HOST_PERMISSIONS.length - 1]!.replace(/\/\*$/, '');
+    const expectedLast = GIST_EGRESS_HOST_PERMISSIONS[GIST_EGRESS_HOST_PERMISSIONS.length - 1].replace(
+      /\/\*$/,
+      ''
+    );
     expect(domains[0]).toBe(expectedFirst);
     expect(domains[domains.length - 1]).toBe(expectedLast);
   });
