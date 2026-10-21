@@ -82,7 +82,13 @@ describe('settings backup restore parity', () => {
     expect(bBlob).not.toHaveProperty('not_a_storage_key');
   });
 
-  it('keeps lexicographic generation order (_9 outranks _10)', async () => {
+  // PBI 2026-10-21-05: the generation order is numeric on the suffix, not
+  // lexicographic. This pin used to assert the lexicographic order (_9
+  // outranking _10), which restored the numerically OLDER backup whenever
+  // suffix lengths were mixed. Production suffixes are 13-digit epoch ms
+  // (same length), so this fixture is exactly the injected mixed-length case
+  // the PBI fixes: _10, the newer generation, must win.
+  it('picks the numerically latest generation with mixed-length suffixes (_10 outranks _9)', async () => {
     const seed = {
       settings: {},
       settings_migrated: true,
@@ -91,8 +97,8 @@ describe('settings backup restore parity', () => {
     };
     const a = await runPathA({ ...seed });
     const bBlob = await runPathBBlob({ ...seed });
-    expect(a.restored).toEqual({ [PORT]: 'nine' });
-    expect(bBlob).toEqual({ [PORT]: 'nine' });
+    expect(a.restored).toEqual({ [PORT]: 'ten' });
+    expect(bBlob).toEqual({ [PORT]: 'ten' });
   });
 
   it('prefers a suffixed key over the bare key', async () => {

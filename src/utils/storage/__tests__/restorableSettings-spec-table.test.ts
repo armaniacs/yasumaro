@@ -11,6 +11,7 @@ import {
   validateRestorableSettings,
 } from '../restorableSettings.js';
 import { API_KEY_FIELDS } from '../settingsMigration.js';
+import { isStorageKeyValue } from '../settingsBackup.js';
 
 describe('restorableSettings spec table invariants (PBI 13)', () => {
   it('derives RESTORABLE_KEYS from the spec table (no drift possible)', () => {
@@ -24,6 +25,16 @@ describe('restorableSettings spec table invariants (PBI 13)', () => {
     for (const field of API_KEY_FIELDS) {
       expect(RESTORABLE_KEYS.has(field)).toBe(false);
     }
+  });
+
+  it('keeps the allowlist a subset of StorageKeys', () => {
+    // PBI 2026-10-21-05: safety_mode / tranco_tier stayed allowlisted after the
+    // Trust DB unification dropped both from StorageKeys, so restoring a backup
+    // wrote keys nothing read (the legacy-restore path filtered them out, the
+    // encrypted-restore path did not). This invariant detects that drift
+    // structurally instead of per incident.
+    const outsideStorageKeys = [...RESTORABLE_KEYS].filter((key) => !isStorageKeyValue(key));
+    expect(outsideStorageKeys).toEqual([]);
   });
 
   it('keeps every cleansing flag typed as boolean', () => {

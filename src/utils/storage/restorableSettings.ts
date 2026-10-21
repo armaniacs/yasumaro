@@ -111,8 +111,12 @@ const RESTORABLE_KEY_SPECS: Record<string, RestorableKeySpec> = {
   'alert_sensitive': { type: 'boolean' },
   'alert_unverified': { type: 'boolean' },
   'save_aborted_pages': { type: 'boolean' },
-  'safety_mode': { type: 'string' },
-  'tranco_tier': { type: 'string' },
+  // PBI 2026-10-21-05: 'safety_mode' and 'tranco_tier' were removed. Neither is
+  // a StorageKeys member (dropped from types.ts by the Trust DB unification,
+  // commit b9ee19cc), no module reads them, and their data of record is
+  // trust_db. Restoring them only wrote keys nothing read; the subset
+  // invariant test in restorableSettings-spec-table.test.ts keeps every
+  // allowlist row inside StorageKeys from here on.
 
   // CSP / CORS
   'conditional_csp_enabled': { type: 'boolean' },

@@ -21,9 +21,36 @@ export function listSettingsBackupKeys(all: Record<string, unknown>): string[] {
     return Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
 }
 
-// Lexicographic on the key string, not numeric: `_9` outranks `_10`. Kept as-is to preserve behavior.
+// Numeric on the suffix (epoch ms), not lexicographic: `_9` must not outrank
+// `_10`. Generations are stored as `${LEGACY_SETTINGS_BACKUP_KEY}_${createdAt}`;
+// production suffixes are 13-digit epoch ms where both orders agree, so the
+// selection is unchanged there, while mixed-length suffixes (test injection,
+// future precision changes) pick the numerically latest generation (PBI
+// 2026-10-21-05). A key without a numeric suffix (the bare legacy key, a
+// corrupt entry) ranks oldest, so a real timestamped generation always wins;
+// among equal generations (leading-zero variants, non-numeric suffixes) the
+// lexicographically larger key wins, so the choice never depends on input
+// order.
+function backupKeyGeneration(key: string): number {
+    const suffix = key.slice(LEGACY_SETTINGS_BACKUP_KEY.length + 1);
+    return /^\d+$/.test(suffix) ? Number(suffix) : Number.NEGATIVE_INFINITY;
+}
+
 export function selectLatestSettingsBackupKey(keys: readonly string[]): string | null {
-    return [...keys].sort().reverse()[0] ?? null;
+    let latest: string | null = null;
+    let latestGeneration = Number.NEGATIVE_INFINITY;
+    for (const key of keys) {
+        const generation = backupKeyGeneration(key);
+        if (
+            latest === null ||
+            generation > latestGeneration ||
+            (generation === latestGeneration && key > latest)
+        ) {
+            latestGeneration = generation;
+            latest = key;
+        }
+    }
+    return latest;
 }
 
 export async function restoreLatestSettingsBackup(port: StoragePort): Promise<Settings | null> {
