@@ -73,6 +73,13 @@ export interface PrivacyPipelineResult {
   /** スロット別の失敗詳細（成功スロット以降の失敗も保持。同 follow-up） */
   slotFailures?: { provider: string; model?: string; error: string; failure?: FailureMetadata }[];
   /**
+   * PBI 2026-10-23-03 (cost-aware cascade): title + opening slice for a
+   * degraded send. Present only when the provider reported `degraded`; the
+   * reason text stays in `summary`, so the record keeps both without posing
+   * as a real remote summary.
+   */
+  degradedSummary?: string;
+  /**
    * Structured failure of the AI call (PBI 2026-09-25-11). A total provider
    * failure is still reported as a normal result, so this field is what lets the
    * executor ask "which kind?" without reading the summary text. Never holds a
@@ -332,6 +339,10 @@ export class PrivacyPipeline {
         attemptedProviders: aiResult.attemptedProviders,
         slotFailures: aiResult.slotFailures,
         failure: aiResult.failure,
+        // PBI 2026-10-23-03: the degraded opening slice rides through only
+        // when the provider reported the fallback, so a real remote summary
+        // never carries it.
+        degradedSummary: aiResult.degraded === true ? aiResult.degradedSummary : undefined,
       }),
     };
   }
