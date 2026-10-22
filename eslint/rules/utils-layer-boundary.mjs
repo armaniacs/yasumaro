@@ -90,6 +90,9 @@ const LAYER1_FILES = [
   // defaults.ts on purpose: defaults -> domainUtils -> SettingsRepository ->
   // settingsMigration -> defaults would close a utils-internal cycle.
   'src/utils/storage/aiDomainPolicy.ts',
+  // Saved-collection normalizer: validation lives here so the settings
+  // pipeline never pulls the repository chain (PBI 2026-10-23-06).
+  'src/utils/storage/savedCollections.ts',
   'src/utils/storage/encryptionSession.ts',
   'src/utils/storage/savedUrlRepository.ts',
   'src/utils/storage/domainFilterCache.ts',
