@@ -27,23 +27,23 @@ Scenario: 縮退を偽成功にしない
   Then 成功表示にならず、理由と再試行手段が分かる
 
 ## 受け入れ基準
-- [ ] カスケード順序が設定でき、既定は課金の少ない順である
-- [ ] 月間tokenの表示と予算capがある
-- [ ] 縮退・失敗の理由表示と再試行ができる
-- [ ] PIIマスキングとプライベート除外が全経路に適用される
+- [x] カスケード順序が設定でき、既定は課金の少ない順である ― 既存資産で充足: `FallbackAIService` がカスケードを所有し（`src/background/ai/FallbackAIService.ts`、mode 'auto' が local→remote の格下げ）、構成ルート `createAIService` が local スロットに Built-in AI を接続（`src/background/ai/aiServiceFactory.ts:26-37`）、remote 順は `AI_PROVIDER_PRIORITY_LIST` で設定可能
+- [x] 月間tokenの表示と予算capがある ― 既存資産で充足: `checkHardLimit` が月間cap判定、`getMonthlyUsage` が月間表示（`src/utils/aiUsageTracker.ts`）
+- [x] 縮退・失敗の理由表示と再試行ができる ― 今回実装で充足: `degraded`/`degradedSummary` フラグ（commits 546aa9b2・9faf6fb1・dea85cd8）が理由テキスト（summary）と縮退要約を併せて返し、再試行は既存の regenerate が `aiSucceeded` を gate に実施
+- [x] PIIマスキングとプライベート除外が全経路に適用される ― 既存資産で充足: `privacyPipeline` がマスキングを AI 前に実施（L2）、プライベート除外は既存の privacyMode 経路
 
 ## テスト戦略
-- E2E: 枯渇条件→縮退保存→理由表示→再試行の通し
-- 統合: local到達不能・モデル未DL・401/429の分岐テスト
-- 単体: cap判定・縮退条件・表示分岐のテーブルテスト
+- E2E: 枯渇条件→縮退保存→理由表示→再試行の通し（残: owner手動観測と併用。縮退経路のpin は `OpenAIProvider-branches.test.ts` で固定済み）
+- 統合: local到達不能・モデル未DL・401/429の分岐テスト（既存の provider 分岐テストで固定済み）
+- 単体: cap判定・縮退条件・表示分岐のテーブルテスト（`aiUsageTracker.test.ts`・`degradedSummary.test.ts` で固定済み）
 
 ## 見積もり
 2.0人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― 枯渇時縮退: `degradedSummary` 経路のpin（`OpenAIProvider-branches.test.ts`）。偽成功にしない: `success` は false のまま。カスケード順序: 既存の `FallbackAIService` 分岐テスト
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(カスケード順序と縮退仕様を含む)
+- [ ] ドキュメント更新済み(カスケード順序と縮退仕様を含む) ― カスケード順序と縮退仕様は `dev-docs/DESIGN_SPECIFICATIONS.md` のAI設定章での確認を残す
 
 ## 実装記録（2026-10-23・調査のみ・未着手）
 - 既存資産の確認: 予算cap機構は実在する（`src/utils/aiUsageTracker.ts` の `checkHardLimit(expectedTokens)` が月間token判定、`getMonthlyUsage()` が月間表示、`recordUsage()` が計上、`checkUsageWarning()` が警告）。promise-chain mutex（`withCounterLock`）で計上の lost update は構造的に封じられている
