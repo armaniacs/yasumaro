@@ -195,7 +195,14 @@ export class VisitReporter {
         try {
             const response = await sender.sendMessageWithRetry({
                 type: 'VALID_VISIT',
-                payload: toValidVisitPayload(pageState, content),
+                // PBI 2026-10-23-02: engagement metrics ride the payload so the
+                // saved row's visit_duration/scroll_ratio are no longer NULL.
+                payload: toValidVisitPayload(pageState, content, {
+                    metrics: {
+                        visitDurationSeconds: Math.max(0, (Date.now() - pageState.startTime) / 1000),
+                        scrollRatioPercent: pageState.maxScrollPercentage,
+                    },
+                }),
             });
             void logDebug('VALID_VISIT response', { response }, 'visitReporter');
 
@@ -230,7 +237,13 @@ export class VisitReporter {
                             // impossible now.
                             await sender.sendMessageWithRetry({
                                 type: 'VALID_VISIT',
-                                payload: toValidVisitPayload(pageState, content, { force: true }),
+                                payload: toValidVisitPayload(pageState, content, {
+                                    force: true,
+                                    metrics: {
+                                        visitDurationSeconds: Math.max(0, (Date.now() - pageState.startTime) / 1000),
+                                        scrollRatioPercent: pageState.maxScrollPercentage,
+                                    },
+                                }),
                             });
                         } catch (retryError: unknown) {
                             await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'visitReporter');

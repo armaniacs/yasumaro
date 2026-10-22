@@ -22,18 +22,20 @@ export type VisitWirePayload = { content: string } & {
     [K in 'force' | 'pageBytes' | 'candidateBytes' | 'originalBytes' | 'cleansedBytes' |
     'aiSummaryOriginalBytes' | 'aiSummaryCleansedBytes' | 'aiSummaryCleansedElements' |
     'aiSummaryCleansedReason' | 'aiSummaryCleansedReasons' | 'fallbackTriggered' |
-    'fallbackReason']?: RecordingData[K] | undefined;
+    'fallbackReason' | 'visitDurationSeconds' | 'scrollRatioPercent']?: RecordingData[K] | undefined;
 };
 
 /**
  * PageState + content から RecordingData（VALID_VISIT / MANUAL_RECORD ペイロード）
  * を構築する。force 再送でも同一の stats 選別が適用される — 呼び出し側は
  * content と force だけを渡し、10超の byte/ai field の正規化を意識しない。
+ * PBI 2026-10-23-02: metrics は visit_duration/scroll_ratio の NULL 解消の
+ * 乗り手。呼び出し側が clock を知っているので、ここでは丸めない。
  */
 export function toValidVisitPayload(
     state: PageState,
     content: string,
-    opts?: { force?: boolean }
+    opts?: { force?: boolean; metrics?: { visitDurationSeconds: number; scrollRatioPercent: number } }
 ): VisitWirePayload {
     const stats: VisitStats = buildVisitStats(state);
     return {
@@ -42,6 +44,8 @@ export function toValidVisitPayload(
         ...stats.aiStats,
         fallbackTriggered: stats.fallbackTriggered,
         ...(stats.fallbackReason !== undefined ? { fallbackReason: stats.fallbackReason } : {}),
+        ...(opts?.metrics ? { visitDurationSeconds: opts.metrics.visitDurationSeconds } : {}),
+        ...(opts?.metrics ? { scrollRatioPercent: opts.metrics.scrollRatioPercent } : {}),
         ...(opts?.force ? { force: true } : {}),
     };
 }

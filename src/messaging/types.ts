@@ -162,6 +162,10 @@ export interface RecordingData {
   /** PBI 04: policy-owned side-effect skips (regenerate = SQLite only). */
   skipObsidianAppend?: boolean;
   skipLocalMarkdownExport?: boolean;
+  /** PBI 2026-10-23-02: seconds of engagement for this visit (valid visit). */
+  visitDurationSeconds?: number;
+  /** PBI 2026-10-23-02: max scroll percentage reached for this visit. */
+  scrollRatioPercent?: number;
 }
 
 // ============================================================================

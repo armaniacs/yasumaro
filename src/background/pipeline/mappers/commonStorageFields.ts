@@ -54,6 +54,9 @@ export interface CommonStorageFields {
   extractedSentencesOriginalBytes: number | null;
   cleansedReason: string | null;
   recordType: RecordType;
+  /** PBI 2026-10-23-02: engagement metrics from the wire payload (null on manual records). */
+  visitDurationSeconds: number | null;
+  scrollRatioPercent: number | null;
 
   /**
    * Builds the SQLite BrowsingLogRecord shape. `contentEnabled` gates whether
@@ -149,6 +152,10 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     extractedSentencesOriginalBytes: extractedSentencesOriginalBytes ?? null,
     cleansedReason: data.cleansedReason ?? null,
     recordType: data.recordType ?? 'auto',
+    // PBI 2026-10-23-02: engagement metrics ride the wire payload. The `??
+    // null` keeps a manual record (no metrics) saving NULL, not 0.
+    visitDurationSeconds: data.visitDurationSeconds ?? null,
+    scrollRatioPercent: data.scrollRatioPercent ?? null,
   };
 
   return {
@@ -162,8 +169,10 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
         tags: fields.tagsArray ? fields.tagsArray.map(t => `#${t}`).join(' ') : null,
         created_at: Date.now(),
         domain: extractDomain(fields.url) || null,
-        visit_duration: null,
-        scroll_ratio: null,
+        // PBI 2026-10-23-02: the saved row carries the wire metrics, so the
+        // NULL常态 is resolved for valid visits (manual records stay NULL).
+        visit_duration: fields.visitDurationSeconds,
+        scroll_ratio: fields.scrollRatioPercent,
         is_starred: 0,
         is_deleted: 0,
         content: contentEnabled ? fields.content : null,
