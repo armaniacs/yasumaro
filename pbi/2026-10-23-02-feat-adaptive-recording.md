@@ -44,3 +44,11 @@ Scenario: バックグラウンドは記録されない
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新済み(判定条件の説明・診断表示を含む)
+
+## 実装記録（2026-10-23・土台と配線完了・残はしきい値UIと記録Payload）
+- メディア種別判定: `src/content/mediaKind.ts` でページを記事・動画・PDF・コードに分類。不明種別・破損DOMは従来条件(記事ペア)に縮退し、検出器の盲点が今日の挙動の出口にしかならない（commit 0925238e）
+- メディア別しきい値: `visitThresholds.ts` にメディア別既定値（記事5s+50%・動画30s視聴・PDF 15s+2ページ・コード15s+1コピー）。記事ペアは既定値とバイト同一（commit 0925238e）
+- VisitGate拡張: 任意メトリック（pdfPagesRead・codeCopies・watchedSeconds）をしきい値が要求するときだけゲート。NaN・未産出の入力は未達として読む（commit 0925238e）
+- 配線: VisitGatingDepsにdetectMediaKindを追加（既定は記事定数）。カーネルはロード時に1回分類する（commit b352b152）
+- 検証: `npm run validate` exit 0（1124 files / 16753 tests・test type errors 451/451）
+- 残タスク: (1) メディア別しきい値の設定UI（dashboard recording-conditionsパネル）(2) 記録Payloadへのメトリック乗載と `visit_duration` NULL解消 (3) 動画再生→記録のE2E
