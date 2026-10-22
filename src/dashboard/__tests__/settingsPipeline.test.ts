@@ -154,6 +154,9 @@ describe('saveDashboardSettings', () => {
     expect(mockSaveSettings).toHaveBeenCalledWith(
       {
         ai_provider_priority_list: ['gemini'],
+        // PBI 2026-10-23-02: the per-media map rides the same save (empty
+        // when the inputs are blank — defaults stay in force).
+        media_thresholds: {},
         sqlite_retention_days: 7,
         sqlite_max_records: 1000,
         content_retention_days: 30,

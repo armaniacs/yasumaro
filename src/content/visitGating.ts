@@ -46,6 +46,8 @@ export interface VisitGatingDeps {
      * tests keep the legacy pair without changes.
      */
     detectMediaKind?: () => string;
+    /** Persisted per-media threshold overrides (empty when unreadable). */
+    getMediaThresholdOverrides?: () => Record<string, Record<string, number>>;
 }
 
 export class VisitGating {
@@ -70,12 +72,13 @@ export class VisitGating {
      * media kinds gate on their own metrics. The media pair starts from the
      * media defaults, so a page the detector classifies as video/pdf/code
      * behaves per-kind and a detector blind spot still falls back to today's
-     * article condition.
+     * article condition. Persisted overrides (MEDIA_THRESHOLDS) ride on top
+     * of the base when the reader can supply them.
      */
     private resolveThresholds(pageState: PageState): VisitGateThresholds {
         const kind = this.deps.detectMediaKind?.() ?? 'article';
         if (kind === 'article') return pageState.toVisitGateThresholds();
-        return mediaThresholdsFor(kind);
+        return mediaThresholdsFor(kind, this.deps.getMediaThresholdOverrides?.() ?? {});
     }
 
     /**
