@@ -84,6 +84,10 @@ const LAYER0_FILES = [
 const LAYER1_FILES = [
   'src/utils/storage/types.ts',
   'src/utils/storage/defaults.ts',
+  // Per-domain egress policy resolver (PBI 2026-10-23-01). Lives outside
+  // defaults.ts on purpose: defaults -> domainUtils -> SettingsRepository ->
+  // settingsMigration -> defaults would close a utils-internal cycle.
+  'src/utils/storage/aiDomainPolicy.ts',
   'src/utils/storage/encryptionSession.ts',
   'src/utils/storage/savedUrlRepository.ts',
   'src/utils/storage/domainFilterCache.ts',

@@ -68,7 +68,7 @@ describe('resolveAiDomainPolicy', () => {
     ['mask-required row resolves', { 'example.com': 'mask-required' }, 'https://example.com/page', 'mask-required'],
     ['no-summary row resolves', { 'example.com': 'no-summary' }, 'https://example.com/page', 'no-summary'],
     ['allowed row resolves', { 'example.com': 'allowed' }, 'https://example.com/page', 'allowed'],
-  ])('%s', (_label, map, url, expected: AiDomainPolicy) => {
+  ] as const)('%s', (_label, map, url, expected) => {
     expect(resolveAiDomainPolicy(SETTINGS(map), url)).toBe(expected);
   });
 

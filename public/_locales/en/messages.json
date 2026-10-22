@@ -1973,6 +1973,53 @@
   "domainSaveBtn": {
     "message": "Save"
   },
+  "aiDomainPolicyTitle": {
+    "message": "AI Egress Policy (per domain)"
+  },
+  "aiDomainPolicyDesc": {
+    "message": "Choose how each site's content is handled when it would be sent to an external AI: send as-is, record without a summary, or always mask PII first."
+  },
+  "aiDomainPolicyInputPlaceholder": {
+    "message": "Domain (e.g. example.com)"
+  },
+  "aiDomainPolicySelect": {
+    "message": "Policy selection"
+  },
+  "aiDomainPolicyList": {
+    "message": "Configured policies"
+  },
+  "aiDomainPolicyAdd": {
+    "message": "Add"
+  },
+  "aiDomainPolicyRemove": {
+    "message": "Remove"
+  },
+  "aiDomainPolicyRemoveAria": {
+    "message": "Remove policy for $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "aiDomainPolicyEmpty": {
+    "message": "No per-domain policies set."
+  },
+  "aiDomainPolicyInvalidDomain": {
+    "message": "Enter a valid domain, e.g. example.com"
+  },
+  "aiDomainPolicySaved": {
+    "message": "Saved"
+  },
+  "aiDomainPolicy_allowed": {
+    "message": "Send allowed"
+  },
+  "aiDomainPolicy_no_summary": {
+    "message": "Record without summary"
+  },
+  "aiDomainPolicy_mask_required": {
+    "message": "Mask required"
+  },
   "ublockDetailsTitle": {
     "message": "uBlock Origin Filter (Advanced)"
   },

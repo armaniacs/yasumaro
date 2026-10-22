@@ -665,6 +665,25 @@
           <div id="domainSaveStatus" class="status-message" aria-live="polite"></div>
         </div>
 
+        <!-- AI送信政策（PBI 2026-10-23-01） -->
+        <hr class="settings-hr">
+        <div class="settings-section" id="aiDomainPolicySection">
+          <h3 class="settings-section-title" data-i18n="aiDomainPolicyTitle">AI Egress Policy (per domain)</h3>
+          <p class="help-text" data-i18n="aiDomainPolicyDesc">
+            Choose how each site's content is handled when it would be sent to an external AI: send as-is, record without a summary, or always mask PII first.
+          </p>
+          <div class="domain-tag-input-row">
+            <input type="text" id="aiDomainPolicyInput" class="domain-tag-input"
+              data-i18n-input-placeholder="aiDomainPolicyInputPlaceholder"
+              autocomplete="off" autocapitalize="none" spellcheck="false">
+            <select id="aiDomainPolicySelect" aria-label="aiDomainPolicySelect" data-i18n-aria-label="aiDomainPolicySelect"></select>
+            <button id="aiDomainPolicyAddBtn" class="secondary-btn" data-i18n="aiDomainPolicyAdd">Add</button>
+          </div>
+          <div id="aiDomainPolicyList" class="domain-tag-list" role="list" data-i18n-aria-label="aiDomainPolicyList"></div>
+          <div id="aiDomainPolicyError" class="field-error" role="alert"></div>
+          <div id="aiDomainPolicyStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
         <!-- uBlock折りたたみ -->
         <details id="ublockDetails" class="ublock-details">
           <summary class="ublock-summary" data-i18n="ublockDetailsTitle">

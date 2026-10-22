@@ -1910,6 +1910,53 @@
   "domainSaveBtn": {
     "message": "保存する"
   },
+  "aiDomainPolicyTitle": {
+    "message": "AI送信政策（ドメイン別）"
+  },
+  "aiDomainPolicyDesc": {
+    "message": "各サイトの本文を外部AIへ送るときの扱いを、ドメインごとに選びます。そのまま送る・要約なしで記録する・PIIを必ずマスクしてから送る、の3種から選べます。"
+  },
+  "aiDomainPolicyInputPlaceholder": {
+    "message": "ドメイン（例: example.com）"
+  },
+  "aiDomainPolicySelect": {
+    "message": "政策の選択"
+  },
+  "aiDomainPolicyList": {
+    "message": "設定済みの政策一覧"
+  },
+  "aiDomainPolicyAdd": {
+    "message": "追加"
+  },
+  "aiDomainPolicyRemove": {
+    "message": "削除"
+  },
+  "aiDomainPolicyRemoveAria": {
+    "message": "$DOMAIN$ の政策を削除",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "aiDomainPolicyEmpty": {
+    "message": "ドメイン別の政策は設定されていません。"
+  },
+  "aiDomainPolicyInvalidDomain": {
+    "message": "有効なドメインを入力してください（例: example.com）"
+  },
+  "aiDomainPolicySaved": {
+    "message": "保存しました"
+  },
+  "aiDomainPolicy_allowed": {
+    "message": "送信を許可"
+  },
+  "aiDomainPolicy_no_summary": {
+    "message": "要約なしで記録"
+  },
+  "aiDomainPolicy_mask_required": {
+    "message": "マスク必須"
+  },
   "ublockDetailsTitle": {
     "message": "uBlock Origin フィルター（上級者向け）"
   },

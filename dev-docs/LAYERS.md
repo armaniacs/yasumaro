@@ -78,6 +78,7 @@ src/utils/scopeHash.ts ― confirm token の scope SHA-256 計算（chrome 非�
 ```
 src/utils/storage/types.ts
 src/utils/storage/defaults.ts
+src/utils/storage/aiDomainPolicy.ts ― ドメイン別AI送信政策の正規化と判定。defaults.ts の外に置く（defaults → domainUtils → SettingsRepository → settingsMigration → defaults の循環を避けるため、PBI 2026-10-23-01）
 src/utils/storage/encryptionSession.ts
 src/utils/storage/SettingsRepository.ts ― 旧 settingsStore.ts の後継。trustDb 系との循環は dynamic import で回避（Layer 1-循環の後継関係）
 src/utils/storage/savedUrlRepository.ts
