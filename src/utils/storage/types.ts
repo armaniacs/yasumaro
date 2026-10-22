@@ -38,6 +38,8 @@ export const StorageKeys = {
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
     /** PBI 2026-10-23-02: per-media-kind threshold overrides. */
     MEDIA_THRESHOLDS: 'media_thresholds',
+    /** PBI 2026-10-23-06: named saved collections (search conditions + tag rules). */
+    SAVED_COLLECTIONS: 'saved_collections',
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
@@ -351,6 +353,8 @@ export interface StorageKeyValues {
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
     /** PBI 2026-10-23-02: per-media-kind threshold overrides (empty = defaults). */
     [StorageKeys.MEDIA_THRESHOLDS]: Record<string, Record<string, number>>;
+    /** PBI 2026-10-23-06: named saved collections (empty = none). */
+    [StorageKeys.SAVED_COLLECTIONS]: Record<string, Record<string, unknown>>;
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
     [StorageKeys.HISTORY_SORT_PREFERENCE]: string;
