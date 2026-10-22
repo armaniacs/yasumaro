@@ -151,6 +151,8 @@ export const StorageKeys = {
     // Conditional CSP Settings (P1)
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled', // 条件付きCSP有効フラグ（デフォルト: true）
     CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers', // 追加するAIプロバイダーIDリスト（デフォルト: []）
+    // Egress ledger domain policy (PBI 2026-10-23-01)
+    AI_DOMAIN_POLICY: 'ai_domain_policy', // ドメイン別送信政策: { [domain: string]: 'allowed' | 'no-summary' | 'mask-required' }（デフォルト: {}）
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
@@ -315,6 +317,23 @@ export type PrivacyMode = (typeof PRIVACY_MODES)[number];
 /** Type guard for a persisted/imported privacy mode value. */
 export function isPrivacyMode(value: unknown): value is PrivacyMode {
     return typeof value === 'string' && (PRIVACY_MODES as readonly string[]).includes(value);
+}
+
+/**
+ * Per-domain egress policy (PBI 2026-10-23-01). The resolved policy decides
+ * what happens to the content of a page on this domain before any external
+ * send: allowed (send as configured), no-summary (record the visit without a
+ * summary, no AI at all), mask-required (force PII masking before the send).
+ * Persisted value is untrusted, so every reader goes through
+ * `normalizeAiDomainPolicy()` / `normalizeAiDomainPolicyMap()`.
+ */
+export const AI_DOMAIN_POLICIES = ['allowed', 'no-summary', 'mask-required'] as const;
+
+export type AiDomainPolicy = (typeof AI_DOMAIN_POLICIES)[number];
+
+/** Type guard for a persisted/imported per-domain policy value. */
+export function isAiDomainPolicy(value: unknown): value is AiDomainPolicy {
+    return typeof value === 'string' && (AI_DOMAIN_POLICIES as readonly string[]).includes(value);
 }
 
 // 各 StorageKey に対応する値型
@@ -530,6 +549,7 @@ export interface StorageKeyValues {
     [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: boolean;
     [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: CleansingFeedbackEntry[];
     [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: boolean;
+    [StorageKeys.AI_DOMAIN_POLICY]: Record<string, AiDomainPolicy>;
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）

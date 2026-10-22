@@ -9,6 +9,11 @@ export interface AISummaryOptions {
   tagSummaryMode?: boolean;
   url?: string;
   traceId?: string;
+  /**
+   * Applied per-domain egress policy (PBI 2026-10-23-01). Rides the send so
+   * the egress ledger records the verdict for this domain.
+   */
+  policy?: string;
 }
 
 /**

@@ -162,6 +162,7 @@ export class RemoteAIService implements AIService {
     tagSummaryMode: boolean,
     traceId: string,
     url: string,
+    policy: string,
   ): Promise<AISummaryResult> {
     const effectiveSettings = this.applySlotModel(settings, slot);
     let providerInstance: AIProviderStrategy;
@@ -189,7 +190,7 @@ export class RemoteAIService implements AIService {
       provider: slot.provider,
       url,
       charCount: content.length,
-      policy: 'allowed',
+      policy,
     });
 
     try {
@@ -272,6 +273,7 @@ export class RemoteAIService implements AIService {
           tagSummaryMode,
           options?.traceId ?? '',
           url,
+          options?.policy ?? 'allowed',
         );
         if (breakerGateOpen) {
           if (result.success) {

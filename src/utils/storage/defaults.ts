@@ -66,6 +66,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist',
     [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: false,
     [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
+    [StorageKeys.AI_DOMAIN_POLICY]: {},
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
@@ -193,3 +194,7 @@ export function normalizePrivacyMode(value: unknown): PrivacyMode {
         ? value
         : (DEFAULT_SETTINGS[StorageKeys.PRIVACY_MODE] as PrivacyMode);
 }
+
+// Per-domain egress policy normalization lives in aiDomainPolicy.ts — deriving
+// here would close a utils-internal import cycle (defaults → domainUtils →
+// SettingsRepository → settingsMigration → defaults).

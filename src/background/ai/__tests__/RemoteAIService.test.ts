@@ -318,6 +318,24 @@ describe('RemoteAIService', () => {
     });
   });
 
+  it('records the applied domain policy on the ledger row (mask-required)', async () => {
+    const service = createService([{ provider: 'test' }], {
+      test: () => makeProvider('ok'),
+    });
+
+    await service.generateSummary('content', {
+      url: 'https://example.com/policy-test',
+      policy: 'mask-required',
+    });
+
+    expect(recordAuditLog).toHaveBeenCalledWith({
+      provider: 'test',
+      url: 'https://example.com/policy-test',
+      charCount: 'content'.length,
+      policy: 'mask-required',
+    });
+  });
+
   it('calls recordAuditLog for each attempted provider during fallback', async () => {
     const service = createService([{ provider: 'fail' }, { provider: 'success' }], {
       fail: () => makeProvider('fail', false),
