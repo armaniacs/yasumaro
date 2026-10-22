@@ -54,4 +54,5 @@ Scenario: バックグラウンドは記録されない
 - 残タスク: (1) メディア別しきい値の設定UI（dashboard recording-conditionsパネル）(2) 動画再生→記録のE2E
 - しきい値UIの再開点: `StorageKeys.MEDIA_THRESHOLDS: 'media_thresholds'` を `src/utils/storage/types.ts` に追加し、StrictSettings にマップ型エントリ（既存のエントリはリテラル型のため要配慮）→ dashboard recording-conditions パネルに4種のしきい値入力 → `mediaThresholdsFor(kind, overrides)` の第2引数に永続化オーバーライドを渡す配線（`src/content/visitGating.ts` の resolveThresholds が既存の受け口）。`initRecordingConditionsSettings` が既存の数値入力パターン（MIN_VISIT_DURATION 等）の規範
 - しきい値UI土台: 完了（commit 302c14f7）。MEDIA_THRESHOLDS設定キー・DEFAULT_SETTINGS空マップ・panel-generalの4種しきい値入力UI（`mediaThresholdVideo`/`Pdf`/`Code`）・ja/en i18n追加。残はマップ書き込みハンドラ（panel-generalの保存経路に3入力を1マップに梱包）と `resolveThresholds` への永続化オーバーライド渡し
+- しきい値UI保存と配線: 完了（commit 2f6956bf）。`collectMediaThresholdOverrides` が3入力を1マップに梱包（空欄・負値・NaNは既定値保持）、`saveDashboardSettings` が同じ保存に乗せる。`getMediaThresholdOverrides` を VisitGatingDeps に追加し、`resolveThresholds` が永続化オーバーライドを媒体既定値の上に適用。残は動画再生→記録のE2E
 - NULL解消: 完了（commit 9c506dfd）。VALID_VISITペイロードに視聴秒数とスクロール率を乗せ、保存行の `visit_duration`/`scroll_ratio` がNULLでなくなる。手動記録はNULLのまま。force再送でもメトリックが落ちない（pin: `src/__tests__/visitDurationWire.test.ts`）
