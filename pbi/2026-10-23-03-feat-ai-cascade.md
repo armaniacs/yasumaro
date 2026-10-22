@@ -48,5 +48,5 @@ Scenario: 縮退を偽成功にしない
 ## 実装記録（2026-10-23・調査のみ・未着手）
 - 既存資産の確認: 予算cap機構は実在する（`src/utils/aiUsageTracker.ts` の `checkHardLimit(expectedTokens)` が月間token判定、`getMonthlyUsage()` が月間表示、`recordUsage()` が計上、`checkUsageWarning()` が警告）。promise-chain mutex（`withCounterLock`）で計上の lost update は構造的に封じられている
 - 消費点: `src/background/ai/providers/HttpProviderStrategy.ts` の `checkPreFlight()` が `hardLimit.blocked` で早期リターン（blocked時は要約が止まるだけ）
-- 枯渇時縮退の配線先（次ラウンドの再開点）: `checkPreFlight()` の `hardLimit.blocked` 分岐を「即ブロック」から「縮退要約（タイトル+冒頭）の生成と記録 + 縮退した旨の表示」に変えるのが本PBIの出口。縮退フラグは既存の wire 契約（`fallbackTriggered`/`fallbackReason`）に乗る受け口が実在し、6.9.51の偽成功表示7箇所と同じ「縮退時は縮退した旨を表示」規約に従う
+- 枯渇時縮退の配線先（次ラウンドの再開点）: `src/background/ai/providers/HttpProviderStrategy.ts:219-222` の `preFlight.blocked` 分岐が `return { success: false, summary: preFlight.message! }` で止まる。この分岐を「即ブロック」から「縮退要約（タイトル+冒頭の切り詰め）の生成と記録 + 縮退した旨の表示」に変えるのが本PBIの出口。縮退フラグは既存の wire 契約（`fallbackTriggered`/`fallbackReason`）に乗る受け口が実在し、6.9.51の偽成功表示7箇所と同じ「縮退時は縮退した旨を表示」規約に従う。設計メモ: 縮退要約の生成には `content.substring(0, N)` の切り詰め（既存 `hooks.contentLimit()` と別の短い cap）とタイトル結合が必要。AISummaryResult に縮退フラグを運ぶか fallbackReason で判定するかは実装時に裁定
 - カスケード順序（rules → tiny local → remote）の設定面は未調査
