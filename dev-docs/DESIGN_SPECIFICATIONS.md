@@ -227,6 +227,14 @@ When enabled (`PII_CONFIRMATION_UI = true`):
 - **L2: PII Masking** (Conditional): Regex-based PII detection and replacement
 - **L3: Cloud Summarization** (Optional): External AI provider for final summary
 
+### 7.4 Cost-Aware Cascade (PBI 2026-10-23-03)
+Cascade order is cheapest-first and owned by one service:
+- **Owner**: `FallbackAIService` (`src/background/ai/FallbackAIService.ts`). mode 'auto' tries local first and falls back to remote; 'local_only' pins local; 'full_pipeline'/'masked_cloud' pin remote.
+- **Composition root**: `createAIService` (`src/background/ai/aiServiceFactory.ts`) wires the local slot to Built-in AI and the remote slot to the provider priority list (`AI_PROVIDER_PRIORITY_LIST`).
+- **Budget cap**: `checkHardLimit` (`src/utils/aiUsageTracker.ts`) judges the monthly token cap; `getMonthlyUsage` is the display. Cap value 0 disables the cap.
+- **Degraded send**: when the quota is exhausted, the blocked branch (`HttpProviderStrategy` `executeHttpSummaryFlow`) returns the reason text in `summary` plus the degraded opening slice in `degradedSummary` and `degraded: true`. `success` stays false so a degraded send never poses as a real remote summary (縮退時は縮退した旨を表示). `_processCloudResult` (`src/background/privacyPipeline.ts`) forwards `degradedSummary` into `PrivacyPipelineResult` only when the provider reported the fallback.
+- **Degraded generator**: `degradedSummary` (`src/utils/degradedSummary.ts`, Layer 0) builds the title + opening slice with a short cap (`DEGRADED_SUMMARY_CHARS`) and a visible note (`DEGRADED_SUMMARY_NOTE`). Empty/NaN/negative inputs fail closed to the title-only form.
+
 ## 8. Concurrency & Mutex
 
 ### 8.1 Global Write Lock
