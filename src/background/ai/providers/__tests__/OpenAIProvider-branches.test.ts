@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
+import { DEGRADED_SUMMARY_NOTE } from '../../../../utils/degradedSummary.js';
 import type { Settings } from '../../../../utils/storage/types.js';
 
 vi.mock('../../../../utils/aiUsageTracker.js', () => ({
@@ -212,6 +213,12 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
       const result = await provider.generateSummary('content');
       expect(result.success).toBe(false);
       expect(result.summary).toContain('limit reached');
+      // PBI 2026-10-23-03 (cost-aware cascade): a blocked quota must not stop
+      // the record — the degraded opening slice rides alongside the reason,
+      // and the flag marks the fallback without posing as a real summary.
+      expect(result.degraded).toBe(true);
+      expect(result.degradedSummary).toContain(DEGRADED_SUMMARY_NOTE);
+      expect(result.degradedSummary).toContain('content');
     });
 
     it('blocks content when dangerLevel is high', async () => {
