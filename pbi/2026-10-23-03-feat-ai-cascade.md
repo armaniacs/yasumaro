@@ -43,7 +43,7 @@ Scenario: 縮退を偽成功にしない
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする ― 枯渇時縮退: `degradedSummary` 経路のpin（`OpenAIProvider-branches.test.ts`）。偽成功にしない: `success` は false のまま。カスケード順序: 既存の `FallbackAIService` 分岐テスト
 - [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(カスケード順序と縮退仕様を含む) ― カスケード順序と縮退仕様は `dev-docs/DESIGN_SPECIFICATIONS.md` のAI設定章での確認を残す
+- [x] ドキュメント更新済み(カスケード順序と縮退仕様を含む) ― `dev-docs/DESIGN_SPECIFICATIONS.md` 7.4章にカスケード順序と縮退仕様を確定（commit 4d4c04da）
 
 ## 実装記録（2026-10-23・調査のみ・未着手）
 - 既存資産の確認: 予算cap機構は実在する（`src/utils/aiUsageTracker.ts` の `checkHardLimit(expectedTokens)` が月間token判定、`getMonthlyUsage()` が月間表示、`recordUsage()` が計上、`checkUsageWarning()` が警告）。promise-chain mutex（`withCounterLock`）で計上の lost update は構造的に封じられている
