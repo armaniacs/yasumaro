@@ -42,5 +42,6 @@ export const MEDIA_KIND_DEFAULTS: Record<string, MediaThresholds> = {
 /** Resolve a persisted or imported media kind defensively to the default pair. */
 export function mediaThresholdsFor(kind: string, overrides: Record<string, Partial<MediaThresholds>> = {}): MediaThresholds {
     const base = MEDIA_KIND_DEFAULTS[kind] ?? MEDIA_KIND_DEFAULTS.article;
-    return { ...base, ...(overrides[kind] ?? {}) };
+    const override = overrides[kind];
+    return { ...base, ...(override ?? {}) } as MediaThresholds;
 }

@@ -13,6 +13,7 @@ import { PageState, type CleansingConfig, DEFAULT_CLEANSING_CONFIG } from './pag
 import { logInfo, logDebug } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import type { VisitGate } from './visitGate.js';
+import { detectMediaKind } from './mediaKind.js';
 import { preparePageContent } from '../utils/pageContentPipeline.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import { ExtractionReport } from '../utils/contentExtractor/extractionReport.js';
@@ -101,6 +102,9 @@ export class ContentKernel {
             getPageState: () => this.pageState,
             clock: this.clock,
             isE2ETest: () => this.isE2ETest(),
+            // PBI 2026-10-23-02: classify the page once at load for adaptive
+            // recording; an unknown page still resolves to the article pair.
+            detectMediaKind: () => detectMediaKind(document),
         });
         this.deadlineTimer = new DeadlineTimer({
             scheduler: this.scheduler,
