@@ -26,14 +26,14 @@
 | ⬜ 09 | [2026-10-23-09-feat-research-report.md](2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | M3。M2に依存 |
 | ⬜ 10 | [2026-10-23-10-feat-domain-intel.md](2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | M4間接効果。独立 |
 
-### 2026-10-23 yasumaro棚卸し第2弾5候補 ― ⬜ 3件残（01完了・02土台完了）RICE順: 02 → 03 → 04 → 05
+### 2026-10-23 yasumaro棚卸し第2弾5候補 ― ⬜ 3件残（01完了・02実装完了・残E2E）RICE順: 02 → 03 → 04 → 05
 
 2026-10-23の棚卸し第2弾(G〜LのうちG/H/I/J/K) をpbi-backlog-prioritizerでPBI化。Lは見送り。詳細は [2026-10-23-00-backlog-yasumaro-review2.md](2026-10-23-00-backlog-yasumaro-review2.md)。02/04/05は独立のため並列着手可。03は01の作法（policy SSOT）確定済み、これに従う。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
 | ✅ 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | 完了。政策エンジン+UI+監査台帳最小形+3文書更新。validate exit 0（16727 tests） |
-| 🔶 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 土台+配線完了(メディア種別判定・メディア別しきい値・VisitGate拡張)。残はしきい値UIと記録Payload |
+| 🔶 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 実装完了(メディア種別判定・メディア別しきい値+UI+保存・VisitGate拡張・visit_duration NULL解消)。残は動画再生→記録のE2E |
 | ⬜ 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 枯渇・NDA対応。01の作法に従う（SSOT確定済み） |
 | ⬜ 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 戦略価値。確信度0.5 |
 | ⬜ 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 間接効果でImpact 1 |
