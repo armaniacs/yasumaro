@@ -27,11 +27,11 @@ Scenario: 未宣言送信先は送らず理由が分かる
   Then ネットワークに出さず遮断し、台帳と設定画面に理由が表示される
 
 ## 受け入れ基準
-- [ ] ドメイン別に送信許可・要約なし記録・マスク必須を選べる
-- [ ] 高リスク遮断時に理由が表示され、元記録は保持される
-- [ ] 未宣言originの遮断がe2e pinで固定される
-- [ ] フォールバック環境でも台帳の最小形が読める
-- [ ] ja/enの文言漏れがない
+- [x] ドメイン別に送信許可・要約なし記録・マスク必須を選べる
+- [x] 高リスク遮断時に理由が表示され、元記録は保持される
+- [x] 未宣言originの遮断がe2e pinで固定される
+- [x] フォールバック環境でも台帳の最小形が読める
+- [x] ja/enの文言漏れがない
 
 ## テスト戦略
 - E2E: 要約有効→保存→台帳表示、未宣言origin遮断の通し
@@ -42,6 +42,14 @@ Scenario: 未宣言送信先は送らず理由が分かる
 1.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(PERMISSIONSの送信先章・SECURITYのScope・PRIVACYの監査章)
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み(PERMISSIONSの送信先章・SECURITYのScope・PRIVACYの監査章)
+
+## 実装記録（2026-10-23）
+- 政策エンジン: `AI_DOMAIN_POLICY` 設定に3種の政策を保存。リゾルバは `src/utils/storage/aiDomainPolicy.ts`（defaults.ts の外に配置し、defaults → domainUtils → SettingsRepository → settingsMigration → defaults の循環を回避）。privacyPipeline はマスク必須でプライバシーモード非依存のマスクを強制し、要約なしでAIを実行せず記録のみ。判定は送信に乗り監査台帳に記録（commit b97c4fc2）
+- 設定UI: domainパネルに3種の政策を選べるエディタを追加。選択肢は `AI_DOMAIN_POLICIES` 集合から生成、行の正規化はfail-closed。ja/en i18n追加。aiDomainPolicy.ts を Layer 1 に登録（commit 2628d3a3）
+- 監査台帳: char_count/policy列を追加し最小形を通す（commit 5a2b9d0b）。フォールバック環境でも最小形を読めるようにする（commit ef7e353a）。台帳は診断パネルのエクスポート（`auditLogTsv.ts`）で確認できる
+- 未宣言originのe2e pin: 既存 `testDir/e2e/gist-egress.spec.ts`（PBI 2026-10-18-25／2026-10-21-11）が document CSP による未宣言origin遮断を固定済み
+- ドキュメント: SECURITY.md Scope・PERMISSIONS.md Reviewer Notes・PRIVACY.md 監査章（docs/publicバイト同一）に追記（commit 1f38b447）
+- 最終検証: `npm run validate` exit 0（1124 files / 16727 tests・docs chars 0 violations・test type errors 451 pinned 451）
