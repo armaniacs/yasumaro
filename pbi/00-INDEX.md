@@ -14,6 +14,43 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-23 新機能5候補(M6見送り) ― ⬜ 5件残 着手順: 06 → 07 → 08 → 09 → 10
+
+新機能観点の棚卸し(M1〜M6)のうちM1/M2/M3/M4/M5をPBI化。M6は見送り。詳細は [2026-10-23-00-backlog-yasumaro-newfeat.md](2026-10-23-00-backlog-yasumaro-newfeat.md)。07/10は06と独立のため並列着手可。08/09は06確定後に着手する。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 06 | [2026-10-23-06-feat-saved-collections.md](2026-10-23-06-feat-saved-collections.md) | feat | 640 | 2.0人週相当 | M2土台。M1/M3が依存 |
+| ⬜ 07 | [2026-10-23-07-feat-entry-friction.md](2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | M5到達最広。独立 |
+| ⬜ 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | M1。M2に依存 |
+| ⬜ 09 | [2026-10-23-09-feat-research-report.md](2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | M3。M2に依存 |
+| ⬜ 10 | [2026-10-23-10-feat-domain-intel.md](2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | M4間接効果。独立 |
+
+### 2026-10-23 yasumaro棚卸し第2弾5候補 ― ⬜ 5件残 RICE順: 01 → 02 → 03 → 04 → 05
+
+2026-10-23の棚卸し第2弾(G〜LのうちG/H/I/J/K) をpbi-backlog-prioritizerでPBI化。Lは見送り。詳細は [2026-10-23-00-backlog-yasumaro-review2.md](2026-10-23-00-backlog-yasumaro-review2.md)。02/04/05は01と独立のため並列着手可。03は01の作法確定後に着手する。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | 信頼の土台。Hが作法に従う |
+| ⬜ 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 記録の入口。Hと独立 |
+| ⬜ 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 枯渇・NDA対応。01の作法に従う |
+| ⬜ 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 戦略価値。確信度0.5 |
+| ⬜ 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 間接効果でImpact 1 |
+
+### 2026-10-22 yasumaro棚卸し6候補 ― ⬜ 6件残 RICE順: 01 → 02 → 03 → 04 → 05 → 06
+
+2026-10-22の棚卸し応答(A〜F)をpbi-backlog-prioritizerでPBI化。詳細は [2026-10-22-00-backlog-yasumaro-review.md](2026-10-22-00-backlog-yasumaro-review.md)。02/04は01と独立のため並列着手可。03/05は01の作法確定後に着手する。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-22-01-refactor-storage-catalog-ssot.md](2026-10-22-01-refactor-storage-catalog-ssot.md) | refactor | 800 | 2.0人週相当 | 土台。A/Dが依存。wa-sqlite部分はゲート後 |
+| ⬜ 02 | [2026-10-22-02-feat-onboarding-light.md](2026-10-22-02-feat-onboarding-light.md) | feat | 480 | 1.0人週相当 | 入口改善。小さく即効 |
+| ⬜ 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 体感価値最大。01に依存 |
+| ⬜ 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | Dと同点。到達広のため先 |
+| ⬜ 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | パワー層。01のegress作法に従う |
+| ⬜ 06 | [2026-10-22-06-feat-capture-expansion.md](2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | 確信度0.5。段階着手 |
+
 ### 2026-10-21 対象外・owner 判断処理（なぜなぜ分析 43 回、fix/feat 12件） ― ✅ 12件完了・アーカイブ済み（01-12） / ⬜ 0件残 実施順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → ~~06~~ → ~~07~~ → ~~08~~ → ~~09~~ → ~~10~~ → ~~11~~ → ~~12~~
 
 ### 2026-10-20 リファクタリング診断（yasumaro-refactor、24件） ― ✅ 24件完了・アーカイブ済み（01-06・08-11・13-24） / ⬜ 0件残 🔧非機能追加 RICE順: ~~01(76)~~ → ~~02(60)~~ → ~~03(58)~~ → ~~04(50)~~ → ~~05(48)~~ → ~~06(42)~~ → ~~07(38)~~ → ~~08(32)~~ → ~~09(30)~~ → ~~10(30)~~ → ~~11(24)~~ → ~~12(24)~~ → ~~13(20)~~ → ~~14(20)~~ → ~~15(20)~~ → ~~16(18)~~ → ~~17(18)~~ → ~~18(15)~~ → ~~19(14)~~ → ~~20(14)~~ → ~~21(13)~~ → ~~22(12)~~ → ~~23(12)~~ → ~~24(8)~~
