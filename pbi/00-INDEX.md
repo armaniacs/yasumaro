@@ -78,7 +78,7 @@ PBI 2026-10-18-01 / 05 / 08 の実装と独立レビュー、およびその後�
 
 進め方: **同意系（03 → 10 → 11 → 07）を先に**まとめると、同意の実効性（受付・実行時・表示）を 1 期で閉じられる。**redirect 系（04/05/06）は一括**が効率的（05 で宣言を 1 箇所に戻すと 06 の適用が各 1 行になり、04 の E2E が全経路を覆える）。01・02 は完了・アーカイブ済み（2026-10-19）。
 
-### 2026-10-18 security-audit run-2（25件） ― ✅ 22件完了・アーカイブ済み / 🔶 15・20 部分実装（owner 判断待ち） / ⬜ 1件残（25 = owner ブラウザ観測） 🔧非機能追加（ブロッカー調査済）
+### 2026-10-18 security-audit run-2（25件） ― ✅ コード作業は全件完了・アーカイブ済み / 残はowner手動観測のみ（自動化不能分） 🔧非機能追加（ブロッカー調査済・W0確定 2026-10-23）
 
 security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: standard）の needs_validation 25件を RICE 採点して PBI 化。**confirmed 0件**（OS-enforced sandbox 不在の source-only 実行のため confirmed は原理的に出ない）。rejected 4件はソース反証済みで PBI 化せず。
 
@@ -88,13 +88,13 @@ security-audit run-2（source ref `d49d70a3`、リポジトリ全体、profile: 
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| 🔶 15 | [2026-10-18-15-fix-hmac-kek-fail-open.md](2026-10-18-15-fix-hmac-kek-fail-open.md) | fix | 750 | 2.0 | KEK fail-open による署名鍵の暗黙失効。選択肢2（quarantine 隔離）は完了・1/3 は owner 判断待ち |
-| 🔶 20 | [2026-10-18-20-fix-session-lock-fanout.md](2026-10-18-20-fix-session-lock-fanout.md) | fix | 400 | 1.0 | 自動ロック通知の fan-out に受け手が無い。宛先修正は別 PBI に分岐 |
-| ⬜ 25 | [2026-10-18-25-fix-gist-egress-csp-declare.md](2026-10-18-25-fix-gist-egress-csp-declare.md) | fix | 80 | 1.0 | Gist の origin 未宣言。fail-closed 側で出荷済み機能が動作しない。owner ブラウザ観測（REMAINS）が残る |
+| ✅ 15 | [2026-10-18-15-fix-hmac-kek-fail-open.md](../dev-docs/archived/pbi/2026-10-18-15-fix-hmac-kek-fail-open.md) | fix | 750 | 2.0 | 選択肢2・3実装済み、選択肢1はowner裁定（追加UI不要）で完了・アーカイブ済み。残はeviction実機観測のみ（quota免除は6.9.52でe2e pin化済み） |
+| ✅ 20 | [2026-10-18-20-fix-session-lock-fanout.md](../dev-docs/archived/pbi/2026-10-18-20-fix-session-lock-fanout.md) | fix | 400 | 1.0 | 選択肢2・3実装済み、宛先修正は10-21-12で完了・アーカイブ済み。残はowner実機観測のみ（受信側遷移は6.9.52でe2e pin化済み） |
+| ✅ 25 | [2026-10-18-25-fix-gist-egress-csp-declare.md](../dev-docs/archived/pbi/2026-10-18-25-fix-gist-egress-csp-declare.md) | fix | 80 | 1.0 | ブロッカー解決済み・6.9.52でe2e 3pin化済み。残は実PAT認証のowner確認のみ（自動化不能） |
 
-実行順（B1→B5）: B1 = ~~01/08/14/16~~(2026-10-19・20 完了)/~~23~~(完了) → B2 = ~~02/04/07/09/11/24~~ 完了 → B3 = ~~05/13/20/21/22~~ 完了（20 は部分実装・宛先修正は別 PBI TODO） → B4 = ~~03/06/10/12/17/19~~ 完了/15 は部分実装（選択肢 2 のみ） → B5 = ~~18~~(完了)/25 は owner ブラウザ観測が残る。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
+実行順（B1→B5）: B1 = ~~01/08/14/16~~(2026-10-19・20 完了)/~~23~~(完了) → B2 = ~~02/04/07/09/11/24~~ 完了 → B3 = ~~05/13/20/21/22~~ 完了（20の宛先修正は10-21-12で完了） → B4 = ~~03/06/10/12/15/17/19~~ 完了（15は選択肢2・3実装＋選択肢1裁定で完了） → B5 = ~~18/25~~(完了。25はe2e 3pin＋実PATのみowner残)。横断的な owner ブロッカー6件（MV3 sendMessage の自己配送 / storage.local の prefix セマンティクス / IDB eviction / npm ミラー / DownloadItem.id の持続性 / Obsidian の空白区切りリンク描画）は各PBIのブロッカー欄と backlog に記載。
 
-TODO（起票済み 2026-10-20）: **fan-out 宛先修正**は [2026-10-20-feat-session-lock-fanout-destination.md](2026-10-20-feat-session-lock-fanout-destination.md) として起票済み（選択肢 1 vs 2 の裁定と実機観測は owner 判断）。2026-10-20 時点で PBI 20 は選択肢 2（応答本文での成功判定）+ 選択肢 3（消費側の `IS_LOCKED` 検査をキャッシュ非依存へ移動）実装済みで、宛先修正は本新 PBI へ引き継ぎ。
+TODO（起票済み 2026-10-20）: **fan-out 宛先修正**は [2026-10-20-feat-session-lock-fanout-destination.md](../dev-docs/archived/pbi/2026-10-20-feat-session-lock-fanout-destination.md) として起票し、[2026-10-21-12-feat-session-lock-fanout-destination.md](../dev-docs/archived/pbi/2026-10-21-12-feat-session-lock-fanout-destination.md) で実装・アーカイブ済み（6.9.52でe2e pin追加）。残はowner実機観測のみ。
 
 ### 2026-10-20 トリガー検証（外部ブロッカー再確認） ― 🔵 監視継続
 
