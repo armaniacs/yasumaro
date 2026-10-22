@@ -8,17 +8,23 @@ import { Mutex } from '../utils/Mutex.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { extractDomain } from '../utils/domainUtils.js';
 import { UPDATABLE_FIELDS, buildInsertRecordFields } from './schema.js';
-import type { BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
+import type { BrowsingLogRecord, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { buildQuerySpec, matchesExtraWhere, purgeCutoffMs, type AlreadyCappedQuery } from './queryPlan.js';
-import { QUERY_CAPS } from '../utils/limits.js';
+import { planAuditLog } from './queryPlanner.js';
+import { QUERY_CAPS, AUDIT_CAP_FALLBACK } from '../utils/limits.js';
 import { forwardWarn } from './offscreenLogger.js';
 
 const STORAGE_KEY = 'FALLBACK_STORAGE_DATA';
 const STORAGE_KEY_COUNTER = 'FALLBACK_STORAGE_COUNTER';
+const AUDIT_STORAGE_KEY = 'FALLBACK_AUDIT_LOG';
 const QUOTA_BYTES_LIMIT = 5 * 1024 * 1024; // 5MB warning threshold
 
 interface StoredData {
   records: BrowsingLogRecord[];
+}
+
+interface AuditStoredData {
+  rows: AuditLogEntry[];
 }
 
 export class FallbackStorage {
@@ -550,6 +556,96 @@ export class FallbackStorage {
   async getAllRecords(): Promise<BrowsingLogRecord[]> {
     const data = await this.loadData();
     return data.records;
+  }
+
+  // ── Audit ledger (PBI 2026-10-23-01) ────────────────────────────────
+  // The minimal form (time, destination, masked char count, policy verdict)
+  // lives under its own chrome.storage.local key, separate from browsing
+  // history so clearAll/purge semantics never mix the two trails.
+
+  private async loadAuditRows(): Promise<AuditLogEntry[]> {
+    const result = await chrome.storage.local.get(AUDIT_STORAGE_KEY);
+    const data = result[AUDIT_STORAGE_KEY] as AuditStoredData | undefined;
+    if (data && Array.isArray(data.rows)) {
+      return data.rows;
+    }
+    return [];
+  }
+
+  private async saveAuditRows(rows: AuditLogEntry[]): Promise<void> {
+    await chrome.storage.local.set({ [AUDIT_STORAGE_KEY]: { rows } satisfies AuditStoredData });
+  }
+
+  /**
+   * Same locking discipline as `mutate`, scoped to the audit key. The shared
+   * mutex serializes audit writes with browsing-log writes too (the mutex is
+   * not reentrant), so a purge and an insert cannot clobber each other's blob.
+   */
+  private async mutateAudit<T>(fn: (rows: AuditLogEntry[]) => { next: AuditLogEntry[]; result: T }): Promise<T> {
+    await this.mutex.acquire();
+    try {
+      const rows = await this.loadAuditRows();
+      const { next, result } = fn(rows);
+      await this.saveAuditRows(next);
+      return result;
+    } finally {
+      this.mutex.release();
+    }
+  }
+
+  /**
+   * Append one audit row for a cloud AI provider send. The id comes from the
+   * rows themselves (max + 1) instead of the shared counter: the counter owns
+   * browsing-log ids, and mixing the two would leave gaps that look like
+   * deleted history.
+   */
+  async insertAuditLog(record: AuditLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
+    try {
+      return await this.mutateAudit((rows) => {
+        const id = rows.reduce((max, r) => Math.max(max, r.id), 0) + 1;
+        const entry: AuditLogEntry = { ...record, id };
+        return { next: [...rows, entry], result: { success: true as const, id } };
+      });
+    } catch (error) {
+      return { success: false, error: errorMessage(error) };
+    }
+  }
+
+  /**
+   * Read audit rows, most recent first — the same paging seam (planAuditLog)
+   * the SQL backends use, with the fallback's own read cap.
+   */
+  async queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<{ success: true; rows: AuditLogEntry[]; total: number } | { success: false; error: string }> {
+    try {
+      const rows = await this.loadAuditRows();
+      const { limit, offset } = planAuditLog(options, AUDIT_CAP_FALLBACK);
+      const sorted = [...rows].sort((a, b) => b.created_at - a.created_at);
+      return { success: true, rows: sorted.slice(offset, offset + limit), total: rows.length };
+    } catch (error) {
+      return { success: false, error: errorMessage(error) };
+    }
+  }
+
+  /**
+   * Sweep audit rows older than the retention window. Same skip guard as the
+   * SQL backends: without a positive window there is no cutoff, and "no
+   * window" must not degrade into "cutoff = now" (which would purge
+   * everything while reporting 0).
+   */
+  async purgeAuditLog(retentionDays?: number): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+    try {
+      if (retentionDays == null || retentionDays <= 0) {
+        return { success: true, purged: 0 };
+      }
+      const purged = await this.mutateAudit((rows) => {
+        const cutoff = purgeCutoffMs(retentionDays);
+        const keep = rows.filter((r) => r.created_at >= cutoff);
+        return { next: keep, result: rows.length - keep.length };
+      });
+      return { success: true, purged };
+    } catch (error) {
+      return { success: false, error: errorMessage(error) };
+    }
   }
 
   private extractDomain(url: string): string | null {

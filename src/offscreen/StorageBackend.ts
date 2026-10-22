@@ -144,7 +144,6 @@ const NOT_INITIALIZED = 'Database not initialized';
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
 export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
 export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
-export const AUDIT_LOG_UNSUPPORTED_ERROR = 'Audit log not supported in fallback mode';
 
 export class NoopBackend implements StorageBackend {
   private err = (): { success: false; error: string } => ({ success: false, error: NOT_INITIALIZED });

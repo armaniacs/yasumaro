@@ -1,6 +1,6 @@
 // src/offscreen/FallbackStorageAdapter.ts
 import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
-import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR, AUDIT_LOG_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
 import { buildExportEnvelope } from './exportEnvelope.js';
 import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
@@ -48,11 +48,10 @@ export class FallbackStorageAdapter implements StorageBackend {
     return this.fallback.purgeContent(retentionDays, maxRecords, includeStarred);
   }
 
-  async purgeAuditLog(_retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
-    // The JSON fallback keeps no audit_log at all (same reason insert/query
-    // refuse), so there is nothing to sweep — reporting success would be a
-    // lie the retention-failure convention depends on.
-    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
+  async purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>> {
+    // PBI 2026-10-23-01: the fallback keeps the audit ledger's minimal form
+    // under its own key, so the sweep works here instead of refusing.
+    return this.fallback.purgeAuditLog(retentionDays);
   }
 
   async getFtsIndexSize(): Promise<BackendOrError<FtsSizeResult>> {
@@ -87,12 +86,13 @@ export class FallbackStorageAdapter implements StorageBackend {
     return { initialized: true, path: 'chrome.storage.local', fallback: true, fts5: false, supportsBinaryBackup: false, compileOptionsSource: 'fallback' };
   }
 
-  async insertAuditLog(_record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
-    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
+  async insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>> {
+    // PBI 2026-10-23-01: the minimal ledger form is readable in fallback too.
+    return this.fallback.insertAuditLog(record);
   }
 
-  async queryAuditLog(_options?: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
-    return { success: false, error: AUDIT_LOG_UNSUPPORTED_ERROR };
+  async queryAuditLog(options?: { limit?: number; offset?: number }): Promise<BackendOrError<AuditLogQueryResult>> {
+    return this.fallback.queryAuditLog(options);
   }
 
   async getCount(): Promise<BackendOrError<CountResult>> {

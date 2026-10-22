@@ -52,6 +52,9 @@ export const MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
  */
 export const AUDIT_CAP_OPFS = 1_000;
 export const AUDIT_CAP_IDB = 100_000;
+/** Fallback (chrome.storage.local) audit-read cap. Matches the OPFS worker:
+ *  the blob is bounded by the local quota and the 7-day retention sweep. */
+export const AUDIT_CAP_FALLBACK = 1_000;
 
 // Caps absorbed from per-module literals; each value keeps its original number.
 
