@@ -195,7 +195,7 @@ describe('launchExtensionContext', () => {
     );
     expect(options.args).toContain(`--load-extension=${EXTENSION_PATH}`);
     expect(options.args).toContain(
-      '--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443',
+      '--host-resolver-rules=MAP api.openai.com:443 127.0.0.1:8443,MAP api.github.com:443 127.0.0.1:8444,MAP example.com:443 127.0.0.1:9',
     );
     expect(options.args).toContain('--ignore-certificate-errors');
     vi.clearAllTimers();
