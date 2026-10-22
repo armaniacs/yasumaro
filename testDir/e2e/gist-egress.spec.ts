@@ -133,6 +133,12 @@ test.describe('Gist egress @extension', () => {
     const result = await page.evaluate(
       () =>
         new Promise<{ blocked: boolean; directive: string; blockedUri: string }>((resolve) => {
+          // The 8s is an upper bound on the event-driven wait, never a
+          // wait-to-pass: the promise resolves on the securitypolicyviolation
+          // event or the fetch settlement, never by this timer. The timer only
+          // prevents a hang (the test-level timeout is the backstop), so it
+          // cannot make the test pass or hide a race.
+          // eslint-disable-next-line local/no-test-sleep -- upper bound on the event-driven wait, never a wait-to-pass (resolves on the event or the fetch settlement; the timer only prevents a hang)
           const timeout = setTimeout(() => resolve({ blocked: false, directive: '', blockedUri: '' }), 8000);
           document.addEventListener(
             'securitypolicyviolation',
