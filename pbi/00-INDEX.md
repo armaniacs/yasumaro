@@ -34,7 +34,7 @@
 |---|---|---|---:|---:|---|
 | ✅ 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | 完了。政策エンジン+UI+監査台帳最小形+3文書更新。validate exit 0（16727 tests） |
 | 🔶 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 実装完了(メディア種別判定・メディア別しきい値+UI+保存・VisitGate拡張・visit_duration NULL解消)。残は動画再生→記録のE2E |
-| 🔶 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 調査完了・実装未着手。予算cap機構(checkHardLimit)は実在、縮退配線先(HttpProviderStrategy.ts:219-222)確定済み |
+| 🔶 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 実装完了(縮退要約ジェネレータ・degradedフラグ・パイプライン配線・pin)。カスケード順序と月間capは既存資産で充足。残は文書確認とコードレビュー |
 | ⬜ 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 戦略価値。確信度0.5 |
 | ⬜ 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 間接効果でImpact 1 |
 
