@@ -52,4 +52,5 @@ Scenario: バックグラウンドは記録されない
 - 配線: VisitGatingDepsにdetectMediaKindを追加（既定は記事定数）。カーネルはロード時に1回分類する（commit b352b152）
 - 検証: `npm run validate` exit 0（1124 files / 16753 tests・test type errors 451/451）
 - 残タスク: (1) メディア別しきい値の設定UI（dashboard recording-conditionsパネル）(2) 動画再生→記録のE2E
+- しきい値UIの再開点: `StorageKeys.MEDIA_THRESHOLDS: 'media_thresholds'` を `src/utils/storage/types.ts` に追加し、StrictSettings にマップ型エントリ（既存のエントリはリテラル型のため要配慮）→ dashboard recording-conditions パネルに4種のしきい値入力 → `mediaThresholdsFor(kind, overrides)` の第2引数に永続化オーバーライドを渡す配線（`src/content/visitGating.ts` の resolveThresholds が既存の受け口）。`initRecordingConditionsSettings` が既存の数値入力パターン（MIN_VISIT_DURATION 等）の規範
 - NULL解消: 完了（commit 9c506dfd）。VALID_VISITペイロードに視聴秒数とスクロール率を乗せ、保存行の `visit_duration`/`scroll_ratio` がNULLでなくなる。手動記録はNULLのまま。force再送でもメトリックが落ちない（pin: `src/__tests__/visitDurationWire.test.ts`）
