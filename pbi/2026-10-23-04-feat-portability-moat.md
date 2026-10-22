@@ -44,3 +44,8 @@ Scenario: 公式exportで移行する
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新済み(スキーマ・列定義・復元手順を含む)
+
+## 実装記録（2026-10-23・調査のみ・未着手）
+- 既存資産の確認（ criterion 1 は既に充足）: アーカイブには `yasumaro_archive_meta` テーブルが実在し、`archive_format_version INTEGER NOT NULL`（スキーマversion）と `yasumaro_version TEXT`（バージョン）を持つ（`src/offscreen/schema.ts:171-182`、PBI 2026-09-06-01 基盤 / 02 record-archive で実施）。`ARCHIVE_FORMAT_VERSION` 定数が書き込み時に記録される（`archiveCreateHandlers.ts:200-210`）。検証子は `src/offscreen/opfsWorker/archiveValidation.ts` の `validateArchiveEngine` と `migrateArchiveStaging`（ALLOWED_TABLES で許可テーブルを固定）
+- アーカイブexport: `handleArchiveExport` が staging ファイルを chunk で書き出す（`archiveCreateHandlers.ts:260-277`）。`yasumaro_archive_<日付>.db` の平文SQLite（`docs/PRIVACY.md` 記載）
+- 残タスク（次ラウンドの再開点）: (1) Markdown/CSV/JSONL の列定義文書（`docs/` に `AUDIT_LOG_GUIDE.md` は実在するがエクスポート列定義は未確認、`EXPORT_COLUMNS` の固定緩和は互換方針とセット）(2) 復元手順の検証（`handleArchiveRestore` は `archiveRestoreHandlers.ts` に実在、テストの有無を確認）(3) 平文保管の注意書きの維持（`docs/PRIVACY.md` と `public/PRIVACY.md` のバイト同一を保つ）
