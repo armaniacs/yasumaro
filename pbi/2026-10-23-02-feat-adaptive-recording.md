@@ -52,3 +52,4 @@ Scenario: バックグラウンドは記録されない
 - 配線: VisitGatingDepsにdetectMediaKindを追加（既定は記事定数）。カーネルはロード時に1回分類する（commit b352b152）
 - 検証: `npm run validate` exit 0（1124 files / 16753 tests・test type errors 451/451）
 - 残タスク: (1) メディア別しきい値の設定UI（dashboard recording-conditionsパネル）(2) 記録Payloadへのメトリック乗載と `visit_duration` NULL解消 (3) 動画再生→記録のE2E
+- NULL解消の配線先（次ラウンドの再開点）: `src/background/pipeline/mappers/commonStorageFields.ts:165` が `visit_duration: null` / `scroll_ratio: null` をハードコード。解消には wire 契約の4ファイル編集（`messaging/types.ts` に RecordingData へ optional field 追加 → `visitPayload.ts` の VisitWirePayload union と toValidVisitPayload → `visitReporter.ts` の clock から計算 → `commonStorageFields.ts` の fields 反映）が必要（visitPayload.ts のヘッダーに記載の wire 契約の所有者に従う）
