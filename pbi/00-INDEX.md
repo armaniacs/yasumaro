@@ -35,7 +35,7 @@
 | ✅ 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | 完了。政策エンジン+UI+監査台帳最小形+3文書更新。validate exit 0（16727 tests） |
 | 🔶 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 実装完了(メディア種別判定・メディア別しきい値+UI+保存・VisitGate拡張・visit_duration NULL解消)。残は動画再生→記録のE2E |
 | 🔶 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 実装完了(縮退要約ジェネレータ・degradedフラグ・パイプライン配線・pin・DESIGN_SPECIFICATIONS 7.4章)。残はコードレビューのみ |
-| ⬜ 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 戦略価値。確信度0.5 |
+| 🔶 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 受入基準4件充足(既存資産+監査ログ列定義の文書反映)。残はコードレビューと閲覧履歴export列定義のdocs反映(任意) |
 | ⬜ 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 間接効果でImpact 1 |
 
 ### 2026-10-22 yasumaro棚卸し6候補 ― ⬜ 6件残 RICE順: 01 → 02 → 03 → 04 → 05 → 06
