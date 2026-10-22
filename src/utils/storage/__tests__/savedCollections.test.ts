@@ -7,7 +7,12 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { normalizeSavedCollection, normalizeSavedCollections } from '../savedCollections.js';
+import {
+  normalizeSavedCollection,
+  normalizeSavedCollections,
+  upsertSavedCollection,
+  removeSavedCollection,
+} from '../savedCollections.js';
 
 describe('normalizeSavedCollection', () => {
   it('keeps a valid collection with its fields', () => {
@@ -52,5 +57,40 @@ describe('normalizeSavedCollections', () => {
   it('returns an empty map for non-object input', () => {
     expect(normalizeSavedCollections(undefined)).toEqual({});
     expect(normalizeSavedCollections('junk')).toEqual({});
+  });
+});
+
+describe('upsertSavedCollection', () => {
+  it('inserts a new collection stamping createdAt and updatedAt', () => {
+    const result = upsertSavedCollection({}, 'c1', 'n', { q: 'x' }, 100);
+    expect(result['c1']).toEqual({ id: 'c1', name: 'n', query: { q: 'x' }, createdAt: 100, updatedAt: 100 });
+  });
+
+  it('renames without moving createdAt (PBI 2026-10-23-06: 件数と更新時刻が分かる)', () => {
+    const base = upsertSavedCollection({}, 'c1', 'n', {}, 100);
+    const renamed = upsertSavedCollection(base, 'c1', 'renamed', {}, 200);
+    expect(renamed['c1']?.createdAt).toBe(100);
+    expect(renamed['c1']?.updatedAt).toBe(200);
+    expect(renamed['c1']?.name).toBe('renamed');
+  });
+
+  it('does not mutate the input map', () => {
+    const base = upsertSavedCollection({}, 'c1', 'n', {}, 100);
+    upsertSavedCollection(base, 'c1', 'changed', {}, 200);
+    expect(base['c1']?.name).toBe('n');
+  });
+});
+
+describe('removeSavedCollection', () => {
+  it('drops only the named collection', () => {
+    const base = upsertSavedCollection({}, 'c1', 'a', {}, 100);
+    const withTwo = upsertSavedCollection(base, 'c2', 'b', {}, 100);
+    const removed = removeSavedCollection(withTwo, 'c1');
+    expect(Object.keys(removed)).toEqual(['c2']);
+  });
+
+  it('is a no-op for a missing id', () => {
+    const result = removeSavedCollection({}, 'missing');
+    expect(result).toEqual({});
   });
 });

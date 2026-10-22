@@ -53,3 +53,25 @@ export function normalizeSavedCollections(raw: unknown): Record<string, SavedCol
   }
   return out;
 }
+
+/** Pure upsert: insert-or-rename one collection on the map (stamps updatedAt). */
+export function upsertSavedCollection(
+  map: Record<string, SavedCollection>,
+  id: string,
+  name: string,
+  query: Record<string, unknown>,
+  now: number,
+): Record<string, SavedCollection> {
+  const existing = map[id];
+  const createdAt = existing ? existing.createdAt : now;
+  return { ...map, [id]: { id, name, query, createdAt, updatedAt: now } };
+}
+
+/** Pure remove: drop one collection from the map (missing id is a no-op). */
+export function removeSavedCollection(
+  map: Record<string, SavedCollection>,
+  id: string,
+): Record<string, SavedCollection> {
+  const { [id]: _removed, ...rest } = map;
+  return rest;
+}
