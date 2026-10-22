@@ -33,7 +33,9 @@ Scenario: 自動タグ規則が適用される
 - [ ] M1/M3からコレクションを入力に選べる
 
 ## テスト戦略
-- E2E: 保存→呼び出し→自動タグ→M3入力の通し
+## 実装記録（2026-10-23・再開点のみ・未着手）
+- 流用先（PBI自体の指示どおり）: `src/dashboard/panels/asyncData/` の `historyQueryCache` と `sqliteHistoryModel` を流用し、足りない永続化（保存済み検索条件の名前付き保持）と共有UIだけを足すのが本PBIの範囲。3バックエンド対応(OPFS/IDB/Fallback・FTS/LIKE分岐)の重さを本PBIで一度だけ払う
+- 再開点: (1) asyncData の既存モジュール構成を確認 (`historyQueryCache`・`sqliteHistoryModel` の受け口) (2) 保存済み条件の設定キー (`SAVED_COLLECTIONS` 等) と StrictSettings エントリ (3) 共有UIの配置 (dashboard panels) (4) M1/M3 からの入力選択経路- E2E: 保存→呼び出し→自動タグ→M3入力の通し
 - 統合: FTS/LIKE両パスの条件再現テスト、規則競合の優先テスト
 - 単体: 条件シリアライズ・規則判定のテーブルテスト
 
