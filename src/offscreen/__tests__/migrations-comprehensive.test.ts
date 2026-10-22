@@ -76,6 +76,32 @@ describe('runMigrations', () => {
     expect(sql).toContain('ADD COLUMN fallback_triggered INTEGER DEFAULT 0');
   });
 
+  // ── audit_log columns (PBI 2026-10-23-01) ───────────────────────────
+
+  it('runs the audit_log char_count/policy ALTER TABLE migrations', async () => {
+    await runMigrations(engine);
+    const sql = engine.executedSql.join('\n');
+    expect(sql).toContain('ALTER TABLE audit_log ADD COLUMN char_count INTEGER');
+    expect(sql).toContain('ALTER TABLE audit_log ADD COLUMN policy TEXT');
+  });
+
+  it('probes the audit_log table for column existence (table-scoped pragma probe)', async () => {
+    const probedSql: string[] = [];
+    engine.queryValue = async (sql: string) => {
+      probedSql.push(sql);
+      return 0;
+    };
+    await runMigrations(engine);
+    expect(probedSql.some((s) => s.includes("pragma_table_info('audit_log')"))).toBe(true);
+  });
+
+  it('skips the audit ALTER when the column already exists (pragma probe, not error wording)', async () => {
+    engine.queryValue = async (sql: string) =>
+      sql.includes('audit_log') && (sql.includes('char_count') || sql.includes('policy')) ? 1 : 0;
+    await runMigrations(engine);
+    expect(engine.executedSql.some((s) => s.includes('ALTER TABLE audit_log'))).toBe(false);
+  });
+
   // ── FTS5 schema ─────────────────────────────────────────────────────
 
   it('runs all 4 FTS5 statements when no error occurs', async () => {

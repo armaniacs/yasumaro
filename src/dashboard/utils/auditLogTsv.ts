@@ -30,9 +30,12 @@ function escapeTsvField(value: string): string {
 }
 
 export function toTsvString(rows: AuditLogEntry[]): string {
-  const header = 'id\tprovider\turl\tcreated_at';
+  // PBI 2026-10-23-01: char_count/policy ride the same row (minimal form).
+  // A row recorded before the columns existed (or through a backend that
+  // could not size the payload) exports an empty field, never a literal null.
+  const header = 'id\tprovider\turl\tcreated_at\tchar_count\tpolicy';
   const lines = rows.map((r) =>
-    `${r.id}\t${escapeTsvField(r.provider)}\t${escapeTsvField(r.url)}\t${formatLocalDateString(r.created_at)}`
+    `${r.id}\t${escapeTsvField(r.provider)}\t${escapeTsvField(r.url)}\t${formatLocalDateString(r.created_at)}\t${r.char_count ?? ''}\t${escapeTsvField(r.policy ?? '')}`
   );
   return header + '\n' + lines.join('\n') + '\n';
 }

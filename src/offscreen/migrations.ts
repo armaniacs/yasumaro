@@ -14,7 +14,7 @@
 // Retention: KEEP indefinitely. All branches are idempotent (duplicate column /
 // already exists → continue) and safe for fresh installs.
 
-import { MIGRATION_COLUMNS, MIGRATION_SEQUENCE, FTS5_STATEMENTS, GIST_SYNCED_INDEX_SQL } from './schema.js';
+import { MIGRATION_COLUMNS, MIGRATION_SEQUENCE, FTS5_STATEMENTS, GIST_SYNCED_INDEX_SQL, AUDIT_MIGRATION_COLUMNS } from './schema.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { forwardWarn } from './offscreenLogger.js';
 
@@ -41,9 +41,9 @@ export function isIdempotentDdlError(err: unknown): boolean {
   return IDEMPOTENT_DDL_ERROR_PATTERNS.some((p) => p.test(msg));
 }
 
-async function columnExists(engine: MigrationEngine, columnName: string): Promise<boolean> {
+async function columnExists(engine: MigrationEngine, columnName: string, table = 'browsing_logs'): Promise<boolean> {
   const count = await engine.queryValue(
-    `SELECT COUNT(*) AS c FROM pragma_table_info('browsing_logs') WHERE name = '${columnName}'`
+    `SELECT COUNT(*) AS c FROM pragma_table_info('${table}') WHERE name = '${columnName}'`
   );
   return Number(count ?? 0) > 0;
 }
@@ -81,6 +81,21 @@ export async function runMigrations(engine: MigrationEngine): Promise<{ fts5Avai
     if (columnName.length > 0 && (await columnExists(engine, columnName))) continue;
     try {
       await engine.exec(`ALTER TABLE browsing_logs ADD COLUMN ${colDef}`);
+    } catch (err) {
+      if (isIdempotentDdlError(err)) continue;
+      throw err;
+    }
+  }
+
+  // 2b. audit_log columns (PBI 2026-10-23-01)
+  // 監査テーブルは CREATE TABLE IF NOT EXISTS のみで、既存 DB に列が
+  // 追加されなかった。browsing_logs と同じ冪等 ALTER 手順で
+  // char_count / policy を既存 DB にも足す（新規インストールは CREATE TABLE）。
+  for (const colDef of AUDIT_MIGRATION_COLUMNS) {
+    const columnName = colDef.trim().split(/\s+/)[0] ?? '';
+    if (columnName.length > 0 && (await columnExists(engine, columnName, 'audit_log'))) continue;
+    try {
+      await engine.exec(`ALTER TABLE audit_log ADD COLUMN ${colDef}`);
     } catch (err) {
       if (isIdempotentDdlError(err)) continue;
       throw err;

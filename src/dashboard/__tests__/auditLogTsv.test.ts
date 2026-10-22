@@ -11,12 +11,22 @@ const CREATED_AT = new Date(2024, 6, 17, 12, 0, 0).getTime();
 describe('toTsvString', () => {
   it('produces correct header and data rows', () => {
     const rows = [
+      { id: 1, provider: 'gemini', url: 'https://example.com', created_at: CREATED_AT, char_count: 1234, policy: 'allowed' },
+    ];
+    const tsv = toTsvString(rows);
+    const lines = tsv.split('\n');
+    // PBI 2026-10-23-01: char_count/policy ride the same row.
+    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at\tchar_count\tpolicy');
+    expect(lines[1]).toBe('1\tgemini\thttps://example.com\t2024-07-17\t1234\tallowed');
+  });
+
+  it('exports an empty field, never a literal null, for rows without char_count/policy', () => {
+    const rows = [
       { id: 1, provider: 'gemini', url: 'https://example.com', created_at: CREATED_AT },
     ];
     const tsv = toTsvString(rows);
     const lines = tsv.split('\n');
-    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at');
-    expect(lines[1]).toBe('1\tgemini\thttps://example.com\t2024-07-17');
+    expect(lines[1]).toBe('1\tgemini\thttps://example.com\t2024-07-17\t\t');
   });
 
   it('escapes tabs in provider names', () => {
@@ -40,7 +50,7 @@ describe('toTsvString', () => {
   it('handles empty rows', () => {
     const tsv = toTsvString([]);
     const lines = tsv.split('\n');
-    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at');
+    expect(lines[0]).toBe('id\tprovider\turl\tcreated_at\tchar_count\tpolicy');
     expect(lines.length).toBeGreaterThanOrEqual(2);
   });
 });

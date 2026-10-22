@@ -141,6 +141,13 @@ export interface AuditLogRecord {
   provider: string;
   url: string;
   created_at: number;
+  /**
+   * Character count of the content actually prepared for the provider (the
+   * PII-masked form, PBI 2026-10-23-01). Metadata only — never the content.
+   */
+  char_count?: number | null;
+  /** Policy verdict for the send (PBI 2026-10-23-01 minimal form: 'allowed'). */
+  policy?: string | null;
 }
 
 export interface AuditLogEntry extends AuditLogRecord {

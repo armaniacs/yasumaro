@@ -74,8 +74,9 @@ export const BROWSING_LOG_FULL_COLUMNS_SQL = BROWSING_LOG_FULL_COLUMNS.join(', '
  * Audit-log listing projection: the exact SELECT order of
  * buildAuditLogStatements — both backends zip against this list, so SELECT
  * order decides the mapping and any SELECT change must land here too.
+ * char_count/policy ride the same row (PBI 2026-10-23-01).
  */
-export const AUDIT_LOG_COLUMNS = ['id', 'provider', 'url', 'created_at'] as const;
+export const AUDIT_LOG_COLUMNS = ['id', 'provider', 'url', 'created_at', 'char_count', 'policy'] as const;
 
 function coerceCell(column: string, value: SqliteValue | null | undefined): SqliteValue | null {
   // LIKE search rows carry no rank column and FTS rows may lack it in
@@ -105,6 +106,10 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     case 'ai_provider':
     case 'ai_model':
     case 'fallback_reason':
+    // Audit policy verdict is TEXT (PBI 2026-10-23-01) and shares the
+    // null-safe String branch: the default branch would run Number() and
+    // NaN it out in the trail.
+    case 'policy':
     // WHY listed explicitly: the default branch runs Number(), which would turn
     // these TEXT columns into NaN and blank them out in the UI.
     case 'nav_source_url':

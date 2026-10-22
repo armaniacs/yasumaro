@@ -657,11 +657,13 @@ export const TOGGLE_STAR_SQL =
 export const LIVE_COUNT_SQL = 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0';
 
 /**
- * Audit-log INSERT shared by idb/opfs. provider/url/created_at only — the
- * trail is metadata and never carries content or PII.
+ * Audit-log INSERT shared by idb/opfs. Minimal form (PBI 2026-10-23-01):
+ * provider/url/created_at/char_count/policy — the trail is metadata and
+ * never carries content or PII. char_count/policy are nullable so a caller
+ * that cannot size the payload still records the send.
  */
 export const AUDIT_INSERT_SQL =
-  'INSERT INTO audit_log (provider, url, created_at) VALUES (?, ?, ?)';
+  'INSERT INTO audit_log (provider, url, created_at, char_count, policy) VALUES (?, ?, ?, ?, ?)';
 
 /**
  * Audit-log INSERT ... RETURNING for IdbVfsBackend.insertAuditLog: the id
@@ -674,8 +676,20 @@ export const AUDIT_INSERT_SQL =
 export const AUDIT_INSERT_RETURNING_SQL = `${AUDIT_INSERT_SQL} RETURNING id`;
 
 /** Parameter array for AUDIT_INSERT_SQL, in column order (buildArchiveInsertParams convention). */
-export function buildAuditInsertParams(record: { provider: string; url: string; created_at: number }): SqliteValue[] {
-  return [record.provider, record.url, record.created_at];
+export function buildAuditInsertParams(record: {
+  provider: string;
+  url: string;
+  created_at: number;
+  char_count?: number | null;
+  policy?: string | null;
+}): SqliteValue[] {
+  return [
+    record.provider,
+    record.url,
+    record.created_at,
+    record.char_count ?? null,
+    record.policy ?? null,
+  ];
 }
 
 /**
@@ -908,7 +922,7 @@ export function buildAuditLogStatements(opts: { limit: number; offset: number })
   countSql: string;
 } {
   return {
-    rowsSql: 'SELECT id, provider, url, created_at FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
+    rowsSql: 'SELECT id, provider, url, created_at, char_count, policy FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
     rowsParams: [opts.limit, opts.offset],
     countSql: 'SELECT COUNT(*) AS c FROM audit_log',
   };

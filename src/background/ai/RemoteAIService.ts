@@ -179,7 +179,18 @@ export class RemoteAIService implements AIService {
       return this.summarizeCaughtError(error, traceId);
     }
 
-    void recordAuditLog({ provider: slot.provider, url });
+    // Egress ledger (PBI 2026-10-23-01): one row per slot attempt, carrying
+    // the time, the destination, the masked char count prepared for this
+    // provider, and the policy verdict. A slot that fails before the fetch
+    // (config error) never reaches this line; a fallback chain records one
+    // row per slot that actually sent, so a retry is never double-counted
+    // and a skipped slot is never recorded at all.
+    void recordAuditLog({
+      provider: slot.provider,
+      url,
+      charCount: content.length,
+      policy: 'allowed',
+    });
 
     try {
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);

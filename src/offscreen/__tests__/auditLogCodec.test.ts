@@ -8,12 +8,12 @@
 import { describe, it, expect, vi } from 'vitest';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
 import { handleAuditLogQuery } from '../opfsWorker/auditHandlers.js';
-import { AUDIT_LOG_COLUMNS } from '../rowCodec.js';
+import { AUDIT_LOG_COLUMNS, mapNamed } from '../rowCodec.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import type { AuditLogEntry } from '../../utils/sqlite-types.js';
 
 const EXPECTED_ROW = [
-  { id: 7, provider: 'gemini', url: 'https://example.com/x', created_at: 1700000000000 },
+  { id: 7, provider: 'gemini', url: 'https://example.com/x', created_at: 1700000000000, char_count: null, policy: null },
 ];
 
 function positionalRow(): SqliteValue[] {
@@ -33,7 +33,19 @@ function assertCoercion(row: AuditLogEntry): void {
 
 describe('audit_log shared codec decode', () => {
   it('AUDIT_LOG_COLUMNS matches the buildAuditLogStatements SELECT order', () => {
-    expect(AUDIT_LOG_COLUMNS).toEqual(['id', 'provider', 'url', 'created_at']);
+    // PBI 2026-10-23-01: char_count/policy ride the same row.
+    expect(AUDIT_LOG_COLUMNS).toEqual(['id', 'provider', 'url', 'created_at', 'char_count', 'policy']);
+  });
+
+  it('coerces a present char_count to Number and policy to String through the shared codec', () => {
+    // PBI 2026-10-23-01: the same Number/String semantics apply to the new
+    // columns — a TEXT policy must not fall through to Number() and NaN out.
+    const decoded = mapNamed<AuditLogEntry>(
+      { id: 7, provider: 'gemini', url: 'https://example.com/x', created_at: 1700000000000, char_count: 456, policy: 'allowed' },
+      AUDIT_LOG_COLUMNS,
+    );
+    expect(decoded.char_count).toBe(456);
+    expect(decoded.policy).toBe('allowed');
   });
 
   it('IdbVfsBackend decodes positionally via the shared codec', async () => {
