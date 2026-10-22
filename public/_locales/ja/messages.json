@@ -1948,6 +1948,39 @@
   "aiDomainPolicySaved": {
     "message": "保存しました"
   },
+  "mediaThresholdsLabel": {
+    "message": "メディア別のしきい値"
+  },
+  "mediaThresholdsHelp": {
+    "message": "動画は視聴秒数、PDFは読んだページ数、コードはコピー回数で判定します。空欄は既定値を保持します。"
+  },
+  "mediaKindVideo": {
+    "message": "動画"
+  },
+  "mediaKindPdf": {
+    "message": "PDF"
+  },
+  "mediaKindCode": {
+    "message": "コード"
+  },
+  "mediaThresholdVideoAria": {
+    "message": "動画のしきい値（視聴秒数）"
+  },
+  "mediaThresholdPdfAria": {
+    "message": "PDFのしきい値（読んだページ数）"
+  },
+  "mediaThresholdCodeAria": {
+    "message": "コードのしきい値（コピー回数）"
+  },
+  "mediaThresholdSecondsUnit": {
+    "message": "秒視聴"
+  },
+  "mediaThresholdPagesUnit": {
+    "message": "ページ"
+  },
+  "mediaThresholdCopiesUnit": {
+    "message": "回コピー"
+  },
   "aiDomainPolicy_allowed": {
     "message": "送信を許可"
   },

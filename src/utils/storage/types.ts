@@ -36,6 +36,8 @@ export const StorageKeys = {
     GEMINI_API_VERSION: 'gemini_api_version', // Gemini API バージョン（デフォルト: v1beta）
     MIN_VISIT_DURATION: 'min_visit_duration',
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
+    /** PBI 2026-10-23-02: per-media-kind threshold overrides. */
+    MEDIA_THRESHOLDS: 'media_thresholds',
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
@@ -347,6 +349,8 @@ export interface StorageKeyValues {
     [StorageKeys.GEMINI_API_VERSION]: string;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    /** PBI 2026-10-23-02: per-media-kind threshold overrides (empty = defaults). */
+    [StorageKeys.MEDIA_THRESHOLDS]: Record<string, Record<string, number>>;
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
     [StorageKeys.HISTORY_SORT_PREFERENCE]: string;

@@ -2011,6 +2011,39 @@
   "aiDomainPolicySaved": {
     "message": "Saved"
   },
+  "mediaThresholdsLabel": {
+    "message": "Per-media thresholds"
+  },
+  "mediaThresholdsHelp": {
+    "message": "Videos gate on watched seconds, PDFs on pages read, code on copy events. Empty fields keep the defaults."
+  },
+  "mediaKindVideo": {
+    "message": "Video"
+  },
+  "mediaKindPdf": {
+    "message": "PDF"
+  },
+  "mediaKindCode": {
+    "message": "Code"
+  },
+  "mediaThresholdVideoAria": {
+    "message": "Video threshold (seconds watched)"
+  },
+  "mediaThresholdPdfAria": {
+    "message": "PDF threshold (pages read)"
+  },
+  "mediaThresholdCodeAria": {
+    "message": "Code threshold (copy events)"
+  },
+  "mediaThresholdSecondsUnit": {
+    "message": "seconds watched"
+  },
+  "mediaThresholdPagesUnit": {
+    "message": "pages read"
+  },
+  "mediaThresholdCopiesUnit": {
+    "message": "copy events"
+  },
   "aiDomainPolicy_allowed": {
     "message": "Send allowed"
   },

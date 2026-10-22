@@ -521,6 +521,27 @@
             <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
             <div id="maxTokensError" class="field-error" role="alert"></div>
           </div>
+
+          <!-- メディア別しきい値（PBI 2026-10-23-02） -->
+          <div class="form-group" id="mediaThresholdsGroup">
+            <label data-i18n="mediaThresholdsLabel">Per-media thresholds</label>
+            <p class="help-text" data-i18n="mediaThresholdsHelp">Videos gate on watched seconds, PDFs on pages read, code on copy events. Empty fields keep the defaults.</p>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindVideo">Video</span>
+              <input type="number" id="mediaThresholdVideo" min="0" step="5" data-i18n-aria-label="mediaThresholdVideoAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdSecondsUnit">seconds watched</span>
+            </div>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindPdf">PDF</span>
+              <input type="number" id="mediaThresholdPdf" min="0" step="1" data-i18n-aria-label="mediaThresholdPdfAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdPagesUnit">pages read</span>
+            </div>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindCode">Code</span>
+              <input type="number" id="mediaThresholdCode" min="0" step="1" data-i18n-aria-label="mediaThresholdCodeAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdCopiesUnit">copy events</span>
+            </div>
+          </div>
         </div>
 
         <!-- 閲覧履歴 保持ポリシー -->
