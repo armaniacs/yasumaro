@@ -79,10 +79,10 @@ test.describe('Session lock fan-out @extension', () => {
     // every fan-out delivery finds on the real alarm path. Written after the
     // migration so the flat keys stay top-level. The read-back pins the seed
     // itself so a storage failure is diagnosed here, not downstream.
-    const seeded = await dashboard.evaluate(async ([enabledKey, lockedKey]) => {
+    const seeded = await dashboard.evaluate(async ({ enabledKey, lockedKey }) => {
       await chrome.storage.local.set({ [enabledKey]: true, [lockedKey]: true });
       return chrome.storage.local.get([enabledKey, lockedKey]);
-    }, [MASTER_PASSWORD_ENABLED_KEY, IS_LOCKED_KEY]);
+    }, { enabledKey: MASTER_PASSWORD_ENABLED_KEY, lockedKey: IS_LOCKED_KEY });
     expect(seeded).toMatchObject({ [MASTER_PASSWORD_ENABLED_KEY]: true, [IS_LOCKED_KEY]: true });
 
     // Precondition: #masterPasswordOptions carries the 'hidden' class on boot —
