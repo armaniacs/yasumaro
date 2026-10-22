@@ -202,7 +202,10 @@ export class BuiltInAIClient {
             return { success: false, error: 'Content contains potentially dangerous patterns' };
         }
 
-        const staticMaxChars = getProviderMaxTokens('localai');
+        // The cap key is the catalog id the built-in provider actually is;
+        // the former phantom 'localai' key resolved to no slot id (PBI
+        // 2026-10-22-01).
+        const staticMaxChars = getProviderMaxTokens('built-in-ai');
 
         // Use cached availability when available; only call LanguageModel.availability()
         // when uncached ('downloading' is handled by getAvailability re-check).

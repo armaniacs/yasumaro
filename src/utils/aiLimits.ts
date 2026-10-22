@@ -4,16 +4,23 @@
  */
 
 // プロバイダーごとの最大トークン数
+// Keys are the PROVIDER_CATALOG ids: settings priority slots resolve to
+// catalog ids and createProviderStrategy throws UnknownProviderError for
+// anything else, so these are the only ids that can reach the cap lookup.
+// The triangle pin (src/__tests__/providerTrianglePin.test.ts) fails when
+// the map and the catalog drift: a key outside the catalog is an unreachable
+// cap, a catalog id missing here silently falls back to GLOBAL_MAX_TOKENS.
+// Former hand-listed rows (openrouter/perplexity/groq/anthropic/claude/
+// localai) resolved to no slot id and were dead caps; the built-in AI client
+// reads its cap through 'built-in-ai', the id it actually is.
 export const PROVIDER_MAX_TOKENS = new Map<string, number>([
-    ['openai', 16384],
-    ['openrouter', 16384],
-    ['perplexity', 128000],
-    ['groq', 16384],
     ['gemini', 8192],
-    ['anthropic', 100000],
-    ['claude', 100000],
-    ['localai', 16384],  // window.ai
+    ['openai', 16384],
+    ['openai2', 16384],
+    ['lm-studio', 16000],
     ['ollama', 32000],
+    ['openai-compatible', 16000],
+    ['built-in-ai', 16384],
 ]);
 
 // グローバル安全上限

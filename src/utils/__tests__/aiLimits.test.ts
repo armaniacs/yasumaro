@@ -55,17 +55,23 @@ describe('validateMaxTokens', () => {
             expect(validateMaxTokens(10000, 'gemini')).toBe(8192);
         });
 
-        it('caps Anthropic/Claude at 100000 tokens', () => {
-            expect(validateMaxTokens(100000, 'anthropic')).toBe(100000);
-            expect(validateMaxTokens(150000, 'anthropic')).toBe(100000);
-
-            expect(validateMaxTokens(100000, 'claude')).toBe(100000);
-            expect(validateMaxTokens(150000, 'claude')).toBe(100000);
+        it('applies the global cap to ids outside the catalog (anthropic/claude are not slot ids)', () => {
+            // PBI 2026-10-22-01: the former hand-listed anthropic/claude rows
+            // resolved to no slot id (createProviderStrategy throws for
+            // non-catalog ids) and were unreachable caps. Their ids now fall
+            // through to the global ceiling like any unknown id.
+            expect(validateMaxTokens(100000, 'anthropic')).toBe(GLOBAL_MAX_TOKENS);
+            expect(validateMaxTokens(150000, 'claude')).toBe(GLOBAL_MAX_TOKENS);
         });
 
-        it('caps Local AI at 16384 tokens', () => {
-            expect(validateMaxTokens(16384, 'localai')).toBe(16384);
-            expect(validateMaxTokens(20000, 'localai')).toBe(16384);
+        it('caps Built-in AI at 16384 tokens (the former phantom localai key)', () => {
+            expect(validateMaxTokens(16384, 'built-in-ai')).toBe(16384);
+            expect(validateMaxTokens(20000, 'built-in-ai')).toBe(16384);
+        });
+
+        it('caps OpenAI Compatible 2 at 16384 tokens (the openai family cap)', () => {
+            expect(validateMaxTokens(16384, 'openai2')).toBe(16384);
+            expect(validateMaxTokens(20000, 'openai2')).toBe(16384);
         });
 
         it('caps Ollama at 32000 tokens', () => {
@@ -94,12 +100,14 @@ describe('validateMaxTokens', () => {
             expect(validateMaxTokens(8000, 'gemini')).toBe(8000);
         });
 
-        it('accepts the default 1000 for every provider', () => {
+        it('accepts the default 1000 for every catalog provider', () => {
             expect(validateMaxTokens(1000, 'openai')).toBe(1000);
+            expect(validateMaxTokens(1000, 'openai2')).toBe(1000);
             expect(validateMaxTokens(1000, 'gemini')).toBe(1000);
-            expect(validateMaxTokens(1000, 'anthropic')).toBe(1000);
-            expect(validateMaxTokens(1000, 'localai')).toBe(1000);
+            expect(validateMaxTokens(1000, 'lm-studio')).toBe(1000);
             expect(validateMaxTokens(1000, 'ollama')).toBe(1000);
+            expect(validateMaxTokens(1000, 'openai-compatible')).toBe(1000);
+            expect(validateMaxTokens(1000, 'built-in-ai')).toBe(1000);
             expect(validateMaxTokens(1000, 'unknown')).toBe(1000);
         });
     });
@@ -157,27 +165,33 @@ describe('CONSTANTS', () => {
         expect(GLOBAL_MAX_TOKENS).toBe(16000);
     });
 
-    it('includes the major providers in PROVIDER_MAX_TOKENS', () => {
+    it('includes exactly the catalog providers in PROVIDER_MAX_TOKENS', () => {
         expect(PROVIDER_MAX_TOKENS.get('openai')).toBe(16384);
+        expect(PROVIDER_MAX_TOKENS.get('openai2')).toBe(16384);
         expect(PROVIDER_MAX_TOKENS.get('gemini')).toBe(8192);
-        expect(PROVIDER_MAX_TOKENS.get('anthropic')).toBe(100000);
-        expect(PROVIDER_MAX_TOKENS.get('claude')).toBe(100000);
-        expect(PROVIDER_MAX_TOKENS.get('localai')).toBe(16384);
+        expect(PROVIDER_MAX_TOKENS.get('lm-studio')).toBe(16000);
         expect(PROVIDER_MAX_TOKENS.get('ollama')).toBe(32000);
+        expect(PROVIDER_MAX_TOKENS.get('openai-compatible')).toBe(16000);
+        expect(PROVIDER_MAX_TOKENS.get('built-in-ai')).toBe(16384);
     });
 });
 
 describe('getProviderMaxTokens', () => {
     it('returns max tokens for known providers', () => {
         expect(getProviderMaxTokens('openai')).toBe(16384);
+        expect(getProviderMaxTokens('openai2')).toBe(16384);
         expect(getProviderMaxTokens('gemini')).toBe(8192);
-        expect(getProviderMaxTokens('anthropic')).toBe(100000);
         expect(getProviderMaxTokens('ollama')).toBe(32000);
+        expect(getProviderMaxTokens('built-in-ai')).toBe(16384);
     });
 
     it('returns the global cap for unknown providers', () => {
         expect(getProviderMaxTokens('unknown_provider')).toBe(GLOBAL_MAX_TOKENS);
         expect(getProviderMaxTokens('')).toBe(GLOBAL_MAX_TOKENS);
+        // Ids outside the catalog fall through to the global ceiling (the
+        // former anthropic/claude/localai rows resolved to no slot id).
+        expect(getProviderMaxTokens('anthropic')).toBe(GLOBAL_MAX_TOKENS);
+        expect(getProviderMaxTokens('localai')).toBe(GLOBAL_MAX_TOKENS);
     });
 });
 
