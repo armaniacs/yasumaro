@@ -35,6 +35,24 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.52] - 2026-10-22
+
+このリリースは前日リリースに続く実機検証の e2e 化です。owner 手動確認として残置していた項目（Gist egress の全 chain・自動ロックの受信側遷移・unlimitedStorage quota 免除）を実 Chromium 上の e2e pin に置き換え、恒常的な検証にしました。製品コードの変更はありません。
+
+### 追加
+
+- Gist egress の e2e pin を新規追加する。有効 PAT → 設定 UI 保存 → 接続テスト → 成功ステータス（UI → tester → fetchWithTimeout → 拡張_pages CSP → host_permissions → 応答検査 → 表示の一本）、無効 PAT（401）→ エラーステータス（fail-closed 契約が UI まで保たれる）、未宣言 origin（example.com）→ document CSP でブロック（CSP が実際に強制されている証拠で、先の pin を有意味にする）の 3 pin。api.github.com は origin 文字列で CSP 判定されるため IP マップでもブラウザの CSP ゲートは本物。実 PAT での認証のみ owner 手動確認のまま（トークンはコミット不可）（gist-egress.spec.ts・PBI 2026-10-18-25 / 2026-10-21-11）
+- 自動ロックの受信側遷移の e2e pin を新規追加する。実メッセージバス横断: popup ページから `SESSION_LOCK_REQUEST` を送信 → dashboard ページの受信側が実バスで受信（プローブで配達回数を観測）→ authGuard 再読みでロック判定 → 鍵キャッシュ破棄 + onLocked → マスターパスワードパネル再読み込みの一本。seed は deferred startup migration 完了後におこなう（flat キーは migration で `settings` blob に集約・除去されるため、migration 前の seed は消える）。SW ハンドラの lockSession は compositionManifest で encryptionSession のページローカル版に配線され fan-out を送らない（fan-out は alarm 経路専用）ため、e2e は受信側の遷移を実バスで駆動し、alarm トリガーと送信側の再試行契約は注入 seam の unit が担保する分担。観測点は `hidden` クラスの有無（privacy パネル表示中は親が display:none のため可視性では観測できない）（session-lock-fanout.spec.ts・PBI 2026-10-21-12）
+- unlimitedStorage quota 免除の e2e pin を新規追加する。manifest 権限に `unlimitedStorage` が含まれること + `navigator.storage.estimate()` の quota が既定上限ではなくディスク近くまで伸びていることの 2 観測点。eviction イベントそのものは OS レベルのディスク圧迫で決定的に引き起こせないため owner 手動確認のまま（storage-quota-exemption.spec.ts）
+
+### 修正
+
+- e2e 起動の host-resolver ルールに api.github.com と example.com の MAP を追加する。api.github.com:443 → 127.0.0.1:8444（宣言済み egress origin を spec の TLS モックに解決する）、example.com:443 → 127.0.0.1:9（デッドポート。未宣言 origin の CSP pin が仮に CSP を通過しても実ネットワークに触れない安全網）
+
+### ドキュメント
+
+- アーカイブ PBI 2 件（Gist egress・自動ロック fan-out 宛先）の実装記録に e2e pin 追加の経緯と分担を追記
+
 ## [6.9.51] - 2026-10-21
 
 このリリースは対象外 17 件（挙動変更テーマ）と owner 判断 PBI 4 件の解決です。なぜなぜ分析を計 43 回おこない、12 件の fix/feat 型 PBI に起票して全件を実装しました。各 PBI の実装記録は `dev-docs/archived/pbi/` を参照してください。
