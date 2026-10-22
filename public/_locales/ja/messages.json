@@ -1981,6 +1981,24 @@
   "mediaThresholdCopiesUnit": {
     "message": "回コピー"
   },
+  "savedCollectionsLabel": {
+    "message": "保存済みコレクション"
+  },
+  "savedCollectionsHelp": {
+    "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。件数と更新時刻が表示されます。"
+  },
+  "savedCollectionsEmpty": {
+    "message": "保存済みコレクションはまだありません"
+  },
+  "savedCollectionSaveBtn": {
+    "message": "この条件を保存"
+  },
+  "savedCollectionApplyBtn": {
+    "message": "呼び出す"
+  },
+  "savedCollectionDeleteBtn": {
+    "message": "削除"
+  },
   "aiDomainPolicy_allowed": {
     "message": "送信を許可"
   },

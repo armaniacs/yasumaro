@@ -2044,6 +2044,24 @@
   "mediaThresholdCopiesUnit": {
     "message": "copy events"
   },
+  "savedCollectionsLabel": {
+    "message": "Saved collections"
+  },
+  "savedCollectionsHelp": {
+    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The count and updated time are shown."
+  },
+  "savedCollectionsEmpty": {
+    "message": "No saved collections yet"
+  },
+  "savedCollectionSaveBtn": {
+    "message": "Save this condition"
+  },
+  "savedCollectionApplyBtn": {
+    "message": "Recall"
+  },
+  "savedCollectionDeleteBtn": {
+    "message": "Delete"
+  },
   "aiDomainPolicy_allowed": {
     "message": "Send allowed"
   },
