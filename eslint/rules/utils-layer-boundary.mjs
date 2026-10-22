@@ -54,6 +54,8 @@ const LAYER0_FILES = [
   'src/utils/backoff.ts',
   'src/utils/httpFailureMessages.ts',
   'src/utils/summaryFallback.ts',
+  // Degraded-summary generator for the cost-aware cascade (PBI 2026-10-23-03).
+  'src/utils/degradedSummary.ts',
   'src/utils/failureTaxonomy.ts',
   'src/utils/vfsCapabilities.ts',
   'src/utils/storage/apiKeyTransition.ts',
