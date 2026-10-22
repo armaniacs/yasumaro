@@ -44,3 +44,9 @@ Scenario: 縮退を偽成功にしない
 - [ ] 全BDDシナリオが自動テストとして実装されパスする
 - [ ] コードレビュー完了
 - [ ] ドキュメント更新済み(カスケード順序と縮退仕様を含む)
+
+## 実装記録（2026-10-23・調査のみ・未着手）
+- 既存資産の確認: 予算cap機構は実在する（`src/utils/aiUsageTracker.ts` の `checkHardLimit(expectedTokens)` が月間token判定、`getMonthlyUsage()` が月間表示、`recordUsage()` が計上、`checkUsageWarning()` が警告）。promise-chain mutex（`withCounterLock`）で計上の lost update は構造的に封じられている
+- 消費点: `src/background/ai/providers/HttpProviderStrategy.ts` の `checkPreFlight()` が `hardLimit.blocked` で早期リターン（blocked時は要約が止まるだけ）
+- 枯渇時縮退の配線先（次ラウンドの再開点）: `checkPreFlight()` の `hardLimit.blocked` 分岐を「即ブロック」から「縮退要約（タイトル+冒頭）の生成と記録 + 縮退した旨の表示」に変えるのが本PBIの出口。縮退フラグは既存の wire 契約（`fallbackTriggered`/`fallbackReason`）に乗る受け口が実在し、6.9.51の偽成功表示7箇所と同じ「縮退時は縮退した旨を表示」規約に従う
+- カスケード順序（rules → tiny local → remote）の設定面は未調査
