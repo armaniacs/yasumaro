@@ -12,6 +12,7 @@ import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js'
 import { logError } from '../../logger/api.js';
 import { ErrorCode } from '../../logger/types.js';
 import type { InMemoryStoragePort } from '../storagePort.js';
+import { settingsRepository } from '../SettingsRepository.js';
 
 vi.mock('../../logger/api.js', () => ({ logError: vi.fn(() => Promise.resolve()) }));
 
@@ -191,5 +192,66 @@ describe('savedCollectionsRepository (injected store seam)', () => {
         'savedCollectionsRepository',
       );
     });
+  });
+});
+
+describe('savedCollectionsRepository (default path backed by real repository)', () => {
+  let live: SavedCollectionsStore;
+  let port: InMemoryStoragePort;
+
+  beforeEach(async () => {
+    await installTestSecretKek();
+    const real = await vi.importActual<typeof import('../SettingsRepository.js')>('../SettingsRepository.js');
+    const fresh = new real.InMemoryStorageAdapter();
+    port = fresh;
+    live = new real.SettingsRepository(fresh);
+    settingsRepository.get = live.get.bind(live);
+    settingsRepository.set = live.set.bind(live);
+    vi.mocked(logError).mockClear();
+  });
+
+  it('roundtrips a saved map through the default path', async () => {
+    const map = {
+      c1: { id: 'c1', name: 'ML papers', query: { q: 'transformers' }, createdAt: 100, updatedAt: 200 },
+    };
+
+    await saveSavedCollections(map);
+
+    await expect(getSavedCollections()).resolves.toEqual(map);
+    await expect(live.get(StorageKeys.SAVED_COLLECTIONS)).resolves.toEqual(map);
+  });
+
+  it('upserts through the default path with production read-modify-write', async () => {
+    await upsertSavedCollectionById('c1', 'first', { q: 'x' }, 100);
+    await upsertSavedCollectionById('c1', 'renamed', { q: 'x' }, 200);
+
+    await expect(getSavedCollections()).resolves.toEqual({
+      c1: { id: 'c1', name: 'renamed', query: { q: 'x' }, createdAt: 100, updatedAt: 200 },
+    });
+  });
+
+  it('degrades a corrupted store to the valid subset through the default path', async () => {
+    port.seed({
+      [StorageKeys.SAVED_COLLECTIONS]: {
+        ok: { name: 'kept', query: {}, createdAt: 1 },
+        junk: 'not-an-object',
+      },
+    });
+
+    const result = await getSavedCollections();
+    expect(Object.keys(result)).toEqual(['ok']);
+    expect(result['ok']).toEqual({ id: 'ok', name: 'kept', query: {}, createdAt: 1, updatedAt: 1 });
+  });
+
+  it('falls back to an empty map and logs STORAGE_READ_FAILURE when the default read throws', async () => {
+    vi.spyOn(settingsRepository, 'get').mockRejectedValueOnce(new Error('storage boom'));
+
+    await expect(getSavedCollections()).resolves.toEqual({});
+    expect(logError).toHaveBeenCalledWith(
+      '[SavedCollections] read failed',
+      { error: 'storage boom' },
+      ErrorCode.STORAGE_READ_FAILURE,
+      'savedCollectionsRepository',
+    );
   });
 });

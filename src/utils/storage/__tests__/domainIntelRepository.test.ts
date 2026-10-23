@@ -55,6 +55,7 @@ import {
 } from '../domainIntelRepository.js';
 import { StorageKeys } from '../types.js';
 import { DEFAULT_SETTINGS } from '../defaults.js';
+import { settingsRepository } from '../SettingsRepository.js';
 
 describe('domainIntelRepository', () => {
   beforeEach(() => {
@@ -189,5 +190,65 @@ describe('domainIntelRepository (injected store seam)', () => {
         'domainIntelRepository',
       );
     });
+  });
+});
+
+describe('domainIntelRepository (default path backed by real repository)', () => {
+  let live: DomainBlacklistStore;
+  let port: InMemoryStoragePort;
+
+  beforeEach(async () => {
+    await installTestSecretKek();
+    const real = await vi.importActual<typeof import('../SettingsRepository.js')>('../SettingsRepository.js');
+    const fresh = new real.InMemoryStorageAdapter();
+    port = fresh;
+    live = new real.SettingsRepository(fresh);
+    settingsRepository.get = live.get.bind(live);
+    settingsRepository.set = live.set.bind(live);
+    vi.mocked(logError).mockClear();
+  });
+
+  it('serves the production default list on a fresh store through the default path', async () => {
+    await expect(getDomainBlacklist()).resolves.toEqual(
+      DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST],
+    );
+  });
+
+  it('persists an added domain through the default path', async () => {
+    const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+
+    await addDomainToBlacklist('example.com');
+
+    await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'example.com']);
+  });
+
+  it('drops only the named domain through the default path', async () => {
+    const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+    await addDomainToBlacklist('one.example');
+    await addDomainToBlacklist('two.example');
+
+    await removeDomainFromBlacklist('one.example');
+
+    await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'two.example']);
+  });
+
+  it('filters non-string entries from a stored list through the default path', async () => {
+    port.seed({ [StorageKeys.DOMAIN_BLACKLIST]: ['kept.example', 1, null] });
+
+    await expect(getDomainBlacklist()).resolves.toEqual(['kept.example']);
+  });
+
+  it('falls back to the default list and logs STORAGE_READ_FAILURE when the default read throws', async () => {
+    vi.spyOn(settingsRepository, 'get').mockRejectedValueOnce(new Error('storage boom'));
+
+    await expect(getDomainBlacklist()).resolves.toEqual(
+      DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST],
+    );
+    expect(logError).toHaveBeenCalledWith(
+      '[DomainIntel] read failed',
+      { error: 'storage boom' },
+      ErrorCode.STORAGE_READ_FAILURE,
+      'domainIntelRepository',
+    );
   });
 });
