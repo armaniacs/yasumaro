@@ -26,10 +26,10 @@ Scenario: 一括で飛ぶ
   Then スター・タグ・コレクション追加のいずれかが適用され、取消ができる
 
 ## 受け入れ基準
-- [ ] omnibox・サイドパネル・右クリック・キーボードのうち権限不要分が動く
-- [ ] 一括操作に確認と取消がある
-- [ ] プライベート判定記録の一括適用が除外できる
-- [ ] ja/enの文言漏れがない
+- [x] omnibox・サイドパネル・右クリック・キーボードのうち権限不要分が動く（2026-10-23: omnibox・キーボード・右クリックが権限不要で動く。サイドパネルは `sidePanel` 権限が要るため段階外）
+- [x] 一括操作に確認と取消がある（2026-10-23: 一括スターに2段階 confirm と inline undo を実装）
+- [x] プライベート判定記録の一括適用が除外できる（2026-10-23: `isPrivacyJudgedEntry` による除外分岐と confirm テキストへの件数表示）
+- [x] ja/enの文言漏れがない（2026-10-23: `commandRecordPage`・`omniboxRecordDefault`・`recordSuccessTitle`・`recordSuccessBody`・`historyStar*` 8キーを双側追加）
 
 ## テスト戦略
 ## 実装記録（2026-10-23・権限不要分のWave A）
@@ -46,6 +46,9 @@ Scenario: 一括で飛ぶ
 - プライベート判定除外: 完了。`isPrivacyJudgedEntry`（`masked_count > 0`、PII マスク通過行）をモデルの純粋関数として公開。confirm テキストに選択中のプライベート判定件数を常に表示し、除外ボタンは件数が 0 のときだけ隠れる（一括適用が何を取り込むかを隠さない）。除外選択時は対象行を batch から除いてモデルへ渡す
 - ja/en: `historyStarSelected`・`historyStarConfirm`・`historyStarApply`・`historyStarApplyExcludePrivate`・`historyStarResult`・`historyStarResultExcluded`・`historyStarUndoBtn`・`historyStarUndoDone` の8キーを双側追加
 - pin: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryModel.bulkStar.test.ts` 6テスト（適用/undo/部分失敗/空リスト/プライベート判定述語）
+- 型baseline: 増加なし（新コールバック3つを既存 callbacks fixture に補完して債務返済、pin 451維持）。validate exit 0（1133 files / 16806 tests、commit 76239b6c）
+- ドキュメント: 完了。ADR-016（キーボード操作対応を実施しない）を Status: Superseded（一部、2026-10-23）に部分更新（記録入口の `Alt+Shift+Y` だけ実装、コマンドパレット等の全面操作は不実施を維持）、ROADMAP N8 行も同期
+- 残: コードレビュー、E2E通し（omnibox記録→履歴表示、一括適用→取消）、検索語ハンドオフ（任意・棚上げ）
 - E2E: omnibox記録→履歴表示、一括適用→取消の通し
 - 統合: 権限不足時の縮退表示テスト
 - 単体: キーバインド・選択集合操作のテーブルテスト

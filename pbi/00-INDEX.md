@@ -21,7 +21,7 @@
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
 | 🔶 06 | [2026-10-23-06-feat-saved-collections.md](2026-10-23-06-feat-saved-collections.md) | feat | 640 | 2.0人週相当 | 基盤+保存UI完了(設定キー・正規化・upsert/remove・repository seam・保存/呼び出し/削除UI・applyCollectionモデル経路)。残は自動タグ規則とM1/M3入力選択、E2E |
-| 🔶 07 | [2026-10-23-07-feat-entry-friction.md](2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | 権限不要分+一括スター完了(omnibox・キーボードコマンド・共有コア・一括スター適用+取消+プライベート判定除外)。残はコードレビューと検索語ハンドオフ(任意) |
+| 🔶 07 | [2026-10-23-07-feat-entry-friction.md](2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | 権限不要分+一括スター完了(omnibox・キーボードコマンド・共有コア・一括スター適用+取消+プライベート判定除外・ADR-016部分更新)。残はコードレビューとE2E通し、検索語ハンドオフ(任意) |
 | ⬜ 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | M1。M2に依存 |
 | ⬜ 09 | [2026-10-23-09-feat-research-report.md](2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | M3。M2に依存 |
 | ⬜ 10 | [2026-10-23-10-feat-domain-intel.md](2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | M4間接効果。独立 |

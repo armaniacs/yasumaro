@@ -73,7 +73,7 @@
 | N5 | `tabs` / `history` 権限の追加 | [ADR 2026-10-07](dev-docs/ADR/2026-10-07-tab-url-permission-decision.md) で案 A を却下済み。install ダイアログに「閲覧履歴の読み取り」が新規表示され、端末内で完結する privacy posture と矛盾する。再評価条件（badge の URL 由来が必須機能になった場合）は ADR に記録済み |
 | N6 | 未実装機能のための先行権限追加 | [CWS 権限ポリシー](https://developer.chrome.com/docs/webstore/program-policies/permissions)が future-proof な権限要求を明確に禁止している。実装してから権限を要求する |
 | N7 | API キーのストア送信・自前プロキシサーバー | [CWS AI ガイダンス](https://developer.chrome.com/docs/extensions/ai)は「キーをストアと共有しない・ユーザーに提供させる」ことを求める。プロキシはサーバー運用を恒久化する（N1 と同型）。BYO-key の現設計が正 |
-| N8 | キーボード操作対応（コマンドパレット・ショートカットの拡充） | [ADR 2026-04-19](dev-docs/ADR/2026-04-19-no-keyboard-operation-support.md) の決定。記録判定は「滞在 + スクロール」であり、キーボード起点の操作と本質が合わない。再評価条件は ADR に記録 |
+| N8 | キーボード操作対応（コマンドパレット・ショートカットの拡充） | [ADR 2026-04-19](dev-docs/ADR/2026-04-19-no-keyboard-operation-support.md) の決定（2026-10-23 に記録入口のショートカット `Alt+Shift+Y` だけ部分更新済み）。記録判定は「滞在 + スクロール」であり、コマンドパレット等キーボード起点の全面操作と本質が合わない。再評価条件は ADR に記録 |
 | N9 | SQLite バックエンドの動的切替機構（実行中の backend 差し替え UI） | [ADR 2026-07-13](dev-docs/ADR/2026-07-13-sqlite-architecture-deep-dig.md) 決定 3。OPFS Worker 初期化失敗は環境要因でセッション中に変化せず、切替は DB 移行とデータ不整合を引き起こす。one-shot で選び、選び直しは移行機能として作る |
 | N10 | 埋め込みベクトルによる類似記事デデュープ・セマンティック検索 | [sentence-dedup WASM の不採用確定](pbi/00-INDEX.md)と同型の問題: 実測された利得が小さく、コンテンツスクリプト経路の CSP 制約で WASM/重いランタイムの初期化を保証できず、バンドルと複雑性のコストは大。類似・ループ検出はキーワード単位（実装済み + 台帳残置）で段階的に足りる（拡張アイデア E6） |
 | N11 | scroll_ratio / visit_duration 依存の機能（読み切り率、積読通知、熟読度フィルター） | [メタ認知台帳の不採用裁定](dev-docs/archived/pbi/2026-09-26-00-backlog-metacognition-analytics.md)。新規行の `visit_duration` / `scroll_ratio` は常に NULL で、滞在時間パネルは 2026-09 に撤去済み（`54cfab5e`）でその判断と両立しない。再開条件は「可視区間の累積計時が記録経路に配線されたとき」（拡張アイデア E8 の基盤もここに依存） |
