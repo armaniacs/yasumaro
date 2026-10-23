@@ -2026,6 +2026,24 @@
   "savedCollectionSaveError": {
     "message": "保存に失敗しました"
   },
+  "commandRecordPage": {
+    "message": "現在のページを記録"
+  },
+  "omniboxRecordDefault": {
+    "message": "このページを記録"
+  },
+  "recordSuccessTitle": {
+    "message": "記録しました"
+  },
+  "recordSuccessBody": {
+    "message": "「$1」を記録しました",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "記事タイトル"
+      }
+    }
+  },
   "aiDomainPolicy_allowed": {
     "message": "送信を許可"
   },

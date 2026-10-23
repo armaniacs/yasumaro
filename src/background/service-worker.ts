@@ -2,6 +2,7 @@ import { SessionStore } from './sessionStore.js';
 import { createTabEventHandlers } from './handlers/tabEventHandlers.js';
 import { createLifecycleHandlers, restoreRecordingCacheOnWake } from './handlers/lifecycleHandlers.js';
 import { registerManualRecordContextMenu as _registerManualRecordContextMenu, createContextClickHandler } from './handlers/contextMenuHandlers.js';
+import { createKeyboardCommandHandler, createOmniboxInputHandler } from './handlers/entryFrictionHandlers.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError } from '../utils/logger/api.js';
@@ -215,6 +216,18 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
 const _contextClickHandler = createContextClickHandler({ handleManualRecord: handleManualRecordForContextMenu });
 
+// ============================================================================
+// Omnibox + Keyboard Command (PBI 2026-10-23-07)
+// ============================================================================
+// The omnibox and the keyboard command ride the same recordTabContent core
+// as the context menu; the confirmation notification carries the page title.
+const _entryFrictionDeps = {
+  recordTabContent: { handleManualRecord: handleManualRecordForContextMenu },
+};
+const _keyboardCommandHandler = createKeyboardCommandHandler(_entryFrictionDeps);
+const _omniboxInputHandler = createOmniboxInputHandler(_entryFrictionDeps);
+export { _keyboardCommandHandler, _omniboxInputHandler };
+
 const handleAlarm = alarmRegistry.handleAlarm;
 
 // Re-export createMessageHandler for backward compatibility with tests
@@ -274,6 +287,15 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
 
     chrome.runtime.onInstalled.addListener(guard(_registerManualRecordContextMenu, 'registerManualRecordContextMenu'));
     chrome.contextMenus.onClicked.addListener(guard(_contextClickHandler, 'contextClick'));
+
+    // PBI 2026-10-23-07: omnibox + keyboard command record the active tab
+    // without opening the dashboard (permission-free manifest keys).
+    if (chrome.commands?.onCommand) {
+      chrome.commands.onCommand.addListener(guard(_keyboardCommandHandler, 'keyboardCommand'));
+    }
+    if (chrome.omnibox?.onInputEntered) {
+      chrome.omnibox.onInputEntered.addListener(guard((text: string) => _omniboxInputHandler(text), 'omniboxInput'));
+    }
 
     chrome.notifications.onButtonClicked.addListener(guard(handleNotificationButtonClicked, 'notificationButtonClicked'));
     chrome.notifications.onClicked.addListener(guard(handleNotificationClicked, 'notificationClicked'));

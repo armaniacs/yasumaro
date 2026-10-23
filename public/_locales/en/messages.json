@@ -2089,6 +2089,24 @@
   "savedCollectionSaveError": {
     "message": "Failed to save"
   },
+  "commandRecordPage": {
+    "message": "Record the current page"
+  },
+  "omniboxRecordDefault": {
+    "message": "Record this page"
+  },
+  "recordSuccessTitle": {
+    "message": "Recorded"
+  },
+  "recordSuccessBody": {
+    "message": "Recorded \"$1\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Page title"
+      }
+    }
+  },
   "aiDomainPolicy_allowed": {
     "message": "Send allowed"
   },

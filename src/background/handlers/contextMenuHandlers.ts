@@ -3,6 +3,12 @@
  *
  * Extracted from service-worker.ts for modularization (PBI-26).
  * Handles manual recording context menu registration and click events.
+ *
+ * PBI 2026-10-23-07: the page extraction + record call delegates to the
+ * shared recordTabContent core (activeTabRecorder.ts) — the omnibox and the
+ * keyboard command ride the same mechanics. The insecure-URL gate, the
+ * per-tab in-flight guard and the error log stay entry-point-local so the
+ * log origin and the skip policy stay readable.
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
 import { getMessageOr } from '../../utils/i18n.js';
@@ -10,9 +16,7 @@ import { ErrorCode } from '../../utils/logger/types.js';
 import { logWarn, logError } from '../../utils/logger/api.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
-
-/** Page-body slice cap for the context-menu record path (was an inline 5000). */
-const CONTEXT_MENU_CONTENT_MAX_CHARS = 5000;
+import { recordTabContent } from './activeTabRecorder.js';
 
 export interface ContextMenuHandlerDeps {
     handleManualRecord: (
@@ -60,43 +64,7 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
 
         await inFlightByTabId.run(targetTabId, async () => {
             try {
-                const [result] = await chrome.scripting.executeScript({
-                    target: { tabId: targetTabId },
-                    func: (maxChars: number) => ({
-                        url: window.location.href,
-                        title: document.title,
-                        content: document.body?.innerText?.slice(0, maxChars) || '',
-                    }),
-                    args: [CONTEXT_MENU_CONTENT_MAX_CHARS],
-                });
-
-                const raw = result?.result;
-                if (!raw || typeof raw !== 'object' || !('url' in raw)) {
-                    await logWarn('Context menu received invalid page data', { url: targetTabUrl }, undefined, 'service-worker');
-                    return;
-                }
-
-                const payload = raw as { url: string; title: string; content: string };
-                const sender: chrome.runtime.MessageSender = {
-                    tab: { id: targetTabId, url: payload.url } as chrome.tabs.Tab,
-                    id: chrome.runtime.id,
-                    url: chrome.runtime.getURL(''),
-                };
-
-                await deps.handleManualRecord(
-                    {
-                        type: 'MANUAL_RECORD',
-                        payload: {
-                            url: payload.url,
-                            title: payload.title,
-                            content: payload.content,
-                            force: true,
-                            skipAi: false,
-                        },
-                    },
-                    sender,
-                    () => {}
-                );
+                await recordTabContent(deps, 'Context menu', targetTabId, targetTabUrl);
             } catch (error) {
                 logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
             }
