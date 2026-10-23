@@ -12,7 +12,7 @@
  * nothing here fires without one (自動除外はしない).
  */
 
-import { StorageKeys, type Settings } from './types.js';
+import { StorageKeys } from './types.js';
 import { settingsRepository } from './SettingsRepository.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
 
@@ -30,17 +30,11 @@ export async function getDomainBlacklist(): Promise<string[]> {
   }
 }
 
-/** The stored blacklist's strict per-key value type (Settings SSOT). */
-type BlacklistValue = Settings[typeof StorageKeys.DOMAIN_BLACKLIST];
-
 async function saveDomainBlacklist(list: string[]): Promise<void> {
-  // The stored shape is the strict per-key literal type; the list shape is
-  // enforced on read by the normalization above (same pattern as the saved
-  // collections repository).
-  await settingsRepository.set(
-    StorageKeys.DOMAIN_BLACKLIST,
-    list as unknown as BlacklistValue,
-  );
+  // The stored shape is string[] (the strict per-key literal type); the list
+  // shape is enforced on read by the normalization above (same pattern as the
+  // saved collections repository).
+  await settingsRepository.set(StorageKeys.DOMAIN_BLACKLIST, list);
 }
 
 /** Adds one domain to the simple blacklist (適用). Idempotent on repeats. */

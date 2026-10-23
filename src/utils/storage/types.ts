@@ -11,6 +11,7 @@ import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCate
 import type { AiSummaryRemovedStats } from '../commonTypes.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
 import type { NavTrailConsent } from './navTrailConsent.js';
+import type { SavedCollection } from './savedCollections.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -355,8 +356,13 @@ export interface StorageKeyValues {
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
     /** PBI 2026-10-23-02: per-media-kind threshold overrides (empty = defaults). */
     [StorageKeys.MEDIA_THRESHOLDS]: Record<string, Record<string, number>>;
-    /** PBI 2026-10-23-06: named saved collections (empty = none). */
-    [StorageKeys.SAVED_COLLECTIONS]: Record<string, Record<string, unknown>>;
+    /**
+     * PBI 2026-10-23-06: named saved collections (empty = none). Type-only
+     * import: the edge is erased at compile time, so savedCollections.ts
+     * (which imports nothing) cannot form a runtime cycle — same pattern as
+     * NavTrailConsent above.
+     */
+    [StorageKeys.SAVED_COLLECTIONS]: Record<string, SavedCollection>;
     /** PBI 2026-10-22-02: the first-launch onboarding banner was dismissed once. */
     [StorageKeys.ONBOARDING_DISMISSED]: boolean;
     [StorageKeys.GEMINI_MODEL]: string;

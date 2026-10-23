@@ -26,9 +26,9 @@ Scenario: 不正な保存形の境界
 
 ## 受け入れ基準
 
-- [ ] `savedCollectionsRepository.ts` と `domainIntelRepository.ts` から `as unknown as` が消える
-- [ ] `SAVED_COLLECTIONS` の値型が `SavedCollection` を保持する
-- [ ] 既存テスト全緑（pure table + tagsPanel・domainAnalysisPanel 系）
+- [x] `savedCollectionsRepository.ts` と `domainIntelRepository.ts` から `as unknown as` が消える
+- [x] `SAVED_COLLECTIONS` の値型が `SavedCollection` を保持する
+- [x] 既存テスト全緑（pure table + tagsPanel・domainAnalysisPanel 系）
 
 ## テスト戦略（t_wada スタイル）
 
@@ -86,7 +86,7 @@ grep -rn "as unknown as" src/utils/storage/*.ts | grep -v __tests__
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + repository ラウンドトリップテスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + repository ラウンドトリップテスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

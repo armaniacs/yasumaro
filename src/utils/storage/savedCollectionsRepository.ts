@@ -31,13 +31,10 @@ export async function getSavedCollections(): Promise<Record<string, SavedCollect
 export async function saveSavedCollections(
   map: Record<string, SavedCollection>,
 ): Promise<void> {
-  // The stored shape is Record<string, Record<string, unknown>> (the strict
-  // per-key literal type); the collection shape is enforced on read by
-  // normalizeSavedCollections.
-  await settingsRepository.set(
-    StorageKeys.SAVED_COLLECTIONS,
-    map as unknown as Record<string, Record<string, unknown>>,
-  );
+  // The stored shape is Record<string, SavedCollection> (the strict per-key
+  // literal type); the read side still normalizes, so a corrupted store
+  // degrades to the valid subset instead of failing the panel.
+  await settingsRepository.set(StorageKeys.SAVED_COLLECTIONS, map);
 }
 
 export async function upsertSavedCollectionById(
