@@ -31,6 +31,7 @@ import {
   resolvePanelIdForTab,
 } from './panels/panelCatalog.js';
 import { initIssueReportEntry } from './panels/diagnostic/issueReportEntry.js';
+import { initOnboardingBanner } from './onboardingBanner.js';
 import { logInfo, logError } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -88,6 +89,10 @@ export async function initDashboard(): Promise<void> {
   // Sidebar + panel "Report a Bug" entry points — the shared controller and
   // the queued-button flush live in panels/diagnostic/issueReportEntry.ts.
   initIssueReportEntry();
+
+  // PBI 2026-10-22-02: first-launch onboarding banner (3 choices, dismissed
+  // once). Page-level wiring that targets only static HTML.
+  try { await initOnboardingBanner(); } catch (e) { void logError('[Dashboard] initOnboardingBanner error', { error: errorMessage(e) }, ErrorCode.INTERNAL_ERROR, 'dashboard'); }
 
   void logInfo('[Dashboard] Initialization complete', {}, 'dashboard');
 }

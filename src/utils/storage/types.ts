@@ -40,6 +40,8 @@ export const StorageKeys = {
     MEDIA_THRESHOLDS: 'media_thresholds',
     /** PBI 2026-10-23-06: named saved collections (search conditions + tag rules). */
     SAVED_COLLECTIONS: 'saved_collections',
+    /** PBI 2026-10-22-02: first-launch onboarding banner dismissed once by the user. */
+    ONBOARDING_DISMISSED: 'onboarding_dismissed',
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
@@ -355,6 +357,8 @@ export interface StorageKeyValues {
     [StorageKeys.MEDIA_THRESHOLDS]: Record<string, Record<string, number>>;
     /** PBI 2026-10-23-06: named saved collections (empty = none). */
     [StorageKeys.SAVED_COLLECTIONS]: Record<string, Record<string, unknown>>;
+    /** PBI 2026-10-22-02: the first-launch onboarding banner was dismissed once. */
+    [StorageKeys.ONBOARDING_DISMISSED]: boolean;
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
     [StorageKeys.HISTORY_SORT_PREFERENCE]: string;

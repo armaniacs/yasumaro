@@ -2173,6 +2173,30 @@
   "initialSetupDescription": {
     "message": "Configure your Obsidian connection and AI settings."
   },
+  "onboarding_intro": {
+    "message": "Recording and search work without any setup. Pick how you want to start."
+  },
+  "onboarding_dismissBtn": {
+    "message": "Set up later"
+  },
+  "onboarding_tryFirstTitle": {
+    "message": "Try it first"
+  },
+  "onboarding_tryFirstDesc": {
+    "message": "Record and search without any setup"
+  },
+  "onboarding_obsidianTitle": {
+    "message": "Obsidian"
+  },
+  "onboarding_obsidianDesc": {
+    "message": "Add Obsidian as a save destination"
+  },
+  "onboarding_aiTitle": {
+    "message": "AI summaries"
+  },
+  "onboarding_aiDesc": {
+    "message": "Enable summary generation"
+  },
   "obsidianSection": {
     "message": "Obsidian Connection"
   },

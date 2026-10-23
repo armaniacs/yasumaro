@@ -2110,6 +2110,30 @@
   "initialSetupDescription": {
     "message": "Obsidianとの接続とAIの設定を行います。"
   },
+  "onboarding_intro": {
+    "message": "設定がなくても記録と検索は使えます。始め方を選んでください。"
+  },
+  "onboarding_dismissBtn": {
+    "message": "後で設定する"
+  },
+  "onboarding_tryFirstTitle": {
+    "message": "まず試す"
+  },
+  "onboarding_tryFirstDesc": {
+    "message": "設定なしで記録と検索を試せます"
+  },
+  "onboarding_obsidianTitle": {
+    "message": "Obsidian連携"
+  },
+  "onboarding_obsidianDesc": {
+    "message": "保存先をObsidianに追加します"
+  },
+  "onboarding_aiTitle": {
+    "message": "AI要約"
+  },
+  "onboarding_aiDesc": {
+    "message": "要約の生成を有効にします"
+  },
   "obsidianSection": {
     "message": "Obsidian 接続"
   },

@@ -270,6 +270,28 @@
         <h2 id="panel-general-title" class="panel-title" data-i18n="mainTabDashboard">Initial Setup</h2>
         <p class="panel-description" data-i18n="initialSetupDescription">Configure your Obsidian connection and AI settings.</p>
 
+        <!-- Onboarding banner (PBI 2026-10-22-02): first-launch 3 choices -->
+        <div id="onboardingBanner" class="onboarding-banner" hidden>
+          <div class="onboarding-banner-head">
+            <p id="onboardingIntro" aria-live="polite"></p>
+            <button type="button" class="secondary-btn" data-onboarding-action="dismiss" data-i18n="onboarding_dismissBtn">後で設定する</button>
+          </div>
+          <div class="onboarding-choices">
+            <button type="button" class="onboarding-choice" data-onboarding-action="try-first">
+              <span class="onboarding-choice-title" data-i18n="onboarding_tryFirstTitle">まず試す</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_tryFirstDesc">設定なしで記録と検索を試せます</span>
+            </button>
+            <button type="button" class="onboarding-choice" data-onboarding-action="obsidian">
+              <span class="onboarding-choice-title" data-i18n="onboarding_obsidianTitle">Obsidian連携</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_obsidianDesc">保存先をObsidianに追加します</span>
+            </button>
+            <button type="button" class="onboarding-choice" data-onboarding-action="ai">
+              <span class="onboarding-choice-title" data-i18n="onboarding_aiTitle">AI要約</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_aiDesc">要約の生成を有効にします</span>
+            </button>
+          </div>
+        </div>
+
         <!-- ボタンエリア（上部） -->
         <div class="general-btn-row">
           <button id="saveTop" class="btn-primary" data-i18n="saveBtn">Save</button>

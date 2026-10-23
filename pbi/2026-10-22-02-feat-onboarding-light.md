@@ -32,6 +32,15 @@ Scenario: 後付けで機能が足せる
 - [ ] ja/enの文言漏れがない(`npm run check-i18n`)
 
 ## テスト戦略
+## 実装記録（2026-10-23・初回起動バナー）
+- 3択表示: 完了。`src/dashboard/onboardingBanner.ts` の `initOnboardingBanner` が初回起動で「まず試す / Obsidian連携 / AI要約」の3択をInitial Setupパネル上部に表示。設定なしでも記録と検索が使えることを案内文に明記。既存のObsidian/AI設定セクションを開くだけで新規の設定書き込みはしない(既存利用者の動作は変えない)
+- 一度だけ表示: 完了。`StorageKeys.ONBOARDING_DISMISSED`(boolean, 既定 false)を Types/Defaults SSOT に追加。ユーザーが「後で設定する」で一度閉じると以後表示されない
+- 3択の導線: まず試す→履歴パネル(panel-sqlite-history)、Obsidian連携→`#obsidianEnabled` をフォーカス、AI要約→`#aiProvider` をフォーカス。パネルレジストリ経由の既存遷移のみ
+- 同意拒否時の制限モード表示: 既存資産で維持(consentBadge、変更なし)。同意フロー(3回拒否で制限モード・GDPR物理削除)は触らない
+- 縮退の出口: フラグ読み取り失敗はバナー再表示(もう一度閉じられる)、書き込み失敗はその起動だけ閉じてパネルを塞がない
+- ja/en: `onboarding_intro`・`onboarding_dismissBtn`・`onboarding_tryFirstTitle/Desc`・`onboarding_obsidianTitle/Desc`・`onboarding_aiTitle/Desc` の8キーを双側追加
+- pin: `src/dashboard/__tests__/onboardingBanner.test.ts` 3テスト(バナー表示条件・要約なし記録のtitle/url維持・URLからのドメイン導出)
+- 残: E2E(新規プロファイルでゼロ設定記録→検索→後付け有効化の通し)、README/OBSIDIAN_SETUP_GUIDE の前提章更新、コードレビュー
 - E2E: 新規プロファイルでゼロ設定記録→検索→後付け有効化の通し
 - 統合: 設定なし状態のバリデータがfail-closedであること
 - 単体: 既定値解決・同意状態遷移のテーブルテスト

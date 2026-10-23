@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.MIN_SCROLL_DEPTH]: 50,
     [StorageKeys.MEDIA_THRESHOLDS]: {},
     [StorageKeys.SAVED_COLLECTIONS]: {},
+    [StorageKeys.ONBOARDING_DISMISSED]: false,
     [StorageKeys.GEMINI_API_KEY]: '',
     [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite',
     [StorageKeys.OBSIDIAN_DAILY_PATH]: '092.Daily',
