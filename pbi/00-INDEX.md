@@ -14,22 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-24 建築改善ループ（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(12) → 02(7.2) → 03(6) → 04(4.3) → 05(4) → 06(4) → 07(4) → 08(2.4)
+### 2026-10-24 建築改善ループ（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(12)~~ → ~~02(7.2)~~ → ~~03(6)~~ → ~~04(4.3)~~ → ~~05(4)~~ → ~~06(4)~~ → ~~07(4)~~ → ~~08(2.4)~~
 
-建築診断（codebase-design 語彙、2領域の並列探索）の10候補から Speculative 1 件を除外・重複 1 組を統合して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024.md](2026-10-24-00-backlog-architecture-1024.md)。
+建築診断（codebase-design 語彙、2領域の並列探索、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2 → バッチ3の2並列 → バッチ4）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024.md)。最終ゲート `npm run validate` 緑（1155ファイル・17062テスト）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-24-01-refactor-pending-gateway-normalize.md](2026-10-24-01-refactor-pending-gateway-normalize.md) | refactor | 12 | 0.5 | pending normalize の共有化（deletion test 済み。最初の一手） |
-| ⬜ 02 | [2026-10-24-02-refactor-response-canonical-module.md](2026-10-24-02-refactor-response-canonical-module.md) | refactor | 7.2 | 2.0 | 応答形状の正本化。NN03・NN04・NN05 は本 PBI の後に実施 |
-| ⬜ 03 | [2026-10-24-03-refactor-regenerate-error-conversion.md](2026-10-24-03-refactor-regenerate-error-conversion.md) | refactor | 6 | 1.0 | エラー変換の集約（NN02 の後に実施） |
-| ⬜ 04 | [2026-10-24-04-refactor-ask-evidence-module.md](2026-10-24-04-refactor-ask-evidence-module.md) | refactor | 4.3 | 1.5 | 証拠 pure 群の独立化（NN02 の後に実施） |
-| ⬜ 05 | [2026-10-24-05-refactor-history-panel-wiring-split.md](2026-10-24-05-refactor-history-panel-wiring-split.md) | refactor | 4 | 3.0 | panel 配線集中の緩和（NN07・NN02 の後に実施） |
-| ⬜ 06 | [2026-10-24-06-refactor-send-seam-unification.md](2026-10-24-06-refactor-send-seam-unification.md) | refactor | 4 | 2.0 | 送信 seam 一本化（独立領域） |
-| ⬜ 07 | [2026-10-24-07-refactor-history-ids-ownership.md](2026-10-24-07-refactor-history-ids-ownership.md) | refactor | 4 | 1.0 | id 所有の是正（NN05 は本 PBI の後に実施） |
-| ⬜ 08 | [2026-10-24-08-refactor-proposal-row-selectors.md](2026-10-24-08-refactor-proposal-row-selectors.md) | refactor | 2.4 | 1.0 | selectors 畳み込み（独立・小幅） |
-
-実行順の推奨: RICE 順。**NN02 → NN03・NN04・NN05、NN07 → NN05** の前後関係を守る。NN01 / NN06 / NN07 / NN08 は互いに独立のため並列着手可。
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
 
 ### 2026-10-23 adversarial-code-review 診断（round2 差分、11件） ― ✅ 11件完了・アーカイブ済み（01-11） 🔧非機能追加 RICE順: ~~01(24)~~ → ~~02(13.3)~~ → ~~03(10)~~ → ~~04(6.7)~~ → ~~05(6)~~ → ~~06(5.3)~~ → ~~07(5)~~ → ~~08(4.3)~~ → ~~09(4)~~ → ~~10(3.3)~~ → ~~11(2.1)~~
 
@@ -580,6 +571,19 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-24 建築改善ループ アーカイブ ― 8件すべて完了（01-08）
+
+2026-10-24 起票の 8 件を RICE 順・依存順に自律実装・アーカイブ。建築診断 10 候補から Speculative 1 件除外・重複 1 組統合。バッチ1（01/06/07/08 並列）→ バッチ2（02）→ バッチ3（03/04 並列）→ バッチ4（05）。バッチ境界で popup 期待値 1 件を原因直し（ガード強化の意図的波及）。最終ゲート `npm run validate` 緑（1155ファイル・17062テスト）。
+
+- **01-refactor-pending-gateway-normalize**: 独自 normalize を共有検査への1行委譲に＋破形 table 新規
+- **02-refactor-response-canonical-module**: 応答正本 2 module 新設＋双子解消＋view 直接受け＋seam 詰替集約
+- **03-refactor-regenerate-error-conversion**: 変換集約 module 新設＋生産経路テスト新規（Red 確認済み）
+- **04-refactor-ask-evidence-module**: 証拠 pure 群の独立 module 新設＋dispatch 試験への寄せ
+- **05-refactor-history-panel-wiring-split**: 振舞いの region factory 移管＋panel 薄化（3 段階で緑維持）
+- **06-refactor-send-seam-unification**: 生送信の委譲縮小＋retry 既定表の1 module 集約（実効値不変）
+- **07-refactor-history-ids-ownership**: id 正本の region 移管（案A選択・文字列不変）
+- **08-refactor-proposal-row-selectors**: selectors 引数削除＋行契約テスト新規
 
 ### 2026-10-23 adversarial-code-review 診断アーカイブ ― 11件すべて完了（01-11）
 
