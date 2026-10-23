@@ -6,15 +6,22 @@
  * four-section Markdown (要旨・時系列・引用・未読穴) and delivers it through the
  * existing export paths. Region-scoped render entry — same contract as
  * renderAskHistoryRegion: the shell placeholder `<div id="sqlite-research-report">`
- * is owned by buildPanelShellHtml (its id lives in SQLITE_HISTORY_IDS, the sole
- * owner of every panel DOM id); this module fills it.
+ * is owned by buildPanelShellHtml, but the id string itself is owned here
+ * (RESEARCH_REPORT_REGION_ID); the view only re-exports it for the shell.
+ * This module fills it.
  */
 
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
-import { SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
+
+/**
+ * Canonical owner of the research-report region placeholder id. The view keeps
+ * a compatibility entry in SQLITE_HISTORY_IDS that references this constant,
+ * so the string has a single source without moving the shell markup.
+ */
+export const RESEARCH_REPORT_REGION_ID = 'sqlite-research-report';
 
 /** Outcome of one report run, as the Panel normalizes it from the wire. */
 export interface ReportRunResult {
@@ -55,7 +62,7 @@ export function renderResearchReportRegion(
   container: HTMLElement,
   actions: ResearchReportRegionActions,
 ): void {
-  const region = container.querySelector(`#${SQLITE_HISTORY_IDS.researchReport}`);
+  const region = container.querySelector(`#${RESEARCH_REPORT_REGION_ID}`);
   if (!(region instanceof HTMLElement)) return;
 
   setElementHtml(region, buildRegionInnerHtml());

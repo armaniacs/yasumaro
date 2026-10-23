@@ -4,8 +4,9 @@
  * Saved-collections region of the SQLite history panel (PBI 2026-10-23-06).
  * Region-scoped render entry — same contract as renderPendingRegion: the
  * shell placeholder `<div id="sqlite-saved-collections">` is owned by
- * buildPanelShellHtml (its id lives in SQLITE_HISTORY_IDS, the sole owner of
- * every panel DOM id); this module fills it. The Panel owns data + repository
+ * buildPanelShellHtml, but the id string itself is owned here
+ * (SAVED_COLLECTIONS_REGION_ID); the view only re-exports it for the shell.
+ * This module fills it. The Panel owns data + repository
  * calls; this module owns markup, labels and in-row wiring.
  *
  * Re-rendered wholesale on data change — per-render button wiring is safe
@@ -16,12 +17,19 @@ import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
-import { SQLITE_HISTORY_IDS, formatTimestamp } from './sqliteHistoryPanelView.js';
+import { formatTimestamp } from './sqliteHistoryPanelView.js';
 import {
   describeCollectionQuery,
   type CollectionQueryLabels,
 } from './savedCollectionQuery.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
+
+/**
+ * Canonical owner of the saved-collections region placeholder id. The view
+ * keeps a compatibility entry in SQLITE_HISTORY_IDS that references this
+ * constant, so the string has a single source without moving the shell markup.
+ */
+export const SAVED_COLLECTIONS_REGION_ID = 'sqlite-saved-collections';
 
 /** Event bundle the Panel builds once and hands to the region renderer. */
 export interface SavedCollectionsRegionActions {
@@ -89,7 +97,7 @@ export function renderSavedCollectionsRegion(
   collections: Record<string, SavedCollection>,
   actions: SavedCollectionsRegionActions,
 ): void {
-  const region = container.querySelector(`#${SQLITE_HISTORY_IDS.savedCollections}`);
+  const region = container.querySelector(`#${SAVED_COLLECTIONS_REGION_ID}`);
   if (!(region instanceof HTMLElement)) return;
 
   setElementHtml(region, buildRegionInnerHtml(collections));

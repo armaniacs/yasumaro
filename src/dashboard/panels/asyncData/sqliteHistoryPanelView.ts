@@ -23,6 +23,11 @@ import {
 // Page size — SSOT via the model so the query limit and the pagination
 // control share one definition (PBI 04).
 import { SQLITE_HISTORY_PAGE_SIZE } from './sqliteHistoryModel.js';
+// Region placeholder ids — owned by the region modules (PBI 2026-10-24-07);
+// the view imports them for the shell and re-exports them below.
+import { SAVED_COLLECTIONS_REGION_ID } from './savedCollectionsPanelView.js';
+import { ASK_HISTORY_REGION_ID } from './askHistoryPanelView.js';
+import { RESEARCH_REPORT_REGION_ID } from './researchReportPanelView.js';
 
 /**
  * Adapter (PBI 2026-09-23-01): the bar definition lives behind
@@ -331,8 +336,11 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
 // the model owns the query defaults and this view imports the same constant.
 
 /**
- * Sole owner of every DOM id the SQLite history view creates.
- * Panel, CSS 以外の TS, テストは文字列直書きせずこの定数を経由する。
+ * Every DOM id the SQLite history view creates, except the three region
+ * placeholders (savedCollections, askHistory, researchReport) whose strings
+ * are owned by their region modules and only referenced here so the shell can
+ * render them. Panel, CSS and tests keep using this map; region code uses its
+ * own constant directly.
  */
 export const SQLITE_HISTORY_IDS = {
   searchInput: 'sqlite-search-input',
@@ -342,15 +350,18 @@ export const SQLITE_HISTORY_IDS = {
   calendarDays: 'sqlite-calendar-days',
   clearAllFilters: 'sqlite-clear-all-filters',
   pendingRegion: 'sqlite-pending-region',
-  // Saved-collections region placeholder (PBI 2026-10-23-06); filled by
-  // savedCollectionsPanelView.renderSavedCollectionsRegion.
-  savedCollections: 'sqlite-saved-collections',
-  // Ask-history region (PBI 2026-10-23-08): question + target collection +
+  // Saved-collections region placeholder (PBI 2026-10-23-06); string owned by
+  // savedCollectionsPanelView (SAVED_COLLECTIONS_REGION_ID), filled by
+  // renderSavedCollectionsRegion.
+  savedCollections: SAVED_COLLECTIONS_REGION_ID,
+  // Ask-history region (PBI 2026-10-23-08): string owned by
+  // askHistoryPanelView (ASK_HISTORY_REGION_ID); question + target collection +
   // answer with citations back to the original records.
-  askHistory: 'sqlite-ask-history',
-  // Research-report region (PBI 2026-10-23-09): one-shot report generation
-  // from the panel conditions, delivered to the existing export paths.
-  researchReport: 'sqlite-research-report',
+  askHistory: ASK_HISTORY_REGION_ID,
+  // Research-report region (PBI 2026-10-23-09): string owned by
+  // researchReportPanelView (RESEARCH_REPORT_REGION_ID); one-shot report
+  // generation from the panel conditions, delivered to the existing export paths.
+  researchReport: RESEARCH_REPORT_REGION_ID,
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',

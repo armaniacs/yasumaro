@@ -5,9 +5,9 @@
  * 履歴に聞く: a question, a target collection, and the answer with citation
  * links back to the original records. Region-scoped render entry — same
  * contract as renderSavedCollectionsRegion: the shell placeholder
- * `<div id="sqlite-ask-history">` is owned by buildPanelShellHtml (its id
- * lives in SQLITE_HISTORY_IDS, the sole owner of every panel DOM id); this
- * module fills it. The Panel owns the gateway call; this module owns markup,
+ * `<div id="sqlite-ask-history">` is owned by buildPanelShellHtml, but the id
+ * string itself is owned here (ASK_HISTORY_REGION_ID); the view only
+ * re-exports it for the shell. This module fills it. The Panel owns the gateway call; this module owns markup,
  * labels and the answer paint.
  */
 
@@ -15,8 +15,14 @@ import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
-import { SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
+
+/**
+ * Canonical owner of the ask-history region placeholder id. The view keeps a
+ * compatibility entry in SQLITE_HISTORY_IDS that references this constant, so
+ * the string has a single source without moving the shell markup.
+ */
+export const ASK_HISTORY_REGION_ID = 'sqlite-ask-history';
 
 /** One citation the answer links back to (BDD: 元記録に飛べる). */
 export interface AskCitation {
@@ -73,7 +79,7 @@ export function renderAskHistoryRegion(
   collections: Record<string, SavedCollection>,
   actions: AskHistoryRegionActions,
 ): void {
-  const region = container.querySelector(`#${SQLITE_HISTORY_IDS.askHistory}`);
+  const region = container.querySelector(`#${ASK_HISTORY_REGION_ID}`);
   if (!(region instanceof HTMLElement)) return;
 
   setElementHtml(region, buildRegionInnerHtml(collections));
