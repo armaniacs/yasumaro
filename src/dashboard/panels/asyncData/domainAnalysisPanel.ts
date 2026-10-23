@@ -34,8 +34,9 @@ import {
 } from '../../../utils/computeLimits.js';
 import { fetchAllPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
-import { getMessageOr, getMessageWithSubstitutions as msg } from '../../../utils/i18n.js';
+import { getMessageOr, getMessageWithSubstitutions as msg, tOrKey as t } from '../../../utils/i18n.js';
 import { clearElement } from '../../../utils/domClear.js';
+import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
 import { showRowCapNotice } from '../rowCapNotice.js';
 import {
@@ -49,6 +50,15 @@ import { type PanelLifecycle } from '../types.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import {
+  computeSourceBias,
+  buildNoiseProposals,
+  periodBasisLabel,
+  type NoiseProposal,
+} from '../../domainIntelAggregate.js';
+import { addDomainToBlacklist, removeDomainFromBlacklist } from '../../../utils/storage/domainIntelRepository.js';
+import { formatLocalDateString } from '../../../utils/localDate.js';
+import { escapeHtml } from '../../../utils/htmlEscape.js';
 
 function navigateToHistoryWithDomain(domain: string): void {
   tryNavigateTyped('panel-sqlite-history', { searchDomain: domain });
@@ -69,6 +79,9 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   let rowCapNotice: HTMLElement | null = null;
   let domainTruncated: HTMLElement | null = null;
   let urlTruncated: HTMLElement | null = null;
+  // Domain-intel section (PBI 2026-10-23-10): bias line + exclusion proposals.
+  let intelBiasLine: HTMLElement | null = null;
+  let intelProposals: HTMLElement | null = null;
   // WHY: the empty-state element doubles as the error surface (one element,
   // two modes) — the unified failure policy swaps in the error wording. The
   // (unknown) bucket count and row cap describe the FETCH, so they are
@@ -131,6 +144,120 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     if (urlBody) clearElement(urlBody);
   }
 
+  // --- Domain intel (PBI 2026-10-23-10) --------------------------------------
+
+  function hideIntel(): void {
+    if (intelBiasLine) intelBiasLine.hidden = true;
+    if (intelProposals) {
+      intelProposals.hidden = true;
+      clearElement(intelProposals);
+    }
+  }
+
+  /**
+   * Exclusion proposal apply/undo (BDD: 見直しを適用できる). Applying is a
+   * user action with an inline undo — nothing fires automatically
+   * (自動除外はしない). The undo restores the blacklist instead of the
+   * previous panel state, so the action is reversible end-to-end.
+   */
+  function wireProposalActions(container: HTMLElement, proposal: NoiseProposal): void {
+    const applyButton = container.querySelector<HTMLButtonElement>('[data-intel-action="apply"]');
+    const undoButton = container.querySelector<HTMLButtonElement>('[data-intel-action="undo"]');
+    const statusEl = container.querySelector<HTMLElement>('.domain-intel-status');
+    const showStatus = (message: string): void => {
+      if (statusEl) statusEl.textContent = message;
+    };
+    applyButton?.addEventListener('click', () => {
+      void (async () => {
+        applyButton.disabled = true;
+        try {
+          await addDomainToBlacklist(proposal.domain);
+          // 適用後は取り消せる: the undo appears in place of the apply button.
+          if (undoButton) undoButton.hidden = false;
+          showStatus(msg('domainIntel_applied', { domain: proposal.domain }, `${proposal.domain} を記録対象外にしました。`));
+        } catch (error) {
+          applyButton.disabled = false;
+          showStatus(errorMessage(error));
+        }
+      })();
+    });
+    undoButton?.addEventListener('click', () => {
+      void (async () => {
+        undoButton.disabled = true;
+        try {
+          await removeDomainFromBlacklist(proposal.domain);
+          undoButton.hidden = true;
+          if (applyButton) applyButton.disabled = false;
+          showStatus(msg('domainIntel_undone', { domain: proposal.domain }, `${proposal.domain} の記録対象外を取り消しました。`));
+        } catch (error) {
+          undoButton.disabled = false;
+          showStatus(errorMessage(error));
+        }
+      })();
+    });
+  }
+
+  function buildProposalRow(proposal: NoiseProposal): string {
+    const percent = Math.round(proposal.share * 100);
+    return `<div class="domain-intel-proposal-row">
+      <div class="domain-intel-proposal-info">
+        <span class="domain-intel-proposal-domain">${escapeHtml(proposal.domain)}</span>
+        <div class="domain-intel-proposal-meta">${escapeHtml(msg('domainIntel_proposalMeta', { count: proposal.count, percent }, `${proposal.count} 件 (割合 ${percent}%)`))}</div>
+      </div>
+      <div class="domain-intel-proposal-actions">
+        <button type="button" class="secondary-btn" data-intel-action="apply"
+          data-intel-domain="${escapeHtml(proposal.domain)}">${escapeHtml(t('domainIntel_applyBtn'))}</button>
+        <button type="button" class="secondary-btn" data-intel-action="undo" hidden
+          data-intel-domain="${escapeHtml(proposal.domain)}">${escapeHtml(t('domainIntel_undoBtn'))}</button>
+      </div>
+      <div class="domain-intel-status" role="status" aria-live="polite"></div>
+    </div>`;
+  }
+
+  function renderIntel(agg: ReturnType<typeof aggregateDomainAnalysis>, range: { since: number | null; until: number | null }): void {
+    if (!intelBiasLine || !intelProposals) return;
+    // 少件数の縮退: below the minimum the panel shows the reason instead of a
+    // share judgment built on a handful of rows.
+    const bias = computeSourceBias(agg, range);
+    if (!bias.enough) {
+      intelBiasLine.textContent = msg('domainIntel_notEnough', { count: bias.total }, `記録が ${bias.total} 件のため偏りを判定できません。`);
+      intelBiasLine.hidden = false;
+      hideIntelProposalsOnly();
+      return;
+    }
+    // 断定口調にしない: the share line states the basis (件数・期間・算出式),
+    // not a verdict.
+    const periodLabel = periodBasisLabel(bias.since, bias.until, formatLocalDateString);
+    intelBiasLine.textContent = msg('domainIntel_biasLine', {
+      domain: bias.topDomain ?? '',
+      percent: Math.round(bias.topShare * 100),
+      total: bias.total,
+      period: periodLabel,
+      formula: bias.formula,
+    }, `${bias.topDomain} が全 ${bias.total} 件のうち約 ${Math.round(bias.topShare * 100)}% を占めています。偏っている可能性があります。`);
+    intelBiasLine.hidden = false;
+
+    const proposals = buildNoiseProposals(agg);
+    if (proposals.length === 0) {
+      hideIntelProposalsOnly();
+      return;
+    }
+    setElementHtml(intelProposals, `
+      <p class="domain-intel-help">${escapeHtml(t('domainIntel_proposalHelp'))}</p>
+      ${proposals.map(buildProposalRow).join('')}`);
+    intelProposals.hidden = false;
+    for (const proposal of proposals) {
+      wireProposalActions(intelProposals, proposal);
+    }
+  }
+
+  function hideIntelProposalsOnly(): void {
+    if (intelProposals) {
+      intelProposals.hidden = true;
+      clearElement(intelProposals);
+    }
+  }
+
   const lifecycle = createAsyncDataPanelLifecycle({
     label: 'domainAnalysisPanel',
     notices: [notices],
@@ -163,12 +290,17 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
 
         if (rows.length === 0) {
           notices.showEmpty();
+          // 空集合では偏りの判定面も隠す: 前回の render が残らない。
+          hideIntel();
           return;
         }
 
         const agg = aggregateDomainAnalysis(rows);
         renderRankRows(domainBody, agg.domains, domainNameCell);
         renderRankRows(urlBody, agg.urls, plainNameCell);
+        // The intel section rides the same fetch's period basis (件数・期間);
+        // unbounded endpoints pass through as null and the basis shows it.
+        renderIntel(agg, { since: since ?? null, until: until ?? null });
 
         if (agg.unknownDomainCount > 0 && unknownNotice) {
           unknownNotice.textContent = msg(
@@ -228,6 +360,9 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       rowCapNotice = container.querySelector('#domainAnalysisRowCap');
       domainTruncated = container.querySelector('#domainAnalysisDomainTruncated');
       urlTruncated = container.querySelector('#domainAnalysisUrlTruncated');
+      // Domain-intel section (PBI 2026-10-23-10).
+      intelBiasLine = container.querySelector('#domainIntelBiasLine');
+      intelProposals = container.querySelector('#domainIntelProposals');
       notices.register('empty', container.querySelector('#domainAnalysisEmptyState'), {
         i18nKey: 'domainAnalysis_empty',
         fallbackText: 'No browsing records match the selected period and tag.',
@@ -260,6 +395,8 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       rowCapNotice = null;
       domainTruncated = null;
       urlTruncated = null;
+      intelBiasLine = null;
+      intelProposals = null;
     },
   };
 }

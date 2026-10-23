@@ -2548,6 +2548,33 @@
     "message": "Domain Analysis",
     "description": "Domain analysis panel title"
   },
+  "domainIntel_heading": {
+    "message": "Source bias"
+  },
+  "domainIntel_biasLine": {
+    "message": "{domain} accounts for about {percent}% of all {total} records — the sources may be lopsided. Period: {period}"
+  },
+  "domainIntel_notEnough": {
+    "message": "Only {count} records — too few to judge a bias."
+  },
+  "domainIntel_proposalHelp": {
+    "message": "Candidates for noisy sources. Applying excludes them from recording; you can undo."
+  },
+  "domainIntel_proposalMeta": {
+    "message": "{count} records ({percent}% share)"
+  },
+  "domainIntel_applyBtn": {
+    "message": "Exclude from recording"
+  },
+  "domainIntel_undoBtn": {
+    "message": "Undo"
+  },
+  "domainIntel_applied": {
+    "message": "{domain} is now excluded from recording."
+  },
+  "domainIntel_undone": {
+    "message": "Undid the exclusion of {domain}."
+  },
   "domainAnalysis_tagLabel": {
     "message": "Tag (optional)",
     "description": "Domain analysis tag filter label"

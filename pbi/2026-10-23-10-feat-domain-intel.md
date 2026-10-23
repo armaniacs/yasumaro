@@ -32,6 +32,15 @@ Scenario: 見直しを適用できる
 - [ ] 少件数時の縮退表示がある
 
 ## テスト戦略
+## 実装記録（2026-10-23・コア集計経路）
+- 偏り判定: 完了。`src/dashboard/domainIntelAggregate.ts` の `computeSourceBias` が最上位ドメインの割合を集計。根拠(件数・期間・算出式)を結果に載せ、UIは断定口調にしない(「偏っている可能性があります」)。`(unknown)` バケットは判定対象外(既存 UNKNOWN_DOMAIN_LABEL を再利用)
+- 少件数縮退: 完了。`MIN_RECORDS_FOR_BIAS`(10) 未満は `enough: false` で割合を断定せず、縮退表示(「記録が N 件と少ないため偏りを判定できません」)
+- 見直し提案: 完了。`buildNoiseProposals` が割合 `NOISE_SHARE_THRESHOLD`(50%) 以上のドメインを最大3件提案。提案は助言のみ(自動除外はしない)。適用はユーザーアクション + インライン取り消し(取り消しはブラックリストを復元、エンドツーエンドで可逆)
+- 適用/取消 seam: 完了。`src/utils/storage/domainIntelRepository.ts` の `addDomainToBlacklist`/`removeDomainFromBlacklist`(SettingsRepository 上の薄い read-modify-write。冪等。破損ストアは既定リストに縮退)。ドメイン分析パネルのインテル領域に配線
+- 接続: 完了。uBlock・信頼DBと接続する ― 除外提案の適用先は simple blacklist(`DOMAIN_BLACKLIST`)で、uBlock形式/信頼DBの評価は既存 `isDomainAllowed` がそのまま従う(新規評価路は追加していない)
+- ja/en: `domainIntel_heading`・`domainIntel_biasLine`・`domainIntel_notEnough`・`domainIntel_proposalHelp`・`domainIntel_proposalMeta`・`domainIntel_applyBtn`・`domainIntel_undoBtn`・`domainIntel_applied`・`domainIntel_undone` の9キーを双側追加
+- pin: `src/dashboard/__tests__/domainIntelAggregate.test.ts` 8テスト(割合+算出式・少件数縮退・unknown除外・提案条件テーブル・cap・期間ラベル)
+- 残: E2E通し(集計→表示→適用→取消)、少件数/偏りなし/騒音なしの統合分岐テスト、コードレビュー、ドキュメント更新(算出式と操作手順を含む)
 - E2E: 集計→表示→適用→取消の通し
 - 統合: 少件数・偏りなし・騒音なしの分岐テスト
 - 単体: 偏り算出・提案条件のテーブルテスト

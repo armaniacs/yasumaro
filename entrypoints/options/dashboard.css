@@ -2025,6 +2025,55 @@ button#changeMasterPassword:hover {
   display: none;
 }
 
+/* Domain-intel section (PBI 2026-10-23-10): bias line + exclusion proposals.
+ * Neutral tone, design tokens only; proposals are advisory with an undo. */
+.domain-intel-proposal-row {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.domain-intel-proposal-domain {
+  font-size: 13px;
+}
+
+.domain-intel-proposal-meta {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.domain-intel-proposal-actions {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-intel-proposal-actions .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
+.domain-intel-help {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.domain-intel-status {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 4px;
+}
+
+.domain-intel-status:empty {
+  display: none;
+}
+
 .pending-pagination {
   display: flex;
   align-items: center;

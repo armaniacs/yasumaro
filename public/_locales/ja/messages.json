@@ -2466,6 +2466,33 @@
     "message": "ドメイン分析",
     "description": "Domain analysis panel title"
   },
+  "domainIntel_heading": {
+    "message": "情報源の偏り"
+  },
+  "domainIntel_biasLine": {
+    "message": "{domain} が全 {total} 件のうち約 {percent}% を占めています。偏っている可能性があります。対象期間: {period}"
+  },
+  "domainIntel_notEnough": {
+    "message": "記録が {count} 件と少ないため、偏りを判定できません。"
+  },
+  "domainIntel_proposalHelp": {
+    "message": "騒音の多い情報源の候補です。適用すると記録対象外になり、取り消せます。"
+  },
+  "domainIntel_proposalMeta": {
+    "message": "{count} 件 (割合 {percent}%)"
+  },
+  "domainIntel_applyBtn": {
+    "message": "記録対象外にする"
+  },
+  "domainIntel_undoBtn": {
+    "message": "取り消す"
+  },
+  "domainIntel_applied": {
+    "message": "{domain} を記録対象外にしました。"
+  },
+  "domainIntel_undone": {
+    "message": "{domain} の記録対象外を取り消しました。"
+  },
   "domainAnalysis_tagLabel": {
     "message": "タグ（任意）",
     "description": "Domain analysis tag filter label"
