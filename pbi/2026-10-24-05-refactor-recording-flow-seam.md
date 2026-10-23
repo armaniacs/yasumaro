@@ -30,9 +30,9 @@ Scenario: sink追加が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] 順序所有が単一seamに寄り、呼び側が順序知識を持たない
-- [ ] visitPayloadがwire梱包adapterに留まる
-- [ ] 既存テスト全緑
+- [x] 順序所有が単一seamに寄り、呼び側が順序知識を持たない
+- [x] visitPayloadがwire梱包adapterに留まる
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -97,8 +97,8 @@ grep -n "preSaveSteps\|SAVE_SINK_ORDER" src/background/pipeline/RecordingOrchest
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

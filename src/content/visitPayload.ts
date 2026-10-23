@@ -14,7 +14,59 @@
 
 import type { PageState } from './pageState.js';
 import type { RecordingData, ContentResponse } from '../messaging/types.js';
-import { buildVisitStats, type VisitStats } from './visitReporter.js';
+import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+
+/** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
+export interface VisitByteStats {
+  pageBytes?: number | undefined;
+  candidateBytes?: number | undefined;
+  originalBytes?: number | undefined;
+  cleansedBytes?: number | undefined;
+}
+
+/** AI-cleanse stat subset shared by both send paths. */
+export interface VisitAiStats {
+  aiSummaryOriginalBytes?: number | undefined;
+  aiSummaryCleansedBytes?: number | undefined;
+  aiSummaryCleansedElements?: number | undefined;
+  aiSummaryCleansedReason?: AiSummaryCleansedReason | undefined;
+  aiSummaryCleansedReasons?: string[] | undefined;
+}
+
+/** One field-selection source for both send paths (auto-visit + manual fetch). */
+export interface VisitStats {
+  byteStats: VisitByteStats;
+  aiStats: VisitAiStats;
+  fallbackTriggered: boolean;
+  fallbackReason: string | undefined;
+}
+
+/**
+ * Build the shared stat selection from PageState. The `|| undefined` /
+ * `!== 'none'` normalization lives here once — not once per send path.
+ * Owned by this wire adapter so both send paths share one selection.
+ */
+export function buildVisitStats(pageState: PageState): VisitStats {
+  const ai = pageState.lastAiSummaryCleansedStats;
+  return {
+    byteStats: {
+      pageBytes: pageState.lastByteStats.pageBytes || undefined,
+      candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+      originalBytes: pageState.lastByteStats.originalBytes || undefined,
+      cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
+    },
+    aiStats: {
+      aiSummaryOriginalBytes: ai.aiSummaryOriginalBytes || undefined,
+      aiSummaryCleansedBytes: ai.aiSummaryCleansedBytes || undefined,
+      aiSummaryCleansedElements: ai.aiSummaryCleansedElements || undefined,
+      aiSummaryCleansedReason:
+        ai.aiSummaryCleansedReason !== 'none' ? ai.aiSummaryCleansedReason : undefined,
+      aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
+    },
+    fallbackTriggered: pageState.lastFallbackTriggered,
+    fallbackReason: pageState.lastFallbackReason,
+  };
+}
 
 /** RecordingData の field サブセット — content script が送信できる部分。
  *  title / url は background 側で補完されるため含まない。 */

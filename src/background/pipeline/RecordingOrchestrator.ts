@@ -61,6 +61,37 @@ export interface RecordOptions {
   settings?: Settings;
 }
 
+/**
+ * Build the pre-save order in one place: truncate, then the NN04 gate table
+ * rows in canonical table order, then the AI shaping steps. The gate table
+ * owns the gate ORDER (ADR 2026-09-28-recording-gate-order-canonical); this
+ * list only carries each step's errorStrategy / maxRetries / offlineRetry
+ * execution metadata. Reordering the table reorders execution.
+ */
+function buildPreSaveSteps(init: {
+  privacyHeaders: PipelineStep['execute'];
+  privacyPipelineFactory: PrivacyPipelineFactory;
+}): PipelineStep[] {
+  const gateExecutors: Record<RecordingGate, PipelineStep['execute']> = {
+    domainFilter: checkDomainFilterStep,
+    permission: checkPermissionStep,
+    trust: checkTrustDomainStep,
+    privacyHeaders: init.privacyHeaders,
+    duplicate: checkDuplicateStep,
+  };
+  const gateSteps: PipelineStep[] = RECORDING_GATE_TABLE.map((row) => ({
+    name: row.name,
+    errorStrategy: ErrorStrategy.FATAL,
+    execute: gateExecutors[row.name],
+  }));
+  return [
+    { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
+    ...gateSteps,
+    { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: createProcessPrivacyPipelineStep(init.privacyPipelineFactory) },
+    { name: 'extractSentences', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, execute: extractSentencesStep },
+    { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
+  ];
+}
 export class RecordingOrchestrator {
   private steps: PipelineStep[];
   private preSaveSteps: PipelineStep[];
@@ -87,30 +118,12 @@ export class RecordingOrchestrator {
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
 
-    // Recording-allowance precedence: the gate rows derive from
-    // RECORDING_GATE_TABLE order (ADR 2026-09-28-recording-gate-order-canonical).
-    // Only this list carries each step's errorStrategy / maxRetries /
-    // offlineRetry; the table owns the gate ORDER, this list owns the
-    // EXECUTION metadata. Reordering the table reorders execution.
-    const gateExecutors: Record<RecordingGate, PipelineStep['execute']> = {
-      domainFilter: checkDomainFilterStep,
-      permission: checkPermissionStep,
-      trust: checkTrustDomainStep,
+    // Pre-save order lives in buildPreSaveSteps; the gate rows still derive
+    // from RECORDING_GATE_TABLE order (NN04 shape unchanged).
+    this.preSaveSteps = buildPreSaveSteps({
       privacyHeaders: this.createPrivacyHeadersStep(),
-      duplicate: checkDuplicateStep,
-    };
-    const gateSteps: PipelineStep[] = RECORDING_GATE_TABLE.map((row) => ({
-      name: row.name,
-      errorStrategy: ErrorStrategy.FATAL,
-      execute: gateExecutors[row.name],
-    }));
-    this.preSaveSteps = [
-      { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
-      ...gateSteps,
-      { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: createProcessPrivacyPipelineStep(deps.privacyPipelineFactory ?? defaultPrivacyPipelineFactory) },
-      { name: 'extractSentences', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, execute: extractSentencesStep },
-      { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
-    ];
+      privacyPipelineFactory: deps.privacyPipelineFactory ?? defaultPrivacyPipelineFactory,
+    });
 
     // Full 13-step introspection surface (SavePhase owns the tail rows,
     // including the retry-subset projection the retry entry point uses).
@@ -165,6 +178,20 @@ export class RecordingOrchestrator {
       this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
       return true;
     });
+  }
+
+  /**
+   * Single order seam: the full intake-to-save-tail step order in one query.
+   * Callers learn only record / preview / retryObsidianWrite — order knowledge
+   * lives here, derived from the pre-save order above and the SavePhase tail.
+   * The gate subsequence keeps the NN04 table-driven shape; adding a sink is
+   * one SAVE_FAN_OUT row and this order follows without caller edits.
+   */
+  flowOrder(): string[] {
+    return [
+      ...this.preSaveSteps.map((step) => step.name),
+      ...this.savePhase.steps().map((step) => step.name),
+    ];
   }
 
   /**
