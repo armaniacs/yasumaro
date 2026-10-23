@@ -60,6 +60,7 @@ import {
 import { addDomainToBlacklist, removeDomainFromBlacklist } from '../../../utils/storage/domainIntelRepository.js';
 import { formatLocalDateString } from '../../../utils/localDate.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { wireProposalRow as wireSharedProposalRow } from '../../proposalRowWiring.js';
 
 function navigateToHistoryWithDomain(domain: string): void {
   tryNavigateTyped('panel-sqlite-history', { searchDomain: domain });
@@ -161,41 +162,26 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
    * (自動除外はしない). The undo restores the blacklist instead of the
    * previous panel state, so the action is reversible end-to-end.
    */
-  function wireProposalActions(container: HTMLElement, proposal: NoiseProposal): void {
-    const applyButton = container.querySelector<HTMLButtonElement>('[data-intel-action="apply"]');
-    const undoButton = container.querySelector<HTMLButtonElement>('[data-intel-action="undo"]');
-    const statusEl = container.querySelector<HTMLElement>('.domain-intel-status');
-    const showStatus = (message: string): void => {
-      if (statusEl) statusEl.textContent = message;
-    };
-    applyButton?.addEventListener('click', () => {
-      void (async () => {
-        applyButton.disabled = true;
-        try {
+  function wireProposalActions(row: HTMLElement, proposal: NoiseProposal): void {
+    wireSharedProposalRow(
+      row,
+      {
+        apply: '[data-intel-action="apply"]',
+        undo: '[data-intel-action="undo"]',
+        status: '.domain-intel-status',
+      },
+      {
+        apply: async () => {
           await addDomainToBlacklist(proposal.domain);
           // 適用後は取り消せる: the undo appears in place of the apply button.
-          if (undoButton) undoButton.hidden = false;
-          showStatus(msg('domainIntel_applied', { domain: proposal.domain }, `${proposal.domain} を記録対象外にしました。`));
-        } catch (error) {
-          applyButton.disabled = false;
-          showStatus(errorMessage(error));
-        }
-      })();
-    });
-    undoButton?.addEventListener('click', () => {
-      void (async () => {
-        undoButton.disabled = true;
-        try {
+          return msg('domainIntel_applied', { domain: proposal.domain }, `${proposal.domain} を記録対象外にしました。`);
+        },
+        undo: async () => {
           await removeDomainFromBlacklist(proposal.domain);
-          undoButton.hidden = true;
-          if (applyButton) applyButton.disabled = false;
-          showStatus(msg('domainIntel_undone', { domain: proposal.domain }, `${proposal.domain} の記録対象外を取り消しました。`));
-        } catch (error) {
-          undoButton.disabled = false;
-          showStatus(errorMessage(error));
-        }
-      })();
-    });
+          return msg('domainIntel_undone', { domain: proposal.domain }, `${proposal.domain} の記録対象外を取り消しました。`);
+        },
+      },
+    );
   }
 
   function buildProposalRow(proposal: NoiseProposal): string {
@@ -247,9 +233,11 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
       <p class="domain-intel-help">${escapeHtml(t('domainIntel_proposalHelp'))}</p>
       ${proposals.map(buildProposalRow).join('')}`);
     intelProposals.hidden = false;
-    for (const proposal of proposals) {
-      wireProposalActions(intelProposals, proposal);
-    }
+    const rows = intelProposals.querySelectorAll<HTMLElement>('.domain-intel-proposal-row');
+    proposals.forEach((proposal, index) => {
+      const row = rows[index];
+      if (row) wireProposalActions(row, proposal);
+    });
   }
 
   function hideIntelProposalsOnly(): void {

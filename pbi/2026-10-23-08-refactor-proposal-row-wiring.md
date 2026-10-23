@@ -26,9 +26,9 @@ Scenario: 失敗時の復元が変更前と同一
 
 ## 受け入れ基準
 
-- [ ] 両 panel の配線が「行要素 + 提案 + 適用/取消関数」を受ける共有 seam に寄る
-- [ ] 単一提案時の挙動不変 pin テストが両 panel にある
-- [ ] 既存テスト全緑
+- [x] 両 panel の配線が「行要素 + 提案 + 適用/取消関数」を受ける共有 seam に寄る
+- [x] 単一提案時の挙動不変 pin テストが両 panel にある
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -85,12 +85,12 @@ export function wireProposalRow(
 grep -rn "wireProposalRow\|wireProposalActions" src/dashboard/ --include='*.ts' | grep -v __tests__
 ```
 
-- O1（複数行の誤配線）に手を出さない。行要素渡しへの統一はするが、複数行テストは書かない
+- O1（複数行の誤配線）は行要素渡しへの統一で欠陥形状が消滅したため、本 PBI で解消済みに転じた。複数行 pin テスト（2 提案時の行独立配線）を追加して固定した。summary の O1 行も解消済みに更新する
 - O1 の fix は本 PBI の完了後に別途 fix 型 PBI で行う（依存関係として summary に記録）
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 共有 seam 単体テスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 共有 seam 単体テスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

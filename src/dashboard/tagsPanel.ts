@@ -16,6 +16,7 @@ import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 import { createTagChip } from './tagChip.js';
 import { buildTagNormalizationProposals, type TagNormalizationProposal } from './tagNormalizationProposals.js';
 import { applyTagRename, undoTagRename, TagRenameError } from './tagRenameApplier.js';
+import { wireProposalRow as wireSharedProposalRow } from './proposalRowWiring.js';
 import { queryLogs, updateLog, isServiceError } from './dashboardSqliteService.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { escapeHtml } from '../utils/htmlEscape.js';
@@ -229,12 +230,6 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   }
 
   function wireProposalRow(row: HTMLElement, proposal: TagNormalizationProposal): void {
-    const applyButton = row.querySelector<HTMLButtonElement>('[data-norm-action="apply"]');
-    const undoButton = row.querySelector<HTMLButtonElement>('[data-norm-action="undo"]');
-    const statusEl = row.querySelector<HTMLElement>('.norm-proposal-status');
-    const showRowStatus = (message: string): void => {
-      if (statusEl) statusEl.textContent = message;
-    };
     const deps = {
       queryByTag: async (tag: string) => {
         const result = await queryLogs({ tagFilter: tag, limit: MAX_BATCH_READ_RECORDS });
@@ -248,34 +243,30 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
         if (isServiceError(result)) throw new Error(result.error);
       },
     };
-    applyButton?.addEventListener('click', () => {
-      void (async () => {
-        applyButton.disabled = true;
-        try {
+    wireSharedProposalRow(
+      row,
+      {
+        apply: '[data-norm-action="apply"]',
+        undo: '[data-norm-action="undo"]',
+        status: '.norm-proposal-status',
+      },
+      {
+        apply: async () => {
           const { updated } = await applyTagRename(deps, proposal.from, proposal.to);
-          if (undoButton) undoButton.hidden = false;
-          showRowStatus(getMessageOr('normProposalApplied', `${updated} 件のタグを書き換えました。`));
-        } catch (error) {
-          applyButton.disabled = false;
-          const updated = error instanceof TagRenameError ? error.updated : 0;
-          showRowStatus(`${errorMessage(error)} (${updated} 件適用済み)`);
-        }
-      })();
-    });
-    undoButton?.addEventListener('click', () => {
-      void (async () => {
-        undoButton.disabled = true;
-        try {
+          return getMessageOr('normProposalApplied', `${updated} 件のタグを書き換えました。`);
+        },
+        undo: async () => {
           await undoTagRename(deps, proposal.from, proposal.to);
-          undoButton.hidden = true;
-          if (applyButton) applyButton.disabled = false;
-          showRowStatus(getMessageOr('normProposalUndone', '取り消しました。'));
-        } catch (error) {
-          undoButton.disabled = false;
-          showRowStatus(errorMessage(error));
-        }
-      })();
-    });
+          return getMessageOr('normProposalUndone', '取り消しました。');
+        },
+      },
+      {
+        formatApplyError: (error) => {
+          const updated = error instanceof TagRenameError ? error.updated : 0;
+          return `${errorMessage(error)} (${updated} 件適用済み)`;
+        },
+      },
+    );
   }
 
   async function renderNormProposals(): Promise<void> {

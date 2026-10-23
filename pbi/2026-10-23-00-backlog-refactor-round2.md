@@ -37,7 +37,7 @@ RICE = Reach（影響するモジュール・呼出箇所・テストの数）×
 
 | 番号 | 内容 | 根拠 file:line | 後続 |
 |---|---|---|---|
-| O1 | domainAnalysisPanel の複数提案行が先頭行のみ配線（先頭に N 重 listener） | `domainAnalysisPanel.ts:249-251` 呼出し × `:164-166` 親 querySelector（主スレッドが実読で確認） | fix。NN08 の後に実施 |
+| O1 | domainAnalysisPanel の複数提案行が先頭行のみ配線（先頭に N 重 listener） | `domainAnalysisPanel.ts:249-251` 呼出し × `:164-166` 親 querySelector（主スレッドが実読で確認） | ✅ 解消済み（NN08 の行渡し統一で欠陥形状が消滅。複数行 pin テスト追加で固定） |
 | O2 | tagsPanel の提案スキャン・適用が最新 200 件切断（201 件目以降の旧タグは提案・適用漏れ） | `tagsPanel.ts:214,217,239` | fix/仕様判断（全件走査か paging か） |
 | O3 | `CONDITION_LABELS` をモジュール頂で `t()` 評価（言語切替後に再評価されない） | `savedCollectionsPanelView.ts:36-40`（主スレッドが実読で確認） | fix（関数化・再評価） |
 | O4 | `buildNoiseProposals` がソートなしで slice（入力の降順に暗黙依存） | `domainIntelAggregate.ts:97-103` | 要判断（明示ソートは表示順変更） |
