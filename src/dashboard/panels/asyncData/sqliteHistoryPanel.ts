@@ -6,7 +6,7 @@ import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import type { SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
-import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
+import { createSqliteHistoryModel, isPrivacyJudgedEntry } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
@@ -23,6 +23,10 @@ import {
   showEntryRegenerateError,
   showDeleteConfirm,
   hideDeleteConfirm,
+  showStarConfirm,
+  hideStarConfirm,
+  showStarUndo,
+  hideStarUndo,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 import { renderSavedCollectionsRegion } from './savedCollectionsPanelView.js';
@@ -283,6 +287,70 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   /** Handler-local in-flight guard: repeat clicks while the bulk run is executing are ignored. */
   let bulkRegenerateInFlight = false;
 
+  // --- Bulk star (PBI 2026-10-23-07) ----------------------------------------
+  // Panel-local undo state: the applied batch's changed ids. Invalidated by a
+  // selection change (the batch no longer matches what the user sees), by the
+  // undo itself, and by panel teardown — never silently by a state refresh.
+  let starUndoIds: number[] | null = null;
+
+  function invalidateStarUndo(): void {
+    starUndoIds = null;
+    if (container) hideStarUndo(container);
+  }
+
+  function handleStarSelected(): void {
+    if (!container) return;
+    const { entries, selectedIds } = model.getState();
+    if (selectedIds.size === 0) return;
+    const privateCount = entries.filter(
+      (entry) => selectedIds.has(entry.id) && isPrivacyJudgedEntry(entry),
+    ).length;
+    showStarConfirm(container, selectedIds.size, privateCount);
+  }
+
+  async function handleStarSelectedConfirm(excludePrivate: boolean): Promise<void> {
+    if (!container) return;
+    hideStarConfirm(container);
+    const state = model.getState();
+    const selected = Array.from(state.selectedIds);
+    if (selected.length === 0) return;
+    // The exclusion is the user's choice (the confirm's second button): the
+    // privacy-judged rows are dropped from the batch before the model runs.
+    const excludedPrivate = excludePrivate
+      ? selected.filter((id) => {
+        const entry = state.entries.find((candidate) => candidate.id === id);
+        return entry !== undefined && isPrivacyJudgedEntry(entry);
+      })
+      : [];
+    const excludedIds = new Set(excludedPrivate);
+    const ids = selected.filter((id) => !excludedIds.has(id));
+    const result = await model.bulkSetStarred(ids, true);
+    if (result.changedIds.length > 0) {
+      starUndoIds = result.changedIds;
+      showStarUndo(container, result.changedIds.length);
+    }
+    // The model already dispatched operationError + notify on a total failure;
+    // only toast the partial/full success here, naming the exclusions.
+    if (result.starredCount > 0) {
+      const body = excludedPrivate.length > 0
+        ? t('historyStarResultExcluded', [String(result.starredCount), String(excludedPrivate.length)])
+        : t('historyStarResult', [String(result.starredCount)]);
+      notify(t('historyStarSelected'), body);
+    }
+  }
+
+  async function handleStarUndo(): Promise<void> {
+    if (!container) return;
+    if (starUndoIds === null) return;
+    const ids = starUndoIds;
+    starUndoIds = null;
+    hideStarUndo(container);
+    const result = await model.bulkSetStarred(ids, false);
+    if (result.starredCount > 0) {
+      notify(t('historyStarSelected'), t('historyStarUndoDone', [String(result.starredCount)]));
+    }
+  }
+
   async function handleRegenerateSelected(): Promise<void> {
     if (bulkRegenerateInFlight) return;
     const { entries, selectedIds } = model.getState();
@@ -347,14 +415,26 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       onPageChange: (page) => model.changePage(page),
       onToggleStar: (id) => void model.toggleStar(id),
       onDelete: (id) => void handleDelete(id),
-      onSelectionChange: (id, selected) => model.selectEntry(id, selected),
+      onSelectionChange: (id, selected) => {
+        invalidateStarUndo();
+        model.selectEntry(id, selected);
+      },
       onTagFilterClick: (tag) => model.filterByTag(tag),
       onContentToggle: (controlsId) => toggleContentArea(container ?? document, controlsId),
-      onSelectAll: (checked) => model.selectAllEntries(checked),
-      onClearSelection: () => model.clearEntrySelection(),
+      onSelectAll: (checked) => {
+        invalidateStarUndo();
+        model.selectAllEntries(checked);
+      },
+      onClearSelection: () => {
+        invalidateStarUndo();
+        model.clearEntrySelection();
+      },
       onAppend: () => void handleAppendToObsidian(),
       onDeleteSelected: () => handleDeleteSelected(),
       onDeleteSelectedConfirm: () => void handleDeleteSelectedConfirm(),
+      onStarSelected: () => handleStarSelected(),
+      onStarSelectedConfirm: (excludePrivate) => void handleStarSelectedConfirm(excludePrivate),
+      onStarUndo: () => void handleStarUndo(),
       onRegenerateSelected: () => void handleRegenerateSelected(),
       onTagFilterClear: () => model.clearTagFilter(),
       onRegenerate: (id, mode, force) => void handleRegenerate(id, mode, force),
@@ -562,6 +642,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       }
       pendingPages = [];
       savedCollections = {};
+      starUndoIds = null;
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.
       // (Also clears bulk bar listener references via the selection clear.)

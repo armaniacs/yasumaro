@@ -4064,6 +4064,62 @@
       }
     }
   },
+  "historyStarSelected": {
+    "message": "選択行にスター"
+  },
+  "historyStarConfirm": {
+    "message": "選択した $1 件にスターを付けますか？（うち $2 件はプライベート判定）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "private": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarApply": {
+    "message": "適用"
+  },
+  "historyStarApplyExcludePrivate": {
+    "message": "プライベート判定を除いて適用"
+  },
+  "historyStarResult": {
+    "message": "$1 件にスターを付けました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyStarResultExcluded": {
+    "message": "$1 件にスターを付けました（プライベート判定 $2 件を除外）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "excluded": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarUndoBtn": {
+    "message": "取り消す"
+  },
+  "historyStarUndoDone": {
+    "message": "$1 件のスターを取り消しました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyRegenerateSelectedResult": {
     "message": "$1 件成功・$2 件失敗",
     "placeholders": {

@@ -389,6 +389,24 @@ export type BulkDeleteResult = {
   error: string | null;
 };
 
+// PBI 2026-10-23-07: bulk star result — changedIds drives the undo (the rows
+// this batch actually flipped), the counters explain the partial outcome.
+export type BulkStarResult = {
+  starredCount: number;
+  skippedAlreadyInState: number;
+  error: string | null;
+  changedIds: number[];
+};
+
+/**
+ * Privacy-judged predicate (PBI 2026-10-23-07): the record's content went
+ * through PII masking. Pure — the panel shows the count, the bulk star uses
+ * it for the exclusion branch.
+ */
+export function isPrivacyJudgedEntry(entry: BrowsingLogEntry): boolean {
+  return (entry.masked_count ?? 0) > 0;
+}
+
 export interface NavigateInParams {
   searchTag?: string;
   searchDomain?: string;
@@ -417,6 +435,12 @@ export interface SqliteHistoryModel {
   search(query: string): void;
   /** Recall a saved collection (PBI 2026-10-23-06): one dispatch + one fetch with every stored condition. */
   applyCollection(rawQuery: Record<string, unknown>): void;
+  /**
+   * Bulk star (PBI 2026-10-23-07): set or unset the star for the given ids.
+   * Rows already in the target state are skipped (never toggled down by a
+   * bulk star); the undo re-runs the same core over the changed ids.
+   */
+  bulkSetStarred(ids: number[], starred: boolean): Promise<BulkStarResult>;
   selectDate(dateStr: string): Promise<void>;
   changeSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void>;
   filterByTag(tag: string): void;
@@ -793,6 +817,40 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     return { deletedCount, error };
   }
 
+  // PBI 2026-10-23-07: bulk star core shared by the apply and the undo. Rows
+  // already in the target state are skipped — a bulk star must never toggle
+  // an already-starred row down. The undo re-runs this core over the batch's
+  // changed ids, so a manual star between apply and undo is reverted with the
+  // batch (the undo restores the batch, not per-row history).
+  async function bulkSetStarred(ids: number[], starred: boolean): Promise<BulkStarResult> {
+    let flipped = 0;
+    let skippedAlreadyInState = 0;
+    let error: string | null = null;
+    const changedIds: number[] = [];
+    await mutateWithInvalidation(async () => {
+      for (const id of ids) {
+        const entry = state.entries.find((candidate) => candidate.id === id);
+        if (!entry || entry.is_starred === (starred ? 1 : 0)) {
+          skippedAlreadyInState += 1;
+          continue;
+        }
+        const result = await toggleStar(id);
+        if (isServiceError(result)) {
+          error = result.error;
+          break;
+        }
+        dispatch({ type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 });
+        changedIds.push(id);
+        flipped += 1;
+      }
+      if (changedIds.length === 0 && error !== null) {
+        return { kind: 'error', error };
+      }
+      return { kind: 'success', action: null };
+    });
+    return { starredCount: flipped, skippedAlreadyInState, error, changedIds };
+  }
+
   async function appendSelectedToObsidian(): Promise<AppendResult | null> {
     if (state.selectedIds.size === 0) return null;
     const ids = Array.from(state.selectedIds);
@@ -913,6 +971,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     deleteEntry,
     appendSelectedToObsidian,
     deleteSelectedEntries,
+    bulkSetStarred,
     search,
     applyCollection,
     selectDate,

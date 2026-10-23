@@ -41,6 +41,11 @@ Scenario: 一括で飛ぶ
 - ja/en: 完了。`commandRecordPage`（commands説明）・`omniboxRecordDefault`・`recordSuccessTitle`・`recordSuccessBody` の4キーを双側追加
 - pin: `src/background/handlers/__tests__/entryFrictionHandlers.test.ts` 9テスト（コマンドルーティング・不安定URL・通知条件・共有コアの縮退）。既存 service-worker 169テスト・background 全体 3227テスト green
 - 再開点: (1) 一括スター（BDD「スター・タグ・コレクション追加のいずれかが適用され、取消ができる」）: history panel の bulk bar にスター適用+取消を追加、プライベート判定記録（`cleansed_reason` 設定行）の除外を付ける (2) omnibox の検索語ハンドオフ（`?q=` deep link → history panel の searchDomain）は M1/M3 入力選択と同じ機構のため棚上げ (3) サイドパネルは `sidePanel` 権限の段階判断が先
+- 一括スター: 完了（2026-10-23・Wave B）。`bulkSetStarred(ids, starred)` をモデルに追加（公開メソッド 23→24、pin 更新済み）。既に状態が合致する行はスキップ（一括スターは既スター行を絶対に解除しない）、undo は同じコアを changedIds に再実行。サービスエラーで中断し部分件数を返す
+- 確認と取消: 完了。bulk bar に2段階 confirm（適用 / プライベート判定を除いて適用 / キャンセル）と inline undo を追加。confirm は選択変更・再読込で自動的に隠れる（stale confirm は生存しない）、undo はパネルローカルの changedIds が保持し、選択変更・undo 実行・teardown で無効化（state 更新では隠さない）
+- プライベート判定除外: 完了。`isPrivacyJudgedEntry`（`masked_count > 0`、PII マスク通過行）をモデルの純粋関数として公開。confirm テキストに選択中のプライベート判定件数を常に表示し、除外ボタンは件数が 0 のときだけ隠れる（一括適用が何を取り込むかを隠さない）。除外選択時は対象行を batch から除いてモデルへ渡す
+- ja/en: `historyStarSelected`・`historyStarConfirm`・`historyStarApply`・`historyStarApplyExcludePrivate`・`historyStarResult`・`historyStarResultExcluded`・`historyStarUndoBtn`・`historyStarUndoDone` の8キーを双側追加
+- pin: `src/dashboard/panels/asyncData/__tests__/sqliteHistoryModel.bulkStar.test.ts` 6テスト（適用/undo/部分失敗/空リスト/プライベート判定述語）
 - E2E: omnibox記録→履歴表示、一括適用→取消の通し
 - 統合: 権限不足時の縮退表示テスト
 - 単体: キーバインド・選択集合操作のテーブルテスト

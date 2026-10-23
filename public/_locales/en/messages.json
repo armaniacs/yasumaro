@@ -4165,6 +4165,62 @@
       }
     }
   },
+  "historyStarSelected": {
+    "message": "Star selected"
+  },
+  "historyStarConfirm": {
+    "message": "Star the $1 selected rows? ($2 private-judged)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "private": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarApply": {
+    "message": "Apply"
+  },
+  "historyStarApplyExcludePrivate": {
+    "message": "Apply excluding private-judged"
+  },
+  "historyStarResult": {
+    "message": "Starred $1 rows",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyStarResultExcluded": {
+    "message": "Starred $1 rows (excluded $2 private-judged)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "excluded": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarUndoBtn": {
+    "message": "Undo"
+  },
+  "historyStarUndoDone": {
+    "message": "Undid star for $1 rows",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyRegenerateSelectedResult": {
     "message": "$1 succeeded, $2 failed",
     "placeholders": {
