@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.56] - 2026-10-24
+
+このリリースは建築改善ループ第2弾（録画スライス＋popup/サービス群の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- truncate切り詰めを単一所有化し、二重encodeを解消する（PBI 2026-10-24-01）
+- 通知方針をtable化し、mockを削減する（PBI 2026-10-24-02）
+- 一時停止概念を深いmoduleに集約する（PBI 2026-10-24-03）
+- 記録可否判定の純粋核をgate tableに一本化する（PBI 2026-10-24-04）
+- 記録フロー順序を単一seam化する（PBI 2026-10-24-05）
+- tab lifecycle操作を1 module化する（PBI 2026-10-24-06）
+- extractor外部seamを単一化する（PBI 2026-10-24-07）
+- popup tab照会を1 module化する（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1161ファイル・17149テスト）。型エラー baseline 449 を維持
+
 ## [6.9.55] - 2026-10-24
 
 このリリースは建築改善ループ（codebase-design 語彙の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
