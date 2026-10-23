@@ -26,9 +26,9 @@ Scenario: 送信失敗の型分岐
 
 ## 受け入れ基準
 
-- [ ] 3 gateway の normalize 5行ガードが共有 helper に集約される
-- [ ] gateway の戻り型に `SendFailure` が透過する（または吸収設計を明文化する）
-- [ ] `sendWithPolicy.test.ts`・`regenerateSummaryGateway.test.ts` が全緑 + ask/research の単体テスト新規
+- [x] 3 gateway の normalize 5行ガードが共有 helper に集約される
+- [x] gateway の戻り型に `SendFailure` が透過する（または吸収設計を明文化する）
+- [x] `sendWithPolicy.test.ts`・`regenerateSummaryGateway.test.ts` が全緑 + ask/research の単体テスト新規
 
 ## テスト戦略（t_wada スタイル）
 
@@ -83,7 +83,7 @@ grep -rn "typeof (raw as" src/messaging/*.ts | grep -v __tests__
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + ask/research gateway 単体テスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + ask/research gateway 単体テスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

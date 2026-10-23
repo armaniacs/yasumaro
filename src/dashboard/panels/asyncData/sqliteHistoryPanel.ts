@@ -221,19 +221,29 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       // misleading failure row for what is actually "still running".
       if (result.error === 'in_flight') return;
 
-      const needsForce = result.needsForce === true;
-      const attemptedProviders = Array.isArray(result.attemptedProviders)
-        ? result.attemptedProviders.filter((p): p is string => typeof p === 'string')
-        : [];
+      // The widened gateway return carries SendFailure explicitly: narrow the
+      // response-only fields with `in` so the union is visible to the type
+      // checker. At runtime a SendFailure never carries these keys, so each
+      // guard evaluates exactly as the direct access it replaces.
+      const needsForce = 'needsForce' in result && result.needsForce === true;
+      const attemptedProviders =
+        'attemptedProviders' in result && Array.isArray(result.attemptedProviders)
+          ? result.attemptedProviders.filter((p): p is string => typeof p === 'string')
+          : [];
       const detail = formatRegenerateErrorDetail(
         attemptedProviders,
-        result.slotFailures,
+        'slotFailures' in result ? result.slotFailures : undefined,
         t('historyRegenerateProvidersTried'),
       );
       showEntryRegenerateError(
         container,
         id,
-        mapRegenerateError(result.error, needsForce, result.reason, result.slotFailures),
+        mapRegenerateError(
+          result.error,
+          needsForce,
+          'reason' in result ? result.reason : undefined,
+          'slotFailures' in result ? result.slotFailures : undefined,
+        ),
         {
           ...(needsForce
             ? {

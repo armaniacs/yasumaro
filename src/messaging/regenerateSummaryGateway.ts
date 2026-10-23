@@ -11,7 +11,9 @@
 
 import type { ResponseForType } from './types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
+import type { SendFailure } from './sendWithPolicy.js';
 
 export const REGENERATE_TIMEOUT_MS = 60_000;
 /** Sentinel so callers can map the timeout to a localized message. */
@@ -29,7 +31,7 @@ type RegenerateSummaryResponse = ResponseForType<'REGENERATE_SUMMARY'>;
 
 export async function regenerateSummary(
   params: RegenerateSummaryParams,
-): Promise<RegenerateSummaryResponse> {
+): Promise<RegenerateSummaryResponse | SendFailure> {
   return sendWithPolicy(
     // Own timeout bounds the call; the seam adds version stamping and
     // validation inside that budget. Retries stay off for the same reason
@@ -47,9 +49,6 @@ export async function regenerateSummary(
   );
 }
 
-function normalizeRegenerateResponse(raw: unknown): RegenerateSummaryResponse {
-  if (raw && typeof raw === 'object' && 'success' in raw && typeof (raw as { success: unknown }).success === 'boolean') {
-    return raw as RegenerateSummaryResponse;
-  }
-  return { success: false, error: 'Invalid REGENERATE_SUMMARY response' };
+function normalizeRegenerateResponse(raw: unknown): RegenerateSummaryResponse | SendFailure {
+  return asSuccessResponse<RegenerateSummaryResponse>(raw, 'Invalid REGENERATE_SUMMARY response');
 }

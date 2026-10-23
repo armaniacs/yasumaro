@@ -11,7 +11,9 @@
  */
 
 import type { ResponseForType } from './types.js';
+import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
+import type { SendFailure } from './sendWithPolicy.js';
 
 export const ASK_HISTORY_TIMEOUT_MS = 60_000;
 /** Sentinel so callers can map the timeout to a localized message. */
@@ -24,7 +26,7 @@ export interface AskHistoryParams {
 
 type AskHistoryResponse = ResponseForType<'ASK_HISTORY'>;
 
-export async function askHistory(params: AskHistoryParams): Promise<AskHistoryResponse> {
+export async function askHistory(params: AskHistoryParams): Promise<AskHistoryResponse | SendFailure> {
   return sendWithPolicy(
     {
       type: 'ASK_HISTORY',
@@ -39,9 +41,6 @@ export async function askHistory(params: AskHistoryParams): Promise<AskHistoryRe
   );
 }
 
-function normalizeAskHistoryResponse(raw: unknown): AskHistoryResponse {
-  if (raw && typeof raw === 'object' && 'success' in raw && typeof (raw as { success: unknown }).success === 'boolean') {
-    return raw as AskHistoryResponse;
-  }
-  return { success: false, error: 'Invalid ASK_HISTORY response' };
+function normalizeAskHistoryResponse(raw: unknown): AskHistoryResponse | SendFailure {
+  return asSuccessResponse<AskHistoryResponse>(raw, 'Invalid ASK_HISTORY response');
 }

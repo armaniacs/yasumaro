@@ -10,7 +10,9 @@
  * the failure reason instead of racing the in-flight report.
  */
 
+import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
+import type { SendFailure } from './sendWithPolicy.js';
 import type { ResponseForType } from './types.js';
 
 export const RESEARCH_REPORT_TIMEOUT_MS = 60_000;
@@ -29,7 +31,7 @@ export interface ResearchReportParams {
 
 type ResearchReportResponse = ResponseForType<'EXPORT_RESEARCH_REPORT'>;
 
-export async function exportResearchReport(params: ResearchReportParams): Promise<ResearchReportResponse> {
+export async function exportResearchReport(params: ResearchReportParams): Promise<ResearchReportResponse | SendFailure> {
   return sendWithPolicy(
     {
       type: 'EXPORT_RESEARCH_REPORT',
@@ -44,9 +46,6 @@ export async function exportResearchReport(params: ResearchReportParams): Promis
   );
 }
 
-function normalizeResearchReportResponse(raw: unknown): ResearchReportResponse {
-  if (raw && typeof raw === 'object' && 'success' in raw && typeof (raw as { success: unknown }).success === 'boolean') {
-    return raw as ResearchReportResponse;
-  }
-  return { success: false, error: RESEARCH_REPORT_TIMEOUT_ERROR };
+function normalizeResearchReportResponse(raw: unknown): ResearchReportResponse | SendFailure {
+  return asSuccessResponse<ResearchReportResponse>(raw, RESEARCH_REPORT_TIMEOUT_ERROR);
 }
