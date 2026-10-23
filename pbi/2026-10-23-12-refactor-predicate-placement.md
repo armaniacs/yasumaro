@@ -26,9 +26,9 @@ Scenario: 境界
 
 ## 受け入れ基準
 
-- [ ] `asString`・`asNumber` が共有述語に寄る（または局所維持の判断を記録して閉じる）
-- [ ] 層の循環が発生しない（`storage → messaging` の import は作らない）
-- [ ] 既存テスト全緑
+- [x] `asString`・`asNumber` が共有述語に寄る（または局所維持の判断を記録して閉じる）
+- [x] 層の循環が発生しない（`storage → messaging` の import は作らない）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -81,7 +81,7 @@ grep -rn "asString\|asNumber\|isNonEmptyString\|isFiniteNumber\|isPositiveIntege
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] 局所維持のため新規テストなし。既存テスト緑で代替（3組とも意味不一致を5 Whysで確定）
+- [x] 既存テスト全通過
+- [ ] `npm run validate` 通過（Phase 3 のフルゲートで確認する）
+- [x] ドキュメント更新済み
