@@ -75,32 +75,18 @@ export type RegenerateSummaryResponse = RecordingResult & {
 };
 
 /**
- * PBI 2026-10-23-08: asking the history wire response. Mirrors the background
- * AskHistoryOutcome: a discriminated union so success and failure narrow apart.
- * A record-less question answers with status 'no_evidence' plus a widening
- * suggestion instead of fabricating an answer.
+ * PBI 2026-10-23-08/09: ask/report wire responses and the answer citation.
+ * Canonical definitions live in responseCanonical.ts (single owner with the
+ * background outcome aliases); imported for local use and re-exported here
+ * so existing import paths keep working.
  */
-export type AskHistoryResponse =
-  | { success: true; status: 'answered'; answer: string; citations: AskHistoryCitation[] }
-  | { success: true; status: 'no_evidence'; suggestion: string }
-  | { success: false; error: string };
+import type {
+  AskHistoryCitation,
+  AskHistoryResponse,
+  ResearchReportResponse,
+} from './responseCanonical.js';
 
-/** One citation the answer links back to (shape shared with AskEvidence). Producers must always include it (empty array, never undefined): callers narrow on success and read it directly. */
-export interface AskHistoryCitation {
-  id: number;
-  title: string;
-  url: string;
-  snippet: string;
-}
-
-/**
- * PBI 2026-10-23-09: report generation wire response. Mirrors the background
- * ResearchReportOutcome: a discriminated union so success and failure narrow
- * apart. A failure carries the reason in error, never a fake success.
- */
-export type ResearchReportResponse =
-  | { success: true; recordCount: number; deliveredTo: ('download' | 'obsidian')[] }
-  | { success: false; error: string };
+export type { AskHistoryCitation, AskHistoryResponse, ResearchReportResponse };
 
 /**
  * 記録処理の結果型

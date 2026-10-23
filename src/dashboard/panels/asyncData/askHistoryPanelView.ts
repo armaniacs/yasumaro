@@ -16,6 +16,10 @@ import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
+import type { AskHistoryCitation } from '../../../messaging/responseCanonical.js';
+import type { AskRunResult } from '../../../messaging/responseRepack.js';
+
+export type { AskRunResult } from '../../../messaging/responseRepack.js';
 
 /**
  * Canonical owner of the ask-history region placeholder id. The view keeps a
@@ -24,23 +28,8 @@ import type { SavedCollection } from '../../../utils/storage/savedCollections.js
  */
 export const ASK_HISTORY_REGION_ID = 'sqlite-ask-history';
 
-/** One citation the answer links back to (BDD: 元記録に飛べる). */
-export interface AskCitation {
-  id: number;
-  title: string;
-  url: string;
-  snippet: string;
-}
-
-/** Outcome of one ask run, as the Panel normalizes it from the wire. */
-export interface AskRunResult {
-  ok: boolean;
-  error?: string;
-  status?: 'answered' | 'no_evidence';
-  answer?: string;
-  suggestion?: string;
-  citations?: AskCitation[];
-}
+/** Citation paint model: alias of the canonical wire citation (single definition). */
+export type AskCitation = AskHistoryCitation;
 
 /** Event bundle the Panel builds once and hands to the region renderer. */
 export interface AskHistoryRegionActions {
@@ -144,7 +133,7 @@ export function clearAskStatus(region: ParentNode): void {
  * original record (元記録に飛べる) — the snippet is the cleansed text, shown
  * as the quote the answer was built from.
  */
-export function showAskAnswer(region: ParentNode, answer: string, citations: AskCitation[]): void {
+export function showAskAnswer(region: ParentNode, answer: string, citations: AskHistoryCitation[]): void {
   const el = answerEl(region);
   if (!el) return;
   const links = citations

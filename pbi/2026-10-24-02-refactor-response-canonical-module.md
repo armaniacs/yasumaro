@@ -30,10 +30,10 @@ Scenario: 実行時は変更前と同一
 
 ## 受け入れ基準
 
-- [ ] Outcome双子の片方が消える（messaging層の正本に一本化）
-- [ ] scope整形がvalidatorに一本化されhandler内再検査が消える
-- [ ] view二重定義が解消される
-- [ ] 既存テスト全緑
+- [x] Outcome双子の片方が消える（messaging層の正本に一本化）
+- [x] scope整形がvalidatorに一本化されhandler内再検査が消える
+- [x] view二重定義が解消される
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -97,8 +97,8 @@ grep -rn "AskHistoryOutcome\|ResearchReportOutcome" src/ --include='*.ts' | grep
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

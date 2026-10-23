@@ -15,6 +15,9 @@ import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
+import type { ReportRunResult } from '../../../messaging/responseRepack.js';
+
+export type { ReportRunResult } from '../../../messaging/responseRepack.js';
 
 /**
  * Canonical owner of the research-report region placeholder id. The view keeps
@@ -22,14 +25,6 @@ import { withBusyButton } from './busyButton.js';
  * so the string has a single source without moving the shell markup.
  */
 export const RESEARCH_REPORT_REGION_ID = 'sqlite-research-report';
-
-/** Outcome of one report run, as the Panel normalizes it from the wire. */
-export interface ReportRunResult {
-  ok: boolean;
-  error?: string;
-  recordCount?: number;
-  deliveredTo?: ('download' | 'obsidian')[];
-}
 
 /** Event bundle the Panel builds once and hands to the region renderer. */
 export interface ResearchReportRegionActions {

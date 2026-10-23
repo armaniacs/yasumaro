@@ -31,6 +31,14 @@ import { MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 import { addLog } from '../utils/logger/core.js';
 import { LogType } from '../utils/logger/types.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
+import type {
+  ResearchReportResponse,
+  ResearchReportScope,
+} from '../messaging/responseCanonical.js';
+
+/** Outcome and scope aliases of the canonical wire shapes (single definition). */
+export type ResearchReportOutcome = ResearchReportResponse;
+export type { ResearchReportScope };
 
 /** Local export path default mirrors the review summary's setting. */
 const DEFAULT_EXPORT_PATH = 'Yasumaro';
@@ -46,19 +54,6 @@ export interface ResearchReportRecord {
   createdAt: number;
   /** Persisted post-cleansing summary; empty when the record has no one (未読穴). */
   summary: string;
-}
-
-/** Outcome of one report run. Failures carry a user-facing reason. */
-export type ResearchReportOutcome =
-  | { success: true; recordCount: number; deliveredTo: ('download' | 'obsidian')[] }
-  | { success: false; error: string };
-
-/** Scope of one report: the panel conditions (PBI 06 collection shape). */
-export interface ResearchReportScope {
-  search?: string;
-  tag?: string;
-  since?: number;
-  until?: number;
 }
 
 /** Report generator, created once and shared by the message handler. */

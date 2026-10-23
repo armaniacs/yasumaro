@@ -17,7 +17,14 @@ import type { AiDomainPolicy } from '../../utils/storage/types.js';
 import { resolveAiDomainPolicy } from '../../utils/storage/aiDomainPolicy.js';
 import { localDayRangeFromDateString } from '../../utils/localDate.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-import type { AskHistoryCitation } from '../../messaging/types.js';
+import type {
+  AskCollectionScope,
+  AskHistoryCitation,
+  AskHistoryResponse,
+} from '../../messaging/responseCanonical.js';
+import { normalizeCollectionScope } from '../../messaging/responseCanonical.js';
+
+export { normalizeCollectionScope };
 
 /** Evidence rows carried back with the answer (BDD: 根拠3件のリンク). */
 export const ASK_EVIDENCE_COUNT = 3;
@@ -27,10 +34,8 @@ export const ASK_SNIPPET_MAX_CHARS = 500;
 /** One evidence row: the citation the answer links back to (元記録に飛べる). Shape single-sourced from the wire type. */
 export type AskEvidence = AskHistoryCitation;
 
-export type AskHistoryOutcome =
-  | { success: true; status: 'answered'; answer: string; citations: AskEvidence[] }
-  | { success: true; status: 'no_evidence'; suggestion: string }
-  | { success: false; error: string };
+/** Handler outcome: alias of the canonical wire response (single definition). */
+export type AskHistoryOutcome = AskHistoryResponse;
 
 /**
  * Search seam the handler reads evidence through (FTS/LIKE dispatching op,
@@ -162,20 +167,6 @@ export function buildWidenSuggestion(reason: 'no_matches' | 'no_quotable' | 'dom
 }
 
 /**
- * Background-side scope read (PBI 2026-10-23-08): the tag and date fields the
- * QA applies to the evidence search. Unknown shapes degrade to null (縮退の
- * 出口) — the recall-path parse stays owned by the dashboard's
- * savedCollectionQuery module; this helper reads only the scope fields the
- * background is allowed to apply.
- */
-export function normalizeCollectionScope(raw: Record<string, unknown> | null): { tag: string | null; date: string | null } {
-  if (raw === null) return { tag: null, date: null };
-  const tag = typeof raw.tag === 'string' && raw.tag.trim().length > 0 ? raw.tag.trim() : null;
-  const date = typeof raw.date === 'string' && raw.date.trim().length > 0 ? raw.date.trim() : null;
-  return { tag, date };
-}
-
-/**
  * Collection scope post-filter (PBI 2026-10-23-08): the FTS/LIKE search op
  * takes no tag/date params, so the collection narrows the evidence rows
  * post-hoc — tag membership and the local day range from the collection's
@@ -183,7 +174,7 @@ export function normalizeCollectionScope(raw: Record<string, unknown> | null): {
  */
 export function matchesCollectionScope(
   row: BrowsingLogRecord,
-  scope: { tag: string | null; date: string | null },
+  scope: AskCollectionScope,
   dayRange: { since: number; until: number } | null,
 ): boolean {
   if (scope.tag !== null) {
@@ -243,7 +234,7 @@ async function runAsk(
   deps: AskHistoryHandlerDeps,
   question: string,
   resolveDomainPolicy: (url: string) => AiDomainPolicy,
-  scope: { tag: string | null; date: string | null },
+  scope: AskCollectionScope,
 ): Promise<AskHistoryOutcome> {
   const trimmed = question.trim();
   if (trimmed.length === 0) {

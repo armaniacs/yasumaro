@@ -30,6 +30,11 @@ import type {
   LogForwardMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import {
+  REPORT_SCOPE_NUMBER_FIELDS,
+  REPORT_SCOPE_STRING_FIELDS,
+} from './responseCanonical.js';
+import type { ResearchReportScope } from './responseCanonical.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 import { ALL_DASHBOARD_SQLITE_SUBTYPES } from './sqliteOperationSecurity.js';
 
@@ -705,8 +710,11 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
       if (typeof scope !== 'object' || scope === null) {
         throw new ValidationError('ExportResearchReportValidator', 'payload.scope must be object', 'scope');
       }
-      const s = scope as Record<string, unknown>;
-      for (const field of ['search', 'tag'] as const) {
+      // Field sets are owned by the canonical scope tables (single owner
+      // with the handler-side normalizer); only the rejection wording stays
+      // here. The checked shape is ResearchReportScope.
+      const s: Record<string, unknown> & Partial<ResearchReportScope> = scope as Record<string, unknown>;
+      for (const field of REPORT_SCOPE_STRING_FIELDS) {
         const value = s[field];
         if (value !== undefined && typeof value !== 'string') {
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be string`, field);
@@ -715,7 +723,7 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, field);
         }
       }
-      for (const field of ['since', 'until'] as const) {
+      for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
         const value = s[field];
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);

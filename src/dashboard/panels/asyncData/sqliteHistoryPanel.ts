@@ -35,6 +35,8 @@ import { renderAskHistoryRegion, type AskRunResult } from './askHistoryPanelView
 import { askHistory } from '../../../messaging/askHistoryGateway.js';
 import { renderResearchReportRegion, type ReportRunResult } from './researchReportPanelView.js';
 import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
+import { toAskRunResult, toReportRunResult } from '../../../messaging/responseRepack.js';
+import type { ResearchReportScope } from '../../../messaging/responseCanonical.js';
 import {
   hasCollectionCondition,
   newCollectionId,
@@ -603,6 +605,8 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   }
 
   // --- Ask history (PBI 2026-10-23-08) ---------------------------------------
+  // Wire-to-view repack lives in the seam module (responseRepack.ts); this
+  // thin shell only supplies the i18n error translation.
 
   async function askQuestion(
     question: string,
@@ -610,21 +614,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   ): Promise<AskRunResult> {
     try {
       const result = await askHistory({ question, collectionId });
-      if (result.success === false) {
-        return { ok: false, error: translateHistoryError(result.error ?? '') };
-      }
-      if (result.status === 'no_evidence') {
-        return result.suggestion !== undefined
-          ? { ok: true, status: 'no_evidence', suggestion: result.suggestion }
-          : { ok: true, status: 'no_evidence' };
-      }
-      const citations = result.citations;
-      return {
-        ok: true,
-        status: 'answered',
-        ...(result.answer !== undefined ? { answer: result.answer } : {}),
-        ...(citations !== undefined ? { citations } : {}),
-      };
+      return toAskRunResult(result, translateHistoryError);
     } catch (e: unknown) {
       // Defensive default: the gateway always resolves (timeout arrives as a
       // SendFailure), so this catch only covers unexpected throws.
@@ -633,16 +623,13 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   }
 
   // --- Research report (PBI 2026-10-23-09) -----------------------------------
+  // Wire-to-view repack lives in the seam module (responseRepack.ts); this
+  // thin shell only builds the scope from the current panel conditions.
 
   async function generateReport(sendToObsidian: boolean): Promise<ReportRunResult> {
     try {
       const state = model.getState();
-      const scope: {
-        search?: string;
-        tag?: string;
-        since?: number;
-        until?: number;
-      } = {};
+      const scope: ResearchReportScope = {};
       if (state.searchQuery.trim().length > 0) scope.search = state.searchQuery.trim();
       if (state.activeTagFilter !== null && state.activeTagFilter.trim().length > 0) {
         scope.tag = state.activeTagFilter.trim();
@@ -654,16 +641,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         scope.until = range.until;
       }
       const result = await exportResearchReport({ scope, sendToObsidian });
-      if (result.success === false) {
-        return { ok: false, error: result.error ?? '' };
-      }
-      const recordCount = result.recordCount;
-      const deliveredTo = result.deliveredTo;
-      return {
-        ok: true,
-        ...(recordCount !== undefined ? { recordCount } : {}),
-        ...(deliveredTo !== undefined ? { deliveredTo } : {}),
-      };
+      return toReportRunResult(result);
     } catch (e: unknown) {
       // Defensive default: the gateway always resolves (timeout arrives as a
       // SendFailure), so this catch only covers unexpected throws.
