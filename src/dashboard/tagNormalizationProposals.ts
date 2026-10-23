@@ -14,15 +14,12 @@
  */
 
 import type { TagNormalizationEntry } from '../utils/types.js';
+import { foldTagForMatch } from '../utils/tagUtils.js';
 
 /** One rename proposal: an existing tag and its canonical form. */
 export interface TagNormalizationProposal {
   from: string;
   to: string;
-}
-
-function foldTag(tag: string): string {
-  return tag.trim().normalize('NFKC').toLowerCase();
 }
 
 /**
@@ -37,13 +34,13 @@ export function buildTagNormalizationProposals(
   if (distinctTags.length === 0 || dict.length === 0) return [];
   const map = new Map<string, string>();
   for (const entry of dict) {
-    const key = foldTag(entry.from);
+    const key = foldTagForMatch(entry.from);
     if (key !== '' && !map.has(key)) map.set(key, entry.to);
   }
   const proposals: TagNormalizationProposal[] = [];
   const proposed = new Set<string>();
   for (const tag of distinctTags) {
-    const folded = foldTag(tag);
+    const folded = foldTagForMatch(tag);
     if (folded === '' || proposed.has(folded)) continue;
     const to = map.get(folded);
     if (to === undefined) continue;
@@ -64,18 +61,18 @@ export function buildTagNormalizationProposals(
  */
 export function renameTagInCsv(tagsCsv: string | null | undefined, from: string, to: string): string {
   if (typeof tagsCsv !== 'string' || tagsCsv === '') return tagsCsv ?? '';
-  const wanted = foldTag(from);
+  const wanted = foldTagForMatch(from);
   if (wanted === '') return tagsCsv;
   const renamed = tagsCsv
     .split(',')
-    .map((t) => (foldTag(t) === wanted ? to.trim() : t.trim()))
+    .map((t) => (foldTagForMatch(t) === wanted ? to.trim() : t.trim()))
     .filter((t) => t !== '');
   // Dedupes case-only collisions the rename may create (same rule as
   // normalizeTags: first occurrence wins).
   const seen = new Set<string>();
   const out: string[] = [];
   for (const tag of renamed) {
-    const key = foldTag(tag);
+    const key = foldTagForMatch(tag);
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(tag);

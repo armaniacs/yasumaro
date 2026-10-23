@@ -10,7 +10,7 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
-import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
+import { DEFAULT_CATEGORIES, foldTagForMatch } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 import { createTagChip } from './tagChip.js';
@@ -191,8 +191,8 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (!from || !to) return;
 
     // Check for duplicates (case-insensitive, matching normalizeTags behavior)
-    const normalizedFrom = from.trim().normalize('NFKC').toLowerCase();
-    if (normalizationEntries.some(e => e.from.trim().normalize('NFKC').toLowerCase() === normalizedFrom)) {
+    const normalizedFrom = foldTagForMatch(from);
+    if (normalizationEntries.some(e => foldTagForMatch(e.from) === normalizedFrom)) {
       void showAlertDialog({ message: getMessageOr('duplicateNormEntryError', 'このFrom値は既に登録されています')});
       return;
     }

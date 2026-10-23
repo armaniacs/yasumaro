@@ -26,8 +26,8 @@ Scenario: 空白・全角・大文字の境界
 
 ## 受け入れ基準
 
-- [ ] `trim().normalize('NFKC').toLowerCase()` の直書きが tagUtils・proposals・tagsPanel から消える
-- [ ] 既存テスト（tagUtils・tagNormalizationProposals・tagsPanel 系）が全緑
+- [x] `trim().normalize('NFKC').toLowerCase()` の直書きが tagUtils・proposals・tagsPanel から消える
+- [x] 既存テスト（tagUtils・tagNormalizationProposals・tagsPanel 系）が全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -82,7 +82,7 @@ grep -rn "normalize('NFKC').toLowerCase()" src/ --include='*.ts' | grep -v __tes
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過（tagUtils・tagNormalizationProposals・tagsPanel 系）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過（tagUtils・tagNormalizationProposals・tagsPanel 系）
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み（CONTEXT.md の用語追加は不要。必要なら本 PBI に記録）
+- [x] ドキュメント更新済み（CONTEXT.md の用語追加は不要。必要なら本 PBI に記録）
