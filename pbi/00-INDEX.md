@@ -14,6 +14,27 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-23 リファクタリング診断 round2（yasumaro-refactor、12件） ― ⬜ 12件未着手 🔧非機能追加 RICE順: 01(52) → 02(36) → 03(24) → 04(18.7) → 05(15) → 06(13.3) → 07(10.7) → 08(9.6) → 09(9.6) → 10(5) → 11(2.7) → 12(2.7)
+
+/yasumaro-refactor による読み取り専用診断（7 レンズ、5 パス: 4 領域の並列走査 + 主スレッド横断）で約 70 件の観測を 12 PBI + 対象外 13 件 + 却下 12 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-23-00-backlog-refactor-round2.md](2026-10-23-00-backlog-refactor-round2.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-23-01-refactor-tag-fold-ssot.md](2026-10-23-01-refactor-tag-fold-ssot.md) | refactor | 52 | 1.0 | タグ fold の SSOT 化（tagUtils 3・proposals・tagsPanel 2 の同一式10箇所）。O6/O8 の fix は本 PBI の後に実施 |
+| ⬜ 02 | [2026-10-23-02-refactor-settings-value-types.md](2026-10-23-02-refactor-settings-value-types.md) | refactor | 36 | 2.0 | Settings 値型整備 + cast 2件撤去 + 未使用変数整理。NN09・NN10 は本 PBI の後に実施 |
+| ⬜ 03 | [2026-10-23-03-refactor-gateway-response-seam.md](2026-10-23-03-refactor-gateway-response-seam.md) | refactor | 24 | 1.0 | gateway 3件の応答ガード共通化 + SendFailure 透過型 + ask/research 単体テスト新規 |
+| ⬜ 04 | [2026-10-23-04-refactor-batch-read-cap.md](2026-10-23-04-refactor-batch-read-cap.md) | refactor | 18.7 | 0.5 | バッチ読込上限 200 の limits 集約（数値不変。乖離時は分名） |
+| ⬜ 05 | [2026-10-23-05-refactor-share-percent-format.md](2026-10-23-05-refactor-share-percent-format.md) | refactor | 15 | 0.5 | 割合％丸め4箇所の共通化 + 境界 table 新規 |
+| ⬜ 06 | [2026-10-23-06-refactor-new-module-hygiene.md](2026-10-23-06-refactor-new-module-hygiene.md) | refactor | 13.3 | 1.0 | 新設5箇所の小衛生 bundle（unknown 化・死定数・cast・素数・二重取得） |
+| ⬜ 07 | [2026-10-23-07-refactor-busy-button-seam.md](2026-10-23-07-refactor-busy-button-seam.md) | refactor | 10.7 | 1.0 | 処理中ボタン定型4複製の共有 seam + view 単体テスト新規 |
+| ⬜ 08 | [2026-10-23-08-refactor-proposal-row-wiring.md](2026-10-23-08-refactor-proposal-row-wiring.md) | refactor | 9.6 | 1.5 | 提案行配線の共通化（単一提案の挙動不変。O1 の fix は本 PBI の後に分離実施） |
+| ⬜ 09 | [2026-10-23-09-refactor-repository-seam-contract.md](2026-10-23-09-refactor-repository-seam-contract.md) | refactor | 9.6 | 1.5 | repository 3件の注入化 + 破損読込ログ + 統合テスト新規（NN02 の後に実施） |
+| ⬜ 10 | [2026-10-23-10-refactor-router-collection-accessor.md](2026-10-23-10-refactor-router-collection-accessor.md) | refactor | 5 | 0.5 | router アクセサの inline（残す判断での close あり。NN02 の後が望ましい） |
+| ⬜ 11 | [2026-10-23-11-refactor-content-flag-watcher.md](2026-10-23-11-refactor-content-flag-watcher.md) | refactor | 2.7 | 0.5 | content フラグ監視の共通化検討（寄せない判断での close あり） |
+| ⬜ 12 | [2026-10-23-12-refactor-predicate-placement.md](2026-10-23-12-refactor-predicate-placement.md) | refactor | 2.7 | 0.5 | ガード述語の配置判断（層逆流禁止。維持判断での close あり） |
+
+実行順の推奨: RICE 順。**NN02 → NN09・NN10、NN01 → O6/O8、NN08 → O1、NN02/NN09 → O5** の前後関係を守る。NN10・NN11・NN12 は判断記録での close あり。対象外 O1-O13 は fix/owner 判断で別途扱う。
+
 ### 2026-10-23 新機能5候補(M6見送り) ― 🔶 5件部分実装（06/07/08/09/10 コア経路完了）
 
 新機能観点の棚卸し(M1〜M6)のうちM1/M2/M3/M4/M5をPBI化。M6は見送り。詳細は [2026-10-23-00-backlog-yasumaro-newfeat.md](2026-10-23-00-backlog-yasumaro-newfeat.md)。07/10は06と独立のため並列着手可。08/09は06確定後に着手する。
