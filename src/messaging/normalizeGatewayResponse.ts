@@ -6,7 +6,7 @@
  * sendWithPolicy (PBI 2026-10-23-03): the next gateway would have copied a
  * fourth variant and the RESEARCH_REPORT copy already drifted to a reused
  * timeout sentence. This module owns the single definition of "well-formed"
- * (a boolean `success` flag, plus a non-empty string `error` on failures
+ * (a boolean `success` flag, plus a non-blank string `error` on failures
  * and never an array) so each gateway normalize shrinks to a one-line
  * delegation that only pins its own failure sentence.
  */
@@ -17,7 +17,7 @@ import type { SendFailure } from './sendWithPolicy.js';
  * Return the raw payload untouched when it carries a boolean `success`
  * flag, otherwise the failure envelope with the caller's pinned sentence.
  * A `success === false` payload additionally needs a non-empty string
- * `error`: bare failures (`{ success: false }`), empty errors, and
+ * `error`: bare failures (`{ success: false }`), blank errors, and
  * non-string errors are worker-side shape breaks, so they map to the
  * caller's sentence instead of reaching the panel as an empty display.
  * Arrays never pass, even with an injected `success` property.
@@ -38,7 +38,7 @@ export function asSuccessResponse<R extends { success: boolean }>(
   ) {
     const candidate = raw as { success: boolean; error?: string };
     if (candidate.success === false) {
-      if (typeof candidate.error !== 'string' || candidate.error.length === 0) {
+      if (typeof candidate.error !== 'string' || candidate.error.trim().length === 0) {
         return { success: false, error: invalidError };
       }
     }

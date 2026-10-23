@@ -113,6 +113,25 @@ describe('proposalRowWiring', () => {
       expect(applyButton.disabled).toBe(false);
     });
 
+    it('drops re-entrant clicks while a run is in flight', async () => {
+      let release!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      const actions: ProposalRowActions = {
+        apply: vi.fn().mockReturnValue(gate.then(() => 'applied message')),
+        undo: vi.fn().mockResolvedValue('undone message'),
+      };
+      const { applyButton, status } = wireWith(actions);
+
+      applyButton.click();
+      applyButton.click();
+      release();
+      await waitForMock(() => expect(status.textContent).toBe('applied message'));
+
+      expect(actions.apply).toHaveBeenCalledTimes(1);
+    });
+
     it('restores the apply button and shows the error when apply fails', async () => {
       const actions: ProposalRowActions = {
         apply: vi.fn().mockRejectedValue(new Error('apply failed')),

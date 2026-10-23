@@ -33,6 +33,7 @@ const MALFORMED_CASES: Array<[string, unknown]> = [
   ['bare failure without error', { success: false }],
   ['failure with undefined error', { success: false, error: undefined }],
   ['failure with empty error', { success: false, error: '' }],
+  ['failure with blank error', { success: false, error: '   ' }],
   ['failure with null error', { success: false, error: null }],
   ['failure with numeric error', { success: false, error: 42 }],
   ['failure with boolean error', { success: false, error: false }],

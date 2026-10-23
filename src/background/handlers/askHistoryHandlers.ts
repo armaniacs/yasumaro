@@ -17,19 +17,15 @@ import type { AiDomainPolicy } from '../../utils/storage/types.js';
 import { resolveAiDomainPolicy } from '../../utils/storage/aiDomainPolicy.js';
 import { localDayRangeFromDateString } from '../../utils/localDate.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import type { AskHistoryCitation } from '../../messaging/types.js';
 
 /** Evidence rows carried back with the answer (BDD: 根拠3件のリンク). */
 export const ASK_EVIDENCE_COUNT = 3;
 /** Snippet cap per evidence row — the context the local model reads. */
 export const ASK_SNIPPET_MAX_CHARS = 500;
 
-/** One evidence row: the citation the answer links back to (元記録に飛べる). */
-export interface AskEvidence {
-  id: number;
-  title: string;
-  url: string;
-  snippet: string;
-}
+/** One evidence row: the citation the answer links back to (元記録に飛べる). Shape single-sourced from the wire type. */
+export type AskEvidence = AskHistoryCitation;
 
 export type AskHistoryOutcome =
   | { success: true; status: 'answered'; answer: string; citations: AskEvidence[] }

@@ -55,6 +55,10 @@ export function wireProposalRow(
   };
   applyButton?.addEventListener('click', () => {
     void (async () => {
+      // Re-entrant clicks while a run is in flight are dropped: a disabled
+      // button fires no click in browsers, but programmatic clicks would
+      // otherwise run the action twice.
+      if (applyButton.disabled) return;
       applyButton.disabled = true;
       try {
         const message = await actions.apply();
@@ -75,6 +79,7 @@ export function wireProposalRow(
   });
   undoButton?.addEventListener('click', () => {
     void (async () => {
+      if (undoButton.disabled) return;
       undoButton.disabled = true;
       try {
         const message = await actions.undo();

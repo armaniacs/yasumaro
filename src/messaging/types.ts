@@ -85,7 +85,7 @@ export type AskHistoryResponse =
   | { success: true; status: 'no_evidence'; suggestion: string }
   | { success: false; error: string };
 
-/** One citation the answer links back to (shape shared with AskEvidence). */
+/** One citation the answer links back to (shape shared with AskEvidence). Producers must always include it (empty array, never undefined): callers narrow on success and read it directly. */
 export interface AskHistoryCitation {
   id: number;
   title: string;
