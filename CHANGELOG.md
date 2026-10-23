@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.55] - 2026-10-24
+
+このリリースは建築改善ループ（codebase-design 語彙の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- pending gateway の独自検査を共有検査への1行委譲にする（PBI 2026-10-24-01）
+- 応答形状の正本を messaging 層の module に寄せ、双子定義を解消する（PBI 2026-10-24-02）
+- 再生成エラー変換を 1 module に集約し、生産経路を直接守る（PBI 2026-10-24-03）
+- ask 証拠 pure 群を独立 module 化し、試験を dispatch 経由に寄せる（PBI 2026-10-24-04）
+- panel 配線集中を region 所有に緩和する（PBI 2026-10-24-05）
+- 送信 seam を一本化し、retry 既定表を集約する。実効値不変（PBI 2026-10-24-06）
+- DOM id 正本を region 側に移す。文字列不変（PBI 2026-10-24-07）
+- 行 seam の selectors 引数を畳む（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1155ファイル・17062テスト）。型エラー baseline 451 を維持
+
 ## [6.9.54] - 2026-10-23
 
 このリリースは adversarial-code-review 診断（round2 差分）の自律実装です。確定指摘 13 件を 11 PBI に統合し、7 件の fix + 4 件の test を RICE 順に実装しました。利用者に見える変更は提案行の取消操作の復旧のみで、他は内部の堅牢化です。
