@@ -14,6 +14,26 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-23 adversarial-code-review 診断（round2 差分、11件） ― ⬜ 11件未着手 🔧非機能追加 RICE順: 01(24) → 02(13.3) → 03(10) → 04(6.7) → 05(6) → 06(5.3) → 07(5) → 08(4.3) → 09(4) → 10(3.3) → 11(2.1)
+
+/adversarial-code-review による round2 差分の診断（4チャンク×2視点の発見 + 独立した反証4体）で確定した 13 件を 11 PBI に統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・却下一覧は [2026-10-23-00-backlog-adversarial-1023.md](2026-10-23-00-backlog-adversarial-1023.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-23-01-fix-proposal-undo-disabled.md](2026-10-23-01-fix-proposal-undo-disabled.md) | fix | 24 | 0.5 | 取消ボタン永久disabled（前提なしで再現する実害）。両 panel で発症 |
+| ⬜ 02 | [2026-10-23-02-test-domain-proposal-row-pin.md](2026-10-23-02-test-domain-proposal-row-pin.md) | test | 13.3 | 0.5 | O1 修正の錠（発火回数・非干渉の assert 不足） |
+| ⬜ 03 | [2026-10-23-03-fix-gateway-response-validation.md](2026-10-23-03-fix-gateway-response-validation.md) | fix | 10 | 1.0 | 応答形状検証と失敗文既定化（同一ガードの本体・テスト・呼出し側を束ねる）。NN05・NN04 は本 PBI の後に実施 |
+| ⬜ 04 | [2026-10-23-04-test-tag-proposal-row-pin.md](2026-10-23-04-test-tag-proposal-row-pin.md) | test | 6.7 | 0.5 | tag 側の複数行テスト追加 |
+| ⬜ 05 | [2026-10-23-05-fix-report-malformed-timeout-text.md](2026-10-23-05-fix-report-malformed-timeout-text.md) | fix | 6 | 0.5 | 不正形とタイムアウト文言の分離（NN03 の後に実施） |
+| ⬜ 06 | [2026-10-23-06-fix-saved-collections-proto.md](2026-10-23-06-fix-saved-collections-proto.md) | fix | 5.3 | 0.5 | 削除の prototype 付け替え退行（到達に汚染保存形が必要なため Conf 0.8） |
+| ⬜ 07 | [2026-10-23-07-test-blacklist-expectation-contract.md](2026-10-23-07-test-blacklist-expectation-contract.md) | test | 5 | 0.5 | 期待値の契約統一（本番補完が正）。NN11 は本 PBI の後に実施 |
+| ⬜ 08 | [2026-10-23-08-fix-response-discriminated-union.md](2026-10-23-08-fix-response-discriminated-union.md) | fix | 4.3 | 1.5 | 応答型の判別 union 化（NN03 の後に実施） |
+| ⬜ 09 | [2026-10-23-09-fix-slot-failures-validation.md](2026-10-23-09-fix-slot-failures-validation.md) | fix | 4 | 0.5 | slotFailures 検証の対称化 |
+| ⬜ 10 | [2026-10-23-10-fix-dead-gateway-catch.md](2026-10-23-10-fix-dead-gateway-catch.md) | fix | 3.3 | 0.5 | 到達不能 catch の整理 |
+| ⬜ 11 | [2026-10-23-11-test-repository-default-path.md](2026-10-23-11-test-repository-default-path.md) | test | 2.1 | 1.0 | 既定経路の実物検証（NN07 の後に実施） |
+
+実行順の推奨: RICE 順。**NN03 → NN05・NN04、NN07 → NN11** の前後関係を守る。NN01 / NN02 / NN04 / NN06 / NN09 / NN10 は互いに独立のため並列着手可。
+
 ### 2026-10-23 リファクタリング診断 round2（yasumaro-refactor、12件） ― ✅ 12件完了・アーカイブ済み（01-12） 🔧非機能追加 RICE順: ~~01(52)~~ → ~~02(36)~~ → ~~03(24)~~ → ~~04(18.7)~~ → ~~05(15)~~ → ~~06(13.3)~~ → ~~07(10.7)~~ → ~~08(9.6)~~ → ~~09(9.6)~~ → ~~10(5)~~ → ~~11(2.7)~~ → ~~12(2.7)~~
 
 /yasumaro-refactor 診断 + arch-delivery-loop で自律実装・検証してアーカイブ。9 件実装 + 3 件判断 close（NN11・NN12 は現状維持、NN10 は inline 実施）。NN08 の行渡し統一で対象外 O1 も解消済み（複数行 pin 追加）。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-23-00-backlog-refactor-round2.md](../dev-docs/archived/pbi/2026-10-23-00-backlog-refactor-round2.md)。最終ゲート `npm run validate` 緑（1151ファイル・16984テスト）。
