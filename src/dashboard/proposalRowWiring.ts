@@ -1,7 +1,8 @@
 /**
  * proposalRowWiring.ts
  *
- * Shared apply/undo wiring for single proposal rows (PBI 2026-10-23-08).
+ * Shared apply/undo wiring for single proposal rows (PBI 2026-10-23-08,
+ * folded by PBI 2026-10-24-08).
  * The tag-normalization panel and the domain-intel panel grew the same
  * row shape independently: an apply button, a hidden undo button, and a
  * status line. The shared part is the transitions (apply disables itself,
@@ -10,16 +11,15 @@
  * it: success text resolves from the action, failure text defaults to the
  * error message with an optional per-panel formatter (the tag panel uses
  * it to keep its applied-count suffix, the domain panel needs none).
+ *
+ * Row structure contract (fixed, PBI 2026-10-24-08): every proposal row
+ * places the apply button first, the undo button second, and exposes one
+ * status line marked with role="status". Both panels already render this
+ * shape, so the seam resolves the parts itself and callers pass no
+ * selector strings.
  */
 
 import { errorMessage } from '../utils/errorUtils.js';
-
-/** Button/status selectors resolved against one proposal row element. */
-export interface ProposalRowSelectors {
-  apply: string;
-  undo: string;
-  status: string;
-}
 
 /**
  * Row actions behind the buttons. Each resolves with the status text to
@@ -37,19 +37,35 @@ export interface ProposalRowTexts {
 }
 
 /**
+ * Row parts resolved from the fixed row structure contract: the first
+ * button is apply, the second button is undo, the status line carries
+ * role="status". Missing parts stay null so bare rows are tolerated.
+ */
+function resolveRowParts(row: HTMLElement): {
+  applyButton: HTMLButtonElement | null;
+  undoButton: HTMLButtonElement | null;
+  statusEl: HTMLElement | null;
+} {
+  const buttons = row.querySelectorAll<HTMLButtonElement>('button');
+  const statusEl = row.querySelector<HTMLElement>('[role="status"]');
+  return {
+    applyButton: buttons[0] ?? null,
+    undoButton: buttons[1] ?? null,
+    statusEl,
+  };
+}
+
+/**
  * Wires one proposal row's apply/undo buttons to the given actions.
  * The row element scopes every lookup, so each row only drives its own
  * buttons and status line.
  */
 export function wireProposalRow(
   row: HTMLElement,
-  selectors: ProposalRowSelectors,
   actions: ProposalRowActions,
   texts: ProposalRowTexts = {},
 ): void {
-  const applyButton = row.querySelector<HTMLButtonElement>(selectors.apply);
-  const undoButton = row.querySelector<HTMLButtonElement>(selectors.undo);
-  const statusEl = row.querySelector<HTMLElement>(selectors.status);
+  const { applyButton, undoButton, statusEl } = resolveRowParts(row);
   const showStatus = (message: string): void => {
     if (statusEl) statusEl.textContent = message;
   };

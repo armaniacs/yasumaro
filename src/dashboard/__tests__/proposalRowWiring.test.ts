@@ -11,12 +11,6 @@ import { wireProposalRow } from '../proposalRowWiring.js';
 import type { ProposalRowActions } from '../proposalRowWiring.js';
 import { TagRenameError } from '../tagRenameApplier.js';
 
-const SELECTORS = {
-  apply: '[data-test-apply]',
-  undo: '[data-test-undo]',
-  status: '.test-status',
-};
-
 interface WiredRow {
   row: HTMLElement;
   applyButton: HTMLButtonElement;
@@ -41,7 +35,7 @@ function buildRow(): WiredRow {
 
 function wireWith(actions: ProposalRowActions): WiredRow {
   const wired = buildRow();
-  wireProposalRow(wired.row, SELECTORS, actions);
+  wireProposalRow(wired.row, actions);
   return wired;
 }
 
@@ -171,7 +165,7 @@ describe('proposalRowWiring', () => {
         undo: vi.fn().mockResolvedValue('undone message'),
       };
       const wired = buildRow();
-      wireProposalRow(wired.row, SELECTORS, actions, {
+      wireProposalRow(wired.row, actions, {
         formatApplyError: (error) => {
           const updated = error instanceof TagRenameError ? error.updated : 0;
           return `${error.message} (${updated} applied)`;
@@ -192,7 +186,7 @@ describe('proposalRowWiring', () => {
         undo: vi.fn().mockResolvedValue('undone message'),
       };
       const wired = buildRow();
-      wireProposalRow(wired.row, SELECTORS, actions, { formatApplyError });
+      wireProposalRow(wired.row, actions, { formatApplyError });
 
       wired.applyButton.click();
       await waitForMock(() => expect(wired.status.textContent).toBe('plain failure'));
@@ -201,13 +195,53 @@ describe('proposalRowWiring', () => {
       expect(wired.applyButton.disabled).toBe(false);
     });
 
+    it('wires both panel row shapes without selector strings', async () => {
+      const shapes = [
+        '<span>OldTag -> NewTag</span>' +
+          '<button type="button" data-norm-action="apply">Apply</button>' +
+          '<button type="button" data-norm-action="undo" hidden>Undo</button>' +
+          '<div class="norm-proposal-status" role="status"></div>',
+        '<div class="domain-intel-proposal-info"><span>noisy.com</span></div>' +
+          '<div class="domain-intel-proposal-actions">' +
+          '<button type="button" data-intel-action="apply">Apply</button>' +
+          '<button type="button" data-intel-action="undo" hidden>Undo</button>' +
+          '</div>' +
+          '<div class="domain-intel-status" role="status"></div>',
+      ];
+      for (const html of shapes) {
+        document.body.innerHTML = '';
+        const row = document.createElement('div');
+        row.innerHTML = html;
+        document.body.appendChild(row);
+        const actions: ProposalRowActions = {
+          apply: vi.fn().mockResolvedValue('applied message'),
+          undo: vi.fn().mockResolvedValue('undone message'),
+        };
+        wireProposalRow(row, actions);
+        const buttons = row.querySelectorAll<HTMLButtonElement>('button');
+        const applyButton = buttons[0] as HTMLButtonElement;
+        const undoButton = buttons[1] as HTMLButtonElement;
+        const status = row.querySelector<HTMLElement>('[role="status"]') as HTMLElement;
+
+        applyButton.click();
+        await waitForMock(() => expect(status.textContent).toBe('applied message'));
+        expect(applyButton.disabled).toBe(true);
+        expect(undoButton.hidden).toBe(false);
+
+        undoButton.click();
+        await waitForMock(() => expect(status.textContent).toBe('undone message'));
+        expect(undoButton.hidden).toBe(true);
+        expect(applyButton.disabled).toBe(false);
+      }
+    });
+
     it('tolerates a row without buttons or a status line', () => {
       const actions: ProposalRowActions = {
         apply: vi.fn().mockResolvedValue('applied message'),
         undo: vi.fn().mockResolvedValue('undone message'),
       };
       const row = document.createElement('div');
-      expect(() => wireProposalRow(row, SELECTORS, actions)).not.toThrow();
+      expect(() => wireProposalRow(row, actions)).not.toThrow();
     });
   });
 });

@@ -30,8 +30,8 @@ Scenario: 振舞いは変更前と同一
 
 ## 受け入れ基準
 
-- [ ] selectors引数が畳まれる（または行生成ごと共有化される）
-- [ ] 既存テスト全緑
+- [x] selectors引数が畳まれる（または行生成ごと共有化される）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -93,8 +93,8 @@ grep -n "wireProposalRow\|ProposalRowSelectors" src/dashboard/tagsPanel.ts src/d
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

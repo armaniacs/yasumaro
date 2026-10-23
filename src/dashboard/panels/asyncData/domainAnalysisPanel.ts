@@ -166,11 +166,6 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     wireSharedProposalRow(
       row,
       {
-        apply: '[data-intel-action="apply"]',
-        undo: '[data-intel-action="undo"]',
-        status: '.domain-intel-status',
-      },
-      {
         apply: async () => {
           await addDomainToBlacklist(proposal.domain);
           // 適用後は取り消せる: the undo appears in place of the apply button.

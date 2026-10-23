@@ -246,11 +246,6 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     wireSharedProposalRow(
       row,
       {
-        apply: '[data-norm-action="apply"]',
-        undo: '[data-norm-action="undo"]',
-        status: '.norm-proposal-status',
-      },
-      {
         apply: async () => {
           const { updated } = await applyTagRename(deps, proposal.from, proposal.to);
           return getMessageOr('normProposalApplied', `${updated} 件のタグを書き換えました。`);
