@@ -47,5 +47,5 @@ export async function exportResearchReport(params: ResearchReportParams): Promis
 }
 
 function normalizeResearchReportResponse(raw: unknown): ResearchReportResponse | SendFailure {
-  return asSuccessResponse<ResearchReportResponse>(raw, RESEARCH_REPORT_TIMEOUT_ERROR);
+  return asSuccessResponse<ResearchReportResponse>(raw, 'Invalid EXPORT_RESEARCH_REPORT response');
 }

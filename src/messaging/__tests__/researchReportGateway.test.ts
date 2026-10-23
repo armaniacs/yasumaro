@@ -37,13 +37,16 @@ describe('researchReportGateway', () => {
       expect(result).toEqual({ success: true, recordCount: 3 });
     });
 
-    it('normalizes garbage to the pinned timeout sentence (wording not unified)', async () => {
+    it('normalizes garbage to Invalid EXPORT_RESEARCH_REPORT response (distinct from timeout)', async () => {
       const sendMessage = vi.fn().mockResolvedValue('ok');
       stubSendMessage(sendMessage);
 
       const result = await exportResearchReport({ scope: {}, sendToObsidian: false });
 
-      expect(result).toEqual({ success: false, error: RESEARCH_REPORT_TIMEOUT_ERROR });
+      // Pin reason (PBI 2026-10-23-05): malformed responses previously reused
+      // RESEARCH_REPORT_TIMEOUT_ERROR, hiding shape breaks as timeouts.
+      // The new sentence keeps real timeouts separately identifiable.
+      expect(result).toEqual({ success: false, error: 'Invalid EXPORT_RESEARCH_REPORT response' });
     });
 
     it('maps sendMessage rejection to failure', async () => {
