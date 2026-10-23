@@ -83,5 +83,5 @@ grep -rn "= 200" src/background/researchReportGenerator.ts src/dashboard/tagsPan
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

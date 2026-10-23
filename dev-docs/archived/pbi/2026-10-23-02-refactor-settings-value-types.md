@@ -88,5 +88,5 @@ grep -rn "as unknown as" src/utils/storage/*.ts | grep -v __tests__
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過 + repository ラウンドトリップテスト新規通過
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

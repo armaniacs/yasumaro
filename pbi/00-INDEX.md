@@ -14,26 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-23 リファクタリング診断 round2（yasumaro-refactor、12件） ― ⬜ 12件未着手 🔧非機能追加 RICE順: 01(52) → 02(36) → 03(24) → 04(18.7) → 05(15) → 06(13.3) → 07(10.7) → 08(9.6) → 09(9.6) → 10(5) → 11(2.7) → 12(2.7)
+### 2026-10-23 リファクタリング診断 round2（yasumaro-refactor、12件） ― ✅ 12件完了・アーカイブ済み（01-12） 🔧非機能追加 RICE順: ~~01(52)~~ → ~~02(36)~~ → ~~03(24)~~ → ~~04(18.7)~~ → ~~05(15)~~ → ~~06(13.3)~~ → ~~07(10.7)~~ → ~~08(9.6)~~ → ~~09(9.6)~~ → ~~10(5)~~ → ~~11(2.7)~~ → ~~12(2.7)~~
 
-/yasumaro-refactor による読み取り専用診断（7 レンズ、5 パス: 4 領域の並列走査 + 主スレッド横断）で約 70 件の観測を 12 PBI + 対象外 13 件 + 却下 12 件へ統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-23-00-backlog-refactor-round2.md](2026-10-23-00-backlog-refactor-round2.md)。
+/yasumaro-refactor 診断 + arch-delivery-loop で自律実装・検証してアーカイブ。9 件実装 + 3 件判断 close（NN11・NN12 は現状維持、NN10 は inline 実施）。NN08 の行渡し統一で対象外 O1 も解消済み（複数行 pin 追加）。RICE 詳細・依存グラフ・対象外リスト・飽和根拠は [2026-10-23-00-backlog-refactor-round2.md](../dev-docs/archived/pbi/2026-10-23-00-backlog-refactor-round2.md)。最終ゲート `npm run validate` 緑（1151ファイル・16984テスト）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-23-01-refactor-tag-fold-ssot.md](2026-10-23-01-refactor-tag-fold-ssot.md) | refactor | 52 | 1.0 | タグ fold の SSOT 化（tagUtils 3・proposals・tagsPanel 2 の同一式10箇所）。O6/O8 の fix は本 PBI の後に実施 |
-| ⬜ 02 | [2026-10-23-02-refactor-settings-value-types.md](2026-10-23-02-refactor-settings-value-types.md) | refactor | 36 | 2.0 | Settings 値型整備 + cast 2件撤去 + 未使用変数整理。NN09・NN10 は本 PBI の後に実施 |
-| ⬜ 03 | [2026-10-23-03-refactor-gateway-response-seam.md](2026-10-23-03-refactor-gateway-response-seam.md) | refactor | 24 | 1.0 | gateway 3件の応答ガード共通化 + SendFailure 透過型 + ask/research 単体テスト新規 |
-| ⬜ 04 | [2026-10-23-04-refactor-batch-read-cap.md](2026-10-23-04-refactor-batch-read-cap.md) | refactor | 18.7 | 0.5 | バッチ読込上限 200 の limits 集約（数値不変。乖離時は分名） |
-| ⬜ 05 | [2026-10-23-05-refactor-share-percent-format.md](2026-10-23-05-refactor-share-percent-format.md) | refactor | 15 | 0.5 | 割合％丸め4箇所の共通化 + 境界 table 新規 |
-| ⬜ 06 | [2026-10-23-06-refactor-new-module-hygiene.md](2026-10-23-06-refactor-new-module-hygiene.md) | refactor | 13.3 | 1.0 | 新設5箇所の小衛生 bundle（unknown 化・死定数・cast・素数・二重取得） |
-| ⬜ 07 | [2026-10-23-07-refactor-busy-button-seam.md](2026-10-23-07-refactor-busy-button-seam.md) | refactor | 10.7 | 1.0 | 処理中ボタン定型4複製の共有 seam + view 単体テスト新規 |
-| ⬜ 08 | [2026-10-23-08-refactor-proposal-row-wiring.md](2026-10-23-08-refactor-proposal-row-wiring.md) | refactor | 9.6 | 1.5 | 提案行配線の共通化（単一提案の挙動不変。O1 の fix は本 PBI の後に分離実施） |
-| ⬜ 09 | [2026-10-23-09-refactor-repository-seam-contract.md](2026-10-23-09-refactor-repository-seam-contract.md) | refactor | 9.6 | 1.5 | repository 3件の注入化 + 破損読込ログ + 統合テスト新規（NN02 の後に実施） |
-| ⬜ 10 | [2026-10-23-10-refactor-router-collection-accessor.md](2026-10-23-10-refactor-router-collection-accessor.md) | refactor | 5 | 0.5 | router アクセサの inline（残す判断での close あり。NN02 の後が望ましい） |
-| ⬜ 11 | [2026-10-23-11-refactor-content-flag-watcher.md](2026-10-23-11-refactor-content-flag-watcher.md) | refactor | 2.7 | 0.5 | content フラグ監視の共通化検討（寄せない判断での close あり） |
-| ⬜ 12 | [2026-10-23-12-refactor-predicate-placement.md](2026-10-23-12-refactor-predicate-placement.md) | refactor | 2.7 | 0.5 | ガード述語の配置判断（層逆流禁止。維持判断での close あり） |
-
-実行順の推奨: RICE 順。**NN02 → NN09・NN10、NN01 → O6/O8、NN08 → O1、NN02/NN09 → O5** の前後関係を守る。NN10・NN11・NN12 は判断記録での close あり。対象外 O1-O13 は fix/owner 判断で別途扱う。
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
 
 ### 2026-10-23 新機能5候補(M6見送り) ― 🔶 5件部分実装（06/07/08/09/10 コア経路完了）
 
@@ -568,6 +555,23 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-23 リファクタリング診断 round2 アーカイブ ― 12件すべて完了（01-12）
+
+2026-10-23 起票の 12 件を RICE 順に自律実装・アーカイブ。9 件実装 + 3 件判断 close（NN11・NN12 は現状維持、NN10 は inline 実施）。バッチ A（01/02/03/11）→ B（04/05/07/10）→ C（08/09/12）→ D（06 単独）。NN08 の行渡し統一で対象外 O1 も解消済み（複数行 pin 追加）。最終ゲート `npm run validate` 緑（1151ファイル・16984テスト）。
+
+- **01-refactor-tag-fold-ssot**（`7b01361a`）: `foldTagForMatch` を tagUtils に集約し直書き 10 箇所を置換 + 共有 fold の table テスト新規。実行時挙動不変。
+- **02-refactor-settings-value-types**（`41e199e7`）: Settings 値型を引上げし cast 2 件撤去 + 未使用変数整理 + repository ラウンドトリップテスト新規。保存形バイト同一。
+- **03-refactor-gateway-response-seam**（`30de8508`）: gateway 3 件の応答ガードを `asSuccessResponse` に集約 + SendFailure 透過型 + gateway 単体テスト新規。エラー文不変。
+- **04-refactor-batch-read-cap**（`10e9a15d`）: 上限 200 を `MAX_BATCH_READ_RECORDS` として limits に集約（数値不変）+ parity guard 登録。
+- **05-refactor-share-percent-format**（`57a55f6c`）: 割合％丸め 4 箇所を `sharePercent` 系に集約 + 境界 table 新規。丸め意味不変。
+- **06-refactor-new-module-hygiene**（`3f25bb26`）: 新設 5 箇所の小衛生整理（unknown 化・死定数削除・narrowing・名前付き定数・二重取得解消）。実行時挙動不変。
+- **07-refactor-busy-button-seam**（`c9424450`）: 処理中ボタン定型 4 複製を `withBusyButton` に集約 + 単体テスト新規。saved 系の成功時非復元は意図的として pin。
+- **08-refactor-proposal-row-wiring**（`01b531e1`）: 提案行配線を共有 seam 化 + 単一・複数行 pin 新規。行渡し統一で O1（複数行の誤配線）も解消。
+- **09-refactor-repository-seam-contract**（`b959f66d`）: repository 3 件を注入化 + 破損読込ログ + 統合テスト新規。縮退・既定動作不変。
+- **10-refactor-router-collection-accessor**（`6c1ad1c9`）: helper 削除・inline 一本化。縮退意味不変。
+- **11-refactor-content-flag-watcher**（`ddef4d92`）: 共有化せず現状維持で close（偶然の重複と裁定）。
+- **12-refactor-predicate-placement**（`725a33dd`）: 局所維持で close（3 組とも受容集合が異なり共有化は判定変更になるため）。
 
 ### 2026-10-21 PBI 11・12 アーカイブ ― 対象外・owner 判断処理 12件すべて完了
 

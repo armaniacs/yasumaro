@@ -83,5 +83,5 @@ grep -rn "asString\|asNumber\|isNonEmptyString\|isFiniteNumber\|isPositiveIntege
 
 - [x] 局所維持のため新規テストなし。既存テスト緑で代替（3組とも意味不一致を5 Whysで確定）
 - [x] 既存テスト全通過
-- [ ] `npm run validate` 通過（Phase 3 のフルゲートで確認する）
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

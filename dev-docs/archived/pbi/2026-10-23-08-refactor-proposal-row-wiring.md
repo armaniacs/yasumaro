@@ -92,5 +92,5 @@ grep -rn "wireProposalRow\|wireProposalActions" src/dashboard/ --include='*.ts' 
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過 + 共有 seam 単体テスト新規通過
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

@@ -85,5 +85,5 @@ grep -rn "typeof (raw as" src/messaging/*.ts | grep -v __tests__
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過 + ask/research gateway 単体テスト新規通過
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

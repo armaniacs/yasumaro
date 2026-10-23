@@ -88,5 +88,5 @@ grep -rn "t('processing')" src/dashboard/ --include='*.ts' | grep -v __tests__
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過 + 共有 seam 単体テスト新規通過
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

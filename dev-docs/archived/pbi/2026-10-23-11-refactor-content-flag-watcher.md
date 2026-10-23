@@ -84,5 +84,5 @@ grep -rn "onChanged.addListener" src/content/ --include='*.ts' | grep -v __tests
 
 - [x] 共有化しないため新規テストなし。既存テスト緑（contentKernel 系 23 件）で代替
 - [x] 既存テスト全通過（共有化しないため watcher テストは作らない）
-- [ ] `npm run validate` 通過（Phase 3 のフルゲートで確認する）
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

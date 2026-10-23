@@ -84,5 +84,5 @@ grep -rn "normalize('NFKC').toLowerCase()" src/ --include='*.ts' | grep -v __tes
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過（tagUtils・tagNormalizationProposals・tagsPanel 系）
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み（CONTEXT.md の用語追加は不要。必要なら本 PBI に記録）
