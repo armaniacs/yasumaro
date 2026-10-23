@@ -12,6 +12,7 @@ import {
   normalizeSavedCollections,
   upsertSavedCollection,
   removeSavedCollection,
+  type SavedCollection,
 } from '../savedCollections.js';
 
 describe('normalizeSavedCollection', () => {
@@ -92,5 +93,35 @@ describe('removeSavedCollection', () => {
   it('is a no-op for a missing id', () => {
     const result = removeSavedCollection({}, 'missing');
     expect(result).toEqual({});
+  });
+
+  // Boundary: special keys must stay own data properties, never relink the prototype.
+  it.each(['__proto__', 'constructor', 'prototype'])(
+    'keeps own special key %s as data when removing another entry',
+    (specialKey) => {
+      const kept = { id: 'c1', name: 'a', query: {}, createdAt: 100, updatedAt: 100 };
+      const special = { id: specialKey, name: 'special', query: {}, createdAt: 10, updatedAt: 10 };
+      const contaminated = Object.fromEntries([
+        ['c1', kept],
+        [specialKey, special],
+      ]) as Record<string, SavedCollection>;
+      const removed = removeSavedCollection(contaminated, 'c1');
+      expect(Object.prototype.hasOwnProperty.call(removed, specialKey)).toBe(true);
+      expect(removed[specialKey]).toEqual(special);
+      expect(Object.getPrototypeOf(removed)).toBe(Object.prototype);
+    },
+  );
+
+  it('removes the __proto__ key itself without relinking the prototype', () => {
+    const kept = { id: 'c1', name: 'a', query: {}, createdAt: 100, updatedAt: 100 };
+    const special = { id: '__proto__', name: 'special', query: {}, createdAt: 10, updatedAt: 10 };
+    const contaminated = Object.fromEntries([
+      ['c1', kept],
+      ['__proto__', special],
+    ]) as Record<string, SavedCollection>;
+    const removed = removeSavedCollection(contaminated, '__proto__');
+    expect(Object.keys(removed)).toEqual(['c1']);
+    expect(removed['c1']).toEqual(kept);
+    expect(Object.getPrototypeOf(removed)).toBe(Object.prototype);
   });
 });

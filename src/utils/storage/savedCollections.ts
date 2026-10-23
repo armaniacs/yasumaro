@@ -72,9 +72,5 @@ export function removeSavedCollection(
   map: Record<string, SavedCollection>,
   id: string,
 ): Record<string, SavedCollection> {
-  const rest: Record<string, SavedCollection> = {};
-  for (const [key, value] of Object.entries(map)) {
-    if (key !== id) rest[key] = value;
-  }
-  return rest;
+  return Object.fromEntries(Object.entries(map).filter(([key]) => key !== id));
 }
