@@ -9,6 +9,12 @@ import type { ExtensionMessage } from '../background/messageTypes.js';
 import { isKnownMessageType } from './envelopeShape.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import {
+  TRANSPORT_DEFAULT_RETRIES,
+  TRANSPORT_RETRY_BASE_MS,
+  TRANSPORT_RETRY_MAX_MS,
+  TRANSPORT_RETRY_MULTIPLIER,
+} from './sendRetryDefaults.js';
 
 export interface TransportPort {
   send(message: unknown): Promise<unknown>;
@@ -77,7 +83,7 @@ export class MessageTransport {
   ) {}
 
   async send<M extends OutgoingMessage>(message: M, opts: MessageTransportOptions = {}): Promise<unknown> {
-    const retries = opts.retries ?? 3;
+    const retries = opts.retries ?? TRANSPORT_DEFAULT_RETRIES;
     const clock = opts.clock ?? this.clock;
 
     // Attach protocol version and validate
@@ -96,7 +102,11 @@ export class MessageTransport {
       } catch (error) {
         lastError = error;
         if (attempt < retries && isRetryableError(error)) {
-          const delayMs = backoffDelayMs(attempt, { baseMs: 100, multiplier: 2, maxMs: 1000 });
+          const delayMs = backoffDelayMs(attempt, {
+            baseMs: TRANSPORT_RETRY_BASE_MS,
+            multiplier: TRANSPORT_RETRY_MULTIPLIER,
+            maxMs: TRANSPORT_RETRY_MAX_MS,
+          });
           await clock.sleep(delayMs);
           continue;
         }

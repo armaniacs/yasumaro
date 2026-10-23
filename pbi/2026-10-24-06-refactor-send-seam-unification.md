@@ -30,9 +30,9 @@ Scenario: retry既定が一本化される
 
 ## 受け入れ基準
 
-- [ ] 生送信がsendWithPolicyに委譲される（dashboardGatewayはtoken付与＋再発行判断のみ）
-- [ ] retry既定の表が1 moduleに寄る
-- [ ] 既存テスト全緑
+- [x] 生送信がsendWithPolicyに委譲される（dashboardGatewayはtoken付与＋再発行判断のみ）
+- [x] retry既定の表が1 moduleに寄る
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -95,8 +95,8 @@ grep -n "retryAttempts\|retryDelay\|withRuntimeTimeout" src/messaging/dashboardG
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

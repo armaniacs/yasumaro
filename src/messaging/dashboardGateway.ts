@@ -9,14 +9,20 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import type { SleepFn } from '../utils/retryPredicate.js';
 import { categorizeError } from './sqliteRpcClient.js';
-import { withRuntimeTimeout } from './withRuntimeTimeout.js';
+import { sendWithPolicy } from './sendWithPolicy.js';
+import {
+  DASHBOARD_GATEWAY_RETRY_ATTEMPTS,
+  DASHBOARD_GATEWAY_RETRY_DELAY_MS,
+  DASHBOARD_GATEWAY_RETRY_MULTIPLIER,
+  DASHBOARD_INNER_TRANSPORT_RETRIES,
+  DASHBOARD_SQLITE_TIMEOUT_MESSAGE,
+  DASHBOARD_SQLITE_TIMEOUT_MS,
+} from './sendRetryDefaults.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { MessageTransport, type TransportPort } from './messageTransport.js';
 import { tokenExempt, deriveScopeHash, CONFIRM_TOKEN_MISMATCH_ERROR } from './sqliteOperationSecurity.js';
 import type { DashboardSqliteRequest, DashboardSqliteResponseFor } from './dashboardSqliteProtocol.js';
-
-const DASHBOARD_SQLITE_TIMEOUT = 10000;
 
 /**
  * Send transport for the dashboard → service worker hop (PBI 2026-09-18-10).
@@ -74,17 +80,28 @@ async function getDashboardConfirmToken(action: string, id?: number, scopeHash?:
 }
 
 async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): Promise<DashboardSqliteResponseFor<T['subtype']>> {
-  // retries: 0 keeps the attempt count identical: callDashboard owns retrying,
-  // so the transport retry policy must not add a second layer. The contract
-  // send still stamps protocolVersion and validates the type. The timeout
-  // race owns timer cleanup and late-rejection handling via withRuntimeTimeout.
-  return withRuntimeTimeout(
-    dashboardTransport.send({ type: 'DASHBOARD_SQLITE', payload }, { retries: 0 }) as Promise<
-      DashboardSqliteResponseFor<T['subtype']>
-    >,
-    DASHBOARD_SQLITE_TIMEOUT,
-    new Error('Dashboard SQLite request timed out'),
+  // Single seam (PBI 2026-10-24-06): envelope + timeout + normalize live in
+  // sendWithPolicy. The dashboard hop supplies only its budget, its swappable
+  // transport, and identity normalize. DASHBOARD_INNER_TRANSPORT_RETRIES keeps
+  // the attempt count identical: callDashboard owns retrying, so the inner
+  // transport retry must not add a second layer. mapError rethrows so the
+  // gateway retry loop keeps its throw/retry contract and the timeout race
+  // keeps its timer cleanup and late-rejection handling inside the seam.
+  const raw = await sendWithPolicy(
+    { type: 'DASHBOARD_SQLITE', payload },
+    {
+      timeoutMs: DASHBOARD_SQLITE_TIMEOUT_MS,
+      timeoutError: new Error(DASHBOARD_SQLITE_TIMEOUT_MESSAGE),
+      retries: DASHBOARD_INNER_TRANSPORT_RETRIES,
+      transport: dashboardTransport,
+      normalize: (value: unknown): DashboardSqliteResponseFor<T['subtype']> =>
+        value as DashboardSqliteResponseFor<T['subtype']>,
+      mapError: (error: unknown): never => {
+        throw error;
+      },
+    },
   );
+  return raw;
 }
 
 /**
@@ -156,16 +173,17 @@ export class DashboardGateway {
    * - An attempt is retried (up to `retryAttempts` total) iff the send throws
    *   or the response is a failure carrying `retriable: true`.
    * - Decode failures are never retried.
-   * - Waits `retryDelayMs` (default 1000) between attempts.
+   * - Waits `retryDelayMs` (default DASHBOARD_GATEWAY_RETRY_DELAY_MS)
+   *   between attempts.
    * There is intentionally no subtype → retry-setting policy table; reassess
    * when a third retrying op appears.
    */
   async callDashboard<T extends DashboardSqliteRequest, R>(payload: T, decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R, defaultErrorMessage: string, retry?: DashboardRetryOptions): Promise<SqliteResult<R>> {
-    const attempts = Math.max(1, retry?.retryAttempts ?? 1);
-    const delayMs = retry?.retryDelayMs ?? 1000;
+    const attempts = Math.max(1, retry?.retryAttempts ?? DASHBOARD_GATEWAY_RETRY_ATTEMPTS);
+    const delayMs = retry?.retryDelayMs ?? DASHBOARD_GATEWAY_RETRY_DELAY_MS;
     const sleep = retry?.sleep ?? defaultSleep;
     const waitBetweenAttempts = (attempt: number): Promise<void> =>
-      sleep(backoffDelayMs(attempt, { baseMs: delayMs, multiplier: 1 }));
+      sleep(backoffDelayMs(attempt, { baseMs: delayMs, multiplier: DASHBOARD_GATEWAY_RETRY_MULTIPLIER }));
     for (let attempt = 0; attempt < attempts; attempt++) {
       const last = attempt + 1 >= attempts;
       let response: DashboardSqliteResponseFor<T['subtype']>;
@@ -173,7 +191,7 @@ export class DashboardGateway {
         response = await sendDashboard(payload);
       } catch (error) {
         if (!last) {
-          // Constant inter-attempt delay expressed as multiplier 1.
+          // Constant inter-attempt delay via DASHBOARD_GATEWAY_RETRY_MULTIPLIER.
           await waitBetweenAttempts(attempt);
           continue;
         }
