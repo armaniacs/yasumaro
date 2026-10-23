@@ -30,8 +30,8 @@ Scenario: degenerate扱いが1箇所に集まる
 
 ## 受け入れ基準
 
-- [ ] 照会が1 module・interface 3点に固定される（またはstatusStoreに方針を持たせる）
-- [ ] 既存テスト全緑
+- [x] 照会が1 module・interface 3点に固定される（またはstatusStoreに方針を持たせる）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -rn "getCurrentTab\|loadActiveTabStatus\|fetchCurrentTab" src/popup/ --incl
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

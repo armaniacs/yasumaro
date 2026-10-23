@@ -1,6 +1,13 @@
 /**
  * tabUtils.ts
  * Single seam for active-tab reads in the popup UI.
+ *
+ * This module is the one query module for the popup: exactly three methods
+ * (getCurrentTab, getActiveTabUrl, getDomainForUrl). Degenerate handling
+ * (no tab, no URL, unparseable URL) is owned here — callers must use these
+ * methods instead of re-implementing null guards around chrome.tabs.query.
+ * Snapshot lifecycle (load vs finish-path refetch) is owned by statusStore,
+ * never by this module: every method here performs a fresh read.
  */
 
 import { extractDomain } from '../utils/domainUtils.js';
