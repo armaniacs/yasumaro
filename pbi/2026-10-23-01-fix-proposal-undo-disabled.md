@@ -30,9 +30,9 @@ Scenario: 失敗時の復元
 
 ## 受け入れ基準
 
-- [ ] undo 成功パスで `undoButton.disabled` が戻る（または disabled を使わない設計に変える）
-- [ ] 2往復の pin テストが両 panel にある
-- [ ] 既存テスト全緑
+- [x] undo 成功パスで `undoButton.disabled` が戻る（または disabled を使わない設計に変える）
+- [x] 2往復の pin テストが両 panel にある
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -93,8 +93,8 @@ grep -n "disabled" src/dashboard/proposalRowWiring.ts
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 2往復 pin 新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 2往復 pin 新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

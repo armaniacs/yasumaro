@@ -58,7 +58,10 @@ export function wireProposalRow(
       applyButton.disabled = true;
       try {
         const message = await actions.apply();
-        if (undoButton) undoButton.hidden = false;
+        if (undoButton) {
+          undoButton.hidden = false;
+          undoButton.disabled = false;
+        }
         showStatus(message);
       } catch (error) {
         applyButton.disabled = false;
@@ -76,6 +79,7 @@ export function wireProposalRow(
       try {
         const message = await actions.undo();
         undoButton.hidden = true;
+        undoButton.disabled = false;
         if (applyButton) applyButton.disabled = false;
         showStatus(message);
       } catch (error) {

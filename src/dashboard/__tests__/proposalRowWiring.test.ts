@@ -73,6 +73,46 @@ describe('proposalRowWiring', () => {
       expect(applyButton.disabled).toBe(false);
     });
 
+    it('pins two apply-undo rounds with enabled undo each time', async () => {
+      const actions: ProposalRowActions = {
+        apply: vi
+          .fn()
+          .mockResolvedValueOnce('applied one')
+          .mockResolvedValueOnce('applied two'),
+        undo: vi
+          .fn()
+          .mockResolvedValueOnce('undone one')
+          .mockResolvedValueOnce('undone two'),
+      };
+      const { applyButton, undoButton, status } = wireWith(actions);
+
+      applyButton.click();
+      await waitForMock(() => expect(status.textContent).toBe('applied one'));
+      expect(applyButton.disabled).toBe(true);
+      expect(undoButton.hidden).toBe(false);
+      expect(undoButton.disabled).toBe(false);
+
+      undoButton.click();
+      await waitForMock(() => expect(status.textContent).toBe('undone one'));
+      expect(undoButton.hidden).toBe(true);
+      expect(undoButton.disabled).toBe(false);
+      expect(applyButton.disabled).toBe(false);
+
+      applyButton.click();
+      await waitForMock(() => expect(status.textContent).toBe('applied two'));
+      expect(applyButton.disabled).toBe(true);
+      expect(undoButton.hidden).toBe(false);
+      expect(undoButton.disabled).toBe(false);
+
+      undoButton.click();
+      await waitForMock(() => expect(status.textContent).toBe('undone two'));
+      expect(actions.apply).toHaveBeenCalledTimes(2);
+      expect(actions.undo).toHaveBeenCalledTimes(2);
+      expect(undoButton.hidden).toBe(true);
+      expect(undoButton.disabled).toBe(false);
+      expect(applyButton.disabled).toBe(false);
+    });
+
     it('restores the apply button and shows the error when apply fails', async () => {
       const actions: ProposalRowActions = {
         apply: vi.fn().mockRejectedValue(new Error('apply failed')),
