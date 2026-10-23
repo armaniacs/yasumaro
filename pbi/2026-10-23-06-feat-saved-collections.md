@@ -40,6 +40,10 @@ Scenario: 自動タグ規則が適用される
 - 正規化モジュール: 完了（commit aa98261a）。`src/utils/storage/savedCollections.ts` が `normalizeSavedCollection`/`normalizeSavedCollections` を提供し、不正入力はnull・破損エントリは一覧から除外（縮退の出口）。Layer 1 に登録（検証はここに置き、repository 鎖を引かない）。残は保存UI・共有経路・M1/M3入力選択
 - upsert/remove: 完了（commit 8e443488）。`upsertSavedCollection` が改名時に createdAt を保持し updatedAt を刻印（BDD「件数と更新時刻が分かる」の受け口）、`removeSavedCollection` は欠落idをno-op。純粋関数として入力を変異させない（pin 13テスト）
 - repository seam: 完了（commit 47efac08）。`src/utils/storage/savedCollectionsRepository.ts` が get/upsert/remove by id を提供し、読み取り時に正規化・読み取り失敗は空一覧に縮退（縮退の出口）。残は共有UIの配置 (dashboard panels) と M1/M3 からの入力選択経路
+- 共有UIの配置: 完了（commit 9a892750）。`sqliteHistoryPanel` のシェルに専用領域 `sqlite-saved-collections` を追加（id は `SQLITE_HISTORY_IDS` が唯一所有）、`savedCollectionsPanelView.ts` が領域スコープの render 入口を提供（renderPendingRegion と同じ契約: innerHTML 全量置換 + 毎回の配線）。Panel が保存（`serializeCollectionQuery` で state が保持する語・タグ・選択日のみ保存、空条件はフェイルクローズ）・呼び出し・削除（confirmDialog 経由）を所有
+- 呼び出し経路: 完了（commit 9a892750）。モデルに `applyCollection(rawQuery)` を追加（公開メソッド 22→23、pin 更新済み）。1 つの `collectionApplied` action で state に全条件を着地させ、1 回の fetch に search + tagFilter + 選択日の日次範囲を一括適用。現在のソートは保持（コレクションは条件の名前付けであってソート選択ではない）。`savedCollectionQuery.ts` の `parseCollectionQuery` が不明形状を空条件に縮退（縮退の出口）、破損 query は throw しない
+- 型baseline: 一時452に増えたがテストのキャスト修正で451に返済（pin 451維持）。validate exit 0（1131 files / 16791 tests）
+- 期間の保存範囲: 選択日（YYYY-MM-DD）のみ保存できる。カスタム範囲選択（rangeSelect）は state に残らない一時値なので保存対象外。M1/M3 入力選択とセットで見直す
 - タイミング障害の記録（2026-10-23）: validate 1回目で4テストが30sタイムアウト（`extractor-comprehensive`・`extractor-core`・`contentCleaner`・`archivePanel`）。machine load 47%+でスイートが5分超（通常98秒）。個別再実行で4件とも passed（67+96=163テスト）。2回目のvalidate は exit 0。原因分類: 負荷誘発のタイムアウト（実バグではなく、私の変更 savedCollections.ts は純粋関数で失敗テストと無関係）- E2E: 保存→呼び出し→自動タグ→M3入力の通し
 - 統合: FTS/LIKE両パスの条件再現テスト、規則競合の優先テスト
 - 単体: 条件シリアライズ・規則判定のテーブルテスト
