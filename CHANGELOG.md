@@ -35,6 +35,33 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.53] - 2026-10-23
+
+このリリースはリファクタリング診断 round2（10-22/10-23 新設コードの静的衛生）の自律実装です。9 件の内部整理 + 3 件の判断 close を RICE 順に実装し、複数提案行の誤配線（対象外 O1）も行渡し統一で解消しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- タグ畳み込み fold を `foldTagForMatch` として tagUtils に集約し、直書き 10 箇所を置換する。式同一のため判定は不変（PBI 2026-10-23-01）
+- Settings 値型を引上げし repository の `as unknown as` 2 件を撤去する。保存形バイト同一（PBI 2026-10-23-02）
+- gateway 3 件の応答ガードを `asSuccessResponse` に集約し、戻り型に SendFailure を透過する。エラー文不変（PBI 2026-10-23-03）
+- バッチ読込上限 200 を `MAX_BATCH_READ_RECORDS` として limits に集約する。数値不変（PBI 2026-10-23-04）
+- 割合％丸め 4 箇所を `sharePercent` 系に集約する。丸め意味不変（PBI 2026-10-23-05）
+- 新設 5 箇所の小衛生整理（unknown 化・未参照定数削除・narrowing・名前付き定数・二重取得解消）。実行時挙動不変（PBI 2026-10-23-06）
+- 処理中ボタン定型 4 複製を `withBusyButton` に集約する（PBI 2026-10-23-07）
+- 提案行配線を共有 seam 化する。単一提案の挙動不変（PBI 2026-10-23-08）
+- repository 3 件を注入化し、破損読込にログを追加する。縮退・既定動作不変（PBI 2026-10-23-09）
+- router の collection 取得アクセサを inline 一本化する（PBI 2026-10-23-10）
+- content フラグ監視の共有化を見送り現状維持で閉じる（偶然の重複と裁定。PBI 2026-10-23-11）
+- ガード述語を局所維持で閉じる（3 組とも受容集合が異なり共有化は判定変更になるため。PBI 2026-10-23-12）
+
+### 修正
+
+- ドメイン提案が複数あるとき先頭行にだけ配線される誤りを、行要素渡しへの統一で解消する。複数行 pin テストで固定（対象外 O1。PBI 2026-10-23-08）
+
+### テスト
+
+- 新規テスト約 90 件（共有 fold・repository 往復・gateway・丸め境界・busy seam・提案 pin ほか）。型エラー baseline 451 を維持（増加なし）。最終ゲート `npm run validate` 緑（1151ファイル・16984テスト）
+
 ## [6.9.52] - 2026-10-22
 
 このリリースは前日リリースに続く実機検証の e2e 化です。owner 手動確認として残置していた項目（Gist egress の全 chain・自動ロックの受信側遷移・unlimitedStorage quota 免除）を実 Chromium 上の e2e pin に置き換え、恒常的な検証にしました。製品コードの変更はありません。
