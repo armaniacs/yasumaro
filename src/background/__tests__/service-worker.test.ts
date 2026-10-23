@@ -497,6 +497,7 @@ vi.mock('../localMarkdownIdleFlusher.js', () => ({
 }));
 vi.mock('../reviewSummaryGenerator.js', () => ({
     createReviewSummaryGenerator: vi.fn(() => mockReviewGenerator),
+    downloadMarkdown: vi.fn().mockResolvedValue(true),
 }));
 vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
     const actual = (await importOriginal()) as Record<string, unknown>;

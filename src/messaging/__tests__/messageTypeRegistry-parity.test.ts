@@ -29,6 +29,7 @@ describe('messaging parity: message type registry', () => {
             'SAVE_RECORD',
             'REGENERATE_SUMMARY',
             'ASK_HISTORY',
+            'EXPORT_RESEARCH_REPORT',
             'TEST_CONNECTIONS',
             'TEST_OBSIDIAN',
             'TEST_AI',

@@ -42,8 +42,8 @@ describe('MessageRouter — deep module single seam dispatch(msg)', () => {
     router = createMessageRouter(makeDeps());
   });
 
-  it('dispatch hides 26 handlers behind one method', () => {
-    expect(router.getHandlerCount()).toBe(26);
+  it('dispatch hides 27 handlers behind one method', () => {
+    expect(router.getHandlerCount()).toBe(27);
     // Caller only knows dispatch, not register/trust/validator
     expect(typeof router.dispatch).toBe('function');
   });

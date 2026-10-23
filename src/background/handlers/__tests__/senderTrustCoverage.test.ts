@@ -51,6 +51,8 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   // PBI 2026-10-23-08: 履歴に聞く (dashboard QA — extension-only like the
   // other dashboard hops).
   ASK_HISTORY: 'extension-only',
+  // PBI 2026-10-23-09: 調査レポート一発生成 (dashboard report delivery).
+  EXPORT_RESEARCH_REPORT: 'extension-only',
   // PBI 2026-09-22-04: dashboard-only regenerate (explicit force opt-in path).
   REGENERATE_SUMMARY: 'extension-only',
   // PBI 2026-10-17-01: pause controls are popup-only. A web page must never
@@ -67,6 +69,7 @@ function makeDeps(): MessageRouterDeps {
     tabCache: { add: () => undefined, update: () => undefined },
     obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
     aiService: { testConnection: async () => ({ success: true, message: 'ok', providers: [] }), generateSummary: async () => ({ success: true, summary: 'ok' }) },
+    researchReportGenerator: undefined as never,
     askEvidenceSearch: undefined as never,
     recordingAdmission: {} as never,
     fetchManualContent: undefined as never,

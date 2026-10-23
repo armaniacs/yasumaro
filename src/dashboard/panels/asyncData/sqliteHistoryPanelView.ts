@@ -311,6 +311,7 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.savedCollections}" class="sqlite-saved-collections"></div>
     <div id="${SQLITE_HISTORY_IDS.askHistory}" class="sqlite-ask-history"></div>
+    <div id="${SQLITE_HISTORY_IDS.researchReport}" class="sqlite-research-report"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -346,6 +347,9 @@ export const SQLITE_HISTORY_IDS = {
   // Ask-history region (PBI 2026-10-23-08): question + target collection +
   // answer with citations back to the original records.
   askHistory: 'sqlite-ask-history',
+  // Research-report region (PBI 2026-10-23-09): one-shot report generation
+  // from the panel conditions, delivered to the existing export paths.
+  researchReport: 'sqlite-research-report',
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',

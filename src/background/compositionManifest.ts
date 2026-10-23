@@ -34,7 +34,9 @@ import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipel
 import { createOfflineNetworkQueue, setOfflineNetworkQueue, sharedOfflineNetworkQueue, type OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createPendingSqliteQueue, setPendingSqliteQueue } from './pendingSqliteQueue.js';
 import { setObsidianClient } from './handlers/dashboardSqlite/deps.js';
-import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
+import { createReviewSummaryGenerator, downloadMarkdown } from './reviewSummaryGenerator.js';
+import { createResearchReportGenerator } from './researchReportGenerator.js';
+import type { ResearchReportGenerator } from './researchReportGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
 import { createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
@@ -145,6 +147,17 @@ export const compositionManifest: readonly CompositionEntry[] = [
       sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
       // PBI 2026-10-19-10: the digest re-reads consent at execution time.
       isConsentGranted: () => hasPrivacyConsent(),
+    }),
+  },
+  // PBI 2026-10-23-09: 調査レポート一発生成 — panel conditions pick the
+  // selection; delivery rides the existing download + Obsidian append paths.
+  {
+    key: 'researchReportGenerator',
+    singleton: true,
+    factory: (c) => createResearchReportGenerator({
+      sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
+      obsidian: c.resolve<ObsidianClient>('obsidian'),
+      downloadMarkdown,
     }),
   },
   {
@@ -289,6 +302,9 @@ export const compositionManifest: readonly CompositionEntry[] = [
           return result.success ? result : { success: false, error: result.error.message };
         },
         dashboardSqliteHandler: c.resolve<MessageHandler>('dashboardSqliteHandler'),
+        // PBI 2026-10-23-09: 調査レポート一発生成 — the singleton generator
+        // (created once above) supplies generation + delivery to the handler.
+        researchReportGenerator: c.resolve<ResearchReportGenerator>('researchReportGenerator'),
       };
       return createMessageRouter(messageRouterDeps);
     },

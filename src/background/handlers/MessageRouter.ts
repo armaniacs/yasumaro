@@ -26,6 +26,8 @@ import {
   createRegenerateSummaryHandler,
 } from './recordingHandlers.js';
 import { createAskHistoryHandler, type AskHistorySearch } from './askHistoryHandlers.js';
+import { createResearchReportHandler } from './researchReportHandlers.js';
+import type { ResearchReportGenerator } from '../researchReportGenerator.js';
 import { getSavedCollections } from '../../utils/storage/savedCollectionsRepository.js';
 
 /** The raw stored query of one saved collection, or null for an unknown id. */
@@ -70,6 +72,7 @@ import {
   contentCleansingExecutedValidator,
   regenerateSummaryValidator,
   askHistoryValidator,
+  exportResearchReportValidator,
   testObsidianValidator,
   e2eProbeQueryValidator,
   e2eProbeStateValidator,
@@ -146,6 +149,14 @@ export interface AskHistoryHandlerDeps {
   askEvidenceSearch: AskHistorySearch;
 }
 
+/**
+ * PBI 2026-10-23-09: 調査レポート一発生成 — the composition seam the report
+ * handler reads generation + delivery through (created once by the root).
+ */
+export interface ResearchReportHandlerDeps {
+  researchReportGenerator: ResearchReportGenerator;
+}
+
 export interface SystemHandlerDeps {
   buildAllowedUrls: (settings: Settings) => Set<string>;
   getSettings: () => Promise<Settings>;
@@ -172,7 +183,8 @@ export type MessageRouterDeps =
   TestingHandlerDeps &
   SystemHandlerDeps &
   LifecycleHandlerDeps &
-  AskHistoryHandlerDeps;
+  AskHistoryHandlerDeps &
+  ResearchReportHandlerDeps;
 
 export class MessageRouter {
   private handlers = new Map<string, MessageHandler>();
@@ -239,6 +251,11 @@ export class MessageRouter {
         generateAnswer: deps.aiService.generateSummary,
         loadCollection: (id) => getSavedCollectionById(id),
       }),
+      // PBI 2026-10-23-09: 調査レポート一発生成 — four-section Markdown from
+      // the panel conditions, delivered through the existing export paths.
+      EXPORT_RESEARCH_REPORT: createResearchReportHandler({
+        researchReportGenerator: deps.researchReportGenerator,
+      }),
       CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({
@@ -294,6 +311,7 @@ export class MessageRouter {
     this.setValidator('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator);
     this.setValidator('REGENERATE_SUMMARY', regenerateSummaryValidator);
     this.setValidator('ASK_HISTORY', askHistoryValidator);
+    this.setValidator('EXPORT_RESEARCH_REPORT', exportResearchReportValidator);
     this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
     this.setValidator('OW_PROBE_QUERY', e2eProbeQueryValidator);
     this.setValidator('OW_PROBE_STATE', e2eProbeStateValidator);

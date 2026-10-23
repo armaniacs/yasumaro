@@ -1,5 +1,6 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
@@ -32,6 +33,8 @@ import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteH
 import { renderSavedCollectionsRegion } from './savedCollectionsPanelView.js';
 import { renderAskHistoryRegion, type AskRunResult } from './askHistoryPanelView.js';
 import { askHistory } from '../../../messaging/askHistoryGateway.js';
+import { renderResearchReportRegion, type ReportRunResult } from './researchReportPanelView.js';
+import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
 import {
   hasCollectionCondition,
   newCollectionId,
@@ -598,6 +601,44 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     }
   }
 
+  // --- Research report (PBI 2026-10-23-09) -----------------------------------
+
+  async function generateReport(sendToObsidian: boolean): Promise<ReportRunResult> {
+    try {
+      const state = model.getState();
+      const scope: {
+        search?: string;
+        tag?: string;
+        since?: number;
+        until?: number;
+      } = {};
+      if (state.searchQuery.trim().length > 0) scope.search = state.searchQuery.trim();
+      if (state.activeTagFilter !== null && state.activeTagFilter.trim().length > 0) {
+        scope.tag = state.activeTagFilter.trim();
+      }
+      if (state.selectedDate !== null) {
+        // The selected day is the report scope (PBI 06 collection shape).
+        const range = localDayRangeFromDateString(state.selectedDate);
+        scope.since = range.since;
+        scope.until = range.until;
+      }
+      const result = await exportResearchReport({ scope, sendToObsidian });
+      if (result.success === false) {
+        return { ok: false, error: result.error ?? '' };
+      }
+      const recordCount = result.recordCount;
+      const deliveredTo = result.deliveredTo;
+      return {
+        ok: true,
+        ...(recordCount !== undefined ? { recordCount } : {}),
+        ...(deliveredTo !== undefined ? { deliveredTo } : {}),
+      };
+    } catch (e: unknown) {
+      // The gateway timeout maps to its sentinel; the failure reason shows.
+      return { ok: false, error: errorMessage(e) };
+    }
+  }
+
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
@@ -648,6 +689,12 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       // saved collections as the target options; the answer paints per ask.
       renderAskHistoryRegion(container, savedCollections, {
         onAsk: (question, collectionId) => askQuestion(question, collectionId),
+      });
+
+      // Research-report region (PBI 2026-10-23-09): rendered per load; the
+      // current panel conditions become the report scope.
+      renderResearchReportRegion(container, {
+        onGenerate: (sendToObsidian) => generateReport(sendToObsidian),
       });
 
       // Single navigation entry point: filter branch → fallback check →

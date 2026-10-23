@@ -2074,6 +2074,27 @@
   "askHistoryNoEvidence": {
     "message": "I don't know. No matching records."
   },
+  "researchReportLabel": {
+    "message": "One-shot research report"
+  },
+  "researchReportHelp": {
+    "message": "Generate a Markdown report from the current conditions (term, tag, selected day) with four sections: digest, timeline, citations and unread holes."
+  },
+  "researchReportObsidianOption": {
+    "message": "Also send to Obsidian"
+  },
+  "researchReportGenerateBtn": {
+    "message": "Generate report"
+  },
+  "researchReportBusy": {
+    "message": "Generating report..."
+  },
+  "researchReportFailed": {
+    "message": "Could not generate a report. Please try again later."
+  },
+  "researchReportDone": {
+    "message": "Report generated ({0} records)."
+  },
   "savedCollectionsHelp": {
     "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
   },

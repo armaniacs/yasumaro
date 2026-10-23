@@ -89,6 +89,18 @@ export interface AskHistoryResponse {
 }
 
 /**
+ * PBI 2026-10-23-09: 調査レポート一発生成の wire 応答。配信先と記録件数を
+ * 返す。縮退・失敗は偽成功にならず error に理由を載せる（BDD: 失敗時は理由と
+ * 再送ができる）。
+ */
+export interface ResearchReportResponse {
+  success: boolean;
+  error?: string;
+  recordCount?: number;
+  deliveredTo?: ('download' | 'obsidian')[];
+}
+
+/**
  * 記録処理の結果型
  */
 export interface RecordingResult {
@@ -285,6 +297,7 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
   T extends 'REGENERATE_SUMMARY' ? RegenerateSummaryResponse :
   T extends 'ASK_HISTORY' ? AskHistoryResponse :
+  T extends 'EXPORT_RESEARCH_REPORT' ? ResearchReportResponse :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'GET_CONTENT' ? ContentResponse :
   T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :

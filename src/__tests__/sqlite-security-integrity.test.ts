@@ -58,6 +58,7 @@ describe('SQLite Security & Data Integrity', () => {
         tabCache: { add: () => undefined, update: () => undefined },
         obsidian: { testConnection: async () => ({ success: true }) as Awaited<ReturnType<MessageRouterDeps['obsidian']['testConnection']>> },
         aiService: { testConnection: async () => ({ success: true }) as Awaited<ReturnType<MessageRouterDeps['aiService']['testConnection']>>, generateSummary: async () => ({ success: true, summary: 'ok' }) },
+        researchReportGenerator: undefined as never,
         askEvidenceSearch: undefined as never,
         recordingAdmission: {} as never,
         fetchManualContent: undefined as never,

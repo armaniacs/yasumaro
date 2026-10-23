@@ -2011,6 +2011,27 @@
   "askHistoryNoEvidence": {
     "message": "分かりません。該当する記録がありません。"
   },
+  "researchReportLabel": {
+    "message": "調査レポート一発生成"
+  },
+  "researchReportHelp": {
+    "message": "現在の検索条件(語・タグ・選択日)を対象に、要旨・時系列・引用・未読穴の4節からなるMarkdownレポートを生成します。"
+  },
+  "researchReportObsidianOption": {
+    "message": "Obsidianにも送る"
+  },
+  "researchReportGenerateBtn": {
+    "message": "レポートを生成"
+  },
+  "researchReportBusy": {
+    "message": "レポートを生成しています..."
+  },
+  "researchReportFailed": {
+    "message": "レポートを生成できませんでした。時間をおいて再試行してください。"
+  },
+  "researchReportDone": {
+    "message": "レポートを生成しました(記録 {0} 件)。"
+  },
   "savedCollectionsHelp": {
     "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
   },

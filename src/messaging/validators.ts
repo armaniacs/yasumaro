@@ -23,6 +23,7 @@ import type {
   ContentCleansingExecutedMessage,
   RegenerateSummaryMessage,
   AskHistoryMessage,
+  ExportResearchReportMessage,
   OwE2eProbeQueryMessage,
   OwE2EProbeStateMessage,
   GenerateReviewSummaryMessage,
@@ -693,6 +694,43 @@ export class AskHistoryValidator implements MessageValidator<AskHistoryMessage> 
 }
 
 // ------------------------------------------------------------------
+// ExportResearchReportValidator — EXPORT_RESEARCH_REPORT (PBI 2026-10-23-09)
+// ------------------------------------------------------------------
+export class ExportResearchReportValidator implements MessageValidator<ExportResearchReportMessage> {
+  validate(msg: unknown): ExportResearchReportMessage {
+    const m = assertEnvelopeType(msg, 'ExportResearchReportValidator', 'EXPORT_RESEARCH_REPORT');
+    const payload = assertPayloadObject(m, 'ExportResearchReportValidator');
+    const scope = payload.scope;
+    if (scope !== undefined) {
+      if (typeof scope !== 'object' || scope === null) {
+        throw new ValidationError('ExportResearchReportValidator', 'payload.scope must be object', 'scope');
+      }
+      const s = scope as Record<string, unknown>;
+      for (const field of ['search', 'tag'] as const) {
+        const value = s[field];
+        if (value !== undefined && typeof value !== 'string') {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be string`, field);
+        }
+        if (typeof value === 'string' && value.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, field);
+        }
+      }
+      for (const field of ['since', 'until'] as const) {
+        const value = s[field];
+        if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
+        }
+      }
+    }
+    if (payload.sendToObsidian !== undefined && typeof payload.sendToObsidian !== 'boolean') {
+      throw new ValidationError('ExportResearchReportValidator', 'payload.sendToObsidian must be boolean', 'sendToObsidian');
+    }
+    assertProtocolVersion(m, 'ExportResearchReportValidator');
+    return msg as ExportResearchReportMessage;
+  }
+}
+
+// ------------------------------------------------------------------
 // CheckDomainValidator — CHECK_DOMAIN (no payload, content-script allowed)
 // ------------------------------------------------------------------
 export class CheckDomainValidator implements MessageValidator<ExtensionMessage> {
@@ -911,6 +949,7 @@ export const fetchUrlValidator = new FetchUrlValidator();
 export const manualRecordValidator = new ManualRecordValidator();
 export const regenerateSummaryValidator = new RegenerateSummaryValidator();
 export const askHistoryValidator = new AskHistoryValidator();
+export const exportResearchReportValidator = new ExportResearchReportValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
 export const testObsidianValidator = new TestObsidianValidator();

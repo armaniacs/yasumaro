@@ -86,6 +86,24 @@ export type AskHistoryMessage = {
     };
 };
 
+/**
+ * PBI 2026-10-23-09: 調査レポート一発生成 — the panel conditions pick the
+ * selection rows and the background assembles the four-section Markdown.
+ * The scope is the same condition shape as the saved collections (PBI 06).
+ */
+export type ExportResearchReportMessage = {
+    type: 'EXPORT_RESEARCH_REPORT';
+    payload: {
+        scope?: {
+            search?: string;
+            tag?: string;
+            since?: number;
+            until?: number;
+        };
+        sendToObsidian?: boolean;
+    };
+};
+
 export type FetchUrlMessage = {
     type: 'FETCH_URL';
     payload: { url: string };
@@ -292,6 +310,7 @@ export type ExtensionMessage = (
     | GenerateReviewSummaryMessage
     | RegenerateSummaryMessage
     | AskHistoryMessage
+    | ExportResearchReportMessage
     | DashboardSqliteMessage
     | LogForwardMessage
 ) & { protocolVersion: number };

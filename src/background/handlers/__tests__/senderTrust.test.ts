@@ -168,6 +168,7 @@ describe('MessageRouter — trust enforcement', () => {
       tabCache: { add: vi.fn(), update: vi.fn() },
       obsidian: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
       aiService: { testConnection: vi.fn().mockResolvedValue({ success: true }), generateSummary: vi.fn() },
+      researchReportGenerator: undefined as never,
       askEvidenceSearch: undefined as never,
       recordingAdmission: {} as never,
       fetchManualContent: undefined as never,
