@@ -1985,7 +1985,7 @@
     "message": "保存済みコレクション"
   },
   "savedCollectionsHelp": {
-    "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。件数と更新時刻が表示されます。"
+    "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
   },
   "savedCollectionsEmpty": {
     "message": "保存済みコレクションはまだありません"
@@ -1998,6 +1998,33 @@
   },
   "savedCollectionDeleteBtn": {
     "message": "削除"
+  },
+  "savedCollectionNamePlaceholder": {
+    "message": "コレクション名"
+  },
+  "savedCollectionCondSearch": {
+    "message": "語"
+  },
+  "savedCollectionCondTag": {
+    "message": "タグ"
+  },
+  "savedCollectionCondDate": {
+    "message": "期間"
+  },
+  "savedCollectionNoCondition": {
+    "message": "保存する条件がありません。語・タグ・期間を指定してください。"
+  },
+  "savedCollectionDeleteConfirm": {
+    "message": "「$1」を削除しますか？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "調べ物A"
+      }
+    }
+  },
+  "savedCollectionSaveError": {
+    "message": "保存に失敗しました"
   },
   "aiDomainPolicy_allowed": {
     "message": "送信を許可"

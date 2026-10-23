@@ -298,6 +298,7 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
+    <div id="${SQLITE_HISTORY_IDS.savedCollections}" class="sqlite-saved-collections"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -327,6 +328,9 @@ export const SQLITE_HISTORY_IDS = {
   calendarDays: 'sqlite-calendar-days',
   clearAllFilters: 'sqlite-clear-all-filters',
   pendingRegion: 'sqlite-pending-region',
+  // Saved-collections region placeholder (PBI 2026-10-23-06); filled by
+  // savedCollectionsPanelView.renderSavedCollectionsRegion.
+  savedCollections: 'sqlite-saved-collections',
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',

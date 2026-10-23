@@ -1724,6 +1724,94 @@ button#changeMasterPassword:hover {
   min-width: unset;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Saved Collections Section (PBI 2026-10-23-06)
+   ───────────────────────────────────────────────────────────────── */
+
+.saved-collections-section {
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius);
+  background: var(--color-bg-white, #fff);
+  padding: 16px;
+}
+
+.saved-collections-help {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin: 4px 0 12px;
+}
+
+.saved-collections-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.saved-collection-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.saved-collection-save-error {
+  font-size: 12px;
+  color: var(--color-danger-text, #991b1b);
+}
+
+.saved-collections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saved-collections-empty {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.saved-collection-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+}
+
+.saved-collection-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.saved-collection-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.saved-collection-meta {
+  font-size: 11px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.saved-collection-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saved-collection-actions .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
 .danger-btn {
   display: inline-block;
   padding: 8px 16px;

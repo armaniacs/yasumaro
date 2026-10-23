@@ -32,6 +32,7 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
+import { parseCollectionQuery } from './savedCollectionQuery.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
@@ -89,6 +90,9 @@ export type SqliteHistoryAction =
   | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
   | { type: 'tagInitiated'; tag: string }
   | { type: 'domainSearchInitiated'; query: string }
+  // PBI 2026-10-23-06: saved-collection recall — every stored condition lands
+  // in state through this one action so a recall cannot drift per field.
+  | { type: 'collectionApplied'; search: string; tag: string | null; date: string | null }
   | { type: 'toggleStarSuccess'; id: number; starred: boolean }
   | { type: 'deleteSuccess'; id: number }
   | { type: 'operationError'; error: string }
@@ -202,6 +206,19 @@ export function historyStateReducer(
 
     case 'domainSearchInitiated':
       return { ...state, searchQuery: action.query, currentPage: 0 };
+
+    // PBI 2026-10-23-06: recall applies every stored condition in one pass.
+    // The current sort is preserved on purpose — a collection is a named
+    // condition, not a sort choice.
+    case 'collectionApplied':
+      return {
+        ...state,
+        searchQuery: action.search,
+        activeTagFilter: action.tag,
+        selectedDate: action.date,
+        pendingTagFallback: null,
+        currentPage: 0,
+      };
 
     case 'toggleStarSuccess':
       return {
@@ -398,6 +415,8 @@ export interface SqliteHistoryModel {
   appendSelectedToObsidian(): Promise<AppendResult | null>;
   deleteSelectedEntries(): Promise<BulkDeleteResult>;
   search(query: string): void;
+  /** Recall a saved collection (PBI 2026-10-23-06): one dispatch + one fetch with every stored condition. */
+  applyCollection(rawQuery: Record<string, unknown>): void;
   selectDate(dateStr: string): Promise<void>;
   changeSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void>;
   filterByTag(tag: string): void;
@@ -795,6 +814,31 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
+  // PBI 2026-10-23-06: single recall entry point. The condition parse lives in
+  // savedCollectionQuery (縮退の出口: corrupted query degrades to the empty
+  // condition); this model only dispatches state and builds one fetch with
+  // every stored condition — search, tag filter and the selected day range.
+  function applyCollection(rawQuery: Record<string, unknown>): void {
+    const parsed = parseCollectionQuery(rawQuery);
+    dispatch({
+      type: 'collectionApplied',
+      search: parsed.search,
+      tag: parsed.tag,
+      date: parsed.date,
+    });
+    notify();
+    const dayRange = parsed.date !== null ? localDayRangeFromDateString(parsed.date) : null;
+    void fetchData({
+      ...pickDefined({
+        search: parsed.search !== '' ? parsed.search : undefined,
+        tagFilter: parsed.tag ?? undefined,
+        since: dayRange?.since,
+        until: dayRange?.until,
+      }),
+      page: 0,
+    });
+  }
+
   async function selectDate(dateStr: string): Promise<void> {
     dispatch({ type: 'dateSelect', date: dateStr });
     await fetchData(localDayRangeFromDateString(dateStr));
@@ -870,6 +914,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     appendSelectedToObsidian,
     deleteSelectedEntries,
     search,
+    applyCollection,
     selectDate,
     changeSort,
     filterByTag,

@@ -2048,7 +2048,7 @@
     "message": "Saved collections"
   },
   "savedCollectionsHelp": {
-    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The count and updated time are shown."
+    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
   },
   "savedCollectionsEmpty": {
     "message": "No saved collections yet"
@@ -2061,6 +2061,33 @@
   },
   "savedCollectionDeleteBtn": {
     "message": "Delete"
+  },
+  "savedCollectionNamePlaceholder": {
+    "message": "Collection name"
+  },
+  "savedCollectionCondSearch": {
+    "message": "Term"
+  },
+  "savedCollectionCondTag": {
+    "message": "Tag"
+  },
+  "savedCollectionCondDate": {
+    "message": "Period"
+  },
+  "savedCollectionNoCondition": {
+    "message": "No condition to save. Specify a term, tag, or period first."
+  },
+  "savedCollectionDeleteConfirm": {
+    "message": "Delete \"$1\"?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research A"
+      }
+    }
+  },
+  "savedCollectionSaveError": {
+    "message": "Failed to save"
   },
   "aiDomainPolicy_allowed": {
     "message": "Send allowed"

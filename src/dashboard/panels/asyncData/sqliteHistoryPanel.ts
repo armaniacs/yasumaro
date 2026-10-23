@@ -25,6 +25,18 @@ import {
   hideDeleteConfirm,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import { renderSavedCollectionsRegion } from './savedCollectionsPanelView.js';
+import {
+  hasCollectionCondition,
+  newCollectionId,
+  serializeCollectionQuery,
+} from './savedCollectionQuery.js';
+import {
+  getSavedCollections,
+  removeSavedCollectionById,
+  upsertSavedCollectionById,
+} from '../../../utils/storage/savedCollectionsRepository.js';
+import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -108,6 +120,12 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // a chrome.storage.onChanged subscription, released in destroy().
   let pendingPages: PendingPage[] = [];
   let unsubscribePendingStorage: (() => void) | null = null;
+
+  // --- Saved collections (PBI 2026-10-23-06) --------------------------------
+  // Panel-local state (NOT model state): saved collections are chrome.storage
+  // settings content, independent of the SQLite query pipeline. The recall
+  // funnels through model.applyCollection (single dispatch + single fetch).
+  let savedCollections: Record<string, SavedCollection> = {};
 
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
@@ -411,6 +429,64 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
   }
 
+  // --- Saved collections (PBI 2026-10-23-06) --------------------------------
+
+  function renderSaved(): void {
+    if (!container) return;
+    renderSavedCollectionsRegion(container, savedCollections, {
+      onSave: (name) => saveCollection(name),
+      onApply: (id) => applySavedCollection(id),
+      onDelete: (id) => deleteSavedCollection(id),
+    });
+  }
+
+  async function loadSaved(): Promise<void> {
+    savedCollections = await getSavedCollections();
+    renderSaved();
+  }
+
+  async function saveCollection(name: string): Promise<{ ok: boolean; error?: string }> {
+    // The save captures exactly what panel state holds (search/tag/selected
+    // day); an empty condition fails closed instead of saving a no-op recall.
+    const query = serializeCollectionQuery(model.getState());
+    if (!hasCollectionCondition(query)) {
+      return { ok: false, error: t('savedCollectionNoCondition') };
+    }
+    try {
+      await upsertSavedCollectionById(newCollectionId(), name, query, Date.now());
+    } catch (e: unknown) {
+      return { ok: false, error: errorMessage(e) };
+    }
+    await loadSaved();
+    return { ok: true };
+  }
+
+  function applySavedCollection(id: string): void {
+    const collection = savedCollections[id];
+    if (!collection) return;
+    model.applyCollection(collection.query);
+  }
+
+  async function deleteSavedCollection(id: string): Promise<void> {
+    const collection = savedCollections[id];
+    if (!collection) return;
+    const confirmed = await showConfirmDialog({
+      title: t('savedCollectionsLabel'),
+      message: t('savedCollectionDeleteConfirm', [collection.name]),
+      confirmLabel: t('savedCollectionDeleteBtn'),
+      cancelLabel: t('cancel'),
+      dangerous: true,
+    });
+    if (!confirmed) return;
+    try {
+      await removeSavedCollectionById(id);
+    } catch {
+      // 縮退の出口: a failed remove keeps the list as-is instead of throwing.
+      return;
+    }
+    await loadSaved();
+  }
+
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
@@ -453,6 +529,10 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       subscribePendingStorage();
       void loadPending();
 
+      // Saved collections render into the shell's dedicated region
+      // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
+      void loadSaved();
+
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
       // the Model, which owns the order.
@@ -481,6 +561,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         unsubscribePendingStorage = null;
       }
       pendingPages = [];
+      savedCollections = {};
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.
       // (Also clears bulk bar listener references via the selection clear.)
