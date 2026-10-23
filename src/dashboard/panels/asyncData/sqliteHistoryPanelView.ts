@@ -310,6 +310,7 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
     <div id="${SQLITE_HISTORY_IDS.savedCollections}" class="sqlite-saved-collections"></div>
+    <div id="${SQLITE_HISTORY_IDS.askHistory}" class="sqlite-ask-history"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -342,6 +343,9 @@ export const SQLITE_HISTORY_IDS = {
   // Saved-collections region placeholder (PBI 2026-10-23-06); filled by
   // savedCollectionsPanelView.renderSavedCollectionsRegion.
   savedCollections: 'sqlite-saved-collections',
+  // Ask-history region (PBI 2026-10-23-08): question + target collection +
+  // answer with citations back to the original records.
+  askHistory: 'sqlite-ask-history',
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',

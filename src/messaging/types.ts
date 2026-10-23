@@ -75,6 +75,20 @@ export type RegenerateSummaryResponse = RecordingResult & {
 };
 
 /**
+ * PBI 2026-10-23-08: 履歴に聞くの wire 応答。該当記録がないときは作らず
+ * status: 'no_evidence' で対象の広げ方を返す（BDD: 作らず分からないと言う）。
+ */
+export interface AskHistoryResponse {
+  success: boolean;
+  error?: string;
+  reason?: string;
+  status?: 'answered' | 'no_evidence';
+  answer?: string;
+  suggestion?: string;
+  citations?: Array<{ id: number; title: string; url: string; snippet: string }>;
+}
+
+/**
  * 記録処理の結果型
  */
 export interface RecordingResult {
@@ -270,6 +284,7 @@ export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
 export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
   T extends 'REGENERATE_SUMMARY' ? RegenerateSummaryResponse :
+  T extends 'ASK_HISTORY' ? AskHistoryResponse :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'GET_CONTENT' ? ContentResponse :
   T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :

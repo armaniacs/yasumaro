@@ -5,7 +5,7 @@ import { visitRateLimiter } from './visitRateLimiter.js';
 import { isRecordingPaused } from './recordingPauseGate.js';
 
 /** The recording kinds the admission pre-stage serves. */
-export type RecordAdmissionKind = 'valid-visit' | 'manual' | 'save' | 'regenerate';
+export type RecordAdmissionKind = 'valid-visit' | 'manual' | 'save' | 'regenerate' | 'ask';
 
 /** One rejection shape for every admission stage, owned by this module. */
 export interface AdmissionRejected {
@@ -41,6 +41,9 @@ const KIND_RATE_BUCKET: Record<Exclude<RecordAdmissionKind, 'valid-visit'>, stri
   manual: undefined,
   save: null,
   regenerate: 'regenerate',
+  // PBI 2026-10-23-08: own bucket so dashboard QA bursts never starve popup
+  // manual records (same reasoning as regenerate's bucket).
+  ask: 'ask',
 };
 
 function toSenderLike(sender: chrome.runtime.MessageSender): MessageSenderLike {

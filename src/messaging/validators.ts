@@ -22,6 +22,7 @@ import type {
   ManualRecordMessage,
   ContentCleansingExecutedMessage,
   RegenerateSummaryMessage,
+  AskHistoryMessage,
   OwE2eProbeQueryMessage,
   OwE2EProbeStateMessage,
   GenerateReviewSummaryMessage,
@@ -669,6 +670,29 @@ export class RegenerateSummaryValidator implements MessageValidator<RegenerateSu
 }
 
 // ------------------------------------------------------------------
+// AskHistoryValidator — ASK_HISTORY (PBI 2026-10-23-08)
+// ------------------------------------------------------------------
+export class AskHistoryValidator implements MessageValidator<AskHistoryMessage> {
+  validate(msg: unknown): AskHistoryMessage {
+    const m = assertEnvelopeType(msg, 'AskHistoryValidator', 'ASK_HISTORY');
+    const payload = assertPayloadObject(m, 'AskHistoryValidator');
+    if (typeof payload.question !== 'string') {
+      throw new ValidationError('AskHistoryValidator', 'payload.question must be string', 'question');
+    }
+    // Same cap as the DASHBOARD_SQLITE search query: the question is the
+    // evidence search term and the prompt head.
+    if (payload.question.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+      throw new ValidationError('AskHistoryValidator', `payload.question exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'question');
+    }
+    if (payload.collectionId !== undefined && payload.collectionId !== null && typeof payload.collectionId !== 'string') {
+      throw new ValidationError('AskHistoryValidator', 'payload.collectionId must be string or null', 'collectionId');
+    }
+    assertProtocolVersion(m, 'AskHistoryValidator');
+    return msg as AskHistoryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
 // CheckDomainValidator — CHECK_DOMAIN (no payload, content-script allowed)
 // ------------------------------------------------------------------
 export class CheckDomainValidator implements MessageValidator<ExtensionMessage> {
@@ -886,6 +910,7 @@ export const dashboardSqliteValidator = new DashboardSqliteValidator();
 export const fetchUrlValidator = new FetchUrlValidator();
 export const manualRecordValidator = new ManualRecordValidator();
 export const regenerateSummaryValidator = new RegenerateSummaryValidator();
+export const askHistoryValidator = new AskHistoryValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
 export const testObsidianValidator = new TestObsidianValidator();

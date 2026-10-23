@@ -1890,6 +1890,96 @@ button#changeMasterPassword:hover {
   min-width: unset;
 }
 
+/* Ask-history region (PBI 2026-10-23-08): neutral tone, design tokens only.
+ * The answer text and citations sit below the question row. */
+.ask-history-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8fafc);
+}
+
+.ask-history-section h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.ask-history-help {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.ask-history-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ask-history-target {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.ask-history-question {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+}
+
+.ask-history-status {
+  font-size: 13px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 6px;
+}
+
+.ask-history-status:empty {
+  display: none;
+}
+
+.ask-history-answer {
+  margin-top: 8px;
+}
+
+.ask-answer-text {
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.ask-citations {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ask-citation-row {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.ask-citation-link {
+  font-size: 13px;
+  color: var(--color-link, #2563eb);
+}
+
+.ask-citation-snippet {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
 .pending-pagination {
   display: flex;
   align-items: center;

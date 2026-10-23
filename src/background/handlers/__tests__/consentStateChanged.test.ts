@@ -34,6 +34,7 @@ describe('createConsentStateChangedHandler', () => {
       tabCache: { add: () => undefined, update: () => undefined },
       obsidian: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['obsidian'],
       aiService: { testConnection: async () => ({ success: true }) } as unknown as MessageRouterDeps['aiService'],
+      askEvidenceSearch: undefined as never,
       recordingAdmission: {} as never,
       fetchManualContent: undefined as never,
       fetchRegenerated: undefined as never,

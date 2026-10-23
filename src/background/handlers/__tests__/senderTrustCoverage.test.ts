@@ -48,6 +48,9 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   GENERATE_REVIEW_SUMMARY: 'extension-only',
   LOG_FORWARD: 'extension-only',
   DASHBOARD_SQLITE: 'extension-only',
+  // PBI 2026-10-23-08: 履歴に聞く (dashboard QA — extension-only like the
+  // other dashboard hops).
+  ASK_HISTORY: 'extension-only',
   // PBI 2026-09-22-04: dashboard-only regenerate (explicit force opt-in path).
   REGENERATE_SUMMARY: 'extension-only',
   // PBI 2026-10-17-01: pause controls are popup-only. A web page must never
@@ -63,7 +66,8 @@ function makeDeps(): MessageRouterDeps {
     recordingPipeline: { record: async () => ({ success: true }) },
     tabCache: { add: () => undefined, update: () => undefined },
     obsidian: { testConnection: async () => ({ success: true, message: 'ok' }) },
-    aiService: { testConnection: async () => ({ success: true, message: 'ok', providers: [] }) },
+    aiService: { testConnection: async () => ({ success: true, message: 'ok', providers: [] }), generateSummary: async () => ({ success: true, summary: 'ok' }) },
+    askEvidenceSearch: undefined as never,
     recordingAdmission: {} as never,
     fetchManualContent: undefined as never,
     fetchRegenerated: undefined as never,

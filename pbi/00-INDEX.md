@@ -14,7 +14,7 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-23 新機能5候補(M6見送り) ― 🔶 2件部分実装（06: 保存・呼び出し・削除UI+モデル経路完了 / 07: 権限不要分+一括スター完了）⬜ 3件残 着手順: 08 → 09 → 10
+### 2026-10-23 新機能5候補(M6見送り) ― 🔶 3件部分実装（06: 保存・呼び出し・削除UI+モデル経路完了 / 07: 権限不要分+一括スター完了 / 08: コアQA経路完了）⬜ 2件残 着手順: 09 → 10
 
 新機能観点の棚卸し(M1〜M6)のうちM1/M2/M3/M4/M5をPBI化。M6は見送り。詳細は [2026-10-23-00-backlog-yasumaro-newfeat.md](2026-10-23-00-backlog-yasumaro-newfeat.md)。07/10は06と独立のため並列着手可。08/09は06確定後に着手する。
 
@@ -22,7 +22,7 @@
 |---|---|---|---:|---:|---|
 | 🔶 06 | [2026-10-23-06-feat-saved-collections.md](2026-10-23-06-feat-saved-collections.md) | feat | 640 | 2.0人週相当 | 基盤+保存UI完了(設定キー・正規化・upsert/remove・repository seam・保存/呼び出し/削除UI・applyCollectionモデル経路)。残は自動タグ規則とM1/M3入力選択、E2E |
 | 🔶 07 | [2026-10-23-07-feat-entry-friction.md](2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | 権限不要分+一括スター完了(omnibox・キーボードコマンド・共有コア・一括スター適用+取消+プライベート判定除外・ADR-016部分更新)。残はコードレビューとE2E通し、検索語ハンドオフ(任意) |
-| ⬜ 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | M1。M2に依存 |
+| 🔶 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | コアQA経路完了(根拠検索+コレクション絞り+no-summary除外・local_only強制・該当なし分岐・引用返却・QA UI・admission ask kind)。残はE2E通しとFTS/LIKE統合テスト、コードレビュー、ドキュメント |
 | ⬜ 09 | [2026-10-23-09-feat-research-report.md](2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | M3。M2に依存 |
 | ⬜ 10 | [2026-10-23-10-feat-domain-intel.md](2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | M4間接効果。独立 |
 

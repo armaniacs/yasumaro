@@ -2047,6 +2047,33 @@
   "savedCollectionsLabel": {
     "message": "Saved collections"
   },
+  "askHistoryLabel": {
+    "message": "Ask history"
+  },
+  "askHistoryHelp": {
+    "message": "Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records."
+  },
+  "askHistoryTargetLabel": {
+    "message": "Target collection"
+  },
+  "askHistoryTargetAll": {
+    "message": "All records"
+  },
+  "askHistoryQuestionPlaceholder": {
+    "message": "Type a question"
+  },
+  "askHistoryAskBtn": {
+    "message": "Ask"
+  },
+  "askHistoryBusy": {
+    "message": "Searching records..."
+  },
+  "askHistoryFailed": {
+    "message": "Could not generate an answer. Please try again later."
+  },
+  "askHistoryNoEvidence": {
+    "message": "I don't know. No matching records."
+  },
   "savedCollectionsHelp": {
     "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
   },

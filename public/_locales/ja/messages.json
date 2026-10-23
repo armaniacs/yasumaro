@@ -1984,6 +1984,33 @@
   "savedCollectionsLabel": {
     "message": "保存済みコレクション"
   },
+  "askHistoryLabel": {
+    "message": "履歴に聞く"
+  },
+  "askHistoryHelp": {
+    "message": "選んだコレクションを対象に質問すると、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元記録に飛べます。"
+  },
+  "askHistoryTargetLabel": {
+    "message": "対象コレクション"
+  },
+  "askHistoryTargetAll": {
+    "message": "すべての記録"
+  },
+  "askHistoryQuestionPlaceholder": {
+    "message": "質問を入力"
+  },
+  "askHistoryAskBtn": {
+    "message": "聞く"
+  },
+  "askHistoryBusy": {
+    "message": "記録を調べています..."
+  },
+  "askHistoryFailed": {
+    "message": "答えを生成できませんでした。時間をおいて再試行してください。"
+  },
+  "askHistoryNoEvidence": {
+    "message": "分かりません。該当する記録がありません。"
+  },
   "savedCollectionsHelp": {
     "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
   },

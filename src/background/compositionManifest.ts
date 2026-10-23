@@ -280,6 +280,14 @@ export const compositionManifest: readonly CompositionEntry[] = [
         },
         generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
         generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
+        // PBI 2026-10-23-08: 履歴に聞く — the background sqlite search seam
+        // (FTS/LIKE dispatching op) supplies QA evidence. The SqliteError
+        // object is narrowed to its user-facing message so the handler's
+        // failure side stays a plain string like the other wire hops.
+        askEvidenceSearch: async (op) => {
+          const result = await c.resolve<SqliteClient>('sqliteClient').query(op);
+          return result.success ? result : { success: false, error: result.error.message };
+        },
         dashboardSqliteHandler: c.resolve<MessageHandler>('dashboardSqliteHandler'),
       };
       return createMessageRouter(messageRouterDeps);

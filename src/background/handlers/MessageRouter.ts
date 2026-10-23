@@ -25,6 +25,14 @@ import {
   createSaveRecordHandler,
   createRegenerateSummaryHandler,
 } from './recordingHandlers.js';
+import { createAskHistoryHandler, type AskHistorySearch } from './askHistoryHandlers.js';
+import { getSavedCollections } from '../../utils/storage/savedCollectionsRepository.js';
+
+/** The raw stored query of one saved collection, or null for an unknown id. */
+async function getSavedCollectionById(id: string): Promise<Record<string, unknown> | null> {
+  const collections = await getSavedCollections();
+  return collections[id]?.query ?? null;
+}
 import {
   createTestConnectionsHandler,
   createTestObsidianHandler,
@@ -61,6 +69,7 @@ import {
   checkDomainValidator,
   contentCleansingExecutedValidator,
   regenerateSummaryValidator,
+  askHistoryValidator,
   testObsidianValidator,
   e2eProbeQueryValidator,
   e2eProbeStateValidator,
@@ -121,9 +130,20 @@ export interface RecordingHandlerDeps {
 
 export interface TestingHandlerDeps {
   obsidian: Pick<ObsidianClient, 'testConnection'>;
-  aiService: Pick<AIService, 'testConnection'>;
+  // PBI 2026-10-23-08: generateSummary rides the same seam — the QA handler
+  // forces mode 'local_only' on it, never a remote provider.
+  aiService: Pick<AIService, 'testConnection' | 'generateSummary'>;
   clearSettingsCache: () => void;
   notifyAiTestProgress: (progress: AiTestProgress) => void;
+}
+
+/**
+ * PBI 2026-10-23-08: 履歴に聞く — the composition seam the QA handler reads
+ * evidence through. Admission and the AI answer seam are composed inside the
+ * router (shared admit + deps.aiService.generateSummary).
+ */
+export interface AskHistoryHandlerDeps {
+  askEvidenceSearch: AskHistorySearch;
 }
 
 export interface SystemHandlerDeps {
@@ -151,7 +171,8 @@ export type MessageRouterDeps =
   RecordingHandlerDeps &
   TestingHandlerDeps &
   SystemHandlerDeps &
-  LifecycleHandlerDeps;
+  LifecycleHandlerDeps &
+  AskHistoryHandlerDeps;
 
 export class MessageRouter {
   private handlers = new Map<string, MessageHandler>();
@@ -211,6 +232,13 @@ export class MessageRouter {
         fetchExtracted: deps.fetchRegenerated,
         recordingPipeline: deps.recordingPipeline,
       }),
+      // PBI 2026-10-23-08: 履歴に聞く — evidence search + local-only answer.
+      ASK_HISTORY: createAskHistoryHandler({
+        admit,
+        search: deps.askEvidenceSearch,
+        generateAnswer: deps.aiService.generateSummary,
+        loadCollection: (id) => getSavedCollectionById(id),
+      }),
       CONTENT_CLEANSING_EXECUTED: createContentCleansingExecutedHandler({}),
       CHECK_DOMAIN: createCheckDomainHandler({ isDomainAllowed: checkDomainPick.isDomainAllowed }),
       TEST_CONNECTIONS: createTestConnectionsHandler({
@@ -265,6 +293,7 @@ export class MessageRouter {
     this.setValidator('CHECK_DOMAIN', checkDomainValidator);
     this.setValidator('CONTENT_CLEANSING_EXECUTED', contentCleansingExecutedValidator);
     this.setValidator('REGENERATE_SUMMARY', regenerateSummaryValidator);
+    this.setValidator('ASK_HISTORY', askHistoryValidator);
     this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
     this.setValidator('OW_PROBE_QUERY', e2eProbeQueryValidator);
     this.setValidator('OW_PROBE_STATE', e2eProbeStateValidator);

@@ -30,6 +30,8 @@ import {
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 import { renderSavedCollectionsRegion } from './savedCollectionsPanelView.js';
+import { renderAskHistoryRegion, type AskRunResult } from './askHistoryPanelView.js';
+import { askHistory } from '../../../messaging/askHistoryGateway.js';
 import {
   hasCollectionCondition,
   newCollectionId,
@@ -567,6 +569,35 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     await loadSaved();
   }
 
+  // --- Ask history (PBI 2026-10-23-08) ---------------------------------------
+
+  async function askQuestion(
+    question: string,
+    collectionId: string | null,
+  ): Promise<AskRunResult> {
+    try {
+      const result = await askHistory({ question, collectionId });
+      if (result.success === false) {
+        return { ok: false, error: translateHistoryError(result.error ?? '') };
+      }
+      if (result.status === 'no_evidence') {
+        return result.suggestion !== undefined
+          ? { ok: true, status: 'no_evidence', suggestion: result.suggestion }
+          : { ok: true, status: 'no_evidence' };
+      }
+      const citations = result.citations;
+      return {
+        ok: true,
+        status: 'answered',
+        ...(result.answer !== undefined ? { answer: result.answer } : {}),
+        ...(citations !== undefined ? { citations } : {}),
+      };
+    } catch (e: unknown) {
+      // The gateway timeout maps to its sentinel; the failure reason shows.
+      return { ok: false, error: errorMessage(e) };
+    }
+  }
+
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
@@ -612,6 +643,12 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       // Saved collections render into the shell's dedicated region
       // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
       void loadSaved();
+
+      // Ask-history region (PBI 2026-10-23-08): rendered per load with the
+      // saved collections as the target options; the answer paints per ask.
+      renderAskHistoryRegion(container, savedCollections, {
+        onAsk: (question, collectionId) => askQuestion(question, collectionId),
+      });
 
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
