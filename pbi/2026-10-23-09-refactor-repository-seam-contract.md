@@ -26,9 +26,9 @@ Scenario: 破損読込の可視化
 
 ## 受け入れ基準
 
-- [ ] 3モジュールが singleton 直 import でなく注入・factory 経由で repository を得る
-- [ ] 破損読込の catch に `logError`（または同等の seam）が入る
-- [ ] 永続化・破損のテストが新規追加される
+- [x] 3モジュールが singleton 直 import でなく注入・factory 経由で repository を得る
+- [x] 破損読込の catch に `logError`（または同等の seam）が入る
+- [x] 永続化・破損のテストが新規追加される
 
 ## テスト戦略（t_wada スタイル）
 
@@ -83,7 +83,7 @@ grep -rn "from './SettingsRepository.js'\|from '../utils/storage/SettingsReposit
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 注入・破損テスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 注入・破損テスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

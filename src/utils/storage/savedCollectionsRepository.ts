@@ -11,30 +11,44 @@
  */
 
 import { StorageKeys } from './types.js';
-import { settingsRepository } from './SettingsRepository.js';
+import { settingsRepository, type SettingsRepository } from './SettingsRepository.js';
 import {
   normalizeSavedCollections,
   removeSavedCollection,
   upsertSavedCollection,
   type SavedCollection,
 } from './savedCollections.js';
+import { errorMessage } from '../errorUtils.js';
+import { logError } from '../logger/api.js';
+import { ErrorCode } from '../logger/types.js';
 
-export async function getSavedCollections(): Promise<Record<string, SavedCollection>> {
+/**
+ * Minimal store seam: `get`/`set` are the only repository members this module
+ * needs. Production callers omit it (the singleton is the factory default);
+ * tests pass a real `SettingsRepository` over an in-memory port.
+ */
+export type SavedCollectionsStore = Pick<SettingsRepository, 'get' | 'set'>;
+
+export async function getSavedCollections(
+  repo: SavedCollectionsStore = settingsRepository,
+): Promise<Record<string, SavedCollection>> {
   try {
-    const stored = await settingsRepository.get(StorageKeys.SAVED_COLLECTIONS);
+    const stored = await repo.get(StorageKeys.SAVED_COLLECTIONS);
     return normalizeSavedCollections(stored);
-  } catch {
+  } catch (error) {
+    void logError('[SavedCollections] read failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'savedCollectionsRepository');
     return {};
   }
 }
 
 export async function saveSavedCollections(
   map: Record<string, SavedCollection>,
+  repo: SavedCollectionsStore = settingsRepository,
 ): Promise<void> {
   // The stored shape is Record<string, SavedCollection> (the strict per-key
   // literal type); the read side still normalizes, so a corrupted store
   // degrades to the valid subset instead of failing the panel.
-  await settingsRepository.set(StorageKeys.SAVED_COLLECTIONS, map);
+  await repo.set(StorageKeys.SAVED_COLLECTIONS, map);
 }
 
 export async function upsertSavedCollectionById(
@@ -42,12 +56,16 @@ export async function upsertSavedCollectionById(
   name: string,
   query: Record<string, unknown>,
   now: number,
+  repo: SavedCollectionsStore = settingsRepository,
 ): Promise<void> {
-  const current = await getSavedCollections();
-  await saveSavedCollections(upsertSavedCollection(current, id, name, query, now));
+  const current = await getSavedCollections(repo);
+  await saveSavedCollections(upsertSavedCollection(current, id, name, query, now), repo);
 }
 
-export async function removeSavedCollectionById(id: string): Promise<void> {
-  const current = await getSavedCollections();
-  await saveSavedCollections(removeSavedCollection(current, id));
+export async function removeSavedCollectionById(
+  id: string,
+  repo: SavedCollectionsStore = settingsRepository,
+): Promise<void> {
+  const current = await getSavedCollections(repo);
+  await saveSavedCollections(removeSavedCollection(current, id), repo);
 }

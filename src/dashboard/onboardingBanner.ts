@@ -13,7 +13,7 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
-import { settingsRepository } from '../utils/storage/SettingsRepository.js';
+import { settingsRepository, type SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { tryNavigateTyped } from './panels/registryContext.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -25,19 +25,31 @@ export function shouldShowOnboardingBanner(dismissed: boolean): boolean {
   return !dismissed;
 }
 
-async function isOnboardingDismissed(): Promise<boolean> {
+/**
+ * Minimal store seam: `get`/`set` are the only repository members this module
+ * needs. Production callers omit it (the singleton is the factory default);
+ * tests pass a real `SettingsRepository` over an in-memory port.
+ */
+export type OnboardingBannerStore = Pick<SettingsRepository, 'get' | 'set'>;
+
+async function isOnboardingDismissed(
+  repo: OnboardingBannerStore = settingsRepository,
+): Promise<boolean> {
   try {
-    const stored = await settingsRepository.get(StorageKeys.ONBOARDING_DISMISSED);
+    const stored = await repo.get(StorageKeys.ONBOARDING_DISMISSED);
     return stored === true;
-  } catch {
+  } catch (error) {
     // 縮退の出口: a corrupted read shows the banner again — the user can
     // dismiss it once more instead of losing the entry points.
+    void logError('[Onboarding] read failed', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'onboardingBanner');
     return false;
   }
 }
 
-async function dismissOnboarding(): Promise<void> {
-  await settingsRepository.set(StorageKeys.ONBOARDING_DISMISSED, true);
+async function dismissOnboarding(
+  repo: OnboardingBannerStore = settingsRepository,
+): Promise<void> {
+  await repo.set(StorageKeys.ONBOARDING_DISMISSED, true);
 }
 
 /**
@@ -62,12 +74,12 @@ function wireChoiceActions(container: HTMLElement): void {
   });
 }
 
-function wireDismiss(container: HTMLElement, banner: HTMLElement): void {
+function wireDismiss(container: HTMLElement, banner: HTMLElement, repo: OnboardingBannerStore): void {
   const dismissButton = container.querySelector<HTMLButtonElement>('[data-onboarding-action="dismiss"]');
   dismissButton?.addEventListener('click', () => {
     void (async () => {
       try {
-        await dismissOnboarding();
+        await dismissOnboarding(repo);
         banner.hidden = true;
       } catch (error) {
         // 縮退の出口: a failed write hides the banner for this launch anyway —
@@ -84,17 +96,19 @@ function wireDismiss(container: HTMLElement, banner: HTMLElement): void {
  * Called from initDashboard, so it targets only static HTML and must not
  * wait on navigation.
  */
-export async function initOnboardingBanner(): Promise<void> {
+export async function initOnboardingBanner(
+  repo: OnboardingBannerStore = settingsRepository,
+): Promise<void> {
   const banner = document.getElementById('onboardingBanner');
   if (!banner) return;
-  const dismissed = await isOnboardingDismissed();
+  const dismissed = await isOnboardingDismissed(repo);
   if (!shouldShowOnboardingBanner(dismissed)) {
     banner.hidden = true;
     return;
   }
   banner.hidden = false;
   wireChoiceActions(banner);
-  wireDismiss(banner, banner);
+  wireDismiss(banner, banner, repo);
   // The banner text rides data-i18n (applyI18n in main.ts); the intro line is
   // resolved here only where substitution is needed.
   const intro = banner.querySelector<HTMLElement>('#onboardingIntro');
