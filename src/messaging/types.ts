@@ -75,30 +75,32 @@ export type RegenerateSummaryResponse = RecordingResult & {
 };
 
 /**
- * PBI 2026-10-23-08: 履歴に聞くの wire 応答。該当記録がないときは作らず
- * status: 'no_evidence' で対象の広げ方を返す（BDD: 作らず分からないと言う）。
+ * PBI 2026-10-23-08: asking the history wire response. Mirrors the background
+ * AskHistoryOutcome: a discriminated union so success and failure narrow apart.
+ * A record-less question answers with status 'no_evidence' plus a widening
+ * suggestion instead of fabricating an answer.
  */
-export interface AskHistoryResponse {
-  success: boolean;
-  error?: string;
-  reason?: string;
-  status?: 'answered' | 'no_evidence';
-  answer?: string;
-  suggestion?: string;
-  citations?: Array<{ id: number; title: string; url: string; snippet: string }>;
+export type AskHistoryResponse =
+  | { success: true; status: 'answered'; answer: string; citations: AskHistoryCitation[] }
+  | { success: true; status: 'no_evidence'; suggestion: string }
+  | { success: false; error: string };
+
+/** One citation the answer links back to (shape shared with AskEvidence). */
+export interface AskHistoryCitation {
+  id: number;
+  title: string;
+  url: string;
+  snippet: string;
 }
 
 /**
- * PBI 2026-10-23-09: 調査レポート一発生成の wire 応答。配信先と記録件数を
- * 返す。縮退・失敗は偽成功にならず error に理由を載せる（BDD: 失敗時は理由と
- * 再送ができる）。
+ * PBI 2026-10-23-09: report generation wire response. Mirrors the background
+ * ResearchReportOutcome: a discriminated union so success and failure narrow
+ * apart. A failure carries the reason in error, never a fake success.
  */
-export interface ResearchReportResponse {
-  success: boolean;
-  error?: string;
-  recordCount?: number;
-  deliveredTo?: ('download' | 'obsidian')[];
-}
+export type ResearchReportResponse =
+  | { success: true; recordCount: number; deliveredTo: ('download' | 'obsidian')[] }
+  | { success: false; error: string };
 
 /**
  * 記録処理の結果型
