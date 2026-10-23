@@ -14,6 +14,23 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-24 建築改善ループ第2弾（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(16) → 02(10) → 03(7.5) → 04(7.2) → 05(5.8) → 06(5.3) → 07(4.3) → 08(4)
+
+建築診断第2弾（録画スライス＋popup/サービス群）の10候補から Speculative 2 件を除外して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024b.md](2026-10-24-00-backlog-architecture-1024b.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-24-01-refactor-truncate-single-owner.md](2026-10-24-01-refactor-truncate-single-owner.md) | refactor | 16 | 0.5 | truncate単一所有（deletion test済み。最初の一手） |
+| ⬜ 02 | [2026-10-24-02-refactor-notification-policy-table.md](2026-10-24-02-refactor-notification-policy-table.md) | refactor | 10 | 1.0 | 通知方針table＋mock削減 |
+| ⬜ 03 | [2026-10-24-03-refactor-recording-pause-module.md](2026-10-24-03-refactor-recording-pause-module.md) | refactor | 7.5 | 1.5 | 一時停止の深いmodule化 |
+| ⬜ 04 | [2026-10-24-04-refactor-recording-gate-table.md](2026-10-24-04-refactor-recording-gate-table.md) | refactor | 7.2 | 2.0 | 判定純粋核一本化。NN05 は本 PBI の後に実施 |
+| ⬜ 05 | [2026-10-24-05-refactor-recording-flow-seam.md](2026-10-24-05-refactor-recording-flow-seam.md) | refactor | 5.8 | 2.5 | 記録フロー単一seam（NN04 の後に実施） |
+| ⬜ 06 | [2026-10-24-06-refactor-tab-lifecycle-module.md](2026-10-24-06-refactor-tab-lifecycle-module.md) | refactor | 5.3 | 1.5 | tab lifecycle 1 module |
+| ⬜ 07 | [2026-10-24-07-refactor-extractor-single-seam.md](2026-10-24-07-refactor-extractor-single-seam.md) | refactor | 4.3 | 1.5 | extractor単一seam |
+| ⬜ 08 | [2026-10-24-08-refactor-popup-tab-query.md](2026-10-24-08-refactor-popup-tab-query.md) | refactor | 4 | 1.0 | tab照会1 module |
+
+実行順の推奨: RICE 順。**NN04 → NN05** の前後関係を守る。NN01 / NN02 / NN06 / NN07 および NN03 / NN04 / NN08 は互いに独立のため並列着手可。
+
 ### 2026-10-24 建築改善ループ（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(12)~~ → ~~02(7.2)~~ → ~~03(6)~~ → ~~04(4.3)~~ → ~~05(4)~~ → ~~06(4)~~ → ~~07(4)~~ → ~~08(2.4)~~
 
 建築診断（codebase-design 語彙、2領域の並列探索、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2 → バッチ3の2並列 → バッチ4）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024.md)。最終ゲート `npm run validate` 緑（1155ファイル・17062テスト）。
