@@ -22,6 +22,7 @@ import { escapeHtml } from '../utils/htmlEscape.js';
 import { logError } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 
 /**
  * Initialize the tag settings panel.
@@ -210,11 +211,11 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   // Normalization proposals: show, apply, undo (PBI 2026-10-23-05)
   // ========================================================================
 
-  /** Bounded tag collection for proposals (same cap as research report). */
-  const NORM_PROPOSAL_SCAN_LIMIT = 200;
+  // Bounded tag collection for proposals; shares the canonical batch
+  // read cap with the research report (see limits.ts).
 
   async function collectStoredTags(): Promise<string[]> {
-    const result = await queryLogs({ limit: NORM_PROPOSAL_SCAN_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
+    const result = await queryLogs({ limit: MAX_BATCH_READ_RECORDS, orderBy: 'created_at', orderDir: 'DESC' });
     if (isServiceError(result)) return [];
     const tags = new Set<string>();
     for (const row of result.data.rows) {
@@ -236,7 +237,7 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     };
     const deps = {
       queryByTag: async (tag: string) => {
-        const result = await queryLogs({ tagFilter: tag, limit: NORM_PROPOSAL_SCAN_LIMIT });
+        const result = await queryLogs({ tagFilter: tag, limit: MAX_BATCH_READ_RECORDS });
         if (isServiceError(result)) throw new Error(result.error);
         return result.data.rows
           .filter((r) => r.id !== undefined)

@@ -27,6 +27,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { formatLocalDateString } from '../utils/localDate.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 import { addLog } from '../utils/logger/core.js';
 import { LogType } from '../utils/logger/types.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
@@ -35,7 +36,7 @@ import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 const DEFAULT_EXPORT_PATH = 'Yasumaro';
 
 /** Records per report; a scope wider than this is capped, not rejected. */
-export const REPORT_MAX_RECORDS = 200;
+export const REPORT_MAX_RECORDS = MAX_BATCH_READ_RECORDS;
 
 /** One report row: id + the post-cleansing text the report quotes. */
 export interface ResearchReportRecord {

@@ -143,6 +143,14 @@ export const MAX_SUMMARY_LENGTH = 100_000;
 export const MAX_QUERY_IDS = 200;
 
 /**
+ * Batch read cap shared by research report generation and tag proposal
+ * collection (PBI 2026-10-23-04). Both paths read at most 200 records;
+ * if they ever need to diverge, add a second named constant here instead
+ * of re-localizing a literal.
+ */
+export const MAX_BATCH_READ_RECORDS = 200;
+
+/**
  * archive_query rows per request (PBI 2026-09-17-18). Previously a bare
  * `1..500` literal inside the validator; moved here so the drift guard sees it
  * alongside the other wire caps.

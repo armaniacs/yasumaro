@@ -26,9 +26,9 @@ Scenario: 上限の所在
 
 ## 受け入れ基準
 
-- [ ] `REPORT_MAX_RECORDS` と `NORM_PROPOSAL_SCAN_LIMIT` が同一定数を参照する
-- [ ] 値は 200 のまま（数値変更なし）
-- [ ] 既存テスト全緑
+- [x] `REPORT_MAX_RECORDS` と `NORM_PROPOSAL_SCAN_LIMIT` が同一定数を参照する
+- [x] 値は 200 のまま（数値変更なし）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -81,7 +81,7 @@ grep -rn "= 200" src/background/researchReportGenerator.ts src/dashboard/tagsPan
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
