@@ -1,6 +1,5 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
@@ -30,23 +29,13 @@ import {
   hideStarUndo,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
-import { renderSavedCollectionsRegion } from './savedCollectionsPanelView.js';
-import { renderAskHistoryRegion, type AskRunResult } from './askHistoryPanelView.js';
-import { askHistory } from '../../../messaging/askHistoryGateway.js';
-import { renderResearchReportRegion, type ReportRunResult } from './researchReportPanelView.js';
-import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
-import { toAskRunResult, toReportRunResult } from '../../../messaging/responseRepack.js';
-import type { ResearchReportScope } from '../../../messaging/responseCanonical.js';
 import {
-  hasCollectionCondition,
-  newCollectionId,
-  serializeCollectionQuery,
-} from './savedCollectionQuery.js';
-import {
-  getSavedCollections,
-  removeSavedCollectionById,
-  upsertSavedCollectionById,
-} from '../../../utils/storage/savedCollectionsRepository.js';
+  createSavedCollectionsActions,
+  loadSavedCollectionsRegion,
+  renderSavedCollectionsRegion,
+} from './savedCollectionsPanelView.js';
+import { createAskHistoryActions, renderAskHistoryRegion } from './askHistoryPanelView.js';
+import { createResearchReportActions, renderResearchReportRegion } from './researchReportPanelView.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 
 export { formatDiagnosticMetadataHtml };
@@ -462,108 +451,50 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
   }
 
-  // --- Saved collections (PBI 2026-10-23-06) --------------------------------
+  // --- Saved collections (PBI 2026-10-23-06, PBI 2026-10-24-05) ---------------
+  // Behavior owned by the region module (createSavedCollectionsActions +
+  // loadSavedCollectionsRegion); the panel only supplies narrow inputs
+  // (query input, recall dispatch, live collections, reload) and the mount
+  // target. The fetch + render pairing stays next to the actions.
+
+  function createSavedActions(): ReturnType<typeof createSavedCollectionsActions> {
+    return createSavedCollectionsActions({
+      getQueryInput: () => model.getState(),
+      applyCollection: (query) => model.applyCollection(query),
+      getCollections: () => savedCollections,
+      reload: () => loadSaved(),
+    });
+  }
 
   function renderSaved(): void {
     if (!container) return;
-    renderSavedCollectionsRegion(container, savedCollections, {
-      onSave: (name) => saveCollection(name),
-      onApply: (id) => applySavedCollection(id),
-      onDelete: (id) => deleteSavedCollection(id),
-    });
+    renderSavedCollectionsRegion(container, savedCollections, createSavedActions());
   }
 
   async function loadSaved(): Promise<void> {
-    savedCollections = await getSavedCollections();
-    renderSaved();
-  }
-
-  async function saveCollection(name: string): Promise<{ ok: boolean; error?: string }> {
-    // The save captures exactly what panel state holds (search/tag/selected
-    // day); an empty condition fails closed instead of saving a no-op recall.
-    const query = serializeCollectionQuery(model.getState());
-    if (!hasCollectionCondition(query)) {
-      return { ok: false, error: t('savedCollectionNoCondition') };
-    }
-    try {
-      await upsertSavedCollectionById(newCollectionId(), name, query, Date.now());
-    } catch (e: unknown) {
-      return { ok: false, error: errorMessage(e) };
-    }
-    await loadSaved();
-    return { ok: true };
-  }
-
-  function applySavedCollection(id: string): void {
-    const collection = savedCollections[id];
-    if (!collection) return;
-    model.applyCollection(collection.query);
-  }
-
-  async function deleteSavedCollection(id: string): Promise<void> {
-    const collection = savedCollections[id];
-    if (!collection) return;
-    const confirmed = await showConfirmDialog({
-      title: t('savedCollectionsLabel'),
-      message: t('savedCollectionDeleteConfirm', [collection.name]),
-      confirmLabel: t('savedCollectionDeleteBtn'),
-      cancelLabel: t('cancel'),
-      dangerous: true,
+    if (!container) return;
+    const target = container;
+    savedCollections = await loadSavedCollectionsRegion(target, {
+      getQueryInput: () => model.getState(),
+      applyCollection: (query) => model.applyCollection(query),
+      getCollections: () => savedCollections,
+      reload: () => loadSaved(),
+      render: (collections) => {
+        savedCollections = collections;
+        if (container === target) renderSaved();
+      },
     });
-    if (!confirmed) return;
-    try {
-      await removeSavedCollectionById(id);
-    } catch {
-      // 縮退の出口: a failed remove keeps the list as-is instead of throwing.
-      return;
-    }
-    await loadSaved();
   }
 
-  // --- Ask history (PBI 2026-10-23-08) ---------------------------------------
-  // Wire-to-view repack lives in the seam module (responseRepack.ts); this
-  // thin shell only supplies the i18n error translation.
+  // --- Ask history (PBI 2026-10-23-08, PBI 2026-10-24-05) ----------------------
+  // Behavior owned by the region module (createAskHistoryActions);
+  // wire-to-view repack lives in the seam module (responseRepack.ts). The
+  // panel only supplies the i18n error translation at mount/load wiring.
 
-  async function askQuestion(
-    question: string,
-    collectionId: string | null,
-  ): Promise<AskRunResult> {
-    try {
-      const result = await askHistory({ question, collectionId });
-      return toAskRunResult(result, translateHistoryError);
-    } catch (e: unknown) {
-      // Defensive default: the gateway always resolves (timeout arrives as a
-      // SendFailure), so this catch only covers unexpected throws.
-      return { ok: false, error: errorMessage(e) };
-    }
-  }
-
-  // --- Research report (PBI 2026-10-23-09) -----------------------------------
-  // Wire-to-view repack lives in the seam module (responseRepack.ts); this
-  // thin shell only builds the scope from the current panel conditions.
-
-  async function generateReport(sendToObsidian: boolean): Promise<ReportRunResult> {
-    try {
-      const state = model.getState();
-      const scope: ResearchReportScope = {};
-      if (state.searchQuery.trim().length > 0) scope.search = state.searchQuery.trim();
-      if (state.activeTagFilter !== null && state.activeTagFilter.trim().length > 0) {
-        scope.tag = state.activeTagFilter.trim();
-      }
-      if (state.selectedDate !== null) {
-        // The selected day is the report scope (PBI 06 collection shape).
-        const range = localDayRangeFromDateString(state.selectedDate);
-        scope.since = range.since;
-        scope.until = range.until;
-      }
-      const result = await exportResearchReport({ scope, sendToObsidian });
-      return toReportRunResult(result);
-    } catch (e: unknown) {
-      // Defensive default: the gateway always resolves (timeout arrives as a
-      // SendFailure), so this catch only covers unexpected throws.
-      return { ok: false, error: errorMessage(e) };
-    }
-  }
+  // --- Research report (PBI 2026-10-23-09, PBI 2026-10-24-05) ------------------
+  // Behavior owned by the region module (createResearchReportActions +
+  // buildResearchReportScope); the panel only supplies the scope source
+  // accessor at load wiring.
 
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
@@ -611,17 +542,22 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
       void loadSaved();
 
-      // Ask-history region (PBI 2026-10-23-08): rendered per load with the
-      // saved collections as the target options; the answer paints per ask.
-      renderAskHistoryRegion(container, savedCollections, {
-        onAsk: (question, collectionId) => askQuestion(question, collectionId),
-      });
+      // Ask-history region (PBI 2026-10-23-08, PBI 2026-10-24-05): rendered
+      // per load with the saved collections as the target options; the
+      // actions bundle is region-owned, the panel only wires mount/load.
+      renderAskHistoryRegion(
+        container,
+        savedCollections,
+        createAskHistoryActions(translateHistoryError),
+      );
 
-      // Research-report region (PBI 2026-10-23-09): rendered per load; the
-      // current panel conditions become the report scope.
-      renderResearchReportRegion(container, {
-        onGenerate: (sendToObsidian) => generateReport(sendToObsidian),
-      });
+      // Research-report region (PBI 2026-10-23-09, PBI 2026-10-24-05):
+      // rendered per load; the actions bundle is region-owned, the panel
+      // only supplies the scope source accessor at wiring time.
+      renderResearchReportRegion(
+        container,
+        createResearchReportActions(() => model.getState()),
+      );
 
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside

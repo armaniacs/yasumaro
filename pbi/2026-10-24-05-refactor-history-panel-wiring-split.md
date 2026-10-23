@@ -30,9 +30,9 @@ Scenario: 既存regionは変更前と同一
 
 ## 受け入れ基準
 
-- [ ] ask/generate/saveの所有が各region moduleに移る
-- [ ] panelがmount/load配線のみに薄化する
-- [ ] 既存テスト全緑
+- [x] ask/generate/saveの所有が各region moduleに移る
+- [x] panelがmount/load配線のみに薄化する
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -n "createCallbacks\|renderSaved\|loadPending" src/dashboard/panels/asyncDa
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

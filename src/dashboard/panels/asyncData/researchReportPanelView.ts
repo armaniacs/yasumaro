@@ -14,8 +14,12 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { withBusyButton } from './busyButton.js';
-import type { ReportRunResult } from '../../../messaging/responseRepack.js';
+import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
+import { toReportRunResult, type ReportRunResult } from '../../../messaging/responseRepack.js';
+import type { ResearchReportScope } from '../../../messaging/responseCanonical.js';
 
 export type { ReportRunResult } from '../../../messaging/responseRepack.js';
 
@@ -26,10 +30,63 @@ export type { ReportRunResult } from '../../../messaging/responseRepack.js';
  */
 export const RESEARCH_REPORT_REGION_ID = 'sqlite-research-report';
 
-/** Event bundle the Panel builds once and hands to the region renderer. */
+/** Event bundle the region owns and hands to the region renderer. */
 export interface ResearchReportRegionActions {
-  /** Generate one report; the Panel owns the gateway call and timeout mapping. */
+  /** Generate one report; the region owns the gateway call and timeout mapping. */
   onGenerate: (sendToObsidian: boolean) => Promise<ReportRunResult>;
+}
+
+/** Narrow panel-condition source the report scope is built from. */
+export interface ResearchReportScopeSource {
+  searchQuery: string;
+  activeTagFilter: string | null;
+  selectedDate: string | null;
+}
+
+/**
+ * Build the report scope from the current panel conditions. Owned here
+ * (PBI 2026-10-24-05) so the selected day / search / tag shaping no longer
+ * lives in the panel closure.
+ */
+export function buildResearchReportScope(source: ResearchReportScopeSource): ResearchReportScope {
+  const scope: ResearchReportScope = {};
+  if (source.searchQuery.trim().length > 0) scope.search = source.searchQuery.trim();
+  if (source.activeTagFilter !== null && source.activeTagFilter.trim().length > 0) {
+    scope.tag = source.activeTagFilter.trim();
+  }
+  if (source.selectedDate !== null) {
+    // The selected day is the report scope (PBI 06 collection shape).
+    const range = localDayRangeFromDateString(source.selectedDate);
+    scope.since = range.since;
+    scope.until = range.until;
+  }
+  return scope;
+}
+
+/**
+ * Region-owned action bundle for the research report (PBI 2026-10-24-05).
+ * Wire-to-view repack lives in the seam module (responseRepack.ts); this
+ * factory only builds the scope from the Panel-supplied source. The Panel
+ * passes a source accessor and keeps no generate logic itself.
+ */
+export function createResearchReportActions(
+  getSource: () => ResearchReportScopeSource,
+): ResearchReportRegionActions {
+  async function generateReport(sendToObsidian: boolean): Promise<ReportRunResult> {
+    try {
+      const scope = buildResearchReportScope(getSource());
+      const result = await exportResearchReport({ scope, sendToObsidian });
+      return toReportRunResult(result);
+    } catch (error) {
+      // Defensive default: the gateway always resolves (timeout arrives as a
+      // SendFailure), so this catch only covers unexpected throws.
+      return { ok: false, error: errorMessage(error) };
+    }
+  }
+
+  return {
+    onGenerate: (sendToObsidian) => generateReport(sendToObsidian),
+  };
 }
 
 function buildRegionInnerHtml(): string {

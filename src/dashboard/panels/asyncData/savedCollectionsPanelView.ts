@@ -18,10 +18,21 @@ import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
 import { formatTimestamp } from './sqliteHistoryPanelView.js';
+import { showConfirmDialog } from '../../utils/confirmDialog.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import {
   describeCollectionQuery,
+  hasCollectionCondition,
+  newCollectionId,
+  serializeCollectionQuery,
+  type CollectionQueryInput,
   type CollectionQueryLabels,
 } from './savedCollectionQuery.js';
+import {
+  getSavedCollections,
+  removeSavedCollectionById,
+  upsertSavedCollectionById,
+} from '../../../utils/storage/savedCollectionsRepository.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 
 /**
@@ -39,6 +50,88 @@ export interface SavedCollectionsRegionActions {
   onApply: (id: string) => void;
   /** Delete after the panel-side confirm dialog resolves. */
   onDelete: (id: string) => Promise<void>;
+}
+
+/**
+ * Narrow inputs the region needs from the Panel side. The region owns the
+ * save/apply/delete behavior (PBI 2026-10-24-05); the Panel only supplies
+ * the current query input, the recall dispatch, the live collections, and a
+ * reload hook that repaints the region after a mutation.
+ */
+export interface SavedCollectionsDeps {
+  getQueryInput: () => CollectionQueryInput;
+  applyCollection: (query: Record<string, unknown>) => void;
+  getCollections: () => Record<string, SavedCollection>;
+  reload: () => Promise<void>;
+}
+
+/**
+ * Region-owned action bundle for saved collections. Moves the save/apply/
+ * delete implementations out of the panel closure so a new region no longer
+ * grows the panel body; the panel only wires mount/load with narrow inputs.
+ */
+export function createSavedCollectionsActions(deps: SavedCollectionsDeps): SavedCollectionsRegionActions {
+  async function saveCollection(name: string): Promise<{ ok: boolean; error?: string }> {
+    // The save captures exactly what panel state holds (search/tag/selected
+    // day); an empty condition fails closed instead of saving a no-op recall.
+    const query = serializeCollectionQuery(deps.getQueryInput());
+    if (!hasCollectionCondition(query)) {
+      return { ok: false, error: t('savedCollectionNoCondition') };
+    }
+    try {
+      await upsertSavedCollectionById(newCollectionId(), name, query, Date.now());
+    } catch (error) {
+      return { ok: false, error: errorMessage(error) };
+    }
+    await deps.reload();
+    return { ok: true };
+  }
+
+  function applySavedCollection(id: string): void {
+    const collection = deps.getCollections()[id];
+    if (!collection) return;
+    deps.applyCollection(collection.query);
+  }
+
+  async function deleteSavedCollection(id: string): Promise<void> {
+    const collection = deps.getCollections()[id];
+    if (!collection) return;
+    const confirmed = await showConfirmDialog({
+      title: t('savedCollectionsLabel'),
+      message: t('savedCollectionDeleteConfirm', [collection.name]),
+      confirmLabel: t('savedCollectionDeleteBtn'),
+      cancelLabel: t('cancel'),
+      dangerous: true,
+    });
+    if (!confirmed) return;
+    try {
+      await removeSavedCollectionById(id);
+    } catch {
+      // Degraded exit: a failed remove keeps the list as-is instead of throwing.
+      return;
+    }
+    await deps.reload();
+  }
+
+  return {
+    onSave: (name) => saveCollection(name),
+    onApply: (id) => applySavedCollection(id),
+    onDelete: (id) => deleteSavedCollection(id),
+  };
+}
+
+/**
+ * Region-owned load entry: fetch the stored collections and paint the region.
+ * The Panel calls this from load() and from the reload hook above, so the
+ * fetch + render pairing lives next to the actions that trigger it.
+ */
+export async function loadSavedCollectionsRegion(
+  container: HTMLElement,
+  deps: SavedCollectionsDeps & { render: (collections: Record<string, SavedCollection>) => void },
+): Promise<Record<string, SavedCollection>> {
+  const collections = await getSavedCollections();
+  deps.render(collections);
+  return collections;
 }
 
 /** Condition-summary labels resolved once (pure describe target, chrome-free module). */

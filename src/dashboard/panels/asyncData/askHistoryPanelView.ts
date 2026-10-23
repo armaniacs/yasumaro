@@ -7,17 +7,19 @@
  * contract as renderSavedCollectionsRegion: the shell placeholder
  * `<div id="sqlite-ask-history">` is owned by buildPanelShellHtml, but the id
  * string itself is owned here (ASK_HISTORY_REGION_ID); the view only
- * re-exports it for the shell. This module fills it. The Panel owns the gateway call; this module owns markup,
- * labels and the answer paint.
+ * re-exports it for the shell. This module fills it. The region owns the gateway call via
+ * createAskHistoryActions; this module also owns markup, labels and the answer paint.
  */
 
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { errorMessage } from '../../../utils/errorUtils.js';
 import { withBusyButton } from './busyButton.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 import type { AskHistoryCitation } from '../../../messaging/responseCanonical.js';
-import type { AskRunResult } from '../../../messaging/responseRepack.js';
+import { askHistory } from '../../../messaging/askHistoryGateway.js';
+import { toAskRunResult, type AskRunResult } from '../../../messaging/responseRepack.js';
 
 export type { AskRunResult } from '../../../messaging/responseRepack.js';
 
@@ -31,10 +33,35 @@ export const ASK_HISTORY_REGION_ID = 'sqlite-ask-history';
 /** Citation paint model: alias of the canonical wire citation (single definition). */
 export type AskCitation = AskHistoryCitation;
 
-/** Event bundle the Panel builds once and hands to the region renderer. */
+/** Event bundle the region owns and hands to the region renderer. */
 export interface AskHistoryRegionActions {
-  /** Ask one question; the Panel owns the gateway call and timeout mapping. */
+  /** Ask one question; the region owns the gateway call and timeout mapping. */
   onAsk: (question: string, collectionId: string | null) => Promise<AskRunResult>;
+}
+
+/**
+ * Region-owned action bundle for ask-history (PBI 2026-10-24-05).
+ * Wire-to-view repack lives in the seam module (responseRepack.ts); this
+ * factory only supplies the i18n error translation. The Panel passes its
+ * translateHistoryError and keeps no ask logic itself.
+ */
+export function createAskHistoryActions(
+  translateError: (error: string) => string,
+): AskHistoryRegionActions {
+  async function askQuestion(question: string, collectionId: string | null): Promise<AskRunResult> {
+    try {
+      const result = await askHistory({ question, collectionId });
+      return toAskRunResult(result, translateError);
+    } catch (error) {
+      // Defensive default: the gateway always resolves (timeout arrives as a
+      // SendFailure), so this catch only covers unexpected throws.
+      return { ok: false, error: errorMessage(error) };
+    }
+  }
+
+  return {
+    onAsk: (question, collectionId) => askQuestion(question, collectionId),
+  };
 }
 
 function buildRegionInnerHtml(collections: Record<string, SavedCollection>): string {
