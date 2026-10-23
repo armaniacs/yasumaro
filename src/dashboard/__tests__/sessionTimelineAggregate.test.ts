@@ -11,7 +11,6 @@ import {
   buildSessionTimelines,
   MIN_SESSION_SIZE,
   REMINDER_MAX_CANDIDATES,
-  REMINDER_MAX_PER_DAY,
   shouldFireReminderToday,
   UNREAD_SCROLL_RATIO,
   type SessionTimelineRecord,
@@ -112,7 +111,6 @@ describe('buildReminderCandidates (読みかけリマインド: 再訪候補)', 
 
 describe('shouldFireReminderToday (間引き: 1日1件)', () => {
   it('fires at most one reminder per local day', () => {
-    expect(REMINDER_MAX_PER_DAY).toBe(1);
     expect(shouldFireReminderToday(null, '2026-10-23')).toBe(true);
     expect(shouldFireReminderToday('2026-10-22', '2026-10-23')).toBe(true);
     expect(shouldFireReminderToday('2026-10-23', '2026-10-23')).toBe(false);

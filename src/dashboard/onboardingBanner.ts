@@ -64,8 +64,9 @@ function wireChoiceActions(container: HTMLElement): void {
     void tryNavigateTyped('panel-sqlite-history', {});
   });
   obsidian?.addEventListener('click', () => {
-    document.getElementById('obsidianEnabled')?.scrollIntoView({ block: 'center' });
-    document.getElementById('obsidianEnabled')?.focus();
+    const toggle = document.getElementById('obsidianEnabled');
+    toggle?.scrollIntoView({ block: 'center' });
+    toggle?.focus();
   });
   ai?.addEventListener('click', () => {
     const section = document.getElementById('aiProviderSection');

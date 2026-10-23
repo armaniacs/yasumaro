@@ -46,9 +46,6 @@ export const MIN_SESSION_SIZE = 2;
 /** A record below this scroll ratio counts as 読みかけ (not read to the end). */
 export const UNREAD_SCROLL_RATIO = 0.9;
 
-/** Reminders per day are capped (間引き): at most one notification a day. */
-export const REMINDER_MAX_PER_DAY = 1;
-
 /** Reminder candidates kept per aggregation (上限). */
 export const REMINDER_MAX_CANDIDATES = 3;
 
@@ -113,7 +110,7 @@ export function buildReminderCandidates(records: SessionTimelineRecord[]): Remin
 }
 
 /**
- * The daily 間引き gate: at most REMINDER_MAX_PER_DAY notifications fire per
+ * The daily 間引き gate: at most one notification fires per
  * local day (PBI: 通知が多すぎる場合の上限と間引き). Pure — the caller passes
  * the last-fired day it stored.
  */

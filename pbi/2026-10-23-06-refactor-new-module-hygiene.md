@@ -26,7 +26,7 @@ Scenario: 静的衛生
 
 ## 受け入れ基準
 
-- [ ] 下記5件が整理され、既存テスト全緑（更新が必要な pin は理由付きで書換え）
+- [x] 下記5件が整理され、既存テスト全緑（更新が必要な pin は理由付きで書換え）
 - [ ] `npm run validate` 通過
 
 ## テスト戦略（t_wada スタイル）
@@ -86,7 +86,7 @@ grep -rn "REMINDER_MAX_PER_DAY\|as number\|slice(0, 3)\|getElementById('obsidian
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過（pin 書換えは理由付き）
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過（pin 書換えは理由付き）
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

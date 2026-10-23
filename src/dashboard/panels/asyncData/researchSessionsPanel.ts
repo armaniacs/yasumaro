@@ -286,6 +286,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
   /** Full inline-confirm detail: pages, date range, representative domains,
    *  and the regroup notice (i18n key researchSessions_deleteDetail). */
   function currentDeleteDetail(): string {
+    /** Representative domains shown in the delete confirm (表示上限). */
+    const TOP_DOMAINS_IN_DELETE_DETAIL = 3;
     const summary = summarizeSelection(lastSessions, toSelection(selectedIds));
     const domainCounts = new Map<string, number>();
     for (const row of lastRows ?? []) {
@@ -294,7 +296,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     }
     const domains = [...domainCounts.entries()]
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
+      .slice(0, TOP_DOMAINS_IN_DELETE_DETAIL)
       .map(([domain]) => domain)
       .join(', ');
     const range =

@@ -235,8 +235,8 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
         const result = await queryLogs({ tagFilter: tag, limit: MAX_BATCH_READ_RECORDS });
         if (isServiceError(result)) throw new Error(result.error);
         return result.data.rows
-          .filter((r) => r.id !== undefined)
-          .map((r) => ({ id: r.id as number, tags: typeof r.tags === 'string' ? r.tags : null }));
+          .filter((r): r is typeof r & { id: number } => r.id !== undefined)
+          .map((r) => ({ id: r.id, tags: typeof r.tags === 'string' ? r.tags : null }));
       },
       updateTags: async (id: number, tags: string) => {
         const result = await updateLog(id, { tags });

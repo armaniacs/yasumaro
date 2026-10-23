@@ -53,7 +53,7 @@ const STOPWORDS: ReadonlySet<string> = new Set([
  * punctuation, stopwords and empties dropped. Unknown shapes fail closed
  * to an empty set (never a throw).
  */
-export function tokenizeTitle(title: string): Set<string> {
+export function tokenizeTitle(title: unknown): Set<string> {
   const tokens = new Set<string>();
   if (typeof title !== 'string') return tokens;
   for (const raw of title.split(/[\s\-_・、。,.!?()（）「」『』:：;；/／|｜\[\]【】…―]+/u)) {

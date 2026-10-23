@@ -34,6 +34,12 @@ describe('tokenizeTitle + titleSimilarity (ローカル類似判定の土台)', 
     expect(tokenizeTitle('')).toEqual(new Set());
   });
 
+  it('fails closed on non-string input (到達不能ガードの到達化)', () => {
+    expect(tokenizeTitle(null)).toEqual(new Set());
+    expect(tokenizeTitle(undefined)).toEqual(new Set());
+    expect(tokenizeTitle(42)).toEqual(new Set());
+  });
+
   it('scores the threshold boundary (類似しきい値の境界)', () => {
     expect(SIMILARITY_THRESHOLD).toBe(0.5);
     const a = new Set(['wasm', 'chrome', 'ships']);
