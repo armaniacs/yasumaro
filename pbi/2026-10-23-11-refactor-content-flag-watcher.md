@@ -26,8 +26,8 @@ Scenario: 無効化の即時反映
 
 ## 受け入れ基準
 
-- [ ] 2箇所の購読定型が共有化される（または寄せない判断を記録して閉じる）
-- [ ] 既存テスト（contentKernel 系・cleansingOffscreen 系）全緑
+- [x] 寄せない判断で閉じる（偶然の重複。3つ目の購読者が現れたら再検討）
+- [x] 既存テスト（contentKernel 系・cleansingOffscreen 系）全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -82,7 +82,7 @@ grep -rn "onChanged.addListener" src/content/ --include='*.ts' | grep -v __tests
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + watcher テスト新規通過（共有化した場合）
-- [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] 共有化しないため新規テストなし。既存テスト緑（contentKernel 系 23 件）で代替
+- [x] 既存テスト全通過（共有化しないため watcher テストは作らない）
+- [ ] `npm run validate` 通過（Phase 3 のフルゲートで確認する）
+- [x] ドキュメント更新済み
