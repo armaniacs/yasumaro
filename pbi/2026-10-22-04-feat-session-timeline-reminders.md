@@ -32,6 +32,14 @@ Scenario: 読みかけを思い出す
 - [ ] プライベート判定記録は再生・通知の対象外にできる
 
 ## テスト戦略
+## 実装記録（2026-10-23・集計経路）
+- タイムライン集計: 完了。`src/dashboard/sessionTimelineAggregate.ts` の `buildSessionTimelines` が既存2列(nav_source_url/search_query)を活用してトレイル群を集計。同一検索語または同一遷移元の記録を訪問順(古い順)に並べ、basis(どの列でグループ化したか)を結果に載せる。グループは件数降順
+- 少件数縮退: 完了。トレイル列が両方とも無い記録はセッション構成員から除外、`MIN_SESSION_SIZE`(2) 未満のグループは破棄(単行の偽セッションを作らない)
+- 読みかけ候補: 完了。`buildReminderCandidates` が `UNREAD_SCROLL_RATIO`(0.9) 未満の記録を再訪候補に。滞在なし(scalar欠落)は判定対象外(fail-closed)。古い読みかけ順
+- 間引きと上限: 完了。`shouldFireReminderToday` が1日1件(REMINDER_MAX_PER_DAY)を判定、候補は `REMINDER_MAX_CANDIDATES`(3) で上限。通知面の静けさを保つ
+- プライベート除外: 呼び出し側が既存のプライベート判定記録を事前にフィルタする契約(本モジュールは再許可しない)
+- pin: `src/dashboard/__tests__/sessionTimelineAggregate.test.ts` 9テスト(トレイル群集計・既存2列の優先順・少件数縮退・読みかけ候補・fail-closed・上限・間引き)
+- 残: 再生ビューのパネル配線(元記録・元URLへ到達)、リマインドの解除・再通知・破棄、通知送信経路(chrome.notifications+アラーム)、E2E通し、コードレビュー、ドキュメント更新(再生ビューの操作手順)
 - E2E: 調査→中断→翌日条件→通知→再訪の通し
 - 統合: 遷移2列の欠落時の縮退表示テスト
 - 単体: 中断判定・間引き・上限の境界テスト
