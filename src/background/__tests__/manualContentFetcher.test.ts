@@ -2,7 +2,7 @@ import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ManualContentFetcher } from '../manualContentFetcher.js';
 
-// chrome.tabs と chrome.scripting をモック
+// chrome.tabs and chrome.scripting stubs
 const mockTabs: chrome.tabs.Tab[] = [];
 const mockScriptResult = 'Extracted page content';
 
@@ -12,6 +12,7 @@ beforeEach(() => {
     tabs: {
       query: vi.fn(() => Promise.resolve(mockTabs)),
       create: vi.fn(() => Promise.resolve({ id: 999, url: 'https://example.com' })),
+      get: vi.fn(() => Promise.resolve({ id: 999, status: 'complete' })),
       remove: vi.fn(() => Promise.resolve()),
       onUpdated: {
         addListener: vi.fn((cb: (tabId: number, info: { status?: string }) => void) => {
@@ -38,7 +39,7 @@ describe('ManualContentFetcher', () => {
     const fetcher = new ManualContentFetcher();
     await fetcher.fetchContent('https://example.com');
 
-    // 2回目は新しいタブを作らない（キャッシュから返す）
+    // Second call creates no new tab (served from cache)
     const createMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
     const tabsMock = createMock.tabs as Record<string, unknown>;
     const createFn = tabsMock.create as ReturnType<typeof vi.fn>;
@@ -46,7 +47,7 @@ describe('ManualContentFetcher', () => {
 
     const content = await fetcher.fetchContent('https://example.com');
     expect(content).toBe(mockScriptResult);
-    // キャッシュヒットなのでタブ作成は呼ばれない
+    // Cache hit, so no tab is created
     expect(createFn).not.toHaveBeenCalled();
   });
 
@@ -72,16 +73,16 @@ describe('ManualContentFetcher', () => {
     const fetcher = new ManualContentFetcher(60000, 2);
     await fetcher.fetchContent('https://a.com');
     await fetcher.fetchContent('https://b.com');
-    await fetcher.fetchContent('https://c.com'); // 'a' が削除される
+    await fetcher.fetchContent('https://c.com'); // 'a' is evicted
     expect(fetcher.getCacheSize()).toBe(2);
   });
 
   it('clearExpired removes TTL-expired entries', async () => {
-    // ManualContentFetcher の内部キャッシュに直接エントリを作成して TTL テストを行う
+    // Exercise TTL handling directly against the internal cache
     const fetcher = new ManualContentFetcher(100, 10);
-    // fetchContent を呼ばずにキャッシュサイズが 0 であることを確認
+    // No fetchContent call, so the cache starts empty
     expect(fetcher.getCacheSize()).toBe(0);
-    // clearExpired は空キャッシュでも例外を投げない
+    // clearExpired on an empty cache must not throw
     fetcher.clearExpired();
     expect(fetcher.getCacheSize()).toBe(0);
   });
@@ -94,7 +95,7 @@ describe('ManualContentFetcher', () => {
     const chromeMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
     const tabsMock = chromeMock.tabs as Record<string, unknown>;
     const createFn = tabsMock.create as ReturnType<typeof vi.fn>;
-    // 既存タブがあるので create は呼ばれない
+    // An existing tab means create is not called
     expect(createFn).not.toHaveBeenCalled();
   });
 
@@ -103,7 +104,7 @@ describe('ManualContentFetcher', () => {
     const scriptingMock = chromeMock.scripting as Record<string, unknown>;
     (scriptingMock.executeScript as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('script error'));
 
-    // onUpdated.addListener が即座に complete を通知するように再設定
+    // Rewire onUpdated.addListener to report complete immediately
     const tabsMock = chromeMock.tabs as Record<string, unknown>;
     (tabsMock.onUpdated as Record<string, unknown>).addListener = vi.fn(
       (cb: (tabId: number, info: { status?: string }) => void) => {
@@ -114,11 +115,11 @@ describe('ManualContentFetcher', () => {
     const fetcher = new ManualContentFetcher();
     const content = await fetcher.fetchContent('https://example.com');
 
-    // エラー時は空文字を返す
+    // Failures surface as an empty string
     expect(content).toBe('');
 
     const removeFn = tabsMock.remove as ReturnType<typeof vi.fn>;
-    // 作成したタブは finally で削除される
+    // The created tab is removed in finally
     expect(removeFn).toHaveBeenCalledWith(999);
   }, 10000);
 });
@@ -131,8 +132,11 @@ describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
       const removeListener = vi.fn();
       const chromeMock = (globalThis as Record<string, unknown>).chrome as Record<string, unknown>;
       const tabsMock = chromeMock.tabs as Record<string, unknown>;
-      // 既存タブなし → タブ作成 + 読み込み完了待ち（タイムアウトまで発火させない）
+      // No existing tab: create a tab and wait for load without ever firing
+      // complete, so the best-effort timeout path settles the wait. getTab
+      // reports loading so the pre-check does not settle it first.
       tabsMock.query = vi.fn(() => Promise.resolve([]));
+      tabsMock.get = vi.fn(() => Promise.resolve({ id: 999, status: 'loading' }));
       tabsMock.onUpdated = { addListener, removeListener };
 
       const fetcher = new ManualContentFetcher();
@@ -142,7 +146,9 @@ describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
 
       expect(addListener).toHaveBeenCalledTimes(1);
       expect(removeListener).toHaveBeenCalledTimes(1);
-      expect(removeListener).toHaveBeenCalledWith(addListener.mock.calls[0][0]);
+      const timedOutListener = addListener.mock.calls[0]?.[0];
+      expect(timedOutListener).toBeDefined();
+      expect(removeListener).toHaveBeenCalledWith(timedOutListener);
     } finally {
       vi.useRealTimers();
     }
@@ -161,6 +167,8 @@ describe('ManualContentFetcher timeout path (PBI 2026-09-17-16)', () => {
     const fetcher = new ManualContentFetcher();
     await fetcher.fetchContent('https://example.com');
 
-    expect(removeListener).toHaveBeenCalledWith(addListener.mock.calls[0][0]);
+    const completedListener = addListener.mock.calls[0]?.[0];
+    expect(completedListener).toBeDefined();
+    expect(removeListener).toHaveBeenCalledWith(completedListener);
   });
 });

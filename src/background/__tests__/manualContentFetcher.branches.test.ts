@@ -26,6 +26,7 @@ function setupChromeMock(executeScriptImpl?: (opts: ExecuteScriptOptions) => Pro
     tabs: {
       query: vi.fn(() => Promise.resolve([])),
       create: vi.fn(() => Promise.resolve({ id: 999, url: 'https://example.com' })),
+      get: vi.fn(() => Promise.resolve({ id: 999, status: 'complete' })),
       remove: vi.fn(() => Promise.resolve()),
       onUpdated: {
         addListener: vi.fn((cb: (tabId: number, info: { status?: string }) => void) => {

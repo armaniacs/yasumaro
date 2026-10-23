@@ -30,9 +30,9 @@ Scenario: timeout意味論が方針値で変わる
 
 ## 受け入れ基準
 
-- [ ] open/wait/closeが1 moduleに集まり、timeout意味論だけ方針値になる
-- [ ] 読取経路差（GET_CONTENT ask vs innerText shortcut）は残る
-- [ ] 既存テスト全緑
+- [x] open/wait/closeが1 moduleに集まり、timeout意味論だけ方針値になる
+- [x] 読取経路差（GET_CONTENT ask vs innerText shortcut）は残る
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -95,8 +95,8 @@ grep -n "open\|wait\|close\|timeout" src/background/manualContentFetcher.ts src/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
