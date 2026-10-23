@@ -163,9 +163,16 @@ describe('domainAnalysisPanel — single proposal pin', () => {
     await panel.load?.();
     const rows = container.querySelectorAll('.domain-intel-proposal-row');
     expect(rows).toHaveLength(2);
+    const first = Array.from(rows).find((row) =>
+      row.textContent?.includes('noisy.com'),
+    ) as HTMLElement;
     const second = Array.from(rows).find((row) =>
       row.textContent?.includes('loud.com'),
     ) as HTMLElement;
+    const firstApply = first.querySelector(
+      '[data-intel-action="apply"]',
+    ) as HTMLButtonElement;
+    const firstStatus = first.querySelector('.domain-intel-status') as HTMLElement;
     const applyButton = second.querySelector(
       '[data-intel-action="apply"]',
     ) as HTMLButtonElement;
@@ -176,6 +183,53 @@ describe('domainAnalysisPanel — single proposal pin', () => {
       expect(status.textContent).toBe('loud.com を記録対象外にしました。'),
     );
     expect(mockAddToBlacklist).toHaveBeenCalledWith('loud.com');
+    expect(mockAddToBlacklist).toHaveBeenCalledTimes(1);
     expect(applyButton.disabled).toBe(true);
+    expect(firstStatus.textContent).toBe('');
+    expect(firstApply.disabled).toBe(false);
+  });
+
+  it('keeps the second row untouched when the first proposal is applied', async () => {
+    const rowsFor = (domain: string, base: number): object[] =>
+      Array.from({ length: 5 }, (_, i) => ({
+        id: base + i,
+        url: `https://${domain}/${i}`,
+        title: 't',
+        created_at: Date.now() - i,
+        domain,
+        tags: null,
+        visit_duration: null,
+      }));
+    mockQueryLogs.mockResolvedValue({
+      data: { rows: [...rowsFor('noisy.com', 1), ...rowsFor('loud.com', 11)], total: 10 },
+    });
+    const { panel, container } = mountPanel();
+    await panel.load?.();
+    const rows = container.querySelectorAll('.domain-intel-proposal-row');
+    expect(rows).toHaveLength(2);
+    const first = Array.from(rows).find((row) =>
+      row.textContent?.includes('noisy.com'),
+    ) as HTMLElement;
+    const second = Array.from(rows).find((row) =>
+      row.textContent?.includes('loud.com'),
+    ) as HTMLElement;
+    const firstApply = first.querySelector(
+      '[data-intel-action="apply"]',
+    ) as HTMLButtonElement;
+    const firstStatus = first.querySelector('.domain-intel-status') as HTMLElement;
+    const secondApply = second.querySelector(
+      '[data-intel-action="apply"]',
+    ) as HTMLButtonElement;
+    const secondStatus = second.querySelector('.domain-intel-status') as HTMLElement;
+
+    firstApply.click();
+    await waitForMock(() =>
+      expect(firstStatus.textContent).toBe('noisy.com を記録対象外にしました。'),
+    );
+    expect(mockAddToBlacklist).toHaveBeenCalledWith('noisy.com');
+    expect(mockAddToBlacklist).toHaveBeenCalledTimes(1);
+    expect(firstApply.disabled).toBe(true);
+    expect(secondStatus.textContent).toBe('');
+    expect(secondApply.disabled).toBe(false);
   });
 });

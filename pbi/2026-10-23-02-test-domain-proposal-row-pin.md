@@ -30,8 +30,8 @@ Scenario: 1行目の操作が2行目に干渉しない
 
 ## 受け入れ基準
 
-- [ ] `toHaveBeenCalledTimes(1)` と1行目非干渉（status 空・非 disabled）の assert がある
-- [ ] 既存テスト全緑
+- [x] `toHaveBeenCalledTimes(1)` と1行目非干渉（status 空・非 disabled）の assert がある
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -91,8 +91,8 @@ grep -n "toHaveBeenCalledTimes\|toHaveLength(2)" src/dashboard/panels/asyncData/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
