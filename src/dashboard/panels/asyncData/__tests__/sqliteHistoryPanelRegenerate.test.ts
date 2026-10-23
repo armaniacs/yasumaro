@@ -33,7 +33,8 @@ vi.mock('../../../../messaging/regenerateSummaryGateway.js', () => ({
   REGENERATE_TIMEOUT_MS: 60000,
 }));
 
-import { mapRegenerateError, formatRegenerateErrorDetail } from '../sqliteHistoryPanel.js';
+import { mapRegenerateError, formatRegenerateErrorDetail, toRegenerateErrorDisplay } from '../sqliteHistoryPanel.js';
+import type { RegenerateSummaryResponse } from '../../../../messaging/types.js';
 import { REGENERATE_TIMEOUT_ERROR } from '../../../../messaging/regenerateSummaryGateway.js';
 
 // NOTE: t() resolves to the en-locale message in vitest (same convention as
@@ -194,5 +195,90 @@ describe('formatRegenerateErrorDetail — slot failure element guard (PBI 2026-1
     expect(mapRegenerateError('ai_failed', false, undefined, malformed)).toBe(
       'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
     );
+  });
+});
+
+describe('toRegenerateErrorDisplay', () => {
+  describe('production path', () => {
+    it('converts a full gateway failure into the provider message plus the tried chain and slot rows', () => {
+      const display = toRegenerateErrorDisplay(
+        {
+          success: false,
+          error: 'ai_failed',
+          attemptedProviders: ['openai', 'gemini'],
+          slotFailures: [
+            { provider: 'openai', error: 'HTTP 401' },
+            { provider: 'gemini', error: 'HTTP 500' },
+          ],
+        },
+        'Providers tried',
+      );
+      expect(display.message).toBe(
+        'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+      );
+      expect(display.detail).toBe(
+        'Providers tried: openai → gemini\nopenai: HTTP 401\ngemini: HTTP 500',
+      );
+      expect(display.needsForce).toBe(false);
+    });
+
+    it('drops malformed providers and slot failures carried by a raw gateway response', () => {
+      const raw = {
+        success: false,
+        error: 'ai_failed',
+        attemptedProviders: ['openai', 7, null],
+        slotFailures: [{ provider: 'openai', error: 'HTTP 401' }, null, 'oops'],
+      } as unknown as RegenerateSummaryResponse;
+      const display = toRegenerateErrorDisplay(raw, 'Providers tried');
+      expect(display.detail).toBe('Providers tried: openai\nopenai: HTTP 401');
+      expect(display.message).toBe(
+        'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+      );
+    });
+
+    it('collapses a bare SendFailure to the generic message with no detail', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'SOME_UNKNOWN' },
+        'Providers tried',
+      );
+      expect(display.message).toBe('Failed to regenerate the AI summary.');
+      expect(display.detail).toBeUndefined();
+      expect(display.needsForce).toBe(false);
+    });
+
+    it('flags needsForce so the panel shows the force action row', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'DOMAIN_BLOCKED', needsForce: true },
+        'Providers tried',
+      );
+      expect(display.needsForce).toBe(true);
+      expect(display.message).toContain('force regeneration');
+    });
+
+    it('prefers the threaded rate_limited reason over raw-error inspection', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'anything at all', reason: 'rate_limited' },
+        'Providers tried',
+      );
+      expect(display.message).toContain('rate limit reached');
+    });
+
+    it('maps ai_failed with a monthly-limit slot failure to the shared-quota message', () => {
+      const display = toRegenerateErrorDisplay(
+        {
+          success: false,
+          error: 'ai_failed',
+          attemptedProviders: ['openai', 'gemini'],
+          slotFailures: [
+            { provider: 'openai', error: 'Error: Monthly token limit reached (1,017,238 / 1,000,000)' },
+            { provider: 'gemini', error: 'HTTP 500' },
+          ],
+        },
+        'Providers tried',
+      );
+      expect(display.message).toContain('Monthly token limit reached');
+      expect(display.message).toContain('shares this quota');
+      expect(display.detail).toContain('openai: Error: Monthly token limit reached');
+    });
   });
 });

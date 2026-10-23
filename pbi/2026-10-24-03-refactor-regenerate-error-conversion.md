@@ -30,9 +30,9 @@ Scenario: 生産経路が直接守られる
 
 ## 受け入れ基準
 
-- [ ] inline絞り込みがmodule内に吸収され、panelは呼ぶだけになる
-- [ ] 生産経路を直接叩くテストがある
-- [ ] 既存テスト全緑
+- [x] inline絞り込みがmodule内に吸収され、panelは呼ぶだけになる
+- [x] 生産経路を直接叩くテストがある
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -n "isSlotFailureRecord\|formatRegenerateErrorDetail\|mapRegenerateError" s
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
