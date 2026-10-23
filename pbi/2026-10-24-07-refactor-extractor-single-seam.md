@@ -30,9 +30,9 @@ Scenario: DOM前提がinterfaceに載る
 
 ## 受け入れ基準
 
-- [ ] 外部seamが1つに固定され、残りが内部seamになる
-- [ ] DOM前提がinterface記述に格上げされる
-- [ ] 既存テスト全緑
+- [x] 外部seamが1つに固定され、残りが内部seamになる
+- [x] DOM前提がinterface記述に格上げされる
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -n "export function\|export const" src/utils/contentExtractor/index.ts | he
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

@@ -37,6 +37,12 @@ export type { ExtractResult } from './contentExtractor/types.js';
 /**
  * Prepare page content from the current document.
  *
+ * THE single external seam of content extraction: config in → ExtractResult
+ * out. All production callers cross here; the contentExtractor entries behind
+ * it are internal seams (@internal) and MUST NOT be imported by production
+ * code. The bench harness (c1/c4, non-diagnostic string path) and unit tests
+ * are the only sanctioned direct users of those entries.
+ *
  * Hides the two-step orchestration that every caller previously re-derived:
  *   buildExtractionOptions(config) → extractMainContentWithInfo(maxChars, opts)
  *
@@ -47,6 +53,14 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * Pure with respect to the DOM: given the same document + config, returns the
  * same ExtractResult. No global pageState mutation — the caller decides what
  * to do with the result (locality).
+ *
+ * DOM contract (the interface-level preconditions, previously only visible in
+ * the extractor body):
+ * - Read source is the live `document.body`. A missing body yields empty
+ *   content without throwing.
+ * - `window.location.hostname` is read for the whitelist-adapter lookup.
+ * - Extraction is synchronous; on unexpected failure the pipeline falls back
+ *   to `document.body.innerText` and truncates the result to maxChars.
  *
  * @param config - CleansingConfig, defaults to a fresh utils-owned default when omitted
  * @param maxChars - maximum characters, defaults to 10000 (same as extractMainContentWithInfo)

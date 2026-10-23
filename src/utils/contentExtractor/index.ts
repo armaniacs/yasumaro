@@ -12,9 +12,21 @@
  * - extractMainContent — bench-measurement adapter ONLY (bench/micro
  *   c1-bytesize and c4-clonenode measure this non-diagnostic path). Zero
  *   production callers. Do not delete: removal would break the bench baseline
- *   continuity; entry reduction is re-evaluated at the next bench
- *   re-measurement.
+ *   continuity (bench/ is outside this refactor's scope, so the bench entry
+ *   is KEPT as an internal seam); entry reduction is re-evaluated at the
+ *   next bench re-measurement.
  * - extract — internal seam for consumers that need the opaque ExtractionReport.
+ *
+ * DOM contract (applies to every entry in this file, including the external
+ * seam that delegates here):
+ * - Read source is the live `document.body`. When `document.body` is absent,
+ *   entries return empty content without throwing.
+ * - `window.location.hostname` is read for the whitelist-adapter lookup.
+ * - Extraction is synchronous; on unexpected failure entries fall back to
+ *   `document.body.innerText` and truncate to maxChars.
+ * External callers MUST use preparePageContent and MUST NOT import these
+ * entries directly (production code); the bench harness and unit tests are
+ * the only sanctioned direct users.
  */
 
 import { INITIAL_KEYWORDS, type CleanseOptions } from '../contentCleaner.js';
@@ -62,6 +74,11 @@ export type ExtractDedupOptions = { dedupEnabled?: boolean; dedupThreshold?: num
 /**
  * Config for the internal report-path entry. Mirrors the positional options of
  * the legacy entries in one struct.
+ *
+ * DOM contract: extraction reads the live `document.body` and consults
+ * `window.location.hostname` for the whitelist-adapter lookup. A missing body
+ * yields empty content (no throw). External callers MUST build this config via
+ * buildExtractionOptions through preparePageContent instead of filling it here.
  */
 export interface ExtractConfig {
     maxChars?: number;
@@ -80,6 +97,10 @@ export interface ExtractOutput {
  * Internal seam: extract the page main content WITH full diagnostics behind
  * an opaque ExtractionReport. Consumers cross only the narrow seam
  * (bytesFunnel / cleanseCounts / fallbackCause / originalText).
+ *
+ * @internal External callers MUST use preparePageContent instead.
+ * DOM contract: reads the live `document.body`; missing body yields empty
+ * content without throwing.
  */
 export function extract(config: ExtractConfig = {}): ExtractOutput {
     const {
@@ -96,6 +117,10 @@ export function extract(config: ExtractConfig = {}): ExtractOutput {
 /**
  * Legacy-compat adapter: full diagnostics expanded to the flat ExtractResult
  * shape. The only entry the external seam (preparePageContent) calls.
+ *
+ * @internal External callers MUST use preparePageContent instead.
+ * DOM contract: reads the live `document.body` and `window.location.hostname`
+ * (whitelist lookup); missing body yields empty content without throwing.
  */
 export function extractMainContentWithInfo(
     maxChars: number = 10000,
@@ -112,8 +137,13 @@ export function extractMainContentWithInfo(
  * Bench-measurement adapter: thin string wrapper with diagnostic byte
  * measurement disabled (only fallback-critical encodes run). Zero production
  * callers — kept only as the c1/c4 micro-bench measurement surface. Do not
- * delete: removal would break the bench baseline continuity; entry reduction
- * is re-evaluated at the next bench re-measurement.
+ * delete: removal would break the bench baseline continuity (bench/ is
+ * outside this refactor's scope, so this entry is KEPT); entry reduction is
+ * re-evaluated at the next bench re-measurement.
+ *
+ * @internal External callers MUST use preparePageContent instead.
+ * DOM contract: reads the live `document.body`; missing body yields an empty
+ * string without throwing.
  */
 export function extractMainContent(
     maxChars: number = 10000,
