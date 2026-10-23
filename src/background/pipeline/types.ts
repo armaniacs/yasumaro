@@ -13,9 +13,6 @@ import type { AIService } from '../ai/AIService.js';
 import type { MarkdownTemplateEntryData } from '../../utils/types.js';
 import type { ObsidianClient } from '../obsidianClient.js';
 
-// Re-export MAX_RECORD_SIZE from the canonical source (recordingValidator.ts)
-export { MAX_RECORD_SIZE } from '../recordingValidator.js';
-
 /**
  * Error handling strategies for pipeline steps
  * @internal — internal seam for step orchestration. External callers should not depend on this.

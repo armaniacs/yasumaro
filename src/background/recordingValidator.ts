@@ -16,27 +16,50 @@ import { normalizeHostname } from '../utils/ssrfGuard.js';
  */
 import { MAX_RECORD_SIZE } from '../utils/limits.js';
 
-export { MAX_RECORD_SIZE };
+/**
+ * Outcome of a single-owner truncation pass.
+ */
+export interface TruncateForRecordingResult {
+  readonly content: string;
+  readonly truncated: boolean;
+  readonly originalBytes: number;
+}
+
+/**
+ * Single owner of byte truncation: check and cut in one pass.
+ * Encodes exactly once, slices at maxSize bytes, and decodes with
+ * fatal:false so a trailing partial UTF-8 sequence is replaced,
+ * never mojibake.
+ *
+ * @param content - Content to truncate
+ * @param maxSize - Maximum size in bytes (default: MAX_RECORD_SIZE)
+ * @returns Truncated content plus truncation metadata
+ */
+export function truncateForRecording(
+  content: string,
+  maxSize: number = MAX_RECORD_SIZE
+): TruncateForRecordingResult {
+  const encoded = new TextEncoder().encode(content);
+
+  if (encoded.length <= maxSize) {
+    return { content, truncated: false, originalBytes: encoded.length };
+  }
+
+  const truncated = encoded.slice(0, maxSize);
+  const decoded = new TextDecoder('utf-8', { fatal: false }).decode(truncated);
+  return { content: decoded, truncated: true, originalBytes: encoded.length };
+}
 
 /**
  * Truncate content to maximum size (UTF-8 safe).
- * Uses TextEncoder/TextDecoder to handle multi-byte characters correctly.
+ * Delegates to the single owner truncateForRecording.
  *
  * @param content - Content to truncate
  * @param maxSize - Maximum size in bytes (default: MAX_RECORD_SIZE)
  * @returns Truncated content (original if within limit)
  */
 export function truncateContentSize(content: string, maxSize: number = MAX_RECORD_SIZE): string {
-  const encoder = new TextEncoder();
-  const encoded = encoder.encode(content);
-
-  if (encoded.length <= maxSize) {
-    return content;
-  }
-
-  const truncated = encoded.slice(0, maxSize);
-  const decoder = new TextDecoder('utf-8', { fatal: false });
-  return decoder.decode(truncated);
+  return truncateForRecording(content, maxSize).content;
 }
 
 /**

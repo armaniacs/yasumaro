@@ -30,10 +30,10 @@ Scenario: 上限変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] byte切り詰めがvalidator module内に畳まれ、stepが薄いadapterになる
-- [ ] encodeが1回になる（UTF-8境界扱いを含む）
-- [ ] MAXの再export鎖が消える（limits正本の直接参照に）
-- [ ] 既存テスト全緑
+- [x] byte切り詰めがvalidator module内に畳まれ、stepが薄いadapterになる
+- [x] encodeが1回になる（UTF-8境界扱いを含む）
+- [x] MAXの再export鎖が消える（limits正本の直接参照に）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -96,8 +96,8 @@ grep -rn "truncateContentSize\|MAX_RECORD_SIZE" src/background/ src/utils/limits
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 境界table新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 境界table新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
