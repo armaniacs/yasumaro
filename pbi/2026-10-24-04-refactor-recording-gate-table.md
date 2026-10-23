@@ -30,10 +30,10 @@ Scenario: 優先順位変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] 純粋核がgate table 1 moduleに寄り、orchestratorは実行metadataのみ持つ
-- [ ] stepがI/Oのみになり、content側がadapterに限定される
-- [ ] 型の並立が解消される
-- [ ] 既存テスト全緑
+- [x] 純粋核がgate table 1 moduleに寄り、orchestratorは実行metadataのみ持つ
+- [x] stepがI/Oのみになり、content側がadapterに限定される
+- [x] 型の並立が解消される
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -97,8 +97,8 @@ grep -rn "decideGate\|GateVerdict\|PrivacyDecision" src/background/pipeline/ src
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
