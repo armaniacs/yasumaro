@@ -30,9 +30,9 @@ Scenario: handler試験がdispatch経由になる
 
 ## 受け入れ基準
 
-- [ ] 証拠選択・切詰・文脈組立・scope照合が独立pure moduleになる（単一interface: 行集合→証拠集合）
-- [ ] handler試験がdispatch経由Outcomeのみになる
-- [ ] 既存テスト全緑
+- [x] 証拠選択・切詰・文脈組立・scope照合が独立pure moduleになる（単一interface: 行集合→証拠集合）
+- [x] handler試験がdispatch経由Outcomeのみになる
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -n "pickEvidenceRows\|truncateSnippet\|buildEvidenceContext\|normalizeColle
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
