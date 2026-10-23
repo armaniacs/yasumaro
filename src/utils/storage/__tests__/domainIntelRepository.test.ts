@@ -18,6 +18,13 @@ vi.mock('../../logger/api.js', () => ({ logError: vi.fn(() => Promise.resolve())
 const backing = vi.hoisted(() => ({
   store: new Map<string, unknown>(),
   failNextGetWith: null as Error | null,
+  // Mirror of DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST] so the mock
+  // reproduces the production default complement for a missing key.
+  defaultBlacklist: [
+    'amazon.co.jp', 'amazon.com', 'yahoo.co.jp', 'yahoo.com',
+    'facebook.com', 'twitter.com', 'x.com', 'instagram.com',
+    'youtube.com', 'google.com', 'google.co.jp',
+  ],
 }));
 
 vi.mock('../SettingsRepository.js', () => ({
@@ -28,7 +35,11 @@ vi.mock('../SettingsRepository.js', () => ({
         backing.failNextGetWith = null;
         throw error;
       }
-      return backing.store.get(key);
+      // Reproduce the production contract: a missing key falls back to the
+      // default list, while an explicitly stored shape passes through as-is.
+      if (backing.store.has(key)) return backing.store.get(key);
+      if (key === 'domain_blacklist') return [...backing.defaultBlacklist];
+      return undefined;
     },
     set: async (key: string, value: unknown): Promise<void> => {
       backing.store.set(key, value);
@@ -53,36 +64,44 @@ describe('domainIntelRepository', () => {
 
   describe('addDomainToBlacklist', () => {
     it('persists an added domain so a later read returns it', async () => {
+      const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+
       await addDomainToBlacklist('example.com');
 
-      expect(backing.store.get(StorageKeys.DOMAIN_BLACKLIST)).toEqual(['example.com']);
-      await expect(getDomainBlacklist()).resolves.toEqual(['example.com']);
+      expect(backing.store.get(StorageKeys.DOMAIN_BLACKLIST)).toEqual([...(defaults ?? []), 'example.com']);
+      await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'example.com']);
     });
 
     it('is idempotent on repeats', async () => {
+      const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+
       await addDomainToBlacklist('example.com');
       await addDomainToBlacklist('example.com');
 
-      await expect(getDomainBlacklist()).resolves.toEqual(['example.com']);
+      await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'example.com']);
     });
   });
 
   describe('removeDomainFromBlacklist', () => {
     it('drops only the named domain', async () => {
+      const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+
       await addDomainToBlacklist('one.example');
       await addDomainToBlacklist('two.example');
 
       await removeDomainFromBlacklist('one.example');
 
-      await expect(getDomainBlacklist()).resolves.toEqual(['two.example']);
+      await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'two.example']);
     });
 
     it('is a no-op for a missing domain', async () => {
+      const defaults = DEFAULT_SETTINGS[StorageKeys.DOMAIN_BLACKLIST];
+
       await addDomainToBlacklist('kept.example');
 
       await removeDomainFromBlacklist('missing.example');
 
-      await expect(getDomainBlacklist()).resolves.toEqual(['kept.example']);
+      await expect(getDomainBlacklist()).resolves.toEqual([...(defaults ?? []), 'kept.example']);
     });
   });
 
