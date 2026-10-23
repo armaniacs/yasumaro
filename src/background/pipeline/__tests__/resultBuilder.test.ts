@@ -36,13 +36,8 @@ vi.mock('../../../utils/logger/api.js', async () =>
 vi.mock('../../../utils/pendingStorage.js', () => ({
   addPendingPage: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('../../notificationHelper.js', () => ({
-  NotificationHelper: { notifySuccess: vi.fn() },
-}));
-
 import { buildErrorResult, buildResult, buildPrivatePageResult, notifyRecordingError, notifyObsidianSaveSuccess } from '../resultBuilder.js';
 import { addPendingPage } from '../../../utils/pendingStorage.js';
-import { NotificationHelper } from '../../notificationHelper.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import type { RecordingContext } from '../types.js';
 
@@ -77,24 +72,36 @@ describe('buildErrorResult', () => {
 
 describe('buildPrivatePageResult', () => {
   it('builds a failure result without any notification side effect', () => {
+    const create = vi.fn();
+    (globalThis as unknown as { chrome: unknown }).chrome = {
+      notifications: { create },
+      runtime: { getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`) },
+      i18n: { getMessage: vi.fn().mockReturnValue('') },
+    };
     const context = makeContext();
     const error = new PrivatePageError('Private page detected', { reason: 'cache-control' });
     const result = buildPrivatePageResult(context, error);
 
     expect(result.success).toBe(false);
     expect(result.reason).toBe('cache-control');
-    expect(NotificationHelper.notifySuccess).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 });
 
 describe('buildResult', () => {
   it('builds a success result without any notification side effect', () => {
+    const create = vi.fn();
+    (globalThis as unknown as { chrome: unknown }).chrome = {
+      notifications: { create },
+      runtime: { getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`) },
+      i18n: { getMessage: vi.fn().mockReturnValue('') },
+    };
     const context = makeContext();
     const result = buildResult(context);
 
     expect(result.success).toBe(true);
     expect(result.title).toBe('Test Page');
-    expect(NotificationHelper.notifySuccess).not.toHaveBeenCalled();
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('builds a pure shape — obsidian_sync recovery moved to the outcome policy', () => {
@@ -133,16 +140,21 @@ describe('notifyRecordingError', () => {
 });
 
 describe('notifyObsidianSaveSuccess', () => {
-  it('delegates to NotificationHelper.notifySuccess', () => {
+  it('creates a chrome notification with the save-success payload', () => {
+    const create = vi.fn();
     (globalThis as unknown as { chrome: unknown }).chrome = {
+      notifications: { create },
+      runtime: { getURL: vi.fn((path: string) => `chrome-extension://mock-id/${path}`) },
       i18n: { getMessage: vi.fn().mockReturnValue('') },
     };
 
     notifyObsidianSaveSuccess('Test Page');
 
-    expect(NotificationHelper.notifySuccess).toHaveBeenCalledWith(
-      expect.any(String),
-      'Saved: Test Page'
-    );
+    expect(create).toHaveBeenCalledWith(expect.objectContaining({
+      type: 'basic',
+      iconUrl: 'chrome-extension://mock-id/icons/icon48.png',
+      title: 'Saved to Obsidian',
+      message: 'Saved: Test Page',
+    }));
   });
 });

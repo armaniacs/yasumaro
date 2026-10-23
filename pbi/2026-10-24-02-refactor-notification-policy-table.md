@@ -30,9 +30,9 @@ Scenario: 文言変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] 通知方針（文面・ボタン構成・requireInteraction方針）がtableに集まる
-- [ ] 8箇所のmockが削減される（tableのunit testに集約）
-- [ ] 既存テスト全緑
+- [x] 通知方針（文面・ボタン構成・requireInteraction方針）がtableに集まる
+- [x] 8箇所のmockが削減される（tableのunit testに集約）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -rn "NotificationHelper" src/ --include='*.ts' | grep -v __tests__ | head; 
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
