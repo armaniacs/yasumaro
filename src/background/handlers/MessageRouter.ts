@@ -29,12 +29,6 @@ import { createAskHistoryHandler, type AskHistorySearch } from './askHistoryHand
 import { createResearchReportHandler } from './researchReportHandlers.js';
 import type { ResearchReportGenerator } from '../researchReportGenerator.js';
 import { getSavedCollections } from '../../utils/storage/savedCollectionsRepository.js';
-
-/** The raw stored query of one saved collection, or null for an unknown id. */
-async function getSavedCollectionById(id: string): Promise<Record<string, unknown> | null> {
-  const collections = await getSavedCollections();
-  return collections[id]?.query ?? null;
-}
 import {
   createTestConnectionsHandler,
   createTestObsidianHandler,
@@ -249,7 +243,7 @@ export class MessageRouter {
         admit,
         search: deps.askEvidenceSearch,
         generateAnswer: deps.aiService.generateSummary,
-        loadCollection: (id) => getSavedCollectionById(id),
+        loadCollection: async (id) => (await getSavedCollections())[id]?.query ?? null,
       }),
       // PBI 2026-10-23-09: 調査レポート一発生成 — four-section Markdown from
       // the panel conditions, delivered through the existing export paths.

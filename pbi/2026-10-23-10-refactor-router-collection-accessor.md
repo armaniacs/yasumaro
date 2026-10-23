@@ -26,8 +26,8 @@ Scenario: 境界
 
 ## 受け入れ基準
 
-- [ ] `getSavedCollectionById` がなくなり、`loadCollection` の lambda に一本化される（または残す判断を記録する）
-- [ ] `askHistoryHandlers.test.ts` が全緑
+- [x] `getSavedCollectionById` がなくなり、`loadCollection` の lambda に一本化される（または残す判断を記録する）
+- [x] `askHistoryHandlers.test.ts` が全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -76,7 +76,7 @@ grep -rn "getSavedCollectionById" src/ --include='*.ts' | grep -v __tests__
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
