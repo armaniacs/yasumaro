@@ -30,8 +30,8 @@ Scenario: 正常な要素は変更前と同一
 
 ## 受け入れ基準
 
-- [ ] slotFailures の要素検証が attemptedProviders 側と対称になる
-- [ ] 既存テスト全緑
+- [x] slotFailures の要素検証が attemptedProviders 側と対称になる
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -89,8 +89,8 @@ grep -n "slotFailures\|attemptedProviders" src/dashboard/panels/asyncData/sqlite
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + table テスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + table テスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

@@ -65,6 +65,9 @@ export function formatRegenerateErrorDetail(
     lines.push(`${triedLabel}: ${attemptedProviders.join(' → ')}`);
   }
   for (const f of slotFailures ?? []) {
+    if (typeof f !== 'object' || f === null) continue;
+    if (!('provider' in f) || !('error' in f)) continue;
+    if (typeof f.provider !== 'string' || typeof f.error !== 'string') continue;
     lines.push(`${f.provider}: ${f.error}`);
   }
   return lines.length > 0 ? lines.join('\n') : undefined;
@@ -101,7 +104,7 @@ export function mapRegenerateError(
     // in aiUsageTracker) — when it tripped, "try another provider" advice is
     // wrong: the next HTTP slot hits the same wall. Show the actionable
     // message instead; the per-slot detail rows still explain each failure.
-    if (slotFailures?.some((f) => f.error.includes('Monthly token limit'))) {
+    if (slotFailures?.some((f) => typeof f === 'object' && f !== null && 'error' in f && typeof f.error === 'string' && f.error.includes('Monthly token limit'))) {
       return t('historyRegenerateErrorMonthlyLimit');
     }
     return t('historyRegenerateErrorAi');
@@ -230,9 +233,21 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         'attemptedProviders' in result && Array.isArray(result.attemptedProviders)
           ? result.attemptedProviders.filter((p): p is string => typeof p === 'string')
           : [];
+      const slotFailures =
+        'slotFailures' in result && Array.isArray(result.slotFailures)
+          ? result.slotFailures.filter(
+              (f): f is { provider: string; error: string } =>
+                typeof f === 'object' &&
+                f !== null &&
+                'provider' in f &&
+                'error' in f &&
+                typeof f.provider === 'string' &&
+                typeof f.error === 'string',
+            )
+          : undefined;
       const detail = formatRegenerateErrorDetail(
         attemptedProviders,
-        'slotFailures' in result ? result.slotFailures : undefined,
+        slotFailures,
         t('historyRegenerateProvidersTried'),
       );
       showEntryRegenerateError(
@@ -242,7 +257,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
           result.error,
           needsForce,
           'reason' in result ? result.reason : undefined,
-          'slotFailures' in result ? result.slotFailures : undefined,
+          slotFailures,
         ),
         {
           ...(needsForce
@@ -606,7 +621,8 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         ...(citations !== undefined ? { citations } : {}),
       };
     } catch (e: unknown) {
-      // The gateway timeout maps to its sentinel; the failure reason shows.
+      // Defensive default: the gateway always resolves (timeout arrives as a
+      // SendFailure), so this catch only covers unexpected throws.
       return { ok: false, error: errorMessage(e) };
     }
   }
@@ -644,7 +660,8 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         ...(deliveredTo !== undefined ? { deliveredTo } : {}),
       };
     } catch (e: unknown) {
-      // The gateway timeout maps to its sentinel; the failure reason shows.
+      // Defensive default: the gateway always resolves (timeout arrives as a
+      // SendFailure), so this catch only covers unexpected throws.
       return { ok: false, error: errorMessage(e) };
     }
   }

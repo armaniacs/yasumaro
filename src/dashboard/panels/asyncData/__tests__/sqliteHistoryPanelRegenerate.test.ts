@@ -131,3 +131,68 @@ describe('mapRegenerateError — shared monthly quota (root cause 2026-09-22)', 
     );
   });
 });
+
+describe('formatRegenerateErrorDetail — slot failure element guard (PBI 2026-10-23-09)', () => {
+  it.each([
+    {
+      name: 'valid rows stay identical',
+      failures: [
+        { provider: 'openai', error: 'HTTP 401' },
+        { provider: 'gemini', error: 'HTTP 500' },
+      ],
+      expected:
+        'Providers tried: openai → gemini\nopenai: HTTP 401\ngemini: HTTP 500',
+    },
+    {
+      name: 'null element is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, null],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'string element is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, 'openai: boom'],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'missing provider is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { error: 'HTTP 500' }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'missing error is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { provider: 'gemini' }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'non-string fields are dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { provider: 7, error: null }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+  ])('$name', ({ failures, expected }) => {
+    const detail = formatRegenerateErrorDetail(
+      ['openai', 'gemini'],
+      failures as unknown as Array<{ provider: string; error: string }>,
+      'Providers tried',
+    );
+    expect(detail).toBe(expected);
+  });
+
+  it('all malformed with no tried chain returns undefined (no garbage rows)', () => {
+    const detail = formatRegenerateErrorDetail(
+      [],
+      [null, 'oops', { provider: 'x' }] as unknown as Array<{ provider: string; error: string }>,
+      'Providers tried',
+    );
+    expect(detail).toBeUndefined();
+  });
+
+  it('mapRegenerateError tolerates malformed slot failures without throwing', () => {
+    const malformed = [null, 'oops', { provider: 'x' }] as unknown as Array<{
+      provider: string;
+      error: string;
+    }>;
+    expect(mapRegenerateError('ai_failed', false, undefined, malformed)).toBe(
+      'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+    );
+  });
+});

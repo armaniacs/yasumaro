@@ -30,8 +30,8 @@ Scenario: コメントが実態と一致する
 
 ## 受け入れ基準
 
-- [ ] 到達不能な catch が整理される（削除または実態に合う記述に）
-- [ ] 既存テスト全緑
+- [x] 到達不能な catch が整理される（削除または実態に合う記述に）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -89,8 +89,8 @@ grep -n "maps to its sentinel" src/dashboard/panels/asyncData/sqliteHistoryPanel
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
