@@ -14,6 +14,8 @@ import {
   NOISE_SHARE_THRESHOLD,
   periodBasisLabel,
   shareFormulaText,
+  sharePercent,
+  sharePercentOf,
 } from '../domainIntelAggregate.js';
 
 function makeAgg(counts: Record<string, number>, total?: number): ReturnType<typeof aggregateDomainAnalysis> {
@@ -65,6 +67,39 @@ describe('shareFormulaText + periodBasisLabel (根拠の表示)', () => {
     expect(periodBasisLabel(0, 1000, fmt)).toContain(' - ');
     expect(periodBasisLabel(null, null, fmt)).toBe('すべての期間');
     expect(periodBasisLabel(0, null, fmt)).toBe('1970-01-01 -');
+  });
+});
+
+describe('sharePercent + sharePercentOf — rounding boundary table (Math.round unchanged)', () => {
+  it.each([
+    [0, 0],
+    [1, 100],
+    [0.6, 60],
+    [0.024, 2],
+    [0.025, 3],
+    [0.124, 12],
+    [0.125, 13],
+    [0.605, 61],
+  ])('rounds share %f to %i percent', (share, expected) => {
+    expect(sharePercent(share)).toBe(expected);
+  });
+
+  it.each([
+    [60, 100, 60],
+    [1, 40, 3],
+    [1, 80, 1],
+    [0, 100, 0],
+    [0, 0, 0],
+    [5, 0, 0],
+  ])('computes part %i of total %i as %i percent', (part, total, expected) => {
+    expect(sharePercentOf(part, total)).toBe(expected);
+  });
+
+  it('matches the legacy inline Math.round expression on boundary shares', () => {
+    const shares = [0, 0.024, 0.025, 0.124, 0.125, 0.6, 0.605, 1];
+    for (const share of shares) {
+      expect(sharePercent(share)).toBe(Math.round(share * 100));
+    }
   });
 });
 

@@ -26,9 +26,9 @@ Scenario: 丸め境界
 
 ## 受け入れ基準
 
-- [ ] panel 側の `Math.round(share * 100)` 系3箇所が共有 helper に置換される
-- [ ] 丸め境界の table テストが新規追加される
-- [ ] 既存テスト全緑
+- [x] panel 側の `Math.round(share * 100)` 系3箇所が共有 helper に置換される
+- [x] 丸め境界の table テストが新規追加される
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -82,7 +82,7 @@ grep -rn "Math.round(.*\* 100)" src/dashboard/domainIntelAggregate.ts src/dashbo
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 丸め境界テスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 丸め境界テスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

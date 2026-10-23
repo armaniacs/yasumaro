@@ -62,9 +62,19 @@ export function periodBasisLabel(
   return `${from} - ${to}`;
 }
 
+/** Display percent for a share fraction (0-1); rounding stays Math.round. */
+export function sharePercent(share: number): number {
+  return Math.round(share * 100);
+}
+
+/** Display percent for a part/total pair; a zero total maps to 0. */
+export function sharePercentOf(part: number, total: number): number {
+  return total > 0 ? sharePercent(part / total) : 0;
+}
+
 /** Share formula text, resolved with the concrete numbers (算出式の表示). */
 export function shareFormulaText(topCount: number, total: number): string {
-  const percent = total > 0 ? Math.round((topCount / total) * 100) : 0;
+  const percent = sharePercentOf(topCount, total);
   return `上位ドメイン割合(%) = 上位件数 ÷ 総件数 × 100 = ${topCount} ÷ ${total} × 100 = ${percent}%`;
 }
 

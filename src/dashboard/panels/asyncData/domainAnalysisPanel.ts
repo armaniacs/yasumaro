@@ -54,6 +54,7 @@ import {
   computeSourceBias,
   buildNoiseProposals,
   periodBasisLabel,
+  sharePercent,
   type NoiseProposal,
 } from '../../domainIntelAggregate.js';
 import { addDomainToBlacklist, removeDomainFromBlacklist } from '../../../utils/storage/domainIntelRepository.js';
@@ -198,7 +199,7 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
   }
 
   function buildProposalRow(proposal: NoiseProposal): string {
-    const percent = Math.round(proposal.share * 100);
+    const percent = sharePercent(proposal.share);
     return `<div class="domain-intel-proposal-row">
       <div class="domain-intel-proposal-info">
         <span class="domain-intel-proposal-domain">${escapeHtml(proposal.domain)}</span>
@@ -230,11 +231,11 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
     const periodLabel = periodBasisLabel(bias.since, bias.until, formatLocalDateString);
     intelBiasLine.textContent = msg('domainIntel_biasLine', {
       domain: bias.topDomain ?? '',
-      percent: Math.round(bias.topShare * 100),
+      percent: sharePercent(bias.topShare),
       total: bias.total,
       period: periodLabel,
       formula: bias.formula,
-    }, `${bias.topDomain} が全 ${bias.total} 件のうち約 ${Math.round(bias.topShare * 100)}% を占めています。偏っている可能性があります。`);
+    }, `${bias.topDomain} が全 ${bias.total} 件のうち約 ${sharePercent(bias.topShare)}% を占めています。偏っている可能性があります。`);
     intelBiasLine.hidden = false;
 
     const proposals = buildNoiseProposals(agg);
