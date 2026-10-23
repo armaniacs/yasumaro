@@ -650,6 +650,8 @@ describe('privatePageDialog', () => {
     });
 
     it('should handle record response with undefined error field', async () => {
+      // Bare failure maps to the gateway sentence (PBI 2026-10-24-01):
+      // the guard no longer passes error-less failures through.
       (global.chrome.runtime.sendMessage as any).mockResolvedValue({
         success: false,
       });
@@ -662,7 +664,7 @@ describe('privatePageDialog', () => {
 
       await vi.waitFor(() => {
         const statusDiv = document.getElementById('mainStatus');
-        expect(statusDiv!.textContent).toContain('Unknown error');
+        expect(statusDiv!.textContent).toContain('Invalid PENDING_RECORD response');
       });
     });
 
