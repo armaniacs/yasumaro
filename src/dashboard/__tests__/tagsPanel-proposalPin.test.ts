@@ -66,6 +66,14 @@ async function showSingleProposal(): Promise<HTMLElement> {
   return document.querySelector('.norm-proposal-row') as HTMLElement;
 }
 
+async function showTwoProposals(): Promise<HTMLElement[]> {
+  (document.getElementById('refreshNormProposalsBtn') as HTMLButtonElement).click();
+  await waitForMock(() => {
+    expect(document.querySelectorAll('.norm-proposal-row')).toHaveLength(2);
+  });
+  return Array.from(document.querySelectorAll('.norm-proposal-row'), (el) => el as HTMLElement);
+}
+
 describe('tagsPanel — single proposal pin', () => {
   beforeEach(() => {
     mockQueryLogs.mockReset();
@@ -119,5 +127,89 @@ describe('tagsPanel — single proposal pin', () => {
     await waitForMock(() => expect(status.textContent).toBe('write failed (1 件適用済み)'));
     expect(applyButton.disabled).toBe(false);
     expect(undoButton.hidden).toBe(true);
+  });
+
+  it('applies only the second row without touching the first', async () => {
+    fullDom();
+    const rows = [
+      { id: 1, tags: 'OldTag', created_at: 1 },
+      { id: 2, tags: 'LegacyTag', created_at: 2 },
+    ];
+    mockQueryLogs.mockResolvedValue({ data: { rows } });
+    mockUpdateLog.mockResolvedValue({});
+    await initTagsPanel(
+      givenRepo([
+        { from: 'OldTag', to: 'NewTag' },
+        { from: 'LegacyTag', to: 'ModernTag' },
+      ]),
+    );
+
+    const proposalRows = await showTwoProposals();
+    const [firstRow, secondRow] = proposalRows;
+    if (firstRow === undefined || secondRow === undefined) {
+      throw new Error('expected two proposal rows');
+    }
+    const firstApply = firstRow.querySelector(
+      '[data-norm-action="apply"]',
+    ) as HTMLButtonElement;
+    const firstUndo = firstRow.querySelector(
+      '[data-norm-action="undo"]',
+    ) as HTMLButtonElement;
+    const firstStatus = firstRow.querySelector('.norm-proposal-status') as HTMLElement;
+    const secondApply = secondRow.querySelector(
+      '[data-norm-action="apply"]',
+    ) as HTMLButtonElement;
+    const secondUndo = secondRow.querySelector(
+      '[data-norm-action="undo"]',
+    ) as HTMLButtonElement;
+    const secondStatus = secondRow.querySelector('.norm-proposal-status') as HTMLElement;
+
+    secondApply.click();
+    await waitForMock(() => expect(secondStatus.textContent).toBe('i18n_normProposalApplied'));
+    expect(secondApply.disabled).toBe(true);
+    expect(secondUndo.hidden).toBe(false);
+    expect(mockUpdateLog).toHaveBeenCalledTimes(1);
+    expect(mockUpdateLog).toHaveBeenCalledWith(2, { tags: 'ModernTag' });
+    expect(firstStatus.textContent).toBe('');
+    expect(firstApply.disabled).toBe(false);
+    expect(firstUndo.hidden).toBe(true);
+  });
+
+  it('routes each row apply to its own tag', async () => {
+    fullDom();
+    const rows = [
+      { id: 1, tags: 'OldTag', created_at: 1 },
+      { id: 2, tags: 'LegacyTag', created_at: 2 },
+    ];
+    mockQueryLogs.mockResolvedValue({ data: { rows } });
+    mockUpdateLog.mockResolvedValue({});
+    await initTagsPanel(
+      givenRepo([
+        { from: 'OldTag', to: 'NewTag' },
+        { from: 'LegacyTag', to: 'ModernTag' },
+      ]),
+    );
+
+    const proposalRows = await showTwoProposals();
+    const [firstRow, secondRow] = proposalRows;
+    if (firstRow === undefined || secondRow === undefined) {
+      throw new Error('expected two proposal rows');
+    }
+    const firstApply = firstRow.querySelector(
+      '[data-norm-action="apply"]',
+    ) as HTMLButtonElement;
+    const firstStatus = firstRow.querySelector('.norm-proposal-status') as HTMLElement;
+    const secondApply = secondRow.querySelector(
+      '[data-norm-action="apply"]',
+    ) as HTMLButtonElement;
+    const secondStatus = secondRow.querySelector('.norm-proposal-status') as HTMLElement;
+
+    firstApply.click();
+    await waitForMock(() => expect(firstStatus.textContent).toBe('i18n_normProposalApplied'));
+    secondApply.click();
+    await waitForMock(() => expect(secondStatus.textContent).toBe('i18n_normProposalApplied'));
+    expect(mockUpdateLog).toHaveBeenCalledTimes(2);
+    expect(mockUpdateLog).toHaveBeenCalledWith(1, { tags: 'NewTag' });
+    expect(mockUpdateLog).toHaveBeenCalledWith(2, { tags: 'ModernTag' });
   });
 });
