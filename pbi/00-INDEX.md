@@ -14,6 +14,23 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-24 建築改善ループ（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(12) → 02(7.2) → 03(6) → 04(4.3) → 05(4) → 06(4) → 07(4) → 08(2.4)
+
+建築診断（codebase-design 語彙、2領域の並列探索）の10候補から Speculative 1 件を除外・重複 1 組を統合して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024.md](2026-10-24-00-backlog-architecture-1024.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-24-01-refactor-pending-gateway-normalize.md](2026-10-24-01-refactor-pending-gateway-normalize.md) | refactor | 12 | 0.5 | pending normalize の共有化（deletion test 済み。最初の一手） |
+| ⬜ 02 | [2026-10-24-02-refactor-response-canonical-module.md](2026-10-24-02-refactor-response-canonical-module.md) | refactor | 7.2 | 2.0 | 応答形状の正本化。NN03・NN04・NN05 は本 PBI の後に実施 |
+| ⬜ 03 | [2026-10-24-03-refactor-regenerate-error-conversion.md](2026-10-24-03-refactor-regenerate-error-conversion.md) | refactor | 6 | 1.0 | エラー変換の集約（NN02 の後に実施） |
+| ⬜ 04 | [2026-10-24-04-refactor-ask-evidence-module.md](2026-10-24-04-refactor-ask-evidence-module.md) | refactor | 4.3 | 1.5 | 証拠 pure 群の独立化（NN02 の後に実施） |
+| ⬜ 05 | [2026-10-24-05-refactor-history-panel-wiring-split.md](2026-10-24-05-refactor-history-panel-wiring-split.md) | refactor | 4 | 3.0 | panel 配線集中の緩和（NN07・NN02 の後に実施） |
+| ⬜ 06 | [2026-10-24-06-refactor-send-seam-unification.md](2026-10-24-06-refactor-send-seam-unification.md) | refactor | 4 | 2.0 | 送信 seam 一本化（独立領域） |
+| ⬜ 07 | [2026-10-24-07-refactor-history-ids-ownership.md](2026-10-24-07-refactor-history-ids-ownership.md) | refactor | 4 | 1.0 | id 所有の是正（NN05 は本 PBI の後に実施） |
+| ⬜ 08 | [2026-10-24-08-refactor-proposal-row-selectors.md](2026-10-24-08-refactor-proposal-row-selectors.md) | refactor | 2.4 | 1.0 | selectors 畳み込み（独立・小幅） |
+
+実行順の推奨: RICE 順。**NN02 → NN03・NN04・NN05、NN07 → NN05** の前後関係を守る。NN01 / NN06 / NN07 / NN08 は互いに独立のため並列着手可。
+
 ### 2026-10-23 adversarial-code-review 診断（round2 差分、11件） ― ✅ 11件完了・アーカイブ済み（01-11） 🔧非機能追加 RICE順: ~~01(24)~~ → ~~02(13.3)~~ → ~~03(10)~~ → ~~04(6.7)~~ → ~~05(6)~~ → ~~06(5.3)~~ → ~~07(5)~~ → ~~08(4.3)~~ → ~~09(4)~~ → ~~10(3.3)~~ → ~~11(2.1)~~
 
 /adversarial-code-review 診断 + autonomous-task-closer で自律実装・検証してアーカイブ。11 件すべて実装（5 バッチ: A4並列 → B3並列 → C/D単独 → E1体2件）。RICE 詳細・依存グラフ・却下一覧は [2026-10-23-00-backlog-adversarial-1023.md](../dev-docs/archived/pbi/2026-10-23-00-backlog-adversarial-1023.md)。最終ゲート `npm run validate` 緑（1152ファイル・17033テスト）。
