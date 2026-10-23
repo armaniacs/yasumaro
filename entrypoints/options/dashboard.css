@@ -2128,6 +2128,46 @@ button#changeMasterPassword:hover {
   color: var(--color-text-muted, #64748b);
 }
 
+/* Normalization proposals (PBI 2026-10-23-05): advisory rows with apply/undo. */
+.norm-proposals-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.norm-proposal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.norm-proposal-label {
+  font-size: 13px;
+  flex: 1 1 auto;
+}
+
+.norm-proposal-row .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
+.norm-proposal-status {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  flex-basis: 100%;
+}
+
+.norm-proposal-status:empty {
+  display: none;
+}
+
 .pending-pagination {
   display: flex;
   align-items: center;

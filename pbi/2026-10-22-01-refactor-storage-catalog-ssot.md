@@ -36,7 +36,7 @@ Scenario: ゲート前のsunset実行を拒否する
 - 三角形pin: 既存資産で充足。`src/__tests__/providerTrianglePin.test.ts` が3隅を担保（cap map と PROVIDER_CATALOG の集合一致、required/optional tier の伝播と境界、connect-src が manifest と同一SSOT、Gist egress の host_permissions + connect-src 両側宣言）。SSOT導出の双方向goldensは `src/utils/storage/__tests__/provider-domain-ssot.derivation.test.ts`
 - wa-sqlite手順書: 既存資産で充足。ゲート条件(2026-12-17+診断ゼロ報告)と `extractDomain` re-export の付け替え手順は `pbi/2026-09-05-32` 実装ガイドに記載済み。ゲート前のsunset実行は拒否（既存移行経路は温存、本PBIでは着手しない）
 - IDB計測設計: 新規作成。`dev-docs/idb-retirement-measurement-design.md` に測定なし廃止禁止の契約・`compileOptionsSource` 信号・ローカル集計のみの計り方・go/no-go基準を記載
-- 残: validate緑化の確認（本PBIのコミット時に実施）、コードレビュー、E2E（Gist egress 3pin の維持）
+- 残: コードレビュー、E2E(Gist egress 3pin維持)。validate緑化は複数回確認済み(exit 0)
 
 ## テスト戦略
 - E2E: Gist egressの3pin(有効PAT/401/未宣言origin遮断)の維持。6.9.52のpinを壊さない

@@ -49,3 +49,11 @@ Scenario: 設定で迷わない
   - 月次ダイジェスト: `src/background/reviewSummaryGenerator.ts` が対象期間の閲覧履歴を集計し、AI要約を用いたダイジェストMarkdownファイルを生成（`digest` 引数と `sanitizeForObsidian(digest)` の受け口が実在）。`src/dashboard/reviewSummaryHandler.ts` の `generateReviewSummary` が UI 経路
   - 上級者項目の折りたたみ: `<details class="advanced-details">` が6箇所実在（`obsidianSettingsDetails`・`diagCompileOptionsSection` 等）。`<details>` は既定で畳まれ、開閉は summary クリック、保存は入力が DOM に在るため影響しない（BDDの開閉シナリオを満たす）
 - 残タスク（次ラウンドの再開点）: (1) タグ正規化の提案（`src/utils/tagUtils.ts` の `normalizeTags` と `TAG_NORMALIZATION_DICT` は実在、提案UI・適用・取消の経路は未実装）(2) 削除物に parity pin を先に置く（本PBIで削除する対象の確定が未着手）(3) E2E（ダイジェスト生成→表示、折りたたみ開閉→保存の通し）
+
+## 実装記録（2026-10-23・タグ正規化の提案UI）
+- 提案の純粋集計: 完了。`src/dashboard/tagNormalizationProposals.ts` の `buildTagNormalizationProposals` が保存済みタグのうち辞書で変わるものを提案。照合意味は `normalizeTags` と同一(NFKC+小文字・先勝ち・大小文字のみの差も実表示変更として提案)。`renameTagInCsv` が適用・取消の基本形(改名+衝突時重複排除、unknownはfail-closed)
+- 適用・取消seam: 完了。`src/dashboard/tagRenameApplier.ts` の `applyTagRename`/`undoTagRename` がタグ付きquery→各行のtags CSV書換→updateで改名。取消は逆向きの同一経路でエンドツーエンド可逆。書込失敗は適用済み件数付きで中断(沈黙の半改名にしない)。deps注入でテストはモック
+- パネル配線: 完了。タグパネルの正規化辞書の下に提案領域(遅延読込でsqlite往復なしに開く)。適用はユーザーアクション+インライン取消(自動適用はしない)。既存seamのみ使用(queryLogs tagFilter・updateLog、新規メッセージ型なし)
+- ja/en: `normProposalsTitle`・`normProposalsDesc`・`normProposalsRefresh`・`normProposalsEmpty`・`normProposalApply`・`normProposalUndo`・`normProposalApplied`・`normProposalUndone` の8キーを双側追加
+- pin: `src/dashboard/__tests__/tagNormalizationProposals.test.ts` 10テスト(提案テーブル・改名・重複排除・fail-closed・適用・取消・中断時件数)
+- 残: parity pin(削除対象の確定が未着手)、E2E(ダイジェスト生成→表示、折りたたみ開閉→保存、提案→適用→取消の通し)、コードレビュー、ドキュメント更新(ダイジェスト手順・寄与手順の差分)

@@ -36,7 +36,7 @@
 | 🔶 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | 実装完了(メディア種別判定・メディア別しきい値+UI+保存・VisitGate拡張・visit_duration NULL解消)。残は動画再生→記録のE2E |
 | 🔶 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | 実装完了(縮退要約ジェネレータ・degradedフラグ・パイプライン配線・pin・DESIGN_SPECIFICATIONS 7.4章)。残はコードレビューのみ |
 | 🔶 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 受入基準4件充足(既存資産+監査ログ列定義の文書反映)。残はコードレビューと閲覧履歴export列定義のdocs反映(任意) |
-| 🔶 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 調査完了。月次ダイジェストと上級者折りたたみは既存資産で充足。残はタグ提案とparity pin |
+| 🔶 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 調査完了+タグ提案UI完了(提案の純粋集計・適用/取消seam・タグパネル配線・既存seamのみ)。残はparity pin(削除対象の確定)、E2E、コードレビュー、ドキュメント |
 
 ### 2026-10-22 yasumaro棚卸し6候補 ― 🔶 6件部分実装・⬜ 0件残（01文書+pin確定・02初回起動バナー・03類似クラスタ土台・04集計経路・05最小ペイロード・06失敗可視化の語彙完了）
 

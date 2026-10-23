@@ -4527,6 +4527,30 @@
   "noNormEntries": {
     "message": "ルールがありません"
   },
+  "normProposalsTitle": {
+    "message": "正規化の提案"
+  },
+  "normProposalsDesc": {
+    "message": "上のルールで変わる保存済みタグを表示します。適用すると記録を書き換え、取り消せます。"
+  },
+  "normProposalsRefresh": {
+    "message": "提案を表示"
+  },
+  "normProposalsEmpty": {
+    "message": "提案はありません。"
+  },
+  "normProposalApply": {
+    "message": "適用"
+  },
+  "normProposalUndo": {
+    "message": "取消"
+  },
+  "normProposalApplied": {
+    "message": "タグを書き換えました。"
+  },
+  "normProposalUndone": {
+    "message": "取り消しました。"
+  },
   "normEntriesTitle": {
     "message": "正規化ルール"
   },

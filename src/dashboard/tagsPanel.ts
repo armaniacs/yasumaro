@@ -14,6 +14,11 @@ import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 import { createTagChip } from './tagChip.js';
+import { buildTagNormalizationProposals, type TagNormalizationProposal } from './tagNormalizationProposals.js';
+import { applyTagRename, undoTagRename, TagRenameError } from './tagRenameApplier.js';
+import { queryLogs, updateLog, isServiceError } from './dashboardSqliteService.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
+import { escapeHtml } from '../utils/htmlEscape.js';
 import { logError } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -37,6 +42,10 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   const addNormEntryBtn = document.getElementById('addNormEntryBtn') as HTMLButtonElement | null;
   const normEntriesList = document.getElementById('normEntriesList') as HTMLElement | null;
   const noNormEntriesMsg = document.getElementById('noNormEntriesMsg') as HTMLElement | null;
+
+  // --- Normalization proposal elements (PBI 2026-10-23-05) ---
+  const refreshNormProposalsBtn = document.getElementById('refreshNormProposalsBtn') as HTMLButtonElement | null;
+  const normProposalsEl = document.getElementById('tagNormProposals') as HTMLElement | null;
 
   // In-memory state
   let userCategories: string[] = [];
@@ -198,6 +207,101 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   }
 
   // ========================================================================
+  // Normalization proposals: show, apply, undo (PBI 2026-10-23-05)
+  // ========================================================================
+
+  /** Bounded tag collection for proposals (same cap as research report). */
+  const NORM_PROPOSAL_SCAN_LIMIT = 200;
+
+  async function collectStoredTags(): Promise<string[]> {
+    const result = await queryLogs({ limit: NORM_PROPOSAL_SCAN_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
+    if (isServiceError(result)) return [];
+    const tags = new Set<string>();
+    for (const row of result.data.rows) {
+      const csv = typeof row.tags === 'string' ? row.tags : '';
+      for (const tag of csv.split(',')) {
+        const trimmed = tag.trim();
+        if (trimmed !== '') tags.add(trimmed);
+      }
+    }
+    return [...tags];
+  }
+
+  function wireProposalRow(row: HTMLElement, proposal: TagNormalizationProposal): void {
+    const applyButton = row.querySelector<HTMLButtonElement>('[data-norm-action="apply"]');
+    const undoButton = row.querySelector<HTMLButtonElement>('[data-norm-action="undo"]');
+    const statusEl = row.querySelector<HTMLElement>('.norm-proposal-status');
+    const showRowStatus = (message: string): void => {
+      if (statusEl) statusEl.textContent = message;
+    };
+    const deps = {
+      queryByTag: async (tag: string) => {
+        const result = await queryLogs({ tagFilter: tag, limit: NORM_PROPOSAL_SCAN_LIMIT });
+        if (isServiceError(result)) throw new Error(result.error);
+        return result.data.rows
+          .filter((r) => r.id !== undefined)
+          .map((r) => ({ id: r.id as number, tags: typeof r.tags === 'string' ? r.tags : null }));
+      },
+      updateTags: async (id: number, tags: string) => {
+        const result = await updateLog(id, { tags });
+        if (isServiceError(result)) throw new Error(result.error);
+      },
+    };
+    applyButton?.addEventListener('click', () => {
+      void (async () => {
+        applyButton.disabled = true;
+        try {
+          const { updated } = await applyTagRename(deps, proposal.from, proposal.to);
+          if (undoButton) undoButton.hidden = false;
+          showRowStatus(getMessageOr('normProposalApplied', `${updated} 件のタグを書き換えました。`));
+        } catch (error) {
+          applyButton.disabled = false;
+          const updated = error instanceof TagRenameError ? error.updated : 0;
+          showRowStatus(`${errorMessage(error)} (${updated} 件適用済み)`);
+        }
+      })();
+    });
+    undoButton?.addEventListener('click', () => {
+      void (async () => {
+        undoButton.disabled = true;
+        try {
+          await undoTagRename(deps, proposal.from, proposal.to);
+          undoButton.hidden = true;
+          if (applyButton) applyButton.disabled = false;
+          showRowStatus(getMessageOr('normProposalUndone', '取り消しました。'));
+        } catch (error) {
+          undoButton.disabled = false;
+          showRowStatus(errorMessage(error));
+        }
+      })();
+    });
+  }
+
+  async function renderNormProposals(): Promise<void> {
+    if (!normProposalsEl) return;
+    normProposalsEl.hidden = false;
+    clearElement(normProposalsEl);
+    const storedTags = await collectStoredTags();
+    const proposals = buildTagNormalizationProposals(storedTags, normalizationEntries);
+    if (proposals.length === 0) {
+      setElementHtml(normProposalsEl, `<p class="help-text">${escapeHtml(getMessageOr('normProposalsEmpty', '提案はありません。'))}</p>`);
+      return;
+    }
+    setElementHtml(normProposalsEl, proposals.map((p) => `
+      <div class="norm-proposal-row">
+        <span class="norm-proposal-label">${escapeHtml(p.from)} → ${escapeHtml(p.to)}</span>
+        <button type="button" class="secondary-btn" data-norm-action="apply">${escapeHtml(getMessageOr('normProposalApply', '適用'))}</button>
+        <button type="button" class="secondary-btn" data-norm-action="undo" hidden>${escapeHtml(getMessageOr('normProposalUndo', '取消'))}</button>
+        <div class="norm-proposal-status" role="status" aria-live="polite"></div>
+      </div>`).join(''));
+    const rows = normProposalsEl.querySelectorAll<HTMLElement>('.norm-proposal-row');
+    proposals.forEach((proposal, index) => {
+      const row = rows[index];
+      if (row) wireProposalRow(row, proposal);
+    });
+  }
+
+  // ========================================================================
   // Settings save
   // ========================================================================
 
@@ -296,4 +400,13 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
 
   // Main save button
   saveTagsBtn?.addEventListener('click', () => saveTagSettings());
+
+  // Normalization proposals (PBI 2026-10-23-05): lazy load on demand so the
+  // panel opens without a sqlite round-trip; dict edits refresh when shown.
+  refreshNormProposalsBtn?.addEventListener('click', () => {
+    refreshNormProposalsBtn.disabled = true;
+    void renderNormProposals().finally(() => {
+      refreshNormProposalsBtn.disabled = false;
+    });
+  });
 }

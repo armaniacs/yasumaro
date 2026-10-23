@@ -4649,6 +4649,30 @@
   "noNormEntries": {
     "message": "No rules configured"
   },
+  "normProposalsTitle": {
+    "message": "Normalization Proposals"
+  },
+  "normProposalsDesc": {
+    "message": "Shows the stored tags that would change under the rules above. Applying rewrites records; you can undo."
+  },
+  "normProposalsRefresh": {
+    "message": "Show proposals"
+  },
+  "normProposalsEmpty": {
+    "message": "No proposals."
+  },
+  "normProposalApply": {
+    "message": "Apply"
+  },
+  "normProposalUndo": {
+    "message": "Undo"
+  },
+  "normProposalApplied": {
+    "message": "Tags rewritten."
+  },
+  "normProposalUndone": {
+    "message": "Undone."
+  },
   "normEntriesTitle": {
     "message": "Normalization Rules"
   },
