@@ -14,6 +14,7 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { withBusyButton } from './busyButton.js';
 import { SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 
@@ -87,32 +88,28 @@ export function renderAskHistoryRegion(
       const question = questionInput.value.trim();
       if (question === '') return;
       const collectionId = targetSelect?.value ?? '';
-      const label = askButton.textContent;
-      askButton.disabled = true;
-      askButton.textContent = t('processing') || '処理中...';
-      clearAskAnswer(region);
-      showAskStatus(region, t('askHistoryBusy'));
-      try {
-        const result = await actions.onAsk(question, collectionId === '' ? null : collectionId);
-        if (!result.ok) {
-          clearAskAnswer(region);
-          showAskStatus(region, result.error ?? t('askHistoryFailed'));
-          return;
-        }
-        if (result.status === 'no_evidence') {
-          clearAskAnswer(region);
-          showAskStatus(region, result.suggestion ?? t('askHistoryNoEvidence'));
-          return;
-        }
-        clearAskStatus(region);
-        showAskAnswer(region, result.answer ?? '', result.citations ?? []);
-      } catch (error) {
+      await withBusyButton(askButton, async () => {
         clearAskAnswer(region);
-        showAskStatus(region, error instanceof Error ? error.message : t('askHistoryFailed'));
-      } finally {
-        askButton.disabled = false;
-        askButton.textContent = label;
-      }
+        showAskStatus(region, t('askHistoryBusy'));
+        try {
+          const result = await actions.onAsk(question, collectionId === '' ? null : collectionId);
+          if (!result.ok) {
+            clearAskAnswer(region);
+            showAskStatus(region, result.error ?? t('askHistoryFailed'));
+            return;
+          }
+          if (result.status === 'no_evidence') {
+            clearAskAnswer(region);
+            showAskStatus(region, result.suggestion ?? t('askHistoryNoEvidence'));
+            return;
+          }
+          clearAskStatus(region);
+          showAskAnswer(region, result.answer ?? '', result.citations ?? []);
+        } catch (error) {
+          clearAskAnswer(region);
+          showAskStatus(region, error instanceof Error ? error.message : t('askHistoryFailed'));
+        }
+      });
     })();
   });
 }

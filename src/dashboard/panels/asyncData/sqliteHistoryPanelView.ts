@@ -9,6 +9,7 @@ import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { withBusyButton } from './busyButton.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
@@ -489,30 +490,30 @@ export function renderPendingRegion(
     const row = btn.closest('.pending-entry') as HTMLElement | null;
     btn.addEventListener('click', () => {
       void (async () => {
-        const label = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = t('processing') || '処理中...';
-        // Failure: restore the button and surface the reason in-row.
-        const fail = (message: string): void => {
-          btn.disabled = false;
-          btn.textContent = label;
+        // Success reloads the region wholesale, so the button intentionally
+        // stays busy; failure restores it via the seam before painting in-row.
+        try {
+          await withBusyButton(
+            btn,
+            async () => {
+              if (action === 'delete') {
+                await actions.onDelete(url);
+                return;
+              }
+              const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
+              if (!result.ok) {
+                throw new Error(result.error ?? t('recordError'));
+              }
+            },
+            { restoreOnSuccess: false },
+          );
+        } catch (error) {
           if (!row) return;
           row.querySelector('.record-error-message')?.remove();
           const msg = document.createElement('div');
           msg.className = 'record-error-message';
-          msg.textContent = message;
+          msg.textContent = error instanceof Error ? error.message : t('recordError');
           row.appendChild(msg);
-        };
-        try {
-          if (action === 'delete') {
-            await actions.onDelete(url);
-            return;
-          }
-          const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
-          if (result.ok) return;
-          fail(result.error ?? t('recordError'));
-        } catch (error) {
-          fail(error instanceof Error ? error.message : t('recordError'));
         }
       })();
     });

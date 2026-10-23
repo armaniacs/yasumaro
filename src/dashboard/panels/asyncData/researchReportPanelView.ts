@@ -13,6 +13,7 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { withBusyButton } from './busyButton.js';
 import { SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
 
 /** Outcome of one report run, as the Panel normalizes it from the wire. */
@@ -66,28 +67,24 @@ export function renderResearchReportRegion(
 
   generateButton.addEventListener('click', () => {
     void (async () => {
-      const label = generateButton.textContent;
-      generateButton.disabled = true;
-      generateButton.textContent = t('processing') || '処理中...';
-      if (statusEl) statusEl.textContent = t('researchReportBusy');
-      try {
-        const result = await actions.onGenerate(obsidianCheck?.checked === true);
-        if (!result.ok) {
-          if (statusEl) statusEl.textContent = result.error ?? t('researchReportFailed');
-          return;
+      await withBusyButton(generateButton, async () => {
+        if (statusEl) statusEl.textContent = t('researchReportBusy');
+        try {
+          const result = await actions.onGenerate(obsidianCheck?.checked === true);
+          if (!result.ok) {
+            if (statusEl) statusEl.textContent = result.error ?? t('researchReportFailed');
+            return;
+          }
+          if (statusEl) {
+            const count = result.recordCount ?? 0;
+            statusEl.textContent = t('researchReportDone', [String(count)]);
+          }
+        } catch (error) {
+          if (statusEl) {
+            statusEl.textContent = error instanceof Error ? error.message : t('researchReportFailed');
+          }
         }
-        if (statusEl) {
-          const count = result.recordCount ?? 0;
-          statusEl.textContent = t('researchReportDone', [String(count)]);
-        }
-      } catch (error) {
-        if (statusEl) {
-          statusEl.textContent = error instanceof Error ? error.message : t('researchReportFailed');
-        }
-      } finally {
-        generateButton.disabled = false;
-        generateButton.textContent = label;
-      }
+      });
     })();
   });
 }

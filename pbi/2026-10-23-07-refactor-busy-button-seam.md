@@ -26,9 +26,9 @@ Scenario: 失敗時の復元
 
 ## 受け入れ基準
 
-- [ ] 4箇所が共有 seam に置換される（saved 系の亜種差分は seam の引数として明示する）
-- [ ] view 単体テストが新規追加される（現状 view test 0 件）
-- [ ] 既存テスト全緑
+- [x] 4箇所が共有 seam に置換される（saved 系の亜種差分は seam の引数として明示する）
+- [x] view 単体テストが新規追加される（現状 view test 0 件）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wada スタイル）
 
@@ -86,7 +86,7 @@ grep -rn "t('processing')" src/dashboard/ --include='*.ts' | grep -v __tests__
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 共有 seam 単体テスト新規通過
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 共有 seam 単体テスト新規通過
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

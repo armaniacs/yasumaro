@@ -15,6 +15,7 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { withBusyButton } from './busyButton.js';
 import { SQLITE_HISTORY_IDS, formatTimestamp } from './sqliteHistoryPanelView.js';
 import {
   describeCollectionQuery,
@@ -101,20 +102,23 @@ export function renderSavedCollectionsRegion(
       void (async () => {
         const name = nameInput.value.trim();
         if (name === '') return;
-        const label = saveButton.textContent;
-        saveButton.disabled = true;
-        saveButton.textContent = t('processing') || '処理中...';
-        const fail = (message: string): void => {
-          saveButton.disabled = false;
-          saveButton.textContent = label;
-          if (errorSpan) errorSpan.textContent = message;
-        };
+        // Success replaces the region wholesale, so the button intentionally
+        // stays busy; failure restores it via the seam before painting.
         try {
-          const result = await actions.onSave(name);
-          if (result.ok) return;
-          fail(result.error ?? t('savedCollectionSaveError'));
+          await withBusyButton(
+            saveButton,
+            async () => {
+              const result = await actions.onSave(name);
+              if (!result.ok) {
+                throw new Error(result.error ?? t('savedCollectionSaveError'));
+              }
+            },
+            { restoreOnSuccess: false },
+          );
         } catch (error) {
-          fail(error instanceof Error ? error.message : t('savedCollectionSaveError'));
+          if (errorSpan) {
+            errorSpan.textContent = error instanceof Error ? error.message : t('savedCollectionSaveError');
+          }
         }
       })();
     });
