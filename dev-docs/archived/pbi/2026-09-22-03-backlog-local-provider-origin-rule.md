@@ -38,6 +38,13 @@ Scenario: 対策が必要な場合、Ollama の挙動は変わらない
 - 単体: ルール生成の golden と、設定変更時の同期
 - 統合: `npm run validate`
 
+## 調査結果（2026-10-23・公式仕様による裁定: 対策不要）
+- 公式仕様: LM Studio のローカルサーバーは「Enable CORS」スイッチを持つ標準CORSモデル（[Server Settings](https://lmstudio.ai/docs/developer/core/server/settings) ― "Enable Cross-Origin Resource Sharing (CORS) to allow applications from different origins to access the API"）。Origin有無でのHTTP層拒否は文書化されていない（Ollama の OLLAMA_ORIGINS / 403 パターンとは異なる）
+- 拡張機能側: SW の fetch は manifest `host_permissions`（`buildLocalHostPermissions()` = schemes × {127.0.0.1, localhost} × {27123, 27124, 11434, 1234}、`wxt.config.ts:263-264`）に localhost:1234 が含まれ、CORSチェック自体が免除される。ブラウザ側の失敗モードが存在しない
+- 残る失敗モードは LM Studio のHTTP層での Origin 拒否のみだが、公式仕様にその挙動はなく、利用者からの拒否報告もない。よって Origin-strip の汎用化は実装しない
+- LM Studio 側で CORS が無効でも、拡張機能の要求は host_permissions 免除で読める。CORSスイッチはブラウザタブ等からの利用者向け設定であり、拡張機能の動作には影響しない
+- **裁定: 不要として閉じる**。将来 LM Studio の Origin 拒否報告が来たら、その時点で再検討（トリガー維持）
+
 ## 見積もり
 3 SP（要チームでの見積もり。調査のみなら 1 SP）
 

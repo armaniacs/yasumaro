@@ -498,13 +498,13 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 
 - [2026-09-22-11-backlog-defense-in-depth-hardening.md](2026-09-22-11-backlog-defense-in-depth-hardening.md)（🔵 監視中 ― RICE 1.0・監視 0 SP・副作用🟢。**項目1（ssrfGuard ホスト名正規化）は 2026-10-12 に発火・実装済み（`c66a2cce`）: `normalizeHostname` による末尾ドット正規化・localhost 名ホストへのポート許可リスト適用・NAT64 埋め込み IPv4 判定**。残る senderTrust fail-closed・`archive_update` 一貫性・レガシー KDF sunset は発火条件を監視）
 
-### 2026-09-22 保留候補の PBI 化（トリガー待ち） ― ⬜ 未着手 1件 / 🔶 部分実装 1件 🔧非機能追加 RICE順: 02 → 03
+### 2026-09-22 保留候補の PBI 化（トリガー待ち） ― ⬜ 未着手 0件 / 🔶 部分実装 1件（03は対策不要でアーカイブ済み） 🔧非機能追加 RICE順: 02 → 03
 
 holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。01は holistic-1014b NN01＋F4で吸収されアーカイブ済み（下記）。残りはいずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
 
 - ✅ [2026-09-22-01-backlog-empty-catch-audit.md](../dev-docs/archived/pbi/2026-09-22-01-backlog-empty-catch-audit.md)（✅ 完了・吸収 ― 7箇所全件裁定：記録4件・理由付き沈黙3件。NN01 `1afa7b25`＋F4で実施。新規空catchは将来ラウンド送り）
 - [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（🔶 部分実装 ― 実装チェック 1/8 達成（前提レビュー 1 項目・残り 7 項目未着手）― RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み ― 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
-- [2026-09-22-03-backlog-local-provider-origin-rule.md](2026-09-22-03-backlog-local-provider-origin-rule.md)（⬜ 未着手 ― RICE 1.0・調査1 SP / 実装3 SP・副作用🟢。ローカルプロバイダ向け Origin-strip の汎用化（investigate 込み）。トリガー: 2つ目のローカルプロバイダで CORS 対策が必要になった時）
+- ✅ [2026-09-22-03-backlog-local-provider-origin-rule.md](../dev-docs/archived/pbi/2026-09-22-03-backlog-local-provider-origin-rule.md)（✅ 対策不要で完了・アーカイブ ― 2026-10-23 公式仕様調査: LM Studio は Enable CORS スイッチの標準CORSモデルで Origin 拒否は非文書化、拡張機能のSW fetch は host_permissions（localhost:1234 含む）で CORS 免除のため失敗モードなし。拒否報告が来たら再検討）
 
 **WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。tag-cooccur（17/21/22）は 2026-09-24 にアーカイブ済み（アーカイブ履歴参照）。
 
