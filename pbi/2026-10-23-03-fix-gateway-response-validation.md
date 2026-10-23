@@ -30,9 +30,9 @@ Scenario: 正常応答は素通しする
 
 ## 受け入れ基準
 
-- [ ] ガードが `success` 以外（error の string 性など）を検証する、または失敗文の既定化で空表示が出ない
-- [ ] bare・配列・非 string の素通し分岐テストがある
-- [ ] 既存テスト全緑
+- [x] ガードが `success` 以外（error の string 性など）を検証する、または失敗文の既定化で空表示が出ない
+- [x] bare・配列・非 string の素通し分岐テストがある
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -rn "asSuccessResponse\|translateHistoryError" src/messaging/ src/dashboard
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 素通し分岐テスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 素通し分岐テスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
