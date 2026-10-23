@@ -32,6 +32,13 @@ Scenario: 記録できない理由が分かる
 - [ ] バンドル肥大の計測があり上限を超えない
 
 ## テスト戦略
+## 実装記録（2026-10-23・失敗可視化の語彙）
+- 対象外理由の分類表: 完了。`src/dashboard/captureFailureReasons.ts` の `CAPTURE_FAILURE_REASONS` がツリー実在の理由コード15件を権限・CSP・種別・同意・保存・重複に分類(PRIVATE_PAGE_DETECTED・domain_excluded・csp_blocked・non-html・unsupported-kind・privacy_consent_required・rate_limited・paused・sqlite-client-absent・no-client・no-write・obsidian-disabled・obsidian-write-failed・pipeline-error・same_day)。診断表示が理由を示す語彙(沈黙の失敗にしない)
+- 縮退の出口: `classifyCaptureFailure` はunknownコード・非文字列・空文字を internal/unknown に分類(例外なし・欠落なし)。未列挙コードはdriftとしてpinされる
+- 対応範囲と対象外一覧: 完了。`CAPTURE_SCOPE` がDoD文書の単一情報源(article=done、PDF・動画字幕・SPA遅延分=planned、file://・認証裏・ペイウォール・キャンバス描画=excluded)。PBI明示の対象外をそのまま載せる
+- 正直な範囲: 本スライスは語彙のみ。PDF・動画字幕・SPA遅延分の記録経路と診断パネルへの最終結果表示の配線は後続スライス(本テーブルを消費する)。Content ScriptのCSP・web_accessible_resources制約は触らない。クレンジング・PIIマスキングは既存経路のまま
+- pin: `src/dashboard/__tests__/captureFailureReasons.test.ts` 6テスト(分類テーブル・fail-closed・重複なし・範囲一覧)
+- 残: 診断パネルへの最終結果表示の配線、PDF・動画字幕・SPA遅延分の段階的記録、字幕取得失敗・遅延未到達の縮退テスト、バンドル肥大の計測と上限、E2E通し、コードレビュー、ドキュメント更新(対応範囲と対象外一覧)
 - E2E: PDF記録→検索、対象外理由表示の通し
 - 統合: 字幕取得失敗・遅延ロード未到達の縮退テスト
 - 単体: 種別判定・抜粋切り詰め・権限分岐のテーブルテスト
