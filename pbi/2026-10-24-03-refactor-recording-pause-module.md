@@ -30,9 +30,9 @@ Scenario: 上限変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] gate predicate・PauseStorage・preset検証・badge連携が単一interfaceの背後に集まる
-- [ ] factory 3件が薄い配線に留まり独自検証を持たない
-- [ ] 既存テスト全緑
+- [x] gate predicate・PauseStorage・preset検証・badge連携が単一interfaceの背後に集まる
+- [x] factory 3件が薄い配線に留まり独自検証を持たない
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -97,8 +97,8 @@ grep -rn "recordingPause\|isPaused\|PAUSE_MAX_MINUTES" src/background/ --include
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

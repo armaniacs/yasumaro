@@ -23,6 +23,32 @@ export function isValidPreset(minutes: number): minutes is PausePresetMinutes {
   return (PAUSE_PRESETS_MINUTES as readonly number[]).includes(minutes);
 }
 
+/** Wire error code for a rejected pause request. Owned here so the handler
+ * factory maps it without keeping its own preset knowledge. */
+export const INVALID_PAUSE_MINUTES = 'INVALID_PAUSE_MINUTES';
+
+/**
+ * Single owner of preset validation. The popup wire can carry anything, so
+ * the runtime typeof guard stays even though the static type is number:
+ * non-number payloads fail closed here while storage reads fail open.
+ */
+export function validatePauseMinutes(minutes: number): minutes is PausePresetMinutes {
+  return typeof minutes === 'number' && isValidPreset(minutes);
+}
+
+/** Thrown by RecordingPause.pause for off-preset requests. */
+export class InvalidPauseMinutesError extends Error {
+  readonly code: string = INVALID_PAUSE_MINUTES;
+  constructor() {
+    super(INVALID_PAUSE_MINUTES);
+  }
+}
+
+/** Pure: whole minutes left on the badge countdown, at least 1. */
+export function remainingPauseMinutes(pausedUntil: number, now: number): number {
+  return Math.max(1, Math.ceil((pausedUntil - now) / 60_000));
+}
+
 /** Pure: paused strictly before the deadline. null/expired => not paused. */
 export function isPaused(pausedUntil: number | null, now: number): boolean {
   return pausedUntil !== null && now < pausedUntil;
@@ -75,4 +101,76 @@ export async function clearPause(
   await chrome.alarms.clear(PAUSE_ALARM_NAME);
   await chrome.alarms.clear(PAUSE_TICK_NAME);
   await setBadge({ kind: 'clear' });
+}
+
+/**
+ * Badge-tick body (armed alongside the pause, period PAUSE_TICK_PERIOD_MINUTES).
+ * Refreshes the global remaining-minutes badge; on expiry (or a missed
+ * resume alarm) it stands down via the same clear path as resume so no
+ * stale number lingers. Storage errors fail open to the stand-down branch
+ * (null => not paused), mirroring the gate predicate.
+ */
+export async function refreshPauseTick(
+  deps: { storage?: PauseStorage; now?: () => number } = {},
+): Promise<void> {
+  const storage = deps.storage ?? createChromePauseStorage();
+  const now = (deps.now ?? Date.now)();
+  const until = await storage.getPausedUntil().catch(() => null);
+  if (until !== null && isPaused(until, now)) {
+    await setBadge({ kind: 'paused', minutes: remainingPauseMinutes(until, now) });
+    return;
+  }
+  await setBadge({ kind: 'clear' });
+  await chrome.alarms.clear(PAUSE_TICK_NAME);
+}
+
+/** Injectable seams for the pause module. Storage defaults to chrome. */
+export interface RecordingPauseDeps {
+  storage?: PauseStorage;
+  now?: () => number;
+}
+
+/**
+ * RecordingPause — the single interface behind which all pause knowledge
+ * lives: preset validation, fail-open deadline reads, badge countdown,
+ * and alarm wiring. Callers learn these five methods instead of the
+ * storage key, alarm names, preset list, and badge rows.
+ */
+export interface RecordingPause {
+  /** Validates the preset, then arms storage + badge + alarms. */
+  pause(minutes: number): Promise<number>;
+  /** Clears storage, both alarms, and the badge. */
+  resume(): Promise<void>;
+  /** Fail-open gate predicate: storage errors mean not paused. */
+  isPaused(now?: number): Promise<boolean>;
+  /** Fail-open deadline read: storage errors mean null. */
+  getPausedUntil(): Promise<number | null>;
+  /** Refreshes (or stands down) the badge countdown. */
+  refreshTick(): Promise<void>;
+}
+
+export function createRecordingPause(deps: RecordingPauseDeps = {}): RecordingPause {
+  const storage = deps.storage ?? createChromePauseStorage();
+  const nowFn = deps.now ?? Date.now;
+  return {
+    async pause(minutes: number): Promise<number> {
+      if (!validatePauseMinutes(minutes)) {
+        throw new InvalidPauseMinutesError();
+      }
+      return schedulePause(minutes, { storage, now: nowFn });
+    },
+    async resume(): Promise<void> {
+      await clearPause({ storage });
+    },
+    async isPaused(now: number = nowFn()): Promise<boolean> {
+      const until = await storage.getPausedUntil().catch(() => null);
+      return isPaused(until, now);
+    },
+    async getPausedUntil(): Promise<number | null> {
+      return storage.getPausedUntil().catch(() => null);
+    },
+    async refreshTick(): Promise<void> {
+      await refreshPauseTick({ storage, now: nowFn });
+    },
+  };
 }

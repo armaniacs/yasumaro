@@ -120,20 +120,13 @@ async function runRecordingResume(): Promise<void> {
 
 /**
  * Badge-countdown ticker (armed alongside the pause, period 1 min).
- * Refreshes the global remaining-minutes badge; on expiry (or a missed
- * resume alarm) it stands down via clearPause so no stale number lingers.
+ * Thin route: the refresh body lives in recordingPause.refreshPauseTick
+ * next to the pause deadline it reads, so the tick cannot drift from the
+ * gate predicate or the badge countdown armed by schedulePause.
  */
 async function runPauseTick(): Promise<void> {
-  const { createChromePauseStorage, isPaused, PAUSE_TICK_NAME } = await import('./recordingPause.js');
-  const { setBadge } = await import('./badgePolicy.js');
-  const until = await createChromePauseStorage().getPausedUntil().catch(() => null);
-  const now = Date.now();
-  if (until !== null && isPaused(until, now)) {
-    await setBadge({ kind: 'paused', minutes: Math.max(1, Math.ceil((until - now) / 60_000)) });
-    return;
-  }
-  await setBadge({ kind: 'clear' });
-  await chrome.alarms.clear(PAUSE_TICK_NAME);
+  const { refreshPauseTick } = await import('./recordingPause.js');
+  await refreshPauseTick();
 }
 
 async function runOfflineNetworkRetry(deps: AlarmHandlerDeps): Promise<void> {
