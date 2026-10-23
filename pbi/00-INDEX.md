@@ -38,7 +38,7 @@
 | 🔶 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | 受入基準4件充足(既存資産+監査ログ列定義の文書反映)。残はコードレビューと閲覧履歴export列定義のdocs反映(任意) |
 | 🔶 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週相当 | 調査完了。月次ダイジェストと上級者折りたたみは既存資産で充足。残はタグ提案とparity pin |
 
-### 2026-10-22 yasumaro棚卸し6候補 ― 🔶 2件部分実装・⬜ 4件残（01文書+pin確定・02初回起動バナー完了）RICE順: 04 → 05（独立並列） → 03（依存01） → 06（保留・段階着手）
+### 2026-10-22 yasumaro棚卸し6候補 ― 🔶 3件部分実装・⬜ 3件残（01文書+pin確定・02初回起動バナー・05最小ペイロード完了）RICE順: 04 → 03（依存01） → 06（保留・段階着手）
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
@@ -52,7 +52,7 @@
 | 🔶 02 | [2026-10-22-02-feat-onboarding-light.md](2026-10-22-02-feat-onboarding-light.md) | feat | 480 | 1.0人週相当 | 初回起動バナー完了(まず試す/Obsidian連携/AI要約の3択・一度だけ表示(ONBOARDING_DISMISSED)・3択の導線は既存遷移のみ・同意表示維持)。残はE2E通し、README/OBSIDIAN_SETUP_GUIDEの前提章、コードレビュー |
 | ⬜ 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 体感価値最大。01に依存 |
 | ⬜ 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | Dと同点。到達広のため先 |
-| ⬜ 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | パワー層。01のegress作法に従う |
+| 🔶 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | 最小ペイロード経路完了(要約・タグ・URLのみ・raw contentなし・転送条件(タグ/エンゲージメント)・httpsのみゲート・stored shape正規化)。残は設定UI、転送履歴と再送、送信経路、e2e pin、コードレビュー、ドキュメント |
 | ⬜ 06 | [2026-10-22-06-feat-capture-expansion.md](2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | 確信度0.5。段階着手 |
 
 ### 2026-10-21 対象外・owner 判断処理（なぜなぜ分析 43 回、fix/feat 12件） ― ✅ 12件完了・アーカイブ済み（01-12） / ⬜ 0件残 実施順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → ~~06~~ → ~~07~~ → ~~08~~ → ~~09~~ → ~~10~~ → ~~11~~ → ~~12~~
