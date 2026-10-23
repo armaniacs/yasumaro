@@ -14,25 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-23 adversarial-code-review 診断（round2 差分、11件） ― ⬜ 11件未着手 🔧非機能追加 RICE順: 01(24) → 02(13.3) → 03(10) → 04(6.7) → 05(6) → 06(5.3) → 07(5) → 08(4.3) → 09(4) → 10(3.3) → 11(2.1)
+### 2026-10-23 adversarial-code-review 診断（round2 差分、11件） ― ✅ 11件完了・アーカイブ済み（01-11） 🔧非機能追加 RICE順: ~~01(24)~~ → ~~02(13.3)~~ → ~~03(10)~~ → ~~04(6.7)~~ → ~~05(6)~~ → ~~06(5.3)~~ → ~~07(5)~~ → ~~08(4.3)~~ → ~~09(4)~~ → ~~10(3.3)~~ → ~~11(2.1)~~
 
-/adversarial-code-review による round2 差分の診断（4チャンク×2視点の発見 + 独立した反証4体）で確定した 13 件を 11 PBI に統合。コード変更は一切行っていない。RICE 詳細・依存グラフ・却下一覧は [2026-10-23-00-backlog-adversarial-1023.md](2026-10-23-00-backlog-adversarial-1023.md)。
+/adversarial-code-review 診断 + autonomous-task-closer で自律実装・検証してアーカイブ。11 件すべて実装（5 バッチ: A4並列 → B3並列 → C/D単独 → E1体2件）。RICE 詳細・依存グラフ・却下一覧は [2026-10-23-00-backlog-adversarial-1023.md](../dev-docs/archived/pbi/2026-10-23-00-backlog-adversarial-1023.md)。最終ゲート `npm run validate` 緑（1152ファイル・17033テスト）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-23-01-fix-proposal-undo-disabled.md](2026-10-23-01-fix-proposal-undo-disabled.md) | fix | 24 | 0.5 | 取消ボタン永久disabled（前提なしで再現する実害）。両 panel で発症 |
-| ⬜ 02 | [2026-10-23-02-test-domain-proposal-row-pin.md](2026-10-23-02-test-domain-proposal-row-pin.md) | test | 13.3 | 0.5 | O1 修正の錠（発火回数・非干渉の assert 不足） |
-| ⬜ 03 | [2026-10-23-03-fix-gateway-response-validation.md](2026-10-23-03-fix-gateway-response-validation.md) | fix | 10 | 1.0 | 応答形状検証と失敗文既定化（同一ガードの本体・テスト・呼出し側を束ねる）。NN05・NN04 は本 PBI の後に実施 |
-| ⬜ 04 | [2026-10-23-04-test-tag-proposal-row-pin.md](2026-10-23-04-test-tag-proposal-row-pin.md) | test | 6.7 | 0.5 | tag 側の複数行テスト追加 |
-| ⬜ 05 | [2026-10-23-05-fix-report-malformed-timeout-text.md](2026-10-23-05-fix-report-malformed-timeout-text.md) | fix | 6 | 0.5 | 不正形とタイムアウト文言の分離（NN03 の後に実施） |
-| ⬜ 06 | [2026-10-23-06-fix-saved-collections-proto.md](2026-10-23-06-fix-saved-collections-proto.md) | fix | 5.3 | 0.5 | 削除の prototype 付け替え退行（到達に汚染保存形が必要なため Conf 0.8） |
-| ⬜ 07 | [2026-10-23-07-test-blacklist-expectation-contract.md](2026-10-23-07-test-blacklist-expectation-contract.md) | test | 5 | 0.5 | 期待値の契約統一（本番補完が正）。NN11 は本 PBI の後に実施 |
-| ⬜ 08 | [2026-10-23-08-fix-response-discriminated-union.md](2026-10-23-08-fix-response-discriminated-union.md) | fix | 4.3 | 1.5 | 応答型の判別 union 化（NN03 の後に実施） |
-| ⬜ 09 | [2026-10-23-09-fix-slot-failures-validation.md](2026-10-23-09-fix-slot-failures-validation.md) | fix | 4 | 0.5 | slotFailures 検証の対称化 |
-| ⬜ 10 | [2026-10-23-10-fix-dead-gateway-catch.md](2026-10-23-10-fix-dead-gateway-catch.md) | fix | 3.3 | 0.5 | 到達不能 catch の整理 |
-| ⬜ 11 | [2026-10-23-11-test-repository-default-path.md](2026-10-23-11-test-repository-default-path.md) | test | 2.1 | 1.0 | 既定経路の実物検証（NN07 の後に実施） |
-
-実行順の推奨: RICE 順。**NN03 → NN05・NN04、NN07 → NN11** の前後関係を守る。NN01 / NN02 / NN04 / NN06 / NN09 / NN10 は互いに独立のため並列着手可。
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
 
 ### 2026-10-23 リファクタリング診断 round2（yasumaro-refactor、12件） ― ✅ 12件完了・アーカイブ済み（01-12） 🔧非機能追加 RICE順: ~~01(52)~~ → ~~02(36)~~ → ~~03(24)~~ → ~~04(18.7)~~ → ~~05(15)~~ → ~~06(13.3)~~ → ~~07(10.7)~~ → ~~08(9.6)~~ → ~~09(9.6)~~ → ~~10(5)~~ → ~~11(2.7)~~ → ~~12(2.7)~~
 
@@ -575,6 +563,22 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-23 adversarial-code-review 診断アーカイブ ― 11件すべて完了（01-11）
+
+2026-10-23 起票の 11 件を RICE 順に自律実装・アーカイブ。7 件 fix + 4 件 test。バッチ A（01/04/06/07）→ B（02/03/11）→ C（05）→ D（08）→ E（09+10）。最終ゲート `npm run validate` 緑（1152ファイル・17033テスト）。
+
+- **01-fix-proposal-undo-disabled**: 両成功パスで undo の disabled 復元 + 2往復 pin 新規（Red 確認済み）
+- **02-test-domain-proposal-row-pin**: 発火回数・非干渉・1行目操作の assert 追加
+- **03-fix-gateway-response-validation**: ガード強化（失敗は非空 string error 必須）+ 素通し分岐 table 新規。正常素通し不変
+- **04-test-tag-proposal-row-pin**: 複数行の独立・index 対応テスト新規
+- **05-fix-report-malformed-timeout-text**: 不正形文を新設しタイムアウト文から分離 + pin 理由付き更新
+- **06-fix-saved-collections-proto**: 安全な複製に戻す + 特殊キー境界テスト新規
+- **07-test-blacklist-expectation-contract**: mock 経路を本番契約に統一（本番無改変）
+- **08-fix-response-discriminated-union**: 応答2型を判別 union 化 + union pin テスト新規。実行時挙動不変
+- **09-fix-slot-failures-validation**: 要素ガード対称化 + table テスト新規
+- **10-fix-dead-gateway-catch**: catch を防御的既定の実態記述に修正（実行時不変）
+- **11-test-repository-default-path**: 既定経路の実物検証 9 件新規
 
 ### 2026-10-23 リファクタリング診断 round2 アーカイブ ― 12件すべて完了（01-12）
 

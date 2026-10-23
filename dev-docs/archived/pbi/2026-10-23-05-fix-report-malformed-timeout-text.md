@@ -96,5 +96,5 @@ grep -rn "RESEARCH_REPORT_TIMEOUT_ERROR\|Invalid.*response" src/messaging/*.ts s
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過 + 文言テスト更新通過
 - [x] コードレビュー完了
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み

@@ -96,5 +96,5 @@ grep -rn "AskHistoryResponse\|ResearchReportResponse" src/messaging/types.ts src
 - [x] 全BDDシナリオが自動テストとして実装されパスする
 - [x] 既存テスト全通過
 - [x] コードレビュー完了
-- [ ] `npm run validate` 通過
+- [x] `npm run validate` 通過
 - [x] ドキュメント更新済み
