@@ -14,22 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-24 建築改善ループ第2弾（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(16) → 02(10) → 03(7.5) → 04(7.2) → 05(5.8) → 06(5.3) → 07(4.3) → 08(4)
+### 2026-10-24 建築改善ループ第2弾（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(16)~~ → ~~02(10)~~ → ~~03(7.5)~~ → ~~04(7.2)~~ → ~~05(5.8)~~ → ~~06(5.3)~~ → ~~07(4.3)~~ → ~~08(4)~~
 
-建築診断第2弾（録画スライス＋popup/サービス群）の10候補から Speculative 2 件を除外して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024b.md](2026-10-24-00-backlog-architecture-1024b.md)。
+建築診断第2弾（録画スライス＋popup/サービス群、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2の3並列 → バッチ3）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024b.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024b.md)。最終ゲート `npm run validate` 緑（1161ファイル・17149テスト）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-24-01-refactor-truncate-single-owner.md](2026-10-24-01-refactor-truncate-single-owner.md) | refactor | 16 | 0.5 | truncate単一所有（deletion test済み。最初の一手） |
-| ⬜ 02 | [2026-10-24-02-refactor-notification-policy-table.md](2026-10-24-02-refactor-notification-policy-table.md) | refactor | 10 | 1.0 | 通知方針table＋mock削減 |
-| ⬜ 03 | [2026-10-24-03-refactor-recording-pause-module.md](2026-10-24-03-refactor-recording-pause-module.md) | refactor | 7.5 | 1.5 | 一時停止の深いmodule化 |
-| ⬜ 04 | [2026-10-24-04-refactor-recording-gate-table.md](2026-10-24-04-refactor-recording-gate-table.md) | refactor | 7.2 | 2.0 | 判定純粋核一本化。NN05 は本 PBI の後に実施 |
-| ⬜ 05 | [2026-10-24-05-refactor-recording-flow-seam.md](2026-10-24-05-refactor-recording-flow-seam.md) | refactor | 5.8 | 2.5 | 記録フロー単一seam（NN04 の後に実施） |
-| ⬜ 06 | [2026-10-24-06-refactor-tab-lifecycle-module.md](2026-10-24-06-refactor-tab-lifecycle-module.md) | refactor | 5.3 | 1.5 | tab lifecycle 1 module |
-| ⬜ 07 | [2026-10-24-07-refactor-extractor-single-seam.md](2026-10-24-07-refactor-extractor-single-seam.md) | refactor | 4.3 | 1.5 | extractor単一seam |
-| ⬜ 08 | [2026-10-24-08-refactor-popup-tab-query.md](2026-10-24-08-refactor-popup-tab-query.md) | refactor | 4 | 1.0 | tab照会1 module |
-
-実行順の推奨: RICE 順。**NN04 → NN05** の前後関係を守る。NN01 / NN02 / NN06 / NN07 および NN03 / NN04 / NN08 は互いに独立のため並列着手可。
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
 
 ### 2026-10-24 建築改善ループ（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(12)~~ → ~~02(7.2)~~ → ~~03(6)~~ → ~~04(4.3)~~ → ~~05(4)~~ → ~~06(4)~~ → ~~07(4)~~ → ~~08(2.4)~~
 
@@ -588,6 +579,19 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-24 建築改善ループ第2弾 アーカイブ ― 8件すべて完了（01-08）
+
+2026-10-24 起票の 8 件を RICE 順・依存順に自律実装・アーカイブ。建築診断 10 候補から Speculative 2 件除外。バッチ1（01/02/06/07 並列）→ バッチ2（03/04/08 並列）→ バッチ3（05）。バッチ境界で popup 期待値 1 件を原因直し（ガード強化の意図的波及）。型 baseline 449 を維持。最終ゲート `npm run validate` 緑（1161ファイル・17149テスト）。
+
+- **01-refactor-truncate-single-owner**: 単一所有化＋境界table新規（二重encode解消）
+- **02-refactor-notification-policy-table**: 方針table＋単一write点＋mock削減（案A選択）
+- **03-refactor-recording-pause-module**: 深いmodule化＋factory薄化
+- **04-refactor-recording-gate-table**: 純粋核一本化＋死コード削除
+- **05-refactor-recording-flow-seam**: 順序単一seam化（NN04の後に実施）
+- **06-refactor-tab-lifecycle-module**: lifecycle 1 module化（方針値で意味論差を保持）
+- **07-refactor-extractor-single-seam**: 外部seam単一化（bench entry残存を記録）
+- **08-refactor-popup-tab-query**: 照会1 module化（案B選択）
 
 ### 2026-10-24 建築改善ループ アーカイブ ― 8件すべて完了（01-08）
 
