@@ -30,8 +30,8 @@ Scenario: availabilityと疎通の区別が保たれる
 
 ## 受け入れ基準
 
-- [ ] testConnectionがmodeを受けるか、両診断を返す形に揃う
-- [ ] 既存テスト全緑
+- [x] testConnectionがmodeを受けるか、両診断を返す形に揃う
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -93,8 +93,8 @@ grep -n "testConnection" src/background/ai/FallbackAIService.ts src/background/a
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
