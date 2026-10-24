@@ -30,9 +30,9 @@ Scenario: iteration変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] payload・iteration・署名検証がcodec単一module背後に集まる
-- [ ] settings側がpasswordとJSONだけ渡す形になる
-- [ ] 既存テスト全緑（復号不能の回帰なし）
+- [x] payload・iteration・署名検証がcodec単一module背後に集まる
+- [x] settings側がpasswordとJSONだけ渡す形になる
+- [x] 既存テスト全緑（復号不能の回帰なし）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -95,8 +95,8 @@ grep -rn "iterations\|ciphertext:iv" src/utils/crypto/encryptedExportCodec.ts sr
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 往復table新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 往復table新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

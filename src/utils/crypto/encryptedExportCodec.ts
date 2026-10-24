@@ -21,6 +21,10 @@ import {
   type KdfNegotiationResult,
 } from './kdfNegotiator.js';
 import type { HmacSigner } from './hmacSigner.js';
+// Barrel import: the crypto tests mock '../crypto/index.js', so importing the
+// seal primitives through the barrel keeps those mocks effective — the same
+// reason kdfNegotiator imports deriveKey through the barrel.
+import { deriveKey, encrypt, generateSalt, bytesToBase64 } from './index.js';
 
 export type { KdfNegotiationResult };
 
@@ -74,6 +78,109 @@ export function hasCiphertextHmac(version: unknown): boolean {
 
 /** Verifier seam: structural so tests verify the codec without chrome. */
 export type CodecHmacVerifier = Pick<HmacSigner, 'verify'>;
+
+/** Signer seam for sealing: structural so tests seal without chrome. */
+export type CodecHmacSigner = Pick<HmacSigner, 'sign'>;
+
+/**
+ * Envelope fields produced by sealEncryptedExport. The file shape
+ * (`encrypted`, `exportedAt`) stays with the settings side; every
+ * cryptographic byte lives here.
+ */
+export interface SealedEncryptedExport {
+  version: string;
+  ciphertext: string;
+  iv: string;
+  salt: string;
+  iterations: number;
+  hmac: string;
+}
+
+/**
+ * Single owner of the encrypted-export seal: salt, KDF (SSOT iterations),
+ * encrypt, and ciphertext HMAC in one place. The settings side passes only
+ * the settings JSON and the password (plus its signer). The byte layout is
+ * identical to the previous inline call site, so existing backups keep
+ * decrypting.
+ */
+export async function sealEncryptedExport(
+  plainJson: string,
+  password: string,
+  signer: CodecHmacSigner,
+): Promise<SealedEncryptedExport> {
+  const salt = generateSalt();
+  const saltB64 = bytesToBase64(salt);
+  const iterations = currentExportIterations();
+  const key = await deriveKey(password, salt, iterations);
+  const encrypted = await encrypt(plainJson, key);
+  const hmac = await signer.sign(
+    buildEncryptedHmacPayload(
+      {
+        ciphertext: encrypted.ciphertext,
+        iv: encrypted.iv,
+        salt: saltB64,
+        iterations,
+      },
+      ENCRYPTED_EXPORT_VERSION,
+    ),
+  );
+  return {
+    version: ENCRYPTED_EXPORT_VERSION,
+    ciphertext: encrypted.ciphertext,
+    iv: encrypted.iv,
+    salt: saltB64,
+    iterations,
+    hmac,
+  };
+}
+
+/** Outcome of opening an encrypted export: decrypted JSON or a fail-closed reason. */
+export type OpenEncryptedExportResult =
+  | { status: 'decrypted'; decryptedJson: string; needsRehash: boolean; legacyUnsigned: boolean }
+  | { status: 'rejected'; reason: 'hmac-mismatch' | 'decrypt-failed' };
+
+/**
+ * Single owner of the encrypted-export open: ciphertext HMAC check, KDF
+ * dispatch, then the legacy plaintext check. The settings side passes only
+ * the password and the file envelope (plus its verifier) and maps the
+ * outcome to logs. A verifier that throws propagates, so the caller keeps
+ * its fail-closed path; a decrypt failure collapses to 'decrypt-failed'.
+ */
+export async function openEncryptedExport(
+  password: string,
+  input: CiphertextHmacCheckInput,
+  verifier: CodecHmacVerifier,
+  decryptFn: typeof decryptWithIterationCandidates = decryptWithIterationCandidates,
+): Promise<OpenEncryptedExportResult> {
+  const ciphertextCheck = await verifyEncryptedExportHmac(input, verifier);
+  if (ciphertextCheck === 'mismatch') {
+    return { status: 'rejected', reason: 'hmac-mismatch' };
+  }
+  let decrypted: KdfNegotiationResult;
+  try {
+    decrypted = await decryptExportCiphertext(password, input, decryptFn);
+  } catch {
+    return { status: 'rejected', reason: 'decrypt-failed' };
+  }
+  if (ciphertextCheck === 'legacy-deferred') {
+    const legacyCheck = await verifyLegacyPlaintextHmac(decrypted.text, input.hmac, verifier);
+    if (legacyCheck === 'mismatch') {
+      return { status: 'rejected', reason: 'hmac-mismatch' };
+    }
+    return {
+      status: 'decrypted',
+      decryptedJson: decrypted.text,
+      needsRehash: decrypted.needsRehash,
+      legacyUnsigned: legacyCheck === 'unsigned',
+    };
+  }
+  return {
+    status: 'decrypted',
+    decryptedJson: decrypted.text,
+    needsRehash: decrypted.needsRehash,
+    legacyUnsigned: false,
+  };
+}
 
 /** Ciphertext-stage HMAC input: envelope fields plus the raw version stamp. */
 export interface CiphertextHmacCheckInput extends EncryptedExportHmacParts {
