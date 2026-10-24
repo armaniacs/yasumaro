@@ -35,6 +35,25 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.57] - 2026-10-24
+
+このリリースは建築改善ループ第3弾（永続化スライス＋AI/信頼/構成の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- フォールバック testConnection を生成seamと対称化する（PBI 2026-10-24-01）
+- HMAC・codec知識を単一所有化する。復号互換不変（PBI 2026-10-24-02）
+- 内蔵AI client実体を共有化する（PBI 2026-10-24-03）
+- プロバイダ追加手順を導出化する（PBI 2026-10-24-04）
+- SyncBatchRunner を畳み込む（PBI 2026-10-24-05）
+- 退避形状の照会を集約する（PBI 2026-10-24-06）
+- 薄い委譲3枚を単一module化する（PBI 2026-10-24-07）
+- Obsidian設定読みをseam化する（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1166ファイル・17255テスト）。型エラー baseline 449 を維持
+
 ## [6.9.56] - 2026-10-24
 
 このリリースは建築改善ループ第2弾（録画スライス＋popup/サービス群の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
