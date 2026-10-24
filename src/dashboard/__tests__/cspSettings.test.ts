@@ -24,9 +24,10 @@ vi.mock('../../utils/ui/confirmDialog.js', () => ({
 vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;  return {
     ...actual,
+    // Keep the full key table: narrowing StorageKeys breaks module-load
+    // validation (e.g. providerCatalog's defineCatalogEntry).
     StorageKeys: {
-      CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled',
-      CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers',
+      ...((actual.StorageKeys ?? {}) as Record<string, unknown>),
     },
   };
 });
