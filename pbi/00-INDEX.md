@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-25 依存ゲート二層化 ― ⬜ 1件残 RICE順: 11
+
+node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監査スコープ差と validate の audit 欠落を直す単独 PBI。dev-only は warn＋到達可能性メモ、本番混入は fail の二層判定にする。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 11 | [2026-10-25-11-backlog-deps-gate-two-tier.md](2026-10-25-11-backlog-deps-gate-two-tier.md) | 🔧非機能追加 | 4.8 | 1 | 未着手。到達不能メモ＋受容記録は DEPENDINGS.md 第 6 章に記載済み |
+
 ### 2026-10-24 建築改善ループ第3弾（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(12)~~ → ~~02(8)~~ → ~~03(8)~~ → ~~04(6.4)~~ → ~~05(5.3)~~ → ~~06(4.8)~~ → ~~07(3.2)~~ → ~~08(3.2)~~
 
 建築診断第3弾（永続化スライス＋AI/信頼/構成、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2の2並列 → バッチ3の2並列）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024c.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024c.md)。最終ゲート `npm run validate` 緑（1166ファイル・17255テスト）。
