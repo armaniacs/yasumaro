@@ -35,7 +35,9 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.9.58] - 2026-10-24
+
+このリリースは利用者向けの新機能を含みます。 / This release includes user-facing new features.
 
 ### 追加 / Added
 
