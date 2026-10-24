@@ -30,8 +30,8 @@ Scenario: batch方針が利用者側に集まる
 
 ## 受け入れ基準
 
-- [ ] runnerがGist側内部seamに畳まれる（外部interface不変）
-- [ ] 既存テスト全緑
+- [x] runnerがGist側内部seamに畳まれる（外部interface不変）
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -93,8 +93,8 @@ grep -rn "SyncBatchRunner\|SyncTarget" src/background/syncTargets/ --include='*.
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
