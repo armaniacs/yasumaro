@@ -30,9 +30,9 @@ Scenario: 委譲先変更が1箇所で済む
 
 ## 受け入れ基準
 
-- [ ] 3 moduleが単一moduleに畳まれ、必要操作だけ残る
-- [ ] テストがmoduleのinterface越しに書き直される
-- [ ] 既存テスト全緑
+- [x] 3 moduleが単一moduleに畳まれ、必要操作だけ残る
+- [x] テストがmoduleのinterface越しに書き直される
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -94,8 +94,8 @@ grep -n "export function\|export const" src/offscreen/recordsRepo.ts src/offscre
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

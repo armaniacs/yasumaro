@@ -4,10 +4,14 @@
  * Coverage gap PBI (re-audit 2026-08-02): dbMaintenance wrappers were at
  * ~12% coverage. Verify each delegation wrapper forwards to the active
  * backend and propagates success/failure correctly.
+ *
+ * PBI 2026-10-24-07: the maintenance operations now live in the single
+ * SQLite secondary-store module, so this test drives them through that
+ * interface (recordsRepo.ts). dbMaintenance.ts remains as a re-export shim.
  */
 
 import { vi } from 'vitest';
-import { purgeOldRecords, purgeContent, backupDb, restoreDb, sqliteHealthCheck } from '../dbMaintenance.js';
+import { purgeOldRecords, purgeContent, backupDb, restoreDb, sqliteHealthCheck } from '../recordsRepo.js';
 
 const backend = vi.hoisted(() => ({
   purgeOldRecords: vi.fn(),
