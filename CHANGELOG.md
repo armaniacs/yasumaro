@@ -35,6 +35,20 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### 追加 / Added
+
+- 保存済みコレクション: 検索条件(語・タグ・期間)の保存・呼び出し・削除 / Saved collections: save, recall, and delete search conditions (terms, tags, period)
+- 履歴に聞く: 端末内のモデルが記録の抜粋を根拠に答える(外部送信なし) / Ask your history: an on-device model answers from record excerpts (nothing sent externally)
+- 調査レポート一発生成: 要旨・時系列・引用・未読穴の4節の Markdown / One-shot research report: four-section Markdown (summary, timeline, citations, unread gaps)
+- 情報源の偏り表示とブラックリスト追加の提案(取り消し可能) / Source bias view with reversible blacklist suggestions
+- ドメイン別 AI 送信政策(送信を許可・要約なしで記録・マスク必須)と、監査ログへの送信文字数・政策判定の記録 / Per-domain AI send policy (allow, record without summary, mask required) and audit-log entries for character count and policy verdict
+- タグ正規化の提案・適用・取り消し / Tag normalization proposals with apply and undo
+- 履歴の選択行への一括スターと取り消し(プライベート判定を除外して適用可) / Bulk star and undo for selected history rows (can exclude private pages)
+- アドレスバー(`y` + Enter)と `Alt+Shift+Y` による現在ページの記録 / Record the current page from the address bar (`y` + Enter) and with `Alt+Shift+Y`
+- 初回起動の3択バナー / First-run 3-choice banner
+
 ## [6.9.57] - 2026-10-24
 
 このリリースは建築改善ループ第3弾（永続化スライス＋AI/信頼/構成の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
