@@ -14,22 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-24 建築改善ループ第3弾（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(12) → 02(8) → 03(8) → 04(6.4) → 05(5.3) → 06(4.8) → 07(3.2) → 08(3.2)
+### 2026-10-24 建築改善ループ第3弾（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(12)~~ → ~~02(8)~~ → ~~03(8)~~ → ~~04(6.4)~~ → ~~05(5.3)~~ → ~~06(4.8)~~ → ~~07(3.2)~~ → ~~08(3.2)~~
 
-建築診断第3弾（永続化スライス＋AI/信頼/構成）の10候補から Speculative 2 件を除外して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024c.md](2026-10-24-00-backlog-architecture-1024c.md)。
+建築診断第3弾（永続化スライス＋AI/信頼/構成、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2の2並列 → バッチ3の2並列）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024c.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024c.md)。最終ゲート `npm run validate` 緑（1166ファイル・17255テスト）。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-10-24-01-refactor-fallback-test-seam.md](2026-10-24-01-refactor-fallback-test-seam.md) | refactor | 12 | 0.5 | test seam対称化（小・検証容易。最初の一手） |
-| ⬜ 02 | [2026-10-24-02-refactor-hmac-codec-single-owner.md](2026-10-24-02-refactor-hmac-codec-single-owner.md) | refactor | 8 | 1.5 | HMAC単一所有（鍵喪失級）。NN06 は本 PBI の後に実施 |
-| ⬜ 03 | [2026-10-24-03-refactor-builtin-client-sharing.md](2026-10-24-03-refactor-builtin-client-sharing.md) | refactor | 8 | 1.0 | client実体共有（置換ADR要否を先に確認）。NN04 は本 PBI の後に実施 |
-| ⬜ 04 | [2026-10-24-04-refactor-provider-catalog-derivation.md](2026-10-24-04-refactor-provider-catalog-derivation.md) | refactor | 6.4 | 1.5 | 追加手順の導出化（NN03 の後に実施） |
-| ⬜ 05 | [2026-10-24-05-refactor-sync-runner-fold.md](2026-10-24-05-refactor-sync-runner-fold.md) | refactor | 5.3 | 1.0 | runner畳み込み（外部interface不変） |
-| ⬜ 06 | [2026-10-24-06-refactor-backup-shape-query.md](2026-10-24-06-refactor-backup-shape-query.md) | refactor | 4.8 | 2.0 | 照会集約（NN02・NN07 の後に実施） |
-| ⬜ 07 | [2026-10-24-07-refactor-sqlite-repo-fold.md](2026-10-24-07-refactor-sqlite-repo-fold.md) | refactor | 3.2 | 1.5 | 委譲3枚畳み込み（NN06 は本 PBI の後に実施） |
-| ⬜ 08 | [2026-10-24-08-refactor-obsidian-config-seam.md](2026-10-24-08-refactor-obsidian-config-seam.md) | refactor | 3.2 | 1.0 | 設定読みseam化 |
-
-実行順の推奨: RICE 順。**NN03 → NN04、NN02 → NN06、NN07 → NN06** の前後関係を守る。NN01 / NN02 / NN05 / NN08 および NN03 / NN07 および NN04 / NN06 は互いに独立のため並列着手可。
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
 
 ### 2026-10-24 建築改善ループ第2弾（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(16)~~ → ~~02(10)~~ → ~~03(7.5)~~ → ~~04(7.2)~~ → ~~05(5.8)~~ → ~~06(5.3)~~ → ~~07(4.3)~~ → ~~08(4)~~
 
@@ -596,6 +587,19 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-24 建築改善ループ第3弾 アーカイブ ― 8件すべて完了（01-08）
+
+2026-10-24 起票の 8 件を RICE 順・依存順に自律実装・アーカイブ。建築診断 10 候補から Speculative 2 件除外。バッチ1（01/02/05/08 並列）→ バッチ2（03/07 並列）→ バッチ3（04/06 並列）。バッチ境界で narrow mock 3 件を原因直し（NN04 の module-load 検証の意図的波及）。型 baseline 449 を維持。最終ゲート `npm run validate` 緑（1166ファイル・17255テスト）。
+
+- **01-refactor-fallback-test-seam**: testConnection対称化＋tableテスト新規
+- **02-refactor-hmac-codec-single-owner**: seal/open集約＋往復table新規（復号互換不変）
+- **03-refactor-builtin-client-sharing**: 共有client entry化＋死設定欄削除（置換ADR不要を記録）
+- **04-refactor-provider-catalog-derivation**: factory集約＋検証table新規（既存7行の値不変）
+- **05-refactor-sync-runner-fold**: loop内蔵＋tombstone化＋政策テスト移設
+- **06-refactor-backup-shape-query**: 照会集約＋tableテスト新規（復元経路不変）
+- **07-refactor-sqlite-repo-fold**: 単一module集約＋再シム化
+- **08-refactor-obsidian-config-seam**: configReader seam追加＋tableテスト新規
 
 ### 2026-10-24 建築改善ループ第2弾 アーカイブ ― 8件すべて完了（01-08）
 
