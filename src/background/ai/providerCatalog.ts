@@ -84,20 +84,53 @@ export interface ProviderCatalogEntry {
 
 /**
  * Display-relevant fields (baseUrlKey/isLocal/label/labelI18nKey) come from the
- * neutral low-tier table — spreading them here makes drift impossible: a
+ * neutral low-tier table — deriving them here makes drift impossible: a
  * missing row or i18n key throws at module load, and the parity test guards
  * the reverse direction. The same rows back the UI-facing projection
  * (PROVIDER_DISPLAY_METADATA), so the label and its i18n key have one
  * declaration site.
+ *
+ * Single derivation/verification seam (PBI 2026-10-24-04): every catalog row
+ * below is built by defineCatalogEntry, which pulls the allowlist projection,
+ * resolves the default base URL from PROVIDER_DEFAULT_BASE_URLS, and verifies
+ * the required keys — a gap throws UnknownProviderError at module load
+ * instead of shipping a half-wired provider.
  */
-function allowRow(
-  id: string,
-): { baseUrlKey?: string; isLocal: boolean; label: string; labelI18nKey: string } {
-  const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === id);
-  if (!row || row.labelI18nKey === undefined) throw new UnknownProviderError(id);
-  return row.baseUrlKey === undefined
-    ? { isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey }
-    : { baseUrlKey: row.baseUrlKey, isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey };
+export type CatalogEntrySpec = Omit<
+  ProviderCatalogEntry,
+  'baseUrlKey' | 'isLocal' | 'label' | 'labelI18nKey' | 'defaultBaseUrl'
+> & {
+  /**
+   * Fixed-endpoint default (openai/openai2 only). Local providers omit this
+   * and resolve it from PROVIDER_DEFAULT_BASE_URLS inside the seam.
+   */
+  readonly defaultBaseUrl?: string;
+};
+
+/**
+ * Build one catalog row from its domain spec (PBI 2026-10-24-04).
+ * The allowlist projection and the local default base URL are derived here —
+ * the only place that reads them — while required keys are verified:
+ * a missing allowlist row, a row without labelI18nKey, requiresApiKey without
+ * apiKeyKey, or an absent modelKey throws UnknownProviderError naming the id.
+ */
+export function defineCatalogEntry(providerId: string, spec: CatalogEntrySpec): ProviderCatalogEntry {
+  const row = PROVIDER_ALLOWLIST_ROWS.find((r) => r.id === providerId);
+  if (row === undefined || row.labelI18nKey === undefined) throw new UnknownProviderError(providerId);
+  if (spec.requiresApiKey && spec.apiKeyKey === undefined) throw new UnknownProviderError(providerId);
+  if (spec.modelKey === undefined) throw new UnknownProviderError(providerId);
+  const allowlistFields =
+    row.baseUrlKey === undefined
+      ? { isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey }
+      : { baseUrlKey: row.baseUrlKey, isLocal: row.isLocal, label: row.label, labelI18nKey: row.labelI18nKey };
+  const { defaultBaseUrl: specDefaultBaseUrl, ...domainSpec } = spec;
+  const defaultBaseUrl =
+    specDefaultBaseUrl ?? (PROVIDER_DEFAULT_BASE_URLS as Readonly<Record<string, string>>)[providerId];
+  return {
+    ...allowlistFields,
+    ...domainSpec,
+    ...(defaultBaseUrl === undefined ? {} : { defaultBaseUrl }),
+  };
 }
 
 // Single definition site for view-only per-provider values (PBI 2026-10-14-05).
@@ -127,8 +160,7 @@ const GEMINI_VIEW_META: ProviderViewMetadata = {
 export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = new Map<ProviderId, ProviderCatalogEntry>([
   [
     'gemini',
-    {
-      ...allowRow('gemini'),
+    defineCatalogEntry('gemini', {
       apiKeyKey: StorageKeys.GEMINI_API_KEY,
       modelKey: StorageKeys.GEMINI_MODEL,
       requiresApiKey: true,
@@ -140,12 +172,11 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       apiKeyLabelI18nKey: 'geminiApiKey',
       // View-only values (cssClass/defaultOpen/extraFields) deliberately stay
       // OFF this domain row: they are read from PROVIDER_VIEW_METADATA.
-    },
+    }),
   ],
   [
     'openai',
-    {
-      ...allowRow('openai'),
+    defineCatalogEntry('openai', {
       apiKeyKey: StorageKeys.OPENAI_API_KEY,
       modelKey: StorageKeys.OPENAI_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
@@ -160,12 +191,11 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
-    },
+    }),
   ],
   [
     'openai2',
-    {
-      ...allowRow('openai2'),
+    defineCatalogEntry('openai2', {
       apiKeyKey: StorageKeys.OPENAI_2_API_KEY,
       modelKey: StorageKeys.OPENAI_2_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
@@ -180,38 +210,33 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
-    },
+    }),
   ],
   [
     'lm-studio',
-    {
-      ...allowRow('lm-studio'),
+    defineCatalogEntry('lm-studio', {
       modelKey: StorageKeys.LM_STUDIO_MODEL,
-      defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['lm-studio'],
       requiresApiKey: false,
       cspDomain: 'http://127.0.0.1:1234',
       fieldPlaceholders: { baseUrl: 'lmStudioBaseUrlPlaceholder', model: 'lmStudioModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
-    },
+    }),
   ],
   [
     'ollama',
-    {
-      ...allowRow('ollama'),
+    defineCatalogEntry('ollama', {
       modelKey: StorageKeys.OLLAMA_MODEL,
-      defaultBaseUrl: PROVIDER_DEFAULT_BASE_URLS['ollama'],
       requiresApiKey: false,
       cspDomain: 'http://localhost:11434',
       fieldPlaceholders: { baseUrl: 'ollamaBaseUrlPlaceholder', model: 'ollamaModelPlaceholder' },
       supportsCustomPrompt: true,
       settingsBlockKind: 'generic',
-    },
+    }),
   ],
   [
     'openai-compatible',
-    {
-      ...allowRow('openai-compatible'),
+    defineCatalogEntry('openai-compatible', {
       apiKeyKey: StorageKeys.PROVIDER_API_KEY,
       modelKey: StorageKeys.PROVIDER_MODEL,
       requiresApiKey: true,
@@ -223,17 +248,16 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       },
       supportsCustomPrompt: false,
       settingsBlockKind: 'models-dev',
-    },
+    }),
   ],
   [
     'built-in-ai',
-    {
-      ...allowRow('built-in-ai'),
+    defineCatalogEntry('built-in-ai', {
       modelKey: '',
       requiresApiKey: false,
       supportsCustomPrompt: true,
       settingsBlockKind: 'built-in-ai',
-    },
+    }),
   ],
 ]);
 

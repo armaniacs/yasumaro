@@ -30,8 +30,8 @@ Scenario: 正常追加が1行で済む
 
 ## 受け入れ基準
 
-- [ ] catalog行からallowlist・既定値・必須鍵を導出または検証するseamが1箇所にある
-- [ ] 既存テスト全緑（parity検証を含む）
+- [x] catalog行からallowlist・既定値・必須鍵を導出または検証するseamが1箇所にある
+- [x] 既存テスト全緑（parity検証を含む）
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -95,8 +95,8 @@ grep -n "PROVIDER_ALLOWLIST_ROWS\|allowRow\|PROVIDER_CATALOG" src/background/ai/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
