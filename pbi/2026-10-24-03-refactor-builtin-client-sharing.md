@@ -30,9 +30,9 @@ Scenario: 入口併存が保たれる
 
 ## 受け入れ基準
 
-- [ ] 共有clientがmanifestの1 entryに登録され、両方に同じ実体が流れる
-- [ ] 死んだ設定欄（RemoteAIService.ts:26）を消すか使うか決める
-- [ ] 既存テスト全緑
+- [x] 共有clientがmanifestの1 entryに登録され、両方に同じ実体が流れる
+- [x] 死んだ設定欄（RemoteAIService.ts:26）を消すか使うか決める
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -95,8 +95,8 @@ grep -n "builtInAiClient\|BuiltInAiProvider\|availability" src/background/ai/aiS
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み

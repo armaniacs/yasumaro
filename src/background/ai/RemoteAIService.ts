@@ -11,7 +11,7 @@ import { settingsRepository, type SettingsReader } from '../../utils/storage/Set
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from './aiModelKey.js';
-import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
+import { type AIProviderStrategy } from './providers/index.js';
 import { createProviderStrategy, UnknownProviderError, type CreateProviderStrategyFn } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
@@ -23,7 +23,6 @@ import { pickDefined } from '../../utils/objectUtils.js';
 import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
 interface RemoteAIServiceConfig {
-  builtInAiClient?: BuiltInAiProvider;
   repo?: SettingsReader;
   /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
   breaker?: ProviderBreakerLike;

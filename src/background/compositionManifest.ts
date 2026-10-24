@@ -15,7 +15,8 @@
  * being scattered through the composition function body.
  */
 
-import { createAIService } from './ai/aiServiceFactory.js';
+import { createAIService, createSharedBuiltInStrategy } from './ai/aiServiceFactory.js';
+import { BuiltInAIClient } from './builtInAIClient.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
 import { ProviderBreaker } from './ai/providerBreaker.js';
@@ -108,11 +109,33 @@ export const compositionManifest: readonly CompositionEntry[] = [
         },
       }),
   },
-  { key: 'remoteAiService', singleton: true, factory: (c) => new RemoteAIService({ breaker: c.resolve<ProviderBreaker>('aiProviderBreaker') }) },
+  // PBI 2026-10-24-03: the shared on-device client. One instance serves the
+  // local path (via LocalAIService) and the built-in-ai provider slot (via the
+  // generation seam below) so both routes read the same availability cache.
+  // The two adapters and their testConnection meanings stay separate — only
+  // the instance is shared (ADR 2026-09-17 coexistence kept).
+  { key: 'builtInAiClient', singleton: true, factory: () => new BuiltInAIClient() },
+  {
+    key: 'remoteAiService',
+    singleton: true,
+    factory: (c) =>
+      new RemoteAIService({
+        breaker: c.resolve<ProviderBreaker>('aiProviderBreaker'),
+        createStrategy: createSharedBuiltInStrategy(c.resolve<BuiltInAIClient>('builtInAiClient')),
+      }),
+  },
   // PBI 27-03: AI provider circuit breaker (policy SSOT in providerBreaker.ts).
   // Resolved here so the wiring test — not just a direct import — proves it.
   { key: 'aiProviderBreaker', singleton: true, factory: (c) => new ProviderBreaker(c.resolve<SessionStorePort>('sessionStore')) },
-  { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
+  {
+    key: 'aiService',
+    singleton: true,
+    factory: (c) =>
+      createAIService({
+        remoteAiService: c.resolve<RemoteAIService>('remoteAiService'),
+        builtInAiClient: c.resolve<BuiltInAIClient>('builtInAiClient'),
+      }),
+  },
   { key: 'settingsRepository', singleton: true, factory: () => settingsRepository },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },
   {
