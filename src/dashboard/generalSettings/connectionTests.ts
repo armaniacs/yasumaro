@@ -1,3 +1,7 @@
+/* eslint-disable local/require-sanitized-markdown -- test data with hardcoded markdown, not user input.
+ * File-level (not next-line): the rule reports on the Program node whose range
+ * now includes leading comments (typescript-eslint 8.72+), so a next-line
+ * suppression can no longer cover it. */
 /**
  * connectionTests.ts
  * 一般設定パネルの保存・接続テスト系ハンドラ
@@ -9,7 +13,6 @@
  * would otherwise pass 500 lines.
  */
 
-// eslint-disable-next-line local/require-sanitized-markdown -- test data with hardcoded markdown, not user input
 import { StorageKeys } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import {

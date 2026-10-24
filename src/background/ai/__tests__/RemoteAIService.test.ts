@@ -300,14 +300,40 @@ describe('RemoteAIService', () => {
     expect(result.providers[0]?.elapsedMs).toBeGreaterThanOrEqual(0);
   });
 
-  it('calls recordAuditLog with provider name and url before generateSummary', async () => {
+  it('records the egress ledger with provider, url, masked char count, and policy before generateSummary', async () => {
     const service = createService([{ provider: 'test' }], {
       test: () => makeProvider('ok'),
     });
 
     await service.generateSummary('content', { url: 'https://example.com/audit-test' });
 
-    expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'test', url: 'https://example.com/audit-test' });
+    // PBI 2026-10-23-01: the minimal row carries the time, the destination,
+    // the char count of the content prepared for the provider (the PII-masked
+    // form), and the policy verdict.
+    expect(recordAuditLog).toHaveBeenCalledWith({
+      provider: 'test',
+      url: 'https://example.com/audit-test',
+      charCount: 'content'.length,
+      policy: 'allowed',
+    });
+  });
+
+  it('records the applied domain policy on the ledger row (mask-required)', async () => {
+    const service = createService([{ provider: 'test' }], {
+      test: () => makeProvider('ok'),
+    });
+
+    await service.generateSummary('content', {
+      url: 'https://example.com/policy-test',
+      policy: 'mask-required',
+    });
+
+    expect(recordAuditLog).toHaveBeenCalledWith({
+      provider: 'test',
+      url: 'https://example.com/policy-test',
+      charCount: 'content'.length,
+      policy: 'mask-required',
+    });
   });
 
   it('calls recordAuditLog for each attempted provider during fallback', async () => {
@@ -318,8 +344,35 @@ describe('RemoteAIService', () => {
 
     await service.generateSummary('content', { url: 'https://example.com/fallback-test' });
 
-    expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'fail', url: 'https://example.com/fallback-test' });
-    expect(recordAuditLog).toHaveBeenCalledWith({ provider: 'success', url: 'https://example.com/fallback-test' });
+    // One row per slot that actually sent — a fallback retry is two real
+    // sends, never a double-counted one.
+    expect(recordAuditLog).toHaveBeenCalledWith({
+      provider: 'fail',
+      url: 'https://example.com/fallback-test',
+      charCount: 'content'.length,
+      policy: 'allowed',
+    });
+    expect(recordAuditLog).toHaveBeenCalledWith({
+      provider: 'success',
+      url: 'https://example.com/fallback-test',
+      charCount: 'content'.length,
+      policy: 'allowed',
+    });
+  });
+
+  it('does not record the ledger for a slot that fails before the send (unknown provider)', async () => {
+    const service = createService([{ provider: 'unknown' }, { provider: 'test' }], {
+      test: () => makeProvider('ok'),
+    });
+
+    await service.generateSummary('content', { url: 'https://example.com/no-send-test' });
+
+    // A config failure never reaches the send line, so the ledger must not
+    // record a send that did not happen (PBI 2026-10-23-01: 二重/誤計上防止).
+    expect(recordAuditLog).toHaveBeenCalledTimes(1);
+    expect(recordAuditLog).toHaveBeenCalledWith(
+      expect.objectContaining({ provider: 'test' }),
+    );
   });
 
   it('returns a generic message without internal error details when a provider throws', async () => {

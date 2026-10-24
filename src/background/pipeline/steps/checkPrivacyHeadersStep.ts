@@ -11,7 +11,7 @@ import type { RecordingContext } from '../types.js';
 import type { PrivacyInfo } from '../../../utils/privacyChecker.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { isDomainInList } from '../../../utils/wildcardToRegex.js';
-import { decideGate, type PrivacyAutoBehavior } from '../../../utils/recordingGateTable.js';
+import { decideGate, normalizePrivacyAutoBehavior, shouldBypassPrivacyFetch, describePrivacyDenial } from '../../../utils/recordingGateTable.js';
 
 export class PrivacyHeadersChecker {
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -31,7 +31,7 @@ export class PrivacyHeadersChecker {
     // filter (wildcard patterns + DOMAIN_SUBDOMAIN_MATCHING). An exact
     // includes() here used to silently ignore *.example.com entries added
     // via the popup whitelist writer, which validates them as valid.
-    // (The bypass log is emitted from the pre-decision branch below so the
+    // (The bypass log is emitted from the bypass branch below so the
     // force-first log order stays byte-equal: force logs only the force
     // message even when the domain also matches the whitelist.)
     const whitelist = settings[StorageKeys.DOMAIN_WHITELIST] || [];
@@ -47,26 +47,15 @@ export class PrivacyHeadersChecker {
       }
     }
 
-    // PBI 2026-09-21-28: bypass 判定を fetch 前の pre-decision に一本化する。
-    // force と whitelisted は fetch 前に確定済みのため、表の privacyHeaders 行に
-    // isPrivate: false（未確定のプレースホルダ）を渡して判定する。
-    // settings の読み取りは副作用が無いため fetch 前倒ししても等価。
-    const rawBehavior = settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save';
-    const behavior: PrivacyAutoBehavior =
-      rawBehavior === 'skip' || rawBehavior === 'confirm' ? rawBehavior : 'save';
-    // PBI 2026-09-23-05: shared gate table row への adapter（pre-decision 構造は不変）。
-    const preDecision = decideGate('privacyHeaders', {
-      force,
-      whitelisted: shouldSkipPrivacyCheck,
-      isPrivate: false,
-      autoSaveBehavior: behavior,
-      requireConfirmation: requireConfirmation ?? false,
-    });
-    // 注意: 表の privacyHeaders 行は !isPrivate でも allow を返すが、fetch 前は
-    // isPrivate が未確定のためその分岐だけでは fetch を省けない。fetch を
-    // スキップするのは bypass（force/whitelisted）に裏打ちされた allow のみ。
-    // ログ文言と return 形状は従来の二つの早期 return と byte 等価。
-    if (preDecision.allow && (force || shouldSkipPrivacyCheck)) {
+    // The fetch plan is I/O scheduling, not a verdict: force and whitelist
+    // bypass the fetch before privacy is known. The predicate lives in the
+    // gate table so the step never re-derives the bypass matrix.
+    const behavior = normalizePrivacyAutoBehavior(
+      settings[StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR] || 'save'
+    );
+    // Log wording and return shape stay byte-equal to the former two early
+    // returns (force-first log order preserved).
+    if (shouldBypassPrivacyFetch(force, shouldSkipPrivacyCheck)) {
       if (force) {
         // force=true の場合はプライバシーチェックをスキップして記録を許可する
         // （「それでも記録」ボタンや手動記録操作など、ユーザーが明示的に記録を指示した場合）
@@ -80,10 +69,10 @@ export class PrivacyHeadersChecker {
     // Check privacy headers
     const privacyInfo = await this.getPrivacyInfoWithCache(url);
 
-    // PBI 2026-09-19-08: verdict は recordingDecision.decidePrivacy に委譲。
-    // PBI 2026-09-23-05: shared gate table row への adapter。
-    // I/O（privacyInfo 取得・pending 保存・log）はこの step に残す。
-    // fetch 後の呼び出しは isPrivate マトリクスのみを担う（deniedBy 不変）。
+    // The verdict comes from the single gate-table interface; this step
+    // only performs I/O (fetch, pending save, logging) around it.
+    // The post-fetch call owns the isPrivate matrix only; deniedBy carries
+    // the payload shape so the step never re-derives it.
     const decision = decideGate('privacyHeaders', {
       force,
       whitelisted: shouldSkipPrivacyCheck,
@@ -112,20 +101,22 @@ export class PrivacyHeadersChecker {
       traceId: context.traceId
     });
 
-    // deny 3分岐の payload 形状は deniedBy が単一所有する
-    // （requireConfirmation と behavior=confirm は headerValue 有無が異なる）。
+    // The deny-payload shape is owned by describePrivacyDenial in the gate
+    // table (requireConfirmation and behavior=confirm stay distinct because
+    // only the latter carries the header value).
     const reason = privacyInfo.reason || 'cache-control';
     const actualHeaderValue = headerValue ||
       (reason === 'cache-control' ? privacyInfo.headers?.cacheControl || '' : '');
 
     await this.savePendingPage(url, title, reason, actualHeaderValue);
 
-    if (decision.deniedBy === 'skip') {
+    const denial = describePrivacyDenial(decision);
+    if (!denial.confirmationRequired) {
       throw new PrivatePageError('PRIVATE_PAGE_DETECTED', pickDefined({ reason: privacyInfo.reason }));
     }
     throw new PrivatePageError('PRIVATE_PAGE_DETECTED', {
       confirmationRequired: true,
-      ...(decision.deniedBy === 'confirm' ? { headerValue: actualHeaderValue } : {}),
+      ...(denial.includeHeaderValue ? { headerValue: actualHeaderValue } : {}),
       ...pickDefined({ reason: privacyInfo.reason }),
     });
 

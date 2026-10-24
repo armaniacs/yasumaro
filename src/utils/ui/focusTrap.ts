@@ -33,16 +33,34 @@ export const FOCUSABLE_SELECTOR = [
 ].join(',');
 
 /**
+ * `display: none` の祖先を持つ要素は描画されないためフォーカス不可
+ * （Chrome も jsdom 30.1.2+ も `focus()` を無視する）。
+ * `offsetParent` は jsdom で常に null のため判定に使えない。
+ */
+function isSubtreeRendered(el: HTMLElement): boolean {
+  const view = el.ownerDocument.defaultView ?? window;
+  let node: HTMLElement | null = el;
+  while (node !== null) {
+    if (view.getComputedStyle(node).display === 'none') return false;
+    node = node.parentElement;
+  }
+  return true;
+}
+
+/**
  * コンテナ内のフォーカス可能要素を全て返す（非表示・disabled 要素は除外）。
  * trap() と popup/dashboard 側のタブ・パネル切り替えロジックで共有する
- * 単一の非表示判定基準。
+ * 単一の非表示判定基準。`display: none`（インライン・クラス問わず）の
+ * サブツリーも除外する。除外しないと Tab 折り返し先の `first.focus()` が
+ * 実ブラウザで無視され、フォーカスが `last` に留まってしまう。
  */
 export function getFocusableElements(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)).filter((el) => {
     if (el.closest('.hidden, [hidden]')) return false;
     // `[tabindex]` / `a[href]` can match a control carrying `disabled`; the
     // selector above covers the form controls, this covers anything else.
-    return !el.hasAttribute('disabled');
+    if (el.hasAttribute('disabled')) return false;
+    return isSubtreeRendered(el);
   });
 }
 

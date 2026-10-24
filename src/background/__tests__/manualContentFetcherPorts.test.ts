@@ -18,6 +18,10 @@ function memoryPorts(content: string): ManualTabPorts & { calls: string[] } {
       calls.push('createTab');
       return { id: 7, url: 'https://example.com' } as chrome.tabs.Tab;
     },
+    getTab: async () => {
+      calls.push('getTab');
+      return { status: 'complete' };
+    },
     onUpdated: {
       addListener: (cb) => {
         calls.push('addListener');
@@ -49,6 +53,10 @@ function existingTabPorts(): ManualTabPorts & { calls: string[] } {
     createTab: async () => {
       calls.push('createTab');
       throw new Error('must not create when a tab already exists');
+    },
+    getTab: async () => {
+      calls.push('getTab');
+      return { status: 'complete' };
     },
     onUpdated: {
       addListener: () => {},

@@ -52,6 +52,9 @@ export const MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
  */
 export const AUDIT_CAP_OPFS = 1_000;
 export const AUDIT_CAP_IDB = 100_000;
+/** Fallback (chrome.storage.local) audit-read cap. Matches the OPFS worker:
+ *  the blob is bounded by the local quota and the 7-day retention sweep. */
+export const AUDIT_CAP_FALLBACK = 1_000;
 
 // Caps absorbed from per-module literals; each value keeps its original number.
 
@@ -138,6 +141,14 @@ export const MAX_SUMMARY_LENGTH = 100_000;
  * legitimate selection use (bulk select pages at 20/page).
  */
 export const MAX_QUERY_IDS = 200;
+
+/**
+ * Batch read cap shared by research report generation and tag proposal
+ * collection (PBI 2026-10-23-04). Both paths read at most 200 records;
+ * if they ever need to diverge, add a second named constant here instead
+ * of re-localizing a literal.
+ */
+export const MAX_BATCH_READ_RECORDS = 200;
 
 /**
  * archive_query rows per request (PBI 2026-09-17-18). Previously a bare

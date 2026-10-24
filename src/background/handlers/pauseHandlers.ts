@@ -4,7 +4,9 @@
  *
  * Small module next to recordingPause.ts: each factory takes only its
  * minimal seam ({ schedulePause } etc.), so tests inject fakes and never
- * touch chrome.storage or chrome.alarms. Extension-only trust comes from
+ * touch chrome.storage or chrome.alarms. Preset validation is not owned
+ * here — factories delegate to recordingPause.validatePauseMinutes and
+ * map its error code. Extension-only trust comes from
  * the router (types are absent from CONTENT_SCRIPT_ALLOWED_TYPES).
  */
 
@@ -13,7 +15,7 @@ import type {
     ResumeRecordingMessage,
     GetPauseStateMessage,
 } from '../messageTypes.js';
-import { isValidPreset, type PausePresetMinutes } from '../recordingPause.js';
+import { INVALID_PAUSE_MINUTES, validatePauseMinutes, type PausePresetMinutes } from '../recordingPause.js';
 
 export interface PauseRecordingHandlerDeps {
     schedulePause: (minutes: PausePresetMinutes) => Promise<number>;
@@ -33,11 +35,12 @@ export function createPauseRecordingHandler(deps: PauseRecordingHandlerDeps) {
         _sender: chrome.runtime.MessageSender,
         sendResponse: (response?: unknown) => void,
     ): Promise<void> => {
-        // Defensive runtime read: the wire can carry anything, so validate
-        // against the preset set instead of trusting the declared type.
-        const minutes = (message as { payload?: { minutes?: unknown } }).payload?.minutes;
-        if (typeof minutes !== 'number' || !isValidPreset(minutes)) {
-            sendResponse({ success: false, error: 'INVALID_PAUSE_MINUTES' });
+        // Thin wiring: the wire can carry anything, so the preset rule
+        // itself lives in recordingPause.validatePauseMinutes — this
+        // factory only extracts the payload and maps the module error code.
+        const minutes: number | undefined = message.payload?.minutes;
+        if (minutes === undefined || !validatePauseMinutes(minutes)) {
+            sendResponse({ success: false, error: INVALID_PAUSE_MINUTES });
             return;
         }
         const pausedUntil = await deps.schedulePause(minutes);

@@ -13,6 +13,8 @@ import type { AIService, AISummaryResult } from './ai/AIService.js';
 import type { MaskedItem } from '../messaging/types.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { SUMMARY_EMPTY_FALLBACK } from '../utils/summaryFallback.js';
+import { resolveAiDomainPolicy } from '../utils/storage/aiDomainPolicy.js';
+import type { AiDomainPolicy } from '../utils/storage/types.js';
 import type { FailureMetadata } from '../utils/failureTaxonomy.js';
 
 /**
@@ -71,6 +73,13 @@ export interface PrivacyPipelineResult {
   /** スロット別の失敗詳細（成功スロット以降の失敗も保持。同 follow-up） */
   slotFailures?: { provider: string; model?: string; error: string; failure?: FailureMetadata }[];
   /**
+   * PBI 2026-10-23-03 (cost-aware cascade): title + opening slice for a
+   * degraded send. Present only when the provider reported `degraded`; the
+   * reason text stays in `summary`, so the record keeps both without posing
+   * as a real remote summary.
+   */
+  degradedSummary?: string;
+  /**
    * Structured failure of the AI call (PBI 2026-09-25-11). A total provider
    * failure is still reported as a normal result, so this field is what lets the
    * executor ask "which kind?" without reading the summary text. Never holds a
@@ -79,6 +88,8 @@ export interface PrivacyPipelineResult {
   failure?: FailureMetadata;
   /** クラウドAI要約(L3)の実呼び出し時間 (ミリ秒) — クラウドAIが呼ばれた場合のみセットされる */
   aiCallDurationMs?: number;
+  /** 適用されたドメイン別送信政策 (PBI 2026-10-23-01)。URLにドメインがなく地図に行がない場合は 'allowed'。 */
+  domainPolicy?: AiDomainPolicy;
 }
 
 export class PrivacyPipeline {
@@ -119,6 +130,10 @@ export class PrivacyPipeline {
     }
 
     const sanitizedSettings = this._buildSanitizedSettings(alreadyProcessed);
+    // Per-domain egress policy (PBI 2026-10-23-01): a mask-required domain
+    // forces masking even in cloud_only mode; a no-summary domain records the
+    // visit without any AI at all.
+    const domainPolicy = resolveAiDomainPolicy(this.settings, url);
     let processingText = content;
     let maskedCount = 0;
     let maskedItems: (string | MaskedItem)[] = [];
@@ -127,7 +142,7 @@ export class PrivacyPipeline {
 
     // L2: PII Masking — run before any AI (local or cloud) so that
     // on-device local AI also receives masked content when masking is enabled.
-    if (sanitizedSettings.useMasking) {
+    if (sanitizedSettings.useMasking || domainPolicy === 'mask-required') {
       const sanitizeResult = await this.sanitizers.sanitizeRegex(processingText);
       processingText = sanitizeResult.text;
       maskedItems = sanitizeResult.maskedItems;
@@ -136,6 +151,12 @@ export class PrivacyPipeline {
     }
 
     const cleansedTokens = estimateTokens(processingText);
+
+    // A no-summary domain records the visit without any AI summary — nothing
+    // leaves the device, so neither local nor cloud summarization runs.
+    if (domainPolicy === 'no-summary') {
+      return { summary: SUMMARY_EMPTY_FALLBACK, originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false, domainPolicy };
+    }
 
     if (previewOnly) {
       return {
@@ -173,16 +194,20 @@ export class PrivacyPipeline {
         mode: 'full_pipeline',
         url,
         traceId,
+        // The applied policy rides the send so the egress ledger records the
+        // verdict for this domain (PBI 2026-10-23-01).
+        policy: domainPolicy,
         ...pickDefined({ tagSummaryMode: options.tagSummaryMode }),
       });
       const aiCallDurationMs = performance.now() - aiCallStart;
       return {
         ...this._processCloudResult(aiResult, maskedCount, originalTokens, cleansedTokens, aiCallDurationMs),
         mode: this.mode,
+        domainPolicy,
       };
     }
 
-    return { summary: SUMMARY_EMPTY_FALLBACK, originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false };
+    return { summary: SUMMARY_EMPTY_FALLBACK, originalTokens, cleansedTokens, mode: this.mode, aiSucceeded: false, domainPolicy };
   }
 
   private _buildSanitizedSettings(alreadyProcessed: boolean) {
@@ -314,6 +339,10 @@ export class PrivacyPipeline {
         attemptedProviders: aiResult.attemptedProviders,
         slotFailures: aiResult.slotFailures,
         failure: aiResult.failure,
+        // PBI 2026-10-23-03: the degraded opening slice rides through only
+        // when the provider reported the fallback, so a real remote summary
+        // never carries it.
+        degradedSummary: aiResult.degraded === true ? aiResult.degradedSummary : undefined,
       }),
     };
   }

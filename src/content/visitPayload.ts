@@ -14,7 +14,59 @@
 
 import type { PageState } from './pageState.js';
 import type { RecordingData, ContentResponse } from '../messaging/types.js';
-import { buildVisitStats, type VisitStats } from './visitReporter.js';
+import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+
+/** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
+export interface VisitByteStats {
+  pageBytes?: number | undefined;
+  candidateBytes?: number | undefined;
+  originalBytes?: number | undefined;
+  cleansedBytes?: number | undefined;
+}
+
+/** AI-cleanse stat subset shared by both send paths. */
+export interface VisitAiStats {
+  aiSummaryOriginalBytes?: number | undefined;
+  aiSummaryCleansedBytes?: number | undefined;
+  aiSummaryCleansedElements?: number | undefined;
+  aiSummaryCleansedReason?: AiSummaryCleansedReason | undefined;
+  aiSummaryCleansedReasons?: string[] | undefined;
+}
+
+/** One field-selection source for both send paths (auto-visit + manual fetch). */
+export interface VisitStats {
+  byteStats: VisitByteStats;
+  aiStats: VisitAiStats;
+  fallbackTriggered: boolean;
+  fallbackReason: string | undefined;
+}
+
+/**
+ * Build the shared stat selection from PageState. The `|| undefined` /
+ * `!== 'none'` normalization lives here once — not once per send path.
+ * Owned by this wire adapter so both send paths share one selection.
+ */
+export function buildVisitStats(pageState: PageState): VisitStats {
+  const ai = pageState.lastAiSummaryCleansedStats;
+  return {
+    byteStats: {
+      pageBytes: pageState.lastByteStats.pageBytes || undefined,
+      candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
+      originalBytes: pageState.lastByteStats.originalBytes || undefined,
+      cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
+    },
+    aiStats: {
+      aiSummaryOriginalBytes: ai.aiSummaryOriginalBytes || undefined,
+      aiSummaryCleansedBytes: ai.aiSummaryCleansedBytes || undefined,
+      aiSummaryCleansedElements: ai.aiSummaryCleansedElements || undefined,
+      aiSummaryCleansedReason:
+        ai.aiSummaryCleansedReason !== 'none' ? ai.aiSummaryCleansedReason : undefined,
+      aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
+    },
+    fallbackTriggered: pageState.lastFallbackTriggered,
+    fallbackReason: pageState.lastFallbackReason,
+  };
+}
 
 /** RecordingData の field サブセット — content script が送信できる部分。
  *  title / url は background 側で補完されるため含まない。 */
@@ -22,18 +74,20 @@ export type VisitWirePayload = { content: string } & {
     [K in 'force' | 'pageBytes' | 'candidateBytes' | 'originalBytes' | 'cleansedBytes' |
     'aiSummaryOriginalBytes' | 'aiSummaryCleansedBytes' | 'aiSummaryCleansedElements' |
     'aiSummaryCleansedReason' | 'aiSummaryCleansedReasons' | 'fallbackTriggered' |
-    'fallbackReason']?: RecordingData[K] | undefined;
+    'fallbackReason' | 'visitDurationSeconds' | 'scrollRatioPercent']?: RecordingData[K] | undefined;
 };
 
 /**
  * PageState + content から RecordingData（VALID_VISIT / MANUAL_RECORD ペイロード）
  * を構築する。force 再送でも同一の stats 選別が適用される — 呼び出し側は
  * content と force だけを渡し、10超の byte/ai field の正規化を意識しない。
+ * PBI 2026-10-23-02: metrics は visit_duration/scroll_ratio の NULL 解消の
+ * 乗り手。呼び出し側が clock を知っているので、ここでは丸めない。
  */
 export function toValidVisitPayload(
     state: PageState,
     content: string,
-    opts?: { force?: boolean }
+    opts?: { force?: boolean; metrics?: { visitDurationSeconds: number; scrollRatioPercent: number } }
 ): VisitWirePayload {
     const stats: VisitStats = buildVisitStats(state);
     return {
@@ -42,6 +96,8 @@ export function toValidVisitPayload(
         ...stats.aiStats,
         fallbackTriggered: stats.fallbackTriggered,
         ...(stats.fallbackReason !== undefined ? { fallbackReason: stats.fallbackReason } : {}),
+        ...(opts?.metrics ? { visitDurationSeconds: opts.metrics.visitDurationSeconds } : {}),
+        ...(opts?.metrics ? { scrollRatioPercent: opts.metrics.scrollRatioPercent } : {}),
         ...(opts?.force ? { force: true } : {}),
     };
 }

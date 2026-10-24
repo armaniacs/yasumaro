@@ -5,7 +5,7 @@
  * - TRUSTED / SENSITIVE / UNVERIFIED（canProceed=true）での通過
  * - LOCKED（canProceed=false）+ force=false → DOMAIN_NOT_TRUSTED エラー
  * - LOCKED（canProceed=false）+ force=true → 通過
- * - showAlert=true 時の NotificationHelper.notifyError 呼び出し
+ * - showAlert=true 時の notifyError 呼び出し
  * - showAlert=false 時は通知しない
  *
  * canProceed=false を返す trust level は LOCKED だけである
@@ -43,13 +43,8 @@ vi.mock('../../../../utils/logger/api.js', async () =>
 vi.mock('../../../../utils/trustChecker.js', () => ({
   TrustChecker: vi.fn(),
 }));
-vi.mock('../../../notificationHelper.js', () => ({
-  NotificationHelper: { notifyError: vi.fn() },
-}));
-
 import { checkTrustDomainStep } from '../checkTrustDomainStep.js';
 import { TrustChecker } from '../../../../utils/trustChecker.js';
-import { NotificationHelper } from '../../../notificationHelper.js';
 import type { RecordingContext } from '../../types.js';
 
 const MockedTrustChecker = TrustChecker as MockedClass<typeof TrustChecker>;
@@ -83,8 +78,11 @@ function setupTrustChecker(mockResult: {
   return mockCheckDomain;
 }
 
+let notifyError: ReturnType<typeof vi.fn<(message: string) => void>>;
+
 beforeEach(() => {
   vi.clearAllMocks();
+  notifyError = vi.fn<(message: string) => void>();
 });
 
 describe('checkTrustDomainStep', () => {
@@ -97,7 +95,7 @@ describe('checkTrustDomainStep', () => {
       });
 
       const context = makeContext();
-      const result = await checkTrustDomainStep(context);
+      const result = await checkTrustDomainStep(context, { notifyError });
 
       expect(result.trustCheck).toEqual({
         canProceed: true,
@@ -116,7 +114,7 @@ describe('checkTrustDomainStep', () => {
         trustResult: { level: 'unverified', source: 'none' },
       });
 
-      const result = await checkTrustDomainStep(makeContext({ force: false }));
+      const result = await checkTrustDomainStep(makeContext({ force: false }), { notifyError });
 
       expect(result.trustCheck).toEqual({
         canProceed: true,
@@ -134,7 +132,7 @@ describe('checkTrustDomainStep', () => {
         trustResult: { level: 'sensitive', source: 'tranco' },
       });
 
-      const result = await checkTrustDomainStep(makeContext({ force: false }));
+      const result = await checkTrustDomainStep(makeContext({ force: false }), { notifyError });
 
       expect(result.trustCheck).toEqual({
         canProceed: true,
@@ -143,7 +141,7 @@ describe('checkTrustDomainStep', () => {
         trustLevel: 'sensitive',
       });
       // この step の通知は記録ブロック時だけ。警告は Trust バッジ側で描画される
-      expect(NotificationHelper.notifyError).not.toHaveBeenCalled();
+      expect(notifyError).not.toHaveBeenCalled();
     });
   });
 
@@ -157,10 +155,10 @@ describe('checkTrustDomainStep', () => {
       });
 
       const context = makeContext({ force: false });
-      await expect(checkTrustDomainStep(context)).rejects.toThrow('DOMAIN_NOT_TRUSTED');
+      await expect(checkTrustDomainStep(context, { notifyError })).rejects.toThrow('DOMAIN_NOT_TRUSTED');
     });
 
-    it('calls NotificationHelper.notifyError when showAlert=true', async () => {
+    it('calls notifyError when showAlert=true', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: true,
@@ -170,17 +168,17 @@ describe('checkTrustDomainStep', () => {
 
       const context = makeContext({ force: false });
       try {
-        await checkTrustDomainStep(context);
+        await checkTrustDomainStep(context, { notifyError });
       } catch {
         // expected
       }
 
-      expect(NotificationHelper.notifyError).toHaveBeenCalledWith(
+      expect(notifyError).toHaveBeenCalledWith(
         expect.stringContaining('Blocked domain')
       );
     });
 
-    it('does not call NotificationHelper.notifyError when showAlert=false', async () => {
+    it('does not call notifyError when showAlert=false', async () => {
       setupTrustChecker({
         canProceed: false,
         showAlert: false,
@@ -190,12 +188,12 @@ describe('checkTrustDomainStep', () => {
 
       const context = makeContext({ force: false });
       try {
-        await checkTrustDomainStep(context);
+        await checkTrustDomainStep(context, { notifyError });
       } catch {
         // expected
       }
 
-      expect(NotificationHelper.notifyError).not.toHaveBeenCalled();
+      expect(notifyError).not.toHaveBeenCalled();
     });
   });
 
@@ -209,7 +207,7 @@ describe('checkTrustDomainStep', () => {
       });
 
       const context = makeContext({ force: true });
-      const result = await checkTrustDomainStep(context);
+      const result = await checkTrustDomainStep(context, { notifyError });
 
       expect(result.trustCheck).toBeDefined();
       expect(result.trustCheck?.canProceed).toBe(false);
@@ -224,9 +222,9 @@ describe('checkTrustDomainStep', () => {
       });
 
       const context = makeContext({ force: true });
-      await checkTrustDomainStep(context);
+      await checkTrustDomainStep(context, { notifyError });
 
-      expect(NotificationHelper.notifyError).not.toHaveBeenCalled();
+      expect(notifyError).not.toHaveBeenCalled();
     });
   });
 
@@ -241,12 +239,12 @@ describe('checkTrustDomainStep', () => {
 
       const context = makeContext({ force: false });
       try {
-        await checkTrustDomainStep(context);
+        await checkTrustDomainStep(context, { notifyError });
       } catch {
         // expected
       }
 
-      expect(NotificationHelper.notifyError).toHaveBeenCalledWith(
+      expect(notifyError).toHaveBeenCalledWith(
         expect.stringContaining('Domain not trusted for recording')
       );
     });

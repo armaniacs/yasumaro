@@ -370,42 +370,33 @@ describe('createAlarmRegistry', () => {
     await vi.waitFor(() => expect(clearSpy).toHaveBeenCalledTimes(1));
   });
 
-  it('routes the pause-tick alarm to refresh the badge countdown', async () => {
-    const setBadge = vi.fn(async () => undefined);
+  it('routes the pause-tick alarm to the pause module refresh', async () => {
+    const refreshSpy = vi.fn(async () => undefined);
     vi.doMock('../recordingPause.js', () => ({
-      createChromePauseStorage: () => ({ getPausedUntil: async () => Date.now() + 1_800_000 }),
-      isPaused: (until: number | null, now: number) => until !== null && now < until,
-      PAUSE_TICK_NAME: 'yasumaro-recording-pause-tick',
+      refreshPauseTick: refreshSpy,
     }));
-    vi.doMock('../badgePolicy.js', () => ({ setBadge }));
     const { createAlarmRegistry } = await import('../alarmRegistry.js');
     const registry = createAlarmRegistry(makeDeps());
     registry.handleAlarm(alarm('yasumaro-recording-pause-tick'));
-    await vi.waitFor(() => expect(setBadge).toHaveBeenCalledTimes(1));
-    expect(setBadge).toHaveBeenCalledWith({ kind: 'paused', minutes: 30 });
+    await waitForMock(() => expect(refreshSpy).toHaveBeenCalledTimes(1));
   });
 
-  it('pause-tick stands down (badge + alarm) once expired', async () => {
-    const globalRef = globalThis as unknown as { chrome?: unknown };
-    const savedChrome = globalRef.chrome;
-    const clear = vi.fn(async () => true);
-    globalRef.chrome = { alarms: { create: vi.fn(), clear } };
-    const setBadge = vi.fn(async () => undefined);
+  it('logs pause-tick refresh failure uniformly instead of void-firing', async () => {
     vi.doMock('../recordingPause.js', () => ({
-      createChromePauseStorage: () => ({ getPausedUntil: async () => Date.now() - 1_000 }),
-      isPaused: (until: number | null, now: number) => until !== null && now < until,
-      PAUSE_TICK_NAME: 'yasumaro-recording-pause-tick',
+      refreshPauseTick: vi.fn(async () => {
+        throw new Error('tick gone');
+      }),
     }));
-    vi.doMock('../badgePolicy.js', () => ({ setBadge }));
-    try {
-      const { createAlarmRegistry } = await import('../alarmRegistry.js');
-      const registry = createAlarmRegistry(makeDeps());
-      registry.handleAlarm(alarm('yasumaro-recording-pause-tick'));
-      await vi.waitFor(() => expect(setBadge).toHaveBeenCalledWith({ kind: 'clear' }));
-      expect(clear).toHaveBeenCalledWith('yasumaro-recording-pause-tick');
-    } finally {
-      globalRef.chrome = savedChrome;
-    }
+    const { createAlarmRegistry } = await import('../alarmRegistry.js');
+    const registry = createAlarmRegistry(makeDeps());
+    registry.handleAlarm(alarm('yasumaro-recording-pause-tick'));
+    await waitForMock(() =>
+      expect(addLogMock).toHaveBeenCalledWith(
+        'ERROR',
+        expect.stringContaining('yasumaro-recording-pause-tick'),
+        expect.anything(),
+      ),
+    );
   });
 
   describe('review-summary run (pinned: deps-driven)', () => {

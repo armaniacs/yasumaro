@@ -126,6 +126,10 @@ sidebar.addEventListener('keydown', (e) => {
 - `Home/End`: 最初/最後のタブへ
 - `Enter`/`Space`: タブを選択
 
+**ページ記録のショートカット:**
+- `Alt+Shift+Y`: 表示中のページを記録（画面は開かない。`chrome://extensions/shortcuts` で変更可能）
+- アドレスバーで `y` + `Enter`: 表示中のページを記録
+
 #### 4. 色のコントラスト
 
 現在の配色はコード内のカラートークンとスタイルシートの CSS 変数で一元管理されており、テキストの対比比 4.5:1 以上を目標としています：
@@ -301,6 +305,10 @@ sidebar.addEventListener('keydown', (e) => {
 - `Right/Left`: Navigate between tabs
 - `Home/End`: Jump to first/last tab
 - `Enter`/`Space`: Select tab
+
+**Page recording shortcuts:**
+- `Alt+Shift+Y`: Record the current page without opening any screen (changeable at `chrome://extensions/shortcuts`)
+- `y` + `Enter` in the address bar: Record the current page
 
 #### 4. Color Contrast
 

@@ -10,13 +10,20 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../utils/storage/SettingsRepository.js';
-import { DEFAULT_CATEGORIES } from '../utils/tagUtils.js';
+import { DEFAULT_CATEGORIES, foldTagForMatch } from '../utils/tagUtils.js';
 import type { TagNormalizationEntry } from '../utils/types.js';
 import { navigateToHistoryWithTag } from './panels/navigateToHistory.js';
 import { createTagChip } from './tagChip.js';
+import { buildTagNormalizationProposals, type TagNormalizationProposal } from './tagNormalizationProposals.js';
+import { applyTagRename, undoTagRename, TagRenameError } from './tagRenameApplier.js';
+import { wireProposalRow as wireSharedProposalRow } from './proposalRowWiring.js';
+import { queryLogs, updateLog, isServiceError } from './dashboardSqliteService.js';
+import { setElementHtml } from '../utils/htmlFragment.js';
+import { escapeHtml } from '../utils/htmlEscape.js';
 import { logError } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 
 /**
  * Initialize the tag settings panel.
@@ -37,6 +44,10 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
   const addNormEntryBtn = document.getElementById('addNormEntryBtn') as HTMLButtonElement | null;
   const normEntriesList = document.getElementById('normEntriesList') as HTMLElement | null;
   const noNormEntriesMsg = document.getElementById('noNormEntriesMsg') as HTMLElement | null;
+
+  // --- Normalization proposal elements (PBI 2026-10-23-05) ---
+  const refreshNormProposalsBtn = document.getElementById('refreshNormProposalsBtn') as HTMLButtonElement | null;
+  const normProposalsEl = document.getElementById('tagNormProposals') as HTMLElement | null;
 
   // In-memory state
   let userCategories: string[] = [];
@@ -182,8 +193,8 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
     if (!from || !to) return;
 
     // Check for duplicates (case-insensitive, matching normalizeTags behavior)
-    const normalizedFrom = from.trim().normalize('NFKC').toLowerCase();
-    if (normalizationEntries.some(e => e.from.trim().normalize('NFKC').toLowerCase() === normalizedFrom)) {
+    const normalizedFrom = foldTagForMatch(from);
+    if (normalizationEntries.some(e => foldTagForMatch(e.from) === normalizedFrom)) {
       void showAlertDialog({ message: getMessageOr('duplicateNormEntryError', 'このFrom値は既に登録されています')});
       return;
     }
@@ -195,6 +206,86 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
 
     // Focus back on the from input for quick entry
     normFromInput.focus();
+  }
+
+  // ========================================================================
+  // Normalization proposals: show, apply, undo (PBI 2026-10-23-05)
+  // ========================================================================
+
+  // Bounded tag collection for proposals; shares the canonical batch
+  // read cap with the research report (see limits.ts).
+
+  async function collectStoredTags(): Promise<string[]> {
+    const result = await queryLogs({ limit: MAX_BATCH_READ_RECORDS, orderBy: 'created_at', orderDir: 'DESC' });
+    if (isServiceError(result)) return [];
+    const tags = new Set<string>();
+    for (const row of result.data.rows) {
+      const csv = typeof row.tags === 'string' ? row.tags : '';
+      for (const tag of csv.split(',')) {
+        const trimmed = tag.trim();
+        if (trimmed !== '') tags.add(trimmed);
+      }
+    }
+    return [...tags];
+  }
+
+  function wireProposalRow(row: HTMLElement, proposal: TagNormalizationProposal): void {
+    const deps = {
+      queryByTag: async (tag: string) => {
+        const result = await queryLogs({ tagFilter: tag, limit: MAX_BATCH_READ_RECORDS });
+        if (isServiceError(result)) throw new Error(result.error);
+        return result.data.rows
+          .filter((r): r is typeof r & { id: number } => r.id !== undefined)
+          .map((r) => ({ id: r.id, tags: typeof r.tags === 'string' ? r.tags : null }));
+      },
+      updateTags: async (id: number, tags: string) => {
+        const result = await updateLog(id, { tags });
+        if (isServiceError(result)) throw new Error(result.error);
+      },
+    };
+    wireSharedProposalRow(
+      row,
+      {
+        apply: async () => {
+          const { updated } = await applyTagRename(deps, proposal.from, proposal.to);
+          return getMessageOr('normProposalApplied', `${updated} 件のタグを書き換えました。`);
+        },
+        undo: async () => {
+          await undoTagRename(deps, proposal.from, proposal.to);
+          return getMessageOr('normProposalUndone', '取り消しました。');
+        },
+      },
+      {
+        formatApplyError: (error) => {
+          const updated = error instanceof TagRenameError ? error.updated : 0;
+          return `${errorMessage(error)} (${updated} 件適用済み)`;
+        },
+      },
+    );
+  }
+
+  async function renderNormProposals(): Promise<void> {
+    if (!normProposalsEl) return;
+    normProposalsEl.hidden = false;
+    clearElement(normProposalsEl);
+    const storedTags = await collectStoredTags();
+    const proposals = buildTagNormalizationProposals(storedTags, normalizationEntries);
+    if (proposals.length === 0) {
+      setElementHtml(normProposalsEl, `<p class="help-text">${escapeHtml(getMessageOr('normProposalsEmpty', '提案はありません。'))}</p>`);
+      return;
+    }
+    setElementHtml(normProposalsEl, proposals.map((p) => `
+      <div class="norm-proposal-row">
+        <span class="norm-proposal-label">${escapeHtml(p.from)} → ${escapeHtml(p.to)}</span>
+        <button type="button" class="secondary-btn" data-norm-action="apply">${escapeHtml(getMessageOr('normProposalApply', '適用'))}</button>
+        <button type="button" class="secondary-btn" data-norm-action="undo" hidden>${escapeHtml(getMessageOr('normProposalUndo', '取消'))}</button>
+        <div class="norm-proposal-status" role="status" aria-live="polite"></div>
+      </div>`).join(''));
+    const rows = normProposalsEl.querySelectorAll<HTMLElement>('.norm-proposal-row');
+    proposals.forEach((proposal, index) => {
+      const row = rows[index];
+      if (row) wireProposalRow(row, proposal);
+    });
   }
 
   // ========================================================================
@@ -296,4 +387,13 @@ export async function initTagsPanel(repo: SettingsReader = settingsRepository): 
 
   // Main save button
   saveTagsBtn?.addEventListener('click', () => saveTagSettings());
+
+  // Normalization proposals (PBI 2026-10-23-05): lazy load on demand so the
+  // panel opens without a sqlite round-trip; dict edits refresh when shown.
+  refreshNormProposalsBtn?.addEventListener('click', () => {
+    refreshNormProposalsBtn.disabled = true;
+    void renderNormProposals().finally(() => {
+      refreshNormProposalsBtn.disabled = false;
+    });
+  });
 }

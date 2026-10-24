@@ -7,11 +7,10 @@
  *   - the offscreen handler is reachable, is a purge, and fails closed on a
  *     garbage window exactly like its two siblings;
  *   - each StorageBackend implementation answers it, or refuses with a reason
- *     (the JSON fallback keeps no audit_log at all).
+ *     (the fallback keeps the minimal ledger form, PBI 2026-10-23-01).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SqliteMessage } from '../../messaging/sqliteMessages.js';
-import { AUDIT_LOG_UNSUPPORTED_ERROR } from '../StorageBackend.js';
 
 const auditLogRepoMock = vi.hoisted(() => ({
   insertAuditLog: vi.fn().mockResolvedValue({ success: true, id: 1 }),
@@ -92,13 +91,25 @@ describe('StorageBackend implementations answer the audit purge', () => {
     expect(res).not.toHaveProperty('purged');
   });
 
-  it('the JSON fallback refuses with the audit-unsupported reason, not a fake 0', async () => {
+  it('the JSON fallback sweeps the audit ledger instead of refusing (PBI 2026-10-23-01)', async () => {
     const backend = new FallbackStorageAdapter(new FallbackStorage());
 
-    await expect(backend.purgeAuditLog(7)).resolves.toEqual({
-      success: false,
-      error: AUDIT_LOG_UNSUPPORTED_ERROR,
-    });
+    // The sweep needs storage-backed rows; the minimal form lives under its
+    // own key, so the sweep works on the fallback backend too.
+    const insert = await backend.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: Date.now() - 30 * 24 * 60 * 60 * 1000, char_count: 10, policy: 'allowed' });
+    expect(insert.success).toBe(true);
+    await backend.insertAuditLog({ provider: 'openai', url: 'https://y.com', created_at: Date.now(), char_count: 20, policy: 'allowed' });
+
+    await expect(backend.purgeAuditLog(7)).resolves.toEqual({ success: true, purged: 1 });
+
+    const read = await backend.queryAuditLog({});
+    expect(read.success).toBe(true);
+    if (read.success) {
+      expect(read.total).toBe(1);
+      expect(read.rows[0]?.provider).toBe('openai');
+      expect(read.rows[0]?.char_count).toBe(20);
+      expect(read.rows[0]?.policy).toBe('allowed');
+    }
   });
 
   it('the no-op backend reports uninitialized', async () => {

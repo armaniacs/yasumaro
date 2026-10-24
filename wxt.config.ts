@@ -240,6 +240,18 @@ export default defineConfig({
       'contextMenus',
       'downloads',
     ],
+    // PBI 2026-10-23-07: permission-free record-without-opening entry points.
+    // `omnibox` and `commands` are manifest keys, not permissions — the side
+    // panel (chrome.sidePanel needs the sidePanel permission) stays staged
+    // out. Enter in the omnibox records the active tab; the keyboard command
+    // records it without opening any surface.
+    omnibox: { keyword: 'y' },
+    commands: {
+      'record-current-page': {
+        suggested_key: { default: 'Alt+Shift+Y' },
+        description: '__MSG_commandRecordPage__',
+      },
+    },
     // <all_urls> は optional_host_permissions に含めない（最小権限）。
     // ホスト単位の追加許可は実行時に chrome.permissions.request({ origins }) で
     // 対象オリジンのみを都度要求する。

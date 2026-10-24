@@ -37,7 +37,8 @@ vi.mock('../../../../utils/logger/api.js', async () =>
 );
 
 import { truncateContentStep } from '../truncateContentStep.js';
-import { MAX_RECORD_SIZE } from '../../types.js';
+import { MAX_RECORD_SIZE } from '../../../../utils/limits.js';
+import { truncateForRecording } from '../../../recordingValidator.js';
 import type { RecordingContext } from '../../types.js';
 
 function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContext {
@@ -197,6 +198,96 @@ describe('truncateContentStep', () => {
 
       const encoder = new TextEncoder();
       expect(encoder.encode(result.truncatedContent!).length).toBeLessThanOrEqual(MAX_RECORD_SIZE);
+    });
+  });
+
+  describe('boundary table (single owner)', () => {
+    const encoder = new TextEncoder();
+    const strictDecoder = new TextDecoder('utf-8', { fatal: true });
+
+    it.each([
+      {
+        name: 'empty content stays empty',
+        content: '',
+        maxSize: 10,
+        expected: '',
+        truncated: false,
+        originalBytes: 0,
+      },
+      {
+        name: 'ascii exactly at limit passes through',
+        content: 'a'.repeat(8),
+        maxSize: 8,
+        expected: 'a'.repeat(8),
+        truncated: false,
+        originalBytes: 8,
+      },
+      {
+        name: 'ascii one byte over limit cuts one byte',
+        content: 'a'.repeat(9),
+        maxSize: 8,
+        expected: 'a'.repeat(8),
+        truncated: true,
+        originalBytes: 9,
+      },
+      {
+        name: 'multibyte cut mid-character replaces partial sequence',
+        content: 'あ'.repeat(5),
+        maxSize: 10,
+        expected: `${'あ'.repeat(3)}�`,
+        truncated: true,
+        originalBytes: 15,
+      },
+      {
+        name: 'emoji cut mid-character replaces partial sequence',
+        content: '😀'.repeat(3),
+        maxSize: 10,
+        expected: `${'😀'.repeat(2)}�`,
+        truncated: true,
+        originalBytes: 12,
+      },
+      {
+        name: 'mixed ascii and multibyte cuts at byte boundary',
+        content: 'abc日本語def'.repeat(2),
+        maxSize: 10,
+        expected: 'abc日本�',
+        truncated: true,
+        originalBytes: 30,
+      },
+    ])('$name', ({ content, maxSize, expected, truncated, originalBytes }) => {
+      const result = truncateForRecording(content, maxSize);
+
+      expect(result.content).toBe(expected);
+      expect(result.truncated).toBe(truncated);
+      expect(result.originalBytes).toBe(originalBytes);
+      // Re-encoded output is always valid UTF-8 (no mojibake).
+      expect(() => strictDecoder.decode(encoder.encode(result.content))).not.toThrow();
+    });
+
+    it('pipeline passes content exactly at MAX_RECORD_SIZE through unchanged', async () => {
+      const content = 'a'.repeat(MAX_RECORD_SIZE);
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://example.com', content },
+      });
+
+      const result = await truncateContentStep(context);
+
+      expect(result.truncatedContent).toBe(content);
+      expect(result.data.content).toBe(content);
+    });
+
+    it('pipeline truncates multibyte content over MAX_RECORD_SIZE without mojibake', async () => {
+      const content = 'あ'.repeat(Math.ceil(MAX_RECORD_SIZE / 3) + 100);
+      const context = makeContext({
+        data: { title: 'Test', url: 'https://example.com', content },
+      });
+
+      const result = await truncateContentStep(context);
+
+      const bytes = encoder.encode(result.truncatedContent!);
+      expect(bytes.length).toBeLessThanOrEqual(MAX_RECORD_SIZE + 3);
+      expect(() => strictDecoder.decode(bytes)).not.toThrow();
+      expect(result.data.content).toBe(result.truncatedContent);
     });
   });
 });

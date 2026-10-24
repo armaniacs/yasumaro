@@ -71,6 +71,39 @@ export type RegenerateSummaryMessage = {
     };
 };
 
+/**
+ * PBI 2026-10-23-08: 履歴に聞く — ask the local history a question and get an
+ * answer with citations. The handler forces mode 'local_only', so the typed
+ * text never leaves the device; `collectionId` names the saved collection the
+ * question targets (M2). Present but optional so the empty shape stays
+ * representable.
+ */
+export type AskHistoryMessage = {
+    type: 'ASK_HISTORY';
+    payload: {
+        question: string;
+        collectionId?: string | null;
+    };
+};
+
+/**
+ * PBI 2026-10-23-09: 調査レポート一発生成 — the panel conditions pick the
+ * selection rows and the background assembles the four-section Markdown.
+ * The scope is the same condition shape as the saved collections (PBI 06).
+ */
+export type ExportResearchReportMessage = {
+    type: 'EXPORT_RESEARCH_REPORT';
+    payload: {
+        scope?: {
+            search?: string;
+            tag?: string;
+            since?: number;
+            until?: number;
+        };
+        sendToObsidian?: boolean;
+    };
+};
+
 export type FetchUrlMessage = {
     type: 'FETCH_URL';
     payload: { url: string };
@@ -276,6 +309,8 @@ export type ExtensionMessage = (
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage
     | RegenerateSummaryMessage
+    | AskHistoryMessage
+    | ExportResearchReportMessage
     | DashboardSqliteMessage
     | LogForwardMessage
 ) & { protocolVersion: number };

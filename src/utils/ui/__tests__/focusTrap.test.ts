@@ -317,8 +317,24 @@ describe('focusTrap', () => {
             expect(getFocusableElements(modal).map((el) => el.id)).toEqual(['enabled1']);
         });
 
-        test('keeps focus inside the modal after the last element becomes disabled', () => {
+        test('excludes a display:none subtree from the focusable set', () => {
+            // jsdom 30.1.2+ (like real browsers) ignores focus() on elements
+            // inside display:none, so a wrap target there leaves focus stuck
+            // on `last` instead of cycling.
             document.body.innerHTML = `
+                <div id="modal">
+                    <div id="nav" style="display: none">
+                        <button id="hiddenNav">Nav</button>
+                    </div>
+                    <button id="visible1">Visible</button>
+                </div>
+            `;
+            const modal = document.getElementById('modal') as HTMLElement;
+
+            expect(getFocusableElements(modal).map((el) => el.id)).toEqual(['visible1']);
+        });
+
+        test('keeps focus inside the modal after the last element becomes disabled', () => {            document.body.innerHTML = `
                 <div id="modal">
                     <button id="first">First</button>
                     <button id="last">Last</button>

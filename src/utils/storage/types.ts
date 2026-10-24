@@ -11,6 +11,7 @@ import type { UblockRules, Source, CustomPrompt, MarkdownExportTemplate, TagCate
 import type { AiSummaryRemovedStats } from '../commonTypes.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
 import type { NavTrailConsent } from './navTrailConsent.js';
+import type { SavedCollection } from './savedCollections.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -36,6 +37,12 @@ export const StorageKeys = {
     GEMINI_API_VERSION: 'gemini_api_version', // Gemini API バージョン（デフォルト: v1beta）
     MIN_VISIT_DURATION: 'min_visit_duration',
     MIN_SCROLL_DEPTH: 'min_scroll_depth',
+    /** PBI 2026-10-23-02: per-media-kind threshold overrides. */
+    MEDIA_THRESHOLDS: 'media_thresholds',
+    /** PBI 2026-10-23-06: named saved collections (search conditions + tag rules). */
+    SAVED_COLLECTIONS: 'saved_collections',
+    /** PBI 2026-10-22-02: first-launch onboarding banner dismissed once by the user. */
+    ONBOARDING_DISMISSED: 'onboarding_dismissed',
     GEMINI_MODEL: 'gemini_model',
     OBSIDIAN_DAILY_PATH: 'obsidian_daily_path',
     HISTORY_SORT_PREFERENCE: 'history_sort_preference', // 履歴パネルのソート設定 { sortBy, sortDir } をJSON文字列で保存
@@ -151,6 +158,8 @@ export const StorageKeys = {
     // Conditional CSP Settings (P1)
     CONDITIONAL_CSP_ENABLED: 'conditional_csp_enabled', // 条件付きCSP有効フラグ（デフォルト: true）
     CONDITIONAL_CSP_PROVIDERS: 'conditional_csp_providers', // 追加するAIプロバイダーIDリスト（デフォルト: []）
+    // Egress ledger domain policy (PBI 2026-10-23-01)
+    AI_DOMAIN_POLICY: 'ai_domain_policy', // ドメイン別送信政策: { [domain: string]: 'allowed' | 'no-summary' | 'mask-required' }（デフォルト: {}）
     // AI Limits Settings
     MAX_TOKENS_PER_PROMPT: 'max_tokens_per_prompt', // 最大トークン数（デフォルト: 1000、範囲: 10〜16000）
     AI_TIMEOUT_MS: 'ai_timeout_ms', // AIリクエストタイムアウト（デフォルト: 自動、ローカル=120000ms、クラウド=30000ms）
@@ -317,6 +326,23 @@ export function isPrivacyMode(value: unknown): value is PrivacyMode {
     return typeof value === 'string' && (PRIVACY_MODES as readonly string[]).includes(value);
 }
 
+/**
+ * Per-domain egress policy (PBI 2026-10-23-01). The resolved policy decides
+ * what happens to the content of a page on this domain before any external
+ * send: allowed (send as configured), no-summary (record the visit without a
+ * summary, no AI at all), mask-required (force PII masking before the send).
+ * Persisted value is untrusted, so every reader goes through
+ * `normalizeAiDomainPolicy()` / `normalizeAiDomainPolicyMap()`.
+ */
+export const AI_DOMAIN_POLICIES = ['allowed', 'no-summary', 'mask-required'] as const;
+
+export type AiDomainPolicy = (typeof AI_DOMAIN_POLICIES)[number];
+
+/** Type guard for a persisted/imported per-domain policy value. */
+export function isAiDomainPolicy(value: unknown): value is AiDomainPolicy {
+    return typeof value === 'string' && (AI_DOMAIN_POLICIES as readonly string[]).includes(value);
+}
+
 // 各 StorageKey に対応する値型
 export interface StorageKeyValues {
     [StorageKeys.OBSIDIAN_API_KEY]: string | EncryptedData;
@@ -328,6 +354,17 @@ export interface StorageKeyValues {
     [StorageKeys.GEMINI_API_VERSION]: string;
     [StorageKeys.MIN_VISIT_DURATION]: number;
     [StorageKeys.MIN_SCROLL_DEPTH]: number;
+    /** PBI 2026-10-23-02: per-media-kind threshold overrides (empty = defaults). */
+    [StorageKeys.MEDIA_THRESHOLDS]: Record<string, Record<string, number>>;
+    /**
+     * PBI 2026-10-23-06: named saved collections (empty = none). Type-only
+     * import: the edge is erased at compile time, so savedCollections.ts
+     * (which imports nothing) cannot form a runtime cycle — same pattern as
+     * NavTrailConsent above.
+     */
+    [StorageKeys.SAVED_COLLECTIONS]: Record<string, SavedCollection>;
+    /** PBI 2026-10-22-02: the first-launch onboarding banner was dismissed once. */
+    [StorageKeys.ONBOARDING_DISMISSED]: boolean;
     [StorageKeys.GEMINI_MODEL]: string;
     [StorageKeys.OBSIDIAN_DAILY_PATH]: string;
     [StorageKeys.HISTORY_SORT_PREFERENCE]: string;
@@ -530,6 +567,7 @@ export interface StorageKeyValues {
     [StorageKeys.ALLOW_ALL_URLS_OPT_IN]: boolean;
     [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: CleansingFeedbackEntry[];
     [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: boolean;
+    [StorageKeys.AI_DOMAIN_POLICY]: Record<string, AiDomainPolicy>;
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）

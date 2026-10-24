@@ -1973,6 +1973,197 @@
   "domainSaveBtn": {
     "message": "Save"
   },
+  "aiDomainPolicyTitle": {
+    "message": "AI Egress Policy (per domain)"
+  },
+  "aiDomainPolicyDesc": {
+    "message": "Choose how each site's content is handled when it would be sent to an external AI: send as-is, record without a summary, or always mask PII first."
+  },
+  "aiDomainPolicyInputPlaceholder": {
+    "message": "Domain (e.g. example.com)"
+  },
+  "aiDomainPolicySelect": {
+    "message": "Policy selection"
+  },
+  "aiDomainPolicyList": {
+    "message": "Configured policies"
+  },
+  "aiDomainPolicyAdd": {
+    "message": "Add"
+  },
+  "aiDomainPolicyRemove": {
+    "message": "Remove"
+  },
+  "aiDomainPolicyRemoveAria": {
+    "message": "Remove policy for $DOMAIN$",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "aiDomainPolicyEmpty": {
+    "message": "No per-domain policies set."
+  },
+  "aiDomainPolicyInvalidDomain": {
+    "message": "Enter a valid domain, e.g. example.com"
+  },
+  "aiDomainPolicySaved": {
+    "message": "Saved"
+  },
+  "mediaThresholdsLabel": {
+    "message": "Per-media thresholds"
+  },
+  "mediaThresholdsHelp": {
+    "message": "Videos gate on watched seconds, PDFs on pages read, code on copy events. Empty fields keep the defaults."
+  },
+  "mediaKindVideo": {
+    "message": "Video"
+  },
+  "mediaKindPdf": {
+    "message": "PDF"
+  },
+  "mediaKindCode": {
+    "message": "Code"
+  },
+  "mediaThresholdVideoAria": {
+    "message": "Video threshold (seconds watched)"
+  },
+  "mediaThresholdPdfAria": {
+    "message": "PDF threshold (pages read)"
+  },
+  "mediaThresholdCodeAria": {
+    "message": "Code threshold (copy events)"
+  },
+  "mediaThresholdSecondsUnit": {
+    "message": "seconds watched"
+  },
+  "mediaThresholdPagesUnit": {
+    "message": "pages read"
+  },
+  "mediaThresholdCopiesUnit": {
+    "message": "copy events"
+  },
+  "savedCollectionsLabel": {
+    "message": "Saved collections"
+  },
+  "askHistoryLabel": {
+    "message": "Ask history"
+  },
+  "askHistoryHelp": {
+    "message": "Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records."
+  },
+  "askHistoryTargetLabel": {
+    "message": "Target collection"
+  },
+  "askHistoryTargetAll": {
+    "message": "All records"
+  },
+  "askHistoryQuestionPlaceholder": {
+    "message": "Type a question"
+  },
+  "askHistoryAskBtn": {
+    "message": "Ask"
+  },
+  "askHistoryBusy": {
+    "message": "Searching records..."
+  },
+  "askHistoryFailed": {
+    "message": "Could not generate an answer. Please try again later."
+  },
+  "askHistoryNoEvidence": {
+    "message": "I don't know. No matching records."
+  },
+  "researchReportLabel": {
+    "message": "One-shot research report"
+  },
+  "researchReportHelp": {
+    "message": "Generate a Markdown report from the current conditions (term, tag, selected day) with four sections: digest, timeline, citations and unread holes."
+  },
+  "researchReportObsidianOption": {
+    "message": "Also send to Obsidian"
+  },
+  "researchReportGenerateBtn": {
+    "message": "Generate report"
+  },
+  "researchReportBusy": {
+    "message": "Generating report..."
+  },
+  "researchReportFailed": {
+    "message": "Could not generate a report. Please try again later."
+  },
+  "researchReportDone": {
+    "message": "Report generated ({0} records)."
+  },
+  "savedCollectionsHelp": {
+    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
+  },
+  "savedCollectionsEmpty": {
+    "message": "No saved collections yet"
+  },
+  "savedCollectionSaveBtn": {
+    "message": "Save this condition"
+  },
+  "savedCollectionApplyBtn": {
+    "message": "Recall"
+  },
+  "savedCollectionDeleteBtn": {
+    "message": "Delete"
+  },
+  "savedCollectionNamePlaceholder": {
+    "message": "Collection name"
+  },
+  "savedCollectionCondSearch": {
+    "message": "Term"
+  },
+  "savedCollectionCondTag": {
+    "message": "Tag"
+  },
+  "savedCollectionCondDate": {
+    "message": "Period"
+  },
+  "savedCollectionNoCondition": {
+    "message": "No condition to save. Specify a term, tag, or period first."
+  },
+  "savedCollectionDeleteConfirm": {
+    "message": "Delete \"$1\"?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research A"
+      }
+    }
+  },
+  "savedCollectionSaveError": {
+    "message": "Failed to save"
+  },
+  "commandRecordPage": {
+    "message": "Record the current page"
+  },
+  "omniboxRecordDefault": {
+    "message": "Record this page"
+  },
+  "recordSuccessTitle": {
+    "message": "Recorded"
+  },
+  "recordSuccessBody": {
+    "message": "Recorded \"$1\"",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "Page title"
+      }
+    }
+  },
+  "aiDomainPolicy_allowed": {
+    "message": "Send allowed"
+  },
+  "aiDomainPolicy_no_summary": {
+    "message": "Record without summary"
+  },
+  "aiDomainPolicy_mask_required": {
+    "message": "Mask required"
+  },
   "ublockDetailsTitle": {
     "message": "uBlock Origin Filter (Advanced)"
   },
@@ -1981,6 +2172,30 @@
   },
   "initialSetupDescription": {
     "message": "Configure your Obsidian connection and AI settings."
+  },
+  "onboarding_intro": {
+    "message": "Recording and search work without any setup. Pick how you want to start."
+  },
+  "onboarding_dismissBtn": {
+    "message": "Set up later"
+  },
+  "onboarding_tryFirstTitle": {
+    "message": "Try it first"
+  },
+  "onboarding_tryFirstDesc": {
+    "message": "Record and search without any setup"
+  },
+  "onboarding_obsidianTitle": {
+    "message": "Obsidian"
+  },
+  "onboarding_obsidianDesc": {
+    "message": "Add Obsidian as a save destination"
+  },
+  "onboarding_aiTitle": {
+    "message": "AI summaries"
+  },
+  "onboarding_aiDesc": {
+    "message": "Enable summary generation"
   },
   "obsidianSection": {
     "message": "Obsidian Connection"
@@ -2356,6 +2571,33 @@
   "domainAnalysis_title": {
     "message": "Domain Analysis",
     "description": "Domain analysis panel title"
+  },
+  "domainIntel_heading": {
+    "message": "Source bias"
+  },
+  "domainIntel_biasLine": {
+    "message": "{domain} accounts for about {percent}% of all {total} records — the sources may be lopsided. Period: {period}"
+  },
+  "domainIntel_notEnough": {
+    "message": "Only {count} records — too few to judge a bias."
+  },
+  "domainIntel_proposalHelp": {
+    "message": "Candidates for noisy sources. Applying excludes them from recording; you can undo."
+  },
+  "domainIntel_proposalMeta": {
+    "message": "{count} records ({percent}% share)"
+  },
+  "domainIntel_applyBtn": {
+    "message": "Exclude from recording"
+  },
+  "domainIntel_undoBtn": {
+    "message": "Undo"
+  },
+  "domainIntel_applied": {
+    "message": "{domain} is now excluded from recording."
+  },
+  "domainIntel_undone": {
+    "message": "Undid the exclusion of {domain}."
   },
   "domainAnalysis_tagLabel": {
     "message": "Tag (optional)",
@@ -4022,6 +4264,62 @@
       }
     }
   },
+  "historyStarSelected": {
+    "message": "Star selected"
+  },
+  "historyStarConfirm": {
+    "message": "Star the $1 selected rows? ($2 private-judged)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "private": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarApply": {
+    "message": "Apply"
+  },
+  "historyStarApplyExcludePrivate": {
+    "message": "Apply excluding private-judged"
+  },
+  "historyStarResult": {
+    "message": "Starred $1 rows",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyStarResultExcluded": {
+    "message": "Starred $1 rows (excluded $2 private-judged)",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "excluded": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarUndoBtn": {
+    "message": "Undo"
+  },
+  "historyStarUndoDone": {
+    "message": "Undid star for $1 rows",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyRegenerateSelectedResult": {
     "message": "$1 succeeded, $2 failed",
     "placeholders": {
@@ -4350,6 +4648,30 @@
   },
   "noNormEntries": {
     "message": "No rules configured"
+  },
+  "normProposalsTitle": {
+    "message": "Normalization Proposals"
+  },
+  "normProposalsDesc": {
+    "message": "Shows the stored tags that would change under the rules above. Applying rewrites records; you can undo."
+  },
+  "normProposalsRefresh": {
+    "message": "Show proposals"
+  },
+  "normProposalsEmpty": {
+    "message": "No proposals."
+  },
+  "normProposalApply": {
+    "message": "Apply"
+  },
+  "normProposalUndo": {
+    "message": "Undo"
+  },
+  "normProposalApplied": {
+    "message": "Tags rewritten."
+  },
+  "normProposalUndone": {
+    "message": "Undone."
   },
   "normEntriesTitle": {
     "message": "Normalization Rules"

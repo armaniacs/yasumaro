@@ -132,6 +132,18 @@ export function parseTagsFromSummary(summary: string): { tags: string[]; summary
 }
 
 /**
+ * Fold a tag into its match key: trim, NFKC normalize, then lowercase.
+ * Single Source of Truth for tag comparison; normalizeTags, proposals,
+ * and the panel duplicate check all share this fold.
+ *
+ * @param {string} tag - Raw tag text
+ * @returns {string} Folded key for comparison
+ */
+export function foldTagForMatch(tag: string): string {
+    return tag.trim().normalize('NFKC').toLowerCase();
+}
+
+/**
  * タグ正規化辞書を適用してタグを正規化する
  * 前処理: trim → NFKC正規化（全角半角・大文字小文字統一）→ 辞書マッチ（最初に一致したエントリを適用）
  *
@@ -150,7 +162,7 @@ export function normalizeTags(tags: string[], dict: TagNormalizationEntry[]): st
     // 辞書を事前に正規化して Map に変換（from キーを正規化済み + 小文字化しておく）
     const normalizationMap = new Map<string, string>();
     for (const entry of dict) {
-        const normalizedKey = entry.from.trim().normalize('NFKC').toLowerCase();
+        const normalizedKey = foldTagForMatch(entry.from);
         // 最初に追加されたエントリを優先（重複エントリ対策）
         if (!normalizationMap.has(normalizedKey)) {
             normalizationMap.set(normalizedKey, entry.to);
@@ -160,10 +172,10 @@ export function normalizeTags(tags: string[], dict: TagNormalizationEntry[]): st
     const result: string[] = [];
     const seen = new Set<string>();
     for (const tag of tags) {
-        const normalized = tag.trim().normalize('NFKC').toLowerCase();
+        const normalized = foldTagForMatch(tag);
         const replacement = normalizationMap.get(normalized) ?? tag;
         // Deduplicate using NFKC+lowercase key to catch case-only duplicates
-        const dedupKey = replacement.trim().normalize('NFKC').toLowerCase();
+        const dedupKey = foldTagForMatch(replacement);
         if (!seen.has(dedupKey)) {
             seen.add(dedupKey);
             result.push(replacement);

@@ -117,6 +117,8 @@ vi.mock('../notificationHelper.ts', () => ({
   NotificationHelper: {
     notifySuccess: vi.fn(),
     notifyError: vi.fn(),
+    getIconUrl: vi.fn().mockReturnValue('mock-icon-url'),
+    show: vi.fn(),
   },
 }));
 

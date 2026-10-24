@@ -37,6 +37,7 @@ import type {
   BackendOrError,
   StorageBackend,
 } from './StorageBackend.js';
+import { hasArchiveCapability } from './StorageBackend.js';
 
 /** The 14 archive operations, implemented only by the OPFS worker backend. */
 export interface ArchiveStaging {
@@ -57,10 +58,12 @@ export interface ArchiveStaging {
 }
 
 /**
- * Narrow a StorageBackend to ArchiveStaging. Probes a single method —
- * all 14 travel together (OpfsWorkerBackend implements the whole interface;
- * other adapters implement none).
+ * Narrow a StorageBackend to ArchiveStaging. Delegates to the single archive
+ * rule in StorageBackend (`hasArchiveCapability`): all 14 travel together
+ * (OpfsWorkerBackend implements the whole interface; other adapters
+ * implement none). The backup shape query reads the same rule, so the
+ * OPFS-exclusive invariant has exactly one owner (PBI 2026-10-24-06).
  */
 export function supportsArchive(backend: StorageBackend): backend is StorageBackend & ArchiveStaging {
-  return typeof (backend as Partial<ArchiveStaging>).archiveStatus === 'function';
+  return hasArchiveCapability(backend);
 }

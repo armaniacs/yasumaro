@@ -81,9 +81,13 @@ vi.mock('../../utils/ui/confirmDialog.js', () => ({
   showAlertDialog: mockShowAlertDialog,
 }));
 
-vi.mock('../../utils/tagUtils.js', () => ({
-  DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
-}));
+vi.mock('../../utils/tagUtils.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
+  };
+});
 
 import { initTagsPanel } from '../tagsPanel.js';
 import { setRegistry } from '../panels/registryContext.js';

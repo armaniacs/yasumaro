@@ -9,6 +9,7 @@ import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { withBusyButton } from './busyButton.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { renderPendingReason } from '../../../utils/pendingStorage.js';
@@ -22,6 +23,11 @@ import {
 // Page size — SSOT via the model so the query limit and the pagination
 // control share one definition (PBI 04).
 import { SQLITE_HISTORY_PAGE_SIZE } from './sqliteHistoryModel.js';
+// Region placeholder ids — owned by the region modules (PBI 2026-10-24-07);
+// the view imports them for the shell and re-exports them below.
+import { SAVED_COLLECTIONS_REGION_ID } from './savedCollectionsPanelView.js';
+import { ASK_HISTORY_REGION_ID } from './askHistoryPanelView.js';
+import { RESEARCH_REPORT_REGION_ID } from './researchReportPanelView.js';
 
 /**
  * Adapter (PBI 2026-09-23-01): the bar definition lives behind
@@ -290,7 +296,18 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       <span id="${SQLITE_HISTORY_IDS.selectionCount}" class="sqlite-selection-count" aria-live="polite">${t('historySelectionCount', [String(state.selectedIds.size)])}</span>
       <button type="button" id="${SQLITE_HISTORY_IDS.appendObsidian}" class="btn-primary" data-i18n="historyAppendToObsidian">${t('historyAppendToObsidian')}</button>
       <button type="button" id="${SQLITE_HISTORY_IDS.regenerateSelected}" class="btn-primary" data-i18n="historyRegenerateSelected">${t('historyRegenerateSelected')}</button>
+      <button type="button" id="${SQLITE_HISTORY_IDS.starSelected}" class="secondary-btn" data-i18n="historyStarSelected">${t('historyStarSelected')}</button>
       <button type="button" id="${SQLITE_HISTORY_IDS.deleteSelected}" class="danger-btn" data-i18n="historyDeleteSelected">${t('historyDeleteSelected')}</button>
+      <span id="${SQLITE_HISTORY_IDS.starConfirm}" class="sqlite-star-confirm hidden" role="group" aria-live="polite">
+        <span class="sqlite-star-confirm-text"></span>
+        <button type="button" id="${SQLITE_HISTORY_IDS.starConfirmAll}" class="btn-primary">${t('historyStarApply')}</button>
+        <button type="button" id="${SQLITE_HISTORY_IDS.starConfirmExclude}" class="secondary-btn hidden">${t('historyStarApplyExcludePrivate')}</button>
+        <button type="button" id="${SQLITE_HISTORY_IDS.starConfirmCancel}" class="secondary-btn">${t('cancel')}</button>
+      </span>
+      <span id="${SQLITE_HISTORY_IDS.starUndo}" class="sqlite-star-undo hidden" role="group" aria-live="polite">
+        <span class="sqlite-star-undo-text"></span>
+        <button type="button" id="${SQLITE_HISTORY_IDS.starUndoBtn}" class="secondary-btn">${t('historyStarUndoBtn')}</button>
+      </span>
       <span id="${SQLITE_HISTORY_IDS.deleteConfirm}" class="sqlite-delete-confirm hidden" role="group" aria-live="polite">
         <span class="sqlite-delete-confirm-text">${t('historyDeleteSelectedConfirm', [String(state.selectedIds.size)])}</span>
         <button type="button" id="${SQLITE_HISTORY_IDS.deleteConfirmYes}" class="danger-btn" data-i18n="historyDeleteConfirmYes">${t('historyDeleteConfirmYes')}</button>
@@ -298,6 +315,9 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
+    <div id="${SQLITE_HISTORY_IDS.savedCollections}" class="sqlite-saved-collections"></div>
+    <div id="${SQLITE_HISTORY_IDS.askHistory}" class="sqlite-ask-history"></div>
+    <div id="${SQLITE_HISTORY_IDS.researchReport}" class="sqlite-research-report"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -316,8 +336,11 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
 // the model owns the query defaults and this view imports the same constant.
 
 /**
- * Sole owner of every DOM id the SQLite history view creates.
- * Panel, CSS 以外の TS, テストは文字列直書きせずこの定数を経由する。
+ * Every DOM id the SQLite history view creates, except the three region
+ * placeholders (savedCollections, askHistory, researchReport) whose strings
+ * are owned by their region modules and only referenced here so the shell can
+ * render them. Panel, CSS and tests keep using this map; region code uses its
+ * own constant directly.
  */
 export const SQLITE_HISTORY_IDS = {
   searchInput: 'sqlite-search-input',
@@ -327,6 +350,18 @@ export const SQLITE_HISTORY_IDS = {
   calendarDays: 'sqlite-calendar-days',
   clearAllFilters: 'sqlite-clear-all-filters',
   pendingRegion: 'sqlite-pending-region',
+  // Saved-collections region placeholder (PBI 2026-10-23-06); string owned by
+  // savedCollectionsPanelView (SAVED_COLLECTIONS_REGION_ID), filled by
+  // renderSavedCollectionsRegion.
+  savedCollections: SAVED_COLLECTIONS_REGION_ID,
+  // Ask-history region (PBI 2026-10-23-08): string owned by
+  // askHistoryPanelView (ASK_HISTORY_REGION_ID); question + target collection +
+  // answer with citations back to the original records.
+  askHistory: ASK_HISTORY_REGION_ID,
+  // Research-report region (PBI 2026-10-23-09): string owned by
+  // researchReportPanelView (RESEARCH_REPORT_REGION_ID); one-shot report
+  // generation from the panel conditions, delivered to the existing export paths.
+  researchReport: RESEARCH_REPORT_REGION_ID,
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',
@@ -337,6 +372,15 @@ export const SQLITE_HISTORY_IDS = {
   appendObsidian: 'sqlite-append-obsidian',
   regenerateSelected: 'sqlite-regenerate-selected',
   deleteSelected: 'sqlite-delete-selected',
+  // Bulk star (PBI 2026-10-23-07): two-step confirm with a private-judged
+  // exclusion branch, then an inline undo for the applied batch.
+  starSelected: 'sqlite-star-selected',
+  starConfirm: 'sqlite-star-confirm',
+  starConfirmAll: 'sqlite-star-confirm-all',
+  starConfirmExclude: 'sqlite-star-confirm-exclude',
+  starConfirmCancel: 'sqlite-star-confirm-cancel',
+  starUndo: 'sqlite-star-undo',
+  starUndoBtn: 'sqlite-star-undo-btn',
   deleteConfirm: 'sqlite-delete-confirm',
   deleteConfirmYes: 'sqlite-delete-confirm-yes',
   deleteConfirmNo: 'sqlite-delete-confirm-no',
@@ -364,6 +408,11 @@ export interface SqliteHistoryViewCallbacks {
   onDeleteSelected: () => void;
   /** Second step of the bulk delete: the inline "really delete" button in the bulk bar. */
   onDeleteSelectedConfirm: () => void;
+  // PBI 2026-10-23-07: bulk star — confirm step carries the private-judged
+  // exclusion choice; the undo reverts the applied batch.
+  onStarSelected: () => void;
+  onStarSelectedConfirm: (excludePrivate: boolean) => void;
+  onStarUndo: () => void;
   onRegenerateSelected: () => void;
   onTagFilterClear: () => void;
   /** PBI 04: regenerate AI summary for one entry (force = explicit gate bypass). */
@@ -452,30 +501,30 @@ export function renderPendingRegion(
     const row = btn.closest('.pending-entry') as HTMLElement | null;
     btn.addEventListener('click', () => {
       void (async () => {
-        const label = btn.textContent;
-        btn.disabled = true;
-        btn.textContent = t('processing') || '処理中...';
-        // Failure: restore the button and surface the reason in-row.
-        const fail = (message: string): void => {
-          btn.disabled = false;
-          btn.textContent = label;
+        // Success reloads the region wholesale, so the button intentionally
+        // stays busy; failure restores it via the seam before painting in-row.
+        try {
+          await withBusyButton(
+            btn,
+            async () => {
+              if (action === 'delete') {
+                await actions.onDelete(url);
+                return;
+              }
+              const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
+              if (!result.ok) {
+                throw new Error(result.error ?? t('recordError'));
+              }
+            },
+            { restoreOnSuccess: false },
+          );
+        } catch (error) {
           if (!row) return;
           row.querySelector('.record-error-message')?.remove();
           const msg = document.createElement('div');
           msg.className = 'record-error-message';
-          msg.textContent = message;
+          msg.textContent = error instanceof Error ? error.message : t('recordError');
           row.appendChild(msg);
-        };
-        try {
-          if (action === 'delete') {
-            await actions.onDelete(url);
-            return;
-          }
-          const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
-          if (result.ok) return;
-          fail(result.error ?? t('recordError'));
-        } catch (error) {
-          fail(error instanceof Error ? error.message : t('recordError'));
         }
       })();
     });
@@ -544,6 +593,61 @@ export function isDeleteConfirmVisible(container: HTMLElement): boolean {
   return !!confirm && !confirm.classList.contains('hidden');
 }
 
+/**
+ * Inline two-step star confirm (PBI 2026-10-23-07), same bulk-bar placement
+ * as the delete confirm. The private-judged exclusion branch only appears
+ * when the selection actually contains privacy-judged rows — a bulk apply
+ * never hides what it would sweep in.
+ */
+export function showStarConfirm(container: HTMLElement, totalCount: number, privateCount: number): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.starConfirm);
+  if (!confirm) return;
+  const textEl = confirm.querySelector('.sqlite-star-confirm-text');
+  if (textEl) textEl.textContent = t('historyStarConfirm', [String(totalCount), String(privateCount)]);
+  const excludeBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starConfirmExclude);
+  if (excludeBtn) {
+    excludeBtn.classList.toggle('hidden', privateCount === 0);
+    excludeBtn.style.display = privateCount === 0 ? 'none' : '';
+  }
+  hideStarUndo(container);
+  confirm.classList.remove('hidden');
+  confirm.style.display = '';
+  queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starConfirmAll)?.focus();
+}
+
+export function hideStarConfirm(container: HTMLElement): void {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.starConfirm);
+  if (!confirm) return;
+  confirm.classList.add('hidden');
+  confirm.style.display = 'none';
+}
+
+export function isStarConfirmVisible(container: HTMLElement): boolean {
+  const confirm = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.starConfirm);
+  return !!confirm && !confirm.classList.contains('hidden');
+}
+
+/**
+ * Inline undo for the applied star batch (PBI 2026-10-23-07). Panel-owned:
+ * unlike the confirms, the undo survives state changes until the panel
+ * invalidates it (selection change, navigation, or the undo itself).
+ */
+export function showStarUndo(container: HTMLElement, starredCount: number): void {
+  const undo = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.starUndo);
+  if (!undo) return;
+  const textEl = undo.querySelector('.sqlite-star-undo-text');
+  if (textEl) textEl.textContent = t('historyStarResult', [String(starredCount)]);
+  undo.classList.remove('hidden');
+  undo.style.display = '';
+}
+
+export function hideStarUndo(container: HTMLElement): void {
+  const undo = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.starUndo);
+  if (!undo) return;
+  undo.classList.add('hidden');
+  undo.style.display = 'none';
+}
+
 function updateBulkBar(
   container: HTMLElement,
   selectedIds: Set<number>,
@@ -553,9 +657,11 @@ function updateBulkBar(
   const selectAll = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.selectAll);
   const countEl = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.selectionCount);
   const confirmText = container.querySelector('.sqlite-delete-confirm-text');
+  const starConfirmText = container.querySelector('.sqlite-star-confirm-text');
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
   const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
   const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
+  const starBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starSelected);
 
   if (bar) {
     // .hidden uses `!important` (dashboard.css), so an inline display
@@ -567,6 +673,7 @@ function updateBulkBar(
   // A stale confirm must never survive: selection changes or a fresh
   // result-reload re-arms the two-step from the delete button.
   hideDeleteConfirm(container);
+  hideStarConfirm(container);
 
   if (selectAll) {
     selectAll.checked = entries.length > 0 && selectedIds.size === entries.length;
@@ -580,6 +687,15 @@ function updateBulkBar(
     confirmText.textContent = t('historyDeleteSelectedConfirm', [String(selectedIds.size)]);
   }
 
+  if (starConfirmText) {
+    // PBI 2026-10-23-07: the star confirm text carries the private-judged
+    // count of the current selection so the exclusion branch is honest.
+    const privateCount = entries.filter(
+      (entry) => selectedIds.has(entry.id) && (entry.masked_count ?? 0) > 0,
+    ).length;
+    starConfirmText.textContent = t('historyStarConfirm', [String(selectedIds.size), String(privateCount)]);
+  }
+
   const noSelection = selectedIds.size === 0;
   if (appendBtn) {
     appendBtn.disabled = noSelection;
@@ -589,6 +705,9 @@ function updateBulkBar(
   }
   if (deleteBtn) {
     deleteBtn.disabled = noSelection;
+  }
+  if (starBtn) {
+    starBtn.disabled = noSelection;
   }
 }
 
@@ -817,7 +936,7 @@ export function wireCalendarNav(
 export function wirePanelShell(
   container: HTMLElement,
   state: SqliteHistoryState,
-  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend' | 'onDeleteSelected' | 'onDeleteSelectedConfirm' | 'onRegenerateSelected'>,
+  callbacks: Pick<SqliteHistoryViewCallbacks, 'onSearchInput' | 'onSelectAll' | 'onClearSelection' | 'onAppend' | 'onDeleteSelected' | 'onDeleteSelectedConfirm' | 'onStarSelected' | 'onStarSelectedConfirm' | 'onStarUndo' | 'onRegenerateSelected'>,
   options: { focusSearch?: boolean } = {},
 ): void {
   const searchInput = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.searchInput);
@@ -833,6 +952,11 @@ export function wirePanelShell(
   const appendBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.appendObsidian);
   const regenerateBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.regenerateSelected);
   const deleteBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteSelected);
+  const starBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starSelected);
+  const starConfirmAll = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starConfirmAll);
+  const starConfirmExclude = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starConfirmExclude);
+  const starConfirmCancel = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starConfirmCancel);
+  const starUndoBtn = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.starUndoBtn);
   const deleteConfirmYes = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmYes);
   const deleteConfirmNo = queryById<HTMLButtonElement>(container, SQLITE_HISTORY_IDS.deleteConfirmNo);
 
@@ -857,6 +981,21 @@ export function wirePanelShell(
   }
   if (deleteBtn) {
     deleteBtn.addEventListener('click', () => callbacks.onDeleteSelected());
+  }
+  if (starBtn) {
+    starBtn.addEventListener('click', () => callbacks.onStarSelected());
+  }
+  if (starConfirmAll) {
+    starConfirmAll.addEventListener('click', () => callbacks.onStarSelectedConfirm(false));
+  }
+  if (starConfirmExclude) {
+    starConfirmExclude.addEventListener('click', () => callbacks.onStarSelectedConfirm(true));
+  }
+  if (starConfirmCancel) {
+    starConfirmCancel.addEventListener('click', () => hideStarConfirm(container));
+  }
+  if (starUndoBtn) {
+    starUndoBtn.addEventListener('click', () => callbacks.onStarUndo());
   }
   if (deleteConfirmYes) {
     deleteConfirmYes.addEventListener('click', () => callbacks.onDeleteSelectedConfirm());

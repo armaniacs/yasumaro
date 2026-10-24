@@ -7,9 +7,10 @@
  * and the timeout contract (20s / 60s, retries off) scattered with it.
  *
  * This seam owns exactly that order and nothing else:
- * 1. messageTransport.send stamps the protocol version and validates the
- *    envelope (retries default to 0: extra attempts would extend past the
- *    documented timeout contract and stall under fake-timer tests);
+ * 1. The transport send stamps the protocol version and validates the
+ *    envelope (retries default to SEND_POLICY_DEFAULT_RETRIES: extra attempts
+ *    would extend past the documented timeout contract and stall under
+ *    fake-timer tests);
  * 2. withRuntimeTimeout races the send against the caller's budget;
  * 3. try/catch normalizes — success raw via `normalize`, thrown errors
  *    (timeout sentinel included) via `mapError`, which defaults to the
@@ -17,7 +18,8 @@
  */
 
 import { errorMessage } from '../utils/errorUtils.js';
-import { messageTransport } from './messageTransport.js';
+import { messageTransport, type MessageTransport } from './messageTransport.js';
+import { SEND_POLICY_DEFAULT_RETRIES } from './sendRetryDefaults.js';
 import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
 
@@ -40,6 +42,12 @@ export interface SendWithPolicyOptions<R extends { success: boolean }> {
   timeoutMs: number;
   timeoutError: Error;
   retries?: number;
+  /**
+   * Transport carrying the send. Defaults to the shared singleton; the
+   * dashboard hop injects its own swappable transport so its raw send rides
+   * this same seam (PBI 2026-10-24-06) instead of a parallel race.
+   */
+  transport?: MessageTransport;
   normalize: (raw: unknown) => R;
   mapError?: (error: unknown) => R | SendFailure;
 }
@@ -52,10 +60,17 @@ export async function sendWithPolicy<M extends OutgoingMessage, R extends { succ
   msg: M,
   options: SendWithPolicyOptions<R>,
 ): Promise<R | SendFailure> {
-  const { timeoutMs, timeoutError, retries = 0, normalize, mapError = defaultMapError } = options;
+  const {
+    timeoutMs,
+    timeoutError,
+    retries = SEND_POLICY_DEFAULT_RETRIES,
+    transport = messageTransport,
+    normalize,
+    mapError = defaultMapError,
+  } = options;
   try {
     const raw = await withRuntimeTimeout(
-      messageTransport.send(msg, { retries }),
+      transport.send(msg, { retries }),
       timeoutMs,
       timeoutError,
     );

@@ -5,6 +5,8 @@
  * FTS/LIKE 切替 (fts5Available true/false, text length 0/2/3/200) と
  * MAX_QUERY_LIMIT=100000 cap と tag 切り詰めを engine.getBackend mock で検証。
  * さらに clearAll / serialize / その他 delegations で statements 90% 到達を担保。
+ * PBI 2026-10-24-07: folded audit_log + maintenance operations are driven
+ * through this same single-module interface (backend mock extended below).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
@@ -20,6 +22,14 @@ const mockBackend = vi.hoisted(() => ({
   getCount: vi.fn().mockResolvedValue({ success: true, count: 0 }),
   getStatus: vi.fn().mockResolvedValue({ success: true, initialized: true, fallback: false, fts5: true, supportsBinaryBackup: true }),
   clearAll: vi.fn().mockResolvedValue({ success: true }),
+  insertAuditLog: vi.fn().mockResolvedValue({ success: true, id: 1 }),
+  queryAuditLog: vi.fn().mockResolvedValue({ success: true, rows: [], total: 0 }),
+  purgeAuditLog: vi.fn().mockResolvedValue({ success: true, purged: 0 }),
+  purgeOldRecords: vi.fn().mockResolvedValue({ success: true, purged: 0 }),
+  purgeContent: vi.fn().mockResolvedValue({ success: true, purged: 0 }),
+  backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() }),
+  restoreDb: vi.fn().mockResolvedValue({ success: true }),
+  healthCheck: vi.fn().mockResolvedValue({ success: true }),
 }));
 
 const engineMock = vi.hoisted(() => ({
@@ -64,7 +74,7 @@ vi.mock('../../utils/logger/api.js', async () =>
   }),
 );
 
-import { query, insert, insertBatch, update, hardDelete, toggleStar, getCount, getStatus, clearAll, serialize } from '../recordsRepo.js';
+import { query, insert, insertBatch, update, hardDelete, toggleStar, getCount, getStatus, clearAll, serialize, insertAuditLog, queryAuditLog, purgeAuditLog, purgeOldRecords, purgeContent, backupDb, restoreDb, sqliteHealthCheck } from '../recordsRepo.js';
 import { FTS_QUERY_MAX_LENGTH } from '../schema.js';
 
 describe('recordsRepo — coverage 90% (PBI 10)', () => {
@@ -73,6 +83,12 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
     mockBackend.query.mockResolvedValue({ success: true, rows: [], total: 0 });
     mockBackend.getStatus.mockResolvedValue({ success: true, initialized: true, fallback: false, fts5: true, supportsBinaryBackup: true } as never);
     mockBackend.clearAll.mockResolvedValue({ success: true } as never);
+    mockBackend.queryAuditLog.mockResolvedValue({ success: true, rows: [], total: 0 });
+    mockBackend.purgeOldRecords.mockResolvedValue({ success: true, purged: 0 });
+    mockBackend.purgeContent.mockResolvedValue({ success: true, purged: 0 });
+    mockBackend.backupDb.mockResolvedValue({ success: true, data: new Uint8Array() });
+    mockBackend.restoreDb.mockResolvedValue({ success: true });
+    mockBackend.healthCheck.mockResolvedValue({ success: true });
     engineMock.getBackend.mockResolvedValue(mockBackend as never);
     engineMock.tryOpfsProxy.mockResolvedValue(null);
     engineMock.idbEngine = null;
@@ -307,6 +323,72 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       await serialize();
       expect(engineMock.tryOpfsProxy).not.toHaveBeenCalledWith('SERIALIZE');
       expect(engineMock.execWithCache).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── folded audit_log operations (PBI 2026-10-24-07: single store interface)
+  describe('audit log — folded operations through the single store interface', () => {
+    it('delegates insertAuditLog to backend.insertAuditLog', async () => {
+      const record = { provider: 'openai', url: 'https://x.com', created_at: 12345, char_count: null, policy: null };
+      const result = await insertAuditLog(record);
+      expect(mockBackend.insertAuditLog).toHaveBeenCalledWith(record);
+      expect(result).toEqual({ success: true, id: 1 });
+    });
+
+    it('delegates queryAuditLog with the given window', async () => {
+      const result = await queryAuditLog({ limit: 10, offset: 5 });
+      expect(mockBackend.queryAuditLog).toHaveBeenCalledWith({ limit: 10, offset: 5 });
+      expect(result).toEqual({ success: true, rows: [], total: 0 });
+    });
+
+    it('delegates purgeAuditLog with the retention window', async () => {
+      mockBackend.purgeAuditLog.mockResolvedValue({ success: true, purged: 5 } as never);
+      const result = await purgeAuditLog(7);
+      expect(mockBackend.purgeAuditLog).toHaveBeenCalledWith(7);
+      expect(result).toEqual({ success: true, purged: 5 });
+    });
+  });
+
+  // ── folded maintenance operations (PBI 2026-10-24-07: single store interface)
+  describe('maintenance — folded operations through the single store interface', () => {
+    it('delegates purgeOldRecords with explicit args', async () => {
+      mockBackend.purgeOldRecords.mockResolvedValue({ success: true, purged: 3 } as never);
+      const result = await purgeOldRecords(30, 500);
+      expect(mockBackend.purgeOldRecords).toHaveBeenCalledWith(30, 500);
+      expect(result).toEqual({ success: true, purged: 3 });
+    });
+
+    it('purgeOldRecords defaults come from the queryPlanner SSOT', async () => {
+      const { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } = await import('../queryPlanner.js');
+      await purgeOldRecords();
+      expect(mockBackend.purgeOldRecords).toHaveBeenCalledWith(DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS);
+    });
+
+    it('purgeContent narrows null args to undefined', async () => {
+      const result = await purgeContent(null, 1000, false);
+      expect(mockBackend.purgeContent).toHaveBeenCalledWith(undefined, 1000, false);
+      expect(result).toEqual({ success: true, purged: 0 });
+    });
+
+    it('delegates backupDb and returns binary data', async () => {
+      const data = new Uint8Array([1, 2, 3]);
+      mockBackend.backupDb.mockResolvedValue({ success: true, data } as never);
+      const result = await backupDb();
+      expect(mockBackend.backupDb).toHaveBeenCalled();
+      expect(result).toEqual({ success: true, data });
+    });
+
+    it('delegates restoreDb with the payload', async () => {
+      const data = new Uint8Array([9]);
+      const result = await restoreDb(data);
+      expect(mockBackend.restoreDb).toHaveBeenCalledWith(data);
+      expect(result).toEqual({ success: true });
+    });
+
+    it('sqliteHealthCheck maps backend success to boolean', async () => {
+      await expect(sqliteHealthCheck()).resolves.toBe(true);
+      mockBackend.healthCheck.mockResolvedValue({ success: false } as never);
+      await expect(sqliteHealthCheck()).resolves.toBe(false);
     });
   });
 });

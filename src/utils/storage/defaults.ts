@@ -35,6 +35,9 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.OBSIDIAN_ENABLED]: false,
     [StorageKeys.MIN_VISIT_DURATION]: 5,
     [StorageKeys.MIN_SCROLL_DEPTH]: 50,
+    [StorageKeys.MEDIA_THRESHOLDS]: {},
+    [StorageKeys.SAVED_COLLECTIONS]: {},
+    [StorageKeys.ONBOARDING_DISMISSED]: false,
     [StorageKeys.GEMINI_API_KEY]: '',
     [StorageKeys.GEMINI_MODEL]: 'gemini-3.1-flash-lite',
     [StorageKeys.OBSIDIAN_DAILY_PATH]: '092.Daily',
@@ -66,6 +69,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist',
     [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: false,
     [StorageKeys.PRIVACY_MODE]: 'masked_cloud',
+    [StorageKeys.AI_DOMAIN_POLICY]: {},
     [StorageKeys.PII_CONFIRMATION_UI]: true,
     [StorageKeys.PII_SANITIZE_LOGS]: true,
     [StorageKeys.AUTO_SAVE_PRIVACY_BEHAVIOR]: 'save',
@@ -193,3 +197,7 @@ export function normalizePrivacyMode(value: unknown): PrivacyMode {
         ? value
         : (DEFAULT_SETTINGS[StorageKeys.PRIVACY_MODE] as PrivacyMode);
 }
+
+// Per-domain egress policy normalization lives in aiDomainPolicy.ts — deriving
+// here would close a utils-internal import cycle (defaults → domainUtils →
+// SettingsRepository → settingsMigration → defaults).

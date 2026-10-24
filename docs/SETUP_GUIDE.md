@@ -230,6 +230,15 @@ ollama list
 - 現在開いているページのドメインを追加するには、ステータスパネル内のボタンまたはタグ入力欄を使用します
 - wwwなどのサブドメインは自動的に除去されます（www.example.com → example.com）
 
+**AI送信政策（ドメイン別）**:
+同じ画面の「AI送信政策（ドメイン別）」で、各サイトの本文を外部AIへ送るときの扱いをドメインごとに選べます。
+
+- **送信を許可**: そのまま送ります
+- **要約なしで記録**: AIへは送らず、要約なしで記録します
+- **マスク必須**: PIIを必ずマスクしてから送ります
+
+ドメインを入力して政策を選び「追加」を押すと保存されます。一覧の「削除」で解除できます。送信時刻・送信先・文字数・政策の判定は、デバイス内の監査ログにのみ記録されます。
+
 **初期設定**:
 - デフォルトはブラックリストモードで、一般的なサイト（Amazon、Google、Facebookなど）があらかじめ設定されています
 
@@ -247,6 +256,8 @@ ollama list
 「プライバシー」タブで、プライバシーに関する詳細な動作を設定できます。
 
 **プライバシー同意**: 初回起動時にデータ収集への同意確認が表示されます。同意しない場合は制限モードで動作し、記録は行われません。3回連続で拒否すると、以降30日間はモーダルが表示されなくなります（30日経過後に再表示、GDPR第7条準拠）（詳細: [PRIVACY.md](PRIVACY.md)）。
+
+**初回起動の3択バナー**: ダッシュボードの初回表示で、始め方を選ぶバナーが表示されます。設定がなくても記録と検索は使えます。「まず試す」は設定なしで記録と検索を試す、「Obsidian連携」は保存先にObsidianを追加する、「AI要約」は要約の生成を有効にする選択肢です。「後で設定する」で閉じられます。
 
 **本文（ページの内容）の保存** (`Dashboard → 設定 → コンテンツ保持設定`): ページ本文をローカルに保存するかをいつでも切り替えられます（デフォルト: オフ）。オフにしても既存の保存済み本文は削除されず、以後の新規記録のみ停止します。本文のみをまとめて削除したい場合は、同じセクションの保持ポリシーまたは「Purge content now」を使用してください。
 
@@ -285,6 +296,11 @@ ollama list
 - **AI要約の作り直し**: エントリヘッダーの「AI要約を作り直す」ボタンで、クレンジング緩和3択（現在の設定 / やや緩い / 最も緩い）を選んで既存行の要約を再生成できます（新規行は増えません）。詳細は [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md) を参照
 - **選択一括操作**: 各エントリのチェックボックスで複数選択すると、選択バーに **「AI要約を作り直し」** と **「選択した記事を削除」** が表示されます。削除はその場の件数付き2段階確認（「本当に削除する」／キャンセル）付きで、最初の失敗で中断します。一括再生成は現在の設定で逐次実行し、成功・失敗件数（実行中の行はスキップ件数として区別）をトースト表示します（再生成の緩和3択・force は一括では使えません。個別ヘッダーから実行してください）
 - **削除**: 個別エントリを物理削除（GDPR Art.17準拠）。「すべてのデータを削除」で全件一括削除も可能です
+- **選択行にスター**: 複数選択した行にまとめてスターを付けます。確認画面でプライベート判定の件数が表示され、「プライベート判定を除いて適用」も選べます。適用後は「取り消す」で元に戻せます
+- **保存済みコレクション**: 検索条件（語・タグ・期間）に名前を付けて「この条件を保存」で保存します。一覧の「呼び出す」で条件を復元し、「削除」で消せます
+- **履歴に聞く**: 対象コレクション（既定は「すべての記録」）を選んで質問を入力し「聞く」を押すと、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録に移動できます。該当する記録がない場合は「分かりません」と表示されます。外部には送信しません
+- **調査レポート一発生成**: 現在の検索条件（語・タグ・選択日）を対象に「レポートを生成」を押すと、要旨・時系列・引用・未読穴の4節からなる Markdown を生成します。「Obsidianにも送る」を選ぶとObsidianにも書き出します
+- **タグ正規化の提案**: タグの正規化ルールで変わる保存済みタグを「提案を表示」で一覧し、「適用」で記録のタグを書き換えます。「取消」で元に戻せます
 
 **絞り込み**:
 - **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
@@ -510,6 +526,15 @@ In the "Domain Filter" tab, you can control which domains to record.
 - To add the currently open page's domain, use the buttons in the status panel or the tag input field
 - Subdomains like www are automatically removed (www.example.com → example.com)
 
+**AI Send Policy (per domain)**:
+In "AI Send Policy (per domain)" on the same screen, choose per domain how page text is handled when it would be sent to an external AI.
+
+- **Allow sending**: Send as is
+- **Record without summary**: Do not send to the AI; record without a summary
+- **Mask required**: Always mask PII before sending
+
+Enter a domain, pick a policy, and press "Add" to save it. Use "Remove" in the list to clear it. The send time, destination, character count, and policy verdict are recorded only in the on-device audit log.
+
 **Initial Settings**:
 - Default is blacklist mode with common sites (Amazon, Google, Facebook, etc.) pre-configured
 
@@ -527,6 +552,8 @@ The same panel also contains **GitHub Gist Sync** settings. Useful for migrating
 In the "Privacy" tab, you can configure detailed privacy behavior.
 
 **Privacy Consent**: On first launch, a consent prompt appears for data collection. If you decline, the extension operates in restricted mode and no recording takes place. After 3 consecutive declines, the prompt is suppressed for 30 days (then reappears, GDPR Article 7 compliance. See [PRIVACY.md](PRIVACY.md) for details).
+
+**First-run 3-choice banner**: On the first dashboard visit, a banner lets you choose how to start. Recording and search work without any setup. "Try first" tries recording and search with no setup, "Obsidian integration" adds Obsidian as a destination, and "AI summary" enables summary generation. "Set up later" dismisses it.
 
 **Storing page content (body text)** (`Dashboard → Settings → Content Retention Settings`): You can toggle whether page body text is stored locally at any time (default: off). Turning it off does not delete already-stored content; it only stops future recordings. To delete stored body text in bulk, use the retention policy or "Purge content now" in the same section.
 
@@ -565,6 +592,11 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 - **Regenerate AI summary**: The "Regenerate AI summary" button in each entry header rebuilds the summary in place (no new row) with a cleansing-loosening choice of three (Current settings / Looser / Loosest). See the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details
 - **Bulk selection actions**: Check the box on multiple entries to reveal **"Regenerate AI summaries"** and **"Delete selected articles"** in the selection bar. Bulk delete confirms inline in the bar with the count ("Delete now" / Cancel) and stops at the first failure. Bulk regenerate runs sequentially with current settings and toasts succeeded/failed counts (rows already running are reported as skipped; the loosening choices and force option are header-only ― use the per-entry header for those)
 - **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
+- **Star selected rows**: Star all checked rows at once. The confirmation shows how many are judged private and offers "Apply excluding private". "Undo" reverts it after applying
+- **Saved collections**: Name a search condition (terms, tags, period) and save it with "Save this condition". "Recall" restores it from the list and "Delete" removes it
+- **Ask your history**: Pick a target collection (default: all records), enter a question, and press "Ask". An on-device model answers from excerpts of your records, and the links to the three supporting records open the originals. If nothing matches, it answers that it does not know. Nothing is sent externally
+- **One-shot research report**: Press "Generate report" to build a Markdown report with four sections (summary, timeline, citations, unread gaps) for the current search condition (terms, tags, selected day). Choose "Also send to Obsidian" to write it to Obsidian too
+- **Tag normalization proposals**: "Show proposals" lists stored tags that would change under the tag normalization rules. "Apply" rewrites the tags on your records and "Undo" reverts it
 
 **Filtering**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5

@@ -6,6 +6,19 @@ import {
   PENDING_RECORD_TIMEOUT_ERROR,
 } from '../pendingRecordGateway.js';
 
+// Shared-guard malformed shapes: bare failure, blank error, array impersonation.
+const MALFORMED_PENDING_RESPONSES: Array<[string, unknown]> = [
+  ['bare failure without error', { success: false }],
+  ['failure with blank error', { success: false, error: '   ' }],
+  ['array impersonating success', arrayWithSuccessFlag()],
+];
+
+function arrayWithSuccessFlag(): unknown {
+  const flagged: Array<unknown> & { success?: boolean } = [{ success: true }];
+  flagged.success = true;
+  return flagged;
+}
+
 describe('pendingRecordGateway', () => {
   beforeEach(() => {
     useTimerClock();
@@ -74,6 +87,20 @@ describe('pendingRecordGateway', () => {
 
     expect(result).toEqual({ success: false, error: 'Connection failed' });
   });
+
+  it.each(MALFORMED_PENDING_RESPONSES)(
+    'maps malformed %s to Invalid PENDING_RECORD response',
+    async (_name, raw) => {
+      const sendMessage = vi.fn().mockResolvedValue(raw);
+      (globalThis as { chrome?: unknown }).chrome = {
+        runtime: { sendMessage },
+      };
+
+      const result = await recordPendingPage({ title: 'T', url: 'https://example.com' });
+
+      expect(result).toEqual({ success: false, error: 'Invalid PENDING_RECORD response' });
+    },
+  );
 
   it('returns the timeout sentinel instead of hanging when no response arrives', async () => {
     const sendMessage = vi.fn().mockReturnValue(new Promise(() => undefined));

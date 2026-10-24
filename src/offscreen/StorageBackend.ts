@@ -1,5 +1,6 @@
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import type { ArchiveDescriptor, DescriptorResponse } from '../messaging/archiveWireTable.js';
+import { isExportEnvelopePayload } from './exportEnvelope.js';
 
 /**
  * Archive result shapes derive from the wire-table descriptors
@@ -144,7 +145,161 @@ const NOT_INITIALIZED = 'Database not initialized';
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
 export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
 export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
-export const AUDIT_LOG_UNSUPPORTED_ERROR = 'Audit log not supported in fallback mode';
+
+// ============================================================================
+// Backup shape query (PBI 2026-10-24-06): the single interface that maps
+// retire wants plus adapter capability to one of the four backup shapes.
+// Codecs stay inside their own seams (envelope projection in exportEnvelope,
+// settings generations in settingsBackup, encrypted open/seal in the crypto
+// codec, archive wire table in archiveStaging); restore dispatches from the
+// shape to those untouched codecs. Archive stays OPFS-exclusive: no fallback
+// shape exists for the archive kind, the query returns null instead.
+// ============================================================================
+
+/** The four retire shapes callers can receive. */
+export type BackupShape = 'binary' | 'envelope' | 'settings' | 'archive';
+
+/** What the retire wants to back up. */
+export type BackupKind = 'database' | 'settings' | 'archive';
+
+/** Retire wants: the kind plus the binary preference for database backups. */
+export interface BackupWants {
+  kind: BackupKind;
+  preferBinary?: boolean;
+}
+
+/** Adapter capability the shape decision reads. No per-caller re-derivation. */
+export interface BackupCapabilities {
+  supportsBinaryBackup: boolean;
+  supportsArchive: boolean;
+}
+
+/** Build capabilities from already-known flags (status + archive probe). */
+export function capabilitiesFromFlags(flags: {
+  supportsBinaryBackup: boolean;
+  supportsArchive: boolean;
+}): BackupCapabilities {
+  return {
+    supportsBinaryBackup: flags.supportsBinaryBackup,
+    supportsArchive: flags.supportsArchive,
+  };
+}
+
+/**
+ * Structural probe for the archive seam. This is the single rule behind the
+ * archive capability: `supportsArchive` in archiveStaging delegates here so
+ * the "all 14 ops travel together, implemented only by OpfsWorkerBackend"
+ * invariant has exactly one owner.
+ */
+export interface ArchiveProbe {
+  archiveStatus?: () => Promise<BackendOrError<ArchiveStatusResult>>;
+}
+
+/** True when the backend carries the archive seam (OPFS only). */
+export function hasArchiveCapability(backend: StorageBackend): boolean {
+  return typeof (backend as ArchiveProbe).archiveStatus === 'function';
+}
+
+/**
+ * Build capabilities from a live backend: the binary flag comes from its
+ * async status, the archive flag from the single probe above.
+ */
+export async function capabilitiesForBackend(backend: StorageBackend): Promise<BackupCapabilities> {
+  const status = await backend.getStatus();
+  if ('error' in status) {
+    return {
+      supportsBinaryBackup: false,
+      supportsArchive: hasArchiveCapability(backend),
+    };
+  }
+  return {
+    supportsBinaryBackup: status.supportsBinaryBackup,
+    supportsArchive: hasArchiveCapability(backend),
+  };
+}
+
+/**
+ * Select the retire shape for the wants under the adapter capability.
+ * Returns null when no shape satisfies the wants (archive without OPFS):
+ * callers fail closed with ARCHIVE_UNSUPPORTED_ERROR instead of silently
+ * picking another shape. Database retire prefers the single-step binary
+ * payload only when asked and capable, otherwise the JSON envelope that
+ * every backend can produce.
+ */
+export function resolveBackupShape(wants: BackupWants, caps: BackupCapabilities): BackupShape | null {
+  if (wants.kind === 'archive') {
+    return caps.supportsArchive ? 'archive' : null;
+  }
+  if (wants.kind === 'settings') {
+    return 'settings';
+  }
+  if (wants.preferBinary === true && caps.supportsBinaryBackup === true) {
+    return 'binary';
+  }
+  return 'envelope';
+}
+
+/** Restore entry point per shape. Codecs behind each target are unchanged. */
+export type BackupRestoreTarget = 'restoreDb' | 'envelopeImport' | 'settingsImport' | 'archiveRestore';
+
+/** Dispatch restore from the shape (no per-caller shape branching). */
+export function restoreTargetForShape(shape: BackupShape): BackupRestoreTarget {
+  if (shape === 'binary') {
+    return 'restoreDb';
+  }
+  if (shape === 'archive') {
+    return 'archiveRestore';
+  }
+  if (shape === 'settings') {
+    return 'settingsImport';
+  }
+  return 'envelopeImport';
+}
+
+/**
+ * Classifiable retire payload fields. Structural on purpose: the binary shape
+ * travels as bytes, the archive shape as a staging name, the file shapes as
+ * parsed JSON. Each codec module owns its predicate; the shape decision here
+ * only orders them.
+ */
+export interface BackupPayloadFields {
+  encrypted?: boolean;
+  version?: string | number;
+  table?: string;
+  settings?: object;
+  exportedAt?: string;
+}
+
+/**
+ * Classify a retire payload back to its shape for restore dispatch.
+ * Bytes are always the binary shape (the envelope is classified after JSON
+ * parsing, never from raw bytes); staging names are always the archive shape.
+ * Settings covers both the plaintext and the encrypted file variants — the
+ * encrypted/plaintext split stays inside the settings codec seam.
+ */
+export function classifyBackupPayload(
+  payload: Uint8Array | string | BackupPayloadFields | null | undefined,
+): BackupShape | null {
+  if (payload === null || payload === undefined) {
+    return null;
+  }
+  if (payload instanceof Uint8Array) {
+    return 'binary';
+  }
+  if (typeof payload === 'string') {
+    return 'archive';
+  }
+  if (payload.encrypted === true) {
+    return 'settings';
+  }
+  if (isExportEnvelopePayload(payload)) {
+    return 'envelope';
+  }
+  if (typeof payload.settings === 'object' && payload.settings !== null) {
+    return 'settings';
+  }
+  return null;
+}
 
 export class NoopBackend implements StorageBackend {
   private err = (): { success: false; error: string } => ({ success: false, error: NOT_INITIALIZED });

@@ -83,10 +83,14 @@ vi.mock('../../utils/ui/confirmDialog.js', () => ({
   showAlertDialog: mockShowAlertDialog,
 }));
 
-// Mock tagUtils
-vi.mock('../../utils/tagUtils.js', () => ({
-  DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
-}));
+// Mock tagUtils (keep the real fold: the panel shares foldTagForMatch)
+vi.mock('../../utils/tagUtils.js', async (importOriginal) => {
+  const actual = (await importOriginal()) as Record<string, unknown>;
+  return {
+    ...actual,
+    DEFAULT_CATEGORIES: ['tech', 'news', 'shopping', 'social'],
+  };
+});
 
 import { initTagsPanel } from '../tagsPanel.js';
 import { setRegistry } from '../panels/registryContext.js';

@@ -553,3 +553,92 @@ describe('planner-trust seam (PBI 2026-09-12-13)', () => {
     }
   });
 });
+
+describe('audit ledger (PBI 2026-10-23-01 minimal form in fallback)', () => {
+  let storage: FallbackStorage;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    storage = new FallbackStorage();
+  });
+
+  it('appends the minimal row with its own id sequence', async () => {
+    const first = await storage.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: 1000, char_count: 123, policy: 'allowed' });
+    const second = await storage.insertAuditLog({ provider: 'openai', url: 'https://y.com', created_at: 2000, char_count: 456, policy: 'allowed' });
+
+    expect(first).toEqual({ success: true, id: 1 });
+    expect(second).toEqual({ success: true, id: 2 });
+  });
+
+  it('reads rows most recent first through the paging seam', async () => {
+    await storage.insertAuditLog({ provider: 'gemini', url: 'https://old.com', created_at: 1000, char_count: 1, policy: 'allowed' });
+    await storage.insertAuditLog({ provider: 'openai', url: 'https://new.com', created_at: 2000, char_count: 2, policy: 'allowed' });
+
+    const result = await storage.queryAuditLog({ limit: 10, offset: 0 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.total).toBe(2);
+      expect(result.rows.map((r) => r.provider)).toEqual(['openai', 'gemini']);
+    }
+  });
+
+  it('omits char_count/policy (null-safe) for a caller that cannot size the payload', async () => {
+    await storage.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: 1000 });
+
+    const result = await storage.queryAuditLog({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.rows[0]?.char_count).toBeUndefined();
+      expect(result.rows[0]?.policy).toBeUndefined();
+    }
+  });
+
+  it('sweeps rows older than the retention window', async () => {
+    await storage.insertAuditLog({ provider: 'gemini', url: 'https://old.com', created_at: Date.now() - 30 * 24 * 60 * 60 * 1000, char_count: 1, policy: 'allowed' });
+    await storage.insertAuditLog({ provider: 'openai', url: 'https://new.com', created_at: Date.now(), char_count: 2, policy: 'allowed' });
+
+    await expect(storage.purgeAuditLog(7)).resolves.toEqual({ success: true, purged: 1 });
+
+    const result = await storage.queryAuditLog({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.total).toBe(1);
+      expect(result.rows[0]?.provider).toBe('openai');
+    }
+  });
+
+  it('keeps the SQL skip guard: no positive window purges nothing', async () => {
+    await storage.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: 1, char_count: 1, policy: 'allowed' });
+
+    await expect(storage.purgeAuditLog(0)).resolves.toEqual({ success: true, purged: 0 });
+    await expect(storage.purgeAuditLog(undefined)).resolves.toEqual({ success: true, purged: 0 });
+
+    const result = await storage.queryAuditLog({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.total).toBe(1);
+    }
+  });
+
+  it('keeps the audit key separate from browsing history (clearAll does not touch the trail)', async () => {
+    await storage.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: 1, char_count: 1, policy: 'allowed' });
+    await storage.insert({ url: 'https://example.com', created_at: 2 });
+
+    await storage.clearAll();
+
+    const trail = await storage.queryAuditLog({});
+    expect(trail.success).toBe(true);
+    if (trail.success) {
+      expect(trail.total).toBe(1);
+    }
+  });
+
+  it('handles storage errors gracefully', async () => {
+    vi.spyOn(chrome.storage.local, 'set').mockRejectedValueOnce(new Error('Quota exceeded'));
+    const result = await storage.insertAuditLog({ provider: 'gemini', url: 'https://x.com', created_at: 1, char_count: 1, policy: 'allowed' });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error).toContain('Quota exceeded');
+    }
+  });
+});

@@ -5,6 +5,7 @@
 
 import {
     DEFAULT_CATEGORIES,
+    foldTagForMatch,
     getAllCategories,
     isValidCategory,
     parseTagsFromSummary,
@@ -227,6 +228,23 @@ describe('tagUtils', () => {
             expect(result.summary).toBe('短い説明');
             expect(result.summary).not.toContain('要約文（改行なし）');
             expect(result.summary).not.toContain('#カテゴリ1');
+        });
+    });
+
+    describe('foldTagForMatch', () => {
+        it.each([
+            { input: ' ＡＩ ', expected: 'ai' },
+            { input: 'ai', expected: 'ai' },
+            { input: 'AI', expected: 'ai' },
+            { input: '  AI  ', expected: 'ai' },
+            { input: '', expected: '' },
+            { input: '   ', expected: '' },
+        ])('folds "$input" to "$expected"', ({ input, expected }) => {
+            expect(foldTagForMatch(input)).toBe(expected);
+        });
+
+        test('treats full-width spaced input and ascii as the same key', () => {
+            expect(foldTagForMatch(' ＡＩ ')).toBe(foldTagForMatch('ai'));
         });
     });
 

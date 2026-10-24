@@ -5,13 +5,16 @@
 
 import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
-import { MAX_RECORD_SIZE, truncateContentSize } from '../../recordingValidator.js';
+import { MAX_RECORD_SIZE } from '../../../utils/limits.js';
+import { truncateForRecording } from '../../recordingValidator.js';
 import type { RecordingContext, PipelineStepFunction } from '../types.js';
 
 /**
- * Truncate content if it exceeds maximum size
- * 【PII保護】切り詰められたコンテンツのみがAI APIに送信される
- * 【パフォーマンス】大きなページがパイプラインをハングさせるのを防止
+ * Truncate content if it exceeds maximum size.
+ * Thin adapter: byte semantics are owned by truncateForRecording.
+ * This step only maps the result onto the pipeline context and logs.
+ * PII protection: only truncated content reaches AI APIs.
+ * Performance: large pages cannot hang the pipeline.
  */
 export const truncateContentStep: PipelineStepFunction = async (
   context: RecordingContext
@@ -23,34 +26,29 @@ export const truncateContentStep: PipelineStepFunction = async (
     return context;
   }
 
-  // Check if content needs truncation
-  const encoder = new TextEncoder();
-  const encoded = encoder.encode(content);
+  const result = truncateForRecording(content);
 
-  if (encoded.length > MAX_RECORD_SIZE) {
-    const originalLength = encoded.length;
-    const truncatedContent = truncateContentSize(content, MAX_RECORD_SIZE);
-
-    addLog(LogType.WARN, 'Content truncated for recording', {
-      originalLength,
-      truncatedLength: MAX_RECORD_SIZE,
-      url,
-      traceId: context.traceId
-    });
-
+  if (!result.truncated) {
+    // No truncation needed
     return {
       ...context,
-      truncatedContent,
-      data: {
-        ...data,
-        content: truncatedContent
-      }
+      truncatedContent: content
     };
   }
 
-  // No truncation needed
+  addLog(LogType.WARN, 'Content truncated for recording', {
+    originalLength: result.originalBytes,
+    truncatedLength: MAX_RECORD_SIZE,
+    url,
+    traceId: context.traceId
+  });
+
   return {
     ...context,
-    truncatedContent: content
+    truncatedContent: result.content,
+    data: {
+      ...data,
+      content: result.content
+    }
   };
 };

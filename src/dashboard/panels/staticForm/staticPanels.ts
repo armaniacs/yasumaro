@@ -7,6 +7,7 @@ import { initRecordingConditionsSettings } from '../../recordingConditionsSettin
 import { initCustomPromptManager } from '../../settings/customPromptManager.js';
 import { initMarkdownTemplateManager } from '../../markdownTemplateManager.js';
 import { cspSettings } from '../../cspSettings.js';
+import { initAiDomainPolicySettings, loadAiDomainPolicySettings } from '../../settings/aiDomainPolicySettings.js';
 import { init as initContentSettings, loadContentSettings } from '../../settings/contentSettings.js';
 import { initExportImport } from '../../exportImport.js';
 import { initEncryptedBackupPanel } from '../../encryptedBackupPanel.js';
@@ -83,9 +84,15 @@ export const STATIC_FORM_SPECS = {
         id: 'panel-domain',
         mount: async () => {
             initDomainFilter();
+            // PBI 2026-10-23-01: per-domain AI egress policy lives next to the
+            // domain filter because it is a per-domain decision.
+            initAiDomainPolicySettings();
             await initDomainFilterTagUI();
         },
-        refresh: () => loadDomainSettings(),
+        refresh: async () => {
+            await loadDomainSettings();
+            await loadAiDomainPolicySettings();
+        },
     },
 } satisfies Record<string, StaticPanelSpec>;
 

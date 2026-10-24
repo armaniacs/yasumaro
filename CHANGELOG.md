@@ -35,6 +35,140 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.59] - 2026-10-25
+
+このリリースはバグ修正版です。 / This is a bug-fix release.
+
+### 修正 / Fixed
+
+- 初期設定バナーがダークモードで読めない問題を修正 / Fixed the initial-setup banner being unreadable in dark mode
+- 非表示の案内ボタンにフォーカスが吸着される問題を修正（確認ダイアログのTab移動） / Fixed Tab focus getting stuck on a hidden navigation button in the confirmation dialog
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1168ファイル・17276テスト）
+
+## [6.9.58] - 2026-10-24
+
+このリリースは利用者向けの新機能を含みます。 / This release includes user-facing new features.
+
+### 追加 / Added
+
+- 保存済みコレクション: 検索条件(語・タグ・期間)の保存・呼び出し・削除 / Saved collections: save, recall, and delete search conditions (terms, tags, period)
+- 履歴に聞く: 端末内のモデルが記録の抜粋を根拠に答える(外部送信なし) / Ask your history: an on-device model answers from record excerpts (nothing sent externally)
+- 調査レポート一発生成: 要旨・時系列・引用・未読穴の4節の Markdown / One-shot research report: four-section Markdown (summary, timeline, citations, unread gaps)
+- 情報源の偏り表示とブラックリスト追加の提案(取り消し可能) / Source bias view with reversible blacklist suggestions
+- ドメイン別 AI 送信政策(送信を許可・要約なしで記録・マスク必須)と、監査ログへの送信文字数・政策判定の記録 / Per-domain AI send policy (allow, record without summary, mask required) and audit-log entries for character count and policy verdict
+- タグ正規化の提案・適用・取り消し / Tag normalization proposals with apply and undo
+- 履歴の選択行への一括スターと取り消し(プライベート判定を除外して適用可) / Bulk star and undo for selected history rows (can exclude private pages)
+- アドレスバー(`y` + Enter)と `Alt+Shift+Y` による現在ページの記録 / Record the current page from the address bar (`y` + Enter) and with `Alt+Shift+Y`
+- 初回起動の3択バナー / First-run 3-choice banner
+
+## [6.9.57] - 2026-10-24
+
+このリリースは建築改善ループ第3弾（永続化スライス＋AI/信頼/構成の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- フォールバック testConnection を生成seamと対称化する（PBI 2026-10-24-01）
+- HMAC・codec知識を単一所有化する。復号互換不変（PBI 2026-10-24-02）
+- 内蔵AI client実体を共有化する（PBI 2026-10-24-03）
+- プロバイダ追加手順を導出化する（PBI 2026-10-24-04）
+- SyncBatchRunner を畳み込む（PBI 2026-10-24-05）
+- 退避形状の照会を集約する（PBI 2026-10-24-06）
+- 薄い委譲3枚を単一module化する（PBI 2026-10-24-07）
+- Obsidian設定読みをseam化する（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1166ファイル・17255テスト）。型エラー baseline 449 を維持
+
+## [6.9.56] - 2026-10-24
+
+このリリースは建築改善ループ第2弾（録画スライス＋popup/サービス群の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- truncate切り詰めを単一所有化し、二重encodeを解消する（PBI 2026-10-24-01）
+- 通知方針をtable化し、mockを削減する（PBI 2026-10-24-02）
+- 一時停止概念を深いmoduleに集約する（PBI 2026-10-24-03）
+- 記録可否判定の純粋核をgate tableに一本化する（PBI 2026-10-24-04）
+- 記録フロー順序を単一seam化する（PBI 2026-10-24-05）
+- tab lifecycle操作を1 module化する（PBI 2026-10-24-06）
+- extractor外部seamを単一化する（PBI 2026-10-24-07）
+- popup tab照会を1 module化する（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1161ファイル・17149テスト）。型エラー baseline 449 を維持
+
+## [6.9.55] - 2026-10-24
+
+このリリースは建築改善ループ（codebase-design 語彙の診断）の自律実装です。10 候補から 8 PBI に統合し、RICE 順・依存順に全件実装しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- pending gateway の独自検査を共有検査への1行委譲にする（PBI 2026-10-24-01）
+- 応答形状の正本を messaging 層の module に寄せ、双子定義を解消する（PBI 2026-10-24-02）
+- 再生成エラー変換を 1 module に集約し、生産経路を直接守る（PBI 2026-10-24-03）
+- ask 証拠 pure 群を独立 module 化し、試験を dispatch 経由に寄せる（PBI 2026-10-24-04）
+- panel 配線集中を region 所有に緩和する（PBI 2026-10-24-05）
+- 送信 seam を一本化し、retry 既定表を集約する。実効値不変（PBI 2026-10-24-06）
+- DOM id 正本を region 側に移す。文字列不変（PBI 2026-10-24-07）
+- 行 seam の selectors 引数を畳む（PBI 2026-10-24-08）
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1155ファイル・17062テスト）。型エラー baseline 451 を維持
+
+## [6.9.54] - 2026-10-23
+
+このリリースは adversarial-code-review 診断（round2 差分）の自律実装です。確定指摘 13 件を 11 PBI に統合し、7 件の fix + 4 件の test を RICE 順に実装しました。利用者に見える変更は提案行の取消操作の復旧のみで、他は内部の堅牢化です。
+
+### 修正
+
+- 提案行の取消ボタンが2サイクル目以降押せなくなる欠陥を解消する。両成功パスで disabled を戻し、2往復 pin テストで固定（PBI 2026-10-23-01）
+- gateway 応答の形状検証を強化し、空の失敗表示が出ないようにする。正常応答の処理は不変（PBI 2026-10-23-03）
+- 不正形応答の失敗文をタイムアウト文言から分離し、障害切り分けを可能にする（PBI 2026-10-23-05）
+- コレクション削除の prototype 付け替え退行を安全な複製に戻す（PBI 2026-10-23-06）
+- 応答2型を判別 union 化し、成功形と失敗形の混入を型で排除する。実行時挙動不変（PBI 2026-10-23-08）
+- slotFailures に要素検証を足し、表示ゴミを出さないようにする（PBI 2026-10-23-09）
+- 到達不能な gateway catch を防御的既定の実態記述に修正する（PBI 2026-10-23-10）
+
+### テスト
+
+- ドメイン提案の複数行テストを強化する（発火回数・非干渉。PBI 2026-10-23-02）
+- タグ提案の複数行テストを追加する（PBI 2026-10-23-04）
+- ブラックリスト期待値を本番契約に統一する（PBI 2026-10-23-07）
+- repository 既定経路の実物検証を追加する（PBI 2026-10-23-11）
+
+## [6.9.53] - 2026-10-23
+
+このリリースはリファクタリング診断 round2（10-22/10-23 新設コードの静的衛生）の自律実装です。9 件の内部整理 + 3 件の判断 close を RICE 順に実装し、複数提案行の誤配線（対象外 O1）も行渡し統一で解消しました。利用者に見える挙動の変更はありません。
+
+### リファクタ
+
+- タグ畳み込み fold を `foldTagForMatch` として tagUtils に集約し、直書き 10 箇所を置換する。式同一のため判定は不変（PBI 2026-10-23-01）
+- Settings 値型を引上げし repository の `as unknown as` 2 件を撤去する。保存形バイト同一（PBI 2026-10-23-02）
+- gateway 3 件の応答ガードを `asSuccessResponse` に集約し、戻り型に SendFailure を透過する。エラー文不変（PBI 2026-10-23-03）
+- バッチ読込上限 200 を `MAX_BATCH_READ_RECORDS` として limits に集約する。数値不変（PBI 2026-10-23-04）
+- 割合％丸め 4 箇所を `sharePercent` 系に集約する。丸め意味不変（PBI 2026-10-23-05）
+- 新設 5 箇所の小衛生整理（unknown 化・未参照定数削除・narrowing・名前付き定数・二重取得解消）。実行時挙動不変（PBI 2026-10-23-06）
+- 処理中ボタン定型 4 複製を `withBusyButton` に集約する（PBI 2026-10-23-07）
+- 提案行配線を共有 seam 化する。単一提案の挙動不変（PBI 2026-10-23-08）
+- repository 3 件を注入化し、破損読込にログを追加する。縮退・既定動作不変（PBI 2026-10-23-09）
+- router の collection 取得アクセサを inline 一本化する（PBI 2026-10-23-10）
+- content フラグ監視の共有化を見送り現状維持で閉じる（偶然の重複と裁定。PBI 2026-10-23-11）
+- ガード述語を局所維持で閉じる（3 組とも受容集合が異なり共有化は判定変更になるため。PBI 2026-10-23-12）
+
+### 修正
+
+- ドメイン提案が複数あるとき先頭行にだけ配線される誤りを、行要素渡しへの統一で解消する。複数行 pin テストで固定（対象外 O1。PBI 2026-10-23-08）
+
+### テスト
+
+- 新規テスト約 90 件（共有 fold・repository 往復・gateway・丸め境界・busy seam・提案 pin ほか）。型エラー baseline 451 を維持（増加なし）。最終ゲート `npm run validate` 緑（1151ファイル・16984テスト）
+
 ## [6.9.52] - 2026-10-22
 
 このリリースは前日リリースに続く実機検証の e2e 化です。owner 手動確認として残置していた項目（Gist egress の全 chain・自動ロックの受信側遷移・unlimitedStorage quota 免除）を実 Chromium 上の e2e pin に置き換え、恒常的な検証にしました。製品コードの変更はありません。

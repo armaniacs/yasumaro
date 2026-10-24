@@ -6,7 +6,6 @@
 
 import type { PageState, CleansingConfig } from './pageState.js';
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
-import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { reasonToStatusCode, statusCodeToMessageKey } from '../utils/privacyStatusCodes.js';
@@ -14,60 +13,17 @@ import { legacyReasonMessageKey } from '../utils/reasonLabel.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logInfo, logWarn, logError, logDebug } from '../utils/logger/api.js';
 import type { SleepFn } from '../utils/retryPredicate.js';
-import { toValidVisitPayload } from './visitPayload.js';
+import { toValidVisitPayload, buildVisitStats } from './visitPayload.js';
+import type { VisitByteStats, VisitAiStats, VisitStats } from './visitPayload.js';
 import type { RecordingResult } from '../messaging/types.js';
 
-/** Byte-stat subset shared by the VALID_VISIT payload and the GET_CONTENT reply. */
-export interface VisitByteStats {
-  pageBytes?: number | undefined;
-  candidateBytes?: number | undefined;
-  originalBytes?: number | undefined;
-  cleansedBytes?: number | undefined;
-}
-
-/** AI-cleanse stat subset shared by both send paths. */
-export interface VisitAiStats {
-  aiSummaryOriginalBytes?: number | undefined;
-  aiSummaryCleansedBytes?: number | undefined;
-  aiSummaryCleansedElements?: number | undefined;
-  aiSummaryCleansedReason?: AiSummaryCleansedReason | undefined;
-  aiSummaryCleansedReasons?: string[] | undefined;
-}
-
-/** One field-selection source for both send paths (auto-visit + manual fetch). */
-export interface VisitStats {
-  byteStats: VisitByteStats;
-  aiStats: VisitAiStats;
-  fallbackTriggered: boolean;
-  /** PBI 05: 発動理由（未発動時は undefined） */
-  fallbackReason: string | undefined;
-}
-
 /**
- * Build the shared stat selection from PageState. The `|| undefined` /
- * `!== 'none'` normalization lives here once — not once per send path.
+ * Single-owner re-export: stat selection lives in the visitPayload wire
+ * adapter (PBI 2026-10-24-05). Kept here so existing importers keep working
+ * without carrying their own copy.
  */
-export function buildVisitStats(pageState: PageState): VisitStats {
-  const ai = pageState.lastAiSummaryCleansedStats;
-  return {
-    byteStats: {
-      pageBytes: pageState.lastByteStats.pageBytes || undefined,
-      candidateBytes: pageState.lastByteStats.candidateBytes || undefined,
-      originalBytes: pageState.lastByteStats.originalBytes || undefined,
-      cleansedBytes: pageState.lastByteStats.cleansedBytes || undefined,
-    },
-    aiStats: {
-      aiSummaryOriginalBytes: ai.aiSummaryOriginalBytes || undefined,
-      aiSummaryCleansedBytes: ai.aiSummaryCleansedBytes || undefined,
-      aiSummaryCleansedElements: ai.aiSummaryCleansedElements || undefined,
-      aiSummaryCleansedReason:
-        ai.aiSummaryCleansedReason !== 'none' ? ai.aiSummaryCleansedReason : undefined,
-      aiSummaryCleansedReasons: ai.aiSummaryCleansedReasons,
-    },
-    fallbackTriggered: pageState.lastFallbackTriggered,
-    fallbackReason: pageState.lastFallbackReason,
-  };
-}
+export { buildVisitStats };
+export type { VisitByteStats, VisitAiStats, VisitStats };
 
 /** Emit a Performance Timeline mark, ignoring environments without `performance`. */
 function benchMark(name: string): void {
@@ -195,7 +151,14 @@ export class VisitReporter {
         try {
             const response = await sender.sendMessageWithRetry({
                 type: 'VALID_VISIT',
-                payload: toValidVisitPayload(pageState, content),
+                // PBI 2026-10-23-02: engagement metrics ride the payload so the
+                // saved row's visit_duration/scroll_ratio are no longer NULL.
+                payload: toValidVisitPayload(pageState, content, {
+                    metrics: {
+                        visitDurationSeconds: Math.max(0, (Date.now() - pageState.startTime) / 1000),
+                        scrollRatioPercent: pageState.maxScrollPercentage,
+                    },
+                }),
             });
             void logDebug('VALID_VISIT response', { response }, 'visitReporter');
 
@@ -230,7 +193,13 @@ export class VisitReporter {
                             // impossible now.
                             await sender.sendMessageWithRetry({
                                 type: 'VALID_VISIT',
-                                payload: toValidVisitPayload(pageState, content, { force: true }),
+                                payload: toValidVisitPayload(pageState, content, {
+                                    force: true,
+                                    metrics: {
+                                        visitDurationSeconds: Math.max(0, (Date.now() - pageState.startTime) / 1000),
+                                        scrollRatioPercent: pageState.maxScrollPercentage,
+                                    },
+                                }),
                             });
                         } catch (retryError: unknown) {
                             await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'visitReporter');

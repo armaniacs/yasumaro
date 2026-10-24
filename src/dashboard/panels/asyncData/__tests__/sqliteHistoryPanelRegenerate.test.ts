@@ -33,7 +33,8 @@ vi.mock('../../../../messaging/regenerateSummaryGateway.js', () => ({
   REGENERATE_TIMEOUT_MS: 60000,
 }));
 
-import { mapRegenerateError, formatRegenerateErrorDetail } from '../sqliteHistoryPanel.js';
+import { mapRegenerateError, formatRegenerateErrorDetail, toRegenerateErrorDisplay } from '../sqliteHistoryPanel.js';
+import type { RegenerateSummaryResponse } from '../../../../messaging/types.js';
 import { REGENERATE_TIMEOUT_ERROR } from '../../../../messaging/regenerateSummaryGateway.js';
 
 // NOTE: t() resolves to the en-locale message in vitest (same convention as
@@ -129,5 +130,155 @@ describe('mapRegenerateError — shared monthly quota (root cause 2026-09-22)', 
     expect(msg).toBe(
       'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
     );
+  });
+});
+
+describe('formatRegenerateErrorDetail — slot failure element guard (PBI 2026-10-23-09)', () => {
+  it.each([
+    {
+      name: 'valid rows stay identical',
+      failures: [
+        { provider: 'openai', error: 'HTTP 401' },
+        { provider: 'gemini', error: 'HTTP 500' },
+      ],
+      expected:
+        'Providers tried: openai → gemini\nopenai: HTTP 401\ngemini: HTTP 500',
+    },
+    {
+      name: 'null element is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, null],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'string element is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, 'openai: boom'],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'missing provider is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { error: 'HTTP 500' }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'missing error is dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { provider: 'gemini' }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+    {
+      name: 'non-string fields are dropped',
+      failures: [{ provider: 'openai', error: 'HTTP 401' }, { provider: 7, error: null }],
+      expected: 'Providers tried: openai → gemini\nopenai: HTTP 401',
+    },
+  ])('$name', ({ failures, expected }) => {
+    const detail = formatRegenerateErrorDetail(
+      ['openai', 'gemini'],
+      failures as unknown as Array<{ provider: string; error: string }>,
+      'Providers tried',
+    );
+    expect(detail).toBe(expected);
+  });
+
+  it('all malformed with no tried chain returns undefined (no garbage rows)', () => {
+    const detail = formatRegenerateErrorDetail(
+      [],
+      [null, 'oops', { provider: 'x' }] as unknown as Array<{ provider: string; error: string }>,
+      'Providers tried',
+    );
+    expect(detail).toBeUndefined();
+  });
+
+  it('mapRegenerateError tolerates malformed slot failures without throwing', () => {
+    const malformed = [null, 'oops', { provider: 'x' }] as unknown as Array<{
+      provider: string;
+      error: string;
+    }>;
+    expect(mapRegenerateError('ai_failed', false, undefined, malformed)).toBe(
+      'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+    );
+  });
+});
+
+describe('toRegenerateErrorDisplay', () => {
+  describe('production path', () => {
+    it('converts a full gateway failure into the provider message plus the tried chain and slot rows', () => {
+      const display = toRegenerateErrorDisplay(
+        {
+          success: false,
+          error: 'ai_failed',
+          attemptedProviders: ['openai', 'gemini'],
+          slotFailures: [
+            { provider: 'openai', error: 'HTTP 401' },
+            { provider: 'gemini', error: 'HTTP 500' },
+          ],
+        },
+        'Providers tried',
+      );
+      expect(display.message).toBe(
+        'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+      );
+      expect(display.detail).toBe(
+        'Providers tried: openai → gemini\nopenai: HTTP 401\ngemini: HTTP 500',
+      );
+      expect(display.needsForce).toBe(false);
+    });
+
+    it('drops malformed providers and slot failures carried by a raw gateway response', () => {
+      const raw = {
+        success: false,
+        error: 'ai_failed',
+        attemptedProviders: ['openai', 7, null],
+        slotFailures: [{ provider: 'openai', error: 'HTTP 401' }, null, 'oops'],
+      } as unknown as RegenerateSummaryResponse;
+      const display = toRegenerateErrorDisplay(raw, 'Providers tried');
+      expect(display.detail).toBe('Providers tried: openai\nopenai: HTTP 401');
+      expect(display.message).toBe(
+        'AI summary generation failed. Try another provider in AI settings, or wait a moment and try again.',
+      );
+    });
+
+    it('collapses a bare SendFailure to the generic message with no detail', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'SOME_UNKNOWN' },
+        'Providers tried',
+      );
+      expect(display.message).toBe('Failed to regenerate the AI summary.');
+      expect(display.detail).toBeUndefined();
+      expect(display.needsForce).toBe(false);
+    });
+
+    it('flags needsForce so the panel shows the force action row', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'DOMAIN_BLOCKED', needsForce: true },
+        'Providers tried',
+      );
+      expect(display.needsForce).toBe(true);
+      expect(display.message).toContain('force regeneration');
+    });
+
+    it('prefers the threaded rate_limited reason over raw-error inspection', () => {
+      const display = toRegenerateErrorDisplay(
+        { success: false, error: 'anything at all', reason: 'rate_limited' },
+        'Providers tried',
+      );
+      expect(display.message).toContain('rate limit reached');
+    });
+
+    it('maps ai_failed with a monthly-limit slot failure to the shared-quota message', () => {
+      const display = toRegenerateErrorDisplay(
+        {
+          success: false,
+          error: 'ai_failed',
+          attemptedProviders: ['openai', 'gemini'],
+          slotFailures: [
+            { provider: 'openai', error: 'Error: Monthly token limit reached (1,017,238 / 1,000,000)' },
+            { provider: 'gemini', error: 'HTTP 500' },
+          ],
+        },
+        'Providers tried',
+      );
+      expect(display.message).toContain('Monthly token limit reached');
+      expect(display.message).toContain('shares this quota');
+      expect(display.detail).toContain('openai: Error: Monthly token limit reached');
+    });
   });
 });

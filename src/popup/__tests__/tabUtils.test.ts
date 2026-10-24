@@ -4,6 +4,7 @@ import {
   getActiveTabUrl,
   getDomainForUrl,
 } from '../tabUtils.js';
+import * as tabQuery from '../tabUtils.js';
 
 const mockQuery = vi.fn();
 vi.stubGlobal('chrome', {
@@ -59,6 +60,16 @@ describe('getActiveTabUrl', () => {
   it('returns null when the tab has no url', async () => {
     mockQuery.mockResolvedValue([{ id: 2 }]);
     await expect(getActiveTabUrl()).resolves.toBeNull();
+  });
+});
+
+describe('query seam shape', () => {
+  it('exposes exactly the three-method query interface', () => {
+    expect(Object.keys(tabQuery).sort()).toEqual([
+      'getActiveTabUrl',
+      'getCurrentTab',
+      'getDomainForUrl',
+    ]);
   });
 });
 

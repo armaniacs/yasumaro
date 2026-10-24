@@ -23,7 +23,7 @@ import type { PageState, CleansingConfig } from './pageState.js';
 import { VisitGate } from './visitGate.js';
 import type { VisitGateThresholds, VisitState } from './visitGate.js';
 import { StorageKeys, type StorageKey } from '../utils/storage/types.js';
-import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION } from '../utils/visitThresholds.js';
+import { DEFAULT_MIN_SCROLL_DEPTH, DEFAULT_MIN_VISIT_DURATION, mediaThresholdsFor } from '../utils/visitThresholds.js';
 import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rules.js';
 import { cleansingFlagProp } from '../utils/cleansingConfig.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
@@ -40,6 +40,14 @@ export interface VisitGatingDeps {
     getPageState: () => PageState;
     clock: Clock;
     isE2ETest: () => boolean;
+    /**
+     * PBI 2026-10-23-02: media-kind detection for adaptive recording.
+     * Defaults to a constant-article verdict so existing constructors and
+     * tests keep the legacy pair without changes.
+     */
+    detectMediaKind?: () => string;
+    /** Persisted per-media threshold overrides (empty when unreadable). */
+    getMediaThresholdOverrides?: () => Record<string, Record<string, number>>;
 }
 
 export class VisitGating {
@@ -53,10 +61,24 @@ export class VisitGating {
     /** Build caches fresh — called once from kernel init via the timer. */
     initialize(): void {
         const pageState = this.deps.getPageState();
-        this.cachedThresholds = pageState.toVisitGateThresholds();
+        this.cachedThresholds = this.resolveThresholds(pageState);
         this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
         this.isE2ECached = this.deps.isE2ETest();
         this.cachedStartTime = pageState.startTime;
+    }
+
+    /**
+     * PBI 2026-10-23-02: article pages keep the legacy pair verbatim; other
+     * media kinds gate on their own metrics. The media pair starts from the
+     * media defaults, so a page the detector classifies as video/pdf/code
+     * behaves per-kind and a detector blind spot still falls back to today's
+     * article condition. Persisted overrides (MEDIA_THRESHOLDS) ride on top
+     * of the base when the reader can supply them.
+     */
+    private resolveThresholds(pageState: PageState): VisitGateThresholds {
+        const kind = this.deps.detectMediaKind?.() ?? 'article';
+        if (kind === 'article') return pageState.toVisitGateThresholds();
+        return mediaThresholdsFor(kind, this.deps.getMediaThresholdOverrides?.() ?? {});
     }
 
     /**
@@ -74,7 +96,7 @@ export class VisitGating {
             this.cachedThresholds.minScroll !== pageState.minScrollDepth ||
             this.cachedStartTime !== pageState.startTime;
         if (stale) {
-            this.cachedThresholds = pageState.toVisitGateThresholds();
+            this.cachedThresholds = this.resolveThresholds(pageState);
             this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
             this.cachedStartTime = pageState.startTime;
         }

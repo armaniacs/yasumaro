@@ -12,12 +12,13 @@
  *   `tabs` permission, so `tab.url` is unreadable for most origins — reuse
  *   lookup would silently fail anyway (Why 連鎖D). Fresh tabs are
  *   `active: false` and always closed in `finally`.
- * - Deliberately NOT sharing ManualContentFetcher's wait/close internals:
- *   theirs resolves best-effort on timeout (a partial extract still wins),
- *   this one REJECTS on timeout (a regenerate must never UPDATE with
- *   half-loaded content) — same shape, opposite semantics.
+ * - Tab lifecycle (open/wait/close) is shared with ManualContentFetcher via
+ *   tabLifecycle.ts since PBI 2026-10-24-06; only the timeout policy differs
+ *   (this path REJECTS on timeout so a regenerate never UPDATEs with
+ *   half-loaded content, while manual resolves best-effort). The earlier
+ *   non-sharing shape is kept above as the reason for the policy value.
  * - validateUrl with blockLocalhost mirrors ManualContentFetcher's position
- *   (Ask: localhost/内部IP 記録の再生成はエラー).
+ *   (regenerating records of localhost/internal IPs is an error).
  * - GET_CONTENT delivery races injection on a fresh tab — retry
  *   "receiving end" errors (200ms × 10).
  *
@@ -30,16 +31,12 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { isDisconnectMessage } from '../messaging/disconnectPhrase.js';
 import type { ContentResponse } from '../messaging/types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import type { TabLifecyclePorts } from './tabLifecycle.js';
+import { closeHelperTab, openHelperTab, waitForTabComplete } from './tabLifecycle.js';
 
-export interface RegenerateContentFetcherDeps {
-  createTab: (createProperties: chrome.tabs.CreateProperties) => Promise<chrome.tabs.Tab>;
-  removeTab: (tabId: number) => Promise<void>;
+export interface RegenerateContentFetcherDeps
+  extends Pick<TabLifecyclePorts, 'createTab' | 'getTab' | 'removeTab' | 'onUpdated'> {
   sendMessage: (tabId: number, message: unknown) => Promise<unknown>;
-  getTab: (tabId: number) => Promise<{ status?: string | undefined }>;
-  onUpdated: {
-    addListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
-    removeListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
-  };
 }
 
 const COMPLETE_TIMEOUT_MS = 10_000;
@@ -58,56 +55,22 @@ export class RegenerateContentFetcher {
   async fetchExtracted(url: string, cleanseMode: RegenerateCleanseMode): Promise<ContentResponse> {
     validateUrl(url, { requireValidProtocol: true, blockLocalhost: true });
 
-    const tab = await this.deps.createTab({ url, active: false });
-    const tabId = tab.id;
-    if (tabId === undefined) {
-      throw new Error('tab_create_failed');
-    }
+    const tabId = await openHelperTab(this.deps, url);
 
     try {
-      await this.waitForComplete(tabId, COMPLETE_TIMEOUT_MS);
+      // Reject wait (shared lifecycle): a regenerate must never UPDATE with
+      // half-loaded content.
+      await waitForTabComplete(this.deps, tabId, COMPLETE_TIMEOUT_MS, 'reject');
       const reply = await this.sendWithRetry(tabId, { type: 'GET_CONTENT', payload: { cleanseMode } });
       if (!reply || typeof reply !== 'object' || typeof (reply as ContentResponse).content !== 'string') {
         throw new Error('get_content_invalid_reply');
       }
       return reply as ContentResponse;
     } finally {
-      try {
-        await this.deps.removeTab(tabId);
-      } catch {
-        // Tab may already be closed by the user or the browser — never fail
-        // the regeneration because teardown raced.
-      }
+      // Tab may already be closed by the user or the browser — never fail
+      // the regeneration because teardown raced.
+      await closeHelperTab(this.deps, tabId);
     }
-  }
-
-  private waitForComplete(tabId: number, timeoutMs: number): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      let settled = false;
-      let timer: ReturnType<typeof setTimeout> | undefined;
-      const finish = (err?: Error): void => {
-        if (settled) return;
-        settled = true;
-        if (timer !== undefined) clearTimeout(timer); // no late-firing timer
-        this.deps.onUpdated.removeListener(listener);
-        if (err) reject(err);
-        else resolve();
-      };
-      const listener = (updatedTabId: number, info: { status?: string }): void => {
-        if (updatedTabId === tabId && info.status === 'complete') finish();
-      };
-      this.deps.onUpdated.addListener(listener);
-      // The tab may already have finished loading before the listener ran.
-      void (async () => {
-        try {
-          const tab = await this.deps.getTab(tabId);
-          if (tab.status === 'complete') finish();
-        } catch (e: unknown) {
-          finish(new Error(`tab_get_failed: ${String(e)}`));
-        }
-      })();
-      timer = setTimeout(() => finish(new Error('tab_load_timeout')), timeoutMs);
-    });
   }
 
   private async sendWithRetry(tabId: number, message: unknown): Promise<unknown> {

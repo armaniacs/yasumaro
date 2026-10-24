@@ -176,9 +176,11 @@ ${entryList || 'No entries in this period.'}
 }
 
 /**
- * ファイルをダウンロードする
+ * ファイルをダウンロードする。research report生成路 (PBI 2026-10-23-09) が
+ * 同一のローカル Markdown 配信先を使うため export する（同一責務の再実装を
+ * 避ける: このモジュールが Markdown ダウンロードの唯一の実装）。
  */
-async function downloadMarkdown(content: string, filename: string, exportPath: string): Promise<boolean> {
+export async function downloadMarkdown(content: string, filename: string, exportPath: string): Promise<boolean> {
   try {
     const base64 = textToBase64(content);
     const dataUrl = `data:text/markdown;base64,${base64}`;

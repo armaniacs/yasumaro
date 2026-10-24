@@ -34,6 +34,7 @@
   /* ---- 操作要素（紫系。金は装飾のみ） ---- */
   --ym-color-primary:       #7c3aed;  /* 操作要素のプライマリ */
   --ym-color-primary-hover: #6d28d9;
+  --ym-color-on-primary:    #ffffff;  /* プライマリ背景上の文字（両モード白） */
   --ym-color-primary-light: rgba(124, 58, 237, 0.1);
   --ym-color-primary-bg:    #f5f3ff;
   --ym-color-primary-border:#ddd6fe;
@@ -46,6 +47,7 @@
   --ym-color-danger-border: #fecaca;
 
   --ym-color-success:        #10b981;
+  --ym-color-success-hover:  #059669;
   --ym-color-success-text:   #065f46;
   --ym-color-success-bg:     #f0fdf4;
   --ym-color-success-border: #bbf7d0;
@@ -57,6 +59,7 @@
   --ym-color-warning-border: #fde68a;
 
   --ym-color-info:        #3b82f6;
+  --ym-color-info-hover:  #2563eb;
   --ym-color-info-accent: #0ea5e9;
   --ym-color-info-accent-bg: #e0f2fe;
   --ym-color-info-light:  rgba(59, 130, 246, 0.1);
@@ -103,6 +106,7 @@
     /* 操作要素（ダーク用） */
     --ym-color-primary:        #c084fc;
     --ym-color-primary-hover:  #a855f7;
+    --ym-color-on-primary:     #ffffff;
     --ym-color-primary-light:  rgba(192, 132, 252, 0.15);
     --ym-color-primary-bg:     #1a1025;
     --ym-color-primary-border: #6b21a8;
@@ -114,6 +118,7 @@
     --ym-color-danger-border: #3d1a1a;
 
     --ym-color-success:        #3fb950;
+    --ym-color-success-hover:   #86efac;
     --ym-color-success-text:   #f0f6fc;
     --ym-color-success-bg:     rgba(63, 185, 80, 0.1);
     --ym-color-success-border: #1a3d1a;
@@ -124,6 +129,7 @@
     --ym-color-warning-border: #3d2e1a;
 
     --ym-color-info:           #58a6ff;
+    --ym-color-info-hover:    #93c5fd;
     --ym-color-info-accent:    #0ea5e9;
     --ym-color-info-accent-bg: rgba(14, 165, 233, 0.1);
     --ym-color-info-light:     rgba(88, 166, 255, 0.15);

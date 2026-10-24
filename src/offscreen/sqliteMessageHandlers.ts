@@ -107,6 +107,11 @@ const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unk
     provider: String(payload.provider || ''),
     url: String(payload.url || ''),
     created_at: Number(payload.created_at || Date.now()),
+    // PBI 2026-10-23-01 minimal form: masked char count and policy verdict
+    // ride the same row. A dropped key (structured clone) stays null, so the
+    // SET-free INSERT is identical for a missing and a present-undefined key.
+    char_count: payload.char_count != null ? Number(payload.char_count) : null,
+    policy: payload.policy != null ? String(payload.policy) : null,
   }),
   auditLogQuery: (payload) => sqliteQueryAuditLog(
     pickDefined({

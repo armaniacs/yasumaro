@@ -33,7 +33,7 @@ describe('compositionManifest breaker wiring', () => {
     const container = new ServiceContainer();
     container.override('sessionStore', memoryStore());
     for (const entry of compositionManifest) {
-      if (entry.key === 'aiProviderBreaker' || entry.key === 'remoteAiService') {
+      if (entry.key === 'aiProviderBreaker' || entry.key === 'remoteAiService' || entry.key === 'builtInAiClient') {
         container.register(entry.key as ServiceKey, () => entry.factory(container), {
           singleton: entry.singleton,
         });

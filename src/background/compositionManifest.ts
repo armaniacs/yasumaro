@@ -15,7 +15,8 @@
  * being scattered through the composition function body.
  */
 
-import { createAIService } from './ai/aiServiceFactory.js';
+import { createAIService, createSharedBuiltInStrategy } from './ai/aiServiceFactory.js';
+import { BuiltInAIClient } from './builtInAIClient.js';
 import { RemoteAIService } from './ai/RemoteAIService.js';
 import type { AIService } from './ai/AIService.js';
 import { ProviderBreaker } from './ai/providerBreaker.js';
@@ -34,7 +35,9 @@ import { createRecordingOrchestrator, type RecordingOrchestrator } from './pipel
 import { createOfflineNetworkQueue, setOfflineNetworkQueue, sharedOfflineNetworkQueue, type OfflineNetworkQueue } from './offlineNetworkQueue.js';
 import { createPendingSqliteQueue, setPendingSqliteQueue } from './pendingSqliteQueue.js';
 import { setObsidianClient } from './handlers/dashboardSqlite/deps.js';
-import { createReviewSummaryGenerator } from './reviewSummaryGenerator.js';
+import { createReviewSummaryGenerator, downloadMarkdown } from './reviewSummaryGenerator.js';
+import { createResearchReportGenerator } from './researchReportGenerator.js';
+import type { ResearchReportGenerator } from './researchReportGenerator.js';
 import { createAutoSavedBadgeTabs } from './swStatePersistence.js';
 import { createDashboardSqliteMessageHandler } from './dashboardSqliteWiring.js';
 import { createConfirmToken, verifyConfirmToken } from './confirmTokenManager.js';
@@ -106,11 +109,33 @@ export const compositionManifest: readonly CompositionEntry[] = [
         },
       }),
   },
-  { key: 'remoteAiService', singleton: true, factory: (c) => new RemoteAIService({ breaker: c.resolve<ProviderBreaker>('aiProviderBreaker') }) },
+  // PBI 2026-10-24-03: the shared on-device client. One instance serves the
+  // local path (via LocalAIService) and the built-in-ai provider slot (via the
+  // generation seam below) so both routes read the same availability cache.
+  // The two adapters and their testConnection meanings stay separate — only
+  // the instance is shared (ADR 2026-09-17 coexistence kept).
+  { key: 'builtInAiClient', singleton: true, factory: () => new BuiltInAIClient() },
+  {
+    key: 'remoteAiService',
+    singleton: true,
+    factory: (c) =>
+      new RemoteAIService({
+        breaker: c.resolve<ProviderBreaker>('aiProviderBreaker'),
+        createStrategy: createSharedBuiltInStrategy(c.resolve<BuiltInAIClient>('builtInAiClient')),
+      }),
+  },
   // PBI 27-03: AI provider circuit breaker (policy SSOT in providerBreaker.ts).
   // Resolved here so the wiring test — not just a direct import — proves it.
   { key: 'aiProviderBreaker', singleton: true, factory: (c) => new ProviderBreaker(c.resolve<SessionStorePort>('sessionStore')) },
-  { key: 'aiService', singleton: true, factory: (c) => createAIService({ remoteAiService: c.resolve<RemoteAIService>('remoteAiService') }) },
+  {
+    key: 'aiService',
+    singleton: true,
+    factory: (c) =>
+      createAIService({
+        remoteAiService: c.resolve<RemoteAIService>('remoteAiService'),
+        builtInAiClient: c.resolve<BuiltInAIClient>('builtInAiClient'),
+      }),
+  },
   { key: 'settingsRepository', singleton: true, factory: () => settingsRepository },
   { key: 'perUrlMutexMap', singleton: true, factory: () => new PerUrlMutexMap() },
   {
@@ -145,6 +170,17 @@ export const compositionManifest: readonly CompositionEntry[] = [
       sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
       // PBI 2026-10-19-10: the digest re-reads consent at execution time.
       isConsentGranted: () => hasPrivacyConsent(),
+    }),
+  },
+  // PBI 2026-10-23-09: 調査レポート一発生成 — panel conditions pick the
+  // selection; delivery rides the existing download + Obsidian append paths.
+  {
+    key: 'researchReportGenerator',
+    singleton: true,
+    factory: (c) => createResearchReportGenerator({
+      sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
+      obsidian: c.resolve<ObsidianClient>('obsidian'),
+      downloadMarkdown,
     }),
   },
   {
@@ -280,7 +316,18 @@ export const compositionManifest: readonly CompositionEntry[] = [
         },
         generateWeeklySummary: () => reviewSummaryGenerator.generateWeeklySummary(),
         generateMonthlySummary: () => reviewSummaryGenerator.generateMonthlySummary(),
+        // PBI 2026-10-23-08: 履歴に聞く — the background sqlite search seam
+        // (FTS/LIKE dispatching op) supplies QA evidence. The SqliteError
+        // object is narrowed to its user-facing message so the handler's
+        // failure side stays a plain string like the other wire hops.
+        askEvidenceSearch: async (op) => {
+          const result = await c.resolve<SqliteClient>('sqliteClient').query(op);
+          return result.success ? result : { success: false, error: result.error.message };
+        },
         dashboardSqliteHandler: c.resolve<MessageHandler>('dashboardSqliteHandler'),
+        // PBI 2026-10-23-09: 調査レポート一発生成 — the singleton generator
+        // (created once above) supplies generation + delivery to the handler.
+        researchReportGenerator: c.resolve<ResearchReportGenerator>('researchReportGenerator'),
       };
       return createMessageRouter(messageRouterDeps);
     },

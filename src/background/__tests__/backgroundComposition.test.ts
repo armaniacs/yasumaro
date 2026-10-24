@@ -129,7 +129,7 @@ vi.mock('../confirmTokenManager.js', () => ({
   verifyConfirmToken: vi.fn().mockResolvedValue(true),
   getConfirmToken: vi.fn().mockResolvedValue('token'),
 }));
-vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator }));
+vi.mock('../reviewSummaryGenerator.js', () => ({ createReviewSummaryGenerator: mocks.createReviewSummaryGenerator, downloadMarkdown: vi.fn().mockResolvedValue(true) }));
 
 import { createBackgroundServices } from '../createBackgroundServices.js';
 

@@ -1,0 +1,54 @@
+# PBI: 初見軽量化 ― 設定なしで動く既定とオンボーディング
+
+## ユーザーストーリー
+初めて使う人として、ObsidianもAPIキーもない状態で記録と検索を試したい、なぜなら初期設定の重さで離脱したくないから
+
+## 優先度
+- 順位: 02 / 6候補
+- RICEスコア: 480 (Reach=300 / Impact=2 / Confidence=0.8 / Effort=1.0人週)
+- 根拠: 新規利用の入口。Effortが小さく即効性がある。既存利用者の動作は変えない
+- 依存: なし。PBI 01とは独立して着手可
+
+## 背景・制約
+- 現状はObsidian+APIキー前提に見える。STORE審査遅延で試用版が古く見える問題もある
+- MV3制約: 同意フロー(3回拒否で制限モード・GDPR物理削除)を壊さない
+- i18nはja/en両対応、a11yはWCAG 2.1 AAを維持する
+
+## BDD受け入れシナリオ
+Scenario: ゼロ設定で記録が残る
+  Given 新規インストール直後でObsidian未設定・APIキー未設定
+  When 記事をしきい値(滞在+スクロール)まで読んだ
+  Then 要約なしの記録がローカルSQLiteに残り、履歴検索で引ける
+
+Scenario: 後付けで機能が足せる
+  Given ゼロ設定で記録済みの状態
+  When Obsidian連携またはAIプロバイダを後から有効化した
+  Then 既存記録は保持され、新規記録から追記・要約が有効になる
+
+## 受け入れ基準
+- [ ] 初回起動で「まず試す / Obsidian連携 / AI要約」の3択が分かる
+- [ ] 要約なし記録でもタイトル・URL・日時・ドメインが欠落しない
+- [ ] 同意拒否時の制限モード表示が維持される
+- [ ] ja/enの文言漏れがない(`npm run check-i18n`)
+
+## テスト戦略
+## 実装記録（2026-10-23・初回起動バナー）
+- 3択表示: 完了。`src/dashboard/onboardingBanner.ts` の `initOnboardingBanner` が初回起動で「まず試す / Obsidian連携 / AI要約」の3択をInitial Setupパネル上部に表示。設定なしでも記録と検索が使えることを案内文に明記。既存のObsidian/AI設定セクションを開くだけで新規の設定書き込みはしない(既存利用者の動作は変えない)
+- 一度だけ表示: 完了。`StorageKeys.ONBOARDING_DISMISSED`(boolean, 既定 false)を Types/Defaults SSOT に追加。ユーザーが「後で設定する」で一度閉じると以後表示されない
+- 3択の導線: まず試す→履歴パネル(panel-sqlite-history)、Obsidian連携→`#obsidianEnabled` をフォーカス、AI要約→`#aiProvider` をフォーカス。パネルレジストリ経由の既存遷移のみ
+- 同意拒否時の制限モード表示: 既存資産で維持(consentBadge、変更なし)。同意フロー(3回拒否で制限モード・GDPR物理削除)は触らない
+- 縮退の出口: フラグ読み取り失敗はバナー再表示(もう一度閉じられる)、書き込み失敗はその起動だけ閉じてパネルを塞がない
+- ja/en: `onboarding_intro`・`onboarding_dismissBtn`・`onboarding_tryFirstTitle/Desc`・`onboarding_obsidianTitle/Desc`・`onboarding_aiTitle/Desc` の8キーを双側追加
+- pin: `src/dashboard/__tests__/onboardingBanner.test.ts` 3テスト(バナー表示条件・要約なし記録のtitle/url維持・URLからのドメイン導出)
+- 残: E2E(新規プロファイルでゼロ設定記録→検索→後付け有効化の通し)、README/OBSIDIAN_SETUP_GUIDE の前提章更新、コードレビュー
+- E2E: 新規プロファイルでゼロ設定記録→検索→後付け有効化の通し
+- 統合: 設定なし状態のバリデータがfail-closedであること
+- 単体: 既定値解決・同意状態遷移のテーブルテスト
+
+## 見積もり
+1.0人週相当。チームで再見積もりすること
+
+## Definition of Done
+- [ ] 全BDDシナリオが自動テストとして実装されパスする
+- [ ] コードレビュー完了
+- [ ] ドキュメント更新済み(READMEの使い方・OBSIDIAN_SETUP_GUIDEの前提章)

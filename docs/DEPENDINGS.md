@@ -102,3 +102,29 @@
 - 判定: ライセンスポリシー上の問題なし。全 672 パッケージが許容ライセンスに適合し、脆弱性 critical / high は 0 件
 - `THIRD_PARTY_NOTICES.md` が 622 パッケージ時点で停止しており現状と乖離している。`npm run generate-notices` の再実行を推奨
 - 未反映の更新は 1 件。`typescript` 7 は計画的な移行判断が必要
+
+## 6. リスク受容記録
+
+修正版が存在しない脆弱性は「直す」のではなく「評価して受容する」。以降の受容は 6.2 の様式で記録する。
+
+### 6.1 node-forge RSA 署名検証バイパス（2026-10-25 受容）
+
+- 対象: GHSA-86w9-cpqp-85rv（CVSS 7.5）。node-forge@1.4.0 の RSA PKCS#1 v1.5 検証不備
+- 経路: node-forge@1.4.0 ← @devicefarmer/adbkit@3.3.9 ← web-ext@10.8.0 ← wxt@0.21.4（全て devDependencies）
+- 到達不能の根拠:
+  - 出荷物（dist / ストア zip）に devDependencies は同梱されない。本番依存の監査は 0 件
+  - 当拡張は Android で動作しない（wxt.config.ts に明記）。`web-ext run` の Android 経路は未使用
+  - node-forge が実行されるのは adbkit の ADB 認証路のみで、通常の build では発火しない
+- 受容内容: `release:check:deps` の HIGH 4 件（同一原因の重複検出）を既知・受容として出荷を継続する
+- 期限・再評価トリガー: wxt / web-ext の次回更新時、または node-forge に修正版・後継が出た時。月次トリアージで確認する
+- 記録日: 2026-10-25
+
+### 6.2 受容書ひな形
+
+- 対象（CVE / GHSA・CVSS）:
+- 経路（バージョン付きチェーン・dev / prod の別）:
+- 到達不能の根拠（出荷物混入の有無・未使用機能の裏付け・発火条件）:
+- 受容内容（何を・どこまで許容するか）:
+- 期限・再評価トリガー:
+- 記録日:
+- 承認（リリース責任者）:

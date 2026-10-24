@@ -50,6 +50,8 @@ const kernel = new ContentKernel(storagePort, domainPolicyPort, () => Date.now()
  * PageStateを変更しない（PBI-28）。呼び出し元が戻り値を使って統計を更新する。
  * PBI 2026-09-21-30: 既定引数なし — 省略時 config は kernel 内の単一解決点
  * (ContentKernel.extractPageContent) で pageState から解決される。
+ * Single external extraction seam chain: kernel.extractPageContent →
+ * pageContentPipeline.preparePageContent → extractMainContentWithInfo (internal).
  */
 export function extractPageContent(config?: CleansingConfig): ExtractResult {
     return kernel.extractPageContent(config);

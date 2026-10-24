@@ -12,6 +12,20 @@ describe('pauseHandlers', () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'INVALID_PAUSE_MINUTES' });
   });
 
+  it('rejects non-number and missing minutes without calling schedule', async () => {
+    const schedule = vi.fn(async () => 0);
+    for (const minutes of ['90', undefined, null]) {
+      const sendResponse = vi.fn();
+      await createPauseRecordingHandler({ schedulePause: schedule })(
+        { type: 'PAUSE_RECORDING', payload: { minutes } } as never,
+        {} as never,
+        sendResponse,
+      );
+      expect(sendResponse).toHaveBeenCalledWith({ success: false, error: 'INVALID_PAUSE_MINUTES' });
+    }
+    expect(schedule).not.toHaveBeenCalled();
+  });
+
   it('accepts the 90-minute press step', async () => {
     const schedule = vi.fn(async () => 99);
     const sendResponse = vi.fn();

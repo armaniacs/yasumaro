@@ -15,7 +15,9 @@
  * behavior.
  */
 
+import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
+import type { SendFailure } from './sendWithPolicy.js';
 import type { ManualRecordMessage } from '../background/messageTypes.js';
 
 export interface PendingRecordRequest {
@@ -65,13 +67,11 @@ export async function recordPendingPage(
       timeoutMs,
       timeoutError: new Error(PENDING_RECORD_TIMEOUT_ERROR),
       retries: 0,
-      normalize: (raw: unknown): PendingRecordResult => {
-        const normalized = raw as { success?: boolean; error?: string } | undefined;
-        if (normalized?.success) {
-          return { success: true };
-        }
-        return { success: false, error: normalized?.error ?? '' };
-      },
+      normalize: normalizePendingRecordResponse,
     },
   );
+}
+
+function normalizePendingRecordResponse(raw: unknown): PendingRecordResult | SendFailure {
+  return asSuccessResponse<PendingRecordResult>(raw, 'Invalid PENDING_RECORD response');
 }

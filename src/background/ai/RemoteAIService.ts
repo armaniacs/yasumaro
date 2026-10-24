@@ -11,7 +11,7 @@ import { settingsRepository, type SettingsReader } from '../../utils/storage/Set
 import { DEFAULT_SETTINGS } from '../../utils/storage/defaults.js';
 import { StorageKeys, Settings, ProviderSlot } from '../../utils/storage/types.js';
 import { resolveModelKey } from './aiModelKey.js';
-import { type AIProviderStrategy, type BuiltInAiProvider } from './providers/index.js';
+import { type AIProviderStrategy } from './providers/index.js';
 import { createProviderStrategy, UnknownProviderError, type CreateProviderStrategyFn } from './providerCatalog.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
@@ -23,7 +23,6 @@ import { pickDefined } from '../../utils/objectUtils.js';
 import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
 interface RemoteAIServiceConfig {
-  builtInAiClient?: BuiltInAiProvider;
   repo?: SettingsReader;
   /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
   breaker?: ProviderBreakerLike;
@@ -162,6 +161,7 @@ export class RemoteAIService implements AIService {
     tagSummaryMode: boolean,
     traceId: string,
     url: string,
+    policy: string,
   ): Promise<AISummaryResult> {
     const effectiveSettings = this.applySlotModel(settings, slot);
     let providerInstance: AIProviderStrategy;
@@ -179,7 +179,18 @@ export class RemoteAIService implements AIService {
       return this.summarizeCaughtError(error, traceId);
     }
 
-    void recordAuditLog({ provider: slot.provider, url });
+    // Egress ledger (PBI 2026-10-23-01): one row per slot attempt, carrying
+    // the time, the destination, the masked char count prepared for this
+    // provider, and the policy verdict. A slot that fails before the fetch
+    // (config error) never reaches this line; a fallback chain records one
+    // row per slot that actually sent, so a retry is never double-counted
+    // and a skipped slot is never recorded at all.
+    void recordAuditLog({
+      provider: slot.provider,
+      url,
+      charCount: content.length,
+      policy,
+    });
 
     try {
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
@@ -261,6 +272,7 @@ export class RemoteAIService implements AIService {
           tagSummaryMode,
           options?.traceId ?? '',
           url,
+          options?.policy ?? 'allowed',
         );
         if (breakerGateOpen) {
           if (result.success) {

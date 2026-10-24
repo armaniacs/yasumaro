@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { Mock } from 'vitest';
-import { loadActiveTabStatus } from '../statusStore.js';
+import { loadActiveTabStatus, refreshActiveTabStatus, resolveActiveTabStatus } from '../statusStore.js';
 import * as statusChecker from '../statusChecker.js';
 import { RecordingCache } from '../../background/__tests__/helpers/recordingCache.js';
 import * as storageSavedUrls from '../../utils/storage/savedUrlRepository.js';
@@ -96,5 +96,41 @@ describe('statusStore.loadActiveTabStatus', () => {
 
     expect(snapshot.url).toBe('chrome://extensions/');
     expect(snapshot.status).toBeNull();
+  });
+
+  it('refreshActiveTabStatus re-queries on every call instead of caching', async () => {
+    mockTabsQuery.mockResolvedValue([{ url: 'https://example.com/page', id: 1 }]);
+
+    const first = await refreshActiveTabStatus();
+    const second = await refreshActiveTabStatus();
+
+    expect(mockTabsQuery).toHaveBeenCalledTimes(2);
+    expect(checkPageStatusMock).toHaveBeenCalledTimes(2);
+    expect(second).not.toBe(first);
+    expect(second).toEqual(first);
+  });
+
+  it('resolveActiveTabStatus returns the given snapshot without re-querying', async () => {
+    mockTabsQuery.mockResolvedValue([{ url: 'https://example.com/page', id: 1 }]);
+    const snapshot = await loadActiveTabStatus();
+    mockTabsQuery.mockClear();
+    checkPageStatusMock.mockClear();
+
+    const resolved = await resolveActiveTabStatus(snapshot);
+
+    expect(resolved).toBe(snapshot);
+    expect(mockTabsQuery).not.toHaveBeenCalled();
+    expect(checkPageStatusMock).not.toHaveBeenCalled();
+  });
+
+  it('resolveActiveTabStatus takes a fresh look when no snapshot is given', async () => {
+    mockTabsQuery.mockResolvedValue([{ url: 'https://example.com/page', id: 1 }]);
+
+    const fromUndefined = await resolveActiveTabStatus(undefined);
+    const fromNull = await resolveActiveTabStatus(null);
+
+    expect(fromUndefined.url).toBe('https://example.com/page');
+    expect(fromNull.url).toBe('https://example.com/page');
+    expect(mockTabsQuery).toHaveBeenCalledTimes(2);
   });
 });

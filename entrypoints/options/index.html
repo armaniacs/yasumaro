@@ -270,6 +270,28 @@
         <h2 id="panel-general-title" class="panel-title" data-i18n="mainTabDashboard">Initial Setup</h2>
         <p class="panel-description" data-i18n="initialSetupDescription">Configure your Obsidian connection and AI settings.</p>
 
+        <!-- Onboarding banner (PBI 2026-10-22-02): first-launch 3 choices -->
+        <div id="onboardingBanner" class="onboarding-banner" hidden>
+          <div class="onboarding-banner-head">
+            <p id="onboardingIntro" aria-live="polite"></p>
+            <button type="button" class="secondary-btn" data-onboarding-action="dismiss" data-i18n="onboarding_dismissBtn">後で設定する</button>
+          </div>
+          <div class="onboarding-choices">
+            <button type="button" class="onboarding-choice" data-onboarding-action="try-first">
+              <span class="onboarding-choice-title" data-i18n="onboarding_tryFirstTitle">まず試す</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_tryFirstDesc">設定なしで記録と検索を試せます</span>
+            </button>
+            <button type="button" class="onboarding-choice" data-onboarding-action="obsidian">
+              <span class="onboarding-choice-title" data-i18n="onboarding_obsidianTitle">Obsidian連携</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_obsidianDesc">保存先をObsidianに追加します</span>
+            </button>
+            <button type="button" class="onboarding-choice" data-onboarding-action="ai">
+              <span class="onboarding-choice-title" data-i18n="onboarding_aiTitle">AI要約</span>
+              <span class="onboarding-choice-desc" data-i18n="onboarding_aiDesc">要約の生成を有効にします</span>
+            </button>
+          </div>
+        </div>
+
         <!-- ボタンエリア（上部） -->
         <div class="general-btn-row">
           <button id="saveTop" class="btn-primary" data-i18n="saveBtn">Save</button>
@@ -521,6 +543,27 @@
             <p class="help-text" id="maxTokensNote" data-i18n="note_max_tokens_cost_control"></p>
             <div id="maxTokensError" class="field-error" role="alert"></div>
           </div>
+
+          <!-- メディア別しきい値（PBI 2026-10-23-02） -->
+          <div class="form-group" id="mediaThresholdsGroup">
+            <label data-i18n="mediaThresholdsLabel">Per-media thresholds</label>
+            <p class="help-text" data-i18n="mediaThresholdsHelp">Videos gate on watched seconds, PDFs on pages read, code on copy events. Empty fields keep the defaults.</p>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindVideo">Video</span>
+              <input type="number" id="mediaThresholdVideo" min="0" step="5" data-i18n-aria-label="mediaThresholdVideoAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdSecondsUnit">seconds watched</span>
+            </div>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindPdf">PDF</span>
+              <input type="number" id="mediaThresholdPdf" min="0" step="1" data-i18n-aria-label="mediaThresholdPdfAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdPagesUnit">pages read</span>
+            </div>
+            <div class="media-threshold-row">
+              <span class="media-threshold-name" data-i18n="mediaKindCode">Code</span>
+              <input type="number" id="mediaThresholdCode" min="0" step="1" data-i18n-aria-label="mediaThresholdCodeAria">
+              <span class="media-threshold-unit" data-i18n="mediaThresholdCopiesUnit">copy events</span>
+            </div>
+          </div>
         </div>
 
         <!-- 閲覧履歴 保持ポリシー -->
@@ -663,6 +706,25 @@
         <div id="domainSaveArea" class="domain-save-area">
           <button id="domainSaveBtn" class="btn-primary" data-i18n="domainSaveBtn">Save</button>
           <div id="domainSaveStatus" class="status-message" aria-live="polite"></div>
+        </div>
+
+        <!-- AI送信政策（PBI 2026-10-23-01） -->
+        <hr class="settings-hr">
+        <div class="settings-section" id="aiDomainPolicySection">
+          <h3 class="settings-section-title" data-i18n="aiDomainPolicyTitle">AI Egress Policy (per domain)</h3>
+          <p class="help-text" data-i18n="aiDomainPolicyDesc">
+            Choose how each site's content is handled when it would be sent to an external AI: send as-is, record without a summary, or always mask PII first.
+          </p>
+          <div class="domain-tag-input-row">
+            <input type="text" id="aiDomainPolicyInput" class="domain-tag-input"
+              data-i18n-input-placeholder="aiDomainPolicyInputPlaceholder"
+              autocomplete="off" autocapitalize="none" spellcheck="false">
+            <select id="aiDomainPolicySelect" aria-label="aiDomainPolicySelect" data-i18n-aria-label="aiDomainPolicySelect"></select>
+            <button id="aiDomainPolicyAddBtn" class="secondary-btn" data-i18n="aiDomainPolicyAdd">Add</button>
+          </div>
+          <div id="aiDomainPolicyList" class="domain-tag-list" role="list" data-i18n-aria-label="aiDomainPolicyList"></div>
+          <div id="aiDomainPolicyError" class="field-error" role="alert"></div>
+          <div id="aiDomainPolicyStatus" class="status-message" aria-live="polite"></div>
         </div>
 
         <!-- uBlock折りたたみ -->
@@ -1794,6 +1856,14 @@
               </div>
             </div>
           </div>
+
+          <!-- Normalization proposals (PBI 2026-10-23-05): 提案・適用・取消 -->
+          <div class="mb-8">
+            <h4 class="mb-4 category-title" data-i18n="normProposalsTitle">Normalization Proposals</h4>
+            <p class="help-text" data-i18n="normProposalsDesc">Shows the stored tags that would change under the rules above. Applying renames them across records; you can undo.</p>
+            <button id="refreshNormProposalsBtn" class="secondary-btn" data-i18n="normProposalsRefresh">Show proposals</button>
+            <div id="tagNormProposals" class="norm-proposals-list" hidden></div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -2019,6 +2089,10 @@
           <tbody id="domainAnalysisUrlBody"></tbody>
         </table>
         <div id="domainAnalysisUrlTruncated" class="data-table-notice is-warning" hidden></div>
+        <!-- Domain intel section (PBI 2026-10-23-10): 偏り判定 + 見直し提案 -->
+        <h3 class="data-table-heading" data-i18n="domainIntel_heading">情報源の偏り</h3>
+        <div id="domainIntelBiasLine" class="data-table-notice is-muted" hidden></div>
+        <div id="domainIntelProposals" hidden></div>
       </section>
 
       <!-- Revisit Insights Panel -->

@@ -22,12 +22,19 @@ import type {
   ManualRecordMessage,
   ContentCleansingExecutedMessage,
   RegenerateSummaryMessage,
+  AskHistoryMessage,
+  ExportResearchReportMessage,
   OwE2eProbeQueryMessage,
   OwE2EProbeStateMessage,
   GenerateReviewSummaryMessage,
   LogForwardMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import {
+  REPORT_SCOPE_NUMBER_FIELDS,
+  REPORT_SCOPE_STRING_FIELDS,
+} from './responseCanonical.js';
+import type { ResearchReportScope } from './responseCanonical.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
 import { ALL_DASHBOARD_SQLITE_SUBTYPES } from './sqliteOperationSecurity.js';
 
@@ -669,6 +676,69 @@ export class RegenerateSummaryValidator implements MessageValidator<RegenerateSu
 }
 
 // ------------------------------------------------------------------
+// AskHistoryValidator — ASK_HISTORY (PBI 2026-10-23-08)
+// ------------------------------------------------------------------
+export class AskHistoryValidator implements MessageValidator<AskHistoryMessage> {
+  validate(msg: unknown): AskHistoryMessage {
+    const m = assertEnvelopeType(msg, 'AskHistoryValidator', 'ASK_HISTORY');
+    const payload = assertPayloadObject(m, 'AskHistoryValidator');
+    if (typeof payload.question !== 'string') {
+      throw new ValidationError('AskHistoryValidator', 'payload.question must be string', 'question');
+    }
+    // Same cap as the DASHBOARD_SQLITE search query: the question is the
+    // evidence search term and the prompt head.
+    if (payload.question.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+      throw new ValidationError('AskHistoryValidator', `payload.question exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, 'question');
+    }
+    if (payload.collectionId !== undefined && payload.collectionId !== null && typeof payload.collectionId !== 'string') {
+      throw new ValidationError('AskHistoryValidator', 'payload.collectionId must be string or null', 'collectionId');
+    }
+    assertProtocolVersion(m, 'AskHistoryValidator');
+    return msg as AskHistoryMessage;
+  }
+}
+
+// ------------------------------------------------------------------
+// ExportResearchReportValidator — EXPORT_RESEARCH_REPORT (PBI 2026-10-23-09)
+// ------------------------------------------------------------------
+export class ExportResearchReportValidator implements MessageValidator<ExportResearchReportMessage> {
+  validate(msg: unknown): ExportResearchReportMessage {
+    const m = assertEnvelopeType(msg, 'ExportResearchReportValidator', 'EXPORT_RESEARCH_REPORT');
+    const payload = assertPayloadObject(m, 'ExportResearchReportValidator');
+    const scope = payload.scope;
+    if (scope !== undefined) {
+      if (typeof scope !== 'object' || scope === null) {
+        throw new ValidationError('ExportResearchReportValidator', 'payload.scope must be object', 'scope');
+      }
+      // Field sets are owned by the canonical scope tables (single owner
+      // with the handler-side normalizer); only the rejection wording stays
+      // here. The checked shape is ResearchReportScope.
+      const s: Record<string, unknown> & Partial<ResearchReportScope> = scope as Record<string, unknown>;
+      for (const field of REPORT_SCOPE_STRING_FIELDS) {
+        const value = s[field];
+        if (value !== undefined && typeof value !== 'string') {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be string`, field);
+        }
+        if (typeof value === 'string' && value.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, field);
+        }
+      }
+      for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
+        const value = s[field];
+        if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
+          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
+        }
+      }
+    }
+    if (payload.sendToObsidian !== undefined && typeof payload.sendToObsidian !== 'boolean') {
+      throw new ValidationError('ExportResearchReportValidator', 'payload.sendToObsidian must be boolean', 'sendToObsidian');
+    }
+    assertProtocolVersion(m, 'ExportResearchReportValidator');
+    return msg as ExportResearchReportMessage;
+  }
+}
+
+// ------------------------------------------------------------------
 // CheckDomainValidator — CHECK_DOMAIN (no payload, content-script allowed)
 // ------------------------------------------------------------------
 export class CheckDomainValidator implements MessageValidator<ExtensionMessage> {
@@ -886,6 +956,8 @@ export const dashboardSqliteValidator = new DashboardSqliteValidator();
 export const fetchUrlValidator = new FetchUrlValidator();
 export const manualRecordValidator = new ManualRecordValidator();
 export const regenerateSummaryValidator = new RegenerateSummaryValidator();
+export const askHistoryValidator = new AskHistoryValidator();
+export const exportResearchReportValidator = new ExportResearchReportValidator();
 export const checkDomainValidator = new CheckDomainValidator();
 export const contentCleansingExecutedValidator = new ContentCleansingExecutedValidator();
 export const testObsidianValidator = new TestObsidianValidator();

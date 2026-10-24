@@ -389,9 +389,16 @@ describe('sqliteMessageHandlers — handleQuery branching', () => {
 describe('sqliteMessageHandlers — handleAuditLogInsert branching', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('converts provider/url/created_at strings', async () => {
+  it('converts provider/url/created_at strings and nulls dropped char_count/policy', async () => {
     await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: 'openai', url: 'https://x.com', created_at: 12345 });
-    expect(auditLogRepoMock.insertAuditLog).toHaveBeenCalledWith({ provider: 'openai', url: 'https://x.com', created_at: 12345 });
+    // PBI 2026-10-23-01: the minimal row carries char_count/policy; a payload
+    // without them maps to null (structured clone drops undefined).
+    expect(auditLogRepoMock.insertAuditLog).toHaveBeenCalledWith({ provider: 'openai', url: 'https://x.com', created_at: 12345, char_count: null, policy: null });
+  });
+
+  it('maps a present char_count/policy onto the record', async () => {
+    await callHandler('SQLITE_AUDIT_LOG_INSERT', { provider: 'openai', url: 'https://x.com', created_at: 12345, char_count: 456, policy: 'allowed' });
+    expect(auditLogRepoMock.insertAuditLog).toHaveBeenCalledWith({ provider: 'openai', url: 'https://x.com', created_at: 12345, char_count: 456, policy: 'allowed' });
   });
 
   it('falls back to empty string when provider is falsy (|| branch)', async () => {

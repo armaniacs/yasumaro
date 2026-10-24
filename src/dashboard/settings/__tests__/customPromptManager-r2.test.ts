@@ -17,8 +17,10 @@ vi.mock('../../../utils/storage/types.js', async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
+    // Keep the full key table: narrowing StorageKeys breaks module-load
+    // validation (e.g. providerCatalog's defineCatalogEntry).
     StorageKeys: {
-      CUSTOM_PROMPTS: 'custom_prompts',
+      ...((actual.StorageKeys ?? {}) as Record<string, unknown>),
     },
   };
 });

@@ -36,6 +36,11 @@ export interface AiSummaryCleanseRunResult {
 /**
  * 抽出結果の型（コンテンツのみ、またはコンテンツとクレンジング情報）
  *
+ * Instances are produced from the live document via the single external seam
+ * (pageContentPipeline.preparePageContent): the read source is
+ * `document.body`, `window.location.hostname` feeds the whitelist lookup, and
+ * a missing body yields empty content without throwing.
+ *
  * Legacy compat: new code consumes extract() → { content, report } and
  * crosses only the ExtractionReport seam. This flat shape is still produced
  * by extractMainContentWithInfo / preparePageContent (via

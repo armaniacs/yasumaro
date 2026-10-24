@@ -28,6 +28,8 @@ import { BuiltInAIClient } from '../../builtInAIClient.js';
 import { FallbackAIService } from '../FallbackAIService.js';
 import { LocalAIService } from '../LocalAIService.js';
 import { createAIService } from '../aiServiceFactory.js';
+import { UnknownProviderError, type CreateProviderStrategyFn } from '../providerCatalog.js';
+import type { Settings } from '../../../utils/storage/types.js';
 
 const RemoteAIServiceMock = RemoteAIService as unknown as ReturnType<typeof vi.fn>;
 const BuiltInAIClientMock = BuiltInAIClient as unknown as ReturnType<typeof vi.fn>;
@@ -105,5 +107,43 @@ describe('createAIService', () => {
     expect(BuiltInAIClientMock).toHaveBeenCalledTimes(2);
     expect(LocalAIServiceMock).toHaveBeenCalledTimes(2);
     expect(FallbackAIServiceMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('flows the same builtInAiClient into the local service and the remote generation seam', () => {
+    const shared = { sharedClient: true } as unknown as BuiltInAIClient;
+    createAIService({ builtInAiClient: shared });
+
+    const localConfig = LocalAIServiceMock.mock.calls[0]?.[0] as { localAiClient: unknown };
+    expect(localConfig.localAiClient).toBe(shared);
+
+    const remoteConfig = RemoteAIServiceMock.mock.calls[0]?.[0] as {
+      createStrategy?: CreateProviderStrategyFn;
+    };
+    expect(typeof remoteConfig.createStrategy).toBe('function');
+    const provider = remoteConfig.createStrategy!('built-in-ai', {} as Settings) as unknown as {
+      builtInAiClient: unknown;
+    };
+    expect(provider.builtInAiClient).toBe(shared);
+  });
+
+  it('builds the default remote with a generation seam instead of a bare instance', () => {
+    createAIService();
+
+    const remoteConfig = RemoteAIServiceMock.mock.calls[0]?.[0] as {
+      createStrategy?: CreateProviderStrategyFn;
+    };
+    expect(typeof remoteConfig.createStrategy).toBe('function');
+  });
+
+  it('delegates non-built-in ids from the shared seam to the production catalog', () => {
+    const shared = { sharedClient: true } as unknown as BuiltInAIClient;
+    createAIService({ builtInAiClient: shared });
+
+    const remoteConfig = RemoteAIServiceMock.mock.calls[0]?.[0] as {
+      createStrategy?: CreateProviderStrategyFn;
+    };
+    expect(() => remoteConfig.createStrategy!('no-such-provider', {} as Settings)).toThrow(
+      UnknownProviderError,
+    );
   });
 });

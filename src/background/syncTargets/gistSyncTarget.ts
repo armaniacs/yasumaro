@@ -1,7 +1,13 @@
 /**
  * gistSyncTarget.ts
- * GitHub Gist sync target implementation.
+ * EXPERIMENTAL GitHub Gist sync target implementation.
  * Syncs browsing history entries to a GitHub Gist as Markdown.
+ *
+ * Batch-policy note (PBI 2026-10-24-05): the batch loop folded here from
+ * SyncBatchRunner is an internal seam of this file, not a shared abstraction
+ * (sole SyncTarget adapter, N=1).
+ * RE-EXTRACT CONDITION: extract a shared runner again only when a second
+ * SyncTarget adapter appears and duplicates this loop.
  */
 
 import type { SyncTarget } from './SyncTarget.js';
@@ -16,9 +22,25 @@ import { CONNECTION_TEST_CACHE_MODE, fetchWithTimeout, noRedirectInit } from '..
 import { readJsonCapped } from '../../utils/readBodyCapped.js';
 import { isCredentialConfigured } from './settingsConfiguredCheck.js';
 import { describeHttpFailure } from '../../utils/httpFailureMessages.js';
-import { SyncBatchRunner, type PendingSyncRow } from './SyncBatchRunner.js';
 
 const GIST_API_BASE = 'https://api.github.com';
+
+/** Log label for this target; the batch seam reports under this name. */
+const GIST_SYNC_TARGET_NAME = 'GistSync';
+
+/** Rows fetched per batch iteration. Policy lives here with its sole consumer. */
+const GIST_BATCH_SIZE = 50;
+
+/** Hard cap guarding against unbounded loops when pending rows keep arriving. */
+const GIST_MAX_BATCH_ITERATIONS = 100;
+
+/** Minimal row shape the internal batch seam needs to drive one sync call. */
+interface PendingGistRow {
+  id: number;
+  url: string;
+  title: string | null;
+  summary: string | null;
+}
 
 /**
  * Minimal read+write settings port for GistSyncTarget.
@@ -32,16 +54,10 @@ export type GistSettingsStore = SettingsReader & Pick<SettingsRepository, 'set'>
 export class GistSyncTarget implements SyncTarget {
   private sqliteClient: SqliteClient;
   private settingsReader: GistSettingsStore;
-  private batchRunner: SyncBatchRunner;
 
   constructor(sqliteClient: SqliteClient, settingsReader: GistSettingsStore = settingsRepository) {
     this.sqliteClient = sqliteClient;
     this.settingsReader = settingsReader;
-    this.batchRunner = new SyncBatchRunner({
-      targetName: 'GistSync',
-      listPending: (limit) => this.listPending(limit),
-      markSynced: (row) => this.syncRow(row),
-    });
   }
 
   async isConfigured(): Promise<boolean> {
@@ -94,11 +110,58 @@ export class GistSyncTarget implements SyncTarget {
       return 0;
     }
 
-    return this.batchRunner.run();
+    return this.runBatchLoop();
   }
 
-  /** SyncBatchRunner ListPending port: fetches up to `limit` unsynced rows. */
-  private async listPending(limit: number): Promise<PendingSyncRow[]> {
+  /**
+   * Internal batch seam (folded from SyncBatchRunner, PBI 2026-10-24-05).
+   * Fetches up to GIST_BATCH_SIZE pending rows, syncs each, and repeats until
+   * no rows remain or GIST_MAX_BATCH_ITERATIONS is reached.
+   * Returns the total number of rows successfully synced.
+   */
+  private async runBatchLoop(): Promise<number> {
+    let totalSynced = 0;
+
+    try {
+      for (let iteration = 0; iteration < GIST_MAX_BATCH_ITERATIONS; iteration++) {
+        const rows = await this.listPending(GIST_BATCH_SIZE);
+        if (rows.length === 0) {
+          break;
+        }
+
+        let batchSynced = 0;
+        for (const row of rows) {
+          const success = await this.syncRow(row);
+          if (success) {
+            batchSynced++;
+          }
+        }
+
+        totalSynced += batchSynced;
+
+        // WHY: rows are re-queried each iteration (not paged via offset), so when
+        // the backlog is unbounded batchSynced === 0 (all attempts failed) must stop
+        // the loop -- otherwise the same unsynced rows would be refetched forever.
+        if (batchSynced === 0) {
+          break;
+        }
+      }
+
+      if (totalSynced > 0) {
+        addLog(LogType.INFO, `${GIST_SYNC_TARGET_NAME}: batch completed`, { synced: totalSynced });
+      }
+
+      return totalSynced;
+    } catch (error) {
+      addLog(LogType.WARN, `${GIST_SYNC_TARGET_NAME}: batch failed`, {
+        error: errorMessage(error),
+      });
+      throw error;
+    }
+  }
+
+  /** Internal batch seam: fetches up to `limit` unsynced rows. */
+  private async listPending(limit: number): Promise<PendingGistRow[]> {
     const result = await this.sqliteClient.query({
       limit,
       offset: 0,
@@ -116,8 +179,8 @@ export class GistSyncTarget implements SyncTarget {
       .map((row) => ({ id: row.id as number, url: row.url, title: row.title ?? null, summary: row.summary ?? null }));
   }
 
-  /** SyncBatchRunner MarkSynced port: syncs one row (sync() itself marks it via sqliteClient.mutate). */
-  private async syncRow(row: PendingSyncRow): Promise<boolean> {
+  /** Internal batch seam: syncs one row (sync() itself marks it via sqliteClient.mutate). */
+  private async syncRow(row: PendingGistRow): Promise<boolean> {
     const result = await this.sync(row.id, row.url, row.title, row.summary);
     return result.success;
   }

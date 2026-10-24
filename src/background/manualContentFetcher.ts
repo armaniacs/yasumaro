@@ -3,32 +3,29 @@ import { sanitizeUrlForLogging } from '../utils/urlUtils.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { sanitizeRegex } from '../utils/piiSanitizer.js';
 import { validateUrl } from '../utils/ssrfGuard.js';
+import type { TabLifecyclePorts } from './tabLifecycle.js';
+import { closeHelperTab, openHelperTab, waitForTabComplete } from './tabLifecycle.js';
 
 const TAB_LOAD_TIMEOUT_MS = 10000;
 const MAX_EXTRACTED_TEXT_LENGTH = 10000;
 
 /**
- * Tab-operation ports, mirroring RegenerateContentFetcherDeps. The class used
- * to reach chrome.* directly while Regenerate took all six operations by
- * injection — the same concern with DI on one side and globals on the other.
- * Defaults bind chrome so production call sites are unchanged; tests inject
- * memory fakes without chrome mocks.
+ * Tab-operation ports. Lifecycle (open/wait/close) is the shared
+ * TabLifecyclePorts shape also used by RegenerateContentFetcher — only the
+ * timeout policy differs (here: best-effort). Reading stays local: queryTabs
+ * reuse plus the innerText executeScript shortcut.
  */
-export interface ManualTabPorts {
+export interface ManualTabPorts
+  extends Pick<TabLifecyclePorts, 'createTab' | 'getTab' | 'removeTab' | 'onUpdated'> {
   queryTabs: (query: chrome.tabs.QueryInfo) => Promise<chrome.tabs.Tab[]>;
-  createTab: (createProperties: chrome.tabs.CreateProperties) => Promise<chrome.tabs.Tab>;
-  onUpdated: {
-    addListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
-    removeListener: (cb: (tabId: number, info: { status?: string }) => void) => void;
-  };
   /** Run the body-text extraction against the tab, returning trimmed text. */
   executeScript: (tabId: number) => Promise<string>;
-  removeTab: (tabId: number) => Promise<void>;
 }
 
 const chromeManualTabPorts: ManualTabPorts = {
   queryTabs: (query) => chrome.tabs.query(query),
   createTab: (props) => chrome.tabs.create(props),
+  getTab: (tabId) => chrome.tabs.get(tabId),
   onUpdated: {
     addListener: (cb) => chrome.tabs.onUpdated.addListener(cb),
     removeListener: (cb) => chrome.tabs.onUpdated.removeListener(cb),
@@ -143,9 +140,9 @@ export class ManualContentFetcher {
 
       if (!targetTabId) {
         try {
-          const newTab = await this.ports.createTab({ url, active: false });
-          createdTabId = newTab.id;
-          targetTabId = newTab.id;
+          const newTabId = await openHelperTab(this.ports, url);
+          createdTabId = newTabId;
+          targetTabId = newTabId;
         } catch (e) {
           await logWarn(
             'Failed to create background tab, falling back to existing tabs only',
@@ -156,25 +153,9 @@ export class ManualContentFetcher {
         }
 
         if (targetTabId) {
-          await new Promise<void>((resolve) => {
-            const cleanup = (): void => {
-              clearTimeout(timeout);
-              this.ports.onUpdated.removeListener(listener);
-            };
-            const timeout = setTimeout(() => {
-              // PBI 2026-09-17-16: the timeout path used to leave the listener
-              // registered, accumulating one listener per manual fetch.
-              cleanup();
-              resolve();
-            }, TAB_LOAD_TIMEOUT_MS);
-            const listener = (tabId: number, info: { status?: string }): void => {
-              if (tabId === targetTabId && info.status === 'complete') {
-                cleanup();
-                resolve();
-              }
-            };
-            this.ports.onUpdated.addListener(listener);
-          });
+          // Best-effort wait (shared lifecycle): a timeout still proceeds to
+          // the innerText shortcut with whatever has loaded so far.
+          await waitForTabComplete(this.ports, targetTabId, TAB_LOAD_TIMEOUT_MS, 'best-effort');
         }
       }
 
@@ -191,9 +172,9 @@ export class ManualContentFetcher {
     } finally {
       if (createdTabId !== undefined) {
         const tabId = createdTabId;
-        this.ports.removeTab(tabId).catch((error: unknown) => {
-          // Helper-tab cleanup is best-effort, but a leaked background tab is
-          // user-visible, so keep the failure in diagnostic logs (was silent).
+        // Helper-tab cleanup is best-effort, but a leaked background tab is
+        // user-visible, so keep the failure in diagnostic logs (was silent).
+        void closeHelperTab(this.ports, tabId, (error: unknown) => {
           void logWarn(
             'Failed to remove helper tab',
             { error: errorMessage(error) },

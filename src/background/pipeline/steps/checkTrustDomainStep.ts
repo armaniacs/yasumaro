@@ -9,16 +9,29 @@ import { TrustChecker } from '../../../utils/trustChecker.js';
 import { NotificationHelper } from '../../notificationHelper.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 import { decideGate } from '../../../utils/recordingGateTable.js';
-import type { RecordingContext, PipelineStepFunction, TrustCheckResult } from '../types.js';
+import type { RecordingContext, StepDeps, TrustCheckResult } from '../types.js';
+
+/**
+ * Injected block-notification seam. Production defaults to the shared
+ * notification facade; tests pass a fake instead of mocking the module.
+ * Extends the step deps shape so the orchestrator keeps passing its own
+ * deps object untouched (the step only reads `notifyError`).
+ */
+export interface CheckTrustDomainDeps extends Partial<StepDeps> {
+  notifyError?: ((message: string) => void) | undefined;
+}
 
 /**
  * Check domain trust level using 3-step verification
  */
-export const checkTrustDomainStep: PipelineStepFunction = async (
-  context: RecordingContext
+export const checkTrustDomainStep = async (
+  context: RecordingContext,
+  deps?: CheckTrustDomainDeps
 ): Promise<RecordingContext> => {
   const { data, force } = context;
   const { url } = data;
+  const notifyError =
+    deps?.notifyError ?? ((message: string) => NotificationHelper.notifyError(message));
 
   const trustChecker = new TrustChecker();
   const trustCheck = await trustChecker.checkDomain(url);
@@ -36,7 +49,7 @@ export const checkTrustDomainStep: PipelineStepFunction = async (
     });
 
     if (trustCheck.showAlert) {
-      NotificationHelper.notifyError(
+      notifyError(
         `Recording Blocked: ${trustCheck.reason || 'Domain not trusted for recording'}`
       );
     }

@@ -9,15 +9,9 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import { API_KEY_FIELDS } from './storage/settingsMigration.js';
 import { DEFAULT_SETTINGS } from './storage/defaults.js';
 import { Settings, StorageKeys, isPrivacyMode } from './storage/types.js';
-import { encrypt, deriveKey } from './crypto/index.js';
-import { generateSalt, bytesToBase64 } from './crypto/index.js';
 import {
-  ENCRYPTED_EXPORT_VERSION,
-  buildEncryptedHmacPayload,
-  currentExportIterations,
-  decryptExportCiphertext,
-  verifyEncryptedExportHmac,
-  verifyLegacyPlaintextHmac,
+  sealEncryptedExport,
+  openEncryptedExport,
 } from './crypto/encryptedExportCodec.js';
 // Compatibility re-export: the version stamps live in the codec (PBI
 // 2026-10-16-06). Existing importers keep working without touching numbers.
@@ -339,39 +333,19 @@ export async function exportEncryptedSettings(
     const exportData = await buildExportData();
     const json = JSON.stringify(exportData, null, 2);
 
-    // ソルト生成
-    const salt = generateSalt();
-    const saltB64 = bytesToBase64(salt);
-
-    // パスワードからキーを派生（PBKDF2）— iteration数はcodecのSSOT参照
-    const iterations = currentExportIterations();
-    const key = await deriveKey(masterPassword, salt, iterations);
-
-    // データを暗号化
-    const encrypted = await encrypt(json, key);
-
-    // HMAC署名を計算（ciphertext全体に対して — version:2 ciphertext-HMAC）
-    const hmac = await exportHmacSigner.sign(
-      buildEncryptedHmacPayload(
-        {
-          ciphertext: encrypted.ciphertext,
-          iv: encrypted.iv,
-          salt: saltB64,
-          iterations,
-        },
-        ENCRYPTED_EXPORT_VERSION
-      )
-    );
+    // Seal (salt, KDF, encrypt, HMAC) is owned by the codec; the settings
+    // side passes only the JSON and the password (plus its signer).
+    const sealed = await sealEncryptedExport(json, masterPassword, exportHmacSigner);
 
     const encryptedExportData: EncryptedExportData = {
       encrypted: true,
-      version: ENCRYPTED_EXPORT_VERSION,
+      version: sealed.version,
       exportedAt: new Date().toISOString(),
-      ciphertext: encrypted.ciphertext,
-      iv: encrypted.iv,
-      hmac: hmac,
-      salt: saltB64,
-      iterations,
+      ciphertext: sealed.ciphertext,
+      iv: sealed.iv,
+      hmac: sealed.hmac,
+      salt: sealed.salt,
+      iterations: sealed.iterations,
     };
 
     return { success: true, encryptedData: encryptedExportData };
@@ -415,39 +389,50 @@ export async function importEncryptedSettings(
       return null;
     }
 
-    // Ciphertext HMAC BEFORE KDF/decrypt (VULN-034): cheap auth, then amplify.
-    // Version branching lives in the codec; legacy versions defer to the
-    // plaintext check below.
+    // Open (ciphertext HMAC, KDF dispatch, legacy plaintext check) is owned
+    // by the codec; the settings side passes only the password and the file
+    // envelope (plus its verifier) and maps the outcome to logs.
     const verifier: ImportHmacVerifier = opts?.signer ?? exportHmacSigner;
-    const ciphertextCheck = await verifyEncryptedExportHmac(encryptedData, verifier);
-    if (ciphertextCheck === 'mismatch') {
-      await logError(
-        'HMAC verification failed',
-        {},
-        ErrorCode.SETTINGS_SIGNATURE_FAILURE,
-        'settingsExportImport.ts'
-      );
-      return null;
-    }
-
-    // PBI 2026-09-15-13: the iteration candidate loop (stored -> SSOT -> legacy)
-    // is centralized in kdfNegotiator.ts (salt decode moved there too),
-    // dispatched through the codec.
     let decryptedJson: string;
     try {
-        const result = await decryptExportCiphertext(
-            masterPassword,
-            encryptedData,
-        );
-        decryptedJson = result.text;
-        if (result.needsRehash) {
+        const opened = await openEncryptedExport(masterPassword, encryptedData, verifier);
+        if (opened.status === 'rejected') {
+            if (opened.reason === 'hmac-mismatch') {
+                await logError(
+                    'HMAC verification failed',
+                    {},
+                    ErrorCode.SETTINGS_SIGNATURE_FAILURE,
+                    'settingsExportImport.ts'
+                );
+            } else {
+                await logError(
+                    'Decryption failed',
+                    {},
+                    ErrorCode.SETTINGS_IMPORT_FAILURE,
+                    'settingsExportImport.ts'
+                );
+            }
+            return null;
+        }
+        decryptedJson = opened.decryptedJson;
+        if (opened.needsRehash) {
             await logInfo(
                 'Decrypted with legacy iterations — re-encrypt recommended',
                 { usedIterations: 'legacy' },
                 'settingsExportImport.ts'
             );
         }
-    } catch (_e) {
+        if (opened.legacyUnsigned) {
+            // Pre-signing exports carry no hmac and cannot be authenticated; they
+            // stay importable so existing backups are not orphaned.
+            await logWarn(
+                'Importing an unsigned legacy encrypted export',
+                { version: String(encryptedData.version) },
+                undefined,
+                'settingsExportImport.ts'
+            );
+        }
+    } catch {
         await logError(
             'Decryption failed',
             {},
@@ -455,38 +440,6 @@ export async function importEncryptedSettings(
             'settingsExportImport.ts'
         );
         return null;
-    }
-
-    // Legacy v1: HMAC was over plaintext_json.
-    // For backward compat, v1 files without HMAC are accepted (old exports before signing).
-    // If HMAC exists on v1, we still verify it against decryptedJson to preserve
-    // integrity for existing tests that expect wrong-HMAC rejection.
-    // For v2, HMAC was already verified over ciphertext before KDF, so no plaintext check.
-    if (ciphertextCheck === 'legacy-deferred') {
-      const legacyCheck = await verifyLegacyPlaintextHmac(
-        decryptedJson,
-        encryptedData.hmac,
-        verifier
-      );
-      if (legacyCheck === 'mismatch') {
-        await logError(
-          'HMAC verification failed',
-          {},
-          ErrorCode.SETTINGS_SIGNATURE_FAILURE,
-          'settingsExportImport.ts'
-        );
-        return null;
-      }
-      if (legacyCheck === 'unsigned') {
-        // Pre-signing exports carry no hmac and cannot be authenticated; they
-        // stay importable so existing backups are not orphaned.
-        await logWarn(
-          'Importing an unsigned legacy encrypted export',
-          { version: String(encryptedData.version) },
-          undefined,
-          'settingsExportImport.ts'
-        );
-      }
     }
 
     // 復号されたJSONを解析してインポート
@@ -526,6 +479,29 @@ export function isEncryptedExport(data: unknown): data is EncryptedExportData {
     data !== null &&
     'encrypted' in obj &&
     obj.encrypted === true;
+}
+
+/**
+ * Plaintext twin of `isEncryptedExport` for the centralized backup query
+ * (PBI 2026-10-24-06). Both file variants belong to the single `settings`
+ * shape: the encrypted/plaintext split stays inside this codec seam
+ * (NN02 unified open/seal), the query only needs "this file is a settings
+ * retire". An encrypted envelope never satisfies this (its `settings` blob
+ * is sealed inside `ciphertext`), so the two predicates are disjoint.
+ */
+export function isPlaintextSettingsPayload(candidate: {
+  encrypted?: boolean;
+  settings?: object;
+  exportedAt?: string;
+}): boolean {
+  if (candidate.encrypted === true) {
+    return false;
+  }
+  return (
+    typeof candidate.settings === 'object' &&
+    candidate.settings !== null &&
+    typeof candidate.exportedAt === 'string'
+  );
 }
 
 /**

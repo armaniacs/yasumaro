@@ -398,14 +398,17 @@ export const FTS5_STATEMENTS: string[] = [
 
 /**
  * Audit log for cloud AI provider send events.
- * Records provider name, target URL, and timestamp only — never content or PII.
+ * Minimal form (PBI 2026-10-23-01): provider, target URL, timestamp, masked
+ * char count, and policy verdict only — never content or PII.
  */
 export const AUDIT_LOG_SCHEMA_SQL = `
   CREATE TABLE IF NOT EXISTS audit_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     provider TEXT NOT NULL,
     url TEXT NOT NULL,
-    created_at INTEGER NOT NULL
+    created_at INTEGER NOT NULL,
+    char_count INTEGER,
+    policy TEXT
   );
 
   CREATE INDEX IF NOT EXISTS idx_audit_log_created ON audit_log(created_at);
@@ -438,6 +441,17 @@ export const MIGRATION_COLUMNS = [
   // PBI 03: 遷移記録（オプトイン）
   'nav_source_url TEXT',
   'search_query TEXT',
+] as const;
+
+/**
+ * Audit-log columns added via idempotent ALTER TABLE (PBI 2026-10-23-01).
+ * The audit table used to be CREATE TABLE only, so existing DBs never gained
+ * new columns; new installs get these from AUDIT_LOG_SCHEMA_SQL, existing DBs
+ * from the same pragma-probe + ALTER procedure as MIGRATION_COLUMNS.
+ */
+export const AUDIT_MIGRATION_COLUMNS = [
+  'char_count INTEGER',
+  'policy TEXT',
 ] as const;
 
 /** Ordered sequence of one-off migrations. */

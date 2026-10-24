@@ -54,6 +54,8 @@ const LAYER0_FILES = [
   'src/utils/backoff.ts',
   'src/utils/httpFailureMessages.ts',
   'src/utils/summaryFallback.ts',
+  // Degraded-summary generator for the cost-aware cascade (PBI 2026-10-23-03).
+  'src/utils/degradedSummary.ts',
   'src/utils/failureTaxonomy.ts',
   'src/utils/vfsCapabilities.ts',
   'src/utils/storage/apiKeyTransition.ts',
@@ -84,6 +86,13 @@ const LAYER0_FILES = [
 const LAYER1_FILES = [
   'src/utils/storage/types.ts',
   'src/utils/storage/defaults.ts',
+  // Per-domain egress policy resolver (PBI 2026-10-23-01). Lives outside
+  // defaults.ts on purpose: defaults -> domainUtils -> SettingsRepository ->
+  // settingsMigration -> defaults would close a utils-internal cycle.
+  'src/utils/storage/aiDomainPolicy.ts',
+  // Saved-collection normalizer: validation lives here so the settings
+  // pipeline never pulls the repository chain (PBI 2026-10-23-06).
+  'src/utils/storage/savedCollections.ts',
   'src/utils/storage/encryptionSession.ts',
   'src/utils/storage/savedUrlRepository.ts',
   'src/utils/storage/domainFilterCache.ts',

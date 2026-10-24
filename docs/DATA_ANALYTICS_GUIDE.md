@@ -47,6 +47,8 @@
 タグ（任意）と期間を指定して、ドメイン別の集計 top 20 と URL 別の集計 top 20 を件数順の表で表示します。「#トラベル タグの記録はどのサイトで見ているか」のような質問に直接答えます。
 
 - 対象は最大 50,000 件の履歴です
+- 「情報源の偏り」に、特定のドメインが全体の約何%を占めるかが対象期間つきで表示されます。記録が少ない場合は偏りを判定しません
+- 騒音の多い情報源の候補には「記録対象外にする」ボタンが表示されます。適用するとそのドメインがドメインフィルターのブラックリストに追加されます（自動では適用されません）。「取り消す」で元に戻せます
 
 ### 再訪とタイムカプセル / Revisits & Time Capsule
 
@@ -206,6 +208,8 @@ Shows the number of records in a 7-day-of-week × 24-hour grid, colored by densi
 Specify an optional tag and a period to see top-20 domain counts and top-20 URL counts as tables ― a direct answer to questions like "which sites do my #travel reads come from?"
 
 - Analyzes up to 50,000 history rows
+- "Source bias" shows roughly what percentage of all records a single domain accounts for, with the analyzed period. With too few records, no bias is judged
+- Candidates for noisy sources get an "Exclude from recording" button. Applying it adds that domain to the domain filter blacklist (never applied automatically), and "Undo" reverts it
 
 ### Revisits & Time Capsule
 

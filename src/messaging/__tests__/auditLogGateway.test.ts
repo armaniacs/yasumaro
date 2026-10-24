@@ -49,6 +49,24 @@ describe('auditLogGateway', () => {
     expect(typeof callArg.created_at).toBe('number');
   });
 
+  it('recordAuditLog passes the masked char count and policy verdict through to the wire record', async () => {
+    // PBI 2026-10-23-01: the minimal row carries char_count/policy. Metadata
+    // only — the char count is the masked content length, never the content.
+    await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page', charCount: 456, policy: 'allowed' });
+
+    const record = (mockMutate.mock.calls[0]![0] as any).record;
+    expect(record.char_count).toBe(456);
+    expect(record.policy).toBe('allowed');
+  });
+
+  it('recordAuditLog omits char_count/policy when the caller cannot size the payload', async () => {
+    await recordAuditLog({ provider: 'gemini', url: 'https://example.com/page' });
+
+    const record = (mockMutate.mock.calls[0]![0] as any).record;
+    expect(record.char_count).toBeUndefined();
+    expect(record.policy).toBeUndefined();
+  });
+
   it('recordAuditLog does not throw when mutate rejects', async () => {
     mockMutate.mockRejectedValue(new Error('offscreen unreachable'));
 

@@ -48,6 +48,20 @@ export function projectExportRow(row: NamedRow): Record<string, unknown> {
   return out;
 }
 
+/**
+ * Envelope-shape predicate for the centralized backup query
+ * (PBI 2026-10-24-06). The version/table contract stays derived from the
+ * module constants, so a stamp change updates the classifier with it.
+ * The raw-bytes form is never classified here: bytes on the wire are the
+ * binary shape, the envelope is recognized after JSON parsing.
+ */
+export function isExportEnvelopePayload(candidate: {
+  version?: string | number;
+  table?: string;
+}): boolean {
+  return candidate.version === EXPORT_VERSION && candidate.table === EXPORT_TABLE;
+}
+
 /** Build the canonical export envelope bytes for the given named rows. */
 export function buildExportEnvelope(rows: NamedRow[]): Uint8Array {
   const json = JSON.stringify({ version: EXPORT_VERSION, table: EXPORT_TABLE, rows: rows.map(projectExportRow) }, null, 2);

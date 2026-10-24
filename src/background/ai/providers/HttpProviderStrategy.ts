@@ -22,6 +22,7 @@
  */
 
 import { applyCustomPrompt } from '../../../utils/customPromptUtils.js';
+import { degradedSummary } from '../../../utils/degradedSummary.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { fetchWithRetry, noRedirectInit } from '../../../utils/fetch.js';
 import { readJsonCapped } from '../../../utils/readBodyCapped.js';
@@ -218,7 +219,18 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
 
     const preFlight = await this.checkPreFlight();
     if (preFlight.blocked) {
-      return { success: false, summary: preFlight.message! };
+      // PBI 2026-10-23-03 (cost-aware cascade): a blocked quota must not stop
+      // the record. The reason stays in `summary` (the established carrier —
+      // provider tests pin it), the degraded opening slice rides
+      // `degradedSummary`, and `degraded` marks the fallback so the pipeline
+      // can record both without posing as a real remote summary.
+      return {
+        success: false,
+        summary: preFlight.message!,
+        degraded: true,
+        degradedSummary: degradedSummary('', content),
+        providerName: hooks.providerName,
+      };
     }
 
     const truncatedContent = content.substring(0, hooks.contentLimit());

@@ -12,11 +12,12 @@ import { getMessage } from '../../utils/i18n.js';
 
 /**
  * Fetch the active tab. Null means the caller exits early (no tab).
+ * Thin delegation to the tabUtils query seam: getCurrentTab already
+ * carries the null contract, so no re-wrap lives here.
  * @returns {Promise<chrome.tabs.Tab|null>}
  */
 export async function fetchCurrentTab(): Promise<chrome.tabs.Tab | null> {
-    const tab = await getCurrentTab();
-    return tab || null;
+    return getCurrentTab();
 }
 
 /**

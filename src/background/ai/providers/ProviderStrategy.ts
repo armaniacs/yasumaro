@@ -95,6 +95,15 @@ export interface AISummaryResult {
      */
     failure?: FailureMetadata;
     error?: string;         // スキーマ不整合等の詳細エラー（ユーザー向け summary とは別）
+    /**
+     * PBI 2026-10-23-03 (cost-aware cascade): true when this result carries a
+     * degraded fallback (quota exhausted, local unreachable) instead of a real
+     * remote summary. `summary` keeps the reason text; the degraded opening
+     * slice rides `degradedSummary` so the record keeps both.
+     */
+    degraded?: boolean;
+    /** Title + opening slice for a degraded send (empty when not degraded). */
+    degradedSummary?: string;
 }
 
 export abstract class AIProviderStrategy {

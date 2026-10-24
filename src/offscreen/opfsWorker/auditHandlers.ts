@@ -13,7 +13,7 @@ import type { AuditLogQueryPayload } from './types.js';
 
 export async function handleAuditLogInsert(
   ctx: HandlerContext,
-  record: { provider: string; url: string; created_at: number },
+  record: { provider: string; url: string; created_at: number; char_count?: number | null; policy?: string | null },
 ): Promise<{ id: number }> {
   await sqlExec(ctx, AUDIT_INSERT_SQL, buildAuditInsertParams(record));
   let id = 0;

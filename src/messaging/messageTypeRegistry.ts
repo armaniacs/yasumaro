@@ -31,6 +31,8 @@ export const VALID_MESSAGE_TYPES = [
     'PREVIEW_RECORD',
     'SAVE_RECORD',
     'REGENERATE_SUMMARY',
+    'ASK_HISTORY', // 履歴に聞く (PBI 2026-10-23-08): dashboard QA with citations
+    'EXPORT_RESEARCH_REPORT', // 調査レポート一発生成 (PBI 2026-10-23-09): dashboard report delivery
     'TEST_CONNECTIONS',
     'TEST_OBSIDIAN',
     'TEST_AI',

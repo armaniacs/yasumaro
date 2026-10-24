@@ -75,6 +75,20 @@ export type RegenerateSummaryResponse = RecordingResult & {
 };
 
 /**
+ * PBI 2026-10-23-08/09: ask/report wire responses and the answer citation.
+ * Canonical definitions live in responseCanonical.ts (single owner with the
+ * background outcome aliases); imported for local use and re-exported here
+ * so existing import paths keep working.
+ */
+import type {
+  AskHistoryCitation,
+  AskHistoryResponse,
+  ResearchReportResponse,
+} from './responseCanonical.js';
+
+export type { AskHistoryCitation, AskHistoryResponse, ResearchReportResponse };
+
+/**
  * 記録処理の結果型
  */
 export interface RecordingResult {
@@ -162,6 +176,10 @@ export interface RecordingData {
   /** PBI 04: policy-owned side-effect skips (regenerate = SQLite only). */
   skipObsidianAppend?: boolean;
   skipLocalMarkdownExport?: boolean;
+  /** PBI 2026-10-23-02: seconds of engagement for this visit (valid visit). */
+  visitDurationSeconds?: number;
+  /** PBI 2026-10-23-02: max scroll percentage reached for this visit. */
+  scrollRatioPercent?: number;
 }
 
 // ============================================================================
@@ -266,6 +284,8 @@ export type PayloadForType<T extends ExtensionMessage['type']> = Extract<
 export type ResponseForType<T extends ExtensionMessage['type']> =
   T extends 'VALID_VISIT' ? RecordingResult :
   T extends 'REGENERATE_SUMMARY' ? RegenerateSummaryResponse :
+  T extends 'ASK_HISTORY' ? AskHistoryResponse :
+  T extends 'EXPORT_RESEARCH_REPORT' ? ResearchReportResponse :
   T extends 'CHECK_DOMAIN' ? { success: true; allowed: boolean } :
   T extends 'GET_CONTENT' ? ContentResponse :
   T extends 'FETCH_URL' ? { success: true; data: string; contentType: string | null } :

@@ -45,9 +45,6 @@ vi.mock('../../../../utils/permissionManager.js');
 vi.mock('../../../../utils/trustChecker.js', () => ({
   TrustChecker: vi.fn(),
 }));
-vi.mock('../../../notificationHelper.js', () => ({
-  NotificationHelper: { notifyError: vi.fn() },
-}));
 vi.mock('../../../../utils/storage/types.js');
 vi.mock('../../../../utils/storage/defaults.js');
 vi.mock('../../../../utils/storage/encryptionSession.js');

@@ -1910,6 +1910,197 @@
   "domainSaveBtn": {
     "message": "保存する"
   },
+  "aiDomainPolicyTitle": {
+    "message": "AI送信政策（ドメイン別）"
+  },
+  "aiDomainPolicyDesc": {
+    "message": "各サイトの本文を外部AIへ送るときの扱いを、ドメインごとに選びます。そのまま送る・要約なしで記録する・PIIを必ずマスクしてから送る、の3種から選べます。"
+  },
+  "aiDomainPolicyInputPlaceholder": {
+    "message": "ドメイン（例: example.com）"
+  },
+  "aiDomainPolicySelect": {
+    "message": "政策の選択"
+  },
+  "aiDomainPolicyList": {
+    "message": "設定済みの政策一覧"
+  },
+  "aiDomainPolicyAdd": {
+    "message": "追加"
+  },
+  "aiDomainPolicyRemove": {
+    "message": "削除"
+  },
+  "aiDomainPolicyRemoveAria": {
+    "message": "$DOMAIN$ の政策を削除",
+    "placeholders": {
+      "domain": {
+        "content": "$1"
+      }
+    }
+  },
+  "aiDomainPolicyEmpty": {
+    "message": "ドメイン別の政策は設定されていません。"
+  },
+  "aiDomainPolicyInvalidDomain": {
+    "message": "有効なドメインを入力してください（例: example.com）"
+  },
+  "aiDomainPolicySaved": {
+    "message": "保存しました"
+  },
+  "mediaThresholdsLabel": {
+    "message": "メディア別のしきい値"
+  },
+  "mediaThresholdsHelp": {
+    "message": "動画は視聴秒数、PDFは読んだページ数、コードはコピー回数で判定します。空欄は既定値を保持します。"
+  },
+  "mediaKindVideo": {
+    "message": "動画"
+  },
+  "mediaKindPdf": {
+    "message": "PDF"
+  },
+  "mediaKindCode": {
+    "message": "コード"
+  },
+  "mediaThresholdVideoAria": {
+    "message": "動画のしきい値（視聴秒数）"
+  },
+  "mediaThresholdPdfAria": {
+    "message": "PDFのしきい値（読んだページ数）"
+  },
+  "mediaThresholdCodeAria": {
+    "message": "コードのしきい値（コピー回数）"
+  },
+  "mediaThresholdSecondsUnit": {
+    "message": "秒視聴"
+  },
+  "mediaThresholdPagesUnit": {
+    "message": "ページ"
+  },
+  "mediaThresholdCopiesUnit": {
+    "message": "回コピー"
+  },
+  "savedCollectionsLabel": {
+    "message": "保存済みコレクション"
+  },
+  "askHistoryLabel": {
+    "message": "履歴に聞く"
+  },
+  "askHistoryHelp": {
+    "message": "選んだコレクションを対象に質問すると、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元記録に飛べます。"
+  },
+  "askHistoryTargetLabel": {
+    "message": "対象コレクション"
+  },
+  "askHistoryTargetAll": {
+    "message": "すべての記録"
+  },
+  "askHistoryQuestionPlaceholder": {
+    "message": "質問を入力"
+  },
+  "askHistoryAskBtn": {
+    "message": "聞く"
+  },
+  "askHistoryBusy": {
+    "message": "記録を調べています..."
+  },
+  "askHistoryFailed": {
+    "message": "答えを生成できませんでした。時間をおいて再試行してください。"
+  },
+  "askHistoryNoEvidence": {
+    "message": "分かりません。該当する記録がありません。"
+  },
+  "researchReportLabel": {
+    "message": "調査レポート一発生成"
+  },
+  "researchReportHelp": {
+    "message": "現在の検索条件(語・タグ・選択日)を対象に、要旨・時系列・引用・未読穴の4節からなるMarkdownレポートを生成します。"
+  },
+  "researchReportObsidianOption": {
+    "message": "Obsidianにも送る"
+  },
+  "researchReportGenerateBtn": {
+    "message": "レポートを生成"
+  },
+  "researchReportBusy": {
+    "message": "レポートを生成しています..."
+  },
+  "researchReportFailed": {
+    "message": "レポートを生成できませんでした。時間をおいて再試行してください。"
+  },
+  "researchReportDone": {
+    "message": "レポートを生成しました(記録 {0} 件)。"
+  },
+  "savedCollectionsHelp": {
+    "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
+  },
+  "savedCollectionsEmpty": {
+    "message": "保存済みコレクションはまだありません"
+  },
+  "savedCollectionSaveBtn": {
+    "message": "この条件を保存"
+  },
+  "savedCollectionApplyBtn": {
+    "message": "呼び出す"
+  },
+  "savedCollectionDeleteBtn": {
+    "message": "削除"
+  },
+  "savedCollectionNamePlaceholder": {
+    "message": "コレクション名"
+  },
+  "savedCollectionCondSearch": {
+    "message": "語"
+  },
+  "savedCollectionCondTag": {
+    "message": "タグ"
+  },
+  "savedCollectionCondDate": {
+    "message": "期間"
+  },
+  "savedCollectionNoCondition": {
+    "message": "保存する条件がありません。語・タグ・期間を指定してください。"
+  },
+  "savedCollectionDeleteConfirm": {
+    "message": "「$1」を削除しますか？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "調べ物A"
+      }
+    }
+  },
+  "savedCollectionSaveError": {
+    "message": "保存に失敗しました"
+  },
+  "commandRecordPage": {
+    "message": "現在のページを記録"
+  },
+  "omniboxRecordDefault": {
+    "message": "このページを記録"
+  },
+  "recordSuccessTitle": {
+    "message": "記録しました"
+  },
+  "recordSuccessBody": {
+    "message": "「$1」を記録しました",
+    "placeholders": {
+      "title": {
+        "content": "$1",
+        "example": "記事タイトル"
+      }
+    }
+  },
+  "aiDomainPolicy_allowed": {
+    "message": "送信を許可"
+  },
+  "aiDomainPolicy_no_summary": {
+    "message": "要約なしで記録"
+  },
+  "aiDomainPolicy_mask_required": {
+    "message": "マスク必須"
+  },
   "ublockDetailsTitle": {
     "message": "uBlock Origin フィルター（上級者向け）"
   },
@@ -1918,6 +2109,30 @@
   },
   "initialSetupDescription": {
     "message": "Obsidianとの接続とAIの設定を行います。"
+  },
+  "onboarding_intro": {
+    "message": "設定がなくても記録と検索は使えます。始め方を選んでください。"
+  },
+  "onboarding_dismissBtn": {
+    "message": "後で設定する"
+  },
+  "onboarding_tryFirstTitle": {
+    "message": "まず試す"
+  },
+  "onboarding_tryFirstDesc": {
+    "message": "設定なしで記録と検索を試せます"
+  },
+  "onboarding_obsidianTitle": {
+    "message": "Obsidian連携"
+  },
+  "onboarding_obsidianDesc": {
+    "message": "保存先をObsidianに追加します"
+  },
+  "onboarding_aiTitle": {
+    "message": "AI要約"
+  },
+  "onboarding_aiDesc": {
+    "message": "要約の生成を有効にします"
   },
   "obsidianSection": {
     "message": "Obsidian 接続"
@@ -2274,6 +2489,33 @@
   "domainAnalysis_title": {
     "message": "ドメイン分析",
     "description": "Domain analysis panel title"
+  },
+  "domainIntel_heading": {
+    "message": "情報源の偏り"
+  },
+  "domainIntel_biasLine": {
+    "message": "{domain} が全 {total} 件のうち約 {percent}% を占めています。偏っている可能性があります。対象期間: {period}"
+  },
+  "domainIntel_notEnough": {
+    "message": "記録が {count} 件と少ないため、偏りを判定できません。"
+  },
+  "domainIntel_proposalHelp": {
+    "message": "騒音の多い情報源の候補です。適用すると記録対象外になり、取り消せます。"
+  },
+  "domainIntel_proposalMeta": {
+    "message": "{count} 件 (割合 {percent}%)"
+  },
+  "domainIntel_applyBtn": {
+    "message": "記録対象外にする"
+  },
+  "domainIntel_undoBtn": {
+    "message": "取り消す"
+  },
+  "domainIntel_applied": {
+    "message": "{domain} を記録対象外にしました。"
+  },
+  "domainIntel_undone": {
+    "message": "{domain} の記録対象外を取り消しました。"
   },
   "domainAnalysis_tagLabel": {
     "message": "タグ（任意）",
@@ -3921,6 +4163,62 @@
       }
     }
   },
+  "historyStarSelected": {
+    "message": "選択行にスター"
+  },
+  "historyStarConfirm": {
+    "message": "選択した $1 件にスターを付けますか？（うち $2 件はプライベート判定）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      },
+      "private": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarApply": {
+    "message": "適用"
+  },
+  "historyStarApplyExcludePrivate": {
+    "message": "プライベート判定を除いて適用"
+  },
+  "historyStarResult": {
+    "message": "$1 件にスターを付けました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "historyStarResultExcluded": {
+    "message": "$1 件にスターを付けました（プライベート判定 $2 件を除外）",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "2"
+      },
+      "excluded": {
+        "content": "$2",
+        "example": "1"
+      }
+    }
+  },
+  "historyStarUndoBtn": {
+    "message": "取り消す"
+  },
+  "historyStarUndoDone": {
+    "message": "$1 件のスターを取り消しました",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
   "historyRegenerateSelectedResult": {
     "message": "$1 件成功・$2 件失敗",
     "placeholders": {
@@ -4228,6 +4526,30 @@
   },
   "noNormEntries": {
     "message": "ルールがありません"
+  },
+  "normProposalsTitle": {
+    "message": "正規化の提案"
+  },
+  "normProposalsDesc": {
+    "message": "上のルールで変わる保存済みタグを表示します。適用すると記録を書き換え、取り消せます。"
+  },
+  "normProposalsRefresh": {
+    "message": "提案を表示"
+  },
+  "normProposalsEmpty": {
+    "message": "提案はありません。"
+  },
+  "normProposalApply": {
+    "message": "適用"
+  },
+  "normProposalUndo": {
+    "message": "取消"
+  },
+  "normProposalApplied": {
+    "message": "タグを書き換えました。"
+  },
+  "normProposalUndone": {
+    "message": "取り消しました。"
   },
   "normEntriesTitle": {
     "message": "正規化ルール"

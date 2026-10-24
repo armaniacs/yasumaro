@@ -37,14 +37,6 @@ import { createSaveSqliteParams, type RetryContext } from './contextBuilder.js';
 
 export type SaveSinkName = 'saveObsidian' | 'saveLocalMarkdown' | 'saveSqlite' | 'saveMetadata';
 
-/** Canonical fan-out order. Reordering changes write visibility — keep Obsidian first. */
-export const SAVE_SINK_ORDER: readonly SaveSinkName[] = [
-  'saveObsidian',
-  'saveLocalMarkdown',
-  'saveSqlite',
-  'saveMetadata',
-];
-
 /**
  * Explicit error mode for the sqlite-absent skip. The former inline WARN
  * branch in the orchestrator could not be distinguished from a real failure
@@ -127,6 +119,14 @@ const SAVE_FAN_OUT: readonly SaveSinkDef[] = [
     execute: saveMetadataStep,
   },
 ];
+
+/**
+ * Canonical fan-out order, derived from the single table above — never a
+ * parallel literal. Reordering changes write visibility: Obsidian stays
+ * first because the sqlite insert carries its synced flag. Adding a sink
+ * is one row in SAVE_FAN_OUT; this order follows without further edits.
+ */
+export const SAVE_SINK_ORDER: readonly SaveSinkName[] = SAVE_FAN_OUT.map((sink) => sink.name);
 
 function toPipelineStep(sink: SaveSinkDef): PipelineStep {
   const step: PipelineStep = { name: sink.name, errorStrategy: sink.errorStrategy, execute: sink.execute };

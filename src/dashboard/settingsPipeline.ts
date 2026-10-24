@@ -95,6 +95,29 @@ export function saveErrorText(error: string | undefined): string {
   return getMessageOr('saveError', 'Save error');
 }
 
+/**
+ * PBI 2026-10-23-02: read the per-media threshold inputs into one override
+ * map. Only non-empty numeric fields become overrides, so an input the user
+ * left blank keeps the media default in force at send time (縮退の出口).
+ */
+export function collectMediaThresholdOverrides(): Record<string, Record<string, number>> {
+  const overrides: Record<string, Record<string, number>> = {};
+  const rows: Array<{ id: string; kind: string; metric: string }> = [
+    { id: 'mediaThresholdVideo', kind: 'video', metric: 'minDuration' },
+    { id: 'mediaThresholdPdf', kind: 'pdf', metric: 'minPdfPages' },
+    { id: 'mediaThresholdCode', kind: 'code', metric: 'minCodeCopies' },
+  ];
+  for (const { id, kind, metric } of rows) {
+    const input = document.getElementById(id) as HTMLInputElement | null;
+    const raw = input?.value?.trim();
+    if (raw === undefined || raw === '') continue;
+    const value = Number.parseInt(raw, 10);
+    if (Number.isNaN(value) || value < 0) continue;
+    (overrides[kind] ??= {})[metric] = value;
+  }
+  return overrides;
+}
+
 export interface SaveSettingsOptions {
   /** CSS selector for the settings form container. Defaults to '#panel-general'. */
   formSelector?: string;
@@ -189,6 +212,10 @@ export async function saveDashboardSettings(options: SaveSettingsOptions = {}): 
     logInfo('Provider priority collection failed; aborting save', { layout }, 'settingsPipeline');
     return { success: false, error: 'collector_failed' };
   }
+  // PBI 2026-10-23-02: per-media-kind threshold overrides ride the same save
+  // (one map from three inputs; empty fields contribute nothing, so the
+  // defaults stay in force for every kind the user left blank).
+  newSettings[StorageKeys.MEDIA_THRESHOLDS] = collectMediaThresholdOverrides();
   if (isBPriorityListActive(layout, bList)) {
     // Bレイアウト時の保存ブロック: P1必須（Spec §6）。Aは従来通りフォールバックでgeminiのためブロックしない。
     const { p1Empty } = renderBPriorityWarnings(bList);

@@ -68,6 +68,15 @@
   --color-bg-subtle: var(--ym-color-bg-subtle, #f8fafc);
   --color-bg-code: var(--ym-color-bg-code, #f1f5f9);
   --color-bg-white: var(--ym-color-bg, #ffffff);
+  /* Aliases for legacy names used across panels. Defined here so they
+     follow the light/dark tokens above instead of falling back to a
+     fixed light color in dark mode (white-on-white bug). */
+  --color-surface: var(--ym-color-bg, #ffffff);
+  --color-bg: var(--ym-color-bg, #ffffff);
+  --color-bg-secondary: var(--ym-color-bg-subtle, #f8fafc);
+  --color-bg-hover: var(--ym-color-bg-code, #f1f5f9);
+  --color-link: #2563eb;
+  --color-link-hover: #1d4ed8;
   --color-overlay: var(--ym-color-overlay, rgba(15, 23, 42, 0.6));
   --color-shadow-sm: rgba(15, 23, 42, 0.05);
   --color-shadow: rgba(15, 23, 42, 0.1);
@@ -1724,6 +1733,94 @@ button#changeMasterPassword:hover {
   min-width: unset;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Saved Collections Section (PBI 2026-10-23-06)
+   ───────────────────────────────────────────────────────────────── */
+
+.saved-collections-section {
+  margin-bottom: 24px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius);
+  background: var(--color-bg-white, #fff);
+  padding: 16px;
+}
+
+.saved-collections-help {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin: 4px 0 12px;
+}
+
+.saved-collections-save {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.saved-collection-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.saved-collection-save-error {
+  font-size: 12px;
+  color: var(--color-danger-text, #991b1b);
+}
+
+.saved-collections-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saved-collections-empty {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.saved-collection-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+}
+
+.saved-collection-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.saved-collection-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.saved-collection-meta {
+  font-size: 11px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.saved-collection-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.saved-collection-actions .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
 .danger-btn {
   display: inline-block;
   padding: 8px 16px;
@@ -1767,6 +1864,332 @@ button#changeMasterPassword:hover {
 .sqlite-delete-confirm-text {
   font-size: 13px;
   color: var(--color-danger-text, #991b1b);
+}
+
+/* Bulk-bar inline star confirm + undo (PBI 2026-10-23-07): the confirm sits
+ * next to the star button (neutral tone — starring is not destructive); the
+ * undo survives state changes until the panel invalidates it. */
+.sqlite-star-confirm,
+.sqlite-star-undo {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8fafc);
+}
+
+.sqlite-star-confirm.hidden,
+.sqlite-star-undo.hidden {
+  display: none;
+}
+
+.sqlite-star-confirm-text,
+.sqlite-star-undo-text {
+  font-size: 13px;
+}
+
+.sqlite-star-confirm .btn-primary,
+.sqlite-star-confirm .secondary-btn,
+.sqlite-star-undo .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
+/* Ask-history region (PBI 2026-10-23-08): neutral tone, design tokens only.
+ * The answer text and citations sit below the question row. */
+.ask-history-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8fafc);
+}
+
+.ask-history-section h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.ask-history-help {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.ask-history-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ask-history-target {
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.ask-history-question {
+  flex: 1;
+  min-width: 160px;
+  font-size: 13px;
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+}
+
+.ask-history-status {
+  font-size: 13px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 6px;
+}
+
+.ask-history-status:empty {
+  display: none;
+}
+
+.ask-history-answer {
+  margin-top: 8px;
+}
+
+.ask-answer-text {
+  font-size: 13px;
+  white-space: pre-wrap;
+}
+
+.ask-citations {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ask-citation-row {
+  padding: 6px 8px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.ask-citation-link {
+  font-size: 13px;
+  color: var(--color-link, #2563eb);
+}
+
+.ask-citation-snippet {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+/* Research-report region (PBI 2026-10-23-09): neutral tone, design tokens only. */
+.research-report-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-bg, #f8fafc);
+}
+
+.research-report-section h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.research-report-help {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.research-report-input {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.research-report-obsidian {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.research-report-status {
+  font-size: 13px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 6px;
+}
+
+.research-report-status:empty {
+  display: none;
+}
+
+/* Domain-intel section (PBI 2026-10-23-10): bias line + exclusion proposals.
+ * Neutral tone, design tokens only; proposals are advisory with an undo. */
+.domain-intel-proposal-row {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.domain-intel-proposal-domain {
+  font-size: 13px;
+}
+
+.domain-intel-proposal-meta {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 2px;
+}
+
+.domain-intel-proposal-actions {
+  margin-top: 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.domain-intel-proposal-actions .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
+.domain-intel-help {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+.domain-intel-status {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  margin-top: 4px;
+}
+
+.domain-intel-status:empty {
+  display: none;
+}
+
+/* Onboarding banner (PBI 2026-10-22-02): first-launch 3 choices. Design
+ * tokens only; the dismissal is a user action and nothing is auto-configured. */
+.onboarding-banner {
+  margin: 12px 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #ffffff);
+}
+
+.onboarding-banner-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.onboarding-banner-head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.onboarding-choices {
+  margin-top: 10px;
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.onboarding-choice {
+  flex: 1 1 180px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.onboarding-choice:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.onboarding-choice:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+}
+
+.onboarding-choice-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.onboarding-choice-desc {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+}
+
+/* Normalization proposals (PBI 2026-10-23-05): advisory rows with apply/undo. */
+.norm-proposals-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.norm-proposal-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface, #ffffff);
+}
+
+.norm-proposal-label {
+  font-size: 13px;
+  flex: 1 1 auto;
+}
+
+.norm-proposal-row .secondary-btn {
+  font-size: 12px;
+  padding: 4px 10px;
+  min-width: unset;
+}
+
+.norm-proposal-status {
+  font-size: 12px;
+  color: var(--color-text-muted, #64748b);
+  flex-basis: 100%;
+}
+
+.norm-proposal-status:empty {
+  display: none;
 }
 
 .pending-pagination {
@@ -3304,7 +3727,7 @@ details[open] .advanced-details-summary {
 
 .csp-provider-label {
   font-size: 14px;
-  color: var(--color-text-main);
+  color: var(--color-text);
   cursor: pointer;
   user-select: none;
   flex: 1;
@@ -3327,8 +3750,8 @@ details[open] .advanced-details-summary {
   margin-bottom: 8px;
   border: 1px solid var(--color-border);
   border-radius: 6px;
-  background: var(--color-bg-primary);
-  color: var(--color-text-main);
+  background: var(--color-bg-white);
+  color: var(--color-text);
   font-size: 14px;
   box-sizing: border-box;
 }
@@ -3356,7 +3779,7 @@ details[open] .advanced-details-summary {
   max-height: 300px;
   overflow-y: auto;
   padding: 8px;
-  background: var(--color-bg-primary);
+  background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: 6px;
 }
@@ -3365,9 +3788,9 @@ details[open] .advanced-details-summary {
   display: none;
   padding: 12px;
   margin-top: 16px;
-  background: var(--color-success-accent-bg);
+  background: var(--color-success-bg);
   color: var(--color-success);
-  border: 1px solid var(--color-success-accent);
+  border: 1px solid var(--color-success-border);
   border-radius: 6px;
   font-size: 14px;
   text-align: center;
@@ -3422,7 +3845,7 @@ details[open] .advanced-details-summary {
   flex: 2;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   text-align: right;
 }
 
@@ -3449,15 +3872,15 @@ details[open] .advanced-details-summary {
 }
 
 .status-badge.status-granted {
-  background: var(--color-success-accent-bg);
+  background: var(--color-success-bg);
   color: var(--color-success);
-  border: 1px solid var(--color-success-accent);
+  border: 1px solid var(--color-success-border);
 }
 
 .status-badge.status-denied {
-  background: var(--color-warning-accent-bg);
+  background: var(--color-warning-bg);
   color: var(--color-warning);
-  border: 1px solid var(--color-warning-accent);
+  border: 1px solid var(--color-warning-border);
 }
 
 .status-badge.status-pending {
@@ -3484,7 +3907,7 @@ details[open] .advanced-details-summary {
 }
 
 .tranco-update-modal-content {
-  background: var(--color-bg-primary);
+  background: var(--color-bg-white);
   border: 1px solid var(--color-border);
   border-radius: 8px;
   padding: 24px;
@@ -3512,7 +3935,7 @@ details[open] .advanced-details-summary {
 
 .tranco-update-modal-section .value {
   font-size: 14px;
-  color: var(--color-text-primary);
+  color: var(--color-text);
   margin-bottom: 8px;
 }
 
@@ -3535,7 +3958,7 @@ details[open] .advanced-details-summary {
 
 .tranco-update-action:hover {
   border-color: var(--color-primary);
-  background: var(--color-bg-primary);
+  background: var(--color-bg-white);
 }
 
 .tranco-update-action-title {
@@ -3550,13 +3973,13 @@ details[open] .advanced-details-summary {
 
 .tranco-update-action.primary {
   border-color: var(--color-primary);
-  background: var(--color-primary-kui-bg);
+  background: var(--color-primary-light);
   color: var(--color-primary);
 }
 
 .tranco-update-action.primary:hover {
   background: var(--color-primary);
-  color: var(--color-bg-primary);
+  color: var(--color-bg-white);
 }
 
 /* =============================================================================
@@ -3723,7 +4146,7 @@ details[open] .advanced-details-summary {
 }
 
 .sqlite-history-error {
-  color: var(--color-error);
+  color: var(--color-danger);
   font-size: 13px;
   margin-top: 8px;
   padding: 8px 12px;
@@ -3865,7 +4288,6 @@ details[open] .advanced-details-summary {
 }
 
 .sqlite-entry-delete:hover {
-  /* --color-error and --color-error-bg were undefined → use --color-danger variants */
   color: var(--color-danger, #ef4444);
   background: var(--color-danger-bg, #fef2f2);
 }
@@ -5190,7 +5612,7 @@ details[open] > .priority-details-summary {
 }
 
 .tag-timeline-point {
-  stroke: var(--ym-color-bg-white, #ffffff);
+  stroke: var(--ym-color-bg, #ffffff);
   stroke-width: 1;
   cursor: default;
 }

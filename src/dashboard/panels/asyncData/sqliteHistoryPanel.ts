@@ -6,12 +6,12 @@ import { createCopyMarkdownButton } from '../../../utils/copyMarkdownButton.js';
 import { type PanelLifecycle } from '../types.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import type { SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
-import { createSqliteHistoryModel } from './sqliteHistoryModel.js';
+import { createSqliteHistoryModel, isPrivacyJudgedEntry } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
 import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
 import { recordPendingPage, PENDING_RECORD_TIMEOUT_ERROR } from '../../../messaging/pendingRecordGateway.js';
-import { regenerateSummary, REGENERATE_TIMEOUT_ERROR } from '../../../messaging/regenerateSummaryGateway.js';
+import { regenerateSummary } from '../../../messaging/regenerateSummaryGateway.js';
 import type { RegenerateCleanseMode } from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import {
   formatDiagnosticMetadataHtml,
@@ -23,71 +23,35 @@ import {
   showEntryRegenerateError,
   showDeleteConfirm,
   hideDeleteConfirm,
+  showStarConfirm,
+  hideStarConfirm,
+  showStarUndo,
+  hideStarUndo,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import {
+  createSavedCollectionsActions,
+  loadSavedCollectionsRegion,
+  renderSavedCollectionsRegion,
+} from './savedCollectionsPanelView.js';
+import { createAskHistoryActions, renderAskHistoryRegion } from './askHistoryPanelView.js';
+import { createResearchReportActions, renderResearchReportRegion } from './researchReportPanelView.js';
+import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 
 export { formatDiagnosticMetadataHtml };
 
 /**
- * Build the multi-line error-row detail: providers tried in order, then each
- * slot's own failure text (PBI 2026-09-22-04 follow-up — the old single-error
- * display could only ever show the LAST slot's message, e.g. built-in-ai's
- * kErrorUnknown, masking why openai/gemini failed). Pure for unit tests.
+ * Regenerate error conversion lives in regenerateErrorConversion.ts (PBI
+ * 2026-10-24-03 single owner). Re-exported here so existing importers keep
+ * working; the panel body only delegates to toRegenerateErrorDisplay.
  */
-export function formatRegenerateErrorDetail(
-  attemptedProviders: string[],
-  slotFailures: ReadonlyArray<{ provider: string; error: string }> | undefined,
-  triedLabel: string,
-): string | undefined {
-  const lines: string[] = [];
-  if (attemptedProviders.length > 0) {
-    lines.push(`${triedLabel}: ${attemptedProviders.join(' → ')}`);
-  }
-  for (const f of slotFailures ?? []) {
-    lines.push(`${f.provider}: ${f.error}`);
-  }
-  return lines.length > 0 ? lines.join('\n') : undefined;
-}
-
-/**
- * Sentinel → i18n key mapping for REGENERATE_SUMMARY failures (PBI
- * 2026-09-22-04). Exported as a pure module-level function so unit tests can
- * pin the matrix directly; raw handler strings are never rendered — unknown
- * sentinels collapse to the generic key and Error-prefixed strings pass
- * through unchanged (same contract as translateHistoryError).
- */
-export function mapRegenerateError(
-  error: string | undefined,
-  needsForce: boolean,
-  reason?: string,
-  slotFailures?: ReadonlyArray<{ provider: string; error: string }>,
-): string {
-  if (needsForce) return t('historyRegenerateGateBlocked');
-  // The handler threads reason:'rate_limited'; match it first so the raw
-  // RateLimiter message (capital 'Rate limit…') never needs case gymnastics.
-  // PBI 03: consent rejections thread reason:'privacy_consent_required' (the
-  // unified admission shape) — matched before the error-based checks.
-  if (reason === 'rate_limited') return t('historyRegenerateErrorRateLimit');
-  if (reason === 'privacy_consent_required') return t('historyRegenerateErrorConsent');
-  if (!error) return t('historyRegenerateError');
-  if (error === 'invalid_url') return t('historyRegenerateErrorUrl');
-  if (error === 'rate_limited' || /rate limit/i.test(error)) return t('historyRegenerateErrorRateLimit');
-  if (error.startsWith('fetch_failed')) return t('historyRegenerateErrorFetch');
-  if (error === REGENERATE_TIMEOUT_ERROR || error === PENDING_RECORD_TIMEOUT_ERROR) return t('historyRegenerateErrorTimeout');
-  if (error === 'privacy_consent_required') return t('historyRegenerateErrorConsent');
-  if (error === 'ai_failed' || error.startsWith('ai_failed:')) {
-    // The monthly token quota is SHARED by every HTTP provider (one counter
-    // in aiUsageTracker) — when it tripped, "try another provider" advice is
-    // wrong: the next HTTP slot hits the same wall. Show the actionable
-    // message instead; the per-slot detail rows still explain each failure.
-    if (slotFailures?.some((f) => f.error.includes('Monthly token limit'))) {
-      return t('historyRegenerateErrorMonthlyLimit');
-    }
-    return t('historyRegenerateErrorAi');
-  }
-  if (error.startsWith('Error:')) return error;
-  return t('historyRegenerateError');
-}
+export {
+  formatRegenerateErrorDetail,
+  isSlotFailureRecord,
+  mapRegenerateError,
+  toRegenerateErrorDisplay,
+} from './regenerateErrorConversion.js';
+import { mapRegenerateError, toRegenerateErrorDisplay } from './regenerateErrorConversion.js';
 
 export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): PanelLifecycle {
   let container: HTMLElement | null = null;
@@ -108,6 +72,12 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // a chrome.storage.onChanged subscription, released in destroy().
   let pendingPages: PendingPage[] = [];
   let unsubscribePendingStorage: (() => void) | null = null;
+
+  // --- Saved collections (PBI 2026-10-23-06) --------------------------------
+  // Panel-local state (NOT model state): saved collections are chrome.storage
+  // settings content, independent of the SQLite query pipeline. The recall
+  // funnels through model.applyCollection (single dispatch + single fetch).
+  let savedCollections: Record<string, SavedCollection> = {};
 
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
@@ -194,27 +164,21 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       // misleading failure row for what is actually "still running".
       if (result.error === 'in_flight') return;
 
-      const needsForce = result.needsForce === true;
-      const attemptedProviders = Array.isArray(result.attemptedProviders)
-        ? result.attemptedProviders.filter((p): p is string => typeof p === 'string')
-        : [];
-      const detail = formatRegenerateErrorDetail(
-        attemptedProviders,
-        result.slotFailures,
-        t('historyRegenerateProvidersTried'),
-      );
+      // Gateway-response → display-detail conversion is owned by the
+      // conversion module (PBI 2026-10-24-03): the panel only delegates.
+      const display = toRegenerateErrorDisplay(result, t('historyRegenerateProvidersTried'));
       showEntryRegenerateError(
         container,
         id,
-        mapRegenerateError(result.error, needsForce, result.reason, result.slotFailures),
+        display.message,
         {
-          ...(needsForce
+          ...(display.needsForce
             ? {
                 forceLabel: t('historyRegenerateForceAction'),
                 onForce: () => { void handleRegenerate(id, mode, true); },
               }
             : {}),
-          ...(detail !== undefined ? { detail } : {}),
+          ...(display.detail !== undefined ? { detail: display.detail } : {}),
         },
       );
     } catch (e: unknown) {
@@ -264,6 +228,70 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
 
   /** Handler-local in-flight guard: repeat clicks while the bulk run is executing are ignored. */
   let bulkRegenerateInFlight = false;
+
+  // --- Bulk star (PBI 2026-10-23-07) ----------------------------------------
+  // Panel-local undo state: the applied batch's changed ids. Invalidated by a
+  // selection change (the batch no longer matches what the user sees), by the
+  // undo itself, and by panel teardown — never silently by a state refresh.
+  let starUndoIds: number[] | null = null;
+
+  function invalidateStarUndo(): void {
+    starUndoIds = null;
+    if (container) hideStarUndo(container);
+  }
+
+  function handleStarSelected(): void {
+    if (!container) return;
+    const { entries, selectedIds } = model.getState();
+    if (selectedIds.size === 0) return;
+    const privateCount = entries.filter(
+      (entry) => selectedIds.has(entry.id) && isPrivacyJudgedEntry(entry),
+    ).length;
+    showStarConfirm(container, selectedIds.size, privateCount);
+  }
+
+  async function handleStarSelectedConfirm(excludePrivate: boolean): Promise<void> {
+    if (!container) return;
+    hideStarConfirm(container);
+    const state = model.getState();
+    const selected = Array.from(state.selectedIds);
+    if (selected.length === 0) return;
+    // The exclusion is the user's choice (the confirm's second button): the
+    // privacy-judged rows are dropped from the batch before the model runs.
+    const excludedPrivate = excludePrivate
+      ? selected.filter((id) => {
+        const entry = state.entries.find((candidate) => candidate.id === id);
+        return entry !== undefined && isPrivacyJudgedEntry(entry);
+      })
+      : [];
+    const excludedIds = new Set(excludedPrivate);
+    const ids = selected.filter((id) => !excludedIds.has(id));
+    const result = await model.bulkSetStarred(ids, true);
+    if (result.changedIds.length > 0) {
+      starUndoIds = result.changedIds;
+      showStarUndo(container, result.changedIds.length);
+    }
+    // The model already dispatched operationError + notify on a total failure;
+    // only toast the partial/full success here, naming the exclusions.
+    if (result.starredCount > 0) {
+      const body = excludedPrivate.length > 0
+        ? t('historyStarResultExcluded', [String(result.starredCount), String(excludedPrivate.length)])
+        : t('historyStarResult', [String(result.starredCount)]);
+      notify(t('historyStarSelected'), body);
+    }
+  }
+
+  async function handleStarUndo(): Promise<void> {
+    if (!container) return;
+    if (starUndoIds === null) return;
+    const ids = starUndoIds;
+    starUndoIds = null;
+    hideStarUndo(container);
+    const result = await model.bulkSetStarred(ids, false);
+    if (result.starredCount > 0) {
+      notify(t('historyStarSelected'), t('historyStarUndoDone', [String(result.starredCount)]));
+    }
+  }
 
   async function handleRegenerateSelected(): Promise<void> {
     if (bulkRegenerateInFlight) return;
@@ -329,14 +357,26 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       onPageChange: (page) => model.changePage(page),
       onToggleStar: (id) => void model.toggleStar(id),
       onDelete: (id) => void handleDelete(id),
-      onSelectionChange: (id, selected) => model.selectEntry(id, selected),
+      onSelectionChange: (id, selected) => {
+        invalidateStarUndo();
+        model.selectEntry(id, selected);
+      },
       onTagFilterClick: (tag) => model.filterByTag(tag),
       onContentToggle: (controlsId) => toggleContentArea(container ?? document, controlsId),
-      onSelectAll: (checked) => model.selectAllEntries(checked),
-      onClearSelection: () => model.clearEntrySelection(),
+      onSelectAll: (checked) => {
+        invalidateStarUndo();
+        model.selectAllEntries(checked);
+      },
+      onClearSelection: () => {
+        invalidateStarUndo();
+        model.clearEntrySelection();
+      },
       onAppend: () => void handleAppendToObsidian(),
       onDeleteSelected: () => handleDeleteSelected(),
       onDeleteSelectedConfirm: () => void handleDeleteSelectedConfirm(),
+      onStarSelected: () => handleStarSelected(),
+      onStarSelectedConfirm: (excludePrivate) => void handleStarSelectedConfirm(excludePrivate),
+      onStarUndo: () => void handleStarUndo(),
       onRegenerateSelected: () => void handleRegenerateSelected(),
       onTagFilterClear: () => model.clearTagFilter(),
       onRegenerate: (id, mode, force) => void handleRegenerate(id, mode, force),
@@ -411,6 +451,51 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
   }
 
+  // --- Saved collections (PBI 2026-10-23-06, PBI 2026-10-24-05) ---------------
+  // Behavior owned by the region module (createSavedCollectionsActions +
+  // loadSavedCollectionsRegion); the panel only supplies narrow inputs
+  // (query input, recall dispatch, live collections, reload) and the mount
+  // target. The fetch + render pairing stays next to the actions.
+
+  function createSavedActions(): ReturnType<typeof createSavedCollectionsActions> {
+    return createSavedCollectionsActions({
+      getQueryInput: () => model.getState(),
+      applyCollection: (query) => model.applyCollection(query),
+      getCollections: () => savedCollections,
+      reload: () => loadSaved(),
+    });
+  }
+
+  function renderSaved(): void {
+    if (!container) return;
+    renderSavedCollectionsRegion(container, savedCollections, createSavedActions());
+  }
+
+  async function loadSaved(): Promise<void> {
+    if (!container) return;
+    const target = container;
+    savedCollections = await loadSavedCollectionsRegion(target, {
+      getQueryInput: () => model.getState(),
+      applyCollection: (query) => model.applyCollection(query),
+      getCollections: () => savedCollections,
+      reload: () => loadSaved(),
+      render: (collections) => {
+        savedCollections = collections;
+        if (container === target) renderSaved();
+      },
+    });
+  }
+
+  // --- Ask history (PBI 2026-10-23-08, PBI 2026-10-24-05) ----------------------
+  // Behavior owned by the region module (createAskHistoryActions);
+  // wire-to-view repack lives in the seam module (responseRepack.ts). The
+  // panel only supplies the i18n error translation at mount/load wiring.
+
+  // --- Research report (PBI 2026-10-23-09, PBI 2026-10-24-05) ------------------
+  // Behavior owned by the region module (createResearchReportActions +
+  // buildResearchReportScope); the panel only supplies the scope source
+  // accessor at load wiring.
+
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
@@ -453,6 +538,27 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       subscribePendingStorage();
       void loadPending();
 
+      // Saved collections render into the shell's dedicated region
+      // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
+      void loadSaved();
+
+      // Ask-history region (PBI 2026-10-23-08, PBI 2026-10-24-05): rendered
+      // per load with the saved collections as the target options; the
+      // actions bundle is region-owned, the panel only wires mount/load.
+      renderAskHistoryRegion(
+        container,
+        savedCollections,
+        createAskHistoryActions(translateHistoryError),
+      );
+
+      // Research-report region (PBI 2026-10-23-09, PBI 2026-10-24-05):
+      // rendered per load; the actions bundle is region-owned, the panel
+      // only supplies the scope source accessor at wiring time.
+      renderResearchReportRegion(
+        container,
+        createResearchReportActions(() => model.getState()),
+      );
+
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
       // the Model, which owns the order.
@@ -481,6 +587,8 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         unsubscribePendingStorage = null;
       }
       pendingPages = [];
+      savedCollections = {};
+      starUndoIds = null;
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.
       // (Also clears bulk bar listener references via the selection clear.)

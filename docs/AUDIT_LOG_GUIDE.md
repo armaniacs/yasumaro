@@ -23,7 +23,7 @@ Yasumaro は、AI要約の生成リクエストを送信するたびに、いつ
 
 ### 確認方法
 
-ダッシュボードの **ログをエクスポート** パネルの「TSV でダウンロード」から、直近の記録を TSV ファイルとしてダウンロードできます（上限は使用中のストレージによって異なります。OPFS使用時は最大1,000件、IndexedDB使用時は最大100,000件。OPFS使用時に上限を超えるデータがある場合、部分的なデータである旨の警告とともに最大1,000件が出力されます）。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv` で、`id`・プロバイダー名・URL・`created_at`（ISO 8601形式）の4カラムが含まれます。
+ダッシュボードの **ログをエクスポート** パネルの「TSV でダウンロード」から、直近の記録を TSV ファイルとしてダウンロードできます（上限は使用中のストレージによって異なります。OPFS使用時は最大1,000件、IndexedDB使用時は最大100,000件。OPFS使用時に上限を超えるデータがある場合、部分的なデータである旨の警告とともに最大1,000件が出力されます）。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv` で、`id`・プロバイダー名・URL・`created_at`（ISO 8601形式）・`char_count`（送信文字数）・`policy`（適用された送信政策）の6カラムが含まれます。`char_count` と `policy` は2026年10月以降の記録に含まれ、古い行では空欄になります。
 
 ### 保持期間
 
@@ -57,7 +57,7 @@ Every time Yasumaro sends an AI summarization request, it records when, to which
 
 ### Viewing the Log
 
-From the dashboard's **Export Logs** panel, use "TSV でダウンロード" to download recent entries as a TSV file (the cap depends on the active storage backend: up to 1,000 entries on OPFS, up to 100,000 on IndexedDB. On OPFS, when more data exists than the cap, up to 1,000 rows are exported with a partial-data warning). The filename follows the pattern `yasumaro-audit-log-YYYY-MM-DD.tsv` and contains four columns: `id`, provider name, URL, and `created_at` (ISO 8601).
+From the dashboard's **Export Logs** panel, use "TSV でダウンロード" to download recent entries as a TSV file (the cap depends on the active storage backend: up to 1,000 entries on OPFS, up to 100,000 on IndexedDB. On OPFS, when more data exists than the cap, up to 1,000 rows are exported with a partial-data warning). The filename follows the pattern `yasumaro-audit-log-YYYY-MM-DD.tsv` and contains six columns: `id`, provider name, URL, `created_at` (ISO 8601), `char_count` (sent character count), and `policy` (the applied egress policy). `char_count` and `policy` are recorded on entries from October 2026 onward; older rows keep those columns empty.
 
 ### Retention
 

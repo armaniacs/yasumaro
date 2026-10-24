@@ -109,6 +109,48 @@ export function decidePrivacy(input: PrivacyDecisionInput): PrivacyDecision {
 }
 
 // ============================================================================
+// Privacy input builders: the step reads settings (I/O) and passes raw
+// values here so the normalization stays in the pure core.
+// ============================================================================
+
+/**
+ * Owns the behavior fallback: only 'skip' and 'confirm' divert from the
+ * default; every other stored value (including future additions) saves.
+ */
+export function normalizePrivacyAutoBehavior(raw: string): PrivacyAutoBehavior {
+  return raw === 'skip' || raw === 'confirm' ? raw : 'save';
+}
+
+/**
+ * Owns the pre-fetch bypass predicate. Force and whitelist are settled
+ * before the fetch, so no gate evaluation is needed to plan the skip —
+ * the step calls this instead of a placeholder decideGate.
+ */
+export function shouldBypassPrivacyFetch(force: boolean, whitelisted: boolean): boolean {
+  return force || whitelisted;
+}
+
+export interface PrivacyDenialDescription {
+  confirmationRequired: boolean;
+  includeHeaderValue: boolean;
+}
+
+/**
+ * Owns the deniedBy -> throw-payload mapping so the step stays I/O-only.
+ * 'confirm' is the only denial carrying the header value; 'skip' throws a
+ * reason-only error; requireConfirmation throws a confirmation error.
+ */
+export function describePrivacyDenial(decision: PrivacyDecision): PrivacyDenialDescription {
+  if (decision.deniedBy === 'confirm') {
+    return { confirmationRequired: true, includeHeaderValue: true };
+  }
+  if (decision.deniedBy === 'requireConfirmation') {
+    return { confirmationRequired: true, includeHeaderValue: false };
+  }
+  return { confirmationRequired: false, includeHeaderValue: false };
+}
+
+// ============================================================================
 // Duplicate: same-day (UTC) + URL set 上限
 // ============================================================================
 
@@ -138,19 +180,6 @@ export function decideDuplicate(input: DuplicateDecisionInput): GateVerdict {
     return { allow: false, error: 'URL_SET_LIMIT_EXCEEDED' };
   }
   return { allow: true };
-}
-
-// ============================================================================
-// 競合時の勝者: 順序表の先頭から最初の拒否 gate を返す
-// ============================================================================
-
-export function evaluateAdmissionPrecedence(
-  failures: Record<RecordingGate, boolean>
-): RecordingGate | null {
-  for (const gate of RECORDING_DECISION_ORDER) {
-    if (failures[gate]) return gate;
-  }
-  return null;
 }
 
 // ============================================================================

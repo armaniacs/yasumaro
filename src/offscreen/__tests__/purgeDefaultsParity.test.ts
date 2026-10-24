@@ -2,7 +2,9 @@
  * purgeDefaultsParity.test.ts
  * Pins the purge-seam retention defaults (PBI 04 mirror contract): the wire
  * defaults (queryPlanner.planPurge) and the executor defaults
- * (dbMaintenance.purgeOldRecords with no args) must come from one definition.
+ * (recordsRepo.purgeOldRecords with no args — PBI 2026-10-24-07 folded the
+ * dbMaintenance split into the single secondary-store module) must come
+ * from one definition.
  * The former local mirror in dbMaintenance restated queryPlanner's values, so
  * a one-sided edit could leave a destructive purge purging on a different
  * default than the planner promised.
@@ -21,7 +23,7 @@ vi.mock('../sqliteEngineHost.js', () => ({
   },
 }));
 
-import { purgeOldRecords } from '../dbMaintenance.js';
+import { purgeOldRecords } from '../recordsRepo.js';
 
 beforeEach(() => {
   vi.clearAllMocks();

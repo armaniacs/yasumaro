@@ -1,71 +1,33 @@
 /**
  * dbMaintenance.ts
- * Retention purging, FTS5 index health monitoring, binary backup/restore,
- * and a lightweight health check.
- * Split out of sqlite.ts (PBI: sqlite.ts deepening).
+ * Backward-compatible re-export shim (PBI: fold thin delegation trio).
  *
- * All methods delegate to the active StorageBackend returned by engine.getBackend().
+ * The maintenance operations (retention purging, binary backup/restore,
+ * health check) now live in the single SQLite secondary-store module
+ * (recordsRepo.ts). This file re-exports them so existing importers keep
+ * working with unchanged results.
  */
 
-import { engine } from './sqliteEngineHost.js';
-// Retention defaults — SSOT via queryPlanner (PBI 04): one definition for the
-// wire defaults (planPurge) and these executor defaults, so a one-sided edit
-// cannot leave a destructive purge purging on a different default. Pinned by
-// purgeDefaultsParity.test.ts.
-import { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } from './queryPlanner.js';
+export * from './recordsRepo.js';
 
 /**
- * Purge old browsing log records based on retention policy.
- * Deletes records older than retentionDays (excluding starred items).
- * If total non-deleted records still exceed maxRecords, deletes oldest non-starred.
+ * Backup shape query re-export (PBI 2026-10-24-06): importers that reach the
+ * binary backup through this legacy path get the single select/dispatch
+ * interface from the same place. The query itself lives in StorageBackend.
  */
-export async function purgeOldRecords(
-  retentionDays: number = DEFAULT_RETENTION_DAYS,
-  maxRecords: number = DEFAULT_MAX_RECORDS
-): Promise<{ success: true; purged: number } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.purgeOldRecords(retentionDays, maxRecords);
-}
-
-/**
- * Purge content (page body) from old records based on retention policy.
- * Sets content = NULL (does NOT delete records).
- * Respects is_starred protection based on includeStarred flag.
- */
-export async function purgeContent(
-  retentionDays?: number | null,
-  maxRecords?: number | null,
-  includeStarred?: boolean | null,
-): Promise<{ success: true; purged: number } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.purgeContent(retentionDays ?? undefined, maxRecords ?? undefined, includeStarred ?? undefined);
-}
-
-/**
- * バイナリ .db バックアップを取得
- * OPFS パスではバイナリ .db を返し、IDB/Fallback パスではエラーを返す
- * (JSON フォールバックは廃止 — コンシューマーに破損 .db を渡すため)
- */
-export async function backupDb(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.backupDb();
-}
-
-/**
- * バイナリ .db を書き戻して履歴DBを復元する
- * OPFS パスのみサポート。一時ファイル検証は opfsWorker.ts 側で行う。
- */
-export async function restoreDb(data: Uint8Array): Promise<{ success: true } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.restoreDb(data);
-}
-
-/**
- * Lightweight health check — verifies the SQLite database is reachable.
- * Returns true if a SELECT 1 succeeds on any available backend.
- */
-export async function sqliteHealthCheck(): Promise<boolean> {
-  const backend = await engine.getBackend();
-  const result = await backend.healthCheck();
-  return result.success;
-}
+export {
+  capabilitiesFromFlags,
+  capabilitiesForBackend,
+  hasArchiveCapability,
+  resolveBackupShape,
+  restoreTargetForShape,
+  classifyBackupPayload,
+} from './StorageBackend.js';
+export type {
+  BackupShape,
+  BackupKind,
+  BackupWants,
+  BackupCapabilities,
+  BackupRestoreTarget,
+  BackupPayloadFields,
+} from './StorageBackend.js';

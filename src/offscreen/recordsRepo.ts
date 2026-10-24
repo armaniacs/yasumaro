@@ -1,15 +1,29 @@
 /**
  * recordsRepo.ts
- * Browsing-log record CRUD, FTS5 search, and JSON export.
- * Split out of sqlite.ts (PBI: sqlite.ts deepening).
+ * Single SQLite secondary-store module for the offscreen document.
+ *
+ * Owns every operation callers need against the secondary store: browsing-log
+ * record CRUD, FTS5 search, and JSON export (folded in from the former thin
+ * recordsRepo split), the audit_log trail (folded in from auditLogRepo), and
+ * retention purging, binary backup/restore, and health check (folded in from
+ * dbMaintenance). The former per-table modules now re-export from here so a
+ * delegation-target change lands in exactly one place.
  *
  * All methods delegate to the active StorageBackend returned by engine.getBackend().
+ * Store-level policy owned here: read-policy application (query), retention
+ * defaults SSOT (purgeOldRecords), and status envelope normalization (getStatus).
  */
 
 import { engine, DB_FILENAME } from './sqliteEngineHost.js';
 import { applyReadPolicy } from './queryPlanner.js';
+// Retention defaults — SSOT via queryPlanner (PBI 04): one definition for the
+// wire defaults (planPurge) and these executor defaults, so a one-sided edit
+// cannot leave a destructive purge purging on a different default. Pinned by
+// purgeDefaultsParity.test.ts.
+import { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } from './queryPlanner.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
+import type { AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 
 /**
  * Insert a new browsing log record and return the auto-generated row id.
@@ -112,4 +126,98 @@ export async function clearAll(): Promise<{ success: boolean; error?: string }> 
 export async function serialize(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
   const backend = await engine.getBackend();
   return backend.serialize();
+}
+
+// ── Audit log (folded in from auditLogRepo) ───────────────────────────────
+// Cloud AI provider send-event trail in the separate `audit_log` table —
+// unrelated to browsing-log record CRUD.
+
+/**
+ * Insert an audit log entry for cloud AI provider send events.
+ */
+export async function insertAuditLog(record: AuditLogRecord): Promise<{ success: true; id: number } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.insertAuditLog(record);
+}
+
+/**
+ * Query audit log entries, most recent first by default.
+ */
+export async function queryAuditLog(options: { limit?: number; offset?: number } = {}): Promise<
+  { success: true; rows: AuditLogEntry[]; total: number } | { success: false; error: string }
+> {
+  const backend = await engine.getBackend();
+  return backend.queryAuditLog(options);
+}
+
+/**
+ * Delete audit log entries older than the retention window.
+ *
+ * The trail records outbound cloud AI sends, so it is deleted on a timer
+ * rather than only on the user's explicit clear-all: an unbounded record of
+ * every URL sent to a provider is exactly what the privacy promise forbids.
+ */
+export async function purgeAuditLog(retentionDays?: number): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.purgeAuditLog(retentionDays);
+}
+
+// ── Maintenance (folded in from dbMaintenance) ────────────────────────────
+// Retention purging, binary backup/restore, and a lightweight health check.
+
+/**
+ * Purge old browsing log records based on retention policy.
+ * Deletes records older than retentionDays (excluding starred items).
+ * If total non-deleted records still exceed maxRecords, deletes oldest non-starred.
+ */
+export async function purgeOldRecords(
+  retentionDays: number = DEFAULT_RETENTION_DAYS,
+  maxRecords: number = DEFAULT_MAX_RECORDS
+): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.purgeOldRecords(retentionDays, maxRecords);
+}
+
+/**
+ * Purge content (page body) from old records based on retention policy.
+ * Sets content = NULL (does NOT delete records).
+ * Respects is_starred protection based on includeStarred flag.
+ */
+export async function purgeContent(
+  retentionDays?: number | null,
+  maxRecords?: number | null,
+  includeStarred?: boolean | null,
+): Promise<{ success: true; purged: number } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.purgeContent(retentionDays ?? undefined, maxRecords ?? undefined, includeStarred ?? undefined);
+}
+
+/**
+ * Take a binary .db backup.
+ * Returns the binary .db on the OPFS path; returns an error on the
+ * IDB/fallback paths (the JSON fallback was removed — handing consumers a
+ * broken .db is worse than failing).
+ */
+export async function backupDb(): Promise<{ success: true; data: Uint8Array } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.backupDb();
+}
+
+/**
+ * Restore the history DB from a binary .db payload.
+ * OPFS path only. Temporary-file validation lives on the opfsWorker side.
+ */
+export async function restoreDb(data: Uint8Array): Promise<{ success: true } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.restoreDb(data);
+}
+
+/**
+ * Lightweight health check — verifies the SQLite database is reachable.
+ * Returns true if a SELECT 1 succeeds on any available backend.
+ */
+export async function sqliteHealthCheck(): Promise<boolean> {
+  const backend = await engine.getBackend();
+  const result = await backend.healthCheck();
+  return result.success;
 }

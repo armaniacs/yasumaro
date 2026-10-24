@@ -8,6 +8,7 @@
 
 import { NotificationHelper } from '../notificationHelper.js';
 import { getMessageOr } from '../../utils/i18n.js';
+import { obsidianSaveOptions, recordingErrorOptions } from '../notificationPolicy.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import type { RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
@@ -51,13 +52,7 @@ export function buildErrorResult(context: RecordingContext, error: Error): Recor
  * calls it after the error result is built.
  */
 export function notifyRecordingError(title: string, errorMessage: string): void {
-  const notificationTitle = getMessageOr('recordingFailed', 'Recording Failed');
-  chrome.notifications.create({
-    type: 'basic',
-    iconUrl: 'icons/icon128.png',
-    title: notificationTitle,
-    message: `Failed to record ${title}: ${errorMessage}`
-  });
+  NotificationHelper.show(recordingErrorOptions({ title, errorMessage, resolve: getMessageOr }));
 }
 
 /**
@@ -104,6 +99,11 @@ export function buildResult(context: RecordingContext): RecordingResult {
  * `recordingOutcome.defaultOutcomeAdapters`.
  */
 export function notifyObsidianSaveSuccess(title: string): void {
-  const notificationTitle = getMessageOr('saveToObsidian', 'Saved to Obsidian');
-  NotificationHelper.notifySuccess(notificationTitle, `Saved: ${title}`);
+  NotificationHelper.show(
+    obsidianSaveOptions({
+      title,
+      resolve: getMessageOr,
+      iconUrl: NotificationHelper.getIconUrl(),
+    }),
+  );
 }

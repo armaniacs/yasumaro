@@ -19,12 +19,6 @@ vi.mock('../../../utils/logger/api.js', async () =>
   }),
 );
 
-vi.mock('../../notificationHelper.js', () => ({
-  NotificationHelper: {
-    notifySuccess: vi.fn(),
-  },
-}));
-
 vi.mock('../../../utils/errorUtils.js', () => ({
   errorMessage: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
   toError: vi.fn((e: unknown) => (e instanceof Error ? e : new Error(String(e)))),

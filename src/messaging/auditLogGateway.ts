@@ -39,11 +39,35 @@ function getClient(): ReturnType<typeof loadSharedClient> {
 /**
  * Record that content was sent to a cloud AI provider.
  * Best-effort: failures are logged but never thrown, so summary generation is never blocked.
+ *
+ * Minimal row (PBI 2026-10-23-01): provider, url, timestamp, masked char
+ * count, and policy verdict — metadata only, never content or PII. charCount
+ * is the length of the content actually prepared for the provider (the
+ * PII-masked form); policy is the verdict that applied to the send.
  */
-export async function recordAuditLog({ provider, url }: { provider: string; url: string }): Promise<void> {
+export async function recordAuditLog({
+  provider,
+  url,
+  charCount,
+  policy,
+}: {
+  provider: string;
+  url: string;
+  charCount?: number;
+  policy?: string;
+}): Promise<void> {
   try {
     const sqliteClient = await getClient();
-    const result = await sqliteClient.mutate({ type: 'insertAuditLog', record: { provider, url, created_at: Date.now() } });
+    const result = await sqliteClient.mutate({
+      type: 'insertAuditLog',
+      record: {
+        provider,
+        url,
+        created_at: Date.now(),
+        ...(charCount != null ? { char_count: charCount } : {}),
+        ...(policy != null ? { policy } : {}),
+      },
+    });
     if (!result.success) {
       logError('Failed to record audit log', { provider, error: result.error.message });
     }
