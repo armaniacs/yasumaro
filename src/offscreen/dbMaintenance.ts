@@ -9,3 +9,25 @@
  */
 
 export * from './recordsRepo.js';
+
+/**
+ * Backup shape query re-export (PBI 2026-10-24-06): importers that reach the
+ * binary backup through this legacy path get the single select/dispatch
+ * interface from the same place. The query itself lives in StorageBackend.
+ */
+export {
+  capabilitiesFromFlags,
+  capabilitiesForBackend,
+  hasArchiveCapability,
+  resolveBackupShape,
+  restoreTargetForShape,
+  classifyBackupPayload,
+} from './StorageBackend.js';
+export type {
+  BackupShape,
+  BackupKind,
+  BackupWants,
+  BackupCapabilities,
+  BackupRestoreTarget,
+  BackupPayloadFields,
+} from './StorageBackend.js';

@@ -482,6 +482,29 @@ export function isEncryptedExport(data: unknown): data is EncryptedExportData {
 }
 
 /**
+ * Plaintext twin of `isEncryptedExport` for the centralized backup query
+ * (PBI 2026-10-24-06). Both file variants belong to the single `settings`
+ * shape: the encrypted/plaintext split stays inside this codec seam
+ * (NN02 unified open/seal), the query only needs "this file is a settings
+ * retire". An encrypted envelope never satisfies this (its `settings` blob
+ * is sealed inside `ciphertext`), so the two predicates are disjoint.
+ */
+export function isPlaintextSettingsPayload(candidate: {
+  encrypted?: boolean;
+  settings?: object;
+  exportedAt?: string;
+}): boolean {
+  if (candidate.encrypted === true) {
+    return false;
+  }
+  return (
+    typeof candidate.settings === 'object' &&
+    candidate.settings !== null &&
+    typeof candidate.exportedAt === 'string'
+  );
+}
+
+/**
  * Export all settings to a JSON file
  */
 export async function exportSettings(): Promise<void> {

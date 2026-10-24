@@ -17,8 +17,22 @@ export function assignSettingValue(settings: Settings, key: StorageKey, value: u
 }
 
 // Prefix match on purpose: generations are stored as `${LEGACY_SETTINGS_BACKUP_KEY}_${createdAt}`.
+export function isSettingsBackupKey(key: string): boolean {
+    return key.startsWith(LEGACY_SETTINGS_BACKUP_KEY);
+}
+
 export function listSettingsBackupKeys(all: Record<string, unknown>): string[] {
-    return Object.keys(all).filter((k) => k.startsWith(LEGACY_SETTINGS_BACKUP_KEY));
+    return Object.keys(all).filter(isSettingsBackupKey);
+}
+
+/**
+ * Settings-shape predicate for the centralized backup query
+ * (PBI 2026-10-24-06): true when at least one settings generation exists.
+ * The key rule stays with `isSettingsBackupKey`; the restore itself stays
+ * with `restoreLatestSettingsBackup`.
+ */
+export function hasSettingsBackupGeneration(keys: readonly string[]): boolean {
+    return keys.some(isSettingsBackupKey);
 }
 
 // Numeric on the suffix (epoch ms), not lexicographic: `_9` must not outrank

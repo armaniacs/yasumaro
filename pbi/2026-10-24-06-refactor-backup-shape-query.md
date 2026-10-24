@@ -30,9 +30,9 @@ Scenario: 復元が形状から分岐する
 
 ## 受け入れ基準
 
-- [ ] 能力照会と形状選択が単一moduleに集まる
-- [ ] 各codecが内部seamに残る
-- [ ] 既存テスト全緑
+- [x] 能力照会と形状選択が単一moduleに集まる
+- [x] 各codecが内部seamに残る
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -98,8 +98,8 @@ grep -rn "supportsArchive\|BINARY_\|ARCHIVE_UNSUPPORTED" src/offscreen/*.ts | gr
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + 照会table新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + 照会table新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
