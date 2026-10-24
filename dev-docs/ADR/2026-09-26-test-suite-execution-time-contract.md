@@ -378,3 +378,34 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
    更新する（2 箇所が矛盾しないように）。
 6. `gates.jsdomFileCount` の値だけを改定し、`npm run test:perf` で `ok jsdom
    files: N / N` を確認する。
+
+#### `jsdomFileCount` 362 → 374 の内訳（2026-10-25 追記）
+
+2026-10-24 の CI（PR #198 / run `40129693375`）と main（2026-10-22 / run
+`39773221409`）が `OVER jsdom files: 374 / 362` で赤だった。`validate` 以外の
+ジョブは緑で、失敗は suite の成長のみが原因（同 run の通常テスト本体も緑）。
+前回改定 rev `65057bf0` からの差分を `git grep` で特定した（推測なし）。
+検証対象 PR 自身の新規テスト 3 件は node 環境で、jsdom 件数への寄与は 0。
+
+| 増減 | ファイル | なぜ jsdom なのか |
+|---|---|---|
+| +1 | `src/content/__tests__/mediaKind.test.ts` | メディア種別判定の DOM（document.body）利用 |
+| +1 | `src/dashboard/__tests__/markdownTemplateSave.test.ts` | テンプレート保存 UI の DOM 操作・イベント検証 |
+| +1 | `src/dashboard/__tests__/onboardingBanner.test.ts` | オンボーディングバナーの DOM 構築検証 |
+| +1 | `src/dashboard/__tests__/proposalRowWiring.test.ts` | 提案行の DOM 配線検証 |
+| +1 | `src/dashboard/__tests__/tagsPanel-proposalPin.test.ts` | タグパネル提案 UI の DOM 検証 |
+| +1 | `src/dashboard/generalSettings/__tests__/connectionTests-conflictFeedback.test.ts` | 接続テストフィードバック UI の DOM 検証 |
+| +1 | `src/dashboard/panels/__tests__/rowCapNotice.test.ts` | 行数上限通知 UI の DOM 検証 |
+| +1 | `src/dashboard/panels/asyncData/__tests__/busyButton.test.ts` | ビジー状態ボタン UI の DOM 検証 |
+| +1 | `src/dashboard/panels/asyncData/__tests__/domainAnalysisPanel-proposalPin.test.ts` | ドメイン分析パネル提案 UI の DOM 検証 |
+| +1 | `src/dashboard/panels/asyncData/__tests__/historyPanelRegionActions.test.ts` | パネル領域アクション（DOM を伴う配線）の検証 |
+| +1 | `src/dashboard/panels/diagnostic/__tests__/exportLogsPanel.dateFilename.test.ts` | エクスポートログパネル UI の DOM 検証 |
+| +1 | `src/dashboard/settings/__tests__/aiDomainPolicySettings.test.ts` | AI ドメイン政策設定 UI の DOM 検証 |
+| +1 | `src/utils/__tests__/domClear.test.ts` | DOM クリアユーティリティ自体の検証 |
+| +1 | `src/utils/__tests__/settingsExportImportUiCore.test.ts` | 確認ダイアログ（DOM モーダル）を含む取込経路の検証 |
+| -1 | `src/content/__tests__/contentKernel.dynamic.test.ts` | ファイル削除（死にコード整理 `1d5fee42`） |
+| -1 | `src/utils/trustDb/__tests__/trancoChangeDetector.test.ts` | ファイル削除（死にコード整理 `d253fcc2`） |
+
+**決定**: `gates.jsdomFileCount` を 362 → 374 に改定する。増加分は DOM を
+直接使う UI・パネル経路の検証が中心で、suite の成長は正当なため、欠陥や
+追加ゲートの必要はない。
