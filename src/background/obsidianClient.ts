@@ -24,7 +24,7 @@ import {
     handleObsidianError,
     type ObsidianProtocol,
 } from '../utils/obsidianConfigValidator.js';
-import { buildObsidianConfig, type ObsidianConfig } from '../utils/obsidianConfigBuilder.js';
+import { buildObsidianConfig, type ObsidianConfig, type ObsidianConfigOverride } from '../utils/obsidianConfigBuilder.js';
 import { describeHttpFailure } from '../utils/httpFailureMessages.js';
 import {
     createFailure,
@@ -120,6 +120,11 @@ export interface ObsidianConnectionResult {
 export interface ObsidianClientOptions {
     mutex?: Mutex;
     sleep?: SleepFn;
+    /**
+     * Config source seam. Defaults to the current global read so production
+     * behavior is unchanged; tests and future callers inject a replacement.
+     */
+    configReader?: (override?: ObsidianConfigOverride) => Promise<ObsidianConfig>;
 }
 
 /**
@@ -177,23 +182,26 @@ function classifyConnectionFailure(
 export class ObsidianClient {
     private mutex: Mutex;
     private sleep: SleepFn;
+    private configReader: (override?: ObsidianConfigOverride) => Promise<ObsidianConfig>;
 
     /**
      * コンストラクタ
      * @param {Object} options - オプション設定
      * @param {Mutex} options.mutex - カスタムMutexインスタンス（テスト用途）
      * @param {SleepFn} options.sleep - リトライ待機を差し替える関数（テスト用途）
+     * @param {Function} options.configReader - config source seam (defaults to the current global read)
      */
     constructor(options: ObsidianClientOptions = {}) {
         this.mutex = options.mutex || globalWriteMutex;
         this.sleep = options.sleep ?? ((ms) => waitForRetry(ms));
+        this.configReader = options.configReader ?? ((override) => buildObsidianConfig(override));
     }
 
     /**
      * 設定オブジェクトを取得する
      */
     async getConfig(): Promise<ObsidianConfig> {
-        return buildObsidianConfig();
+        return this.configReader();
     }
 
     /**
@@ -405,11 +413,11 @@ export class ObsidianClient {
             let headers: HeadersInit;
             if (override) {
                 try {
-                    const config = await buildObsidianConfig(override);
+                    const config = await this.configReader(override);
                     baseUrl = config.baseUrl;
                     headers = config.headers;
                 } catch (e: unknown) {
-                    // buildObsidianConfig performs no I/O, so this path has no
+                    // The reader performs no I/O, so this path has no
                     // transport failure to recognize.
                     return classifyConnectionFailure(e, {
                         errorName: e instanceof Error ? e.name : 'Error',
@@ -443,6 +451,10 @@ export class ObsidianClient {
 
                 // 具体的なHTTPステータスコードに基づくエラーメッセージ
                 // 401/403/404 は同一 SSOT 文言のため一本化（分岐が必要になったら再分割する）。
+                // Shared-knowledge check: 401/403/404 delegate to describeHttpFailure.
+                // Wider delegation (mapHttpConnectionFailure, generic preset) would
+                // rewrite the remaining sentences, so it stays local to keep
+                // production behavior unchanged.
                 if ([401, 403, 404].includes(response.status)) {
                     return { success: false, message: describeHttpFailure(response.status, 'Obsidian') };
                 } else {

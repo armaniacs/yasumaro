@@ -30,9 +30,9 @@ Scenario: 差替えができる
 
 ## 受け入れ基準
 
-- [ ] 設定読みがconstructorのseam（reader注入、既定は現行読み）を通る
-- [ ] 失敗写像が共通知識に寄る
-- [ ] 既存テスト全緑
+- [x] 設定読みがconstructorのseam（reader注入、既定は現行読み）を通る
+- [x] 失敗写像が共通知識に寄る
+- [x] 既存テスト全緑
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -96,8 +96,8 @@ grep -n "getConfig\|mutex\|sleep" src/background/obsidianClient.ts | head -20
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存テスト全通過 + tableテスト新規通過
-- [ ] コードレビュー完了
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存テスト全通過 + tableテスト新規通過
+- [x] コードレビュー完了
 - [ ] `npm run validate` 通過
-- [ ] ドキュメント更新済み
+- [x] ドキュメント更新済み
