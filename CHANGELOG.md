@@ -35,6 +35,19 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.59] - 2026-10-25
+
+このリリースはバグ修正版です。 / This is a bug-fix release.
+
+### 修正 / Fixed
+
+- 初期設定バナーがダークモードで読めない問題を修正 / Fixed the initial-setup banner being unreadable in dark mode
+- 非表示の案内ボタンにフォーカスが吸着される問題を修正（確認ダイアログのTab移動） / Fixed Tab focus getting stuck on a hidden navigation button in the confirmation dialog
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1168ファイル・17276テスト）
+
 ## [6.9.58] - 2026-10-24
 
 このリリースは利用者向けの新機能を含みます。 / This release includes user-facing new features.
