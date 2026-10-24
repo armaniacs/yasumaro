@@ -564,7 +564,7 @@ button:not(.icon-btn):not(.primary-btn):not(.secondary-btn):not(.alert-btn):not(
 
 .btn-banner-primary {
   background: var(--color-primary);
-  color: var(--color-text-primary);
+  color: var(--ym-color-on-primary, #ffffff);
   border: none;
 }
 

@@ -24,8 +24,8 @@ function rules(): Map<string, string[]> {
   const withoutComments = css.replace(/\/\*[\s\S]*?\*\//g, '');
   const found = new Map<string, string[]>();
   for (const match of withoutComments.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
-    const key = match[1].split(',').map((s) => s.trim()).filter(Boolean).join(', ');
-    const body = match[2].replace(/\s+/g, ' ').trim();
+    const key = (match[1] ?? '').split(',').map((s) => s.trim()).filter(Boolean).join(', ');
+    const body = (match[2] ?? '').replace(/\s+/g, ' ').trim();
     found.set(key, [...(found.get(key) ?? []), body]);
   }
   return found;
