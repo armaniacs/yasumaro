@@ -14,6 +14,23 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-24 建築改善ループ第3弾（improve-codebase-architecture、8件） ― ⬜ 8件未着手 🔧非機能追加 RICE順: 01(12) → 02(8) → 03(8) → 04(6.4) → 05(5.3) → 06(4.8) → 07(3.2) → 08(3.2)
+
+建築診断第3弾（永続化スライス＋AI/信頼/構成）の10候補から Speculative 2 件を除外して 8 PBI にした。コード変更は一切行っていない。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024c.md](2026-10-24-00-backlog-architecture-1024c.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-10-24-01-refactor-fallback-test-seam.md](2026-10-24-01-refactor-fallback-test-seam.md) | refactor | 12 | 0.5 | test seam対称化（小・検証容易。最初の一手） |
+| ⬜ 02 | [2026-10-24-02-refactor-hmac-codec-single-owner.md](2026-10-24-02-refactor-hmac-codec-single-owner.md) | refactor | 8 | 1.5 | HMAC単一所有（鍵喪失級）。NN06 は本 PBI の後に実施 |
+| ⬜ 03 | [2026-10-24-03-refactor-builtin-client-sharing.md](2026-10-24-03-refactor-builtin-client-sharing.md) | refactor | 8 | 1.0 | client実体共有（置換ADR要否を先に確認）。NN04 は本 PBI の後に実施 |
+| ⬜ 04 | [2026-10-24-04-refactor-provider-catalog-derivation.md](2026-10-24-04-refactor-provider-catalog-derivation.md) | refactor | 6.4 | 1.5 | 追加手順の導出化（NN03 の後に実施） |
+| ⬜ 05 | [2026-10-24-05-refactor-sync-runner-fold.md](2026-10-24-05-refactor-sync-runner-fold.md) | refactor | 5.3 | 1.0 | runner畳み込み（外部interface不変） |
+| ⬜ 06 | [2026-10-24-06-refactor-backup-shape-query.md](2026-10-24-06-refactor-backup-shape-query.md) | refactor | 4.8 | 2.0 | 照会集約（NN02・NN07 の後に実施） |
+| ⬜ 07 | [2026-10-24-07-refactor-sqlite-repo-fold.md](2026-10-24-07-refactor-sqlite-repo-fold.md) | refactor | 3.2 | 1.5 | 委譲3枚畳み込み（NN06 は本 PBI の後に実施） |
+| ⬜ 08 | [2026-10-24-08-refactor-obsidian-config-seam.md](2026-10-24-08-refactor-obsidian-config-seam.md) | refactor | 3.2 | 1.0 | 設定読みseam化 |
+
+実行順の推奨: RICE 順。**NN03 → NN04、NN02 → NN06、NN07 → NN06** の前後関係を守る。NN01 / NN02 / NN05 / NN08 および NN03 / NN07 および NN04 / NN06 は互いに独立のため並列着手可。
+
 ### 2026-10-24 建築改善ループ第2弾（improve-codebase-architecture、8件） ― ✅ 8件完了・アーカイブ済み（01-08） 🔧非機能追加 RICE順: ~~01(16)~~ → ~~02(10)~~ → ~~03(7.5)~~ → ~~04(7.2)~~ → ~~05(5.8)~~ → ~~06(5.3)~~ → ~~07(4.3)~~ → ~~08(4)~~
 
 建築診断第2弾（録画スライス＋popup/サービス群、HTMLレポート出力）+ pbi-backlog-prioritizer + autonomous-task-closer で自律実装・検証してアーカイブ。8 件すべて実装（バッチ1の4並列 → バッチ2の3並列 → バッチ3）。RICE 詳細・依存グラフは [2026-10-24-00-backlog-architecture-1024b.md](../dev-docs/archived/pbi/2026-10-24-00-backlog-architecture-1024b.md)。最終ゲート `npm run validate` 緑（1161ファイル・17149テスト）。
