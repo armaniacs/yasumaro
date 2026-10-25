@@ -58,6 +58,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder) |
 | Cleansing badge policy | `src/utils/cleansingBadge.ts` | reason → badge text table + counts → reason derivation (Layer 0) |
 | Settings repository | `src/utils/storage/SettingsRepository.ts` | Settings blob read/write SSOT (flat scattered keys are legacy) |
+| AI provider catalog SSOT | `src/background/ai/providerCatalog.ts` (+ `src/utils/aiLimits.ts`, wxt.config.ts manifest fn) | Catalog id is the single key: token caps, CSP connect-src, host_permissions, and Gist egress declarations all derive from it. The triangle pin (`src/__tests__/providerTrianglePin.test.ts`) fails on drift (PBI 2026-10-22-01) |
 
 ## Where to Add New Features
 

@@ -33,3 +33,12 @@
 3. validate への audit warn 追加（失敗させないこと）
 4. CI / release スコープ定義の DEPENDINGS.md 集約
 5. 再評価トリガー（wxt / web-ext 更新時の受容記録見直し）の手順化
+
+## 実装記録（2026-10-25、6.9.60）
+
+- `scripts/release-checks/check-deps.mjs`: フル監査と `--omit=dev` 監査を並列取得し、`classifyAuditFindings`（純粋関数・export）で二層判定。prod 混入=fail、dev-only+メモ=warn、dev-only無メモ=fail、到達不能=scan-error。CLI ガード（`import.meta.url` 比較）を追加して vitest からの import で main が走らないようにした
+- `--audit-warn` モード: 監査のみ実行し全て warn 化・常時 exit 0。`check:deps:audit-warn` として `validate` に組込
+- 単体テスト 10 件（`scripts/__tests__/check-deps-tiers.test.ts`）: clean / prod-fail / dev-warn / dev-uncovered / scan-error / メモ欠落 / id 無し項目の包名照合
+- 実データ検証: `release:check:deps` が node-forge 系 HIGH 4 件を warn として PASS（exit 0）。変更前は同条件で失敗していた
+- DEPENDINGS.md: §3 に二層定義＋validate 行を追加、§4 を 4 層化、§5 の判定を 6.9.60 時点に更新、§6.2 に識別子必須の旨を明記
+- 最終ゲート: 下記 C 作業と合わせて `npm run validate` で確認する

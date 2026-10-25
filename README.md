@@ -193,6 +193,8 @@ Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動�
 
 ### 使い方
 
+ObsidianもAPIキーもない状態で使えます。初回起動のダッシュボードに「まず試す / Obsidian連携 / AI要約」の3択バナーが出るので、設定なしで記録と検索を試してから後付けで連携できます。
+
 #### 自動記録
 - ウェブページを5秒以上閲覧し、50%以上スクロールすると自動的に記録されます
 - 重複URLは記録されません（同じページは1日1回のみ）
@@ -441,6 +443,8 @@ The Firefox build works for recording, saving, and search (including FTS5) as of
 6. Click "Load unpacked" and select the **`dist/chromium-mv3` folder**
 
 ### Usage
+
+No Obsidian or API key is needed to start. The first-launch dashboard shows a three-choice banner (Try first / Obsidian / AI summary), so you can record and search with zero setup and connect services later.
 
 #### Automatic Recording
 - Pages are automatically recorded when you browse for 5+ seconds and scroll 50%+ of the page

@@ -16,6 +16,7 @@ import {
   type ResearchReportGeneratorDeps,
   type ResearchReportRecord,
 } from '../researchReportGenerator.js';
+import { MAX_BATCH_READ_RECORDS } from '../../utils/limits.js';
 
 type GeneratorMocks = ResearchReportGeneratorDeps & {
   sqliteClient: { query: ReturnType<typeof vi.fn> };
@@ -70,6 +71,14 @@ describe('buildResearchReportMarkdown — BDD (要旨・時系列・引用・未
     const markdown = buildResearchReportMarkdown(records, { title: 't', now: 1 });
     const timeline = markdown?.split('## 時系列')[1]?.split('## 引用')[0] ?? '';
     expect(timeline.indexOf('Record 1')).toBeLessThan(timeline.indexOf('Record 2'));
+  });
+
+  it('sanitizes timeline titles like the other sections (no raw HTML passthrough)', () => {
+    const records = [makeRecord(1, { title: '<img src=x onerror=alert(1)>', summary: 's' })];
+    const markdown = buildResearchReportMarkdown(records, { title: 't', now: 1 });
+    const timeline = markdown?.split('## 時系列')[1]?.split('## 引用')[0] ?? '';
+    expect(timeline).not.toContain('<img');
+    expect(timeline).toContain('&lt;img');
   });
 
   it('lists summary-less records as unread holes (選択範囲内の穴)', () => {
@@ -151,5 +160,24 @@ describe('createResearchReportGenerator — BDD (レポートが生成される 
     const generator = createResearchReportGenerator(deps);
     const outcome = await generator.generate({ scope: {} });
     expect(outcome).toEqual({ success: false, error: 'download_failed' });
+  });
+
+  it('pins REPORT_MAX_RECORDS to the shared batch-read cap (no magic-number drift)', async () => {
+    expect(REPORT_MAX_RECORDS).toBe(MAX_BATCH_READ_RECORDS);
+  });
+
+  it('honors the cap on a wide selection instead of failing (大量選択の境界)', async () => {
+    const capped = Array.from({ length: REPORT_MAX_RECORDS }, (_, i) => makeRecord(i + 1));
+    const deps = makeDeps({
+      sqliteClient: {
+        query: vi.fn().mockResolvedValue({ success: true, data: { rows: capped, total: capped.length + 50 } }),
+      },
+    });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({ scope: {} });
+    expect(deps.sqliteClient.query).toHaveBeenCalledWith(expect.objectContaining({ limit: REPORT_MAX_RECORDS }));
+    // The selection wider than the cap is bounded, not rejected (偽成功にしない
+    // applies to failures — a capped report is still a complete report).
+    expect(outcome).toEqual({ success: true, recordCount: REPORT_MAX_RECORDS, deliveredTo: ['download'] });
   });
 });

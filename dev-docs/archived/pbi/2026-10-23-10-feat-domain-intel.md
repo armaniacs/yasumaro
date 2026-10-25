@@ -26,10 +26,10 @@ Scenario: 見直しを適用できる
   Then フィルタに反映され、取消ができる
 
 ## 受け入れ基準
-- [ ] 偏りと根拠(件数・期間・算出式)が表示される
-- [ ] 除外提案の適用・取消ができる
-- [ ] 自動除外はしない
-- [ ] 少件数時の縮退表示がある
+- [x] 偏りと根拠(件数・期間・算出式)が表示される (2026-10-24 確認: renderIntel が biasLine に domain/percent/total/period/formula を渡す。domainIntelAggregate.test.ts 23件 + intelBranches.test.ts の basis 保持テストで緑)
+- [x] 除外提案の適用・取消ができる (2026-10-24 確認: proposalPin.test.ts 4件 + domainIntelRepository.test.ts 17件で適用/取消/冪等/縮退が緑。E2E domain-intel.spec.ts を追加、未実行)
+- [x] 自動除外はしない (2026-10-24 確認: 提案は助言のみで適用はクリック経路だけ。intelBranches.test.ts 4件が読込時の書込ゼロを断定し緑)
+- [x] 少件数時の縮退表示がある (2026-10-24 確認: MIN_RECORDS_FOR_BIAS 未満は enough:false で理由表示。集計単体 + パネル分岐テストで緑)
 
 ## テスト戦略
 ## 実装記録（2026-10-23・コア集計経路）
@@ -49,6 +49,6 @@ Scenario: 見直しを適用できる
 2.0人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(算出式と操作手順を含む)
+- [x] 全BDDシナリオが自動テストとして実装されパスする (2026-10-25: `domain-intel.spec.ts` 3件を `--repeat-each=2` で6/6緑、他specと合わせ24/24緑。単体・view・repository 緑)
+- [x] コードレビュー完了 (2026-10-24 実施: 実装コミット 75bedee7 と 6c1ad1c9 の差分を精査。指摘は本文末尾の残課題に記録)
+- [x] ドキュメント更新済み(算出式と操作手順を含む) (2026-10-25: `docs/DATA_ANALYTICS_GUIDE.md` 日英に算出式・フィルタモード注意を追記)

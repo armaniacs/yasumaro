@@ -57,6 +57,6 @@ Scenario: 一括で飛ぶ
 1.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(操作一覧を含む)
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― シナリオ2（一括適用→取消）は新規E2Eで固定（`history-panel-ui.spec.ts`「bulk star applies to checked rows and undo reverts it」、`--repeat-each=3` で15/15緑・2026-10-25）。シナリオ1（omnibox/キーボード記録→件名通知）は実ブラウザUIがCIから駆動不能のため単体pinで固定（`entryFrictionHandlers.test.ts` 9件: 経路・不安定URL・通知条件）＋owner手動観測と併用（テスト戦略の当初計画通り）
+- [x] コードレビュー完了 ― 2026-10-25実施。Wave A（734f1633）: 共有コアにdrift防止3点集約・入口別方針維持・guard包装と既存一致・SingleFlight重複防止。Wave B（76239b6c）: モデルは合致行skip・部分件数・同一コアundo、パネルは選択変更でundo無効化・fetch成功時に選択リセットされるため除外判定の参照範囲は正しい。指摘なし
+- [x] ドキュメント更新済み(操作一覧を含む) ― `docs/SETUP_GUIDE.md` 手動記録機能に開かずに残す3入口（`y`+Enter / `Alt+Shift+Y` / 右クリック）と通知・非セキュアskip方針を追記（ADR-016・ROADMAP N8は2026-10-23に同期済み）

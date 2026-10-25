@@ -4,9 +4,18 @@
  * check-deps.mjs — Dependency & security verification.
  *
  * Verifies:
- * 1. `npm audit` — no critical or high vulnerabilities
+ * 1. `npm audit` — TWO-TIER judgement (see DEPENDINGS.md §3):
+ *    - prod scope (`--omit=dev`, i.e. what ships): critical/high → FAIL
+ *    - dev-only (present in full audit, absent from prod scope): → WARN
+ *      only when every advisory has a reachability memo in
+ *      `docs/DEPENDINGS.md` §6 (matched by GHSA/CVE id, or by package
+ *      name when the entry carries no advisory id). Without a memo → FAIL.
  * 2. Major dependency versions are not severely outdated (warn-level)
  * 3. License compliance (reuses existing check-licenses.mjs)
+ *
+ * `--audit-warn` runs only the audit section with every finding demoted to
+ * warn and always exits 0. It exists for `npm run validate` so developers
+ * see new advisories in their daily gate without blocking on them.
  *
  * All three checks spawn npm (two of them hitting the registry), so they are
  * executed concurrently and only the reporting is serialised. The dependency
@@ -48,6 +57,11 @@ const CRITICAL_PACKAGES = [
 const OUTDATED_CACHE_PATH = join(ROOT_DIR, 'node_modules', '.cache', 'release-checks', 'outdated.json');
 const OUTDATED_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_BUFFER = 10 * 1024 * 1024;
+
+const WARN_ONLY = process.argv.includes('--audit-warn');
+const MEMO_PATH = join(ROOT_DIR, 'docs', 'DEPENDINGS.md');
+
+const ADVISORY_ID_PATTERN = /\b((?:GHSA|CVE)-[A-Z0-9-]+)\b/i;
 
 /**
  * Runs an npm command that reports findings through its JSON stdout and a
@@ -108,36 +122,121 @@ function describeVulnerability([name, entry]) {
   return `  ${name}: ${entry.severity} — ${detail}`;
 }
 
-async function collectAudit() {
+/**
+ * Extracts advisory identifiers (GHSA-… / CVE-…) from an audit entry's
+ * `via` chain. npm puts the advisory URL on the object-form entries
+ * (`https://github.com/advisories/GHSA-…`); string-form entries are bare
+ * package names and carry no id.
+ */
+export function extractAdvisoryIds(entry) {
+  const via = Array.isArray(entry.via) ? entry.via : [entry.via].filter(Boolean);
+  const ids = new Set();
+  for (const v of via) {
+    const candidates = typeof v === 'string' ? [v] : [v.url, v.title, v.name];
+    for (const text of candidates) {
+      if (typeof text !== 'string') continue;
+      const m = text.match(ADVISORY_ID_PATTERN);
+      if (m) ids.add(m[1].toUpperCase());
+    }
+  }
+  return ids;
+}
+
+/**
+ * Pure two-tier classifier (unit-tested, no I/O).
+ *
+ * `full` / `prod` are `{ report }` or `{ error }` scan results, where a
+ * report is `{ critical: [[name, entry]], high: [[name, entry]] }`.
+ * `memoText` is the body of `docs/DEPENDINGS.md`, or `null` when it could
+ * not be read (then nothing can be proven covered).
+ */
+export function classifyAuditFindings(full, prod, memoText) {
+  if (full.error) return { status: 'scan-error', detail: full.error };
+  if (prod.error) return { status: 'scan-error', detail: `prod-scope audit failed: ${prod.error}` };
+
+  const prodFindings = [...prod.report.critical, ...prod.report.high];
+  if (prodFindings.length > 0) return { status: 'prod-fail', findings: prodFindings };
+
+  const prodKeys = new Set(prodFindings.map(([name]) => name));
+  const devOnly = [...full.report.critical, ...full.report.high].filter(([name]) => !prodKeys.has(name));
+  if (devOnly.length === 0) return { status: 'clean' };
+
+  if (memoText === null) {
+    return { status: 'dev-uncovered', findings: devOnly, detail: `could not read ${MEMO_PATH}` };
+  }
+  const memo = memoText.toUpperCase();
+  const uncovered = devOnly.filter(([name, entry]) => {
+    const ids = extractAdvisoryIds(entry);
+    // Entries without an advisory id cannot be memo-matched by id, so the
+    // package name is the fallback token. DEPENDINGS.md §6.2 requires the
+    // id whenever one exists.
+    const tokens = ids.size > 0 ? [...ids] : [name.toUpperCase()];
+    return !tokens.some((t) => memo.includes(t));
+  });
+  if (uncovered.length > 0) return { status: 'dev-uncovered', findings: uncovered };
+  return { status: 'dev-warn', findings: devOnly };
+}
+
+async function collectAuditScan(args) {
   try {
-    return parseAudit(await runNpmJson(['audit', '--json']));
+    return { report: parseAudit(await runNpmJson(args)) };
   } catch (e) {
-    return { error: e.message, critical: [], high: [] };
+    return { error: e.message };
   }
 }
 
+function readMemoText() {
+  try {
+    return readFileSync(MEMO_PATH, 'utf-8');
+  } catch {
+    return null;
+  }
+}
+
+async function collectAudit() {
+  const [full, prod] = await Promise.all([
+    collectAuditScan(['audit', '--json']),
+    collectAuditScan(['audit', '--json', '--omit=dev']),
+  ]);
+  return { full, prod, memoText: readMemoText() };
+}
+
 function reportAudit(result) {
-  header('npm Audit');
-  info('Running `npm audit`...');
+  header('npm Audit (two-tier: prod fail / dev-only warn+memo)');
+  info('Running `npm audit` (full) and `npm audit --omit=dev` (prod scope)...');
 
-  if (result.error) {
-    fail(`npm audit failed unexpectedly: ${result.error}`);
+  const verdict = classifyAuditFindings(result.full, result.prod, result.memoText);
+  const failOrWarn = WARN_ONLY ? warn : fail;
+
+  if (verdict.status === 'clean') {
+    pass('No critical or high vulnerabilities found');
     return;
   }
 
-  if (result.critical.length > 0) {
-    fail(`Found ${result.critical.length} critical vulnerability(ies)`);
-    for (const entry of result.critical) info(describeVulnerability(entry));
+  if (verdict.status === 'scan-error') {
+    failOrWarn(`npm audit failed unexpectedly: ${verdict.detail}`);
     return;
   }
 
-  if (result.high.length > 0) {
-    fail(`Found ${result.high.length} high severity vulnerability(ies)`);
-    for (const entry of result.high) info(describeVulnerability(entry));
+  if (verdict.status === 'prod-fail') {
+    failOrWarn(`Found ${verdict.findings.length} critical/high vulnerabilit(ies) in PROD scope (shipped code)`);
+    for (const entry of verdict.findings) info(describeVulnerability(entry));
     return;
   }
 
-  pass('No critical or high vulnerabilities found');
+  if (verdict.status === 'dev-warn') {
+    warn(
+      `Found ${verdict.findings.length} dev-only critical/high vulnerabilit(ies) — accepted risk, see docs/DEPENDINGS.md §6`
+    );
+    for (const entry of verdict.findings) info(describeVulnerability(entry));
+    return;
+  }
+
+  failOrWarn(
+    `Found ${verdict.findings.length} dev-only critical/high vulnerabilit(ies) WITHOUT a reachability memo${verdict.detail ? ` (${verdict.detail})` : ''}`
+  );
+  for (const entry of verdict.findings) info(describeVulnerability(entry));
+  info('Record each advisory per the docs/DEPENDINGS.md §6.2 template (GHSA/CVE id required), then re-run.');
 }
 
 function manifestFingerprint() {
@@ -336,6 +435,15 @@ function reportInstallDrift(result) {
 }
 
 async function main() {
+  if (WARN_ONLY) {
+    // Daily-visibility mode for `npm run validate`: findings are reported,
+    // never fatal.
+    reportAudit(await collectAudit());
+    sectionBreak();
+    summary();
+    process.exit(0);
+  }
+
   const [audit, outdated, licenses] = await Promise.all([
     collectAudit(),
     collectOutdatedDeps(),
@@ -352,10 +460,12 @@ async function main() {
   process.exit(allPassed ? 0 : 1);
 }
 
-try {
-  await main();
-} catch (e) {
-  // A release gate that dies on a stack trace hides the actual problem.
-  fail(`Dependency check could not complete: ${e.message}`);
-  process.exit(1);
+if (import.meta.url === `file://${process.argv[1]}`) {
+  try {
+    await main();
+  } catch (e) {
+    // A release gate that dies on a stack trace hides the actual problem.
+    fail(`Dependency check could not complete: ${e.message}`);
+    process.exit(1);
+  }
 }

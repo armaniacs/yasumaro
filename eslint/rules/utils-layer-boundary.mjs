@@ -93,6 +93,8 @@ const LAYER1_FILES = [
   // Saved-collection normalizer: validation lives here so the settings
   // pipeline never pulls the repository chain (PBI 2026-10-23-06).
   'src/utils/storage/savedCollections.ts',
+  // Auto-tag rule normalizer + matcher: same placement reason (PBI 2026-10-23-06).
+  'src/utils/storage/autoTagRules.ts',
   'src/utils/storage/encryptionSession.ts',
   'src/utils/storage/savedUrlRepository.ts',
   'src/utils/storage/domainFilterCache.ts',

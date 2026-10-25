@@ -44,6 +44,19 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 
 条件を厳しくする（滞在時間を長く、スクロール深度を高く）と誤検出が減りますが、記録漏れが増える可能性があります。逆に条件を緩めると多くのページが記録される一方、流し読みしたページも記録対象になりやすくなります。
 
+### メディア別の判定（記事・動画・PDF・コード）
+
+ページの種類によって読み方が違うため、記事以外のページは専用の条件で判定します。種別は読み込み時に1回だけ判定し、判定不能なページは記事の条件に倒します。
+
+| 種別 | 条件（既定） | 変更 |
+|------|-------------|------|
+| 記事 | 滞在5秒＋スクロール50% | 上の Min Visit Duration / Min Scroll Depth |
+| 動画 | 30秒視聴 | Recording Conditions の動画しきい値 |
+| PDF | 滞在15秒＋2ページ | Recording Conditions のPDFしきい値 |
+| コード | 滞在15秒＋1コピー | Recording Conditions のコードしきい値 |
+
+空欄・負値・数値以外の設定は既定値のままになります。非表示タブでは定期判定が止まるため、バックグラウンド放置は記録されません。
+
 ### 手動記録との関係
 
 スマート検出の条件を満たさなかったページでも、ポップアップの **「今すぐ記録」** ボタンで手動記録できます。手動記録はスマート検出の条件（滞在時間・スクロール深度）を経由しないため、開いた直後のページでも即座に記録可能です。
@@ -91,6 +104,19 @@ Two signals are used for the decision:
 | **Minimum Scroll Depth** | How far down the page you scrolled | 50% |
 
 Only pages that satisfy both conditions are automatically recorded. If either falls short, the page is not recorded.
+
+### Per-media conditions (article / video / PDF / code)
+
+Different media are read differently, so non-article pages use dedicated conditions. The kind is classified once at load; unclassifiable pages fall back to the article condition.
+
+| Kind | Condition (default) | Where to change |
+|------|--------------------|-----------------|
+| Article | 5s stay + 50% scroll | Min Visit Duration / Min Scroll Depth above |
+| Video | 30s watched | Video threshold in Recording Conditions |
+| PDF | 15s stay + 2 pages | PDF thresholds in Recording Conditions |
+| Code | 15s stay + 1 copy | Code thresholds in Recording Conditions |
+
+Blank, negative, or non-numeric settings keep the defaults. Periodic checks stop in hidden tabs, so background-idle pages are not recorded.
 
 ### Why these two signals
 

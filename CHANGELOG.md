@@ -35,6 +35,36 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.61] - 2026-10-26
+
+このリリースは棚卸しPBIの仕上げです。利用者に見える変更は保存済みコレクションの改名・複製・自動タグ規則と初回起動バナー・履歴一括スター・振り返りサマリ手順の文書化です。 / This release closes out backlog PBIs. User-visible changes: saved-collection rename/duplicate/auto-tag rules, the first-run banner, history bulk star, and review-summary docs.
+
+### 追加 / Added
+
+- 保存済みコレクションの改名・複製、自動タグ規則（条件一致で自動付与・優先度・適用取消） / Collection rename/duplicate and auto-tag rules (condition match, priority, undo)
+- 初回起動の3択バナー（まず試す / Obsidian連携 / AI要約・一度だけ表示） / First-run 3-choice banner (try first / Obsidian / AI summary, shown once)
+- 履歴一括スターの適用・取消とプライベート判定除外 / Bulk star with undo and privacy-judged exclusion
+- 問合せ回答の未束縛 generateSummary 修正（毎回 TypeError になっていた実バグ） / Fixed detached generateSummary that threw on every answered QA
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1177ファイル・17346テスト）
+- 新規E2E: コレクション保存・呼び出し・改名・複製・規則登録、バナー表示・導線、一括スター適用・取消、ダイジェスト・折りたたみ・提案往復、CSV/JSONエクスポート、アーカイブ検証、Gist 3pin
+- 回答系2件と動画再生の通しは実機・実メディアが必要なため owner手動観測に委ねる（`@interaction`・記録通り）
+
+## [6.9.60] - 2026-10-25
+
+このリリースは依存監査ゲートの二層化です。利用者に見える挙動の変更はありません。 / This release introduces two-tier dependency audit gates. No user-visible behavior changes.
+
+### 追加 / Added
+
+- 依存監査の二層判定: prod スコープ混入は失敗、dev-only は到達可能性メモ（DEPENDINGS.md §6）があれば警告通過 / Two-tier audit: prod-scope findings fail, dev-only findings warn when covered by a reachability memo (DEPENDINGS.md §6)
+- `npm run validate` に audit（warn レベル）を追加し、日常ゲートで脆弱性を早期認知 / Audit (warn level) added to `npm run validate` for early daily awareness
+
+### テスト
+
+- 二層分類の単体テスト 10 件（`scripts/__tests__/check-deps-tiers.test.ts`）。実データで `release:check:deps` が dev-only HIGH 4 件を warn として PASS（exit 0）を確認
+
 ## [6.9.59] - 2026-10-25
 
 このリリースはバグ修正版です。 / This is a bug-fix release.

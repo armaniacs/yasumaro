@@ -2074,6 +2074,115 @@
   "savedCollectionSaveError": {
     "message": "保存に失敗しました"
   },
+  "savedCollectionRenameBtn": {
+    "message": "改名"
+  },
+  "savedCollectionRenameSaveBtn": {
+    "message": "名前を保存"
+  },
+  "savedCollectionDuplicateBtn": {
+    "message": "複製"
+  },
+  "savedCollectionCopyName": {
+    "message": "$1 のコピー",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "調べ物A"
+      }
+    }
+  },
+  "savedCollectionNameEmpty": {
+    "message": "名前を入力してください"
+  },
+  "autoTagRulesLabel": {
+    "message": "自動タグ規則"
+  },
+  "autoTagRulesHelp": {
+    "message": "URL・件名が一致した新規記録に自動でタグを付けます。規則の条件は全て満たす必要があります。優先度の番号が小さい順に適用します。無効化・削除は今後の付与を止めます。"
+  },
+  "autoTagRulesEmpty": {
+    "message": "自動タグ規則はまだありません"
+  },
+  "autoTagRuleNamePlaceholder": {
+    "message": "規則名"
+  },
+  "autoTagRuleDomainPlaceholder": {
+    "message": "ドメイン末尾 (example.com)"
+  },
+  "autoTagRuleUrlPlaceholder": {
+    "message": "URLに含む文字"
+  },
+  "autoTagRuleTitlePlaceholder": {
+    "message": "件名に含む文字"
+  },
+  "autoTagRuleTagPlaceholder": {
+    "message": "付与するタグ"
+  },
+  "autoTagRulePriorityPlaceholder": {
+    "message": "優先度 (既定 100)"
+  },
+  "autoTagRuleAddBtn": {
+    "message": "規則を追加"
+  },
+  "autoTagRuleEnableLabel": {
+    "message": "規則を有効にする"
+  },
+  "autoTagRulePriority": {
+    "message": "優先度 $1",
+    "placeholders": {
+      "priority": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "autoTagRuleUndoBtn": {
+    "message": "適用を取り消す"
+  },
+  "autoTagRuleDeleteBtn": {
+    "message": "規則を削除"
+  },
+  "autoTagRuleDeleteConfirm": {
+    "message": "規則「$1」を削除しますか？今後の記録には付与されなくなります。過去の付与は残ります。",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "資料"
+      }
+    }
+  },
+  "autoTagRuleUndoConfirm": {
+    "message": "規則「$1」が付けたタグ「$2」を一致した記録から外しますか？",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "資料"
+      },
+      "tag": {
+        "content": "$2",
+        "example": "docs"
+      }
+    }
+  },
+  "autoTagRuleUndoDone": {
+    "message": "$1 件からタグを外しました。",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "autoTagRuleNameTagRequired": {
+    "message": "規則名とタグを入力してください"
+  },
+  "autoTagRuleBadPriority": {
+    "message": "優先度は数値で入力してください"
+  },
+  "autoTagRuleNoCondition": {
+    "message": "条件を1つ以上指定してください（ドメイン・URL・件名）"
+  },
   "commandRecordPage": {
     "message": "現在のページを記録"
   },

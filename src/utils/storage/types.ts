@@ -12,6 +12,7 @@ import type { AiSummaryRemovedStats } from '../commonTypes.js';
 import type { TrustDatabase } from '../trustDb/trustDbSchema.js';
 import type { NavTrailConsent } from './navTrailConsent.js';
 import type { SavedCollection } from './savedCollections.js';
+import type { AutoTagApplication, AutoTagRule } from './autoTagRules.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
@@ -41,6 +42,10 @@ export const StorageKeys = {
     MEDIA_THRESHOLDS: 'media_thresholds',
     /** PBI 2026-10-23-06: named saved collections (search conditions + tag rules). */
     SAVED_COLLECTIONS: 'saved_collections',
+    /** PBI 2026-10-23-06: auto-tag rules (conditions → tag) applied at save time. */
+    AUTO_TAG_RULES: 'auto_tag_rules',
+    /** PBI 2026-10-23-06: bounded provenance log for rule-tag undo. */
+    AUTO_TAG_APPLICATIONS: 'auto_tag_applications',
     /** PBI 2026-10-22-02: first-launch onboarding banner dismissed once by the user. */
     ONBOARDING_DISMISSED: 'onboarding_dismissed',
     GEMINI_MODEL: 'gemini_model',
@@ -363,6 +368,13 @@ export interface StorageKeyValues {
      * NavTrailConsent above.
      */
     [StorageKeys.SAVED_COLLECTIONS]: Record<string, SavedCollection>;
+    /**
+     * PBI 2026-10-23-06: auto-tag rules (empty = none). Type-only import for
+     * the same cycle reason as SavedCollection above.
+     */
+    [StorageKeys.AUTO_TAG_RULES]: Record<string, AutoTagRule>;
+    /** PBI 2026-10-23-06: bounded provenance log for rule-tag undo. */
+    [StorageKeys.AUTO_TAG_APPLICATIONS]: AutoTagApplication[];
     /** PBI 2026-10-22-02: the first-launch onboarding banner was dismissed once. */
     [StorageKeys.ONBOARDING_DISMISSED]: boolean;
     [StorageKeys.GEMINI_MODEL]: string;

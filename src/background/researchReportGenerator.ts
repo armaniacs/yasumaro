@@ -82,7 +82,7 @@ function toReportRecord(row: BrowsingLogRecord & { id: number }): ResearchReport
   };
 }
 
-/** 要旨 section: the selection's persisted summaries, newest first. */
+/** 要旨 section: the selection's persisted summaries, in selection order. */
 function buildDigestSection(records: ResearchReportRecord[]): string {
   const withSummary = records.filter((r) => r.summary.trim().length > 0);
   if (withSummary.length === 0) {
@@ -93,11 +93,13 @@ function buildDigestSection(records: ResearchReportRecord[]): string {
     .join('\n');
 }
 
-/** 時系列 section: oldest first, the report's reading order. */
+/** 時系列 section: oldest first, the report's reading order. Titles ride the
+ * same Obsidian sanitizer as the digest so a crafted page title cannot smuggle
+ * raw HTML into the note through this section. */
 function buildTimelineSection(records: ResearchReportRecord[]): string {
   const ordered = [...records].sort((a, b) => a.createdAt - b.createdAt);
   return ordered
-    .map((r) => `- ${formatLocalDateString(r.createdAt)} — ${r.title || r.url}`)
+    .map((r) => `- ${formatLocalDateString(r.createdAt)} — ${sanitizeForObsidian(r.title || r.url)}`)
     .join('\n');
 }
 

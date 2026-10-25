@@ -41,9 +41,9 @@ Scenario: 公式exportで移行する
 1.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(スキーマ・列定義・復元手順を含む)
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― 2026-10-26: アーカイブ書き出し・検証は既存E2E 5緑（7 skipは条件付き既存）。公式exportは新規E2E 2件（CSVヘッダ＋seed・JSON署名envelope v2）3/3緑。JSONLはexporter未実装のため対象外（spec内に明記）
+- [x] コードレビュー完了 ― 2026-10-26実施。8d87505a（監査ログ列の文書反映・旧行空欄の明示）は妥当。新規E2Eは条件待ちのみ・実 exporter と一致する固定値主張（CSV 7列・BOM除去・envelope v2）・JSONL除外を明記。指摘なし
+- [x] ドキュメント更新済み(スキーマ・列定義・復元手順を含む) ― 2026-10-26: `docs/LOG_EXPORT_IMPORT_GUIDE.md` 日英に列定義節を追加（CSV 7列・JSON envelope・EXPORT_COLUMNS 13列の三者区別）。スキーマversion・復元手順は既存文書（schema・復元テスト）が正本
 
 ## 実装記録（2026-10-23・調査のみ・未着手）
 - 既存資産の確認（ criterion 1 は既に充足）: アーカイブには `yasumaro_archive_meta` テーブルが実在し、`archive_format_version INTEGER NOT NULL`（スキーマversion）と `yasumaro_version TEXT`（バージョン）を持つ（`src/offscreen/schema.ts:171-182`、PBI 2026-09-06-01 基盤 / 02 record-archive で実施）。`ARCHIVE_FORMAT_VERSION` 定数が書き込み時に記録される（`archiveCreateHandlers.ts:200-210`）。検証子は `src/offscreen/opfsWorker/archiveValidation.ts` の `validateArchiveEngine` と `migrateArchiveStaging`（ALLOWED_TABLES で許可テーブルを固定）

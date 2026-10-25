@@ -251,6 +251,8 @@ describe('Offline retry policy via step metadata', () => {
         'trust',
         'privacyHeaders',
         'duplicate',
+        // PBI 2026-10-23-06: assistive, retry would re-tag; never fatal.
+        'applyAutoTagRules',
         'formatMarkdown',
         'saveLocalMarkdown',
         'saveSqlite',

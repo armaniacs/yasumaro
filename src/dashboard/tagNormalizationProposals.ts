@@ -79,3 +79,19 @@ export function renameTagInCsv(tagsCsv: string | null | undefined, from: string,
   }
   return out.join(',');
 }
+
+/**
+ * Removes one tag from a stored tags CSV (PBI 2026-10-23-06: the auto-tag
+ * rule undo). Same shape contract as renameTagInCsv: comma cells, folded
+ * comparison, unknown shapes fail closed to the input unchanged.
+ */
+export function removeTagFromCsv(tagsCsv: string | null | undefined, tag: string): string {
+  if (typeof tagsCsv !== 'string' || tagsCsv === '') return tagsCsv ?? '';
+  const wanted = foldTagForMatch(tag);
+  if (wanted === '') return tagsCsv;
+  return tagsCsv
+    .split(',')
+    .map((t) => t.trim())
+    .filter((t) => t !== '' && foldTagForMatch(t) !== wanted)
+    .join(',');
+}

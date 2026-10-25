@@ -81,6 +81,7 @@ src/utils/storage/types.ts
 src/utils/storage/defaults.ts
 src/utils/storage/aiDomainPolicy.ts ― ドメイン別AI送信政策の正規化と判定。defaults.ts の外に置く（defaults → domainUtils → SettingsRepository → settingsMigration → defaults の循環を避けるため、PBI 2026-10-23-01）
 src/utils/storage/savedCollections.ts ― 保存済みコレクションの正規化。検証はここに置き、設定パイプラインが repository 鎖を引かないようにする（PBI 2026-10-23-06）
+src/utils/storage/autoTagRules.ts ― 自動タグ規則の正規化と照合。記録パイプラインが repository 鎖を引かずに照合できるようにする（PBI 2026-10-23-06）
 src/utils/storage/encryptionSession.ts
 src/utils/storage/SettingsRepository.ts ― 旧 settingsStore.ts の後継。trustDb 系との循環は dynamic import で回避（Layer 1-循環の後継関係）
 src/utils/storage/savedUrlRepository.ts

@@ -2137,6 +2137,115 @@
   "savedCollectionSaveError": {
     "message": "Failed to save"
   },
+  "savedCollectionRenameBtn": {
+    "message": "Rename"
+  },
+  "savedCollectionRenameSaveBtn": {
+    "message": "Save name"
+  },
+  "savedCollectionDuplicateBtn": {
+    "message": "Duplicate"
+  },
+  "savedCollectionCopyName": {
+    "message": "$1 copy",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research A"
+      }
+    }
+  },
+  "savedCollectionNameEmpty": {
+    "message": "Enter a name"
+  },
+  "autoTagRulesLabel": {
+    "message": "Auto-tag rules"
+  },
+  "autoTagRulesHelp": {
+    "message": "Rules tag new records automatically when the URL or title matches. All conditions of a rule must match; lower priority applies first. Disabling or deleting a rule stops future tagging."
+  },
+  "autoTagRulesEmpty": {
+    "message": "No auto-tag rules yet"
+  },
+  "autoTagRuleNamePlaceholder": {
+    "message": "Rule name"
+  },
+  "autoTagRuleDomainPlaceholder": {
+    "message": "Domain suffix (example.com)"
+  },
+  "autoTagRuleUrlPlaceholder": {
+    "message": "URL contains"
+  },
+  "autoTagRuleTitlePlaceholder": {
+    "message": "Title contains"
+  },
+  "autoTagRuleTagPlaceholder": {
+    "message": "Tag to apply"
+  },
+  "autoTagRulePriorityPlaceholder": {
+    "message": "Priority (default 100)"
+  },
+  "autoTagRuleAddBtn": {
+    "message": "Add rule"
+  },
+  "autoTagRuleEnableLabel": {
+    "message": "Rule enabled"
+  },
+  "autoTagRulePriority": {
+    "message": "priority $1",
+    "placeholders": {
+      "priority": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "autoTagRuleUndoBtn": {
+    "message": "Undo applications"
+  },
+  "autoTagRuleDeleteBtn": {
+    "message": "Delete rule"
+  },
+  "autoTagRuleDeleteConfirm": {
+    "message": "Delete rule \"$1\"? Future records will no longer be tagged. Past tagging stays.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Docs"
+      }
+    }
+  },
+  "autoTagRuleUndoConfirm": {
+    "message": "Remove tag \"$2\" applied by rule \"$1\" from the matched records?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Docs"
+      },
+      "tag": {
+        "content": "$2",
+        "example": "docs"
+      }
+    }
+  },
+  "autoTagRuleUndoDone": {
+    "message": "Removed the tag from $1 records.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "autoTagRuleNameTagRequired": {
+    "message": "Enter a rule name and a tag"
+  },
+  "autoTagRuleBadPriority": {
+    "message": "Priority must be a number"
+  },
+  "autoTagRuleNoCondition": {
+    "message": "Set at least one condition (domain, URL, or title)"
+  },
   "commandRecordPage": {
     "message": "Record the current page"
   },

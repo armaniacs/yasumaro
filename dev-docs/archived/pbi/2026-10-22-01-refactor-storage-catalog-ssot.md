@@ -47,6 +47,6 @@ Scenario: ゲート前のsunset実行を拒否する
 2.0人週相当(ゲート待ちを除く)。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(ARCHITECTURE_MAPのSSOT表・PERMISSIONS・SECURITYのegress章)
+- [x] 全BDDシナリオが自動テストとして実装されパスする ― 2026-10-26: 三角形pin 9件緑（`providerTrianglePin.test.ts`）。Gist egress 3pinは `gist-egress.spec.ts` で緑（PAT到達/401/未宣言origin遮断）。sunset拒否は手順書のゲート条件で文書化（実行物なし＝実行なし）
+- [x] コードレビュー完了 ― 2026-10-26実施。f4e84725（cap統一）: 旧キーは到達不能capの削除で正当、openai2はGLOBAL 16000→family 16384の意図的変更でpin済み、`built-in-ai` 付け替えは幻参照の修正。f94a280f（文書+pin確定）: 範囲外（wa-sqlite削除・IDB廃止）に着手なし、ゲート尊重を確認。指摘なし
+- [x] ドキュメント更新済み(ARCHITECTURE_MAPのSSOT表・PERMISSIONS・SECURITYのegress章) ― 2026-10-26: ARCHITECTURE_MAP共有モジュール表にcatalog SSOT行を追加。PERMISSIONS.md/SECURITY.mdは存在しないため新規作成せず、egressの文書正本は `SECURITY_REVIEW_GUIDE.md` の既存Gist egress行（202/208/12）が担うことを確認

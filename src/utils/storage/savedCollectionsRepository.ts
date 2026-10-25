@@ -14,6 +14,7 @@ import { StorageKeys } from './types.js';
 import { settingsRepository, type SettingsRepository } from './SettingsRepository.js';
 import {
   normalizeSavedCollections,
+  duplicateSavedCollection,
   removeSavedCollection,
   upsertSavedCollection,
   type SavedCollection,
@@ -68,4 +69,15 @@ export async function removeSavedCollectionById(
 ): Promise<void> {
   const current = await getSavedCollections(repo);
   await saveSavedCollections(removeSavedCollection(current, id), repo);
+}
+
+export async function duplicateSavedCollectionById(
+  id: string,
+  newId: string,
+  name: string,
+  now: number,
+  repo: SavedCollectionsStore = settingsRepository,
+): Promise<void> {
+  const current = await getSavedCollections(repo);
+  await saveSavedCollections(duplicateSavedCollection(current, id, newId, name, now), repo);
 }
