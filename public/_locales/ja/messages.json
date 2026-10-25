@@ -1508,6 +1508,48 @@
   "diagStorageTitle": {
     "message": "ストレージ"
   },
+  "diagCaptureTitle": {
+    "message": "取り込み状態"
+  },
+  "diagCaptureLast": {
+    "message": "直近の記録"
+  },
+  "diagCaptureNoRecord": {
+    "message": "まだ記録がありません"
+  },
+  "diagCaptureRecorded": {
+    "message": "記録済み"
+  },
+  "diagCaptureCategory": {
+    "message": "理由の分類"
+  },
+  "diagCaptureScope": {
+    "message": "対応範囲"
+  },
+  "diagCaptureUnlisted": {
+    "message": "未登録の理由"
+  },
+  "diagCategory_permission": {
+    "message": "権限"
+  },
+  "diagCategory_csp": {
+    "message": "CSP"
+  },
+  "diagCategory_kind": {
+    "message": "内容の種別"
+  },
+  "diagCategory_consent": {
+    "message": "同意"
+  },
+  "diagCategory_storage": {
+    "message": "保存"
+  },
+  "diagCategory_duplicate": {
+    "message": "重複"
+  },
+  "diagCategory_internal": {
+    "message": "内部・未登録"
+  },
   "diagObsidianSettingsTitle": {
     "message": "Obsidian 接続設定"
   },
@@ -5679,5 +5721,29 @@
   "pauseError": {
     "message": "一時停止の操作に失敗しました",
     "description": "一時停止・再開の操作が失敗したときのエラー"
+  },
+  "webhookExportHistoryEmpty": {
+    "message": "Webhook 転送はまだありません。"
+  },
+  "webhookExportResend": {
+    "message": "再送"
+  },
+  "webhookExportResendAria": {
+    "message": "再送 {recordId}",
+    "placeholders": {
+      "recordId": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
+  "webhookExportResendUnavailable": {
+    "message": "この画面では再送は配線されていません。"
+  },
+  "webhookExportRecordMissing": {
+    "message": "元の記録は削除されています。"
+  },
+  "webhookExportSaved": {
+    "message": "Webhook エクスポート設定を保存しました。"
   }
 }

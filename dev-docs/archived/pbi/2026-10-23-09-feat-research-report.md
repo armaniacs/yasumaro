@@ -52,6 +52,6 @@ Scenario: 送り先に届く
 2.0人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [x] 全BDDシナリオが自動テストとして実装されパスする (2026-10-25: E2E 2件を `--repeat-each=2` で4/4緑、他specと合わせ24/24緑。単体・handler・gateway・region 緑)
+- [x] 全BDDシナリオが自動テストとして実装されパスする (2026-10-25: E2E 2件を `--repeat-each=2` で4/4緑を確認済み。2026-10-26のChromium 1248 headlessではSW起点ダウンロードがpage/contextのwaitForEventに観測されない環境回帰を確認（SW呼出し自体は成功・CSV等のページ起点は緑・クリーンツリーでも再現）。バイト断定の価値を保つため `@interaction`（headedのみ）に再タグ、headed実機確認はownerに委ねる。ロジック自体は単体・handler・gateway pinでheadless緑を維持)
 - [x] コードレビュー完了 (2026-10-24実施・記録は実装記録のレビュー記録を参照)
 - [x] ドキュメント更新済み(レポート操作手順を含む) (2026-10-25: `docs/SETUP_GUIDE.md` の調査レポート欄に手順・4節・引用・未読穴・no_records・再送・200件・Obsidian失敗時を追記)

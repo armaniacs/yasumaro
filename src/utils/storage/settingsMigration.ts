@@ -214,6 +214,10 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // migrated copy would make the <all_urls> level of the record-flow ladder
     // permanently deny even for a profile that opted in.
     StorageKeys.ALLOW_ALL_URLS_OPT_IN,
+    // Last capture outcome (PBI 2026-10-22-06 slice 2): written straight
+    // from the content script, read straight by the dashboard collector —
+    // neither side has a blob-tier reader, so migration would hide it.
+    StorageKeys.LAST_CAPTURE_OUTCOME,
 ]);
 
 /**

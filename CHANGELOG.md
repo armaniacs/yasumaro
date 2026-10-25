@@ -35,6 +35,24 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.62] - 2026-10-26
+
+このリリースは棚卸し残タスクの仕上げです。利用者に見える変更は自動タグ規則の保存時適用・週次ダイジェスト基盤・リマインド基盤・Webhook雛形・SPA遅延再スキャン・診断の取り込み状態表示・履歴に聞くの拒否理由表示です。 / This release closes out the remaining backlog: auto-tag on save, weekly digest groundwork, reminder groundwork, webhook scaffolding, SPA late re-scan, diagnostics capture status, and ask-history rejection reasons.
+
+### 追加 / Added
+
+- 自動タグ規則の保存時適用＋取消（ログ上限200・辞書正規化・重複排除） / Auto-tag rules applied at save time with undo (capped log, dict normalization, dedupe)
+- 週次ダイジェストのバッチ基盤（分割再開・冪等・取消・週次標識） / Weekly digest batch groundwork (chunked resume, idempotent, cancellable, weekly marker)
+- リマインド基盤（解除/再通知/破棄の永続化・1日1件・上限3） / Reminder groundwork (dismiss/snooze/discard persistence, 1 per day, cap 3)
+- Webhook雛形（条件・履歴/冪等再送・送信路・CSV/JSON e2e pin） / Webhook scaffolding (conditions, history/idempotent resend, send path, CSV/JSON e2e pins)
+- SPA遅延コンテンツの再スキャン（上限2回）＋診断パネル「取り込み状態」 / SPA late-content re-scan (cap 2) + diagnostics capture status
+- 履歴に聞くの拒否理由表示（admission reason透過） / Ask-history rejection reasons surfaced (admission reason passthrough)
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1196ファイル・17462テスト）
+- 新規単体テスト 100件超（融合・評価・バッチ・送信・取消・表示・診断）。E2Eはheadless実行可能分が緑。SW起点ダウンロードと回答系2件・週次通しはheaded/owner手動に委ねる
+
 ## [6.9.61] - 2026-10-26
 
 このリリースは棚卸しPBIの仕上げです。利用者に見える変更は保存済みコレクションの改名・複製・自動タグ規則と初回起動バナー・履歴一括スター・振り返りサマリ手順の文書化です。 / This release closes out backlog PBIs. User-visible changes: saved-collection rename/duplicate/auto-tag rules, the first-run banner, history bulk star, and review-summary docs.

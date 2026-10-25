@@ -25,6 +25,7 @@ import { DeadlineTimer } from './deadlineTimer.js';
 import { throttle as createThrottle } from './throttle.js';
 import { IdleScheduler, type Scheduler } from './scheduler.js';
 import { VisitGating, applySettingsTable } from './visitGating.js';
+import { shouldRearmForLateContent, readVisibleChars as defaultReadVisibleChars } from './lateContentRescan.js';
 import { StorageKeys } from '../utils/storage/types.js';
 // Probe relay (PBI 2026-10-11-08 follow-up): content scripts cannot reach
 // chrome.storage.session, so arming/state travel as runtime messages via the
@@ -43,6 +44,12 @@ export interface ContentKernelOptions {
     sender?: MessageSender;
     scheduler?: Scheduler;
     isE2ETest?: () => boolean;
+    /**
+     * PBI 2026-10-22-06 slice 2 (SPA late-content re-scan): visible-length
+     * reader for the re-arm verdict. Defaults to the live DOM read; tests
+     * inject a fake length sequence.
+     */
+    readVisibleChars?: () => number;
 }
 
 export class ContentKernel {
@@ -61,6 +68,11 @@ export class ContentKernel {
     private readonly e2eSessionResolveNeeded: boolean;
     private readonly gating: VisitGating;
     private readonly deadlineTimer: DeadlineTimer;
+    /**
+     * PBI 2026-10-22-06 slice 2: visible-length reader for the re-arm
+     * verdict (injected in tests, live DOM in production).
+     */
+    private readonly readVisibleChars: () => number;
     /**
      * PBI 2026-10-17-01 (Task 5): content-side early suppression cache. True
      * while the recording pause is engaged. Read once in init() from
@@ -84,6 +96,7 @@ export class ContentKernel {
         // VisitGating and DeadlineTimer below.
         this.scrollMonitor = new ScrollMonitor(this.pageState, this.clock);
         this.sender = opts.sender ?? createContentMessageSender(2);
+        this.readVisibleChars = opts.readVisibleChars ?? defaultReadVisibleChars;
         this.e2eSessionResolveNeeded = opts.isE2ETest === undefined;
         // The default no longer reads the page-writable
         // `data-ow-e2e-test` DOM attribute. Arming comes from the
@@ -303,7 +316,44 @@ export class ContentKernel {
                 markProbeVisitReported(this.sender);
             }
             this.stopPeriodicCheck();
+            return;
         }
+
+        // PBI 2026-10-22-06 slice 2 (SPA late-content re-scan): the gate
+        // closed on the first report, but an infinite-scroll page may have
+        // grown a full page since. A bounded re-arm re-opens the gate so the
+        // same pipeline re-extracts (with cleansing + PII masking) and
+        // re-sends; the worker's admission stays the backstop.
+        if (this.pageState.isValidVisitReported && this.maybeRearmForLateContent()) {
+            const recheck = this.gating.evaluate(this.pageState.toVisitState(), this.clock());
+            if (recheck.reportable) {
+                void logInfo('[OWeave] 遅延コンテンツ再記録', { rescanCount: this.pageState.lateRescanCount }, 'contentKernel');
+                void this.reportValidVisit();
+                if (this.gating.isE2E) {
+                    markProbeVisitReported(this.sender);
+                }
+            }
+        }
+    }
+
+    /**
+     * PBI 2026-10-22-06 slice 2: bounded gate re-arm for late content.
+     * Returns true when the gate re-opened. Never throws: the DOM read is
+     * fail-closed and the verdict is pure.
+     */
+    maybeRearmForLateContent(): boolean {
+        let current = 0;
+        try {
+            current = this.readVisibleChars();
+        } catch {
+            return false;
+        }
+        if (!shouldRearmForLateContent(this.pageState.reportedContentChars, current, this.pageState.lateRescanCount)) {
+            return false;
+        }
+        this.pageState.isValidVisitReported = false;
+        this.pageState.lateRescanCount += 1;
+        return true;
     }
 
     updateMaxScroll(): void {

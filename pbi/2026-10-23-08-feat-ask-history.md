@@ -29,7 +29,7 @@ Scenario: 根拠がないときは分からないと言う
 - [x] コレクションを対象に選べる（2026-10-26確認: ハンドラ事後絞りと未知id無絞り縮退を単体でpin、select描画をviewテストでpin、panelはloadSaved完了後の再描画に修正。E2Eは作成済み・headed未実行）
 - [x] 答えに引用リンクが付く（2026-10-25確認: 上位3件・500字打切り・target=_blank＋noopenerを単体とviewテストでpin）
 - [x] 該当なし時に作らない応答になる（2026-10-25確認: AI不呼出しと広げ方提案を単体でpin、gateway透過もpin）
-- [ ] 縮退・失敗の理由表示と再試行ができる（2026-10-25: in_flight・未知id縮退・sqlite Narrowing・timeoutはpin済み。再試行はボタン復帰で可能。admission拒否のreasonがgateway正規化で汎用文に置換されるため未チェック。契約変更は [2026-10-25-12-gateway-reason-fidelity.md](2026-10-25-12-gateway-reason-fidelity.md) に分離）
+- [x] 縮退・失敗の理由表示と再試行ができる（2026-10-26: in_flight・未知id縮退・sqlite Narrowing・timeoutはpin済み。再試行はボタン復帰で可能。admission拒否のreason透過は [2026-10-25-12-gateway-reason-fidelity.md](2026-10-25-12-gateway-reason-fidelity.md) で解決：handlerがreasonをerrorに写し、gateway透過・viewの translated error表示まで鎖を確認。失敗表示はviewテストでpin済み）
 
 ## テスト戦略
 ## 実装記録（2026-10-23・コアQA経路）

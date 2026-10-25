@@ -92,7 +92,13 @@ export function createAskHistoryHandler(deps: AskHistoryHandlerDeps) {
     try {
       const admitted = await deps.admit('ask', sender);
       if ('rejected' in admitted) {
-        sendResponse(admitted.rejected);
+        // The admission seam reports `reason`, but the ASK_HISTORY wire
+        // contract carries failures in `error` — forwarding `rejected`
+        // verbatim drops the reason in the gateway normalizer and the panel
+        // shows 'Invalid ASK_HISTORY response' (PBI 2026-10-25-12). Map it
+        // so the panel shows WHY (consent/rate/paused); a blank reason
+        // still falls back to the gateway sentence.
+        sendResponse({ success: false, error: admitted.rejected.reason });
         return;
       }
       // The per-domain egress policy resolves from the admitted settings

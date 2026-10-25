@@ -308,6 +308,11 @@ export const StorageKeys = {
     CLEANSING_FEEDBACK_QUEUE: 'cleansing_feedback_queue',
     // Cleansing Offscreen delegation PoC (PBI 2026-08-30-05) — default OFF
     CLEANSING_OFFSCREEN_ENABLED: 'cleansing_offscreen_enabled',
+    // Last settled capture outcome (PBI 2026-10-22-06 slice 2, diag wiring):
+    // { code, at } only — no content, URL, or title. Written straight from
+    // the content script and read straight by the dashboard collector, so it
+    // stays top-level (see TOP_LEVEL_ONLY_KEYS in settingsMigration.ts).
+    LAST_CAPTURE_OUTCOME: 'last_capture_outcome',
 } as const;
 
 export type StorageKey = typeof StorageKeys[keyof typeof StorageKeys];
@@ -580,6 +585,7 @@ export interface StorageKeyValues {
     [StorageKeys.CLEANSING_FEEDBACK_QUEUE]: CleansingFeedbackEntry[];
     [StorageKeys.CLEANSING_OFFSCREEN_ENABLED]: boolean;
     [StorageKeys.AI_DOMAIN_POLICY]: Record<string, AiDomainPolicy>;
+    [StorageKeys.LAST_CAPTURE_OUTCOME]: { code: string; at: number };
 }
 
 // 厳格な Settings 型（後方互換性のため StrictSettings エイリアスを残す）

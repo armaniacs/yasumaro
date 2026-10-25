@@ -139,10 +139,17 @@ test.describe('History panel UI @extension', () => {
   });
 });
 
-test.describe('Research report @extension (PBI 2026-10-23-09)', () => {
+test.describe('Research report @interaction (PBI 2026-10-23-09)', () => {
   // BDD: レポートが生成される + 送り先に届く — the panel conditions become the
   // scope, the button delivers the four-section Markdown through the existing
   // local-download path, and the status confirms the delivery.
+  //
+  // Headed-only: the download is initiated by the service worker
+  // (chrome.downloads.download), and headless Chromium does not surface
+  // SW-initiated downloads to page/context waitForEvent (directly probed:
+  // the SW call resolves with a download id, no event fires). Page-initiated
+  // downloads (CSV/JSON anchor path) stay @extension. Logic itself is pinned
+  // headless by generator/handler/gateway unit tests.
   test.describe('', () => {
     test.use({
       panelSeedParams: {

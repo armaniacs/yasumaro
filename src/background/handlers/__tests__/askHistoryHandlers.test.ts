@@ -133,12 +133,15 @@ describe('createAskHistoryHandler', () => {
     await first;
   });
 
-  it('rejects on the admission gate and forwards the rejection', async () => {
+  it('rejects on the admission gate and surfaces the reason as the error', async () => {
+    // PBI 2026-10-25-12: the wire contract carries failures in `error`, so
+    // the admission `reason` must be mapped — verbatim forwarding loses it in
+    // the gateway normalizer and the panel shows a generic sentence.
     const deps = makeDeps({
       admit: vi.fn().mockResolvedValue({ rejected: { success: false, reason: 'privacy_consent_required' } }),
     });
     const response = await runHandler(deps, { question: 'q' });
-    expect(response).toEqual({ success: false, reason: 'privacy_consent_required' });
+    expect(response).toEqual({ success: false, error: 'privacy_consent_required' });
   });
 
   it('surfaces an AI failure instead of answering with an empty summary', async () => {

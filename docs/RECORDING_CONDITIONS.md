@@ -57,6 +57,13 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 
 空欄・負値・数値以外の設定は既定値のままになります。非表示タブでは定期判定が止まるため、バックグラウンド放置は記録されません。
 
+### 対応範囲と対象外
+
+- 記録できるもの: 記事頁の自動記録、SPA遅延コンテンツの再スキャン（上限2回・1頁分相当の増加で再記録。スクロール事象なしの自動追記は対象外）
+- 計画中（未対応）: PDFビューワの本文抽出、動画字幕の取込み
+- 記録しないもの: file:// 頁、認証裏頁、ペイウォール頁、キャンバス描画頁
+- 記録できない理由はダッシュボードの診断パネル「取り込み状態」に理由コードと時刻で表示されます（本文・URL・題名は保存しません）
+
 ### 手動記録との関係
 
 スマート検出の条件を満たさなかったページでも、ポップアップの **「今すぐ記録」** ボタンで手動記録できます。手動記録はスマート検出の条件（滞在時間・スクロール深度）を経由しないため、開いた直後のページでも即座に記録可能です。
@@ -117,6 +124,13 @@ Different media are read differently, so non-article pages use dedicated conditi
 | Code | 15s stay + 1 copy | Code thresholds in Recording Conditions |
 
 Blank, negative, or non-numeric settings keep the defaults. Periodic checks stop in hidden tabs, so background-idle pages are not recorded.
+
+### Coverage and exclusions
+
+- Recorded: article auto-capture, SPA late-content re-scan (up to 2 times, re-records on about a page of growth; auto-append without scroll events is out of scope)
+- Planned (not yet): PDF viewer text extraction, video caption ingestion
+- Never recorded: file:// pages, auth-walled pages, paywalled pages, canvas-rendered pages
+- Unrecordable reasons appear in the dashboard diagnostics panel under capture status as reason code + time (no body, URL, or title is stored)
 
 ### Why these two signals
 

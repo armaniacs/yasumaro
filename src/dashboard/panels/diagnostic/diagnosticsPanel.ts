@@ -24,6 +24,13 @@ import { createDiagnosticActions, type DiagnosticActionElements } from './diagno
 import { PROVIDER_CATALOG } from '../../../background/ai/providerCatalog.js';
 import { registerReportBugButton } from './issueReportEntry.js';
 import { ReloadGuard } from '../asyncData/reloadGuard.js';
+import {
+  CAPTURE_FAILURE_REASONS,
+  CAPTURE_SCOPE,
+  classifyCaptureFailure,
+  type CaptureFailureCategory,
+} from '../../captureFailureReasons.js';
+import { RECORDED_OUTCOME_CODE } from '../../../utils/captureOutcome.js';
 
 /**
  * Renders the built-in AI availability row and toggles the download button.
@@ -86,6 +93,11 @@ const clearChildren = (el: HTMLElement | null): void => {
 };
 
 const SECTIONS: DiagSection[] = [
+  {
+    selector: '#diagCaptureStats',
+    clear: clearChildren,
+    render: (el, snap) => renderCaptureSection(el, snap),
+  },
   {
     selector: '#diagStorageStats',
     clear: clearChildren,
@@ -189,8 +201,78 @@ const SECTIONS: DiagSection[] = [
    },
 ];
 
-function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
+/**
+ * PBI 2026-10-22-06 slice 2 (diag wiring): renders the last settled capture
+ * outcome through the failure-reason table, so an excluded page explains
+ * itself instead of failing silently. Every key below is a string literal so
+ * the i18n gate sees it as used; the per-code explanation keys live in the
+ * table rows and resolve once locales add them (code fallback until then).
+ */
+function categoryLabel(category: CaptureFailureCategory): string {
+  switch (category) {
+    case 'permission': return getMessageOr('diagCategory_permission', 'Permission');
+    case 'csp': return getMessageOr('diagCategory_csp', 'CSP');
+    case 'kind': return getMessageOr('diagCategory_kind', 'Content kind');
+    case 'consent': return getMessageOr('diagCategory_consent', 'Consent');
+    case 'storage': return getMessageOr('diagCategory_storage', 'Storage');
+    case 'duplicate': return getMessageOr('diagCategory_duplicate', 'Duplicate');
+    case 'internal': return getMessageOr('diagCategory_internal', 'Internal / unlisted');
+  }
+}
+
+/** Scope summary rendered from the table so doc and panel cannot drift. */
+function summarizeScope(): string {
+  const byStatus = new Map<string, string[]>();
+  for (const row of CAPTURE_SCOPE) {
+    const list = byStatus.get(row.status) ?? [];
+    list.push(row.target);
+    byStatus.set(row.status, list);
+  }
+  const parts: string[] = [];
+  for (const status of ['done', 'planned', 'excluded'] as const) {
+    const list = byStatus.get(status) ?? [];
+    parts.push(`${status} (${list.length}): ${list.join(', ')}`);
+  }
+  return parts.join(' | ');
+}
+
+function renderCaptureSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {
   if (!el) return;
+  const last = snap.lastCapture;
+  if (!last) {
+    el.appendChild(makeStatRow(
+      getMessageOr('diagCaptureLast', 'Last capture'),
+      getMessageOr('diagCaptureNoRecord', 'Not recorded yet'),
+    ));
+    el.appendChild(makeStatRow(getMessageOr('diagCaptureScope', 'Scope'), summarizeScope()));
+    return;
+  }
+  const when = new Date(last.at).toLocaleString();
+  if (last.code === RECORDED_OUTCOME_CODE) {
+    el.appendChild(makeStatRow(
+      getMessageOr('diagCaptureLast', 'Last capture'),
+      `${getMessageOr('diagCaptureRecorded', 'Recorded')} (${when})`,
+    ));
+  } else {
+    const classified = classifyCaptureFailure(last.code);
+    const entry = CAPTURE_FAILURE_REASONS.find((row) => row.code === last.code);
+    const detail = entry ? getMessageOr(entry.i18nKey, last.code) : last.code;
+    el.appendChild(makeStatRow(
+      getMessageOr('diagCaptureLast', 'Last capture'),
+      `${detail} (${when})`,
+    ));
+    const knownSuffix = classified.known
+      ? ''
+      : ` (${getMessageOr('diagCaptureUnlisted', 'unlisted reason')})`;
+    el.appendChild(makeStatRow(
+      getMessageOr('diagCaptureCategory', 'Reason category'),
+      `${categoryLabel(classified.category)}${knownSuffix}`,
+    ));
+  }
+  el.appendChild(makeStatRow(getMessageOr('diagCaptureScope', 'Scope'), summarizeScope()));
+}
+
+function renderObsidianSection(el: HTMLElement | null, snap: DiagnosticsSnapshot): void {  if (!el) return;
 
   if (snap.settingsLoadFailed) {
     el.textContent = getMessageOr('diagLoadError', '設定の読み込みに失敗しました。');

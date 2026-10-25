@@ -1562,6 +1562,48 @@
   "diagStorageTitle": {
     "message": "Storage"
   },
+  "diagCaptureTitle": {
+    "message": "Capture Status"
+  },
+  "diagCaptureLast": {
+    "message": "Last capture"
+  },
+  "diagCaptureNoRecord": {
+    "message": "Not recorded yet"
+  },
+  "diagCaptureRecorded": {
+    "message": "Recorded"
+  },
+  "diagCaptureCategory": {
+    "message": "Reason category"
+  },
+  "diagCaptureScope": {
+    "message": "Scope"
+  },
+  "diagCaptureUnlisted": {
+    "message": "unlisted reason"
+  },
+  "diagCategory_permission": {
+    "message": "Permission"
+  },
+  "diagCategory_csp": {
+    "message": "CSP"
+  },
+  "diagCategory_kind": {
+    "message": "Content kind"
+  },
+  "diagCategory_consent": {
+    "message": "Consent"
+  },
+  "diagCategory_storage": {
+    "message": "Storage"
+  },
+  "diagCategory_duplicate": {
+    "message": "Duplicate"
+  },
+  "diagCategory_internal": {
+    "message": "Internal / unlisted"
+  },
   "diagObsidianSettingsTitle": {
     "message": "Obsidian Connection Settings"
   },
@@ -5697,5 +5739,29 @@
   "pauseError": {
     "message": "Pause action failed",
     "description": "Error shown when a pause or resume action fails"
+  },
+  "webhookExportHistoryEmpty": {
+    "message": "No webhook transfers yet."
+  },
+  "webhookExportResend": {
+    "message": "Resend"
+  },
+  "webhookExportResendAria": {
+    "message": "Resend {recordId}",
+    "placeholders": {
+      "recordId": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
+  "webhookExportResendUnavailable": {
+    "message": "Resend is not wired in this view."
+  },
+  "webhookExportRecordMissing": {
+    "message": "The original record is gone."
+  },
+  "webhookExportSaved": {
+    "message": "Webhook export settings saved."
   }
 }

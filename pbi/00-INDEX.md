@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-25 gateway理由保持 ― ⬜ 1件残（12）
+### 2026-10-25 gateway理由保持 ― ✅ 1件完了・アーカイブ対象（12）
 
-PBI 08 の AC4 から分離。admission拒否の `reason` が gateway 正規化で汎用文に置換される問題の契約変更。
+PBI 08 の AC4 から分離。admission拒否の `reason` が gateway 正規化で汎用文に置換される問題。handlerでの写し（union・gateway無変更）で解決。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---:|---:|---:|---|
-| ⬜ 12 | [2026-10-25-12-gateway-reason-fidelity.md](2026-10-25-12-gateway-reason-fidelity.md) | 🔧非機能追加 | - | - | 未着手。PBI 08 の AC4 を充足する |
+| ✅ 12 | [2026-10-25-12-gateway-reason-fidelity.md](../dev-docs/archived/pbi/2026-10-25-12-gateway-reason-fidelity.md) | 🔧非機能追加 | - | - | ✅ 完了（2026-10-26: 単体＋gateway透過pin緑・3立場Why記録）。PBI 08 の AC4 を充足 |
 
 ### 2026-10-25 依存ゲート二層化 ― ✅ 1件完了・アーカイブ済み（11） 🔧非機能追加 RICE順: ~~11(4.8)~~
 
@@ -78,7 +78,7 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 |---|---|---|---:|---:|---|
 | ✅ 06 | [2026-10-23-06-feat-saved-collections.md](../dev-docs/archived/pbi/2026-10-23-06-feat-saved-collections.md) | feat | 640 | 2.0人週相当 | ✅ 完了（2026-10-25: 改名・複製・自動タグ規則＋取消・フォールバック・M1/M3入力。E2E 9/9・単体50件超・レビュー指摘なし） |
 | ✅ 07 | [2026-10-23-07-feat-entry-friction.md](../dev-docs/archived/pbi/2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | ✅ 完了（2026-10-25: 一括スターE2E 15/15・レビュー指摘なし・SETUP_GUIDEに3入口追記。omnibox実UIはowner手動と併用） |
-| 🔶 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | コアQA経路＋P0/P1修正済み（未束縛generateSummary・loadSaved競合）。残はAC4（R3に分離→PBI 12）・回答系headed E2E 2件（@interaction） |
+| 🔶 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | コアQA経路＋P0/P1修正済み（未束縛generateSummary・loadSaved競合）。AC4はPBI 12で解決済み。残は回答系headed E2E 2件（@interaction・owner手動） |
 | ✅ 09 | [2026-10-23-09-feat-research-report.md](../dev-docs/archived/pbi/2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | ✅ 完了（2026-10-25: 4節・引用・送達/再送・偽成功なし。E2E 4/4・レビュー修正済み・SETUP_GUIDE追記） |
 | ✅ 10 | [2026-10-23-10-feat-domain-intel.md](../dev-docs/archived/pbi/2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | ✅ 完了（2026-10-25: 偏り表示・提案適用/取消・縮退。E2E 6/6・レビュー済み・ANALYTICS_GUIDE日英追記） |
 
@@ -106,10 +106,10 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 |---|---|---|---:|---:|---|
 | ✅ 01 | ~~[2026-10-22-01-refactor-storage-catalog-ssot.md](2026-10-22-01-refactor-storage-catalog-ssot.md)~~ → ✅ 01完了（上段に記録） | refactor | 800 | 2.0人週相当 | 土台。A/Dが依存。wa-sqlite部分はゲート後 |
 | ✅ 02 | [2026-10-22-02-feat-onboarding-light.md](../dev-docs/archived/pbi/2026-10-22-02-feat-onboarding-light.md) | feat | 480 | 1.0人週相当 | ✅ 完了（2026-10-26: バナーE2E 6/6・レビュー指摘なし・README日英＋OBSIDIAN_SETUP_GUIDEに前提追記） |
-| 🔶 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 類似クラスタ土台完了(同一ニュースの媒体横断束ね・鮮度+差分のみ表示・タイトル語彙Jaccard完全ローカル・単独行破棄・入力不変pin)。残はクラスタ表示の配線、週次ダイジェストのバッチ化、embedding選定とハイブリッド統合、評価コーパス、E2E、コードレビュー |
-| 🔶 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | 集計経路完了(既存2列活用のトレイル群集計・訪問順+basis表示・少件数縮退・読みかけ候補(scalar欠落はfail-closed)・間引き1日1件+上限3)。残は再生ビューのパネル配線、リマインドの解除/再通知/破棄、通知送信経路、E2E、コードレビュー |
-| 🔶 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | 最小ペイロード経路完了(要約・タグ・URLのみ・raw contentなし・転送条件(タグ/エンゲージメント)・httpsのみゲート・stored shape正規化)。残は設定UI、転送履歴と再送、送信経路、e2e pin、コードレビュー、ドキュメント |
-| 🔶 06 | [2026-10-22-06-feat-capture-expansion.md](2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | 失敗可視化の語彙完了(実在理由コード15件の分類表・unknownはfail-closed・対応範囲/対象外一覧を単一情報源に)。残は診断パネルへの配線、PDF・動画字幕・SPA遅延分の段階的記録、縮退テスト、バンドル計測、E2E、コードレビュー |
+| 🔶 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 語彙土台＋slice2完了(表示芯・週次バッチ芯・文字gram選定・RRF融合・15文書コーパス・単体31緑)。残はパネル登録・alarm結合・厳密超過（同点1.0）・E2E・第三者レビュー |
+| 🔶 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | ロジック完了(再生モデル・解除/再通知/破棄の永続化・日ゲート通知・単体41緑)。2件チェック（上限・私的除外）。残はパネル登録・SW配線・候補照会・TODO・E2E通し・第三者レビュー・文書配置 |
+| 🔶 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | モジュール完了(設定UI・履歴/冪等再送・送信路・単体41緑・e2e 2pin作成)。残はmount配線・SW発火配線・headed緑確認・文書配置・独立レビュー |
+| 🔶 06 | [2026-10-22-06-feat-capture-expansion.md](2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | 語彙＋SPA再スキャン＋診断配線完了(3件チェック・単体33緑・バンドル7.74MB・RECORDING_CONDITIONS日英)。残はPDF記録・E2E通し・他者レビュー |
 
 ### 2026-10-21 対象外・owner 判断処理（なぜなぜ分析 43 回、fix/feat 12件） ― ✅ 12件完了・アーカイブ済み（01-12） / ⬜ 0件残 実施順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → ~~06~~ → ~~07~~ → ~~08~~ → ~~09~~ → ~~10~~ → ~~11~~ → ~~12~~
 

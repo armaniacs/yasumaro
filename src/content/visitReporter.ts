@@ -16,6 +16,11 @@ import type { SleepFn } from '../utils/retryPredicate.js';
 import { toValidVisitPayload, buildVisitStats } from './visitPayload.js';
 import type { VisitByteStats, VisitAiStats, VisitStats } from './visitPayload.js';
 import type { RecordingResult } from '../messaging/types.js';
+import {
+  deriveOutcomeCode,
+  persistLastCaptureOutcome,
+  type LastCaptureOutcome,
+} from '../utils/captureOutcome.js';
 
 /**
  * Single-owner re-export: stat selection lives in the visitPayload wire
@@ -95,6 +100,13 @@ export interface VisitReporterDeps {
      * before this seam existed, so the delay is unchanged.
      */
     sleep?: SleepFn;
+    /**
+     * PBI 2026-10-22-06 slice 2 (diag wiring): where the settled outcome
+     * goes. Defaults to the best-effort storage persist; tests inject a
+     * recorder. Fire-and-forget at the call site — reporting never awaits
+     * telemetry.
+     */
+    persistOutcome?: (outcome: LastCaptureOutcome) => void;
 }
 
 /** Default retry wait: the real setTimeout wrapper every retry loop uses. */
@@ -121,6 +133,28 @@ export class VisitReporter {
 
     /** One bounded retry after a transient transport failure. */
     private static readonly RETRY_DELAY_MS = 1_000;
+
+    /**
+     * PBI 2026-10-22-06 slice 2: the single commit point for a settled
+     * visit. The reported flag, the late-rescan baseline, and the persisted
+     * diag outcome commit together — a settled visit is never half-recorded.
+     * Telemetry is fire-and-forget (persistOutcome must not throw; the
+     * default storage write catches internally).
+     */
+    private commitSettled(contentChars: number, response: ServiceWorkerResponse | undefined): void {
+        const { pageState } = this.deps;
+        pageState.isValidVisitReported = true;
+        pageState.reportedContentChars = contentChars;
+        const persist = this.deps.persistOutcome
+            ?? ((outcome: LastCaptureOutcome): void => {
+                void persistLastCaptureOutcome(outcome);
+            });
+        try {
+            persist({ code: deriveOutcomeCode(response), at: Date.now() });
+        } catch {
+            // Telemetry must never break reporting.
+        }
+    }
 
     async report(): Promise<void> {
         if (this.deps.isPaused?.() === true) return;
@@ -164,7 +198,7 @@ export class VisitReporter {
 
             if (response && !response.success) {
                 if (response.error === 'DOMAIN_BLOCKED') {
-                    pageState.isValidVisitReported = true;
+                    this.commitSettled(extractResult.content.length, response);
                     return;
                 }
                     if (response.error === 'PRIVATE_PAGE_DETECTED') {
@@ -207,16 +241,16 @@ export class VisitReporter {
                     }
                     // A user-declined or answered confirmation is terminal for
                     // this page view — the gate closes either way.
-                    pageState.isValidVisitReported = true;
+                    this.commitSettled(extractResult.content.length, response);
                     return;
                 }
                 // Any other non-success is a worker-side failure the retry
                 // cannot fix by re-sending now — treat as terminal (gate
                 // closes) but log for diagnosis.
-                pageState.isValidVisitReported = true;
+                this.commitSettled(extractResult.content.length, response);
                 await logError('Background worker error', { error: response.error }, ErrorCode.INTERNAL_ERROR, 'visitReporter');
             } else {
-                pageState.isValidVisitReported = true;
+                this.commitSettled(extractResult.content.length, response);
             }
         } catch (error: unknown) {
             // Transient transport failure: leave the flag false so the gate
