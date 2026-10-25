@@ -251,16 +251,25 @@ Benchmark harness (micro + e2e + CI regression check): [docs/PERFORMANCE_TEST.md
 
 ---
 
-## Agent Coordination Notes
+## Editing Notes
 
-| Primary Agent | Coordinate With | When |
-|---------------|-----------------|------|
-| Feature | Security | Adding new API integrations |
-| Bug Fix | Documentation | User-impacting fixes |
-| Performance | Feature | During new feature development |
-| All | Code Review | Verify compliance with guidelines |
+- `recordingPipeline-full.test.ts` and other large test files are edited repeatedly: Read the file again right before each Edit (formatter hooks and subagents rewrite it), and give `old_string` enough context to be unique.
+- Do not chain `cd`, `rm -rf`, `git add -A` or `~/Secrets` access into one Bash command; a deny rule on any part rejects the whole command. Use `git -C <abs>` and run cleanup as its own command.
 
-Respect modular architecture and avoid cross-contamination of concerns.
+### Tool availability (Kilo Code)
+
+- In-place edits use `apply_diff`; new files and full rewrites use `write_to_file`.
+- `search_and_replace` and `insert_content` are rejected in code mode, and `edit` does not
+  exist in Kilo Code. Calling them costs a full round trip with no effect.
+- Architect mode is plan-only: `execute_command` and file edits are rejected there. Switch to
+  code mode before running commands or editing.
+- Multi-line source edits must not use `sed -i`; use `apply_diff`.
+
+### Batch edits to one file
+
+- Issue one `apply_diff` call containing multiple SEARCH/REPLACE blocks instead of a sequence
+  of single-block diffs to the same file; use one `write_to_file` for a full rewrite.
+- Run `npm run build` + tests after the batch, not between chunks.
 
 ---
 
