@@ -182,6 +182,15 @@
   "googleGemini": {
     "message": "Google Gemini"
   },
+  "openaiOfficial": {
+    "message": "OpenAI"
+  },
+  "openaiOfficialHelp": {
+    "message": "OpenAI APIの接続先: https://api.openai.com/v1。APIキーとモデル名を設定してください。"
+  },
+  "openaiOfficialModelPlaceholder": {
+    "message": "モデルID (例: gpt-6-luna)"
+  },
   "openaiCompatible": {
     "message": "OpenAI互換 (Groq, etc.)"
   },

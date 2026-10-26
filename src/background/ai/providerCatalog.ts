@@ -14,7 +14,7 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import type { ProviderId, StorageKey } from '../../utils/storage/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 import { PROVIDER_ALLOWLIST_ROWS } from '../../utils/storage/providerAllowlist.js';
-import { PROVIDER_DEFAULT_BASE_URLS } from '../../utils/storage/providerDefaultBaseUrls.js';
+import { PROVIDER_DEFAULT_BASE_URLS, OPENAI_OFFICIAL_BASE_URL } from '../../utils/storage/providerDefaultBaseUrls.js';
 import type { AIProviderStrategy } from './providers/index.js';
 import { GeminiProvider, BuiltInAiProvider } from './providers/index.js';
 import { GenericOpenAICompatibleProvider } from './providers/OpenAIProvider.js';
@@ -50,6 +50,7 @@ export interface ProviderViewExtraField {
  * carries no view fields.
  */
 export interface ProviderViewMetadata {
+  readonly helpI18nKey?: string;
   readonly cssClass?: string;
   readonly defaultOpen?: boolean;
   readonly extraFields?: ReadonlyArray<ProviderViewExtraField>;
@@ -61,6 +62,10 @@ export interface ProviderCatalogEntry {
   readonly modelKey: string;
   readonly defaultBaseUrl?: string;
   readonly defaultModel?: string;
+  /** Request dialect is a provider capability, independent of model names. */
+  readonly chatCompletionsDialect?: 'openai' | 'openai-compatible';
+  /** Read old official-endpoint slots without moving field-bound ciphertext. */
+  readonly legacyOpenAIEndpoint?: boolean;
   readonly requiresApiKey: boolean;
   readonly isLocal: boolean;
   readonly label: string;
@@ -175,8 +180,26 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
     }),
   ],
   [
+    'openai-official',
+    defineCatalogEntry('openai-official', {
+      apiKeyKey: StorageKeys.OPENAI_OFFICIAL_API_KEY,
+      modelKey: StorageKeys.OPENAI_OFFICIAL_MODEL,
+      defaultBaseUrl: OPENAI_OFFICIAL_BASE_URL,
+      defaultModel: 'gpt-6-luna',
+      chatCompletionsDialect: 'openai',
+      requiresApiKey: true,
+      cspDomain: 'https://api.openai.com',
+      contentCharsKey: StorageKeys.OPENAI_CONTENT_CHARS,
+      fieldPlaceholders: { apiKey: 'openaiApiKeyPlaceholder', model: 'openaiOfficialModelPlaceholder' },
+      supportsCustomPrompt: true,
+      settingsBlockKind: 'generic',
+    }),
+  ],
+  [
     'openai',
     defineCatalogEntry('openai', {
+      chatCompletionsDialect: 'openai-compatible',
+      legacyOpenAIEndpoint: true,
       apiKeyKey: StorageKeys.OPENAI_API_KEY,
       modelKey: StorageKeys.OPENAI_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
@@ -196,6 +219,8 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'openai2',
     defineCatalogEntry('openai2', {
+      chatCompletionsDialect: 'openai-compatible',
+      legacyOpenAIEndpoint: true,
       apiKeyKey: StorageKeys.OPENAI_2_API_KEY,
       modelKey: StorageKeys.OPENAI_2_MODEL,
       defaultBaseUrl: 'https://api.openai.com/v1',
@@ -237,6 +262,8 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
   [
     'openai-compatible',
     defineCatalogEntry('openai-compatible', {
+      chatCompletionsDialect: 'openai-compatible',
+      legacyOpenAIEndpoint: true,
       apiKeyKey: StorageKeys.PROVIDER_API_KEY,
       modelKey: StorageKeys.PROVIDER_MODEL,
       requiresApiKey: true,
@@ -271,6 +298,7 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
  */
 const PROVIDER_VIEW_OVERRIDES: Record<string, ProviderViewMetadata> = {
   gemini: GEMINI_VIEW_META,
+  'openai-official': { helpI18nKey: 'openaiOfficialHelp' },
 };
 
 export const PROVIDER_VIEW_METADATA: ReadonlyMap<ProviderId, ProviderViewMetadata> =

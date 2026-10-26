@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { createProviderStrategy, getRegistryEntry } from '../../providerCatalog.js';
 import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
 import { StorageKeys, type Settings } from '../../../../utils/storage/types.js';
@@ -40,7 +41,7 @@ interface Payload {
 
 function settingsFor(providerId: string, baseUrl: string, model: string): Settings {
   const prefixes: Record<string, string> = {
-    openai: 'openai', openai2: 'openai_2', 'openai-compatible': 'provider', 'lm-studio': 'lm_studio',
+    'openai-official': 'openai_official', openai: 'openai', openai2: 'openai_2', 'openai-compatible': 'provider', 'lm-studio': 'lm_studio',
   };
   const prefix = prefixes[providerId];
   return {
@@ -112,29 +113,63 @@ describe('GenericOpenAICompatibleProvider', () => {
       expect(connection.debug?.hasContent).toBe(true);
     });
 
-    it.each(['o1', 'o3-mini', 'o4-mini-2025-04-16', 'gpt-5', 'gpt-5.1', 'gpt-6.1-sol'])('omits fixed sampling and uses the configured test budget for %s', async (model) => {
-      const provider = new GenericOpenAICompatibleProvider(settingsFor('openai', 'https://api.openai.com/v1', model));
-
-      await provider.testConnection();
-
-      expect(sentBody()).toMatchObject({ model, max_completion_tokens: 2048 });
-      expect(sentBody()).not.toHaveProperty('temperature');
-    });
-
-    it('preserves sampling and the small connection test for a non-reasoning OpenAI model', async () => {
-      const provider = new GenericOpenAICompatibleProvider(settingsFor('openai', 'https://api.openai.com/v1', 'gpt-4o-mini'));
+    it.each(['gpt-6-luna', 'gpt-4o-mini', 'future-model', 'ft:unknown-family:custom'])('uses the official dialect for both flows without classifying model %s', async (model) => {
+      const provider = createProviderStrategy('openai-official', settingsFor('openai-official', 'https://api.openai.com/v1', model));
 
       await provider.generateSummary('A short public test article.');
       await provider.testConnection();
 
-      expect(sentBody(0)).toMatchObject({ max_completion_tokens: 2048, temperature: 0.1 });
-      expect(sentBody(1)).toMatchObject({ max_completion_tokens: 16, temperature: 0 });
+      for (const index of [0, 1]) {
+        expect(sentBody(index)).toMatchObject({ model, max_completion_tokens: 2048 });
+        expect(sentBody(index)).not.toHaveProperty('max_tokens');
+        expect(sentBody(index)).not.toHaveProperty('temperature');
+      }
+    });
+
+    it('uses the fixed official endpoint and its own credentials independently of legacy settings', async () => {
+      const settings = {
+        ...settingsFor('openai2', 'https://api.groq.com/openai/v1', 'vendor-model'),
+        openai_2_api_key: 'legacy-key',
+        openai_official_api_key: 'official-key',
+      } as Settings;
+      const provider = createProviderStrategy('openai-official', settings);
+
+      await provider.testConnection();
+
+      expect(getRegistryEntry('openai-official')).toMatchObject({ defaultBaseUrl: 'https://api.openai.com/v1', chatCompletionsDialect: 'openai' });
+      expect(fetchMock.mock.calls[0]![0]).toBe('https://api.openai.com/v1/chat/completions');
+      expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe('Bearer official-key');
+      expect(sentBody()).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
+      expect(settings.openai_2_api_key).toBe('legacy-key');
+    });
+
+    it('requires the official credential instead of borrowing a legacy key', async () => {
+      const provider = createProviderStrategy('openai-official', settingsFor('openai2', 'https://api.openai.com/v1', 'gpt-6-luna'));
+
+      const result = await provider.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('upgrades an existing official endpoint regardless of the model name', async () => {
+      const provider = new GenericOpenAICompatibleProvider(settingsFor('openai', 'https://api.openai.com/v1', 'future-model'));
+
+      await provider.generateSummary('A short public test article.');
+      await provider.testConnection();
+
+      expect(sentBody(0)).toMatchObject({ max_completion_tokens: 2048 });
+      expect(sentBody(1)).toMatchObject({ max_completion_tokens: 2048 });
+      expect(sentBody(0)).not.toHaveProperty('temperature');
+      expect(sentBody(1)).not.toHaveProperty('temperature');
     });
 
     it.each([
       ['openai2', 'https://api.groq.com/openai/v1'],
       ['openai-compatible', 'https://api.deepseek.com/v1'],
       ['lm-studio', 'http://127.0.0.1:1234/v1'],
+      ['openai2', 'https://api.openai.com.example.org/v1'],
+      ['openai2', 'https://api.openai.com:8443/v1'],
     ])('preserves legacy parameters for %s at %s even with a reasoning-like model name', async (providerId, baseUrl) => {
       const provider = new GenericOpenAICompatibleProvider(settingsFor(providerId, baseUrl, 'gpt-6-luna'), providerId);
 
@@ -147,10 +182,28 @@ describe('GenericOpenAICompatibleProvider', () => {
       expect(sentBody(1)).not.toHaveProperty('max_completion_tokens');
     });
 
-    it('honors a small configured reasoning budget without silently increasing it', async () => {
-      const settings = settingsFor('openai2', 'https://api.openai.com/v1', 'gpt-6-luna');
-      settings.providers = { openai2: { maxTokens: 32 } };
-      const provider = new GenericOpenAICompatibleProvider(settings, 'openai2');
+    it('keeps both legacy official slots independent without rewriting settings', async () => {
+      const settings = {
+        ...settingsFor('openai', 'https://api.openai.com/v1', 'future-a'),
+        ...settingsFor('openai2', 'https://api.openai.com/v1', 'future-b'),
+        openai_api_key: 'first-key', openai_2_api_key: 'second-key',
+        providers: { openai: { maxTokens: 64 }, openai2: { maxTokens: 128 } },
+      } as Settings;
+      const before = structuredClone(settings);
+      await createProviderStrategy('openai', settings).testConnection();
+      await createProviderStrategy('openai2', settings).testConnection();
+
+      expect(sentBody(0)).toMatchObject({ model: 'future-a', max_completion_tokens: 64 });
+      expect(sentBody(1)).toMatchObject({ model: 'future-b', max_completion_tokens: 128 });
+      expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe('Bearer first-key');
+      expect(fetchMock.mock.calls[1]![1].headers.Authorization).toBe('Bearer second-key');
+      expect(settings).toEqual(before);
+    });
+
+    it.each(['openai-official', 'openai2'])('honors a small configured budget for %s without silently increasing it', async (providerId) => {
+      const settings = settingsFor(providerId, 'https://api.openai.com/v1', 'gpt-6-luna');
+      settings.providers = { [providerId]: { maxTokens: 32 } };
+      const provider = createProviderStrategy(providerId, settings);
 
       await provider.testConnection();
 

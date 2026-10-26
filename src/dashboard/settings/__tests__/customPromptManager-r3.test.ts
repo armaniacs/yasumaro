@@ -553,3 +553,12 @@ describe('customPromptManager - r3 remaining branches', () => {
     expect(mockSetAll).toHaveBeenCalled();
   });
 });
+
+
+describe('asPromptProvider', () => {
+  it('keeps official OpenAI custom prompts scoped to that provider', async () => {
+    const { asPromptProvider } = await import('../customPromptManager.js');
+    expect(asPromptProvider('openai-official')).toBe('openai-official');
+    expect(asPromptProvider('unrecognized-provider')).toBe('all');
+  });
+});

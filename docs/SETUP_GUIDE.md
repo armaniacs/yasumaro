@@ -122,7 +122,7 @@
 > リンクが一切表示されない場合は、接続先の指定自体が違う可能性があります。設定画面の **Obsidian Host** と **Port** を確認してください。HTTP はループバックアドレス（`127.0.0.1` / `localhost`）にのみ許可されるため、リモートのホストには HTTPS が必要です。
 
 #### 2. AIプロバイダー設定
-「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。設定画面には「OpenAI Compatible」「OpenAI Compatible 2」の2つの入力スロットがあり、Priority（Failover Order）リストはフォールバック順序を定めるものです（内部的には最大10スロットまで保持でき、画面には3行表示されます）。
+「AI Provider」のプルダウンから使用するサービスを選択します。優先度1〜3位まで設定できるため、複数プロバイダーをフォールバック構成にできます。OpenAI公式APIには「OpenAI」を選択します。他社・ローカル用に「OpenAI Compatible」「OpenAI Compatible 2」の入力スロットがあり、Priority（Failover Order）リストはフォールバック順序を定めるものです（内部的には最大10スロットまで保持でき、画面には3行表示されます）。
 
 > **Priority (Failover Order) のモデル名表示**: 優先度リスト（B分離型レイアウト）の各行のモデル名欄は、未入力のままでも実際に使用されるモデル名が表示されます（プロバイダの設定値、未設定ならカタログのデフォルト）。表示値をそのまま使う場合は欄を空のままにしてください。空欄のまま保存すると明示的なモデル指定として記録されず、常に最新のデフォルト設定が適用されます。自分で入力した値があればそちらが優先されます。
 
@@ -132,10 +132,17 @@
 *   インターネット接続なしで動作し、データはデバイス外に送信されません
 *   詳細は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照
 
-**B. OpenAI Compatible (Groq, OpenAIなど・推奨)**
+**B. OpenAI（公式API）**
+*   接続先は `https://api.openai.com/v1` に固定されています。URLの入力は不要です。
+*   **API Key**: OpenAIのAPIキー。**Model Name**: 例 `gpt-6-luna`。
+*   モデル名による分岐は行わず、`max_completion_tokens` を使用し、temperatureはモデルの既定値を使います。
+*   接続テストも設定済みのトークン上限を使います。この上限は推論トークンを含み、接続テストも課金対象です。
+*   接続テストは通常要約のアプリ内使用量記録・事前制限を通りません。
+*   既存の互換スロットで公式URLを使っている場合も、新しい送信方針を適用します。キー・モデル・優先順位・カスタムプロンプトを移動・統合しないため、互換1と2で別々の設定を維持できます。新しい「OpenAI」へ切り替える場合は、キーとモデルを設定し、必要な上限やプロンプトも確認してください。新しい設定項目を含まない過去の設定バックアップも読み込めます。
+
+**OpenAI Compatible (Groqなど)**
 *   **Base URL**: APIのエンドポイントURL。
     *   Groq: `https://api.groq.com/openai/v1`
-    *   OpenAI: `https://api.openai.com/v1`
 *   **注意**: Anthropic のネイティブAPI（`https://api.anthropic.com/v1`）は OpenAI 互換ではないため、この設定では利用できません。Anthropic 系のモデルを使う場合は、OpenAI 互換のゲートウェイ/プロキシを経由して接続してください。
 *   **API Key**: 各サービスのAPIキー。
 *   **Model Name**: 使用するモデル名（例: `llama-3.3-70b-versatile`, `gpt-4o-mini`）。
@@ -434,13 +441,15 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. For th
 > If no link is shown at all, the endpoint itself is probably misconfigured ― check **Obsidian Host** and **Port** in the settings. Plain HTTP is allowed on loopback addresses only (`127.0.0.1` / `localhost`), so a remote host requires HTTPS.
 
 #### 2. AI Provider Settings
-Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers. The settings screen has two input slots ("OpenAI Compatible" and "OpenAI Compatible 2"), and the Priority (Failover Order) list defines the fallback order (up to 10 slots are kept internally; the screen shows 3 rows).
+Select your preferred provider from the dropdown. You can configure up to three priority ranks for fallback between providers. Select "OpenAI" for the official OpenAI API. The settings screen also has two compatible input slots ("OpenAI Compatible" and "OpenAI Compatible 2"), and the Priority (Failover Order) list defines the fallback order (up to 10 slots are kept internally; the screen shows 3 rows).
 
 > **Priority (Failover Order) model display**: In the priority list (layout B), each row's model field shows the model that will actually be used even when left empty (the provider's stored setting, or the catalog default if unset). Leave the field empty to always use the latest default settings ― an empty field is not saved as an explicit model. A value you type yourself takes precedence.
 
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
-*   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, and more. Note: Anthropic's native API is not OpenAI-compatible and cannot be used here; access Anthropic-class models via an OpenAI-compatible gateway/proxy.
+*   **OpenAI**: The official API uses the fixed endpoint `https://api.openai.com/v1`; no URL input is needed. Enter your OpenAI API key and model ID (e.g. `gpt-6-luna`). Requests use `max_completion_tokens` and omit temperature for every model name. Connection tests use the configured token budget, including reasoning tokens, and are billable. They do not pass through the normal summary usage accounting or pre-flight limits.
+    *   Existing compatible slots pointing to the official origin use the same request policy without moving or merging credentials, models, priorities, or custom prompts. The two legacy slots remain independent. To switch to the new OpenAI entry, configure its key and model and check its budget and prompt settings. Older settings backups without the new fields remain importable.
+*   **OpenAI Compatible**: Supports Groq and other compatible services. Note: Anthropic's native API is not OpenAI-compatible and cannot be used here; access Anthropic-class models via an OpenAI-compatible gateway/proxy.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
     *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.

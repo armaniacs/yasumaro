@@ -18,6 +18,7 @@ import { FailureKind, createFailure } from '../../../utils/failureTaxonomy.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
+import { OPENAI_OFFICIAL_BASE_URL } from '../../../utils/storage/providerDefaultBaseUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 interface OpenAIApiResponse {
@@ -38,6 +39,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     protected model: string;
     protected timeoutMs: number;
     protected isLocal: boolean;
+    private readonly openAIParameters: boolean;
     /**
      * Where the API key was resolved from (storage key name or fallback
      * description). Recorded for diagnostics only — never the key itself.
@@ -142,6 +144,14 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
             }
         }
 
+        // Existing slots keep their own credentials, prompts and budgets.
+        // The origin bridge upgrades their request dialect without rewriting
+        // settings or copying ciphertext bound to another field name.
+        this.openAIParameters = entry?.chatCompletionsDialect === 'openai'
+            || (entry?.legacyOpenAIEndpoint === true
+                && this.baseUrl !== ''
+                && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin);
+
         // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
         // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。
         this.resolvedSettings = resolvedSettings ?? resolveProviderSettings(
@@ -182,25 +192,13 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
     }
 
-    /** Slots can target other vendors, so select the API dialect by origin. */
-    private usesOpenAIParameters(): boolean {
-        return new URL(this.baseUrl).origin === 'https://api.openai.com';
-    }
-
-    private usesOpenAIReasoningParameters(): boolean {
-        return this.usesOpenAIParameters()
-            && /^(?:o[134](?:-|$)|gpt-[56](?:[.-]|$))/.test(this.model);
-    }
-
-    /** Keep summary and connection-test parameter selection in step. */
+    /** Both HTTP flows follow the provider dialect; model names are opaque. */
     private generationParameters(maxTokens: number, temperature: number): Record<string, number> {
-        if (!this.usesOpenAIParameters()) return { max_tokens: maxTokens, temperature };
-        // The completion budget includes reasoning tokens. Fixed sampling may
-        // be unsupported depending on the model and reasoning effort.
-        return {
-            max_completion_tokens: maxTokens,
-            ...(this.usesOpenAIReasoningParameters() ? {} : { temperature }),
-        };
+        // Official completion budgets include reasoning tokens. Omitting
+        // optional sampling works without predicting a model's capabilities.
+        return this.openAIParameters
+            ? { max_completion_tokens: maxTokens }
+            : { max_tokens: maxTokens, temperature };
     }
 
     /**
@@ -272,7 +270,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                     // A 16-token budget can be exhausted before reasoning
                     // produces visible text. Respect the configured cap.
                     ...this.generationParameters(
-                        this.usesOpenAIReasoningParameters() ? this.resolvedSettings.maxTokens : 16,
+                        this.openAIParameters ? this.resolvedSettings.maxTokens : 16,
                         0,
                     ),
                 };

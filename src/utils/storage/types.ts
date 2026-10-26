@@ -15,11 +15,11 @@ import type { SavedCollection } from './savedCollections.js';
 
 export type SqliteHealthCheck = () => Promise<boolean>;
 
-export type ProviderId = 'gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible' | 'built-in-ai';
+export type ProviderId = 'gemini' | 'openai-official' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible' | 'built-in-ai';
 
 /**
  * AIプロバイダ優先度スロット
- * provider: 既存6種のプロバイダID ('gemini' | 'openai' | 'openai2' | 'lm-studio' | 'ollama' | 'openai-compatible')
+ * provider: ProviderCatalogに登録されたプロバイダーID
  * model: 省略時はそのプロバイダの既存モデル設定値（例: gemini_model）を使用する
  */
 export interface ProviderSlot {
@@ -51,6 +51,8 @@ export const StorageKeys = {
     AI_PROVIDER_LAYOUT: 'ai_provider_layout', // A/Bレイアウト切替 'a'|'b'
     SUMMARY_MIN_LENGTH: 'summary_min_length', // 要約の最小文字数しきい値（デフォルト: 10）。未満の場合フォールバック対象
     AI_PROVIDER_BREAKER_ENABLED: 'ai_provider_breaker_enabled', // AIプロバイダの circuit breaker を無効化する kill switch（デフォルト: true。false にすると cooldown による抑制と breaker state の記録を完全に止める）
+    OPENAI_OFFICIAL_API_KEY: 'openai_official_api_key',
+    OPENAI_OFFICIAL_MODEL: 'openai_official_model',
     OPENAI_BASE_URL: 'openai_base_url',
     OPENAI_API_KEY: 'openai_api_key',
     OPENAI_MODEL: 'openai_model',
@@ -373,6 +375,8 @@ export interface StorageKeyValues {
     [StorageKeys.AI_PROVIDER_LAYOUT]: 'a' | 'b';
     [StorageKeys.SUMMARY_MIN_LENGTH]: number;
     [StorageKeys.AI_PROVIDER_BREAKER_ENABLED]: boolean;
+    [StorageKeys.OPENAI_OFFICIAL_API_KEY]: string | EncryptedData;
+    [StorageKeys.OPENAI_OFFICIAL_MODEL]: string;
     [StorageKeys.OPENAI_BASE_URL]: string;
     [StorageKeys.OPENAI_API_KEY]: string | EncryptedData;
     [StorageKeys.OPENAI_MODEL]: string;

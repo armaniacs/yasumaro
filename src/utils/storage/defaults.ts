@@ -46,6 +46,8 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.AI_PROVIDER_LAYOUT]: 'a',
     [StorageKeys.SUMMARY_MIN_LENGTH]: 10,
     [StorageKeys.AI_PROVIDER_BREAKER_ENABLED]: true,
+    [StorageKeys.OPENAI_OFFICIAL_API_KEY]: '',
+    [StorageKeys.OPENAI_OFFICIAL_MODEL]: 'gpt-6-luna',
     [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1',
     [StorageKeys.OPENAI_API_KEY]: '',
     [StorageKeys.OPENAI_MODEL]: 'openai/gpt-oss-20b',

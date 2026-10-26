@@ -106,6 +106,20 @@ describe('createBPriorityListView model display', () => {
     expect(input.dataset.resolved).toBe('true');
   });
 
+  it('selects official OpenAI, resolves its model, and saves it independently from compatible slots', () => {
+    createBPriorityListView(container, [{ provider: 'gemini' }, { provider: 'openai2', model: 'local-model' }], SETTINGS);
+    const { select, input } = rowInputs(container);
+    select.value = 'openai-official';
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    expect(input.value).toBe('gpt-6-luna');
+    expect(collectBProviderPrioritySlots(container)).toEqual([
+      { provider: 'openai-official' }, { provider: 'openai2', model: 'local-model' },
+    ]);
+    input.value = 'future-model';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    expect(collectBProviderPrioritySlots(container)[0]).toEqual({ provider: 'openai-official', model: 'future-model' });
+  });
+
   it('preserves a user-typed model when the provider changes', () => {
     createBPriorityListView(container, [{ provider: 'gemini' }], SETTINGS);
     const { select, input } = rowInputs(container);
