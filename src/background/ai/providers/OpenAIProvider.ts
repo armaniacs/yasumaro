@@ -182,6 +182,27 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
     }
 
+    /** Slots can target other vendors, so select the API dialect by origin. */
+    private usesOpenAIParameters(): boolean {
+        return new URL(this.baseUrl).origin === 'https://api.openai.com';
+    }
+
+    private usesOpenAIReasoningParameters(): boolean {
+        return this.usesOpenAIParameters()
+            && /^(?:o[134](?:-|$)|gpt-[56](?:[.-]|$))/.test(this.model);
+    }
+
+    /** Keep summary and connection-test parameter selection in step. */
+    private generationParameters(maxTokens: number, temperature: number): Record<string, number> {
+        if (!this.usesOpenAIParameters()) return { max_tokens: maxTokens, temperature };
+        // The completion budget includes reasoning tokens. Fixed sampling may
+        // be unsupported depending on the model and reasoning effort.
+        return {
+            max_completion_tokens: maxTokens,
+            ...(this.usesOpenAIReasoningParameters() ? {} : { temperature }),
+        };
+    }
+
     /**
      * OpenAI互換の癖1組。要約と接続テストはこの同じオブジェクトを共有する
      * （PBI 2026-10-16-05）ため、資格文面の変更は1箇所で両フローに届く。
@@ -226,8 +247,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                             content: userPrompt
                         }
                     ],
-                    max_tokens: this.resolvedSettings.maxTokens,
-                    temperature: 0.1
+                    ...this.generationParameters(this.resolvedSettings.maxTokens, 0.1),
                 };
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' };
                 if (this.apiKey) {
@@ -249,8 +269,12 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const payload = {
                     model: this.model,
                     messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-                    max_tokens: 16,
-                    temperature: 0,
+                    // A 16-token budget can be exhausted before reasoning
+                    // produces visible text. Respect the configured cap.
+                    ...this.generationParameters(
+                        this.usesOpenAIReasoningParameters() ? this.resolvedSettings.maxTokens : 16,
+                        0,
+                    ),
                 };
                 return { url, headers, body: JSON.stringify(payload), modelName: this.model };
             },
