@@ -148,6 +148,7 @@ const RESTORABLE_KEY_SPECS: Record<string, RestorableKeySpec> = {
   'openai_model': { type: 'string' },
   'openai_2_base_url': { type: 'string' },
   'openai_2_model': { type: 'string' },
+  'openai_official_model': { type: 'string' },
   'lm_studio_base_url': { type: 'string' },
   'lm_studio_model': { type: 'string' },
   'ollama_base_url': { type: 'string' },
