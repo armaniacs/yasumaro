@@ -2,7 +2,7 @@
 
 依存パッケージの棚卸し、ライセンスポリシーとの照合結果、アップデート確認の仕組みと最終確認日、現在の運用方針をまとめた文書。
 
-- 最終確認日: 2026-09-26（v6.9.26 時点の実測値を含む）
+- 最終確認日: 2026-10-25（v6.9.59 時点の実測値を含む。監査スコープは §3 の二層化定義に従う）
 - 対象: `package.json` の `dependencies` / `devDependencies` / `overrides`、および lockfile 上の推移依存
 
 ## 1. 依存の全体像
@@ -62,8 +62,9 @@
 
 | 確認経路 | 内容 | 実行タイミング | 最終確認日 |
 |---|---|---|---|
-| `npm run release:check:deps` | `npm audit`（critical / high で失敗、devDependencies 込み）+ `npm outdated` による重大パッケージのメジャードリフト警告（warn のみ）+ ライセンス検査 + 実インストールと lockfile の一致検査 | リリース時（`release:check`） | 2026-09-26（6.9.26、全項目 PASS） |
-| CI（`.github/workflows/ci.yml`） | `npm audit --audit-level=high --omit=dev`、`npm run check-licenses`、SBOM 生成とアーティファクト保存 | `package.json` / `package-lock.json` 等の変更を含む PR・push | 常時 |
+| `npm run release:check:deps` | 二層判定。prod スコープ（`--omit=dev`、配布物に混入しうる範囲）の critical / high は失敗。dev-only（フル監査にのみ現れる）は §6 の到達可能性メモがあれば警告（通過）、なければ失敗 + `npm outdated` による重大パッケージのメジャードリフト警告（warn のみ）+ ライセンス検査 + 実インストールと lockfile の一致検査 | リリース時（`release:check`） | 2026-10-25（6.9.59、dev-only HIGH 4 件を warn として PASS） |
+| `npm run check:deps:audit-warn`（`validate` に組込） | 上と同じ二層分類を fail→warn に読み替えて常時 exit 0 で報告。日常ゲートでの早期認知用。ネットワーク到達不能時も警告のみ | `npm run validate` の一部として毎回 | 2026-10-25（導入） |
+| CI（`.github/workflows/ci.yml`） | `npm audit --audit-level=high --omit=dev`（= prod スコープ。release gate の prod 層と同義）、`npm run check-licenses`、SBOM 生成とアーティファクト保存 | `package.json` / `package-lock.json` 等の変更を含む PR・push | 常時 |
 | `.github/workflows/security-audit.yml` | フル `npm audit`（devDependencies 含む、high 以上で失敗） | 毎週月曜 03:00 UTC + 手動起動 | 定期 |
 
 ### 直近の `npm outdated` 実測と反映（2026-09-26）
@@ -95,11 +96,11 @@
 - ランタイム依存は配布物に同梱される。Firefox ビルドでは `wasm/wa-sqlite-async.wasm` を同一オリジンからロードする
 - `THIRD_PARTY_NOTICES.md`: `npm run generate-notices` で手動生成する。CI での自動検証は生成結果が macOS / Linux で差異を出すため 2026-07-19 に削除済み。最終生成は 2026-07-24（622 パッケージ分）で、現在の 672 パッケージに対して古い
 - `sbom.json`: CycloneDX 形式。`.gitignore` 対象でコミットしない。CI が生成し、90 日間アーティファクトとして保管する
-- 更新運用: lockfile を事実源とし、バージョン範囲内の更新は lockfile の更新で取り込む。脆弱性は CI（ランタイム）+ 週次監査（フル）+ リリースゲート（フル）の 3 層で検出する
+- 更新運用: lockfile を事実源とし、バージョン範囲内の更新は lockfile の更新で取り込む。脆弱性は CI（prod スコープ）+ 日常 gate（`validate` 内 audit warn）+ 週次監査（フル）+ リリースゲート（二層判定）の 4 層で検出する。各層のスコープ定義は §3 の表を正とし、CI と release で「監査」の意味がずれないようにする
 
 ## 5. 判定と注意点
 
-- 判定: ライセンスポリシー上の問題なし。全 672 パッケージが許容ライセンスに適合し、脆弱性 critical / high は 0 件
+- 判定: ライセンスポリシー上の問題なし。全 868 パッケージが許容ライセンスに適合（2026-10-25 実測）。prod スコープの脆弱性 critical / high は 0 件。フル監査の dev-only HIGH 4 件（node-forge 系、同一原因の重複検出）は §6.1 の受容記録に基づき warn として出荷を継続する
 - `THIRD_PARTY_NOTICES.md` が 622 パッケージ時点で停止しており現状と乖離している。`npm run generate-notices` の再実行を推奨
 - 未反映の更新は 1 件。`typescript` 7 は計画的な移行判断が必要
 
@@ -120,6 +121,8 @@
 - 記録日: 2026-10-25
 
 ### 6.2 受容書ひな形
+
+ゲートは本文中に GHSA / CVE 識別子（アドバイザリ URL 由来、表記揺れ吸収のため大文字照合）が存在するかでメモ有無を判定する。識別子がない検出はパッケージ名で照合する。ひな形の各項目を埋め、識別子行を必ず残すこと。
 
 - 対象（CVE / GHSA・CVSS）:
 - 経路（バージョン付きチェーン・dev / prod の別）:

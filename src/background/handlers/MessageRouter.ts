@@ -239,10 +239,12 @@ export class MessageRouter {
         recordingPipeline: deps.recordingPipeline,
       }),
       // PBI 2026-10-23-08: 履歴に聞く — evidence search + local-only answer.
+      // Bound arrow: aiService.generateSummary is a prototype method (reads
+      // this.config) — passing it detached would throw on every answered QA.
       ASK_HISTORY: createAskHistoryHandler({
         admit,
         search: deps.askEvidenceSearch,
-        generateAnswer: deps.aiService.generateSummary,
+        generateAnswer: (content, options) => deps.aiService.generateSummary(content, options),
         loadCollection: async (id) => (await getSavedCollections())[id]?.query ?? null,
       }),
       // PBI 2026-10-23-09: 調査レポート一発生成 — four-section Markdown from

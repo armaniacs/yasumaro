@@ -65,6 +65,10 @@ describe('CAPTURE_SCOPE (DoD: 対応範囲と対象外一覧)', () => {
     expect(byTarget.get('article pages (valid-visit auto recording)')).toBe('done');
     expect(byTarget.get('PDF viewer')).toBe('planned');
     expect(byTarget.get('video captions')).toBe('planned');
-    expect(byTarget.get('SPA late-loaded content')).toBe('planned');
+  });
+
+  it('marks the SPA late-content re-scan done once slice 2 ships', () => {
+    const byTarget = new Map(CAPTURE_SCOPE.map((row) => [row.target, row.status]));
+    expect(byTarget.get('SPA late-loaded content')).toBe('done');
   });
 });

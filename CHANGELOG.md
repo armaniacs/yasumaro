@@ -35,6 +35,54 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.62] - 2026-10-26
+
+このリリースは棚卸し残タスクの仕上げです。利用者に見える変更は自動タグ規則の保存時適用・週次ダイジェスト基盤・リマインド基盤・Webhook雛形・SPA遅延再スキャン・診断の取り込み状態表示・履歴に聞くの拒否理由表示です。 / This release closes out the remaining backlog: auto-tag on save, weekly digest groundwork, reminder groundwork, webhook scaffolding, SPA late re-scan, diagnostics capture status, and ask-history rejection reasons.
+
+### 追加 / Added
+
+- 自動タグ規則の保存時適用＋取消（ログ上限200・辞書正規化・重複排除） / Auto-tag rules applied at save time with undo (capped log, dict normalization, dedupe)
+- 週次ダイジェストのバッチ基盤（分割再開・冪等・取消・週次標識） / Weekly digest batch groundwork (chunked resume, idempotent, cancellable, weekly marker)
+- リマインド基盤（解除/再通知/破棄の永続化・1日1件・上限3） / Reminder groundwork (dismiss/snooze/discard persistence, 1 per day, cap 3)
+- Webhook雛形（条件・履歴/冪等再送・送信路・CSV/JSON e2e pin） / Webhook scaffolding (conditions, history/idempotent resend, send path, CSV/JSON e2e pins)
+- SPA遅延コンテンツの再スキャン（上限2回）＋診断パネル「取り込み状態」 / SPA late-content re-scan (cap 2) + diagnostics capture status
+- 履歴に聞くの拒否理由表示（admission reason透過） / Ask-history rejection reasons surfaced (admission reason passthrough)
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1196ファイル・17462テスト）
+- 新規単体テスト 100件超（融合・評価・バッチ・送信・取消・表示・診断）。E2Eはheadless実行可能分が緑。SW起点ダウンロードと回答系2件・週次通しはheaded/owner手動に委ねる
+
+## [6.9.61] - 2026-10-26
+
+このリリースは棚卸しPBIの仕上げです。利用者に見える変更は保存済みコレクションの改名・複製・自動タグ規則と初回起動バナー・履歴一括スター・振り返りサマリ手順の文書化です。 / This release closes out backlog PBIs. User-visible changes: saved-collection rename/duplicate/auto-tag rules, the first-run banner, history bulk star, and review-summary docs.
+
+### 追加 / Added
+
+- 保存済みコレクションの改名・複製、自動タグ規則（条件一致で自動付与・優先度・適用取消） / Collection rename/duplicate and auto-tag rules (condition match, priority, undo)
+- 初回起動の3択バナー（まず試す / Obsidian連携 / AI要約・一度だけ表示） / First-run 3-choice banner (try first / Obsidian / AI summary, shown once)
+- 履歴一括スターの適用・取消とプライベート判定除外 / Bulk star with undo and privacy-judged exclusion
+- 問合せ回答の未束縛 generateSummary 修正（毎回 TypeError になっていた実バグ） / Fixed detached generateSummary that threw on every answered QA
+
+### テスト
+
+- 最終ゲート `npm run validate` 緑（1177ファイル・17346テスト）
+- 新規E2E: コレクション保存・呼び出し・改名・複製・規則登録、バナー表示・導線、一括スター適用・取消、ダイジェスト・折りたたみ・提案往復、CSV/JSONエクスポート、アーカイブ検証、Gist 3pin
+- 回答系2件と動画再生の通しは実機・実メディアが必要なため owner手動観測に委ねる（`@interaction`・記録通り）
+
+## [6.9.60] - 2026-10-25
+
+このリリースは依存監査ゲートの二層化です。利用者に見える挙動の変更はありません。 / This release introduces two-tier dependency audit gates. No user-visible behavior changes.
+
+### 追加 / Added
+
+- 依存監査の二層判定: prod スコープ混入は失敗、dev-only は到達可能性メモ（DEPENDINGS.md §6）があれば警告通過 / Two-tier audit: prod-scope findings fail, dev-only findings warn when covered by a reachability memo (DEPENDINGS.md §6)
+- `npm run validate` に audit（warn レベル）を追加し、日常ゲートで脆弱性を早期認知 / Audit (warn level) added to `npm run validate` for early daily awareness
+
+### テスト
+
+- 二層分類の単体テスト 10 件（`scripts/__tests__/check-deps-tiers.test.ts`）。実データで `release:check:deps` が dev-only HIGH 4 件を warn として PASS（exit 0）を確認
+
 ## [6.9.59] - 2026-10-25
 
 このリリースはバグ修正版です。 / This is a bug-fix release.

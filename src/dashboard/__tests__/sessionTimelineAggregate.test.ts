@@ -115,4 +115,29 @@ describe('shouldFireReminderToday (間引き: 1日1件)', () => {
     expect(shouldFireReminderToday('2026-10-22', '2026-10-23')).toBe(true);
     expect(shouldFireReminderToday('2026-10-23', '2026-10-23')).toBe(false);
   });
+
+  it('agrees with the neutral-layer pick gate on every day pair (no drift)', async () => {
+    // The send path inlines this gate (layer rule forbids the reverse
+    // import); the two must stay identical. Dashboard -> utils imports are
+    // allowed, so the parity lives here.
+    const { pickReminderToFire } = await import('../../utils/sessionReminder/reminderNotify.js');
+    const { defaultReminderState, markReminderFired } = await import(
+      '../../utils/sessionReminder/reminderStore.js'
+    );
+    const candidate = {
+      record: { id: 1, title: 'T', url: 'https://example.com' },
+      scrollRatio: 0.2,
+    };
+    for (const [lastFired, today] of [
+      [null, '2026-10-23'],
+      ['2026-10-22', '2026-10-23'],
+      ['2026-10-23', '2026-10-23'],
+    ] as Array<[string | null, string]>) {
+      const gate = shouldFireReminderToday(lastFired, today);
+      const state =
+        lastFired === null ? defaultReminderState() : markReminderFired(defaultReminderState(), lastFired);
+      const picked = pickReminderToFire([candidate], state, today, 0);
+      expect(picked !== null).toBe(gate);
+    }
+  });
 });

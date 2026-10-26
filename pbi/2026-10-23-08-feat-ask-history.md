@@ -26,10 +26,10 @@ Scenario: 根拠がないときは分からないと言う
   Then 作らず分からないと答え、対象の広げ方を提案する
 
 ## 受け入れ基準
-- [ ] コレクションを対象に選べる
-- [ ] 答えに引用リンクが付く
-- [ ] 該当なし時に作らない応答になる
-- [ ] 縮退・失敗の理由表示と再試行ができる
+- [x] コレクションを対象に選べる（2026-10-26確認: ハンドラ事後絞りと未知id無絞り縮退を単体でpin、select描画をviewテストでpin、panelはloadSaved完了後の再描画に修正。E2Eは作成済み・headed未実行）
+- [x] 答えに引用リンクが付く（2026-10-25確認: 上位3件・500字打切り・target=_blank＋noopenerを単体とviewテストでpin）
+- [x] 該当なし時に作らない応答になる（2026-10-25確認: AI不呼出しと広げ方提案を単体でpin、gateway透過もpin）
+- [x] 縮退・失敗の理由表示と再試行ができる（2026-10-26: in_flight・未知id縮退・sqlite Narrowing・timeoutはpin済み。再試行はボタン復帰で可能。admission拒否のreason透過は [2026-10-25-12-gateway-reason-fidelity.md](2026-10-25-12-gateway-reason-fidelity.md) で解決：handlerがreasonをerrorに写し、gateway透過・viewの translated error表示まで鎖を確認。失敗表示はviewテストでpin済み）
 
 ## テスト戦略
 ## 実装記録（2026-10-23・コアQA経路）
@@ -42,16 +42,21 @@ Scenario: 根拠がないときは分からないと言う
 - ダッシュボードUI: 完了。`src/dashboard/panels/asyncData/askHistoryPanelView.ts` の `renderAskHistoryRegion`（対象コレクションselect・質問入力・聞くボタン・回答+引用リンク領域）。shell の `sqlite-ask-history` 領域 div は buildPanelShellHtml が所有。回答の引用リンクは `target="_blank" rel="noopener noreferrer"` で元記録に飛べる（BDD: 元記録に飛べる）
 - ja/en: `askHistoryLabel`・`askHistoryHelp`・`askHistoryTargetLabel`・`askHistoryTargetAll`・`askHistoryQuestionPlaceholder`・`askHistoryAskBtn`・`askHistoryBusy`・`askHistoryFailed`・`askHistoryNoEvidence` の9キーを双側追加
 - pin: `src/background/handlers/__tests__/askHistoryHandlers.test.ts` 20テスト（根拠選択テーブル・打ち切り・縮退・コレクション絞り・BDD2シナリオ・in-flight・admission拒否）。既存 pin 更新: MessageRouter handler数 25→26、senderTrustCoverage に ASK_HISTORY 追加
-- pin: `src/dashboard/panels/asyncData/__tests__/askHistoryPanelView` なし（DOM層はE2Eで検証）
-- 残: E2E通し（コレクション選択→質問→引用遷移）、FTS/LIKE両パスの統合スニペット再現テスト、コードレビュー、ドキュメント更新（QAの使い方と対象指定を含む）
-- E2E: コレクション選択→質問→引用遷移の通し
-- 統合: FTS/LIKE両パスのスニペット再現テスト、空集合テスト
-- 単体: 引用整形・打ち切り・安全性判定のテーブルテスト
+- pin: `src/dashboard/panels/asyncData/__tests__/askHistoryPanelView.test.ts` 4件（対象select描画・回答と引用リンク・no_evidence・失敗表示。2026-10-25追加、当初はDOM層E2Eのみの予定を変更）
+- 残(2026-10-25更新): E2Eは作成済み・headed未実行(testDir/e2e/ask-history.spec.ts 3件)。FTS/LIKE両パスの実sqlite統合テストは未着手。コードレビューは完了。ドキュメントはドラフト済み・反映待ち
+- E2E: コレクション選択→質問→引用遷移の通し(仕様作成済み、headed実行待ち)
+- 統合: FTS/LIKE両パスのスニペット再現テスト(未着手)、空集合テスト(単体でpin済み)
+- 単体: 引用整形・打ち切り・安全性判定のテーブルテスト(pin済み、askEvidence.test.ts＋askHistoryPanelView.test.ts)
+- 追記(2026-10-25・検証と小gap修正):
+  - 修正F1: MessageRouterのASK_HISTORY配線がaiService.generateSummaryを未束縛で渡し、回答成功経路が毎回TypeErrorになっていた。束縛arrowに修正。回帰テストをaskHistoryHandlers.test.tsに追加(実router＋this依存aiServiceでansweredを検証。修正前は失敗・修正後は成功を確認)
+  - 修正F2: panel load()がvoid loadSaved()の完了を待たずask領域を描画し、対象selectが初回常に空になっていた。loadSaved完了後にask領域を再描画する形に修正（当初のawait直列化は生成レースガードの単体テストを hang させたため、model fetchを塞がない .then 再描画に変更。2026-10-26）。viewテストで選択肢描画をpin
+  - 追加テスト: askHistoryPanelView.test.ts 4件(選択肢・回答と引用リンク・no_evidence・失敗表示)。単体とviewは全パス、型検査とeslintも clean
+  - レビュー所見(2026-10-25): 層分離(askEvidence純粋化)・never-raw・fail-closed・egress作法(local_only＋ask kind＋no-summary除外)・validator上限・trust設定は良好。規約違反なし(any/unknownなし、ESM .js、固定待ちなし)。R3(拒否reasonの欠落)は契約変更につき別PBI送り、R4(30件取得上限の黙示切捨て)は既知の近似として記録のみ
 
 ## 見積もり
 2.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(QAの使い方と対象指定を含む)
+- [ ] 全BDDシナリオが自動テストとして実装されパスする（2026-10-25: 単体・view緑。E2Eはno-evidence 1件がextensionで緑、回答系2件は実機モデル必須のため `@interaction` に再タグ（built-in-ai既存specと同扱い）。headed実機未実行のため未チェック）
+- [x] コードレビュー完了（2026-10-25実施: 対象commit e02992f7ほか。P0未束縛generateSummaryとP1コレクション競合を修正、P2 reason欠落は別PBI送り。詳細は実装記録の追記節）
+- [x] ドキュメント更新済み(QAの使い方と対象指定を含む)（2026-10-25: `docs/SETUP_GUIDE.md` の履歴に聞く欄に再試行・60秒・二重実行防止を追記）

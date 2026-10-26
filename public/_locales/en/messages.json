@@ -1562,6 +1562,48 @@
   "diagStorageTitle": {
     "message": "Storage"
   },
+  "diagCaptureTitle": {
+    "message": "Capture Status"
+  },
+  "diagCaptureLast": {
+    "message": "Last capture"
+  },
+  "diagCaptureNoRecord": {
+    "message": "Not recorded yet"
+  },
+  "diagCaptureRecorded": {
+    "message": "Recorded"
+  },
+  "diagCaptureCategory": {
+    "message": "Reason category"
+  },
+  "diagCaptureScope": {
+    "message": "Scope"
+  },
+  "diagCaptureUnlisted": {
+    "message": "unlisted reason"
+  },
+  "diagCategory_permission": {
+    "message": "Permission"
+  },
+  "diagCategory_csp": {
+    "message": "CSP"
+  },
+  "diagCategory_kind": {
+    "message": "Content kind"
+  },
+  "diagCategory_consent": {
+    "message": "Consent"
+  },
+  "diagCategory_storage": {
+    "message": "Storage"
+  },
+  "diagCategory_duplicate": {
+    "message": "Duplicate"
+  },
+  "diagCategory_internal": {
+    "message": "Internal / unlisted"
+  },
   "diagObsidianSettingsTitle": {
     "message": "Obsidian Connection Settings"
   },
@@ -2136,6 +2178,115 @@
   },
   "savedCollectionSaveError": {
     "message": "Failed to save"
+  },
+  "savedCollectionRenameBtn": {
+    "message": "Rename"
+  },
+  "savedCollectionRenameSaveBtn": {
+    "message": "Save name"
+  },
+  "savedCollectionDuplicateBtn": {
+    "message": "Duplicate"
+  },
+  "savedCollectionCopyName": {
+    "message": "$1 copy",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Research A"
+      }
+    }
+  },
+  "savedCollectionNameEmpty": {
+    "message": "Enter a name"
+  },
+  "autoTagRulesLabel": {
+    "message": "Auto-tag rules"
+  },
+  "autoTagRulesHelp": {
+    "message": "Rules tag new records automatically when the URL or title matches. All conditions of a rule must match; lower priority applies first. Disabling or deleting a rule stops future tagging."
+  },
+  "autoTagRulesEmpty": {
+    "message": "No auto-tag rules yet"
+  },
+  "autoTagRuleNamePlaceholder": {
+    "message": "Rule name"
+  },
+  "autoTagRuleDomainPlaceholder": {
+    "message": "Domain suffix (example.com)"
+  },
+  "autoTagRuleUrlPlaceholder": {
+    "message": "URL contains"
+  },
+  "autoTagRuleTitlePlaceholder": {
+    "message": "Title contains"
+  },
+  "autoTagRuleTagPlaceholder": {
+    "message": "Tag to apply"
+  },
+  "autoTagRulePriorityPlaceholder": {
+    "message": "Priority (default 100)"
+  },
+  "autoTagRuleAddBtn": {
+    "message": "Add rule"
+  },
+  "autoTagRuleEnableLabel": {
+    "message": "Rule enabled"
+  },
+  "autoTagRulePriority": {
+    "message": "priority $1",
+    "placeholders": {
+      "priority": {
+        "content": "$1",
+        "example": "10"
+      }
+    }
+  },
+  "autoTagRuleUndoBtn": {
+    "message": "Undo applications"
+  },
+  "autoTagRuleDeleteBtn": {
+    "message": "Delete rule"
+  },
+  "autoTagRuleDeleteConfirm": {
+    "message": "Delete rule \"$1\"? Future records will no longer be tagged. Past tagging stays.",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Docs"
+      }
+    }
+  },
+  "autoTagRuleUndoConfirm": {
+    "message": "Remove tag \"$2\" applied by rule \"$1\" from the matched records?",
+    "placeholders": {
+      "name": {
+        "content": "$1",
+        "example": "Docs"
+      },
+      "tag": {
+        "content": "$2",
+        "example": "docs"
+      }
+    }
+  },
+  "autoTagRuleUndoDone": {
+    "message": "Removed the tag from $1 records.",
+    "placeholders": {
+      "count": {
+        "content": "$1",
+        "example": "3"
+      }
+    }
+  },
+  "autoTagRuleNameTagRequired": {
+    "message": "Enter a rule name and a tag"
+  },
+  "autoTagRuleBadPriority": {
+    "message": "Priority must be a number"
+  },
+  "autoTagRuleNoCondition": {
+    "message": "Set at least one condition (domain, URL, or title)"
   },
   "commandRecordPage": {
     "message": "Record the current page"
@@ -5588,5 +5739,29 @@
   "pauseError": {
     "message": "Pause action failed",
     "description": "Error shown when a pause or resume action fails"
+  },
+  "webhookExportHistoryEmpty": {
+    "message": "No webhook transfers yet."
+  },
+  "webhookExportResend": {
+    "message": "Resend"
+  },
+  "webhookExportResendAria": {
+    "message": "Resend {recordId}",
+    "placeholders": {
+      "recordId": {
+        "content": "$1",
+        "example": "42"
+      }
+    }
+  },
+  "webhookExportResendUnavailable": {
+    "message": "Resend is not wired in this view."
+  },
+  "webhookExportRecordMissing": {
+    "message": "The original record is gone."
+  },
+  "webhookExportSaved": {
+    "message": "Webhook export settings saved."
   }
 }

@@ -13,6 +13,8 @@ Yasumaro は、あなたが Chrome で閲覧した Web ページの情報を、�
 - [Obsidian](https://obsidian.md/) と Vault（ノートの保管庫）が作成済みであること
 - [Yasumaro Chrome 拡張機能](https://chromewebstore.google.com/detail/yasumaro-ai-browsing-logg/cpeammcnmfpmlkidciiobmnjnhfkmjlc)が Chrome にインストール済みであること
 
+なお Obsidian 連携は任意です。連携なしでも閲覧の記録と履歴検索は使えます。初回起動のダッシュボードには「まず試す / Obsidian連携 / AI要約」の3択バナーが出るので、まず試してから後付けで連携できます。
+
 ---
 
 ### 1. Local REST API プラグインのインストール

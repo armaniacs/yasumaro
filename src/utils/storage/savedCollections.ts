@@ -74,3 +74,16 @@ export function removeSavedCollection(
 ): Record<string, SavedCollection> {
   return Object.fromEntries(Object.entries(map).filter(([key]) => key !== id));
 }
+
+/** Pure duplicate: copy one collection under a new id (missing id is a no-op). */
+export function duplicateSavedCollection(
+  map: Record<string, SavedCollection>,
+  id: string,
+  newId: string,
+  name: string,
+  now: number,
+): Record<string, SavedCollection> {
+  const source = map[id];
+  if (!source || newId === '' || newId === id) return map;
+  return { ...map, [newId]: { id: newId, name, query: source.query, createdAt: now, updatedAt: now } };
+}

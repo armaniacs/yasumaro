@@ -42,7 +42,7 @@ Scenario: 縮退を偽成功にしない
 
 ## Definition of Done
 - [x] 全BDDシナリオが自動テストとして実装されパスする ― 枯渇時縮退: `degradedSummary` 経路のpin（`OpenAIProvider-branches.test.ts`）。偽成功にしない: `success` は false のまま。カスケード順序: 既存の `FallbackAIService` 分岐テスト
-- [ ] コードレビュー完了
+- [x] コードレビュー完了 ― 2026-10-25実施。対象: 4852d242（生成器+Layer0登録+pin）/ 546aa9b2（blocked分岐・`success:false`維持・理由は`summary`・縮退は`degradedSummary`）/ 9faf6fb1（`degraded === true` の厳密gateで実remote要約の混入を構造的に防止）/ dea85cd8（3点固定のpin）。空入力は注記のみ返却でfail-closed、層境界登録済み。指摘なし。なお `PrivacyPipelineResult.degradedSummary` の表示面の消費者はまだなく（テストのみ参照）、表示配線は将来作業として残るが本変更の欠陥ではない
 - [x] ドキュメント更新済み(カスケード順序と縮退仕様を含む) ― `dev-docs/DESIGN_SPECIFICATIONS.md` 7.4章にカスケード順序と縮退仕様を確定（commit 4d4c04da）
 
 ## 実装記録（2026-10-23・調査のみ・未着手）

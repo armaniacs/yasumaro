@@ -36,6 +36,8 @@ describe('RecordingOrchestrator', () => {
         'truncate',
         ...RECORDING_GATE_TABLE.map((row) => row.name),
         'privacyPipeline',
+        // PBI 2026-10-23-06: rule tags merge right after the AI tags.
+        'applyAutoTagRules',
         'extractSentences',
         'formatMarkdown',
         ...SAVE_SINK_ORDER,

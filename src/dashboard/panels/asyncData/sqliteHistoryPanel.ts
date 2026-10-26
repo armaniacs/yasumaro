@@ -37,6 +37,7 @@ import {
 import { createAskHistoryActions, renderAskHistoryRegion } from './askHistoryPanelView.js';
 import { createResearchReportActions, renderResearchReportRegion } from './researchReportPanelView.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
+import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -78,6 +79,9 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // settings content, independent of the SQLite query pipeline. The recall
   // funnels through model.applyCollection (single dispatch + single fetch).
   let savedCollections: Record<string, SavedCollection> = {};
+  // Panel-local auto-tag rules (PBI 2026-10-23-06): same settings-content
+  // reason as savedCollections above, reloaded with the same loadSaved().
+  let savedTagRules: Record<string, AutoTagRule> = {};
 
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
@@ -462,28 +466,33 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       getQueryInput: () => model.getState(),
       applyCollection: (query) => model.applyCollection(query),
       getCollections: () => savedCollections,
+      getRules: () => savedTagRules,
       reload: () => loadSaved(),
     });
   }
 
   function renderSaved(): void {
     if (!container) return;
-    renderSavedCollectionsRegion(container, savedCollections, createSavedActions());
+    renderSavedCollectionsRegion(container, savedCollections, savedTagRules, createSavedActions());
   }
 
   async function loadSaved(): Promise<void> {
     if (!container) return;
     const target = container;
-    savedCollections = await loadSavedCollectionsRegion(target, {
+    const loaded = await loadSavedCollectionsRegion(target, {
       getQueryInput: () => model.getState(),
       applyCollection: (query) => model.applyCollection(query),
       getCollections: () => savedCollections,
+      getRules: () => savedTagRules,
       reload: () => loadSaved(),
-      render: (collections) => {
+      render: (collections, rules) => {
         savedCollections = collections;
+        savedTagRules = rules;
         if (container === target) renderSaved();
       },
     });
+    savedCollections = loaded.collections;
+    savedTagRules = loaded.rules;
   }
 
   // --- Ask history (PBI 2026-10-23-08, PBI 2026-10-24-05) ----------------------
@@ -540,7 +549,15 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
 
       // Saved collections render into the shell's dedicated region
       // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
-      void loadSaved();
+      // Not awaited: load() must not block the model fetch on settings I/O
+      // (awaiting here hangs the generation race-guard tests, where the real
+      // settings repository never settles on a repeated load). The ask-history
+      // region below reads savedCollections as its target options, so it
+      // re-renders once the collections arrive instead of racing the load.
+      void loadSaved().then(() => {
+        if (!container) return;
+        renderAskHistoryRegion(container, savedCollections, createAskHistoryActions(translateHistoryError));
+      });
 
       // Ask-history region (PBI 2026-10-23-08, PBI 2026-10-24-05): rendered
       // per load with the saved collections as the target options; the
@@ -588,6 +605,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       }
       pendingPages = [];
       savedCollections = {};
+      savedTagRules = {};
       starUndoIds = null;
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.

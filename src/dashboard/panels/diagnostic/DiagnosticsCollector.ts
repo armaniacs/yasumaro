@@ -27,6 +27,7 @@ import { getDebugMode } from './debugModeStore.js';
 import { isOpfsWorkerStatus } from './opfsWorkerStatus.js';
 import type { EncryptedData } from '../../../utils/crypto/types.js';
 import { ProviderCatalog, getRegistryEntry } from '../../../background/ai/providerCatalog.js';
+import { readLastCaptureOutcome, type LastCaptureOutcome } from '../../../utils/captureOutcome.js';
 
 /**
  * Default VFS strategy probe for the dashboard page. The offscreen document
@@ -98,6 +99,15 @@ export interface DiagnosticsSnapshot {
   divergence: { dashboardDetectsOpfs: boolean; offscreenUsesFallback: boolean };
   settingsLoadFailed: boolean;
   debugMode: boolean;
+  /**
+   * PBI 2026-10-22-06 slice 2 (diag wiring): the last settled capture
+   * outcome the content script persisted (code + timestamp, no page text).
+   * Null — or absent on snapshots built before this field existed — when
+   * nothing was recorded yet or the stored shape is foreign. The panel
+   * renders "not recorded yet" either way, so older snapshot literals keep
+   * compiling and stored shapes stay forward-compatible.
+   */
+  lastCapture?: LastCaptureOutcome | null;
 }
 
 export interface DiagnosticsCollectorDeps {
@@ -109,6 +119,11 @@ export interface DiagnosticsCollectorDeps {
   getDebugMode?: () => Promise<boolean>;
   getManifest?: () => { version: string; name: string };
   detectVfsStrategy?: () => { strategy: string };
+  /**
+   * PBI 2026-10-22-06 slice 2: last-capture reader seam. Defaults to the
+   * storage-backed read; tests inject a fixed outcome.
+   */
+  readLastCaptureOutcome?: () => Promise<LastCaptureOutcome | null>;
   /**
    * Bounds checkBuiltInAiAvailability. The probe fans out to
    * LanguageModel.availability(), which has no timeout of its own — in a
@@ -152,6 +167,7 @@ export class DiagnosticsCollector {
       try { return chrome.runtime.getManifest(); } catch { return { version: 'unknown', name: 'unknown' }; }
     });
     const detectVfsStrategyFn = this.deps.detectVfsStrategy ?? detectDashboardVfsStrategy;
+    const readLastCaptureOutcomeFn = this.deps.readLastCaptureOutcome ?? readLastCaptureOutcome;
     const builtInAiTimeoutMs = this.deps.builtInAiTimeoutMs ?? DEFAULT_BUILT_IN_AI_TIMEOUT_MS;
     let settingsLoadFailed = false;
 
@@ -168,7 +184,7 @@ export class DiagnosticsCollector {
     ];
 
     // Parallel gathering — faster than sequential awaits in the old panel
-    const [loadedSettings, sqliteStatus, logCount, builtInAiResult, bytesUsed, debugMode] = await Promise.all([
+    const [loadedSettings, sqliteStatus, logCount, builtInAiResult, bytesUsed, debugMode, lastCapture] = await Promise.all([
       getManyFn(settingsKeys).catch((): SettingsLoad | null => {
         settingsLoadFailed = true;
         return null;
@@ -184,6 +200,7 @@ export class DiagnosticsCollector {
       ).catch(() => null),
       getBytesInUse().catch(() => 0),
       getDebugModeFn().catch(() => false),
+      readLastCaptureOutcomeFn().catch(() => null),
     ]);
 
     // The defaults table is a DeepReadonly<Settings> of the same shape as the
@@ -278,6 +295,7 @@ export class DiagnosticsCollector {
       divergence: { dashboardDetectsOpfs, offscreenUsesFallback },
       settingsLoadFailed,
       debugMode,
+      lastCapture,
     };
   }
 }

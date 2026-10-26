@@ -18,6 +18,7 @@ import { createRetryContext, createStepDeps } from './contextBuilder.js';
 import {
   truncateContentStep, checkDomainFilterStep, checkPermissionStep, checkTrustDomainStep,
   PrivacyHeadersChecker, checkDuplicateStep,
+  applyAutoTagRulesStep,
   extractSentencesStep, formatMarkdownStep
 } from './steps/index.js';
 import {
@@ -88,6 +89,9 @@ function buildPreSaveSteps(init: {
     { name: 'truncate', errorStrategy: ErrorStrategy.FATAL, execute: truncateContentStep },
     ...gateSteps,
     { name: 'privacyPipeline', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, previewBreakpoint: true, execute: createProcessPrivacyPipelineStep(init.privacyPipelineFactory) },
+    // PBI 2026-10-23-06: rule tags merge after the AI tags (FATAL is safe —
+    // the step catches everything internally and returns context untouched).
+    { name: 'applyAutoTagRules', errorStrategy: ErrorStrategy.FATAL, execute: applyAutoTagRulesStep },
     { name: 'extractSentences', errorStrategy: ErrorStrategy.RETRY, maxRetries: 3, offlineRetry: { jobKind: 'ai_summary' }, execute: extractSentencesStep },
     { name: 'formatMarkdown', errorStrategy: ErrorStrategy.FATAL, execute: formatMarkdownStep },
   ];

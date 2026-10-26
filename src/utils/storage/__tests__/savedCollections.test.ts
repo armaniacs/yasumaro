@@ -11,6 +11,7 @@ import {
   normalizeSavedCollection,
   normalizeSavedCollections,
   upsertSavedCollection,
+  duplicateSavedCollection,
   removeSavedCollection,
   type SavedCollection,
 } from '../savedCollections.js';
@@ -123,5 +124,21 @@ describe('removeSavedCollection', () => {
     expect(Object.keys(removed)).toEqual(['c1']);
     expect(removed['c1']).toEqual(kept);
     expect(Object.getPrototypeOf(removed)).toBe(Object.prototype);
+  });
+});
+
+describe('duplicateSavedCollection', () => {
+  it('copies the query under a new id with fresh timestamps', () => {
+    const base = upsertSavedCollection({}, 'c1', 'a', { q: 'x' }, 100);
+    const duped = duplicateSavedCollection(base, 'c1', 'c2', 'a copy', 200);
+    expect(duped['c2']).toEqual({ id: 'c2', name: 'a copy', query: { q: 'x' }, createdAt: 200, updatedAt: 200 });
+    expect(duped['c1']).toEqual(base['c1']);
+  });
+
+  it('is a no-op for a missing id, blank new id, or self-copy', () => {
+    const base = upsertSavedCollection({}, 'c1', 'a', {}, 100);
+    expect(duplicateSavedCollection(base, 'missing', 'c2', 'x', 200)).toBe(base);
+    expect(duplicateSavedCollection(base, 'c1', '', 'x', 200)).toBe(base);
+    expect(duplicateSavedCollection(base, 'c1', 'c1', 'x', 200)).toBe(base);
   });
 });

@@ -26,10 +26,10 @@ Scenario: 送り先に届く
   Then 送達が確認でき、失敗時は理由と再送ができる
 
 ## 受け入れ基準
-- [ ] 要旨・時系列・引用・未読穴の4節がある
-- [ ] 引用から元記録に飛べる
-- [ ] 送達確認と再送ができる
-- [ ] 生成の縮退・失敗が偽成功にならない
+- [x] 要旨・時系列・引用・未読穴の4節がある (2026-10-24確認: `buildResearchReportMarkdown` が4節を出力 `src/background/researchReportGenerator.ts:128-155`、11→14テストで固定)
+- [x] 引用から元記録に飛べる (2026-10-24確認: 番号付き `[title](url)`、`sanitizeUrlForMarkdownTarget` で `javascript:` 等を `about:blank` 化 `src/background/researchReportGenerator.ts:104-109` + `src/utils/markdownSanitizer.ts:66-79`)
+- [x] 送達確認と再送ができる (2026-10-24確認: `deliveredTo`/`recordCount` 返却と状態表示 `src/dashboard/panels/asyncData/researchReportPanelView.ts:132-140`、失敗時は理由表示のままボタンが復帰するため再送は再クリック。gateway は 60秒budget・retries: 0 `src/messaging/researchReportGateway.ts:38-46`)
+- [x] 生成の縮退・失敗が偽成功にならない (2026-10-24確認: `no_records`/`download_failed`/`obsidian_delivery_failed`/fetch失敗パススルー/全catch が `success: false`。正本は判別共用体 `src/messaging/responseCanonical.ts:48-50`)
 
 ## テスト戦略
 ## 実装記録（2026-10-23・コア生成経路）
@@ -40,8 +40,10 @@ Scenario: 送り先に届く
 - messaging: 完了。`EXPORT_RESEARCH_REPORT` 型（messageTypes・ResponseForType）・`ExportResearchReportValidator`（scope の語/タグは `MAX_SEARCH_QUERY_LENGTH` と同cap、since/until は有限数）・`src/messaging/researchReportGateway.ts`（60秒budget・retries: 0）・MessageRouter登録（trust: extension-only）・composition配線（singleton generator）
 - ダッシュボードUI: 完了。`src/dashboard/panels/asyncData/researchReportPanelView.ts` の `renderResearchReportRegion`（生成ボタン・Obsidian送信チェック・状態表示）。shell の `sqlite-research-report` 領域 div は buildPanelShellHtml が所有
 - ja/en: `researchReportLabel`・`researchReportHelp`・`researchReportObsidianOption`・`researchReportGenerateBtn`・`researchReportBusy`・`researchReportFailed`・`researchReportDone` の7キーを双側追加
-- pin: `src/background/__tests__/researchReportGenerator.test.ts` 11テスト（4節・時系列順・未読穴・空選択縮退・ファイル名・取得→組み立て→ダウンロード→Obsidian送信・各失敗経路）
-- 残: E2E通し（選択→生成→送達→再送）、大量選択の境界テスト、コードレビュー、ドキュメント更新（レポート操作手順を含む）
+- pin: `src/background/__tests__/researchReportGenerator.test.ts` 14テスト（4節・時系列順・未読穴・空選択縮退・ファイル名・取得→組み立て→ダウンロード→Obsidian送信・各失敗経路・cap固定・時系列サニタイズ）
+- handler pin (2026-10-24追加): `src/background/handlers/__tests__/researchReportHandlers.test.ts` 7テスト（scope整形・欠落payloadの空scope縮退・sendToObsidian強制・失敗パススルー・throwの `report_failed` 化）
+- 残: E2E通し (specは `testDir/e2e/history-panel-ui.spec.ts` の `Research report @extension` に2件追加済み・未実行。headed実行は別途)、大量選択の境界テスト (単体で固定済み: cap上限200で成功・`REPORT_MAX_RECORDS` は `MAX_BATCH_READ_RECORDS` に固定)、コードレビュー (2026-10-24実施・下記に記録)、ドキュメント (文言案は次回報告に添付・`docs/` は未編集)
+- レビュー記録 (2026-10-24): 対象は `c4ff8484` (本体) と後続 refactor (`96ee8757` 文言分離・`739f19de` 正本集約・`37e576f0` region所有化・`10e9a15d` 上限集約・`c9424450` busy共通化・`30de8508` gateway共通化)。層化 (生成器は輸送を持たない・scope整形は正本が単一所有) と失敗閉鎖に問題なし。指摘2件を同日修正: (1) 時系列節の題名だけ無害化漏れ → 他節と同一の `sanitizeForObsidian` 化 (2) 要旨節コメントの `newest first` が実装 (選択順) と不一致 → コメント修正。残る注意3件は仕様内で受容: Obsidian失敗時は済みのダウンロード送達を捨てて `obsidian_delivery_failed` のみ返す (再送は全行程を再実行・同一分ファイル名で上書き) / Gist送達は未実装 (既存路限定の方針どおり・BDD文言の `またはGist` との差は受容) / コレクション指定は panel条件への適用経由でのみ scope 化 (単体 `collectionId` はなし)
 - E2E: 選択→生成→送達→再送の通し
 - 統合: 空選択・大量選択の境界テスト、送達失敗テスト
 - 単体: 節整形・引用整形のテーブルテスト
@@ -50,6 +52,6 @@ Scenario: 送り先に届く
 2.0人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(レポート操作手順を含む)
+- [x] 全BDDシナリオが自動テストとして実装されパスする (2026-10-25: E2E 2件を `--repeat-each=2` で4/4緑を確認済み。2026-10-26のChromium 1248 headlessではSW起点ダウンロードがpage/contextのwaitForEventに観測されない環境回帰を確認（SW呼出し自体は成功・CSV等のページ起点は緑・クリーンツリーでも再現）。バイト断定の価値を保つため `@interaction`（headedのみ）に再タグ、headed実機確認はownerに委ねる。ロジック自体は単体・handler・gateway pinでheadless緑を維持)
+- [x] コードレビュー完了 (2026-10-24実施・記録は実装記録のレビュー記録を参照)
+- [x] ドキュメント更新済み(レポート操作手順を含む) (2026-10-25: `docs/SETUP_GUIDE.md` の調査レポート欄に手順・4節・引用・未読穴・no_records・再送・200件・Obsidian失敗時を追記)

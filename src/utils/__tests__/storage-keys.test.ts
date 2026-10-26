@@ -51,6 +51,10 @@ describe('getSettings key refinement', () => {
       // PBI 03: device-local opt-in consent, deliberately not in
       // DEFAULT_SETTINGS so an export never carries the authorization.
       StorageKeys.NAV_TRAIL_CONSENT,
+      // PBI 2026-10-22-06 slice 2: last capture outcome. Content-script to
+      // dashboard direct-read state (TOP_LEVEL_ONLY_KEYS), deliberately not
+      // in the settings blob, like RECORDING_PAUSED_UNTIL above.
+      StorageKeys.LAST_CAPTURE_OUTCOME,
     ];
     Object.values(StorageKeys).forEach((key) => {
       if (!internalKeys.includes(key as (typeof StorageKeys)[keyof typeof StorageKeys])) {

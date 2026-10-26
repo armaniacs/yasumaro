@@ -9,6 +9,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAskHistoryHandler } from '../askHistoryHandlers.js';
+import { createMessageRouter, type MessageRouterDeps } from '../MessageRouter.js';
+import type { AISummaryResult, AiConnectionTestResult } from '../../ai/AIService.js';
 import type { BrowsingLogRecord } from '../../../utils/sqlite-types.js';
 
 function makeRow(id: number, overrides: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord {
@@ -131,12 +133,15 @@ describe('createAskHistoryHandler', () => {
     await first;
   });
 
-  it('rejects on the admission gate and forwards the rejection', async () => {
+  it('rejects on the admission gate and surfaces the reason as the error', async () => {
+    // PBI 2026-10-25-12: the wire contract carries failures in `error`, so
+    // the admission `reason` must be mapped — verbatim forwarding loses it in
+    // the gateway normalizer and the panel shows a generic sentence.
     const deps = makeDeps({
       admit: vi.fn().mockResolvedValue({ rejected: { success: false, reason: 'privacy_consent_required' } }),
     });
     const response = await runHandler(deps, { question: 'q' });
-    expect(response).toEqual({ success: false, reason: 'privacy_consent_required' });
+    expect(response).toEqual({ success: false, error: 'privacy_consent_required' });
   });
 
   it('surfaces an AI failure instead of answering with an empty summary', async () => {
@@ -150,5 +155,69 @@ describe('createAskHistoryHandler', () => {
     const response = await runHandler(deps, { question: 'q' });
     expect(response.success).toBe(false);
     expect(response.error).toBe('ask_failed');
+  });
+});
+
+describe('ASK_HISTORY production wiring (PBI 2026-10-23-08)', () => {
+  it('answers through createMessageRouter when generateSummary reads this', async () => {
+    // FallbackAIService.generateSummary is a prototype method (reads
+    // this.config). The router must bind it — a detached pass-through
+    // throws on every answered QA and the answer degrades to a TypeError.
+    class ThisDependentAiService {
+      constructor(private readonly tag: string) {}
+      async generateSummary(content: string): Promise<AISummaryResult> {
+        return { success: true, summary: `${this.tag}:${content.length}`, providerName: 'built-in-ai' };
+      }
+      async testConnection(): Promise<AiConnectionTestResult> {
+        return { success: true, message: 'ok', providers: [] };
+      }
+    }
+    const deps: MessageRouterDeps = {
+      runtimeId: 'test-id',
+      recordingPipeline: { record: vi.fn().mockResolvedValue({ success: true }) },
+      tabCache: { add: vi.fn(), update: vi.fn() },
+      obsidian: { testConnection: vi.fn().mockResolvedValue({ success: true }) },
+      aiService: new ThisDependentAiService('wired'),
+      askEvidenceSearch: vi.fn().mockResolvedValue({
+        success: true,
+        data: { rows: [makeRow(1)], total: 1 },
+      }) as never,
+      recordingAdmission: { admit: vi.fn().mockResolvedValue({ settings: {} }) } as never,
+      fetchManualContent: vi.fn(),
+      fetchRegenerated: vi.fn().mockResolvedValue({ content: '' }),
+      setUrlContent: vi.fn(),
+      buildAllowedUrls: vi.fn().mockReturnValue(new Set()),
+      getSettings: vi.fn().mockResolvedValue({}),
+      isDomainAllowed: vi.fn().mockResolvedValue(true),
+      clearSettingsCache: vi.fn(),
+      notifyAiTestProgress: vi.fn(),
+      getPrivacyCache: vi.fn().mockReturnValue(null),
+      updateActivity: vi.fn().mockResolvedValue(undefined),
+      lockSession: vi.fn().mockResolvedValue(undefined),
+      autoSavedBadgeTabs: { add: vi.fn(), has: vi.fn().mockReturnValue(false) },
+      initExportScheduler: vi.fn().mockResolvedValue(undefined),
+      updateConsentBadge: vi.fn().mockResolvedValue(undefined),
+      generateWeeklySummary: vi.fn().mockResolvedValue(true),
+      generateMonthlySummary: vi.fn().mockResolvedValue(true),
+      dashboardSqliteHandler: vi.fn(),
+    };
+    const router = createMessageRouter(deps);
+    const sendResponse = vi.fn();
+    const sender = { id: 'test-id' } as unknown as chrome.runtime.MessageSender;
+
+    const handled = router.dispatch(
+      { type: 'ASK_HISTORY', payload: { question: '配線の検証' }, protocolVersion: 1 },
+      sender,
+      sendResponse,
+    );
+
+    expect(handled).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, status: 'answered' }),
+      );
+    });
+    const response = sendResponse.mock.calls[0]?.[0] as { answer?: string };
+    expect(response.answer).toMatch(/^wired:/);
   });
 });

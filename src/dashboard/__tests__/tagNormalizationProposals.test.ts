@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildTagNormalizationProposals,
+  removeTagFromCsv,
   renameTagInCsv,
 } from '../tagNormalizationProposals.js';
 import {
@@ -65,6 +66,20 @@ describe('renameTagInCsv (適用・取消の基本形)', () => {
     const applied = renameTagInCsv('ai,web', 'ai', 'AI');
     expect(applied).toBe('AI,web');
     expect(renameTagInCsv(applied, 'AI', 'ai')).toBe('ai,web');
+  });
+});
+
+describe('removeTagFromCsv (自動タグ規則の取消の基本形)', () => {
+  it('removes only the folded-matching cell', () => {
+    expect(removeTagFromCsv('docs, news', 'Docs')).toBe('news');
+    expect(removeTagFromCsv('docs', 'docs')).toBe('');
+    expect(removeTagFromCsv('news', 'docs')).toBe('news');
+  });
+
+  it('fails closed on unknown shapes (縮退の出口)', () => {
+    expect(removeTagFromCsv(null, 'docs')).toBe('');
+    expect(removeTagFromCsv('', 'docs')).toBe('');
+    expect(removeTagFromCsv('docs,news', '')).toBe('docs,news');
   });
 });
 

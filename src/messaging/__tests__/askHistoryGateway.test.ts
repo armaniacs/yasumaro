@@ -55,6 +55,15 @@ describe('askHistoryGateway', () => {
       expect(result).toEqual({ success: false, error: 'Invalid ASK_HISTORY response' });
     });
 
+    it('passes admission rejection reasons through untouched (PBI 2026-10-25-12)', async () => {
+      const sendMessage = vi.fn().mockResolvedValue({ success: false, error: 'privacy_consent_required' });
+      stubSendMessage(sendMessage);
+
+      const result = await askHistory({ question: 'q', collectionId: null });
+
+      expect(result).toEqual({ success: false, error: 'privacy_consent_required' });
+    });
+
     it('maps sendMessage rejection to failure', async () => {
       const sendMessage = vi.fn().mockRejectedValue(new Error('Extension context invalidated'));
       stubSendMessage(sendMessage);

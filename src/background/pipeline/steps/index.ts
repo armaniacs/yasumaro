@@ -10,6 +10,7 @@ export { checkTrustDomainStep } from './checkTrustDomainStep.js';
 export { PrivacyHeadersChecker, PrivatePageError } from './checkPrivacyHeadersStep.js';
 export { checkDuplicateStep, DuplicateError } from './checkDuplicateStep.js';
 export { processPrivacyPipelineStep } from './processPrivacyPipelineStep.js';
+export { applyAutoTagRulesStep, createApplyAutoTagRulesStep } from './applyAutoTagRulesStep.js';
 export { extractSentencesStep } from './extractSentencesStep.js';
 export { formatMarkdownStep } from './formatMarkdownStep.js';
 export { saveToObsidianStep } from './saveToObsidianStep.js';

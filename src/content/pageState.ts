@@ -90,4 +90,14 @@ export class PageState {
     lastFallbackTriggered: boolean = false;
     /** PBI 05: 発動理由（triggered 時のみ。'short_content' | 'over_cleansed' | 'content_overcut' | 'candidate_too_small'） */
     lastFallbackReason: string | undefined = undefined;
+
+    /**
+     * PBI 2026-10-22-06 slice 2 (SPA late-content re-scan): visible length
+     * at the last terminal report. The re-arm verdict compares the live
+     * page against this baseline; wherever isValidVisitReported commits,
+     * this commits beside it.
+     */
+    reportedContentChars: number = 0;
+    /** Bounded re-arms per page view (cap lives in lateContentRescan.ts). */
+    lateRescanCount: number = 0;
 }

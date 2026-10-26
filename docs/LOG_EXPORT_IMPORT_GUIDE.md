@@ -25,6 +25,14 @@ JSON エクスポートには v6.7.99 以降、改竄検出のための **HMAC-S
 
 > JSON・CSV・Markdown のエクスポートは最大 **10,000件** までに制限されています。保存件数が10,000件を超える場合、エクスポートはエラーとなり、`.db` エクスポート（OPFSストレージ使用時）で全件を取得するよう案内されます。
 
+### エクスポート列定義
+
+CSV のヘッダ行は次の 7 列で固定です（Excel 互換の UTF-8 BOM 付き）。
+
+`url`・`title`・`summary`・`tags`・`created_at`・`domain`・`is_starred`
+
+JSON の各レコードは閲覧履歴の全項目を持ち、HMAC-SHA256 署名付きの envelope（`version: 2`）で包まれます。集中バックアップ経路の列射影は `EXPORT_COLUMNS` の 13 列（`id`・`url`・`title`・`summary`・`tags`・`created_at`・`domain`・`visit_duration`・`scroll_ratio`・`is_starred`・`is_deleted`・`obsidian_synced`・`gist_synced`）で固定されており、export shape は stable contract のため列追加は互換方針の見直しとセットです。
+
 ### インポート
 
 「JSON からログをインポート」ボタンから、エクスポートした JSON ファイルを取り込みます。
@@ -77,6 +85,14 @@ The **Export Logs** panel in the dashboard lets you export and import your accum
 Since v6.7.99, JSON exports carry an **HMAC-SHA256 signature** for tamper detection. The signing key is generated automatically inside the extension and requires no user management.
 
 > JSON, CSV, and Markdown exports are limited to a maximum of **10,000 records**. If more than 10,000 records are stored, the export fails with an error directing you to the `.db` export (OPFS storage only) to capture the full history.
+
+### Export column definitions
+
+The CSV header row carries a fixed 7 columns (with a UTF-8 BOM for Excel compatibility).
+
+`url`・`title`・`summary`・`tags`・`created_at`・`domain`・`is_starred`
+
+Each JSON record carries the full browsing-log fields inside an HMAC-SHA256-signed envelope (`version: 2`). The centralized backup path projects a fixed 13 columns (`EXPORT_COLUMNS`: `id`・`url`・`title`・`summary`・`tags`・`created_at`・`domain`・`visit_duration`・`scroll_ratio`・`is_starred`・`is_deleted`・`obsidian_synced`・`gist_synced`); the export shape is a stable contract, so adding a column requires a compatibility-policy review.
 
 ### Import
 

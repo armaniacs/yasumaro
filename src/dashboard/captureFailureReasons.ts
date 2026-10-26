@@ -94,7 +94,10 @@ export const CAPTURE_SCOPE: readonly CaptureScopeEntry[] = [
   { target: 'article pages (valid-visit auto recording)', status: 'done' },
   { target: 'PDF viewer', status: 'planned' },
   { target: 'video captions', status: 'planned' },
-  { target: 'SPA late-loaded content', status: 'planned' },
+  // PBI 2026-10-22-06 slice 2: bounded gate re-arm (lateContentRescan.ts)
+  // re-extracts grown SPA content through the same pipeline. Auto-append
+  // without any scroll event still ends at the first excerpt (recorded limit).
+  { target: 'SPA late-loaded content', status: 'done' },
   { target: 'file:// pages', status: 'excluded' },
   { target: 'auth-walled pages', status: 'excluded' },
   { target: 'paywalled pages', status: 'excluded' },
