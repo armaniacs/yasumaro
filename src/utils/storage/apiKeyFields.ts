@@ -15,6 +15,7 @@ import type { StorageKey } from './types.js';
 export const API_KEY_FIELD_NAMES: readonly string[] = [
   'obsidian_api_key',
   'gemini_api_key',
+  'openai_official_api_key',
   'openai_api_key',
   'openai_2_api_key',
   'provider_api_key',

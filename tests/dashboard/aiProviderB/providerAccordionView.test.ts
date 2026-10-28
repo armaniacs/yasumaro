@@ -8,13 +8,13 @@ function container(): HTMLElement {
 }
 
 describe('createBProviderAccordionView', () => {
-  it('7プロバイダのアコーディオンが catalog 順で生成される', () => {
+  it('renders all 8 provider accordions in catalog order', () => {
     const c = container();
     createBProviderAccordionView(c);
     const details = [...c.querySelectorAll<HTMLElement>('details.b-provider-details')];
-    expect(details.length).toBe(7);
+    expect(details.length).toBe(8);
     expect(details.map((d) => d.dataset.provider)).toEqual([
-      'geminiSettings', 'openaiSettings', 'openai2Settings', 'lm-studioSettings',
+      'geminiSettings', 'openai-officialSettings', 'openaiSettings', 'openai2Settings', 'lm-studioSettings',
       'ollamaSettings', 'openai-compatibleSettings', 'built-in-aiSettings',
     ]);
   });

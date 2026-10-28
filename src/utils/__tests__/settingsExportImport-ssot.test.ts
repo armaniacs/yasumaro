@@ -93,13 +93,27 @@ describe('migration equivalence: legacy hand lists vs SSOT derivation', () => {
       expect(ssot.has(key), `legacy api key "${key}" must stay in SSOT`).toBe(true);
     }
     const added = [...ssot].filter((key) => !(LEGACY_API_KEY_KEYS as readonly string[]).includes(key));
-    expect(added.sort()).toEqual(['github_pat', 'provider_api_key']);
+    expect(added.sort()).toEqual(['github_pat', 'openai_official_api_key', 'provider_api_key']);
   });
 });
 
 describe('intended validateExportData behavior (SSOT-derived)', () => {
   test('full DEFAULT_SETTINGS payload minus API keys is accepted', () => {
     expect(validateExportData(exportData(fullNonApiSettings(), true))).toBe(true);
+  });
+
+  test.each([true, false])('accepts older 1.1 backups without the additive official OpenAI fields (keys excluded: %s)', (apiKeyExcluded) => {
+    const settings = fullNonApiSettings();
+    delete settings.openai_official_model;
+    if (!apiKeyExcluded) {
+      for (const field of API_KEY_FIELDS) {
+        if (field !== 'openai_official_api_key') settings[field] = 'legacy-backup-key';
+      }
+    }
+    expect(validateExportData(exportData(settings, apiKeyExcluded))).toBe(true);
+    // The compatibility exception must not weaken existing required fields.
+    delete settings.gemini_model;
+    expect(validateExportData(exportData(settings, apiKeyExcluded))).toBe(false);
   });
 
   test('payload missing a derived-only key is rejected', () => {
@@ -133,7 +147,7 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
     expect(validateExportData(exportData(settings, true, LEGACY_EXPORT_VERSION))).toBe(false);
   });
 
-  test('apiKeyExcluded=false requires the full SSOT API key set', () => {
+  test('apiKeyExcluded=false requires existing API keys and accepts the additive official key', () => {
     const withLegacyKeys: Record<string, unknown> = {
       ...fullNonApiSettings(),
       obsidian_api_key: 'k1',
@@ -149,6 +163,7 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
       github_pat: 'k6',
     };
     expect(validateExportData(exportData(withAllKeys, false))).toBe(true);
+    expect(validateExportData(exportData({ ...withAllKeys, openai_official_api_key: 'k7' }, false))).toBe(true);
   });
 
   test('legacy 1.0.0 payload with keys included validates against the frozen 4-key set', () => {

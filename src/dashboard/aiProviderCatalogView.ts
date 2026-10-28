@@ -144,6 +144,7 @@ function buildGenericBlock(
   entry: ProviderCatalogEntry,
   meta: ProviderViewMetadata,
 ): void {
+  if (meta.helpI18nKey) container.appendChild(helpText(meta.helpI18nKey));
   if (entry.baseUrlKey) {
     const id = storageKeyToInputId(entry.baseUrlKey);
     container.appendChild(formGroup(

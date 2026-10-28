@@ -252,8 +252,15 @@ async function finalizeParsedImport(
  */
 const API_KEY_FIELD_SET: ReadonlySet<string> = new Set<string>(API_KEY_FIELDS);
 const CONSENT_RECORD_KEY_SET: ReadonlySet<string> = new Set<string>(CONSENT_RECORD_KEYS);
+// These additive provider fields were absent from earlier 1.1.0 backups.
+// Keep those backups importable; setAll preserves existing values for gaps,
+// and the settings read path supplies defaults on a fresh install.
+const ADDITIVE_OPENAI_EXPORT_KEYS: ReadonlySet<string> = new Set<string>([
+  StorageKeys.OPENAI_OFFICIAL_MODEL,
+  StorageKeys.OPENAI_OFFICIAL_API_KEY,
+]);
 const REQUIRED_EXPORT_KEYS: readonly string[] = Object.keys(DEFAULT_SETTINGS).filter(
-  (key) => !API_KEY_FIELD_SET.has(key) && !CONSENT_RECORD_KEY_SET.has(key)
+  (key) => !API_KEY_FIELD_SET.has(key) && !CONSENT_RECORD_KEY_SET.has(key) && !ADDITIVE_OPENAI_EXPORT_KEYS.has(key)
 );
 
 /**
@@ -675,6 +682,7 @@ export function getExportValidationError(data: unknown): ExportValidationError |
   if (!apiKeyExcluded) {
     const apiKeyKeys = isCurrentFormat ? API_KEY_FIELDS : LEGACY_API_KEY_FIELDS;
     for (const key of apiKeyKeys) {
+      if (isCurrentFormat && ADDITIVE_OPENAI_EXPORT_KEYS.has(key)) continue;
       if (!(key in settings)) {
         return {
           field: `settings.${key}`,

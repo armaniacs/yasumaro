@@ -19,6 +19,7 @@ import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 // assertion #2 catches a drift in the other direction.
 const ALL_PROVIDER_IDS: ProviderId[] = [
   'gemini',
+  'openai-official',
   'openai',
   'openai2',
   'lm-studio',
@@ -80,14 +81,14 @@ describe('ProviderCatalog conformance', () => {
     }
   });
 
-  it('providers with a configurable detail field are exactly the 6 non-built-in ones', () => {
+  it('providers with a configurable detail field are exactly the 7 non-built-in ones', () => {
     // This is the derivation diagnosticsPanel.KNOWN_DETAIL_PROVIDERS uses.
     const detailProviders = [...PROVIDER_CATALOG.entries()]
       .filter(([, e]) => Boolean(e.modelKey || e.baseUrlKey || e.apiKeyKey))
       .map(([id]) => id)
       .sort();
     expect(detailProviders).toEqual(
-      ['gemini', 'lm-studio', 'ollama', 'openai', 'openai-compatible', 'openai2'].sort(),
+      ['gemini', 'lm-studio', 'ollama', 'openai-official', 'openai', 'openai-compatible', 'openai2'].sort(),
     );
   });
 
@@ -120,14 +121,14 @@ describe('ProviderCatalog conformance', () => {
     }
   });
 
-  it('supportsCustomPrompt is true exactly for gemini/openai/openai2/lm-studio/ollama/built-in-ai', () => {
+  it('supportsCustomPrompt is true exactly for gemini/openai-official/openai/openai2/lm-studio/ollama/built-in-ai', () => {
     const yes = [...PROVIDER_CATALOG].filter(([, e]) => e.supportsCustomPrompt).map(([id]) => id).sort();
-    expect(yes).toEqual(['gemini', 'lm-studio', 'ollama', 'openai', 'openai2', 'built-in-ai'].sort());
+    expect(yes).toEqual(['gemini', 'lm-studio', 'ollama', 'openai-official', 'openai', 'openai2', 'built-in-ai'].sort());
   });
 
-  it('dropdown order is gemini, openai, openai2, lm-studio, ollama, openai-compatible, built-in-ai', () => {
+  it('dropdown order is gemini, openai-official, openai, openai2, lm-studio, ollama, openai-compatible, built-in-ai', () => {
     expect([...PROVIDER_CATALOG.keys()]).toEqual([
-      'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
+      'gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
     ]);
   });
 

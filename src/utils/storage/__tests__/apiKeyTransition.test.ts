@@ -55,7 +55,9 @@ function buildFixture(): TransitionFixture {
   const reach = new Map<string, KekReach>();
   const secret = new Map<string, string>();
   const targets: ApiKeyTarget[] = [];
-  const third = Math.ceil(API_KEY_FIELD_NAMES.length / 3);
+  // Round down so an added field cannot leave the last bucket with only
+  // one placement. Each bucket keeps nested and scattered targets.
+  const third = Math.floor(API_KEY_FIELD_NAMES.length / 3);
 
   for (const [index, field] of API_KEY_FIELD_NAMES.entries()) {
     const placement: ApiKeyPlacement = index % 2 === 0 ? 'nested' : 'scattered';

@@ -2,10 +2,11 @@ import { describe, it, expect } from 'vitest';
 import { API_KEY_FIELDS } from '../settingsMigration.js';
 
 describe('settingsStore API_KEY_FIELDS', () => {
-  it('exports 6 API key fields', () => {
+  it('exports 7 API key fields', () => {
     expect(API_KEY_FIELDS).toEqual([
       'obsidian_api_key',
       'gemini_api_key',
+      'openai_official_api_key',
       'openai_api_key',
       'openai_2_api_key',
       'provider_api_key',

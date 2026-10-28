@@ -162,6 +162,25 @@ describe('settings — API key field binding (AAD)', () => {
     await expect(decryptApiKey(stored, key, StorageKeys.GEMINI_API_KEY)).rejects.toThrow('Decryption failed');
   });
 
+  it('round-trips official and legacy OpenAI credentials with separate field bindings', async () => {
+    await settingsRepository.setAll({
+      [StorageKeys.OPENAI_OFFICIAL_API_KEY]: 'official-credential',
+      [StorageKeys.OPENAI_2_API_KEY]: 'legacy-credential',
+    });
+    const key = await getOrCreateEncryptionKey();
+    const stored = storageData.settings as Record<string, EncryptedData>;
+    const official = stored[StorageKeys.OPENAI_OFFICIAL_API_KEY]!;
+    const legacy = stored[StorageKeys.OPENAI_2_API_KEY]!;
+    expect(isEncrypted(official)).toBe(true);
+    expect(await decryptApiKey(official, key, StorageKeys.OPENAI_OFFICIAL_API_KEY)).toBe('official-credential');
+    expect(await decryptApiKey(legacy, key, StorageKeys.OPENAI_2_API_KEY)).toBe('legacy-credential');
+    await expect(decryptApiKey(official, key, StorageKeys.OPENAI_2_API_KEY)).rejects.toThrow();
+    settingsRepository.clearCache();
+    const readBack = await settingsRepository.getAll();
+    expect(readBack[StorageKeys.OPENAI_OFFICIAL_API_KEY]).toBe('official-credential');
+    expect(readBack[StorageKeys.OPENAI_2_API_KEY]).toBe('legacy-credential');
+  });
+
   it('reads a v1 envelope for every canonical API key field', async () => {
     const key = await getOrCreateEncryptionKey();
     const seeded: Record<string, unknown> = {};

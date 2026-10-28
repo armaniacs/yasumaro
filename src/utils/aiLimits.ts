@@ -15,6 +15,7 @@
 // reads its cap through 'built-in-ai', the id it actually is.
 export const PROVIDER_MAX_TOKENS = new Map<string, number>([
     ['gemini', 8192],
+    ['openai-official', 16384],
     ['openai', 16384],
     ['openai2', 16384],
     ['lm-studio', 16000],

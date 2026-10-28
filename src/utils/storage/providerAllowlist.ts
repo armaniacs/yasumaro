@@ -77,6 +77,14 @@ export const PROVIDER_ALLOWLIST_ROWS: ReadonlyArray<ProviderAllowlistRow> = [
     permissionTier: 'required',
   },
   {
+    id: 'openai-official',
+    isLocal: false,
+    label: 'OpenAI',
+    labelI18nKey: 'openaiOfficial',
+    domain: 'api.openai.com',
+    permissionTier: 'required',
+  },
+  {
     id: 'openai',
     baseUrlKey: StorageKeys.OPENAI_BASE_URL,
     isLocal: false,

@@ -4,6 +4,13 @@ import { API_KEY_FIELDS } from '../settingsMigration.js';
 import { redactSettingsApiKeys } from '../storagePort.js';
 
 describe('apiKeyFields SSOT', () => {
+  it('protects official OpenAI credentials through canonical encryption and redaction fields', () => {
+    expect(API_KEY_FIELD_NAMES).toContain('openai_official_api_key');
+    expect(isApiKeyField('openaiOfficialApiKey')).toBe(true);
+    const redacted = redactSettingsApiKeys({ openai_official_api_key: 'official-secret' } as never);
+    expect(redacted).toHaveProperty('openai_official_api_key', '');
+  });
+
   it('migration list matches the canonical list', () => {
     expect([...API_KEY_FIELDS]).toEqual([...API_KEY_FIELD_NAMES]);
   });

@@ -26,6 +26,24 @@ vi.mock('../../logger/api.js', async () =>
 import { validateRestorableSettings } from '../restorableSettings.js';
 
 describe('validateRestorableSettings', () => {
+  it('restores the official OpenAI model as a string', () => {
+    const result = validateRestorableSettings({ openai_official_model: 'custom-official-model' });
+
+    expect(result).toEqual({
+      sanitized: { openai_official_model: 'custom-official-model' },
+      skippedKeys: [],
+    });
+  });
+
+  it.each([{ value: null }, { value: 42 }, { value: ['custom-official-model'] }])(
+    'rejects a non-string official OpenAI model: %j',
+    ({ value }) => {
+      const result = validateRestorableSettings({ openai_official_model: value });
+
+      expect(result).toEqual({ sanitized: {}, skippedKeys: ['openai_official_model'] });
+    },
+  );
+
   it('passes through a valid allowlisted value unchanged', () => {
     const { sanitized, skippedKeys } = validateRestorableSettings({
       obsidian_enabled: true,
