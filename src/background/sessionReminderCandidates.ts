@@ -27,6 +27,8 @@
  */
 
 import { MAX_QUERY_ROWS } from '../utils/computeLimits.js';
+import { startOfLocalDayMs } from '../utils/localDate.js';
+import { SYSTEM_CLOCK, type Clock } from '../utils/ports.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import type { ReminderCandidateLike } from '../utils/sessionReminder/reminderNotify.js';
 
@@ -84,12 +86,18 @@ export function toReminderCandidate(row: BrowsingLogRecord): ReminderCandidateLi
 /**
  * Filters and caps the candidates of one read. Oldest 読みかけ first (the
  * same order the aggregate emits: the trail walked away from earliest is the
- * one most worth resuming), capped so the surface stays quiet.
+ * one most worth resuming), capped so the surface stays quiet. `nowMs` gates
+ * the day: only records created BEFORE today's local start are candidates
+ * (docs 契約: 前日までに読みかけたページを翌日に通知する — a page still
+ * being read today belongs to today's session, not to tomorrow's reminder).
  */
-export function pickReminderCandidateRows(rows: BrowsingLogRecord[]): ReminderCandidateLike[] {
+export function pickReminderCandidateRows(rows: BrowsingLogRecord[], nowMs: number): ReminderCandidateLike[] {
+  const todayStart = startOfLocalDayMs(nowMs);
   const candidates: Array<{ candidate: ReminderCandidateLike; createdAt: number }> = [];
   for (const row of rows) {
     if (typeof row.created_at !== 'number') continue;
+    // 当日の読みかけは候補外 (the reminder notifies yesterday's unread pages).
+    if (row.created_at >= todayStart) continue;
     const candidate = toReminderCandidate(row);
     if (candidate !== null) {
       candidates.push({ candidate, createdAt: row.created_at });
@@ -103,14 +111,15 @@ export function pickReminderCandidateRows(rows: BrowsingLogRecord[]): ReminderCa
  * The queryCandidates seam for SessionReminderAlarms: one listing query, the
  * candidate rules above, and an empty set on a failed read (the alarm's next
  * hourly tick retries; a read failure must not fire a notification from
- * absent data).
+ * absent data). The clock is injectable so tests drive the day gate.
  */
 export function createReminderCandidateProvider(
   reader: ReminderCandidateReader,
+  clock: Clock = SYSTEM_CLOCK,
 ): () => Promise<ReminderCandidateLike[]> {
   return async () => {
     const result = await reader.query({ limit: REMINDER_QUERY_ROWS });
     if (!result.success) return [];
-    return pickReminderCandidateRows(result.data.rows);
+    return pickReminderCandidateRows(result.data.rows, clock.now());
   };
 }

@@ -44,9 +44,13 @@ const EXPECTED: Record<string, number> = {
   MAX_CLEANSED_ELEMENTS: 1000000,
   MAX_CLEANSED_REASON_CHARS: 128,
   MAX_CLEANSED_REASONS: 64,
+  // PBI 2026-10-23-02: engagement metric bounds, shared by the VALID_VISIT
+  // validator and the mapper's second-layer clamps.
+  MAX_VISIT_DURATION_SECONDS: 86400,
+  MAX_SCROLL_RATIO_PERCENT: 100,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 43;
+const EXPECTED_LIMITS_EXPORT_COUNT = 45;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',

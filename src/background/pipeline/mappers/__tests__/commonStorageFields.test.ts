@@ -218,6 +218,48 @@ describe('extractCommonStorageFields', () => {
 
       expect(record.scroll_ratio).toBeNull();
     });
+
+    it('collapses non-numeric metrics to NULL instead of storing a CHECK-violating value', () => {
+      // Second-layer guard (the validator rejects malformed wire values, but
+      // internal-only paths never cross it): 'abc' → NaN collapses to NULL —
+      // an unread metric is honest, a wrong one would violate the schema
+      // CHECK and lose the record.
+      const context = makeContext({
+        data: {
+          title: 'T',
+          url: 'https://example.com/page',
+          content: 'body',
+          visitDurationSeconds: 'abc',
+          scrollRatioPercent: Number.NaN,
+        } as unknown as RecordingContext['data'],
+      });
+      const common = extractCommonStorageFields(context);
+
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.visit_duration).toBeNull();
+      expect(record.scroll_ratio).toBeNull();
+    });
+
+    it('clamps numeric metrics into the shared bounds so the CHECK holds', () => {
+      const context = makeContext({
+        data: {
+          title: 'T',
+          url: 'https://example.com/page',
+          content: 'body',
+          visitDurationSeconds: -5,
+          scrollRatioPercent: 250,
+        } as RecordingContext['data'],
+      });
+      const common = extractCommonStorageFields(context);
+
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.visit_duration).toBe(0);
+      // 250 percent clamps to the 0..100 bound, so the normalized fraction
+      // lands on the CHECK's 1 ceiling instead of violating it.
+      expect(record.scroll_ratio).toBe(1);
+    });
   });
 
   describe('toMetadataPatch', () => {

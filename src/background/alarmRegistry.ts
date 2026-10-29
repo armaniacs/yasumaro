@@ -243,12 +243,16 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
   {
     /**
      * Hourly reminder check (PBI 2026-10-22-04 O2). The SessionAlarmService
-     * install model: the service owns its alarm (start clears + re-arms the
-     * standing hourly one), the registry owns the dispatch (checkToday opens
-     * the daily gate on one storage read and only then runs the candidate
-     * query). Recreating the hourly alarm on every Service Worker startup is
-     * acceptable — the check is cheap and the day gate holds the surface to
-     * one notification per day.
+     * install model: the service owns its alarm, the registry owns the
+     * dispatch (checkToday opens the daily gate on one storage read and only
+     * then runs the candidate query). start() installs through the
+     * shouldCreateStandingAlarm get-then-create guard, NOT clear + create:
+     * chrome.alarms.create cancels and replaces a same-name alarm and
+     * recomputes a periodInMinutes-only alarm's first firing from creation
+     * time, so recreating on every Service Worker startup would reset the
+     * countdown — and the 5-minute offline-retry alarm above keeps waking
+     * the worker, so the hourly reminder would never reach its scheduled
+     * time (the standingAlarmGuard contract, PBI 2026-10-18-02).
      */
     name: SESSION_REMINDER_ALARM_NAME,
     install: async () => { await deps.sessionReminderAlarms.start(); },

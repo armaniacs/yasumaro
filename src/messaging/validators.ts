@@ -12,6 +12,8 @@ import {
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
+  MAX_SCROLL_RATIO_PERCENT,
+  MAX_VISIT_DURATION_SECONDS,
   VALIDATOR_LIMITS,
 } from '../utils/limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
@@ -149,6 +151,31 @@ function assertByteStatField(
   }
 }
 
+/**
+ * Engagement metric bound (PBI 2026-10-23-02, shared with the mapper's
+ * second-layer clamps). visit_duration is seconds — a fraction is legitimate,
+ * so the check is finiteness rather than integrality; scrollRatioPercent is
+ * the 0..100 percentage the content script reports. Rejected (never clamped)
+ * so a garbage value cannot violate the schema CHECK and lose the record.
+ */
+function assertMetricField(
+  payload: Record<string, unknown>,
+  field: string,
+  min: number,
+  max: number,
+  validatorName: string,
+): void {
+  const v = payload[field];
+  if (v === undefined) return;
+  if (typeof v !== 'number' || !Number.isFinite(v) || v < min || v > max) {
+    throw new ValidationError(
+      validatorName,
+      `payload.${field} must be a finite number ${min}..${max}`,
+      field,
+    );
+  }
+}
+
 function assertCleansedReasons(
   payload: Record<string, unknown>,
   validatorName: string,
@@ -198,6 +225,11 @@ export class ValidVisitValidator implements MessageValidator<ValidVisitMessage> 
       assertByteStatField(payload, field, MAX_BYTE_STAT_BYTES, 'ValidVisitValidator');
     }
     assertByteStatField(payload, 'aiSummaryCleansedElements', MAX_CLEANSED_ELEMENTS, 'ValidVisitValidator');
+    // PBI 2026-10-23-02: the engagement metrics ride VALID_VISIT payloads —
+    // a garbage value ('abc' → NaN, 250 → 2.5) would violate the schema CHECK
+    // and lose the record, so the validator rejects (never clamps) them.
+    assertMetricField(payload, 'visitDurationSeconds', 0, MAX_VISIT_DURATION_SECONDS, 'ValidVisitValidator');
+    assertMetricField(payload, 'scrollRatioPercent', 0, MAX_SCROLL_RATIO_PERCENT, 'ValidVisitValidator');
     if (
       payload.aiSummaryCleansedReason !== undefined &&
       (typeof payload.aiSummaryCleansedReason !== 'string' ||

@@ -73,8 +73,12 @@ const LINE_TERMINATOR_PATTERN = /[\r\n\u2028\u2029\u0085]+/g;
  * and summary. Non-string values collapse to '' so a caller passing
  * `titleFallback: false` (no fallback chain) cannot turn a missing title into a
  * TypeError that aborts Markdown generation.
+ *
+ * Exported for the reminder TODO line (sessionReminderClick): every Markdown
+ * output built from a stored title must collapse line terminators before
+ * sanitizing, or a hostile page forges a Markdown line under the section.
  */
-function normalizeSingleLine(value: string | null | undefined): string {
+export function normalizeSingleLine(value: string | null | undefined): string {
   return (value ?? '').replace(LINE_TERMINATOR_PATTERN, ' ').replace(/  +/g, ' ').trim();
 }
 

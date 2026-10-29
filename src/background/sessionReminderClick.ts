@@ -39,6 +39,7 @@ import {
   sanitizeForMarkdownLinkText,
   sanitizeUrlForMarkdownTarget,
 } from '../utils/markdownSanitizer.js';
+import { normalizeSingleLine } from '../utils/markdownFormatter.js';
 import { formatLocalDateString } from '../utils/localDate.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logInfo, logWarn } from '../utils/logger/api.js';
@@ -89,10 +90,12 @@ export function parseReminderRecordId(notificationId: string): number | null {
  * The one TODO line the click appends (BDD 後段: Daily NoteにTODOとして残せる).
  * The link text is a stored record title (attacker-controlled) and the URL
  * target must stay inside the link, so both go through the SSOT sanitize
- * chain before the wrapper is applied.
+ * chain before the wrapper is applied — normalizeSingleLine FIRST (a title
+ * carrying \n / U+2028 / U+2029 / U+0085 would otherwise forge Markdown
+ * lines under the section), then the link-text sanitizer.
  */
 export function buildReminderTodoLine(title: string, url: string): string {
-  const sanitizedTitle = sanitizeForMarkdownLinkText(title);
+  const sanitizedTitle = sanitizeForMarkdownLinkText(normalizeSingleLine(title));
   const sanitizedUrl = sanitizeUrlForMarkdownTarget(url);
   return `- [ ] [${sanitizedTitle}](${sanitizedUrl})`;
 }

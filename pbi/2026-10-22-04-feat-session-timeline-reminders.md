@@ -49,7 +49,7 @@ Scenario: 読みかけを思い出す
 - 残 O3: 候補 provider(SQLite→集計→ReminderCandidate 写像の SW 側実装)。最小片: 日ゲート成立時だけ読む問合せ1本。→ 完了(2026-10-30)
 - 残 O4: Daily Note TODO 化(BDD 後段)。最小片: 通知 click からの1行追記。→ 完了(2026-10-30・追記失敗時は通知を消さない)
 - 残 O5: E2E通し(O1-O3 完了後、trail 付き seed は実 navigation + nav-trail consent 経路で)。→ 完了(2026-10-30・trail 列の実 navigation 実測まで。実通知の実クリック表示は owner 手動)
-- 残 O6: 第三者レビュー(今回は自己レビューのみ)。→ 統合側で実施(2026-10-30)
+- 残 O6: 第三者レビュー(今回は自己レビューのみ)。→ 完了(2026-10-30・統合側で敵対的第三者レビュー実施+指摘修正済み・下記実装記録)
 - テスト: 上記5ファイル計41件グリーン(内訳: 集計10・panel8・store9・notify9・alarms5)。`npx vitest run <5 files> --repeats=20` パス。`npx eslint` 対象9件クリーン。`npx tsc --noEmit` は自ファイル無エラー(他所の既存エラーは不触)。full validate / build / headed E2E / commit は制約どおり未実行。
 
 ## 実装記録（2026-10-30・O1-O5 統合実装）
@@ -65,6 +65,9 @@ Scenario: 読みかけを思い出す
 - 契約バグ修正2（O5 E2E で発見・統合側修正）: `recordRequestBuilder.ts` の `pickRecordDiagnostics`（diagnostic field 受渡しの単一所有者）が engagement metrics（visitDurationSeconds/scrollRatioPercent）を転送しておらず、本番では保存行の visit_duration/scroll_ratio が常に NULL になっていた（PBI 2026-10-23-02 の metrics wire が content script 送信と mapper 読取のみで受渡しが欠落）。NULL ratio は候補 provider で fail-closed（非候補）になるため**リマインダーが 1 件も発火しない**状態だった。受渡し表に metrics 2 field を追加+固定テスト 2 件（14 key pin・valid-visit からの運搬 pin）。E2E 実測: visit_duration 5.01 秒・scroll_ratio 0.7 が保存されることを確認
 - spec 修正2件: 既存 spec の strict-mode 違反（共有プレフィックスで 6 行にマッチし必ず失敗）を 1 行確定に修正。通しの masked_count 表明は dashboard query の投影に含まれない列のため削除（私物除外は候補 provider の fail-closed 単体テストと panel の isPlaybackExcluded テストが担保する旨を spec コメントに記載）
 - E2E: `session-timeline-reminders --project=extension` 3 passed・`--repeat-each=3` 9 passed（通し含む。実通知の実クリック表示は owner 手動）
+
+## 実装記録（2026-10-30・第三者レビュー対応）
+✅ 2026-10-22-04 第三者レビュー対応（敵対的レビュー・反証済み報告を受けて）: P0-1 OPFS plain-list 投影に `masked_count` 追加（`rowCodec.ts` 列 SSOT+coerceCell 整数 case。私物拒否が本番 OPFS 経路で fail-open になっていた問題を投影修正で解消。実エンジン parity テスト「OPFS plain listing supplies masked_count」新設。消費者側 `?? 0`/`?? null` は実値が届くため据え置き=NULL 判定未記録行は非私物のパネル同一規約）・P0-2 reminder alarm `start()` を get-then-create 化（`shouldCreateStandingAlarm` 純判断・standingAlarmGuard 前例・daily purge と同一。5 分 offline-retry アラームがワーカーを起こすため clear+create では 60 分に達せず本番で発火しないバグを修正。新規 pin 3 件: 既存欠落時のみ create・決して clear しない・再起動で scheduledTime 存続。`AlarmPort` に get 追加）・P0-3 TODO 行を `sanitizeForMarkdownLinkText(normalizeSingleLine(title))` 連鎖に変更（他の全 markdown 出力と同一。改行注入経路を潰し、捏造 checkbox も bracket エスケープで描画されない pin 新設。normalizeSingleLine を export 化）・P1-4 metrics を両層化（`limits.ts` に `MAX_VISIT_DURATION_SECONDS=86400`/`MAX_SCROLL_RATIO_PERCENT=100` バウンド共有 SSOT、ValidVisitValidator に assertMetricField rejected 検証、mapper に clampVisitDuration/clampScrollRatioPercent 第二層。NaN・範囲外が CHECK 違反＝insert 失敗になる経路をワイヤで拒否）・P1-5 候補に当日除外フィルタ（`startOfLocalDayMs` より前のみ候補。docs「前日までに読みかけたページ…を翌日に通知」契約にコード側を整合。clock 注入で day gate テスト可能化）・P2 全件（`clearElement` canonical 置換・alarmRegistry 行コメントを get-then-create の理由に書き換え・parity テストを isPlaybackExcluded 実物経由に）。「表示→永続化」順（checkToday が show → save）は PBI 破損時ルール「通知が出る側に倒す（出過ぎは日ゲートで抑えられるが、出ない故障は気づけない）」と一致するため維持と判断（save 失敗時の再発火は quota 等の稀な障害時のみで日ゲート閉鎖まで有界）。検証: 全 src スイープ 1149 ファイル/17013 テスト green・変更 13 テストファイル×10 連続 green・parity suite green（sqliteBackendParity 23 等）・eslint 0・tsc 0
 - 私物メモ: `git stash/checkout -- ./reset/clean` 不使用、未コミットのまま残す。pbi/00-INDEX・CHANGELOG・package.json・docs/・他PBI不触。
 
 ## 実装記録（2026-10-23・集計経路）
@@ -83,6 +86,6 @@ Scenario: 読みかけを思い出す
 2.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする(2026-10-25: 単体41件グリーン、E2E通しは O5 として残)
-- [x] コードレビュー完了(2026-10-25: code-review スキルで自己レビュー、所見3件を修正済み・下記R-06。第三者レビューは O6)
+- [x] 全BDDシナリオが自動テストとして実装されパスする(2026-10-30: 単体 126件+レビュー修正テスト green・E2E通し 3 passed/repeat-each=3 9 passed。実通知の実クリック表示は owner 手動)
+- [x] コードレビュー完了(2026-10-25: code-review スキルで自己レビュー、所見3件を修正済み・下記R-06。2026-10-30: 統合側で敵対的第三者レビュー+指摘修正済み)
 - [ ] ドキュメント更新済み(再生ビューの操作手順を含む)(2026-10-25: 草案を本PBI末尾 R-07 に記録。docs/ は制約により不触)

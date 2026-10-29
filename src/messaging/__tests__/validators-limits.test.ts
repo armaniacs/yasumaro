@@ -128,6 +128,57 @@ describe('Message payload size limits', () => {
   });
 });
 
+describe('ValidVisitValidator — engagement metric bounds (PBI 2026-10-23-02)', () => {
+  const v = new ValidVisitValidator();
+  const base = { content: 'c' };
+
+  it('accepts finite in-range metrics and omits them when absent', () => {
+    expect(() => v.validate({ type: 'VALID_VISIT', payload: base })).not.toThrow();
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: 10.5, scrollRatioPercent: 72 } }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: 0, scrollRatioPercent: 0 } }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: 86_400, scrollRatioPercent: 100 } }),
+    ).not.toThrow();
+  });
+
+  it('rejects non-numeric and non-finite metrics', () => {
+    // 'abc' → NaN would ride the wire into a schema CHECK violation (the
+    // insert fails, the record is lost), so the validator rejects it.
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: 'abc' } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, scrollRatioPercent: 'abc' } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: Number.NaN } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, scrollRatioPercent: Number.POSITIVE_INFINITY } }),
+    ).toThrow(ValidationError);
+  });
+
+  it('rejects out-of-range metrics', () => {
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: -1 } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, visitDurationSeconds: 86_401 } }),
+    ).toThrow(ValidationError);
+    // 250 percent would normalize to 2.5 — outside the schema's 0..1 CHECK.
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, scrollRatioPercent: 250 } }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { ...base, scrollRatioPercent: -5 } }),
+    ).toThrow(ValidationError);
+  });
+});
+
 describe('Staging-name subtype coverage (PBI 2026-09-17-18)', () => {
   const v = new DashboardSqliteValidator();
   const validName = 'archive_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';

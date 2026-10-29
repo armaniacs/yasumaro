@@ -202,6 +202,29 @@ describe('search parity on a real engine', () => {
       await b.close();
     }
   });
+
+  it('the OPFS plain listing supplies masked_count (privacy rejection depends on it)', async () => {
+    // PBI 2026-10-22-04 review P0-1: the reminder candidates, the notification
+    // click path and the playback panel all reject masked rows by
+    // masked_count > 0 — without this column in the OPFS projection the
+    // rejection silently failed open on the default backend.
+    const b = await seeded(SEED);
+    try {
+      await insertBoth(b, { url: 'https://kitchen.example.com/private', title: 'Private', created_at: 700, content: 'private body', masked_count: 4 });
+      const q: StorageQuery = { domain: 'kitchen.example.com', limit: 10, offset: 0 };
+      const opfsRes = await handleQuery(b.ctx, q as never);
+      const idbRes = await b.idb.query(q);
+
+      expect(opfsRes.rows.find((r) => (r as unknown as { masked_count?: number }).masked_count === 4)).toBeDefined();
+      expect(
+        (opfsRes.rows.find((r) => (r as unknown as { url?: string }).url === 'https://kitchen.example.com/private') as unknown as { masked_count: number }).masked_count,
+      ).toBe(
+        (idbRes.success ? idbRes.rows.find((r) => r.url === 'https://kitchen.example.com/private') : undefined)!.masked_count,
+      );
+    } finally {
+      await b.close();
+    }
+  });
 });
 
 describe('CRUD parity on a real engine', () => {

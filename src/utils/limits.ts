@@ -171,6 +171,18 @@ export const MAX_CLEANSED_REASON_CHARS = 128;
 export const MAX_CLEANSED_REASONS = 64;
 
 /**
+ * Engagement metric bounds for VALID_VISIT payloads (PBI 2026-10-23-02,
+ * shared with the mapper's second-layer clamps so the two layers cannot drift
+ * apart). visit_duration is seconds: one day accepts every legitimate
+ * measurement with headroom. scrollRatioPercent is the 0..100 percentage the
+ * content script reports (visitReporter: pageState.maxScrollPercentage) —
+ * the schema's scroll_ratio CHECK requires the 0..1 fraction the mapper
+ * normalizes to, so a percentage outside 0..100 would lose the record.
+ */
+export const MAX_VISIT_DURATION_SECONDS = 86_400;
+export const MAX_SCROLL_RATIO_PERCENT = 100;
+
+/**
  * Payload size caps. Oversized payloads are rejected (not truncated) so a
  * compromised or buggy sender cannot exhaust SW memory or chrome.storage
  * quota via the recording pipeline.

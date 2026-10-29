@@ -53,6 +53,8 @@ export const CHROME_STORAGE_PORT: StoragePort = {
 export interface AlarmPort {
   create(name: string, alarmInfo: chrome.alarms.AlarmCreateInfo): Promise<void>;
   clear(name: string): Promise<void>;
+  /** Reads a registered alarm by name (get-then-create guards need it). */
+  get(name: string): Promise<chrome.alarms.Alarm | undefined>;
   onAlarm(listener: (alarm: { name: string }) => void): void;
 }
 
@@ -60,6 +62,9 @@ export const CHROME_ALARM_PORT: AlarmPort = {
   create: (name, alarmInfo) => chrome.alarms.create(name, alarmInfo),
   clear: async (name) => {
     await chrome.alarms.clear(name);
+  },
+  get: async (name) => {
+    return chrome.alarms.get(name);
   },
   onAlarm: (listener) => {
     chrome.alarms.onAlarm.addListener(listener);

@@ -31,6 +31,7 @@ import { formatLocalDateString } from '../utils/localDate.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logInfo } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
+import { shouldCreateStandingAlarm } from './standingAlarmGuard.js';
 import {
   CHROME_ALARM_PORT,
   CHROME_STORAGE_PORT,
@@ -112,7 +113,23 @@ export class SessionReminderAlarms {
 
   async start(): Promise<void> {
     try {
-      await this.alarms.clear(SESSION_REMINDER_ALARM_NAME);
+      // Get-then-create (shouldCreateStandingAlarm, the same guard as
+      // installDailyPurge): chrome.alarms.create cancels and replaces a
+      // same-name alarm and recomputes a periodInMinutes-only alarm's first
+      // firing from creation time, so clear+create on every Service Worker
+      // startup would reset the hourly countdown — and the 5-minute
+      // offline-retry alarm keeps waking the worker, so the reminder would
+      // never reach its scheduled time. An already-registered alarm keeps its
+      // scheduledTime; a missing one (fresh install) is armed here.
+      const existing = await this.alarms.get(SESSION_REMINDER_ALARM_NAME);
+      if (!shouldCreateStandingAlarm(SESSION_REMINDER_ALARM_NAME, existing)) {
+        await logInfo(
+          'Session reminder checker already armed',
+          { alarmName: SESSION_REMINDER_ALARM_NAME },
+          'sessionReminderAlarms.ts',
+        );
+        return;
+      }
       await this.alarms.create(SESSION_REMINDER_ALARM_NAME, {
         periodInMinutes: SESSION_REMINDER_CHECK_INTERVAL_MINUTES,
       });

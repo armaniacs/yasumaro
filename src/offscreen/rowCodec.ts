@@ -61,6 +61,13 @@ export const BROWSING_LOG_COLUMNS = [
   'is_deleted',
   'obsidian_synced',
   'gist_synced',
+  // 私物判定は 3 面（リマインダー候補・通知 click・再生パネル）が
+  // masked_count > 0 で拒否する。IDB の plain listing は全列投影なので
+  // 常に届くが、OPFS の plain listing はこの投影が唯一の供給路 — ここに
+  // ないと私物記録が fail-open で通知され・開かれ・再生に表示されていた
+  // (PBI 2026-10-22-04 第三者レビュー P0-1)。SEARCH_COLUMNS には載せない:
+  // 検索 SELECT は出さず、リスト幅と SELECT 幅の一致を保つため。
+  'masked_count',
 ] as const;
 
 export const BROWSING_LOG_COLUMNS_SQL = BROWSING_LOG_COLUMNS.join(', ');
@@ -90,6 +97,9 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     case 'obsidian_synced':
     case 'gist_synced':
     case 'fallback_triggered':
+    // 私物判定カウントは整数列: 既定分支と同一の Number 強制を明示する
+    // (リマインダー候補・通知 click・再生パネルの私物拒否がこの列を読む)。
+    case 'masked_count':
       return Number(value);
     case 'url':
     // Audit provider is TEXT and shares url's unconditional String coercion:

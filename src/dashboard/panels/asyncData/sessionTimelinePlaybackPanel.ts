@@ -28,6 +28,7 @@ import {
   type PlaybackLabels,
 } from '../../sessionTimelinePanel.js';
 import { getMessageOr } from '../../../utils/i18n.js';
+import { clearElement } from '../../../utils/domClear.js';
 import { MAX_QUERY_ROWS } from '../../../utils/computeLimits.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { createAsyncDataPanelLifecycle } from './asyncDataPanelLifecycle.js';
@@ -60,9 +61,7 @@ export function createSessionTimelinePanel(): PanelLifecycle {
     notices: [],
     isReady: () => listEl !== null,
     resetOutput: () => {
-      if (listEl) {
-        while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
-      }
+      clearElement(listEl);
     },
     load: async ({ isStale }) => {
       if (!listEl) return;

@@ -14,6 +14,8 @@ import {
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
+  MAX_SCROLL_RATIO_PERCENT,
+  MAX_VISIT_DURATION_SECONDS,
 } from '../../../utils/limits.js';
 
 export interface CommonStorageFields {
@@ -101,6 +103,25 @@ function clampCleansedReasons(value: unknown): string[] | null {
   return kept.length > 0 ? kept : null;
 }
 
+/**
+ * Second-layer guard for the engagement metrics (PBI 2026-10-23-02), the same
+ * shape as clampByteStat: the message validator rejects malformed wire values,
+ * but internal-only paths never cross it, so the mapper clamps instead of
+ * trusting bare casts. Bounds are shared with the validator (src/utils/limits)
+ * so the two layers cannot drift apart. A garbage value collapses to NULL —
+ * an unread metric is honest, a wrong one would violate the schema CHECK and
+ * lose the record.
+ */
+function clampVisitDuration(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.min(Math.max(value, 0), MAX_VISIT_DURATION_SECONDS);
+}
+
+function clampScrollRatioPercent(value: unknown): number | null {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  return Math.min(Math.max(value, 0), MAX_SCROLL_RATIO_PERCENT);
+}
+
 export function extractCommonStorageFields(context: RecordingContext): CommonStorageFields {
   const { data, privacyResult, aiDuration, obsidianDuration, extractedSentencesBytes, extractedSentencesOriginalBytes } = context;
   // Typed context access: RecordingData / PrivacyPipelineResult already
@@ -152,10 +173,11 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     extractedSentencesOriginalBytes: extractedSentencesOriginalBytes ?? null,
     cleansedReason: data.cleansedReason ?? null,
     recordType: data.recordType ?? 'auto',
-    // PBI 2026-10-23-02: engagement metrics ride the wire payload. The `??
-    // null` keeps a manual record (no metrics) saving NULL, not 0.
-    visitDurationSeconds: data.visitDurationSeconds ?? null,
-    scrollRatioPercent: data.scrollRatioPercent ?? null,
+    // PBI 2026-10-23-02: engagement metrics ride the wire payload. The clamp
+    // is the second-layer guard (the validator rejects malformed wire values);
+    // the `?? null` result keeps a manual record (no metrics) saving NULL.
+    visitDurationSeconds: clampVisitDuration(data.visitDurationSeconds),
+    scrollRatioPercent: clampScrollRatioPercent(data.scrollRatioPercent),
   };
 
   return {

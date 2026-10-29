@@ -38,16 +38,20 @@ import type { SqliteValue } from '../sqliteEngine.js';
 import type { BrowsingLogRecord, SearchResult } from '../../utils/sqlite-types.js';
 
 describe('rowCodec column lists', () => {
-  it('BROWSING_LOG_COLUMNS is the legacy plain-list set plus the diagnostic and trail columns', () => {
+  it('BROWSING_LOG_COLUMNS is the legacy plain-list set plus the diagnostic, trail and privacy columns', () => {
     expect([...BROWSING_LOG_COLUMNS]).toEqual([
       'id', 'url', 'title', 'summary', 'tags', 'created_at', 'domain',
       'visit_duration', 'scroll_ratio', 'is_starred', 'fallback_reason',
       // PBI 03: the trail renders from the list projection too.
       'nav_source_url', 'search_query',
       'is_deleted', 'obsidian_synced', 'gist_synced',
+      // PBI 2026-10-22-04 review: the privacy rejection (masked_count > 0)
+      // reads this column from the plain-list projection, so the OPFS path
+      // must supply it too (the IDB full listing already did).
+      'masked_count',
     ]);
     expect(BROWSING_LOG_COLUMNS_SQL).toBe(
-      'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason, nav_source_url, search_query, is_deleted, obsidian_synced, gist_synced',
+      'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason, nav_source_url, search_query, is_deleted, obsidian_synced, gist_synced, masked_count',
     );
     expect(PLAIN_LIST_COLUMNS).toBe(BROWSING_LOG_COLUMNS_SQL);
   });
