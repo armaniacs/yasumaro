@@ -197,8 +197,16 @@ SPA再スキャンは壁に触れず実装した。CSP・マニフェスト・WA
 ### 正直に残すもの(未完了・未検証)
 
 - PDF記録のBDDシナリオは未達(壁の実測のみ記録)
-- 変更後ビルド物のバンドル実測は未実施(制約で再ビルド不可のため次回ビルド時に確認)
-- E2E通し(記録→検索、理由表示の通し)は headless 環境で実行不可
+- ~~変更後ビルド物のバンドル実測は未実施~~ → 完了(2026-10-30: 6.9.62 ビルドで `check-bundle-size` 7.74MB < 上限15MB)
+- ~~E2E通し(記録→検索、理由表示の通し)は headless 環境で実行不可~~ → 完了(2026-10-30: `testDir/e2e/capture-late-rescan.spec.ts` 2 passed・`--repeat-each=3` 6 passed。 headed E2E 実行可能性を本セッションで実証)
 - コードレビューはセルフレビューのみ(他者レビュー未実施)
 - 理由コード表への DRIVE_BY 追加なし(DOMAIN_BLOCKED 等の表外コードは未登録表示のまま)
 - 1頁あたりの再送上限2回・しきい値 max(2000字, 全文)は初版定数(運用データで再調整の余地あり)
+
+### 追記(2026-10-30・E2E通しと発見)
+
+- E2E通し: `testDir/e2e/capture-late-rescan.spec.ts`(+フィクスチャページ `late-rescan-page.html`)。シナリオA=SPA遅延再スキャン通し(初期記録→本文成長→再アーム→outcome 再確定)、シナリオB=対象外ページの理由表示通し(domain_blacklist シード→DOMAIN_BLOCKED→診断パネル表示)。通常/3回リピートとも green、固定時間待ちなし
+- 発見1(契約ギャップ・後続PBI候補): 同一日重複ゲート(decideDuplicate: 同一UTC日+同一URL)により再アーム後の再送は常に `{success:true, skipped:true, reason:'same_day'}`。遅延コンテンツは同日は保存行へ到達せず、初回抜粋のまま。outcome コード('recorded')の再確定でのみ成立。修正案: lateRescanCount>0 の再送を重複バイパス扱い、または既存行の内容更新(保存行の意味論変更につき owner 判断を含む設計変更)
+- 発見2(診断ギャップ・小修正): ~~PRIVATE_PAGE_DETECTED(confirmationRequired=false)は LAST_CAPTURE_OUTCOME を永続化しない~~ → 完了(2026-10-30: visitReporter の確定経路を commitSettled 経由に変更し PRIVATE_PAGE_DETECTED の outcome を永続化。unit 3件追加・repeats=20 green)
+- 発見3(診断ギャップ・小修正): ~~DOMAIN_BLOCKED は CAPTURE_FAILURE_REASONS 未収録でパネルは "Internal / unlisted" 表示~~ → 完了(2026-10-30: テーブルに {code:'DOMAIN_BLOCKED', category:'permission'} 収録、E2E で unlisted 接尾辞消滅を pin)。i18nKey captureFailure_domainBlocked の ja/en wiring は後続(messages.json 共有編集のため)
+- プローブ拡張は未実施(ブロッカー: contentKernel.ts の2呼び出し箇所+validators.ts の厳密キー許可リスト+messageTypes.ts の inline ペイロード拡張が必須。本 spec は LAST_CAPTURE_OUTCOME 経路で実装済み)

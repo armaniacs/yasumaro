@@ -125,8 +125,13 @@ describe('VisitReporter policy matrix', () => {
     expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('returns without confirm when confirmation is not required', async () => {
-    const deps = makeDeps();
+  it('commits without confirm when confirmation is not required', async () => {
+    const persisted: Array<{ code: string; at: number }> = [];
+    const deps = makeDeps({
+      persistOutcome: (outcome) => {
+        persisted.push(outcome);
+      },
+    });
     deps.sender.sendMessageWithRetry.mockResolvedValueOnce({
       success: false,
       error: 'PRIVATE_PAGE_DETECTED',
@@ -135,6 +140,11 @@ describe('VisitReporter policy matrix', () => {
     await new VisitReporter(deps).report();
 
     expect(deps.confirmDialog).not.toHaveBeenCalled();
+    // PBI 2026-10-22-06: the settled refusal reaches the diag outcome through
+    // the same single commit point as every other settled visit.
+    expect(deps.pageState.isValidVisitReported).toBe(true);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
   });
 
   it('confirms and force-retries with the full payload (PBI 2026-09-15-14: no stats-drop on force)', async () => {

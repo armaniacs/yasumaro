@@ -42,6 +42,11 @@ export interface CaptureFailureReason {
 export const CAPTURE_FAILURE_REASONS: readonly CaptureFailureReason[] = [
   { code: 'PRIVATE_PAGE_DETECTED', category: 'permission', i18nKey: 'captureFailure_privatePage' },
   { code: 'domain_excluded', category: 'permission', i18nKey: 'captureFailure_domainExcluded' },
+  // PBI 2026-10-22-06: the worker's domain-filter refusal code (E2E evidence:
+  // a blacklisted page settles with error 'DOMAIN_BLOCKED' and previously
+  // displayed as an unlisted internal reason). Permission by the same reading
+  // as PRIVATE_PAGE_DETECTED - the user's own domain filter excluded the page.
+  { code: 'DOMAIN_BLOCKED', category: 'permission', i18nKey: 'captureFailure_domainBlocked' },
   { code: 'csp_blocked', category: 'csp', i18nKey: 'captureFailure_cspBlocked' },
   { code: 'non-html', category: 'kind', i18nKey: 'captureFailure_nonHtml' },
   { code: 'unsupported-kind', category: 'kind', i18nKey: 'captureFailure_unsupportedKind' },

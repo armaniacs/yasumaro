@@ -201,19 +201,24 @@ export class VisitReporter {
                     this.commitSettled(extractResult.content.length, response);
                     return;
                 }
-                    if (response.error === 'PRIVATE_PAGE_DETECTED') {
-                        if (!response.confirmationRequired) {
-                            pageState.isValidVisitReported = true;
-                            return;
-                        }
-                        const statusCode = reasonToStatusCode(response.reason);
-                        const messageKey = statusCodeToMessageKey(statusCode);
-                        const getReasonLabel = this.deps.getReasonLabel ?? defaultGetReasonLabel;
-                        const reasonLabel = getReasonLabel(
-                            messageKey,
-                            legacyReasonMessageKey(response.reason),
-                            response.reason || 'unknown',
-                        );
+                if (response.error === 'PRIVATE_PAGE_DETECTED') {
+                    if (!response.confirmationRequired) {
+                        // PBI 2026-10-22-06: the settled refusal commits through
+                        // the same single point as every other settled visit.
+                        // Without this persist the diagnostics panel kept
+                        // showing the previous outcome - a silent failure
+                        // (沈黙の失敗) for a page the worker refused to record.
+                        this.commitSettled(extractResult.content.length, response);
+                        return;
+                    }
+                    const statusCode = reasonToStatusCode(response.reason);
+                    const messageKey = statusCodeToMessageKey(statusCode);
+                    const getReasonLabel = this.deps.getReasonLabel ?? defaultGetReasonLabel;
+                    const reasonLabel = getReasonLabel(
+                        messageKey,
+                        legacyReasonMessageKey(response.reason),
+                        response.reason || 'unknown',
+                    );
                     // showPrivacyConfirmDialog shares the confirmDialog seam's
                     // signature, so no cast is needed to unify the two.
                     const confirm = this.deps.confirmDialog

@@ -37,7 +37,11 @@ vi.mock('../../utils/logger/api.js', async () =>
   }),
 );
 
-function makeHarness(response: unknown, content = 'hello world') {
+function makeHarness(
+  response: unknown,
+  content = 'hello world',
+  confirmResult = true,
+) {
   const persisted: LastCaptureOutcome[] = [];
   const pageState = {
     isValidVisitReported: false,
@@ -65,7 +69,7 @@ function makeHarness(response: unknown, content = 'hello world') {
     pageState: pageState as never,
     extractAndCommit: vi.fn(() => ({ content })) as never,
     sender: sender as never,
-    confirmDialog: vi.fn(async () => true),
+    confirmDialog: vi.fn(async () => confirmResult),
     getReasonLabel: vi.fn((_k: string, _f: string, fallback: string) => fallback),
     // Instant retry wait: the production backoff is injectable so tests
     // never wait in real time (AGENTS.md wait policy).
@@ -109,6 +113,58 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
 
     expect(persisted).toHaveLength(1);
     expect(persisted[0]?.code).toBe('rate_limited');
+  });
+
+  it('persists PRIVATE_PAGE_DETECTED when no confirmation is required', async () => {
+    // PBI 2026-10-22-06: the settled refusal commits through the same single
+    // point as every other settled visit. Before this fix the private path
+    // set the flag directly and never persisted, so the diagnostics panel
+    // kept showing the previous outcome (沈黙の失敗).
+    const { reporter, pageState, persisted } = makeHarness({
+      success: false,
+      error: 'PRIVATE_PAGE_DETECTED',
+      confirmationRequired: false,
+    });
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
+    expect(typeof persisted[0]?.at).toBe('number');
+  });
+
+  it('persists PRIVATE_PAGE_DETECTED when the user declines the confirmation', async () => {
+    // A declined confirmation is terminal for this page view; the outcome is
+    // a settled refusal and must reach the diagnostics panel either way.
+    const { reporter, pageState, persisted } = makeHarness(
+      {
+        success: false,
+        error: 'PRIVATE_PAGE_DETECTED',
+        reason: 'cache-control',
+        confirmationRequired: true,
+      },
+      'hello world',
+      false,
+    );
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
+  });
+
+  it('keeps the recorded success path unchanged alongside the private persist', async () => {
+    // The private-path fix must not disturb the existing settled contract:
+    // a success still persists exactly one 'recorded' record with the same
+    // baseline.
+    const { reporter, pageState, persisted } = makeHarness({ success: true });
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('recorded');
   });
 
   it('does not count a transport failure as settled (gate stays open, no outcome)', async () => {

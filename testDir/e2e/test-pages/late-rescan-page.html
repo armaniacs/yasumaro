@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head><title>E2E Test - SPA Late Rescan</title></head>
+<body>
+  <!--
+    Fixture for the SPA late-content re-scan E2E (PBI 2026-10-22-06).
+    The initial text stays short on purpose: the re-arm threshold is
+    max(2000 chars, full text), so a short page pins the 2000-char branch of
+    the contract. The spec appends the late batch to the body (outside the
+    fixed-height main) via page.evaluate, so the page actually grows in
+    height and a real wheel input fires a trusted scroll event; the re-arm
+    verdict reads document.body.innerText, which counts the appended text
+    wherever it lives.
+  -->
+  <main style="min-height: 300vh; padding: 2rem;">
+    <h1>SPA Late Rescan Fixture</h1>
+    <article id="late-rescan-article">
+      <p>Initial excerpt before the SPA appends its late-loaded batch. The re-scan contract re-opens the gate only after the page grows past the threshold.</p>
+    </article>
+  </main>
+</body>
+</html>

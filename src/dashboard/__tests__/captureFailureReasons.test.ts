@@ -20,6 +20,14 @@ describe('classifyCaptureFailure (対象外の理由表示: 沈黙の失敗に�
       known: true,
     });
     expect(classifyCaptureFailure('domain_excluded').category).toBe('permission');
+    // PBI 2026-10-22-06: the worker's domain-filter refusal joined the table
+    // (E2E evidence). Listed means the diagnostics panel renders the
+    // permission category without the unlisted-reason suffix.
+    expect(classifyCaptureFailure('DOMAIN_BLOCKED')).toEqual({
+      code: 'DOMAIN_BLOCKED',
+      category: 'permission',
+      known: true,
+    });
   });
 
   it('classifies the CSP / kind / consent / storage / duplicate codes', () => {
