@@ -296,7 +296,7 @@ ollama list
 詳細は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) と [クレンジングの順番](CLEANSING_ORDER.md) を参照してください。
 
 #### 7. ダッシュボード（履歴管理）
-`Dashboard → SQLite History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。
+`Dashboard → SQLite History` タブで、記録されたURLの履歴を確認・管理できます。履歴データはデバイス上の SQLite DB（OPFS）にローカル保存されるため、Obsidian未設定でも利用できます。サイドバーの **セッション再生** パネルで、読みかけたページの足跡を再生し、翌日に読みかけを通知できます（詳細は「その他の機能」の「セッション再生」を参照）。
 
 **主な機能**:
 - **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
@@ -595,7 +595,7 @@ In `Dashboard → AI Summary Cleansing`, configure the noise removal applied bef
 See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) and [Cleansing Order](CLEANSING_ORDER.md) for details.
 
 #### 7. Dashboard (History Management)
-In the `Dashboard → SQLite History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured.
+In the `Dashboard → SQLite History` tab, you can view and manage your recording history. History data is stored locally in a SQLite DB (OPFS) on your device, so it works even without Obsidian configured. The sidebar's **Session Playback** panel replays the trail of pages you walked away from and reminds you of unread ones on the following day (see "Session Playback" under Additional Features).
 
 **Key features**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
@@ -658,6 +658,31 @@ Each history entry shows a badge indicating which privacy mode was used when it 
 - 出現回数上位50件のタグを表示（多数の場合は「上位N件のみ表示中」を明示）
 - 外部ライブラリ不要の軽量 SVG 描画で即座に表示
 
+#### セッション再生（読みかけの復元）
+`Dashboard → セッション再生` パネルで、読みかけたページの足跡を再生できます。
+
+**パネルの使い方**
+- 1 つの検索または 1 つのリンクからたどったページが「セッション」としてまとまって表示されます
+- 見出しの読み方: 「セッション 1（検索語、3 ページ）」= 1 番目のセッションが、検索語を起点に 3 ページをまとめたもの（リンクからたどった場合は「リンク元」表記）
+- 各ページの「記録を開く」ボタンで履歴パネルにそのドメインでフィルタして移動、タイトルのリンクで元のページを開けます
+- 私物判定された記録（マスキングされた内容）は再生に表示されません
+
+**読みかけ通知**
+- 前日までに読みかけたページ（スクロール率が 90% 未満で、検索・リンクの足跡があるページ）を翌日に通知します
+- 通知本文はタイトルとドメインのみで、完全な URL は含みません
+- 通知のボタン:
+  - 「今日は見ない」: 当日は通知が消えます。翌日以降は再び通知対象に戻ります
+  - 「今後表示しない」: その記録は永久に通知対象から外れます
+  - 「後で通知」（スヌーズ）には未対応です（Chrome の通知ボタンは 2 個まで、時刻指定ができないため）
+- 通知の本文をクリック: 元のページを開き、Obsidian の Daily Note（`# 🌐 ブラウザ閲覧履歴` セクション）に `- [ ] [タイトル](URL)` の TODO 行を追記します
+
+**通知が来ないときの注意**
+- 通知は 1 日 1 回までです（当日すでに通知済みの場合は再通知しません）
+- 読み終えたページ（スクロール率 90% 以上）と私物判定された記録は対象外です
+- 検索語・リンク元の足跡がない単独ページはセッションとして扱われないため対象外です
+- 記録が削除・退避済みの場合は対象外です
+- Daily Note への追記に失敗した場合（Obsidian に未接続など）、通知は消えません。もう一度通知をクリックすると TODO の追記を再試行できます
+
 #### GitHub Gist 連携
 Obsidian の代わりに、または併用して GitHub Gist にクラウド同期できます。
 - `Dashboard → Tools → Export / Import` パネル内の「GitHub Gist Sync」セクションから設定
@@ -703,6 +728,31 @@ In `Dashboard → SQLite History → Related Graph`, you can visualize the co-oc
 - Click on a node to automatically filter pages with that tag
 - Displays the top 50 tags by frequency (indicates "showing top N only" if there are more)
 - Lightweight SVG rendering without external libraries for fast rendering
+
+#### Session Playback (Unread Page Restoration)
+The `Dashboard → Session Playback` panel replays the trail of pages you walked away from.
+
+**Using the panel**
+- Pages visited from one search or one link are grouped into a "session"
+- Reading a heading: "Session 1 (search query, 3 pages)" = the first session groups 3 pages under one search query (pages reached via a link show "link source")
+- Each page's "Open record" button jumps to the history panel filtered by that domain; the title link opens the original page
+- Records judged private (masked content) are never shown in the playback
+
+**Unread page reminders**
+- Pages left unread by the end of a day (scroll ratio below 90%, with a search or link trail) are reminded on the following day
+- The notification body carries the title and the host only, never the full URL
+- Notification buttons:
+  - "Not today": the notification clears for the rest of the day; the record becomes eligible again tomorrow
+  - "Don't remind me": the record is excluded from future reminders permanently
+  - Snooze ("remind later") is not supported (Chrome allows at most 2 notification buttons and no time picker)
+- Clicking the notification body opens the original page and appends one `- [ ] [title](url)` TODO line to the Obsidian Daily Note (under the `# 🌐 ブラウザ閲覧履歴` section)
+
+**When the notification doesn't arrive**
+- At most one reminder per day (a day that already fired stays quiet until tomorrow)
+- Fully read pages (scroll ratio 90% or above) and private-judged records are excluded
+- A standalone page with neither a search query nor a link source is not a session and is excluded
+- Records that were deleted or archived are excluded
+- When the Daily Note append fails (for example Obsidian is not connected), the notification stays on screen: clicking it again retries the TODO append
 
 #### GitHub Gist Integration
 Sync your history to GitHub Gist instead of, or in addition to, Obsidian.

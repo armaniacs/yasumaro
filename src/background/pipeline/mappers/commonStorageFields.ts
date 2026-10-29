@@ -172,7 +172,16 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
         // PBI 2026-10-23-02: the saved row carries the wire metrics, so the
         // NULL常态 is resolved for valid visits (manual records stay NULL).
         visit_duration: fields.visitDurationSeconds,
-        scroll_ratio: fields.scrollRatioPercent,
+        // Contract mismatch fix (discovered in PBI 2026-10-22-04 O5): the wire
+        // field is a PERCENTAGE (visitReporter sends pageState
+        // .maxScrollPercentage, 0..100) while every downstream consumer reads
+        // a FRACTION — browsingLogSchema's CHECK requires scroll_ratio 0..1
+        // and the reminder aggregate's UNREAD_SCROLL_RATIO is 0.9. Storing the
+        // raw percentage violated the CHECK (the insert failed, the record was
+        // lost) or, without the CHECK, would have read every scrolled page as
+        // already read. The mapper is the unit boundary: normalize here, once,
+        // so the wire keeps its honest name and the column keeps its schema.
+        scroll_ratio: fields.scrollRatioPercent !== null ? fields.scrollRatioPercent / 100 : null,
         is_starred: 0,
         is_deleted: 0,
         content: contentEnabled ? fields.content : null,

@@ -84,7 +84,7 @@ describe('SessionReminderAlarms', () => {
   let storage: StoragePort;
   let alarms: FakeAlarmPort;
   let clock: Clock;
-  let shown: Array<{ id: string; title: string; message: string }>;
+  let shown: Array<{ id: string; payload: { type: string; title: string; message: string; buttons?: Array<{ title: string }> } }>;
   let queried: number;
 
   beforeEach(() => {
@@ -96,7 +96,7 @@ describe('SessionReminderAlarms', () => {
     queried = 0;
   });
 
-  function createService(candidates: ReminderCandidateLike[]) {
+  function createService(candidates: ReminderCandidateLike[], actionLabels?: { dismiss: string; discard: string }) {
     return new SessionReminderAlarms({
       alarms,
       clock,
@@ -105,10 +105,11 @@ describe('SessionReminderAlarms', () => {
         queried += 1;
         return Promise.resolve(candidates);
       },
-      show: (id, title, message) => {
-        shown.push({ id, title, message });
+      show: (id, payload) => {
+        shown.push({ id, payload });
       },
       iconUrl: () => 'icon.png',
+      ...(actionLabels !== undefined ? { actionLabels } : {}),
     });
   }
 
@@ -126,11 +127,24 @@ describe('SessionReminderAlarms', () => {
       await createService([makeCandidate(11)]).checkToday();
       expect(shown).toHaveLength(1);
       expect(shown[0]?.id).toBe('session-reminder-11');
-      expect(shown[0]?.message).toContain('Page 11');
+      expect(shown[0]?.payload.message).toContain('Page 11');
       const stored = await storage.local.get<Record<string, { lastFiredDay?: string | null }>>([
         SESSION_REMINDER_STORAGE_KEY,
       ]);
       expect(stored[SESSION_REMINDER_STORAGE_KEY]?.lastFiredDay).toBe(TODAY);
+    });
+
+    it('carries the action labels as the notification buttons (O2 釦)', async () => {
+      await createService([makeCandidate(11)], { dismiss: 'Not today', discard: "Don't remind me" }).checkToday();
+      expect(shown[0]?.payload.buttons).toEqual([
+        { title: 'Not today' },
+        { title: "Don't remind me" },
+      ]);
+    });
+
+    it('omits the buttons when no action labels are supplied', async () => {
+      await createService([makeCandidate(11)]).checkToday();
+      expect(shown[0]?.payload.buttons).toBeUndefined();
     });
 
     it('fires at most once per day without querying candidates again', async () => {

@@ -188,6 +188,36 @@ describe('extractCommonStorageFields', () => {
 
       expect(record.domain).toBe('example.com');
     });
+
+    it('normalizes the wire scroll percentage into the fraction the schema CHECK requires', () => {
+      // The wire sends a percentage (visitReporter: pageState
+      // .maxScrollPercentage, 0..100) while browsingLogSchema's CHECK requires
+      // scroll_ratio 0..1 and the reminder aggregate's UNREAD_SCROLL_RATIO is
+      // 0.9. Storing the raw percentage violated the CHECK (the insert failed,
+      // the record was lost) — the mapper is the unit boundary.
+      const context = makeContext({
+        data: {
+          title: 'T',
+          url: 'https://example.com/page',
+          content: 'body',
+          scrollRatioPercent: 72,
+        } as RecordingContext['data'],
+      });
+      const common = extractCommonStorageFields(context);
+
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.scroll_ratio).toBe(0.72);
+    });
+
+    it('keeps scroll_ratio NULL when the wire carries no metrics (manual record)', () => {
+      const context = makeContext();
+      const common = extractCommonStorageFields(context);
+
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.scroll_ratio).toBeNull();
+    });
   });
 
   describe('toMetadataPatch', () => {

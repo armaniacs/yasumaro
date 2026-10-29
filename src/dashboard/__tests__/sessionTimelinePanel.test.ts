@@ -9,6 +9,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
   buildPlaybackModel,
+  formatPlaybackHeading,
   isPlaybackExcluded,
   renderPlayback,
   toSessionTimelineRecord,
@@ -120,6 +121,47 @@ describe('sessionTimelinePanel', () => {
       renderPlayback(container, model.sessions, { onOpenRecord: () => undefined });
       expect(container.querySelectorAll('.session-playback-step a')).toHaveLength(1);
       expect(container.textContent).toContain('X');
+    });
+
+    it('renders the heading through the i18n template with localized basis labels (R-06 残)', () => {
+      const container = document.createElement('div');
+      const model = buildPlaybackModel([
+        makeEntry({ id: 1, url: 'https://example.com/a', search_query: 'q', created_at: 1000 }),
+        makeEntry({ id: 2, url: 'https://example.com/b', search_query: 'q', created_at: 2000 }),
+      ]);
+      renderPlayback(container, model.sessions, { onOpenRecord: () => undefined }, {
+        emptySessions: 'empty',
+        openRecord: 'open',
+        fromSource: 'From',
+        sessionHeading: 'セッション {index}（{basis}、{count} ページ）',
+        basisSearchQuery: '検索語',
+        basisNavSourceUrl: 'リンク元',
+      });
+      const heading = container.querySelector('.session-playback-heading');
+      expect(heading?.textContent).toBe('セッション 1（検索語、2 ページ）');
+    });
+
+    it('renders the nav-source basis label for link trails', () => {
+      const container = document.createElement('div');
+      const model = buildPlaybackModel([
+        makeEntry({ id: 1, url: 'https://example.com/a', nav_source_url: 'https://example.com/ref', created_at: 1000 }),
+        makeEntry({ id: 2, url: 'https://example.com/b', nav_source_url: 'https://example.com/ref', created_at: 2000 }),
+      ]);
+      renderPlayback(container, model.sessions, { onOpenRecord: () => undefined });
+      const heading = container.querySelector('.session-playback-heading');
+      expect(heading?.textContent).toBe('Session 1 (link source, 2 pages)');
+    });
+  });
+
+  describe('formatPlaybackHeading', () => {
+    it('substitutes every placeholder and keeps unknown ones verbatim', () => {
+      expect(
+        formatPlaybackHeading('Session {index} ({basis}, {count} pages) {unknown}', {
+          index: 2,
+          basis: 'search query',
+          count: 3,
+        }),
+      ).toBe('Session 2 (search query, 3 pages) {unknown}');
     });
   });
 });

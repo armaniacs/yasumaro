@@ -69,6 +69,14 @@ export interface ReminderNotificationInput {
   title: string;
   url: string;
   iconUrl: string;
+  /**
+   * Optional action labels for the notification's buttons. Absent = no
+   * buttons (the tests keep the 3-field input). Chrome allows at most 2
+   * buttons per notification, so the store's 3 actions map to the click
+   * (open) plus dismiss and discard; snooze needs a time picker and stays a
+   * later slice (PBI 2026-10-22-04 O2).
+   */
+  actions?: { dismiss: string; discard: string };
 }
 
 /**
@@ -82,6 +90,8 @@ export function reminderNotificationOptions(input: ReminderNotificationInput): {
   iconUrl: string;
   title: string;
   message: string;
+  buttons?: Array<{ title: string }>;
+  requireInteraction?: boolean;
 } {
   let host = '';
   try {
@@ -95,5 +105,14 @@ export function reminderNotificationOptions(input: ReminderNotificationInput): {
     iconUrl: input.iconUrl,
     title: 'Unread page reminder',
     message: `Continue reading "${input.title}"${where}?`,
+    // The reminder must outlive the user's glance (requireInteraction, the
+    // privacy-confirm convention) and carries the two non-click actions;
+    // a click on the body itself opens the record (sessionReminderClick.ts).
+    ...(input.actions
+      ? {
+          buttons: [{ title: input.actions.dismiss }, { title: input.actions.discard }],
+          requireInteraction: true,
+        }
+      : {}),
   };
 }

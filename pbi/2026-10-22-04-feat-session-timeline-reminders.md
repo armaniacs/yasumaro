@@ -44,13 +44,27 @@ Scenario: 読みかけを思い出す
 - R-06 コードレビュー(code-review スキル、自己レビュー): 所見3件を修正。(1) 脆弱性: validateReminderState の `records[key] = valid` が JSON 由来 `__proto__` キーでプロトタイプを書換える → isUnsafeRecordKey で除外(__proto__/constructor/prototype)しテスト追加。(2) 正確性: 再生ステップの time に dateTime 欠落 → ISO dateTime 付与。(3) 保守性: 日ゲートの二重実装ドリフト → 集計テスト側に一致テスト追加。残 accept: 二重発火 TOCTOU(単一SW想定で低)、見出しの i18n 固定英語(O1 で鍵化)、snooze NaN の直接構築( load 経路では検証済み)。
 - R-07 再生ビュー操作手順(草案、docs/ 制約のため本PBIに記録): (1) ダッシュボードのパネル一覧から「Session playback」を開く(配線 O1 後に有効)。(2) セッション見出しは「順番 (根拠列, 件数)」、trail 行は検索語または遷移元を示す。手順は訪問順(古い順)に並ぶ。(3) 題名リンクで元URLを別タブに開く。(4) 「Open record」釦で元の履歴記録に飛ぶ。(5) 読みかけ候補は通知1日1件で届く。今日見ない場合は dismiss(翌日再通知)、時刻指定は snooze、不要は discard。破棄の取消は v1 なし。再訪問は新しい記録として再候補になる。(6) 通知が来ないとき: プライベート判定記録は対象外、trail 列なし記録はセッションに入らない旨の空理由が表示される。
 - R-08 E2E: `testDir/e2e/session-timeline-reminders.spec.ts` 新規(headless、--repeat-each=3 --retries=0 --workers=1)。2件とも headless では fixture の fixme で skip(MV3 SW が headless 未対応 - extension.fixture の HEADLESS_FIXME_MESSAGE、headed 実行は本セッション制約で禁止)。内容: (a) scroll_ratio 付き6行が履歴パネル経路を流れる、(b) 実 chrome.storage.local での状態キー往復。通し(調査→中断→翌日→通知→再訪)は O5: import 経路が trail 2列を落とす(maintenanceBatchHandler.ts 調査済み)ため trail 付き seed が共有 handler 変更なしに不可能。
-- 残 O1: dashboard registry 配線(パネル登録 + HTML + i18n 鍵)。最小片: 本モジュールの renderPlayback 呼出しと onOpenRecord→履歴 navigate の1経路。
-- 残 O2: service-worker 配線(alarm listener→checkToday、通知 click→URL/記録を開く、釦→dismiss/snooze/discard)。最小片: alarm listener + click 開封のみ。
-- 残 O3: 候補 provider(SQLite→集計→ReminderCandidate 写像の SW 側実装)。最小片: 日ゲート成立時だけ読む問合せ1本。
-- 残 O4: Daily Note TODO 化(BDD 後段)。最小片: 通知 click からの1行追記。
-- 残 O5: E2E通し(O1-O3 完了後、trail 付き seed は実 navigation + nav-trail consent 経路で)。
-- 残 O6: 第三者レビュー(今回は自己レビューのみ)。
+- 残 O1: dashboard registry 配線(パネル登録 + HTML + i18n 鍵)。最小片: 本モジュールの renderPlayback 呼出しと onOpenRecord→履歴 navigate の1経路。→ 完了(2026-10-30・下記実装記録)
+- 残 O2: service-worker 配線(alarm listener→checkToday、通知 click→URL/記録を開く、釦→dismiss/snooze/discard)。最小片: alarm listener + click 開封のみ。→ 完了(2026-10-30・snooze は Chrome の釦2件上限で非表現・後述)
+- 残 O3: 候補 provider(SQLite→集計→ReminderCandidate 写像の SW 側実装)。最小片: 日ゲート成立時だけ読む問合せ1本。→ 完了(2026-10-30)
+- 残 O4: Daily Note TODO 化(BDD 後段)。最小片: 通知 click からの1行追記。→ 完了(2026-10-30・追記失敗時は通知を消さない)
+- 残 O5: E2E通し(O1-O3 完了後、trail 付き seed は実 navigation + nav-trail consent 経路で)。→ 完了(2026-10-30・trail 列の実 navigation 実測まで。実通知の実クリック表示は owner 手動)
+- 残 O6: 第三者レビュー(今回は自己レビューのみ)。→ 統合側で実施(2026-10-30)
 - テスト: 上記5ファイル計41件グリーン(内訳: 集計10・panel8・store9・notify9・alarms5)。`npx vitest run <5 files> --repeats=20` パス。`npx eslint` 対象9件クリーン。`npx tsc --noEmit` は自ファイル無エラー(他所の既存エラーは不触)。full validate / build / headed E2E / commit は制約どおり未実行。
+
+## 実装記録（2026-10-30・O1-O5 統合実装）
+- O1 パネル登録: `src/dashboard/panels/asyncData/sessionTimelinePlaybackPanel.ts` 新設（`createSessionTimelinePanel()`、fetchPeriodRows→isStale→renderPlayback、onOpenRecord→`tryNavigateTyped('panel-sqlite-history', {searchDomain})` 1経路）。`panelCatalog.ts` data セクション末尾に `panel-session-timeline` 行+factory。`entrypoints/options/index.html` サイドバーボタン+section。`messages.json` 両 locale に sessionTimeline* 9 種。見出しテンプレート `formatPlaybackHeading()` で R-06 残「見出しの i18n 固定英語」を鍵化（未知プレースホルダは verbatim で壊れない）
+- O2 SW 配線: `alarmRegistry.ts` に行 `{name: SESSION_REMINDER_ALARM_NAME, install: start, run: checkToday}`（サービスがアラーム所有・registry が dispatch 所有）。`compositionManifest.ts` に `sessionReminderAlarms`（queryCandidates=SW 側 provider、show は唯一の chrome.notifications.create 経由 NotificationHelper 経由、iconUrl、actionLabels）。`service-worker.ts` に click/釦 guarded リスナ（自プレフィックスでガード）。`sessionReminderClick.ts` 新設: 通知 ID 解析（厳密 digit+往復一致・外来通知は対象外）→記録 DB 再読で URL 取得→私物(masked_count>0)拒否→非http(s)拒否→openTab。釦0=dismiss（当日非表示・翌日再適格）、釦1=discard（恒久除外）、状態永続化成功後にのみ通知 clear
+- O3 候補 provider: `sessionReminderCandidates.ts` 新設。1 クエリ（day gate が閉じている間は呼ばれない既存 checkToday 契約を維持）→fail-closed 行マッピング→古い順→上限 3。`REMINDER_UNREAD_SCROLL_RATIO=0.9`/`REMINDER_CANDIDATES_MAX=3` は dashboard aggregate と両面 parity テストで固定（レイヤー違反 import なし）
+- O4 Daily Note TODO: 通知 click 成功後に `buildReminderTodoLine`（sanitizeForMarkdownLinkText+sanitizeUrlForMarkdownTarget）で追記。追記失敗は logWarn のみで**通知は消さない**（追記は追加動作・再試行可能）
+- O5 E2E通し: nav-trail consent を seed で有効化→同一タブで実 navigation（検索語脚は外部ネットワーク依存のため nav_source_url 脚で同一 trail パイプラインを行使する判断を spec コメントに記載）→trail 列が記録に入ることを実 SQLite query で検証（nav_source_url 実測一致）。alarm は compositionManifest の install が武装のみのため alarm 名で手動発火する設計を spec コメントに記載。実通知の実クリック表示は owner 手動（chrome.notifications に click 発火 API なし・fixme/skip は足していない）
+- docs: `docs/SETUP_GUIDE.md` に「セッション再生（読みかけの復元）/ Session Playback」小節（ja/en。使い方・見出しの読み方・通知釦 dismiss/discard・snooze 未対応の注記・通知が来ないときの注意）。文字種ゲート 0
+- snooze 非表現の理由: Chrome の通知釦上限 2 件・時刻指定不可のため。dismiss/discard のみ実装し、snooze（時刻指定）は残タスクとして spec・docs・本記録に明記
+- 検証: 変更/新規 126 テスト×10 連続 green（vitest 5.0.5+projects 構成で `--repeats` が乗算されないため等価の連続実行で代替。ツール起因の観測）、全体 536 ファイル/6894 テスト green、eslint 0、tsc 0、check-i18n 2/2、文字種ゲート 0
+- 契約バグ修正（O5 で発見）: `commonStorageFields.ts` の scroll_ratio が wire のパーセント(0..100)を素で保存し、`browsingLogSchema` の CHECK(0..1)違反で insert 失敗＝記録消失（CHECK なしでも全スクロール頁が「読了」扱いになり候補が立たない）。mapper 境界で 1 箇所正規化（/100）+固定テスト 2 件。wire の名前（Percent）と列名（ratio）の意味論を保持
+- 契約バグ修正2（O5 E2E で発見・統合側修正）: `recordRequestBuilder.ts` の `pickRecordDiagnostics`（diagnostic field 受渡しの単一所有者）が engagement metrics（visitDurationSeconds/scrollRatioPercent）を転送しておらず、本番では保存行の visit_duration/scroll_ratio が常に NULL になっていた（PBI 2026-10-23-02 の metrics wire が content script 送信と mapper 読取のみで受渡しが欠落）。NULL ratio は候補 provider で fail-closed（非候補）になるため**リマインダーが 1 件も発火しない**状態だった。受渡し表に metrics 2 field を追加+固定テスト 2 件（14 key pin・valid-visit からの運搬 pin）。E2E 実測: visit_duration 5.01 秒・scroll_ratio 0.7 が保存されることを確認
+- spec 修正2件: 既存 spec の strict-mode 違反（共有プレフィックスで 6 行にマッチし必ず失敗）を 1 行確定に修正。通しの masked_count 表明は dashboard query の投影に含まれない列のため削除（私物除外は候補 provider の fail-closed 単体テストと panel の isPlaybackExcluded テストが担保する旨を spec コメントに記載）
+- E2E: `session-timeline-reminders --project=extension` 3 passed・`--repeat-each=3` 9 passed（通し含む。実通知の実クリック表示は owner 手動）
 - 私物メモ: `git stash/checkout -- ./reset/clean` 不使用、未コミットのまま残す。pbi/00-INDEX・CHANGELOG・package.json・docs/・他PBI不触。
 
 ## 実装記録（2026-10-23・集計経路）

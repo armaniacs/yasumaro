@@ -117,6 +117,7 @@ function makeDeps(overrides: {
     retryPendingChromeStorageWrite: vi.fn(async () => true),
     reviewSummaryGenerator: overrides.generator ?? makeGenerator(),
     sessionAlarmService: {} as never,
+    sessionReminderAlarms: { start: vi.fn(async () => {}), checkToday: vi.fn(async () => {}) } as never,
     settingsReader: reader,
     settingsWriter: writer,
     digestBatchStorage: area,

@@ -23,6 +23,7 @@ import { createWordClusterPanel } from './asyncData/wordClusterPanel.js';
 import { createTagClusterTimeSliderPanel } from './asyncData/tagClusterTimeSliderPanel.js';
 import { createSqliteHistoryPanel } from './asyncData/sqliteHistoryPanel.js';
 import { createSimilarityClusterPanel } from '../similarityClusterPanel.js';
+import { createSessionTimelinePanel } from './asyncData/sessionTimelinePlaybackPanel.js';
 import { createGeneralSettingsPanel } from './staticForm/generalSettingsPanel.js';
 import { createPrivacySettingsPanel } from './staticForm/privacySettingsPanel.js';
 import { createAiSummaryCleansingPanel } from './staticForm/aiSummaryCleansingPanel.js';
@@ -43,6 +44,7 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-word-cluster': createWordClusterPanel,
   'panel-similarity-cluster': createSimilarityClusterPanel,
   'panel-tag-cluster-time-slider': createTagClusterTimeSliderPanel,
+  'panel-session-timeline': createSessionTimelinePanel,
   'panel-sqlite-history': createSqliteHistoryPanel,
   'panel-general': createGeneralSettingsPanel,
   'panel-privacy': createPrivacySettingsPanel,

@@ -12,8 +12,8 @@
  * restarts and snooze expiries. Zero chrome.* access here: AlarmPort /
  * Clock / StoragePort plus injected show() and queryCandidates() keep the
  * whole path unit-testable without a chrome global mock (SessionAlarmService
- * 流儀). Wiring the alarm listener + notification click-through into
- * service-worker.ts stays a deferred slice (shared-file edit, see PBI).
+ * 流儀). The alarm listener + notification click/button wiring live in the
+ * alarmRegistry row and service-worker.ts (PBI O2).
  */
 
 import type { ReminderCandidateLike } from '../utils/sessionReminder/reminderNotify.js';
@@ -55,10 +55,29 @@ export interface SessionReminderAlarmsDeps {
    * import.
    */
   queryCandidates?: () => Promise<ReminderCandidateLike[]>;
-  /** Notification write point (chrome.notifications.create behind it). */
-  show?: (notificationId: string, title: string, message: string, iconUrl: string) => void;
+  /**
+   * Notification write point (NotificationHelper.show behind it — the single
+   * chrome.notifications.create call). Takes the fully-resolved payload so
+   * the optional action buttons ride through unchanged.
+   */
+  show?: (
+    notificationId: string,
+    payload: {
+      type: 'basic';
+      iconUrl: string;
+      title: string;
+      message: string;
+      buttons?: Array<{ title: string }>;
+    },
+  ) => void;
   /** Icon URL resolver (chrome.runtime.getURL in production). */
   iconUrl?: () => string;
+  /**
+   * Localized action labels for the notification's dismiss/discard buttons
+   * (PBI O2 釦). Absent = the notification carries no buttons and the click
+   * path is the only action surface.
+   */
+  actionLabels?: { dismiss: string; discard: string };
 }
 
 const defaultQueryCandidates = (): Promise<ReminderCandidateLike[]> => Promise.resolve([]);
@@ -68,16 +87,27 @@ export class SessionReminderAlarms {
   private readonly clock: Clock;
   private readonly storage: StoragePort;
   private readonly queryCandidates: () => Promise<ReminderCandidateLike[]>;
-  private readonly show: (notificationId: string, title: string, message: string, iconUrl: string) => void;
+  private readonly show: (
+    notificationId: string,
+    payload: {
+      type: 'basic';
+      iconUrl: string;
+      title: string;
+      message: string;
+      buttons?: Array<{ title: string }>;
+    },
+  ) => void;
   private readonly iconUrl: () => string;
+  private readonly actionLabels: { dismiss: string; discard: string } | undefined;
 
   constructor(deps: SessionReminderAlarmsDeps = {}) {
     this.alarms = deps.alarms ?? CHROME_ALARM_PORT;
     this.clock = deps.clock ?? SYSTEM_CLOCK;
     this.storage = deps.storage ?? CHROME_STORAGE_PORT;
     this.queryCandidates = deps.queryCandidates ?? defaultQueryCandidates;
-    this.show = deps.show ?? ((_id, _title, _message, _icon) => undefined);
+    this.show = deps.show ?? ((_id, _payload) => undefined);
     this.iconUrl = deps.iconUrl ?? (() => '');
+    this.actionLabels = deps.actionLabels;
   }
 
   async start(): Promise<void> {
@@ -118,8 +148,9 @@ export class SessionReminderAlarms {
         title: picked.record.title,
         url: picked.record.url,
         iconUrl: this.iconUrl(),
+        ...(this.actionLabels !== undefined ? { actions: this.actionLabels } : {}),
       });
-      this.show(reminderNotificationId(picked.record.id), options.title, options.message, options.iconUrl);
+      this.show(reminderNotificationId(picked.record.id), options);
       await saveReminderState(this.storage.local, markReminderFired(state, today));
       await logInfo(
         'Session reminder fired',

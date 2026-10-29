@@ -79,13 +79,40 @@ export interface PlaybackLabels {
   emptySessions: string;
   openRecord: string;
   fromSource: string;
+  /**
+   * Heading template with `{index}` / `{basis}` / `{count}` placeholders
+   * (R-06 残: the fixed-English heading is i18n keyed; the substitution is
+   * the pure helper below, so jsdom tests pin it without i18n).
+   */
+  sessionHeading: string;
+  /** Localized labels for the two trail bases (the aggregate's raw names). */
+  basisSearchQuery: string;
+  basisNavSourceUrl: string;
 }
 
 const DEFAULT_LABELS: PlaybackLabels = {
   emptySessions: 'No sessions yet. Visit pages from one search or one link to build a trail.',
   openRecord: 'Open record',
   fromSource: 'From',
+  sessionHeading: 'Session {index} ({basis}, {count} pages)',
+  basisSearchQuery: 'search query',
+  basisNavSourceUrl: 'link source',
 };
+
+/**
+ * Pure placeholder substitution for the session heading (no i18n / DOM
+ * dependency): every `{name}` in the template is replaced; unknown
+ * placeholders stay verbatim so a locale's typo cannot crash the render.
+ */
+export function formatPlaybackHeading(
+  template: string,
+  parts: { index: number; basis: string; count: number },
+): string {
+  return template
+    .replace(/\{index\}/g, String(parts.index))
+    .replace(/\{basis\}/g, parts.basis)
+    .replace(/\{count\}/g, String(parts.count));
+}
 
 /**
  * Renders the playback list into the owner-provided container. Every row
@@ -128,7 +155,13 @@ function renderSession(
 
   const heading = document.createElement('h3');
   heading.className = 'session-playback-heading';
-  heading.textContent = `Session ${index + 1} (${session.basis}, ${session.records.length} pages)`;
+  const basisLabel =
+    session.basis === 'search_query' ? labels.basisSearchQuery : labels.basisNavSourceUrl;
+  heading.textContent = formatPlaybackHeading(labels.sessionHeading, {
+    index: index + 1,
+    basis: basisLabel,
+    count: session.records.length,
+  });
   item.appendChild(heading);
 
   const trailKey = document.createElement('p');

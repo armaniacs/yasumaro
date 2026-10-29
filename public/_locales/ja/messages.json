@@ -5761,5 +5761,54 @@
   },
   "webhookExportSaved": {
     "message": "Webhook エクスポート設定を保存しました。"
+  },
+  "sessionTimelineTab": {
+    "message": "セッション再生",
+    "description": "セッション再生パネルのサイドバーラベル"
+  },
+  "sessionTimelineTitle": {
+    "message": "セッション再生",
+    "description": "セッション再生パネルのタイトル"
+  },
+  "sessionTimelineDescription": {
+    "message": "読みかけたページの足跡を再生します。各セッションは 1 つの検索または 1 つのリンクからたどったページをまとめ、記録を開くと再訪できます。",
+    "description": "セッション再生パネルの説明"
+  },
+  "sessionTimelineEmptySessions": {
+    "message": "セッションはまだありません。1 つの検索や 1 つのリンクからページを閲覧すると足跡が作られます。",
+    "description": "セッションの足跡が存在しないときの再生の空状態"
+  },
+  "sessionTimelineOpenRecord": {
+    "message": "記録を開く",
+    "description": "再生の記録を開くボタンのラベル"
+  },
+  "sessionTimelineFromSource": {
+    "message": "起点",
+    "description": "再生セッションの足跡キーの前につくラベル"
+  },
+  "sessionTimelineSessionHeading": {
+    "message": "セッション {index}（{basis}、{count} ページ）",
+    "description": "再生セッション 1 件の見出し。{index} は 1 起点の位置、{basis} は足跡の種別ラベル、{count} はページ数",
+    "placeholders": {
+      "index": { "content": "$1", "example": "1" },
+      "basis": { "content": "$2", "example": "検索語" },
+      "count": { "content": "$3", "example": "3" }
+    }
+  },
+  "sessionTimelineBasisSearch": {
+    "message": "検索語",
+    "description": "検索語でまとめたセッションの見出し種別ラベル"
+  },
+  "sessionTimelineBasisSource": {
+    "message": "リンク元",
+    "description": "ナビゲーション元でまとめたセッションの見出し種別ラベル"
+  },
+  "sessionReminderDismiss": {
+    "message": "今日は見ない",
+    "description": "通知ボタン。当日は通知を隠す"
+  },
+  "sessionReminderDiscard": {
+    "message": "今後表示しない",
+    "description": "通知ボタン。この記録を今後の通知対象から外す"
   }
 }

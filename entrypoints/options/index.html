@@ -242,6 +242,17 @@
           </svg>
           <span data-i18n="tagClusterTimeSliderTab">Tag Cluster Compare</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-session-timeline" aria-selected="false" data-panel="panel-session-timeline">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="5" cy="6" r="2"/>
+            <circle cx="19" cy="6" r="2"/>
+            <circle cx="12" cy="18" r="2"/>
+            <line x1="7" y1="6" x2="17" y2="6"/>
+            <line x1="6" y1="8" x2="11" y2="16"/>
+            <line x1="18" y1="8" x2="13" y2="16"/>
+          </svg>
+          <span data-i18n="sessionTimelineTab">Session Playback</span>
+        </button>
 
         <div class="sidebar-divider"></div>
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="toolsSection">Tools</div>
@@ -2258,6 +2269,13 @@
         <h2 id="panel-similarity-cluster-title" class="panel-title" data-i18n="similarityClusterTitle">Similar Stories</h2>
         <div id="similarityClusterEmptyState" data-i18n="similarityClusterEmpty" hidden>No similar groups yet: every story stands alone.</div>
         <div id="similarityClusterList"></div>
+      </section>
+
+      <!-- Session Timeline Playback Panel (PBI 2026-10-22-04) -->
+      <section id="panel-session-timeline" class="panel" role="tabpanel" aria-labelledby="panel-session-timeline-title">
+        <h2 id="panel-session-timeline-title" class="panel-title" data-i18n="sessionTimelineTitle">Session Playback</h2>
+        <p class="panel-description" data-i18n="sessionTimelineDescription">Replay the trail of pages you walked away from. Each session groups pages from one search or one link; open a record to revisit it.</p>
+        <div id="sessionPlaybackList"></div>
       </section>
 
       <!-- Tag Cluster Time Slider Panel (PBI 2026-09-24-08) -->

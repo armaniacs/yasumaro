@@ -60,6 +60,12 @@ import { PerUrlMutexMap } from './pipeline/perUrlMutex.js';
 import { SessionAlarmService } from './SessionAlarmService.js';
 import { createDeferredMigrationRunner } from './deferredMigrations.js';
 import { createAlarmRegistry } from './alarmRegistry.js';
+// PBI 2026-10-22-04: the reminder send path + the single notification write
+// point (NotificationHelper.show is the only chrome.notifications.create call).
+import { SessionReminderAlarms } from './sessionReminderAlarms.js';
+import { createReminderCandidateProvider } from './sessionReminderCandidates.js';
+import { NotificationHelper } from './notificationHelper.js';
+import { getMessageOr } from '../utils/i18n.js';
 import type { ServiceContainer } from './serviceContainer.js';
 
 export interface CompositionEntry {
@@ -245,12 +251,30 @@ export const compositionManifest: readonly CompositionEntry[] = [
     factory: (c) => createDeferredMigrationRunner(c.resolve<SqliteClient>('sqliteClient')),
   },
   {
+    key: 'sessionReminderAlarms',
+    singleton: true,
+    // PBI 2026-10-22-04 O2/O3: the reminder send path — the candidate provider
+    // (one SQLite read, skipped while the day gate is closed) and the single
+    // notification write point (NotificationHelper.show, so the optional
+    // dismiss/discard buttons ride the same payload).
+    factory: (c) =>
+      new SessionReminderAlarms({
+        queryCandidates: createReminderCandidateProvider(c.resolve<SqliteClient>('sqliteClient')),
+        show: (notificationId, payload) => NotificationHelper.show(payload, notificationId),
+        iconUrl: () => NotificationHelper.getIconUrl(),
+        actionLabels: {
+          dismiss: getMessageOr('sessionReminderDismiss', 'Not today'),
+          discard: getMessageOr('sessionReminderDiscard', "Don't remind me"),
+        },
+      }),
+  },
+  {
     key: 'alarmRegistry',
     singleton: true,
     // The unified alarm seam — install hooks + handleAlarm cover daily purge,
-    // local-md, offline retry, review-summary, and session-timeout. Every dep
-    // resolves from this container so the alarm path observes the same shared
-    // instances as the message paths.
+    // local-md, offline retry, review-summary, session-timeout, and the
+    // session reminder. Every dep resolves from this container so the alarm
+    // path observes the same shared instances as the message paths.
     factory: (c) => {
       return createAlarmRegistry({
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
@@ -266,6 +290,9 @@ export const compositionManifest: readonly CompositionEntry[] = [
         settingsWriter: c.resolve<SettingsRepository>('settingsRepository'),
         reviewSummaryGenerator: c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator'),
         sessionAlarmService: c.resolve<SessionAlarmService>('sessionAlarmService'),
+        // PBI 2026-10-22-04: the hourly reminder tick routes through the
+        // same registry row as every other timed job.
+        sessionReminderAlarms: c.resolve<SessionReminderAlarms>('sessionReminderAlarms'),
       });
     },
   },

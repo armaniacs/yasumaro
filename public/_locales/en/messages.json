@@ -5779,5 +5779,54 @@
   },
   "webhookExportSaved": {
     "message": "Webhook export settings saved."
+  },
+  "sessionTimelineTab": {
+    "message": "Session Playback",
+    "description": "Sidebar label for the session-timeline playback panel"
+  },
+  "sessionTimelineTitle": {
+    "message": "Session Playback",
+    "description": "Title of the session-timeline playback panel"
+  },
+  "sessionTimelineDescription": {
+    "message": "Replay the trail of pages you walked away from. Each session groups pages from one search or one link; open a record to revisit it.",
+    "description": "Description of the session-timeline playback panel"
+  },
+  "sessionTimelineEmptySessions": {
+    "message": "No sessions yet. Visit pages from one search or one link to build a trail.",
+    "description": "Playback empty state when no session trail exists"
+  },
+  "sessionTimelineOpenRecord": {
+    "message": "Open record",
+    "description": "Label of the playback open-record button"
+  },
+  "sessionTimelineFromSource": {
+    "message": "From",
+    "description": "Label in front of the playback session trail key"
+  },
+  "sessionTimelineSessionHeading": {
+    "message": "Session {index} ({basis}, {count} pages)",
+    "description": "Heading of one playback session; {index} is the 1-based position, {basis} the trail basis label, {count} the page count",
+    "placeholders": {
+      "index": { "content": "$1", "example": "1" },
+      "basis": { "content": "$2", "example": "search query" },
+      "count": { "content": "$3", "example": "3" }
+    }
+  },
+  "sessionTimelineBasisSearch": {
+    "message": "search query",
+    "description": "Playback heading basis label for sessions grouped by search query"
+  },
+  "sessionTimelineBasisSource": {
+    "message": "link source",
+    "description": "Playback heading basis label for sessions grouped by navigation source"
+  },
+  "sessionReminderDismiss": {
+    "message": "Not today",
+    "description": "Notification button that hides the reminder for the rest of the day"
+  },
+  "sessionReminderDiscard": {
+    "message": "Don't remind me",
+    "description": "Notification button that excludes the record from future reminders"
   }
 }

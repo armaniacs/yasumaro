@@ -56,6 +56,7 @@ import { handleDailyPurgeAlarm } from '../dailyPurgeHandler.js';
 import { flushPendingRecords } from '../pendingSqliteQueue.js';
 import type { ReviewSummaryGenerator } from '../reviewSummaryGenerator.js';
 import type { SessionAlarmService } from '../SessionAlarmService.js';
+import { SESSION_REMINDER_ALARM_NAME, type SessionReminderAlarms } from '../sessionReminderAlarms.js';
 import type { SettingsReader } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 
@@ -73,6 +74,13 @@ function makeSessionAlarmService(): SessionAlarmService {
   } as unknown as SessionAlarmService;
 }
 
+function makeSessionReminderAlarms(): SessionReminderAlarms {
+  return {
+    start: vi.fn(async () => {}),
+    checkToday: vi.fn(async () => {}),
+  } as unknown as SessionReminderAlarms;
+}
+
 function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
   return {
     sqliteClient: { maintain: vi.fn(async () => ({ success: true })) } as never,
@@ -83,6 +91,7 @@ function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
     retryPendingChromeStorageWrite: vi.fn(async () => true),
     reviewSummaryGenerator: makeReviewGenerator(),
     sessionAlarmService: makeSessionAlarmService(),
+    sessionReminderAlarms: makeSessionReminderAlarms(),
     settingsReader: makeReader(false),
     // PBI 2026-10-22-03: the digest batch's shared-marker write seam.
     settingsWriter: { set: vi.fn(async () => {}) },
@@ -354,6 +363,33 @@ describe('createAlarmRegistry', () => {
 
         expect(service.startTimeoutChecker).toHaveBeenCalledTimes(1);
         expect(service.checkTimeout).not.toHaveBeenCalled();
+      } finally {
+        globalRef.chrome = savedChrome;
+      }
+    });
+  });
+
+  describe('session_reminder_daily (the hourly reminder dispatch path)', () => {
+    it('runs checkToday exactly once per firing', async () => {
+      const service = makeSessionReminderAlarms();
+      const registry = createAlarmRegistry(makeDeps({ sessionReminderAlarms: service }));
+      registry.handleAlarm(alarm(SESSION_REMINDER_ALARM_NAME));
+      await waitForMock(() => expect(service.checkToday).toHaveBeenCalledTimes(1));
+
+      expect(service.checkToday).toHaveBeenCalledTimes(1);
+    });
+
+    it('installs the reminder alarm once per installAll', async () => {
+      const globalRef = globalThis as unknown as { chrome?: unknown };
+      const savedChrome = globalRef.chrome;
+      globalRef.chrome = { alarms: { create: vi.fn(), clear: vi.fn(), get: vi.fn() } };
+      const service = makeSessionReminderAlarms();
+      try {
+        const registry = createAlarmRegistry(makeDeps({ sessionReminderAlarms: service }));
+        await registry.installAll();
+
+        expect(service.start).toHaveBeenCalledTimes(1);
+        expect(service.checkToday).not.toHaveBeenCalled();
       } finally {
         globalRef.chrome = savedChrome;
       }

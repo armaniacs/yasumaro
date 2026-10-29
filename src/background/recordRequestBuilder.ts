@@ -54,6 +54,10 @@ export interface RecordDiagnosticFields {
   fallbackReason?: string | undefined;
   /** PBI 04: UPDATE-in-place target — the existing row this request replaces. */
   targetEntryId?: number | undefined;
+  /** PBI 2026-10-23-02: seconds of engagement for this visit (valid visit). */
+  visitDurationSeconds?: number | undefined;
+  /** PBI 2026-10-23-02: max scroll percentage reached for this visit. */
+  scrollRatioPercent?: number | undefined;
 }
 
 /** Per-surface fixed policy. */
@@ -188,6 +192,8 @@ export type RecordDiagnosticsSource = Partial<
     | 'cleansedReason'
     | 'fallbackTriggered'
     | 'fallbackReason'
+    | 'visitDurationSeconds'
+    | 'scrollRatioPercent'
   >
 > & {
   maskedCount?: unknown;
@@ -225,6 +231,13 @@ export function pickRecordDiagnostics(
     cleansedReason: payload.cleansedReason,
     fallbackTriggered: payload.fallbackTriggered,
     fallbackReason: payload.fallbackReason,
+    // PBI 2026-10-23-02: engagement metrics ride the same single table. A
+    // surface that forgets the spread drops them and the saved row records
+    // NULL visit_duration/scroll_ratio - which the reminder candidate
+    // provider reads as "not a candidate" (fail-closed), so no reminder
+    // would ever fire. Discovered by the PBI 2026-10-22-04 O5 E2E.
+    visitDurationSeconds: payload.visitDurationSeconds,
+    scrollRatioPercent: payload.scrollRatioPercent,
   });
 }
 
@@ -269,6 +282,8 @@ export function buildRecordRequest(
       cleansedReason: fields.cleansedReason,
       fallbackTriggered: fields.fallbackTriggered,
       fallbackReason: fields.fallbackReason,
+      visitDurationSeconds: fields.visitDurationSeconds,
+      scrollRatioPercent: fields.scrollRatioPercent,
       navSourceUrl: fields.navSourceUrl,
       searchQuery: fields.searchQuery,
       targetEntryId: fields.targetEntryId,

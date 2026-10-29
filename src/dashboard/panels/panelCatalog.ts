@@ -68,6 +68,7 @@ export const CATALOG_ROWS = [
   { id: 'panel-word-cluster', sidebarSection: 'data', sidebarI18nKey: 'wordClusterTab', deepLinkSections: [] },
   { id: 'panel-similarity-cluster', sidebarSection: 'data', sidebarI18nKey: 'similarityClusterTab', deepLinkSections: [] },
   { id: 'panel-tag-cluster-time-slider', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTimeSliderTab', deepLinkSections: [] },
+  { id: 'panel-session-timeline', sidebarSection: 'data', sidebarI18nKey: 'sessionTimelineTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
 ] as const satisfies readonly PanelCatalogEntry[];

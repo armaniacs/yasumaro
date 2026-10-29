@@ -5,8 +5,9 @@ import { registerManualRecordContextMenu as _registerManualRecordContextMenu, cr
 import { createKeyboardCommandHandler, createOmniboxInputHandler } from './handlers/entryFrictionHandlers.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { logError } from '../utils/logger/api.js';
+import { logError, logWarn } from '../utils/logger/api.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
+import { createSessionReminderClickHandlers } from './sessionReminderClick.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
 import { createBackgroundServices } from './createBackgroundServices.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
@@ -211,6 +212,41 @@ export const handleNotificationButtonClicked = _notificationHandlers.onButtonCli
 export const handleNotificationClicked = _notificationHandlers.onClicked;
 
 // ============================================================================
+// Session Reminder Notification Handlers (PBI 2026-10-22-04 O2/O4)
+// ============================================================================
+// The reminder notifications carry their own prefix (session-reminder-), so a
+// second handler set routes the click (open record + Daily Note TODO) and the
+// dismiss/discard buttons. The privacy-confirm handler above keeps its own
+// prefix; a chrome.notifications event reaches both listeners and each one
+// guards its own prefix.
+const _sessionReminderClickHandlers = createSessionReminderClickHandlers({
+  queryRecordById: async (recordId) => {
+    const result = await sqliteClient.query({ ids: [recordId], limit: 1 });
+    if (!result.success) return null;
+    const row = result.data.rows[0];
+    // Fail-closed: a row without a numeric id is not a real DB row.
+    if (row === undefined || typeof row.id !== 'number') return null;
+    return { id: row.id, url: row.url, title: row.title ?? null, masked_count: row.masked_count ?? null };
+  },
+  openTab: (url) => {
+    void chrome.tabs.create({ url }).catch((error: unknown) => {
+      void logError('Failed to open the reminder record tab', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+    });
+  },
+  dismissNotification: (notificationId) => {
+    void chrome.notifications.clear(notificationId).catch((error: unknown) => {
+      void logWarn('Failed to clear the reminder notification', { notificationId, error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+    });
+  },
+  // The noteSectionEditor seam: appendToDailyNote runs
+  // NoteSectionEditor.insertIntoSection under the shared write mutex, so the
+  // TODO line joins the existing section instead of stacking a copy.
+  appendTodoToDailyNote: (todoLine) => services.obsidian.appendToDailyNote(todoLine, 'session-reminder-todo'),
+});
+export const handleReminderNotificationClicked = _sessionReminderClickHandlers.onClicked;
+export const handleReminderNotificationButtonClicked = _sessionReminderClickHandlers.onButtonClicked;
+
+// ============================================================================
 // Context Menu
 // ============================================================================
 export const registerManualRecordContextMenu = _registerManualRecordContextMenu;
@@ -297,8 +333,16 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
       chrome.omnibox.onInputEntered.addListener(guard((text: string) => _omniboxInputHandler(text), 'omniboxInput'));
     }
 
-    chrome.notifications.onButtonClicked.addListener(guard(handleNotificationButtonClicked, 'notificationButtonClicked'));
-    chrome.notifications.onClicked.addListener(guard(handleNotificationClicked, 'notificationClicked'));
+    chrome.notifications.onButtonClicked.addListener(guard((notificationId: string, buttonIndex: number) => {
+      // Two listeners share the event; each guards its own prefix. The
+      // privacy-confirm handler ignores the reminder prefix and vice versa.
+      handleNotificationButtonClicked(notificationId, buttonIndex);
+      void handleReminderNotificationButtonClicked(notificationId, buttonIndex);
+    }, 'notificationButtonClicked'));
+    chrome.notifications.onClicked.addListener(guard((notificationId: string) => {
+      handleNotificationClicked(notificationId);
+      void handleReminderNotificationClicked(notificationId);
+    }, 'notificationClicked'));
 
     chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'));
 }

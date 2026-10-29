@@ -65,6 +65,20 @@ describe('buildRecordRequest (PBI 2026-09-12-04)', () => {
       aiSummaryCleansedReasons: ['hard'], maskedCount: 8,
     });
   });
+
+  it('carries the engagement metrics from a valid-visit payload into the record', () => {
+    // Contract (PBI 2026-10-22-04 O5 E2E): the content script sends
+    // visitDurationSeconds/scrollRatioPercent on the VALID_VISIT payload; the
+    // handler forwards them through pickRecordDiagnostics and the saved row
+    // records them (a NULL ratio reads as "not a candidate" downstream, so a
+    // dropped field silently killed the reminder surface).
+    const request = buildRecordRequest('valid-visit', {
+      title: 'T', url: 'https://example.com', content: 'c',
+      ...pickRecordDiagnostics({ visitDurationSeconds: 42, scrollRatioPercent: 72 }),
+    });
+    expect(request.visitDurationSeconds).toBe(42);
+    expect(request.scrollRatioPercent).toBe(72);
+  });
 });
 
 describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () => {
@@ -216,8 +230,15 @@ describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
     fallbackReason: 'content_overcut',
   };
 
-  it('pins the owned field table: exactly these 12 keys travel together', () => {
-    expect(Object.keys(pickRecordDiagnostics({ ...FLAT_DIAG })).sort()).toEqual(
+  it('pins the owned field table: exactly these 14 keys travel together', () => {
+    // The engagement metrics ride the same table (PBI 2026-10-23-02): a
+    // dropped field silently NULLs the saved row's visit_duration/scroll_ratio
+    // and the reminder candidate provider reads that as "not a candidate".
+    expect(
+      Object.keys(
+        pickRecordDiagnostics({ ...FLAT_DIAG, visitDurationSeconds: 42, scrollRatioPercent: 72 }),
+      ).sort(),
+    ).toEqual(
       [
         'aiSummaryCleansedBytes',
         'aiSummaryCleansedElements',
@@ -231,6 +252,8 @@ describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
         'fallbackTriggered',
         'originalBytes',
         'pageBytes',
+        'scrollRatioPercent',
+        'visitDurationSeconds',
       ].sort(),
     );
   });

@@ -28,6 +28,8 @@ import { type SettingsReader, type SettingsRepository } from '../utils/storage/S
 import { StorageKeys } from '../utils/storage/types.js';
 import type { StorageArea } from '../utils/ports.js';
 import { runReviewDigestBatch } from './digestBatchAlarm.js';
+// PBI 2026-10-22-04: the hourly reminder send path (O2 alarm row).
+import { SESSION_REMINDER_ALARM_NAME, type SessionReminderAlarms } from './sessionReminderAlarms.js';
 
 export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
@@ -56,6 +58,13 @@ export interface AlarmHandlerDeps {
    * memory area; production resolves the shared chrome.storage.local port).
    */
   digestBatchStorage?: StorageArea;
+  /**
+   * PBI 2026-10-22-04: the hourly reminder send path. The alarm itself is
+   * created here (start clears + re-arms the standing hourly alarm), but the
+   * dispatch stays registry-owned: checkToday opens the daily gate on one
+   * storage read and only then runs the candidate query.
+   */
+  sessionReminderAlarms: SessionReminderAlarms;
 }
 
 export interface AlarmJobSpec {
@@ -230,6 +239,20 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
     name: 'check_session_timeout',
     install: async () => { await deps.sessionAlarmService.startTimeoutChecker(); },
     run: async () => { await deps.sessionAlarmService.checkTimeout(); },
+  },
+  {
+    /**
+     * Hourly reminder check (PBI 2026-10-22-04 O2). The SessionAlarmService
+     * install model: the service owns its alarm (start clears + re-arms the
+     * standing hourly one), the registry owns the dispatch (checkToday opens
+     * the daily gate on one storage read and only then runs the candidate
+     * query). Recreating the hourly alarm on every Service Worker startup is
+     * acceptable — the check is cheap and the day gate holds the surface to
+     * one notification per day.
+     */
+    name: SESSION_REMINDER_ALARM_NAME,
+    install: async () => { await deps.sessionReminderAlarms.start(); },
+    run: async () => { await deps.sessionReminderAlarms.checkToday(); },
   },
   { name: 'yasumaro-recording-resume', run: runRecordingResume },
   { name: 'yasumaro-recording-pause-tick', run: runPauseTick },
