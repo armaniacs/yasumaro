@@ -29,7 +29,15 @@ type ReviewLogEntry = BrowsingLogRecord & { id: number };
 
 /** Review summary生成器。alarmとmessage handlerが同一インスタンスを共有する。 */
 export interface ReviewSummaryGenerator {
+  /**
+   * Builds the weekly digest. `targetDate` is the reference instant the
+   * completed previous week is derived from (default now): the digest
+   * summarizes the week that has ENDED (動作変更, see
+   * buildCompletedWeekPeriod), so a Monday firing carries the previous
+   * week's full data.
+   */
   generateWeeklySummary(targetDate?: Date): Promise<boolean>;
+  /** Builds the monthly digest for the calendar month of `targetDate`. */
   generateMonthlySummary(targetDate?: Date): Promise<boolean>;
 }
 
@@ -234,6 +242,33 @@ function buildWeekPeriod(date: Date): SummaryPeriod {
   };
 }
 
+/**
+ * The instant whose week is the completed previous week relative to `date`:
+ * -7 calendar days lands on the same weekday of the previous week, so
+ * buildWeekPeriod pins the previous Monday 00:00 .. Sunday 23:59:59.999
+ * window and the same ISO week key.
+ */
+function completedWeekDate(date: Date): Date {
+  const previous = new Date(date);
+  previous.setDate(previous.getDate() - 7);
+  return previous;
+}
+
+/**
+ * The completed previous week relative to `date`.
+ *
+ * 動作変更 (ユーザー可視, PBI 2026-10-22-03 third-party review): the weekly
+ * digest summarizes the week that has ENDED, not the week that just started.
+ * getWeekPeriod(月曜当日) pointed both the weekly alarm and the batch at the
+ * week containing `now`, so a Monday 09:00 firing summarized a few minutes of
+ * a nearly empty new week and pinned the marker over it. Both paths now
+ * derive the same completed week from this single owner, so they guard the
+ * same marker value without drift.
+ */
+function buildCompletedWeekPeriod(date: Date): SummaryPeriod {
+  return buildWeekPeriod(completedWeekDate(date));
+}
+
 function buildMonthPeriod(date: Date): SummaryPeriod {
   const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
   const { start, end } = getMonthPeriod(date);
@@ -358,7 +393,13 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
   }
 
   async function generateWeeklySummary(targetDate?: Date): Promise<boolean> {
-    const date = targetDate || new Date();
+    // 動作変更 (ユーザー可視): the weekly digest summarizes the COMPLETED
+    // previous week (Monday-7 .. Sunday), not the week that just started —
+    // a Monday 09:00 alarm firing now carries the previous week's full data
+    // instead of a few minutes of the new week. The date is also the
+    // filename anchor, so it moves with the period (the digest is dated
+    // "Generated on: <today>" inside the file, which stays the firing day).
+    const date = completedWeekDate(targetDate || new Date());
     return generatePeriodSummary(buildWeekPeriod(date), weeklyMutex, date);
   }
 
@@ -370,7 +411,8 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
   return { generateWeeklySummary, generateMonthlySummary };
 }
 
-// Exported for testing. buildWeekPeriod is also the digest batch's single
-// owner of the weekly period key + window (digestBatchAlarm.ts reuses it so
-// both paths guard the same 'YYYY-Www' marker value without drift).
-export { getISOWeekNumber, getISOWeekYear, getWeekPeriod, getMonthPeriod, buildWeekPeriod, generateStatsSection, generateReviewMarkdown };
+// Exported for testing. buildWeekPeriod and buildCompletedWeekPeriod are
+// also the digest batch's owners of the weekly period key + window
+// (digestBatchAlarm.ts reuses buildCompletedWeekPeriod so both paths guard
+// the same completed-week 'YYYY-Www' marker value without drift).
+export { getISOWeekNumber, getISOWeekYear, getWeekPeriod, getMonthPeriod, buildWeekPeriod, buildCompletedWeekPeriod, generateStatsSection, generateReviewMarkdown };

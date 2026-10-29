@@ -214,7 +214,7 @@ describe('ask-history evidence pipeline on a real engine (PBI 2026-10-23-08)', (
         // The FTS projection adds the rank pseudo-column; the LIKE projection
         // has no rank cell (the codec defaults it to 0). A non-zero rank
         // proves the FTS statements ran on the real engine.
-        expect(res.data.rows[0]!.rank).not.toBe(0);
+        expect((res.data.rows[0] as BrowsingLogRecord & { rank: number }).rank).not.toBe(0);
       } finally {
         backend.close();
       }
@@ -237,7 +237,7 @@ describe('ask-history evidence pipeline on a real engine (PBI 2026-10-23-08)', (
         if (!res.success) return;
         expect(res.data.total).toBe(1);
         // The LIKE projection has no rank cell — the codec defaults it to 0.
-        expect(res.data.rows[0]!.rank).toBe(0);
+        expect((res.data.rows[0] as BrowsingLogRecord & { rank: number }).rank).toBe(0);
       } finally {
         backend.close();
       }

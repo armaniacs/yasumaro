@@ -122,6 +122,20 @@ describe('pre-send gates (no network before the verdict)', () => {
     expect(await deps.history.list()).toEqual([]);
   });
 
+  it('blocks the send when the privacy verdict is absent (fail-closed egress)', async () => {
+    const deps = makeDeps();
+    const result = await sendWebhookExport(makeInput({ isPrivate: undefined }), deps);
+    expect(result.outcome).toBe('blocked');
+    expect(result.reason).toBe(WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    const rows = await deps.history.list();
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.status).toBe('blocked');
+    expect(rows[0]?.reason).toBe(WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent);
+    expect(deps.notices).toHaveLength(1);
+    expect(deps.notices[0]?.reason).toBe(WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent);
+  });
+
   it('blocks an undeclared origin via the permission gate — never fetched', async () => {
     const deps = makeDeps({ isHostPermitted: vi.fn(async (_url: string) => false) });
     const result = await sendWebhookExport(makeInput(), deps);
@@ -183,6 +197,19 @@ describe('production gate reads the manifest, not the granted set', () => {
     await expect(defaultIsWebhookHostPermitted('https://hooks.example.com/hook')).resolves.toBe(false);
   });
 
+  it('restricts <all_urls> to the match-pattern schemes after parsing the URL', () => {
+    // The URL is parsed before the shortcut: a chrome-internal, data, or
+    // unknown scheme never passes an all-urls declaration.
+    expect(isUrlCoveredByHostPattern('chrome://extensions', '<all_urls>')).toBe(false);
+    expect(isUrlCoveredByHostPattern('about:blank', '<all_urls>')).toBe(false);
+    expect(isUrlCoveredByHostPattern('data:text/plain,hi', '<all_urls>')).toBe(false);
+    // The Chrome match-pattern schemes pass.
+    expect(isUrlCoveredByHostPattern('file:///etc/passwd', '<all_urls>')).toBe(true);
+    expect(isUrlCoveredByHostPattern('ws://example.com/x', '<all_urls>')).toBe(true);
+    expect(isUrlCoveredByHostPattern('wss://example.com/x', '<all_urls>')).toBe(true);
+    expect(isUrlCoveredByHostPattern('ftp://example.com/x', '<all_urls>')).toBe(true);
+  });
+
   it('fails closed when the manifest is unreadable', async () => {
     const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
     if (!runtime) throw new Error('chrome.runtime mock missing');
@@ -209,6 +236,46 @@ describe('masking before send', () => {
     expect(body).toContain('[email]');
     expect(body).not.toContain('alice@example.com');
     expect(Object.keys(JSON.parse(body) as Record<string, string>)).not.toContain('content');
+  });
+
+  it('masks the page title through the same seam (mail address and name never ship)', async () => {
+    const deps = makeDeps({
+      maskText: vi.fn(async (text: string) =>
+        text.replace('alice@example.com', '[email]').replace('Alice', '[name]'),
+      ),
+    });
+    const result = await sendWebhookExport(
+      makeInput({ record: makeRecord({ title: 'Alice <alice@example.com> meeting notes' }) }),
+      deps,
+    );
+    expect(result.outcome).toBe('sent');
+    // The title itself is masked before the payload is built.
+    expect(deps.maskText).toHaveBeenCalledWith('Alice <alice@example.com> meeting notes');
+    expect(deps.fetchCalls).toHaveLength(1);
+    const body = JSON.parse(deps.fetchCalls[0]?.init.body ?? '{}') as { title: string; text: string };
+    expect(body.title).not.toContain('alice@example.com');
+    expect(body.title).not.toContain('Alice');
+    expect(body.title).toContain('[email]');
+    // The first text line is the masked title too — no unmasked copy remains.
+    expect(body.text.split('\n')[0]).not.toContain('alice@example.com');
+    expect(body.text.split('\n')[0]).not.toContain('Alice');
+    expect(body.text.split('\n')[0]).toContain('[email]');
+  });
+
+  it('fails closed when the title mask throws — nothing ships raw', async () => {
+    const deps = makeDeps({
+      maskText: vi.fn(async (text: string): Promise<string> => {
+        if (text === 'Example') throw new Error('sanitizer down');
+        return text;
+      }),
+    });
+    const result = await sendWebhookExport(makeInput(), deps);
+    expect(result.outcome).toBe('failed');
+    expect(result.reason).toBe(WEBHOOK_EXPORT_REASONS.maskError);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+    const rows = await deps.history.list();
+    expect(rows[0]?.status).toBe('failed');
+    expect(rows[0]?.reason).toBe(WEBHOOK_EXPORT_REASONS.maskError);
   });
 });
 
@@ -299,6 +366,40 @@ describe('idempotent resend', () => {
       key: first.key,
     });
     expect(deps.fetchCalls).toHaveLength(1);
+  });
+
+  it('derives the same key across runs for the same record + payload (no per-run identity)', async () => {
+    const store: Record<string, string> = {};
+    const runDeps = (clock: number): ReturnType<typeof makeDeps> =>
+      makeDeps({
+        now: () => clock,
+        history: new WebhookExportHistory({
+          get: async (key: string): Promise<string | null> =>
+            typeof store[key] === 'string' ? (store[key] as string) : null,
+          set: async (key: string, value: string): Promise<void> => {
+            store[key] = value;
+          },
+        }),
+      });
+    const first = await sendWebhookExport(makeInput(), runDeps(1000));
+    expect(first.outcome).toBe('sent');
+    // A second recording run (later clock, fresh deps) with identical content
+    // derives the same key — the duplicate suppression stays alive across runs.
+    const second = await sendWebhookExport(makeInput(), runDeps(2000));
+    expect(second).toEqual({
+      outcome: 'skipped',
+      reason: WEBHOOK_EXPORT_REASONS.duplicateSuppressed,
+      key: first.key,
+    });
+  });
+
+  it('derives a new key when the content changes for the same page', async () => {
+    const deps = makeDeps();
+    const first = await sendWebhookExport(makeInput({ record: makeRecord({ summary: 'first pass' }) }), deps);
+    const second = await sendWebhookExport(makeInput({ record: makeRecord({ summary: 'second pass' }) }), deps);
+    expect(second.outcome).toBe('sent');
+    expect(second.key).not.toBe(first.key);
+    expect(deps.fetchCalls).toHaveLength(2);
   });
 
   it('an explicit resend re-POSTs with the SAME key and bumps the counter', async () => {

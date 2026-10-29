@@ -27,7 +27,11 @@
  * saveCompletedPeriod keeps the marker a single atomic write per period: the
  * publisher already wrote it inside publishDigest, so a matching marker is
  * skipped instead of re-written. The write only happens when a publisher
- * returned success without writing the marker (contract safety).
+ * returned success without writing the marker (contract safety), and a
+ * monotonicity guard refuses a write that would regress a newer completion
+ * marker to an older period — the AI call inside publishDigest can outlive
+ * the week (週替わり TOCTOU), and the weekly alarm's later run must not see
+ * the older marker and re-publish the newer week.
  */
 
 import type { DigestBatchCheckpoint, DigestCheckpointStore } from './digestBatchJob.js';
@@ -45,11 +49,17 @@ export interface DigestBatchCheckpointStoreDeps {
   settingsWriter: Pick<SettingsRepository, 'set'>;
 }
 
-/** Persisted wire shape (all fields optional: storage is untrusted). */
+/**
+ * Persisted wire shape (fields optional: storage is untrusted, and older
+ * shapes may miss fields). The types match the data the store writes — a
+ * 'YYYY-Www' period key, a non-negative integer index, an integer id array —
+ * and every load still validates the runtime shapes below (typeof guards,
+ * fail closed to null) because storage content is untrusted.
+ */
 type PersistedCheckpoint = {
-  periodKey?: unknown;
-  nextIndex?: unknown;
-  processedIds?: unknown;
+  periodKey?: string;
+  nextIndex?: number;
+  processedIds?: number[];
 };
 
 /**
@@ -85,6 +95,20 @@ async function readCompletedMarker(settingsReader: SettingsReader): Promise<stri
   return typeof marker === 'string' && marker !== '' ? marker : null;
 }
 
+/**
+ * ISO week keys ('YYYY-Www': 4-digit year, zero-padded week) order
+ * chronologically, so the numeric ordinal is the monotonicity test. null
+ * when the key is not a well-formed week key (an untrusted or legacy value).
+ */
+function weekKeyOrdinal(key: string): number | null {
+  const match = /^(\d{4})-W(\d{2})$/.exec(key);
+  if (match === null) return null;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  if (!Number.isInteger(year) || !Number.isInteger(week)) return null;
+  return year * 100 + week;
+}
+
 export function createDigestBatchCheckpointStore(
   deps: DigestBatchCheckpointStoreDeps,
 ): DigestCheckpointStore {
@@ -110,6 +134,16 @@ export function createDigestBatchCheckpointStore(
       // that returned success without writing the marker.
       const current = await readCompletedMarker(settingsReader);
       if (current === periodKey) return;
+      // 単調性ガード (週替わり TOCTOU, PBI 2026-10-22-03 third-party review):
+      // the AI call inside publishDigest can outlive the week, and a late
+      // save for an older period must not regress a newer completion marker —
+      // the weekly alarm's later run would otherwise see the older marker and
+      // re-publish the newer week. Only a provably newer existing marker
+      // blocks the write; unknown (untrusted or legacy) shapes fall through
+      // to the plain overwrite so a corrupt marker cannot wedge the batch.
+      const currentOrdinal = current !== null ? weekKeyOrdinal(current) : null;
+      const nextOrdinal = weekKeyOrdinal(periodKey);
+      if (currentOrdinal !== null && nextOrdinal !== null && currentOrdinal > nextOrdinal) return;
       await settingsWriter.set(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK, periodKey);
     },
     async clearCheckpoint(): Promise<void> {

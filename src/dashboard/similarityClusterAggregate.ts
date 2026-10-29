@@ -17,6 +17,8 @@
  * クラスタ操作は取り消し可能で元記録を壊さない).
  */
 
+import { MAX_TOKENS_PER_TITLE } from '../utils/computeLimits.js';
+
 /** The persisted record fields the clustering reads. */
 export interface SimilarityRecord {
   id: number;
@@ -50,8 +52,12 @@ const STOPWORDS: ReadonlySet<string> = new Set([
 
 /**
  * Title tokens: lowercase ASCII, split on whitespace and CJK/Latin
- * punctuation, stopwords and empties dropped. Unknown shapes fail closed
- * to an empty set (never a throw).
+ * punctuation, stopwords and empties dropped. Tokens are capped at
+ * MAX_TOKENS_PER_TITLE (first N in scan order, the MAX_TAGS_PER_RECORD
+ * precedent): stored titles are attacker-influenced and bounded only by
+ * MAX_TITLE_LENGTH, so an uncapped token set would multiply every pair
+ * comparison of buildSimilarityClusters by the token count. Unknown shapes
+ * fail closed to an empty set (never a throw).
  */
 export function tokenizeTitle(title: unknown): Set<string> {
   const tokens = new Set<string>();
@@ -60,6 +66,7 @@ export function tokenizeTitle(title: unknown): Set<string> {
     const token = raw.trim().toLowerCase();
     if (token === '' || STOPWORDS.has(token)) continue;
     tokens.add(token);
+    if (tokens.size >= MAX_TOKENS_PER_TITLE) break;
   }
   return tokens;
 }

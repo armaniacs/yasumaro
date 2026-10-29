@@ -5501,8 +5501,30 @@
     "description": "すべての記事が独立しているときの類似記事クラスタの空状態"
   },
   "similarityClusterEmptyNoTitles": {
-    "message": "比較できるタイトルがありません。範囲を広げてください。",
+    "message": "比較できるタイトルがまだありません。タイトル付きの記録が蓄積するとここに表示されます。",
     "description": "タイトルを持つ記録がないときの類似記事クラスタの空状態"
+  },
+  "similarityClusterHeading": {
+    "message": "{count} 件の記事 - {domains} - {date}",
+    "description": "類似記事クラスタ 1 件の見出し。{count} は記事数、{domains} は媒体一覧、{date} は最新の訪問日",
+    "placeholders": {
+      "count": { "content": "$1", "example": "2" },
+      "domains": { "content": "$2", "example": "a.example, b.example" },
+      "date": { "content": "$3", "example": "2026/10/22" }
+    }
+  },
+  "similarityClusterRowCapNotice": {
+    "message": "件数上限（{max} 件）のため、最新 {total} 件のうち {shown} 件のみを比較しています。",
+    "description": "比較対象レコード上限で全期間が打ち切られたときの類似記事クラスタの通知",
+    "placeholders": {
+      "shown": { "content": "$1", "example": "200" },
+      "total": { "content": "$2", "example": "5000" },
+      "max": { "content": "$3", "example": "200" }
+    }
+  },
+  "similarityClusterError": {
+    "message": "類似記事の読み込みに失敗しました。再試行してください。",
+    "description": "類似記事クラスタのエラー状態"
   },
   "tagClusterTimeSliderTab": {
     "message": "タグクラスタ比較",

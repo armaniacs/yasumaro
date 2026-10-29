@@ -4,6 +4,11 @@
  * reporter commits the settled visit once — flag, late-rescan baseline,
  * and persisted diag outcome together — and quotes the worker's own
  * error/reason for the dashboard table.
+ *
+ * Review-fix pins (commit 3b4db08d third-party review): a successful force
+ * re-send normalizes the persisted outcome to the re-send's verdict (P1-1),
+ * and only a successful recording updates the late-rescan baseline (P2-3) —
+ * a settled refusal recorded nothing, so it must not arm the re-send.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { VisitReporter } from '../visitReporter.js';
@@ -41,6 +46,7 @@ function makeHarness(
   response: unknown,
   content = 'hello world',
   confirmResult = true,
+  resendResponse?: unknown,
 ) {
   const persisted: LastCaptureOutcome[] = [];
   const pageState = {
@@ -59,10 +65,16 @@ function makeHarness(
     lastFallbackTriggered: false,
     lastFallbackReason: undefined,
   };
+  let sent = 0;
   const sender = {
     sendMessageWithRetry: vi.fn(async () => {
-      if (response instanceof Error) throw response;
-      return response;
+      // First call = the initial send; later calls = the force re-send.
+      // Without a resendResponse the first response repeats (unchanged
+      // harness behavior for every existing pin).
+      const current = sent === 0 ? response : resendResponse ?? response;
+      sent += 1;
+      if (current instanceof Error) throw current;
+      return current;
     }),
   };
   const reporter = new VisitReporter({
@@ -98,11 +110,14 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
   });
 
   it('quotes the worker error verbatim on settled failure', async () => {
+    // Review fix (P2-3): a settled refusal recorded nothing, so the
+    // late-rescan baseline stays at 0 — shouldRearm must stay false or every
+    // later growth re-sends a visit the pipeline deterministically rejects.
     const { reporter, pageState, persisted } = makeHarness({ success: false, error: 'DOMAIN_BLOCKED' });
     await reporter.report();
 
     expect(pageState.isValidVisitReported).toBe(true);
-    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(pageState.reportedContentChars).toBe(0);
     expect(persisted).toHaveLength(1);
     expect(persisted[0]?.code).toBe('DOMAIN_BLOCKED');
   });
@@ -120,6 +135,8 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
     // point as every other settled visit. Before this fix the private path
     // set the flag directly and never persisted, so the diagnostics panel
     // kept showing the previous outcome (沈黙の失敗).
+    // Review fix (P2-3): the refusal also keeps the late-rescan baseline at
+    // 0 — a rejected page must not arm the bounded re-send.
     const { reporter, pageState, persisted } = makeHarness({
       success: false,
       error: 'PRIVATE_PAGE_DETECTED',
@@ -128,7 +145,7 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
     await reporter.report();
 
     expect(pageState.isValidVisitReported).toBe(true);
-    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(pageState.reportedContentChars).toBe(0);
     expect(persisted).toHaveLength(1);
     expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
     expect(typeof persisted[0]?.at).toBe('number');
@@ -137,6 +154,7 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
   it('persists PRIVATE_PAGE_DETECTED when the user declines the confirmation', async () => {
     // A declined confirmation is terminal for this page view; the outcome is
     // a settled refusal and must reach the diagnostics panel either way.
+    // Review fix (P2-3): the refusal keeps the late-rescan baseline at 0.
     const { reporter, pageState, persisted } = makeHarness(
       {
         success: false,
@@ -150,8 +168,101 @@ describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () =>
     await reporter.report();
 
     expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe(0);
     expect(persisted).toHaveLength(1);
     expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
+  });
+
+  it('normalizes the settled outcome to the force re-send verdict when it succeeds', async () => {
+    // Review fix (P1-1): approval + a successful force re-send records the
+    // page (force=true bypasses the privacy gate), so the persisted outcome
+    // is the re-send's 'recorded' verdict — not the original refusal with a
+    // fresh timestamp, which made the diagnostics panel misread a recorded
+    // page as PRIVATE_PAGE_DETECTED. The baseline updates too: the content
+    // was recorded.
+    const { reporter, pageState, sender, persisted } = makeHarness(
+      {
+        success: false,
+        error: 'PRIVATE_PAGE_DETECTED',
+        reason: 'cache-control',
+        confirmationRequired: true,
+      },
+      'hello world',
+      true,
+      { success: true },
+    );
+    await reporter.report();
+
+    expect(sender.sendMessageWithRetry).toHaveBeenCalledTimes(2);
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('recorded');
+    expect(typeof persisted[0]?.at).toBe('number');
+  });
+
+  it('keeps the original refusal when the force re-send throws', async () => {
+    // Review fix (P1-1): a failed force re-send did not record the page, so
+    // the settled outcome stays the original refusal (pending page stays)
+    // and the late-rescan baseline stays at 0 (P2-3).
+    const { reporter, pageState, persisted } = makeHarness(
+      {
+        success: false,
+        error: 'PRIVATE_PAGE_DETECTED',
+        reason: 'cache-control',
+        confirmationRequired: true,
+      },
+      'hello world',
+      true,
+      new Error('transport down'),
+    );
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe(0);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
+  });
+
+  it('keeps the original refusal when the force re-send settles with a failure', async () => {
+    // Review fix (P1-1): the re-send answered but did not record, so the
+    // persisted outcome stays the original refusal (PBI 2026-10-22-06 review
+    // policy: only a successful re-send normalizes the outcome).
+    const { reporter, pageState, persisted } = makeHarness(
+      {
+        success: false,
+        error: 'PRIVATE_PAGE_DETECTED',
+        reason: 'cache-control',
+        confirmationRequired: true,
+      },
+      'hello world',
+      true,
+      { success: false, error: 'rate_limited' },
+    );
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe(0);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('PRIVATE_PAGE_DETECTED');
+  });
+
+  it('advances the baseline on a settled same-day skip (success + skipped)', async () => {
+    // The same-day duplicate answers success + skipped, so the worker
+    // accepted the visit for today: the baseline advances so the next growth
+    // re-arm needs fresh growth instead of a guaranteed-skip re-send. A
+    // change here (skip keeps the baseline) must be a conscious rewrite.
+    const { reporter, pageState, persisted } = makeHarness({
+      success: true,
+      skipped: true,
+      reason: 'same_day',
+    });
+    await reporter.report();
+
+    expect(pageState.isValidVisitReported).toBe(true);
+    expect(pageState.reportedContentChars).toBe('hello world'.length);
+    expect(persisted).toHaveLength(1);
+    expect(persisted[0]?.code).toBe('recorded');
   });
 
   it('keeps the recorded success path unchanged alongside the private persist', async () => {

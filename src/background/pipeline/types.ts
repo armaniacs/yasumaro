@@ -329,5 +329,5 @@ export interface StepDeps {
    * header fetch. Absent in unit-test doubles — the sink then skips the
    * verdict read instead of deriving its own.
    */
-  privacyReader?: (url: string) => Promise<PrivacyInfo | null>;
+  privacyReader?: ((url: string) => Promise<PrivacyInfo | null>) | undefined;
 }

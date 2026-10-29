@@ -31,7 +31,7 @@ This security policy covers:
 - Content Security Policy
 - Egress destinations: user-selected AI providers, user-configured Obsidian Local REST API, and the opt-in Gist sync feature (`api.github.com`, PAT-based) ― declared in `wxt.config.ts` host_permissions and derived from `src/utils/cspDomains.ts`; undeclared origins are blocked by the runtime CSP validator and browser declarations
 - Egress policy: per-domain send policy (send allowed / record without summary / mask required) owned by `src/utils/storage/aiDomainPolicy.ts` and enforced in the privacy pipeline; the send audit ledger records the time, destination, character count, and policy verdict
-- Webhook export (opt-in, off by default): a user-configured https destination receiving summary, tags, and URL only. Undeclared origins are blocked before any network access. PII masking and private exclusion are applied pre-send; page bodies are never transmitted
+- Webhook export (opt-in, off by default): a user-configured https destination receiving a masked title, a masked summary, tags, and URL only. Undeclared origins are blocked before any network access. PII masking (title and summary) and the privacy verdict are applied pre-send; a record without a verdict is never sent; page bodies are never transmitted
 - Third-party dependency vulnerabilities
 
 ## Supported Versions

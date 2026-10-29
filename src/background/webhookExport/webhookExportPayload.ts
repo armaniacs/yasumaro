@@ -2,10 +2,11 @@
  * webhookExportPayload.ts
  *
  * Minimal webhook export payload builder (PBI 2026-10-22-05).
- * 外部連携: a user-configured webhook receives 要約・タグ・URL only. The
- * payload carries no raw page content — PII masking rides the persisted
- * post-cleansing summary, so nothing raw ever reaches the builder (送信前に
- * PIIマスキングとプライベート除外が適用される).
+ * 外部連携: a user-configured webhook receives マスク済みタイトル・マスク済み
+ * 要約・タグ・URL only. The payload carries no raw page content — PII
+ * マスキングを送信前に適用する: the sender passes the title and the summary
+ * through the same maskText seam immediately before building, so nothing
+ * raw ever reaches this builder.
  *
  * 縮退の出口: unknown shapes fail closed — an https-less or empty
  * destination URL is never allowed, an empty record builds nothing.
@@ -15,6 +16,7 @@
 /** The persisted record fields the payload and conditions read. */
 export interface WebhookExportRecord {
   id: string;
+  /** Page title. The sender masks this via the maskText seam before building. */
   title: string;
   url: string;
   /** Persisted post-cleansing summary (never raw page content). */
@@ -33,7 +35,7 @@ export interface WebhookExportCondition {
   minVisitDuration?: number | undefined;
 }
 
-/** The minimal webhook body: 要約・タグ・URL only. */
+/** The minimal webhook body: masked title + masked summary + tags + URL. */
 export interface WebhookExportPayload {
   text: string;
   title: string;
@@ -78,9 +80,10 @@ export function matchesWebhookExportCondition(
 
 /**
  * The destination gate (縮退の出口): https only, fail-closed on anything else.
- * The origin-permission check (未宣言originは遮断) rides the granted optional
- * permissions in the send path — this pure gate never allows a non-https or
- * empty destination.
+ * The origin-permission check (未宣言originは遮断) rides the manifest's
+ * DECLARED host_permissions in the send path
+ * (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()); this pure
+ * gate never allows a non-https or empty destination.
  */
 export function isWebhookUrlAllowed(url: string): boolean {
   try {
@@ -102,7 +105,9 @@ export function webhookUrlOrigin(url: string): string | null {
 
 /**
  * Builds the minimal webhook body. 縮退の出口: an empty record builds
- * nothing; the summary rides the persisted post-cleansing text only.
+ * nothing. The caller supplies already-masked fields — the title and the
+ * summary ride the sender's maskText seam before this builder runs; the
+ * builder never masks itself.
  */
 export function buildWebhookExportPayload(record: WebhookExportRecord): WebhookExportPayload | null {
   if (record.url.trim() === '') return null;

@@ -136,15 +136,24 @@ export class VisitReporter {
 
     /**
      * PBI 2026-10-22-06 slice 2: the single commit point for a settled
-     * visit. The reported flag, the late-rescan baseline, and the persisted
-     * diag outcome commit together — a settled visit is never half-recorded.
-     * Telemetry is fire-and-forget (persistOutcome must not throw; the
-     * default storage write catches internally).
+     * visit. The reported flag and the persisted diag outcome commit
+     * together — a settled visit is never half-recorded. Telemetry is
+     * fire-and-forget (persistOutcome must not throw; the default storage
+     * write catches internally).
      */
     private commitSettled(contentChars: number, response: ServiceWorkerResponse | undefined): void {
         const { pageState } = this.deps;
         pageState.isValidVisitReported = true;
-        pageState.reportedContentChars = contentChars;
+        // Review fix (P2-3): the late-rescan baseline tracks the content the
+        // last SUCCESSFUL recording covers. A settled refusal recorded
+        // nothing, so the baseline stays where it was and shouldRearm stays
+        // false — otherwise every later growth re-sends a visit the pipeline
+        // deterministically rejects (wasted extract + header fetch). The
+        // same-day duplicate answers success + skip, so its baseline also
+        // advances: another re-send would be a guaranteed skip.
+        if (response?.success === true) {
+            pageState.reportedContentChars = contentChars;
+        }
         const persist = this.deps.persistOutcome
             ?? ((outcome: LastCaptureOutcome): void => {
                 void persistLastCaptureOutcome(outcome);
@@ -225,12 +234,13 @@ export class VisitReporter {
                         ?? (await import('./privacyDialog.js')).showPrivacyConfirmDialog;
                     const userConfirmed = await confirm(statusCode, reasonLabel);
                     if (userConfirmed) {
+                        let resendResponse: ServiceWorkerResponse | undefined;
                         try {
                             // PBI 2026-09-15-14: the force re-send uses the same
                             // payload builder — the stats-drop drift (force
                             // re-sends omitting byte/ai fields) is structurally
                             // impossible now.
-                            await sender.sendMessageWithRetry({
+                            resendResponse = await sender.sendMessageWithRetry({
                                 type: 'VALID_VISIT',
                                 payload: toValidVisitPayload(pageState, content, {
                                     force: true,
@@ -242,6 +252,19 @@ export class VisitReporter {
                             });
                         } catch (retryError: unknown) {
                             await logError('Failed to force save private page', { error: errorMessage(retryError) }, ErrorCode.INTERNAL_ERROR, 'visitReporter');
+                        }
+                        // Review fix (P1-1): the force re-send records the page
+                        // (force=true bypasses the privacy gate in
+                        // checkPrivacyHeadersStep), so the settled outcome
+                        // normalizes to the re-send's verdict instead of the
+                        // original refusal — otherwise the diagnostics panel
+                        // shows PRIVATE_PAGE_DETECTED with a fresh timestamp
+                        // for a page that IS recorded. A failed or unanswered
+                        // re-send keeps the original refusal: the pending page
+                        // stays and the panel keeps showing the refusal.
+                        if (resendResponse?.success === true) {
+                            this.commitSettled(extractResult.content.length, resendResponse);
+                            return;
                         }
                     }
                     // A user-declined or answered confirmation is terminal for

@@ -12,9 +12,17 @@
  * in production, memory in tests — never module-global memory, which dies
  * with the worker), and completion is the single atomic marker write. Alarm
  * wiring follows the existing table (alarmRegistry.ts): a short-interval
- * resume tick re-invokes runDigestBatch until the marker exists, so a kill
- * resumes within minutes, not next Monday. The recording pipeline is never
- * touched: no shared mutex, no shared keys.
+ * resume tick re-invokes runDigestBatch until the marker exists, so FOLD
+ * PROGRESS survives a kill and resumes within minutes, not next Monday.
+ *
+ * The publish is not yet resumable: publishDigest delegates to the existing
+ * weekly generation, which fetches its own period and makes the single AI
+ * call it makes today, so a kill during that call discards the folded digest
+ * and the next tick re-runs the final chunk and the publish from the
+ * checkpoint. The folded chunks are therefore computed but not consumed;
+ * consuming them as incremental AI folds is the deferred follow-up
+ * (digestBatchAlarm.ts's publishDigest seam). The recording pipeline is
+ * never touched: no shared mutex, no shared keys.
  *
  * 標識統一 (production wiring, digestBatchAlarm.ts +
  * digestBatchCheckpointStore.ts): the completion marker IS the weekly
@@ -100,6 +108,14 @@ export async function runDigestBatch(options: DigestBatchRunnerOptions): Promise
   const end = Math.min(nextIndex + Math.max(1, chunkSize), entries.length);
   for (let i = nextIndex; i < end; i++) {
     if (isStale()) {
+      // A newer overlapping tick started: this stale save can land after the
+      // newer run's higher checkpoint, so nextIndex may regress to i — safe,
+      // the fold is rebuilt deterministically from the frozen entries array
+      // (extra cheap folds, no correctness loss). The completion marker
+      // cannot regress with it: every run re-reads the marker at the top,
+      // and the production store's saveCompletedPeriod additionally refuses
+      // an older period over a newer marker (digestBatchCheckpointStore.ts
+      // 単調性ガード).
       await store.saveCheckpoint({ periodKey, nextIndex: i, processedIds: [...processedIds] });
       return { completed: false, processedTotal: processedIds.length };
     }
@@ -111,6 +127,11 @@ export async function runDigestBatch(options: DigestBatchRunnerOptions): Promise
 
   if (end >= entries.length) {
     if (isStale()) {
+      // Same as the mid-chunk save above: a stale save at the publish
+      // boundary persists the reached index and returns without publishing
+      // or writing the marker, so an overlapping newer run's publish (and
+      // the monotonicity-guarded marker write) is never overwritten by a
+      // stale one.
       await store.saveCheckpoint({ periodKey, nextIndex: end, processedIds: [...processedIds] });
       return { completed: false, processedTotal: processedIds.length };
     }

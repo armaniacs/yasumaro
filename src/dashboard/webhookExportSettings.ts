@@ -52,21 +52,30 @@ async function defaultResend(
   settings: WebhookExportSettings,
   force: boolean,
 ): Promise<WebhookExportResendResult> {
-  const [{ sendWebhookExport }, { WebhookExportHistory: HistoryClass }] = await Promise.all([
-    import('../background/webhookExport/webhookExportSender.js'),
-    import('../background/webhookExport/webhookExportHistory.js'),
-  ]);
-  const { getPermissionManager } = await import('../utils/permissionManager.js');
+  const [{ sendWebhookExport, defaultIsWebhookHostPermitted }, { WebhookExportHistory: HistoryClass }] =
+    await Promise.all([
+      import('../background/webhookExport/webhookExportSender.js'),
+      import('../background/webhookExport/webhookExportHistory.js'),
+    ]);
   const { sanitizeRegex } = await import('../utils/piiSanitizer.js');
   const history = new HistoryClass();
   const result = await sendWebhookExport(
+    // isPrivate: false is deliberate: the resend targets a record the user
+    // explicitly picked in the history UI — the explicit pick is the user's
+    // consent — and the verdict source (the SW privacy cache reader) is not
+    // reachable at this seam, so re-running the verdict here is impossible.
     { record, settings, isPrivate: false },
     {
       fetchFn: (url: string, init: { method: string; headers: Record<string, string>; body: string }) =>
         globalThis
           .fetch(url, { method: init.method, headers: init.headers, body: init.body, redirect: 'error' })
           .then((response: Response) => ({ ok: response.ok, status: response.status })),
-      isHostPermitted: (url: string) => getPermissionManager().isHostPermitted(url),
+      // Same declared host_permissions matcher the SW send path uses
+      // (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()) —
+      // NOT permissionManager.isHostPermitted, whose granted-set answer
+      // (chrome.permissions.contains) covers every origin in a real install
+      // and would bypass the undeclared-origin gate.
+      isHostPermitted: defaultIsWebhookHostPermitted,
       maskText: (text: string) => sanitizeRegex(text).then((masked) => masked.text),
       notify: () => {},
       now: () => Date.now(),
@@ -146,14 +155,20 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
       label.className = 'webhook-export-history-label';
       const when: string = new Date(entry.createdAt).toISOString();
       label.textContent = `${when} ${entry.origin} ${entry.status} (${entry.charCount} chars)`;
-      const resendBtn = document.createElement('button');
-      resendBtn.className = 'secondary-btn webhook-export-resend';
-      resendBtn.textContent = getMessageOr('webhookExportResend', 'Resend');
-      resendBtn.setAttribute('aria-label', getMessageOr('webhookExportResendAria', 'Resend', [entry.recordId]));
-      resendBtn.addEventListener('click', () => {
-        void handleResend(entry.recordId);
-      });
-      row.append(label, resendBtn);
+      if (seams.resolveRecord === undefined) {
+        // The record resolver is not wired in this view: a Resend button
+        // would always fail with "not wired", so it never renders here.
+        row.append(label);
+      } else {
+        const resendBtn = document.createElement('button');
+        resendBtn.className = 'secondary-btn webhook-export-resend';
+        resendBtn.textContent = getMessageOr('webhookExportResend', 'Resend');
+        resendBtn.setAttribute('aria-label', getMessageOr('webhookExportResendAria', 'Resend', [entry.recordId]));
+        resendBtn.addEventListener('click', () => {
+          void handleResend(entry.recordId);
+        });
+        row.append(label, resendBtn);
+      }
       list.appendChild(row);
     }
   }

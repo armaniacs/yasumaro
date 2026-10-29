@@ -14,6 +14,7 @@ import {
   tokenizeTitle,
   type SimilarityRecord,
 } from '../similarityClusterAggregate.js';
+import { MAX_TOKENS_PER_TITLE } from '../../utils/computeLimits.js';
 
 function makeRecord(overrides: Partial<SimilarityRecord> = {}): SimilarityRecord {
   return {
@@ -38,6 +39,22 @@ describe('tokenizeTitle + titleSimilarity (ローカル類似判定の土台)', 
     expect(tokenizeTitle(null)).toEqual(new Set());
     expect(tokenizeTitle(undefined)).toEqual(new Set());
     expect(tokenizeTitle(42)).toEqual(new Set());
+  });
+
+  it('caps the token set at MAX_TOKENS_PER_TITLE, first tokens in scan order', () => {
+    expect(MAX_TOKENS_PER_TITLE).toBe(50);
+    // A 500-char title (MAX_TITLE_LENGTH) tokenizes to ~250 whitespace
+    // tokens; the cap keeps the first 50 so a hostile title cannot multiply
+    // every pair comparison of buildSimilarityClusters by the token count.
+    const hostile = Array.from({ length: 250 }, (_, i) => `tok${i}`).join(' ');
+    const tokens = tokenizeTitle(hostile);
+    expect(tokens.size).toBe(MAX_TOKENS_PER_TITLE);
+    expect(tokens.has('tok0')).toBe(true);
+    expect(tokens.has(`tok${MAX_TOKENS_PER_TITLE - 1}`)).toBe(true);
+    expect(tokens.has(`tok${MAX_TOKENS_PER_TITLE}`)).toBe(false);
+    // Duplicates never push the set past the cap.
+    const repeated = tokenizeTitle(Array.from({ length: 100 }, () => 'same').join(' '));
+    expect(repeated.size).toBe(1);
   });
 
   it('scores the threshold boundary (類似しきい値の境界)', () => {

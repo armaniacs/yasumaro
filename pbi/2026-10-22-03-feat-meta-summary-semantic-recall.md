@@ -68,6 +68,9 @@ Scenario: 類似記事が束ねられる
 - (e) E2E spec 新設: `testDir/e2e/similarity-cluster.spec.ts`（@extension、BDD シナリオ 2、固定時間待ちなし・条件待ちのみ）。シナリオ1（週次生成）は AI プロバイダ+ダウンロード先依存のため単体テスト（digestBatchJob 5+alarm 19）が担保。実行は統合側で実施
 - (g) docs 反映: `docs/RECALL_EVAL_GUIDE.md` 新設（二言語。15文書・4問の構成、`evaluateRecallAt3` の測定手順、実測値 recall@3 1.0/1.0・MRR 0.576/0.576 同点と非退行、再現コマンド、コーパス変更の作法）。文字種ゲート違反 0。PRIVACY.md 不接触
 - 検証: 変更・新規 95 テスト `--repeats=20` 全 green、フルスイート 1199 ファイル/17498 テスト全 green、eslint 変更 15 ファイル 0、`npx tsc --noEmit`（本番）0、文字種ゲート 0
+
+## 実装記録（2026-10-30・第三者レビュー対応）
+✅ PBI 2026-10-22-03: 第三者レビュー指摘を修正（敵対的レビュー+反証済み報告を受けて） ― 類似クラスタ O(n^2) 境界制御（`computeLimits.ts` に `CLUSTER_RECORDS_CAP=200`・`MAX_TOKENS_PER_TITLE=50` を実測根拠付きで追加: 攻撃的 ~500 文字タイトル最悪ケースで 200 件 ~30ms/1000 件 ~690ms/旧無制限 10000 行 ~2.5 分相当。fetch limit を 10000→200 に変更し capped notice 表示・tokenizeTitle にトークン上限）、週次ダイジェスト両経路（weekly alarm・batch）を**完了した前週**に統一（`buildCompletedWeekPeriod` 月曜-7日起点。publish は tick 起点時刻を pin し AI 呼び出し中の週替わりドリフトも塞ぐ。動作変更: 週次ダイジェストが前週の実データを持つようになる・手動トリガも前週。月次経路は不接触）、完了標識 `saveCompletedPeriod` に単調性ガード（ISO 週キー序数比較・退行阻止。未知形状はフォールスルーで標識が詰まらない）、kill 再開・行上限導出・空期間の各コメントを実態化、クラスタ見出しの i18n 鍵化（E2E は fixture に locale オプション追加+en-US pin で deterministic 化）・fetch 失敗時のエラー状態表示（`similarityClusterError`）・`similarityClusterEmptyNoTitles` 文言修正（存在しない「範囲を広げる」操作を促さない）・`PersistedCheckpoint` 型具体化（unknown→string/number/number[]）。変更テスト 10 回連続 green、全スイート 1203 ファイル/17595 テスト green、eslint/tsc/check-i18n/check-innerhtml-escape/check-docs-chars 全ゲート 0、ミューテーション検証 3 件（単調性ガード無効化・トークン上限 break 削除・fetch limit を 10000 に戻す、各対応テストが失敗することを確認し全て復元）
 - 残した開き: AI fold の完全統合（畳み込み塊を増分 AI fold として消費）は `publishDigest` seam の差し込み口として後続。fetch 永続失敗時の専用 error state も最小片の外（NavigationRegistry の log に落ちる）
 
 ### 発見(2026-10-30・不触の記録)

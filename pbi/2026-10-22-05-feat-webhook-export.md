@@ -74,10 +74,10 @@ Scenario: 未宣言送信先は遮断される
 
 ## 受け入れ基準の判定（2026-10-30・完了）
 - [x] 転送条件(タグ/エンゲージメント)の設定ができる ― 完了(2026-10-30)。options.html mount 配線(staticForm spec+サイドバーボタン+section・9 要素 ID すべて実装・29 パネル目)
-- [x] 転送履歴と再送ができる ― 完了(2026-10-30)。SW 発火配線(保存テール SAVE_FAN_OUT 5 番目シンク・BEST_EFFORT・非リトライ)。再送 resolver は未接線(DASHBOARD_SQLITE に id 取得操作が存在しないため・UI は設計どおりのフォールバック表示を残す)
+- [x] 転送履歴と再送ができる ― 完了(2026-10-30)。SW 発火配線(保存テール SAVE_FAN_OUT 5 番目シンク・BEST_EFFORT・非リトライ)。**ただし配信は設計上 100% fail-closed 遮断**(ユーザー設定 origin は host_permissions に宣言されないため全送信が `undeclared-origin` で遮断・履歴と通知に理由記録)。実配信には optional_host_permissions 拡張+許可 UI の後続 PBI が必要。再送 resolver も未接線(DASHBOARD_SQLITE に id 取得操作が存在しないため・UI は設計どおりのフォールバック表示を残す)。配信側の BDD E2E pin は意図的に未 pin(単体層でスタブ pin)
 - [x] 未宣言originの遮断がe2e pinで固定される ― 完了(2026-10-30)。headed E2E 2 passed+repeat-each=3 6 passed(宣言済み host_permissions ゲートの実挙動を pin)
 - [x] 送信前にPIIマスキングとプライベート除外が適用される ― 完了(2026-10-30)。実 sanitizeRegex 再マスク+実 privacy 判定(privacyReader→getPrivacyInfoWithCache・キャッシュのみ)を保存テールに接続
-- DoD: BDD自動テスト緑(単体+step+E2E headed)、レビューは統合側で第三者レビュー実施、ドキュメント同期済み(PERMISSIONS 4 種類/SECURITY Scope)
+- DoD: BDD自動テスト緑(単体+step+E2E headed)。**配信シナリオは設計上 100% fail-closed 遮断**(optional_host_permissions 後続 PBI)、E2E はゲート側の実挙動を pin(配信側は意図的に未 pin)
 - E2E: 条件一致→転送→表示、未宣言origin遮断の2pin
 - 統合: 再試行・重複抑止・順序のテスト
 - 単体: 条件判定・ペイロード整形・マスク適用のテーブルテスト
@@ -100,3 +100,6 @@ Scenario: 未宣言送信先は遮断される
 - 再送 resolver 未接線: DASHBOARD_SQLITE に id 取得操作が存在しないため。sender の force パスは単体ピン済み、UI は設計どおり "Resend is not wired in this view." 表示
 - E2E: `webhook-egress --project=extension --headed` 2 passed+repeat-each=3 6 passed（headless は fixture が test.fixme の既知）
 - 検証: vitest 全体 1203 ファイル/17569 テスト green、tsc 0、eslint 0、check-docs-chars 0（1853 ファイル）、check-i18n ALL PASSED、check-innerhtml-escape OK
+
+## 実装記録（2026-10-30・第三者レビュー対応）
+✅ 第三者レビュー指摘修正（2026-10-22-05・敵対的レビュー+反証済み報告を受けて）: sender で title を summary と同一 maskText seam でマスク（text 1 行目+title フィールド両方・失敗時 mask-error fail-closed。タイトルはメール/氏名を含みうる最も PII 密度の高いフィールドで docs の「PII マスキング適用」に反していた）・idempotency key の recordId を page URL に変更し実行ごとの traceId を排除（実行跨ぎ同一 key・force 再記録抑止が有効化。⚠履歴行 recordId が page URL になるため将来 resolveRecord 接線 PBI は URL 解決前提の実装が必要）・privacy 判定欠落を fail-closed（`privacy-verdict-absent`・履歴記録・送信しない。判定不明=送ってよいの fail-open を解消。gate の null は端末内記録の重み、export は端末外転送の別重み）・dashboard defaultResend を宣言済み host_permissions マッチャに統一（修正済みゲートの迂回経路を解消。isPrivate: false は履歴 UI の明示的操作=同意の意味論コメント）・`<all_urls>` を URL パース後に match-pattern スキームのみ許可（chrome:///data:/about: 拒否）・resolveRecord 未接線時は Resend ボタン非表示・PERMISSIONS.md/SECURITY.md/payload ヘッダを実挙動に同期（「マスク済みタイトル・マスク済み要約・タグ・URLのみ」「判定が取得できない記録は送信しない」）・savePhase 5-sink・path/origin-permission コメント修正。テスト 9 件追加・フルスイート 1203 ファイル/17595 green・10 連続実行 green・eslint/tsc/check-docs-chars/check-i18n/check-innerhtml-escape 通過。見送り: per-URL mutex 30 秒直列化（宣言 origin 接続時の課題）・E2E matcher コピー（page.evaluate 内 import 不可能、単体が本物を固定）

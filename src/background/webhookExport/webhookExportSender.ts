@@ -2,17 +2,21 @@
  * webhookExportSender.ts
  *
  * Send path for the minimal webhook export (PBI 2026-10-22-05, box (c)):
- * SW fetch + user notification, with PII masking and private exclusion
- * applied BEFORE any network happens.
+ * SW fetch + user notification, with PII masking (title and summary), the
+ * privacy-verdict gate (an absent verdict fails closed), and private
+ * exclusion applied BEFORE any network happens.
  *
  * Masking point (なぜなぜ Topic 1: 利用者/保守者/攻撃者 × 5 whys): the
  * persisted summary already rides post-cleansing text, but the sender does
- * not trust storage state — it re-applies `sanitizeRegex` (the same regex
- * pass the privacy pipeline owns) to the summary immediately before
- * building the payload. The input type carries no raw-content field at all,
- * so raw page text cannot reach this module by construction (pinned by unit
- * test). Masking is therefore enforced at the last gate before egress,
- * regardless of how the stored summary was produced.
+ * not trust storage state — it re-applies the maskText seam (the same regex
+ * pass the privacy pipeline owns) to the TITLE and the SUMMARY immediately
+ * before building the payload. The title is the most PII-dense field (mail
+ * addresses and real names ride page titles), so both payload copies (the
+ * `title` field and the first `text` line) are masked through the same
+ * seam. The input type carries no raw-content field at all, so raw page
+ * text cannot reach this module by construction (pinned by unit test).
+ * Masking is therefore enforced at the last gate before egress, regardless
+ * of how the stored summary was produced.
  *
  * Declaration pattern (PBI 01): the destination must be https
  * (isWebhookUrlAllowed) AND declared in the manifest's host_permissions
@@ -72,8 +76,11 @@ export interface WebhookExportSendInput {
   record: WebhookExportRecord;
   settings: WebhookExportSettings;
   engagement?: WebhookExportEngagement | undefined;
-  /** Privacy-headers verdict for the source page: excluded before send. */
-  isPrivate: boolean;
+  /** Privacy-headers verdict for the source page. `undefined` (no verdict —
+   * force/whitelist bypass, non-text page, TTL-expired cache) never ships:
+   * the export path fails closed on an unknown verdict because it egresses
+   * outside the device, a different weight than the in-device record gate. */
+  isPrivate?: boolean | undefined;
 }
 
 export interface WebhookFetchResponse {
@@ -103,6 +110,7 @@ export const WEBHOOK_EXPORT_REASONS = {
   nonHttpsDestination: 'non-https-or-empty-destination',
   conditionMismatch: 'condition-mismatch',
   privateExcluded: 'private-excluded',
+  privacyVerdictAbsent: 'privacy-verdict-absent',
   duplicateSuppressed: 'duplicate-suppressed',
   undeclaredOrigin: 'undeclared-origin',
   transportError: 'transport-error',
@@ -130,20 +138,13 @@ export function defaultWebhookFetch(
 
 /**
  * Match-pattern check for one manifest host_permissions entry. Implements the
- * Chrome match-pattern semantics the declared entries use: `<all_urls>`, a
- * `*` scheme (http|https only), a `*` / `*.host` / exact host, and a path
- * glob. Exported pure so the unit tests can pin the semantics without a
- * manifest.
+ * Chrome match-pattern semantics the declared entries use: `<all_urls>`
+ * (match-pattern schemes only, noted inline), a `*` scheme (http|https only),
+ * a `*` / `*.host` / exact host, and a path glob — with one fail-closed path
+ * deviation noted inline. Exported pure so the unit tests can pin the
+ * semantics without a manifest.
  */
 export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean {
-  if (pattern === '<all_urls>') return true;
-  const schemeSeparator = pattern.indexOf('://');
-  if (schemeSeparator < 0) return false;
-  const scheme = pattern.slice(0, schemeSeparator);
-  const rest = pattern.slice(schemeSeparator + 3);
-  const slash = rest.indexOf('/');
-  const host = slash < 0 ? rest : rest.slice(0, slash);
-  const pathGlob = slash < 0 ? '/' : rest.slice(slash);
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -151,6 +152,19 @@ export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean
     return false;
   }
   const protocol = parsed.protocol.replace(/:$/, '');
+  if (pattern === '<all_urls>') {
+    // The URL is parsed BEFORE the shortcut: Chrome's <all_urls> covers the
+    // match-pattern schemes only, so a chrome-internal, data, or unknown
+    // scheme never passes an all-urls declaration.
+    return ['http', 'https', 'file', 'ftp', 'ws', 'wss'].includes(protocol);
+  }
+  const schemeSeparator = pattern.indexOf('://');
+  if (schemeSeparator < 0) return false;
+  const scheme = pattern.slice(0, schemeSeparator);
+  const rest = pattern.slice(schemeSeparator + 3);
+  const slash = rest.indexOf('/');
+  const host = slash < 0 ? rest : rest.slice(0, slash);
+  const pathGlob = slash < 0 ? '/' : rest.slice(slash);
   if (scheme === '*') {
     // In Chrome match patterns a `*` scheme matches http and https only.
     if (protocol !== 'http' && protocol !== 'https') return false;
@@ -169,6 +183,10 @@ export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean
   const path = `${parsed.pathname}${parsed.search}`;
   // Path glob: each `*` matches any run of characters (ReDoS-safe: the
   // pattern comes from the extension's own manifest, not user input).
+  // Deviation from Chrome, kept deliberately fail-closed: Chrome mandates a
+  // path segment in every pattern and would reject a pathless one at
+  // install; this matcher treats a pathless pattern as `/` (root only), so
+  // it never widens a match beyond what Chrome would grant.
   const regex = new RegExp(`^${pathGlob.split('*').map(escapeRegExp).join('.*')}$`);
   return regex.test(path);
 }
@@ -288,19 +306,41 @@ export async function sendWebhookExport(
   if (!matchesWebhookExportCondition(input.record, settings.condition, input.engagement)) {
     return { outcome: 'skipped', reason: WEBHOOK_EXPORT_REASONS.conditionMismatch, key: null };
   }
+  const origin: string = webhookUrlOrigin(settings.url) ?? '';
+  if (input.isPrivate === undefined) {
+    // Fail closed (P1 review): an absent privacy verdict (force/whitelist
+    // bypass, non-text page, TTL-expired cache) never ships — egress to
+    // outside the device is a different weight than the in-device record
+    // gate, where a missing verdict only weighs against recording.
+    await recordHistory(deps, {
+      key: `blocked-${input.record.id}-${deps.now()}`,
+      recordId: input.record.id,
+      origin,
+      status: 'blocked',
+      reason: WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent,
+      charCount: 0,
+    });
+    safeNotify(deps, { kind: 'blocked', origin, reason: WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent });
+    return { outcome: 'blocked', reason: WEBHOOK_EXPORT_REASONS.privacyVerdictAbsent, key: null };
+  }
   if (input.isPrivate) {
     return { outcome: 'skipped', reason: WEBHOOK_EXPORT_REASONS.privateExcluded, key: null };
   }
 
-  const origin: string = webhookUrlOrigin(settings.url) ?? '';
+  let maskedTitle: string;
   let maskedSummary: string | undefined;
   try {
+    // The title is the most PII-dense field (mail addresses and real names
+    // ride page titles) — it passes the SAME maskText seam as the summary,
+    // so both payload copies (the `title` field and the first `text` line)
+    // are masked before the payload is built.
+    maskedTitle = await deps.maskText(input.record.title);
     maskedSummary =
       typeof input.record.summary === 'string' && input.record.summary !== ''
         ? await deps.maskText(input.record.summary)
         : undefined;
   } catch {
-    // Fail closed: an unmaskable summary is never shipped raw.
+    // Fail closed: an unmaskable title or summary is never shipped raw.
     await recordHistory(deps, {
       key: `blocked-${input.record.id}-${deps.now()}`,
       recordId: input.record.id,
@@ -312,7 +352,7 @@ export async function sendWebhookExport(
     safeNotify(deps, { kind: 'failed', origin, reason: WEBHOOK_EXPORT_REASONS.maskError });
     return { outcome: 'failed', reason: WEBHOOK_EXPORT_REASONS.maskError, key: null };
   }
-  const payload = buildWebhookExportPayload({ ...input.record, summary: maskedSummary });
+  const payload = buildWebhookExportPayload({ ...input.record, title: maskedTitle, summary: maskedSummary });
   if (payload === null) {
     return { outcome: 'skipped', reason: WEBHOOK_EXPORT_REASONS.nonHttpsDestination, key: null };
   }

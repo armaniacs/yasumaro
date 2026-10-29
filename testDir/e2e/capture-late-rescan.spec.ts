@@ -52,6 +52,25 @@ const LAST_CAPTURE_OUTCOME_KEY = 'last_capture_outcome';
 // the re-arm contract threshold this spec pins from both sides.
 const LATE_RESCAN_MIN_GROWTH_CHARS = 2000;
 
+/**
+ * Shipped translations of captureFailure_domainBlocked (PBI 2026-10-22-05
+ * wired the key into both locale bundles). The diagnostics panel renders the
+ * locale message via getMessageOr(entry.i18nKey, last.code), and the browser
+ * UI locale is environment-dependent (ja on this machine, en elsewhere), so
+ * the pin accepts whichever translation the browser actually uses instead of
+ * hardcoding one locale.
+ */
+const DOMAIN_BLOCKED_REASON_PATTERN = new RegExp(
+  (['en', 'ja'] as const)
+    .map((locale) => JSON.parse(
+      readFileSync(join(process.cwd(), 'public/_locales', locale, 'messages.json'), 'utf-8'),
+    ) as Record<string, { message?: string }>)
+    .map((bundle) => bundle['captureFailure_domainBlocked']?.message)
+    .filter((message): message is string => typeof message === 'string' && message !== '')
+    .map((message) => message.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|'),
+);
+
 // Permitted port + static server (same pattern as the overcut spec): the
 // manifest host_permissions only cover the four AI/obsidian loopback ports,
 // so a page served there keeps sender.tab.url visible to the SW and the
@@ -258,11 +277,17 @@ test.describe('Capture Late Rescan @extension', () => {
         expect(settled.code).toBe('recorded');
       });
 
-      await test.step('The saved row keeps the first excerpt (background same-day backstop)', async () => {
-        // Observation, not a pinned contract: the re-send clears the flood
-        // guard but the SW's same-day duplicate gate answers success + skip,
-        // so the late batch reaches the pipeline yet the stored row still
-        // carries the first excerpt. Reported as a contract gap.
+      await test.step('The saved row keeps the first excerpt (finding-1 bug behavior)', async () => {
+        // Negation-only observation, not a pinned contract: the re-send
+        // clears the flood guard but the SW's same-day duplicate gate
+        // answers success + skip, so the late batch reaches the pipeline yet
+        // the stored row still carries the first excerpt (reported as a
+        // contract gap).
+        // Review note: this assert pins the CURRENT behavior of review
+        // finding 1 - the stored row is NOT updated on a same-day duplicate.
+        // Implementing the finding-1 fix (row update) BREAKS this assert;
+        // rewrite it to the post-fix contract (the row carries the late
+        // batch) at that point.
         const stored = await optionsPage.evaluate(async () => {
           const res = await chrome.storage.local.get('savedUrlsWithTimestamps');
           return (res.savedUrlsWithTimestamps as Array<Record<string, unknown>>) ?? [];
@@ -327,12 +352,17 @@ test.describe('Capture Late Rescan @extension', () => {
         await optionsPage.locator('button[data-panel="panel-general"]').click();
         await optionsPage.locator('button[data-panel="panel-diagnostics"]').click();
         const captureSection = optionsPage.locator('#diagCaptureStats');
-        // The reason code the worker emitted is rendered verbatim
-        // (locale-independent). DOMAIN_BLOCKED joined the failure-reason
-        // table (permission category), so the row no longer carries the
-        // unlisted-reason suffix, and the scope summary still lists what is
-        // excluded.
-        await expect(captureSection).toContainText('DOMAIN_BLOCKED', { timeout: 15000 });
+        // PBI 2026-10-22-05 wired the captureFailure_domainBlocked i18n key,
+        // so the panel renders the locale message through
+        // getMessageOr(entry.i18nKey, last.code) - the pin expects the
+        // translated text, and the raw code is the fallback only while the
+        // key is unwired (this spec ran green against the raw code before
+        // the wiring landed). The refusal itself is still pinned upstream
+        // through the persisted outcome (code === 'DOMAIN_BLOCKED').
+        await expect(captureSection).toContainText(DOMAIN_BLOCKED_REASON_PATTERN, { timeout: 15000 });
+        // The unwired fallback (raw code) must not surface now that the
+        // translation exists in both locale bundles.
+        await expect(captureSection).not.toContainText('DOMAIN_BLOCKED', { timeout: 5000 });
         await expect(captureSection).toContainText('excluded (', { timeout: 5000 });
         await expect(captureSection).not.toContainText('unlisted reason', { timeout: 5000 });
       });

@@ -51,7 +51,7 @@ describe('gateway execute seam (PBI 2026-10-01-04)', () => {
     // The search row folds into SQLITE_QUERY (the QueryOp is rebuilt as a
     // StorageQuery with text); SQLITE_SEARCH is only reachable by direct
     // offscreen messages.
-    expect(viaExecute.calls[0].type).toBe('SQLITE_QUERY');
+    expect(viaExecute.calls[0]!.type).toBe('SQLITE_QUERY');
   });
 
   it('execute(mutate op) reaches the same transport call as mutate()', async () => {
@@ -67,7 +67,7 @@ describe('gateway execute seam (PBI 2026-10-01-04)', () => {
 
     expect(b).toEqual(a);
     expect(viaExecute.calls).toEqual(viaMutate.calls);
-    expect(viaExecute.calls[0].type).toBe('SQLITE_INSERT');
+    expect(viaExecute.calls[0]!.type).toBe('SQLITE_INSERT');
   });
 
   it('execute(maintain op) reaches the same transport call as maintain()', async () => {
@@ -83,7 +83,7 @@ describe('gateway execute seam (PBI 2026-10-01-04)', () => {
 
     expect(b).toEqual(a);
     expect(viaExecute.calls).toEqual(viaMaintain.calls);
-    expect(viaExecute.calls[0].type).toBe('SQLITE_ARCHIVE_CLEANUP');
+    expect(viaExecute.calls[0]!.type).toBe('SQLITE_ARCHIVE_CLEANUP');
   });
 
   it('execute(plain StorageQuery) folds into the records op like query()', async () => {
@@ -97,7 +97,7 @@ describe('gateway execute seam (PBI 2026-10-01-04)', () => {
     await Promise.all([gatewayA.query({ limit: 3 }), gatewayB.execute({ kind: 'records', q: { limit: 3 } })]);
 
     expect(viaExecute.calls).toEqual(viaQuery.calls);
-    expect(viaExecute.calls[0].type).toBe('SQLITE_QUERY');
+    expect(viaExecute.calls[0]!.type).toBe('SQLITE_QUERY');
   });
 
   it('leaves the retry policy to the transport table for a row-owned unsafe op', async () => {

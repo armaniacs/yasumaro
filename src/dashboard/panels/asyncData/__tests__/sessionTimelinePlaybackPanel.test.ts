@@ -18,6 +18,7 @@ vi.mock('../../fetchPeriodRows.js', async (importOriginal) => {
 import { createSessionTimelinePanel } from '../sessionTimelinePlaybackPanel.js';
 import { fetchPeriodRows } from '../../fetchPeriodRows.js';
 import { setRegistry } from '../../registryContext.js';
+import type { PanelLifecycle } from '../../types.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 
 const mockFetchPeriodRows = vi.mocked(fetchPeriodRows);
@@ -38,14 +39,27 @@ function makeRegistry() {
   const navigations: Array<{ panelId: string; init?: Record<string, unknown> }> = [];
   const registry = {
     navigate: vi.fn(async (panelId: string, init?: Record<string, unknown>) => {
-      navigations.push({ panelId, init });
+      // exactOptionalPropertyTypes: an absent init stays absent (no explicit
+      // undefined) so the recorded shape mirrors the production call.
+      if (init !== undefined) navigations.push({ panelId, init });
+      else navigations.push({ panelId });
     }),
     navigateTyped: vi.fn(async (panelId: string, init?: Record<string, unknown>) => {
-      navigations.push({ panelId, init });
+      if (init !== undefined) navigations.push({ panelId, init });
+      else navigations.push({ panelId });
     }),
   };
   setRegistry(registry as never);
   return { registry, navigations };
+}
+
+/**
+ * PanelLifecycle.load is optional (some panels never implement it): the test
+ * must fail loudly rather than silently skip the read.
+ */
+async function loadPanel(panel: PanelLifecycle): Promise<void> {
+  if (!panel.load) throw new Error('load not implemented');
+  await panel.load();
 }
 
 describe('createSessionTimelinePanel', () => {
@@ -73,7 +87,7 @@ describe('createSessionTimelinePanel', () => {
 
     const panel = createSessionTimelinePanel();
     panel.mount(container);
-    await panel.load();
+    await loadPanel(panel);
 
     expect(mockFetchPeriodRows).toHaveBeenCalledWith({ limit: expect.any(Number), label: 'sessionTimeline' });
     const headings = [...list.querySelectorAll('.session-playback-heading')];
@@ -102,7 +116,7 @@ describe('createSessionTimelinePanel', () => {
 
     const panel = createSessionTimelinePanel();
     panel.mount(container);
-    await panel.load();
+    await loadPanel(panel);
 
     const buttons = [...list.querySelectorAll<HTMLButtonElement>('.session-playback-open-record')];
     expect(buttons).toHaveLength(2);
@@ -128,7 +142,7 @@ describe('createSessionTimelinePanel', () => {
 
     const panel = createSessionTimelinePanel();
     panel.mount(container);
-    await panel.load();
+    await loadPanel(panel);
 
     const button = list.querySelector<HTMLButtonElement>('.session-playback-open-record');
     expect(button).not.toBeNull();
@@ -146,7 +160,7 @@ describe('createSessionTimelinePanel', () => {
 
     const panel = createSessionTimelinePanel();
     panel.mount(container);
-    await panel.load();
+    await loadPanel(panel);
 
     expect(list.querySelector('.session-playback-empty')?.textContent).toBe(
       'No sessions yet. Visit pages from one search or one link to build a trail.',

@@ -284,7 +284,10 @@ describe('generateWeeklySummary', () => {
     const { generator } = createHarness();
     mockGetAll.mockResolvedValue({
       review_summary_enabled: true,
-      review_summary_last_generated_week: '2026-W28',
+      // The completed previous week of Wed 2026-07-08: Mon 2026-06-29 .. Sun
+      // 2026-07-05 = ISO week 27 (動作変更: the digest summarizes the week
+      // that has ENDED, not the week that just started).
+      review_summary_last_generated_week: '2026-W27',
     } as any);
     const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(result).toBe(false);
@@ -409,6 +412,31 @@ describe('generateWeeklySummary', () => {
       expect.objectContaining({ filename: expect.stringContaining('Yasumaro/') })
     );
   });
+
+  it('queries the completed previous week, not the week that just started (動作変更)', async () => {
+    const { generator, generateSummary, queryMock } = createHarness();
+    mockGetAll.mockResolvedValue({
+      review_summary_enabled: true,
+      local_markdown_export_path: 'Yasumaro',
+    } as any);
+    queryMock.mockResolvedValueOnce(mockRows([makeEntry()]));
+    generateSummary.mockResolvedValueOnce({ success: true, summary: 'Digest' });
+
+    const result = await generator.generateWeeklySummary(new Date('2026-07-08'));
+    expect(result).toBe(true);
+
+    // Wed 2026-07-08 sits in ISO week 28; the digest joins the week that has
+    // ENDED: Mon 2026-06-29 00:00:00.000 .. Sun 2026-07-05 23:59:59.999 local.
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    const op = queryMock.mock.calls[0]?.[0] as { dateFrom: number; dateTo: number };
+    expect(op.dateFrom).toBe(new Date(2026, 5, 29, 0, 0, 0, 0).getTime());
+    expect(op.dateTo).toBe(new Date(2026, 6, 5, 23, 59, 59, 999).getTime());
+    // The filename follows the period (the previous week), while "Generated
+    // on" inside the file stays the firing day.
+    expect((globalThis as any).chrome.downloads.download).toHaveBeenCalledWith(
+      expect.objectContaining({ filename: expect.stringContaining('2026-week-27.md') })
+    );
+  });
 });
 
 describe('generateMonthlySummary', () => {
@@ -512,7 +540,7 @@ describe('generated marker round-trip (real SettingsRepository)', () => {
     expect(generateSummary).toHaveBeenCalledTimes(1);
 
     // The marker write must land where the getAll() read can see it.
-    expect(await repo.get(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK)).toBe('2026-W28');
+    expect(await repo.get(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK)).toBe('2026-W27');
 
     const second = await generator.generateWeeklySummary(new Date('2026-07-08'));
     expect(second).toBe(false);

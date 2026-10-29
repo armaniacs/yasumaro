@@ -47,7 +47,7 @@
  */
 
 import { runDigestBatch, type DigestBatchEntry } from './digestBatchJob.js';
-import { buildWeekPeriod } from './reviewSummaryGenerator.js';
+import { buildCompletedWeekPeriod } from './reviewSummaryGenerator.js';
 import { createProductionDigestBatchCheckpointStore } from './digestBatchCheckpointStore.js';
 import type { DigestCheckpointStore } from './digestBatchJob.js';
 import { StorageKeys } from '../utils/storage/types.js';
@@ -90,10 +90,17 @@ export async function runReviewDigestBatch(deps: AlarmHandlerDeps): Promise<void
     deps.digestBatchStorage ?? CHROME_STORAGE_PORT.local,
   );
 
-  // The same period as the existing weekly path: buildWeekPeriod is the
-  // single owner of the 'YYYY-Www' key + window, so the batch and the
-  // weekly alarm guard the same marker value.
-  const period = buildWeekPeriod(new Date());
+  // The same completed previous week as the existing weekly path:
+  // buildCompletedWeekPeriod is the single owner of the completed week's
+  // 'YYYY-Www' key + window, so the batch and the weekly alarm guard the
+  // same marker value. 動作変更 (ユーザー可視): both paths summarize the week
+  // that has ENDED, so a Monday firing digests the previous week's full
+  // data instead of a few minutes of the new week. The instant is pinned at
+  // tick start and handed to publishDigest below, so the AI call inside
+  // generateWeeklySummary cannot drift to a newer week when the clock
+  // crosses the boundary mid-call.
+  const now = new Date();
+  const period = buildCompletedWeekPeriod(now);
 
   // Shared-marker pre-check: a completed week must never re-publish (the
   // weekly alarm won, or this batch already finished). The checkpoint for a
@@ -103,8 +110,12 @@ export async function runReviewDigestBatch(deps: AlarmHandlerDeps): Promise<void
     return;
   }
 
-  // Same fetch route as generatePeriodSummary (dateFrom/dateTo over the
-  // week window, the plain 10000-row cap): no new SQLite query.
+  // Same SQLite query route as generatePeriodSummary (dateFrom/dateTo over
+  // the period window through the injected gateway): no new query shape.
+  // The row cap is the same effective 10000 but derived by reference from
+  // MAX_QUERY_ROWS (= QUERY_CAPS.plain, computeLimits.ts) instead of the
+  // generator's inline literal, so the dashboard ask and the wire clamp
+  // cannot drift silently (the limits-drift test pins the constant).
   const queryRes = await deps.sqliteClient.query({
     dateFrom: period.start,
     dateTo: period.end,
@@ -129,9 +140,13 @@ export async function runReviewDigestBatch(deps: AlarmHandlerDeps): Promise<void
     .sort((a, b) => a.created_at - b.created_at || a.id - b.id)
     .map((row) => ({ id: row.id, summary: row.summary ?? '' }));
 
-  // Nothing to digest: the weekly generator skips empty periods the same
-  // way and leaves the marker untouched, so an empty week must not pin the
-  // batch into a publish loop.
+  // Nothing to digest: the gate is summary-bearing entries, stricter than
+  // the weekly generator's zero-rows skip. The generator skips only a period
+  // with no rows at all (leaving the marker untouched); a period with rows
+  // but no summaries still gets a fallback digest published and pins the
+  // marker, so the batch must not enter that publish loop here — the marker
+  // stays untouched and the weekly alarm's fallback publish (or a later
+  // summary) settles the week.
   if (entries.length === 0) return;
 
   await runDigestBatch({
@@ -142,17 +157,23 @@ export async function runReviewDigestBatch(deps: AlarmHandlerDeps): Promise<void
     // Pure local fold (joined summaries): no AI call, no external send.
     foldEntry: (digest, entry) => (digest === '' ? entry.summary : `${digest}\n\n${entry.summary}`),
     publishDigest: async (periodKey) => {
-      // The week flipped between the fold and this publish: the folded
-      // digest belongs to a period that already ended and the current week
-      // has its own flow — refuse to publish a stale period (他期間の検査点は
-      // 捨てる). runDigestBatch keeps the checkpoint; the next tick computes
-      // the new periodKey and discards it.
-      if (buildWeekPeriod(new Date()).storageKey !== periodKey) return false;
+      // The completed week advanced between the fold and this publish: the
+      // folded digest belongs to a period that is no longer the week the
+      // batch is digesting and the newer week has its own flow — refuse to
+      // publish a stale period (他期間の検査点は捨てる). runDigestBatch keeps
+      // the checkpoint; the next tick computes the new completed week and
+      // discards it.
+      if (buildCompletedWeekPeriod(new Date()).storageKey !== periodKey) return false;
       // The existing weekly generation stays the only publisher: it
       // re-checks the setting/consent/marker, generates the digest, and
       // writes REVIEW_SUMMARY_LAST_GENERATED_WEEK through the
-      // blob-authoritative repo.set seam on success.
-      return deps.reviewSummaryGenerator.generateWeeklySummary();
+      // blob-authoritative repo.set seam on success. The tick-start instant
+      // is pinned so the AI call cannot drift to a newer week when the
+      // clock crosses the boundary mid-call; if a newer marker still lands
+      // through another path, the monotonicity guard in
+      // saveCompletedPeriod (digestBatchCheckpointStore.ts) refuses a late
+      // older-period write so the marker cannot regress.
+      return deps.reviewSummaryGenerator.generateWeeklySummary(now);
     },
     isStale,
   });

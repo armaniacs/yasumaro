@@ -65,6 +65,15 @@ function makeStore(marker: string) {
 
 const VALID_CHECKPOINT = { periodKey: '2026-W43', nextIndex: 2, processedIds: [1, 2] };
 
+/**
+ * Corrupt shapes are intentionally off-type: the validator must reject them
+ * at runtime (storage is untrusted), so they arrive through this cast.
+ */
+type CheckpointArg = Parameters<typeof validateDigestBatchCheckpoint>[0];
+function corrupt(value: unknown): CheckpointArg {
+  return value as CheckpointArg;
+}
+
 describe('validateDigestBatchCheckpoint', () => {
   it('accepts a well-formed checkpoint', () => {
     expect(validateDigestBatchCheckpoint(VALID_CHECKPOINT)).toEqual(VALID_CHECKPOINT);
@@ -75,12 +84,12 @@ describe('validateDigestBatchCheckpoint', () => {
     expect(validateDigestBatchCheckpoint(undefined)).toBeNull();
     expect(validateDigestBatchCheckpoint({})).toBeNull();
     expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, periodKey: '' })).toBeNull();
-    expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, periodKey: 42 })).toBeNull();
+    expect(validateDigestBatchCheckpoint(corrupt({ ...VALID_CHECKPOINT, periodKey: 42 }))).toBeNull();
     expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, nextIndex: -1 })).toBeNull();
     expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, nextIndex: 1.5 })).toBeNull();
-    expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, nextIndex: '2' })).toBeNull();
-    expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, processedIds: 'ids' })).toBeNull();
-    expect(validateDigestBatchCheckpoint({ ...VALID_CHECKPOINT, processedIds: [1, '2'] })).toBeNull();
+    expect(validateDigestBatchCheckpoint(corrupt({ ...VALID_CHECKPOINT, nextIndex: '2' }))).toBeNull();
+    expect(validateDigestBatchCheckpoint(corrupt({ ...VALID_CHECKPOINT, processedIds: 'ids' }))).toBeNull();
+    expect(validateDigestBatchCheckpoint(corrupt({ ...VALID_CHECKPOINT, processedIds: [1, '2'] }))).toBeNull();
   });
 });
 
@@ -127,6 +136,22 @@ describe('createDigestBatchCheckpointStore', () => {
 
   it('overwrites a stale marker for another period', async () => {
     const { writer, store } = makeStore('2026-W42');
+    await store.saveCompletedPeriod('2026-W43');
+    expect(writer.set).toHaveBeenCalledWith(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK, '2026-W43');
+  });
+
+  it('does not regress the marker to an older period (週替わり TOCTOU 単調性ガード)', async () => {
+    const { writer, store } = makeStore('2026-W44');
+    // The AI call inside publishDigest outlived the week: a late save for the
+    // older period must not overwrite the newer completion marker — the
+    // weekly alarm's later run would otherwise see the older marker and
+    // re-publish the newer week.
+    await store.saveCompletedPeriod('2026-W43');
+    expect(writer.set).not.toHaveBeenCalled();
+  });
+
+  it('keeps writing through untrusted marker shapes (a corrupt marker cannot wedge the batch)', async () => {
+    const { writer, store } = makeStore('legacy-value');
     await store.saveCompletedPeriod('2026-W43');
     expect(writer.set).toHaveBeenCalledWith(StorageKeys.REVIEW_SUMMARY_LAST_GENERATED_WEEK, '2026-W43');
   });

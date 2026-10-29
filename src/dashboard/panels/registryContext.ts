@@ -3,7 +3,7 @@ import { type PanelInitMap } from './types.js';
 
 let _registry: NavigationRegistry | null = null;
 
-export function setRegistry(r: NavigationRegistry): void {
+export function setRegistry(r: NavigationRegistry | null): void {
   _registry = r;
 }
 

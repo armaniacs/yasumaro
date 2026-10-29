@@ -42,6 +42,39 @@ export const MAX_TAG_CLUSTER_TAGS = 50;
 export const MAX_TIME_HEATMAP_ROWS = 10000;
 
 /**
+ * Max records fed into the similarity-cluster panel's greedy pair comparison
+ * (PBI 2026-10-22-03 third-party review, VULN-041/051/053 class, CWE-400).
+ * The panel is the one O(n^2) consumer left without a boundary: it fetched
+ * MAX_QUERY_ROWS (=10000) rows and compared every pair, so attacker-influenced
+ * titles could freeze the dashboard for minutes (C(10000, 2) = ~50M pairs).
+ * The cap bounds the comparison to C(200, 2) = 19,900 pairs — the same 200^2
+ * class as MAX_SENTENCES_FOR_TEXTRANK. Measured on the real implementation
+ * (buildSimilarityClusters with the MAX_TOKENS_PER_TITLE cap in effect,
+ * adversarial ~500-char titles that form no clusters = worst case, best of 3
+ * on the dev machine): 200 records ~30ms, 400 records ~112ms, 1000 records
+ * ~690ms, 2000 records ~5.7s — the cost grows ~25x per 5x size, so the old
+ * uncapped 10000-row read projects to ~2.5 minutes. 200 keeps the panel well
+ * under a 1s frame budget while 1000 already risks a multi-second freeze.
+ * Rows kept: the first N as fetched (queryLogs returns newest first, the
+ * MAX_TAGS_PER_RECORD parse-order precedent), so the panel compares the most
+ * recent records and reports the truncation with a cap notice.
+ */
+export const CLUSTER_RECORDS_CAP = 200;
+
+/**
+ * Max tokens kept per title in tokenizeTitle (similarityClusterAggregate).
+ * Stored titles are attacker-influenced and bounded by MAX_TITLE_LENGTH
+ * (=500 chars, utils/limits.ts), which tokenizes to ~250 whitespace/CJK
+ * tokens; every one of them multiplies each pair comparison of the
+ * similarity-cluster panel by |A| + |B| set lookups. Keeping the first 50
+ * tokens in scan order bounds a pair to ~100 lookups (the MAX_TAGS_PER_RECORD
+ * = 50 family), so CLUSTER_RECORDS_CAP^2 pairs stay cheap regardless of title
+ * length. Long real-world news titles carry well under 50 distinct tokens,
+ * so the cap never binds on legitimate data.
+ */
+export const MAX_TOKENS_PER_TITLE = 50;
+
+/**
  * Max rows fetched for the research-sessions panel (user-selected period).
  * One `fetchPeriodRows` page is enough: sessions are grouped in time order
  * client-side, and the panel shows a cap notice when the page came back full.

@@ -195,7 +195,7 @@ describe('parity with the dashboard aggregate (drift guard)', () => {
           ...(typeof row.nav_source_url === 'string' ? { navSourceUrl: row.nav_source_url } : {}),
           ...(typeof row.search_query === 'string' ? { searchQuery: row.search_query } : {}),
         }))
-        .filter((entry) => !isPlaybackExcluded(entry as BrowsingLogEntry)),
+        .filter((entry) => !isPlaybackExcluded(entry as unknown as BrowsingLogEntry)),
     ).map((c) => c.record.id);
     const aggregateSet = new Set(aggregateRecords);
     for (const id of swRecords) {

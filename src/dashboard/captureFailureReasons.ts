@@ -7,9 +7,12 @@
  * (権限・CSP・種別・同意・保存・重複) so the diagnostics surface shows the
  * reason instead of failing silently (沈黙の失敗にしない).
  *
- * Slice scope (honest): this slice ships only the vocabulary — the code
- * table, the scope lists, and the classifier. The diagnostics-panel wiring
- * that renders the last outcome rides a later slice and consumes this table.
+ * Consumer (current): the diagnostics panel consumes this table today —
+ * panels/diagnostic/diagnosticsPanel.ts renders the last persisted outcome
+ * through classifyCaptureFailure plus the entry.i18nKey lookup (getMessageOr),
+ * so a listed code displays its category and translated reason. This file
+ * owns only the vocabulary: the code table, the scope lists, and the
+ * classifier.
  *
  * 縮退の出口: unknown codes classify as internal/unknown — the classifier
  * never throws and never drops a reason, it just marks it unlisted.

@@ -26,8 +26,20 @@
  * cache reader the privacyHeaders gate step uses (deps.privacyReader →
  * RecordingCacheInstance.getPrivacyInfoWithCache). The read is cache-only —
  * the cache never fetches headers — so the sink issues no extra network
- * request, and the null-handling mirrors the gate (privacyInfo?.isPrivate ??
- * false). No second verdict is derived here.
+ * request, and the raw verdict rides through unmodified: an ABSENT verdict
+ * fails closed in the sender (privacy-verdict-absent). Export egresses to
+ * outside the device, a different weight than the in-device record gate
+ * where a missing verdict only weighs against recording — the gate's
+ * null-coalescing (`?? false`) deliberately does NOT carry over to egress.
+ * No second verdict is derived here.
+ *
+ * Idempotency wiring: the record identity is the page URL (data.url) — the
+ * SQLite row id is not propagated to the context, and a per-run traceId
+ * must never enter the idempotency key (it is unique per recording run, so
+ * a traceId key would keep the duplicate suppression dead across
+ * re-records). Same URL + same payload = same key (the history module
+ * contract), so a re-record of an unchanged page is suppressed and a
+ * content change derives a new key.
  */
 
 import { LogType } from '../../../utils/logger/types.js';
@@ -91,11 +103,12 @@ export const executeWebhookExport = async (
     await sendWebhookExport(
       {
         record: {
-          // The SQLite row id is not propagated to the context; the traceId
-          // identifies the recording run that produced this transfer (one run
-          // = one transfer attempt) and the canonical payload hash inside the
-          // idempotency key covers content identity.
-          id: context.traceId ?? data.url,
+          // The SQLite row id is not propagated to the context; the page URL
+          // is the stable record identity — same URL + same payload = same
+          // key (the history module contract). A traceId must never enter
+          // the key: it is unique per recording run, so a per-run key would
+          // keep the duplicate suppression dead across re-records.
+          id: data.url,
           title: data.title,
           url: data.url,
           summary: context.privacyResult?.summary,
@@ -106,7 +119,10 @@ export const executeWebhookExport = async (
           scrollDepth: data.scrollRatioPercent,
           visitDuration: data.visitDurationSeconds,
         },
-        isPrivate: privacy?.isPrivate ?? false,
+        // Raw pass-through: an absent verdict (no cache entry — force/
+        // whitelist bypass, non-text page, TTL expiry) fails closed in the
+        // sender (privacy-verdict-absent): unknown never ships off-device.
+        isPrivate: privacy?.isPrivate,
       },
       {
         fetchFn: defaultWebhookFetch,

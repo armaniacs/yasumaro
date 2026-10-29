@@ -85,6 +85,9 @@ describe('webhookExportSettings dashboard seam', () => {
     // Origin only — the token-bearing path never renders.
     expect(rows[0]?.textContent).toContain('https://hooks.example.com');
     expect(rows[0]?.textContent).not.toContain('hooks.example.com/h');
+    // The record resolver is not wired here: the Resend button never renders
+    // (it would always fail with "not wired in this view").
+    expect(document.querySelectorAll('#webhookExportHistoryList .webhook-export-resend')).toHaveLength(0);
   });
 
   it('saves the transfer condition through the injected store', async () => {
@@ -141,6 +144,8 @@ describe('webhookExportSettings dashboard seam', () => {
     });
     controller.init();
     await controller.load();
+    // The resolver seam is wired, so the Resend button renders.
+    expect(document.querySelectorAll('#webhookExportHistoryList .webhook-export-resend')).toHaveLength(1);
     document.querySelector<HTMLButtonElement>('.webhook-export-resend')?.click();
     await waitForMock(() => {
       expect(resend).toHaveBeenCalledTimes(1);

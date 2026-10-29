@@ -2,11 +2,11 @@
  * SavePhase — deep module owning the recording save tail.
  *
  * Single seam: `save(context, deps) -> SaveReceipt` (bound via
- * `createSavePhase`). Owns the 4-sink fan-out ordering, the BEST_EFFORT
+ * `createSavePhase`). Owns the 5-sink fan-out ordering, the BEST_EFFORT
  * continuation policy, the retry-subset projection (`retryProjection()`),
  * and the retry entry point (`saveRetry() -> SaveReceipt`).
  *
- * Deletion test: deleting this module forces the 4-sink order, the
+ * Deletion test: deleting this module forces the 5-sink order, the
  * per-sink continuation mapping, and the retry subset to reappear as
  * hand-written arrays in every caller.
  */

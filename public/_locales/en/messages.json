@@ -5519,8 +5519,30 @@
     "description": "Similarity-cluster empty state when every record stands alone"
   },
   "similarityClusterEmptyNoTitles": {
-    "message": "No titles to compare in this period. Try a wider range.",
+    "message": "No titled records to compare yet. Clusters appear here once recorded pages carry titles.",
     "description": "Similarity-cluster empty state when no record carries a title"
+  },
+  "similarityClusterHeading": {
+    "message": "{count} articles - {domains} - {date}",
+    "description": "Heading of one similarity cluster; {count} the member count, {domains} the covering media, {date} the freshest visit's date",
+    "placeholders": {
+      "count": { "content": "$1", "example": "2" },
+      "domains": { "content": "$2", "example": "a.example, b.example" },
+      "date": { "content": "$3", "example": "2026/10/22" }
+    }
+  },
+  "similarityClusterRowCapNotice": {
+    "message": "The comparison covers the newest {shown} of {total} records ({max}-record limit).",
+    "description": "Similarity-cluster notice when the compared-record cap truncates the analyzed history",
+    "placeholders": {
+      "shown": { "content": "$1", "example": "200" },
+      "total": { "content": "$2", "example": "5000" },
+      "max": { "content": "$3", "example": "200" }
+    }
+  },
+  "similarityClusterError": {
+    "message": "Failed to load similar stories. Try again.",
+    "description": "Similarity-cluster error state"
   },
   "tagClusterTimeSliderTab": {
     "message": "Tag Cluster Compare",

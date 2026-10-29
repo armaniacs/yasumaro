@@ -118,4 +118,25 @@ describe('runDigestBatch', () => {
     if (!firstCall) throw new Error('expected one publish call');
     expect(firstCall[1]).toBe('alpha\nbeta\ngamma\ndelta');
   });
+
+  it('a stale run at the publish boundary persists progress and never writes the marker (重なった tick の検査点後退)', async () => {
+    // A previous run folded everything and failed to publish: the checkpoint
+    // holds the full index. An overlapping older tick now resumes stale.
+    const store = makeStore({ checkpoint: { periodKey: '2026-W43', nextIndex: ENTRIES.length, processedIds: [1, 2, 3, 4] } });
+    const publish = vi.fn(async (_periodKey: string, _digest: string, _count: number) => true);
+    const result = await runDigestBatch({
+      store, entries: ENTRIES, periodKey: '2026-W43', chunkSize: 10, foldEntry: fold, publishDigest: publish,
+      isStale: () => true,
+    });
+    expect(result.completed).toBe(false);
+    // The stale run does not publish and does not touch the completion
+    // marker: the marker write only happens after a successful publish, and
+    // the production store's saveCompletedPeriod monotonicity guard refuses
+    // an older period over a newer marker (digestBatchCheckpointStore.ts) —
+    // so a stale tick's late checkpoint save can regress nextIndex only
+    // (deterministic refold, no correctness loss), never the marker.
+    expect(publish).not.toHaveBeenCalled();
+    expect(store.completedWrites).toEqual([]);
+    expect(store.savedCheckpoints.at(-1)?.nextIndex).toBe(ENTRIES.length);
+  });
 });

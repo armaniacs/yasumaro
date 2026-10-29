@@ -9,7 +9,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { waitForMock } from '../../../testDir/waitPolicy.js';
 import { runReviewDigestBatch, DIGEST_BATCH_CHUNK_SIZE } from '../digestBatchAlarm.js';
 import { DIGEST_BATCH_CHECKPOINT_KEY } from '../digestBatchCheckpointStore.js';
-import { buildWeekPeriod } from '../reviewSummaryGenerator.js';
+import { buildCompletedWeekPeriod } from '../reviewSummaryGenerator.js';
 import type { ReviewSummaryGenerator } from '../reviewSummaryGenerator.js';
 import type { AlarmHandlerDeps } from '../alarmRegistry.js';
 import type { SettingsReader, SettingsRepository } from '../../utils/storage/SettingsRepository.js';
@@ -18,7 +18,9 @@ import { StorageKeys } from '../../utils/storage/types.js';
 import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 
-const WEEK_KEY = buildWeekPeriod(new Date()).storageKey;
+// 動作変更 (ユーザー可視): both digest paths summarize the completed previous
+// week, so the batch's shared marker value is the completed week's key.
+const WEEK_KEY = buildCompletedWeekPeriod(new Date()).storageKey;
 
 /** In-memory StorageArea (the ports.ts shape the production store injects). */
 function makeMemoryArea(): Pick<StorageArea, 'get' | 'set' | 'remove'> {
@@ -179,6 +181,19 @@ describe('runReviewDigestBatch — execution-time gates', () => {
     // 他期間の検査点は捨てる: a completed week's checkpoint is dead progress.
     expect(await port.get([DIGEST_BATCH_CHECKPOINT_KEY])).toEqual({});
   });
+
+  it('queries the completed previous week, not the week that just started (動作変更)', async () => {
+    const query = makeQuery(makeRows(['a']));
+    const deps = makeDeps({ query });
+    await runReviewDigestBatch(deps);
+    expect(query).toHaveBeenCalledTimes(1);
+    const op = query.mock.calls[0]?.[0] as { dateFrom: number; dateTo: number };
+    // The completed previous week of now: Monday-7 00:00:00.000 .. Sunday
+    // 23:59:59.999 local — a Monday 09:00 firing digests the previous week's
+    // full data instead of a few minutes of the new week.
+    expect(op.dateFrom).toBe(buildCompletedWeekPeriod(new Date()).start);
+    expect(op.dateTo).toBe(buildCompletedWeekPeriod(new Date()).end);
+  });
 });
 
 describe('runReviewDigestBatch — publish and marker unification', () => {
@@ -188,6 +203,16 @@ describe('runReviewDigestBatch — publish and marker unification', () => {
     const deps = makeDeps({ query, generator });
     await runReviewDigestBatch(deps);
     expect(generator.generateWeeklySummary).toHaveBeenCalledTimes(1);
+    // The tick-start instant is pinned so the AI call inside
+    // generateWeeklySummary cannot drift to a newer week mid-call
+    // (週替わり TOCTOU): the batch's period and the publish target stay the
+    // same completed week.
+    expect(generator.generateWeeklySummary).toHaveBeenCalledWith(expect.any(Date));
+    const passedDate = vi.mocked(generator.generateWeeklySummary).mock.calls[0]?.[0];
+    expect(passedDate).toBeInstanceOf(Date);
+    if (passedDate) {
+      expect(buildCompletedWeekPeriod(passedDate).storageKey).toBe(WEEK_KEY);
+    }
     expect(generator.generateMonthlySummary).not.toHaveBeenCalled();
     // 標識統一: the same shared key, the same 'YYYY-Www' value.
     expect(deps.writer.set).toHaveBeenCalledWith(
