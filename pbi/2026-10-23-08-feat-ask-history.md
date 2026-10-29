@@ -43,15 +43,17 @@ Scenario: 根拠がないときは分からないと言う
 - ja/en: `askHistoryLabel`・`askHistoryHelp`・`askHistoryTargetLabel`・`askHistoryTargetAll`・`askHistoryQuestionPlaceholder`・`askHistoryAskBtn`・`askHistoryBusy`・`askHistoryFailed`・`askHistoryNoEvidence` の9キーを双側追加
 - pin: `src/background/handlers/__tests__/askHistoryHandlers.test.ts` 20テスト（根拠選択テーブル・打ち切り・縮退・コレクション絞り・BDD2シナリオ・in-flight・admission拒否）。既存 pin 更新: MessageRouter handler数 25→26、senderTrustCoverage に ASK_HISTORY 追加
 - pin: `src/dashboard/panels/asyncData/__tests__/askHistoryPanelView.test.ts` 4件（対象select描画・回答と引用リンク・no_evidence・失敗表示。2026-10-25追加、当初はDOM層E2Eのみの予定を変更）
-- 残(2026-10-25更新): E2Eは作成済み・headed未実行(testDir/e2e/ask-history.spec.ts 3件)。FTS/LIKE両パスの実sqlite統合テストは未着手。コードレビューは完了。ドキュメントはドラフト済み・反映待ち
-- E2E: コレクション選択→質問→引用遷移の通し(仕様作成済み、headed実行待ち)
-- 統合: FTS/LIKE両パスのスニペット再現テスト(未着手)、空集合テスト(単体でpin済み)
+- 残(2026-10-30更新): E2Eは作成済み（testDir/e2e/ask-history.spec.ts 3件。no-evidence 1件がextensionで緑、回答系2件は実機モデル必須のため `@interaction`）。FTS/LIKE両パスの実sqlite統合テストは完了(下記追記)。コードレビューは完了。ドキュメントは反映済み
+- E2E: コレクション選択→質問→引用遷移の通し(回答系2件は実機モデル必須のowner手動。no-evidence 1件は緑)
+- 統合: FTS/LIKE両パスのスニペット再現テスト(完了・下記追記)、空集合テスト(単体でpin済み)
 - 単体: 引用整形・打ち切り・安全性判定のテーブルテスト(pin済み、askEvidence.test.ts＋askHistoryPanelView.test.ts)
 - 追記(2026-10-25・検証と小gap修正):
   - 修正F1: MessageRouterのASK_HISTORY配線がaiService.generateSummaryを未束縛で渡し、回答成功経路が毎回TypeErrorになっていた。束縛arrowに修正。回帰テストをaskHistoryHandlers.test.tsに追加(実router＋this依存aiServiceでansweredを検証。修正前は失敗・修正後は成功を確認)
   - 修正F2: panel load()がvoid loadSaved()の完了を待たずask領域を描画し、対象selectが初回常に空になっていた。loadSaved完了後にask領域を再描画する形に修正（当初のawait直列化は生成レースガードの単体テストを hang させたため、model fetchを塞がない .then 再描画に変更。2026-10-26）。viewテストで選択肢描画をpin
   - 追加テスト: askHistoryPanelView.test.ts 4件(選択肢・回答と引用リンク・no_evidence・失敗表示)。単体とviewは全パス、型検査とeslintも clean
   - レビュー所見(2026-10-25): 層分離(askEvidence純粋化)・never-raw・fail-closed・egress作法(local_only＋ask kind＋no-summary除外)・validator上限・trust設定は良好。規約違反なし(any/unknownなし、ESM .js、固定待ちなし)。R3(拒否reasonの欠落)は契約変更につき別PBI送り、R4(30件取得上限の黙示切捨て)は既知の近似として記録のみ
+- 追記(2026-10-30・統合テスト完了): `src/offscreen/__tests__/askHistoryEvidence.realEngine.test.ts` 16テスト、実better-sqlite3上でハンドラ通し=wire fold→planQueryOrSearch→handleSearch→実SQL。パス判定discriminator(3字以上→FTS・2字→LIKE)もpin。500字境界・上位3件・引用不能行スキップ・no-summary除外・タグ事後絞り・no_evidenceを両パスで実証、`--repeats=20` green、eslint/型検査 clean。本番コード変更なし
+- 言い回し合わせ(2026-10-30): 検索投影(`SEARCH_COLUMNS_WITH_RANK`、FTS/LIKE両SELECT)は `content` を含まないため、実sqlite経路のスニペットは永続化済みクレンジング済み **summary** から派生する(本文からの引用は hand-built row のみで到達)。never-raw ルール(生本文を送らない)は満たす。content のみに検索語がある記録は QA の対象外(検索対象は url/title/summary/tags)。上記の「クレンジング済み本文（PIIマスク済み）から引用する」記述は summary 由来が実態として読み替える
 
 ## 見積もり
 2.5人週相当。チームで再見積もりすること
