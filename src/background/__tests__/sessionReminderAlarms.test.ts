@@ -52,13 +52,21 @@ class InMemoryStorageArea implements StorageArea {
 class FakeAlarmPort implements AlarmPort {
   created: Array<{ name: string; alarmInfo: chrome.alarms.AlarmCreateInfo }> = [];
   cleared: string[] = [];
+  /** Existing alarms by name (the get-then-create guard reads these). */
+  registered: Map<string, chrome.alarms.Alarm> = new Map();
 
   async create(name: string, alarmInfo: chrome.alarms.AlarmCreateInfo): Promise<void> {
     this.created.push({ name, alarmInfo });
+    this.registered.set(name, { name, periodInMinutes: alarmInfo.periodInMinutes });
   }
 
   async clear(name: string): Promise<void> {
     this.cleared.push(name);
+    this.registered.delete(name);
+  }
+
+  async get(name: string): Promise<chrome.alarms.Alarm | undefined> {
+    return this.registered.get(name);
   }
 
   onAlarm(_listener: (alarm: { name: string }) => void): void {
@@ -116,9 +124,34 @@ describe('SessionReminderAlarms', () => {
   describe('start', () => {
     it('registers the hourly reminder alarm', async () => {
       await createService([]).start();
-      expect(alarms.cleared).toContain(SESSION_REMINDER_ALARM_NAME);
+      expect(alarms.created.some((c) => c.name === SESSION_REMINDER_ALARM_NAME)).toBe(true);
       const created = alarms.created.find((c) => c.name === SESSION_REMINDER_ALARM_NAME);
       expect(created?.alarmInfo.periodInMinutes).toBe(SESSION_REMINDER_CHECK_INTERVAL_MINUTES);
+    });
+
+    it('creates only when no alarm is registered under the name (get-then-create)', async () => {
+      // chrome.alarms.create cancels and replaces a same-name alarm and
+      // recomputes a periodInMinutes-only alarm's first firing from creation
+      // time — recreating on every SW startup resets the countdown (the
+      // standingAlarmGuard contract this service must share).
+      await createService([]).start();
+      await createService([]).start();
+      await createService([]).start();
+      expect(alarms.created.filter((c) => c.name === SESSION_REMINDER_ALARM_NAME)).toHaveLength(1);
+    });
+
+    it('never clears the reminder alarm (a clear would destroy its scheduledTime)', async () => {
+      await createService([]).start();
+      expect(alarms.cleared).not.toContain(SESSION_REMINDER_ALARM_NAME);
+    });
+
+    it('keeps the existing scheduledTime across restarts', async () => {
+      await createService([]).start();
+      const first = alarms.registered.get(SESSION_REMINDER_ALARM_NAME);
+      // A restart with the alarm already armed re-runs start(): the
+      // guard must leave the registered alarm (and its countdown) intact.
+      await createService([]).start();
+      expect(alarms.registered.get(SESSION_REMINDER_ALARM_NAME)).toBe(first);
     });
   });
 

@@ -114,6 +114,18 @@ describe('buildReminderTodoLine', () => {
     const line = buildReminderTodoLine('T](https://evil.example)', 'https://example.com/p');
     expect(line).toBe('- [ ] [T\\]\\(https://evil.example\\)](https://example.com/p)');
   });
+
+  it('collapses line terminators so a title cannot forge Markdown lines', () => {
+    // \r\n are CommonMark's line terminators, U+2028/U+2029 the CodeMirror
+    // (Obsidian) breaks, U+0085 NEL — leaving any of them in the title would
+    // inject arbitrary Markdown under the Daily Note section.
+    const multi = 'Title one\nTitle two\r\n- [ ] forged\u2028\u2029line\u0085end';
+    const line = buildReminderTodoLine(multi, 'https://example.com/p');
+    // The forged "- [ ]" is also bracket-escaped by the link-text sanitizer,
+    // so it cannot even render as a checkbox.
+    expect(line).toBe('- [ ] [Title one Title two - \\[ \\] forged line end](https://example.com/p)');
+    expect(line.split('\n')).toHaveLength(1);
+  });
 });
 
 describe('createSessionReminderClickHandlers — onClicked', () => {

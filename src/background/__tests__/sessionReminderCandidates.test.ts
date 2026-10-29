@@ -20,7 +20,10 @@ import {
   REMINDER_MAX_CANDIDATES,
   UNREAD_SCROLL_RATIO,
 } from '../../dashboard/sessionTimelineAggregate.js';
-import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import { isPlaybackExcluded } from '../../dashboard/sessionTimelinePanel.js';
+import type { BrowsingLogEntry, BrowsingLogRecord } from '../../utils/sqlite-types.js';
+import type { Clock } from '../../utils/ports.js';
+import { startOfLocalDayMs } from '../../utils/localDate.js';
 
 function makeRow(overrides: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord {
   return {
@@ -34,6 +37,10 @@ function makeRow(overrides: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord 
     ...overrides,
   };
 }
+
+/** 2026-10-24 10:00 local — the day gate tests drive the clock to this. */
+const NOW_MS = new Date(2026, 9, 24, 10, 0, 0).getTime();
+const clock: Clock = { now: () => NOW_MS };
 
 describe('toReminderCandidate', () => {
   it('maps an unread trailed row to a candidate', () => {
@@ -85,19 +92,36 @@ describe('pickReminderCandidateRows', () => {
       makeRow({ id: 1, created_at: 1000, title: 'Page 1' }),
       makeRow({ id: 2, created_at: 2000, title: 'Page 2' }),
     ];
-    expect(pickReminderCandidateRows(rows).map((c) => c.record.id)).toEqual([1, 2, 3]);
+    expect(pickReminderCandidateRows(rows, NOW_MS).map((c) => c.record.id)).toEqual([1, 2, 3]);
   });
 
   it('keeps at most the candidate cap', () => {
     const rows = Array.from({ length: REMINDER_CANDIDATES_MAX + 2 }, (_, i) =>
       makeRow({ id: i + 1, created_at: 1000 + i }),
     );
-    expect(pickReminderCandidateRows(rows)).toHaveLength(REMINDER_CANDIDATES_MAX);
+    expect(pickReminderCandidateRows(rows, NOW_MS)).toHaveLength(REMINDER_CANDIDATES_MAX);
   });
 
   it('skips rows without created_at', () => {
     const noTime = { ...makeRow(), created_at: undefined } as unknown as BrowsingLogRecord;
-    expect(pickReminderCandidateRows([noTime])).toEqual([]);
+    expect(pickReminderCandidateRows([noTime], NOW_MS)).toEqual([]);
+  });
+
+  it('excludes unread pages recorded today (docs 契約: 前日までに読みかけたページを翌日に通知)', () => {
+    const todayStart = startOfLocalDayMs(NOW_MS);
+    const today = makeRow({ id: 7, created_at: todayStart + 1000 });
+    const yesterday = makeRow({ id: 8, created_at: todayStart - 1000 });
+    const picked = pickReminderCandidateRows([today, yesterday], NOW_MS).map((c) => c.record.id);
+    expect(picked).toEqual([8]);
+  });
+
+  it('keeps unread pages recorded yesterday', () => {
+    const todayStart = startOfLocalDayMs(NOW_MS);
+    const rows = [
+      makeRow({ id: 9, created_at: todayStart - 1 }),
+      makeRow({ id: 10, created_at: todayStart - 90_000_000 }),
+    ];
+    expect(pickReminderCandidateRows(rows, NOW_MS).map((c) => c.record.id)).toEqual([10, 9]);
   });
 });
 
@@ -107,7 +131,7 @@ describe('createReminderCandidateProvider', () => {
       success: true as const,
       data: { rows: [makeRow()], total: 1 },
     }));
-    const provider = createReminderCandidateProvider({ query });
+    const provider = createReminderCandidateProvider({ query }, clock);
     const candidates = await provider();
     expect(query).toHaveBeenCalledTimes(1);
     expect(query).toHaveBeenCalledWith({ limit: REMINDER_QUERY_ROWS });
@@ -119,7 +143,17 @@ describe('createReminderCandidateProvider', () => {
       success: false as const,
       error: { message: 'storage read failure' },
     }));
-    const provider = createReminderCandidateProvider({ query });
+    const provider = createReminderCandidateProvider({ query }, clock);
+    expect(await provider()).toEqual([]);
+  });
+
+  it('gates the day through the clock (unread recorded today is not a candidate)', async () => {
+    const todayStart = startOfLocalDayMs(NOW_MS);
+    const query = vi.fn(async () => ({
+      success: true as const,
+      data: { rows: [makeRow({ id: 11, created_at: todayStart + 500 })], total: 1 },
+    }));
+    const provider = createReminderCandidateProvider({ query }, clock);
     expect(await provider()).toEqual([]);
   });
 });
@@ -139,24 +173,29 @@ describe('parity with the dashboard aggregate (drift guard)', () => {
       makeRow({ id: 5, created_at: 5000 }),
       makeRow({ id: 6, created_at: 6000, scroll_ratio: 0.2 }),
     ];
-    const swRecords = pickReminderCandidateRows(rows).map((c) => c.record.id);
+    const swRecords = pickReminderCandidateRows(rows, NOW_MS).map((c) => c.record.id);
     // The aggregate's candidates run over the panel-side mapping and require
     // only the unread ratio; the SW set additionally narrows by the trail
     // columns (a reminder resumes a session, the aggregate's 縮退の出口), so
     // the SW set must be the subset of the aggregate's that has a trail.
+    // The private-row exclusion rides the dashboard's own isPlaybackExcluded
+    // (NOT a hand-rolled masked_count re-implementation), so a drift in the
+    // panel contract fails this test with it.
     const aggregateRecords = buildReminderCandidates(
       rows
-        .filter((row) => typeof row.id === 'number' && (row.masked_count ?? 0) === 0)
+        .filter((row) => typeof row.id === 'number')
         .map((row) => ({
           id: row.id as number,
           title: row.title ?? row.url,
           url: row.url,
           createdAt: row.created_at as number,
           domain: row.domain ?? '',
+          masked_count: row.masked_count ?? null,
           ...(typeof row.scroll_ratio === 'number' ? { scrollRatio: row.scroll_ratio } : {}),
           ...(typeof row.nav_source_url === 'string' ? { navSourceUrl: row.nav_source_url } : {}),
           ...(typeof row.search_query === 'string' ? { searchQuery: row.search_query } : {}),
-        })),
+        }))
+        .filter((entry) => !isPlaybackExcluded(entry as BrowsingLogEntry)),
     ).map((c) => c.record.id);
     const aggregateSet = new Set(aggregateRecords);
     for (const id of swRecords) {
