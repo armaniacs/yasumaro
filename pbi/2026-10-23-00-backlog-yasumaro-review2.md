@@ -6,11 +6,11 @@
 
 | 順位 | PBI | 種別 | RICE | Effort | 根拠・依存 |
 |---|---|---|---:|---|---|
-| 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週 | 信頼の土台。Hが作法に従う |
-| 02 | [2026-10-23-02-feat-adaptive-recording.md](2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週 | 記録の入口。Hと独立 |
-| 03 | [2026-10-23-03-feat-ai-cascade.md](2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週 | 枯渇・NDA対応。01の作法に従う |
-| 04 | [2026-10-23-04-feat-portability-moat.md](2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週 | 戦略価値。確信度0.5 |
-| 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週 | 間接効果でImpact 1 |
+| 01 | [2026-10-23-01-feat-egress-ledger.md](../dev-docs/archived/pbi/2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週 | 信頼の土台。Hが作法に従う（✅ 完了・アーカイブ済み 2026-10-30） |
+| 02 | [2026-10-23-02-feat-adaptive-recording.md](../dev-docs/archived/pbi/2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週 | 記録の入口。Hと独立（✅ 完了・アーカイブ済み） |
+| 03 | [2026-10-23-03-feat-ai-cascade.md](../dev-docs/archived/pbi/2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週 | 枯渇・NDA対応。01の作法に従う（✅ 完了・アーカイブ済み） |
+| 04 | [2026-10-23-04-feat-portability-moat.md](../dev-docs/archived/pbi/2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週 | 戦略価値。確信度0.5（✅ 完了・アーカイブ済み） |
+| 05 | [2026-10-23-05-refactor-sustainable-maintenance.md](../dev-docs/archived/pbi/2026-10-23-05-refactor-sustainable-maintenance.md) | refactor | 160 | 1.5人週 | 間接効果でImpact 1（✅ 完了・アーカイブ済み） |
 
 RICE = (Reach × Impact × Confidence) / Effort。Impactは3/2/1/0.5/0.25の目安に合わせた。絶対値より相対比較を重視する。
 

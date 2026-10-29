@@ -88,7 +88,7 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ✅ 01 | [2026-10-23-01-feat-egress-ledger.md](2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | 完了。政策エンジン+UI+監査台帳最小形+3文書更新。validate exit 0（16727 tests） |
+| ✅ 01 | [2026-10-23-01-feat-egress-ledger.md](../dev-docs/archived/pbi/2026-10-23-01-feat-egress-ledger.md) | feat | 1066 | 1.5人週相当 | ✅ 完了・アーカイブ済み（2026-10-30）。政策エンジン+UI+監査台帳最小形+3文書更新。validate exit 0（16727 tests） |
 | ✅ 02 | [2026-10-23-02-feat-adaptive-recording.md](../dev-docs/archived/pbi/2026-10-23-02-feat-adaptive-recording.md) | feat | 576 | 2.5人週相当 | ✅ 完了（2026-10-26: 分類・ゲート・UI・NULL解消。レビュー指摘なし・RECORDING_CONDITIONS日英。動画通しはowner手動） |
 | ✅ 03 | [2026-10-23-03-feat-ai-cascade.md](../dev-docs/archived/pbi/2026-10-23-03-feat-ai-cascade.md) | feat | 560 | 2.0人週相当 | ✅ 完了（2026-10-25レビュー済み。指摘なし。表示面の消費者は将来作業） |
 | ✅ 04 | [2026-10-23-04-feat-portability-moat.md](../dev-docs/archived/pbi/2026-10-23-04-feat-portability-moat.md) | feat | 267 | 1.5人週相当 | ✅ 完了（2026-10-26: アーカイブE2E 5緑・CSV/JSON E2E 3/3・レビュー指摘なし・LOG_EXPORT_IMPORT_GUIDE日英に列定義） |
@@ -104,7 +104,7 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ✅ 01 | ~~[2026-10-22-01-refactor-storage-catalog-ssot.md](2026-10-22-01-refactor-storage-catalog-ssot.md)~~ → ✅ 01完了（上段に記録） | refactor | 800 | 2.0人週相当 | 土台。A/Dが依存。wa-sqlite部分はゲート後 |
+| ✅ 01 | ~~[2026-10-22-01-refactor-storage-catalog-ssot.md](../dev-docs/archived/pbi/2026-10-22-01-refactor-storage-catalog-ssot.md)~~ → ✅ 01完了（上段に記録） | refactor | 800 | 2.0人週相当 | 土台。A/Dが依存。wa-sqlite部分はゲート後 |
 | ✅ 02 | [2026-10-22-02-feat-onboarding-light.md](../dev-docs/archived/pbi/2026-10-22-02-feat-onboarding-light.md) | feat | 480 | 1.0人週相当 | ✅ 完了（2026-10-26: バナーE2E 6/6・レビュー指摘なし・README日英＋OBSIDIAN_SETUP_GUIDEに前提追記） |
 | 🔶 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 語彙土台＋slice2完了(表示芯・週次バッチ芯・文字gram選定・RRF融合・15文書コーパス・単体31緑)。残はパネル登録・alarm結合・厳密超過（同点1.0）・E2E・第三者レビュー |
 | 🔶 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | ロジック完了(再生モデル・解除/再通知/破棄の永続化・日ゲート通知・単体41緑)。2件チェック（上限・私的除外）。残はパネル登録・SW配線・候補照会・TODO・E2E通し・第三者レビュー・文書配置 |
@@ -603,6 +603,11 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-30 PBI 2026-10-23-01 アーカイブ ― ✅ 1件完了（送信の台帳化）
+
+- **01-feat-egress-ledger**（`b97c4fc2` 政策エンジン + `2628d3a3` 設定UI + `5a2b9d0b`/`ef7e353a` 監査台帳 + `1f38b447` 3文書）: ドメイン別AI送信政策（許可・要約なし・マスク必須）と監査台帳へのchar_count/policy記録。未宣言originの遮断は既存 `testDir/e2e/gist-egress.spec.ts` の e2e pin で固定済み。CHANGELOG 6.9.58 に記載。全DoD `[x]`・全BDDシナリオ自動テスト実装済み。アーカイブ時点の実装記録: `npm run validate` exit 0（1124 files / 16727 tests）。
+- 本クリーンアップでの検証: `npm run type-check` / `npm run lint` / `npm test` green。INDEXのリンク切れ 1 件（2026-10-22-01 の打ち消し行）と yasumaro-review2 台帳のリンク切れ 4 件（02〜05 行）をアーカイブ先参照に修正。
 
 ### 2026-10-24 建築改善ループ第3弾 アーカイブ ― 8件すべて完了（01-08）
 
