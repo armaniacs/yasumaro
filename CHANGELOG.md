@@ -35,6 +35,34 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.63] - 2026-10-30
+
+このリリースは棚卸し残タスク（B 分類 5 件）の完成と第三者レビュー指摘の修正です。利用者に見える変更は類似ページクラスタ表示・週次ダイジェストの完了前週統一・読みかけ復元パネルと読みかけリマインダーの SW 配線・Webhook エクスポートの保存時発火とオプション UI・SPA 遅延再スキャンの E2E 固定です。 / This release completes the remaining backlog (B-class, 5 items) and fixes third-party review findings. User-visible changes: the similarity-cluster panel, the weekly digest unified on the completed previous week, the session-restoration playback panel and reminder wiring, webhook export firing on save with its options UI, and the SPA late re-scan pinned by E2E.
+
+### 追加 / Added
+
+- 類似ページクラスタ表示のサイドバー登録（上限 200 件・理由種別つき空状態） / Similarity-cluster panel registered in the sidebar (capped at 200 records, reason-typed empty states)
+- 読みかけ復元パネル（panel-session-timeline）と読みかけリマインダーの SW 配線（通知 ID 厳密解析・私物拒否・Daily Note TODO 追記） / Session-restoration playback panel and reminder service-worker wiring (strict notification ID parsing, private-record rejection, Daily Note todo append)
+- Webhook エクスポートの保存時発火（送信直前に PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）とオプション UI（29 パネル目） / Webhook export firing on save (PII masking right before send, declared host_permissions gate, fail-closed on undeclared origins) with its options UI (29th panel)
+- SPA 遅延再スキャンの E2E 通し（シナリオ A/B）と履歴に聞くの FTS/LIKE 統合テスト / SPA late re-scan pinned by E2E (scenarios A/B) and ask-history FTS/LIKE integration tests
+- 記録測定手順の文書化（docs/RECALL_EVAL_GUIDE.md・recall@3 1.0/1.0 同点と非退行） / Recall evaluation documented (docs/RECALL_EVAL_GUIDE.md, recall@3 1.0/1.0 parity with no regression)
+
+### 修正 / Fixed
+
+- scroll_ratio が wire のパーセント(0..100)を素で保存し CHECK(0..1) 違反で記録消失する mapper 境界の不一致 / scroll_ratio stored as a raw percentage violated the CHECK(0..1) constraint and dropped rows (normalized at the mapper boundary)
+- pickRecordDiagnostics が engagement metrics を転送せず本番で visit_duration/scroll_ratio が常に NULL（リマインダーが発火しない）だった受渡し欠落 / pickRecordDiagnostics dropped engagement metrics so visit_duration/scroll_ratio were always NULL and no reminder could fire
+- OPFS plain-list 投影に masked_count が含まれず私物拒否が本番経路で fail-open / the OPFS plain-list projection omitted masked_count so the private-record rejection failed open (column added to the codec SSOT)
+- セッションリマインダーアラームが SW 全起動で clear+create され本番で発火しないバグ（get-then-create 化） / the reminder alarm was cleared and re-created on every service-worker startup so it never fired (get-then-create)
+- Daily Note TODO 行の改行注入（normalizeSingleLine 連鎖に変更） / Markdown line-injection via the todo title (collapsed through normalizeSingleLine)
+- Webhook host ゲートが付与済み権限を見て実インストールで未宣言 origin 遮断が無効だったバグ（宣言済み host_permissions 読み替え） / the webhook host gate checked granted permissions so undeclared-origin blocking was disabled in real installs (now reads declared host_permissions)
+- PRIVATE_PAGE_DETECTED の outcome が確認ダイアログ経路で握り捨てられる誤診断（再送応答の正規化） / a stale PRIVATE_PAGE_DETECTED outcome was persisted even when the approved force re-send succeeded (normalized)
+
+### テスト
+
+- 最終ゲート `make clean test` 緑（build chromium+firefox → `npm run validate`）
+- フルスイート 1203 ファイル・17,595 テスト緑、テスト型ベースライン 447→446 にロック（返済分）
+- 新規単体テスト 200 件超（統合・バッチ・送信・取消・表示・診断・レビュー修正）。E2E は headless 実行可能分が緑、実通知の実クリック表示・回答系 headed E2E・週次通しは owner 手動に委ねる
+
 ## [6.9.62] - 2026-10-26
 
 このリリースは棚卸し残タスクの仕上げです。利用者に見える変更は自動タグ規則の保存時適用・週次ダイジェスト基盤・リマインド基盤・Webhook雛形・SPA遅延再スキャン・診断の取り込み状態表示・履歴に聞くの拒否理由表示です。 / This release closes out the remaining backlog: auto-tag on save, weekly digest groundwork, reminder groundwork, webhook scaffolding, SPA late re-scan, diagnostics capture status, and ask-history rejection reasons.

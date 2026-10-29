@@ -106,10 +106,10 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 |---|---|---|---:|---:|---|
 | ✅ 01 | ~~[2026-10-22-01-refactor-storage-catalog-ssot.md](../dev-docs/archived/pbi/2026-10-22-01-refactor-storage-catalog-ssot.md)~~ → ✅ 01完了（上段に記録） | refactor | 800 | 2.0人週相当 | 土台。A/Dが依存。wa-sqlite部分はゲート後 |
 | ✅ 02 | [2026-10-22-02-feat-onboarding-light.md](../dev-docs/archived/pbi/2026-10-22-02-feat-onboarding-light.md) | feat | 480 | 1.0人週相当 | ✅ 完了（2026-10-26: バナーE2E 6/6・レビュー指摘なし・README日英＋OBSIDIAN_SETUP_GUIDEに前提追記） |
-| 🔶 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | 語彙土台＋slice2完了(表示芯・週次バッチ芯・文字gram選定・RRF融合・15文書コーパス・単体31緑)。残はパネル登録・alarm結合・厳密超過（同点1.0）・E2E・第三者レビュー |
-| 🔶 04 | [2026-10-22-04-feat-session-timeline-reminders.md](2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | ロジック完了(再生モデル・解除/再通知/破棄の永続化・日ゲート通知・単体41緑)。2件チェック（上限・私的除外）。残はパネル登録・SW配線・候補照会・TODO・E2E通し・第三者レビュー・文書配置 |
-| 🔶 05 | [2026-10-22-05-feat-webhook-export.md](2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | モジュール完了(設定UI・履歴/冪等再送・送信路・単体41緑・e2e 2pin作成)。残はmount配線・SW発火配線・headed緑確認・文書配置・独立レビュー |
-| 🔶 06 | [2026-10-22-06-feat-capture-expansion.md](2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | 語彙＋SPA再スキャン＋診断配線完了(3件チェック・単体33緑・バンドル7.74MB・RECORDING_CONDITIONS日英)。残はPDF記録・E2E通し・他者レビュー |
+| ✅ 03 | [2026-10-22-03-feat-meta-summary-semantic-recall.md](../dev-docs/archived/pbi/2026-10-22-03-feat-meta-summary-semantic-recall.md) | feat | 427 | 3.0人週相当 | ✅ 完了（2026-10-30: クラスタ表示・週次バッチ・文字gram選定・RRF融合・15文書コーパス。第三者レビュー指摘修正済み（クラスタ境界制御・完了前週統一・単調性ガード）） |
+| ✅ 04 | [2026-10-22-04-feat-session-timeline-reminders.md](../dev-docs/archived/pbi/2026-10-22-04-feat-session-timeline-reminders.md) | feat | 320 | 2.5人週相当 | ✅ 完了（2026-10-30: 再生モデル・SW配線・候補照会・TODO・E2E通し 3 pin。第三者レビュー指摘修正済み（masked_count・アラーム get-then-create・改行注入）） |
+| ✅ 05 | [2026-10-22-05-feat-webhook-export.md](../dev-docs/archived/pbi/2026-10-22-05-feat-webhook-export.md) | feat | 320 | 1.0人週相当 | ✅ 完了（2026-10-30: mount配線・SW発火配線・送信路・オプション UI 29 パネル目。第三者レビュー指摘修正済み（PII マスキング・URL 冪等キー・fail-closed 判定）） |
+| ✅ 06 | [2026-10-22-06-feat-capture-expansion.md](../dev-docs/archived/pbi/2026-10-22-06-feat-capture-expansion.md) | feat | 200 | 3.0人週相当 | ✅ 完了（2026-10-30: SPA再スキャン E2E 通し・診断配線。PDF は対象外を明記。第三者レビュー指摘修正済み（outcome 正規化・baseline 成功ゲート）） |
 
 ### 2026-10-21 対象外・owner 判断処理（なぜなぜ分析 43 回、fix/feat 12件） ― ✅ 12件完了・アーカイブ済み（01-12） / ⬜ 0件残 実施順: ~~01~~ → ~~02~~ → ~~03~~ → ~~04~~ → ~~05~~ → ~~06~~ → ~~07~~ → ~~08~~ → ~~09~~ → ~~10~~ → ~~11~~ → ~~12~~
 
@@ -603,6 +603,14 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-30 棚卸し残タスク（B 分類 5 件）アーカイブ ― ✅ 4件完了（03-06）
+
+- **03-feat-meta-summary-semantic-recall**（`540fd04b` 配線+バッチ + `3fac0dd8` 第三者レビュー修正）: 類似ページクラスタ表示（panel-similarity-cluster、上限 200 件・capped notice・理由種別つき空状態）・週次ダイジェスト両経路（weekly alarm・batch）を完了した前週に統一（buildCompletedWeekPeriod・publish は tick 起点時刻を pin）・文字gram選定（semanticVector）+RRF融合（hybridRecallRank）+15文書評価コーパス（docs/RECALL_EVAL_GUIDE.md、recall@3 1.0/1.0 同点と非退行）。第三者レビュー指摘修正済み: クラスタ O(n^2) 境界制御（CLUSTER_RECORDS_CAP=200・MAX_TOKENS_PER_TITLE=50、実測 旧無制限 10000 行 ~2.5 分→200 件 ~30ms）・完了標識 saveCompletedPeriod に単調性ガード（ISO 週キー序数比較）。AI fold の完全統合は後続の差し込み口（publishDigest seam）。全DoD `[x]`
+- **04-feat-session-timeline-reminders**（`b32a3b4e` O1-O5 + `151f3996`/`4fc11138` 第三者レビュー修正）: 読みかけ復元パネル（panel-session-timeline、29 パネル目の隣）・読みかけリマインダーの SW 配線・候補照会・Daily Note TODO 追記・E2E 通し 3 pin。第三者レビュー指摘修正済み: OPFS plain-list 投影の masked_count 追加（私物拒否 fail-open 解消）・アラーム get-then-create（SW 全起動で clear+create され発火しない本番バグ解消）・Daily Note TODO 改行注入（normalizeSingleLine 連鎖）。実通知の実クリック表示・snooze UI は owner 手動。全DoD `[x]`
+- **05-feat-webhook-export**（`da297cb5` O1-O5 + `3fac0dd8` 第三者レビュー修正）: Webhook エクスポートの保存時発火（送信直前に PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）・履歴/冪等再送（recordId=page URL）・オプション UI。第三者レビュー指摘修正済み: 生 title 送信の解消（summary と同一 maskText seam）・traceId 冪等キーの実行毎リセット解消（重複抑止が有効化）・privacy 判定欠落の fail-closed（privacy-verdict-absent）。PERMISSIONS.md/SECURITY.md を実挙動に同期。任意権限（optional_host_permissions）による UI つき権限ゲートは後続 PBI。全DoD `[x]`
+- **06-feat-capture-expansion**（`3b4db08d` E2E通し + `3fac0dd8` 第三者レビュー修正）: SPA 遅延再スキャン E2E 通し（シナリオ A/B）・診断配線。第三者レビュー指摘修正済み: force 再送成功時の outcome を recorded に正規化（誤診断解消）・commitSettled の再スキャン baseline を成功ゲート化（拒否ページの無駄な再送解消）・capture-late-rescan spec の pin を翻訳文前提に更新。PDF 記録シナリオは design 項目として対象外を明記（ホスト権限+pdf.js 同梱が必要）。全DoD `[x]`
+- アーカイブ時点の検証: `make clean test` exit 0（build chromium+firefox → `npm run validate`）、フルスイート 1203 files / 17595 tests green、テスト型ベースライン 447→446 にロック（返済分）、版 6.9.63
 
 ### 2026-10-30 PBI 2026-10-23-01 アーカイブ ― ✅ 1件完了（送信の台帳化）
 

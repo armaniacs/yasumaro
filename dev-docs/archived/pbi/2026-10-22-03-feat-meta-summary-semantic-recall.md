@@ -48,9 +48,9 @@ Scenario: 類似記事が束ねられる
 3.0人週相当。embedding選定で変動するためチームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(評価コーパスと再現手順を含む)
+- [x] 全BDDシナリオが自動テストとして実装されパスする(2026-10-30: 週次通しシナリオは AI プロバイダ+ダウンロード先依存のため単体層（digestBatchJob 5+alarm 19+checkpoint 9）が担保、クラスタ表示シナリオは E2E green)
+- [x] コードレビュー完了(2026-10-25: 敵対的自己レビュー。2026-10-30: 統合側で敵対的第三者レビュー+指摘修正済み)
+- [x] ドキュメント更新済み(評価コーパスと再現手順を含む)(2026-10-30: docs/RECALL_EVAL_GUIDE.md 反映済み)
 
 ## 実装記録（2026-10-25・スライス2: パネル配線・バッチ・ハイブリッド・評価土台）
 - 新規モジュール: `src/dashboard/semanticVector.ts`、`src/dashboard/hybridRecallRank.ts`、`src/dashboard/evalCorpus.ts`、`src/dashboard/recallEval.ts`、`src/dashboard/similarityClusterPanel.ts`、`src/background/digestBatchJob.ts`。テスト6ファイル計31テスト。外部APIなし・ローカルのみ。`any`/`unknown` は src・テストとも不使用。ESM `.js` import。固定時間待ちなし
