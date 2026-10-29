@@ -5780,6 +5780,98 @@
   "webhookExportSaved": {
     "message": "Webhook export settings saved."
   },
+  "webhookExportTab": {
+    "message": "Webhook Export",
+    "description": "Sidebar label and panel title for the webhook export panel"
+  },
+  "webhookExportDescription": {
+    "message": "Forward records that match the transfer condition to a user-configured webhook (https only). Undeclared destinations are blocked before any network access.",
+    "description": "Description of the webhook export panel"
+  },
+  "webhookExportConditionTitle": {
+    "message": "Transfer Condition",
+    "description": "Heading of the webhook export transfer-condition form"
+  },
+  "webhookExportEnabledLabel": {
+    "message": "Enable webhook export",
+    "description": "Label of the webhook export enable toggle"
+  },
+  "webhookExportEnabledDesc": {
+    "message": "Send matching records to the configured webhook destination",
+    "description": "Help text under the webhook export enable toggle"
+  },
+  "webhookExportUrlLabel": {
+    "message": "Webhook URL (https only)",
+    "description": "Label of the webhook destination URL input"
+  },
+  "webhookExportUrlPlaceholder": {
+    "message": "https://hooks.example.com/services/…",
+    "description": "Placeholder of the webhook destination URL input"
+  },
+  "webhookExportUrlAria": {
+    "message": "Webhook URL",
+    "description": "aria-label of the webhook destination URL input"
+  },
+  "webhookExportTagLabel": {
+    "message": "Tag (optional)",
+    "description": "Label of the webhook export tag filter input"
+  },
+  "webhookExportTagPlaceholder": {
+    "message": "obsidian",
+    "description": "Placeholder of the webhook export tag filter input"
+  },
+  "webhookExportTagAria": {
+    "message": "Tag filter",
+    "description": "aria-label of the webhook export tag filter input"
+  },
+  "webhookExportTagHelp": {
+    "message": "Records carrying this tag are forwarded. Leave empty to match every record.",
+    "description": "Help text under the webhook export tag filter input"
+  },
+  "webhookExportMinScrollLabel": {
+    "message": "Minimum scroll depth (%)",
+    "description": "Label of the webhook export minimum scroll depth input"
+  },
+  "webhookExportMinScrollAria": {
+    "message": "Minimum scroll depth percent",
+    "description": "aria-label of the webhook export minimum scroll depth input"
+  },
+  "webhookExportMinDurationLabel": {
+    "message": "Minimum stay seconds",
+    "description": "Label of the webhook export minimum stay seconds input"
+  },
+  "webhookExportMinDurationAria": {
+    "message": "Minimum stay seconds",
+    "description": "aria-label of the webhook export minimum stay seconds input"
+  },
+  "webhookExportReloadLabel": {
+    "message": "Reload",
+    "description": "Label of the webhook transfer history reload button"
+  },
+  "webhookExportHistoryTitle": {
+    "message": "Transfer History",
+    "description": "Heading of the webhook transfer history list"
+  },
+  "webhookExportNoticeTitle": {
+    "message": "Webhook export",
+    "description": "Title of the webhook export result notification"
+  },
+  "webhookExportNoticeSent": {
+    "message": "Transferred to",
+    "description": "Notification text prefix for a delivered webhook transfer"
+  },
+  "webhookExportNoticeBlocked": {
+    "message": "Blocked (undeclared destination)",
+    "description": "Notification text prefix for a blocked webhook transfer"
+  },
+  "webhookExportNoticeFailed": {
+    "message": "Transfer failed",
+    "description": "Notification text prefix for a failed webhook transfer"
+  },
+  "captureFailure_domainBlocked": {
+    "message": "Blocked by the user's domain filter",
+    "description": "Capture-failure explanation shown when the page was refused by the user's domain filter"
+  },
   "sessionTimelineTab": {
     "message": "Session Playback",
     "description": "Sidebar label for the session-timeline playback panel"

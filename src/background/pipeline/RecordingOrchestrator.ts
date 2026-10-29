@@ -212,6 +212,10 @@ export class RecordingOrchestrator {
       aiService: this.aiService,
       urlStore: this.urlStore,
       sqliteClient: this.sqliteClient,
+      // PBI 2026-10-22-05: the webhook save-tail sink reads the real
+      // privacy-headers verdict from the same cache the privacyHeaders gate
+      // step uses — one verdict source, no second judgment.
+      privacyReader: this.getPrivacyInfoWithCache,
     });
     let context: RecordingContext = { data, settings, force: data.force || false, aiService: deps.aiService, traceId, errors: [] };
 

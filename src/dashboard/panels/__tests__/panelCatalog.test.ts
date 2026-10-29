@@ -106,6 +106,8 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-csp',
       'panel-tags',
       'panel-recording-conditions',
+      // PBI 2026-10-22-05: the webhook export settings panel.
+      'panel-webhook-export',
       'panel-diagnostics',
       'panel-tag-cluster',
       'panel-sqlite-history',
@@ -142,7 +144,7 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
   const buttons = parseSidebarButtons();
 
   it('has one sidebar button per catalog sidebar panel, in catalog order', () => {
-    expect(SIDEBAR_PANELS).toHaveLength(28);
+    expect(SIDEBAR_PANELS).toHaveLength(29);
     expect(buttons.map((b) => b.panelId)).toEqual(SIDEBAR_PANELS.map((e) => e.id));
   });
 

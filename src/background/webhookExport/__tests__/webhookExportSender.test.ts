@@ -6,8 +6,10 @@
  * No real timers, no network: every seam (fetch/permission/mask/notify/
  * clock/history) is injected and settles immediately.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
+  defaultIsWebhookHostPermitted,
+  isUrlCoveredByHostPattern,
   sendWebhookExport,
   WEBHOOK_EXPORT_REASONS,
   type WebhookExportNotice,
@@ -135,6 +137,59 @@ describe('pre-send gates (no network before the verdict)', () => {
     // The notice carries the origin only — the full (possibly token-bearing) URL never hits UI.
     expect(deps.notices).toHaveLength(1);
     expect(JSON.stringify(deps.notices[0])).not.toContain('hooks.example.com/hook');
+  });
+});
+
+describe('production gate reads the manifest, not the granted set', () => {
+  const realGetManifest = (globalThis as { chrome?: { runtime?: { getManifest?: () => unknown } } }).chrome
+    ?.runtime?.getManifest;
+
+  afterEach(() => {
+    const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
+    if (runtime) {
+      if (realGetManifest) runtime.getManifest = realGetManifest;
+      else delete runtime.getManifest;
+    }
+  });
+
+  function stubManifest(hostPermissions: string[]): void {
+    const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
+    if (!runtime) throw new Error('chrome.runtime mock missing');
+    runtime.getManifest = () => ({ manifest_version: 3, name: 'test', version: '0', host_permissions: hostPermissions });
+  }
+
+  it('matches exact-host, wildcard-scheme, subdomain and <all_urls> patterns', () => {
+    expect(isUrlCoveredByHostPattern('https://api.github.com/x', 'https://api.github.com/*')).toBe(true);
+    expect(isUrlCoveredByHostPattern('https://api.github.com/x', 'https://api.github.com/webhook')).toBe(false);
+    expect(isUrlCoveredByHostPattern('https://example.com/p', '*://example.com/*')).toBe(true);
+    expect(isUrlCoveredByHostPattern('http://example.com/p', '*://example.com/*')).toBe(true);
+    expect(isUrlCoveredByHostPattern('ftp://example.com/p', '*://example.com/*')).toBe(false);
+    expect(isUrlCoveredByHostPattern('https://sub.example.com/p', 'https://*.example.com/*')).toBe(true);
+    // Chrome match-pattern semantics: `*.host` also matches the bare host.
+    expect(isUrlCoveredByHostPattern('https://example.com/p', 'https://*.example.com/*')).toBe(true);
+    expect(isUrlCoveredByHostPattern('https://notexample.com/p', 'https://*.example.com/*')).toBe(false);
+    expect(isUrlCoveredByHostPattern('https://anything.test/p', '<all_urls>')).toBe(true);
+    // A malformed pattern and an unparseable URL are both non-matches.
+    expect(isUrlCoveredByHostPattern('https://example.com/p', 'not-a-pattern')).toBe(false);
+    expect(isUrlCoveredByHostPattern('::::', 'https://example.com/*')).toBe(false);
+  });
+
+  it('permits only destinations covered by the declared host_permissions', async () => {
+    stubManifest(['https://api.github.com/*', 'https://localhost:27123/*']);
+    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(true);
+    // An undeclared origin is blocked even though the browser's granted set
+    // covers every origin (the content script's <all_urls> match is granted
+    // at install time — proven by the E2E permission probe).
+    await expect(defaultIsWebhookHostPermitted('https://hooks.example.com/hook')).resolves.toBe(false);
+  });
+
+  it('fails closed when the manifest is unreadable', async () => {
+    const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
+    if (!runtime) throw new Error('chrome.runtime mock missing');
+    runtime.getManifest = () => {
+      throw new Error('manifest unavailable');
+    };
+    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(false);
   });
 });
 

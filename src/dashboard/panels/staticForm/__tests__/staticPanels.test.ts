@@ -25,7 +25,8 @@ const html = readFileSync(
 
 describe('STATIC_FORM_PANELS', () => {
   it('declares the expected number of panels', () => {
-    expect(STATIC_FORM_PANELS).toHaveLength(9);
+    // PBI 2026-10-22-05: panel-webhook-export joins the static-form table.
+    expect(STATIC_FORM_PANELS).toHaveLength(10);
   });
 
   it('gives every panel an element in the options page', () => {

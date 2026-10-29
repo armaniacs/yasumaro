@@ -54,6 +54,9 @@ export const CATALOG_ROWS = [
   { id: 'panel-csp', sidebarSection: 'settings', sidebarI18nKey: 'cspTab', deepLinkSections: [] },
   { id: 'panel-tags', sidebarSection: 'settings', sidebarI18nKey: 'tagsTab', deepLinkSections: [] },
   { id: 'panel-recording-conditions', sidebarSection: 'settings', sidebarI18nKey: 'recordingConditionsTab', deepLinkSections: [] },
+  // PBI 2026-10-22-05: the webhook export rides next to the recording
+  // conditions because both are transfer-condition decisions.
+  { id: 'panel-webhook-export', sidebarSection: 'settings', sidebarI18nKey: 'webhookExportTab', deepLinkSections: [] },
   { id: 'panel-diagnostics', sidebarSection: 'settings', sidebarI18nKey: 'diagnosticsTab', deepLinkSections: [] },
   { id: 'panel-tag-cluster', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTab', deepLinkSections: [] },
   { id: 'panel-sqlite-history', sidebarSection: 'data', sidebarI18nKey: 'sqliteHistoryTab', deepLinkSections: [], tabParam: 'history' },

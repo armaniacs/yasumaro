@@ -12,6 +12,7 @@ import type { PrivacyPipelineResult } from '../privacyPipeline.js';
 import type { AIService } from '../ai/AIService.js';
 import type { MarkdownTemplateEntryData } from '../../utils/types.js';
 import type { ObsidianClient } from '../obsidianClient.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 /**
  * Error handling strategies for pipeline steps
@@ -321,4 +322,12 @@ export interface StepDeps {
   urlStore?: UrlStore;
   /** SQLite client for persistence (saveSqliteStep) */
   sqliteClient?: import('../sqlite/offscreenGateway.js').SqliteClient | null;
+  /**
+   * PBI 2026-10-22-05: the real privacy-headers verdict reader (webhookExport
+   * save-tail sink). Same cache the privacyHeaders gate step reads
+   * (RecordingCacheInstance.getPrivacyInfoWithCache); cache-only, never a
+   * header fetch. Absent in unit-test doubles — the sink then skips the
+   * verdict read instead of deriving its own.
+   */
+  privacyReader?: (url: string) => Promise<PrivacyInfo | null>;
 }

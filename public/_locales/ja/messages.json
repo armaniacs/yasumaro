@@ -5762,6 +5762,98 @@
   "webhookExportSaved": {
     "message": "Webhook エクスポート設定を保存しました。"
   },
+  "webhookExportTab": {
+    "message": "Webhook エクスポート",
+    "description": "Webhook エクスポートパネルのサイドバーラベルとタイトル"
+  },
+  "webhookExportDescription": {
+    "message": "転送条件に合う記録を、利用者が設定した Webhook（https のみ）へ転送します。未宣言の送信先はネットワークに出す前に遮断されます。",
+    "description": "Webhook エクスポートパネルの説明"
+  },
+  "webhookExportConditionTitle": {
+    "message": "転送条件",
+    "description": "Webhook エクスポートの転送条件フォームの見出し"
+  },
+  "webhookExportEnabledLabel": {
+    "message": "Webhook エクスポートを有効にする",
+    "description": "Webhook エクスポート有効トグルのラベル"
+  },
+  "webhookExportEnabledDesc": {
+    "message": "条件に合う記録を設定済みの送信先へ転送します",
+    "description": "Webhook エクスポート有効トグルのヘルプ"
+  },
+  "webhookExportUrlLabel": {
+    "message": "Webhook URL（https のみ）",
+    "description": "Webhook 送信先 URL 入力のラベル"
+  },
+  "webhookExportUrlPlaceholder": {
+    "message": "https://hooks.example.com/services/…",
+    "description": "Webhook 送信先 URL 入力のプレースホルダー"
+  },
+  "webhookExportUrlAria": {
+    "message": "Webhook URL",
+    "description": "Webhook 送信先 URL 入力の aria-label"
+  },
+  "webhookExportTagLabel": {
+    "message": "タグ（任意）",
+    "description": "Webhook エクスポートのタグフィルター入力のラベル"
+  },
+  "webhookExportTagPlaceholder": {
+    "message": "obsidian",
+    "description": "Webhook エクスポートのタグフィルター入力のプレースホルダー"
+  },
+  "webhookExportTagAria": {
+    "message": "タグフィルター",
+    "description": "Webhook エクスポートのタグフィルター入力の aria-label"
+  },
+  "webhookExportTagHelp": {
+    "message": "このタグを持つ記録が転送されます。空欄の場合はすべての記録が一致します。",
+    "description": "Webhook エクスポートのタグフィルター入力のヘルプ"
+  },
+  "webhookExportMinScrollLabel": {
+    "message": "最小スクロール深度（%）",
+    "description": "Webhook エクスポートの最小スクロール深度入力のラベル"
+  },
+  "webhookExportMinScrollAria": {
+    "message": "最小スクロール深度（パーセント）",
+    "description": "Webhook エクスポートの最小スクロール深度入力の aria-label"
+  },
+  "webhookExportMinDurationLabel": {
+    "message": "最小滞在秒数",
+    "description": "Webhook エクスポートの最小滞在秒数入力のラベル"
+  },
+  "webhookExportMinDurationAria": {
+    "message": "最小滞在秒数",
+    "description": "Webhook エクスポートの最小滞在秒数入力の aria-label"
+  },
+  "webhookExportReloadLabel": {
+    "message": "再読み込み",
+    "description": "Webhook 転送履歴の再読み込みボタンのラベル"
+  },
+  "webhookExportHistoryTitle": {
+    "message": "転送履歴",
+    "description": "Webhook 転送履歴一覧の見出し"
+  },
+  "webhookExportNoticeTitle": {
+    "message": "Webhook エクスポート",
+    "description": "Webhook エクスポート結果通知のタイトル"
+  },
+  "webhookExportNoticeSent": {
+    "message": "転送しました",
+    "description": "Webhook 転送成功通知の接頭辞"
+  },
+  "webhookExportNoticeBlocked": {
+    "message": "遮断しました（未宣言の送信先）",
+    "description": "Webhook 転送遮断通知の接頭辞"
+  },
+  "webhookExportNoticeFailed": {
+    "message": "転送に失敗しました",
+    "description": "Webhook 転送失敗通知の接頭辞"
+  },
+  "captureFailure_domainBlocked": {
+    "message": "ユーザーのドメインフィルターでブロックされました",
+    "description": "ドメインフィルターが拒否したページの記録失敗の説明"
+  },
   "sessionTimelineTab": {
     "message": "セッション再生",
     "description": "セッション再生パネルのサイドバーラベル"

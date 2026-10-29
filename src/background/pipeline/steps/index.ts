@@ -17,4 +17,5 @@ export { saveToObsidianStep } from './saveToObsidianStep.js';
 export { saveLocalMarkdownStep } from './saveLocalMarkdownStep.js';
 export { saveMetadataStep } from './saveMetadataStep.js';
 export { saveSqliteStep, RegenerateUpdateError } from './saveSqliteStep.js';
+export { executeWebhookExport } from './webhookExportStep.js';
 

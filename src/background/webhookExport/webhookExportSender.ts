@@ -15,14 +15,23 @@
  * regardless of how the stored summary was produced.
  *
  * Declaration pattern (PBI 01): the destination must be https
- * (isWebhookUrlAllowed) AND granted in the manifest's host_permissions
- * (permissionManager.isHostPermitted → chrome.permissions.contains). An
+ * (isWebhookUrlAllowed) AND declared in the manifest's host_permissions
+ * (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()). An
  * undeclared origin is blocked without touching the network and the reason
  * surfaces in history + notification. The browser's extension_pages document
  * CSP is the second layer (pinned by testDir/e2e/webhook-egress.spec.ts).
  * The AI-provider-scoped CSPValidator gate is deliberately NOT consulted —
  * it allowlists provider domains only and would fail every webhook closed
  * without a verdict this feature can explain.
+ *
+ * Why the gate reads the manifest instead of chrome.permissions.contains
+ * (granted permissions): the content script declares `<all_urls>`, and
+ * Chromium grants that match at install time in every real install
+ * (unpacked and store alike), so the granted set covers every origin and a
+ * granted-based check can never block an undeclared destination. Proven by
+ * the E2E permission probe (webhook-egress.spec.ts pin 2: contains() returns
+ * true for example.com while the manifest does not declare it) and pinned by
+ * unit test.
  *
  * The fetch itself runs `redirect: 'error'`: a 30x must never forward the
  * JSON body to a Location no gate checked (same policy as the Gist target).
@@ -35,7 +44,7 @@ import {
   webhookUrlOrigin,
   type WebhookExportRecord,
 } from './webhookExportPayload.js';
-import { getPermissionManager } from '../../utils/permissionManager.js';
+import { escapeRegExp } from '../../utils/string.js';
 import { sanitizeRegex } from '../../utils/piiSanitizer.js';
 import {
   deriveWebhookIdempotencyKey,
@@ -119,9 +128,69 @@ export function defaultWebhookFetch(
     .finally(() => clearTimeout(timer));
 }
 
-/** Production permission check: manifest host_permissions via chrome.permissions. */
+/**
+ * Match-pattern check for one manifest host_permissions entry. Implements the
+ * Chrome match-pattern semantics the declared entries use: `<all_urls>`, a
+ * `*` scheme (http|https only), a `*` / `*.host` / exact host, and a path
+ * glob. Exported pure so the unit tests can pin the semantics without a
+ * manifest.
+ */
+export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean {
+  if (pattern === '<all_urls>') return true;
+  const schemeSeparator = pattern.indexOf('://');
+  if (schemeSeparator < 0) return false;
+  const scheme = pattern.slice(0, schemeSeparator);
+  const rest = pattern.slice(schemeSeparator + 3);
+  const slash = rest.indexOf('/');
+  const host = slash < 0 ? rest : rest.slice(0, slash);
+  const pathGlob = slash < 0 ? '/' : rest.slice(slash);
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const protocol = parsed.protocol.replace(/:$/, '');
+  if (scheme === '*') {
+    // In Chrome match patterns a `*` scheme matches http and https only.
+    if (protocol !== 'http' && protocol !== 'https') return false;
+  } else if (scheme !== protocol) {
+    return false;
+  }
+  const hostname = parsed.hostname;
+  if (host === '*') {
+    // Any host.
+  } else if (host.startsWith('*.')) {
+    const base = host.slice(2);
+    if (hostname !== base && !hostname.endsWith(`.${base}`)) return false;
+  } else if (host !== hostname) {
+    return false;
+  }
+  const path = `${parsed.pathname}${parsed.search}`;
+  // Path glob: each `*` matches any run of characters (ReDoS-safe: the
+  // pattern comes from the extension's own manifest, not user input).
+  const regex = new RegExp(`^${pathGlob.split('*').map(escapeRegExp).join('.*')}$`);
+  return regex.test(path);
+}
+
+/**
+ * Production permission check: the manifest's DECLARED host_permissions.
+ *
+ * Why not permissionManager.isHostPermitted (chrome.permissions.contains):
+ * that primitive answers from the GRANTED set, and the content script's
+ * `<all_urls>` match is granted at install time in every real install, so a
+ * granted-based check passes for every origin and can never implement the
+ * "undeclared origins are blocked" contract (see the module header). Fail
+ * closed: an unreadable manifest means no egress.
+ */
 export function defaultIsWebhookHostPermitted(url: string): Promise<boolean> {
-  return getPermissionManager().isHostPermitted(url);
+  let declared: readonly string[];
+  try {
+    declared = chrome.runtime.getManifest().host_permissions ?? [];
+  } catch {
+    return Promise.resolve(false);
+  }
+  return Promise.resolve(declared.some((pattern) => isUrlCoveredByHostPattern(url, pattern)));
 }
 
 /** Production mask: the privacy pipeline's regex pass, applied at send time. */

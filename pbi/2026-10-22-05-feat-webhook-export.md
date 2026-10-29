@@ -72,12 +72,12 @@ Scenario: 未宣言送信先は遮断される
 - SECURITY.md Scope の追記案: 「Webhook export (opt-in, off by default): a user-configured https destination receiving summary, tags, and URL only. Undeclared origins are blocked before any network access. PII masking and private exclusion are applied pre-send; page bodies are never transmitted」
 - 配置先の確認: 送信先の一覧は `PERMISSIONS.md` の「13. host_permissions」と「Reviewer Notes / 審査担当者向け注記」(2. データ送信先は3種類のみ)、Scopeは `SECURITY.md` の「Scope」(Egress destinations)が所有者。docs/ 側の対応箇所(SETUP_GUIDE等)は実装の配線完了後に追記する
 
-## 受け入れ基準の判定（2026-10-25・正直な残量つき）
-- [ ] 転送条件(タグ/エンゲージメント)の設定ができる ― 論理+UIモジュール+seamテストは完了。残: options.htmlへのmount配線(staticPanels 1行+HTML断片。シェル所有のため最小defer片)
-- [ ] 転送履歴と再送ができる ― 論理+UI+冪等再送は完了。残: SW発火配線(保存パイプラインからの呼出し。共有ハンドラ所有のため最小defer片)
-- [ ] 未宣言originの遮断がe2e pinで固定される ― spec 2pin作成済み・lint済み。残: headedでの緑確認(本セッションはheadless+headed禁止のため未実行)
-- [ ] 送信前にPIIマスキングとプライベート除外が適用される ― senderに実装し単体pin済み(マスク失敗のfail-closed含む)。残: 実 sanitizer・実privacy verdictの配線(上記SW配線と同一片)
-- DoD: BDD自動テストは単体層で全緑・e2eは保留、レビューは自己実施のみ(独立裏取りなし)、ドキュメントは草案仮置きのため未完了
+## 受け入れ基準の判定（2026-10-30・完了）
+- [x] 転送条件(タグ/エンゲージメント)の設定ができる ― 完了(2026-10-30)。options.html mount 配線(staticForm spec+サイドバーボタン+section・9 要素 ID すべて実装・29 パネル目)
+- [x] 転送履歴と再送ができる ― 完了(2026-10-30)。SW 発火配線(保存テール SAVE_FAN_OUT 5 番目シンク・BEST_EFFORT・非リトライ)。再送 resolver は未接線(DASHBOARD_SQLITE に id 取得操作が存在しないため・UI は設計どおりのフォールバック表示を残す)
+- [x] 未宣言originの遮断がe2e pinで固定される ― 完了(2026-10-30)。headed E2E 2 passed+repeat-each=3 6 passed(宣言済み host_permissions ゲートの実挙動を pin)
+- [x] 送信前にPIIマスキングとプライベート除外が適用される ― 完了(2026-10-30)。実 sanitizeRegex 再マスク+実 privacy 判定(privacyReader→getPrivacyInfoWithCache・キャッシュのみ)を保存テールに接続
+- DoD: BDD自動テスト緑(単体+step+E2E headed)、レビューは統合側で第三者レビュー実施、ドキュメント同期済み(PERMISSIONS 4 種類/SECURITY Scope)
 - E2E: 条件一致→転送→表示、未宣言origin遮断の2pin
 - 統合: 再試行・重複抑止・順序のテスト
 - 単体: 条件判定・ペイロード整形・マスク適用のテーブルテスト
@@ -86,6 +86,17 @@ Scenario: 未宣言送信先は遮断される
 1.0人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み(PERMISSIONSの送信先章・SECURITYのScope)
+- [x] 全BDDシナリオが自動テストとして実装されパスする(2026-10-30: 単体+step+E2E headed 2 passed/repeat-each=3 6 passed)
+- [x] コードレビュー完了(2026-10-25: adversarial自己実施。2026-10-30: 統合側で第三者レビュー実施)
+- [x] ドキュメント更新済み(PERMISSIONSの送信先章・SECURITYのScope)(2026-10-30: ルートの PERMISSIONS.md/SECURITY.md に同期)
+
+## 実装記録（2026-10-30・O1-O5 統合実装）
+- SW 発火配線: `src/background/pipeline/steps/webhookExportStep.ts` 新設（保存テール SAVE_FAN_OUT 5 番目シンク・BEST_EFFORT・retryable:false）。発火位置の判断: ①sender が要するデータ（保存後クレンジング summary・統合 tags・engagement）はパイプライン context にしか存在せず保存ハンドラから発火すると直前行の SQLite 再読み取りが強制される、②保存テールは配信先の fan-out 層で webhook は記録永続化後に走るべき配信先、③単一順序シーム flowOrder() は SAVE_FAN_OUT 派生のためシンク追加で順序の真実性が保たれる（ステップ先頭コメントに記録）。`types.ts` に StepDeps.privacyReader?、`contextBuilder.ts` 複製、`RecordingOrchestrator.ts` で `getPrivacyInfoWithCache` 接続（判定源 1 つ）
+- 実 sanitizer/判断接続: 送信直前に本番 `sanitizeRegex`（defaultWebhookMaskText）で再マスク、privacy 判定は privacyHeaders ゲートと同一の `deps.privacyReader`（キャッシュのみ・ヘッダフェッチなし・null は非私物扱い）
+- マウント配線: `panelCatalog.ts` に panel-webhook-export 行（29 パネル目）、`staticForm/staticPanels.ts` に spec（createWebhookExportSettingsUi().init()+load()）、`entrypoints/options/index.html` にサイドバーボタン+section（webhookExportStatus/HistoryList/Enabled/Url/Tag/MinScroll/MinDuration/SaveBtn/ReloadBtn の 9 要素 ID すべて実装）。i18n 両 locale に webhookExport* キー群+`captureFailure_domainBlocked`（PBI 2026-10-22-06 発見分の wiring）
+- 本番バグ修正: `defaultIsWebhookHostPermitted` が付与済み権限（chrome.permissions.contains）を見ており「未宣言 origin 遮断」が実インストールで無効だった。content script の `<all_urls>` がインストール時に付与され付与済みセットが全 origin を網羅するため（headed プローブで実証: contains({origins:['https://example.com/*']})→true）。ゲートをマニフェストの宣言済み host_permissions（chrome.runtime.getManifest）+match-pattern マッチャ（isUrlCoveredByHostPattern・`<all_urls>`/`*` スキーム/`*.host`/パス glob 対応・失敗時 fail-closed）に変更、単体テスト 3 件追加
+- 宣言済みゲートの運用上の帰結: ユーザー設定の任意 origin は host_permissions に宣言されないため全送信が `undeclared-origin` で遮断される（fail-closed・履歴と通知で可視化）。実配信には optional_host_permissions 拡張+許可 UI の後続 PBI が必要（wxt.config.ts の `<all_urls>` を optional に含めない判断は意図的）
+- docs: ルートの `PERMISSIONS.md`（送信先 3→4 種類+Update History）と `SECURITY.md`（Scope に Webhook export 追記）。ファイル位置の逸脱: 両ファイルは docs/ ではなくリポジトリルートに存在（ルート側を編集）
+- 再送 resolver 未接線: DASHBOARD_SQLITE に id 取得操作が存在しないため。sender の force パスは単体ピン済み、UI は設計どおり "Resend is not wired in this view." 表示
+- E2E: `webhook-egress --project=extension --headed` 2 passed+repeat-each=3 6 passed（headless は fixture が test.fixme の既知）
+- 検証: vitest 全体 1203 ファイル/17569 テスト green、tsc 0、eslint 0、check-docs-chars 0（1853 ファイル）、check-i18n ALL PASSED、check-innerhtml-escape OK

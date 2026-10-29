@@ -31,11 +31,12 @@ import {
   saveMetadataStep,
   saveToObsidianStep,
 } from './steps/index.js';
+import { executeWebhookExport } from './steps/webhookExportStep.js';
 import { saveSqliteStep } from './steps/saveSqliteStep.js';
 import { mapToBrowsingLogRecord } from './mappers/BrowsingLogRecordMapper.js';
 import { createSaveSqliteParams, type RetryContext } from './contextBuilder.js';
 
-export type SaveSinkName = 'saveObsidian' | 'saveLocalMarkdown' | 'saveSqlite' | 'saveMetadata';
+export type SaveSinkName = 'saveObsidian' | 'saveLocalMarkdown' | 'saveSqlite' | 'saveMetadata' | 'webhookExport';
 
 /**
  * Explicit error mode for the sqlite-absent skip. The former inline WARN
@@ -117,6 +118,17 @@ const SAVE_FAN_OUT: readonly SaveSinkDef[] = [
     errorStrategy: ErrorStrategy.BEST_EFFORT,
     retryable: false,
     execute: saveMetadataStep,
+  },
+  {
+    // PBI 2026-10-22-05: the webhook export is the fifth delivery
+    // destination. It runs last — after the record is persisted — and its
+    // step catches everything internally (the sender never throws), so a
+    // webhook failure can never break the recording. Not retryable: a failed
+    // transfer is re-attempted only by the dashboard's explicit resend.
+    name: 'webhookExport',
+    errorStrategy: ErrorStrategy.BEST_EFFORT,
+    retryable: false,
+    execute: executeWebhookExport,
   },
 ];
 

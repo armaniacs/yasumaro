@@ -1,7 +1,7 @@
 /**
  * savePhase.test.ts (PBI 2026-09-23-07)
  *
- * Pins the SavePhase seam: one fan-out table owning the 4-sink order, the
+ * Pins the SavePhase seam: one fan-out table owning the 5-sink order, the
  * BEST_EFFORT continuation policy, and the retry-subset projection.
  * End-to-end save semantics (offline enqueue, preview short-circuit, retry
  * entry points) stay pinned by the existing orchestrator tests, which run
@@ -50,6 +50,7 @@ import {
   saveMetadataStep,
   saveToObsidianStep,
 } from '../steps/index.js';
+import { executeWebhookExport } from '../steps/webhookExportStep.js';
 
 const mockedAddLog = addLog as unknown as ReturnType<typeof vi.fn>;
 
@@ -100,8 +101,8 @@ beforeEach(() => {
 });
 
 describe('SavePhase fan-out declaration', () => {
-  it('owns the canonical order Obsidian -> local -> sqlite -> metadata', () => {
-    expect(SAVE_SINK_ORDER).toEqual(['saveObsidian', 'saveLocalMarkdown', 'saveSqlite', 'saveMetadata']);
+  it('owns the canonical order Obsidian -> local -> sqlite -> metadata -> webhook', () => {
+    expect(SAVE_SINK_ORDER).toEqual(['saveObsidian', 'saveLocalMarkdown', 'saveSqlite', 'saveMetadata', 'webhookExport']);
     expect(savePhaseSteps().map((s) => s.name)).toEqual([...SAVE_SINK_ORDER]);
   });
 
@@ -124,6 +125,7 @@ describe('SavePhase fan-out declaration', () => {
     expect(steps[0]!.execute).toBe(saveToObsidianStep);
     expect(steps[1]!.execute).toBe(saveLocalMarkdownStep);
     expect(steps[3]!.execute).toBe(saveMetadataStep);
+    expect(steps[4]!.execute).toBe(executeWebhookExport);
   });
 });
 
@@ -145,7 +147,7 @@ describe('SavePhase retryProjection()', () => {
 });
 
 describe('SavePhase save() matrix', () => {
-  it('runs all four sinks in order on success', async () => {
+  it('runs all five sinks in order on success', async () => {
     const { env } = makeEnv();
     const phase = createSavePhase(env);
     const obsidian = makeObsidian();
@@ -161,6 +163,9 @@ describe('SavePhase save() matrix', () => {
       { name: 'saveLocalMarkdown', status: 'ok' },
       { name: 'saveSqlite', status: 'ok' },
       { name: 'saveMetadata', status: 'ok' },
+      // The webhook sink resolves the opt-in setting (off by default in the
+      // mocked store) and returns ok without touching the network.
+      { name: 'webhookExport', status: 'ok' },
     ]);
     // Obsidian write precedes the sqlite insert carrying its synced flag.
     expect(obsidian.appendToDailyNote).toHaveBeenCalledTimes(1);
@@ -192,6 +197,7 @@ describe('SavePhase save() matrix', () => {
       'saveLocalMarkdown:ok',
       'saveSqlite:ok',
       'saveMetadata:ok',
+      'webhookExport:ok',
     ]);
     // Later sinks still ran despite the earlier failure.
     expect(sqlite.mutate).toHaveBeenCalled();
@@ -245,6 +251,7 @@ describe('SavePhase save() matrix', () => {
       'saveLocalMarkdown:ok',
       'saveSqlite:continued',
       'saveMetadata:ok',
+      'webhookExport:ok',
     ]);
     expect(receipt.context.errors).toHaveLength(1);
     expect(receipt.context.errors[0]).toMatchObject({ step: 'saveSqlite', strategy: ErrorStrategy.BEST_EFFORT });
@@ -288,8 +295,8 @@ describe('SavePhase save() matrix', () => {
 
     expect(receipt.terminated).toBe(false);
     // The old closure bug ignored the executed deps; the seam must hand the
-    // call-time deps to all four sinks.
-    expect(seen).toHaveLength(4);
+    // call-time deps to all five sinks.
+    expect(seen).toHaveLength(5);
     for (const deps of seen) {
       expect(deps.obsidian).toBe(callObsidian);
     }

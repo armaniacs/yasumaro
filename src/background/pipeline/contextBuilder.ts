@@ -22,6 +22,7 @@ import type { SqliteClient } from '../sqlite/offscreenGateway.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { SaveSqliteStepParams } from './steps/saveSqliteStep.js';
 import type { UrlStore } from './types.js';
+import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 
 // ---------------------------------------------------------------------------
 // Retry context — explicit input for retryObsidianWrite (no AI re-run)
@@ -132,6 +133,8 @@ export interface StepDepsInput {
   aiService: AIService | null;
   urlStore?: UrlStore | undefined;
   sqliteClient?: SqliteClient | null | undefined;
+  /** PBI 2026-10-22-05: the real privacy-headers verdict reader (webhook sink). */
+  privacyReader?: ((url: string) => Promise<PrivacyInfo | null>) | undefined;
 }
 
 /**
@@ -151,6 +154,10 @@ export function createStepDeps(input: StepDepsInput): StepDeps {
   // sqliteClient may be null (explicitly no client) or undefined (not provided)
   if (input.sqliteClient !== undefined) {
     deps.sqliteClient = input.sqliteClient;
+  }
+
+  if (input.privacyReader !== undefined) {
+    deps.privacyReader = input.privacyReader;
   }
 
   return deps;

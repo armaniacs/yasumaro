@@ -15,6 +15,7 @@ import { initGistSettings } from '../../gistSettings.js';
 import { init as initTrustSettings, loadTrustSettings } from '../../settings/trustSettings.js';
 import { init as initDomainFilter, loadDomainSettings } from '../../settings/domainFilter.js';
 import { initDomainFilterTagUI } from '../../domainFilterTagUI.js';
+import { createWebhookExportSettingsUi } from '../../webhookExportSettings.js';
 
 /**
  * Panels that only forward to an existing init function.
@@ -41,6 +42,19 @@ export const STATIC_FORM_SPECS = {
     'panel-recording-conditions': {
         id: 'panel-recording-conditions',
         mount: () => initRecordingConditionsSettings(),
+    },
+    // PBI 2026-10-22-05: the webhook export UI reaches for its element ids
+    // itself (document.getElementById), so the spec only wires the controller.
+    // Seams stay at their production defaults; the resend resolver is not
+    // wired here, so the panel reports "Resend is not wired in this view"
+    // until a record read-back seam exists.
+    'panel-webhook-export': {
+        id: 'panel-webhook-export',
+        mount: () => {
+            const ui = createWebhookExportSettingsUi();
+            ui.init();
+            return ui.load();
+        },
     },
     'panel-prompt': {
         id: 'panel-prompt',

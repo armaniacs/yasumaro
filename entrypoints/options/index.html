@@ -116,6 +116,13 @@
           </svg>
           <span data-i18n="recordingConditionsTab">Recording Conditions</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-webhook-export" aria-selected="false" data-panel="panel-webhook-export">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+          </svg>
+          <span data-i18n="webhookExportTab">Webhook Export</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-diagnostics" aria-selected="false" data-panel="panel-diagnostics">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M2 12h20M2 12l5-5m-5 5l5 5"/>
@@ -1916,6 +1923,66 @@
           Set thresholds for automatic recording and AI processing.
         </p>
         <div id="recording-conditions-settings"></div>
+      </section>
+
+      <!-- Webhook Export Panel (PBI 2026-10-22-05) -->
+      <section id="panel-webhook-export" class="panel" role="tabpanel" aria-labelledby="panel-webhook-export-title">
+        <h2 id="panel-webhook-export-title" class="panel-title" data-i18n="webhookExportTab">Webhook Export</h2>
+        <p class="panel-description" data-i18n="webhookExportDescription">
+          Forward records that match the transfer condition to a user-configured webhook (https only). Undeclared destinations are blocked before any network access.
+        </p>
+
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="webhookExportConditionTitle">Transfer Condition</h3>
+
+          <div class="mb-8">
+            <input type="checkbox" id="webhookExportEnabled" aria-describedby="webhookExportEnabledDesc">
+            <label for="webhookExportEnabled" class="inline-label" data-i18n="webhookExportEnabledLabel">Enable webhook export</label>
+            <div class="help-text ml-24" id="webhookExportEnabledDesc" data-i18n="webhookExportEnabledDesc">
+              Send matching records to the configured webhook destination
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <label for="webhookExportUrl" class="inline-label" data-i18n="webhookExportUrlLabel">Webhook URL (https only)</label>
+            <input type="text" id="webhookExportUrl" class="w-full"
+              data-i18n-input-placeholder="webhookExportUrlPlaceholder"
+              data-i18n-aria-label="webhookExportUrlAria" aria-label="Webhook URL">
+          </div>
+
+          <div class="mb-8">
+            <label for="webhookExportTag" class="inline-label" data-i18n="webhookExportTagLabel">Tag (optional)</label>
+            <input type="text" id="webhookExportTag" class="w-full"
+              data-i18n-input-placeholder="webhookExportTagPlaceholder"
+              data-i18n-aria-label="webhookExportTagAria" aria-label="Tag filter">
+            <div class="help-text ml-24" data-i18n="webhookExportTagHelp">
+              Records carrying this tag are forwarded. Leave empty to match every record.
+            </div>
+          </div>
+
+          <div class="mb-8">
+            <label for="webhookExportMinScroll" class="inline-label" data-i18n="webhookExportMinScrollLabel">Minimum scroll depth (%)</label>
+            <input type="number" id="webhookExportMinScroll" class="w-full" min="0" max="100"
+              data-i18n-aria-label="webhookExportMinScrollAria" aria-label="Minimum scroll depth percent">
+          </div>
+
+          <div class="mb-8">
+            <label for="webhookExportMinDuration" class="inline-label" data-i18n="webhookExportMinDurationLabel">Minimum stay seconds</label>
+            <input type="number" id="webhookExportMinDuration" class="w-full" min="0"
+              data-i18n-aria-label="webhookExportMinDurationAria" aria-label="Minimum stay seconds">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <button id="webhookExportSaveBtn" class="btn-primary" data-i18n="saveBtn">Save</button>
+        </div>
+
+        <div class="settings-section">
+          <h3 class="settings-section-title" data-i18n="webhookExportHistoryTitle">Transfer History</h3>
+          <div id="webhookExportStatus" role="status" aria-live="polite"></div>
+          <div id="webhookExportHistoryList" class="mt-4"></div>
+          <button id="webhookExportReloadBtn" class="secondary-btn mt-4" data-i18n="webhookExportReloadLabel">Reload</button>
+        </div>
       </section>
 
       <!-- Export Logs Panel -->

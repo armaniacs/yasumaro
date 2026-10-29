@@ -18,10 +18,16 @@ import { createDashboardFixture } from './fixtures/dashboard-shared.fixture.js';
  *    connect-src/default-src directive. This is the second layer behind the
  *    sender's chrome.permissions.contains pre-check.
  *
- * 2. The sender's pre-check primitive itself: chrome.permissions.contains
- *    returns false for that undeclared webhook origin from a real extension
- *    page, so the send path resolves `undeclared-origin` WITHOUT issuing
- *    any network request (fail-closed before fetch).
+ * 2. The sender's pre-check data source: the manifest's DECLARED
+ *    host_permissions do not cover the undeclared webhook origin
+ *    (example.com), so the sender's gate
+ *    (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()) resolves
+ *    `undeclared-origin` WITHOUT issuing any network request (fail-closed
+ *    before fetch). The pin also documents why the gate must read the
+ *    manifest instead of chrome.permissions.contains: the content script
+ *    declares `<all_urls>`, Chromium grants that match at install time, and
+ *    the probe shows contains() returning TRUE for example.com — a
+ *    granted-based check could never block an undeclared destination.
  *
  * A declared-origin end-to-end POST is intentionally NOT pinned here: the
  * webhook destination is user-configured, so no single origin can be
@@ -84,17 +90,51 @@ test.describe('Webhook egress @extension', () => {
     expect(['connect-src', 'default-src']).toContain(result.directive);
   });
 
-  test('the sender pre-check sees the undeclared webhook origin as not permitted', async ({
+  test('the webhook gate reads declared host_permissions, which exclude the undeclared origin', async ({
     dashboardPage: page,
   }) => {
-    // chrome.permissions.contains mirrors exactly what
-    // permissionManager.isHostPermitted (and therefore the webhook sender's
-    // undeclared-origin gate) observes for this origin. Awaiting the boolean
-    // directly: no timers, no retries — the API resolves once the browser
-    // answers.
-    const permitted: boolean = await page.evaluate(() =>
-      chrome.permissions.contains({ origins: ['https://example.com/*'] }),
-    );
-    expect(permitted).toBe(false);
+    // Two facts pin the gate's real-environment contract:
+    // (a) the manifest's declared host_permissions — the data source
+    //     defaultIsWebhookHostPermitted reads — do not cover example.com;
+    // (b) chrome.permissions.contains answers from the GRANTED set, and the
+    //     content script's <all_urls> match is granted at install time, so it
+    //     returns true for the undeclared origin. This is why a granted-based
+    //     check can never implement "undeclared origins are blocked" and the
+    //     gate reads the manifest (see webhookExportSender.ts module header).
+    const result = await page.evaluate(async () => {
+      const declared: string[] = chrome.runtime.getManifest().host_permissions ?? [];
+      const coveredByPattern = (url: string, pattern: string): boolean => {
+        if (pattern === '<all_urls>') return true;
+        const schemeSeparator = pattern.indexOf('://');
+        if (schemeSeparator < 0) return false;
+        const [scheme, rest] = [pattern.slice(0, schemeSeparator), pattern.slice(schemeSeparator + 3)];
+        const slash = rest.indexOf('/');
+        const host = slash < 0 ? rest : rest.slice(0, slash);
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          return false;
+        }
+        if (scheme !== '*' && scheme !== parsed.protocol.replace(/:$/, '')) return false;
+        if (scheme === '*' && parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false;
+        if (host === '*') return true;
+        if (host.startsWith('*.')) {
+          const base = host.slice(2);
+          return parsed.hostname === base || parsed.hostname.endsWith(`.${base}`);
+        }
+        return host === parsed.hostname;
+      };
+      const declaredCover = declared.some((pattern) => coveredByPattern('https://example.com/hook', pattern));
+      // Awaiting the API directly: no timers, no retries — it resolves once
+      // the browser answers.
+      const grantedContains = await chrome.permissions.contains({ origins: ['https://example.com/*'] });
+      return { declaredCount: declared.length, declaredCover, grantedContains };
+    });
+    expect(result.declaredCount).toBeGreaterThan(0);
+    expect(result.declaredCover).toBe(false);
+    // The granted set covers every origin in a real install (the content
+    // script's <all_urls> match): the reason the gate reads the manifest.
+    expect(result.grantedContains).toBe(true);
   });
 });

@@ -257,6 +257,9 @@ describe('Offline retry policy via step metadata', () => {
         'saveLocalMarkdown',
         'saveSqlite',
         'saveMetadata',
+        // PBI 2026-10-22-05: a failed transfer is re-attempted only by the
+        // dashboard's explicit resend, never by the offline queue.
+        'webhookExport',
       ]);
     });
   });
