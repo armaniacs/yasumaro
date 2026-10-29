@@ -84,6 +84,8 @@ function makeDeps(overrides: Partial<AlarmHandlerDeps> = {}): AlarmHandlerDeps {
     reviewSummaryGenerator: makeReviewGenerator(),
     sessionAlarmService: makeSessionAlarmService(),
     settingsReader: makeReader(false),
+    // PBI 2026-10-22-03: the digest batch's shared-marker write seam.
+    settingsWriter: { set: vi.fn(async () => {}) },
     ...overrides,
   };
 }

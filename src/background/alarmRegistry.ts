@@ -24,8 +24,10 @@ import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import type { ReviewSummaryGenerator } from './reviewSummaryGenerator.js';
 import type { SessionAlarmService } from './SessionAlarmService.js';
-import { type SettingsReader } from '../utils/storage/SettingsRepository.js';
+import { type SettingsReader, type SettingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import type { StorageArea } from '../utils/ports.js';
+import { runReviewDigestBatch } from './digestBatchAlarm.js';
 
 export interface AlarmHandlerDeps {
   sqliteClient: SqliteClient;
@@ -41,6 +43,19 @@ export interface AlarmHandlerDeps {
   reviewSummaryGenerator: ReviewSummaryGenerator;
   sessionAlarmService: SessionAlarmService;
   settingsReader: SettingsReader;
+  /**
+   * Settings write seam for alarm-driven completion markers: the digest
+   * batch writes the shared weekly marker (REVIEW_SUMMARY_LAST_GENERATED_WEEK)
+   * through the same blob-authoritative repo.set the weekly generator uses,
+   * never through a raw chrome.storage.local.set (invisible to
+   * blob-authoritative getAll in migrated profiles).
+   */
+  settingsWriter: Pick<SettingsRepository, 'set'>;
+  /**
+   * Injectable storage area for the digest batch checkpoint (tests inject a
+   * memory area; production resolves the shared chrome.storage.local port).
+   */
+  digestBatchStorage?: StorageArea;
 }
 
 export interface AlarmJobSpec {
@@ -195,6 +210,21 @@ const createJobs = (deps: AlarmHandlerDeps): AlarmJobSpec[] => [
     name: 'yasumaro-review-monthly',
     install: () => installReviewSummary(deps.settingsReader),
     run: async () => { await deps.reviewSummaryGenerator.generateMonthlySummary(); },
+  },
+  {
+    /**
+     * Weekly digest batch resume tick (PBI 2026-10-22-03): the same 5-minute
+     * staticSchedule as the offline-retry row. The standing alarm is
+     * unconditional (the offline-retry precedent); the settings/consent gate
+     * lives in the run body, re-read at execution time, so a withdrawal
+     * stops the batch without needing a settings-change hook to re-arm.
+     * Unchanged: the weekly alarm above keeps firing generateWeeklySummary —
+     * both paths guard the same shared completion marker, so exactly one
+     * publisher per week wins (no double publish).
+     */
+    name: 'yasumaro-review-digest-batch',
+    staticSchedule: { periodInMinutes: 5 },
+    run: runReviewDigestBatch,
   },
   {
     name: 'check_session_timeout',

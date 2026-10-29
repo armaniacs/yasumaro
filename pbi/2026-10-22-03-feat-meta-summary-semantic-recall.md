@@ -62,6 +62,19 @@ Scenario: 類似記事が束ねられる
 - (f) コードレビュー: 敵対的自己レビュー(攻撃者/保守者の2視点+反証)を実施。指摘3件を修正: 非http(s) URLの無害化(`similarityClusterPanel.ts`、link化は `https?` のみ・他は不活性文)、日付表示の利用者 locale 化、融合・再開の拡張注記。残る軽微所見は verdict 節
 - (g) docs draft: 最終報告に同封(評価コーパス・再現手順・将来E2E手順を含む)
 
+## 実装記録（2026-10-30・統合スライス）
+- (a) クラスタ表示の登録配線: 完了。`panelCatalog.ts` data セクションに `panel-similarity-cluster` 行+`panelFactories.ts` に `createSimilarityClusterPanel`（`asyncDataPanelLifecycle` の fetch→isStale→render 形、取得は `fetchPeriodRows` 共通 read seam）+`entrypoints/options/index.html` に sidebar button+section+`messages.json` 両 locale に新キー4種。`panelCatalog.test.ts` ゴールデン 26→27 件 green。モデルに安定した理由種別 `emptyReasonKey`('noSimilarGroups'|'noTitles')を追加し i18n は `getMessageOr` で翻訳
+- (b) 週次ダイジェストのバッチ結合: 完了。新規 `digestBatchCheckpointStore.ts`（モジュール所有キー `yasumaro_digest_batch_checkpoint_v1`、id 列のみ・fail-closed 検証、完了標識は既存 `REVIEW_SUMMARY_LAST_GENERATED_WEEK` を `repo.set` と同じ settings 書込 seam で読み書き）+新規 `digestBatchAlarm.ts`（実行時設定/同意再読込、`buildWeekPeriod` 流用、同一 query seam、純ローカル fold・外部送信なし、`generateWeeklySummary` への発行委譲、run token isStale）+`alarmRegistry.ts` に表1行 `yasumaro-review-digest-batch`（staticSchedule 5 分）+`compositionManifest.ts` 配線。標識統一: 両経路が同じ1キー・同じ 'YYYY-Www' 値を守るため二重発行なし（バッチ先に完了→週次アラームが標識一致で skip／週次先に完了→バッチ tick が fetch 前に return）。`saveCompletedPeriod` は現在値一致時は書かない（単一原子書込）。テスト 19 件追加（checkpoint store 9+alarm 10）、`--repeats=20` green
+- (e) E2E spec 新設: `testDir/e2e/similarity-cluster.spec.ts`（@extension、BDD シナリオ 2、固定時間待ちなし・条件待ちのみ）。シナリオ1（週次生成）は AI プロバイダ+ダウンロード先依存のため単体テスト（digestBatchJob 5+alarm 19）が担保。実行は統合側で実施
+- (g) docs 反映: `docs/RECALL_EVAL_GUIDE.md` 新設（二言語。15文書・4問の構成、`evaluateRecallAt3` の測定手順、実測値 recall@3 1.0/1.0・MRR 0.576/0.576 同点と非退行、再現コマンド、コーパス変更の作法）。文字種ゲート違反 0。PRIVACY.md 不接触
+- 検証: 変更・新規 95 テスト `--repeats=20` 全 green、フルスイート 1199 ファイル/17498 テスト全 green、eslint 変更 15 ファイル 0、`npx tsc --noEmit`（本番）0、文字種ゲート 0
+- 残した開き: AI fold の完全統合（畳み込み塊を増分 AI fold として消費）は `publishDigest` seam の差し込み口として後続。fetch 永続失敗時の専用 error state も最小片の外（NavigationRegistry の log に落ちる）
+
+### 発見(2026-10-30・不触の記録)
+- 既存バグ候補: `yasumaro-review-weekly` の月曜 09:00 発火時、`getWeekPeriod(月曜)` は「その月曜に始まる週」を指すため前週ではなくほぼ空の新週を要約して標識を打つ。バッチは同じ `buildWeekPeriod` を流用して標識を共有するため増幅しない。別 PBI 化候補
+- テスト double の不一致: `storagePort.ts` の `InMemoryStoragePort` は `ports.ts` の `StorageArea` に代入不能（flat StoragePort 形）。`StorageArea` 注入契約用の共通テスト double が存在しない
+- `asyncDataPanelLifecycle` 経由の fetch 失敗は reload を reject しないため `NavigationRegistry` の panel-load-error 表面が発火せず、専用 error notice のないパネルは空白+コンソール log になる
+
 ### なぜなぜ分析(embedding選定: 利用者/保守者/攻撃者の3立場×5問)
 - 立場1・利用者。Q1 なぜJaccardでは足りないか―表記ゆれ(かな・かな以外・略語)に弱いから。Q2 なぜ表記ゆれが痛いか―週次クエリは2-4語の短文で1語の不一致が致命傷だから。Q3 なぜ短文が前提か―想起は探す行為で整文ではないから。Q4 なぜ整文でないと困るか―形態素解析の誤りが順位を直接壊すから。Q5 なぜ誤りに弱い設計を避けるか―辞書なしで動く部分文字列重なりが日本語無区切りに一律に効くから。結論: 文字gram集合+cosine(辞書・模型・通信なし)
 - 立場2・保守者。Q1 なぜ新規WASMクレートを作らないか― crates.json の審査・parity suite・30KB超資産・postprocess配線が要るから。Q2 なぜ既存4クレートの流用でないか―pii/textrank/tag-cooccurは責務が違い sentence-dedupは判定APIで向量を出さないから。Q3 なぜ流用が悪いか―想起の順位と重複除去の敷居値を結合させ将来の調整が互いを壊すから。Q4 なぜ結合が怖いか―敷居値の意味が2責務で二重化し試験が偽陽性を生むから。Q5 なぜ純TSか―jsdom/vitestでwasm-packなしに試験でき依存の芽を残さないから。結論: 依存なし純TS向量(将来の模型差し替え口は `vectorizeSemanticText` の型に集約)
@@ -75,10 +88,10 @@ Scenario: 類似記事が束ねられる
 
 ### per-box verdicts(証拠つき)
 - DONE(前回): `src/dashboard/similarityClusterAggregate.ts:82-117` + `src/dashboard/__tests__/similarityClusterAggregate.test.ts`(6)
-- (a) verdict: 芯完了・登録開。証拠 `src/dashboard/similarityClusterPanel.ts:43-75`(模型)・`:89-138`(描画)・`src/dashboard/__tests__/similarityClusterPanel.test.ts`(6: 束ね・縮退文言・不変・描画と解除・空・URL無害化)。開きの最小片: カタログ1行+HTML節+生成1関数
-- (b) verdict: 芯完了・結合開。証拠 `src/background/digestBatchJob.ts:62-121`(塊・検査点・標識・停止)・`src/background/__tests__/digestBatchJob.test.ts`(5: 分割再開・冪等・発行失敗・取消・他期間破棄)。開きの最小片: alarm表1行+ `REVIEW_SUMMARY_LAST_GENERATED_WEEK` との標識統一
+- (a) verdict: 完了(2026-10-30)。登録配線の3点セット(カタログ行+factory+HTML節)+i18n 両 locale+E2E spec。証拠は上記実装記録(2026-10-30)節
+- (b) verdict: 完了(2026-10-30)。alarm表1行+モジュール所有検査点キー+`REVIEW_SUMMARY_LAST_GENERATED_WEEK` との標識統一(二重発行なし)。AI fold の完全統合は後続の差し込み口
 - (c) verdict: v1選定完了・厳密超過の検証は開。証拠 `src/dashboard/semanticVector.ts:1-62`・`src/dashboard/hybridRecallRank.ts`・`src/dashboard/__tests__/semanticVector.test.ts`(6)・`src/dashboard/__tests__/hybridRecallRank.test.ts`(4)
-- (d) verdict: 土台完了・厳密超過は開。証拠 `src/dashboard/evalCorpus.ts`(15文書・4問)・`src/dashboard/recallEval.ts:54-84`(recall@3+MRR)・`src/dashboard/__tests__/recallEval.test.ts`(3: 凍結・決定論・非退行)。測定値は上記
-- (e) verdict: 未実施。理由: 新規面(未登録パネル・未結合アラーム)は現distに存在せず、再buildは本作業の禁止事項のため headless 実行の対象物がない。最小片: (a)(b)の登録結合後に `testDir/e2e/` へ1 spec(手順はdocs draft)
-- (f) verdict: 自己レビュー完了・第三者レビュー開。所見は本記録と最終報告
-- (g) verdict: draft同封(最終報告)。`docs/` 本体には触れず(制約)
+- (d) verdict: 完了(判断確定・2026-10-30)。土台+測定完了。recall@3 は FTS 1.0・hybrid 1.0、MRR 0.576/0.576 の同点。非退行(hybridHolds)成立。受入基準の「厳密超過」は凍結コーパス上で FTS が既に recall 1.0 であるため構成不能(真の類義語には文字gramが届かない)。重みの彫琢による超過は判定コーパスの都合の良い再選定になるため行わない(誠実性)。非退行として現状維持で閉じ、hybrid の価値は FTS 圏外文書の浮上にある旨を `docs/RECALL_EVAL_GUIDE.md` に記録
+- (e) verdict: spec 新設完了(2026-10-30)・実行は統合側
+- (f) verdict: 自己レビュー完了・第三者レビューは統合側で実施
+- (g) verdict: 完了(2026-10-30)。`docs/RECALL_EVAL_GUIDE.md` 反映済み

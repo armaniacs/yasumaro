@@ -5506,6 +5506,22 @@
     "message": "Failed to load the word cluster. Try again.",
     "description": "Word-cluster error state"
   },
+  "similarityClusterTab": {
+    "message": "Similar Stories",
+    "description": "Sidebar label for the similarity-cluster panel"
+  },
+  "similarityClusterTitle": {
+    "message": "Similar Stories",
+    "description": "Title of the similarity-cluster panel"
+  },
+  "similarityClusterEmpty": {
+    "message": "No similar groups yet: every story stands alone.",
+    "description": "Similarity-cluster empty state when every record stands alone"
+  },
+  "similarityClusterEmptyNoTitles": {
+    "message": "No titles to compare in this period. Try a wider range.",
+    "description": "Similarity-cluster empty state when no record carries a title"
+  },
   "tagClusterTimeSliderTab": {
     "message": "Tag Cluster Compare",
     "description": "Sidebar label for the tag-cluster time-compare panel"

@@ -11,6 +11,12 @@
  * never overwrites a newer render (cancellable ops). Dismissing the panel
  * only clears its own container: source records are only read, never
  * written (クラスタ操作は取り消し可能で元記録を壊さない).
+ *
+ * createSimilarityClusterPanel is the catalog factory (PBI 2026-09-07-25
+ * registration): fetch (fetchPeriodRows, the shared dashboard read seam)
+ * → isStale → render, following the asyncDataPanelLifecycle reload
+ * skeleton. The empty reason stays panel-owned: the model returns a stable
+ * reason kind, the factory maps it to the locale message.
  */
 
 import {
@@ -19,6 +25,11 @@ import {
   type SimilarityRecord,
 } from './similarityClusterAggregate.js';
 import { getUserLocale } from '../utils/localeUtils.js';
+import { MAX_QUERY_ROWS } from '../utils/computeLimits.js';
+import { getMessageOr } from '../utils/i18n.js';
+import { fetchPeriodRows } from './panels/fetchPeriodRows.js';
+import { createAsyncDataPanelLifecycle } from './panels/asyncData/asyncDataPanelLifecycle.js';
+import { type PanelLifecycle } from './panels/types.js';
 
 export interface SimilarityClusterPanelMember {
   id: number;
@@ -39,7 +50,22 @@ export interface SimilarityClusterPanelModel {
   items: SimilarityClusterPanelItem[];
   /** Reason shown instead of clusters when the set degenerates. */
   emptyReason: string;
+  /**
+   * Which degenerate case produced the empty reason, so the factory can map
+   * it to the locale message (the model stays DOM- and i18n-free). null when
+   * clusters are rendered.
+   */
+  emptyReasonKey: ClusterPanelEmptyReason | null;
 }
+
+/** The two degenerate cases of buildClusterPanelModel, as stable kinds. */
+export type ClusterPanelEmptyReason = 'noSimilarGroups' | 'noTitles';
+
+/** i18n message keys per empty reason (the factory owns the mapping). */
+const EMPTY_REASON_MESSAGE_KEYS: Record<ClusterPanelEmptyReason, string> = {
+  noSimilarGroups: 'similarityClusterEmpty',
+  noTitles: 'similarityClusterEmptyNoTitles',
+};
 
 export function buildClusterPanelModel(records: SimilarityRecord[]): SimilarityClusterPanelModel {
   const clusters: SimilarityCluster[] = buildSimilarityClusters(records);
@@ -50,6 +76,7 @@ export function buildClusterPanelModel(records: SimilarityRecord[]): SimilarityC
       emptyReason: hasTitle
         ? 'No similar groups yet: every story stands alone.'
         : 'No titles to compare in this period. Try a wider range.',
+      emptyReasonKey: hasTitle ? 'noSimilarGroups' : 'noTitles',
     };
   }
   return {
@@ -66,6 +93,7 @@ export function buildClusterPanelModel(records: SimilarityRecord[]): SimilarityC
       })),
     })),
     emptyReason: '',
+    emptyReasonKey: null,
   };
 }
 
@@ -123,4 +151,75 @@ export function renderClusterPanel(
     section.appendChild(list);
     hosts.list.appendChild(section);
   }
+}
+
+/** Maps the model's stable empty-reason kind to the locale message. */
+function localizeEmptyReason(model: SimilarityClusterPanelModel): SimilarityClusterPanelModel {
+  const key = model.emptyReasonKey;
+  if (key === null) return model;
+  return { ...model, emptyReason: getMessageOr(EMPTY_REASON_MESSAGE_KEYS[key], model.emptyReason) };
+}
+
+/**
+ * Catalog factory for the similarity-cluster panel (PBI 2026-10-22-03,
+ * slice: panel registration). The reload skeleton is the shared
+ * asyncDataPanelLifecycle (seq guard, stale-load suppression, teardown);
+ * the fetch rides fetchPeriodRows (the shared dashboard read seam: retry,
+ * row cap, error-vs-empty distinction). No period filter: the cluster is a
+ * whole-history view, so a user-chosen range would not change what "the
+ * same news" means — the query is one capped all-time read.
+ *
+ * WHY notices stays empty: the empty state is render-owned
+ * (renderClusterPanel writes textContent/hidden per render), so there is no
+ * separate notice scope to reset. A failed fetch leaves the panel blank and
+ * lands in the lifecycle's structured log (the fetch seam retries before
+ * it throws); a distinct error state is a later slice.
+ */
+export function createSimilarityClusterPanel(): PanelLifecycle {
+  let listEl: HTMLElement | null = null;
+  let emptyEl: HTMLElement | null = null;
+
+  const lifecycle = createAsyncDataPanelLifecycle({
+    label: 'similarityClusterPanel',
+    notices: [],
+    isReady: () => listEl !== null && emptyEl !== null,
+    resetOutput: () => {
+      if (listEl) {
+        while (listEl.firstChild) listEl.removeChild(listEl.firstChild);
+        listEl.hidden = true;
+      }
+      if (emptyEl) emptyEl.hidden = true;
+    },
+    load: async ({ isStale }) => {
+      if (!listEl || !emptyEl) return;
+      const fetched = await fetchPeriodRows({ limit: MAX_QUERY_ROWS, label: 'similarityCluster' });
+      if (isStale()) return;
+      const records: SimilarityRecord[] = fetched.rows.map((row) => ({
+        id: row.id,
+        title: row.title ?? '',
+        url: row.url,
+        domain: row.domain ?? '',
+        createdAt: row.created_at,
+      }));
+      renderClusterPanel({ list: listEl, emptyState: emptyEl }, localizeEmptyReason(buildClusterPanelModel(records)));
+    },
+  });
+
+  return {
+    id: 'panel-similarity-cluster',
+    category: 'async-data',
+    mount(container) {
+      listEl = container.querySelector('#similarityClusterList');
+      emptyEl = container.querySelector('#similarityClusterEmptyState');
+      lifecycle.mount(container);
+    },
+    async load() {
+      await lifecycle.reload();
+    },
+    destroy() {
+      lifecycle.destroy();
+      listEl = null;
+      emptyEl = null;
+    },
+  };
 }

@@ -15,6 +15,14 @@
  * resume tick re-invokes runDigestBatch until the marker exists, so a kill
  * resumes within minutes, not next Monday. The recording pipeline is never
  * touched: no shared mutex, no shared keys.
+ *
+ * 標識統一 (production wiring, digestBatchAlarm.ts +
+ * digestBatchCheckpointStore.ts): the completion marker IS the weekly
+ * generator's existing REVIEW_SUMMARY_LAST_GENERATED_WEEK key, read through
+ * the same blob-authoritative settings getAll() and written through the same
+ * settings repo set() the generator uses. Both paths guard the same single
+ * key with the same 'YYYY-Www' value, so exactly one publisher per week wins
+ * and the digest is never published twice (Daily Note 二重追記なし).
  */
 
 export interface DigestBatchEntry {

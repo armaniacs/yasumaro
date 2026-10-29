@@ -370,5 +370,7 @@ export function createReviewSummaryGenerator(options: CreateReviewSummaryGenerat
   return { generateWeeklySummary, generateMonthlySummary };
 }
 
-// Exported for testing
-export { getISOWeekNumber, getISOWeekYear, getWeekPeriod, getMonthPeriod, generateStatsSection, generateReviewMarkdown };
+// Exported for testing. buildWeekPeriod is also the digest batch's single
+// owner of the weekly period key + window (digestBatchAlarm.ts reuses it so
+// both paths guard the same 'YYYY-Www' marker value without drift).
+export { getISOWeekNumber, getISOWeekYear, getWeekPeriod, getMonthPeriod, buildWeekPeriod, generateStatsSection, generateReviewMarkdown };

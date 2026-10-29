@@ -5488,6 +5488,22 @@
     "message": "ワードクラスタの読み込みに失敗しました。再試行してください。",
     "description": "ワードクラスタのエラー状態"
   },
+  "similarityClusterTab": {
+    "message": "類似記事クラスタ",
+    "description": "類似記事クラスタパネルのサイドバーラベル"
+  },
+  "similarityClusterTitle": {
+    "message": "類似記事クラスタ",
+    "description": "類似記事クラスタパネルのタイトル"
+  },
+  "similarityClusterEmpty": {
+    "message": "まだ似ている記事のまとまりはありません。各記事は独立しています。",
+    "description": "すべての記事が独立しているときの類似記事クラスタの空状態"
+  },
+  "similarityClusterEmptyNoTitles": {
+    "message": "比較できるタイトルがありません。範囲を広げてください。",
+    "description": "タイトルを持つ記録がないときの類似記事クラスタの空状態"
+  },
   "tagClusterTimeSliderTab": {
     "message": "タグクラスタ比較",
     "description": "タグクラスタ時間変化パネルのサイドバーラベル"

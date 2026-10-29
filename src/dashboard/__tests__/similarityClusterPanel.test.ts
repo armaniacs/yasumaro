@@ -38,9 +38,24 @@ describe('buildClusterPanelModel', () => {
     const solo = buildClusterPanelModel([makeRecord({ title: 'Solo story' })]);
     expect(solo.items).toEqual([]);
     expect(solo.emptyReason).not.toBe('');
+    // The stable reason kind is the factory's i18n seam (PBI 2026-09-24-12
+    // parity contract): a titled degenerate set and a title-less one map to
+    // different locale messages.
+    expect(solo.emptyReasonKey).toBe('noSimilarGroups');
     const untitled = buildClusterPanelModel([makeRecord({ title: '   ' })]);
     expect(untitled.items).toEqual([]);
     expect(untitled.emptyReason).not.toBe('');
+    expect(untitled.emptyReasonKey).toBe('noTitles');
+  });
+
+  it('carries no empty-reason kind when clusters are rendered', () => {
+    const model = buildClusterPanelModel([
+      makeRecord({ id: 1, domain: 'a.example', createdAt: 2000 }),
+      makeRecord({ id: 2, title: 'Chrome 140 ships WASM embedding support', domain: 'b.example', createdAt: 1000 }),
+    ]);
+    expect(model.items).toHaveLength(1);
+    expect(model.emptyReason).toBe('');
+    expect(model.emptyReasonKey).toBeNull();
   });
 
   it('never mutates the input records', () => {
@@ -69,7 +84,7 @@ describe('renderClusterPanel', () => {
     expect(list.querySelectorAll('a')).toHaveLength(2);
     expect(list.textContent ?? '').toContain('a.example');
     // Dismiss (取り消し): clearing the render drops only DOM nodes.
-    renderClusterPanel({ list, emptyState }, { items: [], emptyReason: 'Dismissed.' });
+    renderClusterPanel({ list, emptyState }, { items: [], emptyReason: 'Dismissed.', emptyReasonKey: null });
     expect(list.querySelectorAll('section')).toHaveLength(0);
     expect(emptyState.textContent).toBe('Dismissed.');
     expect(records).toEqual(snapshot);
@@ -78,7 +93,7 @@ describe('renderClusterPanel', () => {
   it('shows the empty reason when the model is empty', () => {
     const list = document.createElement('div');
     const emptyState = document.createElement('div');
-    renderClusterPanel({ list, emptyState }, { items: [], emptyReason: 'No similar groups yet.' });
+    renderClusterPanel({ list, emptyState }, { items: [], emptyReason: 'No similar groups yet.', emptyReasonKey: null });
     expect(emptyState.hidden).toBe(false);
     expect(list.hidden).toBe(true);
   });

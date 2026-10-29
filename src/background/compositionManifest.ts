@@ -260,6 +260,10 @@ export const compositionManifest: readonly CompositionEntry[] = [
         isConsentGranted: () => hasPrivacyConsent(),
         retryPendingChromeStorageWrite,
         settingsReader: c.resolve<SettingsRepository>('settingsRepository'),
+        // PBI 2026-10-22-03: the digest batch writes the shared weekly
+        // completion marker through the same blob-authoritative repo.set
+        // seam the weekly generator uses (never a raw chrome.storage.set).
+        settingsWriter: c.resolve<SettingsRepository>('settingsRepository'),
         reviewSummaryGenerator: c.resolve<ReviewSummaryGenerator>('reviewSummaryGenerator'),
         sessionAlarmService: c.resolve<SessionAlarmService>('sessionAlarmService'),
       });

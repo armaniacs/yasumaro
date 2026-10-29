@@ -223,6 +223,17 @@
           </svg>
           <span data-i18n="wordClusterTab">Word Cluster</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-similarity-cluster" aria-selected="false" data-panel="panel-similarity-cluster">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="7" cy="7" r="2.5"/>
+            <circle cx="17" cy="7" r="2.5"/>
+            <circle cx="12" cy="17" r="2.5"/>
+            <line x1="9" y1="9" x2="11" y2="15"/>
+            <line x1="15" y1="9" x2="13" y2="15"/>
+            <line x1="9.5" y1="7" x2="14.5" y2="7"/>
+          </svg>
+          <span data-i18n="similarityClusterTab">Similar Stories</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-tag-cluster-time-slider" aria-selected="false" data-panel="panel-tag-cluster-time-slider">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <circle cx="12" cy="12" r="9"/>
@@ -2240,6 +2251,13 @@
           <button type="button" id="wordClusterZoomReset" data-i18n="tagClusterZoomReset" data-i18n-aria-label="tagClusterZoomReset" aria-label="Reset">Reset</button>
         </div>
         <svg id="wordClusterSvg" width="800" height="600" viewBox="0 0 800 600" role="img" data-i18n-aria-label="wordClusterTitle" aria-label="Word Cluster"></svg>
+      </section>
+
+      <!-- Similarity Cluster Panel (PBI 2026-10-22-03) -->
+      <section id="panel-similarity-cluster" class="panel" role="tabpanel" aria-labelledby="panel-similarity-cluster-title">
+        <h2 id="panel-similarity-cluster-title" class="panel-title" data-i18n="similarityClusterTitle">Similar Stories</h2>
+        <div id="similarityClusterEmptyState" data-i18n="similarityClusterEmpty" hidden>No similar groups yet: every story stands alone.</div>
+        <div id="similarityClusterList"></div>
       </section>
 
       <!-- Tag Cluster Time Slider Panel (PBI 2026-09-24-08) -->

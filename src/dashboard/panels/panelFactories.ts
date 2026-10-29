@@ -22,6 +22,7 @@ import { createTagCooccurrenceTablePanel } from './asyncData/tagCooccurrenceTabl
 import { createWordClusterPanel } from './asyncData/wordClusterPanel.js';
 import { createTagClusterTimeSliderPanel } from './asyncData/tagClusterTimeSliderPanel.js';
 import { createSqliteHistoryPanel } from './asyncData/sqliteHistoryPanel.js';
+import { createSimilarityClusterPanel } from '../similarityClusterPanel.js';
 import { createGeneralSettingsPanel } from './staticForm/generalSettingsPanel.js';
 import { createPrivacySettingsPanel } from './staticForm/privacySettingsPanel.js';
 import { createAiSummaryCleansingPanel } from './staticForm/aiSummaryCleansingPanel.js';
@@ -40,6 +41,7 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-tag-frequency-timeline': createTagFrequencyTimelinePanel,
   'panel-tag-cooccurrence-table': createTagCooccurrenceTablePanel,
   'panel-word-cluster': createWordClusterPanel,
+  'panel-similarity-cluster': createSimilarityClusterPanel,
   'panel-tag-cluster-time-slider': createTagClusterTimeSliderPanel,
   'panel-sqlite-history': createSqliteHistoryPanel,
   'panel-general': createGeneralSettingsPanel,

@@ -118,6 +118,7 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-tag-frequency-timeline',
       'panel-tag-cooccurrence-table',
       'panel-word-cluster',
+      'panel-similarity-cluster',
       'panel-tag-cluster-time-slider',
       'panel-export-logs',
       'panel-export-import',
@@ -140,7 +141,7 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
   const buttons = parseSidebarButtons();
 
   it('has one sidebar button per catalog sidebar panel, in catalog order', () => {
-    expect(SIDEBAR_PANELS).toHaveLength(26);
+    expect(SIDEBAR_PANELS).toHaveLength(27);
     expect(buttons.map((b) => b.panelId)).toEqual(SIDEBAR_PANELS.map((e) => e.id));
   });
 
