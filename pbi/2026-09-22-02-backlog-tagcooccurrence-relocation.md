@@ -26,7 +26,7 @@ Scenario: 層の向きが正しくなる
   Then  dashboard 配下への import が 0 件になる
 
 ## 受け入れ基準
-- [ ] 移設先を裁定し、理由を PBI に記録した（compute の実行場所が確定していること）
+- [x] 移設先を裁定し、理由を PBI に記録した（2026-10-30 裁定: **`src/utils/` Layer 2（High-level Utilities）へ両ファイル移設**。compute の実行場所は dashboard（options ページのメインスレッド ― 本番呼び出しは 4 つの dashboard パネルが `tagCooccurrenceHybrid` 経由）で、offscreen/パイプラインからの本番利用は 0 件。純粋関数は wasm/tag-cooccur（bench・index 型・parity テスト）と offscreen テストからも消費される共有語彙のため、最下層の共有層が正しい居場所。既存前例: `sentenceExtractor.ts`/`contentDeduplicator.ts`（+ hybrid ラッパー）が同一構成で utils 配下にあり、`sentenceExtractorHybrid.ts` の `../wasm/textrank/` import が utils → wasm の下向き辺として確立済み。wasm → dashboard は UI 層への上向き辺（LAYERS.md の上向き依存禁止・utils 層 SSOT の FORBIDDEN_TARGET_LAYERS と同一の向き）で、移設により解消）
 - [ ] 関数の挙動は byte-identical で、golden テストが移設前後で同一
 - [x] `2026-09-20-17/21/22` のレビューが終わり、競合しないことを確認した（2026-09-24 アーカイブ済み ― `502c1093`/`7ea33e53` で再検証・反映。着手可能）
 - [ ] 新規・移動ファイルを lint の層分類 SSOT と、必要なら `manifest.json` の `web_accessible_resources` に登録した

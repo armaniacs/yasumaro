@@ -282,7 +282,7 @@ export default defineConfig({
       //   - the tag cooccurrence core (src/wasm/tag-cooccur/) in the
       //     dashboard page, via
       //     src/dashboard/panels/asyncData/tagClusterPanel.ts →
-      //     src/dashboard/tagCooccurrenceHybrid.ts
+      //     src/utils/tagCooccurrenceHybrid.ts
       // Verified via `grep -rn "sqlite-wasm\|WebAssembly\|pii-sanitizer\|textrank\|sentence-dedup\|tag-cooccur" src/`.
       // That grep pattern is a verification aid, not a crate enumeration
       // (PBI 2026-09-21-26: benign, out of scope for the manifest invariant).

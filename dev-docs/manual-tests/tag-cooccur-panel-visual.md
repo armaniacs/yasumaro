@@ -6,7 +6,7 @@
 
 - WASM 経路で開いたパネルの nodes/edges が、TS 経路で開いたものと同一に見える。
 - WASM が使えない状態でも、パネルが空白にならず TS フォールバックで表示される。
-- 履歴が 32 件未満のときは TS 経路が使われる（`MIN_WASM_ENTRIES = 32`、`src/dashboard/tagCooccurrenceHybrid.ts`）。
+- 履歴が 32 件未満のときは TS 経路が使われる（`MIN_WASM_ENTRIES = 32`、`src/utils/tagCooccurrenceHybrid.ts`）。
 
 ## 準備
 
