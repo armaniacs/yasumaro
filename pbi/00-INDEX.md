@@ -14,6 +14,22 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件）
+
+ブレスト報告書（仕様ギャップ × ユーザージャーニー × 類似ツール比較、docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md）のやること候補9件をRICE採点してPBI化。実行順の推奨: 順位4のROADMAP再同期をラウンド冒頭に着手（以後の裁定の土台）、残りはRICE順。01と03は依存なしで並列着手可。05は新キーを触る機能より先が安全。詳細は [2026-10-31-00-backlog-next-phase-do-dont.md](2026-10-31-00-backlog-next-phase-do-dont.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-10-31-01-feat-recording-skip-reason-visibility.md](2026-10-31-01-feat-recording-skip-reason-visibility.md) | feat | 30.0 | 2.0人週相当 | 条件未達の閲覧は経路を持たず、FAQでしか答えられない。URL非保存に限る |
+| 02 | [2026-10-31-02-fix-path-allow-adjudication.md](2026-10-31-02-fix-path-allow-adjudication.md) | fix | 12.8 | 0.5人週相当 | UI「パス許可」vs 実装hostname正規化（既存T4）。READMEとPRIVACY.md同期 |
+| 03 | [2026-10-31-03-feat-selection-capture-recording.md](2026-10-31-03-feat-selection-capture-recording.md) | feat | 8.0 | 1.5人週相当 | ハイライト相当の唯一の欠落（Web Clipper比較）。軸整合は自律解決済み |
+| 04 | [2026-10-31-04-docs-roadmap-resync.md](2026-10-31-04-docs-roadmap-resync.md) | docs | 6.4 | 0.25人週相当 | C2/C5/N11が出荷済み機能と矛盾。ラウンド冒頭着手を推奨 |
+| 05 | [2026-10-31-05-test-raw-owned-keys-audit.md](2026-10-31-05-test-raw-owned-keys-audit.md) | test | 3.2 | 0.5人週相当 | §5.1.1自認のopen work。分類漏れはマイグレーションでデータ消失 |
+| 06 | [2026-10-31-06-docs-design-spec-refresh.md](2026-10-31-06-docs-design-spec-refresh.md) | docs | 3.2 | 0.25人週相当 | 見出し不一致・§5.2の層の記述・フッタv2.4系のまま |
+| 07 | [2026-10-31-07-docs-mcp-bridge-recipe.md](2026-10-31-07-docs-mcp-bridge-recipe.md) | docs | 2.0 | 0.25人週相当 | MemexのMCP露出。既存webhook経由のレシピ文書。コード追加なし |
+| 08 | [2026-10-31-08-refactor-settings-ia-reorg.md](2026-10-31-08-refactor-settings-ia-reorg.md) | refactor | 1.3 | 1.5人週相当 | 29パネルの発見可能性。検索か再編の縦スライス |
+| 09 | [2026-10-31-09-investigate-obsidian-write-conflict.md](2026-10-31-09-investigate-obsidian-write-conflict.md) | investigate | 0.5 | 0.5人週相当 | RMW競合（README自認）。hash前提条件の要否判断材料 |
+
 ### 2026-10-25 gateway理由保持 ― ✅ 1件完了・アーカイブ対象（12）
 
 PBI 08 の AC4 から分離。admission拒否の `reason` が gateway 正規化で汎用文に置換される問題。handlerでの写し（union・gateway無変更）で解決。
