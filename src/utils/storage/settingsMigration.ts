@@ -218,6 +218,53 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // from the content script, read straight by the dashboard collector —
     // neither side has a blob-tier reader, so migration would hide it.
     StorageKeys.LAST_CAPTURE_OUTCOME,
+    // PBI 2026-10-31-05: gaps the raw-owned-key audit found. Each entry's
+    // owning module reads or writes it directly through chrome.storage.local
+    // (src/utils/storage/__tests__/raw-owned-keys-audit-pin.test.ts pins the
+    // full table), so folding it deletes the only copy the owner can see.
+    // Master-password auth metadata (encryptionSession.ts, authGuard.ts,
+    // settingsMigration.ts, privacyConsent.ts, SettingsRepository.ts): every
+    // reader reads these straight from top-level storage. Folding them would
+    // make getOrCreateEncryptionKey take the anonymous path while the stored
+    // ciphertext is still master-KEK-encrypted, and authGuard would report an
+    // unlocked session for a locked one.
+    StorageKeys.MASTER_PASSWORD_ENABLED,
+    StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
+    StorageKeys.IS_LOCKED,
+    // Consent-gated content storage (privacyConsent.ts): acceptConsent writes
+    // it, the record-flow gate reads it straight from top-level storage.
+    StorageKeys.CONTENT_STORAGE_ENABLED,
+    // Device-local navigation-trail opt-in (navTrailConsent.ts): every reader
+    // reads it straight from top-level storage. Deliberately absent from
+    // DEFAULT_SETTINGS and the restore allowlist (device-local consent), so a
+    // blob copy would be unreachable for its owner.
+    StorageKeys.NAV_TRAIL_CONSENT,
+    // Content-script domain-filter cache mirror (domainFilterCache.ts writes
+    // it, the content script reads it straight from top-level storage): a
+    // migrated copy would hide the cache from the content script until the
+    // next settings write rebuilt it.
+    StorageKeys.DOMAIN_FILTER_CACHE,
+    StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
+    StorageKeys.DOMAIN_FILTER_MODE,
+    // Derived allowlist mirror (allowedUrlsSync.ts): written straight from
+    // top-level storage on every settings write and at startup. No reader
+    // reads the stored copy today, but the owner writes it raw, so classifying
+    // keeps the written copy in place instead of deleting it until the next
+    // settings write recreates it.
+    StorageKeys.ALLOWED_URLS,
+    StorageKeys.ALLOWED_URLS_HASH,
+    // Dashboard history-panel sort preference (sqliteHistoryModel.ts): the
+    // panel reads and writes it straight from top-level storage, so a migrated
+    // copy would reset the user's sort until the next panel sort.
+    StorageKeys.HISTORY_SORT_PREFERENCE,
+    // Cleansing feedback queue (aiSummaryCleaner/feedbackQueue.ts): the queue
+    // reads it straight from top-level storage and the lock persists at the
+    // same key, so a migrated copy would drop every pending feedback entry.
+    StorageKeys.CLEANSING_FEEDBACK_QUEUE,
+    // Recording pause deadline (recordingPause.ts): createChromePauseStorage
+    // reads, writes and removes it straight from top-level storage, so a
+    // migrated copy would resume the recording immediately.
+    StorageKeys.RECORDING_PAUSED_UNTIL,
 ]);
 
 /**

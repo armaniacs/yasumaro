@@ -35,12 +35,12 @@ Feature: raw-owned ストレージキーの分類監査
 ```
 
 ## 受け入れ基準
-- [ ] src/ 全体（テストは除外）で chrome.storage.local を直接読み書きする箇所の走査リストが完成している
-- [ ] 未分類の生所有キーが抽出され、TOP_LEVEL_ONLY_KEYS への分類が完了している（分類漏れ 0 件）
-- [ ] 監査 pin テストが実装され、生所有キーを StorageKeys に追加して分類漏れのままにした場合に失敗することが Red/Green で確認されている
-- [ ] pin テストは既存の manifest SSOT pin（src/__tests__/manifest.test.ts）・layer-direction pin（src/__tests__/tagcooccur-layer-direction.test.ts）と同じ作法で配置されている
-- [ ] 分類判定は名前パターンや substring テストではなく、所有モジュールが直接読み書きするかで行われている
-- [ ] settings_migrated ステートマシン（§5.1.2）との整合が確認されている
+- [x] src/ 全体（テストは除外）で chrome.storage.local を直接読み書きする箇所の走査リストが完成している
+- [x] 未分類の生所有キーが抽出され、TOP_LEVEL_ONLY_KEYS への分類が完了している（分類漏れ 0 件）
+- [x] 監査 pin テストが実装され、生所有キーを StorageKeys に追加して分類漏れのままにした場合に失敗することが Red/Green で確認されている
+- [x] pin テストは既存の manifest SSOT pin（src/__tests__/manifest.test.ts）・layer-direction pin（src/__tests__/tagcooccur-layer-direction.test.ts）と同じ作法で配置されている
+- [x] 分類判定は名前パターンや substring テストではなく、所有モジュールが直接読み書きするかで行われている
+- [x] settings_migrated ステートマシン（§5.1.2）との整合が確認されている
 
 ## テスト戦略
 
@@ -87,7 +87,7 @@ Outside-In 順（pin → 統合 → 単体 → 実装）の縦スライスで進
 1pt目安（0.5人週相当）
 
 ## Definition of Done
-- [ ] 監査結果（走査リストと分類表）が完成
-- [ ] pin テストが実装され Red/Green 確認済み
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 監査結果（走査リストと分類表）が完成
+- [x] pin テストが実装され Red/Green 確認済み
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
