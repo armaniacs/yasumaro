@@ -144,6 +144,11 @@ const LAYER2_MODULES = [
   'src/utils/promptSafety.ts',
   'src/utils/trustDb/TrustLookup.ts',
   'src/utils/trustDb/TrustDecision.ts',
+  // Tag cooccurrence compute layer relocated from src/dashboard/ (PBI
+  // 2026-09-22-02): pure functions plus the WASM hybrid wrapper shared by
+  // the dashboard panels and the wasm/tag-cooccur parity/bench suites.
+  'src/utils/tagCooccurrence.ts',
+  'src/utils/tagCooccurrenceHybrid.ts',
 ];
 
 // Barrel shims are excluded from this rule: new imports through them are

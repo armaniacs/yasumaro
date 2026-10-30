@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTagCooccurrence, narrowEntriesToTopTags, limitToTopNodes } from '../tagCooccurrence.js';
+import { computeTagCooccurrence, narrowEntriesToTopTags, limitToTopNodes } from '../../utils/tagCooccurrence.js';
 import { computeLayout, computeCanvasSize } from '../tagClusterLayout.js';
 import { MAX_TAG_CLUSTER_TAGS } from '../../utils/computeLimits.js';
 

@@ -37,7 +37,7 @@ import { sanitizeRegex } from '../src/utils/piiSanitizer.js';
 import { extractSentences } from '../src/utils/sentenceExtractor.js';
 import { splitSentences } from '../src/utils/text/tokenizer.js';
 import { deduplicateContent, splitSentencesKeepDelimiters } from '../src/utils/contentDeduplicator.js';
-import { computeTagCooccurrence } from '../src/dashboard/tagCooccurrence.js';
+import { computeTagCooccurrence } from '../src/utils/tagCooccurrence.js';
 
 import initPiiModule, { sanitizePii as sanitizePiiWasm } from '../src/wasm/pii-sanitizer/piiSanitizerWasm.js';
 import initTextrankModule, { extractTopIndices } from '../src/wasm/textrank/textrankWasm.js';

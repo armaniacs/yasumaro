@@ -7,7 +7,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { computeTagDiff } from '../tagClusterDiff.js';
-import type { TagNode } from '../tagCooccurrence.js';
+import type { TagNode } from '../../utils/tagCooccurrence.js';
 
 function nodes(...entries: Array<[string, number]>): TagNode[] {
   return entries.map(([tag, count]) => ({ tag, count }));

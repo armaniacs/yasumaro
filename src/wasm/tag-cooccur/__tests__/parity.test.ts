@@ -1,7 +1,7 @@
 /**
  * Parity check: for every corpus input below, the WASM tag-cooccurrence
  * core mapped back through src/wasm/tag-cooccur/index.ts must reconstruct
- * EXACTLY what the TS reference (src/dashboard/tagCooccurrence.ts)
+ * EXACTLY what the TS reference (src/utils/tagCooccurrence.ts)
  * returns. This is the regression gate for the WASM port: any
  * wasm/tag-cooccur change that breaks parity here must not ship (same gate
  * contract as the pii-sanitizer / sentence-dedup parity suites).
@@ -19,7 +19,7 @@ import { describe, test, expect, beforeAll } from 'vitest';
 import {
     computeTagCooccurrence,
     narrowEntriesToTopTags,
-} from '../../../dashboard/tagCooccurrence.js';
+} from '../../../utils/tagCooccurrence.js';
 import {
     computeCooccurrenceWithWasm,
     narrowEntriesToTopTagsWithWasm,

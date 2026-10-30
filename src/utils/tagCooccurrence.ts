@@ -3,8 +3,8 @@
  * Computes tag cooccurrence (nodes and edges) from browsing log entries.
  */
 
-import { parseTagsForDisplay } from '../utils/tagUtils.js';
-import { MAX_TAGS_PER_RECORD } from '../utils/computeLimits.js';
+import { parseTagsForDisplay } from './tagUtils.js';
+import { MAX_TAGS_PER_RECORD } from './computeLimits.js';
 
 export interface TagNode {
   tag: string;

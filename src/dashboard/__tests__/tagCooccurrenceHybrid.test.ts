@@ -11,11 +11,11 @@ import { describe, test, expect, vi, afterEach } from 'vitest';
 import {
     computeTagCooccurrence,
     narrowEntriesToTopTags,
-} from '../tagCooccurrence.js';
+} from '../../utils/tagCooccurrence.js';
 import {
     computeTagCooccurrenceHybrid,
     narrowEntriesToTopTagsHybrid,
-} from '../tagCooccurrenceHybrid.js';
+} from '../../utils/tagCooccurrenceHybrid.js';
 import { LogType } from '../../utils/logger/types.js';
 
 describe('computeTagCooccurrenceHybrid (WASM unavailable → TS fallback)', () => {
@@ -106,8 +106,8 @@ describe('fallback golden pin + u32 boundary (PBI 2026-09-21-19)', () => {
                 await importOriginal<typeof import('../../utils/logger/core.js')>();
             return { ...actual, addLog: mockAddLog };
         });
-        const hybrid = await import('../tagCooccurrenceHybrid.js');
-        const ts = await import('../tagCooccurrence.js');
+        const hybrid = await import('../../utils/tagCooccurrenceHybrid.js');
+        const ts = await import('../../utils/tagCooccurrence.js');
         return { hybrid, ts, mockAddLog, mockCompute, mockNarrow };
     }
 

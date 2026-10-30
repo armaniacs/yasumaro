@@ -9,7 +9,7 @@
  */
 
 import { describe, test, expect, vi, afterAll } from 'vitest';
-import { computeTagCooccurrence, narrowEntriesToTopTags } from '../tagCooccurrence.js';
+import { computeTagCooccurrence, narrowEntriesToTopTags } from '../../utils/tagCooccurrence.js';
 
 const { mockInit, mockCompute, mockNarrow, mockAddLog } = vi.hoisted(() => ({
     mockInit: vi.fn(),
@@ -36,14 +36,14 @@ afterAll(() => {
 });
 
 /** Fresh hybrid module (resets wasmAvailable/probe-guard) with clean mocks. */
-async function resetAndImport(): Promise<typeof import('../tagCooccurrenceHybrid.js')> {
+async function resetAndImport(): Promise<typeof import('../../utils/tagCooccurrenceHybrid.js')> {
     vi.resetModules();
     mockInit.mockReset();
     mockCompute.mockReset();
     mockNarrow.mockReset();
     mockAddLog.mockReset();
     warnSpy.mockClear();
-    return await import('../tagCooccurrenceHybrid.js');
+    return await import('../../utils/tagCooccurrenceHybrid.js');
 }
 
 function largeEntries(): Array<{ tags: string }> {

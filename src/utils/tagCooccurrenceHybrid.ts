@@ -3,7 +3,7 @@
  * Hybrid tag cooccurrence: runs the WASM core (see
  * wasm/tag-cooccur/src/cooccur.rs — an exact port of tagCooccurrence.ts's
  * computeTagCooccurrence + narrowEntriesToTopTags) on the success path and
- * falls back to the TS implementation (src/dashboard/tagCooccurrence.ts)
+ * falls back to the TS implementation (src/utils/tagCooccurrence.ts)
  * when the WASM module fails to initialize (e.g. CSP blocked the fetch, or
  * an unsupported runtime), when the input routes to TS by size, or when a
  * WASM call throws at runtime.
@@ -44,7 +44,7 @@ import {
     createHybridProbe,
     isWasmSafeU32,
     runHybrid,
-} from '../utils/wasmHybridRuntime.js';
+} from './wasmHybridRuntime.js';
 
 // Probe contract (success cached permanently, failure re-probed on the next
 // call, probe log at most once per failure burst) lives in the shared

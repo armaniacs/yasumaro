@@ -15,7 +15,7 @@ import {
 import { SVG_NS } from '../../../../utils/svgNamespace.js';
 import { PanelNotices } from '../../PanelNotices.js';
 import { tagHue } from '../../../tagClusterColor.js';
-import type { TagEdge, TagNode } from '../../../tagCooccurrence.js';
+import type { TagEdge, TagNode } from '../../../../utils/tagCooccurrence.js';
 
 const NODES: TagNode[] = [
   { tag: 'rust', count: 12 },

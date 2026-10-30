@@ -13,7 +13,7 @@
  * turn the partner count into a joint count and change the semantics.)
  */
 
-import type { TagEdge, TagNode } from './tagCooccurrence.js';
+import type { TagEdge, TagNode } from '../utils/tagCooccurrence.js';
 import { compareStrings } from '../utils/compareStrings.js';
 
 export interface CooccurrenceGraph {

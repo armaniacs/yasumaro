@@ -19,11 +19,11 @@
  * stays static, so prefers-reduced-motion needs no handling here.
  */
 
-import { type TagNode, type TagEdge } from '../../tagCooccurrence.js';
+import { type TagNode, type TagEdge } from '../../../utils/tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
-} from '../../tagCooccurrenceHybrid.js';
+} from '../../../utils/tagCooccurrenceHybrid.js';
 import {
   MAX_QUERY_ROWS,
   MAX_TAG_CLUSTER_TAGS,

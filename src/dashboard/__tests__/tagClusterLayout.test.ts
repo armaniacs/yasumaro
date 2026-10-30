@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeLayout, computeCanvasSize } from '../tagClusterLayout.js';
-import type { TagNode, TagEdge } from '../tagCooccurrence.js';
+import type { TagNode, TagEdge } from '../../utils/tagCooccurrence.js';
 
 describe('computeLayout', () => {
   it('returns an empty map for no nodes', () => {

@@ -5,7 +5,7 @@
  * increased, or decreased between the first half and the second half.
  */
 
-import type { TagNode } from './tagCooccurrence.js';
+import type { TagNode } from '../utils/tagCooccurrence.js';
 import { compareStrings } from '../utils/compareStrings.js';
 
 /** Per-tag count change for the increased/decreased sections. */

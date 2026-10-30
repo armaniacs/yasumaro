@@ -18,11 +18,11 @@
  * search navigation).
  */
 
-import { type TagNode } from '../../tagCooccurrence.js';
+import { type TagNode } from '../../../utils/tagCooccurrence.js';
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
-} from '../../tagCooccurrenceHybrid.js';
+} from '../../../utils/tagCooccurrenceHybrid.js';
 import {
   MAX_QUERY_ROWS,
   MAX_TAG_CLUSTER_TAGS,

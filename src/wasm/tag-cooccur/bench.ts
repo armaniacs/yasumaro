@@ -20,12 +20,12 @@
  * record count and tags-per-record (quadratic pair scan), while tiny inputs
  * lose to the fixed wasm-bindgen marshalling cost — those stay on the TS
  * path via the hybrid's size routing (see MIN_WASM_ENTRIES in
- * src/dashboard/tagCooccurrenceHybrid.ts, threshold chosen from this
+ * src/utils/tagCooccurrenceHybrid.ts, threshold chosen from this
  * script's small-input rows).
  */
 
 import { writeFileSync } from 'node:fs';
-import { computeTagCooccurrence } from '../../dashboard/tagCooccurrence.js';
+import { computeTagCooccurrence } from '../../utils/tagCooccurrence.js';
 import initWasmModule, { computeCooccurrence } from './tagCooccurWasm.js';
 import { decodeCooccurResult, joinRawTags } from './index.js';
 import { initWasmForNode } from '../testing/initWasmForNode.js';

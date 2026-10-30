@@ -2,10 +2,10 @@
  * TypeScript wrapper around the Rust/WASM tag-cooccurrence core.
  *
  * Ports `computeTagCooccurrence` and `narrowEntriesToTopTags` from
- * src/dashboard/tagCooccurrence.ts (see wasm/tag-cooccur/src/cooccur.rs
+ * src/utils/tagCooccurrence.ts (see wasm/tag-cooccur/src/cooccur.rs
  * for the parity contracts, including the JS-whitespace table, the UTF-16
  * sort comparator, and the MAX_TAGS_PER_RECORD fail-safe cap). The intended
- * caller is src/dashboard/tagCooccurrenceHybrid.ts, which falls back to the
+ * caller is src/utils/tagCooccurrenceHybrid.ts, which falls back to the
  * TS implementation when this module fails to load.
  *
  * Data-transfer shape: the call sends the records' raw `tags` strings once
@@ -29,7 +29,7 @@
  * (wxt's publicAssets hook distributes it to `dist/wasm/`), and the
  * production call site is
  * src/dashboard/panels/asyncData/tagClusterPanel.ts via
- * src/dashboard/tagCooccurrenceHybrid.ts. Do NOT switch this to
+ * src/utils/tagCooccurrenceHybrid.ts. Do NOT switch this to
  * `new URL('./tag_cooccur_bg.wasm', import.meta.url)` — under the
  * single-file IIFE background build Vite inlines that as a CSP-blocked
  * `data:` URI and the module silently fails in every real build (see
@@ -42,7 +42,7 @@ import initWasmModule, {
 } from './tagCooccurWasm.js';
 import { initExtensionWasm } from '../initWasm.js';
 import { toError } from '../../utils/errorUtils.js';
-import type { TagNode, TagEdge } from '../../dashboard/tagCooccurrence.js';
+import type { TagNode, TagEdge } from '../../utils/tagCooccurrence.js';
 
 /**
  * Initializes the wasm module. Safe to call repeatedly (idempotent) and
@@ -177,7 +177,7 @@ export function decodeCooccurResult(raw: RawCooccurResult): WasmCooccurResult {
  * (the JS→WASM u32 conversion would silently wrap them via ToUint32).
  * The full u32-range policy (`isWasmSafeU32`, including the 2^32 upper
  * bound) is owned by the hybrid bypass in
- * src/dashboard/tagCooccurrenceHybrid.ts, which routes out-of-range
+ * src/utils/tagCooccurrenceHybrid.ts, which routes out-of-range
  * limits to the TS path before calling this.
  */
 export async function narrowEntriesToTopTagsWithWasm<

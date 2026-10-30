@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   computeTagCooccurrence,
   narrowEntriesToTopTags,
-} from '../tagCooccurrence.js';
+} from '../../utils/tagCooccurrence.js';
 import { MAX_TAGS_PER_RECORD, MAX_TAG_CLUSTER_TAGS } from '../../utils/computeLimits.js';
 import { parseTagsForDisplay } from '../../utils/tagUtils.js';
 

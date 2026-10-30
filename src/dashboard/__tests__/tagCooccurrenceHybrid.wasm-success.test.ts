@@ -39,8 +39,8 @@ describe('computeTagCooccurrenceHybrid (WASM available)', () => {
     });
 
     test('large input exercises the real WASM path and matches TS', async () => {
-        const { computeTagCooccurrence } = await import('../tagCooccurrence.js');
-        const { computeTagCooccurrenceHybrid } = await import('../tagCooccurrenceHybrid.js');
+        const { computeTagCooccurrence } = await import('../../utils/tagCooccurrence.js');
+        const { computeTagCooccurrenceHybrid } = await import('../../utils/tagCooccurrenceHybrid.js');
         const entries = Array.from({ length: 500 }, (_, i) => ({
             tags: `#tag${i % 60} #tag${(i * 13) % 60} #tag${(i * 29) % 60}`,
         }));
@@ -50,8 +50,8 @@ describe('computeTagCooccurrenceHybrid (WASM available)', () => {
     });
 
     test('pipe-tag quirk survives the WASM path bit-identically', async () => {
-        const { computeTagCooccurrence } = await import('../tagCooccurrence.js');
-        const { computeTagCooccurrenceHybrid } = await import('../tagCooccurrenceHybrid.js');
+        const { computeTagCooccurrence } = await import('../../utils/tagCooccurrence.js');
+        const { computeTagCooccurrenceHybrid } = await import('../../utils/tagCooccurrenceHybrid.js');
         const entries = Array.from({ length: 100 }, () => ({ tags: '#a|b #c' }));
         await expect(computeTagCooccurrenceHybrid(entries)).resolves.toEqual(
             computeTagCooccurrence(entries)
@@ -59,8 +59,8 @@ describe('computeTagCooccurrenceHybrid (WASM available)', () => {
     });
 
     test('embedded newline falls back to TS with identical output', async () => {
-        const { computeTagCooccurrence } = await import('../tagCooccurrence.js');
-        const { computeTagCooccurrenceHybrid } = await import('../tagCooccurrenceHybrid.js');
+        const { computeTagCooccurrence } = await import('../../utils/tagCooccurrence.js');
+        const { computeTagCooccurrenceHybrid } = await import('../../utils/tagCooccurrenceHybrid.js');
         // 32+ entries so the hybrid attempts WASM first; the gate rejects
         // and the fallback owns the result.
         const entries = Array.from({ length: 40 }, (_, i) =>
@@ -74,8 +74,8 @@ describe('computeTagCooccurrenceHybrid (WASM available)', () => {
 
 describe('narrowEntriesToTopTagsHybrid (WASM available)', () => {
     test('large input exercises the real WASM path and matches TS', async () => {
-        const { narrowEntriesToTopTags } = await import('../tagCooccurrence.js');
-        const { narrowEntriesToTopTagsHybrid } = await import('../tagCooccurrenceHybrid.js');
+        const { narrowEntriesToTopTags } = await import('../../utils/tagCooccurrence.js');
+        const { narrowEntriesToTopTagsHybrid } = await import('../../utils/tagCooccurrenceHybrid.js');
         const entries = Array.from({ length: 300 }, (_, i) => ({
             tags: `#tag${i % 80} #tag${(i * 3) % 80}`,
         }));
@@ -85,7 +85,7 @@ describe('narrowEntriesToTopTagsHybrid (WASM available)', () => {
     });
 
     test('within-limit input returns the same reference via WASM unchanged flag', async () => {
-        const { narrowEntriesToTopTagsHybrid } = await import('../tagCooccurrenceHybrid.js');
+        const { narrowEntriesToTopTagsHybrid } = await import('../../utils/tagCooccurrenceHybrid.js');
         const entries = Array.from({ length: 40 }, () => ({ tags: '#a #b' }));
         await expect(narrowEntriesToTopTagsHybrid(entries, 50)).resolves.toBe(entries);
     });

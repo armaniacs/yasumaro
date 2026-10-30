@@ -5,7 +5,7 @@
  * boundary guards, fallback logging, and the index-remap contract live here
  * so a 4th core only wires its call plus its per-core policy.
  *
- * Probe contract (adopted from src/dashboard/tagCooccurrenceHybrid.ts, the
+ * Probe contract (adopted from src/utils/tagCooccurrenceHybrid.ts, the
  * 4th hybrid — now migrated onto this runtime): success is cached permanently
  * per probe instance; failure is NOT cached, so the next call re-probes (the
  * lower initExtensionWasm layer already dedupes concurrent inits and resets on

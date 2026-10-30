@@ -22,7 +22,7 @@
 import {
   computeTagCooccurrenceHybrid,
   narrowEntriesToTopTagsHybrid,
-} from '../../tagCooccurrenceHybrid.js';
+} from '../../../utils/tagCooccurrenceHybrid.js';
 import {
   buildCooccurrencePairRows,
   COOCCURRENCE_TABLE_TOP_N,

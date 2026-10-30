@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { computeTagCooccurrence } from '../tagCooccurrence.js';
+import { computeTagCooccurrence } from '../../utils/tagCooccurrence.js';
 
 describe('computeTagCooccurrence', () => {
   it('returns empty nodes and edges for empty input', () => {
@@ -53,7 +53,7 @@ describe('computeTagCooccurrence', () => {
   });
 });
 
-import { limitToTopNodes } from '../tagCooccurrence.js';
+import { limitToTopNodes } from '../../utils/tagCooccurrence.js';
 
 describe('limitToTopNodes', () => {
   it('returns all nodes and edges when count is within the limit', () => {

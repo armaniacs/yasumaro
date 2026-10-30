@@ -4,7 +4,7 @@
  * Not a general-purpose physics engine — sized for a few dozen tag nodes.
  */
 
-import type { TagNode, TagEdge } from './tagCooccurrence.js';
+import type { TagNode, TagEdge } from '../utils/tagCooccurrence.js';
 
 export interface Position {
   x: number;

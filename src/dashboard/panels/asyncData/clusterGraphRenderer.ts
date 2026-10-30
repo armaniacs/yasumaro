@@ -17,7 +17,7 @@
  * Those are current UI contracts, so the panels keep choosing them.
  */
 
-import { limitToTopNodes, type TagEdge, type TagNode } from '../../tagCooccurrence.js';
+import { limitToTopNodes, type TagEdge, type TagNode } from '../../../utils/tagCooccurrence.js';
 import { computeCanvasSize, computeLayout } from '../../tagClusterLayout.js';
 import { TagClusterPanZoomController, type PanZoomButtons } from '../../tagClusterPanZoom.js';
 import { tagHue } from '../../tagClusterColor.js';

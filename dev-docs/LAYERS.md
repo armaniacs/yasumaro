@@ -175,6 +175,8 @@ src/utils/logger/sanitize.ts ― Layer 2 の piiSanitizer を静的に import �
 src/utils/promptSafety.ts
 src/utils/trustDb/TrustLookup.ts
 src/utils/trustDb/TrustDecision.ts
+src/utils/tagCooccurrence.ts ― tag 共起計算（dashboard 配下から移設、PBI 2026-09-22-02）
+src/utils/tagCooccurrenceHybrid.ts ― tag 共起 WASM ハイブリッド（dashboard 配下から移設、PBI 2026-09-22-02）
 ```
 
 ### Barrel ― Re-export (retired)

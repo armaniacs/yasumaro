@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildQuerySpec, clampLimit } from '../queryPlan.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
-import { computeTagCooccurrence, narrowEntriesToTopTags } from '../../dashboard/tagCooccurrence.js';
+import { computeTagCooccurrence, narrowEntriesToTopTags } from '../../utils/tagCooccurrence.js';
 
 describe('queryPlan tagCluster regression (6.8.12 hotfix)', () => {
   describe('plain cap is 10000 to keep tagCluster data', () => {

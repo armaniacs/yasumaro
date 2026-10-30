@@ -4,7 +4,7 @@ import {
   COOCCURRENCE_TABLE_TOP_N,
   type CooccurrenceGraph,
 } from '../tagCooccurrenceTable.js';
-import type { TagEdge, TagNode } from '../tagCooccurrence.js';
+import type { TagEdge, TagNode } from '../../utils/tagCooccurrence.js';
 
 function graph(nodes: Array<[string, number]>, edges: Array<[string, string, number]>): CooccurrenceGraph {
   return {
