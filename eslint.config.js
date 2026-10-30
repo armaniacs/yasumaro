@@ -157,6 +157,38 @@ export default [
     },
   },
   {
+    // PBI 2026-09-22-02 follow-up: wasm/offscreen → dashboard の上向き依存を禁止。
+    // pin テスト src/__tests__/tagcooccur-layer-direction.test.ts は from 行の
+    // import しか gate で失敗させないため、side-effect import（from 節なし）と
+    // barrel 形（from '../../dashboard'）は pin テストでは検出できない。この
+    // ルールは 3 形式をまとめて lint ゲートで失敗させる。level を error にして
+    // いるのはこのため（background ブロックの warn と意図的に異なる）。ツリーは
+    // クリーンで 0 違反のため error 化の影響はない。共有語彙は src/utils/ に配置。
+    // group は 3 パターン: `**/dashboard/**` は dashboard 配下のファイルに、
+    // `**/dashboard.js` は dashboard.js 単体に一致する。bare barrel 形
+    // （`import '../../dashboard';`）は gitignore セマンティクス上
+    // `**/dashboard/**` では末尾セグメントがなく一致しないため、
+    // `**/dashboard` を追加して barrel も一致させる。dashboards 等の
+    // 別セグメント名には誤検出しないことを matcher で確認済み。
+    files: ['src/wasm/**/*.ts', 'src/offscreen/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
+    languageOptions: {
+      parser: tsParser,
+      parserOptions: {
+        project: './tsconfig.json',
+        tsconfigRootDir: process.cwd(),
+      },
+    },
+    rules: {
+      'no-restricted-imports': ['error', {
+        patterns: [{
+          group: ['**/dashboard/**', '**/dashboard.js', '**/dashboard'],
+          message: 'wasm/offscreen 層から dashboard への上向き import は禁止。共有語彙は src/utils/ に配置すること。See dev-docs/LAYERS.md.',
+        }],
+      }],
+    },
+  },
+  {
     files: ['src/messaging/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
     languageOptions: { parser: tsParser },
