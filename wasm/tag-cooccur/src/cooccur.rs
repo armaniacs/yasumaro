@@ -1,5 +1,5 @@
 //! Tag cooccurrence core: exact port of `computeTagCooccurrence` and
-//! `narrowEntriesToTopTags` from `src/dashboard/tagCooccurrence.ts`
+//! `narrowEntriesToTopTags` from `src/utils/tagCooccurrence.ts`
 //! (backed by `parseTagsForDisplay` in `src/utils/tagUtils.ts`).
 //!
 //! The per-record double loop over tag pairs is O(T^2) with

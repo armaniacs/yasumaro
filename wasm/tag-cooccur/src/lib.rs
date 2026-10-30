@@ -1,7 +1,7 @@
 //! Tag cooccurrence core for Yasumaro dashboards, compiled to WebAssembly.
 //!
 //! Exact port of `computeTagCooccurrence` and `narrowEntriesToTopTags` in
-//! `src/dashboard/tagCooccurrence.ts` (see `cooccur.rs` for the parity
+//! `src/utils/tagCooccurrence.ts` (see `cooccur.rs` for the parity
 //! contracts, including the deliberate `|`-in-tag quirk handling which lives
 //! in the JS wrapper, and the `MAX_TAGS_PER_RECORD` fail-safe cap).
 //!
