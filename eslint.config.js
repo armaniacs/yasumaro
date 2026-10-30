@@ -11,7 +11,7 @@ export default [
     // wasm-bindgen emits `/* eslint-disable */` into the glue it generates, and
     // the committed copies under src/wasm/ are byte-gated against a fresh build
     // by CI's wasm-test job (node scripts/wasm-crates.mjs check). Editing that
-    // banner out — even to silence an unused-directive warning — makes the gate
+    // banner out ― even to silence an unused-directive warning ― makes the gate
     // fail: 7f201080 removed it from textrank/sentence-dedup on 2026-10-03 and
     // the job stayed red until it was restored on 2026-10-12. Generated files
     // must round-trip, so the directive is left alone and unused-directive
@@ -46,7 +46,7 @@ export default [
       // SSOT in eslint/rules/utils-layer-boundary.mjs; see
       // dev-docs/LAYERS.md "Mechanical enforcement". The single allow entry
       // below is provisional per ADR 2026-09-17-defaults-cleansing-rules-provisional-allow
-      // (value derivation only; re-review on its retrigger conditions) — see LAYERS.md.
+      // (value derivation only; re-review on its retrigger conditions) ― see LAYERS.md.
       'local/utils-layer-boundary': [
         'error',
         {
@@ -140,7 +140,7 @@ export default [
     // 共有ロジックは src/utils/ の中立層に配置すること。
     // Form matches the messaging layer-ban block below (the TS variant, so the
     // message text and the pattern style stay identical); type imports are
-    // banned too — the point of the gate is that no background → content edge
+    // banned too ― the point of the gate is that no background → content edge
     // exists at all, and the core rule in the block above could not be
     // scoped to content without sharing its warn severity with the UI ban.
     files: ['src/background/**/*.ts'],
@@ -164,6 +164,8 @@ export default [
     // ルールは 3 形式をまとめて lint ゲートで失敗させる。level を error にして
     // いるのはこのため（background ブロックの warn と意図的に異なる）。ツリーは
     // クリーンで 0 違反のため error 化の影響はない。共有語彙は src/utils/ に配置。
+    // `allowTypeImports` を付けていないため `import type ... from` も同じく
+    // error になる（型だけの辺でも層の向きは同じく反転する）。
     // group は 3 パターン: `**/dashboard/**` は dashboard 配下のファイルに、
     // `**/dashboard.js` は dashboard.js 単体に一致する。bare barrel 形
     // （`import '../../dashboard';`）は gitignore セマンティクス上
@@ -264,7 +266,7 @@ export default [
       // PBI 2026-10-12-04: a declaration-form skip (it.skip('name', fn)) never
       // runs and keeps the suite green while its coverage disappears. Runtime-
       // conditional forms (test.skip(cond, reason), skipIf, single-string
-      // Playwright test.skip('reason')) stay valid — see
+      // Playwright test.skip('reason')) stay valid ― see
       // eslint/rules/no-dead-test-skip.mjs for the discriminator.
       'local/no-dead-test-skip': 'error',
     },
@@ -280,7 +282,7 @@ export default [
     // so a project-based parser would fail to resolve every spec. Type checking
     // of test code stays with `npm run type-check:test`, which owns its own
     // tsconfig. Extending lint scope must not drag the E2E specs into a
-    // half-configured type-aware project — that would break src/**'s
+    // half-configured type-aware project ― that would break src/**'s
     // `project: './tsconfig.json'` resolution in the same flat config.
     files: ['testDir/**/*.{ts,js,mjs}', 'bench/**/*.{ts,js,mjs}'],
     plugins: {
@@ -290,7 +292,7 @@ export default [
       'local/no-fixed-wait': 'error',
       // PBI 2026-10-05-03: no-fixed-wait covers member calls only
       // (page.waitForTimeout). Bare setTimeout sleeps in E2E/bench are
-      // no-test-sleep's business — same rule as src/**/__tests__.
+      // no-test-sleep's business ― same rule as src/**/__tests__.
       'local/no-test-sleep': 'error',
       // PBI 2026-10-12-04: the Playwright counterpart of the vitest block's
       // no-dead-test-skip. The E2E conditional skips
