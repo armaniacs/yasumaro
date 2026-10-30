@@ -60,6 +60,7 @@ All notable changes to this project will be documented in this file.
 ### リファクタリング / Refactoring
 
 - タグ共起計算層を dashboard 配下から `src/utils/`（Layer 2）へ移設（`tagCooccurrence.ts`/`tagCooccurrenceHybrid.ts`・byte-identical・消費側 22 ファイル import 更新・層分類 SSOT 登録・旧パス逆戻り pin テスト新設） / tag co-occurrence compute layer relocated from dashboard to `src/utils/` (Layer 2), byte-identical, 22 consumer import updates, layer-SSOT registration, and a new tripwire test against upward imports
+- 層の向きの lint ゲート強化（`src/wasm`/`src/offscreen` から dashboard への import を `no-restricted-imports` error で禁止・side-effect/barrel import も捕捉） / layer-direction lint gate strengthened (`no-restricted-imports` at error forbidding dashboard imports from `src/wasm`/`src/offscreen`, catching side-effect/barrel imports)
 
 ### テスト
 
