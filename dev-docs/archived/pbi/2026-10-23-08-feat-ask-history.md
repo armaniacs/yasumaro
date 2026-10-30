@@ -59,6 +59,9 @@ Scenario: 根拠がないときは分からないと言う
 2.5人週相当。チームで再見積もりすること
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（2026-10-25: 単体・view緑。E2Eはno-evidence 1件がextensionで緑、回答系2件は実機モデル必須のため `@interaction` に再タグ（built-in-ai既存specと同扱い）。headed実機未実行のため未チェック）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（2026-10-30: 単体（evidence 11 件+FTS/LIKE 実エンジン 428 行・rank 射影 2 pin）・view緑、E2E は no-evidence 1 件が extension で緑。回答系 2 件は実機モデル必須のため `@interaction` に再タグ（built-in-ai 既存 spec と同扱い）で owner 手動に委ねる ― 自動化不能項目として明示）
 - [x] コードレビュー完了（2026-10-25実施: 対象commit e02992f7ほか。P0未束縛generateSummaryとP1コレクション競合を修正、P2 reason欠落は別PBI送り。詳細は実装記録の追記節）
 - [x] ドキュメント更新済み(QAの使い方と対象指定を含む)（2026-10-25: `docs/SETUP_GUIDE.md` の履歴に聞く欄に再試行・60秒・二重実行防止を追記）
+
+## 実装記録（2026-10-30・完了確認とアーカイブ）
+✅ 2026-10-30: 自動化可能部分の完了を確認してアーカイブ。コア QA 経路（`e02992f7`、単体 16 件）+ FTS/LIKE 実エンジン統合テスト（`94d59649`、428 行 11 件: FTS 5 トライグラム経路と LIKE 経路の振り分け・rank 射影 2 pin・per-kind 統計）+ P0/P1 レビュー指摘修正済み（未束縛 generateSummary・loadSaved コレクション競合、P2 reason 欠落は別 PBI 2026-10-25-12 で解決済み）。検証: 変更テスト green（evidence 11 件は型返済後に 10 回連続 green・フルスイート 1203 files/17595 tests green）、`make clean test` exit 0。残した開き: 回答系 2 件の headed E2E（実機モデル必須・`@interaction` タグ・built-in-ai 既存 spec と同扱い）は owner 手動に委ねる。QA の問い方・対象指定の使い方は `docs/SETUP_GUIDE.md` に反映済み

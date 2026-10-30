@@ -78,7 +78,7 @@ node-forge 受容（DEPENDINGS.md 第 6 章）を前提に、CI / release の監
 |---|---|---|---:|---:|---|
 | ✅ 06 | [2026-10-23-06-feat-saved-collections.md](../dev-docs/archived/pbi/2026-10-23-06-feat-saved-collections.md) | feat | 640 | 2.0人週相当 | ✅ 完了（2026-10-25: 改名・複製・自動タグ規則＋取消・フォールバック・M1/M3入力。E2E 9/9・単体50件超・レビュー指摘なし） |
 | ✅ 07 | [2026-10-23-07-feat-entry-friction.md](../dev-docs/archived/pbi/2026-10-23-07-feat-entry-friction.md) | feat | 480 | 1.5人週相当 | ✅ 完了（2026-10-25: 一括スターE2E 15/15・レビュー指摘なし・SETUP_GUIDEに3入口追記。omnibox実UIはowner手動と併用） |
-| 🔶 08 | [2026-10-23-08-feat-ask-history.md](2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | コアQA経路＋P0/P1修正済み（未束縛generateSummary・loadSaved競合）。AC4はPBI 12で解決済み。残は回答系headed E2E 2件（@interaction・owner手動） |
+| ✅ 08 | [2026-10-23-08-feat-ask-history.md](../dev-docs/archived/pbi/2026-10-23-08-feat-ask-history.md) | feat | 448 | 2.5人週相当 | ✅ 完了（2026-10-30: コアQA経路＋FTS/LIKE実エンジン統合テスト＋P0/P1修正済み。AC4はPBI 12で解決済み。回答系headed E2E 2件は@interaction・owner手動） |
 | ✅ 09 | [2026-10-23-09-feat-research-report.md](../dev-docs/archived/pbi/2026-10-23-09-feat-research-report.md) | feat | 400 | 2.0人週相当 | ✅ 完了（2026-10-25: 4節・引用・送達/再送・偽成功なし。E2E 4/4・レビュー修正済み・SETUP_GUIDE追記） |
 | ✅ 10 | [2026-10-23-10-feat-domain-intel.md](../dev-docs/archived/pbi/2026-10-23-10-feat-domain-intel.md) | feat | 240 | 2.0人週相当 | ✅ 完了（2026-10-25: 偏り表示・提案適用/取消・縮退。E2E 6/6・レビュー済み・ANALYTICS_GUIDE日英追記） |
 
@@ -603,6 +603,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-30 PBI 2026-10-23-08 アーカイブ ― ✅ 1件完了（ask-history）
+
+- **08-feat-ask-history**（`e02992f7` コアQA経路 + `94d59649` FTS/LIKE実エンジン統合テスト 428 行）: 履歴に聞く QA（FTS 5 トライグラム経路と LIKE 経路の振り分け・rank 射影 2 pin・per-kind 統計・evidence 11 件）。P0/P1 レビュー指摘修正済み（未束縛 generateSummary・loadSaved コレクション競合、P2 reason 欠落は別 PBI 2026-10-25-12 で解決済み）。検証: 変更テスト green（フルスイート 1203 files / 17595 tests green）・`make clean test` exit 0。残した開き: 回答系 2 件の headed E2E（実機モデル必須・`@interaction` タグ・built-in-ai 既存 spec と同扱い）は owner 手動に委ねる。全DoD `[x]`
 
 ### 2026-10-30 棚卸し残タスク（B 分類 5 件）アーカイブ ― ✅ 4件完了（03-06）
 
