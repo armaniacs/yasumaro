@@ -559,7 +559,7 @@ VulnHunt 監査（`obsidian-smart-history_VULNHUNT_RESULTS_2026-09-22-063916/`�
 holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台帳送りにした空 catch を PBI 化。01は holistic-1014b NN01＋F4で吸収されアーカイブ済み（下記）。残りはいずれも再検討トリガーが未発火のため、トリガーが発火するまで着手しない。
 
 - ✅ [2026-09-22-01-backlog-empty-catch-audit.md](../dev-docs/archived/pbi/2026-09-22-01-backlog-empty-catch-audit.md)（✅ 完了・吸収 ― 7箇所全件裁定：記録4件・理由付き沈黙3件。NN01 `1afa7b25`＋F4で実施。新規空catchは将来ラウンド送り）
-- [2026-09-22-02-backlog-tagcooccurrence-relocation.md](2026-09-22-02-backlog-tagcooccurrence-relocation.md)（🔶 部分実装 ― 実装チェック 1/8 達成（前提レビュー 1 項目・残り 7 項目未着手）― RICE 1.5・3 SP・副作用🟢。tagCooccurrence 計算層の dashboard 配下からの移設。前提: 17/21/22 のレビュー完了（2026-09-24 アーカイブ済み ― 前提は消化済みで着手可能）。トリガー: compute の offscreen/パイプライン移設）
+- ✅ [2026-09-22-02-backlog-tagcooccurrence-relocation.md](../dev-docs/archived/pbi/2026-09-22-02-backlog-tagcooccurrence-relocation.md)（✅ 完了・アーカイブ（2026-10-30）― 実装チェック 8/8 達成。`src/dashboard/tagCooccurrence.ts`/`tagCooccurrenceHybrid.ts` を `src/utils/` Layer 2 へ移設（byte-identical・rename similarity 96%/97%）。消費側 22 ファイル import 更新、層分類 SSOT（eslint rule+LAYERS.md）登録、旧パス逆戻り pin テスト新設（ミューテーション検証済み）。旧パス参照 4 件はコメント修正済み。ブランチ feature/tagcooccurrence-relocation（`166b2052`/`624df43d`/`38e9b0c9`/`cb76db17`））
 - ✅ [2026-09-22-03-backlog-local-provider-origin-rule.md](../dev-docs/archived/pbi/2026-09-22-03-backlog-local-provider-origin-rule.md)（✅ 対策不要で完了・アーカイブ ― 2026-10-23 公式仕様調査: LM Studio は Enable CORS スイッチの標準CORSモデルで Origin 拒否は非文書化、拡張機能のSW fetch は host_permissions（localhost:1234 含む）で CORS 免除のため失敗モードなし。拒否報告が来たら再検討）
 
 **WASM移行バッチの全候補判定が完了（2026-09-21）**: 採用=pii-sanitizer（3.9x）・textrank（13.36x）・tag-cooccur（5.53x）。保留=sentence-dedup（実行環境制約）。不採用=md-sanitize（撤去）・prompt-scan（PBI-24 に引き継ぎ）・serde スパイク（下記アーカイブ）。次に移植するのは「計算律速であることを実測で示せたものだけ」。tag-cooccur（17/21/22）は 2026-09-24 にアーカイブ済み（アーカイブ履歴参照）。
@@ -603,6 +603,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-30 PBI 2026-09-22-02 アーカイブ ― ✅ 1件完了（tagcooccurrence-relocation）
+
+- **02-backlog-tagcooccurrence-relocation**（`166b2052` 移設 + `624df43d` pin テスト + `38e9b0c9` doc 修正 + `cb76db17` Rust doc 修正。ブランチ feature/tagcooccurrence-relocation、base `d5668bbb`）: `src/dashboard/tagCooccurrence.ts`（純粋 compute）と `src/dashboard/tagCooccurrenceHybrid.ts`（WASM hybrid ラッパー）を `src/utils/` Layer 2 へ移設。byte-identical（`git mv`・rename similarity 96%/97%・差分は import 行+自モジュール JSDoc パス参照のみ）、消費側 22 ファイル import 更新、層分類 SSOT（eslint rule LAYER2_MODULES+LAYERS.md Layer 2）登録、旧パス逆戻り pin テスト新設（静的/型/動的/vi.mock 検出・ミューテーション検証済み）。移設先裁定: compute の本番実行場所は dashboard で offscreen/パイプライン利用 0 件・共有語彙のため最下層の共有層が正しい居場所（既存前例 sentenceExtractor/contentDeduplicator と同一構成）。検証: 変更テスト 22 ファイル 240 テスト green・pin 3 テスト green・`make clean test` exit 0・最終ブランチレビュー（0 Critical・コード変更不要）。後続候補: eslint no-restricted-imports 拡張（src/wasm + src/offscreen → dashboard 禁止・editor 時間で side-effect/barrel import を捕捉）。全DoD `[x]`
 
 ### 2026-10-30 PBI 2026-10-23-08 アーカイブ ― ✅ 1件完了（ask-history）
 

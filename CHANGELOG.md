@@ -57,6 +57,10 @@ All notable changes to this project will be documented in this file.
 - Webhook host ゲートが付与済み権限を見て実インストールで未宣言 origin 遮断が無効だったバグ（宣言済み host_permissions 読み替え） / the webhook host gate checked granted permissions so undeclared-origin blocking was disabled in real installs (now reads declared host_permissions)
 - PRIVATE_PAGE_DETECTED の outcome が確認ダイアログ経路で握り捨てられる誤診断（再送応答の正規化） / a stale PRIVATE_PAGE_DETECTED outcome was persisted even when the approved force re-send succeeded (normalized)
 
+### リファクタリング / Refactoring
+
+- タグ共起計算層を dashboard 配下から `src/utils/`（Layer 2）へ移設（`tagCooccurrence.ts`/`tagCooccurrenceHybrid.ts`・byte-identical・消費側 22 ファイル import 更新・層分類 SSOT 登録・旧パス逆戻り pin テスト新設） / tag co-occurrence compute layer relocated from dashboard to `src/utils/` (Layer 2), byte-identical, 22 consumer import updates, layer-SSOT registration, and a new tripwire test against upward imports
+
 ### テスト
 
 - 最終ゲート `make clean test` 緑（build chromium+firefox → `npm run validate`）
