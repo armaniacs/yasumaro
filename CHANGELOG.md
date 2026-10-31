@@ -35,6 +35,32 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [6.9.64] - 2026-10-31
+
+このリリースは次フェーズ PBI 10 件（04/05/06/09/01/10/02/07/03/08）の完成と持ち越し 16 項目のなぜなぜ分析（4 視点 138 チェーン）です。利用者に見える変更は直近 skip 理由のポップアップ表示・選択範囲の記録・設定パネルの分類 UI・パス許可選択肢のドメイン許可への統一・Webhook ループバック宛先のポート照合修正です。 / This release completes the next-phase 10 PBIs and the 5-Whys analysis of 16 carried-over items (4 perspectives, 138 chains). User-visible changes: last skip reason in the popup, selection capture, the settings panel category UI, the path-allow option unified into domain allow, and the webhook loopback port matching fix.
+
+### 追加 / Added
+
+- 直近 skip 理由のポップアップ表示（保存は理由種別と回数のみ、URL・タイトル・本文・時刻は不保存、chrome.storage.session のみ・beforeunload relay で未成立の訪問だけ記録） / Last skip reason shown in the popup (reason code and count only, chrome.storage.session, beforeunload relay records only unsettled visits)
+- 選択範囲の記録（ポップアップ今すぐ記録ボタンと Alt+Shift+Y の両入口、選択テキストのみを記録、正規化は 10,000 字カップ付きで一箇所に集約、SQLite の content_origin TEXT で判別可能・NOT_UPDATABLE、空選択はページ記録にフォールバック） / Selection capture from both the popup record button and Alt+Shift+Y (selection text only, normalization collapsed in one place with a 10,000-char cap, distinguishable via the SQLite content_origin column, empty selection falls back to page recording)
+- 設定パネルの分類 UI（29 パネルを実測して 6 分類に整理、select によるフィルタ、未割り当ては 'other' フォールバック、矢印キーは隠れたタブをスキップ・WCAG 2.1.1、分類変更時にアクティブタブが隠れると選択分類の先頭の可視タブへ移動） / Settings panel category UI (29 panels grouped into 6 categories, select filter, 'other' fallback, arrow keys skip hidden tabs, selection sync on filter change)
+
+### 修正 / Fixed
+
+- パス許可の文言統一（hostname 正規化と同一動作だったパス許可ボタンを削除しドメイン許可 1 つに統一、README 日英・PRIVACY.md 同期、再導入を失敗させる E2E ピン付き） / The path-allow option (behaviorally identical to domain allow under hostname normalization) removed and unified into domain allow, with README/PRIVACY sync and an E2E tripwire
+- Webhook ループバック宛先がポート照合の不一致で既存設定のまま全遮断されていたバグ（ポート付き宣言パターンを URL の host+port と比較、ポートなしパターンは従来どおり、平文 http は引き続き fail-closed） / Webhook loopback destinations were all blocked by a port-matching mismatch (port-bearing declared patterns now compare host+port, plain http stays fail-closed)
+- パネル分類フィルタ適用時にアクティブタブが hidden になっても aria-selected と表示パネルが取り残されるバグ（選択分類の先頭の可視タブへ navigate） / Category filter left aria-selected and the visible panel stale when the active tab became hidden (now navigates to the first visible tab of the selected category)
+
+### リファクタリング / Refactoring
+
+- raw-owned ストレージキー監査の pin テスト新設（走査正規表現はレシーバ非依存・オプショナルチェーン対応、TOP_LEVEL_ONLY_KEYS を 33→46 キーに分類、監査表と実装の lockstep 検証） / Raw-owned storage key audit pin added (receiver-independent scan, TOP_LEVEL_ONLY_KEYS classified 33→46, lockstep pin between the audit table and the implementation)
+
+### テスト
+
+- フルスイート 1219 ファイル・17,726 テスト緑（08 修正ラウンド時点の実績。テスト型ベースライン 446 維持。saveRetryUnify テストへ skipRecorder モック追加で 447→446 に復帰済み）
+- E2E: chromium 12 passed（パス許可ピン込み）・dashboard-category-filter 4 件・webhook-egress 2 件緑。headless 実行可能分は緑、Firefox E2E はバイナリ未インストールで未実行、実通知表示・headed 系は owner 手動
+- 新規単体テスト 200 件超（skip 理由・選択範囲・分類 UI・監査 pin・ポート照合・文言統一）
+
 ## [6.9.63] - 2026-10-30
 
 このリリースは棚卸し残タスク（B 分類 5 件）の完成と第三者レビュー指摘の修正です。利用者に見える変更は類似ページクラスタ表示・週次ダイジェストの完了前週統一・読みかけ復元パネルと読みかけリマインダーの SW 配線・Webhook エクスポートの保存時発火とオプション UI・SPA 遅延再スキャンの E2E 固定です。 / This release completes the remaining backlog (B-class, 5 items) and fixes third-party review findings. User-visible changes: the similarity-cluster panel, the weekly digest unified on the completed previous week, the session-restoration playback panel and reminder wiring, webhook export firing on save with its options UI, and the SPA late re-scan pinned by E2E.
