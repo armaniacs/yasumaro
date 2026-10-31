@@ -1446,6 +1446,33 @@
   "toolsSection": {
     "message": "Tools"
   },
+  "panelCategoryFilterLabel": {
+    "message": "Filter panels by category"
+  },
+  "panelCategoryAll": {
+    "message": "All panels"
+  },
+  "panelCategorySetup": {
+    "message": "Setup & Connection"
+  },
+  "panelCategoryRecording": {
+    "message": "Recording"
+  },
+  "panelCategoryAi": {
+    "message": "AI Summary"
+  },
+  "panelCategoryPrivacy": {
+    "message": "Privacy & Security"
+  },
+  "panelCategoryAnalysis": {
+    "message": "History & Analysis"
+  },
+  "panelCategoryExport": {
+    "message": "Export"
+  },
+  "panelCategoryOther": {
+    "message": "Other"
+  },
   "domainSearchTab": {
     "message": "Domain Search"
   },

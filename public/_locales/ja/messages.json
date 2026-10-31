@@ -1392,6 +1392,33 @@
   "toolsSection": {
     "message": "ツール"
   },
+  "panelCategoryFilterLabel": {
+    "message": "パネルを分類で絞り込み"
+  },
+  "panelCategoryAll": {
+    "message": "すべてのパネル"
+  },
+  "panelCategorySetup": {
+    "message": "初期設定・接続"
+  },
+  "panelCategoryRecording": {
+    "message": "記録設定"
+  },
+  "panelCategoryAi": {
+    "message": "AI要約"
+  },
+  "panelCategoryPrivacy": {
+    "message": "プライバシー・セキュリティ"
+  },
+  "panelCategoryAnalysis": {
+    "message": "履歴・分析"
+  },
+  "panelCategoryExport": {
+    "message": "出力"
+  },
+  "panelCategoryOther": {
+    "message": "その他"
+  },
   "domainSearchTab": {
     "message": "ドメイン検索"
   },

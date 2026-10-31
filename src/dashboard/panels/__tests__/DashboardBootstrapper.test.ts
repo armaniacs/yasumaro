@@ -458,5 +458,24 @@ describe('DashboardBootstrapper', () => {
         sidebar.remove();
       }
     });
+
+    it('arrow-key navigation skips buttons hidden by the category filter (PBI 2026-10-31-08)', () => {
+      const { general, child, data, group } = buildGroupedSidebar();
+      // The panel category filter hides tabs with the hidden attribute. With
+      // the group expanded the hidden child would be the next tab; the
+      // navigation must skip it or focus would stall on the button before
+      // it (focus() on a hidden element never moves, so the hidden tab
+      // blocks every later tab).
+      group.hidden = false;
+      child.hidden = true;
+      document.body.appendChild(sidebar);
+      try {
+        general.focus();
+        general.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(document.activeElement).toBe(data);
+      } finally {
+        sidebar.remove();
+      }
+    });
   });
 });

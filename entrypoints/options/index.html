@@ -25,6 +25,22 @@
         <img src="/icons/icon48.png" alt="" aria-hidden="true" width="32" height="32">
         <span class="sidebar-title" data-i18n="appTitle">Yasumaro</span>
       </a>
+      <!-- PBI 2026-10-31-08: パネル分類フィルタ (Settings IA)。role=tablist の
+           外に置き、tab セマンティクスを壊さない。ボタンの可視性は
+           src/dashboard/panels/panelCategoryFilter.ts が所有する。 -->
+      <div class="sidebar-filter">
+        <label class="sidebar-filter-label" for="panelCategoryFilter" data-i18n="panelCategoryFilterLabel">Filter panels by category</label>
+        <select id="panelCategoryFilter" class="sidebar-filter-select">
+          <option value="all" data-i18n-opt="panelCategoryAll">All panels</option>
+          <option value="setup" data-i18n-opt="panelCategorySetup">Setup &amp; Connection</option>
+          <option value="recording" data-i18n-opt="panelCategoryRecording">Recording</option>
+          <option value="ai" data-i18n-opt="panelCategoryAi">AI Summary</option>
+          <option value="privacy" data-i18n-opt="panelCategoryPrivacy">Privacy &amp; Security</option>
+          <option value="analysis" data-i18n-opt="panelCategoryAnalysis">History &amp; Analysis</option>
+          <option value="export" data-i18n-opt="panelCategoryExport">Export</option>
+          <option value="other" data-i18n-opt="panelCategoryOther">Other</option>
+        </select>
+      </div>
       <nav id="sidebar" class="sidebar" role="tablist" aria-label="Dashboard navigation">
       <div class="sidebar-nav">
         <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="settingsSection">Settings</div>

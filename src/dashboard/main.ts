@@ -1,6 +1,7 @@
 import { NavigationRegistry } from './panels/NavigationRegistry.js';
 import { DashboardBootstrapper } from './panels/DashboardBootstrapper.js';
 import { createPanelById } from './panels/panelFactories.js';
+import { wirePanelCategoryFilter } from './panels/panelCategoryFilter.js';
 import { setRegistry } from './panels/registryContext.js';
 import { initDashboard, resolveInitialPanelId, applySectionDeepLink } from './dashboard.js';
 // PBI 2026-10-21-12: the dashboard is a real fan-out destination for the
@@ -25,6 +26,12 @@ function wireSidebar(): void {
   if (sidebarEl) {
     bootstrapper.wireSidebar(sidebarEl);
   }
+  // PBI 2026-10-31-08: パネル分類フィルタ (Settings IA)。select なし
+  // (単体テスト fixture) は no-op。DOM 解決は呼び出し時 (dashboard DOM 規約)。
+  wirePanelCategoryFilter(
+    document.querySelector<HTMLSelectElement>('#panelCategoryFilter'),
+    sidebarEl,
+  );
 }
 wireSidebar();
 
