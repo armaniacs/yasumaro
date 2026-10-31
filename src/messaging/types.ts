@@ -313,6 +313,9 @@ export type ResponseForType<T extends ExtensionMessage['type']> =
   // gate, Blue Team review 2026-10-15), so the failure shape is part of the
   // contract — callers must not read `.success` as `true` unconditionally.
   T extends 'OW_PROBE_STATE' ? { success: true } | { success: false; error: string } :
+  // The skip-reason handler refuses the write when the session leg fails
+  // (diagnostics are advisory), so the failure shape is part of the contract.
+  T extends 'RECORDING_SKIP_REASON' ? { success: true } | { success: false; error: string } :
   SuccessResponse;
 
 /**

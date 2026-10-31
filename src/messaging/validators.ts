@@ -17,6 +17,7 @@ import {
   VALIDATOR_LIMITS,
 } from '../utils/limits.js';
 import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
+import { isSkipReasonCode } from '../utils/skipReason.js';
 import type {
   ExtensionMessage,
   ValidVisitMessage,
@@ -28,6 +29,7 @@ import type {
   ExportResearchReportMessage,
   OwE2eProbeQueryMessage,
   OwE2EProbeStateMessage,
+  RecordingSkipReasonMessage,
   GenerateReviewSummaryMessage,
   LogForwardMessage,
 } from '../background/messageTypes.js';
@@ -919,6 +921,47 @@ export class E2EProbeStateValidator implements MessageValidator<OwE2EProbeStateM
 }
 
 // ------------------------------------------------------------------
+// RecordingSkipReasonValidator — RECORDING_SKIP_REASON (PBI 2026-10-31-01)
+// ------------------------------------------------------------------
+
+/**
+ * The complete skip reason payload key set — SSOT: the shared skip vocabulary
+ * in src/utils/skipReason.ts. Anything else is rejected, not stored: the
+ * handler persists a normalized record into extension state, so a payload key
+ * outside the contract (a URL, a title) would land there unexamined.
+ */
+const SKIP_REASON_PAYLOAD_KEYS: ReadonlySet<string> = new Set<string>(['reason']);
+
+export class RecordingSkipReasonValidator implements MessageValidator<RecordingSkipReasonMessage> {
+  validate(msg: unknown): RecordingSkipReasonMessage {
+    const m = assertEnvelopeType(msg, 'RecordingSkipReasonValidator', 'RECORDING_SKIP_REASON');
+    if (!m.payload || typeof m.payload !== 'object' || Array.isArray(m.payload)) {
+      throw new ValidationError('RecordingSkipReasonValidator', 'payload is required', 'payload');
+    }
+    const p = m.payload as Record<string, unknown>;
+    // Unknown-key allowlist: reason is the whole contract; every other key is
+    // a rejection (same policy as the E2E probe-state validator above).
+    for (const key of Object.keys(p)) {
+      if (!SKIP_REASON_PAYLOAD_KEYS.has(key)) {
+        throw new ValidationError(
+          'RecordingSkipReasonValidator',
+          `payload.${key} is not a known skip-reason key`,
+          key,
+        );
+      }
+    }
+    if (!isSkipReasonCode(p.reason)) {
+      throw new ValidationError(
+        'RecordingSkipReasonValidator',
+        'payload.reason is not a known skip-reason code',
+        'reason',
+      );
+    }
+    return msg as RecordingSkipReasonMessage;
+  }
+}
+
+// ------------------------------------------------------------------
 // GenerateReviewSummaryValidator — GENERATE_REVIEW_SUMMARY (PBI 2026-10-21-02)
 // ------------------------------------------------------------------
 /**
@@ -995,5 +1038,6 @@ export const contentCleansingExecutedValidator = new ContentCleansingExecutedVal
 export const testObsidianValidator = new TestObsidianValidator();
 export const e2eProbeQueryValidator = new E2EProbeQueryValidator();
 export const e2eProbeStateValidator = new E2EProbeStateValidator();
+export const recordingSkipReasonValidator = new RecordingSkipReasonValidator();
 export const generateReviewSummaryValidator = new GenerateReviewSummaryValidator();
 export const logForwardValidator = new LogForwardValidator();

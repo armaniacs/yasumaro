@@ -45,6 +45,7 @@ describe('messaging parity: message type registry', () => {
             'LOG_FORWARD',
             'OW_PROBE_QUERY',
             'OW_PROBE_STATE',
+            'RECORDING_SKIP_REASON', // PBI 2026-10-31-01: skip reason relay
             'PAUSE_RECORDING',
             'RESUME_RECORDING',
             'GET_PAUSE_STATE',
@@ -59,6 +60,7 @@ describe('messaging parity: message type registry', () => {
             'PING',
             'OW_PROBE_QUERY',
             'OW_PROBE_STATE',
+            'RECORDING_SKIP_REASON', // PBI 2026-10-31-01: skip reason relay
         ]);
     });
 

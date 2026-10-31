@@ -5924,5 +5924,46 @@
   "sessionReminderDiscard": {
     "message": "今後表示しない",
     "description": "通知ボタン。この記録を今後の通知対象から外す"
+  },
+  "skipReasonPanelTitle": {
+    "message": "直近に記録されなかった理由",
+    "description": "ポップアップの直近skip理由パネル見出し（PBI 2026-10-31-01）"
+  },
+  "skipReasonConditionNotMet": {
+    "message": "条件未達（滞在時間・スクロールがしきい値未満）",
+    "description": "skip理由。滞在5秒未満・スクロール50%未満など自動記録条件未達"
+  },
+  "skipReasonDuplicate": {
+    "message": "同日重複（同じURLを同日に複数回）",
+    "description": "skip理由。同日同URLの重複skip"
+  },
+  "skipReasonPrivatePage": {
+    "message": "プライベートページ",
+    "description": "skip理由。プライベートページとして拒否"
+  },
+  "skipReasonPipelineError": {
+    "message": "パイプラインエラー",
+    "description": "skip理由。パイプラインの終端失敗"
+  },
+  "skipReasonTimes": {
+    "message": "連続$1$回",
+    "description": "直近skip理由の連続回数",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_one": {
+    "message": "1 time in a row",
+    "description": "直近skip理由の連続回数（英語の単数形）",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_other": {
+    "message": "$1$ times in a row",
+    "description": "直近skip理由の連続回数（英語の複数形）",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
   }
 }

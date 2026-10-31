@@ -7,6 +7,7 @@
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import type { SkipReasonCode } from '../utils/skipReason.js';
 // Imported from ai/AIService.js rather than aiClient.js: this module is pulled
 // in by every layer (popup, dashboard, content, offscreen), and reaching
 // through aiClient.js would drag the whole provider Strategy graph along with
@@ -230,6 +231,20 @@ export type OwE2EProbeStateMessage = {
     };
 };
 
+/**
+ * PBI 2026-10-31-01: recording skip reason relay. Content scripts cannot
+ * reach chrome.storage.session, so the condition-not-met skip decided by the
+ * pre-pipeline visit gate (visitGating) travels as a runtime message and the
+ * SW owns the session leg (handlers/recordingSkipReasonHandlers.ts). The
+ * payload is a reason code only — no URL, title, or content. The reason code
+ * domain is the shared skip vocabulary (SSOT: src/utils/skipReason.ts); the
+ * runtime validator pins it.
+ */
+export type RecordingSkipReasonMessage = {
+    type: 'RECORDING_SKIP_REASON';
+    payload: { reason: SkipReasonCode };
+};
+
 type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
@@ -305,6 +320,7 @@ export type ExtensionMessage = (
     | GetPauseStateMessage
     | OwE2eProbeQueryMessage
     | OwE2EProbeStateMessage
+    | RecordingSkipReasonMessage
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage

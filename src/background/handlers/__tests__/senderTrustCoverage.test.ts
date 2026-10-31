@@ -31,6 +31,10 @@ const EXPECTED_TRUST: Record<string, SenderTrustLevel> = {
   // chrome.storage.session, so the SW owns the session leg).
   OW_PROBE_QUERY: 'content-script-allowed',
   OW_PROBE_STATE: 'content-script-allowed',
+  // PBI 2026-10-31-01: skip reason relay (same session-leg ownership as the
+  // probe relay — the condition-not-met skip is decided in the content script
+  // and persisted by the SW).
+  RECORDING_SKIP_REASON: 'content-script-allowed',
 
   // Everything else is popup / dashboard / offscreen only.
   FETCH_URL: 'extension-only',

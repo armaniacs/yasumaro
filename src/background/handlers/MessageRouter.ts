@@ -38,6 +38,7 @@ import {
   createE2EProbeQueryHandler,
   createE2EProbeStateHandler,
 } from './e2eProbeHandlers.js';
+import { createRecordingSkipReasonHandler } from './recordingSkipReasonHandlers.js';
 import {
   createPauseRecordingHandler,
   createResumeRecordingHandler,
@@ -70,6 +71,7 @@ import {
   testObsidianValidator,
   e2eProbeQueryValidator,
   e2eProbeStateValidator,
+  recordingSkipReasonValidator,
   generateReviewSummaryValidator,
   logForwardValidator,
 } from '../../messaging/validators.js';
@@ -281,6 +283,9 @@ export class MessageRouter {
       DASHBOARD_SQLITE: deps.dashboardSqliteHandler,
       OW_PROBE_QUERY: createE2EProbeQueryHandler(),
       OW_PROBE_STATE: createE2EProbeStateHandler(),
+      // PBI 2026-10-31-01: skip reason relay — the SW owns the session leg
+      // content scripts cannot reach.
+      RECORDING_SKIP_REASON: createRecordingSkipReasonHandler(),
     };
 
     const contentScriptAllowed = new Set<string>(CONTENT_SCRIPT_ALLOWED_TYPES as readonly string[]);
@@ -311,6 +316,9 @@ export class MessageRouter {
     this.setValidator('TEST_OBSIDIAN', testObsidianValidator);
     this.setValidator('OW_PROBE_QUERY', e2eProbeQueryValidator);
     this.setValidator('OW_PROBE_STATE', e2eProbeStateValidator);
+    // PBI 2026-10-31-01: the skip-reason handler persists a normalized record
+    // into extension state, so the payload validator runs before it.
+    this.setValidator('RECORDING_SKIP_REASON', recordingSkipReasonValidator);
     // PBI 2026-10-21-02: GENERATE_REVIEW_SUMMARY / LOG_FORWARD had handlers
     // but no registered validator, so dispatch's fail-open skip let invalid
     // payloads reach them unexamined.

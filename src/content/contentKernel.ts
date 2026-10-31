@@ -362,7 +362,49 @@ export class ContentKernel {
     }
 
     async reportValidVisit(): Promise<void> {
+        // PBI 2026-10-31-01: mark the attempt so a later page leave does not
+        // claim a condition skip for a visit the gate opened (a failed send is
+        // not a condition skip). The late-content re-scan resets the settle
+        // flag but never this one: every send still counts as an attempt.
+        this.pageState.visitReportAttempted = true;
         await this.visitReporter.report();
+    }
+
+    /**
+     * PBI 2026-10-31-01: the page view is ending without a settled visit —
+     * record the skip reason the popup shows. Content scripts cannot reach
+     * chrome.storage.session, so the reason travels as a runtime message and
+     * the service worker owns the session leg (the pipeline-side reasons are
+     * recorded in recordingOutcome.decideStepOutcome, not here).
+     *
+     * Guards, in order:
+     *  - paused: the user paused recording; not a condition skip;
+     *  - a settled visit: the outcome policy already recorded the reason;
+     *  - an attempted report: a failed send is a transport failure, not a
+     *    condition skip.
+     *
+     * Never throws: the skip reason is advisory and must not break the unload.
+     */
+    recordSkipIfUnreported(): void {
+        if (this.pausedCache) return;
+        if (this.pageState.isValidVisitReported) return;
+        if (this.pageState.visitReportAttempted) return;
+        try {
+            void Promise.resolve(
+                this.sender.sendMessageWithRetry({
+                    type: 'RECORDING_SKIP_REASON',
+                    payload: { reason: 'condition-not-met' },
+                }),
+            ).catch((e: unknown) => {
+                void logDebug(
+                    'RECORDING_SKIP_REASON send failed',
+                    { error: errorMessage(e) },
+                    'contentKernel',
+                );
+            });
+        } catch {
+            // Skip output must not break the unload.
+        }
     }
 
     // -----------------------------------------------------------------------
@@ -441,7 +483,12 @@ export class ContentKernel {
                 },
                 { passive: true },
             );
-            window.addEventListener('beforeunload', () => this.stopPeriodicCheck());
+            window.addEventListener('beforeunload', () => {
+                this.stopPeriodicCheck();
+                // PBI 2026-10-31-01: the page view is ending — record the
+                // skip reason when the visit never settled.
+                this.recordSkipIfUnreported();
+            });
         }
         if (typeof document !== 'undefined') {
             document.addEventListener('visibilitychange', () => {

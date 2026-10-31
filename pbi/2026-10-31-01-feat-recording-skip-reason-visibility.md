@@ -37,12 +37,12 @@ Scenario: skip理由の保存は理由種別と回数に限る
 
 ## 受け入れ基準
 
-- [ ] 滞在5秒未満・スクロール50%未満など自動記録条件未達でskipされた場合、ポップアップに理由種別が表示される
-- [ ] 同日同URLの重複skipとadaptive記録のゲート拒否も、理由種別がポップアップに表示される
-- [ ] 理由の表示はタブ内トランジェント、または理由種別と回数のみの直近表示に限り、URL・タイトル・本文を保存しない
-- [ ] 直近skip理由の状態は chrome.storage.session に置かれ、MV3 service worker の再起動をまたいで保持される
-- [ ] バッジ通知（青◎/オレンジ!）とskip理由表示が矛盾しない
-- [ ] 既存のドメイン遮断理由表（DOMAIN_BLOCKED）と保留ページ管理の表示が壊れない
+- [x] 滞在5秒未満・スクロール50%未満など自動記録条件未達でskipされた場合、ポップアップに理由種別が表示される（contentKernel の beforeunload 配線 + initSkipReasonPanel。src/content/__tests__/contentKernel.skipReason.test.ts、src/popup/__tests__/skipReasonPanel.test.ts）
+- [x] 同日同URLの重複skipとadaptive記録のゲート拒否も、理由種別がポップアップに表示される（decideStepOutcome の DuplicateError/PrivatePageError 分岐。src/background/pipeline/__tests__/recordingOutcome-skipReason.test.ts）
+- [x] 理由の表示はタブ内トランジェント、または理由種別と回数のみの直近表示に限り、URL・タイトル・本文を保存しない（skipReason.ts の LastSkipReason は reason + count のみ。payload 検証テストで確認）
+- [x] 直近skip理由の状態は chrome.storage.session に置かれ、MV3 service worker の再起動をまたいで保持される（SKIP_REASON_SESSION_KEY = 'last_skip_reason'、session 往復テスト13件）
+- [x] バッジ通知（青◎/オレンジ!）とskip理由表示が矛盾しない（パネルは中立/警告系配色のステータス面。styles.css .skip-reason-panel、RECORDING_CONDITIONS.md に方針を記載）
+- [x] 既存のドメイン遮断理由表（DOMAIN_BLOCKED）と保留ページ管理の表示が壊れない（DOMAIN_BLOCKED はパイプライン以前の拒否のため記録対象外、全テスト緑で確認）
 
 ## テスト戦略
 
@@ -90,6 +90,6 @@ grep -rn "PRIVATE_PAGE_DETECTED" src/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする（条件未達・同日重複・保存範囲の3シナリオを contentKernel.skipReason / recordingOutcome-skipReason / skipReasonPanel / skipReason の4ファイルで網羅）
+- [x] コードレビュー完了（セルフレビュー: 受入基準6項目・URL非保存・session層・監査pin・validate）
+- [x] ドキュメント更新済み（docs/RECORDING_CONDITIONS.md に「直近のskip理由をポップアップで見る」節とFAQを追記、文字種チェック通過）

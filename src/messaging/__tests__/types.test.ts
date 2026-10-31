@@ -128,6 +128,7 @@ describe('messaging/types: isServiceWorkerRequest', () => {
                 minScrollDepth: 50,
                 duration: 2,
             },
+            RECORDING_SKIP_REASON: { reason: 'condition-not-met' },
         };
         VALID_MESSAGE_TYPES.forEach((type) => {
             const payload = payloadForType[type];

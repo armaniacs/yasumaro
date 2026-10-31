@@ -181,6 +181,15 @@
       </div>
     </div>
 
+    <!-- Last skip reason (PBI 2026-10-31-01): 理由種別と回数のみ。記録が
+         skip された直近の理由をポップアップから見えるようにする。 -->
+    <div id="skipReasonPanel" class="skip-reason-panel hidden" role="status">
+      <span class="skip-reason-icon" aria-hidden="true">❓</span>
+      <span id="skipReasonTitle" class="skip-reason-title" data-i18n="skipReasonPanelTitle"></span>
+      <span id="skipReasonText" class="skip-reason-text"></span>
+      <span id="skipReasonCount" class="skip-reason-count"></span>
+    </div>
+
     <button id="recordBtn" class="primary-btn" data-i18n-label="recordNow">📝 Record Now</button>
 
     <!-- Permission Denied Message (P0) -->

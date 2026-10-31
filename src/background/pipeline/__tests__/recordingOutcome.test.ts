@@ -51,14 +51,17 @@ function makeFakes(): OutcomeAdapters & {
   notifiedErrors: Array<{ title: string; message: string }>;
   notifiedSaves: string[];
   pendings: unknown[];
+  skips: string[];
 } {
   const notifiedErrors: Array<{ title: string; message: string }> = [];
   const notifiedSaves: string[] = [];
   const pendings: unknown[] = [];
+  const skips: string[] = [];
   return {
     notifiedErrors,
     notifiedSaves,
     pendings,
+    skips,
     notifier: {
       notifyError: (title, message) => {
         notifiedErrors.push({ title, message });
@@ -70,6 +73,12 @@ function makeFakes(): OutcomeAdapters & {
     pending: {
       addPending: (entry) => {
         pendings.push(entry);
+      },
+    },
+    // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter seam.
+    skipRecorder: {
+      recordSkip: (reason) => {
+        skips.push(reason);
       },
     },
   };

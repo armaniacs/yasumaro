@@ -48,6 +48,7 @@ export const VALID_MESSAGE_TYPES = [
     'LOG_FORWARD', // Log relay from Offscreen Document / its Worker (no direct chrome.storage access)
     'OW_PROBE_QUERY', // E2E probe arming query (content script cannot read chrome.storage.session)
     'OW_PROBE_STATE', // E2E probe state relay (content script cannot write chrome.storage.session)
+    'RECORDING_SKIP_REASON', // Recording skip reason relay (PBI 2026-10-31-01: content script cannot write chrome.storage.session)
     'PAUSE_RECORDING', // Popup-initiated pause (PBI 2026-10-17-01)
     'RESUME_RECORDING', // Popup-initiated early resume (PBI 2026-10-17-01)
     'GET_PAUSE_STATE', // Popup pause-state query (PBI 2026-10-17-01)
@@ -66,6 +67,7 @@ export const CONTENT_SCRIPT_ALLOWED_TYPES = [
     'PING',
     'OW_PROBE_QUERY',
     'OW_PROBE_STATE',
+    'RECORDING_SKIP_REASON', // PBI 2026-10-31-01: skip reason relay (session leg is SW-owned)
 ] as const;
 
 export const NO_PAYLOAD_TYPES = [

@@ -32,6 +32,14 @@ export class PageState {
     startTime: number = Date.now();
     maxScrollPercentage: number = 0;
     isValidVisitReported: boolean = false;
+    /**
+     * PBI 2026-10-31-01: true once the visit gate opened and a report was
+     * attempted (ContentKernel.reportValidVisit). The skip-reason recording
+     * reads it on page leave so a failed send is not claimed as a condition
+     * skip — the settle flag alone cannot distinguish "the gate never opened"
+     * from "the gate opened but the send failed".
+     */
+    visitReportAttempted: boolean = false;
     checkIntervalId: number | null = null;
 
     /**

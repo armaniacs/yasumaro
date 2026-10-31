@@ -50,6 +50,8 @@ function makeEnv(): SavePhaseEnv {
   const adapters = {
     notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn() },
     pending: { addPending: vi.fn() },
+    // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter seam.
+    skipRecorder: { recordSkip: vi.fn() },
   };
   // Direct step execution: the policy under test is the write-visibility
   // mapping, not the executor's retry/offline layer.
