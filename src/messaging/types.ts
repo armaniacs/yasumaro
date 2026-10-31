@@ -75,6 +75,19 @@ export type RegenerateSummaryResponse = RecordingResult & {
 };
 
 /**
+ * GET_SELECTION の wire 応答型 (PBI 2026-10-31-03)。
+ *
+ * 所有は messaging 層 — the content script (selectionCapture.ts) sends it and
+ * the popup reads it, so the shape lives in the neutral layer both depend on.
+ * The raw selection travels verbatim; normalization + the 10,000-char cap are
+ * the consumer's job (utils/selectionText.js), so the same helper serves both
+ * capture paths (popup message and the keyboard path's executeScript func).
+ */
+export interface SelectionResponse {
+  selection: string;
+}
+
+/**
  * PBI 2026-10-23-08/09: ask/report wire responses and the answer citation.
  * Canonical definitions live in responseCanonical.ts (single owner with the
  * background outcome aliases); imported for local use and re-exported here
@@ -180,6 +193,14 @@ export interface RecordingData {
   visitDurationSeconds?: number;
   /** PBI 2026-10-23-02: max scroll percentage reached for this visit. */
   scrollRatioPercent?: number;
+  /**
+   * PBI 2026-10-31-03: saved-row origin marker. 'selection' when the record's
+   * content came from the user's selection (utils/selectionText
+   * SELECTION_CONTENT_ORIGIN); absent on normal page records. The wire
+   * validator pins the allowlist; the mapper writes it to the content_origin
+   * column so the saved row is identifiable as selection-derived.
+   */
+  contentOrigin?: string;
 }
 
 // ============================================================================

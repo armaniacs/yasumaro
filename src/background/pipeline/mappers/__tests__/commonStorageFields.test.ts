@@ -384,4 +384,47 @@ describe('extractCommonStorageFields', () => {
       }));
     });
   });
+
+  describe('content_origin mapping (PBI 2026-10-31-03)', () => {
+    it('carries the selection-origin marker into the saved row', () => {
+      const context = makeContext({
+        data: {
+          title: 'Test', url: 'https://example.com/page', content: 'selected text',
+          recordType: 'manual',
+          contentOrigin: 'selection',
+        },
+      });
+      const common = extractCommonStorageFields(context);
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.content_origin).toBe('selection');
+    });
+
+    it('keeps a normal page record NULL (no marker)', () => {
+      const context = makeContext({
+        data: {
+          title: 'Test', url: 'https://example.com/page', content: 'page body',
+          recordType: 'auto',
+        },
+      });
+      const common = extractCommonStorageFields(context);
+      const record = common.toBrowsingLogRecord(true);
+
+      expect(record.content_origin).toBeNull();
+    });
+
+    it('keeps the marker out of the legacy metadata patch (navSourceUrl precedent)', () => {
+      const context = makeContext({
+        data: {
+          title: 'Test', url: 'https://example.com/page', content: 'selected text',
+          recordType: 'manual',
+          contentOrigin: 'selection',
+        },
+      });
+      const common = extractCommonStorageFields(context);
+      const patch = common.toMetadataPatch();
+
+      expect('contentOrigin' in patch).toBe(false);
+    });
+  });
 });

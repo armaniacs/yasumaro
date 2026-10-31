@@ -50,6 +50,10 @@ export interface CommonStorageFields {
   // the legacy chrome.storage side has no column for it and never held one.
   navSourceUrl: string | null;
   searchQuery: string | null;
+  // PBI 2026-10-31-03: the selection-origin marker ('selection' or null).
+  // Kept out of toMetadataPatch the same way — the legacy chrome.storage side
+  // has no column for it; the primary store is SQLite.
+  contentOrigin: string | null;
   aiDuration: number | null;
   obsidianDuration: number | null;
   extractedSentencesBytes: number | null;
@@ -167,6 +171,9 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
     // become a string that the row codec would render.
     navSourceUrl: data.navSourceUrl ?? null,
     searchQuery: data.searchQuery ?? null,
+    // `?? null` keeps a normal page record saving NULL — only the selection
+    // capture paths set the marker.
+    contentOrigin: data.contentOrigin ?? null,
     aiDuration: aiDuration ?? null,
     obsidianDuration: obsidianDuration ?? null,
     extractedSentencesBytes: extractedSentencesBytes ?? null,
@@ -229,6 +236,9 @@ export function extractCommonStorageFields(context: RecordingContext): CommonSto
         fallback_reason: fields.fallbackReason,
         nav_source_url: fields.navSourceUrl,
         search_query: fields.searchQuery,
+        // PBI 2026-10-31-03: the saved row carries the origin marker, so a
+        // selection-derived record stays identifiable in the dashboard.
+        content_origin: fields.contentOrigin,
       };
     },
 

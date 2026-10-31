@@ -18,6 +18,7 @@ import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
 import { handleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
+import { handleGetSelectionMessage, type SelectionCaptureDeps } from './selectionCapture.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
 import type { VisitState, VisitGateThresholds } from './visitGate.js';
@@ -165,6 +166,37 @@ export function registerGetContentListener(): void {
         const deps = buildGetContentDeps();
         chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
             handleGetContentMessage(message, sender, sendResponse, deps);
+        });
+    }
+}
+
+/**
+ * Deps bundle for the GET_SELECTION handler (PBI 2026-10-31-03). runtimeId is
+ * read live so hosted contexts can be distinguished; the selection reader is
+ * the live DOM read — window.getSelection().toString(), '' when nothing is
+ * selected (getSelection() itself is never null in a real document, but the
+ * optional chain keeps the reader honest in hosted/degraded contexts).
+ */
+export function buildGetSelectionDeps(): SelectionCaptureDeps {
+    return {
+        runtimeId: typeof globalThis.chrome !== 'undefined' ? chrome.runtime?.id : undefined,
+        readSelection: () => window.getSelection()?.toString() ?? '',
+    };
+}
+
+/**
+ * Register the GET_SELECTION listener (PBI 2026-10-31-03). Second onMessage
+ * listener next to the GET_CONTENT one: chrome delivers every message to
+ * each listener and this one guards its own type, so the two asks stay
+ * independent (1 responsibility per handler). No-op where
+ * chrome.runtime.onMessage is unavailable. Driven by
+ * entrypoints/content-extractor.ts in production.
+ */
+export function registerGetSelectionListener(): void {
+    if (typeof globalThis.chrome !== 'undefined' && chrome.runtime?.onMessage) {
+        const deps = buildGetSelectionDeps();
+        chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
+            handleGetSelectionMessage(message, sender, sendResponse, deps);
         });
     }
 }

@@ -6,6 +6,8 @@ import type { PrivacyInfo } from '../utils/privacyChecker.js';
 // 応答契約 SSOT（PBI 2026-10-05-30）: PreviewResponse は RecordingResult の
 // 別名とし、processedContent 必須化などの手書き差分は持たない。
 export type { ContentResponse, RecordingResult, RecordingResult as PreviewResponse } from '../messaging/types.js';
+// PBI 2026-10-31-03: the selection-capture reply (content script → popup).
+export type { SelectionResponse } from '../messaging/types.js';
 
 export interface PendingSave {
   url: string;

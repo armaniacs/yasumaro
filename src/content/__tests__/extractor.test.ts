@@ -102,6 +102,7 @@ import {
     extractPageContent,
     applyExtractResultToPageState,
     registerGetContentListener,
+    registerGetSelectionListener,
     checkVisitConditions,
     updateMaxScroll,
     startPeriodicCheck,
@@ -2478,5 +2479,109 @@ describe('loadSettings with various cleansing options', () => {
             }
         );
         await expect(init()).resolves.not.toThrow();
+    });
+});
+
+// ============================================================================
+// GET_SELECTION wiring (PBI 2026-10-31-03)
+// ============================================================================
+
+describe('registerGetSelectionListener - selection capture wiring', () => {
+    beforeEach(() => {
+        document.body.innerHTML = '';
+        vi.clearAllMocks();
+    });
+
+    it('registers the GET_SELECTION handler as a second onMessage listener', () => {
+        (globalThis as any).chrome.runtime.id = 'test-extension-id';
+        try {
+            registerGetSelectionListener();
+            const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+            expect(calls.length).toBeGreaterThan(0);
+            const listener = calls[calls.length - 1]![0];
+            const sendResponse = vi.fn();
+
+            listener({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledTimes(1);
+        } finally {
+            (globalThis as any).chrome.runtime.id = undefined;
+        }
+    });
+
+    it('answers with the live DOM selection through the default reader', () => {
+        (globalThis as any).chrome.runtime.id = 'test-extension-id';
+        const savedGetSelection = window.getSelection;
+        try {
+            Object.defineProperty(window, 'getSelection', {
+                configurable: true,
+                value: () => ({ toString: () => 'selected sentence' }),
+            });
+            registerGetSelectionListener();
+            const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+            const listener = calls[calls.length - 1]![0];
+            const sendResponse = vi.fn();
+
+            listener({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith({ selection: 'selected sentence' });
+        } finally {
+            Object.defineProperty(window, 'getSelection', {
+                configurable: true,
+                value: savedGetSelection,
+            });
+            (globalThis as any).chrome.runtime.id = undefined;
+        }
+    });
+
+    it('answers with an empty selection when nothing is selected (default reader)', () => {
+        (globalThis as any).chrome.runtime.id = 'test-extension-id';
+        const savedGetSelection = window.getSelection;
+        try {
+            Object.defineProperty(window, 'getSelection', {
+                configurable: true,
+                value: () => null,
+            });
+            registerGetSelectionListener();
+            const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+            const listener = calls[calls.length - 1]![0];
+            const sendResponse = vi.fn();
+
+            listener({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, sendResponse);
+
+            expect(sendResponse).toHaveBeenCalledWith({ selection: '' });
+        } finally {
+            Object.defineProperty(window, 'getSelection', {
+                configurable: true,
+                value: savedGetSelection,
+            });
+            (globalThis as any).chrome.runtime.id = undefined;
+        }
+    });
+
+    it('ignores other-extension senders through the wiring', () => {
+        (globalThis as any).chrome.runtime.id = 'test-extension-id';
+        try {
+            registerGetSelectionListener();
+            const calls = ((globalThis as any).chrome.runtime.onMessage.addListener as ReturnType<typeof vi.fn>).mock.calls;
+            const listener = calls[calls.length - 1]![0];
+            const sendResponse = vi.fn();
+
+            listener({ type: 'GET_SELECTION' }, { id: 'external-id' }, sendResponse);
+
+            expect(sendResponse).not.toHaveBeenCalled();
+        } finally {
+            (globalThis as any).chrome.runtime.id = undefined;
+        }
+    });
+
+    it('is a no-op when chrome.runtime.onMessage is unavailable', () => {
+        const savedOnMessage = (globalThis as any).chrome.runtime.onMessage;
+        try {
+            (globalThis as any).chrome.runtime.onMessage = undefined;
+            expect(() => registerGetSelectionListener()).not.toThrow();
+        } finally {
+            (globalThis as any).chrome.runtime.onMessage = savedOnMessage;
+        }
     });
 });

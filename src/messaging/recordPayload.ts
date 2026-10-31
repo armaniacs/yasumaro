@@ -30,6 +30,13 @@ export interface RecordPayloadStats {
   byteStats?: ContentResponse['byteStats'];
   aiSummaryCleansedStats?: ContentResponse['aiSummaryCleansedStats'];
   maskedCount?: number | undefined;
+  /**
+   * PBI 2026-10-31-03: saved-row origin marker. 'selection' when the record's
+   * content came from the user's selection (utils/selectionText
+   * SELECTION_CONTENT_ORIGIN); absent on normal page records. Rides every
+   * envelope (the marker must survive the PREVIEW → SAVE hand-off too).
+   */
+  contentOrigin?: string | undefined;
 }
 
 /**
@@ -66,7 +73,7 @@ export function buildRecordPayload<Op extends RecordOp>(
   // popup has always forwarded whatever Chrome reported. This is the only
   // place the wire contract is narrowed, instead of every send site casting
   // its way past it.
-  const { maskedCount } = stats as RecordPayloadStats;
+  const { maskedCount, contentOrigin } = stats as RecordPayloadStats;
   return {
     title: tab.title,
     url: tab.url,
@@ -81,6 +88,9 @@ export function buildRecordPayload<Op extends RecordOp>(
     aiSummaryCleansedElements: stats.aiSummaryCleansedStats?.aiSummaryCleansedElements,
     aiSummaryCleansedReason: stats.aiSummaryCleansedStats?.aiSummaryCleansedReason,
     aiSummaryCleansedReasons: stats.aiSummaryCleansedStats?.aiSummaryCleansedReasons,
+    // PBI 2026-10-31-03: the origin marker rides every envelope — absent
+    // when unset, so a normal page record keeps the backward-compatible shape.
+    ...(pickDefined({ contentOrigin })),
     ...(op === 'SAVE_RECORD' ? pickDefined({ maskedCount }) : {}),
   } as PayloadForType<Op>;
 }

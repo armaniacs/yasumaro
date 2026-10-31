@@ -58,7 +58,8 @@ describe('rowCodec column lists', () => {
 
   it('full projection is id plus the schema insert order', () => {
     expect([...BROWSING_LOG_FULL_COLUMNS]).toEqual(['id', ...COLUMN_NAMES]);
-    expect(BROWSING_LOG_FULL_COLUMNS).toHaveLength(36);
+    // 36 insert columns + id (PBI 2026-10-31-03 appended content_origin).
+    expect(BROWSING_LOG_FULL_COLUMNS).toHaveLength(COLUMN_NAMES.length + 1);
     expect(BROWSING_LOG_FULL_COLUMNS_SQL.startsWith('id, url, title')).toBe(true);
   });
 });

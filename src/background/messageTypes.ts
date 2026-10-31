@@ -40,6 +40,17 @@ interface ByteStatsPayload {
     cleansedReason?: string;
 }
 
+/**
+ * PBI 2026-10-31-03: saved-row origin marker. 'selection' when the record's
+ * content came from the user's selection (utils/selectionText
+ * SELECTION_CONTENT_ORIGIN); absent on normal page records. The validator
+ * pins the allowlist, so an arbitrary origin string never reaches the
+ * content_origin column.
+ */
+interface ContentOriginPayload {
+    contentOrigin?: string;
+}
+
 // ============================================================================
 // Individual message types (discriminated by `type`)
 // ============================================================================
@@ -57,6 +68,18 @@ type GetContentMessage = {
     type: 'GET_CONTENT';
     /** PBI 04: optional one-shot cleanse override (tabs.sendMessage path only). */
     payload?: { cleanseMode?: RegenerateCleanseMode };
+};
+
+/**
+ * PBI 2026-10-31-03: selection-capture ask. Delivered to the content script
+ * via chrome.tabs.sendMessage (src/content/selectionCapture.ts), never to the
+ * Service Worker — no registry handler exists. The reply carries the raw
+ * window.getSelection().toString(); normalization + the 10,000-char cap are
+ * the consumer's job (utils/selectionText.js), so the same helper serves both
+ * capture paths.
+ */
+type GetSelectionMessage = {
+    type: 'GET_SELECTION';
 };
 
 /** PBI 04: manual AI-summary regeneration against an existing row. */
@@ -112,17 +135,19 @@ export type FetchUrlMessage = {
 
 export type ManualRecordMessage = {
     type: 'MANUAL_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } & ByteStatsPayload
+        & ContentOriginPayload;
 };
 
 export type PreviewRecordMessage = {
     type: 'PREVIEW_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean } & ByteStatsPayload & ContentOriginPayload;
 };
 
 export type SaveRecordMessage = {
     type: 'SAVE_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number } & ByteStatsPayload
+        & ContentOriginPayload;
 };
 
 export type TestConnectionsMessage = {
@@ -303,6 +328,7 @@ export type ExtensionMessage = (
     | ValidVisitMessage
     | CheckDomainMessage
     | GetContentMessage
+    | GetSelectionMessage
     | FetchUrlMessage
     | ManualRecordMessage
     | PreviewRecordMessage

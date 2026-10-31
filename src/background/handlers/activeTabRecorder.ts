@@ -16,6 +16,7 @@
  */
 import { logWarn } from '../../utils/logger/api.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
+import { normalizeSelectionText, SELECTION_CONTENT_ORIGIN } from '../../utils/selectionText.js';
 
 /** Page-body slice cap for every record-active-tab path (was the context menu's inline 5000). */
 export const ACTIVE_TAB_CONTENT_MAX_CHARS = 5000;
@@ -48,12 +49,17 @@ export async function recordTabContent(
 ): Promise<void> {
   const runScript =
     deps.executeScript ?? ((options: Parameters<typeof chrome.scripting.executeScript>[0]) => chrome.scripting.executeScript(options));
+  // PBI 2026-10-31-03: the func is serialized — it must stay self-contained.
+  // The raw selection travels verbatim (same contract as the popup path);
+  // normalization + the 10,000-char cap are the service worker's job via the
+  // shared utils/selectionText helper.
   const [result] = await runScript({
     target: { tabId },
     func: (maxChars: number) => ({
       url: window.location.href,
       title: document.title,
       content: document.body?.innerText?.slice(0, maxChars) || '',
+      selection: window.getSelection()?.toString() || '',
     }),
     args: [ACTIVE_TAB_CONTENT_MAX_CHARS],
   });
@@ -64,9 +70,23 @@ export async function recordTabContent(
     return;
   }
 
-  const payload = raw as { url: string; title: string; content: string };
+  const extracted = raw as { url: string; title: string; content: string; selection?: string };
+  // A user selection on the page replaces the page body: the selection alone
+  // is recorded (normalized + capped through the shared helper) and the
+  // saved row carries the selection-origin marker. An empty/missing
+  // selection falls back to the page-body record exactly as before.
+  const selection = normalizeSelectionText(extracted.selection ?? '');
+  const content = selection || extracted.content;
+  const payload = {
+    url: extracted.url,
+    title: extracted.title,
+    content,
+    force: true,
+    skipAi: false,
+    ...(selection ? { contentOrigin: SELECTION_CONTENT_ORIGIN } : {}),
+  };
   const sender: chrome.runtime.MessageSender = {
-    tab: { id: tabId, url: payload.url } as chrome.tabs.Tab,
+    tab: { id: tabId, url: extracted.url } as chrome.tabs.Tab,
     id: chrome.runtime.id,
     url: chrome.runtime.getURL(''),
   };
@@ -74,13 +94,7 @@ export async function recordTabContent(
   await deps.handleManualRecord(
     {
       type: 'MANUAL_RECORD',
-      payload: {
-        url: payload.url,
-        title: payload.title,
-        content: payload.content,
-        force: true,
-        skipAi: false,
-      },
+      payload,
     },
     sender,
     (response?: unknown) => {

@@ -26,6 +26,13 @@ export interface PreviewSaveOptions {
   aiSummaryCleansedStats?: ContentResponse['aiSummaryCleansedStats'];
   cleansedReason?: ContentResponse['cleansedReason'];
   cleanseStats?: ContentResponse['cleanseStats'];
+  /**
+   * PBI 2026-10-31-03: saved-row origin marker ('selection' — utils/
+   * selectionText SELECTION_CONTENT_ORIGIN). Undefined on normal page
+   * records. Forwards to every record envelope so the marker survives the
+   * PREVIEW → SAVE hand-off.
+   */
+  contentOrigin?: string | undefined;
 }
 
 /**
@@ -75,12 +82,14 @@ function send(message: RecordRequest): Promise<RecordingResult | undefined> {
 export class PreviewFlow {
 
   async run(options: PreviewSaveOptions): Promise<PreviewSaveResult> {
-    const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats } = options;
+    const { tab, content, force, byteStats, aiSummaryCleansedStats, cleansedReason, cleanseStats, contentOrigin } = options;
     const scope = new SpinnerScope();
     try {
       const settings = await settingsRepository.getAll();
       const usePreview = settings[StorageKeys.PII_CONFIRMATION_UI] !== false;
-      const stats = { byteStats, aiSummaryCleansedStats };
+      // PBI 2026-10-31-03: the origin marker rides every envelope — PREVIEW
+      // and SAVE both carry it so a preview-confirmed save stays marked.
+      const stats = { byteStats, aiSummaryCleansedStats, contentOrigin };
 
       if (!usePreview) {
         const result = await send({

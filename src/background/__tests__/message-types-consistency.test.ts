@@ -120,7 +120,8 @@ describe('Message Type Consistency', () => {
         );
         expect(registered.size).toBeGreaterThan(0);
         // Intentionally handler-less: delivered to the content script, never dispatched.
-        const INTENTIONALLY_UNREGISTERED = new Set(['GET_CONTENT']);
+        // GET_SELECTION (PBI 2026-10-31-03) is tab-delivered the same way.
+        const INTENTIONALLY_UNREGISTERED = new Set(['GET_CONTENT', 'GET_SELECTION']);
         for (const type of VALID_MESSAGE_TYPES) {
             expect(registered.has(type) || INTENTIONALLY_UNREGISTERED.has(type)).toBe(true);
         }

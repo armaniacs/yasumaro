@@ -184,7 +184,7 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
     );
   });
 
-  it('backs up all 33 columns from the old wa-sqlite IDB database', async () => {
+  it('backs up all schema columns from the old wa-sqlite IDB database', async () => {
     vi.stubGlobal('indexedDB', {
       databases: vi.fn().mockResolvedValue([{ name: 'idb-batch-atomic', version: 5 }]),
     });
@@ -226,6 +226,7 @@ describe('SqliteEngineHost: IDB migration (wa-sqlite -> @subframe7536)', () => {
       'candidate_too_small',      // fallback_reason
       'https://a.dev/prev',       // nav_source_url (PBI 03)
       'wasm sqlite',              // search_query (PBI 03)
+      'selection',                // content_origin (PBI 2026-10-31-03)
     ];
     expect(fullRow).toHaveLength(COLUMN_NAMES.length);
 

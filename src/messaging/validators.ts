@@ -34,6 +34,7 @@ import type {
   LogForwardMessage,
 } from '../background/messageTypes.js';
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import { SELECTION_CONTENT_ORIGIN } from '../utils/selectionText.js';
 import {
   REPORT_SCOPE_NUMBER_FIELDS,
   REPORT_SCOPE_STRING_FIELDS,
@@ -653,6 +654,20 @@ export class ManualRecordValidator implements MessageValidator<ManualRecordMessa
     }
     if (payload.fallbackReason !== undefined && typeof payload.fallbackReason !== 'string') {
       throw new ValidationError('ManualRecordValidator', 'payload.fallbackReason must be a string', 'fallbackReason');
+    }
+    // PBI 2026-10-31-03: the saved-row origin marker. Allowlist-fail-closed —
+    // an arbitrary origin string must never reach the content_origin column,
+    // so anything outside the shared domain (utils/selectionText) is a wire-
+    // contract violation. Same reject (never clamp) policy as fallbackReason.
+    if (
+      payload.contentOrigin !== undefined &&
+      payload.contentOrigin !== SELECTION_CONTENT_ORIGIN
+    ) {
+      throw new ValidationError(
+        'ManualRecordValidator',
+        `payload.contentOrigin must be "${SELECTION_CONTENT_ORIGIN}"`,
+        'contentOrigin',
+      );
     }
     for (const field of BYTE_STAT_FIELDS) {
       assertByteStatField(payload, field, MAX_BYTE_STAT_BYTES, 'ManualRecordValidator');
