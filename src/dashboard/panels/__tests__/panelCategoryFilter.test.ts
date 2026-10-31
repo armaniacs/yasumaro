@@ -7,7 +7,7 @@
  * - settings subgroup とセクション見出しの状態が規約どおりに動く
  * - 状態は DOM の hidden 属性のみ (storage キーは増やさない)
  */
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   applyPanelCategoryFilter,
   wirePanelCategoryFilter,
@@ -192,6 +192,35 @@ describe('applyPanelCategoryFilter', () => {
       applyPanelCategoryFilter(fixture.sidebar, 'recording');
       // subgroup が開いて recording 子が可視 → Settings 見出しは残る。
       expect(fixture.labels.settingsLabel.hidden).toBe(false);
+    });
+  });
+
+  describe('選択同期 (アクティブタブが隠れたとき)', () => {
+    it('moves the selection to the first visible tab of the selected category via navigate', () => {
+      // 既定状態: panel-general が active + aria-selected="true" (index.html 既定と同じ)。
+      fixture.tabs.general.classList.add('active');
+      fixture.tabs.general.setAttribute('aria-selected', 'true');
+      const navigate = vi.fn();
+      applyPanelCategoryFilter(fixture.sidebar, 'recording', navigate);
+      // panel-general タブは隠れ、選択は選択分類 (recording) の先頭の可視タブへ移る。
+      expect(fixture.tabs.general.hidden).toBe(true);
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(navigate).toHaveBeenCalledWith('panel-domain');
+    });
+
+    it('keeps the selection when the active tab survives the filter', () => {
+      fixture.tabs.domain.classList.add('active');
+      fixture.tabs.domain.setAttribute('aria-selected', 'true');
+      const navigate = vi.fn();
+      applyPanelCategoryFilter(fixture.sidebar, 'recording', navigate);
+      expect(fixture.tabs.domain.hidden).toBe(false);
+      expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('is a no-op without a navigate callback (既存呼び出し互換)', () => {
+      fixture.tabs.general.classList.add('active');
+      applyPanelCategoryFilter(fixture.sidebar, 'recording');
+      expect(visibleIds(fixture.sidebar)).toEqual(['panel-domain', 'panel-recording-conditions']);
     });
   });
 });

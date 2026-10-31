@@ -1,5 +1,6 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
 import { DEFAULT_PANEL_ID, SETTINGS_SUBGROUP_PANEL_IDS, CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
+import { wirePanelCategoryFilter } from './panelCategoryFilter.js';
 import { type PanelLifecycle } from './types.js';
 import { logError } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
@@ -202,6 +203,23 @@ export class DashboardBootstrapper {
 
       e.preventDefault();
       tabs[newIndex]?.focus();
+    });
+  }
+
+  /**
+   * Wires the panel category filter select (PBI 2026-10-31-08). A filter
+   * change that hides the active tab navigates to the first tab left visible,
+   * so the onDidNavigate sync in wireSidebar above keeps aria-selected on a
+   * visible tab and the displayed panel inside the selected category. No
+   * rollback here on purpose: the pre-filter tab was hidden by the filter, so
+   * restoring it would recreate the tab/display mismatch the navigate exists
+   * to prevent. Failures use the same reporting seam as the click path.
+   */
+  wireCategoryFilter(select: HTMLSelectElement | null, sidebar: HTMLElement | null): void {
+    wirePanelCategoryFilter(select, sidebar, (panelId) => {
+      void this.registry.navigate(panelId).catch((error: unknown) => {
+        this.#reportNavigateFailure(panelId, error);
+      });
     });
   }
 

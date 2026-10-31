@@ -9,8 +9,10 @@ export { PANEL_CATEGORY_FILTER_ALL };
  *
  * select で選ばれた分類以外の sidebar ボタンを hidden 属性で隠す。状態は
  * DOM の hidden 属性のみで保持し (storage キーは増やさない)、パネルの
- * 表示自体は registry の navigate が所有するため、フィルタはボタンの
- * 可視性だけを変える。
+ * 表示自体は registry の navigate が所有する。アクティブタブがフィルタで
+ * 隠れたときだけ、選択分類の先頭の可視タブへ navigate で選択を移す
+ * (aria-selected・アクティブタブ・表示パネルの同期は navigate 先の
+ * onDidNavigate が所有するため、ここでは発火のみ)。
  *
  * 責務の境界:
  * - ナビボタンの hidden: このモジュールが所有する (data-panel 付きのみ。
@@ -21,10 +23,16 @@ export { PANEL_CATEGORY_FILTER_ALL };
  *   settings 子のときだけ開く) に復元する
  * - セクション見出しの hidden: 所属セクションに可視要素が無いときだけ閉じる
  *   (空の見出しが残ると発見可能性が落ちるため)
+ * - 選択の付け替え: registry.navigate に委ねる (DashboardBootstrapper の
+ *   onDidNavigate が同期する既存パターン)
  */
 
 /** sidebar のナビボタンを選択分類で絞り込む。 */
-export function applyPanelCategoryFilter(sidebar: HTMLElement, categoryId: string): void {
+export function applyPanelCategoryFilter(
+  sidebar: HTMLElement,
+  categoryId: string,
+  navigate?: (panelId: string) => void,
+): void {
   const tabs = sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn[data-panel]');
   for (const tab of tabs) {
     const panelId = tab.getAttribute('data-panel');
@@ -35,6 +43,27 @@ export function applyPanelCategoryFilter(sidebar: HTMLElement, categoryId: strin
   }
   syncSettingsSubgroup(sidebar, categoryId);
   syncSectionLabels(sidebar);
+  navigateIfActiveTabHidden(sidebar, navigate);
+}
+
+/**
+ * フィルタでアクティブタブが隠れたとき、選択分類の先頭の可視タブへ選択を
+ * 移す (修正ラウンド)。隠れたタブに aria-selected="true" が残ると可視
+ * tablist に選択がなくなり、コンテンツ領域には分類外のパネルが表示され
+ * 続ける。navigate は DashboardBootstrapper の onDidNavigate (wireSidebar)
+ * が aria-selected・active・subgroup 開閉を同期する既存パターンに委ねる。
+ * アクティブタブなし (wire 直後) は触らない — 初期表示は start() が
+ * 所有するため。
+ */
+function navigateIfActiveTabHidden(sidebar: HTMLElement, navigate?: (panelId: string) => void): void {
+  if (!navigate) return;
+  const activeTab = sidebar.querySelector<HTMLElement>('.sidebar-nav-btn.active');
+  if (!activeTab || !activeTab.hidden) return;
+  const firstVisible = sidebar.querySelector<HTMLElement>(
+    '.sidebar-nav-btn[data-panel]:not([hidden])',
+  );
+  const panelId = firstVisible?.getAttribute('data-panel') ?? null;
+  if (panelId !== null) navigate(panelId);
 }
 
 /** 分類フィルタに応じて settings subgroup の開閉を同期する。 */
@@ -89,10 +118,11 @@ function syncSectionLabels(sidebar: HTMLElement): void {
 export function wirePanelCategoryFilter(
   select: HTMLSelectElement | null,
   sidebar: HTMLElement | null,
+  navigate?: (panelId: string) => void,
 ): void {
   if (!select || !sidebar) return;
   const apply = (): void => {
-    applyPanelCategoryFilter(sidebar, select.value);
+    applyPanelCategoryFilter(sidebar, select.value, navigate);
   };
   select.addEventListener('change', apply);
   apply();
