@@ -145,7 +145,7 @@ function byteFallbackFields(
 /** Fallback flag/reason and PBI 03 trail fields. */
 function trailFallbackFields(
   record: BrowsingLogRecord,
-): Pick<BrowsingLogRecord, 'fallback_triggered' | 'fallback_reason' | 'nav_source_url' | 'search_query'> {
+): Pick<BrowsingLogRecord, 'fallback_triggered' | 'fallback_reason' | 'nav_source_url' | 'search_query' | 'content_origin'> {
   return {
     fallback_triggered: record.fallback_triggered ?? 0,
     // PBI 05: the opt-in diagnosis reason is the only evidence of why the
@@ -156,6 +156,9 @@ function trailFallbackFields(
     // keeps the recovery insert aligned with the new columns.
     nav_source_url: record.nav_source_url ?? null,
     search_query: record.search_query ?? null,
+    // PBI 2026-10-31-03: the selection-origin marker survives the recovery
+    // round-trip; records without one stay NULL.
+    content_origin: record.content_origin ?? null,
   };
 }
 

@@ -28,11 +28,17 @@ import { createDashboardFixture } from './fixtures/dashboard-shared.fixture.js';
  *    declares `<all_urls>`, Chromium grants that match at install time, and
  *    the probe shows contains() returning TRUE for example.com — a
  *    granted-based check could never block an undeclared destination.
+ *    The same pin syncs the inline pattern-copy with the unit matcher's
+ *    port semantics (PBI 2026-10-31-10): the declared loopback entries
+ *    (http|https://127.0.0.1|localhost:27123|27124|11434|1234/*) carry an
+ *    explicit port and are covered by host+port, while the undeclared
+ *    origin stays non-covered.
  *
  * A declared-origin end-to-end POST is intentionally NOT pinned here: the
- * webhook destination is user-configured, so no single origin can be
- * declared in host_permissions for it. Delivery to declared origins rides
- * the unit-pinned sender (webhookExportSender.test.ts).
+ * webhook destination is user-configurable, and the loopback coverage fact
+ * above pins the declared-pattern side against the real manifest. Delivery
+ * to declared origins rides the unit-pinned sender
+ * (webhookExportSender.test.ts).
  */
 
 export const test = createDashboardFixture({
@@ -123,16 +129,32 @@ test.describe('Webhook egress @extension', () => {
           const base = host.slice(2);
           return parsed.hostname === base || parsed.hostname.endsWith(`.${base}`);
         }
-        return host === parsed.hostname;
+        // Same port fix as the unit matcher (PBI 2026-10-31-10): a pattern
+        // host that carries an explicit port compares against the URL's
+        // host+port (parsed.host, which keeps the explicit port and drops
+        // the scheme default); a portless pattern keeps the hostname
+        // comparison (any port matches).
+        const patternHasPort = host.lastIndexOf(':') > host.lastIndexOf(']');
+        return host === (patternHasPort ? parsed.host : parsed.hostname);
       };
       const declaredCover = declared.some((pattern) => coveredByPattern('https://example.com/hook', pattern));
+      // PBI 2026-10-31-10: the manifest declares the 16 loopback patterns
+      // (http|https://127.0.0.1|localhost:27123|27124|11434|1234/*) and the
+      // synced inline copy must cover one of them by host+port. The pre-fix
+      // copy (host === parsed.hostname, portless) covered none of them.
+      const loopbackPattern = declared.find((pattern) => /^https:\/\/(127\.0\.0\.1|localhost):\d+\//.test(pattern));
+      const loopbackCover =
+        loopbackPattern !== undefined
+          ? coveredByPattern(`${loopbackPattern.replace(/\/\*$/, '')}/hook`, loopbackPattern)
+          : false;
       // Awaiting the API directly: no timers, no retries — it resolves once
       // the browser answers.
       const grantedContains = await chrome.permissions.contains({ origins: ['https://example.com/*'] });
-      return { declaredCount: declared.length, declaredCover, grantedContains };
+      return { declaredCount: declared.length, declaredCover, loopbackCover, grantedContains };
     });
     expect(result.declaredCount).toBeGreaterThan(0);
     expect(result.declaredCover).toBe(false);
+    expect(result.loopbackCover).toBe(true);
     // The granted set covers every origin in a real install (the content
     // script's <all_urls> match): the reason the gate reads the manifest.
     expect(result.grantedContains).toBe(true);

@@ -107,7 +107,6 @@ export function renderPrivacyHtml(status: StatusInfo, deps: RendererDeps): strin
     html += `
       <div class="status-actions">
         <button class="status-action-btn" id="statusAddDomain" data-i18n="saveDomain">ドメインを許可</button>
-        <button class="status-action-btn" id="statusAddPath" data-i18n="savePath">パスを許可</button>
       </div>
     `;
     return html;

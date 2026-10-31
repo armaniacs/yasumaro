@@ -78,10 +78,12 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
   } as RecordingContext;
 }
 
-function makeEnv(): { env: SavePhaseEnv; adapters: { notifier: { notifyError: ReturnType<typeof vi.fn>; notifySaveSuccess: ReturnType<typeof vi.fn> }; pending: { addPending: ReturnType<typeof vi.fn> } } } {
+function makeEnv(): { env: SavePhaseEnv; adapters: { notifier: { notifyError: ReturnType<typeof vi.fn>; notifySaveSuccess: ReturnType<typeof vi.fn> }; pending: { addPending: ReturnType<typeof vi.fn> }; skipRecorder: { recordSkip: ReturnType<typeof vi.fn> } } } {
   const adapters = {
     notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn() },
     pending: { addPending: vi.fn() },
+    // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter seam.
+    skipRecorder: { recordSkip: vi.fn() },
   };
   // Direct step execution: policy under test is SavePhase's own
   // continuation mapping, not the executor's retry/offline layer.
@@ -276,6 +278,9 @@ describe('SavePhase save() matrix', () => {
     expect(receipt.result.success).toBe(false);
     expect(adapters.notifier.notifyError).toHaveBeenCalled();
     expect(adapters.pending.addPending).not.toHaveBeenCalled();
+    // PBI 2026-10-31-01: the terminal regenerate failure records the skip
+    // reason the popup shows.
+    expect(adapters.skipRecorder.recordSkip).toHaveBeenCalledWith('pipeline-error');
   });
 
   it('forwards the call-time deps to every sink (no construction closure)', async () => {

@@ -43,6 +43,7 @@ export const SCHEMA_SQL = `
     fallback_reason TEXT,
     nav_source_url TEXT,
     search_query TEXT,
+    content_origin TEXT,
     UNIQUE(url, created_at)
   );
 
@@ -105,6 +106,7 @@ export const COLUMN_NAMES = [
   'fallback_reason',
   'nav_source_url',
   'search_query',
+  'content_origin',
 ] as const;
 
 const INSERT_COLS = COLUMN_NAMES.join(', ');
@@ -130,12 +132,16 @@ export const INSERT_RETURNING_SQL = `${INSERT_SQL} RETURNING id`;
  * backend — the explicit exceptions to the "insertable implies updatable"
  * sync rule that UPDATABLE_FIELDS below derives from COLUMN_NAMES.
  */
-export const NOT_UPDATABLE_COLUMNS = new Set(['created_at', 'nav_source_url', 'search_query']);
+export const NOT_UPDATABLE_COLUMNS = new Set(['created_at', 'nav_source_url', 'search_query', 'content_origin']);
 // WHY nav_source_url / search_query are excluded despite the sync rule
 // below: they are captured once when the record is made and describe how
 // that visit happened. Letting an UPDATE rewrite them would let a later
 // edit rewrite history, and a re-run regeneration would overwrite the
 // original referrer (PBI 2026-09-26-03).
+// WHY content_origin is excluded the same way (PBI 2026-10-31-03): it marks
+// how the content was captured on the manual record that made the row — an
+// UPDATE rewriting it would let a regeneration or an edit rewrite the
+// capture provenance.
 
 /**
  * Fields allowed in UPDATE SET clauses across all backends.
@@ -262,6 +268,8 @@ export interface InsertableRecord {
   nav_source_url?: string | null;
   /** PBI 03: 流入元が検索エンジンだった場合の検索語（PII マスク済み） */
   search_query?: string | null;
+  /** PBI 2026-10-31-03: 記録の由来（'selection'＝選択範囲のみ記録、通常記録は NULL） */
+  content_origin?: string | null;
 }
 
 /**
@@ -319,6 +327,7 @@ export interface InsertRecordFields {
   fallback_reason: string | null;
   nav_source_url: string | null;
   search_query: string | null;
+  content_origin: string | null;
 }
 
 /**
@@ -366,6 +375,7 @@ export function buildInsertRecordFields(
     fallback_reason: record.fallback_reason ?? null,
     nav_source_url: record.nav_source_url ?? null,
     search_query: record.search_query ?? null,
+    content_origin: record.content_origin ?? null,
   };
 }
 
@@ -441,6 +451,8 @@ export const MIGRATION_COLUMNS = [
   // PBI 03: 遷移記録（オプトイン）
   'nav_source_url TEXT',
   'search_query TEXT',
+  // PBI 2026-10-31-03: 記録の由来（選択範囲記録の判別）
+  'content_origin TEXT',
 ] as const;
 
 /**

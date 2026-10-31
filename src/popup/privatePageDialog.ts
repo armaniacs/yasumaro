@@ -5,7 +5,7 @@ import { getMessage } from '../utils/i18n.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { statusChannel } from '../utils/ui/statusChannel.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
-import { addDomainToWhitelist, addPathToWhitelist } from './whitelistWriter.js';
+import { addDomainToWhitelist } from './whitelistWriter.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { getUserErrorMessage } from './errorUtils.js';
@@ -182,26 +182,6 @@ export function wireDialogButtons(): void {
         await recordWithForce();
       } catch (e) {
         reportDialogActionFailure('Whitelisting the domain', e);
-      }
-    }
-  }));
-
-  wireOnce(document.getElementById('dialog-save-path'), (wiredEl) =>
-    wiredEl.addEventListener('click', async () => {
-    const dialog = document.getElementById('private-page-dialog') as HTMLDialogElement;
-    dialog?.close();
-    releasePrivatePageTrap();
-
-    // Snapshot before the first await: module state can be nulled while the
-    // settings read is in flight (cancel / auto-close), and reading it after
-    // the await was a TOCTOU crash.
-    const pending = currentPendingSave;
-    if (pending) {
-      try {
-        await addPathToWhitelist(pending.url);
-        await recordWithForce();
-      } catch (e) {
-        reportDialogActionFailure('Whitelisting the path', e);
       }
     }
   }));

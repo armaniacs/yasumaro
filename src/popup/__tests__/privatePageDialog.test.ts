@@ -566,52 +566,6 @@ describe('privatePageDialog', () => {
     });
   });
 
-  describe('dialog-save-path button', () => {
-    it('should add the URL hostname to the whitelist and record with force (PBI 2026-09-12-05)', async () => {
-      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
-
-      const mod = await import('../privatePageDialog.js');
-      mod.wireDialogButtons();
-      mod.setCurrentPendingSave(
-        createPendingSave({ url: 'https://example.com/private-path' })
-      );
-
-      document.getElementById('dialog-save-path')!.click();
-
-      await vi.waitFor(() => {
-        // The updater seam appends the URL hostname (the only matchable form).
-        const updater = (settingsRepository.updateDomainWhitelist as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as (current: string[]) => string[];
-        expect(updater([])).toEqual(['example.com']);
-      });
-
-      expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
-    });
-
-    it('should not duplicate an existing hostname in the whitelist', async () => {
-      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as any).mockResolvedValue({
-        domain_whitelist: ['example.com'],
-      });
-
-      const mod = await import('../privatePageDialog.js');
-      mod.wireDialogButtons();
-      mod.setCurrentPendingSave(
-        createPendingSave({ url: 'https://example.com/private-path' })
-      );
-
-      document.getElementById('dialog-save-path')!.click();
-
-      // saveSettings should NOT be called because the hostname already exists
-      // (the writer dedups before saving).
-      await vi.waitFor(() => {
-        expect(global.chrome.runtime.sendMessage).toHaveBeenCalled();
-      });
-
-      expect(settingsRepository.setAll).not.toHaveBeenCalled();
-    });
-  });
-
   describe('recordWithForce (internal)', () => {
     it('should close the dialog before recording', async () => {
       const mod = await import('../privatePageDialog.js');
@@ -732,21 +686,6 @@ describe('privatePageDialog', () => {
       expectReported('settings are locked');
       expect((document.getElementById('private-page-dialog') as HTMLDialogElement).open).toBe(false);
     });
-
-    it('reports a rejected path write', async () => {
-      const { settingsRepository } = await import('../../utils/storage/SettingsRepository.js');
-      (settingsRepository.getAll as any).mockResolvedValue({ domain_whitelist: [] });
-      (settingsRepository.updateDomainWhitelist as any).mockRejectedValueOnce(new Error('settings are locked'));
-
-      const mod = await import('../privatePageDialog.js');
-      mod.wireDialogButtons();
-      mod.setCurrentPendingSave(createPendingSave({ url: 'https://example.com/private-path' }));
-
-      document.getElementById('dialog-save-path')!.click();
-
-      await vi.waitFor(() => expect(hoistedMockLogError).toHaveBeenCalled());
-      expectReported('settings are locked');
-    });
   });
 
   describe('focusTrap wiring (PBI-25)', () => {
@@ -787,13 +726,13 @@ describe('privatePageDialog', () => {
       }
     });
 
-    it('save-once/save-domain/save-path each release the trap', async () => {
+    it('save-once/save-domain each release the trap', async () => {
       const mod = await import('../privatePageDialog.js');
       mod.wireDialogButtons();
       const focusTrapManager = await freshTrapManager();
       const releaseSpy = vi.spyOn(focusTrapManager, 'release');
       try {
-        for (const btnId of ['dialog-save-once', 'dialog-save-domain', 'dialog-save-path']) {
+        for (const btnId of ['dialog-save-once', 'dialog-save-domain']) {
           mod.setCurrentPendingSave(createPendingSave());
           mod.showPrivatePageDialog('https://example.com/private', 'reason', 'header');
           expect(trapCountFor(focusTrapManager, 'private-page-dialog')).toBe(1);

@@ -3,7 +3,7 @@ import { loadActiveTabStatus } from './statusStore.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { StorageKeys, type PrivacyMode } from '../utils/storage/types.js';
 import { normalizePrivacyMode } from '../utils/storage/defaults.js';
-import { addDomainToWhitelist, addPathToWhitelist, type WhitelistWriteResult } from './whitelistWriter.js';
+import { addDomainToWhitelist, type WhitelistWriteResult } from './whitelistWriter.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
@@ -269,10 +269,13 @@ type WhitelistWriteOutcome =
 
 /**
  * Single owner of the "tab -> whitelist writer -> result branch -> report"
- * wiring shared by the domain and path buttons. Extracted from two hand-written
- * copies so the message composition (the `statusInvalidUrl` vs
- * `Invalid pattern: …` branch, the success key, the handler-error log text)
- * lives in one place instead of drifting.
+ * wiring used by the domain button. Extracted from hand-written copies so the
+ * message composition (the `statusInvalidUrl` vs `Invalid pattern: …` branch,
+ * the success key, the handler-error log text) lives in one place instead of
+ * drifting. The historical path button was removed by the 2026-10-31
+ * adjudication: path adds normalize to the URL's hostname, so its option was
+ * behaviorally identical to the domain button and its wording mislabeled the
+ * matching scope.
  */
 function wireWhitelistButton(
   btnId: string,
@@ -327,18 +330,6 @@ function attachPrivacyActionListeners(): void {
     },
     'domainAddedToWhitelist',
     'Failed to add the domain to the whitelist',
-  );
-
-  wireWhitelistButton(
-    'statusAddPath',
-    async (url) => ({
-      kind: 'write',
-      result: await addPathToWhitelist(url),
-      invalidPatternTarget: url,
-      successFallback: 'Added path to whitelist',
-    }),
-    'pathAddedToWhitelist',
-    'Failed to add the path to the whitelist',
   );
 }
 

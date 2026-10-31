@@ -55,6 +55,9 @@ function makeEnv(): SavePhaseEnv {
     outcomeAdapters: {
       notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn() },
       pending: { addPending: vi.fn() },
+      // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter
+      // seam (the Obsidian-failure parity test drives the FATAL/RETRY branch).
+      skipRecorder: { recordSkip: vi.fn() },
     },
   };
 }

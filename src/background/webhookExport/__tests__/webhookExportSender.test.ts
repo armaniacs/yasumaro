@@ -19,6 +19,7 @@ import {
 import { WebhookExportHistory, type WebhookExportHistoryEntry } from '../webhookExportHistory.js';
 import type { WebhookExportRecord } from '../webhookExportPayload.js';
 import type { WebhookExportSettings } from '../webhookExportSettings.js';
+import { buildLocalHostPermissions } from '../../../utils/cspDomains.js';
 
 function makeRecord(overrides: Partial<WebhookExportRecord> = {}): WebhookExportRecord {
   return {
@@ -154,6 +155,44 @@ describe('pre-send gates (no network before the verdict)', () => {
   });
 });
 
+describe('declared loopback destinations (PBI 2026-10-31-10 port fix)', () => {
+  /** The real declared-pattern gate: the same shape as defaultIsWebhookHostPermitted. */
+  const realLocalGate = (url: string): Promise<boolean> =>
+    Promise.resolve(buildLocalHostPermissions().some((pattern) => isUrlCoveredByHostPattern(url, pattern)));
+
+  it('sends to a declared loopback https destination (real matcher injected)', async () => {
+    const deps = makeDeps({ isHostPermitted: realLocalGate });
+    const result = await sendWebhookExport(
+      makeInput({ settings: makeSettings({ url: 'https://127.0.0.1:27123/hook' }) }),
+      deps,
+    );
+    expect(result.outcome).toBe('sent');
+    expect(deps.fetchFn).toHaveBeenCalledWith('https://127.0.0.1:27123/hook', expect.anything());
+  });
+
+  it('still blocks a plain http loopback destination before the network', async () => {
+    const deps = makeDeps({ isHostPermitted: realLocalGate });
+    const result = await sendWebhookExport(
+      makeInput({ settings: makeSettings({ url: 'http://127.0.0.1:8787/hook' }) }),
+      deps,
+    );
+    expect(result.outcome).toBe('blocked');
+    expect(result.reason).toBe(WEBHOOK_EXPORT_REASONS.nonHttpsDestination);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('still blocks an undeclared public origin fail-closed before the network', async () => {
+    const deps = makeDeps({ isHostPermitted: realLocalGate });
+    const result = await sendWebhookExport(
+      makeInput({ settings: makeSettings({ url: 'https://example.com/hook' }) }),
+      deps,
+    );
+    expect(result.outcome).toBe('blocked');
+    expect(result.reason).toBe(WEBHOOK_EXPORT_REASONS.undeclaredOrigin);
+    expect(deps.fetchFn).not.toHaveBeenCalled();
+  });
+});
+
 describe('production gate reads the manifest, not the granted set', () => {
   const realGetManifest = (globalThis as { chrome?: { runtime?: { getManifest?: () => unknown } } }).chrome
     ?.runtime?.getManifest;
@@ -195,6 +234,31 @@ describe('production gate reads the manifest, not the granted set', () => {
     // covers every origin (the content script's <all_urls> match is granted
     // at install time — proven by the E2E permission probe).
     await expect(defaultIsWebhookHostPermitted('https://hooks.example.com/hook')).resolves.toBe(false);
+  });
+
+  it('matches a declared loopback pattern by host+port (PBI 2026-10-31-10)', () => {
+    // The declared loopback entries carry an explicit port, and the URL side
+    // must match that host+port — a portless parsed.hostname never matched a
+    // ported declaration, so every declared loopback pattern was dead.
+    expect(isUrlCoveredByHostPattern('https://127.0.0.1:27123/hook', 'https://127.0.0.1:27123/*')).toBe(true);
+    expect(isUrlCoveredByHostPattern('https://localhost:11434/hook', 'https://localhost:11434/*')).toBe(true);
+  });
+
+  it('rejects a URL whose port differs from the declared pattern', () => {
+    expect(isUrlCoveredByHostPattern('https://127.0.0.1:9999/hook', 'https://127.0.0.1:27123/*')).toBe(false);
+  });
+
+  it('keeps the portless-pattern comparison unchanged (any port matches)', () => {
+    // Portless patterns (api.github.com/* etc.) stay on the pre-fix hostname
+    // comparison — the port fix must not widen them.
+    expect(isUrlCoveredByHostPattern('https://api.github.com:8443/x', 'https://api.github.com/*')).toBe(true);
+  });
+
+  it('permits a declared loopback destination through the manifest gate', async () => {
+    stubManifest(buildLocalHostPermissions());
+    await expect(defaultIsWebhookHostPermitted('https://127.0.0.1:27123/hook')).resolves.toBe(true);
+    // An undeclared public origin stays fail-closed with the same declared set.
+    await expect(defaultIsWebhookHostPermitted('https://example.com/hook')).resolves.toBe(false);
   });
 
   it('restricts <all_urls> to the match-pattern schemes after parsing the URL', () => {

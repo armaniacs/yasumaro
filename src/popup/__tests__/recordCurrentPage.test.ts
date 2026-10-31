@@ -421,6 +421,10 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
+        // PBI 2026-10-31-03: the flow asks GET_SELECTION before GET_CONTENT —
+        // the first send is the (empty) selection ask, the second is the page
+        // fetch that fails and drives the ladder.
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce(null);
         vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockRejectedValueOnce(new Error('Send failed'));
         (chrome.runtime as MutableLastError).lastError = null;
 
@@ -482,6 +486,9 @@ describe('recordCurrentPage', () => {
             url: 'https://example.com',
             title: 'Test',
         });
+        // PBI 2026-10-31-03: the first send is the (empty) selection ask; the
+        // page-content response lands on the second send.
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce(null);
         vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce({
             content: 'test content',
             cleansedReason: 'both',

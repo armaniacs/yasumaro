@@ -15,6 +15,7 @@ import { initTrancoUpdateNotification } from './trancoNotification.js';
 import { loadPendingPages, setupEventListeners } from './pendingPages.js';
 import { getPendingPages, isPrivacyPendingReason, renderPendingReason } from '../utils/pendingStorage.js';
 import { showPrivatePageDialog, showRecordingFailedDialog, wireDialogButtons } from './privatePageDialog.js';
+import { initSkipReasonPanel } from './skipReasonPanel.js';
 import { getPrivacyConsent, subscribeConsentChanges } from '../utils/storage/privacyConsent.js';
 import { subscribeSessionLockRequest } from '../utils/storage/sessionLockReceiver.js';
 import { isLocked as isSessionLocked } from '../utils/storage/authGuard.js';
@@ -62,6 +63,14 @@ export async function initPopup(): Promise<void> {
         wireDialogButtons();
     } catch (error) {
         logError('[Popup] Error in dialog wiring', { cause: error }, ErrorCode.INTERNAL_ERROR);
+    }
+
+    // Last skip reason panel (PBI 2026-10-31-01): 理由種別と回数のみの直近表示。
+    // 記録が skip された直近の理由をポップアップを開いたときに見せる。
+    try {
+        await initSkipReasonPanel();
+    } catch (error) {
+        logError('[Popup] Error in skip reason panel', { cause: error }, ErrorCode.INTERNAL_ERROR);
     }
 
     // Pending pages handling: load list and show dialog only if exactly one pending page

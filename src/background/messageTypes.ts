@@ -7,6 +7,7 @@
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
+import type { SkipReasonCode } from '../utils/skipReason.js';
 // Imported from ai/AIService.js rather than aiClient.js: this module is pulled
 // in by every layer (popup, dashboard, content, offscreen), and reaching
 // through aiClient.js would drag the whole provider Strategy graph along with
@@ -39,6 +40,17 @@ interface ByteStatsPayload {
     cleansedReason?: string;
 }
 
+/**
+ * PBI 2026-10-31-03: saved-row origin marker. 'selection' when the record's
+ * content came from the user's selection (utils/selectionText
+ * SELECTION_CONTENT_ORIGIN); absent on normal page records. The validator
+ * pins the allowlist, so an arbitrary origin string never reaches the
+ * content_origin column.
+ */
+interface ContentOriginPayload {
+    contentOrigin?: string;
+}
+
 // ============================================================================
 // Individual message types (discriminated by `type`)
 // ============================================================================
@@ -56,6 +68,18 @@ type GetContentMessage = {
     type: 'GET_CONTENT';
     /** PBI 04: optional one-shot cleanse override (tabs.sendMessage path only). */
     payload?: { cleanseMode?: RegenerateCleanseMode };
+};
+
+/**
+ * PBI 2026-10-31-03: selection-capture ask. Delivered to the content script
+ * via chrome.tabs.sendMessage (src/content/selectionCapture.ts), never to the
+ * Service Worker — no registry handler exists. The reply carries the raw
+ * window.getSelection().toString(); normalization + the 10,000-char cap are
+ * the consumer's job (utils/selectionText.js), so the same helper serves both
+ * capture paths.
+ */
+type GetSelectionMessage = {
+    type: 'GET_SELECTION';
 };
 
 /** PBI 04: manual AI-summary regeneration against an existing row. */
@@ -111,17 +135,19 @@ export type FetchUrlMessage = {
 
 export type ManualRecordMessage = {
     type: 'MANUAL_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean; skipAi?: boolean } & ByteStatsPayload
+        & ContentOriginPayload;
 };
 
 export type PreviewRecordMessage = {
     type: 'PREVIEW_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean } & ByteStatsPayload & ContentOriginPayload;
 };
 
 export type SaveRecordMessage = {
     type: 'SAVE_RECORD';
-    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number } & ByteStatsPayload;
+    payload: { title: string; url: string; content: string; force?: boolean; maskedCount?: number } & ByteStatsPayload
+        & ContentOriginPayload;
 };
 
 export type TestConnectionsMessage = {
@@ -230,6 +256,20 @@ export type OwE2EProbeStateMessage = {
     };
 };
 
+/**
+ * PBI 2026-10-31-01: recording skip reason relay. Content scripts cannot
+ * reach chrome.storage.session, so the condition-not-met skip decided by the
+ * pre-pipeline visit gate (visitGating) travels as a runtime message and the
+ * SW owns the session leg (handlers/recordingSkipReasonHandlers.ts). The
+ * payload is a reason code only — no URL, title, or content. The reason code
+ * domain is the shared skip vocabulary (SSOT: src/utils/skipReason.ts); the
+ * runtime validator pins it.
+ */
+export type RecordingSkipReasonMessage = {
+    type: 'RECORDING_SKIP_REASON';
+    payload: { reason: SkipReasonCode };
+};
+
 type RefreshLocalMarkdownSchedulerMessage = {
     type: 'REFRESH_LOCAL_MARKDOWN_SCHEDULER';
 };
@@ -288,6 +328,7 @@ export type ExtensionMessage = (
     | ValidVisitMessage
     | CheckDomainMessage
     | GetContentMessage
+    | GetSelectionMessage
     | FetchUrlMessage
     | ManualRecordMessage
     | PreviewRecordMessage
@@ -305,6 +346,7 @@ export type ExtensionMessage = (
     | GetPauseStateMessage
     | OwE2eProbeQueryMessage
     | OwE2EProbeStateMessage
+    | RecordingSkipReasonMessage
     | RefreshLocalMarkdownSchedulerMessage
     | ConsentStateChangedMessage
     | GenerateReviewSummaryMessage

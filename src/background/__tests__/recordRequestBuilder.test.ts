@@ -169,6 +169,24 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
     expect(request).not.toHaveProperty('tags');
   });
 
+  it('preserves contentOrigin through the offline retry round-trip (PBI 2026-10-31-03)', () => {
+    // A failed selection record is retried from the offline queue — the
+    // retried row must still be identifiable as selection-derived.
+    const context = {
+      data: {
+        title: 'T', url: 'https://example.com', content: 'selected body',
+        contentOrigin: 'selection',
+      },
+      privacyResult: { summary: 's', maskedCount: 0 },
+    } as unknown as RecordingContext;
+
+    const payload = extractOfflinePayload(context);
+    expect(payload).toMatchObject({ contentOrigin: 'selection' });
+
+    const request = buildOfflineRetryRequest(payload);
+    expect(request).toMatchObject({ contentOrigin: 'selection' });
+  });
+
   it('logs a failed full-pipeline retry instead of swallowing it', async () => {
     const { createOfflineQueueProcessor } = await import('../offlineQueueProcessor.js');
     const logger = await import('../../utils/logger/api.js');
@@ -230,13 +248,20 @@ describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
     fallbackReason: 'content_overcut',
   };
 
-  it('pins the owned field table: exactly these 14 keys travel together', () => {
+  it('pins the owned field table: exactly these 15 keys travel together', () => {
     // The engagement metrics ride the same table (PBI 2026-10-23-02): a
     // dropped field silently NULLs the saved row's visit_duration/scroll_ratio
     // and the reminder candidate provider reads that as "not a candidate".
+    // contentOrigin rides it too (PBI 2026-10-31-03): a dropped marker loses
+    // the saved row's selection-origin evidence.
     expect(
       Object.keys(
-        pickRecordDiagnostics({ ...FLAT_DIAG, visitDurationSeconds: 42, scrollRatioPercent: 72 }),
+        pickRecordDiagnostics({
+          ...FLAT_DIAG,
+          visitDurationSeconds: 42,
+          scrollRatioPercent: 72,
+          contentOrigin: 'selection',
+        }),
       ).sort(),
     ).toEqual(
       [
@@ -248,6 +273,7 @@ describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
         'candidateBytes',
         'cleansedBytes',
         'cleansedReason',
+        'contentOrigin',
         'fallbackReason',
         'fallbackTriggered',
         'originalBytes',
@@ -256,6 +282,19 @@ describe('pickRecordDiagnostics (PBI 2026-09-23-12)', () => {
         'visitDurationSeconds',
       ].sort(),
     );
+  });
+
+  it('carries contentOrigin from the payload into the record request (PBI 2026-10-31-03)', () => {
+    const req = buildRecordRequest('manual', {
+      title: 'T', url: 'https://example.com', content: 'selected text',
+      contentOrigin: 'selection',
+    });
+    expect(req).toMatchObject({ contentOrigin: 'selection' });
+
+    const minimal = buildRecordRequest('manual', {
+      title: 'T', url: 'https://example.com', content: 'page text',
+    });
+    expect('contentOrigin' in minimal).toBe(false);
   });
 
   it('drops unset fields (pickDefined semantics: keys absent, not undefined)', () => {

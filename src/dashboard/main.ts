@@ -25,6 +25,13 @@ function wireSidebar(): void {
   if (sidebarEl) {
     bootstrapper.wireSidebar(sidebarEl);
   }
+  // PBI 2026-10-31-08: パネル分類フィルタ (Settings IA)。select なし
+  // (単体テスト fixture) は no-op。DOM 解決は呼び出し時 (dashboard DOM 規約)。
+  // アクティブタブが隠れる分類への変更は navigate で選択を移す (修正ラウンド)。
+  bootstrapper.wireCategoryFilter(
+    document.querySelector<HTMLSelectElement>('#panelCategoryFilter'),
+    sidebarEl,
+  );
 }
 wireSidebar();
 

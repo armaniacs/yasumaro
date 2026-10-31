@@ -7,9 +7,17 @@
  * live here instead of being split between the orchestrator catch and the
  * result builders. The orchestrator keeps only the step loop.
  *
- * Side-effect adapters (notifier / pending writer) are injectable: production
- * uses chrome + storage, tests use in-memory fakes. Logging stays on the
- * shared logger seam (mocked in tests like everywhere else in this codebase).
+ * Side-effect adapters (notifier / pending writer / skipRecorder) are
+ * injectable: production uses chrome + storage, tests use in-memory fakes.
+ * Logging stays on the shared logger seam (mocked in tests like everywhere
+ * else in this codebase).
+ *
+ * PBI 2026-10-31-01: the terminal branches of `decideStepOutcome()` also
+ * record the latest skip reason (PrivatePage / Duplicate / Regenerate /
+ * FATAL+RETRY -> pipeline-error). The BEST_EFFORT continue path records none —
+ * the pipeline may still succeed, and a recorded skip would contradict the
+ * success result. `finalizeSuccess()` records none either: a success is not a
+ * skip.
  *
  * Deletion test: deleting this module forces the catch mapping + two
  * pending-registration sites + two notify sites to reappear inline in every
@@ -21,6 +29,7 @@ import { addLog } from '../../utils/logger/core.js';
 import { logError } from '../../utils/logger/api.js';
 import { addPendingPage, PENDING_MAX_TTL_MS } from '../../utils/pendingStorage.js';
 import { pickDefined } from '../../utils/objectUtils.js';
+import { recordSkipReason, type SkipReasonCode } from '../../utils/skipReason.js';
 import {
   buildErrorResult,
   buildPrivatePageResult,
@@ -49,9 +58,20 @@ export interface OutcomePendingWriter {
   addPending(entry: Parameters<typeof addPendingPage>[0]): void;
 }
 
+/**
+ * Skip-reason adapter (PBI 2026-10-31-01): records the latest skip reason so
+ * the popup can show it. Production: the chrome.storage.session store in
+ * skipReason.ts. Tests: in-memory fake. The payload is the reason code ONLY —
+ * never a URL, a title, or content (軸3「収集を増やさない」).
+ */
+export interface OutcomeSkipRecorder {
+  recordSkip(reason: SkipReasonCode): void;
+}
+
 export interface OutcomeAdapters {
   notifier: OutcomeNotifier;
   pending: OutcomePendingWriter;
+  skipRecorder: OutcomeSkipRecorder;
 }
 
 const prodNotifier: OutcomeNotifier = {
@@ -65,9 +85,16 @@ const prodPending: OutcomePendingWriter = {
   },
 };
 
+const prodSkipRecorder: OutcomeSkipRecorder = {
+  recordSkip: (reason) => {
+    void recordSkipReason(reason);
+  },
+};
+
 export const defaultOutcomeAdapters: OutcomeAdapters = {
   notifier: prodNotifier,
   pending: prodPending,
+  skipRecorder: prodSkipRecorder,
 };
 
 /** Step descriptor the outcome policy needs. Satisfied by PipelineStep. */
@@ -119,10 +146,16 @@ export function decideStepOutcome(
   // on the error. Unwrap first so every branch below sees the original error.
   const { error: original, enqueued } = unwrapStepFailure(thrown);
   if (original instanceof PrivatePageError) {
+    // PBI 2026-10-31-01: the popup answers "why was this not recorded" from
+    // the latest skip reason, so the settled refusal records it here.
+    adapters.skipRecorder.recordSkip('private-page');
     return { done: true, result: buildPrivatePageResult(context, original) };
   }
   if (original instanceof DuplicateError) {
     const { data } = context;
+    // PBI 2026-10-31-01: 同日重複 — the popup shows the reason with its
+    // consecutive count (a second skipped attempt reads "×2").
+    adapters.skipRecorder.recordSkip('duplicate');
     return {
       done: true,
       result: { success: true, skipped: true, reason: original.reason, title: data.title, url: data.url },
@@ -140,6 +173,9 @@ export function decideStepOutcome(
       ErrorCode.INTERNAL_ERROR,
       'RecordingPipeline',
     );
+    // PBI 2026-10-31-01: a terminal regenerate failure is a "not recorded"
+    // reason the popup shows, like the FATAL/RETRY branch below.
+    adapters.skipRecorder.recordSkip('pipeline-error');
     const result = buildErrorResult(context, error);
     adapters.notifier.notifyError(context.data.title, error.message);
     return { done: true, result };
@@ -155,6 +191,9 @@ export function decideStepOutcome(
       ErrorCode.INTERNAL_ERROR,
       'RecordingPipeline',
     );
+    // PBI 2026-10-31-01: a terminal pipeline failure is a "not recorded"
+    // reason the popup shows — the notice alone never reaches a closed popup.
+    adapters.skipRecorder.recordSkip('pipeline-error');
     // PBI 2026-09-22-04: regenerate is UPDATE-only — pending-page recovery
     // replays a MANUAL_RECORD INSERT that would duplicate the row being
     // replaced. The failure still surfaces as an error result + notice.

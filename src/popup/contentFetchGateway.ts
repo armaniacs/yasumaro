@@ -1,5 +1,5 @@
 import { getMessage } from '../utils/i18n.js';
-import type { ContentResponse } from './mainTypes.js';
+import type { ContentResponse, SelectionResponse } from './mainTypes.js';
 import { getPermissionManager } from '../utils/permissionManager.js';
 import { StorageKeys } from '../utils/storage/types.js';
 
@@ -47,6 +47,33 @@ export async function requestContentFromTab(
   } catch {
     // Promise-style sendMessage rejects on failure (callback-era
     // chrome.runtime.lastError is never set on this path).
+    return null;
+  }
+}
+
+/**
+ * Ask a tab's content script for the current selection (PBI 2026-10-31-03).
+ * Same passive null contract as requestContentFromTab — no permission
+ * prompts, no ladder. A content script that does not answer (or does not
+ * exist) resolves null, and the caller falls back to the page record exactly
+ * as before. The raw selection travels verbatim; normalization + the
+ * 10,000-char cap are the consumer's job (utils/selectionText.js), so the
+ * same helper serves both capture paths.
+ */
+export async function requestSelectionFromTab(
+  tabId: number,
+  opts?: { timeoutMs?: number; transport?: TabSendTransport },
+): Promise<SelectionResponse | null> {
+  const timeoutMs = opts?.timeoutMs ?? CONTENT_FETCH_TIMEOUT_MS;
+  const send = opts?.transport ?? defaultTabTransport;
+  try {
+    return await Promise.race([
+      send(tabId, { type: 'GET_SELECTION' }) as Promise<SelectionResponse>,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
+    ]) ?? null;
+  } catch {
+    // Same rejection shape as requestContentFromTab — a content script that
+    // is not injected rejects instead of answering.
     return null;
   }
 }

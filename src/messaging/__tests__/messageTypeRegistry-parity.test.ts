@@ -23,6 +23,7 @@ describe('messaging parity: message type registry', () => {
             'VALID_VISIT',
             'CHECK_DOMAIN',
             'GET_CONTENT',
+            'GET_SELECTION', // PBI 2026-10-31-03: selection capture ask (popup → content script)
             'FETCH_URL',
             'MANUAL_RECORD',
             'PREVIEW_RECORD',
@@ -45,6 +46,7 @@ describe('messaging parity: message type registry', () => {
             'LOG_FORWARD',
             'OW_PROBE_QUERY',
             'OW_PROBE_STATE',
+            'RECORDING_SKIP_REASON', // PBI 2026-10-31-01: skip reason relay
             'PAUSE_RECORDING',
             'RESUME_RECORDING',
             'GET_PAUSE_STATE',
@@ -59,6 +61,7 @@ describe('messaging parity: message type registry', () => {
             'PING',
             'OW_PROBE_QUERY',
             'OW_PROBE_STATE',
+            'RECORDING_SKIP_REASON', // PBI 2026-10-31-01: skip reason relay
         ]);
     });
 
@@ -66,6 +69,7 @@ describe('messaging parity: message type registry', () => {
         expect([...NO_PAYLOAD_TYPES]).toEqual([
             'CHECK_DOMAIN',
             'GET_CONTENT',
+            'GET_SELECTION', // PBI 2026-10-31-03: bare selection ask like GET_CONTENT
             'GET_PRIVACY_CACHE',
             'ACTIVITY_UPDATE',
             'SESSION_LOCK_REQUEST',

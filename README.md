@@ -99,7 +99,7 @@ flowchart LR
 - 📋 **AIプロンプトプリセット**: 5種類の組み込みプリセット（デフォルト・タグ付き要約・箇条書き・英語要約・技術的観点）から選べます。プリセットを複製してカスタマイズも可能。
 - 🔔 **ツールバーバッジ通知**: プライバシーヘッダー検出時はオレンジ `!`、自動保存完了時は青 `◎` がツールバーアイコンに表示されます。ポップアップを開かなくても状態を確認できます。
 - 🔒 **プライバシー保護**: 4つのプライバシーモードを選択し、個人情報をマスクしてからAIに送信可能。プライベートページ（銀行・メール等）を自動検出し、誤った記録を防止。
-- ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可、パス許可などの選択肢を提供。
+- ⚠️ **プライベートページ確認**: プライベート判定されたページを保存する前に確認ダイアログを表示。キャンセル、今回のみ保存、ドメイン許可などの選択肢を提供。
 - 📋 **保留ページ管理**: 自動記録中にプライベート判定されたページを一時保留。後から一括保存、ホワイトリスト追加、破棄などの操作が可能。詳細は [PRIVACY.md](docs/PRIVACY.md) を参照。
 - 🔐 **マスターパスワード保護**: 設定のエクスポート/インポート時にAES-GCMでファイルを暗号化。APIキーなどの機密情報を安全に移行・バックアップできます。
 - 🗄️ **ローカル SQLite 永続化**（OPFS + FTS5 全文検索を `@subframe7536/sqlite-wasm` で両立、Obsidian 不要でも動作）
@@ -352,7 +352,7 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 📋 **AI Prompt Presets**: Choose from 5 built-in presets (Default, With Tags, Bullet Points, English Summary, Technical). Duplicate any preset to customize it.
 - 🔔 **Toolbar Badge Notifications**: An orange `!` badge appears when privacy headers are detected; a blue `◎` badge appears when auto-recording completes. Check status without opening the popup.
 - 🔒 **Privacy Protection**: Select from 4 privacy modes and mask PII before sending to AI. Automatically detects private pages (banking, email, etc.) to prevent accidental recording.
-- ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, Allow domain, or Allow path.
+- ⚠️ **Private Page Confirmation**: Shows confirmation dialog when saving private pages detected by header analysis. Options include Cancel, Save once, and Allow domain.
 - 📋 **Pending Pages Management**: Temporarily holds pages marked private during auto-recording. Later you can batch save, add to whitelist, or discard them. See [PRIVACY.md](docs/PRIVACY.md) for details.
 - 🔐 **Master Password Protection**: Encrypt exported settings files with AES-GCM. Securely migrate or back up API keys and other sensitive data.
 - 🗄️ **Local SQLite Persistence** (OPFS + FTS5 full-text search coexist via `@subframe7536/sqlite-wasm`, works without Obsidian)
@@ -561,6 +561,7 @@ MIT License
 - [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - ローカル Markdown 書き出しガイド
 - [LOG_EXPORT_IMPORT_GUIDE.md](docs/LOG_EXPORT_IMPORT_GUIDE.md) - ログのエクスポート・インポートガイド（HMAC署名・暗号化バックアップ）
 - [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist 連携ガイド
+- [MCP_BRIDGE_RECIPE.md](docs/MCP_BRIDGE_RECIPE.md) - MCP ブリッジレシピ（webhook エクスポート経由・ローカルブリッジ・コード追加不要）
 - [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - 監査ログガイド
 - [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - クレンジングの順番
 - [CLEANSING_CUSTOMIZATION_GUIDE.md](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) - クレンジングのカスタマイズガイド（誤削除報告・ドメイン別上書き）
@@ -593,6 +594,7 @@ MIT License
 - [MARKDOWN_DOWNLOAD.md](docs/MARKDOWN_DOWNLOAD.md) - Local Markdown Export Guide
 - [LOG_EXPORT_IMPORT_GUIDE.md](docs/LOG_EXPORT_IMPORT_GUIDE.md) - Log Export & Import Guide (HMAC signature, encrypted backup)
 - [GITHUB_GIST_SYNC_GUIDE.md](docs/GITHUB_GIST_SYNC_GUIDE.md) - GitHub Gist Sync Guide
+- [MCP_BRIDGE_RECIPE.md](docs/MCP_BRIDGE_RECIPE.md) - MCP Bridge Recipe (via the webhook export, local bridge, no code changes)
 - [AUDIT_LOG_GUIDE.md](docs/AUDIT_LOG_GUIDE.md) - Audit Log Guide
 - [CLEANSING_ORDER.md](docs/CLEANSING_ORDER.md) - Cleansing Order
 - [CLEANSING_CUSTOMIZATION_GUIDE.md](docs/CLEANSING_CUSTOMIZATION_GUIDE.md) - Cleansing Customization Guide (mis-deletion reports, per-site overrides)

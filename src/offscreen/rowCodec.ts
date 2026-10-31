@@ -124,6 +124,9 @@ function coerceCell(column: string, value: SqliteValue | null | undefined): Sqli
     // these TEXT columns into NaN and blank them out in the UI.
     case 'nav_source_url':
     case 'search_query':
+    // PBI 2026-10-31-03: the selection-origin marker is TEXT ('selection' or
+    // NULL) — the default branch would Number() it into NaN.
+    case 'content_origin':
       return value != null ? String(value) : null;
     default:
       return value != null ? Number(value) : null;

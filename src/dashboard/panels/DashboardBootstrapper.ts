@@ -1,5 +1,6 @@
 import { NavigationRegistry } from './NavigationRegistry.js';
-import { DEFAULT_PANEL_ID, PANEL_CATALOG, CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
+import { DEFAULT_PANEL_ID, SETTINGS_SUBGROUP_PANEL_IDS, CATALOG_ROWS, type PanelCatalogId } from './panelCatalog.js';
+import { wirePanelCategoryFilter } from './panelCategoryFilter.js';
 import { type PanelLifecycle } from './types.js';
 import { logError } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
@@ -9,13 +10,10 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * Settings panels shown only while the settings subgroup is expanded
  * (everything in the settings sidebar section except the Initial Setup
  * toggle itself). Derived from the catalog so a panel added to the
- * settings section automatically joins the collapsible group.
+ * settings section automatically joins the collapsible group; the set is
+ * owned by panelCatalog so panelCategoryFilter reads the same one.
  */
-const SETTINGS_CHILD_IDS: ReadonlySet<string> = new Set(
-  PANEL_CATALOG.filter((e) => e.sidebarSection === 'settings' && e.id !== DEFAULT_PANEL_ID).map(
-    (e) => e.id,
-  ),
-);
+const SETTINGS_CHILD_IDS: ReadonlySet<string> = SETTINGS_SUBGROUP_PANEL_IDS;
 
 export class DashboardBootstrapper {
   private sidebar: HTMLElement | null = null;
@@ -123,7 +121,12 @@ export class DashboardBootstrapper {
     });
     const getTabs = (): HTMLElement[] => {
       return Array.from(sidebar.querySelectorAll<HTMLElement>('.sidebar-nav-btn')).filter((el) => {
-        // Arrow-key navigation skips buttons hidden inside the collapsed
+        // Tabs hidden by the panel category filter (PBI 2026-10-31-08) are
+        // unreachable for arrow-key navigation too. Without this check focus
+        // would stall on the button before a hidden one: focus() on a hidden
+        // element never moves, so the hidden tab would block every later tab.
+        if (el.hidden) return false;
+        // Arrow-key navigation also skips buttons hidden inside the collapsed
         // settings subgroup. Buttons without a subgroup ancestor (or without
         // any subgroup in the DOM) are always reachable.
         const group = el.closest('#settingsSubgroup');
@@ -200,6 +203,23 @@ export class DashboardBootstrapper {
 
       e.preventDefault();
       tabs[newIndex]?.focus();
+    });
+  }
+
+  /**
+   * Wires the panel category filter select (PBI 2026-10-31-08). A filter
+   * change that hides the active tab navigates to the first tab left visible,
+   * so the onDidNavigate sync in wireSidebar above keeps aria-selected on a
+   * visible tab and the displayed panel inside the selected category. No
+   * rollback here on purpose: the pre-filter tab was hidden by the filter, so
+   * restoring it would recreate the tab/display mismatch the navigate exists
+   * to prevent. Failures use the same reporting seam as the click path.
+   */
+  wireCategoryFilter(select: HTMLSelectElement | null, sidebar: HTMLElement | null): void {
+    wirePanelCategoryFilter(select, sidebar, (panelId) => {
+      void this.registry.navigate(panelId).catch((error: unknown) => {
+        this.#reportNavigateFailure(panelId, error);
+      });
     });
   }
 

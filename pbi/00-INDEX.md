@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件＋後発起票1件） ― ✅ 10件完了・アーカイブ済み（01-10）
+
+ブレスト報告書（仕様ギャップ × ユーザージャーニー × 類似ツール比較、docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md）のやること候補9件をRICE採点してPBI化。10 は PBI 07 の着手前検証で発見した照合不整合の後発起票で、07 のレシピ前提を成立させるため 07 より先に実装した。詳細は [2026-10-31-00-backlog-next-phase-do-dont.md](2026-10-31-00-backlog-next-phase-do-dont.md)。実装記録は下の「アーカイブ履歴」を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| （すべて完了・アーカイブ済み。実装記録は [dev-docs/archived/pbi/](../dev-docs/archived/pbi/) を参照） | | | | | |
+
 ### 2026-10-25 gateway理由保持 ― ✅ 1件完了・アーカイブ対象（12）
 
 PBI 08 の AC4 から分離。admission拒否の `reason` が gateway 正規化で汎用文に置換される問題。handlerでの写し（union・gateway無変更）で解決。
@@ -603,6 +611,22 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-10-31 次フェーズやること/やらないこと アーカイブ ― 10件すべて完了（01-10）
+
+2026-10-31 起票の 10 件（ブレスト 9 件＋後発起票 1 件）を完了してアーカイブ。ブランチ feature/next-phase-do-dont（base `cb8841ef` → head `683ef066`、21 コミット）。後発起票の 10 は 07 のレシピ前提（ローカル宛到達可）のため 07 より先に実装。最終ゲート `make clean test` 緑（1219ファイル・17726テスト）、全体レビュー approve。版 6.9.64。
+
+- **01-feat-recording-skip-reason-visibility**（`50fc0391` ポップアップ表示 + `a66e725b` skipRecorder モック追加・型 baseline 446 返済）: 条件未達で skip された直近記録の理由をポップアップに表示。検証: 1210 files / 17660 tests 緑。全DoD `[x]`
+- **02-fix-path-allow-adjudication**（`00962b34`）: UI「パス許可」の文言をドメイン許可（hostname 正規化）に統一し README・PRIVACY.md を同期。レビュー approved。全DoD `[x]`
+- **03-feat-selection-capture-recording**（`ef94669a`）: 選択範囲の記録（ハイライト相当の欠落分）を追加。レビュー approved。全DoD `[x]`
+- **04-docs-roadmap-resync**（`70f5d4de`）: ROADMAP の出荷済み機能との矛盾3組を解消し裁定を反映。全DoD `[x]`
+- **05-test-raw-owned-keys-audit**（`12d14307` pin テスト追加 + `609be598` 走査正規表現拡張・分類漏れ1キー宣言）: raw-owned ストレージキー監査の網羅確認（pin 10/10・storage 673/673・GREEN 確認済み）。全DoD `[x]`
+- **06-docs-design-spec-refresh**（`fd29a9dd`）: 設計仕様書のずれ3点（見出し・§5.2・フッタ版数）を現行に合わせ更新。全DoD `[x]`
+- **07-docs-mcp-bridge-recipe**（`13b5693a`）: MCP ブリッジのレシピ文書を日英で追加（既存 webhook 経由・コード追加なし）。レビュー approved。全DoD `[x]`
+- **08-refactor-settings-ia-reorg**（`74595ed6` 分類UI + `76a3a5bc` 選択同期修正）: 設定パネルの分類 UI を追加（選択同期 TDD 修正済み・17726 tests 緑）。全DoD `[x]`
+- **09-investigate-obsidian-write-conflict**（`df7ed144`）: Obsidian RMW 競合の調査結果を PBI に記録（hash前提条件の要否判断材料）。全DoD `[x]`
+- **10-feat-webhook-loopport-match**（`c530d89f`）: webhook ループバック宣言パターンのポート照合を修正（宣言済み16ループバックパターンがゲートで一致不能の不整合解消）。レビュー approved。全DoD `[x]`
+- 本クリーンアップでの検証: 全 10 件の実装コミット確認済み・移動後のリンク切れなし（07 と 10 の相互参照は同一ディレクトリ内で有効）。ドリフト修正: PBI 07 の DoD checkbox「コードレビュー（ドキュメントレビュー）完了」が未チェックのままだったため [x] 化（レビュー approved 済み）
 
 ### 2026-10-30 PBI 2026-09-22-02 アーカイブ ― ✅ 1件完了（tagcooccurrence-relocation）
 
@@ -2795,8 +2819,8 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 | ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
 | 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
 | 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **46 ファイル（INDEX 1 / 2026-10-18 security-audit run-2 の残り 22 件 + 同ラウンド backlog 1 / それ以前の live 台帳・PBI 22。2026-10-19 の 13 件はすべて完了・アーカイブ済み。2026-10-20 実測: `ls pbi/*.md` = 46）** |
-| アーカイブ済みPBI | 1421（`00-backlog` 台帳を含む。2026-10-20 実測） |
+| **`pbi/` 残存 PBI 合計** | **28 ファイル（INDEX 1 / 00-backlog 台帳・監視・保留分 27。2026-10-31 の 10 件はすべて完了・アーカイブ済み。2026-10-31 実測: `ls pbi/*.md` = 28）** |
+| アーカイブ済みPBI | 1568（`00-backlog` 台帳を含む。2026-10-31 実測） |
 | アーカイブ済み実装計画 | 187 |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。

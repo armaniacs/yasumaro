@@ -2432,10 +2432,6 @@ label.inline-label {
   background: var(--color-info);
 }
 
-.dialog-buttons .btn-confirm#dialog-save-path {
-  background: var(--color-success);
-}
-
 .dialog-buttons .btn-confirm:hover {
   opacity: 0.9;
 }
@@ -2608,4 +2604,49 @@ label.inline-label {
 /* CSP fix: report feedback button margin (was inline style) */
 .report-feedback-btn {
   margin-top: 8px;
+}
+
+/* Last skip reason panel (PBI 2026-10-31-01): 理由種別と回数のみの直近表示。
+   ステータス面であり記録成功扱いの見た目にしない — 中立/警告系の配色。 */
+.skip-reason-panel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2, 8px);
+  border: 1px solid var(--color-warning-border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--color-warning-bg);
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.skip-reason-panel.hidden {
+  display: none;
+}
+
+.skip-reason-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.skip-reason-title {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.skip-reason-text {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs, 12px);
+}
+
+.skip-reason-count {
+  color: var(--color-warning-text);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  margin-inline-start: auto;
 }

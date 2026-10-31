@@ -1359,9 +1359,6 @@
   "saveDomain": {
     "message": "ドメイン全体を許可して保存"
   },
-  "savePath": {
-    "message": "このパスのみ許可して保存"
-  },
   "saveSuccess": {
     "message": "保存成功"
   },
@@ -1370,9 +1367,6 @@
   },
   "domainAddedToWhitelist": {
     "message": "ドメインをホワイトリストに追加しました"
-  },
-  "pathAddedToWhitelist": {
-    "message": "パスをホワイトリストに追加しました"
   },
   "statusInvalidUrl": {
     "message": "無効なURLです"
@@ -1397,6 +1391,33 @@
   },
   "toolsSection": {
     "message": "ツール"
+  },
+  "panelCategoryFilterLabel": {
+    "message": "パネルを分類で絞り込み"
+  },
+  "panelCategoryAll": {
+    "message": "すべてのパネル"
+  },
+  "panelCategorySetup": {
+    "message": "初期設定・接続"
+  },
+  "panelCategoryRecording": {
+    "message": "記録設定"
+  },
+  "panelCategoryAi": {
+    "message": "AI要約"
+  },
+  "panelCategoryPrivacy": {
+    "message": "プライバシー・セキュリティ"
+  },
+  "panelCategoryAnalysis": {
+    "message": "履歴・分析"
+  },
+  "panelCategoryExport": {
+    "message": "出力"
+  },
+  "panelCategoryOther": {
+    "message": "その他"
   },
   "domainSearchTab": {
     "message": "ドメイン検索"
@@ -5924,5 +5945,46 @@
   "sessionReminderDiscard": {
     "message": "今後表示しない",
     "description": "通知ボタン。この記録を今後の通知対象から外す"
+  },
+  "skipReasonPanelTitle": {
+    "message": "直近に記録されなかった理由",
+    "description": "ポップアップの直近skip理由パネル見出し（PBI 2026-10-31-01）"
+  },
+  "skipReasonConditionNotMet": {
+    "message": "条件未達（滞在時間・スクロールがしきい値未満）",
+    "description": "skip理由。滞在5秒未満・スクロール50%未満など自動記録条件未達"
+  },
+  "skipReasonDuplicate": {
+    "message": "同日重複（同じURLを同日に複数回）",
+    "description": "skip理由。同日同URLの重複skip"
+  },
+  "skipReasonPrivatePage": {
+    "message": "プライベートページ",
+    "description": "skip理由。プライベートページとして拒否"
+  },
+  "skipReasonPipelineError": {
+    "message": "パイプラインエラー",
+    "description": "skip理由。パイプラインの終端失敗"
+  },
+  "skipReasonTimes": {
+    "message": "連続$1$回",
+    "description": "直近skip理由の連続回数",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_one": {
+    "message": "1 time in a row",
+    "description": "直近skip理由の連続回数（英語の単数形）",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_other": {
+    "message": "$1$ times in a row",
+    "description": "直近skip理由の連続回数（英語の複数形）",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
   }
 }

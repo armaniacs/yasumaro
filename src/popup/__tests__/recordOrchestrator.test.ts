@@ -373,7 +373,10 @@ describe('RecordSession.handleRecordNowClick', () => {
     // trigger onclick to verify it re-arms a force attempt
     const spy = vi.spyOn(o, 'start').mockResolvedValue(undefined);
     await (btn.onclick as any)();
-    expect(spy).toHaveBeenCalledWith(true, tab, 'content');
+    // PBI 2026-10-31-03: the force-retry re-arm carries the (undefined) page
+    // origin marker as the 4th argument — a selection record re-arms with
+    // 'selection' instead.
+    expect(spy).toHaveBeenCalledWith(true, tab, 'content', undefined);
     spy.mockRestore();
     // reset + result states transition explicitly
     await o.resetRecordButton(btn);

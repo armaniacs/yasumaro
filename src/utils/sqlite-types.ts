@@ -48,6 +48,8 @@ export interface BrowsingLogRecord {
   nav_source_url?: string | null;
   /** PBI 03: 流入元が検索エンジンだった場合の検索語（PII マスク済み）。オプトイン時のみ値が入る */
   search_query?: string | null;
+  /** PBI 2026-10-31-03: 記録の由来（'selection'＝選択範囲のみ記録、通常記録は NULL） */
+  content_origin?: string | null;
 }
 
 // Dashboard row type derived from BrowsingLogRecord (id is required)

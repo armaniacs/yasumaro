@@ -41,7 +41,8 @@ Content Scripts (entrypoints/content/ + src/content/)
   ├── contentKernel.ts → Visit pipeline core (IdleScheduler, lifecycle listeners)
   ├── deadlineTimer.ts → One-shot visit deadline (injected Scheduler)
   ├── throttle.ts → rAF throttling
-  └── getContentHandler.ts → GET_CONTENT handler (deps-injected, chrome-free unit testable)
+  ├── getContentHandler.ts → GET_CONTENT handler (deps-injected, chrome-free unit testable)
+  └── selectionCapture.ts → GET_SELECTION handler (PBI 2026-10-31-03; raw selection travels verbatim, normalization is consumer-side)
 ```
 
 ## Shared Modules Quick Index
@@ -55,7 +56,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 | Message-type runtime registry | `src/messaging/messageTypeRegistry.ts` | Runtime message-type constants (VALID_MESSAGE_TYPES / NO_PAYLOAD_TYPES / CONTENT_SCRIPT_ALLOWED_TYPES / AI_TEST_PROGRESS_MESSAGE_TYPE); background/messageTypes.ts re-exports them |
 | Dashboard SQLite wire contract | `src/messaging/dashboardSqliteProtocol.ts` | DASHBOARD_SQLITE subtype payload/response union + MODAL_REQUIRED_SUBTYPES |
 | Archive staging seam | `src/offscreen/archiveStaging.ts` | 14 archive ops behind ArchiveStaging (OPFS backend only); dispatch fails closed via supportsArchive/narrowing |
-| Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder) |
+| Popup content fetch | `src/popup/contentFetchGateway.ts` | Single seam for "popup asks a tab for content" (timeout + permission ladder). GET_SELECTION ask rides the same seam (PBI 2026-10-31-03, passive null contract) |
 | Cleansing badge policy | `src/utils/cleansingBadge.ts` | reason → badge text table + counts → reason derivation (Layer 0) |
 | Settings repository | `src/utils/storage/SettingsRepository.ts` | Settings blob read/write SSOT (flat scattered keys are legacy) |
 | AI provider catalog SSOT | `src/background/ai/providerCatalog.ts` (+ `src/utils/aiLimits.ts`, wxt.config.ts manifest fn) | Catalog id is the single key: token caps, CSP connect-src, host_permissions, and Gist egress declarations all derive from it. The triangle pin (`src/__tests__/providerTrianglePin.test.ts`) fails on drift (PBI 2026-10-22-01) |

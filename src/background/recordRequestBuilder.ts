@@ -58,6 +58,12 @@ export interface RecordDiagnosticFields {
   visitDurationSeconds?: number | undefined;
   /** PBI 2026-10-23-02: max scroll percentage reached for this visit. */
   scrollRatioPercent?: number | undefined;
+  /**
+   * PBI 2026-10-31-03: saved-row origin marker ('selection' | absent). Rides
+   * the shared table so a surface that forgets the spread loses the saved
+   * row's selection-origin evidence, exactly like a dropped metric.
+   */
+  contentOrigin?: string | undefined;
 }
 
 /** Per-surface fixed policy. */
@@ -138,6 +144,9 @@ export function extractOfflinePayload(context: RecordingContext): OfflineJobPayl
     aiSummaryCleansedReasons: context.data.aiSummaryCleansedReasons,
     navSourceUrl: context.data.navSourceUrl,
     searchQuery: context.data.searchQuery,
+    // PBI 2026-10-31-03: the origin marker is frozen at enqueue time so a
+    // retry still records the selection-origin evidence.
+    contentOrigin: context.data.contentOrigin,
   };
 }
 
@@ -159,6 +168,7 @@ export function buildOfflineRetryRequest(payload: OfflineJobPayload): RecordingD
     aiSummaryCleansedReasons: payload.aiSummaryCleansedReasons,
     navSourceUrl: payload.navSourceUrl,
     searchQuery: payload.searchQuery,
+    contentOrigin: payload.contentOrigin,
   });
 }
 
@@ -192,6 +202,7 @@ export type RecordDiagnosticsSource = Partial<
     | 'cleansedReason'
     | 'fallbackTriggered'
     | 'fallbackReason'
+    | 'contentOrigin'
     | 'visitDurationSeconds'
     | 'scrollRatioPercent'
   >
@@ -238,6 +249,9 @@ export function pickRecordDiagnostics(
     // would ever fire. Discovered by the PBI 2026-10-22-04 O5 E2E.
     visitDurationSeconds: payload.visitDurationSeconds,
     scrollRatioPercent: payload.scrollRatioPercent,
+    // PBI 2026-10-31-03: the saved-row origin marker rides the same table —
+    // a dropped marker loses the saved row's selection-origin evidence.
+    contentOrigin: payload.contentOrigin,
   });
 }
 
@@ -284,6 +298,7 @@ export function buildRecordRequest(
       fallbackReason: fields.fallbackReason,
       visitDurationSeconds: fields.visitDurationSeconds,
       scrollRatioPercent: fields.scrollRatioPercent,
+      contentOrigin: fields.contentOrigin,
       navSourceUrl: fields.navSourceUrl,
       searchQuery: fields.searchQuery,
       targetEntryId: fields.targetEntryId,

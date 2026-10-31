@@ -64,6 +64,22 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 - 記録しないもの: file:// 頁、認証裏頁、ペイウォール頁、キャンバス描画頁
 - 記録できない理由はダッシュボードの診断パネル「取り込み状態」に理由コードと時刻で表示されます（本文・URL・題名は保存しません）
 
+### 直近のskip理由をポップアップで見る
+
+記録が skip された直近の理由は、ポップアップの「直近に記録されなかった理由」パネルに理由種別と連続回数で表示されます。
+
+| 理由種別 | 意味 |
+|---------|------|
+| 条件未達 | 滞在時間・スクロールがしきい値未満（記事の2指標とメディア別の専用条件の両方） |
+| 同日重複 | 同じURLを同日に複数回記録しようとした |
+| プライベートページ | プライベートページとして拒否された |
+| パイプラインエラー | パイプラインの終端処理に失敗した |
+
+- 表示は理由種別と連続回数のみで、URL・題名・本文は保存しません（軸3「収集を増やさない」整合）
+- 状態は chrome.storage.session に置かれるため、ブラウザのセッション中は service worker の再起動をまたいで保持されます
+- バッジ通知（記録成功の青◎、プライベート検出のオレンジ!）と矛盾しない表示です。パネルはステータス面であり、記録成功扱いの見た目にはなりません
+- 条件未達はページを離脱した時点で記録されます。閲覧中に条件を満たせば通常どおり記録されます
+
 ### 手動記録との関係
 
 スマート検出の条件を満たさなかったページでも、ポップアップの **「今すぐ記録」** ボタンで手動記録できます。手動記録はスマート検出の条件（滞在時間・スクロール深度）を経由しないため、開いた直後のページでも即座に記録可能です。
@@ -82,6 +98,7 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 - スクロール深度が「Min Scroll Depth」以上か（ページが短くスクロール不要な場合、条件を満たせないことがあります）
 - ドメインフィルターでブロックされていないか
 - プライベートページとして検出されていないか（銀行・メールなど）
+- ポップアップの「直近に記録されなかった理由」パネルに、直近のskip理由と連続回数が表示されます
 
 **Q. スクロールが不要なほど短いページを記録したい**
 
@@ -132,6 +149,22 @@ Blank, negative, or non-numeric settings keep the defaults. Periodic checks stop
 - Never recorded: file:// pages, auth-walled pages, paywalled pages, canvas-rendered pages
 - Unrecordable reasons appear in the dashboard diagnostics panel under capture status as reason code + time (no body, URL, or title is stored)
 
+### Seeing the recent skip reason in the popup
+
+The most recent reason a recording was skipped appears in the popup's "Why the last page was not recorded" panel as a reason type plus its consecutive count.
+
+| Reason type | Meaning |
+|-------------|---------|
+| Condition not met | Stay or scroll below the threshold (both the article pair and the per-media conditions) |
+| Duplicate | The same URL was recorded more than once on the same day |
+| Private page | Refused as a private page |
+| Pipeline error | A terminal pipeline step failed |
+
+- The record carries the reason type and the count only; no URL, title, or body is stored (aligned with axis 3 "collect nothing extra")
+- The state lives in chrome.storage.session, so it survives a service-worker restart within the browser session
+- The panel is a status surface and never renders like a successful recording, so it does not contradict the badge notices (blue ◎ for recorded, orange ! for private)
+- Condition-not-met is recorded when the page view ends. Meeting the conditions while reading records the page as usual
+
 ### Why these two signals
 
 This combination excludes tabs left open in the background and pages where you scrolled straight to the bottom and left without reading. Looking at visit duration alone would misclassify tabs left open and forgotten as "read." Looking at scroll depth alone would misclassify a quick scroll-to-bottom-and-leave as "read." Combining both narrows detection down to pages you likely actually read.
@@ -175,6 +208,7 @@ Check the following:
 - Whether scroll depth meets or exceeds "Min Scroll Depth" (short pages that don't require scrolling may never satisfy this)
 - Whether the domain is blocked by a domain filter
 - Whether the page was detected as private (banking, email, etc.)
+- The popup's "Why the last page was not recorded" panel shows the recent skip reason with its consecutive count
 
 **Q. I want to record a short page that doesn't require scrolling**
 

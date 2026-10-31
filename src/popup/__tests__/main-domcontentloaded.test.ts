@@ -125,7 +125,6 @@ describe('main.ts DOMContentLoaded', () => {
                 <button id="dialog-cancel"></button>
                 <button id="dialog-save-once"></button>
                 <button id="dialog-save-domain"></button>
-                <button id="dialog-save-path"></button>
             </div>
         `;
     });

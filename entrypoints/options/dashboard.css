@@ -377,6 +377,33 @@ a:hover {
 }
 
 /* =============================================================================
+   PBI 2026-10-31-08: Settings IA — パネル分類フィルタ
+   select 本体は上のグローバル select 規則 (幅・ボーダー・focus-visible) に従う
+   ============================================================================= */
+
+.sidebar-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.sidebar-filter-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  display: block;
+}
+
+.sidebar-filter-select {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+/* =============================================================================
    Content Area
    ============================================================================= */
 

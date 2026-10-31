@@ -1413,9 +1413,6 @@
   "saveDomain": {
     "message": "Save & Allow Domain"
   },
-  "savePath": {
-    "message": "Save & Allow Path"
-  },
   "saveSuccess": {
     "message": "Saved successfully"
   },
@@ -1424,9 +1421,6 @@
   },
   "domainAddedToWhitelist": {
     "message": "Domain added to whitelist"
-  },
-  "pathAddedToWhitelist": {
-    "message": "Path added to whitelist"
   },
   "statusInvalidUrl": {
     "message": "Invalid URL"
@@ -1451,6 +1445,33 @@
   },
   "toolsSection": {
     "message": "Tools"
+  },
+  "panelCategoryFilterLabel": {
+    "message": "Filter panels by category"
+  },
+  "panelCategoryAll": {
+    "message": "All panels"
+  },
+  "panelCategorySetup": {
+    "message": "Setup & Connection"
+  },
+  "panelCategoryRecording": {
+    "message": "Recording"
+  },
+  "panelCategoryAi": {
+    "message": "AI Summary"
+  },
+  "panelCategoryPrivacy": {
+    "message": "Privacy & Security"
+  },
+  "panelCategoryAnalysis": {
+    "message": "History & Analysis"
+  },
+  "panelCategoryExport": {
+    "message": "Export"
+  },
+  "panelCategoryOther": {
+    "message": "Other"
   },
   "domainSearchTab": {
     "message": "Domain Search"
@@ -5942,5 +5963,46 @@
   "sessionReminderDiscard": {
     "message": "Don't remind me",
     "description": "Notification button that excludes the record from future reminders"
+  },
+  "skipReasonPanelTitle": {
+    "message": "Why the last page was not recorded",
+    "description": "Popup last-skip-reason panel heading (PBI 2026-10-31-01)"
+  },
+  "skipReasonConditionNotMet": {
+    "message": "Condition not met (stay or scroll below the threshold)",
+    "description": "Skip reason. Auto-recording conditions unmet (stay under 5s, scroll under 50%, etc.)"
+  },
+  "skipReasonDuplicate": {
+    "message": "Duplicate (same URL twice on the same day)",
+    "description": "Skip reason. Same-day same-URL duplicate skip"
+  },
+  "skipReasonPrivatePage": {
+    "message": "Private page",
+    "description": "Skip reason. Refused as a private page"
+  },
+  "skipReasonPipelineError": {
+    "message": "Pipeline error",
+    "description": "Skip reason. Terminal pipeline failure"
+  },
+  "skipReasonTimes": {
+    "message": "$1$ times in a row",
+    "description": "Consecutive count of the last skip reason",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_one": {
+    "message": "1 time in a row",
+    "description": "Consecutive count of the last skip reason, singular",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
+  },
+  "skipReasonTimes_other": {
+    "message": "$1$ times in a row",
+    "description": "Consecutive count of the last skip reason, plural",
+    "placeholders": {
+      "1": { "content": "$1" }
+    }
   }
 }

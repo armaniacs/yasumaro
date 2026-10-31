@@ -458,5 +458,112 @@ describe('DashboardBootstrapper', () => {
         sidebar.remove();
       }
     });
+
+    it('arrow-key navigation skips buttons hidden by the category filter (PBI 2026-10-31-08)', () => {
+      const { general, child, data, group } = buildGroupedSidebar();
+      // The panel category filter hides tabs with the hidden attribute. With
+      // the group expanded the hidden child would be the next tab; the
+      // navigation must skip it or focus would stall on the button before
+      // it (focus() on a hidden element never moves, so the hidden tab
+      // blocks every later tab).
+      group.hidden = false;
+      child.hidden = true;
+      document.body.appendChild(sidebar);
+      try {
+        general.focus();
+        general.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+        expect(document.activeElement).toBe(data);
+      } finally {
+        sidebar.remove();
+      }
+    });
+  });
+
+  describe('wireCategoryFilter (分類フィルタの選択同期)', () => {
+    /** buildGroupedSidebar と同じ形 + 分類 select (既定値 'all')。 */
+    function buildFilterFixture(): {
+      general: HTMLButtonElement;
+      child: HTMLButtonElement;
+      data: HTMLButtonElement;
+      group: HTMLElement;
+      select: HTMLSelectElement;
+    } {
+      bootstrapper.registerPanels([
+        mockPanel({ id: 'panel-general' }),
+        mockPanel({ id: 'panel-domain' }),
+        mockPanel({ id: 'panel-tag-cluster' }),
+      ]);
+      const general = document.createElement('button');
+      general.className = 'sidebar-nav-btn active';
+      general.setAttribute('data-panel', 'panel-general');
+      general.setAttribute('aria-selected', 'true');
+      const group = document.createElement('div');
+      group.className = 'sidebar-subgroup';
+      group.id = 'settingsSubgroup';
+      const child = document.createElement('button');
+      child.className = 'sidebar-nav-btn';
+      child.setAttribute('data-panel', 'panel-domain');
+      child.setAttribute('aria-selected', 'false');
+      group.appendChild(child);
+      const data = document.createElement('button');
+      data.className = 'sidebar-nav-btn';
+      data.setAttribute('data-panel', 'panel-tag-cluster');
+      data.setAttribute('aria-selected', 'false');
+      sidebar.appendChild(general);
+      sidebar.appendChild(group);
+      sidebar.appendChild(data);
+      bootstrapper.wireSidebar(sidebar);
+      const select = document.createElement('select');
+      for (const value of ['all', 'recording']) {
+        const option = document.createElement('option');
+        option.value = value;
+        select.appendChild(option);
+      }
+      return { general, child, data, group, select };
+    }
+
+    it('a filter change that hides the active tab re-selects the first visible tab (既定状態から select 1 回)', async () => {
+      const { general, child, group, select } = buildFilterFixture();
+      bootstrapper.wireCategoryFilter(select, sidebar);
+
+      select.value = 'recording';
+      select.dispatchEvent(new Event('change'));
+      await flush();
+
+      // 隠れたタブに aria-selected="true" が残らない。
+      expect(general.hidden).toBe(true);
+      expect(general.getAttribute('aria-selected')).toBe('false');
+      // 選択分類の先頭の可視タブが選ばれ、表示パネルもそちらへ移る。
+      expect(child.hidden).toBe(false);
+      expect(child.getAttribute('aria-selected')).toBe('true');
+      expect(child.classList.contains('active')).toBe(true);
+      expect(registry.activeId).toBe('panel-domain');
+      expect(group.hidden).toBe(false);
+    });
+
+    it('does not navigate on wire (初期表示は start() が所有)', () => {
+      const { select } = buildFilterFixture();
+      bootstrapper.wireCategoryFilter(select, sidebar);
+      expect(registry.activeId).toBeNull();
+    });
+
+    it('records a rejected filter navigation through the same seam as clicks', async () => {
+      const { select } = buildFilterFixture();
+      bootstrapper.wireCategoryFilter(select, sidebar);
+      vi.mocked(logError).mockClear();
+      const navigate = vi.spyOn(registry, 'navigate').mockRejectedValue(new Error('panel exploded on mount'));
+
+      select.value = 'recording';
+      select.dispatchEvent(new Event('change'));
+      await flush();
+
+      expect(navigate).toHaveBeenCalledTimes(1);
+      expect(logError).toHaveBeenCalledWith(
+        expect.stringContaining('panel-domain'),
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+      );
+    });
   });
 });

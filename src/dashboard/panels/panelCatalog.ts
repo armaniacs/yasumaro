@@ -88,6 +88,16 @@ export const SIDEBAR_PANELS: readonly PanelCatalogEntry[] = PANEL_CATALOG.filter
     entry.sidebarSection !== null && entry.sidebarI18nKey !== null,
 );
 
+/**
+ * settings セクションの折りたたみグループ (#settingsSubgroup) に入るパネル
+ * (Initial Setup toggle 自身を除く)。DashboardBootstrapper と
+ * panelCategoryFilter が同じ集合を参照するため、ここが単一の導出元。
+ */
+export const SETTINGS_SUBGROUP_PANEL_IDS: ReadonlySet<string> = new Set(
+  PANEL_CATALOG.filter((entry) => entry.sidebarSection === 'settings' && entry.id !== DEFAULT_PANEL_ID)
+    .map((entry) => entry.id),
+);
+
 /** `?tab=` → panel id。該当なしは null (呼び出し側がデフォルトに倒す)。 */
 export function resolvePanelIdForTab(tab: string | null): PanelCatalogId | null {
   if (!tab) return null;

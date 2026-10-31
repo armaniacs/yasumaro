@@ -17,8 +17,10 @@ import { resolveReasonLabel } from '../../utils/reasonLabel.js';
 import { createCopyMarkdownButton } from '../../utils/copyMarkdownButton.js';
 import type { BrowsingLogEntry } from '../../utils/sqlite-types.js';
 import { updateCleansingStatus, updateTrustStatus } from '../statusPanel.js';
-import { ContentFetchGateway } from '../contentFetchGateway.js';
+import { ContentFetchGateway, requestSelectionFromTab } from '../contentFetchGateway.js';
 import { PreviewFlow, type PreviewSaveResult, type SaveRecordResult } from './previewFlow.js';
+import { normalizeSelectionText, SELECTION_CONTENT_ORIGIN } from '../../utils/selectionText.js';
+import type { SelectionResponse } from '../mainTypes.js';
 
 /**
  * Popup record session states. Exactly one owner (this module) reads and
@@ -60,6 +62,12 @@ export class RecordSession {
   constructor(
     private readonly tabContentFetcher: ContentFetchGateway = new ContentFetchGateway(),
     private readonly previewFlow: PreviewFlow = new PreviewFlow(),
+    /**
+     * PBI 2026-10-31-03: injectable selection ask. The default is the passive
+     * GET_SELECTION ask (no permission prompts); a null/failed answer means
+     * "no selection" and falls back to the page record.
+     */
+    private readonly selectionReader: (tabId: number) => Promise<SelectionResponse | null> = requestSelectionFromTab,
   ) {}
 
   /** Read-only state for tests and future callers. Transitions stay private. */
@@ -116,14 +124,15 @@ export class RecordSession {
   private setRecordAnywayButton(
     recordBtn: HTMLButtonElement,
     tab: chrome.tabs.Tab,
-    content: string
+    content: string,
+    contentOrigin?: string | undefined
   ): void {
     this.sessionState = 'awaiting-force';
     recordBtn.disabled = false;
     recordBtn.textContent = getMessageOr('forceRecordAnyway', 'Record Anyway');
     // .onclick property assignment intentional here too — see resetRecordButton() above.
     recordBtn.onclick = () => {
-      void this.start(true, tab, content);
+      void this.start(true, tab, content, contentOrigin);
     };
   }
 
@@ -153,12 +162,12 @@ export class RecordSession {
    * awaiting-force re-arms into a force attempt; showing-result restarts
    * (the button is disabled in UI there, as before — no behavior change).
    */
-  async start(force: boolean = false, tab?: chrome.tabs.Tab, content?: string): Promise<void> {
+  async start(force: boolean = false, tab?: chrome.tabs.Tab, content?: string, contentOrigin?: string | undefined): Promise<void> {
     if (this.sessionState === 'running') return;
     this.sessionState = 'running';
     try {
       if (force && tab && content !== undefined) {
-        await this.runForceBranch(tab, content);
+        await this.runForceBranch(tab, content, contentOrigin);
       } else {
         await this.runNormalBranch(force);
       }
@@ -337,14 +346,17 @@ export class RecordSession {
     statusDiv: HTMLElement,
     recordBtn: HTMLButtonElement | null,
     tab: chrome.tabs.Tab,
-    content: string
+    content: string,
+    contentOrigin?: string | undefined
   ): Settlement {
     if (previewSave.error === 'PRIVATE_PAGE_DETECTED') {
       hideSpinner();
       statusChannel.report(statusDiv, this.buildPrivatePageErrorMessage(previewSave.reason), 'error');
 
       if (recordBtn) {
-        this.setRecordAnywayButton(recordBtn, tab, content);
+        // PBI 2026-10-31-03: a selection record's force retry keeps the same
+        // content and the same origin marker.
+        this.setRecordAnywayButton(recordBtn, tab, content, contentOrigin);
       }
       return { kind: 'private-page' };
     }
@@ -404,11 +416,79 @@ export class RecordSession {
     }
   }
 
-  /** Normal-branch step 2: reflect extraction stats and trust. */
+  /**
+   * Normal-branch step 2: reflect extraction stats and trust.
+   */
   private applyExtractionStats(resp: ContentResponse, tab: chrome.tabs.Tab): void {
     updateCleansingStatus(resp.cleanseStats, resp.cleansedReason);
     if (tab.url) {
       void updateTrustStatus(tab.url);
+    }
+  }
+
+  /**
+   * PBI 2026-10-31-03: the normalized selection on the active tab, or ''
+   * when nothing is selected (or the content script does not answer). The
+   * ask is passive — no permission prompts, no ladder — and a failure
+   * degrades to "no selection", falling back to the page record exactly as
+   * before. Normalization (one-line sanitize + 10,000-char cap) is the
+   * shared utils/selectionText helper, so both capture paths stay one
+   * implementation.
+   */
+  private async captureSelection(tabId: number): Promise<string> {
+    try {
+      const response = await this.selectionReader(tabId);
+      return normalizeSelectionText(response?.selection ?? '');
+    } catch {
+      return '';
+    }
+  }
+
+  /**
+   * Shared preview + save + settle tail for the normal and selection
+   * branches: both run previewFlow, then settle through the same
+   * private-page/cancelled/success/error outcomes. `contentOrigin` is
+   * undefined on the page path and SELECTION_CONTENT_ORIGIN on the selection
+   * path, so the saved row stays identifiable as selection-derived on both
+   * the first attempt and a private-page force retry.
+   */
+  private async runPreviewSave(
+    tab: chrome.tabs.Tab,
+    contentResponse: ContentResponse,
+    force: boolean,
+    contentOrigin: string | undefined,
+    statusDiv: HTMLElement,
+    recordBtn: HTMLButtonElement | null,
+    startTime: number,
+  ): Promise<void> {
+    const previewSave = await this.previewFlow.run({
+      tab,
+      content: contentResponse.content,
+      force,
+      contentOrigin,
+      byteStats: contentResponse.byteStats,
+      aiSummaryCleansedStats: contentResponse.aiSummaryCleansedStats,
+      cleansedReason: contentResponse.cleansedReason,
+      cleanseStats: contentResponse.cleanseStats,
+    });
+
+    const settlement = this.settlePreviewSave(previewSave, statusDiv, recordBtn, tab, contentResponse.content, contentOrigin);
+    if (settlement.kind === 'private-page') {
+      // No button to offer force-retry on: fall into the error path exactly
+      // as the former flow did (throw -> catch -> errorPresenter).
+      if (!recordBtn) throw new Error(previewSave.error || 'Save failed');
+      return;
+    }
+    if (settlement.kind === 'cancelled') return;
+    const result = settlement.result;
+
+    if (!previewSave.success) {
+      throw new Error(previewSave.error || 'Save failed');
+    }
+
+    await this.finishSuccess(tab, result, statusDiv, startTime);
+    if (recordBtn) {
+      this.showButtonResultState(recordBtn, 'done');
     }
   }
 
@@ -476,44 +556,28 @@ export class RecordSession {
         throw new Error(getMessage('cannotRecordPage'));
       }
 
+      // PBI 2026-10-31-03: a user selection on the page replaces the page
+      // body — the selection alone goes through the existing preview + save
+      // pipeline (PII masking, AI summary cleansing, private-page judgment)
+      // with the selection-origin marker. An empty/failed ask falls back to
+      // the page record exactly as before.
+      const selection = await this.captureSelection(tab.id);
+      if (selection) {
+        await this.runPreviewSave(tab, { content: selection }, force, SELECTION_CONTENT_ORIGIN, statusDiv, recordBtn, startTime);
+        return;
+      }
+
       const contentResponse = await this.fetchContent(tab, force);
       this.applyExtractionStats(contentResponse, tab);
 
-      const previewSave = await this.previewFlow.run({
-        tab,
-        content: contentResponse.content,
-        force,
-        byteStats: contentResponse.byteStats,
-        aiSummaryCleansedStats: contentResponse.aiSummaryCleansedStats,
-        cleansedReason: contentResponse.cleansedReason,
-        cleanseStats: contentResponse.cleanseStats,
-      });
-
-      const settlement = this.settlePreviewSave(previewSave, statusDiv, recordBtn, tab, contentResponse.content);
-      if (settlement.kind === 'private-page') {
-        // No button to offer force-retry on: fall into the error path exactly
-        // as the former flow did (throw -> catch -> errorPresenter).
-        if (!recordBtn) throw new Error(previewSave.error || 'Save failed');
-        return;
-      }
-      if (settlement.kind === 'cancelled') return;
-      const result = settlement.result;
-
-      if (!previewSave.success) {
-        throw new Error(previewSave.error || 'Save failed');
-      }
-
-      await this.finishSuccess(tab, result, statusDiv, startTime);
-      if (recordBtn) {
-        this.showButtonResultState(recordBtn, 'done');
-      }
+      await this.runPreviewSave(tab, contentResponse, force, undefined, statusDiv, recordBtn, startTime);
     } catch (error: unknown) {
       this.fail(error, recordBtn, statusDiv, () => this.recordCurrentPage(true));
     }
   }
 
   /** Force branch: skip fetch (content given), preview + save with force. */
-  private async runForceBranch(tab: chrome.tabs.Tab, content: string): Promise<void> {
+  private async runForceBranch(tab: chrome.tabs.Tab, content: string, contentOrigin?: string | undefined): Promise<void> {
     const startTime = performance.now();
     const attempt = this.openAttempt();
     if (!attempt) return;
@@ -526,6 +590,7 @@ export class RecordSession {
         tab,
         content,
         force: true,
+        contentOrigin,
         cleansedReason: undefined,
         cleanseStats: undefined,
       });
