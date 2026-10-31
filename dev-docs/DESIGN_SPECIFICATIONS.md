@@ -124,9 +124,12 @@ Invariants:
 - **State lives in `chrome.storage.local` via `StoragePort`,** never in module state ― a Service Worker restart must not lose the stage.
 
 ### 5.2 URL History Limits
-- **Maximum URLs**: `MAX_URL_SET_SIZE = 10,000`
+The limits below apply to the **saved-URL set** ― the duplicate-check cache in `chrome.storage.local` (keys `savedUrls` + `savedUrlsWithTimestamps`, updated in one `withAtomicKeys` transaction by `src/utils/storage/savedUrlRepository.ts`). This is a separate layer from the SQLite record store (OPFS/IDB, §5.4), which holds the browsing-log records themselves.
+
+- **Maximum URLs**: `MAX_URL_SET_SIZE = 10,000` (`src/utils/urlEntry.ts`)
 - **Warning Threshold**: `URL_WARNING_THRESHOLD = 8,000`
-- When limit is exceeded, recording is rejected with user notification
+- **LRU eviction on write**: each save (`addSavedUrl` → `updateUrlTimestamp`) drops entries older than `URL_RETENTION_DAYS` (35 days), then keeps only the newest `MAX_URL_SET_SIZE` entries by timestamp. This layer never rejects a write.
+- **Rejection at the duplicate gate**: a new recording is rejected when the set has reached the maximum. `checkDuplicateStep` delegates to `decideGate('duplicate', ...)` (`src/utils/recordingGateTable.ts`), which denies at `urlMapSize ≧ MAX_URL_SET_SIZE`; the step throws `URL_SET_LIMIT_EXCEEDED` (FATAL), so the failure surfaces as an error log, an error result, and a user notification.
 - When approaching threshold (≧ 8,000), warning is logged
 
 ### 5.3 Cache Strategy
@@ -292,7 +295,7 @@ Uses placeholder substitution with `buildDailyNotePath()`:
 ### 9.3 Request Behavior
 - **Timeout**: 15 seconds (`FETCH_TIMEOUT_MS`)
 - **Read-Modify-Write**: Fetch existing content → insert into section → write back
-- **Section Header**: Content inserted after `## Web History` section (or default header)
+- **Section Header**: `# 🌐 ブラウザ閲覧履歴` (`NoteSectionEditor.DEFAULT_SECTION_HEADER` in `src/background/noteSectionEditor.ts`). Content is inserted under the existing section when the note already contains the header; when it does not, a new section with that header is appended at the end of the note
 - **404 Handling**: Empty string returned for non-existent notes
 
 ## 10. Content Extraction
@@ -475,4 +478,8 @@ Users can add domains/paths to the whitelist from the confirmation dialog:
 ```
 
 ---
-*Refer to [CHANGELOG.md](../CHANGELOG.md) for the version history that established these rules (v2.4.1 - v2.4.4).*
+**Document scope** ― the role of this document is to prevent regressions of rules, decisions, and constraints (規則・決まり・制約の防止). It is deliberately not a feature inventory: README.md and CHANGELOG.md are the source of truth for what the product does, so this document never enumerates features. When a feature changes, update README.md / CHANGELOG.md, and touch this document only when a rule, decision, or constraint changed with it.
+
+**Version-reference policy** ― keep a version reference only where a rule depends on it. Write one when a rule change depends on a specific release; do not bump version numbers per release. Review version-dependent references (including the CHANGELOG reference below) whenever the release they describe changes.
+
+*Refer to [CHANGELOG.md](../CHANGELOG.md) for the version history (current release: v6.9.63).*
