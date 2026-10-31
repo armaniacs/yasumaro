@@ -42,13 +42,13 @@ Scenario: 未宣言の公的 origin は引き続き fail-closed で遮断され�
 
 ## 受け入れ基準
 
-- [ ] isUrlCoveredByHostPattern（src/background/webhookExport/webhookExportSender.ts:147-192）は、パターン ホスト部がポートを含む場合、URL の host+port と比較する（parsed.hostname のポート不含比較をしない）
-- [ ] 宣言済みループバック 16 パターンのいずれかに一致するローカル HTTPS 宛先が、宣言済み origin ゲート（defaultIsWebhookHostPermitted）を通る
-- [ ] 平文 http:// 宛先は引き続き URL ゲート（isWebhookUrlAllowed、src/background/webhookExport/webhookExportPayload.ts:88-95）で拒否される。同ファイルは変更しない
-- [ ] 未宣言公的 origin は引き続き fail-closed（undeclared-origin）で遮断される
-- [ ] testDir/e2e/webhook-egress.spec.ts ピン 2 のインライン照合コピー（106-127 行目付近）が同じ修正で同期されている
-- [ ] 単体テストが TDD で先に書かれ、ループバック一致・平文 http 拒否・未宣言 fail-closed の 3 分岐を pin している
-- [ ] manifest.json（wxt.config.ts）への権限追加・削除をしない（既存宣言の活用）
+- [x] isUrlCoveredByHostPattern（src/background/webhookExport/webhookExportSender.ts:147-192）は、パターン ホスト部がポートを含む場合、URL の host+port と比較する（parsed.hostname のポート不含比較をしない）
+- [x] 宣言済みループバック 16 パターンのいずれかに一致するローカル HTTPS 宛先が、宣言済み origin ゲート（defaultIsWebhookHostPermitted）を通る
+- [x] 平文 http:// 宛先は引き続き URL ゲート（isWebhookUrlAllowed、src/background/webhookExport/webhookExportPayload.ts:88-95）で拒否される。同ファイルは変更しない
+- [x] 未宣言公的 origin は引き続き fail-closed（undeclared-origin）で遮断される
+- [x] testDir/e2e/webhook-egress.spec.ts ピン 2 のインライン照合コピー（106-127 行目付近）が同じ修正で同期されている
+- [x] 単体テストが TDD で先に書かれ、ループバック一致・平文 http 拒否・未宣言 fail-closed の 3 分岐を pin している
+- [x] manifest.json（wxt.config.ts）への権限追加・削除をしない（既存宣言の活用）
 
 ## テスト戦略
 
@@ -98,11 +98,11 @@ grep -n "LOOPBACK_PORTS\|buildLocalHostPermissions\|27123" src/utils/loopbackPor
 
 ## Definition of Done
 
-- [ ] 照合修正が TDD（赤 → 緑）で実装され、全BDDシナリオが自動テストとしてパスする
-- [ ] e2e ピン 2 のインライン照合コピーが同期され、単体と e2e で同じ結果を返す
-- [ ] 既存テスト全緑（webhookExportSender.test.ts の pin 群と webhookExportPayload.test.ts を含む）
-- [ ] コードレビュー完了
-- [ ] PBI 07（レシピ文書化）を再実行できる状態
+- [x] 照合修正が TDD（赤 → 緑）で実装され、全BDDシナリオが自動テストとしてパスする
+- [x] e2e ピン 2 のインライン照合コピーが同期され、単体と e2e で同じ結果を返す
+- [x] 既存テスト全緑（webhookExportSender.test.ts の pin 群と webhookExportPayload.test.ts を含む）
+- [x] コードレビュー完了
+- [x] PBI 07（レシピ文書化）を再実行できる状態
 
 ## 参照
 
