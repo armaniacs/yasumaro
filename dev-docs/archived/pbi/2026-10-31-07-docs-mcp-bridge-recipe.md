@@ -82,7 +82,7 @@ grep -rn "WEBHOOK\|Webhook" src/ | head -10
 - [x] レシピ文書が日英で完成
 - [x] 文書一覧（README・guides 総覧）に追加済み
 - [x] 既存設定での動作確認済み
-- [ ] コードレビュー（ドキュメントレビュー）完了
+- [x] コードレビュー（ドキュメントレビュー）完了
 
 ## 参照
 - ブレスト報告書: docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md（エージェント連携のトレンド調査）
