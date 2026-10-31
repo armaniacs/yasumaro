@@ -14,9 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件）
+### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件＋後発起票1件）
 
-ブレスト報告書（仕様ギャップ × ユーザージャーニー × 類似ツール比較、docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md）のやること候補9件をRICE採点してPBI化。実行順の推奨: 順位4のROADMAP再同期をラウンド冒頭に着手（以後の裁定の土台）、残りはRICE順。01と03は依存なしで並列着手可。05は新キーを触る機能より先が安全。詳細は [2026-10-31-00-backlog-next-phase-do-dont.md](2026-10-31-00-backlog-next-phase-do-dont.md)。
+ブレスト報告書（仕様ギャップ × ユーザージャーニー × 類似ツール比較、docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md）のやること候補9件をRICE採点してPBI化。実行順の推奨: 順位4のROADMAP再同期をラウンド冒頭に着手（以後の裁定の土台）、残りはRICE順。01と03は依存なしで並列着手可。05は新キーを触る機能より先が安全。詳細は [2026-10-31-00-backlog-next-phase-do-dont.md](2026-10-31-00-backlog-next-phase-do-dont.md)。10 は PBI 07 の着手前検証で発見した照合不整合の後発起票で、07 のレシピ前提を成立させるため 07 より先に実装する。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
@@ -29,6 +29,7 @@
 | 07 | [2026-10-31-07-docs-mcp-bridge-recipe.md](2026-10-31-07-docs-mcp-bridge-recipe.md) | docs | 2.0 | 0.25人週相当 | MemexのMCP露出。既存webhook経由のレシピ文書。コード追加なし |
 | 08 | [2026-10-31-08-refactor-settings-ia-reorg.md](2026-10-31-08-refactor-settings-ia-reorg.md) | refactor | 1.3 | 1.5人週相当 | 29パネルの発見可能性。検索か再編の縦スライス |
 | 09 | [2026-10-31-09-investigate-obsidian-write-conflict.md](2026-10-31-09-investigate-obsidian-write-conflict.md) | investigate | 0.5 | 0.5人週相当 | RMW競合（README自認）。hash前提条件の要否判断材料 |
+| 10 | [2026-10-31-10-feat-webhook-loopport-match.md](2026-10-31-10-feat-webhook-loopport-match.md) | fix | 3.0 | 0.25人週相当 | 07 のレシピ前提（ローカル宛到達可）を実機検証が否定。宣言済み16ループバックパターンがwebhookゲートで一致不能。07の先行修正 |
 
 ### 2026-10-25 gateway理由保持 ― ✅ 1件完了・アーカイブ対象（12）
 
