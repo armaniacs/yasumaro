@@ -93,16 +93,29 @@ Key groups:
 
 Do not reintroduce substring tests such as `key.includes('_version')`. They classify by appearance, which both misclassifies settings whose name merely ends in `_version` (`gemini_api_version`, a dashboard-editable value) and says nothing about the CAS records (`settings_version`) they were meant to exclude ― those are already rejected because they are not `StorageKeys` values.
 
-A key belongs on the allowlist when its owning module reads or writes it directly through `chrome.storage.local`, because migrating it deletes the only copy that owner can see. Current members:
+A key belongs on the allowlist when its owning module reads or writes it directly through `chrome.storage.local`, because migrating it deletes the only copy that owner can see. Current members (46 keys, grouped by owner; the SSOT is the `TOP_LEVEL_ONLY_KEYS` set in `settingsMigration.ts` and the `RAW_OWNED_KEYS` table in the audit pin, kept in lockstep):
 
-| Key | Owner |
+| Owner | Keys |
 |-----|-------|
-| `encryption_salt`, `encryption_secret`, `hmac_secret`, `master_password_salt`, `master_password_hash` | keyring in `storage/encryptionSession.ts` ― relocating strands the ciphertext |
-| `privacy_consent_version` | `storage/privacyConsent.ts` |
-| `tranco_version` | `trustDb/trancoConsentManager.ts` |
-| `trust_db:json` | `trustDb/TrustDbKernel.ts` (persists it with its own `withOptimisticLock` on the raw key) |
+| keyring in `storage/encryptionSession.ts` | `ENCRYPTION_SALT`, `ENCRYPTION_SECRET`, `HMAC_SECRET`, `MASTER_PASSWORD_SALT`, `MASTER_PASSWORD_HASH` ― re-encrypting or relocating strands the ciphertext |
+| master-password auth metadata (`encryptionSession.ts`, `authGuard.ts`, `settingsMigration.ts`, `privacyConsent.ts`, `SettingsRepository.ts`) | `MASTER_PASSWORD_ENABLED`, `MASTER_PASSWORD_KDF_ITERATIONS`, `IS_LOCKED` (audit gap: folding them takes the anonymous path while the stored ciphertext is still master-KEK-encrypted), `MASTER_PASSWORD_PENDING_SALT`, `MASTER_PASSWORD_PENDING_HASH` (KEK-transition anchor a restart must find) |
+| consent + Tranco version state (`storage/privacyConsent.ts`, `trustDb/trancoConsentManager.ts`) | `PRIVACY_CONSENT_VERSION`, `TRANCO_VERSION`, `PRIVACY_CONSENT`, `PRIVACY_CONSENT_DENIED_COUNT`, `PRIVACY_CONSENT_LAST_DENIAL_TIME` (one unit: record + ack version + denial counters), `CONTENT_STORAGE_ENABLED` |
+| recording trigger manager | `RECORDING_TRIGGERS`, `SNAPSHOT_INTERVAL_MINUTES` |
+| device-local trust database (`trustDb/TrustDbKernel.ts`) | `TRUST_DB` (persists it with its own `withOptimisticLock` on the raw key) |
+| AI usage counters (`aiUsageTracker.ts`) | `AI_USAGE_MONTH`, `AI_USAGE_TOKENS_SENT`, `AI_USAGE_TOKENS_RECEIVED`, `AI_USAGE_REQUEST_COUNT`, `AI_RATE_LIMIT_WINDOW_START`, `AI_RATE_LIMIT_COUNT` (migration would look like "the month changed" and silently reset them) |
+| SQLite engine migration state (`sqliteEngineHost.ts` and its worker modules) | `YASUMARO_MIGRATION_STATUS`, `YASUMARO_MIGRATION_PROGRESS`, `YASUMARO_MIGRATION_RETRY_COUNT`, `OPFS_FALLBACK_MODE`, `OPFS_MIGRATION_V2_DONE`, `OPFS_MIGRATION_V2_LAST_ATTEMPTED_AT`, `OPFS_MIGRATION_V2_COMPLETED_AT`, `OPFS_MIGRATION_V2_RECORD_COUNT`, `IDB_MIGRATION_V2_DONE`, `IDB_MIGRATION_BACKUP` |
+| permission-ladder opt-in (`contentFetchGateway.ts`) | `ALLOW_ALL_URLS_OPT_IN` |
+| last capture outcome (content script writes, dashboard collector reads) | `LAST_CAPTURE_OUTCOME` |
+| recording pause deadline (`recordingPause.ts`) | `RECORDING_PAUSED_UNTIL` |
+| navigation-trail opt-in (`navTrailConsent.ts`) | `NAV_TRAIL_CONSENT` |
+| content-script domain-filter cache mirror (`domainFilterCache.ts`) | `DOMAIN_FILTER_CACHE`, `DOMAIN_FILTER_CACHE_TIMESTAMP`, `DOMAIN_FILTER_MODE` |
+| derived allowlist mirror (`allowedUrlsSync.ts`) | `ALLOWED_URLS`, `ALLOWED_URLS_HASH` (no stored-copy reader today; the owner writes it raw, so the written copy stays in place) |
+| dashboard history-panel sort (`sqliteHistoryModel.ts`) | `HISTORY_SORT_PREFERENCE` |
+| cleansing feedback queue (`aiSummaryCleaner/feedbackQueue.ts`) | `CLEANSING_FEEDBACK_QUEUE` (the queue's lock persists at the same key) |
 
-Adding a raw-owned key to `StorageKeys` without classifying it here deletes user state on the next migration. That audit is open work; this table is the contract for what is classified so far.
+Adding a raw-owned key to `StorageKeys` without classifying it here deletes user state on the next migration. The audit is complete as of 2026-10-31: the scanner in `src/utils/storage/__tests__/raw-owned-keys-audit-pin.test.ts` walks every non-test `.ts` file on each run and pins this table and the implementation allowlist in lockstep, so an unclassified raw-owned key fails the pin instead of deleting user state.
+
+A small set of keys stays migratable even though something reads them raw, because the owner is the settings blob: `privacy_mode` and `pii_confirmation_ui` (legacy evidence queries only) and `cleansing_offscreen_enabled` (a delegation gate whose top-level read silently goes off after folding ― follow-up PBI candidate).
 
 ### 5.1.2 Settings migration state machine
 
