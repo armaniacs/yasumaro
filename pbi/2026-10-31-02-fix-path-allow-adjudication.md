@@ -32,12 +32,14 @@ Scenario: 文言と実装の不一致の検出（境界）
 ```
 
 ## 受け入れ基準
-- [ ] 裁定タスク（(a) path 照合を実装する、(b) UI文言を「ドメイン許可」に統一する）が完了し、選択理由が記録されている
-- [ ] 選択した裁定に合わせて README（日英）と PRIVACY.md の記述が実装と同期している
-- [ ] public/PRIVACY.md と docs/PRIVACY.md がバイト同一である
-- [ ] 確認ダイアログの文言（data-i18n、_locales/ja/en）と実装のマッチング範囲が一致している
-- [ ] 単体テスト（whitelistWriter の分類・正規化）と統合テスト（確認ダイアログ経路の許可適用）がパスする
-- [ ] E2E テストでプライベート判定ページの許可選択後の挙動が文言どおりであることを確認している
+- [x] 裁定タスク（(a) path 照合を実装する、(b) UI文言を「ドメイン許可」に統一する）が完了し、選択理由が記録されている
+  - 裁定（2026-10-31 ユーザー確定済み）: (b) UI 選択肢・文言を「ドメイン許可」に統一（実装は hostname 正規化のまま）。選択理由: 「パス許可」ボタンと「ドメイン許可」ボタンは hostname 正規化で完全に同一動作（extractDomain は extractHostname のエイリアス）のため、「このパスのみ許可」の表示は実際の許可範囲（ドメイン全体）と不一致で、ユーザーのプライバシー期待を裏切る。パス許可の選択肢を削除し、選択肢を「ドメイン許可」1 つに統一した
+  - (a) path 照合の実装は裁定により実施せず（未実施）。将来候補として ROADMAP 条件付き C9 に記録済み（本タスクでは実装しない）
+- [x] 選択した裁定に合わせて README（日英）と PRIVACY.md の記述が実装と同期している
+- [x] public/PRIVACY.md と docs/PRIVACY.md がバイト同一である
+- [x] 確認ダイアログの文言（data-i18n、_locales/ja/en）と実装のマッチング範囲が一致している
+- [x] 単体テスト（whitelistWriter の分類・正規化）と統合テスト（確認ダイアログ経路の許可適用）がパスする
+- [x] E2E テストでプライベート判定ページの許可選択後の挙動が文言どおりであることを確認している
 
 ## テスト戦略
 ### E2Eテスト
@@ -78,9 +80,9 @@ path whitelist エントリはかつてどの consumer でも一度もマッチ�
 1pt目安（0.5人週相当）: 本体は裁定とドキュメント同期。(a) を選んでも path 照合は gateway 1 ファイルの変更で可能な状態にされている（アーカイブ済み PBI 2026-09-12-05 の記録）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（README 日英、PRIVACY.md 2 箇所バイト同一）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（シナリオ 1: privatePageDialog / whitelistWriter の正規化テストと E2E の save-domain 経路。シナリオ 2: E2E の #dialog-save-path not.toBeAttached ピン、golden pin、check-i18n の ja/en キー対称性）
+- [x] コードレビュー完了（セルフレビュー: 「パス許可」関連文言の残存 grep 0 件、PRIVACY.md byte-identical、validate 全グリーン）
+- [x] ドキュメント更新済み（README 日英、PRIVACY.md 2 箇所バイト同一）
 
 ## 参照
 - ブレスト報告書: docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md（プライバシー系の約束と実装の不一致）
