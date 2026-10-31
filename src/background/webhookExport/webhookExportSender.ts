@@ -141,8 +141,10 @@ export function defaultWebhookFetch(
  * Chrome match-pattern semantics the declared entries use: `<all_urls>`
  * (match-pattern schemes only, noted inline), a `*` scheme (http|https only),
  * a `*` / `*.host` / exact host, and a path glob — with one fail-closed path
- * deviation noted inline. Exported pure so the unit tests can pin the
- * semantics without a manifest.
+ * deviation noted inline. An exact host that carries an explicit port (the
+ * declared loopback entries) matches the URL's host+port; a portless host
+ * keeps the any-port hostname comparison. Exported pure so the unit tests
+ * can pin the semantics without a manifest.
  */
 export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean {
   let parsed: URL;
@@ -172,12 +174,22 @@ export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean
     return false;
   }
   const hostname = parsed.hostname;
+  // PBI 2026-10-31-10: a pattern host that carries an explicit port (the
+  // declared loopback entries, e.g. 127.0.0.1:27123) is compared against the
+  // URL's host+port — parsed.host keeps an explicit port and drops the
+  // scheme default — because parsed.hostname is portless and never matched a
+  // ported declaration. A portless pattern keeps the hostname comparison
+  // (any port matches), and the `*` / `*.host` wildcard branches below are
+  // NOT widened to port matching. The lastIndexOf guard keeps a portless
+  // IPv6 pattern host (`[::1]`) on the hostname path.
+  const patternHostHasPort = host.lastIndexOf(':') > host.lastIndexOf(']');
+  const urlHost = patternHostHasPort ? parsed.host : hostname;
   if (host === '*') {
     // Any host.
   } else if (host.startsWith('*.')) {
     const base = host.slice(2);
     if (hostname !== base && !hostname.endsWith(`.${base}`)) return false;
-  } else if (host !== hostname) {
+  } else if (host !== urlHost) {
     return false;
   }
   const path = `${parsed.pathname}${parsed.search}`;
