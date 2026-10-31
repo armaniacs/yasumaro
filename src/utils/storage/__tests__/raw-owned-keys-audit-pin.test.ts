@@ -17,8 +17,11 @@
  * illegal, so it does the things that are actually checkable:
  *
  *   1. every non-test .ts source under `src/` and `entrypoints/` is scanned
- *      for direct `chrome.storage.local` read/write call sites, so a broken
- *      collector cannot pass silently, and
+ *      for direct `chrome.storage.local` read/write call sites — including
+ *      optional-chain, receiver-alias and call-return receiver forms
+ *      (`chrome?.storage?.local?.get`, `g.storage.local.get`,
+ *      `this.storage.local.set`, `this.getChromeApi()?.storage?.local?.get`) —
+ *      so a broken collector cannot pass silently, and
  *   2. every `StorageKeys` value resolved at such a call site must be on the
  *      `TOP_LEVEL_ONLY_KEYS` allowlist parsed straight out of the
  *      `settingsMigration.ts` source — a raw-owned key added to `StorageKeys`
@@ -38,8 +41,10 @@
  * and say nothing about the CAS records they were meant to exclude. The
  * declared probe reads below are the one exception the audit records
  * explicitly: `privacy_mode` / `pii_confirmation_ui` are read raw only by the
- * one-time legacy-consent evidence probe, and their owner is the settings blob,
- * so they keep migrating.
+ * one-time legacy-consent evidence probe, and `cleansing_offscreen_enabled` is
+ * read raw by the actual offscreen-delegation gate in
+ * `content/cleansingOffscreenDelegate.ts` — all three are owned by the
+ * settings blob, so they keep migrating.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -102,7 +107,7 @@ const RAW_OWNED_KEYS = {
     // Last capture outcome written by the content script, read by the dashboard.
     LAST_CAPTURE_OUTCOME: 'utils/captureOutcome.ts — written/read straight from top-level storage (PBI 2026-10-22-06)',
     // PBI 2026-10-31-05: gaps the audit found — raw-owned but unclassified.
-    MASTER_PASSWORD_ENABLED: 'storage/encryptionSession.ts writes it on master-password setup; authGuard.ts, settingsMigration.ts, privacyConsent.ts and SettingsRepository.ts read it straight from top-level storage — folding it strands the master-KEK ciphertext and opens a locked session',
+    MASTER_PASSWORD_ENABLED: 'storage/encryptionSession.ts writes it on master-password setup; authGuard.ts, settingsMigration.ts and privacyConsent.ts read it straight from top-level storage (SettingsRepository.ts and SessionAlarmService.ts read the same top-level key through the Port seam) — folding it strands the master-KEK ciphertext and opens a locked session',
     MASTER_PASSWORD_KDF_ITERATIONS: 'storage/encryptionSession.ts — KDF iteration record written/read straight from top-level storage',
     IS_LOCKED: 'storage/encryptionSession.ts writes it on lock/unlock; authGuard.ts reads it straight from top-level storage — folding it reports an unlocked session for a locked one',
     CONTENT_STORAGE_ENABLED: 'storage/privacyConsent.ts — acceptConsent writes it, the record-flow gate reads it straight from top-level storage',
@@ -117,7 +122,11 @@ const RAW_OWNED_KEYS = {
     RECORDING_PAUSED_UNTIL: 'background/recordingPause.ts — pause deadline read/written/removed straight from top-level storage',
 } satisfies Record<string, string>;
 
-/** Keys read raw only by a one-time probe; their owner is the settings blob. */
+/**
+ * Keys read raw but owned by the settings blob, so folding them is by design.
+ * Each reason states the measured behavior of the raw read, not the intended
+ * one; a new entry must record what the read actually drives.
+ */
 const DECLARED_MIGRATABLE_RAW_READS = [
     {
         key: StorageKeys.PRIVACY_MODE,
@@ -127,13 +136,17 @@ const DECLARED_MIGRATABLE_RAW_READS = [
         key: StorageKeys.PII_CONFIRMATION_UI,
         reason: 'same one-time evidence probe; a dashboard-editable user setting whose owner is the settings blob',
     },
+    {
+        key: StorageKeys.CLEANSING_OFFSCREEN_ENABLED,
+        reason: 'read raw as the actual gate decision (isCleansingOffscreenEnabled in content/cleansingOffscreenDelegate.ts: the top-level read picks offscreen delegation vs the sync fallback, cached once and invalidated by storage.onChanged on the same top-level key); the owner is the settings blob (DEFAULT_SETTINGS) and the tree has no top-level writer, so folding is by design — but the gate has no blob-tier reader, so a legacy profile whose top-level copy folds on the next migration silently loses an enabled flag and falls back to sync cleansing (follow-up PBI candidate)',
+    },
 ] as const;
 
 /**
  * Direct call sites whose first argument is a parameter (a function argument,
- * a cross-file constant) the scanner cannot resolve statically. Each declares
- * the member keys its callers trace to; a new parameterized helper must be
- * declared here or the pin fails.
+ * a cross-file constant, or an object-member constant) the scanner cannot
+ * resolve statically. Each declares the member keys its callers trace to; a
+ * new parameterized helper must be declared here or the pin fails.
  */
 const KEY_PARAMETERIZED_HELPERS = [
     {
@@ -196,6 +209,11 @@ const KEY_PARAMETERIZED_HELPERS = [
         tracedMembers: [StorageKeys.RECORDING_TRIGGERS, StorageKeys.SNAPSHOT_INTERVAL_MINUTES],
     },
     {
+        file: 'src/utils/RateLimitService.ts',
+        reason: 'flushPendingWrites/checkRateLimit/resetFailedAttempts call this.storage.local (the injected StoragePort whose default is CHROME_STORAGE_PORT) with the module-local STORAGE_KEYS constants passwordFailedAttempts, firstFailedAttemptTime and lockedUntil (not StorageKeys values)',
+        tracedMembers: [],
+    },
+    {
         file: 'src/utils/storage/encryptionSession.ts',
         reason: 'the HMAC quarantine key is a template of the classified hmac_secret plus the cross-file QUARANTINE_SUFFIX constant (not a StorageKeys value)',
         tracedMembers: [],
@@ -204,8 +222,16 @@ const KEY_PARAMETERIZED_HELPERS = [
 
 /* ------------------------------------------------------------------ scanner */
 
-/** Receiver + method of a direct chrome.storage.local read/write call. */
-const DIRECT_STORAGE_CALL_RE = /chrome\.storage\.local\.(get|set|remove|getBytesInUse|clear)\s*\(/g;
+/**
+ * Receiver + method of a direct chrome.storage.local read/write call. The
+ * receiver may be the chrome global itself, an alias, or an optional/call-return
+ * chain (`chrome?.storage?.local?.get`, `g.storage.local.get`,
+ * `this.storage.local.set`, `this.getChromeApi()?.storage?.local?.get`), so a
+ * call whose `.storage.local` member chain is spelled out still matches even
+ * when the receiver is not the chrome global itself.
+ */
+const DIRECT_STORAGE_CALL_RE =
+    /\b[A-Za-z_$][\w$]*(?:\(\))?\??\.storage\??\.local\??\.(get|set|remove|getBytesInUse|clear)\s*\(/g;
 
 const PRODUCTION_ROOTS = ['src', 'entrypoints'] as const;
 const SKIP_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.wxt', 'coverage']);
@@ -606,7 +632,10 @@ function rawOwnedMemberKeys(): ReadonlySet<string> {
  * keeps the audit honest about the implementation it guards.
  */
 function parseTopLevelOnlyKeys(): ReadonlySet<string> {
-    const source = readFileSync(join(process.cwd(), 'src/utils/storage/settingsMigration.ts'), 'utf8');
+    const raw = readFileSync(join(process.cwd(), 'src/utils/storage/settingsMigration.ts'), 'utf8');
+    // Comments first: a `StorageKeys.X` mention inside a comment would
+    // otherwise be parsed as a member of the allowlist.
+    const source = stripComments(raw);
     const declStart = source.indexOf('const TOP_LEVEL_ONLY_KEYS');
     if (declStart < 0) {
         throw new Error('TOP_LEVEL_ONLY_KEYS no longer exists in settingsMigration.ts — update the pin');
