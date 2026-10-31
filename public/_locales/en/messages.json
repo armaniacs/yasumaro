@@ -1413,9 +1413,6 @@
   "saveDomain": {
     "message": "Save & Allow Domain"
   },
-  "savePath": {
-    "message": "Save & Allow Path"
-  },
   "saveSuccess": {
     "message": "Saved successfully"
   },
@@ -1424,9 +1421,6 @@
   },
   "domainAddedToWhitelist": {
     "message": "Domain added to whitelist"
-  },
-  "pathAddedToWhitelist": {
-    "message": "Path added to whitelist"
   },
   "statusInvalidUrl": {
     "message": "Invalid URL"

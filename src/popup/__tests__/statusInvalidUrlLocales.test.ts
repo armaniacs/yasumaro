@@ -1,70 +1,16 @@
 // @vitest-environment jsdom
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// Locale pin for statusInvalidUrl: the no-domain writer result still has a
+// user-facing message in both locales (the wireWhitelistButton result branch).
+// The historical statusAddPath button was removed by the 2026-10-31
+// adjudication — path adds normalize to the URL's hostname, so its option was
+// behaviorally identical to the domain button and its wording mislabeled the
+// matching scope. The no-domain branch it drove stays as type-complete
+// handling of WhitelistWriteResult and is pinned at runtime by
+// statusPanel-whitelist-wire-golden.test.ts.
+import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { waitForMock } from '../../../testDir/waitPolicy.js';
-
-const { mockGetCurrentTab, mockCheckPageStatus, mockGetAll, mockSetAll } = vi.hoisted(() => ({
-  mockGetCurrentTab: vi.fn(),
-  mockCheckPageStatus: vi.fn(),
-  mockGetAll: vi.fn(),
-  mockSetAll: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock('../tabUtils.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../tabUtils.js')>();
-  return {
-    ...actual,
-    getCurrentTab: mockGetCurrentTab,
-    getActiveTabUrl: async () => (await mockGetCurrentTab())?.url ?? null,
-  };
-});
-
-vi.mock('../statusChecker.js', () => ({ checkPageStatus: mockCheckPageStatus }));
-
-vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-  return {
-    ...actual,
-    settingsRepository: { getAll: mockGetAll, setAll: mockSetAll },
-  };
-});
-
-vi.mock('../../utils/permissionManager.js', () => ({
-  isAllUrlsPermitted: vi.fn().mockResolvedValue(true),
-  isHostPermitted: vi.fn().mockResolvedValue(true),
-  requestPermission: vi.fn(),
-  recordDeniedVisit: vi.fn(),
-  requestAllUrls: vi.fn(),
-}));
-
-vi.mock('../../utils/trustChecker.js', () => ({
-  getTrustLevelDisplay: vi.fn().mockResolvedValue(null),
-  checkDomainTrust: vi.fn().mockResolvedValue(null),
-}));
-
-vi.mock('../../utils/logger/api.js', async () =>
-  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
-    logError: 'fn',
-    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-  }),
-);
-vi.mock('../../utils/logger/types.js', async () =>
-  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
-    logError: 'fn',
-    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-  }),
-);
-vi.mock('../../utils/logger/core.js', async () =>
-  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
-    logError: 'fn',
-    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
-  }),
-);
-
-import { initStatusPanel } from '../statusPanel.js';
-import { setupPopupDom } from './helpers/popupDom.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(here, '..', '..', '..');
@@ -81,92 +27,9 @@ function localeMessage(table: Record<string, { message: string }>, key: string):
   return entry.message;
 }
 
-let activeLocale: 'en' | 'ja' = 'en';
-
-function stubChrome(): void {
-  const tables = { en: enMessages, ja: jaMessages };
-  vi.stubGlobal('chrome', {
-    i18n: {
-      getMessage: (key: string) => tables[activeLocale][key]?.message ?? '',
-    },
-    tabs: { query: vi.fn().mockResolvedValue([]), sendMessage: vi.fn() },
-    runtime: { lastError: null, sendMessage: vi.fn() },
-  });
-}
-
-function setupDom(): void {
-  setupPopupDom({ includePending: false, includeDialogs: false, includeStatusPanel: true });
-}
-
-async function initPrivatePanel(): Promise<void> {
-  setupDom();
-  mockCheckPageStatus.mockResolvedValue({
-    domainFilter: { allowed: true, mode: 'disabled' },
-    privacy: { isPrivate: true, hasCache: true, reason: 'cache-control' },
-    cache: { hasCache: false },
-    lastSaved: { exists: false },
-  });
-  await initStatusPanel();
-}
-
-beforeEach(() => {
-  vi.clearAllMocks();
-  mockGetAll.mockResolvedValue({ privacy_mode: 'full_pipeline', domain_whitelist: [] });
-  mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 });
-});
-
-afterEach(() => {
-  document.body.innerHTML = '';
-  vi.unstubAllGlobals();
-});
-
 describe('statusPanel invalid URL locales', () => {
-  describe('locale pin', () => {
-    it('registers statusInvalidUrl in both locales with non-empty copy', () => {
-      expect(localeMessage(enMessages, 'statusInvalidUrl')).toBeTruthy();
-      expect(localeMessage(jaMessages, 'statusInvalidUrl')).toBeTruthy();
-    });
-  });
-
-  describe('addPath no-domain branch', () => {
-    it('shows the Japanese copy for an unparseable URL', async () => {
-      activeLocale = 'ja';
-      stubChrome();
-      await initPrivatePanel();
-      mockGetCurrentTab.mockResolvedValue({ url: 'not a url', id: 1 });
-      document.getElementById('statusAddPath')!.click();
-      await waitForMock(() => {
-        expect(document.getElementById('mainStatus')!.textContent).toBe(
-          localeMessage(jaMessages, 'statusInvalidUrl'),
-        );
-      });
-    });
-
-    it('shows the English copy for an unparseable URL', async () => {
-      activeLocale = 'en';
-      stubChrome();
-      await initPrivatePanel();
-      mockGetCurrentTab.mockResolvedValue({ url: 'not a url', id: 1 });
-      document.getElementById('statusAddPath')!.click();
-      await waitForMock(() => {
-        expect(document.getElementById('mainStatus')!.textContent).toBe(
-          localeMessage(enMessages, 'statusInvalidUrl'),
-        );
-      });
-    });
-
-    it('falls back to the English default when the key is missing', async () => {
-      vi.stubGlobal('chrome', {
-        i18n: { getMessage: () => '' },
-        tabs: { query: vi.fn().mockResolvedValue([]), sendMessage: vi.fn() },
-        runtime: { lastError: null, sendMessage: vi.fn() },
-      });
-      await initPrivatePanel();
-      mockGetCurrentTab.mockResolvedValue({ url: 'not a url', id: 1 });
-      document.getElementById('statusAddPath')!.click();
-      await waitForMock(() => {
-        expect(document.getElementById('mainStatus')!.textContent).toBe('Invalid URL');
-      });
-    });
+  it('registers statusInvalidUrl in both locales with non-empty copy', () => {
+    expect(localeMessage(enMessages, 'statusInvalidUrl')).toBeTruthy();
+    expect(localeMessage(jaMessages, 'statusInvalidUrl')).toBeTruthy();
   });
 });

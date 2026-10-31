@@ -2432,10 +2432,6 @@ label.inline-label {
   background: var(--color-info);
 }
 
-.dialog-buttons .btn-confirm#dialog-save-path {
-  background: var(--color-success);
-}
-
 .dialog-buttons .btn-confirm:hover {
   opacity: 0.9;
 }

@@ -302,7 +302,6 @@ const defaultMessages: Record<string, string> = {
   statusTrustAlertSensitive: 'Sensitive site',
   statusNoInfo: 'No info',
   domainAddedToWhitelist: 'Domain added',
-  pathAddedToWhitelist: 'Path added',
   statusPageNotRecordable: 'Page not recordable',
 };
 
@@ -664,7 +663,6 @@ describe('initStatusPanel - extended', () => {
         <div id="permissionDeniedMessage" class="hidden"></div>
         <button id="recordBtn"></button>
         <button id="statusAddDomain"></button>
-        <button id="statusAddPath"></button>
       </div>
     `;
     vi.clearAllMocks();

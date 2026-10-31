@@ -393,7 +393,6 @@ describe('main', () => {
           <button id="dialog-cancel"></button>
           <button id="dialog-save-once"></button>
           <button id="dialog-save-domain"></button>
-          <button id="dialog-save-path"></button>
         </div>
         <div id="pending-section" class="hidden">
           <div id="pending-empty" class="hidden"></div>
@@ -1718,12 +1717,10 @@ describe('main', () => {
       const cancelBtn = document.getElementById('dialog-cancel');
       const saveOnceBtn = document.getElementById('dialog-save-once');
       const saveDomainBtn = document.getElementById('dialog-save-domain');
-      const savePathBtn = document.getElementById('dialog-save-path');
 
       expect(cancelBtn).toBeTruthy();
       expect(saveOnceBtn).toBeTruthy();
       expect(saveDomainBtn).toBeTruthy();
-      expect(savePathBtn).toBeTruthy();
     });
 
     it('should have dialog-message element', () => {

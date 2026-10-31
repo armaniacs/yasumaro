@@ -22,7 +22,6 @@ vi.mock('../../messaging/pendingRecordGateway.js', () => ({
 
 vi.mock('../whitelistWriter.js', () => ({
   addDomainToWhitelist: vi.fn().mockResolvedValue({ ok: true, entry: 'example.com', added: true }),
-  addPathToWhitelist: vi.fn().mockResolvedValue({ ok: true, entry: 'example.com', added: true }),
 }));
 
 vi.mock('../autoClose.js', () => ({ startAutoCloseTimer: vi.fn() }));
@@ -119,17 +118,6 @@ describe('privatePageDialog buttons — a rejected record seam', () => {
     mod.setCurrentPendingSave(pendingSave() as never);
 
     document.getElementById('dialog-save-domain')!.click();
-
-    await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported('worker is asleep');
-  });
-
-  it('reports the save-path failure on #mainStatus', async () => {
-    const mod = await import('../privatePageDialog.js');
-    mod.wireDialogButtons();
-    mod.setCurrentPendingSave(pendingSave() as never);
-
-    document.getElementById('dialog-save-path')!.click();
 
     await vi.waitFor(() => expect(mockLogError).toHaveBeenCalled());
     expectReported('worker is asleep');

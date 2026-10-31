@@ -1,13 +1,16 @@
 // @vitest-environment jsdom
-// Golden pin for the popup whitelist buttons (statusAddDomain / statusAddPath).
+// Golden pin for the popup whitelist button (statusAddDomain).
 //
 // Pins the *behavior* of the shared wiring skeleton before it is extracted into
 // wireWhitelistButton: tab retrieval -> whitelist writer call -> result branch
 // -> statusChannel.report message composition -> reportHandlerError on throw.
 // The writer seam is mocked so every result branch (ok+added / !ok no-domain /
 // !ok invalid-pattern / not-added) and the throw path can be driven directly;
-// the assertions record what the two hand-written blocks do today, so the
-// refactor is proven behavior-preserving.
+// the assertions record what the hand-written block does today, so the
+// refactor is proven behavior-preserving. The historical statusAddPath button
+// was removed by the 2026-10-31 adjudication: path adds normalize to the URL's
+// hostname, so its option was behaviorally identical to the domain button and
+// its wording mislabeled the matching scope.
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { waitForMock, drainMacrotask } from '../../../testDir/waitPolicy.js';
 
@@ -18,7 +21,6 @@ const {
   mockIsHostPermitted,
   mockCheckPageStatus,
   mockAddDomainToWhitelist,
-  mockAddPathToWhitelist,
   mockExtractDomain,
 } = vi.hoisted(() => ({
   mockGetCurrentTab: vi.fn(),
@@ -27,7 +29,6 @@ const {
   mockIsHostPermitted: vi.fn(),
   mockCheckPageStatus: vi.fn(),
   mockAddDomainToWhitelist: vi.fn(),
-  mockAddPathToWhitelist: vi.fn(),
   mockExtractDomain: vi.fn(),
 }));
 const mockGetAll = vi.hoisted(() => vi.fn());
@@ -46,7 +47,6 @@ vi.mock('../tabUtils.js', async (importOriginal) => {
 
 vi.mock('../whitelistWriter.js', () => ({
   addDomainToWhitelist: mockAddDomainToWhitelist,
-  addPathToWhitelist: mockAddPathToWhitelist,
 }));
 
 vi.mock('../../utils/domainUtils.js', () => ({ extractDomain: mockExtractDomain }));
@@ -135,7 +135,6 @@ const defaultMessages: Record<string, string> = {
   statusShowDetails: 'Show Details',
   statusHideDetails: 'Hide Details',
   domainAddedToWhitelist: 'Domain added',
-  pathAddedToWhitelist: 'Path added',
   statusInvalidUrl: 'Invalid URL',
   errorPrefix: 'Error',
 };
@@ -263,77 +262,6 @@ describe('whitelist buttons golden pin — statusAddDomain', () => {
     expect(mainStatusReports()[0]![2]).toBe('error');
     expect(mockLogError).toHaveBeenCalledWith(
       'Failed to add the domain to the whitelist',
-      expect.objectContaining({ cause: expect.any(Error) }),
-      'INT_001',
-    );
-  });
-});
-
-describe('whitelist buttons golden pin — statusAddPath', () => {
-  it('success: reads the tab, adds the URL, reports success, re-inits', async () => {
-    mockAddPathToWhitelist.mockResolvedValue({ ok: true, entry: 'example.com', added: true });
-    await initPrivatePanel();
-    const initsBefore = mockCheckPageStatus.mock.calls.length;
-
-    document.getElementById('statusAddPath')!.click();
-
-    await waitForMock(() => expect(mockAddPathToWhitelist).toHaveBeenCalled());
-    expect(mockGetCurrentTab).toHaveBeenCalled();
-    expect(mockAddPathToWhitelist).toHaveBeenCalledWith('https://example.com/page');
-    await waitForMock(() => expect(mainStatusReports()).toHaveLength(1));
-    expect(mainStatusReports()[0]).toEqual(['mainStatus', 'Path added', 'success']);
-    await waitForMock(() =>
-      expect(mockCheckPageStatus.mock.calls.length).toBeGreaterThan(initsBefore),
-    );
-  });
-
-  it('already added (ok, not added): no report', async () => {
-    mockAddPathToWhitelist.mockResolvedValue({ ok: true, entry: 'example.com', added: false });
-    await initPrivatePanel();
-
-    document.getElementById('statusAddPath')!.click();
-
-    await waitForMock(() => expect(mockAddPathToWhitelist).toHaveBeenCalled());
-    await drainMacrotask();
-    expect(mainStatusReports()).toHaveLength(0);
-  });
-
-  it('no-domain rejection: reports statusInvalidUrl text as error', async () => {
-    mockAddPathToWhitelist.mockResolvedValue({ ok: false, reason: 'no-domain' });
-    await initPrivatePanel();
-
-    document.getElementById('statusAddPath')!.click();
-
-    await waitForMock(() => expect(mainStatusReports()).toHaveLength(1));
-    expect(mainStatusReports()[0]).toEqual(['mainStatus', 'Invalid URL', 'error']);
-  });
-
-  it('invalid-pattern rejection: reports "Invalid pattern: <url>" as error', async () => {
-    mockAddPathToWhitelist.mockResolvedValue({ ok: false, reason: 'invalid-pattern', error: 'nope' });
-    await initPrivatePanel();
-
-    document.getElementById('statusAddPath')!.click();
-
-    await waitForMock(() => expect(mainStatusReports()).toHaveLength(1));
-    expect(mainStatusReports()[0]).toEqual([
-      'mainStatus',
-      'Invalid pattern: https://example.com/page',
-      'error',
-    ]);
-  });
-
-  it('thrown writer error: routes to reportHandlerError with the path log message', async () => {
-    mockAddPathToWhitelist.mockRejectedValue(new Error('settings are locked'));
-    await initPrivatePanel();
-
-    document.getElementById('statusAddPath')!.click();
-
-    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expect(mainStatusReports()).toHaveLength(1);
-    expect(mainStatusReports()[0]![1]).toContain('settings are locked');
-    expect(mainStatusReports()[0]![2]).toBe('error');
-    expect(mockLogError).toHaveBeenCalledWith(
-      'Failed to add the path to the whitelist',
       expect.objectContaining({ cause: expect.any(Error) }),
       'INT_001',
     );

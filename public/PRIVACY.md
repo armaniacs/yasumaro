@@ -1,12 +1,13 @@
 # プライバシーポリシー / Privacy Policy
 
-**最終更新日: 2026年10月1日 / Last Updated: October 1, 2026**
+**最終更新日: 2026年10月31日 / Last Updated: October 31, 2026**
 **同意バージョン: 2026年9月8日 / Consent Version: September 8, 2026**
 
 > 最終更新日は文書の改訂日です。全利用者に再同意を求める場合は「同意バージョン」を更新します。
 > The Last Updated date is the document's revision date. Re-prompting every user is driven by the Consent Version line instead.
 
 > **更新履歴 / Update History**:
+> - **2026年10月31日**: 確認ダイアログの選択肢を「ドメインを許可して保存」に統一し、「このパスのみ許可して保存」を削除（実際の許可範囲はドメイン単位のため、表示と実装の不一致を解消。収集範囲は変わらないため同意バージョンは据え置き）
 > - **2026年10月23日**: AI 送信の監査ログに送信文字数とドメイン別送信政策の判定が記録される旨を追記（記録内容の明確化であり収集範囲は変わらないため同意バージョンは据え置き）
 > - **2026年10月1日**: AI 送信の監査ログの保持期間（7日、利用者設定では延長不可）と、「すべてのデータを削除」で削除される旨を追記（保持の明確化であり収集範囲は変わらないため同意バージョンは据え置き）
 > - **2026年9月27日**: API キーの自動暗号化について、マスターパスワード未設定時に secret を平文で保存していた記述を、専用 KEK でラップした envelope のみを保存する実装へ更新（露出範囲の縮小のため同意バージョンは据え置き）
@@ -102,7 +103,6 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
      - キャンセル
      - 今回のみ保存（強制保存）
      - ドメイン全体を許可して保存（ホワイトリスト追加）
-     - このパスのみ許可して保存（パスホワイトリスト追加）
 
 2. **自動記録時**:
    - プライベートページは「保留中のページ」として一時保存されます
@@ -424,7 +424,6 @@ Detected pages are protected as follows:
      - Cancel
      - Save once (force save)
      - Save and allow entire domain (add to whitelist)
-     - Save and allow this path only (add path to whitelist)
 
 2. **Auto Recording**:
    - Private pages are temporarily saved as "Pending Pages"

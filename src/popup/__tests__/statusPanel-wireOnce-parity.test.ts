@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-// Parity pin — re-init must not stack duplicate statusAddDomain /
-// statusAddPath handlers (wireOnce discipline, same as the toggle /
+// Parity pin — re-init must not stack duplicate statusAddDomain handlers
+// (wireOnce discipline, same as the toggle /
 // permission / feedback buttons). Pinned at runtime, not by source regex:
 // the attach spy proves each persistent button node gets exactly one click
 // listener across 2x init — attach is where a stacked duplicate would have
@@ -115,7 +115,6 @@ const defaultMessages: Record<string, string> = {
   statusShowDetails: 'Show Details',
   statusHideDetails: 'Hide Details',
   domainAddedToWhitelist: 'Domain added',
-  pathAddedToWhitelist: 'Path added',
   errorGeneric: 'An error occurred.',
 };
 
@@ -197,24 +196,6 @@ describe('statusPanel wireOnce parity — re-init does not duplicate whitelist w
       await initStatusPanel();
       await initStatusPanel();
       const visibleBtn = document.getElementById('statusAddDomain') as HTMLButtonElement;
-      expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
-      visibleBtn.click();
-      await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
-      expect(mockUpdateWhitelist).toHaveBeenCalledTimes(1);
-    } finally {
-      observed.restore();
-    }
-  });
-
-  it('statusAddPath: 2x init + 1 click => exactly 1 write', async () => {
-    setupDefaultDom();
-    stubTabs();
-    privateStatus();
-    const observed = observeClickAttaches();
-    try {
-      await initStatusPanel();
-      await initStatusPanel();
-      const visibleBtn = document.getElementById('statusAddPath') as HTMLButtonElement;
       expect(observed.targets.filter((t) => t === visibleBtn)).toHaveLength(1);
       visibleBtn.click();
       await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());

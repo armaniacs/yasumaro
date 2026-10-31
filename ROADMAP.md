@@ -45,8 +45,8 @@
 
 ### T4. 既存 UI と実装のギャップの裁定（パス許可）
 
-- 現状: プライベートページ確認ダイアログは「パス許可」の選択肢を提示するが、実装はホスト名に正規化され、パス単位マッチングは未実装（[whitelistWriter.ts](src/popup/whitelistWriter.ts)、[DESIGN_SPECIFICATIONS.md 13.5](dev-docs/DESIGN_SPECIFICATIONS.md)）
-- TODO: パス単位マッチングを実装するか、UI の選択肢を「ドメイン許可」に統一するかを裁定し、UI と実装を一致させる。どちらを選ぶ場合も README と PRIVACY.md の記述を同期させる
+- 現状: 裁定済み（2026-10-31）: UI の選択肢を「ドメイン許可」に統一し、「パス許可」の選択肢は削除済み。README（日英）と PRIVACY.md も同期済み。実装はホスト名に正規化のまま（[whitelistWriter.ts](src/popup/whitelistWriter.ts)、[DESIGN_SPECIFICATIONS.md 13.5](dev-docs/DESIGN_SPECIFICATIONS.md)）
+- TODO: パス単位照合は条件付き C9 の将来候補。ユーザー要望など製品判断が出た時のみ再評価し、その際は README と PRIVACY.md の記述を同時に同期させる
 
 ### T5. 開示・ポリシー整合の運用（常設チェックリスト）
 
@@ -94,6 +94,7 @@
 | C6 | Obsidian 公式 CLI 経由の書き込み | Obsidian Local REST API が使えなくなった時の代替として評価（[obsidian.md/help/cli](https://obsidian.md/help/cli)）。現設計が壊れるまで作らない |
 | C7 | IDB 中間層の廃止（Option B） | fallback-only 到達率の測定後。未測定のまま決定することは禁止（[backlog-future 台帳](pbi/2026-09-05-00-backlog-future.md)、プライバシー制約下の計測設計が先） |
 | C8 | popup / settingsScreen の復活 | 製品判断が出た時（デッドコードは削除済み、戻す場合は新規実装） |
+| C9 | パス単位照合（ホワイトリストの path エントリ） | ユーザー要望など製品判断が出た時。gateway 1 ファイル（[whitelistWriter.ts](src/popup/whitelistWriter.ts)）の変更で可能な状態。UI は 2026-10-31 裁定で「ドメイン許可」に統一済み（T4） |
 
 ### プラットフォームに任せるもの ― 自前実装しない・監視対象
 

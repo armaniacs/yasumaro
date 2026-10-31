@@ -163,9 +163,7 @@ const defaultMessages: Record<string, string> = {
   privacyModeMaskedCloudShort: 'Masked',
   privacyModeCloudOnlyShort: 'Cloud',
   domainAddedToWhitelist: 'Domain added',
-  pathAddedToWhitelist: 'Path added',
   saveDomain: 'Save domain',
-  savePath: 'Save path',
   errorGeneric: 'An error occurred.',
 };
 
@@ -212,7 +210,6 @@ function setupDefaultDom(): void {
     '  <div id="permissionDeniedMessage" class="hidden"></div>',
     '  <button id="recordBtn"></button>',
     '  <button id="statusAddDomain"></button>',
-    '  <button id="statusAddPath"></button>',
     '</div>',
   ].join('\n');
 }
@@ -1082,7 +1079,7 @@ describe('initStatusPanel — missing DOM branches', () => {
 // ──────────────────────────────────────────────
 // attachPrivacyActionListeners — core branches (374-390, 398-412)
 // ──────────────────────────────────────────────
-describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
+describe('attachPrivacyActionListeners — addDomain branches', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetMessage.mockImplementation((key: string, subs?: any) => {
@@ -1266,86 +1263,11 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
     if (orig) mockGetMessage.mockImplementation(orig as any);
   });
 
-  it('addPath: success path — adds the URL hostname (PBI 2026-09-12-05)', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: [] });
-    await initPrivatePanel();
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    expect(btn).toBeTruthy();
-    btn.click();
-    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
-    const updater = mockUpdateWhitelist.mock.calls[0]![0] as (current: string[]) => string[];
-    // The historical raw-URL entry could never match any whitelist consumer
-    // (all match hostnames) — the writer normalizes to the hostname.
-    expect(updater([])).toContain('example.com');
-    expect(document.getElementById('mainStatus')!.textContent).toContain('Path added');
-  });
-
-  it('addPath: url already in whitelist — skips save', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: ['example.com'] });
-    await initPrivatePanel();
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await drainMacrotask();
-    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
-  });
-
-  it('addPath: tab.url undefined — early return', async () => {
-    await initPrivatePanel();
-    // Click-time seam setup (init render above used the default seam tab).
-    mockGetCurrentTab.mockResolvedValue({ url: undefined } as any);
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await drainMacrotask();
-    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
-  });
-
-  it('addPath: tab is null — early return', async () => {
-    await initPrivatePanel();
-    // Click-time seam setup (init render above used the default seam tab).
-    mockGetCurrentTab.mockResolvedValue(null as any);
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await drainMacrotask();
-    expect(mockUpdateWhitelist).not.toHaveBeenCalled();
-  });
-
-  it('addPath: whitelist undefined fallback', async () => {
-    mockGetAll.mockResolvedValue({} as any);
-    await initPrivatePanel();
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
-  });
-
-  it('addPath: statusDiv missing — still saves', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: [] });
-    await initPrivatePanel();
-    document.getElementById('mainStatus')!.remove();
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await waitForMock(() => expect(mockUpdateWhitelist).toHaveBeenCalled());
-  });
-
-  it('addPath: getMessage fallback when empty', async () => {
-    mockGetAll.mockResolvedValue({ domain_whitelist: [] });
-    const orig = mockGetMessage.getMockImplementation();
-    mockGetMessage.mockImplementation((key: string) => {
-      if (key === 'pathAddedToWhitelist') return '';
-      return defaultMessages[key] || key;
-    });
-    await initPrivatePanel();
-    const btn = document.getElementById('statusAddPath') as HTMLButtonElement;
-    btn.click();
-    await waitForMock(() => expect(document.getElementById('mainStatus')!.textContent).toContain('Added path'));
-    if (orig) mockGetMessage.mockImplementation(orig as any);
-  });
-
-  it('handles missing addDomain/addPath buttons gracefully', async () => {
+  it('handles a missing addDomain button gracefully', async () => {
     setupDefaultDom();
     setDefaultChromeTabsQuery();
-    // Remove buttons before init so attachPrivacy finds null
+    // Remove the button before init so attachPrivacy finds null
     document.getElementById('statusAddDomain')!.remove();
-    document.getElementById('statusAddPath')!.remove();
     // Manually trigger private panel rendering but with no buttons in template
     // We instead call init with private and then ensure no throw when buttons missing
     // The render creates buttons, so we remove them immediately after init before second init
@@ -1356,9 +1278,8 @@ describe('attachPrivacyActionListeners — addDomain/addPath branches', () => {
       lastSaved: { exists: false },
     });
     await initStatusPanel();
-    // Remove the newly created buttons to simulate missing
+    // Remove the newly created button to simulate missing
     document.getElementById('statusAddDomain')?.remove();
-    document.getElementById('statusAddPath')?.remove();
     // Re-run attach via another private init without buttons present in DOM at attach time
     mockCheckPageStatus.mockResolvedValue({
       domainFilter: { allowed: true, mode: 'disabled' },
@@ -1595,16 +1516,6 @@ describe('statusPanel async handlers — rejected dependencies', () => {
     await initPrivatePanel();
 
     document.getElementById('statusAddDomain')!.click();
-
-    await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
-    expectReported('settings are locked');
-  });
-
-  it('addPath: a rejected whitelist write lands on mainStatus and the log', async () => {
-    mockUpdateWhitelist.mockRejectedValue(new Error('settings are locked'));
-    await initPrivatePanel();
-
-    document.getElementById('statusAddPath')!.click();
 
     await waitForMock(() => expect(mockLogError).toHaveBeenCalled());
     expectReported('settings are locked');

@@ -69,7 +69,11 @@ test.describe('Popup - Private Page Dialog @ui', () => {
     await expect(page.locator('#dialog-cancel')).toBeAttached();
     await expect(page.locator('#dialog-save-once')).toBeAttached();
     await expect(page.locator('#dialog-save-domain')).toBeAttached();
-    await expect(page.locator('#dialog-save-path')).toBeAttached();
+    // 2026-10-31 adjudication: the path-allow option was removed because path
+    // adds normalize to the URL's hostname — its choice was behaviorally
+    // identical to the domain button and its wording mislabeled the matching
+    // scope. A re-introduced path option must fail here and be re-adjudicated.
+    await expect(page.locator('#dialog-save-path')).not.toBeAttached();
   });
 
   test('dialog has title and message elements', async ({ popupPage: page }) => {
@@ -168,28 +172,6 @@ test.describe('Popup - Private Page Interaction @interaction @extension', () => 
     const dialog = page.locator('#private-page-dialog');
     await expect(dialog).toBeVisible();
     await page.locator('#dialog-save-domain').click();
-    await expect(dialog).not.toBeVisible();
-  });
-
-  testInteraction('should handle save path action', async ({ popupPage: page }) => {
-    await page.evaluate(async () => {
-      // @ts-expect-error - chrome API available in extension context
-      await chrome.storage.local.set({
-        pending_pages: [{
-          url: 'https://private.example.com/page4',
-          title: 'Test Private Page 4',
-          timestamp: Date.now(),
-          reason: 'cache-control',
-          headerValue: 'private',
-          expiry: Date.now() + 3600000
-        }]
-      });
-    });
-    await page.reload();
-
-    const dialog = page.locator('#private-page-dialog');
-    await expect(dialog).toBeVisible();
-    await page.locator('#dialog-save-path').click();
     await expect(dialog).not.toBeVisible();
   });
 
