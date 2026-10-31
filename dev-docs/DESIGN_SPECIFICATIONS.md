@@ -495,4 +495,4 @@ Users can add domains/paths to the whitelist from the confirmation dialog:
 
 **Version-reference policy** ― keep a version reference only where a rule depends on it. Write one when a rule change depends on a specific release; do not bump version numbers per release. Review version-dependent references (including the CHANGELOG reference below) whenever the release they describe changes.
 
-*Refer to [CHANGELOG.md](../CHANGELOG.md) for the version history (current release: v6.9.63).*
+*Refer to [CHANGELOG.md](../CHANGELOG.md) for the version history (current release: v6.9.64).*
