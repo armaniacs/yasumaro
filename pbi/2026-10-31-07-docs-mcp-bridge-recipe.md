@@ -33,12 +33,12 @@ Scenario: レシピの手順が既存の webhook エクスポート設定だけ�
 ```
 
 ## 受け入れ基準
-- [ ] docs/ にレシピ文書が日英（日本語版・英語版）で新規作成されている
-- [ ] README の文書一覧にレシピへのリンクが追加されている
-- [ ] guides 総覧（docs/index.html と GitHub Pages の guides.html、管理先は実装時に確認）にレシピが追加されている
-- [ ] レシピの手順が既存の webhook エクスポート設定だけで動くことが確認されている（コード追加なし）
-- [ ] レシピに webhook エクスポートのセキュリティ前提（opt-in・送信直前 PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）が正確に記載されている
-- [ ] MCP サーバー実装（ネイティブメッセージングホスト等）の手順や、既定 ON の外部送信を勧める手順が含まれていない
+- [x] docs/ にレシピ文書が日英（日本語版・英語版）で新規作成されている
+- [x] README の文書一覧にレシピへのリンクが追加されている
+- [x] guides 総覧（docs/index.html と GitHub Pages の guides.html、管理先は実装時に確認）にレシピが追加されている
+- [x] レシピの手順が既存の webhook エクスポート設定だけで動くことが確認されている（コード追加なし）
+- [x] レシピに webhook エクスポートのセキュリティ前提（opt-in・送信直前 PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）が正確に記載されている
+- [x] MCP サーバー実装（ネイティブメッセージングホスト等）の手順や、既定 ON の外部送信を勧める手順が含まれていない
 
 ## テスト戦略
 ドキュメント作業のため自動テスト対象外。検証は「レシピの手順が既存設定だけで動くことの確認」で行う。
@@ -79,11 +79,12 @@ grep -rn "WEBHOOK\|Webhook" src/ | head -10
 1pt目安（0.25人週相当）
 
 ## Definition of Done
-- [ ] レシピ文書が日英で完成
-- [ ] 文書一覧（README・guides 総覧）に追加済み
-- [ ] 既存設定での動作確認済み
+- [x] レシピ文書が日英で完成
+- [x] 文書一覧（README・guides 総覧）に追加済み
+- [x] 既存設定での動作確認済み
 - [ ] コードレビュー（ドキュメントレビュー）完了
 
 ## 参照
 - ブレスト報告書: docs/superpowers/specs/2026-10-31-next-phase-do-dont-design.md（エージェント連携のトレンド調査）
 - 既存 webhook エクスポートの文書とコード（docs/・src/ 配下、実装時に grep で特定）
+- 前提修正: [2026-10-31-10-feat-webhook-loopport-match.md](2026-10-31-10-feat-webhook-loopport-match.md)。ローカル HTTPS 宛先が宣言済み origin ゲートを通るためには、この修正（isUrlCoveredByHostPattern のポート照合）を含むビルドが前提
