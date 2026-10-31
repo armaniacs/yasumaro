@@ -36,12 +36,18 @@ Scenario: en ロケールでの分類名表示（境界値）
 
 ## 受け入れ基準
 
-- [ ] 着手時にオプション画面のパネル実数を実測して記録する（29 かを確認）
-- [ ] パネルの分類再編または検索を、1 価値単位の縦スライスとして実装する（両方は実装しない）
-- [ ] 追加・変更したラベルと分類名を data-i18n・_locales/ja/en で同時に更新する
-- [ ] manifest permissions と storage key 構造を変更しない
-- [ ] パネルの削除・リネームを行う場合、既存ユーザーの保存済み設定への影響が無いことを確認する
-- [ ] focusTrap とキーボードナビゲーション（WCAG 2.1 AA）の規約に従う
+- [x] 着手時にオプション画面のパネル実数を実測して記録する（29 かを確認）
+  - 実測: `entrypoints/options/index.html` の sidebar 内 `data-panel` 付き nav ボタンは 29 個（`SIDEBAR_PANELS.length === 29` の pin テストとも一致）。6.9.63 時点と同じ 29。
+- [x] パネルの分類再編または検索を、1 価値単位の縦スライスとして実装する（両方は実装しない）
+  - 分類 UI（select によるパネル分類フィルタ）のみを実装。検索 UI は実装しない（BDD シナリオが分類前提のため分類を採用）。
+- [x] 追加・変更したラベルと分類名を data-i18n・_locales/ja/en で同時に更新する
+  - `panelCategoryFilterLabel`（data-i18n）と分類名 8 キー（option は data-i18n-opt）を `_locales/ja/messages.json` と `_locales/en/messages.json` の両方に追加。`npm run check-i18n` 通過。
+- [x] manifest permissions と storage key 構造を変更しない
+  - 分類状態は DOM の hidden 属性のみで保持（storage キー追加なし）。manifest.json は無変更（git diff で確認）。
+- [x] パネルの削除・リネームを行う場合、既存ユーザーの保存済み設定への影響が無いことを確認する
+  - パネルの削除・リネームは行っていない（`PANEL_CATALOG` の 29 パネルは無変更）。フィルタはボタンの可視性のみを変え、パネル本体・セクション要素はそのまま。
+- [x] focusTrap とキーボードナビゲーション（WCAG 2.1 AA）の規約に従う
+  - roving tabindex + 矢印キー navigation を維持し、分類フィルタで隠れたタブをスキップする規約を追加（隠れたタブに focus() が失敗して以降のタブが到達不能になる WCAG 2.1.1 の欠陥を構造的に回避）。分類 select は native control で `<label for>` 付き、モーダルではないため focusTrap の対象外。
 
 ## テスト戦略
 
@@ -94,6 +100,9 @@ grep -rn "data-i18n" src/dashboard/ | head -10
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+  - シナリオ 1（分類から辿り着く）: `panelCategoryFilter.test.ts`（単体）+ `dashboard-category-filter.spec.ts` @extension（E2E、分類選択→タブ表示→クリック→パネル active）
+  - シナリオ 2（未割り当てパネルはその他）: `panelCategories.test.ts`（`categoryForPanel` の 'other' フォールバック）+ E2E（other → diagnostics のみ表示）
+  - シナリオ 3（en ロケールの分類名）: `panelCategories.test.ts`（両 locale のキー実在）+ E2E（en-US ピンで option テキスト断定）
+- [x] コードレビュー完了（セルフレビュー: ONE slice 厳守・i18n 完全性・focusTrap/aria 整合・storage/manifest 無変更。`.superpowers/sdd/2026-10-31-round/pbi-08-report.md`）
+- [x] ドキュメント更新済み（本 PBI の AC/DoD と実装注記）
