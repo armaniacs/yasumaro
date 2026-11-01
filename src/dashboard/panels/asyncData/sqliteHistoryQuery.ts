@@ -267,7 +267,10 @@ export async function queryHistory(
     const sortBy = options.sortBy ?? 'relevance';
     const orderBy = sortBy === 'relevance' ? 'rank' : 'created_at';
     const orderDir = options.sortDir ?? 'DESC';
-    const searchResult = await searchRows(options.search, options.limit, options.offset, { orderBy, orderDir });
+    const searchResult = await searchRows(options.search, options.limit, options.offset, {
+      orderBy, orderDir,
+      ...pickDefined({ tagFilter: options.tagFilter, since: options.since, until: options.until }),
+    });
     if (isServiceError(searchResult)) return searchResult;
     rows = searchResult.data.rows;
     total = searchResult.data.total;

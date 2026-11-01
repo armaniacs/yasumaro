@@ -36,7 +36,7 @@ export type DashboardSqliteRequest =
       orderDir?: 'ASC' | 'DESC';
       tagFilter?: string;
     }
-  | { subtype: 'search'; query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }
+  | { subtype: 'search'; query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number }
   | { subtype: 'toggle_star'; id: number; confirmToken?: string }
   | { subtype: 'delete'; id: number; confirmToken?: string }
   | { subtype: 'update'; id: number; changes: Record<string, unknown>; confirmToken?: string }

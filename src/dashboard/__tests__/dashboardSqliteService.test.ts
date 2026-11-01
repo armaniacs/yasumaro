@@ -142,6 +142,23 @@ describe('dashboardSqliteService', () => {
       expect(call.payload.orderBy).toBeUndefined();
       expect(call.payload.orderDir).toBeUndefined();
     });
+
+    it('forwards tagFilter/since/until scope onto the search payload', async () => {
+      givenResponse({ success: true, rows: [], total: 0 });
+      await searchLogs('AI', 1, 0, { tagFilter: 'tools', since: 1000, until: 2000 });
+      expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ payload: expect.objectContaining({ subtype: 'search', query: 'AI', limit: 1, offset: 0, tagFilter: 'tools', since: 1000, until: 2000 }) })
+      );
+    });
+
+    it('omits tagFilter/since/until from the payload when not provided', async () => {
+      givenResponse({ success: true, rows: [], total: 0 });
+      await searchLogs('kddi', 20, 0, { orderBy: 'rank', orderDir: 'DESC' });
+      const call = (globalThis as any).chrome.runtime.sendMessage.mock.calls[(globalThis as any).chrome.runtime.sendMessage.mock.calls.length - 1][0];
+      expect(call.payload.tagFilter).toBeUndefined();
+      expect(call.payload.since).toBeUndefined();
+      expect(call.payload.until).toBeUndefined();
+    });
   });
 
   describe('toggleStar', () => {

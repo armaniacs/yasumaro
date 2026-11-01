@@ -411,6 +411,9 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
     fields: [
       stringField('query'),
       stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
+      { field: 'tagFilter', optional: true, test: (v) => typeof v === 'string' && v.length <= VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH, message: (s) => `${s}: tagFilter exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars` },
+      { field: 'since', optional: true, test: isFiniteNumber, message: (s) => `${s}: since must be finite number` },
+      { field: 'until', optional: true, test: isFiniteNumber, message: (s) => `${s}: until must be finite number` },
     ],
   },
   import: {
