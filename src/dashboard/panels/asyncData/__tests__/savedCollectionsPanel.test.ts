@@ -41,6 +41,7 @@ import {
   SAVED_COLLECTIONS_EDITOR_REGION_ID,
   SAVED_COLLECTIONS_PANEL_REGION_ID,
 } from '../savedCollectionsPanel.js';
+import { tOrKey as t } from '../../../../utils/i18n.js';
 import type { SavedCollection } from '../../../../utils/storage/savedCollections.js';
 import type { AutoTagRule } from '../../../../utils/storage/autoTagRules.js';
 
@@ -289,6 +290,29 @@ describe('savedCollectionsPanel', () => {
       expect(alert?.textContent).not.toBe('');
       expect(section.querySelector('.clause-count')?.textContent).toBe(baselineRow);
       expect(section.querySelector('.clause-preview-text')?.textContent).toBe(baselineTotal);
+      panel.destroy?.();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('empty save message', () => {
+    it('uses the clause empty-save message key', async () => {
+      // Empty editor + save click drives the panel-internal onSaveV2 path
+      // through the public PanelLifecycle surface (mount/load only).
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      section.querySelector<HTMLInputElement>('.saved-collection-name-input')!.value = 'Empty attempt';
+      section.querySelector<HTMLButtonElement>('[data-collection-action="save"]')?.click();
+      await vi.waitFor(() => {
+        expect(section.querySelector('.saved-collection-save-error')?.textContent).toBe(
+          t('collectionClauseEmptySave'),
+        );
+      });
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
       panel.destroy?.();
     });
   });

@@ -181,7 +181,7 @@ export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): P
   async function onSaveV2(name: string): Promise<{ ok: boolean; error?: string }> {
     const nonEmpty = editor.getClauses().filter((c) => c.search !== '' || c.tag !== null || c.date !== null);
     if (nonEmpty.length === 0) {
-      return { ok: false, error: t('savedCollectionNoCondition') };
+      return { ok: false, error: t('collectionClauseEmptySave') };
     }
     const query =
       loadedIds.length > 0

@@ -2177,7 +2177,7 @@
     "message": "AND/OR 切替"
   },
   "collectionClausePreview": {
-    "message": "条件に合う件数の目安です。実際の検索結果と異なる場合があります。"
+    "message": "件数の目安を更新（実際とは異なる場合があります）"
   },
   "collectionClauseEmptySave": {
     "message": "保存する条件がありません。条件を1件以上追加してください。"

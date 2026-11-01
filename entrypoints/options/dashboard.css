@@ -1848,6 +1848,68 @@ button#changeMasterPassword:hover {
   min-width: unset;
 }
 
+/* ─────────────────────────────────────────────────────────────────
+   Clause editor rows (collection row UI): layout only, reusing the
+   existing .secondary-btn aesthetics and design tokens — no new
+   color scheme. Row inputs inherit the global input rules above.
+   ───────────────────────────────────────────────────────────────── */
+
+.clause-editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.clause-op {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
+.clause-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.clause-row .clause-search,
+.clause-row .clause-tag,
+.clause-row .clause-date {
+  min-width: 0;
+}
+
+.clause-row .clause-search {
+  flex: 2;
+}
+
+.clause-row .clause-tag,
+.clause-row .clause-date {
+  flex: 1;
+}
+
+.clause-count {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 3em;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.clause-preview {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.clause-preview-text {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+}
+
 .danger-btn {
   display: inline-block;
   padding: 8px 16px;

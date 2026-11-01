@@ -2240,7 +2240,7 @@
     "message": "Toggle AND/OR"
   },
   "collectionClausePreview": {
-    "message": "Estimated match count. Actual search results may differ."
+    "message": "Refresh estimated counts (actual results may differ)"
   },
   "collectionClauseEmptySave": {
     "message": "No condition to save. Add at least one condition."
