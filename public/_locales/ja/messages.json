@@ -4439,6 +4439,9 @@
   "savedCollectionsTab": {
     "message": "保存済みコレクション"
   },
+  "askHistoryTab": {
+    "message": "履歴に聞く"
+  },
   "archiveTab": {
     "message": "アーカイブ"
   },

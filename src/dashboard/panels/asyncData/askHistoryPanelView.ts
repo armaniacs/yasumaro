@@ -7,12 +7,14 @@
  * contract as renderSavedCollectionsRegion: the shell placeholder
  * `<div id="sqlite-ask-history">` is owned by buildPanelShellHtml, but the id
  * string itself is owned here (ASK_HISTORY_REGION_ID); the view only
- * re-exports it for the shell. This module fills it. The region owns the gateway call via
+ * re-exports it for the shell. The standalone panel section (PBI 2026-11-01-02)
+ * passes its own region id instead. This module fills it. The region owns the gateway call via
  * createAskHistoryActions; this module also owns markup, labels and the answer paint.
  */
 
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { withBusyButton } from './busyButton.js';
@@ -86,16 +88,18 @@ function buildRegionInnerHtml(collections: Record<string, SavedCollection>): str
 
 /**
  * Region-scoped render entry for the ask-history region. The shell
- * placeholder is owned by buildPanelShellHtml; this function fills it and
- * wires the ask control. Answer/status are painted by the show/hide helpers
- * below and survive until the next wholesale re-render.
+ * placeholder is owned by buildPanelShellHtml (history) or by the standalone
+ * panel section (PBI 2026-11-01-02, which passes its own region id); this
+ * function fills it and wires the ask control. Answer/status are painted by
+ * the show/hide helpers below and survive until the next wholesale re-render.
  */
 export function renderAskHistoryRegion(
   container: HTMLElement,
   collections: Record<string, SavedCollection>,
   actions: AskHistoryRegionActions,
+  regionId: string = ASK_HISTORY_REGION_ID,
 ): void {
-  const region = container.querySelector(`#${ASK_HISTORY_REGION_ID}`);
+  const region = container.querySelector(`#${escapeCssSelector(regionId)}`);
   if (!(region instanceof HTMLElement)) return;
 
   setElementHtml(region, buildRegionInnerHtml(collections));

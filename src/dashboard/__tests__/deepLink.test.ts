@@ -31,6 +31,10 @@ describe('resolveInitialPanelId', () => {
     expect(resolveInitialPanelId('?tab=collections')).toBe('panel-saved-collections');
   });
 
+  it('opens the ask-history panel for ?tab=ask-history (PBI 2026-11-01-02)', () => {
+    expect(resolveInitialPanelId('?tab=ask-history')).toBe('panel-ask-history');
+  });
+
   it.each(['obsidian', 'ai-provider', 'general'])(
     'maps ?section=%s to the general panel',
     (section) => {

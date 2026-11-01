@@ -53,8 +53,7 @@ afterEach(() => {
 });
 
 describe('renderAskHistoryRegion', () => {
-  it('lists the saved collections as ask targets behind the all-targets option', () => {
-    const container = mount({ c1: collection('c1', 'Rust notes', 2), c2: collection('c2', 'Wasm lab', 1) });
+  it('lists the saved collections as ask targets behind the all-targets option', () => {    const container = mount({ c1: collection('c1', 'Rust notes', 2), c2: collection('c2', 'Wasm lab', 1) });
 
     const options = [...container.querySelectorAll<HTMLSelectElement>('.ask-history-target option')];
     expect(options.map((o) => o.value)).toEqual(['', 'c1', 'c2']);
@@ -110,5 +109,21 @@ describe('renderAskHistoryRegion', () => {
       expect(container.querySelector('.ask-history-status')?.textContent).toBe('T:boom');
     });
     expect(container.querySelector('.ask-answer-text')).toBeNull();
+  });
+
+  it('renders into the standalone panel region id (PBI 2026-11-01-02 region move)', () => {
+    const container = document.createElement('div');
+    container.innerHTML = '<div id="ask-history-panel-region"></div>';
+    document.body.appendChild(container);
+    renderAskHistoryRegion(
+      container,
+      { c1: collection('c1', 'Rust notes', 2) },
+      createAskHistoryActions((error) => `T:${error}`),
+      'ask-history-panel-region',
+    );
+
+    const options = [...container.querySelectorAll<HTMLSelectElement>('.ask-history-target option')];
+    expect(options.map((o) => o.value)).toEqual(['', 'c1']);
+    expect(container.querySelector('#ask-history-panel-region .ask-history-question')).not.toBeNull();
   });
 });

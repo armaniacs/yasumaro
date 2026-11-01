@@ -175,6 +175,14 @@
           </svg>
           <span data-i18n="savedCollectionsTab">Saved collections</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-ask-history" aria-selected="false" data-panel="panel-ask-history">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span data-i18n="askHistoryTab">Ask history</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 8v13H3V8"/>
@@ -2090,6 +2098,15 @@
           No condition to save. Specify a term, tag, or period first.
         </p>
         <div id="saved-collections-panel-region"></div>
+      </section>
+
+      <!-- Ask History Panel (PBI 2026-11-01-02) -->
+      <section id="panel-ask-history" class="panel data-panel" role="tabpanel" aria-labelledby="panel-ask-history-title">
+        <h2 id="panel-ask-history-title" class="panel-title" data-i18n="askHistoryTab">Ask history</h2>
+        <p class="panel-description" data-i18n="askHistoryHelp">
+          Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records.
+        </p>
+        <div id="ask-history-panel-region"></div>
       </section>
 
       <!-- Archive Panel (PBI 2026-09-06-02) -->

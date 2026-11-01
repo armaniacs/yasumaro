@@ -4558,6 +4558,9 @@
   "savedCollectionsTab": {
     "message": "Saved collections"
   },
+  "askHistoryTab": {
+    "message": "Ask history"
+  },
   "archiveTab": {
     "message": "Archive"
   },

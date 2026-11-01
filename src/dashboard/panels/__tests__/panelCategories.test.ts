@@ -47,12 +47,13 @@ describe('panelCategories — 単一ソース', () => {
     expect(categoryForPanel('panel-general')).toBe('setup');
   });
 
-  it('places the saved-collections panel in analysis right after history (PBI 2026-11-01-01)', () => {
-    expect(categoryForPanel('panel-saved-collections')).toBe('analysis');
+  it('places the ask-history panel in analysis right after saved-collections (PBI 2026-11-01-02)', () => {
+    expect(categoryForPanel('panel-ask-history')).toBe('analysis');
     expect(CATEGORY_PANEL_IDS.analysis).toEqual([
       'panel-tag-cluster',
       'panel-sqlite-history',
       'panel-saved-collections',
+      'panel-ask-history',
       'panel-archive',
       'panel-domain-search',
       'panel-time-heatmap',
