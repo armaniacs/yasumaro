@@ -35,6 +35,12 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### 追加 / Added
+
+- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search
+
 ## [6.9.64] - 2026-10-31
 
 このリリースは次フェーズ PBI 10 件（04/05/06/09/01/10/02/07/03/08）の完成と持ち越し 16 項目のなぜなぜ分析（4 視点 138 チェーン）です。利用者に見える変更は直近 skip 理由のポップアップ表示・選択範囲の記録・設定パネルの分類 UI・パス許可選択肢のドメイン許可への統一・Webhook ループバック宛先のポート照合修正です。 / This release completes the next-phase 10 PBIs and the 5-Whys analysis of 16 carried-over items (4 perspectives, 138 chains). User-visible changes: last skip reason in the popup, selection capture, the settings panel category UI, the path-allow option unified into domain allow, and the webhook loopback port matching fix.
