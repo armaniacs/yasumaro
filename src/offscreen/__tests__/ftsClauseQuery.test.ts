@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSafeFtsClauseQuery } from '../ftsClauseQuery.js';
+import { buildSafeFtsClauseQuery, matchesClausesLike } from '../ftsClauseQuery.js';
 
 describe('ftsClauseQuery', () => {
   describe('buildSafeFtsClauseQuery', () => {
@@ -16,6 +16,18 @@ describe('ftsClauseQuery', () => {
     });
     it('drops empty terms instead of emitting invalid MATCH', () => {
       expect(buildSafeFtsClauseQuery(['', '  '], 'and')).toBe('');
+    });
+  });
+  describe('matchesClausesLike', () => {
+    it('matches all terms for and and any term for or', () => {
+      const haystack = 'AI 要約 ツール';
+      expect(matchesClausesLike(haystack, ['AI', '要約'], 'and')).toBe(true);
+      expect(matchesClausesLike(haystack, ['AI', '欠落語'], 'and')).toBe(false);
+      expect(matchesClausesLike(haystack, ['欠落語', '要約'], 'or')).toBe(true);
+    });
+    it('ignores empty terms and empty haystacks safely', () => {
+      expect(matchesClausesLike('', ['AI'], 'or')).toBe(false);
+      expect(matchesClausesLike('AI 要約', ['', '  '], 'or')).toBe(false);
     });
   });
 });
