@@ -52,4 +52,47 @@ describe('renderClauseEditorView', () => {
       expect(document.activeElement).toBe(container.querySelector('.clause-row:last-child .clause-search'));
     });
   });
+  describe('focus preservation', () => {
+    function mountWithRerender(editor: ReturnType<typeof createClauseEditor>): HTMLElement {
+      const container = document.createElement('div');
+      container.innerHTML = '<div id="test-editor-region"></div>';
+      document.body.appendChild(container);
+      const callbacks = {
+        onDraftChange: vi.fn(),
+        onStructureChange: (): void => {
+          renderClauseEditorView(container, editor, callbacks, 'test-editor-region');
+        },
+      };
+      renderClauseEditorView(container, editor, callbacks, 'test-editor-region');
+      return container;
+    }
+    it('keeps focus on the same row+field across an op-change rerender', () => {
+      const editor = createClauseEditor();
+      editor.addRow();
+      const container = mountWithRerender(editor);
+      const search = container.querySelector(
+        '.clause-row[data-clause-index="0"] [data-clause-field="search"]',
+      ) as HTMLInputElement;
+      search.focus();
+      const opOr = container.querySelector('input[name="clause-op"][value="or"]') as HTMLInputElement;
+      opOr.dispatchEvent(new Event('change', { bubbles: true }));
+      const next = container.querySelector(
+        '.clause-row[data-clause-index="0"] [data-clause-field="search"]',
+      ) as HTMLInputElement;
+      expect(next).not.toBe(search);
+      expect(document.activeElement).toBe(next);
+    });
+    it('falls back to a visible control after the focused remove button is gone', () => {
+      const editor = createClauseEditor();
+      editor.addRow();
+      const container = mountWithRerender(editor);
+      const remove = container.querySelector(
+        '.clause-row[data-clause-index="1"] [data-clause-action="remove"]',
+      ) as HTMLButtonElement;
+      remove.focus();
+      remove.click();
+      expect(editor.getClauses()).toHaveLength(1);
+      expect(document.activeElement).toBe(container.querySelector('[data-clause-action="add"]'));
+    });
+  });
 });

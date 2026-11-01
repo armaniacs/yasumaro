@@ -7,6 +7,75 @@ import type { createClauseEditor } from './collectionClauseEditor.js';
 export type ClauseEditor = ReturnType<typeof createClauseEditor>;
 export type ClauseEditorChangeKind = 'draft' | 'structure' | 'refresh';
 
+type ClauseEditorFocusDescriptor =
+  | { kind: 'field'; index: number; field: string }
+  | { kind: 'op'; value: string }
+  | { kind: 'action'; action: string; index: number | null };
+
+function captureClauseEditorFocus(region: HTMLElement): ClauseEditorFocusDescriptor | null {
+  const active = document.activeElement;
+  if (!(active instanceof HTMLElement) || !region.contains(active)) return null;
+  if (active instanceof HTMLInputElement && active.getAttribute('name') === 'clause-op') {
+    return { kind: 'op', value: active.value };
+  }
+  if (active instanceof HTMLInputElement) {
+    const field = active.getAttribute('data-clause-field');
+    const rowEl = active.closest('.clause-row');
+    if (field !== null && rowEl instanceof HTMLElement) {
+      const index = Number(rowEl.getAttribute('data-clause-index'));
+      if (Number.isInteger(index)) return { kind: 'field', index, field };
+    }
+    return null;
+  }
+  if (active instanceof HTMLButtonElement) {
+    const action = active.getAttribute('data-clause-action');
+    if (action === null) return null;
+    const rowEl = active.closest('.clause-row');
+    let index: number | null = null;
+    if (rowEl instanceof HTMLElement) {
+      const parsed = Number(rowEl.getAttribute('data-clause-index'));
+      if (Number.isInteger(parsed)) index = parsed;
+    }
+    return { kind: 'action', action, index };
+  }
+  return null;
+}
+
+function restoreClauseEditorFocus(region: HTMLElement, descriptor: ClauseEditorFocusDescriptor | null): void {
+  if (descriptor === null) return;
+  if (descriptor.kind === 'op') {
+    const target = region.querySelector<HTMLInputElement>(`input[name="clause-op"][value="${descriptor.value}"]`);
+    target?.focus();
+    return;
+  }
+  if (descriptor.kind === 'field') {
+    const target = region.querySelector<HTMLElement>(
+      `.clause-row[data-clause-index="${descriptor.index}"] [data-clause-field="${descriptor.field}"]`,
+    );
+    if (target !== null) {
+      target.focus();
+      return;
+    }
+  } else {
+    if (descriptor.index !== null) {
+      const target = region.querySelector<HTMLElement>(
+        `.clause-row[data-clause-index="${descriptor.index}"] [data-clause-action="${descriptor.action}"]`,
+      );
+      if (target !== null) {
+        target.focus();
+        return;
+      }
+    } else {
+      const target = region.querySelector<HTMLElement>(`[data-clause-action="${descriptor.action}"]`);
+      if (target !== null) {
+        target.focus();
+        return;
+      }
+    }
+  }
+  region.querySelector<HTMLElement>('[data-clause-action="add"]')?.focus();
+}
+
 export interface ClauseEditorViewCallbacks {
   onDraftChange: (kind: ClauseEditorChangeKind) => void;
   onStructureChange: (kind: ClauseEditorChangeKind) => void;
@@ -30,6 +99,7 @@ export function renderClauseEditorView(
 ): void {
   const region = container.querySelector(`#${escapeCssSelector(regionId)}`);
   if (!(region instanceof HTMLElement)) return;
+  const focused = captureClauseEditorFocus(region);
   const op = editor.getOp();
   const rows = editor.getClauses().map((row, i) => rowHtml(i, row, '')).join('');
   setElementHtml(region, `<div class="clause-editor">`
@@ -84,4 +154,5 @@ export function renderClauseEditorView(
       }
     });
   });
+  restoreClauseEditorFocus(region, focused);
 }

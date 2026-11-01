@@ -38,6 +38,7 @@ import {
 } from '../../../../utils/storage/autoTagRulesRepository.js';
 import {
   createSavedCollectionsPanel,
+  SAVED_COLLECTIONS_EDITOR_REGION_ID,
   SAVED_COLLECTIONS_PANEL_REGION_ID,
 } from '../savedCollectionsPanel.js';
 import type { SavedCollection } from '../../../../utils/storage/savedCollections.js';
@@ -72,6 +73,7 @@ function mountSection(): HTMLElement {
   section.innerHTML = `
     <h2 id="panel-saved-collections-title">Saved collections</h2>
     <p class="saved-collections-draft" role="status"></p>
+    <div id="${SAVED_COLLECTIONS_EDITOR_REGION_ID}"></div>
     <div id="${SAVED_COLLECTIONS_PANEL_REGION_ID}"></div>`;
   document.body.appendChild(section);
   return section;

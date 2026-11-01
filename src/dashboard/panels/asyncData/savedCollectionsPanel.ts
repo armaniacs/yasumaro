@@ -21,7 +21,7 @@ import { createClauseEditor } from './collectionClauseEditor.js';
 import { renderClauseEditorView } from './collectionClauseEditorView.js';
 
 /**
- * savedCollectionsPanel.ts (PBI 2026-11-01-01; Task 3: clause-editor wiring)
+ * savedCollectionsPanel.ts (PBI 2026-11-01-01; Task 2: clause-editor wiring)
  *
  * Standalone sibling of the history panel: owns saved collections CRUD and
  * auto-tag rules with panel-local state. The region view
