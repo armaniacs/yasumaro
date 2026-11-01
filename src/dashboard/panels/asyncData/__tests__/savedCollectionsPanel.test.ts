@@ -190,3 +190,15 @@ describe('savedCollectionsPanel — load failure stays in-panel (BDD 読込失�
     panel.destroy?.();
   });
 });
+
+describe('savedCollectionsPanel', () => {
+  describe('clause draft handoff', () => {
+    it('restores a multi-clause saved query into the editor', async () => {
+      const { createClauseEditor } = await import('../collectionClauseEditor.js');
+      const editor = createClauseEditor();
+      editor.loadSaved({ version: 2, op: 'or', clauses: [{ search: 'AI' }, { search: '要約' }] });
+      expect(editor.getClauses()).toHaveLength(2);
+      expect(editor.getOp()).toBe('or');
+    });
+  });
+});
