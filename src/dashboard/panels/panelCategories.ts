@@ -71,6 +71,8 @@ export const CATEGORY_PANEL_IDS: Readonly<
     'panel-saved-collections',
     // PBI 2026-11-01-02: ask history (question + target collection).
     'panel-ask-history',
+    // PBI 2026-11-01-03: research report (target collection + one-shot generate).
+    'panel-research-report',
     'panel-archive',
     'panel-domain-search',
     'panel-time-heatmap',

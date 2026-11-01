@@ -2158,6 +2158,15 @@
   "researchReportDone": {
     "message": "Report generated ({0} records)."
   },
+  "researchReportTargetLabel": {
+    "message": "Target collection"
+  },
+  "researchReportTargetAll": {
+    "message": "All records"
+  },
+  "researchReportPanelHelp": {
+    "message": "Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection."
+  },
   "savedCollectionsHelp": {
     "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
   },
@@ -4560,6 +4569,9 @@
   },
   "askHistoryTab": {
     "message": "Ask history"
+  },
+  "researchReportTab": {
+    "message": "One-shot research report"
   },
   "archiveTab": {
     "message": "Archive"

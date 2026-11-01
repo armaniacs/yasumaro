@@ -35,6 +35,10 @@ describe('resolveInitialPanelId', () => {
     expect(resolveInitialPanelId('?tab=ask-history')).toBe('panel-ask-history');
   });
 
+  it('opens the research-report panel for ?tab=research-report (PBI 2026-11-01-03)', () => {
+    expect(resolveInitialPanelId('?tab=research-report')).toBe('panel-research-report');
+  });
+
   it.each(['obsidian', 'ai-provider', 'general'])(
     'maps ?section=%s to the general panel',
     (section) => {

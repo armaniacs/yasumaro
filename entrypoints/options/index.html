@@ -183,6 +183,15 @@
           </svg>
           <span data-i18n="askHistoryTab">Ask history</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-research-report" aria-selected="false" data-panel="panel-research-report">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+            <line x1="9" y1="17" x2="13" y2="17"/>
+          </svg>
+          <span data-i18n="researchReportTab">One-shot research report</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 8v13H3V8"/>
@@ -2107,6 +2116,15 @@
           Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records.
         </p>
         <div id="ask-history-panel-region"></div>
+      </section>
+
+      <!-- Research Report Panel (PBI 2026-11-01-03) -->
+      <section id="panel-research-report" class="panel data-panel" role="tabpanel" aria-labelledby="panel-research-report-title">
+        <h2 id="panel-research-report-title" class="panel-title" data-i18n="researchReportTab">One-shot research report</h2>
+        <p class="panel-description" data-i18n="researchReportPanelHelp">
+          Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection.
+        </p>
+        <div id="research-report-panel-region"></div>
       </section>
 
       <!-- Archive Panel (PBI 2026-09-06-02) -->
