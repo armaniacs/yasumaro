@@ -109,9 +109,9 @@ flowchart LR
 - 🛡️ **プライバシー同意フロー**: 初回起動時に同意確認を表示。3回拒否で永久非表示、その後は制限モード（記録停止）で動作。GDPRに準拠した物理削除（DELETE FROM）対応。
 - 📱 **モバイルChrome / OPFS非対応環境対応**: OPFS が使えない端末では `chrome.storage.local` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（詳細: [STORAGE_MODES.md](docs/STORAGE_MODES.md)）。
 - 📊 **関連グラフ表示**: 記録したページのタグ共起関係をグラフで可視化。ノードをクリックして該当タグのページに自動フィルタ。
-- 🗂️ **保存済みコレクション**: 検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。
-- 💡 **履歴に聞く**: コレクションを対象に質問すると、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録へ移動できます。外部には送信しません。
-- 📜 **調査レポート一発生成**: 現在の検索条件を対象に、要旨・時系列・引用・未読穴の4節からなる Markdown レポートを生成します。Obsidian への送信は任意です。
+- 🗂️ **保存済みコレクション**（履歴直下の独立パネル）: 検索条件(語・タグ・期間)に名前を付けて保存し、一覧からパネル内の下書きに呼び出せます。
+- 💡 **履歴に聞く**（独立パネル）: コレクションを対象に質問すると、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録へ移動できます。外部には送信しません。
+- 📜 **調査レポート一発生成**（独立パネル）: 対象のコレクションを選び、要旨・時系列・引用・未読穴の4節からなる Markdown レポートを生成します。Obsidian への送信は任意です。
 - 🎯 **情報源の偏り表示**: 特定ドメインへの偏りを検出し、騒音の多い情報源をブラックリストへ追加する提案を表示します(自動適用はなく、取り消し可能)。
 - 🛡️ **ドメイン別 AI 送信政策**: ドメインごとに「送信を許可」「要約なしで記録」「マスク必須」を選べます。
 - 🏷️ **タグ正規化の提案**: 類似タグの統合案を提示し、適用・取り消しができます。
@@ -362,9 +362,9 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
 - 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard ― a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), side-by-side tag cluster comparison, a revisits & time capsule view that groups what you keep re-researching, and research sessions that group records close together in time. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
-- 🗂️ **Saved Collections**: Name a search condition (terms, tags, period) and recall it from a list.
-- 💡 **Ask Your History**: Ask a question about a collection and an on-device model answers from excerpts of your records. Links to the three supporting records open the originals. Nothing is sent externally.
-- 📜 **One-Shot Research Report**: Generates a Markdown report with four sections (summary, timeline, citations, unread gaps) for the current search condition. Sending it to Obsidian is optional.
+- 🗂️ **Saved Collections** (standalone panel right after history): Name a search condition (terms, tags, period) and recall it into the panel-local draft from a list.
+- 💡 **Ask Your History** (standalone panel): Ask a question about a collection and an on-device model answers from excerpts of your records. Links to the three supporting records open the originals. Nothing is sent externally.
+- 📜 **One-Shot Research Report** (standalone panel): Pick a target collection and generate a Markdown report with four sections (summary, timeline, citations, unread gaps). Sending it to Obsidian is optional.
 - 🎯 **Source Bias View**: Detects skew toward a single domain and suggests adding noisy sources to the blacklist (never applied automatically, reversible).
 - 🛡️ **Per-Domain AI Send Policy**: Choose "allow sending", "record without summary", or "mask required" for each domain.
 - 🏷️ **Tag Normalization Proposals**: Proposes merges for similar tags; apply and undo them.

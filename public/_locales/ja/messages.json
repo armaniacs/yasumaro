@@ -2095,6 +2095,15 @@
   "researchReportDone": {
     "message": "レポートを生成しました(記録 {0} 件)。"
   },
+  "researchReportTargetLabel": {
+    "message": "対象コレクション"
+  },
+  "researchReportTargetAll": {
+    "message": "すべての記録"
+  },
+  "researchReportPanelHelp": {
+    "message": "選んだコレクションを対象に、要旨・時系列・引用・未読穴の4節からなるMarkdownレポートを生成します。"
+  },
   "savedCollectionsHelp": {
     "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
   },
@@ -4435,6 +4444,15 @@
   },
   "sqliteHistoryTab": {
     "message": "履歴"
+  },
+  "savedCollectionsTab": {
+    "message": "保存済みコレクション"
+  },
+  "askHistoryTab": {
+    "message": "履歴に聞く"
+  },
+  "researchReportTab": {
+    "message": "調査レポート一発生成"
   },
   "archiveTab": {
     "message": "アーカイブ"

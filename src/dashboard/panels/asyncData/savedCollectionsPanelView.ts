@@ -15,6 +15,7 @@
 
 import { tOrKey as t } from '../../../utils/i18n.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
 import { formatTimestamp } from './sqliteHistoryPanelView.js';
@@ -50,9 +51,10 @@ import { undoAutoTagRule } from '../../autoTagUndo.js';
 import { isServiceError, queryLogs, updateLog } from '../../dashboardSqliteService.js';
 
 /**
- * Canonical owner of the saved-collections region placeholder id. The view
- * keeps a compatibility entry in SQLITE_HISTORY_IDS that references this
- * constant, so the string has a single source without moving the shell markup.
+ * Canonical owner of the saved-collections region placeholder id. Since PBI
+ * 2026-11-01-04 the history shell no longer renders this region; the
+ * standalone panel passes its own region id and this constant stays as the
+ * region renderer's default (used by the region unit tests).
  */
 export const SAVED_COLLECTIONS_REGION_ID = 'sqlite-saved-collections';
 
@@ -429,18 +431,20 @@ function buildRegionInnerHtml(
 
 /**
  * Region-scoped render entry for saved collections and auto-tag rules. The
- * shell placeholder is owned by buildPanelShellHtml; this function fills it
- * and wires the save / apply / delete / rename / duplicate / rule controls.
- * In-row failure text survives until the next wholesale re-render (a
- * successful mutation replaces the region).
+ * shell placeholder is owned by buildPanelShellHtml (history) or by the
+ * standalone panel section (PBI 2026-11-01-01, which passes its own region
+ * id); this function fills it and wires the save / apply / delete / rename /
+ * duplicate / rule controls. In-row failure text survives until the next
+ * wholesale re-render (a successful mutation replaces the region).
  */
 export function renderSavedCollectionsRegion(
   container: HTMLElement,
   collections: Record<string, SavedCollection>,
   rules: Record<string, AutoTagRule>,
   actions: SavedCollectionsRegionActions,
+  regionId: string = SAVED_COLLECTIONS_REGION_ID,
 ): void {
-  const region = container.querySelector(`#${SAVED_COLLECTIONS_REGION_ID}`);
+  const region = container.querySelector(`#${escapeCssSelector(regionId)}`);
   if (!(region instanceof HTMLElement)) return;
 
   setElementHtml(region, buildRegionInnerHtml(collections, rules));

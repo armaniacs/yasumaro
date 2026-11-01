@@ -111,6 +111,9 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-diagnostics',
       'panel-tag-cluster',
       'panel-sqlite-history',
+      'panel-saved-collections',
+      'panel-ask-history',
+      'panel-research-report',
       'panel-archive',
       'panel-domain-search',
       'panel-time-heatmap',
@@ -144,7 +147,7 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
   const buttons = parseSidebarButtons();
 
   it('has one sidebar button per catalog sidebar panel, in catalog order', () => {
-    expect(SIDEBAR_PANELS).toHaveLength(29);
+    expect(SIDEBAR_PANELS).toHaveLength(32);
     expect(buttons.map((b) => b.panelId)).toEqual(SIDEBAR_PANELS.map((e) => e.id));
   });
 
@@ -216,6 +219,18 @@ describe('panelCatalog ↔ HTML sidebar 同期', () => {
 describe('panelCatalog — deep-link 派生', () => {
   it('resolves ?tab=history to the sqlite history panel', () => {
     expect(resolvePanelIdForTab('history')).toBe('panel-sqlite-history');
+  });
+
+  it('resolves ?tab=collections to the saved-collections panel (PBI 2026-11-01-01)', () => {
+    expect(resolvePanelIdForTab('collections')).toBe('panel-saved-collections');
+  });
+
+  it('resolves ?tab=ask-history to the ask-history panel (PBI 2026-11-01-02)', () => {
+    expect(resolvePanelIdForTab('ask-history')).toBe('panel-ask-history');
+  });
+
+  it('resolves ?tab=research-report to the research-report panel (PBI 2026-11-01-03)', () => {
+    expect(resolvePanelIdForTab('research-report')).toBe('panel-research-report');
   });
 
   it('resolves nothing for missing/unknown ?tab=', () => {

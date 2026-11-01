@@ -23,11 +23,6 @@ import {
 // Page size — SSOT via the model so the query limit and the pagination
 // control share one definition (PBI 04).
 import { SQLITE_HISTORY_PAGE_SIZE } from './sqliteHistoryModel.js';
-// Region placeholder ids — owned by the region modules (PBI 2026-10-24-07);
-// the view imports them for the shell and re-exports them below.
-import { SAVED_COLLECTIONS_REGION_ID } from './savedCollectionsPanelView.js';
-import { ASK_HISTORY_REGION_ID } from './askHistoryPanelView.js';
-import { RESEARCH_REPORT_REGION_ID } from './researchReportPanelView.js';
 
 /**
  * Adapter (PBI 2026-09-23-01): the bar definition lives behind
@@ -315,9 +310,6 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
       </span>
     </div>
     <div id="${SQLITE_HISTORY_IDS.pendingRegion}" class="sqlite-pending-region"></div>
-    <div id="${SQLITE_HISTORY_IDS.savedCollections}" class="sqlite-saved-collections"></div>
-    <div id="${SQLITE_HISTORY_IDS.askHistory}" class="sqlite-ask-history"></div>
-    <div id="${SQLITE_HISTORY_IDS.researchReport}" class="sqlite-research-report"></div>
     <div id="${SQLITE_HISTORY_IDS.entryList}" class="sqlite-entry-list">
       ${state.loading ? `<div class="loading">${t('historyLoading')}</div>` : ''}
     </div>
@@ -336,11 +328,10 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
 // the model owns the query defaults and this view imports the same constant.
 
 /**
- * Every DOM id the SQLite history view creates, except the three region
- * placeholders (savedCollections, askHistory, researchReport) whose strings
- * are owned by their region modules and only referenced here so the shell can
- * render them. Panel, CSS and tests keep using this map; region code uses its
- * own constant directly.
+ * Every DOM id the SQLite history view creates. The saved-collections /
+ * ask-history / research-report regions moved to their standalone panels
+ * (PBI 2026-11-01-01..03); their placeholder ids are owned by the region
+ * modules and this shell no longer renders them (PBI 2026-11-01-04).
  */
 export const SQLITE_HISTORY_IDS = {
   searchInput: 'sqlite-search-input',
@@ -350,18 +341,6 @@ export const SQLITE_HISTORY_IDS = {
   calendarDays: 'sqlite-calendar-days',
   clearAllFilters: 'sqlite-clear-all-filters',
   pendingRegion: 'sqlite-pending-region',
-  // Saved-collections region placeholder (PBI 2026-10-23-06); string owned by
-  // savedCollectionsPanelView (SAVED_COLLECTIONS_REGION_ID), filled by
-  // renderSavedCollectionsRegion.
-  savedCollections: SAVED_COLLECTIONS_REGION_ID,
-  // Ask-history region (PBI 2026-10-23-08): string owned by
-  // askHistoryPanelView (ASK_HISTORY_REGION_ID); question + target collection +
-  // answer with citations back to the original records.
-  askHistory: ASK_HISTORY_REGION_ID,
-  // Research-report region (PBI 2026-10-23-09): string owned by
-  // researchReportPanelView (RESEARCH_REPORT_REGION_ID); one-shot report
-  // generation from the panel conditions, delivered to the existing export paths.
-  researchReport: RESEARCH_REPORT_REGION_ID,
   entryList: 'sqlite-entry-list',
   pagination: 'sqlite-pagination',
   error: 'sqlite-error',

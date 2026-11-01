@@ -27,6 +27,18 @@ describe('resolveInitialPanelId', () => {
     expect(resolveInitialPanelId('?tab=history')).toBe('panel-sqlite-history');
   });
 
+  it('opens the saved-collections panel for ?tab=collections (PBI 2026-11-01-01)', () => {
+    expect(resolveInitialPanelId('?tab=collections')).toBe('panel-saved-collections');
+  });
+
+  it('opens the ask-history panel for ?tab=ask-history (PBI 2026-11-01-02)', () => {
+    expect(resolveInitialPanelId('?tab=ask-history')).toBe('panel-ask-history');
+  });
+
+  it('opens the research-report panel for ?tab=research-report (PBI 2026-11-01-03)', () => {
+    expect(resolveInitialPanelId('?tab=research-report')).toBe('panel-research-report');
+  });
+
   it.each(['obsidian', 'ai-provider', 'general'])(
     'maps ?section=%s to the general panel',
     (section) => {

@@ -22,6 +22,9 @@ import { createTagCooccurrenceTablePanel } from './asyncData/tagCooccurrenceTabl
 import { createWordClusterPanel } from './asyncData/wordClusterPanel.js';
 import { createTagClusterTimeSliderPanel } from './asyncData/tagClusterTimeSliderPanel.js';
 import { createSqliteHistoryPanel } from './asyncData/sqliteHistoryPanel.js';
+import { createSavedCollectionsPanel } from './asyncData/savedCollectionsPanel.js';
+import { createAskHistoryPanel } from './asyncData/askHistoryPanel.js';
+import { createResearchReportPanel } from './asyncData/researchReportPanel.js';
 import { createSimilarityClusterPanel } from '../similarityClusterPanel.js';
 import { createSessionTimelinePanel } from './asyncData/sessionTimelinePlaybackPanel.js';
 import { createGeneralSettingsPanel } from './staticForm/generalSettingsPanel.js';
@@ -46,6 +49,9 @@ const DIRECT_FACTORIES: Record<Exclude<PanelCatalogId, StaticFormPanelId>, () =>
   'panel-tag-cluster-time-slider': createTagClusterTimeSliderPanel,
   'panel-session-timeline': createSessionTimelinePanel,
   'panel-sqlite-history': createSqliteHistoryPanel,
+  'panel-saved-collections': createSavedCollectionsPanel,
+  'panel-ask-history': createAskHistoryPanel,
+  'panel-research-report': createResearchReportPanel,
   'panel-general': createGeneralSettingsPanel,
   'panel-privacy': createPrivacySettingsPanel,
   'panel-ai-summary-cleansing': createAiSummaryCleansingPanel,
