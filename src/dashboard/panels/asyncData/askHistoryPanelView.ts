@@ -26,9 +26,10 @@ import { toAskRunResult, type AskRunResult } from '../../../messaging/responseRe
 export type { AskRunResult } from '../../../messaging/responseRepack.js';
 
 /**
- * Canonical owner of the ask-history region placeholder id. The view keeps a
- * compatibility entry in SQLITE_HISTORY_IDS that references this constant, so
- * the string has a single source without moving the shell markup.
+ * Canonical owner of the ask-history region placeholder id. Since PBI
+ * 2026-11-01-04 the history shell no longer renders this region; the
+ * standalone panel passes its own region id and this constant stays as the
+ * region renderer's default (used by the region unit tests).
  */
 export const ASK_HISTORY_REGION_ID = 'sqlite-ask-history';
 

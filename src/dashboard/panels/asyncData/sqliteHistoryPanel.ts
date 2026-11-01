@@ -29,15 +29,6 @@ import {
   hideStarUndo,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
-import {
-  createSavedCollectionsActions,
-  loadSavedCollectionsRegion,
-  renderSavedCollectionsRegion,
-} from './savedCollectionsPanelView.js';
-import { createAskHistoryActions, renderAskHistoryRegion } from './askHistoryPanelView.js';
-import { createResearchReportActions, renderResearchReportRegion } from './researchReportPanelView.js';
-import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
-import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -73,15 +64,6 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // a chrome.storage.onChanged subscription, released in destroy().
   let pendingPages: PendingPage[] = [];
   let unsubscribePendingStorage: (() => void) | null = null;
-
-  // --- Saved collections (PBI 2026-10-23-06) --------------------------------
-  // Panel-local state (NOT model state): saved collections are chrome.storage
-  // settings content, independent of the SQLite query pipeline. The recall
-  // funnels through model.applyCollection (single dispatch + single fetch).
-  let savedCollections: Record<string, SavedCollection> = {};
-  // Panel-local auto-tag rules (PBI 2026-10-23-06): same settings-content
-  // reason as savedCollections above, reloaded with the same loadSaved().
-  let savedTagRules: Record<string, AutoTagRule> = {};
 
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
@@ -455,56 +437,6 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
   }
 
-  // --- Saved collections (PBI 2026-10-23-06, PBI 2026-10-24-05) ---------------
-  // Behavior owned by the region module (createSavedCollectionsActions +
-  // loadSavedCollectionsRegion); the panel only supplies narrow inputs
-  // (query input, recall dispatch, live collections, reload) and the mount
-  // target. The fetch + render pairing stays next to the actions.
-
-  function createSavedActions(): ReturnType<typeof createSavedCollectionsActions> {
-    return createSavedCollectionsActions({
-      getQueryInput: () => model.getState(),
-      applyCollection: (query) => model.applyCollection(query),
-      getCollections: () => savedCollections,
-      getRules: () => savedTagRules,
-      reload: () => loadSaved(),
-    });
-  }
-
-  function renderSaved(): void {
-    if (!container) return;
-    renderSavedCollectionsRegion(container, savedCollections, savedTagRules, createSavedActions());
-  }
-
-  async function loadSaved(): Promise<void> {
-    if (!container) return;
-    const target = container;
-    const loaded = await loadSavedCollectionsRegion(target, {
-      getQueryInput: () => model.getState(),
-      applyCollection: (query) => model.applyCollection(query),
-      getCollections: () => savedCollections,
-      getRules: () => savedTagRules,
-      reload: () => loadSaved(),
-      render: (collections, rules) => {
-        savedCollections = collections;
-        savedTagRules = rules;
-        if (container === target) renderSaved();
-      },
-    });
-    savedCollections = loaded.collections;
-    savedTagRules = loaded.rules;
-  }
-
-  // --- Ask history (PBI 2026-10-23-08, PBI 2026-10-24-05) ----------------------
-  // Behavior owned by the region module (createAskHistoryActions);
-  // wire-to-view repack lives in the seam module (responseRepack.ts). The
-  // panel only supplies the i18n error translation at mount/load wiring.
-
-  // --- Research report (PBI 2026-10-23-09, PBI 2026-10-24-05) ------------------
-  // Behavior owned by the region module (createResearchReportActions +
-  // buildResearchReportScope); the panel only supplies the scope source
-  // accessor at load wiring.
-
   // Model subscription — thin alias of former onStateChange, completes BDD happy path.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
@@ -547,35 +479,6 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       subscribePendingStorage();
       void loadPending();
 
-      // Saved collections render into the shell's dedicated region
-      // (PBI 2026-10-23-06); re-rendered per save/delete, not per model change.
-      // Not awaited: load() must not block the model fetch on settings I/O
-      // (awaiting here hangs the generation race-guard tests, where the real
-      // settings repository never settles on a repeated load). The ask-history
-      // region below reads savedCollections as its target options, so it
-      // re-renders once the collections arrive instead of racing the load.
-      void loadSaved().then(() => {
-        if (!container) return;
-        renderAskHistoryRegion(container, savedCollections, createAskHistoryActions(translateHistoryError));
-      });
-
-      // Ask-history region (PBI 2026-10-23-08, PBI 2026-10-24-05): rendered
-      // per load with the saved collections as the target options; the
-      // actions bundle is region-owned, the panel only wires mount/load.
-      renderAskHistoryRegion(
-        container,
-        savedCollections,
-        createAskHistoryActions(translateHistoryError),
-      );
-
-      // Research-report region (PBI 2026-10-23-09, PBI 2026-10-24-05):
-      // rendered per load; the actions bundle is region-owned, the panel
-      // only supplies the scope source accessor at wiring time.
-      renderResearchReportRegion(
-        container,
-        createResearchReportActions(() => model.getState()),
-      );
-
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
       // the Model, which owns the order.
@@ -604,8 +507,6 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         unsubscribePendingStorage = null;
       }
       pendingPages = [];
-      savedCollections = {};
-      savedTagRules = {};
       starUndoIds = null;
       // Single navigation exit point: generation bump + persist flush +
       // cache clear + selection clear run inside the Model.

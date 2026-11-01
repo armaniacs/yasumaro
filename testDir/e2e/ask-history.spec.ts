@@ -1,12 +1,13 @@
 import { test, expect } from './fixtures/seeded-history-panel.fixture.js';
 
 /**
- * Ask-history E2E (PBI 2026-10-23-08).
+ * Ask-history E2E (PBI 2026-10-23-08; panel split PBI 2026-11-01-04).
  *
  * BDD: 質問に引用付きで答える / 根拠がないときは作らず分からないと言う.
- * The ask region lives in the SQLite history panel (`#sqlite-ask-history`):
- * a question, a target-collection select, and the answer with citation
- * links back to the original records.
+ * The ask region lives in the standalone ask-history panel
+ * (`#ask-history-panel-region`, `?tab=ask-history`): a question, a
+ * target-collection select, and the answer with citation links back to the
+ * original records.
  *
  * Determinism note: the no-evidence path never calls the AI seam, so it runs
  * anywhere. The answered paths need the on-device model (mode 'local_only'
@@ -85,7 +86,9 @@ test.describe('Ask history (PBI 2026-10-23-08)', () => {
     }) => {
       test.setTimeout(120_000); // gateway budget 60s + search + panel headroom
       const { page } = seededHistoryPanel;
-      const region = page.locator('#sqlite-ask-history');
+      await page.locator('[data-panel="panel-ask-history"]').click();
+      await expect(page.locator('#panel-ask-history')).toBeVisible();
+      const region = page.locator('#ask-history-panel-region');
 
       await region.locator('.ask-history-question').fill('量子コンピュータの仕様を教えてください');
       await region.locator('[data-ask-action="ask"]').click();
@@ -118,7 +121,9 @@ test.describe('Ask history (PBI 2026-10-23-08)', () => {
     }) => {
       test.setTimeout(120_000);
       const { page } = seededHistoryPanel;
-      const region = page.locator('#sqlite-ask-history');
+      await page.locator('[data-panel="panel-ask-history"]').click();
+      await expect(page.locator('#panel-ask-history')).toBeVisible();
+      const region = page.locator('#ask-history-panel-region');
 
       await region.locator('.ask-history-question').fill('WASMの検証結果を教えてください');
       await region.locator('[data-ask-action="ask"]').click();
@@ -202,7 +207,9 @@ test.describe('Ask history (PBI 2026-10-23-08)', () => {
     }) => {
       test.setTimeout(120_000);
       const { page } = seededHistoryPanel;
-      const region = page.locator('#sqlite-ask-history');
+      await page.locator('[data-panel="panel-ask-history"]').click();
+      await expect(page.locator('#panel-ask-history')).toBeVisible();
+      const region = page.locator('#ask-history-panel-region');
 
       // The saved collection is offered as a target (loaded before the ask
       // region renders, not raced by it).

@@ -305,11 +305,14 @@ ollama list
 - **選択一括操作**: 各エントリのチェックボックスで複数選択すると、選択バーに **「AI要約を作り直し」** と **「選択した記事を削除」** が表示されます。削除はその場の件数付き2段階確認（「本当に削除する」／キャンセル）付きで、最初の失敗で中断します。一括再生成は現在の設定で逐次実行し、成功・失敗件数（実行中の行はスキップ件数として区別）をトースト表示します（再生成の緩和3択・force は一括では使えません。個別ヘッダーから実行してください）
 - **削除**: 個別エントリを物理削除（GDPR Art.17準拠）。「すべてのデータを削除」で全件一括削除も可能です
 - **選択行にスター**: 複数選択した行にまとめてスターを付けます。確認画面でプライベート判定の件数が表示され、「プライベート判定を除いて適用」も選べます。適用後は「取り消す」で元に戻せます
-- **保存済みコレクション**: 検索条件（語・タグ・期間）に名前を付けて「この条件を保存」で保存します。一覧の「呼び出す」で条件を復元し、「改名」「複製」「削除」で管理できます
-- **自動タグ規則**: コレクション欄の下にある規則フォームで、条件（ドメイン末尾・URL・件名のいずれか1つ以上）と付与するタグ、優先度を登録します。新規記録のURL・件名が条件に合うと自動でタグが付きます（AIタグの後に追加され、重複は1つにまとめます）。規則の無効化・削除は今後の付与を止めます。誤って付いた場合は規則の「適用を取り消す」で、付与記録からタグを外せます
-- **履歴に聞く**: 対象コレクション（既定は「すべての記録」）を選んで質問を入力し「聞く」を押すと、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録に移動できます。該当する記録がない場合は「分かりません」と表示されます。外部には送信しません。回答中にもう一度押しても二重実行しません。失敗時は理由が表示されるので、もう一度「聞く」で再試行できます。要求は最大60秒で打ち切られます
-- **調査レポート一発生成**: 現在の検索条件（語・タグ・選択日）を対象に「レポートを生成」を押すと、要旨・時系列・引用・未読穴の4節からなる Markdown を生成します。「Obsidianにも送る」を選ぶとObsidianにも書き出します。要旨は保存済み要約だけを使い、本文そのものは入りません。引用の番号付きリンクから元の記録に飛べます。要約のない記録は未読穴に並びます。条件に合う記録がない場合は理由が表示されファイルは作られません。条件を戻してもう一度押すと再送できます。対象は先頭200件に絞られます。Obsidian送信の失敗時は理由が表示されます
 - **タグ正規化の提案**: タグの正規化ルールで変わる保存済みタグを「提案を表示」で一覧し、「適用」で記録のタグを書き換えます。「取消」で元に戻せます
+
+**保存済みコレクション / 履歴に聞く / 調査レポート一発生成（履歴直下の独立パネル）**:
+履歴パネルは記録一覧と検索操作だけに絞られ、保存・質問・報告は履歴の直後に並ぶ3件の独立パネルに移りました。
+- **保存済みコレクション**（`Dashboard → 保存済みコレクション`）: 検索条件（語・タグ・期間）に名前を付けて保存します。一覧の「呼び出す」はパネル内の下書きに条件を復元します（履歴一覧への適用はしません）。「改名」「複製」「削除」で管理できます
+- **自動タグ規則**（同パネル内）: 条件（ドメイン末尾・URL・件名のいずれか1つ以上）と付与するタグ、優先度を登録します。新規記録のURL・件名が条件に合うと自動でタグが付きます（AIタグの後に追加され、重複は1つにまとめます）。規則の無効化・削除は今後の付与を止めます。誤って付いた場合は規則の「適用を取り消す」で、付与記録からタグを外せます
+- **履歴に聞く**（`Dashboard → 履歴に聞く`）: 対象コレクション（既定は「すべての記録」）を選んで質問を入力し「聞く」を押すと、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録に移動できます。該当する記録がない場合は「分かりません」と表示されます。外部には送信しません。回答中にもう一度押しても二重実行しません。失敗時は理由が表示されるので、もう一度「聞く」で再試行できます。要求は最大60秒で打ち切られます
+- **調査レポート一発生成**（`Dashboard → 調査レポート一発生成`）: 対象コレクションを選んで「レポートを生成」を押すと、要旨・時系列・引用・未読穴の4節からなる Markdown を生成します。「Obsidianにも送る」を選ぶとObsidianにも書き出します。要旨は保存済み要約だけを使い、本文そのものは入りません。引用の番号付きリンクから元の記録に飛べます。要約のない記録は未読穴に並びます。条件に合う記録がない場合は理由が表示されファイルは作られません。対象を選び直してもう一度押すと再送できます。対象は先頭200件に絞られます。Obsidian送信の失敗時は理由が表示されます
 
 **絞り込み**:
 - **全文検索**: 検索ボックスにキーワードを入力すると、URL・タイトル・AI要約全体をFTS5で高速検索できます
@@ -604,10 +607,14 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 - **Bulk selection actions**: Check the box on multiple entries to reveal **"Regenerate AI summaries"** and **"Delete selected articles"** in the selection bar. Bulk delete confirms inline in the bar with the count ("Delete now" / Cancel) and stops at the first failure. Bulk regenerate runs sequentially with current settings and toasts succeeded/failed counts (rows already running are reported as skipped; the loosening choices and force option are header-only ― use the per-entry header for those)
 - **Delete**: Physically delete individual entries (GDPR Art.17 compliant). "Delete All Data" removes everything at once
 - **Star selected rows**: Star all checked rows at once. The confirmation shows how many are judged private and offers "Apply excluding private". "Undo" reverts it after applying
-- **Saved collections**: Name a search condition (terms, tags, period) and save it with "Save this condition". "Recall" restores it from the list and "Delete" removes it
-- **Ask your history**: Pick a target collection (default: all records), enter a question, and press "Ask". An on-device model answers from excerpts of your records, and the links to the three supporting records open the originals. If nothing matches, it answers that it does not know. Nothing is sent externally
-- **One-shot research report**: Press "Generate report" to build a Markdown report with four sections (summary, timeline, citations, unread gaps) for the current search condition (terms, tags, selected day). Choose "Also send to Obsidian" to write it to Obsidian too
 - **Tag normalization proposals**: "Show proposals" lists stored tags that would change under the tag normalization rules. "Apply" rewrites the tags on your records and "Undo" reverts it
+
+**Saved collections / Ask history / One-shot research report (standalone panels right after history)**:
+The history panel keeps only the record list and search operations; saving, asking, and reporting moved to three standalone panels directly after history.
+- **Saved collections** (`Dashboard → Saved collections`): Name a search condition (terms, tags, period) and save it. "Recall" restores it into the panel-local draft (it does not apply to the history list). "Rename", "Duplicate", and "Delete" manage the list
+- **Auto-tag rules** (same panel): Register a condition (domain suffix, URL, and/or title) with a tag and a priority. New records whose URL or title matches get the tag automatically (appended after AI tags, deduplicated). Disabling or deleting a rule stops future tagging. "Undo apply" on a rule removes its tag from the tagged records
+- **Ask history** (`Dashboard → Ask history`): Pick a target collection (default: all records), enter a question, and press "Ask". An on-device model answers from excerpts of your records, and the links to the three supporting records open the originals. If nothing matches, it answers that it does not know. Nothing is sent externally. Pressing again while answering does not run it twice. On failure a reason is shown, so press "Ask" again to retry. Requests time out after 60 seconds
+- **One-shot research report** (`Dashboard → One-shot research report`): Pick a target collection and press "Generate report" to build a Markdown report with four sections (summary, timeline, citations, unread gaps). Choose "Also send to Obsidian" to write it to Obsidian too. The summary uses only stored summaries, never the full body text. Numbered citation links jump to the original records. Records without a summary land in the unread gaps. With no matching records a reason is shown and no file is created. Pick the target again and press once more to resend. Targets are capped at the first 200 records. Obsidian send failures show a reason
 
 **Filtering**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5

@@ -139,10 +139,12 @@ test.describe('History panel UI @extension', () => {
   });
 });
 
-test.describe('Research report @interaction (PBI 2026-10-23-09)', () => {
-  // BDD: レポートが生成される + 送り先に届く — the panel conditions become the
-  // scope, the button delivers the four-section Markdown through the existing
-  // local-download path, and the status confirms the delivery.
+test.describe('Research report @interaction (PBI 2026-10-23-09; panel split PBI 2026-11-01-04)', () => {
+  // BDD: レポートが生成される + 送り先に届く — the selected collection
+  // (default: all records) becomes the scope, the button delivers the
+  // four-section Markdown through the existing local-download path, and the
+  // status confirms the delivery. The region lives in the standalone
+  // research-report panel (`#research-report-panel-region`), not in history.
   //
   // Headed-only: the download is initiated by the service worker
   // (chrome.downloads.download), and headless Chromium does not surface
@@ -188,7 +190,9 @@ test.describe('Research report @interaction (PBI 2026-10-23-09)', () => {
       seededHistoryPanel,
     }) => {
       const { page } = seededHistoryPanel;
-      const region = page.locator('#sqlite-research-report');
+      await page.locator('[data-panel="panel-research-report"]').click();
+      await expect(page.locator('#panel-research-report')).toBeVisible();
+      const region = page.locator('#research-report-panel-region');
       const generateButton = region.locator('[data-report-action="generate"]');
       await expect(generateButton).toBeVisible({ timeout: 15000 });
 
@@ -243,6 +247,33 @@ test.describe('Research report @interaction (PBI 2026-10-23-09)', () => {
           },
         ],
         rowText: 'Retry Seed One',
+        beforeSeed: async (page) => {
+          await page.evaluate(async () => {
+            const res = await chrome.storage.local.get('settings');
+            const current = (res.settings as Record<string, unknown>) ?? {};
+            await chrome.storage.local.set({
+              settings: {
+                ...current,
+                saved_collections: {
+                  'col-e2e-report-empty': {
+                    id: 'col-e2e-report-empty',
+                    name: 'E2E empty collection',
+                    query: { search: 'zzz-no-such-record-09' },
+                    createdAt: 1,
+                    updatedAt: 2,
+                  },
+                  'col-e2e-report-retry': {
+                    id: 'col-e2e-report-retry',
+                    name: 'E2E retry collection',
+                    query: { search: 'Retry' },
+                    createdAt: 3,
+                    updatedAt: 4,
+                  },
+                },
+              },
+            });
+          });
+        },
       },
     });
 
@@ -250,28 +281,26 @@ test.describe('Research report @interaction (PBI 2026-10-23-09)', () => {
       seededHistoryPanel,
     }) => {
       const { page } = seededHistoryPanel;
-      const region = page.locator('#sqlite-research-report');
+      await page.locator('[data-panel="panel-research-report"]').click();
+      await expect(page.locator('#panel-research-report')).toBeVisible();
+      const region = page.locator('#research-report-panel-region');
       const generateButton = region.locator('[data-report-action="generate"]');
       const status = region.locator('.research-report-status');
-      const search = page.locator('#sqlite-search-input');
-      await expect(search).toBeVisible({ timeout: 10000 });
-
-      // Narrow the scope to nothing: the debounced search empties the list.
-      await search.fill('zzz-no-such-record-09');
-      await expect
-        .poll(async () => page.locator('#sqlite-entry-list .sqlite-entry').count(), { timeout: 15000 })
-        .toBe(0);
-
+      const target = region.locator('.research-report-target');
       await expect(generateButton).toBeVisible({ timeout: 15000 });
+
+      // Narrow the scope to nothing: the empty collection matches no rows.
+      await expect
+        .poll(async () => target.locator('option[value="col-e2e-report-empty"]').count(), { timeout: 15_000 })
+        .toBe(1);
+      await target.selectOption('col-e2e-report-empty');
+
       await generateButton.click();
       // 縮退の出口: the raw reason surfaces — never a fake done state.
       await expect(status).toContainText('no_records', { timeout: 15000 });
 
-      // 再送: restore the scope, wait for the rows to return, generate again.
-      await search.fill('');
-      await expect
-        .poll(async () => page.locator('#sqlite-entry-list .sqlite-entry').count(), { timeout: 15000 })
-        .toBeGreaterThan(0);
+      // 再送: restore the scope to the matching collection, generate again.
+      await target.selectOption('col-e2e-report-retry');
 
       const downloadPromise = page.waitForEvent('download');
       await generateButton.click();

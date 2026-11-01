@@ -2,9 +2,10 @@
  * ask-history-panel.spec.ts
  *
  * PBI 2026-11-01-02 — the standalone ask-history panel (@extension).
- * A collection saved in the history region is listed as an ask target in
- * the new sibling panel (shared repositories, no shared state);
- * `?tab=ask-history` deep-links to it.
+ * A stored collection is listed as an ask target in the new sibling panel
+ * (shared repositories, no shared state); `?tab=ask-history` deep-links to
+ * it. Seeding goes through storage (beforeSeed): since PBI 2026-11-01-04
+ * the history panel no longer hosts a save UI.
  *
  * NOTE: not executed in this environment (no Playwright browser installed);
  * unit + integration specs cover the same BDD scenarios. The full
@@ -23,19 +24,35 @@ function buildSeedRows() {
   ];
 }
 
-test.use({ panelSeedParams: { rows: buildSeedRows() } });
+test.use({
+  panelSeedParams: {
+    rows: buildSeedRows(),
+    beforeSeed: async (page) => {
+      await page.evaluate(async () => {
+        const res = await chrome.storage.local.get('settings');
+        const current = (res.settings as Record<string, unknown>) ?? {};
+        await chrome.storage.local.set({
+          settings: {
+            ...current,
+            saved_collections: {
+              'col-e2e-ask-alpha': {
+                id: 'col-e2e-ask-alpha',
+                name: 'Alpha set',
+                query: { search: 'Alpha' },
+                createdAt: 1,
+                updatedAt: 2,
+              },
+            },
+          },
+        });
+      });
+    },
+  },
+});
 
 test.describe('Ask history panel @extension', () => {
-  test('collection saved in history appears as an ask target in the new panel', async ({ seededHistoryPanel }) => {
+  test('stored collection appears as an ask target in the new panel', async ({ seededHistoryPanel }) => {
     const { page } = seededHistoryPanel;
-
-    await page.locator('#sqlite-search-input').fill('Alpha');
-    await expect
-      .poll(async () => page.locator('#sqlite-entry-list .sqlite-entry').count(), { timeout: 15000 })
-      .toBe(1);
-    await page.locator('#panel-sqlite-history .saved-collection-name-input').fill('Alpha set');
-    await page.locator('#panel-sqlite-history [data-collection-action="save"]').click();
-    await expect(page.locator('#panel-sqlite-history .saved-collection-row')).toContainText('Alpha set', { timeout: 15000 });
 
     await page.locator('[data-panel="panel-ask-history"]').click();
     await expect(page.locator('#panel-ask-history')).toBeVisible();
