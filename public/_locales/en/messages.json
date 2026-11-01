@@ -2168,7 +2168,7 @@
     "message": "Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection."
   },
   "savedCollectionsHelp": {
-    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
+    "message": "Enter a term, tag, and period per row, check estimated counts with Refresh, then save under a name and recall it from the list."
   },
   "savedCollectionsEmpty": {
     "message": "No saved collections yet"

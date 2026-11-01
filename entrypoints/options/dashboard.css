@@ -1882,12 +1882,16 @@ button#changeMasterPassword:hover {
 }
 
 .clause-row .clause-search {
-  flex: 2;
+  flex: 2 1 0;
 }
 
-.clause-row .clause-tag,
+.clause-row .clause-tag {
+  flex: 1 1 0;
+}
+
 .clause-row .clause-date {
-  flex: 1;
+  flex: 0 1 auto;
+  min-width: 9em;
 }
 
 .clause-count {

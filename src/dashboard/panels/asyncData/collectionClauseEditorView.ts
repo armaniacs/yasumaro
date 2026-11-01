@@ -83,9 +83,9 @@ export interface ClauseEditorViewCallbacks {
 
 function rowHtml(index: number, row: { search: string; tag: string | null; date: string | null }, countText: string): string {
   return `<div class="clause-row" data-clause-index="${index}">`
-    + `<input type="text" class="clause-search" data-clause-field="search" value="${escapeHtml(row.search)}" aria-label="${escapeHtml(t('savedCollectionCondSearch'))}" />`
-    + `<input type="text" class="clause-tag" data-clause-field="tag" value="${escapeHtml(row.tag ?? '')}" aria-label="${escapeHtml(t('savedCollectionCondTag'))}" />`
-    + `<input type="date" class="clause-date" data-clause-field="date" value="${escapeHtml(row.date ?? '')}" aria-label="${escapeHtml(t('savedCollectionCondDate'))}" />`
+    + `<input type="text" class="clause-search" data-clause-field="search" value="${escapeHtml(row.search)}" aria-label="${escapeHtml(t('savedCollectionCondSearch'))}" placeholder="${escapeHtml(t('savedCollectionCondSearch'))}" />`
+    + `<input type="text" class="clause-tag" data-clause-field="tag" value="${escapeHtml(row.tag ?? '')}" aria-label="${escapeHtml(t('savedCollectionCondTag'))}" placeholder="${escapeHtml(t('savedCollectionCondTag'))}" />`
+    + `<input type="date" class="clause-date" data-clause-field="date" value="${escapeHtml(row.date ?? '')}" aria-label="${escapeHtml(t('savedCollectionCondDate'))}" placeholder="${escapeHtml(t('savedCollectionCondDate'))}" />`
     + `<span class="clause-count" role="status">${escapeHtml(countText)}</span>`
     + `<button type="button" class="secondary-btn" data-clause-action="remove" aria-label="${escapeHtml(t('collectionClauseRemoveRow'))}">${escapeHtml(t('collectionClauseRemoveRow'))}</button>`
     + `</div>`;

@@ -25,6 +25,16 @@ describe('renderClauseEditorView', () => {
       expect(container.querySelector('.clause-tag')).not.toBeNull();
       expect(container.querySelector('.clause-date')).not.toBeNull();
     });
+    it('shows a non-empty placeholder on each clause input', () => {
+      const editor = createClauseEditor();
+      const container = mount(editor);
+      const search = container.querySelector('.clause-search') as HTMLInputElement;
+      const tag = container.querySelector('.clause-tag') as HTMLInputElement;
+      const date = container.querySelector('.clause-date') as HTMLInputElement;
+      expect(search.getAttribute('placeholder')).toBeTruthy();
+      expect(tag.getAttribute('placeholder')).toBeTruthy();
+      expect(date.getAttribute('placeholder')).toBeTruthy();
+    });
   });
   describe('editing', () => {
     it('typing in the search box updates the editor without rerender', () => {
