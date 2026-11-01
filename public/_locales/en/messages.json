@@ -2230,6 +2230,21 @@
   "savedCollectionNameEmpty": {
     "message": "Enter a name"
   },
+  "collectionClauseAddRow": {
+    "message": "Add condition"
+  },
+  "collectionClauseRemoveRow": {
+    "message": "Remove condition"
+  },
+  "collectionClauseOpLabel": {
+    "message": "Toggle AND/OR"
+  },
+  "collectionClausePreview": {
+    "message": "Estimated match count. Actual search results may differ."
+  },
+  "collectionClauseEmptySave": {
+    "message": "No condition to save. Add at least one condition."
+  },
   "autoTagRulesLabel": {
     "message": "Auto-tag rules"
   },
