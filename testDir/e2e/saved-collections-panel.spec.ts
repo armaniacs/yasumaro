@@ -74,13 +74,13 @@ test.describe('Saved collections panel @extension', () => {
     await expect(page.locator('#panel-saved-collections .saved-collections-draft')).toContainText('Alpha');
     await page.locator('#panel-saved-collections .saved-collection-name-input').fill('Rename me');
     await page.locator('#panel-saved-collections [data-collection-action="save"]').click();
-    await expect(page.locator('#panel-saved-collections .saved-collection-row')).toContainText('Rename me', { timeout: 15000 });
+    await expect(page.locator('#panel-saved-collections .saved-collection-row', { hasText: 'Rename me' })).toContainText('Rename me', { timeout: 15000 });
 
     const renameRow = page.locator('#panel-saved-collections .saved-collection-row', { hasText: 'Rename me' });
     await renameRow.locator('[data-collection-action="rename"]').click();
     await renameRow.locator('.saved-collection-rename-input').fill('Renamed');
     await renameRow.locator('[data-collection-action="rename-save"]').click();
-    await expect(page.locator('#panel-saved-collections .saved-collection-row')).toContainText('Renamed', { timeout: 15000 });
+    await expect(page.locator('#panel-saved-collections .saved-collection-row', { hasText: 'Renamed' })).toContainText('Renamed', { timeout: 15000 });
 
     const renamedRow = page.locator('#panel-saved-collections .saved-collection-row', { hasText: 'Renamed' });
     await renamedRow.locator('[data-collection-action="duplicate"]').click();
