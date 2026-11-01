@@ -12,6 +12,9 @@ import {
   parseCollectionQuery,
   describeCollectionQuery,
   newCollectionId,
+  parseCollectionQueryV2,
+  serializeClausesQuery,
+  describeCollectionQueryV2,
 } from '../savedCollectionQuery.js';
 
 const LABELS = { search: '語', tag: 'タグ', date: '期間' };
@@ -104,5 +107,31 @@ describe('newCollectionId', () => {
     expect(a).not.toBe('');
     expect(b).not.toBe('');
     expect(a).not.toBe(b);
+  });
+});
+
+describe('savedCollectionQuery v2', () => {
+  describe('parseCollectionQueryV2', () => {
+    it('parses multi-clause queries with op', () => {
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [
+          { search: 'AI', tag: 'tools', date: null },
+          { search: '要約', tag: null, date: '2026-11-01' },
+        ],
+      });
+      expect(parsed.clauses).toHaveLength(2);
+      expect(parsed.op).toBe('or');
+    });
+    it('migrates legacy v1 shape to single-clause v2', () => {
+      const parsed = parseCollectionQueryV2({ search: 'wasm', tag: 'tools', date: null });
+      expect(parsed.clauses).toEqual([{ search: 'wasm', tag: 'tools', date: null }]);
+      expect(parsed.op).toBe('and');
+    });
+    it('fails closed to empty clauses on unknown shapes', () => {
+      expect(parseCollectionQueryV2(null).clauses).toEqual([]);
+      expect(parseCollectionQueryV2('x').clauses).toEqual([]);
+    });
   });
 });
