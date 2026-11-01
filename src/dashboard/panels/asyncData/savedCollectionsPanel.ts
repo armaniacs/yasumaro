@@ -19,6 +19,11 @@ import type { SavedCollection } from '../../../utils/storage/savedCollections.js
 import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
 import { createClauseEditor } from './collectionClauseEditor.js';
 import { renderClauseEditorView } from './collectionClauseEditorView.js';
+import { previewClauseCounts, type ClausePreview, type ClauseCountSource } from './collectionClausePreview.js';
+import type { ClauseStorageQuery } from './collectionScopeResolver.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
+import { queryHistory, isServiceError } from './sqliteHistoryQuery.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
  * savedCollectionsPanel.ts (PBI 2026-11-01-01; Task 2: clause-editor wiring)
@@ -35,6 +40,21 @@ import { renderClauseEditorView } from './collectionClauseEditorView.js';
  * can receive a handoff (PBI 04 or a follow-up).
  */
 
+export interface SavedCollectionsPanelDeps {
+  countForClause?: ClauseCountSource['countForClause'];
+}
+
+async function countForClauseHistory(query: ClauseStorageQuery): Promise<number> {
+  const result = await queryHistory({
+    ...pickDefined({ search: query.text, tagFilter: query.tagFilter, since: query.dateFrom, until: query.dateTo }),
+    limit: 1,
+    offset: 0,
+    tagInitiated: false,
+  });
+  if (isServiceError(result)) throw new Error(result.error);
+  return result.data.total;
+}
+
 export const SAVED_COLLECTIONS_PANEL_REGION_ID = 'saved-collections-panel-region';
 export const SAVED_COLLECTIONS_EDITOR_REGION_ID = 'saved-collections-editor-region';
 
@@ -44,12 +64,14 @@ const CONDITION_LABELS: CollectionQueryLabels = {
   date: t('savedCollectionCondDate'),
 };
 
-export function createSavedCollectionsPanel(): PanelLifecycle {
+export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): PanelLifecycle {
   let container: HTMLElement | null = null;
   let savedCollections: Record<string, SavedCollection> = {};
   let savedTagRules: Record<string, AutoTagRule> = {};
   const editor = createClauseEditor();
   let loadedIds: number[] = [];
+  let previewGeneration = 0;
+  const countForClause: ClauseCountSource['countForClause'] = deps?.countForClause ?? countForClauseHistory;
 
   function nonEmptyFirstInput(): CollectionQueryInput {
     const first = editor.getClauses().find((c) => c.search !== '' || c.tag !== null || c.date !== null);
@@ -81,16 +103,67 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     container.appendChild(alert);
   }
 
+  function clearPreviewError(): void {
+    container?.querySelector('.saved-collections-preview-error')?.remove();
+  }
+
+  function renderPreviewError(error: unknown): void {
+    if (!container) return;
+    clearPreviewError();
+    const alert = document.createElement('div');
+    alert.className = 'saved-collections-preview-error';
+    alert.setAttribute('role', 'alert');
+    alert.textContent = errorMessage(error);
+    container.appendChild(alert);
+  }
+
+  function toStorageQueries(): ClauseStorageQuery[] {
+    return editor.getClauses().map((clause) => {
+      const out: ClauseStorageQuery = {};
+      if (clause.search !== '') out.text = clause.search;
+      if (clause.tag !== null) out.tagFilter = clause.tag;
+      if (clause.date !== null) {
+        const range = localDayRangeFromDateString(clause.date);
+        out.dateFrom = range.since;
+        out.dateTo = range.until;
+      }
+      return out;
+    });
+  }
+
+  function paintPreview(target: HTMLElement, preview: ClausePreview): void {
+    const rows = target.querySelectorAll('.clause-count');
+    preview.perRow.forEach((count, index) => {
+      const el = rows[index];
+      if (el instanceof HTMLElement) el.textContent = String(count);
+    });
+    const totalEl = target.querySelector('.clause-preview-text');
+    if (totalEl instanceof HTMLElement) totalEl.textContent = String(preview.total);
+  }
+
+  async function refreshPreview(): Promise<void> {
+    const generation = ++previewGeneration;
+    const target = container;
+    if (!target) return;
+    let preview: ClausePreview;
+    try {
+      preview = await previewClauseCounts(toStorageQueries(), editor.getOp(), { countForClause });
+    } catch (error) {
+      if (generation !== previewGeneration || container !== target) return;
+      renderPreviewError(error);
+      return;
+    }
+    if (generation !== previewGeneration || container !== target) return;
+    clearPreviewError();
+    paintPreview(target, preview);
+  }
+
   function applyToDraft(query: Record<string, unknown>): void {
     const parsed = parseCollectionQueryV2(query);
     loadedIds = parsed.ids;
     editor.loadSaved(query);
     renderEditor();
     renderDraft();
-  }
-
-  function refreshPreview(): Promise<void> {
-    return Promise.resolve();
   }
 
   function renderEditor(): void {

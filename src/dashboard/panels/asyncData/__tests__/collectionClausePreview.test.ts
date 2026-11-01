@@ -18,5 +18,12 @@ describe('collectionClausePreview', () => {
       });
       expect(result).toEqual({ perRow: [0], total: 0 });
     });
+    it('excludes structurally empty rows from the and total', async () => {
+      const result = await previewClauseCounts([{ text: 'AI' }, {}], 'and', {
+        countForClause: async (q) => (q.text === 'AI' ? 3 : 99),
+      });
+      expect(result.perRow).toEqual([3, 0]);
+      expect(result.total).toBe(3);
+    });
   });
 });

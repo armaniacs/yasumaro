@@ -24,14 +24,17 @@ export async function previewClauseCounts(
   source: ClauseCountSource,
 ): Promise<ClausePreview> {
   const perRow: number[] = [];
+  const live: number[] = [];
   for (const query of queries) {
     if (isEmptyQuery(query)) {
       perRow.push(0);
       continue;
     }
-    perRow.push(await source.countForClause(query));
+    const count = await source.countForClause(query);
+    perRow.push(count);
+    live.push(count);
   }
-  if (perRow.every((n) => n === 0)) return { perRow, total: 0 };
-  if (op === 'or') return { perRow, total: perRow.reduce((a, b) => a + b, 0) };
-  return { perRow, total: Math.min(...perRow) };
+  if (live.length === 0) return { perRow, total: 0 };
+  if (op === 'or') return { perRow, total: live.reduce((a, b) => a + b, 0) };
+  return { perRow, total: Math.min(...live) };
 }

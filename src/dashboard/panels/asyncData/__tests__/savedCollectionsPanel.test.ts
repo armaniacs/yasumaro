@@ -219,3 +219,37 @@ describe('savedCollectionsPanel', () => {
     });
   });
 });
+
+describe('savedCollectionsPanel', () => {
+  describe('preview generation guard', () => {
+    it('ignores a stale refresh that resolves after a newer one', async () => {
+      const resolvers: Array<(n: number) => void> = [];
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel({
+        countForClause: () => new Promise<number>((resolve) => { resolvers.push(resolve); }),
+      });
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(resolvers).toHaveLength(2);
+
+      resolvers[1]!(7);
+      await vi.waitFor(() => {
+        expect(section.querySelector('.clause-preview-text')?.textContent).toBe('7');
+      });
+
+      resolvers[0]!(100);
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(section.querySelector('.clause-count')?.textContent).toBe('7');
+      expect(section.querySelector('.clause-preview-text')?.textContent).toBe('7');
+      panel.destroy?.();
+    });
+  });
+});
