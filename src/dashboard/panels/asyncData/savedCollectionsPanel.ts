@@ -100,12 +100,17 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     } catch (error) {
       return { ok: false, error: errorMessage(error) };
     }
+    const rawIds = query['ids'];
+    loadedIds = Array.isArray(rawIds)
+      ? rawIds.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      : [];
     await loadSaved();
     return { ok: true };
   }
 
   function createActions(): ReturnType<typeof createSavedCollectionsActions> {
     const base = createSavedCollectionsActions({
+      // Adapter only: satisfies SavedCollectionsDeps — the live save path is onSaveV2.
       getQueryInput: () => ({ ...nonEmptyFirstInput() }),
       applyCollection: (query) => applyToDraft(query),
       getCollections: () => savedCollections,
