@@ -169,6 +169,12 @@
           </svg>
           <span data-i18n="sqliteHistoryTab">SQLite History</span>
         </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-saved-collections" aria-selected="false" data-panel="panel-saved-collections">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 3h12v18l-6-4-6 4z"/>
+          </svg>
+          <span data-i18n="savedCollectionsTab">Saved collections</span>
+        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 8v13H3V8"/>
@@ -2072,6 +2078,18 @@
         <div id="sqlite-history-container">
           <p class="panel-description">Loading SQLite history…</p>
         </div>
+      </section>
+
+      <!-- Saved Collections Panel (PBI 2026-11-01-01) -->
+      <section id="panel-saved-collections" class="panel data-panel" role="tabpanel" aria-labelledby="panel-saved-collections-title">
+        <h2 id="panel-saved-collections-title" class="panel-title" data-i18n="savedCollectionsTab">Saved collections</h2>
+        <p class="panel-description" data-i18n="savedCollectionsHelp">
+          Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count.
+        </p>
+        <p class="saved-collections-draft" role="status" data-i18n="savedCollectionNoCondition">
+          No condition to save. Specify a term, tag, or period first.
+        </p>
+        <div id="saved-collections-panel-region"></div>
       </section>
 
       <!-- Archive Panel (PBI 2026-09-06-02) -->

@@ -4555,6 +4555,9 @@
   "sqliteHistoryTab": {
     "message": "History"
   },
+  "savedCollectionsTab": {
+    "message": "Saved collections"
+  },
   "archiveTab": {
     "message": "Archive"
   },

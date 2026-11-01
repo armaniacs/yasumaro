@@ -47,6 +47,27 @@ describe('panelCategories — 単一ソース', () => {
     expect(categoryForPanel('panel-general')).toBe('setup');
   });
 
+  it('places the saved-collections panel in analysis right after history (PBI 2026-11-01-01)', () => {
+    expect(categoryForPanel('panel-saved-collections')).toBe('analysis');
+    expect(CATEGORY_PANEL_IDS.analysis).toEqual([
+      'panel-tag-cluster',
+      'panel-sqlite-history',
+      'panel-saved-collections',
+      'panel-archive',
+      'panel-domain-search',
+      'panel-time-heatmap',
+      'panel-domain-analysis',
+      'panel-revisit-insights',
+      'panel-research-sessions',
+      'panel-tag-frequency-timeline',
+      'panel-tag-cooccurrence-table',
+      'panel-word-cluster',
+      'panel-similarity-cluster',
+      'panel-tag-cluster-time-slider',
+      'panel-session-timeline',
+    ]);
+  });
+
   it('covers every catalog panel exactly once (assigned or other fallback)', () => {
     const catalogIds = PANEL_CATALOG.map((e) => e.id);
     const assignedIds = Object.values(CATEGORY_PANEL_IDS).flat();

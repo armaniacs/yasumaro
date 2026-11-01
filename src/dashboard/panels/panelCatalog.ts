@@ -60,6 +60,9 @@ export const CATALOG_ROWS = [
   { id: 'panel-diagnostics', sidebarSection: 'settings', sidebarI18nKey: 'diagnosticsTab', deepLinkSections: [] },
   { id: 'panel-tag-cluster', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTab', deepLinkSections: [] },
   { id: 'panel-sqlite-history', sidebarSection: 'data', sidebarI18nKey: 'sqliteHistoryTab', deepLinkSections: [], tabParam: 'history' },
+  // PBI 2026-11-01-01: saved collections + auto-tag rules leave the history
+  // panel for a dedicated data panel directly after it.
+  { id: 'panel-saved-collections', sidebarSection: 'data', sidebarI18nKey: 'savedCollectionsTab', deepLinkSections: [], tabParam: 'collections' },
   { id: 'panel-archive', sidebarSection: 'data', sidebarI18nKey: 'archiveTab', deepLinkSections: [] },
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
   { id: 'panel-time-heatmap', sidebarSection: 'data', sidebarI18nKey: 'timeHeatmapTab', deepLinkSections: [] },

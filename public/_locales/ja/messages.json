@@ -4436,6 +4436,9 @@
   "sqliteHistoryTab": {
     "message": "履歴"
   },
+  "savedCollectionsTab": {
+    "message": "保存済みコレクション"
+  },
   "archiveTab": {
     "message": "アーカイブ"
   },

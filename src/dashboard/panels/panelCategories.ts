@@ -67,6 +67,8 @@ export const CATEGORY_PANEL_IDS: Readonly<
   analysis: [
     'panel-tag-cluster',
     'panel-sqlite-history',
+    // PBI 2026-11-01-01: saved collections + auto-tag rules (history sibling).
+    'panel-saved-collections',
     'panel-archive',
     'panel-domain-search',
     'panel-time-heatmap',

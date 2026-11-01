@@ -27,6 +27,10 @@ describe('resolveInitialPanelId', () => {
     expect(resolveInitialPanelId('?tab=history')).toBe('panel-sqlite-history');
   });
 
+  it('opens the saved-collections panel for ?tab=collections (PBI 2026-11-01-01)', () => {
+    expect(resolveInitialPanelId('?tab=collections')).toBe('panel-saved-collections');
+  });
+
   it.each(['obsidian', 'ai-provider', 'general'])(
     'maps ?section=%s to the general panel',
     (section) => {
