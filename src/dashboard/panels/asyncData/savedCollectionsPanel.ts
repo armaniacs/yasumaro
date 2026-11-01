@@ -18,6 +18,7 @@ import { upsertSavedCollectionById } from '../../../utils/storage/savedCollectio
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
 import { createClauseEditor } from './collectionClauseEditor.js';
+import { renderClauseEditorView } from './collectionClauseEditorView.js';
 
 /**
  * savedCollectionsPanel.ts (PBI 2026-11-01-01; Task 3: clause-editor wiring)
@@ -35,6 +36,7 @@ import { createClauseEditor } from './collectionClauseEditor.js';
  */
 
 export const SAVED_COLLECTIONS_PANEL_REGION_ID = 'saved-collections-panel-region';
+export const SAVED_COLLECTIONS_EDITOR_REGION_ID = 'saved-collections-editor-region';
 
 const CONDITION_LABELS: CollectionQueryLabels = {
   search: t('savedCollectionCondSearch'),
@@ -83,7 +85,24 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     const parsed = parseCollectionQueryV2(query);
     loadedIds = parsed.ids;
     editor.loadSaved(query);
+    renderEditor();
     renderDraft();
+  }
+
+  function refreshPreview(): Promise<void> {
+    return Promise.resolve();
+  }
+
+  function renderEditor(): void {
+    if (!container) return;
+    renderClauseEditorView(container, editor, {
+      onDraftChange: () => renderDraft(),
+      onStructureChange: (kind) => {
+        renderEditor();
+        renderDraft();
+        if (kind !== 'draft') void refreshPreview();
+      },
+    }, SAVED_COLLECTIONS_EDITOR_REGION_ID);
   }
 
   async function onSaveV2(name: string): Promise<{ ok: boolean; error?: string }> {
@@ -122,6 +141,7 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
 
   function renderSaved(): void {
     if (!container) return;
+    renderEditor();
     renderSavedCollectionsRegion(
       container,
       savedCollections,
@@ -166,6 +186,7 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     },
     async load() {
       if (!container) return;
+      renderEditor();
       renderDraft();
       await loadSaved();
     },

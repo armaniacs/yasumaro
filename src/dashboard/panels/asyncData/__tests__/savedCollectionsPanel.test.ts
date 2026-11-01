@@ -192,6 +192,21 @@ describe('savedCollectionsPanel — load failure stays in-panel (BDD 読込失�
 });
 
 describe('savedCollectionsPanel', () => {
+  describe('clause editor region', () => {
+    it('renders editor rows on load', async () => {
+      document.body.innerHTML = '<div id="host"><div id="saved-collections-editor-region"></div><div id="saved-collections-panel-region"></div><p class="saved-collections-draft"></p></div>';
+      const host = document.querySelector('#host') as HTMLElement;
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel();
+      panel.mount(host);
+      await panel.load();
+      expect(host.querySelectorAll('.clause-row').length).toBeGreaterThan(0);
+      panel.destroy();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
   describe('clause draft handoff', () => {
     it('restores a multi-clause saved query into the editor', async () => {
       const { createClauseEditor } = await import('../collectionClauseEditor.js');
