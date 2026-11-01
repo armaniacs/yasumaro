@@ -171,7 +171,7 @@ export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): P
     renderClauseEditorView(container, editor, {
       onDraftChange: () => renderDraft(),
       onStructureChange: (kind) => {
-        renderEditor();
+        if (kind !== 'refresh') renderEditor();
         renderDraft();
         if (kind !== 'draft') void refreshPreview();
       },

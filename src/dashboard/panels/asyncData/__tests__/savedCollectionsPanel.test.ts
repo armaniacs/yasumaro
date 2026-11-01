@@ -251,5 +251,45 @@ describe('savedCollectionsPanel', () => {
       expect(section.querySelector('.clause-preview-text')?.textContent).toBe('7');
       panel.destroy?.();
     });
+
+    it('shows an alert and keeps old counts when preview counting fails', async () => {
+      let shouldFail = false;
+      let deferred: PromiseWithResolvers<number> | null = null;
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel({
+        countForClause: () => {
+          if (!shouldFail) return Promise.resolve(7);
+          deferred = Promise.withResolvers<number>();
+          return deferred.promise;
+        },
+      });
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      const baselineRow = section.querySelector('.clause-count')?.textContent;
+      const baselineTotal = section.querySelector('.clause-preview-text')?.textContent;
+      expect(baselineRow).toBe('7');
+      expect(baselineTotal).toBe('7');
+
+      shouldFail = true;
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(deferred).not.toBeNull();
+      deferred!.reject(new Error('count failed'));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+
+      const alert = section.querySelector('.saved-collections-preview-error');
+      expect(alert?.getAttribute('role')).toBe('alert');
+      expect(alert?.textContent).not.toBe('');
+      expect(section.querySelector('.clause-count')?.textContent).toBe(baselineRow);
+      expect(section.querySelector('.clause-preview-text')?.textContent).toBe(baselineTotal);
+      panel.destroy?.();
+    });
   });
 });
