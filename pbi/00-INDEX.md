@@ -23,9 +23,9 @@
 | ~~01~~ | [2026-11-02-01-bg-search-scope-background.md](2026-11-02-01-bg-search-scope-background.md) | 🔧非機能追加 | 1.44 | 0.33 | ✅ 完了。background 半分の開通。件数の正確化の前提 |
 | ~~02~~ | [2026-11-02-02-feat-ask-collection-v2.md](2026-11-02-02-feat-ask-collection-v2.md) | ✨機能追加 | 0.90 | 0.5 | ✅ 完了。ask の fail-open 解消。tag 部分一致も統一 |
 | ~~03~~ | [2026-11-02-03-feat-history-save-handoff.md](2026-11-02-03-feat-history-save-handoff.md) | ✨機能追加 | 0.72 | 0.5 | ✅ 完了。recall 規約 pin。PBI 2026-11-01-06 の決着を含む |
-| 04 | [2026-11-02-04-feat-report-v2.md](2026-11-02-04-feat-report-v2.md) | ✨機能追加 | 0.56 | 0.75 | ⬜ 未着手。UNION 意味論は本 PBI 内で定義 |
-| 05 | [2026-11-02-05-feat-session-to-collection.md](2026-11-02-05-feat-session-to-collection.md) | ✨機能追加 | 0.42 | 0.75 | ⬜ 未着手。D と同時リリース。単一セッション・ids 優先 |
-| 06 | [2026-11-02-06-feat-today-preset.md](2026-11-02-06-feat-today-preset.md) | ✨機能追加 | 0.36 | 0.33 | ⬜ 未着手。草稿注入のみ |
+| ~~04~~ | [2026-11-02-04-feat-report-v2.md](2026-11-02-04-feat-report-v2.md) | ✨機能追加 | 0.56 | 0.75 | ✅ 完了。UNION 意味論で定義。先頭200件打ち切り |
+| ~~05~~ | [2026-11-02-05-feat-session-to-collection.md](2026-11-02-05-feat-session-to-collection.md) | ✨機能追加 | 0.42 | 0.75 | ✅ 完了。単一セッション・ids 優先。E2E は手動手順で代替 |
+| ~~06~~ | [2026-11-02-06-feat-today-preset.md](2026-11-02-06-feat-today-preset.md) | ✨機能追加 | 0.36 | 0.33 | ✅ 完了。草稿注入のみ |
 | 07 | [2026-11-02-07-feat-history-multi-execution.md](2026-11-02-07-feat-history-multi-execution.md) | ✨機能追加 | 0.28 | 1 | ⬜ 未着手（延期可）。合算 cap と一体 |
 
 ### 2026-11-01 履歴パネルの独立化（ブレスト、4件） ― ✅ 5件完了（01-04 アーカイブ待ち＋06 アーカイブ済み）＋⬜ 05未着手 RICE順: ~~01(0.64)~~ → ~~02(0.64)~~ → ~~03(0.42)~~ → ~~04(0.72・依存により最後)~~ → 05(0.56) → ~~06(0.28・PBI 2026-11-02-03 に吸収)~~
