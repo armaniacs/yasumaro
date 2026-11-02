@@ -1446,6 +1446,9 @@
   "toolsSection": {
     "message": "Tools"
   },
+  "experimentalSection": {
+    "message": "In Development"
+  },
   "panelCategoryFilterLabel": {
     "message": "Filter panels by category"
   },

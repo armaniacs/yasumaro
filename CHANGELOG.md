@@ -39,7 +39,7 @@ All notable changes to this project will be documented in this file.
 
 ### 追加 / Added
 
-- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search
+- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理）（3パネルは開発中の機能として最下部に配置） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search (the three panels live under In Development at the bottom)
 - コレクション条件の複数句対応（行ごとの語・タグ・日付＋AND/OR、件数プレビューつき条件エディタ、単一条件は従来形で保存し質問・レポート互換を維持） / Multi-clause collection conditions (per-row term/tag/date with AND/OR, count preview editor, single conditions still saved in the legacy shape for ask/report compatibility)
 
 ### 修正 / Fixed

@@ -1392,6 +1392,9 @@
   "toolsSection": {
     "message": "ツール"
   },
+  "experimentalSection": {
+    "message": "開発中の機能"
+  },
   "panelCategoryFilterLabel": {
     "message": "パネルを分類で絞り込み"
   },
