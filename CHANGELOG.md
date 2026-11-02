@@ -41,6 +41,15 @@ All notable changes to this project will be documented in this file.
 
 - 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理）（3パネルは開発中の機能として最下部に配置） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search (the three panels live under In Development at the bottom)
 - コレクション条件の複数句対応（行ごとの語・タグ・日付＋AND/OR、件数プレビューつき条件エディタ、単一条件は従来形で保存し質問・レポート互換を維持） / Multi-clause collection conditions (per-row term/tag/date with AND/OR, count preview editor, single conditions still saved in the legacy shape for ask/report compatibility)
+- 履歴に聞くのコレクション V2 対応（複数句・ids の後段絞り込み＋UNION、未対応条件の明示、タグ判定の部分一致統一） / Ask-history collection V2 support (post-hoc multi-clause/ids filtering with UNION, explicit unsupported-scope notice, partial-match tag parity)
+- 調査レポートの V2 対応（複数句の fan-out と ids の和集合、合算200件打ち切り、欠けの除外表示） / Research-report V2 support (per-clause fan-out with ids union, combined 200 cap, excluded-missing display)
+- 履歴からコレクションへの条件引き継ぎ（絞り込みを editor 草稿へ送る、カスタム範囲は拒否、recall 適用先をコレクション草稿に一本化） / History-to-collection handoff (filters sent to the editor draft, custom ranges refused, recall target unified to the collection draft)
+- リサーチセッションの単一コレクション化（ids 優先・200件超拒否・空無効・未読穴警告）と today プリセット（草稿注入のみ） / Single-session to collection (ids-first, 200+ refused, empty disabled, unread-hole warning) and a today preset (draft injection only)
+- 履歴一覧への複数句適用（句ごとの取得と ids 再取得、合算上限、除外件数表示、v1 経路は無改変） / Multi-clause application to the history list (per-clause fetch with ids refetch, combined caps, excluded-count display, v1 path untouched)
+
+### 修正 / Fixed
+
+- 履歴検索で語とタグ・日付を同時に指定してもタグ・日付が無視されていた問題（検索シームが語のみ転送していた。protocol・service・queryHistory を拡張し、recall の複合条件が正しく絞り込むように修正。background 半分も開通済み） / Combined search+tag+date scope was silently dropped on the search path (extended the protocol/service/queryHistory seams plus the background half so recalled compound conditions filter correctly)
 
 ### 修正 / Fixed
 
