@@ -52,6 +52,7 @@ describe('createInitialHistoryState', () => {
       selectedIds: new Set(),
       activeTagFilter: null,
       pendingTagFallback: null,
+      collectionWarning: null,
       sortBy: 'created_at',
       sortDir: 'DESC',
     });

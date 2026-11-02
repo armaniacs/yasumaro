@@ -33,6 +33,8 @@ import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
 import { parseCollectionQuery } from './savedCollectionQuery.js';
+import { resolveCollectionHistory, orderCollectionRows } from './collectionHistoryQuery.js';
+import type { CollectionWarning } from './collectionHistoryQuery.js';
 import type { HistoryCustomRange } from './historyHandoff.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
@@ -63,6 +65,13 @@ export interface SqliteHistoryState {
   selectedIds: Set<number>;
   activeTagFilter: string | null;
   pendingTagFallback: { tag: string; fallbackTo: string; matched: number } | null;
+  /**
+   * v2 collection notice (PBI 2026-11-02-07): set while a multi-clause /
+   * pinned collection drives the list; cleared by every filter change that
+   * leaves collection mode. Null means no collection is applied (or it
+   * applied cleanly with no cap hit).
+   */
+  collectionWarning: CollectionWarning | null;
   sortBy: 'created_at' | 'relevance';
   sortDir: 'ASC' | 'DESC';
 }
@@ -81,6 +90,7 @@ export function createInitialHistoryState(): SqliteHistoryState {
     selectedIds: new Set(),
     activeTagFilter: null,
     pendingTagFallback: null,
+    collectionWarning: null,
     sortBy: 'created_at',
     sortDir: 'DESC',
   };
@@ -103,6 +113,10 @@ export type SqliteHistoryAction =
   // PBI 2026-10-23-06: saved-collection recall — every stored condition lands
   // in state through this one action so a recall cannot drift per field.
   | { type: 'collectionApplied'; search: string; tag: string | null; date: string | null }
+  // PBI 2026-11-02-07: v2 collection recall — clauses cannot land in the
+  // single search/tag/date fields, so they are cleared and the notice carries
+  // what the list shows instead.
+  | { type: 'collectionAppliedV2'; warning: CollectionWarning | null }
   | { type: 'toggleStarSuccess'; id: number; starred: boolean }
   | { type: 'deleteSuccess'; id: number }
   | { type: 'operationError'; error: string }
@@ -118,6 +132,7 @@ function clearTagFilterState(state: SqliteHistoryState): SqliteHistoryState {
     ...state,
     activeTagFilter: null,
     pendingTagFallback: null,
+    collectionWarning: null,
     customRange: null,
     currentPage: 0,
     searchQuery: hadFallback && state.searchQuery ? '' : state.searchQuery,
@@ -169,6 +184,7 @@ export function historyStateReducer(
         searchQuery: action.query,
         currentPage: 0,
         pendingTagFallback: null,
+        collectionWarning: null,
         // A fresh search abandons the ephemeral range: the search query
         // carries no since/until, so keeping it would lie about the list.
         customRange: null,
@@ -184,6 +200,7 @@ export function historyStateReducer(
         customRange: null,
         searchQuery: '',
         pendingTagFallback: null,
+        collectionWarning: null,
         currentPage: 0,
       };
 
@@ -194,11 +211,12 @@ export function historyStateReducer(
         customRange: { since: action.since, until: action.until },
         searchQuery: '',
         pendingTagFallback: null,
+        collectionWarning: null,
         currentPage: 0,
       };
 
     case 'clearFilters':
-      return { ...state, searchQuery: '', selectedDate: null, customRange: null, activeTagFilter: null, pendingTagFallback: null, currentPage: 0 };
+      return { ...state, searchQuery: '', selectedDate: null, customRange: null, activeTagFilter: null, pendingTagFallback: null, collectionWarning: null, currentPage: 0 };
 
     case 'tagFilterClick': {
       const nextTag = state.activeTagFilter === action.tag ? null : action.tag;
@@ -207,7 +225,7 @@ export function historyStateReducer(
       }
       // The tag query carries dateRangeFromSelected only, so an ephemeral
       // custom range no longer describes the list once a tag is picked.
-      return { ...state, activeTagFilter: nextTag, customRange: null, currentPage: 0 };
+      return { ...state, activeTagFilter: nextTag, customRange: null, collectionWarning: null, currentPage: 0 };
     }
 
     case 'clearTagFilter':
@@ -226,11 +244,12 @@ export function historyStateReducer(
         customRange: null,
         currentPage: 0,
         pendingTagFallback: null,
+        collectionWarning: null,
         searchQuery: action.tag,
       };
 
     case 'domainSearchInitiated':
-      return { ...state, searchQuery: action.query, customRange: null, currentPage: 0 };
+      return { ...state, searchQuery: action.query, customRange: null, collectionWarning: null, currentPage: 0 };
 
     // PBI 2026-10-23-06: recall applies every stored condition in one pass.
     // The current sort is preserved on purpose — a collection is a named
@@ -243,6 +262,22 @@ export function historyStateReducer(
         selectedDate: action.date,
         customRange: null,
         pendingTagFallback: null,
+        collectionWarning: null,
+        currentPage: 0,
+      };
+
+    // PBI 2026-11-02-07: v2 recall — clauses cannot land in the single
+    // search/tag/date fields, so they are cleared and the warning carries
+    // what the list shows instead. Sort direction is preserved.
+    case 'collectionAppliedV2':
+      return {
+        ...state,
+        searchQuery: '',
+        activeTagFilter: null,
+        selectedDate: null,
+        customRange: null,
+        pendingTagFallback: null,
+        collectionWarning: action.warning,
         currentPage: 0,
       };
 
@@ -473,6 +508,15 @@ export interface SqliteHistoryModel {
    */
   applyCollection(rawQuery: Record<string, unknown>): void;
   /**
+   * v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
+   * injected queryHistory, mergeClauseResults UNION pins, created_at-ordered
+   * and capped at MAX_COLLECTION_ROWS. The merged set is cached so paging
+   * slices from it; any filter change leaves collection mode. The legacy v1
+   * applyCollection above is untouched — this is the new path, not a change
+   * to it.
+   */
+  applyCollectionQuery(rawQuery: unknown): Promise<void>;
+  /**
    * Bulk star (PBI 2026-10-23-07): set or unset the star for the given ids.
    * Rows already in the target state are skipped (never toggled down by a
    * bulk star); the undo re-runs the same core over the changed ids.
@@ -504,6 +548,32 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   // PBI11: policy (key normalization, eviction, defensive copy) lives in
   // QueryCache — this model only calls buildKey/get/set/clear.
   const cache = new QueryCache(20);
+
+  // PBI 2026-11-02-07: v2 collection page source. While set, the list shows
+  // this merged set (created_at-ordered, already capped) and changePage /
+  // reloadCurrent slice from it instead of issuing a fresh fetch. Any filter
+  // change (search/date/tag/clear, v1 recall, navigation) resets it to null
+  // via leaveCollectionMode and the list returns to query-driven fetching.
+  let collectionRows: BrowsingLogEntry[] | null = null;
+
+  function leaveCollectionMode(): void {
+    collectionRows = null;
+  }
+
+  /** Current page slice of the cached collection set (page clamped). */
+  function collectionPageSlice(page: number): { rows: BrowsingLogEntry[]; total: number } {
+    const rows = collectionRows ?? [];
+    const safePage = Math.max(0, page);
+    const start = safePage * SQLITE_HISTORY_PAGE_SIZE;
+    return { rows: rows.slice(start, start + SQLITE_HISTORY_PAGE_SIZE), total: rows.length };
+  }
+
+  function dispatchCollectionPage(page: number): void {
+    dispatch({ type: 'pageChange', page });
+    const slice = collectionPageSlice(state.currentPage);
+    dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
+    notify();
+  }
 
   // Debounced persistSort — the timing policy lives in the injected
   // PersistScheduler (production default: 500ms setTimeout) so the model
@@ -613,6 +683,12 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function reloadCurrent(): void {
+    if (collectionRows !== null) {
+      const slice = collectionPageSlice(state.currentPage);
+      dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
+      notify();
+      return;
+    }
     if (state.searchQuery.trim()) {
       void fetchData({ search: state.searchQuery, page: state.currentPage });
     } else {
@@ -659,12 +735,14 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function activateWithTag(tag: string): void {
+    leaveCollectionMode();
     pendingInit = { searchTag: tag };
     dispatch({ type: 'tagInitiated', tag });
     void fetchData({ page: 0, ...pickDefined({ tagFilter: state.activeTagFilter || undefined }), tagInitiated: true });
   }
 
   function activateWithDomain(query: string): void {
+    leaveCollectionMode();
     pendingInit = { searchDomain: query };
     dispatch({ type: 'domainSearchInitiated', query });
     if (state.searchQuery.trim()) {
@@ -708,6 +786,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   // set even after the filter reset above.
   function resetFiltersForFreshLoad(): void {
     invalidateCache();
+    leaveCollectionMode();
     const { sortBy, sortDir } = state;
     state = { ...createInitialHistoryState(), sortBy, sortDir };
   }
@@ -805,9 +884,15 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       if (!entry) {
         return { kind: 'success', action: null };
       }
+      const starred = result.data.is_starred === 1;
+      if (collectionRows !== null) {
+        collectionRows = collectionRows.map((row) =>
+          row.id === id ? { ...row, is_starred: starred ? 1 : 0 } : row,
+        );
+      }
       return {
         kind: 'success',
-        action: { type: 'toggleStarSuccess', id, starred: result.data.is_starred === 1 },
+        action: { type: 'toggleStarSuccess', id, starred },
       };
     });
   }
@@ -818,6 +903,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
       const failure = await deleteSingleEntry(id, entry?.url);
       if (failure !== null) {
         return { kind: 'error', error: failure };
+      }
+      if (collectionRows !== null) {
+        collectionRows = collectionRows.filter((row) => row.id !== id);
       }
       return { kind: 'success', action: { type: 'deleteSuccess', id } };
     });
@@ -844,6 +932,9 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
           break;
         }
         dispatch({ type: 'deleteSuccess', id });
+        if (collectionRows !== null) {
+          collectionRows = collectionRows.filter((row) => row.id !== id);
+        }
         deletedCount += 1;
       }
       if (deletedCount === 0 && error !== null) {
@@ -901,6 +992,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function search(query: string): void {
+    leaveCollectionMode();
     dispatch({ type: 'search', query });
     if (query.trim()) {
       void fetchData({ search: query.trim() });
@@ -915,6 +1007,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   // to the empty condition); the model only dispatches state and builds one fetch with
   // every stored condition — search, tag filter and the selected day range.
   function applyCollection(rawQuery: Record<string, unknown>): void {
+    leaveCollectionMode();
     const parsed = parseCollectionQuery(rawQuery);
     dispatch({
       type: 'collectionApplied',
@@ -935,12 +1028,52 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     });
   }
 
+  // v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
+  // injected queryHistory (DI, same seam as fetchData), mergeClauseResults
+  // UNION pins, created_at-ordered and capped. The merged set stays cached
+  // so changePage / reloadCurrent slice from it with paging support; any
+  // filter change leaves collection mode. Deleted-missing pins are excluded
+  // by resolveCollectionHistory, so this never throws for them.
+  async function applyCollectionQuery(rawQuery: unknown): Promise<void> {
+    const generation = guard.start();
+    leaveCollectionMode();
+    invalidateCache();
+    dispatch({ type: 'loadStart' });
+    notify();
+    const outcome = await resolveCollectionHistory(rawQuery, runQueryHistory, {
+      sortDir: state.sortDir,
+    });
+    if (!guard.isCurrent(generation)) return;
+    if ('error' in outcome) {
+      leaveCollectionMode();
+      dispatch({ type: 'loadFailure', error: outcome.error });
+      notify();
+      return;
+    }
+    collectionRows = outcome.data.rows;
+    dispatch({ type: 'collectionAppliedV2', warning: outcome.data.warning });
+    const slice = collectionPageSlice(0);
+    dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
+    notify();
+  }
+
   async function selectDate(dateStr: string): Promise<void> {
+    leaveCollectionMode();
     dispatch({ type: 'dateSelect', date: dateStr });
     await fetchData(localDayRangeFromDateString(dateStr));
   }
 
   async function changeSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): Promise<void> {
+    if (collectionRows !== null) {
+      // Collection mode has no rank: relevance is per-clause FTS5 output and
+      // meaningless across merged clauses, so the key coerces to created_at
+      // while the direction is honored (documented + pinned by test).
+      dispatch({ type: 'sortChange', sortBy: 'created_at', sortDir });
+      schedulePersistSort('created_at', sortDir);
+      collectionRows = orderCollectionRows(collectionRows, sortDir);
+      dispatchCollectionPage(0);
+      return;
+    }
     dispatch({ type: 'sortChange', sortBy, sortDir });
     schedulePersistSort(sortBy, sortDir);
     if (state.searchQuery.trim()) {
@@ -951,11 +1084,13 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function filterByTag(tag: string): void {
+    leaveCollectionMode();
     dispatch({ type: 'tagFilterClick', tag });
     void fetchData({ ...pickDefined({ tagFilter: state.activeTagFilter || undefined }), ...dateRangeFromSelected() });
   }
 
   function clearTagFilter(): void {
+    leaveCollectionMode();
     const hadFallback = state.pendingTagFallback !== null;
     dispatch({ type: 'clearTagFilter' });
     if (hadFallback && state.searchQuery) dispatch({ type: 'search', query: '' });
@@ -963,16 +1098,22 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function selectDateRange(since: number, until: number): void {
+    leaveCollectionMode();
     dispatch({ type: 'rangeSelect', since, until });
     void fetchData({ since, until });
   }
 
   function clearAllFilters(): void {
+    leaveCollectionMode();
     dispatch({ type: 'clearFilters' });
     void fetchData();
   }
 
   function changePage(page: number): void {
+    if (collectionRows !== null) {
+      dispatchCollectionPage(page);
+      return;
+    }
     dispatch({ type: 'pageChange', page });
     reloadCurrent();
   }
@@ -1012,6 +1153,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     bulkSetStarred,
     search,
     applyCollection,
+    applyCollectionQuery,
     selectDate,
     changeSort,
     filterByTag,

@@ -2188,6 +2188,12 @@
   "collectionClauseEmptySave": {
     "message": "保存する条件がありません。条件を1件以上追加してください。"
   },
+  "collectionFanoutNotice": {
+    "message": "条件が多すぎます（$1件）。最初の条件のみ適用しました。"
+  },
+  "collectionTruncatedNotice": {
+    "message": "$2件中最初の$1件を表示しています。"
+  },
   "autoTagRulesLabel": {
     "message": "自動タグ規則"
   },

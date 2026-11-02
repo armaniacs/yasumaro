@@ -2251,6 +2251,12 @@
   "collectionClauseEmptySave": {
     "message": "No condition to save. Add at least one condition."
   },
+  "collectionFanoutNotice": {
+    "message": "Too many conditions ($1). Only the first condition is applied."
+  },
+  "collectionTruncatedNotice": {
+    "message": "Showing the first $1 of $2 matching records."
+  },
   "autoTagRulesLabel": {
     "message": "Auto-tag rules"
   },

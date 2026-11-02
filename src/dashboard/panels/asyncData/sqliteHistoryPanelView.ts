@@ -720,6 +720,7 @@ function updateTagFilterBar(
   containerEl: HTMLElement,
   activeTagFilter: string | null,
   pendingTagFallback: SqliteHistoryState['pendingTagFallback'],
+  collectionWarning: SqliteHistoryState['collectionWarning'],
   onClear: () => void,
 ): void {
   const existingBar = queryById<HTMLElement>(containerEl, SQLITE_HISTORY_IDS.tagFilterBar);
@@ -760,6 +761,36 @@ function updateTagFilterBar(
     }
   } else {
     existingNote?.remove();
+  }
+
+  // Collection notice: shown while a v2 collection drives the list and a cap
+  // was hit (too many clauses → first clause only; rows over the combined
+  // ceiling → head kept). Same role=status pattern as the fallback note.
+  const existingCollectionNote = containerEl.querySelector('.sqlite-collection-note') as HTMLElement | null;
+  if (collectionWarning) {
+    const parts: string[] = [];
+    if (collectionWarning.fanoutCapped) {
+      parts.push(t('collectionFanoutNotice', [String(collectionWarning.totalClauses)]));
+    }
+    if (collectionWarning.truncated) {
+      parts.push(t('collectionTruncatedNotice', [
+        String(collectionWarning.shownCount),
+        String(collectionWarning.fullCount),
+      ]));
+    }
+    if (!existingCollectionNote) {
+      const note = document.createElement('div');
+      note.className = 'sqlite-collection-note';
+      note.setAttribute('role', 'status');
+      note.textContent = parts.join(' ');
+      containerEl.appendChild(note);
+    } else if (parts.length > 0) {
+      existingCollectionNote.textContent = parts.join(' ');
+    } else {
+      existingCollectionNote.remove();
+    }
+  } else {
+    existingCollectionNote?.remove();
   }
 }
 
@@ -1087,6 +1118,7 @@ function updateDynamicRegions(
       searchArea as HTMLElement,
       state.activeTagFilter,
       state.pendingTagFallback,
+      state.collectionWarning,
       callbacks.onTagFilterClear,
     );
   }

@@ -183,6 +183,21 @@ export const MAX_VISIT_DURATION_SECONDS = 86_400;
 export const MAX_SCROLL_RATIO_PERCENT = 100;
 
 /**
+ * History-list collection fan-out (PBI 2026-11-02-07): a v2 collection can
+ * carry arbitrarily many clauses, but each clause costs one history query
+ * (N+1 with the pin-cover re-fetch). Past this many clauses only the first
+ * clause runs and the panel shows a warning.
+ */
+export const MAX_COLLECTION_FANOUT = 8;
+
+/**
+ * History-list collection row ceiling (PBI 2026-11-02-07): the merged
+ * clause-plus-pin row set is sliced to this many rows (created_at order);
+ * the excess is reported as a truncation notice, never silently dropped.
+ */
+export const MAX_COLLECTION_ROWS = 200;
+
+/**
  * Payload size caps. Oversized payloads are rejected (not truncated) so a
  * compromised or buggy sender cannot exhaust SW memory or chrome.storage
  * quota via the recording pipeline.
