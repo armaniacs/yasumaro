@@ -36,6 +36,7 @@ import { getSavedCollections } from '../../../../utils/storage/savedCollectionsR
 import { getAutoTagRules } from '../../../../utils/storage/autoTagRulesRepository.js';
 import { createSavedCollectionsPanel } from '../savedCollectionsPanel.js';
 import { createSqliteHistoryPanel } from '../sqliteHistoryPanel.js';
+import type { SqliteHistoryModelDeps } from '../sqliteHistoryModel.js';
 import { SQLITE_HISTORY_IDS } from '../sqliteHistoryPanelView.js';
 import { tOrKey as t } from '../../../../utils/i18n.js';
 import { useTimerClock, waitForMock } from '../../../../../testDir/waitPolicy.js';
@@ -62,7 +63,7 @@ function mountCollectionsSection(): HTMLElement {
   return section;
 }
 
-function mountPanels(queryHistory: ReturnType<typeof vi.fn>) {
+function mountPanels(queryHistory: NonNullable<SqliteHistoryModelDeps['queryHistory']>) {
   useTimerClock();
   const historySection = mountHistorySection();
   const collectionsSection = mountCollectionsSection();

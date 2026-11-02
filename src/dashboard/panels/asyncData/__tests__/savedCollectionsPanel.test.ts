@@ -204,9 +204,9 @@ describe('savedCollectionsPanel', () => {
       const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
       const panel = createSavedCollectionsPanel();
       panel.mount(host);
-      await panel.load();
+      await panel.load?.();
       expect(host.querySelectorAll('.clause-row').length).toBeGreaterThan(0);
-      panel.destroy();
+      panel.destroy?.();
     });
   });
 });

@@ -737,7 +737,7 @@ describe('researchSessionsPanel — save to collection (PBI 2026-11-02-05)', () 
   it('renders one enabled save button per session with the i18n label', async () => {
     const { panel } = mountPanel();
 
-    await panel.load();
+    await panel.load?.();
     await flush();
 
     // sampleRows groups ids 1-3 into one session; id 4 stays a single page.
@@ -752,7 +752,7 @@ describe('researchSessionsPanel — save to collection (PBI 2026-11-02-05)', () 
   it('hands the ids-first query to the collections draft bus with a count confirmation', async () => {
     const { panel } = mountPanel();
 
-    await panel.load();
+    await panel.load?.();
     await flush();
 
     document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
@@ -777,7 +777,7 @@ describe('researchSessionsPanel — save to collection (PBI 2026-11-02-05)', () 
     mockQueryLogs.mockResolvedValue({ data: { rows, total: rows.length } });
     const { panel } = mountPanel();
 
-    await panel.load();
+    await panel.load?.();
     await flush();
 
     document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
@@ -791,7 +791,7 @@ describe('researchSessionsPanel — save to collection (PBI 2026-11-02-05)', () 
   it('clears the previous handoff reason when the gap regroups the rows', async () => {
     const { panel } = mountPanel();
 
-    await panel.load();
+    await panel.load?.();
     await flush();
 
     document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
