@@ -12,6 +12,7 @@ import {
   buildResearchReportMarkdown,
   countUnreadHoles,
   createResearchReportGenerator,
+  AND_CLAUSE_WINDOW,
   REPORT_MAX_RECORDS,
   type ResearchReportGeneratorDeps,
   type ResearchReportRecord,
@@ -253,6 +254,41 @@ describe('createResearchReportGenerator — V2 UNION semantics (PBI 2026-11-02-0
     expect(outcome).toEqual({ success: true, recordCount: 1, deliveredTo: ['download'] });
     expect(deps.sqliteClient.query).toHaveBeenLastCalledWith({
       ids: [2],
+      orderBy: 'created_at',
+      orderDir: 'ASC',
+      limit: REPORT_MAX_RECORDS,
+    });
+  });
+
+  it('keeps an AND match at position 250 past the per-clause window (large-AND)', async () => {
+    // Clause alpha matches 250 ids; the only intersecting id sits at position
+    // 250. A per-clause 200 cap would drop it before the intersect runs and
+    // the report would narrow to no_records. The mock honors limit like the
+    // real backends (QUERY_CAPS clamp), so this fails without the raised AND
+    // window and passes with it.
+    const many = Array.from({ length: 250 }, (_, i) => i + 1);
+    const query = vi.fn(async (q: Record<string, unknown>) => {
+      if (Array.isArray(q['ids'])) {
+        const ids = (q['ids'] as number[]).filter((id) => id !== 999);
+        return { success: true, data: { rows: ids.map(dbRow), total: ids.length } };
+      }
+      const all = q['text'] === 'alpha' ? many : q['text'] === 'beta' ? [250] : [];
+      const limit = typeof q['limit'] === 'number' ? q['limit'] : all.length;
+      const rows = all.slice(0, limit).map(dbRow);
+      return { success: true, data: { rows, total: all.length } };
+    });
+    const deps = makeDeps({ sqliteClient: { query } });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({
+      scope: { op: 'and', clauses: [{ search: 'alpha' }, { search: 'beta' }] },
+    });
+    expect(deps.sqliteClient.query).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ text: 'alpha', limit: AND_CLAUSE_WINDOW }),
+    );
+    expect(outcome).toEqual({ success: true, recordCount: 1, deliveredTo: ['download'] });
+    expect(deps.sqliteClient.query).toHaveBeenLastCalledWith({
+      ids: [250],
       orderBy: 'created_at',
       orderDir: 'ASC',
       limit: REPORT_MAX_RECORDS,

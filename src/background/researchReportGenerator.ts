@@ -48,6 +48,18 @@ const DEFAULT_EXPORT_PATH = 'Yasumaro';
 /** Records per report; a scope wider than this is capped, not rejected. */
 export const REPORT_MAX_RECORDS = MAX_BATCH_READ_RECORDS;
 
+/**
+ * Per-clause id window for AND scopes (heuristic). AND intersects the
+ * per-clause id sets, so fetching each clause with only REPORT_MAX_RECORDS
+ * rows would silently drop matches at position 201+ before the intersect
+ * runs. The raised window keeps the intersect honest for large clauses while
+ * staying well under QUERY_CAPS (plain 10000 / fts 100000). The report
+ * itself is still bounded by the final first-REPORT_MAX_RECORDS slice, and
+ * the OR path keeps REPORT_MAX_RECORDS: a union cannot lose matches to a
+ * pre-slice the way an intersect can.
+ */
+export const AND_CLAUSE_WINDOW = 2000;
+
 /** One report row: id + the post-cleansing text the report quotes. */
 export interface ResearchReportRecord {
   id: number;
@@ -210,15 +222,25 @@ export function createResearchReportGenerator(deps: ResearchReportGeneratorDeps)
           : [{ ...(scope.search !== undefined ? { search: scope.search } : {}), ...(scope.tag !== undefined ? { tag: scope.tag } : {}), ...(scope.since !== undefined ? { since: scope.since } : {}), ...(scope.until !== undefined ? { until: scope.until } : {}) }];
         const clauseList = rawClauses.filter((clause) =>
           clause.search !== undefined || clause.tag !== undefined || clause.since !== undefined || clause.until !== undefined);
+        const op = scope.op ?? 'and';
+        // AND intersects per-clause id sets, so each clause fetches with the
+        // raised AND_CLAUSE_WINDOW (a 200-capped fetch would drop matches at
+        // position 201+ before the intersect). OR unions, which cannot lose
+        // matches to a pre-slice, keeps REPORT_MAX_RECORDS.
+        const clauseWindow = op === 'and' ? AND_CLAUSE_WINDOW : REPORT_MAX_RECORDS;
         const clauseIdSets: number[][] = [];
         for (const clause of clauseList) {
-          const ids = await fetchClauseIds(deps, clause);
+          const ids = await fetchClauseIds(deps, clause, clauseWindow);
           if (!ids.ok) return { success: false, error: ids.error };
           clauseIdSets.push(ids.ids);
         }
-        const merged = mergeClauseResults(clauseIdSets, scope.op ?? 'and');
+        const merged = mergeClauseResults(clauseIdSets, op);
+        // Id-sort pre-slice: ids are AUTOINCREMENT rowids, hence roughly
+        // monotonic with created_at, so sorting by id approximates
+        // oldest-first for the cap slice. Deletion/import can diverge the
+        // two orders; the authoritative display order still comes from the
+        // final orderBy created_at ASC fetch below.
         const union = [...new Set([...merged, ...pinnedIds])].sort((a, b) => a - b);
-        const truncated = union.length > REPORT_MAX_RECORDS;
         const finalIds = union.slice(0, REPORT_MAX_RECORDS);
         if (finalIds.length === 0) {
           return { success: false, error: 'no_records' };
@@ -237,6 +259,11 @@ export function createResearchReportGenerator(deps: ResearchReportGeneratorDeps)
         }
         const rows = result.data.rows.filter((row): row is BrowsingLogRecord & { id: number } => row.id !== undefined);
         const excludedCount = finalIds.length - rows.length;
+        // 先頭200件 note from delivered rows vs requested selection: show it
+        // only when truncation actually cut resolvable rows. Subtracting the
+        // excluded-missing (deleted pins, never resolvable) keeps a shortfall
+        // explained by deletions from misreporting as a truncation cut.
+        const truncated = union.length - excludedCount > REPORT_MAX_RECORDS;
         return await generateFromRows(deps, repo, { ok: true, rows }, scopeTitle(scope), input.sendToObsidian, { excludedCount, truncated });
       } catch (error: unknown) {
         return { success: false, error: errorMessage(error) };
@@ -280,6 +307,7 @@ async function fetchSingleScope(
 async function fetchClauseIds(
   deps: ResearchReportGeneratorDeps,
   clause: ResearchReportClause,
+  limit: number,
 ): Promise<{ ok: true; ids: number[] } | { ok: false; error: string }> {
   const result = await deps.sqliteClient.query({
     ...(clause.search !== undefined ? { text: clause.search } : {}),
@@ -288,7 +316,7 @@ async function fetchClauseIds(
     ...(clause.until !== undefined ? { dateTo: clause.until } : {}),
     orderBy: 'created_at',
     orderDir: 'ASC',
-    limit: REPORT_MAX_RECORDS,
+    limit,
   });
   if (!result.success) {
     return { ok: false, error: result.error.message || 'report_fetch_failed' };
