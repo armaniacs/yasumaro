@@ -117,6 +117,26 @@ describe('historyToCollectionHandoff', () => {
       collectionsPanel.destroy?.();
     });
 
+    it('flushes pending debounced input synchronously on send (no timer advance)', async () => {
+      const queryHistory = vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } });
+      const { historySection, collectionsSection, historyPanel, collectionsPanel } = mountPanels(queryHistory);
+      await collectionsPanel.load?.();
+      await historyPanel.load?.();
+
+      // Fill + click-send with no timer advance: the send path must flush
+      // the pending debounced input synchronously (regression for the
+      // E2E fill+click-send race that left the draft at "No condition").
+      const search = historySection.querySelector<HTMLInputElement>(`#${SQLITE_HISTORY_IDS.searchInput}`)!;
+      search.value = 'FlushSync';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      historySection.querySelector<HTMLButtonElement>(`#${SQLITE_HISTORY_IDS.sendToCollection}`)?.click();
+
+      expect(collectionsSection.querySelector('.saved-collections-draft')?.textContent).toContain('FlushSync');
+      expect(collectionsSection.querySelector<HTMLInputElement>('.clause-search')?.value).toBe('FlushSync');
+      historyPanel.destroy?.();
+      collectionsPanel.destroy?.();
+    });
+
     it('refuses an empty triple with the no-condition reason and sends nothing', async () => {
       const queryHistory = vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } });
       const { historySection, historyPanel, collectionsPanel } = mountPanels(queryHistory);

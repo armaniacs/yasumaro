@@ -51,6 +51,10 @@ import { mapRegenerateError, toRegenerateErrorDisplay } from './regenerateErrorC
 export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): PanelLifecycle {
   let container: HTMLElement | null = null;
   let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  // Latest debounced input not yet dispatched to the model. The send-to-
+  // collection path flushes it synchronously (see flushPendingSearch) so a
+  // fill+click-send E2E step never reads pre-input state.
+  let pendingSearchQuery: string | null = null;
   let _isMounted = false;
 
   const model = createSqliteHistoryModel(deps);
@@ -337,9 +341,28 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // draft (applyToDraft path via the handoff bus). No in-place save, no
   // naming on this side — those stay in the collections panel. Refusals
   // stay in-panel as a reason line, never silent.
+  /**
+   * Synchronously dispatch any debounced search input still waiting on its
+   * 300ms timer. Typing keeps the debounce; only the send path flushes, so
+   * model state already reflects the last keystroke before the triple is
+   * read. No timers are awaited here — the dispatch itself is synchronous.
+   */
+  function flushPendingSearch(): void {
+    if (searchDebounceTimer !== null) {
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = null;
+    }
+    if (pendingSearchQuery !== null) {
+      const query = pendingSearchQuery;
+      pendingSearchQuery = null;
+      model.search(query);
+    }
+  }
+
   function handleSendToCollection(): void {
     if (!container) return;
     clearHandoffReason(container);
+    flushPendingSearch();
     const state = model.getState();
     const result = buildHistoryHandoffQuery(
       {
@@ -404,10 +427,15 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   }
 
   const debouncedSearch = (query: string): void => {
+    pendingSearchQuery = query;
     if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
     searchDebounceTimer = setTimeout(() => {
-      model.search(query);
       searchDebounceTimer = null;
+      if (pendingSearchQuery !== null) {
+        const flushed = pendingSearchQuery;
+        pendingSearchQuery = null;
+        model.search(flushed);
+      }
     }, 300);
   };
 
@@ -529,6 +557,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
         clearTimeout(searchDebounceTimer);
         searchDebounceTimer = null;
       }
+      pendingSearchQuery = null;
       _isMounted = false;
       if (modelUnsubscribe) {
         modelUnsubscribe();
