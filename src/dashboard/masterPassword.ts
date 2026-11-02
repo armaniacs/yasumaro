@@ -227,6 +227,7 @@ export class MasterPasswordController {
     }
 
     try {
+      showStatus('status', getMessageOr('masterPasswordStageRotating', '鍵を導出して再暗号化しています...'), 'updating');
       if (this.passwordModalMode === 'change') {
         const oldPassword = this.pendingOldPassword;
         if (!oldPassword) {

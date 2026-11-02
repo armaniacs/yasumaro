@@ -5764,6 +5764,24 @@
   "encryptedBackupFileReadFailed": {
     "message": "ファイルの読み込みに失敗しました: {error}"
   },
+  "backupStageReadingDb": {
+    "message": "履歴DBを読み出しています..."
+  },
+  "backupStageEncrypting": {
+    "message": "暗号化しています..."
+  },
+  "backupStageDecrypting": {
+    "message": "復号しています..."
+  },
+  "backupStageRestoringDb": {
+    "message": "履歴DBを復元しています..."
+  },
+  "backupStageRestoringSettings": {
+    "message": "設定を復元しています..."
+  },
+  "masterPasswordStageRotating": {
+    "message": "鍵を導出して再暗号化しています..."
+  },
   "gistSettingsSaved": {
     "message": "Gist 設定を保存しました"
   },

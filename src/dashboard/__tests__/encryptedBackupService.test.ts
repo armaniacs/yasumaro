@@ -204,4 +204,27 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(settingsRepository.setAll).not.toHaveBeenCalled();
     expect(restoreDb).not.toHaveBeenCalled();
   });
+
+  it('reports export stages in order', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+
+    const stages: string[] = [];
+    await exportEncryptedBackup('correct-password', (s) => { stages.push(s); });
+
+    expect(stages).toEqual(['readingDb', 'encrypting']);
+  });
+
+  it('reports import stages in order', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const stages: string[] = [];
+    const result = await importEncryptedBackup(envelope, 'correct-password', (s) => { stages.push(s); });
+
+    expect(result.success).toBe(true);
+    expect(stages).toEqual(['decrypting', 'restoringDb', 'restoringSettings']);
+  });
 });

@@ -45,6 +45,7 @@ All notable changes to this project will be documented in this file.
 ### 修正 / Fixed
 
 - 履歴検索で語とタグ・日付を同時に指定してもタグ・日付が無視されていた問題（検索シームが語のみ転送していた。protocol・service・queryHistory を拡張し、recall の複合条件が正しく絞り込むように修正） / Combined search+tag+date scope was silently dropped on the search path (extended the protocol/service/queryHistory seams so recalled compound conditions filter correctly)
+- バックアップ/マスターパスワード保存の無言の長時間処理に進行表示と二重実行防止を追加 / Added in-place progress and double-run guard to backup and master-password operations
 
 ## [6.9.64] - 2026-10-31
 

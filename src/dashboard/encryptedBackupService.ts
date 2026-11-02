@@ -51,9 +51,14 @@ function isBackupPayload(data: unknown): data is BackupPayload {
  * 履歴+設定を暗号化バックアップとしてエクスポートする。
  * @throws exportDb() が失敗した場合（履歴DBが読めない場合）
  */
-export async function exportEncryptedBackup(password: string): Promise<EncryptionEnvelope> {
+export async function exportEncryptedBackup(
+  password: string,
+  onStage?: (s: 'readingDb' | 'encrypting') => void,
+): Promise<EncryptionEnvelope> {
+  onStage?.('readingDb');
   const payload = await buildBackupPayload();
   const json = JSON.stringify(payload);
+  onStage?.('encrypting');
   return encryptEnvelope(json, password);
 }
 
@@ -63,10 +68,12 @@ export async function exportEncryptedBackup(password: string): Promise<Encryptio
  */
 export async function importEncryptedBackup(
   envelope: EncryptionEnvelope,
-  password: string
+  password: string,
+  onStage?: (s: 'decrypting' | 'restoringDb' | 'restoringSettings') => void,
 ): Promise<{ success: boolean; error?: string; skippedKeys?: string[] }> {
   let json: string;
   try {
+    onStage?.('decrypting');
     json = await decryptEnvelope(envelope, password);
   } catch (error) {
     return { success: false, error: `Decryption failed: ${errorMessage(error)}` };
@@ -88,6 +95,7 @@ export async function importEncryptedBackup(
   }
 
   const dbBytes = base64ToBytes(payload.historyDbBase64);
+  onStage?.('restoringDb');
   const restored = await restoreDb(dbBytes);
   if (isServiceError(restored)) {
     return { success: false, error: `Failed to restore history database: ${restored.error}` };
@@ -96,6 +104,7 @@ export async function importEncryptedBackup(
   // WHY: the runtime value is untrusted parsed JSON; the declared Settings
   // type is not verified, so the validator re-checks every key before restore.
   const { sanitized, skippedKeys } = validateRestorableSettings(payload.settings);
+  onStage?.('restoringSettings');
   await settingsRepository.setAll(sanitized);
 
   return { success: true, skippedKeys };

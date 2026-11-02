@@ -5782,6 +5782,24 @@
   "encryptedBackupFileReadFailed": {
     "message": "Failed to read the file: {error}"
   },
+  "backupStageReadingDb": {
+    "message": "Reading history database..."
+  },
+  "backupStageEncrypting": {
+    "message": "Encrypting..."
+  },
+  "backupStageDecrypting": {
+    "message": "Decrypting..."
+  },
+  "backupStageRestoringDb": {
+    "message": "Restoring history database..."
+  },
+  "backupStageRestoringSettings": {
+    "message": "Restoring settings..."
+  },
+  "masterPasswordStageRotating": {
+    "message": "Deriving key and re-encrypting..."
+  },
   "gistSettingsSaved": {
     "message": "Gist settings saved"
   },

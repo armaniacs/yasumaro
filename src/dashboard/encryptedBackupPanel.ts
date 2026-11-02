@@ -14,6 +14,7 @@ import { downloadBlob } from './exportLogsService.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
+import { withBusyButton } from './panels/asyncData/busyButton.js';
 
 /** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
 const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
@@ -47,15 +48,31 @@ export function initEncryptedBackupPanel(): void {
   const exportBtn = document.getElementById('exportEncryptedBackupBtn');
   const importBtn = document.getElementById('importEncryptedBackupBtn');
   const importFileInput = document.getElementById('importEncryptedBackupFileInput') as HTMLInputElement | null;
+  let exportInFlight = false;
+  let importInFlight = false;
 
   exportBtn?.addEventListener('click', () => {
+    if (exportInFlight) return;
     showPasswordAuthModal('export', async (password: string) => {
+      if (exportInFlight) return;
+      exportInFlight = true;
       try {
-        const envelope = await exportEncryptedBackup(password);
-        downloadJson(envelope, getExportFilename());
-        setStatus(getMessageOr('encryptedBackupCreated', '暗号化バックアップを作成しました'), false);
+        await withBusyButton(exportBtn as HTMLButtonElement, async () => {
+          const envelope = await exportEncryptedBackup(password, (stage) => {
+            setStatus(
+              stage === 'readingDb'
+                ? getMessageOr('backupStageReadingDb', '履歴DBを読み出しています...')
+                : getMessageOr('backupStageEncrypting', '暗号化しています...'),
+              false,
+            );
+          });
+          downloadJson(envelope, getExportFilename());
+          setStatus(getMessageOr('encryptedBackupCreated', '暗号化バックアップを作成しました'), false);
+        });
       } catch (error) {
         setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
+      } finally {
+        exportInFlight = false;
       }
     });
   });
@@ -99,18 +116,35 @@ export function initEncryptedBackupPanel(): void {
       }
 
       showPasswordAuthModal('import', async (password: string) => {
-        const result = await importEncryptedBackup(parsed, password);
-        if (result.success) {
-          const skippedCount = result.skippedKeys?.length ?? 0;
-          setStatus(
-            skippedCount > 0
-              ? getMessageWithSubstitutions('encryptedBackupRestoredSkipped', { skipped: skippedCount }, 'バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）')
-              : getMessageOr('encryptedBackupRestored', 'バックアップから復元しました'),
-            false
-          );
-          document.dispatchEvent(new CustomEvent('reload-general-settings'));
-        } else {
-          setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
+        if (importInFlight) return;
+        importInFlight = true;
+        try {
+          await withBusyButton(importBtn as HTMLButtonElement, async () => {
+            const result = await importEncryptedBackup(parsed, password, (stage) => {
+              setStatus(
+                stage === 'decrypting'
+                  ? getMessageOr('backupStageDecrypting', '復号しています...')
+                  : stage === 'restoringDb'
+                    ? getMessageOr('backupStageRestoringDb', '履歴DBを復元しています...')
+                    : getMessageOr('backupStageRestoringSettings', '設定を復元しています...'),
+                false,
+              );
+            });
+            if (result.success) {
+              const skippedCount = result.skippedKeys?.length ?? 0;
+              setStatus(
+                skippedCount > 0
+                  ? getMessageWithSubstitutions('encryptedBackupRestoredSkipped', { skipped: skippedCount }, 'バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）')
+                  : getMessageOr('encryptedBackupRestored', 'バックアップから復元しました'),
+                false
+              );
+              document.dispatchEvent(new CustomEvent('reload-general-settings'));
+            } else {
+              setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
+            }
+          });
+        } finally {
+          importInFlight = false;
         }
       });
     } catch (error) {

@@ -49,7 +49,7 @@ describe('initEncryptedBackupPanel', () => {
     await Promise.resolve();
 
     expect(showPasswordAuthModal).toHaveBeenCalledWith('export', expect.any(Function));
-    expect(exportEncryptedBackup).toHaveBeenCalledWith('my-password');
+    expect(exportEncryptedBackup).toHaveBeenCalledWith('my-password', expect.any(Function));
   });
 
   it('shows an error status when import fails due to wrong password', async () => {
@@ -142,6 +142,35 @@ describe('initEncryptedBackupPanel', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it('ignores a second export click while a run is in flight', async () => {
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      void action('my-password');
+    });
+    let resolveExport!: (value: unknown) => void;
+    const pending = new Promise((resolve) => { resolveExport = resolve; });
+    vi.mocked(exportEncryptedBackup).mockReturnValue(pending as never);
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:double-run');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+
+    initEncryptedBackupPanel();
+    const exportBtn = document.getElementById('exportEncryptedBackupBtn')!;
+    exportBtn.dispatchEvent(new Event('click'));
+    exportBtn.dispatchEvent(new Event('click'));
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(exportEncryptedBackup).toHaveBeenCalledTimes(1);
+
+    resolveExport({
+      version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd',
+    });
+    await pending;
+    await Promise.resolve();
+    await Promise.resolve();
+    vi.restoreAllMocks();
   });
 
   describe('export download unification (PBI 2026-10-03-19)', () => {
