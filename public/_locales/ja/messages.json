@@ -2176,6 +2176,9 @@
   "collectionClauseRemoveRow": {
     "message": "条件を削除"
   },
+  "collectionPresetToday": {
+    "message": "今日"
+  },
   "collectionClauseOpLabel": {
     "message": "AND/OR 切替"
   },

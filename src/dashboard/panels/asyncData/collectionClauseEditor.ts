@@ -1,3 +1,4 @@
+import { formatLocalDate } from '../../../utils/localDate.js';
 import { serializeClausesQuery, parseCollectionQueryV2, type CollectionQueryV2 } from './savedCollectionQuery.js';
 
 export interface EditorClause {
@@ -21,6 +22,19 @@ export interface ClauseEditor {
   updateRow(index: number, patch: Partial<EditorClause>): void;
   loadSaved(raw: unknown): void;
   toSavedQuery(): Record<string, unknown>;
+}
+
+/**
+ * Raw v2 query for the "today" preset (PBI 2026-11-02-06): a single-day
+ * date clause for the local calendar day containing `now`. Applied via
+ * `loadSaved`, which replaces the draft — never appends, never saves.
+ */
+export function buildTodayPresetQuery(now: Date = new Date()): Record<string, unknown> {
+  return {
+    version: 2,
+    op: 'and',
+    clauses: [{ search: '', tag: null, date: formatLocalDate(now) }],
+  };
 }
 
 export function createClauseEditor(): ClauseEditor {

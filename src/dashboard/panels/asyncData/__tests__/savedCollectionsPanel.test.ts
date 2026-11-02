@@ -42,6 +42,8 @@ import {
   SAVED_COLLECTIONS_PANEL_REGION_ID,
 } from '../savedCollectionsPanel.js';
 import { tOrKey as t } from '../../../../utils/i18n.js';
+import { formatLocalDate } from '../../../../utils/localDate.js';
+import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
 import type { SavedCollection } from '../../../../utils/storage/savedCollections.js';
 import type { AutoTagRule } from '../../../../utils/storage/autoTagRules.js';
 
@@ -312,6 +314,49 @@ describe('savedCollectionsPanel', () => {
           t('collectionClauseEmptySave'),
         );
       });
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
+      panel.destroy?.();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('today preset', () => {
+    it('injects today into the draft without saving', async () => {
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="preset-today"]')?.click();
+      await drainMacrotask();
+
+      const today = formatLocalDate(new Date());
+      expect(section.querySelector('.clause-date')?.getAttribute('value')).toBe(today);
+      expect(section.querySelector('.saved-collections-draft')?.textContent).toContain(today);
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
+      panel.destroy?.();
+    });
+
+    it('replaces existing draft conditions instead of appending', async () => {
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="add"]')?.click();
+      expect(section.querySelectorAll('.clause-row')).toHaveLength(2);
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="preset-today"]')?.click();
+      await drainMacrotask();
+
+      const today = formatLocalDate(new Date());
+      expect(section.querySelectorAll('.clause-row')).toHaveLength(1);
+      expect(section.querySelector('.clause-date')?.getAttribute('value')).toBe(today);
       expect(mockedUpsertSaved).not.toHaveBeenCalled();
       panel.destroy?.();
     });

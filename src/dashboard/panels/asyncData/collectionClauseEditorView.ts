@@ -3,6 +3,7 @@ import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import type { createClauseEditor } from './collectionClauseEditor.js';
+import { buildTodayPresetQuery } from './collectionClauseEditor.js';
 
 export type ClauseEditor = ReturnType<typeof createClauseEditor>;
 export type ClauseEditorChangeKind = 'draft' | 'structure' | 'refresh';
@@ -103,6 +104,7 @@ export function renderClauseEditorView(
   const op = editor.getOp();
   const rows = editor.getClauses().map((row, i) => rowHtml(i, row, '')).join('');
   setElementHtml(region, `<div class="clause-editor">`
+    + `<div class="clause-presets"><button type="button" class="secondary-btn" data-clause-action="preset-today">${escapeHtml(t('collectionPresetToday'))}</button></div>`
     + `<div class="clause-op" role="radiogroup" aria-label="${escapeHtml(t('collectionClauseOpLabel'))}">`
     + `<label><input type="radio" name="clause-op" value="and"${op === 'and' ? ' checked' : ''} />AND</label>`
     + `<label><input type="radio" name="clause-op" value="or"${op === 'or' ? ' checked' : ''} />OR</label>`
@@ -143,6 +145,11 @@ export function renderClauseEditorView(
       }
       if (action === 'refresh') {
         callbacks.onStructureChange('refresh');
+        return;
+      }
+      if (action === 'preset-today') {
+        editor.loadSaved(buildTodayPresetQuery());
+        callbacks.onStructureChange('structure');
         return;
       }
       if (action === 'remove') {

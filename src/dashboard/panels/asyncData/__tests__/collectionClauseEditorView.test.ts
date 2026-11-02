@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createClauseEditor } from '../collectionClauseEditor.js';
 import { renderClauseEditorView } from '../collectionClauseEditorView.js';
+import { formatLocalDate } from '../../../../utils/localDate.js';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -103,6 +104,35 @@ describe('renderClauseEditorView', () => {
       remove.click();
       expect(editor.getClauses()).toHaveLength(1);
       expect(document.activeElement).toBe(container.querySelector('[data-clause-action="add"]'));
+    });
+  });
+  describe('today preset', () => {
+    it('renders the today preset button at the top of the editor', () => {
+      const editor = createClauseEditor();
+      const container = mount(editor);
+      const preset = container.querySelector('[data-clause-action="preset-today"]') as HTMLButtonElement;
+      expect(preset).not.toBeNull();
+      expect(preset.textContent).toBeTruthy();
+      const editorEl = container.querySelector('.clause-editor');
+      expect(editorEl?.firstElementChild?.querySelector('[data-clause-action="preset-today"]')).not.toBeNull();
+    });
+    it('injects a single today clause into an empty editor', () => {
+      const editor = createClauseEditor();
+      const onChange = vi.fn();
+      const container = mount(editor, onChange);
+      (container.querySelector('[data-clause-action="preset-today"]') as HTMLButtonElement).click();
+      expect(editor.getClauses()).toEqual([{ search: '', tag: null, date: formatLocalDate(new Date()) }]);
+      expect(editor.getOp()).toBe('and');
+      expect(onChange).toHaveBeenCalledWith('structure');
+    });
+    it('replaces existing conditions instead of appending', () => {
+      const editor = createClauseEditor();
+      editor.updateRow(0, { search: 'AI' });
+      editor.addRow();
+      const container = mount(editor);
+      (container.querySelector('[data-clause-action="preset-today"]') as HTMLButtonElement).click();
+      expect(editor.getClauses()).toHaveLength(1);
+      expect(editor.getClauses()[0]).toEqual({ search: '', tag: null, date: formatLocalDate(new Date()) });
     });
   });
 });

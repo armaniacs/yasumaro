@@ -2239,6 +2239,9 @@
   "collectionClauseRemoveRow": {
     "message": "Remove condition"
   },
+  "collectionPresetToday": {
+    "message": "Today"
+  },
   "collectionClauseOpLabel": {
     "message": "Toggle AND/OR"
   },
