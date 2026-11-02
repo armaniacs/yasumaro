@@ -74,12 +74,14 @@ export const CATALOG_ROWS = [
   { id: 'panel-session-timeline', sidebarSection: 'data', sidebarI18nKey: 'sessionTimelineTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
-  // PBI 2026-11-01-01: saved collections + auto-tag rules leave the history
-  // panel for a dedicated data panel directly after it.
+  // PBI 2026-11-01-01: saved collections + auto-tag rules grouped in
+  // 'experimental' at the bottom.
   { id: 'panel-saved-collections', sidebarSection: 'experimental', sidebarI18nKey: 'savedCollectionsTab', deepLinkSections: [], tabParam: 'collections' },
-  // PBI 2026-11-01-02: ask-history (question + target collection) directly after it.
+  // PBI 2026-11-01-02: ask-history (question + target collection) grouped in
+  // 'experimental' at the bottom.
   { id: 'panel-ask-history', sidebarSection: 'experimental', sidebarI18nKey: 'askHistoryTab', deepLinkSections: [], tabParam: 'ask-history' },
-  // PBI 2026-11-01-03: research report (target collection + one-shot generate) directly after it.
+  // PBI 2026-11-01-03: research report (target collection + one-shot generate)
+  // grouped in 'experimental' at the bottom.
   { id: 'panel-research-report', sidebarSection: 'experimental', sidebarI18nKey: 'researchReportTab', deepLinkSections: [], tabParam: 'research-report' },
 ] as const satisfies readonly PanelCatalogEntry[];
 
