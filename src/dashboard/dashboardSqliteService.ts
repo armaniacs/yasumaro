@@ -181,8 +181,24 @@ export async function queryLogs(options: {
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
+  /** Targeted id lookup (PBI 2026-11-02-07 pin resolution): forwarded to the records query. */
+  ids?: number[];
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return sqliteClient.call('records', { subtype: 'query', ...options });
+  return sqliteClient.call('records', {
+    subtype: 'query',
+    ...pickDefined({
+      limit: options.limit,
+      offset: options.offset,
+      domain: options.domain,
+      isStarred: options.isStarred,
+      since: options.since,
+      until: options.until,
+      orderBy: options.orderBy,
+      orderDir: options.orderDir,
+      tagFilter: options.tagFilter,
+      ids: options.ids,
+    }),
+  });
 }
 
 /**

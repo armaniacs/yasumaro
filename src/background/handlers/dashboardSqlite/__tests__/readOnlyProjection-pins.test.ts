@@ -68,6 +68,18 @@ describe('readOnly projection pins — projection-only (post PBI 2026-09-21-20)'
       expect(buildListParams({ subtype: 'query', limit: 5000 } as ListPayload).limit).toBe(5000);
     });
 
+    it('forwards the ids filter to the records query (PBI 2026-11-02-07 pin resolution)', () => {
+      const params = buildListParams({
+        subtype: 'query',
+        ids: [1, 2, 999],
+      } as ListPayload);
+      expect(params.ids).toEqual([1, 2, 999]);
+    });
+
+    it('omits absent ids so the planner sees a plain listing', () => {
+      expect('ids' in buildListParams({ subtype: 'query' } as ListPayload)).toBe(false);
+    });
+
     it('projects the alias fields (domain/isStarred/since/until/tagFilter)', () => {
       const params = buildListParams({
         subtype: 'query',

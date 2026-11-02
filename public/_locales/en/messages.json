@@ -2257,6 +2257,9 @@
   "collectionTruncatedNotice": {
     "message": "Showing the first $1 of $2 matching records."
   },
+  "collectionExcludedNotice": {
+    "message": "Excluded $1 pinned record that is no longer available."
+  },
   "autoTagRulesLabel": {
     "message": "Auto-tag rules"
   },

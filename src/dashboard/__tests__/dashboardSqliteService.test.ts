@@ -70,6 +70,16 @@ describe('dashboardSqliteService', () => {
       );
     });
 
+    it('forwards the ids filter on the query payload (PBI 2026-11-02-07 pin resolution)', async () => {
+      givenResponse({ success: true, rows: [], total: 0 });
+
+      await queryLogs({ ids: [1, 2, 999] });
+
+      expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
+        { type: 'DASHBOARD_SQLITE', protocolVersion: CURRENT_PROTOCOL_VERSION, payload: { subtype: 'query', ids: [1, 2, 999] } },
+      );
+    });
+
     it('returns error object on failed response', async () => {
       givenResponse({ success: false, error: 'DB error' });
 

@@ -22,7 +22,7 @@ import {
   generateReviewSummaryValidator,
   logForwardValidator,
 } from '../validators.js';
-import { MAX_BYTE_STAT_BYTES, MAX_CLEANSED_ELEMENTS } from '../../utils/limits.js';
+import { MAX_BYTE_STAT_BYTES, MAX_CLEANSED_ELEMENTS, MAX_QUERY_IDS } from '../../utils/limits.js';
 
 describe('MessageValidator interface', () => {
   it('singletons are instances of correct classes', () => {
@@ -78,6 +78,21 @@ describe('DashboardSqliteValidator', () => {
   it('accepts valid query request', () => {
     expect(() => v.validate({ subtype: 'query', limit: 10 })).not.toThrow();
     expect(() => v.validate({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'query' }, protocolVersion: 1 })).not.toThrow();
+  });
+
+  it('accepts a query with an ids filter (PBI 2026-11-02-07 pin resolution)', () => {
+    expect(() => v.validate({ subtype: 'query', ids: [1, 2, 999] })).not.toThrow();
+  });
+
+  it('rejects a query with non-array or non-finite ids', () => {
+    expect(() => v.validate({ subtype: 'query', ids: 'x' })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, NaN] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, 'x'] })).toThrow(ValidationError);
+  });
+
+  it('rejects a query with more ids than MAX_QUERY_IDS', () => {
+    const ids = Array.from({ length: MAX_QUERY_IDS + 1 }, (_, i) => i + 1);
+    expect(() => v.validate({ subtype: 'query', ids })).toThrow(ValidationError);
   });
 
   it('rejects unknown subtype', () => {

@@ -35,6 +35,8 @@ export type DashboardSqliteRequest =
       orderBy?: string;
       orderDir?: 'ASC' | 'DESC';
       tagFilter?: string;
+      /** Targeted id lookup (PBI 2026-11-02-07 pin resolution): ids IN (...) + LIMIT/OFFSET. */
+      ids?: number[];
     }
   | { subtype: 'search'; query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number }
   | { subtype: 'toggle_star'; id: number; confirmToken?: string }

@@ -5,8 +5,10 @@
  * Pins: the merged set lands in state with the combined total, paging
  * slices from the cached set without re-running the fan-out, cap warnings
  * stay in state until a filter change leaves collection mode, a relevance
- * sort request coerces to created_at, deleted-missing pins never error,
- * and a failed clause query surfaces as a load error.
+ * sort request coerces to created_at, deleted-missing pins are excluded with
+ * a missingCount warning (never an error), a failed pin query surfaces as a
+ * load error like a failed clause query, and a failed clause query surfaces
+ * as a load error.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createSqliteHistoryModel } from '../sqliteHistoryModel.js';
@@ -19,12 +21,20 @@ function makeRow(id: number, createdAt = 1700000000000 + id * 1000): BrowsingLog
 }
 
 function clauseQuery(rowsBySearch: Record<string, BrowsingLogEntry[]>) {
-  return vi.fn(async (options: { search?: string }) => ({
-    data: {
-      rows: (options.search !== undefined ? rowsBySearch[options.search] : Object.values(rowsBySearch).flat()) ?? [],
-      total: 0,
-    },
-  }));
+  return vi.fn(async (options: { search?: string; ids?: number[] }) => {
+    const all = Object.values(rowsBySearch).flat();
+    // The pin query carries ids (no search): resolve each id like the real
+    // records path, so deleted-missing ids come back empty.
+    const rows = options.ids !== undefined
+      ? options.ids.flatMap((id) => {
+        const found = all.find((row) => row.id === id);
+        return found === undefined ? [] : [found];
+      })
+      : (options.search !== undefined ? rowsBySearch[options.search] : all) ?? [];
+    return {
+      data: { rows, total: 0 },
+    };
+  });
 }
 
 function orQuery(searches: string[], ids: number[] = []) {
@@ -106,16 +116,18 @@ describe('sqliteHistoryModel', () => {
       expect(state.entries.map((e) => e.id)).toEqual([1, 3, 2]);
     });
 
-    it('excludes deleted-missing pins without failing', async () => {
+    it('excludes deleted-missing pins with a missingCount warning instead of failing', async () => {
       const queryHistory = clauseQuery({ alpha: [makeRow(1)] });
       const model = createSqliteHistoryModel({ queryHistory: queryHistory as never });
 
       await model.applyCollectionQuery(orQuery(['alpha'], [1, 999]));
 
       const state = model.getState();
+      expect(queryHistory).toHaveBeenCalledWith(expect.objectContaining({ ids: [999] }));
       expect(state.entries.map((e) => e.id)).toEqual([1]);
       expect(state.total).toBe(1);
       expect(state.error).toBeNull();
+      expect(state.collectionWarning).toMatchObject({ missingCount: 1 });
     });
 
     it('surfaces a failed clause query as a load error', async () => {
@@ -123,6 +135,20 @@ describe('sqliteHistoryModel', () => {
       const model = createSqliteHistoryModel({ queryHistory: queryHistory as never });
 
       await model.applyCollectionQuery(orQuery(['alpha']));
+
+      expect(model.getState().error).toBe('historyLoadError');
+      expect(model.getState().entries).toEqual([]);
+    });
+
+    it('surfaces a failed pin query as a load error', async () => {
+      const queryHistory = vi.fn(async (options: { search?: string }) =>
+        options.search === 'alpha'
+          ? { data: { rows: [makeRow(1)], total: 0 } }
+          : { error: 'historyLoadError' },
+      );
+      const model = createSqliteHistoryModel({ queryHistory: queryHistory as never });
+
+      await model.applyCollectionQuery(orQuery(['alpha'], [1, 999]));
 
       expect(model.getState().error).toBe('historyLoadError');
       expect(model.getState().entries).toEqual([]);

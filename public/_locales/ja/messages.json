@@ -2194,6 +2194,9 @@
   "collectionTruncatedNotice": {
     "message": "$2件中最初の$1件を表示しています。"
   },
+  "collectionExcludedNotice": {
+    "message": "利用できなくなったピン留め記録$1件を除外しました。"
+  },
   "autoTagRulesLabel": {
     "message": "自動タグ規則"
   },

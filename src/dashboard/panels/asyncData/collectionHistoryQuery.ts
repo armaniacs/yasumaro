@@ -10,8 +10,11 @@
  *   2. resolve each clause to storage options (`resolveCollectionQueries`),
  *   3. fan out: one `queryHistory` call per clause (DI, defaults to real),
  *   4. merge per-clause id sets (`mergeClauseResults`) UNION the pinned ids,
- *   5. one pin-cover re-fetch for ids no clause returned (N+1 total),
- *      still-missing ids are deleted-missing and excluded, never an error,
+ *   5. one ids-filtered re-fetch per MAX_QUERY_IDS slice for ids no clause
+ *      returned (ids IN (...) + LIMIT/OFFSET in SQL, via the queryHistory
+ *      `ids` option through the records query),
+ *      still-missing ids are deleted-missing and excluded (counted, never
+ *      an error),
  *   6. order by created_at, slice to MAX_COLLECTION_ROWS with a notice.
  *
  * Sorting is ALWAYS created_at-based. Rank is per-clause FTS5 output and
@@ -23,7 +26,7 @@ import { queryHistory, isServiceError } from './sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { resolveCollectionQueries } from './collectionScopeResolver.js';
 import { parseCollectionQueryV2, mergeClauseResults } from '../../../utils/collectionQueryV2.js';
-import { MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS } from '../../../utils/limits.js';
+import { MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS, MAX_QUERY_IDS } from '../../../utils/limits.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
@@ -37,6 +40,8 @@ export interface CollectionWarning {
   totalClauses: number;
   /** True when the merged set exceeded MAX_COLLECTION_ROWS (head kept). */
   truncated: boolean;
+  /** Pinned ids with no returned row (deleted-missing), excluded from the list. */
+  missingCount: number;
   /** Rows kept for the list. */
   shownCount: number;
   /** Merged rows before truncation. */
@@ -58,15 +63,15 @@ export type CollectionHistoryOutcome =
 /** Sort direction for the merged list; relevance is not a member on purpose. */
 export type CollectionHistorySortDir = 'ASC' | 'DESC';
 
-/** Created_at ordering for merged collection rows (id tie-break, stable). Exported so the model can re-sort the cached set when the sort direction changes without re-running the fan-out. */
+/** Created_at ordering for merged collection rows (created_at primary, id ascending always as tie-break — direction never flips the tie-break). Exported so the model can re-sort the cached set when the sort direction changes without re-running the fan-out. */
 export function orderCollectionRows(
   rows: BrowsingLogEntry[],
   dir: CollectionHistorySortDir,
 ): BrowsingLogEntry[] {
-  const sorted = [...rows].sort((a, b) =>
-    a.created_at === b.created_at ? a.id - b.id : a.created_at - b.created_at,
+  const sign = dir === 'ASC' ? 1 : -1;
+  return [...rows].sort((a, b) =>
+    a.created_at === b.created_at ? a.id - b.id : sign * (a.created_at - b.created_at),
   );
-  return dir === 'ASC' ? sorted : sorted.reverse();
 }
 
 /**
@@ -129,25 +134,32 @@ export async function resolveCollectionHistory(
   const merged = mergeClauseResults(idSets, parsed.op);
   const wanted = [...new Set([...merged, ...parsed.ids])];
 
-  // The +1 of N+1: pins (and ids outside a capped clause window) have no row
-  // yet. One bounded plain-listing re-fetch covers them; there is no
-  // ids-filtered query on the dashboard wire path (adding one would touch
-  // offscreen), so anything still missing is treated as deleted-missing and
-  // excluded — never an error.
+  // Pin resolution (PBI 2026-11-02-07): ids no clause returned are fetched
+  // with a REAL ids-filtered query (ids IN (...) + LIMIT/OFFSET in SQL —
+  // the dashboard wire path carries `ids` on the query subtype through the
+  // records query to the offscreen planner, which already honors it via
+  // buildFilterConditions). Sliced to MAX_QUERY_IDS per call so an over-long
+  // pin list never trips the wire cap. A failed pin query propagates as an
+  // error like a failed clause query (model surfaces it as a load error);
+  // ids with no returned row are deleted-missing and excluded (counted).
   const missing = wanted.filter((id) => !rowById.has(id));
-  if (missing.length > 0) {
-    const cover = await runQuery({
-      limit: MAX_COLLECTION_ROWS,
+  for (let start = 0; start < missing.length; start += MAX_QUERY_IDS) {
+    const slice = missing.slice(start, start + MAX_QUERY_IDS);
+    const pinResult = await runQuery({
+      limit: slice.length,
       offset: 0,
       sortBy: 'created_at',
-      sortDir: 'DESC',
+      sortDir,
+      ids: slice,
     });
-    if (!isServiceError(cover)) {
-      for (const row of cover.data.rows) {
-        if (!rowById.has(row.id)) rowById.set(row.id, row);
-      }
+    if (isServiceError(pinResult)) {
+      return { error: pinResult.error };
+    }
+    for (const row of pinResult.data.rows) {
+      if (!rowById.has(row.id)) rowById.set(row.id, row);
     }
   }
+  const missingCount = missing.filter((id) => !rowById.has(id)).length;
 
   const rows = orderCollectionRows(
     wanted.flatMap((id) => (rowById.has(id) ? [rowById.get(id)!] : [])),
@@ -157,11 +169,12 @@ export async function resolveCollectionHistory(
   const truncated = fullCount > MAX_COLLECTION_ROWS;
   const kept = truncated ? rows.slice(0, MAX_COLLECTION_ROWS) : rows;
   const warning: CollectionWarning | null =
-    fanoutCapped || truncated
+    fanoutCapped || truncated || missingCount > 0
       ? {
           fanoutCapped,
           totalClauses: parsed.clauses.length,
           truncated,
+          missingCount,
           shownCount: kept.length,
           fullCount,
         }

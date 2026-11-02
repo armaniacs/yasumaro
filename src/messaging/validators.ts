@@ -12,6 +12,7 @@ import {
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
+  MAX_QUERY_IDS,
   MAX_SCROLL_RATIO_PERCENT,
   MAX_VISIT_DURATION_SECONDS,
   VALIDATOR_LIMITS,
@@ -389,13 +390,24 @@ function importBytesGuard(p: Record<string, unknown>): void {
 /**
  * Per-subtype wire-field schema for DASHBOARD_SQLITE payloads. One entry per
  * subtype; field rows are interpreted uniformly by DashboardSqliteValidator.
- * `query` is intentionally absent — it accepts arbitrary extra fields.
+ * The `query` row carries only the optional `ids` filter — every other extra
+ * field still passes (only listed fields are checked).
  * Exported so the all-subtype coverage test can fail closed on a forgotten
  * row (an undefined spec skips payload validation in validate() entirely).
  */
 export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSqliteSubtypeSpec>> = {
   toggle_star: { fields: [finiteNumber('id')] },
   delete: { fields: [finiteNumber('id')] },
+  // PBI 2026-11-02-07: the plain listing accepts an optional targeted id
+  // filter (pin resolution). Extra fields still pass — only `ids`, when
+  // present, must be a finite-number array capped at MAX_QUERY_IDS (same
+  // shape as the report-scope ids check; oversized wire payloads never
+  // become giant SQL IN clauses — offscreen truncates defensively anyway).
+  query: {
+    fields: [
+      { field: 'ids', optional: true, test: (v) => Array.isArray(v) && v.length <= MAX_QUERY_IDS && (v as unknown[]).every(isFiniteNumber), message: (s) => `${s}: ids must be an array of at most ${MAX_QUERY_IDS} finite numbers` },
+    ],
+  },
   create_confirm_token: {
     fields: [
       nonEmptyString('action'),

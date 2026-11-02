@@ -4,9 +4,11 @@
  *
  * Pins: per-clause fan-out through the injected queryHistory, UNION merge
  * (or) / intersection (and), first-clause-only past MAX_COLLECTION_FANOUT,
- * slice to MAX_COLLECTION_ROWS with a truncation warning, deleted-missing
- * pins excluded without error, created_at ordering (relevance never
- * applied), and error propagation on a failed clause query.
+ * slice to MAX_COLLECTION_ROWS with a truncation warning, real ids-filtered
+ * pin resolution (deleted-missing pins excluded with a missingCount
+ * warning, never an error), created_at ordering with id-ascending tie-break
+ * (relevance never applied), and error propagation on failed clause AND pin
+ * queries.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { resolveCollectionHistory } from '../collectionHistoryQuery.js';
@@ -60,20 +62,51 @@ describe('collectionHistoryQuery', () => {
       expect(outcome).toEqual({ data: { rows: [makeRow(2)], total: 1, warning: null } });
     });
 
-    it('unions pinned ids with the clause results', async () => {
+    it('resolves pinned ids with a real ids-filtered query', async () => {
       const runQuery = vi.fn<QueryFn>(async (options) => {
-        // Clause fan-out returns row 1; the pin-cover re-fetch (no search)
-        // carries the pinned row 7.
+        // Clause fan-out returns row 1; the pin query (ids, no search)
+        // resolves the pinned row 7 through the records path.
         if (options.search === 'alpha') return rowsResult([makeRow(1)]);
-        return rowsResult([makeRow(7)]);
+        if (options.ids !== undefined) return rowsResult(options.ids.map((id) => makeRow(id)));
+        return rowsResult([]);
       });
       const query = { version: 2, op: 'or', clauses: [{ search: 'alpha', tag: null, date: null }], ids: [1, 7] };
 
       const outcome = await resolveCollectionHistory(query, runQuery as never);
 
       expect(runQuery).toHaveBeenCalledTimes(2);
+      expect(runQuery).toHaveBeenCalledWith(expect.objectContaining({ ids: [7] }));
       expect(outcome).toEqual({
         data: { rows: [makeRow(7), makeRow(1)], total: 2, warning: null },
+      });
+    });
+
+    it('keeps rows for found pins and counts the missing id (ids [1,2,999])', async () => {
+      const runQuery = vi.fn<QueryFn>(async (options) => {
+        if (options.ids !== undefined) {
+          // 999 is deleted-missing: the ids query returns only 1 and 2.
+          return rowsResult(options.ids.filter((id) => id !== 999).map((id) => makeRow(id)));
+        }
+        return rowsResult([]);
+      });
+      const query = { version: 2, op: 'or', clauses: [], ids: [1, 2, 999] };
+
+      const outcome = await resolveCollectionHistory(query, runQuery as never);
+
+      expect(runQuery).toHaveBeenCalledWith(expect.objectContaining({ ids: [1, 2, 999] }));
+      expect(outcome).toEqual({
+        data: {
+          rows: [makeRow(2), makeRow(1)],
+          total: 2,
+          warning: {
+            fanoutCapped: false,
+            totalClauses: 0,
+            truncated: false,
+            missingCount: 1,
+            shownCount: 2,
+            fullCount: 2,
+          },
+        },
       });
     });
 
@@ -96,6 +129,7 @@ describe('collectionHistoryQuery', () => {
             fanoutCapped: true,
             totalClauses: MAX_COLLECTION_FANOUT + 1,
             truncated: false,
+            missingCount: 0,
             shownCount: 1,
             fullCount: 1,
           },
@@ -128,14 +162,33 @@ describe('collectionHistoryQuery', () => {
       }
     });
 
-    it('excludes deleted-missing pins instead of failing', async () => {
-      const runQuery = vi.fn<QueryFn>(async () => rowsResult([makeRow(1)]));
+    it('excludes deleted-missing pins with a missingCount warning instead of failing', async () => {
+      const runQuery = vi.fn<QueryFn>(async (options) => {
+        if (options.search === 'alpha') return rowsResult([makeRow(1)]);
+        // The ids query returns only row 1: 999 is deleted-missing.
+        if (options.ids !== undefined) return rowsResult([makeRow(1)]);
+        return rowsResult([]);
+      });
       const query = { version: 2, op: 'or', clauses: [{ search: 'alpha', tag: null, date: null }], ids: [1, 999] };
 
       const outcome = await resolveCollectionHistory(query, runQuery as never);
 
-      // id 999 appears in no clause result and no pin-cover row: excluded.
-      expect(outcome).toEqual({ data: { rows: [makeRow(1)], total: 1, warning: null } });
+      // id 999 has no returned row: excluded (counted), never an error.
+      expect(runQuery).toHaveBeenCalledWith(expect.objectContaining({ ids: [999] }));
+      expect(outcome).toEqual({
+        data: {
+          rows: [makeRow(1)],
+          total: 1,
+          warning: {
+            fanoutCapped: false,
+            totalClauses: 1,
+            truncated: false,
+            missingCount: 1,
+            shownCount: 1,
+            fullCount: 1,
+          },
+        },
+      });
     });
 
     it('orders by created_at in both directions and never by relevance', async () => {
@@ -157,6 +210,22 @@ describe('collectionHistoryQuery', () => {
       }
     });
 
+    it('breaks created_at ties by ascending id in both directions', async () => {
+      const runQuery = vi.fn<QueryFn>(async () => rowsResult([
+        makeRow(2, 1000),
+        makeRow(1, 1000),
+        makeRow(3, 1000),
+      ]));
+      const query = { version: 2, op: 'or', clauses: [{ search: 'alpha', tag: null, date: null }], ids: [] };
+
+      const desc = await resolveCollectionHistory(query, runQuery as never);
+      const asc = await resolveCollectionHistory(query, runQuery as never, { sortDir: 'ASC' });
+
+      // The tie-break stays id-ascending even when the direction flips.
+      expect(desc).toMatchObject({ data: { rows: [makeRow(1, 1000), makeRow(2, 1000), makeRow(3, 1000)] } });
+      expect(asc).toMatchObject({ data: { rows: [makeRow(1, 1000), makeRow(2, 1000), makeRow(3, 1000)] } });
+    });
+
     it('reads tag and day clauses into storage options', async () => {
       const runQuery = vi.fn<QueryFn>(async () => rowsResult([]));
       const query = {
@@ -176,6 +245,18 @@ describe('collectionHistoryQuery', () => {
     it('propagates a failed clause query instead of showing a partial list', async () => {
       const runQuery = vi.fn<QueryFn>(async () => ({ error: 'historyLoadError' }));
       const query = { version: 2, op: 'or', clauses: [{ search: 'alpha', tag: null, date: null }], ids: [] };
+
+      const outcome = await resolveCollectionHistory(query, runQuery as never);
+
+      expect(outcome).toEqual({ error: 'historyLoadError' });
+    });
+
+    it('propagates a failed pin query instead of showing a partial list', async () => {
+      const runQuery = vi.fn<QueryFn>(async (options) => {
+        if (options.search === 'alpha') return rowsResult([makeRow(1)]);
+        return { error: 'historyLoadError' };
+      });
+      const query = { version: 2, op: 'or', clauses: [{ search: 'alpha', tag: null, date: null }], ids: [1, 999] };
 
       const outcome = await resolveCollectionHistory(query, runQuery as never);
 

@@ -42,6 +42,11 @@ export function buildListParams(
     until: payload.until,
     ...pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
     tagFilter: payload.tagFilter,
+    // PBI 2026-11-02-07 pin resolution: the targeted id filter rides the
+    // records query (SqliteClient.query kind:'records' with q — the kind
+    // marker flow below is untouched); absent ids are omitted so the
+    // planner sees a plain listing exactly as before.
+    ...pickDefined({ ids: payload.ids }),
   };
 }
 

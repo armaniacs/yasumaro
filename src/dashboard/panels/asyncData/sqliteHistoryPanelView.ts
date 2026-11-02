@@ -778,6 +778,9 @@ function updateTagFilterBar(
         String(collectionWarning.fullCount),
       ]));
     }
+    if (collectionWarning.missingCount > 0) {
+      parts.push(t('collectionExcludedNotice', [String(collectionWarning.missingCount)]));
+    }
     if (!existingCollectionNote) {
       const note = document.createElement('div');
       note.className = 'sqlite-collection-note';
