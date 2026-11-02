@@ -136,5 +136,38 @@ describe('readOnly projection pins — projection-only (post PBI 2026-09-21-20)'
       expect(offset).toBe(4);
       expect(options).toEqual({ orderBy: 'rank', orderDir: 'ASC' });
     });
+
+    it('extracts tagFilter/since/until scope into options (PBI 2026-11-02-01)', () => {
+      const { text, options } = buildSearchParams({
+        subtype: 'search',
+        query: 'AI',
+        tagFilter: 'tools',
+        since: 1000,
+        until: 2000,
+      } as SearchPayload);
+      expect(text).toBe('AI');
+      expect(options).toEqual({ tagFilter: 'tools', since: 1000, until: 2000 });
+    });
+
+    it('omits absent scope keys from options (field-free without scope)', () => {
+      const { options } = buildSearchParams({
+        subtype: 'search',
+        query: 'hello',
+      } as SearchPayload);
+      expect('tagFilter' in options).toBe(false);
+      expect('since' in options).toBe(false);
+      expect('until' in options).toBe(false);
+    });
+
+    it('extracts partial scope (tagFilter only) without inventing date keys', () => {
+      const { options } = buildSearchParams({
+        subtype: 'search',
+        query: 'q',
+        tagFilter: 'news',
+      } as SearchPayload);
+      expect(options).toEqual({ tagFilter: 'news' });
+      expect('since' in options).toBe(false);
+      expect('until' in options).toBe(false);
+    });
   });
 });

@@ -132,6 +132,9 @@ export type QueryOp =
       offset?: number;
       orderBy?: 'rank' | 'created_at';
       orderDir?: 'ASC' | 'DESC';
+      tagFilter?: string;
+      since?: number;
+      until?: number;
     }
   | { kind: 'count' }
   | { kind: 'auditLog'; limit?: number; offset?: number };

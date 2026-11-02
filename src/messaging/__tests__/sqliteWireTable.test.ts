@@ -109,6 +109,49 @@ describe('messaging/sqliteWireTable: gateway codec pins the frozen wire shapes',
     });
   });
 
+  it('search encodeOp carries tagFilter/since/until scope (PBI 2026-11-02-01)', () => {
+    const op = SQLITE_WIRE_DESCRIPTORS.search.encodeOp('AI', 10, 0, {
+      orderBy: 'rank',
+      orderDir: 'DESC',
+      tagFilter: 'tools',
+      since: 1000,
+      until: 2000,
+    });
+    expect(op).toEqual({
+      kind: 'search',
+      text: 'AI',
+      limit: 10,
+      offset: 0,
+      orderBy: 'rank',
+      orderDir: 'DESC',
+      tagFilter: 'tools',
+      since: 1000,
+      until: 2000,
+    });
+    expect(SQLITE_WIRE_DESCRIPTORS.search.encodePayload(op)).toEqual({
+      kind: 'search',
+      text: 'AI',
+      limit: 10,
+      offset: 0,
+      orderBy: 'rank',
+      orderDir: 'DESC',
+      tagFilter: 'tools',
+      since: 1000,
+      until: 2000,
+    });
+  });
+
+  it('search encode stays field-free when scope is absent', () => {
+    const op = SQLITE_WIRE_DESCRIPTORS.search.encodeOp('hello', 50, 0, { orderBy: 'rank', orderDir: 'ASC' });
+    expect('tagFilter' in op).toBe(false);
+    expect('since' in op).toBe(false);
+    expect('until' in op).toBe(false);
+    const payload = SQLITE_WIRE_DESCRIPTORS.search.encodePayload(op);
+    expect('tagFilter' in payload).toBe(false);
+    expect('since' in payload).toBe(false);
+    expect('until' in payload).toBe(false);
+  });
+
   it('auditLog passes undefined limit/offset through (no pickDefined)', () => {
     const op = SQLITE_WIRE_DESCRIPTORS.auditLog.encodeOp({});
     expect(SQLITE_WIRE_DESCRIPTORS.auditLog.encodePayload(op)).toEqual({ limit: undefined, offset: undefined });

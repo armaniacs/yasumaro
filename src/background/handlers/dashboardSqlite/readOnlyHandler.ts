@@ -51,13 +51,19 @@ export function buildSearchParams(
   text: string;
   limit: number | undefined;
   offset: number;
-  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' };
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number };
 } {
   return {
     text: payload.query || '',
     limit: payload.limit,
     offset: payload.offset ?? 0,
-    options: pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
+    options: pickDefined({
+      orderBy: payload.orderBy,
+      orderDir: payload.orderDir,
+      tagFilter: payload.tagFilter,
+      since: payload.since,
+      until: payload.until,
+    }),
   };
 }
 
