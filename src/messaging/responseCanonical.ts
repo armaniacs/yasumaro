@@ -21,6 +21,7 @@
  * (background -> messaging), so no reverse-dependency exception applies.
  * `types.ts` keeps type-only re-exports so existing import paths work.
  */
+import { parseCollectionQueryV2 } from '../utils/collectionQueryV2.js';
 
 /** One citation the answer links back to (BDD: 元記録に飛べる). */
 export interface AskHistoryCitation {
@@ -113,8 +114,6 @@ export function readTrimmedString(value: unknown): string | null {
 export function readFiniteNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
-
-import { parseCollectionQueryV2 } from '../utils/collectionQueryV2.js';
 
 /**
  * Collection scope normalizer (ASK_HISTORY): resolves the stored query

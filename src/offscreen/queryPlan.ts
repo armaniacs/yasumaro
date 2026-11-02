@@ -16,6 +16,7 @@ import type { SqliteValue } from './sqliteEngine.js';
 import { QUERY_CAPS } from '../utils/limits.js';
 import { UPDATABLE_FIELDS } from './schema.js';
 import { withTransaction } from './sqliteTransaction.js';
+import { rowMatchesTagLike } from '../utils/tagLike.js';
 
 // ============================================================================
 // Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
@@ -211,7 +212,6 @@ export function selectTagFilter(
  * SQL LIKE semantics without a background→offscreen import); this module
  * re-exports it so existing import paths keep working.
  */
-import { rowMatchesTagLike } from '../utils/tagLike.js';
 export { rowMatchesTagLike };
 
 /**
