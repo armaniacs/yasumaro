@@ -5740,8 +5740,11 @@
   "promptNotFound": {
     "message": "プロンプトが見つかりません"
   },
+  "encryptedBackupCreating": {
+    "message": "{filename} を作成しています..."
+  },
   "encryptedBackupCreated": {
-    "message": "暗号化バックアップを作成しました"
+    "message": "暗号化バックアップを作成しました: {filename}"
   },
   "encryptedBackupCreateFailed": {
     "message": "バックアップ作成に失敗しました: {error}"

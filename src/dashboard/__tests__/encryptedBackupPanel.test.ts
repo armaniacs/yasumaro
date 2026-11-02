@@ -52,6 +52,57 @@ describe('initEncryptedBackupPanel', () => {
     expect(exportEncryptedBackup).toHaveBeenCalledWith('my-password', expect.any(Function));
   });
 
+  it('announces the backup filename before creation and downloads with the same name', async () => {
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      void action('my-password');
+    });
+    vi.mocked(exportEncryptedBackup).mockResolvedValue({
+      version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd',
+    });
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:announced-backup');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    const downloaded: string[] = [];
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
+      if (node instanceof HTMLAnchorElement) downloaded.push(node.download);
+      return node;
+    });
+    vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+
+    initEncryptedBackupPanel();
+
+    // Record every status write in order: the pre-creation announcement must
+    // carry the same single-generated filename later used for the download.
+    // getExportFilename is module-private so a call-count spy is impossible
+    // without exporting it; equality of announced and downloaded names is the
+    // behavioral proof that one value reaches both sinks.
+    const statusEl = document.getElementById('encryptedBackupStatus')!;
+    const statuses: string[] = [];
+    let current: string | null = '';
+    Object.defineProperty(statusEl, 'textContent', {
+      configurable: true,
+      get: () => current,
+      set: (value: string | null) => {
+        current = value;
+        statuses.push(value ?? '');
+      },
+    });
+
+    try {
+      document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+      await vi.waitFor(() => {
+        expect(statuses.some((s) => s.startsWith('Encrypted backup created:'))).toBe(true);
+      });
+
+      expect(downloaded).toHaveLength(1);
+      expect(downloaded[0]).toMatch(/yasumaro-backup-.*\.encrypted\.json/);
+      const announced = statuses.find((s) => s.startsWith('Creating '));
+      expect(announced).toBe(`Creating ${downloaded[0]}...`);
+      expect(statuses[statuses.length - 1]).toBe(`Encrypted backup created: ${downloaded[0]}`);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
   it('shows an error status when import fails due to wrong password', async () => {
     vi.mocked(isEncryptedBackupFile).mockReturnValue(true);
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {

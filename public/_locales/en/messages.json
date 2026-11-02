@@ -5758,8 +5758,11 @@
   "promptNotFound": {
     "message": "Prompt not found"
   },
+  "encryptedBackupCreating": {
+    "message": "Creating {filename}..."
+  },
   "encryptedBackupCreated": {
-    "message": "Encrypted backup created"
+    "message": "Encrypted backup created: {filename}"
   },
   "encryptedBackupCreateFailed": {
     "message": "Failed to create backup: {error}"

@@ -58,6 +58,12 @@ export function initEncryptedBackupPanel(): void {
       exportInFlight = true;
       try {
         await withBusyButton(exportBtn as HTMLButtonElement, async () => {
+          const filename = getExportFilename();
+          setStatus(
+            getMessageWithSubstitutions('encryptedBackupCreating', { filename }, '{filename} を作成しています...'),
+            false,
+            'updating',
+          );
           const envelope = await exportEncryptedBackup(password, (stage) => {
             setStatus(
               stage === 'readingDb'
@@ -67,8 +73,8 @@ export function initEncryptedBackupPanel(): void {
               'updating',
             );
           });
-          downloadJson(envelope, getExportFilename());
-          setStatus(getMessageOr('encryptedBackupCreated', '暗号化バックアップを作成しました'), false);
+          downloadJson(envelope, filename);
+          setStatus(getMessageWithSubstitutions('encryptedBackupCreated', { filename }, '暗号化バックアップを作成しました: {filename}'), false);
         });
       } catch (error) {
         setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
