@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ValidVisitValidator,
   DashboardSqliteValidator,
+  ExportResearchReportValidator,
   FetchUrlValidator,
   ManualRecordValidator,
   CheckDomainValidator,
@@ -12,6 +13,7 @@ import {
   ValidationError,
   validVisitValidator,
   dashboardSqliteValidator,
+  exportResearchReportValidator,
   fetchUrlValidator,
   manualRecordValidator,
   checkDomainValidator,
@@ -529,5 +531,44 @@ describe('LogForwardValidator (PBI 2026-10-21-02)', () => {
 
   it('logForwardValidator singleton is an instance', () => {
     expect(logForwardValidator).toBeInstanceOf(LogForwardValidator);
+  });
+});
+
+describe('ExportResearchReportValidator — V2 pins (PBI 2026-11-02-04)', () => {
+  const v = new ExportResearchReportValidator();
+
+  it('accepts a scope without ids (existing behavior)', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { search: 'q' } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('accepts optional ids of finite numbers', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 2, 3] } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('does not reject an over-long pin list (report-side absorption, unlike save path B)', () => {
+    const ids = Array.from({ length: 500 }, (_, i) => i + 1);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('rejects a non-array ids and non-finite entries', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: 'x' } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, NaN] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 'x'] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('exportResearchReportValidator singleton is an instance', () => {
+    expect(exportResearchReportValidator).toBeInstanceOf(ExportResearchReportValidator);
   });
 });

@@ -181,3 +181,125 @@ describe('createResearchReportGenerator — BDD (レポートが生成される 
     expect(outcome).toEqual({ success: true, recordCount: REPORT_MAX_RECORDS, deliveredTo: ['download'] });
   });
 });
+
+describe('buildResearchReportMarkdown — V2 annotation (PBI 2026-11-02-04)', () => {
+  it('shows the excluded count and the truncation note only when set', () => {
+    const records = [makeRecord(1)];
+    const plain = buildResearchReportMarkdown(records, { title: 't', now: 1 });
+    expect(plain).not.toContain('除外');
+    expect(plain).not.toContain('先頭200件');
+    const annotated = buildResearchReportMarkdown(records, {
+      title: 't',
+      now: 1,
+      excludedCount: 2,
+      truncated: true,
+    });
+    expect(annotated).toContain('除外: 2');
+    expect(annotated).toContain('先頭200件');
+  });
+});
+
+describe('createResearchReportGenerator — V2 UNION semantics (PBI 2026-11-02-04)', () => {
+  function dbRow(id: number): Record<string, unknown> {
+    return {
+      id,
+      title: `Record ${id}`,
+      url: `https://example${id}.com/page`,
+      created_at: 1700000000000 + id * 1000,
+      summary: `Summary ${id}`,
+    };
+  }
+
+  // Routes clause queries by text and ids queries by id list; id 999 never
+  // resolves (stands in for a deleted pin).
+  function makeRoutingDeps(clauseRows: Record<string, number[]>): GeneratorMocks {
+    return makeDeps({
+      sqliteClient: {
+        query: vi.fn(async (q: Record<string, unknown>) => {
+          if (Array.isArray(q['ids'])) {
+            const ids = (q['ids'] as number[]).filter((id) => id !== 999);
+            return { success: true, data: { rows: ids.map(dbRow), total: ids.length } };
+          }
+          const rows = (clauseRows[String(q['text'] ?? '')] ?? []).map(dbRow);
+          return { success: true, data: { rows, total: rows.length } };
+        }),
+      },
+    });
+  }
+
+  it('unions both OR clause results with dedup (no silent narrowing to the first clause)', async () => {
+    const deps = makeRoutingDeps({ alpha: [1, 2], beta: [2, 3] });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({
+      scope: { op: 'or', clauses: [{ search: 'alpha' }, { search: 'beta' }] },
+    });
+    expect(outcome).toEqual({ success: true, recordCount: 3, deliveredTo: ['download'] });
+    // Fan-out per clause plus the single final rows fetch.
+    expect(deps.sqliteClient.query).toHaveBeenCalledTimes(3);
+    expect(deps.sqliteClient.query).toHaveBeenLastCalledWith({
+      ids: [1, 2, 3],
+      orderBy: 'created_at',
+      orderDir: 'ASC',
+      limit: REPORT_MAX_RECORDS,
+    });
+  });
+
+  it('intersects AND clause results before the final fetch', async () => {
+    const deps = makeRoutingDeps({ alpha: [1, 2], beta: [2, 3] });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({
+      scope: { op: 'and', clauses: [{ search: 'alpha' }, { search: 'beta' }] },
+    });
+    expect(outcome).toEqual({ success: true, recordCount: 1, deliveredTo: ['download'] });
+    expect(deps.sqliteClient.query).toHaveBeenLastCalledWith({
+      ids: [2],
+      orderBy: 'created_at',
+      orderDir: 'ASC',
+      limit: REPORT_MAX_RECORDS,
+    });
+  });
+
+  it('adds pinned ids to the clause results and excludes deleted pins with a count (never errors on missing)', async () => {
+    const deps = makeRoutingDeps({ alpha: [1] });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({ scope: { search: 'alpha', ids: [3, 999] } });
+    // UNION([1], [3, 999]) resolves to rows 1 and 3; pin 999 is deleted.
+    expect(outcome).toEqual({ success: true, recordCount: 2, deliveredTo: ['download'] });
+    const content = deps.downloadMarkdown.mock.calls[0]?.[0] as string;
+    expect(content).toContain('除外: 1');
+  });
+
+  it('caps the union at the first 200 and marks the truncation', async () => {
+    const deps = makeRoutingDeps({});
+    const generator = createResearchReportGenerator(deps);
+    const ids = Array.from({ length: REPORT_MAX_RECORDS + 10 }, (_, i) => i + 1);
+    const outcome = await generator.generate({ scope: { ids } });
+    expect(outcome).toEqual({ success: true, recordCount: REPORT_MAX_RECORDS, deliveredTo: ['download'] });
+    const finalCall = deps.sqliteClient.query.mock.calls[0]?.[0] as Record<string, unknown>;
+    expect((finalCall['ids'] as number[])).toHaveLength(REPORT_MAX_RECORDS);
+    const content = deps.downloadMarkdown.mock.calls[0]?.[0] as string;
+    expect(content).toContain('先頭200件');
+  });
+
+  it('returns no_records when clauses match nothing and no pins exist', async () => {
+    const deps = makeRoutingDeps({});
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({
+      scope: { op: 'or', clauses: [{ search: 'nothing' }] },
+    });
+    expect(outcome).toEqual({ success: false, error: 'no_records' });
+    expect(deps.downloadMarkdown).not.toHaveBeenCalled();
+  });
+
+  it('surfaces a clause fetch failure instead of generating', async () => {
+    const deps = makeDeps({
+      sqliteClient: { query: vi.fn().mockResolvedValue({ success: false, error: { message: 'db locked' } }) },
+    });
+    const generator = createResearchReportGenerator(deps);
+    const outcome = await generator.generate({
+      scope: { op: 'or', clauses: [{ search: 'alpha' }, { search: 'beta' }] },
+    });
+    expect(outcome).toEqual({ success: false, error: 'db locked' });
+    expect(deps.downloadMarkdown).not.toHaveBeenCalled();
+  });
+});

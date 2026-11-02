@@ -106,6 +106,54 @@ describe('buildResearchReportScopeFromCollection — collection-to-conditions re
   });
 });
 
+describe('buildResearchReportScopeFromCollection — V2 multi-clause and pins (PBI 2026-11-02-04)', () => {
+  it('resolves an OR two-clause collection to op plus clauses (no silent narrowing to the first clause)', () => {
+    const scope = buildResearchReportScopeFromCollection({
+      version: 2,
+      op: 'or',
+      clauses: [
+        { search: 'rust', tag: 'tools' },
+        { search: 'wasm', date: '2026-10-23' },
+      ],
+    });
+    expect(scope.op).toBe('or');
+    expect(scope.clauses).toHaveLength(2);
+    expect(scope.clauses?.[0]).toMatchObject({ search: 'rust', tag: 'tools' });
+    expect(scope.clauses?.[1]?.search).toBe('wasm');
+    expect(typeof scope.clauses?.[1]?.since).toBe('number');
+    expect(scope.search).toBeUndefined();
+  });
+
+  it('carries pinned ids alongside the flat single-clause scope', () => {
+    const scope = buildResearchReportScopeFromCollection({ search: 'wasm', tag: 'tools', ids: [4, 9] });
+    expect(scope.search).toBe('wasm');
+    expect(scope.tag).toBe('tools');
+    expect(scope.ids).toEqual([4, 9]);
+  });
+
+  it('resolves a pins-only collection to the ids-only scope', () => {
+    expect(buildResearchReportScopeFromCollection({ ids: [4, 9] })).toEqual({ ids: [4, 9] });
+  });
+
+  it('carries pinned ids on a multi-clause scope (UNION members)', () => {
+    const scope = buildResearchReportScopeFromCollection({
+      version: 2,
+      op: 'or',
+      clauses: [{ tag: 'rust' }, { tag: 'wasm' }],
+      ids: [7],
+    });
+    expect(scope.op).toBe('or');
+    expect(scope.clauses).toHaveLength(2);
+    expect(scope.ids).toEqual([7]);
+  });
+
+  it('fails closed on a V2 shape with only empty clauses', () => {
+    expect(
+      buildResearchReportScopeFromCollection({ version: 2, op: 'or', clauses: [{ search: '   ' }] }),
+    ).toEqual({});
+  });
+});
+
 describe('createResearchReportPanelActions — panel owns collection → generate', () => {
   it('resolves the selected collection to the scope and keeps the seam call shape', async () => {
     const stored = {

@@ -22,6 +22,7 @@
  * `types.ts` keeps type-only re-exports so existing import paths work.
  */
 import { parseCollectionQueryV2 } from '../utils/collectionQueryV2.js';
+import { MAX_QUERY_IDS } from '../utils/limits.js';
 
 /** One citation the answer links back to (BDD: 元記録に飛べる). */
 export interface AskHistoryCitation {
@@ -81,12 +82,31 @@ export interface AskCollectionScope {
  * Report scope (EXPORT_RESEARCH_REPORT): the panel conditions (PBI 06
  * collection shape). Absent fields mean unscoped; an empty scope is a
  * whole-history report, which the generator caps.
+ *
+ * V2 (PBI 2026-11-02-04): a multi-clause collection resolves to `op` +
+ * `clauses` plus the pinned `ids`. A legacy v1/single collection keeps the
+ * flat `search`/`tag`/`since`/`until` shape (no `clauses` key) so existing
+ * callers and pins are unaffected. UNION semantics (PBI decision): the final
+ * record set is mergeClauseResults(clauseResults, op) UNION ids.
  */
+export interface ResearchReportClause {
+  search?: string;
+  tag?: string;
+  since?: number;
+  until?: number;
+}
+
 export interface ResearchReportScope {
   search?: string;
   tag?: string;
   since?: number;
   until?: number;
+  /** Pinned record ids (V2 pin留め): UNION members, missing ones excluded. */
+  ids?: number[];
+  /** Clause combinator for `clauses` (V2 multi-clause collections). */
+  op?: 'and' | 'or';
+  /** Per-clause conditions (V2 multi-clause collections). */
+  clauses?: ResearchReportClause[];
 }
 
 /** String fields of the report scope (single table for validator + normalizer). */
@@ -94,6 +114,9 @@ export const REPORT_SCOPE_STRING_FIELDS = ['search', 'tag'] as const;
 
 /** Number fields of the report scope (single table for validator + normalizer). */
 export const REPORT_SCOPE_NUMBER_FIELDS = ['since', 'until'] as const;
+
+/** Array fields of the report scope (single table for validator + normalizer). */
+export const REPORT_SCOPE_ARRAY_FIELDS = ['ids'] as const;
 
 /**
  * Single trimmed-string reader: a non-blank string trims, everything else
@@ -142,6 +165,11 @@ export function normalizeCollectionScope(raw: Record<string, unknown> | null): A
 /**
  * Report scope normalizer (EXPORT_RESEARCH_REPORT): keeps only the fields
  * that are actually set. Non-object inputs degrade to the empty scope.
+ * V2 (PBI 2026-11-02-04): `ids` keeps finite numbers only, capped at
+ * MAX_QUERY_IDS (an over-long pin list is truncated, never rejected —
+ * report-side absorption, unlike save path B); `op` keeps 'and'/'or';
+ * `clauses` keeps per-clause trimmed-string / finite-number conditions and
+ * drops fully-empty clauses.
  */
 export function normalizeReportScope(raw: unknown): ResearchReportScope {
   if (typeof raw !== 'object' || raw === null) return {};
@@ -154,6 +182,36 @@ export function normalizeReportScope(raw: unknown): ResearchReportScope {
   for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
     const value = readFiniteNumber(source[field]);
     if (value !== null) scope[field] = value;
+  }
+  for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
+    const value = source[field];
+    if (value !== undefined) {
+      const ids = Array.isArray(value)
+        ? value.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+        : [];
+      if (ids.length > 0) scope[field] = ids.slice(0, MAX_QUERY_IDS);
+    }
+  }
+  const op = source['op'];
+  if (op === 'and' || op === 'or') scope.op = op;
+  const clauses = source['clauses'];
+  if (Array.isArray(clauses)) {
+    const kept: ResearchReportClause[] = [];
+    for (const entry of clauses) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const record = entry as Record<string, unknown>;
+      const clause: ResearchReportClause = {};
+      const search = readTrimmedString(record['search']);
+      if (search !== null) clause.search = search;
+      const tag = readTrimmedString(record['tag']);
+      if (tag !== null) clause.tag = tag;
+      const since = readFiniteNumber(record['since']);
+      if (since !== null) clause.since = since;
+      const until = readFiniteNumber(record['until']);
+      if (until !== null) clause.until = until;
+      if (Object.keys(clause).length > 0) kept.push(clause);
+    }
+    if (kept.length > 0) scope.clauses = kept;
   }
   return scope;
 }

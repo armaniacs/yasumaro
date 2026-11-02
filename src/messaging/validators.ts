@@ -36,6 +36,7 @@ import type {
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import { SELECTION_CONTENT_ORIGIN } from '../utils/selectionText.js';
 import {
+  REPORT_SCOPE_ARRAY_FIELDS,
   REPORT_SCOPE_NUMBER_FIELDS,
   REPORT_SCOPE_STRING_FIELDS,
 } from './responseCanonical.js';
@@ -779,6 +780,22 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
         const value = s[field];
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
+        }
+      }
+      // V2 pins (PBI 2026-11-02-04): optional ids array of finite numbers.
+      // Over-long lists are NOT rejected here — the report side truncates
+      // (absorption, unlike save path B).
+      for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
+        const value = s[field];
+        if (value !== undefined) {
+          if (!Array.isArray(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be array`, field);
+          }
+          for (const entry of value) {
+            if (typeof entry !== 'number' || !Number.isFinite(entry)) {
+              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite numbers`, field);
+            }
+          }
         }
       }
     }

@@ -58,3 +58,24 @@ export function parseCollectionQueryV2(raw: unknown): CollectionQueryV2 {
   const single = readClause(r);
   return { version: 2, op: 'and', clauses: single === null ? [] : [single], ids };
 }
+
+/**
+ * Merge per-clause id sets by the collection combinator (PBI 2026-11-02-04
+ * UNION semantics for the research report): 'or' unions, 'and'
+ * intersects. Single owner — the dashboard resolver re-exports this, and
+ * the background report generator imports it from here, so background never
+ * imports from the dashboard layer.
+ */
+export function mergeClauseResults(idSets: number[][], op: 'and' | 'or'): number[] {
+  if (idSets.length === 0) return [];
+  if (op === 'or') {
+    return [...new Set(idSets.flat())].sort((a, b) => a - b);
+  }
+  const first = new Set(idSets[0]);
+  for (const s of idSets.slice(1)) {
+    for (const id of [...first]) {
+      if (!s.includes(id)) first.delete(id);
+    }
+  }
+  return [...first].sort((a, b) => a - b);
+}

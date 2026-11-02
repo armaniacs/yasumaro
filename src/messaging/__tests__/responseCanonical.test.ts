@@ -6,7 +6,8 @@
  * for queries with nothing enforceable.
  */
 import { describe, it, expect } from 'vitest';
-import { normalizeCollectionScope } from '../responseCanonical.js';
+import { normalizeCollectionScope, normalizeReportScope } from '../responseCanonical.js';
+import { MAX_QUERY_IDS } from '../../utils/limits.js';
 
 describe('responseCanonical', () => {
   describe('normalizeCollectionScope', () => {
@@ -63,6 +64,47 @@ describe('responseCanonical', () => {
       const scope = normalizeCollectionScope({ ids: [3, NaN, 'x'], tag: 'tools' });
       expect(scope.unresolvable).toBe(false);
       expect(scope.ids).toEqual([3]);
+    });
+  });
+
+  describe('normalizeReportScope', () => {
+    it('keeps the legacy flat fields and drops unknown or non-finite values', () => {
+      expect(normalizeReportScope({ search: ' wasm ', tag: 'tools', since: 1, until: 2, bogus: true })).toEqual({
+        search: 'wasm',
+        tag: 'tools',
+        since: 1,
+        until: 2,
+      });
+      expect(normalizeReportScope({ search: '   ', since: NaN })).toEqual({});
+    });
+
+    it('degrades non-object inputs to the empty scope', () => {
+      expect(normalizeReportScope(null)).toEqual({});
+      expect(normalizeReportScope('x')).toEqual({});
+    });
+
+    it('keeps finite ids and drops non-finite entries (V2 pins)', () => {
+      expect(normalizeReportScope({ ids: [3, NaN, 'x', Infinity, 5] })).toEqual({ ids: [3, 5] });
+    });
+
+    it('caps an over-long pin list instead of rejecting it (report-side absorption)', () => {
+      const ids = Array.from({ length: MAX_QUERY_IDS + 50 }, (_, i) => i + 1);
+      const scope = normalizeReportScope({ ids });
+      expect(scope.ids).toHaveLength(MAX_QUERY_IDS);
+      expect(scope.ids?.[0]).toBe(1);
+    });
+
+    it('keeps op and normalized clauses while dropping empty ones', () => {
+      const scope = normalizeReportScope({
+        op: 'or',
+        clauses: [{ search: ' ai ', tag: 'tools' }, { search: '   ' }, 'bogus', { since: 7, until: NaN }],
+      });
+      expect(scope.op).toBe('or');
+      expect(scope.clauses).toEqual([{ search: 'ai', tag: 'tools' }, { since: 7 }]);
+    });
+
+    it('drops an invalid op and an empty clause list', () => {
+      expect(normalizeReportScope({ op: 'xor', clauses: [] })).toEqual({});
     });
   });
 });

@@ -1,6 +1,9 @@
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import type { CollectionQueryV2 } from './savedCollectionQuery.js';
 
+/** mergeClauseResults is owned by the V2 shape module (background-safe import); re-exported here so existing dashboard import paths keep working. */
+export { mergeClauseResults } from '../../../utils/collectionQueryV2.js';
+
 export interface ClauseStorageQuery {
   text?: string;
   tagFilter?: string;
@@ -20,18 +23,4 @@ export function resolveCollectionQueries(query: CollectionQueryV2): ClauseStorag
     }
     return out;
   });
-}
-
-export function mergeClauseResults(idSets: number[][], op: 'and' | 'or'): number[] {
-  if (idSets.length === 0) return [];
-  if (op === 'or') {
-    return [...new Set(idSets.flat())].sort((a, b) => a - b);
-  }
-  const first = new Set(idSets[0]);
-  for (const s of idSets.slice(1)) {
-    for (const id of [...first]) {
-      if (!s.includes(id)) first.delete(id);
-    }
-  }
-  return [...first].sort((a, b) => a - b);
 }
