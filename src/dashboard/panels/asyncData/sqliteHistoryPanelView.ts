@@ -224,7 +224,9 @@ export function buildCalendarNavHtml(
       <button data-date="${formatDate(now)}" data-range="7">${t('historyLast7Days')}</button>
       <button data-date="${formatDate(now)}" data-range="30">${t('historyLast30Days')}</button>
       ${hasActiveFilters ? `<button type="button" id="${SQLITE_HISTORY_IDS.clearAllFilters}" class="sqlite-clear-filters-btn" aria-label="${t('clearAllFilters') || 'Clear all filters'}">${t('clearAllFilters') || '条件をクリア'}</button>` : ''}
+      <button type="button" id="${SQLITE_HISTORY_IDS.sendToCollection}" class="sqlite-send-to-collection-btn">${t('historySendToCollection')}</button>
     </div>
+    <div id="${SQLITE_HISTORY_IDS.handoffReason}" class="sqlite-handoff-reason" role="status"></div>
     <div class="sqlite-calendar-month">
       <button data-month-prev>&lt;</button>
       <span>${year}-${String(month + 1).padStart(2, '0')}</span>
@@ -365,6 +367,8 @@ export const SQLITE_HISTORY_IDS = {
   deleteConfirmNo: 'sqlite-delete-confirm-no',
   tagFilterBar: 'sqlite-tag-filter-bar',
   tagFilterClear: 'sqlite-tag-filter-clear',
+  sendToCollection: 'sqlite-send-to-collection',
+  handoffReason: 'sqlite-handoff-reason',
 } as const;
 
 /** Event + dependency bundle the Panel builds once and hands to `render()`. */
@@ -372,6 +376,11 @@ export interface SqliteHistoryViewCallbacks {
   onDateSelect: (dateStr: string) => void;
   onRangeSelect: (since: number, until: number) => void;
   onClearFilters: () => void;
+  /**
+   * History → collection handoff (PBI 2026-11-02-03). Optional so existing
+   * callback literals keep compiling; the panel always supplies it.
+   */
+  onSendToCollection?: () => void;
   onSearchInput: (query: string) => void;
   onSortChange: (sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']) => void;
   onPageChange: (page: number) => void;
@@ -627,6 +636,23 @@ export function hideStarUndo(container: HTMLElement): void {
   undo.style.display = 'none';
 }
 
+/**
+ * Handoff reason line (PBI 2026-11-02-03): in-panel refusal or confirmation
+ * for "send to collection". The panel owns the message choice; these only
+ * paint it. No-op when the calendar region is absent.
+ */
+export function setHandoffReason(container: HTMLElement, message: string): void {
+  const reason = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.handoffReason);
+  if (!reason) return;
+  reason.textContent = message;
+}
+
+export function clearHandoffReason(container: HTMLElement): void {
+  const reason = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.handoffReason);
+  if (!reason) return;
+  reason.textContent = '';
+}
+
 function updateBulkBar(
   container: HTMLElement,
   selectedIds: Set<number>,
@@ -850,12 +876,12 @@ export function wireSortControl(
   });
 }
 
-/** Builds calendar-nav HTML and wires date/month/clear actions. No-op when absent. */
+/** Builds calendar-nav HTML and wires date/month/clear/send actions. No-op when absent. */
 export function wireCalendarNav(
   container: HTMLElement,
   selectedDate: string | null,
   options: { searchQuery: string; activeTagFilter: string | null },
-  callbacks: Pick<SqliteHistoryViewCallbacks, 'onDateSelect' | 'onRangeSelect' | 'onClearFilters'>,
+  callbacks: Pick<SqliteHistoryViewCallbacks, 'onDateSelect' | 'onRangeSelect' | 'onClearFilters'> & Pick<SqliteHistoryViewCallbacks, 'onSendToCollection'>,
 ): void {
   const region = queryById<HTMLElement>(container, SQLITE_HISTORY_IDS.calendarNav);
   if (!region) return;
@@ -895,6 +921,12 @@ export function wireCalendarNav(
     const searchInput = queryById<HTMLInputElement>(container, SQLITE_HISTORY_IDS.searchInput);
     if (searchInput) searchInput.value = '';
     callbacks.onClearFilters();
+  });
+
+  // History → collection handoff (PBI 2026-11-02-03): the panel packs the
+  // triple, so the view only forwards the click and paints the reason line.
+  region.querySelector(`#${SQLITE_HISTORY_IDS.sendToCollection}`)?.addEventListener('click', () => {
+    callbacks.onSendToCollection?.();
   });
 
   const daysEl = queryById<HTMLElement>(region, SQLITE_HISTORY_IDS.calendarDays);

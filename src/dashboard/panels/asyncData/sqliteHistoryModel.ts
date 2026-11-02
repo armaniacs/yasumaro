@@ -33,6 +33,7 @@ import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
 import { parseCollectionQuery } from './savedCollectionQuery.js';
+import type { HistoryCustomRange } from './historyHandoff.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
@@ -48,6 +49,14 @@ export interface SqliteHistoryState {
   currentPage: number;
   searchQuery: string;
   selectedDate: string | null;
+  /**
+   * Ephemeral custom range from the calendar quick buttons (Last 7/30 days):
+   * since/until with no selectedDate. It never lands in a saved condition,
+   * so the history → collection handoff (PBI 2026-11-02-03) refuses while
+   * this is set instead of silently dropping to a single day. Cleared by
+   * every filter change that the list query itself does not carry.
+   */
+  customRange: HistoryCustomRange | null;
   loading: boolean;
   error: string | null;
   fallbackMode: boolean;
@@ -65,6 +74,7 @@ export function createInitialHistoryState(): SqliteHistoryState {
     currentPage: 0,
     searchQuery: '',
     selectedDate: null,
+    customRange: null,
     loading: false,
     error: null,
     fallbackMode: false,
@@ -82,7 +92,7 @@ export type SqliteHistoryAction =
   | { type: 'loadFailure'; error: string }
   | { type: 'search'; query: string }
   | { type: 'dateSelect'; date: string }
-  | { type: 'rangeSelect' }
+  | { type: 'rangeSelect'; since: number; until: number }
   | { type: 'clearFilters' }
   | { type: 'tagFilterClick'; tag: string }
   | { type: 'clearTagFilter' }
@@ -108,6 +118,7 @@ function clearTagFilterState(state: SqliteHistoryState): SqliteHistoryState {
     ...state,
     activeTagFilter: null,
     pendingTagFallback: null,
+    customRange: null,
     currentPage: 0,
     searchQuery: hadFallback && state.searchQuery ? '' : state.searchQuery,
   };
@@ -158,6 +169,9 @@ export function historyStateReducer(
         searchQuery: action.query,
         currentPage: 0,
         pendingTagFallback: null,
+        // A fresh search abandons the ephemeral range: the search query
+        // carries no since/until, so keeping it would lie about the list.
+        customRange: null,
         sortBy,
         sortDir: clearingRelevance ? 'DESC' : state.sortDir,
       };
@@ -167,23 +181,33 @@ export function historyStateReducer(
       return {
         ...state,
         selectedDate: action.date,
+        customRange: null,
         searchQuery: '',
         pendingTagFallback: null,
         currentPage: 0,
       };
 
     case 'rangeSelect':
-      return { ...state, selectedDate: null, searchQuery: '', pendingTagFallback: null, currentPage: 0 };
+      return {
+        ...state,
+        selectedDate: null,
+        customRange: { since: action.since, until: action.until },
+        searchQuery: '',
+        pendingTagFallback: null,
+        currentPage: 0,
+      };
 
     case 'clearFilters':
-      return { ...state, searchQuery: '', selectedDate: null, activeTagFilter: null, pendingTagFallback: null, currentPage: 0 };
+      return { ...state, searchQuery: '', selectedDate: null, customRange: null, activeTagFilter: null, pendingTagFallback: null, currentPage: 0 };
 
     case 'tagFilterClick': {
       const nextTag = state.activeTagFilter === action.tag ? null : action.tag;
       if (nextTag === null) {
         return clearTagFilterState(state);
       }
-      return { ...state, activeTagFilter: nextTag, currentPage: 0 };
+      // The tag query carries dateRangeFromSelected only, so an ephemeral
+      // custom range no longer describes the list once a tag is picked.
+      return { ...state, activeTagFilter: nextTag, customRange: null, currentPage: 0 };
     }
 
     case 'clearTagFilter':
@@ -199,13 +223,14 @@ export function historyStateReducer(
       return {
         ...state,
         activeTagFilter: action.tag,
+        customRange: null,
         currentPage: 0,
         pendingTagFallback: null,
         searchQuery: action.tag,
       };
 
     case 'domainSearchInitiated':
-      return { ...state, searchQuery: action.query, currentPage: 0 };
+      return { ...state, searchQuery: action.query, customRange: null, currentPage: 0 };
 
     // PBI 2026-10-23-06: recall applies every stored condition in one pass.
     // The current sort is preserved on purpose — a collection is a named
@@ -216,6 +241,7 @@ export function historyStateReducer(
         searchQuery: action.search,
         activeTagFilter: action.tag,
         selectedDate: action.date,
+        customRange: null,
         pendingTagFallback: null,
         currentPage: 0,
       };
@@ -433,7 +459,18 @@ export interface SqliteHistoryModel {
   appendSelectedToObsidian(): Promise<AppendResult | null>;
   deleteSelectedEntries(): Promise<BulkDeleteResult>;
   search(query: string): void;
-  /** Recall a saved collection (PBI 2026-10-23-06): one dispatch + one fetch with every stored condition. */
+  /**
+   * Recall convention (PBI 2026-11-02-03): the recall target is the
+   * collections panel draft (`applyToDraft` / `editor.loadSaved`) — NOT
+   * the history list.
+   *
+   * @deprecated v1-only legacy path. Parses the flat v1 shape
+   * (search/tag/date) and paints it into the history list. No production
+   * caller remains (recall goes to the collections draft since PBI
+   * 2026-11-01-04); kept for v1-shaped restores with its PBI 2026-10-23-06
+   * behavior pinned by tests. Do not extend — extend the draft handoff
+   * (`historyHandoff.ts`) instead.
+   */
   applyCollection(rawQuery: Record<string, unknown>): void;
   /**
    * Bulk star (PBI 2026-10-23-07): set or unset the star for the given ids.
@@ -872,9 +909,10 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
-  // PBI 2026-10-23-06: single recall entry point. The condition parse lives in
-  // savedCollectionQuery (縮退の出口: corrupted query degrades to the empty
-  // condition); this model only dispatches state and builds one fetch with
+  // v1-only legacy path (PBI 2026-11-02-03 recall convention): recall lands
+  // in the collections draft, not here. This entry point only parses the
+  // flat v1 shape (savedCollectionQuery 縮退の出口: corrupted query degrades
+  // to the empty condition); the model only dispatches state and builds one fetch with
   // every stored condition — search, tag filter and the selected day range.
   function applyCollection(rawQuery: Record<string, unknown>): void {
     const parsed = parseCollectionQuery(rawQuery);
@@ -925,7 +963,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   }
 
   function selectDateRange(since: number, until: number): void {
-    dispatch({ type: 'rangeSelect' });
+    dispatch({ type: 'rangeSelect', since, until });
     void fetchData({ since, until });
   }
 

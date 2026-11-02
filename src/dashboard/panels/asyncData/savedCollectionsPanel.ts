@@ -19,6 +19,11 @@ import type { SavedCollection } from '../../../utils/storage/savedCollections.js
 import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
 import { createClauseEditor } from './collectionClauseEditor.js';
 import { renderClauseEditorView } from './collectionClauseEditorView.js';
+import {
+  registerCollectionDraftApplier,
+  unregisterCollectionDraftApplier,
+  consumePendingHistoryHandoff,
+} from './historyHandoff.js';
 import { previewClauseCounts, type ClausePreview, type ClauseCountSource } from './collectionClausePreview.js';
 import type { ClauseStorageQuery } from './collectionScopeResolver.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
@@ -33,11 +38,14 @@ import { pickDefined } from '../../../utils/objectUtils.js';
  * (savedCollectionsPanelView) and the storage repositories are reused
  * unchanged; only the deps supplier differs from the history wiring.
  *
- * No history dependence by design (backlog 2026-11-01-00): recall restores
- * the stored conditions into the panel's clause editor (visible in the draft
- * status line), and save stores the editor query under a new name. Applying
- * conditions to the history list stays out of scope until the history side
- * can receive a handoff (PBI 04 or a follow-up).
+ * Recall convention (PBI 2026-11-02-03, pinned by tests): recall restores
+ * the stored conditions into the panel's clause editor draft (visible in
+ * the draft status line), and save stores the editor query under a new
+ * name. The history list is NEVER a recall target — history
+ * `model.applyCollection` is a v1-only legacy path kept for old shapes,
+ * not a live wiring. The history → collection handoff arrives through the
+ * same draft door (`applyToDraft` via `historyHandoff.ts`: immediate when
+ * this panel is mounted, one pending query consumed on load otherwise).
  */
 
 export interface SavedCollectionsPanelDeps {
@@ -256,14 +264,20 @@ export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): P
     category: 'async-data',
     mount(c: HTMLElement) {
       container = c;
+      // Recall + handoff target: the editor draft (PBI 2026-11-02-03).
+      registerCollectionDraftApplier((query) => applyToDraft(query));
     },
     async load() {
       if (!container) return;
+      // A handoff sent while this panel was unmounted lands here, once.
+      const pendingHandoff = consumePendingHistoryHandoff();
+      if (pendingHandoff) applyToDraft(pendingHandoff);
       renderEditor();
       renderDraft();
       await loadSaved();
     },
     destroy() {
+      unregisterCollectionDraftApplier();
       container = null;
       savedCollections = {};
       savedTagRules = {};

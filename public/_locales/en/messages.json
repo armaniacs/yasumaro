@@ -4398,6 +4398,15 @@
   "historySelectRecord": {
     "message": "Select this record"
   },
+  "historySendToCollection": {
+    "message": "Send to collection"
+  },
+  "historyHandoffSent": {
+    "message": "Sent to the Saved collections draft. Name and save it there."
+  },
+  "historyHandoffRangeUnsavable": {
+    "message": "Custom date ranges cannot be sent. Select a single day first."
+  },
   "historyAppendToObsidian": {
     "message": "Append selected to Obsidian"
   },

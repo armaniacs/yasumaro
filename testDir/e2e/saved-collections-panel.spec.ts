@@ -95,6 +95,16 @@ test.describe('Saved collections panel @extension', () => {
     await expect(page.locator('#panel-saved-collections')).toBeVisible();
   });
 
+  test('history handoff sends the filter triple to the collections draft (PBI 2026-11-02-03)', async ({ seededHistoryPanel }) => {
+    const { page } = seededHistoryPanel;
+    // The Alpha seed row matches a search for "Alpha".
+    await page.locator('#sqlite-search-input').fill('Alpha');
+    await page.locator('#sqlite-send-to-collection').click();
+    await page.locator('[data-panel="panel-saved-collections"]').click();
+    await expect(page.locator('#panel-saved-collections')).toBeVisible();
+    await expect(page.locator('#panel-saved-collections .saved-collections-draft')).toContainText('Alpha');
+  });
+
   test('rule added in the new panel lists immediately and survives reload (reload half moved from saved-collections.spec.ts, PBI 2026-11-01-04)', async ({ seededHistoryPanel }) => {
     const { page, client } = seededHistoryPanel;
     await page.locator('[data-panel="panel-saved-collections"]').click();

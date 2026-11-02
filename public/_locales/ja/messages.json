@@ -4295,6 +4295,15 @@
   "historySelectRecord": {
     "message": "この記録を選択"
   },
+  "historySendToCollection": {
+    "message": "コレクションに送る"
+  },
+  "historyHandoffSent": {
+    "message": "コレクションの草稿に送りました。名前を付けて保存してください。"
+  },
+  "historyHandoffRangeUnsavable": {
+    "message": "期間指定のままでは送れません。単日を選んでください。"
+  },
   "historyAppendToObsidian": {
     "message": "選択した記事を Obsidian に追記"
   },

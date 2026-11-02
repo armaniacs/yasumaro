@@ -27,8 +27,11 @@ import {
   hideStarConfirm,
   showStarUndo,
   hideStarUndo,
+  setHandoffReason,
+  clearHandoffReason,
 } from './sqliteHistoryPanelView.js';
 import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import { buildHistoryHandoffQuery, requestHistoryHandoff } from './historyHandoff.js';
 
 export { formatDiagnosticMetadataHtml };
 
@@ -329,6 +332,34 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     }
   }
 
+  // --- History → collection handoff (PBI 2026-11-02-03) -------------------
+  // The panel packs the full state triple and hands it to the collections
+  // draft (applyToDraft path via the handoff bus). No in-place save, no
+  // naming on this side — those stay in the collections panel. Refusals
+  // stay in-panel as a reason line, never silent.
+  function handleSendToCollection(): void {
+    if (!container) return;
+    clearHandoffReason(container);
+    const state = model.getState();
+    const result = buildHistoryHandoffQuery(
+      {
+        searchQuery: state.searchQuery,
+        activeTagFilter: state.activeTagFilter,
+        selectedDate: state.selectedDate,
+      },
+      state.customRange,
+    );
+    if (!result.ok) {
+      setHandoffReason(
+        container,
+        result.reason === 'custom-range' ? t('historyHandoffRangeUnsavable') : t('savedCollectionNoCondition'),
+      );
+      return;
+    }
+    requestHistoryHandoff(result.query);
+    setHandoffReason(container, t('historyHandoffSent'));
+  }
+
   // The single callback bundle handed to view.render(). Every entry-list /
   // calendar / sort / pagination / bulk-bar / tag-filter interaction runs
   // through this one construction site — adding a callback means editing
@@ -338,6 +369,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       onDateSelect: (d) => void model.selectDate(d),
       onRangeSelect: (since, until) => model.selectDateRange(since, until),
       onClearFilters: () => model.clearAllFilters(),
+      onSendToCollection: () => handleSendToCollection(),
       onSearchInput: (query) => debouncedSearch(query),
       onSortChange: (sortBy, sortDir) => void model.changeSort(sortBy, sortDir),
       onPageChange: (page) => model.changePage(page),
