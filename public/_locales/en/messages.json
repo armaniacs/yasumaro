@@ -3134,6 +3134,42 @@
     "message": "No search-started sessions yet.",
     "description": "Empty state for the search-to-goal table"
   },
+  "researchSessions_saveToCollection": {
+    "message": "Save to collection",
+    "description": "Per-session button that sends the session to the Saved collections draft"
+  },
+  "researchSessions_saveToCollectionAriaLabel": {
+    "message": "save session {n} to collection",
+    "description": "Aria label for the per-session save button"
+  },
+  "researchSessions_handoffSent": {
+    "message": "Sent {n} pages ({range}) to the Saved collections draft. Name and save it there.",
+    "description": "Session to collection handoff confirmation with count and period"
+  },
+  "researchSessions_handoffOverLimit": {
+    "message": "Not saved: {n} pages exceeds the {max} pin limit.",
+    "description": "Session over the ids pin limit refusal"
+  },
+  "researchSessions_handoffEmpty": {
+    "message": "This session has no pages.",
+    "description": "Empty session save refusal"
+  },
+  "researchSessions_handoffMixedTags": {
+    "message": "Tags differ across pages; saved as pinned IDs only.",
+    "description": "Mixed tags note on session handoff"
+  },
+  "researchSessions_handoffCrossDay": {
+    "message": "Spans multiple days; saved as pinned IDs only.",
+    "description": "Cross-day note on session handoff"
+  },
+  "researchSessions_handoffSearchOmitted": {
+    "message": "Search terms differ; saved without a search condition.",
+    "description": "Non-uniform search omitted note"
+  },
+  "researchSessions_handoffQuotableZero": {
+    "message": "Warning: no quotable page in this session.",
+    "description": "Quotable-zero warning on session handoff"
+  },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
   },

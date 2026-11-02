@@ -26,6 +26,7 @@ import { applyI18n } from '../../../utils/i18n-dom.js';
 import { isSecureUrl } from '../../../utils/urlUtils.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { MAX_RESEARCH_SESSION_ROWS } from '../../../utils/computeLimits.js';
+import { MAX_QUERY_IDS } from '../../../utils/limits.js';
 import {
   groupResearchSessions,
   sessionDurationMinutes,
@@ -54,6 +55,10 @@ import {
   summarizeSelection,
   type SessionSelection,
 } from '../../researchSessionSelection.js';
+import {
+  buildSessionToCollectionQuery,
+} from './sessionToCollection.js';
+import { requestHistoryHandoff } from './historyHandoff.js';
 
 /** Toggle hooks for the selection checkboxes (PBI-02). Task 3 wires the
  *  panel-local selection state below. */
@@ -173,6 +178,7 @@ function renderSession(
   session: ResearchSession,
   index: number,
   hooks: SelectionToggleHooks,
+  onSaveSession: (index: number) => void,
 ): HTMLLIElement {
   const item = document.createElement('li');
   item.className = 'research-sessions-item';
@@ -211,6 +217,24 @@ function renderSession(
   sessionCheck.addEventListener('click', (event) => event.stopPropagation());
   summary.prepend(sessionCheck);
   details.appendChild(summary);
+
+  // PBI 2026-11-02-05: per-single-session "save to collection". Ids-first via
+  // the shared handoff bus (editor draft + naming, never a silent direct
+  // save). No bulk conversion: one button per session only.
+  const saveBtn = document.createElement('button');
+  saveBtn.type = 'button';
+  saveBtn.className = 'rsess-save-collection';
+  saveBtn.setAttribute('data-i18n', 'researchSessions_saveToCollection');
+  saveBtn.textContent = msg('researchSessions_saveToCollection', {}, 'Save to collection');
+  saveBtn.setAttribute(
+    'aria-label',
+    msg('researchSessions_saveToCollectionAriaLabel', { n: index + 1 }, `save session ${index + 1} to collection`),
+  );
+  // Empty sessions cannot save (disabled); over-limit sessions stay enabled
+  // so the click can refuse with the reason instead of failing silently.
+  saveBtn.disabled = session.records.length === 0;
+  saveBtn.addEventListener('click', () => onSaveSession(index));
+  details.appendChild(saveBtn);
 
   if (hasNavTrail(session)) {
     // PBI 04: a session with a referrer renders as the path that was taken,
@@ -268,6 +292,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
   let confirmText: HTMLElement | null = null;
   let deleteConfirmYes: HTMLButtonElement | null = null;
   let deleteConfirmNo: HTMLButtonElement | null = null;
+  // PBI 2026-11-02-05: in-panel confirm/refusal line for "save to collection".
+  let handoffReasonEl: HTMLElement | null = null;
 
   function toSelection(ids: Set<number>): SessionSelection[] {
     return [...ids].map((recordId) => ({ kind: 'page', recordId }) as SessionSelection);
@@ -401,6 +427,49 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     }
   }
 
+  // --- Session → collection handoff (PBI 2026-11-02-05) -------------------
+  // Per-single-session only (no bulk conversion): the pure mapper packs the
+  // ids-first v2 query and the shared handoff bus delivers it to the
+  // collections editor draft (naming + save stay there). Refusals stay
+  // in-panel as a reason line, never silent; quotable-zero warns, not blocks.
+  function handleSaveSessionToCollection(index: number): void {
+    const session = lastSessions[index];
+    if (!session || !handoffReasonEl) return;
+    const result = buildSessionToCollectionQuery(session);
+    if (!result.ok) {
+      handoffReasonEl.textContent =
+        result.reason === 'over-limit'
+          ? msg(
+            'researchSessions_handoffOverLimit',
+            { n: result.count, max: MAX_QUERY_IDS },
+            `Not saved: ${result.count} pages exceeds the ${MAX_QUERY_IDS} pin limit.`,
+          )
+          : msg('researchSessions_handoffEmpty', {}, 'This session has no pages.');
+      return;
+    }
+    requestHistoryHandoff(result.query);
+    const range = `${new Date(result.earliest).toLocaleString()} – ${new Date(result.latest).toLocaleString()}`;
+    const parts: string[] = [
+      msg(
+        'researchSessions_handoffSent',
+        { n: result.count, range },
+        `Sent ${result.count} pages (${range}) to the Saved collections draft. Name and save it there.`,
+      ),
+    ];
+    for (const note of result.notes) {
+      if (note === 'mixed-tags') {
+        parts.push(msg('researchSessions_handoffMixedTags', {}, 'Tags differ across pages; saved as pinned IDs only.'));
+      } else if (note === 'cross-day') {
+        parts.push(msg('researchSessions_handoffCrossDay', {}, 'Spans multiple days; saved as pinned IDs only.'));
+      } else if (note === 'search-omitted') {
+        parts.push(msg('researchSessions_handoffSearchOmitted', {}, 'Search terms differ; saved without a search condition.'));
+      } else {
+        parts.push(msg('researchSessions_handoffQuotableZero', {}, 'Warning: no quotable page in this session.'));
+      }
+    }
+    handoffReasonEl.textContent = parts.join(' ');
+  }
+
   /** Re-groups the cached rows. Never refetches — the gap is a different cut
    *  of the same records, not a different question. */
   function render(): void {
@@ -409,6 +478,8 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     // stale delete-error (shown on the count span) does not survive either.
     selectedIds = new Set<number>();
     if (!lastRows || !listEl || !summaryEl) return;
+    // A fresh cut drops the previous handoff confirm/refusal with it.
+    if (handoffReasonEl) handoffReasonEl.textContent = '';
     // Re-aggregation reset: the row cap describes the FETCH, so it survives.
     notices.resetForReaggregate();
     resetSelection();
@@ -437,7 +508,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
     clearElement(listEl);
     const target = listEl;
     agg.sessions.forEach((session, index) => {
-      target.appendChild(renderSession(session, index, selectionHooks));
+      target.appendChild(renderSession(session, index, selectionHooks, (i) => handleSaveSessionToCollection(i)));
     });
     // The tree checkboxes carry data-i18n-aria-label; the page-level
     // applyI18n ran at load, before these nodes existed, so the rendered
@@ -578,7 +649,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       searchToGoalOff = container.querySelector('#researchSessionsSearchToGoalOff');
       bulkBar = container.querySelector('#researchSessionsBulkBar');
       selectionCountEl = container.querySelector('#researchSessionsSelectionCount');
-      deleteBtn = container.querySelector('#researchSessionsDeleteSelected');
+      handoffReasonEl = container.querySelector('#researchSessionsHandoffReason');      deleteBtn = container.querySelector('#researchSessionsDeleteSelected');
       deleteConfirm = container.querySelector('#researchSessionsDeleteConfirm');
       confirmText = deleteConfirm?.querySelector('span') ?? null;
       deleteConfirmYes = container.querySelector('#researchSessionsDeleteConfirmYes');
@@ -637,6 +708,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       lastSessions = [];
       bulkBar = null;
       selectionCountEl = null;
+      handoffReasonEl = null;
       deleteBtn = null;
       deleteConfirm = null;
       confirmText = null;

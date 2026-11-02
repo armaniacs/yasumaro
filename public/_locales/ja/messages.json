@@ -3052,6 +3052,42 @@
     "message": "検索から始まったセッションがまだありません。",
     "description": "Empty state for the search-to-goal table"
   },
+  "researchSessions_saveToCollection": {
+    "message": "コレクションに保存",
+    "description": "セッションをコレクション草稿に送るボタン"
+  },
+  "researchSessions_saveToCollectionAriaLabel": {
+    "message": "セッション{n}をコレクションに保存",
+    "description": "セッション保存ボタンのariaラベル"
+  },
+  "researchSessions_handoffSent": {
+    "message": "{n}件({range})をコレクションの草稿に送りました。名前を付けて保存してください。",
+    "description": "セッション送付の確認表示"
+  },
+  "researchSessions_handoffOverLimit": {
+    "message": "保存しませんでした:{n}件は上限{max}件を超えています。",
+    "description": "ID上限超えの拒否"
+  },
+  "researchSessions_handoffEmpty": {
+    "message": "このセッションにはページがありません。",
+    "description": "空セッションの拒否"
+  },
+  "researchSessions_handoffMixedTags": {
+    "message": "タグが混在しているためID指定のみで保存しました。",
+    "description": "タグ混在メモ"
+  },
+  "researchSessions_handoffCrossDay": {
+    "message": "複数日にまたがるためID指定のみで保存しました。",
+    "description": "跨日メモ"
+  },
+  "researchSessions_handoffSearchOmitted": {
+    "message": "検索語が異なるため検索条件なしで保存しました。",
+    "description": "検索語省略メモ"
+  },
+  "researchSessions_handoffQuotableZero": {
+    "message": "警告:引用できるページがありません。",
+    "description": "引用不可ゼロの警告"
+  },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
   },
