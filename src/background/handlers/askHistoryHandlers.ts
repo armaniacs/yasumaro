@@ -15,7 +15,6 @@ import type { AISummaryOptions, AISummaryResult } from '../ai/AIService.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { AiDomainPolicy } from '../../utils/storage/types.js';
 import { resolveAiDomainPolicy } from '../../utils/storage/aiDomainPolicy.js';
-import { localDayRangeFromDateString } from '../../utils/localDate.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import type {
   AskCollectionScope,
@@ -26,6 +25,7 @@ import {
   ASK_EVIDENCE_COUNT,
   assembleAskEvidence,
   buildEvidenceContext,
+  buildUnsupportedScopeSuggestion,
   buildWidenSuggestion,
   nameEvidenceGap,
 } from '../askEvidence.js';
@@ -130,6 +130,17 @@ async function runAsk(
     return { success: false, error: 'question_required' };
   }
 
+  // Fail-closed (PBI 2026-11-02-02): a stored query with nothing the
+  // post-hoc filter can enforce (no tag/date clause, no ids) never runs
+  // an unbounded search — the panel gets the support boundary instead.
+  if (scope.unresolvable) {
+    return {
+      success: true,
+      status: 'no_evidence',
+      suggestion: buildUnsupportedScopeSuggestion(),
+    };
+  }
+
   const searchResult = await deps.search({
     kind: 'search',
     text: trimmed,
@@ -144,11 +155,9 @@ async function runAsk(
 
   // The collection scope narrows the search rows post-hoc (the FTS/LIKE op
   // takes no tag/date params). An unscoped QA (no collection) keeps every row.
-  const dayRange = scope.date !== null ? localDayRangeFromDateString(scope.date) : null;
   const { evidence, excludedNoSummary, scopedCount } = assembleAskEvidence({
     rows: searchResult.data.rows,
     scope,
-    dayRange,
     resolveDomainPolicy,
   });
   if (evidence.length === 0) {

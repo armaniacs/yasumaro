@@ -114,6 +114,52 @@ describe('createAskHistoryHandler', () => {
     expect(response.status).toBe('answered');
   });
 
+  it('fails closed on an unresolvable collection scope without searching', async () => {
+    // PBI 2026-11-02-02: a stored query with nothing enforceable (here:
+    // search-text-only) must not run an unbounded search — the panel gets
+    // the support boundary instead of an overbroad answer.
+    const deps = makeDeps({
+      search: vi.fn().mockResolvedValue({
+        success: true,
+        data: { rows: [makeRow(1)], total: 1 },
+      }),
+      loadCollection: vi.fn().mockResolvedValue({ search: 'wasm' }),
+    });
+    const response = await runHandler(deps, { question: 'rust', collectionId: 'col-1' });
+    expect(deps.loadCollection).toHaveBeenCalledWith('col-1');
+    expect(deps.search).not.toHaveBeenCalled();
+    expect(deps.generateAnswer).not.toHaveBeenCalled();
+    expect(response.success).toBe(true);
+    expect(response.status).toBe('no_evidence');
+    expect(response.suggestion).toContain('対象外');
+  });
+
+  it('applies a V2 multi-clause scope with pinned ids (union members)', async () => {
+    const deps = makeDeps({
+      search: vi.fn().mockResolvedValue({
+        success: true,
+        data: {
+          rows: [
+            makeRow(1, { tags: 'rust' }),
+            makeRow(2, { tags: 'wasm' }),
+            makeRow(3, { tags: 'ai' }),
+            makeRow(4, { tags: 'other' }),
+          ],
+          total: 4,
+        },
+      }),
+      loadCollection: vi.fn().mockResolvedValue({
+        version: 2,
+        op: 'or',
+        clauses: [{ tag: 'rust' }, { tag: 'wasm' }],
+        ids: [4],
+      }),
+    });
+    const response = await runHandler(deps, { question: 'tools', collectionId: 'col-2' });
+    expect(response.status).toBe('answered');
+    expect((response.citations as Array<{ id: number }>).map((c) => c.id)).toEqual([1, 2, 4]);
+  });
+
   it('ignores repeat clicks while a run is executing (in_flight)', async () => {
     // Object holder: a plain `let` narrowed to `never` across the closure.
     const deferred: { release: (value: unknown) => void } = { release: () => undefined };

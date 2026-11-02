@@ -205,34 +205,14 @@ export function selectTagFilter(
 }
 
 /**
- * Tag predicate shared by the non-SQL paths (matchesExtraWhere consumers and
- * FallbackStorage) — mirrors the SQL semantics of buildTagFilterCondition:
- * comma-split partial match on the raw tag text, exactly the former
- * client-side filterRowsByTag rule. Rows with unset/non-string tags never
- * match (existing rule).
- */
-/**
  * Row-level tag predicate shared by the non-SQL paths (PBI 2026-09-12-40).
- *
- * Policy (decided once, here — was prose-only "mirrors the SQL" while the
- * JS matched case-sensitively and treated commas as separators, diverging
- * from SQL `tags LIKE ?` on six concrete inputs):
- * - CASE: case-insensitive substring match (SQL `LIKE` folds ASCII case).
- * - COMMA: the raw tag text (including commas) is matched against the raw
- *   tags column — commas are NOT treated as separators. The SQL side
- *   `tags LIKE '%a,b%'` matches the identical row.
- * - WILDCARD: `%` and `_` are treated as wildcards (SQL `LIKE` semantics),
- *   not literals.
- * Rows with unset/non-string tags never match (existing rule).
+ * Canonical owner is src/utils/tagLike.ts (PBI 2026-11-02-02 hoisted it
+ * there so the background ask-history post-hoc filter can share the exact
+ * SQL LIKE semantics without a background→offscreen import); this module
+ * re-exports it so existing import paths keep working.
  */
-export function rowMatchesTagLike(tags: string | null | undefined, tagFilter: string): boolean {
-  const tagsString = tags || '';
-  if (typeof tagsString !== 'string' || !tagFilter) return false;
-  // SQL LIKE wildcards → regex, escaping the rest of the pattern.
-  const escaped = tagFilter.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const pattern = escaped.replace(/%/g, '.*').replace(/_/g, '.');
-  return new RegExp(pattern, 'i').test(tagsString);
-}
+import { rowMatchesTagLike } from '../utils/tagLike.js';
+export { rowMatchesTagLike };
 
 /**
  * Back-compat alias: comma-split partial match on the raw tag text.

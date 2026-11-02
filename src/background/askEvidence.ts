@@ -13,9 +13,12 @@
 
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import type { AiDomainPolicy } from '../utils/storage/types.js';
+import { rowMatchesTagLike } from '../utils/tagLike.js';
+import { localDayRangeFromDateString } from '../utils/localDate.js';
 import type {
   AskCollectionScope,
   AskHistoryCitation,
+  AskResolvedClause,
 } from '../messaging/responseCanonical.js';
 
 /** Evidence rows carried back with the answer (BDD: links to source records). */
@@ -26,12 +29,6 @@ export const ASK_SNIPPET_MAX_CHARS = 500;
 /** One evidence row: the citation the answer links back to. */
 export type AskEvidence = AskHistoryCitation;
 
-/** Closed day range derived from the collection scope date. */
-export interface AskEvidenceDayRange {
-  since: number;
-  until: number;
-}
-
 /** Policy reader: resolves the per-domain AI processing policy for a URL. */
 export type AskEvidencePolicyReader = (url: string) => AiDomainPolicy;
 
@@ -39,7 +36,6 @@ export type AskEvidencePolicyReader = (url: string) => AiDomainPolicy;
 export interface AssembleAskEvidenceInput {
   rows: BrowsingLogRecord[];
   scope: AskCollectionScope;
-  dayRange: AskEvidenceDayRange | null;
   resolveDomainPolicy: AskEvidencePolicyReader;
   maxCount?: number;
 }
@@ -62,7 +58,7 @@ export type AskEvidenceGapReason = 'no_matches' | 'no_quotable' | 'domain_exclud
 export function assembleAskEvidence(input: AssembleAskEvidenceInput): AssembleAskEvidenceResult {
   const maxCount = input.maxCount ?? ASK_EVIDENCE_COUNT;
   const scopedRows = input.rows.filter((row) =>
-    matchesCollectionScope(row, input.scope, input.dayRange),
+    matchesCollectionScope(row, input.scope),
   );
   const { evidence, excludedNoSummary } = pickEvidenceRows(
     scopedRows,
@@ -184,21 +180,45 @@ export function nameEvidenceGap(
 
 /**
  * Collection scope post-filter: the FTS/LIKE search op takes no tag/date
- * params, so the collection narrows the evidence rows post-hoc — tag
- * membership and the local day range from the collection's saved date.
- * Rows outside the scope are dropped before evidence selection.
+ * params, so the collection narrows the evidence rows post-hoc (PBI
+ * 2026-11-02-02 V2). UNION member semantics: a row survives when it sits in
+ * the pinned `ids`, or — when no ids pin it — when the clauses accept it
+ * (`or`: any clause, `and`: every clause). One clause matches on its own
+ * tag membership (SQL-compatible partial match, same predicate the report
+ * path applies) and its own local day range. An empty clause list is
+ * unscoped (every row survives); an unresolvable scope matches nothing
+ * (fail-closed — the handler answers before searching, this is the belt).
  */
 export function matchesCollectionScope(
   row: BrowsingLogRecord,
   scope: AskCollectionScope,
-  dayRange: AskEvidenceDayRange | null,
 ): boolean {
-  if (scope.tag !== null) {
-    const tags = row.tags ?? '';
-    if (!tags.split(',').some((t) => t.trim() === scope.tag)) return false;
+  if (scope.unresolvable) return false;
+  if (row.id !== undefined && scope.ids.includes(row.id)) return true;
+  if (scope.clauses.length === 0) return true;
+  if (scope.op === 'or') {
+    return scope.clauses.some((clause) => matchesScopeClause(row, clause));
   }
-  if (dayRange !== null) {
+  return scope.clauses.every((clause) => matchesScopeClause(row, clause));
+}
+
+/** One V2 clause: its tag and its date must both hold (when present). */
+function matchesScopeClause(row: BrowsingLogRecord, clause: AskResolvedClause): boolean {
+  if (clause.tag !== null) {
+    if (!rowMatchesTagLike(row.tags, clause.tag)) return false;
+  }
+  if (clause.date !== null) {
+    const dayRange = localDayRangeFromDateString(clause.date);
     if (row.created_at < dayRange.since || row.created_at > dayRange.until) return false;
   }
   return true;
+}
+
+/**
+ * Fail-closed suggestion for an unresolvable collection scope: names the
+ * support boundary from data the panel already holds instead of answering
+ * from an unbounded search.
+ */
+export function buildUnsupportedScopeSuggestion(): string {
+  return 'このコレクションの条件は質問回答の対象外のため、回答できません。タグ・日付・記録IDで絞ったコレクションを指定してください。';
 }
