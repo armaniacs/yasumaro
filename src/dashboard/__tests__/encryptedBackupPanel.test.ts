@@ -173,6 +173,50 @@ describe('initEncryptedBackupPanel', () => {
     vi.restoreAllMocks();
   });
 
+  it('ignores a second import while a run is in flight and resets the flag afterwards', async () => {
+    vi.mocked(isEncryptedBackupFile).mockReturnValue(true);
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      void action('correct-password');
+    });
+    let resolveImport!: (value: unknown) => void;
+    const pending = new Promise((resolve) => { resolveImport = resolve; });
+    vi.mocked(importEncryptedBackup).mockReturnValue(pending as never);
+
+    initEncryptedBackupPanel();
+
+    const fileInput = document.getElementById('importEncryptedBackupFileInput') as HTMLInputElement;
+    const makeFile = () => new File(
+      [JSON.stringify({ version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd' })],
+      'backup.json',
+      { type: 'application/json' },
+    );
+    Object.defineProperty(fileInput, 'files', { value: [makeFile()], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+    Object.defineProperty(fileInput, 'files', { value: [makeFile()], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(importEncryptedBackup).toHaveBeenCalledTimes(1);
+
+    resolveImport({ success: true, skippedKeys: [] });
+    await pending;
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    Object.defineProperty(fileInput, 'files', { value: [makeFile()], configurable: true });
+    fileInput.dispatchEvent(new Event('change'));
+
+    await new Promise(resolve => setTimeout(resolve, 0));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(importEncryptedBackup).toHaveBeenCalledTimes(2);
+  });
+
   describe('export download unification (PBI 2026-10-03-19)', () => {
     afterEach(() => {
       vi.restoreAllMocks();

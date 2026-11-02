@@ -12,7 +12,7 @@ import {
 } from './encryptedBackupService.js';
 import { downloadBlob } from './exportLogsService.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { withBusyButton } from './panels/asyncData/busyButton.js';
 
@@ -32,8 +32,8 @@ function getExportFilename(): string {
   return `yasumaro-backup-${y}${m}${d}-${hh}${mm}${ss}.encrypted.json`;
 }
 
-function setStatus(message: string, isError: boolean): void {
-  showStatus('encryptedBackupStatus', message, isError ? 'error' : 'success', { autoClear: false });
+function setStatus(message: string, isError: boolean, kind?: StatusType): void {
+  showStatus('encryptedBackupStatus', message, kind ?? (isError ? 'error' : 'success'), { autoClear: false });
 }
 
 function downloadJson(data: unknown, filename: string): void {
@@ -64,6 +64,7 @@ export function initEncryptedBackupPanel(): void {
                 ? getMessageOr('backupStageReadingDb', '履歴DBを読み出しています...')
                 : getMessageOr('backupStageEncrypting', '暗号化しています...'),
               false,
+              'updating',
             );
           });
           downloadJson(envelope, getExportFilename());
@@ -128,6 +129,7 @@ export function initEncryptedBackupPanel(): void {
                     ? getMessageOr('backupStageRestoringDb', '履歴DBを復元しています...')
                     : getMessageOr('backupStageRestoringSettings', '設定を復元しています...'),
                 false,
+                'updating',
               );
             });
             if (result.success) {
