@@ -6,7 +6,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildSessionToCollectionQuery,
-  isSessionSaveable,
 } from '../sessionToCollection.js';
 import { parseCollectionQueryV2 } from '../../../../utils/collectionQueryV2.js';
 import { MAX_QUERY_IDS } from '../../../../utils/limits.js';
@@ -240,21 +239,6 @@ describe('sessionToCollection', () => {
       expect(allowed.ok).toBe(true);
       if (!allowed.ok) return;
       expect(allowed.notes).not.toContain('quotable-zero');
-    });
-  });
-
-  describe('isSessionSaveable', () => {
-    it('disables the button for an empty session', () => {
-      expect(isSessionSaveable(0)).toBe(false);
-    });
-
-    it('allows ordinary and boundary counts', () => {
-      expect(isSessionSaveable(1)).toBe(true);
-      expect(isSessionSaveable(MAX_QUERY_IDS)).toBe(true);
-    });
-
-    it('refuses over-limit counts', () => {
-      expect(isSessionSaveable(MAX_QUERY_IDS + 1)).toBe(false);
     });
   });
 });

@@ -146,8 +146,3 @@ export function buildSessionToCollectionQuery(
 
   return { ok: true, query, notes, count, earliest, latest };
 }
-
-/** Save affordance guard: an empty session disables the button, an over-long one refuses on click. */
-export function isSessionSaveable(count: number): boolean {
-  return count > 0 && count <= MAX_QUERY_IDS;
-}
