@@ -4,6 +4,8 @@ import {
   enableE2EProbe,
   readE2EProbeState,
 } from './fixtures/e2eProbe.js';
+import { createServer, type Server } from 'node:http';
+import { pickLoopbackPort, listenHttp } from './fixtures/localServers.js';
 
 /**
  * PBI-21: Recording pipeline traceId correlation E2E test
@@ -11,7 +13,79 @@ import {
  * Navigates a test page, satisfies VALID_VISIT conditions (50% scroll + 5s stay),
  * then verifies that the Service Worker's `sanitization_logs` contain entries
  * sharing a single traceId for the recording.
+ *
+ * AI is mocked (lm-studio slot on a loopback mock server, the same harness as
+ * regenerate-summary.spec.ts): without it the pipeline spends the whole poll
+ * window failing over real AI providers (cycle-2 diag: still in "AI provider
+ * slot failed, trying next provider" at timeout, zero url-bearing logs), so
+ * the spec would depend on external network timing instead of the traceId
+ * correlation it pins. Port must be in ssrfGuard ALLOWED_LOCALHOST_PORTS;
+ * 11434 (Ollama default) is preferred as least contested.
  */
+const MOCK_PORT_DEFAULT = 11434;
+let MOCK_PORT = MOCK_PORT_DEFAULT;
+const MARKER =
+  'E2E-TRACE-MARKER mock provider summary of the long test page for verification purposes.';
+
+let mockServer: Server | undefined;
+
+test.beforeAll(async () => {
+  MOCK_PORT = await pickLoopbackPort();
+  console.log(`AI MOCK PORT ${MOCK_PORT}`);
+  mockServer = createServer((req, res) => {
+    const pathOnly = (req.url || '/').split('?')[0] || '/';
+    console.log(`AI MOCK HIT ${req.method} ${pathOnly}`);
+    if (req.method === 'POST' && pathOnly === '/v1/chat/completions') {
+      const chunks: Buffer[] = [];
+      req.on('data', (c: Buffer) => { chunks.push(c); });
+      req.on('end', () => {
+        // OpenAI-style chat completion; content is plain prose (no JSON-in-JSON
+        // contract, >= SUMMARY_MIN_LENGTH=10, no '|' so tags parse empty).
+        const payload = {
+          id: 'chatcmpl-e2e',
+          object: 'chat.completion',
+          created: Math.floor(Date.now() / 1000),
+          model: 'e2e-mock-model',
+          choices: [{
+            index: 0,
+            message: { role: 'assistant', content: MARKER },
+            finish_reason: 'stop',
+          }],
+          usage: { prompt_tokens: 50, completion_tokens: 20, total_tokens: 70 },
+        };
+        const body = JSON.stringify(payload);
+        res.writeHead(200, { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) });
+        res.end(body);
+      });
+      return;
+    }
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
+  });
+  await listenHttp(mockServer, MOCK_PORT, '127.0.0.1');
+  console.log(`AI MOCK LISTENING http://127.0.0.1:${MOCK_PORT}`);
+});
+
+test.afterAll(() => {
+  mockServer?.close();
+  mockServer = undefined;
+});
+
+/** Merge the lm-studio mock provider into the single 'settings' blob. */
+async function seedAiMockSettings(page: import('@playwright/test').Page): Promise<void> {
+  await page.evaluate(async (port: number) => {
+    const res = await chrome.storage.local.get('settings');
+    const current = (res.settings as Record<string, unknown>) ?? {};
+    await chrome.storage.local.set({
+      settings: {
+        ...current,
+        ai_provider_priority_list: [{ provider: 'lm-studio', model: 'e2e-mock-model' }],
+        lm_studio_base_url: `http://127.0.0.1:${port}/v1`,
+        lm_studio_model: 'e2e-mock-model',
+      },
+    });
+  }, MOCK_PORT);
+}
 
 test.describe('Recording traceId correlation @extension', () => {
   // WHY: the SW logger buffers entries until BATCH_FLUSH_SIZE=10, so the spec
@@ -33,6 +107,9 @@ test.describe('Recording traceId correlation @extension', () => {
     // Probe is armed extension-side (session flag) — must precede navigation:
     // the content script resolves the flag once at init.
     await enableE2EProbe(context);
+    // AI mock first slot, before navigation (the pipeline reads settings at
+    // record time, well after VALID_VISIT, but seeding up front is explicit).
+    await seedAiMockSettings(page);
 
     await test.step('Navigate to test page', async () => {
       await page.goto('http://localhost:8080/long-page.html');
