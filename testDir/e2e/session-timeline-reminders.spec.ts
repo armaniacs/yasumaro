@@ -224,17 +224,82 @@ test.describe('Session reminder through-run @extension', () => {
         }, REMINDER_ALARM_NAME);
         // The registry routes the firing to checkToday → candidate query →
         // the single notification write point (NotificationHelper.show).
-        await expect(async () => {
-          const all = (await optionsPage.evaluate(async () => chrome.notifications.getAll())) as unknown as Record<
-            string,
-            Record<string, unknown>
-          >;
-          const reminderIds = Object.keys(all).filter((id) => id.startsWith(REMINDER_NOTIFICATION_PREFIX));
-          expect(
-            reminderIds.length,
-            `notifications: ${JSON.stringify(Object.keys(all))}`,
-          ).toBeGreaterThanOrEqual(1);
-        }).toPass({ timeout: 15_000, intervals: [500] });
+        try {
+          await expect(async () => {
+            const all = (await optionsPage.evaluate(async () => chrome.notifications.getAll())) as unknown as Record<
+              string,
+              Record<string, unknown>
+            >;
+            const reminderIds = Object.keys(all).filter((id) => id.startsWith(REMINDER_NOTIFICATION_PREFIX));
+            expect(
+              reminderIds.length,
+              `notifications: ${JSON.stringify(Object.keys(all))}`,
+            ).toBeGreaterThanOrEqual(1);
+          }).toPass({ timeout: 15_000, intervals: [500] });
+        } catch (error) {
+          // Post-mortem only: the predicate, timeout, and intervals above are
+          // unchanged. Distinguishes "alarm never fired" from "fired but no
+          // candidate" (day gate excludes same-day rows by design — see
+          // pickReminderCandidateRows + the unit day-gate pins).
+          const postmortem = await optionsPage.evaluate(
+            async (args: { key: string; alarm: string; targetUrl: string }) => {
+              const d = new Date();
+              d.setHours(0, 0, 0, 0);
+              const all = (await chrome.notifications.getAll()) as unknown as Record<string, unknown>;
+              const state = await chrome.storage.local.get(args.key);
+              const alarm = await chrome.alarms.get(args.alarm);
+              const stored = await chrome.storage.local.get('sanitization_logs');
+              const logs = ((stored as Record<string, unknown>).sanitization_logs ?? []) as Array<{
+                message: string;
+                timestamp: number;
+              }>;
+              return {
+                notificationIds: Object.keys(all),
+                reminderState: (state as Record<string, unknown>)[args.key] ?? null,
+                alarm: alarm ?? null,
+                timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+                localTodayStart: d.getTime(),
+                reminderLogs: logs
+                  .filter((log) => /reminder/i.test(log.message))
+                  .slice(-10)
+                  .map((log) => ({ message: log.message, timestamp: log.timestamp })),
+              };
+            },
+            { key: REMINDER_STORAGE_KEY, alarm: REMINDER_ALARM_NAME, targetUrl: TARGET_URL },
+          );
+          const client = createDashboardSqliteClient(optionsPage);
+          const res = await client.dashboardMsg({
+            subtype: 'query',
+            domain: 'localhost',
+            limit: 100,
+          } as never);
+          const rows = (res?.rows ?? []) as Array<Record<string, unknown>>;
+          const target = rows.find((row) => String(row['url']) === TARGET_URL);
+          await test.info().attach('reminder-postmortem', {
+            body: Buffer.from(
+              JSON.stringify(
+                {
+                  ...postmortem,
+                  targetRow: target
+                    ? {
+                        id: target['id'],
+                        created_at: target['created_at'],
+                        scroll_ratio: target['scroll_ratio'],
+                        nav_source_url: target['nav_source_url'],
+                        search_query: target['search_query'],
+                        masked_count: target['masked_count'],
+                      }
+                    : null,
+                },
+                null,
+                2,
+              ),
+              'utf-8',
+            ),
+            contentType: 'application/json',
+          });
+          throw error;
+        }
       } finally {
         await optionsPage.close();
       }

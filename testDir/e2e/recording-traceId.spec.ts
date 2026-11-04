@@ -63,40 +63,67 @@ test.describe('Recording traceId correlation @extension', () => {
     await test.step('Verify all recent logs share the same traceId', async () => {
       const testUrl = 'http://localhost:8080/long-page.html';
 
-      // Poll the flush condition itself: a single non-empty traceId across
+      // Diagnostic snapshot of the last poll iteration. Written on every
+      // iteration, attached only when the poll below times out (catch path).
+      // The predicate itself is unchanged: a single non-empty traceId across
       // recent logs for the test URL. Returning null retries the poll.
-      await expect.poll(
-        async () => {
-          const sw = context.serviceWorkers()[0];
-          if (!sw) return null;
-          const logs = await sw.evaluate(async () => {
-            const result = await chrome.storage.local.get('sanitization_logs');
-            return (result.sanitization_logs || []) as Array<{
-              message: string;
-              traceId?: string;
-              details?: Record<string, unknown>;
-              timestamp: number;
-            }>;
-          });
+      let lastDiag: Record<string, unknown> = { phase: 'poll-not-started' };
+      try {
+        await expect.poll(
+          async () => {
+            const sw = context.serviceWorkers()[0];
+            if (!sw) {
+              lastDiag = { phase: 'no-service-worker' };
+              return null;
+            }
+            const logs = await sw.evaluate(async () => {
+              const result = await chrome.storage.local.get('sanitization_logs');
+              return (result.sanitization_logs || []) as Array<{
+                message: string;
+                traceId?: string;
+                details?: Record<string, unknown>;
+                timestamp: number;
+              }>;
+            });
 
-          // Keep only logs emitted in the last 30 seconds that relate to the test URL
-          const cutoff = Date.now() - 30000;
-          const recentLogs = logs.filter(
-            (log) =>
-              log.timestamp > cutoff &&
-              (log.details?.url === testUrl ||
+            // Keep only logs emitted in the last 30 seconds that relate to the test URL
+            const cutoff = Date.now() - 30000;
+            const recentLogs = logs.filter((log) => log.timestamp > cutoff);
+            const urlMatched = recentLogs.filter(
+              (log) =>
+                log.details?.url === testUrl ||
                 log.message?.includes('long-page') ||
-                (log.details?.url as string)?.includes('localhost:8080'))
-          );
+                (log.details?.url as string)?.includes('localhost:8080'),
+            );
+            const traceIds = new Set(urlMatched.map((log) => log.traceId).filter(Boolean));
+            const messageHistogram: Record<string, number> = {};
+            for (const log of urlMatched) {
+              messageHistogram[log.message] = (messageHistogram[log.message] ?? 0) + 1;
+            }
+            lastDiag = {
+              phase: 'polled',
+              totalLogs: logs.length,
+              recentLogs: recentLogs.length,
+              urlMatched: urlMatched.length,
+              distinctTraceIds: Array.from(traceIds),
+              missingTraceId: urlMatched.filter((log) => !log.traceId).length,
+              messageHistogram,
+            };
 
-          if (recentLogs.length === 0) return null;
-          const traceIds = new Set(recentLogs.map((log) => log.traceId).filter(Boolean));
-          if (traceIds.size !== 1) return null;
-          const traceId = Array.from(traceIds)[0];
-          return typeof traceId === 'string' && traceId.length > 0 ? traceId : null;
-        },
-        { timeout: 30000, intervals: [2000] },
-      ).toBeTruthy();
+            if (urlMatched.length === 0) return null;
+            if (traceIds.size !== 1) return null;
+            const traceId = Array.from(traceIds)[0];
+            return typeof traceId === 'string' && traceId.length > 0 ? traceId : null;
+          },
+          { timeout: 30000, intervals: [2000] },
+        ).toBeTruthy();
+      } catch (error) {
+        await test.info().attach('traceid-poll-diag', {
+          body: Buffer.from(JSON.stringify(lastDiag, null, 2), 'utf-8'),
+          contentType: 'application/json',
+        });
+        throw error;
+      }
     });
 
     await page.close();
