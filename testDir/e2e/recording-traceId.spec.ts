@@ -100,6 +100,24 @@ test.describe('Recording traceId correlation @extension', () => {
             for (const log of urlMatched) {
               messageHistogram[log.message] = (messageHistogram[log.message] ?? 0) + 1;
             }
+            // Cycle-2 widening: the failure mode seen in CI is urlMatched 0
+            // with a full 10-log flush behind it, so the recent window itself
+            // must be described. Messages are template strings (capped) and
+            // only detail KEY presence is recorded — never values (PII-safe).
+            const recentMessageHistogram: Record<string, number> = {};
+            const recentDetailKeyHistogram: Record<string, number> = {};
+            let recentWithUrl = 0;
+            let recentWithTraceId = 0;
+            for (const log of recentLogs) {
+              const capped = log.message.length > 80 ? `${log.message.slice(0, 80)}…` : log.message;
+              recentMessageHistogram[capped] = (recentMessageHistogram[capped] ?? 0) + 1;
+              const keys = Object.keys(log.details ?? {});
+              for (const key of keys) {
+                recentDetailKeyHistogram[key] = (recentDetailKeyHistogram[key] ?? 0) + 1;
+              }
+              if (typeof log.details?.url === 'string') recentWithUrl += 1;
+              if (typeof log.traceId === 'string' && log.traceId.length > 0) recentWithTraceId += 1;
+            }
             lastDiag = {
               phase: 'polled',
               totalLogs: logs.length,
@@ -108,6 +126,10 @@ test.describe('Recording traceId correlation @extension', () => {
               distinctTraceIds: Array.from(traceIds),
               missingTraceId: urlMatched.filter((log) => !log.traceId).length,
               messageHistogram,
+              recentMessageHistogram,
+              recentDetailKeyHistogram,
+              recentWithUrl,
+              recentWithTraceId,
             };
 
             if (urlMatched.length === 0) return null;
