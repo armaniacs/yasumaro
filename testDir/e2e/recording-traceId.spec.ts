@@ -72,8 +72,11 @@ test.afterAll(() => {
 });
 
 /** Merge the lm-studio mock provider into the single 'settings' blob. */
-async function seedAiMockSettings(page: import('@playwright/test').Page): Promise<void> {
-  await page.evaluate(async (port: number) => {
+async function seedAiMockSettings(context: import('@playwright/test').BrowserContext): Promise<void> {
+  // Service-worker evaluate (not page.evaluate): a fresh about:blank page has
+  // no chrome.storage, mirroring seedPrivacyConsent's own channel.
+  const sw = context.serviceWorkers()[0];
+  await sw.evaluate(async (port: number) => {
     const res = await chrome.storage.local.get('settings');
     const current = (res.settings as Record<string, unknown>) ?? {};
     await chrome.storage.local.set({
@@ -109,7 +112,7 @@ test.describe('Recording traceId correlation @extension', () => {
     await enableE2EProbe(context);
     // AI mock first slot, before navigation (the pipeline reads settings at
     // record time, well after VALID_VISIT, but seeding up front is explicit).
-    await seedAiMockSettings(page);
+    await seedAiMockSettings(context);
 
     await test.step('Navigate to test page', async () => {
       await page.goto('http://localhost:8080/long-page.html');
