@@ -144,6 +144,13 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
           domain: row.domain ?? null,
           visit_duration: row.visit_duration ?? null,
           scroll_ratio: row.scroll_ratio ?? null,
+          // Session trail survives import: nav_source_url / search_query are
+          // what make a row a session member (toReminderCandidate), so
+          // dropping them here would silently desession every imported row.
+          // Still write-once: both stay in NOT_UPDATABLE_COLUMNS, so a later
+          // UPDATE cannot rewrite history (PBI 2026-09-26-03).
+          nav_source_url: row.nav_source_url ?? null,
+          search_query: row.search_query ?? null,
           is_starred: row.is_starred ?? 0,
           is_deleted: row.is_deleted ?? 0,
         })));

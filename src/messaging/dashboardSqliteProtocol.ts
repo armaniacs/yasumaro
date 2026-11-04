@@ -57,6 +57,8 @@ export type DashboardSqliteRequest =
         url: string; title?: string; summary?: string; tags?: string;
         created_at: number; domain?: string; visit_duration?: number;
         scroll_ratio?: number; is_starred?: number; is_deleted?: number;
+        /** Session trail (write-once; UPDATE cannot touch these). */
+        nav_source_url?: string | null; search_query?: string | null;
       }>;
       confirmToken?: string;
     }
