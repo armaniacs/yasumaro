@@ -54,6 +54,7 @@ All notable changes to this project will be documented in this file.
 - 閲覧ログ取込の失敗表示に未置換の `%{error}` が出ていた問題（文言が `%{error}` 形式に変わっていたのに呼び出し側が旧式の連結のままだった。プレースホルダ方式に統一し回帰テストを追加） / Log-import failure showed a raw `%{error}` placeholder (message moved to the `%{error}` form while callers still concatenated; unified on placeholder substitution with a regression test)
 - マスターパスワード設定で弱いパスワードの本当の理由が表示されず「8文字以上」のままだった問題（文言キーが厳格化後のポリシーと不一致で真因を隠していた。SSOTの理由文をそのまま表示＋保存失敗をモーダル内にも表示＋確定時の古いエラーを消去） / Master-password setup hid the real weak-password reason behind a stale message (unified on the SSOT reason text, dual-painted save failures into the modal, stale errors cleared on pass)
 - プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加） / Encrypted-backup Confirm was dead unless the privacy panel had been opened (auth-modal listeners were attached only by the privacy panel mount; export/import mount now attaches them too with a double-attach guard)
+- uBlockフィルタのドメイン集合がソース側とマージ済みルール側に二重保存され設定エクスポートが28MBに膨張し10MiB上限に抵触していた問題（マージ済みルールの永続化を止めソースからの導出に一本化。旧二重データは読み時点で正規化し、設定は10KB級に戻る） / Duplicate uBlock domain storage bloated settings exports to 28MB past the 10MiB cap (merged rules are no longer persisted and are derived from sources instead; legacy duplicates normalize on read; settings shrink back to ~10KB)
 
 ## [6.9.64] - 2026-10-31
 
