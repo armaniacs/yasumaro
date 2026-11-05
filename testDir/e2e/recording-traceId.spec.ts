@@ -185,6 +185,9 @@ test.describe('Recording traceId correlation @extension', () => {
             // with a full 10-log flush behind it, so the recent window itself
             // must be described. Messages are template strings (capped) and
             // only detail KEY presence is recorded — never values (PII-safe).
+            // Keep it that way: CI attachments persist for days, so detail
+            // values must never be added here even if a future failure makes
+            // them tempting.
             const recentMessageHistogram: Record<string, number> = {};
             const recentDetailKeyHistogram: Record<string, number> = {};
             let recentWithUrl = 0;
@@ -221,10 +224,14 @@ test.describe('Recording traceId correlation @extension', () => {
           { timeout: 30000, intervals: [2000] },
         ).toBeTruthy();
       } catch (error) {
-        await test.info().attach('traceid-poll-diag', {
-          body: Buffer.from(JSON.stringify(lastDiag, null, 2), 'utf-8'),
-          contentType: 'application/json',
-        });
+        try {
+          await test.info().attach('traceid-poll-diag', {
+            body: Buffer.from(JSON.stringify(lastDiag, null, 2), 'utf-8'),
+            contentType: 'application/json',
+          });
+        } catch {
+          // Attach is best-effort; the original error below is what matters.
+        }
         throw error;
       }
     });

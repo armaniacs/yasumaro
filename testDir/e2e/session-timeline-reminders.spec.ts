@@ -150,6 +150,62 @@ test.describe('Session reminder through-run @extension', () => {
     }).toPass({ timeout: 20_000, intervals: [500] });
   }
 
+  /**
+   * Best-effort post-mortem snapshot for the notification step's catch path.
+   * Every read can throw (the page may be closing, the SW may be dead), so
+   * callers must catch and fall back to a partial snapshot — never let this
+   * mask the original assertion error.
+   */
+  async function collectReminderPostmortem(optionsPage: Page): Promise<Record<string, unknown>> {
+    const snapshot = await optionsPage.evaluate(
+      async (args: { key: string; alarm: string }) => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        const all = (await chrome.notifications.getAll()) as unknown as Record<string, unknown>;
+        const state = await chrome.storage.local.get(args.key);
+        const alarm = await chrome.alarms.get(args.alarm);
+        const stored = await chrome.storage.local.get('sanitization_logs');
+        const logs = ((stored as Record<string, unknown>).sanitization_logs ?? []) as Array<{
+          message: string;
+          timestamp: number;
+        }>;
+        return {
+          notificationIds: Object.keys(all),
+          reminderState: (state as Record<string, unknown>)[args.key] ?? null,
+          alarm: alarm ?? null,
+          timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+          localTodayStart: d.getTime(),
+          reminderLogs: logs
+            .filter((log) => /reminder/i.test(log.message))
+            .slice(-10)
+            .map((log) => ({ message: log.message, timestamp: log.timestamp })),
+        };
+      },
+      { key: REMINDER_STORAGE_KEY, alarm: REMINDER_ALARM_NAME },
+    );
+    const client = createDashboardSqliteClient(optionsPage);
+    const res = await client.dashboardMsg({
+      subtype: 'query',
+      domain: 'localhost',
+      limit: 100,
+    } as never);
+    const rows = (res?.rows ?? []) as Array<Record<string, unknown>>;
+    const target = rows.find((row) => String(row['url']) === TARGET_URL);
+    return {
+      ...snapshot,
+      targetRow: target
+        ? {
+            id: target['id'],
+            created_at: target['created_at'],
+            scroll_ratio: target['scroll_ratio'],
+            nav_source_url: target['nav_source_url'],
+            search_query: target['search_query'],
+            masked_count: target['masked_count'],
+          }
+        : null,
+    };
+  }
+
   test('trail from real navigation lands the unread candidate and the notification', async ({
     context,
     extensionId,
@@ -280,63 +336,23 @@ test.describe('Session reminder through-run @extension', () => {
           // unchanged. Distinguishes "alarm never fired" from "fired but no
           // candidate" (day gate excludes same-day rows by design — see
           // pickReminderCandidateRows + the unit day-gate pins).
-          const postmortem = await optionsPage.evaluate(
-            async (args: { key: string; alarm: string; targetUrl: string }) => {
-              const d = new Date();
-              d.setHours(0, 0, 0, 0);
-              const all = (await chrome.notifications.getAll()) as unknown as Record<string, unknown>;
-              const state = await chrome.storage.local.get(args.key);
-              const alarm = await chrome.alarms.get(args.alarm);
-              const stored = await chrome.storage.local.get('sanitization_logs');
-              const logs = ((stored as Record<string, unknown>).sanitization_logs ?? []) as Array<{
-                message: string;
-                timestamp: number;
-              }>;
-              return {
-                notificationIds: Object.keys(all),
-                reminderState: (state as Record<string, unknown>)[args.key] ?? null,
-                alarm: alarm ?? null,
-                timezoneOffsetMinutes: new Date().getTimezoneOffset(),
-                localTodayStart: d.getTime(),
-                reminderLogs: logs
-                  .filter((log) => /reminder/i.test(log.message))
-                  .slice(-10)
-                  .map((log) => ({ message: log.message, timestamp: log.timestamp })),
-              };
-            },
-            { key: REMINDER_STORAGE_KEY, alarm: REMINDER_ALARM_NAME, targetUrl: TARGET_URL },
-          );
-          const client = createDashboardSqliteClient(optionsPage);
-          const res = await client.dashboardMsg({
-            subtype: 'query',
-            domain: 'localhost',
-            limit: 100,
-          } as never);
-          const rows = (res?.rows ?? []) as Array<Record<string, unknown>>;
-          const target = rows.find((row) => String(row['url']) === TARGET_URL);
-          await test.info().attach('reminder-postmortem', {
-            body: Buffer.from(
-              JSON.stringify(
-                {
-                  ...postmortem,
-                  targetRow: target
-                    ? {
-                        id: target['id'],
-                        created_at: target['created_at'],
-                        scroll_ratio: target['scroll_ratio'],
-                        nav_source_url: target['nav_source_url'],
-                        search_query: target['search_query'],
-                        masked_count: target['masked_count'],
-                      }
-                    : null,
-                },
-                null,
-                2,
-              ),
-              'utf-8',
-            ),
-            contentType: 'application/json',
-          });
+          // The diagnosis itself must never mask the original failure: every
+          // read below can throw (closed page, dead SW), so a partial
+          // snapshot is attached and the original error always rethrows.
+          let postmortem: Record<string, unknown> = { postmortemFailed: 'not-run' };
+          try {
+            postmortem = await collectReminderPostmortem(optionsPage);
+          } catch (diagError) {
+            postmortem = { postmortemFailed: String((diagError as Error)?.message ?? diagError) };
+          }
+          try {
+            await test.info().attach('reminder-postmortem', {
+              body: Buffer.from(JSON.stringify(postmortem, null, 2), 'utf-8'),
+              contentType: 'application/json',
+            });
+          } catch {
+            // Attach is best-effort; the original error below is what matters.
+          }
           throw error;
         }
       } finally {

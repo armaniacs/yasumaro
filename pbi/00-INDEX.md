@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-05 logger flush合流フォロー（1件） ― ⬜ 1件未着手
+
+B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing` ガードが同時完了時の一方を捨てる窓を合流させる。1分アラームが上限を保証し E2E は完了時flushで緑のため急ぎなし。詳細は [2026-11-05-01-fix-logger-flush-coalesce.md](2026-11-05-01-fix-logger-flush-coalesce.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| 01 | [2026-11-05-01-fix-logger-flush-coalesce.md](2026-11-05-01-fix-logger-flush-coalesce.md) | 🔧非機能追加 | 1.5 | 0.2 | 同時完了は稀・アラームが上限保証。never-flush配線＋並行recordのpinで検証 |
+
 ### 2026-11-02 A/B/D/E コレクション活用の配線（なぜなぜ90連、7件） ― ⬜ 7件未着手 RICE順: 01(1.44) → 02(0.90) → 03(0.72) → 04(0.56) → 05(0.42) → 06(0.36) → 07(0.28・延期可)
 
 3視点 x 30連のなぜなぜ（内容は `pbi/2026-11-02-00-backlog-abde.md` に要約を転記。全文は gitignore 下の `.superpowers/sdd/2026-11-02-abde/`）をRICE採点してPBI化。検索スコープ転送の background 半分、ask/report の V2 対応、履歴→保存ハンドオフ、セッション変換、today プリセット、history-list multi 実行。05 は 02/04 と同時リリース、07 は延期可。詳細は [2026-11-02-00-backlog-abde.md](2026-11-02-00-backlog-abde.md)。
