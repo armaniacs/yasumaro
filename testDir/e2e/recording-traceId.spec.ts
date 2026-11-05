@@ -76,7 +76,8 @@ async function seedAiMockSettings(context: import('@playwright/test').BrowserCon
   // Service-worker evaluate (not page.evaluate): a fresh about:blank page has
   // no chrome.storage, mirroring seedPrivacyConsent's own channel.
   const sw = context.serviceWorkers()[0];
-  await sw.evaluate(async (port: number) => {
+  expect(sw, 'service worker must be running').toBeTruthy();
+  await sw!.evaluate(async (port: number) => {
     const res = await chrome.storage.local.get('settings');
     const current = (res.settings as Record<string, unknown>) ?? {};
     await chrome.storage.local.set({

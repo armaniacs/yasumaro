@@ -50,10 +50,22 @@ describe('maintenanceBatchHandler', () => {
       const result = await handler({ subtype: 'import', rows } as never);
       expect(result).toEqual({ success: true, inserted: 1, skipped: 0, total: 1 });
       expect(insertBatch).toHaveBeenCalledTimes(1);
-      const passed = insertBatch.mock.calls[0]![0] as Array<Record<string, unknown>>;
-      expect(passed).toHaveLength(1);
-      expect(passed[0]!['nav_source_url']).toBe('https://example.com/source');
-      expect(passed[0]!['search_query']).toBe('wasm');
+      expect(insertBatch).toHaveBeenCalledWith([
+        {
+          url: 'https://example.com/target',
+          title: 'Target',
+          summary: 'seed',
+          tags: null,
+          created_at: 1000,
+          domain: 'example.com',
+          visit_duration: null,
+          scroll_ratio: 0.7,
+          nav_source_url: 'https://example.com/source',
+          search_query: 'wasm',
+          is_starred: 0,
+          is_deleted: 0,
+        },
+      ]);
     });
 
     it('defaults absent trail columns to null (codec stores NULL, not undefined)', async () => {
@@ -61,9 +73,23 @@ describe('maintenanceBatchHandler', () => {
       const handler = createMaintenanceBatchHandler(makeDeps({ insertBatch }));
       const rows = [{ url: 'https://example.com/plain', created_at: 2000 }];
       await handler({ subtype: 'import', rows } as never);
-      const passed = insertBatch.mock.calls[0]![0] as Array<Record<string, unknown>>;
-      expect(passed[0]!['nav_source_url']).toBeNull();
-      expect(passed[0]!['search_query']).toBeNull();
+      expect(insertBatch).toHaveBeenCalledTimes(1);
+      expect(insertBatch).toHaveBeenCalledWith([
+        {
+          url: 'https://example.com/plain',
+          title: null,
+          summary: null,
+          tags: null,
+          created_at: 2000,
+          domain: null,
+          visit_duration: null,
+          scroll_ratio: null,
+          nav_source_url: null,
+          search_query: null,
+          is_starred: 0,
+          is_deleted: 0,
+        },
+      ]);
     });
 
     it('keeps the existing field mapping (no regression on the other columns)', async () => {
@@ -83,19 +109,23 @@ describe('maintenanceBatchHandler', () => {
         },
       ];
       await handler({ subtype: 'import', rows } as never);
-      const passed = insertBatch.mock.calls[0]![0] as Array<Record<string, unknown>>;
-      expect(passed[0]).toMatchObject({
-        url: 'https://example.com/p1',
-        title: 'P1',
-        summary: 's',
-        tags: 'a,b',
-        created_at: 3000,
-        domain: 'example.com',
-        visit_duration: 12,
-        scroll_ratio: 0.4,
-        is_starred: 1,
-        is_deleted: 0,
-      });
+      expect(insertBatch).toHaveBeenCalledTimes(1);
+      expect(insertBatch).toHaveBeenCalledWith([
+        {
+          url: 'https://example.com/p1',
+          title: 'P1',
+          summary: 's',
+          tags: 'a,b',
+          created_at: 3000,
+          domain: 'example.com',
+          visit_duration: 12,
+          scroll_ratio: 0.4,
+          nav_source_url: null,
+          search_query: null,
+          is_starred: 1,
+          is_deleted: 0,
+        },
+      ]);
     });
 
     it('rejects an empty row list without calling deps', async () => {
