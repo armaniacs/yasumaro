@@ -39,7 +39,9 @@ function hasUblockRules(ublockRules: unknown): boolean {
  *
  * 健全性の根拠: source 側の書き手 (`sourceManager`) は要素を丸ごと置換
  * (index 代入・push) し、要素内の配列を直接書き換えない。参照が同じ要素は
- * 内容も同じとみなせる。`InMemory`/`Chrome` 両ポートは境界で複製するため、
+ * 内容も同じとみなせる。将来の書き手もこの規約を守ること: 要素内
+ * `blockDomains` / `exceptionDomains` 配列の直接変更 (push/splice 等) は
+ * このメモを陳腐化させるため禁止。`InMemory`/`Chrome` 両ポートは境界で複製するため、
  * 書き込み後の再読込は新しい参照になる。
  */
 let cachedDerivedSources: Source[] | null = null;

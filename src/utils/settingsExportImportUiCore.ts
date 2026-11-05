@@ -242,7 +242,7 @@ export async function handleFileImport(
  * 別入口であり、通常経路の検証・拒否動作には一切触れない。
  *
  * 暗号化ファイルは対象外 (パスワード経路が別にある) として拒否する。
- * 確認キャンセル時は `false` を返し、何も変更しない。
+ * 確認キャンセル時・適用失敗時は `false` を返し、何も変更しない。
  */
 export async function handleMigrationSettingsImport(
   file: File,
@@ -286,6 +286,7 @@ export async function handleMigrationSettingsImport(
   try {
     const imported = await importSettingsForMigration(text, { repo: opts?.repo });
     await applyImportedSettings(ctx, imported, 'Failed to apply migration settings');
+    return imported !== null;
   } catch (error) {
     ctx.logImportError?.(errorMessage(error));
     ctx.showStatus(`${getMessage('importError')}: ${errorMessage(error)}`, 'error');

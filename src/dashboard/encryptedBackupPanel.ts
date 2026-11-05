@@ -17,8 +17,6 @@ import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { withBusyButton } from './panels/asyncData/busyButton.js';
 
-/** Upper bound on the base64 ciphertext field of a backup envelope (SSOT: limits.ts). */
-
 function getExportFilename(): string {
   const date = new Date();
   const y = date.getFullYear();
