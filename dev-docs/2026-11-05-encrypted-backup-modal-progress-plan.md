@@ -14,11 +14,11 @@
 
 ## File Structure
 
-- Modify: `entrypoints/options/index.html:2768-2782` — `passwordAuthModal` の `modal-body` に進捗 `div` を1点追加する。責任: 進捗の表示場所の提供のみ。
-- Modify: `src/dashboard/masterPassword.ts` — `MasterPasswordController` に進捗所有を持たせる。責任: モーダル内進捗・ビジー状態の所有と切替え。`authenticatePassword` の実行中は必ず busy 表示にする。
-- Modify: `src/dashboard/encryptedBackupPanel.ts` — 既存 `onStage` からモーダル進捗への転送と最小計測。責任: 段階文言の解決と二面描画（背後＋モーダル）。
-- Test: `src/dashboard/__tests__/masterPassword-branches.test.ts` — 進捗・ビジーの振る舞いを追加する。
-- Test: `src/dashboard/__tests__/encryptedBackupPanel.test.ts` — stage転送の assertion を追加する。
+- Modify: `entrypoints/options/index.html:2768-2782` ― `passwordAuthModal` の `modal-body` に進捗 `div` を1点追加する。責任: 進捗の表示場所の提供のみ。
+- Modify: `src/dashboard/masterPassword.ts` ― `MasterPasswordController` に進捗所有を持たせる。責任: モーダル内進捗・ビジー状態の所有と切替え。`authenticatePassword` の実行中は必ず busy 表示にする。
+- Modify: `src/dashboard/encryptedBackupPanel.ts` ― 既存 `onStage` からモーダル進捗への転送と最小計測。責任: 段階文言の解決と二面描画（背後＋モーダル）。
+- Test: `src/dashboard/__tests__/masterPassword-branches.test.ts` ― 進捗・ビジーの振る舞いを追加する。
+- Test: `src/dashboard/__tests__/encryptedBackupPanel.test.ts` ― stage転送の assertion を追加する。
 - No change: `src/dashboard/encryptedBackupService.ts`, `src/messaging/*`, `src/utils/crypto/*`.
 
 ---
