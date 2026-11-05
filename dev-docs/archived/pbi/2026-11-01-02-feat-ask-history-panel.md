@@ -29,12 +29,12 @@ Scenario: 失敗時は理由が表示され再試行できる
 
 ## 受け入れ基準
 
-- [ ] `panelCatalog.ts` に `panel-ask-history` を `panel-saved-collections` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `ask-history`）
-- [ ] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
-- [ ] 対象コレクションの一覧を新パネル側で直接読み込む（履歴パネルとの共有状態を作らない）
-- [ ] 生成経路は既存の `askHistoryGateway` のままとし、拒否理由表示・二重実行防止・60秒打ち切りを保つ
-- [ ] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
-- [ ] 履歴パネル本体には触らない（スリム化は PBI 04）
+- [x] `panelCatalog.ts` に `panel-ask-history` を `panel-saved-collections` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `ask-history`）
+- [x] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
+- [x] 対象コレクションの一覧を新パネル側で直接読み込む（履歴パネルとの共有状態を作らない）
+- [x] 生成経路は既存の `askHistoryGateway` のままとし、拒否理由表示・二重実行防止・60秒打ち切りを保つ
+- [x] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
+- [x] 履歴パネル本体には触らない（スリム化は PBI 04）
 
 ## テスト戦略
 
@@ -48,6 +48,9 @@ Scenario: 失敗時は理由が表示され再試行できる
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（実機必須分は手動項目として記録）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（実機必須分は手動項目として記録）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+
+## 追記（アーカイブ時 2026-11-06）
+実装済み（実装コミット `962837d6`、CHANGELOGに記載）。ただし後発の意図的変更 `6470ff0c`「新パネルをexperimental最下部へ移動」により、受入基準のうちsidebar分類に関する項目は現ツリーで字面通りには満たさない。意図的変更でありCHANGELOGにも記載済みのため、本PBIは完了としてアーカイブする。

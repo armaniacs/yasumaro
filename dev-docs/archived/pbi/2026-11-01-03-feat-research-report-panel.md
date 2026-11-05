@@ -29,12 +29,12 @@ Scenario: Obsidian 送付の成否が分かる
 
 ## 受け入れ基準
 
-- [ ] `panelCatalog.ts` に `panel-research-report` を `panel-ask-history` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `research-report`）
-- [ ] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
-- [ ] レポート対象の語・タグ・期間を選択中コレクションから解決する（新パネル専用の条件入力欄は作らない）
-- [ ] 生成経路は既存の `exportResearchReport` のままとし、先頭200件・未読穴・理由表示・再送の既存制約を保つ
-- [ ] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
-- [ ] 履歴パネル本体には触らない（スリム化は PBI 04）
+- [x] `panelCatalog.ts` に `panel-research-report` を `panel-ask-history` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `research-report`）
+- [x] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
+- [x] レポート対象の語・タグ・期間を選択中コレクションから解決する（新パネル専用の条件入力欄は作らない）
+- [x] 生成経路は既存の `exportResearchReport` のままとし、先頭200件・未読穴・理由表示・再送の既存制約を保つ
+- [x] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
+- [x] 履歴パネル本体には触らない（スリム化は PBI 04）
 
 ## テスト戦略
 
@@ -48,6 +48,9 @@ Scenario: Obsidian 送付の成否が分かる
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする（実機必須分は手動項目として記録）
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（実機必須分は手動項目として記録）
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+
+## 追記（アーカイブ時 2026-11-06）
+実装済み（実装コミット `ff52be60`、CHANGELOGに記載）。ただし後発の意図的変更 `6470ff0c`「新パネルをexperimental最下部へ移動」により、受入基準のうちsidebar分類に関する項目は現ツリーで字面通りには満たさない。意図的変更でありCHANGELOGにも記載済みのため、本PBIは完了としてアーカイブする。

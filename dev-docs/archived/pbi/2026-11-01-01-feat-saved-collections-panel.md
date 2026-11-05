@@ -29,13 +29,13 @@ Scenario: 読込失敗はパネル内で完結する
 
 ## 受け入れ基準
 
-- [ ] `panelCatalog.ts` に `panel-saved-collections` を `panel-sqlite-history` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `collections`）
-- [ ] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
-- [ ] 保存済みコレクション CRUD と自動タグ規則が新パネルで動作する（既存の View とリポジトリを移設し、挙動を変えない）
-- [ ] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
-- [ ] `?tab=history` が引き続き履歴パネルを開く（回帰）
-- [ ] 履歴パネル本体には触らない（スリム化は PBI 04）
-- [ ] 呼び出しはパネル内のドラフトへの復元までとし、履歴一覧への適用は PBI 04 の引き継ぎとする（レビュー確定の契約）
+- [x] `panelCatalog.ts` に `panel-saved-collections` を `panel-sqlite-history` の直後に追加する（sidebar は data、分類は analysis、`tabParam` は `collections`）
+- [x] sidebar 静的 HTML と分類・factory・同期テストが catalog と一致する
+- [x] 保存済みコレクション CRUD と自動タグ規則が新パネルで動作する（既存の View とリポジトリを移設し、挙動を変えない）
+- [x] 新設 sidebar 文言を日英両 locale に追加し、`npm run check-i18n` が通る
+- [x] `?tab=history` が引き続き履歴パネルを開く（回帰）
+- [x] 履歴パネル本体には触らない（スリム化は PBI 04）
+- [x] 呼び出しはパネル内のドラフトへの復元までとし、履歴一覧への適用は PBI 04 の引き継ぎとする（レビュー確定の契約）
 
 ## テスト戦略
 
@@ -49,6 +49,9 @@ Scenario: 読込失敗はパネル内で完結する
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（本 PBI 範囲の UI 文言のみ。SETUP_GUIDE 全体の見直しは PBI 04）
+
+## 追記（アーカイブ時 2026-11-06）
+実装済み（実装コミット `ba961ff7`、CHANGELOGに記載）。ただし後発の意図的変更 `6470ff0c`「新パネルをexperimental最下部へ移動」により、受入基準のうち配置に関する項目（sidebar分類・履歴直後の順序）は現ツリーで字面通りには満たさない。意図的変更でありCHANGELOGにも記載済みのため、本PBIは完了としてアーカイブする。

@@ -14,13 +14,13 @@
 
 | 順位 | 候補 | RICE | 内訳 | 根拠・依存関係 |
 |---|---|---|---|---|
-| 1 | [2026-11-02-01-bg-search-scope-background.md](2026-11-02-01-bg-search-scope-background.md) | 1.44 | Reach=0.6 / Impact=2 / Confidence=80% / Effort=0.33人週 | c8522f2b の残り半分。プレビュー件数の正確化の前提 |
-| 2 | [2026-11-02-02-feat-ask-collection-v2.md](2026-11-02-02-feat-ask-collection-v2.md) | 0.90 | Reach=0.5 / Impact=2 / Confidence=90% / Effort=0.5人週 | fail-open の解消。01 の scope 型を流用 |
-| 3 | [2026-11-02-03-feat-history-save-handoff.md](2026-11-02-03-feat-history-save-handoff.md) | 0.72 | Reach=0.6 / Impact=1.5 / Confidence=80% / Effort=0.5人週 | 履歴→保存ボタンと recall 規約 pin。PBI 2026-11-01-06 の決着を含む |
-| 4 | [2026-11-02-04-feat-report-v2.md](2026-11-02-04-feat-report-v2.md) | 0.56 | Reach=0.4 / Impact=2 / Confidence=70% / Effort=0.75人週 | UNION 意味論は本 PBI 内で定義。records 経路は対応済みのため BG 不要 |
-| 5 | [2026-11-02-05-feat-session-to-collection.md](2026-11-02-05-feat-session-to-collection.md) | 0.42 | Reach=0.3 / Impact=2 / Confidence=70% / Effort=0.75人週 | D の ids 消費と同時リリースすること |
-| 6 | [2026-11-02-06-feat-today-preset.md](2026-11-02-06-feat-today-preset.md) | 0.36 | Reach=0.3 / Impact=1 / Confidence=80% / Effort=0.33人週 | 依存なし。草稿注入のみ |
-| 7 | [2026-11-02-07-feat-history-multi-execution.md](2026-11-02-07-feat-history-multi-execution.md) | 0.28 | Reach=0.2 / Impact=2 / Confidence=70% / Effort=1.0人週 | 延期可。合算 cap と一体。PBI 06 本実行の本体 |
+| 1 | [2026-11-02-01-bg-search-scope-background.md](../dev-docs/archived/pbi/2026-11-02-01-bg-search-scope-background.md) | 1.44 | Reach=0.6 / Impact=2 / Confidence=80% / Effort=0.33人週 | c8522f2b の残り半分。プレビュー件数の正確化の前提 |
+| 2 | [2026-11-02-02-feat-ask-collection-v2.md](../dev-docs/archived/pbi/2026-11-02-02-feat-ask-collection-v2.md) | 0.90 | Reach=0.5 / Impact=2 / Confidence=90% / Effort=0.5人週 | fail-open の解消。01 の scope 型を流用 |
+| 3 | [2026-11-02-03-feat-history-save-handoff.md](../dev-docs/archived/pbi/2026-11-02-03-feat-history-save-handoff.md) | 0.72 | Reach=0.6 / Impact=1.5 / Confidence=80% / Effort=0.5人週 | 履歴→保存ボタンと recall 規約 pin。PBI 2026-11-01-06 の決着を含む |
+| 4 | [2026-11-02-04-feat-report-v2.md](../dev-docs/archived/pbi/2026-11-02-04-feat-report-v2.md) | 0.56 | Reach=0.4 / Impact=2 / Confidence=70% / Effort=0.75人週 | UNION 意味論は本 PBI 内で定義。records 経路は対応済みのため BG 不要 |
+| 5 | [2026-11-02-05-feat-session-to-collection.md](../dev-docs/archived/pbi/2026-11-02-05-feat-session-to-collection.md) | 0.42 | Reach=0.3 / Impact=2 / Confidence=70% / Effort=0.75人週 | D の ids 消費と同時リリースすること |
+| 6 | [2026-11-02-06-feat-today-preset.md](../dev-docs/archived/pbi/2026-11-02-06-feat-today-preset.md) | 0.36 | Reach=0.3 / Impact=1 / Confidence=80% / Effort=0.33人週 | 依存なし。草稿注入のみ |
+| 7 | [2026-11-02-07-feat-history-multi-execution.md](../dev-docs/archived/pbi/2026-11-02-07-feat-history-multi-execution.md) | 0.28 | Reach=0.2 / Impact=2 / Confidence=70% / Effort=1.0人週 | 延期可。合算 cap と一体。PBI 06 本実行の本体 |
 
 ## 依存関係
 
