@@ -5,6 +5,8 @@
 
 import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../utils/limits.js';
 import { showPasswordAuthModal } from './masterPassword.js';
+import { setPasswordAuthProgress } from './masterPassword.js';
+import { logDebug } from '../utils/logger/api.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
@@ -64,15 +66,22 @@ export function initEncryptedBackupPanel(): void {
             false,
             'updating',
           );
+          const startedAt = Date.now();
           const envelope = await exportEncryptedBackup(password, (stage) => {
-            setStatus(
+            const text =
               stage === 'readingDb'
-                ? getMessageOr('backupStageReadingDb', '履歴DBを読み出しています...')
-                : getMessageOr('backupStageEncrypting', '暗号化しています...'),
-              false,
-              'updating',
-            );
+                ? getMessageOr('backupStageReadingDb', 'Reading history database...')
+                : getMessageOr('backupStageEncrypting', 'Encrypting...');
+            setStatus(text, false, 'updating');
+            setPasswordAuthProgress(text);
+            void logDebug('encrypted-backup stage', { flow: 'export', stage, elapsedMs: Date.now() - startedAt }, 'encryptedBackupPanel');
           });
+          setPasswordAuthProgress(null);
+          void logDebug(
+            'encrypted-backup done',
+            { flow: 'export', elapsedMs: Date.now() - startedAt, envelopeChars: JSON.stringify(envelope).length },
+            'encryptedBackupPanel',
+          );
           downloadJson(envelope, filename);
           setStatus(getMessageWithSubstitutions('encryptedBackupCreated', { filename }, '暗号化バックアップを作成しました: {filename}'), false);
         });
@@ -127,18 +136,20 @@ export function initEncryptedBackupPanel(): void {
         importInFlight = true;
         try {
           await withBusyButton(importBtn as HTMLButtonElement, async () => {
+            const startedAt = Date.now();
             const result = await importEncryptedBackup(parsed, password, (stage) => {
-              setStatus(
+              const text =
                 stage === 'decrypting'
-                  ? getMessageOr('backupStageDecrypting', '復号しています...')
+                  ? getMessageOr('backupStageDecrypting', 'Decrypting...')
                   : stage === 'restoringDb'
-                    ? getMessageOr('backupStageRestoringDb', '履歴DBを復元しています...')
-                    : getMessageOr('backupStageRestoringSettings', '設定を復元しています...'),
-                false,
-                'updating',
-              );
+                    ? getMessageOr('backupStageRestoringDb', 'Restoring history database...')
+                    : getMessageOr('backupStageRestoringSettings', 'Restoring settings...');
+              setStatus(text, false, 'updating');
+              setPasswordAuthProgress(text);
+              void logDebug('encrypted-backup stage', { flow: 'import', stage, elapsedMs: Date.now() - startedAt }, 'encryptedBackupPanel');
             });
             if (result.success) {
+              setPasswordAuthProgress(null);
               const skippedCount = result.skippedKeys?.length ?? 0;
               setStatus(
                 skippedCount > 0

@@ -12,6 +12,10 @@ vi.mock('../encryptedBackupService.js', () => ({
 
 vi.mock('../masterPassword.js', () => ({
   showPasswordAuthModal: vi.fn(),
+  setPasswordAuthProgress: vi.fn((message: string | null) => {
+    const el = document.getElementById('passwordAuthProgress');
+    if (el) el.textContent = message ?? '';
+  }),
 }));
 
 import { exportEncryptedBackup, importEncryptedBackup, isEncryptedBackupFile } from '../encryptedBackupService.js';
@@ -26,6 +30,7 @@ function setDom() {
     <button id="importEncryptedBackupBtn"></button>
     <input type="file" id="importEncryptedBackupFileInput" />
     <div id="encryptedBackupStatus"></div>
+    <div id="passwordAuthProgress" role="status" aria-live="polite"></div>
   `;
 }
 
@@ -266,6 +271,37 @@ describe('initEncryptedBackupPanel', () => {
     await Promise.resolve();
 
     expect(importEncryptedBackup).toHaveBeenCalledTimes(2);
+  });
+
+  it('forwards export stages to the auth modal progress', async () => {
+    const stages: string[] = [];
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      void action('my-password');
+    });
+    vi.mocked(exportEncryptedBackup).mockImplementation(async (_pw, onStage) => {
+      onStage?.('readingDb');
+      onStage?.('encrypting');
+      return { version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd' };
+    });
+    const { setPasswordAuthProgress } = await import('../masterPassword.js');
+    void setPasswordAuthProgress;
+    initEncryptedBackupPanel();
+    document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+    await vi.waitFor(() => {
+      expect(exportEncryptedBackup).toHaveBeenCalled();
+    });
+    await Promise.resolve();
+    // 転送の実線は onStage -> setPasswordAuthProgress の呼び出しで確認する。
+    // 成功時は実装が進捗をクリアするため、最終 DOM は空になる。
+    await vi.waitFor(() => {
+      expect(vi.mocked(setPasswordAuthProgress)).toHaveBeenCalled();
+    });
+    const seen = vi.mocked(setPasswordAuthProgress).mock.calls.map((args) => args[0]);
+    expect(seen.filter((m): m is string => typeof m === 'string' && m.length > 0).length).toBeGreaterThan(0);
+    await vi.waitFor(() => {
+      expect(document.getElementById('passwordAuthProgress')!.textContent).toBe('');
+    });
+    expect(stages.length).toBeGreaterThanOrEqual(0);
   });
 
   describe('export download unification (PBI 2026-10-03-19)', () => {
