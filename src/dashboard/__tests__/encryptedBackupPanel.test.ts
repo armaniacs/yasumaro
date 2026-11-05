@@ -19,7 +19,7 @@ vi.mock('../masterPassword.js', () => ({
 }));
 
 import { exportEncryptedBackup, importEncryptedBackup, isEncryptedBackupFile } from '../encryptedBackupService.js';
-import { showPasswordAuthModal } from '../masterPassword.js';
+import { showPasswordAuthModal, setPasswordAuthProgress } from '../masterPassword.js';
 import { initEncryptedBackupPanel } from '../encryptedBackupPanel.js';
 import { DOWNLOAD_REVOKE_DELAY_MS } from '../exportLogsService.js';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
@@ -111,7 +111,9 @@ describe('initEncryptedBackupPanel', () => {
   it('shows an error status when import fails due to wrong password', async () => {
     vi.mocked(isEncryptedBackupFile).mockReturnValue(true);
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
-      void action('wrong-password');
+      // The action now rejects on failure (modal stays open); swallow here
+      // so the rejection does not surface as an unhandled error in the runner.
+      void action('wrong-password').catch(() => {});
     });
     vi.mocked(importEncryptedBackup).mockResolvedValue({ success: false, error: 'Decryption failed' });
 
@@ -274,7 +276,6 @@ describe('initEncryptedBackupPanel', () => {
   });
 
   it('forwards export stages to the auth modal progress', async () => {
-    const stages: string[] = [];
     vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
       void action('my-password');
     });
@@ -283,8 +284,6 @@ describe('initEncryptedBackupPanel', () => {
       onStage?.('encrypting');
       return { version: 2, kdf: 'pbkdf2', hash: 'SHA-256', iterations: 600000, salt: 's', iv: 'i', data: 'd' };
     });
-    const { setPasswordAuthProgress } = await import('../masterPassword.js');
-    void setPasswordAuthProgress;
     initEncryptedBackupPanel();
     document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
     await vi.waitFor(() => {
@@ -301,7 +300,35 @@ describe('initEncryptedBackupPanel', () => {
     await vi.waitFor(() => {
       expect(document.getElementById('passwordAuthProgress')!.textContent).toBe('');
     });
-    expect(stages.length).toBeGreaterThanOrEqual(0);
+  });
+
+  it('retains the failed-stage progress when export rejects (modal stays open)', async () => {
+    let rejected: unknown;
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      action('my-password').then(
+        () => {},
+        (error) => {
+          rejected = error;
+        },
+      );
+    });
+    vi.mocked(exportEncryptedBackup).mockImplementation(async (_pw, onStage) => {
+      onStage?.('readingDb');
+      throw new Error('Disk read failed');
+    });
+
+    initEncryptedBackupPanel();
+    document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+
+    // The action must reject so authenticatePassword keeps the modal open
+    // instead of closing it; the stage text must survive (not be cleared).
+    await vi.waitFor(() => {
+      expect(rejected).toBeInstanceOf(Error);
+    });
+    await vi.waitFor(() => {
+      expect(document.getElementById('encryptedBackupStatus')!.textContent).toContain('Disk read failed');
+    });
+    expect(document.getElementById('passwordAuthProgress')!.textContent).not.toBe('');
   });
 
   describe('export download unification (PBI 2026-10-03-19)', () => {

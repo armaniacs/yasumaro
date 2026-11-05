@@ -4,8 +4,7 @@
  */
 
 import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../utils/limits.js';
-import { showPasswordAuthModal } from './masterPassword.js';
-import { setPasswordAuthProgress } from './masterPassword.js';
+import { showPasswordAuthModal, setPasswordAuthProgress } from './masterPassword.js';
 import { logDebug } from '../utils/logger/api.js';
 import {
   exportEncryptedBackup,
@@ -87,6 +86,7 @@ export function initEncryptedBackupPanel(): void {
         });
       } catch (error) {
         setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
+        throw error instanceof Error ? error : new Error(String(errorMessage(error)));
       } finally {
         exportInFlight = false;
       }
@@ -160,6 +160,7 @@ export function initEncryptedBackupPanel(): void {
               document.dispatchEvent(new CustomEvent('reload-general-settings'));
             } else {
               setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
+              throw new Error(String(result.error));
             }
           });
         } finally {
