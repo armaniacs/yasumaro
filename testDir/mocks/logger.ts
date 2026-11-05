@@ -133,5 +133,13 @@ export function createLoggerModuleMock(spec: LoggerModuleMockSpec = {}): Record<
             mod[key] = value;
         }
     }
+    // Surface parity: the real logger/core.js exports flushLogs (completion
+    // flush in RecordingOrchestrator). Specs predate it; default it here so
+    // every double stays faithful without per-file churn. An explicit spec
+    // entry wins. (Also lands on types/api doubles as an inert extra — no
+    // shape assertions exist on these modules.)
+    if (!('flushLogs' in mod)) {
+        mod.flushLogs = vi.fn(async () => undefined);
+    }
     return mod;
 }
