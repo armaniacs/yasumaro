@@ -217,6 +217,19 @@ export class MasterPasswordController {
     );
   }
 
+  /**
+   * Paint a set/change failure where the user acts (the open modal) as well
+   * as the behind-modal page status. Failures reported only to `status` are
+   * invisible while the modal overlay covers the page.
+   */
+  private showSetModalError(message: string): void {
+    if (this.dom.passwordStrengthError) {
+      this.dom.passwordStrengthError.textContent = message;
+      this.dom.passwordStrengthError.classList.add('visible');
+    }
+    showStatus('status', message, 'error');
+  }
+
   private async savePasswordInner(): Promise<void> {
     if (!this.dom.masterPasswordInput) return;
     const password = this.dom.masterPasswordInput.value;
@@ -228,17 +241,26 @@ export class MasterPasswordController {
       if (validateAndSetMatchErrors(password, confirmPasswordValue, this.dom.passwordMatchError)) return;
     }
 
+    // Validation passed: drop stale messages from a previous failed save in
+    // this same modal session so only fresh results show.
+    for (const el of [this.dom.passwordStrengthError, this.dom.passwordMatchError]) {
+      if (el) {
+        el.textContent = '';
+        el.classList.remove('visible');
+      }
+    }
+
     try {
       showStatus('status', getMessageOr('masterPasswordStageRotating', '鍵を導出して再暗号化しています...'), 'updating');
       if (this.passwordModalMode === 'change') {
         const oldPassword = this.pendingOldPassword;
         if (!oldPassword) {
-          showStatus('status', getMessageOr('passwordRequired', 'Please enter your master password.'), 'error');
+          this.showSetModalError(getMessageOr('passwordRequired', 'Please enter your master password.'));
           return;
         }
         const changed = await changeMasterPasswordService(oldPassword, password);
         if (!changed) {
-          showStatus('status', getMessageOr('passwordIncorrect', 'Incorrect password.'), 'error');
+          this.showSetModalError(getMessageOr('passwordIncorrect', 'Incorrect password.'));
           return;
         }
       } else {
@@ -256,15 +278,15 @@ export class MasterPasswordController {
         this.dom.masterPasswordEnabled.checked = this.preToggleChecked;
       }
       if (e instanceof ReencryptionAbortedError) {
-        showStatus('status', this.abortMessage(e), 'error');
+        this.showSetModalError(this.abortMessage(e));
       } else if (e instanceof MasterPasswordAlreadySetError) {
-        showStatus('status', getMessage('masterPasswordAlreadySet'), 'error');
+        this.showSetModalError(getMessage('masterPasswordAlreadySet'));
       } else if (e instanceof PendingRotationMismatchError) {
-        showStatus('status', getMessage('masterPasswordPendingRotationMismatch'), 'error');
+        this.showSetModalError(getMessage('masterPasswordPendingRotationMismatch'));
       } else if (e instanceof RotationInProgressError) {
-        showStatus('status', getMessage('masterPasswordRotationInProgress'), 'error');
+        this.showSetModalError(getMessage('masterPasswordRotationInProgress'));
       } else {
-        showStatus('status', errorMessage(e), 'error');
+        this.showSetModalError(errorMessage(e));
       }
     }
   }

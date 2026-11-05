@@ -772,7 +772,7 @@ describe('savePassword flow', () => {
     await flushPromises();
 
     const errorEl = document.getElementById('passwordStrengthError')!;
-    expect(errorEl.textContent).toBe('i18n_passwordTooShort');
+    expect(errorEl.textContent).toBe('Password too short');
     expect(errorEl.classList.contains('visible')).toBe(true);
     expect(setMasterPasswordService).not.toHaveBeenCalled();
     expect(changeMasterPasswordService).not.toHaveBeenCalled();
