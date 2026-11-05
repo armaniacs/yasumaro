@@ -112,6 +112,11 @@ export class MasterPasswordController {
   // failure, so the open change modal stays retryable. Never persisted.
   private pendingOldPassword: string | null = null;
   private saveInFlight = false;
+  // initEventListeners() is called from every panel that hosts a password
+  // modal user (currently panel-privacy and panel-export-import, while the
+  // modal DOM itself is a single global). Without this flag the second mount
+  // would attach every listener twice and each click would run twice.
+  private listenersAttached = false;
   // Checkbox state before the user's toggle; the DOM value is already flipped
   // by the time save runs, so it cannot be read back then.
   private preToggleChecked = false;
@@ -435,6 +440,8 @@ export class MasterPasswordController {
    * イベントリスナーを初期化する。
    */
   initEventListeners(): void {
+    if (this.listenersAttached) return;
+    this.listenersAttached = true;
     const { dom } = this;
 
     if (dom.masterPasswordEnabled && dom.masterPasswordOptions) {
