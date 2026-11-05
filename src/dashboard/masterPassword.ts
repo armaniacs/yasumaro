@@ -57,6 +57,7 @@ export interface MasterPasswordDomRefs {
   passwordAuthModal: HTMLElement | null;
   masterPasswordAuthInput: HTMLInputElement | null;
   passwordAuthError: HTMLElement | null;
+  passwordAuthProgress: HTMLElement | null;
   closePasswordAuthModalBtn: HTMLButtonElement | null;
   cancelPasswordAuthBtn: HTMLButtonElement | null;
   submitPasswordAuthBtn: HTMLButtonElement | null;
@@ -88,6 +89,7 @@ function resolveDefaultDomRefs(): MasterPasswordDomRefs {
     passwordAuthModal: document.getElementById('passwordAuthModal') as HTMLElement | null,
     masterPasswordAuthInput: document.getElementById('masterPasswordAuthInput') as HTMLInputElement | null,
     passwordAuthError: document.getElementById('passwordAuthError') as HTMLElement | null,
+    passwordAuthProgress: document.getElementById('passwordAuthProgress') as HTMLElement | null,
     closePasswordAuthModalBtn: document.getElementById('closePasswordAuthModalBtn') as HTMLButtonElement | null,
     cancelPasswordAuthBtn: document.getElementById('cancelPasswordAuthBtn') as HTMLButtonElement | null,
     submitPasswordAuthBtn: document.getElementById('submitPasswordAuthBtn') as HTMLButtonElement | null,
@@ -267,12 +269,42 @@ export class MasterPasswordController {
     }
   }
 
+  setPasswordAuthProgress(message: string | null): void {
+    if (!this.dom.passwordAuthProgress) return;
+    this.dom.passwordAuthProgress.textContent = message ?? '';
+    this.dom.passwordAuthProgress.classList.toggle('hidden', message == null || message === '');
+  }
+
+  setPasswordAuthBusy(busy: boolean): void {
+    const submitBtn = this.dom.submitPasswordAuthBtn;
+    const input = this.dom.masterPasswordAuthInput;
+    if (submitBtn) {
+      if (busy) {
+        submitBtn.dataset.label = submitBtn.textContent ?? '';
+        submitBtn.disabled = true;
+        submitBtn.textContent = getMessageOr('processing', 'Processing...');
+      } else {
+        submitBtn.disabled = false;
+        const label = submitBtn.dataset.label;
+        if (label !== undefined && label !== '') {
+          submitBtn.textContent = label;
+          delete submitBtn.dataset.label;
+        } else {
+          submitBtn.textContent = getMessage('confirm');
+        }
+      }
+    }
+    if (input) input.disabled = busy;
+  }
+
   showPasswordAuthModal(actionType: 'export' | 'import', action: (password: string) => Promise<void>): void {
     if (!this.dom.passwordAuthModal) return;
     this.pendingPasswordAction = action;
     if (this.dom.masterPasswordAuthInput) this.dom.masterPasswordAuthInput.value = '';
     if (this.dom.passwordAuthError) this.dom.passwordAuthError.textContent = '';
     this.passwordAuthTrapId = this.setModalVisible(this.dom.passwordAuthModal, () => this.cancelPasswordAuthModal(), this.dom.masterPasswordAuthInput);
+    this.setPasswordAuthProgress(null);
+    this.setPasswordAuthBusy(false);
   }
 
   closePasswordAuthModal(): void {
@@ -281,6 +313,8 @@ export class MasterPasswordController {
     if (this.dom.masterPasswordAuthInput) this.dom.masterPasswordAuthInput.value = '';
     if (this.dom.passwordAuthError) this.dom.passwordAuthError.textContent = '';
     this.pendingPasswordAction = null;
+    this.setPasswordAuthProgress(null);
+    this.setPasswordAuthBusy(false);
   }
 
   private async authenticatePassword(): Promise<void> {
@@ -308,6 +342,8 @@ export class MasterPasswordController {
       return;
     }
 
+    this.setPasswordAuthBusy(true);
+    this.setPasswordAuthProgress(getMessageOr('masterPasswordStageRotating', 'Verifying...'));
     const result = await verifyMasterPasswordWithRehash(password);
     if (result.success) {
       await resetFailedAttempts();
@@ -322,6 +358,7 @@ export class MasterPasswordController {
         // The change action closes the auth modal itself before opening the
         // change modal (single focus trap at a time); close here otherwise.
         if (this.dom.passwordAuthModal && !this.dom.passwordAuthModal.classList.contains('hidden')) {
+          this.setPasswordAuthProgress(null);
           this.closePasswordAuthModal();
         }
       } catch (e) {
@@ -334,9 +371,11 @@ export class MasterPasswordController {
           this.dom.passwordAuthError.classList.add('visible');
         }
       } finally {
-        if (submitBtn) submitBtn.disabled = false;
+        this.setPasswordAuthBusy(false);
       }
     } else {
+      this.setPasswordAuthBusy(false);
+      this.setPasswordAuthProgress(null);
       await recordFailedAttempt();
       if (this.dom.passwordAuthError) {
         this.dom.passwordAuthError.textContent = getMessageOr('passwordIncorrect', result.error || 'Incorrect password.');
@@ -475,4 +514,12 @@ export function showPasswordAuthModal(actionType: 'export' | 'import', action: (
 
 export function closePasswordModal(): void {
   getOrCreateController().closePasswordModal();
+}
+
+export function setPasswordAuthProgress(message: string | null): void {
+  getOrCreateController().setPasswordAuthProgress(message);
+}
+
+export function setPasswordAuthBusy(busy: boolean): void {
+  getOrCreateController().setPasswordAuthBusy(busy);
 }
