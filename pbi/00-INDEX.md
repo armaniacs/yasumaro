@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-06 Edge→Chrome移行障害の是正（3件） ― ✅ 01完了・アーカイブ済み＋⬜ 02/03未着手 RICE順: ~~01(24)~~ → 02(9.6) → 03(9.6・02と同点だが暗号化経路の確定を先に)
+
+Edge実機移行で発覚した3障害をRICE採点してPBI化。01はuBlock二重保持の解消で設定28MB→10KB級にしサイズ上限問題を根本解決（実装済み）。02は暗号化バックアップのenvelope上限とファイル上限の不整合解消。03は公式の3ブラウザ間移行モード。詳細は下の各PBIを参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-06-01-fix-ublock-cache-dedup.md](../dev-docs/archived/pbi/2026-11-06-01-fix-ublock-cache-dedup.md) | 🔧非機能追加 | 24 | M | ✅ 完了。設定28MB→10KB級。R8×I3×C1.0。`npm run validate`+両ブラウザbuild緑 |
+| 02 | [2026-11-06-02-fix-encrypted-backup-cap.md](2026-11-06-02-fix-encrypted-backup-cap.md) | 🔧非機能追加 | 9.6 | M | R4×I3×C0.8。履歴の多いユーザの正規移行ルート復活 |
+| 03 | [2026-11-06-03-feat-profile-migration.md](2026-11-06-03-feat-profile-migration.md) | ✨機能追加 | 9.6 | L | R6×I2×C0.8。02と同点だが暗号化経路の確定を先に。全9通りの移行 |
+
 ### 2026-11-05 logger flush合流フォロー（1件） ― ⬜ 1件未着手
 
 B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing` ガードが同時完了時の一方を捨てる窓を合流させる。1分アラームが上限を保証し E2E は完了時flushで緑のため急ぎなし。詳細は [2026-11-05-01-fix-logger-flush-coalesce.md](2026-11-05-01-fix-logger-flush-coalesce.md)。
@@ -646,6 +656,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-06 Edge→Chrome移行障害01 アーカイブ ― 1件
+
+- **2026-11-06-01-fix-ublock-cache-dedup**: `ublock_rules` の永続化を止め `ublock_sources` からの導出に一本化（`src/utils/derivedUblockRules.ts` 新設）。設定28MB→10KB級。旧二重データは読み時点で正規化。`npm run validate` 緑＋chromium/firefox両build緑。版 6.9.65。
 
 ### 2026-11-02 履歴パネル独立化の後発 PBI 06 アーカイブ ― 1件
 

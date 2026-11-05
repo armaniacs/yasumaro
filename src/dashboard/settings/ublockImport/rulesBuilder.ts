@@ -5,6 +5,7 @@
 
 import { parseUblockFilterListWithErrors, ParseError } from '../../../utils/ublockParser/index.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
+import { deriveUblockRulesFromSources } from '../../../utils/derivedUblockRules.js';
 
 interface Source {
   blockDomains?: string[];
@@ -32,41 +33,27 @@ interface PreviewResult {
 /**
  * 超軽量化: ソースからドメインセットを構築
  * ストレージにはドメイン文字列の配列のみを保存
+ * 導出式の単一実装は `src/utils/derivedUblockRules.ts` にあり、
+ * ここでは旧来の返却形状 (blockRules 別名つき) を保つ薄い層である。
  * @param {Array} sources - ソースリスト
  * @returns {Object} 軽量なルールデータ
  */
 export function rebuildRulesFromSources(sources: Source[]): RebuiltRules {
-  const blockDomains = new Set<string>();
-  const exceptionDomains = new Set<string>();
-
   // null/undefined の場合、空の結果を返す
   if (!sources || !Array.isArray(sources)) {
     sources = [];
   }
 
-  for (const source of sources) {
-    if (source && source.blockDomains) {
-      source.blockDomains.forEach(d => blockDomains.add(d));
-    }
-    if (source && source.exceptionDomains) {
-      source.exceptionDomains.forEach(d => exceptionDomains.add(d));
-    }
-  }
+  const derived = deriveUblockRulesFromSources(sources);
 
   // ストレージには配列のみ保存（オブジェクトは保存しない）
   // 互換性のため blockRules/blockDomains 両方のプロパティを返す
-  const blockRules = Array.from(blockDomains);
-  const exceptionRules = Array.from(exceptionDomains);
-
   return {
-    blockRules,
-    exceptionRules,
-    blockDomains: blockRules,   // 互換性用
-    exceptionDomains: exceptionRules,  // 互換性用
-    metadata: {
-      importedAt: Date.now(),
-      ruleCount: blockDomains.size + exceptionDomains.size
-    }
+    blockRules: derived.blockDomains,
+    exceptionRules: derived.exceptionDomains,
+    blockDomains: derived.blockDomains,   // 互換性用
+    exceptionDomains: derived.exceptionDomains,  // 互換性用
+    metadata: derived.metadata
   };
 }
 

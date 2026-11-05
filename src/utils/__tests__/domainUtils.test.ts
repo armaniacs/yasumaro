@@ -511,6 +511,76 @@ describe('domainUtils', () => {
     });
   });
 
+  describe('PBI 2026-11-06-01: rules derived from sources', () => {
+    test('derives block rules from sources when stored rules are empty', async () => {
+      mockedIsUrlBlocked.mockResolvedValue(true);
+
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'blacklist',
+        simple_format_enabled: false,
+        ublock_format_enabled: true,
+        ublock_sources: [
+          { url: 'manual', ruleCount: 1, blockDomains: ['derived-block.com'], exceptionDomains: [], importedAt: 1 }
+        ],
+        ublock_rules: {
+          blockDomains: [],
+          exceptionDomains: [],
+          metadata: { importedAt: 0, ruleCount: 0 }
+        }
+      } as Settings);
+
+      expect(await isDomainAllowed('https://derived-block.com/page')).toBe(false);
+      expect(mockedIsUrlBlocked).toHaveBeenCalledTimes(1);
+      const passedRules = mockedIsUrlBlocked.mock.calls[0]?.[1] as { blockDomains: string[] };
+      expect(passedRules.blockDomains).toContain('derived-block.com');
+    });
+
+    test('ignores stale stored rules when sources exist', async () => {
+      mockedIsUrlBlocked.mockResolvedValue(true);
+
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'blacklist',
+        simple_format_enabled: false,
+        ublock_format_enabled: true,
+        ublock_sources: [
+          { url: 'manual', ruleCount: 1, blockDomains: ['fresh.com'], exceptionDomains: [], importedAt: 1 }
+        ],
+        ublock_rules: {
+          blockDomains: ['stale.com'],
+          exceptionDomains: [],
+          metadata: { importedAt: 1, ruleCount: 1 }
+        }
+      } as Settings);
+
+      await isDomainAllowed('https://fresh.com/page');
+      const passedRules = mockedIsUrlBlocked.mock.calls[0]?.[1] as { blockDomains: string[] };
+      expect(passedRules.blockDomains).toContain('fresh.com');
+      expect(passedRules.blockDomains).not.toContain('stale.com');
+    });
+
+    test('falls back to stored rules when no sources exist (legacy rules-only)', async () => {
+      mockedIsUrlBlocked.mockResolvedValue(true);
+
+    // @ts-expect-error - vi.fn() type narrowing issue
+
+      mockedGetSettings.mockResolvedValue({
+        domain_filter_mode: 'blacklist',
+        simple_format_enabled: false,
+        ublock_format_enabled: true,
+        ublock_sources: [],
+        ublock_rules: {
+          blockRules: [{ type: 'hostname', domain: 'legacy.com' }],
+          exceptionRules: [],
+          ruleCount: 1
+        }
+      } as Settings);
+
+      expect(await isDomainAllowed('https://legacy.com/page')).toBe(false);
+      const passedRules = mockedIsUrlBlocked.mock.calls[0]?.[1] as { blockRules: { domain: string }[] };
+      expect(passedRules.blockRules).toEqual([{ type: 'hostname', domain: 'legacy.com' }]);
+    });
+  });
+
   describe('parseDomainList', () => {
     test('parses a large domain list (1000 lines) correctly', () => {
       const domainLines = Array.from({ length: 1000 }, (_, i) => `domain${i}.com`);

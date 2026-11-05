@@ -6,6 +6,8 @@
 import { settingsRepository } from './storage/SettingsRepository.js';
 import { StorageKeys } from './storage/types.js';
 import { isUrlBlocked } from './ublockMatcher.js';
+import { deriveUblockRulesFromSources } from './derivedUblockRules.js';
+import type { Source, UblockRules } from './types.js';
 import { matchesDomainPattern, isDomainInList as isDomainInListShared, extractHostname } from './wildcardToRegex.js';
 import { isValidDomainPattern } from './domainValidator.js';
 
@@ -27,6 +29,36 @@ function hasUblockRules(ublockRules: unknown): boolean {
     const hasExceptionRules = Array.isArray(r['exceptionRules']) && (r['exceptionRules'] as unknown[]).length > 0;
 
     return hasBlockDomains || hasExceptionDomains || hasBlockRules || hasExceptionRules;
+}
+
+/**
+ * PBI 2026-11-06-01: `ublock_rules` は永続化されない導出キャッシュのため、
+ * sources 非空時はここで導出する。導出オブジェクトを sources の同一性に
+ * 紐づけて保持することで、`ublockMatcher` 側の WeakMap インデックス
+ * キャッシュが効き続ける。
+ *
+ * 健全性の根拠: source 側の書き手 (`sourceManager`) は要素を丸ごと置換
+ * (index 代入・push) し、要素内の配列を直接書き換えない。参照が同じ要素は
+ * 内容も同じとみなせる。`InMemory`/`Chrome` 両ポートは境界で複製するため、
+ * 書き込み後の再読込は新しい参照になる。
+ */
+let cachedDerivedSources: Source[] | null = null;
+let cachedDerivedRules: UblockRules | null = null;
+
+function derivedRulesForSources(sources: Source[]): UblockRules {
+  const cachedSources = cachedDerivedSources;
+  const cachedRules = cachedDerivedRules;
+  if (
+    cachedSources !== null && cachedRules !== null &&
+    cachedSources.length === sources.length &&
+    cachedSources.every((source, index) => source === sources[index])
+  ) {
+    return cachedRules;
+  }
+  const derived = deriveUblockRulesFromSources(sources);
+  cachedDerivedSources = [...sources];
+  cachedDerivedRules = derived;
+  return derived;
 }
 
 /**
@@ -114,7 +146,14 @@ export async function isDomainAllowed(url: string): Promise<boolean> {
     let ublockBlocked = false;
 
     if (ublockEnabled) {
-        const ublockRules = settings[StorageKeys.UBLOCK_RULES];
+        // PBI 2026-11-06-01: 正本は `ublock_sources`。sources 非空時は
+        // そこから導出し、格納済み `ublock_rules` (旧二重データの残骸) は
+        // 無視する。sources 空のときのみ格納済み rules を使い、rules-only
+        // の旧形式ペイロードの読み込み互換を保つ。
+        const sources = (settings[StorageKeys.UBLOCK_SOURCES] || []) as Source[];
+        const ublockRules = sources.length > 0
+          ? derivedRulesForSources(sources)
+          : settings[StorageKeys.UBLOCK_RULES];
 
 
         if (ublockRules && hasUblockRules(ublockRules)) {

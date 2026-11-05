@@ -15,6 +15,7 @@ import { getOrCreateEncryptionKey } from './encryptionSession.js';
 import { StorageKeys } from './types.js';
 import { asStorageKeys } from './apiKeyFields.js';
 import { DEFAULT_SETTINGS } from './defaults.js';
+import { dropDerivedUblockRules } from '../derivedUblockRules.js';
 import { ChromeStoragePort, type StoragePort } from './storagePort.js';
 import { isPlainRecord } from '../objectUtils.js';
 // Day unit for the backup-retention cutoff — the existing SSOT is
@@ -632,6 +633,15 @@ async function applyMigrationsCore(
         const legacyAutoEnabled = merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_AUTO_ENABLED];
         merged[StorageKeys.LOCAL_MARKDOWN_EXPORT_TIMING] = legacyAutoEnabled ? 'idle' : 'manual';
     }
+    // PBI 2026-11-06-01: `ublock_rules` は `ublock_sources` からの導出
+    // キャッシュであり永続化しない。旧二重データ・旧エクスポート由来の
+    // 二重分を読み時点で空の正規形に畳む (export は getAll 経由のため、
+    // 触らずに小さくなる)。sources 空の rules-only 旧形式は保持する。
+    // 無音で行う: 毎 getAll で走るためログは出さない。
+    merged[StorageKeys.UBLOCK_RULES] = dropDerivedUblockRules(
+        merged[StorageKeys.UBLOCK_SOURCES],
+        merged[StorageKeys.UBLOCK_RULES],
+    );
     const reEncrypted: Record<string, unknown> = {};
     const unrecoverable: StorageKey[] = [];
     let locked = false;

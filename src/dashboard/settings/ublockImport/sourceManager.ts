@@ -11,7 +11,7 @@ import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.j
 import { getPluralKey } from '../../../utils/i18nPlural.js';
 import { logWarn } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
-import { rebuildRulesFromSources } from './rulesBuilder.js';
+import { emptyUblockRules } from '../../../utils/derivedUblockRules.js';
 import type { Source } from '../../../utils/types.js';
 
 interface ReloadResult {
@@ -36,22 +36,11 @@ interface SaveResult {
 export const UBLOCK_STATUS_ID = 'uBlockStatus';
 
 /**
- * Extract only the fields that storage consumers read from merged rules.
- * `blockRules`/`exceptionRules` are `string[]` in RebuiltRules but `UblockRule[]`
- * in UblockRules — storing them would require a type-unsafe cast. Consumers
- * prefer `blockDomains`/`exceptionDomains` when present, so we only persist those.
+ * PBI 2026-11-06-01: `ublock_rules` は `ublock_sources` から導出できる
+ * キャッシュのため永続化しない。正本の sources のみを書き、`ublock_rules`
+ * には空の正規形を書くことで、既存の二重データも上書き消去される。
+ * 実行時判定は `domainUtils` が sources から導出する。
  */
-function buildRulesPayload(mergedRules: ReturnType<typeof rebuildRulesFromSources>): {
-  blockDomains: string[];
-  exceptionDomains: string[];
-  metadata: { importedAt: number; ruleCount: number };
-} {
-  return {
-    blockDomains: mergedRules.blockDomains,
-    exceptionDomains: mergedRules.exceptionDomains,
-    metadata: mergedRules.metadata,
-  };
-}
 
 /**
  * 保存済みソース一覧を読み込んで表示
@@ -76,12 +65,9 @@ export async function deleteSource(index: number, renderCallback?: (sources: Sou
 
   sources.splice(index, 1);
 
-  // ルールを再構築
-  const mergedRules = rebuildRulesFromSources(sources);
-
   await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
+    [StorageKeys.UBLOCK_RULES]: emptyUblockRules(),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: sources.length > 0
   });
 
@@ -139,12 +125,10 @@ export async function reloadSource(index: number, fetchFromUrlCallback: (url: st
     exceptionDomains
   };
 
-  // ルールを再構築
-  const mergedRules = rebuildRulesFromSources(sources);
-
+  // ルールは sources から導出されるため、導出キャッシュは空の正規形で書く
   await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules)
+    [StorageKeys.UBLOCK_RULES]: emptyUblockRules()
   });
 
   return {
@@ -202,12 +186,10 @@ export async function saveUblockSettings(text: string, url: string | null = null
     sources.push(newSource);
   }
 
-  // ルールを再構築
-  const mergedRules = rebuildRulesFromSources(sources);
-
+  // ルールは sources から導出されるため、導出キャッシュは空の正規形で書く
   await settingsRepository.setAll({
     [StorageKeys.UBLOCK_SOURCES]: sources,
-    [StorageKeys.UBLOCK_RULES]: buildRulesPayload(mergedRules),
+    [StorageKeys.UBLOCK_RULES]: emptyUblockRules(),
     [StorageKeys.UBLOCK_FORMAT_ENABLED]: true
   });
 

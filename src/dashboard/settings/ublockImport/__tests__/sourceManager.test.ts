@@ -649,4 +649,79 @@ describe('ublockImport - SourceManager Module', () => {
       }
     });
   });
+
+  // ========================================================================
+  // PBI 2026-11-06-01: 導出キャッシュの二重保持をやめる (単一コピー)
+  // ========================================================================
+
+  describe('ublock cache dedup', () => {
+    test('saveUblockSettings persists sources with an empty derived-rules cache', async () => {
+      await saveUblockSettings('||example.com^\n||test.com^');
+
+      const state = storageMocks.getStorageState();
+      expect(state.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
+      // 正本は sources のみ。導出キャッシュは空の正規形で書く。
+      expect(state.settings[StorageKeys.UBLOCK_RULES]).toEqual({
+        blockDomains: [],
+        exceptionDomains: [],
+        metadata: { importedAt: 0, ruleCount: 0 }
+      });
+      expect(JSON.stringify(state.settings[StorageKeys.UBLOCK_SOURCES])).toContain('example.com');
+    });
+
+    test('deleteSource clears a stale derived-rules cache', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [
+            { url: 'https://example.com/filters1.txt', ruleCount: 1, blockDomains: ['example.com'], exceptionDomains: [] },
+            { url: 'https://example.com/filters2.txt', ruleCount: 1, blockDomains: ['test.com'], exceptionDomains: [] }
+          ],
+          // 旧形式の二重データ (sources と同内容のマージ済みキャッシュ)
+          ublock_rules: {
+            blockDomains: ['example.com', 'test.com'],
+            exceptionDomains: [],
+            metadata: { importedAt: 1, ruleCount: 2 }
+          },
+          ublock_format_enabled: true
+        }
+      });
+
+      await deleteSource(0);
+
+      const state = storageMocks.getStorageState();
+      expect(state.settings[StorageKeys.UBLOCK_SOURCES]).toHaveLength(1);
+      expect(state.settings[StorageKeys.UBLOCK_RULES]).toEqual({
+        blockDomains: [],
+        exceptionDomains: [],
+        metadata: { importedAt: 0, ruleCount: 0 }
+      });
+    });
+
+    test('reloadSource clears a stale derived-rules cache', async () => {
+      storageMocks.setStorageState({
+        settings: {
+          ublock_sources: [
+            { url: 'https://example.com/filters.txt', ruleCount: 1, blockDomains: ['example.com'], exceptionDomains: [] }
+          ],
+          ublock_rules: {
+            blockDomains: ['example.com'],
+            exceptionDomains: [],
+            metadata: { importedAt: 1, ruleCount: 1 }
+          },
+          ublock_format_enabled: true
+        }
+      });
+
+      const fetchFromUrlCallback = vi.fn().mockResolvedValue('||newdomain.com^');
+      await reloadSource(0, fetchFromUrlCallback);
+
+      const state = storageMocks.getStorageState();
+      expect(state.settings[StorageKeys.UBLOCK_SOURCES][0].blockDomains).toEqual(['newdomain.com']);
+      expect(state.settings[StorageKeys.UBLOCK_RULES]).toEqual({
+        blockDomains: [],
+        exceptionDomains: [],
+        metadata: { importedAt: 0, ruleCount: 0 }
+      });
+    });
+  });
 });
