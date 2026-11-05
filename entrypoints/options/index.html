@@ -2623,6 +2623,17 @@
         <hr class="settings-hr">
 
         <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="migrationSectionTitle">Migrate from Another Profile</h3>
+          <p class="help-text" data-i18n="migrationSectionDesc">Apply settings and logs exported from a different browser or profile (Edge, Chrome, Firefox). The file signature cannot be verified, so an explicit confirmation is required.</p>
+          <button id="migrateSettingsBtn" class="secondary-btn" data-i18n="migrateSettingsBtn">Migrate Settings from File</button>
+          <input type="file" id="migrateSettingsFileInput" accept=".json" class="hidden" aria-hidden="true">
+          <button id="migrateLogsBtn" class="secondary-btn" data-i18n="migrateLogsBtn">Migrate Logs from File</button>
+          <input type="file" id="migrateLogsFileInput" accept=".json" class="hidden" aria-hidden="true">
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
           <h3 class="diag-section-title" data-i18n="encryptedBackupSectionTitle">Encrypted Backup</h3>
           <p class="help-text" data-i18n="encryptedBackupSectionDesc">Create or restore a backup of history and settings encrypted with a passphrase.</p>
           <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">Create Encrypted Backup</button>

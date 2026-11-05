@@ -123,6 +123,27 @@ export const DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
  * vs 10 MiB base64 text; do not merge them. */
 export const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
 
+/**
+ * Encrypted-backup file pick ceiling (dashboard encryptedBackupPanel).
+ * A backup legitimately embeds a base64 SQLite DB, so the selected file may
+ * be far larger than any other envelope payload. Kept here (not as a panel
+ * local) so the file gate and the envelope gate below cannot drift apart.
+ */
+export const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Encrypted-backup envelope PRE-DECODE base64 length cap (PBI 2026-11-06-02).
+ * Deliberately separate from the generic MAX_ENVELOPE_BASE64_LENGTH (10 MiB):
+ * raising the generic cap would widen the pre-auth allocation budget on every
+ * envelope consumer (VULN-036), while a backup is a user-picked local file
+ * already bounded by MAX_BACKUP_FILE_BYTES — the JSON envelope is ~data plus
+ * a small fixed overhead, so 50 MiB of base64 text stays inside the 50 MB
+ * file gate and its decode amplification (~37 MiB binary) is bounded by that
+ * same explicit user action. Never compare this against the 64 MiB binary
+ * ciphertext cap; base64 chars and decoded bytes are different layers.
+ */
+export const MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 50 * 1024 * 1024;
+
 /** AI provider HTTP JSON response cap (summary + testConnection). */
 export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
 

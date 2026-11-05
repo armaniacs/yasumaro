@@ -46,6 +46,7 @@ All notable changes to this project will be documented in this file.
 - 履歴からコレクションへの条件引き継ぎ（絞り込みを editor 草稿へ送る、カスタム範囲は拒否、recall 適用先をコレクション草稿に一本化） / History-to-collection handoff (filters sent to the editor draft, custom ranges refused, recall target unified to the collection draft)
 - リサーチセッションの単一コレクション化（ids 優先・200件超拒否・空無効・未読穴警告）と today プリセット（草稿注入のみ） / Single-session to collection (ids-first, 200+ refused, empty disabled, unread-hole warning) and a today preset (draft injection only)
 - 履歴一覧への複数句適用（句ごとの取得と ids 再取得、合算上限、除外件数表示、v1 経路は無改変） / Multi-clause application to the history list (per-clause fetch with ids refetch, combined caps, excluded-count display, v1 path untouched)
+- プロファイル間移行モード（Export/Importパネルに移行セクション新設。Edge・Chrome・Firefoxの全9通りの組み合わせに対応し、移行時は署名検証の代わりに明示確認ダイアログを経由。確認キャンセル時は無変更、成功時は監査ログに記録。通常インポートの拒否動作は不変） / Profile migration mode (new migration section in the Export/Import panel covering all 9 Edge/Chrome/Firefox combinations; migration goes through an explicit confirmation dialog instead of signature verification, canceling changes nothing, success is audit-logged; the normal import rejection behavior is unchanged)
 
 ### 修正 / Fixed
 
@@ -55,6 +56,7 @@ All notable changes to this project will be documented in this file.
 - マスターパスワード設定で弱いパスワードの本当の理由が表示されず「8文字以上」のままだった問題（文言キーが厳格化後のポリシーと不一致で真因を隠していた。SSOTの理由文をそのまま表示＋保存失敗をモーダル内にも表示＋確定時の古いエラーを消去） / Master-password setup hid the real weak-password reason behind a stale message (unified on the SSOT reason text, dual-painted save failures into the modal, stale errors cleared on pass)
 - プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加） / Encrypted-backup Confirm was dead unless the privacy panel had been opened (auth-modal listeners were attached only by the privacy panel mount; export/import mount now attaches them too with a double-attach guard)
 - uBlockフィルタのドメイン集合がソース側とマージ済みルール側に二重保存され設定エクスポートが28MBに膨張し10MiB上限に抵触していた問題（マージ済みルールの永続化を止めソースからの導出に一本化。旧二重データは読み時点で正規化し、設定は10KB級に戻る） / Duplicate uBlock domain storage bloated settings exports to 28MB past the 10MiB cap (merged rules are no longer persisted and are derived from sources instead; legacy duplicates normalize on read; settings shrink back to ~10KB)
+- 暗号化バックアップのenvelope上限10MiBとファイル上限50MBの不整合で履歴の多いバックアップが復号できなかった問題（バックアップ専用envelope上限50MiBを分離し汎用10MiBは不変。超過時は原因特定可能な文言でパスワード入力前に案内） / Encrypted backups with heavy history failed to decrypt from the 10MiB envelope cap contradicting the 50MB file cap (backup-specific 50MiB envelope cap split off, generic 10MiB unchanged; over-cap files are reported with the cause before the password prompt)
 
 ## [6.9.64] - 2026-10-31
 

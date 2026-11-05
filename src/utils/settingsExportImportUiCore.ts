@@ -18,10 +18,15 @@ import {
   validateExportData,
   exportEncryptedSettings,
   importEncryptedSettings,
+  importSettingsForMigration,
   saveEncryptedExportToFile,
   isEncryptedExport,
 } from './settingsExportImport.js';
-import type { ExportFileData, SettingsExportData } from './settingsExportImport.js';
+import type {
+  ExportFileData,
+  SettingsExportData,
+  SettingsImportRepo,
+} from './settingsExportImport.js';
 
 /** マスターパスワード認証モーダルを開く関数の型 */
 export type ShowPasswordAuthModal = (
@@ -53,6 +58,28 @@ export interface ExportContext {
   showStatus: (message: string, type: 'success' | 'error') => void;
   /** エクスポートエラー時のログ記録（popupのみ指定） */
   logExportError?: (cause: string) => void;
+}
+
+/** 移行ハンドラへの依存性注入口 (テストは fake repo を渡す)。 */
+export interface MigrationHandlerOptions {
+  repo?: SettingsImportRepo | undefined;
+}
+
+/**
+ * プロファイル間移行の明示確認ゲート (PBI 2026-11-06-03)。
+ * 移行は署名検証を緩和する唯一の経路のため、適用前に必ずこの確認を通す。
+ * 通常インポートはこの関数を使わず、検証失敗＝無条件拒否のまま。
+ */
+export async function confirmProfileMigration(): Promise<boolean> {
+  return showConfirmDialog({
+    title: getMessageOr('migrationConfirmTitle', 'Migrate from another profile'),
+    message: getMessageOr(
+      'migrationConfirmMessage',
+      'The file was exported from a different browser profile and its signature cannot be verified. Apply it anyway?'
+    ),
+    confirmLabel: getMessageOr('migrationConfirmButton', 'Migrate'),
+    dangerous: true,
+  });
 }
 
 /**
@@ -206,4 +233,63 @@ export async function handleFileImport(
   }
 
   onPlainFileValidated(parsed, text);
+}
+
+/**
+ * プロファイル間移行ハンドラ (PBI 2026-11-06-03)。
+ * 他プロファイル署名 (または無署名) の平文ファイルを、明示確認を経て
+ * `importSettingsForMigration` で適用する。通常の `handleFileImport` とは
+ * 別入口であり、通常経路の検証・拒否動作には一切触れない。
+ *
+ * 暗号化ファイルは対象外 (パスワード経路が別にある) として拒否する。
+ * 確認キャンセル時は `false` を返し、何も変更しない。
+ */
+export async function handleMigrationSettingsImport(
+  file: File,
+  ctx: ImportContext,
+  opts?: MigrationHandlerOptions
+): Promise<boolean> {
+  let text: string;
+  try {
+    text = await file.text();
+  } catch (error) {
+    ctx.logImportError?.(errorMessage(error));
+    ctx.showStatus(`${getMessage('importError')}: ${errorMessage(error)}`, 'error');
+    return false;
+  }
+
+  let parsed: ExportFileData;
+  try {
+    parsed = JSON.parse(text) as ExportFileData;
+  } catch (error) {
+    ctx.logImportError?.(errorMessage(error));
+    ctx.showStatus(`${getMessage('importError')}: ${errorMessage(error)}`, 'error');
+    return false;
+  }
+
+  if (isEncryptedExport(parsed)) {
+    ctx.logImportError?.('encrypted export on plaintext migration path');
+    ctx.showStatus(getMessage('invalidSettingsFile'), 'error');
+    return false;
+  }
+
+  if (!validateExportData(parsed)) {
+    ctx.showStatus(getMessage('invalidSettingsFile'), 'error');
+    return false;
+  }
+
+  const confirmed = await confirmProfileMigration();
+  if (!confirmed) {
+    return false;
+  }
+
+  try {
+    const imported = await importSettingsForMigration(text, { repo: opts?.repo });
+    await applyImportedSettings(ctx, imported, 'Failed to apply migration settings');
+  } catch (error) {
+    ctx.logImportError?.(errorMessage(error));
+    ctx.showStatus(`${getMessage('importError')}: ${errorMessage(error)}`, 'error');
+    return false;
+  }
+  return true;
 }

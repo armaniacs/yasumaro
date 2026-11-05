@@ -15,13 +15,16 @@ import {
   handleExport,
   handleFileImport,
   applyImportedSettings,
+  confirmProfileMigration,
+  handleMigrationSettingsImport,
 } from '../utils/settingsExportImportUiCore.js';
 import type { ExportContext, ImportContext } from '../utils/settingsExportImportUiCore.js';
 import { loadDomainSettings } from './settings/domainFilter.js';
 import { loadPrivacySettings } from './settings/privacySettings.js';
 import { loadContentSettings } from './settings/contentSettings.js';
 import { loadTrustSettings } from './settings/trustSettings.js';
-import { importFromJson, isImportError } from './importLogsService.js';
+import { importFromJson, importFromJsonForMigration, isImportError } from './importLogsService.js';
+import type { ImportLogsResult } from './importLogsService.js';
 
 interface ExportImportDom {
   exportSettingsBtn: HTMLButtonElement | null;
@@ -30,6 +33,10 @@ interface ExportImportDom {
   importLogsBtn: HTMLButtonElement | null;
   importLogsFileInput: HTMLInputElement | null;
   importLogsProgress: HTMLElement | null;
+  migrateSettingsBtn: HTMLButtonElement | null;
+  migrateSettingsFileInput: HTMLInputElement | null;
+  migrateLogsBtn: HTMLButtonElement | null;
+  migrateLogsFileInput: HTMLInputElement | null;
   importConfirmModal: HTMLElement | null;
   closeImportModalBtn: HTMLButtonElement | null;
   cancelImportBtn: HTMLButtonElement | null;
@@ -83,6 +90,10 @@ export function createExportImport(): ExportImportController {
       importLogsBtn: document.getElementById('importLogsBtn') as HTMLButtonElement | null,
       importLogsFileInput: document.getElementById('importLogsFileInput') as HTMLInputElement | null,
       importLogsProgress: document.getElementById('importLogsProgress') as HTMLElement | null,
+      migrateSettingsBtn: document.getElementById('migrateSettingsBtn') as HTMLButtonElement | null,
+      migrateSettingsFileInput: document.getElementById('migrateSettingsFileInput') as HTMLInputElement | null,
+      migrateLogsBtn: document.getElementById('migrateLogsBtn') as HTMLButtonElement | null,
+      migrateLogsFileInput: document.getElementById('migrateLogsFileInput') as HTMLInputElement | null,
       importConfirmModal: document.getElementById('importConfirmModal') as HTMLElement | null,
       closeImportModalBtn: document.getElementById('closeImportModalBtn') as HTMLButtonElement | null,
       cancelImportBtn: document.getElementById('cancelImportBtn') as HTMLButtonElement | null,
@@ -223,6 +234,32 @@ export function createExportImport(): ExportImportController {
       if (e.target === dom?.importConfirmModal) closeImportModal();
     }) as EventListener);
 
+    function showLogsProgress(current?: number, total?: number): void {
+      ensureDom();
+      if (!dom?.importLogsProgress) return;
+      dom.importLogsProgress.classList.remove('hidden');
+      const base = getMessageOr('importLogsProcessing', 'Importing...');
+      dom.importLogsProgress.textContent =
+        current === undefined || total === undefined ? base : `${base} ${current}/${total}`;
+      dom.importLogsProgress.className = 'diag-result';
+    }
+
+    function renderLogsImportResult(result: ImportLogsResult): void {
+      ensureDom();
+      if (!dom?.importLogsProgress) return;
+      if (isImportError(result)) {
+        dom.importLogsProgress.textContent = formatImportLogsError(result.error);
+        dom.importLogsProgress.className = 'diag-result error';
+      } else {
+        const msg = (getMessageOr('importLogsComplete', 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)'))
+          .replace('%{inserted}', String(result.inserted))
+          .replace('%{skipped}', String(result.skipped))
+          .replace('%{total}', String(result.total));
+        dom.importLogsProgress.textContent = `✓ ${msg}`;
+        dom.importLogsProgress.className = 'diag-result success';
+      }
+    }
+
     // --- Log Import ---
     listen(dom?.importLogsBtn, 'click', (() => {
       ensureDom();
@@ -234,45 +271,72 @@ export function createExportImport(): ExportImportController {
       const file = input.files?.[0];
       if (!file) return;
 
-      ensureDom();
-      if (dom?.importLogsProgress) {
-        dom.importLogsProgress.classList.remove('hidden');
-        dom.importLogsProgress.textContent = getMessageOr('importLogsProcessing', 'Importing...');
-        dom.importLogsProgress.className = 'diag-result';
-      }
+      showLogsProgress();
 
       try {
         const text = await file.text();
         const result = await importFromJson(text, (current, total) => {
-          if (dom?.importLogsProgress) {
-            dom.importLogsProgress.textContent = `${getMessageOr('importLogsProcessing', 'Importing...')} ${current}/${total}`;
-          }
+          showLogsProgress(current, total);
         });
 
-        if (isImportError(result)) {
-          if (dom?.importLogsProgress) {
-            dom.importLogsProgress.textContent = formatImportLogsError(result.error);
-            dom.importLogsProgress.className = 'diag-result error';
-          }
-        } else {
-          const msg = (getMessageOr('importLogsComplete', 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)'))
-            .replace('%{inserted}', String(result.inserted))
-            .replace('%{skipped}', String(result.skipped))
-            .replace('%{total}', String(result.total));
-          if (dom?.importLogsProgress) {
-            dom.importLogsProgress.textContent = `✓ ${msg}`;
-            dom.importLogsProgress.className = 'diag-result success';
-          }
-        }
+        renderLogsImportResult(result);
       } catch (error: unknown) {
-        if (dom?.importLogsProgress) {
-          dom.importLogsProgress.textContent = formatImportLogsError(errorMessage(error));
-          dom.importLogsProgress.className = 'diag-result error';
-        }
+        renderLogsImportResult({ error: errorMessage(error) });
       }
 
       ensureDom();
       if (dom?.importLogsFileInput) dom.importLogsFileInput.value = '';
+    }) as EventListener);
+
+    // --- Profile Migration (PBI 2026-11-06-03) ---
+    // Separate entry points from the normal import above: foreign-signed
+    // files keep being rejected there, and only an explicit confirmation
+    // (`confirmProfileMigration`) opens the relaxed-verification path.
+    listen(dom?.migrateSettingsBtn, 'click', (() => {
+      ensureDom();
+      dom?.migrateSettingsFileInput?.click();
+    }) as EventListener);
+
+    listen(dom?.migrateSettingsFileInput, 'change', (async (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      const file = input.files?.[0];
+      if (!file) return;
+
+      await handleMigrationSettingsImport(file, importCtx);
+
+      ensureDom();
+      if (dom?.migrateSettingsFileInput) dom.migrateSettingsFileInput.value = '';
+    }) as EventListener);
+
+    listen(dom?.migrateLogsBtn, 'click', (() => {
+      ensureDom();
+      dom?.migrateLogsFileInput?.click();
+    }) as EventListener);
+
+    listen(dom?.migrateLogsFileInput, 'change', (async (e: Event) => {
+      const input = e.target as HTMLInputElement;
+      const file = input.files?.[0];
+      if (!file) return;
+
+      try {
+        const text = await file.text();
+        const confirmed = await confirmProfileMigration();
+        if (!confirmed) {
+          ensureDom();
+          if (dom?.migrateLogsFileInput) dom.migrateLogsFileInput.value = '';
+          return;
+        }
+        showLogsProgress();
+        const result = await importFromJsonForMigration(text, (current, total) => {
+          showLogsProgress(current, total);
+        });
+        renderLogsImportResult(result);
+      } catch (error: unknown) {
+        renderLogsImportResult({ error: errorMessage(error) });
+      }
+
+      ensureDom();
+      if (dom?.migrateLogsFileInput) dom.migrateLogsFileInput.value = '';
     }) as EventListener);
   }
 

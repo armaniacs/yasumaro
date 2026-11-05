@@ -14,15 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-06 Edge→Chrome移行障害の是正（3件） ― ✅ 01完了・アーカイブ済み＋⬜ 02/03未着手 RICE順: ~~01(24)~~ → 02(9.6) → 03(9.6・02と同点だが暗号化経路の確定を先に)
+### 2026-11-06 Edge→Chrome移行障害の是正（3件） ― ✅ 3件完了・アーカイブ済み RICE順: ~~01(24)~~ → ~~02(9.6)~~ → ~~03(9.6・02と同点だが暗号化経路の確定を先に)~~
 
-Edge実機移行で発覚した3障害をRICE採点してPBI化。01はuBlock二重保持の解消で設定28MB→10KB級にしサイズ上限問題を根本解決（実装済み）。02は暗号化バックアップのenvelope上限とファイル上限の不整合解消。03は公式の3ブラウザ間移行モード。詳細は下の各PBIを参照。
+Edge実機移行で発覚した3障害をRICE採点してPBI化。01はuBlock二重保持の解消で設定28MB→10KB級に。02は暗号化バックアップのenvelope上限とファイル上限の不整合解消（バックアップ専用50MiB上限を分離、汎用10MiBは不変）。03は公式の3ブラウザ間移行モード（明示確認ゲート付き移行経路、通常経路の拒否動作は不変、全9通りをunit+統合で検証、Playwright実ブラウザE2Eは未追加）。詳細は下の各PBIを参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
 | ~~01~~ | [2026-11-06-01-fix-ublock-cache-dedup.md](../dev-docs/archived/pbi/2026-11-06-01-fix-ublock-cache-dedup.md) | 🔧非機能追加 | 24 | M | ✅ 完了。設定28MB→10KB級。R8×I3×C1.0。`npm run validate`+両ブラウザbuild緑 |
-| 02 | [2026-11-06-02-fix-encrypted-backup-cap.md](2026-11-06-02-fix-encrypted-backup-cap.md) | 🔧非機能追加 | 9.6 | M | R4×I3×C0.8。履歴の多いユーザの正規移行ルート復活 |
-| 03 | [2026-11-06-03-feat-profile-migration.md](2026-11-06-03-feat-profile-migration.md) | ✨機能追加 | 9.6 | L | R6×I2×C0.8。02と同点だが暗号化経路の確定を先に。全9通りの移行 |
+| ~~02~~ | [2026-11-06-02-fix-encrypted-backup-cap.md](../dev-docs/archived/pbi/2026-11-06-02-fix-encrypted-backup-cap.md) | 🔧非機能追加 | 9.6 | M | ✅ 完了。R4×I3×C0.8。バックアップ専用上限分離。`npm run validate`+両ブラウザbuild緑 |
+| ~~03~~ | [2026-11-06-03-feat-profile-migration.md](../dev-docs/archived/pbi/2026-11-06-03-feat-profile-migration.md) | ✨機能追加 | 9.6 | L | ✅ 完了。R6×I2×C0.8。全9通りをunit+統合で検証。Playwright実ブラウザE2Eは未追加 |
 
 ### 2026-11-05 logger flush合流フォロー（1件） ― ⬜ 1件未着手
 
@@ -660,6 +660,11 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 ### 2026-11-06 Edge→Chrome移行障害01 アーカイブ ― 1件
 
 - **2026-11-06-01-fix-ublock-cache-dedup**: `ublock_rules` の永続化を止め `ublock_sources` からの導出に一本化（`src/utils/derivedUblockRules.ts` 新設）。設定28MB→10KB級。旧二重データは読み時点で正規化。`npm run validate` 緑＋chromium/firefox両build緑。版 6.9.65。
+
+### 2026-11-06 Edge→Chrome移行障害02・03 アーカイブ ― 2件
+
+- **2026-11-06-02-fix-encrypted-backup-cap**: バックアップ専用envelope上限50MiBを分離（汎用10MiBは不変、VULN-036維持）。超過時は原因特定可能な文言でパスワード入力前に案内。`npm run validate` 緑＋両build緑。
+- **2026-11-06-03-feat-profile-migration**: Export/Importパネルに移行セクション追加（明示確認ゲート付き移行経路、通常経路の拒否動作は不変、全9通りをunit+統合45+20テストで検証、Playwright実ブラウザE2Eは未追加）。版 6.9.66。
 
 ### 2026-11-02 履歴パネル独立化の後発 PBI 06 アーカイブ ― 1件
 

@@ -866,6 +866,27 @@
   "importLogsBtn": {
     "message": "Import Logs from JSON"
   },
+  "migrationSectionTitle": {
+    "message": "Migrate from Another Profile"
+  },
+  "migrationSectionDesc": {
+    "message": "Apply settings and logs exported from a different browser or profile (Edge, Chrome, Firefox). The file signature cannot be verified, so an explicit confirmation is required."
+  },
+  "migrateSettingsBtn": {
+    "message": "Migrate Settings from File"
+  },
+  "migrateLogsBtn": {
+    "message": "Migrate Logs from File"
+  },
+  "migrationConfirmTitle": {
+    "message": "Migrate from another profile"
+  },
+  "migrationConfirmMessage": {
+    "message": "This file was exported from a different browser profile and its signature cannot be verified. Only continue if you exported it yourself. Current settings and history will be overwritten. Continue?"
+  },
+  "migrationConfirmButton": {
+    "message": "Migrate"
+  },
   "importLogsProcessing": {
     "message": "Importing..."
   },

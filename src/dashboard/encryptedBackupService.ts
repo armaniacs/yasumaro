@@ -6,7 +6,7 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { exportDb } from './exportLogsService.js';
 import { restoreDb, isServiceError } from './dashboardSqliteService.js';
-import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
+import { encryptEnvelope, decryptBackupEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
 import type { EncryptionEnvelope } from '../utils/crypto/index.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -74,7 +74,12 @@ export async function importEncryptedBackup(
   let json: string;
   try {
     onStage?.('decrypting');
-    json = await decryptEnvelope(envelope, password);
+    // WHY backup context, not the generic decryptEnvelope: a legitimate
+    // backup embeds a base64 SQLite DB and may exceed the generic 10 MiB
+    // pre-decode cap. The backup cap (limits.ts) is still a pre-auth length
+    // gate — cheap-auth-first order is unchanged — it only budgets for the
+    // file size the panel already enforces at pick time.
+    json = await decryptBackupEnvelope(envelope, password);
   } catch (error) {
     return { success: false, error: `Decryption failed: ${errorMessage(error)}` };
   }

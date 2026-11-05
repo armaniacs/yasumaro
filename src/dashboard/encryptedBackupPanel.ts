@@ -3,7 +3,7 @@
  * ダッシュボードの「暗号化バックアップ」ボタン・モーダルの結線
  */
 
-import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../utils/limits.js';
+import { MAX_BACKUP_FILE_BYTES, MAX_BACKUP_ENVELOPE_BASE64_LENGTH } from '../utils/limits.js';
 import { showPasswordAuthModal, setPasswordAuthProgress } from './masterPassword.js';
 import { logDebug } from '../utils/logger/api.js';
 import {
@@ -17,10 +17,7 @@ import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { withBusyButton } from './panels/asyncData/busyButton.js';
 
-/** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
-const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
-/** Upper bound on the base64 ciphertext field of an envelope. */
-const MAX_ENVELOPE_CIPHERTEXT_LENGTH = ENVELOPE_CIPHERTEXT_LIMIT;
+/** Upper bound on the base64 ciphertext field of a backup envelope (SSOT: limits.ts). */
 
 function getExportFilename(): string {
   const date = new Date();
@@ -120,13 +117,19 @@ export function initEncryptedBackupPanel(): void {
         return;
       }
 
-      // Envelope-length validation at the boundary: reject an envelope whose
-      // ciphertext field alone would amplify into an oversized allocation.
+      // Envelope-length validation at the boundary (PBI 2026-11-06-02): reject
+      // an envelope whose data field alone exceeds the BACKUP base64 cap
+      // before the password prompt. This is the base64-text layer
+      // (MAX_BACKUP_ENVELOPE_BASE64_LENGTH) — never the 64 MiB binary
+      // ciphertext cap, which measures decoded bytes and is a different layer.
+      // An over-cap file is reported as too large (cause-identifying), not as
+      // an invalid file, and decryption is never attempted (VULN-036 order:
+      // file size -> shape -> envelope length -> KDF/auth decrypt).
       if (
         typeof parsed.data === 'string' &&
-        parsed.data.length > MAX_ENVELOPE_CIPHERTEXT_LENGTH
+        parsed.data.length > MAX_BACKUP_ENVELOPE_BASE64_LENGTH
       ) {
-        setStatus(getMessageOr('encryptedBackupInvalidFile', '不正なバックアップファイルです'), true);
+        setStatus(getMessageOr('encryptedBackupFileTooLarge', 'Backup file is too large'), true);
         if (importFileInput) importFileInput.value = '';
         return;
       }

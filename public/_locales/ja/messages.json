@@ -812,6 +812,27 @@
   "importLogsBtn": {
     "message": "JSON からログをインポート"
   },
+  "migrationSectionTitle": {
+    "message": "別のプロファイルから移行"
+  },
+  "migrationSectionDesc": {
+    "message": "別のブラウザやプロファイル (Edge・Chrome・Firefox) からエクスポートした設定とログを適用します。ファイルの署名は検証できないため、明示的な確認が必要です。"
+  },
+  "migrateSettingsBtn": {
+    "message": "ファイルから設定を移行"
+  },
+  "migrateLogsBtn": {
+    "message": "ファイルからログを移行"
+  },
+  "migrationConfirmTitle": {
+    "message": "別のプロファイルから移行"
+  },
+  "migrationConfirmMessage": {
+    "message": "このファイルは別のブラウザプロファイルからエクスポートされたため、署名を検証できません。自分でエクスポートしたファイルの場合のみ続行してください。現在の設定と履歴は上書きされます。続行しますか?"
+  },
+  "migrationConfirmButton": {
+    "message": "移行する"
+  },
   "importLogsProcessing": {
     "message": "インポート中..."
   },
