@@ -177,6 +177,7 @@ describe('exportImport-r2 — Import logs', () => {
         () => expect(progress.textContent).toContain('Invalid format'),
         { interval: 1 }
     );
+    expect(progress.textContent).not.toContain('%{error}');
     expect(progress.className).toContain('error');
   });
 
@@ -196,6 +197,7 @@ describe('exportImport-r2 — Import logs', () => {
         () => expect(progress.textContent).toContain('parse error'),
         { interval: 1 }
     );
+    expect(progress.textContent).not.toContain('%{error}');
     expect(progress.className).toContain('error');
   });
 

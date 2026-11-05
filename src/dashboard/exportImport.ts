@@ -37,6 +37,17 @@ interface ExportImportDom {
   importPreview: HTMLElement | null;
 }
 
+/**
+ * Format a log-import failure message. The locale template carries a
+ * `%{error}` placeholder (same convention as `importLogsComplete`); when
+ * the resolved template lacks it (missing key, test stub), the detail is
+ * appended instead of dropping it.
+ */
+function formatImportLogsError(error: string): string {
+  const template = getMessageOr('importLogsError', 'Import error: %{error}');
+  return template.includes('%{error}') ? template.replace('%{error}', error) : `${template}: ${error}`;
+}
+
 export interface ExportImportController {
   /** Wire every export/import button. Re-resolves the DOM first. */
   initExportImport(): void;
@@ -240,7 +251,7 @@ export function createExportImport(): ExportImportController {
 
         if (isImportError(result)) {
           if (dom?.importLogsProgress) {
-            dom.importLogsProgress.textContent = `${getMessageOr('importLogsError', 'Import error')}: ${result.error}`;
+            dom.importLogsProgress.textContent = formatImportLogsError(result.error);
             dom.importLogsProgress.className = 'diag-result error';
           }
         } else {
@@ -255,7 +266,7 @@ export function createExportImport(): ExportImportController {
         }
       } catch (error: unknown) {
         if (dom?.importLogsProgress) {
-          dom.importLogsProgress.textContent = `${getMessageOr('importLogsError', 'Import error')}: ${errorMessage(error)}`;
+          dom.importLogsProgress.textContent = formatImportLogsError(errorMessage(error));
           dom.importLogsProgress.className = 'diag-result error';
         }
       }
