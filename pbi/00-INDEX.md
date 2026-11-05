@@ -21,6 +21,7 @@ B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing`
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
 | 01 | [2026-11-05-01-fix-logger-flush-coalesce.md](2026-11-05-01-fix-logger-flush-coalesce.md) | 🔧非機能追加 | 1.5 | 0.2 | 同時完了は稀・アラームが上限保証。never-flush配線＋並行recordのpinで検証 |
+| 02 | [2026-11-05-02-fix-review-residuals.md](2026-11-05-02-fix-review-residuals.md) | 🔧非機能追加 | 1.2 | 0.25 | 土台レビュー残件（開示・上限・微性能）。HIGH・spoof・ids上限は先行修正済み |
 
 ### 2026-11-02 A/B/D/E コレクション活用の配線（なぜなぜ90連、7件） ― ⬜ 7件未着手 RICE順: 01(1.44) → 02(0.90) → 03(0.72) → 04(0.56) → 05(0.42) → 06(0.36) → 07(0.28・延期可)
 

@@ -26,7 +26,7 @@ import { queryHistory, isServiceError } from './sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { resolveCollectionQueries } from './collectionScopeResolver.js';
 import { parseCollectionQueryV2, mergeClauseResults } from '../../../utils/collectionQueryV2.js';
-import { MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS, MAX_QUERY_IDS } from '../../../utils/limits.js';
+import { MAX_AND_CLAUSE_WINDOW, MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS, MAX_QUERY_IDS } from '../../../utils/limits.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
@@ -106,8 +106,12 @@ export async function resolveCollectionHistory(
   const rowById = new Map<number, BrowsingLogEntry>();
   const idSets: number[][] = [];
   for (const clause of resolved) {
+    // AND intersects the per-clause id sets, so each clause fetches with
+    // the raised window (a 200-capped fetch would drop matches at position
+    // 201+ before the intersect runs — same precedent as the report path).
+    // OR unions, which cannot lose matches to a pre-slice, keeps the row cap.
     const result = await runQuery({
-      limit: MAX_COLLECTION_ROWS,
+      limit: parsed.op === 'and' ? MAX_AND_CLAUSE_WINDOW : MAX_COLLECTION_ROWS,
       offset: 0,
       sortBy: 'created_at',
       sortDir,

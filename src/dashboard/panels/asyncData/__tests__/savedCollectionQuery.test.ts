@@ -6,6 +6,7 @@
  * summary joins the present conditions only.
  */
 import { describe, it, expect } from 'vitest';
+import { MAX_QUERY_IDS } from '../../../../utils/limits.js';
 import {
   serializeCollectionQuery,
   hasCollectionCondition,
@@ -132,6 +133,21 @@ describe('savedCollectionQuery v2', () => {
     it('fails closed to empty clauses on unknown shapes', () => {
       expect(parseCollectionQueryV2(null).clauses).toEqual([]);
       expect(parseCollectionQueryV2('x').clauses).toEqual([]);
+    });
+    it('truncates over-long id lists to MAX_QUERY_IDS', () => {
+      const ids = Array.from({ length: MAX_QUERY_IDS + 50 }, (_, i) => i);
+      const parsed = parseCollectionQueryV2({ version: 2, op: 'or', clauses: [], ids });
+      expect(parsed.ids).toHaveLength(MAX_QUERY_IDS);
+      expect(parsed.ids).toEqual(ids.slice(0, MAX_QUERY_IDS));
+    });
+    it('drops float, negative, NaN and non-number ids (no DB row can match them)', () => {
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [],
+        ids: [1, 1.5, -2, NaN, Infinity, '3', null, 4],
+      });
+      expect(parsed.ids).toEqual([1, 4]);
     });
   });
 });

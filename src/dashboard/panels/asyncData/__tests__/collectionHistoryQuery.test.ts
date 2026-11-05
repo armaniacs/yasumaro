@@ -14,7 +14,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { resolveCollectionHistory } from '../collectionHistoryQuery.js';
 import type { UnifiedHistoryQueryOptions } from '../sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from '../sqliteHistoryQuery.js';
-import { MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS } from '../../../../utils/limits.js';
+import { MAX_AND_CLAUSE_WINDOW, MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS } from '../../../../utils/limits.js';
 
 function makeRow(id: number, createdAt = 1700000000000 + id * 1000): BrowsingLogEntry {
   return { id, url: `https://example.com/${id}`, title: `Example ${id}`, created_at: createdAt };
@@ -261,6 +261,25 @@ describe('collectionHistoryQuery', () => {
       const outcome = await resolveCollectionHistory(query, runQuery as never);
 
       expect(outcome).toEqual({ error: 'historyLoadError' });
+    });
+
+    it('fetches each clause with the AND window for and and the row cap for or', async () => {
+      const runQuery = vi.fn<QueryFn>(async () => rowsResult([makeRow(1)]));
+      const clauses = [
+        { search: 'alpha', tag: null, date: null },
+        { search: 'beta', tag: null, date: null },
+      ];
+
+      await resolveCollectionHistory({ version: 2, op: 'and', clauses, ids: [] }, runQuery as never);
+      for (const call of runQuery.mock.calls) {
+        expect(call[0]).toMatchObject({ limit: MAX_AND_CLAUSE_WINDOW });
+      }
+
+      runQuery.mockClear();
+      await resolveCollectionHistory({ version: 2, op: 'or', clauses, ids: [] }, runQuery as never);
+      for (const call of runQuery.mock.calls) {
+        expect(call[0]).toMatchObject({ limit: MAX_COLLECTION_ROWS });
+      }
     });
 
     it('reads the collapsed single-clause flat shape and fails closed on garbage', async () => {

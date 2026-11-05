@@ -27,7 +27,7 @@ import { Mutex } from '../utils/Mutex.js';
 import { formatLocalDateString } from '../utils/localDate.js';
 import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
+import { MAX_AND_CLAUSE_WINDOW, MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 import { mergeClauseResults } from '../utils/collectionQueryV2.js';
 import { addLog } from '../utils/logger/core.js';
 import { LogType } from '../utils/logger/types.js';
@@ -58,7 +58,7 @@ export const REPORT_MAX_RECORDS = MAX_BATCH_READ_RECORDS;
  * the OR path keeps REPORT_MAX_RECORDS: a union cannot lose matches to a
  * pre-slice the way an intersect can.
  */
-export const AND_CLAUSE_WINDOW = 2000;
+export const AND_CLAUSE_WINDOW = MAX_AND_CLAUSE_WINDOW;
 
 /** One report row: id + the post-cleansing text the report quotes. */
 export interface ResearchReportRecord {
@@ -156,7 +156,7 @@ export function buildResearchReportMarkdown(
   const capNote = meta.truncated === true
     ? '\n注意: 対象が200件を超えたため、先頭200件で生成しています。'
     : '';
-  return `# 調査レポート: ${meta.title}
+  return `# 調査レポート: ${sanitizeForObsidian(meta.title)}
 
 Generated on: ${formatLocalDateString(meta.now)}
 ${header}${capNote}

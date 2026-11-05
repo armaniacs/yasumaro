@@ -24,5 +24,9 @@ describe('collectionScopeResolver', () => {
       expect(mergeClauseResults([[1, 2], [2, 3]], 'or')).toEqual([1, 2, 3]);
       expect(mergeClauseResults([[1, 2], [2, 3]], 'and')).toEqual([2]);
     });
+    it('intersects across every trailing set for and', () => {
+      expect(mergeClauseResults([[1, 2, 3, 4], [2, 3, 4, 5], [3, 4, 6]], 'and')).toEqual([3, 4]);
+      expect(mergeClauseResults([[1, 2], [3, 4], [1, 2, 3, 4]], 'and')).toEqual([]);
+    });
   });
 });

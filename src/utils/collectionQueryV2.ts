@@ -16,6 +16,8 @@
  * a corrupted query degrades to "no conditions" instead of poisoning recall.
  */
 
+import { MAX_QUERY_IDS } from './limits.js';
+
 export interface CollectionClause {
   search: string;
   tag: string | null;
@@ -45,7 +47,9 @@ export function parseCollectionQueryV2(raw: unknown): CollectionQueryV2 {
   if (typeof raw !== 'object' || raw === null) return { version: 2, op: 'and', clauses: [], ids: [] };
   const r = raw as Record<string, unknown>;
   const ids = Array.isArray(r['ids'])
-    ? (r['ids'] as unknown[]).filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+    ? (r['ids'] as unknown[])
+        .filter((v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0)
+        .slice(0, MAX_QUERY_IDS)
     : [];
   if (Array.isArray(r['clauses'])) {
     const clauses = (r['clauses'] as unknown[]).flatMap((c) => {
@@ -73,8 +77,9 @@ export function mergeClauseResults(idSets: number[][], op: 'and' | 'or'): number
   }
   const first = new Set(idSets[0]);
   for (const s of idSets.slice(1)) {
+    const rest = new Set(s);
     for (const id of [...first]) {
-      if (!s.includes(id)) first.delete(id);
+      if (!rest.has(id)) first.delete(id);
     }
   }
   return [...first].sort((a, b) => a - b);

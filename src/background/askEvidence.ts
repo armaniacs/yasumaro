@@ -186,8 +186,11 @@ export function nameEvidenceGap(
  * (`or`: any clause, `and`: every clause). One clause matches on its own
  * tag membership (SQL-compatible partial match, same predicate the report
  * path applies) and its own local day range. An empty clause list is
- * unscoped (every row survives); an unresolvable scope matches nothing
- * (fail-closed — the handler answers before searching, this is the belt).
+ * unscoped only when no ids pin it (`ids:[]` — every row survives); with
+ * pinned ids it is pins-only (only the pinned rows survive, matching the
+ * report path, which unions the pins alone). An unresolvable scope matches
+ * nothing (fail-closed — the handler answers before searching, this is the
+ * belt).
  */
 export function matchesCollectionScope(
   row: BrowsingLogRecord,
@@ -195,7 +198,7 @@ export function matchesCollectionScope(
 ): boolean {
   if (scope.unresolvable) return false;
   if (row.id !== undefined && scope.ids.includes(row.id)) return true;
-  if (scope.clauses.length === 0) return true;
+  if (scope.clauses.length === 0) return scope.ids.length === 0;
   if (scope.op === 'or') {
     return scope.clauses.some((clause) => matchesScopeClause(row, clause));
   }

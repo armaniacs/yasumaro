@@ -181,6 +181,21 @@ describe('askEvidence', () => {
       expect(scope.unresolvable).toBe(false);
       expect(matchesCollectionScope(makeRow(1, { tags: 'anything' }), scope)).toBe(true);
     });
+
+    it('restricts a pins-only scope to the pinned ids', () => {
+      const scope = normalizeCollectionScope({ version: 2, op: 'or', clauses: [], ids: [5] });
+      expect(scope).toEqual({ op: 'or', clauses: [], ids: [5], unresolvable: false });
+      expect(matchesCollectionScope(makeRow(5, { tags: 'anything' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(6, { tags: 'anything' }), scope)).toBe(false);
+    });
+
+    it('keeps every row for a truly-unscoped scope (empty clauses and empty ids)', () => {
+      const scope = normalizeCollectionScope(null);
+      expect(scope.clauses).toEqual([]);
+      expect(scope.ids).toEqual([]);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'alpha' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(2, { tags: 'beta' }), scope)).toBe(true);
+    });
   });
 
   describe('buildUnsupportedScopeSuggestion', () => {

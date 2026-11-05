@@ -89,6 +89,16 @@ describe('buildResearchReportMarkdown — BDD (要旨・時系列・引用・未
     expect(markdown).toContain('Record 2');
   });
 
+  it('sanitizes markdown links and wikilinks in the header title (no raw spoof)', () => {
+    const records = [makeRecord(1)];
+    const markdown = buildResearchReportMarkdown(records, { title: '[x](https://evil.example) [[wikilink]]', now: 1 });
+    const header = markdown?.split('\n')[0] ?? '';
+    expect(header).not.toContain('[x](https://evil.example)');
+    expect(header).not.toContain('[[wikilink]]');
+    expect(header).toContain('\\[x\\]\\(https://evil.example\\)');
+    expect(header).toContain('\\[\\[wikilink\\]\\]');
+  });
+
   it('returns null for an empty selection (縮退の出口: 偽成功にしない)', () => {
     expect(buildResearchReportMarkdown([], { title: 't', now: 1 })).toBeNull();
   });

@@ -198,6 +198,17 @@ export const MAX_COLLECTION_FANOUT = 8;
 export const MAX_COLLECTION_ROWS = 200;
 
 /**
+ * Per-clause id window for AND collections (PBI 2026-11-02-04 precedent in
+ * the research report path). AND intersects the per-clause id sets, so
+ * fetching each clause with only MAX_COLLECTION_ROWS rows would silently
+ * drop matches at position 201+ before the intersect runs. The raised window
+ * keeps the intersect honest while staying well under QUERY_CAPS (plain
+ * 10000 / fts 100000). OR keeps MAX_COLLECTION_ROWS: a union cannot lose
+ * matches to a pre-slice the way an intersect can.
+ */
+export const MAX_AND_CLAUSE_WINDOW = 2000;
+
+/**
  * Payload size caps. Oversized payloads are rejected (not truncated) so a
  * compromised or buggy sender cannot exhaust SW memory or chrome.storage
  * quota via the recording pipeline.
