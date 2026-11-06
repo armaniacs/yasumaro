@@ -670,6 +670,44 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
       expect(sentMaxTokens(fetch.mock.calls[0]!)).toBe(16);
     });
 
+    it('climbs the full ladder to 1024 after repeated length cutoffs', async () => {
+      const fetch = await retryFetchMock();
+      for (let i = 0; i < 3; i += 1) {
+        fetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+        } as Response);
+      }
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
+      } as Response);
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(true);
+      expect(result.message).toContain('Connected to AI API');
+      expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch.mock.calls.map(sentMaxTokens)).toEqual([16, 256, 512, 1024]);
+    });
+
+    it('fails after exactly 4 fetches when every attempt is cut off (no infinite loop)', async () => {
+      const fetch = await retryFetchMock();
+      for (let i = 0; i < 4; i += 1) {
+        fetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+        } as Response);
+      }
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(false);
+      expect(fetch).toHaveBeenCalledTimes(4);
+      expect(fetch.mock.calls.map(sentMaxTokens)).toEqual([16, 256, 512, 1024]);
+    });
+
     it('surfaces finishReason in debug', async () => {
       const fetch = await retryFetchMock();
       fetch.mockResolvedValueOnce({

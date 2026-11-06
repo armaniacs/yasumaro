@@ -25,8 +25,12 @@ import { pickDefined } from '../../../utils/objectUtils.js';
  * この枠では本文の前に finish_reason=length で切れることがある (issue #202)。
  */
 const CONNECTION_TEST_MAX_TOKENS = 16;
-/** length 切断時に1回だけ再試行する際の max_tokens (Gemini側の256と同値)。 */
-const CONNECTION_TEST_RETRY_MAX_TOKENS = 256;
+/**
+ * length 切断時に順に再試行する際の max_tokens 上限ラダー。推論モデルは
+ * 思考トークンで小枠を使い切るため、256でも切れる個体がある (issue #202
+ * 後続)。初回16に続けて最大3回、合計4fetchで打ち切る。
+ */
+const CONNECTION_TEST_RETRY_CAPS = [256, 512, 1024] as const;
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string }; finish_reason?: string }>;
@@ -300,12 +304,16 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         // 基底テンプレートが所有。癖は generateSummary と同じ1組の hooks。
         // 推論モデルは初回の小枠を思考トークンに使い切り、本文空のまま
         // finish_reason=length で返ることがある (issue #202)。その場合だけ
-        // 256枠で1回再試行する。要約パスは hooks 既定値のまま不変。
-        const first = await this.executeHttpTestFlow(this.hooks(CONNECTION_TEST_MAX_TOKENS));
-        if (!first.success && first.debug?.finishReason === 'length') {
-            return this.executeHttpTestFlow(this.hooks(CONNECTION_TEST_RETRY_MAX_TOKENS));
+        // RETRY_CAPS の上限で順に再試行する (最大3回、初回含め合計4fetch)。
+        // 要約パスは hooks 既定値のまま不変。
+        let result = await this.executeHttpTestFlow(this.hooks(CONNECTION_TEST_MAX_TOKENS));
+        for (const cap of CONNECTION_TEST_RETRY_CAPS) {
+            if (result.success || result.debug?.finishReason !== 'length') {
+                break;
+            }
+            result = await this.executeHttpTestFlow(this.hooks(cap));
         }
-        return first;
+        return result;
     }
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {
