@@ -29,12 +29,12 @@ Scenario: 新パネルの深いリンクが開く
 
 ## 受け入れ基準
 
-- [ ] 履歴シェルから保存済みコレクション・履歴に聞く・調査レポートの3リージョン配線を削除する
-- [ ] catalog 順が `panel-sqlite-history` → `panel-saved-collections` → `panel-ask-history` → `panel-research-report` → `panel-archive` となる
-- [ ] `?tab=history` の回帰テストが通り、新パネルの深いリンクが対応するパネルを開く
-- [ ] `docs/SETUP_GUIDE.md` と `README.md` の履歴節を新パネル構成に合わせて更新する
-- [ ] 編集した文書が文字種チェックを通る
-- [ ] 記録パイプライン本体の挙動を変えない
+- [x] 履歴シェルから保存済みコレクション・履歴に聞く・調査レポートの3リージョン配線を削除する
+- [x] catalog 順が `panel-sqlite-history` → `panel-saved-collections` → `panel-ask-history` → `panel-research-report` → `panel-archive` となる
+- [x] `?tab=history` の回帰テストが通り、新パネルの深いリンクが対応するパネルを開く
+- [x] `docs/SETUP_GUIDE.md` と `README.md` の履歴節を新パネル構成に合わせて更新する
+- [x] 編集した文書が文字種チェックを通る
+- [x] 記録パイプライン本体の挙動を変えない
 
 ## テスト戦略
 
@@ -48,6 +48,9 @@ Scenario: 新パネルの深いリンクが開く
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み（SETUP_GUIDE と README の履歴節）
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み（SETUP_GUIDE と README の履歴節）
+
+## 追記（アーカイブ時 2026-11-06）
+実装済み（実装コミット `dde827d4`、CHANGELOGに記載）。ただし後発の意図的変更 `6470ff0c`「新パネルをexperimental最下部へ移動」により、受入基準のうちカタログ順序に関する項目は現ツリーで字面通りには満たさない。意図的変更でありCHANGELOGにも記載済みのため、本PBIは完了としてアーカイブする。

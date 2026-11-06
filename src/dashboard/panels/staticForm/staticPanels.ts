@@ -11,6 +11,7 @@ import { initAiDomainPolicySettings, loadAiDomainPolicySettings } from '../../se
 import { init as initContentSettings, loadContentSettings } from '../../settings/contentSettings.js';
 import { initExportImport } from '../../exportImport.js';
 import { initEncryptedBackupPanel } from '../../encryptedBackupPanel.js';
+import { initMasterPasswordSettings } from '../../masterPassword.js';
 import { initGistSettings } from '../../gistSettings.js';
 import { init as initTrustSettings, loadTrustSettings } from '../../settings/trustSettings.js';
 import { init as initDomainFilter, loadDomainSettings } from '../../settings/domainFilter.js';
@@ -82,6 +83,12 @@ export const STATIC_FORM_SPECS = {
         id: 'panel-export-import',
         mount: async () => {
             initExportImport();
+            // The password auth modal is a single global DOM whose listeners
+            // used to be attached only by panel-privacy's mount. Navigating
+            // straight here left its Confirm button dead (no listener, no
+            // error). initEventListeners() is idempotent, so calling it from
+            // both mounts is safe.
+            initMasterPasswordSettings();
             initEncryptedBackupPanel();
             await initGistSettings();
         },

@@ -167,6 +167,10 @@ export interface ImportSettingsOptions {
   signer?: ImportHmacVerifier;
 }
 
+export interface MigrationImportSettingsOptions {
+  repo?: SettingsImportRepo | undefined;
+}
+
 /**
  * Single owner of import post-processing: merge→strip→save (PBI 2026-10-16-01).
  *
@@ -787,6 +791,70 @@ export async function importSettings(
   } catch (error) {
     await logError(
       'Failed to import settings',
+      { error: errorMessage(error) },
+      ErrorCode.SETTINGS_IMPORT_FAILURE,
+      'settingsExportImport.ts'
+    );
+    return null;
+  }
+}
+
+/**
+ * Profile migration import (PBI 2026-11-06-03): apply a settings file that
+ * was signed by a DIFFERENT profile's HMAC key (Edge/Chrome/Firefox or
+ * another profile of the same browser).
+ *
+ * This is the only path that skips HMAC verification, and it must only run
+ * after an explicit user confirmation (`showConfirmDialog` in the UI layer —
+ * this function never opens dialogs itself, mirroring `importSettings`).
+ * Everything else matches the normal path: size cap, structure validation,
+ * API-key exclusion, and device-local state stripping
+ * (`finalizeImportedSettings`). A successful application is audit-logged.
+ *
+ * The normal `importSettings` above is untouched: foreign-signed files keep
+ * being rejected there (VULN-009).
+ */
+export async function importSettingsForMigration(
+  jsonData: string,
+  opts?: MigrationImportSettingsOptions
+): Promise<Settings | null> {
+  try {
+    if (isOverImportSizeCap(jsonData)) {
+      await logImportSizeCapExceeded();
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonData) as ExportData;
+    const hadSignature = typeof parsed.signature === 'string' && parsed.signature.length > 0;
+
+    // Structure gate stays fail-closed: only the origin check (HMAC against
+    // THIS profile's key) is skipped. A corrupt payload is still rejected.
+    const validationError = getExportValidationError(parsed);
+    if (validationError !== null) {
+      await logError(
+        'Migration import rejected: invalid export structure',
+        { ...validationError },
+        ErrorCode.SETTINGS_IMPORT_FAILURE,
+        'settingsExportImport.ts'
+      );
+      return null;
+    }
+
+    const finalizeOpts: ImportSettingsOptions | undefined =
+      opts?.repo === undefined ? undefined : { repo: opts.repo };
+    const applied = await finalizeParsedImport(parsed, finalizeOpts);
+    // 成功時の監査ログに失敗用コードを付けない (エラー集計を汚すため)。
+    // 拒否時は上記の SETTINGS_IMPORT_FAILURE が付く。
+    await logWarn(
+      'Settings migration import applied (signature check skipped by explicit user confirmation)',
+      { hadSignature },
+      undefined,
+      'settingsExportImport.ts'
+    );
+    return applied;
+  } catch (error) {
+    await logError(
+      'Failed to import migration settings',
       { error: errorMessage(error) },
       ErrorCode.SETTINGS_IMPORT_FAILURE,
       'settingsExportImport.ts'

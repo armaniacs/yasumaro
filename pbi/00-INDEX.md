@@ -14,18 +14,58 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-01 履歴パネルの独立化（ブレスト、4件） ― ✅ 4件完了（アーカイブ待ち）＋⬜ 後発2件未着手 RICE順: ~~01(0.64)~~ → ~~02(0.64)~~ → ~~03(0.42)~~ → ~~04(0.72・依存により最後)~~ → 05(0.56) → 06(0.28)
+### 2026-11-06 SVGエラー帰属調査（1件） ― ✅ 1件完了・アーカイブ済み
+
+Edge実機で見つかった `preserveAspectRatio` コンソールエラーの投げ手特定。ブラウザ本体由来が有力で自コード由来ではないと確定し、対処不要として閉じた。RICE: ~~04(0.6・R3×I0.2×C1.0)~~。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~04~~ | [2026-11-06-04-backlog-svg-error-attribution.md](../dev-docs/archived/pbi/2026-11-06-04-backlog-svg-error-attribution.md) | 🔧非機能追加 | 0.6 | S | ✅ 完了。投げ手特定済み・対処不要。実機再確認手順を記録 |
+
+### 2026-11-06 Edge→Chrome移行障害の是正（3件） ― ✅ 3件完了・アーカイブ済み RICE順: ~~01(24)~~ → ~~02(9.6)~~ → ~~03(9.6・02と同点だが暗号化経路の確定を先に)~~
+
+Edge実機移行で発覚した3障害をRICE採点してPBI化。01はuBlock二重保持の解消で設定28MB→10KB級に。02は暗号化バックアップのenvelope上限とファイル上限の不整合解消（バックアップ専用50MiB上限を分離、汎用10MiBは不変）。03は公式の3ブラウザ間移行モード（明示確認ゲート付き移行経路、通常経路の拒否動作は不変、全9通りをunit+統合で検証、Playwright実ブラウザE2Eは未追加）。詳細は下の各PBIを参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-06-01-fix-ublock-cache-dedup.md](../dev-docs/archived/pbi/2026-11-06-01-fix-ublock-cache-dedup.md) | 🔧非機能追加 | 24 | M | ✅ 完了。設定28MB→10KB級。R8×I3×C1.0。`npm run validate`+両ブラウザbuild緑 |
+| ~~02~~ | [2026-11-06-02-fix-encrypted-backup-cap.md](../dev-docs/archived/pbi/2026-11-06-02-fix-encrypted-backup-cap.md) | 🔧非機能追加 | 9.6 | M | ✅ 完了。R4×I3×C0.8。バックアップ専用上限分離。`npm run validate`+両ブラウザbuild緑 |
+| ~~03~~ | [2026-11-06-03-feat-profile-migration.md](../dev-docs/archived/pbi/2026-11-06-03-feat-profile-migration.md) | ✨機能追加 | 9.6 | L | ✅ 完了。R6×I2×C0.8。全9通りをunit+統合で検証。Playwright実ブラウザE2Eは未追加 |
+
+### 2026-11-05 logger flush合流フォロー（1件） ― ✅ 2件完了・アーカイブ済み RICE順: ~~01(1.5)~~ → ~~02(1.2)~~
+
+B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing` ガードが同時完了時の一方を捨てる窓を合流させる。1分アラームが上限を保証し E2E は完了時flushで緑のため急ぎなし。詳細は [2026-11-05-01-fix-logger-flush-coalesce.md](../dev-docs/archived/pbi/2026-11-05-01-fix-logger-flush-coalesce.md)。02 は土台レビュー残件 9件の束。詳細は [2026-11-05-02-fix-review-residuals.md](../dev-docs/archived/pbi/2026-11-05-02-fix-review-residuals.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-05-01-fix-logger-flush-coalesce.md](../dev-docs/archived/pbi/2026-11-05-01-fix-logger-flush-coalesce.md) | 🔧非機能追加 | 1.5 | 0.2 | ✅ 完了。再ドレインループで合流。never-flush配線＋並行recordのpinで検証 |
+| ~~02~~ | [2026-11-05-02-fix-review-residuals.md](../dev-docs/archived/pbi/2026-11-05-02-fix-review-residuals.md) | 🔧非機能追加 | 1.2 | 0.25 | ✅ 完了。土台レビュー残件9件。文言2件は暫定で要owner確認 |
+
+### 2026-11-02 A/B/D/E コレクション活用の配線（なぜなぜ90連、7件） ― ✅ 7件完了・アーカイブ済み RICE順: ~~01(1.44)~~ → ~~02(0.90)~~ → ~~03(0.72)~~ → ~~04(0.56)~~ → ~~05(0.42)~~ → ~~06(0.36)~~ → ~~07(0.28・延期可)~~
+
+3視点 x 30連のなぜなぜ（内容は `pbi/2026-11-02-00-backlog-abde.md` に要約を転記。全文は gitignore 下の `.superpowers/sdd/2026-11-02-abde/`）をRICE採点してPBI化。検索スコープ転送の background 半分、ask/report の V2 対応、履歴→保存ハンドオフ、セッション変換、today プリセット、history-list multi 実行。05 は 02/04 と同時リリース、07 は延期可。詳細は [2026-11-02-00-backlog-abde.md](2026-11-02-00-backlog-abde.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-02-01-bg-search-scope-background.md](../dev-docs/archived/pbi/2026-11-02-01-bg-search-scope-background.md) | 🔧非機能追加 | 1.44 | 0.33 | ✅ 完了。background 半分の開通。件数の正確化の前提 |
+| ~~02~~ | [2026-11-02-02-feat-ask-collection-v2.md](../dev-docs/archived/pbi/2026-11-02-02-feat-ask-collection-v2.md) | ✨機能追加 | 0.90 | 0.5 | ✅ 完了。ask の fail-open 解消。tag 部分一致も統一 |
+| ~~03~~ | [2026-11-02-03-feat-history-save-handoff.md](../dev-docs/archived/pbi/2026-11-02-03-feat-history-save-handoff.md) | ✨機能追加 | 0.72 | 0.5 | ✅ 完了。recall 規約 pin。PBI 2026-11-01-06 の決着を含む |
+| ~~04~~ | [2026-11-02-04-feat-report-v2.md](../dev-docs/archived/pbi/2026-11-02-04-feat-report-v2.md) | ✨機能追加 | 0.56 | 0.75 | ✅ 完了。UNION 意味論で定義。先頭200件打ち切り |
+| ~~05~~ | [2026-11-02-05-feat-session-to-collection.md](../dev-docs/archived/pbi/2026-11-02-05-feat-session-to-collection.md) | ✨機能追加 | 0.42 | 0.75 | ✅ 完了。単一セッション・ids 優先。E2E は手動手順で代替 |
+| ~~06~~ | [2026-11-02-06-feat-today-preset.md](../dev-docs/archived/pbi/2026-11-02-06-feat-today-preset.md) | ✨機能追加 | 0.36 | 0.33 | ✅ 完了。草稿注入のみ |
+| ~~07~~ | [2026-11-02-07-feat-history-multi-execution.md](../dev-docs/archived/pbi/2026-11-02-07-feat-history-multi-execution.md) | ✨機能追加 | 0.28 | 1 | ✅ 完了。合算 cap と一体 |
+
+### 2026-11-01 履歴パネルの独立化（ブレスト、4件） ― ✅ 5件完了・アーカイブ済み（01-05＋06） RICE順: ~~01(0.64)~~ → ~~02(0.64)~~ → ~~03(0.42)~~ → ~~04(0.72・依存により最後)~~ → ~~05(0.56)~~ → ~~06(0.28・PBI 2026-11-02-03 に吸収)~~
 
 設計書（docs/superpowers/specs/2026-11-01-history-panels-independence-design.md）のA案（リージョン移植）をRICE採点してPBI化。保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設する3データパネルに切り出し、履歴は記録一覧と検索操作だけに絞る。04 は 01〜03 への依存によりスコア最上位でも最後に実施。詳細は [2026-11-01-00-backlog-history-panels.md](2026-11-01-00-backlog-history-panels.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| 01 | [2026-11-01-01-feat-saved-collections-panel.md](2026-11-01-01-feat-saved-collections-panel.md) | ✨機能追加 | 0.64 | 1 | 分離の基盤（自動タグ規則含む）。02・03 が参照する置き場所を先に確定 |
-| 02 | [2026-11-01-02-feat-ask-history-panel.md](2026-11-01-02-feat-ask-history-panel.md) | ✨機能追加 | 0.64 | 0.75 | 01 と同点のため基盤側先行。一覧は新パネル側で直接読み込む |
-| 03 | [2026-11-01-03-feat-research-report-panel.md](2026-11-01-03-feat-research-report-panel.md) | ✨機能追加 | 0.42 | 0.75 | 対象解決の新規性が高く確信度を下げた。対象は保存済みコレクション選択 |
-| 04 | [2026-11-01-04-fix-history-panel-slimming.md](2026-11-01-04-fix-history-panel-slimming.md) | 🔧非機能追加 | 0.72 | 0.5 | スコア最上位だが 01〜03 への依存により最後。履歴スリム化＋文書更新 |
-| 05 | [2026-11-01-05-feat-saved-collections-first-condition.md](2026-11-01-05-feat-saved-collections-first-condition.md) | ✨機能追加 | 0.56 | 0.5 | ⬜ 未着手（後発）。初期利用者の初回作成導線。01 の後に実施 |
-| 06 | [2026-11-01-06-fix-recall-history-handoff.md](2026-11-01-06-fix-recall-history-handoff.md) | 🔧非機能追加 | 0.28 | 0.5 | ⬜ 未着手（後発）。`model.applyCollection` の配線か整理。05 の後に実施 |
+| ~~01~~ | [2026-11-01-01-feat-saved-collections-panel.md](../dev-docs/archived/pbi/2026-11-01-01-feat-saved-collections-panel.md) | ✨機能追加 | 0.64 | 1 | ✅ 完了。分離の基盤（自動タグ規則含む）。02・03 が参照する置き場所を先に確定 |
+| ~~02~~ | [2026-11-01-02-feat-ask-history-panel.md](../dev-docs/archived/pbi/2026-11-01-02-feat-ask-history-panel.md) | ✨機能追加 | 0.64 | 0.75 | ✅ 完了。01 と同点のため基盤側先行。一覧は新パネル側で直接読み込む |
+| ~~03~~ | [2026-11-01-03-feat-research-report-panel.md](../dev-docs/archived/pbi/2026-11-01-03-feat-research-report-panel.md) | ✨機能追加 | 0.42 | 0.75 | ✅ 完了。対象解決の新規性が高く確信度を下げた。対象は保存済みコレクション選択 |
+| ~~04~~ | [2026-11-01-04-fix-history-panel-slimming.md](../dev-docs/archived/pbi/2026-11-01-04-fix-history-panel-slimming.md) | 🔧非機能追加 | 0.72 | 0.5 | ✅ 完了。スコア最上位だが 01〜03 への依存により最後。履歴スリム化＋文書更新 |
+| ~~05~~ | [2026-11-01-05-feat-saved-collections-first-condition.md](../dev-docs/archived/pbi/2026-11-01-05-feat-saved-collections-first-condition.md) | ✨機能追加 | 0.56 | 0.5 | ✅ 完了。初期利用者の初回作成導線。現配置に合わせパネル内完結の案内 |
 
 ### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件＋後発起票1件） ― ✅ 10件完了・アーカイブ済み（01-10）
 
@@ -624,6 +664,39 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-06 logger flush合流01 アーカイブ ― 1件
+
+- **2026-11-05-01-fix-logger-flush-coalesce**: `persistPending` を単発drainから再ドレインループに変更し同時完了時の一方捨てを合流に（dirtyフラグは無力と実証して不採用）。`npm run validate` 緑＋両build緑。版 6.9.67。
+
+### 2026-11-06 レビュー残件02 アーカイブ ― 1件
+
+- **2026-11-05-02-fix-review-residuals**: 土台レビュー残件9件（開示文言・handoff queue化・世代管理・ids整数化・clamp・truncated・ids長吸収文書化・clause上限・正規表現cache）。`askSearchDroppedNote` と `historyHandoffDroppedPrevious` の文言は暫定で要owner確認。あわせて `.worktrees/` を eslint 共通除外に追加。`npm run validate` 緑＋両build緑。版 6.9.68。
+
+### 2026-11-06 履歴パネル独立化01〜04・ABDE 01〜07 アーカイブ ― 11件
+
+pbi-cleanupの裏取りで実装済みを確認（実装コミット＋CHANGELOG＋コード現存）。11-01の01〜04は後発の意図的変更 `6470ff0c`（新パネルをexperimental最下部へ移動）により配置系の受入基準が字面通りには満たさないが、意図的変更でCHANGELOG記載済みのため完了としてアーカイブ（各PBIに追記あり）。11-01-05は未実装のため残置。
+
+- **2026-11-01-01/02/03/04**: 履歴パネル独立化の3データパネル新設＋履歴スリム化。
+- **2026-11-02-01〜07**: ABDEコレクション活用の配線7件（検索スコープbackground半分、ask/report V2、履歴→保存ハンドオフ、セッション変換、todayプリセット、history-list multi実行）。
+
+### 2026-11-06 SVGエラー帰属04・初回条件05 アーカイブ ― 2件
+
+- **2026-11-06-04-backlog-svg-error-attribution**: 投げ手はブラウザ本体 (Blink SVGパーサ) が有力で自コード由来ではないと確定。対処不要として閉じる。実機再確認手順を記録。
+- **2026-11-01-05-feat-saved-collections-first-condition**: 空状態の手順案内＋名前未入力時の理由表示。現配置 (experimental最下部) に合わせパネル内完結。PBI 01 契約・記録パイプライン不変。`npm run validate` 緑＋両build緑。版 6.9.69。
+
+### 2026-11-06 Edge→Chrome移行障害01 アーカイブ ― 1件
+
+- **2026-11-06-01-fix-ublock-cache-dedup**: `ublock_rules` の永続化を止め `ublock_sources` からの導出に一本化（`src/utils/derivedUblockRules.ts` 新設）。設定28MB→10KB級。旧二重データは読み時点で正規化。`npm run validate` 緑＋chromium/firefox両build緑。版 6.9.65。
+
+### 2026-11-06 Edge→Chrome移行障害02・03 アーカイブ ― 2件
+
+- **2026-11-06-02-fix-encrypted-backup-cap**: バックアップ専用envelope上限50MiBを分離（汎用10MiBは不変、VULN-036維持）。超過時は原因特定可能な文言でパスワード入力前に案内。`npm run validate` 緑＋両build緑。
+- **2026-11-06-03-feat-profile-migration**: Export/Importパネルに移行セクション追加（明示確認ゲート付き移行経路、通常経路の拒否動作は不変、全9通りをunit+統合45+20テストで検証、Playwright実ブラウザE2Eは未追加）。版 6.9.66。
+
+### 2026-11-02 履歴パネル独立化の後発 PBI 06 アーカイブ ― 1件
+
+- **2026-11-01-06-fix-recall-history-handoff**（PBI [2026-11-02-03](../dev-docs/archived/pbi/2026-11-02-03-feat-history-save-handoff.md) に吸収）: recall 適用先を collections draft に一本化し、`model.applyCollection` を v1-only legacy として注記＋pin。PBI 01 契約維持。レビュー approved。
 
 ### 2026-10-31 次フェーズやること/やらないこと アーカイブ ― 10件すべて完了（01-10）
 

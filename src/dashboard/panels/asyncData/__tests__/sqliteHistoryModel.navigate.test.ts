@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 
 describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
-  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (28 -> 24)', () => {
+  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (28 -> 25)', () => {
     const model = createSqliteHistoryModel({ queryHistory: vi.fn().mockResolvedValue(okEmpty()) });
     expect(typeof model.onNavigateIn).toBe('function');
     expect(typeof model.onNavigateOut).toBe('function');
@@ -36,8 +36,10 @@ describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
     }
     // PBI 2026-10-23-06: +1 for applyCollection (saved-collection recall).
     // PBI 2026-10-23-07: +1 for bulkSetStarred (bulk star apply + undo).
-    expect(Object.keys(model)).toHaveLength(24);
+    // PBI 2026-11-02-07: +1 for applyCollectionQuery (v2 multi-clause execution).
+    expect(Object.keys(model)).toHaveLength(25);
     expect(typeof model.applyCollection).toBe('function');
+    expect(typeof model.applyCollectionQuery).toBe('function');
     expect(typeof model.bulkSetStarred).toBe('function');
   });
 });

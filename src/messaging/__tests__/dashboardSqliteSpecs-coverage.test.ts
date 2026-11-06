@@ -19,7 +19,6 @@ import { ALL_DASHBOARD_SQLITE_SUBTYPES } from '../sqliteOperationSecurity.js';
  * reason; a new canonical subtype must add a spec row instead of landing here.
  */
 const INTENTIONALLY_UNSPECIFIED: Readonly<Record<string, string>> = {
-  query: 'accepts arbitrary extra fields',
   migrate: 'no required payload fields (confirmToken is verified by the token gate, not wire validation)',
   clear_all: 'no required payload fields (confirmToken is verified by the token gate)',
   get_count: 'no payload',

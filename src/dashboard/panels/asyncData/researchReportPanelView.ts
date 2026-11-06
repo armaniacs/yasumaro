@@ -21,9 +21,10 @@ import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { withBusyButton } from './busyButton.js';
 import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
 import { toReportRunResult, type ReportRunResult } from '../../../messaging/responseRepack.js';
-import type { ResearchReportScope } from '../../../messaging/responseCanonical.js';
+import type { ResearchReportClause, ResearchReportScope } from '../../../messaging/responseCanonical.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
-import { parseCollectionQuery } from './savedCollectionQuery.js';
+import { parseCollectionQueryV2 } from './savedCollectionQuery.js';
+import { resolveCollectionQueries, type ClauseStorageQuery } from './collectionScopeResolver.js';
 
 export type { ReportRunResult } from '../../../messaging/responseRepack.js';
 
@@ -96,27 +97,53 @@ export function createResearchReportActions(
 
 /**
  * Resolve the report target from the SELECTED SAVED COLLECTION
- * (PBI 2026-11-01-03). The standalone panel owns no condition inputs and
- * never reads the history shell's search conditions; term/tag/day come from
- * the stored collection query only. A corrupted stored shape fails closed to
- * the empty scope, and a non-finite day range is dropped instead of sending
- * NaN downstream.
+ * (PBI 2026-11-01-03, V2 PBI 2026-11-02-04). The standalone panel owns no
+ * condition inputs and never reads the history shell's search conditions;
+ * term/tag/day come from the stored collection query only. The query is
+ * read through `parseCollectionQueryV2` and each clause through
+ * `resolveCollectionQueries` (day strings become since/until ranges).
+ *
+ * Shape contract: a legacy v1 / single-clause collection keeps the flat
+ * `{ search, tag, since, until }` scope (no new keys, pins ride in `ids`);
+ * a multi-clause V2 collection returns the richer `{ op, clauses, ids? }`
+ * scope the generator fans out over. A corrupted stored shape fails closed
+ * to the empty scope, and a non-finite day range is dropped instead of
+ * sending NaN downstream.
  */
 export function buildResearchReportScopeFromCollection(
   query: Record<string, unknown>,
 ): ResearchReportScope {
-  const parsed = parseCollectionQuery(query);
-  const scope: ResearchReportScope = {};
-  if (parsed.search !== '') scope.search = parsed.search;
-  if (parsed.tag !== null) scope.tag = parsed.tag;
-  if (parsed.date !== null) {
-    const range = localDayRangeFromDateString(parsed.date);
-    if (Number.isFinite(range.since) && Number.isFinite(range.until)) {
-      scope.since = range.since;
-      scope.until = range.until;
-    }
+  const parsed = parseCollectionQueryV2(query);
+  const ids = parsed.ids;
+  const clauses = resolveCollectionQueries(parsed)
+    .map(toReportClause)
+    .filter((clause) => Object.keys(clause).length > 0);
+  if (clauses.length === 0) {
+    return ids.length > 0 ? { ids } : {};
   }
+  if (clauses.length === 1 && parsed.op === 'and') {
+    const only = clauses[0] as ResearchReportClause;
+    const scope: ResearchReportScope = {};
+    if (only.search !== undefined) scope.search = only.search;
+    if (only.tag !== undefined) scope.tag = only.tag;
+    if (only.since !== undefined) scope.since = only.since;
+    if (only.until !== undefined) scope.until = only.until;
+    if (ids.length > 0) scope.ids = ids;
+    return scope;
+  }
+  const scope: ResearchReportScope = { op: parsed.op, clauses };
+  if (ids.length > 0) scope.ids = ids;
   return scope;
+}
+
+/** One resolved storage query becomes one report clause; a non-finite day range is dropped instead of sending NaN downstream. */
+function toReportClause(resolved: ClauseStorageQuery): ResearchReportClause {
+  const clause: ResearchReportClause = {};
+  if (resolved.text !== undefined) clause.search = resolved.text;
+  if (resolved.tagFilter !== undefined) clause.tag = resolved.tagFilter;
+  if (resolved.dateFrom !== undefined && Number.isFinite(resolved.dateFrom)) clause.since = resolved.dateFrom;
+  if (resolved.dateTo !== undefined && Number.isFinite(resolved.dateTo)) clause.until = resolved.dateTo;
+  return clause;
 }
 
 /** Event bundle the standalone panel region owns (collection + generate). */

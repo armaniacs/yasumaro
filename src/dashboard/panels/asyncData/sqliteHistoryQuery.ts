@@ -164,6 +164,8 @@ export interface UnifiedHistoryQueryOptions {
   offset: number;
   /** Active tag filter; pushed to the SQL layer (partial match, all backends). */
   tagFilter?: string;
+  /** Targeted id lookup (PBI 2026-11-02-07 pin resolution): ids IN (...) on the listing path. */
+  ids?: number[];
   /** True when the tag filter came from a Tag Cluster navigation. */
   tagInitiated?: boolean;
   /** Sort applied to results. 'relevance' is only meaningful when `search` is set. */
@@ -267,7 +269,10 @@ export async function queryHistory(
     const sortBy = options.sortBy ?? 'relevance';
     const orderBy = sortBy === 'relevance' ? 'rank' : 'created_at';
     const orderDir = options.sortDir ?? 'DESC';
-    const searchResult = await searchRows(options.search, options.limit, options.offset, { orderBy, orderDir });
+    const searchResult = await searchRows(options.search, options.limit, options.offset, {
+      orderBy, orderDir,
+      ...pickDefined({ tagFilter: options.tagFilter, since: options.since, until: options.until }),
+    });
     if (isServiceError(searchResult)) return searchResult;
     rows = searchResult.data.rows;
     total = searchResult.data.total;
@@ -280,7 +285,9 @@ export async function queryHistory(
       orderDir: options.sortDir ?? 'DESC',
       // PBI 2026-09-11: the tag filter is now pushed down to the SQL layer
       // (partial-match semantics preserved; paging handled by LIMIT/OFFSET).
-      ...pickDefined({ tagFilter: options.tagFilter }),
+      // PBI 2026-11-02-07: the targeted id filter rides the same listing
+      // (ids IN (...) + LIMIT/OFFSET in SQL) for pin resolution.
+      ...pickDefined({ tagFilter: options.tagFilter, ids: options.ids }),
     });
     if (isServiceError(qRes)) return qRes;
 

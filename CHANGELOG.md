@@ -35,11 +35,33 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
-## [Unreleased]
+## [6.9.69] - 2026-11-07
+
+このリリースは履歴まわりのデータパネル独立とコレクション複数句対応、プロファイル間移行モードの新設、暗号化バックアップの進行表示と無反応修正です。利用者に見える変更は保存済みコレクション・履歴に聞く・調査レポート一発生成の3パネル、Edge・Chrome・Firefox間の移行、バックアップ作成時のファイル名予告と段階表示、設定エクスポートの肥大解消です。 / This release splits history-adjacent data panels, adds multi-clause collections, adds cross-profile migration, and makes encrypted backup show progress instead of going silent. User-visible changes: the saved-collections, ask-history, and one-shot research report panels, Edge/Chrome/Firefox migration, backup filename announcement with stage display, and the settings-export bloat fix.
 
 ### 追加 / Added
 
-- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search
+- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理）（3パネルは開発中の機能として最下部に配置） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search (the three panels live under In Development at the bottom)
+- コレクション条件の複数句対応（行ごとの語・タグ・日付＋AND/OR、件数プレビューつき条件エディタ、単一条件は従来形で保存し質問・レポート互換を維持） / Multi-clause collection conditions (per-row term/tag/date with AND/OR, count preview editor, single conditions still saved in the legacy shape for ask/report compatibility)
+- 履歴に聞くのコレクション V2 対応（複数句・ids の後段絞り込み＋UNION、未対応条件の明示、タグ判定の部分一致統一） / Ask-history collection V2 support (post-hoc multi-clause/ids filtering with UNION, explicit unsupported-scope notice, partial-match tag parity)
+- 調査レポートの V2 対応（複数句の fan-out と ids の和集合、合算200件打ち切り、欠けの除外表示） / Research-report V2 support (per-clause fan-out with ids union, combined 200 cap, excluded-missing display)
+- 履歴からコレクションへの条件引き継ぎ（絞り込みを editor 草稿へ送る、カスタム範囲は拒否、recall 適用先をコレクション草稿に一本化） / History-to-collection handoff (filters sent to the editor draft, custom ranges refused, recall target unified to the collection draft)
+- リサーチセッションの単一コレクション化（ids 優先・200件超拒否・空無効・未読穴警告）と today プリセット（草稿注入のみ） / Single-session to collection (ids-first, 200+ refused, empty disabled, unread-hole warning) and a today preset (draft injection only)
+- 履歴一覧への複数句適用（句ごとの取得と ids 再取得、合算上限、除外件数表示、v1 経路は無改変） / Multi-clause application to the history list (per-clause fetch with ids refetch, combined caps, excluded-count display, v1 path untouched)
+- プロファイル間移行モード（Export/Importパネルに移行セクション新設。Edge・Chrome・Firefoxの全9通りの組み合わせに対応し、移行時は署名検証の代わりに明示確認ダイアログを経由。確認キャンセル時は無変更、成功時は監査ログに記録。通常インポートの拒否動作は不変） / Profile migration mode (new migration section in the Export/Import panel covering all 9 Edge/Chrome/Firefox combinations; migration goes through an explicit confirmation dialog instead of signature verification, canceling changes nothing, success is audit-logged; the normal import rejection behavior is unchanged)
+
+### 修正 / Fixed
+
+- 履歴検索で語とタグ・日付を同時に指定してもタグ・日付が無視されていた問題（検索シームが語のみ転送していた。protocol・service・queryHistory を拡張し、recall の複合条件が正しく絞り込むように修正。background 半分も開通済み） / Combined search+tag+date scope was silently dropped on the search path (extended the protocol/service/queryHistory seams plus the background half so recalled compound conditions filter correctly)
+- バックアップ/マスターパスワード保存の無言の長時間処理に進行表示と二重実行防止を追加。バックアップは作成開始時にファイル名を予告し、完了時にも同名を確認表示する / Added in-place progress and double-run guard to backup and master-password operations. Backup now announces its filename when creation starts and confirms the same name on completion
+- 閲覧ログ取込の失敗表示に未置換の `%{error}` が出ていた問題（文言が `%{error}` 形式に変わっていたのに呼び出し側が旧式の連結のままだった。プレースホルダ方式に統一し回帰テストを追加） / Log-import failure showed a raw `%{error}` placeholder (message moved to the `%{error}` form while callers still concatenated; unified on placeholder substitution with a regression test)
+- マスターパスワード設定で弱いパスワードの本当の理由が表示されず「8文字以上」のままだった問題（文言キーが厳格化後のポリシーと不一致で真因を隠していた。SSOTの理由文をそのまま表示＋保存失敗をモーダル内にも表示＋確定時の古いエラーを消去） / Master-password setup hid the real weak-password reason behind a stale message (unified on the SSOT reason text, dual-painted save failures into the modal, stale errors cleared on pass)
+- プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加） / Encrypted-backup Confirm was dead unless the privacy panel had been opened (auth-modal listeners were attached only by the privacy panel mount; export/import mount now attaches them too with a double-attach guard)
+- uBlockフィルタのドメイン集合がソース側とマージ済みルール側に二重保存され設定エクスポートが28MBに膨張し10MiB上限に抵触していた問題（マージ済みルールの永続化を止めソースからの導出に一本化。旧二重データは読み時点で正規化し、設定は10KB級に戻る） / Duplicate uBlock domain storage bloated settings exports to 28MB past the 10MiB cap (merged rules are no longer persisted and are derived from sources instead; legacy duplicates normalize on read; settings shrink back to ~10KB)
+- 暗号化バックアップのenvelope上限10MiBとファイル上限50MBの不整合で履歴の多いバックアップが復号できなかった問題（バックアップ専用envelope上限50MiBを分離し汎用10MiBは不変。超過時は原因特定可能な文言でパスワード入力前に案内） / Encrypted backups with heavy history failed to decrypt from the 10MiB envelope cap contradicting the 50MB file cap (backup-specific 50MiB envelope cap split off, generic 10MiB unchanged; over-cap files are reported with the cause before the password prompt)
+- 記録パイプラインの同時完了時に片方のログが次の1分アラームまで残りSW終了時に失われることがあった問題（`persistPending` を単発drainから再ドレインループに変え合流させる。完了時flushの契約とonSuspendの扱いは不変） / Concurrent recording completions could leave one side's logs until the next 1-minute alarm, losing them on SW shutdown (persistPending now re-drains in a loop to coalesce; completion-flush contract and onSuspend handling unchanged)
+- 土台レビュー残件9件の対応（ask回答での検索条件欠落の開示、handoff競合のdropped-previous通知、再マウント時の旧世代描画防止、ids整数・非負の締め、paging上限clamp、truncated過報告の修正、ids長吸収の文書化、clause長上限、正規表現cache。2文言は暫定） / Nine leftover review findings (disclose dropped search terms in ask answers, dropped-previous notice on handoff contention, stale-generation paint guard on remount, integer non-negative ids, paging clamp, truncated over-report fix, ids-length absorption documented, clause length cap, regex cache; two wordings provisional)
+- 保存済みコレクションが空のままでは最初の1件の作り方が分からなかった問題（0件時に手順案内を表示し、名前未入力の保存は理由表示の失敗扱いに。既存ドラフト流用・呼び出し復元の契約は不変） / Empty saved-collections gave no hint how to create the first entry (empty state now shows a guide, unnamed saves fail with an in-panel reason; existing draft reuse and recall-to-draft contract unchanged)
 
 ## [6.9.64] - 2026-10-31
 

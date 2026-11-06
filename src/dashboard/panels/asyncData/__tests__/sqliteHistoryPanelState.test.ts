@@ -45,12 +45,14 @@ describe('createInitialHistoryState', () => {
       currentPage: 0,
       searchQuery: '',
       selectedDate: null,
+      customRange: null,
       loading: false,
       error: null,
       fallbackMode: false,
       selectedIds: new Set(),
       activeTagFilter: null,
       pendingTagFallback: null,
+      collectionWarning: null,
       sortBy: 'created_at',
       sortDir: 'DESC',
     });
@@ -165,15 +167,16 @@ describe('historyStateReducer — search and date filters', () => {
     expect(next.currentPage).toBe(0);
   });
 
-  it('rangeSelect clears the date, search and fallback', () => {
+  it('rangeSelect clears the date, search and fallback and records the range', () => {
     const state = makeState({
       selectedDate: '2026-08-01',
       searchQuery: 'q',
       pendingTagFallback: { tag: 'AI', fallbackTo: 'AI', matched: 1 },
       currentPage: 2,
     });
-    const next = historyStateReducer(state, { type: 'rangeSelect' });
+    const next = historyStateReducer(state, { type: 'rangeSelect', since: 100, until: 200 });
     expect(next.selectedDate).toBeNull();
+    expect(next.customRange).toEqual({ since: 100, until: 200 });
     expect(next.searchQuery).toBe('');
     expect(next.pendingTagFallback).toBeNull();
     expect(next.currentPage).toBe(0);
@@ -183,6 +186,7 @@ describe('historyStateReducer — search and date filters', () => {
     const state = makeState({
       searchQuery: 'q',
       selectedDate: '2026-08-01',
+      customRange: { since: 100, until: 200 },
       activeTagFilter: 'AI',
       pendingTagFallback: { tag: 'AI', fallbackTo: 'AI', matched: 1 },
       currentPage: 4,
@@ -190,6 +194,7 @@ describe('historyStateReducer — search and date filters', () => {
     const next = historyStateReducer(state, { type: 'clearFilters' });
     expect(next.searchQuery).toBe('');
     expect(next.selectedDate).toBeNull();
+    expect(next.customRange).toBeNull();
     expect(next.activeTagFilter).toBeNull();
     expect(next.pendingTagFallback).toBeNull();
     expect(next.currentPage).toBe(0);

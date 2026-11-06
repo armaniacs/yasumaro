@@ -85,6 +85,7 @@ const SECTION_LABEL_TO_CATALOG: Record<string, string> = {
   settingsSection: 'settings',
   dataSection: 'data',
   toolsSection: 'tools',
+  experimentalSection: 'experimental',
 };
 
 describe('panelCatalog — 単一ソース', () => {
@@ -111,9 +112,6 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-diagnostics',
       'panel-tag-cluster',
       'panel-sqlite-history',
-      'panel-saved-collections',
-      'panel-ask-history',
-      'panel-research-report',
       'panel-archive',
       'panel-domain-search',
       'panel-time-heatmap',
@@ -128,6 +126,9 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-session-timeline',
       'panel-export-logs',
       'panel-export-import',
+      'panel-saved-collections',
+      'panel-ask-history',
+      'panel-research-report',
     ]);
   });
 

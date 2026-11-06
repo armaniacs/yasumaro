@@ -3,8 +3,9 @@
  * ダッシュボードの「暗号化バックアップ」ボタン・モーダルの結線
  */
 
-import { MAX_ENVELOPE_CIPHERTEXT_LENGTH as ENVELOPE_CIPHERTEXT_LIMIT } from '../utils/limits.js';
-import { showPasswordAuthModal } from './masterPassword.js';
+import { MAX_BACKUP_FILE_BYTES, MAX_BACKUP_ENVELOPE_BASE64_LENGTH } from '../utils/limits.js';
+import { showPasswordAuthModal, setPasswordAuthProgress } from './masterPassword.js';
+import { logDebug } from '../utils/logger/api.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
@@ -12,13 +13,9 @@ import {
 } from './encryptedBackupService.js';
 import { downloadBlob } from './exportLogsService.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { showStatus, type StatusType } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
-
-/** Backup files legitimately hold a base64 SQLite DB; allow more headroom. */
-const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
-/** Upper bound on the base64 ciphertext field of an envelope. */
-const MAX_ENVELOPE_CIPHERTEXT_LENGTH = ENVELOPE_CIPHERTEXT_LIMIT;
+import { withBusyButton } from './panels/asyncData/busyButton.js';
 
 function getExportFilename(): string {
   const date = new Date();
@@ -31,8 +28,8 @@ function getExportFilename(): string {
   return `yasumaro-backup-${y}${m}${d}-${hh}${mm}${ss}.encrypted.json`;
 }
 
-function setStatus(message: string, isError: boolean): void {
-  showStatus('encryptedBackupStatus', message, isError ? 'error' : 'success', { autoClear: false });
+function setStatus(message: string, isError: boolean, kind?: StatusType): void {
+  showStatus('encryptedBackupStatus', message, kind ?? (isError ? 'error' : 'success'), { autoClear: false });
 }
 
 function downloadJson(data: unknown, filename: string): void {
@@ -47,15 +44,46 @@ export function initEncryptedBackupPanel(): void {
   const exportBtn = document.getElementById('exportEncryptedBackupBtn');
   const importBtn = document.getElementById('importEncryptedBackupBtn');
   const importFileInput = document.getElementById('importEncryptedBackupFileInput') as HTMLInputElement | null;
+  let exportInFlight = false;
+  let importInFlight = false;
 
   exportBtn?.addEventListener('click', () => {
+    if (exportInFlight) return;
     showPasswordAuthModal('export', async (password: string) => {
+      if (exportInFlight) return;
+      exportInFlight = true;
       try {
-        const envelope = await exportEncryptedBackup(password);
-        downloadJson(envelope, getExportFilename());
-        setStatus(getMessageOr('encryptedBackupCreated', '暗号化バックアップを作成しました'), false);
+        await withBusyButton(exportBtn as HTMLButtonElement, async () => {
+          const filename = getExportFilename();
+          setStatus(
+            getMessageWithSubstitutions('encryptedBackupCreating', { filename }, '{filename} を作成しています...'),
+            false,
+            'updating',
+          );
+          const startedAt = Date.now();
+          const envelope = await exportEncryptedBackup(password, (stage) => {
+            const text =
+              stage === 'readingDb'
+                ? getMessageOr('backupStageReadingDb', 'Reading history database...')
+                : getMessageOr('backupStageEncrypting', 'Encrypting...');
+            setStatus(text, false, 'updating');
+            setPasswordAuthProgress(text);
+            void logDebug('encrypted-backup stage', { flow: 'export', stage, elapsedMs: Date.now() - startedAt }, 'encryptedBackupPanel');
+          });
+          setPasswordAuthProgress(null);
+          void logDebug(
+            'encrypted-backup done',
+            { flow: 'export', elapsedMs: Date.now() - startedAt, envelopeChars: JSON.stringify(envelope).length },
+            'encryptedBackupPanel',
+          );
+          downloadJson(envelope, filename);
+          setStatus(getMessageWithSubstitutions('encryptedBackupCreated', { filename }, '暗号化バックアップを作成しました: {filename}'), false);
+        });
       } catch (error) {
         setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
+        throw error instanceof Error ? error : new Error(String(errorMessage(error)));
+      } finally {
+        exportInFlight = false;
       }
     });
   });
@@ -87,30 +115,57 @@ export function initEncryptedBackupPanel(): void {
         return;
       }
 
-      // Envelope-length validation at the boundary: reject an envelope whose
-      // ciphertext field alone would amplify into an oversized allocation.
+      // Envelope-length validation at the boundary (PBI 2026-11-06-02): reject
+      // an envelope whose data field alone exceeds the BACKUP base64 cap
+      // before the password prompt. This is the base64-text layer
+      // (MAX_BACKUP_ENVELOPE_BASE64_LENGTH) — never the 64 MiB binary
+      // ciphertext cap, which measures decoded bytes and is a different layer.
+      // An over-cap file is reported as too large (cause-identifying), not as
+      // an invalid file, and decryption is never attempted (VULN-036 order:
+      // file size -> shape -> envelope length -> KDF/auth decrypt).
       if (
         typeof parsed.data === 'string' &&
-        parsed.data.length > MAX_ENVELOPE_CIPHERTEXT_LENGTH
+        parsed.data.length > MAX_BACKUP_ENVELOPE_BASE64_LENGTH
       ) {
-        setStatus(getMessageOr('encryptedBackupInvalidFile', '不正なバックアップファイルです'), true);
+        setStatus(getMessageOr('encryptedBackupFileTooLarge', 'Backup file is too large'), true);
         if (importFileInput) importFileInput.value = '';
         return;
       }
 
       showPasswordAuthModal('import', async (password: string) => {
-        const result = await importEncryptedBackup(parsed, password);
-        if (result.success) {
-          const skippedCount = result.skippedKeys?.length ?? 0;
-          setStatus(
-            skippedCount > 0
-              ? getMessageWithSubstitutions('encryptedBackupRestoredSkipped', { skipped: skippedCount }, 'バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）')
-              : getMessageOr('encryptedBackupRestored', 'バックアップから復元しました'),
-            false
-          );
-          document.dispatchEvent(new CustomEvent('reload-general-settings'));
-        } else {
-          setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
+        if (importInFlight) return;
+        importInFlight = true;
+        try {
+          await withBusyButton(importBtn as HTMLButtonElement, async () => {
+            const startedAt = Date.now();
+            const result = await importEncryptedBackup(parsed, password, (stage) => {
+              const text =
+                stage === 'decrypting'
+                  ? getMessageOr('backupStageDecrypting', 'Decrypting...')
+                  : stage === 'restoringDb'
+                    ? getMessageOr('backupStageRestoringDb', 'Restoring history database...')
+                    : getMessageOr('backupStageRestoringSettings', 'Restoring settings...');
+              setStatus(text, false, 'updating');
+              setPasswordAuthProgress(text);
+              void logDebug('encrypted-backup stage', { flow: 'import', stage, elapsedMs: Date.now() - startedAt }, 'encryptedBackupPanel');
+            });
+            if (result.success) {
+              setPasswordAuthProgress(null);
+              const skippedCount = result.skippedKeys?.length ?? 0;
+              setStatus(
+                skippedCount > 0
+                  ? getMessageWithSubstitutions('encryptedBackupRestoredSkipped', { skipped: skippedCount }, 'バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）')
+                  : getMessageOr('encryptedBackupRestored', 'バックアップから復元しました'),
+                false
+              );
+              document.dispatchEvent(new CustomEvent('reload-general-settings'));
+            } else {
+              setStatus(getMessageWithSubstitutions('encryptedBackupRestoreFailed', { error: String(result.error) }, '復元に失敗しました: {error}'), true);
+              throw new Error(String(result.error));
+            }
+          });
+        } finally {
+          importInFlight = false;
         }
       });
     } catch (error) {

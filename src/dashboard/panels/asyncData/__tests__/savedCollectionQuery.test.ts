@@ -6,12 +6,16 @@
  * summary joins the present conditions only.
  */
 import { describe, it, expect } from 'vitest';
+import { MAX_QUERY_IDS, MAX_SEARCH_QUERY_LENGTH } from '../../../../utils/limits.js';
 import {
   serializeCollectionQuery,
   hasCollectionCondition,
   parseCollectionQuery,
   describeCollectionQuery,
   newCollectionId,
+  parseCollectionQueryV2,
+  serializeClausesQuery,
+  describeCollectionQueryV2,
 } from '../savedCollectionQuery.js';
 
 const LABELS = { search: '語', tag: 'タグ', date: '期間' };
@@ -104,5 +108,61 @@ describe('newCollectionId', () => {
     expect(a).not.toBe('');
     expect(b).not.toBe('');
     expect(a).not.toBe(b);
+  });
+});
+
+describe('savedCollectionQuery v2', () => {
+  describe('parseCollectionQueryV2', () => {
+    it('parses multi-clause queries with op', () => {
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [
+          { search: 'AI', tag: 'tools', date: null },
+          { search: '要約', tag: null, date: '2026-11-01' },
+        ],
+      });
+      expect(parsed.clauses).toHaveLength(2);
+      expect(parsed.op).toBe('or');
+    });
+    it('migrates legacy v1 shape to single-clause v2', () => {
+      const parsed = parseCollectionQueryV2({ search: 'wasm', tag: 'tools', date: null });
+      expect(parsed.clauses).toEqual([{ search: 'wasm', tag: 'tools', date: null }]);
+      expect(parsed.op).toBe('and');
+    });
+    it('fails closed to empty clauses on unknown shapes', () => {
+      expect(parseCollectionQueryV2(null).clauses).toEqual([]);
+      expect(parseCollectionQueryV2('x').clauses).toEqual([]);
+    });
+    it('truncates over-long id lists to MAX_QUERY_IDS', () => {
+      const ids = Array.from({ length: MAX_QUERY_IDS + 50 }, (_, i) => i);
+      const parsed = parseCollectionQueryV2({ version: 2, op: 'or', clauses: [], ids });
+      expect(parsed.ids).toHaveLength(MAX_QUERY_IDS);
+      expect(parsed.ids).toEqual(ids.slice(0, MAX_QUERY_IDS));
+    });
+    it('drops float, negative, NaN and non-number ids (no DB row can match them)', () => {
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [],
+        ids: [1, 1.5, -2, NaN, Infinity, '3', null, 4],
+      });
+      expect(parsed.ids).toEqual([1, 4]);
+    });
+    it('truncates over-long clause strings to MAX_SEARCH_QUERY_LENGTH (S-#4)', () => {
+      const long = 'x'.repeat(MAX_SEARCH_QUERY_LENGTH + 500);
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [{ search: long, tag: long, date: '2026-11-01' }],
+        ids: [],
+      });
+      expect(parsed.clauses).toHaveLength(1);
+      expect(parsed.clauses[0]?.search).toHaveLength(MAX_SEARCH_QUERY_LENGTH);
+      expect(parsed.clauses[0]?.tag).toHaveLength(MAX_SEARCH_QUERY_LENGTH);
+      // Short inputs are untouched; the date shape is unaffected by the cap.
+      const short = parseCollectionQueryV2({ search: 'wasm', tag: 'tools', date: '2026-11-01' });
+      expect(short.clauses).toEqual([{ search: 'wasm', tag: 'tools', date: '2026-11-01' }]);
+    });
   });
 });

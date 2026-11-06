@@ -2,9 +2,10 @@ import { tOrKey as t } from '../../../utils/i18n.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { type PanelLifecycle } from '../types.js';
 import {
-  describeCollectionQuery,
-  parseCollectionQuery,
-  serializeCollectionQuery,
+  describeCollectionQueryV2,
+  parseCollectionQueryV2,
+  serializeClausesQuery,
+  newCollectionId,
   type CollectionQueryInput,
   type CollectionQueryLabels,
 } from './savedCollectionQuery.js';
@@ -13,51 +14,86 @@ import {
   loadSavedCollectionsRegion,
   renderSavedCollectionsRegion,
 } from './savedCollectionsPanelView.js';
+import { upsertSavedCollectionById } from '../../../utils/storage/savedCollectionsRepository.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 import type { AutoTagRule } from '../../../utils/storage/autoTagRules.js';
+import { createClauseEditor } from './collectionClauseEditor.js';
+import { renderClauseEditorView } from './collectionClauseEditorView.js';
+import {
+  registerCollectionDraftApplier,
+  unregisterCollectionDraftApplier,
+  consumePendingHistoryHandoff,
+} from './historyHandoff.js';
+import { previewClauseCounts, type ClausePreview, type ClauseCountSource } from './collectionClausePreview.js';
+import type { ClauseStorageQuery } from './collectionScopeResolver.js';
+import { localDayRangeFromDateString } from '../../../utils/localDate.js';
+import { queryHistory, isServiceError } from './sqliteHistoryQuery.js';
+import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
- * savedCollectionsPanel.ts (PBI 2026-11-01-01)
+ * savedCollectionsPanel.ts (PBI 2026-11-01-01; Task 2: clause-editor wiring)
  *
  * Standalone sibling of the history panel: owns saved collections CRUD and
  * auto-tag rules with panel-local state. The region view
  * (savedCollectionsPanelView) and the storage repositories are reused
  * unchanged; only the deps supplier differs from the history wiring.
  *
- * No history dependence by design (backlog 2026-11-01-00): recall restores
- * the stored conditions into the panel's own draft (visible in the draft
- * status line), and save stores that draft under a new name. Applying
- * conditions to the history list stays out of scope until the history side
- * can receive a handoff (PBI 04 or a follow-up) — the stored query round
- * trips losslessly through the draft in the meantime (search + tag + date).
+ * Recall convention (PBI 2026-11-02-03, pinned by tests): recall restores
+ * the stored conditions into the panel's clause editor draft (visible in
+ * the draft status line), and save stores the editor query under a new
+ * name. The history list is NEVER a recall target — history
+ * `model.applyCollection` is a v1-only legacy path kept for old shapes,
+ * not a live wiring. The history → collection handoff arrives through the
+ * same draft door (`applyToDraft` via `historyHandoff.ts`: immediate when
+ * this panel is mounted, one pending query consumed on load otherwise).
  */
 
-/** Placeholder id inside this panel's static section (the history shell keeps its own). */
-export const SAVED_COLLECTIONS_PANEL_REGION_ID = 'saved-collections-panel-region';
+export interface SavedCollectionsPanelDeps {
+  countForClause?: ClauseCountSource['countForClause'];
+}
 
-/** Condition-summary labels (same target as the region's own labels). */
+async function countForClauseHistory(query: ClauseStorageQuery): Promise<number> {
+  const result = await queryHistory({
+    ...pickDefined({ search: query.text, tagFilter: query.tagFilter, since: query.dateFrom, until: query.dateTo }),
+    limit: 1,
+    offset: 0,
+    tagInitiated: false,
+  });
+  if (isServiceError(result)) throw new Error(result.error);
+  return result.data.total;
+}
+
+export const SAVED_COLLECTIONS_PANEL_REGION_ID = 'saved-collections-panel-region';
+export const SAVED_COLLECTIONS_EDITOR_REGION_ID = 'saved-collections-editor-region';
+
 const CONDITION_LABELS: CollectionQueryLabels = {
   search: t('savedCollectionCondSearch'),
   tag: t('savedCollectionCondTag'),
   date: t('savedCollectionCondDate'),
 };
 
-const EMPTY_DRAFT: CollectionQueryInput = {
-  searchQuery: '',
-  activeTagFilter: null,
-  selectedDate: null,
-};
-
-export function createSavedCollectionsPanel(): PanelLifecycle {
+export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): PanelLifecycle {
   let container: HTMLElement | null = null;
   let savedCollections: Record<string, SavedCollection> = {};
   let savedTagRules: Record<string, AutoTagRule> = {};
-  let draft: CollectionQueryInput = { ...EMPTY_DRAFT };
+  const editor = createClauseEditor();
+  let loadedIds: number[] = [];
+  let previewGeneration = 0;
+  const countForClause: ClauseCountSource['countForClause'] = deps?.countForClause ?? countForClauseHistory;
+
+  function nonEmptyFirstInput(): CollectionQueryInput {
+    const first = editor.getClauses().find((c) => c.search !== '' || c.tag !== null || c.date !== null);
+    return {
+      searchQuery: first?.search ?? '',
+      activeTagFilter: first?.tag ?? null,
+      selectedDate: first?.date ?? null,
+    };
+  }
 
   function renderDraft(): void {
     const draftEl = container?.querySelector('.saved-collections-draft');
     if (!(draftEl instanceof HTMLElement)) return;
-    const summary = describeCollectionQuery(serializeCollectionQuery(draft), CONDITION_LABELS);
+    const summary = describeCollectionQueryV2(editor.toSavedQuery(), CONDITION_LABELS);
     draftEl.textContent = summary !== '' ? summary : t('savedCollectionNoCondition');
   }
 
@@ -75,28 +111,118 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     container.appendChild(alert);
   }
 
+  function clearPreviewError(): void {
+    container?.querySelector('.saved-collections-preview-error')?.remove();
+  }
+
+  function renderPreviewError(error: unknown): void {
+    if (!container) return;
+    clearPreviewError();
+    const alert = document.createElement('div');
+    alert.className = 'saved-collections-preview-error';
+    alert.setAttribute('role', 'alert');
+    alert.textContent = errorMessage(error);
+    container.appendChild(alert);
+  }
+
+  function toStorageQueries(): ClauseStorageQuery[] {
+    return editor.getClauses().map((clause) => {
+      const out: ClauseStorageQuery = {};
+      if (clause.search !== '') out.text = clause.search;
+      if (clause.tag !== null) out.tagFilter = clause.tag;
+      if (clause.date !== null) {
+        const range = localDayRangeFromDateString(clause.date);
+        out.dateFrom = range.since;
+        out.dateTo = range.until;
+      }
+      return out;
+    });
+  }
+
+  function paintPreview(target: HTMLElement, preview: ClausePreview): void {
+    const rows = target.querySelectorAll('.clause-count');
+    preview.perRow.forEach((count, index) => {
+      const el = rows[index];
+      if (el instanceof HTMLElement) el.textContent = String(count);
+    });
+    const totalEl = target.querySelector('.clause-preview-text');
+    if (totalEl instanceof HTMLElement) totalEl.textContent = String(preview.total);
+  }
+
+  async function refreshPreview(): Promise<void> {
+    const generation = ++previewGeneration;
+    const target = container;
+    if (!target) return;
+    let preview: ClausePreview;
+    try {
+      preview = await previewClauseCounts(toStorageQueries(), editor.getOp(), { countForClause });
+    } catch (error) {
+      if (generation !== previewGeneration || container !== target) return;
+      renderPreviewError(error);
+      return;
+    }
+    if (generation !== previewGeneration || container !== target) return;
+    clearPreviewError();
+    paintPreview(target, preview);
+  }
+
   function applyToDraft(query: Record<string, unknown>): void {
-    const parsed = parseCollectionQuery(query);
-    draft = {
-      searchQuery: parsed.search,
-      activeTagFilter: parsed.tag,
-      selectedDate: parsed.date,
-    };
+    const parsed = parseCollectionQueryV2(query);
+    loadedIds = parsed.ids;
+    editor.loadSaved(query);
+    renderEditor();
     renderDraft();
   }
 
+  function renderEditor(): void {
+    if (!container) return;
+    renderClauseEditorView(container, editor, {
+      onDraftChange: () => renderDraft(),
+      onStructureChange: (kind) => {
+        if (kind !== 'refresh') renderEditor();
+        renderDraft();
+        if (kind !== 'draft') void refreshPreview();
+      },
+    }, SAVED_COLLECTIONS_EDITOR_REGION_ID);
+  }
+
+  async function onSaveV2(name: string): Promise<{ ok: boolean; error?: string }> {
+    const nonEmpty = editor.getClauses().filter((c) => c.search !== '' || c.tag !== null || c.date !== null);
+    if (nonEmpty.length === 0) {
+      return { ok: false, error: t('collectionClauseEmptySave') };
+    }
+    const query =
+      loadedIds.length > 0
+        ? serializeClausesQuery(editor.getOp(), nonEmpty, loadedIds)
+        : editor.toSavedQuery();
+    try {
+      await upsertSavedCollectionById(newCollectionId(), name, query, Date.now());
+    } catch (error) {
+      return { ok: false, error: errorMessage(error) };
+    }
+    const rawIds = query['ids'];
+    loadedIds = Array.isArray(rawIds)
+      ? rawIds.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+      : [];
+    await loadSaved();
+    return { ok: true };
+  }
+
   function createActions(): ReturnType<typeof createSavedCollectionsActions> {
-    return createSavedCollectionsActions({
-      getQueryInput: () => ({ ...draft }),
+    const base = createSavedCollectionsActions({
+      // Adapter only: satisfies SavedCollectionsDeps — the live save path is onSaveV2.
+      getQueryInput: () => ({ ...nonEmptyFirstInput() }),
       applyCollection: (query) => applyToDraft(query),
       getCollections: () => savedCollections,
       getRules: () => savedTagRules,
       reload: () => loadSaved(),
     });
+    return { ...base, onSave: (name) => onSaveV2(name) };
   }
 
   function renderSaved(): void {
     if (!container) return;
+    renderEditor();
     renderSavedCollectionsRegion(
       container,
       savedCollections,
@@ -111,7 +237,7 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     const target = container;
     try {
       const loaded = await loadSavedCollectionsRegion(target, {
-        getQueryInput: () => ({ ...draft }),
+        getQueryInput: () => ({ ...nonEmptyFirstInput() }),
         applyCollection: (query) => applyToDraft(query),
         getCollections: () => savedCollections,
         getRules: () => savedTagRules,
@@ -129,9 +255,6 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
         renderSaved();
       }
     } catch (error) {
-      // Contained in-panel (BDD 読込失敗はパネル内で完結する): the failure
-      // reason paints here and load() still resolves, so the history panel
-      // and the registry banner stay out of it.
       if (container === target) renderLoadError(error);
     }
   }
@@ -141,17 +264,30 @@ export function createSavedCollectionsPanel(): PanelLifecycle {
     category: 'async-data',
     mount(c: HTMLElement) {
       container = c;
+      // Recall + handoff target: the editor draft (PBI 2026-11-02-03).
+      registerCollectionDraftApplier((query) => applyToDraft(query));
     },
     async load() {
       if (!container) return;
+      // A handoff sent while this panel was unmounted lands here, once.
+      const pendingHandoff = consumePendingHistoryHandoff();
+      if (pendingHandoff) applyToDraft(pendingHandoff);
+      renderEditor();
       renderDraft();
       await loadSaved();
     },
     destroy() {
+      // C-#7: invalidate in-flight previews. destroy() nulls the container,
+      // so a stale flight normally misses — except when the region remounts
+      // onto the same element: generation must move or the old flight paints
+      // over the fresh mount as if it were current.
+      previewGeneration++;
+      unregisterCollectionDraftApplier();
       container = null;
       savedCollections = {};
       savedTagRules = {};
-      draft = { ...EMPTY_DRAFT };
+      loadedIds = [];
+      editor.loadSaved({ version: 2, op: 'and', clauses: [] });
     },
   };
 }

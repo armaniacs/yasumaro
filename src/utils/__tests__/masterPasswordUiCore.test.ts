@@ -31,6 +31,15 @@ describe('masterPasswordUiCore', () => {
             const result = validateAndSetPasswordErrors('ab', null);
             expect(result).toBe(false);
         });
+
+        test('surfaces the policy reason verbatim (12-char single-class fails on classes, not length)', async () => {
+            const { validatePasswordRequirements } = await import('../masterPassword.js');
+            const reason = validatePasswordRequirements('abcdefghijkl');
+            expect(reason).toBeTruthy();
+            const errorEl = { textContent: '', classList: { add: vi.fn() } } as any;
+            expect(validateAndSetPasswordErrors('abcdefghijkl', errorEl)).toBe(true);
+            expect(errorEl.textContent).toBe(reason);
+        });
     });
 
     describe('validateAndSetMatchErrors', () => {

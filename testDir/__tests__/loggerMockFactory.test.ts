@@ -42,7 +42,22 @@ describe('createLoggerModuleMock', () => {
   it('keeps spec entry order as export order', () => {
     const mod = createLoggerModuleMock({ logWarn: 'fn', logError: 'fn', logInfo: 'fn' });
 
-    expect(Object.keys(mod)).toEqual(['logWarn', 'logError', 'logInfo']);
+    expect(Object.keys(mod)).toEqual(['logWarn', 'logError', 'logInfo', 'flushLogs']);
+  });
+
+  it('defaults flushLogs to an async noop (real core.js surface parity)', async () => {
+    const mod = createLoggerModuleMock({ logError: 'fn' });
+    const flushLogs = mod.flushLogs as () => Promise<void>;
+
+    expect(vi.isMockFunction(flushLogs)).toBe(true);
+    await expect(flushLogs()).resolves.toBeUndefined();
+  });
+
+  it('lets an explicit flushLogs spec entry win over the default', () => {
+    const spy = vi.fn();
+    const mod = createLoggerModuleMock({ flushLogs: spy });
+
+    expect(mod.flushLogs).toBe(spy);
   });
 });
 

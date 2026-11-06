@@ -11,12 +11,15 @@ import {
   ASK_SNIPPET_MAX_CHARS,
   assembleAskEvidence,
   buildEvidenceContext,
+  buildUnsupportedScopeSuggestion,
   buildWidenSuggestion,
   matchesCollectionScope,
   nameEvidenceGap,
   pickEvidenceRows,
   truncateSnippet,
 } from '../askEvidence.js';
+import { normalizeCollectionScope } from '../../messaging/responseCanonical.js';
+import { localDayRangeFromDateString } from '../../utils/localDate.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 
 function makeRow(id: number, overrides: Partial<BrowsingLogRecord> = {}): BrowsingLogRecord {
@@ -107,16 +110,97 @@ describe('askEvidence', () => {
 
   describe('matchesCollectionScope', () => {
     it('filters rows by tag membership and the local day range', () => {
-      const scope = { tag: 'rust', date: null };
-      expect(matchesCollectionScope(makeRow(1, { tags: 'rust, wasm' }), scope, null)).toBe(true);
-      expect(matchesCollectionScope(makeRow(1, { tags: 'wasm' }), scope, null)).toBe(false);
+      const scope = normalizeCollectionScope({ tag: 'rust' });
+      expect(matchesCollectionScope(makeRow(1, { tags: 'rust, wasm' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'wasm' }), scope)).toBe(false);
+    });
+
+    it('matches tags by SQL-compatible partial match, not exact segment match', () => {
+      // Report parity (PBI 2026-11-02-02): scope.tag is a substring of the
+      // stored tag text, so a longer stored tag still counts as in-scope.
+      const scope = normalizeCollectionScope({ tag: 'rust' });
+      expect(matchesCollectionScope(makeRow(1, { tags: 'rustacean' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'RUST tools' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'trust' }), scope)).toBe(true);
     });
 
     it('drops rows outside the saved day range', () => {
-      const scope = { tag: null, date: '2026-10-23' };
-      const dayRange = { since: 1794380400000, until: 1794466740999 };
-      expect(matchesCollectionScope(makeRow(1, { created_at: 1794400000000 }), scope, dayRange)).toBe(true);
-      expect(matchesCollectionScope(makeRow(1, { created_at: 1700000000000 }), scope, dayRange)).toBe(false);
+      // Boundaries come from the day-range seam itself (calendar math is
+      // owned by localDate.test.ts); this pins the wiring: the clause date
+      // narrows rows to its local day.
+      const { since, until } = localDayRangeFromDateString('2026-10-23');
+      const scope = normalizeCollectionScope({ date: '2026-10-23' });
+      expect(matchesCollectionScope(makeRow(1, { created_at: since + 1000 }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { created_at: until - 1000 }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { created_at: since - 1000 }), scope)).toBe(false);
+      expect(matchesCollectionScope(makeRow(1, { created_at: until + 1000 }), scope)).toBe(false);
+    });
+
+    it('combines multi-clause scopes by op (or: any clause, and: every clause)', () => {
+      const orScope = normalizeCollectionScope({
+        version: 2,
+        op: 'or',
+        clauses: [{ tag: 'rust' }, { tag: 'wasm' }],
+      });
+      expect(matchesCollectionScope(makeRow(1, { tags: 'wasm' }), orScope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'ai' }), orScope)).toBe(false);
+
+      const andScope = normalizeCollectionScope({
+        version: 2,
+        op: 'and',
+        clauses: [{ tag: 'rust' }, { date: '2026-10-23' }],
+      });
+      const { since } = localDayRangeFromDateString('2026-10-23');
+      expect(matchesCollectionScope(makeRow(1, { tags: 'rust', created_at: since + 1000 }), andScope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'rust', created_at: since - 1000 }), andScope)).toBe(false);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'wasm', created_at: since + 1000 }), andScope)).toBe(false);
+    });
+
+    it('treats pinned ids as UNION members regardless of the clauses', () => {
+      const scope = normalizeCollectionScope({
+        version: 2,
+        op: 'and',
+        clauses: [{ tag: 'rust' }],
+        ids: [7],
+      });
+      // Pinned by id: survives even though no clause matches.
+      expect(matchesCollectionScope(makeRow(7, { tags: 'wasm' }), scope)).toBe(true);
+      // Clause match without a pin: survives without an id at all.
+      expect(matchesCollectionScope(makeRow(1, { tags: 'rust' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(2, { tags: 'wasm' }), scope)).toBe(false);
+    });
+
+    it('matches nothing for an unresolvable scope (fail-closed belt)', () => {
+      const scope = normalizeCollectionScope({ search: 'wasm' });
+      expect(scope.unresolvable).toBe(true);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'wasm' }), scope)).toBe(false);
+    });
+
+    it('keeps an unscoped QA (null collection) on every row', () => {
+      const scope = normalizeCollectionScope(null);
+      expect(scope.unresolvable).toBe(false);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'anything' }), scope)).toBe(true);
+    });
+
+    it('restricts a pins-only scope to the pinned ids', () => {
+      const scope = normalizeCollectionScope({ version: 2, op: 'or', clauses: [], ids: [5] });
+      expect(scope).toEqual({ op: 'or', clauses: [], ids: [5], unresolvable: false, searchDropped: false });
+      expect(matchesCollectionScope(makeRow(5, { tags: 'anything' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(6, { tags: 'anything' }), scope)).toBe(false);
+    });
+
+    it('keeps every row for a truly-unscoped scope (empty clauses and empty ids)', () => {
+      const scope = normalizeCollectionScope(null);
+      expect(scope.clauses).toEqual([]);
+      expect(scope.ids).toEqual([]);
+      expect(matchesCollectionScope(makeRow(1, { tags: 'alpha' }), scope)).toBe(true);
+      expect(matchesCollectionScope(makeRow(2, { tags: 'beta' }), scope)).toBe(true);
+    });
+  });
+
+  describe('buildUnsupportedScopeSuggestion', () => {
+    it('names the support boundary instead of widening an unbounded search', () => {
+      expect(buildUnsupportedScopeSuggestion()).toContain('対象外');
     });
   });
 
@@ -129,8 +213,7 @@ describe('askEvidence', () => {
       ];
       const result = assembleAskEvidence({
         rows,
-        scope: { tag: 'rust', date: null },
-        dayRange: null,
+        scope: normalizeCollectionScope({ tag: 'rust' }),
         resolveDomainPolicy: () => 'allowed',
       });
       expect(result.scopedCount).toBe(2);
@@ -138,12 +221,32 @@ describe('askEvidence', () => {
       expect(result.excludedNoSummary).toBe(0);
     });
 
+    it('applies multi-clause union semantics with pinned ids', () => {
+      const rows = [
+        makeRow(1, { tags: 'rust' }),
+        makeRow(2, { tags: 'wasm' }),
+        makeRow(3, { tags: 'ai' }),
+        makeRow(4, { tags: 'other' }),
+      ];
+      const result = assembleAskEvidence({
+        rows,
+        scope: normalizeCollectionScope({
+          version: 2,
+          op: 'or',
+          clauses: [{ tag: 'rust' }, { tag: 'wasm' }],
+          ids: [4],
+        }),
+        resolveDomainPolicy: () => 'allowed',
+      });
+      expect(result.scopedCount).toBe(3);
+      expect(result.evidence.map((e) => e.id)).toEqual([1, 2, 4]);
+    });
+
     it('counts excluded domains while selecting the remaining rows', () => {
       const rows = [makeRow(1), makeRow(2), makeRow(3)];
       const result = assembleAskEvidence({
         rows,
-        scope: { tag: null, date: null },
-        dayRange: null,
+        scope: normalizeCollectionScope(null),
         resolveDomainPolicy: (url) => (url.includes('example2.com') ? 'no-summary' : 'allowed'),
       });
       expect(result.excludedNoSummary).toBe(1);
@@ -154,8 +257,7 @@ describe('askEvidence', () => {
     it('returns an empty evidence set when no rows survive the scope', () => {
       const result = assembleAskEvidence({
         rows: [makeRow(1, { tags: 'wasm' })],
-        scope: { tag: 'rust', date: null },
-        dayRange: null,
+        scope: normalizeCollectionScope({ tag: 'rust' }),
         resolveDomainPolicy: () => 'allowed',
       });
       expect(result.evidence).toEqual([]);
@@ -166,8 +268,7 @@ describe('askEvidence', () => {
       const rows = [1, 2, 3, 4, 5].map((id) => makeRow(id));
       const result = assembleAskEvidence({
         rows,
-        scope: { tag: null, date: null },
-        dayRange: null,
+        scope: normalizeCollectionScope(null),
         resolveDomainPolicy: () => 'allowed',
         maxCount: 1,
       });

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   ValidVisitValidator,
   DashboardSqliteValidator,
+  ExportResearchReportValidator,
   FetchUrlValidator,
   ManualRecordValidator,
   CheckDomainValidator,
@@ -12,6 +13,7 @@ import {
   ValidationError,
   validVisitValidator,
   dashboardSqliteValidator,
+  exportResearchReportValidator,
   fetchUrlValidator,
   manualRecordValidator,
   checkDomainValidator,
@@ -20,7 +22,7 @@ import {
   generateReviewSummaryValidator,
   logForwardValidator,
 } from '../validators.js';
-import { MAX_BYTE_STAT_BYTES, MAX_CLEANSED_ELEMENTS } from '../../utils/limits.js';
+import { MAX_BYTE_STAT_BYTES, MAX_CLEANSED_ELEMENTS, MAX_QUERY_IDS } from '../../utils/limits.js';
 
 describe('MessageValidator interface', () => {
   it('singletons are instances of correct classes', () => {
@@ -76,6 +78,23 @@ describe('DashboardSqliteValidator', () => {
   it('accepts valid query request', () => {
     expect(() => v.validate({ subtype: 'query', limit: 10 })).not.toThrow();
     expect(() => v.validate({ type: 'DASHBOARD_SQLITE', payload: { subtype: 'query' }, protocolVersion: 1 })).not.toThrow();
+  });
+
+  it('accepts a query with an ids filter (PBI 2026-11-02-07 pin resolution)', () => {
+    expect(() => v.validate({ subtype: 'query', ids: [1, 2, 999] })).not.toThrow();
+  });
+
+  it('rejects a query with non-array or non-integer ids (C-#8: rowids are non-negative integers)', () => {
+    expect(() => v.validate({ subtype: 'query', ids: 'x' })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, NaN] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, 'x'] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, 1.5] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, -2] })).toThrow(ValidationError);
+  });
+
+  it('rejects a query with more ids than MAX_QUERY_IDS', () => {
+    const ids = Array.from({ length: MAX_QUERY_IDS + 1 }, (_, i) => i + 1);
+    expect(() => v.validate({ subtype: 'query', ids })).toThrow(ValidationError);
   });
 
   it('rejects unknown subtype', () => {
@@ -529,5 +548,50 @@ describe('LogForwardValidator (PBI 2026-10-21-02)', () => {
 
   it('logForwardValidator singleton is an instance', () => {
     expect(logForwardValidator).toBeInstanceOf(LogForwardValidator);
+  });
+});
+
+describe('ExportResearchReportValidator — V2 pins (PBI 2026-11-02-04)', () => {
+  const v = new ExportResearchReportValidator();
+
+  it('accepts a scope without ids (existing behavior)', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { search: 'q' } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('accepts optional ids of non-negative integers (C-#8)', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 2, 3] } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('does not reject an over-long pin list (report-side absorption, unlike save path B)', () => {
+    const ids = Array.from({ length: 500 }, (_, i) => i + 1);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids } }, protocolVersion: 1 }),
+    ).not.toThrow();
+  });
+
+  it('rejects a non-array ids and non-integer entries (C-#8)', () => {
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: 'x' } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, NaN] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 'x'] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 1.5] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, -2] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+  });
+
+  it('exportResearchReportValidator singleton is an instance', () => {
+    expect(exportResearchReportValidator).toBeInstanceOf(ExportResearchReportValidator);
   });
 });

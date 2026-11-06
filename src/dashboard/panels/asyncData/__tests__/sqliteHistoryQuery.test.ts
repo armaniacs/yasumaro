@@ -515,3 +515,16 @@ describe('queryHistory', () => {
     );
   });
 });
+
+describe('queryHistory', () => {
+  describe('search with scope', () => {
+    it('forwards tagFilter and date range to searchLogs on the search path', async () => {
+      const searchLogs = vi.fn().mockResolvedValue({ data: { rows: [], total: 0 } });
+      await queryHistory(
+        { search: 'AI', tagFilter: 'tools', since: 1000, until: 2000, limit: 1, offset: 0 },
+        { searchLogs, queryLogs: vi.fn(), getSavedUrlEntries: vi.fn().mockResolvedValue([]) },
+      );
+      expect(searchLogs).toHaveBeenCalledWith('AI', 1, 0, expect.objectContaining({ tagFilter: 'tools', since: 1000, until: 2000 }));
+    });
+  });
+});

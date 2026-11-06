@@ -38,8 +38,12 @@ import {
 } from '../../../../utils/storage/autoTagRulesRepository.js';
 import {
   createSavedCollectionsPanel,
+  SAVED_COLLECTIONS_EDITOR_REGION_ID,
   SAVED_COLLECTIONS_PANEL_REGION_ID,
 } from '../savedCollectionsPanel.js';
+import { tOrKey as t } from '../../../../utils/i18n.js';
+import { formatLocalDate } from '../../../../utils/localDate.js';
+import { drainMacrotask } from '../../../../../testDir/waitPolicy.js';
 import type { SavedCollection } from '../../../../utils/storage/savedCollections.js';
 import type { AutoTagRule } from '../../../../utils/storage/autoTagRules.js';
 
@@ -72,6 +76,7 @@ function mountSection(): HTMLElement {
   section.innerHTML = `
     <h2 id="panel-saved-collections-title">Saved collections</h2>
     <p class="saved-collections-draft" role="status"></p>
+    <div id="${SAVED_COLLECTIONS_EDITOR_REGION_ID}"></div>
     <div id="${SAVED_COLLECTIONS_PANEL_REGION_ID}"></div>`;
   document.body.appendChild(section);
   return section;
@@ -188,5 +193,198 @@ describe('savedCollectionsPanel — load failure stays in-panel (BDD 読込失�
     expect(alert?.getAttribute('role')).toBe('alert');
     expect(alert?.textContent).toContain('db down');
     panel.destroy?.();
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('clause editor region', () => {
+    it('renders editor rows on load', async () => {
+      document.body.innerHTML = '<div id="host"><div id="saved-collections-editor-region"></div><div id="saved-collections-panel-region"></div><p class="saved-collections-draft"></p></div>';
+      const host = document.querySelector('#host') as HTMLElement;
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel();
+      panel.mount(host);
+      await panel.load?.();
+      expect(host.querySelectorAll('.clause-row').length).toBeGreaterThan(0);
+      panel.destroy?.();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('clause draft handoff', () => {
+    it('restores a multi-clause saved query into the editor', async () => {
+      const { createClauseEditor } = await import('../collectionClauseEditor.js');
+      const editor = createClauseEditor();
+      editor.loadSaved({ version: 2, op: 'or', clauses: [{ search: 'AI' }, { search: '要約' }] });
+      expect(editor.getClauses()).toHaveLength(2);
+      expect(editor.getOp()).toBe('or');
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('preview generation guard', () => {
+    it('ignores a stale refresh that resolves after a newer one', async () => {
+      const resolvers: Array<(n: number) => void> = [];
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel({
+        countForClause: () => new Promise<number>((resolve) => { resolvers.push(resolve); }),
+      });
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(resolvers).toHaveLength(2);
+
+      resolvers[1]!(7);
+      await vi.waitFor(() => {
+        expect(section.querySelector('.clause-preview-text')?.textContent).toBe('7');
+      });
+
+      resolvers[0]!(100);
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(section.querySelector('.clause-count')?.textContent).toBe('7');
+      expect(section.querySelector('.clause-preview-text')?.textContent).toBe('7');
+      panel.destroy?.();
+    });
+
+    it('shows an alert and keeps old counts when preview counting fails', async () => {
+      let shouldFail = false;
+      let deferred: PromiseWithResolvers<number> | null = null;
+      const { createSavedCollectionsPanel } = await import('../savedCollectionsPanel.js');
+      const panel = createSavedCollectionsPanel({
+        countForClause: () => {
+          if (!shouldFail) return Promise.resolve(7);
+          deferred = Promise.withResolvers<number>();
+          return deferred.promise;
+        },
+      });
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      const baselineRow = section.querySelector('.clause-count')?.textContent;
+      const baselineTotal = section.querySelector('.clause-preview-text')?.textContent;
+      expect(baselineRow).toBe('7');
+      expect(baselineTotal).toBe('7');
+
+      shouldFail = true;
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(deferred).not.toBeNull();
+      deferred!.reject(new Error('count failed'));
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+
+      const alert = section.querySelector('.saved-collections-preview-error');
+      expect(alert?.getAttribute('role')).toBe('alert');
+      expect(alert?.textContent).not.toBe('');
+      expect(section.querySelector('.clause-count')?.textContent).toBe(baselineRow);
+      expect(section.querySelector('.clause-preview-text')?.textContent).toBe(baselineTotal);
+      panel.destroy?.();
+    });
+
+    it('drops an in-flight preview across destroy and same-element remount (C-#7)', async () => {
+      const resolvers: Array<(n: number) => void> = [];
+      const remountPanel = createSavedCollectionsPanel({
+        countForClause: () => new Promise<number>((resolve) => { resolvers.push(resolve); }),
+      });
+      const section = mountSection();
+      remountPanel.mount(section);
+      await remountPanel.load?.();
+
+      // Start one preview flight, then destroy and remount onto the SAME
+      // element (region recreated in place): the old flight must not paint
+      // over the fresh mount as if it were current.
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(resolvers).toHaveLength(1);
+      remountPanel.destroy?.();
+      remountPanel.mount(section);
+
+      resolvers[0]!(42);
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(section.querySelector('.clause-preview-text')?.textContent).not.toBe('42');
+      remountPanel.destroy?.();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('empty save message', () => {
+    it('uses the clause empty-save message key', async () => {
+      // Empty editor + save click drives the panel-internal onSaveV2 path
+      // through the public PanelLifecycle surface (mount/load only).
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      section.querySelector<HTMLInputElement>('.saved-collection-name-input')!.value = 'Empty attempt';
+      section.querySelector<HTMLButtonElement>('[data-collection-action="save"]')?.click();
+      await vi.waitFor(() => {
+        expect(section.querySelector('.saved-collection-save-error')?.textContent).toBe(
+          t('collectionClauseEmptySave'),
+        );
+      });
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
+      panel.destroy?.();
+    });
+  });
+});
+
+describe('savedCollectionsPanel', () => {
+  describe('today preset', () => {
+    it('injects today into the draft without saving', async () => {
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="preset-today"]')?.click();
+      await drainMacrotask();
+
+      const today = formatLocalDate(new Date());
+      expect(section.querySelector('.clause-date')?.getAttribute('value')).toBe(today);
+      expect(section.querySelector('.saved-collections-draft')?.textContent).toContain(today);
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
+      panel.destroy?.();
+    });
+
+    it('replaces existing draft conditions instead of appending', async () => {
+      const panel = createSavedCollectionsPanel();
+      const section = mountSection();
+      panel.mount(section);
+      await panel.load?.();
+
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="add"]')?.click();
+      expect(section.querySelectorAll('.clause-row')).toHaveLength(2);
+
+      section.querySelector<HTMLButtonElement>('[data-clause-action="preset-today"]')?.click();
+      await drainMacrotask();
+
+      const today = formatLocalDate(new Date());
+      expect(section.querySelectorAll('.clause-row')).toHaveLength(1);
+      expect(section.querySelector('.clause-date')?.getAttribute('value')).toBe(today);
+      expect(mockedUpsertSaved).not.toHaveBeenCalled();
+      panel.destroy?.();
+    });
   });
 });

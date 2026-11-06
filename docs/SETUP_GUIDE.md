@@ -307,8 +307,8 @@ ollama list
 - **選択行にスター**: 複数選択した行にまとめてスターを付けます。確認画面でプライベート判定の件数が表示され、「プライベート判定を除いて適用」も選べます。適用後は「取り消す」で元に戻せます
 - **タグ正規化の提案**: タグの正規化ルールで変わる保存済みタグを「提案を表示」で一覧し、「適用」で記録のタグを書き換えます。「取消」で元に戻せます
 
-**保存済みコレクション / 履歴に聞く / 調査レポート一発生成（履歴直下の独立パネル）**:
-履歴パネルは記録一覧と検索操作だけに絞られ、保存・質問・報告は履歴の直後に並ぶ3件の独立パネルに移りました。
+**保存済みコレクション / 履歴に聞く / 調査レポート一発生成（開発中の機能として最下部に配置）**:
+履歴パネルは記録一覧と検索操作だけに絞られ、保存・質問・報告は最下部の「開発中の機能」に並ぶ3件の独立パネルに移りました。
 - **保存済みコレクション**（`Dashboard → 保存済みコレクション`）: 検索条件（語・タグ・期間）に名前を付けて保存します。一覧の「呼び出す」はパネル内の下書きに条件を復元します（履歴一覧への適用はしません）。「改名」「複製」「削除」で管理できます
 - **自動タグ規則**（同パネル内）: 条件（ドメイン末尾・URL・件名のいずれか1つ以上）と付与するタグ、優先度を登録します。新規記録のURL・件名が条件に合うと自動でタグが付きます（AIタグの後に追加され、重複は1つにまとめます）。規則の無効化・削除は今後の付与を止めます。誤って付いた場合は規則の「適用を取り消す」で、付与記録からタグを外せます
 - **履歴に聞く**（`Dashboard → 履歴に聞く`）: 対象コレクション（既定は「すべての記録」）を選んで質問を入力し「聞く」を押すと、端末内のモデルが記録の抜粋を根拠に答えます。根拠3件のリンクから元の記録に移動できます。該当する記録がない場合は「分かりません」と表示されます。外部には送信しません。回答中にもう一度押しても二重実行しません。失敗時は理由が表示されるので、もう一度「聞く」で再試行できます。要求は最大60秒で打ち切られます
@@ -611,7 +611,7 @@ In the `Dashboard → SQLite History` tab, you can view and manage your recordin
 
 **Saved collections / Ask history / One-shot research report (standalone panels right after history)**:
 The history panel keeps only the record list and search operations; saving, asking, and reporting moved to three standalone panels directly after history.
-- **Saved collections** (`Dashboard → Saved collections`): Name a search condition (terms, tags, period) and save it. "Recall" restores it into the panel-local draft (it does not apply to the history list). "Rename", "Duplicate", and "Delete" manage the list
+- **Saved collections** (`Dashboard → Saved collections`): Name a search condition (terms, tags, period) and save it. "Recall" restores it into the panel-local draft (recall convention: the draft is the only recall target; it does not apply to the history list, and the history-side `applyCollection` is a v1-only legacy path). "Rename", "Duplicate", and "Delete" manage the list. "Send to collection" in the history panel packs the current filters (term, tag, single day) into the collections draft without saving there; empty filters and custom date ranges are refused with a reason shown in the history panel
 - **Auto-tag rules** (same panel): Register a condition (domain suffix, URL, and/or title) with a tag and a priority. New records whose URL or title matches get the tag automatically (appended after AI tags, deduplicated). Disabling or deleting a rule stops future tagging. "Undo apply" on a rule removes its tag from the tagged records
 - **Ask history** (`Dashboard → Ask history`): Pick a target collection (default: all records), enter a question, and press "Ask". An on-device model answers from excerpts of your records, and the links to the three supporting records open the originals. If nothing matches, it answers that it does not know. Nothing is sent externally. Pressing again while answering does not run it twice. On failure a reason is shown, so press "Ask" again to retry. Requests time out after 60 seconds
 - **One-shot research report** (`Dashboard → One-shot research report`): Pick a target collection and press "Generate report" to build a Markdown report with four sections (summary, timeline, citations, unread gaps). Choose "Also send to Obsidian" to write it to Obsidian too. The summary uses only stored summaries, never the full body text. Numbered citation links jump to the original records. Records without a summary land in the unread gaps. With no matching records a reason is shown and no file is created. Pick the target again and press once more to resend. Targets are capped at the first 200 records. Obsidian send failures show a reason
@@ -619,6 +619,7 @@ The history panel keeps only the record list and search operations; saving, aski
 **Filtering**:
 - **Full-text search**: Type keywords in the search box to search across URLs, titles, and AI summaries using FTS5
 - **Date filtering**: Narrow records down by recording date with the calendar
+- **Send to collection**: The calendar bar button sends the current term/tag/single-day filter to the Saved collections draft (naming and saving happen there). With no filter, or with a custom date range selected, nothing is sent and the reason is shown in the history panel
 - **Tag filtering**: Filter history by tag. Sorting is also supported
 - **Pending section**: Pages skipped by privacy detection appear in the pending section. Each entry offers "Record Now", "Record without AI", and "Delete Forever" actions
 

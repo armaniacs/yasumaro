@@ -8,7 +8,10 @@
  */
 
 import type { EncryptedData } from './types.js';
-import { MAX_ENVELOPE_BASE64_LENGTH as LIMIT_ENVELOPE_BASE64_LENGTH } from '../limits.js';
+import {
+    MAX_ENVELOPE_BASE64_LENGTH as LIMIT_ENVELOPE_BASE64_LENGTH,
+    MAX_BACKUP_ENVELOPE_BASE64_LENGTH as LIMIT_BACKUP_ENVELOPE_BASE64_LENGTH,
+} from '../limits.js';
 import {
     getWebCrypto,
     generateSalt,
@@ -25,7 +28,6 @@ import {
 const ENCRYPTION_ALGORITHM = 'AES-GCM';
 const ENVELOPE_HASH: 'SHA-256' = 'SHA-256';
 const MIN_ENVELOPE_ITERATIONS = 1;
-const MAX_ENVELOPE_BASE64_LENGTH = LIMIT_ENVELOPE_BASE64_LENGTH;
 const ALLOWED_ENVELOPE_HASHES = ['SHA-256'] as const;
 
 export interface EncryptionEnvelope {
@@ -38,7 +40,31 @@ export interface EncryptionEnvelope {
     data: string;
 }
 
-function validateEnvelope(envelope: EncryptionEnvelope): void {
+/**
+ * Decrypt-side options (PBI 2026-11-06-02).
+ *
+ * `context: 'backup'` selects the backup-specific pre-decode cap
+ * (MAX_BACKUP_ENVELOPE_BASE64_LENGTH): a user-picked backup file is already
+ * bounded by MAX_BACKUP_FILE_BYTES, so its envelope may legitimately exceed
+ * the generic 10 MiB cap. The default context keeps the generic cap, so all
+ * other envelope consumers retain their VULN-036 budget unchanged.
+ */
+export interface EnvelopeDecryptOptions {
+    context?: 'default' | 'backup';
+    /**
+     * Explicit pre-decode base64 cap override. Wins over `context`; exists so
+     * boundary tests can exercise the gate without multi-megabyte fixtures.
+     */
+    maxBase64Length?: number;
+}
+
+export function resolveEnvelopeBase64Cap(options?: EnvelopeDecryptOptions): number {
+    if (options?.maxBase64Length !== undefined) return options.maxBase64Length;
+    if (options?.context === 'backup') return LIMIT_BACKUP_ENVELOPE_BASE64_LENGTH;
+    return LIMIT_ENVELOPE_BASE64_LENGTH;
+}
+
+function validateEnvelope(envelope: EncryptionEnvelope, maxBase64Length: number, capLabel: string): void {
     if (envelope.version !== CURRENT_ENVELOPE_VERSION) {
         throw new Error(`Unsupported envelope version: ${envelope.version}. Expected ${CURRENT_ENVELOPE_VERSION}.`);
     }
@@ -49,8 +75,8 @@ function validateEnvelope(envelope: EncryptionEnvelope): void {
         throw new Error(`Invalid envelope hash: ${envelope.hash}`);
     }
     for (const field of ['salt', 'iv', 'data'] as const) {
-        if (envelope[field].length > MAX_ENVELOPE_BASE64_LENGTH) {
-            throw new Error(`Envelope ${field} exceeds maximum length`);
+        if (envelope[field].length > maxBase64Length) {
+            throw new Error(`Envelope ${field} exceeds maximum length (${capLabel} limit ${maxBase64Length} chars)`);
         }
     }
 }
@@ -76,8 +102,18 @@ export async function encryptEnvelope(plaintext: string, password: string): Prom
     };
 }
 
-export async function decryptEnvelope(envelope: EncryptionEnvelope, password: string): Promise<string> {
-    validateEnvelope(envelope);
+export async function decryptEnvelope(
+    envelope: EncryptionEnvelope,
+    password: string,
+    options?: EnvelopeDecryptOptions,
+): Promise<string> {
+    // cheap-auth-first order is load-bearing (VULN-036): structural checks and
+    // the pre-decode length gate run before base64 decode, KDF, and AES-GCM
+    // auth decrypt. The backup context only swaps which named cap the gate
+    // uses; it never moves the gate behind the expensive steps.
+    const cap = resolveEnvelopeBase64Cap(options);
+    const isBackupCap = options?.context === 'backup' && options?.maxBase64Length === undefined;
+    validateEnvelope(envelope, cap, isBackupCap ? 'backup' : 'envelope');
     const salt = base64ToBytes(envelope.salt);
     const iv = base64ToBytes(envelope.iv);
     const ciphertext = base64ToBytes(envelope.data);
@@ -89,6 +125,18 @@ export async function decryptEnvelope(envelope: EncryptionEnvelope, password: st
         ciphertext as BufferSource,
     );
     return new TextDecoder().decode(plaintext);
+}
+
+/**
+ * Backup-path decrypt (PBI 2026-11-06-02): same cheap-auth-first checks as
+ * decryptEnvelope, but the pre-decode length gate uses the backup-specific
+ * cap so a legitimate multi-MB backup is not rejected before authentication.
+ */
+export async function decryptBackupEnvelope(
+    envelope: EncryptionEnvelope,
+    password: string,
+): Promise<string> {
+    return decryptEnvelope(envelope, password, { context: 'backup' });
 }
 
 export function isEncryptionEnvelope(data: unknown): data is EncryptionEnvelope {

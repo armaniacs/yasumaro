@@ -81,7 +81,9 @@ test.describe('Panel category filter @extension', () => {
     // 折りたたみはトグル規約が所有するため :visible ではなく :not([hidden])
     // で pin する)。
     const unhiddenTabs = page.locator('#sidebar .sidebar-nav-btn[data-panel]:not([hidden])');
-    await expect(unhiddenTabs).toHaveCount(14);
+    // Mirrors CATEGORY_PANEL_IDS.analysis length (17): PBI 01-03 added
+    // saved-collections, ask-history, and research-report to analysis.
+    await expect(unhiddenTabs).toHaveCount(17);
 
     await filter.selectOption('all');
     await expect(unhiddenTabs).toHaveCount(totalTabs);

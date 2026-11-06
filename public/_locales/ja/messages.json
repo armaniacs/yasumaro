@@ -812,6 +812,27 @@
   "importLogsBtn": {
     "message": "JSON からログをインポート"
   },
+  "migrationSectionTitle": {
+    "message": "別のプロファイルから移行"
+  },
+  "migrationSectionDesc": {
+    "message": "別のブラウザやプロファイル (Edge・Chrome・Firefox) からエクスポートした設定とログを適用します。ファイルの署名は検証できないため、明示的な確認が必要です。"
+  },
+  "migrateSettingsBtn": {
+    "message": "ファイルから設定を移行"
+  },
+  "migrateLogsBtn": {
+    "message": "ファイルからログを移行"
+  },
+  "migrationConfirmTitle": {
+    "message": "別のプロファイルから移行"
+  },
+  "migrationConfirmMessage": {
+    "message": "このファイルは別のブラウザプロファイルからエクスポートされたため、署名を検証できません。自分でエクスポートしたファイルの場合のみ続行してください。現在の設定と履歴は上書きされます。続行しますか?"
+  },
+  "migrationConfirmButton": {
+    "message": "移行する"
+  },
   "importLogsProcessing": {
     "message": "インポート中..."
   },
@@ -1391,6 +1412,9 @@
   },
   "toolsSection": {
     "message": "ツール"
+  },
+  "experimentalSection": {
+    "message": "開発中の機能"
   },
   "panelCategoryFilterLabel": {
     "message": "パネルを分類で絞り込み"
@@ -2074,6 +2098,9 @@
   "askHistoryNoEvidence": {
     "message": "分かりません。該当する記録がありません。"
   },
+  "askSearchDroppedNote": {
+    "message": "注: コレクションの検索語条件は質問回答の絞り込みに使われていません。ピン留めID・タグ・日付条件のみで回答しています。"
+  },
   "researchReportLabel": {
     "message": "調査レポート一発生成"
   },
@@ -2105,10 +2132,14 @@
     "message": "選んだコレクションを対象に、要旨・時系列・引用・未読穴の4節からなるMarkdownレポートを生成します。"
   },
   "savedCollectionsHelp": {
-    "message": "検索条件(語・タグ・期間)に名前を付けて保存し、一覧から呼び出せます。一覧には更新時刻が、呼び出し後には条件に合う件数が表示されます。"
+    "message": "条件行に語・タグ・期間を入力 → 件数の目安を更新で件数を確認 → 名前を付けて保存し、一覧から呼び出せます。"
   },
   "savedCollectionsEmpty": {
     "message": "保存済みコレクションはまだありません"
+  },
+  "savedCollectionsFirstGuide": {
+    "message": "上の条件入力に語・タグ・期間を入れて、名前を付けて保存すると最初の1件が作れます",
+    "description": "保存0件時の初回作成の手順案内"
   },
   "savedCollectionSaveBtn": {
     "message": "この条件を保存"
@@ -2166,6 +2197,33 @@
   },
   "savedCollectionNameEmpty": {
     "message": "名前を入力してください"
+  },
+  "collectionClauseAddRow": {
+    "message": "条件を追加"
+  },
+  "collectionClauseRemoveRow": {
+    "message": "条件を削除"
+  },
+  "collectionPresetToday": {
+    "message": "今日"
+  },
+  "collectionClauseOpLabel": {
+    "message": "AND/OR 切替"
+  },
+  "collectionClausePreview": {
+    "message": "件数の目安を更新（実際とは異なる場合があります）"
+  },
+  "collectionClauseEmptySave": {
+    "message": "保存する条件がありません。条件を1件以上追加してください。"
+  },
+  "collectionFanoutNotice": {
+    "message": "条件が多すぎます（$1件）。最初の条件のみ適用しました。"
+  },
+  "collectionTruncatedNotice": {
+    "message": "$2件中最初の$1件を表示しています。"
+  },
+  "collectionExcludedNotice": {
+    "message": "利用できなくなったピン留め記録$1件を除外しました。"
   },
   "autoTagRulesLabel": {
     "message": "自動タグ規則"
@@ -3033,6 +3091,42 @@
   "researchSessions_searchToGoalEmpty": {
     "message": "検索から始まったセッションがまだありません。",
     "description": "Empty state for the search-to-goal table"
+  },
+  "researchSessions_saveToCollection": {
+    "message": "コレクションに保存",
+    "description": "セッションをコレクション草稿に送るボタン"
+  },
+  "researchSessions_saveToCollectionAriaLabel": {
+    "message": "セッション{n}をコレクションに保存",
+    "description": "セッション保存ボタンのariaラベル"
+  },
+  "researchSessions_handoffSent": {
+    "message": "{n}件({range})をコレクションの草稿に送りました。名前を付けて保存してください。",
+    "description": "セッション送付の確認表示"
+  },
+  "researchSessions_handoffOverLimit": {
+    "message": "保存しませんでした:{n}件は上限{max}件を超えています。",
+    "description": "ID上限超えの拒否"
+  },
+  "researchSessions_handoffEmpty": {
+    "message": "このセッションにはページがありません。",
+    "description": "空セッションの拒否"
+  },
+  "researchSessions_handoffMixedTags": {
+    "message": "タグが混在しているためID指定のみで保存しました。",
+    "description": "タグ混在メモ"
+  },
+  "researchSessions_handoffCrossDay": {
+    "message": "複数日にまたがるためID指定のみで保存しました。",
+    "description": "跨日メモ"
+  },
+  "researchSessions_handoffSearchOmitted": {
+    "message": "検索語が異なるため検索条件なしで保存しました。",
+    "description": "検索語省略メモ"
+  },
+  "researchSessions_handoffQuotableZero": {
+    "message": "警告:引用できるページがありません。",
+    "description": "引用不可ゼロの警告"
   },
   "privacyPolicyTitle": {
     "message": "プライバシーポリシー — Yasumaro"
@@ -4276,6 +4370,18 @@
   },
   "historySelectRecord": {
     "message": "この記録を選択"
+  },
+  "historySendToCollection": {
+    "message": "コレクションに送る"
+  },
+  "historyHandoffSent": {
+    "message": "コレクションの草稿に送りました。名前を付けて保存してください。"
+  },
+  "historyHandoffRangeUnsavable": {
+    "message": "期間指定のままでは送れません。単日を選んでください。"
+  },
+  "historyHandoffDroppedPrevious": {
+    "message": "直前の送りが未処理のため上書きしました。先にコレクション側で読み込んでください。"
   },
   "historyAppendToObsidian": {
     "message": "選択した記事を Obsidian に追記"
@@ -5722,8 +5828,11 @@
   "promptNotFound": {
     "message": "プロンプトが見つかりません"
   },
+  "encryptedBackupCreating": {
+    "message": "{filename} を作成しています..."
+  },
   "encryptedBackupCreated": {
-    "message": "暗号化バックアップを作成しました"
+    "message": "暗号化バックアップを作成しました: {filename}"
   },
   "encryptedBackupCreateFailed": {
     "message": "バックアップ作成に失敗しました: {error}"
@@ -5745,6 +5854,24 @@
   },
   "encryptedBackupFileReadFailed": {
     "message": "ファイルの読み込みに失敗しました: {error}"
+  },
+  "backupStageReadingDb": {
+    "message": "履歴DBを読み出しています..."
+  },
+  "backupStageEncrypting": {
+    "message": "暗号化しています..."
+  },
+  "backupStageDecrypting": {
+    "message": "復号しています..."
+  },
+  "backupStageRestoringDb": {
+    "message": "履歴DBを復元しています..."
+  },
+  "backupStageRestoringSettings": {
+    "message": "設定を復元しています..."
+  },
+  "masterPasswordStageRotating": {
+    "message": "鍵を導出して再暗号化しています..."
   },
   "gistSettingsSaved": {
     "message": "Gist 設定を保存しました"

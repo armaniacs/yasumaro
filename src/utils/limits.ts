@@ -123,6 +123,27 @@ export const DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
  * vs 10 MiB base64 text; do not merge them. */
 export const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
 
+/**
+ * Encrypted-backup file pick ceiling (dashboard encryptedBackupPanel).
+ * A backup legitimately embeds a base64 SQLite DB, so the selected file may
+ * be far larger than any other envelope payload. Kept here (not as a panel
+ * local) so the file gate and the envelope gate below cannot drift apart.
+ */
+export const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Encrypted-backup envelope PRE-DECODE base64 length cap (PBI 2026-11-06-02).
+ * Deliberately separate from the generic MAX_ENVELOPE_BASE64_LENGTH (10 MiB):
+ * raising the generic cap would widen the pre-auth allocation budget on every
+ * envelope consumer (VULN-036), while a backup is a user-picked local file
+ * already bounded by MAX_BACKUP_FILE_BYTES — the JSON envelope is ~data plus
+ * a small fixed overhead, so 50 MiB of base64 text stays inside the 50 MB
+ * file gate and its decode amplification (~37 MiB binary) is bounded by that
+ * same explicit user action. Never compare this against the 64 MiB binary
+ * ciphertext cap; base64 chars and decoded bytes are different layers.
+ */
+export const MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 50 * 1024 * 1024;
+
 /** AI provider HTTP JSON response cap (summary + testConnection). */
 export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
 
@@ -181,6 +202,32 @@ export const MAX_CLEANSED_REASONS = 64;
  */
 export const MAX_VISIT_DURATION_SECONDS = 86_400;
 export const MAX_SCROLL_RATIO_PERCENT = 100;
+
+/**
+ * History-list collection fan-out (PBI 2026-11-02-07): a v2 collection can
+ * carry arbitrarily many clauses, but each clause costs one history query
+ * (N+1 with the pin-cover re-fetch). Past this many clauses only the first
+ * clause runs and the panel shows a warning.
+ */
+export const MAX_COLLECTION_FANOUT = 8;
+
+/**
+ * History-list collection row ceiling (PBI 2026-11-02-07): the merged
+ * clause-plus-pin row set is sliced to this many rows (created_at order);
+ * the excess is reported as a truncation notice, never silently dropped.
+ */
+export const MAX_COLLECTION_ROWS = 200;
+
+/**
+ * Per-clause id window for AND collections (PBI 2026-11-02-04 precedent in
+ * the research report path). AND intersects the per-clause id sets, so
+ * fetching each clause with only MAX_COLLECTION_ROWS rows would silently
+ * drop matches at position 201+ before the intersect runs. The raised window
+ * keeps the intersect honest while staying well under QUERY_CAPS (plain
+ * 10000 / fts 100000). OR keeps MAX_COLLECTION_ROWS: a union cannot lose
+ * matches to a pre-slice the way an intersect can.
+ */
+export const MAX_AND_CLAUSE_WINDOW = 2000;
 
 /**
  * Payload size caps. Oversized payloads are rejected (not truncated) so a

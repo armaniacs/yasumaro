@@ -54,9 +54,11 @@ export {
 export {
     encryptEnvelope,
     decryptEnvelope,
+    decryptBackupEnvelope,
+    resolveEnvelopeBase64Cap,
     isEncryptionEnvelope,
     migrateLegacyCiphertext,
 } from './envelope.js';
-export type { EncryptionEnvelope } from './envelope.js';
+export type { EncryptionEnvelope, EnvelopeDecryptOptions } from './envelope.js';
 
 export { hmacSignerForKey, hmacSignerForSecret, type HmacSigner, type HmacEncoding } from './hmacSigner.js';

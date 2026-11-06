@@ -42,6 +42,11 @@ export function buildListParams(
     until: payload.until,
     ...pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
     tagFilter: payload.tagFilter,
+    // PBI 2026-11-02-07 pin resolution: the targeted id filter rides the
+    // records query (SqliteClient.query kind:'records' with q — the kind
+    // marker flow below is untouched); absent ids are omitted so the
+    // planner sees a plain listing exactly as before.
+    ...pickDefined({ ids: payload.ids }),
   };
 }
 
@@ -51,13 +56,19 @@ export function buildSearchParams(
   text: string;
   limit: number | undefined;
   offset: number;
-  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' };
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number };
 } {
   return {
     text: payload.query || '',
     limit: payload.limit,
     offset: payload.offset ?? 0,
-    options: pickDefined({ orderBy: payload.orderBy, orderDir: payload.orderDir }),
+    options: pickDefined({
+      orderBy: payload.orderBy,
+      orderDir: payload.orderDir,
+      tagFilter: payload.tagFilter,
+      since: payload.since,
+      until: payload.until,
+    }),
   };
 }
 

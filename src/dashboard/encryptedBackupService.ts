@@ -6,7 +6,7 @@
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { exportDb } from './exportLogsService.js';
 import { restoreDb, isServiceError } from './dashboardSqliteService.js';
-import { encryptEnvelope, decryptEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
+import { encryptEnvelope, decryptBackupEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
 import type { EncryptionEnvelope } from '../utils/crypto/index.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
@@ -51,9 +51,14 @@ function isBackupPayload(data: unknown): data is BackupPayload {
  * 履歴+設定を暗号化バックアップとしてエクスポートする。
  * @throws exportDb() が失敗した場合（履歴DBが読めない場合）
  */
-export async function exportEncryptedBackup(password: string): Promise<EncryptionEnvelope> {
+export async function exportEncryptedBackup(
+  password: string,
+  onStage?: (s: 'readingDb' | 'encrypting') => void,
+): Promise<EncryptionEnvelope> {
+  onStage?.('readingDb');
   const payload = await buildBackupPayload();
   const json = JSON.stringify(payload);
+  onStage?.('encrypting');
   return encryptEnvelope(json, password);
 }
 
@@ -63,11 +68,18 @@ export async function exportEncryptedBackup(password: string): Promise<Encryptio
  */
 export async function importEncryptedBackup(
   envelope: EncryptionEnvelope,
-  password: string
+  password: string,
+  onStage?: (s: 'decrypting' | 'restoringDb' | 'restoringSettings') => void,
 ): Promise<{ success: boolean; error?: string; skippedKeys?: string[] }> {
   let json: string;
   try {
-    json = await decryptEnvelope(envelope, password);
+    onStage?.('decrypting');
+    // WHY backup context, not the generic decryptEnvelope: a legitimate
+    // backup embeds a base64 SQLite DB and may exceed the generic 10 MiB
+    // pre-decode cap. The backup cap (limits.ts) is still a pre-auth length
+    // gate — cheap-auth-first order is unchanged — it only budgets for the
+    // file size the panel already enforces at pick time.
+    json = await decryptBackupEnvelope(envelope, password);
   } catch (error) {
     return { success: false, error: `Decryption failed: ${errorMessage(error)}` };
   }
@@ -88,6 +100,7 @@ export async function importEncryptedBackup(
   }
 
   const dbBytes = base64ToBytes(payload.historyDbBase64);
+  onStage?.('restoringDb');
   const restored = await restoreDb(dbBytes);
   if (isServiceError(restored)) {
     return { success: false, error: `Failed to restore history database: ${restored.error}` };
@@ -96,6 +109,7 @@ export async function importEncryptedBackup(
   // WHY: the runtime value is untrusted parsed JSON; the declared Settings
   // type is not verified, so the validator re-checks every key before restore.
   const { sanitized, skippedKeys } = validateRestorableSettings(payload.settings);
+  onStage?.('restoringSettings');
   await settingsRepository.setAll(sanitized);
 
   return { success: true, skippedKeys };

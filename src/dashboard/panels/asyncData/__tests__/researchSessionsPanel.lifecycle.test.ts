@@ -40,6 +40,10 @@ vi.mock('../../../utils/retry.js', async (importOriginal) => {
 });
 
 import { createResearchSessionsPanel } from '../researchSessionsPanel.js';
+import {
+  clearHistoryHandoffForTests,
+  consumePendingHistoryHandoff,
+} from '../historyHandoff.js';
 
 const MINUTE_MS = 60_000;
 
@@ -62,6 +66,7 @@ function mountPanel() {
         <button type="button" id="researchSessionsDeleteConfirmNo" class="secondary-btn" data-i18n="researchSessions_deleteConfirmNo">Cancel</button>
       </span>
     </div>
+    <div id="researchSessionsHandoffReason" class="data-table-notice" role="status"></div>
     <ol id="researchSessionsList" class="research-sessions-list"></ol>
     <p id="researchSessionsSearchToGoalOff" hidden></p>
     <table id="researchSessionsSearchToGoalTable" hidden>
@@ -710,5 +715,92 @@ describe('researchSessionsPanel — PanelLifecycle', () => {
       expect(list.querySelector('.research-sessions-source')).toBeNull();
       expect(list.textContent).not.toContain('not a url');
     });
+  });
+});
+
+describe('researchSessionsPanel — save to collection (PBI 2026-11-02-05)', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+    mockQueryLogs.mockReset();
+    mockGetSqliteStatus.mockReset();
+    mockGetSqliteStatus.mockResolvedValue({ initialized: true });
+    mockGetNavTrailConsent.mockReset();
+    mockGetNavTrailConsent.mockResolvedValue({ enabled: false, consentedAt: null });
+    mockQueryLogs.mockResolvedValue({ data: { rows: sampleRows(), total: 4 } });
+    mockDeleteLog.mockReset();
+    mockDeleteLog.mockResolvedValue({ data: undefined });
+    mockRemoveSavedUrl.mockReset();
+    mockRemoveSavedUrl.mockResolvedValue(undefined);
+    clearHistoryHandoffForTests();
+  });
+
+  it('renders one enabled save button per session with the i18n label', async () => {
+    const { panel } = mountPanel();
+
+    await panel.load?.();
+    await flush();
+
+    // sampleRows groups ids 1-3 into one session; id 4 stays a single page.
+    const buttons = document.querySelectorAll<HTMLButtonElement>('.rsess-save-collection');
+    expect(buttons).toHaveLength(1);
+    const button = buttons[0]!;
+    expect(button.disabled).toBe(false);
+    expect(button.getAttribute('data-i18n')).toBe('researchSessions_saveToCollection');
+    expect(button.textContent).not.toBe('');
+  });
+
+  it('hands the ids-first query to the collections draft bus with a count confirmation', async () => {
+    const { panel } = mountPanel();
+
+    await panel.load?.();
+    await flush();
+
+    document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
+
+    const pending = consumePendingHistoryHandoff();
+    expect(pending).not.toBeNull();
+    expect(pending).toMatchObject({ ids: [1, 2, 3] });
+    const reason = document.querySelector('#researchSessionsHandoffReason')!;
+    expect(reason.textContent).toContain('3');
+  });
+
+  it('refuses an over-limit session on click with a reason and no handoff', async () => {
+    const base = Date.now() - 60 * MINUTE_MS;
+    const rows = Array.from({ length: 201 }, (_, i) => ({
+      id: 100 + i,
+      url: `https://c.dev/${i}`,
+      title: `C${i}`,
+      domain: 'c.dev',
+      tags: '#x',
+      created_at: base + i * MINUTE_MS,
+    }));
+    mockQueryLogs.mockResolvedValue({ data: { rows, total: rows.length } });
+    const { panel } = mountPanel();
+
+    await panel.load?.();
+    await flush();
+
+    document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
+
+    expect(consumePendingHistoryHandoff()).toBeNull();
+    const reason = document.querySelector('#researchSessionsHandoffReason')!;
+    expect(reason.textContent).not.toBe('');
+    expect(reason.textContent).toContain('201');
+  });
+
+  it('clears the previous handoff reason when the gap regroups the rows', async () => {
+    const { panel } = mountPanel();
+
+    await panel.load?.();
+    await flush();
+
+    document.querySelector<HTMLButtonElement>('.rsess-save-collection')!.click();
+    expect(document.querySelector('#researchSessionsHandoffReason')!.textContent).not.toBe('');
+
+    const gap = document.querySelector<HTMLSelectElement>('#researchSessionsGap')!;
+    gap.value = '5';
+    gap.dispatchEvent(new Event('change', { bubbles: true }));
+
+    expect(document.querySelector('#researchSessionsHandoffReason')!.textContent).toBe('');
   });
 });

@@ -866,6 +866,27 @@
   "importLogsBtn": {
     "message": "Import Logs from JSON"
   },
+  "migrationSectionTitle": {
+    "message": "Migrate from Another Profile"
+  },
+  "migrationSectionDesc": {
+    "message": "Apply settings and logs exported from a different browser or profile (Edge, Chrome, Firefox). The file signature cannot be verified, so an explicit confirmation is required."
+  },
+  "migrateSettingsBtn": {
+    "message": "Migrate Settings from File"
+  },
+  "migrateLogsBtn": {
+    "message": "Migrate Logs from File"
+  },
+  "migrationConfirmTitle": {
+    "message": "Migrate from another profile"
+  },
+  "migrationConfirmMessage": {
+    "message": "This file was exported from a different browser profile and its signature cannot be verified. Only continue if you exported it yourself. Current settings and history will be overwritten. Continue?"
+  },
+  "migrationConfirmButton": {
+    "message": "Migrate"
+  },
   "importLogsProcessing": {
     "message": "Importing..."
   },
@@ -1445,6 +1466,9 @@
   },
   "toolsSection": {
     "message": "Tools"
+  },
+  "experimentalSection": {
+    "message": "In Development"
   },
   "panelCategoryFilterLabel": {
     "message": "Filter panels by category"
@@ -2137,6 +2161,9 @@
   "askHistoryNoEvidence": {
     "message": "I don't know. No matching records."
   },
+  "askSearchDroppedNote": {
+    "message": "Note: the collection's text-search condition was not applied to this answer. It was answered from pinned IDs, tags, and dates only."
+  },
   "researchReportLabel": {
     "message": "One-shot research report"
   },
@@ -2168,10 +2195,14 @@
     "message": "Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection."
   },
   "savedCollectionsHelp": {
-    "message": "Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count."
+    "message": "Enter a term, tag, and period per row, check estimated counts with Refresh, then save under a name and recall it from the list."
   },
   "savedCollectionsEmpty": {
     "message": "No saved collections yet"
+  },
+  "savedCollectionsFirstGuide": {
+    "message": "Enter a term, tag, or period in the condition editor above, then name it and save to create your first collection",
+    "description": "First-save guide shown when no collections exist"
   },
   "savedCollectionSaveBtn": {
     "message": "Save this condition"
@@ -2229,6 +2260,33 @@
   },
   "savedCollectionNameEmpty": {
     "message": "Enter a name"
+  },
+  "collectionClauseAddRow": {
+    "message": "Add condition"
+  },
+  "collectionClauseRemoveRow": {
+    "message": "Remove condition"
+  },
+  "collectionPresetToday": {
+    "message": "Today"
+  },
+  "collectionClauseOpLabel": {
+    "message": "Toggle AND/OR"
+  },
+  "collectionClausePreview": {
+    "message": "Refresh estimated counts (actual results may differ)"
+  },
+  "collectionClauseEmptySave": {
+    "message": "No condition to save. Add at least one condition."
+  },
+  "collectionFanoutNotice": {
+    "message": "Too many conditions ($1). Only the first condition is applied."
+  },
+  "collectionTruncatedNotice": {
+    "message": "Showing the first $1 of $2 matching records."
+  },
+  "collectionExcludedNotice": {
+    "message": "Excluded $1 pinned record that is no longer available."
   },
   "autoTagRulesLabel": {
     "message": "Auto-tag rules"
@@ -3115,6 +3173,42 @@
   "researchSessions_searchToGoalEmpty": {
     "message": "No search-started sessions yet.",
     "description": "Empty state for the search-to-goal table"
+  },
+  "researchSessions_saveToCollection": {
+    "message": "Save to collection",
+    "description": "Per-session button that sends the session to the Saved collections draft"
+  },
+  "researchSessions_saveToCollectionAriaLabel": {
+    "message": "save session {n} to collection",
+    "description": "Aria label for the per-session save button"
+  },
+  "researchSessions_handoffSent": {
+    "message": "Sent {n} pages ({range}) to the Saved collections draft. Name and save it there.",
+    "description": "Session to collection handoff confirmation with count and period"
+  },
+  "researchSessions_handoffOverLimit": {
+    "message": "Not saved: {n} pages exceeds the {max} pin limit.",
+    "description": "Session over the ids pin limit refusal"
+  },
+  "researchSessions_handoffEmpty": {
+    "message": "This session has no pages.",
+    "description": "Empty session save refusal"
+  },
+  "researchSessions_handoffMixedTags": {
+    "message": "Tags differ across pages; saved as pinned IDs only.",
+    "description": "Mixed tags note on session handoff"
+  },
+  "researchSessions_handoffCrossDay": {
+    "message": "Spans multiple days; saved as pinned IDs only.",
+    "description": "Cross-day note on session handoff"
+  },
+  "researchSessions_handoffSearchOmitted": {
+    "message": "Search terms differ; saved without a search condition.",
+    "description": "Non-uniform search omitted note"
+  },
+  "researchSessions_handoffQuotableZero": {
+    "message": "Warning: no quotable page in this session.",
+    "description": "Quotable-zero warning on session handoff"
   },
   "privacyPolicyTitle": {
     "message": "Privacy Policy — Yasumaro"
@@ -4379,6 +4473,18 @@
   },
   "historySelectRecord": {
     "message": "Select this record"
+  },
+  "historySendToCollection": {
+    "message": "Send to collection"
+  },
+  "historyHandoffSent": {
+    "message": "Sent to the Saved collections draft. Name and save it there."
+  },
+  "historyHandoffRangeUnsavable": {
+    "message": "Custom date ranges cannot be sent. Select a single day first."
+  },
+  "historyHandoffDroppedPrevious": {
+    "message": "The previous unsent handoff was overwritten. Load the collections panel first to receive it."
   },
   "historyAppendToObsidian": {
     "message": "Append selected to Obsidian"
@@ -5740,8 +5846,11 @@
   "promptNotFound": {
     "message": "Prompt not found"
   },
+  "encryptedBackupCreating": {
+    "message": "Creating {filename}..."
+  },
   "encryptedBackupCreated": {
-    "message": "Encrypted backup created"
+    "message": "Encrypted backup created: {filename}"
   },
   "encryptedBackupCreateFailed": {
     "message": "Failed to create backup: {error}"
@@ -5763,6 +5872,24 @@
   },
   "encryptedBackupFileReadFailed": {
     "message": "Failed to read the file: {error}"
+  },
+  "backupStageReadingDb": {
+    "message": "Reading history database..."
+  },
+  "backupStageEncrypting": {
+    "message": "Encrypting..."
+  },
+  "backupStageDecrypting": {
+    "message": "Decrypting..."
+  },
+  "backupStageRestoringDb": {
+    "message": "Restoring history database..."
+  },
+  "backupStageRestoringSettings": {
+    "message": "Restoring settings..."
+  },
+  "masterPasswordStageRotating": {
+    "message": "Deriving key and re-encrypting..."
   },
   "gistSettingsSaved": {
     "message": "Gist settings saved"

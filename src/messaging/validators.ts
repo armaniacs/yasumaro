@@ -12,6 +12,7 @@ import {
   MAX_CLEANSED_ELEMENTS,
   MAX_CLEANSED_REASON_CHARS,
   MAX_CLEANSED_REASONS,
+  MAX_QUERY_IDS,
   MAX_SCROLL_RATIO_PERCENT,
   MAX_VISIT_DURATION_SECONDS,
   VALIDATOR_LIMITS,
@@ -36,6 +37,7 @@ import type {
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import { SELECTION_CONTENT_ORIGIN } from '../utils/selectionText.js';
 import {
+  REPORT_SCOPE_ARRAY_FIELDS,
   REPORT_SCOPE_NUMBER_FIELDS,
   REPORT_SCOPE_STRING_FIELDS,
 } from './responseCanonical.js';
@@ -388,13 +390,26 @@ function importBytesGuard(p: Record<string, unknown>): void {
 /**
  * Per-subtype wire-field schema for DASHBOARD_SQLITE payloads. One entry per
  * subtype; field rows are interpreted uniformly by DashboardSqliteValidator.
- * `query` is intentionally absent — it accepts arbitrary extra fields.
+ * The `query` row carries only the optional `ids` filter — every other extra
+ * field still passes (only listed fields are checked).
  * Exported so the all-subtype coverage test can fail closed on a forgotten
  * row (an undefined spec skips payload validation in validate() entirely).
  */
 export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSqliteSubtypeSpec>> = {
   toggle_star: { fields: [finiteNumber('id')] },
   delete: { fields: [finiteNumber('id')] },
+  // PBI 2026-11-02-07: the plain listing accepts an optional targeted id
+  // filter (pin resolution). Extra fields still pass — only `ids`, when
+  // present, must be a non-negative-integer array capped at MAX_QUERY_IDS
+  // (rowids are integers; floats/negatives can never match — rejected,
+  // never truncated. Same shape as the report-scope ids check; oversized
+  // wire payloads never become giant SQL IN clauses — offscreen truncates
+  // defensively anyway).
+  query: {
+    fields: [
+      { field: 'ids', optional: true, test: (v) => Array.isArray(v) && v.length <= MAX_QUERY_IDS && (v as unknown[]).every(isNonNegativeInteger), message: (s) => `${s}: ids must be an array of at most ${MAX_QUERY_IDS} non-negative integers` },
+    ],
+  },
   create_confirm_token: {
     fields: [
       nonEmptyString('action'),
@@ -411,6 +426,9 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
     fields: [
       stringField('query'),
       stringLengthCap('query', VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH),
+      { field: 'tagFilter', optional: true, test: (v) => typeof v === 'string' && v.length <= VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH, message: (s) => `${s}: tagFilter exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars` },
+      { field: 'since', optional: true, test: isFiniteNumber, message: (s) => `${s}: since must be finite number` },
+      { field: 'until', optional: true, test: isFiniteNumber, message: (s) => `${s}: until must be finite number` },
     ],
   },
   import: {
@@ -776,6 +794,33 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
         const value = s[field];
         if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
+        }
+      }
+      // V2 pins (PBI 2026-11-02-04): optional ids array of non-negative
+      // integers (rowids — floats/negatives can never match, so they are
+      // rejected, never absorbed).
+      //
+      // S-#3 absorption note: over-long lists are NOT rejected here — the
+      // report side truncates (absorption, unlike save path B which rejects
+      // at parse). The bound is enforced in layers, so an unbounded array
+      // can never become a giant SQL IN clause:
+      //   1. normalizeReportScope (responseCanonical) slices ids to
+      //      MAX_QUERY_IDS;
+      //   2. createResearchReportGenerator slices the final union to
+      //      REPORT_MAX_RECORDS (== MAX_QUERY_IDS) before the ids fetch;
+      //   3. the DASHBOARD_SQLITE query row rejects ids past MAX_QUERY_IDS.
+      // Length is absorbed, element type is rejected — pinned on both sides.
+      for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
+        const value = s[field];
+        if (value !== undefined) {
+          if (!Array.isArray(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be array`, field);
+          }
+          for (const entry of value) {
+            if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0) {
+              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be non-negative integers`, field);
+            }
+          }
         }
       }
     }

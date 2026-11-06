@@ -21,6 +21,8 @@
  * (background -> messaging), so no reverse-dependency exception applies.
  * `types.ts` keeps type-only re-exports so existing import paths work.
  */
+import { parseCollectionQueryV2 } from '../utils/collectionQueryV2.js';
+import { MAX_QUERY_IDS } from '../utils/limits.js';
 
 /** One citation the answer links back to (BDD: 元記録に飛べる). */
 export interface AskHistoryCitation {
@@ -50,27 +52,69 @@ export type ResearchReportResponse =
   | { success: false; error: string };
 
 /**
- * Background-side collection scope (ASK_HISTORY): the tag and date fields
- * the QA applies to the evidence search. Unknown shapes degrade to null
- * (縮退の出口) — the recall-path parse stays owned by the dashboard's
- * savedCollectionQuery module; this shape holds only the scope fields the
- * background is allowed to apply.
+ * Background-side collection scope (ASK_HISTORY): the V2 conditions the QA
+ * applies to the evidence search. `clauses`/`op`/`ids` come straight from
+ * `parseCollectionQueryV2` (PBI 2026-11-02-02) — the scope no longer
+ * degrades a multi-clause query to a single tag/date. A legacy v1 shape
+ * (`{ tag, date }`) migrates to one clause through the same parse, so
+ * top-level tag/date collections keep working.
+ *
+ * `unresolvable` is the fail-closed latch: true when a stored query exists
+ * but carries nothing the post-hoc filter can enforce (no tag/date clause
+ * and no ids — e.g. a search-text-only or corrupted shape). The handler
+ * answers with the unsupported-scope suggestion instead of an unbounded
+ * search. Null (unknown id) stays unscoped — the 縮退の出口 where the QA
+ * falls back to an unscoped search instead of failing.
  */
-export interface AskCollectionScope {
+export interface AskResolvedClause {
   tag: string | null;
   date: string | null;
+}
+
+export interface AskCollectionScope {
+  op: 'and' | 'or';
+  clauses: AskResolvedClause[];
+  ids: number[];
+  unresolvable: boolean;
+  /**
+   * True when the stored query carried per-clause text-search conditions
+   * that the post-hoc filter cannot enforce (C-#4): the FTS/LIKE search op
+   * takes no per-clause text params, so search text is dropped here, not
+   * answered. The handler discloses it (askSearchDroppedNote) instead of
+   * answering as if the full collection applied.
+   */
+  searchDropped: boolean;
 }
 
 /**
  * Report scope (EXPORT_RESEARCH_REPORT): the panel conditions (PBI 06
  * collection shape). Absent fields mean unscoped; an empty scope is a
  * whole-history report, which the generator caps.
+ *
+ * V2 (PBI 2026-11-02-04): a multi-clause collection resolves to `op` +
+ * `clauses` plus the pinned `ids`. A legacy v1/single collection keeps the
+ * flat `search`/`tag`/`since`/`until` shape (no `clauses` key) so existing
+ * callers and pins are unaffected. UNION semantics (PBI decision): the final
+ * record set is mergeClauseResults(clauseResults, op) UNION ids.
  */
+export interface ResearchReportClause {
+  search?: string;
+  tag?: string;
+  since?: number;
+  until?: number;
+}
+
 export interface ResearchReportScope {
   search?: string;
   tag?: string;
   since?: number;
   until?: number;
+  /** Pinned record ids (V2 pin留め): UNION members, missing ones excluded. */
+  ids?: number[];
+  /** Clause combinator for `clauses` (V2 multi-clause collections). */
+  op?: 'and' | 'or';
+  /** Per-clause conditions (V2 multi-clause collections). */
+  clauses?: ResearchReportClause[];
 }
 
 /** String fields of the report scope (single table for validator + normalizer). */
@@ -78,6 +122,9 @@ export const REPORT_SCOPE_STRING_FIELDS = ['search', 'tag'] as const;
 
 /** Number fields of the report scope (single table for validator + normalizer). */
 export const REPORT_SCOPE_NUMBER_FIELDS = ['since', 'until'] as const;
+
+/** Array fields of the report scope (single table for validator + normalizer). */
+export const REPORT_SCOPE_ARRAY_FIELDS = ['ids'] as const;
 
 /**
  * Single trimmed-string reader: a non-blank string trims, everything else
@@ -100,17 +147,40 @@ export function readFiniteNumber(value: unknown): number | null {
 }
 
 /**
- * Collection scope normalizer (ASK_HISTORY): reads only the tag/date
- * fields the background applies. Unknown shapes degrade to nulls.
+ * Collection scope normalizer (ASK_HISTORY): resolves the stored query
+ * through `parseCollectionQueryV2` and keeps the enforceable per-clause
+ * conditions (tag/date) plus the pinned ids. Per-clause `search` text is
+ * not enforceable post-hoc (no per-clause fan-out — single question search
+ * + V2 post-hoc, PBI 2026-11-02-02), so it is dropped here, not answered.
+ *
+ * Fail-closed: a non-null query with nothing enforceable (no tag/date
+ * clause, no ids) latches `unresolvable` — the handler must not run an
+ * unbounded search for it. Null (unknown id) stays unscoped.
  */
 export function normalizeCollectionScope(raw: Record<string, unknown> | null): AskCollectionScope {
-  if (raw === null) return { tag: null, date: null };
-  return { tag: readTrimmedString(raw.tag), date: readTrimmedString(raw.date) };
+  const unscoped: AskCollectionScope = { op: 'and', clauses: [], ids: [], unresolvable: false, searchDropped: false };
+  if (raw === null) return unscoped;
+  const parsed = parseCollectionQueryV2(raw);
+  // C-#4: any stored search text is unenforceable post-hoc, so its presence
+  // latches the disclosure flag even when tag/date/ids survive.
+  const searchDropped = parsed.clauses.some((clause) => clause.search !== '');
+  const clauses: AskResolvedClause[] = parsed.clauses
+    .filter((clause) => clause.tag !== null || clause.date !== null)
+    .map((clause) => ({ tag: clause.tag, date: clause.date }));
+  if (clauses.length === 0 && parsed.ids.length === 0) {
+    return { op: 'and', clauses: [], ids: [], unresolvable: true, searchDropped };
+  }
+  return { op: parsed.op, clauses, ids: parsed.ids, unresolvable: false, searchDropped };
 }
 
 /**
  * Report scope normalizer (EXPORT_RESEARCH_REPORT): keeps only the fields
  * that are actually set. Non-object inputs degrade to the empty scope.
+ * V2 (PBI 2026-11-02-04): `ids` keeps finite numbers only, capped at
+ * MAX_QUERY_IDS (an over-long pin list is truncated, never rejected —
+ * report-side absorption, unlike save path B); `op` keeps 'and'/'or';
+ * `clauses` keeps per-clause trimmed-string / finite-number conditions and
+ * drops fully-empty clauses.
  */
 export function normalizeReportScope(raw: unknown): ResearchReportScope {
   if (typeof raw !== 'object' || raw === null) return {};
@@ -123,6 +193,38 @@ export function normalizeReportScope(raw: unknown): ResearchReportScope {
   for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
     const value = readFiniteNumber(source[field]);
     if (value !== null) scope[field] = value;
+  }
+  for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
+    const value = source[field];
+    if (value !== undefined) {
+      // C-#8: rowids are non-negative integers — floats/negatives degrade
+      // to absent, matching the validator's rejection and the parse-side cap.
+      const ids = Array.isArray(value)
+        ? value.filter((v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0)
+        : [];
+      if (ids.length > 0) scope[field] = ids.slice(0, MAX_QUERY_IDS);
+    }
+  }
+  const op = source['op'];
+  if (op === 'and' || op === 'or') scope.op = op;
+  const clauses = source['clauses'];
+  if (Array.isArray(clauses)) {
+    const kept: ResearchReportClause[] = [];
+    for (const entry of clauses) {
+      if (typeof entry !== 'object' || entry === null) continue;
+      const record = entry as Record<string, unknown>;
+      const clause: ResearchReportClause = {};
+      const search = readTrimmedString(record['search']);
+      if (search !== null) clause.search = search;
+      const tag = readTrimmedString(record['tag']);
+      if (tag !== null) clause.tag = tag;
+      const since = readFiniteNumber(record['since']);
+      if (since !== null) clause.since = since;
+      const until = readFiniteNumber(record['until']);
+      if (until !== null) clause.until = until;
+      if (Object.keys(clause).length > 0) kept.push(clause);
+    }
+    if (kept.length > 0) scope.clauses = kept;
   }
   return scope;
 }

@@ -334,13 +334,13 @@ export const SQLITE_WIRE_TABLE = [
       // default (planSearch → DEFAULT_SEARCH_LIMIT = 50) since PBI 2026-09-21-20.
       limit?: number,
       offset?: number,
-      options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' },
+      options?: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number },
     ): Extract<QueryOp, { kind: 'search' }> => ({
       kind: 'search',
       text,
       ...(limit !== undefined && { limit }),
       ...(offset !== undefined && { offset }),
-      ...pickDefined({ orderBy: options?.orderBy, orderDir: options?.orderDir }),
+      ...pickDefined({ orderBy: options?.orderBy, orderDir: options?.orderDir, tagFilter: options?.tagFilter, since: options?.since, until: options?.until }),
     }),
     encodePayload: (op) => {
       const o = op as Extract<QueryOp, { kind: 'search' }>;
@@ -350,7 +350,7 @@ export const SQLITE_WIRE_TABLE = [
       // instead of falling into planQuery's listing default (100).
       // (Checking Team 2026-09-22: Legacy Bridge Medium.) Additive on the
       // wire — normalizeStorageQuery drops unknown keys.
-      return { kind: 'search', text: o.text, ...pickDefined({ limit: o.limit, offset: o.offset, orderBy: o.orderBy, orderDir: o.orderDir }) } as Record<string, unknown>;
+      return { kind: 'search', text: o.text, ...pickDefined({ limit: o.limit, offset: o.offset, orderBy: o.orderBy, orderDir: o.orderDir, tagFilter: o.tagFilter, since: o.since, until: o.until }) } as Record<string, unknown>;
     },
     decodeGateway: decodeQueryGateway,
     dashboard: {

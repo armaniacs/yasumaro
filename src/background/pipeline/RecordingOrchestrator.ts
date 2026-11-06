@@ -11,6 +11,7 @@
  */
 
 import { generateId } from '../../utils/generateId.js';
+import { flushLogs } from '../../utils/logger/core.js';
 import { ErrorStrategy, type RecordingContext, type PipelineStep, type StepDeps, type UrlStore } from './types.js';
 import { defaultOutcomeAdapters, finalizeSuccess, handleStepFailure, type OutcomeAdapters } from './recordingOutcome.js';
 import { toExternalResult } from './piiBoundary.js';
@@ -167,21 +168,30 @@ export class RecordingOrchestrator {
    */
   async retryObsidianWrite(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
     return this.mutexMap.runExclusive(job.url, async () => {
-      const settings = await this.getSettingsWithCache();
-      const traceId = generateId();
-      const context = createRetryContext(job, settings, traceId);
-      const deps = createStepDeps({
-        obsidian: this.obsidian,
-        aiService: this.aiService,
-        urlStore: this.urlStore,
-        sqliteClient: this.sqliteClient,
-      });
-      const receipt = await this.savePhase.saveRetry(context, deps);
-      if (receipt.terminated) return false;
-      if (receipt.outcomes.find((o) => o.name === 'saveObsidian')?.status !== 'ok') return false;
-      this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
-      return true;
+      try {
+        return await this.retryObsidianWriteInner(job);
+      } finally {
+        // Same durability contract as executeInternal below.
+        await flushLogs();
+      }
     });
+  }
+
+  private async retryObsidianWriteInner(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
+    const settings = await this.getSettingsWithCache();
+    const traceId = generateId();
+    const context = createRetryContext(job, settings, traceId);
+    const deps = createStepDeps({
+      obsidian: this.obsidian,
+      aiService: this.aiService,
+      urlStore: this.urlStore,
+      sqliteClient: this.sqliteClient,
+    });
+    const receipt = await this.savePhase.saveRetry(context, deps);
+    if (receipt.terminated) return false;
+    if (receipt.outcomes.find((o) => o.name === 'saveObsidian')?.status !== 'ok') return false;
+    this.outcomeAdapters.notifier.notifySaveSuccess(job.title || job.url);
+    return true;
   }
 
   /**
@@ -206,6 +216,20 @@ export class RecordingOrchestrator {
    * injected adapters.
    */
   private async executeInternal(data: RecordingData, settings: Settings): Promise<RecordingResult> {
+    try {
+      return await this.executeInternalInner(data, settings);
+    } finally {
+      // Durability (logCritical precedent: flush so entries are not lost on
+      // SW termination): a recording's traceId logs must be queryable right
+      // after it completes, not only once the buffer hits BATCH_FLUSH_SIZE
+      // or the 1-minute alarm fires. flushLogs is a no-op when empty and
+      // persistPending already swallows its own errors, so completion paths
+      // cannot break here.
+      await flushLogs();
+    }
+  }
+
+  private async executeInternalInner(data: RecordingData, settings: Settings): Promise<RecordingResult> {
     const traceId = generateId();
     const deps = createStepDeps({
       obsidian: this.obsidian,

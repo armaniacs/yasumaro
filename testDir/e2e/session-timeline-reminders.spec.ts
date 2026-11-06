@@ -7,15 +7,21 @@
  * round-trips in the real extension context.
  *
  * The trail-grouping通し lives in the second describe: the trail columns are
- * seeded through REAL navigation (the nav-trail consent route), because the
- * DASHBOARD_SQLITE `import` subtype drops search_query / nav_source_url (see
- * maintenanceBatchHandler.ts import mapping) — seeding them would mean
- * touching shared handler code.
+ * seeded through REAL navigation (the nav-trail consent route), because only
+ * a real visit proves the tab's previous URL lands in nav_source_url.
+ * The notification half is two-stage by contract: the candidate rule only
+ * fires for rows created BEFORE today's local start (docs 契約:
+ * 前日までに読みかけたページを翌日に通知する — pickReminderCandidateRows
+ * day gate, pinned by sessionReminderCandidates.test.ts), so a same-day
+ * visit can never notify. After the real-navigation steps prove the trail
+ * lands, the spec seeds the SAME trail backdated to yesterday through the
+ * `import` subtype (which preserves nav_source_url / search_query —
+ * maintenanceBatchHandler.ts) and fires the alarm at that row.
  */
 import { test, expect } from './fixtures/seeded-history-panel.fixture.js';
 import type { BrowserContext, Page } from '@playwright/test';
 import { seedPrivacyConsent } from './fixtures/privacyConsentSeed.js';
-import { createDashboardSqliteClient, openOptionsPage } from './fixtures/dashboardSqliteHelpers.js';
+import { createDashboardSqliteClient, openOptionsPage, seedRows } from './fixtures/dashboardSqliteHelpers.js';
 import {
   enableE2EProbe,
   readE2EProbeState,
@@ -112,6 +118,13 @@ test.describe('Session reminder through-run @extension', () => {
   /** The test-pages server serves long-page.html at `/`; the query string makes the two visits distinct URLs (same-day duplicate gate). */
   const SOURCE_URL = 'http://localhost:8080/?e2e=source';
   const TARGET_URL = 'http://localhost:8080/?e2e=target';
+  /**
+   * Yesterday's row for the notification half: a distinct URL (UNIQUE(url,
+   * created_at) would allow reusing TARGET_URL, but a separate URL keeps the
+   * seeded row distinguishable from the real-navigation rows). The trail
+   * value is the REAL source URL the navigation steps just proved lands.
+   */
+  const YESTERDAY_URL = 'http://localhost:8080/?e2e=yesterday';
   /** Module-owned key (SSOT: src/utils/sessionReminder/reminderStore.ts). */
   const REMINDER_STORAGE_KEY = 'session_reminder_state_v1';
   /** Module-owned alarm name (SSOT: src/background/sessionReminderAlarms.ts). */
@@ -135,6 +148,62 @@ test.describe('Session reminder through-run @extension', () => {
       expect(state).not.toBeNull();
       expect(state!.isValidVisitReported).toBe(true);
     }).toPass({ timeout: 20_000, intervals: [500] });
+  }
+
+  /**
+   * Best-effort post-mortem snapshot for the notification step's catch path.
+   * Every read can throw (the page may be closing, the SW may be dead), so
+   * callers must catch and fall back to a partial snapshot — never let this
+   * mask the original assertion error.
+   */
+  async function collectReminderPostmortem(optionsPage: Page): Promise<Record<string, unknown>> {
+    const snapshot = await optionsPage.evaluate(
+      async (args: { key: string; alarm: string }) => {
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        const all = (await chrome.notifications.getAll()) as unknown as Record<string, unknown>;
+        const state = await chrome.storage.local.get(args.key);
+        const alarm = await chrome.alarms.get(args.alarm);
+        const stored = await chrome.storage.local.get('sanitization_logs');
+        const logs = ((stored as Record<string, unknown>).sanitization_logs ?? []) as Array<{
+          message: string;
+          timestamp: number;
+        }>;
+        return {
+          notificationIds: Object.keys(all),
+          reminderState: (state as Record<string, unknown>)[args.key] ?? null,
+          alarm: alarm ?? null,
+          timezoneOffsetMinutes: new Date().getTimezoneOffset(),
+          localTodayStart: d.getTime(),
+          reminderLogs: logs
+            .filter((log) => /reminder/i.test(log.message))
+            .slice(-10)
+            .map((log) => ({ message: log.message, timestamp: log.timestamp })),
+        };
+      },
+      { key: REMINDER_STORAGE_KEY, alarm: REMINDER_ALARM_NAME },
+    );
+    const client = createDashboardSqliteClient(optionsPage);
+    const res = await client.dashboardMsg({
+      subtype: 'query',
+      domain: 'localhost',
+      limit: 100,
+    } as never);
+    const rows = (res?.rows ?? []) as Array<Record<string, unknown>>;
+    const target = rows.find((row) => String(row['url']) === TARGET_URL);
+    return {
+      ...snapshot,
+      targetRow: target
+        ? {
+            id: target['id'],
+            created_at: target['created_at'],
+            scroll_ratio: target['scroll_ratio'],
+            nav_source_url: target['nav_source_url'],
+            search_query: target['search_query'],
+            masked_count: target['masked_count'],
+          }
+        : null,
+    };
   }
 
   test('trail from real navigation lands the unread candidate and the notification', async ({
@@ -177,8 +246,9 @@ test.describe('Session reminder through-run @extension', () => {
           const rows = (res?.rows ?? []) as Array<Record<string, unknown>>;
           const target = rows.find((row) => String(row['url']) === TARGET_URL);
           expect(target, `stored rows: ${JSON.stringify(rows.map((r) => r['url']))}`).toBeDefined();
-          // The trail column the import seed cannot set: the tab's previous
-          // URL at the moment of the target's valid visit.
+          // The trail column real navigation lands: the tab's previous
+          // URL at the moment of the target's valid visit. (The Seed step
+          // below reuses this proven value backdated to yesterday.)
           expect(String(target!['nav_source_url'] ?? '')).toBe(SOURCE_URL);
           // The candidate rules hold on the same row (non-private + unread),
           // so the reminder provider can pick it. A NULL ratio is not a
@@ -213,6 +283,29 @@ test.describe('Session reminder through-run @extension', () => {
       }
     });
 
+    await test.step('Seed: the real trail backdated to yesterday (day-gate contract)', async () => {
+      // The candidate rule only fires for rows created BEFORE today's local
+      // start. Date.now() - 25h is before it in every timezone (local start
+      // is always within the last 24h), so no fixed wall-clock seed is used.
+      const optionsPage = await openOptionsPage(context, extensionId);
+      try {
+        const client = createDashboardSqliteClient(optionsPage);
+        await seedRows(client, [
+          {
+            url: YESTERDAY_URL,
+            title: 'Reminder e2e yesterday row',
+            summary: 'e2e seed row',
+            created_at: Date.now() - 25 * 3_600_000,
+            domain: 'localhost',
+            scroll_ratio: 0.7,
+            nav_source_url: SOURCE_URL,
+          },
+        ]);
+      } finally {
+        await optionsPage.close();
+      }
+    });
+
     await test.step('And: the manual alarm firing sends the reminder notification', async () => {
       const optionsPage = await openOptionsPage(context, extensionId);
       try {
@@ -224,17 +317,44 @@ test.describe('Session reminder through-run @extension', () => {
         }, REMINDER_ALARM_NAME);
         // The registry routes the firing to checkToday → candidate query →
         // the single notification write point (NotificationHelper.show).
-        await expect(async () => {
-          const all = (await optionsPage.evaluate(async () => chrome.notifications.getAll())) as unknown as Record<
-            string,
-            Record<string, unknown>
-          >;
-          const reminderIds = Object.keys(all).filter((id) => id.startsWith(REMINDER_NOTIFICATION_PREFIX));
-          expect(
-            reminderIds.length,
-            `notifications: ${JSON.stringify(Object.keys(all))}`,
-          ).toBeGreaterThanOrEqual(1);
-        }).toPass({ timeout: 15_000, intervals: [500] });
+        // The yesterday seed is older than today's navigation rows, so the
+        // oldest-first provider picks it.
+        try {
+          await expect(async () => {
+            const all = (await optionsPage.evaluate(async () => chrome.notifications.getAll())) as unknown as Record<
+              string,
+              Record<string, unknown>
+            >;
+            const reminderIds = Object.keys(all).filter((id) => id.startsWith(REMINDER_NOTIFICATION_PREFIX));
+            expect(
+              reminderIds.length,
+              `notifications: ${JSON.stringify(Object.keys(all))}`,
+            ).toBeGreaterThanOrEqual(1);
+          }).toPass({ timeout: 15_000, intervals: [500] });
+        } catch (error) {
+          // Post-mortem only: the predicate, timeout, and intervals above are
+          // unchanged. Distinguishes "alarm never fired" from "fired but no
+          // candidate" (day gate excludes same-day rows by design — see
+          // pickReminderCandidateRows + the unit day-gate pins).
+          // The diagnosis itself must never mask the original failure: every
+          // read below can throw (closed page, dead SW), so a partial
+          // snapshot is attached and the original error always rethrows.
+          let postmortem: Record<string, unknown> = { postmortemFailed: 'not-run' };
+          try {
+            postmortem = await collectReminderPostmortem(optionsPage);
+          } catch (diagError) {
+            postmortem = { postmortemFailed: String((diagError as Error)?.message ?? diagError) };
+          }
+          try {
+            await test.info().attach('reminder-postmortem', {
+              body: Buffer.from(JSON.stringify(postmortem, null, 2), 'utf-8'),
+              contentType: 'application/json',
+            });
+          } catch {
+            // Attach is best-effort; the original error below is what matters.
+          }
+          throw error;
+        }
       } finally {
         await optionsPage.close();
       }

@@ -17,7 +17,7 @@
  * __tests__/panelCatalog.test.ts で検証する。実行時生成への移行は将来判断。
  */
 
-export type SidebarSection = 'settings' | 'data' | 'tools';
+export type SidebarSection = 'settings' | 'data' | 'tools' | 'experimental';
 
 export interface PanelCatalogEntry {
   /** `section id`・`data-panel`・registry id と同一。 */
@@ -60,13 +60,6 @@ export const CATALOG_ROWS = [
   { id: 'panel-diagnostics', sidebarSection: 'settings', sidebarI18nKey: 'diagnosticsTab', deepLinkSections: [] },
   { id: 'panel-tag-cluster', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTab', deepLinkSections: [] },
   { id: 'panel-sqlite-history', sidebarSection: 'data', sidebarI18nKey: 'sqliteHistoryTab', deepLinkSections: [], tabParam: 'history' },
-  // PBI 2026-11-01-01: saved collections + auto-tag rules leave the history
-  // panel for a dedicated data panel directly after it.
-  { id: 'panel-saved-collections', sidebarSection: 'data', sidebarI18nKey: 'savedCollectionsTab', deepLinkSections: [], tabParam: 'collections' },
-  // PBI 2026-11-01-02: ask-history (question + target collection) directly after it.
-  { id: 'panel-ask-history', sidebarSection: 'data', sidebarI18nKey: 'askHistoryTab', deepLinkSections: [], tabParam: 'ask-history' },
-  // PBI 2026-11-01-03: research report (target collection + one-shot generate) directly after it.
-  { id: 'panel-research-report', sidebarSection: 'data', sidebarI18nKey: 'researchReportTab', deepLinkSections: [], tabParam: 'research-report' },
   { id: 'panel-archive', sidebarSection: 'data', sidebarI18nKey: 'archiveTab', deepLinkSections: [] },
   { id: 'panel-domain-search', sidebarSection: 'data', sidebarI18nKey: 'domainSearchTab', deepLinkSections: [] },
   { id: 'panel-time-heatmap', sidebarSection: 'data', sidebarI18nKey: 'timeHeatmapTab', deepLinkSections: [] },
@@ -81,6 +74,15 @@ export const CATALOG_ROWS = [
   { id: 'panel-session-timeline', sidebarSection: 'data', sidebarI18nKey: 'sessionTimelineTab', deepLinkSections: [] },
   { id: 'panel-export-logs', sidebarSection: 'tools', sidebarI18nKey: 'exportLogsTab', deepLinkSections: [] },
   { id: 'panel-export-import', sidebarSection: 'tools', sidebarI18nKey: 'exportImportTab', deepLinkSections: [] },
+  // PBI 2026-11-01-01: saved collections + auto-tag rules grouped in
+  // 'experimental' at the bottom.
+  { id: 'panel-saved-collections', sidebarSection: 'experimental', sidebarI18nKey: 'savedCollectionsTab', deepLinkSections: [], tabParam: 'collections' },
+  // PBI 2026-11-01-02: ask-history (question + target collection) grouped in
+  // 'experimental' at the bottom.
+  { id: 'panel-ask-history', sidebarSection: 'experimental', sidebarI18nKey: 'askHistoryTab', deepLinkSections: [], tabParam: 'ask-history' },
+  // PBI 2026-11-01-03: research report (target collection + one-shot generate)
+  // grouped in 'experimental' at the bottom.
+  { id: 'panel-research-report', sidebarSection: 'experimental', sidebarI18nKey: 'researchReportTab', deepLinkSections: [], tabParam: 'research-report' },
 ] as const satisfies readonly PanelCatalogEntry[];
 
 export const PANEL_CATALOG: readonly PanelCatalogEntry[] = CATALOG_ROWS;

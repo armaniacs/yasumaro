@@ -407,6 +407,84 @@ describe('ask-history evidence pipeline on a real engine (PBI 2026-10-23-08)', (
       }
     });
 
+    it.each(PATHS)('$label: the V2 scope combines multi-clause or with pinned ids (union members)', async ({ question }) => {
+      const backend = await makeAskBackend([
+        { url: 'https://docs.example.com/rune-rust', title: 'rust rune', summary: 'rune rust summary with u***@example.com', tags: 'rust, rune', created_at: BASE_TS + 1 },
+        { url: 'https://docs.example.com/rune-wasm', title: 'wasm rune', summary: 'rune wasm summary with u***@example.com', tags: 'wasm, rune', created_at: BASE_TS + 2 },
+        { url: 'https://docs.example.com/rune-ai', title: 'ai rune', summary: 'rune ai summary with u***@example.com', tags: 'ai, rune', created_at: BASE_TS + 3 },
+      ]);
+      try {
+        const pinnedId = (backend.db.prepare('SELECT id FROM browsing_logs WHERE url = ?').get('https://docs.example.com/rune-ai') as { id: number }).id;
+        const { deps } = makeDeps(makeAskEvidenceSearch(backend), {
+          loadCollection: async () => ({
+            version: 2,
+            op: 'or',
+            clauses: [{ tag: 'rust' }, { tag: 'wasm' }],
+            ids: [pinnedId],
+          }),
+        });
+        const response = await runHandler(deps, { question, collectionId: 'col-v2' });
+        expect(response.success).toBe(true);
+        if (!response.success || response.status !== 'answered') return;
+        // Both clause-matching rows plus the id-pinned row (UNION member),
+        // even though no clause matches the pinned row.
+        expect(response.citations.map((c) => c.url).sort()).toEqual([
+          'https://docs.example.com/rune-ai',
+          'https://docs.example.com/rune-rust',
+          'https://docs.example.com/rune-wasm',
+        ]);
+      } finally {
+        backend.close();
+      }
+    });
+
+    it.each(PATHS)('$label: the scope tag is a partial match like the report population', async ({ question }) => {
+      const backend = await makeAskBackend([
+        { url: 'https://docs.example.com/rune-tagged', title: 'tagged rune', summary: 'rune tagged summary with u***@example.com', tags: 'rust, rune', created_at: BASE_TS + 1 },
+        { url: 'https://docs.example.com/rune-other', title: 'other rune', summary: 'rune other summary with u***@example.com', tags: 'wasm', created_at: BASE_TS + 2 },
+      ]);
+      try {
+        const { deps } = makeDeps(makeAskEvidenceSearch(backend), {
+          // 'run' is a substring of the stored 'rune' tag, not a full
+          // comma-segment — exact-match would drop the tagged row.
+          loadCollection: async () => ({ tag: 'run' }),
+        });
+        const response = await runHandler(deps, { question, collectionId: 'col-1' });
+        expect(response.success).toBe(true);
+        if (!response.success || response.status !== 'answered') return;
+        expect(response.citations).toHaveLength(1);
+        expect(response.citations[0]!.url).toBe('https://docs.example.com/rune-tagged');
+      } finally {
+        backend.close();
+      }
+    });
+
+    it.each(PATHS)('$label: an unresolvable scope fails closed without searching', async ({ question }) => {
+      const backend = await makeAskBackend(SEED);
+      try {
+        // Search-text-only collections have nothing the post-hoc filter can
+        // enforce — answering from them would be an unbounded search.
+        const search = makeAskEvidenceSearch(backend);
+        const seen: string[] = [];
+        const { deps, contexts } = makeDeps(
+          (async (op) => {
+            seen.push(op.text);
+            return search(op);
+          }) as typeof search,
+          { loadCollection: async () => ({ search: 'rune' }) },
+        );
+        const response = await runHandler(deps, { question, collectionId: 'col-unresolvable' });
+        expect(response.success).toBe(true);
+        if (!response.success || response.status !== 'no_evidence') return;
+        expect(response.suggestion).toContain('対象外');
+        // No search, no AI call — the fail-closed branch answers directly.
+        expect(seen).toEqual([]);
+        expect(contexts).toHaveLength(0);
+      } finally {
+        backend.close();
+      }
+    });
+
     it.each(PATHS)('$label: no matching record means no answer and no AI call', async ({ miss }) => {
       const backend = await makeAskBackend(SEED);
       try {

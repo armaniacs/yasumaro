@@ -64,17 +64,32 @@ export function resetLoggerWiring(): void {
 let isFlushing = false;
 
 async function persistPending(): Promise<void> {
+  // Coalesce concurrent flushes (PBI 2026-11-05-01): an overlapping call
+  // still returns at once, but the in-flight flush re-drains afterwards
+  // instead of leaving the newly buffered entries until the next 1-minute
+  // alarm (where an SW shutdown could lose them). A dirty flag was
+  // considered and rejected: every overlapping call implies a later
+  // non-empty drain (batch callers only fire when the buffer is full, and
+  // an empty completion/alarm flush needs no re-run), and the only await
+  // below is the append itself — so the re-drain alone guarantees the merge
+  // and a flag would never change behavior.
   if (isFlushing) return;
   isFlushing = true;
   try {
-    const entries = buffer.drain();
-    if (entries.length === 0) return;
-
-    // No chrome check here: the chrome adapter owns the offscreen console
-    // fallback, so in-memory wiring persists with no chrome at all.
-    await ensureWiring().storage.append(entries);
-  } catch (e) {
-    console.error('Logger: Failed to flush logs', e);
+    while (true) {
+      const entries = buffer.drain();
+      if (entries.length === 0) break;
+      try {
+        // No chrome check here: the chrome adapter owns the offscreen console
+        // fallback, so in-memory wiring persists with no chrome at all.
+        await ensureWiring().storage.append(entries);
+      } catch (e) {
+        // Per-batch report: a failed batch is dropped without breaking the
+        // loop, so a coalesced batch from another recording still persists
+        // even when the in-flight batch fails.
+        console.error('Logger: Failed to flush logs', e);
+      }
+    }
   } finally {
     // A scheduled alarm may still be pending even though we just flushed
     // (e.g. addLog reached BATCH_FLUSH_SIZE before the alarm fired). Clear

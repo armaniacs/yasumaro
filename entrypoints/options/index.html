@@ -169,29 +169,6 @@
           </svg>
           <span data-i18n="sqliteHistoryTab">SQLite History</span>
         </button>
-        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-saved-collections" aria-selected="false" data-panel="panel-saved-collections">
-          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M6 3h12v18l-6-4-6 4z"/>
-          </svg>
-          <span data-i18n="savedCollectionsTab">Saved collections</span>
-        </button>
-        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-ask-history" aria-selected="false" data-panel="panel-ask-history">
-          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <circle cx="12" cy="12" r="10"/>
-            <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/>
-            <line x1="12" y1="17" x2="12.01" y2="17"/>
-          </svg>
-          <span data-i18n="askHistoryTab">Ask history</span>
-        </button>
-        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-research-report" aria-selected="false" data-panel="panel-research-report">
-          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <path d="M14 2v6h6"/>
-            <line x1="9" y1="13" x2="15" y2="13"/>
-            <line x1="9" y1="17" x2="13" y2="17"/>
-          </svg>
-          <span data-i18n="researchReportTab">One-shot research report</span>
-        </button>
         <button class="sidebar-nav-btn" role="tab" aria-controls="panel-archive" aria-selected="false" data-panel="panel-archive">
           <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <path d="M21 8v13H3V8"/>
@@ -325,6 +302,31 @@
             <line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <span data-i18n="diagBugReportBtn">Report a Bug</span>
+        </button>
+        <div class="sidebar-divider"></div>
+        <div role="heading" aria-level="2" class="sidebar-section-label" data-i18n="experimentalSection">In Development</div>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-saved-collections" aria-selected="false" data-panel="panel-saved-collections">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M6 3h12v18l-6-4-6 4z"/>
+          </svg>
+          <span data-i18n="savedCollectionsTab">Saved collections</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-ask-history" aria-selected="false" data-panel="panel-ask-history">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          <span data-i18n="askHistoryTab">Ask history</span>
+        </button>
+        <button class="sidebar-nav-btn" role="tab" aria-controls="panel-research-report" aria-selected="false" data-panel="panel-research-report">
+          <svg class="sidebar-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6"/>
+            <line x1="9" y1="13" x2="15" y2="13"/>
+            <line x1="9" y1="17" x2="13" y2="17"/>
+          </svg>
+          <span data-i18n="researchReportTab">One-shot research report</span>
         </button>
       </div>
     </nav>
@@ -2097,36 +2099,6 @@
         </div>
       </section>
 
-      <!-- Saved Collections Panel (PBI 2026-11-01-01) -->
-      <section id="panel-saved-collections" class="panel data-panel" role="tabpanel" aria-labelledby="panel-saved-collections-title">
-        <h2 id="panel-saved-collections-title" class="panel-title" data-i18n="savedCollectionsTab">Saved collections</h2>
-        <p class="panel-description" data-i18n="savedCollectionsHelp">
-          Save a search condition (term, tag, period) under a name and recall it from the list. The list shows the updated time; recalling shows the matched count.
-        </p>
-        <p class="saved-collections-draft" role="status" data-i18n="savedCollectionNoCondition">
-          No condition to save. Specify a term, tag, or period first.
-        </p>
-        <div id="saved-collections-panel-region"></div>
-      </section>
-
-      <!-- Ask History Panel (PBI 2026-11-01-02) -->
-      <section id="panel-ask-history" class="panel data-panel" role="tabpanel" aria-labelledby="panel-ask-history-title">
-        <h2 id="panel-ask-history-title" class="panel-title" data-i18n="askHistoryTab">Ask history</h2>
-        <p class="panel-description" data-i18n="askHistoryHelp">
-          Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records.
-        </p>
-        <div id="ask-history-panel-region"></div>
-      </section>
-
-      <!-- Research Report Panel (PBI 2026-11-01-03) -->
-      <section id="panel-research-report" class="panel data-panel" role="tabpanel" aria-labelledby="panel-research-report-title">
-        <h2 id="panel-research-report-title" class="panel-title" data-i18n="researchReportTab">One-shot research report</h2>
-        <p class="panel-description" data-i18n="researchReportPanelHelp">
-          Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection.
-        </p>
-        <div id="research-report-panel-region"></div>
-      </section>
-
       <!-- Archive Panel (PBI 2026-09-06-02) -->
       <section id="panel-archive" class="panel" role="tabpanel" aria-labelledby="panel-archive-title">
         <h2 id="panel-archive-title" class="panel-title" data-i18n="archiveTab">Archive</h2>
@@ -2323,6 +2295,7 @@
             <button type="button" id="researchSessionsDeleteConfirmNo" class="secondary-btn" data-i18n="researchSessions_deleteConfirmNo">Cancel</button>
           </span>
         </div>
+        <div id="researchSessionsHandoffReason" class="data-table-notice" role="status"></div>
         <ol id="researchSessionsList" class="research-sessions-list"></ol>
 
         <h3 class="data-table-heading" data-i18n="researchSessions_searchToGoalTitle">Topics that take the longest to resolve</h3>
@@ -2650,6 +2623,17 @@
         <hr class="settings-hr">
 
         <div class="export-import-section">
+          <h3 class="diag-section-title" data-i18n="migrationSectionTitle">Migrate from Another Profile</h3>
+          <p class="help-text" data-i18n="migrationSectionDesc">Apply settings and logs exported from a different browser or profile (Edge, Chrome, Firefox). The file signature cannot be verified, so an explicit confirmation is required.</p>
+          <button id="migrateSettingsBtn" class="secondary-btn" data-i18n="migrateSettingsBtn">Migrate Settings from File</button>
+          <input type="file" id="migrateSettingsFileInput" accept=".json" class="hidden" aria-hidden="true">
+          <button id="migrateLogsBtn" class="secondary-btn" data-i18n="migrateLogsBtn">Migrate Logs from File</button>
+          <input type="file" id="migrateLogsFileInput" accept=".json" class="hidden" aria-hidden="true">
+        </div>
+
+        <hr class="settings-hr">
+
+        <div class="export-import-section">
           <h3 class="diag-section-title" data-i18n="encryptedBackupSectionTitle">Encrypted Backup</h3>
           <p class="help-text" data-i18n="encryptedBackupSectionDesc">Create or restore a backup of history and settings encrypted with a passphrase.</p>
           <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">Create Encrypted Backup</button>
@@ -2681,6 +2665,37 @@
         </div>
 
         <div id="exportImportStatus" aria-live="polite"></div>
+      </section>
+
+      <!-- Saved Collections Panel (PBI 2026-11-01-01) -->
+      <section id="panel-saved-collections" class="panel data-panel" role="tabpanel" aria-labelledby="panel-saved-collections-title">
+        <h2 id="panel-saved-collections-title" class="panel-title" data-i18n="savedCollectionsTab">Saved collections</h2>
+        <p class="panel-description" data-i18n="savedCollectionsHelp">
+          Enter a term, tag, and period per row, check estimated counts with Refresh, then save under a name and recall it from the list.
+        </p>
+        <p class="saved-collections-draft" role="status" data-i18n="savedCollectionNoCondition">
+          No condition to save. Specify a term, tag, or period first.
+        </p>
+        <div id="saved-collections-editor-region"></div>
+        <div id="saved-collections-panel-region"></div>
+      </section>
+
+      <!-- Ask History Panel (PBI 2026-11-01-02) -->
+      <section id="panel-ask-history" class="panel data-panel" role="tabpanel" aria-labelledby="panel-ask-history-title">
+        <h2 id="panel-ask-history-title" class="panel-title" data-i18n="askHistoryTab">Ask history</h2>
+        <p class="panel-description" data-i18n="askHistoryHelp">
+          Ask a question against a chosen collection and the on-device model answers from record excerpts. The three evidence links open the original records.
+        </p>
+        <div id="ask-history-panel-region"></div>
+      </section>
+
+      <!-- Research Report Panel (PBI 2026-11-01-03) -->
+      <section id="panel-research-report" class="panel data-panel" role="tabpanel" aria-labelledby="panel-research-report-title">
+        <h2 id="panel-research-report-title" class="panel-title" data-i18n="researchReportTab">One-shot research report</h2>
+        <p class="panel-description" data-i18n="researchReportPanelHelp">
+          Generate a Markdown report with four sections — digest, timeline, citations and unread holes — for the chosen collection.
+        </p>
+        <div id="research-report-panel-region"></div>
       </section>
 
     </main>
@@ -2769,6 +2784,7 @@
           <label for="masterPasswordAuthInput" data-i18n="masterPassword">Master Password</label>
           <input type="password" id="masterPasswordAuthInput" autocomplete="current-password">
         </div>
+        <div id="passwordAuthProgress" class="auth-progress hidden" role="status" aria-live="polite"></div>
         <div id="passwordAuthError" class="field-error" role="alert"></div>
       </div>
       <div class="modal-footer">

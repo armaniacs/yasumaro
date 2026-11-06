@@ -479,3 +479,68 @@ describe('bulk-bar inline delete confirm', () => {
     expect(() => hideDeleteConfirm(document.createElement('div'))).not.toThrow();
   });
 });
+
+describe('render — collection excluded notice (PBI 2026-11-02-07)', () => {
+  function noopCallbacks(): SqliteHistoryViewCallbacks {
+    return {
+      onDateSelect: () => undefined,
+      onRangeSelect: () => undefined,
+      onClearFilters: () => undefined,
+      onSearchInput: () => undefined,
+      onSortChange: () => undefined,
+      onPageChange: () => undefined,
+      onToggleStar: () => undefined,
+      onDelete: () => undefined,
+      onSelectionChange: () => undefined,
+      onTagFilterClick: () => undefined,
+      onContentToggle: () => undefined,
+      onSelectAll: () => undefined,
+      onClearSelection: () => undefined,
+      onAppend: () => undefined,
+      onDeleteSelected: () => undefined,
+      onDeleteSelectedConfirm: () => undefined,
+      onStarSelected: () => undefined,
+      onStarSelectedConfirm: () => undefined,
+      onStarUndo: () => undefined,
+      onRegenerateSelected: () => undefined,
+      onTagFilterClear: () => undefined,
+      onRegenerate: () => undefined,
+      translateError: (error) => error ?? '',
+      createCopyButton: () => document.createElement('button'),
+    };
+  }
+
+  it('shows the excluded-count notice with role=status when pins are missing (ids [1,2,999])', () => {
+    const container = document.createElement('div');
+    const callbacks = noopCallbacks();
+    render(container, makeState(), callbacks); // full mount
+    render(container, makeState({
+      entries: [
+        { ...baseEntry, id: 2 },
+        { ...baseEntry, id: 1 },
+      ],
+      total: 2,
+      collectionWarning: {
+        fanoutCapped: false,
+        totalClauses: 0,
+        truncated: false,
+        missingCount: 1,
+        shownCount: 2,
+        fullCount: 2,
+      },
+    }), callbacks); // diff path paints the notice
+
+    const note = container.querySelector('.sqlite-collection-note');
+    expect(note).not.toBeNull();
+    expect(note?.getAttribute('role')).toBe('status');
+    expect(note?.textContent ?? '').toContain('1');
+  });
+
+  it('shows no collection notice when the collection applies cleanly', () => {
+    const container = document.createElement('div');
+    const callbacks = noopCallbacks();
+    render(container, makeState(), callbacks);
+    render(container, makeState({ collectionWarning: null }), callbacks);
+    expect(container.querySelector('.sqlite-collection-note')).toBeNull();
+  });
+});

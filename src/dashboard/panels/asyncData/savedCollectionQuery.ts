@@ -87,3 +87,33 @@ export function newCollectionId(now: number = Date.now()): string {
   const rand = Math.floor(Math.random() * 0x10000).toString(36);
   return `col-${now.toString(36)}-${rand}`;
 }
+
+import { parseCollectionQueryV2 } from '../../../utils/collectionQueryV2.js';
+import type { CollectionClause, CollectionQueryV2 } from '../../../utils/collectionQueryV2.js';
+export { parseCollectionQueryV2 };
+export type { CollectionClause, CollectionQueryV2 };
+
+export function serializeClausesQuery(op: 'and' | 'or', clauses: CollectionClause[], ids: number[] = []): Record<string, unknown> {
+  const kept = clauses.filter((c) => c.search !== '' || c.tag !== null || c.date !== null);
+  if (kept.length === 1 && ids.length === 0 && op === 'and') {
+    const only = kept[0] as CollectionClause;
+    const out: Record<string, unknown> = {};
+    if (only.search !== '') out['search'] = only.search;
+    if (only.tag !== null) out['tag'] = only.tag;
+    if (only.date !== null) out['date'] = only.date;
+    return out;
+  }
+  return { version: 2, op, clauses: kept, ...(ids.length > 0 ? { ids } : {}) };
+}
+
+export function describeCollectionQueryV2(raw: unknown, labels: CollectionQueryLabels): string {
+  const parsed = parseCollectionQueryV2(raw);
+  if (parsed.clauses.length === 0 && parsed.ids.length === 0) return '';
+  const parts = parsed.clauses.map((c) => describeCollectionQuery(c, labels));
+  const body = parts.filter((p) => p !== '').join(parsed.op === 'or' ? ' OR ' : ' AND ');
+  if (parsed.ids.length > 0) {
+    const pins = `ID: ${parsed.ids.length}件`;
+    return body === '' ? pins : `${body} + ${pins}`;
+  }
+  return body;
+}

@@ -48,18 +48,18 @@ describe('history shell without regions (PBI 2026-11-01-04)', () => {
 });
 
 describe('catalog order after the split (PBI 2026-11-01-04)', () => {
-  it('orders history → saved-collections → ask-history → research-report → archive', () => {
+  it('orders history -> archive ... with the trio grouped at the experimental end', () => {
     const ids = PANEL_CATALOG.map((entry) => entry.id);
     const history = ids.indexOf('panel-sqlite-history');
+    const archive = ids.indexOf('panel-archive');
     const saved = ids.indexOf('panel-saved-collections');
     const ask = ids.indexOf('panel-ask-history');
     const report = ids.indexOf('panel-research-report');
-    const archive = ids.indexOf('panel-archive');
     expect(history).toBeGreaterThanOrEqual(0);
-    expect(saved).toBe(history + 1);
-    expect(ask).toBe(saved + 1);
-    expect(report).toBe(ask + 1);
-    expect(archive).toBe(report + 1);
+    expect(archive).toBe(history + 1);
+    expect(saved).toBe(ids.length - 3);
+    expect(ask).toBe(ids.length - 2);
+    expect(report).toBe(ids.length - 1);
   });
 });
 

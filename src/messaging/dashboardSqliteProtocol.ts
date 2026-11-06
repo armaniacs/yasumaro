@@ -35,8 +35,10 @@ export type DashboardSqliteRequest =
       orderBy?: string;
       orderDir?: 'ASC' | 'DESC';
       tagFilter?: string;
+      /** Targeted id lookup (PBI 2026-11-02-07 pin resolution): ids IN (...) + LIMIT/OFFSET. */
+      ids?: number[];
     }
-  | { subtype: 'search'; query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' }
+  | { subtype: 'search'; query: string; limit?: number; offset?: number; orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number }
   | { subtype: 'toggle_star'; id: number; confirmToken?: string }
   | { subtype: 'delete'; id: number; confirmToken?: string }
   | { subtype: 'update'; id: number; changes: Record<string, unknown>; confirmToken?: string }
@@ -55,6 +57,8 @@ export type DashboardSqliteRequest =
         url: string; title?: string; summary?: string; tags?: string;
         created_at: number; domain?: string; visit_duration?: number;
         scroll_ratio?: number; is_starred?: number; is_deleted?: number;
+        /** Session trail (write-once; UPDATE cannot touch these). */
+        nav_source_url?: string | null; search_query?: string | null;
       }>;
       confirmToken?: string;
     }

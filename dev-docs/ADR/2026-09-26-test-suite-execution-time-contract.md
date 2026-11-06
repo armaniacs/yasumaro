@@ -409,3 +409,24 @@ isolated/node が 40ms/ファイル、isolated/jsdom が 147ms/ファイル
 **決定**: `gates.jsdomFileCount` を 362 → 374 に改定する。増加分は DOM を
 直接使う UI・パネル経路の検証が中心で、suite の成長は正当なため、欠陥や
 追加ゲートの必要はない。
+
+#### `jsdomFileCount` 374 → 398 の内訳（2026-11-02 追記）
+
+2026-11-02 の本ブランチ CI が `OVER jsdom files: 398 / 374` で赤だった。
+`validate` 以外のジョブは緑で、失敗は suite の成長のみが原因。前回改定
+rev `426d0ca8` からの差分を `git grep` で特定した（推測なし）。増加 24 件、
+削除 0 件。内訳は main-line の jsdom 転換 +21 件と本ブランチの DOM 配線
+スイート +3 件である。
+
+| 増減 | 領域 | なぜ jsdom なのか |
+|---|---|---|
+| +4 | `src/content/__tests__` | DOM を使う content 経路の検証 (lateRescan / skipReason / rescan / selection 系) |
+| +3 | `src/dashboard/__tests__` | パネル・設定 UI の DOM 検証 (sessionTimeline / similarityCluster / webhookExport-seam) |
+| +1 | `src/dashboard/panels/__tests__` | 分類フィルタ UI の DOM 検証 (panelCategoryFilter) |
+| +12 | `src/dashboard/panels/asyncData/__tests__` | パネル配線の DOM 検証。うち本ブランチ +3 件: `collectionClauseEditorView.test.ts`・`historyToCollectionHandoff.test.ts`・`sessionToCollectionHandoff.test.ts`。残り +9 件は main-line (ask-history / research-report / saved-collections / sessionTimelinePlayback / historySlimming / domainAnalysis-intelBranches 系) |
+| +1 | `src/dashboard/panels/diagnostic/__tests__` | 診断パネル UI の DOM 検証 (captureOutcome) |
+| +3 | `src/popup/__tests__` | ポップアップ UI の DOM 検証 (recordSession-selection / selectionRequest / skipReasonPanel) |
+
+**決定**: `gates.jsdomFileCount` を 374 → 398 に改定する。増加分は DOM を
+直接使う UI・パネル経路の検証が中心で、suite の成長は正当なため、欠陥や
+追加ゲートの必要はない。

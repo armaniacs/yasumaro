@@ -317,10 +317,11 @@ describe('messaging/validators: subtype spec single interpreter', () => {
       expect(envelopeAccepts(payload)).toBe(false);
     });
 
-    it('still passes a known subtype that intentionally carries no spec row', () => {
+    it('still passes a query with arbitrary extra fields (only ids is checked)', () => {
       const payload = { subtype: 'query', anything: 'goes' };
-      // `query` accepts arbitrary extra fields by design — only truly unknown
-      // subtypes are rejected, so the fail-closed change stays limited to them.
+      // `query` accepts arbitrary extra fields by design — only the optional
+      // `ids` filter is validated, so truly unknown subtypes are still the
+      // only rejections on this path.
       expect(interpretSubtypeSpec('query', payload)).toBeNull();
       expect(evaluateSubtypeSpec('query', payload)).toBeNull();
       expect(envelopeAccepts(payload)).toBe(true);

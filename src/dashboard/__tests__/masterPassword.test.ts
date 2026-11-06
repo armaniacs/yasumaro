@@ -698,6 +698,25 @@ describe('initMasterPasswordSettings - auth modal events', () => {
     expect(verifyMasterPasswordWithRehash).toHaveBeenCalledWith('mypassword');
   });
 
+  it('should attach auth listeners only once when init runs from two panel mounts', async () => {
+    setupFullDOM();
+    vi.resetModules();
+    const { initMasterPasswordSettings, showPasswordAuthModal } = await import('../masterPassword.js');
+
+    // panel-privacy and panel-export-import both call this on mount.
+    initMasterPasswordSettings();
+    initMasterPasswordSettings();
+    showPasswordAuthModal('export', vi.fn());
+
+    const authInput = document.getElementById('masterPasswordAuthInput') as HTMLInputElement;
+    authInput.value = 'mypassword';
+    document.getElementById('submitPasswordAuthBtn')!.click();
+
+    await flushPromises();
+
+    expect(verifyMasterPasswordWithRehash).toHaveBeenCalledTimes(1);
+  });
+
   it('should trigger authenticatePassword when Enter key is pressed on auth input', async () => {
     setupFullDOM();
     vi.resetModules();
@@ -772,7 +791,7 @@ describe('savePassword flow', () => {
     await flushPromises();
 
     const errorEl = document.getElementById('passwordStrengthError')!;
-    expect(errorEl.textContent).toBe('i18n_passwordTooShort');
+    expect(errorEl.textContent).toBe('Password too short');
     expect(errorEl.classList.contains('visible')).toBe(true);
     expect(setMasterPasswordService).not.toHaveBeenCalled();
     expect(changeMasterPasswordService).not.toHaveBeenCalled();

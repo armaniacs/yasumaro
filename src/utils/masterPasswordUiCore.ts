@@ -17,7 +17,11 @@ export function validateAndSetPasswordErrors(
 ): boolean {
     const requirementError = validatePasswordRequirements(password);
     if (requirementError && errorEl) {
-        errorEl.textContent = getMessageOr('passwordTooShort', requirementError);
+        // NOTE: show the SSOT reason verbatim. The legacy `passwordTooShort`
+        // locale key ("8文字以上...") predates the unified policy (12+ chars,
+        // 3 of 4 classes, score>=40) and hid the real cause, so it must not
+        // be used here.
+        errorEl.textContent = requirementError;
         errorEl.classList.add('visible');
         return true;
     }

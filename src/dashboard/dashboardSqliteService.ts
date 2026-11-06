@@ -181,8 +181,24 @@ export async function queryLogs(options: {
   orderBy?: string;
   orderDir?: 'ASC' | 'DESC';
   tagFilter?: string;
+  /** Targeted id lookup (PBI 2026-11-02-07 pin resolution): forwarded to the records query. */
+  ids?: number[];
 } = {}): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
-  return sqliteClient.call('records', { subtype: 'query', ...options });
+  return sqliteClient.call('records', {
+    subtype: 'query',
+    ...pickDefined({
+      limit: options.limit,
+      offset: options.offset,
+      domain: options.domain,
+      isStarred: options.isStarred,
+      since: options.since,
+      until: options.until,
+      orderBy: options.orderBy,
+      orderDir: options.orderDir,
+      tagFilter: options.tagFilter,
+      ids: options.ids,
+    }),
+  });
 }
 
 /**
@@ -193,14 +209,14 @@ export async function searchLogs(
   query: string,
   limit = 50,
   offset = 0,
-  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC' } = {}
+  options: { orderBy?: 'rank' | 'created_at'; orderDir?: 'ASC' | 'DESC'; tagFilter?: string; since?: number; until?: number } = {}
 ): Promise<ServiceResult<{ rows: BrowsingLogEntry[]; total: number }>> {
   return sqliteClient.call('search', {
     subtype: 'search',
     query,
     limit,
     offset,
-    ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir }),
+    ...pickDefined({ orderBy: options.orderBy, orderDir: options.orderDir, tagFilter: options.tagFilter, since: options.since, until: options.until }),
   });
 }
 

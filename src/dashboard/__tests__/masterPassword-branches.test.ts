@@ -115,6 +115,7 @@ function emptyDomRefs(): MasterPasswordDomRefs {
     passwordAuthModal: null,
     masterPasswordAuthInput: null,
     passwordAuthError: null,
+    passwordAuthProgress: null,
     closePasswordAuthModalBtn: null,
     cancelPasswordAuthBtn: null,
     submitPasswordAuthBtn: null,
@@ -566,5 +567,29 @@ describe('masterPassword-branches — loadSettings null-element branches', () =>
     await controller.loadSettings();
     expect(refs.masterPasswordEnabled.checked).toBe(false);
     expect(refs.masterPasswordOptions.classList.contains('hidden')).toBe(true);
+  });
+});
+
+describe('password auth modal progress (2026-11-05)', () => {
+  it('exposes progress text and busy state on the auth modal', async () => {
+    const { MasterPasswordController } = await import('../masterPassword.js');
+    document.body.innerHTML = `
+      <div id="passwordAuthModal" class="hidden">
+        <input id="masterPasswordAuthInput" type="password" />
+        <div id="passwordAuthError"></div>
+        <div id="passwordAuthProgress" role="status" aria-live="polite"></div>
+        <button id="closePasswordAuthModalBtn"></button>
+        <button id="cancelPasswordAuthBtn"></button>
+        <button id="submitPasswordAuthBtn">Confirm</button>
+      </div>
+    `;
+    const controller = new MasterPasswordController();
+    controller.setPasswordAuthProgress('履歴DBを読み出しています...');
+    expect(document.getElementById('passwordAuthProgress')!.textContent)
+      .toBe('履歴DBを読み出しています...');
+    controller.setPasswordAuthBusy(true);
+    expect((document.getElementById('submitPasswordAuthBtn') as HTMLButtonElement).disabled).toBe(true);
+    controller.setPasswordAuthBusy(false);
+    expect((document.getElementById('submitPasswordAuthBtn') as HTMLButtonElement).disabled).toBe(false);
   });
 });
