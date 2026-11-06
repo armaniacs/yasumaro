@@ -52,12 +52,12 @@ function makeTmpEngine(query: QueryFn) {
   };
 }
 
-function makeQueryFn(archiveTablePresent: boolean): QueryFn {
+function makeQueryFn(archiveTablePresent: boolean, triggerRows: Array<Record<string, unknown>> = []): QueryFn {
   return async (sql: string) => {
     if (sql.includes("name = 'yasumaro_archive_meta'")) {
       return archiveTablePresent ? [{ name: 'yasumaro_archive_meta' }] : [];
     }
-    if (sql.includes("type = 'trigger'")) return [{ c: 0 }];
+    if (sql.includes("type = 'trigger'")) return triggerRows;
     if (sql.includes('count(*)')) return [{ c: 2 }];
     return [];
   };
@@ -109,5 +109,46 @@ describe('handleRestore — archive database rejection guard (PBI 2026-09-06-01)
     await expect(
       handleRestore(new Uint8Array([1]), () => null, () => undefined, async () => undefined),
     ).resolves.toEqual({ restored: true });
+  });
+});
+
+describe('handleRestore — own FTS trigger allowlist', () => {
+  it('allows a genuine backup carrying the schema FTS sync triggers', async () => {
+    const { FTS5_STATEMENTS } = await import('../schema.js');
+    // SQLite drops IF NOT EXISTS when storing the trigger text — mirror the
+    // real sqlite_master form (verified against better-sqlite3).
+    const ownTriggers = FTS5_STATEMENTS.filter((s) => s.includes('CREATE TRIGGER')).map((sql) => {
+      const stored = sql.replace(/\bIF NOT EXISTS\b/gi, ' ');
+      const name = /CREATE TRIGGER\s+([A-Za-z_]\w*)/i.exec(stored)?.[1] ?? '';
+      return { name, sql: stored };
+    });
+    expect(ownTriggers).toHaveLength(3);
+    currentQueryFn = makeQueryFn(false, ownTriggers);
+    const handleRestore = await loadHandleRestore();
+    await expect(
+      handleRestore(new Uint8Array([1]), () => null, () => undefined, async () => undefined),
+    ).resolves.toEqual({ restored: true });
+  });
+
+  it('rejects a backup with an unknown trigger and cleans up the temp file', async () => {
+    currentQueryFn = makeQueryFn(false, [
+      { name: 'evil_exfiltrate', sql: 'CREATE TRIGGER evil_exfiltrate AFTER INSERT ON browsing_logs BEGIN SELECT 1; END' },
+    ]);
+    const handleRestore = await loadHandleRestore();
+    await expect(
+      handleRestore(new Uint8Array([1]), () => null, () => undefined, async () => undefined),
+    ).rejects.toThrow(/unexpected trigger 'evil_exfiltrate'/);
+    const tmpRemoved = REMOVED.find((n) => n.endsWith('.restore-tmp'));
+    expect(tmpRemoved).toBeDefined();
+  });
+
+  it('rejects a trusted trigger name carrying tampered SQL', async () => {
+    currentQueryFn = makeQueryFn(false, [
+      { name: 'browsing_logs_ai', sql: 'CREATE TRIGGER browsing_logs_ai AFTER INSERT ON browsing_logs BEGIN DELETE FROM browsing_logs; END' },
+    ]);
+    const handleRestore = await loadHandleRestore();
+    await expect(
+      handleRestore(new Uint8Array([1]), () => null, () => undefined, async () => undefined),
+    ).rejects.toThrow(/unexpected trigger 'browsing_logs_ai'/);
   });
 });
