@@ -47,9 +47,15 @@ vi.mock('../dashboardSqliteService.js', () => ({
   isServiceError: (r: unknown) => typeof r === 'object' && r !== null && 'error' in r,
 }));
 
+vi.mock('../../utils/storage/encryptionSession.js', () => ({
+  isMasterPasswordEnabled: vi.fn(),
+  unlockWithPassword: vi.fn(),
+}));
+
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { exportDb } from '../exportLogsService.js';
 import { restoreDb } from '../dashboardSqliteService.js';
+import { isMasterPasswordEnabled, unlockWithPassword } from '../../utils/storage/encryptionSession.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
@@ -60,6 +66,8 @@ beforeEach(() => {
   const webcrypto = new Crypto();
   global.crypto = webcrypto;
   vi.clearAllMocks();
+  vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
+  vi.mocked(unlockWithPassword).mockResolvedValue(true);
 });
 
 describe('exportEncryptedBackup / importEncryptedBackup', () => {
@@ -226,5 +234,49 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
     expect(result.success).toBe(true);
     expect(stages).toEqual(['decrypting', 'restoringDb', 'restoringSettings']);
+  });
+
+  it('unlocks the session with the verified password when a master password is set', async () => {
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(unlockWithPassword).toHaveBeenCalledWith('correct-password');
+    const unlockOrder = vi.mocked(unlockWithPassword).mock.invocationCallOrder[0]!;
+    const setAllOrder = vi.mocked(settingsRepository.setAll).mock.invocationCallOrder[0]!;
+    expect(unlockOrder).toBeLessThan(setAllOrder);
+  });
+
+  it('leaves the session locked path untouched when no master password is set', async () => {
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(unlockWithPassword).not.toHaveBeenCalled();
+  });
+
+  it('fails import without touching db or settings when unlock fails', async () => {
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(unlockWithPassword).mockResolvedValue(false);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toContain('unlock');
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
   });
 });

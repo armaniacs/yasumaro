@@ -35,6 +35,13 @@ All notable changes to this project will be documented in this file.
 >
 > For releases with normal spacing, no additional prefix is required.
 
+## [Unreleased]
+
+### 修正 / Fixed
+
+- 正規バックアップの復元までトリガー検出で拒否されていた問題（自前のFTS同期トリガーまで一律拒否していた。スキーマSSOTと完全一致するもののみ許可し、未知・改竄トリガーは拒否のまま） / Genuine backups were rejected by trigger detection (even the schema's own FTS sync triggers; only byte-identical schema triggers pass now, unknown or tampered triggers stay rejected)
+- 復元直後の設定保存がENCRYPTION_LOCKEDで失敗していた問題（認証モーダルは検証のみでロック解除しない。復号成功後に検証済みパスワードでセッションを確立し、未設定時は匿名キーのまま） / Settings save failed with ENCRYPTION_LOCKED right after a restore (the auth modal verifies without unlocking; the session is now established from the verified password after decryption, untouched when no master password is set)
+
 ## [6.9.69] - 2026-11-07
 
 このリリースは履歴まわりのデータパネル独立とコレクション複数句対応、プロファイル間移行モードの新設、暗号化バックアップの進行表示と無反応修正です。利用者に見える変更は保存済みコレクション・履歴に聞く・調査レポート一発生成の3パネル、Edge・Chrome・Firefox間の移行、バックアップ作成時のファイル名予告と段階表示、設定エクスポートの肥大解消です。 / This release splits history-adjacent data panels, adds multi-clause collections, adds cross-profile migration, and makes encrypted backup show progress instead of going silent. User-visible changes: the saved-collections, ask-history, and one-shot research report panels, Edge/Chrome/Firefox migration, backup filename announcement with stage display, and the settings-export bloat fix.
