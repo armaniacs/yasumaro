@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-06 SVGエラー帰属調査（1件） ― ⬜ 1件未着手
+### 2026-11-06 SVGエラー帰属調査（1件） ― ✅ 1件完了・アーカイブ済み
 
-Edge実機で見つかった `preserveAspectRatio` コンソールエラーの投げ手特定。エラー文は自コード内に存在せず機能影響もなしのため優先度低。RICE: 04(0.6・R3×I0.2×C1.0)。
+Edge実機で見つかった `preserveAspectRatio` コンソールエラーの投げ手特定。ブラウザ本体由来が有力で自コード由来ではないと確定し、対処不要として閉じた。RICE: ~~04(0.6・R3×I0.2×C1.0)~~。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| 04 | [2026-11-06-04-backlog-svg-error-attribution.md](2026-11-06-04-backlog-svg-error-attribution.md) | 🔧非機能追加 | 0.6 | S | R3×I0.2×C1.0。機能影響なしのノイズ。投げ手特定後に修正か対処不要判断 |
+| ~~04~~ | [2026-11-06-04-backlog-svg-error-attribution.md](../dev-docs/archived/pbi/2026-11-06-04-backlog-svg-error-attribution.md) | 🔧非機能追加 | 0.6 | S | ✅ 完了。投げ手特定済み・対処不要。実機再確認手順を記録 |
 
 ### 2026-11-06 Edge→Chrome移行障害の是正（3件） ― ✅ 3件完了・アーカイブ済み RICE順: ~~01(24)~~ → ~~02(9.6)~~ → ~~03(9.6・02と同点だが暗号化経路の確定を先に)~~
 
@@ -55,7 +55,7 @@ B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing`
 | ~~06~~ | [2026-11-02-06-feat-today-preset.md](../dev-docs/archived/pbi/2026-11-02-06-feat-today-preset.md) | ✨機能追加 | 0.36 | 0.33 | ✅ 完了。草稿注入のみ |
 | ~~07~~ | [2026-11-02-07-feat-history-multi-execution.md](../dev-docs/archived/pbi/2026-11-02-07-feat-history-multi-execution.md) | ✨機能追加 | 0.28 | 1 | ✅ 完了。合算 cap と一体 |
 
-### 2026-11-01 履歴パネルの独立化（ブレスト、4件） ― ✅ 4件完了・アーカイブ済み（01-04）＋06 アーカイブ済み＋⬜ 05未着手 RICE順: ~~01(0.64)~~ → ~~02(0.64)~~ → ~~03(0.42)~~ → ~~04(0.72・依存により最後)~~ → 05(0.56) → ~~06(0.28・PBI 2026-11-02-03 に吸収)~~
+### 2026-11-01 履歴パネルの独立化（ブレスト、4件） ― ✅ 5件完了・アーカイブ済み（01-05＋06） RICE順: ~~01(0.64)~~ → ~~02(0.64)~~ → ~~03(0.42)~~ → ~~04(0.72・依存により最後)~~ → ~~05(0.56)~~ → ~~06(0.28・PBI 2026-11-02-03 に吸収)~~
 
 設計書（docs/superpowers/specs/2026-11-01-history-panels-independence-design.md）のA案（リージョン移植）をRICE採点してPBI化。保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設する3データパネルに切り出し、履歴は記録一覧と検索操作だけに絞る。04 は 01〜03 への依存によりスコア最上位でも最後に実施。詳細は [2026-11-01-00-backlog-history-panels.md](2026-11-01-00-backlog-history-panels.md)。
 
@@ -65,7 +65,7 @@ B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing`
 | ~~02~~ | [2026-11-01-02-feat-ask-history-panel.md](../dev-docs/archived/pbi/2026-11-01-02-feat-ask-history-panel.md) | ✨機能追加 | 0.64 | 0.75 | ✅ 完了。01 と同点のため基盤側先行。一覧は新パネル側で直接読み込む |
 | ~~03~~ | [2026-11-01-03-feat-research-report-panel.md](../dev-docs/archived/pbi/2026-11-01-03-feat-research-report-panel.md) | ✨機能追加 | 0.42 | 0.75 | ✅ 完了。対象解決の新規性が高く確信度を下げた。対象は保存済みコレクション選択 |
 | ~~04~~ | [2026-11-01-04-fix-history-panel-slimming.md](../dev-docs/archived/pbi/2026-11-01-04-fix-history-panel-slimming.md) | 🔧非機能追加 | 0.72 | 0.5 | ✅ 完了。スコア最上位だが 01〜03 への依存により最後。履歴スリム化＋文書更新 |
-| 05 | [2026-11-01-05-feat-saved-collections-first-condition.md](2026-11-01-05-feat-saved-collections-first-condition.md) | ✨機能追加 | 0.56 | 0.5 | ⬜ 未着手（後発）。初期利用者の初回作成導線。01 の後に実施 |
+| ~~05~~ | [2026-11-01-05-feat-saved-collections-first-condition.md](../dev-docs/archived/pbi/2026-11-01-05-feat-saved-collections-first-condition.md) | ✨機能追加 | 0.56 | 0.5 | ✅ 完了。初期利用者の初回作成導線。現配置に合わせパネル内完結の案内 |
 
 ### 2026-10-31 次フェーズやること/やらないこと（ブレスト、9件＋後発起票1件） ― ✅ 10件完了・アーカイブ済み（01-10）
 
@@ -679,6 +679,11 @@ pbi-cleanupの裏取りで実装済みを確認（実装コミット＋CHANGELOG
 
 - **2026-11-01-01/02/03/04**: 履歴パネル独立化の3データパネル新設＋履歴スリム化。
 - **2026-11-02-01〜07**: ABDEコレクション活用の配線7件（検索スコープbackground半分、ask/report V2、履歴→保存ハンドオフ、セッション変換、todayプリセット、history-list multi実行）。
+
+### 2026-11-06 SVGエラー帰属04・初回条件05 アーカイブ ― 2件
+
+- **2026-11-06-04-backlog-svg-error-attribution**: 投げ手はブラウザ本体 (Blink SVGパーサ) が有力で自コード由来ではないと確定。対処不要として閉じる。実機再確認手順を記録。
+- **2026-11-01-05-feat-saved-collections-first-condition**: 空状態の手順案内＋名前未入力時の理由表示。現配置 (experimental最下部) に合わせパネル内完結。PBI 01 契約・記録パイプライン不変。`npm run validate` 緑＋両build緑。版 6.9.69。
 
 ### 2026-11-06 Edge→Chrome移行障害01 アーカイブ ― 1件
 

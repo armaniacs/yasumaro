@@ -2137,6 +2137,10 @@
   "savedCollectionsEmpty": {
     "message": "保存済みコレクションはまだありません"
   },
+  "savedCollectionsFirstGuide": {
+    "message": "上の条件入力に語・タグ・期間を入れて、名前を付けて保存すると最初の1件が作れます",
+    "description": "保存0件時の初回作成の手順案内"
+  },
   "savedCollectionSaveBtn": {
     "message": "この条件を保存"
   },

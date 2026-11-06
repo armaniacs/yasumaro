@@ -413,7 +413,7 @@ function buildRegionInnerHtml(
   const entries = Object.values(collections).sort((a, b) => b.updatedAt - a.updatedAt);
   const list = entries.length > 0
     ? entries.map((c) => buildSavedRowHtml(c)).join('')
-    : `<div class="saved-collections-empty">${escapeHtml(t('savedCollectionsEmpty'))}</div>`;
+    : `<div class="saved-collections-empty">${escapeHtml(t('savedCollectionsEmpty'))}<p class="saved-collections-first-guide">${escapeHtml(t('savedCollectionsFirstGuide'))}</p></div>`;
   return `<div class="saved-collections-section">
     <h4 data-i18n="savedCollectionsLabel">${escapeHtml(t('savedCollectionsLabel'))}</h4>
     <p class="saved-collections-help" data-i18n="savedCollectionsHelp">${escapeHtml(t('savedCollectionsHelp'))}</p>
@@ -456,7 +456,12 @@ export function renderSavedCollectionsRegion(
     saveButton.addEventListener('click', () => {
       void (async () => {
         const name = nameInput.value.trim();
-        if (name === '') return;
+        if (name === '') {
+          // Fail closed with an in-panel reason instead of a silent no-op,
+          // so a first-time save without a name explains itself (PBI 2026-11-01-05).
+          if (errorSpan) errorSpan.textContent = t('savedCollectionNameEmpty');
+          return;
+        }
         // Success replaces the region wholesale, so the button intentionally
         // stays busy; failure restores it via the seam before painting.
         try {

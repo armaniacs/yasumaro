@@ -2200,6 +2200,10 @@
   "savedCollectionsEmpty": {
     "message": "No saved collections yet"
   },
+  "savedCollectionsFirstGuide": {
+    "message": "Enter a term, tag, or period in the condition editor above, then name it and save to create your first collection",
+    "description": "First-save guide shown when no collections exist"
+  },
   "savedCollectionSaveBtn": {
     "message": "Save this condition"
   },
