@@ -52,6 +52,8 @@ export interface AIProviderConnectionResult {
         sentTokens?: number;
         /** 受信トークン数（プロバイダが返した場合）。 */
         receivedTokens?: number;
+        /** choices[0].finish_reason（OpenAI互換の接続テストがlength切断の再試行判定に使う）。 */
+        finishReason?: string;
     };
 }
 
