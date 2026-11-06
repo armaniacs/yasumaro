@@ -447,7 +447,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
           : msg('researchSessions_handoffEmpty', {}, 'This session has no pages.');
       return;
     }
-    requestHistoryHandoff(result.query);
+    const where = requestHistoryHandoff(result.query);
     const range = `${new Date(result.earliest).toLocaleString()} – ${new Date(result.latest).toLocaleString()}`;
     const parts: string[] = [
       msg(
@@ -466,6 +466,15 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       } else {
         parts.push(msg('researchSessions_handoffQuotableZero', {}, 'Warning: no quotable page in this session.'));
       }
+    }
+    if (where === 'dropped-previous') {
+      parts.push(
+        msg(
+          'historyHandoffDroppedPrevious',
+          {},
+          'The previous unsent handoff was overwritten. Load the collections panel first to receive it.',
+        ),
+      );
     }
     handoffReasonEl.textContent = parts.join(' ');
   }

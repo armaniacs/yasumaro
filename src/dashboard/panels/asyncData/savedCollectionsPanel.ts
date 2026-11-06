@@ -277,6 +277,11 @@ export function createSavedCollectionsPanel(deps?: SavedCollectionsPanelDeps): P
       await loadSaved();
     },
     destroy() {
+      // C-#7: invalidate in-flight previews. destroy() nulls the container,
+      // so a stale flight normally misses — except when the region remounts
+      // onto the same element: generation must move or the old flight paints
+      // over the fresh mount as if it were current.
+      previewGeneration++;
       unregisterCollectionDraftApplier();
       container = null;
       savedCollections = {};

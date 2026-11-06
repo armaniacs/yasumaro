@@ -2161,6 +2161,9 @@
   "askHistoryNoEvidence": {
     "message": "I don't know. No matching records."
   },
+  "askSearchDroppedNote": {
+    "message": "Note: the collection's text-search condition was not applied to this answer. It was answered from pinned IDs, tags, and dates only."
+  },
   "researchReportLabel": {
     "message": "One-shot research report"
   },
@@ -4475,6 +4478,9 @@
   },
   "historyHandoffRangeUnsavable": {
     "message": "Custom date ranges cannot be sent. Select a single day first."
+  },
+  "historyHandoffDroppedPrevious": {
+    "message": "The previous unsent handoff was overwritten. Load the collections panel first to receive it."
   },
   "historyAppendToObsidian": {
     "message": "Append selected to Obsidian"

@@ -6,7 +6,7 @@
  * summary joins the present conditions only.
  */
 import { describe, it, expect } from 'vitest';
-import { MAX_QUERY_IDS } from '../../../../utils/limits.js';
+import { MAX_QUERY_IDS, MAX_SEARCH_QUERY_LENGTH } from '../../../../utils/limits.js';
 import {
   serializeCollectionQuery,
   hasCollectionCondition,
@@ -148,6 +148,21 @@ describe('savedCollectionQuery v2', () => {
         ids: [1, 1.5, -2, NaN, Infinity, '3', null, 4],
       });
       expect(parsed.ids).toEqual([1, 4]);
+    });
+    it('truncates over-long clause strings to MAX_SEARCH_QUERY_LENGTH (S-#4)', () => {
+      const long = 'x'.repeat(MAX_SEARCH_QUERY_LENGTH + 500);
+      const parsed = parseCollectionQueryV2({
+        version: 2,
+        op: 'or',
+        clauses: [{ search: long, tag: long, date: '2026-11-01' }],
+        ids: [],
+      });
+      expect(parsed.clauses).toHaveLength(1);
+      expect(parsed.clauses[0]?.search).toHaveLength(MAX_SEARCH_QUERY_LENGTH);
+      expect(parsed.clauses[0]?.tag).toHaveLength(MAX_SEARCH_QUERY_LENGTH);
+      // Short inputs are untouched; the date shape is unaffected by the cap.
+      const short = parseCollectionQueryV2({ search: 'wasm', tag: 'tools', date: '2026-11-01' });
+      expect(short.clauses).toEqual([{ search: 'wasm', tag: 'tools', date: '2026-11-01' }]);
     });
   });
 });

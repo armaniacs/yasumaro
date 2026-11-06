@@ -379,8 +379,11 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       );
       return;
     }
-    requestHistoryHandoff(result.query);
-    setHandoffReason(container, t('historyHandoffSent'));
+    const where = requestHistoryHandoff(result.query);
+    setHandoffReason(
+      container,
+      t(where === 'dropped-previous' ? 'historyHandoffDroppedPrevious' : 'historyHandoffSent'),
+    );
   }
 
   // The single callback bundle handed to view.render(). Every entry-list /

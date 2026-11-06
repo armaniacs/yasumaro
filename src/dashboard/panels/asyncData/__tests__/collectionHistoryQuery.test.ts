@@ -137,6 +137,58 @@ describe('collectionHistoryQuery', () => {
       });
     });
 
+    it('does not claim truncation from a first-clause-only AND union past the fan-out cap (C-#10)', async () => {
+      // The first clause alone exceeds the row cap, but the true AND
+      // intersection runs over all clauses — judging truncation from the
+      // partial superset would over-report, so the flag stays false and the
+      // fanout notice carries the approximation.
+      const runQuery = vi.fn<QueryFn>(async () => rowsResult(
+        Array.from({ length: MAX_COLLECTION_ROWS + 5 }, (_, i) => makeRow(i + 1)),
+      ));
+      const clauses = Array.from({ length: MAX_COLLECTION_FANOUT + 1 }, (_, i) => ({
+        search: `term-${i}`, tag: null, date: null,
+      }));
+      const query = { version: 2, op: 'and', clauses, ids: [] };
+
+      const outcome = await resolveCollectionHistory(query, runQuery as never);
+
+      expect(runQuery).toHaveBeenCalledTimes(1);
+      expect(outcome).toMatchObject({
+        data: {
+          warning: {
+            fanoutCapped: true,
+            totalClauses: MAX_COLLECTION_FANOUT + 1,
+            truncated: false,
+            fullCount: MAX_COLLECTION_ROWS + 5,
+          },
+        },
+      });
+    });
+
+    it('keeps the truncation claim for a capped OR union, which can only under-report (C-#10)', async () => {
+      // OR partial union is a subset of the true union: a capped excess
+      // entails a true excess, so the claim stands.
+      const runQuery = vi.fn<QueryFn>(async () => rowsResult(
+        Array.from({ length: MAX_COLLECTION_ROWS + 5 }, (_, i) => makeRow(i + 1)),
+      ));
+      const clauses = Array.from({ length: MAX_COLLECTION_FANOUT + 1 }, (_, i) => ({
+        search: `term-${i}`, tag: null, date: null,
+      }));
+      const query = { version: 2, op: 'or', clauses, ids: [] };
+
+      const outcome = await resolveCollectionHistory(query, runQuery as never);
+
+      expect(outcome).toMatchObject({
+        data: {
+          warning: {
+            fanoutCapped: true,
+            truncated: true,
+            fullCount: MAX_COLLECTION_ROWS + 5,
+          },
+        },
+      });
+    });
+
     it('slices the merged set to the row cap and warns', async () => {
       const runQuery = vi.fn<QueryFn>(async () => rowsResult(
         Array.from({ length: MAX_COLLECTION_ROWS + 5 }, (_, i) => makeRow(i + 1)),

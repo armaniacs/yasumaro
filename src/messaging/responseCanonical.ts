@@ -76,6 +76,14 @@ export interface AskCollectionScope {
   clauses: AskResolvedClause[];
   ids: number[];
   unresolvable: boolean;
+  /**
+   * True when the stored query carried per-clause text-search conditions
+   * that the post-hoc filter cannot enforce (C-#4): the FTS/LIKE search op
+   * takes no per-clause text params, so search text is dropped here, not
+   * answered. The handler discloses it (askSearchDroppedNote) instead of
+   * answering as if the full collection applied.
+   */
+  searchDropped: boolean;
 }
 
 /**
@@ -150,16 +158,19 @@ export function readFiniteNumber(value: unknown): number | null {
  * unbounded search for it. Null (unknown id) stays unscoped.
  */
 export function normalizeCollectionScope(raw: Record<string, unknown> | null): AskCollectionScope {
-  const unscoped: AskCollectionScope = { op: 'and', clauses: [], ids: [], unresolvable: false };
+  const unscoped: AskCollectionScope = { op: 'and', clauses: [], ids: [], unresolvable: false, searchDropped: false };
   if (raw === null) return unscoped;
   const parsed = parseCollectionQueryV2(raw);
+  // C-#4: any stored search text is unenforceable post-hoc, so its presence
+  // latches the disclosure flag even when tag/date/ids survive.
+  const searchDropped = parsed.clauses.some((clause) => clause.search !== '');
   const clauses: AskResolvedClause[] = parsed.clauses
     .filter((clause) => clause.tag !== null || clause.date !== null)
     .map((clause) => ({ tag: clause.tag, date: clause.date }));
   if (clauses.length === 0 && parsed.ids.length === 0) {
-    return { op: 'and', clauses: [], ids: [], unresolvable: true };
+    return { op: 'and', clauses: [], ids: [], unresolvable: true, searchDropped };
   }
-  return { op: parsed.op, clauses, ids: parsed.ids, unresolvable: false };
+  return { op: parsed.op, clauses, ids: parsed.ids, unresolvable: false, searchDropped };
 }
 
 /**
@@ -186,8 +197,10 @@ export function normalizeReportScope(raw: unknown): ResearchReportScope {
   for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
     const value = source[field];
     if (value !== undefined) {
+      // C-#8: rowids are non-negative integers — floats/negatives degrade
+      // to absent, matching the validator's rejection and the parse-side cap.
       const ids = Array.isArray(value)
-        ? value.filter((v): v is number => typeof v === 'number' && Number.isFinite(v))
+        ? value.filter((v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0)
         : [];
       if (ids.length > 0) scope[field] = ids.slice(0, MAX_QUERY_IDS);
     }

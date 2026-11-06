@@ -17,6 +17,7 @@ describe('responseCanonical', () => {
         clauses: [],
         ids: [],
         unresolvable: false,
+        searchDropped: false,
       });
     });
 
@@ -45,6 +46,7 @@ describe('responseCanonical', () => {
         clauses: [{ tag: 'rust', date: null }, { tag: null, date: '2026-10-23' }],
         ids: [3],
         unresolvable: false,
+        searchDropped: false,
       });
     });
 
@@ -65,6 +67,24 @@ describe('responseCanonical', () => {
       expect(scope.unresolvable).toBe(false);
       expect(scope.ids).toEqual([3]);
     });
+
+    it('latches searchDropped when stored search text cannot be enforced (C-#4)', () => {
+      // pins-only with a search condition: the search text is dropped, the
+      // pins still answer — the handler must disclose the drop.
+      const pinsOnly = normalizeCollectionScope({ search: 'wasm', ids: [5] });
+      expect(pinsOnly.unresolvable).toBe(false);
+      expect(pinsOnly.searchDropped).toBe(true);
+      // tag/date survive while the search text is dropped.
+      const tagged = normalizeCollectionScope({ search: 'wasm', tag: 'tools' });
+      expect(tagged.clauses).toEqual([{ tag: 'tools', date: null }]);
+      expect(tagged.searchDropped).toBe(true);
+    });
+
+    it('leaves searchDropped false when no search text was stored (C-#4)', () => {
+      expect(normalizeCollectionScope(null).searchDropped).toBe(false);
+      expect(normalizeCollectionScope({ tag: 'tools' }).searchDropped).toBe(false);
+      expect(normalizeCollectionScope({ version: 2, op: 'or', clauses: [], ids: [5] }).searchDropped).toBe(false);
+    });
   });
 
   describe('normalizeReportScope', () => {
@@ -83,8 +103,8 @@ describe('responseCanonical', () => {
       expect(normalizeReportScope('x')).toEqual({});
     });
 
-    it('keeps finite ids and drops non-finite entries (V2 pins)', () => {
-      expect(normalizeReportScope({ ids: [3, NaN, 'x', Infinity, 5] })).toEqual({ ids: [3, 5] });
+    it('keeps non-negative-integer ids and drops the rest (C-#8)', () => {
+      expect(normalizeReportScope({ ids: [3, NaN, 'x', Infinity, 5, 1.5, -2] })).toEqual({ ids: [3, 5] });
     });
 
     it('caps an over-long pin list instead of rejecting it (report-side absorption)', () => {

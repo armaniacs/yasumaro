@@ -16,7 +16,7 @@
  * a corrupted query degrades to "no conditions" instead of poisoning recall.
  */
 
-import { MAX_QUERY_IDS } from './limits.js';
+import { MAX_QUERY_IDS, MAX_SEARCH_QUERY_LENGTH } from './limits.js';
 
 export interface CollectionClause {
   search: string;
@@ -36,9 +36,19 @@ function readClause(raw: unknown): CollectionClause | null {
   const r = raw as Record<string, unknown>;
   const str = (v: unknown): string | null =>
     typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
-  const search = str(r['search']) ?? '';
-  const tag = str(r['tag']);
-  const date = str(r['date']);
+  // S-#4: per-field string ceiling. Clause text feeds the same FTS/LIKE
+  // machinery the DASHBOARD_SQLITE search row caps at
+  // MAX_SEARCH_QUERY_LENGTH, but a stored clause crosses no wire gate — so
+  // the normalizer truncates instead of rejecting. Truncation keeps the
+  // clause enforceable (dropping it would widen an AND), and legitimate
+  // inputs sit orders of magnitude below the cap.
+  const cap = (v: string): string =>
+    v.length > MAX_SEARCH_QUERY_LENGTH ? v.slice(0, MAX_SEARCH_QUERY_LENGTH) : v;
+  const search = cap(str(r['search']) ?? '');
+  const tagRaw = str(r['tag']);
+  const tag = tagRaw === null ? null : cap(tagRaw);
+  const dateRaw = str(r['date']);
+  const date = dateRaw === null ? null : cap(dateRaw);
   if (search === '' && tag === null && date === null) return null;
   return { search, tag, date };
 }

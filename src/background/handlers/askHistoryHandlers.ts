@@ -16,6 +16,7 @@ import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';
 import type { AiDomainPolicy } from '../../utils/storage/types.js';
 import { resolveAiDomainPolicy } from '../../utils/storage/aiDomainPolicy.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import type {
   AskCollectionScope,
   AskHistoryResponse,
@@ -141,6 +142,19 @@ async function runAsk(
     };
   }
 
+  // C-#4: the collection scope drops per-clause text-search conditions
+  // (the search op takes no per-clause text params). When anything was
+  // dropped, the answer/suggestion says so instead of reading as if the
+  // full collection applied. Wording lives in messages.json
+  // (askSearchDroppedNote); the fallback keeps the disclosure when the key
+  // is missing. Exact wording is owner-confirmed (PBI 2026-11-05-02).
+  const searchDroppedNote = scope.searchDropped
+    ? getMessageOr(
+      'askSearchDroppedNote',
+      '注: コレクションの検索語条件は質問回答の絞り込みに使われていません。ピン留めID・タグ・日付条件のみで回答しています。',
+    )
+    : null;
+
   const searchResult = await deps.search({
     kind: 'search',
     text: trimmed,
@@ -162,10 +176,11 @@ async function runAsk(
   });
   if (evidence.length === 0) {
     const reason = nameEvidenceGap(evidence.length, excludedNoSummary, scopedCount);
+    const suggestion = buildWidenSuggestion(reason ?? 'no_matches');
     return {
       success: true,
       status: 'no_evidence',
-      suggestion: buildWidenSuggestion(reason ?? 'no_matches'),
+      suggestion: searchDroppedNote === null ? suggestion : `${suggestion}\n\n${searchDroppedNote}`,
     };
   }
 
@@ -177,5 +192,6 @@ async function runAsk(
   if (!aiResult.success || aiResult.summary.trim().length === 0) {
     return { success: false, error: aiResult.summary || 'ask_failed' };
   }
-  return { success: true, status: 'answered', answer: aiResult.summary, citations: evidence };
+  const answer = searchDroppedNote === null ? aiResult.summary : `${aiResult.summary}\n\n${searchDroppedNote}`;
+  return { success: true, status: 'answered', answer, citations: evidence };
 }

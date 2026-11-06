@@ -5,7 +5,7 @@ import localPlugin from './eslint/plugin.mjs';
 
 export default [
   {
-    ignores: ['node_modules/', 'dist/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/'],
+    ignores: ['node_modules/', 'dist/', 'coverage/', '.vulnhunter-fix/', 'graphify-out/', 'obsidian-smart-history_VULNHUNT_RESULTS*/', '.kilo/', '.claude/', '.worktrees/'],
   },
   {
     // wasm-bindgen emits `/* eslint-disable */` into the glue it generates, and

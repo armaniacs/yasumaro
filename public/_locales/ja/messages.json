@@ -2098,6 +2098,9 @@
   "askHistoryNoEvidence": {
     "message": "分かりません。該当する記録がありません。"
   },
+  "askSearchDroppedNote": {
+    "message": "注: コレクションの検索語条件は質問回答の絞り込みに使われていません。ピン留めID・タグ・日付条件のみで回答しています。"
+  },
   "researchReportLabel": {
     "message": "調査レポート一発生成"
   },
@@ -4372,6 +4375,9 @@
   },
   "historyHandoffRangeUnsavable": {
     "message": "期間指定のままでは送れません。単日を選んでください。"
+  },
+  "historyHandoffDroppedPrevious": {
+    "message": "直前の送りが未処理のため上書きしました。先にコレクション側で読み込んでください。"
   },
   "historyAppendToObsidian": {
     "message": "選択した記事を Obsidian に追記"

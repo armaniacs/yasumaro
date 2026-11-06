@@ -84,10 +84,12 @@ describe('DashboardSqliteValidator', () => {
     expect(() => v.validate({ subtype: 'query', ids: [1, 2, 999] })).not.toThrow();
   });
 
-  it('rejects a query with non-array or non-finite ids', () => {
+  it('rejects a query with non-array or non-integer ids (C-#8: rowids are non-negative integers)', () => {
     expect(() => v.validate({ subtype: 'query', ids: 'x' })).toThrow(ValidationError);
     expect(() => v.validate({ subtype: 'query', ids: [1, NaN] })).toThrow(ValidationError);
     expect(() => v.validate({ subtype: 'query', ids: [1, 'x'] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, 1.5] })).toThrow(ValidationError);
+    expect(() => v.validate({ subtype: 'query', ids: [1, -2] })).toThrow(ValidationError);
   });
 
   it('rejects a query with more ids than MAX_QUERY_IDS', () => {
@@ -558,7 +560,7 @@ describe('ExportResearchReportValidator — V2 pins (PBI 2026-11-02-04)', () => 
     ).not.toThrow();
   });
 
-  it('accepts optional ids of finite numbers', () => {
+  it('accepts optional ids of non-negative integers (C-#8)', () => {
     expect(() =>
       v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 2, 3] } }, protocolVersion: 1 }),
     ).not.toThrow();
@@ -571,7 +573,7 @@ describe('ExportResearchReportValidator — V2 pins (PBI 2026-11-02-04)', () => 
     ).not.toThrow();
   });
 
-  it('rejects a non-array ids and non-finite entries', () => {
+  it('rejects a non-array ids and non-integer entries (C-#8)', () => {
     expect(() =>
       v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: 'x' } }, protocolVersion: 1 }),
     ).toThrow(ValidationError);
@@ -580,6 +582,12 @@ describe('ExportResearchReportValidator — V2 pins (PBI 2026-11-02-04)', () => 
     ).toThrow(ValidationError);
     expect(() =>
       v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 'x'] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, 1.5] } }, protocolVersion: 1 }),
+    ).toThrow(ValidationError);
+    expect(() =>
+      v.validate({ type: 'EXPORT_RESEARCH_REPORT', payload: { scope: { ids: [1, -2] } }, protocolVersion: 1 }),
     ).toThrow(ValidationError);
   });
 

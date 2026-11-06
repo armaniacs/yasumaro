@@ -90,6 +90,20 @@ describe('historyHandoff', () => {
       expect(consumePendingHistoryHandoff()).toBeNull();
     });
 
+    it('returns dropped-previous when a second request overwrites a pending one (C-#6)', () => {
+      expect(requestHistoryHandoff({ search: 'first' })).toBe('pending');
+      // The newest query wins, but the loss is named instead of silent.
+      expect(requestHistoryHandoff({ search: 'second' })).toBe('dropped-previous');
+      expect(consumePendingHistoryHandoff()).toEqual({ search: 'second' });
+      expect(consumePendingHistoryHandoff()).toBeNull();
+    });
+
+    it('returns pending again once the previous handoff was consumed (C-#6)', () => {
+      expect(requestHistoryHandoff({ search: 'first' })).toBe('pending');
+      expect(consumePendingHistoryHandoff()).toEqual({ search: 'first' });
+      expect(requestHistoryHandoff({ search: 'second' })).toBe('pending');
+    });
+
     it('returns null when nothing is pending', () => {
       expect(consumePendingHistoryHandoff()).toBeNull();
     });

@@ -29,15 +29,15 @@ Scenario: 古いpreviewが再マウント後に描画しない
 
 ## 受け入れ基準
 
-- [ ] C-#4: searchDropped 相当の note 開示（文言は owner 確認）
-- [ ] C-#6: handoff bus の queue 化か dropped 応答
-- [ ] C-#7: destroy() 時の previewGeneration++（再マウント塗り防止）
-- [ ] C-#8: validators＋canonical の ids 整数・非負チェック（parse 側は先行済み）
-- [ ] C-#9: collection-mode paging の上限 clamp
-- [ ] C-#10: truncated フラグの過報告修正（全 union で判定か近似表示）
-- [ ] S-#3: ExportResearchReportValidator の ids 長上限（吸収設計の文書化でも可）
-- [ ] S-#4: readClause の clause 文字列上限＋tag 正規表現 cache（計測付き）
-- [ ] 各件に単体 pin（既存テストの隣に配置）
+- [x] C-#4: searchDropped 相当の note 開示（文言は owner 確認）
+- [x] C-#6: handoff bus の queue 化か dropped 応答
+- [x] C-#7: destroy() 時の previewGeneration++（再マウント塗り防止）
+- [x] C-#8: validators＋canonical の ids 整数・非負チェック（parse 側は先行済み）
+- [x] C-#9: collection-mode paging の上限 clamp
+- [x] C-#10: truncated フラグの過報告修正（全 union で判定か近似表示）
+- [x] S-#3: ExportResearchReportValidator の ids 長上限（吸収設計の文書化でも可）
+- [x] S-#4: readClause の clause 文字列上限＋tag 正規表現 cache（計測付き）
+- [x] 各件に単体 pin（既存テストの隣に配置）
 
 ## テスト戦略
 
@@ -50,11 +50,14 @@ Scenario: 古いpreviewが再マウント後に描画しない
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み (本 PBI 範囲のみ)
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み (本 PBI 範囲のみ)
 
 ## 出典
 
 - correctness レビュー 10件（HIGH 2件は先行修正: pins-only `askEvidence.ts`・AND窓 `collectionHistoryQuery.ts`）
 - security レビュー 4件（Low-spoof の report title・ids 上限は先行修正）
+
+## 追記（アーカイブ時 2026-11-06）
+9件すべて実装済み（実装コミットは統合時の `fix:` を参照、CHANGELOGに記載）。`askSearchDroppedNote` と `historyHandoffDroppedPrevious` の文言は暫定であり要owner確認。あわせて `.worktrees/` が `eslint .` の走査に入りゲートを壊していたため `eslint.config.js` の共通除外に追加（既存の `.kilo/`・`.claude/` と同列の扱い）。

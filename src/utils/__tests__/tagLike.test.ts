@@ -6,7 +6,7 @@
  * report SQL cannot diverge from the same population.
  */
 import { describe, it, expect } from 'vitest';
-import { rowMatchesTagLike } from '../tagLike.js';
+import { clearTagLikeCacheForTests, rowMatchesTagLike, tagLikeCacheStatsForTests } from '../tagLike.js';
 
 describe('tagLike', () => {
   describe('rowMatchesTagLike', () => {
@@ -46,6 +46,27 @@ describe('tagLike', () => {
       expect(rowMatchesTagLike(undefined, 'rust')).toBe(false);
       expect(rowMatchesTagLike('rust', '')).toBe(false);
       expect(rowMatchesTagLike('', '')).toBe(false);
+    });
+
+    it('reuses the compiled pattern for a repeated filter (S-#4 cache, measured)', () => {
+      clearTagLikeCacheForTests();
+      expect(rowMatchesTagLike('rust, wasm', 'rust')).toBe(true);
+      expect(rowMatchesTagLike('other', 'rust')).toBe(false);
+      const stats = tagLikeCacheStatsForTests();
+      expect(stats.compilations).toBe(1);
+      expect(stats.hits).toBe(1);
+    });
+
+    it('bounds the pattern cache so a tag flood cannot grow memory (S-#4)', () => {
+      clearTagLikeCacheForTests();
+      for (let i = 0; i < 200; i++) {
+        expect(rowMatchesTagLike('x', `tag-${i}`)).toBe(false);
+      }
+      const stats = tagLikeCacheStatsForTests();
+      expect(stats.size).toBeLessThanOrEqual(64);
+      expect(stats.compilations).toBe(200);
+      // An evicted pattern still matches correctly when recompiled.
+      expect(rowMatchesTagLike('found tag-0 here', 'tag-0')).toBe(true);
     });
   });
 });

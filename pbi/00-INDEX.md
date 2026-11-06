@@ -32,14 +32,14 @@ Edge実機移行で発覚した3障害をRICE採点してPBI化。01はuBlock二
 | ~~02~~ | [2026-11-06-02-fix-encrypted-backup-cap.md](../dev-docs/archived/pbi/2026-11-06-02-fix-encrypted-backup-cap.md) | 🔧非機能追加 | 9.6 | M | ✅ 完了。R4×I3×C0.8。バックアップ専用上限分離。`npm run validate`+両ブラウザbuild緑 |
 | ~~03~~ | [2026-11-06-03-feat-profile-migration.md](../dev-docs/archived/pbi/2026-11-06-03-feat-profile-migration.md) | ✨機能追加 | 9.6 | L | ✅ 完了。R6×I2×C0.8。全9通りをunit+統合で検証。Playwright実ブラウザE2Eは未追加 |
 
-### 2026-11-05 logger flush合流フォロー（1件） ― ✅ 01完了・アーカイブ済み＋⬜ 02未着手 RICE順: ~~01(1.5)~~ → 02(1.2)
+### 2026-11-05 logger flush合流フォロー（1件） ― ✅ 2件完了・アーカイブ済み RICE順: ~~01(1.5)~~ → ~~02(1.2)~~
 
-B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing` ガードが同時完了時の一方を捨てる窓を合流させる。1分アラームが上限を保証し E2E は完了時flushで緑のため急ぎなし。詳細は [2026-11-05-01-fix-logger-flush-coalesce.md](../dev-docs/archived/pbi/2026-11-05-01-fix-logger-flush-coalesce.md)。
+B対応レビュー指摘 #2 のフォロー。`persistPending` の `isFlushing` ガードが同時完了時の一方を捨てる窓を合流させる。1分アラームが上限を保証し E2E は完了時flushで緑のため急ぎなし。詳細は [2026-11-05-01-fix-logger-flush-coalesce.md](../dev-docs/archived/pbi/2026-11-05-01-fix-logger-flush-coalesce.md)。02 は土台レビュー残件 9件の束。詳細は [2026-11-05-02-fix-review-residuals.md](../dev-docs/archived/pbi/2026-11-05-02-fix-review-residuals.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
 | ~~01~~ | [2026-11-05-01-fix-logger-flush-coalesce.md](../dev-docs/archived/pbi/2026-11-05-01-fix-logger-flush-coalesce.md) | 🔧非機能追加 | 1.5 | 0.2 | ✅ 完了。再ドレインループで合流。never-flush配線＋並行recordのpinで検証 |
-| 02 | [2026-11-05-02-fix-review-residuals.md](2026-11-05-02-fix-review-residuals.md) | 🔧非機能追加 | 1.2 | 0.25 | 土台レビュー残件（開示・上限・微性能）。HIGH・spoof・ids上限は先行修正済み |
+| ~~02~~ | [2026-11-05-02-fix-review-residuals.md](../dev-docs/archived/pbi/2026-11-05-02-fix-review-residuals.md) | 🔧非機能追加 | 1.2 | 0.25 | ✅ 完了。土台レビュー残件9件。文言2件は暫定で要owner確認 |
 
 ### 2026-11-02 A/B/D/E コレクション活用の配線（なぜなぜ90連、7件） ― ✅ 7件完了・アーカイブ済み RICE順: ~~01(1.44)~~ → ~~02(0.90)~~ → ~~03(0.72)~~ → ~~04(0.56)~~ → ~~05(0.42)~~ → ~~06(0.36)~~ → ~~07(0.28・延期可)~~
 
@@ -668,6 +668,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 ### 2026-11-06 logger flush合流01 アーカイブ ― 1件
 
 - **2026-11-05-01-fix-logger-flush-coalesce**: `persistPending` を単発drainから再ドレインループに変更し同時完了時の一方捨てを合流に（dirtyフラグは無力と実証して不採用）。`npm run validate` 緑＋両build緑。版 6.9.67。
+
+### 2026-11-06 レビュー残件02 アーカイブ ― 1件
+
+- **2026-11-05-02-fix-review-residuals**: 土台レビュー残件9件（開示文言・handoff queue化・世代管理・ids整数化・clamp・truncated・ids長吸収文書化・clause上限・正規表現cache）。`askSearchDroppedNote` と `historyHandoffDroppedPrevious` の文言は暫定で要owner確認。あわせて `.worktrees/` を eslint 共通除外に追加。`npm run validate` 緑＋両build緑。版 6.9.68。
 
 ### 2026-11-06 履歴パネル独立化01〜04・ABDE 01〜07 アーカイブ ― 11件
 

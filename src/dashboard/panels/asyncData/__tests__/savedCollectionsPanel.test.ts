@@ -294,6 +294,32 @@ describe('savedCollectionsPanel', () => {
       expect(section.querySelector('.clause-preview-text')?.textContent).toBe(baselineTotal);
       panel.destroy?.();
     });
+
+    it('drops an in-flight preview across destroy and same-element remount (C-#7)', async () => {
+      const resolvers: Array<(n: number) => void> = [];
+      const remountPanel = createSavedCollectionsPanel({
+        countForClause: () => new Promise<number>((resolve) => { resolvers.push(resolve); }),
+      });
+      const section = mountSection();
+      remountPanel.mount(section);
+      await remountPanel.load?.();
+
+      // Start one preview flight, then destroy and remount onto the SAME
+      // element (region recreated in place): the old flight must not paint
+      // over the fresh mount as if it were current.
+      const search = section.querySelector<HTMLInputElement>('.clause-search')!;
+      search.value = 'AI';
+      search.dispatchEvent(new Event('input', { bubbles: true }));
+      section.querySelector<HTMLButtonElement>('[data-clause-action="refresh"]')?.click();
+      expect(resolvers).toHaveLength(1);
+      remountPanel.destroy?.();
+      remountPanel.mount(section);
+
+      resolvers[0]!(42);
+      for (let i = 0; i < 10; i++) await Promise.resolve();
+      expect(section.querySelector('.clause-preview-text')?.textContent).not.toBe('42');
+      remountPanel.destroy?.();
+    });
   });
 });
 

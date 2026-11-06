@@ -209,7 +209,10 @@ export function createResearchReportGenerator(deps: ResearchReportGeneratorDeps)
       await reportMutex.acquire();
       try {
         const scope = input.scope;
-        const pinnedIds = (scope.ids ?? []).filter((id) => Number.isFinite(id));
+        // C-#8: keep only non-negative-integer pins (rowids). The canonical
+        // normalizer already degrades the rest to absent; this re-check keeps
+        // a direct caller from smuggling floats/negatives into the ids query.
+        const pinnedIds = (scope.ids ?? []).filter((id) => Number.isInteger(id) && id >= 0);
         const hasClauses = (scope.clauses?.length ?? 0) > 0;
         if (!hasClauses && pinnedIds.length === 0) {
           return await generateFromRows(deps, repo, await fetchSingleScope(deps, scope), scopeTitle(scope), input.sendToObsidian, {});

@@ -563,13 +563,24 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   /** Current page slice of the cached collection set (page clamped). */
   function collectionPageSlice(page: number): { rows: BrowsingLogEntry[]; total: number } {
     const rows = collectionRows ?? [];
-    const safePage = Math.max(0, page);
-    const start = safePage * SQLITE_HISTORY_PAGE_SIZE;
+    const start = clampCollectionPage(page) * SQLITE_HISTORY_PAGE_SIZE;
     return { rows: rows.slice(start, start + SQLITE_HISTORY_PAGE_SIZE), total: rows.length };
   }
 
+  /**
+   * Last-page clamp for the cached collection set (C-#9): an over-range
+   * page lands on the final page instead of painting an empty list. The
+   * SQL path needs no twin — LIMIT/OFFSET over-fetch already returns the
+   * tail there; only the client-side slice can show "nothing" mid-data.
+   */
+  function clampCollectionPage(page: number): number {
+    const rows = collectionRows ?? [];
+    const maxPage = Math.max(0, Math.ceil(rows.length / SQLITE_HISTORY_PAGE_SIZE) - 1);
+    return Math.min(Math.max(0, page), maxPage);
+  }
+
   function dispatchCollectionPage(page: number): void {
-    dispatch({ type: 'pageChange', page });
+    dispatch({ type: 'pageChange', page: clampCollectionPage(page) });
     const slice = collectionPageSlice(state.currentPage);
     dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
     notify();

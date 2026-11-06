@@ -184,7 +184,7 @@ describe('askEvidence', () => {
 
     it('restricts a pins-only scope to the pinned ids', () => {
       const scope = normalizeCollectionScope({ version: 2, op: 'or', clauses: [], ids: [5] });
-      expect(scope).toEqual({ op: 'or', clauses: [], ids: [5], unresolvable: false });
+      expect(scope).toEqual({ op: 'or', clauses: [], ids: [5], unresolvable: false, searchDropped: false });
       expect(matchesCollectionScope(makeRow(5, { tags: 'anything' }), scope)).toBe(true);
       expect(matchesCollectionScope(makeRow(6, { tags: 'anything' }), scope)).toBe(false);
     });

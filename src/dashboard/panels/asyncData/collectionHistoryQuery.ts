@@ -170,7 +170,14 @@ export async function resolveCollectionHistory(
     sortDir,
   );
   const fullCount = rows.length;
-  const truncated = fullCount > MAX_COLLECTION_ROWS;
+  // C-#10: AND + fanoutCapped runs the first clause only, so the merged set
+  // is a SUPERSET of the true intersection — asserting truncation from it
+  // over-reports when the full AND would fit. The full union cannot be
+  // judged without running every clause (the cap's whole point), so the
+  // fanout notice carries the approximation instead of a truncation claim.
+  // OR needs no twin: a partial union is a subset, so a capped excess
+  // entails a true excess.
+  const truncated = fanoutCapped && parsed.op === 'and' ? false : fullCount > MAX_COLLECTION_ROWS;
   const kept = truncated ? rows.slice(0, MAX_COLLECTION_ROWS) : rows;
   const warning: CollectionWarning | null =
     fanoutCapped || truncated || missingCount > 0

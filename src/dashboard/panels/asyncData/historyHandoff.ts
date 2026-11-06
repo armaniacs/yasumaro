@@ -99,14 +99,22 @@ export function unregisterCollectionDraftApplier(): void {
  * when the collections panel is mounted; otherwise stashes it for the
  * next collections load. Returns where it went (the history panel shows
  * the same confirmation either way).
+ *
+ * C-#6: a single slot cannot queue, so a second request while one is
+ * still pending overwrites it — but the overwrite is reported as
+ * 'dropped-previous' instead of vanishing silently. Callers show the
+ * dropped notice so the sender can reload the collections panel first.
+ * Fail-closed: the newest query still wins (no stale draft), the loss is
+ * named, never hidden.
  */
-export function requestHistoryHandoff(query: Record<string, unknown>): 'applied' | 'pending' {
+export function requestHistoryHandoff(query: Record<string, unknown>): 'applied' | 'pending' | 'dropped-previous' {
   if (draftApplier) {
     draftApplier(query);
     return 'applied';
   }
+  const dropped = pendingQuery !== null;
   pendingQuery = query;
-  return 'pending';
+  return dropped ? 'dropped-previous' : 'pending';
 }
 
 /** Collections panel load hook: take the stashed query once (null when none). */

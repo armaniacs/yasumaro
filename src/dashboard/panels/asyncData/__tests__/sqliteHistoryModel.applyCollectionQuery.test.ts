@@ -84,6 +84,23 @@ describe('sqliteHistoryModel', () => {
       expect(queryHistory.mock.calls.length).toBe(fanOutCalls);
     });
 
+    it('clamps an over-range collection page to the last page instead of an empty list (C-#9)', async () => {
+      const alpha = Array.from({ length: 15 }, (_, i) => makeRow(i + 1));
+      const beta = Array.from({ length: 15 }, (_, i) => makeRow(i + 11));
+      const queryHistory = clauseQuery({ alpha, beta });
+      const model = createSqliteHistoryModel({ queryHistory: queryHistory as never });
+
+      await model.applyCollectionQuery(orQuery(['alpha', 'beta']));
+      expect(model.getState().total).toBe(25);
+
+      model.changePage(99);
+
+      const state = model.getState();
+      expect(state.currentPage).toBe(1);
+      expect(state.entries.map((e) => e.id)).toEqual([5, 4, 3, 2, 1]);
+      expect(state.total).toBe(25);
+    });
+
     it('keeps the warning in state and leaves collection mode on a filter change', async () => {
       const queryHistory = clauseQuery({ alpha: [makeRow(1)] });
       const model = createSqliteHistoryModel({ queryHistory: queryHistory as never });

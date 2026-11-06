@@ -400,12 +400,14 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   delete: { fields: [finiteNumber('id')] },
   // PBI 2026-11-02-07: the plain listing accepts an optional targeted id
   // filter (pin resolution). Extra fields still pass — only `ids`, when
-  // present, must be a finite-number array capped at MAX_QUERY_IDS (same
-  // shape as the report-scope ids check; oversized wire payloads never
-  // become giant SQL IN clauses — offscreen truncates defensively anyway).
+  // present, must be a non-negative-integer array capped at MAX_QUERY_IDS
+  // (rowids are integers; floats/negatives can never match — rejected,
+  // never truncated. Same shape as the report-scope ids check; oversized
+  // wire payloads never become giant SQL IN clauses — offscreen truncates
+  // defensively anyway).
   query: {
     fields: [
-      { field: 'ids', optional: true, test: (v) => Array.isArray(v) && v.length <= MAX_QUERY_IDS && (v as unknown[]).every(isFiniteNumber), message: (s) => `${s}: ids must be an array of at most ${MAX_QUERY_IDS} finite numbers` },
+      { field: 'ids', optional: true, test: (v) => Array.isArray(v) && v.length <= MAX_QUERY_IDS && (v as unknown[]).every(isNonNegativeInteger), message: (s) => `${s}: ids must be an array of at most ${MAX_QUERY_IDS} non-negative integers` },
     ],
   },
   create_confirm_token: {
@@ -794,9 +796,20 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
           throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
         }
       }
-      // V2 pins (PBI 2026-11-02-04): optional ids array of finite numbers.
-      // Over-long lists are NOT rejected here — the report side truncates
-      // (absorption, unlike save path B).
+      // V2 pins (PBI 2026-11-02-04): optional ids array of non-negative
+      // integers (rowids — floats/negatives can never match, so they are
+      // rejected, never absorbed).
+      //
+      // S-#3 absorption note: over-long lists are NOT rejected here — the
+      // report side truncates (absorption, unlike save path B which rejects
+      // at parse). The bound is enforced in layers, so an unbounded array
+      // can never become a giant SQL IN clause:
+      //   1. normalizeReportScope (responseCanonical) slices ids to
+      //      MAX_QUERY_IDS;
+      //   2. createResearchReportGenerator slices the final union to
+      //      REPORT_MAX_RECORDS (== MAX_QUERY_IDS) before the ids fetch;
+      //   3. the DASHBOARD_SQLITE query row rejects ids past MAX_QUERY_IDS.
+      // Length is absorbed, element type is rejected — pinned on both sides.
       for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
         const value = s[field];
         if (value !== undefined) {
@@ -804,8 +817,8 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
             throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be array`, field);
           }
           for (const entry of value) {
-            if (typeof entry !== 'number' || !Number.isFinite(entry)) {
-              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite numbers`, field);
+            if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0) {
+              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be non-negative integers`, field);
             }
           }
         }
