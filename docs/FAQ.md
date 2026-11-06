@@ -123,7 +123,7 @@ Chrome の Gemini Nano、Microsoft Edge の Phi-mini を要約に使う仕組み
 
 **Q15. Groq を使うにはどう設定しますか？**
 
-ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `llama-3.3-70b-versatile` などを入力し、最後に「Test AI」をクリックしてください。
+ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `openai/gpt-oss-20b` などを入力し、最後に「Test AI」をクリックしてください。
 
 **Q16. Gemini を使うにはどう設定しますか？**
 
@@ -425,7 +425,7 @@ It uses Chrome's Gemini Nano or Microsoft Edge's Phi-mini for summarization. No 
 
 **Q15. How do I set up Groq?**
 
-In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `llama-3.3-70b-versatile`, and click "Test AI".
+In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `openai/gpt-oss-20b`, and click "Test AI".
 
 **Q16. How do I set up Gemini?**
 

@@ -146,7 +146,7 @@
     *   OpenAI: `https://api.openai.com/v1`
 *   **注意**: Anthropic のネイティブAPI（`https://api.anthropic.com/v1`）は OpenAI 互換ではないため、この設定では利用できません。Anthropic 系のモデルを使う場合は、OpenAI 互換のゲートウェイ/プロキシを経由して接続してください。
 *   **API Key**: 各サービスのAPIキー。
-*   **Model Name**: 使用するモデル名（例: `llama-3.3-70b-versatile`, `gpt-4o-mini`）。
+*   **Model Name**: 使用するモデル名（例: `openai/gpt-oss-120b`, `gpt-4o-mini`）。
 
 **C. Google Gemini**
 *   **API Key**: GeminiのAPIキーを入力。
@@ -457,7 +457,7 @@ Select your preferred provider from the dropdown. You can configure up to three 
 *   **OpenAI Compatible (Recommended)**: Supports Groq, OpenAI, and more. Note: Anthropic's native API is not OpenAI-compatible and cannot be used here; access Anthropic-class models via an OpenAI-compatible gateway/proxy.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`
     *   **API Key**: Your provider's key.
-    *   **Model Name**: e.g., `llama-3.3-70b-versatile`, `gpt-4o-mini`.
+    *   **Model Name**: e.g., `openai/gpt-oss-120b`, `gpt-4o-mini`.
 *   **Google Gemini**: Enter API Key and Model (e.g., `gemini-3.1-flash-lite`).
 *   **OpenAI Compatible 2**: Use this for a secondary provider like a local LLM (`http://localhost:11434/v1`).
 
