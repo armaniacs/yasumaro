@@ -57,6 +57,7 @@ All notable changes to this project will be documented in this file.
 - プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加） / Encrypted-backup Confirm was dead unless the privacy panel had been opened (auth-modal listeners were attached only by the privacy panel mount; export/import mount now attaches them too with a double-attach guard)
 - uBlockフィルタのドメイン集合がソース側とマージ済みルール側に二重保存され設定エクスポートが28MBに膨張し10MiB上限に抵触していた問題（マージ済みルールの永続化を止めソースからの導出に一本化。旧二重データは読み時点で正規化し、設定は10KB級に戻る） / Duplicate uBlock domain storage bloated settings exports to 28MB past the 10MiB cap (merged rules are no longer persisted and are derived from sources instead; legacy duplicates normalize on read; settings shrink back to ~10KB)
 - 暗号化バックアップのenvelope上限10MiBとファイル上限50MBの不整合で履歴の多いバックアップが復号できなかった問題（バックアップ専用envelope上限50MiBを分離し汎用10MiBは不変。超過時は原因特定可能な文言でパスワード入力前に案内） / Encrypted backups with heavy history failed to decrypt from the 10MiB envelope cap contradicting the 50MB file cap (backup-specific 50MiB envelope cap split off, generic 10MiB unchanged; over-cap files are reported with the cause before the password prompt)
+- 記録パイプラインの同時完了時に片方のログが次の1分アラームまで残りSW終了時に失われることがあった問題（`persistPending` を単発drainから再ドレインループに変え合流させる。完了時flushの契約とonSuspendの扱いは不変） / Concurrent recording completions could leave one side's logs until the next 1-minute alarm, losing them on SW shutdown (persistPending now re-drains in a loop to coalesce; completion-flush contract and onSuspend handling unchanged)
 
 ## [6.9.64] - 2026-10-31
 
