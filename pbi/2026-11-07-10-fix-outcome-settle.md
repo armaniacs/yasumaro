@@ -58,12 +58,12 @@ Scenario: 正常系の振る舞いは変わらない
 
 ## 受け入れ基準
 
-- [ ] `recordingOutcome.ts` の `void addPendingPage` と `void recordSkipReason` のfire-and-forgetがない
-- [ ] 案Aまたは案Bのどちらかに統一し、呼び出し側がsettled状態を扱う
-- [ ] 登録失敗時にunhandled rejectionが発生しない
-- [ ] 登録失敗の事実が `addLog` で追跡できる
-- [ ] 正常系の `RecordingResult` と通知内容が変わらない
-- [ ] 型チェックが通る
+- [x] `recordingOutcome.ts` の `void addPendingPage` と `void recordSkipReason` のfire-and-forgetがない
+- [x] 案Aまたは案Bのどちらかに統一し、呼び出し側がsettled状態を扱う
+- [x] 登録失敗時にunhandled rejectionが発生しない
+- [x] 登録失敗の事実が `addLog` で追跡できる
+- [x] 正常系の `RecordingResult` と通知内容が変わらない
+- [x] 型チェックが通る
 
 ## テスト戦略(t_wada式)
 
@@ -126,8 +126,8 @@ grep -rn "StepDelayFn\|enqueueError" src/background/pipeline/stepExecutor.ts
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] 既存のpipelineテストがパスする
-- [ ] `npm run type-check` がパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] 既存のpipelineテストがパスする
+- [x] `npm run type-check` がパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み
