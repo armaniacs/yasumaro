@@ -10,6 +10,7 @@ import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import type { QueueStorageAdapter } from './queueStorageAdapter.js';
 import {
   MAX_PATCH_PAYLOAD_BYTES,
   MAX_PENDING_WRITES,
@@ -104,7 +105,7 @@ export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetada
  * Create a pending write queue with the given adapter.
  * The default export uses ChromeStorageAdapter; tests can inject InMemoryAdapter.
  */
-export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
+export function createPendingWriteQueue(adapter: QueueStorageAdapter) {
   const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
     storageKey: PENDING_CHROME_STORAGE_KEY,
     maxSize: MAX_PENDING_WRITES,

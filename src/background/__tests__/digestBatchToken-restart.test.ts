@@ -22,8 +22,8 @@ async function freshDigestModule() {
 /** Disabled-setting deps: the tick returns early, but the token still advances. */
 function makeDisabledDeps(): AlarmHandlerDeps {
   return {
-    settingsReader: { getAll: async () => ({}) } as never,
-  } as AlarmHandlerDeps;
+    settingsReader: { getAll: async () => ({}) },
+  } as unknown as AlarmHandlerDeps;
 }
 
 /** Wait for the module's fire-and-forget session write to land. */
@@ -36,7 +36,9 @@ async function flushTokenWrite(): Promise<void> {
 
 async function tokenOf(mod: Awaited<ReturnType<typeof freshDigestModule>>): Promise<number> {
   const stored = (await chrome.storage.session.get(TOKEN_SESSION_KEY)) as Record<string, number>;
-  return stored[TOKEN_SESSION_KEY];
+  const value = stored[TOKEN_SESSION_KEY];
+  if (typeof value !== 'number') throw new Error('digest run token was not persisted');
+  return value;
 }
 
 describe('digestBatchAlarm', () => {

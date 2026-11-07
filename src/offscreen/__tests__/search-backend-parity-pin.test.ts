@@ -77,7 +77,7 @@ describe('search backend parity pin (PBI 2026-11-08-05)', () => {
   });
 
   it('FTS with an ids filter: byte-identical COUNT/rows SQL+params on both backends', async () => {
-    const q = { text: 'runes', ids: [3, 7], limit: 10, offset: 0 } as const;
+    const q = { text: 'runes', ids: [3, 7] as number[], limit: 10, offset: 0 };
     const idb = makeIdb(true);
     await idb.backend.query({ ...q });
     const opfs = makeOpfs();
