@@ -43,10 +43,10 @@ Scenario: reject/absorb 差が保たれる
 
 ## 受け入れ基準
 
-- [ ] traversal が1箇所に集約される
-- [ ] reject/absorb 差が policy として明示され既存 pin 緑である
-- [ ] sqliteValidators の seam 漏れが解消される (直 import か正本参照のいずれか)
-- [ ] 既存テスト緑
+- [x] traversal が1箇所に集約される
+- [x] reject/absorb 差が policy として明示され既存 pin 緑である
+- [x] sqliteValidators の seam 漏れが解消される (直 import か正本参照のいずれか)
+- [x] 既存テスト緑
 
 ## テスト戦略
 

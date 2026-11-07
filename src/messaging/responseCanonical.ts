@@ -22,7 +22,7 @@
  * `types.ts` keeps type-only re-exports so existing import paths work.
  */
 import { parseCollectionQueryV2 } from '../utils/collectionQueryV2.js';
-import { MAX_QUERY_IDS } from '../utils/limits.js';
+import { MAX_QUERY_IDS, VALIDATOR_LIMITS } from '../utils/limits.js';
 
 /** One citation the answer links back to (BDD: 元記録に飛べる). */
 export interface AskHistoryCitation {
@@ -127,6 +127,88 @@ export const REPORT_SCOPE_NUMBER_FIELDS = ['since', 'until'] as const;
 export const REPORT_SCOPE_ARRAY_FIELDS = ['ids'] as const;
 
 /**
+ * Report scope field policy (PBI 2026-11-08-07): the reject/absorb intent
+ * split is a parameter, not two traversals. 'reject' is the validator gate
+ * (a bad value is a wire-contract violation); 'absorb' is the normalizer
+ * gate (a bad value degrades to absent). Length is absorbed, element type
+ * is rejected - pinned on both sides.
+ */
+export type ReportScopeFieldPolicy = 'reject' | 'absorb';
+
+/** Scope field kinds, one per canonical field table. */
+export type ReportScopeFieldKind = 'string' | 'number' | 'array';
+
+/**
+ * Reject-side string predicate (adapter target for
+ * ExportResearchReportValidator): a scope string field must be a string.
+ * Blank handling stays absorb-side (readTrimmedString degrades blanks to
+ * null); the length cap is checked by isReportScopeStringWithinCap.
+ */
+export function isReportScopeStringValue(value: unknown): value is string {
+  return typeof value === 'string';
+}
+
+/**
+ * Reject-side string cap predicate: a scope string field must fit the wire
+ * cap. The default cap is the same VALIDATOR_LIMITS constant the validator
+ * interpolates into its rejection text, so wording and bound cannot drift.
+ */
+export function isReportScopeStringWithinCap(
+  value: string,
+  cap: number = VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH,
+): boolean {
+  return value.length <= cap;
+}
+
+/**
+ * Reject-side number predicate: a scope number field must be a finite
+ * number. Shared with the absorb-side reader (readFiniteNumber) so
+ * NaN/Infinity handling stays single-owned.
+ */
+export function isReportScopeFiniteNumberValue(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+/**
+ * Reject-side id predicate: a scope id entry must be a non-negative
+ * integer (rowids - floats/negatives can never match, so they are rejected
+ * on the wire and filtered out on the absorb side).
+ */
+export function isReportScopeIdValue(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0;
+}
+
+/**
+ * Reject-side ids shape predicate: the ids field must be an array when
+ * present. Length is NOT judged here - an over-long pin list is absorbed
+ * (truncated) by the normalizer, never rejected.
+ */
+export function isReportScopeIdListValue(value: unknown): value is unknown[] {
+  return Array.isArray(value);
+}
+
+/**
+ * The ONE traversal over the canonical scope field tables (PBI 2026-11-08-07).
+ * Both the validator (policy 'reject') and the normalizer (policy 'absorb')
+ * walk the same tables through this function, so adding a field is a table
+ * row plus policy handling - never a new loop. The policy parameter is
+ * fail-closed: an unknown policy throws instead of silently picking a side.
+ * `op` / `clauses` are not scope fields and stay normalizer-owned.
+ */
+export function forEachReportScopeField(
+  source: Record<string, unknown>,
+  policy: ReportScopeFieldPolicy,
+  visit: (field: string, kind: ReportScopeFieldKind, value: unknown) => void,
+): void {
+  if (policy !== 'reject' && policy !== 'absorb') {
+    throw new Error(`Unknown report scope policy: ${String(policy)}`);
+  }
+  for (const field of REPORT_SCOPE_STRING_FIELDS) visit(field, 'string', source[field]);
+  for (const field of REPORT_SCOPE_NUMBER_FIELDS) visit(field, 'number', source[field]);
+  for (const field of REPORT_SCOPE_ARRAY_FIELDS) visit(field, 'array', source[field]);
+}
+
+/**
  * Single trimmed-string reader: a non-blank string trims, everything else
  * (non-strings, blank strings) degrades to null. Shared by the collection
  * and report normalizers so blank handling cannot drift between them.
@@ -186,25 +268,25 @@ export function normalizeReportScope(raw: unknown): ResearchReportScope {
   if (typeof raw !== 'object' || raw === null) return {};
   const source = raw as Record<string, unknown>;
   const scope: ResearchReportScope = {};
-  for (const field of REPORT_SCOPE_STRING_FIELDS) {
-    const trimmed = readTrimmedString(source[field]);
-    if (trimmed !== null) scope[field] = trimmed;
-  }
-  for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
-    const value = readFiniteNumber(source[field]);
-    if (value !== null) scope[field] = value;
-  }
-  for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
-    const value = source[field];
-    if (value !== undefined) {
-      // C-#8: rowids are non-negative integers — floats/negatives degrade
+  // Absorb side of the single traversal (policy 'absorb'): bad values
+  // degrade to absent, never throw. The reject side lives in
+  // ExportResearchReportValidator, which walks the same tables with the
+  // same predicates but policy 'reject'.
+  forEachReportScopeField(source, 'absorb', (field, kind, value) => {
+    if (value === undefined) return;
+    if (kind === 'string') {
+      const trimmed = readTrimmedString(value);
+      if (trimmed !== null) scope[field as (typeof REPORT_SCOPE_STRING_FIELDS)[number]] = trimmed;
+    } else if (kind === 'number') {
+      const num = readFiniteNumber(value);
+      if (num !== null) scope[field as (typeof REPORT_SCOPE_NUMBER_FIELDS)[number]] = num;
+    } else {
+      // C-#8: rowids are non-negative integers - floats/negatives degrade
       // to absent, matching the validator's rejection and the parse-side cap.
-      const ids = Array.isArray(value)
-        ? value.filter((v): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0)
-        : [];
-      if (ids.length > 0) scope[field] = ids.slice(0, MAX_QUERY_IDS);
+      const ids = isReportScopeIdListValue(value) ? value.filter(isReportScopeIdValue) : [];
+      if (ids.length > 0) scope[field as (typeof REPORT_SCOPE_ARRAY_FIELDS)[number]] = ids.slice(0, MAX_QUERY_IDS);
     }
-  }
+  });
   const op = source['op'];
   if (op === 'and' || op === 'or') scope.op = op;
   const clauses = source['clauses'];

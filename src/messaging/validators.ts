@@ -37,9 +37,12 @@ import type {
 import { REGENERATE_CLEANSE_MODES } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import { SELECTION_CONTENT_ORIGIN } from '../utils/selectionText.js';
 import {
-  REPORT_SCOPE_ARRAY_FIELDS,
-  REPORT_SCOPE_NUMBER_FIELDS,
-  REPORT_SCOPE_STRING_FIELDS,
+  forEachReportScopeField,
+  isReportScopeFiniteNumberValue,
+  isReportScopeIdListValue,
+  isReportScopeIdValue,
+  isReportScopeStringValue,
+  isReportScopeStringWithinCap,
 } from './responseCanonical.js';
 import type { ResearchReportScope } from './responseCanonical.js';
 import type { DashboardSqliteRequest } from './dashboardSqliteProtocol.js';
@@ -778,24 +781,38 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
         throw new ValidationError('ExportResearchReportValidator', 'payload.scope must be object', 'scope');
       }
       // Field sets are owned by the canonical scope tables (single owner
-      // with the handler-side normalizer); only the rejection wording stays
-      // here. The checked shape is ResearchReportScope.
+      // with the handler-side normalizer); this gate is an adapter that
+      // walks the same single traversal with the reject policy and calls
+      // the shared predicates only. The checked shape is ResearchReportScope.
       const s: Record<string, unknown> & Partial<ResearchReportScope> = scope as Record<string, unknown>;
-      for (const field of REPORT_SCOPE_STRING_FIELDS) {
-        const value = s[field];
-        if (value !== undefined && typeof value !== 'string') {
-          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be string`, field);
+      // Reject side of the single traversal (policy 'reject'): a bad value
+      // is a wire-contract violation and throws. The absorb side lives in
+      // normalizeReportScope, which walks the same tables with policy
+      // 'absorb'. Rejection wording below is byte-identical to before.
+      forEachReportScopeField(s, 'reject', (field, kind, value) => {
+        if (value === undefined) return;
+        if (kind === 'string') {
+          if (!isReportScopeStringValue(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be string`, field);
+          }
+          if (!isReportScopeStringWithinCap(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, field);
+          }
+        } else if (kind === 'number') {
+          if (!isReportScopeFiniteNumberValue(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
+          }
+        } else {
+          if (!isReportScopeIdListValue(value)) {
+            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be array`, field);
+          }
+          for (const entry of value) {
+            if (!isReportScopeIdValue(entry)) {
+              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be non-negative integers`, field);
+            }
+          }
         }
-        if (typeof value === 'string' && value.length > VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH) {
-          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} exceeds ${VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH} chars`, field);
-        }
-      }
-      for (const field of REPORT_SCOPE_NUMBER_FIELDS) {
-        const value = s[field];
-        if (value !== undefined && (typeof value !== 'number' || !Number.isFinite(value))) {
-          throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be finite number`, field);
-        }
-      }
+      });
       // V2 pins (PBI 2026-11-02-04): optional ids array of non-negative
       // integers (rowids — floats/negatives can never match, so they are
       // rejected, never absorbed).
@@ -810,19 +827,6 @@ export class ExportResearchReportValidator implements MessageValidator<ExportRes
       //      REPORT_MAX_RECORDS (== MAX_QUERY_IDS) before the ids fetch;
       //   3. the DASHBOARD_SQLITE query row rejects ids past MAX_QUERY_IDS.
       // Length is absorbed, element type is rejected — pinned on both sides.
-      for (const field of REPORT_SCOPE_ARRAY_FIELDS) {
-        const value = s[field];
-        if (value !== undefined) {
-          if (!Array.isArray(value)) {
-            throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be array`, field);
-          }
-          for (const entry of value) {
-            if (typeof entry !== 'number' || !Number.isInteger(entry) || entry < 0) {
-              throw new ValidationError('ExportResearchReportValidator', `payload.scope.${field} must be non-negative integers`, field);
-            }
-          }
-        }
-      }
     }
     if (payload.sendToObsidian !== undefined && typeof payload.sendToObsidian !== 'boolean') {
       throw new ValidationError('ExportResearchReportValidator', 'payload.sendToObsidian must be boolean', 'sendToObsidian');

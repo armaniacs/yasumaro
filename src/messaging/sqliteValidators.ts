@@ -7,6 +7,8 @@
 
 import type { AuditLogEntry, BrowsingLogEntry } from '../utils/sqlite-types.js';
 import type { SqliteStatusExtras } from './sqliteMessages.js';
+// PBI 2026-11-08-07: isFiniteNumber is owned by validators.ts - this module
+// takes it by direct import only (no re-export), so the seam has one edge.
 import { isFiniteNumber } from './validators.js';
 
 export function requiredFiniteNumber(value: unknown, field: string): number {
@@ -58,8 +60,6 @@ export function optionalNullableNonNegativeNumber(value: unknown, field: string)
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
-
-export { isFiniteNumber } from './validators.js';
 
 export function requiredRows<T>(value: unknown, field: string, isRow: (value: unknown) => value is T): T[] {
   if (!Array.isArray(value) || !value.every(isRow)) {
