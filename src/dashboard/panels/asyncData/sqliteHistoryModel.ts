@@ -39,6 +39,8 @@ import type { HistoryCustomRange } from './historyHandoff.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { getPendingPages as defaultGetPendingPages } from '../../../utils/pendingStorage.js';
+import type { PendingPage } from '../../../utils/pendingStorage.js';
 
 // ---------------------------------------------------------------------------
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
@@ -437,8 +439,58 @@ export interface SqliteHistoryModelDeps {
   getSqliteStatus?: typeof getSqliteStatus;
   /** Timing policy for debounced sort persistence; defaults to 500ms setTimeout. */
   scheduler?: PersistScheduler;
+  /**
+   * PBI 16: timing policy for the debounced search input. Separate instance
+   * from `scheduler` (sort persistence) so the two debounces never share a
+   * timer. Defaults to setTimeout.
+   */
+  searchScheduler?: PersistScheduler;
+  /**
+   * PBI 16: pending-pages source. Defaults to chrome.storage-backed
+   * getPendingPages + onChanged; tests inject a fake.
+   */
+  pendingPages?: PendingPagesSource;
   /** @deprecated Prefer subscribe(); kept for Controller shim compatibility. */
   onStateChange?: () => void;
+}
+
+/**
+ * PBI 16: pending-pages seam. `load` reads the current list; `subscribe`
+ * registers a live-update callback and returns its unsubscribe. The chrome
+ * default is side-effect-free at creation — listeners attach in
+ * startPendingPagesSubscription, never in the factory.
+ */
+export interface PendingPagesSource {
+  load(): Promise<PendingPage[]>;
+  subscribe(onChange: () => void): () => void;
+}
+
+function createChromePendingPagesSource(): PendingPagesSource {
+  return {
+    load(): Promise<PendingPage[]> {
+      return defaultGetPendingPages();
+    },
+    subscribe(onChange: () => void): () => void {
+      if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
+        return () => undefined;
+      }
+      const listener = (changes: Record<string, unknown>, areaName: string): void => {
+        if (areaName === 'local' && changes['pending_pages']) {
+          onChange();
+        }
+      };
+      chrome.storage.onChanged.addListener(listener);
+      return () => chrome.storage.onChanged.removeListener(listener);
+    },
+  };
+}
+
+/** PBI 16: the filter triple the history→collection handoff reads. */
+export interface HistoryHandoffSource {
+  searchQuery: string;
+  activeTagFilter: string | null;
+  selectedDate: string | null;
+  customRange: HistoryCustomRange | null;
 }
 
 export type AppendResult =
@@ -494,6 +546,34 @@ export interface SqliteHistoryModel {
   appendSelectedToObsidian(): Promise<AppendResult | null>;
   deleteSelectedEntries(): Promise<BulkDeleteResult>;
   search(query: string): void;
+  /**
+   * PBI 16: debounced search entry point — the single owner of the pending
+   * input. Stores the latest keystroke and dispatches via the injected
+   * searchScheduler (300ms production default); tests inject an immediate
+   * scheduler. Replaces the former panel-side debounce timer.
+   */
+  searchInput(query: string): void;
+  /** PBI 16: synchronously dispatch a still-debounced input, if any. */
+  flushPendingSearch(): void;
+  /**
+   * PBI 16: handoff read — flushes a still-debounced input BEFORE returning
+   * the filter triple, so a fill+click-send sequence can never read pre-input
+   * state. The flush ordering lives inside this one method; callers have no
+   * order to get wrong (the former panel-side flushPendingSearch hack).
+   */
+  readHandoffSource(): HistoryHandoffSource;
+  /** PBI 16: current pending-pages list owned by the model. */
+  getPendingPages(): PendingPage[];
+  /** PBI 16: subscribe to pending-pages changes; returns unsubscribe. */
+  subscribePending(listener: () => void): () => void;
+  /** PBI 16: (re)load the pending-pages list and notify subscribers. */
+  loadPendingPages(): Promise<void>;
+  /**
+   * PBI 16: start/stop the pending-pages live subscription. The panel decides
+   * *when* (load/destroy); the model owns *how*. Idempotent.
+   */
+  startPendingPagesSubscription(): void;
+  stopPendingPagesSubscription(): void;
   /**
    * Recall convention (PBI 2026-11-02-03): the recall target is the
    * collections panel draft (`applyToDraft` / `editor.loadSaved`) — NOT
@@ -608,6 +688,92 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   function schedulePersistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): void {
     pendingPersist = { sortBy, sortDir };
     scheduler.defer(writePendingPersist, 500);
+  }
+
+  // PBI 16: debounced search ownership (moved from the panel-local
+  // pendingSearchQuery + setTimeout). The handoff reads through
+  // readHandoffSource so flush-before-read cannot be skipped by a caller.
+  let pendingSearchQuery: string | null = null;
+  const searchScheduler = deps.searchScheduler ?? createTimeoutPersistScheduler();
+
+  function searchInput(query: string): void {
+    pendingSearchQuery = query;
+    searchScheduler.defer(() => {
+      if (pendingSearchQuery !== null) {
+        const flushed = pendingSearchQuery;
+        pendingSearchQuery = null;
+        search(flushed);
+      }
+    }, 300);
+  }
+
+  function flushPendingSearch(): void {
+    searchScheduler.cancel();
+    if (pendingSearchQuery !== null) {
+      const flushed = pendingSearchQuery;
+      pendingSearchQuery = null;
+      search(flushed);
+    }
+  }
+
+  function cancelPendingSearch(): void {
+    searchScheduler.cancel();
+    pendingSearchQuery = null;
+  }
+
+  function readHandoffSource(): HistoryHandoffSource {
+    flushPendingSearch();
+    return {
+      searchQuery: state.searchQuery,
+      activeTagFilter: state.activeTagFilter,
+      selectedDate: state.selectedDate,
+      customRange: state.customRange,
+    };
+  }
+
+  // PBI 16: pending-pages ownership (moved from panel-local state). The list
+  // lives here; change notification flows through a dedicated listener set so
+  // a history refresh never repaints the pending region (which would wipe
+  // in-row record-error DOM state) and a pending update never re-renders the
+  // entry list.
+  let pendingPages: PendingPage[] = [];
+  const pendingListeners = new Set<() => void>();
+  const pendingSource = deps.pendingPages ?? createChromePendingPagesSource();
+  let stopPendingSource: (() => void) | null = null;
+
+  function notifyPending(): void {
+    for (const l of [...pendingListeners]) {
+      try {
+        l();
+      } catch (error: unknown) {
+        void logError('sqliteHistoryModel: pending subscriber threw during notify', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'sqliteHistoryModel');
+      }
+    }
+  }
+
+  async function loadPendingPages(): Promise<void> {
+    pendingPages = await pendingSource.load();
+    notifyPending();
+  }
+
+  function startPendingPagesSubscription(): void {
+    if (stopPendingSource !== null) return;
+    stopPendingSource = pendingSource.subscribe(() => {
+      void loadPendingPages();
+    });
+  }
+
+  function stopPendingPagesSubscription(): void {
+    if (stopPendingSource !== null) {
+      stopPendingSource();
+      stopPendingSource = null;
+    }
+    pendingPages = [];
+  }
+
+  function subscribePending(listener: () => void): () => void {
+    pendingListeners.add(listener);
+    return () => pendingListeners.delete(listener);
   }
 
   function notify(): void {
@@ -835,6 +1001,10 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     // fire post-unmount. Flushing preserves the user's sort choice.
     guard.invalidate();
     flushPendingPersist();
+    // PBI 16: a still-debounced search keystroke is discarded here, not
+    // flushed — leaving the screen must not issue a query for text the user
+    // never committed (and the timer must not fire post-unmount).
+    cancelPendingSearch();
     invalidateCache();
     clearEntrySelection();
   }
@@ -1163,6 +1333,14 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     deleteSelectedEntries,
     bulkSetStarred,
     search,
+    searchInput,
+    flushPendingSearch,
+    readHandoffSource,
+    getPendingPages: () => pendingPages,
+    subscribePending,
+    loadPendingPages,
+    startPendingPagesSubscription,
+    stopPendingPagesSubscription,
     applyCollection,
     applyCollectionQuery,
     selectDate,

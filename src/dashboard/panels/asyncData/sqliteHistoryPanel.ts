@@ -8,8 +8,7 @@ import { getPluralKey } from '../../../utils/i18nPlural.js';
 import type { SqliteHistoryModelDeps } from './sqliteHistoryModel.js';
 import { createSqliteHistoryModel, isPrivacyJudgedEntry } from './sqliteHistoryModel.js';
 import { notify } from '../../notificationService.js';
-import { getPendingPages, removePendingPages } from '../../../utils/pendingStorage.js';
-import type { PendingPage } from '../../../utils/pendingStorage.js';
+import { removePendingPages } from '../../../utils/pendingStorage.js';
 import { recordPendingPage, PENDING_RECORD_TIMEOUT_ERROR } from '../../../messaging/pendingRecordGateway.js';
 import { regenerateSummary } from '../../../messaging/regenerateSummaryGateway.js';
 import type { RegenerateCleanseMode } from '../../../utils/aiSummaryCleaner/cleanseModeLadder.js';
@@ -50,11 +49,8 @@ import { mapRegenerateError, toRegenerateErrorDisplay } from './regenerateErrorC
 
 export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): PanelLifecycle {
   let container: HTMLElement | null = null;
-  let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
-  // Latest debounced input not yet dispatched to the model. The send-to-
-  // collection path flushes it synchronously (see flushPendingSearch) so a
-  // fill+click-send E2E step never reads pre-input state.
-  let pendingSearchQuery: string | null = null;
+  // PBI 16: debounce state + pending-pages subscription live in the model.
+  // The panel keeps no query/storage timing state of its own.
   let _isMounted = false;
 
   const model = createSqliteHistoryModel(deps);
@@ -65,12 +61,15 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // stays side-effect-free and only stashes params for load().
   let pendingNavParams: { searchTag?: string; searchDomain?: string } | null = null;
 
-  // --- Pending pages (PBI 2026-09-11-02, PBI-P) -----------------------------
-  // Panel-local state (NOT model state): pending pages are chrome.storage
-  // content, independent of the SQLite query pipeline. Live updates come from
-  // a chrome.storage.onChanged subscription, released in destroy().
-  let pendingPages: PendingPage[] = [];
-  let unsubscribePendingStorage: (() => void) | null = null;
+  // --- Pending pages (PBI 2026-09-11-02, PBI-P; ownership PBI 16) ---------
+  // The list + chrome.storage subscription live in the model
+  // (getPendingPages/subscribePending/loadPendingPages); the panel only
+  // renders the model's list and owns the record/delete UI actions.
+  // Model subscription — thin alias of former onStateChange, completes BDD happy path.
+  // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
+  // created-but-never-loaded panel does not hold a live subscription.
+  let modelUnsubscribe: (() => void) | null = null;
+  let pendingUnsubscribe: (() => void) | null = null;
 
   /** Translate a loadFailure error: an i18n key (from the model) or a raw "Error: ..." string. */
   function translateHistoryError(error: string | null): string {
@@ -341,36 +340,21 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   // draft (applyToDraft path via the handoff bus). No in-place save, no
   // naming on this side — those stay in the collections panel. Refusals
   // stay in-panel as a reason line, never silent.
-  /**
-   * Synchronously dispatch any debounced search input still waiting on its
-   * 300ms timer. Typing keeps the debounce; only the send path flushes, so
-   * model state already reflects the last keystroke before the triple is
-   * read. No timers are awaited here — the dispatch itself is synchronous.
-   */
-  function flushPendingSearch(): void {
-    if (searchDebounceTimer !== null) {
-      clearTimeout(searchDebounceTimer);
-      searchDebounceTimer = null;
-    }
-    if (pendingSearchQuery !== null) {
-      const query = pendingSearchQuery;
-      pendingSearchQuery = null;
-      model.search(query);
-    }
-  }
-
+  //
+  // PBI 16: the triple comes from model.readHandoffSource(), which flushes a
+  // still-debounced input BEFORE returning it. There is no panel-side flush
+  // and no flush-before-read order left for this path to get wrong.
   function handleSendToCollection(): void {
     if (!container) return;
     clearHandoffReason(container);
-    flushPendingSearch();
-    const state = model.getState();
+    const source = model.readHandoffSource();
     const result = buildHistoryHandoffQuery(
       {
-        searchQuery: state.searchQuery,
-        activeTagFilter: state.activeTagFilter,
-        selectedDate: state.selectedDate,
+        searchQuery: source.searchQuery,
+        activeTagFilter: source.activeTagFilter,
+        selectedDate: source.selectedDate,
       },
-      state.customRange,
+      source.customRange,
     );
     if (!result.ok) {
       setHandoffReason(
@@ -396,7 +380,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       onRangeSelect: (since, until) => model.selectDateRange(since, until),
       onClearFilters: () => model.clearAllFilters(),
       onSendToCollection: () => handleSendToCollection(),
-      onSearchInput: (query) => debouncedSearch(query),
+      onSearchInput: (query) => model.searchInput(query),
       onSortChange: (sortBy, sortDir) => void model.changeSort(sortBy, sortDir),
       onPageChange: (page) => model.changePage(page),
       onToggleStar: (id) => void model.toggleStar(id),
@@ -429,19 +413,6 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     };
   }
 
-  const debouncedSearch = (query: string): void => {
-    pendingSearchQuery = query;
-    if (searchDebounceTimer !== null) clearTimeout(searchDebounceTimer);
-    searchDebounceTimer = setTimeout(() => {
-      searchDebounceTimer = null;
-      if (pendingSearchQuery !== null) {
-        const flushed = pendingSearchQuery;
-        pendingSearchQuery = null;
-        model.search(flushed);
-      }
-    }, 300);
-  };
-
   // Render ownership lives in the View (PBI 23): the diff/full decision is
   // view.render()'s single entry, so refresh() is a one-line delegation.
   function refresh(): void {
@@ -450,20 +421,17 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
   }
 
   // --- Pending pages (PBI-P) ------------------------------------------------
+  // PBI 16: the list + live subscription live in the model; repaint arrives
+  // through subscribePending so history refreshes never touch this region.
 
   function renderPending(): void {
     if (!container) return;
-    renderPendingRegion(container, pendingPages, createPendingActions());
-  }
-
-  async function loadPending(): Promise<void> {
-    pendingPages = await getPendingPages();
-    renderPending();
+    renderPendingRegion(container, model.getPendingPages(), createPendingActions());
   }
 
   async function removePendingAndReload(url: string): Promise<void> {
     await removePendingPages([url]);
-    await loadPending();
+    await model.loadPendingPages();
   }
 
   function createPendingActions(): PendingRegionActions {
@@ -476,7 +444,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
 
   /** Pending re-record — envelope + timeout contract lives in the shared seam (PBI 2026-09-12-01). */
   async function recordPending(url: string, skipAi: boolean): Promise<{ ok: boolean; error?: string }> {
-    const page = pendingPages.find((p) => p.url === url);
+    const page = model.getPendingPages().find((p) => p.url === url);
     if (!page) return { ok: false, error: t('recordError') };
     const result = await recordPendingPage({ title: page.title, url: page.url, force: true, skipAi });
     if (result.success) {
@@ -489,21 +457,10 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     return { ok: false, error };
   }
 
-  function subscribePendingStorage(): void {
-    if (unsubscribePendingStorage || typeof chrome === 'undefined' || !chrome.storage?.onChanged) return;
-    const listener = (changes: Record<string, unknown>, areaName: string) => {
-      if (areaName === 'local' && changes['pending_pages']) {
-        void loadPending();
-      }
-    };
-    chrome.storage.onChanged.addListener(listener);
-    unsubscribePendingStorage = () => chrome.storage.onChanged.removeListener(listener);
-  }
-
-  // Model subscription — thin alias of former onStateChange, completes BDD happy path.
+  // Model + pending subscriptions — thin aliases of former onStateChange.
   // PBI 2026-09-11-06 (round 6): moved from creation into load() so a
   // created-but-never-loaded panel does not hold a live subscription.
-  let modelUnsubscribe: (() => void) | null = null;
+  // (Declarations live with the model wiring near the top of this closure.)
 
   return {
     id: 'panel-sqlite-history',
@@ -538,9 +495,13 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       refresh();
 
       // Pending pages render into the shell's dedicated region (PBI-P) and
-      // live-update through the chrome.storage.onChanged subscription.
-      subscribePendingStorage();
-      void loadPending();
+      // live-update through the model-owned chrome.storage.onChanged
+      // subscription (PBI 16). Repaints arrive via subscribePending.
+      if (!pendingUnsubscribe) {
+        pendingUnsubscribe = model.subscribePending(() => renderPending());
+      }
+      model.startPendingPagesSubscription();
+      void model.loadPendingPages();
 
       // Single navigation entry point: filter branch → fallback check →
       // persisted sort → initial fetch (retry with backoff) all run inside
@@ -556,24 +517,22 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
       refresh();
     },
     destroy() {
-      if (searchDebounceTimer !== null) {
-        clearTimeout(searchDebounceTimer);
-        searchDebounceTimer = null;
-      }
-      pendingSearchQuery = null;
       _isMounted = false;
       if (modelUnsubscribe) {
         modelUnsubscribe();
         modelUnsubscribe = null;
       }
-      if (unsubscribePendingStorage) {
-        unsubscribePendingStorage();
-        unsubscribePendingStorage = null;
+      if (pendingUnsubscribe) {
+        pendingUnsubscribe();
+        pendingUnsubscribe = null;
       }
-      pendingPages = [];
+      // PBI 16: pending subscription + list teardown live in the model; the
+      // debounced search discard runs inside onNavigateOut.
+      model.stopPendingPagesSubscription();
       starUndoIds = null;
       // Single navigation exit point: generation bump + persist flush +
-      // cache clear + selection clear run inside the Model.
+      // debounced-search discard + cache clear + selection clear run inside
+      // the Model.
       // (Also clears bulk bar listener references via the selection clear.)
       model.onNavigateOut();
     },
