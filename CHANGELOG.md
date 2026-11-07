@@ -39,6 +39,7 @@ All notable changes to this project will be documented in this file.
 
 ### 追加 / Added
 
+- Rust製の読み取り専用CLI `yasumaro` を `cli/` に新設(JS版 `feature/yasumaro-cli` と共存。`cargo install --path cli` で導入し、将来は `cargo install yasumaro` に対応予定。`search`/`list`/`show`/`stats`/`export`/`config`+対話REPL、設定解決順・FTS/LIKE切替・終了符号0/1/2/3はJS版と同等) / Added a Rust read-only CLI `yasumaro` under `cli/` (coexists with the JS `feature/yasumaro-cli`; install via `cargo install --path cli`, `cargo install yasumaro` planned after crates.io publication; same six commands plus interactive REPL, config resolution, FTS/LIKE fallback, and exit codes 0/1/2/3 as the JS version)
 - OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストは16から開始しlength継続時のみ段階的に拡大、設定済み上限は公式系の最終手段としてのみ使用。既存の互換スロットは設定移動なしで対応） / Added an official OpenAI API provider ("OpenAI" pinned to `https://api.openai.com/v1`; uses `max_completion_tokens` without model-name branching and omits temperature, connection tests start at 16 and grow stepwise only on continued length cutoffs with the configured budget only as the last official resort; existing compatible slots keep working without migration)
 
 ### 修正 / Fixed
