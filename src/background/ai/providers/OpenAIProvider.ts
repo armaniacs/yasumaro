@@ -18,6 +18,7 @@ import { FailureKind, createFailure } from '../../../utils/failureTaxonomy.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
+import { OPENAI_OFFICIAL_BASE_URL } from '../../../utils/storage/providerDefaultBaseUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
@@ -50,6 +51,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     protected model: string;
     protected timeoutMs: number;
     protected isLocal: boolean;
+    private readonly openAIParameters: boolean;
     /**
      * Where the API key was resolved from (storage key name or fallback
      * description). Recorded for diagnostics only — never the key itself.
@@ -122,6 +124,10 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         this.logApiKeySource(this.apiKeySource, providerName);
 
         // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
+        // The official-origin bridge for legacy slots is resolved inside the
+        // same try block so a malformed baseUrl surfaces as `Invalid baseUrl`,
+        // never as a raw TypeError from `new URL`.
+        let officialOriginBridge = false;
         if (this.baseUrl) {
             try {
                 validateUrlForAIRequests(this.baseUrl);
@@ -148,11 +154,20 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 // No allowlist row (direct construction with an unknown id):
                 // the factory rejects unknown ids first, so this branch stays
                 // on the deny-only SSRF gate alone.
+                // Existing slots keep their own credentials, prompts and budgets.
+                // The origin bridge upgrades their request dialect without
+                // rewriting settings or copying ciphertext bound to another
+                // field name. Parsed here (exact origin: scheme+host+port) so a
+                // malformed baseUrl is wrapped as `Invalid baseUrl` below.
+                officialOriginBridge = entry?.legacyOpenAIEndpoint === true
+                    && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin;
             } catch (error: unknown) {
                 addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
                 throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);
             }
         }
+
+        this.openAIParameters = entry?.chatCompletionsDialect === 'openai' || officialOriginBridge;
 
         // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
         // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。
@@ -192,6 +207,18 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
      */
     private isApiKeyMissing(): boolean {
         return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
+    }
+
+    /** Both HTTP flows follow the provider dialect; model names are opaque. */
+    private generationParameters(maxTokens: number, temperature: number): Record<string, number> {
+        // Official completion budgets include reasoning tokens. Omitting
+        // optional sampling works without predicting a model's capabilities.
+        // Intentional behavior change: non-reasoning official models
+        // previously received temperature 0.1/0 and now use the model
+        // default (omitted) for forward compatibility.
+        return this.openAIParameters
+            ? { max_completion_tokens: maxTokens }
+            : { max_tokens: maxTokens, temperature };
     }
 
     /**
@@ -238,8 +265,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                             content: userPrompt
                         }
                     ],
-                    max_tokens: this.resolvedSettings.maxTokens,
-                    temperature: 0.1
+                    ...this.generationParameters(this.resolvedSettings.maxTokens, 0.1),
                 };
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' };
                 if (this.apiKey) {
@@ -261,8 +287,15 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const payload = {
                     model: this.model,
                     messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-                    max_tokens: connectionTestMaxTokens,
-                    temperature: 0,
+                    // A small budget can be exhausted before reasoning
+                    // produces visible text. Official-dialect providers use
+                    // the configured cap (it covers reasoning tokens);
+                    // others use the retry-ladder cap from testConnection
+                    // (issue #202).
+                    ...this.generationParameters(
+                        this.openAIParameters ? this.resolvedSettings.maxTokens : connectionTestMaxTokens,
+                        0,
+                    ),
                 };
                 return { url, headers, body: JSON.stringify(payload), modelName: this.model };
             },

@@ -81,11 +81,12 @@ describe('catalog-driven provider UI', () => {
     expect(Object.prototype.hasOwnProperty.call(PROVIDER_CATALOG.get('gemini'), 'cssClass')).toBe(false);
   });
 
-  it('non-gemini ids resolve empty view metadata (no per-provider values)', () => {
+  it('other ids resolve empty view metadata while OpenAI has endpoint help', () => {
     for (const [id, meta] of PROVIDER_VIEW_METADATA) {
-      if (id === 'gemini') continue;
+      if (id === 'gemini' || id === 'openai-official') continue;
       expect(Object.keys(meta), `${id}`).toEqual([]);
     }
+    expect(PROVIDER_VIEW_METADATA.get('openai-official')).toEqual({ helpI18nKey: 'openaiOfficialHelp' });
     expect(PROVIDER_CATALOG.get('openai' as ProviderId)?.apiKeyLabelI18nKey).toBeUndefined();
   });
 

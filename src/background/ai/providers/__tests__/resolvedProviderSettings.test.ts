@@ -155,11 +155,11 @@ describe('Adapterは解決済み値だけ読む (BDD Scenario 1)', () => {
 
     const [, init, ] = fetchWithRetryMock.mock.calls[0] as unknown as [{}, { timeoutMs: number }, {}];
     const body = JSON.parse(fetchWithRetryMock.mock.calls[0]![1].body as string) as {
-      max_tokens: number;
+      max_completion_tokens: number;
       messages: Array<{ content: string }>;
     };
     // blob(111)ではなく解決済み(222)が送られる
-    expect(body.max_tokens).toBe(222);
+    expect(body.max_completion_tokens).toBe(222);
     expect(init.timeoutMs).toBe(resolved.timeoutMs);
     // 切り詰めも解決済み上限(100)が効く
     expect(body.messages[1]!.content.length).toBe(100);

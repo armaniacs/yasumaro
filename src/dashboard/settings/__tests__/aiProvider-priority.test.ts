@@ -13,7 +13,7 @@ function createMockSelect(value: string): HTMLSelectElement {
 }
 
 function settingsMap(): Record<string, HTMLElement | undefined> {
-  const ids = ['gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai'];
+  const ids = ['gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai'];
   const map: Record<string, HTMLElement | undefined> = {};
   ids.forEach((id) => { map[id] = document.createElement('div'); });
   return map;
@@ -35,6 +35,13 @@ describe('updateAIProviderVisibilityMulti', () => {
     expect(elements.settings.gemini!.style.display).toBe('block');
     expect(elements.settings.openai2!.style.display).toBe('block');
     expect(elements.settings.openai!.style.display).toBe('none');
+  });
+
+  it('shows official OpenAI with its selected compatible fallback without showing Gemini', () => {
+    updateAIProviderVisibilityMulti(elements, ['openai-official', 'openai2']);
+    expect(elements.settings['openai-official']!.style.display).toBe('block');
+    expect(elements.settings.openai2!.style.display).toBe('block');
+    expect(elements.settings.gemini!.style.display).toBe('none');
   });
 
   it('keeps settings sections of unselected providers hidden', () => {

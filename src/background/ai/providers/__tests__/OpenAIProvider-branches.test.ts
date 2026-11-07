@@ -607,6 +607,15 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
       return (JSON.parse(init.body) as { max_tokens: number }).max_tokens;
     }
 
+    // The ladder asserts max_tokens caps, i.e. the compatible-dialect path.
+    // Legacy slots pointing at the official origin follow the official
+    // dialect (max_completion_tokens, PR #199), so these tests use a
+    // non-official origin fixture (authorized via provider-domain).
+    const ladderSettings = {
+      ...baseSettings,
+      openai_base_url: 'https://api.groq.com/openai/v1',
+    } as unknown as Settings;
+
     it('retries once with max_tokens 256 when the first reply is cut off (finish_reason length)', async () => {
       const fetch = await retryFetchMock();
       fetch.mockResolvedValueOnce({
@@ -619,7 +628,7 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
       } as Response);
-      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(ladderSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(true);
       expect(result.message).toContain('Connected to AI API');
@@ -663,7 +672,7 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
       } as Response);
-      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(ladderSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(true);
       expect(fetch).toHaveBeenCalledTimes(1);
@@ -684,7 +693,7 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
         status: 200,
         json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
       } as Response);
-      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(ladderSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(true);
       expect(result.message).toContain('Connected to AI API');
@@ -701,7 +710,7 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
           json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
         } as Response);
       }
-      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const provider = new GenericOpenAICompatibleProvider(ladderSettings, 'openai');
       const result = await provider.testConnection();
       expect(result.success).toBe(false);
       expect(fetch).toHaveBeenCalledTimes(4);

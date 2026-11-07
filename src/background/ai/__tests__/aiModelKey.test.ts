@@ -16,6 +16,7 @@ describe('resolveModelKey', () => {
     it('maps each registered provider to its catalog modelKey', () => {
         const expectations: Array<[string, string]> = [
             ['gemini', 'gemini_model'],
+            ['openai-official', 'openai_official_model'],
             ['openai', 'openai_model'],
             ['openai2', 'openai_2_model'],
             ['openai-compatible', 'provider_model'],

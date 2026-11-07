@@ -12,7 +12,7 @@ import {
 describe('providerIdsInOrder', () => {
   it('returns the dropdown order', () => {
     expect(providerIdsInOrder()).toEqual([
-      'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
+      'gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
     ]);
   });
 });
@@ -21,24 +21,24 @@ describe('renderProviderOptions', () => {
   let sel: HTMLSelectElement;
   beforeEach(() => { sel = document.createElement('select'); });
 
-  it('renders all 7 providers in catalog order with localized text', () => {
+  it('renders all 8 providers in catalog order with localized text', () => {
     renderProviderOptions(sel);
     expect([...sel.options].map((o) => o.value)).toEqual([
-      'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
+      'gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
     ]);
     expect(sel.options[0]?.textContent).toBe('Google Gemini');
-    expect(sel.options[6]?.textContent).toContain('Built-in AI');
+    expect(sel.options[7]?.textContent).toContain('Built-in AI');
   });
 
   it('includeNone prepends an empty option', () => {
     renderProviderOptions(sel, { includeNone: true });
     expect(sel.options[0]?.value).toBe('');
-    expect(sel.options.length).toBe(8);
+    expect(sel.options.length).toBe(9);
   });
 
-  it('customPrompt keeps only gemini/openai/openai2/lm-studio/ollama/built-in-ai and prepends "all"', () => {
+  it('customPrompt keeps only gemini/openai-official/openai/openai2/lm-studio/ollama/built-in-ai and prepends "all"', () => {
     renderProviderOptions(sel, { customPrompt: true });
-    expect([...sel.options].map((o) => o.value)).toEqual(['all', 'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'built-in-ai']);
+    expect([...sel.options].map((o) => o.value)).toEqual(['all', 'gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'built-in-ai']);
   });
 
   it('preserves the current value when the option still exists', () => {
@@ -70,6 +70,17 @@ describe('renderProviderSettings', () => {
     expect(c.querySelector('#openaiBaseUrl')?.getAttribute('data-storage-key')).toBe('openai_base_url');
     expect(c.querySelector('#openaiApiKey')?.getAttribute('type')).toBe('password');
     expect(c.querySelector('#openaiModel')?.getAttribute('data-storage-key')).toBe('openai_model');
+  });
+
+  it('renders a separate official provider with a fixed endpoint, key, and model', () => {
+    renderProviderSettings(c, 'openai-official');
+    expect(c.id).toBe('openai-officialSettings');
+    expect(c.querySelector('#openaiOfficialApiKey')?.getAttribute('type')).toBe('password');
+    expect(c.querySelector('#openaiOfficialModel')?.getAttribute('data-storage-key')).toBe('openai_official_model');
+    expect(c.querySelector('input[data-storage-key$="base_url"]')).toBeNull();
+    const help = c.querySelector('[data-i18n="openaiOfficialHelp"]');
+    expect(help?.textContent).toContain('https://api.openai.com/v1');
+    expect(c.querySelectorAll('input')).toHaveLength(2);
   });
 
   it('lm-studio: no api key row (requiresApiKey false)', () => {

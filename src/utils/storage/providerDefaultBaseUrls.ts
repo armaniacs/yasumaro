@@ -9,6 +9,9 @@
 // provider catalog + its CSP origin, and the pinned providerRegistry test);
 // Ollama is localhost (unanimous across all four sites). Both are loopback,
 // so the allowlist treats them identically — this table only unifies text.
+// Official OpenAI uses a fixed endpoint; it has no local preset button.
+export const OPENAI_OFFICIAL_BASE_URL = 'https://api.openai.com/v1';
+
 export const PROVIDER_DEFAULT_BASE_URLS = {
   'lm-studio': 'http://127.0.0.1:1234/v1',
   'ollama': 'http://localhost:11434/v1',
