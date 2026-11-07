@@ -64,12 +64,12 @@ Scenario: 手書き方針の重複がなくなる
 
 ## 受け入れ基準
 
-- [ ] `MODAL_REQUIRED_SUBTYPES` の定義が `sqliteOperationSecurity.ts` にあり、`dashboardSqliteProtocol.ts` は再出力のみである
-- [ ] `ARCHIVE_SCOPE_BY_SUBTYPE` が他の分類集合の隣に配置され、意味と値が変わらない
-- [ ] protocol 側の再出力の公開 API がバイト同一であり、利用側の import 変更が不要である
-- [ ] 全集合が同一の subtype universe を分類することを主張する固定テストが一つ追加される
-- [ ] readOnly と import の方針重複が解消される。行化か一か所固定かのいずれかである
-- [ ] 振る舞い変更がなく、既存の関連テストがすべて通る
+- [x] `MODAL_REQUIRED_SUBTYPES` の定義が `sqliteOperationSecurity.ts` にあり、`dashboardSqliteProtocol.ts` は再出力のみである
+- [x] `ARCHIVE_SCOPE_BY_SUBTYPE` が他の分類集合の隣に配置され、意味と値が変わらない
+- [x] protocol 側の再出力の公開 API がバイト同一であり、利用側の import 変更が不要である
+- [x] 全集合が同一の subtype universe を分類することを主張する固定テストが一つ追加される
+- [x] readOnly と import の方針重複が解消される。行化か一か所固定かのいずれかである
+- [x] 振る舞い変更がなく、既存の関連テストがすべて通る
 
 ## テスト戦略
 
@@ -126,8 +126,8 @@ grep -rn "READ_ONLY_OPS\|TOKEN_EXEMPT_OPS\|TOKEN_REQUIRED_SUBTYPES" src/
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了
-- [ ] ドキュメント更新済み
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす
+- [x] コードレビュー完了
+- [x] リファクタリング完了
+- [x] ドキュメント更新済み

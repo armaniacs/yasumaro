@@ -16,6 +16,7 @@ import type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 
 export type { DashboardSqliteSubtype } from './sqliteOperationSecurity.js';
 export { TOKEN_REQUIRED_SUBTYPES } from './sqliteOperationSecurity.js';
+export { MODAL_REQUIRED_SUBTYPES } from './sqliteOperationSecurity.js';
 
 // ============================================================================
 // Requests (subtype -> payload shape, excluding confirmToken which is
@@ -95,11 +96,6 @@ type _UnionCovered =
     DashboardSqliteRequest['subtype'] extends DashboardSqliteSubtype ? true : never
   >;
 const _unionCoveredCheck: _UnionCovered = true;
-
-/** Subtypes whose confirmation UI is a full modal dialog (vs. inline confirm). */
-export const MODAL_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'delete', 'migrate', 'cleanup_legacy', 'clear_all',
-]);
 
 // ============================================================================
 // Responses (subtype -> response shape)

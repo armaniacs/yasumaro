@@ -161,6 +161,11 @@ export const TOKEN_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> =
     ALL_DASHBOARD_SQLITE_SUBTYPES.filter((s) => !tokenExempt.has(s)),
   );
 
+/** Subtypes whose confirmation UI is a full modal dialog (vs. inline confirm). */
+export const MODAL_REQUIRED_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
+  'delete', 'migrate', 'cleanup_legacy', 'clear_all',
+]);
+
 // ============================================================================
 // PBI 2026-09-06-01: confirm token scope binding for archive subtypes.
 // The token previously bound only (action, id); archive operations are
