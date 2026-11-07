@@ -3,6 +3,8 @@ import { createProviderStrategy, getRegistryEntry } from '../../providerCatalog.
 import { GenericOpenAICompatibleProvider } from '../OpenAIProvider.js';
 import { CONNECTION_TEST_PROMPT } from '../ProviderStrategy.js';
 import { StorageKeys, type Settings } from '../../../../utils/storage/types.js';
+import * as fetchModule from '../../../../utils/fetch.js';
+import * as allowlistModule from '../../../../utils/storage/providerAllowlist.js';
 
 const { fetchMock } = vi.hoisted(() => ({ fetchMock: vi.fn() }));
 
@@ -228,6 +230,40 @@ describe('GenericOpenAICompatibleProvider', () => {
       expect(error).toBeInstanceOf(Error);
       expect((error as Error).message).toMatch(/Invalid baseUrl/);
       expect(error).not.toBeInstanceOf(TypeError);
+    });
+
+    it.each([':::', 'not-a-url'])('isolates the origin-bridge parse for malformed legacy baseUrl %s (SSRF gates mocked out)', (baseUrl) => {
+      // Isolation regression test: the end-to-end test above uses the real
+      // validateUrlForAIRequests, which throws before the origin-bridge
+      // `new URL` line, so it passes even when the bridge parse is left
+      // outside the try (pre-fix). The SSRF gates are mocked to no-ops here
+      // so the ONLY throw can come from the in-try origin-bridge parse;
+      // it must surface as `Invalid baseUrl`, never as a raw TypeError.
+      const validateSpy = vi.spyOn(fetchModule, 'validateUrlForAIRequests').mockImplementation(() => {});
+      const allowedSpy = vi.spyOn(allowlistModule, 'isAllowedProviderBaseUrl').mockReturnValue(true);
+      const authzSpy = vi.spyOn(allowlistModule, 'isProviderOriginAuthorized').mockReturnValue({ authorized: true, reason: 'pinned' });
+      try {
+        const settings = {
+          openai_base_url: baseUrl,
+          openai_api_key: 'test-key',
+          openai_model: 'gpt-6-luna',
+        } as unknown as Settings;
+
+        let error: unknown;
+        try {
+          new GenericOpenAICompatibleProvider(settings, 'openai');
+        } catch (e) {
+          error = e;
+        }
+
+        expect(error).toBeInstanceOf(Error);
+        expect((error as Error).message).toMatch(/Invalid baseUrl/);
+        expect(error).not.toBeInstanceOf(TypeError);
+      } finally {
+        validateSpy.mockRestore();
+        allowedSpy.mockRestore();
+        authzSpy.mockRestore();
+      }
     });
 
     it('pins the configured official budget across all 4 testConnection retries (length x3 then stop)', async () => {

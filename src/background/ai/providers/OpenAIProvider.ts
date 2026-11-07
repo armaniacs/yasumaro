@@ -213,6 +213,9 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     private generationParameters(maxTokens: number, temperature: number): Record<string, number> {
         // Official completion budgets include reasoning tokens. Omitting
         // optional sampling works without predicting a model's capabilities.
+        // Intentional behavior change: non-reasoning official models
+        // previously received temperature 0.1/0 and now use the model
+        // default (omitted) for forward compatibility.
         return this.openAIParameters
             ? { max_completion_tokens: maxTokens }
             : { max_tokens: maxTokens, temperature };
