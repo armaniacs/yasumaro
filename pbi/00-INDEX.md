@@ -14,21 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-08 arch-delivery-loop archloop-1108（9件）
+### 2026-11-08 arch-delivery-loop archloop-1108（9件） ― ✅ 9件完了・アーカイブ済み
 
-診断ドメイン: messaging seam・offscreen query・MV3乖離。01 SW-let永続化 / 02 micro fold+dead削除 / 03 alias集約 / 04 innerHTML往復除去 / 05 backend parity / 06 facade段階削除(02後) / 07 twin traversal統合 / 08 registry複製解消(03後) / 09 E2E肯定条件化。RICE降順、B1=01/02/03/04並列、B2=05/06/07/08、B3=09。台帳は [2026-11-08-00-backlog-archloop-1108.md](2026-11-08-00-backlog-archloop-1108.md) を参照。
+診断ドメイン: messaging seam・offscreen query・MV3乖離。01 SW-let永続化 / 02 micro fold+dead削除 / 03 alias集約 / 04 innerHTML往復除去 / 05 backend parity+pin / 06 facade段階削除(02後) / 07 twin traversal統合 / 08 registry複製解消(03後) / 09 E2E肯定条件化。最終ゲート: make clean test。台帳は [2026-11-08-00-backlog-archloop-1108.md](2026-11-08-00-backlog-archloop-1108.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| ⬜ 01 | [2026-11-08-01-fix-sw-module-let.md](2026-11-08-01-fix-sw-module-let.md) | 🔧非機能追加 | 12 | M | SW再起動で失われるlet状態の永続化・注入必須化 |
-| ⬜ 02 | [2026-11-08-02-refactor-micro-fold.md](2026-11-08-02-refactor-micro-fold.md) | 🔧非機能追加 | 10 | M | micro fold+dead fts削除。06は本PBIの後 |
-| ⬜ 03 | [2026-11-08-03-refactor-messaging-alias.md](2026-11-08-03-refactor-messaging-alias.md) | 🔧非機能追加 | 7 | S | alias三重複製の集約。08は本PBIの後 |
-| ⬜ 04 | [2026-11-08-04-fix-connectiontests-innerhtml.md](2026-11-08-04-fix-connectiontests-innerhtml.md) | 🔧非機能追加 | 6.4 | S | innerHTML往復除去+markup pin |
-| ⬜ 05 | [2026-11-08-05-refactor-search-parity.md](2026-11-08-05-refactor-search-parity.md) | 🔧非機能追加 | 4.8 | M | extraQualification廃止+parity pin |
-| ⬜ 06 | [2026-11-08-06-refactor-queryplan-facade.md](2026-11-08-06-refactor-queryplan-facade.md) | 🔧非機能追加 | 4.0 | M | facade段階削除。02の後に実施 |
-| ⬜ 07 | [2026-11-08-07-refactor-scope-traversal.md](2026-11-08-07-refactor-scope-traversal.md) | 🔧非機能追加 | 3.2 | S | twin traversal統合+seam漏れ解消 |
-| ⬜ 08 | [2026-11-08-08-refactor-message-registry.md](2026-11-08-08-refactor-message-registry.md) | 🔧非機能追加 | 2.4 | S | loader複製解消。03の後に実施 |
-| ⬜ 09 | [2026-11-08-09-test-e2e-wait.md](2026-11-08-09-test-e2e-wait.md) | 🔧非機能追加 | 1.6 | XS | E2E固定待ちの肯定条件化 |
+| ~~01~~ | [2026-11-08-01-fix-sw-module-let.md](../dev-docs/archived/pbi/2026-11-08-01-fix-sw-module-let.md) | 🔧非機能追加 | 12 | M | ✅ 完了。token・計数のsession永続化+singleton注入必須化 |
+| ~~02~~ | [2026-11-08-02-refactor-micro-fold.md](../dev-docs/archived/pbi/2026-11-08-02-refactor-micro-fold.md) | 🔧非機能追加 | 10 | M | ✅ 完了。fts/normalize削除+planner集約 |
+| ~~03~~ | [2026-11-08-03-refactor-messaging-alias.md](../dev-docs/archived/pbi/2026-11-08-03-refactor-messaging-alias.md) | 🔧非機能追加 | 7 | S | ✅ 完了。alias正本集約・層維持 |
+| ~~04~~ | [2026-11-08-04-fix-connectiontests-innerhtml.md](../dev-docs/archived/pbi/2026-11-08-04-fix-connectiontests-innerhtml.md) | 🔧非機能追加 | 6.4 | S | ✅ 完了。往復除去+markup pin |
+| ~~05~~ | [2026-11-08-05-refactor-search-parity.md](../dev-docs/archived/pbi/2026-11-08-05-refactor-search-parity.md) | 🔧非機能追加 | 4.8 | M | ✅ 完了。per-path統一+parity pin |
+| ~~06~~ | [2026-11-08-06-refactor-queryplan-facade.md](../dev-docs/archived/pbi/2026-11-08-06-refactor-queryplan-facade.md) | 🔧非機能追加 | 4.0 | M | ✅ 完了。facadeにdeprecated+直import移行 |
+| ~~07~~ | [2026-11-08-07-refactor-scope-traversal.md](../dev-docs/archived/pbi/2026-11-08-07-refactor-scope-traversal.md) | 🔧非機能追加 | 3.2 | S | ✅ 完了。単一codec+seam漏れ解消 |
+| ~~08~~ | [2026-11-08-08-refactor-message-registry.md](../dev-docs/archived/pbi/2026-11-08-08-refactor-message-registry.md) | 🔧非機能追加 | 2.4 | S | ✅ 完了。loader共有定数+drift pin |
+| ~~09~~ | [2026-11-08-09-test-e2e-wait.md](../dev-docs/archived/pbi/2026-11-08-09-test-e2e-wait.md) | 🔧非機能追加 | 1.6 | XS | ✅ 完了。固定待ち除去・肯定条件化 |
 
 ### 2026-11-07 arch-delivery-loop archloop-1107（5件） ― ✅ 5件完了・アーカイブ済み
 

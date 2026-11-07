@@ -17,5 +17,5 @@
 | 08 | message契約loader複製解消 (M3) | 3 | 1 | 0.8 | 2.4 | M2の後 (types.ts競合回避) |
 | 09 | E2E waitForTimeout肯定条件化 (S3) | 2 | 1 | 0.8 | 1.6 | なし |
 
-バッチ: B1 = 01/02/03/04 並列 (background/offscreen/messaging/dashboardで排他)。B2 = 05/06/07/08 (06は01後、08は03後なのでB2で安全)。B3 = 09 単独。
+バッチ: B1 = 01/02/03/04 並列 (background/offscreen/messaging/dashboardで排他)。B2 = 05/07/08/09 並列 (06は05とsearchExecution.tsで重なるためB3へ分離)。B3 = 06 単独 (05の後)。
 プライバシー: 全件が表示・型・テストのみ。履歴の外部送信なし、鍵復号の移動なし。`check-privacy` 緩和なし。
