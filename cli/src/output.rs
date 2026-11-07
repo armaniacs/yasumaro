@@ -12,8 +12,8 @@
 //! - [`format_stats`]: `count` / `range` / `top domains` / `per day` lines
 //!   with a trailing `\n`;
 //! - [`to_json`]: 2-space pretty JSON plus a trailing `\n`;
-//! - [`export_json`]/[`export_csv`]/[`export_md`]: the three `--format`
-//!   shapes (CSV quotes per RFC 4180, which matches the JS `csvCell`);
+//! - [`to_json`] backs both `--json` output and the `json` export shape;
+//! - [`export_csv`]/[`export_md`]: the `csv`/`md` `--format` shapes (CSV quotes per RFC 4180, which matches the JS `csvCell`);
 //! - [`emit`]: write text to stdout, then optionally copy; a copy failure
 //!   writes `copy failed: {reason}` to stderr and returns exit 3 while the
 //!   already-written output is kept.
@@ -48,19 +48,30 @@ pub fn format_date(millis: i64) -> String {
     }
 }
 
-/// Render one `Option<i64>` field: the number, or `''` for `None`.
-fn opt_int(value: Option<i64>) -> String {
-    value.map_or_else(String::new, |number| number.to_string())
+/// Render one optional field: the value, or `''` for `None`.
+fn opt<T: std::fmt::Display>(value: Option<T>) -> String {
+    value.map_or_else(String::new, |item| item.to_string())
 }
 
-/// Render one `Option<f64>` field: the number, or `''` for `None`.
-fn opt_float(value: Option<f64>) -> String {
-    value.map_or_else(String::new, |number| number.to_string())
-}
-
-/// Render one `Option<String>` field: the text, or `''` for `None`.
-fn opt_text(value: Option<&String>) -> String {
-    value.map_or_else(String::new, |text| text.clone())
+/// Rendered value of one display column (used by both [`record_entries`]
+/// and the CSV builder so the two never drift apart).
+fn cell_value(record: &Record, column: &str) -> String {
+    match column {
+        "id" => opt(record.id),
+        "url" => opt(record.url.as_ref()),
+        "title" => opt(record.title.as_ref()),
+        "summary" => opt(record.summary.as_ref()),
+        "tags" => opt(record.tags.as_ref()),
+        "created_at" => opt(record.created_at),
+        "domain" => opt(record.domain.as_ref()),
+        "visit_duration" => opt(record.visit_duration),
+        "scroll_ratio" => opt(record.scroll_ratio),
+        "is_starred" => opt(record.is_starred),
+        "is_deleted" => opt(record.is_deleted),
+        "obsidian_synced" => opt(record.obsidian_synced),
+        "gist_synced" => opt(record.gist_synced),
+        _ => String::new(),
+    }
 }
 
 /// `(key, rendered value)` pairs in [`DISPLAY_COLUMNS`] order (the JS
@@ -69,25 +80,7 @@ fn opt_text(value: Option<&String>) -> String {
 fn record_entries(record: &Record) -> Vec<(&'static str, String)> {
     DISPLAY_COLUMNS
         .iter()
-        .map(|column| {
-            let value = match *column {
-                "id" => opt_int(record.id),
-                "url" => opt_text(record.url.as_ref()),
-                "title" => opt_text(record.title.as_ref()),
-                "summary" => opt_text(record.summary.as_ref()),
-                "tags" => opt_text(record.tags.as_ref()),
-                "created_at" => opt_int(record.created_at),
-                "domain" => opt_text(record.domain.as_ref()),
-                "visit_duration" => opt_int(record.visit_duration),
-                "scroll_ratio" => opt_float(record.scroll_ratio),
-                "is_starred" => opt_int(record.is_starred),
-                "is_deleted" => opt_int(record.is_deleted),
-                "obsidian_synced" => opt_int(record.obsidian_synced),
-                "gist_synced" => opt_int(record.gist_synced),
-                _ => String::new(),
-            };
-            (*column, value)
-        })
+        .map(|column| (*column, cell_value(record, column)))
         .collect()
 }
 
@@ -115,7 +108,7 @@ pub fn format_rows(rows: &[Record]) -> String {
             .take(60)
             .collect();
         let date = row.created_at.map_or_else(String::new, format_date);
-        let id = opt_int(row.id);
+        let id = opt(row.id);
         let domain: &str = row.domain.as_deref().unwrap_or("");
         out.push_str(&format!("{id} {date}{star} {domain} {title}\n"));
     }
@@ -160,16 +153,11 @@ pub fn format_stats(stats: &Stats) -> String {
 }
 
 /// 2-space pretty JSON plus a trailing `\n` (JS `toJson` parity).
-pub fn to_json<T: Serialize>(value: &T) -> Result<String, serde_json::Error> {
+pub fn to_json<T: Serialize + ?Sized>(value: &T) -> Result<String, serde_json::Error> {
     serde_json::to_string_pretty(value).map(|mut text| {
         text.push('\n');
         text
     })
-}
-
-/// JSON export: a pretty array of records (JS `toJson(rows)` parity).
-pub fn export_json(rows: &[Record]) -> Result<String, serde_json::Error> {
-    to_json(&rows)
 }
 
 /// CSV export with a header row: `columns` joined by commas, then one quoted
@@ -185,12 +173,7 @@ pub fn export_csv(rows: &[Record], columns: &[&str]) -> Result<String, CliError>
     for row in rows {
         let cells: Vec<String> = columns
             .iter()
-            .map(|column| {
-                record_entries(row)
-                    .into_iter()
-                    .find(|(key, _)| key == column)
-                    .map_or_else(String::new, |(_, value)| value)
-            })
+            .map(|column| cell_value(row, column))
             .collect();
         writer
             .write_record(&cells)

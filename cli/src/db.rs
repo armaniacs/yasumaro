@@ -73,35 +73,33 @@ pub fn open_readonly(path: &Path) -> Result<Connection, CliError> {
     })
 }
 
-/// Require the `browsing_logs` table (JS `assertBrowsingLogs` parity).
-pub fn assert_browsing_logs(conn: &Connection) -> Result<(), CliError> {
+/// Whether a table named `name` exists in `sqlite_master`.
+fn table_present(conn: &Connection, name: &str) -> Result<bool, CliError> {
     let present: Option<String> = conn
         .query_row(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'browsing_logs'",
-            [],
-            |row| row.get(0),
-        )
-        .optional()
-        .map_err(|err| CliError::Internal(format!("cannot inspect database schema: {err}")))?;
-    match present {
-        Some(_) => Ok(()),
-        None => Err(CliError::Db(
-            "not a Yasumaro history database: table browsing_logs is missing".to_owned(),
-        )),
-    }
-}
-
-/// Whether the `browsing_logs_fts` table exists (JS `hasFts` parity).
-pub fn has_fts(conn: &Connection) -> Result<bool, CliError> {
-    let present: Option<String> = conn
-        .query_row(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'browsing_logs_fts'",
-            [],
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            [name],
             |row| row.get(0),
         )
         .optional()
         .map_err(|err| CliError::Internal(format!("cannot inspect database schema: {err}")))?;
     Ok(present.is_some())
+}
+
+/// Require the `browsing_logs` table (JS `assertBrowsingLogs` parity).
+pub fn assert_browsing_logs(conn: &Connection) -> Result<(), CliError> {
+    if table_present(conn, "browsing_logs")? {
+        Ok(())
+    } else {
+        Err(CliError::Db(
+            "not a Yasumaro history database: table browsing_logs is missing".to_owned(),
+        ))
+    }
+}
+
+/// Whether the `browsing_logs_fts` table exists (JS `hasFts` parity).
+pub fn has_fts(conn: &Connection) -> Result<bool, CliError> {
+    table_present(conn, "browsing_logs_fts")
 }
 
 /// Real column names of `browsing_logs` via `PRAGMA table_info`.
@@ -112,13 +110,11 @@ pub fn real_columns(conn: &Connection) -> Result<Vec<String>, CliError> {
     let names = stmt
         .query_map([], |row| row.get::<_, String>(1))
         .map_err(|err| CliError::Internal(format!("cannot inspect database schema: {err}")))?;
-    let mut columns = Vec::new();
-    for name in names {
-        columns.push(
-            name.map_err(|err| CliError::Internal(format!("cannot read column name: {err}")))?,
-        );
-    }
-    Ok(columns)
+    names
+        .map(|name| {
+            name.map_err(|err| CliError::Internal(format!("cannot read column name: {err}")))
+        })
+        .collect()
 }
 
 #[cfg(test)]

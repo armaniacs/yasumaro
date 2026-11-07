@@ -204,7 +204,7 @@ pub fn write_history_file(path: &Path, lines: &[String]) -> Result<(), CliError>
 /// file is never lost to an interrupt.
 pub fn run_repl() -> i32 {
     let env = Env::from_process();
-    let config = match crate::config::load_config_file(env.config_path()) {
+    let config = match crate::config::load_config_file(&env.config_path) {
         Ok(config) => config,
         Err(err) => {
             let failure: CliError = err.into();
@@ -348,56 +348,46 @@ mod tests {
         assert_eq!(parse_repl_line("help"), ReplLine::Help);
     }
 
+    /// The `--query` of a `search` line, for shape assertions.
+    fn search_query(line: &ReplLine) -> Option<&str> {
+        match line {
+            ReplLine::Run(command) => match command.as_ref() {
+                Commands::Search(args) => args.query.as_deref(),
+                other => panic!("expected search, got {other:?}"),
+            },
+            other => panic!("expected a dispatched command, got {other:?}"),
+        }
+    }
+
     #[test]
     fn parse_search_shorthand_joins_words_as_query() {
-        match parse_repl_line("search foo bar") {
-            ReplLine::Run(command) => match command.as_ref() {
-                Commands::Search(args) => {
-                    assert_eq!(args.query.as_deref(), Some("foo bar"));
-                }
-                other => panic!("search shorthand must dispatch search, got {other:?}"),
-            },
-            other => panic!("search shorthand must dispatch search, got {other:?}"),
-        }
+        assert_eq!(
+            search_query(&parse_repl_line("search foo bar")),
+            Some("foo bar")
+        );
     }
 
     #[test]
     fn parse_search_shorthand_strips_quotes() {
-        match parse_repl_line("search \"foo bar\"") {
-            ReplLine::Run(command) => match command.as_ref() {
-                Commands::Search(args) => {
-                    assert_eq!(args.query.as_deref(), Some("foo bar"));
-                }
-                other => panic!("quoted shorthand must join, got {other:?}"),
-            },
-            other => panic!("quoted shorthand must join, got {other:?}"),
-        }
+        assert_eq!(
+            search_query(&parse_repl_line("search \"foo bar\"")),
+            Some("foo bar")
+        );
     }
 
     #[test]
     fn parse_search_with_query_flag_skips_shorthand() {
-        match parse_repl_line("search --query \"Daily News\"") {
-            ReplLine::Run(command) => match command.as_ref() {
-                Commands::Search(args) => {
-                    assert_eq!(args.query.as_deref(), Some("Daily News"));
-                }
-                other => panic!("--query form must parse, got {other:?}"),
-            },
-            other => panic!("--query form must parse, got {other:?}"),
-        }
+        assert_eq!(
+            search_query(&parse_repl_line("search --query \"Daily News\"")),
+            Some("Daily News")
+        );
     }
 
     #[test]
     fn parse_bare_search_parses_without_query() {
         // A lone `search` falls through to the full parser; the missing
         // query surfaces later as exit-2 `search requires --query TEXT`.
-        match parse_repl_line("search") {
-            ReplLine::Run(command) => match command.as_ref() {
-                Commands::Search(args) => assert_eq!(args.query, None),
-                other => panic!("bare search must parse, got {other:?}"),
-            },
-            other => panic!("bare search must parse, got {other:?}"),
-        }
+        assert_eq!(search_query(&parse_repl_line("search")), None);
     }
 
     /// Name of the dispatched subcommand, for shape assertions.

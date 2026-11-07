@@ -89,27 +89,18 @@ fn resolve_config_path(
     xdg_config_home: Option<&str>,
     home: Option<&Path>,
 ) -> PathBuf {
-    if let Some(custom) = yasumaro_config {
-        if !custom.is_empty() {
-            return PathBuf::from(custom);
-        }
+    if let Some(custom) = yasumaro_config.filter(|custom| !custom.is_empty()) {
+        return PathBuf::from(custom);
     }
-    let base = match xdg_config_home {
-        Some(dir) if !dir.is_empty() => PathBuf::from(dir),
-        _ => match home {
-            Some(dir) => dir.join(".config"),
-            // No home directory is known; keep a relative fallback
-            // rather than failing, since the missing file still
-            // yields defaults downstream.
-            None => PathBuf::from(".config"),
-        },
+    let base = match xdg_config_home.filter(|dir| !dir.is_empty()) {
+        Some(dir) => PathBuf::from(dir),
+        // No home directory is known; keep a relative fallback rather than
+        // failing, since the missing file still yields defaults downstream.
+        None => home
+            .map(|dir| dir.join(".config"))
+            .unwrap_or_else(|| PathBuf::from(".config")),
     };
     base.join("yasumaro").join("config.toml")
-}
-
-/// Best-effort home directory lookup (cross-platform, like `os.homedir()`).
-fn home_dir() -> Option<PathBuf> {
-    dirs::home_dir()
 }
 
 /// Config file path honoring `YASUMARO_CONFIG` > `XDG_CONFIG_HOME` >
@@ -118,7 +109,7 @@ pub fn default_config_path() -> PathBuf {
     resolve_config_path(
         std::env::var("YASUMARO_CONFIG").ok().as_deref(),
         std::env::var("XDG_CONFIG_HOME").ok().as_deref(),
-        home_dir().as_deref(),
+        dirs::home_dir().as_deref(),
     )
 }
 
@@ -129,7 +120,7 @@ pub fn default_config_path() -> PathBuf {
 /// path is returned unchanged instead of failing.
 pub fn expand_home(path: &str) -> PathBuf {
     match path.strip_prefix("~/") {
-        Some(rest) => match home_dir() {
+        Some(rest) => match dirs::home_dir() {
             Some(home) => home.join(rest),
             None => PathBuf::from(path),
         },
@@ -331,7 +322,7 @@ mod tests {
 
     #[test]
     fn expand_home_expands_tilde_slash_only() {
-        let home = home_dir().expect("test environment has a home directory");
+        let home = dirs::home_dir().expect("test environment has a home directory");
         assert_eq!(
             expand_home("~/notes/history.db"),
             home.join("notes/history.db")

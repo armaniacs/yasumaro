@@ -34,6 +34,16 @@ fn is_plain_integer(text: &str) -> bool {
     !digits.is_empty() && digits.bytes().all(|byte| byte.is_ascii_digit())
 }
 
+/// Parse a plain integer flag value (JS `parseInt` shape check plus exact
+/// `i64` range); failures name the flag, like the JS `invalid …` messages.
+fn parse_plain_integer(text: &str, flag: &str) -> Result<i64, CliError> {
+    if !is_plain_integer(text) {
+        return Err(CliError::Usage(format!("invalid {flag}: {text}")));
+    }
+    text.parse::<i64>()
+        .map_err(|_| CliError::Usage(format!("invalid {flag}: {text}")))
+}
+
 fn invalid_limit(value: &str) -> CliError {
     CliError::Usage(format!("invalid --limit: {value}"))
 }
@@ -43,15 +53,10 @@ fn invalid_limit(value: &str) -> CliError {
 pub fn parse_limit(value: Option<&str>, default: i64) -> Result<i64, CliError> {
     match value {
         None => Ok(default),
-        Some(text) => {
-            if !is_plain_integer(text) {
-                return Err(invalid_limit(text));
-            }
-            match text.parse::<i64>() {
-                Ok(number) if number > 0 => Ok(number),
-                _ => Err(invalid_limit(text)),
-            }
-        }
+        Some(text) => match parse_plain_integer(text, "--limit")? {
+            number if number > 0 => Ok(number),
+            _ => Err(invalid_limit(text)),
+        },
     }
 }
 
@@ -59,15 +64,10 @@ pub fn parse_limit(value: Option<&str>, default: i64) -> Result<i64, CliError> {
 pub fn parse_offset(value: Option<&str>) -> Result<i64, CliError> {
     match value {
         None => Ok(0),
-        Some(text) => {
-            if !is_plain_integer(text) {
-                return Err(CliError::Usage(format!("invalid --offset: {text}")));
-            }
-            match text.parse::<i64>() {
-                Ok(number) if number >= 0 => Ok(number),
-                _ => Err(CliError::Usage(format!("invalid --offset: {text}"))),
-            }
-        }
+        Some(text) => match parse_plain_integer(text, "--offset")? {
+            number if number >= 0 => Ok(number),
+            _ => Err(CliError::Usage(format!("invalid --offset: {text}"))),
+        },
     }
 }
 
@@ -76,15 +76,7 @@ pub fn parse_offset(value: Option<&str>) -> Result<i64, CliError> {
 pub fn parse_id(value: Option<&str>) -> Result<i64, CliError> {
     match value {
         None => Err(CliError::Usage("show requires --id N".to_owned())),
-        Some(text) => {
-            if !is_plain_integer(text) {
-                return Err(CliError::Usage(format!("invalid --id: {text}")));
-            }
-            match text.parse::<i64>() {
-                Ok(number) => Ok(number),
-                Err(_) => Err(CliError::Usage(format!("invalid --id: {text}"))),
-            }
-        }
+        Some(text) => parse_plain_integer(text, "--id"),
     }
 }
 
@@ -95,18 +87,17 @@ pub fn parse_id(value: Option<&str>) -> Result<i64, CliError> {
 /// like `Date.parse`). `flag` must be `--from` or `--to`; `--to` bounds are
 /// moved to 23:59:59.999 of that day (inclusive). `None` stays `None`.
 pub fn parse_date_bound(value: Option<&str>, flag: &str) -> Result<Option<i64>, CliError> {
-    match value {
-        None => Ok(None),
-        Some(text) => {
+    value
+        .map(|text| {
             let millis = parse_date_millis(text)
                 .ok_or_else(|| CliError::Usage(format!("invalid {flag}: {text}")))?;
-            if flag == "--to" {
-                Ok(Some(millis.saturating_add(END_OF_DAY_INCLUSIVE_MS)))
+            Ok(if flag == "--to" {
+                millis.saturating_add(END_OF_DAY_INCLUSIVE_MS)
             } else {
-                Ok(Some(millis))
-            }
-        }
-    }
+                millis
+            })
+        })
+        .transpose()
 }
 
 /// `Date.parse` subset: RFC-3339/ISO with offset, `YYYY-MM-DD` (UTC midnight),

@@ -301,6 +301,15 @@ fn internal(message: String) -> CliError {
     CliError::Internal(message)
 }
 
+/// Prepare a statement, mapping failures to a query error.
+fn prepare<'conn>(
+    conn: &'conn Connection,
+    sql: &str,
+) -> Result<rusqlite::Statement<'conn>, CliError> {
+    conn.prepare(sql)
+        .map_err(|err| internal(format!("query failed: {err}")))
+}
+
 /// Run a `SELECT` built by the query functions and map every row.
 fn run_select(
     conn: &Connection,
@@ -308,9 +317,7 @@ fn run_select(
     params: Vec<Value>,
     columns: &[String],
 ) -> Result<Vec<Record>, CliError> {
-    let mut statement = conn
-        .prepare(sql)
-        .map_err(|err| internal(format!("query failed: {err}")))?;
+    let mut statement = prepare(conn, sql)?;
     let rows = statement
         .query_map(rusqlite::params_from_iter(params.iter()), |row| {
             record_from_row(row, columns)
@@ -350,13 +357,17 @@ pub fn search_logs(
     let columns = require_columns(conn)?;
     let sanitized = sanitize_fts_term(&clean);
     let use_fts = crate::db::has_fts(conn)? && sanitized.chars().count() >= FTS_MIN_CHARS;
-    if use_fts {
+    let prefix = if use_fts { "b." } else { "" };
+    let filters = build_filters(query, prefix);
+    // Each branch supplies its SELECT text plus the head params (the MATCH
+    // phrase or the four LIKE patterns); the filter params, paging, and the
+    // run itself are shared below.
+    let (sql, head): (String, Vec<Value>) = if use_fts {
         let select = columns
             .iter()
             .map(|column| format!("b.{column}"))
             .collect::<Vec<_>>()
             .join(", ");
-        let filters = build_filters(query, "b.");
         let sql = format!(
             "SELECT {select} FROM browsing_logs_fts \
              JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id \
@@ -364,14 +375,9 @@ pub fn search_logs(
              ORDER BY b.created_at DESC LIMIT ? OFFSET ?",
             filters.sql
         );
-        let mut params = vec![Value::Text(format!("\"{sanitized}\""))];
-        params.extend(filters.params);
-        params.push(Value::Integer(query.limit));
-        params.push(Value::Integer(query.offset));
-        run_select(conn, &sql, params, &columns)
+        (sql, vec![Value::Text(format!("\"{sanitized}\""))])
     } else {
         let select = columns.join(", ");
-        let filters = build_filters(query, "");
         let sql = format!(
             "SELECT {select} FROM browsing_logs \
              WHERE (url LIKE ? ESCAPE '\\' OR title LIKE ? ESCAPE '\\' \
@@ -380,17 +386,14 @@ pub fn search_logs(
             filters.sql
         );
         let like = format!("%{}%", escape_like(&clean));
-        let mut params = vec![
-            Value::Text(like.clone()),
-            Value::Text(like.clone()),
-            Value::Text(like.clone()),
-            Value::Text(like),
-        ];
-        params.extend(filters.params);
-        params.push(Value::Integer(query.limit));
-        params.push(Value::Integer(query.offset));
-        run_select(conn, &sql, params, &columns)
-    }
+        let head = vec![like; 4].into_iter().map(Value::Text).collect();
+        (sql, head)
+    };
+    let mut params = head;
+    params.extend(filters.params);
+    params.push(Value::Integer(query.limit));
+    params.push(Value::Integer(query.offset));
+    run_select(conn, &sql, params, &columns)
 }
 
 /// Filtered history listing, newest first (JS `listLogs` parity).
@@ -416,9 +419,7 @@ pub fn get_by_id(conn: &Connection, id: i64) -> Result<Option<Record>, CliError>
         "SELECT {} FROM browsing_logs WHERE id = ?",
         columns.join(", ")
     );
-    let mut statement = conn
-        .prepare(&sql)
-        .map_err(|err| internal(format!("query failed: {err}")))?;
+    let mut statement = prepare(conn, &sql)?;
     statement
         .query_row([id], |row| record_from_row(row, &columns))
         .optional()
@@ -442,13 +443,14 @@ pub fn get_stats(conn: &Connection) -> Result<Stats, CliError> {
             |row| Ok((row.get(0)?, row.get(1)?)),
         )
         .map_err(|err| internal(format!("query failed: {err}")))?;
-    let mut domains = conn
-        .prepare(&format!(
+    let mut domains = prepare(
+        conn,
+        &format!(
             "SELECT domain, COUNT(*) FROM browsing_logs \
              WHERE {LIVE} AND domain IS NOT NULL \
              GROUP BY domain ORDER BY COUNT(*) DESC, domain ASC LIMIT 10"
-        ))
-        .map_err(|err| internal(format!("query failed: {err}")))?;
+        ),
+    )?;
     let top_domains = domains
         .query_map([], |row| {
             Ok(DomainCount {
@@ -459,13 +461,14 @@ pub fn get_stats(conn: &Connection) -> Result<Stats, CliError> {
         .map_err(|err| internal(format!("query failed: {err}")))?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| internal(format!("cannot read row: {err}")))?;
-    let mut days = conn
-        .prepare(&format!(
+    let mut days = prepare(
+        conn,
+        &format!(
             "SELECT date(created_at / 1000, 'unixepoch'), COUNT(*) FROM browsing_logs \
              WHERE {LIVE} GROUP BY date(created_at / 1000, 'unixepoch') \
              ORDER BY date(created_at / 1000, 'unixepoch') ASC LIMIT 30"
-        ))
-        .map_err(|err| internal(format!("query failed: {err}")))?;
+        ),
+    )?;
     let per_day = days
         .query_map([], |row| {
             Ok(DayCount {
@@ -903,180 +906,8 @@ mod tests {
 
     #[test]
     fn stats_serialize_with_js_keys() {
-        // Minimal serializer that records struct field names, so the test
-        // needs no serde_json dependency.
-        #[derive(Debug)]
-        struct SinkError;
-        impl std::fmt::Display for SinkError {
-            fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                formatter.write_str("sink error")
-            }
-        }
-        impl std::error::Error for SinkError {}
-        impl serde::ser::Error for SinkError {
-            fn custom<T: std::fmt::Display>(_message: T) -> Self {
-                Self
-            }
-        }
-
-        struct FieldSink<'a> {
-            fields: &'a mut Vec<String>,
-        }
-        impl serde::ser::SerializeStruct for FieldSink<'_> {
-            type Ok = ();
-            type Error = SinkError;
-            fn serialize_field<T: ?Sized + serde::Serialize>(
-                &mut self,
-                key: &'static str,
-                _value: &T,
-            ) -> Result<(), SinkError> {
-                self.fields.push(key.to_owned());
-                Ok(())
-            }
-            fn end(self) -> Result<(), SinkError> {
-                Ok(())
-            }
-        }
-
-        struct KeySink<'a> {
-            fields: &'a mut Vec<String>,
-        }
-        impl<'a> serde::Serializer for KeySink<'a> {
-            type Ok = ();
-            type Error = SinkError;
-            type SerializeSeq = serde::ser::Impossible<(), SinkError>;
-            type SerializeTuple = serde::ser::Impossible<(), SinkError>;
-            type SerializeTupleStruct = serde::ser::Impossible<(), SinkError>;
-            type SerializeTupleVariant = serde::ser::Impossible<(), SinkError>;
-            type SerializeMap = serde::ser::Impossible<(), SinkError>;
-            type SerializeStruct = FieldSink<'a>;
-            type SerializeStructVariant = serde::ser::Impossible<(), SinkError>;
-            fn serialize_bool(self, _value: bool) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_i8(self, _value: i8) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_i16(self, _value: i16) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_i32(self, _value: i32) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_i64(self, _value: i64) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_u8(self, _value: u8) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_u16(self, _value: u16) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_u32(self, _value: u32) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_u64(self, _value: u64) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_f32(self, _value: f32) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_f64(self, _value: f64) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_char(self, _value: char) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_str(self, _value: &str) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_bytes(self, _value: &[u8]) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_none(self) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_some<T: ?Sized + serde::Serialize>(
-                self,
-                _value: &T,
-            ) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_unit(self) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_unit_struct(self, _name: &'static str) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_unit_variant(
-                self,
-                _name: &'static str,
-                _index: u32,
-                _variant: &'static str,
-            ) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_newtype_struct<T: ?Sized + serde::Serialize>(
-                self,
-                _name: &'static str,
-                _value: &T,
-            ) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_newtype_variant<T: ?Sized + serde::Serialize>(
-                self,
-                _name: &'static str,
-                _index: u32,
-                _variant: &'static str,
-                _value: &T,
-            ) -> Result<(), SinkError> {
-                Ok(())
-            }
-            fn serialize_seq(self, _len: Option<usize>) -> Result<Self::SerializeSeq, SinkError> {
-                Err(SinkError)
-            }
-            fn serialize_tuple(self, _len: usize) -> Result<Self::SerializeTuple, SinkError> {
-                Err(SinkError)
-            }
-            fn serialize_tuple_struct(
-                self,
-                _name: &'static str,
-                _len: usize,
-            ) -> Result<Self::SerializeTupleStruct, SinkError> {
-                Err(SinkError)
-            }
-            fn serialize_tuple_variant(
-                self,
-                _name: &'static str,
-                _index: u32,
-                _variant: &'static str,
-                _len: usize,
-            ) -> Result<Self::SerializeTupleVariant, SinkError> {
-                Err(SinkError)
-            }
-            fn serialize_map(self, _len: Option<usize>) -> Result<Self::SerializeMap, SinkError> {
-                Err(SinkError)
-            }
-            fn serialize_struct(
-                self,
-                _name: &'static str,
-                _len: usize,
-            ) -> Result<Self::SerializeStruct, SinkError> {
-                Ok(FieldSink {
-                    fields: self.fields,
-                })
-            }
-            fn serialize_struct_variant(
-                self,
-                _name: &'static str,
-                _index: u32,
-                _variant: &'static str,
-                _len: usize,
-            ) -> Result<Self::SerializeStructVariant, SinkError> {
-                Err(SinkError)
-            }
-        }
-
+        // `serde_json` is a main dependency since the export work landed, so
+        // the key names are read straight off the serialized value.
         let stats = Stats {
             count: 2,
             min_created_at: Some(DAY_10),
@@ -1084,12 +915,13 @@ mod tests {
             top_domains: Vec::new(),
             per_day: Vec::new(),
         };
-        let mut fields = Vec::new();
-        stats
-            .serialize(KeySink {
-                fields: &mut fields,
-            })
-            .expect("stats must serialize");
+        let value = serde_json::to_value(&stats).expect("stats must serialize to JSON");
+        let fields: Vec<&str> = value
+            .as_object()
+            .expect("stats serializes as an object")
+            .keys()
+            .map(String::as_str)
+            .collect();
         for key in [
             "count",
             "minCreatedAt",
@@ -1098,7 +930,7 @@ mod tests {
             "perDay",
         ] {
             assert!(
-                fields.contains(&key.to_owned()),
+                fields.contains(&key),
                 "stats keys missing {key}: {fields:?}"
             );
         }

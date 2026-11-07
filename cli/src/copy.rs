@@ -38,30 +38,26 @@ pub enum AttemptError {
 
 /// Candidate `(program, args)` backends for a JS-style platform tag.
 fn candidates(platform: &str) -> Vec<(&'static str, Vec<&'static str>)> {
-    if platform == PLATFORM_MACOS {
-        vec![("pbcopy", Vec::new())]
-    } else if platform == PLATFORM_WINDOWS {
-        vec![("clip", Vec::new())]
-    } else {
-        vec![
+    match platform {
+        p if p == PLATFORM_MACOS => vec![("pbcopy", Vec::new())],
+        p if p == PLATFORM_WINDOWS => vec![("clip", Vec::new())],
+        _ => vec![
             ("xclip", vec!["-selection", "clipboard"]),
             ("xsel", vec!["--clipboard", "--input"]),
-        ]
+        ],
     }
 }
 
 /// Map `std::env::consts::OS` (`macos`/`windows`/…) to the JS
 /// `process.platform` tag consumed by [`copy_with`].
 fn current_platform() -> &'static str {
-    if std::env::consts::OS == "macos" {
-        PLATFORM_MACOS
-    } else if std::env::consts::OS == "windows" {
-        PLATFORM_WINDOWS
-    } else {
-        // `std::env::consts::OS` reports e.g. `linux`; the JS tag for the
-        // same kernel is also `linux`, so any non-Apple/non-Windows tag
-        // takes the xclip/xsel path via the fallthrough in `candidates`.
-        "linux"
+    // Any non-Apple/non-Windows tag takes the xclip/xsel path via the
+    // fallthrough in `candidates` (`std::env::consts::OS` reports e.g.
+    // `linux`, and the JS tag for the same kernel is also `linux`).
+    match std::env::consts::OS {
+        "macos" => PLATFORM_MACOS,
+        "windows" => PLATFORM_WINDOWS,
+        _ => "linux",
     }
 }
 

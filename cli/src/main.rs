@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
 
@@ -234,10 +234,6 @@ impl Env {
             env_db: std::env::var("YASUMARO_DB").ok(),
         }
     }
-
-    pub(crate) fn config_path(&self) -> &Path {
-        &self.config_path
-    }
 }
 
 /// Usage text equivalent to the HELP string in the JS reference
@@ -375,6 +371,27 @@ fn emit_or_fail(
     }
 }
 
+/// Serialize `value` to pretty JSON (JS `toJson` shape); encoding failures
+/// are internal errors (exit 1).
+fn json_or_internal<T: serde::Serialize + ?Sized>(value: &T) -> Result<String, db::CliError> {
+    output::to_json(value)
+        .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}")))
+}
+
+/// Render fetched rows as JSON or human-readable text.
+fn render_rows(
+    rows: &[queries::Record],
+    json: bool,
+    copy: bool,
+) -> Result<(String, bool), db::CliError> {
+    let text = if json {
+        json_or_internal(rows)?
+    } else {
+        output::format_rows(rows)
+    };
+    Ok((text, copy))
+}
+
 fn run_search(
     args: &SearchArgs,
     env: &Env,
@@ -385,13 +402,7 @@ fn run_search(
     let result = with_db(args.db.as_deref(), env, |conn, cfg| {
         let query = build_query(&filter_flags!(args), cfg.limit)?;
         let rows = queries::search_logs(conn, args.query.as_deref().unwrap_or(""), &query)?;
-        let text = if args.json {
-            output::to_json(&rows)
-                .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}")))?
-        } else {
-            output::format_rows(&rows)
-        };
-        Ok((text, args.copy))
+        render_rows(&rows, args.json, args.copy)
     });
     emit_or_fail(result, stdout, stderr, copy_fn)
 }
@@ -406,13 +417,7 @@ fn run_list(
     let result = with_db(args.db.as_deref(), env, |conn, cfg| {
         let query = build_query(&filter_flags!(args), cfg.limit)?;
         let rows = queries::list_logs(conn, &query)?;
-        let text = if args.json {
-            output::to_json(&rows)
-                .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}")))?
-        } else {
-            output::format_rows(&rows)
-        };
-        Ok((text, args.copy))
+        render_rows(&rows, args.json, args.copy)
     });
     emit_or_fail(result, stdout, stderr, copy_fn)
 }
@@ -430,8 +435,7 @@ fn run_show(
         // A missing id prints `not found` (or JSON `null`) with exit 0,
         // like the JS `formatRecord`/`toJson(row ?? null)` flow.
         let text = if args.json {
-            output::to_json(&row)
-                .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}")))?
+            json_or_internal(&row)?
         } else {
             output::format_record(row.as_ref())
         };
@@ -463,8 +467,7 @@ fn run_stats(
                 "topDomains": stats.top_domains,
                 "perDay": stats.per_day,
             });
-            output::to_json(&value)
-                .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}")))?
+            json_or_internal(&value)?
         } else {
             output::format_stats(&stats)
         };
@@ -508,8 +511,7 @@ fn run_export(
                 output::export_csv(&rows, &columns)
             }
             "md" => Ok(output::export_md(&rows)),
-            _ => output::export_json(&rows)
-                .map_err(|err| db::CliError::Internal(format!("cannot encode JSON: {err}"))),
+            _ => json_or_internal(&rows),
         }
     });
     let text = match result {
@@ -640,6 +642,7 @@ fn main() {
 mod tests {
     use super::*;
     use clap::Parser;
+    use std::path::Path;
     use std::sync::atomic::{AtomicU64, Ordering};
 
     /// Unique temp path so parallel tests never share a file.
@@ -655,14 +658,17 @@ mod tests {
     /// Scratch history DB: two live rows (Jan 10 + Jan 15) and one deleted
     /// row, mirroring the epoch constants used across the suite
     /// (`2026-01-10T00:00:00Z` = `1_768_003_200_000`).
+    const BROWSING_LOGS_SCHEMA: &str = "CREATE TABLE browsing_logs (\
+         id INTEGER PRIMARY KEY, url TEXT, title TEXT, summary TEXT, tags TEXT, \
+         created_at INTEGER, domain TEXT, visit_duration INTEGER, scroll_ratio REAL, \
+         is_starred INTEGER, is_deleted INTEGER, obsidian_synced INTEGER, gist_synced INTEGER);";
+
     fn fixture_db(path: &Path) {
         let conn = rusqlite::Connection::open(path).expect("fixture: create db");
+        conn.execute_batch(BROWSING_LOGS_SCHEMA)
+            .expect("fixture: create table");
         conn.execute_batch(
-            "CREATE TABLE browsing_logs (\
-             id INTEGER PRIMARY KEY, url TEXT, title TEXT, summary TEXT, tags TEXT, \
-             created_at INTEGER, domain TEXT, visit_duration INTEGER, scroll_ratio REAL, \
-             is_starred INTEGER, is_deleted INTEGER, obsidian_synced INTEGER, gist_synced INTEGER); \
-             INSERT INTO browsing_logs VALUES \
+            "INSERT INTO browsing_logs VALUES \
              (1, 'https://example.com/guide', 'TypeScript Guide', 'a guide', 'docs', \
               1768003200000, 'example.com', 120, 0.5, 1, 0, 0, 0), \
              (2, 'https://other.org/news', 'Daily News', 'news', 'news', \
@@ -923,13 +929,7 @@ mod tests {
         let conn = rusqlite::Connection::open(&db).expect("fixture db");
         // Full column set but zero rows: the stats filters (`is_deleted`,
         // `domain`) need the real columns to exist.
-        conn.execute_batch(
-            "CREATE TABLE browsing_logs (\
-             id INTEGER PRIMARY KEY, url TEXT, title TEXT, summary TEXT, tags TEXT, \
-             created_at INTEGER, domain TEXT, visit_duration INTEGER, scroll_ratio REAL, \
-             is_starred INTEGER, is_deleted INTEGER, obsidian_synced INTEGER, gist_synced INTEGER);",
-        )
-        .expect("schema");
+        conn.execute_batch(BROWSING_LOGS_SCHEMA).expect("schema");
         drop(conn);
         let command = Commands::Stats(StatsArgs::default());
         let (code, stdout, _, _) = run_with(&command, &db, Ok(()));
