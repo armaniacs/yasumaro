@@ -1,0 +1,17 @@
+[package]
+name = "yasumaro"
+version = "6.9.69"
+edition = "2021"
+license = "MIT"
+description = "Read-only CLI for exported Yasumaro history databases"
+repository = "https://github.com/armaniacs/yasumaro"
+keywords = ["sqlite", "history", "cli"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+
+[[bin]]
+name = "yasumaro"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
