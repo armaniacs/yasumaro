@@ -20,8 +20,20 @@ import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedErr
 import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
+/**
+ * 接続テストの初回 max_tokens。推論モデルは出力枠を思考トークンに消費し、
+ * この枠では本文の前に finish_reason=length で切れることがある (issue #202)。
+ */
+const CONNECTION_TEST_MAX_TOKENS = 16;
+/**
+ * length 切断時に順に再試行する際の max_tokens 上限ラダー。推論モデルは
+ * 思考トークンで小枠を使い切るため、256でも切れる個体がある (issue #202
+ * 後続)。初回16に続けて最大3回、合計4fetchで打ち切る。
+ */
+const CONNECTION_TEST_RETRY_CAPS = [256, 512, 1024] as const;
+
 interface OpenAIApiResponse {
-    choices?: Array<{ message?: { content: string } }>;
+    choices?: Array<{ message?: { content: string }; finish_reason?: string }>;
     usage?: { prompt_tokens?: number; completion_tokens?: number };
 }
 
@@ -186,7 +198,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
      * OpenAI互換の癖1組。要約と接続テストはこの同じオブジェクトを共有する
      * （PBI 2026-10-16-05）ため、資格文面の変更は1箇所で両フローに届く。
      */
-    private hooks(): HttpProviderHooks {
+    private hooks(connectionTestMaxTokens: number = CONNECTION_TEST_MAX_TOKENS): HttpProviderHooks {
         return {
             providerName: this.providerName,
             providerLabel: this.providerName,
@@ -249,7 +261,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const payload = {
                     model: this.model,
                     messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-                    max_tokens: 16,
+                    max_tokens: connectionTestMaxTokens,
                     temperature: 0,
                 };
                 return { url, headers, body: JSON.stringify(payload), modelName: this.model };
@@ -259,12 +271,14 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const typed = data as OpenAIApiResponse;
                 const text = typed.choices?.[0]?.message?.content ?? '';
                 const hasContent = text.trim().length > 0;
+                const finishReason = typed.choices?.[0]?.finish_reason;
 
                 return {
                     success: hasContent,
                     message: hasContent ? 'Connected to AI API.' : 'Response contained no content.',
                     debug: {
                         ...this.buildTestDebugBase(ctx, hasContent, text),
+                        ...(finishReason !== undefined ? { finishReason } : {}),
                         ...(typed.usage?.prompt_tokens !== undefined ? { sentTokens: typed.usage.prompt_tokens } : {}),
                         ...(typed.usage?.completion_tokens !== undefined ? { receivedTokens: typed.usage.completion_tokens } : {}),
                         ...(hasContent ? {} : { error: 'choices[0].message.content was empty' }),
@@ -288,7 +302,18 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     async testConnection(): Promise<AIProviderConnectionResult> {
         // 順序（資格→構築→fetch→HTTPエラー変換→読み取り→例外変換）は
         // 基底テンプレートが所有。癖は generateSummary と同じ1組の hooks。
-        return this.executeHttpTestFlow(this.hooks());
+        // 推論モデルは初回の小枠を思考トークンに使い切り、本文空のまま
+        // finish_reason=length で返ることがある (issue #202)。その場合だけ
+        // RETRY_CAPS の上限で順に再試行する (最大3回、初回含め合計4fetch)。
+        // 要約パスは hooks 既定値のまま不変。
+        let result = await this.executeHttpTestFlow(this.hooks(CONNECTION_TEST_MAX_TOKENS));
+        for (const cap of CONNECTION_TEST_RETRY_CAPS) {
+            if (result.success || result.debug?.finishReason !== 'length') {
+                break;
+            }
+            result = await this.executeHttpTestFlow(this.hooks(cap));
+        }
+        return result;
     }
 
     private async _extractSummary(data: OpenAIApiResponse, traceId: string = ''): Promise<AISummaryResult> {
