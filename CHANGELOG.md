@@ -37,6 +37,26 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.72] - 2026-11-08
+
+このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
+
+### 修正 / Fixed
+
+- Service Worker再起動でmodule-let状態(token・計数・singleton)が失われる問題（session永続化とcomposition root注入必須化へ移し、再起動復元のpinテストを追加） / Module-let state (tokens, counters, singletons) was lost on Service Worker restart (moved to session persistence with mandatory composition-root injection; restart-restoration pin tests added)
+- 接続テスト表示がinnerHTML往復でescape保証を迂回していた問題（ノード退避へ置換し、markup混じり表示のpinテストを追加） / Connection-test rendering bypassed escape guarantees via an innerHTML round-trip (replaced with node staging; pin tests for markup-mixed rendering added)
+- E2EのWASM初期化テストが固定待ちに依存していた問題（初期化完了の肯定条件ポーリングへ反転） / The WASM-init E2E test depended on a fixed wait (inverted to affirmative completion polling)
+- 最終ゲートで検出した自ラウンド由来の型エラー5件（テストの型付けを正し、type-test baselineを442へ引き下げ） / Five type errors from this round found by the final gate (test typing corrected; type-test baseline lowered to 442)
+
+### リファクタリング / Refactored
+
+- query周りのshallow micro module（`ftsClauseQuery`・`queryNormalize`）をfold・削除し、plannerを単一policy moduleへ集約 / Folded and removed shallow query micro-modules (`ftsClauseQuery`, `queryNormalize`), consolidating the planner into a single policy module
+- messagingのalias型三重複製を`messageTransport`へ集約 / Consolidated triplicated messaging alias types into `messageTransport`
+- 検索経路のbackend差（FTS修飾の有無）をper-path統一し、COUNT/rows SQLバイト一致のparity pinを追加 / Unified search-path backend differences (FTS qualification) per-path with byte-identical COUNT/rows parity pins
+- `queryPlan`末尾のcompat facadeに非推奨を付与し、直import移行を開始（型循環は実行時解消済み・型のみ残存を記録） / Deprecated the `queryPlan` compat facade and started direct-import migration (runtime cycle already resolved; type-level remainder recorded)
+- report scopeの二重走査を単一codecへ統合し、validatorを述語呼出のadapter化 / Unified report-scope double traversal into a single codec with validators as predicate-calling adapters
+- protocol versionのloader複製を共有定数参照へ移行し、3点drift検出pinを追加 / Moved the loader's protocol-version copy to a shared constant reference with a three-point drift pin
+
 ## [6.9.71] - 2026-11-08
 
 このリリースは内部リファクタリングのみで、利用者に見える変更はありません。dashboard-sqlite分類集合の単一所有者化、画面stateのModel集約、pending描画の共有化、collection v1実行系のsunset、claim取得のorchestrator集約を含みます。 / No user-visible changes; internal refactoring only: single-owner taxonomy sets, single-owner screen state, shared pending rendering, collection v1 sunset, and orchestrator-owned claim acquisition.
