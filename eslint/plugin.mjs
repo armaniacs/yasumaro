@@ -8,6 +8,7 @@ import noVacuousNegativeWait from './rules/no-vacuous-negative-wait.mjs';
 import noManualProtocolVersion from './rules/no-manual-protocol-version.mjs';
 import utilsLayerBoundary from './rules/utils-layer-boundary.mjs';
 import noDeadTestSkip from './rules/no-dead-test-skip.mjs';
+import noRawStorage from './rules/no-raw-storage.mjs';
 
 export default {
   rules: {
@@ -21,5 +22,6 @@ export default {
     'no-manual-protocol-version': noManualProtocolVersion,
     'utils-layer-boundary': utilsLayerBoundary,
     'no-dead-test-skip': noDeadTestSkip,
+    'no-raw-storage': noRawStorage,
   },
 };

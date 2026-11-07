@@ -105,6 +105,187 @@ export default [
     },
   },
   {
+    // PBI 2026-11-07-02: reject NEW direct `chrome.storage.local` get/set
+    // outside the SettingsRepository/StoragePort seam. The seam itself
+    // (src/utils/storage/**, src/utils/ports.ts) passes by construction
+    // inside the rule; every other pre-existing direct use below carries a
+    // reason. Entries marked "migration candidate" are settings-shaped
+    // stores a follow-up PBI may move into SettingsRepository; the rest
+    // (migration, session, queue, crypto, engine, diagnostics) stay direct.
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
+    languageOptions: {
+      parser: tsParser,
+    },
+    plugins: {
+      local: localPlugin,
+    },
+    rules: {
+      'local/no-raw-storage': [
+        'error',
+        {
+          allow: [
+            {
+              file: 'src/background/migration/migrationState.ts',
+              reason:
+                'Migration state machine (status/progress/retryCount) must work before and while settings migrate; not user settings.',
+            },
+            {
+              file: 'src/background/migration/legacyMigration.ts',
+              reason:
+                'One-shot legacy browsing-data migration: reads/removes legacy keys once, never a settings round-trip.',
+            },
+            {
+              file: 'src/background/migration/opfsRecovery.ts',
+              reason:
+                'OPFS fallback recovery owns its fallback-mode/data keys; storage-engine repair, not settings.',
+            },
+            {
+              file: 'src/background/sessionStore.ts',
+              reason:
+                'Session persistence: emergency flush, single-key session migration, startup bulk move. Session infra, not settings.',
+            },
+            {
+              file: 'src/background/queueStorageAdapter.ts',
+              reason:
+                'Offline queue load/save behind an injectable QueueStorageAdapter seam; queue infra, not settings.',
+            },
+            {
+              file: 'src/background/recordingPause.ts',
+              reason:
+                'Pause-until timestamp behind an injectable PauseStorage seam; session-scoped ephemeral state, not user settings.',
+            },
+            {
+              file: 'src/background/recordingTriggerManager.ts',
+              reason:
+                'Migration-compat read of pre-blob top-level trigger keys with blob-snapshot fallback; legacy read path.',
+            },
+            {
+              file: 'src/background/allowedUrlsSync.ts',
+              reason:
+                'Derived allowlist cache synced from the settings blob on every settings write plus startup seed (fail-closed reader); write-through cache, not a settings source.',
+            },
+            {
+              file: 'src/background/dailyPurgeHandler.ts',
+              reason:
+                'Export bookkeeping sweep: enumerates the whole store and removes expired export keys; maintenance, not settings.',
+            },
+            {
+              file: 'src/background/dashboardSqliteWiring.ts',
+              reason:
+                'One-shot cleanup remove of legacy keys during dashboard/SQLite wiring.',
+            },
+            {
+              file: 'src/background/localMarkdownExportCore.ts',
+              reason:
+                'Export file payload store (get-all plus remove of flushed keys); content data, not settings.',
+            },
+            {
+              file: 'src/background/localMarkdownExportRetention.ts',
+              reason:
+                'Export retention bookkeeping read (download IDs / erase queue); content data, not settings.',
+            },
+            {
+              file: 'src/background/webhookExport/webhookExportSettings.ts',
+              reason:
+                'Migration candidate: pre-existing per-feature settings store behind an injectable seam; move to SettingsRepository in a follow-up PBI.',
+            },
+            {
+              file: 'src/background/webhookExport/webhookExportHistory.ts',
+              reason:
+                'Feature event log behind an injectable WebhookExportStore seam; history data, not settings.',
+            },
+            {
+              file: 'src/offscreen/opfsWorker/migrationV2.ts',
+              reason:
+                'One-shot OPFS migration marker keys; migration infra, not settings.',
+            },
+            {
+              file: 'src/offscreen/sqliteEngineContext/fallbackMigration.ts',
+              reason:
+                'Fallback-mode flag cleanup during engine migration; migration infra, not settings.',
+            },
+            {
+              file: 'src/offscreen/sqliteEngineContext/migrationBackup.ts',
+              reason:
+                'Pre-migration backup payload store; storage-engine safety copy, not settings.',
+            },
+            {
+              file: 'src/offscreen/sqliteEngineHost.ts',
+              reason:
+                'OPFS fallback-mode flag owned by the storage engine itself; engine-internal state.',
+            },
+            {
+              file: 'src/offscreen/sqliteStatus.ts',
+              reason:
+                'Engine status probe read; diagnostics, not settings.',
+            },
+            {
+              file: 'src/offscreen/storageFallback.ts',
+              reason:
+                'OPFS-unavailable fallback key-value/audit store plus quota reads; implements a storage engine, not a settings client.',
+            },
+            {
+              file: 'src/dashboard/panels/asyncData/sqliteHistoryModel.ts',
+              reason:
+                'Migration candidate: sort preference behind an injectable SortPreferencePersistence seam; UI-only preference.',
+            },
+            {
+              file: 'src/dashboard/panels/diagnostic/debugModeStore.ts',
+              reason:
+                'Migration candidate: debugMode flag port centralizing the key; diagnostic flag.',
+            },
+            {
+              file: 'src/dashboard/panels/diagnostic/DiagnosticsCollector.ts',
+              reason:
+                'Quota diagnostic read (getBytesInUse, injectable via deps); diagnostics, not settings.',
+            },
+            {
+              file: 'src/popup/contentFetchGateway.ts',
+              reason:
+                'Reader-only opt-in flag read on the migration-allowlisted top-level key; the one-click flow must stay writer-free.',
+            },
+            {
+              file: 'src/utils/aiSummaryCleaner/feedbackQueue.ts',
+              reason:
+                'Cleansing feedback queue under withOptimisticLock; telemetry queue, not settings.',
+            },
+            {
+              file: 'src/utils/aiUsageTracker.ts',
+              reason:
+                'Usage metering counters plus migration-compat blob/top-level settings reads; metering, not a settings writer.',
+            },
+            {
+              file: 'src/utils/crypto/hmacKeyStore.ts',
+              reason:
+                'HMAC key envelopes plus quarantine writes must bypass settings encryption (storing keys inside the encrypted blob is circular).',
+            },
+            {
+              file: 'src/utils/crypto/kdfNegotiator.ts',
+              reason:
+                'Legacy KDF salt/secret bootstrap read for key derivation; crypto setup precedes settings decryption.',
+            },
+            {
+              file: 'src/utils/logger/storageAdapter.ts',
+              reason:
+                'Log ring-buffer store behind an injectable, serialized LogStorageAdapter; the logger must stay independent of the settings seam to avoid import cycles.',
+            },
+            {
+              file: 'src/utils/pendingStorage.ts',
+              reason:
+                'Pending-pages queue plus one-shot legacy-key migration; queue infra, not settings.',
+            },
+            {
+              file: 'src/utils/trustDb/TrustDbKernel.ts',
+              reason:
+                'Trust database blob load; security dataset, not user settings.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // PBI 2026-09-05-21: background → UI 層への上向き依存を禁止。
     // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
     files: ['src/background/**/*.ts'],
