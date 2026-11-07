@@ -14,6 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-07 大局的改善ラウンド差分 holistic-1107b（5件） ― ⬜ PBI起票中
+
+差分レビュー(前回閉鎖テーマ除外)の5候補をRICE降順でPBI化。台帳: [2026-11-07-00-backlog-holistic-1107b.md](2026-11-07-00-backlog-holistic-1107b.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 10 | [2026-11-07-10-fix-outcome-settle.md](2026-11-07-10-fix-outcome-settle.md) | 🔧非機能追加 | 4.8 | S | void 2箇所集約 |
+| ⬜ 11 | [2026-11-07-11-fix-validator-alias.md](2026-11-07-11-fix-validator-alias.md) | 🔧非機能追加 | 2.0 | S | validator alias置換(起票中) |
+| ⬜ 12 | [2026-11-07-12-refactor-purge-split.md](2026-11-07-12-refactor-purge-split.md) | 🔧非機能追加 | 0.96 | M | purgeRunner/parityPredicate分離 |
+| ⬜ 13 | [2026-11-07-13-refactor-view-dialogs.md](2026-11-07-13-refactor-view-dialogs.md) | 🔧非機能追加 | 0.64 | M | Viewダイアログ群切り出し(起票中) |
+| ⬜ 14 | [2026-11-07-14-docs-cleanser-headers.md](2026-11-07-14-docs-cleanser-headers.md) | 🔧非機能追加 | 0.5 | XS | cleanser header追記 |
+
 ### 2026-11-07 大局的改善ラウンド holistic-1107（9件） ― ✅ 9件完了・アーカイブ済み
 
 DRY/SoC/拡張性/堅牢性のレビュー所見をRICE採点し実行順にPBI化・実装。01 shim-import lint / 02 raw-storage lint / 03 shim付け替え+3削除 / 04 アダプタ委譲 / 05 ブランドpinテスト / 06 CLI対応表 / 07 queryPlan分割 / 08 validator裁定(同一・実施延期) / 09 gatewayファクトリ。最終ゲート: 全vitest 1257件・18189件緑、build緑、各サブゲート緑。test baseline超過(+4・既存branch条件)はdebt返済で446に復帰。台帳は [2026-11-07-00-backlog-holistic-1107.md](2026-11-07-00-backlog-holistic-1107.md) を参照。
