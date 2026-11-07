@@ -11,11 +11,10 @@
 
 import type { ResponseForType } from './types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
-import { asSuccessResponse } from './normalizeGatewayResponse.js';
-import { sendWithPolicy } from './sendWithPolicy.js';
+import { AI_GATEWAY_TIMEOUT_MS, defineGateway } from './gatewayFactory.js';
 import type { SendFailure } from './sendWithPolicy.js';
 
-export const REGENERATE_TIMEOUT_MS = 60_000;
+export const REGENERATE_TIMEOUT_MS = AI_GATEWAY_TIMEOUT_MS;
 /** Sentinel so callers can map the timeout to a localized message. */
 export const REGENERATE_TIMEOUT_ERROR = 'Regenerate summary request timed out';
 
@@ -29,26 +28,22 @@ export interface RegenerateSummaryParams {
 
 type RegenerateSummaryResponse = ResponseForType<'REGENERATE_SUMMARY'>;
 
+const regenerateSummaryGateway = defineGateway<
+  'REGENERATE_SUMMARY',
+  RegenerateSummaryParams,
+  RegenerateSummaryResponse
+>({
+  type: 'REGENERATE_SUMMARY',
+  timeoutMs: REGENERATE_TIMEOUT_MS,
+  timeoutError: REGENERATE_TIMEOUT_ERROR,
+  invalidMessage: 'Invalid REGENERATE_SUMMARY response',
+});
+
 export async function regenerateSummary(
   params: RegenerateSummaryParams,
 ): Promise<RegenerateSummaryResponse | SendFailure> {
-  return sendWithPolicy(
-    // Own timeout bounds the call; the seam adds version stamping and
-    // validation inside that budget. Retries stay off for the same reason
-    // as pendingRecordGateway (documented timeout contract + fake timers).
-    {
-      type: 'REGENERATE_SUMMARY',
-      payload: params,
-    },
-    {
-      timeoutMs: REGENERATE_TIMEOUT_MS,
-      timeoutError: new Error(REGENERATE_TIMEOUT_ERROR),
-      retries: 0,
-      normalize: normalizeRegenerateResponse,
-    },
-  );
-}
-
-function normalizeRegenerateResponse(raw: unknown): RegenerateSummaryResponse | SendFailure {
-  return asSuccessResponse<RegenerateSummaryResponse>(raw, 'Invalid REGENERATE_SUMMARY response');
+  // Own timeout bounds the call; the seam adds version stamping and
+  // validation inside that budget. Retries stay off for the same reason
+  // as pendingRecordGateway (documented timeout contract + fake timers).
+  return regenerateSummaryGateway.send(params);
 }

@@ -11,11 +11,10 @@
  */
 
 import type { ResponseForType } from './types.js';
-import { asSuccessResponse } from './normalizeGatewayResponse.js';
-import { sendWithPolicy } from './sendWithPolicy.js';
+import { AI_GATEWAY_TIMEOUT_MS, defineGateway } from './gatewayFactory.js';
 import type { SendFailure } from './sendWithPolicy.js';
 
-export const ASK_HISTORY_TIMEOUT_MS = 60_000;
+export const ASK_HISTORY_TIMEOUT_MS = AI_GATEWAY_TIMEOUT_MS;
 /** Sentinel so callers can map the timeout to a localized message. */
 export const ASK_HISTORY_TIMEOUT_ERROR = 'Ask history request timed out';
 
@@ -26,21 +25,13 @@ export interface AskHistoryParams {
 
 type AskHistoryResponse = ResponseForType<'ASK_HISTORY'>;
 
-export async function askHistory(params: AskHistoryParams): Promise<AskHistoryResponse | SendFailure> {
-  return sendWithPolicy(
-    {
-      type: 'ASK_HISTORY',
-      payload: params,
-    },
-    {
-      timeoutMs: ASK_HISTORY_TIMEOUT_MS,
-      timeoutError: new Error(ASK_HISTORY_TIMEOUT_ERROR),
-      retries: 0,
-      normalize: normalizeAskHistoryResponse,
-    },
-  );
-}
+const askHistoryGateway = defineGateway<'ASK_HISTORY', AskHistoryParams, AskHistoryResponse>({
+  type: 'ASK_HISTORY',
+  timeoutMs: ASK_HISTORY_TIMEOUT_MS,
+  timeoutError: ASK_HISTORY_TIMEOUT_ERROR,
+  invalidMessage: 'Invalid ASK_HISTORY response',
+});
 
-function normalizeAskHistoryResponse(raw: unknown): AskHistoryResponse | SendFailure {
-  return asSuccessResponse<AskHistoryResponse>(raw, 'Invalid ASK_HISTORY response');
+export async function askHistory(params: AskHistoryParams): Promise<AskHistoryResponse | SendFailure> {
+  return askHistoryGateway.send(params);
 }

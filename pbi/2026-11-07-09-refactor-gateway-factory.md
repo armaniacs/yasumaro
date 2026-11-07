@@ -73,8 +73,8 @@ Then 3 gateway とも従来と同じ `SendFailure` 形式で失敗を返す
 
 ## DoD (Definition of Done)
 
-- [ ] AC1 から AC6 を全て満たす
-- [ ] 既存 messaging テストが全て成功する
-- [ ] type-check が成功する
-- [ ] lint が成功する
-- [ ] 外部仕様の変更がないことを差分レビューで確認する
+- [x] AC1 から AC6 を全て満たす
+- [x] 既存 messaging テストが全て成功する
+- [x] type-check が成功する
+- [x] lint が成功する
+- [x] 外部仕様の変更がないことを差分レビューで確認する
