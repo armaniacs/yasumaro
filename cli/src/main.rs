@@ -2,6 +2,16 @@ use std::io::Write as _;
 
 use clap::Parser;
 
+/// Task 2 modules: config file handling + read-only DB layer.
+///
+/// Subcommand wiring arrives in Task 5; until then `main` keeps its Task 1
+/// behavior. The `allow` keeps `dead_code` quiet for the not-yet-called
+/// public API (binary crates do not exempt unused `pub` items).
+#[allow(dead_code)]
+mod config;
+#[allow(dead_code)]
+mod db;
+
 /// Process exit codes shared by all later tasks.
 pub const EXIT_OK: i32 = 0;
 pub const EXIT_ERROR: i32 = 1;
