@@ -87,5 +87,5 @@ Scenario: search と listing の dispatch は planQueryMode に一元化され�
 - [x] test が固定時間待ちを使わない
 - [x] 振る舞い変更がないことが diff で確認できる
 - [x] `npm run type-check` が pass する
-- [ ] `npm run validate` が pass する (最終ゲートで確認する)
+- [x] `npm run validate` が pass する (最終ゲート一式: type-check・lint・全vitest・build・各サブゲート緑。test baseline 超過は既存branch条件だったため debt 4件返済で446に復帰)
 - [x] 関連ドキュメントの更新が不要であることが確認済みである

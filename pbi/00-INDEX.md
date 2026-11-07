@@ -14,21 +14,21 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-07 大局的改善ラウンド holistic-1107（9件） ― ⬜ 未着手
+### 2026-11-07 大局的改善ラウンド holistic-1107（9件） ― ✅ 9件完了・アーカイブ済み
 
-大局的コードレビュー(DRY/SoC/拡張性/堅牢性)テーマTOP 5を実行可能単位に分解した9候補。RICE降順=実行順。台帳: [2026-11-07-00-backlog-holistic-1107.md](2026-11-07-00-backlog-holistic-1107.md)。
+DRY/SoC/拡張性/堅牢性のレビュー所見をRICE採点し実行順にPBI化・実装。01 shim-import lint / 02 raw-storage lint / 03 shim付け替え+3削除 / 04 アダプタ委譲 / 05 ブランドpinテスト / 06 CLI対応表 / 07 queryPlan分割 / 08 validator裁定(同一・実施延期) / 09 gatewayファクトリ。最終ゲート: 全vitest 1257件・18189件緑、build緑、各サブゲート緑。test baseline超過(+4・既存branch条件)はdebt返済で446に復帰。台帳は [2026-11-07-00-backlog-holistic-1107.md](2026-11-07-00-backlog-holistic-1107.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-11-07-01-refactor-shim-import-lint.md](2026-11-07-01-refactor-shim-import-lint.md) | 🔧非機能追加 | 6.0 | S | shim新規import禁止lint拡大。Quick Win |
-| ⬜ 02 | [2026-11-07-02-refactor-raw-storage-lint.md](2026-11-07-02-refactor-raw-storage-lint.md) | 🔧非機能追加 | 4.0 | S | raw storage検出lint。04の先行 |
-| ⬜ 03 | [2026-11-07-03-refactor-shim-rewire-remove.md](2026-11-07-03-refactor-shim-rewire-remove.md) | 🔧非機能追加 | 1.67 | M | 旧経路付け替え+参照ゼロshim削除 |
-| ⬜ 04 | [2026-11-07-04-refactor-raw-storage-adapter.md](2026-11-07-04-refactor-raw-storage-adapter.md) | 🔧非機能追加 | 1.6 | M | raw呼び出しのアダプタ委譲。02完了後 |
-| ⬜ 05 | [2026-11-07-05-refactor-brand-pin-test.md](2026-11-07-05-refactor-brand-pin-test.md) | 🔧非機能追加 | 1.2 | S | ブランド生成点固定テスト。07の先行 |
-| ⬜ 06 | [2026-11-07-06-docs-cli-parity-map.md](2026-11-07-06-docs-cli-parity-map.md) | 🔧非機能追加 | 1.0 | S | CLI parity対応表コメント(docs) |
-| ⬜ 07 | [2026-11-07-07-refactor-queryplan-split.md](2026-11-07-07-refactor-queryplan-split.md) | 🔧非機能追加 | 0.8 | L | queryPlan分割。05完了後 |
-| ⬜ 08 | [2026-11-07-08-investigate-validator-unify.md](2026-11-07-08-investigate-validator-unify.md) | 🔧非機能追加 | 0.75 | S | validator二系統の裁定(調査) |
-| ⬜ 09 | [2026-11-07-09-refactor-gateway-factory.md](2026-11-07-09-refactor-gateway-factory.md) | 🔧非機能追加 | 0.64 | M | gatewayファクトリ化+3委譲 |
+| ~~01~~ | [2026-11-07-01-refactor-shim-import-lint.md](../dev-docs/archived/pbi/2026-11-07-01-refactor-shim-import-lint.md) | 🔧非機能追加 | 6.0 | S | ✅ 完了。新規shim importをgateで拒否 |
+| ~~02~~ | [2026-11-07-02-refactor-raw-storage-lint.md](../dev-docs/archived/pbi/2026-11-07-02-refactor-raw-storage-lint.md) | 🔧非機能追加 | 4.0 | S | ✅ 完了。no-raw-storageルール+既存台帳化 |
+| ~~03~~ | [2026-11-07-03-refactor-shim-rewire-remove.md](../dev-docs/archived/pbi/2026-11-07-03-refactor-shim-rewire-remove.md) | 🔧非機能追加 | 1.67 | M | ✅ 完了。3 shim削除・残は grandfather |
+| ~~04~~ | [2026-11-07-04-refactor-raw-storage-adapter.md](../dev-docs/archived/pbi/2026-11-07-04-refactor-raw-storage-adapter.md) | 🔧非機能追加 | 1.6 | M | ✅ 完了。5箇所をport委譲へ |
+| ~~05~~ | [2026-11-07-05-refactor-brand-pin-test.md](../dev-docs/archived/pbi/2026-11-07-05-refactor-brand-pin-test.md) | 🔧非機能追加 | 1.2 | S | ✅ 完了。pinテスト14件 |
+| ~~06~~ | [2026-11-07-06-docs-cli-parity-map.md](../dev-docs/archived/pbi/2026-11-07-06-docs-cli-parity-map.md) | 🔧非機能追加 | 1.0 | S | ✅ 完了。対応表コメントのみ |
+| ~~07~~ | [2026-11-07-07-refactor-queryplan-split.md](../dev-docs/archived/pbi/2026-11-07-07-refactor-queryplan-split.md) | 🔧非機能追加 | 0.8 | L | ✅ 完了。909行→353行に純粋化 |
+| ~~08~~ | [2026-11-07-08-investigate-validator-unify.md](../dev-docs/archived/pbi/2026-11-07-08-investigate-validator-unify.md) | 🔧非機能追加 | 0.75 | S | ✅ 裁定済み。同一・alias実施は延期 |
+| ~~09~~ | [2026-11-07-09-refactor-gateway-factory.md](../dev-docs/archived/pbi/2026-11-07-09-refactor-gateway-factory.md) | 🔧非機能追加 | 0.64 | M | ✅ 完了。3 gateway委譲・定数集約 |
 
 ### 2026-11-07 AIモデル定期レビュー（1件） ― 🔶 初回分実施済み・四半期運用として継続
 

@@ -75,7 +75,7 @@ Outside-In で進める。まず上記テストで失敗条件を確認し、次
 ## Definition of Done
 
 - [x] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] `npm test` がグリーンである
+- [x] `npm test` がグリーンである
 - [x] `npm run type-check` がグリーンである
 - [x] コードレビュー完了
 - [x] ドキュメント更新済み
