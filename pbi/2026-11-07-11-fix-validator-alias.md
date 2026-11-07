@@ -84,12 +84,12 @@ Then すべて緑になる
 
 ## 受け入れ条件
 
-- [ ] src/messaging/sqliteValidators.ts の2行定義が1行の re-export に置き換わっていること
-- [ ] src/messaging/validators.ts 側の定義と内部利用が変わっていないこと
-- [ ] sqliteValidators.ts と validators.ts の間に循環参照がないこと
-- [ ] messaging の既存テストが緑であること
-- [ ] 型チェックが緑であること
-- [ ] 公開 API の振る舞いに変更がないこと
+- [x] src/messaging/sqliteValidators.ts の2行定義が1行の re-export に置き換わっていること
+- [x] src/messaging/validators.ts 側の定義と内部利用が変わっていないこと
+- [x] sqliteValidators.ts と validators.ts の間に循環参照がないこと
+- [x] messaging の既存テストが緑であること
+- [x] 型チェックが緑であること
+- [x] 公開 API の振る舞いに変更がないこと
 
 ## テスト戦略
 
@@ -101,9 +101,9 @@ Then すべて緑になる
 
 ## DoD
 
-- [ ] 1行の re-export への置き換えが完了している
-- [ ] 循環参照がない
-- [ ] messaging の既存テストが緑である
-- [ ] 型チェックが緑である
-- [ ] 日本語本文・英語の code/identifier・Shift-JIS 安全文字だけで書かれている
-- [ ] 絵文字を使っていない
+- [x] 1行の re-export への置き換えが完了している
+- [x] 循環参照がない
+- [x] messaging の既存テストが緑である
+- [x] 型チェックが緑である
+- [x] 日本語本文・英語の code/identifier・Shift-JIS 安全文字だけで書かれている
+- [x] 絵文字を使っていない

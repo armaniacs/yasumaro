@@ -7,6 +7,7 @@
 
 import type { AuditLogEntry, BrowsingLogEntry } from '../utils/sqlite-types.js';
 import type { SqliteStatusExtras } from './sqliteMessages.js';
+import { isFiniteNumber } from './validators.js';
 
 export function requiredFiniteNumber(value: unknown, field: string): number {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
@@ -58,9 +59,7 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
-export function isFiniteNumber(value: unknown): value is number {
-  return typeof value === 'number' && Number.isFinite(value);
-}
+export { isFiniteNumber } from './validators.js';
 
 export function requiredRows<T>(value: unknown, field: string, isRow: (value: unknown) => value is T): T[] {
   if (!Array.isArray(value) || !value.every(isRow)) {
