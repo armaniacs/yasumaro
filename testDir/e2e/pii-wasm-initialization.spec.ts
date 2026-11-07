@@ -67,23 +67,45 @@ test.describe('PII sanitizer WASM initialization @interaction @extension', () =>
 
     // Trigger a real privacy-pipeline pass containing WASM-coverable PII
     // (email is one of the 21 patterns WASM now covers end-to-end).
-    await sendMessage(page, 'PREVIEW_RECORD', {
+    const response = (await sendMessage(page, 'PREVIEW_RECORD', {
       url: 'https://example.com/wasm-init-check',
       title: 'WASM init check',
       content: 'contact me at wasmcheck@example.com for details',
-    });
+    })) as {
+      success?: boolean;
+      skipped?: boolean;
+      maskedCount?: number;
+      error?: unknown;
+    } | null | undefined;
 
-    // The warning is written by the service worker before PREVIEW_RECORD
-    // resolves, so the pipeline has already run by now. What is still in
-    // flight is the console EVENT's delivery back to this process, and the
-    // successful path emits nothing to the service worker's console (the
-    // logger writes to chrome.storage; its console branch is the no-chrome
-    // offscreen path). There is therefore no condition to await: the only
-    // observable is an absence, and polling for the warning would make this
-    // assertion pass by construction. The bounded settle below covers the
-    // event-delivery window and nothing else.
-    // eslint-disable-next-line local/no-fixed-wait -- negative assertion with no awaitable condition; see comment
-    await page.waitForTimeout(500);
+    // Positive anchors (PBI 2026-11-08-09: the fixed 500ms settle is gone).
+    // PREVIEW_RECORD resolves only after the pipeline ran the PII stage to
+    // completion: the WASM availability probe and the sanitize call both run
+    // inside pipeline.record, and the fallback warning (if any) is emitted
+    // before sendResponse. So a resolved success with masked output proves
+    // the absence assertion below is not vacuous - the sanitizer
+    // demonstrably ran on WASM-coverable input.
+    expect(
+      response?.success,
+      `PREVIEW_RECORD must succeed for the WASM guard to mean anything; got ${JSON.stringify(response)}`,
+    ).toBe(true);
+    expect(
+      response?.skipped,
+      'a skipped preview never runs the sanitizer; the guard would pass by construction',
+    ).not.toBe(true);
+    expect(
+      typeof response?.maskedCount === 'number' ? response.maskedCount : -1,
+      `PII stage must mask the email in the probe content; got ${JSON.stringify(response)}`,
+    ).toBeGreaterThanOrEqual(1);
+
+    // Delivery drain, not a wait: the warning (if any) precedes sendResponse
+    // on the same CDP session, so a service-worker round-trip ordered after
+    // the resolved response guarantees any earlier console event has already
+    // been dispatched to consoleMessages. No duration is hoped for - under
+    // load this costs one round-trip, not a guessed constant.
+    await serviceWorker!.evaluate(async () => {
+      await chrome.storage.local.get('sanitization_logs');
+    });
 
     const wasmFallbackWarning = consoleMessages.find((m) =>
       m.includes('PII WASM module unavailable') || m.includes('PII WASM sanitize call failed')
