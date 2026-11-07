@@ -23,6 +23,7 @@ tmp/
 # `npm run build:wasm`, so pkg/ itself is a rebuildable intermediate.
 wasm/*/target/
 wasm/*/pkg/
+cli/target/
 
 
 
