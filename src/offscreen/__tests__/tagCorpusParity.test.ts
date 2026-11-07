@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { rowMatchesTagLike, tagMatchesFilter } from '../queryPlan.js';
+import { rowMatchesTagLike } from '../../utils/tagLike.js';
+import { tagMatchesFilter } from '../queryPlan.js';
 
 /**
  * Tag-corpus test — the executable contract for cross-backend tag semantics

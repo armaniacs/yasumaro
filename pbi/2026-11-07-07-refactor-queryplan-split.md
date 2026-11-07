@@ -49,12 +49,12 @@ Scenario: 公開 API と SQL 出力が変わらない
 ```
 
 ## 受け入れ基準
-- [ ] policy 部分 (mode/cap/brand/ExtraWhere) と statement 構築部分 (QuerySpec/SQL 組み立て/purge statements) が別 module に分かれ、依存方向が policy <- statement または共有 builder への一方向である。
-- [ ] 分割後の plan 層は pure である。`withTransaction` の import と実行を持たず、`rowMatchesTagLike` の再 export を持たず、副作用のある purge 実行 (`runPurgeSequence`) を含まない。
-- [ ] 公開 API の形が同一である。既存 caller (`IdbVfsBackend`、`storageFallback`、`opfsWorker/crudHandlers`) の import path と呼び出し signature に破壊的変更がない。やむを得ない移動には再 export の互換 shim を残す。
-- [ ] parity/golden tests を TDD の順序で先に固定する。refactor 前に現行 SQL 出力を pin し、refactor 後に差分ゼロであることを示す。
-- [ ] `withTransaction` と `rowMatchesTagLike` の参照が実行層 (`recordsRepo`、`opfsWorker/handlers`、`sqliteTransaction`、`utils/tagLike`) に寄り、plan 層から消える。
-- [ ] `AlreadyCappedQuery` の brand 生成が `applyReadPolicy` 経由に固定されたままである。PBI 05 の pin test が全て green のままである。
+- [x] policy 部分 (mode/cap/brand/ExtraWhere) と statement 構築部分 (QuerySpec/SQL 組み立て/purge statements) が別 module に分かれ、依存方向が policy <- statement または共有 builder への一方向である。
+- [x] 分割後の plan 層は pure である。`withTransaction` の import と実行を持たず、`rowMatchesTagLike` の再 export を持たず、副作用のある purge 実行 (`runPurgeSequence`) を含まない。
+- [x] 公開 API の形が同一である。既存 caller (`IdbVfsBackend`、`storageFallback`、`opfsWorker/crudHandlers`) の import path と呼び出し signature に破壊的変更がない。やむを得ない移動には再 export の互換 shim を残す。
+- [x] parity/golden tests を TDD の順序で先に固定する。refactor 前に現行 SQL 出力を pin し、refactor 後に差分ゼロであることを示す。
+- [x] `withTransaction` と `rowMatchesTagLike` の参照が実行層 (`recordsRepo`、`opfsWorker/handlers`、`sqliteTransaction`、`utils/tagLike`) に寄り、plan 層から消える。
+- [x] `AlreadyCappedQuery` の brand 生成が `applyReadPolicy` 経由に固定されたままである。PBI 05 の pin test が全て green のままである。
 
 ## Test Strategy
 - 方針は `dev-docs/TEST_RULE.md` に従う。固定時間待ちは使わない。非同期の完了は Promise の await または条件待ちで確認する。
@@ -67,10 +67,10 @@ Scenario: 公開 API と SQL 出力が変わらない
 - 8SP
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動 test として実装され pass する
-- [ ] golden test が refactor 前に pin され refactor 後に差分ゼロである
-- [ ] plan 層が withTransaction と rowMatchesTagLike を参照しないことが grep で確認できる
-- [ ] 公開 API の互換性が型検査で確認できる
-- [ ] `npm run type-check` が pass する
-- [ ] 関連 vitest suite が pass する
-- [ ] 振る舞い変更がないことが diff で確認できる
+- [x] 全 BDD シナリオが自動 test として実装され pass する
+- [x] golden test が refactor 前に pin され refactor 後に差分ゼロである
+- [x] plan 層が withTransaction と rowMatchesTagLike を参照しないことが grep で確認できる
+- [x] 公開 API の互換性が型検査で確認できる
+- [x] `npm run type-check` が pass する
+- [x] 関連 vitest suite が pass する
+- [x] 振る舞い変更がないことが diff で確認できる
