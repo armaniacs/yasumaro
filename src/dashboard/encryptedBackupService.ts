@@ -13,6 +13,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
 import { isMasterPasswordEnabled, unlockWithPassword } from '../utils/storage/encryptionSession.js';
+import { isLocked } from '../utils/storage/authGuard.js';
 
 export const BACKUP_PAYLOAD_VERSION = 1;
 
@@ -103,14 +104,23 @@ export async function importEncryptedBackup(
   // WHY: the dashboard auth modal verifies the password but deliberately
   // does not unlock the session, and a fresh set starts locked — so a
   // correct password alone would still fail below at setAll with
-  // ENCRYPTION_LOCKED. Authenticated decryption just proved the password;
-  // establish the session from it (the same takeover changeMasterPassword
-  // performs) before touching settings. Skipped when no master password is
-  // set: the anonymous-key path then applies untouched.
+  // ENCRYPTION_LOCKED. Three cases after decryption proved the backup
+  // password: (1) no master password is set — the anonymous-key path
+  // applies untouched, nothing to unlock; (2) a master password is set and
+  // the session is already unlocked — skip the unlock attempt entirely,
+  // because the backup password is not necessarily the master password and
+  // trying it would fail (or disturb) a ready session; (3) a master
+  // password is set and the session is locked — establish the session from
+  // the verified password (the same takeover changeMasterPassword performs)
+  // before touching settings. A mismatch in case (3) means the backup
+  // password is not the master password, so the error tells the user to
+  // unlock with the master password first instead of failing at setAll.
   if (await isMasterPasswordEnabled()) {
-    const unlocked = await unlockWithPassword(password);
-    if (!unlocked) {
-      return { success: false, error: 'Failed to unlock session with the provided password' };
+    if (await isLocked()) {
+      const unlocked = await unlockWithPassword(password);
+      if (!unlocked) {
+        return { success: false, error: 'Could not unlock the encryption session with the provided password. Unlock with the master password first, then retry the import.' };
+      }
     }
   }
 

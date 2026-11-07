@@ -53,10 +53,15 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   unlockWithPassword: vi.fn(),
 }));
 
+vi.mock('../../utils/storage/authGuard.js', () => ({
+  isLocked: vi.fn(),
+}));
+
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { exportDb } from '../exportLogsService.js';
 import { restoreDb } from '../dashboardSqliteService.js';
 import { isMasterPasswordEnabled, unlockWithPassword } from '../../utils/storage/encryptionSession.js';
+import { isLocked } from '../../utils/storage/authGuard.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
@@ -69,6 +74,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(isMasterPasswordEnabled).mockResolvedValue(false);
   vi.mocked(unlockWithPassword).mockResolvedValue(true);
+  // Fail closed by default, matching a fresh set (lockSession writes
+  // IS_LOCKED=true); each master-enabled test sets its own state below.
+  vi.mocked(isLocked).mockResolvedValue(true);
 });
 
 describe('exportEncryptedBackup / importEncryptedBackup', () => {
@@ -258,6 +266,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('unlocks the session with the verified password when a master password is set', async () => {
     vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(isLocked).mockResolvedValue(true);
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
@@ -270,6 +279,24 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     const unlockOrder = vi.mocked(unlockWithPassword).mock.invocationCallOrder[0]!;
     const setAllOrder = vi.mocked(settingsRepository.setAll).mock.invocationCallOrder[0]!;
     expect(unlockOrder).toBeLessThan(setAllOrder);
+  });
+
+  it('skips the unlock attempt when a master password is set but the session is already unlocked', async () => {
+    vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(isLocked).mockResolvedValue(false);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    // The backup password is not necessarily the master password: the
+    // session is ready, so restore must proceed without trying it.
+    const envelope = await exportEncryptedBackup('backup-password');
+    const result = await importEncryptedBackup(envelope, 'backup-password');
+
+    expect(result.success).toBe(true);
+    expect(unlockWithPassword).not.toHaveBeenCalled();
+    expect(restoreDb).toHaveBeenCalledTimes(1);
+    expect(settingsRepository.setAll).toHaveBeenCalledTimes(1);
   });
 
   it('leaves the session locked path untouched when no master password is set', async () => {
@@ -287,6 +314,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('fails import without touching db or settings when unlock fails', async () => {
     vi.mocked(isMasterPasswordEnabled).mockResolvedValue(true);
+    vi.mocked(isLocked).mockResolvedValue(true);
     vi.mocked(unlockWithPassword).mockResolvedValue(false);
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
@@ -296,6 +324,7 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
     expect(result.success).toBe(false);
     expect((result as { error: string }).error).toContain('unlock');
+    expect((result as { error: string }).error).toContain('master password');
     expect(restoreDb).not.toHaveBeenCalled();
     expect(settingsRepository.setAll).not.toHaveBeenCalled();
   });
