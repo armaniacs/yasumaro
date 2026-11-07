@@ -130,6 +130,34 @@ describe('handleRestore — own FTS trigger allowlist', () => {
     ).resolves.toEqual({ restored: true });
   });
 
+  it('accepts every CREATE TRIGGER statement in FTS5_STATEMENTS (extractor drift guard)', async () => {
+    // The restore validator allowlists exact trigger SQL derived from
+    // FTS5_STATEMENTS, but its name extractor only handles simple
+    // identifiers. If a future schema trigger uses a form the extractor
+    // cannot parse, the validator would silently reject genuine backups —
+    // so every CREATE TRIGGER statement must both parse to a name and pass
+    // the restore validation path below.
+    const { FTS5_STATEMENTS } = await import('../schema.js');
+    const triggerStatements = FTS5_STATEMENTS.filter((s) => /CREATE TRIGGER/i.test(s));
+    expect(triggerStatements.length).toBeGreaterThan(0);
+    // SQLite drops IF NOT EXISTS when storing the trigger text — mirror the
+    // real sqlite_master form (verified against better-sqlite3).
+    const ownTriggers = triggerStatements.map((sql) => {
+      const stored = sql.replace(/\bIF NOT EXISTS\b/gi, ' ');
+      const name = /CREATE TRIGGER\s+([A-Za-z_]\w*)/i.exec(stored)?.[1] ?? '';
+      // A future trigger the simple-identifier extractor cannot name fails
+      // here loudly instead of being dropped from the allowlist silently.
+      expect(name, `trigger statement has no simple-identifier name: ${stored.slice(0, 80)}`).not.toBe('');
+      return { name, sql: stored };
+    });
+    expect(ownTriggers).toHaveLength(triggerStatements.length);
+    currentQueryFn = makeQueryFn(false, ownTriggers);
+    const handleRestore = await loadHandleRestore();
+    await expect(
+      handleRestore(new Uint8Array([1]), () => null, () => undefined, async () => undefined),
+    ).resolves.toEqual({ restored: true });
+  });
+
   it('rejects a backup with an unknown trigger and cleans up the temp file', async () => {
     currentQueryFn = makeQueryFn(false, [
       { name: 'evil_exfiltrate', sql: 'CREATE TRIGGER evil_exfiltrate AFTER INSERT ON browsing_logs BEGIN SELECT 1; END' },

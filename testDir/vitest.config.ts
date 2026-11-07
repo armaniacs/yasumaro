@@ -32,7 +32,7 @@ const exclude = [
   '**/testDir/e2e/**',
   '**/.kilo/**',
   '**/.claude/**',
-  '**/.worktrees/**',
+  '**/.worktrees/**', // Worktree checkouts must not be collected as test files.
   '**/video-*/**',
   '**/.vulnhunter-fix/**',
   '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',

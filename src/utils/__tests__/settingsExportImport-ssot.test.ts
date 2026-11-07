@@ -116,6 +116,24 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
     expect(validateExportData(exportData(settings, apiKeyExcluded))).toBe(false);
   });
 
+  test('current-format payload WITH the additive official OpenAI fields stays valid and keeps their values', () => {
+    // Keys-excluded export carrying the official model field.
+    const excluded = fullNonApiSettings();
+    excluded['openai_official_model'] = 'gpt-6-luna-custom';
+    expect(validateExportData(exportData(excluded, true))).toBe(true);
+    expect(excluded['openai_official_model']).toBe('gpt-6-luna-custom');
+
+    // Keys-included export carrying both official fields.
+    const included: Record<string, unknown> = { ...fullNonApiSettings() };
+    for (const field of API_KEY_FIELDS) {
+      included[field] = `${field}-value`;
+    }
+    included['openai_official_model'] = 'gpt-6-luna-custom';
+    expect(validateExportData(exportData(included, false))).toBe(true);
+    expect(included['openai_official_model']).toBe('gpt-6-luna-custom');
+    expect(included['openai_official_api_key']).toBe('openai_official_api_key-value');
+  });
+
   test('payload missing a derived-only key is rejected', () => {
     const settings = fullNonApiSettings();
     delete settings['obsidian_host'];
