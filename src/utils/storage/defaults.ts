@@ -49,6 +49,7 @@ export const DEFAULT_SETTINGS: DeepReadonly<Settings> = {
     [StorageKeys.SUMMARY_MIN_LENGTH]: 10,
     [StorageKeys.AI_PROVIDER_BREAKER_ENABLED]: true,
     [StorageKeys.OPENAI_OFFICIAL_API_KEY]: '',
+    // OPENAI_OFFICIAL_MODEL の有効性は四半期レビュー PBI (pbi/2026-11-07-backlog-ai-model-review.md) で追跡する。
     [StorageKeys.OPENAI_OFFICIAL_MODEL]: 'gpt-6-luna',
     [StorageKeys.OPENAI_BASE_URL]: 'https://api.groq.com/openai/v1',
     [StorageKeys.OPENAI_API_KEY]: '',
