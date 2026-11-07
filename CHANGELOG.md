@@ -37,6 +37,10 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 追加 / Added
+
+- OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストも設定済み上限を適用。既存の互換スロットは設定移動なしで対応） / Added an official OpenAI API provider ("OpenAI" pinned to `https://api.openai.com/v1`; uses `max_completion_tokens` without model-name branching and omits temperature, connection tests use the configured budget; existing compatible slots keep working without migration)
+
 ### 修正 / Fixed
 
 - 正規バックアップの復元までトリガー検出で拒否されていた問題（自前のFTS同期トリガーまで一律拒否していた。スキーマSSOTと完全一致するもののみ許可し、未知・改竄トリガーは拒否のまま） / Genuine backups were rejected by trigger detection (even the schema's own FTS sync triggers; only byte-identical schema triggers pass now, unknown or tampered triggers stay rejected)
