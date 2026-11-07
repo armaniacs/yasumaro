@@ -472,6 +472,8 @@ feat(domainFilter): uBlock形式のフィルターインポート機能
 
 GitHub Release を作成する際は、`CHANGELOG.md` の該当セクションをリリースノートとして使用し、冒頭には `CHANGELOG.md` 先頭に記載の Yasumaro ブランド案内を含めてください。
 
+タグ push(`v*`)を起点とするリリースでは、拡張機能アーカイブと並行して Rust 製 CLI(`cli/`)が crates.io へ公開されます(`scripts/publish/cargo.mjs`)。事前にリポジトリの secrets へ `CARGO_REGISTRY_TOKEN`(crates.io の publish 権限付きトークン)の登録が必要です。`cli/Cargo.toml` の版は `package.json` と一致させてください(不一致時は公開前に失敗します)。再実行時は公開済み版の再公開を成功扱いにします。
+
 ---
 
 ## English
@@ -937,3 +939,5 @@ Include for bug reports:
 ### Release Process
 
 When creating a GitHub Release, use the corresponding section in `CHANGELOG.md` as the release notes and include the Yasumaro brand notice from the top of `CHANGELOG.md` at the top.
+
+A tag push (`v*`) also publishes the Rust CLI (`cli/`) to crates.io (`scripts/publish/cargo.mjs`) alongside the extension archives. Register `CARGO_REGISTRY_TOKEN` (a crates.io token with publish scope) in the repository secrets beforehand. Keep `cli/Cargo.toml` in sync with `package.json` (a mismatch fails the step before publishing). Re-runs treat an already-published version as success.

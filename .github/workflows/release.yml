@@ -88,6 +88,33 @@ jobs:
             dist/yasumaro-${{ steps.version.outputs.version }}-edge.zip
           draft: false
           prerelease: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master (2026-09)
+        with:
+          toolchain: stable
+      - name: Cache cargo registry for CLI publish
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-cargo-cli-${{ hashFiles('cli/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-cli-
+      - name: Publish CLI to crates.io
+        # Independent of the store steps: a store failure must not skip the
+        # crate publish (same failure policy as Edge/AMO). Re-runs stay green:
+        # scripts/publish/cargo.mjs treats "already uploaded" as success.
+        # Requires the CARGO_REGISTRY_TOKEN repository secret (crates.io token
+        # with publish scope for the `yasumaro` crate).
+        if: ${{ always() }}
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        # Version-drift guard (package.json vs cli/Cargo.toml), dry-run gate,
+        # and publish live in scripts/publish/cargo.mjs (covered by
+        # scripts/__tests__/publish-stores.test.ts); inputs stay on env and
+        # the token is never logged.
+        run: node scripts/publish/cargo.mjs
       - name: Upload to Chrome Web Store
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
