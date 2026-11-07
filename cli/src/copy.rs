@@ -14,8 +14,8 @@
 //!   are no candidates at all).
 //!
 //! Only `std::process::Command` is used (no extra clipboard crates). The
-//! [`CommandRunner`] seam lets tests inject a mock so the suite never touches
-//! the real clipboard.
+//! `runner` parameter of [`copy_with`] is the injection seam that lets tests
+//! pass a mock so the suite never touches the real clipboard.
 
 use std::io::Write as _;
 use std::process::{Command, Stdio};
@@ -35,19 +35,6 @@ pub enum AttemptError {
     /// The helper launched but failed (spawn error or non-zero exit).
     Failed(String),
 }
-
-/// Injectable command seam: run `program` with `args`, feeding `input` on
-/// stdin encoded as UTF-8.
-///
-/// Returns `Ok(())` on exit status 0, `Err(AttemptError::NotFound)` when the
-/// program is missing, and `Err(AttemptError::Failed)` otherwise. Production
-/// uses [`real_runner`]; tests inject a mock with this exact signature.
-///
-/// Kept as a named alias (rather than inlined) so the seam's contract has
-/// one canonical spelling; it is only named in docs, hence the allowance.
-/// The production path exercises it through [`copy_with`]/[`real_runner`].
-#[allow(dead_code)]
-pub type CommandRunner = dyn Fn(&str, &[&str], &str) -> Result<(), AttemptError>;
 
 /// Candidate `(program, args)` backends for a JS-style platform tag.
 fn candidates(platform: &str) -> Vec<(&'static str, Vec<&'static str>)> {
@@ -108,7 +95,7 @@ pub fn copy_to_clipboard(text: &str) -> Result<(), String> {
     copy_with(text, current_platform(), &real_runner)
 }
 
-/// Production [`CommandRunner`] over `std::process::Command`.
+/// Production runner over `std::process::Command`.
 fn real_runner(program: &str, args: &[&str], input: &str) -> Result<(), AttemptError> {
     let mut child = Command::new(program)
         .args(args)
@@ -162,7 +149,7 @@ mod tests {
         input: String,
     }
 
-    /// Build a mock [`CommandRunner`] replaying `results` in order (the last
+    /// Build a mock runner replaying `results` in order (the last
     /// result repeats when more calls arrive than results).
     fn mock_runner(
         results: Vec<Result<(), AttemptError>>,
