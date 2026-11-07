@@ -80,10 +80,9 @@ export class IdbVfsBackend implements StorageBackend {
   /**
    * The host's half of the shared search skeleton: `execWithCache` yields
    * positional values in SELECT order, so rows decode positionally and a COUNT
-   * row is its first cell. `per-path` qualification qualifies the FTS JOIN's
-   * filter columns and leaves the unaliased LIKE path alone — one unqualified
-   * projection for both throws `no such column: b.is_deleted` on the short-text
-   * path, so the two paths cannot share one projection.
+   * row is its first cell. Filter qualification is per-path in the skeleton
+   * (FTS JOIN alias `b`, unaliased LIKE) — enforced by
+   * `buildFtsSearchStatements`, so the two paths cannot share one projection.
    */
   private get searchRowSource(): SearchRowSource<SqliteValue[], SearchRow> {
     return {
@@ -157,7 +156,6 @@ export class IdbVfsBackend implements StorageBackend {
         // 'error' is the host's policy, and spec.error above already rejected
         // anything out of the whitelist — this is the belt to that braces.
         onInvalid: 'error',
-        extraQualification: 'per-path',
         fts5Available: this.engine.fts5Available,
       });
       return { success: true, rows, total };

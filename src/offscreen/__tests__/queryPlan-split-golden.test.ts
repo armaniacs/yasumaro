@@ -76,14 +76,17 @@ describe('queryPlan split golden', () => {
         limit: 10,
         offset: 5,
       });
+      // PBI 2026-11-08-05: the FTS builder enforces the JOIN-alias
+      // qualification (was pass-through, so an unqualified fragment stayed
+      // unqualified). Host output is unchanged; the pin moved with the fix.
       expect(stmts.countSql).toBe(
         'SELECT COUNT(*) AS c FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id' +
-          ' WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND domain = ?',
+          ' WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.domain = ?',
       );
       expect(stmts.rowsSql).toBe(
         'SELECT b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank' +
           ' FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id' +
-          ' WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND domain = ? ORDER BY rank LIMIT ? OFFSET ?',
+          ' WHERE browsing_logs_fts MATCH ? AND b.is_deleted = 0 AND b.domain = ? ORDER BY rank LIMIT ? OFFSET ?',
       );
       expect(stmts.countParams).toEqual(['"hello"', 'example.com']);
       expect(stmts.rowsParams).toEqual(['"hello"', 'example.com', 10, 5]);

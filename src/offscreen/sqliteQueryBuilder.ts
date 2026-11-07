@@ -430,6 +430,21 @@ export function withTagParams(baseParams: SqliteValue[], tagFilter: TagFilterCon
 }
 
 /**
+ * PBI 2026-11-08-05: FTS-side qualification enforcement. The FTS statements
+ * join `browsing_logs AS b`, so every filter column in the fragment must ride
+ * the alias. Callers build the fragment per-path (searchExecution qualifies
+ * the FTS path), but this builder owns the JOIN — so it normalizes its input
+ * idempotently instead of trusting the caller. The vocabulary matches
+ * `qualifyCondition` above; `(?<!b\.)` keeps an already-qualified fragment
+ * byte-identical (host output does not move, worker output joins it).
+ */
+function ensureFtsQualifiedExtraWhere(sql: string): string {
+  return sql
+    .replace(/(?<!b\.)\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, 'b.$1')
+    .replace(/(?<!b\.)\bid IN \(/g, 'b.id IN (');
+}
+
+/**
  * FTS5 search statements (browsing_logs_fts JOIN browsing_logs AS b).
  * `extra` comes from buildExtraWhereSql; `orderClause` from
  * buildSearchOrderClause({ fts: true }) or QuerySpec.order.
@@ -451,10 +466,13 @@ export function buildFtsSearchStatements(
   // source. `excludeDeleted: false` drops it via includeDeletedFilter, like
   // fallback/InMemory.
   const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
+  // PBI 2026-11-08-05: enforce the JOIN-alias qualification here (see
+  // ensureFtsQualifiedExtraWhere) — per-path, not per-backend.
+  const extraWhereSql = ensureFtsQualifiedExtraWhere(extra.extraWhereSql);
   return assembleSearchStatements({
     selectColumns: FTS_SEARCH_SELECT_COLUMNS,
     from: FTS_SEARCH_FROM,
-    whereCore: `browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}`,
+    whereCore: `browsing_logs_fts MATCH ?${deletedCond}${extraWhereSql}`,
     whereCoreParams: [opts.ftsQuery, ...extra.extraParams],
     tagFilter: opts.tagFilter,
     orderClause: opts.orderClause,

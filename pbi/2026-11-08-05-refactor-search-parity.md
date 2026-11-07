@@ -41,10 +41,10 @@ Scenario: 不正 orderDir の扱いが文書化される
 
 ## 受け入れ基準
 
-- [ ] extraQualification 引数が廃止され per-path 統一になる
-- [ ] parity pin (COUNT/rows バイト一致) が追加される。現行 pin の更新差分は PBI に記録する
-- [ ] orderDir 分岐が pin され意図的 divergence として文書化される
-- [ ] 既存テスト緑
+- [x] extraQualification 引数が廃止され per-path 統一になる
+- [x] parity pin (COUNT/rows バイト一致) が追加される。現行 pin の更新差分は PBI に記録する
+- [x] orderDir 分岐が pin され意図的 divergence として文書化される
+- [x] 既存テスト緑
 
 ## テスト戦略
 
