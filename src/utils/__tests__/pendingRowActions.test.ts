@@ -7,18 +7,25 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { dispatchPendingRowAction } from '../pendingRowActions.js';
-import type { PendingRowActions } from '../pendingRowActions.js';
+import type { PendingRowActions, PendingRowResult } from '../pendingRowActions.js';
 
 function makeActions(overrides: Partial<PendingRowActions> = {}): PendingRowActions & {
   onRecord: ReturnType<typeof vi.fn>;
   onRecordWithoutAi: ReturnType<typeof vi.fn>;
   onDelete: ReturnType<typeof vi.fn>;
 } {
+  const onRecord = vi.fn<(url: string) => Promise<PendingRowResult>>().mockResolvedValue({ ok: true });
+  const onRecordWithoutAi = vi.fn<(url: string) => Promise<PendingRowResult>>().mockResolvedValue({ ok: true });
+  const onDelete = vi.fn<(url: string) => Promise<void>>().mockResolvedValue(undefined);
   return {
-    onRecord: vi.fn().mockResolvedValue({ ok: true }),
-    onRecordWithoutAi: vi.fn().mockResolvedValue({ ok: true }),
-    onDelete: vi.fn().mockResolvedValue(undefined),
+    onRecord,
+    onRecordWithoutAi,
+    onDelete,
     ...overrides,
+  } as PendingRowActions & {
+    onRecord: ReturnType<typeof vi.fn>;
+    onRecordWithoutAi: ReturnType<typeof vi.fn>;
+    onDelete: ReturnType<typeof vi.fn>;
   };
 }
 

@@ -62,7 +62,7 @@ describe('messaging/sqlite taxonomy single owner (PBI 2026-11-07-15)', () => {
   it('TOKEN_REQUIRED_SUBTYPES is exactly the complement of the exempt set', () => {
     const exempt = new Set<string>(TOKEN_EXEMPT_OPS);
     const missing = [...canonical].filter(
-      (s) => !TOKEN_REQUIRED_SUBTYPES.has(s) && !exempt.has(s),
+      (s) => !(TOKEN_REQUIRED_SUBTYPES as Set<string>).has(s) && !exempt.has(s),
     );
     expect({ unclassified: missing }).toEqual({ unclassified: [] });
     const overlap = [...TOKEN_REQUIRED_SUBTYPES].filter((s) => exempt.has(s));
