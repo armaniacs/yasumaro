@@ -10,8 +10,9 @@
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { EXPORT_VERSION, LEGACY_EXPORT_VERSION, validateExportData } from '../settingsExportImport.js';
+import { EXPORT_VERSION, LEGACY_EXPORT_VERSION, finalizeImportedSettings, validateExportData } from '../settingsExportImport.js';
 import * as exportModule from '../settingsExportImport.js';
+import type { Settings } from '../storage/types.js';
 import { DEFAULT_SETTINGS } from '../storage/defaults.js';
 import { API_KEY_FIELDS } from '../storage/settingsMigration.js';
 
@@ -55,7 +56,10 @@ function exportData(
   return {
     version,
     exportedAt: new Date().toISOString(),
-    settings,
+    // Copy, not alias: assertions below read the EXPORTED payload, so a
+    // production regression stripping keys must fail here instead of passing
+    // off the caller's still-intact input object.
+    settings: { ...settings },
     apiKeyExcluded,
   };
 }
@@ -116,22 +120,51 @@ describe('intended validateExportData behavior (SSOT-derived)', () => {
     expect(validateExportData(exportData(settings, apiKeyExcluded))).toBe(false);
   });
 
-  test('current-format payload WITH the additive official OpenAI fields stays valid and keeps their values', () => {
+  test('current-format payload WITH the additive official OpenAI fields stays valid and keeps their values', async () => {
     // Keys-excluded export carrying the official model field.
-    const excluded = fullNonApiSettings();
-    excluded['openai_official_model'] = 'gpt-6-luna-custom';
-    expect(validateExportData(exportData(excluded, true))).toBe(true);
-    expect(excluded['openai_official_model']).toBe('gpt-6-luna-custom');
+    const excludedPayload = exportData(
+      { ...fullNonApiSettings(), openai_official_model: 'gpt-6-luna-custom' },
+      true,
+    );
+    expect(validateExportData(excludedPayload)).toBe(true);
+    const excludedExported = excludedPayload.settings as Record<string, unknown>;
+    expect(excludedExported['openai_official_model']).toBe('gpt-6-luna-custom');
+    // Round-trip through the real import finalizer: the value must survive.
+    const excludedFinalized = (await finalizeImportedSettings(
+      excludedExported as unknown as Settings,
+      {
+        apiKeyExcluded: true,
+        repo: {
+          getAll: async () => ({ ...(DEFAULT_SETTINGS as Record<string, unknown>) }) as unknown as Settings,
+          setAll: async () => undefined,
+        },
+      },
+    )) as unknown as Record<string, unknown>;
+    expect(excludedFinalized['openai_official_model']).toBe('gpt-6-luna-custom');
 
     // Keys-included export carrying both official fields.
-    const included: Record<string, unknown> = { ...fullNonApiSettings() };
+    const includedSettings: Record<string, unknown> = { ...fullNonApiSettings() };
     for (const field of API_KEY_FIELDS) {
-      included[field] = `${field}-value`;
+      includedSettings[field] = `${field}-value`;
     }
-    included['openai_official_model'] = 'gpt-6-luna-custom';
-    expect(validateExportData(exportData(included, false))).toBe(true);
-    expect(included['openai_official_model']).toBe('gpt-6-luna-custom');
-    expect(included['openai_official_api_key']).toBe('openai_official_api_key-value');
+    includedSettings['openai_official_model'] = 'gpt-6-luna-custom';
+    const includedPayload = exportData(includedSettings, false);
+    expect(validateExportData(includedPayload)).toBe(true);
+    const includedExported = includedPayload.settings as Record<string, unknown>;
+    expect(includedExported['openai_official_model']).toBe('gpt-6-luna-custom');
+    expect(includedExported['openai_official_api_key']).toBe('openai_official_api_key-value');
+    const includedFinalized = (await finalizeImportedSettings(
+      includedExported as unknown as Settings,
+      {
+        apiKeyExcluded: false,
+        repo: {
+          getAll: async () => ({ ...(DEFAULT_SETTINGS as Record<string, unknown>) }) as unknown as Settings,
+          setAll: async () => undefined,
+        },
+      },
+    )) as unknown as Record<string, unknown>;
+    expect(includedFinalized['openai_official_model']).toBe('gpt-6-luna-custom');
+    expect(includedFinalized['openai_official_api_key']).toBe('openai_official_api_key-value');
   });
 
   test('payload missing a derived-only key is rejected', () => {

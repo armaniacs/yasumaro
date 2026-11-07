@@ -29,7 +29,8 @@ const CONNECTION_TEST_MAX_TOKENS = 16;
 /**
  * length 切断時に順に再試行する際の max_tokens 上限ラダー。推論モデルは
  * 思考トークンで小枠を使い切るため、256でも切れる個体がある (issue #202
- * 後続)。初回16に続けて最大3回、合計4fetchで打ち切る。
+ * 後続)。初回16に続くラダーは最大3回で合計4fetch。公式方言は最後に
+ * 設定済み上限でもう1回試すことがあり、最悪5fetchになる。
  */
 const CONNECTION_TEST_RETRY_CAPS = [256, 512, 1024] as const;
 /** 公式 origin の事前計算値。構築ごとの `new URL(...).origin` 再計算を避ける。 */

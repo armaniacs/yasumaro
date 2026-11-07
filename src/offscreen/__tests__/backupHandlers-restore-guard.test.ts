@@ -143,11 +143,17 @@ describe('handleRestore — own FTS trigger allowlist', () => {
     // SQLite drops IF NOT EXISTS when storing the trigger text — mirror the
     // real sqlite_master form (verified against better-sqlite3).
     const ownTriggers = triggerStatements.map((sql) => {
-      const stored = sql.replace(/\bIF NOT EXISTS\b/gi, ' ');
-      const name = /CREATE TRIGGER\s+([A-Za-z_]\w*)/i.exec(stored)?.[1] ?? '';
+      // Production's exact extractor (src/offscreen/opfsWorker/backupHandlers.ts
+      // expectedTriggerSql) requires literal IF NOT EXISTS on the RAW statement:
+      // a future schema trigger omitting it is dropped from the allowlist there,
+      // so this must fail here loudly instead of passing on stripped SQL.
+      const name = /CREATE TRIGGER IF NOT EXISTS\s+([A-Za-z_]\w*)/i.exec(sql)?.[1] ?? '';
       // A future trigger the simple-identifier extractor cannot name fails
       // here loudly instead of being dropped from the allowlist silently.
-      expect(name, `trigger statement has no simple-identifier name: ${stored.slice(0, 80)}`).not.toBe('');
+      expect(name, `trigger statement has no simple-identifier name: ${sql.slice(0, 80)}`).not.toBe('');
+      // SQLite drops IF NOT EXISTS when storing the trigger text — mirror the
+      // real sqlite_master form (verified against better-sqlite3).
+      const stored = sql.replace(/\bIF NOT EXISTS\b/gi, ' ');
       return { name, sql: stored };
     });
     expect(ownTriggers).toHaveLength(triggerStatements.length);

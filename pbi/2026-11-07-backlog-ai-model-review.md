@@ -20,7 +20,7 @@
 1. **既定モデル ID の有効性**: `src/utils/storage/defaults.ts` の `OPENAI_MODEL` (`openai/gpt-oss-20b`)、`GEMINI_MODEL` (`gemini-3.1-flash-lite`)、`OPENAI_2_MODEL` (`llama3`) に加え、`OPENAI_OFFICIAL_MODEL` (`gpt-6-luna`) を公式 OpenAI モデル一覧と突き合わせて確認する。死んでいれば live モデルへ更新する (コード変更は別 PBI 化してよい)。
 2. **文書のモデル名と退役表の突合**: `docs/FAQ.md`・`docs/SETUP_GUIDE.md` (日英) および他のガイド内のモデル名例を Groq deprecations ページと突き合わせ、死んだ ID を live モデルへ置換する。公式 OpenAI の文書例 (`docs/SETUP_GUIDE.md` の OpenAI 節、locale `openaiOfficialModelPlaceholder`) は公式 OpenAI モデル一覧と突き合わせる。
 3. **接続テスト上限の確認**: `src/utils/limits.ts` の `MAX_AI_HTTP_RESPONSE_BYTES` (現行 10 MiB、summary + testConnection 共通) が adaptive retry の実測と矛盾しないか確認する。矛盾があれば別 PBI 化する (本 PBI では変えない)。
-4. **プロバイダー数の sanity check**: `docs/SETUP_GUIDE.md` の「サポートされているAIプロバイダー」表の行数・ドメインが、コード側の許可リスト (CSP 関連) および `src/utils/storage/providerDefaultBaseUrls.ts` の既定表と一致しているか確認する。許可リストは `openai-official` を含む (`src/utils/storage/providerAllowlist.ts`) ため、次回は 8 プロバイダーとの一致を見る。ずれがあれば別 PBI 化する。
+4. **プロバイダー数の sanity check**: `docs/SETUP_GUIDE.md` の「サポートされているAIプロバイダー」表の行数・ドメインが、8 プロバイダーの SSOT である `PROVIDER_CATALOG` (`src/background/ai/providerCatalog.ts`) と一致しているか確認する。CSP 関連の許可リスト (`src/utils/storage/providerAllowlist.ts`) および `src/utils/storage/providerDefaultBaseUrls.ts` の既定表との突合も行う。ずれがあれば別 PBI 化する。
 5. **CHANGELOG 記録**: 上記で変更が発生したら `CHANGELOG.md` の `[Unreleased]` に「四半期 AI モデルレビュー (YYYY-MM-DD)」として 1 行で記録する。変更なしでも本 PBI に実施日と結果 (変更なし) を追記する。
 
 実施時期の目安: 1月・4月・7月・10月の各月初。Groq の臨時退役発表があれば随時前倒ししてよい。
