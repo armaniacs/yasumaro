@@ -39,7 +39,7 @@ All notable changes to this project will be documented in this file.
 
 ### 追加 / Added
 
-- OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストも設定済み上限を適用。既存の互換スロットは設定移動なしで対応） / Added an official OpenAI API provider ("OpenAI" pinned to `https://api.openai.com/v1`; uses `max_completion_tokens` without model-name branching and omits temperature, connection tests use the configured budget; existing compatible slots keep working without migration)
+- OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストは16から開始しlength継続時のみ段階的に拡大、設定済み上限は公式系の最終手段としてのみ使用。既存の互換スロットは設定移動なしで対応） / Added an official OpenAI API provider ("OpenAI" pinned to `https://api.openai.com/v1`; uses `max_completion_tokens` without model-name branching and omits temperature, connection tests start at 16 and grow stepwise only on continued length cutoffs with the configured budget only as the last official resort; existing compatible slots keep working without migration)
 
 ### 修正 / Fixed
 
@@ -47,6 +47,7 @@ All notable changes to this project will be documented in this file.
 - 復元直後の設定保存がENCRYPTION_LOCKEDで失敗していた問題（認証モーダルは検証のみでロック解除しない。復号成功後に検証済みパスワードでセッションを確立し、未設定時は匿名キーのまま） / Settings save failed with ENCRYPTION_LOCKED right after a restore (the auth modal verifies without unlocking; the session is now established from the verified password after decryption, untouched when no master password is set)
 - 推論モデルの接続テストがlength切断で失敗していた問題（出力枠を思考トークンに使い切るモデル向けに、空応答かつlength打ち切りの場合のみ256/512/1024へ段階的に再試行。finish_reasonを診断に露出） / Reasoning-model connection tests failed on length cutoff (retry stepwise at 256/512/1024 only on empty + length cutoff; finish_reason now in diagnostics)
 - FAQとセットアップガイドの停止済みモデル参照を更新 / Updated retired model references in FAQ and setup guide
+- 公式方針のリクエスト形式を動作変更として明示(公式originの互換スロットを含む公式系は `max_completion_tokens` を使用し temperature を省略。従来は要約0.1・接続テスト0を送信。接続テストは16から開始しlength継続時のみ段階的に拡大。設定移動は不要) / Official requests use `max_completion_tokens` with temperature omitted (previously 0.1 for summaries and 0 for connection tests); connection tests start at 16 and grow stepwise only on continued length cutoffs; legacy official-origin slots inherit the policy without migration
 
 ## [6.9.69] - 2026-11-07
 

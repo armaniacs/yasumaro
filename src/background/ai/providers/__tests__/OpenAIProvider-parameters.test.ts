@@ -81,10 +81,12 @@ describe('GenericOpenAICompatibleProvider', () => {
       expect(fetchMock).toHaveBeenCalledTimes(2);
       for (const index of [0, 1]) {
         expect(fetchMock.mock.calls[index]![0]).toBe('https://api.openai.com/v1/chat/completions');
-        expect(sentBody(index)).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
         expect(sentBody(index)).not.toHaveProperty('max_tokens');
         expect(sentBody(index)).not.toHaveProperty('temperature');
       }
+      // Summary uses the configured budget; the connection test starts cheap at 16.
+      expect(sentBody(0)).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
+      expect(sentBody(1)).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 16 });
       expect(sentBody(0).messages[1]?.content).toBe('A short public test article.');
       expect(sentBody(1).messages).toEqual([{ role: 'user', content: CONNECTION_TEST_PROMPT }]);
     });
@@ -122,10 +124,11 @@ describe('GenericOpenAICompatibleProvider', () => {
       await provider.testConnection();
 
       for (const index of [0, 1]) {
-        expect(sentBody(index)).toMatchObject({ model, max_completion_tokens: 2048 });
         expect(sentBody(index)).not.toHaveProperty('max_tokens');
         expect(sentBody(index)).not.toHaveProperty('temperature');
       }
+      expect(sentBody(0)).toMatchObject({ model, max_completion_tokens: 2048 });
+      expect(sentBody(1)).toMatchObject({ model, max_completion_tokens: 16 });
     });
 
     it('uses the fixed official endpoint and its own credentials independently of legacy settings', async () => {
@@ -141,7 +144,7 @@ describe('GenericOpenAICompatibleProvider', () => {
       expect(getRegistryEntry('openai-official')).toMatchObject({ defaultBaseUrl: 'https://api.openai.com/v1', chatCompletionsDialect: 'openai' });
       expect(fetchMock.mock.calls[0]![0]).toBe('https://api.openai.com/v1/chat/completions');
       expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe('Bearer official-key');
-      expect(sentBody()).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
+      expect(sentBody()).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 16 });
       expect(settings.openai_2_api_key).toBe('legacy-key');
     });
 
@@ -161,7 +164,7 @@ describe('GenericOpenAICompatibleProvider', () => {
       await provider.testConnection();
 
       expect(sentBody(0)).toMatchObject({ max_completion_tokens: 2048 });
-      expect(sentBody(1)).toMatchObject({ max_completion_tokens: 2048 });
+      expect(sentBody(1)).toMatchObject({ max_completion_tokens: 16 });
       expect(sentBody(0)).not.toHaveProperty('temperature');
       expect(sentBody(1)).not.toHaveProperty('temperature');
     });
@@ -195,21 +198,21 @@ describe('GenericOpenAICompatibleProvider', () => {
       await createProviderStrategy('openai', settings).testConnection();
       await createProviderStrategy('openai2', settings).testConnection();
 
-      expect(sentBody(0)).toMatchObject({ model: 'future-a', max_completion_tokens: 64 });
-      expect(sentBody(1)).toMatchObject({ model: 'future-b', max_completion_tokens: 128 });
+      expect(sentBody(0)).toMatchObject({ model: 'future-a', max_completion_tokens: 16 });
+      expect(sentBody(1)).toMatchObject({ model: 'future-b', max_completion_tokens: 16 });
       expect(fetchMock.mock.calls[0]![1].headers.Authorization).toBe('Bearer first-key');
       expect(fetchMock.mock.calls[1]![1].headers.Authorization).toBe('Bearer second-key');
       expect(settings).toEqual(before);
     });
 
-    it.each(['openai-official', 'openai2'])('honors a small configured budget for %s without silently increasing it', async (providerId) => {
+    it.each(['openai-official', 'openai2'])('starts the connection test at 16 without spending the small configured budget for %s', async (providerId) => {
       const settings = settingsFor(providerId, 'https://api.openai.com/v1', 'gpt-6-luna');
       settings.providers = { [providerId]: { maxTokens: 32 } };
       const provider = createProviderStrategy(providerId, settings);
 
       await provider.testConnection();
 
-      expect(sentBody()).toMatchObject({ max_completion_tokens: 32 });
+      expect(sentBody()).toMatchObject({ max_completion_tokens: 16 });
     });
 
     it.each([':::', 'not-a-url'])('wraps a malformed legacy baseUrl %s as Invalid baseUrl instead of a raw TypeError', (baseUrl) => {
@@ -266,11 +269,11 @@ describe('GenericOpenAICompatibleProvider', () => {
       }
     });
 
-    it('pins the configured official budget across all 4 testConnection retries (length x3 then stop)', async () => {
+    it('climbs the ladder cheaply then spends the configured official budget on the final retry (length x4 then stop)', async () => {
       const provider = new GenericOpenAICompatibleProvider(
         settingsFor('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), 'openai',
       );
-      for (let i = 0; i < 3; i += 1) {
+      for (let i = 0; i < 4; i += 1) {
         fetchMock.mockResolvedValueOnce(Response.json({
           choices: [{ message: { content: '' }, finish_reason: 'length' }],
         }));
@@ -282,19 +285,21 @@ describe('GenericOpenAICompatibleProvider', () => {
       const result = await provider.testConnection();
 
       expect(result.success).toBe(true);
-      expect(fetchMock).toHaveBeenCalledTimes(4);
-      for (const index of [0, 1, 2, 3]) {
-        expect(sentBody(index)).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      const budgets = [0, 1, 2, 3, 4].map((index) => sentBody(index).max_completion_tokens);
+      expect(budgets).toEqual([16, 256, 512, 1024, 2048]);
+      for (const index of [0, 1, 2, 3, 4]) {
+        expect(sentBody(index)).toMatchObject({ model: 'gpt-6-luna' });
         expect(sentBody(index)).not.toHaveProperty('max_tokens');
         expect(sentBody(index)).not.toHaveProperty('temperature');
       }
     });
 
-    it('fails official-dialect testConnection after exactly 4 fetches when every attempt is cut off', async () => {
+    it('fails official-dialect testConnection after exactly 5 fetches when every attempt is cut off', async () => {
       const provider = new GenericOpenAICompatibleProvider(
         settingsFor('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), 'openai',
       );
-      for (let i = 0; i < 4; i += 1) {
+      for (let i = 0; i < 5; i += 1) {
         fetchMock.mockResolvedValueOnce(Response.json({
           choices: [{ message: { content: '' }, finish_reason: 'length' }],
         }));
@@ -303,9 +308,10 @@ describe('GenericOpenAICompatibleProvider', () => {
       const result = await provider.testConnection();
 
       expect(result.success).toBe(false);
-      expect(fetchMock).toHaveBeenCalledTimes(4);
-      for (const index of [0, 1, 2, 3]) {
-        expect(sentBody(index)).toMatchObject({ max_completion_tokens: 2048 });
+      expect(fetchMock).toHaveBeenCalledTimes(5);
+      const budgets = [0, 1, 2, 3, 4].map((index) => sentBody(index).max_completion_tokens);
+      expect(budgets).toEqual([16, 256, 512, 1024, 2048]);
+      for (const index of [0, 1, 2, 3, 4]) {
         expect(sentBody(index)).not.toHaveProperty('max_tokens');
         expect(sentBody(index)).not.toHaveProperty('temperature');
       }

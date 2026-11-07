@@ -717,6 +717,106 @@ describe('GenericOpenAICompatibleProvider: branch coverage', () => {
       expect(fetch.mock.calls.map(sentMaxTokens)).toEqual([16, 256, 512, 1024]);
     });
 
+    it('starts official-dialect connection tests at max_completion_tokens 16 with no temperature key', async () => {
+      const fetch = await retryFetchMock();
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
+      } as Response);
+      const provider = new GenericOpenAICompatibleProvider(baseSettings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      const body = JSON.parse((fetch.mock.calls[0]![1] as { body: string }).body) as {
+        max_completion_tokens?: number;
+        max_tokens?: number;
+        temperature?: number;
+      };
+      expect(body).toMatchObject({ max_completion_tokens: 16 });
+      expect(body).not.toHaveProperty('max_tokens');
+      expect(body).not.toHaveProperty('temperature');
+    });
+
+    it('ends an official persistent-length sequence with a configured-max retry (5 fetches total)', async () => {
+      const fetch = await retryFetchMock();
+      for (let i = 0; i < 4; i += 1) {
+        fetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+        } as Response);
+      }
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
+      } as Response);
+      const settings = { ...baseSettings, providers: { openai: { maxTokens: 96 } } } as unknown as Settings;
+      const provider = new GenericOpenAICompatibleProvider(settings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(5);
+      const bodies = fetch.mock.calls.map(
+        (call) => JSON.parse((call[1] as { body: string }).body) as { max_completion_tokens?: number },
+      );
+      expect(bodies.map((body) => body.max_completion_tokens)).toEqual([16, 256, 512, 1024, 96]);
+      for (const body of bodies) {
+        expect(body).not.toHaveProperty('max_tokens');
+        expect(body).not.toHaveProperty('temperature');
+      }
+    });
+
+    it('skips the official final retry when the configured max equals a ladder cap (exactly 4 fetches)', async () => {
+      const fetch = await retryFetchMock();
+      for (let i = 0; i < 4; i += 1) {
+        fetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+        } as Response);
+      }
+      const settings = { ...baseSettings, providers: { openai: { maxTokens: 256 } } } as unknown as Settings;
+      const provider = new GenericOpenAICompatibleProvider(settings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(false);
+      expect(fetch).toHaveBeenCalledTimes(4);
+      const bodies = fetch.mock.calls.map(
+        (call) => JSON.parse((call[1] as { body: string }).body) as { max_completion_tokens?: number },
+      );
+      expect(bodies.map((body) => body.max_completion_tokens)).toEqual([16, 256, 512, 1024]);
+    });
+
+    it('keeps the non-official ladder on max_tokens with temperature present', async () => {
+      const fetch = await retryFetchMock();
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: '' }, finish_reason: 'length' }] }),
+      } as Response);
+      fetch.mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }] }),
+      } as Response);
+      const provider = new GenericOpenAICompatibleProvider(ladderSettings, 'openai');
+      const result = await provider.testConnection();
+      expect(result.success).toBe(true);
+      expect(fetch).toHaveBeenCalledTimes(2);
+      const bodies = fetch.mock.calls.map(
+        (call) => JSON.parse((call[1] as { body: string }).body) as {
+          max_completion_tokens?: number;
+          max_tokens?: number;
+          temperature?: number;
+        },
+      );
+      expect(bodies[0]).toMatchObject({ max_tokens: 16, temperature: 0 });
+      expect(bodies[1]).toMatchObject({ max_tokens: 256, temperature: 0 });
+      for (const body of bodies) {
+        expect(body).not.toHaveProperty('max_completion_tokens');
+      }
+    });
+
     it('surfaces finishReason in debug', async () => {
       const fetch = await retryFetchMock();
       fetch.mockResolvedValueOnce({
