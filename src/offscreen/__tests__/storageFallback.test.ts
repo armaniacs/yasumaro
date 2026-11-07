@@ -177,7 +177,7 @@ describe('FallbackStorage', () => {
     it('filters by starred', async () => {
       // PBI 2026-09-12-13: legacy key names collapse at the planner seam;
       // the fallback consumes the normalized query verbatim (product path).
-      const { normalizeStorageQuery } = await import('../queryNormalize.js');
+      const { normalizeStorageQuery } = await import('../queryPlanner.js');
       const result = await storage.query({ ...normalizeStorageQuery({ isStarred: true }), excludeDeleted: false });
       expect(result.success).toBe(true);
       if (result.success) {
@@ -188,7 +188,7 @@ describe('FallbackStorage', () => {
 
     it('filters by time range', async () => {
       // PBI 2026-09-12-13: aliases collapse at the planner seam (see above).
-      const { normalizeStorageQuery } = await import('../queryNormalize.js');
+      const { normalizeStorageQuery } = await import('../queryPlanner.js');
       const result = await storage.query(normalizeStorageQuery({ since: 100, until: 200 }));
       expect(result.success).toBe(true);
       if (result.success) {
@@ -520,7 +520,7 @@ describe('FallbackStorage', () => {
 
 describe('planner-trust seam (PBI 2026-09-12-13)', () => {
   it('consumes normalized queries verbatim — since/until/isStarred need no local aliases', async () => {
-    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const { normalizeStorageQuery } = await import('../queryPlanner.js');
     const storage = new FallbackStorage();
     await storage.insertBatch([
       { url: 'https://a.com', created_at: 1000, is_starred: 0 },
@@ -539,7 +539,7 @@ describe('planner-trust seam (PBI 2026-09-12-13)', () => {
   });
 
   it('honors the normalized is_starred numeric alias', async () => {
-    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const { normalizeStorageQuery } = await import('../queryPlanner.js');
     const storage = new FallbackStorage();
     await storage.insertBatch([
       { url: 'https://a.com', created_at: 1000, is_starred: 0 },

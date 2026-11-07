@@ -308,7 +308,6 @@ export function buildQuerySpec(
 export {
   buildFilterConditions,
   qualifyCondition,
-  matchesExtraWhere,
   buildFtsMatchQuery,
   buildLikePattern,
   buildSearchOrderClause,
@@ -339,6 +338,12 @@ export {
   AUDIT_INSERT_SQL,
   AUDIT_INSERT_RETURNING_SQL,
 } from './sqliteQueryBuilder.js';
+// PBI 2026-11-08-02: matchesExtraWhere sources directly from its owner
+// (single parity → plan stage — the former parity → builder → plan two-stage
+// re-export is dissolved on the builder side). The facade itself stays until
+// PBI 06; new code should import the predicate from queryParityPredicate.js
+// directly.
+export { matchesExtraWhere } from './queryParityPredicate.js';
 export type {
   FilterCondition,
   InvalidOrderPolicy,

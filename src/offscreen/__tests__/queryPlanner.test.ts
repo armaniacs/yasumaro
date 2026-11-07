@@ -71,6 +71,59 @@ describe('queryPlanner — read policy composition', () => {
   });
 });
 
+/**
+ * Planner-boundary pin for PBI 2026-11-08-02 (micro-fold).
+ *
+ * `normalizeStorageQuery` folds into queryPlanner.ts; these tests lock the
+ * wire-alias collapse AT THE PLANNER BOUNDARY (planQuery/planSearch) so the
+ * fold cannot silently drop an alias family. Added BEFORE the fold (fixture
+ * first); they pass against the pre-fold composition and must stay green
+ * after queryNormalize.ts is deleted.
+ */
+describe('queryPlanner — normalize fold boundary pin (PBI 2026-11-08-02)', () => {
+  it('collapses the starred family with starred > isStarred > is_starred precedence', () => {
+    expect(planQuery({ starred: 1 })).toMatchObject({ starred: true });
+    expect(planQuery({ isStarred: 1 })).toMatchObject({ starred: true });
+    expect(planQuery({ isStarred: 0 })).toMatchObject({ starred: false });
+    expect(planQuery({ is_starred: 1 })).toMatchObject({ starred: true });
+    expect(planQuery({ is_starred: 0 })).toMatchObject({ starred: false });
+    expect(planQuery({ starred: false, isStarred: true, is_starred: 1 })).toMatchObject({ starred: false });
+    expect(planQuery({ isStarred: true, is_starred: 0 })).toMatchObject({ starred: true });
+    expect(planQuery({})).not.toHaveProperty('starred');
+  });
+
+  it('collapses date/tag/domain/gist aliases at the boundary', () => {
+    expect(planQuery({ since: '2000' })).toMatchObject({ dateFrom: 2000 });
+    expect(planQuery({ dateFrom: null, since: '3000' })).toMatchObject({ dateFrom: 3000 });
+    expect(planQuery({ until: '200' })).toMatchObject({ dateTo: 200 });
+    expect(planQuery({ tagFilter: 'b' })).toMatchObject({ tag: 'b' });
+    expect(planQuery({ tag: null, tagFilter: 'c' })).toMatchObject({ tag: 'c' });
+    expect(planQuery({ domain: 123 })).toMatchObject({ domain: '123' });
+    expect(planQuery({ gistSynced: '1' })).toMatchObject({ gistSynced: 1 });
+    expect(planQuery({ excludeDeleted: 1 })).toMatchObject({ excludeDeleted: true });
+  });
+
+  it('preserves non-empty text and drops empty text at the boundary', () => {
+    expect(planQuery({ text: '研究所' })).toMatchObject({ text: '研究所' });
+    expect(planQuery({ text: '' })).not.toHaveProperty('text');
+  });
+
+  it('normalizes ids to a bounded integer array at the boundary (PBI 2026-09-11-01/02)', () => {
+    expect(planQuery({ ids: [9] })).toMatchObject({ ids: [9] });
+    expect(planQuery({ ids: '1,2,3' })).not.toHaveProperty('ids');
+    expect(planQuery({ ids: 42 })).not.toHaveProperty('ids');
+    expect(planQuery({ ids: [1, '2', NaN, -3, Infinity] })).toMatchObject({ ids: [1, 2] });
+    expect(planQuery({ ids: ['a'] })).not.toHaveProperty('ids');
+    expect(planQuery({ ids: [1.5, 2, 3.9] })).toMatchObject({ ids: [2] });
+    const huge = Array.from({ length: 1000 }, (_, i) => i + 1);
+    expect(planQuery({ ids: huge }).ids).toHaveLength(200);
+  });
+
+  it('drops unknown keys at the boundary', () => {
+    expect(planQuery({ unknownField: 'x', limit: 5 })).toEqual({ limit: 5 });
+  });
+});
+
 describe('selectReadCap / applySearchPolicy (PBI 2026-09-12-16)', () => {
   it('selects the fts cap for FTS searches and the plain cap otherwise', async () => {
     const { selectReadCap } = await import('../queryPlan.js');

@@ -7,9 +7,11 @@
 // (buildFilterConditions — formerly in queryPlan.ts, the import that
 // closed the queryPlan ⇄ queryBuilder cycle), every search/plain/CRUD/
 // audit/purge statement builder, and compat re-exports for the two
-// responsibilities that moved out (PBI 2026-11-07-12): the in-memory parity
-// predicate (matchesExtraWhere → queryParityPredicate.ts) and the purge
-// execution runner (runPurgeSequence → purgeRunner.ts).
+// responsibilities that moved out (PBI 2026-11-07-12): the purge execution
+// runner (runPurgeSequence → purgeRunner.ts), kept as a compat re-export
+// below. The in-memory parity predicate (matchesExtraWhere →
+// queryParityPredicate.ts) is NOT re-exported here since PBI 2026-11-08-02:
+// SQL assembly only — the plan-side compat re-export sources it directly.
 // The policy layer (queryPlan.ts: mode/cap/brand/clamp/QuerySpec) depends
 // on this module one-way; nothing here imports policy at runtime
 // (type-only references to ExtraWhere/QuerySpec excepted).
@@ -267,14 +269,11 @@ export function qualifyCondition(condition: FilterCondition, qualifier: string):
   return { ...condition, sql: qualified };
 }
 
-// ---------------------------------------------------------------------------
-// Non-SQL parity predicate — moved to queryParityPredicate.ts
-// (PBI 2026-11-07-12). Compat re-export: pre-split import paths keep working.
-// The policy module cannot host this: it needs `rowMatchesTagLike`, and the
-// split requires the policy module to hold no tagLike runtime import.
-// ---------------------------------------------------------------------------
-
-export { matchesExtraWhere } from './queryParityPredicate.js';
+// PBI 2026-11-08-02: the parity predicate lives in queryParityPredicate.ts.
+// This module keeps SQL assembly only, so it no longer re-exports it —
+// the former parity → builder → plan two-stage re-export collapsed to a
+// single parity → plan stage (the plan-side compat re-export sources it
+// directly; consumer migration to direct imports is PBI 06 scope).
 
 // ---------------------------------------------------------------------------
 // PBI-34: shared SQL assembly — WHERE/ORDER/LIMIT built in ONE place.

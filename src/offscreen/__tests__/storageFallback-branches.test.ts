@@ -242,7 +242,7 @@ describe('FallbackStorage query legacy starred param', () => {
     await storage.insert(makeRecord({ url: 'https://s1.com', created_at: 1, is_starred: 1 }));
     await storage.insert(makeRecord({ url: 'https://s2.com', created_at: 2, is_starred: 0 }));
 
-    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const { normalizeStorageQuery } = await import('../queryPlanner.js');
     const result = await storage.query(normalizeStorageQuery({ is_starred: 1 }));
     expect(result.success).toBe(true);
     if (result.success) {
@@ -255,7 +255,7 @@ describe('FallbackStorage query legacy starred param', () => {
     await storage.insert(makeRecord({ url: 'https://s3.com', created_at: 3, is_starred: 1 }));
     await storage.insert(makeRecord({ url: 'https://s4.com', created_at: 4, is_starred: 0 }));
 
-    const { normalizeStorageQuery } = await import('../queryNormalize.js');
+    const { normalizeStorageQuery } = await import('../queryPlanner.js');
     const result = await storage.query(normalizeStorageQuery({ is_starred: 0 }));
     expect(result.success).toBe(true);
     if (result.success) {
