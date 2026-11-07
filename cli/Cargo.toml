@@ -14,9 +14,12 @@ name = "yasumaro"
 path = "src/main.rs"
 
 [dependencies]
+chrono = "0.4.45"
 clap = { version = "4", features = ["derive"] }
+csv = "1.4.0"
 dirs = "6"
 rusqlite = { version = "0.32", features = ["bundled"] }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.154"
 thiserror = "2"
 toml = "1"

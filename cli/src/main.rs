@@ -3,6 +3,8 @@ use std::io::Write as _;
 use clap::Parser;
 
 /// Task 2 modules: config file handling + read-only DB layer.
+/// Task 4 modules: display/export (`output`), clipboard (`copy`), and flag
+/// validation (`params`).
 ///
 /// Subcommand wiring arrives in Task 5; until then `main` keeps its Task 1
 /// behavior. The `allow` keeps `dead_code` quiet for the not-yet-called
@@ -10,7 +12,13 @@ use clap::Parser;
 #[allow(dead_code)]
 mod config;
 #[allow(dead_code)]
+mod copy;
+#[allow(dead_code)]
 mod db;
+#[allow(dead_code)]
+mod output;
+#[allow(dead_code)]
+mod params;
 #[allow(dead_code)]
 mod queries;
 
