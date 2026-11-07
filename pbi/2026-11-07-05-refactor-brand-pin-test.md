@@ -83,9 +83,9 @@ Scenario: search と listing の dispatch は planQueryMode に一元化され�
 - SQL 文字列の一致を assert する場合は完全一致にせず、cap と filter の有無に絞ること。SQL 整形の差分で test が壊れるのを防ぐためだ。
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動 test として実装され pass する
-- [ ] test が固定時間待ちを使わない
-- [ ] 振る舞い変更がないことが diff で確認できる
-- [ ] `npm run type-check` が pass する
-- [ ] `npm run validate` が pass する
-- [ ] 関連ドキュメントの更新が不要であることが確認済みである
+- [x] 全 BDD シナリオが自動 test として実装され pass する
+- [x] test が固定時間待ちを使わない
+- [x] 振る舞い変更がないことが diff で確認できる
+- [x] `npm run type-check` が pass する
+- [ ] `npm run validate` が pass する (最終ゲートで確認する)
+- [x] 関連ドキュメントの更新が不要であることが確認済みである
