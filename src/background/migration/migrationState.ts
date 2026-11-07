@@ -8,6 +8,7 @@
  */
 
 import { StorageKeys } from '../../utils/storage/types.js';
+import { ChromeStoragePort, type StoragePort } from '../../utils/storage/storagePort.js';
 
 export type MigrationStatus = 'pending' | 'completed' | 'fresh_install' | 'failed_permanently';
 
@@ -30,34 +31,39 @@ export const MIGRATION_RETRY_COUNT_KEY = StorageKeys.YASUMARO_MIGRATION_RETRY_CO
 
 /**
  * Chrome storage adapter for migration state.
- * Each accessor reads/writes a single key via chrome.storage.local.
+ * Delegates each accessor to the StoragePort seam (PBI 2026-11-07-04):
+ * same keys, same value shapes — the raw chrome.storage.local access lives
+ * in ChromeStoragePort only. Pass a StoragePort (e.g. InMemoryStoragePort)
+ * in tests to avoid chrome.
  */
 export class ChromeMigrationStateAdapter implements MigrationStatePort {
+  constructor(private readonly port: StoragePort = new ChromeStoragePort()) {}
+
   async getStatus(): Promise<MigrationStatus | null> {
-    const result = await chrome.storage.local.get(MIGRATION_STATUS_KEY);
+    const result = await this.port.get(MIGRATION_STATUS_KEY);
     return (result[MIGRATION_STATUS_KEY] as MigrationStatus) || null;
   }
 
   async setStatus(status: MigrationStatus): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_STATUS_KEY]: status });
+    await this.port.set({ [MIGRATION_STATUS_KEY]: status });
   }
 
   async getProgress(): Promise<number> {
-    const result = await chrome.storage.local.get(MIGRATION_PROGRESS_KEY);
+    const result = await this.port.get(MIGRATION_PROGRESS_KEY);
     return (result[MIGRATION_PROGRESS_KEY] as number) || 0;
   }
 
   async setProgress(count: number): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_PROGRESS_KEY]: count });
+    await this.port.set({ [MIGRATION_PROGRESS_KEY]: count });
   }
 
   async getRetryCount(): Promise<number> {
-    const result = await chrome.storage.local.get(MIGRATION_RETRY_COUNT_KEY);
+    const result = await this.port.get(MIGRATION_RETRY_COUNT_KEY);
     return (result[MIGRATION_RETRY_COUNT_KEY] as number) || 0;
   }
 
   async setRetryCount(count: number): Promise<void> {
-    await chrome.storage.local.set({ [MIGRATION_RETRY_COUNT_KEY]: count });
+    await this.port.set({ [MIGRATION_RETRY_COUNT_KEY]: count });
   }
 }
 

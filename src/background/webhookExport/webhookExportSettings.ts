@@ -15,6 +15,7 @@
  */
 
 import type { WebhookExportCondition } from './webhookExportPayload.js';
+import { ChromeStoragePort, type StoragePort } from '../../utils/storage/storagePort.js';
 
 /** Persisted transfer settings: destination + transfer conditions. */
 export interface WebhookExportSettings {
@@ -35,15 +36,20 @@ export interface WebhookExportStore {
   set(key: string, value: string): Promise<void>;
 }
 
-export function chromeLocalWebhookExportStore(): WebhookExportStore {
+/**
+ * Production WebhookExportStore backend. Delegates to the StoragePort seam
+ * (PBI 2026-11-07-04): same key, same single-string value — the raw
+ * chrome.storage.local access lives in ChromeStoragePort only.
+ */
+export function chromeLocalWebhookExportStore(port: StoragePort = new ChromeStoragePort()): WebhookExportStore {
   return {
     get: async (key: string): Promise<string | null> => {
-      const raw = await chrome.storage.local.get(key);
+      const raw = await port.get(key);
       const value: string | null = typeof raw[key] === 'string' ? (raw[key] as string) : null;
       return value;
     },
     set: async (key: string, value: string): Promise<void> => {
-      await chrome.storage.local.set({ [key]: value });
+      await port.set({ [key]: value });
     },
   };
 }

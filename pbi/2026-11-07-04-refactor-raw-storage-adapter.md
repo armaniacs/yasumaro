@@ -44,12 +44,12 @@ Scenario: session 移行が emergency flush と共存する
 
 ## 受け入れ基準
 
-- [ ] non-blob キー (migration state、pause marker) が StoragePort 実装の背後に置かれている
-- [ ] 業務ロジック側の raw `chrome.storage.local` 呼び出しが adapter への委譲に置き換わっている
-- [ ] raw 呼び出しが adapter 内部だけに残り、それ以外の直接呼び出しが増えていない
-- [ ] キー名と暗号化要否の判断が adapter 層に集約されている
-- [ ] 既存データ形式と読み書き結果が同一であり、振る舞い変更がない
-- [ ] PBI 2026-11-07-02 の完了後に着手し、lint-first の順序が守られている
+- [x] non-blob キー (migration state、pause marker) が StoragePort 実装の背後に置かれている
+- [x] 業務ロジック側の raw `chrome.storage.local` 呼び出しが adapter への委譲に置き換わっている
+- [x] raw 呼び出しが adapter 内部だけに残り、それ以外の直接呼び出しが増えていない
+- [x] キー名と暗号化要否の判断が adapter 層に集約されている
+- [x] 既存データ形式と読み書き結果が同一であり、振る舞い変更がない
+- [x] PBI 2026-11-07-02 の完了後に着手し、lint-first の順序が守られている
 
 ## テスト戦略
 
@@ -74,8 +74,8 @@ Outside-In で進める。まず上記テストで失敗条件を確認し、次
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
 - [ ] `npm test` がグリーンである
-- [ ] `npm run type-check` がグリーンである
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] `npm run type-check` がグリーンである
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

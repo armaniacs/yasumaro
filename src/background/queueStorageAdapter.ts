@@ -4,6 +4,8 @@
  * PersistentRetryQueue. Decouples queue semantics from the persistence backend.
  */
 
+import { ChromeStoragePort, type StoragePort } from '../utils/storage/storagePort.js';
+
 /**
  * Storage adapter interface for queue persistence.
  *
@@ -19,18 +21,23 @@ export interface QueueStorageAdapter {
 }
 
 /**
- * Chrome storage.local adapter. Rejects on storage failure; the queue turns
- * rejections into structured logs and best-effort flow control.
+ * Chrome storage.local adapter. Delegates to the StoragePort seam
+ * (PBI 2026-11-07-04): same keys, same array-value shape — the raw
+ * chrome.storage.local access lives in ChromeStoragePort only.
+ * Rejects on storage failure; the queue turns rejections into structured
+ * logs and best-effort flow control.
  */
 export class ChromeStorageAdapter implements QueueStorageAdapter {
+  constructor(private readonly port: StoragePort = new ChromeStoragePort()) {}
+
   async load<T>(key: string): Promise<T[]> {
-    const result = await chrome.storage.local.get(key);
+    const result = await this.port.get(key);
     const stored = result[key];
     return Array.isArray(stored) ? (stored as T[]) : [];
   }
 
   async save<T>(key: string, items: T[]): Promise<void> {
-    await chrome.storage.local.set({ [key]: items });
+    await this.port.set({ [key]: items });
   }
 }
 

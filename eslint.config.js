@@ -125,11 +125,9 @@ export default [
         'error',
         {
           allow: [
-            {
-              file: 'src/background/migration/migrationState.ts',
-              reason:
-                'Migration state machine (status/progress/retryCount) must work before and while settings migrate; not user settings.',
-            },
+            // PBI 2026-11-07-04 (shrink): migrationState, sessionStore,
+            // queueStorageAdapter, recordingPause, webhookExportSettings now
+            // delegate to ChromeStoragePort — their entries were removed.
             {
               file: 'src/background/migration/legacyMigration.ts',
               reason:
@@ -139,21 +137,6 @@ export default [
               file: 'src/background/migration/opfsRecovery.ts',
               reason:
                 'OPFS fallback recovery owns its fallback-mode/data keys; storage-engine repair, not settings.',
-            },
-            {
-              file: 'src/background/sessionStore.ts',
-              reason:
-                'Session persistence: emergency flush, single-key session migration, startup bulk move. Session infra, not settings.',
-            },
-            {
-              file: 'src/background/queueStorageAdapter.ts',
-              reason:
-                'Offline queue load/save behind an injectable QueueStorageAdapter seam; queue infra, not settings.',
-            },
-            {
-              file: 'src/background/recordingPause.ts',
-              reason:
-                'Pause-until timestamp behind an injectable PauseStorage seam; session-scoped ephemeral state, not user settings.',
             },
             {
               file: 'src/background/recordingTriggerManager.ts',
@@ -184,11 +167,6 @@ export default [
               file: 'src/background/localMarkdownExportRetention.ts',
               reason:
                 'Export retention bookkeeping read (download IDs / erase queue); content data, not settings.',
-            },
-            {
-              file: 'src/background/webhookExport/webhookExportSettings.ts',
-              reason:
-                'Migration candidate: pre-existing per-feature settings store behind an injectable seam; move to SettingsRepository in a follow-up PBI.',
             },
             {
               file: 'src/background/webhookExport/webhookExportHistory.ts',
