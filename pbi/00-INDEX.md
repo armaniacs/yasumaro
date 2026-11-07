@@ -14,6 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-07 arch-delivery-loop archloop-1107（5件） ― ⬜ 未着手
+
+診断ドメイン: モジュール深度・seam・約束事乖離(約束事スポットチェックは乖離なし)。RICE降順=実行順。台帳: [2026-11-07-00-backlog-archloop-1107.md](2026-11-07-00-backlog-archloop-1107.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ⬜ 15 | [2026-11-07-15-refactor-sqlite-taxonomy-owner.md](2026-11-07-15-refactor-sqlite-taxonomy-owner.md) | 🔧非機能追加 | 2.4 | M | taxonomy単一所有者+pinテスト |
+| ⬜ 16 | [2026-11-07-16-refactor-screen-state-owner.md](2026-11-07-16-refactor-screen-state-owner.md) | 🔧非機能追加 | 0.8 | L | 画面state単一所有者化 |
+| ⬜ 17 | [2026-11-07-17-refactor-pending-renderer.md](2026-11-07-17-refactor-pending-renderer.md) | 🔧非機能追加 | 0.64 | M | pending-row共有レンダラー。16完了後 |
+| ⬜ 18 | [2026-11-07-18-refactor-collection-sunset.md](2026-11-07-18-refactor-collection-sunset.md) | 🔧非機能追加 | 0.3 | L | v1 sunset+実行集約。16完了後 |
+| ⬜ 19 | [2026-11-07-19-refactor-claim-owner.md](2026-11-07-19-refactor-claim-owner.md) | 🔧非機能追加 | 0.3 | M | claim取得のorchestrator化(確定済み) |
+
 ### 2026-11-07 大局的改善ラウンド差分 holistic-1107b（5件） ― ✅ 5件完了・アーカイブ済み
 
 差分レビュー(前回閉鎖テーマ除外)の5候補をRICE降順でPBI化・実装。10 settle集約+境界テスト2件 / 11 alias一本化 / 12 purge分離(845→741行)+ARCHITECTURE_MAP更新 / 13 ダイアログ群切り出し / 14 header追記。最終ゲート: 全vitest緑・build緑・各サブゲート緑。実機目視のみ未実施(移動のみdiff+743件緑で代替)。台帳は [2026-11-07-00-backlog-holistic-1107b.md](2026-11-07-00-backlog-holistic-1107b.md) を参照。
