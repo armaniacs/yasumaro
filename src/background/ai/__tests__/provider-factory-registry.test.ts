@@ -1,6 +1,6 @@
 /**
  * provider-factory-registry.test.ts (PBI 2026-09-21-15)
- * Pins createProviderStrategy output types for all 7 catalog ids (written
+ * Pins createProviderStrategy output types for all 8 catalog ids (written
  * before the if-chain became a registry), then proves registry behavior:
  * default fallback, unknown-id error, and registration without branch edits.
  */
@@ -25,15 +25,15 @@ describe('createProviderStrategy type pins (all catalog ids)', () => {
     expect(createProviderStrategy('built-in-ai', SETTINGS)).toBeInstanceOf(BuiltInAiProvider);
   });
 
-  it.each(['openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible'] as const)(
+  it.each(['openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible'] as const)(
     '%s resolves to GenericOpenAICompatibleProvider',
     (id) => {
       expect(createProviderStrategy(id, SETTINGS)).toBeInstanceOf(GenericOpenAICompatibleProvider);
     },
   );
 
-  it('covers exactly the 7 catalog ids', () => {
-    expect([...PROVIDER_CATALOG.keys()]).toHaveLength(7);
+  it('covers exactly the 8 catalog ids', () => {
+    expect([...PROVIDER_CATALOG.keys()]).toHaveLength(8);
   });
 
   it('unknown providerId throws UnknownProviderError (no generic mis-construction)', () => {
@@ -46,7 +46,7 @@ describe('provider factory registry', () => {
     const catalog = await import('../providerCatalog.js');
     expect(catalog.PROVIDER_STRATEGY_FACTORIES.has('gemini')).toBe(true);
     expect(catalog.PROVIDER_STRATEGY_FACTORIES.has('built-in-ai')).toBe(true);
-    for (const id of ['openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible']) {
+    for (const id of ['openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible']) {
       expect(catalog.PROVIDER_STRATEGY_FACTORIES.has(id)).toBe(false);
     }
   });

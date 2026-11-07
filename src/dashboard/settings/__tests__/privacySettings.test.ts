@@ -425,6 +425,8 @@ describe('privacySettings', () => {
             <select id="aiProvider"><option value="gemini">Gemini</option></select>
           </div>
           <div id="geminiSettings"><input type="text" /></div>
+          <div id="openai-officialSettings"><input type="password" /></div>
+          <div id="lm-studioSettings"><input type="text" /></div>
           <div id="openaiSettings"><input type="text" /></div>
           <div id="openai2Settings"><input type="text" /></div>
         </div>
@@ -453,6 +455,8 @@ describe('privacySettings', () => {
       expect(
         (document.querySelector('#openai2Settings input') as HTMLInputElement).disabled
       ).toBe(true);
+      expect((document.querySelector('#openai-officialSettings input') as HTMLInputElement).disabled).toBe(true);
+      expect((document.querySelector('#lm-studioSettings input') as HTMLInputElement).disabled).toBe(false);
       expect((document.getElementById('providerWrap') as HTMLElement).style.opacity).toBe('0.5');
       expect((document.getElementById('providerWrap') as HTMLElement).style.pointerEvents).toBe('none');
     });

@@ -30,14 +30,21 @@ vi.mock('../../../utils/fetch.js', () => ({
 }));
 
 describe('PROVIDER_REGISTRY', () => {
-    it('contains 7 providers', () => {
-        expect(PROVIDER_REGISTRY.size).toBe(7);
+    it('contains 8 providers', () => {
+        expect(PROVIDER_REGISTRY.size).toBe(8);
         expect([...PROVIDER_REGISTRY.keys()].sort()).toEqual(
-            ['built-in-ai', 'gemini', 'lm-studio', 'ollama', 'openai', 'openai-compatible', 'openai2'].sort(),
+            ['built-in-ai', 'gemini', 'lm-studio', 'ollama', 'openai-official', 'openai', 'openai-compatible', 'openai2'].sort(),
         );
     });
 
     it('each entry references correct StorageKeys', () => {
+        expect(getRegistryEntry('openai-official')).toMatchObject({
+            apiKeyKey: StorageKeys.OPENAI_OFFICIAL_API_KEY,
+            modelKey: StorageKeys.OPENAI_OFFICIAL_MODEL,
+            chatCompletionsDialect: 'openai',
+            defaultBaseUrl: 'https://api.openai.com/v1',
+        });
+        expect(getRegistryEntry('openai-official')?.baseUrlKey).toBeUndefined();
         expect(getRegistryEntry('openai')).toMatchObject({
             baseUrlKey: StorageKeys.OPENAI_BASE_URL,
             apiKeyKey: StorageKeys.OPENAI_API_KEY,
@@ -160,13 +167,14 @@ describe('PROVIDER_VIEW_METADATA (PBI 2026-10-14-05)', () => {
         expect([...PROVIDER_VIEW_METADATA.keys()].sort()).toEqual([...PROVIDER_REGISTRY.keys()].sort());
     });
 
-    it('carries the gemini view values and defaults everything else', async () => {
+    it('carries the gemini view values and carries official endpoint help and defaults everything else', async () => {
         const { PROVIDER_VIEW_METADATA } = await import('../providerCatalog.js');
         expect(PROVIDER_VIEW_METADATA.get('gemini')).toMatchObject({ cssClass: '', defaultOpen: true });
         expect(PROVIDER_VIEW_METADATA.get('gemini')?.extraFields).toHaveLength(1);
+        expect(PROVIDER_VIEW_METADATA.get('openai-official')).toEqual({ helpI18nKey: 'openaiOfficialHelp' });
         const offenders: Array<[string, unknown]> = [];
         for (const [id, meta] of PROVIDER_VIEW_METADATA) {
-            if (id === 'gemini') continue;
+            if (id === 'gemini' || id === 'openai-official') continue;
             // Single assertion (vitest/valid-expect allows one arg): collect
             // offenders so the failure diff names the provider ids.
             if (Object.keys(meta).length > 0) offenders.push([id, meta]);

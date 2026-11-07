@@ -18,6 +18,7 @@ import { FailureKind, createFailure } from '../../../utils/failureTaxonomy.js';
 import { getRegistryEntry, isAllowedProviderBaseUrl } from '../providerCatalog.js';
 import { assertApiKeyResolved } from '../../../utils/storage/encryptionLockedError.js';
 import { PROVIDER_ALLOWLIST_ROWS, isProviderOriginAuthorized } from '../../../utils/storage/providerAllowlist.js';
+import { OPENAI_OFFICIAL_BASE_URL } from '../../../utils/storage/providerDefaultBaseUrls.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 
 /**
@@ -50,6 +51,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
     protected model: string;
     protected timeoutMs: number;
     protected isLocal: boolean;
+    private readonly openAIParameters: boolean;
     /**
      * Where the API key was resolved from (storage key name or fallback
      * description). Recorded for diagnostics only — never the key itself.
@@ -154,6 +156,14 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
             }
         }
 
+        // Existing slots keep their own credentials, prompts and budgets.
+        // The origin bridge upgrades their request dialect without rewriting
+        // settings or copying ciphertext bound to another field name.
+        this.openAIParameters = entry?.chatCompletionsDialect === 'openai'
+            || (entry?.legacyOpenAIEndpoint === true
+                && this.baseUrl !== ''
+                && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin);
+
         // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
         // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。
         this.resolvedSettings = resolvedSettings ?? resolveProviderSettings(
@@ -192,6 +202,15 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
      */
     private isApiKeyMissing(): boolean {
         return getRegistryEntry(this.providerName)?.requiresApiKey === true && !this.apiKey;
+    }
+
+    /** Both HTTP flows follow the provider dialect; model names are opaque. */
+    private generationParameters(maxTokens: number, temperature: number): Record<string, number> {
+        // Official completion budgets include reasoning tokens. Omitting
+        // optional sampling works without predicting a model's capabilities.
+        return this.openAIParameters
+            ? { max_completion_tokens: maxTokens }
+            : { max_tokens: maxTokens, temperature };
     }
 
     /**
@@ -238,8 +257,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                             content: userPrompt
                         }
                     ],
-                    max_tokens: this.resolvedSettings.maxTokens,
-                    temperature: 0.1
+                    ...this.generationParameters(this.resolvedSettings.maxTokens, 0.1),
                 };
                 const headers: Record<string, string> = { 'Content-Type': 'application/json' };
                 if (this.apiKey) {
@@ -261,8 +279,15 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const payload = {
                     model: this.model,
                     messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-                    max_tokens: connectionTestMaxTokens,
-                    temperature: 0,
+                    // A small budget can be exhausted before reasoning
+                    // produces visible text. Official-dialect providers use
+                    // the configured cap (it covers reasoning tokens);
+                    // others use the retry-ladder cap from testConnection
+                    // (issue #202).
+                    ...this.generationParameters(
+                        this.openAIParameters ? this.resolvedSettings.maxTokens : connectionTestMaxTokens,
+                        0,
+                    ),
                 };
                 return { url, headers, body: JSON.stringify(payload), modelName: this.model };
             },

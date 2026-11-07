@@ -1,3 +1,4 @@
+import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
 /**
  * privacySettings.ts
  * Privacy settings functionality for the popup UI.
@@ -67,19 +68,12 @@ export function createPrivacySettings(): PrivacySettingsController {
      */
     function toggleCloudProviderSettings(disabled: boolean): void {
         const providerSelect = document.getElementById('aiProvider') as HTMLSelectElement | null;
-        const geminiSettings = document.getElementById('geminiSettings');
-        const openaiSettings = document.getElementById('openaiSettings');
-        const openai2Settings = document.getElementById('openai2Settings');
-
         if (providerSelect) providerSelect.disabled = disabled;
-        if (geminiSettings) {
-            geminiSettings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
-        }
-        if (openaiSettings) {
-            openaiSettings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
-        }
-        if (openai2Settings) {
-            openai2Settings.querySelectorAll('input').forEach(el => (el as HTMLInputElement).disabled = disabled);
+        for (const [id, entry] of PROVIDER_CATALOG) {
+            if (entry.isLocal) continue;
+            document.getElementById(`${id}Settings`)?.querySelectorAll('input').forEach(el => {
+                (el as HTMLInputElement).disabled = disabled;
+            });
         }
 
         // Visual feedback: dim the provider section when disabled

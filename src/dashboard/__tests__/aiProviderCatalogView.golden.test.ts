@@ -9,7 +9,7 @@ import { renderProviderSettings } from '../aiProviderCatalogView.js';
 import type { ProviderId } from '../../utils/storage/types.js';
 
 const ALL_IDS: ProviderId[] = [
-  'gemini', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
+  'gemini', 'openai-official', 'openai', 'openai2', 'lm-studio', 'ollama', 'openai-compatible', 'built-in-ai',
 ];
 
 function render(id: ProviderId): HTMLElement {

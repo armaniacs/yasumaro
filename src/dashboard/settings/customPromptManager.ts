@@ -54,7 +54,7 @@ export function asCustomPrompts(value: unknown): CustomPrompt[] {
 
 /** Boundary guard for the provider select: unknown option values fall back to 'all'. */
 export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
-    return value === 'gemini' || value === 'openai' || value === 'openai2'
+    return value === 'gemini' || value === 'openai-official' || value === 'openai' || value === 'openai2'
         || value === 'lm-studio' || value === 'ollama' || value === 'all'
         ? value
         : 'all';

@@ -182,6 +182,15 @@
   "googleGemini": {
     "message": "Google Gemini"
   },
+  "openaiOfficial": {
+    "message": "OpenAI"
+  },
+  "openaiOfficialHelp": {
+    "message": "OpenAI API endpoint: https://api.openai.com/v1. Enter your API key and model."
+  },
+  "openaiOfficialModelPlaceholder": {
+    "message": "Model ID (e.g. gpt-6-luna)"
+  },
   "openaiCompatible": {
     "message": "OpenAI Compatible (Groq, etc.)"
   },

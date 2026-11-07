@@ -18,6 +18,7 @@ describe('provider accordion DOM goldens', () => {
     const details = [...container.querySelectorAll('details.b-provider-details')];
     expect(details.map((d) => d.getAttribute('data-provider'))).toEqual([
       'geminiSettings',
+      'openai-officialSettings',
       'openaiSettings',
       'openai2Settings',
       'lm-studioSettings',

@@ -4,6 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Crypto } from '@peculiar/webcrypto';
 import { encryptEnvelope } from '../../utils/crypto/index.js';
+import type { Settings } from '../../utils/storage/types.js';
 
 // PBKDF2 at the production 600,000 iterations dominates this file's runtime.
 // The production values are asserted in cryptoParamsSSOT.test.ts; here the KDF
@@ -80,6 +81,32 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect(restoreDb).toHaveBeenCalledTimes(1);
     const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array;
     expect(Array.from(restoredBytes)).toEqual(Array.from(FAKE_DB_BYTES));
+  });
+
+  it('round-trips a non-default official OpenAI model without restoring its API key', async () => {
+    const sourceSettings = {
+      ai_provider: 'openai-official',
+      // No slot-level model override: the provider model must survive restoration.
+      ai_provider_priority_list: [{ provider: 'openai-official' }],
+      openai_official_model: 'custom-official-model',
+      openai_official_api_key: 'test-backup-key-not-for-restoration',
+      openai_model: 'custom-compatible-model',
+    } as Settings;
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(sourceSettings);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+    const result = await importEncryptedBackup(envelope, 'correct-password');
+
+    expect(result).toEqual({ success: true, skippedKeys: ['openai_official_api_key'] });
+    expect(settingsRepository.setAll).toHaveBeenCalledExactlyOnceWith({
+      ai_provider: 'openai-official',
+      ai_provider_priority_list: [{ provider: 'openai-official' }],
+      openai_official_model: 'custom-official-model',
+      openai_model: 'custom-compatible-model',
+    });
+    expect(restoreDb).toHaveBeenCalledExactlyOnceWith(FAKE_DB_BYTES);
   });
 
   it('surfaces the restoreDb failure reason instead of a fixed message', async () => {

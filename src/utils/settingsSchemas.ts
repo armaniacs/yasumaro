@@ -32,6 +32,8 @@ export const GENERAL_SETTINGS_SCHEMA: SettingsSchema = [
   { key: StorageKeys.GEMINI_API_KEY, type: 'password' },
   { key: StorageKeys.GEMINI_MODEL, type: 'text' },
   { key: StorageKeys.GEMINI_API_VERSION, type: 'text' },
+  { key: StorageKeys.OPENAI_OFFICIAL_API_KEY, type: 'password' },
+  { key: StorageKeys.OPENAI_OFFICIAL_MODEL, type: 'text' },
   { key: StorageKeys.OPENAI_BASE_URL, type: 'text' },
   { key: StorageKeys.OPENAI_API_KEY, type: 'password' },
   { key: StorageKeys.OPENAI_MODEL, type: 'text' },

@@ -73,6 +73,7 @@ vi.mock('../../utils/storage/types.js', async (importOriginal) => {
   return {
     ...actual,
     StorageKeys: {
+      ...(actual.StorageKeys as Record<string, string>),
       OBSIDIAN_API_KEY: 'obsidian_api_key',
       OBSIDIAN_PROTOCOL: 'obsidian_protocol',
       OBSIDIAN_PORT: 'obsidian_port',
