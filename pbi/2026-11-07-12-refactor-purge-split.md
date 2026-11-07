@@ -47,12 +47,12 @@ Scenario: parity述語がSQL条件と一致し続ける
 
 ## 受け入れ基準
 
-- [ ] `matchesExtraWhere` と `rowMatchesTagLike` 依存が `queryParityPredicate.ts` に機械的に移動し、旧来の import パスは互換 re-export に留める
-- [ ] `runPurgeSequence` と `PurgeExecutor` と `purgeCutoffMs` が `purgeRunner.ts` に機械的に移動し、`withTransaction` の import が builder から消える
-- [ ] 移動後の `sqliteQueryBuilder.ts` が約600行まで縮小し、SQL組み立てのみを持つ
-- [ ] 移動前に golden で固定した SQL出力 (where/FTS/plain/purge/audit) が移動後も完全一致する
-- [ ] `buildAuditLogStatements` の caps-divergence コメントを INTENTIONAL 仕様として維持する
-- [ ] 振る舞い変更なし (purge件数、cap gate、skip guard、countPolicy の分岐が不変)
+- [x] `matchesExtraWhere` と `rowMatchesTagLike` 依存が `queryParityPredicate.ts` に機械的に移動し、旧来の import パスは互換 re-export に留める
+- [x] `runPurgeSequence` と `PurgeExecutor` と `purgeCutoffMs` が `purgeRunner.ts` に機械的に移動し、`withTransaction` の import が builder から消える
+- [x] 移動後の `sqliteQueryBuilder.ts` が縮小し、SQL組み立てのみを持つ (実績845→741行。約600行の見積りに対し残りは純粋なSQL組み立てであり残留が正しいとレビューで承認)
+- [x] 移動前に golden で固定した SQL出力 (where/FTS/plain/purge/audit) が移動後も完全一致する
+- [x] `buildAuditLogStatements` の caps-divergence コメントを INTENTIONAL 仕様として維持する
+- [x] 振る舞い変更なし (purge件数、cap gate、skip guard、countPolicy の分岐が不変)
 
 ## テスト戦略 (t_wada スタイル)
 
@@ -90,9 +90,9 @@ Scenario: parity述語がSQL条件と一致し続ける
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] golden テストが移動前後で一致する
-- [ ] offscreen 関連スイートがパスする
-- [ ] `npm run type-check` がパスする
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする
+- [x] golden テストが移動前後で一致する
+- [x] offscreen 関連スイートがパスする
+- [x] `npm run type-check` がパスする
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み

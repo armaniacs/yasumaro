@@ -6,8 +6,10 @@
 // queryPlan split. It owns the shared filter vocabulary
 // (buildFilterConditions — formerly in queryPlan.ts, the import that
 // closed the queryPlan ⇄ queryBuilder cycle), every search/plain/CRUD/
-// audit/purge statement builder, the in-memory parity predicate
-// (matchesExtraWhere), and the purge execution runner (runPurgeSequence).
+// audit/purge statement builder, and compat re-exports for the two
+// responsibilities that moved out (PBI 2026-11-07-12): the in-memory parity
+// predicate (matchesExtraWhere → queryParityPredicate.ts) and the purge
+// execution runner (runPurgeSequence → purgeRunner.ts).
 // The policy layer (queryPlan.ts: mode/cap/brand/clamp/QuerySpec) depends
 // on this module one-way; nothing here imports policy at runtime
 // (type-only references to ExtraWhere/QuerySpec excepted).
@@ -15,10 +17,9 @@
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import type { ExtraWhere, QuerySpec } from './queryPlan.js';
+import type { PurgeSequenceStatements } from './purgeRunner.js';
 import { sanitizeFtsTerm, ALLOWED_ORDER_COLUMNS, FTS_QUERY_MAX_LENGTH, UPDATABLE_FIELDS } from './schema.js';
 import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
-import { rowMatchesTagLike } from '../utils/tagLike.js';
-import { withTransaction } from './sqliteTransaction.js';
 
 /** WHERE-prefix projection over the shared filter conditions. */
 function buildWhereFromConditions(conditions: FilterCondition[]): { where: string; params: SqliteValue[] } {
@@ -216,8 +217,8 @@ export function shouldUseFts5(fts5Available: boolean, bareTerm: string): boolean
  * the shared filter vocabulary (dateFrom/dateTo/domain/starred/gistSynced/
  * ids/excludeDeleted). `buildWhereClause` (plain SQL, this module's adapter),
  * `buildExtraWhereSql` (search SQL, policy module) and `matchesExtraWhere`
- * (non-SQL parity, below) all derive from this list, so a new filter is one
- * row here instead of three synchronized edits.
+ * (non-SQL parity, queryParityPredicate.ts) all derive from this list, so a
+ * new filter is one row here instead of three synchronized edits.
  *
  * `params` is ALWAYS a flat `SqliteValue[]` vector — the round-12 version
  * stored the whole `ids` array as one bind value, so search+ids bound a
@@ -267,34 +268,13 @@ export function qualifyCondition(condition: FilterCondition, qualifier: string):
 }
 
 // ---------------------------------------------------------------------------
-// Non-SQL parity predicate (moved from queryPlan.ts, PBI 2026-11-07-07).
-//
+// Non-SQL parity predicate — moved to queryParityPredicate.ts
+// (PBI 2026-11-07-12). Compat re-export: pre-split import paths keep working.
 // The policy module cannot host this: it needs `rowMatchesTagLike`, and the
-// split requires the policy module to hold no tagLike runtime import. The
-// builder already owns tag-filter semantics (buildTagFilterCondition above),
-// so the implementation lives here; queryPlan.ts keeps a compat re-export.
+// split requires the policy module to hold no tagLike runtime import.
 // ---------------------------------------------------------------------------
 
-/**
- * Shared in-memory predicate mirroring buildExtraWhereSql's semantics.
- * Lets InMemoryTransport filter without reimplementing the condition set —
- * both the SQL generator and the JS fallback read from the same source.
- */
-export function matchesExtraWhere(
-  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number; tags?: string | null },
-  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'tag'>
-): boolean {
-  if (query.domain != null && query.domain !== '' && record.domain !== query.domain) return false;
-  if (query.starred != null && Boolean(record.is_starred) !== query.starred) return false;
-  if (query.gistSynced != null && (record.gist_synced ?? 0) !== query.gistSynced) return false;
-  if (query.dateFrom != null && record.created_at < (query as StorageQuery).dateFrom!) return false;
-  if (query.dateTo != null && record.created_at > (query as StorageQuery).dateTo!) return false;
-  if (query.ids != null && query.ids.length > 0) {
-    if (record.id == null || !query.ids.includes(record.id)) return false;
-  }
-  if (query.tag != null && query.tag !== '' && !rowMatchesTagLike(record.tags, query.tag)) return false;
-  return true;
-}
+export { matchesExtraWhere } from './queryParityPredicate.js';
 
 // ---------------------------------------------------------------------------
 // PBI-34: shared SQL assembly — WHERE/ORDER/LIMIT built in ONE place.
@@ -667,107 +647,23 @@ export function buildUpdateByIdStatements(
 // sequence: delete-old (gated on retentionDays > 0) → SELECT changes() → COUNT
 // → excess delete over maxRecords → SELECT changes(). It used to be four
 // near-identical copies whose control flow could drift silently per lang; the
-// statements build the SQL, and `runPurgeSequence` owns the gates, the
-// changes()-based counting rule and the transaction policy, so a fix lands
-// once and both langs move together.
+// statements build the SQL, and `runPurgeSequence` (purgeRunner.ts) owns the
+// gates, the changes()-based counting rule and the transaction policy, so a
+// fix lands once and both langs move together.
 //
-// The runner lives HERE (not in the policy module) because it executes
-// against a live engine via `withTransaction` — the split requires the
-// policy layer to hold no transaction import or execution.
+// The runner lives OUTSIDE this module (PBI 2026-11-07-12 — purgeRunner.ts,
+// re-exported below for compat) because it executes against a live engine via
+// `withTransaction`; the split requires the policy layer to hold no
+// transaction import or execution, and this module keeps SQL assembly only.
 // ---------------------------------------------------------------------------
 
-/** Retention cutoff in epoch ms. `now` is injectable for tests. */
-export function purgeCutoffMs(retentionDays: number, now: number = Date.now()): number {
-  return now - retentionDays * 24 * 60 * 60 * 1000;
-}
-
-/**
- * The statements one purge sequence runs, in execution order. Both backends
- * construct these from the shared builders; the runner binds the values.
- */
-export interface PurgeSequenceStatements {
-  /** Deletes/clears rows older than the retention cutoff (one cutoff bind). */
-  deleteOldSql: string;
-  /** Reads the row count the cap gate compares against maxRecords. */
-  countSql: string;
-  /** Deletes/clears `count - maxRecords` rows, oldest first (one bind). */
-  deleteExcessSql: string;
-}
-
-/**
- * Executor seam for `runPurgeSequence`: each backend binds its own engine, so
- * the sequence stays engine-agnostic. The two backends genuinely read scalars
- * differently (IDB positional callback vs the worker's named `row.c`), so the
- * seam — not the runner — owns that shape.
- * - `exec` runs a write (DELETE/UPDATE) with its binds.
- * - `count` runs a scalar COUNT and returns its single value.
- * - `changes` runs `SELECT changes()` (spelled per backend) after a write and
- *   returns the number of rows that write actually touched.
- */
-export interface PurgeExecutor {
-  exec(sql: string, params: SqliteValue[]): Promise<void>;
-  count(sql: string, params: SqliteValue[]): Promise<number>;
-  changes(): Promise<number>;
-}
-
-/**
- * The one documented difference between the two purge ops, made explicit.
- * 'always' (purgeOldRecords): the cap COUNT runs even when maxRecords is
- * absent. 'when-max-records' (content purge): the COUNT is skipped entirely
- * unless maxRecords > 0. Collapsing them would change the emitted sequence.
- */
-export type PurgeCountPolicy = 'always' | 'when-max-records';
-
-export interface PurgeSequencePolicy {
-  retentionDays?: number | null | undefined;
-  maxRecords?: number | null | undefined;
-  countPolicy: PurgeCountPolicy;
-}
-
-/**
- * Run the shared purge sequence inside ONE `withTransaction` and return the
- * executed-row count. Policy, shared verbatim by both backends:
- *
- * - TRANSACTION: the whole sequence runs in one BEGIN IMMEDIATE … COMMIT.
- *   Every purge here reads between writes — `SELECT changes()` feeds the
- *   reported count, and the cap COUNT decides the next write's LIMIT. A
- *   recording landing between the two would otherwise report a count taken
- *   from one snapshot while deleting rows selected from another.
- * - SKIP GUARDS (PBI 2026-09-12-36): an absent or non-positive
- *   `retentionDays` / `maxRecords` skips that dimension entirely, so "no
- *   window" never degrades into "cutoff = now" (the old (0,0)
- *   deleted-everything divergence). `countPolicy` is the one intentional
- *   cross-op difference, preserved here rather than re-decided per backend.
- * - COUNTING: `purged` is the sum of `SELECT changes()` after each write. The
- *   computed excess is only what the cap statement was asked to touch, not
- *   what it touched, so reporting it would turn a disagreement between the
- *   count and the delete into a wrong number.
- */
-export async function runPurgeSequence(
-  executor: PurgeExecutor,
-  stmts: PurgeSequenceStatements,
-  policy: PurgeSequencePolicy,
-): Promise<number> {
-  const { retentionDays, maxRecords, countPolicy } = policy;
-  let purged = 0;
-
-  await withTransaction({ exec: (sql) => executor.exec(sql, []) }, async () => {
-    if (retentionDays != null && retentionDays > 0) {
-      await executor.exec(stmts.deleteOldSql, [purgeCutoffMs(retentionDays)]);
-      purged += await executor.changes();
-    }
-
-    if (countPolicy === 'always' || (maxRecords != null && maxRecords > 0)) {
-      const count = await executor.count(stmts.countSql, []);
-      if (maxRecords != null && maxRecords > 0 && count > maxRecords) {
-        await executor.exec(stmts.deleteExcessSql, [count - maxRecords]);
-        purged += await executor.changes();
-      }
-    }
-  });
-
-  return purged;
-}
+export { purgeCutoffMs, runPurgeSequence } from './purgeRunner.js';
+export type {
+  PurgeSequenceStatements,
+  PurgeExecutor,
+  PurgeCountPolicy,
+  PurgeSequencePolicy,
+} from './purgeRunner.js';
 
 /** Age-based + cap-based hard-delete statements shared by idb/opfs purge. */
 export function buildPurgeOldRecordsStatements(): PurgeSequenceStatements {

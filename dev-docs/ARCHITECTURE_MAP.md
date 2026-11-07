@@ -49,7 +49,7 @@ Content Scripts (entrypoints/content/ + src/content/)
 
 | Module | Location | Role |
 |--------|----------|------|
-| SQLite query plan SSOT | `src/offscreen/queryPlan.ts` | QuerySpec / statement builders / condition set shared by OPFS / IDB / fallback |
+| SQLite query plan SSOT | `src/offscreen/queryPlan.ts` | Read policy / caps / brand shared by OPFS / IDB / fallback. Statement builders live in `src/offscreen/sqliteQueryBuilder.ts`; parity predicates in `src/offscreen/queryParityPredicate.ts`; purge execution in `src/offscreen/purgeRunner.ts` |
 | SQLite read policy (QueryPlanner) | `src/offscreen/queryPlanner.ts` | Single read seam: wire payload → StorageQuery (normalize → clamp → FTS truncate). Internals: queryNormalize / queryPlan / sqliteQueryBuilder / rowCodec; adjacent: recordsRepo (execution), browsingLogCodec (write encode) |
 | SQLite STATUS enrichment | `src/offscreen/sqliteStatus.ts` | Migration extras collection (field-isolated allSettled) + legacy-DB probes |
 | Archive wire descriptors | `src/messaging/archiveWireTable.ts` | Codec-carrying descriptor rows for archive ops (single projection source) |
