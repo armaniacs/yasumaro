@@ -209,5 +209,70 @@ describe('GenericOpenAICompatibleProvider', () => {
 
       expect(sentBody()).toMatchObject({ max_completion_tokens: 32 });
     });
+
+    it.each([':::', 'not-a-url'])('wraps a malformed legacy baseUrl %s as Invalid baseUrl instead of a raw TypeError', (baseUrl) => {
+      // Built manually: the settingsFor helper parses the baseUrl itself.
+      const settings = {
+        openai_base_url: baseUrl,
+        openai_api_key: 'test-key',
+        openai_model: 'gpt-6-luna',
+      } as unknown as Settings;
+
+      let error: unknown;
+      try {
+        new GenericOpenAICompatibleProvider(settings, 'openai');
+      } catch (e) {
+        error = e;
+      }
+
+      expect(error).toBeInstanceOf(Error);
+      expect((error as Error).message).toMatch(/Invalid baseUrl/);
+      expect(error).not.toBeInstanceOf(TypeError);
+    });
+
+    it('pins the configured official budget across all 4 testConnection retries (length x3 then stop)', async () => {
+      const provider = new GenericOpenAICompatibleProvider(
+        settingsFor('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), 'openai',
+      );
+      for (let i = 0; i < 3; i += 1) {
+        fetchMock.mockResolvedValueOnce(Response.json({
+          choices: [{ message: { content: '' }, finish_reason: 'length' }],
+        }));
+      }
+      fetchMock.mockResolvedValueOnce(Response.json({
+        choices: [{ message: { content: 'OK' }, finish_reason: 'stop' }],
+      }));
+
+      const result = await provider.testConnection();
+
+      expect(result.success).toBe(true);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      for (const index of [0, 1, 2, 3]) {
+        expect(sentBody(index)).toMatchObject({ model: 'gpt-6-luna', max_completion_tokens: 2048 });
+        expect(sentBody(index)).not.toHaveProperty('max_tokens');
+        expect(sentBody(index)).not.toHaveProperty('temperature');
+      }
+    });
+
+    it('fails official-dialect testConnection after exactly 4 fetches when every attempt is cut off', async () => {
+      const provider = new GenericOpenAICompatibleProvider(
+        settingsFor('openai', 'https://api.openai.com/v1', 'gpt-6-luna'), 'openai',
+      );
+      for (let i = 0; i < 4; i += 1) {
+        fetchMock.mockResolvedValueOnce(Response.json({
+          choices: [{ message: { content: '' }, finish_reason: 'length' }],
+        }));
+      }
+
+      const result = await provider.testConnection();
+
+      expect(result.success).toBe(false);
+      expect(fetchMock).toHaveBeenCalledTimes(4);
+      for (const index of [0, 1, 2, 3]) {
+        expect(sentBody(index)).toMatchObject({ max_completion_tokens: 2048 });
+        expect(sentBody(index)).not.toHaveProperty('max_tokens');
+        expect(sentBody(index)).not.toHaveProperty('temperature');
+      }
+    });
   });
 });

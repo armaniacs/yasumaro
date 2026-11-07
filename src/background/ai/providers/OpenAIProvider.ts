@@ -124,6 +124,10 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         this.logApiKeySource(this.apiKeySource, providerName);
 
         // BaseUrl SSRF対策 — validateUrlForAIRequests + registry allowlist (PBI04)
+        // The official-origin bridge for legacy slots is resolved inside the
+        // same try block so a malformed baseUrl surfaces as `Invalid baseUrl`,
+        // never as a raw TypeError from `new URL`.
+        let officialOriginBridge = false;
         if (this.baseUrl) {
             try {
                 validateUrlForAIRequests(this.baseUrl);
@@ -150,19 +154,20 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 // No allowlist row (direct construction with an unknown id):
                 // the factory rejects unknown ids first, so this branch stays
                 // on the deny-only SSRF gate alone.
+                // Existing slots keep their own credentials, prompts and budgets.
+                // The origin bridge upgrades their request dialect without
+                // rewriting settings or copying ciphertext bound to another
+                // field name. Parsed here (exact origin: scheme+host+port) so a
+                // malformed baseUrl is wrapped as `Invalid baseUrl` below.
+                officialOriginBridge = entry?.legacyOpenAIEndpoint === true
+                    && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin;
             } catch (error: unknown) {
                 addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
                 throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);
             }
         }
 
-        // Existing slots keep their own credentials, prompts and budgets.
-        // The origin bridge upgrades their request dialect without rewriting
-        // settings or copying ciphertext bound to another field name.
-        this.openAIParameters = entry?.chatCompletionsDialect === 'openai'
-            || (entry?.legacyOpenAIEndpoint === true
-                && this.baseUrl !== ''
-                && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin);
+        this.openAIParameters = entry?.chatCompletionsDialect === 'openai' || officialOriginBridge;
 
         // timeout・上限は解決済み値に一本化: 注入があればそれを使い、
         // なければblobから導出 (既存構築互換)。hooks閉包は以後この値を読む。

@@ -57,6 +57,7 @@ function buildFixture(): TransitionFixture {
   const targets: ApiKeyTarget[] = [];
   // Round down so an added field cannot leave the last bucket with only
   // one placement. Each bucket keeps nested and scattered targets.
+  // 7-field list incl. openai_official_api_key: floor keeps every bucket mixed-placement; ceil would strand one bucket with a single target.
   const third = Math.floor(API_KEY_FIELD_NAMES.length / 3);
 
   for (const [index, field] of API_KEY_FIELD_NAMES.entries()) {

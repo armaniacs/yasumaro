@@ -69,7 +69,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('round-trips settings and history db through encrypt/decrypt', async () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -111,7 +110,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('surfaces the restoreDb failure reason instead of a fixed message', async () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ error: 'Database file is corrupt' });
 
@@ -126,7 +124,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('fails with wrong password without touching settings or db', async () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
 
     const envelope = await exportEncryptedBackup('correct-password');
@@ -160,7 +157,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('rejects when exportDb fails', async () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockRejectedValue(new Error('Database unavailable'));
 
     await expect(exportEncryptedBackup('correct-password')).rejects.toThrow();
@@ -175,7 +171,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
       github_pat: 'ghp_attackertoken',
     } as never;
     vi.mocked(settingsRepository.getAll).mockResolvedValue(TAMPERED_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(TAMPERED_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -200,7 +195,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
       some_unknown_key: 'x',
     } as never;
     vi.mocked(settingsRepository.getAll).mockResolvedValue(MIXED_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(MIXED_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
     vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
 
@@ -219,7 +213,6 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
 
   it('rejects import with excessive iterations', async () => {
     vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
-    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
     vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
 
     const envelope = await exportEncryptedBackup('correct-password');
