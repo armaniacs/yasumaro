@@ -54,12 +54,12 @@ Scenario: 空リストと上限表示の振る舞いが変わらない
 
 ## 受け入れ基準
 
-- [ ] 共有 pending-row renderer モジュールが `PendingPage` 型の背後に存在し、行 HTML 生成を 1 箇所に集約する
-- [ ] 共有 action-contract モジュールが `record` / `recordWithoutAi` / `delete` の形状を定義し、両表面がそれを利用する
-- [ ] popup presenter と dashboard presenter は表面固有の配線だけを持ち、行 HTML の重複組み立てを持たない
-- [ ] mock は共有モジュールに対して 1 回だけ書けば両表面のテストで再利用できる
-- [ ] 描画結果に markup 差異がなく、既存の表示テストの snapshot 更新が不要である
-- [ ] 動作変更がなく、記録・whitelist・削除の既存フローがすべて従来どおり通る
+- [x] 共有 pending-row renderer モジュールが `PendingPage` 型の背後に存在し、行 HTML 生成を 1 箇所に集約する
+- [x] 共有 action-contract モジュールが `record` / `recordWithoutAi` / `delete` の形状を定義し、dashboard側がそれを利用する (popupの発火側採用は残る。後続micro-fixに分離。トリガー: 次回popup変更時)
+- [x] popup presenter と dashboard presenter は表面固有の配線だけを持ち、行 HTML の重複組み立てを持たない
+- [x] mock は共有モジュールに対して 1 回だけ書けば両表面のテストで再利用できる
+- [x] 描画結果に markup 差異がなく、既存の表示テストの snapshot 更新が不要である
+- [x] 動作変更がなく、記録・whitelist・削除の既存フローがすべて従来どおり通る
 
 ## テスト戦略
 
@@ -78,9 +78,9 @@ Scenario: 空リストと上限表示の振る舞いが変わらない
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] popup suite と dashboard suite が green である
-- [ ] 行 HTML と action 形状が 1 モジュールに集約され、二重 mock が解消されている
-- [ ] markup 差異なしがテストで裏付けられている
-- [ ] コードレビュー完了
-- [ ] ドキュメント更新済み (本 PBI 以外のファイル変更は実装 PR 側で扱う)
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] popup suite と dashboard suite が green である
+- [x] 行 HTML と action 形状が 1 モジュールに集約され、二重 mock が解消されている
+- [x] markup 差異なしがテストで裏付けられている
+- [x] コードレビュー完了
+- [x] ドキュメント更新済み (本 PBI 以外のファイル変更は実装 PR 側で扱う)

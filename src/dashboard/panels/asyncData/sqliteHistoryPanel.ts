@@ -29,7 +29,8 @@ import {
   setHandoffReason,
   clearHandoffReason,
 } from './sqliteHistoryPanelView.js';
-import type { PendingRegionActions, SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
+import type { PendingRowActions } from '../../../utils/pendingRowActions.js';
 import { buildHistoryHandoffQuery, requestHistoryHandoff } from './historyHandoff.js';
 
 export { formatDiagnosticMetadataHtml };
@@ -434,7 +435,7 @@ export function createSqliteHistoryPanel(deps: SqliteHistoryModelDeps = {}): Pan
     await model.loadPendingPages();
   }
 
-  function createPendingActions(): PendingRegionActions {
+  function createPendingActions(): PendingRowActions {
     return {
       onRecord: (url) => recordPending(url, false),
       onRecordWithoutAi: (url) => recordPending(url, true),

@@ -99,6 +99,8 @@ src/utils/trustDb/managedStringList.ts
 src/utils/trustDb/TrustDbAdmin.ts
 src/utils/ui/confirmDialog.ts
 src/utils/copyMarkdownButton.ts
+src/utils/pendingRowRenderer.ts
+src/utils/pendingRowActions.ts
 src/utils/storage/trancoConsent.ts
 src/utils/storage/providerAllowlist.ts
 src/utils/storage/providerDefaultBaseUrls.ts

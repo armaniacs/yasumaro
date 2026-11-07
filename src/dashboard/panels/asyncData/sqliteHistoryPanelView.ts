@@ -10,8 +10,13 @@ import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { withBusyButton } from './busyButton.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
-import { renderPendingReason } from '../../../utils/pendingStorage.js';
 import type { PendingPage } from '../../../utils/pendingStorage.js';
+import { buildPendingRowHtml, formatTimestamp } from '../../../utils/pendingRowRenderer.js';
+// `formatTimestamp` moved to the shared pending-row renderer with the row
+// that needs it; re-exported so existing importers keep working.
+export { formatTimestamp } from '../../../utils/pendingRowRenderer.js';
+import type { PendingRowActions } from '../../../utils/pendingRowActions.js';
+import { dispatchPendingRowAction } from '../../../utils/pendingRowActions.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 import { renderCleansingBar, renderEntryDiagnostics } from './historyEntryPresentation.js';
 import {
@@ -66,16 +71,6 @@ export function buildCleansingProgressBarHtml(entry: BrowsingLogEntry): string {
 /** Thin `Date` wrapper over the localDate SSOT's YYYY-MM-DD formatter. */
 export function formatDate(date: Date): string {
   return formatLocalDate(date);
-}
-
-export function formatTimestamp(ts: number): string {
-  const d = new Date(ts);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
 }
 
 /**
@@ -348,37 +343,14 @@ export function isViewMounted(container: HTMLElement): boolean {
 // the View owns ids, markup and in-row feedback for this region.
 // ---------------------------------------------------------------------------
 
-export interface PendingRegionActions {
-  onRecord: (url: string) => Promise<{ ok: boolean; error?: string }>;
-  onRecordWithoutAi: (url: string) => Promise<{ ok: boolean; error?: string }>;
-  onDelete: (url: string) => Promise<void>;
-}
+export type PendingRegionActions = PendingRowActions;
 
 /** Rows per page in the pending section (parity with the legacy pending panel). */
 export const PENDING_REGION_PAGE_SIZE = 10;
 
-function buildPendingRowHtml(page: PendingPage): string {
-  const urlEl = isSecureUrl(page.url)
-    ? `<a class="history-entry-url" href="${escapeHtml(page.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(page.title || page.url)}</a>`
-    : `<span class="history-entry-url">${escapeHtml(page.title || page.url)}</span>`;
-  const header = page.headerValue ? `<span class="pending-entry-header"> (${escapeHtml(page.headerValue)})</span>` : '';
-  const meta = `${escapeHtml(formatTimestamp(page.timestamp))} — ${escapeHtml(renderPendingReason(page.reason))}${header}`;
-  return `<div class="pending-entry" data-pending-url="${escapeHtml(page.url)}">
-    <div class="pending-entry-info">
-      ${urlEl}
-      <div class="pending-entry-meta">${meta}</div>
-    </div>
-    <div class="pending-entry-actions">
-      <button type="button" class="secondary-btn pending-record-btn" data-pending-action="record" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('recordNow') || '📝 今すぐ記録')}</button>
-      <button type="button" class="secondary-btn pending-record-btn" data-pending-action="recordWithoutAi" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('recordWithoutAi') || '📝 AI要約なしで記録')}</button>
-      <button type="button" class="secondary-btn pending-delete-btn" data-pending-action="delete" data-pending-url="${escapeHtml(page.url)}">${escapeHtml(t('pendingDeleteForever') || '完全に削除')}</button>
-    </div>
-  </div>`;
-}
-
 function buildPendingRegionInnerHtml(pages: PendingPage[]): string {
   const sorted = [...pages].sort((a, b) => b.timestamp - a.timestamp);
-  const rows = sorted.slice(0, PENDING_REGION_PAGE_SIZE).map((p) => buildPendingRowHtml(p)).join('');
+  const rows = sorted.slice(0, PENDING_REGION_PAGE_SIZE).map((p) => buildPendingRowHtml(p, { mode: 'actions' })).join('');
   const more = sorted.length > PENDING_REGION_PAGE_SIZE
     ? `<div class="pending-entry-more">${escapeHtml(t('pendingMoreCount', [String(sorted.length - PENDING_REGION_PAGE_SIZE)]))}</div>`
     : '';
@@ -422,12 +394,11 @@ export function renderPendingRegion(
           await withBusyButton(
             btn,
             async () => {
-              if (action === 'delete') {
-                await actions.onDelete(url);
-                return;
-              }
-              const result = await (action === 'record' ? actions.onRecord(url) : actions.onRecordWithoutAi(url));
-              if (!result.ok) {
+              // Action routing lives in the shared pending-row action
+              // contract; `delete` resolves undefined (success), record
+              // failures throw to paint the in-row error below.
+              const result = await dispatchPendingRowAction(action, url, actions);
+              if (result && !result.ok) {
                 throw new Error(result.error ?? t('recordError'));
               }
             },
