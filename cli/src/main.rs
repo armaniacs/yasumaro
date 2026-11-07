@@ -11,6 +11,8 @@ use clap::Parser;
 mod config;
 #[allow(dead_code)]
 mod db;
+#[allow(dead_code)]
+mod queries;
 
 /// Process exit codes shared by all later tasks.
 pub const EXIT_OK: i32 = 0;
