@@ -15,7 +15,13 @@ mod params;
 mod queries;
 mod repl;
 
-/// Process exit codes shared by all tasks (JS `EXIT_*` parity).
+/// Process exit codes shared by all tasks.
+/// JS map (`tools/yasumaro-cli/cli.mjs` at ref `a4889355` on branch
+/// `feature/yasumaro-cli`): `EXIT_OK = 0` (`:7`) <-> [`EXIT_OK`],
+/// `EXIT_ERROR = 1` (`:8`) <-> [`EXIT_ERROR`], `EXIT_USAGE = 2` (`:9`)
+/// <-> [`EXIT_USAGE`], `EXIT_COPY = 3` (`:10`) <-> [`EXIT_COPY`].
+/// Drift procedure: compare against
+/// `git show feature/yasumaro-cli:tools/yasumaro-cli/cli.mjs`.
 pub const EXIT_OK: i32 = 0;
 pub const EXIT_ERROR: i32 = 1;
 pub const EXIT_USAGE: i32 = 2;
@@ -56,6 +62,14 @@ pub(crate) enum Commands {
     Config(ConfigArgs),
 }
 
+/// Args map vs JS `tools/yasumaro-cli/args.mjs` (ref `a4889355`):
+/// `COMMANDS` (`:9`) <-> [`Commands`]; `VALUE_FLAGS`/`BOOL_FLAGS`
+/// (`:11-16`, parsed at `:24-55`) <-> the `#[arg(long)]` flags below.
+/// `SearchArgs`/`ListArgs`/`ShowArgs`/`StatsArgs`/`ExportArgs` cover the same
+/// per-command flags (`query`, `domain`, `tag`, `starred`, `limit`, `offset`,
+/// `from`, `to`, `db`, `json`, `copy`, plus `format`/`out`/`id` where the JS
+/// allows them). Parser mechanics differ (JS hand-rolled `parseArgs` vs
+/// clap), so drift checks compare flag sets and messages, not parser code.
 #[derive(Debug, Default, PartialEq, Eq, Args)]
 pub(crate) struct SearchArgs {
     /// Full-text query
@@ -227,9 +241,18 @@ impl Env {
 }
 
 /// Usage text equivalent to the HELP string in the JS reference
-/// (`tools/yasumaro-cli/cli.mjs`). It doubles as the top-level `--help`
-/// long body (see [`parse_cli`]), so the clap help and the JS HELP stay one
-/// text.
+/// (`tools/yasumaro-cli/cli.mjs:12-26` at ref `a4889355`). It doubles as the
+/// top-level `--help` long body (see [`parse_cli`]), so the clap help and
+/// the JS HELP stay one text.
+/// Sentence map (JS `HELP` line <-> `usage_text()` line, 1:1 at the ref):
+/// title (`:12`), `Usage:` (`:14`), `search`/`list`/`show`/`stats`/`export`/
+/// `config`/shell lines (`:15-21`), `Common flags:` (`:23`), `Config file:`
+/// (`:24`), `Database resolution:` (`:25`). Verified identical at the ref;
+/// any added/removed/changed sentence is drift and must be mirrored here.
+/// Drift procedure: diff against
+/// `git show feature/yasumaro-cli:tools/yasumaro-cli/cli.mjs` `HELP`.
+/// Note: JS `help-topic`/`version` commands have no Rust counterpart struct;
+/// clap serves `--help`/`--version` instead (see `parse_cli` docs).
 fn usage_text() -> &'static str {
     "yasumaro - read-only CLI for exported Yasumaro history databases\n\
      \n\
@@ -319,6 +342,11 @@ fn build_query(
 }
 
 /// Collect the filter flags out of a search-style args struct.
+/// Aggregation point for the search filters (`domain`, `tag`, `starred`,
+/// `limit`, `offset`, `from`, `to`), mirroring the JS `filters(q)` field set
+/// (`tools/yasumaro-cli/queries.mjs:27-38` at ref `a4889355`); value parsing
+/// (`parseLimit`/`parseOffset`/`parseDateBound` parity) lives in [`params`]
+/// with usage failures at exit 2.
 macro_rules! filter_flags {
     ($args:expr) => {
         FilterFlags {

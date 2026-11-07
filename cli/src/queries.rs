@@ -24,6 +24,30 @@
 //! Date parsing (`--from`/`--to` strings, `--to` end-of-day inclusive) stays
 //! a CLI-layer concern for Task 5: every query here takes resolved
 //! `from_ms`/`to_ms: Option<i64>` millisecond bounds.
+//!
+//! JS correspondence map (drift detector; JS ref commit `a4889355` on branch
+//! `feature/yasumaro-cli`, read-only via
+//! `git show feature/yasumaro-cli:tools/yasumaro-cli/queries.mjs`):
+//!
+//! | JS (`queries.mjs`) | Rust (this file) | check |
+//! | `:4` `DISPLAY_COLUMNS` (13 cols) | `:36-50` | same names and order |
+//! | `:6` `FTS_MIN_CHARS = 3` | `:52` | exact value |
+//! | `:7` `SEARCH_MAX_CHARS = 200` | `:55` | exact value |
+//! | `:19-21` `sanitizeFtsTerm` | `:145` `sanitize_fts_term` | strip `"`, trim, truncate 200 |
+//! | `:23-25` `escapeLike` | `:155` `escape_like` | escape `\`, `%`, `_` |
+//! | `:27-38` `filters` | `:179` `build_filters` | `is_deleted = 0` plus domain/starred/tag/from/to |
+//! | `:40-60` `searchLogs` | `:317` `search_logs` | empty term is exit 2; FTS `MATCH` when FTS table exists and sanitized term is at least 3 chars, else `LIKE` over url/title/summary/tags |
+//! | `:62-70` `listLogs` | `:373` `list_logs` | filters only, `ORDER BY created_at DESC` |
+//! | `:72-75` `getById` | `:389` `get_by_id` | no `is_deleted` filter |
+//! | `:77-88` `getStats` | `:405` `get_stats` | live count, `MIN`/`MAX(created_at)`, top 10 domains, per-day `LIMIT 30` |
+//!
+//! Length-unit edge: JS `.slice(0, 200)` and `[...s].length` count UTF-16
+//! units / code points, while Rust `.chars()` counts scalar values. They
+//! agree on BMP text and may differ on non-BMP input; keep the truncation
+//! and FTS-threshold behavior aligned when either side changes.
+//! Drift procedure: re-run the `git show` above at a new ref, diff each JS
+//! row against its Rust row, and move both sides (or record `TO CHECK`)
+//! before changing behavior.
 
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, Row};
