@@ -32,10 +32,10 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
-import { parseCollectionQuery } from './savedCollectionQuery.js';
 import { resolveCollectionHistory, orderCollectionRows } from './collectionHistoryQuery.js';
 import type { CollectionWarning } from './collectionHistoryQuery.js';
-import type { HistoryCustomRange } from './historyHandoff.js';
+import type { HistoryCustomRange, HistoryHandoffRefusal } from './historyHandoff.js';
+import { buildMigratedCollectionHandoff, requestHistoryHandoff } from './historyHandoff.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
@@ -46,6 +46,15 @@ import type { PendingPage } from '../../../utils/pendingStorage.js';
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
 // The reducer stays pure and re-used internally via dispatch().
 // ---------------------------------------------------------------------------
+
+/**
+ * Migrate-on-read delivery result (PBI 18 sunset): a v1 save either lands
+ * in the collections draft (`ok: true` + where the bus took it) or refuses
+ * fail-closed (`ok: false` — corrupt/empty input, never a throw).
+ */
+export type RestoreCollectionResult =
+  | { ok: true; where: 'applied' | 'pending' | 'dropped-previous'; query: Record<string, unknown> }
+  | { ok: false; reason: HistoryHandoffRefusal };
 
 export interface SqliteHistoryState {
   entries: BrowsingLogEntry[];
@@ -112,9 +121,6 @@ export type SqliteHistoryAction =
   | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
   | { type: 'tagInitiated'; tag: string }
   | { type: 'domainSearchInitiated'; query: string }
-  // PBI 2026-10-23-06: saved-collection recall — every stored condition lands
-  // in state through this one action so a recall cannot drift per field.
-  | { type: 'collectionApplied'; search: string; tag: string | null; date: string | null }
   // PBI 2026-11-02-07: v2 collection recall — clauses cannot land in the
   // single search/tag/date fields, so they are cleared and the notice carries
   // what the list shows instead.
@@ -252,21 +258,6 @@ export function historyStateReducer(
 
     case 'domainSearchInitiated':
       return { ...state, searchQuery: action.query, customRange: null, collectionWarning: null, currentPage: 0 };
-
-    // PBI 2026-10-23-06: recall applies every stored condition in one pass.
-    // The current sort is preserved on purpose — a collection is a named
-    // condition, not a sort choice.
-    case 'collectionApplied':
-      return {
-        ...state,
-        searchQuery: action.search,
-        activeTagFilter: action.tag,
-        selectedDate: action.date,
-        customRange: null,
-        pendingTagFallback: null,
-        collectionWarning: null,
-        currentPage: 0,
-      };
 
     // PBI 2026-11-02-07: v2 recall — clauses cannot land in the single
     // search/tag/date fields, so they are cleared and the warning carries
@@ -575,27 +566,22 @@ export interface SqliteHistoryModel {
   startPendingPagesSubscription(): void;
   stopPendingPagesSubscription(): void;
   /**
-   * Recall convention (PBI 2026-11-02-03): the recall target is the
-   * collections panel draft (`applyToDraft` / `editor.loadSaved`) — NOT
-   * the history list.
-   *
-   * @deprecated v1-only legacy path. Parses the flat v1 shape
-   * (search/tag/date) and paints it into the history list. No production
-   * caller remains (recall goes to the collections draft since PBI
-   * 2026-11-01-04); kept for v1-shaped restores with its PBI 2026-10-23-06
-   * behavior pinned by tests. Do not extend — extend the draft handoff
-   * (`historyHandoff.ts`) instead.
-   */
-  applyCollection(rawQuery: Record<string, unknown>): void;
-  /**
    * v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
    * injected queryHistory, mergeClauseResults UNION pins, created_at-ordered
    * and capped at MAX_COLLECTION_ROWS. The merged set is cached so paging
-   * slices from it; any filter change leaves collection mode. The legacy v1
-   * applyCollection above is untouched — this is the new path, not a change
-   * to it.
+   * slices from it; any filter change leaves collection mode. v1 saves do
+   * not execute here — they migrate on read to the collections draft via
+   * `restoreCollectionToDraft` below (PBI 18 sunset).
    */
   applyCollectionQuery(rawQuery: unknown): Promise<void>;
+  /**
+   * Migrate-on-read for v1 saves (PBI 18 sunset): parses the flat v1
+   * record fail-closed and delivers it to the collections draft via the
+   * historyHandoff bus. Never paints the history list, never fetches,
+   * never throws for unknown shapes (closes to the `empty` refusal).
+   * This replaced the deleted v1 list-painting `applyCollection`.
+   */
+  restoreCollectionToDraft(rawQuery: unknown): RestoreCollectionResult;
   /**
    * Bulk star (PBI 2026-10-23-07): set or unset the star for the given ids.
    * Rows already in the target state are skipped (never toggled down by a
@@ -1182,33 +1168,6 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
-  // v1-only legacy path (PBI 2026-11-02-03 recall convention): recall lands
-  // in the collections draft, not here. This entry point only parses the
-  // flat v1 shape (savedCollectionQuery 縮退の出口: corrupted query degrades
-  // to the empty condition); the model only dispatches state and builds one fetch with
-  // every stored condition — search, tag filter and the selected day range.
-  function applyCollection(rawQuery: Record<string, unknown>): void {
-    leaveCollectionMode();
-    const parsed = parseCollectionQuery(rawQuery);
-    dispatch({
-      type: 'collectionApplied',
-      search: parsed.search,
-      tag: parsed.tag,
-      date: parsed.date,
-    });
-    notify();
-    const dayRange = parsed.date !== null ? localDayRangeFromDateString(parsed.date) : null;
-    void fetchData({
-      ...pickDefined({
-        search: parsed.search !== '' ? parsed.search : undefined,
-        tagFilter: parsed.tag ?? undefined,
-        since: dayRange?.since,
-        until: dayRange?.until,
-      }),
-      page: 0,
-    });
-  }
-
   // v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
   // injected queryHistory (DI, same seam as fetchData), mergeClauseResults
   // UNION pins, created_at-ordered and capped. The merged set stays cached
@@ -1236,6 +1195,19 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     const slice = collectionPageSlice(0);
     dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
     notify();
+  }
+
+  // Migrate-on-read for v1 saves (PBI 18 sunset): the stored flat record
+  // is parsed fail-closed and handed to the collections draft bus. The
+  // history list is deliberately untouched — no dispatch, no fetch, no
+  // notify — because recall paints the draft, not the list (PBI
+  // 2026-11-02-03 recall convention). Unknown shapes refuse with `empty`,
+  // never throw.
+  function restoreCollectionToDraft(rawQuery: unknown): RestoreCollectionResult {
+    const migrated = buildMigratedCollectionHandoff(rawQuery);
+    if (!migrated.ok) return { ok: false, reason: migrated.reason };
+    const where = requestHistoryHandoff(migrated.query);
+    return { ok: true, where, query: migrated.query };
   }
 
   async function selectDate(dateStr: string): Promise<void> {
@@ -1341,8 +1313,8 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     loadPendingPages,
     startPendingPagesSubscription,
     stopPendingPagesSubscription,
-    applyCollection,
     applyCollectionQuery,
+    restoreCollectionToDraft,
     selectDate,
     changeSort,
     filterByTag,

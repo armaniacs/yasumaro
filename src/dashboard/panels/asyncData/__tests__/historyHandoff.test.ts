@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   buildHistoryHandoffQuery,
+  buildMigratedCollectionHandoff,
   requestHistoryHandoff,
   consumePendingHistoryHandoff,
   registerCollectionDraftApplier,
@@ -70,6 +71,33 @@ describe('historyHandoff', () => {
       expect(result.ok).toBe(true);
       if (!result.ok) return;
       expect(result.dropped).toEqual([]);
+    });
+  });
+
+  describe('buildMigratedCollectionHandoff', () => {
+    it('packs a full v1 flat record into the draft handoff query', () => {
+      const result = buildMigratedCollectionHandoff({ search: 'wasm', tag: 'tools', date: '2026-11-02' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.query).toEqual({ search: 'wasm', tag: 'tools', date: '2026-11-02' });
+    });
+
+    it('packs a partial v1 record (search only)', () => {
+      const result = buildMigratedCollectionHandoff({ search: 'wasm' });
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.query).toEqual({ search: 'wasm' });
+    });
+
+    it('refuses an empty v1 record with the empty reason', () => {
+      expect(buildMigratedCollectionHandoff({})).toEqual({ ok: false, reason: 'empty', dropped: [] });
+    });
+
+    it('closes corrupt shapes to the empty refusal without throwing', () => {
+      for (const raw of [undefined, null, 'not-a-query', 42, { evil: '<script>', search: 42 }]) {
+        expect(() => buildMigratedCollectionHandoff(raw)).not.toThrow();
+        expect(buildMigratedCollectionHandoff(raw)).toEqual({ ok: false, reason: 'empty', dropped: [] });
+      }
     });
   });
 

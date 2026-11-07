@@ -34,14 +34,15 @@ describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
     ]) {
       expect(model).not.toHaveProperty(hidden);
     }
-    // PBI 2026-10-23-06: +1 for applyCollection (saved-collection recall).
     // PBI 2026-10-23-07: +1 for bulkSetStarred (bulk star apply + undo).
     // PBI 2026-11-02-07: +1 for applyCollectionQuery (v2 multi-clause execution).
+    // PBI 18: applyCollection (v1 list recall) sunset into
+    // restoreCollectionToDraft (migrate-on-read to the collections draft).
     // PBI 16: +8 for single-owner screen state (searchInput, flushPendingSearch,
     // readHandoffSource, getPendingPages, subscribePending, loadPendingPages,
     // startPendingPagesSubscription, stopPendingPagesSubscription).
     expect(Object.keys(model)).toHaveLength(33);
-    expect(typeof model.applyCollection).toBe('function');
+    expect(typeof model.restoreCollectionToDraft).toBe('function');
     expect(typeof model.applyCollectionQuery).toBe('function');
     expect(typeof model.bulkSetStarred).toBe('function');
     expect(typeof model.searchInput).toBe('function');

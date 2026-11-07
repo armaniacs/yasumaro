@@ -90,6 +90,9 @@ export function newCollectionId(now: number = Date.now()): string {
 
 import { parseCollectionQueryV2 } from '../../../utils/collectionQueryV2.js';
 import type { CollectionClause, CollectionQueryV2 } from '../../../utils/collectionQueryV2.js';
+// Re-exported for existing storage-shape consumers. New execution code
+// (fan-out / merge / order) goes through collectionHistoryQuery.ts, the
+// PBI 18 single collection-execution seam — not through this module.
 export { parseCollectionQueryV2 };
 export type { CollectionClause, CollectionQueryV2 };
 

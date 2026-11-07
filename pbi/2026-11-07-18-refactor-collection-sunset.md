@@ -48,12 +48,12 @@ Scenario: 不正な保存は安全に閉じる
 
 ## 受け入れ基準
 
-- [ ] v1 形式の restore は migrate-on-read 経由で draft handoff (`buildHistoryHandoffQuery` 系) へ引き継がれる
-- [ ] sunset 完了後は model の `applyCollection` が削除され、本番参照と test 参照が残らない
-- [ ] v2 実行 (`applyCollectionQuery` / `resolveCollectionHistory`) の振る舞いに変更がない (順序、上限、warning を含む)
-- [ ] parse と merge と order が `queryHistory` seam 背後の一つの collection 実行モジュールに集約される
-- [ ] 不正形式の入力は例外なく空条件へ閉じる
-- [ ] privacy 観点で外部送信と鍵移動の追加がない
+- [x] v1 形式の restore は migrate-on-read 経由で draft handoff (`buildHistoryHandoffQuery` 系) へ引き継がれる
+- [x] sunset 完了後は model の `applyCollection` が削除され、本番参照と test 参照が残らない
+- [x] v2 実行 (`applyCollectionQuery` / `resolveCollectionHistory`) の振る舞いに変更がない (順序、上限、warning を含む)
+- [x] parse と merge と order が `queryHistory` seam 背後の一つの collection 実行モジュールに集約される
+- [x] 不正形式の入力は例外なく空条件へ閉じる
+- [x] privacy 観点で外部送信と鍵移動の追加がない
 
 ## テスト戦略 (t_wada 式 Outside-In)
 
@@ -123,9 +123,9 @@ grep -rn "resolveCollectionHistory\|orderCollectionRows\|mergeClauseResults\|MAX
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動 test として実装され pass する
-- [ ] legacy restore 系 test が削除前まで green であり、削除後に参照が残らない
-- [ ] v2 の順序と上限と warning に差分がない
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (green 後)
-- [ ] ドキュメント更新済み
+- [x] 全 BDD シナリオが自動 test として実装され pass する
+- [x] legacy restore 系 test が削除前まで green であり、削除後に参照が残らない
+- [x] v2 の順序と上限と warning に差分がない
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (green 後)
+- [x] ドキュメント更新済み
