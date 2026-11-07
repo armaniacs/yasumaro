@@ -11,14 +11,21 @@ import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord,
 import { INSERT_RETURNING_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
 import {
-  buildQuerySpec, buildPlainListStatements, buildFtsMatchQuery,
-  purgeCutoffMs, buildPurgeOldRecordsStatements,
+  buildQuerySpec,
+  type AlreadyCappedQuery,
+} from './queryPlan.js';
+import {
+  buildPlainListStatements, buildFtsMatchQuery,
+  buildPurgeOldRecordsStatements,
   contentPurgeStarredClause, buildContentPurgeStatements,
-  buildAuditLogStatements, buildAuditLogPurgeStatements, runPurgeSequence,
+  buildAuditLogStatements, buildAuditLogPurgeStatements,
   DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL,
   AUDIT_INSERT_RETURNING_SQL, buildAuditInsertParams, buildUpdateByIdStatements,
-  type AlreadyCappedQuery, type PurgeExecutor,
-} from './queryPlan.js';
+} from './sqliteQueryBuilder.js';
+import {
+  purgeCutoffMs, runPurgeSequence,
+  type PurgeExecutor,
+} from './purgeRunner.js';
 import { QUERY_CAPS } from '../utils/limits.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { withTransaction, type TransactionExecutor } from './sqliteTransaction.js';

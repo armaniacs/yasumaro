@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildFilterConditions, buildExtraWhereSql, buildFtsSearchStatements, buildLikeSearchStatements, buildQuerySpec } from '../queryPlan.js';
+import { buildExtraWhereSql, buildQuerySpec } from '../queryPlan.js';
+import { buildFilterConditions, buildFtsSearchStatements, buildLikeSearchStatements } from '../sqliteQueryBuilder.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
 
 describe('buildFilterConditions — shared filter vocabulary (PBI 2026-09-12-27)', () => {

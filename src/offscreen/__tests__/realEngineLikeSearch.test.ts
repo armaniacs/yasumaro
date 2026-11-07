@@ -11,7 +11,8 @@
  */
 import Database from 'better-sqlite3';
 import { describe, it, expect } from 'vitest';
-import { buildLikeSearchStatements, buildExtraWhereSql, buildFtsSearchStatements } from '../queryPlan.js';
+import { buildExtraWhereSql } from '../queryPlan.js';
+import { buildLikeSearchStatements, buildFtsSearchStatements } from '../sqliteQueryBuilder.js';
 import type { ExtraWhere } from '../queryPlan.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 

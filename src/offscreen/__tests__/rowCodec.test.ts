@@ -26,12 +26,14 @@ import {
 } from '../rowCodec.js';
 import { COLUMN_NAMES, SCHEMA_SQL, INSERT_SQL, buildInsertParams } from '../schema.js';
 import {
+  buildExtraWhereSql,
+} from '../queryPlan.js';
+import {
   PLAIN_LIST_COLUMNS,
   buildPlainListStatements,
   buildFtsSearchStatements,
   buildLikeSearchStatements,
-  buildExtraWhereSql,
-} from '../queryPlan.js';
+} from '../sqliteQueryBuilder.js';
 import { IdbVfsBackend } from '../IdbVfsBackend.js';
 import { handleQuery } from '../opfsWorker/crudHandlers.js';
 import type { SqliteValue } from '../sqliteEngine.js';

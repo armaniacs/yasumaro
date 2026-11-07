@@ -17,6 +17,12 @@
  * holds NO withTransaction / rowMatchesTagLike runtime refs and no
  * runPurgeSequence. The `export ... from` block at the bottom is a compat
  * facade: every pre-split import path keeps working unchanged.
+ *
+ * PBI 2026-11-08-06 direct-import policy (新規コード向け):
+ * statement builders は sqliteQueryBuilder.js、purge 実行は purgeRunner.js、
+ * parity 述語は queryParityPredicate.js から直接 import すること。
+ * この facade 経由の新規 import は書かない。facade は既存呼出の互換のため
+ * だけに残る。
  */
 
 import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5, buildFilterConditions, qualifyCondition, DELETED_CONDITION_SQL } from './sqliteQueryBuilder.js';
@@ -303,8 +309,20 @@ export function buildQuerySpec(
 // import statement builders from sqliteQueryBuilder.js directly.
 // Intentionally NOT re-exported: `rowMatchesTagLike` (use utils/tagLike.js)
 // and the policy-owned `DELETED_CONDITION_SQL` spelling detail.
+//
+// PBI 2026-11-08-06: this entire facade block is @deprecated. It stays only
+// for existing callers until the follow-up removal PBI; new code must import
+// from the owner modules directly (builders → sqliteQueryBuilder.js,
+// purge execution → purgeRunner.js, parity predicate →
+// queryParityPredicate.js).
 // ---------------------------------------------------------------------------
 
+/**
+ * @deprecated Use the owner modules directly: statement builders and SQL
+ * constants from sqliteQueryBuilder.js, purge execution from purgeRunner.js,
+ * matchesExtraWhere from queryParityPredicate.js. This facade stays only for
+ * existing callers until the follow-up removal PBI (PBI 2026-11-08-06).
+ */
 export {
   buildFilterConditions,
   qualifyCondition,
@@ -343,7 +361,12 @@ export {
 // re-export is dissolved on the builder side). The facade itself stays until
 // PBI 06; new code should import the predicate from queryParityPredicate.js
 // directly.
+/** @deprecated Import matchesExtraWhere from queryParityPredicate.js directly. */
 export { matchesExtraWhere } from './queryParityPredicate.js';
+/**
+ * @deprecated Import statement types from sqliteQueryBuilder.js and purge
+ * execution types from purgeRunner.js directly.
+ */
 export type {
   FilterCondition,
   InvalidOrderPolicy,

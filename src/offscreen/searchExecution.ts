@@ -30,14 +30,16 @@
 
 import {
   buildExtraWhereSql,
+  selectTagFilter,
+  type ExtraWhereQuery,
+} from './queryPlan.js';
+import {
   buildLikePattern,
   buildSearchOrderClause,
   buildFtsSearchStatements,
   buildLikeSearchStatements,
-  selectTagFilter,
-  type ExtraWhereQuery,
   type InvalidOrderPolicy,
-} from './queryPlan.js';
+} from './sqliteQueryBuilder.js';
 import type { SqliteValue } from './sqliteEngine.js';
 
 /**

@@ -16,9 +16,11 @@ import type { SqliteRow } from '../sqliteEngine.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import {
-  buildFtsMatchQuery,
   clampOffset,
 } from '../queryPlan.js';
+import {
+  buildFtsMatchQuery,
+} from '../sqliteQueryBuilder.js';
 import { applySearchPolicy } from '../queryPlanner.js';
 import { SEARCH_COLUMNS_WITH_RANK, mapNamed } from '../rowCodec.js';
 import { runSearch, type SearchInput, type SearchRowSource } from '../searchExecution.js';

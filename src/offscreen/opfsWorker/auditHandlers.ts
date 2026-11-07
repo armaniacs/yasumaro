@@ -4,7 +4,7 @@
  */
 
 import { sqlExec, sqlQuery, type HandlerContext } from './handlers.js';
-import { AUDIT_INSERT_SQL, buildAuditInsertParams, buildAuditLogStatements } from '../queryPlan.js';
+import { AUDIT_INSERT_SQL, buildAuditInsertParams, buildAuditLogStatements } from '../sqliteQueryBuilder.js';
 import { planAuditLog } from '../queryPlanner.js';
 import { AUDIT_CAP_OPFS } from '../../utils/limits.js';
 import { AUDIT_LOG_COLUMNS, mapNamed } from '../rowCodec.js';

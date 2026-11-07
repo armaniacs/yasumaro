@@ -2,17 +2,21 @@ import { describe, expect, it } from 'vitest';
 import * as fs from 'node:fs';
 import { QUERY_CAPS } from '../../utils/limits.js';
 import {
+  buildExtraWhereSql,
+  buildQuerySpec,
+  type AlreadyCappedQuery,
+} from '../queryPlan.js';
+import {
   buildAuditLogPurgeStatements,
   buildContentPurgeStatements,
-  buildExtraWhereSql,
   buildFtsSearchStatements,
   buildLikeSearchStatements,
   buildPurgeOldRecordsStatements,
-  buildQuerySpec,
   contentPurgeStarredClause,
+} from '../sqliteQueryBuilder.js';
+import {
   purgeCutoffMs,
-  type AlreadyCappedQuery,
-} from '../queryPlan.js';
+} from '../purgeRunner.js';
 import { applyReadPolicy } from '../queryPlanner.js';
 
 /**
