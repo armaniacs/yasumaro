@@ -5,6 +5,7 @@
  *   - Hard Strip: タグ・属性ベースの強制削除
  *   - Keyword Strip: ID/クラス属性のキーワードベース削除
  *   - 外部ライブラリ不使用（バンドルサイズ抑止）
+ * Execution stage: pre-extract (DOM hard-strip before content extraction).
  * 🟢
  */
 
