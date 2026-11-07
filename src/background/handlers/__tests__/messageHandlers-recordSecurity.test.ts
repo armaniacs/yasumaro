@@ -320,7 +320,7 @@ describe('recording handlers — minimal base deps behaviour', () => {
       sendResponse,
     );
 
-    expect(pipeline.record).toHaveBeenCalledWith(expect.anything(), { settings: { AUTO_CONTENT_FETCH_ENABLED: true } });
+    expect(pipeline.record).toHaveBeenCalledWith(expect.anything(), { settings: { AUTO_CONTENT_FETCH_ENABLED: true }, acquireRecoveryClaim: true });
     expect(deps.fetchContent).toHaveBeenCalledWith('https://example.com');
     expect(deps.setUrlContent).toHaveBeenCalledWith('https://example.com', 'content');
   });

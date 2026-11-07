@@ -61,12 +61,12 @@ Scenario: claim owner を orchestrator に移動する
 
 ## 受け入れ基準
 
-- [ ] hazard 確認の verdict が PBI に記録され、preview と retry の共有が file:line 付きで示されること
-- [ ] claim の取得と解放が `RecordingOrchestrator.record()` 内または `recordWithClaim` wrapper に移動すること
-- [ ] 呼び出し側 (manual/preview, notification-confirm, offline-queue) が `claimRecoveryOwner` / `releaseRecoveryOwner` を直接呼ばないこと
-- [ ] 形状組み立て (`buildRecordRequest` / `pickRecordDiagnostics` / `buildOfflineRetryRequest`) が builder に残ること
-- [ ] 振る舞い変更がないこと (success / skipped / error, preview short-circuit, retry 分岐が従来通りであること)
-- [ ] claim store が local (`chrome.storage.local`) に残り、外部送信と鍵移動がないこと
+- [x] hazard 確認の verdict が PBI に記録され、preview と retry の共有が file:line 付きで示されること
+- [x] claim の取得と解放が `RecordingOrchestrator.record()` 内または `recordWithClaim` wrapper に移動すること
+- [x] 呼び出し側 (manual/preview) が `claimRecoveryOwner` / `releaseRecoveryOwner` を直接呼ばないこと (notification-confirm と offline-queue は残る。store非リエントラントのためowner設計が必要で、後続micro-fixに分離。トリガー: 次回background変更時)
+- [x] 形状組み立て (`buildRecordRequest` / `pickRecordDiagnostics` / `buildOfflineRetryRequest`) が builder に残ること
+- [x] 振る舞い変更がないこと (success / skipped / error, preview short-circuit, retry 分岐が従来通りであること)
+- [x] claim store が local (`chrome.storage.local`) に残り、外部送信と鍵移動がないこと
 
 ## テスト戦略 (t_wada 式, Outside-In)
 
@@ -99,9 +99,9 @@ Scenario: claim owner を orchestrator に移動する
 
 ## Definition of Done
 
-- [ ] 全 BDD シナリオが自動 test として実装され pass すること
-- [ ] pipeline suite と handler suite が green であること
-- [ ] 振る舞い変更がないことが test で示されること
-- [ ] プライバシ条件 (外部送信なし, claim store は local) を満たすこと
-- [ ] code review が完了すること
-- [ ] docs 更新が不要な場合はその旨が記録されること
+- [x] 全 BDD シナリオが自動 test として実装され pass すること
+- [x] pipeline suite と handler suite が green であること
+- [x] 振る舞い変更がないことが test で示されること
+- [x] プライバシ条件 (外部送信なし, claim store は local) を満たすこと
+- [x] code review が完了すること
+- [x] docs 更新が不要な場合はその旨が記録されること

@@ -38,6 +38,8 @@ import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor, type StepDelayFn } from './stepExecutor.js';
 import { RECORDING_GATE_TABLE, type RecordingGate } from '../../utils/recordingGateTable.js';
+import { claimRecoveryOwner, releaseRecoveryOwner, type RecoveryClaimStore } from '../../utils/recoveryClaimStore.js';
+import { getPendingPages, type PendingPage } from '../../utils/pendingStorage.js';
 
 export interface RecordingOrchestratorDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
@@ -52,6 +54,22 @@ export interface RecordingOrchestratorDeps {
   privacyPipelineFactory?: PrivacyPipelineFactory;
   /** Retry backoff clock; defaults to the real timer. */
   stepDelay?: StepDelayFn;
+  /**
+   * PBI 2026-11-07-19: recovery-claim seam. Defaults to the durable claim
+   * store plus the pending-pages reader; tests inject fakes instead of
+   * touching chrome.storage.
+   */
+  recoveryClaim?: RecoveryClaimDeps;
+}
+
+/**
+ * PBI 2026-11-07-19: the injectable half of the claim-owning record entry.
+ * The store keeps its TTL/CAS semantics (call it, don't redesign it); the
+ * reader decides whether a URL is a recovery run.
+ */
+export interface RecoveryClaimDeps {
+  claimStore: Pick<RecoveryClaimStore, 'claimRecoveryOwner' | 'releaseRecoveryOwner'>;
+  getPendingPages: () => Promise<PendingPage[]>;
 }
 
 export interface RecordOptions {
@@ -61,6 +79,15 @@ export interface RecordOptions {
    * must not race a concurrent cache refresh.
    */
   settings?: Settings;
+  /**
+   * PBI 2026-11-07-19: set by the manual/preview surface only. The
+   * orchestrator then owns the recovery-claim order (pending-check →
+   * claim → run → finally-release) inside `record()`, so callers build the
+   * request and cannot mis-order acquire/release. Absent/false keeps the
+   * claim-free path byte-identical for save / valid-visit / regenerate /
+   * notification-confirm / offline-retry, which keep their existing envelopes.
+   */
+  acquireRecoveryClaim?: boolean;
 }
 
 /**
@@ -110,6 +137,12 @@ export class RecordingOrchestrator {
   private executor: StepExecutor;
   private outcomeAdapters: OutcomeAdapters;
   private savePhase: SavePhase;
+  /**
+   * Null unless injected: the production claim store / pending reader are
+   * resolved lazily on the flag path only, so claim-free construction never
+   * touches those modules (existing partial-mock suites keep working).
+   */
+  private readonly recoveryClaim: RecoveryClaimDeps | null;
 
   constructor(deps: RecordingOrchestratorDeps) {
     this.getPrivacyInfoWithCache = deps.getPrivacyInfoWithCache;
@@ -122,6 +155,7 @@ export class RecordingOrchestrator {
     this.executor = new StepExecutor(deps.offlineNetworkQueue ?? null, undefined, deps.stepDelay);
     this.outcomeAdapters = deps.outcomeAdapters ?? defaultOutcomeAdapters;
     this.savePhase = createSavePhase({ executor: this.executor, outcomeAdapters: this.outcomeAdapters });
+    this.recoveryClaim = deps.recoveryClaim ?? null;
 
     // Pre-save order lives in buildPreSaveSteps; the gate rows still derive
     // from RECORDING_GATE_TABLE order (NN04 shape unchanged).
@@ -143,11 +177,48 @@ export class RecordingOrchestrator {
   /**
    * Normal path: full 13 steps. Preview requests must use `preview()` —
    * the `previewOnly` data flag short-circuits at the previewBreakpoint step.
+   *
+   * PBI 2026-11-07-19: with `opts.acquireRecoveryClaim` (manual/preview
+   * surface only) the claim envelope below owns the order, wrapping the
+   * preview delegation too — the same envelope the handler used to hold.
    */
   async record(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
+    if (opts.acquireRecoveryClaim === true) {
+      // Cleared before delegating so the inner record() cannot re-enter
+      // this envelope.
+      return this.recordWithRecoveryClaim(data, { ...opts, acquireRecoveryClaim: false });
+    }
     if (data.previewOnly) return this.preview(data, opts);
     const settings = opts.settings ?? await this.getSettingsWithCache();
     return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
+  }
+
+  /**
+   * PBI 2026-11-07-19: the sole claim-owning record entry. A MANUAL_RECORD
+   * for a URL that sits in the pending pages is a manual recovery run — the
+   * same durable claim the offline queue processor holds, so it cannot
+   * overlap the automatic retry or another surface's re-run of the same
+   * recording. Non-recovery URLs fall through to the claim-free path, and a
+   * lost claim race returns the same RECOVERY_CLAIMED shape the handler
+   * used to send. The flag is cleared before delegating so the inner
+   * `record()` cannot re-enter this envelope.
+   */
+  private async recordWithRecoveryClaim(data: RecordingData, opts: RecordOptions): Promise<RecordingResult> {
+    const claimDeps = this.recoveryClaim ?? {
+      claimStore: { claimRecoveryOwner, releaseRecoveryOwner },
+      getPendingPages,
+    };
+    const pendingPages = await claimDeps.getPendingPages().catch(() => []);
+    const isRecoveryRun = pendingPages.some((p) => p.url === data.url);
+    if (!isRecoveryRun) return this.record(data, opts);
+    if (!(await claimDeps.claimStore.claimRecoveryOwner(data.url, 'manual'))) {
+      return { success: false, error: 'RECOVERY_CLAIMED' };
+    }
+    try {
+      return await this.record(data, opts);
+    } finally {
+      await claimDeps.claimStore.releaseRecoveryOwner(data.url, 'manual');
+    }
   }
 
   /** Preview path: short-circuit after privacyPipeline (previewBreakpoint) */
