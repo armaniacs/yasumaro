@@ -41,9 +41,9 @@ Scenario: 契約 drift が検出される
 
 ## 受け入れ基準
 
-- [ ] loader の hardcode が共有定数参照になる
-- [ ] compile assert か parity test が3点 drift を検出する
-- [ ] 既存テスト緑
+- [x] loader の hardcode が共有定数参照になる
+- [x] compile assert か parity test が3点 drift を検出する
+- [x] 既存テスト緑
 
 ## テスト戦略
 

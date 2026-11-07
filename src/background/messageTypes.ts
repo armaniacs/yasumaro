@@ -319,6 +319,7 @@ export type LogForwardMessage = {
  * Discriminate on `type` to narrow to a specific message shape.
  */
 import type { DashboardSqliteRequest } from '../messaging/dashboardSqliteProtocol.js';
+import type { ValidMessageType } from '../messaging/messageTypeRegistry.js';
 type DashboardSqliteMessage = {
     type: 'DASHBOARD_SQLITE';
     payload?: DashboardSqliteRequest;
@@ -376,3 +377,17 @@ export interface AiTestProgressMessage {
     type: typeof AI_TEST_PROGRESS_MESSAGE_TYPE;
     progress: AiTestProgress;
 }
+
+// ----------------------------------------------------------------------------
+// PBI 2026-11-08-08: union/registry parity compile assert.
+// The `ExtensionMessage` union above and `VALID_MESSAGE_TYPES` in
+// src/messaging/messageTypeRegistry.ts must hold the same set of types.
+// (AI_TEST_PROGRESS stays outside both: it is a one-way broadcast, never an
+// SW-bound request.) Adding a message type on one side without the other
+// fails `npm run type-check`. The re-export block below is unchanged.
+// ----------------------------------------------------------------------------
+type _UnionExcess = Exclude<ExtensionMessage['type'], ValidMessageType>;
+type _RegistryExcess = Exclude<ValidMessageType, ExtensionMessage['type']>;
+type _AssertNever<T extends never> = T;
+type _CheckUnionCoveredByRegistry = _AssertNever<_UnionExcess>;
+type _CheckRegistryCoveredByUnion = _AssertNever<_RegistryExcess>;

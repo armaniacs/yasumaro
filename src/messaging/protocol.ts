@@ -9,8 +9,12 @@
  * 本ファイルはその型に付随するバージョン番号のみを担う。
  *
  * NOTE: src/content/loader.ts は Content Script エントリポイントであり
- * 静的 import ができないため、同じ値をハードコードで複製している。
- * この値を変更する際は loader.ts も併せて更新すること。
+ * 実行時 import ができないため、同じ値をハードコード複製しないこと。
+ * 値はビルド時に wxt.config.ts の `define.__PROTOCOL_VERSION__` 経由で
+ * 本定数から注入される (SSOT は本ファイル)。
+ * loader 側は `import type` で本定数を参照し、define 宣言を
+ * `typeof CURRENT_PROTOCOL_VERSION` に型結合している。
+ * この値を変更する際はビルドし直すこと (loader 側の数値直書きは禁止)。
  */
 
 /**
