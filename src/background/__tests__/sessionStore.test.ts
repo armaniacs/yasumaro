@@ -512,8 +512,8 @@ describe('SessionStore', () => {
     expect(mockSession.set).toHaveBeenCalledTimes(2);
     resolvers[1]!();
     await Promise.all([firstFlush, secondFlush]);
-    const written = mockSession.set.mock.calls.map((call) => call[0] as Record<string, unknown>);
-    expect(written.some((args) => args['key2'] === 'value2')).toBe(true);
+    const written = mockSession.set.mock.calls.map((call: unknown[]) => call[0] as Record<string, unknown>);
+    expect(written.some((args: Record<string, unknown>) => args['key2'] === 'value2')).toBe(true);
   });
 
   it('emergencyFlushToLocal() does nothing when write queue is empty', () => {

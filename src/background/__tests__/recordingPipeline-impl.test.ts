@@ -657,7 +657,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = addLog.mock.calls.filter(
+      const retryCalls = vi.mocked(addLog).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 

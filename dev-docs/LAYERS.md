@@ -97,7 +97,6 @@ src/utils/rateLimiter.ts
 src/utils/trustDb/domainValidation.ts
 src/utils/trustDb/managedStringList.ts
 src/utils/trustDb/TrustDbAdmin.ts
-src/utils/keySerializer.ts
 src/utils/ui/confirmDialog.ts
 src/utils/copyMarkdownButton.ts
 src/utils/storage/trancoConsent.ts

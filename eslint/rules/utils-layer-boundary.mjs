@@ -112,7 +112,6 @@ const LAYER1_FILES = [
   // mislisted as Layer 0 in LAYERS.md.
   'src/utils/crypto/hmacKeyStore.ts',
   'src/utils/trustDb/TrustDbAdmin.ts',
-  'src/utils/keySerializer.ts',
   'src/utils/ui/confirmDialog.ts',
   'src/utils/copyMarkdownButton.ts',
   'src/utils/storage/trancoConsent.ts',

@@ -111,7 +111,7 @@ describe('gateway execute seam (PBI 2026-10-01-04)', () => {
     await gateway.execute({ type: 'archiveCreate', cutoffDate: '2026-09-01', cutoffMs: 0, includeDeleted: false, yasumaroVersion: 'test' });
 
     expect(calls).toHaveLength(1);
-    expect(calls[0].opts).toBeUndefined();
+    expect(calls[0]?.opts).toBeUndefined();
   });
 
   it('routes an unknown maintain op to a closed failure (drifted lookup)', async () => {
