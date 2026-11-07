@@ -87,9 +87,13 @@ vi.mock('../../utils/pendingStorage.ts', () => ({
   addPendingPage: vi.fn(),
 }));
 
-vi.mock('../../utils/redaction.ts', () => ({
-  redactHeaderValue: vi.fn((v: string) => v),
-}));
+vi.mock('../../utils/sensitiveDataMask.ts', async () => {
+  const actual = await vi.importActual('../../utils/sensitiveDataMask.ts');
+  return {
+    ...actual,
+    redactHeaderValue: vi.fn((v: string) => v),
+  };
+});
 
 vi.mock('../../utils/permissionManager.ts', () => ({
   getPermissionManager: vi.fn(() => ({

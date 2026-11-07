@@ -62,8 +62,6 @@ const RULES = [
         name: 'redaction shim import',
         canonical: 'src/utils/sensitiveDataMask.ts',
         grandfathered: new Set([
-            'src/utils/obsidianConfigBuilder.ts',
-            'src/utils/pendingStorage.ts',
         ]),
     },
     {

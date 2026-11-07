@@ -3,7 +3,7 @@ import { logInfo, logDebug, logError } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { hashUrl } from './urlHash.js';
 import { getMessageOr } from './i18n.js';
-import { redactHeaderValue } from './redaction.js';
+import { redactHeaderValue } from './sensitiveDataMask.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
 
 /**
