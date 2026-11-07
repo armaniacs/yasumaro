@@ -34,3 +34,9 @@
 
 - アーカイブ重複なし。前回9件は全件アーカイブ済み・INDEX反映済み。
 - 新規反映漏れなし。
+
+## 追記: View↔新モジュール循環 (台帳送り)
+
+- 内容: `sqliteHistoryPanelView.ts` ⇄ `sqliteHistoryChromeWiring.ts` / `sqliteHistoryConfirmDialogs.ts` の値import循環 (ChromeWiringがViewの `formatDate` / `SQLITE_HISTORY_IDS` を参照)。実行時無害 (遅延使用・全緑・no-cycleルールなし)。
+- 解消案: `formatDate` は utils直参照、`SQLITE_HISTORY_IDS` は Model直参照へ寄せ、View依存を断つ。
+- 再検討トリガー: 次回 dashboard/panels 変更時または次回 holistic。
