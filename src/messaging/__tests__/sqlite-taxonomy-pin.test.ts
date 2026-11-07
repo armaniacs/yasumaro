@@ -26,16 +26,9 @@ import { DASHBOARD_SQLITE_SUBTYPE_SPECS } from '../validators.js';
 
 const canonical = new Set<string>(ALL_DASHBOARD_SQLITE_SUBTYPES);
 
-function diffMessage(label: string, extras: readonly string[]): string {
-  return `${label} drift from the canonical subtype universe: ${extras.join(', ')}`;
-}
-
 describe('messaging/sqlite taxonomy single owner (PBI 2026-11-07-15)', () => {
   it('protocol re-export is the same binding (no duplicated definition)', () => {
-    expect(
-      PROTOCOL_MODAL_REQUIRED_SUBTYPES,
-      'dashboardSqliteProtocol.ts must re-export MODAL_REQUIRED_SUBTYPES, not define its own copy',
-    ).toBe(MODAL_REQUIRED_SUBTYPES);
+    expect(PROTOCOL_MODAL_REQUIRED_SUBTYPES === MODAL_REQUIRED_SUBTYPES).toBe(true);
   });
 
   it('every classification set only names canonical subtypes', () => {
@@ -48,16 +41,22 @@ describe('messaging/sqlite taxonomy single owner (PBI 2026-11-07-15)', () => {
     };
     for (const [name, set] of Object.entries(sets)) {
       const stale = [...set].filter((s) => !canonical.has(s));
-      expect(stale, diffMessage(name, stale)).toEqual([]);
+      expect({ set: name, stale }).toEqual({ set: name, stale: [] });
     }
     const staleScope = Object.keys(ARCHIVE_SCOPE_BY_SUBTYPE).filter(
       (s) => !canonical.has(s),
     );
-    expect(staleScope, diffMessage('ARCHIVE_SCOPE_BY_SUBTYPE', staleScope)).toEqual([]);
+    expect({ set: 'ARCHIVE_SCOPE_BY_SUBTYPE', stale: staleScope }).toEqual({
+      set: 'ARCHIVE_SCOPE_BY_SUBTYPE',
+      stale: [],
+    });
     const staleSpecs = Object.keys(DASHBOARD_SQLITE_SUBTYPE_SPECS).filter(
       (s) => !canonical.has(s),
     );
-    expect(staleSpecs, diffMessage('DASHBOARD_SQLITE_SUBTYPE_SPECS', staleSpecs)).toEqual([]);
+    expect({ set: 'DASHBOARD_SQLITE_SUBTYPE_SPECS', stale: staleSpecs }).toEqual({
+      set: 'DASHBOARD_SQLITE_SUBTYPE_SPECS',
+      stale: [],
+    });
   });
 
   it('TOKEN_REQUIRED_SUBTYPES is exactly the complement of the exempt set', () => {
@@ -65,32 +64,20 @@ describe('messaging/sqlite taxonomy single owner (PBI 2026-11-07-15)', () => {
     const missing = [...canonical].filter(
       (s) => !TOKEN_REQUIRED_SUBTYPES.has(s) && !exempt.has(s),
     );
-    expect(
-      missing,
-      `unclassified subtypes (in neither TOKEN_REQUIRED nor TOKEN_EXEMPT): ${missing.join(', ')}`,
-    ).toEqual([]);
+    expect({ unclassified: missing }).toEqual({ unclassified: [] });
     const overlap = [...TOKEN_REQUIRED_SUBTYPES].filter((s) => exempt.has(s));
-    expect(
-      overlap,
-      `subtypes in both TOKEN_REQUIRED_SUBTYPES and TOKEN_EXEMPT_OPS: ${overlap.join(', ')}`,
-    ).toEqual([]);
+    expect({ overlap }).toEqual({ overlap: [] });
   });
 
   it('every token-exempt op is also a read-only op (fail-safe: exemption cannot hide a mutation)', () => {
     const outside = [...TOKEN_EXEMPT_OPS].filter((s) => !READ_ONLY_OPS.has(s));
-    expect(
-      outside,
-      `TOKEN_EXEMPT_OPS entries outside READ_ONLY_OPS (single fixed exemption point violated): ${outside.join(', ')}`,
-    ).toEqual([]);
+    expect({ outside }).toEqual({ outside: [] });
   });
 
   it('every modal subtype is token-required (a modal confirm must never be exempt)', () => {
     const exemptModal = [...MODAL_REQUIRED_SUBTYPES].filter((s) =>
       tokenExempt.has(s),
     );
-    expect(
-      exemptModal,
-      `MODAL_REQUIRED_SUBTYPES entries that skip the token gate: ${exemptModal.join(', ')}`,
-    ).toEqual([]);
+    expect({ exemptModal }).toEqual({ exemptModal: [] });
   });
 });
