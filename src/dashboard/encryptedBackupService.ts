@@ -12,6 +12,7 @@ import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
+import { isMasterPasswordEnabled, unlockWithPassword } from '../utils/storage/encryptionSession.js';
 
 export const BACKUP_PAYLOAD_VERSION = 1;
 
@@ -97,6 +98,20 @@ export async function importEncryptedBackup(
 
   if (payload.version !== BACKUP_PAYLOAD_VERSION) {
     return { success: false, error: `Unsupported backup version: ${payload.version}` };
+  }
+
+  // WHY: the dashboard auth modal verifies the password but deliberately
+  // does not unlock the session, and a fresh set starts locked — so a
+  // correct password alone would still fail below at setAll with
+  // ENCRYPTION_LOCKED. Authenticated decryption just proved the password;
+  // establish the session from it (the same takeover changeMasterPassword
+  // performs) before touching settings. Skipped when no master password is
+  // set: the anonymous-key path then applies untouched.
+  if (await isMasterPasswordEnabled()) {
+    const unlocked = await unlockWithPassword(password);
+    if (!unlocked) {
+      return { success: false, error: 'Failed to unlock session with the provided password' };
+    }
   }
 
   const dbBytes = base64ToBytes(payload.historyDbBase64);

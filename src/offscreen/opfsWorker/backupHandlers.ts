@@ -8,10 +8,40 @@ import { sqlQuery, type HandlerContext } from './handlers.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
 import { DB_FILENAME } from '../dbFilename.js';
 import { createEngine } from '../sqliteBoot.js';
+import { FTS5_STATEMENTS } from '../schema.js';
 import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { NamedRow } from '../rowCodec.js';
 
 const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
+
+/**
+ * Whitespace-normalized form for trigger SQL comparison. sqlite_master
+ * stores the CREATE statement text as executed, with two normalizations
+ * applied by SQLite itself: `IF NOT EXISTS` is dropped, and formatting may
+ * drift between versions. Both sides go through this function so a genuine
+ * backup always matches the schema SSOT.
+ */
+function normalizeTriggerSql(sql: string): string {
+  return sql
+    .replace(/\bIF NOT EXISTS\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * yasumaro's own FTS5 sync triggers (name → normalized CREATE statement),
+ * derived from the schema SSOT. A genuine backup always carries these —
+ * the live DB file is exported verbatim — so the restore validator must
+ * accept them. Anything else is untrusted backup content and stays rejected.
+ */
+function expectedTriggerSql(): Map<string, string> {
+  const expected = new Map<string, string>();
+  for (const statement of FTS5_STATEMENTS) {
+    const match = /CREATE TRIGGER IF NOT EXISTS\s+([A-Za-z_]\w*)/i.exec(statement);
+    if (match?.[1]) expected.set(match[1], normalizeTriggerSql(statement));
+  }
+  return expected;
+}
 
 export async function handleSerialize(ctx: HandlerContext): Promise<Uint8Array> {
   // PBI 2026-09-12-22: rows go through the shared envelope + column SSOT
@@ -87,11 +117,20 @@ export async function handleRestore(
         'Archive database detected: use the archive restore panel (archive_restore) instead of full restore_db',
       );
     }
-    const triggerRows = await tmpEngine.query('SELECT count(*) as c FROM sqlite_master WHERE type = \'trigger\'');
-    const triggerCount = Number(triggerRows[0]?.c ?? 0);
-    if (triggerCount > 0) {
-      await tmpEngine.close();
-      throw new Error(`Restore validation failed: trigger detected (${triggerCount})`);
+    const triggerRows = await tmpEngine.query(
+      "SELECT name, sql FROM sqlite_master WHERE type = 'trigger'",
+    );
+    // WHY allowlist by exact SQL, not just name: a crafted backup file could
+    // reuse a trusted trigger name with hostile SQL. Only byte-identical
+    // (modulo whitespace) copies of the schema's own sync triggers pass.
+    const expected = expectedTriggerSql();
+    for (const row of triggerRows) {
+      const name = String(row.name ?? '');
+      const sql = normalizeTriggerSql(String(row.sql ?? ''));
+      if (expected.get(name) !== sql) {
+        await tmpEngine.close();
+        throw new Error(`Restore validation failed: unexpected trigger '${name}'`);
+      }
     }
     await tmpEngine.close();
   } catch (validationError) {
