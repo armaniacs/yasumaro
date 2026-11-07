@@ -35,3 +35,8 @@ RICE降順。逸脱: E3/E5同点は安全側 (枯れ経路削除のE3を先、Sp
 - Batch 2: E2 (単独)。
 - Batch 3 (並列): E4 + E3。
 - 境界検証は `npm run validate:fast`、最終は `make clean test`。
+
+## 追記: popup発火側のcontract採用残 (台帳送り)
+
+- 内容: 共有action-contractは定義済み・dashboard採用済みだが、popupの発火配線はpresenter所有のまま。
+- 再検討トリガー: 次回popup変更時または次回holistic。

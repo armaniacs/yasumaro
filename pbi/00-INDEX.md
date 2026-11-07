@@ -14,17 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-07 arch-delivery-loop archloop-1107（5件） ― ⬜ 未着手
+### 2026-11-07 arch-delivery-loop archloop-1107（5件） ― ✅ 5件完了・アーカイブ済み
 
-診断ドメイン: モジュール深度・seam・約束事乖離(約束事スポットチェックは乖離なし)。RICE降順=実行順。台帳: [2026-11-07-00-backlog-archloop-1107.md](2026-11-07-00-backlog-archloop-1107.md)。
+診断ドメイン: モジュール深度・seam・約束事乖離(乖離なし)。15 taxonomy集約+pinテスト / 16 state単一所有者化 / 17 pending共有レンダラー / 18 v1 sunset+migrate-on-read / 19 claim取得集約(manual・previewのみ)。最終ゲート: make clean test。台帳は [2026-11-07-00-backlog-archloop-1107.md](2026-11-07-00-backlog-archloop-1107.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---:|---|
-| ⬜ 15 | [2026-11-07-15-refactor-sqlite-taxonomy-owner.md](2026-11-07-15-refactor-sqlite-taxonomy-owner.md) | 🔧非機能追加 | 2.4 | M | taxonomy単一所有者+pinテスト |
-| ⬜ 16 | [2026-11-07-16-refactor-screen-state-owner.md](2026-11-07-16-refactor-screen-state-owner.md) | 🔧非機能追加 | 0.8 | L | 画面state単一所有者化 |
-| ⬜ 17 | [2026-11-07-17-refactor-pending-renderer.md](2026-11-07-17-refactor-pending-renderer.md) | 🔧非機能追加 | 0.64 | M | pending-row共有レンダラー。16完了後 |
-| ⬜ 18 | [2026-11-07-18-refactor-collection-sunset.md](2026-11-07-18-refactor-collection-sunset.md) | 🔧非機能追加 | 0.3 | L | v1 sunset+実行集約。16完了後 |
-| ⬜ 19 | [2026-11-07-19-refactor-claim-owner.md](2026-11-07-19-refactor-claim-owner.md) | 🔧非機能追加 | 0.3 | M | claim取得のorchestrator化(確定済み) |
+| ~~15~~ | [2026-11-07-15-refactor-sqlite-taxonomy-owner.md](../dev-docs/archived/pbi/2026-11-07-15-refactor-sqlite-taxonomy-owner.md) | 🔧非機能追加 | 2.4 | M | ✅ 完了。分類集合約+pinテスト |
+| ~~16~~ | [2026-11-07-16-refactor-screen-state-owner.md](../dev-docs/archived/pbi/2026-11-07-16-refactor-screen-state-owner.md) | 🔧非機能追加 | 0.8 | L | ✅ 完了。state単一所有者化 |
+| ~~17~~ | [2026-11-07-17-refactor-pending-renderer.md](../dev-docs/archived/pbi/2026-11-07-17-refactor-pending-renderer.md) | 🔧非機能追加 | 0.64 | M | ✅ 完了。共有レンダラー+層登録 |
+| ~~18~~ | [2026-11-07-18-refactor-collection-sunset.md](../dev-docs/archived/pbi/2026-11-07-18-refactor-collection-sunset.md) | 🔧非機能追加 | 0.3 | L | ✅ 完了。v1削除・集約 |
+| ~~19~~ | [2026-11-07-19-refactor-claim-owner.md](../dev-docs/archived/pbi/2026-11-07-19-refactor-claim-owner.md) | 🔧非機能追加 | 0.3 | M | ✅ 完了。claim集約(manual系) |
 
 ### 2026-11-07 大局的改善ラウンド差分 holistic-1107b（5件） ― ✅ 5件完了・アーカイブ済み
 
