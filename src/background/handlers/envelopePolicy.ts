@@ -89,8 +89,68 @@ interface VersionDetail {
   type: string;
 }
 
-/** Session-scoped count of accepted messages without a protocol version. Resets on SW restart. */
+/**
+ * Session key for the absent-version counter. The service worker is ephemeral
+ * (MV3): module variables alone lose the count on every restart, so the
+ * counter is written through to chrome.storage.session (which survives SW
+ * restarts within the browser session) and rehydrated at module load — the
+ * src/background/sqliteAlert.ts pattern. A plain string key is used — this
+ * is SW-lifetime diagnostic state, not a user setting, so it stays out of
+ * StorageKeys/DEFAULT_SETTINGS.
+ *
+ * Why the counter must survive restarts (PBI 2026-11-08-01): the counter
+ * drives the every-10th migration-progress log. Resetting it on every wake
+ * would re-log the same legacy senders and under-report the surviving legacy
+ * population. Restoring it keeps the diagnostic cadence continuous.
+ */
+const ABSENT_VERSION_COUNTER_SESSION_KEY = 'envelopeAbsentVersionCount';
+
+/** Count of accepted messages without a protocol version. */
 let absentVersionCounter = 0;
+
+/** True once this SW lifetime has counted an absent message; a late-arriving
+ *  rehydration must not clobber the newer in-memory count with a stale snapshot. */
+let counterMutated = false;
+
+/** In-flight (or completed) rehydration; shared so concurrent callers join it. */
+let counterRestorePromise: Promise<void> | null = null;
+
+async function persistAbsentVersionCount(): Promise<void> {
+  try {
+    await chrome.storage.session.set({ [ABSENT_VERSION_COUNTER_SESSION_KEY]: absentVersionCounter });
+  } catch {
+    // Best-effort; the in-memory count still drives this SW lifetime's cadence.
+  }
+}
+
+/**
+ * Rehydrate the absent-version counter after a service worker restart.
+ * Called once at module load (module top-level code runs on every SW wake);
+ * checkEnvelope awaits it before counting so the cadence never moves backward.
+ */
+export function restoreAbsentVersionCount(): Promise<void> {
+  counterRestorePromise ??= (async () => {
+    try {
+      const stored = await chrome.storage.session.get(ABSENT_VERSION_COUNTER_SESSION_KEY) as Record<string, unknown>;
+      const saved = stored[ABSENT_VERSION_COUNTER_SESSION_KEY];
+      if (
+        typeof saved === 'number' &&
+        Number.isInteger(saved) &&
+        saved > 0 &&
+        !counterMutated
+      ) {
+        absentVersionCounter = saved;
+      }
+    } catch {
+      // Unavailable session storage means a fresh count; keep zeros.
+    }
+  })();
+  return counterRestorePromise;
+}
+
+// SW wake re-runs module top-level code, so this rehydrates the counter that
+// the previous SW lifetime persisted.
+void restoreAbsentVersionCount();
 
 /**
  * Test seam: lets tests assert the absent-version counter. Production
@@ -103,6 +163,13 @@ export function getAbsentVersionCount(): number {
 /** Test seam — resets the absent-version counter. */
 export function __resetAbsentVersionCountForTesting(): void {
   absentVersionCounter = 0;
+  counterMutated = false;
+  counterRestorePromise = null;
+  try {
+    void chrome.storage.session.remove(ABSENT_VERSION_COUNTER_SESSION_KEY);
+  } catch {
+    // Test environments without session storage; in-memory reset suffices.
+  }
 }
 
 /** Types that skip deferred migrations + tab-cache init (test/diagnostic paths). */
@@ -176,10 +243,16 @@ export async function checkEnvelope(
   }
 
   if (versionVerdict === 'absent') {
+    // The cadence must not move backward across a restart: rehydrate before
+    // counting (the promise is shared, so steady-state messages pay ~zero cost).
+    await restoreAbsentVersionCount();
+    counterMutated = true;
     absentVersionCounter += 1;
+    void persistAbsentVersionCount();
     // Migration-progress diagnostics: log every 10th absent message so the
     // surviving-legacy-sender count is visible in the diagnostic logs without
-    // a dedicated query path. Resets on SW restart (session-scoped).
+    // a dedicated query path. The counter (and therefore the cadence)
+    // survives SW restarts via the session snapshot above.
     if (absentVersionCounter % 10 === 1) {
       void logInfo(`Protocol version absent (legacy sender): count=${absentVersionCounter}`, {
         type: msg.type,

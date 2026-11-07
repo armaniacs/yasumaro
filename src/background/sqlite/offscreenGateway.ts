@@ -225,10 +225,29 @@ export type SqliteClient = OffscreenGateway;
 export type { SqliteRpcResult as CallResult } from '../../messaging/sqliteRpcClient.js';
 
 /**
- * Lazy singleton shared with the container: the manifest's sqliteClient entry
- * delegates to getSharedSqliteClient, so both paths observe one instance.
- * Module state is an SW-lifetime cache only; durable state lives offscreen.
+ * Shared SqliteClient for the SW lifetime. The production instance is owned
+ * by the composition root: the manifest `sqliteClient` entry's factory
+ * delegates to getSharedSqliteClient, so both paths observe one instance
+ * (no double generation). Tests inject a fake via setSharedSqliteClient.
+ * The lazy default below is the standalone/test fallback only — it lets
+ * single-module use work without booting the container, but production must
+ * reach the client through the composition root. Module state is an
+ * SW-lifetime cache only; durable state lives offscreen (OPFS).
  * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
  */
 let sharedInstance: SqliteClient | null = null;
 export function getSharedSqliteClient(): SqliteClient { if (!sharedInstance) sharedInstance = new SqliteClient(); return sharedInstance; }
+
+/**
+ * Inject the shared SqliteClient. The composition root owns the production
+ * instance (manifest `sqliteClient` entry delegates to the accessor above);
+ * tests pass a fake gateway so no offscreen transport is touched.
+ */
+export function setSharedSqliteClient(client: SqliteClient): void {
+  sharedInstance = client;
+}
+
+/** Test seam — clears the shared instance (simulates the SW restart drop). */
+export function __resetSharedSqliteClientForTesting(): void {
+  sharedInstance = null;
+}
