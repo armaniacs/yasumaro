@@ -36,7 +36,6 @@ import { escapeHtml } from '../../utils/htmlEscape.js';
 import { setElementHtml } from '../../utils/htmlFragment.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { showConfirmDialog } from '../../utils/ui/confirmDialog.js';
-import { PROVIDER_CATALOG } from '../../background/ai/providerCatalog.js';
 
 // Prompt ID prefix constants
 const PROMPT_ID = {
@@ -54,33 +53,19 @@ export function asCustomPrompts(value: unknown): CustomPrompt[] {
 }
 
 /**
- * Catalog-derived prompt-provider scope: every catalog id with
- * supportsCustomPrompt === true, plus the 'all' pseudo-scope. This is the
- * scope source that moves with new providers, so no hand-maintained list can
- * drift when the next provider is added.
+ * Boundary guard for the provider select: unknown option values fall back to
+ * 'all'. The accepted set is an explicit union comparison on purpose — this
+ * file must not import background/ai/providerCatalog (see the provider label
+ * SSOT boundary test in src/utils/storage/__tests__/providerLabelSso.test.ts).
+ * Drift against the catalog is caught by the invariant test in
+ * __tests__/customPromptManager-provider-guard.test.ts, not by a runtime
+ * catalog set here.
  */
-const PROMPT_PROVIDER_SCOPE: ReadonlySet<string> = new Set<string>([
-  ...[...PROVIDER_CATALOG].filter(([, entry]) => entry.supportsCustomPrompt).map(([id]) => id),
-  'all',
-]);
-
-/**
- * Type boundary for the provider select: the CustomPrompt['provider'] union
- * (src/utils/types.ts) still needs a deliberate type edit per provider, so a
- * catalog id the union does not know stays rejected until that edit lands.
- */
-function isPromptProviderUnion(value: string): value is CustomPrompt['provider'] {
-  return value === 'gemini' || value === 'openai-official' || value === 'openai' || value === 'openai2'
-    || value === 'lm-studio' || value === 'ollama' || value === 'all';
-}
-
-/** Boundary guard for the provider select: unknown option values fall back to 'all'. */
 export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
-  if (typeof value !== 'string') return 'all';
-  // Layer 1 (catalog): scope source that moves with new providers.
-  if (!PROMPT_PROVIDER_SCOPE.has(value)) return 'all';
-  // Layer 2 (union): type boundary that still needs a deliberate type edit.
-  return isPromptProviderUnion(value) ? value : 'all';
+    return value === 'gemini' || value === 'openai-official' || value === 'openai' || value === 'openai2'
+        || value === 'lm-studio' || value === 'ollama' || value === 'all'
+        ? value
+        : 'all';
 }
 
 export interface PromptItemRowConfig {
