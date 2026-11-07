@@ -430,3 +430,22 @@ rev `426d0ca8` からの差分を `git grep` で特定した（推測なし）�
 **決定**: `gates.jsdomFileCount` を 374 → 398 に改定する。増加分は DOM を
 直接使う UI・パネル経路の検証が中心で、suite の成長は正当なため、欠陥や
 追加ゲートの必要はない。
+
+#### `jsdomFileCount` 398 → 403 の内訳（2026-11-07 追記）
+
+2026-11-07 の main CI が `OVER jsdom files: 403 / 398` で赤だった。
+`validate` 以外のジョブは緑で、失敗は suite の成長のみが原因。前回改定
+rev `d0ab5499` からの差分を `git grep` で特定した（推測なし）。増加 5 件、
+削除 0 件。すべて DOM を使う UI・移行経路の検証である。
+
+| 増減 | ファイル | なぜ jsdom なのか |
+|---|---|---|
+| +1 | `src/dashboard/__tests__/encryptedBackupPanel-backupCap.test.ts` | バックアップ上限 UI の DOM 検証（`cff908df` 移行モード） |
+| +1 | `src/dashboard/__tests__/exportImport-migration.test.ts` | 移行経路 UI の DOM 検証（同上） |
+| +1 | `src/dashboard/__tests__/importLogsService-migration.test.ts` | 取込移行経路 UI の DOM 検証（同上） |
+| +1 | `src/utils/__tests__/settingsExportImportUiCore-migration.test.ts` | 確認ダイアログ移行経路の DOM 検証（同上） |
+| +1 | `src/dashboard/panels/asyncData/__tests__/savedCollectionsFirstCondition.test.ts` | 空コレクション案内 UI の DOM 検証（`ff9ccdf6` 初回作成導線） |
+
+**決定**: `gates.jsdomFileCount` を 398 → 403 に改定する。増加分は DOM を
+直接使う UI・移行経路の検証が中心で、suite の成長は正当なため、欠陥や
+追加ゲートの必要はない。

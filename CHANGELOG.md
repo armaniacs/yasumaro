@@ -41,6 +41,8 @@ All notable changes to this project will be documented in this file.
 
 - 正規バックアップの復元までトリガー検出で拒否されていた問題（自前のFTS同期トリガーまで一律拒否していた。スキーマSSOTと完全一致するもののみ許可し、未知・改竄トリガーは拒否のまま） / Genuine backups were rejected by trigger detection (even the schema's own FTS sync triggers; only byte-identical schema triggers pass now, unknown or tampered triggers stay rejected)
 - 復元直後の設定保存がENCRYPTION_LOCKEDで失敗していた問題（認証モーダルは検証のみでロック解除しない。復号成功後に検証済みパスワードでセッションを確立し、未設定時は匿名キーのまま） / Settings save failed with ENCRYPTION_LOCKED right after a restore (the auth modal verifies without unlocking; the session is now established from the verified password after decryption, untouched when no master password is set)
+- 推論モデルの接続テストがlength切断で失敗していた問題（出力枠を思考トークンに使い切るモデル向けに、空応答かつlength打ち切りの場合のみ256/512/1024へ段階的に再試行。finish_reasonを診断に露出） / Reasoning-model connection tests failed on length cutoff (retry stepwise at 256/512/1024 only on empty + length cutoff; finish_reason now in diagnostics)
+- FAQとセットアップガイドの停止済みモデル参照を更新 / Updated retired model references in FAQ and setup guide
 
 ## [6.9.69] - 2026-11-07
 

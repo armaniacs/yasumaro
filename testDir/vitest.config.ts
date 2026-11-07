@@ -32,6 +32,7 @@ const exclude = [
   '**/testDir/e2e/**',
   '**/.kilo/**',
   '**/.claude/**',
+  '**/.worktrees/**',
   '**/video-*/**',
   '**/.vulnhunter-fix/**',
   '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
