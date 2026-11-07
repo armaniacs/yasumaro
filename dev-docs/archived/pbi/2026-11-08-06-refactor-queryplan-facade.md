@@ -19,7 +19,7 @@
 
 - `src/offscreen/queryPlan.ts:308-353`: 約25シンボル re-export の pass-through facade。
 - 実装は `src/offscreen/sqliteQueryBuilder.ts:1-22`・`purgeRunner.ts:1-13`。呼出約20箇所: searchExecution, searchHandlers, crudHandlers, purgeHandlers, auditHandlers, IdbVfsBackend, storageFallback。
-- `sqliteQueryBuilder.ts:19` に queryPlan⇄builder の型循環が残存。
+- `sqliteQueryBuilder.ts:19` に queryPlan⇔builder の型循環が残存。
 - 方針: 新規コードは builder/queryParityPredicate/purgeRunner 直 import に切替、facade に @deprecated 付与→テスト移行後に削除。一括削除不可 (facade import のテスト約10件)。
 
 ## BDD受け入れシナリオ
@@ -34,7 +34,7 @@ Scenario: facade が非推奨になる
 
 ```gherkin
 Scenario: import graph が DAG に戻る
-  Given queryPlan⇄builder の型循環がある
+  Given queryPlan⇔builder の型循環がある
   When 移行が進む
   Then 定義-参照の locality が回復する
   And 既存テストが緑である
