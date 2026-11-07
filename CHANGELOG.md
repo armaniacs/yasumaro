@@ -37,6 +37,16 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.71] - 2026-11-08
+
+このリリースは内部リファクタリングのみで、利用者に見える変更はありません。dashboard-sqlite分類集合の単一所有者化、画面stateのModel集約、pending描画の共有化、collection v1実行系のsunset、claim取得のorchestrator集約を含みます。 / No user-visible changes; internal refactoring only: single-owner taxonomy sets, single-owner screen state, shared pending rendering, collection v1 sunset, and orchestrator-owned claim acquisition.
+
+### 修正 / Fixed
+
+- dashboard-sqliteの分類集合がvalidator・wire表・handlerに分散していた問題（`sqliteOperationSecurity.ts` に集約し、分類universe一致のpinテストを追加。公開APIは不変） / Dashboard-sqlite classifications were scattered across validator, wire table, and handlers (consolidated into `sqliteOperationSecurity.ts` with a universe-match pin test; public API unchanged)
+- 履歴画面のstateがModelとPanelに二重所有されていた問題（pending検索と購読をModelへ移し、flush順序hackを除去） / History screen state was dually owned by model and panel (pending search and subscription moved into the model; flush-ordering hack removed)
+- collection v1実行系が残存していた問題（migrate-on-read経路の追加後に削除し、parse・merge・orderを集約） / Legacy collection v1 execution path remained (removed after adding a migrate-on-read path; parse/merge/order consolidated)
+
 ## [6.9.70] - 2026-11-07
 
 このリリースはOpenAI公式プロバイダーの新設とRust製CLIの追加、バックアップ復元まわりの修正です。利用者に見える変更は公式OpenAIスロットの選択肢追加、`yasumaro` コマンドでの履歴検索・集計、復元直後の設定保存と推論モデル接続テストの安定化です。 / This release adds an official OpenAI provider and a Rust CLI, plus backup-restore fixes. User-visible changes: an official OpenAI slot option, history search and stats via the `yasumaro` command, and steadier post-restore settings saves and reasoning-model connection tests.

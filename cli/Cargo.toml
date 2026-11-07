@@ -1,6 +1,6 @@
 [package]
 name = "yasumaro"
-version = "6.9.70"
+version = "6.9.71"
 edition = "2021"
 license = "MIT"
 description = "Read-only CLI for exported Yasumaro history databases"
