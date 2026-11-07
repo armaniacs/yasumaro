@@ -62,9 +62,9 @@
 
 ## DoD
 
-- [ ] shim 経由の新規 import が lint または alias check で失敗する
-- [ ] 正規 import 先の案内が表示される
-- [ ] 既存利用の付け替えが完了し grandfather 除外が削減されている
-- [ ] `npm run lint` が緑である
-- [ ] `npm run check-deprecated-aliases` が緑である
-- [ ] 公開 API の振る舞いに差分がない
+- [x] shim 経由の新規 import が lint または alias check で失敗する
+- [x] 正規 import 先の案内が表示される
+- [x] 既存利用の付け替えが完了し grandfather 除外が削減されている
+- [x] `npm run lint` が緑である
+- [x] `npm run check-deprecated-aliases` が緑である
+- [x] 公開 API の振る舞いに差分がない

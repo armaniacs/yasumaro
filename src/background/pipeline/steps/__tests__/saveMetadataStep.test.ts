@@ -62,7 +62,7 @@ vi.mock('../../../pendingChromeStorageQueue.js', () => ({
 }));
 
 import { saveMetadataStep } from '../saveMetadataStep.js';
-import * as savedUrlStore from '../../../../utils/storage/savedUrlStore.js';
+import * as savedUrlRepository from '../../../../utils/storage/savedUrlRepository.js';
 import * as pendingQueue from '../../../pendingChromeStorageQueue.js';
 import { addLog } from '../../../../utils/logger/core.js';
 import { StorageKeys } from '../../../../utils/storage/types.js';
@@ -140,8 +140,8 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(1);
-      const [url, patch, options] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [
+      expect(savedUrlRepository.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(1);
+      const [url, patch, options] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [
         string, Record<string, unknown>, Record<string, unknown>,
       ];
       expect(url).toBe('https://example.com/page');
@@ -186,7 +186,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('maskedCount' in patch).toBe(false);
     });
 
@@ -197,7 +197,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('content' in patch).toBe(false);
     });
 
@@ -208,7 +208,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('tags' in patch).toBe(false);
     });
 
@@ -219,7 +219,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect('aiSummary' in patch).toBe(false);
     });
 
@@ -230,7 +230,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      const [, patch] = (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
+      const [, patch] = (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mock.calls[0] as [string, Record<string, unknown>];
       expect(patch.recordType).toBe('auto');
     });
   });
@@ -243,7 +243,7 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      expect(savedUrlStore.saveSavedUrlEntryMetadata).not.toHaveBeenCalled();
+      expect(savedUrlRepository.saveSavedUrlEntryMetadata).not.toHaveBeenCalled();
       expect(pendingQueue.enqueuePendingWrite).not.toHaveBeenCalled();
     });
 
@@ -252,13 +252,13 @@ describe('saveMetadataStep', () => {
 
       await saveMetadataStep(context);
 
-      expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(1);
+      expect(savedUrlRepository.saveSavedUrlEntryMetadata).toHaveBeenCalledTimes(1);
     });
   });
 
   describe('失敗時の queue 保持', () => {
     it('retains the metadata patch payload in the queue on save failure', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -286,7 +286,7 @@ describe('saveMetadataStep', () => {
     });
 
     it('logs a WARN on failure', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
 
       const context = makeContext({
         data: { title: 'Test', url: 'https://example.com', content: 'content', maskedCount: 3 },
@@ -302,7 +302,7 @@ describe('saveMetadataStep', () => {
     });
 
     it('logs ERROR when the save fails and the queue cannot persist either (double failure)', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
       (pendingQueue.enqueuePendingWrite as Mock).mockResolvedValueOnce(false);
 
       const context = makeContext({
@@ -319,7 +319,7 @@ describe('saveMetadataStep', () => {
     });
 
     it('logs no queue ERROR when the fallback queue persists', async () => {
-      (savedUrlStore.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
+      (savedUrlRepository.saveSavedUrlEntryMetadata as Mock).mockRejectedValueOnce(new Error('Storage error'));
       (pendingQueue.enqueuePendingWrite as Mock).mockResolvedValueOnce(true);
 
       const context = makeContext({
@@ -373,7 +373,7 @@ describe('saveMetadataStep — regenerate with zero tags', () => {
     });
     await saveMetadataStep(context);
 
-    const saveMock = savedUrlStore.saveSavedUrlEntryMetadata as unknown as Mock;
+    const saveMock = savedUrlRepository.saveSavedUrlEntryMetadata as unknown as Mock;
     expect(saveMock).toHaveBeenCalledTimes(1);
     const [, patch, options] = saveMock.mock.calls[0] as unknown as [
       string,
@@ -388,7 +388,7 @@ describe('saveMetadataStep — regenerate with zero tags', () => {
     const context = makeContext();
     await saveMetadataStep(context);
 
-    const saveMock = savedUrlStore.saveSavedUrlEntryMetadata as unknown as Mock;
+    const saveMock = savedUrlRepository.saveSavedUrlEntryMetadata as unknown as Mock;
     const [, , options] = saveMock.mock.calls[0] as unknown as [
       string,
       Record<string, unknown>,

@@ -1,7 +1,7 @@
 /**
  * obsidianClient-security.test.ts
  * 【セキュリティ強化】コンソールログ機密情報削除機能のテスト
- * 【テスト対象】: src/utils/redaction.js の redactSensitiveData 関数
+ * 【テスト対象】: src/utils/sensitiveDataMask.js の maskSensitiveData('full') 関数（旧 redaction.js 経由と同値）
  *
  * 注: chrome storage モックは jest.setup.ts で設定済み
  */
@@ -34,7 +34,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 🟢 信頼性レベル: 青信号（実装されたredaction.js確認済み）
 
         // 【実際の処理実行】redactionをインポート
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         // 【テストデータ準備】APIキーを含むログデータ
         const logData = {
@@ -45,7 +45,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
 
         // 【実際の処理実行】redaction実行
         // redactSensitiveData returns unknown; tests assert against known shapes.
-        const result = redactSensitiveData(logData) as any;
+        const result = maskSensitiveData(logData) as any;
 
         // 【結果検証】APIキーが削除されていることを確認
         expect(result.fullKey).not.toBe('sk-proj-abcdefghijklmnopqrstuvwxyz1234567890'); // 【確認内容】: 元のAPIキーが出力されていないことを確認 🟢
@@ -66,7 +66,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: ネスト内の機密キーも[REDACTED]に置換される
         // 🟢 信頼性レベル: 青信号（redaction.jsの再帰処理実装確認済み）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         const nestedData = {
             level1: {
@@ -80,7 +80,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             safeData: 'normal-value'
         };
 
-        const result = redactSensitiveData(nestedData) as any;
+        const result = maskSensitiveData(nestedData) as any;
 
         // 【結果検証】深いネスト内のAPIキーが削除されていることを確認
         expect(result.level1.level2.level3.apiKey).toBe('[REDACTED]'); // 【確認内容】: ネスト内のapiKeyがredaction済み 🟢
@@ -99,7 +99,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: 配列各要素内の機密キーが[REDACTED]に置換される
         // 🟢 信頼性レベル: 青信号（redaction.jsの配列処理実装確認済み）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         const arrayData = [
             { name: 'Item 1', apiKey: 'key-1' },
@@ -107,7 +107,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             { name: 'Item 3', apiKey: 'key-3' },
         ];
 
-        const result = redactSensitiveData(arrayData) as any;
+        const result = maskSensitiveData(arrayData) as any;
 
         // 【結果検証】配列内の全APIキーが削除されていることを確認
         expect(result[0].apiKey).toBe('[REDACTED]'); // 【確認内容】: 配列要素1のapiKeyがredaction済み 🟢
@@ -129,7 +129,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: null/undefinedの機密キーも[REDACTED]に置換される
         // 🟢 信頼性レベル: 青信号（redaction.jsの基本型チェック実装確認済み）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         const dataWithNulls = {
             apiKey: null,
@@ -137,7 +137,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
             normalValue: 'test',
         };
 
-        const result = redactSensitiveData(dataWithNulls) as any;
+        const result = maskSensitiveData(dataWithNulls) as any;
 
         // 【結果検証】null/undefinedの機密キーもredactionされることを確認
         expect(result.apiKey).toBe('[REDACTED]'); // 【確認内容】: nullのapiKeyがredaction済み 🟢
@@ -156,12 +156,12 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: 基本型データは変更なしで返却される
         // 🟢 信頼性レベル: 青信号（redaction.jsの早期return実装確認済み）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
-        expect(redactSensitiveData('string')).toBe('string'); // 【確認内容】: 文字列はそのまま 🟢
-        expect(redactSensitiveData(123)).toBe(123); // 【確認内容】: 数値はそのまま 🟢
-        expect(redactSensitiveData(true)).toBe(true); // 【確認内容】: 真偽値はそのまま 🟢
-        expect(redactSensitiveData(null)).toBe(null); // 【確認内容】: nullはそのまま 🟢
+        expect(maskSensitiveData('string')).toBe('string'); // 【確認内容】: 文字列はそのまま 🟢
+        expect(maskSensitiveData(123)).toBe(123); // 【確認内容】: 数値はそのまま 🟢
+        expect(maskSensitiveData(true)).toBe(true); // 【確認内容】: 真偽値はそのまま 🟢
+        expect(maskSensitiveData(null)).toBe(null); // 【確認内容】: nullはそのまま 🟢
     });
 
     /**
@@ -175,7 +175,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: 深度制限を超えた部分では '[REDACTED: too deep]' を返却（データ漏洩防止）
         // 🟢 信頼性レベル: 青信号（refactorで追加した深度制限実装確認済み）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         // 深いネスト構造を生成（103階層）
         let deepObject: any = { apiKey: 'deep-key', value: 'root' };
@@ -184,7 +184,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         }
 
         // 【安全確認】: スタックオーバーフローせずに処理が終了することを確認
-        expect(() => redactSensitiveData(deepObject)).not.toThrow(); // 【確認内容】: エラーがスローされないこと 🟢
+        expect(() => maskSensitiveData(deepObject)).not.toThrow(); // 【確認内容】: エラーがスローされないこと 🟢
     });
 
     /**
@@ -196,7 +196,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: typeofの結果（'string'等）は文字列としてそのまま出力される
         // 🟢 信頼性レベル: 青信号（redactionロジックは特定キー名のみ対象）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         // 【テストデータ準備】型情報を含むデータ（実際のobsidianClient.tsの使用パターン）
         const typeInfoData = {
@@ -205,7 +205,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         };
 
         // 【実際の処理実行】redaction実行
-        const result = redactSensitiveData(typeInfoData) as any;
+        const result = maskSensitiveData(typeInfoData) as any;
 
         // 【結果検証】型情報はredactionされるが、設計上は問題ないことを確認
         // 注: apiKeyキーはSENSITIVE_KEYSに含まれるためredactionされるが、値は型情報で本物ではない
@@ -222,7 +222,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         // 【期待される動作】: 全ての機密キーが削除され、安全なデータは保持される
         // 🟢 信頼性レベル: 青信号（redaction.jsの完全性確認）
 
-        const { redactSensitiveData } = await import('../../utils/redaction.js');
+        const { maskSensitiveData } = await import('../../utils/sensitiveDataMask.js');
 
         // 【テストデータ準備】複雑な混合データ構造
         const complexData = {
@@ -242,7 +242,7 @@ describe('ObsidianClient セキュリティ: コンソールログの機密情�
         };
 
         // 【実際の処理実行】redaction実行
-        const result = redactSensitiveData(complexData) as any;
+        const result = maskSensitiveData(complexData) as any;
 
         // 【結果検証】全ての機密キーがredactionされることを確認
         expect(result.config.apiKey).toBe('[REDACTED]'); // 【確認内容】: ネスト内のapiKey 🟢
