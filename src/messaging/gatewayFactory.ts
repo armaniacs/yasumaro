@@ -21,10 +21,8 @@
 import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
 import type { SendFailure } from './sendWithPolicy.js';
-import type { ExtensionMessage } from '../background/messageTypes.js';
-
-type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
-type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
+import type { OutgoingMessage } from './messageTransport.js';
+export type { OutgoingMessage, WithoutProtocolVersion } from './messageTransport.js';
 
 /** Record-path budget: pendingRecordGateway's 20s timeout contract. */
 export const RECORD_GATEWAY_TIMEOUT_MS = 20_000;

@@ -68,8 +68,8 @@ export interface MessageTransportOptions {
  * conditional distributes over the union so each envelope keeps its `type`
  * discriminant.
  */
-type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
-type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
+export type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
+export type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
 
 const defaultClock: { now: () => number; sleep: (ms: number) => Promise<void> } = {
   now: () => Date.now(),

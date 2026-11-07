@@ -19,12 +19,10 @@
 
 import { errorMessage } from '../utils/errorUtils.js';
 import { messageTransport, type MessageTransport } from './messageTransport.js';
+import type { OutgoingMessage } from './messageTransport.js';
+export type { OutgoingMessage, WithoutProtocolVersion } from './messageTransport.js';
 import { SEND_POLICY_DEFAULT_RETRIES } from './sendRetryDefaults.js';
 import { withRuntimeTimeout } from './withRuntimeTimeout.js';
-import type { ExtensionMessage } from '../background/messageTypes.js';
-
-type WithoutProtocolVersion<M> = M extends unknown ? Omit<M, 'protocolVersion'> : never;
-type OutgoingMessage = WithoutProtocolVersion<ExtensionMessage>;
 
 /**
  * Failure envelope the seam produces when the send throws (timeout sentinel
