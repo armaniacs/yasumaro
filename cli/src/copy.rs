@@ -42,6 +42,11 @@ pub enum AttemptError {
 /// Returns `Ok(())` on exit status 0, `Err(AttemptError::NotFound)` when the
 /// program is missing, and `Err(AttemptError::Failed)` otherwise. Production
 /// uses [`real_runner`]; tests inject a mock with this exact signature.
+///
+/// Kept as a named alias (rather than inlined) so the seam's contract has
+/// one canonical spelling; it is only named in docs, hence the allowance.
+/// The production path exercises it through [`copy_with`]/[`real_runner`].
+#[allow(dead_code)]
 pub type CommandRunner = dyn Fn(&str, &[&str], &str) -> Result<(), AttemptError>;
 
 /// Candidate `(program, args)` backends for a JS-style platform tag.

@@ -471,7 +471,6 @@ mod tests {
     const DAY_12: i64 = 1768176000000;
     const DAY_15: i64 = 1768435200000;
     const DAY_18: i64 = 1768694400000;
-    const DAY_20: i64 = 1768867200000;
 
     const FULL_SCHEMA: &str = "CREATE TABLE browsing_logs (\
         id INTEGER PRIMARY KEY AUTOINCREMENT, \

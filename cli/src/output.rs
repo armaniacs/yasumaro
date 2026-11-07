@@ -430,6 +430,14 @@ mod tests {
     }
 
     #[test]
+    fn csv_quotes_cells_containing_carriage_return() {
+        let mut record = sample_record();
+        record.summary = Some("first\rsecond".to_owned());
+        let text = export_csv(&[record], &["id", "summary"]).expect("CSV must encode");
+        assert_eq!(text, "id,summary\n1,\"first\rsecond\"\n");
+    }
+
+    #[test]
     fn csv_renders_none_cells_as_empty() {
         let mut record = sample_record();
         record.summary = None;
