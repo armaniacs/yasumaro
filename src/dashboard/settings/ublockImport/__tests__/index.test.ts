@@ -531,6 +531,34 @@ describe('ublockImport/index.ts', () => {
         expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('Read error'), 'error')
       );
     });
+
+    test('does not show an error on drop when the read is aborted', async () => {
+      const { readFile } = await import('../fileReader.js');
+      const { getMessage } = await import('../../../../utils/i18n.js');
+      (readFile as Mock).mockRejectedValueOnce(new Error(getMessage('ublockFileAborted')));
+
+      setupUblockDOM();
+      const { setupDragAndDrop } = await import('../index.js');
+      setupDragAndDrop();
+
+      const dropZone = document.getElementById('uBlockDropZone')!;
+
+      const file = new File(['first'], 'first.txt', { type: 'text/plain' });
+      const dropEvent = new Event('drop', { bubbles: true, cancelable: true });
+      Object.defineProperty(dropEvent, 'dataTransfer', {
+        value: { files: [file] },
+      });
+      Object.defineProperty(dropEvent, 'preventDefault', {
+        value: vi.fn(),
+      });
+      dropZone.dispatchEvent(dropEvent);
+
+      await waitForMock(() => expect(readFile).toHaveBeenCalledTimes(1));
+      await drainMacrotask();
+
+      const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
+      expect(showStatus).not.toHaveBeenCalled();
+    });
   });
 
   // =========================================================================
@@ -1011,6 +1039,62 @@ describe('ublockImport/index.ts', () => {
       await waitForMock(() =>
         expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('File read error'), 'error')
       );
+    });
+
+    test('does not show an error when the preempted read is aborted', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+      const { getMessage } = await import('../../../../utils/i18n.js');
+      // The i18n mock echoes unknown keys, so this equals the abort wording
+      // fileReader would reject with in production.
+      (readFile as Mock).mockRejectedValueOnce(new Error(getMessage('ublockFileAborted')));
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      const file = new File(['first'], 'first.txt', { type: 'text/plain' });
+      Object.defineProperty(fileInput, 'files', {
+        value: [file],
+        writable: true,
+      });
+
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+      // Anchor: the handler ran (read started); only then is the negative
+      // assertion below meaningful (waitForMock must not wrap a negation).
+      await waitForMock(() => expect(readFile).toHaveBeenCalledTimes(1));
+      await drainMacrotask();
+
+      const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement;
+      expect(textarea.value).toBe('');
+      const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
+      expect(showStatus).not.toHaveBeenCalled();
+    });
+
+    test('does not show an error for a DOM AbortError rejection', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+      (readFile as Mock).mockRejectedValueOnce(
+        new DOMException('The operation was aborted.', 'AbortError'),
+      );
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', {
+        value: [new File(['first'], 'first.txt', { type: 'text/plain' })],
+        writable: true,
+      });
+
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await waitForMock(() => expect(readFile).toHaveBeenCalledTimes(1));
+      await drainMacrotask();
+
+      const { showStatus } = await import('../../../../utils/ui/settingsUiHelper.js');
+      expect(showStatus).not.toHaveBeenCalled();
     });
 
     test('should abort the previous read when a new file is selected', async () => {
