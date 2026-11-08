@@ -5,7 +5,7 @@
  * The shared stat builder is covered directly.
  */
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VisitReporter, buildVisitStats, isServiceWorkerResponse, type VisitReporterDeps } from '../visitReporter.js';
 
 vi.mock('../../utils/logger/types.js', async () =>
@@ -69,6 +69,16 @@ function makeDeps(overrides: Partial<VisitReporterDeps> = {}): VisitReporterDeps
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // These tests simulate a live extension context: the retry path requires
+  // chrome.runtime.id to be present (see isRuntimeIdMissing in
+  // visitReporter.ts). Scoped here instead of the shared setup so other
+  // suites keep the id-less mock.
+  (globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id =
+    'test-extension-id';
+});
+
+afterEach(() => {
+  delete (globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id;
 });
 
 describe('buildVisitStats', () => {
