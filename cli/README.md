@@ -1,5 +1,10 @@
 # yasumaro (Rust CLI)
 
+> **Development status:** this CLI is under active development. Commands,
+> flags, output formats, and exit-code semantics may change without notice
+> until the first stable release. Do not rely on its interface in scripts
+> that require long-term stability.
+
 Read-only CLI for exported Yasumaro history databases. It never writes to
 the database (read-only open); the only write it performs is appending REPL
 history to the history file described below.
