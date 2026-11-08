@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createBackgroundServices } from '../createBackgroundServices.js';
+import { createBackgroundServices, ServiceInitError } from '../createBackgroundServices.js';
 import { compositionManifest } from '../compositionManifest.js';
 import { ServiceContainer } from '../serviceContainer.js';
 import { flushPendingWrites } from '../pendingChromeStorageQueue.js';
@@ -33,22 +33,38 @@ function containerWithAllFakes(): ServiceContainer {
 
 describe('createBackgroundServices failure isolation', () => {
   describe('factory exception', () => {
-    it('records the failing service instead of aborting the whole composition', () => {
-      const services = createBackgroundServices(containerWithThrowingFactory('obsidian boom'));
+    it('throws a ServiceInitError naming the failing service instead of returning undefined slots', () => {
+      let caught: unknown;
+      try {
+        createBackgroundServices(containerWithThrowingFactory('obsidian boom'));
+      } catch (error) {
+        caught = error;
+      }
 
-      expect(services.serviceInitFailures).toEqual([{ key: FAILING_KEY, message: 'obsidian boom' }]);
+      expect(caught).toBeInstanceOf(ServiceInitError);
+      // The dashboardSqliteHandler onReady resolves 'obsidian' too, so the
+      // cascade is recorded as a second failure with the same cause — every
+      // wiring that could not complete is named instead of just the first.
+      expect((caught as ServiceInitError).failures).toEqual([
+        { key: FAILING_KEY, message: 'obsidian boom' },
+        { key: 'dashboardSqliteHandler', message: 'obsidian boom' },
+      ]);
+      expect((caught as Error).message).toContain('obsidian');
     });
 
-    it('still initializes the remaining services when one factory throws', () => {
-      const services = createBackgroundServices(containerWithThrowingFactory('obsidian boom'));
+    it('still initializes the remaining services before throwing', () => {
+      const container = containerWithThrowingFactory('obsidian boom');
 
-      expect(services.sqliteClient).toEqual({ fake: 'sqliteClient' });
-      expect(services.tabCache).toEqual({ fake: 'tabCache' });
-      expect(services.messageRouter).toEqual({ fake: 'messageRouter' });
-      expect(services.obsidian).toBeUndefined();
+      expect(() => createBackgroundServices(container)).toThrow(ServiceInitError);
+
+      // Healthy services resolved despite the obsidian failure — the throw
+      // reports the failure instead of handing out an undefined slot.
+      expect(container.resolve('sqliteClient')).toEqual({ fake: 'sqliteClient' });
+      expect(container.resolve('tabCache')).toEqual({ fake: 'tabCache' });
+      expect(container.resolve('messageRouter')).toEqual({ fake: 'messageRouter' });
     });
 
-    it('still runs onReady wiring for the healthy services', async () => {
+    it('still runs onReady wiring for the healthy services before throwing', async () => {
       const container = containerWithThrowingFactory('obsidian boom');
       const fakeQueue = {
         flushPendingWrites: vi.fn().mockResolvedValue(undefined),
@@ -56,7 +72,7 @@ describe('createBackgroundServices failure isolation', () => {
       };
       container.override('pendingWriteQueue', fakeQueue);
 
-      createBackgroundServices(container);
+      expect(() => createBackgroundServices(container)).toThrow(ServiceInitError);
 
       // The manifest's pendingWriteQueue onReady installs the facade instance;
       // it must run even though the obsidian factory threw.
@@ -67,10 +83,10 @@ describe('createBackgroundServices failure isolation', () => {
   });
 
   describe('healthy composition', () => {
-    it('reports no failures when every factory resolves', () => {
+    it('returns without throwing when every factory resolves', () => {
       const services = createBackgroundServices(containerWithAllFakes());
 
-      expect(services.serviceInitFailures).toEqual([]);
+      expect(services.sqliteClient).toEqual({ fake: 'sqliteClient' });
     });
   });
 });

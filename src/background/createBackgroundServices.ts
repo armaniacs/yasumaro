@@ -85,18 +85,39 @@ export interface BackgroundServicesComposition extends BackgroundServices {
 
 /**
  * One isolated service-initialization failure. A throwing factory is recorded
- * here instead of aborting the whole composition, so the remaining services
- * still initialize and the failure stays detectable (PBI 2026-11-08-13).
+ * here instead of aborting the remaining initializations, so every failure is
+ * still detected when the composition below throws (PBI 2026-11-08-13).
  */
 export interface ServiceInitFailure {
   readonly key: ServiceKey;
   readonly message: string;
 }
 
-export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition & {
-  /** Per-service init failures; empty when every factory resolved. */
-  serviceInitFailures: readonly ServiceInitFailure[];
-} {
+/**
+ * Thrown by createBackgroundServices when one or more service factories (or
+ * onReady wirings) failed. Carries every failure so a partial outage is never
+ * mistaken for a healthy composition: the return type stays honest (every
+ * member defined) because this function either returns fully or throws.
+ *
+ * Fail-open is deliberately not an option here: resolving a failed slot as
+ * `undefined` would satisfy the type while handing every consumer a value
+ * that crashes on first use, far from the cause. Fail fast at startup
+ * instead — the Service Worker restart that follows re-runs the factories.
+ */
+export class ServiceInitError extends Error {
+  readonly failures: readonly ServiceInitFailure[];
+
+  constructor(failures: readonly ServiceInitFailure[]) {
+    super(
+      `createBackgroundServices: ${failures.length} service(s) failed to initialize: ` +
+        failures.map((f) => `${f.key} (${f.message})`).join('; '),
+    );
+    this.name = 'ServiceInitError';
+    this.failures = failures;
+  }
+}
+
+export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
   // Register every manifest entry the container does not already have, so a
   // test that called container.override(key, fake) keeps its fake.
   for (const entry of compositionManifest) {
@@ -106,9 +127,12 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
   }
 
   // Resolve everything, isolating one service's factory exception from the
-  // rest: a failure is recorded and the key keeps a degraded (undefined)
-  // slot so the composition below and the onReady wiring observe a defined
-  // value instead of throwing. Detection rides on serviceInitFailures.
+  // rest: a failure is recorded so the remaining services still initialize
+  // and every failure is reported together. Nothing degraded is returned —
+  // the composition below throws a ServiceInitError when any failure was
+  // recorded, so no consumer ever observes an undefined slot through a
+  // success-typed member (fail-open). Detection rides on the thrown error's
+  // `failures`, which names every failed key instead of just the first.
   const failures: ServiceInitFailure[] = [];
   const failedKeys = new Set<ServiceKey>();
   for (const entry of compositionManifest) {
@@ -117,7 +141,6 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     } catch (error) {
       failures.push({ key: entry.key, message: errorMessage(error) });
       failedKeys.add(entry.key);
-      container.override(entry.key, undefined);
     }
   }
   for (const entry of compositionManifest) {
@@ -126,7 +149,12 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       entry.onReady?.(container);
     } catch (error) {
       failures.push({ key: entry.key, message: errorMessage(error) });
+      failedKeys.add(entry.key);
     }
+  }
+
+  if (failures.length > 0) {
+    throw new ServiceInitError(failures);
   }
 
   return {
@@ -147,7 +175,6 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     sessionAlarmService: container.resolve<SessionAlarmService>('sessionAlarmService'),
     alarmRegistry: container.resolve<AlarmRegistry>('alarmRegistry'),
     deferredMigrationRunner: container.resolve<() => Promise<void>>('deferredMigrationRunner'),
-    serviceInitFailures: failures,
   };
 }
 
