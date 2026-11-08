@@ -141,10 +141,13 @@ describe('derived wire registry: one entry per gateway wire-table row', () => {
 
   // Per-row dispatch loop: each message routes to the descriptor's own
   // repoMethod runner and to no other. Payload {} keeps the loop
-  // fixture-free — shapes are pinned by the coverage tests.
+  // fixture-free — shapes are pinned by the coverage tests. The update
+  // runner alone needs a minimal id: it fail-closes on a missing id
+  // (PBI 2026-11-08-06), so the routing pin sends { id: 1 } there.
   for (const row of gatewayRows) {
     it(`${row.op}: ${row.messageType} dispatches to the ${row.repoMethod} runner`, async () => {
-      const response = await callHandler(row.messageType, {});
+      const payload = row.op === 'update' ? { id: 1 } : {};
+      const response = await callHandler(row.messageType, payload);
 
       const own = RUNNER_MOCKS[row.repoMethod as SqliteRepoMethod];
       expect(own).toHaveBeenCalledTimes(1);

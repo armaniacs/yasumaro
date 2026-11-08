@@ -56,6 +56,7 @@ import {
   trueDecode,
   voidDecode,
 } from './wireLambdaFactories.js';
+import { validateImportRow, validateUpdateChanges } from './validators.js';
 import {
   requiredNonNegativeNumber,
   requiredBoolean,
@@ -179,7 +180,21 @@ export const SQLITE_WIRE_TABLE = [
     messageType: 'SQLITE_INSERT_BATCH',
     repoMethod: 'insertBatch',
     depsMethod: 'insertBatch',
-    encodeOp: (records: BrowsingLogRecord[]): Extract<MutateOp, { type: 'insertBatch' }> => ({ type: 'insertBatch', records }),
+    // PBI 2026-11-08-06: fail closed at construction — an invalid row (missing
+    // url, mistyped field) throws here instead of travelling to insertBatch
+    // and failing the whole batch at the SQL layer.
+    encodeOp: (records: BrowsingLogRecord[]): Extract<MutateOp, { type: 'insertBatch' }> => {
+      if (!Array.isArray(records)) {
+        throw new TypeError('insertBatch requires an array of records');
+      }
+      for (let i = 0; i < records.length; i++) {
+        const reason = validateImportRow(records[i]);
+        if (reason !== null) {
+          throw new TypeError(`insertBatch record ${i} is invalid: ${reason}`);
+        }
+      }
+      return { type: 'insertBatch', records };
+    },
     encodePayload: (op) => ({ records: (op as Extract<MutateOp, { type: 'insertBatch' }>).records as unknown as Record<string, unknown>[] }),
     decodeGateway: (response) => ({
       count: (response.inserted as number | undefined) ?? (response.count as number),
@@ -198,7 +213,17 @@ export const SQLITE_WIRE_TABLE = [
     encodeOp: (
       id: number,
       changes: Partial<Record<string, unknown>>,
-    ): Extract<MutateOp, { type: 'update' }> => ({ type: 'update', id, changes }),
+    ): Extract<MutateOp, { type: 'update' }> => {
+      if (!Number.isInteger(id) || (id as number) <= 0) {
+        throw new TypeError('update requires a positive integer id');
+      }
+      const { id: _dropRoutingOverride, ...rest } = changes;
+      const reason = validateUpdateChanges(rest as Record<string, unknown>);
+      if (reason !== null) {
+        throw new TypeError(`update changes are invalid: ${reason}`);
+      }
+      return { type: 'update', id, changes };
+    },
     // Flattened wire contract: changes travel as `{ id, ...changes }`, not
     // nested under a `changes` key. The offscreen update runner reads flat
     // keys via `key in payload`, so a nested shape would silently apply zero
@@ -225,6 +250,9 @@ export const SQLITE_WIRE_TABLE = [
       // Fail-closed on malformed payloads (Checking Team 2026-09-22: Data
       // Integrity Medium) — an empty changes object would otherwise succeed
       // as a zero-column update, looking successful while writing nothing.
+      // PBI 2026-11-08-06: known columns are also value-checked, so a
+      // mistyped edit (scroll_ratio: 5, title: 123) is rejected with the
+      // field named instead of failing at the SQL CHECK.
       validate: (p) => {
         const id = (p as { id?: unknown }).id;
         if (!Number.isInteger(id) || (id as number) <= 0) {
@@ -234,9 +262,14 @@ export const SQLITE_WIRE_TABLE = [
         if (
           changes === null ||
           typeof changes !== 'object' ||
+          Array.isArray(changes) ||
           Object.keys(changes as Record<string, unknown>).length === 0
         ) {
           return 'update requires a non-empty changes object';
+        }
+        const reason = validateUpdateChanges(changes as Record<string, unknown>);
+        if (reason !== null) {
+          return `update: ${reason}`;
         }
         return null;
       },
