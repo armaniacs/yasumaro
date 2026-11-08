@@ -78,6 +78,10 @@ export async function readJsonCapped(response: Response, maxBytes: number): Prom
     // form so an oversized payload cannot bypass the cap (PBI 2026-11-08-09 (5)).
     // response.json() output is always JSON-serializable (it was just parsed),
     // so stringify cannot hit a circular structure here.
+    // S30 (認識共有・対策不能): この経路では response.json() の時点で既に
+    // 全量が実体化しているため、cap は事後拒否にしかならない (メモリ尖頭を
+    // 防げない)。実ストリームを持つ本番 Response では到達しない経路であり、
+    // 構造的対策は不能のため、制約として記録する。
     const data = await response.json();
     const serialized = JSON.stringify(data) ?? '';
     if (byteLength(serialized) > maxBytes) {

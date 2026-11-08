@@ -21,8 +21,12 @@ import type { VisitState } from './visitGate.js';
 import type { OWTestState } from '../utils/e2eTestState.js';
 
 declare const __OW_E2E_PROBE__: boolean | undefined;
+// S32: strict opt-in — only an explicit `true` define compiles the relay in.
+// `undefined` (vitest, where the define is absent) keeps the historical
+// probe-enabled default so unit tests keep exercising the relay; any other
+// value stays compiled out. `!== false` was looser than this contract.
 const RELAY_COMPILED_IN: boolean =
-    typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ !== false;
+    typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ === true;
 
 /**
  * Ask the service worker whether the probe is armed (it reads the session
