@@ -14,6 +14,8 @@
  * hid caller bugs (e.g. a numeric id rendering as an empty attribute).
  * A `as any` cast at the call site still compiles, but the throw makes the
  * misuse loud at runtime instead of invisible in the DOM.
+ *
+ * 注意(意図的破壊的変更): 非string非nullish は TypeError (旧 '' 黙殺) — 数値等を渡す呼び出しは修正が必要。
  */
 const HTML_ESCAPE_MAP: Record<string, string> = {
     '&': '&amp;', '<': '&lt;', '>': '&gt;',
