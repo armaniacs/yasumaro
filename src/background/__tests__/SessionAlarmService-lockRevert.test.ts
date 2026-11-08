@@ -63,6 +63,9 @@ class FakeClock implements Clock {
 class FakeAlarmPort implements AlarmPort {
   async create(): Promise<void> {}
   async clear(): Promise<void> {}
+  async get(): Promise<undefined> {
+    return undefined;
+  }
   onAlarm(): void {}
 }
 

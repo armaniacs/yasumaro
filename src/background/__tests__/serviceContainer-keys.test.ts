@@ -6,7 +6,7 @@ describe('ServiceContainer keys', () => {
   describe('SERVICE_KEYS', () => {
     it('matches the composition manifest keys exactly (no drift either way)', () => {
       const manifestKeys = new Set(compositionManifest.map((entry) => entry.key));
-      const declaredKeys = new Set<string>(SERVICE_KEYS);
+      const declaredKeys = new Set<ServiceKey>(SERVICE_KEYS);
 
       for (const key of manifestKeys) {
         expect(declaredKeys.has(key), `manifest key "${key}" is missing from SERVICE_KEYS`).toBe(true);

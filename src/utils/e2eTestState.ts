@@ -30,8 +30,9 @@
 
 // Build-time kill switch (wxt.config.ts define, same pattern as __OW_BENCH__
 // in loader.ts). Store release builds set OW_E2E_PROBE=0 so the probe is
-// dead-code eliminated; dev/CI builds keep it (default true) so the E2E
-// suite runs against a plain `npm run build`. Unit tests (vitest) leave the
+// dead-code eliminated; CI builds set OW_E2E_PROBE=1 to keep it (opt-in
+// since PBI 2026-11-08-13, see .github/workflows/tests.yml). A plain
+// `npm run build` strips the probe. Unit tests (vitest) leave the
 // define undefined, which also keeps the probe enabled.
 declare const __OW_E2E_PROBE__: boolean | undefined;
 const E2E_PROBE_COMPILED_IN: boolean =

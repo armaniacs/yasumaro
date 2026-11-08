@@ -14,6 +14,30 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-08 adversarial-code-review adversarial-1108（17件） ― ✅ 17件完了・アーカイブ済み
+
+レビュー所見171件を全件反証(74件却下)し生き残り97件を17候補へ集約・RICE降順でPBI化・実装。01 SSRFピン留め / 02 gating正確性 / 03 通知無害化 / 04 sessionStore耐久性 / 05 content連携 / 06 sqlite検証 / 07 pipeline回復 / 08 popup可視化 / 09 cleaner正確性 / 10 migration / 11 Mutex(07より先行) / 12 messaging seam / 13 配線起動(+tests.yml E2Eプローブenv・e2eTestState注記追補) / 14 i18n信頼性 / 15 privacy描画 / 16 定数集約 / 17 検証境界。4バッチ(6並列・5並列・3並列・単独)でworktree実装→mainへマージ。台帳は [2026-11-08-00-backlog-adversarial-1108.md](../dev-docs/archived/pbi/2026-11-08-00-backlog-adversarial-1108.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-08-01-fix-ssrf-dns-pinning.md](../dev-docs/archived/pbi/2026-11-08-01-fix-ssrf-dns-pinning.md) | 🔧非機能追加 | 240 | M | ✅ 完了。DNSピン留め+localhost既定拒否(既定DoH未配線はseam+opt-out方式で留保) |
+| ~~02~~ | [2026-11-08-02-fix-visit-gating-correctness.md](../dev-docs/archived/pbi/2026-11-08-02-fix-visit-gating-correctness.md) | 🔧非機能追加 | 240 | M | ✅ 完了。SPA・しきい値・NaN・performance(共有setup revert+局所stubの回帰修正を含む) |
+| ~~03~~ | [2026-11-08-03-fix-notification-title-sanitize.md](../dev-docs/archived/pbi/2026-11-08-03-fix-notification-title-sanitize.md) | 🔧非機能追加 | 240 | S | ✅ 完了。信頼UIへの文言注入を無害化 |
+| ~~04~~ | [2026-11-08-04-fix-sessionstore-durability.md](../dev-docs/archived/pbi/2026-11-08-04-fix-sessionstore-durability.md) | 🔧非機能追加 | 160 | L | ✅ 完了。消失7件のfail-visible化 |
+| ~~05~~ | [2026-11-08-05-fix-content-messaging-robustness.md](../dev-docs/archived/pbi/2026-11-08-05-fix-content-messaging-robustness.md) | 🔧非機能追加 | 120 | M | ✅ 完了。ハング・世代ずれ・無音失敗 |
+| ~~06~~ | [2026-11-08-06-fix-dashboard-sqlite-validation.md](../dev-docs/archived/pbi/2026-11-08-06-fix-dashboard-sqlite-validation.md) | 🔧非機能追加 | 107 | M | ✅ 完了。行・値の検証追加 |
+| ~~07~~ | [2026-11-08-07-fix-recording-pipeline.md](../dev-docs/archived/pbi/2026-11-08-07-fix-recording-pipeline.md) | 🔧非機能追加 | 107 | L | ✅ 完了。重複・回復漏れ防止 |
+| ~~08~~ | [2026-11-08-08-fix-popup-error-handling.md](../dev-docs/archived/pbi/2026-11-08-08-fix-popup-error-handling.md) | 🔧非機能追加 | 107 | M | ✅ 完了。失敗可視化・二重実行防止 |
+| ~~09~~ | [2026-11-08-09-fix-cleaner-privacy-accuracy.md](../dev-docs/archived/pbi/2026-11-08-09-fix-cleaner-privacy-accuracy.md) | 🔧非機能追加 | 80 | M | ✅ 完了。除去漏れ・誤判定の是正 |
+| ~~10~~ | [2026-11-08-10-fix-migration-robustness.md](../dev-docs/archived/pbi/2026-11-08-10-fix-migration-robustness.md) | 🔧非機能追加 | 50 | M | ✅ 完了。再試行・状態検証 |
+| ~~11~~ | [2026-11-08-11-fix-mutex-ownership.md](../dev-docs/archived/pbi/2026-11-08-11-fix-mutex-ownership.md) | 🔧非機能追加 | 40 | S | ✅ 完了。所有権・watchdog |
+| ~~12~~ | [2026-11-08-12-fix-messaging-seam.md](../dev-docs/archived/pbi/2026-11-08-12-fix-messaging-seam.md) | 🔧非機能追加 | 32 | M | ✅ 完了。型境界・検証漏れ |
+| ~~13~~ | [2026-11-08-13-fix-wiring-startup.md](../dev-docs/archived/pbi/2026-11-08-13-fix-wiring-startup.md) | 🔧非機能追加 | 32 | M | ✅ 完了。配線・起動の可視化 |
+| ~~14~~ | [2026-11-08-14-fix-popup-dashboard-i18n-reliability.md](../dev-docs/archived/pbi/2026-11-08-14-fix-popup-dashboard-i18n-reliability.md) | 🔧非機能追加 | 30 | M | ✅ 完了。i18n漏れ・誤timeout等 |
+| ~~15~~ | [2026-11-08-15-fix-privacy-renderer.md](../dev-docs/archived/pbi/2026-11-08-15-fix-privacy-renderer.md) | 🔧非機能追加 | 24 | S | ✅ 完了。構文対応・表示崩れ |
+| ~~16~~ | [2026-11-08-16-refactor-config-consolidation.md](../dev-docs/archived/pbi/2026-11-08-16-refactor-config-consolidation.md) | 🔧非機能追加 | 16 | S | ✅ 完了。定数集約 |
+| ~~17~~ | [2026-11-08-17-fix-validation-limits.md](../dev-docs/archived/pbi/2026-11-08-17-fix-validation-limits.md) | 🔧非機能追加 | 13 | S | ✅ 完了。境界・文言依存の是正 |
+
 ### 2026-11-08 arch-delivery-loop archloop-1108（9件） ― ✅ 9件完了・アーカイブ済み
 
 診断ドメイン: messaging seam・offscreen query・MV3乖離。01 SW-let永続化 / 02 micro fold+dead削除 / 03 alias集約 / 04 innerHTML往復除去 / 05 backend parity+pin / 06 facade段階削除(02後) / 07 twin traversal統合 / 08 registry複製解消(03後) / 09 E2E肯定条件化。最終ゲート: make clean test。台帳は [2026-11-08-00-backlog-archloop-1108.md](2026-11-08-00-backlog-archloop-1108.md) を参照。

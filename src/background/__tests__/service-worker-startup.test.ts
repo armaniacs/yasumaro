@@ -47,7 +47,7 @@ describe('service-worker startup observability', () => {
       // initAllowedUrlsSync reads the seed inside its own try/catch, but the
       // listener registration after it has no handler: a missing onChanged
       // surface rejects the phase task, which must be recorded, not thrown.
-      stub.storage.onChanged = undefined;
+      delete stub.storage.onChanged;
       const serviceWorker = await import('../service-worker.js');
 
       const phases = await serviceWorker.init();

@@ -36,6 +36,9 @@ jobs:
 
       - name: Build extension
         run: npm run build
+        env:
+          # E2E probe stays in CI builds (opt-in since PBI 2026-11-08-13).
+          OW_E2E_PROBE: '1'
 
       - name: Accessibility checks (axe-core)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" npx playwright test --config testDir/playwright.config.ts --grep @a11y
@@ -70,6 +73,9 @@ jobs:
 
       - name: Build extension
         run: npm run build
+        env:
+          # E2E probe stays in CI builds (opt-in since PBI 2026-11-08-13).
+          OW_E2E_PROBE: '1'
 
       - name: Usability checks (navigation, task-flows, a11y, i18n, friction budget)
         run: npm run test:e2e:usability:ci
@@ -108,6 +114,9 @@ jobs:
 
       - name: Build extension (firefox)
         run: npm run build:firefox
+        env:
+          # E2E probe stays in CI builds (opt-in since PBI 2026-11-08-13).
+          OW_E2E_PROBE: '1'
 
       - name: Firefox storage + PII WASM probes (VFS probe + worker smoke + wasm core)
         run: npx playwright test --config testDir/playwright.config.ts --project=firefox e2e/firefox-opfs-probe.spec.ts e2e/firefox-worker-smoke.spec.ts e2e/firefox-pii-wasm-probe.spec.ts

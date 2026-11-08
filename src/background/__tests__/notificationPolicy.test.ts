@@ -175,7 +175,8 @@ describe('notificationPolicy', () => {
       });
 
       const bodyCall = seen.find((call) => call.key === 'notifyPrivacyConfirmBody');
-      expect(bodyCall?.substitutions?.[0]).not.toContain('\n');
+      const bodySubstitutions = bodyCall?.substitutions as unknown as string[] | undefined;
+      expect(bodySubstitutions?.[0]).not.toContain('\n');
       expect(bodyCall?.substitutions).toEqual(['Line1 Line2', 'reason']);
     });
 

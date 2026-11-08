@@ -11,6 +11,7 @@ import { createOfflineQueueProcessor } from '../offlineQueueProcessor.js';
 import { createOfflineNetworkQueue, type OfflineJob } from '../offlineNetworkQueue.js';
 import { InMemoryAdapter } from '../persistentRetryQueue.js';
 import { claimRecoveryOwner, releaseRecoveryOwner } from '../../utils/recoveryClaimStore.js';
+import type { RecordingData } from '../../messaging/types.js';
 
 const CLAIMS_KEY = 'recording_recovery_claims';
 const URL = 'https://example.com/contended';
@@ -23,11 +24,15 @@ function makeProcessor(opts: {
   return createOfflineQueueProcessor({
     offlineNetworkQueue: opts.queue,
     recordingPipeline: {
-      record: opts.record,
+      record: opts.record as unknown as (
+        data: RecordingData,
+      ) => Promise<{ success: boolean; skipped?: boolean }>,
       retryObsidianWrite: vi.fn().mockResolvedValue(true),
     },
     isConsentGranted: () => Promise.resolve(true),
-    terminalFailureHandler: { handOver: opts.handOver },
+    terminalFailureHandler: {
+      handOver: opts.handOver as unknown as (job: OfflineJob) => Promise<void>,
+    },
   });
 }
 

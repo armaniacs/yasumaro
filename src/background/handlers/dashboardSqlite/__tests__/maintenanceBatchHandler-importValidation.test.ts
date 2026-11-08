@@ -44,7 +44,7 @@ describe('maintenanceBatchHandler', () => {
       const result = await handler({ subtype: 'import', rows } as never);
       expect(result).toEqual({ success: true, inserted: 2, skipped: 0, total: 4 });
       expect(insertBatch).toHaveBeenCalledTimes(1);
-      const sent = insertBatch.mock.calls[0]![0] as Array<{ url: string }>;
+      const sent = insertBatch.mock.calls[0]![0] as unknown as Array<{ url: string }>;
       expect(sent.map((r) => r.url)).toEqual(['https://example.com/ok1', 'https://example.com/ok2']);
     });
 
