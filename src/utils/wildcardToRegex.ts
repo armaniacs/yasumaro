@@ -66,7 +66,15 @@ export function wildcardToRegex(pattern: string): RegExp | null {
  * existing call sites keep their behavior.
  */
 export function matchesDomainPattern(domain: string, pattern: string, matchSubdomains = false): boolean {
-    if (pattern.length > MAX_PATTERN_LENGTH) return false;
+    // S26: an over-long pattern never matches. In blocklist use that is
+    // fail-open (a stored pattern silently stops blocking), so the drop is
+    // reported here — callers keeping the pattern must shorten or split it.
+    if (pattern.length > MAX_PATTERN_LENGTH) {
+        console.warn(
+            `[wildcardToRegex] pattern exceeds MAX_PATTERN_LENGTH (${MAX_PATTERN_LENGTH}), treated as never-match`,
+        );
+        return false;
+    }
     if (!pattern.includes('*')) {
         const d = domain.toLowerCase();
         const p = pattern.toLowerCase();
