@@ -65,14 +65,29 @@ export function wildcardToRegex(pattern: string): RegExp | null {
  * the pattern itself. Default is false (exact match only) so all
  * existing call sites keep their behavior.
  */
+/**
+ * Patterns already reported as over-long (S16 warn-once). An over-long
+ * pattern typically stays in the stored list, so every match check would
+ * otherwise re-emit the same warning and flood the console. Remembering
+ * fired patterns keeps the first report per distinct pattern and silences
+ * repeats; the behavior (never-match) is unchanged.
+ */
+const warnedOverlongPatterns = new Set<string>();
+
 export function matchesDomainPattern(domain: string, pattern: string, matchSubdomains = false): boolean {
     // S26: an over-long pattern never matches. In blocklist use that is
     // fail-open (a stored pattern silently stops blocking), so the drop is
     // reported here — callers keeping the pattern must shorten or split it.
+    // S16: warn once per distinct pattern — the stored pattern outlives a
+    // single check, so an unconditional warn fires on every check and floods
+    // the console.
     if (pattern.length > MAX_PATTERN_LENGTH) {
-        console.warn(
-            `[wildcardToRegex] pattern exceeds MAX_PATTERN_LENGTH (${MAX_PATTERN_LENGTH}), treated as never-match`,
-        );
+        if (!warnedOverlongPatterns.has(pattern)) {
+            warnedOverlongPatterns.add(pattern);
+            console.warn(
+                `[wildcardToRegex] pattern exceeds MAX_PATTERN_LENGTH (${MAX_PATTERN_LENGTH}), treated as never-match`,
+            );
+        }
         return false;
     }
     if (!pattern.includes('*')) {

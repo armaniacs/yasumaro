@@ -7,7 +7,7 @@
  * ignore the flag (documented policy — subdomain scope must be written
  * into the wildcard itself, never OR-ed in silently).
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   MAX_PATTERN_LENGTH,
   MAX_WILDCARDS_PER_PATTERN,
@@ -64,5 +64,45 @@ describe('matchSubdomains ignored for wildcards (PBI 2026-11-08-17 item 4)', () 
   it('requires wildcard subdomain scope to be written into the pattern', () => {
     expect(matchesDomainPattern('deep.sub.example.com', '*.example.com')).toBe(true);
     expect(matchesDomainPattern('deep.sub.example.com', 'sub.example.com', true)).toBe(true);
+  });
+});
+
+describe('over-long warning fires once per pattern (S16 warn-once)', () => {
+  function overlong(tag: string): string {
+    return `s16-${tag}-` + 'a'.repeat(MAX_PATTERN_LENGTH);
+  }
+
+  it('warns only once for repeated checks of the same over-long pattern', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const pattern = overlong('once');
+      expect(matchesDomainPattern('example.com', pattern)).toBe(false);
+      expect(matchesDomainPattern('example.com', pattern)).toBe(false);
+      expect(matchesDomainPattern('example.com', pattern, true)).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('warns again for a different over-long pattern', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(matchesDomainPattern('example.com', overlong('first'))).toBe(false);
+      expect(matchesDomainPattern('example.com', overlong('second'))).toBe(false);
+      expect(warn).toHaveBeenCalledTimes(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('stays silent for patterns within the cap', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(matchesDomainPattern('example.com', 'example.com')).toBe(true);
+      expect(warn).not.toHaveBeenCalled();
+    } finally {
+      warn.mockRestore();
+    }
   });
 });
