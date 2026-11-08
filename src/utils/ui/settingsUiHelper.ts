@@ -86,10 +86,16 @@ function mirrorStatusToTop(el: HTMLElement): void {
   if (el.id !== 'status') return;
   try {
     syncStatusToTop();
-    // WHY (intentional silence, PBI 2026-09-22-01裁定): the mirror is
-    // cosmetic best-effort — a missed mirror self-heals on the next
-    // showStatus/clearStatus, and logging every DOM mismatch would spam per status.
-  } catch {}
+  } catch {
+    // WHY (visible failure, PBI 2026-11-08-09 (4)): the mirror is cosmetic,
+    // but a DOM inconsistency (e.g. a detached #statusTop breaking
+    // setElementHtml) must not vanish silently — a missed mirror used to
+    // self-heal opaquely, hiding real DOM bugs. The warn surfaces it in
+    // diagnostics and the dataset flag makes it observable (and styleable)
+    // while the source #status message itself stays intact.
+    console.warn('[settingsUiHelper] mirrorStatusToTop: #status -> #statusTop mirror failed');
+    el.dataset.statusMirrorFailed = '1';
+  }
 }
 
 /**

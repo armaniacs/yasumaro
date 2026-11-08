@@ -29,13 +29,52 @@ export interface PrivacyInfo {
 /**
  * Type guard for PrivacyInfo
  * Validates that an unknown value from external storage matches the expected shape.
+ * Beyond the two required fields, the optional reason/headers shapes are also
+ * checked so corrupt cache entries (wrong reason literal, non-boolean flags,
+ * non-finite/negative timestamps) are detected instead of trusted
+ * (PBI 2026-11-08-09 (7)). Rejected entries fail safe: callers fall through
+ * to a fresh privacy check.
  */
 export function isPrivacyInfo(value: unknown): value is PrivacyInfo {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
-  const obj = value as Record<string, unknown>;
-  return typeof obj.isPrivate === 'boolean' && typeof obj.timestamp === 'number';
+  const obj = value as {
+    isPrivate?: boolean;
+    timestamp?: number;
+    reason?: string;
+    headers?: { cacheControl?: string; hasCookie?: boolean; hasAuth?: boolean } | null;
+  };
+  if (typeof obj.isPrivate !== 'boolean') {
+    return false;
+  }
+  if (typeof obj.timestamp !== 'number' || !Number.isFinite(obj.timestamp) || obj.timestamp < 0) {
+    return false;
+  }
+  if (
+    obj.reason !== undefined &&
+    obj.reason !== 'cache-control' &&
+    obj.reason !== 'set-cookie' &&
+    obj.reason !== 'authorization'
+  ) {
+    return false;
+  }
+  if (obj.headers !== undefined) {
+    if (typeof obj.headers !== 'object' || obj.headers === null) {
+      return false;
+    }
+    const headers = obj.headers;
+    if (headers.cacheControl !== undefined && typeof headers.cacheControl !== 'string') {
+      return false;
+    }
+    if (headers.hasCookie !== undefined && typeof headers.hasCookie !== 'boolean') {
+      return false;
+    }
+    if (headers.hasAuth !== undefined && typeof headers.hasAuth !== 'boolean') {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -139,5 +178,9 @@ function findHeader(headers: chrome.webRequest.HttpHeader[], name: string): chro
 }
 
 function hasHeader(headers: chrome.webRequest.HttpHeader[], name: string): boolean {
-  return findHeader(headers, name) !== undefined;
+  // Presence alone is not a signal: an empty Set-Cookie / Authorization value
+  // carries no cookie or credential, so blank values must not flip a public
+  // page to private (PBI 2026-11-08-09 (8)).
+  const found = findHeader(headers, name);
+  return typeof found?.value === 'string' && found.value.trim().length > 0;
 }

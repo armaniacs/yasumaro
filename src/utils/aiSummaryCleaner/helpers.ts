@@ -174,6 +174,13 @@ export interface DeepHosts {
     shadowHosts: Element[];
     /** Iframe elements (same-origin ones are traversed, cross-origin skipped). */
     iframes: HTMLIFrameElement[];
+    /**
+     * True when host detection threw mid-walk: the two arrays may be a
+     * partial (possibly empty) prefix, NOT a trustworthy "no hosts" signal.
+     * Consumers must treat `incomplete === true` as "unknown", never as a
+     * clean bill of health (PBI 2026-11-08-09 (1)).
+     */
+    incomplete: boolean;
 }
 
 /**
@@ -191,7 +198,7 @@ export function findDeepHosts(root: ParentNode): DeepHosts {
     try {
         const doc = (root as Element).ownerDocument ?? (root as Document);
         if (typeof doc?.createTreeWalker !== 'function') {
-            return { shadowHosts, iframes };
+            return { shadowHosts, iframes, incomplete: true };
         }
         const walker = doc.createTreeWalker(root as unknown as Node, 1);
         let node = walker.nextNode() as Element | null;
@@ -206,9 +213,14 @@ export function findDeepHosts(root: ParentNode): DeepHosts {
             node = walker.nextNode() as Element | null;
         }
     } catch {
-        return { shadowHosts, iframes };
+        // The walk failed partway (detached root, hostile DOM): the arrays
+        // above may be a partial prefix. Flag it so callers never mistake
+        // this for a verified "no shadow/iframe hosts" result.
+        // Logging happens at the querySelectorAllDeep consumption point so a
+        // single failure is reported once, not once per detector caller.
+        return { shadowHosts, iframes, incomplete: true };
     }
-    return { shadowHosts, iframes };
+    return { shadowHosts, iframes, incomplete: false };
 }
 
 type DeepRoot = Element | Document | ShadowRoot | DocumentFragment;
@@ -226,16 +238,56 @@ export function primeDeepHosts(root: DeepRoot): DeepHosts {
     return hosts;
 }
 
+/** Detached probe element reused to parse-check selectors without scanning. */
+let selectorProbe: Element | null = null;
+
+/**
+ * True when the selector parses. Lets callers distinguish "selector typo"
+ * from "zero matches" before scanning (PBI 2026-11-08-09 (2)): an invalid
+ * selector is reported via console.warn at the querySelectorAllDeep entry
+ * point and yields [], while a valid selector with no matches stays silent.
+ * Without a DOM (non-browser hosts) validation is impossible, so the
+ * selector is treated as valid and the try-catch guards below still apply.
+ */
+export function isValidSelector(selector: string): boolean {
+    try {
+        if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+            return true;
+        }
+        if (selectorProbe === null) {
+            selectorProbe = document.createElement('div');
+        }
+        selectorProbe.querySelector(selector);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 export function querySelectorAllDeep(
     root: DeepRoot,
     selector: string,
     hosts?: DeepHosts,
 ): Element[] {
+    // Invalid selectors never reach the scan: one warn per top-level call
+    // keeps them distinguishable from genuine zero-match results, and the
+    // early return also spares every recursion level a repeated report.
+    if (!isValidSelector(selector)) {
+        console.warn('[aiSummaryCleaner] querySelectorAllDeep: invalid selector, returning no matches', selector);
+        return [];
+    }
     // Hosts resolve without a fresh scan when the caller supplies them or the
     // entry point primed this root. The fallback detects once but deliberately
     // does NOT cache: the DOM may mutate between calls, and only the entry
     // point (which owns the rule target for the whole cleanse) may prime.
     const resolved = hosts ?? deepHostsCache.get(root) ?? findDeepHosts(root as unknown as ParentNode);
+
+    // An incomplete host detection is not a verified "no hosts" signal: keep
+    // the plain query as a best-effort result but report the gap so a
+    // removal miss never parades as a clean scan (PBI 2026-11-08-09 (1)).
+    if (resolved.incomplete) {
+        console.warn('[aiSummaryCleaner] querySelectorAllDeep: host detection incomplete, shadow/iframe matches may be missed');
+    }
 
     // Fast path: no shadow/iframe hosts anywhere below this root — the plain
     // query is already complete, no recursion and no per-level enumeration.
@@ -244,7 +296,8 @@ export function querySelectorAllDeep(
             const nodeList = (root as Element).querySelectorAll?.(selector);
             return nodeList ? (Array.from(nodeList) as Element[]) : [];
         } catch {
-            // invalid selector 等は無視
+            // invalid selector は入口で弾き済み。ここは detached root 等の
+            // DOM 異常用ガードとして残す
             return [];
         }
     }
@@ -258,22 +311,26 @@ export function querySelectorAllDeep(
             result.push(...Array.from(nodeList) as Element[]);
         }
     } catch {
-        // invalid selector 等は無視
+        // invalid selector は入口で弾き済み。ここは detached root 等の
+        // DOM 異常用ガードとして残す
     }
 
     // 2) Recurse only into precollected hosts (never a full child enumeration).
     // Each subtree detects its own nested hosts on first visit and caches them.
     for (const host of resolved.shadowHosts) {
-        // shadowRoot（open のみ）
-        const shadow = (host as unknown as { shadowRoot?: ShadowRoot | null }).shadowRoot;
-        if (shadow) {
-            try {
+        // shadowRoot（open のみ）。読み取り自体が detached 等で投げる場合も
+        // あるため取得から再帰までを同一 try で囲む
+        try {
+            const shadow = (host as unknown as { shadowRoot?: ShadowRoot | null }).shadowRoot;
+            if (shadow) {
                 result.push(...querySelectorAllDeep(shadow, selector));
-                // WHY (intentional silence, PBI 2026-09-22-01裁定): a closed
-                // or detached shadow root throws per-subtree — skipping it is
-                // the expected control flow (same as cross-origin iframes
-                // below), and logging per skipped subtree would spam per page.
-            } catch {}
+            }
+        } catch {
+            // WHY (diagnostic log, PBI 2026-11-08-09 (3)): a closed or
+            // detached shadow root throws per-subtree — skipping it stays the
+            // control flow, but the skip is now recorded with the host tag/id
+            // instead of vanishing, so removal gaps are diagnosable.
+            console.debug('[aiSummaryCleaner] querySelectorAllDeep: skipped shadow subtree', host.tagName, host.id);
         }
     }
     for (const el of resolved.iframes) {
