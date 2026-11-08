@@ -56,10 +56,21 @@ export interface SuspendBackupStatus {
  * set() のデフォルトは debounce 書き込みだが、未 flush のキューは
  * onSuspend 時に local へ自動退避され、起動時・get 時に移行で復元される。
  * 即時性が要る書き込みは { flushImmediately: true } を指定すること。
+ *
+ * @throws {SessionStoreReadError} get() が chrome.storage.session の読み取り
+ *   失敗時（および local フォールバック移行後の再読み取り失敗時）に投げる。
+ *   miss は null で返るため、呼び出し側は catch しなくても「値なし」を
+ *   通常フローで扱える。set()/remove() はキュー投入のみで投げない。
+ *   具象 SessionStore.waitForFlush() は未処理キューが
+ *   MAX_WAIT_FOR_FLUSH_ROUNDS を超えて残る場合に Error を投げる
+ *   (Port 契約外の拡張であり、この Port 型経由では呼ばないこと)。
  */
 export interface SessionStorePort {
+  /** miss は null、読み取り失敗は SessionStoreReadError を投げる。 */
   get<T>(key: string): Promise<T | null>;
+  /** キュー投入のみで投げない。flush 失敗は内部で再試行・退避される。 */
   set(key: string, value: unknown, options?: { flushImmediately?: boolean }): Promise<void>;
+  /** キュー投入のみで投げない。 */
   remove(key: string): void;
 }
 
