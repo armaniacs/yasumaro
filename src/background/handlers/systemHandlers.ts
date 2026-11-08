@@ -31,8 +31,9 @@ export interface FetchUrlHandlerDeps {
   getSettings: () => Promise<Settings>;
   buildAllowedUrls: (settings: Settings) => Set<string>;
   /**
-   * DNSピン留め用resolver (任意)。指定時は検証と接続で同一解決IPを使い、
-   * 検証後にDNS応答がloopbackへ変わったら接続前に拒否する。未指定時は
+   * DNSピン留め用resolver (任意)。指定時は非同期ガードで検証したpinを
+   * 接続層へ受渡し、検証と接続で同一pin・同一resolverを使う (No.5)。
+   * 解決はガード1回+接続後検証1回の計2回に最小化される。未指定時は
    * 従来どおり文字列検査のみ (後方互換)。
    */
   resolveHostname?: DnsResolveFn;
@@ -89,15 +90,14 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
     // VULN-004: FETCH_URL is an extension-page operation, not a content-script
     // one. Enforced by the registry's 'extension-only' trust level.
     try {
-      // DNSピン留めありの場合は非同期ガード (解決IP検証+pin取得) を使い、
+      // DNSピン留めありの場合は非同期ガードで検証したpinを接続層へ受渡す
+      // (No.5: ガードの戻りを破棄せず、検証と接続で同一pinを使う)。
       // なしの場合は従来の同期ガードを使う (後方互換)。
-      if (deps.resolveHostname) {
-        await validateUrlForFilterImportAsync(message.payload.url, {
+      const dnsPin = deps.resolveHostname
+        ? await validateUrlForFilterImportAsync(message.payload.url, {
           resolveHostname: deps.resolveHostname,
-        });
-      } else {
-        validateUrlForFilterImport(message.payload.url);
-      }
+        })
+        : null;
 
       const settings = await deps.getSettings();
       const allowedUrls = deps.buildAllowedUrls(settings);
@@ -119,8 +119,10 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
         method: 'GET',
         cache: 'no-cache',
         allowedUrls,
-        // resolver指定時のみDNSピン留め (検証後再解決の突き合わせ) が働く。
-        ...(deps.resolveHostname ? { resolveHostname: deps.resolveHostname } : {}),
+        // pin受渡し時のみDNSピン留め (接続後再解決の突き合わせ) が働く。
+        // pinは検証に使った同一resolverを内包するため、fetch側での
+        // 再解決は接続後検証の1回だけで済む。
+        ...(dnsPin ? { dnsPin } : {}),
       }));
 
       // Defense in depth: `redirect: 'error'` should already have rejected, but
