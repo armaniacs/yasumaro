@@ -72,9 +72,13 @@ export class ScrollMonitor {
      * back to documentElement.clientHeight when it is NaN/0/negative, so one
      * bad viewport read no longer freezes depth silently; the next valid
      * read recovers because every call re-resolves the viewport (no latch).
-     * When no viewport is readable at all, docHeight degrades to the raw
-     * scrollHeight so real scroll movement still advances the depth instead
-     * of maintaining; a fully unreadable DOM keeps the last finite max.
+     * Review S2: when no viewport is readable at all, the depth maintains
+     * the current max (safe side) instead of degrading to the raw
+     * scrollHeight — scrollHeight-as-docHeight divides by a far larger
+     * denominator base and would over-report depth on an unreadable layout,
+     * wrongly opening the visit gate. A fully unreadable DOM keeps the
+     * last finite max; computeMaxScroll's h <= 0 guard implements the
+     * maintain by returning the base.
      */
     updateFromWindow(): number {
         if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -87,12 +91,12 @@ export class ScrollMonitor {
               ? document.documentElement.clientHeight
               : NaN;
         const scrollHeight = toFinite(document.documentElement.scrollHeight, NaN);
+        // Review S2: no readable viewport -> docHeight stays NaN so the
+        // update maintains the current max (safe side, gate stays closed).
         const docHeight =
             Number.isFinite(viewport) && Number.isFinite(scrollHeight)
                 ? scrollHeight - viewport
-                : Number.isFinite(scrollHeight)
-                  ? scrollHeight
-                  : NaN;
+                : NaN;
         return this.update(scrollY, docHeight);
     }
 }
