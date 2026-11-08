@@ -31,8 +31,11 @@ import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOv
 /**
  * Review S3: cheap content equality for the overrides memo. Compares the
  * effective snapshot content (finite-number leaves only, matching the
- * key-sorted stringify) without allocating. Non-object leaves count as
- * absent on both sides so corruption neither pins nor churns the key.
+ * key-sorted stringify). Builds small transient key arrays per kind
+ * (Object.keys + filter) — cheap next to the stringify it replaces, which
+ * now runs only on an actual content change (a storage write). Non-object
+ * leaves count as absent on both sides so corruption neither pins nor
+ * churns the key.
  */
 function areOverridesEqual(
     a: Record<string, Record<string, number>>,

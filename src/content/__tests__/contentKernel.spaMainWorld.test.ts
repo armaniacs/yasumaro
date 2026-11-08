@@ -91,6 +91,87 @@ describe('ContentKernel SPA seam — URL comparison guard (No.2)', () => {
   });
 });
 
+describe('ContentKernel SPA seam — startPeriodicCheck restarts the poll (No.1)', () => {
+  it('re-arms a stopped poll on startPeriodicCheck without stacking timers', () => {
+    const pageState = new PageState();
+    pageState.startTime = BASE;
+    pageState.maxScrollPercentage = 55;
+    const kernel = makeKernel(pageState, BASE + 9000);
+    const originalHref = window.location.href;
+    const tickBox: { current: (() => void) | null } = { current: null };
+    let setCalls = 0;
+    const timer: SpaPollTimer = {
+      setInterval: (callback) => {
+        setCalls += 1;
+        tickBox.current = callback;
+        return setCalls as unknown as ReturnType<typeof setInterval>;
+      },
+      clearInterval: () => {
+        tickBox.current = null;
+      },
+    };
+    kernel.startSpaUrlPolling(2000, timer);
+    expect(setCalls).toBe(1);
+    expect(tickBox.current).not.toBeNull();
+
+    // stopPeriodicCheck stops the MAIN-world poll with the deadline timer.
+    kernel.stopPeriodicCheck();
+    expect(tickBox.current).toBeNull();
+
+    // startPeriodicCheck re-arms the same poll (symmetric restart).
+    kernel.startPeriodicCheck();
+    expect(setCalls).toBe(2);
+    expect(tickBox.current).not.toBeNull();
+
+    // Multi-start guard: a repeated start never stacks a second interval.
+    kernel.startPeriodicCheck();
+    expect(setCalls).toBe(2);
+    expect(tickBox.current).not.toBeNull();
+
+    // The re-armed poll still detects a MAIN-world transition.
+    const rawPush = window.history.pushState.bind(window.history);
+    try {
+      rawPush.call(window.history, {}, '', '/restarted-poll-page');
+      tickBox.current?.();
+      expect(pageState.startTime).toBe(BASE + 9000);
+      expect(pageState.maxScrollPercentage).toBe(0);
+    } finally {
+      kernel.stopPeriodicCheck();
+      window.history.replaceState({}, '', originalHref);
+    }
+  });
+});
+
+describe('ContentKernel SPA seam — hash-only moves never reset (No.2)', () => {
+  it('ignores fragment-only changes but still resets on a true path change', () => {
+    const pageState = new PageState();
+    pageState.startTime = BASE;
+    pageState.maxScrollPercentage = 70;
+    pageState.isValidVisitReported = true;
+    const kernel = makeKernel(pageState, BASE + 9000);
+    const originalHref = window.location.href;
+    const baseNoHash = originalHref.split('#')[0] ?? originalHref;
+    const unsubscribe = kernel.subscribeSpaNavigation();
+    try {
+      window.history.pushState({}, '', `${baseNoHash}#section-a`);
+      expect(kernel.pollSpaUrlOnce()).toBe(false);
+      window.history.pushState({}, '', `${baseNoHash}#section-b`);
+      expect(kernel.pollSpaUrlOnce()).toBe(false);
+      expect(pageState.startTime).toBe(BASE);
+      expect(pageState.maxScrollPercentage).toBe(70);
+      expect(pageState.isValidVisitReported).toBe(true);
+      // A true path change after the anchor hops still resets.
+      window.history.pushState({}, '', '/hash-then-real-page');
+      expect(pageState.startTime).toBe(BASE + 9000);
+      expect(pageState.maxScrollPercentage).toBe(0);
+      expect(pageState.isValidVisitReported).toBe(false);
+    } finally {
+      unsubscribe();
+      window.history.replaceState({}, '', originalHref);
+    }
+  });
+});
+
 describe('ContentKernel SPA seam — MAIN-world polling backing (No.1)', () => {
   it('records the subscribed URL so the first poll is a no-op', () => {
     const kernel = makeKernel(new PageState(), BASE);

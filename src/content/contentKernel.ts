@@ -49,6 +49,17 @@ const defaultSpaPollTimer: SpaPollTimer = {
     clearInterval: (id) => clearInterval(id),
 };
 
+/**
+ * Review No.2: fragment-stripped comparison for SPA navigation. A hash-only
+ * change (same document, e.g. an in-page anchor hop) keeps the stripped
+ * form identical, so it never resets the visit — only a true path/query
+ * change does.
+ */
+function stripUrlFragment(url: string): string {
+    const hashIndex = url.indexOf('#');
+    return hashIndex === -1 ? url : url.slice(0, hashIndex);
+}
+
 export interface ContentKernelOptions {    pageState?: PageState;
     sender?: MessageSender;
     scheduler?: Scheduler;
@@ -256,15 +267,35 @@ export class ContentKernel {
     }
 
     /** Keep the cache fresh when the popup/background (un)pauses mid-page. */
-    private subscribePauseChanges(): void {
+    /**
+     * Keep the cache fresh when the popup/background (un)pauses mid-page.
+     * Returns the unsubscribe so a failed init() can roll the listener
+     * back (Review No.3) — a no-op where chrome is unavailable (tests).
+     */
+    private subscribePauseChanges(): () => void {
+        const noop = (): void => {};
         try {
-            this.getChromeApi()?.storage?.onChanged?.addListener((changes, areaName) => {
+            const onChanged = this.getChromeApi()?.storage?.onChanged;
+            if (onChanged === undefined || typeof onChanged.addListener !== 'function') return noop;
+            const listener = (
+                changes: { [key: string]: chrome.storage.StorageChange },
+                areaName: string,
+            ): void => {
                 if (areaName !== 'local') return;
                 const change = changes[StorageKeys.RECORDING_PAUSED_UNTIL];
                 if (change) this.refreshPausedCache(change.newValue);
-            });
+            };
+            onChanged.addListener(listener);
+            return () => {
+                try {
+                    onChanged.removeListener(listener);
+                } catch {
+                    // Best-effort rollback — an init failure must still reject.
+                }
+            };
         } catch {
             // No chrome — nothing to subscribe.
+            return noop;
         }
     }
 
@@ -400,9 +431,9 @@ export class ContentKernel {
      * without that polling armed, MAIN-world transitions are missed. The
      * popstate listener is the single path that fires for both worlds.
      * Review No.2: every entry funnels through maybeResetForSpaUrl, which
-     * compares against the last observed URL — a same-URL (shallow state
-     * update) pushState/replaceState skips resetForNavigation/loadSettings
-     * and only a true URL change resets.
+     * compares fragment-stripped URLs — a same-URL (shallow state update)
+     * or hash-only (same-document anchor) pushState/replaceState skips
+     * resetForNavigation/loadSettings and only a true URL change resets.
      */
     subscribeSpaNavigation(): () => void {
         const noop = (): void => {};
@@ -444,7 +475,15 @@ export class ContentKernel {
      * seam is injectable so tests never wait in real time.
      */
     startSpaUrlPolling(intervalMs = 2000, timer: SpaPollTimer = defaultSpaPollTimer): () => void {
+        // Review S3: idempotent second call — returns the active stopper so
+        // a repeated arm (entrypoint re-run, double init) never stacks a
+        // second interval behind the first. The first arm's interval/timer
+        // win; late callers share them.
         if (this.spaPollStop !== null) return this.spaPollStop;
+        // Review No.1: remember the arm config so startPeriodicCheck() can
+        // re-arm the same poll after a stop (symmetric restart) without the
+        // caller re-supplying interval/timer.
+        this.spaPollConfig = { intervalMs, timer };
         if (this.lastSpaUrl === null) this.lastSpaUrl = this.readSpaUrl();
         const id = timer.setInterval(() => {
             this.pollSpaUrlOnce();
@@ -484,8 +523,9 @@ export class ContentKernel {
     }
 
     /**
-     * Review No.2: guarded navigation reset. Same-URL (shallow) updates
-     * return false without touching visit state; only a true URL change
+     * Review No.2: guarded navigation reset. Same-URL (shallow) and
+     * hash-only (same-document anchor) updates return false without
+     * touching visit state; only a true fragment-stripped URL change
      * resets the visit and reloads settings. A null current URL (no
      * window) never resets.
      */
@@ -496,13 +536,23 @@ export class ContentKernel {
             this.lastSpaUrl = current;
             return false;
         }
-        if (current === this.lastSpaUrl) return false;
+        if (stripUrlFragment(current) === stripUrlFragment(this.lastSpaUrl)) {
+            // Same document (shallow state update or anchor hop) — record
+            // the latest URL but leave the visit state untouched.
+            this.lastSpaUrl = current;
+            return false;
+        }
         this.lastSpaUrl = current;
         this.resetForNavigation();
         void this.loadSettings().catch(() => {
             // Best-effort reload: the reset above already moved the
             // startTime, so gating rebuilds with cached thresholds until
             // the next successful settings read lands.
+            // Review S4: deliberately silent, unlike the entrypoint init
+            // warn. The entrypoint warns once for a terminal init failure;
+            // this path runs on every SPA navigation, so warning here
+            // would repeat for the same persistent failure. The cached
+            // thresholds keep gating, and the next navigation retries.
         });
         return true;
     }
@@ -571,6 +621,15 @@ export class ContentKernel {
 
     startPeriodicCheck(): void {
         this.deadlineTimer.start();
+        // Review No.1: symmetric restart of the MAIN-world poll stopped by
+        // stopPeriodicCheck(). Re-arms only when a poll was configured via
+        // startSpaUrlPolling() and none is running — the null-stopper check
+        // here plus the non-null-stopper guard inside startSpaUrlPolling()
+        // keep repeated starts to a single interval.
+        if (this.spaPollConfig !== null && this.spaPollStop === null) {
+            const { intervalMs, timer } = this.spaPollConfig;
+            this.startSpaUrlPolling(intervalMs, timer);
+        }
     }
 
     private scrollThrottles: Array<{ dispose: () => void }> = [];
@@ -579,11 +638,18 @@ export class ContentKernel {
     /**
      * Review No.1/No.2: last URL observed by the SPA seam. All navigation
      * entries (isolated wrappers, popstate, MAIN-world poll) compare
-     * against it so shallow same-URL updates never reset.
+     * fragment-stripped URLs against it so shallow same-URL and hash-only
+     * updates never reset.
      */
     private lastSpaUrl: string | null = null;
     /** Review No.1: active MAIN-world poll stopper (null when not polling). */
     private spaPollStop: (() => void) | null = null;
+    /**
+     * Review No.1: last MAIN-world poll arm config (null until the first
+     * startSpaUrlPolling). Lets startPeriodicCheck() re-arm the same poll
+     * after a stop without the caller re-supplying interval/timer.
+     */
+    private spaPollConfig: { intervalMs: number; timer: SpaPollTimer } | null = null;
 
     stopPeriodicCheck(): void {
         this.deadlineTimer.stop();
@@ -609,7 +675,8 @@ export class ContentKernel {
         // Review S6 — half-init policy (fail-closed, no auto-retry): every
         // line below the Promise.all runs only after settings, pause cache
         // and probe flag all resolve. If any rejects, init() rejects with
-        // NO scroll listener, NO deadline timer and NO SPA subscription, so
+        // NO scroll listener, NO deadline timer, NO SPA subscription and
+        // NO pause listener, so
         // the kernel never gates visits on unloaded thresholds — a
         // half-initialized pipeline stays silent instead of mis-recording.
         // Recovery is a fresh init() (page reload re-runs the entrypoint);
@@ -620,24 +687,32 @@ export class ContentKernel {
         // than self-heal into wrong thresholds.
         // PBI 2026-10-17-01 (Task 5): subscribe before the one-shot pause
         // read so a pause change landing mid-init is not missed.
-        this.subscribePauseChanges();
+        // Review No.3: the subscription is rolled back when the init below
+        // fails, so a rejected init() also leaves NO pause listener behind
+        // (the S6 fail-closed claim covers the pause seam too).
+        const unsubscribePause = this.subscribePauseChanges();
         // PBI 2026-10-11-12 (NN12): settings load and probe-flag resolve are
         // independent — run them concurrently. loadSettings rejection still
         // rejects init (Promise.all); the flag resolve is fail-safe inside
         // queryProbeArmed (never rejects), so error semantics are unchanged.
-        await Promise.all([
-            this.loadSettings(),
-            this.loadPausedCache(),
-            // Resolve the extension-side probe flag once before the gating caches
-            // it — only when the caller did not inject an explicit decision.
-            // The service worker reads the session flag on our behalf: content
-            // scripts cannot reach chrome.storage.session directly.
-            (async () => {
-                if (this.e2eSessionResolveNeeded) {
-                    this.e2eSessionEnabled = await queryProbeArmed(this.sender);
-                }
-            })(),
-        ]);
+        try {
+            await Promise.all([
+                this.loadSettings(),
+                this.loadPausedCache(),
+                // Resolve the extension-side probe flag once before the gating caches
+                // it — only when the caller did not inject an explicit decision.
+                // The service worker reads the session flag on our behalf: content
+                // scripts cannot reach chrome.storage.session directly.
+                (async () => {
+                    if (this.e2eSessionResolveNeeded) {
+                        this.e2eSessionEnabled = await queryProbeArmed(this.sender);
+                    }
+                })(),
+            ]);
+        } catch (e: unknown) {
+            unsubscribePause();
+            throw e;
+        }
 
         // Build the owned gate/thresholds and resolve isE2ETest once — reused thereafter
         this.deadlineTimer.initialize();
