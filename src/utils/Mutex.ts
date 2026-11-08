@@ -74,8 +74,10 @@ export class Mutex {
     /** Holder holds that outlived `holderTimeoutMs`. */
     private hangDetectedCount: number;
 
-    constructor(options: MutexOptions = {}) {
-        this.locked = false;
+    /**
+     * 注意(意図的破壊的変更): 不正オプションは RangeError を投げる (黙示デフォルト化しない) — 0・負数・NaN を渡す呼び出しは修正が必要。
+     */
+    constructor(options: MutexOptions = {}) {        this.locked = false;
         this.queue = new Map();
         this.lockedAt = null;
         this.nextTaskId = 0;
@@ -231,6 +233,7 @@ export class Mutex {
      * that ignore it keep working unchanged — and every `false` is also
      * counted in `getSpuriousReleaseCount()` plus the pre-existing WARN log,
      * so the misuse stays detectable without an ownership-token API break.
+     * 注意(意図的破壊的変更): 戻り値 boolean 化 (旧 void) — 無視する既存呼び出しは動作不変、二重解放の検出にのみ使うこと。
      */
     release(): boolean {
         if (!this.locked) {
