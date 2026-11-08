@@ -28,8 +28,40 @@ import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rule
 import { cleansingFlagProp } from '../utils/cleansingConfig.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 
-export interface VisitEvaluation {
-    reportable: boolean;
+/**
+ * Review S3: cheap content equality for the overrides memo. Compares the
+ * effective snapshot content (finite-number leaves only, matching the
+ * key-sorted stringify) without allocating. Non-object leaves count as
+ * absent on both sides so corruption neither pins nor churns the key.
+ */
+function areOverridesEqual(
+    a: Record<string, Record<string, number>>,
+    b: Record<string, Record<string, number>>,
+): boolean {
+    const aKinds = Object.keys(a).filter((k) => {
+        const inner: Record<string, number> | undefined = a[k];
+        return inner !== null && typeof inner === 'object';
+    });
+    const bKinds = Object.keys(b).filter((k) => {
+        const inner: Record<string, number> | undefined = b[k];
+        return inner !== null && typeof inner === 'object';
+    });
+    if (aKinds.length !== bKinds.length) return false;
+    for (const kind of aKinds) {
+        const ai = a[kind];
+        const bi = b[kind];
+        if (ai === undefined || bi === undefined) return false;
+        const aKeys = Object.keys(ai).filter((k) => typeof ai[k] === 'number' && Number.isFinite(ai[k]));
+        const bKeys = Object.keys(bi).filter((k) => typeof bi[k] === 'number' && Number.isFinite(bi[k]));
+        if (aKeys.length !== bKeys.length) return false;
+        for (const key of aKeys) {
+            if (ai[key] !== bi[key]) return false;
+        }
+    }
+    return true;
+}
+
+export interface VisitEvaluation {    reportable: boolean;
     duration: number;
     thresholds: VisitGateThresholds;
     gate: VisitGate;
@@ -64,6 +96,12 @@ export class VisitGating {
      */
     private cachedMediaKind: string | null = null;
     private cachedOverridesKey: string | null = null;
+    /**
+     * Review S3: memoization anchor for the overrides snapshot. The raw
+     * provider value rides here so refreshCachesIfStale() can reuse the
+     * cached key without stringify when the content is unchanged.
+     */
+    private lastOverridesRaw: Record<string, Record<string, number>> | null = null;
 
     constructor(private readonly deps: VisitGatingDeps) {}
 
@@ -103,6 +141,18 @@ export class VisitGating {
      */
     private snapshotOverrides(): string {
         const raw: Record<string, Record<string, number>> = this.deps.getMediaThresholdOverrides?.() ?? {};
+        // Review S3: memoized — reuse the cached key when the raw content
+        // is unchanged so the per-evaluation stringify disappears. The
+        // shallow walk below is O(kinds * keys); stringify runs only on an
+        // actual content change (a storage write). Callers holding a stable
+        // reference skip even the walk via the identity fast path.
+        if (this.lastOverridesRaw !== null && this.lastOverridesRaw === raw) {
+            return this.cachedOverridesKey ?? '{}';
+        }
+        if (this.lastOverridesRaw !== null && areOverridesEqual(this.lastOverridesRaw, raw)) {
+            this.lastOverridesRaw = raw;
+            return this.cachedOverridesKey ?? '{}';
+        }
         const sorted: Record<string, Record<string, number>> = {};
         for (const kind of Object.keys(raw).sort()) {
             const inner = raw[kind];
@@ -114,7 +164,13 @@ export class VisitGating {
             }
             sorted[kind] = sortedInner;
         }
-        return JSON.stringify(sorted);
+        const key = JSON.stringify(sorted);
+        // NOTE: the anchor moves here, but cachedOverridesKey is written
+        // only by initialize()/refreshCachesIfStale() AFTER comparing —
+        // writing it here would make the staleness check compare the new
+        // key against itself and never rebuild on overrides changes.
+        this.lastOverridesRaw = raw;
+        return key;
     }
 
     /**

@@ -187,7 +187,9 @@ describe('handleGetContentMessage - extraction failure (PBI 2026-11-08-05)', () 
         const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
         expect(response['content']).toBe('');
         expect(response['fallbackTriggered']).toBe(true);
-        expect(response['fallbackReason']).toContain('extract-failed');
-        expect(response['fallbackReason']).toContain('extract boom');
+        // Review S1: the wire code is a fixed code only — the raw error
+        // text never leaves the content script (it goes to the log side).
+        expect(response['fallbackReason']).toBe('extract-failed');
+        expect(response['fallbackReason']).not.toContain('extract boom');
     });
 });

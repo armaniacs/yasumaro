@@ -15,6 +15,8 @@
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { CleansingConfig, PageState } from './pageState.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { logWarn } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 import { toGetContentReply } from './visitPayload.js';
 import {
     resolveRegenerateCleansingConfig,
@@ -73,11 +75,23 @@ export function handleGetContentMessage(
     // PBI 2026-11-08-05: extraction threw — still answer so the popup never
     // hangs. The fallback channel (popup/regenerate already understand it)
     // carries the failure signal with empty content.
+    // Review S1: the wire code is a fixed code only ('extract-failed') — the
+    // raw error text never leaves the content script and lives in the log
+    // side, so popup/regenerate can branch on a stable value and no error
+    // internals (paths, selectors, DOM excerpts) leak over the message port.
     try {
+        void logWarn(
+            'GET_CONTENT extract failed',
+            { error: extractResult.error },
+            ErrorCode.INTERNAL_ERROR,
+            'getContentHandler',
+        ).catch(() => {
+            // Logging must never cost the caller its answer.
+        });
         sendResponse({
             ...toGetContentReply(deps.pageState, ''),
             fallbackTriggered: true,
-            fallbackReason: `extract-failed: ${extractResult.error}`,
+            fallbackReason: 'extract-failed',
         });
     } catch {
         // The reply builder itself must never cost the caller its answer.

@@ -141,8 +141,18 @@ export function isContextInvalidatedMessage(message: string): boolean {
  * Structural invalid-context signal: the extension globals are alive but
  * chrome.runtime.id is gone (the observable state after an extension
  * reload). Needs no message text, so a reworded error still exits
- * immediately. Returns false where chrome is absent entirely (unit tests,
- * non-extension pages) so transient errors there keep retrying.
+ * immediately.
+ *
+ * Review S4 — chrome-absent contract (fail-open to retry): returns false
+ * where chrome is absent entirely or chrome.runtime is missing (unit tests
+ * with injected fakes, non-extension pages). Rationale: in production the
+ * content script always runs with chrome.runtime present, so "absent" is
+ * not an observable production state — treating it as invalidated would
+ * stop the periodic check in exactly the environments (tests, hosted
+ * previews) where retrying is the safe default. Only a present-but-idless
+ * runtime (the real post-reload shape) is terminal. Pinned by
+ * visitReporter.chromeAbsent.test.ts: absent chrome retries, idless chrome
+ * stops.
  */
 function isRuntimeIdMissing(): boolean {
     try {

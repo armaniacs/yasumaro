@@ -22,21 +22,47 @@ const liveInstances = new Set<() => void>();
 let beforeUnloadWired = false;
 
 /**
- * PBI 2026-11-08-02: performance.now() is not guaranteed (non-browser or
- * degraded contexts). A bare call throws on the first scroll and depth
- * updates stop afterwards — so the clock degrades to Date.now() instead of
- * throwing, and a non-finite reading degrades the same way.
+ * Review No.12: single monotonic time source per throttle instance. The old
+ * now() mixed epochs — performance.now() (ms since page load, small) when
+ * available and Date.now() (unix epoch, huge) otherwise — so a source flip
+ * mid-life corrupted `remaining` (a performance-epoch lastCall against a
+ * Date-epoch now always reads as long-past-due and fires spuriously, and
+ * the reverse stalls the trailing edge). The source is probed once at
+ * creation and the instance never leaves it: a performance instance that
+ * later throws or turns non-finite reuses its last good reading instead of
+ * falling back to Date.now(), so lastCall and nowMs always share an epoch
+ * (the "fallback retakes lastCall in the same source" requirement holds by
+ * construction — there is no second source to retake from).
  */
-function now(): number {
+function createMonotonicClock(): () => number {
+  let usePerformance = false;
   try {
-    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
-      const t = performance.now();
-      if (typeof t === 'number' && Number.isFinite(t)) return t;
-    }
+    usePerformance =
+      typeof performance !== 'undefined' &&
+      typeof performance.now === 'function' &&
+      Number.isFinite(performance.now());
   } catch {
-    // performance unavailable or throwing — fall through to Date.now().
+    usePerformance = false;
   }
-  return Date.now();
+  if (usePerformance) {
+    let lastGood = 0;
+    let initialized = false;
+    return () => {
+      try {
+        const t = performance.now();
+        if (typeof t === 'number' && Number.isFinite(t)) {
+          lastGood = t;
+          initialized = true;
+          return t;
+        }
+      } catch {
+        // Performance degraded mid-life: stay on the same source by
+        // reusing the last good reading instead of mixing in Date.now().
+      }
+      return initialized ? lastGood : 0;
+    };
+  }
+  return () => Date.now();
 }
 
 function ensureBeforeUnloadFlush(): void {
@@ -55,6 +81,7 @@ export function throttle<T extends (...args: unknown[]) => void>(
   options?: { delayMs?: number }
 ): ThrottleHandle<T> {
   const delayMs = options?.delayMs ?? 100;
+  const now = createMonotonicClock();
   // -Infinity: the FIRST call always takes the leading edge, whatever the
   // clock reports (fake timers start performance.now() at 0).
   let lastCall = -Infinity;

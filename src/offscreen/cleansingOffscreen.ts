@@ -35,6 +35,20 @@ function utf8ByteLength(value: string): number {
     return new TextEncoder().encode(value).length;
 }
 
+/**
+ * Review S5: O(1) UTF-8 upper bound — every UTF-16 code unit encodes to at
+ * most 3 bytes (astral pairs are 2 units for 4 bytes), so length * 3 never
+ * under-counts. Accuracy/speed tradeoff: inputs well under the limit
+ * (bound <= max) skip the TextEncoder allocation entirely; inputs near or
+ * over the limit pay one exact encode so the verdict and the reported byte
+ * count stay precise (no false rejects of astral-heavy input, no fuzzy
+ * error message). Worst case (a multi-MB document) still encodes once, but
+ * only on the reject path — the common small-page path allocates nothing.
+ */
+export function estimatedUtf8UpperBound(charLength: number): number {
+    return charLength * 3;
+}
+
 export interface CleansingOffscreenPayload {
     html: string;
     options?: AiSummaryCleanseOptions;
@@ -91,22 +105,11 @@ export function cleanseHtmlOffscreen(
 }
 
 /**
- * Offscreen メッセージハンドラのペイロード検証と実行。
- * handleOffscreenMessage から委譲される具体的な処理。
+ * Runs the parse + cleanse after the size gate passed. Shared by the fast
+ * (bound-admitted) and exact (encode-verified) paths so the two gates
+ * cannot drift into different cleansing behavior.
  */
-export function handleCleansingOffscreenPayload(
-    payload: unknown,
-): CleansingOffscreenResponse {
-    if (typeof payload !== 'object' || payload === null || typeof (payload as Record<string, unknown>).html !== 'string') {
-        return { success: false, error: 'Invalid payload: html is required' };
-    }
-    const { html, options } = payload as { html: string; options?: AiSummaryCleanseOptions };
-    // PBI 2026-11-08-05: byte budget, not UTF-16 length — astral-heavy
-    // input (emoji) used to slip through and pin the parser.
-    const byteLength = utf8ByteLength(html);
-    if (byteLength > MAX_CLEANSING_HTML_BYTES) {
-        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} ${byteLength} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
-    }
+function cleanseAfterGate(html: string, options?: AiSummaryCleanseOptions): CleansingOffscreenResponse {
     try {
         const { html: cleansed, result } = cleanseHtmlOffscreen(html, options);
         return {
@@ -121,4 +124,30 @@ export function handleCleansingOffscreenPayload(
         const msg = errorMessage(e);
         return { success: false, error: msg };
     }
+}
+
+/**
+ * Offscreen メッセージハンドラのペイロード検証と実行。
+ * handleOffscreenMessage から委譲される具体的な処理。
+ */
+export function handleCleansingOffscreenPayload(
+    payload: unknown,
+): CleansingOffscreenResponse {
+    if (typeof payload !== 'object' || payload === null || typeof (payload as Record<string, unknown>).html !== 'string') {
+        return { success: false, error: 'Invalid payload: html is required' };
+    }
+    const { html, options } = payload as { html: string; options?: AiSummaryCleanseOptions };
+    // PBI 2026-11-08-05: byte budget, not UTF-16 length — astral-heavy
+    // input (emoji) used to slip through and pin the parser.
+    // Review S5: two-stage gate — the O(1) upper bound admits small pages
+    // without encoding; only near-limit input pays the exact TextEncoder
+    // pass, so the reject verdict and the byte count stay precise.
+    if (estimatedUtf8UpperBound(html.length) <= MAX_CLEANSING_HTML_BYTES) {
+        return cleanseAfterGate(html, options);
+    }
+    const byteLength = utf8ByteLength(html);
+    if (byteLength > MAX_CLEANSING_HTML_BYTES) {
+        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} ${byteLength} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
+    }
+    return cleanseAfterGate(html, options);
 }
