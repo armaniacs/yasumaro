@@ -18,8 +18,8 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger/api.js';
-import { validateUrl, validateUrlForFilterImport, resolveAndGuardHostname, assertDnsPinStable, isIpLiteral } from './ssrfGuard.js';
-import type { DnsResolveFn } from './ssrfGuard.js';
+import { validateUrl, validateUrlForFilterImport, resolveAndGuardHostname, assertDnsPinStable, isIpLiteral, normalizeHostname } from './ssrfGuard.js';
+import type { DnsResolveFn, DnsPin } from './ssrfGuard.js';
 import { backoffDelayMs } from './backoff.js';
 import {
   FailureKind,
@@ -44,6 +44,7 @@ export {
   validateUrl,
   type ValidateUrlOptions,
   type DnsResolveFn,
+  type DnsPin,
   type DnsPinOptions,
 } from './ssrfGuard.js';
 
@@ -110,6 +111,18 @@ interface FetchOptions extends RequestInit {
   blockLocalhost?: boolean;
   /** DNSピン留め用resolver。指定時は検証と接続で同一解決IPを使う。 */
   resolveHostname?: DnsResolveFn;
+  /**
+   * 呼び出し側で検証済みのpin (No.3/No.4/No.5)。
+   * 指定時は接続前の再解決を行わずこのpinを使い回し、接続後の再解決にも
+   * 同一pin・同一resolverを使う。hostname不一致時 (リダイレクト追従の
+   * 次hop等) はpin内resolverで現hopを解決し直す (同一系統を維持)。
+   *
+   * ブラウザfetchにはDNS指定口がないため、pinはTCP層の固定ではなく
+   * 「接続前ゲート+接続後突き合わせによる応答破棄」の検出型制御である。
+   * IPリテラルへのURL書換えは採らない: Hostヘッダは禁制ヘッダで保持
+   * できず、httpsでは証明書・SNI不一致で接続自体が壊れるため。
+   */
+  dnsPin?: DnsPin;
   allowedUrls?: Set<string> | null;
   skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
   timeoutMs?: number; // リクエストタイムアウト時間（ミリ秒）
@@ -154,6 +167,7 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     requireValidProtocol = true,
     blockLocalhost = true,
     resolveHostname,
+    dnsPin,
     allowedUrls = null, // 動的URL検証用オプション
     skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
     timeoutMs: optionTimeoutMs,
@@ -162,13 +176,23 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
 
-  // DNSピン留めの前半: ドメイン名は解決して全IPを検証しpinを保持する。
+  // DNSピン留めの前半 (No.3/No.4/No.5): 検証に使ったpinと接続を同一にする。
+  // 呼び出し側のpinがあれば接続前の再解決は行わない (解決回数の最小化)。
+  // なければ同一resolverで接続直前に1回だけ解決し、そのpinを後半に使い回す。
   // IPリテラルは上記の validateUrl で分類済みのため解決しない。
+  // resolverに渡すホスト名は常に正規化済み (S8: 前半と後半の同一性)。
   const parsedHostname = new URL(url).hostname;
-  const needsDnsPin = resolveHostname !== undefined && !isIpLiteral(parsedHostname);
-  const pinnedIps: string[] = needsDnsPin && resolveHostname
-    ? await resolveAndGuardHostname(parsedHostname, resolveHostname)
-    : [];
+  const normalizedHostname = normalizeHostname(parsedHostname);
+  let activePin: DnsPin | null = null;
+  if (dnsPin && dnsPin.hostname === normalizedHostname) {
+    activePin = dnsPin;
+  } else {
+    const resolver = resolveHostname ?? dnsPin?.resolveHostname;
+    if (resolver !== undefined && !isIpLiteral(normalizedHostname)) {
+      const ips = await resolveAndGuardHostname(normalizedHostname, resolver);
+      activePin = { hostname: normalizedHostname, ips, resolveHostname: resolver };
+    }
+  }
 
   // options.timeoutMs が指定された場合は最優先で使用する
   const effectiveTimeout = optionTimeoutMs ?? timeoutMs;
@@ -213,11 +237,13 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   try {
     const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
     clearTimeout(timeoutId);
-    // DNSピン留めの後半: 接続後に再解決し、検証時のpinと突き合わせる。
+    // DNSピン留めの後半: 接続後に同一resolverで再解決し、前半のpinと突き合わせる。
     // 検査時と接続時でDNS応答が変わった (rebinding) 場合は応答を破棄する。
-    if (needsDnsPin && resolveHostname) {
-      const freshIps = await resolveHostname(parsedHostname);
-      assertDnsPinStable(pinnedIps, freshIps, parsedHostname);
+    // ブラウザ制約上、到達自体ではなく応答の返却を止める検出型制御である
+    // (接続前ゲートで既知の切替えは接続前に拒否する)。
+    if (activePin) {
+      const freshIps = await activePin.resolveHostname(activePin.hostname);
+      assertDnsPinStable(activePin.ips, freshIps, activePin.hostname);
     }
     return response;
   } catch (error: unknown) {
