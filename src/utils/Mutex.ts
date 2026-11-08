@@ -23,9 +23,29 @@ function safeAddLog(fn: () => void): void {
     }
 }
 
+/** Diagnostic payload delivered to `onHolderTimeout` when a holder hangs. */
+export interface MutexHangInfo {
+    lockDurationMs: number;
+    thresholdMs: number;
+}
+
 export interface MutexOptions {
     maxQueueSize?: number;
     timeoutMs?: number;
+    /**
+     * Holder watchdog threshold. When the current holder keeps the lock
+     * longer than this, the hang is reported (WARN log + `onHolderTimeout` +
+     * `getHangDetectedCount()`), but the lock itself is untouched: waiter
+     * timing and ownership transfer behave exactly as before.
+     * Defaults to `timeoutMs`. Must be a finite number > 0 when given —
+     * 0/negative/NaN are rejected instead of being silently defaulted.
+     */
+    holderTimeoutMs?: number;
+    /**
+     * Optional hook invoked once per over-long hold. Must never throw into
+     * the Mutex: hook errors are swallowed so the lock state stays intact.
+     */
+    onHolderTimeout?: (info: MutexHangInfo) => void;
 }
 
 interface MutexTask {
@@ -36,20 +56,59 @@ interface MutexTask {
 }
 
 export class Mutex {
+    private static readonly DEFAULT_MAX_QUEUE_SIZE = 50;
+    private static readonly DEFAULT_TIMEOUT_MS = 30000;
+
     private locked: boolean;
     private queue: Map<number, MutexTask>;
     private lockedAt: number | null;
     private nextTaskId: number;
     private maxQueueSize: number;
     private timeoutMs: number;
+    private readonly holderTimeoutMs: number;
+    private readonly onHolderTimeout: ((info: MutexHangInfo) => void) | null;
+    private holderTimer: NodeJS.Timeout | null;
+    private holdEpoch: number;
+    /** Releases observed while unlocked (double-release / non-holder). */
+    private spuriousReleaseCount: number;
+    /** Holder holds that outlived `holderTimeoutMs`. */
+    private hangDetectedCount: number;
 
     constructor(options: MutexOptions = {}) {
         this.locked = false;
         this.queue = new Map();
         this.lockedAt = null;
         this.nextTaskId = 0;
-        this.maxQueueSize = options.maxQueueSize || 50;
-        this.timeoutMs = options.timeoutMs || 30000;
+        this.holderTimer = null;
+        this.holdEpoch = 0;
+        this.spuriousReleaseCount = 0;
+        this.hangDetectedCount = 0;
+
+        // `??` (not `||`): an explicit 0 must not be silently replaced by
+        // the default. Out-of-range values are rejected below so the misuse
+        // surfaces at construction instead of hiding as a default.
+        const maxQueueSize = options.maxQueueSize ?? Mutex.DEFAULT_MAX_QUEUE_SIZE;
+        if (!Number.isInteger(maxQueueSize) || maxQueueSize < 1) {
+            throw new RangeError(
+                `Mutex: maxQueueSize must be an integer >= 1 (got ${String(maxQueueSize)})`,
+            );
+        }
+        const timeoutMs = options.timeoutMs ?? Mutex.DEFAULT_TIMEOUT_MS;
+        if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+            throw new RangeError(
+                `Mutex: timeoutMs must be a finite number > 0 (got ${String(timeoutMs)})`,
+            );
+        }
+        const holderTimeoutMs = options.holderTimeoutMs ?? timeoutMs;
+        if (!Number.isFinite(holderTimeoutMs) || holderTimeoutMs <= 0) {
+            throw new RangeError(
+                `Mutex: holderTimeoutMs must be a finite number > 0 (got ${String(holderTimeoutMs)})`,
+            );
+        }
+        this.maxQueueSize = maxQueueSize;
+        this.timeoutMs = timeoutMs;
+        this.holderTimeoutMs = holderTimeoutMs;
+        this.onHolderTimeout = options.onHolderTimeout ?? null;
     }
 
     /**
@@ -71,6 +130,52 @@ export class Mutex {
             attempts++;
         }
         return this.nextTaskId++;
+    }
+
+    /**
+     * Holder watchdog: armed on every new hold (fresh acquire or transfer),
+     * disarmed on full unlock. Firing only reports the hang — it never
+     * releases the lock or touches waiter timing.
+     */
+    private armHolderWatchdog(): void {
+        this.disarmHolderWatchdog();
+        const thresholdMs = this.holderTimeoutMs;
+        const epoch = this.holdEpoch;
+        this.holderTimer = setTimeout(() => {
+            // Stale timer from a previous hold (transfer/unlock re-arms or
+            // disarms first): ignore so a new holder is never blamed for the
+            // previous holder's overrun.
+            if (epoch !== this.holdEpoch || !this.locked || this.lockedAt === null) {
+                return;
+            }
+            const lockDurationMs = Date.now() - this.lockedAt;
+            if (lockDurationMs < thresholdMs) {
+                return;
+            }
+            // One-shot per hold: report once, do not re-arm, so a legitimately
+            // long operation logs exactly one WARN instead of spamming.
+            this.holderTimer = null;
+            this.hangDetectedCount++;
+            safeAddLog(() => void addLog(LogType.WARN, 'Mutex: lock holder exceeded watchdog threshold', {
+                lockDurationMs,
+                thresholdMs,
+            }));
+            const hook = this.onHolderTimeout;
+            if (hook !== null) {
+                try {
+                    hook({ lockDurationMs, thresholdMs });
+                } catch {
+                    // A diagnostic hook must never break the lock.
+                }
+            }
+        }, thresholdMs);
+    }
+
+    private disarmHolderWatchdog(): void {
+        if (this.holderTimer !== null) {
+            clearTimeout(this.holderTimer);
+            this.holderTimer = null;
+        }
     }
 
     async acquire(): Promise<void> {
@@ -112,16 +217,29 @@ export class Mutex {
 
         this.locked = true;
         this.lockedAt = Date.now();
+        this.holdEpoch++;
+        this.armHolderWatchdog();
         safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock acquired'));
     }
 
     /**
      * ロックを解放する
+     *
+     * @returns `true` when this call actually released or transferred a held
+     * lock; `false` when the mutex was already unlocked (double-release or a
+     * non-holder releasing). The return value is advisory — existing callers
+     * that ignore it keep working unchanged — and every `false` is also
+     * counted in `getSpuriousReleaseCount()` plus the pre-existing WARN log,
+     * so the misuse stays detectable without an ownership-token API break.
      */
-    release(): void {
+    release(): boolean {
         if (!this.locked) {
+            this.spuriousReleaseCount++;
+            // Keep this call's exact shape: existing tests assert the
+            // two-argument form, and the count is exposed via
+            // getSpuriousReleaseCount() instead.
             safeAddLog(() => void addLog(LogType.WARN, 'Mutex: Attempting to release unlocked mutex'));
-            return;
+            return false;
         }
 
         if (this.queue.size > 0) {
@@ -136,6 +254,8 @@ export class Mutex {
                 }
 
                 this.lockedAt = Date.now();
+                this.holdEpoch++;
+                this.armHolderWatchdog();
 
                 if (task && task.resolve) {
                     task.resolve();
@@ -144,14 +264,17 @@ export class Mutex {
                 safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock transferred to waiting task', {
                     remainingQueue: this.queue.size
                 }));
-                return;
+                return true;
             }
         }
 
         // If queue is empty or something weird happened with iterator
         this.locked = false;
         this.lockedAt = null;
+        this.holdEpoch++;
+        this.disarmHolderWatchdog();
         safeAddLog(() => void addLog(LogType.DEBUG, 'Mutex: Lock released'));
+        return true;
     }
 
     /**
@@ -183,5 +306,20 @@ export class Mutex {
      */
     getMaxQueueSize(): number {
         return this.maxQueueSize;
+    }
+
+    /**
+     * 未ロック状態での release() が観測された回数(二重 release・非保有者の
+     * release)。正常系では 0 のまま。
+     */
+    getSpuriousReleaseCount(): number {
+        return this.spuriousReleaseCount;
+    }
+
+    /**
+     * 保持者が watchdog 閾値を超えたまま保持し続けた回数。
+     */
+    getHangDetectedCount(): number {
+        return this.hangDetectedCount;
     }
 }
