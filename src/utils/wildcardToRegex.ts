@@ -17,13 +17,28 @@ import { escapeRegExp } from './string.js';
 export const MAX_WILDCARDS_PER_PATTERN = 5;
 
 /**
+ * Upper bound on pattern length in characters (PBI 2026-11-08-17): applies
+ * to BOTH branches — the non-wildcard branch used to compile unbounded
+ * input into an anchored RegExp (and compare unbounded strings in the
+ * matcher), so one over-long stored pattern bounded every check. Patterns
+ * above this return `null` (never match). 1024 covers the longest
+ * legitimate input (253-char DNS name plus wildcard/label separators)
+ * with wide headroom.
+ */
+export const MAX_PATTERN_LENGTH = 1024;
+
+/**
  * Convert a wildcard pattern to a case-insensitive anchored RegExp.
  * @param pattern - Pattern where `*` is a wildcard. `null` is returned for
- *   empty patterns or patterns exceeding MAX_WILDCARDS_PER_PATTERN (ReDoS guard).
+ *   empty patterns, patterns longer than MAX_PATTERN_LENGTH, or patterns
+ *   exceeding MAX_WILDCARDS_PER_PATTERN (ReDoS guard).
  */
 export function wildcardToRegex(pattern: string): RegExp | null {
-    if (!pattern || !pattern.includes('*')) {
-        return pattern ? new RegExp(`^${escapeRegExp(pattern)}$`, 'i') : null;
+    if (!pattern || pattern.length > MAX_PATTERN_LENGTH) {
+        return null;
+    }
+    if (!pattern.includes('*')) {
+        return new RegExp(`^${escapeRegExp(pattern)}$`, 'i');
     }
     const wildcardCount = (pattern.match(/\*/g) || []).length;
     if (wildcardCount > MAX_WILDCARDS_PER_PATTERN) return null;
@@ -42,10 +57,16 @@ export function wildcardToRegex(pattern: string): RegExp | null {
  *
  * When `matchSubdomains` is true, a plain pattern also matches any
  * subdomain (`example.com` matches `sub.example.com`). Wildcard patterns
- * are unaffected by the flag. Default is false (exact match only) so all
+ * are UNAFFECTED by the flag (PBI 2026-11-08-17: documented, not enabled):
+ * a wildcard already expresses its own subdomain scope (`*.example.com`
+ * matches subdomains, `*example.com` matches more), so OR-ing an extra
+ * suffix rule would widen stored patterns beyond what their author wrote.
+ * Callers needing subdomain matching with wildcards must write it into
+ * the pattern itself. Default is false (exact match only) so all
  * existing call sites keep their behavior.
  */
 export function matchesDomainPattern(domain: string, pattern: string, matchSubdomains = false): boolean {
+    if (pattern.length > MAX_PATTERN_LENGTH) return false;
     if (!pattern.includes('*')) {
         const d = domain.toLowerCase();
         const p = pattern.toLowerCase();
