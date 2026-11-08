@@ -24,6 +24,90 @@ export interface ValidateUrlOptions {
 }
 
 /**
+ * DNS解決の差し替え口。検証時と接続時で同じ名前解決を使う (pin留め) ための
+ * seam であり、本番では DoH 等の解決器を、テストでは決定論的なモックを渡す。
+ * IPリテラルは解決不要のためこの関数は呼ばれない。
+ *
+ * @param hostname - 正規化済みホスト名 (小文字・末尾ドット除去)
+ * @returns 解決されたIPアドレスの一覧
+ */
+export type DnsResolveFn = (hostname: string) => Promise<string[]>;
+
+export interface DnsPinOptions {
+  resolveHostname?: DnsResolveFn;
+}
+
+/**
+ * ホスト名がIPリテラル相当かどうか判定する。ドット区切りIPv4・全数字
+ * (WHATWGパーサがIPv4へ正規化する `2130706433` 形式)・コロン含み (IPv6) を
+ * リテラル扱いし、それ以外のドメイン名はDNS解決が必要とみなす。
+ */
+export function isIpLiteral(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  if (normalized.includes(':')) {
+    return true;
+  }
+  if (/^\d+$/.test(normalized)) {
+    return true;
+  }
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(normalized);
+}
+
+/**
+ * 解決済みIPの一覧を検証する。一つでもプライベート/ループバックなら拒否し、
+ * 空の一覧は fail-closed (未解決の接続先へは出さない) で拒否する。
+ */
+export function assertResolvedIpsPublic(ips: string[], hostnameForError: string): void {
+  if (ips.length === 0) {
+    throw new Error(`DNS resolution failed for ${hostnameForError}: no addresses resolved`);
+  }
+  for (const ip of ips) {
+    if (isPrivateIpAddress(ip)) {
+      throw new Error(`Blocked hostname: ${hostnameForError}. Resolved address ${ip} is private or loopback.`);
+    }
+  }
+}
+
+/**
+ * ホスト名を解決して接続先IPを確定する (pin留めの前半)。
+ * IPリテラルは直接分類し、ドメイン名は resolveHostname で解決して全件検証する。
+ *
+ * @returns 検証済みの解決IP一覧 (接続後に突き合わせるpin)
+ */
+export async function resolveAndGuardHostname(
+  hostname: string,
+  resolveHostname: DnsResolveFn,
+): Promise<string[]> {
+  const normalized = normalizeHostname(hostname);
+  if (isIpLiteral(normalized)) {
+    if (isPrivateIpAddress(normalized)) {
+      throw new Error(`Blocked hostname: ${hostname}. Access to private network is not allowed.`);
+    }
+    return [normalized];
+  }
+  const ips = await resolveHostname(normalized);
+  assertResolvedIpsPublic(ips, hostname);
+  return ips;
+}
+
+/**
+ * 接続後の再解決結果がpinと一致することを検証する (pin留めの後半)。
+ * 検証時と接続時でDNS応答が変わった (TOCTOU) 場合は拒否する。
+ */
+export function assertDnsPinStable(
+  pinnedIps: string[],
+  freshIps: string[],
+  hostnameForError: string,
+): void {
+  assertResolvedIpsPublic(freshIps, hostnameForError);
+  const pinned = [...pinnedIps].sort().join(',');
+  const fresh = [...freshIps].sort().join(',');
+  if (pinned !== fresh) {
+    throw new Error(`Blocked hostname: ${hostnameForError}. DNS re-resolution mismatch (possible rebinding).`);
+  }
+}
+
+/**
  * URLを検証（オプション）
  * @param {string} url - 検証するURL
  * @param {ValidateUrlOptions} options - 検証オプション
@@ -266,6 +350,27 @@ export function validateUrlForFilterImport(url: string): void {
   if (isLocalhostHostname(hostname)) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
   }
+}
+
+/**
+ * uBlockインポート用URLの非同期検証 (DNSピン留め付き)。
+ * 同期版の文字列検査に加え、resolveHostname があれば解決IPを全件検証して
+ * pin (解決IP一覧) を返す。呼び出し側は接続後に再解決して
+ * {@link assertDnsPinStable} で突き合わせる。resolver未指定時は従来どおり
+ * 文字列検査のみ (後方互換)。
+ *
+ * @returns 検証済みの解決IP一覧。resolver未指定時は空配列。
+ */
+export async function validateUrlForFilterImportAsync(
+  url: string,
+  options: DnsPinOptions = {},
+): Promise<string[]> {
+  validateUrlForFilterImport(url);
+  if (!options.resolveHostname) {
+    return [];
+  }
+  const parsedUrl = new URL(url);
+  return resolveAndGuardHostname(parsedUrl.hostname, options.resolveHostname);
 }
 
 /**

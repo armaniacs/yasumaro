@@ -18,7 +18,8 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger/api.js';
-import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
+import { validateUrl, validateUrlForFilterImport, resolveAndGuardHostname, assertDnsPinStable, isIpLiteral } from './ssrfGuard.js';
+import type { DnsResolveFn } from './ssrfGuard.js';
 import { backoffDelayMs } from './backoff.js';
 import {
   FailureKind,
@@ -33,11 +34,17 @@ export {
   normalizeIpHostname,
   isPrivateIpAddress,
   validateUrlForFilterImport,
+  validateUrlForFilterImportAsync,
+  resolveAndGuardHostname,
+  assertDnsPinStable,
+  isIpLiteral,
   ALLOWED_LOCALHOST_PORTS,
   isLocalhostAddress,
   validateUrlForAIRequests,
   validateUrl,
   type ValidateUrlOptions,
+  type DnsResolveFn,
+  type DnsPinOptions,
 } from './ssrfGuard.js';
 
 const MIN_TIMEOUT_MS = 100;      // 最小100ms
@@ -101,6 +108,8 @@ export function noRedirectInit(options: NoRedirectFetchInit = {}): RequestInit {
 interface FetchOptions extends RequestInit {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;
+  /** DNSピン留め用resolver。指定時は検証と接続で同一解決IPを使う。 */
+  resolveHostname?: DnsResolveFn;
   allowedUrls?: Set<string> | null;
   skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
   timeoutMs?: number; // リクエストタイムアウト時間（ミリ秒）
@@ -139,10 +148,12 @@ function validateTimeout(timeoutMs: number): void {
  * @throws {Error} 無効なURL、タイムアウト、またはネットワークエラー
  */
 export async function fetchWithTimeout(url: string, options: FetchOptions = {}, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<Response> {
-  // URL検証（オプション - デフォルトではlocalhostを許可）
+  // URL検証（オプション - 既定ではlocalhostを拒否。Obsidian Local REST・
+  // ローカルAI等の正規用途は呼び出し側で blockLocalhost: false を明示する）
   const {
     requireValidProtocol = true,
-    blockLocalhost = false,
+    blockLocalhost = true,
+    resolveHostname,
     allowedUrls = null, // 動的URL検証用オプション
     skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
     timeoutMs: optionTimeoutMs,
@@ -150,6 +161,14 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     ...fetchOptions
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
+
+  // DNSピン留めの前半: ドメイン名は解決して全IPを検証しpinを保持する。
+  // IPリテラルは上記の validateUrl で分類済みのため解決しない。
+  const parsedHostname = new URL(url).hostname;
+  const needsDnsPin = resolveHostname !== undefined && !isIpLiteral(parsedHostname);
+  const pinnedIps: string[] = needsDnsPin && resolveHostname
+    ? await resolveAndGuardHostname(parsedHostname, resolveHostname)
+    : [];
 
   // options.timeoutMs が指定された場合は最優先で使用する
   const effectiveTimeout = optionTimeoutMs ?? timeoutMs;
@@ -194,6 +213,12 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   try {
     const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
     clearTimeout(timeoutId);
+    // DNSピン留めの後半: 接続後に再解決し、検証時のpinと突き合わせる。
+    // 検査時と接続時でDNS応答が変わった (rebinding) 場合は応答を破棄する。
+    if (needsDnsPin && resolveHostname) {
+      const freshIps = await resolveHostname(parsedHostname);
+      assertDnsPinStable(pinnedIps, freshIps, parsedHostname);
+    }
     return response;
   } catch (error: unknown) {
     clearTimeout(timeoutId);
