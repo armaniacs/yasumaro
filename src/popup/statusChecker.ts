@@ -56,6 +56,9 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
   const date = new Date(timestamp);
 
   // 相対時間
+  // 意図的な英文フォールバック: locale バンドルにキーが無い場合の最終防衛で、
+  // 未翻訳の放置ではない (getMessageOr 契約。privacy.ts の loadPrivacyPolicy
+  // エラー表示と同規約)。
   let timeAgo: string;
   if (diff < 60 * 1000) {
     timeAgo = getMessageOr('timeJustNow', 'Just now');
@@ -120,9 +123,12 @@ export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   // Special URLs. This popup-side list is a deliberate subset of the
   // content-script SSOT SKIPPED_PROTOCOLS (src/content/urlSkipper.ts):
   // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows.
-  if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')
-    || url.startsWith('chrome-extension://') || url.startsWith('moz-extension://')
-    || url.startsWith('file://') || url.startsWith('data:')) {
+  // Scheme comparison is case-insensitive (URL schemes are ASCII
+  // case-insensitive, so 'CHROME://' must hit the same guard).
+  const scheme = url.toLowerCase();
+  if (scheme.startsWith('chrome://') || scheme.startsWith('about:') || scheme.startsWith('edge://')
+    || scheme.startsWith('chrome-extension://') || scheme.startsWith('moz-extension://')
+    || scheme.startsWith('file://') || scheme.startsWith('data:') || scheme.startsWith('view-source:')) {
     return null;
   }
 
