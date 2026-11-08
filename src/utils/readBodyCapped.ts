@@ -68,11 +68,22 @@ export async function readJsonCapped(response: Response, maxBytes: number): Prom
   if (hasReadableStream(response)) {
     return JSON.parse(await readBodyCapped(response, maxBytes));
   }
-  // Host/mock without a readable stream: fall back to Response.json(), still
-  // guarding the buffered result would require re-serializing; callers here are
-  // test doubles and non-streaming runtimes, not an attack surface.
+  // Host/mock without a readable stream: the cap still applies.
+  // Prefer the text path so the same byte counter guards the buffered body.
+  if (typeof response.text === 'function') {
+    return JSON.parse(await readBodyCapped(response, maxBytes));
+  }
   if (typeof response.json === 'function') {
-    return response.json();
+    // json()-only doubles (no text(), no stream): measure the serialized
+    // form so an oversized payload cannot bypass the cap (PBI 2026-11-08-09 (5)).
+    // response.json() output is always JSON-serializable (it was just parsed),
+    // so stringify cannot hit a circular structure here.
+    const data = await response.json();
+    const serialized = JSON.stringify(data) ?? '';
+    if (byteLength(serialized) > maxBytes) {
+      throw new ResponseBodyTooLargeError(maxBytes);
+    }
+    return data;
   }
   return JSON.parse(await readBodyCapped(response, maxBytes));
 }
