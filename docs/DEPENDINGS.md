@@ -2,7 +2,7 @@
 
 依存パッケージの棚卸し、ライセンスポリシーとの照合結果、アップデート確認の仕組みと最終確認日、現在の運用方針をまとめた文書。
 
-- 最終確認日: 2026-10-25（v6.9.59 時点の実測値を含む。監査スコープは §3 の二層化定義に従う）
+- 最終確認日: 2026-11-08（依存更新ラウンドで minor/patch を反映。監査スコープは §3 の二層化定義に従う）
 - 対象: `package.json` の `dependencies` / `devDependencies` / `overrides`、および lockfile 上の推移依存
 
 ## 1. 依存の全体像
@@ -23,9 +23,9 @@
 
 | グループ | パッケージ（インストール済みバージョン） |
 |---|---|
-| ビルド | `wxt` (0.21.4), `vite` (8.3.1), `esbuild` (0.28.2), `typescript` (6.0.3) |
-| テスト | `vitest` (5.0.2), `@playwright/test` (1.63.0), `happy-dom` (20.14.5), `jsdom` (30.1.1), `@stryker-mutator/core` / `vitest-runner` (10.0.0), `better-sqlite3` (13.0.3) |
-| 静的解析・文書 | `eslint` (10.11.0), `@typescript-eslint/eslint-plugin` / `parser` (8.70.1), `knip` (6.38.0), `typedoc` (0.28.20) |
+| ビルド | `wxt` (0.21.5), `vite` (8.3.6), `esbuild` (0.28.2), `typescript` (6.0.3) |
+| テスト | `vitest` (5.1.0), `@playwright/test` (1.65.0), `happy-dom` (20.14.5), `jsdom` (31.0.0), `@stryker-mutator/core` / `vitest-runner` (10.0.0), `better-sqlite3` (13.0.3) |
+| 静的解析・文書 | `eslint` (10.14.0), `@typescript-eslint/eslint-plugin` / `parser` (8.72.1), `knip` (6.38.0), `typedoc` (0.28.20) |
 | コンプライアンス | `license-checker` (25.0.1), `@cyclonedx/cyclonedx-npm` (6.0.1) |
 
 ### overrides（ピン留め）
@@ -67,7 +67,10 @@
 | CI（`.github/workflows/ci.yml`） | `npm audit --audit-level=high --omit=dev`（= prod スコープ。release gate の prod 層と同義）、`npm run check-licenses`、SBOM 生成とアーティファクト保存 | `package.json` / `package-lock.json` 等の変更を含む PR・push | 常時 |
 | `.github/workflows/security-audit.yml` | フル `npm audit`（devDependencies 含む、high 以上で失敗） | 毎週月曜 03:00 UTC + 手動起動 | 定期 |
 
-### 直近の `npm outdated` 実測と反映（2026-09-26）
+### 直近の依存更新（2026-11-08）
+
+- 反映: `eslint` 10.9→10.14、`@typescript-eslint/*` 8.67→8.72.1、`wxt` 0.21.4→0.21.5、`vite` 8.2→8.3.6、`vitest` 5.0.3→5.1.0（`@vitest/coverage-v8` とlockstepで同時更新）、`@playwright/test` 1.62→1.65、`@types/node` 26.2→26.6、`jsdom` 30.1→31.0（メジャー更新。フルスイート18579件緑・型・lint・ライセンス・ビルド緑で回帰なし）
+- 意図的に未反映の残り 1 件と理由（2026-09-26 から変更なし）
 
 - 更新を検出: 12 件。うち 11 件は同日中に反映済み（`@types/chrome`, `@types/node`, `@typescript-eslint/*`, `@vitest/coverage-v8`, `eslint`, `happy-dom`, `jsdom`, `knip`, `vite`, `vitest`）
 - `vitest` と `@vitest/coverage-v8` は互いに厳密な peer pin（`vitest@5.0.2` ⇔ `@vitest/coverage-v8@5.0.2`）を持つため、必ず同時に更新する
