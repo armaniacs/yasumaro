@@ -29,8 +29,9 @@ import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js'
 import type { RecordingAdmission } from './recordingAdmission.js';
 import type { SessionAlarmService } from './SessionAlarmService.js';
 import type { AlarmRegistry } from './alarmRegistry.js';
-import { ServiceContainer } from './serviceContainer.js';
+import { ServiceContainer, type ServiceKey } from './serviceContainer.js';
 import { compositionManifest } from './compositionManifest.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
@@ -82,7 +83,20 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   deferredMigrationRunner: () => Promise<void>;
 }
 
-export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+/**
+ * One isolated service-initialization failure. A throwing factory is recorded
+ * here instead of aborting the whole composition, so the remaining services
+ * still initialize and the failure stays detectable (PBI 2026-11-08-13).
+ */
+export interface ServiceInitFailure {
+  readonly key: ServiceKey;
+  readonly message: string;
+}
+
+export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition & {
+  /** Per-service init failures; empty when every factory resolved. */
+  serviceInitFailures: readonly ServiceInitFailure[];
+} {
   // Register every manifest entry the container does not already have, so a
   // test that called container.override(key, fake) keeps its fake.
   for (const entry of compositionManifest) {
@@ -91,14 +105,28 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     }
   }
 
-  // Resolve everything, then run onReady side effects once (the manifest's
-  // pendingWriteQueue entry installs the facade's queue instance — the
-  // utils↔background boundary wiring).
+  // Resolve everything, isolating one service's factory exception from the
+  // rest: a failure is recorded and the key keeps a degraded (undefined)
+  // slot so the composition below and the onReady wiring observe a defined
+  // value instead of throwing. Detection rides on serviceInitFailures.
+  const failures: ServiceInitFailure[] = [];
+  const failedKeys = new Set<ServiceKey>();
   for (const entry of compositionManifest) {
-    container.resolve(entry.key);
+    try {
+      container.resolve(entry.key);
+    } catch (error) {
+      failures.push({ key: entry.key, message: errorMessage(error) });
+      failedKeys.add(entry.key);
+      container.override(entry.key, undefined);
+    }
   }
   for (const entry of compositionManifest) {
-    entry.onReady?.(container);
+    if (failedKeys.has(entry.key)) continue;
+    try {
+      entry.onReady?.(container);
+    } catch (error) {
+      failures.push({ key: entry.key, message: errorMessage(error) });
+    }
   }
 
   return {
@@ -119,6 +147,7 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     sessionAlarmService: container.resolve<SessionAlarmService>('sessionAlarmService'),
     alarmRegistry: container.resolve<AlarmRegistry>('alarmRegistry'),
     deferredMigrationRunner: container.resolve<() => Promise<void>>('deferredMigrationRunner'),
+    serviceInitFailures: failures,
   };
 }
 
