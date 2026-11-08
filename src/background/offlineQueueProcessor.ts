@@ -120,6 +120,21 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             // same recording twice. Failed claim = someone else owns it now.
             if (!(await claimRecoveryOwner(payload.url, 'offline-queue'))) {
                 logWarn('Offline retry skipped: recovery claim held by another owner', { url: payload.url }, undefined, 'service-worker');
+                // PBI 2026-11-08-07(4): a contested claim is not a send
+                // failure — the other owner is running the same recording
+                // right now. The queue counts every `false` handler result as
+                // a failure and burns a retry, so returning `false` as-is
+                // would drive a merely contended job to max-retries
+                // exhaustion and a spurious terminal handover ("retries
+                // exhausted" notice for a job that was never attempted).
+                // Offset that increment on the job reference the queue keeps,
+                // keeping the job for the next cycle without spending budget:
+                // the queue adds exactly one on the `false` below, so lending
+                // one here nets zero (-1 is transient; only the post-increment
+                // value is ever persisted).
+                if (typeof job.retryCount === 'number') {
+                    job.retryCount -= 1;
+                }
                 return false;
             }
             try {

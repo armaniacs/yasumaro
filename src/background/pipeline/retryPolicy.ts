@@ -18,7 +18,22 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * no structured kind to read. No current boundary may produce one of these
  * strings on purpose.
  */
-const LEGACY_NETWORK_MARKERS: readonly string[] = LEGACY_TRANSPORT_MARKERS_FULL;
+
+/**
+ * PBI 2026-11-08-07(3): the same markers as word/phrase patterns. A plain
+ * lowercase substring scan matches unrelated sentences ("prefetch failed
+ * gracefully" contains "fetch failed"; "networked cache" contains
+ * "network"), routing them to the offline queue. Word boundaries keep the
+ * ADR 2026-08-27 breadth (every enumerated word still matches) while
+ * refusing embeddings inside longer words.
+ */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const LEGACY_NETWORK_MARKER_PATTERNS: readonly RegExp[] = LEGACY_TRANSPORT_MARKERS_FULL.map(
+  (marker) => new RegExp(`\\b${escapeRegExp(marker)}\\b`, 'i'),
+);
 
 /**
  * RetryPolicy — owns offline-enqueue eligibility.
@@ -51,13 +66,18 @@ export class RetryPolicy {
     return this.isNetworkError(error);
   }
 
-  private matchesLegacyNetworkMarker(error: unknown): boolean {
-    const lower = errorMessage(error).toLowerCase();
-    if (LEGACY_NETWORK_MARKERS.some((marker) => lower.includes(marker))) {
+  private matchesLegacyNetworkMarker(error: unknown, seen: Set<unknown> = new Set()): boolean {
+    // A cyclic `cause` chain would recurse forever; each object is visited once.
+    if (typeof error === 'object' && error !== null) {
+      if (seen.has(error)) return false;
+      seen.add(error);
+    }
+    const text = errorMessage(error);
+    if (LEGACY_NETWORK_MARKER_PATTERNS.some((pattern) => pattern.test(text))) {
       return true;
     }
-    if (error instanceof Error && error.cause) {
-      return this.matchesLegacyNetworkMarker(error.cause);
+    if (error instanceof Error && error.cause !== undefined && error.cause !== null) {
+      return this.matchesLegacyNetworkMarker(error.cause, seen);
     }
     return false;
   }

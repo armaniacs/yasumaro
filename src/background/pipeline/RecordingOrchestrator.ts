@@ -189,8 +189,20 @@ export class RecordingOrchestrator {
       return this.recordWithRecoveryClaim(data, { ...opts, acquireRecoveryClaim: false });
     }
     if (data.previewOnly) return this.preview(data, opts);
-    const settings = opts.settings ?? await this.getSettingsWithCache();
-    return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
+    // PBI 2026-11-08-07(1): settings must be read AFTER the per-URL mutex is
+    // acquired, not before waiting on it. A recording queued behind another
+    // run of the same URL would otherwise execute with a pre-wait snapshot —
+    // e.g. a consent granted at intake but withdrawn mid-wait would still be
+    // recorded. An explicitly passed `settings` stays caller-owned (the
+    // manual/preview surface resolved it and must not race a cache refresh).
+    if (opts.settings !== undefined) {
+      const settings = opts.settings;
+      return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
+    }
+    return this.mutexMap.runExclusive(data.url, async () => {
+      const freshSettings = await this.getSettingsWithCache();
+      return this.executeInternal(data, freshSettings);
+    });
   }
 
   /**
@@ -208,7 +220,12 @@ export class RecordingOrchestrator {
       claimStore: { claimRecoveryOwner, releaseRecoveryOwner },
       getPendingPages,
     };
-    const pendingPages = await claimDeps.getPendingPages().catch(() => []);
+    // PBI 2026-11-08-07(2): a failed pending-pages read must not collapse to
+    // "no pending pages". Treating a storage outage as a non-recovery run
+    // lets this run overlap the automatic retry of the same recording
+    // (duplicate Obsidian writes). The failure propagates to the caller as a
+    // detectable error instead of silently running claim-free.
+    const pendingPages = await claimDeps.getPendingPages();
     const isRecoveryRun = pendingPages.some((p) => p.url === data.url);
     if (!isRecoveryRun) return this.record(data, opts);
     if (!(await claimDeps.claimStore.claimRecoveryOwner(data.url, 'manual'))) {
@@ -223,9 +240,17 @@ export class RecordingOrchestrator {
 
   /** Preview path: short-circuit after privacyPipeline (previewBreakpoint) */
   async preview(data: RecordingData, opts: RecordOptions = {}): Promise<RecordingResult> {
-    const settings = opts.settings ?? await this.getSettingsWithCache();
     const effectiveData = { ...data, previewOnly: true };
-    return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
+    // Same post-wait freshness as record(): preview shares the per-URL mutex
+    // and must not render under a pre-wait consent snapshot either.
+    if (opts.settings !== undefined) {
+      const settings = opts.settings;
+      return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
+    }
+    return this.mutexMap.runExclusive(effectiveData.url, async () => {
+      const freshSettings = await this.getSettingsWithCache();
+      return this.executeInternal(effectiveData, freshSettings);
+    });
   }
 
   /**
