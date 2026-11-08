@@ -94,6 +94,15 @@ export const MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
 export const MAX_ERROR_BODY_SIZE = 1024 * 1024;
 
 /**
+ * Privacy policy fetch cap (privacy/loadPrivacyPolicy, PBI 2026-11-08-15).
+ * Same 1MB value as MAX_ERROR_BODY_SIZE / MAX_PAYLOAD_STRING_BYTES but a
+ * separate concern: response-header gating for a fetched Markdown document.
+ * Lives here (not as a privacy.ts literal) so the drift guard sees it
+ * alongside the other size caps.
+ */
+export const MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
+
+/**
  * Round 5 drift-guard follow-up — caps the first guard pass itself found:
  */
 /** Pre-parse import text cap (dashboard importLogsService). */

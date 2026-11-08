@@ -193,10 +193,9 @@ describe('renderMarkdown', () => {
             expect(result).toContain('<h5 id="heading-5">Heading 5</h5>');
         });
 
-        it('should treat 6 hashes as paragraph (max is h5)', () => {
+        it('should render 6 hashes as h6 (PBI 2026-11-08-15)', () => {
             const result = renderMarkdown('###### Heading 6');
-            expect(result).not.toContain('<h6');
-            expect(result).toContain('<p>###### Heading 6</p>');
+            expect(result).toContain('<h6 id="heading-6">Heading 6</h6>');
         });
 
         it('should handle heading with special characters', () => {
