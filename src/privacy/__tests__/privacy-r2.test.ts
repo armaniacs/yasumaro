@@ -130,5 +130,35 @@ describe('privacy', () => {
 
             expect(document.getElementById('content')?.innerHTML).toContain('<h1');
         });
+
+        it('rejects an over-size body when the header is missing (post-read check)', async () => {
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                headers: { get: () => null },
+                text: () => Promise.resolve('x'.repeat(MAX_PRIVACY_POLICY_BYTES + 1)),
+            });
+
+            await loadPrivacyPolicy('content');
+
+            expect(document.getElementById('content')?.innerHTML).toContain('error');
+        });
+
+        it('measures the post-read cap in UTF-8 bytes, not UTF-16 code units', async () => {
+            // 'あ' is 3 bytes in UTF-8 but 1 UTF-16 unit: a body of
+            // cap/3 + 1 chars passes a length check yet exceeds the byte cap.
+            const overByChars = 'あ'.repeat(Math.floor(MAX_PRIVACY_POLICY_BYTES / 3) + 1);
+            expect(overByChars.length).toBeLessThan(MAX_PRIVACY_POLICY_BYTES);
+            (global.fetch as any).mockResolvedValueOnce({
+                ok: true,
+                status: 200,
+                headers: { get: () => null },
+                text: () => Promise.resolve(overByChars),
+            });
+
+            await loadPrivacyPolicy('content');
+
+            expect(document.getElementById('content')?.innerHTML).toContain('error');
+        });
     });
 });
