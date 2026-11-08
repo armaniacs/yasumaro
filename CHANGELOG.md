@@ -60,6 +60,13 @@ All notable changes to this project will be documented in this file.
 
 - 開発依存のminor/patch更新（eslint・typescript-eslint・wxt・vite・vitest系・playwright・types/node）と `jsdom` 31への更新。フルスイート・型・lint・ライセンス・ビルドで回帰なし。`typescript` 7は上流(typescript-eslint・typedoc)対応待ちのため保留 / Dev-dependency minor and patch updates (eslint, typescript-eslint, wxt, vite, vitest family, playwright, types/node) plus `jsdom` 31. No regressions across the full suite, types, lint, licenses, and build. `typescript` 7 stays held for upstream (typescript-eslint, typedoc) support
 
+### 破壊的変更 / Breaking Changes
+
+- `Mutex.release()` が `boolean` を返すよう変更（二重release時は `false` を返し計数する）。戻り値を無視する既存呼び出しは動作不変 / `Mutex.release()` now returns `boolean` (`false` on double-release, counted). Existing callers that ignore the return value behave as before
+- `Mutex` の `maxQueueSize`・`timeoutMs`・`holderTimeoutMs` に `0`・負数・NaN・非整数を渡すと `RangeError` を投げるよう変更（従来は既定値に黙殺） / `Mutex` now throws `RangeError` for `0`, negative, NaN, or non-integer `maxQueueSize` / `timeoutMs` / `holderTimeoutMs` (previously silently defaulted)
+- `htmlEscape()` は非文字列（`null`・`undefined` 除外）に `TypeError` を投げるよう変更（従来は `''` に黙殺）。`null`・`undefined` は従来通り `''` / `htmlEscape()` now throws `TypeError` for non-string input (excluding `null` and `undefined`, which still yield `''` as before)
+- `messageTransport` の再送判定が機械可読コード必須化（素のErrorは再送しない。`toTransportError` 公開seamでChrome境界の文言翻訳を維持） / `messageTransport` retry decisions now require machine-readable codes (bare Errors no longer retry; the public `toTransportError` seam keeps Chrome-boundary wording translation)
+
 ## [6.9.72] - 2026-11-08
 
 このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
