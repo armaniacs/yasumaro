@@ -24,5 +24,11 @@ export function createContentMessageSender(retries: number = CONTENT_RETRIES): M
       const response = await transport.send(message as ExtensionMessage, { retries });
       return isServiceWorkerResponse(response) ? response : undefined;
     },
+    // PBI 2026-11-08-05: unload-path single shot — one immediate attempt,
+    // no backoff sleeps for the tearing-down page to outlive.
+    async sendMessageWithoutRetry(message): Promise<ServiceWorkerResponse | undefined> {
+      const response = await transport.send(message as ExtensionMessage, { retries: 0 });
+      return isServiceWorkerResponse(response) ? response : undefined;
+    },
   };
 }

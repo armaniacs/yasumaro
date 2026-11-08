@@ -118,6 +118,43 @@ describe('ChromeDomainPolicyPort', () => {
     const result = await port.checkDomainAllowedFromCache('https://blocked.com/page');
     expect(result).toEqual({ allowed: true, useCache: true });
   });
+
+  it('reads a single generation: a mid-read settings change cannot mix mode and flags (PBI 2026-11-08-05)', async () => {
+    const gen1: Record<string, unknown> = {
+      [StorageKeys.DOMAIN_FILTER_CACHE]: ['a.com'],
+      [StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP]: now,
+      [StorageKeys.DOMAIN_FILTER_MODE]: 'blacklist',
+      [StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]: false,
+      [StorageKeys.DOMAIN_BLACKLIST]: ['blocked.com'],
+      [StorageKeys.SIMPLE_FORMAT_ENABLED]: true,
+      [StorageKeys.UBLOCK_FORMAT_ENABLED]: false,
+    };
+    // A concurrent writer flips simple-format off between the old
+    // two-stage reads — the second read would observe this generation.
+    const gen2: Record<string, unknown> = {
+      ...gen1,
+      [StorageKeys.SIMPLE_FORMAT_ENABLED]: false,
+      [StorageKeys.DOMAIN_BLACKLIST]: [],
+    };
+    let calls = 0;
+    const storage = new InMemoryStoragePort();
+    const getSpy = vi.spyOn(storage, 'get').mockImplementation(async (keys: string | string[] | null) => {
+      calls += 1;
+      const gen = calls === 1 ? gen1 : gen2;
+      const out: Record<string, unknown> = {};
+      for (const k of Array.isArray(keys) ? keys : []) {
+        if (k in gen) out[k] = gen[k];
+      }
+      return out;
+    });
+    const port = new ChromeDomainPolicyPort(storage, () => now);
+
+    const verdict = await port.checkDomainAllowedFromCache('https://blocked.com/page');
+
+    // One generation only: blacklist + simple on + blocked.com listed.
+    expect(getSpy).toHaveBeenCalledTimes(1);
+    expect(verdict).toEqual({ allowed: false, useCache: true });
+  });
 });
 
 describe('InMemoryDomainPolicyPort', () => {

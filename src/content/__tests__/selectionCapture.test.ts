@@ -83,3 +83,19 @@ describe('handleGetSelectionMessage - chrome-free direct calls', () => {
     expect(handleGetSelectionMessage({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, vi.fn(), deps)).toBeUndefined();
   });
 });
+
+describe('handleGetSelectionMessage - reader failure (PBI 2026-11-08-05)', () => {
+  it('still answers with the empty-selection contract when readSelection throws', () => {
+    const throwing = (): string => {
+      throw new Error('detached window');
+    };
+    const deps: SelectionCaptureDeps = { runtimeId: 'test-extension-id', readSelection: throwing };
+    const sendResponse = vi.fn();
+
+    expect(() =>
+      handleGetSelectionMessage({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, sendResponse, deps),
+    ).not.toThrow();
+    expect(sendResponse).toHaveBeenCalledTimes(1);
+    expect(sendResponse).toHaveBeenCalledWith({ selection: '' });
+  });
+});

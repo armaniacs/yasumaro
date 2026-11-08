@@ -160,3 +160,34 @@ describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)',
         expect(sendResponse).not.toHaveBeenCalled();
     });
 });
+
+describe('handleGetContentMessage - extraction failure (PBI 2026-11-08-05)', () => {
+    it('still answers when extractAndCommit throws (popup must not hang)', () => {
+        const { deps, extractAndCommit } = makeDeps('test-extension-id');
+        extractAndCommit.mockImplementation(() => {
+            throw new Error('extract boom');
+        });
+        const sendResponse = vi.fn();
+
+        expect(() =>
+            handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps),
+        ).not.toThrow();
+        expect(sendResponse).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks the failure reply through the fallback channel with empty content', () => {
+        const { deps, extractAndCommit } = makeDeps('test-extension-id');
+        extractAndCommit.mockImplementation(() => {
+            throw new Error('extract boom');
+        });
+        const sendResponse = vi.fn();
+
+        handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
+
+        const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
+        expect(response['content']).toBe('');
+        expect(response['fallbackTriggered']).toBe(true);
+        expect(response['fallbackReason']).toContain('extract-failed');
+        expect(response['fallbackReason']).toContain('extract boom');
+    });
+});

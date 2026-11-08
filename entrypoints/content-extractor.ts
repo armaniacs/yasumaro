@@ -9,7 +9,16 @@ export default defineUnlistedScript({
       m.registerGetContentListener();
       // PBI 2026-10-31-03: the selection-capture ask (popup → content script).
       m.registerGetSelectionListener();
-      void m.init();
+      // PBI 2026-11-08-05: init reads settings — a rejection used to vanish
+      // silently (listeners armed, clock never started). Surface it so a
+      // settings failure is visible instead of a quiet dead extractor.
+      void m.init().catch((e: unknown) => {
+        try {
+          console.warn('[OWeave] content-extractor init failed', e);
+        } catch {
+          /* logging must never throw */
+        }
+      });
     });
   },
 });
