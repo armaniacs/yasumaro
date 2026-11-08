@@ -63,6 +63,16 @@ describe('ssrfGuard', () => {
       expect(isPrivateIpAddress('999.999.999.999')).toBe(false);
     });
 
+    it('classifies a dotted IPv4 with a DNS root trailing dot (S5)', () => {
+      expect(isPrivateIpAddress('10.0.0.1.')).toBe(true);
+      expect(isPrivateIpAddress('127.0.0.1.')).toBe(true);
+      expect(isPrivateIpAddress('192.168.1.1.')).toBe(true);
+    });
+
+    it('still treats a public IPv4 with a trailing dot as public', () => {
+      expect(isPrivateIpAddress('8.8.8.8.')).toBe(false);
+    });
+
     it('expands a single-label decimal literal before classifying (S8)', () => {
       expect(isPrivateIpAddress('2130706433')).toBe(true); // 127.0.0.1
       expect(isPrivateIpAddress('3232235777')).toBe(true); // 192.168.1.1

@@ -163,6 +163,46 @@ describe('ssrfDnsPinning', () => {
     });
   });
 
+  describe('pin/resolver identity (No.8)', () => {
+    it('throws when a pin and a different-resolver option are combined', async () => {
+      const pinResolver = vi.fn(async (_host: string) => ['93.184.216.34']);
+      const pinned = await validateUrlForFilterImportAsync('https://example.com/filters.txt', {
+        resolveHostname: pinResolver,
+      });
+      expect(pinned).not.toBeNull();
+
+      const otherResolver = vi.fn(async (_host: string) => ['93.184.216.34']);
+      await expect(
+        fetchWithTimeout('https://example.com/filters.txt', {
+          skipCspValidation: true,
+          dnsPin: pinned!,
+          resolveHostname: otherResolver,
+        }),
+      ).rejects.toThrow(/resolver mismatch/i);
+      expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('reuses the pin when the combined resolvers are the same instance', async () => {
+      const resolveHostname = vi.fn(async (_host: string) => ['93.184.216.34']);
+      const pinned = await validateUrlForFilterImportAsync('https://example.com/filters.txt', {
+        resolveHostname,
+      });
+      expect(pinned).not.toBeNull();
+      const callsAfterGuard = resolveHostname.mock.calls.length;
+
+      const response = await fetchWithTimeout('https://example.com/filters.txt', {
+        skipCspValidation: true,
+        dnsPin: pinned!,
+        resolveHostname,
+      });
+
+      expect(response.ok).toBe(true);
+      // No pre-connection resolution: the same-instance pin is adopted and
+      // only the post-connection stability check resolves again.
+      expect(resolveHostname.mock.calls.length).toBe(callsAfterGuard + 1);
+    });
+  });
+
   describe('localhost by default (BDD boundary)', () => {
     it('rejects a literal 127.0.0.1 without any explicit option', async () => {
       await expect(
