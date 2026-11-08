@@ -66,10 +66,10 @@ import { SessionReminderAlarms } from './sessionReminderAlarms.js';
 import { createReminderCandidateProvider } from './sessionReminderCandidates.js';
 import { NotificationHelper } from './notificationHelper.js';
 import { getMessageOr } from '../utils/i18n.js';
-import type { ServiceContainer } from './serviceContainer.js';
+import type { ServiceContainer, ServiceKey } from './serviceContainer.js';
 
 export interface CompositionEntry {
-  key: string;
+  key: ServiceKey;
   factory: (c: ServiceContainer) => unknown;
   singleton: boolean;
   /** Side-effect wiring run once after all services are resolved. */
@@ -304,7 +304,10 @@ export const compositionManifest: readonly CompositionEntry[] = [
     // adapter; the three handler dep objects collapsed into this single entry.
     factory: (c) => new RecordingAdmission({
       isRecordingAllowed: () => hasPrivacyConsent(),
-      getSettings: () => settingsRepository.getAll(),
+      // Resolve through the container (not the imported singleton) so a test
+      // override of 'settingsRepository' is observed here instead of silently
+      // diverging to the default instance (PBI 2026-11-08-13).
+      getSettings: () => c.resolve<SettingsRepository>('settingsRepository').getAll(),
       rateLimiter: c.resolve<RateLimiter>('rateLimiter'),
     }),
   },
@@ -329,9 +332,11 @@ export const compositionManifest: readonly CompositionEntry[] = [
           c.resolve<RegenerateContentFetcher>('regenerateContentFetcher').fetchExtracted(url, cleanseMode),
         setUrlContent,
         buildAllowedUrls: (settings) => buildAllowedUrls(settings),
-        getSettings: () => settingsRepository.getAll(),
+        // Same injected-settings rule as recordingAdmission above: resolve
+        // through the container so overrides are observed (PBI 2026-11-08-13).
+        getSettings: () => c.resolve<SettingsRepository>('settingsRepository').getAll(),
         isDomainAllowed: (url) => isDomainAllowed(url),
-        clearSettingsCache: () => settingsRepository.clearCache(),
+        clearSettingsCache: () => c.resolve<SettingsRepository>('settingsRepository').clearCache(),
         notifyAiTestProgress,
         getPrivacyCache: () => recordingCache.getPrivacyCache(),
         updateActivity: () => updateActivity(),
