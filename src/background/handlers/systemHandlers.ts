@@ -1,5 +1,6 @@
 import type { Settings } from '../../utils/storage/types.js';
-import { validateUrlForFilterImport, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
+import { validateUrlForFilterImport, validateUrlForFilterImportAsync, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
+import type { DnsResolveFn } from '../../utils/fetch.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logDebug, logWarn, logError } from '../../utils/logger/api.js';
 import { errorMessage } from '../../utils/errorUtils.js';
@@ -29,6 +30,12 @@ import type {
 export interface FetchUrlHandlerDeps {
   getSettings: () => Promise<Settings>;
   buildAllowedUrls: (settings: Settings) => Set<string>;
+  /**
+   * DNSピン留め用resolver (任意)。指定時は検証と接続で同一解決IPを使い、
+   * 検証後にDNS応答がloopbackへ変わったら接続前に拒否する。未指定時は
+   * 従来どおり文字列検査のみ (後方互換)。
+   */
+  resolveHostname?: DnsResolveFn;
 }
 
 export interface ContentCleansingExecutedHandlerDeps {
@@ -82,7 +89,15 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
     // VULN-004: FETCH_URL is an extension-page operation, not a content-script
     // one. Enforced by the registry's 'extension-only' trust level.
     try {
-      validateUrlForFilterImport(message.payload.url);
+      // DNSピン留めありの場合は非同期ガード (解決IP検証+pin取得) を使い、
+      // なしの場合は従来の同期ガードを使う (後方互換)。
+      if (deps.resolveHostname) {
+        await validateUrlForFilterImportAsync(message.payload.url, {
+          resolveHostname: deps.resolveHostname,
+        });
+      } else {
+        validateUrlForFilterImport(message.payload.url);
+      }
 
       const settings = await deps.getSettings();
       const allowedUrls = deps.buildAllowedUrls(settings);
@@ -104,6 +119,8 @@ export function createFetchUrlHandler(deps: FetchUrlHandlerDeps) {
         method: 'GET',
         cache: 'no-cache',
         allowedUrls,
+        // resolver指定時のみDNSピン留め (検証後再解決の突き合わせ) が働く。
+        ...(deps.resolveHostname ? { resolveHostname: deps.resolveHostname } : {}),
       }));
 
       // Defense in depth: `redirect: 'error'` should already have rejected, but
