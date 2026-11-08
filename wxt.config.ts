@@ -24,9 +24,22 @@ export function normalizeManifestVersion(version: string): string {
   // ("1.2.3-dev+build.5"), so removing the prerelease first would leave the
   // metadata behind and the manifest version invalid. Exported for the
   // regression pin in __tests__/wxt.config.test.ts (PBI 2026-11-08-13).
-  return version.replace(/\+[^+]*$/, '').replace(/-[0-9A-Za-z.]+$/, '');
+  // The prerelease class includes "-": semver prereleases may chain hyphens
+  // ("1.2.3-alpha-beta"), and stripping only the last segment would leave
+  // "1.2.3-alpha" in the manifest (No.10).
+  return version.replace(/\+[^+]*$/, '').replace(/-[0-9A-Za-z.-]+$/, '');
 }
 const manifestVersion = normalizeManifestVersion(pkg.version);
+
+/**
+ * Opt-in mapping for the E2E probe define (S32 pin in
+ * __tests__/wxt.config.test.ts): only the exact string '1' keeps the probe;
+ * every other value (including 'true', '0', '' and undefined) resolves to
+ * false so a forgotten flag can never ship the probe in release artifacts.
+ */
+export function resolveE2eProbeDefine(envValue: string | undefined): boolean {
+  return envValue === '1';
+}
 
 const localConnectSrc = buildLocalConnectSrc();
 const aiConnectSrc = buildConnectSrcDomains();
@@ -118,7 +131,7 @@ export default defineConfig({
       // explicitly); every other build resolves to false so the probe is
       // dead-code eliminated. Default-off means a forgotten flag can no
       // longer ship the probe in a release artifact (PBI 2026-11-08-13).
-      __OW_E2E_PROBE__: JSON.stringify(process.env.OW_E2E_PROBE === '1'),
+      __OW_E2E_PROBE__: JSON.stringify(resolveE2eProbeDefine(process.env.OW_E2E_PROBE)),
     },
     plugins: stripInlinedWasmPlugins(env.browser),
     build: {
