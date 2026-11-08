@@ -92,6 +92,34 @@ describe('handleCleansingOffscreenPayload — validation', () => {
     });
 });
 
+describe('handleCleansingOffscreenPayload — byte budget (PBI 2026-11-08-05)', () => {
+    it('rejects emoji-heavy input whose bytes exceed the limit while chars do not', async () => {
+        const { MAX_CLEANSING_HTML_BYTES, TOO_LARGE_ERROR_PREFIX } = await import('../cleansingOffscreen.js');
+        // One emoji = 1 UTF-16 char (surrogate pair: 2 units) but 4 UTF-8
+        // bytes. '😀'.length is 2, so chars stay far below the limit while
+        // bytes blow past it — the old html.length check let this through.
+        const emojiCount = Math.floor(MAX_CLEANSING_HTML_BYTES / 4) + 1;
+        const html = '😀'.repeat(emojiCount);
+        expect(html.length).toBeLessThan(MAX_CLEANSING_HTML_BYTES);
+
+        const res = handleCleansingOffscreenPayload({ html });
+
+        expect(res.success).toBe(false);
+        if (!res.success) {
+            const expectedBytes = new TextEncoder().encode(html).length;
+            expect(expectedBytes).toBeGreaterThan(MAX_CLEANSING_HTML_BYTES);
+            expect(res.error.startsWith(TOO_LARGE_ERROR_PREFIX)).toBe(true);
+            expect(res.error).toContain(`${expectedBytes} bytes`);
+        }
+    });
+
+    it('accepts small emoji input within the byte budget', () => {
+        const html = `<p>hello 😀 world</p>`;
+        const res = handleCleansingOffscreenPayload({ html });
+        expect(res.success).toBe(true);
+    });
+});
+
 describe('handleOffscreenMessage — CLEANSING_OFFSCREEN routing', () => {
     it('routes CLEANSING_OFFSCREEN from content script (sender with tab) to cleansing handler', async () => {
         const responses: unknown[] = [];

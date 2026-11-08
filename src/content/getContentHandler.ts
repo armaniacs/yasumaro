@@ -14,6 +14,7 @@
 
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { CleansingConfig, PageState } from './pageState.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { toGetContentReply } from './visitPayload.js';
 import {
     resolveRegenerateCleansingConfig,
@@ -62,8 +63,39 @@ export function handleGetContentMessage(
         (REGENERATE_CLEANSE_MODES as readonly string[]).includes(mode)
             ? resolveRegenerateCleansingConfig(deps.pageState.cleansingConfig, mode)
             : undefined;
-    const extractResult = deps.extractAndCommit(config);
-    // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
-    // via the single visitPayload module — one builder, no per-path drift.
-    sendResponse(toGetContentReply(deps.pageState, extractResult.content));
+    const extractResult = tryExtractAndCommit(deps, config);
+    if (extractResult.ok) {
+        // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
+        // via the single visitPayload module — one builder, no per-path drift.
+        sendResponse(toGetContentReply(deps.pageState, extractResult.content));
+        return;
+    }
+    // PBI 2026-11-08-05: extraction threw — still answer so the popup never
+    // hangs. The fallback channel (popup/regenerate already understand it)
+    // carries the failure signal with empty content.
+    try {
+        sendResponse({
+            ...toGetContentReply(deps.pageState, ''),
+            fallbackTriggered: true,
+            fallbackReason: `extract-failed: ${extractResult.error}`,
+        });
+    } catch {
+        // The reply builder itself must never cost the caller its answer.
+        sendResponse({ content: '' });
+    }
+}
+
+/**
+ * PBI 2026-11-08-05: extract+commit never throws to the caller — a failure
+ * becomes a value so handleGetContentMessage always reaches sendResponse.
+ */
+function tryExtractAndCommit(
+    deps: GetContentHandlerDeps,
+    config: CleansingConfig | undefined,
+): { ok: true; content: string } | { ok: false; error: string } {
+    try {
+        return { ok: true, content: deps.extractAndCommit(config).content };
+    } catch (e: unknown) {
+        return { ok: false, error: errorMessage(e) };
+    }
 }

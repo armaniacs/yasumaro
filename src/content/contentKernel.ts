@@ -446,9 +446,16 @@ export class ContentKernel {
         if (this.pausedCache) return;
         if (this.pageState.isValidVisitReported) return;
         if (this.pageState.visitReportAttempted) return;
+        // PBI 2026-11-08-05: beforeunload delivery is best-effort — a
+        // tearing-down page never survives retry backoff sleeps, so the
+        // unload path takes one immediate attempt (no sleeps) when the
+        // sender offers it. Still fire-and-forget: chrome messaging has no
+        // keepalive, and the skip output must not break the unload.
+        const sendOnce =
+            this.sender.sendMessageWithoutRetry ?? this.sender.sendMessageWithRetry;
         try {
             void Promise.resolve(
-                this.sender.sendMessageWithRetry({
+                sendOnce.call(this.sender, {
                     type: 'RECORDING_SKIP_REASON',
                     payload: { reason: 'condition-not-met' },
                 }),

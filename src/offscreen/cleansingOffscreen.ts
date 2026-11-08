@@ -27,6 +27,14 @@ export const TOO_LARGE_ERROR_PREFIX = 'TOO_LARGE:' as const;
  */
 export const MAX_CLEANSING_HTML_BYTES = 512 * 1024;
 
+/**
+ * UTF-8 byte length of a string. The cap is a byte budget (parser cost
+ * scales with encoded size), so astral characters must count 4, not 1.
+ */
+function utf8ByteLength(value: string): number {
+    return new TextEncoder().encode(value).length;
+}
+
 export interface CleansingOffscreenPayload {
     html: string;
     options?: AiSummaryCleanseOptions;
@@ -93,8 +101,11 @@ export function handleCleansingOffscreenPayload(
         return { success: false, error: 'Invalid payload: html is required' };
     }
     const { html, options } = payload as { html: string; options?: AiSummaryCleanseOptions };
-    if (html.length > MAX_CLEANSING_HTML_BYTES) {
-        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} ${html.length} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
+    // PBI 2026-11-08-05: byte budget, not UTF-16 length — astral-heavy
+    // input (emoji) used to slip through and pin the parser.
+    const byteLength = utf8ByteLength(html);
+    if (byteLength > MAX_CLEANSING_HTML_BYTES) {
+        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} ${byteLength} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
     }
     try {
         const { html: cleansed, result } = cleanseHtmlOffscreen(html, options);

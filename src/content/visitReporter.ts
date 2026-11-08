@@ -69,6 +69,13 @@ export function isServiceWorkerResponse(value: unknown): value is ServiceWorkerR
 
 export interface MessageSender {
     sendMessageWithRetry(message: Message): Promise<ServiceWorkerResponse | undefined>;
+    /**
+     * PBI 2026-11-08-05: unload-path single-shot send. The retrying send
+     * waits out backoff sleeps that a tearing-down page never survives, so
+     * beforeunload traffic prefers this when present and falls back to
+     * sendMessageWithRetry otherwise. Optional so test fakes keep working.
+     */
+    sendMessageWithoutRetry?(message: Message): Promise<ServiceWorkerResponse | undefined>;
 }
 
 export interface VisitReporterDeps {

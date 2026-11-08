@@ -120,8 +120,7 @@ describe('ContentKernel skip reason wiring (PBI 2026-10-31-01)', () => {
         );
     });
 
-    it('marks the attempt when the visit gate opens (reportValidVisit)', async () => {
-        const pageState = new PageState();
+    it('marks the attempt when the visit gate opens (reportValidVisit)', async () => {        const pageState = new PageState();
         pageState.startTime = FIXED_NOW - 6000; // above the threshold
         pageState.maxScrollPercentage = 60;
         Object.defineProperty(window, 'scrollY', { value: 720, writable: true, configurable: true });
@@ -136,5 +135,30 @@ describe('ContentKernel skip reason wiring (PBI 2026-10-31-01)', () => {
         await Promise.resolve();
 
         expect(reportSpy).toHaveBeenCalledWith(true);
+    });
+
+    it('prefers the single-shot sender on the unload path when available (PBI 2026-11-08-05)', async () => {
+        const pageState = new PageState();
+        pageState.startTime = FIXED_NOW - 3000; // 3s elapsed — below the 5s threshold
+        const sender = {
+            sendMessageWithRetry: vi.fn(() => Promise.resolve({ success: true })),
+            sendMessageWithoutRetry: vi.fn(() => Promise.resolve({ success: true })),
+        };
+        const { kernel } = makeKernel({
+            pageState,
+            sender: sender as unknown as { sendMessageWithRetry: ReturnType<typeof vi.fn> },
+        });
+        await kernel.init();
+
+        window.dispatchEvent(new Event('beforeunload'));
+
+        // The affirmative send anchors the negative below (wait policy).
+        expect(sender.sendMessageWithoutRetry).toHaveBeenCalledWith({
+            type: 'RECORDING_SKIP_REASON',
+            payload: { reason: 'condition-not-met' },
+        });
+        expect(sender.sendMessageWithRetry).not.toHaveBeenCalledWith(
+            expect.objectContaining({ type: 'RECORDING_SKIP_REASON' }),
+        );
     });
 });

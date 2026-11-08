@@ -154,7 +154,16 @@ export async function resolveVisitAdmission(deps: VisitAdmissionDeps): Promise<A
     return 'skipped';
   }
 
-  const cacheCheck = await deps.checkCache(deps.url);
+  let cacheCheck: DomainCacheCheck;
+  try {
+    cacheCheck = await deps.checkCache(deps.url);
+  } catch (e) {
+    // PBI 2026-11-08-05: a storage failure must not become an unhandled
+    // rejection (extractor never injected, nothing logged). Record it and
+    // defer to the retrying background verdict like a cold cache.
+    deps.warn('[OWeave] Domain cache read failed', deps.url, errorMessage(e));
+    cacheCheck = { allowed: false, useCache: false };
+  }
   if (cacheCheck.useCache) {
     if (!cacheCheck.allowed) {
       return 'skipped';
