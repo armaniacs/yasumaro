@@ -156,6 +156,15 @@ export const MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 50 * 1024 * 1024;
 /** AI provider HTTP JSON response cap (summary + testConnection). */
 export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
 
+/**
+ * uBlock filter-list paste caps (PBI 2026-11-08-16, moved unchanged from
+ * utils/ublockParser/index.ts so all size caps are greppable from here).
+ * A paste above either cap is rejected before parsing: unbounded text would
+ * let one dashboard paste exhaust memory (bytes) or stall the tab (lines).
+ */
+export const MAX_UBLOCK_FILTER_BYTES = 10 * 1024 * 1024;
+export const MAX_UBLOCK_FILTER_LINES = 500_000;
+
 /** chrome.storage.local quota (storage/quota helpers). */
 export const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
 

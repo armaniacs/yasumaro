@@ -44,6 +44,14 @@ import { matchWhitelistAdapter, extractWhitelistedContent } from './whitelistAda
 
 // パブリックAPIを再エクスポート
 export type { ExtractResult } from './types.js';
+
+/**
+ * Default extraction cap (PBI 2026-11-08-16): the single home for the
+ * `maxChars` default previously repeated as a bare `10000` literal at the
+ * four entries below and in pageContentPipeline.preparePageContent. The
+ * value is unchanged — only the definition is shared.
+ */
+export const DEFAULT_EXTRACT_MAX_CHARS = 10_000;
 export { ExtractionReport } from './extractionReport.js';
 export type { ByteFunnel, CleanseCounts, FallbackCause, ExtractionReportTarget } from './extractionReport.js';
 export { isExcludedElement, isAsianContentElement } from './classifier.js';
@@ -104,7 +112,7 @@ export interface ExtractOutput {
  */
 export function extract(config: ExtractConfig = {}): ExtractOutput {
     const {
-        maxChars = 10000,
+        maxChars = DEFAULT_EXTRACT_MAX_CHARS,
         cleanseOptions = { cleanseEnabled: false },
         aiSummaryCleanseOptions = { aiSummaryCleanseEnabled: false },
         dedupOptions = {},
@@ -123,7 +131,7 @@ export function extract(config: ExtractConfig = {}): ExtractOutput {
  * (whitelist lookup); missing body yields empty content without throwing.
  */
 export function extractMainContentWithInfo(
-    maxChars: number = 10000,
+    maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {}
@@ -146,7 +154,7 @@ export function extractMainContentWithInfo(
  * string without throwing.
  */
 export function extractMainContent(
-    maxChars: number = 10000,
+    maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {}
@@ -164,7 +172,7 @@ export function extractMainContent(
  * preBytes origin (candidateBytes / pageBytes).
  */
 function extractInternal(
-    maxChars: number = 10000,
+    maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {},

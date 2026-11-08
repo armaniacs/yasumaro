@@ -9,6 +9,8 @@
  * Only OPFS-touching logic lives in the opfsWorker modules.
  */
 
+import { DAY_MS } from './localDate.js';
+
 /** Hard cap for a single archive/staging .db file (200 MiB). */
 export const MAX_ARCHIVE_FILE_BYTES = 200 * 1024 * 1024;
 
@@ -68,7 +70,23 @@ export function isHttpUrl(url: unknown): boolean {
   }
 }
 
-const MIN_CUTOFF_MS = new Date(2000, 0, 1).getTime();
+/**
+ * Earliest acceptable cutoff: 2000-01-01T00:00:00Z. UTC midnight, not local
+ * midnight (PBI 2026-11-08-17): `new Date(2000, 0, 1)` resolves in the
+ * host timezone, so the bound used to shift by zone. Cutoffs are
+ * same-day-or-later end-of-day values far above either bound in practice,
+ * so the accepted/rejected set is unchanged — only the definition is now
+ * zone-independent.
+ */
+const MIN_CUTOFF_MS = Date.UTC(2000, 0, 1);
+
+/**
+ * How far past "now" a cutoff date may lie (PBI 2026-11-08-16): the +2 day
+ * grace covers timezone skew between the operator's date pick and the
+ * worker clock. Single named definition over the shared day unit instead
+ * of an inline `2 * 24 * 60 * 60 * 1000` expression.
+ */
+export const ARCHIVE_CUTOFF_FUTURE_TOLERANCE_MS = 2 * DAY_MS;
 
 /**
  * Convert a "YYYY-MM-DD" local date into the end-of-day cutoff in UTC ms.
@@ -110,7 +128,7 @@ export function cutoffMsFromLocalDate(dateStr: string): number {
   ) {
     throw new Error(`Invalid archive cutoff date: ${dateStr}`);
   }
-  if (Number.isNaN(ms) || ms < MIN_CUTOFF_MS || ms > Date.now() + 2 * 24 * 60 * 60 * 1000) {
+  if (Number.isNaN(ms) || ms < MIN_CUTOFF_MS || ms > Date.now() + ARCHIVE_CUTOFF_FUTURE_TOLERANCE_MS) {
     throw new Error(`Archive cutoff date out of range: ${dateStr}`);
   }
   return ms;
@@ -141,12 +159,20 @@ export class CutoffMismatchError extends Error {
  * Returns the derived ms on success. Throws the derivation error as-is for
  * bad dates, `Error('cutoffMs must be finite number')` for non-finite input,
  * and `CutoffMismatchError` (message embeds the expectation) for forged pairs.
+ * The `cutoffDate` parameter is validated here (PBI 2026-11-08-17) instead
+ * of being cast through `as string`: a non-string fails at this seam with
+ * the same `Invalid archive cutoff date: ...` wording the derivation used
+ * to produce for it (message continuity pinned by archiveGuards.test.ts),
+ * rather than travelling into the derivation as a mistyped value.
  */
 export function assertCutoffPair(cutoffDate: unknown, cutoffMs: unknown): number {
+  if (typeof cutoffDate !== 'string') {
+    throw new Error(`Invalid archive cutoff date: ${String(cutoffDate)}`);
+  }
   if (typeof cutoffMs !== 'number' || !Number.isFinite(cutoffMs)) {
     throw new Error('cutoffMs must be finite number');
   }
-  const derived = cutoffMsFromLocalDate(cutoffDate as string);
+  const derived = cutoffMsFromLocalDate(cutoffDate);
   if (cutoffMs !== derived) {
     throw new CutoffMismatchError(cutoffDate, cutoffMs, derived);
   }

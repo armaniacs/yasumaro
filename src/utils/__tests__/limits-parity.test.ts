@@ -15,6 +15,7 @@ const EXPECTED: Record<string, number> = {
   MAX_RESTORE_BASE64_BYTES: 157286400,
   AUDIT_CAP_OPFS: 1000,
   AUDIT_CAP_IDB: 100000,
+  AUDIT_CAP_FALLBACK: 1000,
   MAX_QUERY_LIMIT: 100000,
   MAX_LOG_FORWARD_MESSAGE_CHARS: 65536,
   MAX_LOG_FORWARD_DETAILS_KEYS: 64,
@@ -25,6 +26,9 @@ const EXPECTED: Record<string, number> = {
   MAX_TOKENS_PER_CALL: 10000000,
   MAX_ENVELOPE_CIPHERTEXT_LENGTH: 67108864,
   MAX_ERROR_BODY_SIZE: 1048576,
+  // Registered late (PBI 2026-11-08-16 cleanup): added by PBI 2026-11-08-15
+  // without updating this guard, which is why the export count drifted.
+  MAX_PRIVACY_POLICY_BYTES: 1048576,
   MAX_IMPORT_TEXT_BYTES: 10485760,
   MAX_PAYLOAD_STRING_BYTES: 1048576,
   MAX_BATCH_TOTAL_BYTES: 20971520,
@@ -55,9 +59,13 @@ const EXPECTED: Record<string, number> = {
   // validator and the mapper's second-layer clamps.
   MAX_VISIT_DURATION_SECONDS: 86400,
   MAX_SCROLL_RATIO_PERCENT: 100,
+  // PBI 2026-11-08-16: uBlock filter-list paste caps, moved unchanged from
+  // utils/ublockParser/index.ts so every size cap is greppable from here.
+  MAX_UBLOCK_FILTER_BYTES: 10485760,
+  MAX_UBLOCK_FILTER_LINES: 500000,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 50;
+const EXPECTED_LIMITS_EXPORT_COUNT = 53;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',
