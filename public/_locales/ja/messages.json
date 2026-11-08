@@ -6140,5 +6140,29 @@
     "placeholders": {
       "1": { "content": "$1" }
     }
+  },
+  "previewNoResponse": {
+    "message": "バックグラウンドワーカーから応答がありません",
+    "description": "プレビュー失敗: バックグラウンドワーカーが応答しなかった"
+  },
+  "previewProcessingFailed": {
+    "message": "処理に失敗しました",
+    "description": "プレビュー失敗: 詳細エラーなし"
+  },
+  "recordSaveFailed": {
+    "message": "保存に失敗しました",
+    "description": "記録失敗: 詳細エラーなし"
+  },
+  "panelLoadError": {
+    "message": "このパネルの読み込みに失敗しました（{panel}）。",
+    "description": "ダッシュボードのパネル読み込み失敗バナー。パネルIDのみで生エラーは含めない"
+  },
+  "ublockFileTooLarge": {
+    "message": "ファイルが大きすぎます（上限: {max}）。",
+    "description": "uBlock取り込みで上限超過ファイルを拒否"
+  },
+  "ublockFileAborted": {
+    "message": "ファイルの読み込みがキャンセルされました。",
+    "description": "uBlock取り込みのファイル読み込み中断"
   }
 }

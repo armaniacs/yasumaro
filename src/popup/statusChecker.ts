@@ -58,21 +58,21 @@ export function formatTimeAgo(timestamp: number): TimeFormat {
   // 相対時間
   let timeAgo: string;
   if (diff < 60 * 1000) {
-    timeAgo = getMessageOr('timeJustNow', 'たった今');
+    timeAgo = getMessageOr('timeJustNow', 'Just now');
   } else if (diff < 60 * 60 * 1000) {
     const minutes = Math.floor(diff / (60 * 1000));
     const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
-    timeAgo = msg || `${minutes}分前`;
+    timeAgo = msg || `${minutes} minutes ago`;
   } else if (diff < 24 * 60 * 60 * 1000) {
     const hours = Math.floor(diff / (60 * 60 * 1000));
     const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
-    timeAgo = msg || `${hours}時間前`;
+    timeAgo = msg || `${hours} hours ago`;
   } else if (diff < 48 * 60 * 60 * 1000) {
-    timeAgo = getMessageOr('timeYesterday', '昨日');
+    timeAgo = getMessageOr('timeYesterday', 'Yesterday');
   } else {
     const days = Math.floor(diff / (24 * 60 * 60 * 1000));
     const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });
-    timeAgo = msg || `${days}日前`;
+    timeAgo = msg || `${days} days ago`;
   }
 
   // 絶対時間
@@ -119,9 +119,10 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
   // Special URLs. This popup-side list is a deliberate subset of the
   // content-script SSOT SKIPPED_PROTOCOLS (src/content/urlSkipper.ts):
-  // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows,
-  // and data:/file:// URLs never reach the popup status check.
-  if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')) {
+  // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows.
+  if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')
+    || url.startsWith('chrome-extension://') || url.startsWith('moz-extension://')
+    || url.startsWith('file://') || url.startsWith('data:')) {
     return null;
   }
 

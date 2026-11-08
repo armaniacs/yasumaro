@@ -109,7 +109,7 @@ export class PreviewFlow {
         // PBI 2026-09-12-14: expected background failures return instead of
         // throwing — callers settle through PreviewSaveResult uniformly.
         logError('PREVIEW_RECORD failed: No response', {}, ErrorCode.CONTENT_EXTRACTION_FAILURE);
-        return { success: false, error: 'No response from background worker' };
+        return { success: false, error: getMessage('previewNoResponse') };
       }
 
       if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
@@ -117,7 +117,7 @@ export class PreviewFlow {
       }
 
       if (!previewResponse.success) {
-        const errorMsg = previewResponse.error || 'Processing failed';
+        const errorMsg = previewResponse.error || getMessage('previewProcessingFailed');
         logError('PREVIEW_RECORD failed', { response: previewResponse }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
         return { success: false, error: errorMsg };
       }
