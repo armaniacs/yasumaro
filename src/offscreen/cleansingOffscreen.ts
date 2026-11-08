@@ -139,11 +139,16 @@ export function handleCleansingOffscreenPayload(
     const { html, options } = payload as { html: string; options?: AiSummaryCleanseOptions };
     // PBI 2026-11-08-05: byte budget, not UTF-16 length — astral-heavy
     // input (emoji) used to slip through and pin the parser.
-    // Review S5: two-stage gate — the O(1) upper bound admits small pages
-    // without encoding; only near-limit input pays the exact TextEncoder
-    // pass, so the reject verdict and the byte count stay precise.
+    // Review S5/S1: three-stage gate — the O(1) upper bound (length*3)
+    // admits small pages without encoding; the O(1) lower bound (length*1,
+    // UTF-8では1単位あたり最低1byteのため超過確定) で即時rejectし全文
+    // encodeを避ける; 正確なbyte数表示が必要な境界付近のみTextEncoderで
+    // 確定させる。
     if (estimatedUtf8UpperBound(html.length) <= MAX_CLEANSING_HTML_BYTES) {
         return cleanseAfterGate(html, options);
+    }
+    if (html.length > MAX_CLEANSING_HTML_BYTES) {
+        return { success: false, error: `${TOO_LARGE_ERROR_PREFIX} at least ${html.length} bytes exceeds limit of ${MAX_CLEANSING_HTML_BYTES}` };
     }
     const byteLength = utf8ByteLength(html);
     if (byteLength > MAX_CLEANSING_HTML_BYTES) {

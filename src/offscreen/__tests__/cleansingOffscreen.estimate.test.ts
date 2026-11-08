@@ -44,6 +44,25 @@ describe('handleCleansingOffscreenPayload — two-stage size gate (S5)', () => {
     }
   });
 
+  it('rejects immediately via the lower bound without encoding a huge page (S1)', () => {
+    // char length alone already exceeds the byte budget (UTF-8 encodes every
+    // unit to at least 1 byte), so the verdict is certain without TextEncoder.
+    const encode = vi.spyOn(TextEncoder.prototype, 'encode');
+    try {
+      const html = 'x'.repeat(MAX_CLEANSING_HTML_BYTES + 1);
+      expect(html.length).toBeGreaterThan(MAX_CLEANSING_HTML_BYTES);
+      const res = handleCleansingOffscreenPayload({ html });
+      expect(res.success).toBe(false);
+      if (!res.success) {
+        expect(res.error.startsWith(TOO_LARGE_ERROR_PREFIX)).toBe(true);
+        expect(res.error).toContain('exceeds limit');
+      }
+      expect(encode).not.toHaveBeenCalled();
+    } finally {
+      encode.mockRestore();
+    }
+  });
+
   it('admits input whose exact bytes fit even when the bound exceeds the limit', () => {
     // ASCII at exactly the limit: the O(1) bound (3x) overshoots, but the
     // exact pass proves it fits — admitted, not falsely rejected.

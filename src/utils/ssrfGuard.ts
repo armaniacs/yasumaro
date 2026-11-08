@@ -84,7 +84,12 @@ export function isIpLiteral(hostname: string): boolean {
  * WHATWG URLパーサは `2130706433` (10進32bit) や `0x7f000001` (16進) を
  * IPv4アドレスとして正規化するが、URLを経由しない生ホスト名入力では
  * その正規化が働かない。ここで同一の値解釈を内製し、分類の素通しを防ぐ。
- * ドット区切りの10/8進・16進混在表記はURLパーサ側の正規化に委ね、対象外とする。
+ *
+ * 前提条件: 入力はURLパーサ済みhostname (`new URL(url).hostname` 由来の
+ * 正規化済み文字列) であること。ドット区切りの10/8進・16進混在表記
+ * (`0177.0.0.1` / `0x7f.0.0.1` 等) の正規化はURLパーサ側に委ね、
+ * この関数の対象外とする。生ホスト名を直接渡す呼び出し側は、先にURL
+ * パーサを通すか、混在表記を正規化してから渡すこと。
  *
  * @returns ドット区切りIPv4。数値として不正 (32bit超過) なら null (fail-closed)
  */
@@ -122,6 +127,10 @@ export function assertResolvedIpsPublic(ips: string[], hostnameForError: string)
 /**
  * ホスト名を解決して接続先IPを確定する (pin留めの前半)。
  * IPリテラルは直接分類し、ドメイン名は resolveHostname で解決して全件検証する。
+ *
+ * 前提条件: hostnameはURLパーサ済み (`new URL(url).hostname` 由来) の
+ * こと。ドット区切りの8進/16進混在表記の正規化はURLパーサに委ね、
+ * ここでは単一ラベル数値と素朴なドット区切り10進のみをリテラル展開する。
  *
  * @returns 検証済みの解決IP一覧 (接続後に突き合わせるpin)
  */
@@ -292,11 +301,15 @@ function classifyEmbeddedIpv4(embedded: string): boolean {
  * 展開してから分類する (S8の正規化の内製)。URLパーサを経由しない生ホスト名
  * 入力でも、パーサ経由時と同一の値で判定される。
  *
- * @param {string} hostname - チェックするホスト名
+ * 内部正規化: 小文字化・末尾ドット除去・ブラケット除去を内製するため、
+ * `10.0.0.1.` のような末尾ドット付き入力も素通ししない。ドット区切りの
+ * 8進/16進混在表記は対象外とし、URLパーサ済みhostnameを前提とする。
+ *
+ * @param {string} hostname - チェックするホスト名 (生入力可)
  * @returns {boolean} プライベートIPの場合true
  */
 export function isPrivateIpAddress(hostname: string): boolean {
-  const normalized = normalizeIpHostname(hostname);
+  const normalized = normalizeIpHostname(normalizeHostname(hostname));
   const target = expandSingleLabelNumericLiteral(normalized) ?? normalized;
 
   // IPv4形式（xxx.xxx.xxx.xxx）
