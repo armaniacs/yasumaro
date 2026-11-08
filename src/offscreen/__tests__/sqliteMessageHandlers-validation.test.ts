@@ -82,6 +82,18 @@ describe('sqliteMessageHandlers — final-defense validation', () => {
   beforeEach(() => vi.clearAllMocks());
 
   describe('insert', () => {
+    it('rejects a url-less record without calling the repo', async () => {
+      const res = await callHandler('SQLITE_INSERT', { title: 'No URL', created_at: 1 });
+      expect(res).toEqual({ success: false, error: expect.stringContaining('url') });
+      expect(recordsRepoMock.insert).not.toHaveBeenCalled();
+    });
+
+    it('rejects an empty-string url without calling the repo', async () => {
+      const res = await callHandler('SQLITE_INSERT', { url: '', created_at: 1 });
+      expect(res).toEqual({ success: false, error: expect.stringContaining('url') });
+      expect(recordsRepoMock.insert).not.toHaveBeenCalled();
+    });
+
     it('rejects a CHECK-violating flag without calling the repo', async () => {
       const res = await callHandler('SQLITE_INSERT', { url: 'https://a.com', created_at: 1, is_starred: 2 });
       expect(res).toEqual({ success: false, error: expect.stringContaining('is_starred') });
