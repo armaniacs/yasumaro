@@ -422,4 +422,13 @@ describe('checkPageStatus special URLs (PBI 2026-11-08-14)', () => {
     expect(result).toBeNull();
     expect(mockChromeRuntime.sendMessage).not.toHaveBeenCalled();
   });
+
+  it('returns null for non-string input instead of throwing outside try', async () => {
+    mockChromeRuntime.sendMessage.mockClear();
+
+    await expect(checkPageStatus(undefined as unknown as string)).resolves.toBeNull();
+    await expect(checkPageStatus(null as unknown as string)).resolves.toBeNull();
+
+    expect(mockChromeRuntime.sendMessage).not.toHaveBeenCalled();
+  });
 });

@@ -120,15 +120,19 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
 }
 
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
-  // Special URLs. This popup-side list is a deliberate subset of the
-  // content-script SSOT SKIPPED_PROTOCOLS (src/content/urlSkipper.ts):
-  // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows.
+  // Non-string inputs (e.g. a tab URL that is still undefined) cannot be
+  // checked; treat them like any other non-page URL instead of throwing.
+  if (typeof url !== 'string') return null;
+  // Special URLs. This popup-side list is the content-script SSOT
+  // SKIPPED_PROTOCOLS (src/content/urlSkipper.ts) subset plus a
+  // view-source: extension: 'about:' as a prefix covers the SSOT's
+  // about:blank/about:srcdoc rows.
   // Scheme comparison is case-insensitive (URL schemes are ASCII
   // case-insensitive, so 'CHROME://' must hit the same guard).
-  const scheme = url.toLowerCase();
-  if (scheme.startsWith('chrome://') || scheme.startsWith('about:') || scheme.startsWith('edge://')
-    || scheme.startsWith('chrome-extension://') || scheme.startsWith('moz-extension://')
-    || scheme.startsWith('file://') || scheme.startsWith('data:') || scheme.startsWith('view-source:')) {
+  const loweredUrl = url.toLowerCase();
+  if (loweredUrl.startsWith('chrome://') || loweredUrl.startsWith('about:') || loweredUrl.startsWith('edge://')
+    || loweredUrl.startsWith('chrome-extension://') || loweredUrl.startsWith('moz-extension://')
+    || loweredUrl.startsWith('file://') || loweredUrl.startsWith('data:') || loweredUrl.startsWith('view-source:')) {
     return null;
   }
 
