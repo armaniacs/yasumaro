@@ -91,6 +91,16 @@ export class OfflineNetworkQueue {
   constructor(private readonly port: QueuePort<OfflineJob> = queue) {}
 
   /**
+   * Job objects already compensated by offsetNonFailureResult in this queue
+   * instance (idempotency guard). Per-object identity is the right key: every
+   * flush load materializes fresh job objects from storage, so each cycle may
+   * lend once, while a duplicated call on the same reference lends nothing
+   * more. Entries vanish with their job objects (WeakSet holds no strong
+   * reference), so no cleanup pass is needed.
+   */
+  private readonly offsetApplied = new WeakSet<OfflineJob>();
+
+  /**
    * Enqueue a job. Returns true when durably queued, false when the job was
    * dropped or could not be persisted (logged, never thrown — PBI 2026-09-17-15).
    */
@@ -148,9 +158,19 @@ export class OfflineNetworkQueue {
    * increment lands on that same object.
    */
   offsetNonFailureResult(job: OfflineJob): void {
-    if (typeof job.retryCount === 'number') {
-      job.retryCount -= 1;
-    }
+    // Guard non-finite budgets (e.g. a corrupted NaN from storage): lending
+    // against them would spread the corruption instead of compensating a
+    // flush increment, so they are left untouched.
+    if (typeof job.retryCount !== 'number' || !Number.isFinite(job.retryCount)) return;
+    // Idempotency: at most one lend per job object. A duplicated contention
+    // branch calling this twice must not spend the budget twice for the single
+    // increment flush() is about to apply.
+    if (this.offsetApplied.has(job)) return;
+    this.offsetApplied.add(job);
+    // Lower bound: retryCount is a spend budget, never a debt. Lending below
+    // zero would mint budget out of thin air on the next increment (-1 + 1
+    // lands back at 0 instead of staying spent), so the floor holds at 0.
+    job.retryCount = Math.max(0, job.retryCount - 1);
   }
 
   async getQueueSize(): Promise<number> {
