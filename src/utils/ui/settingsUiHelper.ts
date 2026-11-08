@@ -86,6 +86,9 @@ function mirrorStatusToTop(el: HTMLElement): void {
   if (el.id !== 'status') return;
   try {
     syncStatusToTop();
+    // S27: a past mirror failure must not stick once the mirror succeeds —
+    // clear the flag so it always reflects the latest write, not history.
+    delete el.dataset.statusMirrorFailed;
   } catch {
     // WHY (visible failure, PBI 2026-11-08-09 (4)): the mirror is cosmetic,
     // but a DOM inconsistency (e.g. a detached #statusTop breaking
