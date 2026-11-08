@@ -31,7 +31,8 @@ vi.mock('../../../utils/logger/api.js', async () =>
   }),
 );
 
-import { decideStepOutcome, finalizeSuccess, type OutcomeAdapters } from '../recordingOutcome.js';
+import { decideStepOutcome, finalizeSuccess, settleOutcomeWrite, type OutcomeAdapters } from '../recordingOutcome.js';
+import { addLog } from '../../../utils/logger/core.js';
 import { StepFailureError, ErrorStrategy, type RecordingContext } from '../types.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import { DuplicateError } from '../steps/checkDuplicateStep.js';
@@ -379,5 +380,26 @@ describe('StepExecutor → decideStepOutcome handoff — PBI 2026-10-16-04', () 
     expect(outcome.result.success).toBe(false);
     expect(fakes.pendings).toHaveLength(0);
     expect(fakes.notifiedErrors).toHaveLength(1);
+  });
+});
+
+describe('settleOutcomeWrite (PBI 2026-11-07-10)', () => {
+  beforeEach(() => {
+    vi.mocked(addLog).mockClear();
+  });
+
+  it('records a rejecting registration via addLog instead of leaking an unhandled rejection', async () => {
+    settleOutcomeWrite(Promise.reject(new Error('disk full')), 'pending', 'trace-1');
+    await vi.waitFor(() => {
+      expect(vi.mocked(addLog)).toHaveBeenCalled();
+    });
+    const call = vi.mocked(addLog).mock.calls[0] as unknown[];
+    expect(call[0]).toBe('WARN');
+    expect(call[1]).toContain('pending');
+  });
+
+  it('does nothing for sync void writes', () => {
+    settleOutcomeWrite(undefined, 'skip', 'trace-2');
+    expect(vi.mocked(addLog)).not.toHaveBeenCalled();
   });
 });

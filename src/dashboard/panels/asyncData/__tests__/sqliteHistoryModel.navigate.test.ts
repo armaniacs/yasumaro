@@ -18,7 +18,7 @@ beforeEach(() => {
 });
 
 describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
-  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (28 -> 25)', () => {
+  it('exposes onNavigateIn/onNavigateOut and hides the 8 plumbing methods (25 -> 33, PBI 16 single-owner state)', () => {
     const model = createSqliteHistoryModel({ queryHistory: vi.fn().mockResolvedValue(okEmpty()) });
     expect(typeof model.onNavigateIn).toBe('function');
     expect(typeof model.onNavigateOut).toBe('function');
@@ -34,13 +34,21 @@ describe('sqliteHistoryModel — narrowed lifecycle interface', () => {
     ]) {
       expect(model).not.toHaveProperty(hidden);
     }
-    // PBI 2026-10-23-06: +1 for applyCollection (saved-collection recall).
     // PBI 2026-10-23-07: +1 for bulkSetStarred (bulk star apply + undo).
     // PBI 2026-11-02-07: +1 for applyCollectionQuery (v2 multi-clause execution).
-    expect(Object.keys(model)).toHaveLength(25);
-    expect(typeof model.applyCollection).toBe('function');
+    // PBI 18: applyCollection (v1 list recall) sunset into
+    // restoreCollectionToDraft (migrate-on-read to the collections draft).
+    // PBI 16: +8 for single-owner screen state (searchInput, flushPendingSearch,
+    // readHandoffSource, getPendingPages, subscribePending, loadPendingPages,
+    // startPendingPagesSubscription, stopPendingPagesSubscription).
+    expect(Object.keys(model)).toHaveLength(33);
+    expect(typeof model.restoreCollectionToDraft).toBe('function');
     expect(typeof model.applyCollectionQuery).toBe('function');
     expect(typeof model.bulkSetStarred).toBe('function');
+    expect(typeof model.searchInput).toBe('function');
+    expect(typeof model.readHandoffSource).toBe('function');
+    expect(typeof model.loadPendingPages).toBe('function');
+    expect(typeof model.startPendingPagesSubscription).toBe('function');
   });
 });
 

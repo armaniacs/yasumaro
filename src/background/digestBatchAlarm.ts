@@ -70,12 +70,80 @@ export const DIGEST_BATCH_CHUNK_SIZE = 200;
 let latestRunToken = 0;
 
 /**
+ * Session key for the run token. The service worker is ephemeral (MV3):
+ * module variables alone lose the token on every restart, so the token is
+ * written through to chrome.storage.session (which survives SW restarts
+ * within the browser session) and rehydrated at module load — the
+ * src/background/sqliteAlert.ts pattern. A plain string key is used — this
+ * is SW-lifetime state, not a user setting, so it stays out of
+ * StorageKeys/DEFAULT_SETTINGS.
+ *
+ * Why the token must be monotonic across restarts (PBI 2026-11-08-01):
+ * in-flight folds die with the SW lifetime, so no cross-lifetime stale pair
+ * can exist; the token only needs intra-lifetime monotonicity to stop an
+ * older tick at the next entry boundary. Persisting it keeps the generation
+ * moving forward so a post-restart tick can never reuse a token value from
+ * the previous lifetime. Cross-restart resume itself is owned by the durable
+ * checkpoint in digestBatchStorage, not by this token.
+ */
+const DIGEST_RUN_TOKEN_SESSION_KEY = 'digestBatchRunToken';
+
+/** True once this SW lifetime has advanced the token; a late-arriving
+ *  rehydration must not clobber the newer in-memory token with a stale snapshot. */
+let tokenMutated = false;
+
+/** In-flight (or completed) rehydration; shared so concurrent callers join it. */
+let tokenRestorePromise: Promise<void> | null = null;
+
+async function persistDigestRunToken(): Promise<void> {
+  try {
+    await chrome.storage.session.set({ [DIGEST_RUN_TOKEN_SESSION_KEY]: latestRunToken });
+  } catch {
+    // Best-effort; the in-memory token still guards this SW lifetime.
+  }
+}
+
+/**
+ * Rehydrate the run token after a service worker restart. Called once at
+ * module load (module top-level code runs on every SW wake); the alarm tick
+ * awaits it before minting its token so the generation never moves backward.
+ */
+function restoreDigestRunToken(): Promise<void> {
+  tokenRestorePromise ??= (async () => {
+    try {
+      const stored = await chrome.storage.session.get(DIGEST_RUN_TOKEN_SESSION_KEY) as Record<string, unknown>;
+      const saved = stored[DIGEST_RUN_TOKEN_SESSION_KEY];
+      if (
+        typeof saved === 'number' &&
+        Number.isInteger(saved) &&
+        saved > latestRunToken &&
+        !tokenMutated
+      ) {
+        latestRunToken = saved;
+      }
+    } catch {
+      // Unavailable session storage means a fresh generation; keep zeros.
+    }
+  })();
+  return tokenRestorePromise;
+}
+
+// SW wake re-runs module top-level code, so this rehydrates the token that
+// the previous SW lifetime persisted.
+void restoreDigestRunToken();
+
+/**
  * One alarm tick of the weekly digest batch. All gates are re-read at
  * execution time (tick-armed-under-old-settings protection); the work is a
  * single runDigestBatch chunk with the production checkpoint store.
  */
 export async function runReviewDigestBatch(deps: AlarmHandlerDeps): Promise<void> {
+  // The generation must not move backward across a restart: rehydrate before
+  // minting (the promise is shared, so steady-state ticks pay ~zero cost).
+  await restoreDigestRunToken();
+  tokenMutated = true;
   const token = ++latestRunToken;
+  void persistDigestRunToken();
   const isStale = (): boolean => token !== latestRunToken;
 
   // 設定は実行時に再読込 (受入条件 5): the tick fires unconditionally (the

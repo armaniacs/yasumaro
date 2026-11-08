@@ -1,0 +1,28 @@
+[package]
+name = "yasumaro"
+version = "6.9.72"
+edition = "2021"
+license = "MIT"
+description = "Read-only CLI for exported Yasumaro history databases"
+homepage = "https://github.com/armaniacs/yasumaro"
+documentation = "https://github.com/armaniacs/yasumaro/blob/main/cli/README.md"
+repository = "https://github.com/armaniacs/yasumaro"
+keywords = ["sqlite", "history", "cli"]
+categories = ["command-line-utilities"]
+readme = "README.md"
+
+[[bin]]
+name = "yasumaro"
+path = "src/main.rs"
+
+[dependencies]
+chrono = "0.4.45"
+clap = { version = "4", features = ["derive"] }
+csv = "1.4.0"
+dirs = "6"
+rusqlite = { version = "0.32", features = ["bundled"] }
+rustyline = "15"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2"
+toml = "1"

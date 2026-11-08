@@ -14,8 +14,6 @@ import { NotificationHelper } from '../notificationHelper.js';
 import type { RecordOptions } from '../pipeline/RecordingOrchestrator.js';
 import { buildRecordRequest, pickRecordDiagnostics } from '../recordRequestBuilder.js';
 import { validateUrl } from '../../utils/ssrfGuard.js';
-import { getPendingPages } from '../../utils/pendingStorage.js';
-import { claimRecoveryOwner, releaseRecoveryOwner } from '../../utils/recoveryClaimStore.js';
 import type { RegenerateCleanseMode } from '../../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { RecordingAdmit } from '../recordingAdmission.js';
 
@@ -246,35 +244,23 @@ export function createManualRecordHandler(deps: ManualRecordHandlerDeps) {
 
     const pipeline = deps.recordingPipeline;
 
-    // PBI 2026-09-25-12: a MANUAL_RECORD for a URL that sits in the pending
-    // pages is a manual recovery run — the same durable claim the offline
-    // queue processor holds, so it cannot overlap the 5-minute automatic
-    // retry or another surface's re-run of the same recording.
-    const pendingPages = await getPendingPages().catch(() => []);
-    const isRecoveryRun = pendingPages.some((p) => p.url === message.payload.url);
-    if (isRecoveryRun && !(await claimRecoveryOwner(message.payload.url, 'manual'))) {
-      sendResponse({ success: false, error: 'RECOVERY_CLAIMED' });
-      return;
-    }
-
-    let result: RecordingResult;
-    try {
-      // PBI 2026-09-12-04: field whitelist + source policy live in the shared
-      // builder (was a hand-spread literal duplicated with SAVE_RECORD).
-      result = await pipeline.record(buildRecordRequest('manual', {
-        title: message.payload.title,
-        url: message.payload.url,
-        content,
-        ...pickRecordDiagnostics(message.payload),
-        skipAi,
-        previewOnly: message.type === 'PREVIEW_RECORD',
-        force: message.payload.force,
-      }), { settings });
-    } finally {
-      if (isRecoveryRun) {
-        await releaseRecoveryOwner(message.payload.url, 'manual');
-      }
-    }
+    // PBI 2026-11-07-19: the recovery-claim order (pending-check → claim →
+    // record → finally-release) is owned by the orchestrator via the
+    // acquireRecoveryClaim flag. The handler builds the request only, so a
+    // MANUAL_RECORD for a pending-page URL and a PREVIEW_RECORD
+    // (previewOnly below) share the same envelope structurally instead of
+    // each call site holding its own acquire/release pair.
+    // PBI 2026-09-12-04: field whitelist + source policy live in the shared
+    // builder (was a hand-spread literal duplicated with SAVE_RECORD).
+    const result = await pipeline.record(buildRecordRequest('manual', {
+      title: message.payload.title,
+      url: message.payload.url,
+      content,
+      ...pickRecordDiagnostics(message.payload),
+      skipAi,
+      previewOnly: message.type === 'PREVIEW_RECORD',
+      force: message.payload.force,
+    }), { settings, acquireRecoveryClaim: true });
 
     if (result.success) {
       await deps.setUrlContent(message.payload.url, content);

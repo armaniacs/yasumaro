@@ -8,10 +8,13 @@ import type { StorageQuery } from '../../utils/sqlite-types.js';
 import type { SqliteValue } from '../sqliteEngine.js';
 import { INSERT_SQL, INSERT_IGNORE_RETURNING_SQL, buildInsertParams } from '../schema.js';
 import {
-  buildQuerySpec, buildPlainListStatements,
-  DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL, buildUpdateByIdStatements,
+  buildQuerySpec,
   type AlreadyCappedQuery,
 } from '../queryPlan.js';
+import {
+  buildPlainListStatements,
+  DELETE_BY_ID_SQL, TOGGLE_STAR_SQL, LIVE_COUNT_SQL, buildUpdateByIdStatements,
+} from '../sqliteQueryBuilder.js';
 import { QUERY_CAPS } from '../../utils/limits.js';
 import { BROWSING_LOG_COLUMNS, BROWSING_LOG_COLUMNS_SQL, mapNamed } from '../rowCodec.js';
 import type { QueryPayload } from './types.js';

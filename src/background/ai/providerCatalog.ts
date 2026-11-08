@@ -185,6 +185,7 @@ export const PROVIDER_CATALOG: ReadonlyMap<ProviderId, ProviderCatalogEntry> = n
       apiKeyKey: StorageKeys.OPENAI_OFFICIAL_API_KEY,
       modelKey: StorageKeys.OPENAI_OFFICIAL_MODEL,
       defaultBaseUrl: OPENAI_OFFICIAL_BASE_URL,
+      // Default liveness is tracked by the quarterly review PBI (pbi/2026-11-07-backlog-ai-model-review.md).
       defaultModel: 'gpt-6-luna',
       chatCompletionsDialect: 'openai',
       requiresApiKey: true,

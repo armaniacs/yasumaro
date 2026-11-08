@@ -8,13 +8,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  buildExtraWhereSql,
+} from '../queryPlan.js';
+import {
   buildFtsSearchStatements,
   buildLikeSearchStatements,
   buildSearchOrderClause,
-  buildExtraWhereSql,
   FTS_SEARCH_SELECT_COLUMNS,
   LIKE_SEARCH_SELECT_COLUMNS,
-} from '../queryPlan.js';
+} from '../sqliteQueryBuilder.js';
 import {
   buildOrderByClause,
   buildFts5OrderClause,

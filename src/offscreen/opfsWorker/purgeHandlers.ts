@@ -12,14 +12,16 @@
 
 import { sqlExec, sqlQuery, withTransaction, type HandlerContext } from './handlers.js';
 import {
-  purgeCutoffMs,
   buildPurgeOldRecordsStatements,
   contentPurgeStarredClause,
   buildContentPurgeStatements,
   buildAuditLogPurgeStatements,
+} from '../sqliteQueryBuilder.js';
+import {
+  purgeCutoffMs,
   runPurgeSequence,
   type PurgeExecutor,
-} from '../queryPlan.js';
+} from '../purgeRunner.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 
 export interface PurgeLogCallback {

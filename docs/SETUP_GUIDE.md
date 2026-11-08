@@ -144,7 +144,7 @@
 *   接続先は `https://api.openai.com/v1` に固定されています。URLの入力は不要です。
 *   **API Key**: OpenAIのAPIキー。**Model Name**: 例 `gpt-6-luna`。
 *   モデル名による分岐は行わず、`max_completion_tokens` を使用し、temperatureはモデルの既定値を使います。
-*   接続テストも設定済みのトークン上限を使います。この上限は推論トークンを含み、接続テストも課金対象です。
+*   接続テストは16トークンから開始し、length切断が続く場合のみ256/512/1024へ段階的に拡大します (設定済み上限の使用は公式系の最終手段のみ)。この上限は推論トークンを含み、接続テストも課金対象です。
 *   接続テストは通常要約のアプリ内使用量記録・事前制限を通りません。
 *   既存の互換スロットで公式URLを使っている場合も、新しい送信方針を適用します。キー・モデル・優先順位・カスタムプロンプトを移動・統合しないため、互換1と2で別々の設定を維持できます。新しい「OpenAI」へ切り替える場合は、キーとモデルを設定し、必要な上限やプロンプトも確認してください。新しい設定項目を含まない過去の設定バックアップも読み込めます。
 
@@ -461,7 +461,7 @@ Select your preferred provider from the dropdown. You can configure up to three 
 
 *   **Built-in AI**: Chrome's Gemini Nano or Edge's Phi-mini. No API key required; works offline once the model is downloaded and flags are enabled.
     *   See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md) for details.
-*   **OpenAI**: The official API uses the fixed endpoint `https://api.openai.com/v1`; no URL input is needed. Enter your OpenAI API key and model ID (e.g. `gpt-6-luna`). Requests use `max_completion_tokens` and omit temperature for every model name. Connection tests use the configured token budget, including reasoning tokens, and are billable. They do not pass through the normal summary usage accounting or pre-flight limits.
+*   **OpenAI**: The official API uses the fixed endpoint `https://api.openai.com/v1`; no URL input is needed. Enter your OpenAI API key and model ID (e.g. `gpt-6-luna`). Requests use `max_completion_tokens` and omit temperature for every model name. Connection tests start at 16 tokens and grow stepwise to 256/512/1024 only on continued length cutoffs, with the configured budget as the official-only last resort; the configured budget covers reasoning tokens, and connection tests are billable. They do not pass through the normal summary usage accounting or pre-flight limits.
     *   Existing compatible slots pointing to the official origin use the same request policy without moving or merging credentials, models, priorities, or custom prompts. The two legacy slots remain independent. To switch to the new OpenAI entry, configure its key and model and check its budget and prompt settings. Older settings backups without the new fields remain importable.
 *   **OpenAI Compatible**: Supports Groq and other compatible services. Note: Anthropic's native API is not OpenAI-compatible and cannot be used here; access Anthropic-class models via an OpenAI-compatible gateway/proxy.
     *   **Base URL**: e.g., `https://api.groq.com/openai/v1`

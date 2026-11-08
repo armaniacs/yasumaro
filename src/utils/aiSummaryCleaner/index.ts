@@ -1,5 +1,6 @@
 /**
  * AI要約クリーニング — メインエントリーポイント
+ * Execution stage: post-summary (rule-driven DOM cleanse after AI summary).
  * ルール表 (rules.ts) を走査してクレンジングを実行する
  *
  * 【モジュール構成】

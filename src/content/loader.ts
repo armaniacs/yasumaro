@@ -21,13 +21,19 @@ import { resolveVisitAdmission } from './visitAdmission.js';
 import type { CheckDomainResponse } from './visitAdmission.js';
 import { messageTransport } from '../messaging/messageTransport.js';
 import { logWarn } from '../utils/logger/api.js';
+// Type-only reference to the protocol SSOT (PBI 2026-11-08-08). Erased at
+// build time, so the Content Script entry's no-runtime-import constraint is
+// unaffected; it only ties the build-time define below to the shared constant.
+import type { CURRENT_PROTOCOL_VERSION } from '../messaging/protocol.js';
 
 // Content Script entry point runs without ESM module support, so we cannot
 // import CURRENT_PROTOCOL_VERSION statically. The value is injected at build
 // time via wxt.config.ts `define.__PROTOCOL_VERSION__` (SSOT: src/messaging/protocol.ts).
 // (No longer used for sends: CHECK_DOMAIN goes through messageTransport, which
 // stamps the version itself. The define stays for wxt.config.ts compatibility.)
-declare const __PROTOCOL_VERSION__: number | undefined;
+// The declared type is bound to the shared constant: a protocol bump changes
+// the literal and any loader-side numeric hardcode fails type-check.
+declare const __PROTOCOL_VERSION__: typeof CURRENT_PROTOCOL_VERSION | undefined;
 
 // Benchmark A/B build flag. Only builds made with OW_BENCH=1 define this as
 // true; production builds define it as false so the page-controllable

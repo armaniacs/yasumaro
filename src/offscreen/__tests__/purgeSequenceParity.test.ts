@@ -28,7 +28,7 @@ import {
   handlePurgeOldRecords, handleContentPurge, handleAuditLogPurge,
 } from '../opfsWorker/purgeHandlers.js';
 import type { HandlerContext } from '../opfsWorker/handlers.js';
-import { purgeCutoffMs } from '../queryPlan.js';
+import { purgeCutoffMs } from '../purgeRunner.js';
 
 interface Call { sql: string; params: unknown[] }
 

@@ -2,9 +2,16 @@
  * collectionHistoryQuery.ts
  * v2 collection execution for the history list (PBI 2026-11-02-07).
  *
- * The legacy v1 `applyCollection` path (sqliteHistoryModel) paints one flat
- * condition (search/tag/day) into the list. A v2 collection carries many
- * clauses plus pinned ids, so it needs its own execution:
+ * Single collection-execution seam behind the `queryHistory` injection
+ * (PBI 18): parse (`parseCollectionQueryV2`), merge (`mergeClauseResults`)
+ * and order (`orderCollectionRows`) are all reached through this module —
+ * the model never imports the canonical shape module directly — so fan-out
+ * and UNION/intersect meaning cannot drift per caller. The re-exports below
+ * are move-only; v2 SQL meaning, caps and ordering are unchanged.
+ *
+ * The deleted v1 `applyCollection` list path is NOT here: v1 saves migrate
+ * on read to the collections draft (`buildMigratedCollectionHandoff` in
+ * historyHandoff.ts).
  *
  *   1. parse via `parseCollectionQueryV2` (fail-closed to empty),
  *   2. resolve each clause to storage options (`resolveCollectionQueries`),
@@ -26,6 +33,10 @@ import { queryHistory, isServiceError } from './sqliteHistoryQuery.js';
 import type { BrowsingLogEntry } from './sqliteHistoryQuery.js';
 import { resolveCollectionQueries } from './collectionScopeResolver.js';
 import { parseCollectionQueryV2, mergeClauseResults } from '../../../utils/collectionQueryV2.js';
+// PBI 18 single-seam re-exports: parse + merge + order (orderCollectionRows
+// is defined below) are consumed through this module only. Move-only.
+export { parseCollectionQueryV2, mergeClauseResults };
+export type { CollectionQueryV2, CollectionClause } from '../../../utils/collectionQueryV2.js';
 import { MAX_AND_CLAUSE_WINDOW, MAX_COLLECTION_FANOUT, MAX_COLLECTION_ROWS, MAX_QUERY_IDS } from '../../../utils/limits.js';
 import { pickDefined } from '../../../utils/objectUtils.js';
 

@@ -62,6 +62,16 @@ export const VALID_MESSAGE_TYPES = [
 ] as const;
 
 /**
+ * Derived type of the registry table (PBI 2026-11-08-08).
+ *
+ * Single-row edit point: adding a message type means appending one literal
+ * above. Parity with the `ExtensionMessage` union is enforced by the
+ * compile assert in src/background/messageTypes.ts — drift on either side
+ * fails `npm run type-check`.
+ */
+export type ValidMessageType = (typeof VALID_MESSAGE_TYPES)[number];
+
+/**
  * Full set of types that content scripts are allowed to send.
  * Canonical SSOT for MessageRouter's trust table — MessageRouter derives
  * its `contentScriptAllowed` Set from this array. Adding a new

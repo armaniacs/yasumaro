@@ -52,7 +52,15 @@ export function asCustomPrompts(value: unknown): CustomPrompt[] {
     return Array.isArray(value) ? (value as CustomPrompt[]) : [];
 }
 
-/** Boundary guard for the provider select: unknown option values fall back to 'all'. */
+/**
+ * Boundary guard for the provider select: unknown option values fall back to
+ * 'all'. The accepted set is an explicit union comparison on purpose — this
+ * file must not import background/ai/providerCatalog (see the provider label
+ * SSOT boundary test in src/utils/storage/__tests__/providerLabelSso.test.ts).
+ * Drift against the catalog is caught by the invariant test in
+ * __tests__/customPromptManager-provider-guard.test.ts, not by a runtime
+ * catalog set here.
+ */
 export function asPromptProvider(value: unknown): CustomPrompt['provider'] {
     return value === 'gemini' || value === 'openai-official' || value === 'openai' || value === 'openai2'
         || value === 'lm-studio' || value === 'ollama' || value === 'all'

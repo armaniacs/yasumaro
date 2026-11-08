@@ -32,18 +32,29 @@ import { errorMessage } from '../../../utils/errorUtils.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { QueryCache } from './historyQueryCache.js';
-import { parseCollectionQuery } from './savedCollectionQuery.js';
 import { resolveCollectionHistory, orderCollectionRows } from './collectionHistoryQuery.js';
 import type { CollectionWarning } from './collectionHistoryQuery.js';
-import type { HistoryCustomRange } from './historyHandoff.js';
+import type { HistoryCustomRange, HistoryHandoffRefusal } from './historyHandoff.js';
+import { buildMigratedCollectionHandoff, requestHistoryHandoff } from './historyHandoff.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
 import { ReloadGuard } from './reloadGuard.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { getPendingPages as defaultGetPendingPages } from '../../../utils/pendingStorage.js';
+import type { PendingPage } from '../../../utils/pendingStorage.js';
 
 // ---------------------------------------------------------------------------
 // State — moved from sqliteHistoryPanelState.ts so HistoryModel owns it.
 // The reducer stays pure and re-used internally via dispatch().
 // ---------------------------------------------------------------------------
+
+/**
+ * Migrate-on-read delivery result (PBI 18 sunset): a v1 save either lands
+ * in the collections draft (`ok: true` + where the bus took it) or refuses
+ * fail-closed (`ok: false` — corrupt/empty input, never a throw).
+ */
+export type RestoreCollectionResult =
+  | { ok: true; where: 'applied' | 'pending' | 'dropped-previous'; query: Record<string, unknown> }
+  | { ok: false; reason: HistoryHandoffRefusal };
 
 export interface SqliteHistoryState {
   entries: BrowsingLogEntry[];
@@ -110,9 +121,6 @@ export type SqliteHistoryAction =
   | { type: 'sortChange'; sortBy: 'created_at' | 'relevance'; sortDir: 'ASC' | 'DESC' }
   | { type: 'tagInitiated'; tag: string }
   | { type: 'domainSearchInitiated'; query: string }
-  // PBI 2026-10-23-06: saved-collection recall — every stored condition lands
-  // in state through this one action so a recall cannot drift per field.
-  | { type: 'collectionApplied'; search: string; tag: string | null; date: string | null }
   // PBI 2026-11-02-07: v2 collection recall — clauses cannot land in the
   // single search/tag/date fields, so they are cleared and the notice carries
   // what the list shows instead.
@@ -250,21 +258,6 @@ export function historyStateReducer(
 
     case 'domainSearchInitiated':
       return { ...state, searchQuery: action.query, customRange: null, collectionWarning: null, currentPage: 0 };
-
-    // PBI 2026-10-23-06: recall applies every stored condition in one pass.
-    // The current sort is preserved on purpose — a collection is a named
-    // condition, not a sort choice.
-    case 'collectionApplied':
-      return {
-        ...state,
-        searchQuery: action.search,
-        activeTagFilter: action.tag,
-        selectedDate: action.date,
-        customRange: null,
-        pendingTagFallback: null,
-        collectionWarning: null,
-        currentPage: 0,
-      };
 
     // PBI 2026-11-02-07: v2 recall — clauses cannot land in the single
     // search/tag/date fields, so they are cleared and the warning carries
@@ -437,8 +430,58 @@ export interface SqliteHistoryModelDeps {
   getSqliteStatus?: typeof getSqliteStatus;
   /** Timing policy for debounced sort persistence; defaults to 500ms setTimeout. */
   scheduler?: PersistScheduler;
+  /**
+   * PBI 16: timing policy for the debounced search input. Separate instance
+   * from `scheduler` (sort persistence) so the two debounces never share a
+   * timer. Defaults to setTimeout.
+   */
+  searchScheduler?: PersistScheduler;
+  /**
+   * PBI 16: pending-pages source. Defaults to chrome.storage-backed
+   * getPendingPages + onChanged; tests inject a fake.
+   */
+  pendingPages?: PendingPagesSource;
   /** @deprecated Prefer subscribe(); kept for Controller shim compatibility. */
   onStateChange?: () => void;
+}
+
+/**
+ * PBI 16: pending-pages seam. `load` reads the current list; `subscribe`
+ * registers a live-update callback and returns its unsubscribe. The chrome
+ * default is side-effect-free at creation — listeners attach in
+ * startPendingPagesSubscription, never in the factory.
+ */
+export interface PendingPagesSource {
+  load(): Promise<PendingPage[]>;
+  subscribe(onChange: () => void): () => void;
+}
+
+function createChromePendingPagesSource(): PendingPagesSource {
+  return {
+    load(): Promise<PendingPage[]> {
+      return defaultGetPendingPages();
+    },
+    subscribe(onChange: () => void): () => void {
+      if (typeof chrome === 'undefined' || !chrome.storage?.onChanged) {
+        return () => undefined;
+      }
+      const listener = (changes: Record<string, unknown>, areaName: string): void => {
+        if (areaName === 'local' && changes['pending_pages']) {
+          onChange();
+        }
+      };
+      chrome.storage.onChanged.addListener(listener);
+      return () => chrome.storage.onChanged.removeListener(listener);
+    },
+  };
+}
+
+/** PBI 16: the filter triple the history→collection handoff reads. */
+export interface HistoryHandoffSource {
+  searchQuery: string;
+  activeTagFilter: string | null;
+  selectedDate: string | null;
+  customRange: HistoryCustomRange | null;
 }
 
 export type AppendResult =
@@ -495,27 +538,50 @@ export interface SqliteHistoryModel {
   deleteSelectedEntries(): Promise<BulkDeleteResult>;
   search(query: string): void;
   /**
-   * Recall convention (PBI 2026-11-02-03): the recall target is the
-   * collections panel draft (`applyToDraft` / `editor.loadSaved`) — NOT
-   * the history list.
-   *
-   * @deprecated v1-only legacy path. Parses the flat v1 shape
-   * (search/tag/date) and paints it into the history list. No production
-   * caller remains (recall goes to the collections draft since PBI
-   * 2026-11-01-04); kept for v1-shaped restores with its PBI 2026-10-23-06
-   * behavior pinned by tests. Do not extend — extend the draft handoff
-   * (`historyHandoff.ts`) instead.
+   * PBI 16: debounced search entry point — the single owner of the pending
+   * input. Stores the latest keystroke and dispatches via the injected
+   * searchScheduler (300ms production default); tests inject an immediate
+   * scheduler. Replaces the former panel-side debounce timer.
    */
-  applyCollection(rawQuery: Record<string, unknown>): void;
+  searchInput(query: string): void;
+  /** PBI 16: synchronously dispatch a still-debounced input, if any. */
+  flushPendingSearch(): void;
+  /**
+   * PBI 16: handoff read — flushes a still-debounced input BEFORE returning
+   * the filter triple, so a fill+click-send sequence can never read pre-input
+   * state. The flush ordering lives inside this one method; callers have no
+   * order to get wrong (the former panel-side flushPendingSearch hack).
+   */
+  readHandoffSource(): HistoryHandoffSource;
+  /** PBI 16: current pending-pages list owned by the model. */
+  getPendingPages(): PendingPage[];
+  /** PBI 16: subscribe to pending-pages changes; returns unsubscribe. */
+  subscribePending(listener: () => void): () => void;
+  /** PBI 16: (re)load the pending-pages list and notify subscribers. */
+  loadPendingPages(): Promise<void>;
+  /**
+   * PBI 16: start/stop the pending-pages live subscription. The panel decides
+   * *when* (load/destroy); the model owns *how*. Idempotent.
+   */
+  startPendingPagesSubscription(): void;
+  stopPendingPagesSubscription(): void;
   /**
    * v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
    * injected queryHistory, mergeClauseResults UNION pins, created_at-ordered
    * and capped at MAX_COLLECTION_ROWS. The merged set is cached so paging
-   * slices from it; any filter change leaves collection mode. The legacy v1
-   * applyCollection above is untouched — this is the new path, not a change
-   * to it.
+   * slices from it; any filter change leaves collection mode. v1 saves do
+   * not execute here — they migrate on read to the collections draft via
+   * `restoreCollectionToDraft` below (PBI 18 sunset).
    */
   applyCollectionQuery(rawQuery: unknown): Promise<void>;
+  /**
+   * Migrate-on-read for v1 saves (PBI 18 sunset): parses the flat v1
+   * record fail-closed and delivers it to the collections draft via the
+   * historyHandoff bus. Never paints the history list, never fetches,
+   * never throws for unknown shapes (closes to the `empty` refusal).
+   * This replaced the deleted v1 list-painting `applyCollection`.
+   */
+  restoreCollectionToDraft(rawQuery: unknown): RestoreCollectionResult;
   /**
    * Bulk star (PBI 2026-10-23-07): set or unset the star for the given ids.
    * Rows already in the target state are skipped (never toggled down by a
@@ -608,6 +674,92 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   function schedulePersistSort(sortBy: SqliteHistoryState['sortBy'], sortDir: SqliteHistoryState['sortDir']): void {
     pendingPersist = { sortBy, sortDir };
     scheduler.defer(writePendingPersist, 500);
+  }
+
+  // PBI 16: debounced search ownership (moved from the panel-local
+  // pendingSearchQuery + setTimeout). The handoff reads through
+  // readHandoffSource so flush-before-read cannot be skipped by a caller.
+  let pendingSearchQuery: string | null = null;
+  const searchScheduler = deps.searchScheduler ?? createTimeoutPersistScheduler();
+
+  function searchInput(query: string): void {
+    pendingSearchQuery = query;
+    searchScheduler.defer(() => {
+      if (pendingSearchQuery !== null) {
+        const flushed = pendingSearchQuery;
+        pendingSearchQuery = null;
+        search(flushed);
+      }
+    }, 300);
+  }
+
+  function flushPendingSearch(): void {
+    searchScheduler.cancel();
+    if (pendingSearchQuery !== null) {
+      const flushed = pendingSearchQuery;
+      pendingSearchQuery = null;
+      search(flushed);
+    }
+  }
+
+  function cancelPendingSearch(): void {
+    searchScheduler.cancel();
+    pendingSearchQuery = null;
+  }
+
+  function readHandoffSource(): HistoryHandoffSource {
+    flushPendingSearch();
+    return {
+      searchQuery: state.searchQuery,
+      activeTagFilter: state.activeTagFilter,
+      selectedDate: state.selectedDate,
+      customRange: state.customRange,
+    };
+  }
+
+  // PBI 16: pending-pages ownership (moved from panel-local state). The list
+  // lives here; change notification flows through a dedicated listener set so
+  // a history refresh never repaints the pending region (which would wipe
+  // in-row record-error DOM state) and a pending update never re-renders the
+  // entry list.
+  let pendingPages: PendingPage[] = [];
+  const pendingListeners = new Set<() => void>();
+  const pendingSource = deps.pendingPages ?? createChromePendingPagesSource();
+  let stopPendingSource: (() => void) | null = null;
+
+  function notifyPending(): void {
+    for (const l of [...pendingListeners]) {
+      try {
+        l();
+      } catch (error: unknown) {
+        void logError('sqliteHistoryModel: pending subscriber threw during notify', { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'sqliteHistoryModel');
+      }
+    }
+  }
+
+  async function loadPendingPages(): Promise<void> {
+    pendingPages = await pendingSource.load();
+    notifyPending();
+  }
+
+  function startPendingPagesSubscription(): void {
+    if (stopPendingSource !== null) return;
+    stopPendingSource = pendingSource.subscribe(() => {
+      void loadPendingPages();
+    });
+  }
+
+  function stopPendingPagesSubscription(): void {
+    if (stopPendingSource !== null) {
+      stopPendingSource();
+      stopPendingSource = null;
+    }
+    pendingPages = [];
+  }
+
+  function subscribePending(listener: () => void): () => void {
+    pendingListeners.add(listener);
+    return () => pendingListeners.delete(listener);
   }
 
   function notify(): void {
@@ -835,6 +987,10 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     // fire post-unmount. Flushing preserves the user's sort choice.
     guard.invalidate();
     flushPendingPersist();
+    // PBI 16: a still-debounced search keystroke is discarded here, not
+    // flushed — leaving the screen must not issue a query for text the user
+    // never committed (and the timer must not fire post-unmount).
+    cancelPendingSearch();
     invalidateCache();
     clearEntrySelection();
   }
@@ -1012,33 +1168,6 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     }
   }
 
-  // v1-only legacy path (PBI 2026-11-02-03 recall convention): recall lands
-  // in the collections draft, not here. This entry point only parses the
-  // flat v1 shape (savedCollectionQuery 縮退の出口: corrupted query degrades
-  // to the empty condition); the model only dispatches state and builds one fetch with
-  // every stored condition — search, tag filter and the selected day range.
-  function applyCollection(rawQuery: Record<string, unknown>): void {
-    leaveCollectionMode();
-    const parsed = parseCollectionQuery(rawQuery);
-    dispatch({
-      type: 'collectionApplied',
-      search: parsed.search,
-      tag: parsed.tag,
-      date: parsed.date,
-    });
-    notify();
-    const dayRange = parsed.date !== null ? localDayRangeFromDateString(parsed.date) : null;
-    void fetchData({
-      ...pickDefined({
-        search: parsed.search !== '' ? parsed.search : undefined,
-        tagFilter: parsed.tag ?? undefined,
-        since: dayRange?.since,
-        until: dayRange?.until,
-      }),
-      page: 0,
-    });
-  }
-
   // v2 collection execution (PBI 2026-11-02-07): fan-out per clause via the
   // injected queryHistory (DI, same seam as fetchData), mergeClauseResults
   // UNION pins, created_at-ordered and capped. The merged set stays cached
@@ -1066,6 +1195,19 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     const slice = collectionPageSlice(0);
     dispatch({ type: 'loadSuccess', data: { rows: slice.rows, total: slice.total } });
     notify();
+  }
+
+  // Migrate-on-read for v1 saves (PBI 18 sunset): the stored flat record
+  // is parsed fail-closed and handed to the collections draft bus. The
+  // history list is deliberately untouched — no dispatch, no fetch, no
+  // notify — because recall paints the draft, not the list (PBI
+  // 2026-11-02-03 recall convention). Unknown shapes refuse with `empty`,
+  // never throw.
+  function restoreCollectionToDraft(rawQuery: unknown): RestoreCollectionResult {
+    const migrated = buildMigratedCollectionHandoff(rawQuery);
+    if (!migrated.ok) return { ok: false, reason: migrated.reason };
+    const where = requestHistoryHandoff(migrated.query);
+    return { ok: true, where, query: migrated.query };
   }
 
   async function selectDate(dateStr: string): Promise<void> {
@@ -1163,8 +1305,16 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
     deleteSelectedEntries,
     bulkSetStarred,
     search,
-    applyCollection,
+    searchInput,
+    flushPendingSearch,
+    readHandoffSource,
+    getPendingPages: () => pendingPages,
+    subscribePending,
+    loadPendingPages,
+    startPendingPagesSubscription,
+    stopPendingPagesSubscription,
     applyCollectionQuery,
+    restoreCollectionToDraft,
     selectDate,
     changeSort,
     filterByTag,

@@ -39,6 +39,56 @@ const RULES = [
             'src/background/ai/providerCatalog.ts',
         ]),
     },
+    // --- PBI 2026-11-07-01: shim-path bans. Match the import path (not the
+    // identifier) so renames cannot dodge the gate. Grandfathered sets list
+    // only non-test files that still import the shim today (__tests__ dirs
+    // are skipped by the walker); entries may only be removed, never added.
+    {
+        pattern: /(?:from|import\()\s*['"][^'"]*keySerializer\.js['"]/,
+        name: 'keySerializer shim import',
+        canonical: 'src/utils/storage/storageTransaction.ts',
+        grandfathered: new Set([
+        ]),
+    },
+    {
+        pattern: /(?:from|import\()\s*['"][^'"]*logMasker\.js['"]/,
+        name: 'logMasker shim import',
+        canonical: "src/utils/sensitiveDataMask.ts maskSensitiveData(data, 'partial')",
+        grandfathered: new Set([
+        ]),
+    },
+    {
+        pattern: /(?:from|import\()\s*['"][^'"]*\/redaction\.js['"]/,
+        name: 'redaction shim import',
+        canonical: 'src/utils/sensitiveDataMask.ts',
+        grandfathered: new Set([
+        ]),
+    },
+    {
+        pattern: /(?:from|import\()\s*['"][^'"]*savedUrlStore\.js['"]/,
+        name: 'savedUrlStore shim import',
+        canonical: 'src/utils/storage/savedUrlRepository.ts (types/constants via src/utils/urlEntry.ts)',
+        grandfathered: new Set([
+        ]),
+    },
+    {
+        pattern: /(?:from|import\()\s*['"][^'"]*utils\/auditLog\.js['"]/,
+        name: 'auditLog shim import',
+        canonical: 'src/messaging/auditLogGateway.ts',
+        grandfathered: new Set([
+            'src/background/ai/RemoteAIService.ts',
+        ]),
+    },
+    {
+        // Legacy Adapter names re-exported by SettingsRepository. The line
+        // must name both an *Adapter identifier and the SettingsRepository
+        // path, so the unrelated queue/log/offscreen adapters never match.
+        pattern: /(?=.*SettingsRepository\.js['"])(?=.*\b\w*Adapter\b)/,
+        name: 'SettingsRepository Adapter alias import',
+        canonical: 'src/utils/storage/storagePort.ts (StoragePort, ChromeStoragePort, InMemoryStoragePort)',
+        grandfathered: new Set([
+        ]),
+    },
 ];
 
 function* walk(dir) {

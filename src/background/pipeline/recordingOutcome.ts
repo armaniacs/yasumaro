@@ -55,7 +55,7 @@ export interface OutcomeNotifier {
  * Production: pendingStorage. Tests: in-memory fake.
  */
 export interface OutcomePendingWriter {
-  addPending(entry: Parameters<typeof addPendingPage>[0]): void;
+  addPending(entry: Parameters<typeof addPendingPage>[0]): void | Promise<void>;
 }
 
 /**
@@ -65,7 +65,7 @@ export interface OutcomePendingWriter {
  * never a URL, a title, or content (軸3「収集を増やさない」).
  */
 export interface OutcomeSkipRecorder {
-  recordSkip(reason: SkipReasonCode): void;
+  recordSkip(reason: SkipReasonCode): void | Promise<void>;
 }
 
 export interface OutcomeAdapters {
@@ -79,15 +79,36 @@ const prodNotifier: OutcomeNotifier = {
   notifySaveSuccess: (title) => notifyObsidianSaveSuccess(title),
 };
 
+/**
+ * Settle wrapper (PBI 2026-11-07-10, 案B): the single discard point for
+ * outcome side-effect writes. A sync `void` result needs nothing; a promise
+ * gets a rejection handler that records the failure fact via `addLog` so no
+ * promise is silently voided and no unhandled rejection escapes. The log
+ * carries the kind + error message + traceId only — never a URL, a title, or
+ * content (軸3「収集を増やさない」). `addLog` itself never rejects
+ * (catch-all in logger/core.ts), so the derived promise cannot reject either.
+ */
+export function settleOutcomeWrite(
+  write: void | Promise<void>,
+  kind: 'pending' | 'skip',
+  traceId: string | undefined,
+): void {
+  if (!write || typeof (write as Promise<void>).then !== 'function') return;
+  (write as Promise<void>).then(undefined, (error: unknown) => {
+    addLog(LogType.WARN, `RecordingPipeline: outcome ${kind} registration failed`, {
+      error: error instanceof Error ? error.message : String(error),
+      ...pickDefined({ traceId }),
+    });
+  });
+}
+
 const prodPending: OutcomePendingWriter = {
-  addPending: (entry) => {
-    void addPendingPage(entry);
-  },
+  addPending: (entry) => addPendingPage(entry),
 };
 
 const prodSkipRecorder: OutcomeSkipRecorder = {
-  recordSkip: (reason) => {
-    void recordSkipReason(reason);
+  recordSkip: async (reason) => {
+    await recordSkipReason(reason);
   },
 };
 
@@ -148,14 +169,14 @@ export function decideStepOutcome(
   if (original instanceof PrivatePageError) {
     // PBI 2026-10-31-01: the popup answers "why was this not recorded" from
     // the latest skip reason, so the settled refusal records it here.
-    adapters.skipRecorder.recordSkip('private-page');
+    settleOutcomeWrite(adapters.skipRecorder.recordSkip('private-page'), 'skip', context.traceId);
     return { done: true, result: buildPrivatePageResult(context, original) };
   }
   if (original instanceof DuplicateError) {
     const { data } = context;
     // PBI 2026-10-31-01: 同日重複 — the popup shows the reason with its
     // consecutive count (a second skipped attempt reads "×2").
-    adapters.skipRecorder.recordSkip('duplicate');
+    settleOutcomeWrite(adapters.skipRecorder.recordSkip('duplicate'), 'skip', context.traceId);
     return {
       done: true,
       result: { success: true, skipped: true, reason: original.reason, title: data.title, url: data.url },
@@ -175,7 +196,7 @@ export function decideStepOutcome(
     );
     // PBI 2026-10-31-01: a terminal regenerate failure is a "not recorded"
     // reason the popup shows, like the FATAL/RETRY branch below.
-    adapters.skipRecorder.recordSkip('pipeline-error');
+    settleOutcomeWrite(adapters.skipRecorder.recordSkip('pipeline-error'), 'skip', context.traceId);
     const result = buildErrorResult(context, error);
     adapters.notifier.notifyError(context.data.title, error.message);
     return { done: true, result };
@@ -193,7 +214,7 @@ export function decideStepOutcome(
     );
     // PBI 2026-10-31-01: a terminal pipeline failure is a "not recorded"
     // reason the popup shows — the notice alone never reaches a closed popup.
-    adapters.skipRecorder.recordSkip('pipeline-error');
+    settleOutcomeWrite(adapters.skipRecorder.recordSkip('pipeline-error'), 'skip', context.traceId);
     // PBI 2026-09-22-04: regenerate is UPDATE-only — pending-page recovery
     // replays a MANUAL_RECORD INSERT that would duplicate the row being
     // replaced. The failure still surfaces as an error result + notice.
@@ -203,7 +224,11 @@ export function decideStepOutcome(
     // PBI 2026-10-16-04: both rules live in decideRecoveryOwner alone.
     const owner = decideRecoveryOwner({ targetEntryId: context.data.targetEntryId, enqueued });
     if (owner === 'pending') {
-      adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message));
+      settleOutcomeWrite(
+        adapters.pending.addPending(pendingEntry(context, 'pipeline-error', error.message)),
+        'pending',
+        context.traceId,
+      );
     }
     const result = buildErrorResult(context, error);
     adapters.notifier.notifyError(context.data.title, error.message);
@@ -283,7 +308,11 @@ export function finalizeSuccess(
     enqueued: obsidianError?.offlineEnqueued === true,
   });
   if (obsidianError && obsidianOwner === 'pending') {
-    adapters.pending.addPending(pendingEntry(context, 'obsidian-write-failed', obsidianError.error.message));
+    settleOutcomeWrite(
+      adapters.pending.addPending(pendingEntry(context, 'obsidian-write-failed', obsidianError.error.message)),
+      'pending',
+      context.traceId,
+    );
   }
 
   const result = buildResult(context);

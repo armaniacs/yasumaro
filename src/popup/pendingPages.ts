@@ -5,7 +5,8 @@ import { logError } from '../utils/logger/api.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 import { showSuccess, showError } from './errorUtils.js';
-import { escapeHtml, clearElement, wireOnce } from './domUtils.js';
+import { clearElement, wireOnce } from './domUtils.js';
+import { buildPendingRowHtml } from '../utils/pendingRowRenderer.js';
 import { recordPendingPage } from '../messaging/pendingRecordGateway.js';
 import {
   addDomainToWhitelist,
@@ -57,13 +58,9 @@ export async function loadPendingPages(): Promise<void> {
         item.dataset.url = page.url;
         item.dataset.index = String(index);
 
-        setElementHtml(item, `
-          <input type="checkbox" value="${escapeHtml(page.url)}" class="pending-checkbox">
-          <div class="pending-item-content">
-            <div class="pending-item-title pending-item-title--link">${escapeHtml(page.title)}</div>
-            <div class="pending-item-reason">${escapeHtml(page.headerValue || page.reason)}</div>
-          </div>
-        `);
+        // Row HTML lives in the shared pending-row renderer (PBI 2026-11-07-17);
+        // the popup keeps the element, its dataset, and the title-click wiring.
+        setElementHtml(item, buildPendingRowHtml(page, { mode: 'checkbox' }));
 
         const titleEl = item.querySelector('.pending-item-title');
         if (titleEl) {

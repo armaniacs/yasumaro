@@ -14,7 +14,7 @@ import {
     removeSavedUrl,
     isUrlSaved,
     getSavedUrlCount,
-} from '../storage/savedUrlStore.js';
+} from '../storage/savedUrlRepository.js';
 import { MAX_URL_SET_SIZE, MAX_CONTENT_ENTRIES } from '../urlEntry.js';
 import type { SavedUrlEntry } from '../urlEntry.js';
 

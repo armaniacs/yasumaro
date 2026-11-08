@@ -14,6 +14,62 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-08 arch-delivery-loop archloop-1108（9件） ― ✅ 9件完了・アーカイブ済み
+
+診断ドメイン: messaging seam・offscreen query・MV3乖離。01 SW-let永続化 / 02 micro fold+dead削除 / 03 alias集約 / 04 innerHTML往復除去 / 05 backend parity+pin / 06 facade段階削除(02後) / 07 twin traversal統合 / 08 registry複製解消(03後) / 09 E2E肯定条件化。最終ゲート: make clean test。台帳は [2026-11-08-00-backlog-archloop-1108.md](2026-11-08-00-backlog-archloop-1108.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-08-01-fix-sw-module-let.md](../dev-docs/archived/pbi/2026-11-08-01-fix-sw-module-let.md) | 🔧非機能追加 | 12 | M | ✅ 完了。token・計数のsession永続化+singleton注入必須化 |
+| ~~02~~ | [2026-11-08-02-refactor-micro-fold.md](../dev-docs/archived/pbi/2026-11-08-02-refactor-micro-fold.md) | 🔧非機能追加 | 10 | M | ✅ 完了。fts/normalize削除+planner集約 |
+| ~~03~~ | [2026-11-08-03-refactor-messaging-alias.md](../dev-docs/archived/pbi/2026-11-08-03-refactor-messaging-alias.md) | 🔧非機能追加 | 7 | S | ✅ 完了。alias正本集約・層維持 |
+| ~~04~~ | [2026-11-08-04-fix-connectiontests-innerhtml.md](../dev-docs/archived/pbi/2026-11-08-04-fix-connectiontests-innerhtml.md) | 🔧非機能追加 | 6.4 | S | ✅ 完了。往復除去+markup pin |
+| ~~05~~ | [2026-11-08-05-refactor-search-parity.md](../dev-docs/archived/pbi/2026-11-08-05-refactor-search-parity.md) | 🔧非機能追加 | 4.8 | M | ✅ 完了。per-path統一+parity pin |
+| ~~06~~ | [2026-11-08-06-refactor-queryplan-facade.md](../dev-docs/archived/pbi/2026-11-08-06-refactor-queryplan-facade.md) | 🔧非機能追加 | 4.0 | M | ✅ 完了。facadeにdeprecated+直import移行 |
+| ~~07~~ | [2026-11-08-07-refactor-scope-traversal.md](../dev-docs/archived/pbi/2026-11-08-07-refactor-scope-traversal.md) | 🔧非機能追加 | 3.2 | S | ✅ 完了。単一codec+seam漏れ解消 |
+| ~~08~~ | [2026-11-08-08-refactor-message-registry.md](../dev-docs/archived/pbi/2026-11-08-08-refactor-message-registry.md) | 🔧非機能追加 | 2.4 | S | ✅ 完了。loader共有定数+drift pin |
+| ~~09~~ | [2026-11-08-09-test-e2e-wait.md](../dev-docs/archived/pbi/2026-11-08-09-test-e2e-wait.md) | 🔧非機能追加 | 1.6 | XS | ✅ 完了。固定待ち除去・肯定条件化 |
+
+### 2026-11-07 arch-delivery-loop archloop-1107（5件） ― ✅ 5件完了・アーカイブ済み
+
+診断ドメイン: モジュール深度・seam・約束事乖離(乖離なし)。15 taxonomy集約+pinテスト / 16 state単一所有者化 / 17 pending共有レンダラー / 18 v1 sunset+migrate-on-read / 19 claim取得集約(manual・previewのみ)。最終ゲート: make clean test。台帳は [2026-11-07-00-backlog-archloop-1107.md](2026-11-07-00-backlog-archloop-1107.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~15~~ | [2026-11-07-15-refactor-sqlite-taxonomy-owner.md](../dev-docs/archived/pbi/2026-11-07-15-refactor-sqlite-taxonomy-owner.md) | 🔧非機能追加 | 2.4 | M | ✅ 完了。分類集合約+pinテスト |
+| ~~16~~ | [2026-11-07-16-refactor-screen-state-owner.md](../dev-docs/archived/pbi/2026-11-07-16-refactor-screen-state-owner.md) | 🔧非機能追加 | 0.8 | L | ✅ 完了。state単一所有者化 |
+| ~~17~~ | [2026-11-07-17-refactor-pending-renderer.md](../dev-docs/archived/pbi/2026-11-07-17-refactor-pending-renderer.md) | 🔧非機能追加 | 0.64 | M | ✅ 完了。共有レンダラー+層登録 |
+| ~~18~~ | [2026-11-07-18-refactor-collection-sunset.md](../dev-docs/archived/pbi/2026-11-07-18-refactor-collection-sunset.md) | 🔧非機能追加 | 0.3 | L | ✅ 完了。v1削除・集約 |
+| ~~19~~ | [2026-11-07-19-refactor-claim-owner.md](../dev-docs/archived/pbi/2026-11-07-19-refactor-claim-owner.md) | 🔧非機能追加 | 0.3 | M | ✅ 完了。claim集約(manual系) |
+
+### 2026-11-07 大局的改善ラウンド差分 holistic-1107b（5件） ― ✅ 5件完了・アーカイブ済み
+
+差分レビュー(前回閉鎖テーマ除外)の5候補をRICE降順でPBI化・実装。10 settle集約+境界テスト2件 / 11 alias一本化 / 12 purge分離(845→741行)+ARCHITECTURE_MAP更新 / 13 ダイアログ群切り出し / 14 header追記。最終ゲート: 全vitest緑・build緑・各サブゲート緑。実機目視のみ未実施(移動のみdiff+743件緑で代替)。台帳は [2026-11-07-00-backlog-holistic-1107b.md](2026-11-07-00-backlog-holistic-1107b.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~10~~ | [2026-11-07-10-fix-outcome-settle.md](../dev-docs/archived/pbi/2026-11-07-10-fix-outcome-settle.md) | 🔧非機能追加 | 4.8 | S | ✅ 完了。settle集約+境界テスト |
+| ~~11~~ | [2026-11-07-11-fix-validator-alias.md](../dev-docs/archived/pbi/2026-11-07-11-fix-validator-alias.md) | 🔧非機能追加 | 2.0 | S | ✅ 完了。alias一本化・循環なし |
+| ~~12~~ | [2026-11-07-12-refactor-purge-split.md](../dev-docs/archived/pbi/2026-11-07-12-refactor-purge-split.md) | 🔧非機能追加 | 0.96 | M | ✅ 完了。purge分離・golden一致 |
+| ~~13~~ | [2026-11-07-13-refactor-view-dialogs.md](../dev-docs/archived/pbi/2026-11-07-13-refactor-view-dialogs.md) | 🔧非機能追加 | 0.64 | M | ✅ 完了。移動のみ・import修正含む |
+| ~~14~~ | [2026-11-07-14-docs-cleanser-headers.md](../dev-docs/archived/pbi/2026-11-07-14-docs-cleanser-headers.md) | 🔧非機能追加 | 0.5 | XS | ✅ 完了。header 2行のみ |
+
+### 2026-11-07 大局的改善ラウンド holistic-1107（9件） ― ✅ 9件完了・アーカイブ済み
+
+DRY/SoC/拡張性/堅牢性のレビュー所見をRICE採点し実行順にPBI化・実装。01 shim-import lint / 02 raw-storage lint / 03 shim付け替え+3削除 / 04 アダプタ委譲 / 05 ブランドpinテスト / 06 CLI対応表 / 07 queryPlan分割 / 08 validator裁定(同一・実施延期) / 09 gatewayファクトリ。最終ゲート: 全vitest 1257件・18189件緑、build緑、各サブゲート緑。test baseline超過(+4・既存branch条件)はdebt返済で446に復帰。台帳は [2026-11-07-00-backlog-holistic-1107.md](2026-11-07-00-backlog-holistic-1107.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-07-01-refactor-shim-import-lint.md](../dev-docs/archived/pbi/2026-11-07-01-refactor-shim-import-lint.md) | 🔧非機能追加 | 6.0 | S | ✅ 完了。新規shim importをgateで拒否 |
+| ~~02~~ | [2026-11-07-02-refactor-raw-storage-lint.md](../dev-docs/archived/pbi/2026-11-07-02-refactor-raw-storage-lint.md) | 🔧非機能追加 | 4.0 | S | ✅ 完了。no-raw-storageルール+既存台帳化 |
+| ~~03~~ | [2026-11-07-03-refactor-shim-rewire-remove.md](../dev-docs/archived/pbi/2026-11-07-03-refactor-shim-rewire-remove.md) | 🔧非機能追加 | 1.67 | M | ✅ 完了。3 shim削除・残は grandfather |
+| ~~04~~ | [2026-11-07-04-refactor-raw-storage-adapter.md](../dev-docs/archived/pbi/2026-11-07-04-refactor-raw-storage-adapter.md) | 🔧非機能追加 | 1.6 | M | ✅ 完了。5箇所をport委譲へ |
+| ~~05~~ | [2026-11-07-05-refactor-brand-pin-test.md](../dev-docs/archived/pbi/2026-11-07-05-refactor-brand-pin-test.md) | 🔧非機能追加 | 1.2 | S | ✅ 完了。pinテスト14件 |
+| ~~06~~ | [2026-11-07-06-docs-cli-parity-map.md](../dev-docs/archived/pbi/2026-11-07-06-docs-cli-parity-map.md) | 🔧非機能追加 | 1.0 | S | ✅ 完了。対応表コメントのみ |
+| ~~07~~ | [2026-11-07-07-refactor-queryplan-split.md](../dev-docs/archived/pbi/2026-11-07-07-refactor-queryplan-split.md) | 🔧非機能追加 | 0.8 | L | ✅ 完了。909行→353行に純粋化 |
+| ~~08~~ | [2026-11-07-08-investigate-validator-unify.md](../dev-docs/archived/pbi/2026-11-07-08-investigate-validator-unify.md) | 🔧非機能追加 | 0.75 | S | ✅ 裁定済み。同一・alias実施は延期 |
+| ~~09~~ | [2026-11-07-09-refactor-gateway-factory.md](../dev-docs/archived/pbi/2026-11-07-09-refactor-gateway-factory.md) | 🔧非機能追加 | 0.64 | M | ✅ 完了。3 gateway委譲・定数集約 |
+
 ### 2026-11-07 AIモデル定期レビュー（1件） ― 🔶 初回分実施済み・四半期運用として継続
 
 Groq のモデル退役サイクルに合わせた四半期点検プロセス (既定モデル ID・docs モデル名・接続テスト上限・プロバイダー数・CHANGELOG 記録)。初回分として FAQ.md と SETUP_GUIDE.md の死んだ `llama-3.3-70b-versatile` 参照 4 箇所を live モデルへ置換済み。RICE: 01(1.0)。

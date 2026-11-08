@@ -183,9 +183,13 @@ vi.mock('../../utils/pendingStorage.js', () => ({
   PENDING_MAX_TTL_MS: 24 * 60 * 60 * 1000,
 }));
 
-vi.mock('../../utils/redaction.js', () => ({
-  redactHeaderValue: vi.fn((v: string) => v),
-}));
+vi.mock('../../utils/sensitiveDataMask.js', async () => {
+  const actual = await vi.importActual('../../utils/sensitiveDataMask.js');
+  return {
+    ...actual,
+    redactHeaderValue: vi.fn((v: string) => v),
+  };
+});
 
 const mockPermissionManager = {
   isHostPermitted: vi.fn().mockResolvedValue(true),
@@ -653,7 +657,7 @@ describe('RecordingPipeline', () => {
       await executePromise;
 
       // addLog に渡された delayMs 引数をすべて検証
-      const retryCalls = addLog.mock.calls.filter(
+      const retryCalls = vi.mocked(addLog).mock.calls.filter(
         (call: unknown[]) => typeof call[1] === 'string' && (call[1] as string).includes('Retrying')
       );
 

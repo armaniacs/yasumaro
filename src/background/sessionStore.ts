@@ -1,6 +1,7 @@
 import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { ChromeStoragePort, type StoragePort } from '../utils/storage/storagePort.js';
 
 export const SESSION_KEYS = {
   SKIP_AI_RATE_LIMITER: 'sw:rateLimiter',
@@ -56,6 +57,24 @@ export const SESSION_MAX_FLUSH_BYTES = 3 * 1024 * 1024;
  * decision 2).
  */
 const MAX_OVERFLOW_REQUEUES = 2;
+
+/**
+ * Local-area backend contract for SessionStore's chrome.storage.local paths
+ * (emergency flush, single-key and startup migrations). Same shape as
+ * StoragePort, but `remove` is required: the migration paths always clean up
+ * the local keys they move. Both production ports (ChromeStoragePort,
+ * InMemoryStoragePort) satisfy it.
+ */
+export type SessionLocalPort = Pick<StoragePort, 'get' | 'set'> & {
+  remove(keys: string | string[]): Promise<void>;
+};
+
+/**
+ * Production local-area backend. Module-level singleton: ChromeStoragePort
+ * is stateless and touches chrome lazily per call, so sharing it changes
+ * neither timing nor behavior.
+ */
+const sharedLocalPort: SessionLocalPort = new ChromeStoragePort();
 
 export class SessionStore implements SessionStorePort {
   private writeQueue = new Map<string, unknown>();
@@ -369,8 +388,10 @@ export class SessionStore implements SessionStorePort {
   /**
    * Write queued items to chrome.storage.local immediately. Used as an
    * emergency fallback when the Service Worker is about to suspend.
+   * Delegates to the StoragePort seam (PBI 2026-11-07-04): same items,
+   * same fire-and-forget timing, same best-effort .catch logging.
    */
-  emergencyFlushToLocal(): void {
+  emergencyFlushToLocal(localPort: SessionLocalPort = sharedLocalPort): void {
     if (this.writeQueue.size === 0) return;
 
     const items: Record<string, unknown> = {};
@@ -382,7 +403,7 @@ export class SessionStore implements SessionStorePort {
       // Fire-and-forget: we cannot reliably await inside onSuspend.
       // Best-effort persistence, but a lost emergency flush must stay visible
       // in diagnostic logs (was silent).
-      chrome.storage.local.set(items).catch((error: unknown) => {
+      localPort.set(items).catch((error: unknown) => {
         addLog(LogType.WARN, 'SessionStore: emergency flush to local storage failed', { error: errorMessage(error) });
       });
     }
@@ -394,17 +415,17 @@ export class SessionStore implements SessionStorePort {
    * This restores data after session storage is cleared (e.g., Service Worker
    * restart or browser update) without re-scanning all local storage each time.
    */
-  static async migrateFromLocalStorageIfSessionEmpty(key: string): Promise<boolean> {
+  static async migrateFromLocalStorageIfSessionEmpty(key: string, localPort: SessionLocalPort = sharedLocalPort): Promise<boolean> {
     if (!chrome?.storage?.local || !chrome?.storage?.session) {
       return false;
     }
 
     try {
-      const localResult = await chrome.storage.local.get(key);
+      const localResult = await localPort.get(key);
       if (!(key in localResult)) return false;
 
       await chrome.storage.session.set({ [key]: localResult[key] });
-      await chrome.storage.local.remove(key);
+      await localPort.remove(key);
 
       addLog(LogType.INFO, 'SessionStore: migrated single key from local to session storage', {
         key,
@@ -424,13 +445,13 @@ export class SessionStore implements SessionStorePort {
    * chrome.storage.local to chrome.storage.session, then clean up the old keys.
    * Should be called once at service-worker startup before SessionStore is used.
    */
-  static async migrateFromLocalStorage(): Promise<boolean> {
+  static async migrateFromLocalStorage(localPort: SessionLocalPort = sharedLocalPort): Promise<boolean> {
     if (!chrome?.storage?.local || !chrome?.storage?.session) {
       return false;
     }
 
     try {
-      const all = await chrome.storage.local.get(null);
+      const all = await localPort.get(null);
       const entries = Object.entries(all).filter(([key]) => key.startsWith('sw:'));
       if (entries.length === 0) return false;
 
@@ -440,7 +461,7 @@ export class SessionStore implements SessionStorePort {
       }
 
       await chrome.storage.session.set(items);
-      await chrome.storage.local.remove(entries.map(([key]) => key));
+      await localPort.remove(entries.map(([key]) => key));
 
       addLog(LogType.INFO, 'SessionStore: migrated session data from local to session storage', {
         keys: entries.map(([key]) => key),

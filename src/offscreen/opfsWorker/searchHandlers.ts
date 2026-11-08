@@ -16,9 +16,11 @@ import type { SqliteRow } from '../sqliteEngine.js';
 import type { SearchPayload } from './types.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import {
-  buildFtsMatchQuery,
   clampOffset,
 } from '../queryPlan.js';
+import {
+  buildFtsMatchQuery,
+} from '../sqliteQueryBuilder.js';
 import { applySearchPolicy } from '../queryPlanner.js';
 import { SEARCH_COLUMNS_WITH_RANK, mapNamed } from '../rowCodec.js';
 import { runSearch, type SearchInput, type SearchRowSource } from '../searchExecution.js';
@@ -26,8 +28,9 @@ import { runSearch, type SearchInput, type SearchRowSource } from '../searchExec
 /**
  * The worker's half of the shared skeleton: named rows, counted as `row.c`
  * (every COUNT in queryPlan.ts emits the alias), decoded by column name.
- * The FTS JOIN's filter columns stay unqualified here — the worker has always
- * emitted them that way and the statements are pinned byte-for-byte.
+ * Filter qualification is per-path in the skeleton and enforced by
+ * `buildFtsSearchStatements` (PBI 2026-11-08-05) — the FTS JOIN's filter
+ * columns ride the `b` alias on this backend too.
  */
 function workerRowSource(ctx: HandlerContext): SearchRowSource<SqliteRow, SearchResult> {
   return {
@@ -59,7 +62,6 @@ export async function runOpfsSearch(
     orderBy: args.orderBy,
     orderDir: args.orderDir,
     onInvalid: 'coerce',
-    extraQualification: 'none',
     fts5Available: args.fts5Available ?? (path === 'fts'),
   });
 }

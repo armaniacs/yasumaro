@@ -13,7 +13,7 @@
  *   - sequential saves accumulate patches and bump the version per cycle.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { saveSavedUrlEntryMetadata } from '../savedUrlStore.js';
+import { saveSavedUrlEntryMetadata } from '../savedUrlRepository.js';
 import type { SavedUrlEntry } from '../../urlEntry.js';
 
 const storageGetMock = chrome.storage.local.get as unknown as ReturnType<typeof vi.fn>;

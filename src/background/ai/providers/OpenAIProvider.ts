@@ -29,9 +29,12 @@ const CONNECTION_TEST_MAX_TOKENS = 16;
 /**
  * length 切断時に順に再試行する際の max_tokens 上限ラダー。推論モデルは
  * 思考トークンで小枠を使い切るため、256でも切れる個体がある (issue #202
- * 後続)。初回16に続けて最大3回、合計4fetchで打ち切る。
+ * 後続)。初回16に続くラダーは最大3回で合計4fetch。公式方言は最後に
+ * 設定済み上限でもう1回試すことがあり、最悪5fetchになる。
  */
 const CONNECTION_TEST_RETRY_CAPS = [256, 512, 1024] as const;
+/** 公式 origin の事前計算値。構築ごとの `new URL(...).origin` 再計算を避ける。 */
+const OPENAI_OFFICIAL_ORIGIN = new URL(OPENAI_OFFICIAL_BASE_URL).origin;
 
 interface OpenAIApiResponse {
     choices?: Array<{ message?: { content: string }; finish_reason?: string }>;
@@ -160,7 +163,7 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 // field name. Parsed here (exact origin: scheme+host+port) so a
                 // malformed baseUrl is wrapped as `Invalid baseUrl` below.
                 officialOriginBridge = entry?.legacyOpenAIEndpoint === true
-                    && new URL(this.baseUrl).origin === new URL(OPENAI_OFFICIAL_BASE_URL).origin;
+                    && new URL(this.baseUrl).origin === OPENAI_OFFICIAL_ORIGIN;
             } catch (error: unknown) {
                 addLog(LogType.ERROR, `Invalid baseUrl for ${providerName}: ${errorMessage(error)}`);
                 throw new Error(`Invalid baseUrl: ${errorMessage(error)}`);
@@ -287,13 +290,10 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
                 const payload = {
                     model: this.model,
                     messages: [{ role: 'user', content: CONNECTION_TEST_PROMPT }],
-                    // A small budget can be exhausted before reasoning
-                    // produces visible text. Official-dialect providers use
-                    // the configured cap (it covers reasoning tokens);
-                    // others use the retry-ladder cap from testConnection
-                    // (issue #202).
+                    // 小枠から登るラダー: 初回16で通常モデルは通り、推論モデルは
+                    // 256/512/1024へ段階的に再試行する。要約パスは設定済み上限のまま。
                     ...this.generationParameters(
-                        this.openAIParameters ? this.resolvedSettings.maxTokens : connectionTestMaxTokens,
+                        connectionTestMaxTokens,
                         0,
                     ),
                 };
@@ -337,14 +337,23 @@ export class GenericOpenAICompatibleProvider extends HttpProviderStrategy {
         // 基底テンプレートが所有。癖は generateSummary と同じ1組の hooks。
         // 推論モデルは初回の小枠を思考トークンに使い切り、本文空のまま
         // finish_reason=length で返ることがある (issue #202)。その場合だけ
-        // RETRY_CAPS の上限で順に再試行する (最大3回、初回含め合計4fetch)。
+        // RETRY_CAPS の上限で順に再試行する (初回含め合計4fetch)。
         // 要約パスは hooks 既定値のまま不変。
+        // 通常モデルは初回16で通り安価、推論モデルはラダーを登り、
+        // それでもlengthが続く公式方言だけ最後に設定済み上限を使う。
+        // 最悪fetch数は公式5・非公式4。設定済み上限が初回16やラダー上限と
+        // 同値の場合は重複fetchになるため最終再試行を省く。
         let result = await this.executeHttpTestFlow(this.hooks(CONNECTION_TEST_MAX_TOKENS));
         for (const cap of CONNECTION_TEST_RETRY_CAPS) {
             if (result.success || result.debug?.finishReason !== 'length') {
                 break;
             }
             result = await this.executeHttpTestFlow(this.hooks(cap));
+        }
+        if (this.openAIParameters && !result.success && result.debug?.finishReason === 'length'
+            && this.resolvedSettings.maxTokens !== CONNECTION_TEST_MAX_TOKENS
+            && !((CONNECTION_TEST_RETRY_CAPS as readonly number[]).includes(this.resolvedSettings.maxTokens))) {
+            result = await this.executeHttpTestFlow(this.hooks(this.resolvedSettings.maxTokens));
         }
         return result;
     }

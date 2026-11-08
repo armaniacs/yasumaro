@@ -8,7 +8,9 @@
  * clamped limits and truncated FTS input — so a policy change had to land
  * in both places consistently. It now lives here, in one pure composition:
  *
- *   normalize (queryNormalize) -> clamp (queryPlan.clampLimit) -> truncate (schema.FTS_QUERY_MAX_LENGTH)
+ *   normalize (local normalizeStorageQuery, folded in from queryNormalize.ts
+ *   by PBI 2026-11-08-02 — the sole caller was already this planner) ->
+ *   clamp (queryPlan.clampLimit) -> truncate (schema.FTS_QUERY_MAX_LENGTH)
  *
  * Statement building (`queryPlan` / `sqliteQueryBuilder`) and row decoding
  * (`rowCodec`) remain the planner's internals: backends consume the planned
@@ -18,9 +20,8 @@
  * owned: it encodes write payloads, not reads.
  */
 
-import { normalizeStorageQuery } from './queryNormalize.js';
 import { clampLimit, clampOffset, selectReadCap, DEFAULT_QUERY_LIMIT, type AlreadyCappedQuery } from './queryPlan.js';
-import { MAX_QUERY_LIMIT, AUDIT_CAP_IDB } from '../utils/limits.js';
+import { MAX_QUERY_IDS, MAX_QUERY_LIMIT, AUDIT_CAP_IDB } from '../utils/limits.js';
 import { sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
 import { FTS_QUERY_MAX_LENGTH } from './schema.js';
 import { pickDefined } from '../utils/objectUtils.js';
@@ -42,6 +43,55 @@ export const DEFAULT_MAX_RECORDS = 1000;
  * DEFAULT_QUERY_LIMIT (100).
  */
 export const DEFAULT_SEARCH_LIMIT = 50;
+
+/**
+ * Normalize a query-shaped wire payload into a StorageQuery.
+ * Unknown keys are dropped; every alias family collapses to one field.
+ *
+ * Folded in verbatim from queryNormalize.ts (PBI 2026-11-08-02): the sole
+ * caller was already this planner (planQuery/planSearch), so the module
+ * boundary carried no seam — only an extra hop. The dashboard and the
+ * gateway spell the same filters differently
+ * (starred|isStarred, dateFrom|since, dateTo|until, tag|tagFilter), so both
+ * SQLITE_QUERY and SQLITE_SEARCH funnel through this pure function instead
+ * of each handler re-implementing the alias ternaries.
+ */
+export function normalizeStorageQuery(payload: Record<string, unknown>): StorageQuery {
+  return pickDefined({
+    limit: payload?.limit != null ? Number(payload.limit) : undefined,
+    offset: payload?.offset != null ? Number(payload.offset) : undefined,
+    orderBy: payload?.orderBy as 'created_at' | 'rank' | undefined,
+    orderDir: payload?.orderDir as 'ASC' | 'DESC' | undefined,
+    domain: payload?.domain != null ? String(payload.domain) : undefined,
+    // Full-text search term — MUST survive normalization (was dropped, so
+    // dashboard text search silently became a plain listing returning the
+    // same recent rows for every query).
+    text: payload?.text != null && String(payload.text) !== '' ? String(payload.text) : undefined,
+    // PBI 2026-09-12-13: the snake_case `is_starred` numeric alias used to
+    // live only in FallbackStorage's local re-derivation, so the same wire
+    // payload filtered differently per backend. It collapses here now.
+    starred: payload?.starred != null ? Boolean(payload.starred) : payload?.isStarred != null ? Boolean(payload.isStarred) : payload?.is_starred != null ? Boolean(Number(payload.is_starred)) : undefined,
+    excludeDeleted: payload?.excludeDeleted != null ? Boolean(payload.excludeDeleted) : undefined,
+    dateFrom: payload?.dateFrom != null ? Number(payload.dateFrom) : payload?.since != null ? Number(payload.since) : undefined,
+    dateTo: payload?.dateTo != null ? Number(payload.dateTo) : payload?.until != null ? Number(payload.until) : undefined,
+    // PBI 2026-09-11-01 (round 5): ids crosses the wire — a string or scalar
+    // used to pass through the cast and crash buildExtraWhereSql's .map.
+    // Normalize to a finite-number array; anything else (or an all-invalid
+    // array) drops the filter.
+    // PBI 2026-09-11-02 (round 6): bound the array (a giant wire payload must
+    // not become a giant SQL IN clause) and keep integers only.
+    ids: (() => {
+      if (!Array.isArray(payload?.ids)) return undefined;
+      const ids = (payload.ids as unknown[])
+        .slice(0, MAX_QUERY_IDS)
+        .map(Number)
+        .filter((n) => Number.isInteger(n) && n >= 0);
+      return ids.length > 0 ? ids : undefined;
+    })(),
+    tag: payload?.tag != null ? String(payload.tag) : payload?.tagFilter != null ? String(payload.tagFilter) : undefined,
+    gistSynced: payload?.gistSynced != null ? Number(payload.gistSynced) : undefined,
+  });
+}
 
 /**
  * Apply the read policy to an already-normalized query: clamp the limit and

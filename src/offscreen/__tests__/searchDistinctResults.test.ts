@@ -17,7 +17,7 @@
  */
 import { describe, it, expect, beforeEach } from 'vitest';
 import { FallbackStorage } from '../storageFallback.js';
-import { normalizeStorageQuery } from '../queryNormalize.js';
+import { normalizeStorageQuery } from '../queryPlanner.js';
 
 describe('search-distinct-results — different queries return different rows (PBI 2026-09-12-42)', () => {
   let storage: FallbackStorage;

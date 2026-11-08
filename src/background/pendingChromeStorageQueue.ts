@@ -10,6 +10,7 @@ import { LogType } from '../utils/logger/types.js';
 import { addLog } from '../utils/logger/core.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { PersistentRetryQueue, ChromeStorageAdapter } from './persistentRetryQueue.js';
+import type { QueueStorageAdapter } from './queueStorageAdapter.js';
 import {
   MAX_PATCH_PAYLOAD_BYTES,
   MAX_PENDING_WRITES,
@@ -104,7 +105,7 @@ export type QueuedChromeStorageWrite = PendingChromeStorageWrite | PendingMetada
  * Create a pending write queue with the given adapter.
  * The default export uses ChromeStorageAdapter; tests can inject InMemoryAdapter.
  */
-export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
+export function createPendingWriteQueue(adapter: QueueStorageAdapter) {
   const queue = new PersistentRetryQueue<QueuedChromeStorageWrite>(adapter, {
     storageKey: PENDING_CHROME_STORAGE_KEY,
     maxSize: MAX_PENDING_WRITES,
@@ -134,10 +135,19 @@ export function createPendingWriteQueue(adapter: ChromeStorageAdapter) {
 }
 
 /**
- * Module-level seam, exempted from the manifest-first policy: layer-crossing
- * callers reach this facade without DI, and tests swap in an InMemoryAdapter
- * via setPendingWriteQueue. The lazy default keeps standalone use working;
- * production wiring must inject once from the composition root before first use.
+ * Module-level facade over the container-owned queue. The composition root
+ * injects its `pendingWriteQueue` singleton once via onReady, before first
+ * use, so layer-crossing callers (utils/alarm paths that cannot take DI)
+ * reach the same instance the container manages — without this wiring the
+ * facade would lazily build a SECOND queue over the same storage key with
+ * its own lock chain (lost-update shape). The lazy default below is the
+ * standalone/test fallback only (ADR 2026-09-17 conditions: cross-layer
+ * callers, once-at-startup injection, correct default). Tests swap in an
+ * InMemoryAdapter via setPendingWriteQueue.
+ * Queue contents are durable in chrome.storage.local through the adapter;
+ * this module reference is an SW-lifetime cache only — losing it on restart
+ * is safe because the next wake re-injects (composition root) or rebuilds
+ * lazily over the same key.
  * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
  */
 let activeQueue: ReturnType<typeof createPendingWriteQueue> | undefined;

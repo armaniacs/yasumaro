@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { uploadAndPublishCws } from '../publish/cws.mjs';
+import { publishCargo, crateVersion } from '../publish/cargo.mjs';
 import { uploadAndPublishEdge } from '../publish/edge.mjs';
 import { prepareAmoSources } from '../publish/amo-prepare-sources.mjs';
 import { submitAmo } from '../publish/amo-submit.mjs';
@@ -876,6 +877,105 @@ describe('lib', () => {
       expect(exitCode).toBe(1);
       expect(logs).toHaveLength(1);
       expect(logs[0]).toContain('__definitely_missing_publish_cmd__');
+    });
+  });
+});
+
+describe('cargo', () => {
+  describe('crateVersion', () => {
+    it('reads the first version line and yields empty on missing', () => {
+      expect(crateVersion('[package]\nname = "yasumaro"\nversion = "6.9.71"\n')).toBe('6.9.71');
+      expect(crateVersion('[package]\nname = "yasumaro"\n')).toBe('');
+    });
+  });
+
+  describe('publishCargo', () => {
+    function setupManifest(version: string) {
+      const dir = mkdtempSync(join(tmpdir(), 'cargo-publish-'));
+      mkdirSync(join(dir, 'cli'));
+      writeFileSync(join(dir, 'cli', 'Cargo.toml'), `[package]\nname = "yasumaro"\nversion = "${version}"\n`);
+      return dir;
+    }
+
+    function createRun(results: Array<{ code: number; stderr?: string }>) {
+      const calls: Array<{ command: string; args: string[]; options: unknown }> = [];
+      return {
+        calls,
+        run: async (command: string, args: string[], options: unknown = {}) => {
+          calls.push({ command, args, options });
+          const next = results.length > 1 ? results.shift()! : results[0];
+          return { code: next.code, stderr: next.stderr ?? '' };
+        },
+      };
+    }
+
+    function createLogs() {
+      const logs: string[] = [];
+      return { logs, log: (message: unknown) => logs.push(String(message)) };
+    }
+
+    it('fails fast when the token is missing', async () => {
+      const { logs, log } = createLogs();
+      const { run } = createRun([{ code: 0 }]);
+      await expect(publishCargo({ VERSION: '9.9.9' }, { run, log, cwd: '/nonexistent' })).rejects.toBeInstanceOf(
+        StepFailed
+      );
+      expect(logs).toEqual(['CARGO_REGISTRY_TOKEN is missing']);
+    });
+
+    it('fails on version drift before touching the network', async () => {
+      const dir = setupManifest('9.9.9');
+      const { logs, log } = createLogs();
+      const { run, calls } = createRun([{ code: 0 }]);
+      await expect(
+        publishCargo({ CARGO_REGISTRY_TOKEN: 'tok', VERSION: '1.0.0' }, { run, log, cwd: dir })
+      ).rejects.toBeInstanceOf(StepFailed);
+      expect(calls).toHaveLength(0);
+      expect(logs).toEqual(['Version drift: package.json says 1.0.0, cli/Cargo.toml says 9.9.9']);
+    });
+
+    it('fails when the dry run fails without attempting publish', async () => {
+      const dir = setupManifest('9.9.9');
+      const { logs, log } = createLogs();
+      const { run, calls } = createRun([{ code: 1, stderr: 'packaging error' }]);
+      await expect(
+        publishCargo({ CARGO_REGISTRY_TOKEN: 'tok', VERSION: '9.9.9' }, { run, log, cwd: dir })
+      ).rejects.toBeInstanceOf(StepFailed);
+      expect(calls).toHaveLength(1);
+      expect(calls[0].args).toContain('--dry-run');
+      expect(logs).toContain('cargo publish --dry-run failed');
+    });
+
+    it('publishes with the token in env and never in logs', async () => {
+      const dir = setupManifest('9.9.9');
+      const { logs, log } = createLogs();
+      const { run, calls } = createRun([{ code: 0 }, { code: 0 }]);
+      await publishCargo({ CARGO_REGISTRY_TOKEN: 'sekret-token', VERSION: '9.9.9' }, { run, log, cwd: dir });
+      expect(calls).toHaveLength(2);
+      expect(calls[1].command).toBe('cargo');
+      expect(calls[1].args).not.toContain('--dry-run');
+      const options = calls[1].options as { env?: Record<string, string> };
+      expect(options.env?.['CARGO_REGISTRY_TOKEN']).toBe('sekret-token');
+      expect(logs.join('\n')).not.toContain('sekret-token');
+      expect(logs).toContain('Published yasumaro v9.9.9 to crates.io');
+    });
+
+    it('treats already-uploaded as success for release re-runs', async () => {
+      const dir = setupManifest('9.9.9');
+      const { logs, log } = createLogs();
+      const { run } = createRun([{ code: 0 }, { code: 101, stderr: 'error: crate version 9.9.9 is already uploaded' }]);
+      await publishCargo({ CARGO_REGISTRY_TOKEN: 'tok', VERSION: '9.9.9' }, { run, log, cwd: dir });
+      expect(logs).toContain('yasumaro v9.9.9 is already on crates.io; treating as success');
+    });
+
+    it('fails the step on any other publish error', async () => {
+      const dir = setupManifest('9.9.9');
+      const { logs, log } = createLogs();
+      const { run } = createRun([{ code: 0 }, { code: 101, stderr: 'error: invalid token' }]);
+      await expect(
+        publishCargo({ CARGO_REGISTRY_TOKEN: 'tok', VERSION: '9.9.9' }, { run, log, cwd: dir })
+      ).rejects.toBeInstanceOf(StepFailed);
+      expect(logs).toContain('cargo publish failed');
     });
   });
 });

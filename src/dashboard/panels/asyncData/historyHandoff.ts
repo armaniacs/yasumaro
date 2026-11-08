@@ -15,6 +15,10 @@
  *   state cannot carry yet (today: none — domain/starred style fields
  *   land here when state grows, so they are warned about, never dropped
  *   silently).
+ * - `buildMigratedCollectionHandoff` (pure, PBI 18 sunset): migrate-on-read
+ *   for stored v1 flat records — `parseCollectionQuery` (fail-closed) then
+ *   the same `buildHistoryHandoffQuery` packer, so old saves land in the
+ *   draft without the deleted v1 list-painting path.
  * - Handoff bus: `requestHistoryHandoff` applies immediately when the
  *   collections panel registered its draft applier, otherwise stashes one
  *   pending query that the collections panel consumes on load
@@ -23,7 +27,7 @@
  *   deferred by design).
  */
 
-import { serializeCollectionQuery } from './savedCollectionQuery.js';
+import { parseCollectionQuery, serializeCollectionQuery } from './savedCollectionQuery.js';
 
 /** The filter triple the history panel can hold (no in-place save, no naming here). */
 export interface HistoryFilterTriple {
@@ -72,6 +76,27 @@ export function buildHistoryHandoffQuery(
     return { ok: false, reason: 'empty', dropped };
   }
   return { ok: true, query, dropped };
+}
+
+/**
+ * Migrate-on-read for v1 flat saves (PBI 18 sunset).
+ *
+ * A stored v1 record (search/tag/date, parsed fail-closed by
+ * `parseCollectionQuery`) is packed as a draft handoff query through
+ * `buildHistoryHandoffQuery`. v1 carries a single day only, so the custom
+ * range is always null here; unknown shapes close to the `empty` refusal
+ * instead of throwing, so a corrupted save degrades to "no conditions".
+ */
+export function buildMigratedCollectionHandoff(rawQuery: unknown): HistoryHandoffResult {
+  const parsed = parseCollectionQuery(rawQuery);
+  return buildHistoryHandoffQuery(
+    {
+      searchQuery: parsed.search,
+      activeTagFilter: parsed.tag,
+      selectedDate: parsed.date,
+    },
+    null,
+  );
 }
 
 // ---------------------------------------------------------------------------

@@ -142,7 +142,11 @@ export type { ArchivePurgeData };
  * Manifest-wired ObsidianClient singleton for the append path. The
  * composition root injects its `obsidian` singleton once via onReady
  * (compositionManifest.dashboardSqliteHandler); tests inject a fake via
- * setObsidianClient. The lazy default keeps standalone use working.
+ * setObsidianClient. The lazy default below is the standalone/test fallback
+ * only — it lets single-module use work without booting the container, but
+ * production must reach the client through the composition root so both
+ * paths observe one instance (no double generation). Module state is an
+ * SW-lifetime cache only.
  */
 let obsidianSingleton: ObsidianClient | undefined;
 

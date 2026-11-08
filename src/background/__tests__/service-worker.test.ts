@@ -562,7 +562,7 @@ import { RecordingOrchestrator } from '../pipeline/RecordingOrchestrator.js';
 import * as fetchUtils from '../../utils/fetch.js';
 import * as headerDetector from '../headerDetector.js';
 import * as sessionAlarmsManager from '../sessionAlarmsManager.js';
-import * as savedUrlStore from '../../utils/storage/savedUrlStore.js';
+import * as savedUrlRepository from '../../utils/storage/savedUrlRepository.js';
 import * as permissionManager from '../../utils/permissionManager.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError, logWarn } from '../../utils/logger/api.js';
@@ -1855,12 +1855,12 @@ describe('service-worker handlers', () => {
                 refreshTimestamp: true,
                 mergeTags: true,
             }));
-            (savedUrlStore.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockClear();
+            (savedUrlRepository.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockClear();
 
             onAlarmListener({ name: 'yasumaro-offline-network-retry' } as chrome.alarms.Alarm);
 
             await vi.waitFor(
-                () => expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+                () => expect(savedUrlRepository.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
                 'https://queued.com',
                 { recordType: 'auto' },
                 { refreshTimestamp: true, mergeTags: true },
@@ -2472,12 +2472,12 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+            expect(savedUrlRepository.updateSavedUrlEntry).toHaveBeenCalledWith(
                 'https://example.com',
                 expect.any(Function)
             );
             // Verify the updater sets cleansedReason to 'both'
-            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const calls = (savedUrlRepository.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('both');
@@ -2493,11 +2493,11 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+            expect(savedUrlRepository.updateSavedUrlEntry).toHaveBeenCalledWith(
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const calls = (savedUrlRepository.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('hard');
@@ -2513,11 +2513,11 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(savedUrlStore.updateSavedUrlEntry).toHaveBeenCalledWith(
+            expect(savedUrlRepository.updateSavedUrlEntry).toHaveBeenCalledWith(
                 'https://example.com',
                 expect.any(Function)
             );
-            const calls = (savedUrlStore.updateSavedUrlEntry as Mock).mock.calls;
+            const calls = (savedUrlRepository.updateSavedUrlEntry as Mock).mock.calls;
             const updater = calls[calls.length - 1]![1] as (entry: any) => any;
             const result = updater({ url: 'https://example.com', timestamp: 0 });
             expect(result.cleansedReason).toBe('keyword');
@@ -2533,7 +2533,7 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(savedUrlStore.updateSavedUrlEntry).not.toHaveBeenCalled();
+            expect(savedUrlRepository.updateSavedUrlEntry).not.toHaveBeenCalled();
             expect(sendResponse).toHaveBeenCalledWith({ success: true });
         });
 
@@ -2547,7 +2547,7 @@ describe('service-worker handlers', () => {
 
             await serviceWorker.handleContentCleansingExecuted(message, sender, sendResponse);
 
-            expect(savedUrlStore.updateSavedUrlEntry).not.toHaveBeenCalled();
+            expect(savedUrlRepository.updateSavedUrlEntry).not.toHaveBeenCalled();
         });
     });
 
@@ -2599,7 +2599,7 @@ describe('service-worker handlers', () => {
             }));
 
             expect(ok).toBe(true);
-            expect(savedUrlStore.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
+            expect(savedUrlRepository.saveSavedUrlEntryMetadata).toHaveBeenCalledWith(
                 'https://patch.com',
                 { recordType: 'auto' },
                 { refreshTimestamp: true, mergeTags: true },
@@ -2617,7 +2617,7 @@ describe('service-worker handlers', () => {
         });
 
         it('returns false when saveSavedUrlEntryMetadata rejects (write stays queued)', async () => {
-            (savedUrlStore.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+            (savedUrlRepository.saveSavedUrlEntryMetadata as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
                 new Error('storage quota exceeded')
             );
 

@@ -21,21 +21,25 @@
  *   'error' (fail closed) on the host — the host rejects before it gets here,
  *   so it must keep the stricter clause builder. See buildSearchOrderClause.
  * - Filter qualification. The FTS statements join `browsing_logs AS b`, so
- *   filter columns need a `b.` prefix there and must not have one on the
- *   unaliased LIKE path. `per-path` qualifies the FTS projection only; `none`
- *   leaves both unqualified, which is what the worker has always emitted.
+ *   filter columns carry a `b.` prefix there and must not have one on the
+ *   unaliased LIKE path. The skeleton qualifies per-path (FTS only);
+ *   `buildFtsSearchStatements` enforces the same normalization on its input,
+ *   so the FTS projection is qualified no matter which backend calls it
+ *   (PBI 2026-11-08-05: the former `ExtraQualification` argument is gone).
  */
 
 import {
   buildExtraWhereSql,
+  selectTagFilter,
+  type ExtraWhereQuery,
+} from './queryPlan.js';
+import {
   buildLikePattern,
   buildSearchOrderClause,
   buildFtsSearchStatements,
   buildLikeSearchStatements,
-  selectTagFilter,
-  type ExtraWhereQuery,
   type InvalidOrderPolicy,
-} from './queryPlan.js';
+} from './sqliteQueryBuilder.js';
 import type { SqliteValue } from './sqliteEngine.js';
 
 /**
@@ -50,9 +54,6 @@ import type { SqliteValue } from './sqliteEngine.js';
 export type SearchInput =
   | { path: 'fts'; ftsQuery: string }
   | { path: 'like'; rawTerm: string };
-
-/** Whether the filter columns carry the FTS join alias, per backend. */
-export type ExtraQualification = 'per-path' | 'none';
 
 /**
  * The two engine-specific halves of a search: how to run a statement and get
@@ -77,7 +78,6 @@ export interface RunSearchArgs<TRow, TOut> {
   orderBy?: string | undefined;
   orderDir?: string | undefined;
   onInvalid: InvalidOrderPolicy;
-  extraQualification: ExtraQualification;
   /** Engine capability, not per-path: the LIKE path downgrades it itself. */
   fts5Available: boolean;
 }
@@ -88,9 +88,9 @@ export async function runSearch<TRow, TOut>(
   const { reader, input, limit, offset, fts5Available } = args;
   const isFts = input.path === 'fts';
 
-  const extra = buildExtraWhereSql(args.query, {
-    qualified: args.extraQualification === 'per-path' && isFts,
-  });
+  // Per-path qualification (PBI 2026-11-08-05): the FTS JOIN reads through
+  // the `b` alias, the LIKE path has no alias — the path alone decides.
+  const extra = buildExtraWhereSql(args.query, { qualified: isFts });
   const tagFilter = args.query.tag
     ? selectTagFilter(args.query.tag, input.path, fts5Available)
     : null;

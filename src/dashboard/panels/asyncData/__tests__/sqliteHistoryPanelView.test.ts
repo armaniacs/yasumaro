@@ -2,20 +2,24 @@
 import { describe, it, expect } from 'vitest';
 import {
   buildCleansingProgressBarHtml,
-  sortSelectValue,
-  parseSortSelectValue,
   isFullTextSearchActive,
   buildPaginationHtml,
-  buildSortControlHtml,
-  buildCalendarNavHtml,
-  buildCalendarDaysHtml,
   SQLITE_HISTORY_IDS,
   isViewMounted,
   render,
+} from '../sqliteHistoryPanelView.js';
+import {
+  sortSelectValue,
+  parseSortSelectValue,
+  buildSortControlHtml,
+  buildCalendarNavHtml,
+  buildCalendarDaysHtml,
+} from '../sqliteHistoryChromeWiring.js';
+import {
   showDeleteConfirm,
   hideDeleteConfirm,
   isDeleteConfirmVisible,
-} from '../sqliteHistoryPanelView.js';
+} from '../sqliteHistoryConfirmDialogs.js';
 import type { SqliteHistoryViewCallbacks } from '../sqliteHistoryPanelView.js';
 import type { BrowsingLogEntry } from '../../../../utils/sqlite-types.js';
 import { createInitialHistoryState } from '../sqliteHistoryPanelState.js';

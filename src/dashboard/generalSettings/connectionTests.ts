@@ -361,9 +361,13 @@ export async function handleTestObsidian(options?: Event | ObsidianConnectionTes
         }
       }
 
-      const renderedContent = statusDiv.innerHTML;
+      // PBI 2026-11-08-04: node-based preserve/restore instead of an
+      // innerHTML string round-trip. showStatus rewrites textContent, so the
+      // live nodes are kept aside and re-attached; moving nodes never
+      // re-parses markup and never executes scripts.
+      const renderedNodes = [...statusDiv.childNodes];
       showStatus(statusDiv, statusDiv.textContent ?? '', obsidianResult.success ? 'success' : 'error', { autoClear: false });
-      statusDiv.innerHTML = renderedContent;
+      statusDiv.replaceChildren(...renderedNodes);
       syncStatusToTop();
     },
     onError: () => {
@@ -429,9 +433,12 @@ export async function handleTestAi(): Promise<void> {
             target.appendChild(createConnectionStatusElement('AI', aiResult));
           },
           onResultRendered: (target, aiResult) => {
-            const renderedContent = target.innerHTML;
+            // PBI 2026-11-08-04: same node-based preserve/restore as above —
+            // no innerHTML read/write; re-attaching live nodes cannot execute
+            // scripts.
+            const renderedNodes = [...target.childNodes];
             showStatus(target, target.textContent ?? '', aiResult.success ? 'success' : 'error', { autoClear: false });
-            target.innerHTML = renderedContent;
+            target.replaceChildren(...renderedNodes);
             syncStatusToTop();
           },
           onError: (target) => {

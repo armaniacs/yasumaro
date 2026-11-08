@@ -363,14 +363,13 @@ describe('purge: one transaction per purge, on both backends', () => {
 
 describe('search: both backends emit the same statements for one query', () => {
   /**
-   * The one intended SQL difference: the FTS statements join
-   * `browsing_logs AS b`, so the host qualifies its filter columns and the
-   * worker has never emitted them qualified. Only qualification before a
-   * comparison is stripped — the alias in the projection, the JOIN and the
-   * ORDER BY must still match, and the tag sub-select is `b.id` on both.
+   * PBI 2026-11-08-05: the FTS statements join `browsing_logs AS b`, so the
+   * filter columns ride the alias on BOTH backends (enforced by
+   * `buildFtsSearchStatements`, qualified per-path in the shared skeleton).
+   * The LIKE path has no alias and was already byte-identical. The former
+   * `unqualify` helper (which stripped `b.` before comparing) is gone: the
+   * same search must now produce the same statements with no normalization.
    */
-  const unqualify = (calls: Stmt[]) =>
-    calls.map((c) => ({ ...c, sql: c.sql.replace(/\bb\.(?=[a-z_]+\s*[=<>])/g, '') }));
 
   beforeEach(() => {
     __setEngineForTesting(null, false);
@@ -396,7 +395,7 @@ describe('search: both backends emit the same statements for one query', () => {
     expect(idbRes.success && idbRes.rows.map((r) => r.id)).toEqual(opfsRes.rows.map((r) => r.id));
     // Same search, same statements in the same order with the same bindings:
     // the shared skeleton is the only thing that can guarantee it.
-    expect(unqualify(idb.calls)).toEqual(unqualify(opfs.calls));
+    expect(idb.calls).toEqual(opfs.calls);
   });
 
   it('the LIKE path needs no alias, so it is byte-identical', async () => {
@@ -410,10 +409,11 @@ describe('search: both backends emit the same statements for one query', () => {
     expect(idb.calls).toEqual(opfs.calls);
   });
 
-  it('the FTS path qualifies filter columns on the host only, and says so', async () => {
-    // Pinned rather than unified: the worker's unqualified form is what its
-    // own statements have always emitted, and a silent "fix" here would move
-    // SQL under a live database.
+  it('the FTS path qualifies filter columns on both backends (PBI 2026-11-08-05 unification)', async () => {
+    // Was pinned as host-only: the worker emitted the FTS fragment unqualified
+    // for historical reasons. buildFtsSearchStatements now enforces the JOIN
+    // alias, so both backends emit the qualified form — the pin moved with the
+    // fix (cause addressed, not the expectation rewritten to fit a failure).
     const ftsRowsSql = (calls: Stmt[]) =>
       calls.find((c) => /browsing_logs_fts MATCH/.test(c.sql) && /ORDER BY/.test(c.sql))!.sql;
     const q = { text: 'runes', domain: 'a.test', limit: 20 };
@@ -423,7 +423,9 @@ describe('search: both backends emit the same statements for one query', () => {
     await idb.backend.query(q);
     await handleSearch(opfs.ctx, q, true);
 
-    expect(ftsRowsSql(idb.calls)).toContain('AND b.domain = ?');
-    expect(ftsRowsSql(opfs.calls)).toContain(' AND domain = ?');
+    for (const calls of [idb.calls, opfs.calls]) {
+      expect(ftsRowsSql(calls)).toContain('AND b.domain = ?');
+      expect(ftsRowsSql(calls)).not.toContain(' AND domain = ?');
+    }
   });
 });

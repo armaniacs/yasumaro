@@ -19,7 +19,7 @@ vi.mock('../storageTransaction.js', () => ({
     }),
 }));
 
-import { setSavedUrls, saveSavedUrlEntryMetadata } from '../savedUrlStore.js';
+import { setSavedUrls, saveSavedUrlEntryMetadata } from '../savedUrlRepository.js';
 import { withOptimisticLock } from '../storageTransaction.js';
 import { getStorageUsage, hasUnlimitedStorage } from '../quota.js';
 import { STORAGE_QUOTA_BYTES } from '../quota.js';

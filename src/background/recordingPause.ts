@@ -1,5 +1,6 @@
 // src/background/recordingPause.ts
 import { StorageKeys } from '../utils/storage/types.js';
+import { ChromeStoragePort, type StoragePort } from '../utils/storage/storagePort.js';
 import { setBadge } from './badgePolicy.js';
 
 /** One-shot alarm armed per pause. install is a no-op (local-md immediate pattern). */
@@ -61,19 +62,27 @@ export interface PauseStorage {
   clearPausedUntil(): Promise<void>;
 }
 
-export function createChromePauseStorage(): PauseStorage {
+/**
+ * Production PauseStorage backend. Delegates to the StoragePort seam
+ * (PBI 2026-11-07-04): same key, same value shape, same fail-open reads —
+ * the raw chrome.storage.local access lives in ChromeStoragePort only.
+ * Pass a StoragePort (e.g. InMemoryStoragePort) in tests to avoid chrome.
+ */
+export function createChromePauseStorage(port: StoragePort = new ChromeStoragePort()): PauseStorage {
   const key = StorageKeys.RECORDING_PAUSED_UNTIL;
   return {
     async getPausedUntil() {
-      const result = await chrome.storage.local.get(key);
+      const result = await port.get(key);
       const raw = result[key];
       return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
     },
     async setPausedUntil(value: number) {
-      await chrome.storage.local.set({ [key]: value });
+      await port.set({ [key]: value });
     },
     async clearPausedUntil() {
-      await chrome.storage.local.remove(key);
+      // remove is optional on StoragePort but both production ports
+      // (ChromeStoragePort, InMemoryStoragePort) implement it.
+      await port.remove?.(key);
     },
   };
 }

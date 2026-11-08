@@ -15,9 +15,7 @@
  * behavior.
  */
 
-import { asSuccessResponse } from './normalizeGatewayResponse.js';
-import { sendWithPolicy } from './sendWithPolicy.js';
-import type { SendFailure } from './sendWithPolicy.js';
+import { RECORD_GATEWAY_TIMEOUT_MS, defineGateway } from './gatewayFactory.js';
 import type { ManualRecordMessage } from '../background/messageTypes.js';
 
 export interface PendingRecordRequest {
@@ -34,10 +32,21 @@ export interface PendingRecordResult {
 }
 
 /** Timeout contract inherited from the dashboard pending panel. */
-export const PENDING_RECORD_TIMEOUT_MS = 20000;
+export const PENDING_RECORD_TIMEOUT_MS = RECORD_GATEWAY_TIMEOUT_MS;
 
 /** Sentinel error so callers can map the timeout to a localized message. */
 export const PENDING_RECORD_TIMEOUT_ERROR = 'PENDING_RECORD_TIMEOUT';
+
+const pendingRecordGateway = defineGateway<
+  'MANUAL_RECORD',
+  ManualRecordMessage['payload'],
+  PendingRecordResult
+>({
+  type: 'MANUAL_RECORD',
+  timeoutMs: PENDING_RECORD_TIMEOUT_MS,
+  timeoutError: PENDING_RECORD_TIMEOUT_ERROR,
+  invalidMessage: 'Invalid PENDING_RECORD response',
+});
 
 export async function recordPendingPage(
   request: PendingRecordRequest,
@@ -54,24 +63,9 @@ export async function recordPendingPage(
     payload.skipAi = request.skipAi;
   }
 
-  return sendWithPolicy(
-    // The gateway's own timeout bounds the call; the seam adds version
-    // stamping and validation inside that budget. Retries stay off: extra
-    // attempts would extend past the documented timeout contract (and stall
-    // under fake timers, which the timeout tests install).
-    {
-      type: 'MANUAL_RECORD',
-      payload,
-    },
-    {
-      timeoutMs,
-      timeoutError: new Error(PENDING_RECORD_TIMEOUT_ERROR),
-      retries: 0,
-      normalize: normalizePendingRecordResponse,
-    },
-  );
-}
-
-function normalizePendingRecordResponse(raw: unknown): PendingRecordResult | SendFailure {
-  return asSuccessResponse<PendingRecordResult>(raw, 'Invalid PENDING_RECORD response');
+  // The gateway's own timeout bounds the call; the seam adds version
+  // stamping and validation inside that budget. Retries stay off: extra
+  // attempts would extend past the documented timeout contract (and stall
+  // under fake timers, which the timeout tests install).
+  return pendingRecordGateway.send(payload, { timeoutMs });
 }

@@ -6,8 +6,7 @@
  */
 
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
-import { withOptimisticLock, withAtomicKeys } from '../storage/storageTransaction.js';
-import { runSerialized, _resetKeySerializerForTest } from '../keySerializer.js';
+import { withOptimisticLock, withAtomicKeys, runSerialized, _resetKeySerializerForTest } from '../storage/storageTransaction.js';
 import { ChromeStorageLogAdapter } from '../logger/storageAdapter.js';
 
 describe('keySerializer primitive', () => {

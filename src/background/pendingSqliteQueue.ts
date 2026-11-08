@@ -92,10 +92,19 @@ export function createPendingSqliteQueue(adapter: QueueStorageAdapter) {
 }
 
 /**
- * Module-level seam, exempted from the manifest-first policy: layer-crossing
- * callers reach this facade without DI, and tests swap in an InMemoryAdapter
- * via setPendingSqliteQueue. The lazy default keeps standalone use working;
- * production wiring must inject once from the composition root before first use.
+ * Module-level facade over the container-owned queue. The composition root
+ * injects its `pendingSqliteQueue` singleton once via onReady, before first
+ * use, so layer-crossing callers (alarm paths that cannot take DI) reach the
+ * same instance the container manages — without this wiring the facade
+ * would lazily build a SECOND queue over the same storage key with its own
+ * lock chain (lost-update shape). The lazy default below is the
+ * standalone/test fallback only (ADR 2026-09-17 conditions: cross-layer
+ * callers, once-at-startup injection, correct default). Tests swap in an
+ * InMemoryAdapter via setPendingSqliteQueue.
+ * Queue contents are durable in chrome.storage.local through the adapter;
+ * this module reference is an SW-lifetime cache only — losing it on restart
+ * is safe because the next wake re-injects (composition root) or rebuilds
+ * lazily over the same key.
  * See dev-docs/ADR/2026-09-17-module-singleton-policy.md.
  */
 let activeQueue: ReturnType<typeof createPendingSqliteQueue> | undefined;

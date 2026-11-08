@@ -6,17 +6,29 @@
  * Grilling decision: Fallback を含めつつ QuerySpec 構造体で統一。
  * LIMIT は fts:100000 / plain:10000 の2種を cap として明示。定義本体は
  * utils/limits.ts にあり、queryPlanner が cap 選択を所有する。ここの clamp は worker 境界での防御的再適用。
+ *
+ * PBI 2026-11-07-07: policy-vs-statement split. This module is the POLICY
+ * layer — mode dispatch, cap selection, the AlreadyCappedQuery brand, the
+ * extra-WHERE filter projection, clamps, and the QuerySpec plan seam
+ * (buildQuerySpec stays here as thin delegation over the builder, the
+ * calling shape callers rely on). All statement assembly (filter
+ * vocabulary, search/plain/CRUD/audit/purge builders, the in-memory parity
+ * predicate, the purge runner) lives in sqliteQueryBuilder.ts; this module
+ * holds NO withTransaction / rowMatchesTagLike runtime refs and no
+ * runPurgeSequence. The `export ... from` block at the bottom is a compat
+ * facade: every pre-split import path keeps working unchanged.
+ *
+ * PBI 2026-11-08-06 direct-import policy (新規コード向け):
+ * statement builders は sqliteQueryBuilder.js、purge 実行は purgeRunner.js、
+ * parity 述語は queryParityPredicate.js から直接 import すること。
+ * この facade 経由の新規 import は書かない。facade は既存呼出の互換のため
+ * だけに残る。
  */
 
-import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5 } from './sqliteQueryBuilder.js';
-import type { TagFilterCondition } from './sqliteQueryBuilder.js';
-import { BROWSING_LOG_COLUMNS_SQL } from './rowCodec.js';
+import { buildWhereClause, buildOrderByClause, buildFts5OrderClause, buildLikeOrderClause, buildTagFilterCondition, sanitizeTextForFts5, shouldUseFts5, buildFilterConditions, qualifyCondition, DELETED_CONDITION_SQL } from './sqliteQueryBuilder.js';
 import type { StorageQuery } from '../utils/sqlite-types.js';
 import type { SqliteValue } from './sqliteEngine.js';
 import { QUERY_CAPS } from '../utils/limits.js';
-import { UPDATABLE_FIELDS } from './schema.js';
-import { withTransaction } from './sqliteTransaction.js';
-import { rowMatchesTagLike } from '../utils/tagLike.js';
 
 // ============================================================================
 // Mode + cap policy (moved from queryPlanner, PBI 2026-09-15-03) — breaking
@@ -57,9 +69,14 @@ export function selectReadCap(useFts: boolean): number {
 }
 
 /** Brand proving a query has passed the planner's read policy (cap + truncate).
- *  Produced only by applyReadPolicy / planQuery / planSearch / applySearchPolicy;
- *  buildQuerySpec accepts nothing else, so an uncapped query cannot reach SQL
- *  assembly without an explicit (documented) worker-boundary cast. */
+ *  Produced only by applyReadPolicy (planQuery / planSearch / planQueryOrSearch
+ *  delegate to it); buildQuerySpec accepts nothing else, so an uncapped query
+ *  cannot reach SQL assembly without an explicit (documented)
+ *  worker-boundary cast. NOTE (holistic-1107 concern 1, decided keep-as-is):
+ *  applySearchPolicy clamps through the planner-owned cap but does NOT confer
+ *  this brand — it returns plain StorageQuery, pinned by
+ *  alreadyCapped-brand.test.ts. Conferring the brand there would widen the
+ *  sanctioned creation point beyond applyReadPolicy. */
 declare const __capped: unique symbol;
 export type AlreadyCappedQuery = StorageQuery & { readonly [__capped]: true };
 
@@ -75,61 +92,6 @@ export interface ExtraWhere {
   extraParams: SqliteValue[];
   /** Whether the search builders must emit their (per-path qualified) is_deleted predicate. The predicate itself lives in the builders, never in extraWhereSql (PBI 2026-10-16-04 single-source). */
   includeDeletedFilter: boolean;
-}
-
-/**
- * PBI 2026-09-12-27/35: single structured condition set — the ONE spelling of
- * the shared filter vocabulary (dateFrom/dateTo/domain/starred/gistSynced/
- * ids/excludeDeleted). `buildWhereClause` (plain SQL, sqliteQueryBuilder
- * adapter), `buildExtraWhereSql` (search SQL) and `matchesExtraWhere`
- * (non-SQL parity) all derive from this list, so a new filter is one row here
- * instead of three synchronized edits.
- *
- * `params` is ALWAYS a flat `SqliteValue[]` vector — the round-12 version
- * stored the whole `ids` array as one bind value, so search+ids bound a
- * nested array against `id IN (?,?)` on both SQL search paths.
- *
- * `qualifier` prefixes column names for the FTS JOIN path (`b.`), replacing
- * the former regex string-rewrite of the assembled SQL (the most fragile
- * point: a new column that is a substring of an existing one silently
- * produced wrong SQL).
- */
-export interface FilterCondition {
-  sql: string;
-  params: SqliteValue[];
-}
-
-/**
- * Single spelling of the soft-delete predicate (PBI 2026-10-16-04).
- * `buildFilterConditions` emits it; `buildExtraWhereSql` excludes it from the
- * search fragment (the FTS/LIKE builders own the per-path qualified copy).
- */
-const DELETED_CONDITION_SQL = 'is_deleted = 0';
-
-export function buildFilterConditions(
-  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'excludeDeleted'>,
-): FilterCondition[] {
-  const conditions: FilterCondition[] = [];
-  if (query.excludeDeleted !== false) {
-    conditions.push({ sql: DELETED_CONDITION_SQL, params: [] });
-  }
-  if (query.dateFrom != null) conditions.push({ sql: 'created_at >= ?', params: [query.dateFrom] });
-  if (query.dateTo != null) conditions.push({ sql: 'created_at <= ?', params: [query.dateTo] });
-  if (query.domain) conditions.push({ sql: 'domain = ?', params: [query.domain] });
-  if (query.starred != null) conditions.push({ sql: 'is_starred = ?', params: [query.starred ? 1 : 0] });
-  if (query.gistSynced != null) conditions.push({ sql: 'gist_synced = ?', params: [query.gistSynced] });
-  if (query.ids != null && query.ids.length > 0) {
-    conditions.push({ sql: `id IN (${query.ids.map(() => '?').join(',')})`, params: query.ids as unknown as SqliteValue[] });
-  }
-  return conditions;
-}
-
-/** Qualify column names in a condition for the FTS JOIN path (`b.` prefix). */
-export function qualifyCondition(condition: FilterCondition, qualifier: string): FilterCondition {
-  const qualified = condition.sql
-    .replace(/\b(created_at|domain|is_starred|gist_synced|is_deleted)\b/g, `${qualifier}$&`)
-    .replace(/\bid IN \(/g, `${qualifier}id IN (`);
-  return { ...condition, sql: qualified };
 }
 
 /** The filter fields `buildExtraWhereSql` reads; everything else on a query is paging or text. */
@@ -206,45 +168,16 @@ export function selectTagFilter(
 }
 
 /**
- * Row-level tag predicate shared by the non-SQL paths (PBI 2026-09-12-40).
- * Canonical owner is src/utils/tagLike.ts (PBI 2026-11-02-02 hoisted it
- * there so the background ask-history post-hoc filter can share the exact
- * SQL LIKE semantics without a background→offscreen import); this module
- * re-exports it so existing import paths keep working.
- */
-export { rowMatchesTagLike };
-
-/**
  * Back-compat alias: comma-split partial match on the raw tag text.
- * PBI 2026-09-12-40: the fallback read path now uses `rowMatchesTagLike`
- * (SQL-parity). This function remains for direct callers that explicitly
- * want the legacy comma-split semantics.
+ * PBI 2026-09-12-40: the fallback read path uses `rowMatchesTagLike`
+ * (SQL-parity; now imported from sqliteQueryBuilder's re-export). This function
+ * remains for direct callers that explicitly want the legacy comma-split
+ * semantics.
  */
 export function tagMatchesFilter(tags: string | null | undefined, tagFilter: string): boolean {
   const tagsString = tags || '';
   if (typeof tagsString !== 'string') return false;
   return tagsString.split(',').some(tag => tag.trim().includes(tagFilter));
-}
-
-/**
- * Shared in-memory predicate mirroring buildExtraWhereSql's semantics.
- * Lets InMemoryTransport filter without reimplementing the condition set —
- * both the SQL generator and the JS fallback read from the same source.
- */
-export function matchesExtraWhere(
-  record: { domain?: string | null; is_starred?: number; gist_synced?: number | null; created_at: number; id?: number; tags?: string | null },
-  query: Pick<StorageQuery, 'dateFrom' | 'dateTo' | 'domain' | 'starred' | 'gistSynced' | 'ids' | 'tag'>
-): boolean {
-  if (query.domain != null && query.domain !== '' && record.domain !== query.domain) return false;
-  if (query.starred != null && Boolean(record.is_starred) !== query.starred) return false;
-  if (query.gistSynced != null && (record.gist_synced ?? 0) !== query.gistSynced) return false;
-  if (query.dateFrom != null && record.created_at < (query as StorageQuery).dateFrom!) return false;
-  if (query.dateTo != null && record.created_at > (query as StorageQuery).dateTo!) return false;
-  if (query.ids != null && query.ids.length > 0) {
-    if (record.id == null || !query.ids.includes(record.id)) return false;
-  }
-  if (query.tag != null && query.tag !== '' && !rowMatchesTagLike(record.tags, query.tag)) return false;
-  return true;
 }
 
 /**
@@ -370,540 +303,79 @@ export function buildQuerySpec(
 }
 
 // ---------------------------------------------------------------------------
-// PBI-34: shared SQL assembly — WHERE/ORDER/LIMIT built in ONE place.
+// Compat facade (PBI 2026-11-07-07): statement assembly moved to
+// sqliteQueryBuilder.ts. Every pre-split `queryPlan.js` import path keeps
+// working through these re-exports — no caller changes. New code should
+// import statement builders from sqliteQueryBuilder.js directly.
+// Intentionally NOT re-exported: `rowMatchesTagLike` (use utils/tagLike.js)
+// and the policy-owned `DELETED_CONDITION_SQL` spelling detail.
 //
-// IdbVfsBackend (direct exec) and opfsWorker search/crud handlers previously
-// assembled the same COUNT/rows statements independently; drift between the
-// two copies changed search results per backend. These builders are the
-// single source of truth for statement text and parameter order. Backends
-// supply only policy (limit caps/defaults, invalid-order handling) and keep
-// their intentionally different behaviour, documented below.
-//
-// Out of scope (preserved, NOT unified by PBI-34):
-// - InMemoryTransport is test-only and soft-deletes (is_deleted = 1) while
-//   every product backend hard-deletes. Unifying DELETE semantics would
-//   corrupt test fixtures — do not touch.
-// - FallbackStorage has no FTS5: rank is always 0 and search keeps insertion
-//   order unless created_at is requested explicitly.
+// PBI 2026-11-08-06: this entire facade block is @deprecated. It stays only
+// for existing callers until the follow-up removal PBI; new code must import
+// from the owner modules directly (builders → sqliteQueryBuilder.js,
+// purge execution → purgeRunner.js, parity predicate →
+// queryParityPredicate.js).
 // ---------------------------------------------------------------------------
 
 /**
- * Quote a sanitized bare term as an FTS5 phrase query.
- * Single place for the `"bare"` wrapping used by every FTS MATCH statement.
+ * @deprecated Use the owner modules directly: statement builders and SQL
+ * constants from sqliteQueryBuilder.js, purge execution from purgeRunner.js,
+ * matchesExtraWhere from queryParityPredicate.js. This facade stays only for
+ * existing callers until the follow-up removal PBI (PBI 2026-11-08-06).
  */
-export function buildFtsMatchQuery(bare: string): string {
-  return `"${bare}"`;
-}
-
+export {
+  buildFilterConditions,
+  qualifyCondition,
+  buildFtsMatchQuery,
+  buildLikePattern,
+  buildSearchOrderClause,
+  assembleSearchStatements,
+  appendTag,
+  withTagParams,
+  buildFtsSearchStatements,
+  buildLikeSearchStatements,
+  buildPlainListStatements,
+  buildUpdateSet,
+  buildUpdateByIdStatements,
+  buildPurgeOldRecordsStatements,
+  buildAuditLogPurgeStatements,
+  buildContentPurgeStatements,
+  buildAuditLogStatements,
+  buildAuditInsertParams,
+  runPurgeSequence,
+  purgeCutoffMs,
+  contentPurgeStarredClause,
+  FTS_SEARCH_SELECT_COLUMNS,
+  LIKE_SEARCH_SELECT_COLUMNS,
+  FTS_SEARCH_FROM,
+  LIKE_SEARCH_FROM,
+  PLAIN_LIST_COLUMNS,
+  DELETE_BY_ID_SQL,
+  TOGGLE_STAR_SQL,
+  LIVE_COUNT_SQL,
+  AUDIT_INSERT_SQL,
+  AUDIT_INSERT_RETURNING_SQL,
+} from './sqliteQueryBuilder.js';
+// PBI 2026-11-08-02: matchesExtraWhere sources directly from its owner
+// (single parity → plan stage — the former parity → builder → plan two-stage
+// re-export is dissolved on the builder side). The facade itself stays until
+// PBI 06; new code should import the predicate from queryParityPredicate.js
+// directly.
+/** @deprecated Import matchesExtraWhere from queryParityPredicate.js directly. */
+export { matchesExtraWhere } from './queryParityPredicate.js';
 /**
- * Build the LIKE pattern for fallback text search.
- *
- * INTENTIONAL: the raw query is interpolated without escaping, preserving
- * the long-standing SQLite LIKE semantics shared by the idb and opfs SQL
- * backends (`%`/`_` in user input act as wildcards there). The non-SQL
- * paths (FallbackStorage, InMemoryTransport) have no FTS/LIKE engine and use
- * case-insensitive substring/token matching instead — a documented
- * divergence covered by the parametric query-backends test, not something
- * this builder can or should hide.
+ * @deprecated Import statement types from sqliteQueryBuilder.js and purge
+ * execution types from purgeRunner.js directly.
  */
-export function buildLikePattern(raw: string): string {
-  return `%${raw}%`;
-}
-
-/**
- * Policy for out-of-whitelist orderDir on the search path.
- *
- * - 'error': fail closed (IdbVfsBackend.query returns success:false so
- *   untrusted input crossing chrome.runtime.sendMessage never reaches
- *   string interpolation).
- * - 'coerce': normalize to DESC (legacy opfsWorker search behaviour).
- *
- * INTENTIONAL divergence preserved by PBI-34: the idb query path uses
- * 'error', the opfs search path uses 'coerce'. See the parametric
- * query-backends test ('INTENTIONAL: invalid orderDir ...').
- */
-export type InvalidOrderPolicy = 'error' | 'coerce';
-
-/**
- * Unified ORDER BY mapping for text search (FTS and LIKE-fallback).
- * Delegates to the sqliteQueryBuilder clause functions so the column mapping
- * (`rank` default for FTS, `created_at` for LIKE) lives in exactly one place;
- * only the invalid-input policy differs per caller.
- */
-export function buildSearchOrderClause(
-  q: { orderBy?: string | undefined; orderDir?: string | undefined },
-  opts: { fts: boolean; onInvalid?: InvalidOrderPolicy } = { fts: false }
-): { orderClause: string; error?: string } {
-  const build = opts.fts ? buildFts5OrderClause : buildLikeOrderClause;
-  const first = build(q as StorageQuery);
-  if (!first.error || (opts.onInvalid ?? 'error') === 'error') return first;
-  return build({ ...q, orderDir: 'DESC' } as StorageQuery);
-}
-
-/** COUNT + rows statements with parameter arrays, in execution order. */
-export interface SearchStatements {
-  countSql: string;
-  rowsSql: string;
-  countParams: SqliteValue[];
-  rowsParams: SqliteValue[];
-}
-
-/**
- * Search-statement column lists (PBI 2026-10-14-04): the ONLY per-path
- * difference the FTS/LIKE skeleton parameterizes, kept next to the skeleton
- * so a new column is one edit here instead of two synchronized SELECTs.
- *
- * INTENTIONAL divergence preserved: FTS projects the `b.`-qualified 11
- * browsing_logs columns plus `rank AS rank` (12 items — the FTS5 relevance
- * score has no LIKE counterpart), LIKE projects the 11 unqualified columns.
- */
-export const FTS_SEARCH_SELECT_COLUMNS =
-  'b.id, b.url, b.title, b.summary, b.tags, b.created_at, b.domain, b.visit_duration, b.scroll_ratio, b.is_starred, b.fallback_reason, rank AS rank';
-
-export const LIKE_SEARCH_SELECT_COLUMNS =
-  'id, url, title, summary, tags, created_at, domain, visit_duration, scroll_ratio, is_starred, fallback_reason';
-
-/** FROM clause shared by the FTS COUNT and rows statements (JOIN path). */
-export const FTS_SEARCH_FROM =
-  'FROM browsing_logs_fts JOIN browsing_logs b ON browsing_logs_fts.rowid = b.id';
-
-/** FROM clause shared by the LIKE COUNT and rows statements (single table). */
-export const LIKE_SEARCH_FROM = 'FROM browsing_logs';
-
-/**
- * Single skeleton for the FTS/LIKE search-statement twins (PBI 2026-10-14-04).
- *
- * The twins shared everything except the SELECT column list, the FROM clause,
- * and the WHERE core (MATCH-? + qualified deleted filter vs LIKE-OR + plain
- * deleted filter): suffix assembly (appendTag), param assembly
- * (withTagParams), COUNT aliasing (`AS c` for the opfs named-row reader),
- * ORDER/LIMIT/OFFSET shape, and limit/offset bind order are identical and
- * now live here. Callers supply ONLY the parameterized parts:
- * `selectColumns` (FTS 12 incl. rank vs LIKE 11), `from`, the tag-unappended
- * `whereCore` + its `whereCoreParams` (lead binds + extraParams), and the
- * already-resolved `orderClause`.
- */
-export function assembleSearchStatements(opts: {
-  selectColumns: string;
-  from: string;
-  whereCore: string;
-  whereCoreParams: SqliteValue[];
-  tagFilter?: TagFilterCondition | null | undefined;
-  orderClause: string;
-  limit: number;
-  offset: number;
-}): SearchStatements {
-  const conditions = appendTag(opts.whereCore, opts.tagFilter);
-  const baseParams = withTagParams([...opts.whereCoreParams], opts.tagFilter);
-  return {
-    countSql: `SELECT COUNT(*) AS c ${opts.from} WHERE ${conditions}`,
-    rowsSql:
-      `SELECT ${opts.selectColumns} ${opts.from} ` +
-      `WHERE ${conditions} ORDER BY ${opts.orderClause} LIMIT ? OFFSET ?`,
-    countParams: baseParams,
-    rowsParams: [...baseParams, opts.limit, opts.offset],
-  };
-}
-
-/**
- * Single append point for the tag condition suffix.
- * Was copy-pasted ` AND ${condition}` in all 3 builders; param spreads were
- * hand-synced next to it (same shape as the round-12 nested `ids` bind bug).
- */
-export function appendTag(baseSql: string, tagFilter: TagFilterCondition | null | undefined): string {
-  return tagFilter ? `${baseSql} AND ${tagFilter.condition}` : baseSql;
-}
-
-/** Single append point for tag bind params — always trails `extraParams`. */
-export function withTagParams(baseParams: SqliteValue[], tagFilter: TagFilterCondition | null | undefined): SqliteValue[] {
-  return tagFilter ? [...baseParams, ...tagFilter.params] : baseParams;
-}
-
-/**
- * FTS5 search statements (browsing_logs_fts JOIN browsing_logs AS b).
- * `extra` comes from buildExtraWhereSql; `orderClause` from
- * buildSearchOrderClause({ fts: true }) or QuerySpec.order.
- * `tagFilter` (PBI 2026-09-11-06, round 5): the shared tag condition built
- * with buildTagFilterCondition({ idColumn: 'b.id' }) — text+tag applies BOTH
- * conditions on every SQL backend instead of silently dropping the tag.
- */
-export function buildFtsSearchStatements(
-  extra: ExtraWhere,
-  opts: { ftsQuery: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
-): SearchStatements {
-  // `AS c` alias: required by the opfs named-row reader (row.c), ignored by
-  // the idb positional reader (row[0]) — one text serves both (PBI-34).
-  // rowCodec.test.ts pins this: every COUNT emits `AS c`, every FTS rows
-  // query emits `rank AS rank`, so the codec mappers never read bare names.
-  // PBI 2026-09-12-27 + PBI 2026-10-16-04: the deleted-row filter lives HERE
-  // (deletedCond), not in `extra` — buildExtraWhereSql excludes the shared
-  // is_deleted condition from the search fragment, so this is the single
-  // source. `excludeDeleted: false` drops it via includeDeletedFilter, like
-  // fallback/InMemory.
-  const deletedCond = extra.includeDeletedFilter ? ' AND b.is_deleted = 0' : '';
-  return assembleSearchStatements({
-    selectColumns: FTS_SEARCH_SELECT_COLUMNS,
-    from: FTS_SEARCH_FROM,
-    whereCore: `browsing_logs_fts MATCH ?${deletedCond}${extra.extraWhereSql}`,
-    whereCoreParams: [opts.ftsQuery, ...extra.extraParams],
-    tagFilter: opts.tagFilter,
-    orderClause: opts.orderClause,
-    limit: opts.limit,
-    offset: opts.offset,
-  });
-}
-
-/**
- * LIKE-fallback search statements (no FTS available or term too short).
- * `orderClause` comes from buildSearchOrderClause({ fts: false }).
- * `tagFilter` (PBI 2026-09-11-06): built with buildTagFilterCondition
- * ({ fts5Available: false }) so short/absent FTS still honours the tag.
- */
-export function buildLikeSearchStatements(
-  extra: ExtraWhere,
-  opts: { likePattern: string; orderClause: string; limit: number; offset: number; tagFilter?: TagFilterCondition | null }
-): SearchStatements {
-  // PBI 2026-09-12-27 + PBI 2026-10-16-04: the deleted-row filter lives HERE
-  // (baseConds), not in `extra` — buildExtraWhereSql excludes the shared
-  // is_deleted condition from the search fragment, so this is the single
-  // source. `excludeDeleted: false` drops it via includeDeletedFilter, like
-  // fallback/InMemory.
-  const baseConds = extra.includeDeletedFilter
-    ? 'is_deleted = 0 AND (url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)'
-    : '(url LIKE ? OR title LIKE ? OR summary LIKE ? OR tags LIKE ?)';
-  const likeParams: SqliteValue[] = [opts.likePattern, opts.likePattern, opts.likePattern, opts.likePattern];
-  return assembleSearchStatements({
-    selectColumns: LIKE_SEARCH_SELECT_COLUMNS,
-    from: LIKE_SEARCH_FROM,
-    whereCore: `${baseConds}${extra.extraWhereSql}`,
-    whereCoreParams: [...likeParams, ...extra.extraParams],
-    tagFilter: opts.tagFilter,
-    orderClause: opts.orderClause,
-    limit: opts.limit,
-    offset: opts.offset,
-  });
-}
-
-/**
- * Plain filtered-listing statements. The tag filter rides on the spec
- * (QuerySpec.tagFilter — built by buildQuerySpec with the backend's
- * fts5Available), so every backend assembles the same condition set
- * (PBI 2026-09-11 tag SQL migration: the former "opfs honours tag, idb/fallback
- * ignore it" divergence is gone — all backends honour the tag).
- */
-/** Canonical plain-list projection — owned by rowCodec; kept here so existing importers keep working. */
-export const PLAIN_LIST_COLUMNS = BROWSING_LOG_COLUMNS_SQL;
-
-export function buildPlainListStatements(
-  spec: Pick<QuerySpec, 'where' | 'order' | 'limit' | 'offset' | 'params' | 'tagFilter'>,
-  opts: { columns: string },
-): SearchStatements {
-  let where = spec.where;
-  const params: SqliteValue[] = withTagParams([...spec.params], spec.tagFilter);
-  if (spec.tagFilter) {
-    where = where ? appendTag(where, spec.tagFilter) : `WHERE ${spec.tagFilter.condition}`;
-  }
-  return {
-    countSql: `SELECT COUNT(*) AS c FROM browsing_logs ${where}`,
-    rowsSql: `SELECT ${opts.columns} FROM browsing_logs ${where} ${spec.order} LIMIT ? OFFSET ?`,
-    countParams: params,
-    rowsParams: [...params, spec.limit, spec.offset],
-  };
-}
-
-// ---------------------------------------------------------------------------
-// CRUD assembly (PBI 2026-10-07-05) — update/delete/star/count/audit
-// statements in ONE place. IdbVfsBackend and the opfsWorker crud/audit
-// handlers previously hand-copied these, and the two UPDATE field loops
-// diverged on undefined values: idb wrote NULL for a key present with an
-// undefined value while the worker skipped it — the same op produced
-// different rows per backend. The builders here own the UPDATABLE_FIELDS
-// loop and the statement text; backends supply only the policy and keep
-// their own execution model.
-// ---------------------------------------------------------------------------
-
-/** DELETE-by-id statement shared by idb/opfs hard delete. */
-export const DELETE_BY_ID_SQL = 'DELETE FROM browsing_logs WHERE id = ?';
-
-/** Star-toggle UPDATE shared by idb/opfs toggleStar. */
-export const TOGGLE_STAR_SQL =
-  'UPDATE browsing_logs SET is_starred = CASE WHEN is_starred = 0 THEN 1 ELSE 0 END WHERE id = ?';
-
-/**
- * Live-row COUNT with the `AS c` alias: required by the opfs named-row reader
- * (row.c), ignored by the idb positional reader (row[0]) — one text serves
- * both (same rule as the COUNT in buildFtsSearchStatements).
- */
-export const LIVE_COUNT_SQL = 'SELECT COUNT(*) AS c FROM browsing_logs WHERE is_deleted = 0';
-
-/**
- * Audit-log INSERT shared by idb/opfs. Minimal form (PBI 2026-10-23-01):
- * provider/url/created_at/char_count/policy — the trail is metadata and
- * never carries content or PII. char_count/policy are nullable so a caller
- * that cannot size the payload still records the send.
- */
-export const AUDIT_INSERT_SQL =
-  'INSERT INTO audit_log (provider, url, created_at, char_count, policy) VALUES (?, ?, ?, ?, ?)';
-
-/**
- * Audit-log INSERT ... RETURNING for IdbVfsBackend.insertAuditLog: the id
- * comes back from the very statement that wrote the row, so the former
- * two-step `SELECT last_insert_rowid()` cannot interleave with a concurrent
- * insert and hand back the other row's id (PBI 2026-10-18-23). AUDIT_INSERT_SQL
- * stays RETURNING-free: the OPFS worker's audit handler still emits it, under
- * the worker's request queue.
- */
-export const AUDIT_INSERT_RETURNING_SQL = `${AUDIT_INSERT_SQL} RETURNING id`;
-
-/** Parameter array for AUDIT_INSERT_SQL, in column order (buildArchiveInsertParams convention). */
-export function buildAuditInsertParams(record: {
-  provider: string;
-  url: string;
-  created_at: number;
-  char_count?: number | null;
-  policy?: string | null;
-}): SqliteValue[] {
-  return [
-    record.provider,
-    record.url,
-    record.created_at,
-    record.char_count ?? null,
-    record.policy ?? null,
-  ];
-}
-
-/**
- * Undefined-value policy for UPDATE SET assembly (PBI 2026-10-07-05).
- *
- * The two backends used to disagree here: idb treated a key present with an
- * undefined value as NULL (the divergence), the worker skipped it.
- * 'skip-undefined' is the unified policy — it matches the wire semantics,
- * where structured clone drops undefined properties, so the SET clause is
- * identical for a dropped key and a present-undefined key. 'write-null' is
- * kept as the named former idb behavior so the divergence fix stays
- * greppable and pinnable in tests.
- */
-export type UpdateUndefinedPolicy = 'skip-undefined' | 'write-null';
-
-/** The assembled SET clause (no WHERE) and its bind values, in field order. */
-export interface UpdateSetParts {
-  setSql: string;
-  params: SqliteValue[];
-}
-
-/**
- * Single owner of the UPDATABLE_FIELDS loop: fields not in `changes` are
- * ignored (whitelist validation), and `policy` decides what a key present
- * with an undefined value does. Every update path must assemble its SET
- * clause through this builder — a hand-rolled loop reintroduces the
- * per-backend divergence this PBI closed.
- */
-export function buildUpdateSet(changes: Record<string, unknown>, policy: UpdateUndefinedPolicy): UpdateSetParts {
-  const clauses: string[] = [];
-  const params: SqliteValue[] = [];
-  for (const field of UPDATABLE_FIELDS) {
-    if (!(field in changes)) continue;
-    const val = changes[field];
-    if (policy === 'skip-undefined' && val === undefined) continue;
-    // `?? null` is load-bearing for the 'write-null' policy: an undefined
-    // value must bind as NULL there, never as undefined.
-    clauses.push(`${field} = ?`);
-    params.push((val ?? null) as SqliteValue);
-  }
-  return { setSql: clauses.join(', '), params };
-}
-
-/** Full UPDATE-by-id statement, or null when nothing would be set (no-op). */
-export function buildUpdateByIdStatements(
-  id: number,
-  changes: Record<string, unknown>,
-  policy: UpdateUndefinedPolicy,
-): { sql: string; params: SqliteValue[] } | null {
-  const set = buildUpdateSet(changes, policy);
-  if (!set.setSql) return null;
-  return {
-    sql: `UPDATE browsing_logs SET ${set.setSql} WHERE id = ?`,
-    params: [...set.params, id],
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Purge assembly — retention cutoff, DELETE/UPDATE conditions and the purge
-// transaction skeleton in ONE place.
-//
-// Both backends (IdbVfsBackend and opfsWorker/purgeHandlers) run the identical
-// sequence: delete-old (gated on retentionDays > 0) → SELECT changes() → COUNT
-// → excess delete over maxRecords → SELECT changes(). It used to be four
-// near-identical copies whose control flow could drift silently per lang; the
-// statements build the SQL, and `runPurgeSequence` owns the gates, the
-// changes()-based counting rule and the transaction policy, so a fix lands
-// once and both langs move together.
-// ---------------------------------------------------------------------------
-
-/** Retention cutoff in epoch ms. `now` is injectable for tests. */
-export function purgeCutoffMs(retentionDays: number, now: number = Date.now()): number {
-  return now - retentionDays * 24 * 60 * 60 * 1000;
-}
-
-/**
- * The statements one purge sequence runs, in execution order. Both backends
- * construct these from the shared builders; the runner binds the values.
- */
-export interface PurgeSequenceStatements {
-  /** Deletes/clears rows older than the retention cutoff (one cutoff bind). */
-  deleteOldSql: string;
-  /** Reads the row count the cap gate compares against maxRecords. */
-  countSql: string;
-  /** Deletes/clears `count - maxRecords` rows, oldest first (one bind). */
-  deleteExcessSql: string;
-}
-
-/**
- * Executor seam for `runPurgeSequence`: each backend binds its own engine, so
- * the sequence stays engine-agnostic. The two backends genuinely read scalars
- * differently (IDB positional callback vs the worker's named `row.c`), so the
- * seam — not the runner — owns that shape.
- * - `exec` runs a write (DELETE/UPDATE) with its binds.
- * - `count` runs a scalar COUNT and returns its single value.
- * - `changes` runs `SELECT changes()` (spelled per backend) after a write and
- *   returns the number of rows that write actually touched.
- */
-export interface PurgeExecutor {
-  exec(sql: string, params: SqliteValue[]): Promise<void>;
-  count(sql: string, params: SqliteValue[]): Promise<number>;
-  changes(): Promise<number>;
-}
-
-/**
- * The one documented difference between the two purge ops, made explicit.
- * 'always' (purgeOldRecords): the cap COUNT runs even when maxRecords is
- * absent. 'when-max-records' (content purge): the COUNT is skipped entirely
- * unless maxRecords > 0. Collapsing them would change the emitted sequence.
- */
-export type PurgeCountPolicy = 'always' | 'when-max-records';
-
-export interface PurgeSequencePolicy {
-  retentionDays?: number | null | undefined;
-  maxRecords?: number | null | undefined;
-  countPolicy: PurgeCountPolicy;
-}
-
-/**
- * Run the shared purge sequence inside ONE `withTransaction` and return the
- * executed-row count. Policy, shared verbatim by both backends:
- *
- * - TRANSACTION: the whole sequence runs in one BEGIN IMMEDIATE … COMMIT.
- *   Every purge here reads between writes — `SELECT changes()` feeds the
- *   reported count, and the cap COUNT decides the next write's LIMIT. A
- *   recording landing between the two would otherwise report a count taken
- *   from one snapshot while deleting rows selected from another.
- * - SKIP GUARDS (PBI 2026-09-12-36): an absent or non-positive
- *   `retentionDays` / `maxRecords` skips that dimension entirely, so "no
- *   window" never degrades into "cutoff = now" (the old (0,0)
- *   deleted-everything divergence). `countPolicy` is the one intentional
- *   cross-op difference, preserved here rather than re-decided per backend.
- * - COUNTING: `purged` is the sum of `SELECT changes()` after each write. The
- *   computed excess is only what the cap statement was asked to touch, not
- *   what it touched, so reporting it would turn a disagreement between the
- *   count and the delete into a wrong number.
- */
-export async function runPurgeSequence(
-  executor: PurgeExecutor,
-  stmts: PurgeSequenceStatements,
-  policy: PurgeSequencePolicy,
-): Promise<number> {
-  const { retentionDays, maxRecords, countPolicy } = policy;
-  let purged = 0;
-
-  await withTransaction({ exec: (sql) => executor.exec(sql, []) }, async () => {
-    if (retentionDays != null && retentionDays > 0) {
-      await executor.exec(stmts.deleteOldSql, [purgeCutoffMs(retentionDays)]);
-      purged += await executor.changes();
-    }
-
-    if (countPolicy === 'always' || (maxRecords != null && maxRecords > 0)) {
-      const count = await executor.count(stmts.countSql, []);
-      if (maxRecords != null && maxRecords > 0 && count > maxRecords) {
-        await executor.exec(stmts.deleteExcessSql, [count - maxRecords]);
-        purged += await executor.changes();
-      }
-    }
-  });
-
-  return purged;
-}
-
-/** Age-based + cap-based hard-delete statements shared by idb/opfs purge. */
-export function buildPurgeOldRecordsStatements(): PurgeSequenceStatements {
-  return {
-    deleteOldSql: 'DELETE FROM browsing_logs WHERE created_at < ? AND is_starred = 0 AND is_deleted = 0',
-    countSql: LIVE_COUNT_SQL,
-    deleteExcessSql:
-      'DELETE FROM browsing_logs WHERE id IN (' +
-      'SELECT id FROM browsing_logs WHERE is_starred = 0 AND is_deleted = 0 ' +
-      'ORDER BY created_at ASC LIMIT ?)',
-  };
-}
-
-/**
- * Audit-log retention delete shared by the idb/opfs purge paths.
- *
- * Age is the only dimension: audit_log has no starred/deleted columns and no
- * cap, and the trail is metadata whose whole value is bounded by how long it
- * stays readable — so the cutoff rides the existing `created_at` index rather
- * than a per-row expiry column.
- */
-export function buildAuditLogPurgeStatements(cutoffMs: number): {
-  deleteOldSql: string;
-  deleteOldParams: SqliteValue[];
-} {
-  return {
-    deleteOldSql: 'DELETE FROM audit_log WHERE created_at < ?',
-    deleteOldParams: [cutoffMs],
-  };
-}
-
-/**
- * Starred-row guard for content purge (sets content NULL, keeps the row).
- * '' when includeStarred is truthy, otherwise excludes starred rows.
- */
-export function contentPurgeStarredClause(includeStarred?: boolean | null): string {
-  return includeStarred ? '' : 'AND is_starred = 0';
-}
-
-/**
- * Content-purge statements shared by idb/opfs implementations.
- *
- * FallbackStorage additionally differs in cap eviction: it can NULL the
- * content of starred rows when over maxRecords, while this SQL only touches
- * unstarred rows unless includeStarred is set (documented divergence). The
- * per-step counting rule lives in `runPurgeSequence`.
- */
-export function buildContentPurgeStatements(starredClause: string): PurgeSequenceStatements {
-  return {
-    deleteOldSql:
-      'UPDATE browsing_logs SET content = NULL ' +
-      `WHERE content IS NOT NULL AND created_at < ? ${starredClause}`,
-    countSql: `SELECT COUNT(*) AS c FROM browsing_logs WHERE content IS NOT NULL ${starredClause}`,
-    deleteExcessSql:
-      'UPDATE browsing_logs SET content = NULL WHERE id IN (' +
-      'SELECT id FROM browsing_logs ' +
-      `WHERE content IS NOT NULL ${starredClause} ORDER BY created_at ASC LIMIT ?)`,
-  };
-}
-
-/**
- * Audit-log listing statements. Caps/defaults stay per caller (INTENTIONAL):
- * IdbVfsBackend allows up to 100000 rows, the opfs worker caps at 1000.
- */
-export function buildAuditLogStatements(opts: { limit: number; offset: number }): {
-  rowsSql: string;
-  rowsParams: SqliteValue[];
-  countSql: string;
-} {
-  return {
-    rowsSql: 'SELECT id, provider, url, created_at, char_count, policy FROM audit_log ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    rowsParams: [opts.limit, opts.offset],
-    countSql: 'SELECT COUNT(*) AS c FROM audit_log',
-  };
-}
+export type {
+  FilterCondition,
+  InvalidOrderPolicy,
+  SearchStatements,
+  TagFilterCondition,
+  UpdateUndefinedPolicy,
+  UpdateSetParts,
+  PurgeSequenceStatements,
+  PurgeExecutor,
+  PurgeCountPolicy,
+  PurgeSequencePolicy,
+} from './sqliteQueryBuilder.js';
