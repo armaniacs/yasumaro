@@ -41,7 +41,17 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
 
   async getStatus(): Promise<MigrationStatus | null> {
     const result = await this.port.get(MIGRATION_STATUS_KEY);
-    return (result[MIGRATION_STATUS_KEY] as MigrationStatus) || null;
+    const raw = result[MIGRATION_STATUS_KEY];
+    if (raw === undefined || raw === null) return null;
+    if (
+      raw === 'pending' ||
+      raw === 'completed' ||
+      raw === 'fresh_install' ||
+      raw === 'failed_permanently'
+    ) {
+      return raw;
+    }
+    throw new Error(`Migration status corrupted: unexpected value for ${MIGRATION_STATUS_KEY}`);
   }
 
   async setStatus(status: MigrationStatus): Promise<void> {
@@ -50,7 +60,10 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
 
   async getProgress(): Promise<number> {
     const result = await this.port.get(MIGRATION_PROGRESS_KEY);
-    return (result[MIGRATION_PROGRESS_KEY] as number) || 0;
+    const raw = result[MIGRATION_PROGRESS_KEY];
+    if (raw === undefined || raw === null) return 0;
+    if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) return raw;
+    throw new Error(`Migration progress corrupted: unexpected value for ${MIGRATION_PROGRESS_KEY}`);
   }
 
   async setProgress(count: number): Promise<void> {
@@ -59,7 +72,10 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
 
   async getRetryCount(): Promise<number> {
     const result = await this.port.get(MIGRATION_RETRY_COUNT_KEY);
-    return (result[MIGRATION_RETRY_COUNT_KEY] as number) || 0;
+    const raw = result[MIGRATION_RETRY_COUNT_KEY];
+    if (raw === undefined || raw === null) return 0;
+    if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) return raw;
+    throw new Error(`Migration retry count corrupted: unexpected value for ${MIGRATION_RETRY_COUNT_KEY}`);
   }
 
   async setRetryCount(count: number): Promise<void> {
