@@ -35,8 +35,12 @@
 // `npm run build` strips the probe. Unit tests (vitest) leave the
 // define undefined, which also keeps the probe enabled.
 declare const __OW_E2E_PROBE__: boolean | undefined;
+// S32: strict opt-in — only an explicit `true` define compiles the probe in.
+// `undefined` (vitest, where the define is absent) keeps the historical
+// probe-enabled default so unit tests keep exercising the probe; any other
+// value stays compiled out. `!== false` was looser than this contract.
 const E2E_PROBE_COMPILED_IN: boolean =
-    typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ !== false;
+    typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ === true;
 
 /** Session flag the harness (via the SW) sets to arm the probe. */
 export const E2E_PROBE_ENABLE_KEY = 'owE2eProbeEnabled';
