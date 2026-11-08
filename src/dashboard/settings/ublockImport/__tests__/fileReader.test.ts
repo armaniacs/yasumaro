@@ -80,4 +80,35 @@ describe('ublockImport - FileReader Module', () => {
       expect(text).toContain('sub.example.co.jp');
     });
   });
+
+  describe('size limit and abort (PBI 2026-11-08-14)', () => {
+    beforeEach(() => {
+      (globalThis as { chrome?: unknown }).chrome = {
+        i18n: { getMessage: (key: string) => key },
+      };
+    });
+
+    test('rejects an over-size file with an i18n key error', async () => {
+      const big = new File(['x'.repeat(100)], 'big.txt', { type: 'text/plain' });
+
+      await expect(readFile(big, { maxBytes: 10 })).rejects.toThrow('ublockFileTooLarge');
+    });
+
+    test('rejects a pre-aborted read with an i18n key error', async () => {
+      const mockFile = new File(['||example.com^'], 'a.txt', { type: 'text/plain' });
+      const controller = new AbortController();
+      controller.abort();
+
+      await expect(readFile(mockFile, { signal: controller.signal })).rejects.toThrow('ublockFileAborted');
+    });
+
+    test('rejects when aborted mid-read', async () => {
+      const mockFile = new File(['||example.com^'], 'a.txt', { type: 'text/plain' });
+      const controller = new AbortController();
+      const pending = readFile(mockFile, { signal: controller.signal });
+      controller.abort();
+
+      await expect(pending).rejects.toThrow('ublockFileAborted');
+    });
+  });
 });

@@ -6158,5 +6158,29 @@
     "placeholders": {
       "1": { "content": "$1" }
     }
+  },
+  "previewNoResponse": {
+    "message": "No response from background worker",
+    "description": "Preview step failed: the background worker did not answer"
+  },
+  "previewProcessingFailed": {
+    "message": "Processing failed",
+    "description": "Preview step failed without a detailed error"
+  },
+  "recordSaveFailed": {
+    "message": "Save failed",
+    "description": "Record step failed without a detailed error"
+  },
+  "panelLoadError": {
+    "message": "Failed to load this panel ({panel}).",
+    "description": "Dashboard panel load failure banner; panel id only, no raw error"
+  },
+  "ublockFileTooLarge": {
+    "message": "File is too large (limit: {max}).",
+    "description": "uBlock import rejected an over-size file"
+  },
+  "ublockFileAborted": {
+    "message": "File reading was cancelled.",
+    "description": "uBlock import file read aborted"
   }
 }

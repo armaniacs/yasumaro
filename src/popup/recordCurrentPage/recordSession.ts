@@ -476,14 +476,14 @@ export class RecordSession {
     if (settlement.kind === 'private-page') {
       // No button to offer force-retry on: fall into the error path exactly
       // as the former flow did (throw -> catch -> errorPresenter).
-      if (!recordBtn) throw new Error(previewSave.error || 'Save failed');
+      if (!recordBtn) throw new Error(previewSave.error || getMessage('recordSaveFailed'));
       return;
     }
     if (settlement.kind === 'cancelled') return;
     const result = settlement.result;
 
     if (!previewSave.success) {
-      throw new Error(previewSave.error || 'Save failed');
+      throw new Error(previewSave.error || getMessage('recordSaveFailed'));
     }
 
     await this.finishSuccess(tab, result, statusDiv, startTime);
@@ -607,7 +607,7 @@ export class RecordSession {
         await this.showCopyMarkdownButton(tab, result);
         if (button) this.showButtonResultState(button, 'done');
       } else {
-        statusChannel.report(statusDiv, `${getMessage('saveError')}: ${result?.error || previewSave.error || 'Unknown error'}`, 'error');
+        statusChannel.report(statusDiv, `${getMessage('saveError')}: ${result?.error || previewSave.error || getMessage('unknownError')}`, 'error');
         if (button) this.showButtonResultState(button, 'error');
       }
     } catch (error: unknown) {

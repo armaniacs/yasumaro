@@ -397,3 +397,26 @@ describe('checkPageStatus', () => {
     expect(result.domainFilter.mode).toBe('disabled');
   });
 });
+
+describe('checkPageStatus special URLs (PBI 2026-11-08-14)', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    'chrome://extensions',
+    'edge://settings',
+    'about:blank',
+    'chrome-extension://abcdef/popup.html',
+    'moz-extension://abcdef/options.html',
+    'file:///home/user/notes.txt',
+    'data:text/html,<h1>hi</h1>',
+  ])('returns null for %s without a service-worker round trip', async (url) => {
+    mockChromeRuntime.sendMessage.mockClear();
+
+    const result = await checkPageStatus(url);
+
+    expect(result).toBeNull();
+    expect(mockChromeRuntime.sendMessage).not.toHaveBeenCalled();
+  });
+});

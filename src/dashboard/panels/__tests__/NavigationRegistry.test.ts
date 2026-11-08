@@ -1,7 +1,15 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { waitForMock } from '../../../../testDir/waitPolicy.js';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { type PanelLifecycle } from '../types.js';
+
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({ logError: 'fn' }),
+);
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({ ErrorCode: 'internalUnknownKey' }),
+);
 
 type PanelOverrides = { [K in keyof PanelLifecycle]?: PanelLifecycle[K] | undefined };
 
@@ -328,8 +336,7 @@ describe('NavigationRegistry', () => {
     });
   });
 
-  describe('destroyAll (pagehide contract)', () => {
-    it('calls destroy on every mounted panel', async () => {
+  describe('destroyAll (pagehide contract)', () => {    it('calls destroy on every mounted panel', async () => {
       const containerA = document.createElement('div');
       containerA.id = 'panel-a';
       document.body.appendChild(containerA);
@@ -386,5 +393,45 @@ describe('NavigationRegistry', () => {
       expect(panelA.destroy).not.toHaveBeenCalled();
       expect(panelB.destroy).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe('load failure banner (PBI 2026-11-08-14)', () => {
+  const outerChrome = (globalThis as { chrome?: unknown }).chrome;
+
+  beforeEach(() => {
+    (globalThis as { chrome?: unknown }).chrome = {
+      i18n: {
+        getMessage: (key: string) =>
+          key === 'panelLoadError' ? 'Failed to load this panel ({panel}).' : '',
+      },
+    };
+  });
+
+  afterEach(() => {
+    (globalThis as { chrome?: unknown }).chrome = outerChrome;
+  });
+
+  it('shows a localized banner without the raw error text', async () => {
+    const localRegistry = new NavigationRegistry();
+    const container = document.createElement('div');
+    container.id = 'panel-bad';
+    document.body.appendChild(container);
+    try {
+      localRegistry.register(
+        mockPanel({ id: 'panel-bad', load: vi.fn().mockRejectedValue(new Error('/secret/path boom')) }),
+      );
+      await localRegistry.navigate('panel-bad');
+
+      await waitForMock(() =>
+        expect(container.querySelector('.panel-load-error')).not.toBeNull(),
+      );
+      const banner = container.querySelector('.panel-load-error') as HTMLElement;
+      expect(banner.getAttribute('role')).toBe('alert');
+      expect(banner.textContent).toBe('Failed to load this panel (panel-bad).');
+      expect(banner.textContent).not.toContain('/secret/path');
+    } finally {
+      document.body.removeChild(container);
+    }
   });
 });

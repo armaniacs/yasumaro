@@ -1,5 +1,6 @@
 import { type PanelLifecycle, type PanelInitMap } from './types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { getMessage } from '../../utils/i18n.js';
 import { logError } from '../../utils/logger/api.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { ReloadGuard } from './asyncData/reloadGuard.js';
@@ -128,7 +129,9 @@ export class NavigationRegistry {
           const errEl = document.createElement('div');
           errEl.className = 'panel-load-error';
           errEl.setAttribute('role', 'alert');
-          errEl.textContent = `Failed to load panel: ${errorMessage(err)}`;
+          // 生 errorMessage は構造化ログ側にだけ残し、画面には i18n 文言のみ
+          // （内部パス等の露出を避ける）。textContent 代入のため escape 不要。
+          errEl.textContent = getMessage('panelLoadError', { panel: panelId });
           errEl.style.cssText =
             'padding:12px;color:var(--color-error, #c00);background:var(--color-error-bg, #fee);border:1px solid var(--color-error, #c00);border-radius:4px;margin:8px 0;';
           container.prepend(errEl);

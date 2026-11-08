@@ -161,7 +161,7 @@ describe('PreviewFlow.run error normalization (PBI 2026-09-12-14)', () => {
     sendMock.mockResolvedValue(undefined);
     const flow = new PreviewFlow();
     const result = await flow.run({ tab: makeTab(), content: 'c', force: true });
-    expect(result).toEqual({ success: false, error: 'No response from background worker' });
+    expect(result).toEqual({ success: false, error: 'previewNoResponse' });
     expect((document.getElementById('loadingSpinner') as HTMLElement).style.display).toBe('none');
   });
 
@@ -171,6 +171,13 @@ describe('PreviewFlow.run error normalization (PBI 2026-09-12-14)', () => {
     const result = await flow.run({ tab: makeTab(), content: 'c', force: true });
     expect(result).toEqual({ success: false, error: 'Processing failed' });
     expect((document.getElementById('loadingSpinner') as HTMLElement).style.display).toBe('none');
+  });
+
+  it('returns an i18n key (not raw English) when background gives no error detail', async () => {
+    sendMock.mockResolvedValue({ success: false });
+    const flow = new PreviewFlow();
+    const result = await flow.run({ tab: makeTab(), content: 'c', force: true });
+    expect(result).toEqual({ success: false, error: 'previewProcessingFailed' });
   });
 
   it('sends the confirmed content (not the original) on SAVE', async () => {

@@ -161,6 +161,32 @@ describe('getUserErrorMessage', () => {
   });
 });
 
+describe('sanitizeErrorMessage (PBI 2026-11-08-14)', () => {
+  test('preserves ordinary English containing " at " instead of dropping to UNKNOWN', () => {
+    const error = new Error('Failed at step 3');
+    const message = getUserErrorMessage(error);
+
+    expect(message).toContain('Failed at step 3');
+  });
+
+  test('strips an embedded file:line reference but keeps the message line', () => {
+    const error = new Error('Error: Some error at file.js:10:5');
+    const message = getUserErrorMessage(error);
+
+    expect(message).toContain('Error: Some error');
+    expect(message).not.toContain('file.js');
+  });
+
+  test('drops bare stack-frame lines but keeps the head line', () => {
+    const error = new Error('Something broke');
+    error.stack = 'Error: Something broke\n    at foo (app.js:1:2)\n    at bar (app.js:3:4)';
+    const message = getUserErrorMessage(error);
+
+    expect(message).toContain('Something broke');
+    expect(message).not.toContain('app.js');
+  });
+});
+
 describe('showError', () => {
   let statusElement: HTMLElement;
   let mockForceRecordCallback: ReturnType<typeof vi.fn>;
