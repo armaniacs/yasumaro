@@ -115,6 +115,27 @@ export async function reportValidVisit(): Promise<void> {
 }
 
 /**
+ * PBI 2026-11-08-02: SPA navigation seam. The module singleton pageState is
+ * created once at import, but history navigation never reloads the content
+ * script — this resets the visit state (startTime/scroll/report flags) so
+ * the new page is gated on fresh criteria. ContentKernel.init subscribes
+ * the history wiring automatically; this stays as the explicit entry point
+ * for tests and manual driving.
+ */
+export function resetForSpaNavigation(now?: number): void {
+    return kernel.resetForNavigation(now);
+}
+
+/**
+ * PBI 2026-11-08-02: history subscription behind resetForSpaNavigation.
+ * Returns the unsubscribe function. Single delegation — the implementation
+ * lives in ContentKernel.
+ */
+export function subscribeSpaNavigation(): () => void {
+    return kernel.subscribeSpaNavigation();
+}
+
+/**
  * Schedule the next periodic check using injected Scheduler (IdleScheduler → requestIdleCallback fallback)
  */
 export function scheduleNextCheck(): void {

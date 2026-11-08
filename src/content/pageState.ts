@@ -51,6 +51,23 @@ export class PageState {
     }
 
     /**
+     * PBI 2026-11-08-02: SPA navigation reset. history pushState/replaceState
+     * and popstate do not reload the content script, so the previous page's
+     * startTime, scroll depth and report flags would otherwise leak into the
+     * new page's gating. Thresholds themselves are reloaded by
+     * ContentKernel.loadSettings after the reset; the gating caches rebuild
+     * on the changed startTime.
+     */
+    resetVisitState(startTime: number): void {
+        this.startTime = startTime;
+        this.maxScrollPercentage = 0;
+        this.isValidVisitReported = false;
+        this.visitReportAttempted = false;
+        this.reportedContentChars = 0;
+        this.lateRescanCount = 0;
+    }
+
+    /**
      * VisitGate.isReportable に渡す VisitState を返す純粋ヘルパー。
      */
     toVisitState(): { startTime: number; maxScrollPercentage: number; isValidVisitReported: boolean } {

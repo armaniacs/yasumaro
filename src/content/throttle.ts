@@ -21,6 +21,24 @@ export interface ThrottleHandle<T extends (...args: unknown[]) => void> {
 const liveInstances = new Set<() => void>();
 let beforeUnloadWired = false;
 
+/**
+ * PBI 2026-11-08-02: performance.now() is not guaranteed (non-browser or
+ * degraded contexts). A bare call throws on the first scroll and depth
+ * updates stop afterwards — so the clock degrades to Date.now() instead of
+ * throwing, and a non-finite reading degrades the same way.
+ */
+function now(): number {
+  try {
+    if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      const t = performance.now();
+      if (typeof t === 'number' && Number.isFinite(t)) return t;
+    }
+  } catch {
+    // performance unavailable or throwing — fall through to Date.now().
+  }
+  return Date.now();
+}
+
 function ensureBeforeUnloadFlush(): void {
   if (beforeUnloadWired || typeof window === 'undefined') return;
   beforeUnloadWired = true;
@@ -45,7 +63,7 @@ export function throttle<T extends (...args: unknown[]) => void>(
 
   const invokeTrailing = (): void => {
     timerId = null;
-    lastCall = performance.now();
+    lastCall = now();
     const args = lastArgs;
     lastArgs = null;
     if (args) fn(...args);
@@ -60,15 +78,15 @@ export function throttle<T extends (...args: unknown[]) => void>(
 
   const throttledFn = ((...args: Parameters<T>) => {
     lastArgs = args;
-    const now = performance.now();
-    const remaining = lastCall + delayMs - now;
+    const nowMs = now();
+    const remaining = lastCall + delayMs - nowMs;
     if (remaining <= 0) {
       // Leading edge.
       if (timerId !== null) {
         clearTimeout(timerId);
         timerId = null;
       }
-      lastCall = now;
+      lastCall = nowMs;
       lastArgs = null;
       fn(...args);
       return;
