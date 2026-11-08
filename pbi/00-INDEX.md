@@ -14,6 +14,10 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-08 既定DoH配線 backlog-1108-18（1件） ― ⛔ 着手条件付き駐留
+
+- [2026-11-08-18-backlog-default-doh.md](2026-11-08-18-backlog-default-doh.md)（⛔ **明示的な着手宣言があるまで実装しない**: PBI 2026-11-08-01でseam+opt-in配線まで実施済み。残りは既定DoH解決器の選定・配線とmanifest `host_permissions` 追加で、権限設計の判断と一体で着手する。M）
+
 ### 2026-11-08 adversarial-code-review adversarial-1108（17件） ― ✅ 17件完了・アーカイブ済み
 
 レビュー所見171件を全件反証(74件却下)し生き残り97件を17候補へ集約・RICE降順でPBI化・実装。01 SSRFピン留め / 02 gating正確性 / 03 通知無害化 / 04 sessionStore耐久性 / 05 content連携 / 06 sqlite検証 / 07 pipeline回復 / 08 popup可視化 / 09 cleaner正確性 / 10 migration / 11 Mutex(07より先行) / 12 messaging seam / 13 配線起動(+tests.yml E2Eプローブenv・e2eTestState注記追補) / 14 i18n信頼性 / 15 privacy描画 / 16 定数集約 / 17 検証境界。4バッチ(6並列・5並列・3並列・単独)でworktree実装→mainへマージ。台帳は [2026-11-08-00-backlog-adversarial-1108.md](../dev-docs/archived/pbi/2026-11-08-00-backlog-adversarial-1108.md) を参照。
