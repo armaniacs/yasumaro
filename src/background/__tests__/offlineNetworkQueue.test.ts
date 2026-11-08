@@ -253,12 +253,16 @@ describe('OfflineNetworkQueue', () => {
       expect(job.retryCount).toBe(1);
     });
 
-    it('never lends below zero', () => {
+    it('lends below zero so the paired flush increment nets exactly zero', () => {
       const job = makeJob(0);
 
       queue.offsetNonFailureResult(job);
 
-      expect(job.retryCount).toBe(0);
+      // The lend pairs with flush()'s +1 on the same object (-1 + 1 = 0).
+      // Flooring here would land the persisted budget at 1 and burn a retry
+      // on a job that was never attempted (claimRetry regression test pins
+      // the end-to-end zero).
+      expect(job.retryCount).toBe(-1);
     });
 
     it('is idempotent for the same job object', () => {

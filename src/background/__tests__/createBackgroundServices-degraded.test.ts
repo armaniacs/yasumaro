@@ -46,7 +46,7 @@ describe('toDegradedServices', () => {
       // A dependent whose factory resolves the failed key throws too, so the
       // cascade degrades with it (mirrors the real messageRouter → obsidian
       // edge without running the real router wiring, which needs chrome).
-      container.register('messageRouter', (c: ServiceContainer) => ({ wrapped: c.resolve('obsidian') }), { singleton: true });
+      container.register('messageRouter', () => ({ wrapped: container.resolve('obsidian') }), { singleton: true });
       expect(() => createBackgroundServices(container)).toThrow();
 
       const degraded = toDegradedServices(container);
