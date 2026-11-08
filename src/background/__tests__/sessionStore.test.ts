@@ -831,6 +831,21 @@ describe('SessionStore', () => {
     await expect(store.waitForFlush()).resolves.toBeUndefined();
     expect(mockSession.set).toHaveBeenCalledTimes(2);
   });
+
+  it('waitForFlush() throws when a producer keeps the queue non-empty forever', async () => {
+    // Every flush fails transiently and re-queues, so the queue never
+    // settles: the bound must surface as a throw, not a silent return that
+    // looks like "settled". No timers are waited on — each round awaits the
+    // (immediately rejected) flush work directly.
+    mockSession.set.mockRejectedValue(new Error('boom'));
+    store.set('key1', 'value1');
+    await expect(store.waitForFlush()).rejects.toThrow(/unsettled work/);
+    expect(mockAddLog).toHaveBeenCalledWith(
+      LogType.ERROR,
+      expect.stringContaining('unsettled work'),
+      expect.anything(),
+    );
+  });
 });
 
 describe('SessionStore.migrateFromLocalStorage', () => {
