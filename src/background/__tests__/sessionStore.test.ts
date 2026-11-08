@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { SessionStore, SESSION_KEYS, SESSION_STORE_FLUSH_DELAY_MS, SESSION_MAX_FLUSH_BYTES, type SessionStorePort } from '../sessionStore.js';
+import { SessionStore, SESSION_KEYS, SESSION_STORE_FLUSH_DELAY_MS, SESSION_MAX_FLUSH_BYTES, SessionStoreReadError, type SessionStorePort } from '../sessionStore.js';
 import { LogType } from '../../utils/logger/types.js';
-import { useTimerClock } from '../../../testDir/waitPolicy.js';
+import { useTimerClock, drainMacrotask } from '../../../testDir/waitPolicy.js';
+import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
 
 const mockAddLog = vi.hoisted(() => vi.fn());
 
@@ -197,19 +198,18 @@ describe('SessionStore', () => {
   });
 
   // T10
-  it('storage unavailable should not throw', async () => {
+  it('storage unavailable: set() stays queued without throwing while get() surfaces a typed read error', async () => {
     delete (globalThis as any).chrome.storage.session;
     expect(() => store.set('key1', 'value1')).not.toThrow();
-    const value = await store.get('key1');
-    expect(value).toBeNull();
+    await expect(store.get('key1')).rejects.toThrow(SessionStoreReadError);
   });
 
-  // T11
-  it('quota exceeded should not retry and should keep data in memory', async () => {
+  // T11: quota no longer idles until the next set() — the batch is retried
+  // on the timer (bounded), so a transient quota pressure can clear.
+  it('quota exceeded retries on the timer and keeps data queued', async () => {
     // A retry is a setTimeout(FLUSH_DELAY) away, so a real-clock wait would be
     // the only way to cross it — which is exactly what the wait policy forbids.
-    // Drive the clock instead: if the quota branch ever regressed into the
-    // retry branch, the 50ms timer below would fire and the count would be 2.
+    // Drive the clock instead: the second set call below IS the retry.
     useTimerClock();
     try {
       mockSession.set.mockRejectedValueOnce(new Error('QUOTA_BYTES quota exceeded'));
@@ -217,13 +217,17 @@ describe('SessionStore', () => {
       await store.flushNow();
       expect(mockSession.set).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 2);
-      expect(mockSession.set).toHaveBeenCalledTimes(1);
+      expect(mockSession.set).toHaveBeenCalledTimes(2);
+      expect(mockSession.set).toHaveBeenLastCalledWith({ key1: 'value1' });
+      // The retry succeeded, so nothing is left to flush.
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 2);
+      expect(mockSession.set).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
     }
   });
 
-  it('handles non-Error quota rejection', async () => {
+  it('handles non-Error quota rejection with the same retry', async () => {
     useTimerClock();
     try {
       mockSession.set.mockRejectedValueOnce('QUOTA_BYTES quota exceeded');
@@ -231,7 +235,39 @@ describe('SessionStore', () => {
       await store.flushNow();
       expect(mockSession.set).toHaveBeenCalledTimes(1);
       await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 2);
-      expect(mockSession.set).toHaveBeenCalledTimes(1);
+      expect(mockSession.set).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('quota retry budget exhaustion backs the full values up to local storage and stops retrying', async () => {
+    useTimerClock();
+    try {
+      const localPort = new InMemoryStoragePort();
+      const quotaStore = new SessionStore(localPort);
+      mockSession.set.mockRejectedValue(new Error('QUOTA_BYTES quota exceeded'));
+      quotaStore.set('key1', 'value1');
+      await quotaStore.flushNow();
+      // Attempts 1-3 retry on the timer; the 4th exhausts the budget.
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 10);
+      expect(mockSession.set.mock.calls.length).toBeGreaterThanOrEqual(4);
+      const callsAfterExhaustion = mockSession.set.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS * 10);
+      // No infinite retry loop: the queue was dropped after a durable backup.
+      expect(mockSession.set.mock.calls.length).toBe(callsAfterExhaustion);
+      expect(localPort.dump()).toEqual({ key1: 'value1' });
+      // The dropped data is not floating: after a restart it migrates back.
+      mockSession.set.mockReset();
+      const sessionData: Record<string, unknown> = {};
+      mockSession.get.mockImplementation(async () => ({ ...sessionData }));
+      mockSession.set.mockImplementation(async (items: Record<string, unknown>) => {
+        Object.assign(sessionData, items);
+      });
+      const restarted = new SessionStore(localPort);
+      await expect(restarted.get<string>('key1')).resolves.toBe('value1');
+      restarted.dispose();
+      quotaStore.dispose();
     } finally {
       vi.useRealTimers();
     }
@@ -327,18 +363,28 @@ describe('SessionStore', () => {
     expect(SESSION_MAX_FLUSH_BYTES).toBe(3_145_728);
   });
 
-  it('flush() saves only priority data when the estimated size exceeds the flush cap', async () => {
+  it('flush() never writes a partial shape under the canonical key when the estimated size exceeds the flush cap', async () => {
     const value = overCapRecordingCache();
     store.set(SESSION_KEYS.RECORDING_CACHE, value);
     await store.flushNow();
 
-    const setCall = mockSession.set.mock.calls[0][0];
-    expect(setCall[SESSION_KEYS.RECORDING_CACHE]).toEqual({
-      settingsCache: { value: 'priority' },
-      cacheTimestamp: 12345,
-      cacheVersion: 1,
-    });
-    expect(setCall[SESSION_KEYS.RECORDING_CACHE].urlCache).toBeUndefined();
+    // No reduced "priority sub-keys only" half-shape may read back as data.
+    expect(mockSession.set).not.toHaveBeenCalled();
+    // The stale session copy is removed so readers miss instead of reading old data as latest.
+    expect(mockSession.remove).toHaveBeenCalledWith([SESSION_KEYS.RECORDING_CACHE]);
+    // The full value stays queued for the bounded retry.
+    expect(queuedKeys(store)).toEqual([SESSION_KEYS.RECORDING_CACHE]);
+  });
+
+  it('flush() backs the full over-cap value up to local storage so a SW death mid-retry loses nothing', async () => {
+    const localPort = new InMemoryStoragePort();
+    const overflowStore = new SessionStore(localPort);
+    const value = overCapRecordingCache();
+    overflowStore.set(SESSION_KEYS.RECORDING_CACHE, value);
+    await overflowStore.flushNow();
+
+    expect(localPort.dump()[SESSION_KEYS.RECORDING_CACHE]).toEqual(value);
+    overflowStore.dispose();
   });
 
   it('flush() writes 10,000 x 180-char urlCache entries whole instead of reducing them', async () => {
@@ -379,25 +425,45 @@ describe('SessionStore', () => {
     expect(mockSession.set).not.toHaveBeenCalled();
   });
 
-  it('logs the dropped key name and consecutive overflow count at WARN', async () => {
+  it('logs the dropped key name and consecutive overflow count, escalating to ERROR when no durable backup exists', async () => {
     mockAddLog.mockClear();
     store.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
 
     await store.flushNow();
     await store.flushNow();
     expect(mockAddLog).not.toHaveBeenCalledWith(LogType.WARN, expect.stringContaining('dropping'), expect.anything());
+    expect(mockAddLog).not.toHaveBeenCalledWith(LogType.ERROR, expect.stringContaining('dropping'), expect.anything());
 
     await store.flushNow();
 
+    // No chrome.storage.local in this environment, so the backup could not
+    // land and the loss is reported at ERROR, not WARN.
     expect(mockAddLog).toHaveBeenCalledWith(
-      LogType.WARN,
+      LogType.ERROR,
       expect.stringContaining('dropping'),
-      expect.objectContaining({ key: SESSION_KEYS.RECORDING_CACHE, consecutiveOverflowFlushes: 3 }),
+      expect.objectContaining({ key: SESSION_KEYS.RECORDING_CACHE, consecutiveOverflowFlushes: 3, backedUp: false }),
     );
     const dropLogs = mockAddLog.mock.calls.filter(
       ([, message]) => typeof message === 'string' && message.includes('dropping'),
     );
     expect(dropLogs).toHaveLength(1);
+  });
+
+  it('logs the over-cap drop at WARN when the full value was durably backed up', async () => {
+    mockAddLog.mockClear();
+    const backedStore = new SessionStore(new InMemoryStoragePort());
+    backedStore.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
+
+    await backedStore.flushNow();
+    await backedStore.flushNow();
+    await backedStore.flushNow();
+
+    expect(mockAddLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      expect.stringContaining('dropping'),
+      expect.objectContaining({ key: SESSION_KEYS.RECORDING_CACHE, backedUp: true }),
+    );
+    backedStore.dispose();
   });
 
   it('keeps a dropped over-cap key out of the suspend emergency flush to local storage', async () => {
@@ -412,17 +478,24 @@ describe('SessionStore', () => {
     };
     (globalThis as any).chrome.storage.local = mockLocal;
 
+    // Own store for the same repeat-safety reason as above.
+    const suspendStore = new SessionStore();
     // Mirrors how the service worker wires suspend handling.
-    SessionStore.registerSuspendHandler(store);
-    store.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
-    await store.flushNow();
-    await store.flushNow();
-    await store.flushNow();
-    expect(queuedKeys(store)).toEqual([]);
+    SessionStore.registerSuspendHandler(suspendStore);
+    suspendStore.set(SESSION_KEYS.RECORDING_CACHE, overCapRecordingCache());
+    await suspendStore.flushNow();
+    await suspendStore.flushNow();
+    await suspendStore.flushNow();
+    expect(queuedKeys(suspendStore)).toEqual([]);
 
-    listeners[0]!();
+    // The over-cap value was durably backed up during the overflow retries by
+    // design; what must NOT happen is the suspend path adding anything new
+    // for a key that already left the queue.
+    mockLocal.set.mockClear();
+    listeners[listeners.length - 1]!();
 
     expect(mockLocal.set).not.toHaveBeenCalled();
+    suspendStore.dispose();
   });
 
   it('clears the re-queue count after a successful write so a later overflow gets a full budget', async () => {
@@ -547,42 +620,124 @@ describe('SessionStore', () => {
     expect(mockSession.set).toHaveBeenCalledWith({ key1: circular });
   });
 
-  it('extractPriorityData() keeps non-RECORDING_CACHE keys as-is when the payload exceeds the flush cap', async () => {
+  it('over-cap batch with a non-RECORDING_CACHE key is backed up whole to local storage, never partially written', async () => {
+    const localPort = new InMemoryStoragePort();
+    const backedStore = new SessionStore(localPort);
     const bigString = 'x'.repeat(SESSION_MAX_FLUSH_BYTES + 1024);
-    store.set('someOtherKey', bigString);
-    await store.flushNow();
+    backedStore.set('someOtherKey', bigString);
+    await backedStore.flushNow();
 
-    const setCall = mockSession.set.mock.calls[0][0];
-    expect(setCall.someOtherKey).toBe(bigString);
+    expect(mockSession.set).not.toHaveBeenCalled();
+    expect(mockSession.remove).toHaveBeenCalledWith(['someOtherKey']);
+    expect(localPort.dump()).toEqual({ someOtherKey: bigString });
+    backedStore.dispose();
   });
 
-  it('registerSuspendHandler() registers an onSuspend listener that flushes to local', () => {
+  it('registerSuspendHandler() is idempotent per store', () => {
     const listeners: Array<() => void> = [];
     (globalThis as any).chrome.runtime = {
       onSuspend: {
         addListener: vi.fn((cb: () => void) => listeners.push(cb)),
       },
     };
-    const mockLocal = {
+    // Own store: repeat runs reuse the shared beforeEach store (hooks do not
+    // re-run between repeats), so idempotency needs a fresh flag per run.
+    const fresh = new SessionStore();
+    // The constructor already registered once via the runtime mock above.
+    SessionStore.registerSuspendHandler(fresh);
+    SessionStore.registerSuspendHandler(fresh);
+
+    expect(listeners).toHaveLength(1);
+    fresh.dispose();
+  });
+
+  it('debounced writes survive a suspend via the automatic local backup and recover after a restart', async () => {
+    const listeners: Array<() => void> = [];
+    (globalThis as any).chrome.runtime = {
+      onSuspend: { addListener: vi.fn((cb: () => void) => listeners.push(cb)) },
+    };
+    const localPort = new InMemoryStoragePort();
+    const suspendStore = new SessionStore(localPort);
+    // The constructor wires the suspend backup: no manual registration needed.
+    expect(listeners).toHaveLength(1);
+
+    suspendStore.set('key1', 'value1');
+    // Still debounced: nothing reached session storage yet.
+    expect(mockSession.set).not.toHaveBeenCalled();
+    listeners[0]!();
+    await drainMacrotask();
+
+    expect(localPort.dump()).toEqual({ key1: 'value1' });
+    expect(suspendStore.getLastSuspendBackup()).toEqual(expect.objectContaining({ keys: ['key1'], ok: true }));
+
+    // Simulate a service-worker restart: fresh empty session, same local area.
+    const sessionData: Record<string, unknown> = {};
+    mockSession.get.mockImplementation(async () => ({ ...sessionData }));
+    mockSession.set.mockImplementation(async (items: Record<string, unknown>) => {
+      Object.assign(sessionData, items);
+    });
+    const restarted = new SessionStore(localPort);
+    await expect(restarted.get<string>('key1')).resolves.toBe('value1');
+    suspendStore.dispose();
+    restarted.dispose();
+  });
+
+  it('emergencyFlushToLocal() resolves true and records the backup on success', async () => {
+    const localPort = new InMemoryStoragePort();
+    const backedStore = new SessionStore(localPort);
+    backedStore.set('key1', 'value1');
+
+    await expect(backedStore.emergencyFlushToLocal()).resolves.toBe(true);
+    expect(localPort.dump()).toEqual({ key1: 'value1' });
+    expect(backedStore.getLastSuspendBackup()).toEqual(expect.objectContaining({ keys: ['key1'], ok: true }));
+    backedStore.dispose();
+  });
+
+  it('emergencyFlushToLocal() reports failure visibly when the local write rejects', async () => {
+    mockAddLog.mockClear();
+    const failingPort = {
       get: vi.fn().mockResolvedValue({}),
-      set: vi.fn().mockResolvedValue(undefined),
+      set: vi.fn().mockRejectedValue(new Error('local gone')),
       remove: vi.fn().mockResolvedValue(undefined),
     };
-    (globalThis as any).chrome.storage.local = mockLocal;
+    const failingStore = new SessionStore(failingPort);
+    failingStore.set('key1', 'value1');
 
-    SessionStore.registerSuspendHandler(store);
-    store.set('key1', 'value1');
-    expect(listeners).toHaveLength(1);
-    listeners[0]!();
+    await expect(failingStore.emergencyFlushToLocal()).resolves.toBe(false);
+    expect(failingStore.getLastSuspendBackup()).toEqual(expect.objectContaining({ keys: ['key1'], ok: false }));
+    expect(mockAddLog).toHaveBeenCalledWith(
+      LogType.WARN,
+      expect.stringContaining('emergency flush'),
+      expect.anything(),
+    );
+    failingStore.dispose();
+  });
 
-    expect(mockLocal.set).toHaveBeenCalledWith({ key1: 'value1' });
+  it('set -> waitForFlush -> get -> restart read keeps order and content', async () => {
+    const sessionData: Record<string, unknown> = {};
+    mockSession.get.mockImplementation(async () => ({ ...sessionData }));
+    mockSession.set.mockImplementation(async (items: Record<string, unknown>) => {
+      Object.assign(sessionData, items);
+    });
+    mockSession.remove.mockImplementation(async (keys: string | string[]) => {
+      for (const key of Array.isArray(keys) ? keys : [keys]) delete sessionData[key];
+    });
+
+    await store.set('key1', 'value1', { flushImmediately: true });
+    await store.waitForFlush();
+    await expect(store.get<string>('key1')).resolves.toBe('value1');
+
+    // A new store over the same session backend (SW restart) reads it back.
+    const restarted = new SessionStore();
+    await expect(restarted.get<string>('key1')).resolves.toBe('value1');
+    restarted.dispose();
   });
 
   it('registerSuspendHandler() is a no-op when chrome.runtime.onSuspend is unavailable', () => {
     expect(() => SessionStore.registerSuspendHandler(store)).not.toThrow();
   });
 
-  it('get() returns null when local fallback migration does not find the key', async () => {
+  it('get() returns null on a miss without memoizing a transient fallback failure', async () => {
     mockSession.get.mockResolvedValue({});
     const mockLocal = {
       get: vi.fn().mockResolvedValue({}),
@@ -597,16 +752,49 @@ describe('SessionStore', () => {
     expect(value).toBeNull();
   });
 
-  it('get() returns null when chrome.storage.session is unavailable', async () => {
-    delete (globalThis as any).chrome.storage.session;
-    const value = await store.get<string>('key1');
-    expect(value).toBeNull();
+  it('get() retries the local fallback after a transient failure instead of treating it as checked', async () => {
+    const sessionData: Record<string, unknown> = {};
+    mockSession.get.mockImplementation(async () => ({ ...sessionData }));
+    mockSession.set.mockImplementation(async (items: Record<string, unknown>) => {
+      Object.assign(sessionData, items);
+    });
+    const mockLocal = {
+      get: vi.fn().mockRejectedValueOnce(new Error('local flake')).mockResolvedValue({ retryKey: 'recovered' }),
+      set: vi.fn().mockResolvedValue(undefined),
+      remove: vi.fn().mockResolvedValue(undefined),
+    };
+    (globalThis as any).chrome.storage.local = mockLocal;
+
+    await expect(store.get<string>('retryKey')).resolves.toBeNull();
+    const value = await store.get<string>('retryKey');
+
+    // Two local reads: the transient failure was NOT memoized as checked.
+    expect(mockLocal.get).toHaveBeenCalledTimes(2);
+    expect(mockSession.set).toHaveBeenCalledWith({ retryKey: 'recovered' });
+    expect(mockLocal.remove).toHaveBeenCalledWith('retryKey');
+    expect(value).toBe('recovered');
   });
 
-  it('get() swallows errors thrown by chrome.storage.session.get', async () => {
+  it('get() rejects with SessionStoreReadError when chrome.storage.session is unavailable', async () => {
+    delete (globalThis as any).chrome.storage.session;
+    await expect(store.get<string>('key1')).rejects.toThrow(SessionStoreReadError);
+  });
+
+  it('get() rejects with SessionStoreReadError instead of swallowing read failures as null', async () => {
     mockSession.get.mockRejectedValueOnce(new Error('boom'));
-    const value = await store.get<string>('key1');
-    expect(value).toBeNull();
+    const failure = await store.get<string>('key1').then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(SessionStoreReadError);
+    expect((failure as SessionStoreReadError).key).toBe('key1');
+    expect((failure as SessionStoreReadError).causeText).toContain('boom');
+  });
+
+  it('get() still resolves null on a genuine miss', async () => {
+    mockSession.get.mockResolvedValue({});
+    delete (globalThis as any).chrome.storage.local;
+    await expect(store.get<string>('absent')).resolves.toBeNull();
   });
 
   it('waitForFlush() awaits an in-flight flush when no timer is pending', async () => {
@@ -624,6 +812,24 @@ describe('SessionStore', () => {
     resolveSet();
     await Promise.all([flushing, waiting]);
     expect(mockSession.set).toHaveBeenCalledTimes(1);
+  });
+
+  it('waitForFlush() covers a write that lands mid-flush instead of leaving its fresh timer behind', async () => {
+    const gate = Promise.withResolvers<void>();
+    mockSession.set.mockImplementation(() => gate.promise);
+    store.set('key1', 'value1');
+    const flushing = store.flushNow();
+    // The flush is in-flight; this write cannot schedule a timer yet, so the
+    // completing flush leaves one behind for it.
+    store.set('key2', 'value2');
+    const waiting = store.waitForFlush();
+    gate.resolve();
+    await Promise.all([flushing, waiting]);
+    // Both writes landed before waitForFlush resolved — no orphaned timer.
+    expect(mockSession.set).toHaveBeenCalledTimes(2);
+    expect(mockSession.set).toHaveBeenLastCalledWith({ key2: 'value2' });
+    await expect(store.waitForFlush()).resolves.toBeUndefined();
+    expect(mockSession.set).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -780,34 +986,43 @@ describe('SessionStore.migrateFromLocalStorageIfSessionEmpty', () => {
 
     const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
-    expect(migrated).toBe(true);
+    expect(migrated).toBe('migrated');
     expect(sessionStorage['sw:rateLimiter']).toEqual({ entries: [] });
     expect(localStorage['sw:rateLimiter']).toBeUndefined();
   });
 
-  it('returns false when key does not exist in local storage', async () => {
+  it('returns absent when key does not exist in local storage', async () => {
     const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
-    expect(migrated).toBe(false);
+    expect(migrated).toBe('absent');
     expect(Object.keys(sessionStorage)).toHaveLength(0);
   });
 
-  it('returns false when storage APIs are unavailable', async () => {
+  it('returns failed when storage APIs are unavailable', async () => {
     delete (globalThis as any).chrome.storage.local;
 
     const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
-    expect(migrated).toBe(false);
+    expect(migrated).toBe('failed');
   });
 
-  it('returns false and logs when session.set throws', async () => {
+  it('returns failed and logs when session.set throws', async () => {
     localStorage['sw:rateLimiter'] = { entries: [] };
     mockSession.set.mockRejectedValueOnce(new Error('boom'));
 
     const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
 
-    expect(migrated).toBe(false);
+    expect(migrated).toBe('failed');
     expect(localStorage['sw:rateLimiter']).toEqual({ entries: [] });
+  });
+
+  it('returns failed and logs when the local read throws', async () => {
+    mockLocal.get.mockRejectedValueOnce(new Error('local flake'));
+
+    const migrated = await SessionStore.migrateFromLocalStorageIfSessionEmpty('sw:rateLimiter');
+
+    expect(migrated).toBe('failed');
+    expect(Object.keys(sessionStorage)).toHaveLength(0);
   });
 });
 
@@ -820,7 +1035,7 @@ describe('SessionStorePort contract', () => {
     expect(typeof port.remove).toBe('function');
   });
 
-  it('get() returns null without throwing when the underlying read fails (documented contract)', async () => {
+  it('get() rejects with SessionStoreReadError on read failure and resolves null on a miss (documented contract)', async () => {
     const store = new SessionStore();
     (globalThis as any).chrome = {
       storage: {
@@ -828,7 +1043,11 @@ describe('SessionStorePort contract', () => {
       },
     };
 
-    await expect(store.get('any-key')).resolves.toBeNull();
+    const failure = await store.get('any-key').then(
+      () => null,
+      (error: unknown) => error,
+    );
+    expect(failure).toBeInstanceOf(SessionStoreReadError);
     store.dispose();
   });
 });
