@@ -67,6 +67,10 @@ All notable changes to this project will be documented in this file.
 - `htmlEscape()` は非文字列（`null`・`undefined` 除外）に `TypeError` を投げるよう変更（従来は `''` に黙殺）。`null`・`undefined` は従来通り `''` / `htmlEscape()` now throws `TypeError` for non-string input (excluding `null` and `undefined`, which still yield `''` as before)
 - `messageTransport` の再送判定が機械可読コード必須化（素のErrorは再送しない。`toTransportError` 公開seamでChrome境界の文言翻訳を維持） / `messageTransport` retry decisions now require machine-readable codes (bare Errors no longer retry; the public `toTransportError` seam keeps Chrome-boundary wording translation)
 
+### レビュー指摘対応 / Review Fixes
+
+- コードレビュー指摘48件の対応修正。SPA検出の実効化（MAIN world裏付けのURL監視・真遷移時のみreset）、throttle時刻源の単一化、DNS pinの接続時同一化（解決2回化・pin受渡し・既定localhost拒否の統一）、起動失敗slotの集約エラー化、破損マイグレーション値の自己修復、retry境界のスネークケース対応、空url行の拒否、manifest版正規化の複数ハイフン対応、E2Eプローブ判定の厳格化。残りは可視化・互換性明示・上限実効化の小規模修正 / Review-driven fixes (48 findings): effective SPA detection (MAIN-world URL monitoring, reset on true navigation only), unified throttle clock, DNS-pin unification at connect time (two resolutions, pin handoff, default localhost deny), aggregated startup errors, self-healing corrupt migration values, snake_case retry boundaries, empty-URL rejection, multi-hyphen manifest normalization, stricter E2E probe checks. The rest are small visibility, compatibility, and cap-enforcement fixes
+
 ## [6.9.72] - 2026-11-08
 
 このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
