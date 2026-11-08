@@ -42,6 +42,23 @@ function retryAllFeeding(
     return { retryAll, onDropped };
 }
 
+/**
+ * Fake queue over a retryAll mock. offsetNonFailureResult mirrors
+ * OfflineNetworkQueue (net-zero lending) so contention tests observe the
+ * same retryCount behavior as the real queue.
+ */
+function fakeQueue(retryAll: RetryAllFn): {
+    retryAll: RetryAllFn;
+    offsetNonFailureResult: (job: OfflineJob) => void;
+} {
+    return {
+        retryAll,
+        offsetNonFailureResult: (job: OfflineJob) => {
+            if (typeof job.retryCount === 'number') job.retryCount -= 1;
+        },
+    };
+}
+
 describe('createOfflineQueueProcessor', () => {
     beforeEach(async () => {
         // chrome.storage.local is the vitest.setup mock; clear the claims key
@@ -61,7 +78,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -88,7 +105,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -110,7 +127,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -138,7 +155,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -173,7 +190,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -206,7 +223,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -230,7 +247,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -252,7 +269,7 @@ describe('createOfflineQueueProcessor', () => {
         });
 
         const processQueue = createOfflineQueueProcessor({
-            offlineNetworkQueue: { retryAll },
+            offlineNetworkQueue: fakeQueue(retryAll),
             recordingPipeline: { record, retryObsidianWrite },
         });
 
@@ -273,7 +290,7 @@ describe('createOfflineQueueProcessor', () => {
                 });
             });
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
             await processQueue();
@@ -303,7 +320,7 @@ describe('createOfflineQueueProcessor', () => {
                 }));
             });
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
             await processQueue();
@@ -325,7 +342,7 @@ describe('createOfflineQueueProcessor', () => {
                 }));
             });
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
             await processQueue();
@@ -343,7 +360,7 @@ describe('createOfflineQueueProcessor', () => {
                 expect(result).toBe(false);
             });
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
             await processQueue();
@@ -361,7 +378,7 @@ describe('createOfflineQueueProcessor', () => {
                 expect(result).toBe(true);
             });
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
             await processQueue();
@@ -379,7 +396,7 @@ describe('createOfflineQueueProcessor', () => {
                 true,
             );
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite: vi.fn() },
                 terminalFailureHandler: { handOver },
             });
@@ -399,7 +416,7 @@ describe('createOfflineQueueProcessor', () => {
                 false,
             );
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
 
@@ -420,7 +437,7 @@ describe('createOfflineQueueProcessor', () => {
                 false,
             );
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
 
@@ -440,7 +457,7 @@ describe('createOfflineQueueProcessor', () => {
                 true,
             );
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
             });
 
@@ -460,7 +477,7 @@ describe('createOfflineQueueProcessor', () => {
             );
             const notifyError = vi.fn();
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
                 notifyError,
             });
@@ -482,7 +499,7 @@ describe('createOfflineQueueProcessor', () => {
             const retryAll = vi.fn();
 
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
                 isConsentGranted: () => Promise.resolve(false),
             });
@@ -508,7 +525,7 @@ describe('createOfflineQueueProcessor', () => {
             });
 
             const processQueue = createOfflineQueueProcessor({
-                offlineNetworkQueue: { retryAll },
+                offlineNetworkQueue: fakeQueue(retryAll),
                 recordingPipeline: { record, retryObsidianWrite },
                 isConsentGranted: () => Promise.resolve(granted),
             });
