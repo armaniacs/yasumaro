@@ -347,12 +347,17 @@ const arrayLengthCap = (field: string, cap: number): DashboardSqliteFieldSpec =>
 /** Staging-name boundary decode — one implementation for all 9 staging
  *  subtypes (previously 6 copy-pasted try/catch blocks; PBI 2026-09-17-18).
  *  The brand proves the name crossed validation, but the wire payload stays
- *  `string` (PBI 2026-09-07-22 touches wire shape). */
+ *  `string` (PBI 2026-09-07-22 touches wire shape). The rejection message is
+ *  byte-identical to before (pinned by archiveHandler tests); the decode
+ *  failure is kept on `cause` (PBI 2026-11-08-12) so the diagnosis is not
+ *  discarded with the throw. */
 function stagingNameGuard(p: Record<string, unknown>, subtype: string): void {
   try {
     decodeStagingName(p.stagingName);
-  } catch {
-    throw new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+  } catch (error) {
+    const failure = new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+    failure.cause = error;
+    throw failure;
   }
 }
 
@@ -382,9 +387,17 @@ function cutoffPairGuard(p: Record<string, unknown>, subtype: string): void {
 }
 
 /** Import rows byte-estimate — needs the whole type-checked array, so it runs
- *  after the row-count field checks (guardLast). */
+ *  after the row-count field checks (guardLast). A circular `rows` value made
+ *  JSON.stringify throw a bare TypeError that escaped as a non-layer error
+ *  (PBI 2026-11-08-12): it is now mapped to the layer's ValidationError. */
 function importBytesGuard(p: Record<string, unknown>): void {
-  const approxBytes = JSON.stringify(p.rows).length;
+  let approxBytes: number;
+  try {
+    const serialized: unknown = JSON.stringify(p.rows);
+    approxBytes = typeof serialized === 'string' ? serialized.length : 0;
+  } catch {
+    throw new ValidationError('DashboardSqliteValidator', 'import: rows must be JSON-serializable (circular references rejected)', 'rows');
+  }
   if (approxBytes > VALIDATOR_LIMITS.MAX_IMPORT_BYTES) {
     throw new ValidationError('DashboardSqliteValidator', `import: payload exceeds ${VALIDATOR_LIMITS.MAX_IMPORT_BYTES} bytes`, 'rows');
   }

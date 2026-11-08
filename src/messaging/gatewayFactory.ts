@@ -19,15 +19,22 @@
  */
 
 import { asSuccessResponse } from './normalizeGatewayResponse.js';
+import {
+  AI_GATEWAY_TIMEOUT_MS,
+  RECORD_GATEWAY_TIMEOUT_MS,
+} from './sendRetryDefaults.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
 import type { SendFailure } from './sendWithPolicy.js';
 import type { OutgoingMessage } from './messageTransport.js';
 export type { OutgoingMessage, WithoutProtocolVersion } from './messageTransport.js';
 
-/** Record-path budget: pendingRecordGateway's 20s timeout contract. */
-export const RECORD_GATEWAY_TIMEOUT_MS = 20_000;
-/** AI round-trip budget shared by askHistory + regenerateSummary (60s). */
-export const AI_GATEWAY_TIMEOUT_MS = 60_000;
+/**
+ * Gateway timeout budgets live in sendRetryDefaults.ts (PBI 2026-11-08-12:
+ * the 20s/60s budgets were defined here beside the other send/retry
+ * numbers). Re-exported under the historic names so gateway modules keep
+ * their existing imports and externally visible values never change.
+ */
+export { AI_GATEWAY_TIMEOUT_MS, RECORD_GATEWAY_TIMEOUT_MS };
 
 export interface GatewayConfig<TType extends OutgoingMessage['type']> {
   type: TType;
@@ -35,6 +42,17 @@ export interface GatewayConfig<TType extends OutgoingMessage['type']> {
   timeoutError: string;
   invalidMessage: string;
 }
+
+/**
+ * Wire payload for one outgoing message type (PBI 2026-11-08-12). A
+ * mapped lookup instead of `Extract<...>[...]` indexing: indexing a
+ * deferred Extract with a generic key is rejected (TS2536), while a
+ * generic key into this concrete table resolves fine. Payload-less types
+ * map to never — every declared gateway carries a payload.
+ */
+export type GatewayPayload<TType extends OutgoingMessage['type']> = {
+  [M in OutgoingMessage as M['type']]: M extends { payload: infer P } ? P : never;
+}[TType];
 
 export interface Gateway<P, R extends { success: boolean }> {
   readonly type: string;
@@ -51,10 +69,16 @@ export interface Gateway<P, R extends { success: boolean }> {
  * `asSuccessResponse` with the gateway's invalid-message sentence.
  * Retries stay off: extra attempts would extend past the documented timeout
  * contract (and stall under fake timers, which the timeout tests install).
+ *
+ * Type safety (PBI 2026-11-08-12): `P` is constrained to the wire payload
+ * for `TType`, so a payload that does not match the declared message type
+ * fails compilation instead of crossing the seam. The single `as` below is
+ * then overlap-justified by that constraint — the old `as unknown as`
+ * double cast erased the mismatch instead of proving it away.
  */
 export function defineGateway<
   TType extends OutgoingMessage['type'],
-  P,
+  P extends GatewayPayload<TType>,
   R extends { success: boolean },
 >(config: GatewayConfig<TType>): Gateway<P, R> {
   const { type, timeoutMs: defaultTimeoutMs, timeoutError, invalidMessage } = config;
@@ -65,7 +89,7 @@ export function defineGateway<
     invalidMessage,
     send(payload: P, opts: { timeoutMs?: number } = {}): Promise<R | SendFailure> {
       const timeoutMs = opts.timeoutMs ?? defaultTimeoutMs;
-      const message = { type, payload } as unknown as Extract<OutgoingMessage, { type: TType }>;
+      const message = { type, payload } as Extract<OutgoingMessage, { type: TType }>;
       return sendWithPolicy(message, {
         timeoutMs,
         timeoutError: new Error(timeoutError),

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { MessageTransport, ChromeTransport, ImmediateTransport } from '../messageTransport.js';
+import { MessageTransport, ChromeTransport, ImmediateTransport, RetryableTransportError } from '../messageTransport.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
 
 function validMessage(type = 'PING'): Record<string, unknown> {
@@ -87,11 +87,11 @@ describe('messageTransport - branch coverage', () => {
       expect(clock.sleep).not.toHaveBeenCalled();
     });
 
-    it('retries on Receiving end does not exist (Error instance)', async () => {
+    it('retries on a coded transport error (Error instance)', async () => {
       const port = {
         send: vi
           .fn()
-          .mockRejectedValueOnce(new Error('Receiving end does not exist.'))
+          .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist.'))
           .mockResolvedValueOnce({ ok: true }),
       };
       const clock = makeClock();
@@ -104,21 +104,24 @@ describe('messageTransport - branch coverage', () => {
       expect(clock.sleep).toHaveBeenCalledWith(100); // attempt 0 => 100*2^0 =100
     });
 
-    it('retries on Could not establish connection (string error coercion)', async () => {
+    it('does not retry a codeless string rejection (PBI 2026-11-08-17 spec change)', async () => {
+      // Spec change: only the machine-readable code retries. A rejected
+      // string cannot carry a code, so even the legacy transient wording
+      // fails fast — ChromeTransport translates at the boundary instead.
       const port = {
-        send: vi.fn().mockRejectedValueOnce('Could not establish connection').mockResolvedValueOnce({ ok: 2 }),
+        send: vi.fn().mockRejectedValueOnce('Could not establish connection'),
       };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: {} } as unknown;
-      const res = await mt.send({ type: 'PING' } as never, { retries: 1 });
-      expect(res).toEqual({ ok: 2 });
-      expect(clock.sleep).toHaveBeenCalledTimes(1);
+      await expect(mt.send({ type: 'PING' } as never, { retries: 1 })).rejects.toBe('Could not establish connection');
+      expect(port.send).toHaveBeenCalledTimes(1);
+      expect(clock.sleep).not.toHaveBeenCalled();
     });
 
-    it('retries on The message port closed', async () => {
+    it('retries on a coded port-close error', async () => {
       const port = {
-        send: vi.fn().mockRejectedValueOnce(new Error('The message port closed before a response was received')).mockResolvedValueOnce({ ok: 3 }),
+        send: vi.fn().mockRejectedValueOnce(new RetryableTransportError('The message port closed before a response was received')).mockResolvedValueOnce({ ok: 3 }),
       };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
@@ -127,9 +130,9 @@ describe('messageTransport - branch coverage', () => {
       expect(res).toEqual({ ok: 3 });
     });
 
-    it('retries on Extension context invalidated (case-insensitive check via regex)', async () => {
+    it('retries on a coded context-invalidation error', async () => {
       const port = {
-        send: vi.fn().mockRejectedValueOnce(new Error('Extension context invalidated.')).mockResolvedValueOnce({ ok: 4 }),
+        send: vi.fn().mockRejectedValueOnce(new RetryableTransportError('Extension context invalidated.')).mockResolvedValueOnce({ ok: 4 }),
       };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
@@ -143,10 +146,10 @@ describe('messageTransport - branch coverage', () => {
       const port = {
         send: vi
           .fn()
-          .mockRejectedValueOnce(new Error('Receiving end does not exist'))
-          .mockRejectedValueOnce(new Error('Receiving end does not exist'))
-          .mockRejectedValueOnce(new Error('Receiving end does not exist'))
-          .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+          .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
+          .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
+          .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
+          .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
           .mockResolvedValueOnce({ ok: true }),
       };
       const clock = makeClock();
@@ -161,7 +164,7 @@ describe('messageTransport - branch coverage', () => {
 
     it('caps delay at 1000ms for high attempt numbers', async () => {
       const port = {
-        send: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')),
+        send: vi.fn().mockRejectedValue(new RetryableTransportError('Receiving end does not exist')),
       };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
@@ -176,7 +179,7 @@ describe('messageTransport - branch coverage', () => {
     });
 
     it('exhausts retries and throws last error', async () => {
-      const err = new Error('Receiving end does not exist');
+      const err = new RetryableTransportError('Receiving end does not exist');
       const port = { send: vi.fn().mockRejectedValue(err) };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
@@ -187,7 +190,7 @@ describe('messageTransport - branch coverage', () => {
     });
 
     it('retries: 0 means no retry (single attempt)', async () => {
-      const port = { send: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')) };
+      const port = { send: vi.fn().mockRejectedValue(new RetryableTransportError('Receiving end does not exist')) };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: {} } as unknown;
@@ -200,7 +203,7 @@ describe('messageTransport - branch coverage', () => {
       const ctorClock = { now: vi.fn(() => 0), sleep: vi.fn(() => Promise.resolve()) };
       const callClock = { now: vi.fn(() => 0), sleep: vi.fn(() => Promise.resolve()) };
       const port = {
-        send: vi.fn().mockRejectedValueOnce(new Error('Receiving end does not exist')).mockResolvedValueOnce({ ok: true }),
+        send: vi.fn().mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist')).mockResolvedValueOnce({ ok: true }),
       };
       const mt = new MessageTransport(port as never, ctorClock);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: {} } as unknown;
@@ -210,7 +213,7 @@ describe('messageTransport - branch coverage', () => {
     });
 
     it('defaults retries to 3 when opts not provided', async () => {
-      const port = { send: vi.fn().mockRejectedValue(new Error('Receiving end does not exist')) };
+      const port = { send: vi.fn().mockRejectedValue(new RetryableTransportError('Receiving end does not exist')) };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: {} } as unknown;
@@ -218,13 +221,14 @@ describe('messageTransport - branch coverage', () => {
       expect(port.send).toHaveBeenCalledTimes(4); // 0..3
     });
 
-    it('handles string thrown as error (non-Error)', async () => {
+    it('rejects a codeless string without retry even for legacy transient wording (PBI 2026-11-08-17 spec change)', async () => {
       const port = { send: vi.fn().mockRejectedValue('Receiving end does not exist' as unknown as Error) };
       const clock = makeClock();
       const mt = new MessageTransport(port as never, clock);
       (globalThis as unknown as Record<string, unknown>).chrome = { runtime: {} } as unknown;
-      await expect(mt.send({ type: 'PING' } as never, { retries: 1 })).rejects.toEqual('Receiving end does not exist');
-      expect(clock.sleep).toHaveBeenCalledTimes(1);
+      await expect(mt.send({ type: 'PING' } as never, { retries: 1 })).rejects.toBe('Receiving end does not exist');
+      expect(port.send).toHaveBeenCalledTimes(1);
+      expect(clock.sleep).not.toHaveBeenCalled();
     });
 
     it('non-retryable string does not trigger retry', async () => {
@@ -286,9 +290,9 @@ describe('messageTransport - branch coverage', () => {
       expect(res).toEqual({ ok: true });
     });
 
-    it('retries on rejected sends with a retryable pattern and fails if it persists', async () => {
+    it('retries coded rejections and fails if they persist', async () => {
       const clock = { now: vi.fn(() => 0), sleep: vi.fn(() => Promise.resolve()) };
-      const port = { send: vi.fn(() => Promise.reject(new Error('Extension context invalidated'))) };
+      const port = { send: vi.fn(() => Promise.reject(new RetryableTransportError('Extension context invalidated'))) };
       const mt = new MessageTransport(port as never, clock);
       await expect(mt.send({ type: 'PING' } as never, { retries: 1 })).rejects.toThrow('Extension context invalidated');
       expect(port.send).toHaveBeenCalledTimes(2);

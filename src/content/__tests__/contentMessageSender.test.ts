@@ -22,7 +22,7 @@ describe('createContentMessageSender', () => {
             stubSendMessage(async () => ({ success: true }));
             const sender = createContentMessageSender();
 
-            const response = await sender.sendMessageWithRetry({ type: 'VALID_VISIT' });
+            const response = await sender.sendMessageWithRetry({ type: 'VALID_VISIT', payload: { content: 'x' } });
 
             expect(response).toEqual({ success: true });
         });
@@ -36,7 +36,7 @@ describe('createContentMessageSender', () => {
             const sender = createContentMessageSender();
 
             await expect(
-                sender.sendMessageWithoutRetry?.({ type: 'RECORDING_SKIP_REASON' }),
+                sender.sendMessageWithoutRetry?.({ type: 'RECORDING_SKIP_REASON', payload: { reason: 'condition-not-met' } }),
             ).rejects.toThrow('Receiving end does not exist');
             expect(sendMessage).toHaveBeenCalledTimes(1);
         });
@@ -47,6 +47,7 @@ describe('createContentMessageSender', () => {
 
             const response = await sender.sendMessageWithoutRetry?.({
                 type: 'RECORDING_SKIP_REASON',
+                payload: { reason: 'condition-not-met' },
             });
 
             expect(response).toEqual({ success: true });
@@ -58,6 +59,7 @@ describe('createContentMessageSender', () => {
 
             const response = await sender.sendMessageWithoutRetry?.({
                 type: 'RECORDING_SKIP_REASON',
+                payload: { reason: 'condition-not-met' },
             });
 
             expect(response).toBeUndefined();

@@ -211,9 +211,13 @@ export async function deriveScopeHash(
   const kind = ARCHIVE_SCOPE_BY_SUBTYPE[subtype];
   if (!kind) return undefined;
   if (kind === 'cutoff') {
+    // includeDeleted is a boolean on the wire (the validator rejects
+    // non-booleans; PBI 2026-11-08-12): the old `as number | undefined`
+    // cast lied about the shape. computeScopeHash stringifies parts, so
+    // the digest is unchanged — only the type now matches reality.
     return computeScopeHash([
       payload?.cutoffMs as number | undefined,
-      payload?.includeDeleted as number | undefined,
+      payload?.includeDeleted as boolean | undefined,
     ]);
   }
   return computeScopeHash([payload?.stagingName as string | undefined]);

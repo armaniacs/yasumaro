@@ -6,7 +6,7 @@
 
 import { CURRENT_PROTOCOL_VERSION } from './protocol.js';
 import type { ExtensionMessage } from '../background/messageTypes.js';
-import { isKnownMessageType } from './envelopeShape.js';
+import { isKnownMessageType, isValidEnvelopeShape } from './envelopeShape.js';
 import { backoffDelayMs } from '../utils/backoff.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import {
@@ -22,7 +22,11 @@ export interface TransportPort {
 
 export class ChromeTransport implements TransportPort {
   async send(message: unknown): Promise<unknown> {
-    return chrome.runtime.sendMessage(message);
+    try {
+      return await chrome.runtime.sendMessage(message);
+    } catch (error) {
+      throw toTransportError(error);
+    }
   }
 }
 
@@ -33,25 +37,83 @@ export class ImmediateTransport implements TransportPort {
   }
 }
 
-const RETRYABLE_ERROR_PATTERNS = [
+/**
+ * Machine-readable marker for transport-level retriability (PBI
+ * 2026-11-08-17: the retry policy used to read English error sentences with
+ * regular expressions, so any Chrome wording change silently flipped the
+ * retry decision. The decision below reads only this code, so reworded
+ * messages with the same code retry exactly as before).
+ */
+export const TRANSPORT_RETRYABLE_CODE = 'message-transport/retryable';
+
+/**
+ * A transport failure the sender may retry (dead port, torn-down context).
+ * Ports throw this instead of a bare Error so `isRetryableError` never
+ * inspects message wording. The original failure stays available as
+ * `cause`.
+ */
+export class RetryableTransportError extends Error {
+  readonly code = TRANSPORT_RETRYABLE_CODE;
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'RetryableTransportError';
+  }
+}
+
+/**
+ * Read the machine-readable retry code off any thrown value. Codeless
+ * values (plain Errors, strings, Chrome's foreign rejections) yield null —
+ * never retryable by code.
+ */
+function transportErrorCodeOf(error: unknown): string | null {
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const code: unknown = (error as { code: unknown }).code;
+    return typeof code === 'string' ? code : null;
+  }
+  return null;
+}
+
+/**
+ * Foreign-error seam for the Chrome boundary (PBI 2026-11-08-17):
+ * `chrome.runtime.sendMessage` rejects with plain Errors whose only signal
+ * is Chrome's English wording, so this translator — and only this
+ * translator — still matches that wording, once, at the boundary where the
+ * foreign error enters. Everything downstream (the policy below, the retry
+ * loop) reads only the attached code.
+ */
+const CHROME_TRANSIENT_MESSAGE_PATTERNS = [
   /Receiving end does not exist/i,
   /Could not establish connection/i,
   /The message port closed/i,
   /Extension context invalidated/i,
 ];
 
+function toTransportError(error: unknown): unknown {
+  if (isRetryableError(error)) return error;
+  if (CHROME_TRANSIENT_MESSAGE_PATTERNS.some((p) => p.test(errorMessage(error)))) {
+    return new RetryableTransportError(errorMessage(error), { cause: error });
+  }
+  return error;
+}
+
 /**
- * Canonical transport-level retriability predicate (PBI 2026-09-28-29).
+ * Canonical transport-level retriability predicate (PBI 2026-09-28-29,
+ * code-based since PBI 2026-11-08-17).
  *
  * Scope: message-transport failures only (dead port, torn-down context).
  * Network-fetch failures (pipeline/retryPolicy.ts LEGACY_NETWORK_MARKERS)
  * and provider HTTP failures (ProviderStrategy.shouldRetrySummaryRequest)
  * are different error universes with their own policies — they cross-link
  * here for the transport class instead of merging into one function.
+ *
+ * Code-based: only errors carrying TRANSPORT_RETRYABLE_CODE retry. Plain
+ * Errors retry nothing even when their message sounds transient — wording
+ * is not a contract. Chrome's foreign rejections gain the code in
+ * ChromeTransport (toTransportError); test and custom ports attach it
+ * themselves (RetryableTransportError or any `{ code }` carrier).
  */
 export function isRetryableError(error: unknown): boolean {
-  const msg = errorMessage(error);
-  return RETRYABLE_ERROR_PATTERNS.some((p) => p.test(msg));
+  return transportErrorCodeOf(error) === TRANSPORT_RETRYABLE_CODE;
 }
 
 export interface MessageTransportOptions {
@@ -86,10 +148,17 @@ export class MessageTransport {
     const retries = opts.retries ?? TRANSPORT_DEFAULT_RETRIES;
     const clock = opts.clock ?? this.clock;
 
-    // Attach protocol version and validate
-    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION } as M & { protocolVersion: number };
-    if (!isKnownMessageType((enriched as Record<string, unknown>).type)) {
-      throw new Error(`Invalid message type: ${String((enriched as Record<string, unknown>).type)}`);
+    // Attach protocol version and validate the full envelope shape
+    // (PBI 2026-11-08-12): the old gate checked only `type`, so a known
+    // type with a missing or malformed payload travelled to the port
+    // unexamined. The payload branch rules stay in envelopeShape —
+    // per-field content checks stay in the per-type validators.
+    const enriched = { ...message, protocolVersion: CURRENT_PROTOCOL_VERSION };
+    if (!isKnownMessageType(enriched.type)) {
+      throw new Error(`Invalid message type: ${String(enriched.type)}`);
+    }
+    if (!isValidEnvelopeShape(enriched)) {
+      throw new Error(`Invalid message payload for type: ${String(enriched.type)}`);
     }
 
     let lastError: unknown;
