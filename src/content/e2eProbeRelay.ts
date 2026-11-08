@@ -25,6 +25,12 @@ declare const __OW_E2E_PROBE__: boolean | undefined;
 // `undefined` (vitest, where the define is absent) keeps the historical
 // probe-enabled default so unit tests keep exercising the relay; any other
 // value stays compiled out. `!== false` was looser than this contract.
+// S18 note: unifying this to `__OW_E2E_PROBE__ ?? false` was considered and
+// rejected — it would flip the vitest `undefined` case to compiled-out and
+// break e2eProbeRelay.test.ts, which pins the enabled default. Production
+// builds always receive an explicit boolean from resolveE2eProbeDefine
+// (wxt.config.ts), pinned by __tests__/wxt.config.test.ts, so the residual
+// looseness (`undefined` => enabled) only ever applies to the test runner.
 const RELAY_COMPILED_IN: boolean =
     typeof __OW_E2E_PROBE__ === 'undefined' || __OW_E2E_PROBE__ === true;
 
