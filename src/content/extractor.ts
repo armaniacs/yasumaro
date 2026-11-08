@@ -136,6 +136,25 @@ export function subscribeSpaNavigation(): () => void {
 }
 
 /**
+ * Review No.1: MAIN-world backing for SPA detection. Content scripts cannot
+ * use chrome.webNavigation (background-only), so the permission-safe backing
+ * is polling location.href — see ContentKernel.startSpaUrlPolling. Driven by
+ * entrypoints/content-extractor.ts after a successful init (fail-closed:
+ * a failed init never arms the poll).
+ */
+export function startSpaUrlPolling(intervalMs?: number): () => void {
+    return kernel.startSpaUrlPolling(intervalMs);
+}
+
+/**
+ * Review No.1/No.2: single-shot SPA URL check (no timers). Returns true
+ * only on a true URL change.
+ */
+export function pollSpaUrlOnce(): boolean {
+    return kernel.pollSpaUrlOnce();
+}
+
+/**
  * Schedule the next periodic check using injected Scheduler (IdleScheduler → requestIdleCallback fallback)
  */
 export function scheduleNextCheck(): void {
