@@ -114,8 +114,13 @@ interface FetchOptions extends RequestInit {
   /**
    * 呼び出し側で検証済みのpin (No.3/No.4/No.5)。
    * 指定時は接続前の再解決を行わずこのpinを使い回し、接続後の再解決にも
-   * 同一pin・同一resolverを使う。hostname不一致時 (リダイレクト追従の
-   * 次hop等) はpin内resolverで現hopを解決し直す (同一系統を維持)。
+   * 同一pin・同一resolverを使う。
+   *
+   * 自動追従時 (platform既定 `redirect: 'follow'`) の次hopは検証しない:
+   * この関数は初期URLのhostnameしか見ず、追従先Locationはplatformが
+   * 素通しするためである。dnsPin併用時は `redirect: 'error'`
+   * (NO_REDIRECT_FETCH_POLICY / noRedirectInit) か
+   * fetchWithRedirectGuardを使うこと。
    *
    * ブラウザfetchにはDNS指定口がないため、pinはTCP層の固定ではなく
    * 「接続前ゲート+接続後突き合わせによる応答破棄」の検出型制御である。
@@ -185,6 +190,13 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   const normalizedHostname = normalizeHostname(parsedHostname);
   let activePin: DnsPin | null = null;
   if (dnsPin && dnsPin.hostname === normalizedHostname) {
+    // No.8: DnsPinの不変条件「同一resolver」を強制する。両方あり・
+    // hostname一致でもresolverインスタンスが異なれば異系統pinの混入の
+    // ためfail-closedでthrowする。dnsPinのみの現行prod callerは
+    // resolveHostnameがundefinedのため従来どおりpinを採用する。
+    if (resolveHostname !== undefined && resolveHostname !== dnsPin.resolveHostname) {
+      throw new Error(`DnsPin resolver mismatch for ${normalizedHostname}: pin and option resolvers differ.`);
+    }
     activePin = dnsPin;
   } else {
     const resolver = resolveHostname ?? dnsPin?.resolveHostname;
