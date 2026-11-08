@@ -167,10 +167,13 @@ export class OfflineNetworkQueue {
     // increment flush() is about to apply.
     if (this.offsetApplied.has(job)) return;
     this.offsetApplied.add(job);
-    // Lower bound: retryCount is a spend budget, never a debt. Lending below
-    // zero would mint budget out of thin air on the next increment (-1 + 1
-    // lands back at 0 instead of staying spent), so the floor holds at 0.
-    job.retryCount = Math.max(0, job.retryCount - 1);
+    // No lower bound here: the lend is always paired with flush()'s +1 on
+    // the same object (see the contract above), so -1 + 1 nets exactly zero
+    // even from a fresh budget of 0. Flooring at 0 would break the pairing
+    // (0 -> 0 -> +1 lands at 1 and burns a retry on a job that was never
+    // attempted). Unpaired lends cannot occur: this runs only on the false
+    // path that flush() always follows with exactly one increment.
+    job.retryCount = job.retryCount - 1;
   }
 
   async getQueueSize(): Promise<number> {
