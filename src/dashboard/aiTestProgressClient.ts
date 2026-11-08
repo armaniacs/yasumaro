@@ -55,6 +55,11 @@ export function generateAiTestRunId(): string {
  * runId). Progress from other runs (e.g. a concurrent Dashboard tab) and
  * messages from other extensions are discarded. Call the returned function
  * to stop listening and clear the timeout.
+ *
+ * Timeout cleanup on terminal states is caller-owned: the AiTestProgress
+ * shape carries no status field, so this client cannot tell completion from
+ * silence. The caller clears the timer by calling the returned unsubscribe
+ * when its run finishes (success, failure, or UI teardown).
  */
 export function subscribeAiTestProgress(
   runId: string,
