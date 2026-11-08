@@ -66,7 +66,8 @@ function fingerprintSources(sources: Source[]): string {
 /**
  * Derive the ublock rules for the given sources with reference-plus-length
  * caching (see the cache note above). Exported for cache-behavior tests;
- * production callers go through `isDomainAllowed`.
+ * production callers go through `isDomainAllowed`. S29: テスト用公開として
+ * 本番混入を許容する (移動不要)。
  */
 export function derivedRulesForSources(sources: Source[]): UblockRules {
   const cachedSources = cachedDerivedSources;
@@ -89,6 +90,8 @@ export function derivedRulesForSources(sources: Source[]): UblockRules {
 /**
  * Test seam (PBI 2026-11-08-17): clears the module-level derived-rules
  * cache so cache-behavior tests start from a known state.
+ * S29 (記録・移動不要): 本番バンドルに同梱されることを承知でここに置く。
+ * 無引数・副作用はキャッシュ破棄のみで、通常経路の判定結果を変えない。
  */
 export function resetDerivedRulesCacheForTests(): void {
   cachedDerivedSources = null;
