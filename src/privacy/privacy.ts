@@ -205,6 +205,10 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
         const md = await res.text();
         // 事前検査のヘッダは欠落・偽装しうるため、読み取り後の実バイト長でも
         // 上限を実効化する (TextEncoder換算のUTF-8バイト長で判定)。
+        // 将来の遠隔化メモ: res.text() は全文をメモリに載せる。遠隔取得に
+        // 切り替える場合は Reader で逐次読みし、累積バイトが上限を超えた
+        // 時点で打切るストリーミングcapに変えること。現状は同梱資産のみで
+        // 上限内が保証されるため全文読みで十分であり動作変更は不要。
         if (new TextEncoder().encode(md).byteLength > MAX_PRIVACY_POLICY_BYTES) {
             throw new Error('Privacy policy file exceeds size limit');
         }

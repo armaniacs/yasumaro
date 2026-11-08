@@ -39,6 +39,19 @@ function readFileCancellable(file: File): Promise<string> {
 }
 
 /**
+ * ファイル読み取りの中断による失敗かどうかを判定する。
+ * 継続操作で旧読取を abort した際の reject は正常系の中断であり、
+ * 新読取の success と競合してエラー表示で上書きしてはならない。
+ * DOMException の AbortError 名、または fileReader が返す中断文言
+ * (getMessage('ublockFileAborted')) のいずれかに一致したら中断扱いとする。
+ */
+function isFileReadAbort(error: Error | DOMException): boolean {
+  if (error.name === 'AbortError') return true;
+  const abortedMessage = getMessage('ublockFileAborted');
+  return abortedMessage !== '' && error.message.includes(abortedMessage);
+}
+
+/**
  * uBlockインポートUIを初期化
  */
 export async function init(): Promise<void> {
@@ -118,6 +131,9 @@ async function handleFileSelect(event: Event): Promise<void> {
     handleTextInputPreview();
     showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
+    // 旧読取の中断は正常系のためエラー表示せず静かに抜ける。
+    // DOMException は Error のサブクラスではないため両方で狭める。
+    if ((error instanceof Error || error instanceof DOMException) && isFileReadAbort(error)) return;
     showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
@@ -415,6 +431,9 @@ async function processFile(file: File): Promise<void> {
     handleTextInputPreview();
     showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
+    // ドロップ直後の再ドロップで旧読取が abort された場合も同様に沈黙させる。
+    // DOMException は Error のサブクラスではないため両方で狭める。
+    if ((error instanceof Error || error instanceof DOMException) && isFileReadAbort(error)) return;
     showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
