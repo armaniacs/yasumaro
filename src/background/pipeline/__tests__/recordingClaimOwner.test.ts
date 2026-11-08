@@ -149,14 +149,15 @@ describe('RecordingOrchestrator recovery-claim ownership (PBI 2026-11-07-19)', (
     expect(h.claimStore.releaseRecoveryOwner).not.toHaveBeenCalled();
   });
 
-  it('treats a pending-pages read failure as a non-recovery run (old catch-all parity)', async () => {
+  it('surfaces a pending-pages read failure as a detectable error instead of running claim-free (PBI 2026-11-08-07)', async () => {
     const h = makeHarness({ pending: new Error('storage unavailable'), claimGranted: true });
 
-    const result = await h.orch.record(recordData(RECOVERY_URL), { acquireRecoveryClaim: true });
-
-    expect(result).toEqual({ success: true });
-    expect(h.events).toEqual([`record:${RECOVERY_URL}`]);
+    await expect(
+      h.orch.record(recordData(RECOVERY_URL), { acquireRecoveryClaim: true }),
+    ).rejects.toThrow('storage unavailable');
+    expect(h.events).toEqual([]);
     expect(h.claimStore.claimRecoveryOwner).not.toHaveBeenCalled();
+    expect(h.claimStore.releaseRecoveryOwner).not.toHaveBeenCalled();
   });
 
   it('wraps previewOnly requests in the same claim envelope', async () => {
