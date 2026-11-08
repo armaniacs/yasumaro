@@ -55,7 +55,9 @@ function showPrivatePageDialog(url: string, reason: string, headerValue: string)
   }
 
   if (!dialog) return;
-  dialog.showModal();
+  // A second show while the dialog is already open throws InvalidStateError
+  // on showModal — keep the displayed state instead.
+  if (!dialog.open) dialog.showModal();
   ensureCloseRelease(dialog, releasePrivatePageTrap);
   // Re-open guard: never double-trap
   releasePrivatePageTrap();
@@ -77,7 +79,8 @@ function showRecordingFailedDialog(url: string, reasonLabel: string): void {
   }
 
   if (!dialog) return;
-  dialog.showModal();
+  // Same re-open guard as the private-page dialog: never showModal twice.
+  if (!dialog.open) dialog.showModal();
   ensureCloseRelease(dialog, releaseRecordingFailedTrap);
   // Re-open guard: never double-trap
   releaseRecordingFailedTrap();

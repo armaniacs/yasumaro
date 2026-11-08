@@ -19,6 +19,26 @@ vi.mock('../autoClose.js', () => ({
   clearAutoCloseTimer: vi.fn()
 }));
 
+const mockLogError = vi.hoisted(() => vi.fn());
+vi.mock('../../utils/logger/types.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/core.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+vi.mock('../../utils/logger/api.js', async () =>
+  (await import('../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    logError: mockLogError,
+    ErrorCode: { INTERNAL_ERROR: 'INT_001' },
+  }),
+);
+
 import { showMainScreen, showSettingsScreen, init } from '../navigation.js';
 import { setScreenState, SCREEN_STATES } from '../screenState.js';
 import { clearAutoCloseTimer } from '../autoClose.js';
@@ -32,7 +52,11 @@ describe('navigation', () => {
         getURL: vi.fn((path: string) => `chrome-extension://test/${path}`)
       },
       tabs: {
-        create: vi.fn()
+        create: vi.fn(() => Promise.resolve({ id: 1 }))
+      },
+      i18n: {
+        getMessage: vi.fn((key: string) => key),
+        getUILanguage: vi.fn(() => 'en')
       }
     } as any;
 
@@ -46,6 +70,7 @@ describe('navigation', () => {
       <div id="settingsScreen" style="display: none;">Settings Screen</div>
       <button id="menuBtn">Menu</button>
       <button id="backBtn">Back</button>
+      <div id="mainStatus"></div>
     `;
   });
 
@@ -82,27 +107,53 @@ describe('navigation', () => {
   });
 
   describe('showSettingsScreen', () => {
-    it('should show settings screen and hide main screen', () => {
+    it('should show settings screen and hide main screen', async () => {
       const mainScreen = document.getElementById('mainScreen')!;
       const settingsScreen = document.getElementById('settingsScreen')!;
 
-      showSettingsScreen();
+      await showSettingsScreen();
 
       expect(clearAutoCloseTimer).toHaveBeenCalled();
       expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/options.html' });
       expect(window.close).toHaveBeenCalled();
     });
 
-    it('should handle missing DOM elements gracefully', () => {
+    it('should handle missing DOM elements gracefully', async () => {
       document.getElementById('mainScreen')!.remove();
 
-      expect(() => {
-        showSettingsScreen();
-      }).not.toThrow();
+      await expect(showSettingsScreen()).resolves.toBeUndefined();
 
       expect(clearAutoCloseTimer).toHaveBeenCalled();
       expect(global.chrome.tabs.create).toHaveBeenCalledWith({ url: 'chrome-extension://test/options.html' });
       expect(window.close).toHaveBeenCalled();
+    });
+
+    it('keeps the popup open and surfaces the failure when tab creation rejects', async () => {
+      vi.mocked(global.chrome.tabs.create).mockRejectedValueOnce(new Error('tabs.create failed'));
+
+      await showSettingsScreen();
+
+      expect(window.close).not.toHaveBeenCalled();
+      const status = document.getElementById('mainStatus')!;
+      expect(status.textContent).toContain('tabs.create failed');
+      expect(status.className).toBe('status-message error');
+      expect(mockLogError).toHaveBeenCalledWith(
+        '[navigation] Failed to open a page in a new tab',
+        expect.objectContaining({ cause: expect.any(Error) }),
+        'INT_001',
+      );
+    });
+
+    it('keeps the popup open when tab creation throws synchronously', async () => {
+      vi.mocked(global.chrome.tabs.create).mockImplementationOnce(() => {
+        throw new Error('tabs.create sync failure');
+      });
+
+      await showSettingsScreen();
+
+      expect(window.close).not.toHaveBeenCalled();
+      expect(document.getElementById('mainStatus')!.textContent).toContain('tabs.create sync failure');
+      expect(mockLogError).toHaveBeenCalled();
     });
   });
 

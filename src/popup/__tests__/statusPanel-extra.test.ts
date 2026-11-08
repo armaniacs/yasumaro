@@ -1097,6 +1097,12 @@ describe('attachPrivacyActionListeners — addDomain branches', () => {
       try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return null; }
     });
     mockGetCurrentTab.mockResolvedValue({ url: 'https://example.com/page', id: 1 });
+    // The addDomain flow re-inits the panel, which refreshes trust. Stub the
+    // trust check with a valid display so the refresh succeeds and only the
+    // addDomain outcome lands on mainStatus (an unstubbed mock would fail the
+    // refresh and — since PBI 2026-11-08-08 — report that failure instead).
+    mockGetTrustLevelDisplay.mockResolvedValue({ level: 'Trusted' });
+    mockCheckDomainTrust.mockResolvedValue({ showAlert: false, trustResult: {} });
   });
 
   async function initPrivatePanel() {

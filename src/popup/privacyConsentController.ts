@@ -97,7 +97,8 @@ function showPrivacyConsentModal(): void {
     }
 
     // モーダル表示（ESCで閉じない: 'cancel'イベントをpreventDefaultする）
-    modal.showModal();
+    // 既に開いている間の再表示はInvalidStateErrorになるため、表示状態を保つ。
+    if (!modal.open) modal.showModal();
 
     // フォーカストラップ設定（ESCでは閉じないため closeCallback は渡さない）。
     // 再表示時の二重 trap を避けるため既存トラップを先に解放する。

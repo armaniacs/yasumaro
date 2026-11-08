@@ -18,6 +18,7 @@
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { messageTransport } from '../messaging/messageTransport.js';
 import type { ResponseForType } from '../messaging/types.js';
+import { wireOnce } from './domUtils.js';
 
 export type PausePresetMinutes = 30 | 60 | 90 | 120;
 
@@ -204,12 +205,18 @@ export function initPausePanel(deps: PausePanelDeps = {}): void {
   const now = deps.now ?? (() => Date.now());
   const pauseBtn = document.getElementById('pauseBtn');
   if (!pauseBtn) return;
-  pauseBtn.addEventListener('click', () => {
-    void pauseByPress(send, now);
+  // Re-init (popup reopen / status refresh) must not stack duplicate press
+  // handlers — one re-entry used to send PAUSE_RECORDING twice per click.
+  wireOnce(pauseBtn, (el) => {
+    el.addEventListener('click', () => {
+      void pauseByPress(send, now);
+    });
   });
   const resumeBtn = document.getElementById('resumeBtn');
-  resumeBtn?.addEventListener('click', () => {
-    void resumeNow(send, now);
+  wireOnce(resumeBtn, (el) => {
+    el.addEventListener('click', () => {
+      void resumeNow(send, now);
+    });
   });
   void refreshPauseState(send, now);
 }

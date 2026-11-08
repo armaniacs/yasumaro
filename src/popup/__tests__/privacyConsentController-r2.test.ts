@@ -264,4 +264,21 @@ describe('privacyConsentController - r2 missed branches', () => {
       });
     });
   });
+
+  describe('showPrivacyConsentModal - double-show guard (PBI 2026-11-08-08)', () => {
+    it('calls showModal once across two prompts while the modal is already open', async () => {
+      mockShouldPromptForConsent.mockResolvedValue(true);
+      const modal = getModal()!;
+      const showModalSpy = vi.spyOn(modal, 'showModal');
+
+      setupPrivacyConsentListeners();
+      await initPrivacyConsent();
+      expect(modal.open).toBe(true);
+
+      await initPrivacyConsent();
+
+      expect(modal.open).toBe(true);
+      expect(showModalSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });

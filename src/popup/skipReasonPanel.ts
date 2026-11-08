@@ -19,6 +19,8 @@
 import { readLastSkipReason, type LastSkipReason, type SkipReasonCode } from '../utils/skipReason.js';
 import { getMessageOr, getMessage } from '../utils/i18n.js';
 import { getPluralKey } from '../utils/i18nPlural.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 /** i18n keys for the reason text, per code. */
 const REASON_MESSAGE_KEYS: Record<SkipReasonCode, string> = {
@@ -65,7 +67,14 @@ export async function initSkipReasonPanel(): Promise<void> {
   let outcome: LastSkipReason | null = null;
   try {
     outcome = await readLastSkipReason();
-  } catch {
+  } catch (readError) {
+    // Fail-closed display (the panel stays hidden), but a read failure is
+    // logged so a storage outage is distinguishable from "no skip yet".
+    logError(
+      '[skipReasonPanel] Failed to read the last skip reason',
+      { cause: readError },
+      ErrorCode.STORAGE_READ_FAILURE,
+    );
     outcome = null;
   }
 
