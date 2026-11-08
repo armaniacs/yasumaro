@@ -66,11 +66,14 @@ export function validateRecordForInsert(payload: unknown): string | null {
   // pass here and reach the backend as '' (see buildRecordFromPayload's ''
   // coercion below), which is indistinguishable from a real value: it
   // pollutes the url column and the (url, created_at) uniqueness with empty
-  // rows. buildRecordFromPayload keeps its '' coercion for legacy callers,
-  // but the validated write path (the offscreen insert runners above it)
+  // rows. A whitespace-only url is rejected for the same reason — it carries
+  // no address information and would pollute the column with blank rows that
+  // are just as indistinguishable from each other as empty ones.
+  // buildRecordFromPayload keeps its '' coercion for legacy callers, but
+  // the validated write path (the offscreen insert runners above it)
   // never lets a url-less payload get that far.
   const url = r.url;
-  if (typeof url !== 'string' || url.length === 0) {
+  if (typeof url !== 'string' || url.length === 0 || url.trim().length === 0) {
     return 'url must be a non-empty string';
   }
   for (const field of CODEC_TEXT_FIELDS) {

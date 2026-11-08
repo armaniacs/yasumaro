@@ -117,7 +117,16 @@ export class ServiceInitError extends Error {
   }
 }
 
-export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+/**
+ * Shared container initialization: register the manifest entries the container
+ * does not already have, resolve every entry while isolating one service's
+ * factory exception from the rest, then run onReady wiring for the healthy
+ * ones. Returns every failure instead of throwing, so the fail-fast
+ * composition (createBackgroundServices) and the degraded composition
+ * (toDegradedServices, consumed by service-worker.ts) observe the same
+ * isolation with no duplicated loops.
+ */
+function initializeContainer(container: ServiceContainer): ServiceInitFailure[] {
   // Register every manifest entry the container does not already have, so a
   // test that called container.override(key, fake) keeps its fake.
   for (const entry of compositionManifest) {
@@ -152,6 +161,11 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
       failedKeys.add(entry.key);
     }
   }
+  return failures;
+}
+
+export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+  const failures = initializeContainer(container);
 
   if (failures.length > 0) {
     throw new ServiceInitError(failures);
@@ -180,3 +194,59 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
 
 // Re-exported so existing test imports (`import { MessageHandler }`) keep working.
 export type { MessageHandler };
+
+/**
+ * Degraded composition view: the same members as BackgroundServicesComposition
+ * but each honestly typed as possibly undefined. A failed factory resolves its
+ * slot to undefined here instead of aborting the whole startup, so the
+ * service worker can keep the healthy services and degrade only the paths
+ * that need the missing ones.
+ */
+export type DegradedBackgroundServices = {
+  [K in keyof BackgroundServicesComposition]: BackgroundServicesComposition[K] | undefined;
+};
+
+/**
+ * Resolve one service without throwing: returns undefined when the factory
+ * (or a dependency it needs) failed, so the degraded startup keeps the
+ * healthy services. Callers must existence-check the result — a missing slot
+ * must never flow silently into a consumer that assumes it is defined.
+ * The ServiceContainer resolve/override contract is untouched: this only
+ * catches the throw at the composition boundary.
+ */
+function resolveServiceOrUndefined<T>(container: ServiceContainer, key: ServiceKey): T | undefined {
+  try {
+    return container.resolve<T>(key);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Build the degraded view over an already-initialized container (one that ran
+ * through initializeContainer via createBackgroundServices, healthy or not).
+ * Never throws for factory failures: failed slots resolve to undefined while
+ * healthy singletons resolve to the same instances the fail-fast composition
+ * would have returned.
+ */
+export function toDegradedServices(container: ServiceContainer): DegradedBackgroundServices {
+  return {
+    obsidian: resolveServiceOrUndefined<ObsidianClient>(container, 'obsidian'),
+    sqliteClient: resolveServiceOrUndefined<SqliteClient>(container, 'sqliteClient'),
+    tabCache: resolveServiceOrUndefined<TabCache>(container, 'tabCache'),
+    rateLimiter: resolveServiceOrUndefined<RateLimiter>(container, 'rateLimiter'),
+    manualContentFetcher: resolveServiceOrUndefined<ManualContentFetcher>(container, 'manualContentFetcher'),
+    aiService: resolveServiceOrUndefined<AIService>(container, 'aiService'),
+    reviewSummaryGenerator: resolveServiceOrUndefined<ReviewSummaryGenerator>(container, 'reviewSummaryGenerator'),
+    sessionStore: resolveServiceOrUndefined<SessionStore>(container, 'sessionStore'),
+    headerDetector: resolveServiceOrUndefined<HeaderDetector>(container, 'headerDetector'),
+    recordingCache: resolveServiceOrUndefined<RecordingCacheInstance>(container, 'recordingCache'),
+    recordingPipeline: resolveServiceOrUndefined<RecordingOrchestrator>(container, 'recordingPipeline'),
+    recordingAdmission: resolveServiceOrUndefined<RecordingAdmission>(container, 'recordingAdmission'),
+    messageRouter: resolveServiceOrUndefined<MessageRouter>(container, 'messageRouter'),
+    autoSavedBadgeTabs: resolveServiceOrUndefined<AutoSavedBadgeTabs>(container, 'autoSavedBadgeTabs'),
+    sessionAlarmService: resolveServiceOrUndefined<SessionAlarmService>(container, 'sessionAlarmService'),
+    alarmRegistry: resolveServiceOrUndefined<AlarmRegistry>(container, 'alarmRegistry'),
+    deferredMigrationRunner: resolveServiceOrUndefined<() => Promise<void>>(container, 'deferredMigrationRunner'),
+  };
+}

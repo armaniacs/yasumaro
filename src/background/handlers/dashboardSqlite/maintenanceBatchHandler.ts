@@ -155,9 +155,15 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         if (validRows.length === 0) {
           return { success: false, error: 'No valid rows provided' };
         }
-        if (invalidReasons.length > 0 || validRows.length !== rows.length) {
-          // Silent exclusion would make an import shortfall undiagnosable:
-          // log how many rows were dropped and why (first few reasons only).
+        // validRows.length !== rows.length already implies invalidReasons is
+        // non-empty: the first invalid row always pushes a reason (the cap only
+        // limits how many are kept), so no separate length check is needed.
+        if (validRows.length !== rows.length) {
+          // Best-effort diagnostic: the import result must not depend on
+          // telemetry delivery. If logging fails, the rejection counts and
+          // the valid rows are still imported — hence fire-and-forget (void)
+          // instead of awaiting. A missing WARN line never changes the
+          // response; the excluded/total counts stay derivable by the caller.
           void logWarn('maintenanceBatchHandler: import excluded invalid rows', {
             excluded: rows.length - validRows.length,
             total: rows.length,

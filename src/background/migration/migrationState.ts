@@ -66,14 +66,14 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
    * with a valid value on its next setStatus/setProgress/setRetryCount.
    */
   private async healCorruptedKey(key: string, raw: unknown): Promise<void> {
-    addLog(LogType.WARN, 'Migration state corrupted, self-healing to absent and re-running migration', {
+    await addLog(LogType.WARN, 'Migration state corrupted, self-healing to absent and re-running migration', {
       key,
       rawType: typeof raw,
     });
     try {
       await this.port.remove?.(key);
     } catch (error) {
-      addLog(LogType.WARN, 'Migration state self-heal could not remove the corrupted key; the re-migration will overwrite it', {
+      await addLog(LogType.WARN, 'Migration state self-heal could not remove the corrupted key; the re-migration will overwrite it', {
         key,
         error: errorMessage(error),
       });

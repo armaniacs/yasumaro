@@ -34,6 +34,12 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * there. Only `[A-Za-z0-9]` counts as "inside a word": a marker flanked by
  * underscores still matches, while one embedded in a longer alphanumeric
  * run (`networked`, `prefetch`) does not.
+ *
+ * Runtime floor pin: the negative lookbehind `(?<![A-Za-z0-9])` below needs
+ * ES2018 regex support (Chrome 62+, Safari 16.4+, Node 10+). This repository
+ * targets ESNext with engines Node >= 24, so the syntax is always available;
+ * do not lower the tsconfig target below ES2018 without rewriting these
+ * patterns into lookbehind-free equivalents first.
  */
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -26,6 +26,11 @@ describe('browsingLogCodec', () => {
       expect(validateRecordForInsert({ url: '' })).toContain('url');
     });
 
+    it('rejects a whitespace-only url (indistinguishable from empty in the url column)', () => {
+      expect(validateRecordForInsert({ url: '   ' })).toContain('url');
+      expect(validateRecordForInsert({ url: ' \t\n ' })).toContain('url');
+    });
+
     it('accepts legacy coercible values unchanged', () => {
       expect(validateRecordForInsert({ url: 'https://a.com', visit_duration: '30000' })).toBeNull();
       expect(validateRecordForInsert({ url: 'https://a.com', is_starred: true })).toBeNull();
