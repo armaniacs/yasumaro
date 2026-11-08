@@ -7,10 +7,12 @@ import { errorMessage } from '../utils/errorUtils.js';
  *
  * The returned boolean reports the dispatch attempt, not the final display
  * outcome: `true` when the notification was handed to the platform for
- * dispatch, `false` when dispatch itself failed (missing API, a throw, or a
- * rejected promise). A later `chrome.runtime.lastError` (e.g. permission
- * denied) arrives asynchronously after dispatch, so it is recorded through
- * the structured-log seam but does not flip the return value.
+ * dispatch, `false` only when dispatch itself failed synchronously (missing
+ * API or a throw). A rejected promise from the platform settles after the
+ * handoff, so it is recorded through the structured-log seam but keeps the
+ * `true` return. A later `chrome.runtime.lastError` (e.g. permission
+ * denied) arrives asynchronously after dispatch, so it is likewise only
+ * logged and does not flip the return value.
  */
 export function notify(title: string, message: string): boolean {
   try {
