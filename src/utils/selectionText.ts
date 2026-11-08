@@ -30,7 +30,17 @@ export const SELECTION_CONTENT_ORIGIN = 'selection';
  * spaces, trimmed, and capped at SELECTION_MAX_CHARS. An empty selection
  * normalizes to '' — callers treat that as "no selection" and fall back to
  * the page record.
+ *
+ * The cap counts Unicode code points, not UTF-16 code units (PBI
+ * 2026-11-08-17): a naive slice() can split a surrogate pair and store a
+ * lone surrogate (U+FFFD on read, and a shorter string than intended).
+ * Array.from splits on code points so the cut always lands on a character
+ * boundary. Combining sequences (grapheme clusters) may still separate —
+ * out of scope: the stored form is normalized single-line text, not
+ * display shaping.
  */
 export function normalizeSelectionText(raw: string): string {
-  return normalizeSingleLine(raw).slice(0, SELECTION_MAX_CHARS);
+  const normalized = normalizeSingleLine(raw);
+  if (normalized.length <= SELECTION_MAX_CHARS) return normalized;
+  return Array.from(normalized).slice(0, SELECTION_MAX_CHARS).join('');
 }

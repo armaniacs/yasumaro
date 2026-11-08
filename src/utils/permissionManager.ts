@@ -10,6 +10,11 @@ import { logDebug, logWarn } from './logger/api.js';
 import { errorMessage } from './errorUtils.js';
 import { withOptimisticLock } from './storage/storageTransaction.js';
 import { ChromeStoragePort, type StoragePort } from './storage/storagePort.js';
+// Day-unit SSOT (PBI 2026-11-08-16): localDate.DAY_MS is the Layer-0 single
+// definition of a day in ms. Aliased as MS_PER_DAY here to match the
+// storage-layer name (trancoConsent.MS_PER_DAY) without pulling the
+// storage graph into this module's mock surface.
+import { DAY_MS as MS_PER_DAY } from './localDate.js';
 
 // ============================================================================
 // Types
@@ -210,7 +215,7 @@ export class PermissionManager {
    */
   async cleanupOldDeniedEntries(days: number = 90): Promise<void> {
     try {
-      const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
+      const threshold = Date.now() - days * MS_PER_DAY;
       let removedCount = 0;
 
       await this.updateDeniedDomains((deniedDomains) => {
@@ -240,7 +245,7 @@ export class PermissionManager {
    */
   async cleanupDismissedEntries(days: number = 7): Promise<void> {
     try {
-      const threshold = Date.now() - (days * 24 * 60 * 60 * 1000);
+      const threshold = Date.now() - days * MS_PER_DAY;
       let removedCount = 0;
 
       await this.updateDeniedDomains((deniedDomains) => {
@@ -297,7 +302,7 @@ export class PermissionManager {
       // total over the optional field type.
       const notifyThreshold = Math.max(1, Math.min(50, threshold ?? storedThreshold ?? 3));
 
-       const dismissalThreshold = Date.now() - (dismissalDays * 24 * 60 * 60 * 1000);
+       const dismissalThreshold = Date.now() - dismissalDays * MS_PER_DAY;
        const entries: DeniedDomainEntry[] = [];
 
        for (const [domain, entry] of Object.entries(deniedDomains)) {

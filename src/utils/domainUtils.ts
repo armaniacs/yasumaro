@@ -43,15 +43,37 @@ function hasUblockRules(ublockRules: unknown): boolean {
  * `blockDomains` / `exceptionDomains` 配列の直接変更 (push/splice 等) は
  * このメモを陳腐化させるため禁止。`InMemory`/`Chrome` 両ポートは境界で複製するため、
  * 書き込み後の再読込は新しい参照になる。
+ *
+ * 強制 (PBI 2026-11-08-17): 参照同一性に加え、各 source の配列長フィンガー
+ * プリントも保持する。in-place の push/splice は配列長を変えるため検出して
+ * 再導出する。同一長のまま要素を書き換える in-place 編集は検出できない:
+ * そのような書き方は引き続き禁止 (規約)。フィンガープリントは O(sources)
+ * の軽量比較で、導出自体より十分安い。
  */
 let cachedDerivedSources: Source[] | null = null;
+let cachedDerivedFingerprint: string | null = null;
 let cachedDerivedRules: UblockRules | null = null;
 
-function derivedRulesForSources(sources: Source[]): UblockRules {
+/**
+ * Length fingerprint of the derived-cache key: one `block/exception` length
+ * pair per source, in order. Reference-identical sources with an unchanged
+ * fingerprint reuse the cache; anything else re-derives.
+ */
+function fingerprintSources(sources: Source[]): string {
+  return sources.map((source) => `${source.blockDomains.length}:${source.exceptionDomains.length}`).join('|');
+}
+
+/**
+ * Derive the ublock rules for the given sources with reference-plus-length
+ * caching (see the cache note above). Exported for cache-behavior tests;
+ * production callers go through `isDomainAllowed`.
+ */
+export function derivedRulesForSources(sources: Source[]): UblockRules {
   const cachedSources = cachedDerivedSources;
   const cachedRules = cachedDerivedRules;
   if (
     cachedSources !== null && cachedRules !== null &&
+    cachedDerivedFingerprint === fingerprintSources(sources) &&
     cachedSources.length === sources.length &&
     cachedSources.every((source, index) => source === sources[index])
   ) {
@@ -59,8 +81,19 @@ function derivedRulesForSources(sources: Source[]): UblockRules {
   }
   const derived = deriveUblockRulesFromSources(sources);
   cachedDerivedSources = [...sources];
+  cachedDerivedFingerprint = fingerprintSources(sources);
   cachedDerivedRules = derived;
   return derived;
+}
+
+/**
+ * Test seam (PBI 2026-11-08-17): clears the module-level derived-rules
+ * cache so cache-behavior tests start from a known state.
+ */
+export function resetDerivedRulesCacheForTests(): void {
+  cachedDerivedSources = null;
+  cachedDerivedFingerprint = null;
+  cachedDerivedRules = null;
 }
 
 /**

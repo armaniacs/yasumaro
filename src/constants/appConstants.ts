@@ -4,6 +4,16 @@
  * 📝 コーディング規約遵守: ハードコードされた値の一元管理
  */
 
+// Messaging send/retry budgets are owned by
+// messaging/sendRetryDefaults.ts (PBI 2026-11-08-12/16): TIMEOUTS exposes
+// the same values under UI-facing names instead of re-stating the numbers,
+// so a budget change touches exactly one definition. Values unchanged.
+import {
+  AI_GATEWAY_TIMEOUT_MS,
+  DASHBOARD_SQLITE_TIMEOUT_MS,
+  RECORD_GATEWAY_TIMEOUT_MS,
+} from '../messaging/sendRetryDefaults.js';
+
 // =============================================================================
 // 色定数
 // =============================================================================
@@ -106,6 +116,13 @@ export const TIMEOUTS = {
   STATUS_MESSAGE_SUCCESS: 3000,
   /** ステータスメッセージ表示時間（エラー時）: 5秒 */
   STATUS_MESSAGE_ERROR: 5000,
+  // -- Gateway / hop budgets (single definitions in sendRetryDefaults) --
+  /** 記録系 gateway 予算: 20秒 (正本: RECORD_GATEWAY_TIMEOUT_MS) */
+  GATEWAY_RECORD: RECORD_GATEWAY_TIMEOUT_MS,
+  /** AI ラウンドトリップ gateway 予算: 60秒 (正本: AI_GATEWAY_TIMEOUT_MS) */
+  GATEWAY_AI: AI_GATEWAY_TIMEOUT_MS,
+  /** Dashboard SQLite ホップ予算 (正本: DASHBOARD_SQLITE_TIMEOUT_MS) */
+  DASHBOARD_SQLITE: DASHBOARD_SQLITE_TIMEOUT_MS,
 } as const;
 
 // =============================================================================

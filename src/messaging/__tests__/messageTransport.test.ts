@@ -7,6 +7,8 @@ import {
     ChromeTransport,
     ImmediateTransport,
     MessageTransport,
+    RetryableTransportError,
+    isRetryableError,
     messageTransport,
 } from '../messageTransport.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
@@ -34,9 +36,9 @@ describe('ImmediateTransport', () => {
 });
 
 describe('isRetryableError via send behavior', () => {
-    it('retries on "Receiving end does not exist" pattern', async () => {
+    it('retries a coded transport error', async () => {
         const handler = vi.fn()
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
             .mockResolvedValue({ ok: true });
         const port = new ImmediateTransport(handler);
         const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
@@ -46,12 +48,56 @@ describe('isRetryableError via send behavior', () => {
         expect(result).toEqual({ ok: true });
     });
 
+    it('retries a coded error even when the wording is novel (wording-independent policy)', async () => {
+        const handler = vi.fn()
+            .mockRejectedValueOnce(new RetryableTransportError('totally reworded port failure v2'))
+            .mockResolvedValue({ ok: true });
+        const port = new ImmediateTransport(handler);
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(port, clock);
+        const result = await transport.send({ type: 'PING' } as any);
+        expect(handler).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({ ok: true });
+    });
+
+    it('does not retry a plain error even when the wording sounds transient (PBI 2026-11-08-17 spec change)', async () => {
+        // Spec change: the policy reads only the machine-readable code.
+        // A bare Error carrying the legacy Chrome sentence is no longer
+        // retried here — ChromeTransport attaches the code at the boundary.
+        const handler = vi.fn().mockRejectedValue(new Error('Receiving end does not exist'));
+        const port = new ImmediateTransport(handler);
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(port, clock);
+        await expect(transport.send({ type: 'PING' } as any)).rejects.toThrow('Receiving end does not exist');
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(clock.sleep).not.toHaveBeenCalled();
+    });
+
     it('does not retry on non-retryable error pattern', async () => {
         const handler = vi.fn().mockRejectedValue(new Error('some other error'));
         const port = new ImmediateTransport(handler);
         const transport = new MessageTransport(port);
         await expect(transport.send({ type: 'PING' } as any)).rejects.toThrow('some other error');
         expect(handler).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('isRetryableError code predicate (PBI 2026-11-08-17)', () => {
+    it('accepts the retryable code regardless of message wording', () => {
+        expect(isRetryableError(new RetryableTransportError('whatever wording'))).toBe(true);
+        expect(isRetryableError({ code: 'message-transport/retryable', message: 'x' })).toBe(true);
+    });
+
+    it('rejects codeless values even with legacy transient wording', () => {
+        expect(isRetryableError(new Error('Receiving end does not exist'))).toBe(false);
+        expect(isRetryableError('Could not establish connection')).toBe(false);
+        expect(isRetryableError(null)).toBe(false);
+        expect(isRetryableError(undefined)).toBe(false);
+    });
+
+    it('rejects foreign codes', () => {
+        expect(isRetryableError({ code: 'something-else' })).toBe(false);
+        expect(isRetryableError({ code: 42 })).toBe(false);
     });
 });
 
@@ -76,7 +122,7 @@ describe('MessageTransport', () => {
 
     it('retries on retryable error then succeeds', async () => {
         const handler = vi.fn()
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
             .mockResolvedValue({ ok: true });
         const port = new ImmediateTransport(handler);
         const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
@@ -89,7 +135,7 @@ describe('MessageTransport', () => {
     });
 
     it('retries up to max retries then throws', async () => {
-        const handler = vi.fn().mockRejectedValue(new Error('Could not establish connection'));
+        const handler = vi.fn().mockRejectedValue(new RetryableTransportError('Could not establish connection'));
         const port = new ImmediateTransport(handler);
         const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
         const transport = new MessageTransport(port, clock);
@@ -100,9 +146,9 @@ describe('MessageTransport', () => {
 
     it('uses exponential backoff capped at 1000ms', async () => {
         const handler = vi.fn()
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
             .mockResolvedValue({ ok: true });
         const port = new ImmediateTransport(handler);
         const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
@@ -140,7 +186,7 @@ describe('MessageTransport', () => {
 
     it('uses opts.clock over instance clock', async () => {
         const handler = vi.fn()
-            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockRejectedValueOnce(new RetryableTransportError('Receiving end does not exist'))
             .mockResolvedValue({ ok: true });
         const port = new ImmediateTransport(handler);
         const instanceClock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
@@ -163,6 +209,59 @@ describe('MessageTransport', () => {
 describe('messageTransport singleton', () => {
     it('is an instance of MessageTransport', () => {
         expect(messageTransport).toBeInstanceOf(MessageTransport);
+    });
+});
+
+describe('ChromeTransport boundary translation (PBI 2026-11-08-17)', () => {
+    it('translates Chrome transient wording into a coded error so the transport retries', async () => {
+        const sendSpy = vi.spyOn(chrome.runtime, 'sendMessage') as unknown as ReturnType<typeof vi.fn>;
+        sendSpy.mockRejectedValueOnce(new Error('Receiving end does not exist')).mockResolvedValue({ ok: true });
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(new ChromeTransport(), clock);
+
+        const result = await transport.send({ type: 'PING' } as any);
+
+        expect(sendSpy).toHaveBeenCalledTimes(2);
+        expect(clock.sleep).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ ok: true });
+        sendSpy.mockRestore();
+    });
+
+    it('passes non-transient Chrome errors through uncoded (no retry)', async () => {
+        const sendSpy = vi.spyOn(chrome.runtime, 'sendMessage') as unknown as ReturnType<typeof vi.fn>;
+        sendSpy.mockRejectedValue(new Error('some other error'));
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(new ChromeTransport(), clock);
+
+        await expect(transport.send({ type: 'PING' } as any)).rejects.toThrow('some other error');
+        expect(sendSpy).toHaveBeenCalledTimes(1);
+        expect(clock.sleep).not.toHaveBeenCalled();
+        sendSpy.mockRestore();
+    });
+});
+
+describe('MessageTransport envelope payload validation (PBI 2026-11-08-12 item 3)', () => {
+    it('rejects a known type with a missing payload', async () => {
+        const port = new ImmediateTransport(vi.fn().mockResolvedValue({ ok: true }));
+        const transport = new MessageTransport(port);
+        await expect(transport.send({ type: 'MANUAL_RECORD' } as any)).rejects.toThrow(
+            'Invalid message payload for type: MANUAL_RECORD',
+        );
+    });
+
+    it('rejects a known type with a null payload', async () => {
+        const port = new ImmediateTransport(vi.fn().mockResolvedValue({ ok: true }));
+        const transport = new MessageTransport(port);
+        await expect(
+            transport.send({ type: 'FETCH_URL', payload: null } as any),
+        ).rejects.toThrow('Invalid message payload for type: FETCH_URL');
+    });
+
+    it('still sends a bare envelope for a no-payload type', async () => {
+        const handler = vi.fn().mockResolvedValue({ ok: true });
+        const transport = new MessageTransport(new ImmediateTransport(handler));
+        await expect(transport.send({ type: 'PING' } as any)).resolves.toEqual({ ok: true });
+        expect(handler).toHaveBeenCalledTimes(1);
     });
 });
 

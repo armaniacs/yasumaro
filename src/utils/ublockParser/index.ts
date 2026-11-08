@@ -10,6 +10,9 @@
 
 import { DEFAULT_METADATA, RULE_TYPES } from './constants.js';
 import { errorMessage } from '../errorUtils.js';
+// Paste size caps live in utils/limits.ts (PBI 2026-11-08-16) so every
+// size cap is greppable from one registry; values unchanged.
+import { MAX_UBLOCK_FILTER_BYTES, MAX_UBLOCK_FILTER_LINES } from '../limits.js';
 import { isValidString, isCommentLine, isEmptyLine, validateDomain, isValidRulePattern } from './validation.js';
 import { createEmptyRuleset, buildRuleObject, parseDomainList as transformParseDomainList, UblockRule, ParsedUblockRuleset } from './transform.js';
 import { parseUblockFilterLine } from './parsing.js';
@@ -72,11 +75,14 @@ export {
 // 複数行パース関数
 // ============================================================================
 
-/** 入力サイズの上限。1 つの貼り付けでメモリを枯渇させないためのガード。 */
-const MAX_INPUT_SIZE = 10 * 1024 * 1024; // 10MB
+/**
+ * 入力サイズの上限。1 つの貼り付けでメモリを枯渇させないためのガード。
+ * (値は utils/limits.ts の MAX_UBLOCK_FILTER_BYTES が正本)
+ */
+const MAX_INPUT_SIZE = MAX_UBLOCK_FILTER_BYTES;
 
-/** 入力行数の上限。過剰な処理時間を防ぐためのガード。 */
-const MAX_LINES = 500000;
+/** 入力行数の上限。過剰な処理時間を防ぐためのガード。(正本: MAX_UBLOCK_FILTER_LINES) */
+const MAX_LINES = MAX_UBLOCK_FILTER_LINES;
 
 /**
  * パースエラー情報

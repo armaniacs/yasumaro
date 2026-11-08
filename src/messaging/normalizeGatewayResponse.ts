@@ -14,6 +14,22 @@
 import type { SendFailure } from './sendWithPolicy.js';
 
 /**
+ * Extra-field policy (PBI 2026-11-08-12): the minimal shape check above
+ * cannot judge fields beyond `success` / `error`, but they no longer pass
+ * silently.
+ *
+ * - Failure envelopes (`success: false`) have a fully known shape, so any
+ *   key beyond `success`/`error` is reported through `onExtraFields`.
+ *   The fields themselves are PRESERVED, not stripped: downstream display
+ *   narrowing (`toRegenerateErrorDisplay`) reads optional members
+ *   (`needsForce`, `attemptedProviders`, `slotFailures`, `reason`) via `in`
+ *   checks, and stripping them would break the gate UI.
+ * - Success envelopes keep R's full shape by reference (R is caller-owned
+ *   and this seam cannot enumerate it); the hook does not fire for them.
+ */
+export type ExtraFieldsReport = (extraKeys: string[]) => void;
+
+/**
  * Return the raw payload untouched when it carries a boolean `success`
  * flag, otherwise the failure envelope with the caller's pinned sentence.
  * A `success === false` payload additionally needs a non-empty string
@@ -28,6 +44,7 @@ import type { SendFailure } from './sendWithPolicy.js';
 export function asSuccessResponse<R extends { success: boolean }>(
   raw: unknown,
   invalidError: string,
+  onExtraFields?: ExtraFieldsReport,
 ): R | SendFailure {
   if (
     raw &&
@@ -41,6 +58,8 @@ export function asSuccessResponse<R extends { success: boolean }>(
       if (typeof candidate.error !== 'string' || candidate.error.trim().length === 0) {
         return { success: false, error: invalidError };
       }
+      const extraKeys = Object.keys(candidate).filter((key) => key !== 'success' && key !== 'error');
+      if (extraKeys.length > 0) onExtraFields?.(extraKeys);
     }
     return raw as R;
   }
