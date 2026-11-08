@@ -47,6 +47,11 @@ npm view @typescript-eslint/eslint-plugin version peerDependencies
 
 2026-10-17 再調査の試み: `npm view` が環境の npm キャッシュ権限エラーで実行不能のため未確認のまま待機継続。次回はキャッシュ修復後に再試行する。
 
+2026-11-08 再調査(npm registry直読。トリガー未発火を維持):
+- `typescript` latest 7.0.2(不変)。`@typescript-eslint/eslint-plugin` latest 8.72.1のpeerは `typescript >=4.8.4 <6.1.0` のまま。`@typescript-eslint/parser` latest 8.72.1も同peer。`typedoc` latest 0.28.20のpeerは `5.0.x〜6.0.x` のまま。いずれもTS 7対応版は未リリース
+- 上流の進捗: track issue typescript-eslint#10940 はstate open・team assigned・assignee JoshuaKGoldbergのまま(updated 2026-09-29、23 comments)。同梱devDepsに `@typescript/native: npm:typescript@^7.0.2` が入りTS 7 native backendのdogfoodingは継続中だが、安定版のpeer拡大には至っていない
+- その他ツールチェーンの現況(同日registry直読、要求→最新): `eslint` ^10.9.0→10.14.0、`vitest` ^5.0.3→5.1.0(更新時は `@vitest/coverage-v8` と厳密lockstep必須)、`wxt` ^0.21.4→0.21.5、`vite` ^8.2.2→8.3.6、`@playwright/test` ^1.62.1→1.65.0、`@types/node` ^26.2.0→26.6.6、`esbuild` ^0.28.2→0.28.2(一致)、`ts-node` 10.9.2→10.9.2(一致・上流は保守停滞)。要注意: `jsdom` ^30.1.1→31.0.0はメジャー更新でenginesがnode ^22.22.2以上。TS 7とは独立の更新判断が必要
+
 ## 移行手順（トリガー発火後に実施）
 
 1. `typescript@^7.0.2` と TypeScript 7 対応の `@typescript-eslint/eslint-plugin` / `parser`、および TypeScript 7 対応の `typedoc` を同時に更新する
