@@ -285,6 +285,10 @@ export function querySelectorAllDeep(
     // An incomplete host detection is not a verified "no hosts" signal: keep
     // the plain query as a best-effort result but report the gap so a
     // removal miss never parades as a clean scan (PBI 2026-11-08-09 (1)).
+    // S28 (意図的・非伝播の記録): `incomplete` は戻り値にも report 計上にも
+    // 上位伝播しない。querySelectorAllDeep は Element[] を返す公開契約のため
+    // 戻り値に載せられず、呼び出し側に集計口もない。検出漏れは上記の warn
+    // 1行で可視化し、結果は best-effort として返すことで合意済み。
     if (resolved.incomplete) {
         console.warn('[aiSummaryCleaner] querySelectorAllDeep: host detection incomplete, shadow/iframe matches may be missed');
     }
