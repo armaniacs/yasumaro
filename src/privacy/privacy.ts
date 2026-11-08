@@ -203,6 +203,11 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
             throw new Error('Privacy policy file exceeds size limit');
         }
         const md = await res.text();
+        // 事前検査のヘッダは欠落・偽装しうるため、読み取り後の実バイト長でも
+        // 上限を実効化する (TextEncoder換算のUTF-8バイト長で判定)。
+        if (new TextEncoder().encode(md).byteLength > MAX_PRIVACY_POLICY_BYTES) {
+            throw new Error('Privacy policy file exceeds size limit');
+        }
         setElementHtml(content, renderMarkdown(md));
     } catch (_e) {
         setElementHtml(content, `<p class="error">${getMessageOr('privacyPolicyLoadError', 'Failed to load the privacy policy.')}</p>`);

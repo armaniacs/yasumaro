@@ -1,7 +1,7 @@
 import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { showPreview } from '../sanitizePreview.js';
-import { getMessage } from '../../utils/i18n.js';
+import { getMessageOr } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
 import type { RecordingResult } from '../../messaging/types.js';
 import {
@@ -99,7 +99,7 @@ export class PreviewFlow {
         return { success: !!result?.success, ...pickDefined({ result, error: result?.error }) };
       }
 
-      scope.show(getMessage('localAiProcessing'));
+      scope.show(getMessageOr('localAiProcessing', 'Browser built-in AI processing...'));
       const previewResponse = await send({
         type: 'PREVIEW_RECORD',
         payload: buildRecordPayload('PREVIEW_RECORD', tab, content, force, stats),
@@ -109,7 +109,7 @@ export class PreviewFlow {
         // PBI 2026-09-12-14: expected background failures return instead of
         // throwing — callers settle through PreviewSaveResult uniformly.
         logError('PREVIEW_RECORD failed: No response', {}, ErrorCode.CONTENT_EXTRACTION_FAILURE);
-        return { success: false, error: getMessage('previewNoResponse') };
+        return { success: false, error: getMessageOr('previewNoResponse', 'No response from background worker') };
       }
 
       if (!previewResponse.success && previewResponse.error === 'PRIVATE_PAGE_DETECTED') {
@@ -117,7 +117,7 @@ export class PreviewFlow {
       }
 
       if (!previewResponse.success) {
-        const errorMsg = previewResponse.error || getMessage('previewProcessingFailed');
+        const errorMsg = previewResponse.error || getMessageOr('previewProcessingFailed', 'Processing failed');
         logError('PREVIEW_RECORD failed', { response: previewResponse }, ErrorCode.CONTENT_EXTRACTION_FAILURE);
         return { success: false, error: errorMsg };
       }
@@ -142,7 +142,7 @@ export class PreviewFlow {
         finalContent = confirmation.content || '';
       }
 
-      scope.show(getMessage('saving'));
+      scope.show(getMessageOr('saving', 'Saving...'));
       const result = await send({
         type: 'SAVE_RECORD',
         payload: buildRecordPayload('SAVE_RECORD', tab, finalContent, force, {

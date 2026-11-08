@@ -5,9 +5,12 @@ import { errorMessage } from '../utils/errorUtils.js';
 /**
  * Shows a basic Chrome notification from dashboard-context code.
  *
- * Failures are never silent: a missing notifications API, a thrown error, or a
- * chrome.runtime.lastError (e.g. permission denied) is recorded through the
- * structured-log seam and reported as `false` so callers can react.
+ * The returned boolean reports the dispatch attempt, not the final display
+ * outcome: `true` when the notification was handed to the platform for
+ * dispatch, `false` when dispatch itself failed (missing API, a throw, or a
+ * rejected promise). A later `chrome.runtime.lastError` (e.g. permission
+ * denied) arrives asynchronously after dispatch, so it is recorded through
+ * the structured-log seam but does not flip the return value.
  */
 export function notify(title: string, message: string): boolean {
   try {

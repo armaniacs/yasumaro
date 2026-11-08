@@ -23,6 +23,22 @@ let dropZoneActive = false;
 let currentSourceUrl: string | null = null;
 
 /**
+ * 進行中のファイル読み取りの中断口。ファイル選択・ドロップのたびに前回分を
+ * abort して最新の読み取りだけを生かす (fileReader.ts の signal 対応の
+ * production 配線。連続操作で古い読み取りが遅れて上書きする競合を防ぐ)。
+ */
+let currentFileRead: AbortController | null = null;
+
+function readFileCancellable(file: File): Promise<string> {
+  currentFileRead?.abort();
+  const controller = new AbortController();
+  currentFileRead = controller;
+  return readFile(file, { signal: controller.signal }).finally(() => {
+    if (currentFileRead === controller) currentFileRead = null;
+  });
+}
+
+/**
  * uBlockインポートUIを初期化
  */
 export async function init(): Promise<void> {
@@ -95,7 +111,7 @@ async function handleFileSelect(event: Event): Promise<void> {
   if (!file) return;
 
   try {
-    const text = await readFile(file);
+    const text = await readFileCancellable(file);
     const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
     if (textarea) textarea.value = text;
     currentSourceUrl = null;
@@ -392,7 +408,7 @@ function handleDrop(event: DragEvent): void {
  */
 async function processFile(file: File): Promise<void> {
   try {
-    const text = await readFile(file);
+    const text = await readFileCancellable(file);
     const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
     if (textarea) textarea.value = text;
     currentSourceUrl = null;

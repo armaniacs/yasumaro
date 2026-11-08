@@ -501,7 +501,7 @@ describe('ublockImport/index.ts', () => {
       dropZone.dispatchEvent(dropEvent);
 
       const { readFile } = await import('../fileReader.js');
-      await waitForMock(() => expect(readFile).toHaveBeenCalledWith(file));
+      await waitForMock(() => expect(readFile).toHaveBeenCalledWith(file, expect.objectContaining({ signal: expect.any(AbortSignal) })));
 
       expect(dropZone.classList.contains('active')).toBe(false);
     });
@@ -1011,6 +1011,45 @@ describe('ublockImport/index.ts', () => {
       await waitForMock(() =>
         expect(showStatus).toHaveBeenCalledWith('uBlockStatus', expect.stringContaining('File read error'), 'error')
       );
+    });
+
+    test('should abort the previous read when a new file is selected', async () => {
+      setupUblockDOM();
+      const { readFile } = await import('../fileReader.js');
+      // First read stays pending so the second select can preempt it.
+      let firstSignal: AbortSignal | undefined;
+      (readFile as Mock).mockImplementationOnce((_file: unknown, options?: { signal?: AbortSignal }) => {
+        firstSignal = options?.signal;
+        return new Promise(() => {});
+      });
+      (readFile as Mock).mockResolvedValueOnce('second');
+
+      const { init } = await import('../index.js');
+      await init();
+
+      const fileInput = document.getElementById('uBlockFileInput') as HTMLInputElement;
+      Object.defineProperty(fileInput, 'files', {
+        value: [new File(['first'], 'first.txt', { type: 'text/plain' })],
+        writable: true,
+        configurable: true,
+      });
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await waitForMock(() => expect(readFile).toHaveBeenCalledTimes(1));
+
+      Object.defineProperty(fileInput, 'files', {
+        value: [new File(['second'], 'second.txt', { type: 'text/plain' })],
+        writable: true,
+        configurable: true,
+      });
+      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+      await waitForMock(() => expect(readFile).toHaveBeenCalledTimes(2));
+
+      // The preempted read's signal is aborted; the latest read stays live.
+      expect(firstSignal?.aborted).toBe(true);
+      const secondOptions = (readFile as Mock).mock.calls[1]?.[1] as { signal?: AbortSignal } | undefined;
+      const secondSignal = secondOptions?.signal;
+      expect(secondSignal).toBeInstanceOf(AbortSignal);
+      expect(secondSignal?.aborted).toBe(false);
     });
   });
 

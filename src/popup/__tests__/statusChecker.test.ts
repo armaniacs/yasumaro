@@ -411,6 +411,9 @@ describe('checkPageStatus special URLs (PBI 2026-11-08-14)', () => {
     'moz-extension://abcdef/options.html',
     'file:///home/user/notes.txt',
     'data:text/html,<h1>hi</h1>',
+    'view-source:https://example.com/',
+    'CHROME://extensions',
+    'View-Source:https://example.com/',
   ])('returns null for %s without a service-worker round trip', async (url) => {
     mockChromeRuntime.sendMessage.mockClear();
 
