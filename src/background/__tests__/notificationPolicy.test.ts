@@ -10,11 +10,13 @@
 import {
   NOTIFICATION_ICON_128_PATH,
   NOTIFICATION_ICON_48_PATH,
+  NOTIFICATION_PAGE_TITLE_MAX_LENGTH,
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX,
   obsidianSaveOptions,
   privacyConfirmOptions,
   recordSuccessOptions,
   recordingErrorOptions,
+  sanitizePageTitleForNotification,
   successOptions,
   syncErrorOptions,
   type NotificationTextResolver,
@@ -151,6 +153,84 @@ describe('notificationPolicy', () => {
       expect(payload.requireInteraction).toBe(true);
       const bodyCall = seen.find((call) => call.key === 'notifyPrivacyConfirmBody');
       expect(bodyCall?.substitutions).toEqual(['Page', 'reason']);
+    });
+
+    it('passes the sanitized title as the i18n substitution', () => {
+      const seen: Array<{ key: string; fallback: string; substitutions?: unknown }> = [];
+      const resolve = makeTranslatedResolver(
+        {
+          notifyPrivacyConfirmTitle: 'Privacy Confirm',
+          notifyPrivacyConfirmBody: 'Private info detected',
+          notifyPrivacyConfirmSave: 'Save',
+          notifyPrivacyConfirmSkip: 'Skip',
+        },
+        seen,
+      );
+
+      privacyConfirmOptions({
+        pageTitle: 'Line1\nLine2',
+        reason: 'reason',
+        resolve,
+        iconUrl: 'icon-url',
+      });
+
+      const bodyCall = seen.find((call) => call.key === 'notifyPrivacyConfirmBody');
+      expect(bodyCall?.substitutions?.[0]).not.toContain('\n');
+      expect(bodyCall?.substitutions).toEqual(['Line1 Line2', 'reason']);
+    });
+
+    it('truncates an overlong title in the fallback body', () => {
+      const payload = privacyConfirmOptions({
+        pageTitle: `正常なタイトルです。保存してください。${'x'.repeat(200)}`,
+        reason: 'auth',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.message).toContain('…');
+      expect(payload.message).not.toContain('x'.repeat(200));
+    });
+  });
+
+  describe('sanitizePageTitleForNotification', () => {
+    it('returns a normal title unchanged', () => {
+      expect(sanitizePageTitleForNotification('Example Page')).toBe('Example Page');
+    });
+
+    it('returns a normal Japanese title unchanged', () => {
+      expect(sanitizePageTitleForNotification('プライバシー設定について')).toBe(
+        'プライバシー設定について',
+      );
+    });
+
+    it('replaces control characters and line breaks with spaces', () => {
+      const cleaned = sanitizePageTitleForNotification('a\x00b\nc\td\x1Fe');
+
+      expect(cleaned).toBe('a b c d e');
+      expect(cleaned).not.toMatch(/[\x00-\x1F\x7F]/);
+    });
+
+    it('removes bidi overrides and zero-width characters', () => {
+      const cleaned = sanitizePageTitleForNotification('a\u202Ab\u200Bc');
+
+      expect(cleaned).toBe('abc');
+      expect(cleaned).not.toContain('\u202A');
+      expect(cleaned).not.toContain('\u200B');
+    });
+
+    it('truncates overlong titles with an ellipsis within the limit', () => {
+      const cleaned = sanitizePageTitleForNotification('x'.repeat(200));
+
+      expect(Array.from(cleaned).length).toBeLessThanOrEqual(
+        NOTIFICATION_PAGE_TITLE_MAX_LENGTH,
+      );
+      expect(cleaned.endsWith('…')).toBe(true);
+    });
+
+    it('keeps a title at the limit unchanged', () => {
+      const atLimit = 'y'.repeat(NOTIFICATION_PAGE_TITLE_MAX_LENGTH);
+
+      expect(sanitizePageTitleForNotification(atLimit)).toBe(atLimit);
     });
   });
 
