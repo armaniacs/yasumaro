@@ -391,6 +391,173 @@ function importBytesGuard(p: Record<string, unknown>): void {
 }
 
 /**
+ * Per-row import contract (PBI 2026-11-08-06).
+ *
+ * The import spec used to check only the envelope (rows is an array, byte
+ * estimate) and never looked inside a row, so a row with a missing url or a
+ * mistyped field travelled all the way to insertBatch, where a single bad
+ * row failed the whole batch. Mirrors the dashboard importLogsService
+ * pre-check (url + created_at required, ranges for the engagement metrics,
+ * 0/1 flags) so the envelope gate, the background handler, and the wire
+ * codecs accept the same rows.
+ *
+ * Returns the rejection reason, or null when the row may proceed. Null and
+ * undefined field values count as absent (downstream maps them to NULL).
+ */
+export function validateImportRow(row: unknown): string | null {
+  if (row === null || typeof row !== 'object' || Array.isArray(row)) {
+    return 'must be an object';
+  }
+  const r = row as Record<string, unknown>;
+  if (typeof r.url !== 'string' || r.url.length === 0) {
+    return 'url must be a non-empty string';
+  }
+  for (const field of ['title', 'summary', 'tags', 'domain', 'nav_source_url', 'search_query'] as const) {
+    const v = r[field];
+    if (v !== undefined && v !== null && typeof v !== 'string') {
+      return `${field} must be a string`;
+    }
+  }
+  if (typeof r.created_at !== 'number' || !Number.isFinite(r.created_at)) {
+    return 'created_at must be a finite number';
+  }
+  const visitDuration = r.visit_duration;
+  if (visitDuration !== undefined && visitDuration !== null) {
+    if (typeof visitDuration !== 'number' || !Number.isFinite(visitDuration)) {
+      return 'visit_duration must be a finite number';
+    }
+    if (visitDuration < 0) {
+      return 'visit_duration must be >= 0';
+    }
+  }
+  const scrollRatio = r.scroll_ratio;
+  if (scrollRatio !== undefined && scrollRatio !== null) {
+    if (typeof scrollRatio !== 'number' || !Number.isFinite(scrollRatio)) {
+      return 'scroll_ratio must be a finite number';
+    }
+    if (scrollRatio < 0 || scrollRatio > 1) {
+      return 'scroll_ratio must be between 0 and 1';
+    }
+  }
+  for (const field of ['is_starred', 'is_deleted'] as const) {
+    const v = r[field];
+    if (v !== undefined && v !== null && v !== 0 && v !== 1) {
+      return `${field} must be 0 or 1`;
+    }
+  }
+  return null;
+}
+
+/** Nullable text columns an update may clear with null (url is handled
+ *  separately — NOT NULL — and unknown keys pass through to the downstream
+ *  key allowlists). */
+const UPDATE_NULLABLE_TEXT: ReadonlySet<string> = new Set([
+  'title', 'summary', 'tags', 'domain', 'content', 'cleansed_reason',
+  'ai_provider', 'ai_model', 'fallback_reason', 'nav_source_url',
+  'search_query', 'content_origin',
+]);
+
+/** Plain finite-number columns (cleared with null). */
+const UPDATE_PLAIN_NUMERIC: ReadonlySet<string> = new Set([
+  'created_at', 'masked_count', 'ai_duration_ms', 'obsidian_duration_ms',
+  'sent_tokens', 'received_tokens', 'original_tokens', 'cleansed_tokens',
+  'page_bytes', 'candidate_bytes', 'original_bytes', 'cleansed_bytes',
+  'ai_summary_original_bytes', 'ai_summary_cleansed_bytes',
+  'extracted_sentences_bytes', 'extracted_sentences_original_bytes',
+]);
+
+/** Flag columns: only 0 or 1 (cleared with null), matching the schema CHECKs. */
+const UPDATE_FLAGS: ReadonlySet<string> = new Set([
+  'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced', 'fallback_triggered',
+]);
+
+/**
+ * Per-field value contract for update `changes` (PBI 2026-11-08-06).
+ *
+ * The update gates used to check only the key subset (dashboard) or the
+ * id + non-empty shape (wire table), so a mistyped value (scroll_ratio: 5,
+ * title: 123) travelled to the SQL CHECK and failed the write there with a
+ * backend error. Every known column must carry a storable value; unknown
+ * keys pass here because key allowlisting lives downstream (the dashboard
+ * mutable subset, the offscreen UPDATABLE_FIELDS filter).
+ *
+ * Returns the rejection reason, or null when the changes may proceed. An
+ * empty object passes (the wire row owns the non-empty rule).
+ */
+export function validateUpdateChanges(changes: Record<string, unknown>): string | null {
+  for (const key of Object.keys(changes)) {
+    const value = changes[key];
+    if (value === undefined) {
+      return `${key} must not be undefined`;
+    }
+    if (key === 'url') {
+      if (typeof value !== 'string' || value.length === 0) {
+        return 'url must be a non-empty string';
+      }
+      continue;
+    }
+    if (UPDATE_NULLABLE_TEXT.has(key)) {
+      if (value !== null && typeof value !== 'string') {
+        return `${key} must be a string`;
+      }
+      continue;
+    }
+    if (UPDATE_FLAGS.has(key)) {
+      if (value !== null && value !== 0 && value !== 1) {
+        return `${key} must be 0 or 1`;
+      }
+      continue;
+    }
+    if (key === 'visit_duration') {
+      if (value !== null) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return 'visit_duration must be a finite number';
+        }
+        if (value < 0) {
+          return 'visit_duration must be >= 0';
+        }
+      }
+      continue;
+    }
+    if (key === 'scroll_ratio') {
+      if (value !== null) {
+        if (typeof value !== 'number' || !Number.isFinite(value)) {
+          return 'scroll_ratio must be a finite number';
+        }
+        if (value < 0 || value > 1) {
+          return 'scroll_ratio must be between 0 and 1';
+        }
+      }
+      continue;
+    }
+    if (UPDATE_PLAIN_NUMERIC.has(key)) {
+      if (value !== null && (typeof value !== 'number' || !Number.isFinite(value))) {
+        return `${key} must be a finite number`;
+      }
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Import payload guard: the byte estimate still runs first (importBytesGuard
+ * is unchanged — an oversized payload keeps its original rejection), then
+ * every row is checked against validateImportRow. Runs last because it needs
+ * the whole type-checked array.
+ */
+function importPayloadGuard(p: Record<string, unknown>): void {
+  importBytesGuard(p);
+  const rows = p.rows as unknown[];
+  for (let i = 0; i < rows.length; i++) {
+    const reason = validateImportRow(rows[i]);
+    if (reason !== null) {
+      throw new ValidationError('DashboardSqliteValidator', `import: row ${i} ${reason}`, 'rows');
+    }
+  }
+}
+
+/**
  * Per-subtype wire-field schema for DASHBOARD_SQLITE payloads. One entry per
  * subtype; field rows are interpreted uniformly by DashboardSqliteValidator.
  * The `query` row carries only the optional `ids` filter — every other extra
@@ -422,7 +589,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   update: {
     fields: [
       finiteNumber('id'),
-      { field: 'changes', test: (v) => v !== null && typeof v === 'object', message: (s) => `${s}: changes is required` },
+      { field: 'changes', test: (v) => v !== null && typeof v === 'object' && !Array.isArray(v) && validateUpdateChanges(v as Record<string, unknown>) === null, message: (s) => `${s}: changes must be an object with valid field values` },
     ],
   },
   search: {
@@ -439,7 +606,7 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
       arrayField('rows'),
       arrayLengthCap('rows', VALIDATOR_LIMITS.MAX_IMPORT_ROWS),
     ],
-    guardLast: importBytesGuard,
+    guardLast: importPayloadGuard,
   },
   restore_db: {
     fields: [
