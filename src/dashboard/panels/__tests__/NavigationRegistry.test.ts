@@ -423,9 +423,8 @@ describe('load failure banner (PBI 2026-11-08-14)', () => {
       );
       await localRegistry.navigate('panel-bad');
 
-      await waitForMock(() =>
-        expect(container.querySelector('.panel-load-error')).not.toBeNull(),
-      );
+      // navigate() settles the load attempt, so the banner is present
+      // synchronously here; no wait is needed.
       const banner = container.querySelector('.panel-load-error') as HTMLElement;
       expect(banner.getAttribute('role')).toBe('alert');
       expect(banner.textContent).toBe('Failed to load this panel (panel-bad).');
