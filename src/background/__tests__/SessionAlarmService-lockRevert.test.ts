@@ -160,5 +160,25 @@ describe('SessionAlarmService', () => {
         expect.any(String),
       );
     });
+    test('retries the lock on the next timeout check after an unconfirmed revert', async () => {
+      sendMessage.mockResolvedValue(undefined);
+
+      await expireSession();
+
+      expect(sendMessage).toHaveBeenCalledTimes(3);
+      const reverted = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
+      expect(reverted[IS_LOCKED_KEY]).toBe(false);
+
+      // Next periodic cycle: the delivery is confirmed this time, so the
+      // re-attempted lock sticks. This pins the revert -> refire -> relock
+      // chain the revert comment relies on.
+      sendMessage.mockResolvedValue({ success: true });
+      clock.advance(31 * 60 * 1000);
+      await service.checkTimeout();
+
+      expect(sendMessage).toHaveBeenCalledTimes(4);
+      const relocked = await storage.local.get<Record<string, boolean>>([IS_LOCKED_KEY]);
+      expect(relocked[IS_LOCKED_KEY]).toBe(true);
+    });
   });
 });

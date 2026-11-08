@@ -133,30 +133,32 @@ describe('ContentKernel SPA seam — MAIN-world polling backing (No.1)', () => {
     const kernel = makeKernel(pageState, BASE + 9000);
     const originalHref = window.location.href;
     const rawPush = window.history.pushState.bind(window.history);
-    let tick: (() => void) | null = null;
+    // Boxed so CFA does not narrow the callback slot to null: the assignment
+    // runs inside the timer closure, which straight-line narrowing ignores.
+    const tickBox: { current: (() => void) | null } = { current: null };
     const timer: SpaPollTimer = {
       setInterval: (callback) => {
-        tick = callback;
+        tickBox.current = callback;
         return 1 as unknown as ReturnType<typeof setInterval>;
       },
       clearInterval: () => {
-        tick = null;
+        tickBox.current = null;
       },
     };
     const stop = kernel.startSpaUrlPolling(2000, timer);
     try {
-      expect(tick).not.toBeNull();
+      expect(tickBox.current).not.toBeNull();
       // No movement yet: a tick is a no-op.
-      tick?.();
+      tickBox.current?.();
       expect(pageState.maxScrollPercentage).toBe(60);
       // MAIN-world movement: the next tick resets through the guard.
       rawPush.call(window.history, {}, '', '/main-world-polled');
-      tick?.();
+      tickBox.current?.();
       expect(pageState.startTime).toBe(BASE + 9000);
       expect(pageState.maxScrollPercentage).toBe(0);
     } finally {
       stop();
-      expect(tick).toBeNull();
+      expect(tickBox.current).toBeNull();
       // stop() is idempotent-safe: stopping twice via stopPeriodicCheck path.
       kernel.stopPeriodicCheck();
       window.history.replaceState({}, '', originalHref);

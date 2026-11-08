@@ -41,7 +41,7 @@ function makeDeps(overrides: Partial<MaintenanceBatchDeps> = {}): MaintenanceBat
 describe('maintenanceBatchHandler', () => {
   describe('import row validation', () => {
     it('filters invalid rows and still imports the valid ones', async () => {
-      const insertBatch = vi.fn(async (): Promise<BatchResult> => ({ success: true, data: { count: 2, skipped: 0 } }));
+      const insertBatch = vi.fn(async (..._args: unknown[]): Promise<BatchResult> => ({ success: true, data: { count: 2, skipped: 0 } }));
       const handler = createMaintenanceBatchHandler(makeDeps({ insertBatch }));
       const rows = [
         { url: 'https://example.com/ok1', created_at: 1000 },
@@ -52,7 +52,7 @@ describe('maintenanceBatchHandler', () => {
       const result = await handler({ subtype: 'import', rows } as never);
       expect(result).toEqual({ success: true, inserted: 2, skipped: 0, total: 4 });
       expect(insertBatch).toHaveBeenCalledTimes(1);
-      const sent = insertBatch.mock.calls[0]![0] as unknown as Array<{ url: string }>;
+      const sent = insertBatch.mock.calls[0]![0] as Array<{ url: string }>;
       expect(sent.map((r) => r.url)).toEqual(['https://example.com/ok1', 'https://example.com/ok2']);
     });
 

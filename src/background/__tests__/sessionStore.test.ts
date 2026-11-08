@@ -682,6 +682,28 @@ describe('SessionStore', () => {
     restarted.dispose();
   });
 
+  it('emergencyFlushToLocal() logs attempt start and finish on the suspend-listener path', async () => {
+    const listeners: Array<() => void> = [];
+    (globalThis as any).chrome.runtime = {
+      onSuspend: { addListener: vi.fn((cb: () => void) => listeners.push(cb)) },
+    };
+    const localPort = new InMemoryStoragePort();
+    const suspendStore = new SessionStore(localPort);
+    suspendStore.set('key1', 'value1');
+    mockAddLog.mockClear();
+
+    // The onSuspend bridge cannot await: the start line is what proves an
+    // attempt ran when the finish line is missing (worker died mid-backup).
+    listeners[0]!();
+    await drainMacrotask();
+
+    const messages = mockAddLog.mock.calls.map((call) => String(call[1]));
+    expect(messages.some((message) => message.includes('started'))).toBe(true);
+    expect(messages.some((message) => message.includes('succeeded'))).toBe(true);
+    expect(suspendStore.getLastSuspendBackup()).toEqual(expect.objectContaining({ keys: ['key1'], ok: true }));
+    suspendStore.dispose();
+  });
+
   it('emergencyFlushToLocal() resolves true and records the backup on success', async () => {
     const localPort = new InMemoryStoragePort();
     const backedStore = new SessionStore(localPort);

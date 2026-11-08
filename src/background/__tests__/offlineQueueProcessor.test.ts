@@ -47,12 +47,14 @@ function retryAllFeeding(
  * OfflineNetworkQueue (net-zero lending) so contention tests observe the
  * same retryCount behavior as the real queue.
  */
-function fakeQueue(retryAll: RetryAllFn): {
+function fakeQueue(
+    retryAll: (handler: (job: unknown) => Promise<boolean>) => Promise<void>,
+): {
     retryAll: RetryAllFn;
     offsetNonFailureResult: (job: OfflineJob) => void;
 } {
     return {
-        retryAll,
+        retryAll: retryAll as unknown as RetryAllFn,
         offsetNonFailureResult: (job: OfflineJob) => {
             if (typeof job.retryCount === 'number') job.retryCount -= 1;
         },
@@ -444,7 +446,10 @@ describe('createOfflineQueueProcessor', () => {
             await processQueue();
 
             expect(record).toHaveBeenCalledTimes(1);
-            const stored = await global.chrome.storage.local.get(CLAIMS_KEY);
+            const stored = (await global.chrome.storage.local.get(CLAIMS_KEY)) as unknown as Record<
+                string,
+                Record<string, unknown>
+            >;
             expect(stored[CLAIMS_KEY]?.['https://example.com/release']).toBeUndefined();
         });
 
@@ -463,7 +468,10 @@ describe('createOfflineQueueProcessor', () => {
 
             await processQueue();
 
-            const stored = await global.chrome.storage.local.get(CLAIMS_KEY);
+            const stored = (await global.chrome.storage.local.get(CLAIMS_KEY)) as unknown as Record<
+                string,
+                Record<string, unknown>
+            >;
             expect(stored[CLAIMS_KEY]?.['https://example.com/throwing']).toBeUndefined();
         });
 
