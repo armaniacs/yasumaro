@@ -37,6 +37,29 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 修正 / Fixed
+
+- SSRFガードのDNSピン留めとlocalhost既定拒否（検証と接続で同一解決IPを使う突き合わせを追加し、リテラルloopbackとhttp経由の内部到達を拒否。Obsidian・ローカルAI等の正規用途は明示opt-out。既定DoH解決器の配線はmanifest権限設計と一体の将来課題としてPBIに駐留） / SSRF guard DNS pinning with localhost deny-by-default (same-resolution pinning between validation and fetch; literal loopback and http-internal reach rejected; explicit opt-outs for Obsidian and local-AI use. Default DoH resolver wiring is parked as future work tied to manifest permission design)
+- プライバシー確認通知のページタイトル無害化（制御文字除去と80文字上限で信頼UIへの文言注入を防止） / Sanitized page titles in privacy-confirmation notifications (control-character stripping and 80-char cap against trusted-UI text injection)
+- DASHBOARD_SQLITE取込・更新の行・値検証（不正型の行混入と不正値の更新を各層で拒否） / Row and value validation for DASHBOARD_SQLITE import and update (malformed rows and values rejected at every layer)
+- 訪問ゲーティング・滞在判定の正確性（SPA遷移後の基準更新、しきい値の範囲検証、NaN viewport時の安全側動作、performance不在時の継続、文言非依存の無効context判定） / Visit-gating and stay-detection accuracy (post-SPA criteria refresh, threshold clamping, NaN-viewport safety, no-performance fallback, wording-independent invalidation checks)
+- sessionStoreの耐久性（容量・quota超過のfail-visible化と再試行、半端形状の排除、移行チェックの是正、flush順序保証） / sessionStore durability (fail-visible capacity and quota handling with retries, partial-shape elimination, migration-check fixes, flush ordering)
+- content連携の堅牢性（抽出例外時も応答を返す、設定の単一世代読取、unload時の単発送信、上限のバイト換算） / Content-script連携 robustness (guaranteed responses on extraction errors, single-generation settings reads, single-shot unload sends, byte-based caps)
+- 記録パイプラインの回復・再試行の正確性（待機後の設定再取得、失敗の明示化、競合時のretry非消費、未確認通知時のロック巻き戻し、循環payload拒否） / Recording-pipeline recovery accuracy (post-wait settings refresh, explicit failures, no retry burn on contention, lock revert on unconfirmed notices, circular-payload rejection)
+- popupエラーハンドリングの可視化と二重実行防止（失敗のログ・表示、ダイアログのopenガード、再初期化の多重送信防止） / Popup error visibility and double-execution guards (logged and surfaced failures, dialog open-guards, re-init wire-once)
+- 要約クリーナーと私的判定の正確性（除去漏れの区別表示、空ヘッダーの誤判定修正、失敗計数の永続化） / Cleaner and privacy-judgment accuracy (distinguishable removal failures, empty-header fix, persisted failure counts)
+- 起動マイグレーションの再試行と状態検証（失敗時の再試行、保存先の注入化、破損値の検出） / Startup migration retries and state validation (retry on failure, injectable state store, corrupt-value detection)
+- Mutexの所有権検証とタイムアウト契約（`??`既定化と範囲拒否、二重release検出、保持者watchdog。API互換維持） / Mutex ownership checks and timeout contract (`??` defaults with range rejection, double-release detection, holder watchdog; API compatible)
+- messaging層の型境界と検証漏れの是正（gateway二重キャスト解消、予算集約、transport検証、循環参照のValidationError化） / Messaging-layer type boundaries and validation gaps (gateway cast cleanup, budget consolidation, transport validation, circular-input ValidationErrors)
+- 配線・起動順序の可視化（サービス初期化失敗の局所化、起動フェーズ結果の返却、E2Eプローブのオプトイン化とCIビルドでの明示有効化） / Wiring and startup observability (localized init failures, returned startup-phase results, opt-in E2E probe enabled explicitly in CI builds)
+- popup・dashboardのi18n漏れ修正と信頼性向上（英語フォールバック排除、進捗連動タイムアウト、大容量上限と中断、通知失敗の可視化、特殊URL判定の拡張） / Popup and dashboard i18n gaps and reliability (English-fallback removal, progress-aware timeouts, size caps with abort, notification-failure visibility, wider special-URL detection)
+- privacyレンダラーの構文対応（h6見出し、重複id一意化、括弧含みURL、太字・コード順序、上限のlimits共有。表示出力は不変を確認） / Privacy renderer syntax coverage (h6 headings, unique duplicate ids, paren URLs, bold and code ordering, shared limits cap; rendered output verified unchanged)
+- 定数・上限値の集約（二重管理の解消。値と振る舞いは不変）と入力検証の境界・型・文言依存の是正（上限・UTC基準・サロゲート安全化・コード判定・切捨て通知） / Constant and limit consolidation (single ownership; values and behavior unchanged) plus input-validation hardening (bounds, UTC base, surrogate-safe slicing, code-based retry checks, truncation notices)
+
+### 依存更新 / Dependencies
+
+- 開発依存のminor/patch更新（eslint・typescript-eslint・wxt・vite・vitest系・playwright・types/node）と `jsdom` 31への更新。フルスイート・型・lint・ライセンス・ビルドで回帰なし。`typescript` 7は上流(typescript-eslint・typedoc)対応待ちのため保留 / Dev-dependency minor and patch updates (eslint, typescript-eslint, wxt, vite, vitest family, playwright, types/node) plus `jsdom` 31. No regressions across the full suite, types, lint, licenses, and build. `typescript` 7 stays held for upstream (typescript-eslint, typedoc) support
+
 ## [6.9.72] - 2026-11-08
 
 このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
