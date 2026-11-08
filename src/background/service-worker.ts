@@ -53,29 +53,50 @@ export function guard<Args extends unknown[]>(
  * Initialize Service Worker with all Chrome event listeners.
  * Extracted for testability - call this function instead of relying on
  * module-level side effects.
+ *
+ * Observable startup (PBI 2026-11-08-13): every phase fires exactly as
+ * before (same calls, same initiation order, same per-phase error handling),
+ * but each phase's completion is tracked and the returned promise resolves
+ * with the per-phase results in startup-sequence order. A phase failure is
+ * recorded as `{ ok: false }` instead of an unhandled rejection, so callers
+ * (and tests) can observe completion and order without changing behavior.
  */
-export function init(): void {
+export type StartupPhase = 'allowed-urls-sync' | 'alarm-registry' | 'export-scheduler' | 'offscreen-host';
+
+export type StartupPhaseResult =
+  | { readonly phase: StartupPhase; readonly ok: true }
+  | { readonly phase: StartupPhase; readonly ok: false; readonly message: string };
+
+function trackStartupPhase(phase: StartupPhase, task: Promise<void>): Promise<StartupPhaseResult> {
+  return task.then(
+    () => ({ phase, ok: true as const }),
+    (error) => ({ phase, ok: false as const, message: errorMessage(error) }),
+  );
+}
+
+export function init(): Promise<readonly StartupPhaseResult[]> {
+    const pending: Array<Promise<StartupPhaseResult>> = [];
     // Seed + live-sync the persisted FETCH_URL/provider allowlist from
     // settings. Runs before any request can read the key, so existing users
     // are migrated ahead of the fail-closed reader.
-    void initAllowedUrlsSync();
+    pending.push(trackStartupPhase('allowed-urls-sync', initAllowedUrlsSync()));
 
     // All timed jobs (daily purge, local-md, offline retry, review-summary,
     // session-timeout) are unified under the registry's installAll() — static
     // schedules + conditional install hooks + uniform failure policy live in
     // alarmRegistry.ts's table. The session-timeout alarm is armed here and
     // nowhere else; arming it in two places would clear+create it twice.
-    void alarmRegistry.installAll();
+    pending.push(trackStartupPhase('alarm-registry', alarmRegistry.installAll()));
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
-    (async () => {
+    pending.push(trackStartupPhase('export-scheduler', (async () => {
       try {
         const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
         await initExportScheduler();
       } catch (err) {
         logError('Failed to init export scheduler', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
-    })();
+    })()));
 
     // Firefox has no offscreen API: the background event page hosts the
     // storage engine itself and answers target:'offscreen' messages in-page.
@@ -83,7 +104,7 @@ export function init(): void {
     // the offscreen host module (whose import registers the runtime listener
     // and keeps the engine resident). Build-time constant — dead on Chromium.
     if (import.meta.env.FIREFOX) {
-      (async () => {
+      pending.push(trackStartupPhase('offscreen-host', (async () => {
         try {
           const { setOpfsWorkerFactory } = await import('../offscreen/sqliteEngineContext/opfsWorkerProxy.js');
           setOpfsWorkerFactory(() => new Worker(chrome.runtime.getURL('opfs-worker.js'), { type: 'module' }));
@@ -99,8 +120,9 @@ export function init(): void {
         } catch (err) {
           logError('Failed to start in-page offscreen host', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
         }
-      })();
+      })()));
     }
+    return Promise.all(pending);
 }
 
 // ============================================================================

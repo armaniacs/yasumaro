@@ -19,7 +19,14 @@ const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 
 // Strip the prerelease suffix so the shipped manifest stays loadable and
 // Chrome Web Store-compatible; the -dev notation lives in package.json and
 // docs/version.json only.
-const manifestVersion = pkg.version.replace(/-[0-9A-Za-z.-]+$/, '');
+export function normalizeManifestVersion(version: string): string {
+  // Strip semver build metadata ("+...") FIRST: it sorts after the prerelease
+  // ("1.2.3-dev+build.5"), so removing the prerelease first would leave the
+  // metadata behind and the manifest version invalid. Exported for the
+  // regression pin in __tests__/wxt.config.test.ts (PBI 2026-11-08-13).
+  return version.replace(/\+[^+]*$/, '').replace(/-[0-9A-Za-z.]+$/, '');
+}
+const manifestVersion = normalizeManifestVersion(pkg.version);
 
 const localConnectSrc = buildLocalConnectSrc();
 const aiConnectSrc = buildConnectSrcDomains();
@@ -107,10 +114,11 @@ export default defineConfig({
       __OW_BENCH__: JSON.stringify(process.env.OW_BENCH === '1'),
       // E2E probe flag for src/utils/e2eTestState.ts and
       // src/content/e2eProbeRelay.ts (PBI 2026-10-11-08 NN08).
-      // Store release builds set OW_E2E_PROBE=0 so the probe is dead-code
-      // eliminated from shipped artifacts; dev/CI builds keep it (default
-      // true) so the E2E suite runs against a plain `npm run build`.
-      __OW_E2E_PROBE__: JSON.stringify(process.env.OW_E2E_PROBE !== '0'),
+      // Opt-in: OW_E2E_PROBE=1 keeps the probe (E2E builds set it
+      // explicitly); every other build resolves to false so the probe is
+      // dead-code eliminated. Default-off means a forgotten flag can no
+      // longer ship the probe in a release artifact (PBI 2026-11-08-13).
+      __OW_E2E_PROBE__: JSON.stringify(process.env.OW_E2E_PROBE === '1'),
     },
     plugins: stripInlinedWasmPlugins(env.browser),
     build: {
