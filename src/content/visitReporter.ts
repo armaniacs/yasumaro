@@ -112,6 +112,40 @@ export interface VisitReporterDeps {
 /** Default retry wait: the real setTimeout wrapper every retry loop uses. */
 const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * PBI 2026-11-08-02: invalid-context phrase match. Case-insensitive so
+ * capitalization drift does not flip the branch; the structural
+ * isRuntimeIdMissing() check below is the primary signal and does not
+ * depend on wording at all.
+ */
+const CONTEXT_INVALIDATED_PATTERN = /extension context invalidated/i;
+
+/**
+ * Pure wording check, exported for regression tests. True only for the
+ * context-invalidated family — deliberately NOT for bare "sendMessage"
+ * mentions, which also appear in transient transport errors that must stay
+ * on the retry path.
+ */
+export function isContextInvalidatedMessage(message: string): boolean {
+    return CONTEXT_INVALIDATED_PATTERN.test(message);
+}
+
+/**
+ * Structural invalid-context signal: the extension globals are alive but
+ * chrome.runtime.id is gone (the observable state after an extension
+ * reload). Needs no message text, so a reworded error still exits
+ * immediately. Returns false where chrome is absent entirely (unit tests,
+ * non-extension pages) so transient errors there keep retrying.
+ */
+function isRuntimeIdMissing(): boolean {
+    try {
+        if (typeof chrome === 'undefined' || chrome.runtime === undefined || chrome.runtime === null) return false;
+        return typeof chrome.runtime.id === 'undefined';
+    } catch {
+        return false;
+    }
+}
+
 /** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
 function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback: string): string {
     return typeof chrome !== 'undefined' && chrome.i18n
@@ -284,7 +318,7 @@ export class VisitReporter {
             // Transient transport failure: leave the flag false so the gate
             // stays open, and schedule one bounded retry.
             const msg = errorMessage(error);
-            if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
+            if (msg && (isContextInvalidatedMessage(msg) || isRuntimeIdMissing())) {
                 this.deps.stopPeriodicCheck?.();
                 await logInfo('Extension reloaded - page refresh needed', {}, 'visitReporter');
                 return;

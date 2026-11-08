@@ -248,6 +248,10 @@ const chromeRuntimeMock = {
     },
   },
    runtime: {
+      // A live extension context always carries runtime.id; an id-less
+      // runtime is the observable state after an extension reload (PBI
+      // 2026-11-08-02: visitReporter treats it as invalidated context).
+      id: 'test-extension-id',
       lastError: null as any,
      sendMessage: chromeRuntimeMock.sendMessage,
      onMessage: chromeRuntimeMock.onMessage,
@@ -377,6 +381,8 @@ beforeEach(() => {
     (global as any).chrome.runtime.lastError = null;
     // Reset sendMessage mock to default
     (global as any).chrome.runtime.sendMessage = chromeRuntimeMock.sendMessage;
+    // Live contexts always carry runtime.id (see above).
+    (global as any).chrome.runtime.id = 'test-extension-id';
   }
   // Clear storage
   Object.keys(localStorage).forEach((key) => delete localStorage[key]);

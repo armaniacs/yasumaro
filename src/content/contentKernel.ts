@@ -361,6 +361,63 @@ export class ContentKernel {
         this.checkVisitConditions();
     }
 
+    /**
+     * PBI 2026-11-08-02: SPA navigation entry point. Resets the visit state
+     * synchronously so the new page is gated on a fresh startTime and fresh
+     * thresholds (settings are reloaded by the history subscriber right
+     * after; the gating caches rebuild on the changed startTime even before
+     * the reload lands). Restarts the periodic check for the new page view.
+     */
+    resetForNavigation(now?: number): void {
+        this.pageState.resetVisitState(now ?? this.clock());
+        this.gating.refreshCachesIfStale();
+        this.deadlineTimer.refreshCachesIfStale();
+        this.startPeriodicCheck();
+    }
+
+    /**
+     * PBI 2026-11-08-02: subscribe to SPA navigation. Wraps
+     * history.pushState/replaceState and listens to popstate so a navigation
+     * without content-script reload resets the visit state and reloads
+     * settings for the new page. Idempotent per kernel instance; the
+     * returned function unsubscribes (restores the original history methods
+     * and drops the listener). No-op without window/history (unit tests).
+     */
+    subscribeSpaNavigation(): () => void {
+        const noop = (): void => {};
+        if (typeof window === 'undefined' || typeof history === 'undefined') return noop;
+        if (this.spaSubscribed) return noop;
+        this.spaSubscribed = true;
+        const target = window.history;
+        const originalPush = target.pushState.bind(target);
+        const originalReplace = target.replaceState.bind(target);
+        const onNavigate = (): void => {
+            this.resetForNavigation();
+            void this.loadSettings().catch(() => {
+                // Best-effort reload: the reset above already moved the
+                // startTime, so gating rebuilds with cached thresholds until
+                // the next successful settings read lands.
+            });
+        };
+        const wrappedPush = (...args: Parameters<History['pushState']>): void => {
+            originalPush(...args);
+            onNavigate();
+        };
+        const wrappedReplace = (...args: Parameters<History['replaceState']>): void => {
+            originalReplace(...args);
+            onNavigate();
+        };
+        target.pushState = wrappedPush;
+        target.replaceState = wrappedReplace;
+        window.addEventListener('popstate', onNavigate);
+        return () => {
+            target.pushState = originalPush as History['pushState'];
+            target.replaceState = originalReplace as History['replaceState'];
+            window.removeEventListener('popstate', onNavigate);
+            this.spaSubscribed = false;
+        };
+    }
+
     async reportValidVisit(): Promise<void> {
         // PBI 2026-10-31-01: mark the attempt so a later page leave does not
         // claim a condition skip for a visit the gate opened (a failed send is
@@ -421,6 +478,8 @@ export class ContentKernel {
     }
 
     private scrollThrottles: Array<{ dispose: () => void }> = [];
+    /** PBI 2026-11-08-02: history wrapping must happen at most once per kernel. */
+    private spaSubscribed = false;
 
     stopPeriodicCheck(): void {
         this.deadlineTimer.stop();
@@ -467,6 +526,10 @@ export class ContentKernel {
         const throttled = this.throttle(() => this.updateMaxScroll());
         let deferredCheckArmed = false;
         if (typeof window !== 'undefined') {
+            // PBI 2026-11-08-02: SPA navigation never reloads the content
+            // script — without this the previous page's startTime and
+            // thresholds gate the new page.
+            this.subscribeSpaNavigation();
             window.addEventListener(
                 'scroll',
                 (event: Event) => {
