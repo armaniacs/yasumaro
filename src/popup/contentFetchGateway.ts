@@ -2,6 +2,8 @@ import { getMessage } from '../utils/i18n.js';
 import type { ContentResponse, SelectionResponse } from './mainTypes.js';
 import { getPermissionManager } from '../utils/permissionManager.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 /**
  * ContentFetchGateway (PBI 2026-09-11-04) — the single seam for "popup asks a
@@ -108,7 +110,7 @@ export class ContentFetchGateway {
       const contentResponse = await requestContentFromTab(tab.id);
       if (contentResponse) return contentResponse;
       throw new Error('Content script response timeout');
-    } catch (_e: unknown) {
+    } catch (_e) {
       const pm = getPermissionManager();
 
       // Level 1: per-origin via PermissionManager (narrowest)
@@ -120,13 +122,21 @@ export class ContentFetchGateway {
           if (!hasPerOrigin) {
             hasPerOrigin = await pm.requestPermission(tabUrl);
           }
-        } catch { /* permission check/request failure */ }
+        } catch (permissionError) {
+          // A denied or failed permission check used to vanish silently and
+          // read as "not permitted". Log it so the ladder decision is auditable.
+          logError(
+            '[contentFetchGateway] Per-origin permission check/request failed',
+            { cause: permissionError },
+            ErrorCode.PERMISSION_REQUIRED,
+          );
+        }
       }
 
       if (hasPerOrigin) {
         try {
           return await executeScriptInnerText(tab.id);
-        } catch (_e2: unknown) {
+        } catch (_e2) {
           if (force) return { content: '' };
           throw new Error(getMessage('errorContentScriptNotAvailable'));
         }
@@ -149,7 +159,15 @@ export class ContentFetchGateway {
       try {
         const stored = await chrome.storage.local.get(StorageKeys.ALLOW_ALL_URLS_OPT_IN) as Record<string, boolean | undefined>;
         allowAllUrlsOptIn = !!stored[StorageKeys.ALLOW_ALL_URLS_OPT_IN];
-      } catch { /* storage unavailable */ }
+      } catch (storageError) {
+        // A storage outage used to read as "opt-in off". Log it so a failed
+        // read is distinguishable from an explicit opt-out.
+        logError(
+          '[contentFetchGateway] Failed to read the opt-in flag from storage',
+          { cause: storageError },
+          ErrorCode.STORAGE_READ_FAILURE,
+        );
+      }
 
       if (allowAllUrlsOptIn) {
         let hasAllUrls = false;
@@ -158,11 +176,19 @@ export class ContentFetchGateway {
           if (!hasAllUrls) {
             hasAllUrls = await pm.requestAllUrls();
           }
-        } catch { /* permission failure */ }
+        } catch (allUrlsError) {
+          // Same contract as the per-origin level: log instead of swallowing,
+          // so the ladder decision stays auditable.
+          logError(
+            '[contentFetchGateway] <all_urls> permission check/request failed',
+            { cause: allUrlsError },
+            ErrorCode.PERMISSION_REQUIRED,
+          );
+        }
         if (hasAllUrls) {
           try {
             return await executeScriptInnerText(tab.id);
-          } catch (_e3: unknown) {
+          } catch (_e3) {
             if (force) return { content: '' };
             throw new Error(getMessage('errorContentScriptNotAvailable'));
           }

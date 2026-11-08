@@ -258,6 +258,10 @@ const mockChrome = {
     lastError: null,
     sendMessage: vi.fn(),
   },
+  i18n: {
+    getMessage: vi.fn((key: string) => key),
+    getUILanguage: vi.fn(() => 'en'),
+  },
 };
 global.chrome = mockChrome as any;
 
@@ -556,10 +560,16 @@ describe('updateTrustStatus', () => {
    it('shows muted "No info" on error', async () => {
      mockIsAllUrlsPermitted.mockResolvedValue(true);
      mockGetTrustLevelDisplay.mockRejectedValue(new Error('fail'));
+     document.body.insertAdjacentHTML('beforeend', '<div id="mainStatus"></div>');
      await updateTrustStatus('https://example.com');
      const trustContent = document.getElementById('statusTrustContent')!;
      expect(trustContent.innerHTML).toContain('No info');
      expect(trustContent.innerHTML).toContain('status-muted');
+     // PBI 2026-11-08-08: the failure keeps the fallback but is no longer
+     // absorbed silently — it is reported as an error and logged.
+     const status = document.getElementById('mainStatus')!;
+     expect(status.textContent).toContain('fail');
+     expect(status.className).toBe('status-message error');
    });
 });
 
