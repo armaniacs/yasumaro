@@ -181,6 +181,9 @@ function hasHeader(headers: chrome.webRequest.HttpHeader[], name: string): boole
   // Presence alone is not a signal: an empty Set-Cookie / Authorization value
   // carries no cookie or credential, so blank values must not flip a public
   // page to private (PBI 2026-11-08-09 (8)).
+  // S31 (確認結果の記録): 空値系は全て false 相当=public 側に倒すことを確認済み:
+  // ヘッダ欠落・value undefined・''・空白のみのいずれも private 化しない。
+  // name 欠損エントリは find 時に安全にスキップされる (`?.` 比較不一致)。
   const found = findHeader(headers, name);
   return typeof found?.value === 'string' && found.value.trim().length > 0;
 }
