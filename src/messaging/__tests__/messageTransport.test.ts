@@ -9,6 +9,8 @@ import {
     MessageTransport,
     RetryableTransportError,
     isRetryableError,
+    toTransportError,
+    withTransportErrorTranslation,
     messageTransport,
 } from '../messageTransport.js';
 import { CURRENT_PROTOCOL_VERSION } from '../protocol.js';
@@ -203,6 +205,52 @@ describe('MessageTransport', () => {
         const transport = new MessageTransport(port);
         const result = await transport.send({ type: 'FETCH_URL', payload: { url: 'https://example.com' } } as any);
         expect(result).toEqual({ data: 42 });
+    });
+});
+
+describe('toTransportError boundary seam (No.13/S9)', () => {
+    it('translates a legacy Chrome-wording error into a coded error', async () => {
+        const out = toTransportError(new Error('Receiving end does not exist'));
+        expect(out).toBeInstanceOf(RetryableTransportError);
+        expect(isRetryableError(out)).toBe(true);
+    });
+
+    it('passes an already-coded error through untouched', async () => {
+        const coded = new RetryableTransportError('boom');
+        expect(toTransportError(coded)).toBe(coded);
+    });
+
+    it('passes a non-transient error through uncoded (no retry)', async () => {
+        const plain = new Error('some other error');
+        expect(toTransportError(plain)).toBe(plain);
+        expect(isRetryableError(plain)).toBe(false);
+    });
+});
+
+describe('withTransportErrorTranslation custom-port wrapper (No.13/S9)', () => {
+    it('keeps legacy wording-based retry explicit through a custom port', async () => {
+        const handler = vi.fn()
+            .mockRejectedValueOnce(new Error('Receiving end does not exist'))
+            .mockResolvedValue({ ok: true });
+        const port = withTransportErrorTranslation(handler);
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(port, clock);
+
+        const result = await transport.send({ type: 'PING' } as any);
+
+        expect(handler).toHaveBeenCalledTimes(2);
+        expect(result).toEqual({ ok: true });
+    });
+
+    it('still fails fast on non-transient failures through the wrapper', async () => {
+        const handler = vi.fn().mockRejectedValue(new Error('some other error'));
+        const port = withTransportErrorTranslation(handler);
+        const clock = { now: vi.fn(() => Date.now()), sleep: vi.fn().mockResolvedValue(undefined) };
+        const transport = new MessageTransport(port, clock);
+
+        await expect(transport.send({ type: 'PING' } as any)).rejects.toThrow('some other error');
+        expect(handler).toHaveBeenCalledTimes(1);
+        expect(clock.sleep).not.toHaveBeenCalled();
     });
 });
 
