@@ -6,14 +6,50 @@
  * factories are memoized; non-singleton factories produce a fresh instance on
  * each resolve. Tests can override a token with a fake via override().
  *
- * This is deliberately small (50 lines): no scopes, no async factories, no
- * token types beyond string — enough to make adding a dependency one register()
- * call instead of touching 3 type definitions.
+ * This is deliberately small: no scopes, no async factories — register/resolve
+ * are keyed by the closed ServiceKey union, enough to make adding a
+ * dependency one register() call instead of touching 3 type definitions.
  */
 
-// Service keys are plain strings so adding a manifest entry never requires
-// editing this file — there is no keys union to keep in sync.
-export type ServiceKey = string;
+// The closed set of background composition keys. Mirrors compositionManifest;
+// the wiring-startup pin (serviceContainer-keys.test.ts) asserts the two stay
+// in sync in both directions, so adding a manifest entry without extending
+// this list fails type-check (CompositionEntry.key) and tests. A typo'd or
+// ad-hoc key is rejected at compile time instead of surfacing as a
+// "no registration" failure at startup.
+export const SERVICE_KEYS = [
+  'sessionStore',
+  'recordingCache',
+  'headerDetector',
+  'obsidian',
+  'sqliteClient',
+  'tabCache',
+  'rateLimiter',
+  'manualContentFetcher',
+  'regenerateContentFetcher',
+  'builtInAiClient',
+  'remoteAiService',
+  'aiProviderBreaker',
+  'aiService',
+  'settingsRepository',
+  'perUrlMutexMap',
+  'pendingWriteQueue',
+  'pendingSqliteQueue',
+  'offlineNetworkQueue',
+  'reviewSummaryGenerator',
+  'researchReportGenerator',
+  'recordingPipeline',
+  'dashboardSqliteHandler',
+  'autoSavedBadgeTabs',
+  'sessionAlarmService',
+  'deferredMigrationRunner',
+  'sessionReminderAlarms',
+  'alarmRegistry',
+  'recordingAdmission',
+  'messageRouter',
+] as const;
+
+export type ServiceKey = (typeof SERVICE_KEYS)[number];
 
 export class ServiceContainer {
   private readonly entries = new Map<string, { factory: () => unknown; singleton: boolean; instance?: unknown; hasInstance: boolean }>();
