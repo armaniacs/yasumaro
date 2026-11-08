@@ -180,6 +180,34 @@ describe('createFetchUrlHandler', () => {
     expect(opts.redirect).toBe('error');
   });
 
+  it('passes the guard pin to fetchWithTimeout so validation and connection share it (No.5)', async () => {
+    const resolveHostname = vi.fn(async (_host: string) => ['93.184.216.34']);
+    vi.mocked(fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      status: 200,
+      statusText: 'OK',
+      redirected: false,
+      url: 'https://example.com/list.txt',
+      headers: { get: vi.fn().mockReturnValue(null) },
+      text: vi.fn().mockResolvedValue('content'),
+    } as any);
+
+    const handler = createFetchUrlHandler({ ...deps, resolveHostname } as any);
+    const sendResponse = vi.fn();
+    await handler({ payload: { url: 'https://example.com/list.txt' } } as any, {} as any, sendResponse);
+
+    // The guard resolves once; the connection reuses the pin (no second
+    // pre-connection resolution — the post-connection check runs inside the
+    // real fetchWithTimeout, which is mocked out here).
+    expect(resolveHostname).toHaveBeenCalledTimes(1);
+    expect(resolveHostname).toHaveBeenCalledWith('example.com');
+    const opts = vi.mocked(fetchWithTimeout).mock.calls[0]?.[1] as Record<string, unknown>;
+    expect(opts.dnsPin).toMatchObject({ hostname: 'example.com', ips: ['93.184.216.34'] });
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, data: 'content' }),
+    );
+  });
+
   it('does NOT return a body from a redirected response pointing at a private IP (VULN-016)', async () => {
     // Defense in depth: even if a redirect somehow slipped through, a response
     // whose final URL is a private address must not be handed back.

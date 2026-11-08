@@ -53,14 +53,21 @@ describe('ssrfDnsPinning', () => {
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('returns the pinned IPs from the async filter-import guard', async () => {
+    it('returns the pin from the async filter-import guard', async () => {
       const resolveHostname = vi.fn(async (_host: string) => ['93.184.216.34']);
 
       const pinned = await validateUrlForFilterImportAsync('https://example.com/filters.txt', {
         resolveHostname,
       });
 
-      expect(pinned).toEqual(['93.184.216.34']);
+      expect(pinned?.ips).toEqual(['93.184.216.34']);
+      expect(pinned?.hostname).toBe('example.com');
+    });
+
+    it('returns null when no resolver is given (string check only)', async () => {
+      const pinned = await validateUrlForFilterImportAsync('https://example.com/filters.txt');
+
+      expect(pinned).toBeNull();
     });
   });
 
@@ -115,6 +122,44 @@ describe('ssrfDnsPinning', () => {
           resolveHostname,
         }),
       ).rejects.toThrow(/no addresses resolved/i);
+    });
+  });
+
+  describe('pin reuse across the guard and the connection (No.3/No.4/No.5)', () => {
+    it('resolves only after connect when the caller passes the guard pin', async () => {
+      const resolveHostname = vi.fn(async (_host: string) => ['93.184.216.34']);
+
+      const pinned = await validateUrlForFilterImportAsync('https://example.com/filters.txt', {
+        resolveHostname,
+      });
+      expect(pinned).not.toBeNull();
+      expect(resolveHostname).toHaveBeenCalledTimes(1);
+
+      const response = await fetchWithTimeout('https://example.com/filters.txt', {
+        skipCspValidation: true,
+        dnsPin: pinned!,
+      });
+
+      expect(response.ok).toBe(true);
+      // No pre-connection resolution: the guard pin is reused, only the
+      // post-connection stability check resolves again.
+      expect(resolveHostname).toHaveBeenCalledTimes(2);
+    });
+
+    it('passes a normalized hostname to the resolver on both halves (S8)', async () => {
+      const seen: string[] = [];
+      const resolveHostname = vi.fn(async (host: string) => {
+        seen.push(host);
+        return ['93.184.216.34'];
+      });
+
+      const response = await fetchWithTimeout('https://EXAMPLE.COM./filters.txt', {
+        skipCspValidation: true,
+        resolveHostname,
+      });
+
+      expect(response.ok).toBe(true);
+      expect(seen).toEqual(['example.com', 'example.com']);
     });
   });
 

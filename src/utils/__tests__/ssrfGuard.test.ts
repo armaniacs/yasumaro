@@ -6,11 +6,13 @@
  */
 import {
   isPrivateIpAddress,
+  isIpLiteral,
   normalizeIpHostname,
   normalizeHostname,
   isLocalhostHostname,
   isLocalhostAddress,
   ALLOWED_LOCALHOST_PORTS,
+  resolveAndGuardHostname,
   validateUrl,
   validateUrlForFilterImport,
   validateUrlForAIRequests,
@@ -59,6 +61,17 @@ describe('ssrfGuard', () => {
 
     it('rejects out-of-range IPv4 octets rather than treating them as private', () => {
       expect(isPrivateIpAddress('999.999.999.999')).toBe(false);
+    });
+
+    it('expands a single-label decimal literal before classifying (S8)', () => {
+      expect(isPrivateIpAddress('2130706433')).toBe(true); // 127.0.0.1
+      expect(isPrivateIpAddress('3232235777')).toBe(true); // 192.168.1.1
+      expect(isPrivateIpAddress('134744072')).toBe(false); // 8.8.8.8
+    });
+
+    it('expands a single-label hex literal before classifying (S8)', () => {
+      expect(isPrivateIpAddress('0x7f000001')).toBe(true); // 127.0.0.1
+      expect(isPrivateIpAddress('0x08080808')).toBe(false); // 8.8.8.8
     });
 
     it('classifies IPv6 loopback (::1) as private', () => {
@@ -136,6 +149,68 @@ describe('ssrfGuard', () => {
     });
   });
 
+  describe('isIpLiteral', () => {
+    it('treats single-label hex as a literal (S8)', () => {
+      expect(isIpLiteral('0x7f000001')).toBe(true);
+    });
+
+    it('still treats domain names as non-literals', () => {
+      expect(isIpLiteral('example.com')).toBe(false);
+    });
+  });
+
+  describe('resolveAndGuardHostname', () => {
+    it('rejects a decimal loopback literal without calling the resolver (S8)', async () => {
+      const resolveHostname = async (_host: string): Promise<string[]> => ['93.184.216.34'];
+      await expect(resolveAndGuardHostname('2130706433', resolveHostname)).rejects.toThrow(
+        /private network/,
+      );
+    });
+
+    it('rejects a hex loopback literal without calling the resolver (S8)', async () => {
+      const resolveHostname = async (_host: string): Promise<string[]> => ['93.184.216.34'];
+      await expect(resolveAndGuardHostname('0x7f000001', resolveHostname)).rejects.toThrow(
+        /private network/,
+      );
+    });
+
+    it('fails closed on an out-of-range numeric literal (S8)', async () => {
+      let called = 0;
+      const resolveHostname = async (_host: string): Promise<string[]> => {
+        called += 1;
+        return ['93.184.216.34'];
+      };
+      await expect(resolveAndGuardHostname('99999999999', resolveHostname)).rejects.toThrow(
+        /Invalid numeric IP literal/,
+      );
+      expect(called).toBe(0);
+    });
+
+    it('returns the canonical dotted form for a public numeric literal (S8)', async () => {
+      let called = 0;
+      const resolveHostname = async (_host: string): Promise<string[]> => {
+        called += 1;
+        return ['93.184.216.34'];
+      };
+      await expect(resolveAndGuardHostname('134744072', resolveHostname)).resolves.toEqual([
+        '8.8.8.8',
+      ]);
+      expect(called).toBe(0);
+    });
+
+    it('normalizes a raw hostname before invoking the resolver (S8)', async () => {
+      const seen: string[] = [];
+      const resolveHostname = async (host: string): Promise<string[]> => {
+        seen.push(host);
+        return ['93.184.216.34'];
+      };
+      await expect(resolveAndGuardHostname('EXAMPLE.COM.', resolveHostname)).resolves.toEqual([
+        '93.184.216.34',
+      ]);
+      expect(seen).toEqual(['example.com']);
+    });
+  });
+
   describe('validateUrl', () => {
     it('rejects an unsupported protocol', () => {
       expect(() => validateUrl('ftp://example.com')).toThrow(/Unsupported protocol/);
@@ -146,8 +221,13 @@ describe('ssrfGuard', () => {
       expect(() => validateUrl('http://example.com')).not.toThrow();
     });
 
-    it('does not block localhost by default', () => {
-      expect(() => validateUrl('http://localhost:8080')).not.toThrow();
+    it('blocks localhost by default (S7 fail-closed)', () => {
+      expect(() => validateUrl('http://localhost:8080')).toThrow(/localhost/);
+      expect(() => validateUrl('http://127.0.0.1:8080/')).toThrow(/private network/);
+    });
+
+    it('allows localhost only when the caller explicitly opts out (S7)', () => {
+      expect(() => validateUrl('http://localhost:8080', { blockLocalhost: false })).not.toThrow();
     });
 
     it('does not throw for a normal hostname when blockLocalhost=true', () => {
