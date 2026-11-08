@@ -60,6 +60,11 @@ export function guard<Args extends unknown[]>(
  * with the per-phase results in startup-sequence order. A phase failure is
  * recorded as `{ ok: false }` instead of an unhandled rejection, so callers
  * (and tests) can observe completion and order without changing behavior.
+ *
+ * Phase-name lookup: each StartupPhase string is unique to one wiring site
+ * in this file — search for the phase name (e.g. 'alarm-registry') to jump
+ * from the phase list in init() below straight to the code that implements
+ * it, and keep the name stable when renaming the underlying wiring.
  */
 export type StartupPhase = 'allowed-urls-sync' | 'alarm-registry' | 'export-scheduler' | 'offscreen-host';
 

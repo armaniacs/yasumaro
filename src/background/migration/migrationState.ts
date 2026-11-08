@@ -9,6 +9,9 @@
 
 import { StorageKeys } from '../../utils/storage/types.js';
 import { ChromeStoragePort, type StoragePort } from '../../utils/storage/storagePort.js';
+import { LogType } from '../../utils/logger/types.js';
+import { addLog } from '../../utils/logger/core.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 
 export type MigrationStatus = 'pending' | 'completed' | 'fresh_install' | 'failed_permanently';
 
@@ -35,9 +38,47 @@ export const MIGRATION_RETRY_COUNT_KEY = StorageKeys.YASUMARO_MIGRATION_RETRY_CO
  * same keys, same value shapes — the raw chrome.storage.local access lives
  * in ChromeStoragePort only. Pass a StoragePort (e.g. InMemoryStoragePort)
  * in tests to avoid chrome.
+ *
+ * Corrupted-value policy (fail-soft, not fail-closed): a value that is
+ * neither absent nor in the valid shape is self-healed to absent
+ * (unmigrated) with a WARN log, and the stored key is removed best-effort so
+ * the next LegacyMigrationService.run() re-migrates from scratch. Throwing
+ * here would be fail-permanent: run() funnels every getStatus/getProgress/
+ * getRetryCount throw into recordFailureAndMaybeGiveUp, so an unrestorable
+ * typo would burn the retry budget and end in `failed_permanently` — a
+ * legitimate stuck migration the user must clear by hand. By contrast a
+ * re-run is safe (idempotent): insertBatch is INSERT OR IGNORE (duplicate
+ * rows surface as `skipped`, never as double rows), progress restarts at 0,
+ * and `completed`/`fresh_install` short-circuit before any write. The only
+ * terminal state therefore stays the explicit `failed_permanently` that the
+ * retry budget owns — no quarantine path is needed because a healed re-run
+ * cannot corrupt data that a dusted retry loop could leave behind.
  */
 export class ChromeMigrationStateAdapter implements MigrationStatePort {
   constructor(private readonly port: StoragePort = new ChromeStoragePort()) {}
+
+  /**
+   * Best-effort repair of a corrupted migration-state key: log the shape
+   * violation loudly (WARN — a human tampered value or a past writer bug is
+   * worth a timeline entry), then remove the key so the state reads as
+   * absent. Removal itself is best-effort: a port without remove() (or a
+   * failing one) still heals the read — the re-migration overwrites the key
+   * with a valid value on its next setStatus/setProgress/setRetryCount.
+   */
+  private async healCorruptedKey(key: string, raw: unknown): Promise<void> {
+    addLog(LogType.WARN, 'Migration state corrupted, self-healing to absent and re-running migration', {
+      key,
+      rawType: typeof raw,
+    });
+    try {
+      await this.port.remove?.(key);
+    } catch (error) {
+      addLog(LogType.WARN, 'Migration state self-heal could not remove the corrupted key; the re-migration will overwrite it', {
+        key,
+        error: errorMessage(error),
+      });
+    }
+  }
 
   async getStatus(): Promise<MigrationStatus | null> {
     const result = await this.port.get(MIGRATION_STATUS_KEY);
@@ -51,7 +92,8 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
     ) {
       return raw;
     }
-    throw new Error(`Migration status corrupted: unexpected value for ${MIGRATION_STATUS_KEY}`);
+    await this.healCorruptedKey(MIGRATION_STATUS_KEY, raw);
+    return null;
   }
 
   async setStatus(status: MigrationStatus): Promise<void> {
@@ -63,7 +105,8 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
     const raw = result[MIGRATION_PROGRESS_KEY];
     if (raw === undefined || raw === null) return 0;
     if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) return raw;
-    throw new Error(`Migration progress corrupted: unexpected value for ${MIGRATION_PROGRESS_KEY}`);
+    await this.healCorruptedKey(MIGRATION_PROGRESS_KEY, raw);
+    return 0;
   }
 
   async setProgress(count: number): Promise<void> {
@@ -75,7 +118,8 @@ export class ChromeMigrationStateAdapter implements MigrationStatePort {
     const raw = result[MIGRATION_RETRY_COUNT_KEY];
     if (raw === undefined || raw === null) return 0;
     if (typeof raw === 'number' && Number.isInteger(raw) && raw >= 0) return raw;
-    throw new Error(`Migration retry count corrupted: unexpected value for ${MIGRATION_RETRY_COUNT_KEY}`);
+    await this.healCorruptedKey(MIGRATION_RETRY_COUNT_KEY, raw);
+    return 0;
   }
 
   async setRetryCount(count: number): Promise<void> {

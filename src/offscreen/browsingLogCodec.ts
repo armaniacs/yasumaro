@@ -39,9 +39,10 @@ function toFiniteNumber(value: unknown): number | null {
  * still turn a finite out-of-range number into a stored value that violates
  * the schema CHECKs (visit_duration < 0, scroll_ratio outside 0..1, flags
  * outside 0/1) and fails the whole write at the backend. This validator
- * rejects exactly those values — plus non-object rows and non-string urls,
- * which String() would mangle — so the offscreen runners fail closed with
- * the field named. Everything else keeps the legacy coercion:
+ * rejects exactly those values — plus non-object rows and a
+ * missing/empty/non-string url (which buildRecordFromPayload would otherwise
+ * coerce to ''), which String() would mangle — so the offscreen runners
+ * fail closed with the field named. Everything else keeps the legacy coercion:
  * absent/nullable fields, numeric strings, booleans for flags, and
  * non-finite numbers (which the codec already neutralizes to null/0/now).
  *
@@ -61,9 +62,16 @@ export function validateRecordForInsert(payload: unknown): string | null {
     return 'must be an object';
   }
   const r = payload as Record<string, unknown>;
+  // url is required and must be a non-empty string. An absent url used to
+  // pass here and reach the backend as '' (see buildRecordFromPayload's ''
+  // coercion below), which is indistinguishable from a real value: it
+  // pollutes the url column and the (url, created_at) uniqueness with empty
+  // rows. buildRecordFromPayload keeps its '' coercion for legacy callers,
+  // but the validated write path (the offscreen insert runners above it)
+  // never lets a url-less payload get that far.
   const url = r.url;
-  if (url !== undefined && url !== null && typeof url !== 'string') {
-    return 'url must be a string';
+  if (typeof url !== 'string' || url.length === 0) {
+    return 'url must be a non-empty string';
   }
   for (const field of CODEC_TEXT_FIELDS) {
     const v = r[field];

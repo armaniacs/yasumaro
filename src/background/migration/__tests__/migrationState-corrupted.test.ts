@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   ChromeMigrationStateAdapter,
   MIGRATION_STATUS_KEY,
@@ -6,6 +6,17 @@ import {
   MIGRATION_RETRY_COUNT_KEY,
 } from '../migrationState.js';
 import { InMemoryStoragePort } from '../../../utils/storage/storagePort.js';
+import { LogType } from '../../../utils/logger/types.js';
+
+const mockAddLog = vi.hoisted(() => vi.fn());
+
+// The self-heal path logs a WARN; the real logger buffers into
+// chrome.storage, so replace it with a spy like sessionStore.test.ts does.
+vi.mock('../../../utils/logger/core.js', async () =>
+  (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
+    addLog: mockAddLog,
+  }),
+);
 
 describe('migrationState corrupted values', () => {
   let port: InMemoryStoragePort;
@@ -14,6 +25,7 @@ describe('migrationState corrupted values', () => {
   beforeEach(() => {
     port = new InMemoryStoragePort();
     adapter = new ChromeMigrationStateAdapter(port);
+    mockAddLog.mockClear();
   });
 
   describe('getStatus', () => {
@@ -26,14 +38,21 @@ describe('migrationState corrupted values', () => {
       expect(await adapter.getStatus()).toBe('completed');
     });
 
-    it('rejects with a detectable error for an unknown status string', async () => {
+    it('self-heals an unknown status string to absent and removes the key so the migration re-runs', async () => {
       port.seed({ [MIGRATION_STATUS_KEY]: 'done' });
-      await expect(adapter.getStatus()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getStatus()).resolves.toBeNull();
+      expect(port.dump()[MIGRATION_STATUS_KEY]).toBeUndefined();
+      expect(mockAddLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        expect.stringContaining('self-healing'),
+        expect.objectContaining({ key: MIGRATION_STATUS_KEY }),
+      );
     });
 
-    it('rejects with a detectable error for a non-string status value', async () => {
+    it('self-heals a non-string status value to absent', async () => {
       port.seed({ [MIGRATION_STATUS_KEY]: 42 });
-      await expect(adapter.getStatus()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getStatus()).resolves.toBeNull();
+      expect(port.dump()[MIGRATION_STATUS_KEY]).toBeUndefined();
     });
   });
 
@@ -47,19 +66,25 @@ describe('migrationState corrupted values', () => {
       expect(await adapter.getProgress()).toBe(7);
     });
 
-    it('rejects with a detectable error for a string value', async () => {
+    it('self-heals a string value to 0 so the migration restarts idempotently', async () => {
       port.seed({ [MIGRATION_PROGRESS_KEY]: '7' });
-      await expect(adapter.getProgress()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getProgress()).resolves.toBe(0);
+      expect(port.dump()[MIGRATION_PROGRESS_KEY]).toBeUndefined();
+      expect(mockAddLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        expect.stringContaining('self-healing'),
+        expect.objectContaining({ key: MIGRATION_PROGRESS_KEY }),
+      );
     });
 
-    it('rejects with a detectable error for a negative value', async () => {
+    it('self-heals a negative value to 0', async () => {
       port.seed({ [MIGRATION_PROGRESS_KEY]: -1 });
-      await expect(adapter.getProgress()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getProgress()).resolves.toBe(0);
     });
 
-    it('rejects with a detectable error for a non-integer value', async () => {
+    it('self-heals a non-integer value to 0', async () => {
       port.seed({ [MIGRATION_PROGRESS_KEY]: 1.5 });
-      await expect(adapter.getProgress()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getProgress()).resolves.toBe(0);
     });
   });
 
@@ -73,9 +98,15 @@ describe('migrationState corrupted values', () => {
       expect(await adapter.getRetryCount()).toBe(3);
     });
 
-    it('rejects with a detectable error for a non-numeric value', async () => {
+    it('self-heals a non-numeric value to 0', async () => {
       port.seed({ [MIGRATION_RETRY_COUNT_KEY]: 'many' });
-      await expect(adapter.getRetryCount()).rejects.toThrow(/corrupted/);
+      await expect(adapter.getRetryCount()).resolves.toBe(0);
+      expect(port.dump()[MIGRATION_RETRY_COUNT_KEY]).toBeUndefined();
+      expect(mockAddLog).toHaveBeenCalledWith(
+        LogType.WARN,
+        expect.stringContaining('self-healing'),
+        expect.objectContaining({ key: MIGRATION_RETRY_COUNT_KEY }),
+      );
     });
   });
 });

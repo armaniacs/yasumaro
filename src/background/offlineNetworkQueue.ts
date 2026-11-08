@@ -138,6 +138,21 @@ export class OfflineNetworkQueue {
     await this.port.flush(handler, onDropped);
   }
 
+  /**
+   * Offset the retry increment flush() applies to every `false` handler
+   * result when that `false` was NOT a send failure (e.g. the recovery claim
+   * is held by another owner). flush() adds exactly one retry per `false`
+   * before persisting, so pre-lending one here nets zero and the job is kept
+   * without spending budget. Must be called on the same job reference flush
+   * handed to the handler, immediately before returning `false` — the
+   * increment lands on that same object.
+   */
+  offsetNonFailureResult(job: OfflineJob): void {
+    if (typeof job.retryCount === 'number') {
+      job.retryCount -= 1;
+    }
+  }
+
   async getQueueSize(): Promise<number> {
     return this.port.getQueueSize();
   }

@@ -190,6 +190,13 @@ export class SessionAlarmService {
         // timeout cycle re-locks and re-notifies instead of leaving a lock
         // nobody applied. The revert itself is best-effort and never masks
         // the unconfirmed-delivery error below.
+        //
+        // No explicit timeout re-arm is needed after this revert: the
+        // periodic `check_session_timeout` alarm keeps firing (armed once via
+        // alarmRegistry.installAll() and owned there, never here), so the
+        // next firing re-evaluates the reverted unlocked state and retries
+        // the lock. This method must not clear/re-create the alarm — arming
+        // it in two places would double-fire checkTimeout.
         try {
           await this.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
         } catch (revertError) {

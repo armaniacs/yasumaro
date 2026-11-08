@@ -12,9 +12,18 @@ import { validateRecordForInsert } from '../browsingLogCodec.js';
 
 describe('browsingLogCodec', () => {
   describe('validateRecordForInsert', () => {
-    it('accepts an empty payload and a minimal valid record', () => {
-      expect(validateRecordForInsert({})).toBeNull();
+    it('accepts a minimal valid record', () => {
       expect(validateRecordForInsert({ url: 'https://example.com', created_at: 1000 })).toBeNull();
+    });
+
+    it('rejects a missing url (no silent empty-string row)', () => {
+      expect(validateRecordForInsert({})).toContain('url');
+      expect(validateRecordForInsert({ created_at: 1000 })).toContain('url');
+    });
+
+    it('rejects a null or empty url', () => {
+      expect(validateRecordForInsert({ url: null })).toContain('url');
+      expect(validateRecordForInsert({ url: '' })).toContain('url');
     });
 
     it('accepts legacy coercible values unchanged', () => {
@@ -31,6 +40,7 @@ describe('browsingLogCodec', () => {
 
     it('rejects a non-string url', () => {
       expect(validateRecordForInsert({ url: 123 })).toContain('url');
+      expect(validateRecordForInsert({ url: { text: 'x' } })).toContain('url');
     });
 
     it('rejects an object where text belongs', () => {

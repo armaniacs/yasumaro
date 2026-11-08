@@ -31,6 +31,13 @@ interface OfflineNetworkQueueLike {
         handler: (job: OfflineJob) => Promise<boolean>,
         onDropped?: (job: OfflineJob, reason: 'max-retries' | 'ttl') => Promise<void> | void
     ): Promise<void>;
+    /**
+     * Offset the retry increment the queue applies to a `false` handler
+     * result when that `false` was not a send failure. The queue owns the
+     * increment, so the compensation lives there too — never as a raw
+     * `retryCount -= 1` at the call site.
+     */
+    offsetNonFailureResult(job: OfflineJob): void;
 }
 
 interface RecordingPipelineLike {
@@ -127,14 +134,10 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                 // would drive a merely contended job to max-retries
                 // exhaustion and a spurious terminal handover ("retries
                 // exhausted" notice for a job that was never attempted).
-                // Offset that increment on the job reference the queue keeps,
-                // keeping the job for the next cycle without spending budget:
-                // the queue adds exactly one on the `false` below, so lending
-                // one here nets zero (-1 is transient; only the post-increment
-                // value is ever persisted).
-                if (typeof job.retryCount === 'number') {
-                    job.retryCount -= 1;
-                }
+                // Offset that increment through the queue-owned API, keeping
+                // the job for the next cycle without spending budget (the net
+                // effect is zero; only the post-increment value is persisted).
+                deps.offlineNetworkQueue.offsetNonFailureResult(job);
                 return false;
             }
             try {

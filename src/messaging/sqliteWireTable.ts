@@ -222,7 +222,12 @@ export const SQLITE_WIRE_TABLE = [
       if (reason !== null) {
         throw new TypeError(`update changes are invalid: ${reason}`);
       }
-      return { type: 'update', id, changes };
+      // Carry the validated `rest`, not the original `changes`: the caller
+      // may have spread a whole row (with an `id` key) into `changes`, and
+      // forwarding the unvalidated object would keep the routing-override
+      // key on the op even though validation never saw it in that shape.
+      // encodePayload still strips defensively for hand-built ops.
+      return { type: 'update', id, changes: rest as Record<string, unknown> };
     },
     // Flattened wire contract: changes travel as `{ id, ...changes }`, not
     // nested under a `changes` key. The offscreen update runner reads flat

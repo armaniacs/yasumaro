@@ -26,13 +26,21 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * "network"), routing them to the offline queue. Word boundaries keep the
  * ADR 2026-08-27 breadth (every enumerated word still matches) while
  * refusing embeddings inside longer words.
+ *
+ * The boundary is alphanumeric-only on purpose (`\b` is wrong here):
+ * transport errors surface as snake_case tokens (`request_timeout`,
+ * `connection_reset`, `fetch_failed`) where the marker sits between
+ * underscores, and `\b` treats `_` as a word character so it never matches
+ * there. Only `[A-Za-z0-9]` counts as "inside a word": a marker flanked by
+ * underscores still matches, while one embedded in a longer alphanumeric
+ * run (`networked`, `prefetch`) does not.
  */
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 const LEGACY_NETWORK_MARKER_PATTERNS: readonly RegExp[] = LEGACY_TRANSPORT_MARKERS_FULL.map(
-  (marker) => new RegExp(`\\b${escapeRegExp(marker)}\\b`, 'i'),
+  (marker) => new RegExp(`(?<![A-Za-z0-9])${escapeRegExp(marker)}(?![A-Za-z0-9])`, 'i'),
 );
 
 /**

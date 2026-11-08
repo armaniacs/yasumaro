@@ -2,8 +2,12 @@ import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import { validateImportRow } from '../../../messaging/validators.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
+import { logWarn } from '../../../utils/logger/api.js';
 import type { DepsResult, MaintenanceBatchDeps } from './deps.js';
 import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
+
+/** How many per-row rejection reasons ride the exclusion WARN log at most. */
+const MAX_EXCLUSION_REASONS = 5;
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set
@@ -141,9 +145,24 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         // whole insertBatch; invalid rows are filtered here so valid rows
         // still import. `total` stays the original count, so the rejected
         // count is derivable as total - inserted - skipped.
-        const validRows = rows.filter((row) => validateImportRow(row) === null);
+        const invalidReasons: string[] = [];
+        const validRows = rows.filter((row) => {
+          const reason = validateImportRow(row);
+          if (reason === null) return true;
+          if (invalidReasons.length < MAX_EXCLUSION_REASONS) invalidReasons.push(reason);
+          return false;
+        });
         if (validRows.length === 0) {
           return { success: false, error: 'No valid rows provided' };
+        }
+        if (invalidReasons.length > 0 || validRows.length !== rows.length) {
+          // Silent exclusion would make an import shortfall undiagnosable:
+          // log how many rows were dropped and why (first few reasons only).
+          void logWarn('maintenanceBatchHandler: import excluded invalid rows', {
+            excluded: rows.length - validRows.length,
+            total: rows.length,
+            reasons: invalidReasons,
+          });
         }
         const result = await deps.insertBatch(validRows.map(row => ({
           url: row.url,

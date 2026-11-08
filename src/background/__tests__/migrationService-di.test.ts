@@ -96,18 +96,22 @@ describe('MigrationService state injection', () => {
       expect(mockStorage['yasumaro_migration_status']).toBe('completed');
     });
 
-    it('does not run a full re-migration when the stored status is corrupted', async () => {
+    it('self-heals a corrupted status to absent and re-runs the migration', async () => {
       mockStorage['yasumaro_migration_status'] = 'bogus-status';
       mockStorage['savedUrlsWithTimestamps'] = [
         { url: 'https://example.com/1', timestamp: 1000 },
       ];
+      sendMessageMock.mockImplementation(
+        (_msg: unknown, callback: (response: unknown) => void) => {
+          callback({ success: true, count: 1 });
+        }
+      );
       const service = new MigrationService(sqliteClient);
 
       await service.run();
 
-      expect(sendMessageMock).not.toHaveBeenCalled();
-      expect(mockStorage['yasumaro_migration_status']).toBe('bogus-status');
-      expect(mockStorage['yasumaro_migration_retry_count']).toBe(1);
+      expect(sendMessageMock).toHaveBeenCalled();
+      expect(mockStorage['yasumaro_migration_status']).toBe('completed');
     });
   });
 });

@@ -172,10 +172,11 @@ describe('sqliteMessageHandlers — handleInsert', () => {
     expect(arg.title).toBe('t');
   });
 
-  it('handles empty payload defaults', async () => {
-    await callHandler('SQLITE_INSERT', {});
-    const arg = recordsRepoMock.insert.mock.calls[0]![0] as Record<string, unknown>;
-    expect(arg.url).toBe('');
+  it('rejects an empty payload: url is required, never coerced to an empty row', async () => {
+    const res = await callHandler('SQLITE_INSERT', {}) as { success: boolean; error?: string };
+    expect(res.success).toBe(false);
+    expect(res.error).toContain('url');
+    expect(recordsRepoMock.insert).not.toHaveBeenCalled();
   });
 });
 

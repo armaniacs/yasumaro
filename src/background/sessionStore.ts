@@ -427,6 +427,15 @@ export class SessionStore implements SessionStorePort {
     // Drop the stale session copy so a half-shape can never read back as
     // canonical. Readers miss, then recover the fresh full value from the
     // local backup through the fallback migration.
+    //
+    // S18 premise: if this remove fails, the stale copy stays readable and a
+    // reader mistakes it for the latest write (no freshness marker exists on
+    // the session copy). That window is accepted and bounded, not ignored:
+    // the WARN below names the keys for diagnosis; re-queued keys retry this
+    // remove on the next flush; dropped keys already have their full value in
+    // the local backup (recoverable after the stale copy is eventually
+    // evicted). The residual risk is a persistently failing remove coinciding
+    // with a drop — visible in the log, never silent.
     try {
       await chrome.storage.session.remove(Array.from(items.keys()));
     } catch (error) {
@@ -532,6 +541,12 @@ export class SessionStore implements SessionStorePort {
     // Loop until quiescent: a write that lands mid-flush leaves a fresh timer
     // behind, and awaiting only the in-flight flush would miss it. Each round
     // awaits real work, so this never spins.
+    //
+    // The bound is fail-closed, not fail-silent: hitting it means a producer
+    // keeps the queue non-empty forever (a leak, not a slow flush), so the
+    // caller learns it via a throw instead of a normal return that looks
+    // like "settled". The void return stays compatible: every settled wait
+    // still resolves to undefined.
     for (let round = 0; round < MAX_WAIT_FOR_FLUSH_ROUNDS; round++) {
       if (this.disposed) return;
       // スケジュールされたタイマーがあれば即座にフラッシュして待つ
@@ -551,6 +566,9 @@ export class SessionStore implements SessionStorePort {
     addLog(LogType.ERROR, 'SessionStore: waitForFlush left with unsettled work', {
       rounds: MAX_WAIT_FOR_FLUSH_ROUNDS,
     });
+    throw new Error(
+      `SessionStore: waitForFlush exceeded ${MAX_WAIT_FOR_FLUSH_ROUNDS} rounds with unsettled work`,
+    );
   }
 
   static mapToEntries<K, V>(map: Map<K, V>): [K, V][] {
@@ -567,6 +585,12 @@ export class SessionStore implements SessionStorePort {
    * per store (the constructor already registers), and the attempt outcome
    * is recorded — see emergencyFlushToLocal and getLastSuspendBackup — so a
    * suspend backup never ends with its fate unknown.
+   *
+   * Premise: onSuspend listeners cannot be awaited — Chrome suspends the
+   * worker without waiting for the returned promise. The listener therefore
+   * fires emergencyFlushToLocal fire-and-forget on purpose; observability
+   * rides on that method's own start/finish logs plus getLastSuspendBackup()
+   * (null until a backup of queued data has run), never on awaiting here.
    */
   static registerSuspendHandler(store: SessionStore): void {
     if (store.suspendHandlerRegistered) return;
@@ -587,7 +611,10 @@ export class SessionStore implements SessionStorePort {
    */
   async emergencyFlushToLocal(localPort?: SessionLocalPort): Promise<boolean> {
     const port = localPort ?? this.localPort;
-    if (this.writeQueue.size === 0) return true;
+    if (this.writeQueue.size === 0) {
+      addLog(LogType.INFO, 'SessionStore: suspend backup skipped, nothing queued', {});
+      return true;
+    }
 
     const items: Record<string, unknown> = {};
     const keys: string[] = [];
@@ -595,6 +622,11 @@ export class SessionStore implements SessionStorePort {
       items[key] = value;
       keys.push(key);
     }
+
+    // Attempt start: the onSuspend listener cannot await this method, so the
+    // start line is what proves an attempt ran when the finish line is missing
+    // (worker died mid-backup).
+    addLog(LogType.INFO, 'SessionStore: emergency flush to local storage started', { keys });
 
     // Same no-guard rationale as backupItemsToLocal: the write attempt itself
     // is the probe, and its outcome is recorded either way.
@@ -611,9 +643,11 @@ export class SessionStore implements SessionStorePort {
   }
 
   /**
-   * Outcome of the most recent emergencyFlushToLocal attempt, or null when no
-   * attempt ran yet. Lets tests and diagnostics observe the suspend path that
-   * onSuspend itself cannot await.
+   * Outcome of the most recent emergencyFlushToLocal attempt that had queued
+   * data, or null when no such attempt ran yet (including empty-queue skips,
+   * which log but record nothing). Tests and diagnostics observe the suspend
+   * path that onSuspend itself cannot await: null means "never attempted",
+   * non-null tells success from failure.
    */
   getLastSuspendBackup(): SuspendBackupStatus | null {
     return this.lastSuspendBackup;

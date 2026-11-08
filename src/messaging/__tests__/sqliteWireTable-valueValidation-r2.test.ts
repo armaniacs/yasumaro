@@ -56,6 +56,12 @@ describe('messaging/sqliteWireTable: update value validation', () => {
       const op = SQLITE_WIRE_DESCRIPTORS.update.encodeOp(7, { title: 'n' });
       expect(op).toEqual({ type: 'update', id: 7, changes: { title: 'n' } });
     });
+
+    it('carries the validated rest on the op, not the original changes with id', () => {
+      const op = SQLITE_WIRE_DESCRIPTORS.update.encodeOp(7, { id: 99, title: 'n' } as never);
+      expect(op.changes).toEqual({ title: 'n' });
+      expect('id' in (op.changes as Record<string, unknown>)).toBe(false);
+    });
   });
 
   describe('insertBatch encodeOp', () => {
