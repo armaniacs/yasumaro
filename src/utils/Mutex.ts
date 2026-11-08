@@ -77,7 +77,8 @@ export class Mutex {
     /**
      * 注意(意図的破壊的変更): 不正オプションは RangeError を投げる (黙示デフォルト化しない) — 0・負数・NaN を渡す呼び出しは修正が必要。
      */
-    constructor(options: MutexOptions = {}) {        this.locked = false;
+    constructor(options: MutexOptions = {}) {
+        this.locked = false;
         this.queue = new Map();
         this.lockedAt = null;
         this.nextTaskId = 0;
