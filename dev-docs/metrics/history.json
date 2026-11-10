@@ -830,6 +830,17 @@
       "testCount": 16228,
       "functionCount": 5188,
       "dependencyCount": 31
+    },
+    {
+      "version": "6.9.74",
+      "tagVersion": "6.9.74",
+      "tag": "v6.9.74",
+      "date": "2026-11-11T06:40:07+09:00",
+      "linesOfCode": 412617,
+      "fileCount": 2038,
+      "testCount": 16641,
+      "functionCount": 5281,
+      "dependencyCount": 31
     }
   ]
 }
