@@ -71,6 +71,12 @@ All notable changes to this project will be documented in this file.
 
 - コードレビュー指摘48件の対応修正。SPA検出の実効化（MAIN world裏付けのURL監視・真遷移時のみreset）、throttle時刻源の単一化、DNS pinの接続時同一化（解決2回化・pin受渡し・既定localhost拒否の統一）、起動失敗slotの集約エラー化、破損マイグレーション値の自己修復、retry境界のスネークケース対応、空url行の拒否、manifest版正規化の複数ハイフン対応、E2Eプローブ判定の厳格化。残りは可視化・互換性明示・上限実効化の小規模修正 / Review-driven fixes (48 findings): effective SPA detection (MAIN-world URL monitoring, reset on true navigation only), unified throttle clock, DNS-pin unification at connect time (two resolutions, pin handoff, default localhost deny), aggregated startup errors, self-healing corrupt migration values, snake_case retry boundaries, empty-URL rejection, multi-hyphen manifest normalization, stricter E2E probe checks. The rest are small visibility, compatibility, and cap-enforcement fixes
 
+### テスト・型負債 / Tests and Type Debt
+
+- 残存カバレッジギャップ2件の回帰テスト追加（ロック復帰→次回発火→再ロック連鎖、suspend退避の開始・終了ログ）。検証中に検出した型エラー16件を返済し、型テストbaselineを442から439へ引き下げ / Regression tests for two residual coverage gaps (revert-refire-relock chain, suspend-backup start and finish logs). Repaid 16 type errors found during verification; type-test baseline lowered from 442 to 439
+- オフライン再送のretry会計修正（下限が貸出と返済の対応を壊し新規ジョブの競合でretryを消費していた問題を除去） / Offline-retry accounting fix (removed a floor that broke lend-and-repay pairing and burned a retry on contended fresh jobs)
+- Rust CLI `yasumaro` は開発中である旨を宣言（コマンド・出力形式は安定版まで変更があり得る） / Declared the Rust `yasumaro` CLI as under development (commands and output formats may change before the first stable release)
+
 ## [6.9.72] - 2026-11-08
 
 このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
