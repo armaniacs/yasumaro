@@ -9,6 +9,9 @@
   <a href="https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep" target="_blank" rel="noopener">
     <img src="https://img.shields.io/badge/Edge_Add--ons-Install-0078D4?style=for-the-badge&logo=microsoftedge&logoColor=white" alt="Edge Add-ons" />
   </a>
+  <a href="https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/" target="_blank" rel="noopener">
+    <img src="https://img.shields.io/badge/Firefox_Add--ons-Install-FF7139?style=for-the-badge&logo=firefox&logoColor=white" alt="Firefox Add-ons" />
+  </a>
   <a href="https://github.com/armaniacs/yasumaro/releases/latest" target="_blank" rel="noopener">
     <img src="https://img.shields.io/badge/GitHub_Releases-Download-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub Releases" />
   </a>
@@ -30,7 +33,7 @@
 
 **「流動的なブラウジング体験を、構造化された不変の記録に変換する」**
 
-技術ドキュメントや論文、長文記事をよく読むエンジニアやリサーチャーにとって強力なツール。ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するChrome拡張機能です。
+技術ドキュメントや論文、長文記事をよく読むエンジニアやリサーチャーにとって強力なツール。ブラウザの閲覧履歴を、AIによる要約付きでObsidianのデイリーノートに自動保存するブラウザ拡張機能です。
 
 ### オリジナルの Obsidian Smart History について
 Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)で紹介されている Obsidian Smart History をフォークして作成しました。シンプルながら実用的なアイデアを形にしてくれたオリジナル作者に感謝します。
@@ -47,7 +50,7 @@ Yasumaroは、[こちらの記事](https://note.com/izuru_tcnkc/n/nd0a758483901)
 
 ### アーキテクチャ
 
-Yasumaro は Manifest V3 Chrome 拡張機能として、以下のコンポーネントで構成されています。
+Yasumaro は Manifest V3 ブラウザ拡張機能として、以下のコンポーネントで構成されています。
 
 ```mermaid
 flowchart LR
@@ -119,7 +122,7 @@ flowchart LR
 - 🖱️ **アドレスバーとショートカットで記録**: アドレスバーに `y` と入力して Tab / Enter、または `Alt+Shift+Y` で現在のページを記録します。
 - 🚀 **初回起動の3択バナー**: 初回は「まず試す」「Obsidian連携」「AI要約」から始め方を選べます。設定なしでも記録と検索を試せます。
 - ☁️ **GitHub Gist 連携**: Obsidian と併用して GitHub Gist にクラウド同期可能。複数同期先に対応。
-- 🌐 **複数ブラウザ対応**: Chrome、Microsoft Edge、Brave など Chromium 系ブラウザをサポート。
+- 🌐 **複数ブラウザ対応**: Chrome、Microsoft Edge、Firefox、Brave など主要ブラウザをサポート。
 
 ### 必要なもの
 - [Obsidian](https://obsidian.md/) と [Local REST API プラグイン](https://github.com/coddingtonbear/obsidian-local-rest-api)（セットアップ手順は [Obsidian連携ガイド](docs/OBSIDIAN_SETUP_GUIDE.md) を参照）
@@ -149,25 +152,32 @@ flowchart LR
 3. 確認ダイアログで「拡張機能を追加」をクリックします。
 4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
 
-#### 方法3: GitHub Releases の zip を読み込む（Chrome / Brave など）
+#### 方法3: Firefox Add-ons からインストール
+
+1. [Firefox Add-ons の Yasumaro ページ](https://addons.mozilla.org/ja/firefox/addon/yasumaro-ai-browsing-logger/) を開きます。
+2. 「Firefox へ追加」ボタンをクリックします。
+3. 確認ダイアログで「追加」をクリックします。
+4. ツールバーの Yasumaro アイコンをクリックして設定を開始します。
+
+Firefox 版は審査を通過した署名済みビルドのため、通常の Firefox にそのままインストールできます（Developer Edition や署名の無効化は不要です）。既知の制限として、ブラウザ内蔵 AI（Gemini Nano / Phi-mini）は非対応です。外部 AI プロバイダー（Gemini API、OpenAI 互換、Ollama など）は利用できます。
+
+#### 方法4: GitHub Releases の zip を読み込む（Chrome / Brave など）
 
 1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します。
 2. Chrome を開き、`chrome://extensions` にアクセスします。
 3. 右上の「デベロッパーモード」を有効にします。
 4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、展開したフォルダを選択します。
 
-#### 方法3b: Firefox（実験的サポート）
+#### 方法4b: Firefox に一時読み込みする（開発者向け）
 
-Firefox 版もビルドでき、記録・保存・検索（FTS5 含む）が動作します（2026-09 から）。ブラウザ内蔵 AI は非対応です（外部 AI プロバイダーは利用可）。
+通常は上記の Firefox Add-ons 版を使ってください。開発中のビルドを試す場合のみ、以下の手順で一時読み込みできます。
 
 1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-firefox.zip` をダウンロードして展開します。
 2. Firefox で `about:debugging#/runtime/this-firefox` を開きます。
 3. 「一時的なアドオンを読み込む…」→ 展開したフォルダ内の `manifest.json` を選択します。
 4. 一時読み込みは Firefox 再起動で消えます。永続的に使う場合は Firefox Developer Edition / Nightly で `xpinstall.signatures.required` を `false` にしたプロファイルへインストールしてください。
 
-> Firefox は実験的サポートのため、動作確認は Chromium 系ほど網羅されていません。不具合は GitHub issue で報告をお願いします。
-
-#### 方法4: ソースからビルド（開発者向け）
+#### 方法5: ソースからビルド（開発者向け）
 
 1. このリポジトリをクローンまたはダウンロードします:
    ```bash
@@ -283,7 +293,7 @@ ObsidianもAPIキーもない状態で使えます。初回起動のダッシュ
 
 **"Turn fluid browsing into structured, immutable records."**
 
-A powerful tool for engineers and researchers who read technical documentation, papers, and long-form articles ― a Chrome extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
+A powerful tool for engineers and researchers who read technical documentation, papers, and long-form articles ― a browser extension that automatically saves your browsing history to Obsidian with AI-generated summaries.
 
 ### About the Original ― Obsidian Smart History
 Yasumaro is a fork of Obsidian Smart History, introduced in [this article](https://note.com/izuru_tcnkc/n/nd0a758483901). Credit goes to the original author for a simple, genuinely useful idea.
@@ -300,7 +310,7 @@ I use this tool myself, every day, so I don't want to cut corners on it. That's 
 
 ### Architecture
 
-Yasumaro is built as a Manifest V3 Chrome extension with the following components:
+Yasumaro is built as a Manifest V3 browser extension with the following components:
 
 ```mermaid
 flowchart LR
@@ -400,25 +410,32 @@ Store releases go through review, so they may lag behind the latest GitHub Relea
 3. Click "Add extension" in the confirmation dialog.
 4. Click the Yasumaro icon in your toolbar to start configuring.
 
-#### Option 3: Load the GitHub Releases zip (Chrome / Brave, etc.)
+#### Option 3: Install from Firefox Add-ons
+
+1. Open the [Yasumaro page on Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/yasumaro-ai-browsing-logger/).
+2. Click "Add to Firefox".
+3. Click "Add" in the confirmation dialog.
+4. Click the Yasumaro icon in your toolbar to start configuring.
+
+The Firefox build is reviewed and signed, so it installs into regular Firefox with no Developer Edition or signature bypass needed. Known limitation: browser Built-in AI (Gemini Nano / Phi-mini) is not supported. External AI providers (Gemini API, OpenAI-compatible, Ollama, etc.) work.
+
+#### Option 4: Load the GitHub Releases zip (Chrome / Brave, etc.)
 
 1. Download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
 2. Open Chrome and navigate to `chrome://extensions`.
 3. Enable "Developer mode" in the top right.
 4. Click "Load unpacked" and select the unzipped folder.
 
-#### Option 3b: Firefox (experimental support)
+#### Option 4b: Temporarily load in Firefox (for developers)
 
-The Firefox build works for recording, saving, and search (including FTS5) as of September 2026. Built-in AI is not supported (external AI providers work).
+Use the Firefox Add-ons version above for normal use. Only follow these steps to try a development build.
 
 1. Download `yasumaro-<version>-firefox.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
 2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
 3. Click "Load Temporary Add-on…" and select `manifest.json` inside the unzipped folder.
 4. Temporary installs are removed when Firefox restarts. For persistent use, install it into a Firefox Developer Edition / Nightly profile with `xpinstall.signatures.required` set to `false`.
 
-> Firefox is experimental support ― it is less thoroughly tested than Chromium-based builds. Please report issues via GitHub issues.
-
-#### Option 4: Build from Source (For Developers)
+#### Option 5: Build from Source (For Developers)
 
 1. Clone or download this repository:
    ```bash

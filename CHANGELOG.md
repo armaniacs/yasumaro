@@ -37,6 +37,12 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.74] - 2026-11-11
+
+### ドキュメント / Docs
+
+- GitHub PagesとREADMEをFirefox Add-ons配布に対応（ヒーローとインストール欄にFirefox入手ボタンを追加、日英の導入手順・FAQを更新。「Chrome拡張機能」表記を「ブラウザ拡張機能」に統一） / Updated GitHub Pages and README for Firefox Add-ons distribution (Firefox buttons in the hero and install sections, install steps and FAQ revised in JA/EN, "Chrome extension" wording unified to "browser extension")
+
 ## [6.9.73] - 2026-11-10
 
 ### 修正 / Fixed
