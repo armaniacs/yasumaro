@@ -37,6 +37,14 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.75] - 2026-11-11
+
+このリリースはCI/pipelineの緊急修正です。 / This release is an urgent CI/pipeline fix.
+
+### 修正 / Fixed
+
+- リリース時のCLI版同期漏れを修正（`cli/Cargo.lock` の版を `package.json` に同期。v6.9.73・v6.9.74の版上げで漏れていたため `cargo publish --dry-run` がdirty扱いで失敗していた） / Fixed missing CLI version sync at release time (synced `cli/Cargo.lock` to `package.json`; the v6.9.73 and v6.9.74 bumps missed it, failing `cargo publish --dry-run` as dirty)
+
 ## [6.9.74] - 2026-11-11
 
 ### ドキュメント / Docs
