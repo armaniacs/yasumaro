@@ -37,6 +37,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [6.9.73] - 2026-11-10
+
 ### 修正 / Fixed
 
 - SSRFガードのDNSピン留めとlocalhost既定拒否（検証と接続で同一解決IPを使う突き合わせを追加し、リテラルloopbackとhttp経由の内部到達を拒否。Obsidian・ローカルAI等の正規用途は明示opt-out。既定DoH解決器の配線はmanifest権限設計と一体の将来課題としてPBIに駐留） / SSRF guard DNS pinning with localhost deny-by-default (same-resolution pinning between validation and fetch; literal loopback and http-internal reach rejected; explicit opt-outs for Obsidian and local-AI use. Default DoH resolver wiring is parked as future work tied to manifest permission design)

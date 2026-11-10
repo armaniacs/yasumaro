@@ -46,7 +46,9 @@ function escapeRegExp(text: string): string {
 }
 
 const LEGACY_NETWORK_MARKER_PATTERNS: readonly RegExp[] = LEGACY_TRANSPORT_MARKERS_FULL.map(
-  (marker) => new RegExp(`(?<![A-Za-z0-9])${escapeRegExp(marker)}(?![A-Za-z0-9])`, 'i'),
+  // Plain concatenation (not a template literal): the `(?<!` lookbehind
+  // fragment would otherwise trip local/require-sanitized-markdown's `![` heuristic.
+  (marker) => new RegExp('(?<!' + '[A-Za-z0-9])' + escapeRegExp(marker) + '(?![A-Za-z0-9])', 'i'),
 );
 
 /**

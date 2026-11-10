@@ -1,5 +1,5 @@
 import type { Settings } from '../../utils/storage/types.js';
-import { validateUrlForFilterImport, validateUrlForFilterImportAsync, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
+import { validateUrlForFilterImportAsync, fetchWithTimeout, noRedirectInit } from '../../utils/fetch.js';
 import type { DnsResolveFn } from '../../utils/fetch.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logDebug, logWarn, logError } from '../../utils/logger/api.js';
