@@ -22,6 +22,22 @@ import { isEncryptionLockedError } from '../../utils/storage/encryptionLockedErr
 import { pickDefined } from '../../utils/objectUtils.js';
 import { disabledBreaker, type ProviderBreakerLike, type ProviderCooldown } from './providerBreaker.js';
 
+/**
+ * PBI 2026-11-11-01: deterministic FNV-1a 32-bit content hash for the
+ * in-flight dedupe key. Same input always yields the same fragment, so
+ * identical parallel requests still share one provider call, while different
+ * content never collides into it. Local on purpose (no new dependency); the
+ * raw content never enters the key, only its length plus this hash.
+ */
+function contentHash(content: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < content.length; i++) {
+    hash ^= content.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(36);
+}
+
 interface RemoteAIServiceConfig {
   repo?: SettingsReader;
   /** PBI 27-03: injected breaker; defaults to disabled (try all, remember nothing). */
@@ -185,12 +201,23 @@ export class RemoteAIService implements AIService {
     // (config error) never reaches this line; a fallback chain records one
     // row per slot that actually sent, so a retry is never double-counted
     // and a skipped slot is never recorded at all.
-    void recordAuditLog({
-      provider: slot.provider,
-      url,
-      charCount: content.length,
-      policy,
-    });
+    // PBI 2026-11-11-01: awaited (was `void`) so a send failure surfaces as a
+    // visible WARN instead of a silent audit gap; the summary itself is
+    // unaffected because recordAuditLog never throws past this catch.
+    try {
+      await recordAuditLog({
+        provider: slot.provider,
+        url,
+        charCount: content.length,
+        policy,
+      });
+    } catch (error: unknown) {
+      addLog(LogType.WARN, 'Failed to record audit log', {
+        provider: slot.provider,
+        error: errorMessage(error),
+        traceId,
+      });
+    }
 
     try {
       const result = await providerInstance.generateSummary(content, tagSummaryMode, traceId);
@@ -215,11 +242,14 @@ export class RemoteAIService implements AIService {
       addLog(LogType.INFO, 'AI provider circuit breaker disabled by user setting');
     }
 
-    // In-flight deduplication: concurrent calls for the same URL+mode share
-    // one provider slot loop (FinOptimization: prevent duplicate API costs).
+    // In-flight deduplication: concurrent calls for the same URL, mode, AND
+    // content share one provider slot loop (FinOptimization: prevent duplicate
+    // API costs). PBI 2026-11-11-01: the key used to be url+mode only, so same
+    // URL with different content collided into one promise and returned the
+    // wrong summary. Identical content still shares (criterion 2 preserved).
     const url = options?.url ?? '';
     const tagSummaryMode = options?.tagSummaryMode ?? false;
-    const dedupeKey = url ? `${url}::${tagSummaryMode}` : null;
+    const dedupeKey = url ? `${url}::${tagSummaryMode}::${content.length}:${contentHash(content)}` : null;
 
     if (dedupeKey) {
       const existing = this.inFlightSummaryRequests.get(dedupeKey);
