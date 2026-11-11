@@ -37,6 +37,19 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+### 修正 / Fixed
+
+- AI要約の並行要求の取り違えを防止（dedupeキーに内容ハッシュを含め、内容違いの共有を排除。同一内容の共有によるAPIコスト最適化は維持。autoフォールバック時のlocal失敗をWARN記録し、監査ログ送信失敗を検出可能化） / Prevented cross-talk between concurrent AI summary requests (dedupe key now includes a content hash so different content is never shared; sharing for identical content keeps the API-cost optimization. Local failures on auto fallback are WARN-logged and audit-log send failures are surfaced)
+
+### リファクタリング / Refactored
+
+- dashboardのViewと配線の値import循環を解消（`SQLITE_HISTORY_IDS` の所有権を新規共有モジュールへ移し、`formatDate` 参照をutils直参照に寄せて単方向化。描画内容はparityテストで一致を保証） / Removed the value-import cycle between the dashboard view and its wiring (moved `SQLITE_HISTORY_IDS` ownership to a new shared module and pointed `formatDate` references at utils, leaving a single direction. Rendered output pinned by parity tests)
+- ログ経路を構造化loggerのseamに一本化（console直書きと二重発射をseam委譲に寄せ、logger自体の失敗を検出可能化。新規直書きを検出するlintルールを追加し既存残存分は除外録化） / Unified log output on the structured-logger seam (direct console writes and double emission now delegate to the seam, logger's own failures are detectable. Added a lint rule rejecting new direct console writes with a grandfather list)
+- collection selectのoptions構築を共通ビルダーに集約（3箇所を委譲しescape経路を単一化。描画はgolden一致） / Consolidated collection-select option building into a shared builder (three call sites delegate, single escape path. Output pinned by golden tests)
+- 日時フォーマットをlocaleUtilsの正規seamに集約（`formatTimeAgo` の移動とinline置換。UTC表示1箇所は仕様変更のため対象外として次回送り） / Consolidated date formatting on the localeUtils seam (moved `formatTimeAgo`, replaced inline calls. One UTC display left out as a spec change for later)
+- region配線骨格を `runRegionAction` に共通化（busy・status遷移の一元化と二重実行ガード統一。in-row描画は対象外） / Consolidated region wiring on `runRegionAction` (unified busy and status transitions with a shared double-execution guard. In-row rendering out of scope)
+- sqliteHistoryModelの世代ガードを注入可能化（lifecycle ring統一の前提。未指定時は従来通り私設生成で挙動不変） / Made the sqliteHistoryModel generation guard injectable (groundwork for lifecycle-ring unification. Default still creates a private guard, behavior unchanged)
+
 ## [6.9.75] - 2026-11-11
 
 このリリースはCI/pipelineの緊急修正です。 / This release is an urgent CI/pipeline fix.
