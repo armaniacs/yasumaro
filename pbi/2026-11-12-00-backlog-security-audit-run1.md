@@ -23,6 +23,6 @@
 
 ## 次のアクション
 
-- [ ] NV-1 ダミー実験の実施 (validation_plan local 手順)
-- [ ] 実験結果に基づく最小修正の PBI 化 (post-mutex consent gate)
-- [ ] run-2 (旧リポ名 dir) 成果物との突合せが必要になった場合は `~/security-audit-skill/obsidian-smart-history/run-2/` を参照
+- [x] NV-1 ダミー実験の実施 (validation_plan local 手順) ― firing 確定 (6/6)。発火デモ `src/background/pipeline/__tests__/consentToctou.probe.test.ts` をコミット済み (`81fd73cd`)
+- [x] 実験結果に基づく最小修正の PBI 化 (post-mutex consent gate) ― `pbi/2026-11-12-01-fix-recording-consent-reread.md` を起票 (`29154735`)
+- [ ] run-2 (旧リポ名 dir) 成果物との突合せが必要になった場合は `~/security-audit-skill/obsidian-smart-history/run-2/` を参照 (条件付き・平時は不作為)

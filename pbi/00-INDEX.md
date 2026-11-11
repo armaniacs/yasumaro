@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― 検証 firing 確定・修正 PBI 起票済み
+### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― ✅ 1件完了・アーカイブ済み
 
-監査 run-1 の needs_validation (同意TOCTOU) はダミー実験で firing 確定 (6/6)。発火デモ probe をコミット済み。台帳は [2026-11-12-00-backlog-security-audit-run1.md](2026-11-12-00-backlog-security-audit-run1.md) を参照。
+監査 run-1 の needs_validation (同意TOCTOU) はダミー実験で firing 確定 (6/6) 後、mutex直後の同意再読ゲートで修正 (record/preview/retryObsidianWrite の全経路)。発火デモ probe は実execute経路の回帰ガードへ昇格 (5テスト)。バッチ境界: 型検査緑・lint エラー0・background 3766件緑。台帳は [2026-11-12-00-backlog-security-audit-run1.md](2026-11-12-00-backlog-security-audit-run1.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-12-01-fix-recording-consent-reread.md](2026-11-12-01-fix-recording-consent-reread.md) | 🔧非機能追加 | 8.0 | S | ⬜ 未着手。mutex直後の同意再読ゲート・probe の回帰昇格 |
+| ~~01~~ | [2026-11-12-01-fix-recording-consent-reread.md](../dev-docs/archived/pbi/2026-11-12-01-fix-recording-consent-reread.md) | 🔧非機能追加 | 8.0 | S | ✅ 完了。撤回時拒否・sink沈黙・回帰5テスト |
 
 ### 2026-11-11 大局的改善 Round 1 holistic-1111（3件） ― ✅ 3件完了・アーカイブ済み
 
