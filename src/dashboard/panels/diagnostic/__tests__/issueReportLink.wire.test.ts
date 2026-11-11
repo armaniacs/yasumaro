@@ -14,7 +14,8 @@ async function flushMicrotasks(): Promise<void> {
   for (let i = 0; i < 10; i++) await Promise.resolve();
 }
 
-vi.mock('../../../../utils/logger/core.js', () => ({
+vi.mock('../../../../utils/logger/core.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../utils/logger/core.js')>()),
   getLogs: vi.fn().mockResolvedValue([]),
 }));
 

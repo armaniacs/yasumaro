@@ -117,31 +117,35 @@ describe('fallback golden pin + u32 boundary (PBI 2026-09-21-19)', () => {
         }));
     }
 
-    test('compute: WASM throw → runtime-standard warn+addLog once each, TS result', async () => {
+    test('compute: WASM throw → single seam log (no console double-fire), TS result', async () => {
         const { hybrid, ts, mockAddLog } = await importFresh('throw');
         const entries = largeEntries();
         await expect(hybrid.computeTagCooccurrenceHybrid(entries)).resolves.toEqual(
             ts.computeTagCooccurrence(entries)
         );
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy).toHaveBeenCalledWith(COMPUTE_MSG, 'wasm boom');
+        // PBI 2026-11-11-03: single seam line (was console.warn + addLog double-fire).
+        expect(warnSpy).not.toHaveBeenCalled();
         expect(mockAddLog).toHaveBeenCalledTimes(1);
         expect(mockAddLog).toHaveBeenCalledWith(LogType.WARN, COMPUTE_MSG, {
             error: 'wasm boom',
+            _errorCode: undefined,
+            _source: 'wasmHybridRuntime',
         });
     });
 
-    test('narrow: WASM throw → runtime-standard warn+addLog once each, TS result', async () => {
+    test('narrow: WASM throw → single seam log (no console double-fire), TS result', async () => {
         const { hybrid, ts, mockAddLog } = await importFresh('throw');
         const entries = largeEntries();
         await expect(hybrid.narrowEntriesToTopTagsHybrid(entries, 5)).resolves.toEqual(
             ts.narrowEntriesToTopTags(entries, 5)
         );
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy).toHaveBeenCalledWith(NARROW_MSG, 'wasm boom');
+        // PBI 2026-11-11-03: single seam line (was console.warn + addLog double-fire).
+        expect(warnSpy).not.toHaveBeenCalled();
         expect(mockAddLog).toHaveBeenCalledTimes(1);
         expect(mockAddLog).toHaveBeenCalledWith(LogType.WARN, NARROW_MSG, {
             error: 'wasm boom',
+            _errorCode: undefined,
+            _source: 'wasmHybridRuntime',
         });
     });
 
