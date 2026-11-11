@@ -8,6 +8,8 @@
 import { logWarn } from './logger/api.js';
 import { ErrorCode } from './logger/types.js';
 import { errorMessage } from './errorUtils.js';
+import { getMessage, getMessageOr } from './i18n.js';
+import { getPluralKey } from './i18nPlural.js';
 
 /**
  * ユーザーロケールを取得します
@@ -160,4 +162,128 @@ export function getDateSeparator(): string {
   // ロケールに応じた区切り文字
   // 将来的に拡張可能
   return '-';
+}
+
+/**
+ * 相対時刻 + 絶対時刻のペア (PBI 2026-11-11-05)。
+ *
+ * 正規の置き場所はこのモジュール。`src/popup/statusChecker.ts` は
+ * 再exportする互換ラッパーであり、実装はここに一本化されている。
+ */
+export interface TimeFormat {
+  timeAgo: string;
+  formatted: string;
+}
+
+/**
+ * 相対時刻と絶対時刻を同時に取得します (PBI 2026-11-11-05)。
+ *
+ * `src/popup/statusChecker.ts` からの逐語移動。表示文字列不変のため、
+ * 相対部の i18n キー解決も絶対部の手組み (`HH:MM` / `MM/DD HH:MM`) も
+ * 一切変えていない。
+ *
+ * @param {number} timestamp - 基準となる epoch-ms
+ * @returns {TimeFormat} 相対表示と絶対表示のペア
+ */
+export function formatTimeAgo(timestamp: number): TimeFormat {
+  const now = Date.now();
+  const diff = now - timestamp;
+  const date = new Date(timestamp);
+
+  // 相対時間
+  // 意図的な英文フォールバック: locale バンドルにキーが無い場合の最終防衛で、
+  // 未翻訳の放置ではない (getMessageOr 契約。privacy.ts の loadPrivacyPolicy
+  // エラー表示と同規約)。
+  let timeAgo: string;
+  if (diff < 60 * 1000) {
+    timeAgo = getMessageOr('timeJustNow', 'Just now');
+  } else if (diff < 60 * 60 * 1000) {
+    const minutes = Math.floor(diff / (60 * 1000));
+    const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
+    timeAgo = msg || `${minutes} minutes ago`;
+  } else if (diff < 24 * 60 * 60 * 1000) {
+    const hours = Math.floor(diff / (60 * 60 * 1000));
+    const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
+    timeAgo = msg || `${hours} hours ago`;
+  } else if (diff < 48 * 60 * 60 * 1000) {
+    timeAgo = getMessageOr('timeYesterday', 'Yesterday');
+  } else {
+    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+    const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });
+    timeAgo = msg || `${days} days ago`;
+  }
+
+  // 絶対時間
+  const today = new Date(now);
+  const isToday =
+    date.getDate() === today.getDate() &&
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
+
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  let formatted: string;
+
+  if (isToday) {
+    formatted = `${hours}:${minutes}`;
+  } else {
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    formatted = `${month}/${day} ${hours}:${minutes}`;
+  }
+
+  return { timeAgo, formatted };
+}
+
+/**
+ * 短い月日+時刻表示 (PBI 2026-11-11-05)。
+ *
+ * 正規seam。`pendingRowRenderer.formatTimestamp` はこの委譲ラッパーであり、
+ * 既存 importer (sqliteHistoryPanelView 経由の savedCollectionsPanelView を
+ * 含む) は公開名のまま動き続ける。
+ *
+ * 等価性 pin: `new Date(ts).toLocaleString(undefined, { month: 'short',
+ * day: 'numeric', hour: '2-digit', minute: '2-digit' })` とバイト等価。
+ * locale ソースの正規化 (undefined → chrome UI 言語) は表示文字列を変えうる
+ * ため本 PBI では行わない (台帳送り)。
+ *
+ * @param {number} ts - epoch-ms
+ * @returns {string} 短い日時文字列 (例: "Feb 11, 2:30 PM")
+ */
+export function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/**
+ * 既定ロケール・既定オプションの日時表示 (PBI 2026-11-11-05)。
+ *
+ * 旧 inline `new Date(x).toLocaleString()` 群 (cleansingFeedbackView /
+ * exportImport / diagnosticsPanel / researchSessionsPanel 範囲行) の置換先
+ * seam。元式とバイト等価。
+ *
+ * @param {Date|string|number} value - フォーマットする日時
+ * @returns {string} 既定ロケール表示の日時文字列
+ */
+export function formatLocaleDateTime(value: Date | string | number): string {
+  return new Date(value).toLocaleString();
+}
+
+/**
+ * 中形式の日付+短形式時刻の表示 (PBI 2026-11-11-05)。
+ *
+ * 旧 researchSessionsPanel:190
+ * `new Date(session.startAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })`
+ * の置換先 seam。元式とバイト等価。
+ *
+ * @param {Date|string|number} value - フォーマットする日時
+ * @returns {string} 中形式日付+短形式時刻の文字列
+ */
+export function formatMediumDateTime(value: Date | string | number): string {
+  return new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
 }
