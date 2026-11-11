@@ -24,6 +24,9 @@ function makeOrchestrator(opts: {
   const orch = new RecordingOrchestrator({
     getPrivacyInfoWithCache: async () => null,
     getSettingsWithCache: opts.getSettingsWithCache as never,
+    // PBI 2026-11-12-01: granted so the suite pins settings freshness;
+    // withdrawal is the consentToctou guard.
+    isConsentGranted: async () => true,
     obsidian: {} as never,
     aiService: null,
     sqliteClient: null,

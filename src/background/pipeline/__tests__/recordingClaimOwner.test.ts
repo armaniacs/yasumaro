@@ -64,6 +64,9 @@ function makeHarness(opts: {
   const orch = new RecordingOrchestrator({
     getPrivacyInfoWithCache: async () => null,
     getSettingsWithCache: async () => ({}) as never,
+    // PBI 2026-11-12-01: the claim envelope sits above the consent gate;
+    // granted here so the suite pins claim order, not consent.
+    isConsentGranted: async () => true,
     obsidian: {} as never,
     aiService: null,
     sqliteClient: null,

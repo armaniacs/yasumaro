@@ -37,6 +37,7 @@ import type { PrivacyInfo } from '../../utils/privacyChecker.js';
 import type { OfflineNetworkQueue } from '../offlineNetworkQueue.js';
 import { PerUrlMutexMap } from './perUrlMutex.js';
 import { StepExecutor, type StepDelayFn } from './stepExecutor.js';
+import { hasPrivacyConsent } from '../../utils/storage/privacyConsent.js';
 import { RECORDING_GATE_TABLE, type RecordingGate } from '../../utils/recordingGateTable.js';
 import { claimRecoveryOwner, releaseRecoveryOwner, type RecoveryClaimStore } from '../../utils/recoveryClaimStore.js';
 import { getPendingPages, type PendingPage } from '../../utils/pendingStorage.js';
@@ -44,6 +45,16 @@ import { getPendingPages, type PendingPage } from '../../utils/pendingStorage.js
 export interface RecordingOrchestratorDeps {
   getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   getSettingsWithCache: () => Promise<Settings>;
+  /**
+   * PBI 2026-11-12-01: post-mutex consent re-read. Consent lives outside the
+   * Settings blob, so a fresh `getSettingsWithCache()` cannot observe a
+   * mid-wait withdrawal — this dedicated seam can. Production wires
+   * `() => hasPrivacyConsent()` through the composition manifest (the same
+   * `isRecordingAllowed` answer the admission pre-stage reads); tests inject
+   * a mutable store. Defaults to the shared `hasPrivacyConsent` seam so a
+   * missing injection still refuses instead of silently recording.
+   */
+  isConsentGranted?: () => Promise<boolean>;
   obsidian: ObsidianClient;
   aiService: AIService | null;
   sqliteClient: SqliteClient | null;
@@ -129,6 +140,7 @@ export class RecordingOrchestrator {
   private preSaveSteps: PipelineStep[];
   private getPrivacyInfoWithCache: (url: string) => Promise<PrivacyInfo | null>;
   private getSettingsWithCache: () => Promise<Settings>;
+  private isConsentGranted: () => Promise<boolean>;
   private obsidian: ObsidianClient;
   private aiService: AIService | null;
   private sqliteClient: SqliteClient | null;
@@ -147,6 +159,7 @@ export class RecordingOrchestrator {
   constructor(deps: RecordingOrchestratorDeps) {
     this.getPrivacyInfoWithCache = deps.getPrivacyInfoWithCache;
     this.getSettingsWithCache = deps.getSettingsWithCache;
+    this.isConsentGranted = deps.isConsentGranted ?? (() => hasPrivacyConsent());
     this.obsidian = deps.obsidian;
     this.aiService = deps.aiService;
     this.sqliteClient = deps.sqliteClient;
@@ -195,14 +208,44 @@ export class RecordingOrchestrator {
     // e.g. a consent granted at intake but withdrawn mid-wait would still be
     // recorded. An explicitly passed `settings` stays caller-owned (the
     // manual/preview surface resolved it and must not race a cache refresh).
+    //
+    // PBI 2026-11-12-01: settings re-read alone cannot observe that
+    // withdrawal — consent lives outside the Settings blob. Both branches
+    // below re-read `isConsentGranted` immediately after acquiring the mutex
+    // and refuse with `privacy_consent_required` before any step or sink runs.
     if (opts.settings !== undefined) {
       const settings = opts.settings;
-      return this.mutexMap.runExclusive(data.url, () => this.executeInternal(data, settings));
+      return this.mutexMap.runExclusive(data.url, async () => {
+        const refused = await this.checkRecordingConsent(data);
+        if (refused) return refused;
+        return this.executeInternal(data, settings);
+      });
     }
     return this.mutexMap.runExclusive(data.url, async () => {
+      const refused = await this.checkRecordingConsent(data);
+      if (refused) return refused;
       const freshSettings = await this.getSettingsWithCache();
       return this.executeInternal(data, freshSettings);
     });
+  }
+
+  /**
+   * PBI 2026-11-12-01: the post-mutex consent re-read both `record` branches
+   * share. Returns the `privacy_consent_required` refusal when consent was
+   * withdrawn while the recording waited for the mutex (or was already
+   * withdrawn), `null` when recording may proceed. Rejection only — timeouts,
+   * retries, and the mutex order are untouched, and no step, sink, pending
+   * registration, or notice runs on the refusal path.
+   */
+  private async checkRecordingConsent(data: RecordingData): Promise<RecordingResult | null> {
+    if (await this.isConsentGranted()) return null;
+    return {
+      success: false,
+      error: 'privacy_consent_required',
+      reason: 'privacy_consent_required',
+      title: data.title,
+      url: data.url,
+    };
   }
 
   /**
@@ -243,11 +286,19 @@ export class RecordingOrchestrator {
     const effectiveData = { ...data, previewOnly: true };
     // Same post-wait freshness as record(): preview shares the per-URL mutex
     // and must not render under a pre-wait consent snapshot either.
+    // PBI 2026-11-12-01: same post-mutex consent re-read as record() — a
+    // mid-wait withdrawal refuses the preview with privacy_consent_required.
     if (opts.settings !== undefined) {
       const settings = opts.settings;
-      return this.mutexMap.runExclusive(effectiveData.url, () => this.executeInternal(effectiveData, settings));
+      return this.mutexMap.runExclusive(effectiveData.url, async () => {
+        const refused = await this.checkRecordingConsent(effectiveData);
+        if (refused) return refused;
+        return this.executeInternal(effectiveData, settings);
+      });
     }
     return this.mutexMap.runExclusive(effectiveData.url, async () => {
+      const refused = await this.checkRecordingConsent(effectiveData);
+      if (refused) return refused;
       const freshSettings = await this.getSettingsWithCache();
       return this.executeInternal(effectiveData, freshSettings);
     });
@@ -264,6 +315,13 @@ export class RecordingOrchestrator {
    */
   async retryObsidianWrite(job: { title: string; url: string; summary: string; markdown?: string | undefined; tags?: string[] }): Promise<boolean> {
     return this.mutexMap.runExclusive(job.url, async () => {
+      // PBI 2026-11-12-01: same post-mutex consent re-read as record() — a
+      // mid-wait withdrawal refuses the Obsidian re-write (returns false so
+      // the offline queue keeps the job instead of writing without consent).
+      // checkRecordingConsent only reads title/url, so the summary-only job
+      // shape is adapted with an empty content body.
+      const refused = await this.checkRecordingConsent({ title: job.title, url: job.url, content: '' });
+      if (refused) return false;
       try {
         return await this.retryObsidianWriteInner(job);
       } finally {

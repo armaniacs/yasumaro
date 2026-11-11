@@ -36,10 +36,10 @@ Scenario: 同意が維持されれば従来通り録画される
 ```
 
 ## 受け入れ基準
-- [ ] (1) mutex 解放直後に `isConsentGranted` (または同等 seam) を再読し、撤回時は `privacy_consent_required` で拒否する
-- [ ] (2) caller-owned-settings 経路も同一ゲートで守られる (settings 自体に同意がないため別 seam が必須)
-- [ ] (3) `consentToctou.probe.test.ts` を実 execute 経路の回帰ガードへ昇格させる (SCOPE ブロック記載の通り)
-- [ ] (4) 既存の recording/orchestrator 系テストが全件緑を維持する
+- [x] (1) mutex 解放直後に `isConsentGranted` (または同等 seam) を再読し、撤回時は `privacy_consent_required` で拒否する
+- [x] (2) caller-owned-settings 経路も同一ゲートで守られる (settings 自体に同意がないため別 seam が必須)
+- [x] (3) `consentToctou.probe.test.ts` を実 execute 経路の回帰ガードへ昇格させる (preview/retry の2経路も同一ゲートで追加し計5テスト)
+- [x] (4) 既存の recording/orchestrator 系テスト全件緑を維持する
 
 ## テスト戦略
 - 発火デモ probe を回帰テストへ昇格 (stub 配線から実 execute 経路へ)
@@ -50,9 +50,9 @@ Scenario: 同意が維持されれば従来通り録画される
 - S
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テスト化され、すべてパスする
-- [ ] コードレビューが完了している
-- [ ] 受け入れ基準のすべての項目が満たされている
+- [x] 全BDDシナリオが自動テスト化され、すべてパスする
+- [x] コードレビューが完了している (spec 4/4、quality Approved。残存2経路も同一ゲートで拡張済み)
+- [x] 受け入れ基準のすべての項目が満たされている
 
 ## 出典
 - security-audit run-1 NV-1 (`security-audit-yasumaro-run-1/NEEDS-VALIDATION.md`)

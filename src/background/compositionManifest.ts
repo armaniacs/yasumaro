@@ -197,6 +197,11 @@ export const compositionManifest: readonly CompositionEntry[] = [
       return createRecordingOrchestrator({
         getPrivacyInfoWithCache: (url: string) => rc.getPrivacyInfoWithCache(url),
         getSettingsWithCache: () => rc.getSettingsWithCache(),
+        // PBI 2026-11-12-01: the execution-time consent re-read. Consent
+        // lives outside the Settings blob, so the post-mutex settings
+        // re-read cannot observe a mid-wait withdrawal — this seam can.
+        // Same `hasPrivacyConsent` answer the admission pre-stage reads.
+        isConsentGranted: () => hasPrivacyConsent(),
         obsidian: c.resolve<ObsidianClient>('obsidian'),
         aiService: c.resolve<AIService>('aiService'),
         sqliteClient: c.resolve<SqliteClient>('sqliteClient'),
