@@ -7,6 +7,7 @@ import { addLog, flushLogs, isDevelopment } from './core.js';
 import { defaultCriticalSink, type CriticalAlertSink } from './criticalAlertSink.js';
 import { ErrorCode, ErrorCodeValues, LogType, LogTypeValues } from './types.js';
 import { sanitizeRegex } from '../piiSanitizer.js';
+import { maskSensitiveData } from '../sensitiveDataMask.js';
 import { persistableLogText } from './sanitize.js';
 
 // 【SRE/Logging改善 #8】構造化ロギング便利関数
@@ -54,7 +55,11 @@ async function writeStructuredLog<T extends object = Record<string, unknown>>(
             _source: source
         });
     } catch (e) {
-        console.error('Logger: Failed to write structured log', e);
+        // PBI 2026-11-11-03: the logger cannot log to itself here (that would
+        // recurse), so the last resort stays a console line — but it must not
+        // go invisible. The marker carries the lost log's type + message so a
+        // failure is greppable and diagnosable from the console alone.
+        console.error(`[Logger:log-write-failed:${type}] ${message}`, e);
     }
 }
 
@@ -86,6 +91,13 @@ export async function logWarn<T extends object = Record<string, unknown>>(
     source?: string
 ): Promise<void> {
     await writeStructuredLog(LogType.WARN, message, details, errorCode, source);
+
+    // PBI 2026-11-11-03: development console mirroring lives in the seam so
+    // callers (e.g. wasmHybridRuntime) emit a single seam line instead of a
+    // console + addLog double-fire. Production stays persist-only.
+    if (isDevelopment()) {
+        console.warn(message, details);
+    }
 }
 
 /**
@@ -162,7 +174,11 @@ export async function logCritical<T extends object = Record<string, unknown>>(
     // Critical logs are flushed immediately so they are not lost on SW termination.
     await flushLogs(true);
 
-    console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(details, (key, value) => {
+    // PBI 2026-11-11-03: the console line serializes key-masked details, not
+    // the raw object — persisting runs the full PII pipeline inside addLog,
+    // but this line used to print the full raw JSON (secret values included).
+    const consoleDetails = maskSensitiveData(details, 'full');
+    console.error(`[CRITICAL:${errorCode}] ${message} ${JSON.stringify(consoleDetails, (key, value) => {
         if (typeof value === 'string' && value.length > CRITICAL_LOG_MAX_DETAIL_CHARS) {
             return value.slice(0, CRITICAL_LOG_MAX_DETAIL_CHARS) + '...[truncated]';
         }

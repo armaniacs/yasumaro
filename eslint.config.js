@@ -264,6 +264,71 @@ export default [
     },
   },
   {
+    // PBI 2026-11-11-03: reject NEW direct `console.*` log emissions outside
+    // the structured-logger seam (src/utils/logger/** passes by construction
+    // inside the rule — the logger cannot log to itself, so its last-resort
+    // lines live there). Every other pre-existing direct use below carries a
+    // reason (grandfather台帳); new call sites must route through
+    // logInfo/logWarn/logError/logDebug/logCritical from src/utils/logger/api.js.
+    files: ['src/**/*.ts'],
+    ignores: ['src/**/__tests__/**'],
+    languageOptions: {
+      parser: tsParser,
+    },
+    plugins: {
+      local: localPlugin,
+    },
+    rules: {
+      'local/no-direct-console-log': [
+        'error',
+        {
+          allow: [
+            {
+              file: 'src/wasm/textrank/bench.ts',
+              reason:
+                'Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging.',
+            },
+            {
+              file: 'src/wasm/pii-sanitizer/bench.ts',
+              reason:
+                'Grandfathered: CLI bench tooling stdout reporting plus a bench-failure dump, not product logging.',
+            },
+            {
+              file: 'src/wasm/sentence-dedup/bench.ts',
+              reason:
+                'Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging.',
+            },
+            {
+              file: 'src/wasm/tag-cooccur/bench.ts',
+              reason:
+                'Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging.',
+            },
+            {
+              file: 'src/utils/aiSummaryCleaner/helpers.ts',
+              reason:
+                'Grandfathered (PBI 2026-11-11-03): pre-existing querySelectorAllDeep diagnostics; seam routing is a follow-up.',
+            },
+            {
+              file: 'src/utils/ui/settingsUiHelper.ts',
+              reason:
+                'Grandfathered (PBI 2026-11-11-03): pre-existing status-mirror failure diagnostic; seam routing is a follow-up.',
+            },
+            {
+              file: 'src/utils/wildcardToRegex.ts',
+              reason:
+                'Grandfathered (PBI 2026-11-11-03): pre-existing pattern diagnostic; seam routing is a follow-up.',
+            },
+            {
+              file: 'src/utils/sensitiveDataMask.ts',
+              reason:
+                'Last-resort fallback only: the primary path delegates to the logger seam via dynamic import; this line runs solely when the seam module itself cannot load.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // PBI 2026-09-05-21: background → UI 層への上向き依存を禁止。
     // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
     files: ['src/background/**/*.ts'],

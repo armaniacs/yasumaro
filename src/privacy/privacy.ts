@@ -9,6 +9,8 @@ import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
 import { MAX_PRIVACY_POLICY_BYTES } from '../utils/limits.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 export { escapeHtml };
 
@@ -228,6 +230,14 @@ export function initPrivacyPage(): void {
         setHtmlLangAndDir();
         applyI18n();
         translatePageTitle('privacyPolicyTitle');
-        loadPrivacyPolicy().catch(console.error);
+        // PBI 2026-11-11-03: seam-routed (was .catch(console.error)).
+        loadPrivacyPolicy().catch((error: unknown) => {
+            void logError(
+                'Failed to load the privacy policy',
+                { error: error instanceof Error ? error.message : String(error) },
+                ErrorCode.STORAGE_READ_FAILURE,
+                'privacy'
+            );
+        });
     });
 }

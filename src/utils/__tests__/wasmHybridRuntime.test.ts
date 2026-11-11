@@ -6,6 +6,7 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { logWarn } from '../logger/api.js';
 import {
     U32_MAX,
     createHybridProbe,
@@ -16,9 +17,14 @@ import {
     withWasmFallback,
 } from '../wasmHybridRuntime.js';
 
+vi.mock('../logger/api.js', () => ({
+    logWarn: vi.fn().mockResolvedValue(undefined),
+}));
+
 let warnSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+    vi.mocked(logWarn).mockClear();
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
@@ -34,6 +40,7 @@ describe('createHybridProbe', () => {
         expect(await probe.isAvailable()).toBe(true);
         expect(await probe.isAvailable()).toBe(true);
         expect(init).toHaveBeenCalledTimes(1);
+        expect(logWarn).not.toHaveBeenCalled();
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
@@ -53,7 +60,10 @@ describe('createHybridProbe', () => {
         await probe.isAvailable();
         await probe.isAvailable();
         await probe.isAvailable();
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        // PBI 2026-11-11-03: single seam line (was console.warn + addLog).
+        expect(logWarn).toHaveBeenCalledTimes(1);
+        expect(logWarn).toHaveBeenCalledWith('unavailable', { error: 'boom' }, undefined, 'wasmHybridRuntime');
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('a success clears the burst flag so a later burst logs again', async () => {
@@ -62,7 +72,7 @@ describe('createHybridProbe', () => {
         const probe = createHybridProbe(init, 'unavailable');
 
         await probe.isAvailable();
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        expect(logWarn).toHaveBeenCalledTimes(1);
 
         // Success path uses a fresh probe (the failing one can never observe
         // a success once cached-true): emulate the next context lifetime.
@@ -72,7 +82,8 @@ describe('createHybridProbe', () => {
         fail = true;
         const probe3 = createHybridProbe(init, 'unavailable');
         await probe3.isAvailable();
-        expect(warnSpy).toHaveBeenCalledTimes(2);
+        expect(logWarn).toHaveBeenCalledTimes(2);
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('a probe that recovers reports available on the re-probe', async () => {
@@ -148,6 +159,7 @@ describe('withWasmFallback / logWasmFallback', () => {
         const runTs = vi.fn().mockReturnValue('ts');
         await expect(withWasmFallback('failed', async () => 'wasm', runTs)).resolves.toBe('wasm');
         expect(runTs).not.toHaveBeenCalled();
+        expect(logWarn).not.toHaveBeenCalled();
         expect(warnSpy).not.toHaveBeenCalled();
     });
 
@@ -155,8 +167,9 @@ describe('withWasmFallback / logWasmFallback', () => {
         await expect(
             withWasmFallback('failed for input', async () => { throw new Error('wasm boom'); }, () => 'ts')
         ).resolves.toBe('ts');
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy.mock.calls[0]?.[0]).toBe('failed for input');
+        expect(logWarn).toHaveBeenCalledTimes(1);
+        expect(logWarn).toHaveBeenCalledWith('failed for input', { error: 'wasm boom' }, undefined, 'wasmHybridRuntime');
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('a throwing TS fallback propagates (fail-closed)', async () => {
@@ -171,8 +184,8 @@ describe('withWasmFallback / logWasmFallback', () => {
 
     test('logWasmFallback emits the message plus the error detail', () => {
         logWasmFallback('call failed', new Error('detail'));
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy.mock.calls[0]?.[0]).toBe('call failed');
-        expect(warnSpy.mock.calls[0]?.[1]).toBe('detail');
+        expect(logWarn).toHaveBeenCalledTimes(1);
+        expect(logWarn).toHaveBeenCalledWith('call failed', { error: 'detail' }, undefined, 'wasmHybridRuntime');
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 });

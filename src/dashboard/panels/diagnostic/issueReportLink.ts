@@ -12,8 +12,9 @@
  */
 
 import type { DiagnosticsSnapshot } from './DiagnosticsCollector.js';
-import type { LogEntry } from '../../../utils/logger/types.js';
+import { ErrorCode, type LogEntry } from '../../../utils/logger/types.js';
 import { getLogs } from '../../../utils/logger/core.js';
+import { logError } from '../../../utils/logger/api.js';
 import { getMessageOr } from '../../../utils/i18n.js';
 
 const GITHUB_ISSUE_URL = 'https://github.com/armaniacs/yasumaro/issues/new';
@@ -199,9 +200,14 @@ export function createIssueReportModalController(
             // GitHub issue, so error internals stay out of it (see module
             // doc comment). The elapsed time separates a timeout-bound hang
             // (≈ collectionTimeoutMs) from a fast rejection.
-            console.error(
+            // PBI 2026-11-11-03: seam-routed (was console.error). The reason
+            // stays a sanitized one-line detail in the structured log; it
+            // must never reach the outbound body (see module doc comment).
+            void logError(
               `[BugReport] diagnostics collection failed after ${Date.now() - startedAt}ms:`,
-              err,
+              { error: err instanceof Error ? err.message : String(err) },
+              ErrorCode.UNKNOWN_ERROR,
+              'issueReportLink',
             );
             previewContent.value = getMessageOr(
               'diagBugReportError',
