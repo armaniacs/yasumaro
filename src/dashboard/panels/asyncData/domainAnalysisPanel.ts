@@ -60,6 +60,7 @@ import {
 import { addDomainToBlacklist, removeDomainFromBlacklist } from '../../../utils/storage/domainIntelRepository.js';
 import { formatLocalDateString } from '../../../utils/localDate.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
+import { buildStatusDivHtml } from './regionAction.js';
 import { wireProposalRow as wireSharedProposalRow } from '../../proposalRowWiring.js';
 
 function navigateToHistoryWithDomain(domain: string): void {
@@ -192,7 +193,7 @@ export function createDomainAnalysisPanel(): PanelLifecycle {
         <button type="button" class="secondary-btn" data-intel-action="undo" hidden
           data-intel-domain="${escapeHtml(proposal.domain)}">${escapeHtml(t('domainIntel_undoBtn'))}</button>
       </div>
-      <div class="domain-intel-status" role="status" aria-live="polite"></div>
+      ${buildStatusDivHtml('domain-intel-status')}
     </div>`;
   }
 
