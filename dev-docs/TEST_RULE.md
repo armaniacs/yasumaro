@@ -33,7 +33,7 @@ describe('sessionAlarmsManager', () => {
 
 ## 実時間待ちの禁止と代替手段
 
-固定時間の待機は失敗しえないので、回帰を何も検出しない。実行時間を消費するだけで、負荷の高いマシンでは不安定の原因になる。待つのは条件の成立だけにする。方針の根拠と実測値は [ADR: ユニットテストの実行時間を契約として管理する](ADR/2026-09-26-test-suite-execution-time-contract.md)（R1・R2）を参照。テストが落ちたときの手順と完了判定は [AGENTS.md の Async / Timing Failures](../AGENTS.md#async--timing-failures) に従う。
+固定時間の待機は失敗しえないので、回帰を何も検出しない。実行時間を消費するだけで、負荷の高いマシンでは不安定の原因になる。待つのは条件の成立だけにする。方針の根拠と実測値は [ADR: ユニットテストの実行時間を契約として管理する](ADR/2026-09-26-test-suite-execution-time-contract.md)（R1・R2）を参照。テストが落ちたときの手順と完了判定は、以下の「失敗がタイミング関連に見えるとき」「完了判定」のとおり。
 
 ### 待っているものごとの代替手段
 
@@ -73,6 +73,33 @@ expect(mockGenerate).toHaveBeenCalledTimes(1);
 first.resolve('summary');
 await Promise.all([p1, p2]);
 ```
+
+### 失敗がタイミング関連に見えるとき
+
+1. 原因を分類し、根拠を書き留める:
+   - `await` 漏れ（テストが非同期処理の完了を待っていない）
+   - 初期化順序の誤り
+   - 外部プロセスの起動待ち（dev server、offscreen document、worker）
+   - 書き込みが落ち着く前の読み込み
+   - テスト間の状態リーク
+2. 上の「待っているものごとの代替手段」表から一致する手法で直す: 完了を告げる Promise やイベントを待つ、`waitForMock()`（E2E では `expect.poll`）で条件成立を待つ、注入した sleep や `useTimerClock()` で本番タイマーを進める、setup/teardown をテストごとに隔離する。既定設定の `vi.useFakeTimers()` は使わない（`queueMicrotask` まで偽装され、動的 import が止まる）。
+3. 原因を特定できないなら、待ちで回避せずそこで止まる。観測した事実と仮説を報告する。
+
+### シェルでの待ち合わせ
+
+`cmd & sleep N` と書かない。コマンドの完了を待つならフォアグラウンドで実行するか、PID に `wait` する。長時間プロセスの準備完了は、上限付きで準備条件をポーリングする。例: `for i in $(seq 1 120); do curl -sf http://localhost:PORT/ && break; sleep 0.5; done`（macOS に `timeout` コマンドはないため使わない）
+
+ポーリング間隔は 10 秒以下に保つ。規則の本文と根拠は [AGENTS.md の Async / Timing Failures](../AGENTS.md#async--timing-failures) にあり（`src/__tests__/agent-poll-interval.test.ts` が本文の存在を保証する）、ここでは繰り返さない。
+
+### 完了判定
+
+タイミング関連の修正は、1 回の green では完了ではない。retry を無効にした反復実行で、すべての実行が通るまで確認する:
+
+- ユニット: `npx vitest run <file> --repeats=20`
+- E2E: `npx playwright test <file> --repeat-each=10 --retries=0 --workers=4`
+- ESLint ルールテスト: `npx vitest run eslint/__tests__ --repeats=20`（素の `RuleTester` ではなく `createRepeatSafeRuleTester` 経由。理由は[ローカルルールのテスト](#ローカルルールのテスト)）
+
+報告には原因カテゴリ、修正内容、反復コマンドとその結果を含める。
 
 ### 本番コード側の書き方
 
