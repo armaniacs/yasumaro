@@ -4,8 +4,8 @@ import {
   formatLocalDate,
   parseLocalDateStart,
 } from '../../../utils/localDate.js';
-import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
+import { buildSelectOptionsHtml } from './collectionSelectBuilder.js';
 import { SQLITE_HISTORY_IDS } from './sqliteHistoryIds.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
@@ -56,10 +56,14 @@ export function buildSortControlHtml(
   // a matching selected option.
   const safeValue = options.some(o => o.value === currentValue) ? currentValue : sortSelectValue('created_at', 'DESC');
 
+  const selectOptions = buildSelectOptionsHtml(
+    options.map((o) => ({ value: o.value, label: o.label, selected: o.value === safeValue })),
+  );
+
   return `
     <label class="sqlite-sort-label" for="sqlite-sort-select">${t('historySortLabel') || '並び替え'}</label>
     <select id="${SQLITE_HISTORY_IDS.sortSelect}" aria-label="${t('historySortLabel') || '並び替え'}">
-      ${options.map(o => `<option value="${o.value}"${o.value === safeValue ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+      ${selectOptions}
     </select>
   `;
 }
