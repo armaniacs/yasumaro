@@ -14,6 +14,34 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-11 大局的改善 Round 1 holistic-1111（3件） ― ✅ 3件完了・アーカイブ済み
+
+SoC系3件をRICE降順で実装。01 AI要約カスケード (dedupeキーにcontent hash・fallback診断・監査可視化) / 02 View⇔配線循環解消 (共有SSOT+parity) / 03 ログ経路一本化 (seam委譲+console直書きlint)。バッチ境界: 型検査緑・lint エラー0・軽量1133件緑。台帳は [2026-11-11-00-backlog-holistic-1111.md](2026-11-11-00-backlog-holistic-1111.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-11-01-fix-ai-cascade-misrouting.md](../dev-docs/archived/pbi/2026-11-11-01-fix-ai-cascade-misrouting.md) | 🔧非機能追加 | 3.2 | M | ✅ 完了。内容違い分離+同一共有維持・Red4失敗→全緑 |
+| ~~02~~ | [2026-11-11-02-refactor-view-wiring-cycle.md](../dev-docs/archived/pbi/2026-11-11-02-refactor-view-wiring-cycle.md) | 🔧非機能追加 | 3.0 | S | ✅ 完了。共有SSOT・循環ゼロ・832件緑 |
+| ~~03~~ | [2026-11-11-03-refactor-log-path-unify.md](../dev-docs/archived/pbi/2026-11-11-03-refactor-log-path-unify.md) | 🔧非機能追加 | 2.0 | S | ✅ 完了。seam一本化+lint新設・625件緑 |
+
+### 2026-11-11 大局的改善 Round 2 holistic-1111b（3件） ― ✅ 3件完了・アーカイブ済み
+
+DRY系3件。04 selectビルダー集約 / 05 日時seam集約 (UTC表示1箇所は仕様変更のため送り) / 06 region骨格共通化 (04と同一viewに積み重ねて統合)。バッチ境界: 型検査緑・lint エラー0・軽量909件緑。台帳は [2026-11-11-00-backlog-holistic-1111b.md](2026-11-11-00-backlog-holistic-1111b.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~04~~ | [2026-11-11-04-refactor-collection-select-builder.md](../dev-docs/archived/pbi/2026-11-11-04-refactor-collection-select-builder.md) | 🔧非機能追加 | 2.0 | S | ✅ 完了。3箇所委譲・golden無修正緑 (view2件は06に同梱) |
+| ~~05~~ | [2026-11-11-05-refactor-datetime-unify.md](../dev-docs/archived/pbi/2026-11-11-05-refactor-datetime-unify.md) | 🔧非機能追加 | 1.28 | M | ✅ 完了。seam集約・契約維持・426件緑 (UTC 1箇所送り) |
+| ~~06~~ | [2026-11-11-06-refactor-region-action.md](../dev-docs/archived/pbi/2026-11-11-06-refactor-region-action.md) | 🔧非機能追加 | 0.8 | S | ✅ 完了。遷移一元化・856件緑 (tagsPanel不存在のため対象外) |
+
+### 2026-11-11 大局的改善 Round 3 holistic-1111c（1件） ― ✅ 1件完了・アーカイブ済み
+
+Model肥大テーマの段階着手 (ガード注入のみ・全面分割は送り)。台帳は [2026-11-11-00-backlog-holistic-1111c.md](2026-11-11-00-backlog-holistic-1111c.md) を参照。本ラウンド終了直前に最終ゲート (フルテスト+ビルド) を実施。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~07~~ | [2026-11-11-07-refactor-model-guard-inject.md](../dev-docs/archived/pbi/2026-11-11-07-refactor-model-guard-inject.md) | 🔧非機能追加 | 1.2 | S | ✅ 完了。注入化・既定不変・Red2失敗→全緑 |
+
 ### 2026-11-08 既定DoH配線 backlog-1108-18（1件） ― ⛔ 着手条件付き駐留
 
 - [2026-11-08-18-backlog-default-doh.md](2026-11-08-18-backlog-default-doh.md)（⛔ **明示的な着手宣言があるまで実装しない**: PBI 2026-11-08-01でseam+opt-in配線まで実施済み。残りは既定DoH解決器の選定・配線とmanifest `host_permissions` 追加で、権限設計の判断と一体で着手する。M）
