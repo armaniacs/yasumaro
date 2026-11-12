@@ -13,7 +13,6 @@
     ".agents",
     ".claude",
     ".kilo",
-    ".github",
     "bench",
     "coverage",
     "dev-docs",
