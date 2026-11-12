@@ -72,7 +72,7 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 - [x] 採用検証で `npm run test:mutate` がミュータントごとにテストを実行している（2026-11-12部分実行: htmlEscapeでRan 64.27/mutant、domClearで49.29/mutant。killed実績あり）
 - [x] ミューテーションスコアが実効値として変動し、0.00% 固定でないこと（2026-11-12: htmlEscape 84.62%、domClear 100.00%、break 50超過でexit 0）
 - [x] 生残ミュータントの理由分類（2026-11-12: htmlEscapeのNoCoverage 1件=等価、Survived 3件=テスト不足(メッセージ未assert)。domClearは生残0。ランナー不具合なし）
-- [ ] `dev-docs/TEST_RULE.md` の既知制約節（「既知の制約」段落）を実効スコアの実測に合わせて更新している
+- [x] `dev-docs/TEST_RULE.md` の既知制約節（「既知の制約」段落）を実効スコアの実測に合わせて更新している（2026-11-12: 10.1.1解消・部分実測値を記録）
 - [ ] `stryker.config.json` の thresholds と mutate が意図せず変わっていない（実効スコアが判明した後の妥当性再評価は別途行う）
 - [ ] `npm run validate` が通る
 
