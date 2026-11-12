@@ -152,7 +152,7 @@ const SEARCH_ROW = {
 // ---------------------------------------------------------------------------
 
 describe('database file name: one declaration', () => {
-  const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'graphify-out']);
+  const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'graphify-out', '.stryker-tmp']);
 
   function sourceFiles(dir: string, acc: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {

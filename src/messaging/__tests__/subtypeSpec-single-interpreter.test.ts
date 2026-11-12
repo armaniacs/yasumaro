@@ -336,7 +336,7 @@ describe('messaging/validators: subtype spec single interpreter', () => {
     function collectProductionSources(dir: string, acc: string[] = []): string[] {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {
         if (entry.isDirectory()) {
-          if (entry.name === '__tests__' || entry.name === 'node_modules') continue;
+          if (entry.name === '__tests__' || entry.name === 'node_modules' || entry.name === '.stryker-tmp') continue;
           collectProductionSources(join(dir, entry.name), acc);
         } else if (entry.isFile() && entry.name.endsWith('.ts') && !entry.name.endsWith('.d.ts')) {
           acc.push(join(dir, entry.name));

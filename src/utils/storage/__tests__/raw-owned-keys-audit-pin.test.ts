@@ -237,7 +237,7 @@ const DIRECT_STORAGE_CALL_RE =
 /** Repo root, mapped out of a Stryker sandbox copy when present: source-scanning gates must read the real tree. */
 const CWD_ROOT = resolveRepoRoot(process.cwd());
 const PRODUCTION_ROOTS = ['src', 'entrypoints'] as const;
-const SKIP_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.wxt', 'coverage']);
+const SKIP_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.wxt', 'coverage', '.stryker-tmp']);
 
 /** @returns repo-relative POSIX paths of every non-test .ts source under `dir`. */
 function collectProductionFiles(dir: string, acc: string[] = []): string[] {

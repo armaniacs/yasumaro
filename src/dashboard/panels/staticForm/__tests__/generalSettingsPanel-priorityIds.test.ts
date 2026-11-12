@@ -10,16 +10,22 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { repoRootFromUrl } from '../../../../../testDir/repoRoot.js';
 import { createGeneralSettingsPanel } from '../generalSettingsPanel.js';
 import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 
+// Source-scanning reads: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy (instrumented sources would
+// poison the pins).
+const REPO_ROOT = repoRootFromUrl(import.meta.url);
+
 const panelSource = readFileSync(
-  resolve(process.cwd(), 'src/dashboard/panels/staticForm/generalSettingsPanel.ts'),
+  resolve(REPO_ROOT, 'src/dashboard/panels/staticForm/generalSettingsPanel.ts'),
   'utf-8',
 );
 
 const layoutModuleSource = readFileSync(
-  resolve(process.cwd(), 'src/dashboard/panels/staticForm/generalSettingsLayout.ts'),
+  resolve(REPO_ROOT, 'src/dashboard/panels/staticForm/generalSettingsLayout.ts'),
   'utf-8',
 );
 

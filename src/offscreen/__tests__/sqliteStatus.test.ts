@@ -105,7 +105,7 @@ describe('legacy path SSOT drift guard (PBI 2026-09-11-06)', () => {
     const literals = [/=\s*['"]yasumaro-opfs['"]/, /=\s*['"]idb-batch-atomic['"]/];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
-        if (name === '__tests__' || name === 'node_modules' || name === 'dist') continue;
+        if (name === '__tests__' || name === 'node_modules' || name === 'dist' || name === '.stryker-tmp') continue;
         const full = join(dir, name);
         if (statSync(full).isDirectory()) {
           walk(full);

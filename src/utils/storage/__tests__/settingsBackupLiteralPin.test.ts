@@ -4,7 +4,7 @@ import { join, relative, resolve } from 'node:path';
 import { resolveRepoRoot } from '../../../../testDir/repoRoot.js';
 
 const SOURCE_ROOTS = ['src'];
-const SKIPPED_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.kilo', '.claude', 'bench']);
+const SKIPPED_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.kilo', '.claude', 'bench', '.stryker-tmp']);
 
 const projectRoot = resolveRepoRoot(resolve(import.meta.dirname, '../../../..'));
 

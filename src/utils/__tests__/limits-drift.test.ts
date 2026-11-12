@@ -56,7 +56,7 @@ describe('cap registry drift guard', () => {
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
-        if (name === '__tests__' || name === 'node_modules' || name === 'dist' || name === 'testDir') continue;
+        if (name === '__tests__' || name === 'node_modules' || name === 'dist' || name === 'testDir' || name === '.stryker-tmp') continue;
         const full = join(dir, name);
         if (statSync(full).isDirectory()) {
           walk(full);

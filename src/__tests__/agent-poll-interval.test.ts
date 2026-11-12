@@ -68,6 +68,7 @@ const SKIP_DIRS = new Set([
   'test-results',
   'playwright-report',
   'testDir/test-results',
+  '.stryker-tmp',
 ]);
 
 const TEXT_EXTENSIONS = new Set([

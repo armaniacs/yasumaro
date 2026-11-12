@@ -16,10 +16,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { repoRootFromUrl } from '../../../../../testDir/repoRoot.js';
 import { STATIC_FORM_PANELS } from '../staticPanels.js';
 
+// See generalSettingsPanel-priorityIds.test.ts: read the real repo tree even
+// inside a Stryker sandbox copy.
 const html = readFileSync(
-  resolve(process.cwd(), 'entrypoints/options/index.html'),
+  resolve(repoRootFromUrl(import.meta.url), 'entrypoints/options/index.html'),
   'utf-8',
 );
 
