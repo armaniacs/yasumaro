@@ -3,6 +3,7 @@
   "testRunner": "vitest",
   "reporters": ["html", "clear-text", "progress"],
   "coverageAnalysis": "all",
+  "concurrency": 4,
   "ignorePatterns": [
     ".agents",
     ".claude",
