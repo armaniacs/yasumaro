@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import { cleansingFlagProp, DEFAULT_CLEANSING_CONFIG } from '../cleansingConfig.js';
 import { CLEANSING_RULES } from '../aiSummaryCleaner/rules.js';
 import type { RuleKey } from '../aiSummaryCleaner/types.js';
@@ -76,7 +77,10 @@ describe('cleansingFlagProp golden pin (NN07)', () => {
 });
 
 describe('cleansingFlagProp is the single runtime derivation (NN07)', () => {
-  const readSource = (rel: string): string => readFileSync(join(process.cwd(), rel), 'utf8');
+  // Source-scanning gate: always read the real repo tree, even when this
+  // test itself runs from inside a Stryker sandbox copy.
+  const repoRoot = repoRootFromUrl(import.meta.url);
+  const readSource = (rel: string): string => readFileSync(join(repoRoot, rel), 'utf8');
 
   it('call sites call the shared helper instead of inlining the derivation', () => {
     const optionBuilder = readSource('src/utils/contentExtractor/optionBuilder.ts');
