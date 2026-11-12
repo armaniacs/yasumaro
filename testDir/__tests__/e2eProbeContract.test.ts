@@ -118,7 +118,9 @@ describe('e2eProbe window-global ownership (double-owner pin)', () => {
 describe('markE2eVisitReported dead export (legacy-path pin)', () => {
     it('has no callers anywhere in src/ or testDir/ outside its defining module', () => {
         const definingModule = join(srcRoot, 'utils', 'e2eTestState.ts');
-        const selfFile = fileURLToPath(import.meta.url);
+        // Repo-relative identity: under a Stryker sandbox the running file
+        // lives in the sandbox copy while scanned files are real-tree paths.
+        const selfFile = join(repoRoot, 'testDir/__tests__/e2eProbeContract.test.ts');
         const strayReferences: string[] = [];
         for (const root of [srcRoot, join(repoRoot, 'testDir')]) {
             const stack = [root];
