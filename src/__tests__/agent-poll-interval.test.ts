@@ -70,6 +70,10 @@ const SKIP_DIRS = new Set([
   'playwright-report',
   'testDir/test-results',
   '.stryker-tmp',
+  // Generated Stryker reports embed mutated source text (including the rule's
+  // own "--interval 30" example), so scanning them reports the rule as a
+  // violation of itself.
+  'reports',
 ]);
 
 const TEXT_EXTENSIONS = new Set([
