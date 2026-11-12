@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import { drainMacrotask, useTimerClock, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
@@ -1298,9 +1298,11 @@ describe('attachPrivacyActionListeners — addDomain branches', () => {
   });
 
   it('routes every mainStatus render through the channel, with no bare class write left', () => {
-    const dir = dirname(fileURLToPath(import.meta.url));
-    const source = readFileSync(join(dir, '..', 'statusPanel.ts'), 'utf-8');
-    const trustSource = readFileSync(join(dir, '..', 'trustPanel.ts'), 'utf-8');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const dir = join(repoRootFromUrl(import.meta.url), 'src/popup');
+    const source = readFileSync(join(dir, 'statusPanel.ts'), 'utf-8');
+    const trustSource = readFileSync(join(dir, 'trustPanel.ts'), 'utf-8');
     // The whitelist buttons' report sites now live in the single
     // wireWhitelistButton helper: 1 success + 1 validation-failure render.
     // The shared handler-failure report the async click handlers catch into
