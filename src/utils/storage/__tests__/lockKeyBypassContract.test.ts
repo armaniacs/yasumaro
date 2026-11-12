@@ -17,6 +17,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
+import { resolveRepoRoot } from '../../../../testDir/repoRoot.js';
 
 /**
  * The object lock keys under `withLock`/`withOptimisticLock`, plus the constant
@@ -45,7 +46,7 @@ const LOCK_KEYS: ReadonlyArray<{ key: string; aliases: readonly string[] }> = [
 const SOURCE_ROOTS = ['src', 'entrypoints'];
 const SKIPPED_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.kilo', '.claude', 'bench']);
 
-const projectRoot = resolve(import.meta.dirname, '../../../..');
+const projectRoot = resolveRepoRoot(resolve(import.meta.dirname, '../../../..'));
 
 function collectSourceFiles(dir: string, out: string[]): void {
   for (const name of readdirSync(dir)) {

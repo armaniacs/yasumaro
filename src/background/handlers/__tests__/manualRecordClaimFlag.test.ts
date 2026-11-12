@@ -8,8 +8,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 import {
   createManualRecordHandler,
   createSaveRecordHandler,
@@ -100,8 +100,10 @@ describe('manual/preview handler claim ownership (PBI 2026-11-07-19)', () => {
   });
 
   it('recordingHandlers.ts no longer calls the claim store directly', () => {
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
     const source = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'recordingHandlers.ts'),
+      join(repoRootFromUrl(import.meta.url), 'src/background/handlers/recordingHandlers.ts'),
       'utf-8',
     );
     for (const banned of ['claimRecoveryOwner', 'releaseRecoveryOwner', 'getPendingPages']) {
