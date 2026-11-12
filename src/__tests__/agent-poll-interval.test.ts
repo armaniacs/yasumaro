@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, extname } from 'node:path';
+import { resolveRepoRoot } from '../../testDir/repoRoot.js';
 
 const CAP_SECONDS = 10;
 
@@ -151,7 +152,9 @@ describe('agent polling interval rule', () => {
   });
 
   it('keeps every interval flag in the repository at or below the cap', () => {
-    const files = collectFiles(process.cwd());
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const files = collectFiles(resolveRepoRoot(process.cwd()));
     const violations: string[] = [];
 
     for (const file of files) {
@@ -183,7 +186,7 @@ describe('agent polling interval rule', () => {
   });
 
   it('scans a non-trivial number of files, so a broken collector cannot pass silently', () => {
-    const files = collectFiles(process.cwd());
+    const files = collectFiles(resolveRepoRoot(process.cwd()));
     expect(files.length).toBeGreaterThan(50);
     expect(files.some((f) => f.endsWith('ci.yml'))).toBe(true);
   });

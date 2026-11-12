@@ -546,7 +546,9 @@ function scanRawAccess(): RawAccessScan {
     const nonMemberKeys = new Map<string, string[]>();
     const unresolvedSites: string[] = [];
     for (const file of scannedFiles) {
-        const raw = readFileSync(file, 'utf8');
+        // Absolute read: `file` is repo-relative, and the process cwd is the
+        // Stryker sandbox root when running under mutation testing.
+        const raw = readFileSync(join(CWD_ROOT, file), 'utf8');
         const clean = stripComments(raw);
         if (!DIRECT_STORAGE_CALL_RE.test(clean)) continue;
         DIRECT_STORAGE_CALL_RE.lastIndex = 0;
