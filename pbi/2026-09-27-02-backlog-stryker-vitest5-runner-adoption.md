@@ -143,7 +143,7 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 
 ## Definition of Done
 
-- [ ] 依存更新後、`npm run test:mutate` が実効スコアを出す（出力の記録あり）
+- [ ] 依存更新後、`npm run test:mutate` が実効スコアを出す（2026-11-12裁定: 単一75k件ジョブは中断必至のため、src配下8分割の合算 killed合計/total合計 をもって達成とする。thresholds不変のため合否判定は同一）
 - [ ] 生残ミュータントの理由分類が記録され、テスト不足分の後続タスクが切り出されている
 - [ ] `dev-docs/TEST_RULE.md` が更新されている
 - [ ] `npm run validate` が通る
