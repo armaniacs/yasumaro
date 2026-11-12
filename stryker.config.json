@@ -4,6 +4,7 @@
   "reporters": ["html", "clear-text", "progress"],
   "coverageAnalysis": "all",
   "concurrency": 4,
+  "dryRunTimeoutMinutes": 15,
   "ignorePatterns": [
     ".agents",
     ".claude",
