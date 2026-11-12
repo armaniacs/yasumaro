@@ -29,7 +29,6 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import {
   dashboardSqliteValidator,
   evaluateSubtypeSpec,
@@ -39,6 +38,7 @@ import {
 } from '../validators.js';
 import type { DashboardArchiveSubtype } from '../archiveWireTable.js';
 import { cutoffMsFromLocalDate } from '../../utils/archiveGuards.js';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import {
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   MAX_ARCHIVE_QUERY_LIMIT,
@@ -329,7 +329,9 @@ describe('messaging/validators: subtype spec single interpreter', () => {
   });
 
   describe('structure pin: one interpretation path', () => {
-    const SRC_DIR = fileURLToPath(new URL('../../', import.meta.url));
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const SRC_DIR = join(repoRootFromUrl(import.meta.url), 'src');
 
     function collectProductionSources(dir: string, acc: string[] = []): string[] {
       for (const entry of readdirSync(dir, { withFileTypes: true })) {

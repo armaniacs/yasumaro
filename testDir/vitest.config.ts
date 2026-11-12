@@ -33,6 +33,7 @@ const exclude = [
   '**/.kilo/**',
   '**/.claude/**',
   '**/.worktrees/**', // Worktree checkouts must not be collected as test files.
+  '**/.stryker-tmp/**', // Aborted stryker runs must not be collected as test files.
   '**/video-*/**',
   '**/.vulnhunter-fix/**',
   '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',

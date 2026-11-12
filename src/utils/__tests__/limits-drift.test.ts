@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import { QUERY_CAPS } from '../limits.js';
 import { MAX_QUERY_ROWS } from '../computeLimits.js';
 
@@ -49,7 +50,9 @@ const EXEMPT = new Set([
 
 describe('cap registry drift guard', () => {
   it('cap values are assigned only in limits.ts (exempt list aside)', async () => {
-    const root = join(__dirname, '..', '..', '..');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = repoRootFromUrl(import.meta.url);
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
@@ -74,7 +77,7 @@ describe('cap registry drift guard', () => {
   });
 
   it('limits.ts actually defines every absorbed cap', async () => {
-    const limits = readFileSync(join(__dirname, '..', '..', '..', 'src', 'utils', 'limits.ts'), 'utf-8');
+    const limits = readFileSync(join(repoRootFromUrl(import.meta.url), 'src', 'utils', 'limits.ts'), 'utf-8');
     for (const name of [
       'MAX_QUERY_LIMIT', 'MAX_LOG_FORWARD_MESSAGE_CHARS', 'MAX_LOG_FORWARD_DETAILS_KEYS',
       'MAX_LOG_FORWARD_SERIALIZED_CHARS', 'MAX_RECORD_SIZE', 'MAX_PII_INPUT_SIZE',
