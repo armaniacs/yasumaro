@@ -46,8 +46,8 @@ Scenario: 関連 PBI と同一領域を競合して変更しない
 ## 受け入れ基準
 
 - [ ] 専用ブランチを作成し、関連 PBI との統合順序を確定し、着手トリガー発行後に限り着手している。
-- [ ] 着手時に `src/utils/` 直下 96 ファイル、production サブディレクトリ 10 個、`__tests__` 1 個、utils 配下 production TS 合計 196 ファイルを baseline として確認している。
-- [ ] 96 ファイルそれぞれについて、責務グループ、移動先、`@layer` を対応付けしている。
+- [x] 着手時に `src/utils/` 直下 96 ファイル、production サブディレクトリ 10 個、`__tests__` 1 個、utils 配下 production TS 合計 196 ファイルを baseline として確認している。
+- [x] 96 ファイルそれぞれについて、責務グループ、移動先、`@layer` を対応付けしている。
 - [ ] 責務グループごとに物理移動と `@layer` 注釈を同じ段階で適用している。
 - [ ] 各段階で import linter と `npm run validate` が正常になっている。
 - [ ] 更新対象の ESM import は `.js` 拡張子を維持している。
