@@ -5,6 +5,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Mock } from 'vitest';
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 const mockSettingsGetAll = vi.hoisted(() => vi.fn().mockResolvedValue({}));
@@ -1763,7 +1765,9 @@ describe('service-worker handlers', () => {
             // reappear. Importing the deleted module would also fail this
             // file outright; this keeps the pin visible even if someone
             // recreates the module.
-            const src = await readFile(new URL('../service-worker.ts', import.meta.url), 'utf8');
+            // Source-scanning gate: always read the real repo tree, even when
+            // this test itself runs from inside a Stryker sandbox copy.
+            const src = await readFile(join(repoRootFromUrl(import.meta.url), 'src/background/service-worker.ts'), 'utf8');
             expect(src).not.toContain('alarmRegistryRefs');
         });
     });
@@ -1895,7 +1899,9 @@ describe('service-worker handlers', () => {
         it('guards the alarm listener like every other listener in the block', async () => {
             // Structural pin: the alarm listener was the only unguarded one in
             // the top-level block (PBI 03).
-            const src = await readFile(new URL('../service-worker.ts', import.meta.url), 'utf8');
+            // Source-scanning gate: always read the real repo tree, even when
+            // this test itself runs from inside a Stryker sandbox copy.
+            const src = await readFile(join(repoRootFromUrl(import.meta.url), 'src/background/service-worker.ts'), 'utf8');
             expect(src).toContain("chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'))");
         });
     });
