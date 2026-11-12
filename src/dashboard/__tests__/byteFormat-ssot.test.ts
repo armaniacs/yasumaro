@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
 /**
  * Byte-format SSOT guard (PBI 2026-09-25-07).
@@ -24,7 +25,9 @@ const DEFINITION_PATTERNS = [
 
 describe('byte-format SSOT guard (PBI 2026-09-25-07)', () => {
   it('only src/dashboard/byteFormat.ts defines the byte formatter', () => {
-    const root = join(__dirname, '..', '..', '..');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = repoRootFromUrl(import.meta.url);
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
@@ -49,7 +52,9 @@ describe('byte-format SSOT guard (PBI 2026-09-25-07)', () => {
   });
 
   it('the SSOT holds exactly one definition and stays a pure module', () => {
-    const root = join(__dirname, '..', '..', '..');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = repoRootFromUrl(import.meta.url);
     const source = readFileSync(join(root, ...SSOT.split('/')), 'utf-8');
 
     expect(DEFINITION_PATTERNS.filter((p) => p.test(source))).toHaveLength(1);

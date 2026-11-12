@@ -17,10 +17,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { repoRootFromUrl } from '../repoRoot.js';
 import { E2E_PROBE_ENABLE_KEY, E2E_PROBE_STATE_KEY } from '../../src/utils/e2eTestState.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..');
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const repoRoot = repoRootFromUrl(import.meta.url);
 const srcRoot = join(repoRoot, 'src');
 const fixtureText = readFileSync(join(here, '..', 'e2e', 'fixtures', 'e2eProbe.ts'), 'utf-8');
 

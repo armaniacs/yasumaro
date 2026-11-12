@@ -31,10 +31,15 @@
 
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync, type Stats } from 'node:fs';
-import { join, extname, sep } from 'node:path';
+import { join, extname, relative, sep } from 'node:path';
+import { repoRootFromUrl } from '../../testDir/repoRoot.js';
 
 /** The two layers that sit below the UI and must never reach up into it. */
 const LAYER_DIRS = ['src/wasm', 'src/offscreen'] as const;
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy (instrumented sources would
+// poison the pins).
+const REPO_ROOT = repoRootFromUrl(import.meta.url);
 
 /**
  * Static imports (plain and `import type`) and re-exports. Detection keys on
@@ -69,7 +74,9 @@ function collectFiles(dir: string, acc: string[] = []): string[] {
       collectFiles(full, acc);
     } else if (st.isFile() && extname(entry) === '.ts') {
       // POSIX separators so reported paths read the same on every platform.
-      acc.push(full.split(sep).join('/'));
+      // Repo-relative so the pin is independent of the checkout location
+      // (and of a Stryker sandbox copy).
+      acc.push(relative(REPO_ROOT, full).split(sep).join('/'));
     }
   }
   return acc;
@@ -92,14 +99,16 @@ function scanLines(lines: string[], file: string): string[] {
 function upwardImportsIn(dir: string): string[] {
   const violations: string[] = [];
   for (const file of collectFiles(dir)) {
-    violations.push(...scanLines(readFileSync(file, 'utf-8').split('\n'), file));
+    // `file` is repo-relative; resolve against the real tree so a Stryker
+    // sandbox copy never gets scanned.
+    violations.push(...scanLines(readFileSync(join(REPO_ROOT, file), 'utf-8').split('\n'), file));
   }
   return violations;
 }
 
 describe('tagcooccurrence layer direction', () => {
   it('scans every .ts source under the two lower layers, so a broken collector cannot pass silently', () => {
-    const files = LAYER_DIRS.flatMap((dir) => collectFiles(dir));
+    const files = LAYER_DIRS.flatMap((dir) => collectFiles(join(REPO_ROOT, dir)));
     expect(files.length).toBeGreaterThan(100);
     // The tag-cooccur harnesses are the files this pin exists for: bench.ts
     // held the offending bench import, index.ts the type import, and the
@@ -111,7 +120,7 @@ describe('tagcooccurrence layer direction', () => {
   });
 
   it('keeps wasm/ and offscreen/ free of imports into dashboard/', () => {
-    const violations = LAYER_DIRS.flatMap((dir) => upwardImportsIn(dir));
+    const violations = LAYER_DIRS.flatMap((dir) => upwardImportsIn(join(REPO_ROOT, dir)));
     expect(
       violations,
       `upward imports from wasm/offscreen into dashboard/ — move the shared code to src/utils/ instead:\n${violations.join('\n')}`,

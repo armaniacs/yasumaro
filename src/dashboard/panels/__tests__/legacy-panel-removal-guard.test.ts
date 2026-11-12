@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 
 /**
  * Legacy panel-history removal guard (PBI 2026-09-11-09).
@@ -30,7 +31,9 @@ const FORBIDDEN = [
 
 describe('legacy panel-history removal guard (PBI 2026-09-11-09)', () => {
   it('removed panel identifiers do not reappear in src/ or testDir/', () => {
-    const root = join(__dirname, '..', '..', '..', '..');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = repoRootFromUrl(import.meta.url);
     const offenders: string[] = [];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
@@ -60,7 +63,7 @@ describe('legacy panel-history removal guard (PBI 2026-09-11-09)', () => {
 
   it('the removed modules are gone from disk', async () => {
     const { existsSync } = await import('node:fs');
-    const root = join(__dirname, '..', '..', '..');
+    const root = repoRootFromUrl(import.meta.url);
     for (const rel of [
       'src/dashboard/panels/asyncData/historyPanel.ts',
       'src/dashboard/historyState.ts',

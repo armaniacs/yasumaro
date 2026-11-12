@@ -10,9 +10,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'fs';
 import { join } from 'path';
+import { repoRootFromUrl } from '../../testDir/repoRoot.js';
 import { createMessageRouter } from '../background/handlers/MessageRouter.js';
 import type { MessageRouterDeps } from '../background/handlers/MessageRouter.js';
 import { UPDATABLE_FIELDS } from '../offscreen/schema.js';
+
+// Source-scanning gates below always read the real repo tree, even when
+// this file itself runs from inside a Stryker sandbox copy (instrumented
+// sources would poison the pins).
+const REPO_ROOT = repoRootFromUrl(import.meta.url);
 
 // Fields ObsidianSyncService writes back after a successful sync; the update
 // whitelist must keep accepting them or sync bookkeeping silently degrades.
@@ -148,7 +154,7 @@ describe('SQLite Security & Data Integrity', () => {
 
     it('should NOT have subtype-specific sender checks (unified guard)', () => {
       const handlerSource = readFileSync(
-        join(process.cwd(), 'src/background/handlers/dashboardSqliteHandlers.ts'),
+        join(REPO_ROOT, 'src/background/handlers/dashboardSqliteHandlers.ts'),
         'utf8',
       );
       expect(handlerSource.includes('sender.tab')).toBe(false);
@@ -159,7 +165,7 @@ describe('SQLite Security & Data Integrity', () => {
     let schemaSource: string;
 
     beforeEach(() => {
-      const filePath = join(process.cwd(), 'src/offscreen/schema.ts');
+      const filePath = join(REPO_ROOT, 'src/offscreen/schema.ts');
       schemaSource = readFileSync(filePath, 'utf8');
     });
 
@@ -180,7 +186,7 @@ describe('SQLite Security & Data Integrity', () => {
     });
 
     it('should include obsidian_synced in BrowsingLogRecord type', () => {
-      const typesPath = join(process.cwd(), 'src/utils/sqlite-types.ts');
+      const typesPath = join(REPO_ROOT, 'src/utils/sqlite-types.ts');
       const typesSource = readFileSync(typesPath, 'utf8');
 
       const hasField = /obsidian_synced\s*\?\s*:\s*number/.test(typesSource);
@@ -194,8 +200,8 @@ describe('SQLite Security & Data Integrity', () => {
     beforeEach(() => {
       // Whitelist moved from offscreen.ts to sqliteMessageHandlers.ts (PBI-07 registry extraction);
       // check both locations so the contract survives the refactor.
-      const offscreenPath = join(process.cwd(), 'src/offscreen/offscreen.ts');
-      const handlersPath = join(process.cwd(), 'src/offscreen/sqliteMessageHandlers.ts');
+      const offscreenPath = join(REPO_ROOT, 'src/offscreen/offscreen.ts');
+      const handlersPath = join(REPO_ROOT, 'src/offscreen/sqliteMessageHandlers.ts');
       const offSrc = readFileSync(offscreenPath, 'utf8');
       const hSrc = (() => {
         try {
