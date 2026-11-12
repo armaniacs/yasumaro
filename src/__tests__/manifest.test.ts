@@ -40,6 +40,7 @@ import {
   buildLocalHostPermissions,
 } from '../utils/cspDomains.js';
 import type { UserManifest } from 'wxt';
+import { resolveRepoRoot } from '../../testDir/repoRoot.js';
 // Intentional deviation from the ".js extensions on all imports" convention
 // (AGENTS.md): wxt.config.ts is the root build config, not a compiled module —
 // no .js form exists for it, and vitest (vite) resolves the .ts directly.
@@ -296,9 +297,13 @@ function listTsFiles(dir: string): string[] {
 function collectPageContextGetURLTargets(): string[] {
   const getURLPattern = /getURL\(\s*(['"`])((?:(?!\1).)*)\1\s*\)/g;
   const targets = new Set<string>();
+  // Source-scanning gate: always read the real repo tree, even when this
+  // test itself runs from inside a Stryker sandbox copy (instrumentation
+  // rewrites call arguments, so the sandbox copy has no literal getURL('...')).
+  const root = resolveRepoRoot(process.cwd());
   const files = [
-    ...PAGE_CONTEXT_SOURCE_DIRS.flatMap((dir) => listTsFiles(join(process.cwd(), dir))),
-    ...PAGE_CONTEXT_SOURCE_FILES.map((file) => join(process.cwd(), file)),
+    ...PAGE_CONTEXT_SOURCE_DIRS.flatMap((dir) => listTsFiles(join(root, dir))),
+    ...PAGE_CONTEXT_SOURCE_FILES.map((file) => join(root, file)),
   ];
   for (const file of files) {
     const content = readFileSync(file, 'utf8');
@@ -322,13 +327,14 @@ function collectPageContextGetURLTargets(): string[] {
  * fails the stale check as a false positive.
  */
 function warResourceResolves(resource: string): boolean {
+  const root = resolveRepoRoot(process.cwd());
   if (resource.endsWith('.js')) {
     // Built from entrypoints/<name>.ts — WXT emits <name>.js for a content
     // script entrypoint.
-    return existsSync(join(process.cwd(), 'entrypoints', resource.replace(/\.js$/, '.ts')));
+    return existsSync(join(root, 'entrypoints', resource.replace(/\.js$/, '.ts')));
   }
   // Everything else ships from public/.
-  return existsSync(join(process.cwd(), 'public', resource));
+  return existsSync(join(root, 'public', resource));
 }
 
 /* ------------------------------------------------------------------- specs */
