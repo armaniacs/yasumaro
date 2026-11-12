@@ -30,11 +30,21 @@ describe('escapeHtml', () => {
         // fails loud so the misuse is diagnosable. Existing string callers
         // are unaffected (proven by type-check: the signature no longer
         // accepts non-strings without a cast).
-        expect(() => escapeHtml(123 as any)).toThrow(TypeError);
-        expect(() => escapeHtml({} as any)).toThrow(TypeError);
-        expect(() => escapeHtml([] as any)).toThrow(TypeError);
-        expect(() => escapeHtml(true as any)).toThrow(TypeError);
-        expect(() => escapeHtml(Symbol('x') as any)).toThrow(TypeError);
+        expect(() => escapeHtml(123 as any)).toThrow(
+            new TypeError('escapeHtml expects a string, null, or undefined (got number)'),
+        );
+        expect(() => escapeHtml({} as any)).toThrow(
+            new TypeError('escapeHtml expects a string, null, or undefined (got object)'),
+        );
+        expect(() => escapeHtml([] as any)).toThrow(
+            new TypeError('escapeHtml expects a string, null, or undefined (got object)'),
+        );
+        expect(() => escapeHtml(true as any)).toThrow(
+            new TypeError('escapeHtml expects a string, null, or undefined (got boolean)'),
+        );
+        expect(() => escapeHtml(Symbol('x') as any)).toThrow(
+            new TypeError('escapeHtml expects a string, null, or undefined (got symbol)'),
+        );
     });
     test('verifies replacements are always mapped although the nullish coalescing fallback is unreachable', () => {
         // 全ての正規表現マッチ文字がマップに存在するため、フォールバック '' は到達不能。

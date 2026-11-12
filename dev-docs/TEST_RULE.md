@@ -202,7 +202,7 @@ npm run test:mutate
 
 設定は `stryker.config.json` にあり、`mutate` 対象は `src/**/*.ts`（テストファイルは除外）。`thresholds.break`（50%）を下回るとビルドが失敗する。CIへの統合は各ワークフローの設定に従う。
 
-> **既知の制約**: `@stryker-mutator/vitest-runner` 10.0.0 は Vitest 5 に未対応で、ミュータントごとのテスト実行が 0 件のまま完走し、スコアが常に 0.00% になる。ランナーが Vitest 5 対応版（core と runner を同梱の新バージョン）をリリースされるまで `npm run test:mutate` のスコアは信頼できない。 代わりに「ローカル検証手順」の Red/Green 確認でテストの実効性を担保する。
+> **既知の制約(解消済み)**: `@stryker-mutator/vitest-runner` 10.0.0 は Vitest 5 に未対応で、ミュータントごとのテスト実行が 0 件のまま完走し、スコアが常に 0.00% になった。10.1.1 で Vitest 5 対応が回復し、部分実行で実効スコアを確認済みのため、この制約は解消した。部分実行の実測は `src/utils/htmlEscape.ts` が 84.62%、`src/utils/domClear.ts` が 100.00%、Ran が 64.27/49.29 per mutant。全量実行のスコアは未測定のため、必要に応じて再測定する。
 
 対象範囲を絞って実行する場合は Stryker CLI の `--mutate` オプションで対象ファイルを指定する。
 
