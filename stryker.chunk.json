@@ -6,7 +6,7 @@
     "clear-text",
     "progress"
   ],
-  "coverageAnalysis": "all",
+  "coverageAnalysis": "perTest",
   "concurrency": 4,
   "dryRunTimeoutMinutes": 15,
   "ignorePatterns": [
