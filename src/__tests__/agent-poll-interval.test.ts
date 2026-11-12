@@ -110,18 +110,21 @@ function collectFiles(dir: string, acc: string[] = []): string[] {
 describe('agent polling interval rule', () => {
   it('keeps the rule of record in a tracked file', () => {
     // A rule that only lives in a gitignored dotfile does not exist for CI or
-    // for the next person who clones the repository.
-    const tracked = execFileSync('git', ['ls-files', RULE_OF_RECORD], {
+    // for the next person who clones the repository. Run git against the real
+    // repo: a Stryker sandbox copy has no .git of its own.
+    const tracked = execFileSync('git', ['-C', resolveRepoRoot(process.cwd()), 'ls-files', RULE_OF_RECORD], {
       encoding: 'utf-8',
     }).trim();
     expect(tracked, `${RULE_OF_RECORD} must be tracked`).toBe(RULE_OF_RECORD);
   });
 
   it('does not let a local mirror become the rule of record', () => {
+    const repoRoot = resolveRepoRoot(process.cwd());
     for (const mirror of LOCAL_MIRRORS) {
-      if (!existsSync(mirror)) continue;
-      // `git check-ignore` exits 0 when the path is ignored.
-      const { status } = spawnSync('git', ['check-ignore', '-q', mirror]);
+      if (!existsSync(join(repoRoot, mirror))) continue;
+      // `git check-ignore` exits 0 when the path is ignored. Run git against
+      // the real repo: a Stryker sandbox copy has no .git of its own.
+      const { status } = spawnSync('git', ['-C', repoRoot, 'check-ignore', '-q', mirror]);
       expect(
         status,
         `${mirror} exists but is not gitignored — either track it and make it a rule file, or delete it`,
