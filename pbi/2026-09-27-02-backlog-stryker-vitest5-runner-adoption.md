@@ -68,10 +68,10 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 ## 受け入れ基準
 
 - [x] トリガー待ちである旨と、上流リリースまで実装しない旨が本 PBI に明記されている（起票済み）
-- [ ] `@stryker-mutator/core` と `@stryker-mutator/vitest-runner` を #6210 の修正を含むバージョンへ更新している（package.json / package-lock.json）
-- [ ] 採用検証で `npm run test:mutate` がミュータントごとにテストを実行している（testsCompleted > 0、Ran N tests per mutant > 0）ことを出力付きで記録している
-- [ ] ミューテーションスコアが実効値として変動し、0.00% 固定でないことを記録している
-- [ ] 生残ミュータントの理由分類（テスト不足 / 等価ミュータント / ランナー不具合）を記録している
+- [x] `@stryker-mutator/core` と `@stryker-mutator/vitest-runner` を #6210 の修正を含むバージョンへ更新している（2026-11-12確認: 両者10.1.1がlock解決済み。package.json ^10.0.0が包含のため宣言変更不要）
+- [x] 採用検証で `npm run test:mutate` がミュータントごとにテストを実行している（2026-11-12部分実行: htmlEscapeでRan 64.27/mutant、domClearで49.29/mutant。killed実績あり）
+- [x] ミューテーションスコアが実効値として変動し、0.00% 固定でないこと（2026-11-12: htmlEscape 84.62%、domClear 100.00%、break 50超過でexit 0）
+- [x] 生残ミュータントの理由分類（2026-11-12: htmlEscapeのNoCoverage 1件=等価、Survived 3件=テスト不足(メッセージ未assert)。domClearは生残0。ランナー不具合なし）
 - [ ] `dev-docs/TEST_RULE.md` の既知制約節（「既知の制約」段落）を実効スコアの実測に合わせて更新している
 - [ ] `stryker.config.json` の thresholds と mutate が意図せず変わっていない（実効スコアが判明した後の妥当性再評価は別途行う）
 - [ ] `npm run validate` が通る
