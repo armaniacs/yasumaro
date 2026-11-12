@@ -120,6 +120,17 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 - 全量ミューテーション実行は長時間を要する（テスト 14,000+）。CI への組込みは既存の実行時間契約（dev-docs/ADR test-suite-execution-time-contract）との整合を確認してからにする
 - `npm run test:mutate` を実行する前に `npm run build` の要否を TEST_RULE.md の現行記述と突き合わせる
 
+## 実行方式の裁定 (2026-11-12/13)
+
+全量単一実行は 75,296 ミュータント・約0.4秒/件で10時間超となり、端末スリープで中断して完走しない。3立場 (実行者/保守/意思決定) のなぜなぜ分析30問ずつの結論に従い、9分割の合算でスコアを確定する。
+
+- ランナー: `node scripts/mutation-chunks.mjs` (`stryker.chunk.json` を使用)。チャンク別レポートを `reports/mutation/chunks/<key>.json` に保存し、完了済みチャンクはスキップして再開する。`--aggregate` で killed合計/tested合計 を出す
+- チャンク設定の意図: `coverageAnalysis: perTest` と `ignoreStatic: true`。`all` では静的ミュータント199件が実行時間の98%を占め完走不能だったため除外する (全ミュータントの6%、主にモジュール直下の定数)。この除外はスコアの意味を変えるため、合算値は「静的ミュータントを除いた実効スコア」として記録する
+- thresholds は不変 (high 80 / low 60 / break 50) のため、合算値でも合否判定は全量実行と同一
+- 実測: `src/popup/domUtils.ts` の138件で6分16秒 (dry-run 約5分 + 0.43秒/件)。`src/offscreen/**` は5,297件で約50分
+- dry-run の前提: ソース走査系テストは `testDir/repoRoot.ts` で実リポジトリを読む。`stryker.chunk.json` では `.github` を sandbox へ複製し `vitest.related` を無効化する
+
+
 ## 技術的考慮事項
 
 - 依存関係: 上流 stryker-mutator/stryker-js のリリース（外部依存）。本リポジトリ内の他タスクとの依存なし
