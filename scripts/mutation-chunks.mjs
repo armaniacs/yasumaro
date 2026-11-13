@@ -86,20 +86,36 @@ function runChunk(chunk) {
     const mutate = [...chunk.globs, ...EXCLUDES].join(',');
     const finalReport = chunkReportPath(chunk.key);
     console.log(`\n=== chunk ${chunk.key}: ${chunk.globs.join(', ')} ===`);
-    execFileSync(
-        'npx',
-        [
-            'stryker', 'run', CONFIG,
-            '--concurrency', '2',
-            '--mutate', mutate,
-            '--reporters', 'clear-text,progress,json',
-            '--jsonReporter.fileName', finalReport,
-        ],
-        { cwd: REPO_ROOT, stdio: 'inherit', env: { ...process.env, NODE_OPTIONS: '--max-old-space-size=6144' } },
-    );
-    // Stryker writes the report itself; keep the last full report around too.
+    // Two Stryker workers each start a vitest run; without a cap that is 12
+    // fork workers on 8 cores and heavy UI tests cross the 30 s testTimeout
+    // during the dry run. Capping the inner pool keeps the sandbox inside the
+    // machine instead of relaxing any timeout.
+    const env = {
+        ...process.env,
+        NODE_OPTIONS: '--max-old-space-size=6144',
+        VITEST_MAX_WORKERS: '3',
+    };
+    const args = [
+        'stryker', 'run', CONFIG,
+        '--concurrency', '2',
+        '--mutate', mutate,
+        '--reporters', 'clear-text,progress,json',
+    ];
+    // One retry: a dry-run timeout under load is transient, and losing an
+    // hour of a chunk to it does not make the failure more informative.
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+            execFileSync('npx', args, { cwd: REPO_ROOT, stdio: 'inherit', env });
+            break;
+        } catch (error) {
+            if (attempt === 2) throw error;
+            console.log(`chunk ${chunk.key} failed on attempt 1; retrying once`);
+        }
+    }
+    // The JSON reporter always writes to its configured path; move it to the
+    // chunk's own file so the sweep can resume and aggregate.
     const latest = join(REPORT_DIR, 'mutation.json');
-    if (existsSync(latest)) renameSync(latest, join(REPORT_DIR, `${chunk.key}-latest.json`));
+    if (existsSync(latest)) renameSync(latest, finalReport);
 }
 
 function aggregate() {
