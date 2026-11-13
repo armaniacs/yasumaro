@@ -16,11 +16,15 @@ vi.stubGlobal('chrome', {
 });
 
 describe('trustSettings imports without a DOM', () => {
+  // The body has no wait: the cost is the first transform of the module graph,
+  // which exceeds the 30 s default when the suite runs inside a Stryker
+  // sandbox with several workers. The pin is "the import succeeds without a
+  // DOM", so give that import room instead of leaving it load-dependent.
   it('has no document global and still imports', async () => {
     expect((globalThis as Record<string, unknown>).document).toBeUndefined();
     const mod = await import('../trustSettings.js');
     expect(typeof mod.init).toBe('function');
     expect(typeof mod.loadTrustSettings).toBe('function');
     expect(typeof mod.renderPermissionSuggestList).toBe('function');
-  });
+  }, 120_000);
 });

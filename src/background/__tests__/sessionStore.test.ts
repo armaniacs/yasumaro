@@ -141,11 +141,18 @@ describe('SessionStore', () => {
 
   // T6
   it('setTimeout-based flush should persist within FLUSH_DELAY', async () => {
-    store.set('key1', 'value1');
-    await vi.waitFor(
-        () => expect(mockSession.set).toHaveBeenCalledWith({ key1: 'value1' }),
-        { interval: 1 }
-    );
+    // The pin is "the scheduled flush fires", not "the machine is fast enough
+    // to flush 50 ms from now": a real-clock waitFor starves under
+    // mutation-testing load (the whole suite runs in a Stryker sandbox) and
+    // reports a timer defect that does not exist. Drive the clock instead.
+    useTimerClock();
+    try {
+      store.set('key1', 'value1');
+      await vi.advanceTimersByTimeAsync(SESSION_STORE_FLUSH_DELAY_MS);
+      expect(mockSession.set).toHaveBeenCalledWith({ key1: 'value1' });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   // T7
