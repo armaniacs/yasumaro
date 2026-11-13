@@ -38,5 +38,7 @@
   "vitest": {
     "related": false
   },
-  "ignoreStatic": true
+  "ignoreStatic": true,
+  "timeoutMS": 15000,
+  "timeoutFactor": 1.25
 }
