@@ -76,13 +76,13 @@ describe('ValidVisitValidator', () => {
   // path and a mutant that deleted the check survived.
   it('rejects a non-boolean fallbackTriggered', () => {
     expect(() =>
-      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackTriggered: 'yes' } }),
+      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackTriggered: 'yes' } as unknown as { content: string } }),
     ).toThrow(/fallbackTriggered must be boolean/);
   });
 
   it('rejects a non-string fallbackReason', () => {
     expect(() =>
-      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackReason: 5 } }),
+      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackReason: 5 } as unknown as { content: string } }),
     ).toThrow(/fallbackReason must be a string/);
   });
 

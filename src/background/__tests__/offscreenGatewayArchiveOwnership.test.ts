@@ -70,7 +70,7 @@ describe('offscreenGatewayArchiveOwnership', () => {
 
     it('keeps query, getStatus, mutate and maintain on OffscreenGateway', () => {
       for (const method of ['query', 'mutate', 'maintain', 'execute', 'status', 'getStatus'] as const) {
-        expect(typeof (OffscreenGateway.prototype as Record<string, unknown>)[method]).toBe('function');
+        expect(typeof (OffscreenGateway.prototype as unknown as Record<string, unknown>)[method]).toBe('function');
       }
     });
   });

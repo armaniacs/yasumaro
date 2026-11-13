@@ -51,7 +51,11 @@ describe('view-wiring cycle parity (PBI 2026-11-11-02)', () => {
 
   it('pins calendar nav shell ids', () => {
     const { html } = buildCalendarNavHtml(null, { searchQuery: '', activeTagFilter: null });
-    expect(html).toContain(SQLITE_HISTORY_IDS.clearAllFilters === '' ? '__never__' : SQLITE_HISTORY_IDS.calendarDays);
+    // Widened to string on purpose: the id is a non-empty literal today, and
+    // the empty check must stay meaningful (a vacuous containment assertion
+    // would pass even if the calendar shell lost its days container).
+    const clearAllFiltersId: string = SQLITE_HISTORY_IDS.clearAllFilters;
+    expect(html).toContain(clearAllFiltersId === '' ? '__never__' : SQLITE_HISTORY_IDS.calendarDays);
     expect(html).toContain(SQLITE_HISTORY_IDS.handoffReason);
     expect(html).toContain(SQLITE_HISTORY_IDS.sendToCollection);
   });
