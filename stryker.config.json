@@ -9,6 +9,7 @@
     ".agents",
     ".claude",
     ".kilo",
+    ".worktrees",
     ".github",
     "bench",
     "coverage",

@@ -13,6 +13,7 @@
     ".agents",
     ".claude",
     ".kilo",
+    ".worktrees",
     "bench",
     "coverage",
     "dev-docs",
