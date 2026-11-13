@@ -118,6 +118,70 @@ function runChunk(chunk) {
     if (existsSync(latest)) renameSync(latest, finalReport);
 }
 
+/**
+ * Survived / uncovered mutants grouped by file and mutator, for the reason
+ * classification the PBI requires (equivalent mutant vs missing test).
+ * `--survivors [n]` prints the top n files; `--survivors-detail <file>` lists
+ * every survived mutant in one file with its line and mutator name.
+ */
+function survivors() {
+    const byFile = new Map();
+    const byMutator = new Map();
+    for (const chunk of CHUNKS) {
+        const file = chunkReportPath(chunk.key);
+        if (!existsSync(file)) continue;
+        let json;
+        try {
+            json = JSON.parse(readFileSync(file, 'utf-8'));
+        } catch {
+            continue;
+        }
+        for (const [path, fileResult] of Object.entries(json.files ?? {})) {
+            for (const mutant of fileResult.mutants ?? []) {
+                if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') continue;
+                const entry = byFile.get(path) ?? { survived: 0, noCoverage: 0 };
+                if (mutant.status === 'Survived') entry.survived += 1;
+                else entry.noCoverage += 1;
+                byFile.set(path, entry);
+                const key = mutant.mutatorName ?? 'unknown';
+                const counts = byMutator.get(key) ?? { survived: 0, noCoverage: 0, mutated: '' };
+                if (mutant.status === 'Survived') counts.survived += 1;
+                else counts.noCoverage += 1;
+                counts.mutated = mutant.replacement ?? counts.mutated;
+                byMutator.set(key, counts);
+            }
+        }
+    }
+    const detail = flagValue('--survivors-detail');
+    if (detail) {
+        for (const chunk of CHUNKS) {
+            const file = chunkReportPath(chunk.key);
+            if (!existsSync(file)) continue;
+            const json = JSON.parse(readFileSync(file, 'utf-8'));
+            const fileResult = json.files?.[detail];
+            if (!fileResult) continue;
+            for (const mutant of fileResult.mutants ?? []) {
+                if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') continue;
+                const line = mutant.location?.start?.line ?? '?';
+                console.log(`${detail}:${line}  ${mutant.status}  ${mutant.mutatorName}  ->  ${JSON.stringify(mutant.replacement)}`);
+            }
+        }
+        return;
+    }
+    const limit = Number.parseInt(flagValue('--survivors') ?? '20', 10);
+    const rows = [...byFile.entries()]
+        .map(([path, counts]) => ({ path, ...counts, total: counts.survived + counts.noCoverage }))
+        .sort((a, b) => b.total - a.total)
+        .slice(0, Number.isInteger(limit) ? limit : 20);
+    for (const row of rows) {
+        console.log(`${String(row.total).padStart(5)}  survived ${String(row.survived).padStart(4)}  no-cov ${String(row.noCoverage).padStart(4)}  ${row.path}`);
+    }
+    console.log('\nBy mutator:');
+    for (const [name, counts] of [...byMutator.entries()].sort((a, b) => (b[1].survived + b[1].noCoverage) - (a[1].survived + a[1].noCoverage))) {
+        console.log(`${String(counts.survived + counts.noCoverage).padStart(6)}  survived ${String(counts.survived).padStart(4)}  no-cov ${String(counts.noCoverage).padStart(4)}  ${name}`);
+    }
+}
+
 function aggregate() {
     const rows = [];
     for (const chunk of CHUNKS) {
@@ -150,6 +214,11 @@ if (hasFlag('--list')) {
 
 if (hasFlag('--aggregate')) {
     aggregate();
+    process.exit(0);
+}
+
+if (hasFlag('--survivors') || args.includes('--survivors-detail')) {
+    survivors();
     process.exit(0);
 }
 
