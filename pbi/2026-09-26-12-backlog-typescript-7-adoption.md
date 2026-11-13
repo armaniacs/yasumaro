@@ -106,4 +106,4 @@ Scenario: トリガー未発火時は現状を維持する
 ## 参考
 
 - `docs/DEPENDINGS.md` ― 依存棚卸しと未反映理由の記録
-- 同型の監視 PBI: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（上流リリース待ちのトリガー型 PBI の先行例）
+- 同型の監視 PBI: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（上流リリース待ちのトリガー型 PBI の先行例。2026-11-13 に採用完了・アーカイブ済み）

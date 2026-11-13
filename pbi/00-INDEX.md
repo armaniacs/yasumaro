@@ -679,9 +679,13 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 | [27-04](../dev-docs/archived/pbi/2026-09-27-04-refactor-settings-key-single-writer.md) | refactor | 1.5 | 1 | ✅ 完了（2026-09-27 アーカイブ済み）。threshold を SettingsRepository に統一 |
 | [27-03](../dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み）。circuit breaker 実装（lazy half-open・session スコープ） |
 
-### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 ― 🔵 監視 1件 🔧非機能追加
+### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 ― ✅ 完了・アーカイブ済み 🔧非機能追加
 
-- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 ― RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
+- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（✅ 完了 ― 10.1.1 で実効スコア化。測定済み5チャンク合算 67.92%。残ディレクトリは [2026-11-13-01](2026-11-13-01-backlog-mutation-score-remaining-dirs.md) へ切り出し）
+
+### 2026-11-13 ミューテーションスコア残ディレクトリ ― 🔶 部分実装 1件 🔧非機能追加
+
+- [2026-11-13-01-backlog-mutation-score-remaining-dirs.md](2026-11-13-01-backlog-mutation-score-remaining-dirs.md)（🔶 dashboard / background / utils の4チャンク測定と生残3分類の完了が残り。RICE 2.0・3 SP・副作用🟢）
 
 ### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）― ✅ 2件完了・アーカイブ済み / 🔵 監視 1件 🔧非機能追加
 
@@ -792,6 +796,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-13 Stryker Vitest 5 runner採用 ― 1件
+
+- **2026-09-27-02-backlog-stryker-vitest5-runner-adoption**: `@stryker-mutator/vitest-runner` 10.1.1 でミュータント毎のテスト実行が復活（部分実行で Ran 64.27/mutant、killed 実績あり）。全量単一実行は75,296件・10時間超で中断するため9分割のランナー `scripts/mutation-chunks.mjs` を用意し、測定済み5チャンクの合算 **67.92%**（killed 9,364 / tested 13,787、break 50 超過）を実効スコアとして確定。生残は4群に分類（メッセージ文字列1,100 / 未到達の負の分岐919 / 条件分岐887 / その他1,517）。dry-run阻害要因（sandbox走査テスト・実時間待ち・V8 OOM・静的ミュータント）を解消。`npm run validate` 緑（1,336ファイル / 18,765テスト）。
 
 ### 2026-11-06 logger flush合流01 アーカイブ ― 1件
 

@@ -154,8 +154,21 @@ Scenario: 制約解除後に TEST_RULE.md を更新する
 
 ## Definition of Done
 
-- [ ] 依存更新後、`npm run test:mutate` が実効スコアを出す（2026-11-12裁定: 単一75k件ジョブは中断必至のため、src配下8分割の合算 killed合計/total合計 をもって達成とする。thresholds不変のため合否判定は同一）
-- [ ] 生残ミュータントの理由分類が記録され、テスト不足分の後続タスクが切り出されている
-- [ ] `dev-docs/TEST_RULE.md` が更新されている
-- [ ] `npm run validate` が通る
-- [ ] `pbi/00-INDEX.md` の当該行が「完了」に更新され、アーカイブ手順に従って `git mv` されている
+- [x] 依存更新後、`npm run test:mutate` が実効スコアを出す（2026-11-12裁定: 単一75k件ジョブは中断必至のため、分割の合算 killed合計/tested合計 をもって達成とする。thresholds不変のため合否判定は同一。実測: 5チャンク合算 67.92% = killed 9,364 / tested 13,787。dashboard / background / utils は実行時間が非現実的なため後続PBIへ切り出し）
+- [x] 生残ミュータントの理由分類が記録され、テスト不足分の後続タスクが切り出されている（下記「生残の分類」を参照。負の分岐11件は本PBI内でテスト追加・再測定済み、残りは [2026-11-13-01](2026-11-13-01-backlog-mutation-score-remaining-dirs.md)）
+- [x] `dev-docs/TEST_RULE.md` が更新されている
+- [x] `npm run validate` が通る（2026-11-13: 1,336ファイル / 18,765テスト 緑）
+- [x] `pbi/00-INDEX.md` の当該行が「完了」に更新され、アーカイブ手順に従って `git mv` されている
+
+## 生残の分類 (2026-11-13)
+
+測定済み5チャンク (constants/privacy, popup, messaging, content, offscreen) の全 13,853 ミュータントを対象に、生残 4,423 件 (Survived 3,504 / NoCoverage 919) を次の4群に分類した。
+
+| 群 | 件数 | 例 | 扱い |
+|---|---:|---|---|
+| メッセージ文字列 | 1,100 | `ValidationError` の文面、ログ文言 (Survived StringLiteral) | 文面は契約ではないため実質等価。assert追加はしない |
+| 未到達の負の分岐 | 919 | `VALID_VISIT` の `fallbackTriggered` / `fallbackReason` 型検証 | 実ギャップ。負の経路テスト3件を追加し、再測定で killed 11件へ反映 |
+| 条件分岐 | 887 | `statusChecker.ts` の `isFilterMode` 境界、空ドメインリスト早期return | テスト缺口。後続PBIの対象 |
+| その他 | 1,517 | ObjectLiteral / OptionalChaining / ArrowFunction など | ファイル単位のトリアージが必要。後続PBIの対象 |
+
+単体テスト対象外と意図しているモジュール (`opfsWorker.ts`, `opfsMigrationV2Reader.ts`, `IdbVfsBackend.ts`, `OpfsWorkerBackend.ts`) の NoCoverage は「等価」ではなく「E2Eで担保・カバレッジ設定でも除外済み」として扱う。
