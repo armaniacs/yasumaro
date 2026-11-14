@@ -116,7 +116,7 @@ function runChunk(chunk) {
     };
     const args = [
         'stryker', 'run', CONFIG,
-        '--concurrency', '2',
+        '--concurrency', process.env.MUTATION_CONCURRENCY ?? '2',
         '--mutate', mutate,
         '--reporters', 'clear-text,progress,json',
     ];
