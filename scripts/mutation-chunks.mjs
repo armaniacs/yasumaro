@@ -33,7 +33,10 @@ const EXCLUDES = ['!src/**/__tests__/**', '!src/**/*.test.ts', '!src/**/*.d.ts']
 
 /**
  * Small units first: a broken setting shows up in minutes, and whatever gets
- * interrupted leaves the most chunks already complete.
+ * interrupted leaves the most chunks already complete. Sizes are balanced by
+ * measured mutants so one unit is roughly 3-8k mutants (1-3 h); anything that
+ * still overruns is safe anyway because stryker.chunk.json enables
+ * `incremental` (mutant-level resume) and a finished chunk is never rerun.
  */
 const CHUNKS = [
     { key: '01-constants-privacy', globs: ['src/constants/**/*.ts', 'src/utils/types.ts', 'src/utils/privacyStatusCodes.ts', 'src/utils/privacyChecker.ts'] },
@@ -41,10 +44,22 @@ const CHUNKS = [
     { key: '03-messaging', globs: ['src/messaging/**/*.ts'] },
     { key: '04-content', globs: ['src/content/**/*.ts'] },
     { key: '05-offscreen', globs: ['src/offscreen/**/*.ts'] },
-    { key: '06-dashboard', globs: ['src/dashboard/**/*.ts'] },
-    { key: '07-background', globs: ['src/background/**/*.ts'] },
-    { key: '08-utils-a-l', globs: ['src/utils/[a-l]*/**/*.ts', 'src/utils/[a-l]*.ts'] },
-    { key: '09-utils-m-z', globs: ['src/utils/[m-z]*/**/*.ts', 'src/utils/[m-z]*.ts'] },
+    { key: '06a-dashboard-root-a-m', globs: ['src/dashboard/[a-mA-M]*.ts'] },
+    { key: '06b-dashboard-root-n-z', globs: ['src/dashboard/[n-zN-Z]*.ts'] },
+    { key: '06c-dashboard-settings', globs: ['src/dashboard/settings/**/*.ts', 'src/dashboard/generalSettings/**/*.ts', 'src/dashboard/utils/**/*.ts', 'src/dashboard/components/**/*.ts', 'src/dashboard/aiProviderB/**/*.ts'] },
+    { key: '06d-panels-asyncdata', globs: ['src/dashboard/panels/asyncData/**/*.ts'] },
+    { key: '06e-panels-rest', globs: ['src/dashboard/panels/**/*.ts', '!src/dashboard/panels/asyncData/**/*.ts'] },
+    { key: '07a-background-root-a-m', globs: ['src/background/[a-mA-M]*.ts'] },
+    { key: '07b-background-root-n-z', globs: ['src/background/[n-zN-Z]*.ts'] },
+    { key: '07c-background-handlers', globs: ['src/background/handlers/**/*.ts'] },
+    { key: '07d-background-pipeline-ai', globs: ['src/background/pipeline/**/*.ts', 'src/background/ai/**/*.ts'] },
+    { key: '07e-background-rest', globs: ['src/background/cache/**/*.ts', 'src/background/migration/**/*.ts', 'src/background/navTrail/**/*.ts', 'src/background/net/**/*.ts', 'src/background/queue/**/*.ts', 'src/background/sqlite/**/*.ts', 'src/background/syncTargets/**/*.ts', 'src/background/webhookExport/**/*.ts'] },
+    { key: '08a-utils-storage', globs: ['src/utils/storage/**/*.ts'] },
+    { key: '08b-utils-mid-a', globs: ['src/utils/aiSummaryCleaner/**/*.ts', 'src/utils/contentExtractor/**/*.ts'] },
+    { key: '08c-utils-mid-b', globs: ['src/utils/trustDb/**/*.ts', 'src/utils/crypto/**/*.ts'] },
+    { key: '08d-utils-root-a-m', globs: ['src/utils/[a-mA-M]*.ts'] },
+    { key: '08e-utils-root-n-z', globs: ['src/utils/[n-zN-Z]*.ts'] },
+    { key: '08f-utils-small', globs: ['src/utils/ublockParser/**/*.ts', 'src/utils/logger/**/*.ts', 'src/utils/ui/**/*.ts', 'src/utils/sessionReminder/**/*.ts', 'src/utils/domainFilter/**/*.ts', 'src/utils/text/**/*.ts'] },
 ];
 
 const args = process.argv.slice(2);
@@ -90,10 +105,14 @@ function runChunk(chunk) {
     // fork workers on 8 cores and heavy UI tests cross the 30 s testTimeout
     // during the dry run. Capping the inner pool keeps the sandbox inside the
     // machine instead of relaxing any timeout.
+    // NODE_OPTIONS / VITEST_MAX_WORKERS are env-overridable so a second
+    // stream in another worktree can run a smaller footprint next to this one
+    // (e.g. MUTATION_NODE_OPTIONS='--max-old-space-size=4096'
+    // MUTATION_VITEST_WORKERS=2).
     const env = {
         ...process.env,
-        NODE_OPTIONS: '--max-old-space-size=6144',
-        VITEST_MAX_WORKERS: '3',
+        NODE_OPTIONS: process.env.MUTATION_NODE_OPTIONS ?? '--max-old-space-size=6144',
+        VITEST_MAX_WORKERS: process.env.MUTATION_VITEST_WORKERS ?? '3',
     };
     const args = [
         'stryker', 'run', CONFIG,
@@ -223,7 +242,12 @@ if (hasFlag('--survivors') || args.includes('--survivors-detail')) {
 }
 
 const only = flagValue('--only');
-const targets = only ? CHUNKS.filter((c) => c.key === only || c.key.startsWith(only)) : CHUNKS;
+// Comma-separated so two streams can split the list, e.g.
+// --only 06a,06c,06e in one worktree and --only 06b,06d in another.
+const wanted = only ? only.split(',').map((s) => s.trim()).filter(Boolean) : undefined;
+const targets = wanted
+    ? CHUNKS.filter((c) => wanted.some((w) => c.key === w || c.key.startsWith(w)))
+    : CHUNKS;
 if (targets.length === 0) {
     console.error(`no chunk matches "${only}"`);
     process.exit(2);

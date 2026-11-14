@@ -40,5 +40,6 @@
   },
   "ignoreStatic": true,
   "timeoutMS": 15000,
-  "timeoutFactor": 1.25
+  "timeoutFactor": 1.25,
+  "incremental": true
 }
