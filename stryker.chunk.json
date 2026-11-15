@@ -8,7 +8,7 @@
   ],
   "coverageAnalysis": "perTest",
   "concurrency": 4,
-  "dryRunTimeoutMinutes": 15,
+  "dryRunTimeoutMinutes": 25,
   "ignorePatterns": [
     ".agents",
     ".claude",
