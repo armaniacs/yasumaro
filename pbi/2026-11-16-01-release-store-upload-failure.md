@@ -1,10 +1,18 @@
 # PBI: Release 42908187378 のストアアップロード失敗の復旧
 
-- 状態: 未着手 (所有者による secrets / ストア側の確認待ち)
+- 状態: 実装中 (ストアアップロードの無効化で赤を消す方針に変更)
 - 種別: 非機能追加 (リリース運用)
 - 見積もり: 1 SP
 - 起票日: 2026-11-16
 - 対象ラン: https://github.com/armaniacs/yasumaro/actions/runs/42908187378 (Release, v6.9.75, attempt 2)
+
+## 方針転換 (2026-11-16)
+
+CLI (crates.io) は正常にリリースできているため、失敗しているストアアップロード2件は無効化する。認証情報の復旧 (下記「所有者の確認手順」) は任意の後続作業とし、本 PBI の完了条件には含めない。再開時はリポジトリ変数 `ENABLE_STORE_UPLOAD` を `'true'` に戻すだけで復活する (スクリプト本体・しきい値・成果物名は不変)。
+
+- `Upload to Chrome Web Store`: `vars.ENABLE_STORE_UPLOAD == 'true'` のときのみ実行 (未設定ならスキップ)
+- `Upload to Edge Add-ons`: 既存の `always() && hashFiles(...)` に同変数の条件を追加
+- AMO 提出は従来どおり `AMO_AUTO_SUBMIT` が gating する (変更なし)
 
 ## 背景
 
@@ -25,17 +33,17 @@ Release ワークフローの「Upload to Chrome Web Store」と「Upload to Edg
 
 ## 受け入れシナリオ
 
-### S1: Chrome Web Store へのアップロードが成功する
+### S1: ストアアップロードがスキップされ、Release が緑になる
 
-Given 有効な `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` / `CHROME_REFRESH_TOKEN` が secrets に設定され
-When Release ワークフロー (または失敗ジョブの再実行) が回り
-Then 「Upload to Chrome Web Store」が緑になる
+Given リポジトリ変数 `ENABLE_STORE_UPLOAD` が未設定 (または `'true'` 以外) の状態で
+When Release ワークフローが回り
+Then 「Upload to Chrome Web Store」と「Upload to Edge Add-ons」はスキップされ、ジョブ全体が緑になる
 
-### S2: Edge Add-ons へのアップロードが成功する
+### S2: 変数を戻せばストアアップロードが復活する
 
-Given CI ログの `Upload failed:` / `Publish failed:` の status fields を確認し、パッケージ起因なら修正して
-When Release ワークフロー (または失敗ジョブの再実行) が回り
-Then 「Upload to Edge Add-ons」が緑になる
+Given リポジトリ変数 `ENABLE_STORE_UPLOAD` を `'true'` に設定し
+When Release ワークフローが回り
+Then 両アップロードステップが実行される (成否は secrets / ストア側の状態に従来どおり依存する)
 
 ## 所有者の確認手順
 
@@ -51,5 +59,6 @@ Then 「Upload to Edge Add-ons」が緑になる
 
 ## 完了条件
 
-- [ ] CI ログの原文で両失敗の原因が特定されている
-- [ ] Release ワークフローの再実行で Chrome / Edge の両アップロードが緑になる
+- [ ] Release ワークフローが `ENABLE_STORE_UPLOAD` 未設定で緑になる (両アップロードがスキップされる)
+- [ ] `vars.ENABLE_STORE_UPLOAD == 'true'` の評価が YAML として妥当である (パーサ検証済み)
+- [ ] 認証情報の復旧手順が「所有者の確認手順」に残り、再開方法が明示されている
