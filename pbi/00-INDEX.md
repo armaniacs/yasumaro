@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
+
+Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。コードは正常版と同一でスクリプトのテストも緑のため、認証情報またはストア側検証が原因と推定。所有者による secrets / ストア側の確認待ち。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| 01 | [2026-11-16-01-release-store-upload-failure.md](2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | 🔶 未着手。Chrome約2秒失敗=OAuth拒否の疑い、Edge約32秒失敗=パッケージ検証の疑い。CIログ原文の確認と secrets 更新が所有者作業 |
+
 ### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― ✅ 1件完了・アーカイブ済み
 
 監査 run-1 の needs_validation (同意TOCTOU) はダミー実験で firing 確定 (6/6) 後、mutex直後の同意再読ゲートで修正 (record/preview/retryObsidianWrite の全経路)。発火デモ probe は実execute経路の回帰ガードへ昇格 (5テスト)。バッチ境界: 型検査緑・lint エラー0・background 3766件緑。台帳は [2026-11-12-00-backlog-security-audit-run1.md](2026-11-12-00-backlog-security-audit-run1.md) を参照。
