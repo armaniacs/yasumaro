@@ -15,7 +15,11 @@
  *   CWS_AUTO_PUBLISH — 'true' submits for review; anything else stops after upload
  *   VERSION          — package version (dist/yasumaro-<VERSION>-chrome.crx)
  *
- * Semantics are unchanged from the shell: same URLs, headers, and timeouts;
+ * Semantics match the shell except for one deliberate re-run guard:
+ * when the upload is rejected as PKG_INVALID_VERSION_NUMBER and the store's
+ * published version equals ours, the release goal already holds, so the step
+ * succeeds instead of failing (a re-run after a partially completed
+ * release). Same URLs, headers, and timeouts otherwise;
  * the same 30 × 10s upload-state poll (IN_PROGRESS|NOT_FOUND, NOT_FOUND
  * included because the async upload is not registered yet); the same
  * messages; failure → non-zero exit, publish skip → 0.
@@ -30,6 +34,7 @@ import {
   jqExtract,
   jqExtractOr,
   jqRawRender,
+  parseJson,
   projectErrorFields,
   readFileOrAbort,
   requestOrAbort,
@@ -38,6 +43,41 @@ import {
 
 const UPLOAD_POLL_MAX = 30;
 const POLL_INTERVAL_MS = 10_000;
+
+/**
+ * Re-run safety for the upload step. A previous attempt may already have
+ * published this exact version (auto-publish submits the draft, so a re-run
+ * re-uploads the same CRX and CWS rejects it as "not larger than the
+ * published package"). Returns the store's published version when the body
+ * is a PKG_INVALID_VERSION_NUMBER rejection, else null — callers treat an
+ * exact match with their own version as already-published success, and every
+ * other shape keeps failing as before.
+ */
+export function publishedVersionOnRecord(responseText) {
+  const parsed = parseJson(responseText);
+  if (parsed.ok !== true) return null;
+  const root = parsed.value;
+  if (root === null || typeof root !== 'object' || Array.isArray(root)) return null;
+  const details = root.error !== null && typeof root.error === 'object' && !Array.isArray(root.error)
+    ? root.error.details
+    : undefined;
+  if (!Array.isArray(details)) return null;
+  for (const detail of details) {
+    if (detail === null || typeof detail !== 'object' || Array.isArray(detail)) continue;
+    const violations = detail.fieldViolations;
+    if (!Array.isArray(violations)) continue;
+    for (const violation of violations) {
+      if (violation === null || typeof violation !== 'object' || Array.isArray(violation)) continue;
+      if (violation.reason !== 'PKG_INVALID_VERSION_NUMBER') continue;
+      // The description ends with a sentence period ("...package: 1.2.3."),
+      // so version segments are matched explicitly instead of allowing a
+      // trailing dot.
+      const match = /published package:\s*([0-9][0-9A-Za-z\-]*(?:\.[0-9A-Za-z\-]+)*)/.exec(String(violation.description ?? ''));
+      if (match) return match[1];
+    }
+  }
+  return null;
+}
 
 export async function uploadAndPublishCws(env, deps = {}) {
   const {
@@ -148,6 +188,16 @@ export async function uploadAndPublishCws(env, deps = {}) {
   }
 
   if (uploadState !== 'SUCCEEDED') {
+    // Re-run safety: attempt 1 may already have published this exact version
+    // (auto-publish submits the draft, so a re-run re-uploads the same CRX
+    // and CWS rejects it as "not larger than the published package"). The
+    // store goal already holds in that case, so succeed instead of failing
+    // the re-run. A newer store version, an unparseable body, or any other
+    // terminal state still fails below.
+    if (uploadState === 'UNKNOWN' && publishedVersionOnRecord(upload.text) === (version ?? '')) {
+      log(`Version ${version} is already published; treating re-upload as success`);
+      return;
+    }
     // Parity with the Edge wait loop: exhaustion ("did not finish in time")
     // is told apart from a terminal failure state (P4).
     if (uploadState === 'IN_PROGRESS' || uploadState === 'NOT_FOUND') {

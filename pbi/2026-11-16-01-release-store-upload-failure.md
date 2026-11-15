@@ -1,10 +1,25 @@
 # PBI: Release 42908187378 のストアアップロード失敗の復旧
 
-- 状態: 未着手 (所有者による secrets / ストア側の確認待ち)
+- 状態: 実装済み (検証待ち: 次回リリースでの緑確認)
 - 種別: 非機能追加 (リリース運用)
 - 見積もり: 1 SP
 - 起票日: 2026-11-16
 - 対象ラン: https://github.com/armaniacs/yasumaro/actions/runs/42908187378 (Release, v6.9.75, attempt 2)
+
+## 原因 (2026-11-16 確定)
+
+CIログの原文で確定。再実行の冪等性欠如であり、認証情報でもパッケージ内容でもない。
+
+- **Chrome**: `PKG_INVALID_VERSION_NUMBER` ―「published package: 6.9.75」に対して同バージョンを再アップロードしたため拒否。attempt 1 が既に公開まで進めていたところへ attempt 2 が同 CRX を上げ直した
+- **Edge**: `InProgressSubmission` ― "Can't publish extension as your extension submission is in progress"。前回試行の submission がサーバー側で実行中のまま publish を呼んだため拒否
+
+両方とも「前回試行が部分的/完全に成功した後の再実行」に起因する。スクリプト本体・しきい値・成果物名の変更は不要だった。
+
+## 修正内容
+
+- `scripts/publish/cws.mjs`: アップロード拒否が `PKG_INVALID_VERSION_NUMBER` かつ store の published 版が自バージョンと一致する場合、目的 (公開済み) が達成済みとして成功扱いにする (`publishedVersionOnRecord` をエクスポート・単体テスト済み)。不一致・その他は従来どおり失敗
+- `scripts/publish/edge.mjs`: publish の終端失敗が `InProgressSubmission` の場合のみ60秒待って再投稿する (最大3回)。最終試行は従来どおり失敗内容を出して失敗。アップロード側の挙動は不変 (`waitForOperation` に任意の終端分類フックを追加)
+- テスト: `scripts/__tests__/publish-stores.test.ts` に7件追加 (計49件緑)。`npm run lint` エラー0、`tsc` 緑
 
 ## 方針 (2026-11-16)
 
@@ -29,17 +44,23 @@ Release ワークフローの「Upload to Chrome Web Store」と「Upload to Edg
 
 ## 受け入れシナリオ
 
-### S1: Chrome Web Store へのアップロードが成功する
+### S1: 同バージョンの再アップロードが成功扱いになる (Chrome)
 
-Given 有効な `CHROME_CLIENT_ID` / `CHROME_CLIENT_SECRET` / `CHROME_REFRESH_TOKEN` が secrets に設定され
-When Release ワークフロー (または失敗ジョブの再実行) が回り
-Then 「Upload to Chrome Web Store」が緑になる
+Given ストア公開済みが 6.9.75 の状態で
+When 同バージョンの CRX をアップロードし `PKG_INVALID_VERSION_NUMBER` が返り
+Then 「already published」として成功し、publish には進まない
 
-### S2: Edge Add-ons へのアップロードが成功する
+### S2: 実行中の submission があっても publish が通る (Edge)
 
-Given CI ログの `Upload failed:` / `Publish failed:` の status fields を確認し、パッケージ起因なら修正して
-When Release ワークフロー (または失敗ジョブの再実行) が回り
-Then 「Upload to Edge Add-ons」が緑になる
+Given 前回試行の submission が実行中の状態で
+When publish が `InProgressSubmission` で終端失敗し
+Then 60秒待って再投稿し、空き次第 `Publish submitted` になる (最大3回。解消しなければ従来どおり失敗)
+
+### S3: 従来の失敗は従来どおり失敗する
+
+Given 上記以外の拒否 (別バージョン、検証エラー、認証失敗など) が返り
+When 各ステップが実行され
+Then 従来と同一メッセージで失敗する (テストで固定)
 
 ## 所有者の確認手順
 
@@ -55,5 +76,5 @@ Then 「Upload to Edge Add-ons」が緑になる
 
 ## 完了条件
 
-- [ ] CI ログの原文で両失敗の原因が特定されている
-- [ ] Release ワークフローの再実行で Chrome / Edge の両アップロードが緑になる
+- [x] CI ログの原文で両失敗の原因が特定されている (Chrome: 同版再アップロード拒否、Edge: InProgressSubmission)
+- [ ] Release ワークフローの再実行で Chrome / Edge の両アップロードが緑になる (次回リリース時に確認)

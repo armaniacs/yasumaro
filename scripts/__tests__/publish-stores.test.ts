@@ -15,9 +15,9 @@ import { describe, it, expect } from 'vitest';
 import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { uploadAndPublishCws } from '../publish/cws.mjs';
+import { uploadAndPublishCws, publishedVersionOnRecord } from '../publish/cws.mjs';
 import { publishCargo, crateVersion } from '../publish/cargo.mjs';
-import { uploadAndPublishEdge } from '../publish/edge.mjs';
+import { uploadAndPublishEdge, publishTerminalErrorCode } from '../publish/edge.mjs';
 import { prepareAmoSources } from '../publish/amo-prepare-sources.mjs';
 import { submitAmo } from '../publish/amo-submit.mjs';
 import { StepFailed, defaultRun, jqExtractOr, projectErrorFields, requestOrAbort } from '../publish/lib.mjs';
@@ -405,6 +405,83 @@ describe('cws', () => {
         `Request failed (${TOKEN_URL}): socket hang up`,
       ]);
     });
+
+    it('treats a same-version PKG_INVALID_VERSION_NUMBER as already published (re-run)', async () => {
+      const body = JSON.stringify({
+        error: {
+          code: 400,
+          message: 'The uploaded package was invalid.',
+          status: 'INVALID_ARGUMENT',
+          details: [
+            { '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'INVALID_PACKAGE' },
+            {
+              '@type': 'type.googleapis.com/google.rpc.BadRequest',
+              fieldViolations: [{
+                field: 'media',
+                description:
+                  'Invalid version number in manifest: 1.2.3. Please make sure the newly uploaded package has a larger version in file manifest.json than the published package: 1.2.3.',
+                reason: 'PKG_INVALID_VERSION_NUMBER',
+              }],
+            },
+          ],
+        },
+      });
+      const { fetchImpl, calls } = createFetch([
+        TOKEN_ROUTE,
+        { match: endsWith(':upload'), respond: () => ({ body }) },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd });
+
+      expect(harness.logs).toEqual([
+        '::add-mask::tok-abc',
+        'Upload: UNKNOWN',
+        'Upload response (error fields only):',
+        `{"error":${JSON.stringify(JSON.parse(body).error)},"status":null,"message":null}`,
+        'Version 1.2.3 is already published; treating re-upload as success',
+      ]);
+      // No publish call: the release goal already holds.
+      expect(calls.some((call) => call.url.endsWith(':publish'))).toBe(false);
+      expect(harness.sleepCalls).toEqual([]);
+    });
+
+    it('still fails a PKG_INVALID_VERSION_NUMBER for a different published version', async () => {
+      const body = JSON.stringify({
+        error: {
+          code: 400,
+          details: [{
+            '@type': 'type.googleapis.com/google.rpc.BadRequest',
+            fieldViolations: [{
+              field: 'media',
+              description: 'Invalid version number in manifest: 1.2.3. Please make sure the newly uploaded package has a larger version in file manifest.json than the published package: 9.9.9.',
+              reason: 'PKG_INVALID_VERSION_NUMBER',
+            }],
+          }],
+        },
+      });
+      const { fetchImpl } = createFetch([
+        TOKEN_ROUTE,
+        { match: endsWith(':upload'), respond: () => ({ body }) },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-chrome.crx']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishCws(CWS_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs[harness.logs.length - 1]).toBe('Upload failed with state: UNKNOWN');
+    });
+
+    it('publishedVersionOnRecord returns null for missing or unparseable shapes', () => {
+      expect(publishedVersionOnRecord('not json')).toBeNull();
+      expect(publishedVersionOnRecord('{"error":null}')).toBeNull();
+      expect(publishedVersionOnRecord('{"error":{"details":[]}}')).toBeNull();
+      expect(publishedVersionOnRecord('{"error":{"details":[{"fieldViolations":[{"reason":"OTHER"}]}]}}')).toBeNull();
+      expect(publishedVersionOnRecord('{"error":{"details":[{"fieldViolations":[{"reason":"PKG_INVALID_VERSION_NUMBER"}]}]}}')).toBeNull();
+    });
   });
 });
 
@@ -624,6 +701,154 @@ describe('edge', () => {
       expect(polled).toContain(
         'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-9'
       );
+    });
+
+    it('retries the publish when a previous submission is still in progress, then succeeds', async () => {
+      const inProgress = '{"status":"Failed","errorCode":"InProgressSubmission","message":"try later"}';
+      const { fetchImpl, calls } = createFetch([
+        {
+          match: endsWith('/draft/package'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-1' },
+          }),
+        },
+        {
+          match: endsWith('/submissions'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-1' },
+          }),
+        },
+        {
+          match: (url: string) => /\/operations\/[^/?#]+(?:[?#].*)?$/.test(url),
+          respond: (() => {
+            const bodies = ['{"status":"Succeeded"}', inProgress, '{"status":"Succeeded"}'];
+            return () => ({ body: bodies.shift() ?? '{"status":"Succeeded"}' });
+          })(),
+        },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-edge.zip']);
+      const harness = createHarness();
+
+      await uploadAndPublishEdge(EDGE_ENV, { fetch: fetchImpl, ...harness, cwd });
+
+      expect(harness.logs).toEqual([
+        'Upload: HTTP 202',
+        'Upload status check 1/30: Succeeded',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Failed',
+        'Publish attempt 1 blocked by an in-progress submission; retrying',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Succeeded',
+        'Publish submitted',
+      ]);
+      // One upload poll, one failed publish poll, one successful publish poll.
+      expect(harness.sleepCalls).toEqual([60_000]);
+      expect(calls.filter((call) => call.url.endsWith('/submissions')).map((call) => call.init.method)).toEqual([
+        'POST',
+        'POST',
+      ]);
+    });
+
+    it('fails after three publish attempts when the submission never clears', async () => {
+      const inProgress = '{"status":"Failed","errorCode":"InProgressSubmission","message":"try later"}';
+      const { fetchImpl } = createFetch([
+        {
+          match: endsWith('/draft/package'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-1' },
+          }),
+        },
+        {
+          match: endsWith('/submissions'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-1' },
+          }),
+        },
+        {
+          match: (url: string) => /\/operations\/[^/?#]+(?:[?#].*)?$/.test(url),
+          respond: ({ url }) => ({
+            body: url.includes('/draft/') ? '{"status":"Succeeded"}' : inProgress,
+          }),
+        },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-edge.zip']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishEdge(EDGE_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        'Upload: HTTP 202',
+        'Upload status check 1/30: Succeeded',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Failed',
+        'Publish attempt 1 blocked by an in-progress submission; retrying',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Failed',
+        'Publish attempt 2 blocked by an in-progress submission; retrying',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Failed',
+        'Publish failed:',
+        '{"status":"Failed","errorCode":"InProgressSubmission","message":"try later"}',
+      ]);
+      expect(harness.sleepCalls).toEqual([60_000, 60_000]);
+    });
+
+    it('fails immediately on a non-retryable publish terminal state', async () => {
+      const { fetchImpl } = createFetch([
+        {
+          match: endsWith('/draft/package'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/draft/package/operations/OP-UP-1' },
+          }),
+        },
+        {
+          match: endsWith('/submissions'),
+          respond: () => ({
+            status: 202,
+            headers: { location: 'https://api.addons.microsoftedge.microsoft.com/v1/products/product-1/submissions/operations/OP-PUB-1' },
+          }),
+        },
+        {
+          match: (url: string) => /\/operations\/[^/?#]+(?:[?#].*)?$/.test(url),
+          respond: ({ url }) => ({
+            body: url.includes('/draft/')
+              ? '{"status":"Succeeded"}'
+              : '{"status":"Failed","errorCode":"ValidationError","message":"bad package"}',
+          }),
+        },
+      ]);
+      const cwd = createCwdWithArtifacts(['dist/yasumaro-1.2.3-edge.zip']);
+      const harness = createHarness();
+
+      await expect(
+        uploadAndPublishEdge(EDGE_ENV, { fetch: fetchImpl, ...harness, cwd })
+      ).rejects.toBeInstanceOf(StepFailed);
+
+      expect(harness.logs).toEqual([
+        'Upload: HTTP 202',
+        'Upload status check 1/30: Succeeded',
+        'Publish: HTTP 202',
+        'Publish status check 1/30: Failed',
+        'Publish failed:',
+        '{"status":"Failed","errorCode":"ValidationError","message":"bad package"}',
+      ]);
+      // No retry wait: only retryable terminal states sleep.
+      expect(harness.sleepCalls).toEqual([]);
+    });
+
+    it('publishTerminalErrorCode reads the error code only from a well-formed body', () => {
+      expect(publishTerminalErrorCode('{"status":"Failed","errorCode":"InProgressSubmission"}')).toBe('InProgressSubmission');
+      expect(publishTerminalErrorCode('{"status":"Failed"}')).toBeNull();
+      expect(publishTerminalErrorCode('{"status":"Failed","errorCode":42}')).toBeNull();
+      expect(publishTerminalErrorCode('not json')).toBeNull();
+      expect(publishTerminalErrorCode('[]')).toBeNull();
     });
   });
 });

@@ -14,9 +14,12 @@
  *   EDGE_AUTO_PUBLISH — 'true' submits for certification; anything else stops after upload
  *   VERSION           — package version (dist/yasumaro-<VERSION>-edge.zip)
  *
- * Semantics are unchanged from the shell: same URLs, headers, and timeouts;
- * the same 30 × 10s operation polling (any status other than InProgress
- * fails, and never-finished prints `<label> did not finish in time`);
+ * Semantics match the shell except for one deliberate re-run guard: a publish
+ * blocked by another in-progress submission waits 60 s and retries (up to 3
+ * posts), because that is what a re-run after a partially completed release
+ * hits. Same URLs, headers, and timeouts otherwise; the same 30 × 10s
+ * operation polling (any status other than InProgress fails, and
+ * never-finished prints `<label> did not finish in time`);
  * failure → non-zero exit, publish skip → 0. A Chrome Web Store failure must
  * not skip this step — the workflow's `if: always()` gate still owns that.
  */
@@ -27,6 +30,7 @@ import {
   defaultSleep,
   isCliEntry,
   jqExtractOr,
+  parseJson,
   projectStatusFields,
   readFileOrAbort,
   requestOrAbort,
@@ -35,6 +39,26 @@ import {
 
 const OPERATION_POLL_MAX = 30;
 const POLL_INTERVAL_MS = 10_000;
+// A previous attempt's submission can still be running server-side when a
+// re-run publishes ("Can't publish extension as your extension submission is
+// in progress"). The draft package update already went through, so waiting
+// and re-submitting is the documented remediation — bounded, like the polls.
+const PUBLISH_ATTEMPTS_MAX = 3;
+const PUBLISH_RETRY_WAIT_MS = 60_000;
+
+/**
+ * The terminal errorCode of an Edge operation body, or null when the body
+ * carries none (non-JSON, no errorCode field, non-string value). Exported for
+ * tests; the publish loop uses it to recognise a retryable
+ * InProgressSubmission without changing the upload path.
+ */
+export function publishTerminalErrorCode(statusBody) {
+  const parsed = parseJson(statusBody);
+  if (parsed.ok !== true) return null;
+  const root = parsed.value;
+  if (root === null || typeof root !== 'object' || Array.isArray(root)) return null;
+  return typeof root.errorCode === 'string' ? root.errorCode : null;
+}
 
 export async function uploadAndPublishEdge(env, deps = {}) {
   const {
@@ -76,13 +100,20 @@ export async function uploadAndPublishEdge(env, deps = {}) {
 
   // Prints "Succeeded" once the operation finishes; any other terminal
   // status (or never finishing within 30 × 10s) fails the step.
-  async function waitForOperation(url, label) {
+  // onTerminalFailure classifies a terminal body: return 'retry' to let the
+  // caller drive the next step instead of throwing here. The upload path
+  // passes none and keeps the old fail-fast behavior.
+  async function waitForOperation(url, label, onTerminalFailure) {
     for (let attempt = 1; attempt <= OPERATION_POLL_MAX; attempt++) {
       const response = await requestOrAbort(fetchFn, url, { headers: authHeaders, timeoutMs: 30_000 }, log);
       const status = jqExtractOr(response.text, ['status'], 'UNKNOWN');
       log(`${label} status check ${attempt}/${OPERATION_POLL_MAX}: ${status}`);
       if (status === 'Succeeded') return;
       if (status !== 'InProgress') {
+        if (onTerminalFailure) {
+          const decision = onTerminalFailure(response.text);
+          if (decision === 'retry') return 'retry';
+        }
         log(`${label} failed:`);
         log(projectStatusFields(response.text) ?? 'Non-JSON response');
         throw new StepFailed();
@@ -146,28 +177,45 @@ export async function uploadAndPublishEdge(env, deps = {}) {
   }
 
   // --- Submit the submission for certification ---
-  const publish = await requestOrAbort(
-    fetchFn,
-    `${api}/submissions`,
-    {
-      method: 'POST',
-      headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notes: `Automated release v${version ?? ''}` }),
-      timeoutMs: 60_000,
-    },
-    log
-  );
-  log(`Publish: HTTP ${publish.status}`);
-  if (publish.status !== 202) {
-    log('Edge publish was not accepted');
-    throw new StepFailed();
+  // A re-run can arrive while the previous attempt's submission is still
+  // running server-side (InProgressSubmission). The draft package update
+  // already went through, so wait and re-submit rather than failing the
+  // release; anything else still fails immediately.
+  for (let attempt = 1; ; attempt++) {
+    const publish = await requestOrAbort(
+      fetchFn,
+      `${api}/submissions`,
+      {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: `Automated release v${version ?? ''}` }),
+        timeoutMs: 60_000,
+      },
+      log
+    );
+    log(`Publish: HTTP ${publish.status}`);
+    if (publish.status !== 202) {
+      log('Edge publish was not accepted');
+      throw new StepFailed();
+    }
+    const publishOperation = operationId(publish);
+    if (!publishOperation) {
+      log('No operation id in Location header');
+      throw new StepFailed();
+    }
+    const outcome = await waitForOperation(
+      `${api}/submissions/operations/${publishOperation}`,
+      'Publish',
+      // Only earlier attempts may retry: the last one must surface the
+      // terminal failure (with its fields) instead of swallowing it.
+      attempt < PUBLISH_ATTEMPTS_MAX
+        ? (body) => (publishTerminalErrorCode(body) === 'InProgressSubmission' ? 'retry' : undefined)
+        : undefined,
+    );
+    if (outcome !== 'retry') break;
+    log(`Publish attempt ${attempt} blocked by an in-progress submission; retrying`);
+    await sleep(PUBLISH_RETRY_WAIT_MS);
   }
-  const publishOperation = operationId(publish);
-  if (!publishOperation) {
-    log('No operation id in Location header');
-    throw new StepFailed();
-  }
-  await waitForOperation(`${api}/submissions/operations/${publishOperation}`, 'Publish');
   log('Publish submitted');
 }
 
