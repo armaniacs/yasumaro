@@ -7,11 +7,14 @@
 import { describe, it, expect } from 'vitest';
 import { join } from 'path';
 import { readFileSync } from 'fs';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
 // Import the shared version check logic from the build script
 import { readVersions, VERSION_FILES } from '../../../scripts/check-version-consistency.js';
 
-const ROOT = join(__dirname, '..', '..', '..');
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const ROOT = repoRootFromUrl(import.meta.url);
 
 describe('version consistency', () => {
   it('should read the same version from all version files', () => {
