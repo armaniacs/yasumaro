@@ -122,14 +122,27 @@ function runChunk(chunk) {
     ];
     // One retry: a dry-run timeout under load is transient, and losing an
     // hour of a chunk to it does not make the failure more informative.
+    // With --skip-failed the sweep continues past a twice-failed chunk
+    // (unattended overnight runs); without it the sweep aborts, which is the
+    // safer default when interactively watching the first chunks.
+    const skipFailed = hasFlag('--skip-failed');
+    let lastError;
     for (let attempt = 1; attempt <= 2; attempt += 1) {
         try {
             execFileSync('npx', args, { cwd: REPO_ROOT, stdio: 'inherit', env });
+            lastError = undefined;
             break;
         } catch (error) {
-            if (attempt === 2) throw error;
+            lastError = error;
+            if (attempt === 2) break;
             console.log(`chunk ${chunk.key} failed on attempt 1; retrying once`);
         }
+    }
+    if (lastError) {
+        console.log(`chunk ${chunk.key} failed twice; ${skipFailed ? 'skipping (recorded below)' : 'aborting sweep'}`);
+        failedChunks.push(chunk.key);
+        if (!skipFailed) throw lastError;
+        return;
     }
     // The JSON reporter always writes to its configured path; move it to the
     // chunk's own file so the sweep can resume and aggregate.
@@ -253,6 +266,8 @@ if (targets.length === 0) {
     process.exit(2);
 }
 
+const failedChunks = [];
+
 for (const chunk of targets) {
     const totals = readReport(chunkReportPath(chunk.key));
     if (totals && totals.tested > 0) {
@@ -263,3 +278,7 @@ for (const chunk of targets) {
 }
 
 aggregate();
+if (failedChunks.length > 0) {
+    console.log(`\nfailed chunks (not run): ${failedChunks.join(', ')}`);
+    process.exit(1);
+}
