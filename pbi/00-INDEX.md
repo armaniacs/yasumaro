@@ -20,7 +20,7 @@ Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロ�
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-16-01-release-store-upload-failure.md](2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | 🔶 部分実装。方針転換: CLI公開は緑のため両アップロードを `ENABLE_STORE_UPLOAD` 変数で無効化 (未設定=スキップ)。認証情報の復旧は任意の後続作業 |
+| 01 | [2026-11-16-01-release-store-upload-failure.md](2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | 🔶 未着手。ストアアップロードはreleaseに含め続ける方針 (無効化案は却下)。Chrome約2秒失敗=OAuth拒否の疑い、Edge約32秒失敗=パッケージ検証の疑い。CIログ原文の確認と secrets 更新が所有者作業 |
 
 ### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― ✅ 1件完了・アーカイブ済み
 

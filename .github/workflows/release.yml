@@ -116,10 +116,6 @@ jobs:
         # the token is never logged.
         run: node scripts/publish/cargo.mjs
       - name: Upload to Chrome Web Store
-        # Disabled until the store credentials are restored (PBI 2026-11-16-01):
-        # the step runs only when the repository variable is 'true'. The CLI
-        # publish above is unaffected (independent `if: always()` there).
-        if: ${{ vars.ENABLE_STORE_UPLOAD == 'true' }}
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
@@ -135,9 +131,7 @@ jobs:
         run: node scripts/publish/cws.mjs
       - name: Upload to Edge Add-ons
         # Independent of the Chrome step: a Chrome Web Store failure must not skip Edge.
-        # Disabled until the store credentials are restored (PBI 2026-11-16-01):
-        # the repository variable gates the step even when the zip exists.
-        if: ${{ always() && vars.ENABLE_STORE_UPLOAD == 'true' && hashFiles('dist/yasumaro-*-edge.zip') != '' }}
+        if: ${{ always() && hashFiles('dist/yasumaro-*-edge.zip') != '' }}
         env:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
