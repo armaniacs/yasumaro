@@ -159,30 +159,18 @@ function runChunk(chunk) {
 function survivors() {
     const byFile = new Map();
     const byMutator = new Map();
-    for (const chunk of CHUNKS) {
-        const file = chunkReportPath(chunk.key);
-        if (!existsSync(file)) continue;
-        let json;
-        try {
-            json = JSON.parse(readFileSync(file, 'utf-8'));
-        } catch {
-            continue;
-        }
-        for (const [path, fileResult] of Object.entries(json.files ?? {})) {
-            for (const mutant of fileResult.mutants ?? []) {
-                if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') continue;
-                const entry = byFile.get(path) ?? { survived: 0, noCoverage: 0 };
-                if (mutant.status === 'Survived') entry.survived += 1;
-                else entry.noCoverage += 1;
-                byFile.set(path, entry);
-                const key = mutant.mutatorName ?? 'unknown';
-                const counts = byMutator.get(key) ?? { survived: 0, noCoverage: 0, mutated: '' };
-                if (mutant.status === 'Survived') counts.survived += 1;
-                else counts.noCoverage += 1;
-                counts.mutated = mutant.replacement ?? counts.mutated;
-                byMutator.set(key, counts);
-            }
-        }
+    for (const { path, mutant } of collectUniqueMutants().values()) {
+        if (mutant.status !== 'Survived' && mutant.status !== 'NoCoverage') continue;
+        const entry = byFile.get(path) ?? { survived: 0, noCoverage: 0 };
+        if (mutant.status === 'Survived') entry.survived += 1;
+        else entry.noCoverage += 1;
+        byFile.set(path, entry);
+        const key = mutant.mutatorName ?? 'unknown';
+        const counts = byMutator.get(key) ?? { survived: 0, noCoverage: 0, mutated: '' };
+        if (mutant.status === 'Survived') counts.survived += 1;
+        else counts.noCoverage += 1;
+        counts.mutated = mutant.replacement ?? counts.mutated;
+        byMutator.set(key, counts);
     }
     const detail = flagValue('--survivors-detail');
     if (detail) {
@@ -214,24 +202,79 @@ function survivors() {
     }
 }
 
+const STATUS_RANK = { Killed: 3, Timeout: 2, Survived: 1, NoCoverage: 0 };
+
+function mutantKey(path, mutant) {
+    const loc = mutant.location ?? {};
+    const start = loc.start ?? {};
+    const end = loc.end ?? {};
+    return [
+        path,
+        mutant.mutatorName ?? '',
+        `${start.line ?? '?'}:${start.column ?? '?'}-${end.line ?? '?'}:${end.column ?? '?'}`,
+        JSON.stringify(mutant.replacement ?? null),
+    ].join('|');
+}
+
+/**
+ * Every distinct mutant across all chunk reports, deduplicated by identity.
+ * Stryker's incremental mode carries already-tested mutants into each later
+ * chunk's report, so naive per-chunk summation double-counts them (early
+ * chunks would dominate the aggregate). On conflict (same mutant, different
+ * status across runs — usually a flaky test) the best status wins: a mutant
+ * killed at least once is killable.
+ */
+function collectUniqueMutants() {
+    const unique = new Map();
+    for (const chunk of CHUNKS) {
+        const file = chunkReportPath(chunk.key);
+        if (!existsSync(file)) continue;
+        let json;
+        try {
+            json = JSON.parse(readFileSync(file, 'utf-8'));
+        } catch {
+            continue;
+        }
+        for (const [path, fileResult] of Object.entries(json.files ?? {})) {
+            for (const mutant of fileResult.mutants ?? []) {
+                const key = mutantKey(path, mutant);
+                const prev = unique.get(key);
+                if (prev === undefined || (STATUS_RANK[mutant.status] ?? -1) > (STATUS_RANK[prev.status] ?? -1)) {
+                    unique.set(key, { path, mutant });
+                }
+            }
+        }
+    }
+    return unique;
+}
+
 function aggregate() {
     const rows = [];
     for (const chunk of CHUNKS) {
         const totals = readReport(chunkReportPath(chunk.key));
         rows.push({ key: chunk.key, ...(totals ?? { killed: 0, total: 0, tested: 0, missing: true }) });
     }
-    let killed = 0;
-    let tested = 0;
+    // Per-chunk rows are raw report totals (each report carries incremental
+    // carryover from earlier chunks, so they overlap). The headline number
+    // below is the deduplicated union, which is the only unbiased total.
+    let uniqueKilled = 0;
+    let uniqueTested = 0;
+    for (const { mutant } of collectUniqueMutants().values()) {
+        if (mutant.status === 'Killed' || mutant.status === 'Timeout') {
+            uniqueKilled += 1;
+            uniqueTested += 1;
+        } else if (mutant.status === 'Survived' || mutant.status === 'NoCoverage') {
+            uniqueTested += 1;
+        }
+    }
     for (const row of rows) {
-        killed += row.killed;
-        tested += row.tested;
-        const label = row.missing ? 'not run' : `${row.tested} tested`;
+        const label = row.missing ? 'not run' : `${row.tested} tested (report total, includes carryover)`;
         const score = row.missing || row.tested === 0 ? 'n/a' : ((row.killed / row.tested) * 100).toFixed(2);
         console.log(`${row.key.padEnd(22)} ${String(score).padStart(6)}%  ${label}  (killed ${row.killed})`);
     }
-    const overall = tested === 0 ? Number.NaN : (killed / tested) * 100;
-    console.log(`\nAggregate mutation score: ${Number.isNaN(overall) ? 'n/a' : `${overall.toFixed(2)}%`} (killed ${killed} / tested ${tested})`);
-    return { overall, killed, tested, rows };
+    const overall = uniqueTested === 0 ? Number.NaN : (uniqueKilled / uniqueTested) * 100;
+    console.log(`\nAggregate mutation score (deduplicated): ${Number.isNaN(overall) ? 'n/a' : `${overall.toFixed(2)}%`} (killed ${uniqueKilled} / tested ${uniqueTested})`);
+    return { overall, killed: uniqueKilled, tested: uniqueTested, rows };
 }
 
 mkdirSync(CHUNK_DIR, { recursive: true });
