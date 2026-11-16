@@ -59,10 +59,16 @@ export async function runMigrationV2(ctx: MigrationContext): Promise<void> {
 
     if (!result.skipped && !result.error && chromeStorageAvailable) {
       const completedAt = new Date().toISOString();
-      chrome.storage.local.set({
-        [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: completedAt,
-        [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: result.migrated,
-      });
+      try {
+        await chrome.storage.local.set({
+          [StorageKeys.OPFS_MIGRATION_V2_COMPLETED_AT]: completedAt,
+          [StorageKeys.OPFS_MIGRATION_V2_RECORD_COUNT]: result.migrated,
+        });
+      } catch (error) {
+        ctx.postLog('warn', 'OPFS Worker: failed to persist V2 migration completion flags', {
+          error: errorMessage(error),
+        });
+      }
     }
 
     if (result.skipped) {
