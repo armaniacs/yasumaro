@@ -14,6 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| 02 | [2026-11-16-02-backlog-omnibox-url-fallback.md](2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ⬜ 未着手。omnibox経路の tab.url 空で無言 return。tabs 権限は ADR 却下のため、通知/サジェストでの可視化に限定 |
+
 ### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
 
 Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。コードは正常版と同一でスクリプトのテストも緑のため、認証情報またはストア側検証が原因と推定。所有者による secrets / ストア側の確認待ち。
