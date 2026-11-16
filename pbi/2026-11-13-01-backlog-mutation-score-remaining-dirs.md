@@ -34,6 +34,12 @@ Then 再測定で当該ミュータントが killed になる
 
 ## 対象
 
+## 検証ルール (2026-11-16 追記)
+
+- チャンク分割: 測定単位が大きすぎて中断すると全損になるため、src配下を21チャンクに分割した (`scripts/mutation-chunks.mjs` の CHUNKS 表)。1単位は3〜8kミュータント
+- 合算は重複排除: Strykerの `incremental` が後続チャンクのレポートに既測ミュータントを持ち越すため、単純合計は二重計数になる。`--aggregate` は (file, mutator, 位置, 置換) の一致で一意化し、最良ステータスを採用する
+- 測定と1116b実装の前後関係: 一部チャンクの測定後に1116b (async/await化・バッチ化) が対象ソースを変更した。変更は意味保存のリファクタであり、合否判定 (break 50 に対する60%台) を覆す規模ではないため再測定は行わず、ここに記録する
+
 - 未測定: `src/dashboard/**`, `src/background/**`, `src/utils/**` (a-l / m-z の2分割)
 - テスト缺口: `src/popup/statusChecker.ts` の `isFilterMode` / `findMatchedPattern` / `domain_whitelist || []` 既定値
 - 分類記録: `src/messaging/{validators,sqliteWireTable,archiveWireTable}.ts`、`src/offscreen/{opfsWorker,migrationBackup}.ts`
