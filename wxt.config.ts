@@ -261,6 +261,14 @@ export default defineConfig({
       'contextMenus',
       'downloads',
     ],
+    // Explicit toolbar action surface: chrome.action.* APIs (service-worker
+    // flagDegradedStartup, badgePolicy.setBadge, headerDetector badge writes)
+    // must not depend on WXT's implicit default_popup generation from the
+    // popup entrypoint. The popup document stays byte-identical to the
+    // generated one (entrypoints/popup/index.html -> popup.html).
+    action: {
+      default_popup: 'popup.html',
+    },
     // PBI 2026-10-23-07: permission-free record-without-opening entry points.
     // `omnibox` and `commands` are manifest keys, not permissions — the side
     // panel (chrome.sidePanel needs the sidePanel permission) stays staged

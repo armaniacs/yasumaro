@@ -124,16 +124,21 @@ function httpReason(status: number): string {
 }
 
 /** Production fetch: no redirect following, 30s abort. Tests inject fetchFn. */
-export function defaultWebhookFetch(
+export async function defaultWebhookFetch(
   url: string,
   init: { method: string; headers: Record<string, string>; body: string },
 ): Promise<WebhookFetchResponse> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 30000);
-  return globalThis
-    .fetch(url, { method: init.method, headers: init.headers, body: init.body, redirect: 'error', signal: controller.signal })
-    .then((response: Response) => ({ ok: response.ok, status: response.status }))
-    .finally(() => clearTimeout(timer));
+  try {
+    const response: Response = await globalThis.fetch(
+      url,
+      { method: init.method, headers: init.headers, body: init.body, redirect: 'error', signal: controller.signal },
+    );
+    return { ok: response.ok, status: response.status };
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -213,19 +218,20 @@ export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean
  * "undeclared origins are blocked" contract (see the module header). Fail
  * closed: an unreadable manifest means no egress.
  */
-export function defaultIsWebhookHostPermitted(url: string): Promise<boolean> {
+export async function defaultIsWebhookHostPermitted(url: string): Promise<boolean> {
   let declared: readonly string[];
   try {
     declared = chrome.runtime.getManifest().host_permissions ?? [];
   } catch {
-    return Promise.resolve(false);
+    return false;
   }
-  return Promise.resolve(declared.some((pattern) => isUrlCoveredByHostPattern(url, pattern)));
+  return declared.some((pattern) => isUrlCoveredByHostPattern(url, pattern));
 }
 
 /** Production mask: the privacy pipeline's regex pass, applied at send time. */
-export function defaultWebhookMaskText(text: string): Promise<string> {
-  return sanitizeRegex(text).then((result) => result.text);
+export async function defaultWebhookMaskText(text: string): Promise<string> {
+  const result = await sanitizeRegex(text);
+  return result.text;
 }
 
 async function recordHistory(

@@ -69,10 +69,9 @@ function isRecordingResult(value: unknown): value is RecordingResult {
 }
 
 /** Popup → SW send with retry, via the unified MessageTransport. */
-function send(message: RecordRequest): Promise<RecordingResult | undefined> {
-  return messageTransport
-    .send(message, { retries: 5 })
-    .then((response) => (isRecordingResult(response) ? response : undefined));
+async function send(message: RecordRequest): Promise<RecordingResult | undefined> {
+  const response = await messageTransport.send(message, { retries: 5 });
+  return isRecordingResult(response) ? response : undefined;
 }
 
 /**
