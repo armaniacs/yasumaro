@@ -34,36 +34,34 @@ describe('pageContentPipeline single seam', () => {
       dom = installDom('');
     });
 
-    it('returns the article text on a healthy document', () => {
+    it('returns the article text on a healthy document', async () => {
       dom.window.document.body.innerHTML = HEALTHY_HTML;
-      const result = preparePageContent(createDefaultCleansingConfig());
+      const result = await preparePageContent(createDefaultCleansingConfig());
       expect(result.content).toContain('Single Seam Contract');
     });
 
-    it('returns an empty string without throwing when the body element is missing', () => {
+    it('returns an empty string without throwing when the body element is missing', async () => {
       dom.window.document.body.innerHTML = HEALTHY_HTML;
       dom.window.document.body.remove();
       expect(document.body).toBeNull();
-      let result: ReturnType<typeof preparePageContent> | undefined;
-      expect(() => {
-        result = preparePageContent(createDefaultCleansingConfig());
-      }).not.toThrow();
+      // PBI 1116b: the seam is async now — "without throwing" means the
+      // promise resolves instead of rejecting; a rejection fails the test.
+      const result: Awaited<ReturnType<typeof preparePageContent>> | undefined =
+        await preparePageContent(createDefaultCleansingConfig());
       expect(typeof result?.content).toBe('string');
       expect(result?.content).toBe('');
     });
 
-    it('returns a string without throwing on an empty body', () => {
+    it('returns a string without throwing on an empty body', async () => {
       dom.window.document.body.innerHTML = '';
-      let result: ReturnType<typeof preparePageContent> | undefined;
-      expect(() => {
-        result = preparePageContent(createDefaultCleansingConfig());
-      }).not.toThrow();
+      const result: Awaited<ReturnType<typeof preparePageContent>> | undefined =
+        await preparePageContent(createDefaultCleansingConfig());
       expect(typeof result?.content).toBe('string');
     });
 
-    it('honours maxChars truncation through the single seam', () => {
+    it('honours maxChars truncation through the single seam', async () => {
       dom.window.document.body.innerHTML = HEALTHY_HTML;
-      const result = preparePageContent(createDefaultCleansingConfig(), SMALL_MAX_CHARS);
+      const result = await preparePageContent(createDefaultCleansingConfig(), SMALL_MAX_CHARS);
       expect(result.content.length).toBeLessThanOrEqual(SMALL_MAX_CHARS);
       expect(result.content.length).toBeGreaterThan(0);
     });
@@ -92,17 +90,17 @@ describe('pageContentPipeline single seam', () => {
     ];
 
     for (const testCase of cases) {
-      it(`matches the legacy two-step call — ${testCase.name}`, () => {
+      it(`matches the legacy two-step call — ${testCase.name}`, async () => {
         const viaSeamConfig = testCase.config(createDefaultCleansingConfig());
         const viaLegacyConfig = testCase.config(createDefaultCleansingConfig());
 
         const dom = installDom(HEALTHY_HTML);
-        const viaSeam = preparePageContent(viaSeamConfig, testCase.maxChars ?? 10000);
+        const viaSeam = await preparePageContent(viaSeamConfig, testCase.maxChars ?? 10000);
 
         dom.window.document.body.innerHTML = HEALTHY_HTML;
         const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } =
           buildExtractionOptions(viaLegacyConfig);
-        const viaLegacy = extractMainContentWithInfo(
+        const viaLegacy = await extractMainContentWithInfo(
           testCase.maxChars ?? 10000,
           cleanseOptions,
           aiSummaryCleanseOptions,

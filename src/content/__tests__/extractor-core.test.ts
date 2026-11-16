@@ -80,13 +80,13 @@ describe('extractPageContent', () => {
         document.body.innerHTML = '';
     });
 
-    it('returns empty string for empty document', () => {
+    it('returns empty string for empty document', async () => {
         document.body.innerHTML = '';
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('extracts text from article element', () => {
+    it('extracts text from article element', async () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -94,38 +94,38 @@ describe('extractPageContent', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content).toContain('Test Article');
         expect(result.content).toContain('main content');
     });
 
-    it('returns a string for document with main element', () => {
+    it('returns a string for document with main element', async () => {
         document.body.innerHTML = `
             <main>
                 <h2>Main Content</h2>
                 <p>This is main content with sufficient length for extraction.</p>
             </main>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('returns a string even when body has only nav elements', () => {
+    it('returns a string even when body has only nav elements', async () => {
         document.body.innerHTML = `
             <nav><a href="/">Home</a><a href="/about">About</a></nav>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('respects maxChars limit (default 10000)', () => {
+    it('respects maxChars limit (default 10000)', async () => {
         const longText = 'a'.repeat(15000);
         document.body.innerHTML = `<article><p>${longText}</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
-    it('does not mutate pageState as a side effect (PBI-28: pure function)', () => {
+    it('does not mutate pageState as a side effect (PBI-28: pure function)', async () => {
         document.body.innerHTML = `<article><p>Purity check content with enough text to trigger stats.</p></article>`;
 
         const before = {
@@ -136,7 +136,7 @@ describe('extractPageContent', () => {
             lastFallbackTriggered: getPageStateForTesting().lastFallbackTriggered,
         };
 
-        const result = extractPageContent();
+        const result = await extractPageContent();
 
         // The result carries its own stats — pageState must remain untouched.
         expect(result.content.length).toBeGreaterThan(0);
@@ -147,11 +147,11 @@ describe('extractPageContent', () => {
         expect(getPageStateForTesting().lastFallbackTriggered).toBe(before.lastFallbackTriggered);
     });
 
-    it('is callable repeatedly without accumulating state (no hidden memoization)', () => {
+    it('is callable repeatedly without accumulating state (no hidden memoization)', async () => {
         document.body.innerHTML = `<article><p>Repeat call content with sufficient text length here.</p></article>`;
 
-        const first = extractPageContent();
-        const second = extractPageContent();
+        const first = await extractPageContent();
+        const second = await extractPageContent();
 
         expect(first.content).toBe(second.content);
     });

@@ -16,8 +16,9 @@ function makeDeps(runtimeId: string | undefined = 'test-extension-id'): {
     pageState: PageState;
 } {
     const pageState = new PageState();
+    // PBI 1116b: async extraction seam — the mock resolves like the kernel.
     const extractAndCommit = vi.fn(
-        () =>
+        async () =>
             ({
                 content: '<p>hello</p>',
                 cleansedReason: 'none',
@@ -31,32 +32,32 @@ function makeDeps(runtimeId: string | undefined = 'test-extension-id'): {
 }
 
 describe('handleGetContentMessage - chrome-free direct calls', () => {
-    it('works even when no chrome global exists', () => {
+    it('works even when no chrome global exists', async () => {
         const holder = globalThis as unknown as Record<string, unknown>;
         const saved = holder['chrome'];
         try {
             delete holder['chrome'];
             const { deps } = makeDeps('test-extension-id');
             const sendResponse = vi.fn();
-            handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
+            await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
             expect(sendResponse).toHaveBeenCalledTimes(1);
         } finally {
             holder['chrome'] = saved;
         }
     });
 
-    it('ignores non-object / null / type-less messages', () => {
+    it('ignores non-object / null / type-less messages', async () => {
         const { deps } = makeDeps();
         for (const message of [undefined, null, 42, 'GET_CONTENT', {}, { type: 7 }]) {
             const sendResponse = vi.fn();
             const result = handleGetContentMessage(message, { id: 'test-extension-id' }, sendResponse, deps);
             expect(sendResponse).not.toHaveBeenCalled();
-            expect(result).toBeUndefined();
+            expect(await result).toBeUndefined();
         }
         expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
-    it('ignores non-GET_CONTENT broadcasts', () => {
+    it('ignores non-GET_CONTENT broadcasts', async () => {
         const { deps } = makeDeps();
         const sendResponse = vi.fn();
         const result = handleGetContentMessage(
@@ -66,23 +67,23 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
             deps,
         );
         expect(sendResponse).not.toHaveBeenCalled();
-        expect(result).toBeUndefined();
+        expect(await result).toBeUndefined();
         expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
-    it('rejects senders whose id differs from runtimeId', () => {
+    it('rejects senders whose id differs from runtimeId', async () => {
         const { deps } = makeDeps('test-extension-id');
         const sendResponse = vi.fn();
-        handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'external-id' }, sendResponse, deps);
+        await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'external-id' }, sendResponse, deps);
         expect(sendResponse).not.toHaveBeenCalled();
         expect(deps.extractAndCommit).not.toHaveBeenCalled();
     });
 
-    it('answers same-extension GET_CONTENT with the full response shape', () => {
+    it('answers same-extension GET_CONTENT with the full response shape', async () => {
         const { deps, extractAndCommit, pageState } = makeDeps('test-extension-id');
         const sendResponse = vi.fn();
 
-        handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
+        await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
 
         expect(extractAndCommit).toHaveBeenCalledTimes(1);
         expect(sendResponse).toHaveBeenCalledTimes(1);
@@ -95,13 +96,13 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
         expect(response).toHaveProperty('fallbackTriggered');
     });
 
-    it('echoes injected pageState stats (no singleton coupling)', () => {
+    it('echoes injected pageState stats (no singleton coupling)', async () => {
         const { deps, pageState } = makeDeps('test-extension-id');
         pageState.lastCleansedReason = 'keyword';
         pageState.lastCleanseStats = { hardStripRemoved: 1, keywordStripRemoved: 2, totalRemoved: 3 };
         const sendResponse = vi.fn();
 
-        handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
+        await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
 
         const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
         expect(response['cleansedReason']).toBe('keyword');
@@ -110,24 +111,24 @@ describe('handleGetContentMessage - chrome-free direct calls', () => {
 });
 
 describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)', () => {
-    it("CRITICAL: 'current'/absent calls extractAndCommit with undefined (no override)", () => {
+    it("CRITICAL: 'current'/absent calls extractAndCommit with undefined (no override)", async () => {
         for (const message of [
             { type: 'GET_CONTENT' },
             { type: 'GET_CONTENT', payload: { cleanseMode: 'current' } },
         ]) {
             const { deps, extractAndCommit } = makeDeps();
             const sendResponse = vi.fn();
-            handleGetContentMessage(message, { id: 'test-extension-id' }, sendResponse, deps);
+            await handleGetContentMessage(message, { id: 'test-extension-id' }, sendResponse, deps);
             expect(extractAndCommit).toHaveBeenCalledWith(undefined);
             expect(sendResponse).toHaveBeenCalledTimes(1);
         }
     });
 
-    it("CRITICAL: 'looser'/'loosest' resolve against live pageState config (propagation)", () => {
+    it("CRITICAL: 'looser'/'loosest' resolve against live pageState config (propagation)", async () => {
         for (const cleanseMode of ['looser', 'loosest'] as const) {
             const { deps, extractAndCommit } = makeDeps();
             const sendResponse = vi.fn();
-            handleGetContentMessage(
+            await handleGetContentMessage(
                 { type: 'GET_CONTENT', payload: { cleanseMode } },
                 { id: 'test-extension-id' },
                 sendResponse,
@@ -147,10 +148,10 @@ describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)',
         }
     });
 
-    it('wrong sender id performs NO extraction even with a cleanseMode', () => {
+    it('wrong sender id performs NO extraction even with a cleanseMode', async () => {
         const { deps } = makeDeps('test-extension-id');
         const sendResponse = vi.fn();
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'GET_CONTENT', payload: { cleanseMode: 'loosest' } },
             { id: 'external-id' },
             sendResponse,
@@ -162,27 +163,27 @@ describe('handleGetContentMessage - regenerate cleanseMode (PBI 2026-09-22-04)',
 });
 
 describe('handleGetContentMessage - extraction failure (PBI 2026-11-08-05)', () => {
-    it('still answers when extractAndCommit throws (popup must not hang)', () => {
+    it('still answers when extractAndCommit throws (popup must not hang)', async () => {
         const { deps, extractAndCommit } = makeDeps('test-extension-id');
         extractAndCommit.mockImplementation(() => {
             throw new Error('extract boom');
         });
         const sendResponse = vi.fn();
 
-        expect(() =>
-            handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps),
-        ).not.toThrow();
+        // PBI 1116b: the handler is async now — "does not throw" means the
+        // promise resolves instead of rejecting; a rejection fails the test.
+        await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
         expect(sendResponse).toHaveBeenCalledTimes(1);
     });
 
-    it('marks the failure reply through the fallback channel with empty content', () => {
+    it('marks the failure reply through the fallback channel with empty content', async () => {
         const { deps, extractAndCommit } = makeDeps('test-extension-id');
         extractAndCommit.mockImplementation(() => {
             throw new Error('extract boom');
         });
         const sendResponse = vi.fn();
 
-        handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
+        await handleGetContentMessage({ type: 'GET_CONTENT' }, { id: 'test-extension-id' }, sendResponse, deps);
 
         const response = sendResponse.mock.calls[0]![0] as Record<string, unknown>;
         expect(response['content']).toBe('');

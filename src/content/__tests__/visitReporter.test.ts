@@ -271,6 +271,12 @@ describe('VisitReporter policy matrix', () => {
       const reporter = new VisitReporter(deps);
       const first = reporter.report();
       const second = reporter.report();
+      // PBI 1116b: extraction awaits the batched scan, so the first attempt
+      // reaches the sender a few microtasks later — wait for the call
+      // (condition-based, no fixed sleep) before releasing it.
+      await vi.waitFor(() => {
+        expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);
+      });
       release({ success: true });
       await Promise.all([first, second]);
       expect(deps.sender.sendMessageWithRetry).toHaveBeenCalledTimes(1);

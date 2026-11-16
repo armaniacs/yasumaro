@@ -86,7 +86,7 @@ export interface VisitReporterDeps {
      * extract/apply pair fallback was retired, so there is no second path
      * to choose and no commit to forget.
      */
-    extractAndCommit: (config?: CleansingConfig) => ExtractResult;
+    extractAndCommit: (config?: CleansingConfig) => Promise<ExtractResult>;
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
@@ -238,7 +238,7 @@ export class VisitReporter {
         benchMark('ow-extract-start');
         // PBI 2026-09-21-30: single route — extract+commit is atomic inside
         // the kernel, so no fallback branch and no sequencing knowledge here.
-        const extractResult = this.deps.extractAndCommit();
+        const extractResult = await this.deps.extractAndCommit();
         const content = extractResult.content;
         benchMark('ow-send-ready');
 

@@ -49,7 +49,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             </article>
         `;
 
-        const result = kernel.extractPageContent(hardStripOnly(kernel));
+        const result = await kernel.extractPageContent(hardStripOnly(kernel));
         await flushSends();
 
         expect(result.cleansingExecuted).toBe(true);
@@ -68,7 +68,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             <script>alert('outside the candidate')</script>
         `;
 
-        const result = kernel.extractPageContent(hardStripOnly(kernel));
+        const result = await kernel.extractPageContent(hardStripOnly(kernel));
         await flushSends();
 
         // 診断 recount が body 全体を数えて totalRemoved を埋めるが、識別子は立たない
@@ -90,7 +90,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             ...hardStripOnly(kernel),
             contentStripHardEnabled: false,
         };
-        const result = kernel.extractPageContent(disabled);
+        const result = await kernel.extractPageContent(disabled);
         await flushSends();
 
         expect(result.cleansingExecuted).toBeUndefined();
@@ -112,7 +112,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             ${'Body fallback filler text. '.repeat(30)}
         `;
 
-        const result = kernel.extractPageContent({
+        const result = await kernel.extractPageContent({
             ...hardStripOnly(kernel),
             candidateGuardEnabled: false,
         });
@@ -139,7 +139,7 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             ${'Body fallback filler text. '.repeat(30)}
         `;
 
-        const result = kernel.extractPageContent(hardStripOnly(kernel));
+        const result = await kernel.extractPageContent(hardStripOnly(kernel));
         await flushSends();
 
         expect(result.fallbackTriggered).toBe(true);
@@ -162,10 +162,10 @@ describe('ContentKernel — CONTENT_CLEANSING_EXECUTED via injected sender', () 
             </article>
         `;
 
+        // PBI 1116b: extraction is async — awaiting directly proves the flow
+        // does not fail (a rejection fails the test).
         let result;
-        expect(() => {
-            result = kernel.extractPageContent(hardStripOnly(kernel));
-        }).not.toThrow();
+        result = await kernel.extractPageContent(hardStripOnly(kernel));
         await flushSends();
 
         expect(result!.content.length).toBeGreaterThan(0);
