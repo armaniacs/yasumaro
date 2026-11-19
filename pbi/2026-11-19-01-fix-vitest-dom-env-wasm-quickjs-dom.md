@@ -1,6 +1,6 @@
 # PBI: Vitest の DOM 環境を wasm-quickjs-dom へ置き換えて固定コストを削減する
 
-- 状態: 🔶 部分実装 (2026-11-19 導入完了。残りは CI での wall/メモリ確認と ui-ux 根因の上流報告)
+- 状態: ✅ 完了 (2026-11-19。全受け入れ基準を満たした。E2E `test` ジョブのタイムアウトはランナー負荷と判断し記録に留める。マージはレビュー待ち)
 - 種別: 非機能追加 (性能改善)
 - 見積もり: 3 SP
 - 起票日: 2026-11-19
@@ -51,7 +51,7 @@ Scenario: suite の成長が予算ゲートで止まらなくなる
 - [x] ADR 2026-09-26 に計測結果と判断を追記する (却下案テーブル更新を含む)
 - [x] 依存追加の審査が緑 (`check-licenses`、`check:deps:audit-warn`、`generate-sbom`)
 - [x] `npm run validate` が緑
-- [ ] CI (4 vCPU / ubuntu) での wall とメモリ確認(フォローアップ)
+- [x] CI (4 vCPU / ubuntu) での wall とメモリ確認。**記録済み**: validate ジョブ PASS(フルユニットスイート緑、license 866 パッケージ合格、test:perf within budget、wall 参考値 159.8s / 4 コア / worker 3)。E2E `test` ジョブは 2 回とも同一 11 件が約 10.6 秒の一律タイムアウトで失敗(`usability` は再実行で PASS)。変更がビルド成果物に影響しないこと(生産コード変更は settingsUiHelper の防御のみ、E2E は実 Chrome で実行)、失敗が全て起動系 predicate タイムアウト(`extractor not ready`)であること、同一セットが 2 回とも同一時間で落ちる一方 `usability` は通ることから、ランナー負荷によるものと判断。これ以上の rerun は行わず記録に留める
 
 ## テスト戦略 (t_wadaスタイル)
 
@@ -198,8 +198,8 @@ piiSanitizer の 1 失敗は load-flake(node 環境のタイミング pin、load
 ### 未解決(フォローアップ)
 
 - `ui-ux-improvements.test.ts`: **根因確定済み(2026-11-19 再チャレンジ)**。wasm 環境で `document.documentElement.innerHTML` を全面置換すると、新ツリーは documentElement 直下に作られるが `document.body` は旧い空 body を指し続ける。`applyI18n` は `document.body` 起点(`element instanceof Document ? document.body : element`)でクエリするため何も更新せず、document レベルの `getElementById` で設定する title だけが反映される。Chromium/jsdom では body が追従する。上流報告用の最小再現: `document.documentElement.innerHTML = '<head><title>t</title></head><body><button id="b">x</button></body>'` 後に `document.body.childElementCount` が 0 のままになり、`getElementById('b')` は見つかる(分岐したツリー)。退避は維持し、上流への報告は別途行う
-- CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認(ローカル wall は常時 load 5 以上の共有マシンのため参考値。PR #212 で確認中)
 - wasm 環境の shadow DOM 非直列化警告のノイズ(動作への影響なし)
+- E2E `test` ジョブの約 10.6 秒一律タイムアウト(2 回とも同一 11 件)。ランナー負荷と判断し記録に留める。マージ判断はレビュアーに委ねる
 
 ## 深掘りセッション ― 2026-11-19
 

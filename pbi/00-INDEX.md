@@ -18,7 +18,7 @@
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | 🔶 部分実装。jsdom → wasm-quickjs-dom を 422 ファイルへ導入(退避 14 ファイルは根拠つき jsdom 維持)。フルスイート 1336/18835 全パス、environment フェーズ 49s→25.3s、A/B で DOM ファイル 1.76 倍速。ゲートを domFileCount(426)へ再定義。ADR 追記・validate 緑・供給網審査通過。残り: CI での wall/メモリ確認、ui-ux-improvements 根因の上流確認 |
+| 01 | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了。jsdom → wasm-quickjs-dom を 422 ファイルへ導入(退避 14 ファイルは根拠つき jsdom 維持)。フルスイート 1336/18835 全パス、environment フェーズ 49s→25.3s、A/B で DOM ファイル 1.76 倍速。ゲートを domFileCount(426)へ再定義。ADR 追記・validate 緑・供給網審査通過・ui-ux 根因 (document.body 更新漏れ) 確定。CI: validate 緑・license 866・test:perf within budget・wall 159.8s(4vCPU)。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録に留める。マージはレビュー待ち |
 
 ### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
 

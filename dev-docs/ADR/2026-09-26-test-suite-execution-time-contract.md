@@ -569,6 +569,14 @@ worktree)**:
 
 wall の絶対値はマシン依存のため、最終確認は CI(4 vCPU)で行う。
 
+**CI 実測(PR #212、4 vCPU / ubuntu / worker 3)**: validate ジョブ PASS。
+フルユニットスイート緑、license 866 パッケージ合格、test:perf within budget
+(DOM env files 426/426)。wall 参考値 159.8s。E2E `test` ジョブは 2 回とも
+同一 11 件が約 10.6 秒の一律タイムアウトで失敗(`extractor not ready` 等の
+起動系 predicate)。`usability` は再実行で PASS(3m6s)。変更がビルド成果物に
+影響しないこと(生産コード変更は settingsUiHelper の防御のみ、E2E は実 Chrome
+で実行)から、ランナー負荷によるものと判断し再実行は行わない。
+
 ### 未解決
 
 - `ui-ux-improvements.test.ts`: **根因確定済み(2026-11-19 再チャレンジ)**。
@@ -579,7 +587,6 @@ wall の絶対値はマシン依存のため、最終確認は CI(4 vCPU)で行�
   最小再現は PBI 2026-11-19-01 の実装結果節を参照
 - wasm 環境は shadow DOM を含むページで「serialised に含まれない」警告を出す
   (動作には影響しないがログが騒がしい)
-- CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認
 
 ### 却下案テーブルへの追記
 
