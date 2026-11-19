@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * researchReportPanelView.test.ts (PBI 2026-11-01-03)
  * Research-report region: the report target (term/tag/period) resolves from

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfsWorkerBackend-degradation.test.ts
  *

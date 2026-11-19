@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for idbEngineLifecycle.ts (PBI-01 extraction).
  * Covers init success/failure and lastInitError recording, using a mocked

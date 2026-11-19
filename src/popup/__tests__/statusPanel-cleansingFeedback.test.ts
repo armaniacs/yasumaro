@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * statusPanel-cleansingFeedback.test.ts
  * PBI 2026-09-28-08: the 報告 button synthesized the removal counts by merging

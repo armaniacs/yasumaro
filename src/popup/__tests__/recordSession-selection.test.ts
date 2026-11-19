@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // --- hoisted mocks (mirrors recordOrchestrator.test.ts harness) ---

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * purgeSequenceParity.test.ts — PBI 2026-10-09-04 (NN04)
  *

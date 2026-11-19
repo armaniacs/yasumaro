@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * trancoNotification.test.ts
  * Tests for Tranco update notification banner UI and consent handling

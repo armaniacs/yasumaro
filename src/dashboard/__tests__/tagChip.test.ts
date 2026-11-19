@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagChip.test.ts — createTagChip factory unit tests.
  */

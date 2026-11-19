@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi } from 'vitest';
 
 // We test the sanitizeFtsQuery function indirectly by importing from sqlite.ts.

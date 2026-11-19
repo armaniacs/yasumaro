@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 describe('domainFilter UI integration', () => {

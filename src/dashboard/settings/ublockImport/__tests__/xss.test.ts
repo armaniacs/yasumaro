@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * ublockImport-xss.test.js
  * XSS protection tests for renderSourceList

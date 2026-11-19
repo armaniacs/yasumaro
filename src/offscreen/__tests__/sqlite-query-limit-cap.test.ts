@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqlite-query-limit-cap.test.ts
  * M13: query() must clamp an excessively large `limit` to a hard

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveValidationResourceCaps.test.ts
  * Boundary tests for the worker-side restore ceilings enforced by

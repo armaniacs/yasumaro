@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: wasm-quickjs-dom CSSOM parses malicious style values differently; this CSS-injection pin must run on the jsdom baseline.
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { setElementColor, setElementWidth, escapeCssIdentifier, escapeCssValue } from '../cspStyleUtils.js';

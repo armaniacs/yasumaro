@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 import { calculateTextScore, findMainContentCandidates, scoreAndSort } from '../scoring.js';

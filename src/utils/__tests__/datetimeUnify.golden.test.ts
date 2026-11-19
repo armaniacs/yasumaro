@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * datetimeUnify.golden.test.ts (PBI 2026-11-11-05)
  * Golden pins written BEFORE the seam unification (受け入れシナリオ 1-3)。

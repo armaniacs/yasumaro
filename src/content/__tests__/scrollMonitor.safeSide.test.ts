@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * scrollMonitor.safeSide.test.ts (review S2)
  * When no viewport is readable, the update maintains the current max

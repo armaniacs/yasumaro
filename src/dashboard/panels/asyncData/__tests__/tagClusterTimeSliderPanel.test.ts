@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagClusterTimeSliderPanel behavior (PBI 2026-09-24-08):
  * - Apply fires TWO queryLogs calls with the first/second half bounds derived

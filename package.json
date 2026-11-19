@@ -108,6 +108,7 @@
     "typescript": "^6.0.3",
     "vite": "^8.3.6",
     "vitest": "^5.1.0",
+    "vitest-environment-wasm-quickjs-dom": "^1.0.19",
     "web-ext": "^10.7.0",
     "wxt": "^0.21.5"
   },

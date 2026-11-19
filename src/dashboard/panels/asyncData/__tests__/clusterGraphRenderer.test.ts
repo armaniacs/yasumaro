@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * clusterGraphRenderer (PBI 2026-09-28-17): one pin for the draw skeleton the
  * tag-cluster, word-cluster and tag-cluster-compare panels now share, and one

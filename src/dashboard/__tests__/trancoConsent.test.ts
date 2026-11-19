@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * trancoConsent.test.ts
  * Unit tests for trancoConsent.ts

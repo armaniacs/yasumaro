@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect } from 'vitest';
 import { FILTER_LIST_SOURCES, ALL_LIST_SOURCES, TRANCO_METADATA_SOURCE } from '../listSources.js';
 import { isDomainInWhitelist, buildAllowedUrls } from '../storage/urlWhitelist.js';

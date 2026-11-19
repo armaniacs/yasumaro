@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * staticPanelAdapter.test.ts
  * PBI 2026-08-09-22: 単純委譲パネルの宣言表化

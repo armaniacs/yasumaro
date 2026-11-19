@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfs-search-skeleton-pin.test.ts
  * PBI 2026-09-21-23 (TDD pin): pins CURRENT search behavior for the FTS and

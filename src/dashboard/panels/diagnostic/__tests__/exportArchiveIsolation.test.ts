@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportArchiveIsolation.test.ts
  * PBI 2026-10-02-06: codifies the intended concurrency shape at the panel

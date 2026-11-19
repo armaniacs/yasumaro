@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * index-batch-d.test.ts — PBI 2026-11-08-16 (item 1) pins.
  *

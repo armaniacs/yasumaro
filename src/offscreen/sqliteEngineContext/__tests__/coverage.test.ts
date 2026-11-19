@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * coverage.test.ts — PBI-11: offscreen/sqliteEngineContext 90% ゲート用
  * - _doInit の OPFS→IDB→Fallback 3分岐、fts5Available 反映、FALLBACK_MODE 切替を chrome.storage mock で検証

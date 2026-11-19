@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * promptItemGolden.test.ts
  * PBI NN19: .prompt-item 行 HTML の byte-identical golden pin.

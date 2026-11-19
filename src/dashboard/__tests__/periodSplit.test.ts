@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * periodSplit unit tests (PBI 2026-09-24-08): half boundaries, shared mid
  * instant, inversion swap, zero-length windows, and non-finite rejection.

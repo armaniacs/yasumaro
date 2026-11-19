@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * i18n-torkey.test.ts
  * PBI 2026-09-18-15: pins tOrKey's contract — key-fallback on missing keys,

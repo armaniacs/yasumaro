@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * visitGatingCorrectness.test.ts (PBI 2026-11-08-02)
  * Regression pins for the six verified visit-gating findings:

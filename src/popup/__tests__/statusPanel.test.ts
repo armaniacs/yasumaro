@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * reopenWizard() used to build a MutationObserver on every click and never
  * disconnect it, so N reopens left N live observers watching the same element.

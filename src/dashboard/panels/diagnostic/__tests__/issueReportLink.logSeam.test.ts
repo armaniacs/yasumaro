@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Parity pin for PBI 2026-11-11-03 (log-path-unify): the diagnostics
  * collection failure travels the structured-logger seam (logError) with the

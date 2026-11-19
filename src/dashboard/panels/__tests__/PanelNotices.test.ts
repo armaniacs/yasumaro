@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * PanelNotices unit tests: named registration, show/hide/hideAll
  * idempotency, the empty/error surface swap on one element, reset()

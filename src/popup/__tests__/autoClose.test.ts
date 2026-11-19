@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * UF-404 記録成功後のポップアップ自動クローズ機能のテスト
  *

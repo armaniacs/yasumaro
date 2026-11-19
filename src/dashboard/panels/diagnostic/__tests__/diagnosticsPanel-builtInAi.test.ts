@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * diagnosticsPanel-builtInAi.test.ts
  * Focused DOM tests for the built-in AI diagnostics rendering in diagnosticsPanel.ts.

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../utils/i18n.js', async () => {

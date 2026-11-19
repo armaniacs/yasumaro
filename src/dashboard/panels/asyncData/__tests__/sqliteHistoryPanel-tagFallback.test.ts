@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-tagFallback.test.ts
  * PBI 2026-08-06-01: Tag Cluster クリック時にタグ未マッチなら全文検索へフォールバック

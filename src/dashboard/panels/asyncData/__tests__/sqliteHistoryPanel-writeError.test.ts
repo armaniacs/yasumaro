@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-writeError.test.ts
  * PBI 2026-08-09-21: 削除・スター操作の失敗が画面に反映されない問題の回帰テスト

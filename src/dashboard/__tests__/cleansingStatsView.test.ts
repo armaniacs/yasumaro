@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 
 import { computeCleansingStats, renderStatsSummary, renderFunnelChart } from '../cleansingStatsView.js';
 import type { SavedUrlEntry } from '../../utils/storageUrls.js';

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveValidation.test.ts
  * Unit tests for validateArchiveEngine / migrateArchiveStaging using a mock

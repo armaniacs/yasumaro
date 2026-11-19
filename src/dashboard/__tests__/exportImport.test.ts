@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 const { hoistedMockGet, hoistedMockSave } = vi.hoisted(() => ({

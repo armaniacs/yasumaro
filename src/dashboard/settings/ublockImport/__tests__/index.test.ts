@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * index.test.ts
  * Tests for src/popup/ublockImport/index.ts

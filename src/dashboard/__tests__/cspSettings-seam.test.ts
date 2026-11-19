@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi } from 'vitest';
 import { CspSettingsController } from '../cspSettings.js';
 import { StorageKeys } from '../../utils/storage/types.js';

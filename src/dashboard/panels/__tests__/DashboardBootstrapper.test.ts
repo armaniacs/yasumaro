@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { NavigationRegistry } from '../NavigationRegistry.js';
 import { DashboardBootstrapper } from '../DashboardBootstrapper.js';

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-pagination.test.ts
  * PBI 2026-08-08-07: 履歴のページングが1000件で破綻する問題の回帰テスト

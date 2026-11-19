@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * settingsExportImportUiCore.test.ts
  * PBI 2026-10-21-04: the import-permission confirmation must carry an

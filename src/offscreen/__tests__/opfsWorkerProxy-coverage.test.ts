@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfsWorkerProxy-coverage.test.ts
  * PBI 10: opfsWorkerProxy の 15s タイムアウトを vi.useFakeTimers で検証、terminate パス追加。

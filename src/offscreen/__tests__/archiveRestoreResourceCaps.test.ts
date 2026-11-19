@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveRestoreResourceCaps.test.ts
  * Restore-loop enforcement of the worker-side resource ceilings

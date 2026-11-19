@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * mediaKind.test.ts
  * Table tests for adaptive-recording media-kind detection (PBI 2026-10-23-02).

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * savedCollectionsFirstCondition.test.ts (PBI 2026-11-01-05)
  * First collection from the new panel alone: empty-state guide, failed

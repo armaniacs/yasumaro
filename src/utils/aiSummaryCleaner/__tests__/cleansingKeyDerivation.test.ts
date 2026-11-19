@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * cleansingKeyDerivation.test.ts — PBI 2026-09-21-05
  *

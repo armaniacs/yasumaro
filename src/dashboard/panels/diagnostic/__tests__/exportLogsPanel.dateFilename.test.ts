@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportLogsPanel.dateFilename.test.ts
  * PBI 2026-10-21-09: the diagnostic export filenames carry the LOCAL calendar

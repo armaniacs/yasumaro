@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * logExportSignature.test.ts
  * End-to-end: exportJson signs, importFromJson verifies (VULN-035).

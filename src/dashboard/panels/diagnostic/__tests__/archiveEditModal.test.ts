@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveEditModal.test.ts
  * PBI 2026-09-06-07: the archive session edit UI must be an accessible modal

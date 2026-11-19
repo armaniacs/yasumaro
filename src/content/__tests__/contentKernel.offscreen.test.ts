@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanseViaOffscreen, cleanseHtmlSync, isCleansingOffscreenEnabled, __resetCleansingFlagCacheForTesting } from '../cleansingOffscreenDelegate.js';
 import { cleanseHtmlOffscreen } from '../../offscreen/cleansingOffscreen.js';

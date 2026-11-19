@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanelRegenerate.test.ts — mapRegenerateError sentinel → i18n
  * matrix (PBI 2026-09-22-04). The function is exported from the panel module

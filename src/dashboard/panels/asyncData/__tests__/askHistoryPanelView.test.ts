@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * askHistoryPanelView.test.ts
  * PBI 2026-10-23-08 — region render + ask flow paint.

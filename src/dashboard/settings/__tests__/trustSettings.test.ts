@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * trustSettings.test.ts
  * Tests for src/popup/trustSettings.ts

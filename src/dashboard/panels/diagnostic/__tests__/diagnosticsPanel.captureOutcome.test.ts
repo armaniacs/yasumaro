@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * diagnosticsPanel.captureOutcome.test.ts
  * PBI 2026-10-22-06 slice 2 (diag wiring): the diagnostics panel renders

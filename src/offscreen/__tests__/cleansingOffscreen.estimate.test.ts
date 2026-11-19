@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * cleansingOffscreen.estimate.test.ts (review S5)
  * Two-stage size gate: small pages skip the TextEncoder allocation via the

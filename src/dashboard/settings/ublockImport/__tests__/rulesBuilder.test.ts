@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * ublockImport-rulesBuilder.test.js
  * uBlock Import - RulesBuilderモジュールのユニットテスト

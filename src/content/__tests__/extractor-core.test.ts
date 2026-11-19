@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * extractor.ts core function tests
  * Tests for exported state variables, extractPageContent, and init behavior.

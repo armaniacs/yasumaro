@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * importLogsService-validateRow.test.ts
  * All-field boundary tests for the log-import row validator (VULN-035).

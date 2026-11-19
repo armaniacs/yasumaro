@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * busyButton.test.ts — unit tests for the shared busy-button seam
  * (PBI 2026-10-23-07). Pins the button lifecycle for the success and

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * vfsCapabilities.test.ts
  * The pure core moved out of src/offscreen/opfsCapabilities.ts. These cases pin

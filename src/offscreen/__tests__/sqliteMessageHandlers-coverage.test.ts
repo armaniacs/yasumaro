@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteMessageHandlers-coverage.test.ts
  * Branch coverage gap filler for src/offscreen/sqliteMessageHandlers.ts

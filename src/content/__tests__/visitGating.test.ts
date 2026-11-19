@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * visitGating.test.ts (PBI 2026-09-23-08)
  * Pins the VisitGating single-owner seam: evaluate(state, now) verdict

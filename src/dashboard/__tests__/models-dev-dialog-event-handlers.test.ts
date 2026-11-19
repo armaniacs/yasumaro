@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * models-dev-dialog-event-handlers.test.ts
  * Tests for models-dev-dialog.ts event listener deduplication

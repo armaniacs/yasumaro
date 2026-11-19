@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * historyPanelSlimming.test.ts (PBI 2026-11-01-04)
  *

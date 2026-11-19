@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Extra tests for extractor.ts — covers module-level guard, i18n fallback paths,
  * reportValidVisit error branches, and exported state from extractPageContent.

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * getContentHandler.test.ts (PBI-14)
  * handleGetContentMessage is chrome-free: no chrome global is stubbed in

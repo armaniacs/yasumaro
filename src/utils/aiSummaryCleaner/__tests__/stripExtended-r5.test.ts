@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 /**
  * stripExtended-r5.test.ts — targeted branch coverage filler for stripExtended.ts

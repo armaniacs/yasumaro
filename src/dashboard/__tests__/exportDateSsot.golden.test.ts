@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportDateSsot.golden.test.ts (PBI 2026-09-21-12)
  * Golden pins of CURRENT behavior, written BEFORE the SSOT refactor.

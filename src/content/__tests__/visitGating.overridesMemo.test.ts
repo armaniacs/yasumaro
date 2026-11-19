@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * visitGating.overridesMemo.test.ts (review S3)
  * The overrides snapshot is memoized: repeated evaluations with unchanged

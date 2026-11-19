@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { removeCollected, stripCollected } from '../selectorRules.js';

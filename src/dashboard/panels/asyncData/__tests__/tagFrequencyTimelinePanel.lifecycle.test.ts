@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagFrequencyTimelinePanel lifecycle tests (PBI 2026-09-24-05):
  * since/until + limit propagation on the explicit Run trigger, client-side

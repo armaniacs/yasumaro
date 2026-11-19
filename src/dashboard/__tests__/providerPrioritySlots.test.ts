@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * providerPrioritySlots.test.ts
  * Parity tests for collectCurrentProviderPrioritySlots (PBI 2026-10-02-01).

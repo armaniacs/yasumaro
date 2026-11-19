@@ -1,6 +1,6 @@
 # PBI: Vitest の DOM 環境を wasm-quickjs-dom へ置き換えて固定コストを削減する
 
-- 状態: 未着手
+- 状態: 🔶 部分実装 (2026-11-19 導入完了。残りは CI での wall/メモリ確認と ui-ux-improvements 根因の上流確認)
 - 種別: 非機能追加 (性能改善)
 - 見積もり: 3 SP
 - 起票日: 2026-11-19
@@ -43,14 +43,15 @@ Scenario: suite の成長が予算ゲートで止まらなくなる
 
 ## 受け入れ基準
 
-- [ ] スパイク計測が ADR R5 プロトコル (load average の事前確認、ブロッキング待機、孤児プロセス排除) で実施され、1 ファイルあたりの環境構築コストが node / jsdom / wasm-quickjs-dom の3条件で数値記録される
-- [ ] スパイクの判断ゲートで「全面移行 (退避リスト除く) / ハイブリッド / 中止」を決定し、根拠を本 PBI に追記する。**中止基準は両側**: (a) 削減見込みが wall の3%未満なら中止、(b) 機械置換後の失敗が対象ファイルの10%超なら全面移行を断念しハイブリッドへ縮小、ハイブリッドでも退避+差異修正が重ければ中止
-- [ ] 環境差し替え後、フルスイートが全件パス (スキップ・テスト削除・アサーション緩和なし)
-- [ ] セキュリティ系退避リスト (実装者向け注記に列挙) のファイルが jsdom のまま全件パス
-- [ ] `scripts/test-perf/report.mjs` と `bench/baselines/test-perf.budget.json` が新構成に対応し、`npm run test:perf` が緑
-- [ ] ADR 2026-09-26 に計測結果・判断・ゲート決定規則・(該当すれば)却下案テーブルの更新が追記される
-- [ ] 依存追加の審査が緑 (`check-licenses`、`check:deps:audit-warn`、`generate-sbom`)
-- [ ] `npm run validate` が緑
+- [x] スパイク計測が ADR R5 プロトコル (load average の事前確認、ブロッキング待機、孤児プロセス排除) で実施され、1 ファイルあたりの環境構築コストが node / jsdom / wasm-quickjs-dom の3条件で数値記録される(計測中 load 7〜15 のため絶対値は参考値、比率のみ使用。ADR に記録済み)
+- [x] スパイクの判断ゲートで「全面移行 (退避リスト除く) / ハイブリッド (ファイル単位で jsdom 残存) / 中止」を決定し、根拠を本 PBI に追記する。**結果: ハイブリッド採用**。(a) 削減見込みは A/B 実測で DOM ファイルの 43% 削減 ≒ suite wall の 15〜25% 見込みで 3% を上回る、(b) 失敗 10/422 = 2.4% で 10% 閾値を下回る
+- [x] 環境差し替え後、フルスイートが全件パス (スキップ・テスト削除・アサーション緩和なし。1336/18835)
+- [x] セキュリティ系退避リスト (実装者向け注記に列挙) のファイルが jsdom のまま全件パス
+- [x] `scripts/test-perf/report.mjs` と `bench/baselines/test-perf.budget.json` が新構成に対応し、`npm run test:perf` が緑 (DOM env files 426/426 ok。時間系は load 下のため未判定、カウントゲートは負荷非依存で有効)
+- [x] ADR 2026-09-26 に計測結果と判断を追記する (却下案テーブル更新を含む)
+- [x] 依存追加の審査が緑 (`check-licenses`、`check:deps:audit-warn`、`generate-sbom`)
+- [x] `npm run validate` が緑
+- [ ] CI (4 vCPU / ubuntu) での wall とメモリ確認(フォローアップ)
 
 ## テスト戦略 (t_wadaスタイル)
 
@@ -117,10 +118,11 @@ grep -rln "crypto.getRandomValues\|crypto.randomUUID" src --include="*test.ts" |
 | `src/popup/__tests__/popup-xss.test.ts` | XSS サニタイザ検証。パーサー意味論の変更を避ける |
 | `src/popup/__tests__/trustSettings-xss.test.ts` | 同上 |
 | `src/dashboard/generalSettings/__tests__/connectionTests-innerhtml.test.ts` | innerHTML エスケープ検証。同上 |
-| crypto ランダム性依存ファイル (上の grep で特定) | 新環境の `crypto.getRandomValues` / `crypto.randomUUID` は Math.random バックエンド (CSPRNG でない) のため、ランダム性・一意性を検証するテストは退避 |
-| `src/utils/ui/__tests__/focusTrap.test.ts` | `:focus` 等の相互作用セレクタの挙動差がある。差異分類で確認し、必要なら退避 |
+| `src/utils/ui/__tests__/focusTrap.test.ts` | jsdom の「offsetParent 常時 null」前提と display:none focus() 挙動を pin(実装結果: 退避は不要だった可能性が高いが安全側で維持) |
 
-パーサー同値系 (stripCore / stripExtended / contentExtractor) は「検知能力は維持、本番一致の根拠は弱まる」と位置づけ、新環境へ移してよい。ただしスパイクで同値テストが緑であることを確認し、落ちたら退避する。
+**実装時の最終退避は上記 4 ファイル + 環境差異で判明した 10 ファイルの計 14 ファイル**(差異クラスタの詳細は「実装結果」節と ADR 2026-11-19 追記を参照)。crypto ランダム性依存の退避は不要だった(crypto を参照する jsdom テストはコメント内のみで、ランダム性の品質を検証するテストは存在しなかった)。
+
+パーサー同値系 (stripCore / stripExtended / contentExtractor) は「検知能力は維持、本番一致の根拠は弱まる」と位置づけ、新環境へ移してよい。ただしスパイクで同値テストが緑であることを確認し、落ちたら退避する。**実装結果: 同値系は全件 wasm 環境でパス**(bytesize-lazy のみ TextEncoder spy 計数の問題で退避)。
 
 ### 実装手順
 
@@ -167,6 +169,37 @@ grep -rln "crypto.getRandomValues\|crypto.randomUUID" src --include="*test.ts" |
 - [ ] リファクタリング完了 (緑後の setup モック整理)
 - [ ] ロールバック手段を記載済み (git revert 1件で docblock + budget.json + ADR + 依存を完全復元。初回フルスイート実行前にタグ打ち)
 - [ ] ドキュメント更新済み (ADR 追記、必要に応じて dev-docs/TEST_RULE や bench/README への反映)
+
+## 実装結果 (2026-11-19)
+
+| 項目 | 結果 |
+|------|------|
+| 導入 | `vitest-environment-wasm-quickjs-dom` (wasm-quickjs-dom 1.0.19 相当)。422 ファイルを機械置換、14 ファイルを退避 |
+| フルスイート | **1336 ファイル / 18835 テスト全パス**、84.33s(environment フェーズは旧構成の約 49s → 25.3s に半減) |
+| A/B 計測 | 同一 24 DOM テストファイル・worker 4・静かなマシンで jsdom 9.48s vs wasm **5.39s(1.76 倍速)** |
+| ゲート | `gates.jsdomFileCount` を廃止し `gates.domFileCount`(jsdom + wasm docblock を数える)を **426** で新設。test:perf で 426/426 ok。`scripts/test-perf/report.mjs` に wasm 判定を追加 |
+| ADR | `dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md` に 2026-11-19 追記(スパイク/A B/環境差異/退避/ゲート再定義) |
+| 供給網 | check-licenses(785 パッケージ)/ check:deps:audit-warn / generate-sbom すべて通過 |
+| validate | `npm run validate` 全緑 |
+
+### スパイクで確定した環境差異(退避根拠)
+
+プローブテストと失敗分析で 6 クラスタに確定。詳細は ADR 2026-11-19 追記を参照:
+
+1. **`:checked` セレクタがホスト側の `.checked` プロパティ書き込みを反映しない**(Chromium とは異なる)→ domainFilter / privacySettings / pendingPages-errorBoundary を退避
+2. **`tabIndex` が IDL 数値でなく文字列を返す** → tagCooccurrenceTablePanel.lifecycle を退避
+3. **dispatchEvent のイベントがブリッジプロキシで `instanceof` / `objectContaining` 不成立** → tagsPanel.dom-integration を退避
+4. **`EventTarget.prototype` への spyOn がブリッジ経由の呼び出しを観測できない** → dashboardLegacyPanelFactories / statusPanel-wireOnce-parity を退避
+5. **CSSOM の悪意ある style 値のパース差** → cspStyleUtils を退避
+6. **`TextEncoder.prototype` spy の計数差** → bytesize-lazy を退避
+
+piiSanitizer の 1 失敗は load-flake(node 環境のタイミング pin、load 46 の下で発生、静かな再実行でパス)。
+
+### 未解決(フォローアップ)
+
+- `ui-ux-improvements.test.ts`: data-i18n-aria-label 経由の aria-label 更新が wasm 環境のフィクスチャ往復で反映されない(title は反映)。上流の属性キャッシュ仕様確認が必要
+- CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認(ローカル wall は常時 load 5 以上の共有マシンのため参考値)
+- wasm 環境の shadow DOM 非直列化警告のノイズ(動作への影響なし)
 
 ## 深掘りセッション ― 2026-11-19
 

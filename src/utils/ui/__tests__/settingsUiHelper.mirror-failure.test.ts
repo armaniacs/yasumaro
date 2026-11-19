@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * settingsUiHelper.mirror-failure.test.ts — PBI 2026-11-08-09 (4)
  *

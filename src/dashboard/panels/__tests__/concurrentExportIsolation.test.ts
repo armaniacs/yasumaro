@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * concurrentExportIsolation.test.ts
  * PBI 2026-10-02-06: proves the intended concurrency shape of runPanelAction

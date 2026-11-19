@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-pending.test.ts
  * Pending-pages region tests (PBI 2026-09-11-02, PBI-P): the section rendered

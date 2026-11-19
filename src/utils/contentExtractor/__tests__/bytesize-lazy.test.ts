@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: TextEncoder.prototype spy counts differ under the bridge; the encode-dedup pins are not environment-agnostic.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractMainContent, extractMainContentWithInfo } from '../index.js';
 import { cleanseAISummaryContent } from '../../aiSummaryCleaner/index.js';

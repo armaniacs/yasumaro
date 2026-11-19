@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  * aiProviderCatalogView.catalog-driven.test.ts (PBI 2026-09-21-14)
  * Proves the views render provider variants from PROVIDER_VIEW_METADATA
  * alone: a fixture row with custom view metadata renders accordingly with no

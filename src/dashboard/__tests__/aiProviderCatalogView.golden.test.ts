@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  * aiProviderCatalogView.golden.test.ts (PBI 2026-09-21-14)
  * DOM pins of the CURRENT rendering, captured before the gemini branches
  * become catalog fields. Green before AND after: any rendering drift fails.

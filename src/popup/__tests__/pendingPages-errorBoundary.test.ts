@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: same :checked selector gap as domainFilter; host writes .checked and production reads :checked (probe-confirmed).
 /**
  * The pending-list buttons are the popup's only entry point for a batch of
  * withheld pages, and every step they await (settings write, pending-record

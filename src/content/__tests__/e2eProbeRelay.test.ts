@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for the E2E probe relay (PBI 2026-10-11-08 follow-up).
  * The relay carries arming queries and state reports as runtime messages

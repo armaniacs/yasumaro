@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * generalSettingsPanel.test.ts
  * PBI 2026-08-09-24: panel 層から dashboard.ts への逆依存解消

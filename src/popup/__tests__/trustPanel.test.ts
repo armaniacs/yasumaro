@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Parity tests for the trustPanel split (pbi/2026-10-03-25): the trust /
  * permission flow and the all-URLs banner moved out of statusPanel.ts into

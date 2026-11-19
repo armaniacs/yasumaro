@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dashboard/settings/aiProvider.ts のテスト
  * AIプロバイダーUI表示制御のテスト（catalog 駆動）

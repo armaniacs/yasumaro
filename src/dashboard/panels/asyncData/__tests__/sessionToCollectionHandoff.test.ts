@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sessionToCollectionHandoff.test.ts (PBI 2026-11-02-05)
  * Panel-level integration: a research session packs to the ids-first v2

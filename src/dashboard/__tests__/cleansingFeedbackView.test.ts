@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * cleansingFeedbackView.test.ts
  * PBI 2026-09-07-13: テーブル見出しが i18n キー経由で描画されること、

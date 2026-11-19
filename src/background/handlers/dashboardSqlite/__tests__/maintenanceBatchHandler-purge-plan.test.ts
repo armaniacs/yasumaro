@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Entry-level purge planning tests (PBI 2026-10-16-11).
  *

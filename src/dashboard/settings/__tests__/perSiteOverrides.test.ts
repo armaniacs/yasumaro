@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * perSiteOverrides.test.ts
  * PBI 2026-09-05-24: 空リスト表示が i18n キー経由であることを検証する。

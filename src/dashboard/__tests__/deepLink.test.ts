@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Deep links used to be applied by navigating away from the default panel
  * after the bootstrapper had already started on it. Now the starting panel is

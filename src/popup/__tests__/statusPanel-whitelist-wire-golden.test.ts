@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 // Golden pin for the popup whitelist button (statusAddDomain).
 //
 // Pins the *behavior* of the shared wiring skeleton before it is extracted into

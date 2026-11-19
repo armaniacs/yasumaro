@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * wordClusterPanel behavior (PBI 2026-09-24-07):
  * - explicit-apply: the period filter only records the range; the Run button

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * search-backend-parity-pin.test.ts
  * PBI 2026-11-08-05 (fixture-first parity pin).

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * fetchPeriodRows unit tests: the single panel fetch seam — success shape,
  * throw on persistent failure (service error and uninitialized DB), cap

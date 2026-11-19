@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.extractCommit.parity.test.ts (PBI 2026-09-21-25)
  * Pins the CURRENT extract -> apply pair behavior BEFORE the

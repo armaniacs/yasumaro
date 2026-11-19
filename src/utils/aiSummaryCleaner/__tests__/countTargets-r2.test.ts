@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * countTargets-r2.test.ts — additional branch coverage for countTargets.ts.
  * Covers: all enable/disable branches (alt, metadata, ads, nav, social, deep,

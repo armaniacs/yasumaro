@@ -6,7 +6,7 @@
  * drift against the DEFAULT_SETTINGS-derived set, and pins the intended
  * post-refactor behavior of validateExportData and saveJsonToFile.
  *
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 import { beforeEach, describe, expect, test, vi } from 'vitest';

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * selectionCapture.test.ts (PBI 2026-10-31-03)
  * handleGetSelectionMessage is chrome-free: no chrome global is stubbed in

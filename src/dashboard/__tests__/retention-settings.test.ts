@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * retention-settings.test.ts
  * TDD: Retention policy UI — load settings into selects, save on submit.

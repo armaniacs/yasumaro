@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * encryptedBackupPanel-backupCap.test.ts (PBI 2026-11-06-02)
  *
