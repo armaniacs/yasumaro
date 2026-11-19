@@ -4,6 +4,10 @@
 
 ## [Unreleased]
 
+### テスト
+
+- テストのDOM環境をjsdomからwasm-quickjs-domへ移行（422ファイルを機械置換、14ファイルは根拠つきでjsdomに退避。environmentフェーズを約49秒から約25.3秒に半減。`jsdomFileCount`ゲートをDOM環境ファイル数 `domFileCount`（426）に再定義）
+
 ## [6.9.76] - 2026-11-19
 
 このリリースはchrome-extensions監査対応の修正とコンテンツ抽出の高速化、ミューテーションテスト全21チャンク測定の完了です。利用者に見える変更はmanifestへのaction明示・通知失敗の可視化・offscreenのstorage判定の統一・extractor走査のバッチ化です。
