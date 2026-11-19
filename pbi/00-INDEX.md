@@ -14,6 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ⬜ 未着手 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| 01 | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ⬜ 未着手。jsdom 環境構築 (ADR実測106ms/ファイル×約420件) が残存固定コストの約半分。環境差し替えで wall 数秒〜10%削減と jsdomFileCount ゲート (426) の緩和余地。深掘り済み: セキュリティ系退避リスト確定・両側 kill criteria・ゲート決定規則 (実測 C≦N×1.5 で fileCount 復帰か再定義) を PBI に反映 |
+
 ### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
