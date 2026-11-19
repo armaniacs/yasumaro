@@ -449,3 +449,22 @@ rev `d0ab5499` からの差分を `git grep` で特定した（推測なし）�
 **決定**: `gates.jsdomFileCount` を 398 → 403 に改定する。増加分は DOM を
 直接使う UI・移行経路の検証が中心で、suite の成長は正当なため、欠陥や
 追加ゲートの必要はない。
+#### `jsdomFileCount` 403 → 426 の内訳（2026-11-19 追記）
+
+2026-11-19 の main CI（1116b マージ後の初回 push）が `OVER jsdom files: 426 / 403` で赤だった。
+`validate` 以外のジョブは緑で、失敗は suite の成長のみが原因。前回改定
+rev `20778134` からの差分を `git grep` で特定した（推測なし）。増加 23 件、
+削除 0 件。この期間のローカル main には 75 コミット分が未 push のまま積み上がっており（大局的改善 3 ラウンド、chrome-extensions 監査 1116b 対応、ミューテーション測定とテスト補強）、CI には初めて現れる成長である。
+
+| 増減 | 領域 | なぜ jsdom なのか |
+|---|---|---|
+| +6 | `src/content/__tests__` | content 経路の DOM 検証（contentKernel halfInit / spaMainWorld、scrollMonitor safeSide、throttle monoclock、visitGating overridesMemo / Correctness） |
+| +5 | `src/popup/__tests__` | ポップアップ UI の DOM 検証（contentFetchGateway / pausePanel / privatePageDialog / skipReasonPanel / trustPanel の r2 追試） |
+| +5 | `src/dashboard` | 配線・golden・parity ピン（connectionTests-innerhtml、collectionSelectBuilder.golden、regionAction.parity、sqliteHistoryViewWiringCycle、issueReportLink.logSeam） |
+| +2 | `src/offscreen/__tests__` | 検証追加（cleansingOffscreen.estimate、search-backend-parity-pin） |
+| +4 | `src/utils` | golden・失敗可視化・切り出し系の DOM 検証（datetimeUnify.golden、helpers.failure-visibility、contentExtractor index-batch-d、settingsUiHelper.mirror-failure） |
+| +1 | `src/privacy/__tests__` | privacy-r2 追試 |
+
+**決定**: `gates.jsdomFileCount` を 403 → 426 に改定する。増加分は DOM を
+直接使う content・popup・配線経路の検証が中心で、suite の成長は正当なため、
+欠陥や追加ゲートの必要はない。
