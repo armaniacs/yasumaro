@@ -48,19 +48,19 @@ describe('pageContentPipeline decouple — behavior pins (PBI 2026-09-21-16)', (
     global.chrome = undefined;
   });
 
-  it('no-arg call resolves the same result as an explicit fresh PageState config', () => {
+  it('no-arg call resolves the same result as an explicit fresh PageState config', async () => {
     setBody(dom, ARTICLE_HTML);
-    const fromDefault = preparePageContent();
+    const fromDefault = await preparePageContent();
     setBody(dom, ARTICLE_HTML);
-    const fromExplicit = preparePageContent(new PageState().cleansingConfig);
+    const fromExplicit = await preparePageContent(new PageState().cleansingConfig);
     expect(fromDefault).toEqual(fromExplicit);
   });
 
-  it('output shape is unchanged between default and explicit config', () => {
+  it('output shape is unchanged between default and explicit config', async () => {
     setBody(dom, ARTICLE_HTML);
-    const fromDefault = preparePageContent();
+    const fromDefault = await preparePageContent();
     setBody(dom, ARTICLE_HTML);
-    const fromExplicit = preparePageContent(new PageState().cleansingConfig);
+    const fromExplicit = await preparePageContent(new PageState().cleansingConfig);
     expect(Object.keys(fromDefault).sort()).toEqual(Object.keys(fromExplicit).sort());
     expect(typeof fromDefault.content).toBe('string');
     expect(fromDefault.content).toContain('Decouple Article');
@@ -76,11 +76,11 @@ describe('pageContentPipeline decouple — behavior pins (PBI 2026-09-21-16)', (
     );
   });
 
-  it('explicit config still flows through buildExtractionOptions unchanged', () => {
+  it('explicit config still flows through buildExtractionOptions unchanged', async () => {
     setBody(dom, ARTICLE_HTML);
     const config = new PageState().cleansingConfig;
     config.contentStripHardEnabled = false;
-    const result = preparePageContent(config);
+    const result = await preparePageContent(config);
     expect(typeof result.content).toBe('string');
     expect(result.content).toContain('Decouple Article');
   });

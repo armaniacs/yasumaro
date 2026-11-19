@@ -61,20 +61,20 @@ describe('preparePageContent — fallback priority through the single seam', () 
     global.chrome = undefined;
   });
 
-  it('content_overcut fires and restores the pre-cleanse text (② alone)', () => {
+  it('content_overcut fires and restores the pre-cleanse text (② alone)', async () => {
     dom.window.document.body.innerHTML = KEYWORD_OVERSTRIP_HTML;
     const cfg = createDefaultCleansingConfig();
     cfg.aiSummaryCleansingEnabled = false;
-    const result = preparePageContent(cfg);
+    const result = await preparePageContent(cfg);
     expect(result.fallbackTriggered).toBe(true);
     expect(result.fallbackReason).toBe('content_overcut');
     expect(result.content).toContain('login履歴とランク判定');
   });
 
-  it('② content_overcut wins over ③ over_cleansed when both arms are armed', () => {
+  it('② content_overcut wins over ③ over_cleansed when both arms are armed', async () => {
     dom.window.document.body.innerHTML = KEYWORD_OVERSTRIP_HTML;
     const cfg = createDefaultCleansingConfig();
-    const result = preparePageContent(cfg);
+    const result = await preparePageContent(cfg);
     expect(result.fallbackTriggered).toBe(true);
     expect(result.fallbackReason).toBe('content_overcut');
     expect(result.content).toContain('login履歴とランク判定');
@@ -82,12 +82,12 @@ describe('preparePageContent — fallback priority through the single seam', () 
     expect(result.aiSummaryOriginalBytes).toBeUndefined();
   });
 
-  it('over_cleansed wins when only the AI path is armed (③ without ②)', () => {
+  it('over_cleansed wins when only the AI path is armed (③ without ②)', async () => {
     dom.window.document.body.innerHTML = NAV_HEAVY_HTML;
     const cfg = createDefaultCleansingConfig();
     cfg.contentStripHardEnabled = false;
     cfg.contentStripKeywordEnabled = false;
-    const result = preparePageContent(cfg);
+    const result = await preparePageContent(cfg);
     expect(result.fallbackTriggered).toBe(true);
     expect(result.fallbackReason).toBe('over_cleansed');
     // The ③ arm restores the pre-AI text and keeps its diagnostics.
@@ -95,7 +95,7 @@ describe('preparePageContent — fallback priority through the single seam', () 
     expect(result.aiSummaryOriginalBytes).toBeGreaterThan(0);
   });
 
-  it('short_content body fallback when no guard arms and the content is tiny', () => {
+  it('short_content body fallback when no guard arms and the content is tiny', async () => {
     dom.window.document.body.innerHTML =
       '<article><p>Hi</p></article><div>Some other body content that will be used as fallback text here.</div>';
     const cfg = createDefaultCleansingConfig();
@@ -103,7 +103,7 @@ describe('preparePageContent — fallback priority through the single seam', () 
     cfg.contentStripKeywordEnabled = false;
     cfg.aiSummaryCleansingEnabled = false;
     cfg.candidateGuardEnabled = false;
-    const result = preparePageContent(cfg);
+    const result = await preparePageContent(cfg);
     expect(result.fallbackTriggered).toBe(true);
     expect(result.fallbackReason).toBe('short_content');
   });
@@ -134,16 +134,16 @@ describe('preparePageContent — legacy adapter parity', () => {
   ];
 
   for (const testCase of cases) {
-    it(`returns the identical ExtractResult as the legacy adapter — ${testCase.name}`, () => {
+    it(`returns the identical ExtractResult as the legacy adapter — ${testCase.name}`, async () => {
       const viaSeamConfig = testCase.config(createDefaultCleansingConfig());
       const viaLegacyConfig = testCase.config(createDefaultCleansingConfig());
 
       dom.window.document.body.innerHTML = testCase.html;
-      const viaSeam = preparePageContent(viaSeamConfig, testCase.maxChars ?? 10000);
+      const viaSeam = await preparePageContent(viaSeamConfig, testCase.maxChars ?? 10000);
 
       dom.window.document.body.innerHTML = testCase.html;
       const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } = buildExtractionOptions(viaLegacyConfig);
-      const viaLegacy = extractMainContentWithInfo(
+      const viaLegacy = await extractMainContentWithInfo(
         testCase.maxChars ?? 10000,
         cleanseOptions,
         aiSummaryCleanseOptions,

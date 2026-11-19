@@ -46,11 +46,13 @@ export function guard<Args extends unknown[]>(
   tag: string,
 ): (...args: Args) => void {
   return (...args: Args) => {
-    void Promise.resolve()
-      .then(() => fn(...args))
-      .catch((error: unknown) => {
+    void (async (): Promise<void> => {
+      try {
+        await fn(...args);
+      } catch (error: unknown) {
         void logError(`Listener failed: ${tag}`, { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
-      });
+      }
+    })();
   };
 }
 
@@ -81,11 +83,13 @@ export type StartupPhaseResult =
   | { readonly phase: StartupPhase; readonly ok: true }
   | { readonly phase: StartupPhase; readonly ok: false; readonly message: string };
 
-function trackStartupPhase(phase: StartupPhase, task: Promise<void>): Promise<StartupPhaseResult> {
-  return task.then(
-    () => ({ phase, ok: true as const }),
-    (error) => ({ phase, ok: false as const, message: errorMessage(error) }),
-  );
+async function trackStartupPhase(phase: StartupPhase, task: Promise<void>): Promise<StartupPhaseResult> {
+  try {
+    await task;
+    return { phase, ok: true as const };
+  } catch (error) {
+    return { phase, ok: false as const, message: errorMessage(error) };
+  }
 }
 
 export function init(): Promise<readonly StartupPhaseResult[]> {

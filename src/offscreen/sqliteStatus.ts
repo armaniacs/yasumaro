@@ -65,10 +65,17 @@ async function probeLegacyIdbDb(): Promise<boolean | null> {
 
 /** Collect the migration extras with per-field isolation (allSettled). */
 export async function collectMigrationExtras(): Promise<SqliteMigrationExtras> {
-  // Offscreen documents have no chrome.storage access (see .kilorules rule 9).
-  // Guard the storage read so a missing API does not throw synchronously and
-  // turn the whole STATUS call into a persistent failure (the error in the
-  // screenshot: "Cannot read properties of undefined (reading 'local')").
+  // chrome.storage.local IS available in the offscreen document: it is an
+  // extension page holding the manifest 'storage' permission, created with
+  // the LOCAL_STORAGE reason (ChromeOffscreenTransport), and the Tier-3
+  // FallbackStorage backend — which runs only here — depends on it. .kilorules
+  // rule 9 restricts chrome.downloads/tabs/action (bridged via the service
+  // worker), not chrome.storage. The guard below stays as defense in depth:
+  // Edge once served an offscreen context with chrome.storage undefined
+  // ("Cannot read properties of undefined (reading 'local')", Sep 2026), and
+  // non-extension harnesses (unit tests, Workers without the chrome
+  // namespace) share this code path — a missing API must degrade to empty
+  // extras, never to a persistent STATUS failure.
   const storagePromise: Promise<Record<string, unknown>> = (() => {
     try {
       if (typeof chrome === 'undefined' || !chrome.storage?.local?.get) {

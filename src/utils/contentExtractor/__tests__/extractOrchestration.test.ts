@@ -47,9 +47,9 @@ describe('extract orchestration drift detection', () => {
         cleansingExecuted: result['cleansingExecuted'],
     });
 
-    it('candidate path removes the script target and reports hard stats', () => {
+    it('candidate path removes the script target and reports hard stats', async () => {
         document.body.innerHTML = `<article><p>${LONG_TEXT}</p><script>var x = 1;</script></article>`;
-        const result = extractMainContentWithInfo(10000, { ...CLEANSE_OPTIONS }) as unknown as Record<string, unknown>;
+        const result = await extractMainContentWithInfo(10000, { ...CLEANSE_OPTIONS }) as unknown as Record<string, unknown>;
         // candidate path に乗ったことの確認（候補バイトが計測される）
         expect(result['candidateBytes']).toBeGreaterThan(0);
         expect(statsOf(result)).toEqual({
@@ -61,10 +61,10 @@ describe('extract orchestration drift detection', () => {
         });
     });
 
-    it('body path removes the same script target and reports identical stats', () => {
+    it('body path removes the same script target and reports identical stats', async () => {
         // script 直下のみ＝候補なし → body path（script は除外要素のため候補にならない）
         document.body.innerHTML = `${LONG_TEXT}<script>var x = 1;</script>`;
-        const result = extractMainContentWithInfo(10000, { ...CLEANSE_OPTIONS }) as unknown as Record<string, unknown>;
+        const result = await extractMainContentWithInfo(10000, { ...CLEANSE_OPTIONS }) as unknown as Record<string, unknown>;
         // body path に乗ったことの確認（候補バイトは計測されない）
         expect(result['candidateBytes'] ?? 0).toBe(0);
         expect(statsOf(result)).toEqual({

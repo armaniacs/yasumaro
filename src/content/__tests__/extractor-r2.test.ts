@@ -104,19 +104,19 @@ describe('extractPageContent — HTML structure variants', () => {
     document.body.innerHTML = '';
   });
 
-  it('extracts from div[role="main"] when article/main absent', () => {
+  it('extracts from div[role="main"] when article/main absent', async () => {
     document.body.innerHTML = '<div role="main"><h1>Role main</h1><p>Content inside role=main element here with sufficient text.</p></div>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
-  it('extracts from body fallback when no semantic container exists', () => {
+  it('extracts from body fallback when no semantic container exists', async () => {
     document.body.innerHTML = '<p>Only a bare paragraph with enough text to be extracted successfully by the algorithm.</p>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
-  it('handles page with script/style/noscript content', () => {
+  it('handles page with script/style/noscript content', async () => {
     document.body.innerHTML = `
       <article>
         <script>var x = 1;</script>
@@ -125,39 +125,39 @@ describe('extractPageContent — HTML structure variants', () => {
         <p>Actual readable paragraph text here for extraction testing.</p>
       </article>
     `;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
     expect(result.content).not.toContain('var x');
   });
 
-  it('extracts content stripping HTML entities', () => {
+  it('extracts content stripping HTML entities', async () => {
     document.body.innerHTML = '<article><p>Price &amp; tax &lt; 100 &gt; 50 &quot;quote&quot;</p><p>More text here for extraction length.</p></article>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
-  it('handles html with lang attribute detection', () => {
+  it('handles html with lang attribute detection', async () => {
     document.documentElement.setAttribute('lang', 'ja');
     document.body.innerHTML = '<article><p>日本語の記事本文です。十分な長さのテキストが必要です。</p></article>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
     document.documentElement.removeAttribute('lang');
   });
 
-  it('handles div.main as the primary content container', () => {
+  it('handles div.main as the primary content container', async () => {
     document.body.innerHTML = '<div class="main"><h1>Main div</h1><p>Content inside the main class div with enough text to be extracted properly.</p></div>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
-  it('handles content with nested tables', () => {
+  it('handles content with nested tables', async () => {
     document.body.innerHTML = `
       <article>
         <table><tr><td>Cell text here for extraction algorithm to find content.</td></tr></table>
         <p>More content after table with enough text for scoring.</p>
       </article>
     `;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 });
@@ -240,7 +240,7 @@ describe('loadSettings — custom patterns and edge cases', () => {
     );
     document.body.innerHTML = '<article><p>Custom patterns empty test with enough content.</p></article>';
     await expect(init()).resolves.not.toThrow();
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
@@ -255,7 +255,7 @@ describe('loadSettings — custom patterns and edge cases', () => {
     );
     document.body.innerHTML = '<article><p>Custom patterns non-array test with enough content.</p></article>';
     await expect(init()).resolves.not.toThrow();
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
@@ -302,20 +302,20 @@ describe('extractPageContent — last stats with variants', () => {
     );
   });
 
-  it('records non-zero candidateBytes when article present', () => {
+  it('records non-zero candidateBytes when article present', async () => {
     document.body.innerHTML = '<article><p>Content here with sufficient text for scoring and extraction purposes in this test scenario.</p></article>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(result.pageBytes ?? 0).toBeGreaterThan(0);
     expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
   });
 
-  it('keeps getPageStateForTesting().lastCleansedReason as "none" when no cleansing necessary', () => {
+  it('keeps getPageStateForTesting().lastCleansedReason as "none" when no cleansing necessary', async () => {
     document.body.innerHTML = '<article><p>Clean content with no sensitive data or ads to strip here.</p></article>';
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(['none', 'hard', 'keyword', 'both']).toContain(result.cleansedReason ?? 'none');
   });
 
-  it('populates aiSummaryCleansedReasons as array when elements cleaned', () => {
+  it('populates aiSummaryCleansedReasons as array when elements cleaned', async () => {
     document.body.innerHTML = `
       <article>
         <p>Main content paragraph with sufficient text for extraction to succeed here in this test.</p>
@@ -323,7 +323,7 @@ describe('extractPageContent — last stats with variants', () => {
         <nav><a href="/">nav link</a></nav>
       </article>
     `;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(Array.isArray(result.aiSummaryCleansedReasons) ||
       result.aiSummaryCleansedReasons === undefined).toBe(true);
   });

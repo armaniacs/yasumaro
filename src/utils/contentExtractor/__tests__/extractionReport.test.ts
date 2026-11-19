@@ -27,24 +27,24 @@ beforeEach(() => {
 });
 
 describe('extract() hot path stays byte-identical to the string entry', () => {
-    it('returns the same content string with default options', () => {
+    it('returns the same content string with default options', async () => {
         document.body.innerHTML = ARTICLE;
-        const viaString = extractMainContent(10000, {});
+        const viaString = await extractMainContent(10000, {});
         document.body.innerHTML = ARTICLE;
-        const { content } = extract({ maxChars: 10000, cleanseOptions: { cleanseEnabled: false } });
+        const { content } = await extract({ maxChars: 10000, cleanseOptions: { cleanseEnabled: false } });
         expect(content).toBe(viaString);
     });
 
-    it('returns the same content string with cleanse + AI summary enabled', () => {
+    it('returns the same content string with cleanse + AI summary enabled', async () => {
         const dom = `<article><p>${'Main content for combined pin. '.repeat(10)}</p><script>alert('x')</script></article>`;
         document.body.innerHTML = dom;
-        const viaString = extractMainContent(
+        const viaString = await extractMainContent(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true },
         );
         document.body.innerHTML = dom;
-        const { content } = extract({
+        const { content } = await extract({
             maxChars: 10000,
             cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true },
             aiSummaryCleanseOptions: { aiSummaryCleanseEnabled: true, altEnabled: true },
@@ -52,10 +52,10 @@ describe('extract() hot path stays byte-identical to the string entry', () => {
         expect(content).toBe(viaString);
     });
 
-    it('keeps the string-path encode budget (one fallback-critical encode)', () => {
+    it('keeps the string-path encode budget (one fallback-critical encode)', async () => {
         document.body.innerHTML = ARTICLE;
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
-        extractMainContent(10000, {});
+        await extractMainContent(10000, {});
         expect(encodeSpy).toHaveBeenCalledTimes(1);
     });
 });
@@ -65,18 +65,18 @@ describe('whitelist path also produces a report', () => {
         document.body.innerHTML = `<article><h1>薄いレスのスレ</h1><div class="t_b">薄いレス本文</div></article>`;
     }
 
-    it('carries adapterUsed with a zero byte-funnel and no fallback', () => {
+    it('carries adapterUsed with a zero byte-funnel and no fallback', async () => {
         setupWhitelistDom();
-        const { content, report } = extract({ cleanseOptions: { cleanseEnabled: true } });
+        const { content, report } = await extract({ cleanseOptions: { cleanseEnabled: true } });
         expect(report.adapterUsed).toBe('5ch-matome');
         expect(content).toContain('薄いレス本文');
         expect(report.bytesFunnel()).toEqual({ pageBytes: 0, candidateBytes: 0, cleansedBytes: 0 });
         expect(report.fallbackCause()).toEqual({ triggered: false });
     });
 
-    it('legacy expansion of a whitelist report mirrors the old early-return shape', () => {
+    it('legacy expansion of a whitelist report mirrors the old early-return shape', async () => {
         setupWhitelistDom();
-        const { content, report } = extract({ cleanseOptions: { cleanseEnabled: true } });
+        const { content, report } = await extract({ cleanseOptions: { cleanseEnabled: true } });
         const legacy = report.toLegacyResult(content);
         expect(legacy.whitelistAdapterUsed).toBe('5ch-matome');
         expect(legacy.pageBytes).toBeUndefined();
@@ -85,11 +85,11 @@ describe('whitelist path also produces a report', () => {
 });
 
 describe('narrow seam matches the legacy diagnostic values', () => {
-    it('bytesFunnel() equals the legacy byte columns', () => {
+    it('bytesFunnel() equals the legacy byte columns', async () => {
         document.body.innerHTML = `<article><p>${'Byte funnel pin content. '.repeat(20)}</p><script>alert('x')</script></article>`;
-        const { report } = extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
+        const { report } = await extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
         document.body.innerHTML = `<article><p>${'Byte funnel pin content. '.repeat(20)}</p><script>alert('x')</script></article>`;
-        const legacy = extractMainContentWithInfo(10000, { cleanseEnabled: true, hardStripEnabled: true });
+        const legacy = await extractMainContentWithInfo(10000, { cleanseEnabled: true, hardStripEnabled: true });
         expect(report.bytesFunnel()).toEqual({
             pageBytes: legacy.pageBytes,
             candidateBytes: legacy.candidateBytes,
@@ -97,9 +97,9 @@ describe('narrow seam matches the legacy diagnostic values', () => {
         });
     });
 
-    it('cleanseCounts() equals the legacy cleanse fields', () => {
+    it('cleanseCounts() equals the legacy cleanse fields', async () => {
         document.body.innerHTML = `<article><p>${'Cleanse counts pin content. '.repeat(10)}</p><script>alert('x')</script></article>`;
-        const { report } = extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
+        const { report } = await extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
         const counts = report.cleanseCounts();
         expect(counts.cleansedReason).toBe('hard');
         expect(counts.hardStripRemoved).toBeGreaterThan(0);
@@ -107,16 +107,16 @@ describe('narrow seam matches the legacy diagnostic values', () => {
         expect(counts.cleansingExecuted).toBe(true);
     });
 
-    it('fallbackCause() reports the short_content settlement', () => {
+    it('fallbackCause() reports the short_content settlement', async () => {
         document.body.innerHTML = `<article><p>Hi</p></article><div>Some other body content that will be used as fallback text here.</div>`;
-        const { content, report } = extract({ aiSummaryCleanseOptions: { candidateGuardEnabled: false } });
+        const { content, report } = await extract({ aiSummaryCleanseOptions: { candidateGuardEnabled: false } });
         expect(report.fallbackCause()).toEqual({ triggered: true, reason: 'short_content' });
         expect(typeof content).toBe('string');
     });
 
-    it('originalText() retains the pre-cleanse text capped at maxChars*2', () => {
+    it('originalText() retains the pre-cleanse text capped at maxChars*2', async () => {
         document.body.innerHTML = `<article><p>${'Dual payload cap pin. '.repeat(40)}</p></article>`;
-        const { report } = extract({ maxChars: 100 });
+        const { report } = await extract({ maxChars: 100 });
         const original = report.originalText();
         expect(original).toBeDefined();
         expect((original as string).length).toBeLessThanOrEqual(200);
@@ -125,9 +125,9 @@ describe('narrow seam matches the legacy diagnostic values', () => {
 });
 
 describe('report is opaque outside the seam', () => {
-    it('exposes no raw diagnostic properties', () => {
+    it('exposes no raw diagnostic properties', async () => {
         document.body.innerHTML = ARTICLE;
-        const { report } = extract({});
+        const { report } = await extract({});
         const exposed = report as unknown as Record<string, unknown>;
         expect(exposed['pageBytes']).toBeUndefined();
         expect(exposed['candidateBytes']).toBeUndefined();
@@ -152,11 +152,11 @@ describe('kernel applyReport(report) commits like the legacy pair', () => {
         };
     }
 
-    it('single call equals applyExtractResultToPageState on the same extraction', () => {
+    it('single call equals applyExtractResultToPageState on the same extraction', async () => {
         document.body.innerHTML = `<article><p>${'Kernel commit pin content. '.repeat(10)}</p><script>alert('x')</script></article>`;
-        const { report } = extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
+        const { report } = await extract({ cleanseOptions: { cleanseEnabled: true, hardStripEnabled: true } });
         document.body.innerHTML = `<article><p>${'Kernel commit pin content. '.repeat(10)}</p><script>alert('x')</script></article>`;
-        const legacy = extractMainContentWithInfo(10000, { cleanseEnabled: true, hardStripEnabled: true });
+        const legacy = await extractMainContentWithInfo(10000, { cleanseEnabled: true, hardStripEnabled: true });
 
         const viaReport = makeKernel();
         viaReport.applyReport(report);

@@ -94,12 +94,16 @@ export function settleOutcomeWrite(
   traceId: string | undefined,
 ): void {
   if (!write || typeof (write as Promise<void>).then !== 'function') return;
-  (write as Promise<void>).then(undefined, (error: unknown) => {
-    addLog(LogType.WARN, `RecordingPipeline: outcome ${kind} registration failed`, {
-      error: error instanceof Error ? error.message : String(error),
-      ...pickDefined({ traceId }),
-    });
-  });
+  void (async (): Promise<void> => {
+    try {
+      await write;
+    } catch (error: unknown) {
+      addLog(LogType.WARN, `RecordingPipeline: outcome ${kind} registration failed`, {
+        error: error instanceof Error ? error.message : String(error),
+        ...pickDefined({ traceId }),
+      });
+    }
+  })();
 }
 
 const prodPending: OutcomePendingWriter = {

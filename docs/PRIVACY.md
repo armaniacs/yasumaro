@@ -152,7 +152,7 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 
 通常の使用では、APIキーは**自動的に暗号化されて保存**されます。マスターパスワードの設定は不要で、ユーザーの操作なくバックグラウンドでAES-GCMによる暗号化が適用されます。
 
-  ただし、マスターパスワードが**未設定の場合**、暗号化キー自体は `chrome.storage.local` に平文で保持されます。Chrome 拡張機能のストレージは拡張機能ごとに分離されており、他の拡張機能から直接読み取ることはできませんが、この拡張機能内からはアクセス可能です。この状態では、暗号化は外部からの読み取りを防ぎますが、拡張機能自身の内部からのアクセスは防げません。
+  マスターパスワードが**未設定の場合**でも、自動生成された秘密自体が平文で保存されることはありません。`chrome.storage.local` が保持するのはラップされた envelope のみであり、その開封には別の保管場所 (IndexedDB) にある取り出し不可の専用キーを必要とし、読み取り可能なバイト列としては存在しません。そのため `chrome.storage.local` の漏えいだけでは API キー一式を復号できません。Chrome 拡張機能のストレージは拡張機能ごとに分離されており、他の拡張機能から直接読み取ることはできませんが、この拡張機能内からはアクセス可能です。この状態では、暗号化は外部からの読み取りを防ぎますが、拡張機能自身の内部からのアクセスは防げません。
 
 **マスターパスワードを設定すると、暗号化キー自体をマスターパスワードから導出できるようになります。その結果、APIキーの復号にはマスターパスワードの入力が必要になります。**
 
@@ -222,6 +222,14 @@ v4.2.1以降、以下の機能が追加されました：
    - **保存場所**: 取得したドメインリストは Chrome ローカルストレージに保存されます
    - **使用目的**: 訪問したドメインが信頼できるかどうかを判定するため（Tranco Top 1000 に含まれるドメインは信頼できるとみなされます）
    - **プライバシーへの影響**: ドメイン名のみを取得・保存するため、ユーザーの閲覧履歴や個人を特定できる情報は Tranco に送信されません
+
+4. **GitHub (不具合報告・利用者の操作時のみ)**: 診断パネルの「不具合を報告」ボタンから報告します。自動で送信されることはありません。
+    - **きっかけ**: ボタンを押して、表示内容を確認したときのみ動作します
+    - **含まれる内容**: 拡張機能のバージョン、ブラウザーの user agent、デバッグ mode の状態、SQLite の初期化状態、AI プロバイダーの種類名のみ、Obsidian 接続の protocol と port のみ、直近のエラーコード名と件数
+    - **含まれない内容**: API キー、base URL、Obsidian の日次メモの保存先、記録の文面は含みません
+    - **確認手順**: 新しい GitHub のタブが開く前に全文を確認できます。表示を閉じた場合は何も送信されません
+5. **GitHub Gist 同期 (オプトイン)**: Gist 同期を有効にし、個人用トークンを設定した利用者のみが対象です。同期対象に選んだ記録の本文とトークンのみが `https://api.github.com` に送られ、Gist の作成・更新と接続テストに使われます。
+6. **最小 Webhook 書き出し (オプトイン・既定は無効)**: 利用者が設定した https の URL に、マスク済みのタイトル・マスク済みの要約・タグ・URL のみを送ります。送信先が宣言済みの許可先に含まれない場合は送信せず、理由を履歴と通知に残します。プライバシー判定のない記録とページ本文は送りません。
 
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
@@ -390,6 +398,8 @@ An optional feature behind the "Research Sessions" panel, which shows which page
    - **Data Included**: Extension version, browser user agent, debug mode flag, SQLite initialization status, AI provider type name only, Obsidian connection protocol/port only, and recent error code names with counts
    - **Data Excluded**: API keys, base URLs, your Obsidian daily note path, and log message contents are never included
    - **Confirmation Step**: You can review the exact text before a new GitHub tab opens; closing the preview sends nothing
+5. **GitHub Gist Sync (Opt-In)**: Only for users who enable Gist sync and set a personal token. Only the token and the body of the records selected for sync are sent to `https://api.github.com`, to create and update gists and to test the connection.
+6. **Minimal Webhook Export (Opt-In, Off by Default)**: Sends only the masked title, masked summary, tags, and URL to the https URL you configure. If the destination origin is not a declared host permission, nothing is sent and the reason is kept in the history and a notification. Records without a privacy verdict and page body text are never sent.
 
 ### Private Page Protection
 

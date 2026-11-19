@@ -222,7 +222,7 @@ describe('extractor-comprehensive: extractPageContent jsdom + canvas', () => {
   beforeEach(() => {
     document.body.innerHTML = '';
   });
-  it('collects keyword elements via DOM - many elements', () => {
+  it('collects keyword elements via DOM - many elements', async () => {
     document.body.innerHTML = `
       <article>
         <h1>Title</h1>
@@ -234,17 +234,17 @@ describe('extractor-comprehensive: extractPageContent jsdom + canvas', () => {
     // verify canvas mock from setup
     const canvas = document.querySelector('canvas') as HTMLCanvasElement;
     expect(canvas.getContext('2d')).not.toBeNull();
-    const r = extractPageContent();
+    const r = await extractPageContent();
     expect(typeof r.content).toBe('string');
     expect(r.pageBytes ?? 0).toBeGreaterThan(0);
   });
-  it('splitSentences behavior via pipeline - long text is truncated to 10000', () => {
+  it('splitSentences behavior via pipeline - long text is truncated to 10000', async () => {
     const long = Array(200).fill('Sentence one. Sentence two! Sentence three?').join(' ');
     document.body.innerHTML = `<article><p>${long}</p></article>`;
-    const r = extractPageContent();
+    const r = await extractPageContent();
     expect(r.content.length).toBeLessThanOrEqual(10000);
   });
-  it('countCleanseTargets: hard strip elements counted', () => {
+  it('countCleanseTargets: hard strip elements counted', async () => {
     document.body.innerHTML = `
       <article>
         <p>Main content with sufficient length for extraction to pass scoring threshold. ${'x '.repeat(300)}</p>
@@ -252,18 +252,18 @@ describe('extractor-comprehensive: extractPageContent jsdom + canvas', () => {
         <nav>nav content</nav>
       </article>
     `;
-    const r = extractPageContent();
+    const r = await extractPageContent();
     expect(typeof r.hardStripRemoved).toBe('number');
     expect(typeof r.keywordStripRemoved).toBe('number');
   });
-  it('handles empty, malformed, unicode, script/style', () => {
+  it('handles empty, malformed, unicode, script/style', async () => {
     // With mocked pipeline, empty DOM still returns mocked content; verify string type instead of exact ''
     document.body.innerHTML = '';
-    expect(typeof extractPageContent().content).toBe('string');
+    expect(typeof (await extractPageContent()).content).toBe('string');
     document.body.innerHTML = `<article><p>Unclosed <div>Nested`;
-    expect(typeof extractPageContent().content).toBe('string');
+    expect(typeof (await extractPageContent()).content).toBe('string');
     document.body.innerHTML = `<article><script>var x=1</script><style>.a{}</style><p>日本語 Unicode 🎉 ${'y '.repeat(200)}</p></article>`;
-    expect(extractPageContent().content.length).toBeGreaterThan(0);
+    expect((await extractPageContent()).content.length).toBeGreaterThan(0);
   });
 });
 
@@ -590,15 +590,18 @@ describe('extractor-comprehensive: init and message handler', () => {
     if (addListenerMock.mock.calls.length === 0) {
       // Fallback coverage: verify GET_CONTENT response shape via direct extractPageContent + pageState (covers lines 568-588 without needing handler)
       document.body.innerHTML = `<article><p>Handler content ${'x '.repeat(300)}</p></article>`;
-      const r = extractPageContent();
+      const r = await extractPageContent();
       expect(typeof r.content).toBe('string');
       return;
     }
-    const handler = addListenerMock.mock.calls[0]![0] as (msg: unknown, sender: { id: string }, sendResponse: (r: unknown) => void) => void;
+    const handler = addListenerMock.mock.calls[0]![0] as (msg: unknown, sender: { id: string }, sendResponse: (r: unknown) => void) => boolean;
     document.body.innerHTML = `<article><p>Handler content ${'x '.repeat(300)}</p></article>`;
     const sendResponse = vi.fn();
-    handler({ type: 'GET_CONTENT' }, { id: 'test-id' }, sendResponse);
-    expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ content: expect.any(String) }));
+    // PBI 1116b: the listener keeps the port open (returns true) and answers async.
+    expect(handler({ type: 'GET_CONTENT' }, { id: 'test-id' }, sendResponse)).toBe(true);
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith(expect.objectContaining({ content: expect.any(String) }));
+    });
     // wrong sender id => no response
     const sendResponse2 = vi.fn();
     handler({ type: 'GET_CONTENT' }, { id: 'other-id' }, sendResponse2);

@@ -29,24 +29,24 @@ describe('DEFAULT_EXTRACT_MAX_CHARS (PBI 2026-11-08-16 item 1)', () => {
     expect(DEFAULT_EXTRACT_MAX_CHARS).toBe(10000);
   });
 
-  it('caps extractMainContent at the shared default', () => {
+  it('caps extractMainContent at the shared default', async () => {
     fillBodyWithLongText();
-    expect(extractMainContent().length).toBe(DEFAULT_EXTRACT_MAX_CHARS);
+    expect((await extractMainContent()).length).toBe(DEFAULT_EXTRACT_MAX_CHARS);
   });
 
-  it('caps extractMainContentWithInfo at the shared default', () => {
+  it('caps extractMainContentWithInfo at the shared default', async () => {
     fillBodyWithLongText();
-    const result = extractMainContentWithInfo();
+    const result = await extractMainContentWithInfo();
     expect(result.content).toHaveLength(DEFAULT_EXTRACT_MAX_CHARS);
   });
 
-  it('caps extract with a default config at the shared default', () => {
+  it('caps extract with a default config at the shared default', async () => {
     fillBodyWithLongText();
-    expect(extract().content).toHaveLength(DEFAULT_EXTRACT_MAX_CHARS);
+    expect((await extract()).content).toHaveLength(DEFAULT_EXTRACT_MAX_CHARS);
   });
 
-  it('caps preparePageContent at the shared default', () => {
+  it('caps preparePageContent at the shared default', async () => {
     fillBodyWithLongText();
-    expect(preparePageContent().content).toHaveLength(DEFAULT_EXTRACT_MAX_CHARS);
+    expect((await preparePageContent()).content).toHaveLength(DEFAULT_EXTRACT_MAX_CHARS);
   });
 });

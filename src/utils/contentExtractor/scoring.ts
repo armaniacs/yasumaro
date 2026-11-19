@@ -6,6 +6,71 @@
 import { isExcludedElement, isAsianContentElement } from './classifier.js';
 
 /**
+ * Candidate-scan batch size (PBI 1116b): each DOM-filter batch processes at
+ * most this many elements before yielding to the renderer. 200 matches the
+ * digest-batch precedent and keeps every synchronous slice well under a frame
+ * on typical article pages.
+ */
+export const CANDIDATE_SCAN_BATCH_SIZE = 200;
+
+/**
+ * Yield one turn to the renderer between scan batches (content-script safe:
+ * DOM timers only — no Node APIs, no chrome.*).
+ *
+ * Preference order follows the platform capability ladder:
+ * 1. `scheduler.yield()` when the explicit-yield scheduler exists,
+ * 2. one `requestAnimationFrame` turn otherwise,
+ * 3. a zero-delay `setTimeout` as the final fallback (jsdom / workers
+ *    without rAF, matching the IdleScheduler fallback in src/content/).
+ */
+function yieldToRenderer(): Promise<void> {
+    const scope = globalThis as unknown as {
+        scheduler?: { yield?: () => Promise<void> };
+        requestAnimationFrame?: (callback: (time: number) => void) => number;
+    };
+    const schedulerPort = scope.scheduler;
+    if (schedulerPort !== undefined && typeof schedulerPort.yield === 'function') {
+        return schedulerPort.yield();
+    }
+    const raf = scope.requestAnimationFrame;
+    if (typeof raf === 'function') {
+        return new Promise<void>((resolve) => {
+            raf(() => resolve());
+        });
+    }
+    return new Promise<void>((resolve) => {
+        setTimeout(resolve, 0);
+    });
+}
+
+/**
+ * Filter a static NodeList in document order, yielding to the renderer every
+ * `CANDIDATE_SCAN_BATCH_SIZE` elements. The returned array preserves the
+ * source order exactly — callers observe the same sequence as the previous
+ * synchronous `for` loop, only spread across frames on large DOMs. Small
+ * DOMs (fewer elements than one batch) complete without yielding.
+ */
+async function collectCandidatesBatched(
+    source: NodeListOf<Element>,
+    include: (element: Element) => boolean,
+): Promise<Element[]> {
+    const collected: Element[] = [];
+    for (let start = 0; start < source.length; start += CANDIDATE_SCAN_BATCH_SIZE) {
+        const end = Math.min(start + CANDIDATE_SCAN_BATCH_SIZE, source.length);
+        for (let i = start; i < end; i++) {
+            const element = source[i];
+            if (element !== undefined && include(element)) {
+                collected.push(element);
+            }
+        }
+        if (end < source.length) {
+            await yieldToRenderer();
+        }
+    }
+    return collected;
+}
+
+/**
  * 要素のテキストスコアを計算
  * テキストの多さ、段落の数、リンク密度などに基づいてスコアを計算
  * 【パフォーマンス最適化】DOM走査を一度に集約し、querySelectorAll呼び出しを削減
@@ -136,34 +201,33 @@ function scanAndAdopt(candidates: Element[], guardMinChars: number | undefined, 
  * the take-slice — the article/main branch returns take=1, so scanning the
  * returned list would never see rank 2+. `findMainContentCandidates()` keeps
  * the legacy no-guard contract as a thin wrapper.
+ *
+ * PBI 1116b: the two querySelectorAll scans below are chunked into
+ * `CANDIDATE_SCAN_BATCH_SIZE` batches with a renderer yield between batches,
+ * so a pathological page (thousands of div/section nodes) no longer blocks
+ * the content script's main thread in one synchronous loop. Result order is
+ * unchanged: batches walk the static NodeList in document order.
  */
-export function scanMainContentCandidates(guardMinChars?: number): CandidateScanResult {
-  const candidates: Element[] = [];
-
+export async function scanMainContentCandidates(guardMinChars?: number): Promise<CandidateScanResult> {
   // 優先ターゲット: article, main
   const mainTags = document.querySelectorAll('article, main');
-  for (const tag of mainTags) {
-    if (!isExcludedElement(tag)) {
-      candidates.push(tag);
-    }
-  }
+  const fromMain = await collectCandidatesBatched(mainTags, (tag) => !isExcludedElement(tag));
 
   // 候補がある場合、最もスコアの高い要素を選択
-  if (candidates.length > 0) {
-    return scanAndAdopt(candidates, guardMinChars, 1);
+  if (fromMain.length > 0) {
+    return scanAndAdopt(fromMain, guardMinChars, 1);
   }
 
   // アジア圏のコンテンツ構造を検索
   const allElements = document.querySelectorAll('div, section');
-  for (const elem of allElements) {
-    if (isAsianContentElement(elem) && !isExcludedElement(elem)) {
-      candidates.push(elem);
-    }
-  }
+  const fromDivs = await collectCandidatesBatched(
+    allElements,
+    (elem) => isAsianContentElement(elem) && !isExcludedElement(elem),
+  );
 
   // アジアコンテンツが見つかった場合、スコア順にソートして返す
-  if (candidates.length > 0) {
-    return scanAndAdopt(candidates, guardMinChars, 3);
+  if (fromDivs.length > 0) {
+    return scanAndAdopt(fromDivs, guardMinChars, 3);
   }
 
   // 候補がない場合、階層的に探索
@@ -177,6 +241,7 @@ export function scanMainContentCandidates(guardMinChars?: number): CandidateScan
     child => !isExcludedElement(child)
   );
 
+  const candidates: Element[] = [];
   for (const child of directChildren) {
     candidates.push(child);
   }
@@ -187,7 +252,8 @@ export function scanMainContentCandidates(guardMinChars?: number): CandidateScan
 
 /**
  * レガシー契約: ガードなし候補抽出（take 後のスコア順リスト）。
+ * PBI 1116b: underlying scan is batched/async — await the result.
  */
-export function findMainContentCandidates(): Element[] {
-    return scanMainContentCandidates().candidates;
+export async function findMainContentCandidates(): Promise<Element[]> {
+    return (await scanMainContentCandidates()).candidates;
 }

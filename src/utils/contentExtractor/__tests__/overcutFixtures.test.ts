@@ -23,13 +23,13 @@ const loadFixture = (name: string): string =>
     readFileSync(join(process.cwd(), 'testDir/e2e/test-pages', name), 'utf8');
 
 describe('PBI 05 fixture verification (DoD gate — Ask N2-A)', () => {
-    it('qa-smbc-repro: tiny article candidate → candidate_too_small body join ships floor-clearing text', () => {
+    it('qa-smbc-repro: tiny article candidate → candidate_too_small body join ships floor-clearing text', async () => {
         document.body.innerHTML = loadFixture('qa-smbc-repro.html');
         // Production-faithful: FULL default cleansing config (55 keywords, all
         // rules) — mirrors what the real content script runs in the e2e spec.
         const cfg = createDefaultCleansingConfig();
         const { cleanseOptions, aiSummaryCleanseOptions, dedupOptions } = buildExtractionOptions(cfg);
-        const r = extractMainContentWithInfo(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions) as unknown as Result;
+        const r = await extractMainContentWithInfo(10000, cleanseOptions, aiSummaryCleanseOptions, dedupOptions) as unknown as Result;
 
         expect(r.fallbackTriggered).toBe(true);
         expect(r.fallbackReason).toBe('candidate_too_small');
@@ -41,9 +41,9 @@ describe('PBI 05 fixture verification (DoD gate — Ask N2-A)', () => {
         expect(Number(r.pageBytes ?? 0)).toBeGreaterThan(Number(r.candidateBytes ?? 0));
     });
 
-    it('keyword-overstrip: keyword strip guts the candidate → content_overcut restores pre-cleanse text', () => {
+    it('keyword-overstrip: keyword strip guts the candidate → content_overcut restores pre-cleanse text', async () => {
         document.body.innerHTML = loadFixture('keyword-overstrip.html');
-        const r = extractMainContentWithInfo(
+        const r = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true, keywordStripEnabled: true },
         ) as unknown as Result;
@@ -56,9 +56,9 @@ describe('PBI 05 fixture verification (DoD gate — Ask N2-A)', () => {
         expect(r.aiSummaryOriginalBytes).toBeUndefined();
     });
 
-    it('whitelist-tiny: whitelist path bypasses the guards (documented v1 scope — Ask Q2A)', () => {
+    it('whitelist-tiny: whitelist path bypasses the guards (documented v1 scope — Ask Q2A)', async () => {
         document.body.innerHTML = loadFixture('whitelist-tiny.html');
-        const r = extractMainContentWithInfo(10000, { cleanseEnabled: true }) as unknown as Result;
+        const r = await extractMainContentWithInfo(10000, { cleanseEnabled: true }) as unknown as Result;
 
         expect(r.whitelistAdapterUsed).toBe('5ch-matome');
         expect(r.content).toContain('薄いレス本文');

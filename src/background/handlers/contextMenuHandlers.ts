@@ -15,6 +15,7 @@ import { getMessageOr } from '../../utils/i18n.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logWarn, logError } from '../../utils/logger/api.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
+import { NotificationHelper } from '../notificationHelper.js';
 import type { ManualRecordMessage } from '../messageTypes.js';
 import { recordTabContent } from './activeTabRecorder.js';
 
@@ -24,6 +25,29 @@ export interface ContextMenuHandlerDeps {
         sender: chrome.runtime.MessageSender,
         sendResponse: (response?: unknown) => void
     ) => Promise<void>;
+    /** Injectable success notifier (NotificationHelper by default, same as the omnibox/command path). */
+    notifyRecorded?: ((pageTitle: string) => void) | undefined;
+    /** Injectable failure notifier (NotificationHelper by default). */
+    notifyRecordFailed?: ((error: unknown) => void) | undefined;
+}
+
+function notifyContextMenuRecorded(deps: ContextMenuHandlerDeps, pageTitle: string): void {
+    if (deps.notifyRecorded) {
+        deps.notifyRecorded(pageTitle);
+        return;
+    }
+    NotificationHelper.notifySuccess(
+        getMessageOr('recordSuccessTitle', 'Recorded'),
+        getMessageOr('recordSuccessBody', `Recorded "${pageTitle}"`, [pageTitle]),
+    );
+}
+
+function notifyContextMenuRecordFailed(deps: ContextMenuHandlerDeps, error: unknown): void {
+    if (deps.notifyRecordFailed) {
+        deps.notifyRecordFailed(error);
+        return;
+    }
+    NotificationHelper.notifyError(error);
 }
 
 export function registerManualRecordContextMenu(): void {
@@ -63,10 +87,34 @@ export function createContextClickHandler(deps: ContextMenuHandlerDeps) {
         if (!targetTabId || !targetTabUrl) return;
 
         await inFlightByTabId.run(targetTabId, async () => {
+            let captured: unknown;
             try {
-                await recordTabContent(deps, 'Context menu', targetTabId, targetTabUrl);
+                await recordTabContent(
+                    {
+                        ...deps,
+                        captureResult: (result: unknown) => {
+                            captured = result;
+                        },
+                    },
+                    'Context menu',
+                    targetTabId,
+                    targetTabUrl,
+                );
+                // A successful record confirms with the page title, like the
+                // omnibox/command path. A captured failure stays silent here:
+                // the pipeline's outcome policy already notified it.
+                if (
+                    captured !== undefined &&
+                    captured !== null &&
+                    typeof captured === 'object' &&
+                    'success' in captured &&
+                    (captured as { success?: unknown }).success === true
+                ) {
+                    notifyContextMenuRecorded(deps, tab.title || targetTabUrl);
+                }
             } catch (error) {
                 logError('Context menu manual record failed', { cause: error }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+                notifyContextMenuRecordFailed(deps, error);
             }
         }, 'drop');
     };

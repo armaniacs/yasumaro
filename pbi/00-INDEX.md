@@ -14,6 +14,12 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| 02 | [2026-11-16-02-backlog-omnibox-url-fallback.md](2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ⬜ 未着手。omnibox経路の tab.url 空で無言 return。tabs 権限は ADR 却下のため、通知/サジェストでの可視化に限定 |
+
 ### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
 
 Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。コードは正常版と同一でスクリプトのテストも緑のため、認証情報またはストア側検証が原因と推定。所有者による secrets / ストア側の確認待ち。
@@ -689,11 +695,11 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 ### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 ― ✅ 完了・アーカイブ済み 🔧非機能追加
 
-- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（✅ 完了 ― 10.1.1 で実効スコア化。測定済み5チャンク合算 67.92%。残ディレクトリは [2026-11-13-01](2026-11-13-01-backlog-mutation-score-remaining-dirs.md) へ切り出し）
+- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（✅ 完了 ― 10.1.1 で実効スコア化。測定済み5チャンク合算 67.92%。残ディレクトリは [2026-11-13-01](../dev-docs/archived/pbi/2026-11-13-01-backlog-mutation-score-remaining-dirs.md) へ切り出し。全21チャンク合算 64.61% で完走・アーカイブ済み）
 
-### 2026-11-13 ミューテーションスコア残ディレクトリ ― 🔶 部分実装 1件 🔧非機能追加
+### 2026-11-13 ミューテーションスコア残ディレクトリ ― ✅ 完了・アーカイブ済み 🔧非機能追加
 
-- [2026-11-13-01-backlog-mutation-score-remaining-dirs.md](2026-11-13-01-backlog-mutation-score-remaining-dirs.md)（🔶 dashboard / background / utils の4チャンク測定と生残3分類の完了が残り。RICE 2.0・3 SP・副作用🟢）
+- [2026-11-13-01-backlog-mutation-score-remaining-dirs.md](../dev-docs/archived/pbi/2026-11-13-01-backlog-mutation-score-remaining-dirs.md)（✅ 完了 ― dashboard / background / utils の全チャンク測定・生残3分類・テスト補強を完了。RICE 2.0・3 SP・副作用🟢。詳細はアーカイブ履歴）
 
 ### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）― ✅ 2件完了・アーカイブ済み / 🔵 監視 1件 🔧非機能追加
 
@@ -804,6 +810,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-19 ミューテーションスコア残ディレクトリ アーカイブ ― 1件
+
+- **2026-11-13-01-backlog-mutation-score-remaining-dirs**: 最終チャンク 08e-utils-root-n-z を含む全21チャンクが完走。合算スコア (重複排除後) **64.61%** (killed 47,607 / tested 73,685、break 50 超過)。テスト補強4ファイル59テスト (statusChecker・summaryNormalizer・retryPredicate・selectionText) を追加し、対象チャンク (02-popup・08e) を incremental resume で再測定して killed +50 (64.54% から 64.61%)。生残は等価 / 対象外 / テスト缺口の3分類を PBI に記録 (等価の代表例は到達性解析で実証)。`npm run validate` 緑。
 
 ### 2026-11-13 Stryker Vitest 5 runner採用 ― 1件
 

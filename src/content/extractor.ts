@@ -17,7 +17,7 @@ import type { Clock } from './domainPolicyPort.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
-import { handleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
+import { handleGetContentMessage, shouldHandleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
 import { handleGetSelectionMessage, type SelectionCaptureDeps } from './selectionCapture.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
@@ -54,7 +54,7 @@ const kernel = new ContentKernel(storagePort, domainPolicyPort, () => Date.now()
  * Single external extraction seam chain: kernel.extractPageContent →
  * pageContentPipeline.preparePageContent → extractMainContentWithInfo (internal).
  */
-export function extractPageContent(config?: CleansingConfig): ExtractResult {
+export async function extractPageContent(config?: CleansingConfig): Promise<ExtractResult> {
     return kernel.extractPageContent(config);
 }
 
@@ -205,7 +205,15 @@ export function registerGetContentListener(): void {
         // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
         const deps = buildGetContentDeps();
         chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
-            handleGetContentMessage(message, sender, sendResponse, deps);
+            // PBI 1116b: extraction is async (batched candidate scan), so a
+            // taken message must keep the port open (return true) and answer
+            // from the settled promise. Untaken messages return undefined so
+            // other listeners (e.g. GET_SELECTION) are unaffected.
+            if (shouldHandleGetContentMessage(message, sender, deps)) {
+                void handleGetContentMessage(message, sender, sendResponse, deps);
+                return true;
+            }
+            return undefined;
         });
     }
 }

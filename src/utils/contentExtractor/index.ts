@@ -20,10 +20,12 @@
  * DOM contract (applies to every entry in this file, including the external
  * seam that delegates here):
  * - Read source is the live `document.body`. When `document.body` is absent,
- *   entries return empty content without throwing.
+ *   entries resolve to empty content without throwing.
  * - `window.location.hostname` is read for the whitelist-adapter lookup.
- * - Extraction is synchronous; on unexpected failure entries fall back to
- *   `document.body.innerText` and truncate to maxChars.
+ * - Extraction is asynchronous (PBI 1116b): the candidate scan yields to the
+ *   renderer between batches, so entries return Promises. On unexpected
+ *   failure entries fall back to `document.body.innerText` and truncate to
+ *   maxChars.
  * External callers MUST use preparePageContent and MUST NOT import these
  * entries directly (production code); the bench harness and unit tests are
  * the only sanctioned direct users.
@@ -110,7 +112,7 @@ export interface ExtractOutput {
  * DOM contract: reads the live `document.body`; missing body yields empty
  * content without throwing.
  */
-export function extract(config: ExtractConfig = {}): ExtractOutput {
+export async function extract(config: ExtractConfig = {}): Promise<ExtractOutput> {
     const {
         maxChars = DEFAULT_EXTRACT_MAX_CHARS,
         cleanseOptions = { cleanseEnabled: false },
@@ -118,7 +120,7 @@ export function extract(config: ExtractConfig = {}): ExtractOutput {
         dedupOptions = {},
     } = config;
     const builder = createReportBuilder(maxChars, true);
-    const content = extractInternal(maxChars, cleanseOptions, aiSummaryCleanseOptions, dedupOptions, builder);
+    const content = await extractInternal(maxChars, cleanseOptions, aiSummaryCleanseOptions, dedupOptions, builder);
     return { content, report: builder.build() };
 }
 
@@ -130,14 +132,14 @@ export function extract(config: ExtractConfig = {}): ExtractOutput {
  * DOM contract: reads the live `document.body` and `window.location.hostname`
  * (whitelist lookup); missing body yields empty content without throwing.
  */
-export function extractMainContentWithInfo(
+export async function extractMainContentWithInfo(
     maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {}
-): ExtractResult {
+): Promise<ExtractResult> {
     const builder = createReportBuilder(maxChars, true);
-    const content = extractInternal(maxChars, cleanseOptions, aiSummaryCleanseOptions, dedupOptions, builder);
+    const content = await extractInternal(maxChars, cleanseOptions, aiSummaryCleanseOptions, dedupOptions, builder);
     return builder.build().toLegacyResult(content);
 }
 
@@ -153,12 +155,12 @@ export function extractMainContentWithInfo(
  * DOM contract: reads the live `document.body`; missing body yields an empty
  * string without throwing.
  */
-export function extractMainContent(
+export async function extractMainContent(
     maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {}
-): string {
+): Promise<string> {
     const builder = createReportBuilder(maxChars, false);
     return extractInternal(maxChars, cleanseOptions, aiSummaryCleanseOptions, dedupOptions, builder);
 }
@@ -171,13 +173,13 @@ export function extractMainContent(
  * folds into the source element (top candidate / document.body) and the
  * preBytes origin (candidateBytes / pageBytes).
  */
-function extractInternal(
+async function extractInternal(
     maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
     cleanseOptions: ExtractCleanseOptions = { cleanseEnabled: false },
     aiSummaryCleanseOptions: ExtractAiSummaryOptions = { aiSummaryCleanseEnabled: false },
     dedupOptions: ExtractDedupOptions = {},
     builder: ExtractionReportBuilder
-): string {
+): Promise<string> {
     let content = '';
     const { cleanseEnabled = false, hardStripEnabled = true, keywordStripEnabled = true, keywords = [...INITIAL_KEYWORDS] } = cleanseOptions;
     const { aiSummaryCleanseEnabled = false, fallbackRatio = 0.20, fallbackMinBytes = 300, fallbackMinChars = 100, cleanseGuardEnabled = true, candidateGuardEnabled = true } = aiSummaryCleanseOptions;
@@ -230,7 +232,7 @@ function extractInternal(
             builder.notePageBytes(meter.measure(document.body.textContent || ''));
         }
 
-        const scan = scanMainContentCandidates(candidateGuardEnabled ? fallbackMinChars : undefined);
+        const scan = await scanMainContentCandidates(candidateGuardEnabled ? fallbackMinChars : undefined);
         const candidates = scan.candidates;
         // PBI 05 ① all-miss: body join below; rejectedTop stays measurable so
         // diagnostics show what was discarded (transparent discard, why-G).

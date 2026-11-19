@@ -59,16 +59,17 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * - Read source is the live `document.body`. A missing body yields empty
  *   content without throwing.
  * - `window.location.hostname` is read for the whitelist-adapter lookup.
- * - Extraction is synchronous; on unexpected failure the pipeline falls back
- *   to `document.body.innerText` and truncates the result to maxChars.
+ * - Extraction is asynchronous (PBI 1116b: batched candidate scan yields to
+ *   the renderer); on unexpected failure the pipeline falls back to
+ *   `document.body.innerText` and truncates the result to maxChars.
  *
  * @param config - CleansingConfig, defaults to a fresh utils-owned default when omitted
  * @param maxChars - maximum characters, defaults to DEFAULT_EXTRACT_MAX_CHARS (same as extractMainContentWithInfo)
  */
-export function preparePageContent(
+export async function preparePageContent(
   config?: CleansingConfig,
   maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
-): ExtractResult {
+): Promise<ExtractResult> {
   // When no config is supplied, use a fresh utils-owned default. This keeps the
   // module free of content-layer coupling — the content script's
   // extractPageContent() wrapper still owns pageState, but direct callers

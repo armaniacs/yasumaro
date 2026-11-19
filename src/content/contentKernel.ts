@@ -160,9 +160,9 @@ export class ContentKernel {
      * carries no default-parameter — the `??` in the body is the only
      * default. The extractor.ts facade forwards with no default of its own.
      */
-    extractPageContent(config?: CleansingConfig): ExtractResult {
+    async extractPageContent(config?: CleansingConfig): Promise<ExtractResult> {
         const resolved: CleansingConfig = config ?? this.pageState.cleansingConfig;
-        const result = preparePageContent(resolved);
+        const result = await preparePageContent(resolved);
         if (result.cleansingExecuted === true) {
             // Badge 通知は fire-and-forget（PBI-22 MessageSender seam 経由）。
             // 送信失敗は抽出フローを壊さない — ログのみ。
@@ -194,8 +194,8 @@ export class ContentKernel {
      * which holds the kernel's single default-resolution point, so an
      * omitted config resolves exactly once however this method is entered.
      */
-    extractAndCommit(config?: CleansingConfig): ExtractResult {
-        const result = this.extractPageContent(config);
+    async extractAndCommit(config?: CleansingConfig): Promise<ExtractResult> {
+        const result = await this.extractPageContent(config);
         this.applyExtractResultToPageState(result);
         return result;
     }

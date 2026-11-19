@@ -33,14 +33,16 @@ export class HeaderDetector {
    * rejections.
    */
   private fireAndForget(task: () => Promise<unknown>, context: string): void {
-    void Promise.resolve()
-      .then(() => task())
-      .catch((error: unknown) => {
+    void (async (): Promise<void> => {
+      try {
+        await task();
+      } catch (error: unknown) {
         void logDebug('HeaderDetector fire-and-forget failed', {
           context,
           error: errorMessage(error),
         });
-      });
+      }
+    })();
   }
 
   /**
