@@ -4,9 +4,15 @@
 
 ## [Unreleased]
 
+## [6.9.76] - 2026-11-19
+
+このリリースはchrome-extensions監査対応の修正とコンテンツ抽出の高速化、ミューテーションテスト全21チャンク測定の完了です。利用者に見える変更はmanifestへのaction明示・通知失敗の可視化・offscreenのstorage判定の統一・extractor走査のバッチ化です。
+
 ### 修正
 
 - AI要約の並行要求の取り違えを防止（dedupeキーに内容ハッシュを含め、内容違いの共有を排除。同一内容の共有によるAPIコスト最適化は維持。autoフォールバック時のlocal失敗をWARN記録し、監査ログ送信失敗を検出可能化）
+- chrome-extensions監査（1116b）の修正群を反映（manifestに `action` キーを明示し、`chrome.action` 系APIがWXTの暗黙生成に依存しないようにした。service workerのメッセージ応答をasync統一パターンに寄せ、通知生成の失敗を `chrome.runtime.lastError` とPromise拒否の両系統で検出してWARN記録。コンテキストメニュー・記録結果判定・webhook送信・ヘッダ検出のエラー処理を堅牢化）
+- offscreenの `migrationV2` と `sqliteStatus` でstorage利用可否の扱いが矛盾していたのを統一
 
 ### リファクタリング
 
@@ -16,6 +22,18 @@
 - 日時フォーマットをlocaleUtilsの正規seamに集約（`formatTimeAgo` の移動とinline置換。UTC表示1箇所は仕様変更のため対象外として次回送り）
 - region配線骨格を `runRegionAction` に共通化（busy・status遷移の一元化と二重実行ガード統一。in-row描画は対象外）
 - sqliteHistoryModelの世代ガードを注入可能化（lifecycle ring統一の前提。未指定時は従来通り私設生成で挙動不変）
+
+### パフォーマンス
+
+- コンテンツextractor走査の200件バッチ＋yield化（DOM走査を200件単位に分割しバッチ間でyieldする。抽出結果はcontentKernelとのparityテストで一致を保証）
+
+### ドキュメント
+
+- PRIVACY開示の追記と `CHROMEWEBSTORE.md` を新設（ストア公開向けの説明を独立ファイル化）
+
+### テスト
+
+- ミューテーションテスト全21チャンクの測定を完了（重複排除後の合算スコア64.61%、break 50を上回る）。生残を等価/対象外/テスト缺口の3分類でPBIに記録し、テスト缺口4ファイルに59テストを追加してkilled +50
 
 ## [6.9.75] - 2026-11-11
 
