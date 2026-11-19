@@ -541,7 +541,7 @@ worktree)**:
 | `src/dashboard/__tests__/dashboardLegacyPanelFactories.test.ts` | EventTarget.prototype spy によるリスナ観測 |
 | `src/popup/__tests__/statusPanel-wireOnce-parity.test.ts` | 同上 |
 | `src/utils/contentExtractor/__tests__/bytesize-lazy.test.ts` | TextEncoder spy の encode 計数 pin |
-| `src/popup/__tests__/ui-ux-improvements.test.ts` | data-i18n-aria-label 経由の属性更新が反映されない(title は反映される)。根因は部分確定 |
+| `src/popup/__tests__/ui-ux-improvements.test.ts` | `document.body` 更新漏れ(全面置換後も旧い空 body を指す。applyI18n は body 起点のため無更新、getElementById での title 設定は反映)。Chromium/jsdom では body が追従する |
 
 退避ファイルには docblock の直後に 1 行の根拠コメントを残している。
 
@@ -571,9 +571,12 @@ wall の絶対値はマシン依存のため、最終確認は CI(4 vCPU)で行�
 
 ### 未解決
 
-- `ui-ux-improvements.test.ts` の aria-label 更新不反映の根因は部分確定
-  (フィクスチャの innerHTML 往復と data-i18n-aria-label の組合せ)。上流
-  (wasm-quickjs-dom)の属性キャッシュ仕様確認が必要
+- `ui-ux-improvements.test.ts`: **根因確定済み(2026-11-19 再チャレンジ)**。
+  wasm 環境で `document.documentElement.innerHTML` を全面置換すると、新ツリーは
+  documentElement 直下に作られるが `document.body` は旧い空 body を指し続ける。
+  `applyI18n` は `document.body` 起点でクエリするため何も更新せず、document
+  レベルの `getElementById` で設定する title だけが反映される。上流報告用の
+  最小再現は PBI 2026-11-19-01 の実装結果節を参照
 - wasm 環境は shadow DOM を含むページで「serialised に含まれない」警告を出す
   (動作には影響しないがログが騒がしい)
 - CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認

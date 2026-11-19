@@ -1,6 +1,6 @@
 # PBI: Vitest の DOM 環境を wasm-quickjs-dom へ置き換えて固定コストを削減する
 
-- 状態: 🔶 部分実装 (2026-11-19 導入完了。残りは CI での wall/メモリ確認と ui-ux-improvements 根因の上流確認)
+- 状態: 🔶 部分実装 (2026-11-19 導入完了。残りは CI での wall/メモリ確認と ui-ux 根因の上流報告)
 - 種別: 非機能追加 (性能改善)
 - 見積もり: 3 SP
 - 起票日: 2026-11-19
@@ -197,8 +197,8 @@ piiSanitizer の 1 失敗は load-flake(node 環境のタイミング pin、load
 
 ### 未解決(フォローアップ)
 
-- `ui-ux-improvements.test.ts`: data-i18n-aria-label 経由の aria-label 更新が wasm 環境のフィクスチャ往復で反映されない(title は反映)。上流の属性キャッシュ仕様確認が必要
-- CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認(ローカル wall は常時 load 5 以上の共有マシンのため参考値)
+- `ui-ux-improvements.test.ts`: **根因確定済み(2026-11-19 再チャレンジ)**。wasm 環境で `document.documentElement.innerHTML` を全面置換すると、新ツリーは documentElement 直下に作られるが `document.body` は旧い空 body を指し続ける。`applyI18n` は `document.body` 起点(`element instanceof Document ? document.body : element`)でクエリするため何も更新せず、document レベルの `getElementById` で設定する title だけが反映される。Chromium/jsdom では body が追従する。上流報告用の最小再現: `document.documentElement.innerHTML = '<head><title>t</title></head><body><button id="b">x</button></body>'` 後に `document.body.childElementCount` が 0 のままになり、`getElementById('b')` は見つかる(分岐したツリー)。退避は維持し、上流への報告は別途行う
+- CI ランナー(4 vCPU / ubuntu)での wall とメモリの確認(ローカル wall は常時 load 5 以上の共有マシンのため参考値。PR #212 で確認中)
 - wasm 環境の shadow DOM 非直列化警告のノイズ(動作への影響なし)
 
 ## 深掘りセッション ― 2026-11-19
