@@ -1,10 +1,10 @@
 # PBI: 未測定ディレクトリのミューテーションスコア確定とテスト缺口の補強
 
-- 状態: 未着手
+- 状態: 完了 (2026-11-19)
 - 種別: 非機能追加 (テスト基盤)
 - 見積もり: 3 SP
 - 起票日: 2026-11-13
-- 親: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)
+- 親: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)
 
 ## 背景
 
@@ -40,9 +40,21 @@ Then 再測定で当該ミュータントが killed になる
 - 合算は重複排除: Strykerの `incremental` が後続チャンクのレポートに既測ミュータントを持ち越すため、単純合計は二重計数になる。`--aggregate` は (file, mutator, 位置, 置換) の一致で一意化し、最良ステータスを採用する
 - 測定と1116b実装の前後関係: 一部チャンクの測定後に1116b (async/await化・バッチ化) が対象ソースを変更した。変更は意味保存のリファクタであり、合否判定 (break 50 に対する60%台) を覆す規模ではないため再測定は行わず、ここに記録する
 
-- 未測定: `src/dashboard/**`, `src/background/**`, `src/utils/**` (a-l / m-z の2分割)
-- テスト缺口: `src/popup/statusChecker.ts` の `isFilterMode` / `findMatchedPattern` / `domain_whitelist || []` 既定値
-- 分類記録: `src/messaging/{validators,sqliteWireTable,archiveWireTable}.ts`、`src/offscreen/{opfsWorker,migrationBackup}.ts`
+## 最終測定結果 (2026-11-19)
+
+- 全21チャンクが完走。合算スコア (重複排除後) は **64.61%** (killed 47,607 / tested 73,685) で、break 50 を上回る
+- 最終チャンク 08e-utils-root-n-z はスリープ抑止 (caffeinate) 付きの単独実行 (concurrency 2) で161分、テストランナー2プロセスで安定完走
+- テスト補強: 4ファイルに59テストを追加し、対象チャンク (02-popup, 08e-utils-root-n-z) を incremental resume で再測定。合算は 64.54% から 64.61% へ (killed +50)
+  - `src/popup/statusChecker.ts`: isFilterMode 境界・モード別判定・subdomain 一致・privacy cache 後処理 (survived 63 → 37)
+  - `src/utils/summaryNormalizer.ts`: 敬体変換テーブルの表駆動テスト (survived 32 → 1)
+  - `src/utils/retryPredicate.ts`: FailureKind 別判定・cause 型別・終端マーカー (survived 49 → 35、no-cov 11 → 2)
+  - `src/utils/selectionText.ts`: 文字数上限境界とコードポイント単位の切り詰め (survived 5 → 3)
+
+## 生残の3分類 (2026-11-19 時点、合算 26,078件)
+
+- 等価 (実証済みの代表例。テスト追加はしない): `selectionText.ts:44` の切り詰め境界2件 (上限以下で slice が恒等写像)、`summaryNormalizer.ts:27` (ガードを外しても出力同一)、`retryPredicate.ts:48/61/82` の論理演算子崩し (プロファイル表の真偽一致・左辺到達不能)、`statusChecker.ts:62` の空リスト早期return (呼び出し元が必ず非空配列を渡すため到達不能)
+- 対象外 (仕様の凍結になるため補強しない): 宣言的テーブル (settingsSchemas のスキーマ定義、searchQuery の検索エンジン辞書、registrableDomain のマルチラベルTLD表)、表示文面の StringLiteral (生残全体の約29%)、piiSanitizer のPII正規表現の文字クラス変異 (過剰一致は安全側で仕様固定になる) と RuntimeError 195件 (変異regexの実行時暴走、スコア計算の分母外)
+- テスト缺口: 上記4ファイルのロジック系は補強済み。未対応の候補 (pathSanitizer の上限境界、trustChecker の changedKeys、registrableDomain のlabels判定) と messaging/offscreen のwire系生残は記録に留め、必要になった時点で個別PBI化
 
 ## 実行手順
 
@@ -59,7 +71,7 @@ Then 再測定で当該ミュータントが killed になる
 
 ## 完了条件
 
-- [ ] dashboard / background / utils の4チャンクのレポートが保存されている
-- [ ] `--aggregate` が全9チャンクの合算スコアを出し、その値が記録されている
-- [ ] 生残の3分類が記録され、テスト缺口の補強が実施されている
-- [ ] `npm run validate` が通る
+- [x] dashboard / background / utils のレポートが保存されている (21チャンク構成に拡張し、全チャンク完走)
+- [x] `--aggregate` が全チャンクの合算スコアを出し、その値が記録されている (64.61%)
+- [x] 生残の3分類が記録され、テスト缺口の補強が実施されている
+- [x] `npm run validate` が通る
