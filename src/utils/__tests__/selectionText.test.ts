@@ -60,6 +60,37 @@ describe('normalizeSelectionText', () => {
     expect(result).toHaveLength(SELECTION_MAX_CHARS);
     expect(result).not.toContain('\u2029');
   });
+
+  it('returns below-cap text with astral characters intact, exactly as normalized', () => {
+    // Exercises the early return end to end: the normalization result goes
+    // back out verbatim, so a body emptied to `undefined` fails here.
+    expect(normalizeSelectionText('  😀 \u2028 tail  ')).toBe('😀 tail');
+  });
+
+  it('returns input of exactly SELECTION_MAX_CHARS UTF-16 units verbatim at the boundary', () => {
+    // 9998 BMP chars + one astral char = exactly 10000 UTF-16 units (9999
+    // code points): the last input the guard must send back without
+    // truncating. Exact equality, not a length check, so any change to the
+    // returned value at the boundary is caught.
+    const raw = `${'x'.repeat(SELECTION_MAX_CHARS - 2)}😀`;
+    expect(raw).toHaveLength(SELECTION_MAX_CHARS);
+    expect(normalizeSelectionText(raw)).toBe(raw);
+  });
+
+  it('cuts on a code-point boundary when the unit-10000 line falls inside a surrogate pair', () => {
+    // 9999 BMP chars + two astral chars = 10003 UTF-16 units, 10001 code
+    // points. The cap keeps 10000 code points, so the first astral char —
+    // which straddles the 10000th UTF-16 unit — survives whole; a UTF-16
+    // unit slice would store a lone lead surrogate instead.
+    const head = 'あ'.repeat(SELECTION_MAX_CHARS - 1);
+    const result = normalizeSelectionText(`${head}😀😀`);
+    expect(result).toBe(`${head}😀`);
+    expect([...result]).toHaveLength(SELECTION_MAX_CHARS);
+    // The cap counts code points, so the stored form is 10001 UTF-16 units —
+    // one unit MORE than a unit-based cap would keep (with a lone surrogate
+    // at this boundary).
+    expect(result).toHaveLength(SELECTION_MAX_CHARS + 1);
+  });
 });
 
 describe('SELECTION_MAX_CHARS', () => {
