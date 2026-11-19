@@ -1,203 +1,170 @@
-# Changelog
+# 更新履歴
 
-All notable changes to this project will be documented in this file.
-
-> **v6 系バージョニングポリシー**
->
-> - `v6.偶数.x` リリース（例: `v6.0.x`、`v6.2.x`）では **bug fix のみ** を行う。
-> - `v6.奇数.x` リリース（例: `v6.1.x`、`v6.3.x`、直前の偶数 `+1`）では **新機能の実装** を行う。
-> - `v6.8` は **stable ライン**。6.8.x の bug fix は `support/6.8` ブランチから `v6.8.x` タグでリリースする。
-> - `main` は次期開発ライン。リリース時は `v6.9.0` のように奇数マイナーの機能リリースとしてタグを打つ。
-> - 現時点では stable は `v6.8.21` リリース、`v6.9.0` リリース。
->
-> **Yasumaro ブランド案内 / Yasumaro Brand Notice**
->
-> 本拡張機能は旧称「Obsidian Weave」から「Yasumaro」へ改名しました。今後のリリースは `armaniacs/yasumaro` リポジトリで公開されます。
->
-> This extension has been renamed from "Obsidian Weave" to "Yasumaro". Future releases will be published from the `armaniacs/yasumaro` repository.
->
-> **リリース頻度・連日リリース時のガイドライン / Release Frequency & Consecutive Release Guidelines**
->
-> 本プロジェクトでは、緊急の hotfix、前日リリースに対するレビュー指摘の即時反映、CI/pipeline の緊急修正などにより、連日リリースが発生することがあります。
-> 連日リリースの場合は、各リリースエントリの先頭にその意図を示す文言を含め、読み手がバグ修正版か新機能版かを区別しやすくします。
->
-> - hotfix の場合: 「このリリースは ... に対する hotfix です。」
-> - 前日レビュー指摘の即時反映の場合: 「このリリースは前日のレビュー指摘を即座に反映したものです。」
-> - CI/pipeline 修正の場合: 「このリリースは CI/pipeline の緊急修正です。」
->
-> 通常のリリース間隔の場合は、これらの追加文言は不要です。
->
-> This project may ship releases on consecutive days for emergency hotfixes, immediate follow-ups to review feedback from the previous release, or urgent CI/pipeline fixes. When this happens, each release entry begins with a phrase that clarifies the intent so readers can distinguish bug-fix releases from feature releases.
->
-> - Hotfix: "This release is a hotfix for ..."
-> - Review feedback follow-up: "This release immediately addresses review feedback from the previous day."
-> - CI/pipeline fix: "This release is an urgent CI/pipeline fix."
->
-> For releases with normal spacing, no additional prefix is required.
+本拡張機能の注目すべき変更をこのファイルに記録する。バージョニングポリシー・ブランド案内・リリース頻度の指針は [docs/RELEASE_POLICY.md](docs/RELEASE_POLICY.md) を参照。
 
 ## [Unreleased]
 
-### 修正 / Fixed
+### 修正
 
-- AI要約の並行要求の取り違えを防止（dedupeキーに内容ハッシュを含め、内容違いの共有を排除。同一内容の共有によるAPIコスト最適化は維持。autoフォールバック時のlocal失敗をWARN記録し、監査ログ送信失敗を検出可能化） / Prevented cross-talk between concurrent AI summary requests (dedupe key now includes a content hash so different content is never shared; sharing for identical content keeps the API-cost optimization. Local failures on auto fallback are WARN-logged and audit-log send failures are surfaced)
+- AI要約の並行要求の取り違えを防止（dedupeキーに内容ハッシュを含め、内容違いの共有を排除。同一内容の共有によるAPIコスト最適化は維持。autoフォールバック時のlocal失敗をWARN記録し、監査ログ送信失敗を検出可能化）
 
-### リファクタリング / Refactored
+### リファクタリング
 
-- dashboardのViewと配線の値import循環を解消（`SQLITE_HISTORY_IDS` の所有権を新規共有モジュールへ移し、`formatDate` 参照をutils直参照に寄せて単方向化。描画内容はparityテストで一致を保証） / Removed the value-import cycle between the dashboard view and its wiring (moved `SQLITE_HISTORY_IDS` ownership to a new shared module and pointed `formatDate` references at utils, leaving a single direction. Rendered output pinned by parity tests)
-- ログ経路を構造化loggerのseamに一本化（console直書きと二重発射をseam委譲に寄せ、logger自体の失敗を検出可能化。新規直書きを検出するlintルールを追加し既存残存分は除外録化） / Unified log output on the structured-logger seam (direct console writes and double emission now delegate to the seam, logger's own failures are detectable. Added a lint rule rejecting new direct console writes with a grandfather list)
-- collection selectのoptions構築を共通ビルダーに集約（3箇所を委譲しescape経路を単一化。描画はgolden一致） / Consolidated collection-select option building into a shared builder (three call sites delegate, single escape path. Output pinned by golden tests)
-- 日時フォーマットをlocaleUtilsの正規seamに集約（`formatTimeAgo` の移動とinline置換。UTC表示1箇所は仕様変更のため対象外として次回送り） / Consolidated date formatting on the localeUtils seam (moved `formatTimeAgo`, replaced inline calls. One UTC display left out as a spec change for later)
-- region配線骨格を `runRegionAction` に共通化（busy・status遷移の一元化と二重実行ガード統一。in-row描画は対象外） / Consolidated region wiring on `runRegionAction` (unified busy and status transitions with a shared double-execution guard. In-row rendering out of scope)
-- sqliteHistoryModelの世代ガードを注入可能化（lifecycle ring統一の前提。未指定時は従来通り私設生成で挙動不変） / Made the sqliteHistoryModel generation guard injectable (groundwork for lifecycle-ring unification. Default still creates a private guard, behavior unchanged)
+- dashboardのViewと配線の値import循環を解消（`SQLITE_HISTORY_IDS` の所有権を新規共有モジュールへ移し、`formatDate` 参照をutils直参照に寄せて単方向化。描画内容はparityテストで一致を保証）
+- ログ経路を構造化loggerのseamに一本化（console直書きと二重発射をseam委譲に寄せ、logger自体の失敗を検出可能化。新規直書きを検出するlintルールを追加し既存残存分は除外録化）
+- collection selectのoptions構築を共通ビルダーに集約（3箇所を委譲しescape経路を単一化。描画はgolden一致）
+- 日時フォーマットをlocaleUtilsの正規seamに集約（`formatTimeAgo` の移動とinline置換。UTC表示1箇所は仕様変更のため対象外として次回送り）
+- region配線骨格を `runRegionAction` に共通化（busy・status遷移の一元化と二重実行ガード統一。in-row描画は対象外）
+- sqliteHistoryModelの世代ガードを注入可能化（lifecycle ring統一の前提。未指定時は従来通り私設生成で挙動不変）
 
 ## [6.9.75] - 2026-11-11
 
-このリリースはCI/pipelineの緊急修正です。 / This release is an urgent CI/pipeline fix.
+このリリースはCI/pipelineの緊急修正です。
 
-### 修正 / Fixed
+### 修正
 
-- リリース時のCLI版同期漏れを修正（`cli/Cargo.lock` の版を `package.json` に同期。v6.9.73・v6.9.74の版上げで漏れていたため `cargo publish --dry-run` がdirty扱いで失敗していた） / Fixed missing CLI version sync at release time (synced `cli/Cargo.lock` to `package.json`; the v6.9.73 and v6.9.74 bumps missed it, failing `cargo publish --dry-run` as dirty)
+- リリース時のCLI版同期漏れを修正（`cli/Cargo.lock` の版を `package.json` に同期。v6.9.73・v6.9.74の版上げで漏れていたため `cargo publish --dry-run` がdirty扱いで失敗していた）
 
 ## [6.9.74] - 2026-11-11
 
-### ドキュメント / Docs
+### ドキュメント
 
-- GitHub PagesとREADMEをFirefox Add-ons配布に対応（ヒーローとインストール欄にFirefox入手ボタンを追加、日英の導入手順・FAQを更新。「Chrome拡張機能」表記を「ブラウザ拡張機能」に統一） / Updated GitHub Pages and README for Firefox Add-ons distribution (Firefox buttons in the hero and install sections, install steps and FAQ revised in JA/EN, "Chrome extension" wording unified to "browser extension")
+- GitHub PagesとREADMEをFirefox Add-ons配布に対応（ヒーローとインストール欄にFirefox入手ボタンを追加、日英の導入手順・FAQを更新。「Chrome拡張機能」表記を「ブラウザ拡張機能」に統一）
 
 ## [6.9.73] - 2026-11-10
 
-### 修正 / Fixed
+### 修正
 
-- SSRFガードのDNSピン留めとlocalhost既定拒否（検証と接続で同一解決IPを使う突き合わせを追加し、リテラルloopbackとhttp経由の内部到達を拒否。Obsidian・ローカルAI等の正規用途は明示opt-out。既定DoH解決器の配線はmanifest権限設計と一体の将来課題としてPBIに駐留） / SSRF guard DNS pinning with localhost deny-by-default (same-resolution pinning between validation and fetch; literal loopback and http-internal reach rejected; explicit opt-outs for Obsidian and local-AI use. Default DoH resolver wiring is parked as future work tied to manifest permission design)
-- プライバシー確認通知のページタイトル無害化（制御文字除去と80文字上限で信頼UIへの文言注入を防止） / Sanitized page titles in privacy-confirmation notifications (control-character stripping and 80-char cap against trusted-UI text injection)
-- DASHBOARD_SQLITE取込・更新の行・値検証（不正型の行混入と不正値の更新を各層で拒否） / Row and value validation for DASHBOARD_SQLITE import and update (malformed rows and values rejected at every layer)
-- 訪問ゲーティング・滞在判定の正確性（SPA遷移後の基準更新、しきい値の範囲検証、NaN viewport時の安全側動作、performance不在時の継続、文言非依存の無効context判定） / Visit-gating and stay-detection accuracy (post-SPA criteria refresh, threshold clamping, NaN-viewport safety, no-performance fallback, wording-independent invalidation checks)
-- sessionStoreの耐久性（容量・quota超過のfail-visible化と再試行、半端形状の排除、移行チェックの是正、flush順序保証） / sessionStore durability (fail-visible capacity and quota handling with retries, partial-shape elimination, migration-check fixes, flush ordering)
+- SSRFガードのDNSピン留めとlocalhost既定拒否（検証と接続で同一解決IPを使う突き合わせを追加し、リテラルloopbackとhttp経由の内部到達を拒否。Obsidian・ローカルAI等の正規用途は明示opt-out。既定DoH解決器の配線はmanifest権限設計と一体の将来課題としてPBIに駐留）
+- プライバシー確認通知のページタイトル無害化（制御文字除去と80文字上限で信頼UIへの文言注入を防止）
+- DASHBOARD_SQLITE取込・更新の行・値検証（不正型の行混入と不正値の更新を各層で拒否）
+- 訪問ゲーティング・滞在判定の正確性（SPA遷移後の基準更新、しきい値の範囲検証、NaN viewport時の安全側動作、performance不在時の継続、文言非依存の無効context判定）
+- sessionStoreの耐久性（容量・quota超過のfail-visible化と再試行、半端形状の排除、移行チェックの是正、flush順序保証）
 - content連携の堅牢性（抽出例外時も応答を返す、設定の単一世代読取、unload時の単発送信、上限のバイト換算） / Content-script連携 robustness (guaranteed responses on extraction errors, single-generation settings reads, single-shot unload sends, byte-based caps)
-- 記録パイプラインの回復・再試行の正確性（待機後の設定再取得、失敗の明示化、競合時のretry非消費、未確認通知時のロック巻き戻し、循環payload拒否） / Recording-pipeline recovery accuracy (post-wait settings refresh, explicit failures, no retry burn on contention, lock revert on unconfirmed notices, circular-payload rejection)
-- popupエラーハンドリングの可視化と二重実行防止（失敗のログ・表示、ダイアログのopenガード、再初期化の多重送信防止） / Popup error visibility and double-execution guards (logged and surfaced failures, dialog open-guards, re-init wire-once)
-- 要約クリーナーと私的判定の正確性（除去漏れの区別表示、空ヘッダーの誤判定修正、失敗計数の永続化） / Cleaner and privacy-judgment accuracy (distinguishable removal failures, empty-header fix, persisted failure counts)
-- 起動マイグレーションの再試行と状態検証（失敗時の再試行、保存先の注入化、破損値の検出） / Startup migration retries and state validation (retry on failure, injectable state store, corrupt-value detection)
+- 記録パイプラインの回復・再試行の正確性（待機後の設定再取得、失敗の明示化、競合時のretry非消費、未確認通知時のロック巻き戻し、循環payload拒否）
+- popupエラーハンドリングの可視化と二重実行防止（失敗のログ・表示、ダイアログのopenガード、再初期化の多重送信防止）
+- 要約クリーナーと私的判定の正確性（除去漏れの区別表示、空ヘッダーの誤判定修正、失敗計数の永続化）
+- 起動マイグレーションの再試行と状態検証（失敗時の再試行、保存先の注入化、破損値の検出）
 - Mutexの所有権検証とタイムアウト契約（`??`既定化と範囲拒否、二重release検出、保持者watchdog。API互換維持） / Mutex ownership checks and timeout contract (`??` defaults with range rejection, double-release detection, holder watchdog; API compatible)
-- messaging層の型境界と検証漏れの是正（gateway二重キャスト解消、予算集約、transport検証、循環参照のValidationError化） / Messaging-layer type boundaries and validation gaps (gateway cast cleanup, budget consolidation, transport validation, circular-input ValidationErrors)
-- 配線・起動順序の可視化（サービス初期化失敗の局所化、起動フェーズ結果の返却、E2Eプローブのオプトイン化とCIビルドでの明示有効化） / Wiring and startup observability (localized init failures, returned startup-phase results, opt-in E2E probe enabled explicitly in CI builds)
-- popup・dashboardのi18n漏れ修正と信頼性向上（英語フォールバック排除、進捗連動タイムアウト、大容量上限と中断、通知失敗の可視化、特殊URL判定の拡張） / Popup and dashboard i18n gaps and reliability (English-fallback removal, progress-aware timeouts, size caps with abort, notification-failure visibility, wider special-URL detection)
-- privacyレンダラーの構文対応（h6見出し、重複id一意化、括弧含みURL、太字・コード順序、上限のlimits共有。表示出力は不変を確認） / Privacy renderer syntax coverage (h6 headings, unique duplicate ids, paren URLs, bold and code ordering, shared limits cap; rendered output verified unchanged)
-- 定数・上限値の集約（二重管理の解消。値と振る舞いは不変）と入力検証の境界・型・文言依存の是正（上限・UTC基準・サロゲート安全化・コード判定・切捨て通知） / Constant and limit consolidation (single ownership; values and behavior unchanged) plus input-validation hardening (bounds, UTC base, surrogate-safe slicing, code-based retry checks, truncation notices)
+- messaging層の型境界と検証漏れの是正（gateway二重キャスト解消、予算集約、transport検証、循環参照のValidationError化）
+- 配線・起動順序の可視化（サービス初期化失敗の局所化、起動フェーズ結果の返却、E2Eプローブのオプトイン化とCIビルドでの明示有効化）
+- popup・dashboardのi18n漏れ修正と信頼性向上（英語フォールバック排除、進捗連動タイムアウト、大容量上限と中断、通知失敗の可視化、特殊URL判定の拡張）
+- privacyレンダラーの構文対応（h6見出し、重複id一意化、括弧含みURL、太字・コード順序、上限のlimits共有。表示出力は不変を確認）
+- 定数・上限値の集約（二重管理の解消。値と振る舞いは不変）と入力検証の境界・型・文言依存の是正（上限・UTC基準・サロゲート安全化・コード判定・切捨て通知）
 
-### 依存更新 / Dependencies
+### 依存更新
 
-- 開発依存のminor/patch更新（eslint・typescript-eslint・wxt・vite・vitest系・playwright・types/node）と `jsdom` 31への更新。フルスイート・型・lint・ライセンス・ビルドで回帰なし。`typescript` 7は上流(typescript-eslint・typedoc)対応待ちのため保留 / Dev-dependency minor and patch updates (eslint, typescript-eslint, wxt, vite, vitest family, playwright, types/node) plus `jsdom` 31. No regressions across the full suite, types, lint, licenses, and build. `typescript` 7 stays held for upstream (typescript-eslint, typedoc) support
+- 開発依存のminor/patch更新（eslint・typescript-eslint・wxt・vite・vitest系・playwright・types/node）と `jsdom` 31への更新。フルスイート・型・lint・ライセンス・ビルドで回帰なし。`typescript` 7は上流(typescript-eslint・typedoc)対応待ちのため保留
 
-### 破壊的変更 / Breaking Changes
+### 破壊的変更
 
 - `Mutex.release()` が `boolean` を返すよう変更（二重release時は `false` を返し計数する）。戻り値を無視する既存呼び出しは動作不変 / `Mutex.release()` now returns `boolean` (`false` on double-release, counted). Existing callers that ignore the return value behave as before
 - `Mutex` の `maxQueueSize`・`timeoutMs`・`holderTimeoutMs` に `0`・負数・NaN・非整数を渡すと `RangeError` を投げるよう変更（従来は既定値に黙殺） / `Mutex` now throws `RangeError` for `0`, negative, NaN, or non-integer `maxQueueSize` / `timeoutMs` / `holderTimeoutMs` (previously silently defaulted)
 - `htmlEscape()` は非文字列（`null`・`undefined` 除外）に `TypeError` を投げるよう変更（従来は `''` に黙殺）。`null`・`undefined` は従来通り `''` / `htmlEscape()` now throws `TypeError` for non-string input (excluding `null` and `undefined`, which still yield `''` as before)
 - `messageTransport` の再送判定が機械可読コード必須化（素のErrorは再送しない。`toTransportError` 公開seamでChrome境界の文言翻訳を維持） / `messageTransport` retry decisions now require machine-readable codes (bare Errors no longer retry; the public `toTransportError` seam keeps Chrome-boundary wording translation)
 
-### レビュー指摘対応 / Review Fixes
+### レビュー指摘対応
 
-- コードレビュー指摘48件の対応修正。SPA検出の実効化（MAIN world裏付けのURL監視・真遷移時のみreset）、throttle時刻源の単一化、DNS pinの接続時同一化（解決2回化・pin受渡し・既定localhost拒否の統一）、起動失敗slotの集約エラー化、破損マイグレーション値の自己修復、retry境界のスネークケース対応、空url行の拒否、manifest版正規化の複数ハイフン対応、E2Eプローブ判定の厳格化。残りは可視化・互換性明示・上限実効化の小規模修正 / Review-driven fixes (48 findings): effective SPA detection (MAIN-world URL monitoring, reset on true navigation only), unified throttle clock, DNS-pin unification at connect time (two resolutions, pin handoff, default localhost deny), aggregated startup errors, self-healing corrupt migration values, snake_case retry boundaries, empty-URL rejection, multi-hyphen manifest normalization, stricter E2E probe checks. The rest are small visibility, compatibility, and cap-enforcement fixes
+- コードレビュー指摘48件の対応修正。SPA検出の実効化（MAIN world裏付けのURL監視・真遷移時のみreset）、throttle時刻源の単一化、DNS pinの接続時同一化（解決2回化・pin受渡し・既定localhost拒否の統一）、起動失敗slotの集約エラー化、破損マイグレーション値の自己修復、retry境界のスネークケース対応、空url行の拒否、manifest版正規化の複数ハイフン対応、E2Eプローブ判定の厳格化。残りは可視化・互換性明示・上限実効化の小規模修正
 
-### テスト・型負債 / Tests and Type Debt
+### テスト・型負債
 
-- 残存カバレッジギャップ2件の回帰テスト追加（ロック復帰→次回発火→再ロック連鎖、suspend退避の開始・終了ログ）。検証中に検出した型エラー16件を返済し、型テストbaselineを442から439へ引き下げ / Regression tests for two residual coverage gaps (revert-refire-relock chain, suspend-backup start and finish logs). Repaid 16 type errors found during verification; type-test baseline lowered from 442 to 439
-- オフライン再送のretry会計修正（下限が貸出と返済の対応を壊し新規ジョブの競合でretryを消費していた問題を除去） / Offline-retry accounting fix (removed a floor that broke lend-and-repay pairing and burned a retry on contended fresh jobs)
-- Rust CLI `yasumaro` は開発中である旨を宣言（コマンド・出力形式は安定版まで変更があり得る） / Declared the Rust `yasumaro` CLI as under development (commands and output formats may change before the first stable release)
+- 残存カバレッジギャップ2件の回帰テスト追加（ロック復帰→次回発火→再ロック連鎖、suspend退避の開始・終了ログ）。検証中に検出した型エラー16件を返済し、型テストbaselineを442から439へ引き下げ
+- オフライン再送のretry会計修正（下限が貸出と返済の対応を壊し新規ジョブの競合でretryを消費していた問題を除去）
+- Rust CLI `yasumaro` は開発中である旨を宣言（コマンド・出力形式は安定版まで変更があり得る）
 
 ## [6.9.72] - 2026-11-08
 
-このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。 / No user-visible changes; internal refactoring only: durable SW module-let state, query micro-module folding with dead-code removal, messaging alias consolidation, innerHTML round-trip removal in connection tests, search backend parity, queryPlan facade deprecation, scope codec unification, protocol version dedup, and E2E fixed-wait removal.
+このリリースは内部リファクタリングのみで、利用者に見える変更はありません。SW再起動で失われるmodule-let状態の永続化、query micro moduleのfoldとdeadコード削除、messaging alias集約、接続テスト表示のinnerHTML往復除去、検索経路のbackend parity、queryPlan facadeの段階削除、scope codec統合、protocol version複製解消、E2E固定待ちの肯定条件化を含みます。
 
-### 修正 / Fixed
+### 修正
 
-- Service Worker再起動でmodule-let状態(token・計数・singleton)が失われる問題（session永続化とcomposition root注入必須化へ移し、再起動復元のpinテストを追加） / Module-let state (tokens, counters, singletons) was lost on Service Worker restart (moved to session persistence with mandatory composition-root injection; restart-restoration pin tests added)
-- 接続テスト表示がinnerHTML往復でescape保証を迂回していた問題（ノード退避へ置換し、markup混じり表示のpinテストを追加） / Connection-test rendering bypassed escape guarantees via an innerHTML round-trip (replaced with node staging; pin tests for markup-mixed rendering added)
-- E2EのWASM初期化テストが固定待ちに依存していた問題（初期化完了の肯定条件ポーリングへ反転） / The WASM-init E2E test depended on a fixed wait (inverted to affirmative completion polling)
-- 最終ゲートで検出した自ラウンド由来の型エラー5件（テストの型付けを正し、type-test baselineを442へ引き下げ） / Five type errors from this round found by the final gate (test typing corrected; type-test baseline lowered to 442)
+- Service Worker再起動でmodule-let状態(token・計数・singleton)が失われる問題（session永続化とcomposition root注入必須化へ移し、再起動復元のpinテストを追加）
+- 接続テスト表示がinnerHTML往復でescape保証を迂回していた問題（ノード退避へ置換し、markup混じり表示のpinテストを追加）
+- E2EのWASM初期化テストが固定待ちに依存していた問題（初期化完了の肯定条件ポーリングへ反転）
+- 最終ゲートで検出した自ラウンド由来の型エラー5件（テストの型付けを正し、type-test baselineを442へ引き下げ）
 
-### リファクタリング / Refactored
+### リファクタリング
 
-- query周りのshallow micro module（`ftsClauseQuery`・`queryNormalize`）をfold・削除し、plannerを単一policy moduleへ集約 / Folded and removed shallow query micro-modules (`ftsClauseQuery`, `queryNormalize`), consolidating the planner into a single policy module
-- messagingのalias型三重複製を`messageTransport`へ集約 / Consolidated triplicated messaging alias types into `messageTransport`
-- 検索経路のbackend差（FTS修飾の有無）をper-path統一し、COUNT/rows SQLバイト一致のparity pinを追加 / Unified search-path backend differences (FTS qualification) per-path with byte-identical COUNT/rows parity pins
-- `queryPlan`末尾のcompat facadeに非推奨を付与し、直import移行を開始（型循環は実行時解消済み・型のみ残存を記録） / Deprecated the `queryPlan` compat facade and started direct-import migration (runtime cycle already resolved; type-level remainder recorded)
-- report scopeの二重走査を単一codecへ統合し、validatorを述語呼出のadapter化 / Unified report-scope double traversal into a single codec with validators as predicate-calling adapters
-- protocol versionのloader複製を共有定数参照へ移行し、3点drift検出pinを追加 / Moved the loader's protocol-version copy to a shared constant reference with a three-point drift pin
+- query周りのshallow micro module（`ftsClauseQuery`・`queryNormalize`）をfold・削除し、plannerを単一policy moduleへ集約
+- messagingのalias型三重複製を`messageTransport`へ集約
+- 検索経路のbackend差（FTS修飾の有無）をper-path統一し、COUNT/rows SQLバイト一致のparity pinを追加
+- `queryPlan`末尾のcompat facadeに非推奨を付与し、直import移行を開始（型循環は実行時解消済み・型のみ残存を記録）
+- report scopeの二重走査を単一codecへ統合し、validatorを述語呼出のadapter化
+- protocol versionのloader複製を共有定数参照へ移行し、3点drift検出pinを追加
 
 ## [6.9.71] - 2026-11-08
 
-このリリースは内部リファクタリングのみで、利用者に見える変更はありません。dashboard-sqlite分類集合の単一所有者化、画面stateのModel集約、pending描画の共有化、collection v1実行系のsunset、claim取得のorchestrator集約を含みます。 / No user-visible changes; internal refactoring only: single-owner taxonomy sets, single-owner screen state, shared pending rendering, collection v1 sunset, and orchestrator-owned claim acquisition.
+このリリースは内部リファクタリングのみで、利用者に見える変更はありません。dashboard-sqlite分類集合の単一所有者化、画面stateのModel集約、pending描画の共有化、collection v1実行系のsunset、claim取得のorchestrator集約を含みます。
 
-### 修正 / Fixed
+### 修正
 
-- dashboard-sqliteの分類集合がvalidator・wire表・handlerに分散していた問題（`sqliteOperationSecurity.ts` に集約し、分類universe一致のpinテストを追加。公開APIは不変） / Dashboard-sqlite classifications were scattered across validator, wire table, and handlers (consolidated into `sqliteOperationSecurity.ts` with a universe-match pin test; public API unchanged)
-- 履歴画面のstateがModelとPanelに二重所有されていた問題（pending検索と購読をModelへ移し、flush順序hackを除去） / History screen state was dually owned by model and panel (pending search and subscription moved into the model; flush-ordering hack removed)
-- collection v1実行系が残存していた問題（migrate-on-read経路の追加後に削除し、parse・merge・orderを集約） / Legacy collection v1 execution path remained (removed after adding a migrate-on-read path; parse/merge/order consolidated)
+- dashboard-sqliteの分類集合がvalidator・wire表・handlerに分散していた問題（`sqliteOperationSecurity.ts` に集約し、分類universe一致のpinテストを追加。公開APIは不変）
+- 履歴画面のstateがModelとPanelに二重所有されていた問題（pending検索と購読をModelへ移し、flush順序hackを除去）
+- collection v1実行系が残存していた問題（migrate-on-read経路の追加後に削除し、parse・merge・orderを集約）
 
 ## [6.9.70] - 2026-11-07
 
-このリリースはOpenAI公式プロバイダーの新設とRust製CLIの追加、バックアップ復元まわりの修正です。利用者に見える変更は公式OpenAIスロットの選択肢追加、`yasumaro` コマンドでの履歴検索・集計、復元直後の設定保存と推論モデル接続テストの安定化です。 / This release adds an official OpenAI provider and a Rust CLI, plus backup-restore fixes. User-visible changes: an official OpenAI slot option, history search and stats via the `yasumaro` command, and steadier post-restore settings saves and reasoning-model connection tests.
+このリリースはOpenAI公式プロバイダーの新設とRust製CLIの追加、バックアップ復元まわりの修正です。利用者に見える変更は公式OpenAIスロットの選択肢追加、`yasumaro` コマンドでの履歴検索・集計、復元直後の設定保存と推論モデル接続テストの安定化です。
 
-### 追加 / Added
+### 追加
 
-- Rust製の読み取り専用CLI `yasumaro` を `cli/` に新設(JS版 `feature/yasumaro-cli` と共存。`cargo install --path cli` で導入し、`cargo install yasumaro` でも導入可能（crates.io公開済み）。`search`/`list`/`show`/`stats`/`export`/`config`+対話REPL、設定解決順・FTS/LIKE切替・終了符号0/1/2/3はJS版と同等) / Added a Rust read-only CLI `yasumaro` under `cli/` (coexists with the JS `feature/yasumaro-cli`; install via `cargo install --path cli` or `cargo install yasumaro` from crates.io; same six commands plus interactive REPL, config resolution, FTS/LIKE fallback, and exit codes 0/1/2/3 as the JS version)
-- OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストは16から開始しlength継続時のみ段階的に拡大、設定済み上限は公式系の最終手段としてのみ使用。既存の互換スロットは設定移動なしで対応） / Added an official OpenAI API provider ("OpenAI" pinned to `https://api.openai.com/v1`; uses `max_completion_tokens` without model-name branching and omits temperature, connection tests start at 16 and grow stepwise only on continued length cutoffs with the configured budget only as the last official resort; existing compatible slots keep working without migration)
+- Rust製の読み取り専用CLI `yasumaro` を `cli/` に新設(JS版 `feature/yasumaro-cli` と共存。`cargo install --path cli` で導入し、`cargo install yasumaro` でも導入可能（crates.io公開済み）。`search`/`list`/`show`/`stats`/`export`/`config`+対話REPL、設定解決順・FTS/LIKE切替・終了符号0/1/2/3はJS版と同等)
+- OpenAI 公式 API 用プロバイダー「OpenAI」を新設（接続先は `https://api.openai.com/v1` に固定。モデル名で分岐せず `max_completion_tokens` を使用し temperature は省略、接続テストは16から開始しlength継続時のみ段階的に拡大、設定済み上限は公式系の最終手段としてのみ使用。既存の互換スロットは設定移動なしで対応）
 
-### 修正 / Fixed
+### 修正
 
-- 正規バックアップの復元までトリガー検出で拒否されていた問題（自前のFTS同期トリガーまで一律拒否していた。スキーマSSOTと完全一致するもののみ許可し、未知・改竄トリガーは拒否のまま） / Genuine backups were rejected by trigger detection (even the schema's own FTS sync triggers; only byte-identical schema triggers pass now, unknown or tampered triggers stay rejected)
-- 復元直後の設定保存がENCRYPTION_LOCKEDで失敗していた問題（認証モーダルは検証のみでロック解除しない。復号成功後に検証済みパスワードでセッションを確立し、未設定時は匿名キーのまま） / Settings save failed with ENCRYPTION_LOCKED right after a restore (the auth modal verifies without unlocking; the session is now established from the verified password after decryption, untouched when no master password is set)
+- 正規バックアップの復元までトリガー検出で拒否されていた問題（自前のFTS同期トリガーまで一律拒否していた。スキーマSSOTと完全一致するもののみ許可し、未知・改竄トリガーは拒否のまま）
+- 復元直後の設定保存がENCRYPTION_LOCKEDで失敗していた問題（認証モーダルは検証のみでロック解除しない。復号成功後に検証済みパスワードでセッションを確立し、未設定時は匿名キーのまま）
 - 推論モデルの接続テストがlength切断で失敗していた問題（出力枠を思考トークンに使い切るモデル向けに、空応答かつlength打ち切りの場合のみ256/512/1024へ段階的に再試行。finish_reasonを診断に露出） / Reasoning-model connection tests failed on length cutoff (retry stepwise at 256/512/1024 only on empty + length cutoff; finish_reason now in diagnostics)
-- FAQとセットアップガイドの停止済みモデル参照を更新 / Updated retired model references in FAQ and setup guide
-- 公式方針のリクエスト形式を動作変更として明示(公式originの互換スロットを含む公式系は `max_completion_tokens` を使用し temperature を省略。従来は要約0.1・接続テスト0を送信。接続テストは16から開始しlength継続時のみ段階的に拡大。設定移動は不要) / Official requests use `max_completion_tokens` with temperature omitted (previously 0.1 for summaries and 0 for connection tests); connection tests start at 16 and grow stepwise only on continued length cutoffs; legacy official-origin slots inherit the policy without migration
+- FAQとセットアップガイドの停止済みモデル参照を更新
+- 公式方針のリクエスト形式を動作変更として明示(公式originの互換スロットを含む公式系は `max_completion_tokens` を使用し temperature を省略。従来は要約0.1・接続テスト0を送信。接続テストは16から開始しlength継続時のみ段階的に拡大。設定移動は不要)
 
 ## [6.9.69] - 2026-11-07
 
-このリリースは履歴まわりのデータパネル独立とコレクション複数句対応、プロファイル間移行モードの新設、暗号化バックアップの進行表示と無反応修正です。利用者に見える変更は保存済みコレクション・履歴に聞く・調査レポート一発生成の3パネル、Edge・Chrome・Firefox間の移行、バックアップ作成時のファイル名予告と段階表示、設定エクスポートの肥大解消です。 / This release splits history-adjacent data panels, adds multi-clause collections, adds cross-profile migration, and makes encrypted backup show progress instead of going silent. User-visible changes: the saved-collections, ask-history, and one-shot research report panels, Edge/Chrome/Firefox migration, backup filename announcement with stage display, and the settings-export bloat fix.
+このリリースは履歴まわりのデータパネル独立とコレクション複数句対応、プロファイル間移行モードの新設、暗号化バックアップの進行表示と無反応修正です。利用者に見える変更は保存済みコレクション・履歴に聞く・調査レポート一発生成の3パネル、Edge・Chrome・Firefox間の移行、バックアップ作成時のファイル名予告と段階表示、設定エクスポートの肥大解消です。
 
-### 追加 / Added
+### 追加
 
-- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理）（3パネルは開発中の機能として最下部に配置） / History panel split into three new data panels (saved collections, ask history, one-shot research report) right after history; history now keeps only record listing and search (the three panels live under In Development at the bottom)
-- コレクション条件の複数句対応（行ごとの語・タグ・日付＋AND/OR、件数プレビューつき条件エディタ、単一条件は従来形で保存し質問・レポート互換を維持） / Multi-clause collection conditions (per-row term/tag/date with AND/OR, count preview editor, single conditions still saved in the legacy shape for ask/report compatibility)
-- 履歴に聞くのコレクション V2 対応（複数句・ids の後段絞り込み＋UNION、未対応条件の明示、タグ判定の部分一致統一） / Ask-history collection V2 support (post-hoc multi-clause/ids filtering with UNION, explicit unsupported-scope notice, partial-match tag parity)
-- 調査レポートの V2 対応（複数句の fan-out と ids の和集合、合算200件打ち切り、欠けの除外表示） / Research-report V2 support (per-clause fan-out with ids union, combined 200 cap, excluded-missing display)
-- 履歴からコレクションへの条件引き継ぎ（絞り込みを editor 草稿へ送る、カスタム範囲は拒否、recall 適用先をコレクション草稿に一本化） / History-to-collection handoff (filters sent to the editor draft, custom ranges refused, recall target unified to the collection draft)
+- 履歴パネルの独立化（保存済みコレクション・履歴に聞く・調査レポート一発生成を履歴の直後に新設した3データパネルに分離、履歴は記録一覧と検索操作だけに整理）（3パネルは開発中の機能として最下部に配置）
+- コレクション条件の複数句対応（行ごとの語・タグ・日付＋AND/OR、件数プレビューつき条件エディタ、単一条件は従来形で保存し質問・レポート互換を維持）
+- 履歴に聞くのコレクション V2 対応（複数句・ids の後段絞り込み＋UNION、未対応条件の明示、タグ判定の部分一致統一）
+- 調査レポートの V2 対応（複数句の fan-out と ids の和集合、合算200件打ち切り、欠けの除外表示）
+- 履歴からコレクションへの条件引き継ぎ（絞り込みを editor 草稿へ送る、カスタム範囲は拒否、recall 適用先をコレクション草稿に一本化）
 - リサーチセッションの単一コレクション化（ids 優先・200件超拒否・空無効・未読穴警告）と today プリセット（草稿注入のみ） / Single-session to collection (ids-first, 200+ refused, empty disabled, unread-hole warning) and a today preset (draft injection only)
-- 履歴一覧への複数句適用（句ごとの取得と ids 再取得、合算上限、除外件数表示、v1 経路は無改変） / Multi-clause application to the history list (per-clause fetch with ids refetch, combined caps, excluded-count display, v1 path untouched)
-- プロファイル間移行モード（Export/Importパネルに移行セクション新設。Edge・Chrome・Firefoxの全9通りの組み合わせに対応し、移行時は署名検証の代わりに明示確認ダイアログを経由。確認キャンセル時は無変更、成功時は監査ログに記録。通常インポートの拒否動作は不変） / Profile migration mode (new migration section in the Export/Import panel covering all 9 Edge/Chrome/Firefox combinations; migration goes through an explicit confirmation dialog instead of signature verification, canceling changes nothing, success is audit-logged; the normal import rejection behavior is unchanged)
+- 履歴一覧への複数句適用（句ごとの取得と ids 再取得、合算上限、除外件数表示、v1 経路は無改変）
+- プロファイル間移行モード（Export/Importパネルに移行セクション新設。Edge・Chrome・Firefoxの全9通りの組み合わせに対応し、移行時は署名検証の代わりに明示確認ダイアログを経由。確認キャンセル時は無変更、成功時は監査ログに記録。通常インポートの拒否動作は不変）
 
-### 修正 / Fixed
+### 修正
 
 - 履歴検索で語とタグ・日付を同時に指定してもタグ・日付が無視されていた問題（検索シームが語のみ転送していた。protocol・service・queryHistory を拡張し、recall の複合条件が正しく絞り込むように修正。background 半分も開通済み） / Combined search+tag+date scope was silently dropped on the search path (extended the protocol/service/queryHistory seams plus the background half so recalled compound conditions filter correctly)
-- バックアップ/マスターパスワード保存の無言の長時間処理に進行表示と二重実行防止を追加。バックアップは作成開始時にファイル名を予告し、完了時にも同名を確認表示する / Added in-place progress and double-run guard to backup and master-password operations. Backup now announces its filename when creation starts and confirms the same name on completion
+- バックアップ/マスターパスワード保存の無言の長時間処理に進行表示と二重実行防止を追加。バックアップは作成開始時にファイル名を予告し、完了時にも同名を確認表示する
 - 閲覧ログ取込の失敗表示に未置換の `%{error}` が出ていた問題（文言が `%{error}` 形式に変わっていたのに呼び出し側が旧式の連結のままだった。プレースホルダ方式に統一し回帰テストを追加） / Log-import failure showed a raw `%{error}` placeholder (message moved to the `%{error}` form while callers still concatenated; unified on placeholder substitution with a regression test)
-- マスターパスワード設定で弱いパスワードの本当の理由が表示されず「8文字以上」のままだった問題（文言キーが厳格化後のポリシーと不一致で真因を隠していた。SSOTの理由文をそのまま表示＋保存失敗をモーダル内にも表示＋確定時の古いエラーを消去） / Master-password setup hid the real weak-password reason behind a stale message (unified on the SSOT reason text, dual-painted save failures into the modal, stale errors cleared on pass)
-- プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加） / Encrypted-backup Confirm was dead unless the privacy panel had been opened (auth-modal listeners were attached only by the privacy panel mount; export/import mount now attaches them too with a double-attach guard)
+- マスターパスワード設定で弱いパスワードの本当の理由が表示されず「8文字以上」のままだった問題（文言キーが厳格化後のポリシーと不一致で真因を隠していた。SSOTの理由文をそのまま表示＋保存失敗をモーダル内にも表示＋確定時の古いエラーを消去）
+- プライバシー設定を開かずに暗号化バックアップへ直行すると確認ボタンが無反応だった問題（認証モーダルのリスナー登録がプライバシーパネルのmount時にしか行われず、遅延マウントと相性が悪かった。エクスポート/インポートのmountでも登録し二重登録防止ガードを追加）
 - uBlockフィルタのドメイン集合がソース側とマージ済みルール側に二重保存され設定エクスポートが28MBに膨張し10MiB上限に抵触していた問題（マージ済みルールの永続化を止めソースからの導出に一本化。旧二重データは読み時点で正規化し、設定は10KB級に戻る） / Duplicate uBlock domain storage bloated settings exports to 28MB past the 10MiB cap (merged rules are no longer persisted and are derived from sources instead; legacy duplicates normalize on read; settings shrink back to ~10KB)
-- 暗号化バックアップのenvelope上限10MiBとファイル上限50MBの不整合で履歴の多いバックアップが復号できなかった問題（バックアップ専用envelope上限50MiBを分離し汎用10MiBは不変。超過時は原因特定可能な文言でパスワード入力前に案内） / Encrypted backups with heavy history failed to decrypt from the 10MiB envelope cap contradicting the 50MB file cap (backup-specific 50MiB envelope cap split off, generic 10MiB unchanged; over-cap files are reported with the cause before the password prompt)
-- 記録パイプラインの同時完了時に片方のログが次の1分アラームまで残りSW終了時に失われることがあった問題（`persistPending` を単発drainから再ドレインループに変え合流させる。完了時flushの契約とonSuspendの扱いは不変） / Concurrent recording completions could leave one side's logs until the next 1-minute alarm, losing them on SW shutdown (persistPending now re-drains in a loop to coalesce; completion-flush contract and onSuspend handling unchanged)
-- 土台レビュー残件9件の対応（ask回答での検索条件欠落の開示、handoff競合のdropped-previous通知、再マウント時の旧世代描画防止、ids整数・非負の締め、paging上限clamp、truncated過報告の修正、ids長吸収の文書化、clause長上限、正規表現cache。2文言は暫定） / Nine leftover review findings (disclose dropped search terms in ask answers, dropped-previous notice on handoff contention, stale-generation paint guard on remount, integer non-negative ids, paging clamp, truncated over-report fix, ids-length absorption documented, clause length cap, regex cache; two wordings provisional)
-- 保存済みコレクションが空のままでは最初の1件の作り方が分からなかった問題（0件時に手順案内を表示し、名前未入力の保存は理由表示の失敗扱いに。既存ドラフト流用・呼び出し復元の契約は不変） / Empty saved-collections gave no hint how to create the first entry (empty state now shows a guide, unnamed saves fail with an in-panel reason; existing draft reuse and recall-to-draft contract unchanged)
+- 暗号化バックアップのenvelope上限10MiBとファイル上限50MBの不整合で履歴の多いバックアップが復号できなかった問題（バックアップ専用envelope上限50MiBを分離し汎用10MiBは不変。超過時は原因特定可能な文言でパスワード入力前に案内）
+- 記録パイプラインの同時完了時に片方のログが次の1分アラームまで残りSW終了時に失われることがあった問題（`persistPending` を単発drainから再ドレインループに変え合流させる。完了時flushの契約とonSuspendの扱いは不変）
+- 土台レビュー残件9件の対応（ask回答での検索条件欠落の開示、handoff競合のdropped-previous通知、再マウント時の旧世代描画防止、ids整数・非負の締め、paging上限clamp、truncated過報告の修正、ids長吸収の文書化、clause長上限、正規表現cache。2文言は暫定）
+- 保存済みコレクションが空のままでは最初の1件の作り方が分からなかった問題（0件時に手順案内を表示し、名前未入力の保存は理由表示の失敗扱いに。既存ドラフト流用・呼び出し復元の契約は不変）
 
 ## [6.9.64] - 2026-10-31
 
-このリリースは次フェーズ PBI 10 件（04/05/06/09/01/10/02/07/03/08）の完成と持ち越し 16 項目のなぜなぜ分析（4 視点 138 チェーン）です。利用者に見える変更は直近 skip 理由のポップアップ表示・選択範囲の記録・設定パネルの分類 UI・パス許可選択肢のドメイン許可への統一・Webhook ループバック宛先のポート照合修正です。 / This release completes the next-phase 10 PBIs and the 5-Whys analysis of 16 carried-over items (4 perspectives, 138 chains). User-visible changes: last skip reason in the popup, selection capture, the settings panel category UI, the path-allow option unified into domain allow, and the webhook loopback port matching fix.
+このリリースは次フェーズ PBI 10 件（04/05/06/09/01/10/02/07/03/08）の完成と持ち越し 16 項目のなぜなぜ分析（4 視点 138 チェーン）です。利用者に見える変更は直近 skip 理由のポップアップ表示・選択範囲の記録・設定パネルの分類 UI・パス許可選択肢のドメイン許可への統一・Webhook ループバック宛先のポート照合修正です。
 
-### 追加 / Added
+### 追加
 
-- 直近 skip 理由のポップアップ表示（保存は理由種別と回数のみ、URL・タイトル・本文・時刻は不保存、chrome.storage.session のみ・beforeunload relay で未成立の訪問だけ記録） / Last skip reason shown in the popup (reason code and count only, chrome.storage.session, beforeunload relay records only unsettled visits)
+- 直近 skip 理由のポップアップ表示（保存は理由種別と回数のみ、URL・タイトル・本文・時刻は不保存、chrome.storage.session のみ・beforeunload relay で未成立の訪問だけ記録）
 - 選択範囲の記録（ポップアップ今すぐ記録ボタンと Alt+Shift+Y の両入口、選択テキストのみを記録、正規化は 10,000 字カップ付きで一箇所に集約、SQLite の content_origin TEXT で判別可能・NOT_UPDATABLE、空選択はページ記録にフォールバック） / Selection capture from both the popup record button and Alt+Shift+Y (selection text only, normalization collapsed in one place with a 10,000-char cap, distinguishable via the SQLite content_origin column, empty selection falls back to page recording)
-- 設定パネルの分類 UI（29 パネルを実測して 6 分類に整理、select によるフィルタ、未割り当ては 'other' フォールバック、矢印キーは隠れたタブをスキップ・WCAG 2.1.1、分類変更時にアクティブタブが隠れると選択分類の先頭の可視タブへ移動） / Settings panel category UI (29 panels grouped into 6 categories, select filter, 'other' fallback, arrow keys skip hidden tabs, selection sync on filter change)
+- 設定パネルの分類 UI（29 パネルを実測して 6 分類に整理、select によるフィルタ、未割り当ては 'other' フォールバック、矢印キーは隠れたタブをスキップ・WCAG 2.1.1、分類変更時にアクティブタブが隠れると選択分類の先頭の可視タブへ移動）
 
-### 修正 / Fixed
+### 修正
 
-- パス許可の文言統一（hostname 正規化と同一動作だったパス許可ボタンを削除しドメイン許可 1 つに統一、README 日英・PRIVACY.md 同期、再導入を失敗させる E2E ピン付き） / The path-allow option (behaviorally identical to domain allow under hostname normalization) removed and unified into domain allow, with README/PRIVACY sync and an E2E tripwire
+- パス許可の文言統一（hostname 正規化と同一動作だったパス許可ボタンを削除しドメイン許可 1 つに統一、README 日英・PRIVACY.md 同期、再導入を失敗させる E2E ピン付き）
 - Webhook ループバック宛先がポート照合の不一致で既存設定のまま全遮断されていたバグ（ポート付き宣言パターンを URL の host+port と比較、ポートなしパターンは従来どおり、平文 http は引き続き fail-closed） / Webhook loopback destinations were all blocked by a port-matching mismatch (port-bearing declared patterns now compare host+port, plain http stays fail-closed)
-- パネル分類フィルタ適用時にアクティブタブが hidden になっても aria-selected と表示パネルが取り残されるバグ（選択分類の先頭の可視タブへ navigate） / Category filter left aria-selected and the visible panel stale when the active tab became hidden (now navigates to the first visible tab of the selected category)
+- パネル分類フィルタ適用時にアクティブタブが hidden になっても aria-selected と表示パネルが取り残されるバグ（選択分類の先頭の可視タブへ navigate）
 
-### リファクタリング / Refactoring
+### リファクタリング
 
 - raw-owned ストレージキー監査の pin テスト新設（走査正規表現はレシーバ非依存・オプショナルチェーン対応、TOP_LEVEL_ONLY_KEYS を 33→46 キーに分類、監査表と実装の lockstep 検証） / Raw-owned storage key audit pin added (receiver-independent scan, TOP_LEVEL_ONLY_KEYS classified 33→46, lockstep pin between the audit table and the implementation)
 
@@ -209,30 +176,30 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.63] - 2026-10-30
 
-このリリースは棚卸し残タスク（B 分類 5 件）の完成と第三者レビュー指摘の修正です。利用者に見える変更は類似ページクラスタ表示・週次ダイジェストの完了前週統一・読みかけ復元パネルと読みかけリマインダーの SW 配線・Webhook エクスポートの保存時発火とオプション UI・SPA 遅延再スキャンの E2E 固定です。 / This release completes the remaining backlog (B-class, 5 items) and fixes third-party review findings. User-visible changes: the similarity-cluster panel, the weekly digest unified on the completed previous week, the session-restoration playback panel and reminder wiring, webhook export firing on save with its options UI, and the SPA late re-scan pinned by E2E.
+このリリースは棚卸し残タスク（B 分類 5 件）の完成と第三者レビュー指摘の修正です。利用者に見える変更は類似ページクラスタ表示・週次ダイジェストの完了前週統一・読みかけ復元パネルと読みかけリマインダーの SW 配線・Webhook エクスポートの保存時発火とオプション UI・SPA 遅延再スキャンの E2E 固定です。
 
-### 追加 / Added
+### 追加
 
-- 類似ページクラスタ表示のサイドバー登録（上限 200 件・理由種別つき空状態） / Similarity-cluster panel registered in the sidebar (capped at 200 records, reason-typed empty states)
-- 読みかけ復元パネル（panel-session-timeline）と読みかけリマインダーの SW 配線（通知 ID 厳密解析・私物拒否・Daily Note TODO 追記） / Session-restoration playback panel and reminder service-worker wiring (strict notification ID parsing, private-record rejection, Daily Note todo append)
-- Webhook エクスポートの保存時発火（送信直前に PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）とオプション UI（29 パネル目） / Webhook export firing on save (PII masking right before send, declared host_permissions gate, fail-closed on undeclared origins) with its options UI (29th panel)
-- SPA 遅延再スキャンの E2E 通し（シナリオ A/B）と履歴に聞くの FTS/LIKE 統合テスト / SPA late re-scan pinned by E2E (scenarios A/B) and ask-history FTS/LIKE integration tests
+- 類似ページクラスタ表示のサイドバー登録（上限 200 件・理由種別つき空状態）
+- 読みかけ復元パネル（panel-session-timeline）と読みかけリマインダーの SW 配線（通知 ID 厳密解析・私物拒否・Daily Note TODO 追記）
+- Webhook エクスポートの保存時発火（送信直前に PII マスキング・宣言済み host_permissions ゲート・未宣言 origin fail-closed）とオプション UI（29 パネル目）
+- SPA 遅延再スキャンの E2E 通し（シナリオ A/B）と履歴に聞くの FTS/LIKE 統合テスト
 - 記録測定手順の文書化（docs/RECALL_EVAL_GUIDE.md・recall@3 1.0/1.0 同点と非退行） / Recall evaluation documented (docs/RECALL_EVAL_GUIDE.md, recall@3 1.0/1.0 parity with no regression)
 
-### 修正 / Fixed
+### 修正
 
-- scroll_ratio が wire のパーセント(0..100)を素で保存し CHECK(0..1) 違反で記録消失する mapper 境界の不一致 / scroll_ratio stored as a raw percentage violated the CHECK(0..1) constraint and dropped rows (normalized at the mapper boundary)
-- pickRecordDiagnostics が engagement metrics を転送せず本番で visit_duration/scroll_ratio が常に NULL（リマインダーが発火しない）だった受渡し欠落 / pickRecordDiagnostics dropped engagement metrics so visit_duration/scroll_ratio were always NULL and no reminder could fire
-- OPFS plain-list 投影に masked_count が含まれず私物拒否が本番経路で fail-open / the OPFS plain-list projection omitted masked_count so the private-record rejection failed open (column added to the codec SSOT)
-- セッションリマインダーアラームが SW 全起動で clear+create され本番で発火しないバグ（get-then-create 化） / the reminder alarm was cleared and re-created on every service-worker startup so it never fired (get-then-create)
-- Daily Note TODO 行の改行注入（normalizeSingleLine 連鎖に変更） / Markdown line-injection via the todo title (collapsed through normalizeSingleLine)
-- Webhook host ゲートが付与済み権限を見て実インストールで未宣言 origin 遮断が無効だったバグ（宣言済み host_permissions 読み替え） / the webhook host gate checked granted permissions so undeclared-origin blocking was disabled in real installs (now reads declared host_permissions)
-- PRIVATE_PAGE_DETECTED の outcome が確認ダイアログ経路で握り捨てられる誤診断（再送応答の正規化） / a stale PRIVATE_PAGE_DETECTED outcome was persisted even when the approved force re-send succeeded (normalized)
+- scroll_ratio が wire のパーセント(0..100)を素で保存し CHECK(0..1) 違反で記録消失する mapper 境界の不一致
+- pickRecordDiagnostics が engagement metrics を転送せず本番で visit_duration/scroll_ratio が常に NULL（リマインダーが発火しない）だった受渡し欠落
+- OPFS plain-list 投影に masked_count が含まれず私物拒否が本番経路で fail-open
+- セッションリマインダーアラームが SW 全起動で clear+create され本番で発火しないバグ（get-then-create 化）
+- Daily Note TODO 行の改行注入（normalizeSingleLine 連鎖に変更）
+- Webhook host ゲートが付与済み権限を見て実インストールで未宣言 origin 遮断が無効だったバグ（宣言済み host_permissions 読み替え）
+- PRIVATE_PAGE_DETECTED の outcome が確認ダイアログ経路で握り捨てられる誤診断（再送応答の正規化）
 
-### リファクタリング / Refactoring
+### リファクタリング
 
-- タグ共起計算層を dashboard 配下から `src/utils/`（Layer 2）へ移設（`tagCooccurrence.ts`/`tagCooccurrenceHybrid.ts`・byte-identical・消費側 22 ファイル import 更新・層分類 SSOT 登録・旧パス逆戻り pin テスト新設） / tag co-occurrence compute layer relocated from dashboard to `src/utils/` (Layer 2), byte-identical, 22 consumer import updates, layer-SSOT registration, and a new tripwire test against upward imports
-- 層の向きの lint ゲート強化（`src/wasm`/`src/offscreen` から dashboard への import を `no-restricted-imports` error で禁止・side-effect/barrel import も捕捉） / layer-direction lint gate strengthened (`no-restricted-imports` at error forbidding dashboard imports from `src/wasm`/`src/offscreen`, catching side-effect/barrel imports)
+- タグ共起計算層を dashboard 配下から `src/utils/`（Layer 2）へ移設（`tagCooccurrence.ts`/`tagCooccurrenceHybrid.ts`・byte-identical・消費側 22 ファイル import 更新・層分類 SSOT 登録・旧パス逆戻り pin テスト新設）
+- 層の向きの lint ゲート強化（`src/wasm`/`src/offscreen` から dashboard への import を `no-restricted-imports` error で禁止・side-effect/barrel import も捕捉）
 
 ### テスト
 
@@ -242,16 +209,16 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.62] - 2026-10-26
 
-このリリースは棚卸し残タスクの仕上げです。利用者に見える変更は自動タグ規則の保存時適用・週次ダイジェスト基盤・リマインド基盤・Webhook雛形・SPA遅延再スキャン・診断の取り込み状態表示・履歴に聞くの拒否理由表示です。 / This release closes out the remaining backlog: auto-tag on save, weekly digest groundwork, reminder groundwork, webhook scaffolding, SPA late re-scan, diagnostics capture status, and ask-history rejection reasons.
+このリリースは棚卸し残タスクの仕上げです。利用者に見える変更は自動タグ規則の保存時適用・週次ダイジェスト基盤・リマインド基盤・Webhook雛形・SPA遅延再スキャン・診断の取り込み状態表示・履歴に聞くの拒否理由表示です。
 
-### 追加 / Added
+### 追加
 
-- 自動タグ規則の保存時適用＋取消（ログ上限200・辞書正規化・重複排除） / Auto-tag rules applied at save time with undo (capped log, dict normalization, dedupe)
-- 週次ダイジェストのバッチ基盤（分割再開・冪等・取消・週次標識） / Weekly digest batch groundwork (chunked resume, idempotent, cancellable, weekly marker)
-- リマインド基盤（解除/再通知/破棄の永続化・1日1件・上限3） / Reminder groundwork (dismiss/snooze/discard persistence, 1 per day, cap 3)
-- Webhook雛形（条件・履歴/冪等再送・送信路・CSV/JSON e2e pin） / Webhook scaffolding (conditions, history/idempotent resend, send path, CSV/JSON e2e pins)
+- 自動タグ規則の保存時適用＋取消（ログ上限200・辞書正規化・重複排除）
+- 週次ダイジェストのバッチ基盤（分割再開・冪等・取消・週次標識）
+- リマインド基盤（解除/再通知/破棄の永続化・1日1件・上限3）
+- Webhook雛形（条件・履歴/冪等再送・送信路・CSV/JSON e2e pin）
 - SPA遅延コンテンツの再スキャン（上限2回）＋診断パネル「取り込み状態」 / SPA late-content re-scan (cap 2) + diagnostics capture status
-- 履歴に聞くの拒否理由表示（admission reason透過） / Ask-history rejection reasons surfaced (admission reason passthrough)
+- 履歴に聞くの拒否理由表示（admission reason透過）
 
 ### テスト
 
@@ -260,14 +227,14 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.61] - 2026-10-26
 
-このリリースは棚卸しPBIの仕上げです。利用者に見える変更は保存済みコレクションの改名・複製・自動タグ規則と初回起動バナー・履歴一括スター・振り返りサマリ手順の文書化です。 / This release closes out backlog PBIs. User-visible changes: saved-collection rename/duplicate/auto-tag rules, the first-run banner, history bulk star, and review-summary docs.
+このリリースは棚卸しPBIの仕上げです。利用者に見える変更は保存済みコレクションの改名・複製・自動タグ規則と初回起動バナー・履歴一括スター・振り返りサマリ手順の文書化です。
 
-### 追加 / Added
+### 追加
 
-- 保存済みコレクションの改名・複製、自動タグ規則（条件一致で自動付与・優先度・適用取消） / Collection rename/duplicate and auto-tag rules (condition match, priority, undo)
-- 初回起動の3択バナー（まず試す / Obsidian連携 / AI要約・一度だけ表示） / First-run 3-choice banner (try first / Obsidian / AI summary, shown once)
-- 履歴一括スターの適用・取消とプライベート判定除外 / Bulk star with undo and privacy-judged exclusion
-- 問合せ回答の未束縛 generateSummary 修正（毎回 TypeError になっていた実バグ） / Fixed detached generateSummary that threw on every answered QA
+- 保存済みコレクションの改名・複製、自動タグ規則（条件一致で自動付与・優先度・適用取消）
+- 初回起動の3択バナー（まず試す / Obsidian連携 / AI要約・一度だけ表示） / First-run 3-choice banner (try first / Obsidian
+- 履歴一括スターの適用・取消とプライベート判定除外
+- 問合せ回答の未束縛 generateSummary 修正（毎回 TypeError になっていた実バグ）
 
 ### テスト
 
@@ -277,12 +244,12 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.60] - 2026-10-25
 
-このリリースは依存監査ゲートの二層化です。利用者に見える挙動の変更はありません。 / This release introduces two-tier dependency audit gates. No user-visible behavior changes.
+このリリースは依存監査ゲートの二層化です。利用者に見える挙動の変更はありません。
 
-### 追加 / Added
+### 追加
 
 - 依存監査の二層判定: prod スコープ混入は失敗、dev-only は到達可能性メモ（DEPENDINGS.md §6）があれば警告通過 / Two-tier audit: prod-scope findings fail, dev-only findings warn when covered by a reachability memo (DEPENDINGS.md §6)
-- `npm run validate` に audit（warn レベル）を追加し、日常ゲートで脆弱性を早期認知 / Audit (warn level) added to `npm run validate` for early daily awareness
+- `npm run validate` に audit（warn レベル）を追加し、日常ゲートで脆弱性を早期認知
 
 ### テスト
 
@@ -290,12 +257,12 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.59] - 2026-10-25
 
-このリリースはバグ修正版です。 / This is a bug-fix release.
+このリリースはバグ修正版です。
 
-### 修正 / Fixed
+### 修正
 
-- 初期設定バナーがダークモードで読めない問題を修正 / Fixed the initial-setup banner being unreadable in dark mode
-- 非表示の案内ボタンにフォーカスが吸着される問題を修正（確認ダイアログのTab移動） / Fixed Tab focus getting stuck on a hidden navigation button in the confirmation dialog
+- 初期設定バナーがダークモードで読めない問題を修正
+- 非表示の案内ボタンにフォーカスが吸着される問題を修正（確認ダイアログのTab移動）
 
 ### テスト
 
@@ -303,19 +270,19 @@ All notable changes to this project will be documented in this file.
 
 ## [6.9.58] - 2026-10-24
 
-このリリースは利用者向けの新機能を含みます。 / This release includes user-facing new features.
+このリリースは利用者向けの新機能を含みます。
 
-### 追加 / Added
+### 追加
 
-- 保存済みコレクション: 検索条件(語・タグ・期間)の保存・呼び出し・削除 / Saved collections: save, recall, and delete search conditions (terms, tags, period)
-- 履歴に聞く: 端末内のモデルが記録の抜粋を根拠に答える(外部送信なし) / Ask your history: an on-device model answers from record excerpts (nothing sent externally)
-- 調査レポート一発生成: 要旨・時系列・引用・未読穴の4節の Markdown / One-shot research report: four-section Markdown (summary, timeline, citations, unread gaps)
-- 情報源の偏り表示とブラックリスト追加の提案(取り消し可能) / Source bias view with reversible blacklist suggestions
-- ドメイン別 AI 送信政策(送信を許可・要約なしで記録・マスク必須)と、監査ログへの送信文字数・政策判定の記録 / Per-domain AI send policy (allow, record without summary, mask required) and audit-log entries for character count and policy verdict
-- タグ正規化の提案・適用・取り消し / Tag normalization proposals with apply and undo
-- 履歴の選択行への一括スターと取り消し(プライベート判定を除外して適用可) / Bulk star and undo for selected history rows (can exclude private pages)
+- 保存済みコレクション: 検索条件(語・タグ・期間)の保存・呼び出し・削除
+- 履歴に聞く: 端末内のモデルが記録の抜粋を根拠に答える(外部送信なし)
+- 調査レポート一発生成: 要旨・時系列・引用・未読穴の4節の Markdown
+- 情報源の偏り表示とブラックリスト追加の提案(取り消し可能)
+- ドメイン別 AI 送信政策(送信を許可・要約なしで記録・マスク必須)と、監査ログへの送信文字数・政策判定の記録
+- タグ正規化の提案・適用・取り消し
+- 履歴の選択行への一括スターと取り消し(プライベート判定を除外して適用可)
 - アドレスバー(`y` + Enter)と `Alt+Shift+Y` による現在ページの記録 / Record the current page from the address bar (`y` + Enter) and with `Alt+Shift+Y`
-- 初回起動の3択バナー / First-run 3-choice banner
+- 初回起動の3択バナー
 
 ## [6.9.57] - 2026-10-24
 
@@ -660,13 +627,13 @@ Chrome Web Store への自動アップロードを再開するリリースです
 
 v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応じた後続 fix 1 件のみを含みます。
 
-### Fixed
+### 修正
 
 - **nav trail を VALID_VISIT 由来に再配線し通常サイトでリファラー記録を復活** ― changeInfo.url writer（tabs 権限なしで構造的 no-op、ADR 2026-10-07 裁定）を削除し、記録成立時に同一タブの前回記録 URL を referrer として供給。供給は記録成否に依存せず、consent ゲートと reload/fragment 判定は navTrailTracker 内に維持。リファラー語義を「前回記録 URL」に pin する 6 テストを新設
 
 ## [6.9.38] - 2026-10-07
 
-### Fixed
+### 修正
 
 - **trustChecker の alert 設定を読み書きとも SettingsRepository 経由に寄せ移行での消失を塞ぐ** ― 生 chrome.storage.local で移行対象キーを扱い、移行後にユーザーの警告トグルが黙って既定へ戻る実害を除去
 - **reviewSummaryGenerator の生成済みマーカーを読み書き同じ seam に統一** ― 移行済みプロファイルで毎アラームが AI ダイジェストを再生成する重複トークン消費を除去
@@ -674,14 +641,14 @@ v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応
 - **SEARCH_COLUMNS を実 SELECT 幅に一致させ IDB 経路の cell 誤配置を塞ぐ** ― 位置 zip のズレで rank 値が nav_source_url に流れ込む実データ破壊を除去
 - **CRUD UPDATE 組立を共有ビルダーに集約し undefined 語義を両バックエンドで統一** ― 同一 op が backend により異なる行を書く乖離を除去
 
-### Changed
+### 変更
 
 - **arch-delivery-loop ラウンド（archloop-1007 の 17 件）** ― pipeline・wire・codec の重複排除（audit デコード双子・CRUD 文の複製除去）、SessionAlarmService の待ち注入化、dashboard sqlite プロトコルの双方向同期 assert、popup テスト scaffold の統一、provider allowlist 表の SSOT 化、sw-startup bench を実 cold-start 計測に変更、死んだパイロット tabCacheFactory の削除など。外部挙動不変
 - **テスト型エラーのベースラインを 469→467 に引き下げ** ― wave 実装の行ズレ分と新規 4 件を返済
 
 ## [6.9.37] - 2026-10-07
 
-### Fixed
+### 修正
 
 - **診断パネルの compileOptions 描画をエスケープ** ― 同一データを textContent で描く箇所と異なり `<pre>` だけ未エスケープだった XSS 表面を除去
 - **Gemini 空応答に failure メタデータを付与** ― OpenAI と対称化し breaker 冷却可能に。文言・policy は不変
@@ -694,7 +661,7 @@ v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応
 - **connectionTests の 4 ハンドラの動作ガードを統一** ― 接続確認ボタンの規約不統一を解消
 - **ローカル Markdown 書き出しのアラーム所有権と daily リセットを修正** ― アラーム作成の表外分岐を正規化
 
-### Changed
+### 変更
 
 - **arch-delivery-loop ラウンド（積み残し L1-L8 の 23 件）** ― pipeline 失敗処理の集約、wire 表・queryPlan の重複排除、dashboard 大型モジュールの責務整理、E2E fixture・spec の統一、ログ経路の統一など。外部挙動不変
 - **大局的コード改善ラウンド（holistic-1005）の 32 PBI（内部整理）** ― docs/SSOT 照合ゲートの配線、ループバックポート・レート制限・各種 wire 表の SSOT 化、popup/dashboard テスト足場の統一など。上記 Fixed 6 件を除き外部挙動不変
@@ -702,7 +669,7 @@ v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応
 
 ## [6.9.36] - 2026-10-05
 
-### Fixed
+### 修正
 
 - **「不具合を報告」ボタンが無反応になる経路を解消** ― クリック時にモーダルを即時表示し、収集全体に15秒の打ち切りを追加。停滞時はエラー表示になり、Cancel 後の再クリックで回復できる
 - **診断情報の収集で内蔵 AI 判定プローブを5秒に制限** ― オンデバイスモデルサービス停滞時にスナップショット全体が巻き添えになっていた問題を解消。判定不能時は unknown 扱いでレポートは完成する
@@ -713,7 +680,7 @@ v6.9.38 に続く当日リリースです。NN07 の ADR 裁定（案 B）に応
 
 v6.9.34 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、holistic ラウンド（holistic-1003b）の 20 PBI（内部整理）のみを含みます。
 
-### Fixed
+### 修正
 
 - **fetchWithRetry の HTTP 5xx リトライに指数バックオフを追加** ― `SleepFn` 注入でテストも実時間待ちなし（PBI 16）
 - **flushBatch の over-retry/TTL drop を onDropped 契約で報告** ― 破棄理由が観測可能に（PBI 18）
@@ -721,7 +688,7 @@ v6.9.34 に続く当日リリースです。拡張機能の通常利用の動作
 - **anchor-click ダウンロードを exportLogsService.downloadBlob に統一**（PBI 19）
 - **プリセットステータスの孤立クラスを showStatus 契約に統一**（PBI 20）
 
-### Refactored
+### リファクタリング
 
 - **拡張起動コンテキストを launchExtensionContext() に統一** ― e2e の起動重複を解消（PBI 26）
 - **ステータス CSS クラス名を STATUS_CLASS 定数に統一**（PBI 22）
@@ -735,7 +702,7 @@ v6.9.34 に続く当日リリースです。拡張機能の通常利用の動作
 - **残存 as unknown as 二段キャストを単一キャストに整理**（PBI 31）
 - **MessageRouter の二段キャストを解消しデッドコードを削除**（PBI 33）
 
-### Chore
+### 保守
 
 - **no-tautology-expect ルールのテストを追加**（PBI 27）
 
@@ -743,7 +710,7 @@ v6.9.34 に続く当日リリースです。拡張機能の通常利用の動作
 
 v6.9.33 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、adversarial review ラウンド（adversarial-1003）の 15 PBI（内部整理）のみを含みます。
 
-### Fixed
+### 修正
 
 - **popup の pending 保存の失敗結果握りつぶしを解消** ― result 駆動削除 + whitelist `{ok:false}` 報告へ統一しました（PBI 01）
 - **レビューサマリアラームが生成されない問題を解消** ― `createJobs(deps)` ファクトリ + `settingsReader` 必須化（PBI 02）
@@ -756,14 +723,14 @@ v6.9.33 に続く当日リリースです。拡張機能の通常利用の動作
 - **saved URL の timestamp 欠損を決定的に扱う** ― `(|| 0)` 正規化 4 箇所 + reader 正規化（PBI 12）
 - **recoveryClaimStore の同一ミリ秒再取得を claim token で防止**（PBI 14）
 
-### Refactored
+### リファクタリング
 
 - **anchor-click の 60s revoke 維持理由を WHY コメントで codify** ― 3 箇所一貫 pin（PBI 09）
 - **失敗表示を getUserErrorMessage 派生の単一契約に統一** ― `:112` 不整合解消 + errorDisplayContract.test.ts（PBI 10）
 - **テストの pin を実装詳細から観測可能な振る舞いへ寄せ** ― ソース正規表現ピンを attach 観測へ、固定 drain を完了シグナルへ置換（PBI 13）
 - **コメント・デッド比較の現状整合** ― 5 件修正（PBI 15）
 
-### Chore
+### 保守
 
 - **テスト型 baseline ゲートに tsc-ran sanity を追加し CI へ配線**（PBI 07）
 
@@ -771,7 +738,7 @@ v6.9.33 に続く当日リリースです。拡張機能の通常利用の動作
 
 v6.9.32 に続く当日リリースです。拡張機能の通常利用の動作変更はなく、実残8件ラウンド（leftover-1002）の 8 PBI（内部整理）のみを含みます。
 
-### Fixed
+### 修正
 
 - **popup のステータスパネル多重登録を解消** ― リスナー登録を wireOnce へ統一しました（PBI 03）
 - **markdown export の revoke タイミングを修正** ― 固定タイマーから完了シグナル駆動へ置換しました（PBI 04）
@@ -780,7 +747,7 @@ v6.9.32 に続く当日リリースです。拡張機能の通常利用の動作
 - **domain filter の既定値を blacklist へ裁定し統一** ― 三者不一致を解消しました（PBI 08）
 - **collector の throw 意味論を propagate へ復元**（PBI 09）
 
-### Refactored
+### リファクタリング
 
 - **import 判定を専用 narrow ガードへ構造化**（PBI 05）
 - **テスト型エラーの baseline ゲートを復活** ― pin 496 で固定しました（PBI 10）
@@ -789,7 +756,7 @@ v6.9.32 に続く当日リリースです。拡張機能の通常利用の動作
 
 v6.9.31 に続く翌日リリースです。拡張機能の通常利用の動作変更はなく、大局的コード改善ラウンドの 21 PBI と follow-up 2 件（内部整理）のみを含みます。最終レビュー verdict は KEEP（全件維持・ロールバックなし）です。
 
-### Refactored
+### リファクタリング
 
 大局的レビュー（holistic-code-review）で抽出した 23 項目を整理しました。いずれも通常利用の挙動は変わりません。
 
@@ -806,7 +773,7 @@ v6.9.31 に続く翌日リリースです。拡張機能の通常利用の動作
 
 v6.9.30 に続く翌日リリースです。拡張機能の通常利用の動作変更はなく、arch-delivery-loop ラウンドの 7 PBI（アーキテクチャ整理）と開発環境まわりの整備のみを含みます。
 
-### Refactored
+### リファクタリング
 
 アーキテクチャ診断（arch-delivery-loop）で抽出した 7 項目を RICE 順に整理しました。いずれも通常利用の挙動は変わりません。
 
@@ -818,7 +785,7 @@ v6.9.30 に続く翌日リリースです。拡張機能の通常利用の動作
 - **replay 書き込みの dedupe を SavePhase の seam 内へ移設** ― オーケストレータにあったプロトコル hack を除去しました
 - **ページ内容抽出の入口を `preparePageContent` に集約** ― 3 つの公開入口を単一 seam に寄せました（ベンチ用の旧入口は維持）
 
-### Developer Experience
+### 開発体験
 
 - **カバレッジ出力先を `.gitignore` に追加** ― `coverage/` ディレクトリが誤ってコミット対象に含まれないようにしました
 - **成長メトリクスを記録** ― v6.9.30 時点の指標を `dev-docs/metrics/history.json` に追記しました
@@ -827,7 +794,7 @@ v6.9.30 に続く翌日リリースです。拡張機能の通常利用の動作
 
 v6.9.29 に続く翌日リリースです。bug fix のみを含み、新機能の追加はありません。暗号化関連の攻撃視点レビュー 13 項目と、保留されていた設定復元・制限値集約・メッセージ層境界の 3 項目を修正しました。いずれも通常利用の動作は変わりません。
 
-### Fixed
+### 修正
 
 - **ストレージの部分破損で API キーが無効化されないように**。暗号化 secret だけが欠けた状態で新しい鍵ペアを生成すると、保存済みの暗号文がどの鍵でも読めなくなっていました。欠けたまま再生成せず、破損エラーで停止して暗号文を保持します
 - **設定済みマスターパスワードの set 経路を拒否するように**。設定済みにもかかわらず新規設定フローが書き込みまで進めたのを、サービス層のガードで専用エラーにし、変更認証へ誘導します
@@ -845,7 +812,7 @@ v6.9.29 に続く翌日リリースです。bug fix のみを含み、新機能�
 - **制限値定数を Layer 0 に集約**。メッセージ層に置かれた純定数を基盤層へ移し、層検査の穴を塞ぎました。値・契約は不変です
 - **メッセージ層の中立性を回復**。メッセージ種別定数をメッセージ層へ移し、プロトコル版の参照を 1 経路に統一しました。値・契約は不変です
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（15220 passed / 21 skipped、985 ファイル、lint 0 errors）
 - E2E: 対象 spec を実走し全件通過
@@ -854,15 +821,15 @@ v6.9.29 に続く翌日リリースです。bug fix のみを含み、新機能�
 
 v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整理（設定系メニューの折りたたみ）のみを含みます。
 
-### Changed
+### 変更
 
 - **ダッシュボードの設定系メニューを折りたたみ式に** ― サイドバーの Settings 欄に並んでいた 11 項目（ドメインフィルター〜診断）を「初期設定」ボタン配下のサブグループにまとめ、初期設定を押すまで表示しないようにしました。設定系パネルへの直接リンクやパネル内ジャンプでは自動で展開されるため、表示中のパネルに対応するボタンが見えなくなることはありません。キーボード操作では折りたたみ中の項目を飛ばし、開閉状態は `aria-expanded` で支援技術に伝えます。タスク完了までの手順が 1 手増えたため、E2E の friction budget を更新しました（`domain-filter-add` 4→5、`issue-report-open` 2→3）
 
-### Developer Experience
+### 開発体験
 
 - **CI の GitHub Actions を更新** ― `dorny/paths-filter` を 4.0.3、`gitleaks/gitleaks-action` を 3.0.0 に更新（動作変更なし）
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（15,022 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 設定サブグループの開閉 7 件、sidebar 構造ピン 1 件
 - E2E: 対象 spec を実走し全件通過（navigation / task-flows / issue-report / error-recovery / a11y / friction-metrics / master-password-reencrypt / cleansing-preset / domain-filter-ui / dashboard-ui）
@@ -871,12 +838,12 @@ v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整
 
 アーキテクチャ全面レビュー 2 ラウンド（09-28 の 7 項目、09-29 の 10 項目）で見つかった問題の修正と、マスターパスワード操作で API キーが失われる問題の解決を含みます。新規オプションの追加は「失敗が続くプロバイダの一時停止を無効化する」1 件です。
 
-### Added
+### 追加
 
 - **AI プロバイダの一時停止を設定で無効化できるように**（PBI 27-07）。AI 要約の失敗抑制（circuit breaker）が入る cooldown は 5〜15 分で、API キーを差し替えても、その時間が終わるまで要約が出ない状態から抜けられませんでした。AI プロバイダー設定に「失敗が続くプロバイダを一時停止する」を追加し、OFF にすると一時停止による省略と抑制状態（breaker state）の記録を完全に止めます。OFF の間は失敗数に関係なく一時停止されないため、要約のたびに全プロバイダを再試行します。既定は ON で、既存の抑制挙動は変わりません。判定は接続試験には及ばず、接続試験は従来どおり一時停止中でも実行されます
   - **注意**: 設定エクスポート（形式 1.1.0）の必須キーは既定値から自動導出されます。本キーの追加により、1.1.0 形式のエクスポートファイルは `ai_provider_breaker_enabled` を含まない場合インポートできなくなります。1.1.0 より前の形式で書き出されたエクスポートファイルのインポートは影響を受けません
 
-### Fixed
+### 修正
 
 - **マスターパスワードを設定・変更・解除しても API キーが保持されるように**。マスターパスワードの KEK（鍵導出鍵）を切り替えると、新しく導出した鍵で暗号化済みの API キーが復号できなくなり、認証情報をすべて入力し直す手間が発生していました。設定・変更・解除の 3 操作で API キー 6 フィールド（プロバイダ API キーと GitHub PAT を含む）を再暗号化して持ち越すようにし、確認が通るまで認証メタデータを更新しません。復号不能な項目が 1 つでもあれば処理を中止して既存データと画面の状態をそのまま残します（チェックボックスも元に戻し、完了メッセージは出しません）。解除時は匿名 KEK へ移すため、解除後もキーは読み出せます。あわせて設定画面が直接ストレージを削除していた経路を廃止し、状態の一致をサービス側で保証します
 - **記録条件（スクロール深度・滞在時間）が判定に反映されなかった問題を修正** ― 設定した閾値が scroll_idle イベントの記録可否判定で常に既定値として動いていました。設定値は設定 blob へ移行しましたが、読み側は旧来の top-level キーを直接参照していたため移行後に既定値へ落ちていました。実効値の読みを blob 経由に統一し、閾値の定義も 1 箇所に集約しました
@@ -889,12 +856,12 @@ v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整
 - **AI 要約の失敗がプロバイダ一時停止（circuit breaker）に正しく反映されない経路を修正** ― 応答形式の異常・API キー未設定・モデル名の誤りなどの失敗が構造化情報を持たず、一時停止の判定から漏れていました。すべての失敗経路に種別を付与し、端末内 AI のエラーでは例外文がページ要約として保存されないよう固定文に分離しました。OpenAI 互換プロバイダが空の要約を成功として返す経路も拒否に統一しています
 - **設定まわりの書き込み競合と listener 残留を解消** ― ①失敗した設定書き込みの再試行キューが、構成ルートとの接続を持たないまま動く契約になっていたのを実配線しました（将来の二重インスタンス化を構造的に防止）。②SQLite への記録失敗を保持するキューの成功/残件カウントが、flush 中の新規登録で負値になりうる計測方法だったのを lock 内計測に統一しました。③クレンジング feedback キューへの同時書き込みが 1 件を黙って失っていたのを楽観ロックで保護しました。④ローカル Markdown のアイドル時書き出し listener が設定保存のたびに蓄積し、同じ書き出しが複数回走っていたのを再登録前に必ず解除する形に修正しました
 
-### Changed
+### 変更
 
 - **全データ削除の経路を service 関数に一本化し、並列書き込みとの相互作用を明示的にした** ― 全データ削除はバージョンの管理記録（並列書き込みの検知に使う比較値）をデータと一緒に消すため、削除と並行して走った保存がどう検証されるかを示す記述がありませんでした。削除専用の関数を storage 層に用意して呼び出し先を統一し、削除直前に開始した保存が検証で必ず失敗し、半削除された状態を復活させないことを契約として明記しました
 - **内部構造の改善（ユーザーに見える動作の変更はありません）** ― 大局的レビュー 2 ラウンドで見つかった構造的課題 17 項目を解消しました: ①履歴 DB の 2 バックエンド（OPFS Worker / IndexedDB）の起動手順・purge 計数・検索処理を統一し、purge の報告件数が両者で一致するように ②AI プロバイダ基盤（632 行・12 責務）を HTTP テンプレートとポリシー群に分割し、到達不能なエラー経路と重複したリトライ判定を除去 ③Tranco 同意の 30 日ルールが popup と dashboard で二重実装だったのを 1 箇所に集約 ④設定画面の旧形式モジュール 4 件（トラスト設定 / カスタムプロンプト / Markdown テンプレート / 録画条件）のグローバル状態を factory + destroy 形式に移行し、AI 接続テストの実行ループが一般設定と診断に重複していたのを共通 runner に集約 ⑤録画の判定順序を ADR で裁定した単一実装に統一し、AI プロバイダの送信経路を 4 つの gateway に集約してリトライ判定を 1 つに ⑥設定値と閾値の正本を一箇所に集約（メッセージプロトコル値の層引き上げ、content reader の分離、設定スナップショット）⑦使われなくなった互換コード（migration / storage shim / 旧 Tranco 連鎖）を削除
 
-### Security
+### セキュリティ
 
 - **ENCRYPTION_SECRET を平文で保存しない**（PBI 25-25）。マスターパスワード未設定時に自動生成される secret は、これまで `chrome.storage.local` に Base64 平文で保存されていた。本リリースから `chrome.storage.local` には専用 KEK で AES-GCM ラップした envelope（`{ v, wrapped, iv }`）のみを保存し、復号鍵は `chrome.storage.local` とは別の store（IndexedDB）に保存した non-extractable `CryptoKey` とする。`chrome.storage.local` が単独で漏洩しても API キー群を復号できない。
   - 既存の平文 secret は読み取り時に envelope へ無停止移行する。ラップした envelope の unwrap 確認が取れてから local を上書きするため、移行途中で保存済み API キーを失うことはない。
@@ -903,11 +870,11 @@ v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整
   - **注意**: 平文保存を廃止する一方向の移行であり、旧バージョンへ戻すと保存済み API キーが復号不能になる。復旧には API キーの再入力が必要。
   - 利用者に公開しているプライバシー記述に影響するため `PRIVACY.md` 2 ファイルを更新した（最終更新日 2026-09-27、同意バージョンは据え置き）。
 
-### Documentation
+### ドキュメント
 
 - **KEK 切替の再暗号化と録画 gate 順序の裁定を ADR として記録** ― `2026-09-28-master-password-kek-reencryption` と `2026-09-28-recording-gate-order-canonical` の 2 件を追加。あわせて 2 ラウンドの 17 PBI と KEK 再暗号化の裁定 PBI の実装記録・採点根拠をアーカイブへ移管
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（15,014 passed / 21 skipped、957 ファイル、lint 0 errors）。新規テスト: 秘匿キーのキー名マスキング行列、AI 失敗の種別付け、OPFS デグレの段階ラダー（fault injection）、SQLite 2 バックエンドの parity（stub と実 SQLite）、接続テスト runner、旧形式モジュールの destroy ライフサイクル
 - E2E: `npm run test:e2e` green（325 passed / 30 skipped）。KEK 切替の E2E を新設し、復号不能項目がある解除が中途半端な状態（チェックボックスとメタデータ・暗号文の維持）で止まることを確認
@@ -916,7 +883,7 @@ v6.9.28 の翌日リリースです。ダッシュボードのサイドバー整
 
 v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能の追加はありません。Firefox など端末内AI非対応ブラウザでの誤案内、自己署名証明書の Obsidian 接続時の案内欠落、Obsidian API の認証エラーの誤分類といった表示上の問題 3 件を修正し、あわせてストレージ書き込みの競合契約を強化しました。
 
-### Fixed
+### 修正
 
 - **障害中の AI プロバイダへの無駄な課金リクエストを抑止** ― AI プロバイダ × モデル単位の circuit breaker を導入しました。連続失敗が閾値（通常 3 回、認証失敗・429 は初回）に達したスロットは cooldown に入り（通常 5 分、認証失敗 15 分、429 は 10 分）、要約生成の試行対象から外れます。cooldown 終了後は最初の 1 リクエストだけを probe として試し、成功で復旧・失敗で再び cooldown に入ります。ユーザーが明示する接続試験は cooldown 中でも省略されず、結果も breaker に反映されません。状態は browser 終了で消える session スコープに保存し、API key を含みません
 - **通知設定の保存を SettingsRepository に一本化し、設定 blob との分岐を除去** ― 設定画面の `permission_notify_threshold` 変更が top-level の単キーへ直接書き込まれ、migration が管理する nested settings blob と値が分岐する経路がありました。保存・読み取りともに SettingsRepository（delta write 契約）経由に統一し、設定再読込後も変更値が保持されます。`denied_domains` は閲覧履歴として専用 CAS writer のまま維持し、キー構造・export 対象に変更ありません
@@ -927,7 +894,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 - **Obsidian の 401/403 が「ネットワークエラー」と表示される問題を修正** ― API キーの期限切れや入力ミスで 401/403 が返されたとき、実際の原因は認証なのに接続確認を案内していました。401/403 は認証エラー（APIキー確認）、429 はレート制限、404 と 5xx はサーバーエラーとして正しく案内されます。表示文言はすべて既存キーの使用で、新しい文言の追加はありません
 - **ストレージ書き込みの競合契約を強化し、黙って上書きされる経路を撤去** ― pending pages の legacy 移行と保存 URL のクォータクリーンアップが version 管理を迂回して書き込む経路を `withLock` 経由に統一し、競合検知から漏れる経路を除去しました。あわせてテスト基盤のストレージ境界を本番（structured clone）と同等に揃え、迂回の再発を契約テストで機械的に検出します
 
-### Developer Experience
+### 開発体験
 
 - **テスト基盤の依存を更新し、jsdom 30.1.1 のセレクタ長上限に対応** ― `jsdom` を 30.0.1 から 30.1.1 に更新しました。jsdom 30.1.1 が同梱する dom-selector 9.x は 1 回の `querySelectorAll` で 2048 文字を超えるセレクタを拒否するため、クレンジングエンジン（`stripBySelectors`）が長いセレクタを 2000 文字以下のチャンクに分割して実行するようにしました。カンマ区切りセレクタの照合は各セレクタの和集合であるため、ブラウザ実行時の除去対象は変わりません。あわせて `@types/chrome` を 0.2.9 から 0.3.0 に更新しています（型定義のみの変更で、実測では影響なし）
 - **E2E テストの retry を全面廃止し、失敗をその場で検出できるようにした** ― Playwright の全プロジェクト（extension / interaction / a11y / usability）とグローバル設定で有効だった `retries` を 0 にしました。retry は最初の失敗を隠すだけで、負荷や実行環境が変わると再発します。全プロジェクトを `--retries=0` で実走し、失敗 0 件（323 passed / 30 skipped）を確認した上での変更です。既知の flaky だった regenerate-summary の CRITICAL ケースも `--repeat-each=5 --retries=0` で 20/20 安定通過しています。あわせて trace 設定を `on-first-retry`（retry 廃止では発火しない）から `retain-on-failure` へ変え、失敗時の調査証拠を残します
@@ -943,7 +910,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 2. **lint で検出する 3 つの待ち時間パターン**: 固定 sleep に加えて、条件が否定アサーションしかない待ち（`vi.waitFor` のコールバックは最初の評価で既に成立するため、ガードを消しても緑のままになる）と、動的 import をハングさせる既定 fake timers も検出します
 3. **リリース前チェックの不具合修正**: `release:check:fast` が 1 つもチェックを実行せずに失敗していた問題と、レジストリ到達失敗時に「脆弱性なし」と報告していた問題を修正
 
-### Developer Experience
+### 開発体験
 
 - **テストの実行時間短縮とルール化**: 実タイマー待ちの固定 sleep（`setTimeout(r, N)`）を完全に排除しました。`drainMacrotask()` / `waitForMock()` / `useTimerClock()` による条件待ちに置き換え、テスト実行時間を短縮するとともに、ESLint ルール `local/no-test-sleep` を自動検出 (error) に昇格させ、再発を防止します。詳細は [AGENTS.md § Async / Timing Failures](AGENTS.md#async--timing-failures) と [dev-docs/TEST_RULE.md § 実時間待ちの禁止と代替手段](dev-docs/TEST_RULE.md#実時間待ちの禁止と代替手段) を参照。
 - **lint で検出する 3 つの待ち時間パターン**: `local/no-test-sleep`（`error`）は `const DELAY_MS = 30; setTimeout(fn, DELAY_MS)` のように数値リテラルを経由して書いた待ちも検出して定数束縛を解決します。`local/no-vacuous-negative-wait`（`error`）は、条件が否定アサーションしかない `vi.waitFor` / `waitForMock` を検出します。この待ちは最初の評価で条件が既に成立しているため待ち時間 0 で通り、ガードを削除してもテストが緑のままになるため、`await drainMacrotask()` で settle させてからアサーションするか、同じテスト内に肯定アサーションを置いてください。`local/no-greedy-fake-timers`（`warn`）は、動的 import をハングさせる既定 `toFake` の `vi.useFakeTimers()` を検出します（移行中のため `warn`）。正当な場合は理由を添えて無効化できます
@@ -954,7 +921,7 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 - **テスト並列数を明示** ― ファイルごとに fork する側のメモリ使用量を抑えるため、並列数を「コア数 − 2」に固定しました（メモリが逼迫すると `Timeout waiting for worker to respond` で落ちる実績があったため）。実行時間のトレードオフは実在します: 同じ 8 コア機で 6 worker 76.9 秒 / 3 worker 184 秒 / 2 worker 303 秒。CI の `ubuntu-latest` は 4 vCPU なので 3 → 2 worker に当たります。`VITEST_MAX_WORKERS` 環境変数で上書きできます
 - **依存・セキュリティ検査を並列化** ― `release:check` の deps カテゴリは `npm audit`（約 9 秒）/ `npm outdated`（約 8 秒）/ ライセンス検査（約 0.5 秒）を逐次実行しており、1 回あたり 20 秒ほどかかっていました。3 つを並行実行に変え、`npm outdated` はマニフェスト（package.json + package-lock.json）のフィンガープリントと 24 時間のキャッシュでレジストリ照会を省くようにしました。実行時間はキャッシュなしで約 11 秒、キャッシュヒット時は `npm audit` だけなので 9 秒前後です。キャッシュを無視したい場合は `RELEASE_CHECKS_NO_CACHE=1` を設定してください
 
-### Fixed
+### 修正
 
 - **`release:check:fast` が 1 つもチェックを実行せずに失敗していた**: `--category` の引数解析で `findIndex` が「フラグ無し」を -1 として返し、次の引数（`--skip-e2e`）をカテゴリ名として扱っていました。`make release-check-fast` が常にエラー終了していたため、最終リリース前チェックが機能していませんでした。フラグ未指定時は全カテゴリを走査し、`--category` に値が無い場合はカテゴリ名を推測せず明示的にエラーになるように修正
 - **npm audit がレジストリ到達不能を「脆弱性なし」と報告していた**: npm はレジストリ不通や認証失敗時にエラー JSON を stdout に出力して非 0 終了します。その JSON を監査結果として解釈していたため、監査が実行されていないのに「high / critical の脆弱性は検出されませんでした」と報告して終了コード 0 になっていました。監査レポートのバージョン有無で判定し、取得失敗は失敗として報告するよう修正
@@ -967,11 +934,11 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 - **依存検査がインストール済みツリーを見ていなかった**: `npm audit` と `npm outdated` は manifest だけを読むため `node_modules` に対して盲目です。`npm install --package-lock-only` はロックだけ更新してツリーを触らないので、古いバージョンが動き続けるまま「high / critical の脆弱性は検出されませんでした」と報告します。実際 `node_modules/adm-zip` が 0.6.0 のまま 0.6.1 と報告されていました。各パッケージの `package.json` を実際に読んでロックと突き合わせる照合を追加し、この 1 件を検出・修正しています
 - **`waitForRetry` に呼び出しのない seam があった**: 追加した `sleep` パラメータはリポジトリ全体で呼び出し元がゼロで、既定以外の分岐に到達不能でした。テストが実際に注入しているのは 1 つ上の `ObsidianClientOptions.sleep` の方なので、パラメータを削除して seam を 1 箇所に集約しました
 
-### Security
+### セキュリティ
 
 - **adm-zip を 0.6.1 に更新** ― 開発用依存の adm-zip が、展開時に宛先のシンボリックリンクを追従して任意のファイルを上書きできる脆弱性（high）の影響を受けていました。`devDependencies` と `overrides` の両方を `^0.6.1` へ上げて解決バージョンを更新しています
 
-### Added
+### 追加
 
 - **再訪とタイムカプセル パネル**: 自動記録がデイリーノートへ分散してしまう「同じテーマの調べ直し」を4区分（何度も調べているテーマ / よく再訪するページ / 最近触れていないテーマ / 1年前の今週）で表示します。形式の統一された「Markdownでコピー」で、散らばった訪問を1枚のノートにまとめられます
 - **リサーチ・セッション パネル**: 時刻の近い記録をひとつの「調べもの」としてまとめます。セッションの区切りは 5 / 15 / 30 / 60 分から選べ、区切りを変えても再取得はしません
@@ -980,11 +947,11 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 - **CI に単体スイートのファイル単位コストゲートを追加** ― `npm run test:perf`（`make test-perf`）がスイートを 1 回走らせて `bench/baselines/test-perf.budget.json` と比較します。CI の validate ジョブは `npm test` の代わりにこれを使うため、追加の実行時間はゼロです。**合否を握るのはファイル数だけ**で、時間系は参考値として併記します。時間系は 8 コアのノート PC で較正値があり、4 vCPU の CI ランナーではコアあたりの速さが違うため、共有ファイルに閾値を持てばランナーの個体差で落ちてしまうからです。load average は計測の**直前**に読み、コア数を超えていれば「machine is busy」として判定そのものを保留します（スイートは実行中ずっと全コアを使い切るため、計測の直後との差で棄却する規則を文字通り適用すると全測定が棄却されます）
 - **レビューで判明した 6 件を修正** ― `release:check` の引数解析、`local/no-test-sleep` の遅延解決、SQLite 並行失敗テスト、依存検査の実インストール照合、`waitForRetry` の未使用 seam、`no-greedy-fake-timers` の件数の 6 項目（うち 1 件は CRITICAL 2 件）。詳細は下の `### Fixed` を参照
 
-### Changed
+### 変更
 
 - **ユニットテストの待ち時間を削減** ― リトライのバックオフや結果状態のタイマーなど、「待つだけ」のテストが合計 20 秒ほど実行時間を占めていました。fake timers で時計を進める形、`vi.waitFor` で条件成立を待つ形、リトライ待機を差し替えられる seam（`ObsidianClient` の `sleep` オプション、`createSqliteHistoryPanel` の `scheduler` 透過）に置き換え、待ち時間をほぼ 0 にしました
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（14,050 passed / 21 skipped、909 ファイル、lint 0 errors）。新規テスト: ESLint ルール 3 種の RuleTester（計 35 cases: no-test-sleep 12 / no-vacuous-negative-wait 13 / no-greedy-fake-timers 10）、`testPartition` の 4 cases、`local/no-vacuous-negative-wait` で検出した 20 件の再確認、変更した 13 テストファイルは `--repeats=20` で安定
 - 変異確認: ガードを意図的に壊し、修正したテストが実際に失敗することを確認（`popup/main.ts` のタブ ID 判定、`dashboard/settings/trustSettings.ts` の null チェック、`background/sessionStore.ts` のクォータ判定分岐、`popup/statusPanel.ts` の URL ガード、`popup/popup.ts` の配列長ガード、`testPartition.ts` の isolation 正規表現）。各変更はテスト実行後に元に戻し、差分が 0 であることを確認しています
@@ -994,17 +961,17 @@ v6.9.26 に続く同日リリースです。bug fix のみを含み、新機能�
 
 v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間の計測実装を取り下げ、滞在時間分析パネルを撤去しました。あわせて、共有部品がパネル名に依存していた i18n キーと CSS クラスを中性名へ付け替え、他 6 パネルの表示が崩れないようにしています。
 
-### Removed
+### 削除
 
 - **滞在時間分析パネルを削除** ― 記録の自動発火条件（スクロール深度 + 最小滞在時間）を崩さずに正確な滞在時間を計測するには、記録経路 4 ホップに計測値を配線し可視区間の累積計時を組み込むという大きな変更が必要で、得られる精度も「タブを開いただけ」の除外とゼロからの相対比較に留まります。コストに見合わないとして、パネル（`visitDurationPanel` / `visitDurationAggregate`）と sidebar 登録・HTML section・i18n 23 キー×2・専用 CSS・`MAX_VISIT_DURATION_ROWS` を撤去
   - `visit_duration` / `scroll_ratio` カラム、記録の自動発火条件（`min_visit_duration` / `min_scroll_depth`）、エクスポート/アーカイブの往復は**変更なし**
 
-### Changed
+### 変更
 
 - **共有部品からパネル名への依存を解放** ― 撤去したパネル由来の識別子を他パネルが共有していたため、両方を中性名へ付け替えた。i18n は既定ラベルが `visitDurationPeriod*` を参照していて 6 パネルすべてが `labelKeys` を渡さずに既定値へ依存しており、キーを消したままだと期間フィルタが日本語表示を落としていた。CSS は `.visit-duration-*` をドメイン分析・タグ推移・共起ペア表・ワードクラスタ・タグクラスタ時間変化比較が表・見出し・警告通知に使用しており、パネル名付きのままでは他パネルの表示が崩れていた。文言と見た目は変えず、識別子のみ差し替え（`periodFilter*` / `.data-table*`）
 - **期間フィルタの選択状態を色付けで明示** ― 共有部品 `periodFilter`（期間指定タグクラスタ・ワードクラスタ・曜日×時間帯ヒートマップ・ドメイン分析・タグ頻度の期間推移・タグ共起ペア表の 6 パネル共通）は、選択中のプリセットが太字になるだけで一目で判別しにくかった。未選択を淡い背景＋罫線に、選択中をプライマリ色の塗り＋白文字（ダークモードは `--color-primary` が明るい紫のため前景を暗色へ差し替え）にして対比を明確化。`custom` 期間はプリセットボタンを持たないため選択状態が表現不可能だったが、fieldset に `data-active-preset` を出力し、カスタム行全体をプライマリ tint ＋ inset 罫線、ラベルをプライマリ太字で表示するようにした
 
-### Tested
+### テスト
 
 - 単体: `periodFilter` に `data-active-preset` の追従（構築時・プリセットクリック・カスタム日付入力の 3 経路）と、既定 i18n の 9 キーが「要求されていること」「実ロケールに存在すること」を満たす assert を追加。誤キー注入とロケールからのキー欠落で双方とも失敗することを実測済み（本番 Chrome は欠落キーで空文字を返し英語フォールバックに落ちるため、表示文言ではなくキー名で assert している）
 - 全体: `npm run validate` green（13,875 passed / 21 skipped、897 ファイル）。`.data-table*` の表・見出し・警告通知は実 CSS で目視確認済み
@@ -1013,14 +980,14 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 ワークスペース全量レビューの残債から RICE 採点した PBI のうち 6 件（messaging 再試行の fail-closed 規定・ループバック provider origin の承認締め付け・Obsidian 接続確認の有限再試行・Trust DB 一本化・SQLite アラートの永続化・popup tooltip の i18n）を実装し、コードレビューで判明した 23 指摘を修正しました。全テスト（単体 13,894 件、E2E 323 件）がグリーンです。
 
-### Added
+### 追加
 
 - **Obsidian 接続確認の有限再試行** ― 接続テストが一時的なネットワーク障害や 5xx で失敗しても最大 3 回・指数バックオフで自動回復。API キー不備・CSP・不正 URL 等の終端エラーは分類して即失敗（新設 `src/utils/retryPredicate.ts`）
 - **CI にマイクロベンチ回帰ゲートを新設** ― `bench-check` job がコード系変更時のみ `npm run bench:check` を実行（paths-filter で docs のみの変更は即成功）。`tests.yml` に Playwright ブラウザキャッシュを追加
 - **リリースチェックに `check-privacy` を新設** ― `public/PRIVACY.md` と `docs/PRIVACY.md` の一致と、`PRIVACY_POLICY_VERSION` と PRIVACY.md 最終更新日の突合を検証
 - **ダッシュボードのアクセシビリティ強化** ― 全パネルに `aria-labelledby` を付与し、タグラフノード用 a11y ヘルパーと `.btn` 基底クラス（secondary / danger バリアント）を追加
 
-### Changed
+### 変更
 
 - **Offscreen transport の再試行を実行安全性で規定** ― 呼び出し側 `noRetry` フラグを廃止し、メッセージタイプ別の再試行ポリシー表（新設 `src/messaging/transportRetryPolicy.ts`）に一本化。INSERT 系など応答喪失時に二重書き込みになりうる操作は fail-closed とし、網羅的な `Record` 型で新タイプ追加時のポリシー未定義をコンパイルエラーで検出
 - **信頼設定のストレージを Trust DB に一本化** ― レガシー `chrome.storage.local` 経路（SAFETY_MODE / TRANCO_TIER キーと双方向マッピング）を削除し、判定を Trust DB 単一経路に
@@ -1030,23 +997,23 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **CI ワークフローの整理** ― paths-filter アクションをコミット SHA でピン留め、E2E job から型検査・単体テストの重複実行を削除して CI workflow に集約
 - **ログへのレスポンスボディ記録を 500 文字で打ち切り** ― Obsidian API エラー時にサーバー応答本文が診断ログ・TSV エクスポートへ無制限に流れ込むのを防止（新設 `src/utils/logTruncate.ts`）
 
-### Fixed
+### 修正
 
 - **SQLite アラート状態がサービスワーカー再起動で消えていた** ― 連続失敗カウンタとクールダウン時刻を `chrome.storage.session` に永続化して起動時に復元。再起動後にアラート済みの失敗が再通知され 1 時間クールダウンをバイパスする問題を修正し、定常成功時の冗長な書き込みも削減
 - **popup の履歴ボタン tooltip が未翻訳の英語固定** ― ハードコードを既存 i18n キーに置換（spinner SVG のハードコード色も削除）
 - **コードレビューで判明した 23 指摘を修正** ― dashboard 全般の i18n フォールバック統一、サイト別オーバーライド UI とクレンジングフィードバック UI の未翻訳箇所（ja/en 計 18 キー新設）、ドメインタグ削除ボタンの aria label ほか
 - **E2E テスト基盤の修正** ― macOS のアプリデータ保護で Playwright Firefox が起動できない問題を一時プロファイル退避で回避、privacy consent seed を共有 fixture 化して版数 drift を構造的に排除
 
-### Security
+### セキュリティ
 
 - **ループバック provider origin の承認を締め付け** ― `http://localhost` / `127.x` / `::1` への自動承認をローカルプロバイダスロット（LM Studio / Ollama / built-in AI）限定に変更し、非ローカルスロットではダッシュボード確認ダイアログの明示承認を必須化。締め付け前に保存済みだった loopback URL は 1 回限りの移行で確認済み origins に自動登録し、既存設定を保護。以後に設定・変更した URL は承認必須
 
-### Documentation
+### ドキュメント
 
 - **ワークスペース全量レビューの残債を PBI 化** ― 過去のレビュー報告書 8 件をアーカイブへ移管し、残債 31 候補を RICE 採点して PBI 30 件を起票（うち 6 件を本リリースで実装）
 - **ガイドを実装に同期** ― trust 判定の記録可否仕様を `docs/TRUST_DOMAIN_GUIDE.md` の正本に揃え、README と `docs/i18n-guide.md` を修正
 
-### Tested
+### テスト
 
 - 単体: `npm test` green（13,894 passed / 21 skipped）。新規テスト: 再試行ポリシー・loopback 移行・sqliteAlert 永続化・localeParity ほか
 - E2E: `make test-all` green ― 323 passed / 30 skipped（chromium 80 / firefox 81 / extension 101 / interaction 17 / a11y 4 / usability 40）。前ラウンドまで起動できなかった firefox プロジェクトを復旧済み
@@ -1055,7 +1022,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.22 に続く同日リリースで、ドキュメント整備のみを含みます。拡張機能のコード変更はありません。
 
-### Documentation
+### ドキュメント
 
 - **データ分析パネルのガイドを新設** ― 6.9.22 で追加した 8 分析パネル（曜日×時間帯ヒートマップ・閲覧時間ランキング・ドメイン分析・期間指定タグクラスタ・タグ頻度の期間推移・タグ共起ペア表・ワードクラスタ・タグクラスタ時間変化比較）の使い方を `docs/DATA_ANALYTICS_GUIDE.md` にまとめ、`docs/TAG_CLUSTER_GUIDE.md` から関連節をリンク。`README.md` と `docs/guides.html` のガイド一覧にも追加
 - **分析パネルのブログ下書きを追加** ― `docs/blog-6_9/data-analytics-panels.md`
@@ -1065,17 +1032,17 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 アーキテクチャ深層化第4ラウンド（archloop-0924: 診断→RICE→実装の 8 PBI）でダッシュボード分析パネル基盤を深いモジュールに畳み込み、分析機能8面板を追加しました。全テスト（13,838 件）がグリーンです。
 
-### Added
+### 追加
 
 - **分析パネル 8 面を追加**（RICE 順）: 曜日×時間帯ヒートマップ・閲覧時間ランキング（共有期間フィルタ部品 `periodFilter` を新設）・ドメイン分析（タグ×期間でドメイン/URL top N）・期間指定タグクラスタ・タグ頻度の期間推移・タグ共起ペア表・ワードクラスタ（Intl.Segmenter キーワード抽出＋既存 tag-cooccur パイプライン再利用）・タグクラスタ時間変化比較（side-by-side＋diff 一覧・FNV-1a 安定配色）。ワードクラスタ・タグクラスタの既定期間は直近7日間
 - **台帳に分析手法の後続候補を記載**: 再訪分析・スター分析・記録量ストリーク・AI 利用統計・プライバシー統計（既存カラムのみで実装可能、トリガー付き）
 
-### Fixed
+### 修正
 
 - **ブランチレビューの指摘 16 件を解消**: visitDuration のマウント時二重フェッチ、時間変化比較のオーバーレイ凍結、ドメイン分析の offset ページングによる二重計上リスク、cap 通知の誤検知（ちょうど上限で部分集計と表示）、リトライ失敗のサイレント空表示、除外件数通知の語義不一致、未使用定数・i18n 孤児キー
 - **E2E を現行仕様に追従**: サイドバータブ検索の厳密一致化（Tag Cluster Compare 追加による strict mode violation 解消）、期間既定変更に伴うタグクラスタ E2E の全期間プリセット選択
 
-### Changed
+### 変更
 
 - **パネルデータ読み込みを `fetchPeriodRows` に集約**: 8 パネルの loadRowsWithRetry（失敗ポリシー 5 種にドリフト）を 1 本化。throw-on-failure 統一・capped 判定（total 突合）の一元化・since/until 省略規約を単一所有。タグクラスタにエラー状態を追加
 - **periodFilter 契約を深化**: 構築中の同期 emit を廃止し `getRange()` を初期値の単一ソースに。filterReady 回避策×3・デッド読み戻し×7 を削除、ラベルキーを注入可能に
@@ -1083,7 +1050,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **小さな重複を SSOT 化**: フォールバックリテラル（utils/summaryFallback.ts・Layer 0）・navigateToHistoryWithTag・i18n msg ヘルパー・MAX_QUERY_ROWS（QUERY_CAPS.plain と一致を pin）の 4 領域
 - **i18n ゲートを強化**: 実 locale ファイルの parity テストを validate 経路に追加し、サイドバー i18n キー存在 assert を導入。実 drift（historyDeleteSelectedSuccess_one/_other の ja 欠落）を検出・修正
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（13,838 passed / 21 skipped、889 ファイル）。新規テスト: fetchPeriodRows・PanelNotices・periodFilter 新契約・localeParity・summaryFallback pin・navigateToHistory ほか
 - E2E: chromium/extension/usability/interaction/a11y green（241 tests）。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
@@ -1092,7 +1059,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.20 に続く連続リリースです。アーキテクチャ深層化第3ラウンド（archloop-0923c: 診断→RICE→実装の 5 PBI）で通信・録画・UI・設定の残存手配線を刈り込みました。全テスト（13,562 件）がグリーンです。
 
-### Changed
+### 変更
 
 - **非推奨 HMAC 双子を削除し `HmacSigner` に一本化**: 生産呼び出し 0 を確認し、`generateHmacSignature` / `verifyHmacSignature` と barrel を削除。弱い手書き比較と全エラー潰しの verify 経路が消え、`constantTimeCompare` 1 本に
 - **診断転送を builder Adapter に集約**: `pickRecordDiagnostics(payload)` を builder に所有させ、4 handler の手列挙を spread 1 行に縮退。SAVE の maskedCount 除外は構造的に維持し、新 field の追加は builder 1 行で全経路に反映
@@ -1100,7 +1067,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **popup active-tab 読取を単一 Seam に統合**: tabUtils に狭い Adapter を追加し、素クエリ 2 箇所と独自 hostname パース 1 箇所を寄せる。生産クエリは 1 箇所のみ、null 時の panel-hide 振る舞いはテストで pin
 - **preset dual-write を repository 移行**: `CLEANSING_PRESET` の素 storage 接触 7 箇所を adapter＋単一 locked-delta に置換し、perSiteOverrides の load を targeted read に切替。busy 窓・epoch・migration は保持
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（13,562 passed / 21 skipped、865 ファイル）。新規テスト: maintain wire-table・dispatch parity・recordDiagnosticsConvergence・tabSeamNullPin・presetSettingsAdapter・cleansingPresetStore・perSiteOverrides-seam ほか
 - E2E: chromium green。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
@@ -1109,7 +1076,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.19 に続く連続リリースです。アーキテクチャ深層化第2ラウンド（archloop-0923b: 診断→RICE→実装の 5 PBI）で録画 path の 5 領域を深いモジュールに畳み込みました。全テスト（13,495 件）がグリーンです。
 
-### Changed
+### 変更
 
 - **互換 shim `tabUtils.isRecordable` を削除**: gate 表駆動化で生産呼び出しが 0 になった shim を確定削除。記録可否の振る舞いは gate-table テストが pin 済みのため網羅性は不変
 - **保存 fan-out を SavePhase の唯一 Seam に統合**: `save(context, deps) → SaveReceipt` を公開し、4-sink fan-out 順序・BEST_EFFORT 継続・retry 投影を所有。手書き retry 配列と `this.*` closure 注入を廃し、全 sink を `StepDeps` から均一解決。sqlite 欠如 skip は明示エラー様式に。保存順序・継続・preview 短絡の語義は不変
@@ -1117,7 +1084,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **抽出診断を ExtractionReport 背後に集約**: 公開 interface を `extract(config) → { content, report }` にし、ByteMeter・dual 保持・funnel・recount を Module 背後に移動。hot path のバイト出力は同一
 - **信頼 lookup を TrustLookup の単一 async Seam に統合**: `lookup(url)` と `decideAlert` の 2 関数に集約し、sync 双子は生産呼び出し 0 のため廃止。legacy コンストラクタ分岐は test-only factory に押し出す。senderTrust・TrustPolicy 語義は不変
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（13,495 passed / 21 skipped、858 ファイル）。新規テスト: savePhase（12）・visitGating（19）・scheduler・extractionReport（12）・TrustLookup（24）・admissionGateSteps ほか
 - E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（前ラウンドから継続する環境障害。CI の Linux/xvfb 実行には影響なし）
@@ -1126,7 +1093,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.18 に続く連続リリースです。VulnHunt 監査で確定した 7 件の脆弱性修正（VULN-001/002/003/004/005/007/006）を実装し、アーキテクチャ深層化ラウンド（archloop-0923: 診断→RICE→実装の 5 PBI）で履歴表示・SQLite RPC・設定フォーム・WASM ハイブリッド・記録可否判定の 5 領域を深いモジュールに畳み込みました。全テスト（13,432 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **保存済み Obsidian API キーが上書きホストに流れる問題を修正（VULN-001）**: `buildFromOverride` のキーフォールバックを「上書き host == 保存 host」のときのみ許可し、上書きホスト×保存済みキーの fetch を構造的に不可能化。host 検証を RFC-1123/IP リテラルの実質検証へ強化し、`obsidianClient` から `skipCspValidation` を撤去。CSP ゲートは保存済み Obsidian origin を共有バリデータ由来で認可し、リモート vault・カスタムポートの loopback vault を維持。TEST_OBSIDIAN バリデータ行の追加と UI ミラーの単一実装化も実施
 - **プロバイダ Base URL の origin 認可と FETCH_URL の fail-closed 化（VULN-002/003）**: pinned row domain・既知プロバイダドメイン・ユーザー確認済み origin・loopback 例外の 4 層認可を導入し、Gemini・Built-in AI にも同型のコンストラクタゲートを追加。`addBaseUrlDomain` の自己認可を廃し、確認済み origin のみ CSP に追加。`ALLOWED_URLS` は SW 起動シード＋設定変更再同期で常時最新化し、空集合では fail-closed に。確認済み origin はデバイスローカルのセキュリティ状態として export/import から除外し、保存時に確認ダイアログで明示許可する
@@ -1134,7 +1101,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **ByteStats の範囲検証と SAVE maskedCount の呼び出し元値廃止（VULN-005/007）**: VALID_VISIT の 9 フィールドに範囲検証（wire=拒否・mapper=clamp の 2 層）を追加し、`aiSummaryCleansedReasons[]` に要素数・要素型上限を実装。SAVE 経路は呼び出し元の maskedCount を破棄し、パイプライン計算値を唯一の真実にする
 - **レート制限キーを eTLD+1 スコープに変更（VULN-006）**: 兄弟サブドメイン輪番による 5 秒スロットル回避を閉じる。localhost・IP リテラルはポート込み origin のまま別キー
 
-### Changed
+### 変更
 
 - **履歴エントリ診断表示を深いモジュールに統合**: `historyEntryPresentation` に `renderEntryDiagnostics` / `renderCleansingBar` を公開し、View の約 300 行の診断分岐を背後に移動（View 1169→1012 行）。15 フィクスチャの characterization snapshot で全ブランチの HTML バイト等価を確認
 - **SQLite RPC を wire-table 真の Seam に統合**: `callDashboard` / `callSqliteWire` / `callArchive` の三重 runner を表駆動の単一 runner にまとめ、`sqliteClient.call(op, payload)` の 1 本化。既存 30 op は互換エイリアス、export/import の 2 呼び出し側を移行。decode 所有を wire-table 側に寄せる
@@ -1142,22 +1109,21 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **ハイブリッド骨格を `runHybrid` 汎用 interface に統合**: 4 ハイブリッドの同型骨格を runtime の 1 箇所に集約。各コアは政策データ＋`callWasm`/`callTs` の Adapter に縮退。parity 戦略・フォールバック語義・しきい値・warn 文言は不変
 - **記録可否判定を gate 表の唯一 Seam に統合**: 中立層 `recordingGateTable.ts` に precedence を 1 表で所有し、`evaluateGates` を公開。5 step は表の Adapter に、popup は中立表に統一。content は domain 行・scheme 述語を共有（engagement 閾値との合流は follow-up）
 
-### Tested
+### テスト
 
 - 単体: `npm run validate` green（13,432 passed / 21 skipped、853 ファイル）。新規テスト: 診断表示 characterization（31）・wire-table seam・fieldDescriptor（14）・trustSettingsNoDom・runHybrid（9）・gate 表（20）・origin 認可・confirmation flow・allowedUrlsSync ほか
 - E2E: chromium 242 passed。firefox プロジェクトは本機の Playwright firefox が profile 作成に失敗し起動不能のため未実行（素の `firefox.launch()` でも再現する環境障害。CI の Linux/xvfb 実行には影響なし）
-
 
 ## [6.9.18] - 2026-09-23
 
 このリリースは v6.9.17 に続く連続リリースです。Firefox AMO（addons.mozilla.org）への申請に向けた提出前修正（ソース提出用 zip の縮小・データ開示マニフェスト対応・動的 innerHTML の排除）を行いました。addons-linter は 0 errors / 0 warnings / 0 notices、全テスト（13,209 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **Firefox AMO（addons.mozilla.org）への提出に失敗する問題を修正**: ソース提出用 zip に Rust ビルド成果物（`target/`）やローカルのカバレッジ・キャッシュ・旧成果物が約 600MB 分取り込まれていたため、`wxt.config.ts` の `zip.excludeSources` で除外し 23.6MB に縮小。また AMO のデータ開示ポリシー対応として Firefox マニフェストに `data_collection_permissions`（収集なし）と `strict_min_version: 140.0`（Android は 142.0）を追加
 - **動的 innerHTML 代入を排除し addons-linter の警告 38 件を 0 に**: AMO のチェッカー（no-unsanitized ルール・全エスケープ関数無効化設定）は動的 innerHTML 代入をすべて警告するため、`createContextualFragment` を使った代替も含め排除。新設の `src/utils/htmlFragment.ts` `setElementHtml()`（DOMParser + テーブル文脈 wrap + `replaceChildren`、パース済み script は除去）で UI 描画 39 箇所を書き換え。クレンジングの DOM パースも DOMParser 単一経路に統一。addons-linter は 0 errors / 0 warnings / 0 notices
 
-### Tested
+### テスト
 
 - 単体: `src/utils/__tests__/htmlFragment.test.ts`（テーブル文脈保持・スクリプト不活性化・ShadowRoot・td/tr/thead wrap）を追加
 - 全体: `npm run validate` green（13,209 passed / 21 skipped）、addons-linter 0/0/0、Chrome ビルド正常
@@ -1166,23 +1132,23 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.16 に続く連続リリースです。SQLite History の選択一括操作（複数選択の一括削除・一括再生成）、削除確認 UI の視認性修正（選択バー内の2段階確認＋共有モーダルの中央表示化）、タグクラスタの最大ズーム拡大（3倍→12倍）を追加しました。全テスト（13,201 件）がグリーンです。
 
-### Added
+### 追加
 
 - **選択バーに一括操作ボタンを追加**: SQLite History のチェックボックスで複数選択すると、選択バーに「AI要約を作り直し」と「選択した記事を削除」が表示される。一括削除はモデル `deleteSelectedEntries`（最初の失敗で中断・削除済み件数とエラーを返却・成功時のみキャッシュ無効化）、一括再生成は現在の設定で逐次実行し成功・失敗件数をトーストして一覧を更新（緩和3択・force は個別ヘッダーのみ）
 - **共有確認ダイアログに中央表示スタイルを追加**: `showConfirmDialog` / `showAlertDialog`（`src/utils/ui/confirmDialog.ts`）に CSS 定義が一切なく、文書末尾の素のブロック（左下）として描画されていた。新規共有 `src/styles/confirmDialog.css`（全画面 dim＋中央カード＋右寄せボタン）を dashboard・popup の両スタイルから import し、単発削除を含む全使用箇所の確認ダイアログが目の前に表示されるようにした
 - **タグクラスタの最大ズームを拡大**: `TagClusterPanZoomController` の `MAX_SCALE` を 3→12 に引き上げ（+ボタン・ホイール・ピンチズーム共通）。SVG は viewBox 方式のため深くズームしてもノード・ラベルはベクターのまま鮮明に拡大される
 
-### Fixed
+### 修正
 
 - **一括削除の確認が画面左下に埋もれていた**: 一括削除は共有モーダルを使わず、選択バー内の2段階インライン確認に変更（1クリック目で削除ボタンの右に件数付き「本当に削除する」／キャンセルが出現、2クリック目で実行）。選択変更・再描画で stale な確認は消去し、確認ボタンにフォーカスを移動
 - **部分削除の失敗がトーストに現れなかった**: 途中失敗時は成功件数のみの表示だったのを、削除済み・残件数・理由を表示する `historyDeleteSelectedPartial` トーストに変更（全件失敗時は従来どおりモデル側 `operationError`＋通知）
 - **一括再生成のトーストで実行中の行が消えていた**: `in_flight` の行を `skipped` として計数し、`succeeded + failed + skipped === 選択件数` を保証。スキップありの場合のみ「（N件スキップ: 実行中）」を付記
 
-### Changed
+### 変更
 
 - **docs**: `SETUP_GUIDE.md`・`AI_SUMMARY_GUIDE.md`（日英）に一括操作・2段階確認・スキップ表示を追記、`FAQ.md` に Q52（再生成）・Q53（一括削除）を追加、`CLEANSING_ORDER.md`・`CLEANSING_CUSTOMIZATION_GUIDE.md` に再生成の緩和仕様を追記
 
-### Tested
+### テスト
 
 - 単体: インライン削除確認の表示・実行・キャンセル・再描画消去、部分削除トーストのテンプレート分岐、全件成功トーストの維持、`in_flight` スキップ表示、上限クランプ（baseSize / 12）を追加
 - 全体: `npm run validate` green（13,201 passed / 21 skipped）
@@ -1191,12 +1157,12 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.15 に続く連続リリースです。過剰クレンジングで本文が空近くまで削られ要約が一文に潰れたレコードへの対処として、AI要約の手動再生成（PBI 2026-09-22-04）と抽出段の過剰削減ガード（PBI 2026-09-22-05）を追加しました。全テスト（13,193 件）がグリーンです。
 
-### Added
+### 追加
 
 - **履歴エントリから AI要約を手動再生成できる**: 履歴ヘッダーに「AI要約を作り直す」ボタンとクレンジング緩和3択（現在の設定 / やや緩い / 最も緩い）を追加。`REGENERATE_SUMMARY` メッセージが GET_CONTENT + cleanseMode オーバーライドで本文を再取得し、通常記録と同じパイプラインを流した後、既存行を UPDATE-in-place で上書きする（新規 INSERT 禁止・重複チェック skip・Obsidian/ローカル MD 自動出力 skip・タグは新値上書き）。クレンジング緩和は③ルール段下げのみ（custom=minimal 相当・最緩=②③無効）で設定には永続化しない。force は既定なし、ゲート拒否時のみ「設定を無視して強制再生成」を明示オプトイン（Ask Q1C）。レート制限は `regenerate` 専用バケットに分離し、ダッシュボード側の消費が通常記録を圧迫しない（Ask N3-B）。一括再生成と Obsidian 自動同期は v1 対象外（SQLite 更新のみ、送信は既存の手動「追記」ボタン）（PBI 2026-09-22-04）
 - **抽出・Content Cleansing 段の過剰削減ガード**: 実測で 99.4%（30.6 KB→193 B）削減していた主因は Content Cleansing ではなく①候補選択だった。単一ポリシー点 `applyFallback` に **②content_overcut**（クレンジング後の削減率・文字数フロア未満なら pre-クレンジング候補へ復元）と **③**（従来の AI要約クレンジング FB）を優先順 **② > ③ > 短文本文** で配置し、**①候補フロア**（スコア順走査で文字数フロアを満たす最初の候補を take 分割前に採用、新キーノブ `fallbackMinChars` 既定 100）を追加。ガード①②はデフォルトONで Dashboard → AI Summary Cleansing →「過剰削減ガード」セクションで切替可能。ホワイトリスト抽出は v1 で意図的にガード対象外（Ask Q2A）。発火理由は `fallback_reason` カラム（`candidate_too_small` / `content_overcut` / `over_cleansed` / `short_content`）として pageState から履歴表示まで貫通（PBI 2026-09-22-05）
 
-### Fixed
+### 修正
 
 - **AIプロバイダ失敗時にエラー文言が要約として保存されていた**: `buildResult` が無条件 `success:true` を返すため、失敗時のエラーテキストが SQLite の summary として書かれていた。`PrivacyPipelineResult.aiSucceeded` → `RecordingResult` まで伝播し、`saveSqliteStep` が `aiSucceeded === false` の UPDATE をスキップして既存行を保持、ハンドラは `ai_failed` を返却（PBI 2026-09-22-04 レビュー修正）
 - **プロバイダ失敗理由が最後のスロットしか見えなかった**: `fetchWithRetry` が non-ok で throw するため `handleErrorResponse` に到達せず、ループが `lastResult` のみ保持していた。`AISlotFailure[]`（`slotFailures`）で全スロットの失敗を収集し `RemoteAIService` が WARN、再生成応答に同梱（PBI 2026-09-22-04 レビュー修正）
@@ -1206,12 +1172,12 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **再生成UIのコントラスト不足**: mode select を `--color-bg` から `--color-bg-white` + `--color-text` へ、強制ボタンを `--color-danger-bg` へ変更し、履歴の星アイコンの既定スタイル（背景・枠線・padding）を打ち消し（PBI 2026-09-22-04 レビュー修正）
 - **記録条件パネルで保存済み表示が入力後も残っていた**: 任何の入力で成功・エラーメッセージの両方を消去（stale-message 報告 2026-09-22）
 
-### Changed
+### 変更
 
 - **docs**: `CLEANSING_ORDER.md` に過剰削減ガードの3層ポリシー（優先順・発火条件・設定場所・単位境界）を日英で追記、`AI_SUMMARY_GUIDE.md` に「送信前に何が起きるか」と再生成フローへの誘導を日英で追記（PBI 2026-09-22-04/05）
 - **pbi**: VulnHunt 監査（confirmed 7件）の修正方針を6 PBI に PBI 化し台帳へ登録（2026-09-22-06〜11、最優先は obsidian host × 保存済みキーのペアリング禁止）（PBI 2026-09-22-00）
 
-### Tested
+### テスト
 
 - 単体: 再生成ハンドラ / ゲートウェイ / バリデータ / UPDATE ワイトリスト / cleanseMode ladder / rate-limit regenerate バケット / `aiSucceeded` ゲート / `slotFailures` / 過剰削減フィクスチャ（byte-identical pin 付き）を追加
 - E2E: `regenerate-summary.spec.ts`（記録→再生成のフルロー。エントリ URL は host_permissions が必要なため `https://api.openai.com/e2e/...` + host-resolver ルート）、`overcut-guard-recording.spec.ts`（`fallback_reason=candidate_too_small` の発火確認）
@@ -1220,7 +1186,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
 
-### Changed
+### 変更
 
 - **WASM crate manifest の採用を完了**: `test:wasm` の硬直 chain・CI の cache path/step 名/parity 2行・CSP prose・CONTEXT.md の crate リストが `wasm/crates.json` の外に残り、manifest 自身の「他ファイルは列挙しない」invariant が偽になっていた。`libCrates` + `paritySuites` を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で全消費者を駆動。旧列挙と byte 同一であることを実証（PBI 2026-09-21-26）
 - **privacy bypass 判定を pre-decision 化し pending 組み立てを抽出**: force/whitelist の bypass 規則が step の手書き early-return と `decidePrivacy` の到達不能な再エンコードに二重所有され、pending ペイロード組み立てが型・許可リスト・TTL の所有者と別の場所で `Date.now()` 直呼びされていた。fetch 前の pre-decision で bypass subset（force/whitelisted）のみ fetch をスキップ（I/O 最適化を保持）、組み立ては `buildPendingPage(input, now)` 純粋関数に抽出し clock を注入可能に（PBI 2026-09-21-28）
@@ -1232,7 +1198,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.14 に続く連続リリースです。アーキテクチャ深化の差分ラウンド（arch-delivery-loop 0921b の 5 PBI）です。全テスト（13,016 件）がグリーンです。
 
-### Changed
+### 変更
 
 - **WASM crate manifest の採用を完了**: `test:wasm` の硬直 chain・CI の cache path/step 名/parity 2行・CSP prose・CONTEXT.md の crate リストが `wasm/crates.json` の外に残り、manifest 自身の「他ファイルは列挙しない」invariant が偽になっていた。`libCrates` + `paritySuites` を manifest に追加し loader サブコマンド（test/test-dirs/cache-paths/parity-args）で全消費者を駆動。旧列挙と byte 同一であることを実証（PBI 2026-09-21-26）
 - **privacy bypass 判定を pre-decision 化し pending 組み立てを抽出**: force/whitelist の bypass 規則が step の手書き early-return と `decidePrivacy` の到達不能な再エンコードに二重所有され、pending ペイロード組み立てが型・許可リスト・TTL の所有者と別の場所で `Date.now()` 直呼びされていた。fetch 前の pre-decision で bypass subset（force/whitelisted）のみ fetch をスキップ（I/O 最適化を保持）、組み立ては `buildPendingPage(input, now)` 純粋関数に抽出し clock を注入可能に（PBI 2026-09-21-28）
@@ -1240,12 +1206,11 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **FTS/LIKE 検索の入力を判別共用体に**: `RunOpfsSearchArgs.searchInput` が path 依存の2意味を prose で持っていたため、生 term を FTS path に渡る誤用が静かに誤クエリになった。`{path:'fts',ftsQuery}|{path:'like',rawTerm}` に型で契約を強制（PBI 2026-09-21-29）
 - **Node 側 WASM ロード儀式の残り2箇所を共有 helper に移行**: PBI 2026-09-21-22 が所有権外として保留した pii/tag-cooccur の wasm-success mock を `createNodeWasmInit` に移行し、ローダの deletion test を完了（PBI 2026-09-21-27）
 
-
 ## [6.9.13] - 2026-09-21
 
 このリリースは v6.9.13 に続く連続リリースです。アーキテクチャ深化ラウンド（holistic-0921 / closer / arch-delivery-loop 0921 の計 28 PBI）です。全テスト（12,986 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **クレンジング per-site overrides の保存が二重書き込みで競合し、失敗が握り潰されていた**: ロック規律を迂回する raw `chrome.storage.local.set` と空 `catch {}` を削除し、`SettingsRepository` 経由の単一 writer に統一。書き込み失敗は UI にエラー表示（PBI 2026-09-21-02）
 - **Obsidian ポートの検証が dashboard と SW 側で挙動不一致**: dashboard の `parseInt` ベース検証を `validateObsidianPort` に委譲し、`80.5` 等が保存できて接続テストで拒否される save-then-fail を解消。空欄は既定ポート扱いで SW 側と一貫（PBI 2026-09-21-04）
@@ -1256,34 +1221,33 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **CONSENT_STATE_CHANGED / ACTIVITY_UPDATE が型検査されない手書き sendMessage だった**: 型付きセンダーに統一し、`ContentResponse` を messaging に移動して popup⇔messaging の型循環も解消（PBI 2026-09-21-11）
 - **エクスポート経路ごとに日付分解が異なり、深夜境界の行が別の日次ファイルに分類**: 日付を `getLocalDateString` に統一。テストエクスポートのファイル名のみ UTC→local に意図的変更（PBI 2026-09-21-12）
 
-### Changed
+### 変更
 
 - **アーキテクチャ深化ラウンド（holistic-0921 / closer / archloop-0921、計 21 refactor）**: URL 判定・正規化とプロバイダ構築儀式の SSOT 委譲化（03/10）、utils 層の utils→background 逆依存と pageContentPipeline の utils⇔content 循環を解消（06/16）、記録可否判定を `recordingDecision.ts` 純粋関数 seam に集約し obsidian/L0 skip 判定も合流（08/21）、要約ソース優先順位を `selectPipelineText` に単一所有（17）、WASM crate 台帳を `wasm/crates.json` manifest SSOT に集約して build/glue/出荷/CI を駆動（18）、tag-cooccur の fallback+u32 上限を `wasmHybridRuntime` 契約へ統一（19）、dashboard 読み取りの cap policy を planner seam に単一所有し fts 既定 50 を `planSearch` に移植（20）、FTS/LIKE 検索の実行スケルトンを `runOpfsSearch` に統一（23）、JS `\s` 集合定義を js-strings crate に SSOT 化して 3 コアの一致を exhaustive テストで保証（24、バイナリ再コミット）、contentKernel に `extractAndCommit` 深い呼び出しを追加（25）、Node 側 WASM ロード儀式 10 箇所を共有 helper に集約（22）
 
-
 このリリースは v6.9.12 に続く連続リリースです。タグクラスタパネルの共起集計の Rust/WASM 移植（Rust 化第3弾）と promptSanitizer の堅牢化ラウンドです。全テスト（12,712 件）がグリーンです。
 
-### Added
+### 追加
 
 - **タグクラスタパネルの共起集計をRust/WASMコアへ移植**: ダッシュボードのタグクラスタパネルの共起集計（タグごとの`Set<string>`生成×1万回+O(T^2)ペア走査+文字列キー`Map`集計）を `wasm/tag-cooccur/` のRustコアとして再実装し、`tagCooccurrenceHybrid`（WASM成功時はWASMコア、32件未満の入力・split不一致・実行時エラーはTS実装にフォールバック）経由に切り替え。文字列は1回だけ投入しJS側にはインデックス配列のみを返す契約で、JSヒープ上のタグごとSet・エッジMap構築を排除。TS参照実装とのパリティテスト37件（`|`を含むタグ名のエッジ衝突マージ・エッジ配列の範囲チェック・u32境界などの境界ケース込み）、ハイブリッドテスト20件、Rust単体テスト16件で等価性を検証。1万件×20タグの入力で 256ms → 46.3ms（**5.53x**）、100件でも1.55x。1呼び出しのJSヒープフットプリントも 7.17MB → 4.58MB に削減
 
-### Changed
+### 変更
 
 - **SQLite クライアントのパススルークラスを解消**: `SqliteClient` が `OffscreenGateway` の overload 全面を1行委譲で再掲するだけの浅いラッパーだったため、alias に畳んだ。op 追加時の overload 二重所有が解消（PBI 2026-09-20-15）。挙動変更なし
 - **CI の wasm 等価性ゲートを tag-cooccur に拡張**: 新鮮リビルド対コミット済みバイナリのパリティ検証、`src/` と `public/` のバイナリ一致比較、glue / d.ts の陳腐化検知（`git diff --exit-code`）、Cargo キャッシュキーへの tag-cooccur Cargo.lock 追加。Rust ソース変更にコンパイル済み出力の再コミットが伴わないままリリースされる経路を遮断
 
-### Fixed
+### 修正
 
 - **内蔵AIの local_only / auto モードでカスタムプロンプトと利用統計が無視されていた**: ローカル経路の `LocalAIService` が `AISummaryOptions`（カスタムプロンプト・タグ要約モード・traceId）を丸ごと無視し、利用統計も記録していなかった。要約生成を `BuiltInAiProvider` strategy 経由に委譲してリモートスロット経路と同一の契約に統一（PBI 2026-09-20-12）。あわせて provider 側の二重 sanitize を削除し、オフデバイスのプロンプトインジェクション検査はクライアントの `builtin-input` プロファイルに1本化
 - **プロンプトインジェクション検出が、置換後の文字列変異により後続の注入フレーズを取りこぼすことがあった**: `sanitizePromptContent` の高リスクパターンループ（21パターン）が `replaceAll` で文字列を再代入しながら旧 `lastIndex` で次のマッチを走める実装のため、`[FILTERED]`（10文字）より長いマッチの直後に続く注入フレーズが検出・除去されないことがあった。スキャンと置換を分離（マッチ範囲の収集→1パス適用）し、同一パターンの連続マッチを確実に除去
 - **promptSanitizer の正規表現再構築で multiline フラグが脱落していた**: `new RegExp(pattern.source, 'gi')` の再構築でパターン定義の `m`（multiline）フラグが落ち、複数行テキストでの行頭アンカー（`^`）が2行目以降まったく効かず検出漏れ。`pattern.flags` を保持するよう修正。既存テスト「同一インジェクションの全件フィルタリング」は `replaceAll` の副作用（同一文字列の一括置換）で偶然パスしていたことが判明
 - **promptSanitizer にマッチ件数の fail-open 上限を導入**: 1,000件を超えるマッチで検出を打ち切り、超過分は保持（内容は落とさない）。マッチ数に比例した全文字列コピーによる最悪ケースのレイテンシ不安定を解消
 
-### Refactored
+### リファクタリング
 
 - **promptSanitizer の制御文字除去を1文字ずつのループから regex 1パスに置換**: 出力・警告は旧実装と bit 等価（`DANGEROUS_CHARS` テーブル12種と同一集合）
 
-### Tested
+### テスト
 
 - **WASM メモリプローブを追加**: `bench/wasm-memory-probe.ts` ― 各クレートの TS vs WASM について、GC後フットプリント/GC前ピーク/RSS増分を3ラウンド中央値で計測。textrank と sentence-dedup は1呼び出しのJSヒープフットプリントが計測不能レベルに削減、tag-cooccur は 7.17MB → 4.58MB、pii-sanitizer は差なし（利得は速度のみ）
 - **WASM 移植候補6件の採用判定を記録**: prompt-scan は転送シェア1〜2%と計算律速だが絶対値がsub-ms+パリティリスク最大のため不採用（上限化はTSハードニングとして実施）、エクスポートJSON の serde 化はスパイク実測で serde 往復が V8 ネイティブ JSON の4〜5倍のため不採用、sentence-dedup の本番配線は唯一の呼び出し元がコンテンツスクリプト専用経路（page CSP で WASM 初期化を保証できない）ため保留。判断根拠は PBI 台帳（`pbi/00-INDEX.md`）に記録
@@ -1292,18 +1256,18 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.11 に続く連続リリースです。TextRank 文抽出の Rust/WASM 移植（PII サニタイザに続く Rust 化第2弾）と CI 強化のラウンドです。全テスト（12,616 件）がグリーンです。
 
-### Added
+### 追加
 
 - **TextRank 文抽出をRust/WASMコアへ移植**: L0 抽出圧縮（`src/utils/sentenceExtractor.ts` の TextRank + PageRank）を `wasm/textrank/` として再実装し、記録パイプラインの文抽出を WASM 経由に切り替え。JS 文字列の UTF-16 コードユニットセマンティクス（`.length`、`charAt` バイグラム、JS `\s` の trim/split 集合、ループ変数 `lastIndex = match.index + 1`）を厳密に再現。TS 参照実装との選択結果パリティテスト（英語・日本語・絵文字混在・区切り記号の隣接／空白区切り隣接）、VULN-051 の 200 文キャップ境界でのクロス実装パリティ、Rust 単体テスト 22 件で等価性を検証。実測で TS 実装比 3.6〜13.3 倍高速（160 文コーパスで 47.4ms → 3.6ms）
 - **共有 WASM 初期化ユーティリティを追加**: `chrome.runtime.getURL()` + シングルトン + 失敗時リセットのロード規約を `src/wasm/initWasm.ts` に一元化し、PII サニタイザと TextRank の両ラッパーを同一実装に統合。単一ファイル IIFE ビルドでの data: URI インライン化（CSP で FetchError になる既知問題）の再発防止規約の所有者を 1 箇所に限定
 - **gitleaks による Secret scan を CI に追加**: `.gitleaks.toml` が存在しながら実行ワークフローが未配線だった既知の gap を解消。全履歴に対する scan を push/PR で常時実行する
 
-### Changed
+### 変更
 
 - **記録パイプラインの L0 文抽出を WASM 優先のハイブリッドに変更**: `extractSentencesStep` が `extractSentencesHybrid`（WASM 成功時は WASM コア、初期化失敗・実行時エラー・オプションが JS→u32 境界外の値は TS 実装にフォールバック）経由で実行される。WASM コアは選択文インデックス＋分割文数を返し、JS 側の文分割と一致することを検証してから文字列へマッピングする（不一致・範囲外インデックスはフォールバックで誤出力を防止）
 - **CI の wasm 等価性ゲートを textrank に拡張**: 新鮮リビルド対コミット済みバイナリのパリティ検証、`src/` と `public/` のバイナリ一致比較、glue / d.ts の陳腐化検知（`git diff --exit-code`）、Cargo キャッシュキーへの textrank Cargo.lock 追加。Rust ソース変更にコンパイル済み出力の再コミットが伴わないままリリースされる経路を両クレートで遮断
 
-### Docs
+### ドキュメント
 
 - **旧データベース互換コードの提供終了予告を公開**（予告 issue #154）: 移行コードの保持期間が 2026-12-17 に満了するにあたり、対象者の判定方法・締め切り後の挙動・報告受付口を利用者向けに整理。未移行ユーザーの報告は #154 で受け付け、削除の実施・延期判断に使用する
 
@@ -1311,15 +1275,15 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.10 と同日にリリースする連続リリースです。Firefox ビルドのサイズ削減（zip 10.4MB → 2.76MB、-74%）とCI強化のラウンドです。全テスト（12,600 件）がグリーンです。
 
-### Changed
+### 変更
 
 - **Firefox 版拡張機能の zip を 10.4MB から 2.76MB に削減**: lib モード単一ファイルビルドで emscripten グルー内の `new URL()` フォールバック各所に wasm バイナリが data: URI として個別インライン化されており（同一バイナリが最大7回複製、計約20MBのbase64）、opfs-worker.js と background.js が肥大化していた。ランタイムは常に locateFile（chromium: バンドルアセット、firefox: INIT オーバーライドの公開アセット）を使い、拡張機能 CSP のもとで data: fetch が常に失敗するため到達不能なデッドコードであり、Firefox ビルドのレンダリング時に剥がすことで挙動は不変。`opfs-worker.js` は 13.98MB → 0.50MB、`background.js` は 7.62MB → 0.70MB。chrome の zip はバイト単位で不変
 
-### Added
+### 追加
 
 - **release.yml に Firefox 版のバンドルサイズゲートを追加**: chromium にのみ存在した 15MB 上限チェックを firefox-mv3 にも適用し、ビルド肥大化の再発を CI で検知する
 
-### Docs
+### ドキュメント
 
 - Firefox サポートの現況とzip削減チャレンジの技術記事を追加（`docs/blog-6_9/`）
 
@@ -1327,15 +1291,15 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースは v6.9.9 と同日にリリースする連続リリースです。CIゲートの緑化とPIIスキャナの等価性ギャップ解消に加え、docs/ 30ファイルの実装乖離監査（約130件の指摘を解消）と、監査で判明した実装側課題の修正を行ったラウンドです。全テスト（12,600 件）がグリーンです。
 
-### Added
+### 追加
 
 - **内蔵AIでもカスタムプロンプトを適用できるように**: `BuiltInAiProvider` が `applyCustomPrompt` を呼ばずカスタムプロンプト（all スコープ含む）を黙って無視していた問題を修正。`BuiltInAIClient.summarize()` にプロンプト上書きオプションを追加し、HTTP系プロバイダーと同じ契約でカスタムプロンプトを適用する。カタログの `supportsCustomPrompt` を true にし、プロンプトUIの対象にも加えた
 
-### Changed
+### 変更
 
 - **docs/ 30ファイルを実装の実態に合わせて全面改訂**: 並列監査で洗い出した乖離（存在しないUIの操作手順、誤った動作仕様、上限値・既定値の不一致、PIIサニタイザWASM化への未追従、APIキーがデフォルト平文保存である旨の記述不足など約130件）を修正。日英両セクションを同時更新し、実装修正（即時モード・ホワイトリスト・内蔵AIカスタムプロンプト等）にも追従
 
-### Fixed
+### 修正
 
 - **ドメインフィルタ保存フローのE2EがCI環境で恒常的に失敗していた**: ダッシュボードのドメインフィルタ保存がdelta書き込みでsettingsバージョン管理ブロブを初生成した瞬間、設定読み取りがフラットキーフォールバックからblob経路へ切り替わり、blobに存在しない`ai_provider`がデフォルト（OpenAI互換）から補完されてUIの選択状態が巻き戻り、全プロバイダ設定ブロックが非表示になっていた。テストフィクスチャが実マイグレーション後状態と矛盾するシード（空の優先リスト明示＋`settings_migrated`）をしていたため顕在化。フィクスチャを実状態に一致させ、`loadGeneralSettings`の可視性導出にセレクトと同一のフォールバック規則を適用、さらにレイアウト再構築時の重複ID生成も解消。PR #150から継続していた`test`/`usability`ジョブの赤を解消
 - **PIIスキャナの区切り判定がJS `\s` の非ASCIIメンバーに未対応だった**: 全角スペース（U+3000）やNBSP（U+00A0）で整形された電話番号・マイナンバー・クレジットカード番号がTS正規表現では検出されるのにWASMスキャナでは素通ししていた（区切り消費が1バイト前提）。区切り判定をUTF-8幅認識（`js_ws_len`/`sep_len`/`sep_dot_len`）に変更し、22箇所の呼び出しを移行。ロングラン中性化のrun境界もJS `\s` に揃え
@@ -1345,11 +1309,11 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **記録パイプラインのプライバシーヘッダーホワイトリスト照合が完全一致のみだった**: popup から追加した `*.example.com` 形式のワイルドカード項目が黙って無効だった。ダッシュボードのドメインフィルターと同一の `isDomainInList` + `DOMAIN_SUBDOMAIN_MATCHING` 評価に統一し、ワイルドカードとサブドメイン一致設定の両方が記録判定でも効くようにした
 - **ローカルMarkdownの即時モードが実質動作していなかった**: 即時モード用アラーム `yasumaro-local-md-immediate` は alarmRegistry にハンドラ登録だけが存在し、生成するコードが無かった。記録ごとに約1分後発火のワンショットアラームを生成する（同名アラームは Chrome が差し替えるため、連続記録時はダウンロードが最短1分間隔に間引かれる）。あわせて `scheduleDailyFlush` が生成する日次アラーム名がハンドラの無い死んだ名前（`yasumaro-local-md-daily`）だったのを registry 管理下の `yasumaro-local-md-daily-flush` に統一
 
-### Refactored
+### リファクタリング
 
 - **クレンジング初期キーワードを単一ソース化**: 新規インストール時の17語初期値が `defaults.ts` と `contentExtractor` に複製されていたため、`contentCleaner.INITIAL_KEYWORDS` に一元化した。設定リセットで復元される全量リスト（`DEFAULT_KEYWORDS`・55語）との関係も明示。挙動の変更はない
 
-### Tested
+### テスト
 
 - マルチバイト空白セパレータの回帰テストを追加: 全角スペース・NBSP・混合幅でのphoneJp/myNumber/creditCard/phoneUs/phoneKr/phoneCnをRust単体5件＋JSパリティ7件で固定
 - 実装修正の回帰テストを追加: CSP許可集合（manifest整合・オプトイン経路）、ホワイトリストのワイルドカード／サブドメイン一致、内蔵AIのカスタムプロンプト適用とレガシー経路の引数契約、即時モードのワンショットアラーム生成
@@ -1358,13 +1322,13 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 セキュリティ堅牢化と内部改善のラウンドです（PBI 2026-09-19-01〜23）。クレンジング・Obsidian接続・メッセージプロトコルの防御を強化し、レビューゲートを2件追加しました。あわせて、PIIサニタイザの正規表現エンジン全21パターンをRust/WASMコアへ移植し、実ビルドでの動作を実証しました。全テスト（12,609 件）がグリーンです。
 
-### Added
+### 追加
 
 - **PIIサニタイザ全21パターンをRust/WASMコアへ移植**: `src/utils/piiSanitizer.ts` の正規表現スキャンを `wasm/pii-sanitizer/` の単一パスバイトスキャナとして再実装し、記録パイプラインのPIIマスキングをWASM経由に切り替え。JS正規表現の選択肢コミット順（Luhn判定後のフォールスルー挙動を含む）をバイト単位で再現し、218件の実キャプチャ入力パリティテスト・52件の境界コーパス・Rust単体テスト41件で等価性を検証。移植過程でPhase 1実装の境界バグ2件（bankAccount / myNumber の末尾単語境界欠落）を発見・修正。WASM単独でTS正規表現比2.2〜3.0倍高速（60KB入力で3.2ms→1.0ms、c8マイクロベンチ計測）
 - **PIIサニタイザWASM初期化の実機検証テストを追加**: 実ビルド拡張のService Worker内でWASMが初期化されTS正規表現へ常時フォールバックしていないことを検証するChromium E2E（`pii-wasm-initialization.spec.ts`）、およびPlaywrightが拡張機能インストールをサポートしないFirefox向けに、同一のコミット済みWASMバイナリをFirefoxエンジン（SpiderMonkey）のモジュールワーカーで駆動するプローブ（`firefox-pii-wasm-probe.spec.ts`、`firefox-storage` CIジョブで実行）を追加
 - **接続テストが保存前の設定値を評価するように**: Test Connection がフォームのprotocol/port/hostを転送し、保存される構成と同じルール（平文HTTP制限を含む）で検証する。全フィールドが空の場合は従来どおり保存済み設定でテストする（PBI 22）
 
-### Fixed
+### 修正
 
 - **PIIサニタイザWASMが実ビルドで常時フォールバックしていた**: background entrypointの単一ファイルIIFEビルド（codeSplitting: false）でWASMバイナリがbase64データURIとしてインライン化され、拡張機能CSP（`connect-src 'self'`）がdata:フェッチをブロックするため、WASM初期化がChromium/Firefoxとも必ずNetworkErrorで失敗し、WASMコアが一度も実行されていなかった。バイナリを安定パスの公開アセット（`public/wasm/`）へ配置し `chrome.runtime.getURL()` 経由でフェッチする方式に変更。ユニットテスト・型チェック・Nodeパリティテストが全パスしても実ビルド成果物の直接検査がないと検出できない問題だったため、実機E2Eを回帰ゲートとして追加
 - **PIIサニタイザWASMスキャナの等価性バグ3件をマージ前に修正**: コードレビューで、(1) 改行区切りのPII（電話・マイナンバー・クレカ等）がJS正規表現では検出されるのにWASMでは素通しになる（`[-\s]`の`\s`をスペースとタブのみに縮小していた）、(2) マッチが1000件を超える入力でTS参照はパイプラインを中断するのに対しWASMは部分マスクのまま成功する、(3) 16進文字開始のフルフォームIPv6（`fe80:...`）が未マスク、が判明。いずれも218件のキャプチャ入力では踏まれていなかった境界条件で、区切りクラスの拡張・マッチ件数上限のエラー伝搬（フォールバック経由でフェイルクローズを回復）・ipv6ディスパッチゲートの修正と回帰テスト追加で対応。あわせて`sanitizeRegex`との契約差を解消: 出力サイズ上限（128KB truncate＋エラー）の再現、`includeIndices`未指定時に`index`を返さない統一、配布される`public/wasm/`バイナリをCIの再ビルドdiffゲートとFirefoxプローブの検証対象に追加
@@ -1374,7 +1338,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **host設定にURL userinfo（`127.0.0.1@evil.com` 形式）を入力するとAPIキーが別サーバへ送られ得た**: ホスト検証が `@` と `%` を含む入力を拒否するようにした。保存・接続テスト・同期の全経路で同一の検証が効く
 - **プライバシーヘッダ判定のセッションキャッシュ書き込み失敗が黙って握りつぶされていた**: 失敗を診断ログに記録し、インメモリキャッシュを正として処理を継続する（PBI 02）
 
-### Refactored
+### リファクタリング
 
 - **PIIサニタイザのTS regex常時二重パスを削除**: WASM全パターン網羅後もWASM成功時にTS regexをマスク後テキストへ再実行しており、c8マイクロベンチで二重パスがサニタイズ全体の約2/3のレイテンシを消費し（WASM化の速度向上が完全相殺）、ハイブリッドがTS-onlyと同等か遅いことが判明。WASM単一パスに簡素化し、TS regexはWASM初期化失敗時・実行時エラー時のフォールバックとして維持。等価性の保証はCI毎のパリティゲート（218件キャプチャ+52件境界コーパス+Rust単体テスト41件+バイナリ再ビルドdiff）に集約
 - **protocolVersion を持たない旧送信者メッセージの扱いを明示化**: deprecated フラグ付きで受け入れつつ、受信数をカウンタと診断ログで可視化し、移行完了の判断材料にできるようにした（PBI 05・18）
@@ -1386,7 +1350,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 - **Offscreen transport の選択結果を起動ログに記録**: Chrome/InPage のどちらで動作しているか診断できるようにした（PBI 13）
 - **APIキーの解決出所を診断ログに記録**: どのストレージキー（またはフォールバック）から解決されたかを追跡できる。キー本体は出力しない（PBI 07・17）
 
-### Tested
+### テスト
 
 - **E2Eオーケストレーションテストをプロトコルエンベロープに追従させCI実行漏れを解消**: `service-worker-orchestration.spec.ts` がprotocolVersion無し（レガシーセンダー扱い）で送信しており、deprecatedフラグ追加後にPING/CHECK_DOMAINが失敗していた。メッセージに現行プロトコルバージョンを付与し、レガシーセンダー路径の回帰テストを追加。あわせて`@interaction`のみのタグだった4ファイルに`@extension`を追加（CIのe2e実行はプロジェクトgrepとANDで効くため、これらのテストはCIで一度も実行されていなかった）
 - **PIIサニタイザのマイクロベンチ（c8）を追加**: TS regex / WASM / 旧二重パスハイブリッドの3バリアントを実ページ密度のフィクスチャ（8/32/60KB）で計測し、バックストップ削除の判断根拠と回帰比較基準を提供
@@ -1397,7 +1361,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 履歴パネルの診断行が欠測時も常に表示されるようになりました（PBI 2026-09-18-20・21）。AIなし記録や旧バージョン記録ではトークン行・PIIマスキング行・AI要約クレンジング行・削減率バーがまとめて消え、正常なエントリとの差が不具合に見えていました。全テスト（12,263 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **履歴の診断行が欠測時にまとめて消えていた**: 欠測時も行領域を維持し、「計測なし（AIなし記録）」「計測なし」「計測対象なし」の3分類で理由を示すようにした。欠測理由の判定は `historyEntryPresentation.ts` に集約し、文言は既存ロケールキーを再利用しているため新規翻訳は不要。正常エントリの数値表示は変わらない。設計判断は ADR `2026-09-18-history-diagnostic-rows-always-visible.md` に記録
 
@@ -1405,7 +1369,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 このリリースはアーキテクチャの深化（Architecture Deepening）リリースです。新機能はなく、既存挙動を byte-identical のまま保つリファクタリングです。
 
-### Refactor
+### リファクタリング
 
 - **logger barrel の完全撤退**: `logger.ts` barrel を削除し、呼び出し側約133箇所を `logger/types.js`（ErrorCode・LogType）/ `logger/core.js`（addLog 系）/ `logger/api.js`（log* 系）の直接 import に移行（Wave 4 の明示的残作業を完遂）。storage 系3箇所の dynamic import も循環なしを確認の上静的化
 - **許可URLの死んだ分身を削除**: `FILTER_LIST_SOURCES` SSOT（2026-09-11-05）に乖離していた `utils/allowedUrls.ts` と `storageUrls` barrel の未使用再exportを削除。許可URLの知識は `urlWhitelist` + `listSources` の1箇所に集約
@@ -1415,7 +1379,7 @@ v6.9.24 に続く同日リリースです。6.9.24 で実施した滞在時間�
 
 archloop-0915b の残り将来候補を PBI 化・実装（PBI 2026-09-18-03・04）。全テスト（12,255 件）がグリーンです。
 
-### Refactored
+### リファクタリング
 
 - **週次/月次レビューサマリー生成のロジック重複を解消**（PBI 2026-09-18-03）: `reviewSummaryGenerator.ts` の週次・月次生成が同一構造のロジックを2箇所に持ち、修正のたびに2箇所を同期させる必要があった。期間情報（開始・終了・ラベル・保存キー）を組み立てる `buildWeekPeriod`/`buildMonthPeriod` と、共通の `generatePeriodSummary(period, mutex)` に一本化した。生成される Markdown・ストレージキーは従来と同一（byte-identical）で、既存テストは無修正で通る
 - **SessionStore の依存先にインターフェースを導入**（PBI 2026-09-18-04）: `TabCache`・`RateLimiter` が `SessionStore` 具象クラスに直接依存していた。`get`/`set`/`remove` の契約（get 失敗時は例外を投げず null を返す）を明示する `SessionStorePort` を新設し、両クラスと `compositionManifest.ts` の DI 登録をこのインターフェース経由に変更した。既存の durability 挙動（debounce・flushImmediately）に変更はない
@@ -1424,7 +1388,7 @@ archloop-0915b の残り将来候補を PBI 化・実装（PBI 2026-09-18-03・0
 
 履歴の診断行が欠測時に理由を表示するようになりました（PBI 2026-09-18-01）。コンテンツ抽出・Content Cleansing の数値が出ない場合に行自体を消さず、「計測なし（AIなし記録）」「計測なし」「計測対象なし」の3分類で理由を示します。AI なし記録と旧バージョン記録と空ページの区別がつき、正常エントリの表示は変わりません。全テスト（12,251 件）がグリーンです。
 
-### Refactored
+### リファクタリング
 
 - **履歴の理由行生成を seam に集約**（PBI 2026-09-18-02）: 理由行の組み立て 4 複製を `pushReasonRow` に、Cleansing のバイト解決を `resolveCleansingBytes` に集約し、View と判定側の二重所有を解消した。表示は不変で既存テストは無修正で通る
 
@@ -1432,7 +1396,7 @@ archloop-0915b の残り将来候補を PBI 化・実装（PBI 2026-09-18-03・0
 
 Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全テスト（12,222 件）がグリーンです。
 
-### Refactored
+### リファクタリング
 
 - **base64 変換を1箇所に集約**（PBI 2026-09-15-16）: `atob` / `btoa` の直書きが 28 箇所に散在し、codec の seam を迂回していた。実質 2 箇所（seam 本体と、後述の互換性のため意図的に残した 1 箇所）まで削減し、変換の仕様変更が1箇所で全呼び出しに効くようにした。あわせて seam を3点強化している ― Bloom フィルタが独自に持っていたチャンク方式を取り込んで大きな入力での変換を高速化（2MB で 106ms → 39ms）、非推奨の `unescape` に依存していた UTF-8 テキスト用の変換を関数化、URL に埋め込む base64 の文字置換3連を関数化。ユーザーに見える動作の変更はない
 - **ログ用の URL ハッシュ化を暗号モジュールから分離**（PBI 2026-09-16-05）: `hashUrl` は SHA-256 を使うものの、用途はログに URL の生値を残さないためのマスキングに限られ、戻り値もログ向けの整形済み文字列だった。暗号モジュールから `utils/urlHash.ts` へ移し、暗号モジュールの責務を暗号操作だけに絞った。ログに出力されるハッシュ値は変わらない（過去のログとの突合が崩れないよう、固定値のテストで固定している）
@@ -1446,7 +1410,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 このリリースは、拡張機能の起動直後やデータベース操作のタイミングによって処理が拒否される不具合に対する hotfix です。全テスト（12,079 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **拡張機能の起動直後に実行した操作が「Database connection lost」で失敗することがあった**: SQLite 操作を受け持つ offscreen document は、リスナーの登録を OPFS ワーカーファクトリの読み込み完了後に行っていた。一方 `chrome.offscreen.createDocument()` が解決するのはドキュメントの生成までで、中のスクリプトが実行を終えたことは保証しない。このため送信側が「準備完了」と見なして送ったメッセージが、受信リスナーの未登録な一瞬に落ち、拒否されていた（実測でドキュメント生成の 2ms 後に失敗し、同じドキュメントが 50ms 後には正常に受信することを確認）。リスナーをモジュール評価時に同期登録し、ファクトリの待機をハンドラ内へ移すことで、早く届いたメッセージは拒否されず待たされるようにした
 - **confirm token が Service Worker の終了で失われ、操作が拒否されることがあった**: トークンは `chrome.storage.session` に保存されるが、このストレージは MV3 の Service Worker 終了時に揮発する。発行から検証までの間に Service Worker が終了すると、有効期限内かつ未使用の正当なトークンでも拒否されていた。送信側がトークン不一致を受け取った場合に限り、1回だけ再発行して再送するようにした（不一致は操作の実行前に返る応答のため、再送しても二重に適用されることはない）
@@ -1456,12 +1420,12 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 このリリースは、Firefox で履歴が表示できなくなっていた不具合と、Built-in AI の利用不可メッセージに対する hotfix です。
 
-### Fixed
+### 修正
 
 - **Firefox で履歴・検索などすべての SQLite 操作が「外部拡張機能からは利用できません」として拒否されていた**: 送信者検証を `authorizeSqliteSender` に一本化した際（6.9.1）、in-page transport が送信者として渡す値を、実際の送信者から「認可済み」を表すブランド型（`auth.proof`）に置き換えてしまっていた。このブランド型は `id` を持たないため、受け手の offscreen 側が再検証した時点で `sender.id !== chrome.runtime.id` となり、外部拡張機能として拒否されていた。`chrome.offscreen` API を持たない Firefox は必ずこの経路を通るため、ダッシュボードの履歴が1件も読めない状態だった。実際の送信者（拡張機能の runtime id と URL）を渡す 6.9.1 以前の方式に戻した。検証ゲート自体は従来どおり全 `SQLITE_*` メッセージに対して機能する。回帰が素通りした原因は in-page transport の受理経路を通すテストが存在しなかったことにあるため、送信者がゲートに受理されることを end-to-end で固定するテストを追加している
 - **Built-in AI が使えない理由として、有効化済みのフラグを誤って案内していた**: 端末内 AI モデルの初期化に必要な空き容量が不足している場合も、ブラウザの `availability()` は理由を伴わない `unavailable` を返す。従来はこれを一律「フラグを有効にしてください」と案内していたため、フラグを既に有効にしているユーザーが、有効なフラグを何度も確認し続けることになっていた。空き容量を推定し、不足している場合は必要な容量と現在の空き容量を示すように変更（判定できない場合は従来のフラグ案内にフォールバック）。要約時のエラーメッセージとダッシュボードの診断パネルの両方に同じ誤案内があったため、あわせて修正している
 
-### Tested
+### テスト
 
 - **Chromium 用オフスクリーン transport のテストを追加**: `ChromeOffscreenTransport` にテストが1件も無かったため、ドキュメント生成の単一化、生成失敗時に送信しないこと、送信失敗後に1回リトライして復帰することを固定した
 
@@ -1469,7 +1433,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ診断（arch-delivery-loop 0915、11候補）から上位4件を実装した内部改善リリースです。ユーザーに見える動作の変更はありません。全テスト（12,031 件）がグリーンです。
 
-### Refactored
+### リファクタリング
 
 - **送信者検証 seam の一本化**: 「content script を拒否する」ポリシーが senderTrust（ローカル再定義）と offscreen（インライン checks）の2箇所に重複し、Firefox 移植で導入された in-page transport が sender を捏造して検証を通過させている状態だった。`authorizeSqliteSender`（SSOT）+ `AuthorizedSqliteSender` 証明の渡し方に統一し、検証が型で迂回不可能に
 - **queryPlanner ⇔ queryPlan の循環 import を解消**: 双方向だった依存を planner→plan の一方向に。`AlreadyCappedQuery` ブランド型により、cap 未適用のクエリが SQL 組立に到達できないことを型で保証（worker 境界の1箇所だけ文書化キャスト）
@@ -1484,18 +1448,18 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 **Firefox 対応**を主軸としたリリースです。`chrome.offscreen` への依存を抽象化し、Firefox で記録・保存・検索（FTS5）が動作するようにしました。実機検証の過程で発見した不具合4件（ダッシュボード拒否・保存不能・プリセット競合・同意リセット）をすべて解消しています。全テスト（12,031 件）がグリーンです。
 
-### Added
+### 追加
 
 - **Firefox 対応（実験的サポート）**: `chrome.offscreen` に依存しないストレージコンテナを導入。Firefox では background イベントページがストレージエンジンをホストし、OPFS SyncAccessHandle + FTS5 全文検索が動作する（VFS プローブと実 dist worker smoke を CI の `firefox-storage` ジョブで常時回帰検知）。manifest に `browser_specific_settings.gecko.id` を追加し、`build:firefox` / `make build` で両ブラウザをビルド
 - **Firefox 版のドキュメント**: FAQ・README（ja/en）にインストール手順（一時読み込み + 永続インストール）と既知制限（Built-in AI 非対応）を追記、TESTING_GUIDE に手動 smoke 手順を追加
 
-### Fixed
+### 修正
 
 - **Firefox でダッシュボードの操作が拒否されていた**: 拡張ページの送信者識別が `sender.tab` と `chrome-extension://` スキーム前提だったため、Firefox（タブ内の拡張ページにも tab を付け、URL は `moz-extension://`）でダッシュボードが content script と誤判定され `DASHBOARD_SQLITE` が拒否されていた。拡張オリジンによる識別（`src/utils/extensionOrigin.ts`）に統一
 - **Firefox でレコードの保存ができていなかった**: Firefox 専用 worker エントリが wasm を data: URL としてインライン化し、拡張機能 CSP（`connect-src 'self'`）にブロックされてエンジン初期化が失敗していた。wasm を安定パスの公開アセットとして配置し INIT ペイロードで注入する方式に変更
 - **Firefox 再起動のたびにプライバシー同意がリセットされていた**: HMAC ラッピング鍵（KEK）が session-only（VULN-010/M3 対策）だったため、再起動ごとに consent 署名が無効化されていた。KEK を IndexedDB の**非抽出可能 CryptoKey** として永続化する方式に変更し、鍵素材をバイト列として storage に置かないポスチャを維持したまま同意が永続化されるように修正
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 15（PBI 01〜04）: OPFS / IndexedDB / fallback 3 バックエンドに独立して埋め込まれていた検索・一覧の分岐判断を `planQueryMode()` に一元化（直近2件の検索回帰と同型の回帰テスト付き）、consent 状態変化を module-scoped 単発コールバックからイベント購読方式に変更（初期化順序依存バグの再発源を解消）、診断パネルの移行ステータス判定を `deriveMigrationStatus` 純粋関数に分離、issue報告モーダルの状態を controller オブジェクトに集約
 - adversarial-code-review 検証済み指摘 4 件（PBI 05〜08）: `attachTrigger` に WeakSet ガードを追加し同一ボタンの二重配線を防止（名前と実装が乖離していた reentrancy テストも実態合わせ）、`CONSENT_STATE_CHANGED` が値を運ばない契約を doc comment と accept/decline 同一形状の pin テストで明示、移行ステータスの表示優先順位を `displayState` 判別ユニオンに統一（レンダーは Record マッピングのみに。既存の描画テストが無変更でパス = 視覚的差分ゼロを証明）、「移行済みだがレガシーDB残存」状態の可視化を追加
@@ -1508,17 +1472,17 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-14 round 15、`arch-delivery-loop`）と adversarial-code-review 検証済み指摘（PBI 05〜08）の実装リリースです。実バグ 2 件の解消（同意承諾直後にオンボーディングウィザードが表示されない退行、診断パネル直行時の「不具合を報告」ボタン無反応）と、移行ステータス表示の強化・内部構造改善を含みます。全テスト（12,024 件）がグリーンです。
 
-### Added
+### 追加
 
 - **診断パネルに「移行済みだがレガシーDBが残存」状態の表示を追加**: 移行完了フラグが立っていてもライブプローブが旧データベースを検出した場合に説明文を表示する `legacyStillPresent` フラグ（OPFS / IndexedDB 両方・`undefined` はプローブ未確認のため非判定）と i18n メッセージ（ja/en）を追加。移行ルーチン完走後のクリーンアップ失敗によるディスク二重消費に気づけるようにした（移行完了判定 `allDone` は不変）
 - **「記録開始」「検索」タスクをキーボードのみで完了できることを検証するE2Eを追加**: 検索は dashboard fixture に SQLite seed パターンで追加（`fill()` ではなく実キー入力の `keyboard.type` を使用）、記録開始は popup の cleansing-preview fixture を使う新規 spec として切り出し（headless スキップガード付き・headed 実行で実走確認済み）
 
-### Fixed
+### 修正
 
 - **プライバシー同意を承諾した直後にオンボーディングウィザードが表示されない退行を修正**: consent 変化のイベント購読方式へのリファクタ後、再判定が `CONSENT_STATE_CHANGED` の `chrome.runtime.onMessage` 購読に依存していたが、このメッセージは popup 自身が送信者であり、Chrome は送信者自身のコンテキストには配送しないため同一セッション内の再判定が発火しなかった。`privacyConsentController` が同一ドキュメントイベントを dispatch し popup が購読する併用方式で修復（単体テストはメッセージ配送をシミュレートするため検出不可で、onboarding E2E の失敗で判明）
 - **診断パネルが初期表示（`?tab=` 深いリンク）だと「不具合を報告」ボタンが無反応だった**: ボタン配線が非同期のページ初期化で生成される共有 controller に依存するようになった後、mount 時に controller が未生成でもオプショナルチェーンが黙ってスキップし、mount-once のため以後一切配線されなかった。controller 生成前のトリガをキューし生成直後にフラッシュする方式で解消
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 15（PBI 01〜04）: OPFS / IndexedDB / fallback 3 バックエンドに独立して埋め込まれていた検索・一覧の分岐判断を `planQueryMode()` に一元化（直近2件の検索回帰と同型の回帰テスト付き）、consent 状態変化を module-scoped 単発コールバックからイベント購読方式に変更（初期化順序依存バグの再発源を解消）、診断パネルの移行ステータス判定を `deriveMigrationStatus` 純粋関数に分離、issue報告モーダルの状態を controller オブジェクトに集約
 - adversarial-code-review 検証済み指摘 4 件（PBI 05〜08）: `attachTrigger` に WeakSet ガードを追加し同一ボタンの二重配線を防止（名前と実装が乖離していた reentrancy テストも実態合わせ）、`CONSENT_STATE_CHANGED` が値を運ばない契約を doc comment と accept/decline 同一形状の pin テストで明示、移行ステータスの表示優先順位を `displayState` 判別ユニオンに統一（レンダーは Record マッピングのみに。既存の描画テストが無変更でパス = 視覚的差分ゼロを証明）
@@ -1528,14 +1492,14 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 設定画面にGitHub issue報告導線を新設し、ユーザビリティE2Eテスト群（ナビゲーション・設定変更タスク・検索・タグクラウド・Markdownエクスポート・エラーメッセージ・アクセシビリティ・i18nレイアウト・ポップアップ記録/オンボーディング）を新規に整備したリリースです。テスト作成の過程で実バグ7件を発見・修正しました。
 
-### Added
+### 追加
 
 - **診断パネルに「不具合を報告」ボタンを新設**: `buildIssueReportBody()` が拡張バージョン・SQLite状態・AIプロバイダー種別・Obsidian接続protocol/port・直近のエラーコード種別と件数のみを含むサマリーを生成し、APIキー・baseUrl・Obsidianのdaily note path・ログ本文は除外する。ユーザーが確認プレビューで内容を見てから「GitHubを開く」を押すまで送信は発生しない
 - **`.github/ISSUE_TEMPLATE/bug_report.md` を新設**し、PRIVACY.md（public/docs両方）にissue報告機能によるユーザー操作時のみの情報送信を明記
 - **ユーザビリティE2Eテスト一式を新設**（`testDir/e2e/usability/`）: sidebar 18パネルの到達性、ドメインフィルタ追加タスクの完了、検索結果の件数・空状態、タグクラウドのノード数一致、Markdownエクスポートの実ダウンロード、AI/Obsidian/オフライン時のエラーメッセージ品質、axe-coreによるWCAG AAスキャン、ja/enレイアウト崩れ検知、ポップアップの記録フロー/オンボーディングフロー
 - **クリック数によるユーザビリティ回帰検知基盤**（`frictionMeter.ts` / `usability-budget.json`）をCIに追加し、UI変更によるタスク完了ステップ数の悪化を自動検知
 
-### Fixed
+### 修正
 
 - **ポップアップのrecordBtnが初回ロード時に無反応だった**: `RecordSession.resetRecordButton`（唯一のonclick書き込み者）が読み込みパスから一度も呼ばれておらず、記録完了/エラー後の再設定パスを通るまでボタンクリックが無反応だった
 - **プライバシー同意を承諾した直後にオンボーディングウィザードが表示されなかった**: `initPopup()`のオンボーディング判定が読み込み時の一度きりで、その場でconsentを承諾したユーザーはポップアップを再度開くまでウィザードを見られなかった。承諾直後に同一セッション内で判定をやり直すコールバックを配線
@@ -1549,12 +1513,12 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 このリリースは `v6.8.18` に対する hotfix です。ダッシュボードのテキスト検索が全クエリで同一の最新レコードを返す回帰（round 12/14 のリファクタで発生）を修正し、再発防止の多層防御テストを追加しました。
 
-### Fixed
+### 修正
 
 - **テキスト検索の検索語が正規化で欠落していた**: `normalizeStorageQuery` の allowlist に `text` フィールドが含まれておらず、ダッシュボードのテキスト検索フロー（searchLogs → buildSearchParams → gateway → SQLITE_QUERY → planQuery）で検索語が欠落し、全クエリが同一の最新レコードを返していた。`text` を保持するよう修正
 - **OPFS backend のテキスト検索が plain listing に誤配送されていた**: `OpfsWorkerBackend.query()` が `q.text` の有無に関わらず常に worker の plain-listing ハンドラ（'QUERY'）を送信していたため、検索語を無視した結果を返していた。`q.text` の有無で 'SEARCH'（FTS5/LIKE）に振り分けるよう修正
 
-### Added
+### 追加
 
 - **テキスト検索回帰の多層防御テストを追加**: 症状テスト（3 トピック distinct・field preservation contract 13 フィールド全生存）、ホップ契約テスト（buildSearchParams / gateway / planQuery の各 hop で text 保持を pin）、日本語 corpus テスト（CJK trigram/LIKE 境界）、実エンジン regression test（better-sqlite3 で LIKE SQL を実行）、Playwright UI 検索 e2e（検索ボックス入力 → カード表示）
 - **TEST_RULE に「検索パス変更時の smoke test 必須化」セクション追加**: 検索パスに触る変更の PR で 4 種 smoke test（symptom / real-engine / routing pin / UI E2E）の実行を必須化
@@ -1563,13 +1527,13 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 14、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（IDB 短文検索の SQL 実行エラー、StatusPanel の permission ボタン throw、toast タイマー競合）と、tag filter 導出の統一・cross-backend タグセマンティクス parity の確立を含みます。全テスト（11,956 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **IDB backend で 1-2 文字のテキスト検索が必ず SQL エラーで失敗していた**: round 12 の filter SSOT 統合で FTS/LIKE 両パスに同一の `b.` 限定付き ExtraWhere を渡すようになり、LIKE path（別名なしの `FROM browsing_logs`）で `no such column: b.is_deleted` が発生していた。FTS/LIKE で別々の射影を構築するよう修正（real-engine regression test 付き）
 - **trust deny 時に非解析 URL で unhandled throw が発生し toast が表示されなかった**: `new URL(url).hostname` が非解析 URL で throw していた。既存の `extractDomain` ヘルパーに置換
 - **連続で permission を deny した際に toast タイマーが競合していた**: 2 つの setTimeout チェーンが並行して走り、1 つ目のクリックのタイマーが 2 つ目のトーストを隠していた。per-element timer token で解消
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 14（PBI 38〜41）: tag filter 導出 5 箇所を `selectTagFilter` path-aware seam に統一（hardcode true の direct-call 脆弱性解消）、fallback の tag/order セマンティクスを SQL parity に統一（`rowMatchesTagLike` 新設・wildcard/case ポリシー文書化・corpus test で prose「mirrors」を executable 契約に変換）、StatusPanel の string building を `statusRenderers.ts`（Layer-0 純粋 renderer）に抽出、vestigial `extraWhereSqlFts` フィールド削除
 
@@ -1577,12 +1541,12 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 13、`arch-delivery-loop`）のリリースです。実バグ 2 件の解消（監査フラグの per-message session 読み + echo 書き戻し、private page の raw slug 表示）と、SQL 検索のネスト bind・破壊的 purge 契約・PreviewView interface の確定 3 件を含みます。全テスト（11,934 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **全メッセージで cache flag の session 読み + echo 書き戻しが走っていた**: round 12 の restore-once が `AutoSavedBadgeTabs` にのみ適用され、`CacheInitializedFlag` は対象外だった（messageHandler が毎回 `chrome.storage.session.get` を実行し、Proxy が load 直後の同一値を書き戻す echo も発生）。`CacheInitializedFlag` を restore-once 化し Proxy を明示的 `set()` に置換。あわせて `CACHE_INITIALIZED_KEY` を export（module-private のままだったためテストの直接代入がキー "undefined" に書き込む問題も解消）
 - **private page の通知・エラー文が raw slug で表示されていた**: round 12 の `reasonLabel.ts` 新設後も 2 call site が legacy key のみを解決しており、locale が canonical `privacyStatus_*` のみを出荷している cache-control / set-cookie が localized label にならなかった。2 call site を `resolveReasonLabel(reason, getMessage)` adapter に統一
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 13（PBI 33〜37）: SQL 検索の `FilterCondition` を params vector 専用に変更（text+ids のネスト bind 解消）+ `buildWhereClause` を共有語彙の射影 adapter に統合（filter 語彙の 2 モジュール分裂解消）、`purgeOldRecords` を 3 backend で skip ガード統一（round 12 の `0` 契約が old-records 経路でデフォルト発火に化けていた追半分を解消）、PreviewView interface から dead 4 メンバー削除（presenter が modal ライフサイクル + width を単一所有）
 
@@ -1590,7 +1554,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 12、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（メッセージ毎 restore ファンアウト、破壊的 purge の 0 契約不一致、検索パスの excludeDeleted 無視 + fallback export 切り詰め）と、同時実行・ラベル・narrowing の政策単一化 5 件を含みます。全テスト（11,936 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **全メッセージで badge tabs の restore ファンアウトが走っていた**: round 11 の prune 追加後、restore が保存済み tabId 毎に `chrome.tabs.get` を fan-out し、メッセージハンドラの先頭で毎回実行されていた。restore-once seam（`restoredOnce` / `resetRestoreOnce`）を新設し、fan-out を SW 起動後 1 回 + タブ削除後に限定
 - **`purgeOldRecords(0,0)` は全件削除、`purgeContent(0,0)` は無視と 2 つの破壊的操作が逆動作していた**: `planPurge` が `0` を有効値として通していたため。`0` を「次元スキップ」に正規化し backend の `>0` ガードと契約を一致
@@ -1598,7 +1562,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **fallback backend の export が 10k 件で切り詰められていた**: `serialize` が capped `query()` 経由で取得していたため。`exportAllRecords()`（full-table scan）を新設し SQL backend と同一の全件 export に統一
 - **ステータスの開閉ボタンが再初期化のたびに二重配線されていた**: `wireOnce` の適用漏れ。bulk タブ削除で session 書込が N 回発生する問題も batch 化
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 12（PBI 25〜32）: `AutoSavedBadgeTabs` の prune + removeAndFlush（stale recorded badge 解消）、`planPurge` 契約の確定、filter 条件語彙の `buildFilterConditions` 統一（FTS 限定子を param 化・旧 regex replace 削除）、`ReasonLabel` テーブル統合（multi-hyphen latent bug 解消）、`SingleFlight<K>`（join/drop 政策の引数化）、`supportsArchive` narrowing 統一（doc/code 不一致解消）
 
@@ -1606,13 +1570,13 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 11、`arch-delivery-loop`）のリリースです。実バグ 3 件の解消（監査ログ TSV の部分的配布、transient 送信失敗による訪問ロスト、診断表示の Infinity%/NaN%）と、paging・purge・export の政策単一化 5 件を含みます。全テスト（11,939 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **監査ログ TSV エクスポートが部分的なまま成功表示していた**: audit 読み取りの cap が dashboard 事前 clamp 10000 / IDB 100000 / worker 1000 の 3 値に分岐し、backend ごとに取得件数が変わって `total` との不一致が無警告で配布されていた。paging 政策を `planAuditLog` seam に集約（AUDIT_CAP_* を実配線・offset 正規化で garbage offset の応答劣化も解消）し、TSV パネルに `total > rows.length` ガードを追加
 - **transient 送信失敗で訪問が永久に失われていた**: `visitReporter` が送信前に `isValidVisitReported` を楽観コミットしており、SW 忙碌・送信拒否の際に gate が閉じたまま再送されなかった。commit 権を success / terminal 拒否のみに限定し、transport 失敗時は 1 回の bounded retry で復帰（in-flight guard で二重送信も防止）
 - **診断表示が Infinity%/NaN% になることがあった**: byte 差分表示の 5 方言のうち 1 分支だけゼロガードが無く `page_bytes=0` で `Infinity%` を描画、`||` チェーンが正当な 0 バイト値を fallback に落下させていた。`entryByteDelta` module に計算を集約（describeDelta + formatBytes 単位表）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 11（PBI 17〜24）: 破壊的 purge の `planPurge` fail-closed seam（NaN silent 0-purge 解消）、export の `Queryable.serialize()` 昇格 + `exportEnvelope` SSOT（backend で export 形状が分岐する問題を解消）、context menu の tabId keyed 化（URL-blind drop 解消）、`withTransaction` の中立 sqliteTransaction.ts 抽出（host→worker 越境解消）、RecordSession の `openAttempt` prelude 統合、`AutoSavedBadgeTabs` の prune + TabCache remove 即時 flush（stale recorded badge と suspend 窓ロスの解消）、`wireOnce` 共有 seam
 
@@ -1620,29 +1584,28 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 10、`arch-delivery-loop`）のリリースです。実バグ 2 件の解消（preview ナビゲーションの stale-closure、FallbackStorage の alias backend 分岐）と、判定・検証・cap 政策の単一化 6 件を含みます。全テスト（11,881 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **preview 表示 2 回目以降の prev/next が古い navigator で遷移していた**: `PreviewView.buildNavigation` が初回のみボタンを生成し、再 show 時は表示切替だけで再配線しなかった。束縛 handler を保持して show 毎に removeEventListener → addEventListener で再配線する idempotent 化で解消し、`refreshLabels()` 分離で locale 切替の stale も解消（re-show 回帰テスト付き）
 - **同じ wire payload が backend で異なるフィルタになっていた**: `FallbackStorage.query` が `isStarred/since/until/is_starred` を手動で再派生する一方、`normalizeStorageQuery` は `is_starred` 数値 alias を知らず、経路でフィルタが分岐していた。alias を `queryNormalize` 側に吸収し、fallback は正規化済みクエリを直接消費。`search()` shim は呼び出し元が test のみのため削除し `query({text})` に移行（seam test 付き）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 10（PBI 09〜16）: タブバッジ判定の `TabBadgeResolver` ordered table 統合（activate/navigate の 15 行二重実装を解消）、offline queue payload の `OfflineJobPayload` round-trip 統合（PBI 04 の pack/unpack 二重綴りを回収）、sender 政策の `tab-page-only` 3rd tier 昇格（router の inline strict ブロックを回収）、PreviewFlow の `buildRecordPayload` + `SpinnerScope` 統合（3 payload 手組みと spinner 所有分断を解消・期待失敗を return に正規化）、domain 入力検証の `DomainInputPolicy` 単一化（click+observer ブリッジを `saveDomainLists()` 直接呼び出しに）、read-limit 政策の planner 単一 owner 化（`QUERY_CAPS` を limits.ts に移動・`selectReadCap`/`applySearchPolicy` 新設）
-
 
 ## [6.8.13] - 2026-09-12
 
 このリリースは `v6.8.12` に対する hotfix です。ドメインフィルター設定画面で旧 UI が二重表示され空の紫ボタンが表示される問題を修正し、タグクラウドとドメインフィルターの回帰テストを追加しました。
 
-### Fixed
+### 修正
 
 - **ドメインフィルターの旧 UI 二重表示と空ボタンを修正**: `dashboard.css` の `button#saveDomainSettings { display: inline-block }` が `[hidden]` に勝って `hidden` 属性付きの旧保存ボタンが紫の空ボタンとして表示され、旧 `simpleFormatUI` / `domainListSection` が新タグ UI と二重に表示されていました。`[hidden] { display: none !important; }` を追加し、`domainFilter.ts` の `updateDomainListVisibility` / `toggleFormatUI` で新タグ UI (`#domainTagArea`) 存在時は旧 UI を表示しないガードを追加
 
-### Added
+### 追加
 
 - **タグクラウド表示の回帰テストを3層で追加**: `1500件中後半500件に hot タグ` のデータで `plain` 上限が `1000` に戻ると空になるバグを検出する。ユニット（`src/offscreen/__tests__/queryPlan.tagClusterRegression.test.ts`）、パネル結合（`src/dashboard/panels/asyncData/__tests__/tagClusterPanel.tagCloudRegression.test.ts`）、E2E（`testDir/e2e/tag-cluster.spec.ts`）
 
-### Changed
+### 変更
 
 - **ドメインフィルター回帰テストを追加**: `src/dashboard/__tests__/domainFilterUiIntegration.test.ts` で新旧 UI 共存時の `hidden` 扱いと保存ボタンの唯一性を検証、`testDir/e2e/domain-filter-ui.spec.ts` で実拡張機能の可視性を検証
 - **UI 機能追加時のテスト必須化をルール化**: `dev-docs/TEST_RULE.md` に「UI 機能追加・変更時のテスト必須化」節を追加。レンダリング・旧 UI との共存・インタラクション・E2E の観点と配置指針を明記
@@ -1651,7 +1614,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 このリリースは `v6.8.11` に対する hotfix です。Edge 環境で `SQLITE_STATUS` が永続失敗し `CRITICAL:STRG_RD_001` が表示される問題と、拡張機能読み込み時の `Variable $1$ used but not defined.` エラーを修正しました。タグクラスタのデータ取得件数が直近の硬化で切り詰められていた問題も解消しています。
 
-### Fixed
+### 修正
 
 - **Edge で `SQLITE_STATUS` が永続失敗（`reading 'local'`）**: `src/offscreen/sqliteStatus.ts` の `collectMigrationExtras` が `chrome.storage.local` をガードなしで呼び出しており、offscreen コンテキスト（`chrome.storage` が利用不可）で同期例外を投げ、3 回連続失敗でクリティカルアラートに到達していました。`chrome.storage` の存在を事前チェックし、利用不可時は空の extras を返すようにして `STATUS` 呼び出しが常に成功するように修正
 - **拡張機能読み込み時の `Variable $1$ used but not defined.`**: `public/_locales/*/messages.json` の `statusPattern` が `$1$` プレースホルダーを使用しながら `placeholders` 定義を欠いており、Chrome のロケール検証で拒否されていました。両ロケールに `placeholders` を追加
@@ -1661,7 +1624,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-12 round 9、`arch-delivery-loop`）のリリースです。実バグ 5 件の解消（非公開ページダイアログの保存が静かに失敗する dead envelope、アーカイブ復元後のセッション表示、ドメインフィルタのサブドメイン判定不一致、offline リトライの診断値欠落、path whitelist の死エントリ）と Service Worker 内 `setTimeout` 違反の解消を含みます。全テスト（11,836 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **非公開ページダイアログの保存が静かに失敗していた**: dialog が wire に存在しない `type: 'record'` envelope を送信しており router が破棄するため、全保存経路（保存 / ドメインで保存 / パスで保存 / 再試行）が「Unknown error」表示になっていた。envelope + 20 秒 timeout 契約を `pendingRecordGateway` に集約し、送信失敗が未処理 rejection になる経路と save-path ハンドラの TOCTOU（await 後の状態再読）も解消
 - **アーカイブ復元後にセッション一覧が空のまま**: 復元 → open の後で `sessionStaging` が設定されず一覧描画のガードが早期 return していた。open 成功後に引き継ぐよう修正し、open + 一覧描画を busy スコープ内に移動（連続ファイル選択時の OPFS 書込 interleave も解消）
@@ -1674,13 +1637,13 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **クレンジング報告ボタンが再初期化のたびに二重配線されていた**: `dataset.wired` ガードを追加（許可ボタンと同一紀律）
 - **言語切替後にエラーメッセージが旧言語のまま残る**: メッセージキャッシュに UI 言語をキーとして追加
 
-### Changed
+### 変更
 
 - **バッジ表示政策を BadgePolicy に統合**: 4 箇所で再派生していた text / 色 / タブスコープを 1 テーブルに統合し、タブ派生状態の書込を per-tab に統一（タブごとの状態が他タブのフォールバックに漏出する経路を解消）
 - **uBlock ルールの両形式混在時に警告ログを追加**: 移行残骸（旧 blockRules + 新 blockDomains）で旧形式が無警告で無視される状態に観測可能性を追加（優先規則の挙動は不変）
 - **SQLite 読み取りパスの paging 値を統一**: offset クランプを limit と同一の read policy seam に追加し、worker の spec 上書きを削除。負 offset が backend 間で行を発散させる経路を封じる（parametric テスト付き）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 9（PBI 01〜08）: 記録リクエスト構築の `buildRecordRequest` 統合、popup whitelist 書込の `whitelistWriter` 統合、`pendingRecordGateway` / `BadgePolicy` の新設、アーカイブ復元フローの busy スコープ整理
 
@@ -1688,12 +1651,11 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ深化ラウンド（2026-09-11 rounds 4-8,`arch-delivery-loop`）のリリースです。PBIs 01-08 の実装により、アーカイブシームの分離、SQLite ディスパッチチェーンの縮小、クエリプランナーの統合、RecordingOrchestrator インターフェースの狭小化、およびポップアップ許可ラダーの検証が行われました。全テスト（11,794 件）がグリーンです。
 
-
 ## [6.8.9] - 2026-09-11
 
 アーキテクチャ改善ラウンド（2026-09-11 round 7、`arch-delivery-loop`）のリリースです。i18n dead key 104 件の削除（3 段階 verifier による安全な削除）、models.dev ダイアログの二重 Esc 解消と a11y パリティ達成、未使用ロケール整理を含みます。全テスト（11,773 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **models.dev ダイアログの Esc が二重発火していた**: focusTrap の closeCallback と document keydown listener の 2 系統で `hide()` が走り、onCancel が二重呼び出しされていた。手動 keydown listener を削除して focusTrap に一本化し、`hide()` を idempotent 化。document keydown listener は除去経路が無く instance 生成のたびに漏洩していた（leak 解消）
 - **models.dev ダイアログの a11y が静的仕様を満たしていなかった**: 削除した静的 HTML twin が aria-live / aria-busy / aria-required の仕様を持っていたが、実際に表示される TS 構築 DOM は未対応 ― TS 実装を twin 水準に合わせ、a11y テストを実 DOM 対応に書き直した
@@ -1701,12 +1663,12 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **popup の初期化が 3 経路で競合**: popup.ts の import 時 auto-run・entrypoint main.ts の DOMContentLoaded・main.ts の load が並行していた。entrypoint の bootstrap（applyI18n → initPopup）に単一化し、navigation の dead 分岐（存在しない settingsScreen / backBtn）と 2 重の lang/dir ヘルパーを削除
 - **release-checks の沈黙ゲート 3 件**: manifest 権限チェックが 2 権限しか要求せず drift で絶対に落ちない（期待権限を wxt.config.ts から派生するよう修正）、e2e の skip が PASS と区別不能（`--skip-e2e` / `SKIP_E2E=1` の明示要求に変更）、coverage-summary 欠落が素通し（fail に変更 + `describe(` の水増しカウント解消）。coverage ゲートの 90/90 しきい値はプロジェクト自身の vitest.config（80/80）と矛盾していたため揃え、coverage を実測再生成（lines 93.6% / branches 87.2%）
 
-### Changed
+### 変更
 
 - **未使用 i18n キー 104 件を削除**: 3 段階 verifier（リテラルスキャン → コメント除去後 substring（tests 込み）→ 動的構築 prefix 検査）で全参照ゼロを証明した key のみを削除。動的構築キー（`historyAiSummaryCleansedReason${Rule}` ファミリー 30 件）と変数経由・manifest 解決キー（177 件）は保護。6 フィルターモード系（legacy panel 撤去の実績）・tranco モーダル系・trigger 系など
 - **クレンジング offscreen flag の module cache**: default OFF の PoC flag が cleanse 呼び出し毎に chrome.storage を読んでいたのを 1 回読み + onChanged 無効化に変更
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 7（PBI 01〜07）: ARCHITECTURE_MAP の component tree を現行 seam 語彙（createBackgroundServices / MessageRouter / AIService family / RecordingOrchestrator）に更新、orphan WXT entrypoint（models-dev-dialog.html stub）の削除
 
@@ -1714,7 +1676,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ改善ラウンド（2026-09-11 round 6、`arch-delivery-loop`）のリリースです。台帳に残っていた小型バグ群の全件実検証と解消、記録フロー promise の永久ハング解消、コンテンツスロットルの再実装、i18n 欠落 50 件の補完を含みます。全テスト（11,784 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **確認プレビューの promise が永久ハングし得た**: ユーザー操作の瞬間にモーダル DOM が消失すると、presenter が resolve/reject を null 化するだけで呼び出し元の promise が確定しなかった（記録フロー唯一の永久ハング経路）。`settle()` 単一 seam に集約し、欠損 path は reject に変更。あわせて resize observer の切断漏れ・cleanup の実 removeEventListener 欠落（cleanup→init 循環で listener 蓄積）・previewView の production caller 無し handler 配列を解消し、focus trap の所有を presenter 単一に統一（focusTrap に live-trap 上限の tripwire を追加）
 - **コンテンツスロットルが trailing 呼び出しを落としていた**: 実態が last-call-wins debounce で、連続スクロール中に `updateMaxScroll` が 100ms の静寂が出るまで発火せず、スクロール深度が visit gate 判定に過小報告されていた。leading + 保証付き trailing 実装に再実装し、`dispose` 返却と beforeunload flush の単一化で listener 漏れも解消
@@ -1722,13 +1684,13 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **DeadlineTimer の getter が非対称**: `gate` は null 許容なのに `thresholds` は非 null assert で初期化前に throw し得た。thresholds を null 許容に、isE2E を non-null 化
 - **`locale` 検出の潜在バグ**: `getMessage('locale')` が存在しないキーを読み、`||` 演算子の優先順位と組み合わさって偶然動作していた。`navigator.language` 直参照に修正
 
-### Changed
+### 変更
 
 - **フィルターリスト取得元を LIST_SOURCES 単一テーブルに統合**: 同一 5 ホストが 4 テーブルに重複しており、`nsfw.oisd.nl` は origin としては許可されるのに whitelist gate で拒否される不一致（OISD 系 uBlock ソースが warn-skip される）があった。`listSources.ts` SSOT に集約し、cross-table 整合テスト（conformance 6 件）を新設。Tranco はメタデータ取得（FETCH_URL 非経由）として分離を文書化
 - **上限値レジストリの拡充**: drift ガードに 10MiB ファミリーの監視を追加したところ、未吸収の上限が 6 件見つかり limits.ts へ取り込んだ（FETCH_URL レスポンス・Obsidian 設定読み込み・設定 import・envelope base64・AI レスポンス・storage quota ― 値はすべて不変）
 - **未使用 i18n キーの棚卸しツール**: check-i18n に未使用キー検出（warn インベントリ）を追加。静的スキャンは動的 label map を過大検出するため、削除は手動 per-key パスに回す（候補 310 件を台帳に記録）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 6（PBI 01〜09）: queryNormalize の ids に上限（MAX_QUERY_IDS=200）と整数化を追加、initializeModalEvents を idempotent detach→attach 再配線に、pending pages region の interface 2 重定義統合と model.subscribe の load() 移動、popup main.ts の記録ボタン二重配線削除（onclick sole-writer 契約を文字どおり成立）、archivePanel の同内容 2 重 interface 統合
 
@@ -1736,7 +1698,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ改善ラウンド（2026-09-11 round 5、`arch-delivery-loop`）のリリースです。実バグ 4 件（popup の writer 競合・検索とタグの同時絞り込み欠落など）の修正、legacy 履歴パネルの撤去（約 1,600 行削除）、上限定数の SSOT 取り込みなど 10 件を含みます。全テスト（11,773 件）がグリーンです。
 
-### Fixed
+### 修正
 
 - **タグ絞り込みと全文検索の同時指定でタグが無視されていた**: round 4 のタグ SQL 移行が plain 一覧経路だけを貫通しており、text+tag の検索は OPFS / IndexedDB でタグ条件が落ちていた（fallback は honoring）。FTS / LIKE 検索ステートメントにタグ条件を貫通し、parametric テストで backend 間一致を pin。逆に fallback 経路では `ids` フィルタが完全無視されていたのを `matchesExtraWhere` 委譲で解消
 - **popup の記録ボタン状態が writer 間で競合**: statusPanel が LOCKED 時に `recordBtn.disabled = true` を書き、RecordSession（唯一の writer という契約）が無条件で false に戻すレースが round 3 の統合後に残存していた。statusPanel からの書き込みを全削除し、LOCKED はバッジ + 権限要求エリアで伝達（「Record Anyway」の escape hatch を保護）
@@ -1745,16 +1707,16 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **query ペイロードの `ids` が未検証で SQL 組立まで通っていた**: wire から文字列 ids が届くと `buildExtraWhereSql` の `.map` で TypeError になる。配列ガード + 有限数フィルタで正規化（不正値はフィルタ無しに正規化）
 - **e2e ハーネスが stale バージョン '6.7.114' を pin**: archive 監査メタデータの `yasumaroVersion` を package.json 派生に置換し、版上げでハーネスが rot しない構造に
 
-### Changed
+### 変更
 
 - **pending pages を SQLite 履歴パネルへ移設**: 記録できなかったページの閲覧・記録（AI 要約あり/なし）・削除が SQLite パネル内で完結し、`chrome.storage.onChanged` でライブ更新される。"Export all as Markdown" ボタンは Export Logs パネルへ移設
 - **legacy 履歴パネル（panel-history）を撤去**: どこからも到達不能だった旧パネルと 9 モジュールの依存チェーン（約 1,600 行）を削除。履歴 UI は SQLite パネル 1 本に。タグ編集モーダルは follow-up、6 種フィルターモードは必要時に SQL フィルタ化（判断は PBI に記録）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 5（PBI 01〜10）: STATUS extras の `SqliteStatusExtras` 単一 field list 統一（producer / gateway pick / validator decoder table / dashboard 戻り値型を派生に）、タグ条件の search path 貫通 + fallback の `matchesExtraWhere` 委譲、上限定数 14 箇所の `messaging/limits.ts` 取り込み（drift ガードテスト新設 ― ガードが追加 4 cap を発見して吸収）、popup GET_CONTENT の spinner 所有権呼び出し側移管 + executeScript 重複統合、`btnRequestAllUrls` の wired ガード、ADR limit-policy の status note
 
-### Security
+### セキュリティ
 
 - なし（round 5 のセキュリティ関連は強化のみ: queryNormalize の ids 検証はワイヤ堅牢化として Fixed に記載）
 
@@ -1762,11 +1724,11 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ改善ラウンド（2026-09-11 round 4、`arch-delivery-loop`）のリリースです。confirm token の scope binding ギャップ 1 件のセキュリティ強化、実バグ 5 件（popup pending pages 経路の 3 件を含む）の修正と、7 件の内部構造改善（SSOT 統合）を含みます。全テスト（12,051 件）がグリーンです。
 
-### Security
+### セキュリティ
 
 - **archive confirm token の scope binding を残り 4 subtype に拡張**: PBI 2026-09-06-01 で導入した token⇔破壊的パラメータ束縛（scopeHash）が 6 subtype のみで、`archive_open` / `archive_update` / `archive_save` / `archive_close` が未バインドだった（archive payload には `id` が無く subtype 単位で token が共用 → stagingA 用 token が stagingB にリプレイ可能）。SSOT テーブル（`ARCHIVE_SCOPE_BY_SUBTYPE`）に 4 subtype を追加し、送信側・検証側の両 hop が自動修復。`prepare_incoming` / `cleanup` は破壊的パラメータを持たないため不バインドを明記し、新 subtype の表更新漏れを検出する drift ガードテストを新設
 
-### Fixed
+### 修正
 
 - **popup pending pages の「保存」が実際には記録していなかった**: popup の pending 一覧から「保存」した際に送信される `{type:'record'}` メッセージが envelope 移行以降どのハンドラにも処理されず、ページは記録されずに一覧から削除されていた。`MANUAL_RECORD` envelope（validator 契約どおり）に修正
 - **popup pending pages の「ドメインを許可して保存」が恒久的に無効だった**: whitelist 追加がマイグレーション後どの読み取り経路にも使われないトップレベル散在キー（`domain_whitelist`）に直接書き込んでいた（設定は単一 `settings` blob で管理）。`SettingsRepository` 経由の書き込みに統合し、楽観ロック・検証・キャッシュ無効化も通るようにした
@@ -1776,11 +1738,11 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 - **archivePanel 復元プレビュー完了メッセージが ja ロケールでも英語固定**: 三項演算子の両分岐が同一のハードコード英語 `'Preview ready.'` で、比較が死んでいた。i18n キー `archiveRestorePreviewReady` を新設（ja/en）
 - **STATUS enrichment の fail-whole を解消**: `handleStatus` の `Promise.all` が 1 つのプローブ失敗で全 extras を捨てていた。`allSettled` のフィールド隔離に変更し、`indexedDB.databases` 未実装環境では「不在」と断定せずフィールドを省略する（誤って「対象なし」表示になるのを防止）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 4（PBI 01〜08）: popup GET_CONTENT 送信 seam 3 重実装の `ContentFetchGateway` 統合（timeout 無し 2 箇所・到達不能な callback 時代 `lastError` ポーリング 2 箇所の削除・permission ボタンの listener 積み重ね修正）、クレンジング badge 表示政策 4 重実装の `CleansingBadge` テーブル統合、legacy パス定数 4 ファイル複製の `sqliteMessages.ts` SSOT 統合（drift ガード付き）、STATUS enrichment の `sqliteStatus.ts` 集約、dashboard import の `insertBatch` 統合、`StorageBackend` の archive 不可 stub 28+6 重複の共有ヘルパ統合（テストは定数参照で pin）、履歴タグフィルタの SQL 移行（`queryPlan.tagFilter` SSOT 化）
 
-### Changed
+### 変更
 
 - なし（ユーザーに見える動作は Fixed / Security のみ）
 
@@ -1788,13 +1750,13 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 テスト品質基準（`dev-docs/TEST_RULE.md`）への全面準拠リリースです。プロダクトコード（`src/` の非テストファイル）には変更がなく、全テスト（12,030 件）がグリーンです。
 
-### Added
+### 追加
 
 - **テスト品質基準の新設**: `dev-docs/TEST_RULE.md` に AI 生成テストの無力化（tautological assertion、無意味なモック比較、アサーション欠落）を防ぐルールを定義し、PR テンプレートに Red/Green 検証などのチェックリストを追加
 - **ESLint カスタムルール `local/no-tautology-expect`**: `expect(true).toBe(true)` 等の自明に真なアサーションを静的に検出（テストファイル全体を対象、誤検出 0 を確認済み）
 - **Stryker ミューテーションテスト設定**: `stryker.config.json` と `npm run test:mutate` を追加。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 未対応のためスコアが信頼できない既知制約は `dev-docs/TEST_RULE.md` に記載し、Red/Green 手動検証手順を代替と規定
 
-### Changed
+### 変更
 
 - **tautological assertion の 61 件を実装検証に置換**: 8 テストファイルの `expect(true).toBe(true)` 等を、実装の状態遷移・副作用・mock 呼び出しを検証するアサーションに置換。無意味なプレースホルダーファイル 1 件（`localMarkdownExport-m15.test.ts`）は削除
 - **テスト説明文の英語統一**: 全 `it()` / `test()` の説明文（190 ファイル・約 3,100 件）を TEST_RULE.md の規約に従い英語に翻訳（fixture・`describe()` タイトル・ロジックは不変）
@@ -1804,7 +1766,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 このリリースは v6.8.3 と同日に公開するセキュリティ修正リリースです。VulnHunter 監査で特定された 5 件の脆弱性（VULN-001〜005）を、TDD（エクスプロイト実証 → RED → GREEN）で修復しました。全テスト（11,995 件）がグリーンです。
 
-### Security
+### セキュリティ
 
 - **Obsidian 日次ノートの書き込み先パス検証を強化**（VULN-001 / CWE-22）: 日次ノートパスのサニタイザが `../` 等のセパレータ付き親参照のみを拒否し、裸の `..` / `.` 成分を許容していた。Obsidian REST の URL はドットセグメント正規化されるため、設定値 `..` で `/vault/` 外への書き込みが可能だった。パス成分としての `..` / `.`（前後空白を含む）を拒否するよう修正
 - **AI プロバイダー報告の usage トークン数を検証**（VULN-002 / CWE-190）: プロバイダー応答のトークン数が無検証で月次カウンタに加算され、負値の報告で月次ハードリミットの発火回避（無制限利用）、極端な値で誤リミット発火（利用不能化）が可能だった。3 プロバイダー共通の単一経路で、有限・正値・1 呼び出し 10,000,000 上限に正規化
@@ -1816,7 +1778,7 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 レビュー指摘修正のリリースです。旧形式エクスポートのインポート互換性復活と、バッチ挿入の計数改善を含みます。
 
-### Fixed
+### 修正
 
 - **旧形式エクスポートのインポート互換性を復活**: 6.8.2 の SSOT 派生 requiredKeys が旧リリース製エクスポートが持たない新規設定キーまで要求し、旧形式ファイルのインポートが拒否されていた。エクスポート形式バージョン (1.1.0) で検証をゲート化し、旧形式 (1.0.0) は凍結済みレガシー契約（21 キー + 4 API キー）で検証する
 - **insertBatch の計数を改善**: OPFS Worker 経路の行カウントを `INSERT ... RETURNING` に変更し、ステートメント数を 2N から N に半減。FTS5 同期トリガーの shadow 書き込み（1 insert あたり約 +7）を含む `total_changes()` 差分方式では新規/重複混在バッチで誤カウントになるため、トリガーの影響を受けない RETURNING 戻り行で計数する。トリガー適用済みスキーマでの計数を parametric テストに追加
@@ -1825,16 +1787,16 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 アーキテクチャ改善ラウンド（2026-09-09 round 3）のリリースです。SQLite update パスの本番バグ 1 件の修正と、6 件の内部構造改善（SSOT 統合）を含みます。
 
-### Fixed
+### 修正
 
 - **insertBatch の集計断を修正**: OPFS Worker 経路のバッチ挿入が最後の 1 文しか `changes()` を計数せず、重複スキップ分が反映されない（3 件バッチで新規 2 + 重複 1 のとき `{count: 0}` を返す）。また wire 契約の不一致で `inserted` / `skipped` が常に `undefined` だった問題を修正し、`{count, inserted, skipped}` を正しく返すようにした
 - エクスポート検証の requiredKeys が手写しリストのため新規設定キーに追従していなかった問題を `DEFAULT_SETTINGS` からの派生に置換し解消（約 130 キーの追従漏れを是正）
 
-### Refactored
+### リファクタリング
 
 - アーキテクチャ Deepening round 3（PBI 01〜06）: 上限定数の `limits.ts` SSOT 統合（validator / handler / dashboard 間の上限 drift 解消）、UPDATE 許可フィールドの whitelist 統合（dashboard 10 項 / offscreen 31 項の二重管理解消＋payload 正規化関数新設）、行シェイプ `rowCodec` 統合（バックエンド間の行 mapper 4 コピー解消・列指定必須化）、archive wire テーブルの codec 携行化（14 op × 5 hop の応答 shape 再宣言を 1 descriptor 行に統一）、AI クレンジング strip ルールの `SelectorRuleDef` テーブル＋エンジン統合（stripCore/stripExtended 合計 −912 行）
 
-### Changed
+### 変更
 
 - なし（ユーザーに見える動作は Fixed のみ）
 
@@ -1844,16 +1806,12 @@ Architecture Deepening（arch-delivery-loop 第4ループ、PBI 17〜19）。全
 
 v6.8.0 のタグで CI の Chrome Web Store 公開ステップを実行したところ、`PKG_CANNOT_VERIFY_CRX_SIGNATURE` で失敗しました。GitHub Secrets に登録されている署名鍵が、Chrome Web Store 側に登録済みの公開鍵と一致しないためで、既存の拡張機能 ID への自動・手動どちらの更新も不可能な状態です。今後の配布は Edge Add-ons と GitHub Releases（zip の読み込み・ソースからのビルド）に一本化します。
 
-This release immediately addresses review feedback from the previous day. Chrome Web Store distribution has ended and the related CI code has been removed.
-
-Running the CI's Chrome Web Store publish step for the v6.8.0 tag failed with `PKG_CANNOT_VERIFY_CRX_SIGNATURE`: the signing key in GitHub Secrets no longer matches the public key registered with the Chrome Web Store, so neither automated nor manual updates to the existing extension ID are possible. Distribution now goes through Edge Add-ons and GitHub Releases (loading the zip, or building from source).
-
-### Removed / 削除
+### 削除
 
 - **`release.yml` から Chrome Web Store 公開ステップを削除** ― CRX 署名（`build-crx3.mjs`）、`.crx` の生成と GitHub Release への添付、偶数 minor 判定、`chromewebstore.googleapis.com` への upload/publish を一式削除。`.github/workflows/build-crx3.mjs` を削除。GitHub Release に添付するのは chrome / firefox / edge の zip 3 種のみ
 - **`.crx` 配布を廃止** ― サイドロード用の署名済み `.crx` の生成・添付を取りやめ
 
-### Changed / 変更
+### 変更
 
 - **ドキュメントの配布手順を更新** ― `README.md` / `docs/SETUP_GUIDE.md` / `docs/FAQ.md`（日英）から「Chrome Web Store からインストール」を削除し、Edge Add-ons と GitHub Releases の zip 読み込み・ソースビルドに置き換え。`docs/OBSIDIAN_SETUP_GUIDE.md` の Chrome Web Store リンクを差し替え
 - **`scripts/release-checks/check-docs.mjs`** ― README のストアリンクチェックを Edge Add-ons のみに変更
@@ -1865,11 +1823,7 @@ Running the CI's Chrome Web Store publish step for the v6.8.0 tag failed with `P
 
 Chrome Web Store / Edge Add-ons 公開に向けて、ドキュメントを v6.7.x で導入した新機能（ブラウザ内蔵 AI、コンテンツクレンジングの大幅強化、閲覧履歴アーカイブ、AI 接続テストの実質化）に追随させました。機能面の変更はありません。
 
-This is the first v6.8.x stable release, transitioning from the v6.7.x feature series to the v6.8.x bug-fix-only series.
-
-Documentation has been brought up to date with the features introduced during v6.7.x (browser Built-in AI, greatly expanded content cleansing, browsing-history archive, and a real-inference AI connection test) ahead of Chrome Web Store / Edge Add-ons publication. There are no functional changes.
-
-### Docs / ドキュメント
+### ドキュメント
 
 - **README・セットアップ/FAQ ガイドを v6.7.x 新機能に追随** ― 内蔵 AI（Chrome Gemini Nano / Edge Phi-mini）、クレンジングプリセット4種とドメイン別上書き、閲覧履歴アーカイブ、AI 接続テストの送受信表示について `README.md`（日英）、`docs/SETUP_GUIDE.md`、`docs/FAQ.md`、`docs/AI_SUMMARY_GUIDE.md`、`docs/CLEANSING_CUSTOMIZATION_GUIDE.md`、`docs/BUILT_IN_AI_SETUP_GUIDE.md` を更新。「（開発中）」等の古い表現を削除
 - **PRIVACY.md にアーカイブ機能のデータフローを追記** ― `.db` 書き出し（平文・非署名・ダウンロードフォルダ保存）、復元時の突合せ、一時オープンでのファイル書き戻しについて `docs/PRIVACY.md` と `public/PRIVACY.md` に同一内容を追加。内蔵 AI がデバイス外へデータを送信しないことを明記
@@ -1878,7 +1832,7 @@ Documentation has been brought up to date with the features introduced during v6
 - **ブログシリーズを追加** ― v6.6 → v6.7 のユーザー体験差分を紹介する Zenn / note 向け記事群を `dev-docs/blogs/blog-6_8/` に追加
 - **CHANGELOG 冒頭のバージョニングポリシー文を更新** ― 「現時点では `v6.7.116`」→「`v6.8.0`」
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.116` → `6.8.0`
 
@@ -1886,7 +1840,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは、アーキテクチャの深いモジュール化（deepening）リファクタ 7 件を含む内部改善リリースです。振る舞いは不変で、全テスト（11,938 件）がグリーンです。
 
-### Removed
+### 削除
 
 - **OPFS feasibility spike を製品コードから完全撤去**（PBI 2026-09-07-19）: ADR-014 の一次検証用ハーネス（`src/offscreen/opfsSpike.ts` / `runOpfsSpikeA` / `SQLITE_OPFS_SPIKE` / `opfs_spike` / 診断パネルの "Run OPFS Spike" ボタン＋結果欄 / ロケールキー `diagOpfsSpikeBtn`）を、メッセージ経路 13 ファイル・`sqliteOperationSecurity.ts` の 3 リスト・関連テスト・E2E・カバレッジ設定とともに削除。案Aの健全性確認は診断パネルの OPFS 移行状態表示と divergence 警告で代替。製品 Worker（`opfsWorker.ts`）と CSP 設定は無変更
 
@@ -1904,13 +1858,13 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは、閲覧履歴アーカイブ機能の本番バグ修正2件と、手動テストのE2E自動化を含むリリースです。
 
-### Fixed
+### 修正
 
 - **アーカイブのダウンロードが常に失敗する問題を修正**: Archiveパネルで作成したアーカイブ .db のダウンロード（フェーズA後の「Download」ボタン）が、サービスワーカーハンドラに `archive_export` の分岐が欠落していたため、常に `Unknown archive subtype` エラーで失敗していた（初回実装時からの欠落）。worker・offscreen 側の経路は完備していたため、分岐追加のみで修復
 - **アーカイブ .db をファイルから復元するフローが必ず失敗する問題を修正**: 一時オープン用のステージング名発行（`archive_prepare_incoming`）で、worker のオブジェクト応答が二重ラップされたまま渡され、パネルが `[object Object]` をファイル名として扱っていた。後続の `archive_open` の名前検証で必ず拒否されるため、ファイルからの復元が機能していなかった（PBI 2026-09-07-02 の E2E が検出）
 - **ステージング掃除（`archive_cleanup`）の応答も同様の二重ラップ**だった問題を修正。いずれも `OpfsWorkerBackend` でフィールドを正しく取り出す形に統一
 
-### Added
+### 追加
 
 - **アーカイブ手動テストのE2E自動化**（PBI 2026-09-07-01〜03）: `docs/MANUAL_TEST_ARCHIVE.md` の必須・推奨項目の大半を自動テスト化した。退避 .db の内容照合（実SQLiteでバイト列を検証）、境界日のタイムゾーン判定（UTC+14/+9/-8 の3TZ × 固定epoch seed）、フェーズA後の本体不変、レコード編集→書き戻し、復元後の値照合、削除済み含む復元集計、検索語の `%`/`_` リテラル扱い、録画との並行動作、実エンジンでの freelist 減少と VACUUM 成功を検証。手動チェックリストは E2E 不可の 7 項目のみに縮小（理由を各項目に明記）
 - 上記の自動化（テスト駆動の Red）が本番バグ2件（上記 Fixed 参照）を検出した
@@ -1927,7 +1881,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは v6.7.113 と同日に公開する、閲覧履歴アーカイブ機能のリリースです。
 
-### Added
+### 追加
 
 - **閲覧履歴アーカイブ（フェーズA: 退避）**: 設定の「Archive」パネルで、指定日（その日を含む）以前の閲覧履歴を標準SQLiteファイル（`.db`、DB Browser for SQLite 等で開ける）として退避できるようにした（PBI 2026-09-06-02）。削除済みレコードはデフォルト除外（チェックで含めることも可能）。退避はバッチINSERT（5000件/COMMIT）＋構造検証（allowlist・meta突合せ）を経て行われ、フェーズAでは本体DBは一切変更されない。作成したファイルはチャンク転送でダウンロードでき、ステージングコピーを削除するまで再ダウンロード可能
 - **アーカイブからの復元**: アーカイブ .db のレコードを本体DBへマージ復元（PBI 2026-09-06-03）。既存レコードは保持され、重複（同一URL・同一時刻）はスキップ、レコードIDは再採番、`domain` はURLから再計算。行単位のエラーハンドリングで一部の無効行があっても復元は継続（`skippedInvalid` として集計）。バッチ 5000件/COMMIT で途中失敗しても再実行で収束
@@ -1935,14 +1889,14 @@ Documentation has been brought up to date with the features introduced during v6
 - **アーカイブの一時オープン**: アーカイブ .db を本体DBに取り込まずにパネル上で開き、検索・タイトル編集・保存（アーカイブファイルへの書き戻し）ができる（PBI 2026-09-06-05）。未保存の変更がある状態で閉じる場合は確認ダイアログが表示され、オプションページ再読み込み後もセッション状態を検出して再接続できる
 - アーカイブ作成時の quota プレフライト（不足時は日付分割を案内して拒否）と、フェーズBのストレージ解放効果の検証（`PRAGMA freelist_count` 前後比較）
 
-### Security
+### セキュリティ
 
 - 確認トークンに破壊パラメータの scopeHash 束縛を追加（PBI 2026-09-06-01）。トークン発行後に cutoff / stagingName を差し替えた実行は fail-closed で拒否される
 - 全体復元（restore_db）が、アーカイブ形式の .db を検証なしで受理して本体を FTS なしの状態で上書きできる経路を遮断（アーカイブ復元UIへの誘導つきガード）
 - アーカイブ .db は信頼できない入力として扱う: `sqlite_master` の allowlist 構造検証（VIEW/トリガー/仮想テーブル/hidden列の拒否）、`PRAGMA table_xinfo` 照合、meta.record_count 突合せ、URLスキーム検証（http/https 以外の編集を拒否）
 - メッセージ転送に `noRetry` オプションを追加し、バルク破壊操作（アーカイブ作成・削除・復元）のタイムアウト後二重実行を防止
 
-### Documentation
+### ドキュメント
 
 - `dev-docs/ERROR_CODES.md` にアーカイブ関連コード（ARC_系）を登録
 - スパイクF-2（2エンジン共存の実証）と各PBIの実装メモを記録
@@ -1951,7 +1905,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは v6.7.112 と同日に公開する、アーカイブ機能に向けた基盤整備リリースです。
 
-### Fixed
+### 修正
 
 - 全体復元（restore_db）が、アーカイブ形式の .db（`yasumaro_archive_meta` テーブルを持つファイル）を検証なしで受理し、本体DBを FTS なしの状態で上書きできていた問題を防止。アーカイブ形式を検出した場合は復元を拒否し、アーカイブ復元UIの使用を案内する
 - ダウンロード処理（`downloadBlob`）がオブジェクトURLを同期的に解放していたため、大容量ダウンロードが中断・破損する可能性があった問題を修正（解放を60秒遅延）
@@ -1965,13 +1919,13 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.112] - 2026-09-06
 
-### Added
+### 追加
 
 - 設定画面の「コンテンツ保持設定」に、ページ本文（content）をローカル保存するかを切り替えるトグルを追加（PBI 2026-09-06-04）。初回同意モーダルでしか変更できなかった保存ポリシーを設定画面から随時変更できる。既存の保存済み content は保持され、以後の新規記録のみ反映
 - AI プロバイダー設定の Priority (Failover Order)（B分離型）で、各行のモデル名欄に実際に使用されるモデル名（スロット明示値 → プロバイダのストレージ設定値 → カタログのデフォルト）を初期表示するようにした（PBI 2026-09-06-05）。表示した解決値は保存時に明示モデルとして固定されず、ユーザーが入力した値があればそちらが優先される。プロバイダー変更時には未入力欄が新しい解決値に切り替わる
 - ドメインフィルタに「サブドメインもマッチさせる」トグルを追加（PBI 2026-09-06-06）。ONにすると `example.com` の登録が `sub.example.com` 等のサブドメインにも一致する。OFF（デフォルト）では従来どおり完全一致のみで、既存ユーザーの動作は変わらない。バックグラウンドのライブ判定とコンテンツスクリプトのキャッシュ判定の両方に反映され、ワイルドカードパターン（`*.example.com`）はトグルに関係なく従来どおり動作する
 
-### Documentation
+### ドキュメント
 
 - レコードアーカイブ機能（日付指定退避・アーカイブの一時オープン・メインDBへの復元）の設計 PBI 3件（`pbi/2026-09-06-01〜03`）と deep-dig findings（OPFSステージング方式・スパイク必須化・削除済み行の扱い等の決定記録）を追加
 
@@ -1979,7 +1933,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは v6.7.110 と同日に公開する、リファクタリングとテスト整備中心のリリースです。
 
-### Fixed
+### 修正
 
 - popup のステータス表示系コントロール（`.status-toggle` / `.btn-banner-allow` / `.banner-actions .btn-sm`）に `min-width: 0; max-width: 100%` を追加。v6.7.110 の `white-space: normal` 化だけでは flex item が max-content 幅を保つため、長い翻訳ラベル（独語等）が折り返されずクリップされる状態が残っていた。popup の幅・折り返し・フォーカストラップを検証する e2e（`testDir/e2e/popup-fix09-25.spec.ts`、6 tests）がこの未完成箇所を検出した
 
@@ -1987,7 +1941,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 - SQLite 永続化層の WHERE/ORDER/LIMIT/purge SQL 組み立てを `queryPlan.ts` の共通ビルダー（`buildFtsSearchStatements` / `buildLikeSearchStatements` / `buildPlainListStatements` / `buildPurgeOldRecordsStatements` 等）に集約し、`IdbVfsBackend`（直 exec）と `opfsWorker` ハンドラの二重実装を解消（PBI 2026-09-05-34）。idb / opfs-stub / fallback の同一 QuerySpec 比較パラメトリックテストを新設し、3 系統の search-sort テストを統合。FTS evoke 条件・LIKE 境界・`#tag` ギャップ・audit cap の意図的差分は INTENTIONAL テストで固定し、`DELETE` セマンティクス差（テスト専用ソフトデリート vs 製品ハードデリート）は統一せず文書化
 
-### Documentation
+### ドキュメント
 
 - `pbi/` 台帳を再整理。実行済み backlog 10 件（0831a / 0902 / 0903 / 0904 arch2・perf / 0905 arch3・arch4・arch5・review-fixes）を `dev-docs/archived/pbi/` へ移動し、散在していた見送り・トリガー付き・製品判断待ち候補を `pbi/2026-09-05-00-backlog-future.md`（統合台帳）に集約。`pbi/` 配下はゲート付き PBI 32（wa-sqlite サンセット、2026-12-17 以降着手）と統合台帳のみに
 
@@ -1997,11 +1951,11 @@ Documentation has been brought up to date with the features introduced during v6
 
 - プロトコルバージョン不一致の即時拒否を段階的移行ウィンドウに変更。直前世代（N-1）のみ警告ログ＋応答の `deprecated: true` フラグ付きで受理し、それ以前・未知のバージョンは従来通り `Protocol version mismatch` で拒否。恒久的な多世代サポートではなく一時的な移行措置
 
-### Fixed
+### 修正
 
 - LEGACY_DUAL_WRITE 無効期間中に SQLite のみに蓄積された記録をレガシー側（`savedUrlsWithTimestamps`）へ戻す手動再同期を追加（PBI 2026-09-05-22）。診断パネルの「Resync legacy history from SQLite」ボタンからのみ実行する MANUAL-ONLY 方式（起動時・設定変更時の自動実行なし、confirmToken 必須）。URL キーマージで冪等（再実行で重複・タイムスタンプ変動なし）、既定 1000 件・上限 5000 件の有界実行、`withOptimisticLock` CAS 規律で再同期中の新規記録と競合しない。無効時の `saveMetadataStep` early-return（既定動作）は不変
 
-### Fixed
+### 修正
 
 - Checking Team レビュー（2026-09-05、26 候補）から 10 件を実施（PBI 2026-09-05-01〜10、`dev-docs/archived/pbi/` 参照）。`optional_host_permissions` から `<all_urls>` を削除して取得先ドメインの個別列挙のみに限定、confirmToken の `Math.random` フォールバックを削除して fail-closed 化、メッセージバリデータに上限サイズ検証（ValidVisit content 1MB・ManualRecord title 500 字/content 1MB・SQLite import 件数/サイズ等）と URL スキーム検証（http/https 以外を拒否）を追加、レコード保持に 365 日のデフォルト上限を設定（両境界が無制限のときはオプションページに警告表示）、FTS 再構築条件を全空のみから件数比較に緩和して部分インデックスを自動修復、マイグレーション冪等判定をエラーメッセージの文字列マッチから `pragma_table_info` 存在確認ベースに変更、復号失敗時に API キーを空文字で上書きせず元の暗号文を保全（`unrecoverable` で通知）、popup 幅を 360px 固定から min 360/max 420 の許容範囲方式に緩和して翻訳文字列のクリップを解消、`retryObsidianWrite` が Obsidian 書き込みの成否を正しく返すように修正、閲覧履歴記録の初回 OFF（同意ゲート・デフォルト false）を検証・ピン留めし「記録中」バッジ（`●`）の常時表示とオンボーディングへの記録範囲説明を追加
 
@@ -2055,7 +2009,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは前日のレビュー指摘を即座に反映したものです。
 
-### Fixed
+### 修正
 
 - 秘匿キー一覧の二重管理を解消。`storagePort.ts` の文字列リテラル版と `settingsMigration.ts` の `StorageKeys` 参照版が並存し、新プロバイダー追加時の片方更新漏れで平文残留・漏洩が起きるリスクがあった。依存なしの `apiKeyFields.ts` を正典（SSOT）に一本化し、両モジュールから参照。drift 検出テストを追加
 - DomainFilter の判定・検証ロジックの重複を解消。キャッシュ付き許可判定2コピーを共有ヘルパー `evaluateCachedAllow` に抽出。保存時検証の二重実行（旧 `validateDomainList`＋新 `parseAndValidate`）を `DomainFilter.parseAndValidate` に一本化し、構文検証を共通 `domainValidator.ts` に集約（循環 import 回避）
@@ -2064,7 +2018,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.103] - 2026-09-04
 
-### Added
+### 追加
 
 - ツールバーバッジに、ドメインフィルターで記録対象外になっているページを示す緑の `∉` バッジを追加。プライバシー検出（オレンジ `!`）に次ぐ優先度で表示し、別タブへ切り替えると消える。判定が行えなかった場合はバッジを出さない。
 
@@ -2072,13 +2026,13 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは前日のレビュー指摘を即座に反映したものです。
 
-### Fixed
+### 修正
 
 - ドメインフィルター（uBlock Origin 上級者向け）で URL インポート後に「保存」してもフィルターソースが保存されず、リロードすると消える問題を修正。非表示の有効化チェックボックスに保存がゲートされており、初回は常に未チェックのため保存処理が早期 return していた。フィルター本文が入力されていればチェックボックスの状態に関わらず保存するようにした。
 
 ## [6.7.101] - 2026-09-04
 
-### Refactor
+### リファクタリング
 
 - Trust seam: globalThis registry 廃止、seam を module-scope singleton に一本化 (PBI 01, RICE 12.0)
 - Pipeline: PipelineKernel を RecordingOrchestrator に統合、dead stage-branding 削除 (PBI 03/04)
@@ -2086,7 +2040,7 @@ Documentation has been brought up to date with the features introduced during v6
 - Provider: SSRF security policy を catalog から分離 (PBI 06)
 - SQLite: dashboardGateway の重複 race を sendDashboardRaw に統一 (PBI 07)
 
-### Fixed
+### 修正
 
 - retryPolicy の 'ai ' 部分一致ヒューリスティックを削除 (PBI 02, RICE 9.6)
 
@@ -2094,7 +2048,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースはユーザーに見える機能変更を含まず、ドキュメント整備を中心としたリリースです。
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - `AGENTS.md` を再構成し、トピック別ガイドを `dev-docs/` 配下の専用ファイル（`ARCHITECTURE_MAP.md` / `DEBUGGING_GUIDE.md` / `DOCUMENTATION_GUIDE.md` / `NAMING_GUIDELINES.md` / `PERFORMANCE_GUIDE.md` / `SECURITY_REVIEW_GUIDE.md` / `TESTING_GUIDE.md`）に分割。`dev-docs/README.md` を索引として新設
 - ユーザーガイドを追加: [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md)（HMAC 署名・暗号化バックアップ）、[クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md)（誤削除報告・ドメイン別上書き）
@@ -2108,12 +2062,12 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースはユーザーに見える新機能を含まず、アーキテクチャの深化（Architecture Deepening 0831a）とセキュリティ強化を中心とした内部改善です。
 
-### Security
+### セキュリティ
 
 - ブラウジングログのエクスポート/インポートに HMAC 署名を導入（VULN-035）。`exportLogsService.exportJson()` が署名付き（`version: 2`）で書き出し、`importLogsService.importFromJson()` がインポート前に署名を検証する。無署名（旧 `version: 1`）または改竄されたログファイルは拒否される。**旧バージョンでエクスポートした無署名のログ JSON は再インポートできなくなる**ため、必要なら本バージョンで再エクスポートすること（`.db` エクスポートは影響なし）
 - `hmacKeyStore` の署名鍵・ラップキー生成と `confirmTokenManager` のトークンマップ更新を Mutex で直列化（VULN-039）。並行コンテキストが分岐した鍵/トークンを生成する余地を解消
 
-### Changed
+### 変更
 
 - **Architecture Deepening 0831a** ― アーキテクチャレビューで抽出した 6 領域を単一 seam / SSOT に集約（挙動変更なし）。
   - Settings: `SettingsRepository` へ一本化。`settingsStore.legacy.ts` / `settingsStore.ts` を削除し、legacy 1 秒キャッシュと Repository の二重真実を解消（PBI 01）
@@ -2125,7 +2079,7 @@ Documentation has been brought up to date with the features introduced during v6
   - `src/dashboard/BrowsingLogRepository.ts`（未接続の 296 行）を削除し、dashboard SQLite 経路を `dashboardSqliteService.ts` に確定
 - messaging: 2 系統の `chrome.runtime.sendMessage` seam を `MessageTransport` に統一。`retryHelper.ts`（`ChromeMessageSender`）を撤去（PBI-22 残余）
 
-### Fixed
+### 修正
 
 - **B レイアウト（分離型）の AI プロバイダー設定が壊れていた不具合を修正**。06c の catalog 駆動化で B レイアウトのアコーディオンが自前の `#<id>Settings` ブロックを持つようになった一方、mount 時に A レイアウトの `#providerSettingsMount` も同じ id で構築・値読込していたため、保存済みの `openai_base_url` / `openai_api_key` / `openai_model` が優先度コンテナ側に流れ込み、アコーディオン内は空プレースホルダのまま、AI テストも失敗していた。B モードでは `#providerSettingsMount` を構築せず、アコーディオン生成後に `loadSettingsToInputs` で値を流し込むよう修正。A⇔B トグル時の再構築も対応
 - **保存時に AI プロバイダーの接続設定（Base URL / モデル名 / API キー）が空値で上書きされない保護を追加**。上記の表示バグのように何らかの理由でフォームの入力欄が空のまま「保存する」を押しても、`_base_url` / `_model` / `_api_key` で終わるキーは保存済みの値が非空なら空文字で潰さないよう `settingsPipeline` にガードを入れた（API キーは従来から保護済み、Base URL / モデル名を追加）
@@ -2134,7 +2088,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.98] - 2026-08-31
 
-### Fixed
+### 修正
 
 - E2Eテスト5件失敗を修正。`dashboard.fixture.ts` に `ai_provider_layout: 'a'` を追加しダッシュボードBレイアウトで `#aiProvider` が非表示になる問題を解消（built-in-ai 3件）、`wasm-boundary-comprehensive.spec.ts` を `create_confirm_token` API 経由に変更し 06b 以降の `dashboardSqliteConfirmToken` 不整合を解消（1件）、`recording-traceId.spec.ts` は logger buffer flush タイミング依存の pre-existing な flaky であることを明記して skip（1件）
 - `trustDb.repairDatabase` の型安全性を改善。`as unknown as Record<string, unknown>` キャストを `as unknown as Record<string, unknown>` に統一し、各サブオブジェクトを明示的に再代入する形に変更
@@ -2145,59 +2099,59 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.97] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.96` に対する hotfix です。診断で `hasSensitive: false` のまま破損DBがストレージに残り、`repairDatabase` がメモリ上のみで永続化されず再発していた問題を修正。`wasRepaired` 検出後に `this.save()` で永続化し、BBC/CNN での `pipeline-error` を永続的に解消。
 
 ## [6.7.96] - 2026-08-30
 
-### Added
+### 追加
 
 - 回帰テスト `pipelineErrorRegression.test.ts` を追加。BBC／CNN で `pipeline-error`（`userTlds`／`presets` 欠落）が発生し「今すぐ記録」がブロックされていた不具合の再発を防止。破損DB（`jpAnchor`／`userTlds`／`presets` 欠落）でも `DomainVerifier` が例外を投げず `UNVERIFIED` を返し、新たな記録が失敗しないことを保証
 
-### Fixed
+### 修正
 
 - `DomainVerifier.checkJpAnchor` で `jpAnchor.tlds`／`userTlds` が `undefined` の場合に `is not iterable` が発生していた不具合を修正。`...(jpAnchor.tlds ?? [])` でデフォルト空配列にフォールバック
 
 ## [6.7.95] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは systematic debugging による包括的 hotfix です。`v6.7.92`→`6.7.94` で個別フィールド（`userTlds`→`presets`）の ad-hoc ガードを追加するたびに次の欠落が顕在化し、3+ fixes failed の architectural problem に該当。根源は `trustDb.doInitialize` で破損DBを単一箇所で検証・修復していないこと。`repairDatabase` を新設し、全必須フィールドを包括的にデフォルト補完する systematic な修復に置換。今後新たなフィールド欠落でも `pipeline-error` を投げず `UNVERIFIED` で継続。
 
 ## [6.7.94] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.93` に対する hotfix です。`v6.7.93` で `userTlds` は修復したが、次に `presets` が欠落した破損DBで同様に `Cannot read properties of undefined (reading 'presets')` が `pipeline-error` として表示されていた問題を修正。`trustDb.doInitialize` で `presets`／`finance`／`gaming`／`sns` 等の各欠落をデフォルトで補完し、`DomainVerifier.checkSensitive` に `presets` 存在チェックを追加。
 
 ## [6.7.93] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.92` に対する hotfix です。`v6.7.92` の `DomainVerifier` ガードだけでは、破損した Trust DB（`jpAnchor` 欠落）で `buildManagedStringLists` が `userTlds` 読み取りで例外を投げ、依然として `pipeline-error` が発生していた問題を包括修正。`trustDb.doInitialize` で欠落した `jpAnchor`／`sensitive`／`tranco` をデフォルトで補完し、`buildManagedStringLists` と `mergeTrustDatabase` に `optional chaining` によるガードを追加。
 
 ## [6.7.92] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.91` に対する hotfix です。CNN／BBC 等で `background.js:49` `Cannot read properties of undefined (reading 'userTlds')` が `pipeline-error` として popup に表示され「今すぐ記録」がブロックされていた問題を修正。`trustDb` の `DomainVerifier` が初期化前の `state.database` 参照で例外を投げていたため、`checkJpAnchor`／`checkSensitive`／`checkTranco` に `database` 未初期化ガードを追加し `UNVERIFIED` で継続するように修正。
 
 ## [6.7.91] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.90` に対する hotfix です。`v6.7.89` で追加した「誤削除を報告」ボタン（`reportCleansingFeedbackBtn`）とドメイン別オーバーライド一覧（`perSiteOverrides`）でインラインスタイル（`style="margin-top:8px"`／`span.style.marginLeft`）を使用していたため、popup の CSP `style-src 'self'` に違反し `chrome://extensions` で 2件のエラーが表示されていた問題を修正。インラインスタイルを外部 CSS クラス（`.report-feedback-btn`／`.per-site-override-suffix`）に移行。
 
 ## [6.7.90] - 2026-08-30
 
-### Fixed
+### 修正
 
 - このリリースは `v6.7.89` に対する hotfix です。`v6.7.89` で PBKDF2 を 100k→600k にSSOT化した際、既存の匿名モード暗号化データ（Obsidian／OpenAI 等のAPIキー）を 600k 派生キーで復号しようとして失敗し、空文字として扱われ使えなくなる不具合を修正。`settingsMigration` に `tryDecryptWithLegacyFallback` を追加し、600k で失敗時に 100k 派生キーでリトライ、成功時は 600k で再暗号化して移行。ストレージ上の暗号化 blob が上書きされていなければ再起動で自動復旧。
 
 ## [6.7.89] - 2026-08-30
 
-### Added
+### 追加
 
 - クレンジング多言語パターン拡充（30-12）。`patterns.ts` にフランス語・ドイツ語・中国語の広告／ソーシャル定型句 37パターンを追加。クラス部分一致ではなくテキストマッチとして判定し `address` 等の誤爆を回避
 - クレンジングプリセット（30-06）。32トグルを `minimal`（3ON）／`balanced`（9ON）／`aggressive`（25ON）／`custom` の4プリセットに束ねる。`presets.ts` 新設、`cleansing_preset` ストレージ追加、既存設定からのマイグレーションと custom 遷移ガードを実装。`entrypoints/options` にセレクト追加
@@ -2213,36 +2167,36 @@ Documentation has been brought up to date with the features introduced during v6
 - ホワイトリストアダプタ自動生成ヘルパー（30-10）。`scripts/generate-whitelist-adapter.mjs` で17候補セレクタのテキスト量計測し最多を選択、draft JSON とLLMプロンプトを `dev-docs/` に出力。`whitelistAdapterGenerator.ts` に純粋関数を抽出
 - ベンチマーク（30-04）。`scripts/benchmark-cleansing.mjs` で 100／500／1000要素DOMのクレンジング時間を計測し `dev-docs/benchmark-cleansing-2026-08-30.md` に出力（772msで要1パス検討と判断）
 
-### Fixed
+### 修正
 
 - 信頼境界一貫性（29-06）。`loader.ts` e2e 分岐で cold cache 時に SW `CHECK_DOMAIN` を await、`offlineQueueProcessor` の `force:true` を `force:false` にし2ゲートを再評価、`confirm_token` を `create_confirm_token` パーアクション化（TTL60秒・単回使用）、`tabContentFetcher` を per-origin→opt-in `<all_urls>` の権限ラダーに
 - 暗号・認証ポリシーSSOT（29-12）。`cryptoParams.ts` に `PBKDF2_ITERATIONS=600k` をSSOT化し3 KDF経路を付け替え、KEK を session-only 化（wrapped鍵の local 保存は維持）、`RateLimitService` を local 永続化、settings export を `version:2` ciphertext HMAC 先行化し旧形式は互換読み込み
 - 短文保護閾値（30-01）。`readability-spike` で閾値200では 33% のみ保護、120で 100% を実測し `bodyProtection.ts` の `DEFAULT_BODY_SCORE_THRESHOLD` を 200→120 に変更
 
-### Changed
+### 変更
 
 - `package.json` に `benchmark:cleansing`／`check:cleansing-corpus`／`generate:whitelist-adapter`／`verify:vulnhunt-fix` を追加
 - `wxt.config.ts` の `optional_host_permissions` に `<all_urls>` を追加（タブラダー用、host_permissions 昇格なし）
 
 ## [6.7.88] - 2026-08-30
 
-### Added
+### 追加
 
 - AIプロバイダ設定のA/B比較実験を実装。初期設定画面（Dashboard / Initial Setup）のAIセクション内で「A 一体型（現行：優先度カード内に設定を埋め込む）」と「B 分離型（優先度リストとプロバイダ別設定を分離）」をトグルで切り替え可能に。`ai_provider_layout: 'a'|'b'` を新規ストレージキーとして追加し、新規ユーザーはB／既存ユーザーはAをデフォルト、再起動後も保持。優先度は3枠固定、同一プロバイダでもモデルが異なれば重複を許可、同一プロバイダ＋同一モデルは警告（P1空は保存ブロック）。Bはドラッグ＋↑↓ボタンで順序入替、常設アコーディオンは既存DOMを再利用
 - `public/_locales` に `aiProviderLayoutA` / `aiProviderLayoutB` / `aiProviderPriorityDuplicateWarning` / `aiProviderPriority1Required` / `aiProviderLayoutToggleLabel` の5キーを追加
 
-### Fixed
+### 修正
 
 - BレイアウトでProvider Settingsアコーディオンを開いてもBase URLやAPIキーが表示されない問題を修正。`hideAllProviderSettings()` で `display:none` にされたままアコーディオン内に移動されていたため、`providerAccordionView` で `display:block` に上書きし、B表示時は不要な `hideAll` 呼び出しを除去
 
 ## [6.7.87] - 2026-08-29
 
-### Fixed
+### 修正
 
 - `offscreen/recordsRepo.ts` の `getStatus()` が各バックエンド（OPFS Worker / IndexedDB / Fallback）の返す実際の `path` を汎用の `DB_FILENAME` で常に上書きしていたため、診断パネルの「現在使用中のエンジン」が常に「不明」と表示される問題を修正。OPFS Worker側の `compileOptionsSource: 'opfs-worker'` 未設定、IdbVfsBackend/FallbackStorageAdapterの `path` 未設定も併せて解消
 - `sqliteMessageHandlers.ts` の `handleStatus()` が `opfsMigrationV2RecordCount` 未書き込み時（移行処理未実行）にデフォルト値 `0` を返し、「実際に0件移行した」状態と区別できず矛盾表示していた問題を修正。`optionalNullableNonNegativeNumber` を新設し `null`（未実行）を区別できるように変更
 
-### Added
+### 追加
 
 - 診断パネル「旧データベース移行」セクションを拡充。「現在使用中のエンジン」（OPFS/IndexedDB/フォールバック、OPFSには推奨タグとファイル名を併記）、「保存データ件数」「ストレージ使用量」を新規表示
 - OPFS経路の状態表示を2値（完了/未完了）から4状態（完了／対象外（旧データなし）／確認中／未完了）に拡張。`opfsMigrationV2LastAttemptedAt`/`CompletedAt`/`RecordCount` を用いて「移行処理が一度も実行されていない一時的な状態」と「実行したが未完了の警告状態」を区別
@@ -2252,13 +2206,13 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.86] - 2026-08-28
 
-### Refactor
+### リファクタリング
 
 - `GistSyncTarget` と `ObsidianSyncService` に重複していたバッチ同期ループ（listPending→markSynced）と `isConfigured` 判定を共通化。`SyncBatchRunner`（`listPending`/`markSynced` port）と `isCredentialConfigured`（`SettingsReader` 注入）を新設し、各ターゲットは I/O のみを実装する形に縮小。`ObsidianSyncService.isConfigured` が `chrome.storage.local` を直接参照していたドリフトを解消し `SettingsRepository` 経由に統一
 
 ## [6.7.85] - 2026-08-28
 
-### Fixed
+### 修正
 
 - Ollama Originヘッダー削除ルールに `initiatorDomains: [chrome.runtime.id]` を追加し、拡張機能自身からのリクエストにのみ適用されるよう限定。修正前は任意のウェブサイトが `fetch('http://localhost:11434/...')` でOriginヘッダーを削除でき、OllamaのCORS保護を意図せずバイパスしていた
 - Ollama設定Observerに前回値比較（`prevOllamaBaseUrl` クロージャ保持）を追加。修正前は `SettingsRepository.observe` が渡す `newValue` 全体に `OLLAMA_BASE_URL` が常に含まれるため `===undefined` ガードが到達不能で、任意の設定変更のたびに `chrome.declarativeNetRequest.updateDynamicRules` が冗長発火していた
@@ -2266,27 +2220,27 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.84] - 2026-08-28
 
-### Added
+### 追加
 
 - OllamaプロバイダのbaseUrlホスト宛リクエストから、`chrome.declarativeNetRequest` により `Origin` ヘッダーを強制削除する機能を追加。OllamaのデフォルトCORS設定（`OLLAMA_ORIGINS`未設定時）による拒否を、Ollama側の設定変更なしに回避できる。ルールはサービスワーカー起動時とOllama baseUrl設定変更時に同期され、対象はOllamaのホスト+ポートに限定（LM Studio・Obsidian REST API等の他ローカルプロバイダには影響しない）
 
-### Fixed
+### 修正
 
 - Chrome内蔵AI（Prompt API / Gemini Nano）呼び出し時、`LanguageModel.availability()` に出力言語指定（`expectedOutputs`）が渡されておらず「No output language was specified」エラーが記録される問題を修正。`create()` と同じ `expectedOutputs` を `availability()` にも渡すよう統一
 
 ## [6.7.83] - 2026-08-28
 
-### Fixed
+### 修正
 
 - 設定画面でAIプロバイダー優先度（1〜3位）を変更して保存しても `AI_PROVIDER_PRIORITY_LIST` が保存されず、実際の要約処理に反映されない問題を修正。保存処理にフォームの優先度スロット収集を組み込んだ
 
 ## [6.7.82] - 2026-08-27
 
-### Fixed
+### 修正
 
 - `dev-docs/Makefile` の `copy-wasm` / `build-wasm` ターゲットが削除済みの `vendor/wa-sqlite/` を参照していたため `make build` が失敗する問題を修正。`build` / `build-store` / `build-edge` から `copy-wasm` への依存を除去し、`build-wasm` ターゲットを削除
 
-### Refactor
+### リファクタリング
 
 - `vendor/wa-sqlite/` の未参照 WASM 成果物（`wa-sqlite-async.wasm`、`wa-sqlite-async.mjs`、`build-wasm.sh`）を削除。`node_modules/wa-sqlite` 経由でバンドルされるためビルド・移行機能に影響なし。SHA1 ハッシュ一致を確認済み。`npm run build` で 4 種 wasm が同一ハッシュで生成されることを検証
 - 診断パネルに旧 DB 移行状態（OPFS / IDB）を表示。`idb_migration_v2_done` を SQLite status プロトコル経由で診断パネルに反映。`renderMigrationSection` で両フラグ true 時「完了」、それ以外は「未完了（該当データがない場合を含む）」と内訳を表示。日英 i18n キー 9 個追加、`diagnosticsPanel.migration.test.ts` に 2 ケース追加
@@ -2295,7 +2249,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは前日のレビュー指摘を即座に反映したものです。
 
-### Fixed
+### 修正
 
 - ブランチ差分レビュー（`/review branch`）で検出した5件を修正：
   - `offscreen/sqliteMessageHandlers.ts` の `handleQuery` で `starred`/`dateFrom`/`dateTo`/`tag` の両エイリアス（`starred`/`isStarred`, `dateFrom`/`since`, `dateTo`/`until`, `tag`/`tagFilter`）をサポートし、SQLite/OPFSとFallbackで異なる結果を返すフィルタバイパスを解消。`payload` を `Record<string, unknown>` にキャストして型エラー解消
@@ -2305,7 +2259,7 @@ Documentation has been brought up to date with the features introduced during v6
   - `background/serviceContainer.ts` の `ServiceTokens.perUrlMutexMap` を `createBackgroundServices` で `register('perUrlMutexMap', () => new PerUrlMutexMap(), {singleton:true})` し、container経由で解決可能にしてdead tokenを解消
 - テスト失敗5件を解消（`gistSettings`/`tagsPanel`/`dashboard-handlers`）: `utils/storage/settingsStore.legacy.ts` で `repo.setAll(toSave, undefined)` を条件分岐（`if (sqliteHealthCheck) register with {sqliteHealthCheck} else register without`）に修正し、`StorageKeys` モックに `ALLOWED_URLS`/`ALLOWED_URLS_HASH` を追加。`8396 tests PASS` に復帰
 
-### Refactor
+### リファクタリング
 
 - checking-teamレビュー指摘16件を9 PBIに統合しRICEで優先度付け（`pbi/2026-08-25-00-backlog.md` および `dev-docs/archived/pbi/2026-08-25-0*.md`）。`InMemoryStorageAdapter` のマイグレーション整合テスト追加と `CONTENT_SCRIPT_ONLY_TYPES` の削除（PBI01/08, RICE 57.6/20.0）、`ProviderStrategy` の後方互換エイリアス `ProviderStrategy = AIProviderStrategy`（PBI02, RICE 40.0）、`sqliteClient` の `Extract<QueryOp>`/`Extract<MutateOp>`是正と `traceId` のoptional化（PBI03, RICE 34.3）、`providerRegistry` の `@layer 1`是正と `isAllowedProviderBaseUrl` 追加（PBI04, RICE 32.7）、`ServiceContainer` の `ServiceTokens` 型付けと `PerUrlMutexMap` のconstructor注入（PBI05, RICE 21.0）、`VisitGate` の `elapsed` clampと `extractor` の重複export削除（PBI06, RICE 16.0）、`vitest` coverage閾値 `lines:80/branches:80` と `reviewSummaryAlarm` の冪等化（PBI07/09, RICE 8.0/6.1）をWave1（3件並列）→Wave2→Wave3→Wave4で実施。全9件を `dev-docs/archived/pbi/` へアーカイブし `pbi/00-INDEX.md` に `0825b/c/d/e/f` 履歴を追記。`0824a` ブランチを `main` へマージ（`3d59ffbc`）
 - `background/serviceContainer.ts` に `ServiceTokens` constと `ServiceKey` 型を追加し `register/resolve/has/override` を型付け。`background/pipeline/perUrlMutex.ts` に `constructor(map?)` を追加しデフォルトは共有static mapを維持しつつ `container.override('perUrlMutexMap', new PerUrlMutexMap(new Map()))` でテスト隔離可能に
@@ -2313,14 +2267,14 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.80] - 2026-08-25
 
-### Fixed
+### 修正
 
 - ブランチ差分レビュー（`/review branch`）で検出した問題を修正：
   - `PerUrlMutexMap.runExclusiveOn` が `acquire()` 失敗時（キュー満杯・タイムアウト）にも `finally` で `release()` を呼び、他レコーディングが保持中のロックを誤解放・譲渡して per-URL 直列化が壊れる問題を修正。取得成功時のみ解放する `acquired` フラグを導入
   - `storageMaintenance` の `setSqliteHealthCheck` 注入が Service Worker でのみ実行されるため、ポップアップ/オプション画面では `getSqliteHealthCheck()` が常に `null` → `async () => false` となり、レガシー領域の退避（`purgeLegacyStorage`）がスキップされてクォータ超過ユーザーの設定保存が `STORAGE_QUOTA_EXCEEDED` で失敗するリグレッションを修正。`getDefaultSqliteHealthCheck()`（SqliteClient ベースの遅延フォールバック）を復活させ、`ensureStorageQuota` を「明示指定 → 注入済み → 遅延フォールバック」の順で解決
   - `saveSettings` が `ensureStorageQuota` を二重実行し、明示的な `sqliteHealthCheck` 引数が実効ゲートで無視されていた問題を修正。クォータチェックを `ChromeStorageAdapter.setSettings` に一本化し、ヘルスチェックを `setAll` → `setSettings` 経由でスレッド
 
-### Refactor
+### リファクタリング
 
 - `SettingsRepository` の未使用ファサード（`getCleansingConfig`/`getThresholds`/`getObsidianConfig`/`getAiProviderConfig`/`getPrivacyConfig`）と、それを支える `rules.ts` の手動ミラーテーブル（`CLEANSING_RULE_PROP_MAP` 33件 / `THRESHOLD_RULES_FACADE` 7件 ほか）を削除し、`aiSummaryCleaner/rules.ts` を単一ソースに復帰（デッドコード・ドリフトリスク解消）
 - `content/visitGate.ts` の未使用 `shouldRecordVisit` ヘルパ（`extractor.ts` の同名ラッパが shadowing）を削除
@@ -2328,57 +2282,57 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.79] - 2026-08-25
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening 0825a（arch-delivery-loop）診断5候補 → RICE再計算で残存stagedを整理。`SettingsRepository`にObsidian/AI/Privacy 3 facadeを追加し47箇所の`StorageKeys.`直参照94行を集約（PBI-01, RICE 32.0, 0.45w）、`CleansingConfig`に`Record<ThresholdProp,number>`交差を追加し3箇所`as unknown`を型安全化（PBI-02, 32.0, 0.10w）、`createBackgroundServices`後半7件を`container.register(singleton:true)`に移行し3重型更新を解消（PBI-03, 22.5, 0.35w）をWave1並列3で、`Settings`を`Partial<StrictSettings>`に一本化し`settings['typo']`を型エラー化（PBI-04, 36.0, 0.25w）をWave2で。8394 tests PASS / type-check PASS / lint 63 warnings。
 
 ## [6.7.78] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening 0824d（arch-delivery-loop）診断4候補 → RICE再計算でServiceContainer/THRESHOLD_RULESのenablerにより2.0w→0.90w stagedに55%削減。`SettingsRepository`に`getCleansingConfig()`/`getThresholds()` facadeを追加し40+7キーの取得を`CLEANSING_RULES`/`THRESHOLD_RULES`の`storageKey`配列を`getMany`で一括取得+`DEFAULT_SETTINGS` fallback内包で完結（PBI-05, RICE 63.0, Effort 0.20w）。`VisitGate`純粋value objectを`src/content/visitGate.ts`に新設し`PageState`に`toVisitGateThresholds()`/`toVisitState()` DI seam追加、`extractor.ts`の`checkVisitConditions`を`VisitGate`委譲に置換（PBI-06, RICE 16.8, Effort 0.90w）。Wave 1並列2件はstorage vs contentでdisjoint、8394 tests PASS / type-check PASS。残りSlice A/C（Obsidian/AI/index撤廃）は次スプリントへ。
 
 ## [6.7.77] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
-- `ServiceContainer`を`src/background/serviceContainer.ts`に新設し`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換。`getSharedSqliteClient`を`singleton:true` factoryとして登録し、deferredとなっていたArchitecture Deepening #4を解消。`8394 tests PASS / type-check PASS / build 6.89MB`
+- `ServiceContainer`を`src/background/serviceContainer.ts`に新設し`createBackgroundServices`の11 singleton生成を`container.register`宣言的配線に置換。`getSharedSqliteClient`を`singleton:true` factoryとして登録し、deferredとなっていたArchitecture Deepening #4を解消。`8394 tests PASS / type-check PASS
 
 ## [6.7.76] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
-- Architecture Deepening 0824c（arch-delivery-loop）診断7候補 → RICEスコアリング + 並列性調査で3件をWave 1並列で実装。`THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出、`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約（PBI-01, RICE 42.0）。`CONTENT_SCRIPT_ALLOWED_TYPES`をSSOT化し`CONTENT_SCRIPT_ONLY_TYPES`を派生として型保証、`MessageRouter.dispatch`に`tab.id/tab.url`の厳格チェックを集約し`messageHandler`を`restore+migrate+router.dispatch`の薄い層に縮小（PBI-02, RICE 21.3）。4 helper（callQuery/callMutate/callMaintain/callStatus）を`callInternal` genericに集約し`sqliteMessageHandlers`に`satisfies Record<SqliteMessageType, Handler>`で静的網羅性を付与、`storageMaintenance`の`await import+new SqliteClient`を削除し`setSqliteHealthCheck`注入に、`createBackgroundServices`で`getSharedSqliteClient`を注入、`quota.ts`の`getStorageUsage`を`getBytesInUse`不在時に0を返す耐性化でstub欠落を解消（PBI-03, RICE 17.1）。deferred 3件（extractor分割/ServiceContainer/StorageKeys）を次スプリントへ。`8394 tests PASS / type-check PASS / lint 62 warnings / build 6.89MB`
+- Architecture Deepening 0824c（arch-delivery-loop）診断7候補 → RICEスコアリング + 並列性調査で3件をWave 1並列で実装。`THRESHOLD_RULES`テーブル7要素を`src/utils/aiSummaryCleaner/rules.ts`に新設し`THRESHOLD_DEFAULTS`と`DEFAULT_CLEANSING_CONFIG`/`DEFAULT_SETTINGS`を同テーブルから導出、`src/content/extractor.ts`の7連打ifを`for (const t of THRESHOLD_RULES)`の1ループに集約（PBI-01, RICE 42.0）。`CONTENT_SCRIPT_ALLOWED_TYPES`をSSOT化し`CONTENT_SCRIPT_ONLY_TYPES`を派生として型保証、`MessageRouter.dispatch`に`tab.id/tab.url`の厳格チェックを集約し`messageHandler`を`restore+migrate+router.dispatch`の薄い層に縮小（PBI-02, RICE 21.3）。4 helper（callQuery/callMutate/callMaintain/callStatus）を`callInternal` genericに集約し`sqliteMessageHandlers`に`satisfies Record<SqliteMessageType, Handler>`で静的網羅性を付与、`storageMaintenance`の`await import+new SqliteClient`を削除し`setSqliteHealthCheck`注入に、`createBackgroundServices`で`getSharedSqliteClient`を注入、`quota.ts`の`getStorageUsage`を`getBytesInUse`不在時に0を返す耐性化でstub欠落を解消（PBI-03, RICE 17.1）。deferred 3件（extractor分割/ServiceContainer/StorageKeys）を次スプリントへ。`8394 tests PASS / type-check PASS / lint 62 warnings
 
 ## [6.7.75] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
-- 並列スプリントで deferred 3件を同時実装。`ProviderRegistry` 導入で `OpenAIProvider` 5分岐を `GenericOpenAICompatibleProvider` + `PROVIDER_REGISTRY` Map に集約し `isLocal`/`requiresApiKey` で timeout/contentLimit を導出、`aiModelKey` を registry ルックアップの互換 shim 化、`RemoteAIService.registerDefaultProviders` をループ化（PBI-10, RICE 11.2, 11 tests 追加）。`SqliteClient` の 20 shim 削除と `call` → `callQuery/callMutate/callMaintain/callStatus` 4分割で 100行削減、13テストを新 domain API に移行（PBI-11, RICE 20.0）。`offscreen` の 24-case dispatch を `Map` + 共通 `assertPayloadSize` + `browsingLogCodec` 抽出で guard 重複を解消し VULN-001 再発防止（PBI-07, RICE 48.0）。3件のファイル重複はゼロで完全並列実行、統合時の `types.ts` 重複定義と `eslint` worktree 除外および `SettingsRepository` モック不整合（27 tests FAIL）を解消。`8394 tests PASS / type-check PASS / lint 62 warnings`
+- 並列スプリントで deferred 3件を同時実装。`ProviderRegistry` 導入で `OpenAIProvider` 5分岐を `GenericOpenAICompatibleProvider` + `PROVIDER_REGISTRY` Map に集約し `isLocal`/`requiresApiKey` で timeout/contentLimit を導出、`aiModelKey` を registry ルックアップの互換 shim 化、`RemoteAIService.registerDefaultProviders` をループ化（PBI-10, RICE 11.2, 11 tests 追加）。`SqliteClient` の 20 shim 削除と `call` → `callQuery/callMutate/callMaintain/callStatus` 4分割で 100行削減、13テストを新 domain API に移行（PBI-11, RICE 20.0）。`offscreen` の 24-case dispatch を `Map` + 共通 `assertPayloadSize` + `browsingLogCodec` 抽出で guard 重複を解消し VULN-001 再発防止（PBI-07, RICE 48.0）。3件のファイル重複はゼロで完全並列実行、統合時の `types.ts` 重複定義と `eslint` worktree 除外および `SettingsRepository` モック不整合（27 tests FAIL）を解消。`8394 tests PASS / type-check PASS
 
 ## [6.7.74] - 2026-08-24
 
-### Fixed
+### 修正
 
 - Cookie同意バナー統合欠落による 2 tests FAIL を修正。`entrypoints/options/index.html` の手書き checkbox 群に `ai-summary-cleansing-cookie` が欠落し `aiSummaryCleansingSettingsV2-ruleDerivation` が `id="ai-summary-cleansing-cookie"` 不存在で失敗、`src/utils/__tests__/aiSummaryCleaner.test.ts` の「全無効」ケースが `cookieEnabled:false` 未指定で `totalRemoved 1` になる問題を解消。`AiSummaryCleansingSettings` を `RuleKey` からの mapped type `Record<`${RuleKey}Enabled`, boolean>` に置換し `CLEANSING_RULES` が SSOT になるよう型レベルで保証、`public/_locales/*/messages.json` に `aiSummaryCleansingCookieDesc` を追加
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening 0824b（arch-delivery-loop）診断 8候補 → RICE スコアリング → 2件を実装・2件を次スプリントへ。`AiSummaryCleansingSettings` 手書き 33項目を `RuleKey` 導出の mapped type に置換しルール追加時の型追従を保証（PBI 09, RICE 64.0）。`ProviderRegistry`（RICE 11.2）と `SqliteClient shim`（RICE 20.0）は次スプリントへ見送り。詳細は `dev-docs/archived/pbi/2026-08-24-00-backlog-0824b.md` と HTMLレポート `/var/folders/b_/fzr253l50g58s5p7d94nxjmc0000gn/T/architecture-review-20260824190249.html` を参照
 
 ## [6.7.73] - 2026-08-24
 
-### Fixed
+### 修正
 
 - Dell Pro Max ページで OneTrust 製 Cookie同意バナー（`onetrust`/`ot-sdk`系）の定型文が AI へ送信されていた問題を修正。AI要約クレンジングに `cookie` ルール（`COOKIE_TEXT_PATTERNS` 12件: 日 `Cookieの管理`/`必須Cookie`/`マーケティング` 等、英 `Manage.*cookie`/`Always active` 等）を新設し、OneTrust 系クラス（`onetrust`/`ot-sdk`/`optanon`/`truste`等）を `POPUP_PATTERNS` に追加して無条件除去。`stripCookieConsentElements` によりテキストマッチでも1000文字以下のバナー要素を除去。`historyAiSummaryCleansedReasonCookie` を ja/en に追加し、既存ユーザーも `defaultEnabled:true` で有効
 
 ## [6.7.72] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening 0824a（arch-delivery-loop）3件を実装。`SettingsRepository` の shim（`tryLegacyGetAll`/`tryLegacySave` 66行）を削除し `InMemoryStorageAdapter.getSettings` を `applyMigrationsAndDecrypt(…, false)` で本番ミラー化、`settingsStore.legacy.ts` を `@deprecated` static wrapper 化して `SettingsReader` 経由のテストモック移行（29テストの `SettingsRepository` モック化 + `cspSettings.ts` の `this.repo` 注入修正）、`ProviderId` union 7種を `storage/types.ts` に導入し `ProviderSlot.provider` を型安全化、 `SqliteHealthCheck` を `types.ts` Layer 0 に抽出し `storageMaintenance.ts` の `utils→background` 動的 import を排除して Layer 循環を解消。PBI-02（StorageKeys facade）/ PBI-04（Pipeline composition root）/ PBI-06（content extractor global state）/ PBI-07（offscreen dispatch guard）は次スプリントへ見送り
 
-### Fixed
+### 修正
 
 - `settingsStore.legacy.ts` の未使用 import と `cspSettings.ts` の未使用 `SettingsReader` 型 import による lint エラー（`no-unused-vars`）を修正
 - `eslint.config.js` に `.vulnhunter-fix/` と `obsidian-smart-history_VULNHUNT_RESULTS*/` の ignore を追加し `make clean test` の lint ゲート（413件の `parserOptions.project` エラー）が `src/` のみに限定されるよう修正
@@ -2386,23 +2340,23 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.71] - 2026-08-24
 
-### Fixed
+### 修正
 
 - `CspSettingsController` の reset 成功メッセージ表示テストが非同期 `loadCSPSettings` の完了待機不足でフレーキーになっていた問題を修正。`vi.waitFor` でメッセージ要素の表示を待機するよう変更
 
-### Chore
+### 保守
 
 - 2026-08-24 Architecture Deepening で見送りとした PBI-02（contentExtractor fallback 抽出）と PBI-06（message 検証一本化）を `pbi/` から `dev-docs/archived/pbi/` へ移動。両方とも高リスク・trust/security 層に直結するため次スプリントで単独着手予定
 
 ## [6.7.70] - 2026-08-24
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening（arch-delivery-loop）5件を実装。`loader.ts` から domain policy を `content/domainPolicy.ts` に抽出し `StorageKeys` 再定義を廃止して `storage/types.js` の単一ソースに（content-script-safe adapter 化）、`recordingHandlers` の module-level Map を `visitRateLimiter.ts` の注入可能な `VisitRateLimiter`（`VisitRateLimiterStore` adapter）へ抽出、非推奨 `piiStripper.ts` shim を削除しテスト import を `piiBoundary` に移行、未使用 `syncTargetRegistry.ts` を削除、`CspSettingsController` の listener 重ね掛けを `AbortController` で一括破棄するよう修正（PBI-01/03/04/05/07）。PBI-02（contentExtractor fallback 抽出）と PBI-06（message 検証一本化）は高リスクのため次スプリントへ見送り
 
 ## [6.7.69] - 2026-08-24
 
-### Fixed
+### 修正
 
 - `make clean test` の lint ゲートが 2件の `no-unused-vars` エラーで失敗していた問題を修正。`src/background/syncTargets/gistSyncTarget.ts` の未使用 `Settings` 型 import と `src/offscreen/storageFallback.ts` の未使用 `SearchResult` 型 import を削除し、`lint 0 errors` を復元
 - ブランチ差分レビュー（`/review branch`）で検出した問題を修正：
@@ -2415,34 +2369,34 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.68] - 2026-08-23
 
-### Refactor
+### リファクタリング
 
 - Architecture Deepening 0823a 4件を実装（RICE 240/180/120/96）。`ChromeStorageAdapter` を `chrome.storage.local` 直読みに変更し `settingsStore` 循環を断ち `settingsStore.legacy.ts` に退避、10 call sites を `SettingsRepository` に移行し `no-restricted-imports` で新規直importを禁止。`systemHandlers.ts` を `fetchHandlers`/`badgeHandlers`/`lifecycleSystemHandlers` に3分割し `VisitRateLimiter` を抽出。`RecordingPipeline` を `PerUrlMutexMap`/`StepExecutor` に分離し 519→192行に縮小。`contentExtractor` の `returnInfo` boolean trap を `extractMainContent`/`extractMainContentWithInfo` の2メソッドに分割し `pageContentPipeline` を唯一の public seam に
 
 ## [6.7.67] - 2026-08-23
 
-### Changed
+### 変更
 - 依存パッケージを更新（patch/minor: `@cyclonedx/cyclonedx-npm`、`@vitest/coverage-v8`、`happy-dom`、`vitest`、`@axe-core/playwright`、`@peculiar/webcrypto`、`@playwright/test`、`@types/node`、`@typescript-eslint/*`、`eslint`、`knip`、`vite`。major v0: `@types/chrome`、`esbuild`、`typedoc`）。TypeScript 6→7 は MAJOR 変更のため見送り。Playwright ブラウザバイナリを再インストールし、`make clean test` が全テスト合格することを確認
 
-### Refactor
+### リファクタリング
 - Architecture Deepening 7件を実装。SettingsRepository の `StorageAdapter` を `getSettings`/`setSettings` で多態化し `instanceof` 分岐を解消、PII 境界を `piiBoundary.ts` の `toExternalResult()` に集約し `piiStripper.ts` を deprecated shim 化、protocol version を `wxt.config.ts:define.__PROTOCOL_VERSION__` で単一ソース化し `loader.ts` ハードコードを排除、Storage の `chrome.storage.onChanged` 横断無効化を追加、メッセージ trust table を `CONTENT_SCRIPT_ALLOWED_TYPES` の SSOT 導出に、`content/privacyDialog.ts` を抽出し `extractor.ts` から分離、`serviceContainer.ts` に軽量 DI コンテナを新設
 
 ## [6.7.66] - 2026-08-23
 
-### Added
+### 追加
 - Microsoft Edge Add-ons ストアでの配布を開始（[Yasumaro - AI Browsing Logger](https://microsoftedge.microsoft.com/addons/detail/yasumaro-ai-browsing-lo/cajkdicmjjpmmohmiodmilmgkaeeonep)）。GitHub Pages（`docs/index.html`）のヒーローセクション・インストールセクションに Edge Add-ons への導線を追加。
 
-### Fixed
+### 修正
 - リリース前ブランドチェックスクリプト（`check-release-branding.js`）がプロジェクトルートの `.github/workflows/release.yml` を正しく参照するよう修正。従来はパス解決バグで `.kilo/.github/workflows/release.yml` を探して常に読み取り失敗していた（`../../..` → `../../../..`）。`generate-release-notes.js` は元から正しく動作していたため変更なし。
 
 ## [6.7.65] - 2026-08-23
 
-### Fixed
+### 修正
 - 既定 Obsidian ポートペアを訂正。`DEFAULT_SETTINGS`/`allowedUrls`/`urlWhitelist`/`obsidianConfigValidator` のフォールバックポートを `27123` から `27124` に統一し、`protocol='https' × port='27124'` の整合ペアにした。明示設定ユーザーの保存値は尊重。`storage-defaults.test.ts` / `obsidianClient.test.ts` / `robustness-port-validation.test.ts` / `storageUrls.test.ts` の default 期待値を `27124` に更新。
 - Built-in AI のセッション作成に `expectedOutputs: [{ type: 'text', languages: ['ja'] }]` を指定し、日本語テキスト出力を明示的に要求するようにした。`builtInAIClient.ts` および `builtInAiDiagnosticsService.ts` のダウンロード診断セッションに適用。
 - PII サニタイゼーションのエラーハンドリングを修正し、例外のスローではなくエラーオブジェクトの返却を復元して API コントラクトを維持（`docs/assets/pii-sandbox.js`）
 
-### Refactor
+### リファクタリング
 - `SettingsRepository` に `getMany` を追加し、`DiagnosticsCollector` / `settingsForm` / `connectionTests` / `CspSettingsController` / `tagsPanel` / `gistSettings` / `markdownExport` / `recordingConditionsSettings` を repository 経由に移行。生キャスト（`as string` 等）を0件に削減。`SettingsReader` 型を export し、view model 関数・クラスに後置 optional パラメータで注入シームを提供。`InMemoryStorageAdapter` 越しの単体テストを追加。
 - AI 接続テストの進捗 UI（スピナー + プロバイダラベル + 経過時間）を `aiTestProgressView.ts` に抽出し、「初期設定」画面と「診断」画面の両方から共有するようにした。`connectionTests.ts` と `diagnosticsActions.ts` の重複していた DOM 構築・レンダリングロジックを純関数として統合。
 - `dev-docs/dig-findings-*.md` を `dev-docs/archived/` へ移動し、完了した深掘り記録をアーカイブした。
@@ -2470,7 +2424,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.62] - 2026-08-20
 
-### Refactor
+### リファクタリング
 
 - `PanelLifecycle` Wave 3 残り9パネルを移行完了。`diagnosticsPanel`/`sqliteHistoryPanel` に続き `historyPanel`/`tagClusterPanel`/`domainSearchPanel`/`exportLogsPanel`/`generalSettingsPanel`/`privacySettingsPanel`/`aiSummaryCleansingPanel` と `STATIC_FORM_PANELS` 9件を `PanelLifecycle` 直接実装に移行。`src/dashboard/main.ts` の `adaptLegacyPanel` ラッパーを全廃。`src/dashboard/panels/types.ts` の legacy 型 (`AsyncDataPanel`/`StaticFormPanel`/`DiagnosticPanel`/`Panel`/`adaptLegacyPanel`) を削除。`NavigationRegistry` に `diagnostic` 向け `load()` 呼出を追加し失敗時の UI フィードバックを実装。`MessageHandlerRegistry` の validator 拒否時の返り値を `false` に統一。
 - `src/utils/` レイヤー境界を形式化。`dev-docs/LAYERS.md` 新設、ADR `2026-08-20-utils-layer-circular-dependency` 新設、`src/utils/` 15ファイルに `// @layer` コメント付与。`storage.ts` barrel から `storage/types.js` への直接 import へ段階的移行（`rateLimiter`/`obsidianClient`/`saveToObsidianStep`/`BrowsingLogRecordMapper`/`obsidianSyncService` の5ファイルを移行、残り27件は次スプリントへ）。`trustDb⇔settingsStore` 循環と `storageMaintenance→background/sqliteClient` 逆依存を例外として文書化。
@@ -2480,27 +2434,27 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.61] - 2026-08-20
 
-### Refactor
+### リファクタリング
 
 - アーキテクチャ深深化 第2波 5件を実装。`PageContentPipeline` 深いモジュール新設（`contentExtractor` 480行 + `aiSummaryCleaner` stripCore 522行/stripExtended 1008行 等、計約3,600行を `preparePageContent()` の1 seam に集約。`buildExtractionOptions` の6フラグを `PrepareHints` に集約し `src/content/extractor.ts` を1行委譲に簡素化。interface テスト6件追加）、`RecordingPipeline` 深いインターフェーステスト追加（`force`/`skipDuplicateCheck`/`previewOnly` の8通り + `BEST_EFFORT` + `per-URL Mutex` を `record()` の1 seam で検証。`PipelineStep`/`ErrorStrategy`/`RecordingContext` は内部 seam に留まることを保証）、`BrowsingLogRepository` 深いモジュール新設（`dashboardSqliteService` 598行の20 thin proxy を6 domain メソッド `query`/`search`/`toggleStar`/`deleteLog`/`getCount`/`getStatus` に集約。`tokenExempt`/`timeout`/`retry` を1 seamに隠蔽。`OffscreenTransport` は ports & adapters として維持）、`DiagnosticsCollector` 深いモジュール新設（681行 god module の11診断を `collect() → Snapshot` に集約。`storage`/`sqlite`/`deficiencies`/`builtInAi` 等を並列収集し型安全な Snapshot で返却。`chrome.storage`/`getSqliteStatus` は adapter 注入可能）、`SettingsRepository` 深いモジュール新設（30+散在の `StorageKeys` アクセスを `get`/`set`/`getAll`/`onChange` の1 seam に集約。defaults/validation/encryption/migration を内部に隠蔽。`StorageAdapter` で `ChromeStorageAdapter`/`InMemoryStorageAdapter` の2 adapter）
 - `validate`（lint 0件 / type-check 成功 / 8191テスト成功）と `build`（6.91 MB）を通過。`pbi/00-INDEX.md` を空にし第2波5件を `dev-docs/archived/pbi/` へアーカイブ
 
 ## [6.7.60] - 2026-08-20
 
-### Refactor
+### リファクタリング
 
 - アーキテクチャ深深化 5件を実装。`savedUrlRepository` への集約（`storage/savedUrlStore.ts` 552行を38行の薄い re-export に縮小し30行の手動プロパティ列挙を `spreadExistingFields` に置換、プロトタイプ汚染ガード追加）、`dashboardSqliteService` の重複プロキシ集約（`runOpfsSpike`/`backupDb` を汎用 `callDashboard` 経由に統合 637→598行）、`PanelLifecycle` 共通寿命サイクル導入（`NavigationRegistry`/`DashboardBootstrapper` を統一 interface に移行し25パネルを `adaptLegacyPanel` でラップ）、`createMessageRegistryComposition` パススルー削除（配線を `createBackgroundServices` に集約し `Pick<>` による依存絞り込みとサブセット静的保証を追加）、`SettingsSchema`/`ValidationSchema` 導入（`settingsPipeline` の7要素IDハードコードをスキーマ駆動に、`GENERAL_SETTINGS_SCHEMA` を dashboard/popup 共有の単一ソース化し `RecordingContextFieldMapper` を `commonStorageFields` に集約して重複を解消）
 - 共有 `commonStorageFields` への集約により `saveMetadataStep` と `BrowsingLogRecordMapper` の41フィールド抽出の二重管理を解消
 
 ## [6.7.59] - 2026-08-20
 
-### Fix
+### 修正
 
 - ブラウザ再起動後もプライバシーポリシー同意モーダルが表示される問題を修正。HMAC署名検証用の wrapping key を `chrome.storage.session` から `chrome.storage.local` に永続化し、ブラウザ再起動後も署名検証が成功するように改善
 
 ## [6.7.58] - 2026-08-20
 
-### Refactor
+### リファクタリング
 
 - 静的 `RecordingCache` クラスを削除し、全呼び出し元を `RecordingCacheInstance` の依存性注入に統一。グローバル状態を排除しテスト時のインスタンス分離が可能に
 - `SqliteRpcClient` インターフェースを `src/messaging/sqliteRpcClient.ts` に新設し、Service Worker 側 `SqliteClient` と Dashboard 側 `dashboardSqliteService` でエラー分類（`categorizeError`）と結果型（`SqliteRpcResult<T>`）を共有
@@ -2511,31 +2465,31 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.57] - 2026-08-19
 
-### Fixed
+### 修正
 
 - プロンプトサニタイザの `LOW` 危険度検知を各呼び出し元でログに記録するよう変更
 - プロンプトサニタイザの safe-context 判定を強化し、HTML属性値内を安全とみなさないように修正
 - 訪問レートリミットの TTL スイープを毎回実行するよう修正し、古いエントリが残り続ける問題を解消
 - 暗号化 `encrypt()` の Base64 エンコードをスプレッド構文（`String.fromCharCode(...array)`）からループベースの `bytesToBase64()` に置換し、大きなバッファで発生しうるコールスタック溢れを回避
 
-### Refactor
+### リファクタリング
 
 - `DASHBOARD_SQLITE` メッセージの `payload` 型を `Record<string, unknown>` から `DashboardSqliteRequest` に型付けし、型安全性を向上
 
-### Chore
+### 保守
 
 - CI に PBI DoD（Definition of Done）の自動検証ジョブを追加
 
 ## [6.7.56] - 2026-08-18
 
-### Fixed
+### 修正
 
 - E2E テストの `PRIVACY_POLICY_VERSION` とソース定数の整合性を `versionConsistency.test.ts` で自動検証するテストを追加。将来のバージョン更新時に E2E テスト側の更新漏れをコンパイル時に検出
 - `release.yml` のビルド前に `check-version-consistency.js` を追加し、リリース時のバージョン不整合をCIゲートで防止
 
 ## [6.7.55] - 2026-08-18
 
-### Fixed
+### 修正
 
 - `docs/version.json` が `6.7.53` のまま更新されず、ビルド時のバージョン整合性チェックで失敗していた問題を修正
 - E2E テスト `recording-traceId.spec.ts` が `consentVersion: '2026-06-20'` をハードコードしており、`PRIVACY_POLICY_VERSION`（`2026-07-31`）と不一致で `hasPrivacyConsent()` が `false` を返し、`VALID_VISIT` が `privacy_consent_required` で拒否されてログが0件になる問題を修正。テスト定数を `PRIVACY_POLICY_VERSION` に同期し、ログ取得をポーリング方式に変更
@@ -2543,7 +2497,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.54] - 2026-08-18
 
-### Fixed
+### 修正
 
 - `tsconfig.json` に `noImplicitReturns`/`exactOptionalPropertyTypes` を追加し、型安全性の最終仕上げを完了。return漏れ1件、undefined明示代入93件を全件解消（53ファイル）
 - 共通ヘルパー `pickDefined`（`src/utils/objectUtils.ts`）を新設し、値が `undefined` なプロパティをキーごと省略する形に統一
@@ -2551,13 +2505,13 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.53] - 2026-08-18
 
-### Fixed
+### 修正
 
 - `tsconfig.json` に `noUncheckedIndexedAccess`/`noImplicitOverride`/`noFallthroughCasesInSwitch` を追加し、CI とエディタ（`.wxt/tsconfig.json`）の型チェック厳格度を整合。187件の型エラーを全件解消（53ファイル）。optional chaining / null check / `??` デフォルト値で修正、原則として非nullアサーション（`!`）はループ境界チェック後・配列長チェック後にのみ使用
 
 ## [6.7.52] - 2026-08-18
 
-### Fixed
+### 修正
 
 - `eslint.config.js` に `@typescript-eslint/no-explicit-any: error` を追加し、本番コードの明示的な `any` 使用を機械的に禁止。`createMessageHandlerRegistry.ts` の4つの `any` 型を具象型（`Settings`/`AiTestProgress`/`PrivacyInfo`）に、`i18n.ts` の `substitutions: any` を実装の共通型に、`gistSettings.ts` の `as any` を `as Settings` に、`deps.ts` の `record as any` を `record as unknown as BrowsingLogRecord` にそれぞれ修正。`MessageHandler` の `message: any` は異種コレクション型として構造的に維持し WHY コメントを付与
 - `as unknown as` 二段キャスト31件を棚卸し。11件を型安全に置換（`sqliteClient.ts` 5件、`extractor.ts` 2件、`resultBuilder.ts`/`RecordingPipeline.ts` 2件、`sourceManager.ts` 3件、`storageFallback.ts` 1件、`customPromptUtils.ts` 1件）。残り20件（WASM/OPFS/Worker境界）に WHY コメントを付与
@@ -2568,7 +2522,7 @@ Documentation has been brought up to date with the features introduced during v6
 - `TrancoUpdater.fetchTrancoCsv` のレスポンスに Content-Length ガードを追加（50MB上限）
 - `readBodyWithTimeout` のレスポンスに Content-Length ガードを追加（10MB上限）
 
-### Refactor
+### リファクタリング
 
 - `appConstants.ts` から未使用定数10件（`TRUST_LEVEL_COLORS`/`TIMEOUTS_MINUTES`/`SIZE_LIMITS`/`RETRY_CONFIG`/`DEFAULT_VISIT_SETTINGS`/`DEFAULT_PORT`/`ERROR_CODES`/`NON_RECORDABLE_SCHEMES`/`DOM_SELECTORS`）を削除
 - `popup/errorUtils.ts` から未使用型定義7件（`ErrorWithDetails`/`ObsidianError`/`AiError`/`NetworkError`/`UserError`/`SystemError`/`KnownError`）と型ガード関数5件を削除
@@ -2580,7 +2534,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.51] - 2026-08-18
 
-### Refactor
+### リファクタリング
 
 - `HeaderDetector` を静的メソッドからインスタンス化。`createBackgroundServices.ts` が明示的にインスタンスを生成・初期化する構造に変更
 - `PendingChromeStorageQueue` のシングルトンを遅延初期化に変更。テストからの注入が容易に
@@ -2598,7 +2552,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.50] - 2026-08-17
 
-### Refactor
+### リファクタリング
 
 - `SqliteEngineContext`（718行）を OPFS Worker プロキシ、IDB エンジンライフサイクル、マイグレーションバックアップ、フォールバックマイグレーションの4モジュールに分割。ファサードは268行に削減し、既存の public API（`engine`, `DB_FILENAME`, `MAX_QUERY_LIMIT`, `extractDomain`）は不変
 - `extractor.ts` のオプション構築（32フィールドの CleansingConfig → CleanseOptions 変換）を `contentExtractor/optionBuilder.ts` に集約。コンテンツ抽出パイプラインの重複を解消し、新しいクレンジングルール追加時の修正箇所を2箇所から1箇所に削減
@@ -2606,7 +2560,7 @@ Documentation has been brought up to date with the features introduced during v6
 - `RecordingCache` に `createRecordingCache(sessionStore?)` ファクトリ関数を追加。テストで注入可能なストアと独立したキャッシュインスタンスを作成可能に。既存の static API はデフォルトシングルトンに委譲し、呼び出し元は変更不要
 - `service-worker.ts`（579行）から `confirmTokenManager.ts`, `alarmHandler.ts`, `deferredMigrations.ts`, `dashboardSqliteWiring.ts`, `retryPendingWrites.ts`, `messageHandler.ts` の6モジュールに責務を抽出。ファサードは214行に削減
 
-### Fixed
+### 修正
 
 - `DB_FILENAME` が3ファイルで独立宣言されていた問題を修正。`idbEngineLifecycle.ts` を単一ソースとし、`migrationBackup.ts` と `sqliteEngineContext.ts` がそこからインポート/再エクスポートする構造に変更
 - `sqliteEngineContext.ts` の未使用再エクスポート7件を削除。外部からインポートされていない内部モジュールの型・関数はファサード公開APIから除外
@@ -2615,26 +2569,26 @@ Documentation has been brought up to date with the features introduced during v6
 
 このリリースは v6.7.48 のリリース時に発見したリリースノート生成スクリプトの不具合を修正したものです。
 
-### Fixed
+### 修正
 
 - GitHub リリースノート生成スクリプト（`generate-release-notes.js`）が、CHANGELOG のバージョンヘッダーに続く日付部分（例: `- 2026-08-16`）を抽出ボディの先頭に残骸として出力していたバグを修正。ヘッダー行全体を正規表現で消費するようにした
 
 ## [6.7.48] - 2026-08-16
 
-### Refactor
+### リファクタリング
 
 - DASHBOARD_SQLITE ハンドラ（`dashboardSqliteHandlers.ts`）の20分岐switchを、関心事ごとの3つのサブハンドラ（読み取り専用 / 主要CRUD / メンテナンス・一括処理）と、トークンチェックとdispatchのみを担うルーターに分割した。既存ファイルは import パス維持のための薄い re-export として残し、外部インターフェース（`createDashboardSqliteHandler`）は不変
 - 分割に伴い3サブハンドラへ複製されたエラーハンドリングをルーターの単一 try/catch に集約し、subtype のグループ定義を各サブハンドラへ集約（プロトコルとの整合をモジュール読み込み時に検証）。分割に伴い未使用になった import・export を削除
 
 ## [6.7.47] - 2026-08-16
 
-### Fixed
+### 修正
 
 - SQLite History パネルの一括選択バーが、選択後も表示されないままになる不具合を修正。`.hidden` クラス（`display: none !important`）をインラインスタイルの変更だけでは打ち消せず、選択してもバーが現れなかった
 - SQLite History パネルの日付レンジ選択・条件クリアが、初回描画直後と2回目以降の操作とで異なる実装経路を通っており、将来の状態遷移ロジック変更が片方にしか反映されない潜在バグを解消
 - SQLite History パネルの一括「全選択」チェックボックスが、選択解除の操作を挟んだ後に古い選択IDを残したまま全選択してしまう不具合を修正
 
-### Changed
+### 変更
 
 - SQLite History パネル（`sqliteHistoryPanel.ts`）から状態オーケストレーション（検索・ソート・タグフィルタ・一括選択・初期化ライフサイクルの管理）を `SqliteHistoryController` に分離し、DOM非依存のテストを追加
 - 構造化ログの内部実装で発生していた二重生成を解消
@@ -2644,14 +2598,14 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.46] - 2026-08-16
 
-### Added
+### 追加
 
 - SQLite History ダッシュボードパネルに検索結果の並び替え機能を追加。「新しい順」「古い順」に加え、検索実行中は「関連度順」（FTS5ランキングスコア順）も選択可能。選択したソート順は次回起動時も引き継がれる
 - タグフィルタ有効時は、実際に全文検索が実行されている場合（タグがヒットせず全文検索にフォールバックしたとき）のみ「関連度順」を選択肢に表示する
 
 ## [6.7.45] - 2026-08-15
 
-### Fixed
+### 修正
 
 - アップデート直後の並行呼び出しで暗号化キーの秘密（secret）が誤って再生成され、既存の暗号化済みAPIキー（Obsidian/AIプロバイダのトークン）が復号不能になるデータ損失バグを修正。`getOrCreateEncryptionKey()` のsession→local復元処理を排他制御（Mutex）し、ロック取得後に状態を再確認するダブルチェックロッキングを実装
 - 重大エラー発生時のOS通知（`chrome.notifications`）に、APIキーなどの機密情報が未サニタイズのまま表示されうる問題を修正。既存のPIIマスキング処理を通知メッセージにも適用
@@ -2662,19 +2616,19 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.44] - 2026-08-12
 
-### Changed
+### 変更
 
 - 依存パッケージを更新（`jsdom` v29→v30、`wxt` v0.20.27→v0.21.4）
 
 ## [6.7.43] - 2026-08-12
 
-### Fixed
+### 修正
 
 - **暗号化秘密値の保存先を `chrome.storage.local` に戻し、拡張機能アップデート後のAPIキー消失を修正** ― v6.7.42で `chrome.storage.session` へ移行したが、`chrome.storage.session` は拡張機能アップデート時にクリアされる仕様のため、アップデートのたびに新しい秘密値が生成され、既存の暗号化済みAPIキー（Obsidian・AIプロバイダのトークン）が復号不能になっていた。`chrome.storage.local` へ戻し、直前バージョンで `chrome.storage.session` に秘密値が移動済みだが未クリアのユーザー向けに救済マイグレーションを追加した。設計判断の詳細は [ADR](dev-docs/ADR/2026-08-12-encryption-secret-storage-area-must-be-local.md) を参照。既にアップデートを跨いで秘密値が失われたユーザーはAPIキーの再入力が必要。
 
 ## [6.7.42] - 2026-08-12
 
-### Fixed
+### 修正
 
 - fallback検索失敗時にServiceErrorを返しover-fetchを解消
 - sqliteHistoryPanelのstate mutationをreducer経由に統一
@@ -2684,7 +2638,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 ## [6.7.41] - 2026-08-11
 
-### Fixed
+### 修正
 
 - ダッシュボードでURL経由（`?tab=`）に初期パネルを開いた際、「初期設定」パネルのヘッダーが残存し、サイドバー選択状態とパネル表示がずれる不具合を修正した。
 
@@ -2692,7 +2646,7 @@ Documentation has been brought up to date with the features introduced during v6
 
 archive済みPBIの本文を実装結果と同期した。
 
-### Docs
+### ドキュメント
 
 - Architecture deepening Epicと子PBIの完了記録を更新した。
 
@@ -2700,11 +2654,11 @@ archive済みPBIの本文を実装結果と同期した。
 
 前回のコミット分離漏れを補正した。
 
-### Refactor
+### リファクタリング
 
 - SQLite history panelのstate seamを実装コミットへ追加した。
 
-### Docs
+### ドキュメント
 
 - archive済みPBIの実装結果を確定記録した。
 
@@ -2712,7 +2666,7 @@ archive済みPBIの本文を実装結果と同期した。
 
 PBIとアーキテクチャ記録を実装状態へ同期した。
 
-### Docs
+### ドキュメント
 
 - 完了済みPBIをarchiveへ移動し、PBI INDEXの履歴を更新した。
 - deep-digの判断記録とAIService lifecycleのADRを整理した。
@@ -2722,7 +2676,7 @@ PBIとアーキテクチャ記録を実装状態へ同期した。
 
 深深化したmoduleのテスト表面を拡充した。
 
-### Tests
+### テスト
 
 - SQLite history panel state reducerの全actionを検証した。
 - panelのstale response防止とSaved URL CAS競合を検証した。
@@ -2732,13 +2686,13 @@ PBIとアーキテクチャ記録を実装状態へ同期した。
 
 Background・Dashboard・AI summaryの主要moduleを深深化した。
 
-### Refactor
+### リファクタリング
 
 - Saved URL metadata保存をatomic CASへ集約した。
 - SQLite history queryとrecording handlerの依存経路を整理した。
 - review summaryをAIService factory経由へ移行した。
 
-### Tests
+### テスト
 
 - 保存、履歴query、handler、AI summaryの回帰テストを追加した。
 
@@ -2746,7 +2700,7 @@ Background・Dashboard・AI summaryの主要moduleを深深化した。
 
 アーキテクチャ深掘り作業のPBI整理を完了した。
 
-### Docs
+### ドキュメント
 
 - 完了したhandler registry、offline retry、Dashboard decoderのPBIをアーカイブへ移動した。
 - アーキテクチャ深掘りEpicとPBI INDEXを更新した。
@@ -2755,13 +2709,13 @@ Background・Dashboard・AI summaryの主要moduleを深深化した。
 
 DashboardとSQLiteの応答契約を厳密化した。
 
-### Fixed
+### 修正
 
 - DashboardのSQLite応答で欠損・不正な値を暗黙の既定値へ変換せず、エラーとして扱うようにした。
 - OPFS migration statusの各フィールドに型検証を適用した。
 - SQLite監査ログとDashboardのエクスポート経路で失敗理由を保持するようにした。
 
-### Tests
+### テスト
 
 - Dashboard、SQLite、監査ログの欠損フィールド・不正値・失敗応答に対する回帰テストを追加した。
 
@@ -2769,7 +2723,7 @@ DashboardとSQLiteの応答契約を厳密化した。
 
 Backgroundテストの共有fixtureを整理した。
 
-### Tests
+### テスト
 
 - RecordingLogicのテストで使用するcomposition fixtureを共有helperへ抽出した。
 
@@ -2777,13 +2731,13 @@ Backgroundテストの共有fixtureを整理した。
 
 Backgroundの依存配線とhandler registryをcomposition rootへ集約した。
 
-### Refactor
+### リファクタリング
 
 - Background servicesとRecordingPipelineの共有依存をcomposition rootで構築するよう整理した。
 - handler registryの登録を専用compositionへ移設し、19件のsender trust levelを一元管理した。
 - 不要になったServiceWorkerContextを削除し、関連テストと配線を更新した。
 
-### Tests
+### テスト
 
 - 全handlerの登録とsender trust policyを網羅する契約テストを追加した。
 
@@ -2791,7 +2745,7 @@ Backgroundの依存配線とhandler registryをcomposition rootへ集約した�
 
 Background composition、offline retry、Dashboard SQLite statusの残作業を完了した。
 
-### Fixed
+### 修正
 
 - **handler registryの登録先がService Workerに残っていた問題を修正**
   19件のhandler登録をcomposition rootへ移設し、各message typeのtrust levelを一元管理するようにした。
@@ -2800,7 +2754,7 @@ Background composition、offline retry、Dashboard SQLite statusの残作業を�
 - **DashboardのOPFS migration statusが未検証のままUIへ渡る問題を修正**
   `opfsMigrationV2*`フィールドに厳密なdecoderを適用し、不正なboolean、日時、件数を成功値として扱わないようにした。
 
-### Refactor
+### リファクタリング
 
 - sender trust policyの全19 message typeをcomposition rootの契約テストで網羅した。
 
@@ -2808,7 +2762,7 @@ Background composition、offline retry、Dashboard SQLite statusの残作業を�
 
 SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理由が途中で失われる問題を修正した。
 
-### Fixed
+### 修正
 
 - **SQLite操作の失敗が空結果や成功として扱われる問題を修正**
   dashboard、Service Worker、offscreen間の結果契約を統一し、空結果と通信・DB障害を区別するようにした。
@@ -2821,7 +2775,7 @@ SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理
 - **オフライン再試行対象がstep名の文字列照合に依存していた問題を修正**
   RecordingPipelineのstep metadataから再試行可否とjob種別を決定するようにした。
 
-### Refactor
+### リファクタリング
 
 - SqliteClientの失敗情報を捨てる重複wrapperを削除し、`*Result`メソッドへ統一した。
 - BackgroundのRecordingPipeline依存生成を共通化し、context menuの重複配線を解消した。
@@ -2829,7 +2783,7 @@ SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理
 - `OfflineJobKind`の定義をキューとRecordingPipelineで共有し、job種別追加時の型ドリフトを防止した。
 - 重複していた`src/eslint.config.js`を削除し、ルートのESLint設定へ統一した。
 
-### Tests
+### テスト
 
 - PBI-01〜05の受け入れシナリオ、失敗経路、型付き応答、オフライン再試行を検証するテストを追加・更新した。
 - 全テスト **7,763件成功、18件skip**、TypeScript型チェック成功。
@@ -2840,7 +2794,7 @@ SQLiteの結果処理とRecordingPipelineの依存配線を整理し、失敗理
 PBI 2026-08-09-23（SQLite トランスポート層削減）の Phase 3 を完了。
 confirmToken 要否を単一ソース化し、破壊的操作のトークン保護を強化した。
 
-### Fixed
+### 修正
 
 - **暗号化バックアップ復元・一括インポート・Obsidian追記の失敗理由が
   すべて null や固定文言に丸められていた問題を修正**
@@ -2867,7 +2821,7 @@ confirmToken 要否を単一ソース化し、破壊的操作のトークン保�
   で reject され、全履歴のバックアップが一切出力できなかった。
   送信側のトークン添付を単一ソース導出に乗せて解消（PBI 2026-08-09-23 Phase 3）
 
-### Security
+### セキュリティ
 
 - 破壊的操作のうち、従来 confirmToken が要求されていなかった3件
   （Obsidian への追記 `append_to_obsidian` / 履歴パージ `purge_now` /
@@ -2880,7 +2834,7 @@ confirmToken 要否を単一ソース化し、破壊的操作のトークン保�
   - これらを要求トークンに含めない裏経路（`diagnosticsPanel` の `status` 等）が
     無いことを確認済み
 
-### Refactor
+### リファクタリング
 
 - SQLite のメッセージ型一覧の二重化を解消した。型 union 20件と
   同じ内容の配列20件が並んでおり、一方だけを直しても誰も気づかない
@@ -2957,7 +2911,7 @@ confirmToken 要否を単一ソース化し、破壊的操作のトークン保�
   - `DashboardSqliteRequest` union と `ALL_DASHBOARD_SQLITE_SUBTYPES` の乖離を
     コンパイル時表明で強制（union に新 subtype を足して配列を忘れると build が落ちる）
 
-### Tests
+### テスト
 
 - テスト総数: 7711 → 7750（+39）
 - 設定パネル: アダプタの単体テスト、9件のidが実際の `options/index.html` の
@@ -2974,12 +2928,10 @@ confirmToken 要否を単一ソース化し、破壊的操作のトークン保�
 
 ## [6.7.28] - 2026-08-09
 
-This release is a hotfix for a content extraction crash on pages containing SVG.
-
 SVG を含むページ（Google 検索結果、Zenn の記事など）で自動保存が失敗する不具合の修正。
 あわせて、その失敗が「プライベートページが検出されました」と誤って表示される問題も直した。
 
-### Fixed
+### 修正
 
 - **SVG を含むページで記録が失敗する問題を修正**
   `Element.className` は HTML 要素では文字列だが、SVG 要素では `SVGAnimatedString`
@@ -3001,13 +2953,13 @@ SVG を含むページ（Google 検索結果、Zenn の記事など）で自動�
   型で分離し、失敗系には「記録に失敗しました」＋「再試行」の専用ダイアログを出すようにした。
   未知の理由は失敗側に倒し、誤ってホワイトリスト提案が出ないようにしている
 
-### Changed
+### 変更
 
 - 再試行は `force: false` の通常経路を通すため、プライバシー検出は引き続き有効
 - `renderPendingReason` を `dashboard/historyFilters.ts` から `utils/pendingStorage.ts` へ移動
   （popup からも使うため）。既存の import 位置は再エクスポートで維持
 
-### Tests
+### テスト
 
 - テスト総数: 7605 → 7680（+75）
 - SVG 要素に対する回帰テストを classifier・aiSummaryCleaner・新ヘルパーに追加
@@ -3015,12 +2967,10 @@ SVG を含むページ（Google 検索結果、Zenn の記事など）で自動�
 
 ## [6.7.27] - 2026-08-09
 
-This release immediately addresses review feedback from the previous release.
-
 [6.7.26](#6726---2026-08-09) で「別PBI推奨」として残した2件の後始末。
 どちらもコードの削除であり、ユーザーに見える振る舞いの変更はない。
 
-### Security
+### セキュリティ
 
 - 送信元認可の判定を `checkSenderTrust` の**1箇所に集約**した
   （[6.7.26](#6726---2026-08-09) では registry と handler の二重で判定していた）
@@ -3032,7 +2982,7 @@ This release immediately addresses review feedback from the previous release.
   **実際に dispatch して全20 subtype の拒否を確認する**形に書き換えた。
   ガードの実装位置に依存しない検証になっている
 
-### Refactor
+### リファクタリング
 
 - 本番から呼ばれていなかったテスト専用 wrapper `handleDashboardSqlite` を削除し、
   72箇所を `__tests__` 配下のハーネス経由に移行。
@@ -3041,7 +2991,7 @@ This release immediately addresses review feedback from the previous release.
 - handler 側の個別認可チェック13箇所と `rejectContentScriptSender` を削除。
   VULN-004/009/018/019/020 の背景コメントは残し、強制箇所への参照を追記
 
-### Tests
+### テスト
 
 - テスト総数: 7546 → 7605（+59）
 - 認可を検証していた直接呼び出しテスト6件は、削除せず registry 経由に移行
@@ -3050,12 +3000,10 @@ This release immediately addresses review feedback from the previous release.
 
 ## [6.7.26] - 2026-08-09
 
-This release immediately addresses review feedback from the previous release.
-
 リポジトリ全体を対象とした2回目のアーキテクチャレビューの指摘を PBI 6件として文書化し、実装したもの。
 **DB障害がユーザーに一切通知されない**という一連の欠陥（エラー情報が生成元から表示先まで届かない）を修正した。
 
-### Fixed
+### 修正
 
 - **SQLite の具体的なエラー文言が画面に届かない問題を修正**
   `deps.lastError` が値型だったため、Service Worker の配線はモジュール読み込み時の `null` を
@@ -3071,7 +3019,7 @@ This release immediately addresses review feedback from the previous release.
 - **1万件を超えるエクスポートが無言で切り捨てられる問題を修正**
   `total` と取得件数を照合せず、超過分が警告なく欠落していた
 
-### Security
+### セキュリティ
 
 - 送信元認可ポリシーを `MessageHandlerRegistry` に集約し、登録時の信頼レベル指定を必須化
   （指定しないとコンパイルが通らないため、既定が暗黙の「content script 許可」だった状態を解消）
@@ -3080,21 +3028,21 @@ This release immediately addresses review feedback from the previous release.
 - `CONSENT_STATE_CHANGED` / `GENERATE_REVIEW_SUMMARY` / `LOG_FORWARD` は
   content script が通過する検査のみだったため強化（`GENERATE_REVIEW_SUMMARY` は課金対象のAI呼び出しを起動する）
 
-### Refactor
+### リファクタリング
 
 - dashboard SQLite ハンドラの依存組み立てを本番とテストで共有（`createSqliteClientDeps`）。
   従来はテスト専用 wrapper が migration / confirmToken / backfill / cleanup をスタブ化しており、
   本番の実処理が一度もテストされていなかった
 - `src/offscreen/sqlite.ts`（全 export が `@deprecated` の再エクスポート層）を削除
 
-### Tests
+### テスト
 
 - 上記すべてについて「修正を戻すとテストが落ちる」ことを確認した回帰テストを追加（計42件）
 - `offscreen.test.ts` の `vi.mock` を本番の import 先に合わせて分割し、
   未到達だった経路が検証されるようになった（offscreen: 152 → 175件）
 - テスト総数: 7507 → 7546
 
-### Docs
+### ドキュメント
 
 - 調査の結果 markdownFormatter と obsidianFormatter のサニタイズ差異は
   ADR 2026-07-22 に照らして**意図的かつ正しい**と判明したため、対応不要の根拠を PBI に記録
@@ -3105,7 +3053,7 @@ This release immediately addresses review feedback from the previous release.
 
 レビュー時の判断のうち5点は、実装前の調査で誤りと判明したため訂正した（詳細は各 PBI に記録）。
 
-### Fixed / 修正
+### 修正
 
 - **履歴が1000件を超えると51ページ目以降が閲覧できない問題を修正** ― 履歴パネルの `fetchData` は `queryLogs` を `limit: 1000, offset: 0` で固定呼び出しし、ページングを取得後のクライアント側 `slice` で行っていた。1ページ20件のため**1001件目以降に到達できず**、しかも総件数はDB上の値を表示するため、ページネーションUIは開いても空になるページを表示し続けていた
   - SQLite 側は `LIMIT`/`OFFSET` を実装済みだったため、タグ絞り込みが無い場合はサーバ側ページングに委ねる形へ変更
@@ -3115,7 +3063,7 @@ This release immediately addresses review feedback from the previous release.
 - **Gemini が使用量不明時に「0トークン使用」を記録していた問題を修正** ― `usageMetadata` 欠落時に `|| 0` で丸めて必ず記録していた。「トークン数不明」は「0トークン使った」ではないため、記録しない OpenAI 側の挙動に統一
 - **Built-in AI がプロンプトインジェクション検査を通っていなかった問題を修正** ― `BuiltInAiProvider` は基底クラスの `sanitizeContent()` を呼んでおらず、レジストリの契約を満たすためだけに継承している状態だった。オンデバイス実行のため外部送信は無いが、注入された指示が要約を汚染して Obsidian に書き込まれる経路は残っていた
 
-### Refactor / リファクタ
+### リファクタ
 
 - **`AIService` に `testConnection` を追加し、抽象の穴を閉じた** ― ADR 2026-07-27 は「`aiClient` への新規直接依存は原則禁止」と定めたが、`AIService` に接続テストの入口が無く、service-worker は要約と接続テストで2経路を使い分けざるを得なかった。規律の問題ではなく抽象の欠落であり、2経路が独立して育った結果、6.7.24 の Gemini thinking バグは両方に別々の修正を要した
 - **AI プロバイダー間の非対称な振る舞いを基底クラスへ集約** ― リトライ述語（`shouldRetrySummaryRequest`）と使用量記録（`recordUsageIfPresent`）を `ProviderStrategy` へ
@@ -3126,7 +3074,7 @@ This release immediately addresses review feedback from the previous release.
 - **メッセージ型の整合性テストをソース導出方式へ** ― チェック対象をテスト内に手書きで複製していたため、`LOG_FORWARD` 追加時に更新が漏れ「整合性を守るはずのテストが最新の型を見落とす」状態だった。型レベルのチェックだけでは vitest が型を消すため不十分で、`messageTypes.ts` のソースから union メンバーを導出して突き合わせる形にした
 - **`utils/i18n.ts` に `getMessageOr` を追加** ― 共有 seam の `getMessage` はキー未定義時に空文字を返すため、`|| fallback` を期待する呼び出し元8件を機械的に置換すると翻訳漏れが空白UIになる回帰を生む。seam 側に不足機能を足し、独自ラッパー3件をその上に載せ替えた
 
-### Tests / テスト
+### テスト
 
 - 全 7,507 単体テスト通過（408ファイル）、TypeScript 型チェック正常。6.7.24 比 +83件
 - 追加した回帰テストは、**実装を意図的に壊して失敗することを確認**したうえで採用している
@@ -3139,7 +3087,7 @@ This release immediately addresses review feedback from the previous release.
 - `BuiltInAiProvider` のテストを新規作成（12件、従来0件）
 - `markdownExport` のテストを新規作成（22件）
 
-### Docs / ドキュメント
+### ドキュメント
 
 - アーキテクチャレビューの指摘を PBI 8件（`pbi/2026-08-08-02`〜`09`）として文書化。各PBIに調査で判明した訂正内容と、見送った項目の理由を記録
 - ADR 2026-07-27 に `AIService.testConnection` 追加の経緯を追記
@@ -3150,7 +3098,7 @@ This release immediately addresses review feedback from the previous release.
 
 あわせて、AI接続テストが実際にはAIへ問い合わせておらず（モデル一覧の取得のみ）疎通確認として不十分だった不具合を修正し、送受信内容を画面に表示するようにした。
 
-### Removed / 削除
+### 削除
 
 - **本番未使用のデッドモジュール5件を削除（本番1,010行 + テスト3,915行）** ― WXTエントリポイントからの推移的import追跡（到達性解析）により、本番コードから一切参照されず、テストのみが検証し続けている状態を検出。いずれも後継実装への移行時の削除漏れ
   - `src/popup/masterPasswordUi.ts` → `utils/masterPasswordUiCore.ts` + `dashboard/masterPassword.ts` へ移行済み
@@ -3159,7 +3107,7 @@ This release immediately addresses review feedback from the previous release.
   - `src/popup/settingsForm.ts` → `utils/settingsFormBinding.ts` へ移行済み
   - `src/popup/ublockExport.ts` ― 呼び出し元・対応するUIボタンともに存在せず到達不能
 
-### Refactor / リファクタ
+### リファクタ
 
 - **dashboard 専用の設定モジュールを `src/dashboard/settings/` へ移動（16ファイル 4,227行）** ― `src/popup/` 配下にありながら popup UI からは到達不能で、実際には options(dashboard) からのみ使われていたモジュール群。`entrypoints/popup/index.html` には対応する設定フォームのDOM自体が存在せず、popup 文脈ではバインド対象すら無い状態だった。「popup」という名前が実態と食い違い、設定機能を追うのに popup と dashboard を往復する必要があった（locality の問題）
   - `trustSettings` / `aiSummaryCleansingSettingsV2` / `customPromptManager` / `domainFilter` / `contentSettings` / `privacySettings` / `settings/aiProvider` / `settings/fieldValidation` / `ublockImport/*`
@@ -3177,7 +3125,7 @@ This release immediately addresses review feedback from the previous release.
 - **履歴パネルの計算部分を純関数として切り出す** ― `createSqliteHistoryPanel()` は約930行のクロージャで state と DOM を共有しており、個々の計算を単体検証する seam が無かった。引数のみに依存する4関数を `sqliteHistoryQuery.ts` へ抽出（`buildEnrichmentKey` / `enrichEntryWithChromeStorage` / `filterRowsByTag` / `dateRangeFromSelectedDate`）
   - 副次効果として、chrome.storage 補完キーの生成がキャッシュ構築側と参照側で二重定義されていたのを一本化（書式のずれは補完が黙って効かなくなる類のバグ源）
 
-### Fixed / 修正
+### 修正
 
 - **AI接続テストが実際にはAIへ問い合わせておらず、疎通確認として不十分だった問題を修正** ― OpenAI互換・Gemini の接続テストは `GET /models`（モデル一覧の取得）を叩くだけで、実際に推論を走らせていなかった。そのため以下が検証できていなかった
   - APIキーが**推論に対して**有効か（モデル一覧の取得だけ通るケースを見逃す）
@@ -3195,7 +3143,7 @@ This release immediately addresses review feedback from the previous release.
   - 空応答時のエラー内容を `finishReason` / `blockReason` / `thoughtsTokenCount` から組み立てるようにした。従来は「Invalid API response format」で原因が分からなかったが、`MAX_TOKENS` なら設定変更を促し、`SAFETY` ならフィルタによるブロックと判別できる
 - **`initDashboard` の名前衝突を修正** ― 即時実行される `(async function initDashboard())` と、同名の no-op な `export function initDashboard()` が同一ファイル内で衝突していた。テストから `initDashboard` を import すると実際のブートストラップ処理ではなく no-op を掴むため、テストが何も検証していない状態だった。即時実行IIFEを `export async function` 化し、テストも実処理の完了を検証する形に更新
 
-### Tests / テスト
+### テスト
 
 - 全 7,424 単体テスト通過（403ファイル）、TypeScript 型チェック正常
 - 接続テストの回帰テストを追加。`connectionTest-real-inference.test.ts` は「GETでのメタデータ取得に戻っていないこと」と送受信内容の記録を固定し、`aiTestResultView.test.ts` は「1秒未満が 0.0秒 に丸められないこと」を固定する
@@ -3206,7 +3154,7 @@ This release immediately addresses review feedback from the previous release.
 
 RecordingLogic ゴッドモジュール（541行）を3モジュールに分割する deepening リファクタリング。
 
-### Refactor / リファクタ
+### リファクタ
 
 - **RecordingLogic の分割** ― キャッシュ・検証・オーケストレーションの4関心事を3モジュールに分離
   - `src/background/recordingCache.ts`（395行）― settings/URL/privacy キャッシュ管理（TTL・永続化・VULN-014 redaction）
@@ -3215,7 +3163,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 - **呼び出し元の更新** ― `headerDetector.ts` / `tabEventHandlers.ts` / `lifecycleHandlers.ts` / `service-worker.ts` を `RecordingCache` の accessor メソッド経由に移行
 - **`truncateContentStep.ts` のローカルコピー削除** ― `RecordingValidator.truncateContentSize()` を直接使用する形に統合
 
-### Tests / テスト
+### テスト
 
 - 全 7556 単体テスト通過、TypeScript 型チェック正常
 - `service-worker.test.ts` / `lifecycleHandlers-pendingQueue.test.ts` のモックを `RecordingCache` ベースに更新
@@ -3225,7 +3173,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 前日リリースに続く deepening リファクタリングの追加分。AI プロバイダー層とURLメタデータ管理の重複をさらに解消。
 
-### Refactor / リファクタ
+### リファクタ
 
 - **built-in-ai をファーストクラスの provider strategy に昇格** ― `AIClient` から `registerBuiltInAiService()` の特殊経路を廃止し、`BuiltInAiProvider`（`AIProviderStrategy` 実装）として `ollama` / `openai-compatible` と同列の providers map に登録。`generateSummary` / `testConnection` の重複を `processSummarySlot()` に抽出
   - `src/background/ai/providers/BuiltInAiProvider.ts` ― 新設
@@ -3233,7 +3181,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 - **`urlMetadata.ts` を `savedUrlStore.ts` に統合** ― 機能が完全に上位互換だった `urlMetadata.ts`（558行）を削除し、`mergeSavedUrlEntry()` updater パターンを `savedUrlStore.ts` に追加。呼び出し元（`messageHandlers.ts` / `saveMetadataStep.ts` / `historyTagEditModal.ts`）を更新
 - **`contentExtractor` の cleanse 処理を重複除去** ― 3箇所に分散していた cleanse ブロックを `runAiSummaryCleanse()` ヘルパーに抽出、`AiSummaryCleanseRunResult` 型を新設
 
-### Tests / テスト
+### テスト
 
 - `BuiltInAiProvider` の dispatch 経路テストを更新
 - `urlMetadata` 関連呼び出し元のテスト・モックを `savedUrlStore` ベースに更新
@@ -3242,7 +3190,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 コードベースの重複除去と single responsibility の深化。3つの deepening candidate（D/E/F）を完了。
 
-### Refactor / リファクタ
+### リファクタ
 
 - **キュー統合** ― `PersistentRetryQueue<T>` を新設し `pendingChromeStorageQueue` / `pendingSqliteQueue` / `offlineNetworkQueue` の重複する load/save/enqueue ロジックを共通化。ストレージは `ChromeStorageAdapter` で抽象化し、各キューはドメイン固有の flush 戦略だけを保持
   - `src/background/persistentRetryQueue.ts` ― 深いキューモジュール（TTL, retry count, per-cycle cap, payload check）を所有
@@ -3259,7 +3207,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 - **Auto Fallback バグ修正** ― `FallbackAIService` の `auto` モードが `LocalAIService` の `{ success: false }` を検出せず remote にフォールバックしない不具合を修正
   - 例外 + `success === false` の両方をフォールバック条件に追加
 
-### Tests / テスト
+### テスト
 
 - `FallbackAIService.test.ts` ― `success:false` フォールバックテストを追加
 - `localMarkdownExportTimingUi.test.ts` ― インポート元を `dashboard.js` → `settingsFormBinding.js` に変更
@@ -3269,13 +3217,13 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 自治体サイト等で `<script>` タグ以外の形（`hidden`/`display:none` 要素内への平文埋め込み）で本文に混入するJS/jQueryコードを、コンテンツ抽出・Content Cleansingの両段階で除去できるようにするバグ修正。
 
-### Fixed / 修正
+### 修正
 
 - **本文抽出時にJSコードが混入する不具合を修正** ― `https://ginzan.city.oda.lg.jp/`（石見銀山世界遺産センター）等の自治体CMSサイトで、`hidden` 属性や `display:none` の要素内に平文で埋め込まれたjQueryコード（ドロップダウンメニュー制御、iOS拡大防止等の実装コード）がAIへの送信データに混入し、無関係な要約が生成される問題を修正
   - `src/utils/contentExtractor/classifier.ts` ― テキスト抽出の除外対象タグ（`EXCLUDED_TAGS`）に `script` / `style` / `noscript` / `template` を追加
   - `src/utils/contentCleaner.ts` ― Content Cleansing の Hard Strip 対象タグに `noscript` を追加。さらに `[hidden]` / `[aria-hidden="true"]` / `display:none` の非表示要素を削除するロジックを新設し、正規の `<script>` タグ以外の形で埋め込まれたコード片も除去可能に
 
-### Tests / テスト
+### テスト
 
 - `classifier.test.ts` ― script/style/noscript タグの除外テストを追加
 - `textExtraction.test.ts` ― 自治体CMSサイトを模した再現ケース（本文中へのscriptタグ混入、noscript混入、style混入）の回帰テストを追加
@@ -3286,7 +3234,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 コードレビューで発見された ~2,800 行の重複コードの解消。6 PBIs を TDD で実装し、約 30 コミットで収束。
 
-### Refactor / リファクタ
+### リファクタ
 
 - **AI プロバイダーの共通化** ― `GeminiProvider` と `OpenAIProvider` の重複ロジック（プリフライトガード、コンテンツサニタイズ、HTTP エラーハンドリング）を `AIProviderStrategy` 基底クラスに抽出。`testConnection()` が ~130 行 → ~50 行に縮小
   - `checkPreFlight()` ― 月次リミット・使用量警告・レート制限の共通ガードチェーン
@@ -3311,7 +3259,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 - **エラー処理イディオムを統一** ― `error instanceof Error ? error.message : String(error)` のインラインパターンを `errorMessage()` に置換（`offlineNetworkQueue` / `sessionStore` / `dashboardSqliteService`）
 - **重複テストファイルを統合** ― `GeminiProvider` / `OpenAIProvider` の provider/__tests__ 重複を canonical の background/__tests__ にマージして削除。`fieldValidation` の 188 行サブセットを 889 行 canonical に統合して削除
 
-### Tests / テスト
+### テスト
 
 - `ProviderStrategy.test.ts` に `checkPreFlight`、`sanitizeContent`、`mapConnectionError`、`parseAndMapFetchError` の単体テストを追加
 - `masterPasswordUiCore.test.ts`（11 テスト）を新設
@@ -3326,7 +3274,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 - `OpenAIProvider.test.ts` に `openai_content_chars` 上書きテストを追加
 - 全 7557 単体テスト通過、TypeScript 型チェック正常、ビルド成功、E2E 185 テスト通過
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.18` → `6.7.19`
 - PBI 2026-08-07-01〜06 を `pbi/` に作成、実装計画を `docs/superpowers/plans/` に出力
@@ -3338,7 +3286,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 ローカル Markdown 書き出し（自動エクスポート・ダッシュボード手動エクスポート）の出力フォーマットをユーザーがテンプレートとしてカスタマイズできる機能を追加。
 
-### Features / 新機能
+### 新機能
 
 - **ローカル Markdown 書き出しテンプレート機能** ― 自動エクスポート（`saveLocalMarkdownStep`）とダッシュボード手動エクスポート（日付範囲指定・全履歴）で共通のテンプレートエンジンを使用し、出力フォーマットをカスタマイズ可能に
   - ファイルテンプレート（`{{date}}` `{{entryCount}}` `{{entries}}`）とエントリテンプレート（`{{timestamp}}` `{{title}}` `{{url}}` `{{summary}}` `{{tags}}` `{{domain}}`）の2層構造
@@ -3348,17 +3296,17 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
   - デフォルトテンプレートは編集・削除不可（複製してカスタム版を作成する運用）
   - Obsidian 送信経路（デイリーノートへの追記フォーマット）は対象外、現状のまま維持
 
-### Bug Fixes / バグ修正
+### バグ修正
 
 - **自動ローカル Markdown エクスポートが機能していなかった問題を修正** ― `flushBufferedExports()` が `chrome.storage.local.get(Object.keys(StorageKeys))` を呼んでおり、渡していたのが実際のストレージキー値ではなく enum のプロパティ名だったため、動的なバッファキー（`local_export_YYYY-MM-DD`）を一度も取得できていなかった。2026-07-20 のメモリ圧迫対策コミット（キー指定取得への変更）で混入し、以降 timing 設定（immediate/idle/daily）にかかわらずファイルが一切ダウンロードされない状態が続いていた。全件取得（引数なし `get()`）に戻して解消
   - `unlimitedStorage` 権限が有効なこと、大容量コンテンツは既に SQLite 側と件数上限で抑制されていることを確認済み
 
-### Refactor / リファクタ
+### リファクタ
 
 - **4箇所に重複していた Markdown 整形ロジックのうち2経路を統合** ― 自動エクスポートとダッシュボード手動エクスポートを単一のテンプレートレンダリングロジックに統合し、常に同じフォーマットが適用されるように変更
 - **`MarkdownEntry` を生データベースの構造に変更** ― 保存済みバッファは事前レンダリング済みの `markdown: string` ではなく、生データ（`entryData: MarkdownTemplateEntryData`）を保持するように変更。旧形式のバッファエントリは自動的にスキップされ、フラッシュ処理全体には影響しない
 
-### Tests / テスト
+### テスト
 
 - `markdownTemplateUtils.ts` の単体テスト（レンダリング・バリデーション・CRUD）を追加
 - 「UI でテンプレートを作成 → アクティブ化 → 自動エクスポートに反映」までのエンドツーエンド統合テストを追加（`chrome.storage.local` / `chrome.downloads.download` のみモック）
@@ -3367,7 +3315,7 @@ RecordingLogic ゴッドモジュール（541行）を3モジュールに分割�
 
 Tag Cluster パネルでタグノードをクリックしたとき、そのタグが付いた履歴が 0件なら自動で全文検索にフォールバックする機能を追加。
 
-### Features / 新機能
+### 新機能
 
 - **Tag Cluster クリック時にタグ未マッチなら全文検索へフォールバック** ― Tag Cluster パネルでタグノード（`#投資` など）をクリックし、SQLite History でそのタグフィルタが 0件だった場合、自動的に「タグ文字列を含む全文検索 (FTS5/LIKE)」に切り替えて関連する履歴を表示する。フォールバック通知 (`#投資 タグは 0件でした。「投資」を含む全文検索結果を表示しています (146件)。`) でユーザーに状態を伝える
   - `shouldFallbackToTextSearch()` 純粋関数を `historyFilters.ts` に追加し、ソース (tag/manual)・タグ絞り込み結果・原始フィルタ文字列からフォールバック可否を判定
@@ -3377,25 +3325,25 @@ Tag Cluster パネルでタグノードをクリックしたとき、そのタ�
   - 日付選択 / 範囲選択 / フィルタクリア時に `pendingTagFallback` をリセットし、stale な通知が残る問題を防止
   - フォールバック先も 0件の場合は通知を出さず、従来の空状態表示を維持
 
-### Refactor / リファクタ
+### リファクタ
 
 - **NavigationRegistry の呼び出し順を `onActivate` → `loadData` に変更** ― `loadData` の `retryInitialLoad` がデフォルトパラメータで fetch し、`onActivate` で設定した検索状態を上書きする問題を解消。`loadData` 内で `consumePendingInit()` を呼び、`retryInitialLoad` に正しい fetch オプションを渡す
 
-### i18n
+### 国際化
 
 - **`tagFallbackNotice` キーを日英ロケールに追加** ― フォールバック通知テキスト。positional `$1/$2/$3` プレースホルダを使用
 
-### CSS
+### スタイル
 
 - **`.sqlite-tag-fallback-note` スタイルを追加** ― フォールバック通知用の左ボーダー付きノートスタイル
 
-### Tests / テスト
+### テスト
 
 - **`shouldFallbackToTextSearch` の単体テスト 6 ケース** ― ソース判定・null ハンドリング・`#` 剥がし・空白トリム・空文字判定
 - **SQLite History パネルのフォールバック統合テスト 5 ケース** ― タグ未マッチ時フォールバック発動 / タグヒット時フォールバック不発 / 両側 0件時通知抑制 / ドメイン起点時不発 / タグクリア後のリセット
 - 全 7504 単体テスト通過、TypeScript 型チェック正常、ビルド成功
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.16` → `6.7.17`
 
@@ -3403,7 +3351,7 @@ Tag Cluster パネルでタグノードをクリックしたとき、そのタ�
 
 VulnFix による VulnHunter セキュリティ監査（VULN-001〜020）の修正対応。TDD（RED→GREEN）で進め、17件を修正した。
 
-### Security / セキュリティ
+### セキュリティ
 
 - **マークダウンリンク注入（VULN-001/008/016/017）を修正** ― ページタイトルが `[title](url)` ラッパー内で `](https://evil.example)` 形式のサフィックスによりラッパーを閉じて攻撃者指定先へのリンクを生成できた問題を修正。新ヘルパー `sanitizeForMarkdownLinkText` でタイトル内の `[ ] ( )` をエスケープ。AI タグ（VULN-008）は `sanitizeForObsidian` を適用し、wikilink/リンク注入を防止。`formatMarkdownStep` / `obsidianFormatter` / `dashboard.ts` の3 sink に適用。ESLint ルール `require-sanitized-markdown` も新関数を認識するよう更新
 - **CSV 数式注入（VULN-005）を修正** ― ログエクスポートの `escapeCsv` が先頭の `= + - @ \t \r` を中和せず、スプレッドシートで式として実行される問題（CWE-1236）を修正
@@ -3415,44 +3363,44 @@ VulnFix による VulnHunter セキュリティ監査（VULN-001〜020）の修�
 - **平文 API キーの残置（VULN-015）を修正** ― 暗号化前のレガシー平文キーが warn のみで残っていた問題を、検出時に自動再暗号化して一方向マイグレーションするよう修正
 - **特権メッセージハンドラの送信元検証（VULN-004/009/018/019/020）を追加** ― MANUAL_RECORD / SAVE_RECORD / PREVIEW_RECORD / FETCH_URL / TEST_* / GET_PRIVACY_CACHE / ACTIVITY_UPDATE / SESSION_LOCK_REQUEST に、content script 送信元を拒否する sender ガードを追加（DASHBOARD_SQLITE のガードと同型）
 
-### Tests / テスト
+### テスト
 
 - `markdownSanitizer.test.ts` / `formatMarkdownStep.test.ts` / `exportLogsService.test.ts` / `senderGuard.test.ts` / `offscreen-sqlite.test.ts` / `dashboardSqliteHandlers-append.test.ts` / `aiUsageTracker.test.ts` / `headerDetector.test.ts` / `settingsStore-plaintext-api-key.test.ts` / `recordingLogic-redact.test.ts` に RED→GREEN の回帰テストを追加
 - 全 7493 単体テスト通過、TypeScript 型チェック正常、ビルド成功
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.15` → `6.7.16`
 - テストインフラ: `testDir/vitest.setup.ts` の `chrome.runtime.getURL` モックを chrome-extension URL を返すよう修正（sender ガードの正当な extension 送信元をテストで再現可能に）
 
 ## [6.7.15] - 2026-08-05
 
-### Added / 追加
+### 追加
 
 - **popup の AI 要約所要時間表示に使用プロバイダー名を追加** ― 記録結果メッセージの「AI: 2.4秒」表示に、実際に使用した AI プロバイダーの表示名を括弧書きで併記（例: 「AI: 2.4秒 (OpenAI Compatible)」）。`RecordingPipeline` の結果に `privacyResult.providerName` を `aiProvider` として含め、popup 側でラベル変換して表示
 
-### Tests / テスト
+### テスト
 
 - `errorUtils.test.ts`: `formatSuccessMessage()` がプロバイダー名（既知キー・未知キー・未指定）に応じて正しいメッセージを生成することを検証するテストを追加
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.14` → `6.7.15`
 
 ## [6.7.14] - 2026-08-05
 
-### Added / 追加
+### 追加
 
 - **AI 接続テスト結果に各プロバイダーの所要時間を表示** ― `testConnection()` の各プロバイダー結果に `elapsedMs` を追加し、ダッシュボード（初期設定パネル・診断パネル）の結果表示に秒単位で所要時間を併記
 
-### Fixed / 修正
+### 修正
 
 - **Dashboard history タブでの CSP (`style-src 'self'`) 違反を解消** ― タグクラスター可視化（SVG）で JS 経由のインラインスタイル代入（`circle.style.cursor`）を CSS クラスに置換。AI 診断結果のデバッグ詳細表示（`cssText` 代入）も CSS クラスベースに変更
 - **popup のマスクナビゲーション UI で同種の CSP 違反を解消** ― `cssText` によるインラインスタイル代入を `styles.css` のセレクタベーススタイルに置換
 - **content script のプライバシー確認ダイアログで同種の CSP 違反を解消** ― Shadow DOM host 要素への `cssText` 一括代入を個別プロパティ代入に分解（対象 Web ページの任意の CSP 下でも動作するようクラス化はできないため）
 - **AI 接続テスト中の経過時間表示が上部ステータス欄で固まって見える不具合を修正** ― 経過時間の 200ms ティックがプロバイダ切替時のみ同期される上部ステータス欄（`#statusTop`）に反映されていなかったため、ティックのたびに直接同期するよう修正
 
-### Tests / テスト
+### テスト
 
 - `dashboard-handlers.test.ts`: 上部ステータス欄の経過時間表示がタイマーティックごとに更新されることを検証する回帰テストを追加
 - `aiClient.test.ts`: 各プロバイダー結果に非負の `elapsedMs` が含まれることを検証するテストを追加
@@ -3461,30 +3409,30 @@ VulnFix による VulnHunter セキュリティ監査（VULN-001〜020）の修�
 
 Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指摘された残存事項への対応。
 
-### Security / セキュリティ
+### セキュリティ
 
 - **AI 接続テスト進捗 broadcast の受信側をハードニング** ― `isAiTestProgressMessage` が payload の形状（`provider` が string、`index`/`total` が非負整数、`model` が string|undefined）を検証し、不正・偽造メッセージによる表示汚染を防止。`PROVIDER_LABELS` へのアクセスを `hasOwnProperty` ベースの `providerLabelSafe()` に変更し、`constructor` 等のプロトタイプ継承キー漏れを防止
 
-### Fixed / 修正
+### 修正
 
 - **進捗 broadcast を全タブの content script に届かないよう修正** ― `extractor.ts` の onMessage リスナーを `GET_CONTENT` 以外で早期 return にし、SW→全タブ broadcast によるメッセージポート保持・未解決 Promise の滞留を解消
 - **複数ダッシュボードタブでの進捗干渉を防止** ― `AiTestProgress` に `runId` を追加し、TEST_AI メッセージ経由で各タブが自分の実行の進捗のみ描画
 
-### Refactor / リファクタ
+### リファクタ
 
 - **AI 進捗メッセージ契約を一元化** ― `AI_TEST_PROGRESS_MESSAGE_TYPE` / `AiTestProgressMessage` を `messageTypes.ts` に集約し、メッセージ型の単一ソースを維持
 - **モデルキー解決を一元化** ― 共通ヘルパー `src/utils/aiModelKey.ts`（`normalizeProviderKeyName` / `resolveModelKey`）を新設し、`AIClient` と `OpenAIProvider` が参照。`OpenAIProvider` のキー正規化で欠落していたハイフン変換を解消し、書き込み・表示・リクエストで同一キーを保証
 - **廃棄ログを観測可能に** ― 進捗 broadcast の廃棄（レシーバ不在・SW コンテキスト無効化）を `LogType.WARN` で記録し、本番でも診断可能に
 - **テストの型安全化** ― テスト内の `@ts-expect-error` による型抑制を `vi.mocked()` + 明示キャストに置換
 
-### Tests / テスト
+### テスト
 
 - `aiTestProgressNotifier.test.ts`: 廃棄時の WARN ログ記録・正常時のノーログを検証
 - `dashboard-handlers.test.ts`: 不正 payload 無視・プロトタイプキーラベル汚染防止・異なる runId の進捗無視を追加
 - `aiModelKey.test.ts`: 全プロバイダーのモデルキー解決テーブルを検証
 - `aiClient-priority-fallback.test.ts`: `@ts-expect-error` 撤廃とデフォルトモデル解決パスの検証を維持
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.12` → `6.7.13`
 - PBI 2026-08-04-01〜05 を `dev-docs/archived/pbi/` へ移動し `pbi/00-INDEX.md` を更新
@@ -3493,22 +3441,22 @@ Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指
 
 ダッシュボードの AI 接続テストに進捗表示を追加。
 
-### Features / 新機能
+### 新機能
 
 - **AI 接続テストの進捗表示** ― 複数プロバイダーを順にテストする際、現在テスト中のプロバイダー名・使用モデル名・経過時間・スピナーをリアルタイム表示するように変更。Built-in AI のように応答が遅いプロバイダーでも、テストが進行中であることが分かるようにした
   - `AIClient.testConnection()` に進捗コールバックを追加し、Service Worker からダッシュボードへ `AI_TEST_PROGRESS` メッセージで通知
   - モデル未指定のスロットでも、設定済みのデフォルトモデル名を解決して表示
 
-### Fixes / 修正
+### 修正
 
 - **AI 接続テストの進捗表示がページ上部のステータス欄に反映されない不具合を修正** ― 画面上部の「AI テスト」ボタン（`testAiBtnTop`）から実行した場合、進捗表示は下部の非表示領域にのみ描画され、上部の表示領域には最終結果が出るまで反映されなかった
 
-### Tests / テスト
+### テスト
 
 - `AIClient.testConnection()` の進捗コールバックが各プロバイダー開始時に正しい引数で呼ばれることを検証するテストを追加
 - ダッシュボードの進捗表示・タイマークリーンアップ・リスナー登録解除を検証するテストを追加
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.11` → `6.7.12`
 
@@ -3516,17 +3464,17 @@ Checking Team レビュー（v6.7.12 の AI 接続テスト進捗表示）で指
 
 VulnHunter セキュリティ監査で検出された2件の脆弱性（VULN-001, VULN-002）への対応。
 
-### Security / セキュリティ
+### セキュリティ
 
 - **VULN-001: ダッシュボード履歴パネルの DOM XSS を修正** ― `sqliteHistoryPanel.ts` の `formatDiagnosticMetadataHtml()` で、AI プロバイダー名（`ai_provider`）とモデル名（`ai_model`）が `escapeHtml()` なしで `innerHTML` に挿入されていた。設定インポート等を通じて `ai_model` に `<svg onload=...>` 等のペイロードが入ると、拡張機能のオプションページ（`chrome-extension://` オリジン）でスクリプトが実行可能だった。両フィールドに `escapeHtml()` を適用
 - **VULN-002: IPv4-mapped IPv6 による SSRF バイパスを修正** ― `isPrivateIpAddress()` が IPv4-mapped IPv6（`::ffff:0:0/96`）を検出できず、`validateUrlForFilterImport` / `validateUrlForAIRequests` の SSRF 対策を `::ffff:10.0.0.1` や `::ffff:169.254.169.254` の形式で迂回できた。`::ffff:` プレフィックスの IPv4 部分（ドット区切り・16進表記両対応）を抽出して再帰的にプライベート判定へフォールバック
 
-### Tests / テスト
+### テスト
 
 - **VULN-001: `sqliteHistoryPanel-formatDiagnosticMetadata.test.ts` を新設** ― `ai_provider`/`ai_model` の XSS エスケープを検証（5テスト）
 - **VULN-002: `fetch-ipv6.test.ts` に IPv4-mapped IPv6 のリグレッションテストを追加** ― プライベート範囲（10/8, 172.16/12, 192.168/16, 169.254/16）のドット区切り・16進表記検出、公開アドレスの許可を検証
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.10` → `6.7.11`
 
@@ -3534,7 +3482,7 @@ VulnHunter セキュリティ監査で検出された2件の脆弱性（VULN-001
 
 テストカバレッジ拡充（PBI 2026-08-02-01〜05）と、その過程で発見したカバレッジギャップへの対応。機能変更なし（単体テスト・E2E テストのみ追加）。
 
-### Tests / テスト
+### テスト
 
 - **プロンプトインジェクション検知テストを拡充** ― `promptSanitizer-owasp-matrix.test.ts` を新設し、OWASP LLM Top 10 系・日本語を含むプロンプトインジェクションのパターンマトリクスをデータ駆動で追加。各ペイロードが HIGH 判定され、攻撃フレーズがサニタイズ出力に残らないことを検証。あわせて技術文の誤検知（False Positive）ガードを追加
 - **楽観的ロックのストレステストを追加** ― `optimisticLock-stress.test.ts` を新設。大量の順序処理バッチでデータ消失が起きないこと、独立キー間の同時更新が互いに干渉しないこと、リトライ枯渇時に `ConflictError` が投げられストレージが破損しないこと、冪等更新が収束することを検証
@@ -3546,7 +3494,7 @@ VulnHunter セキュリティ監査で検出された2件の脆弱性（VULN-001
 - **Service Worker メッセージルーティングの E2E を追加** ― `service-worker-orchestration.spec.ts`（`@interaction`）を新設。PING / GET_PRIVACY_CACHE のハンドラ配線、content-script-only 型の送信者検証（`INVALID_SENDER_ERROR`）、未知メッセージでの SW クラッシュ耐性を検証
 - **7398 単体テスト（394 ファイル）通過**、TypeScript 型チェック正常、ビルド成功
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.9` → `6.7.10`
 - 実装済み PBI 2026-08-02-01〜05 を `dev-docs/archived/pbi/` へ移動し `pbi/00-INDEX.md` を更新
@@ -3555,28 +3503,28 @@ VulnHunter セキュリティ監査で検出された2件の脆弱性（VULN-001
 
 Checking Team レビュー（プロジェクト全体、`plans/2026-08-01-1903-review-yasumaro.md`）の High 指摘事項に対する事実確認済みの修正、および直後のコードレビューで見つかった軽微なフォローアップ対応。
 
-### Added / 追加
+### 追加
 
 - **ダッシュボード診断パネルにブラウザ内蔵AI診断セクションを追加** ― `builtInAiDiagnosticsService.ts` を新設し、Options ページから `LanguageModel.availability()` を直接呼び出して Prompt API（Chrome Gemini Nano / Edge Phi-mini）の利用可能状態を診断。ダウンロード必要時は `LanguageModel.create({ monitor })` で `downloadprogress` イベントを受信し、ダウンロードボタンでモデル取得を開始できる。i18n メッセージ（日英）、`diagnosticsPanel.ts` の `renderBuiltInAiStatus()`、`entrypoints/options/index.html` のセクションを追加
 
-### Security / セキュリティ
+### セキュリティ
 
 - **セッションタイムアウトのロック処理をマスターパスワード有効時のみに限定** ― `sessionAlarmsManager.ts` の `checkTimeout()` が `MASTER_PASSWORD_ENABLED` フラグを確認しないまま `IS_LOCKED: true` を設定していた。マスターパスワードを未設定のユーザーに対してロックを適用すると、`getOrCreateEncryptionKey()` のキャッシュ済みキー IS_LOCKED チェックに阻まれて API キーの復号・暗号化が恒久的に失敗する
 - **`getOrCreateEncryptionKey()` の IS_LOCKED チェックをマスターパスワード有効時のみに限定** ― `encryptionSession.ts` で `MASTER_PASSWORD_ENABLED` と `IS_LOCKED` の両方を確認するよう修正。マスターパスワード未設定ユーザーのキー取得が誤ってブロックされることを防止（VULN-017 の修正を補強）
 
-### Fixed / 修正
+### 修正
 
 - **`setUrlFallbackTriggered` を Optimistic Lock に統一** ― 他 29 個の `savedUrlsWithTimestamps` setter と異なり素の get-modify-set パターンだったため、並行書き込み時に他エントリの更新を上書きするおそれがあった。`withOptimisticLock` に統一し、URL 照合ロジックも他 setter と同じ非正規化方式に統一（ハッシュフラグメント付き URL の扱いの不整合を解消）
 - **オフラインキュー再送処理を Service Worker のライフサイクルに対応** ― `chrome.alarms.onAlarm` リスナーが `processOfflineNetworkQueue()` を fire-and-forget（`void`）で呼んでいたため、Service Worker が処理途中で終了すると `retryCount` の進行が失われる可能性があった。リスナーを `async` 化し `Promise.allSettled` で待機するよう変更。`retryAll()` の `retryCount` 保存もループ完了後の一括保存からジョブ単位保存に変更
 - **オフラインキュー再送にサイクル処理件数上限を追加** ― `retryAll()` に上限（`MAX_JOBS_PER_CYCLE = 20`）がなく、キューに大量のジョブが溜まった場合 1 回のアラム発火で多数のクラウド AI 呼び出しが発生しうる状態だった。上限を超えた分は次回サイクルへ持ち越すよう変更
 - **trustDb / TrancoConsentManager のストレージアクセスを `settings` オブジェクト経由に統一** ― `tranco_domains` / `tranco_version` が `chrome.storage.local` の個別キーに直接アクセスされており、`migrateToSingleSettingsObject()` の集約・バックアップ対象から外れていた。`getSettings()`/`saveSettings()` 経由に統一し、移行ロジックとの構造的な不整合を解消
 
-### Refactor / リファクタ
+### リファクタ
 
 - **オフラインキュー処理の計算量を改善** ― `retryAll()` 内の未処理ジョブ管理を `filter()`（O(n^2)）から `shift()`（O(n)）に変更
 - **trustDb.ts の動的 import 重複を解消** ― `settingsStore.ts` との循環参照回避のための動的 import が 3 箇所に重複していたため、メモ化ヘルパー関数（`getSettingsStore()` / `getStorageTypes()`）に集約
 
-### Tests / テスト
+### テスト
 
 - **オフラインキューテストの意図的な未解決 Promise を明示的なクリーンアップに変更** ― Service Worker 中断シミュレーションのテストが Promise を未解決のまま放置していたため、明示的に resolve・await するよう修正
 - **Built-in AI 診断・ダウンロード機能のテストを追加** ― `builtInAiDiagnosticsService.test.ts`（11テスト）と `diagnosticsPanel-builtInAi.test.ts`（6テスト）に、availability チェック・フラグ案内・ダウンロード進捗通知・セッション破棄のテストを追加
@@ -3586,11 +3534,11 @@ Checking Team レビュー（プロジェクト全体、`plans/2026-08-01-1903-r
 - **trustDb / TrancoConsentManager テストを settingsStore モックに対応** ― `tranco_domains` / `tranco_version` が settings オブジェクト経由になったためテストモックを更新
 - **7360 単体テスト（388 ファイル）通過**、TypeScript 型チェック正常
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`clearOldTrancoDomains()` / `saveOldTrancoDomains()` のコスト特性を JSDoc に明記** ― `saveSettings()` 経由の呼び出しはクォータチェック・API キー暗号化ループ・楽観的ロックを伴うため、`chrome.storage.local` 直接操作より高コストである旨を注記
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.7` → `6.7.9`
 - Checking Team レビュー指摘の事実確認を実施し、誇張・誤りのある指摘（AI コスト再送回数の計算誤り、Safety Mode 機能停止の誇張など）を訂正した上で PBI 化
@@ -3600,7 +3548,7 @@ Checking Team レビュー（プロジェクト全体、`plans/2026-08-01-1903-r
 
 adversarial code review（攻撃者視点＋保守担当者視点）で発見された12件のセキュリティ・保守性欠陥への対応。
 
-### Security / セキュリティ
+### セキュリティ
 
 - **暗号化エンベロープの入力検証を強化** ― `decryptEnvelope` で `iterations`/`hash`/`version`/`salt`/`iv`/`data` の範囲・形式を検証し、細工されたバックアップファイルによる DoS（過大反復）や KDF ダウングレードを防止
 - **HMAC 署名鍵を暗号化保存に変更** ― 同意記録・通知URL・設定インポートの HMAC 署名鍵を `chrome.storage.local` の平文 base64 から暗号化形式に移行。旧平文鍵は初回読み込み時に自動移行。設定インポート署名の比較を `constantTimeCompare` に変更
@@ -3610,34 +3558,34 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **非冪等な POST リクエストの 5xx 再送を禁止** ― `fetchWithRetry` が POST/PUT/PATCH のサーバーエラー後に再送して二重生成・二重課金する問題を、HTTP メソッドを考慮したリトライ条件で防止
 - **暗号化モジュールの保守性向上** ― `SubtleCrypto.timingSafeEqual` の型捏造を削除。エンベロープ定数を TDZ 回避で先頭に移動。`needsRehash` の比較ロジック修正。`isEncrypted` の厳密化。平文 API キー検出時の警告追加
 
-### Fixed / 修正
+### 修正
 
 - **Service Worker の `init()` 呼び出しを実装** ― 未呼び出しで停止していたアラーム登録・マイグレーション・マスターパスワードロックを起動時に実行。非同期マイグレーションは初回メッセージ処理時に遅延実行し、E2E テストとの競合を回避
 - **fetch ユーティリティの堅牢性向上** ― `fetchWithTimeout` が `timeoutMs` オプションを正しく反映。タイムアウト判定を `error.name === 'AbortError'` に統一。IPv6 ブラケット付きプライベート IP の正規化。`localhost`/`127.0.0.1` の `isLocalhostAddress` 判定を追加
 - **Obsidian クライアントの堅牢性向上** ― ポート既定値を 27123 に統一。IPv6 ループバックアドレスの許可。レスポンスボディ読み込みにタイムアウト追加。タイムアウト時のログ出力。dailyPath の URL メタ文字エンコード
 - **記録状態のリソース管理と永続化を修正** ― `urlRecordMutexes` の使用後解放で無制限成長を防止。RecordingLogic/RecordingPipeline の二重 Mutex を統合。SW 活性化時のキャッシュ復元。`privacyCache` の TTL 検証と session キーのクリーンアップ。`SessionStore` に即時フラッシュオプションを追加
 
-### Refactor / リファクタ
+### リファクタ
 
 - **AI プロバイダー間の整合性を改善** ― OpenAI でも `recordUsage()` を呼ぶように修正。Gemini のタイムアウトを設定値 (`AI_TIMEOUT_MS`) に合わせて修正。`testConnection` のエラーメッセージを401/404/タイムアウト別に整理。Gemini 成功結果に `providerName`/`model` を追加
 
-### Tests / テスト
+### テスト
 
 - **7329 単体テスト（386 ファイル）通過**、181 E2E テスト通過、TypeScript 型チェック正常
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **FAQ にブラウザ組み込みAIの説明を追加** ― 「AI 機能は必須ですか？」「どのAIプロバイダーに対応していますか？」の回答に Chrome Gemini Nano / Edge Phi-mini の記述、API キー不要・速度目安（M1 Mac で約30秒）・バックグラウンド動作を追記
 - **組み込みAIブログ記事を執筆** ― `docs/blog-built-in-ai.md` に、API キー不要・速度の現実・メリット・セットアップ方法・今後展望を執筆
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.6` → `6.7.7`
 - PBI 12件を `pbi/2026-08-01-*.md` として作成、実装計画を `docs/superpowers/plans/` に出力
 
 ## [6.7.6] - 2026-07-31
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **ドキュメントを現状実装に追いつかせる更新** ― README.md、CHANGELOG.md バージョニング表記、および docs/ 配下・ルートの各種ガイドを、Built-in AI 対応（Chrome Gemini Nano / Edge Phi-mini）、履歴一覧のプライバシーモードバッジ、ダッシュボードのパネル再編（監査ログ・GitHub Gist Sync・設定エクスポート/インポートの Tools 配下への統合、popup 設定 UI の dashboard 一本化）に合わせて全面的に見直した
   - **docs/CSP_GUIDE.md**: Built-in AI はブラウザ内部 API を Service Worker から直接呼び出すオンデバイス推論でネットワーク通信を行わないため、条件付き CSP の対象外である旨を日英両方に追記
@@ -3648,22 +3596,22 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
   - **PERMISSIONS.md**: `src/dashboard/sqliteHistoryPanel.ts` の実パス（`src/dashboard/panels/asyncData/sqliteHistoryPanel.ts`）への修正、到達不能な「履歴」パネルへの言及削除、最終更新日・対象バージョンの更新
   - 併せて README.md、docs/AI_SUMMARY_GUIDE.md、docs/BUILT_IN_AI_SETUP_GUIDE.md、docs/FAQ.md、docs/GITHUB_GIST_SYNC_GUIDE.md、docs/PII_FEATURE_GUIDE.md、docs/PRIVACY.md、public/PRIVACY.md の内容も実装と突き合わせて更新済み
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.5` → `6.7.6`
 
 ## [6.7.5] - 2026-07-31
 
-### Added / 追加
+### 追加
 
 - **履歴一覧に保存時のプライバシーモードバッジを追加** ― 「履歴」パネルの各エントリに、保存時に使用したプライバシーモード（Local Only / Full Pipeline / Masked Cloud / Cloud Only）をバッジ表示。設定変更後も過去のエントリがどのモードで処理されたか一覧から確認できるようにした
 - **`PrivacyPipeline` の保存結果に `mode` を含めるよう修正** ― 従来は `previewOnly` 時のみ `mode` を返しており、実際の保存パスでは常に欠落していたため、`saveMetadataStep.ts` で `privacyMode` を永続化できるよう修正
 
-### Changed / 変更
+### 変更
 
 - **Mode A (Local Only) / Mode B (Full Pipeline) の説明文言を更新** ― 「（開発中）」「現在、多くのブラウザで動作しません」という古い表記を削除し、実装済みのブラウザ内蔵AI（Chrome の Gemini Nano、Edge の Phi-mini）を反映した文言（対応ブラウザでのフラグ有効化・モデルダウンロードが必要、という条件付き表現）に変更。日英両ロケールおよび `options/index.html` のフォールバック文言も同期
 
-### Fixed / 修正
+### 修正
 
 - **popup の幅が無限に広がる不具合を修正** ― `entrypoints/popup/index.html` に含まれていた `viewport` メタタグ（`width=device-width`）が Chrome 拡張の popup（ネイティブ管理の固定サイズウィンドウ）と衝突し、ビューポート計算の基準を狂わせていたため削除。あわせて `html` 要素に明示的な `width: 360px` を指定し、Chromium の popup サイズ計算（コンテンツ高さ変化のたびに 800px 幅で再計算する既知の挙動）による幅崩れを防止
 - **popup 確認モーダルの `ResizeObserver` がモーダル非表示時にも `body` 幅を書き換えていた問題を修正** ― `<dialog>` は非表示でも DOM 上に存在し続けるため、モーダルを一度も開いていなくても間接的なレイアウト再計算で `document.body.style.width` が上書きされていた。`modal.open` を確認してから幅追従するようガードを追加
@@ -3671,18 +3619,18 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **CSP 違反となっていたインラインの `style` 属性を削除** ― `entrypoints/options/index.html` の Built-in AI 案内リンク（2箇所）が `style="margin-top: 8px; font-size: 0.9em;"` を直書きしており、`style-src 'self'` に違反してブロックされていたため、`.built-in-ai-help` クラスに切り出し
 - **WXT/Vite ビルドで発生していた `modulepreload` の cross-world 警告を解消** ― `offscreen.html`/`options.html`/`popup.html` で Chrome の拡張機能エラーコンソールに出ていた「cross-world extension resource mismatch」警告を、`wxt.config.ts` の `vite.build.modulePreload: false` で解消（同一オリジンリソースのためプリロード自体の効果は無視できる）
 
-### Tests / テスト
+### テスト
 
 - **`sanitizePreview.test.ts` に ResizeObserver のモーダル開閉ガードのテストを追加**
 - **`historyEntryRow.test.ts`/`historyEntryRow-r2.test.ts` のモックに `makePrivacyModeBadge` を追加**
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.4` → `6.7.5`
 
 ## [6.7.4] - 2026-07-30
 
-### Added / 追加
+### 追加
 
 - **Built-in AI の Microsoft Edge (Phi-mini) 対応** ― 実機検証（Edge 150.0.4078.105 stable, Mac）により Edge の Phi-mini Prompt API が Chrome の Gemini Nano と同一の `LanguageModel` API 形状（`availability()`/`create()`/`session.prompt()`/`contextWindow`/`contextUsage`/`oncontextoverflow`）を提供することを確認し、以下を実装した
   - `session.contextWindow`（トークン数）に基づく動的な入力切り詰め上限を追加。静的上限（`aiLimits.ts` の16,384文字）と、実測コンテキストウィンドウから導出した動的上限（保守的な換算係数・安全マージン付き）の小さい方を使用し、Edge Phi-mini（実測 `contextWindow: 9216`）のような狭いコンテキストウィンドウでの `QuotaExceededError` を予防
@@ -3690,22 +3638,22 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
   - ブラウザ検出による Built-in AI 利用不可時の案内文言の出し分けを追加。Chrome では `chrome://flags/#prompt-api-for-gemini-nano`、Edge では `edge://flags/#edge-llm-prompt-api-for-phi-mini` のフラグ URL・フラグ名を含むローカライズ済みメッセージを表示
   - ブラウザ検出には既存の `src/utils/browserSupport.ts` の `getBrowserName()` を再利用（新規実装は行わず、返り値をリテラル型に変更）。API 呼び出しコード自体にはブラウザ分岐を一切追加していない
 
-### Refactor / リファクタ
+### リファクタ
 
 - **`src/utils/browserSupport.ts` の `supportsBuiltInAI()` を削除** ― `globalThis.ai`（Edge独自の名前空間という誤った前提）をチェックする実装で、`any` 型キャストも使用しており、実際にはどこからも呼ばれていなかったデッドコード
 
-### Tests / テスト
+### テスト
 
 - **`BuiltInAIClient` の動的切り詰め・`oncontextoverflow`・ブラウザ別案内文言のテストを追加**
 - **`browserSupport.ts` の `getBuiltInAIFlagGuidance()` テストを追加、`supportsBuiltInAI()` テストを削除**
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.3` → `6.7.4`
 
 ## [6.7.3] - 2026-07-30
 
-### Added / 追加
+### 追加
 
 - **Chrome Built-in AI (Gemini Nano) の統合** ― `window.ai` (Prompt API) を利用したローカル要約機能を実装。優先度リストに `built-in-ai` プロバイダーを追加し、ネットワーク不要かつ低コストな要約を可能にした
 - **AI要約におけるトークン数とプロバイダー名の記録** ― ローカルAI使用時も `sentTokens`, `receivedTokens`, `providerName`, `modelName` を履歴に保存し、利用統計の正確性を向上
@@ -3718,7 +3666,7 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **`BuiltInAIClient` に availability キャッシュを追加** ― `LanguageModel.availability()` の結果をインスタンス生存期間中キャッシュし、2回目以降の `summarize()` 呼び出しで API 呼び出しを省略。`'downloading'` 状態は常に再チェックする
 - **`BuiltInAIClient` に `resetAvailabilityCache()` メソッドを追加** ― テスト容易性と明示的なキャッシュクリア手段を提供
 
-### Fixed / 修正
+### 修正
 
 - **LocalAIClient の Offscreen Document 依存を解消** ― Built-in AI は Service Worker から直接 `LanguageModel` を呼び出せるため、Offscreen Document へのメッセージ転送を排除し、レイテンシと複雑性を削減
 - **AI テストが Built-in AI の実際の動作状態を正しく報告するよう修正** ― 従来は例外が投げられなければ「ok」と報告していたが、`success` フラグとレスポンス内容も検証するよう改善。Edge で「Built-in AI is currently downloadable」状態を誤って成功と報告していた問題を修正
@@ -3726,14 +3674,14 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **`generateSummaryInternal()` が Built-in AI の `success: false` を検出して次のプロバイダーへフォールバックするよう修正** ― `result.success !== false` のチェックを追加し、モデル未ダウンロード時の誤動作を防止
 - **`LocalAIService` から死んだ `ensureOffscreenDocument` を削除** ― コードレビュー指摘対応。`LocalAIServiceConfig` から `ensureOffscreenDocument?()` とそのガード条件を削除。このコードパスは既に全呼び出し元から削除済みだった
 
-### Refactor / リファクタ
+### リファクタ
 
 - **`LocalAIClient` を `BuiltInAIClient` にリネーム・再設計** ― Prompt API 特化の設計に変更し、`LocalAIService` との連携を最適化
 - **AIClient の Built-in AI 委譲経路を新設** ― Strategy パターン（AIProviderStrategy）とは別に、優先度リストの `built-in-ai` スロットから `LocalAIService` へ直接委譲する専用経路を実装
 - **`AIService` インターフェースに `success`/`error` フィールドを追加** ― プロバイダーの実際の成功/失敗状態を呼び出し元に伝達可能に
 - **`AIProviderConnectionResult` に `debug` フィールドを追加** ― テスト時の通信内容（prompt, response, error, statusCode, hasContent）を保持
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.2` → `6.7.3`
 - **PBI アーカイブ** ― Built-in AI 実装完了に伴い PBI をアーカイブ
@@ -3742,7 +3690,7 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **`LocalAIService` の ensureOffscreenDocument テストを削除** ― コードレビューでのデッドコード指摘に対応
 - **availability キャッシュのテストを追加** ― キャッシュヒット時の API 呼び出し省略、`downloading` 状態の再チェック、`resetAvailabilityCache` の動作を検証
 
-### Verified / 動作確認
+### 動作確認
 
 - **Chrome 150.0.7871.186（公式ビルド）macOS (arm64) で Built-in AI の接続テスト・要約生成の動作を確認**
 - **Edge (Chromium ベース) で `downloadable` 状態が正しく検出されることを確認**
@@ -3752,18 +3700,18 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 
 このリリースは前日リリースに対するレビュー指摘の即時反映です。popup と dashboard で重複していた設定 UI を一本化しました。
 
-### Fixed / 修正
+### 修正
 
 - **popup の設定 UI を dashboard に一本化** ― `entrypoints/popup/index.html` から `settingsScreen`（General / Domain Filter / Prompt / Privacy の4タブ）と設定用モーダルを削除。設定は `#menuBtn` から開く dashboard（`options.html`）に集約
 - **`src/popup/popup.ts` から settingsScreen 専用の初期化コードを削除** ― domain filter / custom prompt / privacy settings / export-import / master password の popup 側初期化を除去。これらの共有モジュールは dashboard からも import されているためファイルは維持
 - **`entrypoints/popup/main.ts` から不要な `domainFilter` import を削除**
 
-### Tests / テスト
+### テスト
 
 - **`popup.test.ts` を設定 UI 削除後の責務に合わせて更新**
 - **`ui-ux-improvements.test.ts` を popup HTML から設定タブ・help-text が削除された構造に合わせて更新**
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.1` → `6.7.2`
 
@@ -3771,17 +3719,17 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 
 このリリースは前日リリースに対するレビュー指摘の即時反映です。Checking Team レビューから起票した非機能改善 PBI 群のフォローアップを実施しました。
 
-### Added / 追加
+### 追加
 
 - **オフラインキューのリトライ時、AI要約の不要な再実行をスキップ** ― Obsidian書き込みのみ失敗したジョブは、保存済みの要約結果を使って書き込みのみ再試行するようにし、無駄なAI APIコストを削減
 - **ダッシュボードのGeneralパネルに記録条件設定を追加** ― popup側にのみ存在していた Min Visit Duration / Min Scroll Depth / Max Tokens Per Prompt の3設定項目をダッシュボードにも追加
 
-### Fixed / 修正
+### 修正
 
 - **`options.html` の未翻訳フォールバック文字列を英語プレースホルダーに統一**（約247箇所）
 - **モバイル環境での SQLite メッセージタイムアウトを短縮** ― Offscreen Document がサスペンドされやすいモバイル Chrome で、タイムアウトを10秒→5秒に短縮し失敗を早期に検出できるようにした
 
-### Refactor / リファクタ
+### リファクタ
 
 - **`logger.ts`（755行）を型定義・コアAPI・高レベルラッパーの3ファイルに分割**（`logger/types.ts`, `logger/core.ts`, `logger/api.ts`）。呼び出し元120件が多いため `logger.ts` 自体はバレルとして維持
 - **Offscreen Document/Worker の `console.*` 出力を構造化ロガー経由に統一** ― Service Workerへのメッセージ中継機構（`LOG_FORWARD`）を新設し、直接ログできないコンテキストからも構造化ログを利用できるようにした
@@ -3789,20 +3737,20 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **バレル再エクスポート4ファイルを削除し直接importに統一** ― `aiSummaryCleaner.ts`, `contentExtractor.ts`, `ublockParser.ts`, `ublockImport.ts`
 - **`TabData` の未使用 `content` フィールドを削除**
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.7.0` → `6.7.1`
 
 ## [6.7.0] - 2026-07-26
 
-### Added / 追加
+### 追加
 
 - **CI に SBOM 生成ステップを追加** ― `@cyclonedx/cyclonedx-npm` を導入し、CycloneDX 1.6 形式の SBOM を生成して CI アーティファクトとして保存するようにした
 - **`data-i18n-args` の `count` から複数形メッセージキーを自動解決** ― `applyI18n()` が `count` を含む置換パラメータを検出すると `getPluralKey()` 経由で `_one`/`_other` バリエーションを自動選択するようにした（英語ロケール向け）
 - **保留中 SQLite キューの定期リトライを追加** ― オフライン等で SQLite への書き込みに失敗したレコードを、既存の `yasumaro-offline-network-retry` アラーム（5分間隔）で自動的に再試行するようにした
 - **プライバシー同意撤回時にデータ削除の確認ダイアログを追加** ― 同意を撤回すると記録済みの閲覧履歴データ（SQLite）も完全に削除されることをダイアログで明示し、実行前に確認を求めるようにした
 
-### Fixed / 修正
+### 修正
 
 - **PBKDF2 レガシー検証パスのタイミングサイドチャネルを解消** ― iteration count 未保存の古いマスターパスワードユーザー向け検証パスが、新旧いずれかの iteration count と一致した時点で早期リターンしていたため、応答時間から iteration count を推測できる問題があった。常に両方のハッシュを計算してから判定するよう修正
 - **プライバシー同意記録に HMAC 署名検証を追加** ― 同意記録の改ざんを検知できるよう、保存・読み込み時に専用の HMAC 鍵で署名検証するようにした
@@ -3814,12 +3762,12 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **`popup.html` の未翻訳フォールバック文字列を英語プレースホルダーに統一**（13箇所）
 - **カスタムプロンプトのデフォルトロケール解決を修正** ― ロケール未指定時に正しくブラウザのロケールへフォールバックするよう修正
 
-### Performance / パフォーマンス
+### パフォーマンス
 
 - **ローカル Markdown 全履歴エクスポートをバッチストリーミング化** ― 全履歴を一括取得していたエクスポート処理を、デスクトップ 1,000 件・モバイル 500 件のバッチ単位で逐次処理するように変更し、メモリ使用量を抑制
 - **AI 要約リクエストの in-flight 重複排除を追加** ― 同一 URL に対する並行 AI 要約リクエストをデデュープし、不要な API コールを削減
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`public/PRIVACY.md` を `docs/PRIVACY.md`（v6.0.1、GDPR 準拠修正）の内容に同期**
 - **デザイントークンのコンセプト「研墨」を `dev-docs/DESIGN_TOKENS.md` として文書化**
@@ -3827,7 +3775,7 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 - **ドメインフィルタ関連コードの責務分離マップを ADR として文書化**
 - **Chrome Built-in AI Provider 統合の設計・実装計画を追加** ― Chrome Prompt API（`window.ai`）を既存の AI Provider 抽象化に統合するための設計ドキュメントと TDD 実装計画（今後のリリースに向けた準備）
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.6` → `6.7.0`
 - `osh_pending_pages` ストレージキーを `pending_pages` にリネーム（旧キーから自動移行）
@@ -3839,53 +3787,53 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 
 ## [6.6.6] - 2026-07-25
 
-### Fixed / 修正
+### 修正
 
 - **「ログをエクスポート」パネルのローカル Markdown 書き出しが動作しない不具合を修正** ― `exportLocalMarkdownBtn`（「ログをエクスポート」パネル内の「ローカル Markdown 書き出し」エクスポートボタン）にイベントリスナーが未接続だった。`dashboard.ts` の `initDashboard()` で `handleExportLocalMarkdown` ハンドラをバインド
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.5` → `6.6.6`
 
 ## [6.6.5] - 2026-07-25
 
-### Fixed / 修正
+### 修正
 
 - **CRX3 ヘッダーに `signed_header_data` フィールドを追加** ― Chromium の CRX3 実装は `CrxFileHeader` protobuf に署名対象データ（`SignedData` のシリアライズ済みバイト列）自体を `signed_header_data`（field 10000）として含める必要があるが、`.github/workflows/build-crx3.mjs` はこのフィールドを省略していたため、Chrome Web Store 側で署名検証ができず公開に失敗していた問題を修正
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.4` → `6.6.5`
 
 ## [6.6.4] - 2026-07-25
 
-### Fixed / 修正
+### 修正
 
 - **Chrome Web Store 公開を v2 API + CRX3 署名アップロードに移行** ― この拡張機能は Verified CRX Uploads 設定のため署名済み `.crx` パッケージが必須だが、`.github/workflows/release.yml` は `.zip` をアップロードしていたため公開に失敗していた問題を修正。加えて非推奨の v1.1 API から v2 API（`chromewebstore.googleapis.com/v2`）に移行
 - **CRX3 生成スクリプトを正しいフォーマットで再実装** ― `.github/workflows/build-crx3.mjs` を protobuf ベースの CRX3 仕様（`CrxFileHeader` + `CRX3 SignedData` 署名コンテキスト）で再実装。旧 CRX2 生成スクリプトは削除
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.3` → `6.6.4`
 
 ## [6.6.3] - 2026-07-25
 
-### Fixed / 修正
+### 修正
 
 - **Chrome Web Store エラー詳細出力の SyntaxError を修正** ― `.github/workflows/release.yml` のエラー詳細出力用 Python スクリプトでリテラルの `\n` が改行として解釈されず、アップロード失敗時の本当の原因（`itemError`）が隠れていた問題を修正。単一行スクリプトに変更
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.2` → `6.6.3`
 
 ## [6.6.2] - 2026-07-25
 
-### Changed / 変更
+### 変更
 
 - **CRX2 ビルドスクリプトを簡素化** ― `.github/workflows/build-crx2.mjs` の冗長コメントを削除し、CRX2バイナリフォーマットの説明を1行に集約。compact if文を展開してUsageメッセージを追加
 - **Chrome Web Store パブリッシュステップを可読性向上** ― `.github/workflows/release.yml` の入れ子三項演算子をif/elseチェーンに、リスト内包表記（副作用利用）をfor文に置換
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.1` → `6.6.2`
 
@@ -3893,22 +3841,20 @@ adversarial code review（攻撃者視点＋保守担当者視点）で発見さ
 
 このリリースは v6.6.0 に対する follow-up で、前回のコミット作業に含まれていなかった tailwindcss 残骸の完全除去と、ai-summary-cleansing の開発者向け改善を反映したものです。
 
-This release is a follow-up to v6.6.0, completing the removal of orphaned tailwindcss artifacts and implementing developer-oriented improvements for ai-summary-cleansing.
-
-### Removed / 削除
+### 削除
 
 - **tailwindcss vite plugin と依存を完全削除** ― `wxt.config.ts` から `import tailwindcss` と `vite` plugin ブロックを削除。`package.json` から `@tailwindcss/vite` 依存を削除（node_modules から 7 パッケージ除去）
 
-### Changed / 変更
+### 変更
 
 - **セレクター文字列をモジュールレベルでキャッシュ化** ― `stripCore.ts` / `stripExtended.ts` の `buildClassIdSelectors()` 呼び出しをモジュール初回評価時に一度だけ実行し、全 strip 関数でキャッシュされたセレクター文字列を再利用するよう変更。ページロードごとの再計算を排除
 - **過剰削減フォールバック閾値を設定可能化** ― 従来ハードコードされていた fallback 比率（0.20）と絶対量（300 バイト）を storage 設定経由で変更可能に。ダッシュボード・ポップアップの AI 要約クレンジング設定パネルにスライダー UI を追加
 
-### Tests / テスト
+### テスト
 
 - **パターンマッチング単体テストを追加** ― `src/utils/aiSummaryCleaner/__tests__/patterns.test.ts` に AD/SOCIAL/NAV/DEEP 各クラスパターンの正検出・誤検出テスト 13 件を追加
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.6.0` → `6.6.1`
 
@@ -3918,118 +3864,116 @@ This release is a follow-up to v6.6.0, completing the removal of orphaned tailwi
 
 Chrome Web Store公開は保留中
 
-This is the first v6.6.x stable release, transitioning from the v6.5.x feature series to the v6.6.x bug-fix-only series.
-
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.61` → `6.6.0`
 
 ## [6.5.61] - 2026-07-24
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **CHANGELOG・ADR・ドキュメント参照を更新** ― `AGENTS.md`、`CONTRIBUTING.md`、`PERMISSIONS.md`、`dev-docs/ADR/`配下の各ADRファイル、`dev-docs/ADR/README.md`のファイルパス・参照を現状のコードベースに追従させて更新
 
-### Fixed / 修正
+### 修正
 
 - **CI: Playwright E2E テストに `--config` フラグを追加** ― `.github/workflows/tests.yml` の `Extension E2E tests` ステップで `npx playwright test --grep @extension` を `npx playwright test --config testDir/playwright.config.ts --grep @extension` に修正。設定ファイルを明示的に指定しないと Playwright がリポジトリ全体の `.spec.ts` ファイルを走査し、`test()` / `describe()` の混在したファイルを検出してクラッシュしていた
 
 ## [6.5.59] - 2026-07-24
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **未使用エクスポートを削除** ― knip で検出された82個の未使用エクスポートと34個の未使用型定義を整理。バーレル再エクスポートの削除、内部使用関数の `export` キーワード削除、デッドコードの削除を実施。テストで動的 import されている関数（`startTimeoutChecker`、`stopTimeoutChecker` 等）は `export` を維持
 - **ステージング漏れ分の追加削除も含む** ― knip 検出範囲外だった追従漏れファイルも合わせて整理
 
 ## [6.5.58] - 2026-07-24
 
-### Removed / 削除
+### 削除
 
 - **未使用ファイル5個を削除** ― `public/utils/trustDb/bloomfilter-vendor.mjs`、`scripts/test-gate-false-positive.mjs`、`src/__tests__/docs.spec.ts`、`src/__tests__/types.ts`、`src/background/pipeline/index.ts`。knip で検出後、grep で未使用を確認して削除
 
 ## [6.5.57] - 2026-07-24
 
-### Removed / 削除
+### 削除
 
 - **未使用の Svelte 依存を完全削除** ― `svelte`, `@sveltejs/vite-plugin-svelte`, `eslint-plugin-svelte` を `package.json` から削除。`svelte.config.js` を削除。`wxt.config.ts` から svelte プラグイン import と登録を削除。`eslint.config.js` から svelte プラグイン import と `flat/recommended` 設定を削除。`tsconfig.json` の `types` 配列から `"svelte"` を削除。孤立ファイル `src/offscreen/App.svelte` を削除。29 パッケージが node_modules から除去
 - **未使用の依存パッケージ6個を削除** ― `bloomfilter`（dependencies）、`@rollup/plugin-commonjs`、`@rollup/plugin-node-resolve`、`css-tree`、`globals`、`tailwindcss`（devDependencies）。knip で検出後、grep で未使用を確認して削除。11 パッケージが node_modules から除去
 
 ## [6.5.56] - 2026-07-24
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **プライバシーモードi18nキー名を意味ベース命名に統一** ― `modeA`/`modeB`系キー（`modeAShort`, `modeADesc`, `modeADetail`, `modeBShort`, `modeBDesc`, `modeBCurrently`）を`privacyModeLocalOnly`/`privacyModeFullPipeline`系（`privacyModeLocalOnlyShort`, `privacyModeLocalOnlyDesc`, `privacyModeLocalOnlyStatus`, `privacyModeFullPipelineShort`, `privacyModeFullPipelineDesc`, `privacyModeFullPipelineStatus`）にリネーム。PBI 3（`modeC`/`modeD` → `privacyModeMaskedCloud`/`privacyModeCloudOnly`）が未対応だった`modeA`/`modeB`を同じ命名規則に揃えるもの。`public/_locales/{ja,en}/messages.json`、`entrypoints/{options,popup}/index.html`のdata-i18n属性、`src/popup/statusPanel.ts`、テストモック（`statusPanel-extra.test.ts`, `testDir/vitest.setup.ts`）を更新。DOM要素ID（`id="modeA"`等）はE2Eテストとの結合度を考慮し変更せず維持
 
 ## [6.5.55] - 2026-07-23
 
-### Chores / その他
+### その他
 
 - **依存パッケージのアップデート（typescript 以外）** ― `@tailwindcss/vite` 4.3.2 → 4.3.3, `@typescript-eslint/eslint-plugin` 8.63.0 → 8.65.0, `@typescript-eslint/parser` 8.63.0 → 8.65.0, `eslint-plugin-svelte` 3.20.0 → 3.22.0, `happy-dom` 20.10.6 → 20.11.1, `svelte` 5.56.4 → 5.56.7, `tailwindcss` 4.3.2 → 4.3.3, `vite` 8.1.4 → 8.1.5。`typescript` 6.0.3 → 7.0.2 は major アップデートのため保留
 
 ## [6.5.54] - 2026-07-23
 
-### Added / 追加
+### 追加
 
 - **ダッシュボードUIテスト（Playwright）を新規追加** ― `testDir/e2e/dashboard-ui.spec.ts` に16パネルのDOM構造検証、サイドバー3セクション・16タブの存在確認、初期設定パネルのフォーム要素チェック、レスポンシブレイアウトテストを網羅。`file://` プロトコルでの静的HTML検証パターン
 
-### Security / セキュリティ
+### セキュリティ
 
 - **`GEMINI_API_KEY` の型定義を修正** ― `src/utils/storage/types.ts` で `string` のみだった型を `string | EncryptedData` に変更。他のAPIキーと同様の暗号化対応型に統一
 - **`hashPassword` / `verifyPassword` に `@deprecated` を追加** ― 未ソルトSHA-256を使用する旧関数に非推奨マークを付与。将来の誤使用防止
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.53` → `6.5.54`
 
 ## [6.5.53] - 2026-07-23
 
-### Added / 追加
+### 追加
 
 - **ドメイン信頼度判定パネルにドキュメントリンクを追加** ― Trust パネルの説明文の直後に `docs/TRUST_DOMAIN_GUIDE.md` へのリンクを追加。既存の他のパネル（Obsidian設定ガイド、uBlockインポートガイド等）と同じパターンで配置
 - **条件付きCSP設定パネルにドキュメントリンクを追加** ― CSP パネルの説明文の直後に `docs/CSP_GUIDE.md` へのリンクを追加
 - **条件付きCSP設定ガイド（`docs/CSP_GUIDE.md`）を新規作成** ― 二層CSPモデル、デフォルト許可プロバイダー一覧、追加プロバイダーの有効化手順、OpenAI互換エンドポイント対応、ローカルLLMのポート制限、エラー対処法を網羅する日本語/英語バイリンガルドキュメント
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.52` → `6.5.53`
 
 ## [6.5.52] - 2026-07-23
 
-### Fixed / 修正
+### 修正
 
 - **週次/月次振り返りサマリ生成がダッシュボードから常に「履歴なし」になる不具合を修正** ― ダッシュボードの「今週/今月のサマリを生成」ボタンが `reviewSummaryGenerator.ts`（service worker 専用に設計された offscreen document 直接操作モジュール）をダッシュボードページから直接動的 import しており、他の SQLite 操作（履歴一覧・検索など）が使う `chrome.runtime.sendMessage` 経由の統一経路を通っていなかった。新規メッセージ型 `GENERATE_REVIEW_SUMMARY` を追加し、service worker 側でサマリ生成を実行する方式に統一
 - **SQLite クエリ失敗時のログを「履歴なし」と誤表示しないよう修正** ― `reviewSummaryGenerator.ts` で SQLite クエリが失敗して `null` が返るケースと、対象期間の履歴が実際に0件のケースを区別せずログ出力していたため、接続エラー発生時にも「対象期間の履歴がない」という誤解を招くメッセージが表示されていた
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.51` → `6.5.52`
 
 ## [6.5.51] - 2026-07-23
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **ESLint `require-response-size-limit` ルールを AST ベースにリファクタリング** ― トークンテキスト結合方式から AST ノード再帰走査方式に変更。`findEnclosingBlock()` / `collectPrecedingStatements()` / `hasSizePattern()` の3関数で構成。コメント・文字列リテラル内の偽陽性を排除（PBI 2）
 
-### Fixed / 修正
+### 修正
 
 - **プライバシーポリシーテストの fetch モックに `headers` オブジェクトを追加** ― `res.headers.get('content-length')` の呼び出しに対応。2つの失敗していたテストを修正
 - **E2E テストのプライバシーモード ID を PBI 3 のリネームに対応** ― `modeC` → `privacyModeMaskedCloud`、`modeD` → `privacyModeCloudOnly`
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.50` → `6.5.51`
 
 ## [6.5.50] - 2026-07-22
 
-### Added / 追加
+### 追加
 
 - **ダッシュボードサイドバーヘッダーをクリック可能に変更** ― サイドバー上部の「Yasumaro」ロゴ/タイトル領域をリンク化し、クリックで `https://armaniacs.github.io/yasumaro/` が新しいタブで開くようにした。セマンティック修正として `<a>` タグを `<nav role="tablist">` の外に移動し、`.sidebar-container` でラップ
 
-### Changed / 変更
+### 変更
 
 - **サイドバーのHTML構造を整理** ― ヘッダー（`<a>`）とナビゲーション（`<nav>`）を `.sidebar-container` で囲み、ダークモード・レスポンシブ対応のCSSセレクタを `.sidebar-container` に統一
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.49` → `6.5.50`
 
@@ -4037,9 +3981,7 @@ This is the first v6.6.x stable release, transitioning from the v6.5.x feature s
 
 このリリースはドキュメントの現状追従とPBIアーカイブ漏れの整理です。
 
-This release updates documentation to reflect the current codebase state and cleans up leftover PBI archive files.
-
-### Docs / ドキュメント
+### ドキュメント
 
 - **AUDIT_LOG_GUIDE.md**: 監査ログ一覧表示→TSVダウンロードに更新（v6.5.36の変更を反映）
 - **RECORDING_CONDITIONS.md**: 4設定→10設定に拡張（月間トークン上限・レート制限・各プロバイダーの文字数上限等を追加）
@@ -4047,7 +3989,7 @@ This release updates documentation to reflect the current codebase state and cle
 - **PII_FEATURE_GUIDE.md**: Mode A/B/C/D表記を廃止し、実際の4モード（Masked Cloud / Full Pipeline / Local Only / Cloud Only）に更新
 - **FAQ.md**: Mode C表記をMasked Cloudに統一、ストレージ記述を3層構成に更新
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.48` → `6.5.49`
 - **PBIファイルの移動漏れを整理** ― アーカイブ済みPBI6件の pbi/ 上の実ファイルを完全に削除
@@ -4056,16 +3998,14 @@ This release updates documentation to reflect the current codebase state and cle
 
 このリリースは VulnHunter 修正バッチの残存ギャップを解消したものです。
 
-This release closes the remaining gaps from the VulnHunter fix batch.
-
-### Security / セキュリティ
+### セキュリティ
 
 - **4つの未サニタイズmarkdown出力経路を修正** ― `obsidianSyncService.ts` / `gistSyncTarget.ts` / `reviewSummaryGenerator.ts` / `exportLogsService.ts` の markdown テンプレートに `sanitizeForObsidian()` / `sanitizeUrlForMarkdownTarget()` を適用。
 - **ESLint カスタムルールを導入** ― `require-sanitized-markdown`: markdown テンプレート内の未サニタイズ変数を検出。`require-response-size-limit`: `response.text()` 呼び出し前のサイズ制限欠如を検出。
 - **セキュリティレビューチェックリストを PR テンプレートに追加** ― markdown 出力・fetch サイズ上限・localhost 検証・レート制限・鍵キャッシュの5観点。
 - **ADR: Markdown出力経路へのサニタイズ適用ルール** ― 3層ガードレール（lint rule + レビューチェックリスト + ADR）を確立。
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.47` → `6.5.48`
 - **PBIアーカイブ** ― 完了済み7件のPBIを `dev-docs/archived/pbi/` に移動。
@@ -4074,9 +4014,7 @@ This release closes the remaining gaps from the VulnHunter fix batch.
 
 このリリースは VulnHunter セキュリティ監査（2026-07-21）由来の21件の脆弱性修正を反映したものです。
 
-This release addresses 21 security findings from the VulnHunter security audit (2026-07-21).
-
-### Security / セキュリティ
+### セキュリティ
 
 - **マークダウン注入の根本修正（VULN-001,002,004,005）** ― `sanitizeForObsidian()` を scheme-agnostic な `sanitizeAllMarkdownLinks` に切り替え + `escapeObsidianWikilinks` 追加。`formatMarkdownStep` のURLに `sanitizeUrlForMarkdownTarget` を適用。`SAVE_RECORD` ハンドラに `isSecureUrl` チェックを追加。
 - **マークダウン注入の派生サーフェス修正（VULN-006,007,020）** ― `obsidianFormatter.ts` / `dashboard.ts` / `sqliteHistoryPanel.ts` の各出力経路でURL・タイトルをサニタイズし、`rel="noopener noreferrer"` を追加。
@@ -4085,7 +4023,7 @@ This release addresses 21 security findings from the VulnHunter security audit (
 - **PBKDF2反復回数を強化（VULN-019）** ― マスターパスワードのハッシュ導出に `ENVELOPE_ITERATIONS`（600,000回）を使用。既存の100,000回ハッシュにはフォールバック検証＋透過的再ハッシュを実装。
 - **マスターパスワード保護の完全性（VULN-015,017,018,021）** ― 無効化操作にパスワード認証を必須化。暗号化キーキャッシュ返却前に `IS_LOCKED` チェック。セッションロック通知にリトライ機構。`unlockWithPassword` / `authenticatePassword` にレート制限を統一。
 
-### Fixed / 修正
+### 修正
 
 - **TOCTOU競合状態を修正（VULN-003）** ― `recordingLogic.record()` にURL単位の Mutex を追加し、同一URLの同時記録による重複チェックの競合を防止。
 - **restore_db の資源枯渇を防止（VULN-008）** ― base64デコード前にサイズ上限（150MB）をチェック。
@@ -4095,7 +4033,7 @@ This release addresses 21 security findings from the VulnHunter security audit (
 - **Offscreen SQLite 書き込みの競合を修正（VULN-016）** ― offscreenドキュメントのSQLiteメッセージハンドラを Mutex で直列化。
 - **piiSanitizer のフレーキーテストを修正** ― タイムアウトテストをCPUタイミングに依存しない実装に変更。
 
-### Tests / テスト
+### テスト
 
 - **`markdownSanitizer.test.ts`** ― `sanitizeUrlForMarkdownTarget` / `escapeObsidianWikilinks` のテストを追加。
 - **`obsidianFormatter.test.ts`** ― VULN-007回帰テスト（新規ファイル）。
@@ -4106,24 +4044,24 @@ This release addresses 21 security findings from the VulnHunter security audit (
 - **`crypto.test.ts`** ― `verifyPasswordWithPBKDF2` の戻り値型変更に対応。
 - **`storage-keys.test.ts`** ― `MASTER_PASSWORD_KDF_ITERATIONS` を内部キーリストに追加。
 
-### Chores / その他
+### その他
 
 - **バージョン更新** ― `6.5.46` → `6.5.47`
 
 ## [6.5.46] - 2026-07-21
 
-### Fixed / 修正
+### 修正
 
 - **診断パネルの記録済みURL数が0と表示されるバグを修正** ― chrome.storage の `getSavedUrlCount()` から SQLite の `getLogCount()` に切り替え。SQLite 障害時は -1 を返し UI で "Unavailable" と表示。
 - **Stored XSS 脆弱性を修正** ― `makeStatRow()` の `innerHTML` を `createElement` + `textContent` に置換。設定インポート経由で悪意あるプロバイダ名を注入されてもスクリプトが実行されない。
 - **DoS リスクを緩和** ― `resolveProviderSlots()` に `MAX_PROVIDERS=10` 制限を追加し、大量のプロバイダ設定によるリソース枯渇を防止。
 - **`getLogCount()` のエラー判別を改善** ― エラー時に `0` ではなく `-1` を返すよう変更し、データ0件と SQLite 障害を区別可能に。
 
-### Added / 追加
+### 追加
 
 - **診断パネルに複数AIプロバイダの表示とテストを追加** ― 優先度リストの全プロバイダの設定（Base URL、Model、API Key）を罫線付きグループで表示。AI接続テストを全プロバイダに対して実行し、各プロバイダごとの結果を表示。
 
-### Changed / 変更
+### 変更
 
 - **`ProviderTestResult` / `MultiProviderTestResult` を `aiClient.ts` に一本化** ― `dashboard.ts` の重複定義を削除し import に統一。デッドコード `ConnectionTestResult` を削除。
 - **`PROVIDER_LABELS` 共通マップを `aiClient.ts` に追加** ― 4箇所に重複していたプロバイダラベル定義を解消。
@@ -4133,28 +4071,28 @@ This release addresses 21 security findings from the VulnHunter security audit (
 
 ## [6.5.45] - 2026-07-21
 
-### Added / 追加
+### 追加
 
 - **AI 使用量制限のユーザー設定化** ― Dashboard に月間トークン上限、1分間の AI リクエスト数上限、OpenAI/Gemini のコンテンツ文字数上限を追加。`aiUsageTracker.ts` に `checkHardLimit()` を追加し、上限超過時に AI 要約リクエストをブロック。
 - **外部エンドポイントのユーザー設定化** ― Dashboard に Obsidian Local REST API のホスト（`OBSIDIAN_HOST`）と Gemini API バージョン（`GEMINI_API_VERSION`）を追加。WSL2/Docker 環境や Gemini API のバージョン非推奨化に対応。
 
-### Fixed / 修正
+### 修正
 
 - **Gist 同期ターゲットの未同期レコード取り残しを修正** ― `GistSyncTarget.syncBatch()` から `result.rows.length < BATCH_SIZE` による早期終了を削除。未同期レコードが残っている限り、`gist_synced = 0` フィルタで次バッチを取得し続ける。
 - **AI プロバイダー API レスポンスのスキーマ検証を強化** ― `OpenAIProvider` / `GeminiProvider` の `_extractSummary` で `choices` / `candidates` / `message` / `content` / `parts[0].text` の存在・型を検証。スキーマ不整合時は `success: false` と詳細な `error` を返し、次のプロバイダーへのフォールバックを促す。
 - **Logger の Service Worker 終了耐性強化** ― バッチフラッシュを `setTimeout` から `chrome.alarms` に移行。`chrome.runtime.onSuspend` で保留ログのフラッシュを待機し、`logCritical` で即時フラッシュ。
 
-### Changed / 変更
+### 変更
 
 - **ObsidianClient の fetch を中央 `fetchWithTimeout` に統合** ― `_fetchWithTimeout` を削除し、`src/utils/fetch.ts` の `fetchWithTimeout` を使用。CSP 検証・allowedUrls スキップにより Obsidian Local REST API 通信を維持。
 
 ## [6.5.44] - 2026-07-21
 
-### Fixed / 修正
+### 修正
 
 - **`GistSyncTarget.syncBatch()` の無限ループを修正** ― `while(true)` + `offset: 0` + `gistSynced: 0` フィルタの組み合わせで、バッチ内の全行が `sync()` 失敗時に同じ行を再取得し続け無限ループになる問題を修正。`MAX_ITERATIONS = 100` ガードを追加。
 
-### Changed / 変更
+### 変更
 
 - **中国語（`zh`）ロケールのフォールバック先を日本語（`ja`）から英語（`en`）に変更** ― `resolveLocaleWithFallback()` の `zh` 判定を `'en'` に変更。既存の中国語ユーザーは AI プロンプトの言語が日本語から英語に変わります。
 
@@ -4162,27 +4100,25 @@ This release addresses 21 security findings from the VulnHunter security audit (
 
 このリリースは同日の Checking Team レビュー指摘事項の修正とCSP強化を反映したものです。
 
-This release addresses Checking Team review findings and strengthens CSP.
-
-### Fixed / 修正
+### 修正
 
 - **`MessageHandlerRegistry.dispatch()` の未ハンドル Promise rejection を修正** ― 非同期ハンドラが例外をスローした場合、`void` でPromiseを捨てていたため未ハンドルrejectionが発生し、MV3 Service Workerが停止するリスクがあった。`Promise.resolve().catch()` でハンドラ例外を捕捉し、`sendResponse` でエラーを返すよう変更
 - **`handleDashboardSqlite` の IIFE に try-catch を追加** ― `_dashboardSqliteHandler` が例外をスローした場合、`sendResponse` が呼ばれないままDashboard UIが永久に待機状態になる問題を修正
 - **`sanitizeRegex` の例外伝播方針変更にテストを追従** ― エラー時に `[SANITIZATION_FAILED]` プレースホルダーを返す代わりに例外をスローするよう変更。到達不能アサーション4件を除去し、`rejects.toThrow()` に更新
 
-### Security / セキュリティ
+### セキュリティ
 
 - **CSP `style-src` から `'unsafe-inline'` を削除** ― CSSインジェクションによる情報漏洩リスクを低減。ダッシュボード（`sqliteHistoryPanel.ts`）のインラインスタイル属性を既存CSSクラス（`.hidden`、`.warning-banner`）とJS DOM操作に移行。`recordingConditionsSettings.ts` の `style.display` 操作を `classList` に統一
 
-### Changed / 変更
+### 変更
 
 - **`MessageHandler` 型の戻り値を `void | Promise<void>` に変更** ― `boolean` 戻り値によるチャネル維持ロジックを廃止し、`dispatch()` が常時 `true` を返す fire-and-forget パターンに移行。全ハンドラからの `as unknown as MessageHandler` キャストを削除
 
-### i18n
+### 国際化
 
 - **日本語ロケールに42キーを追加** ― ルール/例外/エラー数、時間表記、マスク状態、履歴件数、トリガー設定、診断メッセージなど
 
-### Tests / テスト
+### テスト
 
 - **`MessageHandlerRegistry.test.ts`** ― dispatch の fire-and-forget 動作に合わせてテストを更新
 - **`sqlite-security-integrity.test.ts`** ― dashboardSqliteガードテストを正規表現から `indexOf` + `substring` に変更
@@ -4194,19 +4130,17 @@ This release addresses Checking Team review findings and strengthens CSP.
 
 このリリースは同日の PBI 実装を反映したものです。
 
-This release incorporates the PBI implemented on the same day.
-
-### Added / 追加
+### 追加
 
 - **EU圏PIIパターンをサニタイザーに追加** ― `src/utils/piiSanitizer.ts` に IBAN（ドイツ/フランス/イタリア/スペイン/オランダ）、ドイツ税ID（Steuerliche Identifikationsnummer）、フランスINSEE番号、イタリアCodice Fiscale、スペインDNI/NIE を追加
 - **暗号化設定画面に平文保存リスクの警告を追加** ― マスターパスワード未設定時に「APIキーは chrome.storage.local に平文で保存されます」と表示し、マスターパスワード設定ボタンを追加
 - **ダッシュボード診断パネルに月間AI使用量を表示** ― 今月のAPI呼び出し回数と合計トークン消費量を診断パネルに追加
 
-### Changed / 変更
+### 変更
 
 - **クレジットカード・US電話番号パターンを精密化** ― 区切り文字を必須にし、純粋な数字列（EU税ID等）への誤検知を抑制
 
-### Tests / テスト
+### テスト
 
 - **`piiSanitizer.test.ts`** ― EU圏PIIパターン6種のマスクテストと既存パターンへの回帰テストを追加
 - **`masterPassword.test.ts`** ― マスターパスワード未設定時の警告表示テストを追加
@@ -4214,7 +4148,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.41] - 2026-07-20
 
-### Fixed / 修正
+### 修正
 
 - **protocolVersion 不一致時にメッセージを拒否するよう変更** ― `src/background/service-worker.ts` でプロトコルバージョン不一致をログ出力のみからエラーレスポンスを返す動作に変更。undefined のプロトコルバージョンは下位互換のため許容
 - **`logCritical` の console.error 出力に PII 難読化を追加** ― `src/utils/logger.ts` で `JSON.stringify` の replacer に長文文字列のトランケートと API キー風文字列の難読化を実装
@@ -4222,11 +4156,11 @@ This release incorporates the PBI implemented on the same day.
 - **楽観的ロックの post-write 再検証を本番ではスキップ** ― `src/utils/optimisticLock.ts` で `enablePostWriteVerification()` （テスト用）を追加し、本番環境での余分なストレージ I/O を削減。`_postWriteVerificationEnabled` フラグで制御
 - **`scheduleCacheSave()` にエラーハンドリングを追加** ― `src/background/recordingLogic.ts` で fire-and-forget だったキャッシュ保存に try/catch と async を追加。書き込み失敗時のサイレントデータ消失を防止
 
-### Changed / 変更
+### 変更
 
 - **`htmlparser2` override を `~12.0.0` に狭域化** ― `package.json` の overrides で `^12.0.0` から `~12.0.0` に変更し、マイナーバージョンの自動更新リスクを低減
 
-### Tests / テスト
+### テスト
 
 - **`optimisticLock.test.ts`** ― post-write 再検証テストに `enablePostWriteVerification()` 呼び出しを追加
 - **`sqliteClient-queue.test.ts`** ― モバイル判定テストを `chrome.runtime.getPlatformInfo` モックに対応
@@ -4234,7 +4168,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.40] - 2026-07-19
 
-### Added / 追加
+### 追加
 
 - **はてな匿名ダイアリーのホワイトリスト抽出アダプタを追加** ― `anond.hatelabo.jp` 向けに `div.section` からの記事本文抽出を追加。`div.hatena-body` 内の不要要素を `excludeSelectors` で除外
 - **`SessionStore` を `chrome.storage.session` に移行** ― セッション状態の保存先を `chrome.storage.local` から `chrome.storage.session` に変更し、Service Worker 再起動時のパフォーマンスとメモリ効率を改善
@@ -4243,7 +4177,7 @@ This release incorporates the PBI implemented on the same day.
 - **ログ source パラメータの自動補完ヘルパーを追加** ― `src/utils/logger.ts` でログ出力時に呼び出し元モジュール名を自動補完するユーティリティを追加
 - **モバイル環境で `SqliteClient` Mutex キュー上限を 50 に引き下げ** ― 低メモリデバイスでのキュー溢れリスクを低減
 
-### Fixed / 修正
+### 修正
 
 - **クラウドAI要約の処理時間計測を実測値ベースに修正** ― 従来の分割払い出しタイミングではなく、API 呼び出しの実測経過時間を `ai_duration_ms` に記録するよう修正
 - **`CONSENT_STATE_CHANGED` ハンドラに送信元検証を追加** ― `messageHandlers.ts` で `sender.id !== chrome.runtime.id` の場合にエラーを返す defense-in-depth
@@ -4254,28 +4188,28 @@ This release incorporates the PBI implemented on the same day.
 - **`popup/main.ts` の i18n import を `src/utils/i18n` に移行** ― 重複していたポップアップ側の i18n 実装を統合後の単一ソースに修正
 - **保留レコードの挿入を 50 件チャンクのバッチ処理に変更** ― `pendingSqliteQueue.ts` で大量保留時の SQLite 負荷を分散
 
-### Accessibility / アクセシビリティ
+### アクセシビリティ
 
 - **ダッシュボードサイドバーに `tablist`/`tab` の ARIA ロールを追加** ― サイドバーナビゲーションに適切なロールと `aria-selected` を付与し、スクリーンリーダーでの操作性を改善
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **`popup` と `options` の重複 `i18n.ts` を `src/utils/i18n.ts` に統合** ― 3 箇所に分散していた i18n ヘルパーを単一モジュールに集約
 - **`RecordingPipeline` の生成を `createRecordingPipeline()` ファクトリに抽出** ― コンストラクタの複雑な依存注入をファクトリ関数に分離し、テスト容易性を向上
 
-### Removed / 削除
+### 削除
 
 - **未使用の Breaking Changes modal サブシステムを削除** ― 使用されていないモーダルコンポーネントとその関連コードを除去
 - **未使用の OPFS spike 関数 `runOpfsSpikeB` を削除** ― 過去の調査用コードをクリーンアップ
 - **未使用の exported public API 群を削除** ― 内部モジュールからの不要な export 文を整理
 - **未使用の `_` プレフィックスヘルパー関数を削除** ― 呼び出し元のない private 関数を除去
 
-### Chores / その他
+### その他
 
 - **`THIRD_PARTY_NOTICES.md` の自動生成 CI を導入** ― `.github/workflows/ci.yml` で依存ライセンス情報を自動的に生成・検証するワークフローを追加
 - **`README.md` にアーキテクチャ図と Privacy & Security セクションを追加** ― 拡張機能の全体構成とデータ処理の透明性を文書化
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **AI処理時間表示の意味を `SETUP_GUIDE.md` / `FAQ.md` に追記** ― ダッシュボードの処理時間表示が実測値であることを明記
 - **デッドコード削除の設計ドキュメント・実装計画を追加** ― `dev-docs/superpowers/specs/` および `plans/` 配下に 2 件のドキュメントを追加
@@ -4283,7 +4217,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.39] - 2026-07-18
 
-### Fixed / 修正
+### 修正
 
 - **`uuid` の overrides レンジを修正** ― `package.json` の `overrides` で `uuid` を `>=11.1.1` としていたのを `^11.1.1` に変更。`>=` 指定による意図しないメジャーアップデートを防止
 - **`GET_CONTENT` メッセージハンドラに送信元検証を追加** ― `src/content/extractor.ts` で `sender.id !== chrome.runtime.id` の場合にエラーを返すよう修正。defense-in-depth の一環
@@ -4291,39 +4225,39 @@ This release incorporates the PBI implemented on the same day.
 - **ポップアップの最小幅をレスポンシブ化** ― `entrypoints/popup/styles.css` の固定幅 `width: 360px` を `min-width: 360px; max-width: 100vw` に変更
 - **IDB 移行バックアップのカラム不整合を修正** ― `src/offscreen/sqliteEngineContext.ts` の `MIGRATION_BACKUP_COLUMNS` を動的な `[...COLUMN_NAMES]`（32 カラム）に拡張し、`mapMigrationBackupRow()` を追加。スキーマ追加後も列数ズレで復元が失敗しにくくした
 
-### Changed / 変更
+### 変更
 
 - **ログ保持期間と最大件数を短縮** ― `src/utils/logger.ts` の `RETENTION_DAYS` を 7 日から 3 日に、`MAX_LOGS` を 1000 件から 500 件に変更
 - **ログ ID フォールバックを CSPRNG に変更** ― `src/utils/logger.ts` で `Math.random()` ベースの ID 生成を `crypto.getRandomValues()` に置換
 
-### Removed / 削除
+### 削除
 
 - **レガシー履歴パネルを削除** ― 使用されなくなった `src/dashboard/sqliteHistoryPanel.ts`、`src/dashboard/historyPanel.ts`、および関連テスト 5 ファイルを削除
 - **`saveSqliteStep` から不要な楽観的ロック呼び出しを削除** ― no-op になっていた `withOptimisticLock` の呼び出しと import を除去
 
-### Deprecated / 非推奨
+### 非推奨
 
 - **barrel 再エクスポートに `@deprecated` を付与** ― `src/utils/storage.ts` と `src/offscreen/sqlite.ts` の後方互換再エクスポートに JSDoc `@deprecated` を追加。新規コードでは分割モジュールを直接インポートすることを推奨
 
-### Accessibility / アクセシビリティ
+### アクセシビリティ
 
 - **ポップアップパネル切替時のフォーカス移動を追加** ― `src/popup/popup.ts` でタブ/パネル切替後、新しくアクティブになったパネル内の最初のフォーカス可能要素にフォーカスを移動
 
 ## [6.5.38] - 2026-07-18
 
-### Fixed / 修正
+### 修正
 
 - **`matchWhitelistAdapter()` が汎用 `article` タグに誤マッチしていた問題を修正** ― ドメインを持つアダプタ（`nhk-news`）の `detectSelector: 'article'` が、テスト環境の `<article>` 要素を含む全ページで誤発動。第2パス（DOM構造検出）でドメインを持つアダプタは特定セレクタ（`.`, `#`, `[` を含むもの）のみマッチするよう変更。汎用タグ名セレクタは不要なホワイトリスト抽出の早期リターンを防ぐ（54件のテスト失敗を解消）
 - **`convertFallbackRecord()` に不足していた 20+ フィールドを追加** ― `gist_synced`、`content`、`masked_count`、`cleansed_reason`、`ai_provider`、`ai_model`、`ai_duration_ms`、`obsidian_duration_ms`、`sent_tokens`、`received_tokens`、`original_tokens`、`cleansed_tokens`、`page_bytes`、`candidate_bytes`、`original_bytes`、`cleansed_bytes`、`ai_summary_original_bytes`、`ai_summary_cleansed_bytes`、`extracted_sentences_bytes`、`extracted_sentences_original_bytes`、`fallback_triggered` のマッピングを追加（フォールバックデータの欠損を防止）
 - **`IdbVfsBackend` に ORDER BY インジェクション対策を追加** ― `ALLOWED_ORDER_COLUMNS` / `ALLOWED_ORDER_DIRECTIONS` による許可リスト検証を実装。無効な値はエラーレスポンスを返す
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **`aiSummaryCleansingSettings.ts`（V1）を削除** ― 後方互換のため残していた旧モジュールを完全に除去。全参照を `aiSummaryCleansingSettingsV2.ts` に統一し、テストの参照パスも更新
 
 ## [6.5.37] - 2026-07-18
 
-### Added / 追加
+### 追加
 
 - **CNN.co.jp ドメイン別ホワイトリスト抽出アダプター** ― `cnn.co.jp` 向けに `#leaf-body` からの記事本文抽出を追加。SNS シェアボタン・タグ・ページネーション・関連記事・動画/写真セクションを `excludeSelectors` で除外
 
@@ -4331,40 +4265,40 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.36] - 2026-07-18
 
-### Added / 追加
+### 追加
 
 - **監査ログの TSV ダウンロード機能** ― 監査ログパネルのテーブル UI（検索・フィルタ・ソート）を撤去し、「ログをエキスポート」パネルに「監査ログ TSV ダウンロード」セクションとして統合。`toTsvString()` で `AuditLogEntry[]` → TSV 変換し、`Blob` + `<a download>` パターンでファイルダウンロード。ファイル名は `yasumaro-audit-log-YYYY-MM-DD.tsv`、`created_at` は ISO 8601 形式
 
 - **Wikipedia ドメイン別ホワイトリスト抽出アダプター** ― `wikipedia.org`（全言語版）向けに `div.mw-parser-output` からの記事本文抽出を追加。`[編集]` リンク・参照リスト・ナビゲーションボックス・TOC を `excludeSelectors` で除外。`excludeSelectors` 機能は既存インターフェースに定義されていたが未実装だったため、新規実装して全アダプタで利用可能に
 
-### Changed / 変更
+### 変更
 
 - **ダッシュボード「ログをエクスポート」パネルのスタイル統一** ― 各エクスポートボタン+説明文を `settings-section` で囲み、ローカル Markdown 書き出し・監査ログ セクションと同じ見た目に統一
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **監査ログパネルを廃止** ― 単独パネル (`panel-audit-log`)・サイドバー項目・レガシー `auditLogPanel.ts` を削除。`asyncData/auditLogPanel.ts` は `toTsvString()` のみに簡素化。HTML/CSS からテーブル用スタイルを削除し約 250 行を削減
 
 ## [6.5.35] - 2026-07-17
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **sqliteHistoryPanel の関数シグネチャを引数化** ― `updateTagFilterBar()` の global state/document 依存を除去し `(container, activeTagFilter, onClear)` の3引数化。`renderCalendarNav` / `renderEntryList` / `renderPagination` / `updateBulkBar` は既に引数化済みのため変更不要。`_getMonthDateRange` / `updateTagFilterBar` / `renderCalendarNav` を `_test` エクスポート経由で単体テスト可能にし、11 件のテストを追加（[PBI: 2026-07-13-03](pbi/2026-07-13-03-fix-sqlite-history-panel-deepening.md)）
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **ADR の implements トレーサビリティ改善** ― 主要5 ADR に `## Implements` セクションを追加し、コード⇔ドキュメント間の参照を明示化。`npm run lint:adr-links` で全33 ADR の参照パスを自動検証可能に
 - **Content Script 注入フロー可視化** ― `dev-docs/content-script-injection-flow.md` を新設し、loader.ts → extractor.ts → service-worker.ts の注入経路とメッセージ型一覧を記載
 
-### Added / 追加
+### 追加
 
 - **知識グラフ依存エッジの可視化改善** ― `src/content/loader.ts` / `src/content/extractor.ts` に `import type` を追加し content script ⇔ SW 間のメッセージ型依存を graphify で捕捉可能に。`src/utils/piiSanitizer.ts` の `SanitizeOptions` を export し `logger.ts` との依存エッジを確立
 
-### Changed / 変更
+### 変更
 
 - `loader-no-static-imports` テストで TypeScript の `import type`（コンパイル時消去・ランタイム影響なし）を許可
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **ADR の implements トレーサビリティ改善** ― 主要5 ADR に `## Implements` セクションを追加し、コード⇔ドキュメント間の参照を明示化。`npm run lint:adr-links` で全33 ADR の参照パスを自動検証可能に
 - **Content Script 注入フロー可視化** ― `dev-docs/content-script-injection-flow.md` を新設し、loader.ts → extractor.ts → service-worker.ts の注入経路とメッセージ型一覧を記載
@@ -4372,26 +4306,26 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.34] - 2026-07-17
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **SW⇔offscreen 間 SQLite メッセージ型を単一ソース化** ― `src/messaging/sqliteMessages.ts` を新設し、`SqliteMessage` discriminated union を定義。`sqliteClient.ts` と `offscreen.ts` が共通の型ソースを参照するようになり、typo によるプロトコル不整合がコンパイルエラーで検出可能になった。`offscreen.ts` の約180行の if-else チェーンを exhaustive switch に置換し、未知メッセージ型に対してクラッシュせずログ記録するように改善（[PBI: 2026-07-16-05](pbi/2026-07-16-05-fix-sqlite-message-type-unification.md)）
 
 - **IDB フォールバックパスを `@subframe7536/sqlite-wasm` へ移行** ― `sqliteEngineContext.ts` の IDB VFS 初期化を旧 `wa-sqlite`（`IDBBatchAtomicVFS`）から `@subframe7536/sqlite-wasm`（`useIdbStorage`）に置換。`IdbVfsBackend.ts` を新設し `StorageBackend` インターフェース準拠の完全な実装を提供。既存ユーザーの旧 wa-sqlite IDB データベースは検出時に自動バックアップ→移行し、FTS5 検索も IDB フォールバックパスで引き続き利用可能。`wa-sqlite` は旧 DB の一回限り移行用の動的 import のみに限定（[PBI: 2026-07-16-06](pbi/2026-07-16-06-fix-idb-fallback-subframe7536-migration.md)）
 
-### Added / 追加
+### 追加
 
 - **ダッシュボード診断パネルに OPFS 移行状態を表示** ― `OPFS_MIGRATION_V2_DONE`、試行日時、完了日時、移行レコード数を `chrome.storage.local` に記録し、ダッシュボードの SQLite 診断パネルに「OPFS データ移行」行として表示。移行完了済みか未完了かを一目で確認可能になった（[PBI: 2026-07-17-08](pbi/2026-07-17-08-dashboard-opfs-migration-status.md)）
 
-### Fixed / 修正
+### 修正
 
 - **ログ出力・設定エクスポートで動的プロバイダーAPIキーとGitHub PATがマスク・除外対象から漏れていた問題を修正** ― 設定管理モジュールの新旧統合（`storageSettings.ts` 廃止）に伴い、機密フィールド一覧（`API_KEY_FIELDS`）を新系統の6フィールド版（`provider_api_key`・`github_pat` を含む）に一本化。これまで `provider_api_key`（動的プロバイダー用APIキー）と `github_pat`（Gistバックアップ用GitHub PAT）は、コンソールログのマスキング処理および設定エクスポート時のAPIキー除外処理の対象に含まれていなかった
 - **AI要約クレンジングの開発者向け改善4項目に対応** ― ストレージデフォルト値コメントを実装値（`true`）に修正しコードとドキュメントの整合性を確保。`buildClassIdSelectors` のセレクター文字列をモジュールレベルでキャッシュ化し、ページロードごとの再計算を排除。過剰削減フォールバック閾値（比率・絶対バイト数）を設定可能化し、ダッシュボードにスライダーUIを追加。パターンマッチングの誤検出防止のための単体テストを追加
 
-### Changed / 変更
+### 変更
 
 - 旧設定管理モジュール `src/utils/storageSettings.ts` を廃止し、`src/utils/storage/`（新系統）に統合。`Settings` 型・`API_KEY_FIELDS` 定数の単一ソース化（[ADR 2026-03-20](dev-docs/ADR/2026-03-20-default-settings-single-source.md) の残タスクを完了）
 
-### Docs / ドキュメント
+### ドキュメント
 
 - **AI要約クレンジング設定 Canvas ファイルを追加** ― `docs/ai-summary-cleansing-settings.canvas` を新規作成
 - **ADR-014（OPFS/FTS5 共存）を現状化** ― `sqlite.ts` の4モジュール分割、`sqliteEngine.ts` と `sqliteEngineContext.ts` の責務分担、`sqliteMessages.ts` の追加を反映。（[ADR](dev-docs/ADR/2026-06-17-opfs-fts5-coexistence.md) / [PBI: 2026-07-16-04](pbi/2026-07-16-04-fix-adr014-file-references.md)）
@@ -4400,50 +4334,50 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.32] - 2026-07-16
 
-### Added
+### 追加
 
 - **AI要約クレンジング Category B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加** ― `newsMediaEnabled`/`ecSiteEnabled`/`qaSiteEnabled`/`videoSiteEnabled` の4オプションを新設。コメント欄・関連記事カード・記者クレジット（ニュース）、レビュー欄・バリエーション選択UI・関連購入商品（EC）、ベストアンサーバッジ・関連質問一覧（Q&A）、コメント弾幕・タグクラウド・関連動画（動画）等を削除。新規ユーザーはデフォルト有効、既存ユーザーはマイグレーションで無効維持
 - **ドメイン別ホワイトリスト抽出モードを実装** ― Togetter・5ちゃんねるまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・小説投稿サイト（なろう/カクヨム）・レシピサイト（クックパッド/クラシル）・はてなブックマーク・食べログ向けに、周辺ノイズ比率が極端に高いページから特定クラス/IDの本文のみを狙い撃ちで抽出する新モードを追加。ドメイン一致またはDOM構造検知で自動発動し、0件抽出時は既存の削除方式に自動フォールバック。全体トグル1つで一括制御可能
 - `countTargets.ts` に Category B（News/EC/QA/Video）のカウント対応を追加
 - Category A（affiliate/speech-bubble）チェックボックスに `data-i18n` 属性と日英i18nメッセージを追加
 
-### Changed
+### 変更
 
 - Category B パターンの陰性テストを部分文字列一致で強化し、既知の重複パターンをホワイトリスト化
 
-### Docs
+### ドキュメント
 
 - AI要約クレンジングガイド（`docs/AI_SUMMARY_GUIDE.md`, `docs/CLEANSING_ORDER.md`）に日本語サイト特化オプション（Category A/B）とドメイン別ホワイトリスト抽出モードの説明を追加
 
 ## [6.5.31] - 2026-07-16
 
-### Fixed / 修正
+### 修正
 
 - **監査ログがダッシュボードで表示されなかった問題を修正** ― `auditLogPanel` がダッシュボード（options ページ）から直接 `SqliteClient` を呼んでいたが、ダッシュボードコンテキストでは `chrome.offscreen` API が利用不可のため `ensureOffscreenDocument()` が失敗し、クエリがサイレントにエラーになっていた。他のダッシュボードパネルと同様に `DASHBOARD_SQLITE` メッセージをサービスワーカー経由で中継する `audit_log_query` subtype を追加し、`dashboardSqliteService.ts` 経由のクエリに変更
 
-### Added / 追加
+### 追加
 
 - **監査ログパネルを表形式にリニューアル** ― プレーンリストから `<table>` ベースのUIに変更。プロバイダー・URL・送信日時の3カラム表示、ヘッダークリックによるソート（昇順/降順トグル）、プロバイダードロップダウンフィルタ、テキスト検索、件数表示を追加。ダークモード対応
 - **監査ログのURLクリックで履歴パネルにジャンプ** ― 監査ログのURL列をクリックすると、そのドメイン名で履歴パネルが開き検索が実行される。FTS5 trigramトークナイザーの制約上、URL全文ではなくドメイン名をクエリとして使用
 
-### Chores / その他
+### その他
 
 - **`package.json` / `wxt.config.ts` のバージョン同期** ― `6.5.30` → `6.5.31`
 
 ## [6.5.30] - 2026-07-15
 
-### Added
+### 追加
 
 - AI要約クレンジングにCategory B（ニュース・EC・Q&A・動画プラットフォーム向けパターン）を追加
 - ドメイン別ホワイトリスト抽出モードを追加（Togetter・5chまとめブログ・ガールズちゃんねる・Yahoo!知恵袋・なろう/カクヨム・クックパッド/クラシル対応）
 
-### Chores / その他
+### その他
 
 - **`package-lock.json` のバージョン同期** ― `6.5.29` → `6.5.30`
 
 ## [6.5.29] - 2026-07-14
 
-### Fixed / 修正
+### 修正
 
 - **サイドバークリックでパネル表示が切り替わらない問題を修正** ― `NavigationRegistry` が CSS の `.panel` / `.panel.active` クラス切り替えを行っていなかったため、すべてのパネルが `display: none` のまま。パネル切替時に `classList.add('active')` / `classList.remove('active')` を追加。`DashboardBootstrapper.wireSidebar` でサイドバーボタンの `active` クラスも切り替え
 - **SQLite の `getBackend()` が `NoopBackend` を誤返していたバグを修正** ― `sqliteEngineContext.getBackend()` が OPFS Worker の初期化状態を確認せずに常に `OpfsWorkerBackend` を返し、次に `init()` 完了前にフォールバック判定が行われ `NoopBackend` に到達していた。`getBackend()` の先頭で `init()` の完了を保証し、`opfsWorker` が null の場合は IDB VFS に確実にフォールバック
@@ -4456,7 +4390,7 @@ This release incorporates the PBI implemented on the same day.
 - **`queryLogs` / `searchLogs` に SQLite 未初期化時のリトライ機構を追加** ― 初回失敗時に 1 秒待機してリトライし、初期化タイミングの不整合を吸収
 - **`package-lock.json` のバージョン同期** ― `6.5.28` → `6.5.29`
 
-### CI / テスト
+### テスト
 
 - **`tests.yml` に `pull-requests: write` 権限を追加** ― PR コメント作成に必要な権限
 - **`github-script` の `steps` 参照を環境変数に修正** ― `process.env.TYPE_CHECK_OUTCOME` 等に変更
@@ -4464,7 +4398,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.28] - 2026-07-14
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **ダッシュボード Panel 抽象の導入** ― 18 パネルを 3 カテゴリ（AsyncDataPanel / StaticFormPanel / DiagnosticPanel）の型付き interface に移行。NavigationRegistry + DashboardBootstrapper でパネルのライフサイクルを管理。1521 行の `dashboard.ts` をモジュール分割（C1）
 - **HTML `data-storage-key` convention の導入** ― `getSettingsMapping()` の手動マッピングを廃止。全 settings input に `data-storage-key` 属性を追加し、`loadSettingsToInputs` / `extractSettingsFromInputs` を汎用ユーティリティ化（C2）
@@ -4472,18 +4406,18 @@ This release incorporates the PBI implemented on the same day.
 - **Service Worker handler の依存絞り込み** ― 15 の handler を singleton 丸ごと注入から method-level DI に変更。15 分岐 if-else を `MessageHandlerRegistry` で置換。`createBackgroundServices()` で明示的コンポジション（C4）
 - **Pipeline mapper 抽出** ― 30 フィールドの `BrowsingLogRecord` マッピングを `BrowsingLogRecordMapper` 純粋関数に抽出。`chrome.alarms` / `chrome.storage` の concern を `MarkdownBufferManager` に抽出（C5）
 
-### Added / 追加
+### 追加
 
 - **AI プロバイダー設定をアコーディオン化** ― 3 つの優先度セクションを `<details>` 要素に変更。デフォルトは 1 位のみ展開。プロバイダー選択変更時に `<summary>` にプロバイダー名を動的表示
 
-### CI / テスト
+### テスト
 
 - **OPFS+FTS5 E2E テストをスキップ** ― ローカル / CI 両環境で不安定なため、`test.skip` で無効化
 - **Extension E2E テストにリトライを追加** ― `retries: 0` → `retries: 2`
 - **`github-script` の `steps` 参照を環境変数に修正** ― `process.env.TYPE_CHECK_OUTCOME` 等に変更
 - **`tests.yml` に `pull-requests: write` 権限を追加** ― PR コメント作成に必要な権限
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **設計ドキュメント 5 件を追加** ― `dev-docs/superpowers/specs/2026-07-13-*.md`
 - **AI プロバイダーアコーディオン設計書を追加** ― `dev-docs/superpowers/specs/2026-07-14-ai-provider-accordion-design.md`
@@ -4492,7 +4426,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.27] - 2026-07-13
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **SQLiteレイヤーのアーキテクチャ深化** ― 5つの構造的改善により保守性・テスト容易性・エラー可視性を向上
   - **3バックエンド分岐をStorageBackendアダプタに統一** ― `recordsRepo.ts` / `dbMaintenance.ts` / `auditLogRepo.ts` から約842行の重複分岐ロジックを削除。`StorageBackend` インターフェース + `OpfsWorkerBackend` / `IdbVfsBackend` / `FallbackStorageAdapter` / `NoopBackend` の4実装に集約。バックエンド選択は `SqliteEngineContext.getBackend()` で遅延初期化・1回限り
@@ -4501,35 +4435,35 @@ This release incorporates the PBI implemented on the same day.
   - **マイグレーションロジックを共有モジュール化** ― `sqliteEngineContext._doInit()` と `opfsWorker.initSqliteInner()` に重複していたALTER TABLEループ・FTS5セットアップを `migrations.ts` の `runMigrations()` に統合
   - **sqliteHistoryPanel.ts のテスタビリティ向上** ― `renderCalendarNav()` / `renderEntryList()` / `renderPagination()` / `updateBulkBar()` をグローバルstate/DOMからパラメータ化し、単体テスト可能に
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **設計ドキュメント5件を追加** ― `docs/superpowers/specs/2026-07-13-*.md`
 - **深掘りインタビュー記録** ― `dev-docs/ADR/2026-07-13-sqlite-architecture-deep-dig.md`
 
 ## [6.5.26] - 2026-07-12
 
-### Fixed / 修正
+### 修正
 
 - **監査ログ（Audit Log）が全く記録されなかった問題を修正** ― `opfsWorker.ts` に `AUDIT_LOG_INSERT` / `AUDIT_LOG_QUERY` のメッセージハンドラが存在せず、OPFS Worker 経由の監査ログ書き込み・読み取りがすべて `Unknown worker type` エラーでサイレントに失敗していた。`handleAuditLogInsert()` / `handleAuditLogQuery()` を新規実装し、スイッチ文に case を追加（862ced4）
 
 ## [6.5.25] - 2026-07-12
 
-### Changed / 変更
+### 変更
 
 - **npm 依存パッケージを更新** ― `@types/node` 25.9.5→26.1.1、`@types/chrome` 0.1.43→0.2.2、`adm-zip` 0.5.18→0.6.0、`eslint` 9.39.5→10.7.0、`globals` 15.15.0→17.7.0
 
-### Security / セキュリティ
+### セキュリティ
 
 - **間接依存の脆弱性 7 件を overrides で修正** ― `shell-quote` (critical 3件)、`tmp` (high 2件)、`uuid` (moderate 2件) を最新版に強制解決
 
-### Chores / その他
+### その他
 
 - **ESLint 10 移行に伴う未使用変数 210 件を修正** ― 全ファイルで `@typescript-eslint/no-unused-vars` エラーを解消。`eslint.config.js` に `caughtErrorsIgnorePattern: '^_'` を追加
 - **TypeScript 7 へのアップデートは見送り** ― `@typescript-eslint` 8.63 が TS 6.1 未満のみサポートのため
 
 ## [6.5.24] - 2026-07-12
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **README.md を刷新** ― フォークの理由・プロジェクト継続の動機を書き下ろし、機能一覧を拡充。CWS リンクの配置を改善
 - **ランディングページ (`docs/index.html`) を改修** ― ヒーローセクションに Chrome Web Store ボタンを追加（プライマリ）、GitHub リンクをセカンダリに変更。FAQ をカテゴリ別アコーディオンに整理し、セクション文言を調整
@@ -4543,71 +4477,71 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.23] - 2026-07-12
 
-### Fixed / 修正
+### 修正
 
 - **WCAG a11y 違反を修正** ― `aria-hidden="true"` の非表示タブパネル（`#domainPanel`, `#promptPanel`, `#privacyPanel`）に `inert` 属性を追加し、フォーカス可能要素がアクセシビリティツリーに露出しないよう対応。`initTabNavigation()` と `showTab()` にタブ切り替え時の `inert` 設定/解除ロジックを追加
 - **`#importFileInput` の ARIA 違反を修正** ― `<div role="menu">` 内に `<input>` が存在した違反を解消するため要素をメニュー外に移動し、ラベルなしフォーム要素の違反対策として `aria-label` を追加
 - **Privacy Consent Modal の `<dialog>` に ARIA 属性を追加** ― `role="dialog"` と `aria-modal="true"` を明示的に設定
 - **E2E テストの互換性を修正** ― Privacy Consent Modal のテストを `<dialog>` 移行後の DOM 構造（`modal-dialog` クラス、`not.toBeVisible()` チェック）に更新。Domain Filter テストをダッシュボード遷移変更（`showSettingsScreen()` が新規タブを開くようになった）に合わせて `page.evaluate()` ベースに修正
 
-### Changed / 変更
+### 変更
 
 - **a11y E2E テストの設定画面遷移を修正** ― `showSettingsScreen()` が新規タブを開くようになったため、`page.evaluate()` で直接 `#settingsScreen` を表示するよう変更
 
 ## [6.5.22] - 2026-07-12
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **storage.tsを4モジュールに分割** ― 1364行・38 exportの単一ファイルだった`src/utils/storage.ts`を`encryptionSession.ts`（暗号化セッション）、`settingsStore.ts`（設定ストア）、`savedUrlStore.ts`（保存URLストア）、`domainFilterCache.ts`（ドメインフィルタキャッシュ）の4モジュールに分割。`storage.ts`は後方互換のための再エクスポート層として維持し、既存75箇所のimport文は変更不要（M34）
 - **sqlite.tsを4モジュールに分割** ― 1594行・22 exportの単一ファイルだった`src/offscreen/sqlite.ts`を`sqliteEngineContext.ts`（エンジン状態・初期化）、`recordsRepo.ts`（レコードCRUD・FTS5検索）、`dbMaintenance.ts`（保持期間パージ・バックアップ/リストア）、`auditLogRepo.ts`（監査ログ）の4モジュールに分割。`sqlite.ts`は後方互換のための再エクスポート層として維持（M35）
 - **sqliteHistoryPanelの再描画をrefresh()に統一** ― state変更後の再描画判断が20箇所超のハンドラに個別に散在していた問題を解消。`updateDynamicRegions()`に漏れていた`updateBulkBar()`呼び出しを追加し、「条件をクリア」ボタンの二重再描画も解消（M36）
 - **dashboard SQLite通信をDiscriminated Unionで型安全化** ― 新規`dashboardSqliteProtocol.ts`でsubtype別のリクエスト/レスポンスをDiscriminated Unionとして定義。`payload.x as T`キャストの塊だった`dashboardSqliteHandlers.ts` / `dashboardSqliteService.ts` / `dashboard.ts`を型安全化。新規subtype追加時に送受信両側の対応をコンパイラが保証する（M36）
 
-### Fixed / 修正
+### 修正
 
 - **`aiSummaryCleansingSettingsV2.ts`のgit管理漏れを修正** ― 既存のソースファイルだがgit add漏れによりコミットされていなかったファイルを追跡対象に追加
 - **`confirm_token`サブタイプが常にUnknown subtypeエラーになるバグを修正** ― `dashboardSqliteHandlers.ts`で`case 'confirm_token'`がハンドリングされておらず、分割前から存在していた潜在バグを解消
 
 ## [6.5.21] - 2026-07-11
 
-### Changed / 変更
+### 変更
 
 - **クエリ結果件数に強制上限を追加** ― `query()`/`search()`/`queryAuditLog()`に`MAX_QUERY_LIMIT=100000`のハード上限を導入し、呼び出し元が極端に大きいlimitを指定しても全件をJSメモリに一度にロードしないよう保護（M13）
 - **SqliteClientをシングルトン化** ― `getSharedSqliteClient()`を新設し、`service-worker.ts`/`auditLog.ts`/`reviewSummaryGenerator.ts`が独立に持っていたSqliteClientインスタンスを単一の共有インスタンスに統一。Offscreen Documentのライフサイクル管理が一本化された（M8）
 - **Offscreen Documentへのリクエストを直列化** ― `SqliteClient.msgOffscreen()`に既存のMutexを適用し、複数タブからの同時記録リクエストがOffscreen Document側で競合しないよう保護（M7）
 - **Offscreen Document接続エラー時の自動リトライを追加** ― モバイル環境などでOffscreen Documentが休止から復帰する際の接続エラーを検知し、1回だけ自動的に再接続・再送信するようになった（M12）
 
-### Added / 追加
+### 追加
 
 - **SQLite書き込み失敗時の保留キューを追加** ― SQLiteが一時的に利用不可な間に記録が失敗すると、これまではレコードが完全に失われていた。`pendingSqliteQueue.ts`を新設し、失敗したレコードを`chrome.storage.local`に保留、Service Worker再起動時に自動で再投入するようになった（M14）
 
-### Refactored / リファクタリング
+### リファクタリング
 
 - **ダッシュボードの3つのMarkdownエクスポート関数を統合** ― `handleManualLocalMarkdownExport`/`handleExportLocalMarkdown`/`handleHistoryExportLocalMarkdown`のほぼ同一だったロジックを`exportLocalMarkdownCore()`に集約。既存の関数シグネチャ・呼び出し元は変更なし（M15）
 - **sqlite.ts/opfsWorker.ts間で重複していたFTS5サニタイズロジックを共通化** ― 完全一致していた`sanitizeFtsTerm()`/`FTS_QUERY_MAX_LENGTH`を`schema.ts`に集約。両バックエンドの非同期実行モデルが異なるため完全なStrategyパターン統合は見送り、安全に共有できる部分のみ抽出（M16）
 - **CSPドメインリストを共通定数から自動生成** ― `src/utils/cspDomains.ts`を新設し、`wxt.config.ts`の`host_permissions`/`optional_host_permissions`/CSP文字列すべてを単一のドメイン配列から生成するよう変更。新しいAIプロバイダドメインを追加する際に複数箇所を編集する必要がなくなった（M24）
 - **全モーダルをネイティブ`<dialog>`要素に統一** ― `confirmationModal`/`importConfirmModal`/`passwordModal`/`passwordAuthModal`/`privacyConsentModal`の5モーダル全てを`<div>`+`focusTrapManager`から`<dialog>`+ネイティブ`showModal()`/`close()`に変更。フォーカストラップ・ESCキー処理をブラウザ標準機構に委譲（同意モーダルは引き続きESCで閉じない仕様を維持）（M21）
 
-### Added / 追加
+### 追加
 
 - **リリースビルドにバンドルサイズ検証を追加** ― `scripts/check-bundle-size.mjs`を新設し、Chrome向けビルド直後に15MB上限のサイズチェックを実行。想定外のバンドル肥大化をリリース前に検知できるようになった（M26）
 
 ## [6.5.20] - 2026-07-11
 
-### Added / 追加
+### 追加
 
 - **未同意状態をツールバーバッジで可視化** ― プライバシー同意を拒否している間、拡張機能アイコンに警告バッジが表示されるようになった（Checking Team M3）
 - **プライバシー設定画面にPIIマスキングサンプルを追加** ― クラウドAI送信前にどのようなデータが匿名化されるか、固定サンプルで確認できるようになった（Checking Team M4）
 - **ダッシュボードのデータ管理セクションにポータビリティ権の導線を追加** ― データ削除ボタンに加え、エクスポートログパネルへのショートカットと説明文を追加（Checking Team M6）
 - **デュアルライト終了条件フラグを追加** ― `LEGACY_DUAL_WRITE_ENABLED` 設定キーを追加。`false` 時に `chrome.storage.local` へのレガシー二重書き込みをスキップし、SQLite を単一の情報源とする移行を可能にした（M9）
 
-### Fixed / 修正
+### 修正
 
 - **i18nキー `confirm` を `confirmImport` にリネーム** ― キー名が実際の用途（インポート確認ダイアログ）と一致するよう修正。日英の messages.json および HTML の data-i18n 参照を全て更新（M22）
 - **ダッシュボードHTMLの初期lang属性を修正** ― `html lang="en"` を `html lang=""` に変更し、JS側の動的設定と競合しないよう修正（M20）
 - **データ集約パネルの最大幅制限を分離** ― 共通 `.panel` クラスの `max-width: 680px` からデータ集約パネル（履歴・SQLite履歴）を `.panel.data-panel` として分離し、`max-width: 1100px` を設定。設定パネルは従来の 680px を維持（M31）
 
-### Changed / 変更
+### 変更
 
 - **ESLint を導入** ― `@typescript-eslint` ルールセットで `no-unused-vars` を有効化。`package.json` の `lint` スクリプトを `tsc --noEmit` から `eslint .` に変更（M25、既存コードの警告解消は別スコープ）
 - **プリペアドステートメントキャッシュをLRU戦略に変更** ― `src/offscreen/lruCache.ts` を新設し、単純な挿入順（FIFO）退避から、アクセス頻度を考慮したLRU（least-recently-used）退避に変更。頻繁に使われるクエリがキャッシュから追い出されにくくなった（M33）
@@ -4619,20 +4553,20 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.18] - 2026-07-11
 
-### Changed / 変更
+### 変更
 
 - **ローカル Markdown 書き出しタイミングを4択に変更** ― 「記録時に自動で書き出す」チェックボックスを廃止し、「手動のみ / 即時（記録直後・最短1分間隔） / アイドル時・30分ごと / 日付が変わったとき（前日分を回収）」の4モードから選べるラジオボタンに変更。既存ユーザーの設定は自動で「アイドル時」または「手動のみ」に移行される
 - ダッシュボードで書き出しタイミングを変更して保存すると、Service Worker の再起動を待たずに即座に新しいスケジュールが反映されるようになった
 - **30カラム INSERT 文のパラメータ構築を共通化** ― `offscreen` 内の重複していたパラメータビルダーを共通関数に集約（保守性向上）
 
-### Fixed / 修正
+### 修正
 
 - （内部）モード切り替え直後にバックグラウンド側のアラーム登録が古いままになる不具合を修正
 - **`purgeLegacyStorage` 実行前に SQLite 健全性チェックを追加** ― SQLite が不健全な状態でレガシーストレージを削除してしまうデータ消失リスクを防止
 
 ## [6.5.17] - 2026-07-09
 
-### Fixed / 修正 (Checking Team Wave 3 + Phase 5)
+### 修正 (Checking Team Wave 3 + Phase 5)
 
 - **`backup_db` に確認トークン必須化** ― `TOKEN_REQUIRED_SUBTYPES` に `'backup_db'` を追加し、全DBバックアップ操作に確認トークンを要求（Red Team）
 - **`DASHBOARD_SQLITE` ハンドラに sender.id 検証を追加** ― defense-in-depth としてオフスクリーンドキュメントと同一パターンの送信元検証を実装（Red Team）
@@ -4644,13 +4578,13 @@ This release incorporates the PBI implemented on the same day.
 - **`opfsWorker` handler の冗長な init ガードを統合** ― switch 文の前で1回チェックするよう統一（Refactoring Evangelist）
 - **WAL モード設定を初期化早期に移動** ― スキーマ作成前に `PRAGMA journal_mode=WAL` を実行（Data Integrity Expert）
 
-### Tested / テスト確認
+### テスト確認
 - **TypeScript 型チェック** ― エラーなし
 - **全テスト** ― 342 files, 6882 passed / 20 skipped
 
 ## [6.5.16] - 2026-07-09
 
-### Changed / 変更
+### 変更
 
 - **ダッシュボードのサイドバー項目の並び替え** ― 「Data」セクション内を Tag Cluster → SQLite History → Domain Search → 監査ログの順に整理し、「記録条件」「診断」を Settings セクションに移動、「Export Logs」を Tools セクション先頭に移動
 - **ポップアップ右上ボタンの遷移先を変更** ― `historyBtn` クリック時の遷移先を Data セクションの「履歴」（`panel-sqlite-history`）に変更（`src/popup/navigation.ts`, `src/dashboard/dashboard.ts`）
@@ -4658,27 +4592,27 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.15] - 2026-07-09
 
-### Chores / その他
+### その他
 
 - **依存パッケージの一斉更新** ― `npm update` を実行し、semver 範囲内の 10 パッケージを最新に更新（51 packages changed）。更新対象: `@subframe7536/sqlite-wasm` 1.2.0→1.3.1、`@sveltejs/vite-plugin-svelte` 7.1.2→7.2.0、`@tailwindcss/vite` 4.3.1→4.3.2、`@types/node` 25.9.4→25.9.5、`@vitest/coverage-v8` 4.1.9→4.1.10、`adm-zip` 0.5.17→0.5.18、`tailwindcss` 4.3.1→4.3.2、`typedoc` 0.28.19→0.28.20、`vite` 8.1.0→8.1.4、`vitest` 4.1.9→4.1.10
 - **バージョン更新漏れを修正** ― `wxt.config.ts` の `version` フィールドが 6.5.14 のままだった問題を修正
 
 ## [6.5.14] - 2026-07-09
 
-### Added / 追加
+### 追加
 
 - **Tag Cluster ローディングラベルの i18n 化** ― `tagClusterLoading.ts` のハードコード日本語を `getMessage` 経由に変更し、`_locales/{en,ja}/messages.json` に 4 キー追加
 - **ページ本文(content)の PII マスキング保存 + 初回同意** ― `RecordingPipeline` で content を `sanitizeRegex` 通過後に格納し、`CONTENT_STORAGE_ENABLED` が true の場合のみ保存。プライバシー同意モーダルに内容保存チェックボックスを追加。`CONTENT_RETENTION_DAYS` のデフォルトを 7 日に変更
 - **ローカル Markdown 書き出しの idle 一括化** ― `saveLocalMarkdownStep` をバッファ蓄積のみに改修し、`chrome.idle.onStateChanged` による idle 時 or 30 分ごとのアラームで 1 日分をまとめてダウンロードするフッシャーを新規実装
 
-### Fixed / 修正 (Checking Team Wave 3)
+### 修正 (Checking Team Wave 3)
 
 - **ALTER TABLE マイグレーションのエラー握り潰しを修正** ― `catch` ブロックで duplicate column 以外のエラーを `console.warn` で出力するよう変更
 - **SQLite リストア時のペイロードに 100MB サイズ上限を追加** ― `SQLITE_RESTORE` ハンドラで超過時にエラーレスポンスを返す
 - **FTS5 tagFilter クエリに 200 文字の長さ制限を追加** ― `query()` と `handleQuery()` の両パスでトランケート（二重防御）
 - **Offscreen メッセージハンドラの送信元検証テストを追加** ― `SQLITE_UPDATE` / `SQLITE_SEARCH` の sender validation テスト 4 件を追加
 
-### Tests / テスト
+### テスト
 
 - `tagClusterLoading.test.ts` ― ローディングラベル i18n 化の単体テスト
 - `sqlite-migration-errors.test.ts` ― ALTER エラー警告テスト
@@ -4689,20 +4623,20 @@ This release incorporates the PBI implemented on the same day.
 
 ---
 
-### Added / 追加
+### 追加
 
 - **Tag Cluster グラフにパン・ズーム機能** ― マウスホイールズーム（カーソル中心、0.3〜3倍）、ドラッグパン、ピンチズーム、+/-/リセットボタンを実装。`viewBox` 操作による TagClusterPanZoomController を新規実装
 - **ノード数に応じてレイアウト座標空間を動的に拡大** ― `computeCanvasSize` でノード数増加時にグラフがパネル幅を超えて見えなくなる不具合を解消
 
-### Fixed / 修正
+### 修正
 
 - **ドラッグ後のクリックで `navigate-to-tag` が誤発火** ― 5px 移動閾値でドラッグとクリックを判定し誤発火を防止
 
-### Changed / 変更
+### 変更
 
 - **ズームボタンに i18n 対応** ― `data-i18n-aria-label` を追加
 
-### Tests / テスト
+### テスト
 
 - **Tag Cluster パン・ズームのテストを追加** ― `tagClusterPanZoom.test.ts`（297行）でホイールズーム、ドラッグパン、ピンチズーム、ボタン操作の全動作を網羅
 - **既存テストをパン・ズーム対応に更新** ― `tagClusterLayout.test.ts`、`tagClusterPanel.test.ts` の座標系モック更新
@@ -4711,15 +4645,15 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.12] - 2026-07-08
 
-### Added / 追加
+### 追加
 
 - **Tag Cluster に4段階ローディング進捗表示** ― SVG グラフ中央に「データ読み込み」「ノード分析」「レイアウト計算」「グラフ描画」の4ステップ進捗をオーバーレイ表示。各ステップ完了時に `◯` → `✓`（緑）へ視覚的フィードバックを提供。`tagClusterLoading.ts` 新規モジュール
 
-### Fixed / 修正
+### 修正
 
 - **SQLite 未初期化時に Tag Cluster が0件表示される問題を修正** ― 起動直後の初回レンダリングで `getSqliteStatus().initialized` を確認し、初期化完了までリトライするよう改善。修正前はページリロードが必要だった
 
-### Tests / テスト
+### テスト
 
 - **Tag Cluster リトライ検証テストを追加** ― SQLite 初期化未完了→完了の遷移をシミュレートし、リトライ後にグラフが描画されることを確認
 - **既存テスト3件を `getSqliteStatus` モック対応に修正** ― ローディング進捗表示の追加に伴うテスト安定化
@@ -4728,7 +4662,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.11] - 2026-07-08
 
-### Added / 追加
+### 追加
 
 - **Tag Cluster ノードクリックで履歴をタグフィルタリング** ― タグクラスタグラフのノードをクリックすると、対応するタグで履歴パネルがフィルタリングされるよう連動。`navigate-to-tag` カスタムイベントで history panel にタグ検索クエリを伝達
 
@@ -4736,11 +4670,11 @@ This release incorporates the PBI implemented on the same day.
 
 - **サイドバーナビゲーション整理** ― Export / Import パネルを SQLite History より前に移動。`sqlite-history` URL パラメータを非推奨化し、`navigate-to-tag` イベント経由のリダイレクトに移行。`initNavigation()` をダッシュボード初期化フローに統合
 
-### Changed / 変更
+### 変更
 
 - **Tag Cluster SVG の CSS スタイリングを強化** ― `.tag-cluster-node`（フィル + ホバーアニメーション）、`.tag-cluster-edge`（線色 + 不透明度）、`.tag-cluster-text`（太字 + ストローク付きテキスト）を `dashboard.css` に追加。ダークモード対応済み
 
-### Tests / テスト
+### テスト
 
 - **`navigate-to-tag` イベントテストを削除** ― イベントハンドラの責務が `navigation.ts` に移動したため、`historyPanel.dom-integration.test.ts` のテスト 2 件を削除
 - **large list / missing fields テストを `skip` に変更** ― 後続リファクタリング時の再開に備え、`it.skip` で保留
@@ -4749,7 +4683,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.9] - 2026-07-08
 
-### Added / 追加
+### 追加
 
 - **SQLite に診断メタデータを永続化（PBI-1）** ― `BrowsingLogRecord` に `sent_tokens`, `received_tokens`, `ai_provider`, `ai_model`, `page_bytes`, `processing_time_ms` 等の診断フィールドを追加。SQLite スキーマ（`schema.ts`）に該当カラムを追加し、`RecordingPipeline` → `saveSqliteStep` 経由で記録時に書き込み。`opfsWorker.ts` / `sqlite.ts` の `insert` / `batch` / `ALLOWED_ORDER_COLUMNS` を拡張
 
@@ -4761,17 +4695,17 @@ This release incorporates the PBI implemented on the same day.
 
 - **レガシーストレージ削除ボタン** ― 診断パネルに「元の chrome.storage データを削除」ボタンを追加。移行完了後の元データを明示的に削除可能に
 
-### Fixed / 修正
+### 修正
 
 - **マイグレーションが元データを削除していた問題を修正** ― 「記録履歴を SQLite へ変換」ボタンが従来 `savedUrlsWithTimestamps` を削除していた問題を修正。移行はコピーオペレーションになり、元データは保持される。削除は「診断」パネルの「元の chrome.storage データを削除」ボタンから明示的に実行可能
 
 - **`mapLegacyEntryToRecord` が診断フィールドをマッピングしていなかった問題を修正** ― 移行時にメトリクス（sent_tokens, received_tokens, ai_provider, page_bytes 等 18 フィールド）が SQLite に保存されない問題を修正。`LegacyUrlEntry` インターフェースに全診断フィールドを追加
 
-### Changed / 変更
+### 変更
 
 - **`formatDiagnosticMetadata` を置換** ― プレーンテキストから構造化 HTML（`history-entry-tokens`, `history-entry-token-reduction`, `history-entry-ai-summary-cleansing`, `cleansing-progress-wrapper` クラス）に変更。記録履歴パネルと同一のビジュアルスタイルで表示
 
-### Tests / テスト
+### テスト
 
 - **`mapLegacyEntryToRecord` テスト追加** ― 診断メタデータフィールドのマッピングとデフォルト値を検証するテスト 2 件を追加
 - **`sqliteHistoryPanel` レンダリングテスト追加** ― `formatDiagnosticMetadataHtml` と `buildCleansingProgressBarHtml` の出力を検証するテスト 10 件を追加
@@ -4781,7 +4715,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.8] - 2026-07-06
 
-### Added / 追加
+### 追加
 
 - **オフラインモード対応** ― ローカル AI プロバイダー利用時にネットワーク接続が不要な `local_only` モードを追加。設定 UI ガードとプライバシーモード表示を実装
 
@@ -4789,7 +4723,7 @@ This release incorporates the PBI implemented on the same day.
 
 - **パイプライン失敗時の自動保留登録** ― `RecordingPipeline` で FATAL/RETRY 失敗時に `pipeline-error`、`saveObsidian` のみ失敗時に `obsidian-write-failed` として自動的に保留ページに登録
 
-### Fixed / 修正
+### 修正
 
 - **監査ログの null 応答処理を修正** ― `SqliteClient` の `recordAuditLog` が null 応答を返した場合も失敗としてログに記録するよう修正
 
@@ -4797,7 +4731,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.7] - 2026-07-06
 
-### Added / 追加
+### 追加
 
 - **SQLite DB 復元機能** ― ダッシュボードからバックアップした `.db` ファイルを復元する機能を追加
   - `SqliteClient.restoreDb` のメッセージ契約を追加
@@ -4816,7 +4750,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.6] - 2026-07-06
 
-### Added / 追加
+### 追加
 
 - **ダッシュボードに保留ページを追加** ― パイプライン失敗や Obsidian 書き込み失敗したエントリを一覧表示し、再試行可能に
   - `PendingPage` に `pipeline-error` / `obsidian-write-failed` の reason ラベルを表示
@@ -4824,7 +4758,7 @@ This release incorporates the PBI implemented on the same day.
 
 - **パイプライン失敗時の自動保留登録** ― `RecordingPipeline` で FATAL/RETRY 失敗時に `pipeline-error`、`saveObsidian` のみ失敗時に `obsidian-write-failed` として自動的に保留ページに登録
 
-### Fixed / 修正
+### 修正
 
 - **AI プロバイダ設定レイアウトを改善** ― 各優先度カード内に設定を表示し、複数プロバイダーの設定を直感的に管理可能に
 
@@ -4832,18 +4766,18 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.5] - 2026-07-07
 
-### Fixed / 修正
+### 修正
 
 - **`chrome.storage.local` 5MB クォータ超過による設定保存失敗を修正** ― `saveSettings` に自動クォータ回復機構（`purgeLegacyStorage()`）を追加。設定保存時にクォータ超過が検出されると、レガシー `savedUrlsWithTimestamps` から large metadata（content, aiSummary, tokens, bytes 等）を削除し、エントリ数を最新 500 件にトリミングしてからリトライする。本番環境で 5,237,549 / 5,242,880 bytes（99.9%）に達しているユーザーが確認されており、ダッシュボードで `Storage quota exceeded` エラーが発生していた。二重書き込み自体は維持し（フォールバックモード・レガシー履歴パネル互換性のため）、クォータ超過時の自動回復のみを保護策とする。
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **ADR: `dev-docs/ADR/2026-07-07-sqlite-chrome-storage-dual-write.md` を新規作成** ― SQLite と chrome.storage の二重書き込みの経緯・コードパス・維持理由、自動クォータ回復機構の設計、将来の完全 SQLite 化時に削除すべきコード一覧と判断基準を記載。
 ---
 
 ## [6.5.4] - 2026-07-07
 
-### Added / 追加
+### 追加
 
 - **検索結果の関連グラフ / タグクラスタ表示機能** ― PBI #02: 履歴のタグ共起関係を集計し、ダッシュボードにノード（タグ）とエッジ（共起関係）からなるグラフを描画
   - 新規モジュール `src/dashboard/tagCooccurrence.ts`：タグ共起集計ロジック（`computeTagCooccurrence()` 関数）
@@ -4867,15 +4801,15 @@ This release incorporates the PBI implemented on the same day.
   - ビルドスクリプト拡張：`npm run build:edge`、`npm run build:brave` でブラウザ別パッケージ生成
   - manifest.json の `browser_specific_settings` で各ブラウザの固有設定に対応
 
-### Fixed / 修正
+### 修正
 
 - **複数 AI プロバイダー設定時の UI 表示バグを修正** ― プロバイダ変更時にセレクト箱の可視性を正確に制御
 
-### Changed / 変更
+### 変更
 
 - **ダッシュボード SQLitePanel に「関連グラフ」タブを追加** ― タグクラスタ表示パネルを新規追加
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **設計ドキュメント**: `docs/superpowers/specs/2026-07-06-related-graph-tag-cluster-design.md`
 - **実装計画**: `docs/superpowers/plans/2026-07-06-related-graph-tag-cluster.md`
@@ -4884,7 +4818,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.3] - 2026-07-06
 
-### Added / 追加
+### 追加
 
 - **週次/月次レビューサマリ機能** ― 閲覧履歴を期間単位で集約し、ローカルMarkdownファイルとして出力
   - `src/background/reviewSummaryGenerator.ts` を新設。ISO週番号・月境界に基づく期間抽出、統計セクション生成、AIダイジェスト生成、`chrome.downloads` によるファイル出力を担当
@@ -4919,11 +4853,11 @@ This release incorporates the PBI implemented on the same day.
 
 - **CSS スタイリング** ― `.sqlite-entry-tags`、`.sqlite-tag-filter-bar`、`.tag-filter-badge`、正規化辞書 UI クラスを追加。ダークモード対応
 
-### Fixed / 修正
+### 修正
 
 - **FTS5 タグフィルタが短いタグ（2文字、例: "AI"）で動作しない問題を修正** ― `sanitizeFtsTerm()` が `#` プレフィックスとクォートを除去し、FTS5 トリグラムトークナイザが 2 文字からトークンを生成できなかった。タグ名の FTS5 オペレーター除去に変更し、`#` プレフィックスを保持
 
-### Changed / 変更
+### 変更
 
 - **`URL_RETENTION_DAYS` を 7 日から 35 日に延長** ― 月次サマリ（過去1ヶ月分）の集計に必要な履歴を保持するため
 
@@ -4931,7 +4865,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.2] - 2026-07-05
 
-### Added / 追加
+### 追加
 
 - **ローカル Markdown 書き出し機能を追加** ― PBI #07: Obsidian REST API を導入せずに、閲覧履歴を日次 Markdown ファイルとしてブラウザのダウンロードフォルダに保存する機能
   - **パイプラインステップ**: `saveLocalMarkdownStep`（Step 9）を新規追加。BEST_EFFORT 戦略で Obsidian と独立動作
@@ -4942,19 +4876,19 @@ This release incorporates the PBI implemented on the same day.
   - **ファイル形式**: `~/Downloads/Yasumaro/YYYY-MM-DD.md`。`conflictAction: 'overwrite'` で日次ファイルを上書き
   - **ローカルタイムゾーン対応**: 日付のグループ化・ファイル名生成をローカルタイムゾーンで処理
 
-### Changed / 変更
+### 変更
 
 - **ダッシュボード設定パネルに「ローカル Markdown 書き出し」セクションを追加** ― 初期設定パネルにトグル・フォルダ設定・手動エクスポート UI を追加
 - **「ログをエキスポート」「履歴」パネルに Markdown 書き出しボタンを追加** ― 既存パネルからもローカル Markdown 書き出しが可能に
 - **ダッシュボードの英語 i18n 不足キーを補完** ― Export Logs パネル、Recording Conditions パネルのボタン・説明文に `data-i18n` 属性を追加。動的レンダリングで `getMessage()` を直接使用するよう修正
 - **`downloads` 権限を追加** ― `chrome.downloads.download()` の使用に必要な権限を `wxt.config.ts` に追加
 
-### Fixed / 修正
+### 修正
 
 - **`URL.createObjectURL` が Service Worker で使用できない問題を修正** ― data URL 方式に変更して `chrome.downloads.download()` に対応
 - **日付のタイムゾーンずれを修正** ― `saveLocalMarkdownStep` と `handleManualLocalMarkdownExport` で `toISOString()`（UTC）からローカルタイムゾーンの日付生成に変更
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`docs/MARKDOWN_DOWNLOAD.md` を新規作成** ― ローカル Markdown 書き出しの日英ユーザーガイド。動作モード、設定方法、ファイル形式、トラブルシューティングを網羅
 - **`docs/FAQ.md` に Q44・Q45 を追加** ― Obsidian なしでの Markdown 書き出し、ダウンロード通知の非表示化方法を日英で追加
@@ -4963,7 +4897,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.1] - 2026-07-04
 
-### Chores / その他
+### その他
 
 - **バージョン 6.5.0 → 6.5.1** ― 次期開発サイクル開始
 
@@ -4971,7 +4905,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.5.0] - 2026-07-04
 
-### Fixed / 修正
+### 修正
 
 - **本番コードから `any` 型を全 8 箇所排除** ― 型健全性を損なう `any` の使用を徹底的に排除。各修正方針は以下の通り:
   - `extractor.ts`: `throttle` のジェネリック制約 `(...args: any[])` → `(...args: unknown[])` に置換
@@ -4983,7 +4917,7 @@ This release incorporates the PBI implemented on the same day.
   - `ProviderStrategy.ts`: `as Record<string, any>` → `as Record<string, ProviderSpecificSettings> | undefined` に変更。ネストされたプロパティへのアクセスをオプショナルチェーンで型安全に
 - **CI: release.yml の Chrome Web Store アップロードファイルを修正** ― CWS API が `.zip` を要求するのに対し `.crx` を指定していたため `FAILURE` していた問題を修正
 
-### Changed / 変更
+### 変更
 
 - **JSDoc コメント内の `any` 表記を修正** ― `piiSanitizer.ts`, `logger.ts` の JSDoc 型表記を実際のシグネチャに合わせて更新
 
@@ -4991,7 +4925,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.4.4] - 2026-07-04
 
-### Changed / 変更
+### 変更
 
 - **docs: Zenn 向け記事を削除** ― `articles/domain-trust-evaluation.md` を削除し、`CHANGELOG.md` の 6.4.3 エントリからも参照を除去
 
@@ -4999,27 +4933,26 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.4.3] - 2026-07-04
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **docs: TRUST_DOMAIN_GUIDE.md を新規作成** ― Yasumaro のドメイン信頼度判定機能を日英バイリンガルで詳細解説。Trust Level、3-Step Verification、Safety Mode、Alert Settings、カスタムリスト、Tranco 更新、プライバシー・セキュリティ、トラブルシューティングを網羅
 - **docs: TRUST_DOMAIN_GUIDE.md の LOCKED レベル説明を修正** ― スキーマ上は存在するが、現時点の通常判定フローでは返されない将来拡張用レベルであることを正確に記載
-
 
 ---
 
 ## [6.4.2] - 2026-07-04
 
-### Added / 追加
+### 追加
 
 - **CI: release.yml に CRX 署名ステップを追加** ― Chrome Web Store の「検証済みCRXアップロード」に対応。`crx3` パッケージでビルドディレクトリを署名し `.crx` ファイルを生成。CWS アップロード対象を `.zip` → `.crx` に変更。GitHub Release に `.crx` ファイルも含めるよう拡張
 - **ダッシュボードにドキュメントリンクを 6 パネルに追加** ― Domain Filter（uBlock）、Prompt、Content、AI Summary Cleansing、Privacy、History 各パネルに該当するユーザーガイドへのリンクを追加。ユーザーが設定時にドキュメントに迷わずたど着けるよう UX を改善
 - **GitHub Pages ランディングページにドキュメントリンクを 5 機能に追加** ― Features セクションの「マルチ出力」「プライバシー保護」「ドメインフィルター」「AIプロンプト」「暗号化エクスポート」各カードに該当するユーザーガイドへのリンクを追加
 
-### Fixed / 修正
+### 修正
 
 - **ダッシュボードの「保存する」ボタン表示を統一** ― `primary-btn` クラス（CSS ルールなし）を `btn-primary`（紫背景 + 白文字）に修正。Domain Filter / Prompt / Content / AI Summary Cleansing / Trust / Tags / CSP / Export-Import の全パネルでボタンスタイルを一貫
 
-### Changed / 変更
+### 変更
 
 - **`crx3` を devDependency に追加** ― CRX 署名ツールのバージョンを固定し、CI で毎回 npm からダウンロードするリスクを排除
 - **`.gitignore` に `*.crx` を追加** ― ローカルでの CRX 署名テスト出力を git にコミットしないよう防止
@@ -5028,7 +4961,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.4.1] - 2026-07-01
 
-### Changed / 変更
+### 変更
 
 - **docs: FAQ.md を新規作成** ― よくある質問43問を日英バイラル形式で整理。7カテゴリ（基本・インストール、Obsidian連携、AI設定、プライバシーとデータ、記録の動作、トラブルシューティング、その他の機能）
 - **docs: GitHub Pages ランディングページに FAQ セクションを追加** ― 日英10問のアコーディオン式FAQ・「すべての質問を見る」リンクをindex.htmlに追加。navにFAQリンクを追加
@@ -5044,7 +4977,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.4.0] - 2026-07-01
 
-### Infrastructure / インフラ更新
+### インフラ更新
 
 - **TypeScript 5.9.3 → 6.0.3 にアップグレード** ― 非推奨となった `tsconfig.json` の `baseUrl` / `paths` 設定を削除（コード内で未使用のため）。5936 tests passing を確認
 
@@ -5052,21 +4985,21 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.8] - 2026-06-29
 
-### Added / 追加
+### 追加
 
 - **CI: GitHub Actions を SHA ピン留め** ― 全5ワークフロー・10種類のアクションを immutable SHA で固定。サプライチェーン攻撃対策（PBI-02）
 - **CI: Dependabot 設定を追加** ― `.github/dependabot.yml` に weekly スケジュールで github-actions エコシステムの自動更新を設定（PBI-02）
 - **CI: axe-core アクセシビリティチェック導入** ― `@axe-core/playwright` を導入し、E2E テストに `@a11y` タグ付きの WCAG 2.0 A/AA テスト 5 件を追加。CI の `tests.yml` に a11y ジョブを追加（PBI-03）
 - **docs: 定例メンテナンス計画を追加** ― `dev-docs/plans/2026-06-29-maintenance-plan.md` を作成。npm 脆弱性モニタリング・CI パイプライン確認・依存関係更新の手順を定義
 
-### Fixed / 修正
+### 修正
 
 - **CI: validate.yml を tests.yml に統合** ― PR 作成時に type-check + test が3重実行されていた問題を解消。validate.yml を削除し、PR コメント機能を tests.yml に移植（PBI-01）
 - **CI: Playwright ブラウザキャッシュを追加** ― `actions/cache@v4` で `~/.cache/ms-playwright` をキャッシュし CI 時間を短縮（PBI-01）
 - **CI: `ubuntu-latest` を `ubuntu-24.04` に固定** ― OS バージョンによる CI 結果の変動を防止（PBI-01, Checking Team）
 - **a11y: ポップアップの WCAG 違反 2 件を修正** ― `#btnRequestAllUrls` に `aria-label` 追加、`#previewContent` textarea にラベル追加。i18n キー `previewContent` を日英で追加（PBI-03, Checking Team）
 
-### Changed / 変更
+### 変更
 
 - **docs: OBSIDIAN_SETUP_GUIDE.md を全面更新** ― セクション構成・トラブルシューティング・プロトコル/ポート参照を PBI 仕様に合わせて整理
 - **docs: CONTRIBUTING.md に CI パイプライン節を追加** ― ワークフロー一覧と実行条件を日英で記載
@@ -5078,7 +5011,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.7] - 2026-06-28
 
-### Fixed / 修正
+### 修正
 
 - **Obsidian REST API のプロトコル設定が HTTP でも強制的に HTTPS にアップグレードされていた問題を修正** ― 従来、ユーザーがプロトコル設定で `http` を選択していても `enforceHttps()` 関数がすべてのリクエストを強制的に `https` に書き換えていました。HTTP のみで Listen している Obsidian Local REST API 環境では接続できない問題がありました。本リリースでは:
   - `enforceHttps()` を削除し、プロトコル設定をそのまま尊重するよう変更
@@ -5087,18 +5020,18 @@ This release incorporates the PBI implemented on the same day.
 
   > この修正は [bootjp](https://github.com/bootjp) さんからのコントリビューション（[#5](https://github.com/armaniacs/yasumaro/pull/5)）が基になっています。ありがとうございました！
 
-### Changed / 変更
+### 変更
 
 - **プロトコル設定で `http` を選択した場合の警告表示を追加** ― ダッシュボード / ポップアップの設定画面でプロトコルに `http` を入力した際、APIキーとデータが平文で送信されることを注意喚起するアンバー色のインライン警告を表示
 - **`http` 選択時にバックグラウンドで WARN ログを出力** ― `_validateProtocol()` が `http` を検出した場合、`LogType.WARN` で平文送信の注意をログに記録
 
-### Security / セキュリティ
+### セキュリティ
 
 - **HTTP 使用時のセキュリティリスクを明示化** ― 従来は HTTP 設定でも強制的に HTTPS にアップグレードされていたため、ユーザーは HTTP のリスクに気づけませんでした。今回の変更により、HTTP を選択したユーザーには UI 警告とログの両方で注意を促します
 - **`_validateProtocol` に型ガードを追加** ― `typeof protocol !== 'string'` のチェックを先頭に挿入し、非文字列（配列など）が `String()` 経由で不正にプロトコルとして受理される経路を塞ぐ（Checking Team: Medium#1）
 - **HTTP 保存時の確認ダイアログを追加** ― ダッシュボード・ポップップの両方で、プロトコルに `http` が設定された状態で保存ボタンをクリックした際、確認ダイアログを表示して明示的な同意を取得してから保存を実行する（Checking Team: Medium#2）
 
-### Chores / その他
+### その他
 
 - **Checking Team レビュー（セキュリティ + ドキュメント）** ― Red Team / Blue Team / Documentation Architect の3名がレビューを実施。スコア 97/100（S）。Medium 指摘 2 件を修正。
 - **i18n キー `confirmProtocolHttp` を追加** ― HTTP プロトコル保存時の確認ダイアログ用メッセージを日英で追加
@@ -5107,12 +5040,12 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.6] - 2026-06-28
 
-### Added / 追加
+### 追加
 
 - **README.md に Obsidian連携ガイドへのリンクを追加** ― 「必要なもの」と「設定」の該当箇所に `docs/OBSIDIAN_SETUP_GUIDE.md` へのリンクを追加（日英）。初めて Obsidian を設定するユーザーが迷わず詳細ガイドにたどり着けるよう導線を強化
 - **ランディングページに Obsidian連携ガイドリンクを追加** ― `docs/index.html`（GitHub Pages）のインストールセクションに「Obsidian連携ガイド」ボタンを追加。How it works とインストール手順の説明文にもリンクを設置。Obsidian 連携を希望するユーザーがワンクリックでガイドを参照可能に
 
-### Fixed / 修正
+### 修正
 
 - **generate-release-notes.js のパス解決と indexOf バグを修正** ― `.kilo/skills/yasumaro-github-release/scripts/` 内のルートパスが1階層不足していた問題と、`extractEntry()` で `changelog.indexOf(nm)` が常に最初の `## [` を見つけるバグを `matchAll` + `.index` に修正
 - **saveMetadataStep.test.ts のモック不足を修正** ― `saveMetadataStep.ts` が `setUrlFallbackTriggered` を含む 8 つの `setUrl*` 関数を新たにインポートしていたが、テストモックに未定義だったため全 10 テストが失敗。モックファクトリに不足エクスポートを追加し、全テストをパスに回復
@@ -5121,7 +5054,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.5] - 2026-06-28
 
-### Added / 追加
+### 追加
 
 - **Obsidian連携セットアップガイドを追加** ― `docs/OBSIDIAN_SETUP_GUIDE.md` を新規作成。Local REST API with MCP プラグインのインストール・APIキーのコピー・Daily Note Path の設定・接続テストの手順を日英バイリンガルで詳説。証明書エラーや Daily Note Path 設定ミスなどのトラブルシューティングも含む
 - **ダッシュボードに Obsidian 設定ガイドリンクを追加** ― 「Obsidian API Key」入力欄の直下に `docs/OBSIDIAN_SETUP_GUIDE.md` へのリンクを追加。初回設定時に迷わず手順を参照できるよう UX を改善
@@ -5131,7 +5064,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.4] - 2026-06-27
 
-### Fixed / 修正
+### 修正
 
 - **`fallbackTriggered` がストレージに保存されない問題を修正** ― `saveMetadataStep` でデストラクチャリングと `setUrlFallbackTriggered()` の呼び出しが欠落しており、ダッシュボードのフォールバック表示が常に非表示になっていた問題を修正。併せて `fallbackTriggered` を常に書き込むよう変更し（`!!fallbackTriggered`）、再処理時にフラグが `true` に固定される問題も解消
 - **`recordingLogic.ts` の dead import を削除** ― パイプライン移行後も残っていた `setUrlFallbackTriggered` の未使用 import を削除
@@ -5142,15 +5075,15 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.3] - 2026-06-27
 
-### Added / 追加
+### 追加
 
 - **GitHub Pages にデモ動画を埋め込み** ― YouTube 動画 `https://youtu.be/uHoiOYJhaB8`（ダッシュボードの履歴タブ紹介）をランディングページに埋め込み。「How it works」と「インストール」の間に Demo セクションを追加
 
-### Fixed / 修正
+### 修正
 
 - **GitHub Pages の News セクションを削除** ― `data-i18n` キーが未登録だったためプレースホルダー（`NEWS.TITLE` 等）がそのまま表示されていた問題を修正。セクション・ナビリンク・未使用 i18n キーを削除
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **README.md に Chrome Web Store バッジを追加** ― タイトル直下に CWS / GitHub のリンクバッジを表示。インストールセクションを「Chrome Web Store からインストール（推奨）」と「ソースからビルド（開発者向け）」の2方式に再編
 - **docs/SETUP_GUIDE.md に CWS インストールを追加** ― ステップ3に Chrome Web Store からのインストールを最優先の方法として追加
@@ -5158,12 +5091,12 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.2] - 2026-06-22
 
-### Added / 追加
+### 追加
 
 - **Gemini API Key 取得リンクをダッシュボードに追加** ― Gemini API Key 入力欄の下に「Google AI Studio で取得できます。 APIキーを作成 →」リンクを表示。新規ユーザーがAPIキーを容易に取得できるよう UX を改善
 - **初期設定パネルの上部ボタン行にステータス表示を追加** ― 上部の「保存する」「Obsidian テスト」「AI テスト」ボタン押下時の結果をボタン直下に表示。ページ下部までスクロールせずに結果を確認可能に
 
-### Changed / 変更
+### 変更
 
 - **Gemini デフォルトモデル名を `gemini-3.1-flash-lite` に変更** ― ダッシュボード・ポップアップ・プロバイダーのフォールバック値、i18n プレースホルダー、テストフィクスチャ、ドキュメントを全て更新
 
@@ -5171,7 +5104,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.1] - 2026-06-22
 
-### Fixed / 修正
+### 修正
 
 - **backupDb() フォールバックパスで JSON を .db として返す問題を修正** ― OPFS 非対応環境でバイナリエクスポートが失敗することを明示的に通知するように変更（Checking Team: High#1）
 - **OPFS 復旧マイグレーションの非アトミック操作を修正** ― データ削除→フラグクリアの順序に変更し、SWクラッシュ時のオーファンデータを防止（Checking Team: High#2）
@@ -5180,34 +5113,34 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.3.0] - 2026-06-21
 
-### Added / 追加
+### 追加
 
 - **プライバシー同意のバージョン移行** ― プライバシーポリシーが更新された際、自動的に再同意モーダルを表示。ポリシーバージョン記録機能と拒否カウンターのリセット機能を追加 (PBI-23)
 - **`.db` バイナリデータベースエクスポート** ― ダッシュボードのエクスポート機能に「Export as Database (.db)」ボタンを追加。OPFS ストレージ使用時に SQLite ファイルを直接ダウンロード可能 (PBI-24)
 - **OPFS 復旧時の自動マイグレーション** ― OPFS ストレージが復旧した際、フォールバックデータを SQLite に自動移行。起動時に復旧検出し、バッチ処理で安全に移行 (PBI-25)
 
-### Fixed / 修正
+### 修正
 
 - **vitest 設定ファイルの自動発見問題** ― `vitest.config.ts` が `testDir/` 内にあったため `npx vitest run` で 215 件の False Positive が発生。ルートに設定ファイルを追加し、`--config` パラメータを不要に (PBI-27)
 - **ダークモード視認性の包括的修正** ― オンボーディングウィザード、OpenAI 互換プロバイダーダイアログ、バナー、バッジのダークモード対応。`--ym-color-paper` / `--ym-color-ink-black` の同一色問題を修正
 
-### Changed / 変更
+### 変更
 
 - **Service Worker モジュール分割** ― `service-worker.ts` を 1106 行から 908 行に削減。タブイベントハンドラ、ライフサイクルハンドラ、コンテキストメニューを別モジュールに抽出 (PBI-26)
 
 ## [6.1.2] - 2026-06-21
 
-### Fixed / 修正
+### 修正
 
 - **OPFS Worker 同時アクセスによる database is locked を修正** ― `opfsWorker.ts` の `onmessage` ハンドラが async だったため、複数リクエストが並列実行されて SQLite ロックエラーが発生していた問題を、リクエストキューによるシリアライズで解消
 
-### Added / 追加
+### 追加
 
 - **ダッシュボードからセットアップウィザードを再表示** ― 初期設定パネルのボタン行（上部・下部）に「セットアップウィザード」ボタンを追加。クリックするとダッシュボード上にオンボーディングウィザードがオーバーレイ表示される
 - **プロバイダー選択ダイアログに APIキー作成リンクを追加** ― OpenAI互換プロバイダー選択後、APIキー入力欄の直下に各プロバイダーのAPIキー発行ページへのリンクを表示（40プロバイダー対応、未知プロバイダーはdocフィールドURLにフォールバック）
 - **初期設定パネルにボタン行を上部追加** ― 長いフォームを下までスクロールしなくても「保存する」「各種テスト」ボタンにアクセス可能に
 
-### Fixed / 修正（続き）
+### 修正（続き）
 
 - **プロバイダー選択ダイアログが開かない問題を修正** ― `.modal-overlay` の CSS が `display: none` 固定で `show` クラスを追加するコードがなかったため、`:not(.hidden)` セレクターを追加して `hidden` クラス除去で表示されるよう修正
 - **OPFS Workerキューが例外後に永続ブロックされる問題を修正** ― `processQueue` のタスク実行に `try/finally` を追加し、SQLite I/Oエラー等でタスクが例外を投げても `queueProcessing` フラグが必ずリセットされるよう修正。未修正のままだと以降のリクエストがすべて無音でキュー待ちとなり処理されなかった
@@ -5217,7 +5150,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.1.0] - 2026-06-20
 
-### Added / 追加
+### 追加
 
 - **対話型設定ウィザード** ― 初回起動時にユーザータイプ別（Obsidian 使い / SQLite 派 / とりあえず試す）のステップ案内を表示
 - **コンテキストメニューからの手動記録** ― ページ上で右クリックして「Yasumaro でこのページを記録」から即座に保存可能に
@@ -5225,7 +5158,7 @@ This release incorporates the PBI implemented on the same day.
 - **Markdown 1クリックコピー** ― 記録した要約をポップアップ/ダッシュボードから Markdown 形式でクリップボードにコピー
 - **Chrome Web Store ランディング素材** ― ストア説明文（日英）、スクリーンショット 4 枚、`store-assets/` 運用フローを追加
 
-### Changed / 変更
+### 変更
 
 - `PERMISSIONS.md` を更新 ― `contextMenus` 権限の正当化を追加
 
@@ -5233,27 +5166,27 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.0.4] - 2026-06-20
 
-### Fixed / 修正
+### 修正
 
 - **Obsidian接続の`testConnection` override メソッドでのデフォルトプロトコルを http → https に修正** ― `_getConfig()` と一貫性を保つため、protocol パラメータが指定されていない場合のデフォルトを `https` に変更（Checking Team 指摘対応）
 
-### Chores / その他
+### その他
 
 - **testConnection override https デフォルトのテストを追加** ― プロトコル指定なしで `testConnection` を呼び出した場合、https がデフォルトとして使用されることを確認するテストを追加
 - **GitHub Release ワークフローのブランド名を修正** ― `.github/workflows/release.yml` のハードコードされた `Obsidian Weave` を `Yasumaro` に、リポジトリURLを `armaniacs/obsidian-weave` から `armaniacs/Yasumaro` に修正
 ## [6.0.3] - 2026-06-20
 
-### Added / 追加
+### 追加
 
-### Fixed / 修正
+### 修正
 
 - `CHANGELOG.md` と `CONTRIBUTING.md` をブランド名の扱いについて追加
 
-### Chores / その他
+### その他
 
 ## [6.0.2] - 2026-06-20
 
-### Fixed / 修正
+### 修正
 
 - **残存した旧ブランド名を修正** ― ソースコード・テスト・コメント・ドキュメント内の `Obsidian Weave` / `obsidian-weave` を `Yasumaro` / `yasumaro` に一括修正（15 ファイル、20 insertions / 20 deletions）。GitHub Pages 用 `docs/index.html` の favicon URL も新リポジトリ名に更新
 
@@ -5268,21 +5201,21 @@ This release incorporates the PBI implemented on the same day.
   - **`docs/UBLOCK_MIGRATION.md`**: 「約 70% 削減」の記載に「環境により変動」の但し書きを追加（日英）
   - **`docs/USER-GUIDE-UBLOCK-IMPORT.md`**: 「20 万ドメイン対応」の記載に Set ベース O(1) マッチングの技術的根拠を追加（日英）
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`docs/*.md` 9 ファイル ― コードベースの網羅的ファクトチェック結果に基づく一律修正**:
   - 全 11 のドキュメントファイルを調査し、14 件の不整合を発見・修正。10 ファイル、74 insertions / 40 deletions
 
 ## [6.0.1] - 2026-06-19
 
-### Added / 追加
+### 追加
 
 - **`src/offscreen/schema.ts`** ― SQLite スキーマ定義を共通モジュールに抽出（`sqlite.ts` と `opfsWorker.ts` で重複していた DDL を一元化）
 - **`StorageKeys.PRIVACY_CONSENT_LAST_DENIAL_TIME`** ― 同意拒否の最終時刻を記録し、30 日後に再表示する仕組みを追加
 - **`activeTab` パーミッションを追加** ― Chrome Web Store 審査推奨に従い、ポップアップからの手動保存に限定した Tab アクセスを実現。`wxt.config.ts` の重複パーミッション（`scripting` / `offscreen` / `unlimitedStorage` ×2）を一掃し単一化
 - **`web_accessible_resources` の `matches` を `['<all_urls>']` → `['http://*/*', 'https://*/*']` に狭域化**
 
-### Fixed / 修正
+### 修正
 
 - **未使用の `sidePanel` パーミッションを削除** ― ソースコード内で `chrome.sidePanel.*` が一切使われていなかったため削除
 - **`notifications` パーミッション欠落を修正** ― `wxt.config.ts` の `permissions` 配列に `'notifications'` を復元（6.0.0 で誤って削除されていた）
@@ -5301,7 +5234,7 @@ This release incorporates the PBI implemented on the same day.
 - **`aria-pressed` に数値が設定されていた問題を修正** ― `String(Boolean(entry.is_starred))` で正しい文字列値に変換
 - **CSS `.settings-section` の重複定義を修正** ― Trust パネルの重複を `.trust-panel-section` に変更
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`THIRD_PARTY_NOTICES.md` に `@subframe7536/sqlite-wasm` の MIT ライセンス表記を追加**
 - **`PERMISSIONS.md` を全面更新**:
@@ -5311,7 +5244,7 @@ This release incorporates the PBI implemented on the same day.
   - `sidePanel` 削除に伴うサマリーテーブル更新
   - セクション番号を 10 → 9 に振り直し
 
-### Chores / その他
+### その他
 
 - **Checking Team レビュー（22名）** ― 全 21 エージェント完了、スコア 80/100（B）
   - High 指摘 6 件修正、Medium 指摘 10 件修正
@@ -5321,7 +5254,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [6.0.0] - 2026-06-18 (Chrome Web Store 初回公開)
 
-### Added / 追加
+### 追加
 
 - **Chrome Web Store 初回公開** ― 世界中の Chrome ユーザーが Web Store から直接インストール可能に
 - **`homepage_url`** を `wxt.config.ts` に追加 (`https://github.com/armaniacs/yasumaro`)
@@ -5337,19 +5270,19 @@ This release incorporates the PBI implemented on the same day.
   - `dashboardSqliteHandlers.ts` に `purge_now` サブタイプを追加
   - i18n キー 11 件を ja/en に追加
 
-### Fixed / 修正
+### 修正
 
 - **`yasumaro-daily-purge` アラームハンドラが未登録だった問題を修正** ― `service-worker.ts` に `chrome.alarms.onAlarm` リスナーを追加
 - **`$COUNT$` 変数未定義エラーを修正** ― `purgeNowSuccess` メッセージの `$COUNT$` を `{COUNT}` に変更し、JS 側で置換するよう統一
 - **記録履歴パネルの「過去7日間・最大10,000件・自動削除」という誤った説明を削除**
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.x → 6.0.0**（Chrome Web Store 公式リリースに合わせてメジャーバージョンアップ）
 
 ## [5.9.16] - 2026-06-18
 
-### Fixed / 修正
+### 修正
 
 - **POPUP の記録完了メッセージを状況に応じて表示するよう修正**
   - Obsidian 無効時に「✓ Obsidianに保存しました」と誤表示される問題を修正
@@ -5362,13 +5295,13 @@ This release incorporates the PBI implemented on the same day.
     - `PreviewResponse` に `aiDuration` を追加
     - `SaveRecordMessage` ペイロードに `aiDuration` を追加し、プレビュー段階のAI処理時間を保存ステップに伝播
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.15 → 5.9.16**
 
 ## [5.9.15] - 2026-06-18
 
-### Fixed / 修正
+### 修正
 
 - レビュー指摘対応（3件修正、1件調査完了）
   - `append_to_obsidian` の10000件フルテーブルスキャンを `QueryOptions.ids` 追加によりターゲットクエリに変更（4レイヤー: 型定義・SQLiteClient・Offscreen・sqlite.ts を一貫修正）
@@ -5391,23 +5324,23 @@ This release incorporates the PBI implemented on the same day.
 - **手動追記時のタイムスタンプをオリジナルの記録時刻から追記した現在時刻に変更**
   - `obsidianFormatter.ts` でエントリの `created_at` ではなく `Date.now()` を使用するよう修正
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.14 → 5.9.15**
 
 ## [5.9.14] - 2026-06-17
 
-### Fixed / 修正
+### 修正
 
 - **E2Eテストの jsdom 化**: `testDir/e2e/sqlite-history-selection.spec.ts` はダッシュボードが Chrome 拡張 API に依存するため `file://` で動作せず全24テスト失敗。代わりに `src/dashboard/__tests__/sqliteHistoryPanel-selection-ui.test.ts` を jsdom 環境で作成し 13 テストを安定稼働
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.13 → 5.9.14**
 
 ## [5.9.13] - 2026-06-17
 
-### Tests / テスト追加
+### テスト追加
 
 - **テストカバレッジ監査と改善（6ギャップ対応）**:
   - `dashboardSqliteHandlers-append.test.ts`（新規 10 件）: `append_to_obsidian` ハンドラの全パス（空IDs、API Key未設定、存在しないIDs、成功/失敗、ページ跨りフィルタ、混在IDs）
@@ -5417,13 +5350,13 @@ This release incorporates the PBI implemented on the same day.
   - `saveToObsidianStep.test.ts`（追記 3 件）: フラグ未定義フォールバック、フラグ優先判定
   - 合計 53 テスト追加（5805 → 5858）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.12 → 5.9.13**
 
 ## [5.9.12] - 2026-06-17
 
-### Added / 追加
+### 追加
 
 - **ダッシュボード初期設定に Obsidian 利用有無のチェックボックスを追加（PBI-17）**
   - `StorageKeys.OBSIDIAN_ENABLED` を新規追加（デフォルト: `false`）
@@ -5443,18 +5376,18 @@ This release incorporates the PBI implemented on the same day.
   - 選択状態はページ遷移・検索・日付変更で自動リセット
   - 日本語・英語の i18n メッセージを追加（7キー）
 
-### Tests / テスト追加
+### テスト追加
 
 - PBI-17 テスト 16 件: ストレージキー定義、マイグレーション判定、saveToObsidianStep フラグ判定、ダッシュボード UI 連動
 - PBI-18 テスト 16 件: formatEntriesToMarkdown 整形、appendToLogs メッセージング
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.11 → 5.9.12**
 
 ## [5.9.11] - 2026-06-17
 
-### Added / 追加
+### 追加
 
 - **Obsidian非依存のAIテスト・録画動作（PBI-16）**
   - `handleTestAi` に自動保存ロジックを追加（テスト前に設定をストレージに保存し、正しいAPIキーが読み取られるように）
@@ -5466,13 +5399,13 @@ This release incorporates the PBI implemented on the same day.
   - `GeminiProvider` に HTTP 401/403/429/500 エラーハンドリングを追加
   - テスト15件を追加（統合2件、単体5件、CSP 8件）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.10 → 5.9.11**
 
 ## [5.9.10] - 2026-06-17
 
-### Added / 追加
+### 追加
 
 - **Chrome Web Store 公開準備（PBI-08: P1 完了、P2〜P4 は次フェーズ、P5 は審査提出時）**
   - `scripts/build-store-zip.mjs` を新規追加（`dist/chromium-mv3/` を ZIP 化、ソースマップ・`.bak*`・`__tests__` ディレクトリを自動除外、ZIP 整合性検証機能付き）
@@ -5482,36 +5415,33 @@ This release incorporates the PBI implemented on the same day.
   - プライバシーポリシー (`PRIVACY.md` および `docs/PRIVACY.md`) の最終更新日を 2026-06-17 に更新
   - `.gitignore` に `*.zip` / `store-assets/` を追加（ZIP 成果物の誤コミット防止）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.9 → 5.9.10**
 
 ## [5.9.9] - 2026-06-17
 
-### Added / 追加
+### 追加
 
 - **OPFS 永続化と FTS5 全文検索の両立（`@subframe7536/sqlite-wasm` 導入）**
   - `@subframe7536/sqlite-wasm` を採用し、OPFS（OriginPrivateFileSystem）永続化と FTS5 全文検索を同一データベースで実現
-  - OPFS persistence and FTS5 full-text search now coexist in the same database via `@subframe7536/sqlite-wasm`
 
 - **旧 OPFS データベースからの自動データ移行**
   - 旧スキーマ（wa-sqlite ベース）から新スキーマへの自動マイグレーションを実装し、既存データを失わずにアップグレード可能
-  - Automatic data migration from the previous OPFS database ensures no history is lost on upgrade
 
-### Fixed / 修正
+### 修正
 
 - **日本語（CJK）全文検索が機能しない不具合を修正**
   - FTS5 tokenizer を `trigram` に変更し、日本語など空白で区切られない言語の部分一致検索を有効化（3 文字未満のクエリは LIKE 検索にフォールバック）
   - 併せて tokenizer 設定の誤りにより全文検索が機能していなかった問題も修正
-  - Fixed Japanese/CJK full-text search by switching the FTS5 tokenizer to `trigram` (queries shorter than 3 characters fall back to LIKE), and corrected a malformed tokenizer config that prevented search from returning results
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.8 → 5.9.9**
 
 ## [5.9.8] - 2026-06-16
 
-### Added / 追加
+### 追加
 
 - **Yasumaro デザインシステム確立（PBI-09）**
   - `src/styles/tokens.css` を新規作成し、`--ym-*` プレフィックスのデザイントークンを一元定義
@@ -5530,7 +5460,7 @@ This release incorporates the PBI implemented on the same day.
   - `entrypoints/popup/styles.css` の `:root` ブロックも `--ym-*` 参照に書き換え
   - `tokens.css` を popup エントリでも読み込み、ダークモードパレットをダッシュボードと統一
 
-### Fixed / 修正
+### 修正
 
 - **ダッシュボード可視性の包括的改善（10コミット・ダーク/ライト両方）**
   - ダークモード: `.history-entry-time`、`.history-entry-tokens`、`.token-label`、`.history-entry-token-reduction`、`.history-entry-byte-reduction`、`.history-entry-ai-summary-cleansing` のハードコード色 `#475569` を `var(--color-text-secondary)` に変更（7.0:1 AAA）
@@ -5548,14 +5478,13 @@ This release incorporates the PBI implemented on the same day.
   - ライトモード: タグバッジのテキスト色を `--color-primary` から `#6b21a8`（purple-800, 7.5:1 AAA）に変更
   - アクセシビリティ: `prefers-reduced-motion` でアニメーションを 0.01ms に短縮（tokens.css 内）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.7 → 5.9.8**
 
-
 ## [5.9.7] - 2026-06-15
 
-### Fixed / 修正
+### 修正
 
 - **テスト失敗14件をすべて修正・0 failures 達成（5,722 テスト全パス）**:
   - `sendDashboardMessage` の Promise 化に伴う `dashboardSqliteService.test.ts` のモック修正（コールバック → Promise）
@@ -5566,10 +5495,9 @@ This release incorporates the PBI implemented on the same day.
   - `piiSanitizer-security.test.ts`: vitest globals インポート追加 + maskedItems の仕様に反するアサーション修正
   - `storage-keys.test.ts`: `vi.mock` ファクトリのモジュール評価順序問題を `vi.hoisted` で解消 + `OPFS_FALLBACK_MODE` を internalKeys に追加
 
-
 ## [5.9.6] - 2026-06-15
 
-### Added / 追加
+### 追加
 
 - **診断パネルに SQLite ケイパビリティ・マトリクスを追加（PBI-13）**
   - 不足診断: 環境能力（OPFS/FTS5/初期化）を9パターンに分類し、不足している機能と具体的な対処を表示
@@ -5578,33 +5506,32 @@ This release incorporates the PBI implemented on the same day.
   - dashboard/offscreen 間の乖離検出: OPFS が利用可能なのに fallback が使用されている場合に警告
   - initError 表示: DB 初期化失敗時にエラーメッセージを診断パネルに表示
 
-### Fixed / 修正
+### 修正
 
 - **`sendDashboardMessage` を Promise ベースに修正**: MV3 サービスワーカーのコールバックベース応答で `chrome.runtime.lastError` が誤検出し、診断パネル初期化時にタイムアウトする問題を修正
 - **不足診断の誤検出を修正**: dashboard 側の環境判定（ウィンドウコンテキスト）を正として使っていたため Worker コンテキストで利用不可の API を「利用不可」と誤判定していた問題を修正。offscreen 側の実測結果を使用するよう変更
 - **乖離警告の誤検出を削減**: dashboard 側は Worker 専用 API を検出できないため、通常の OPFS Worker 環境でも乖離警告が表示されていた問題を修正。offscreen が fallback の場合のみ警告を表示
 - **diagnosticsPanel テストの `chrome is not defined` 問題を修正**: `setupChromeMocks()` が `chrome` オブジェクトを未定義時にサイレントに no-op していた問題を修正
 
-### Changed / 変更
+### 変更
 
 - **sendDashboardMessage の API 切替**: コールバックベース → Promise ベース（`Promise.race` によるタイムアウト制御）
 - **不足診断の入力ソース変更**: dashboard 側 `detectLiveVfsStrategy()` → offscreen 側の status レスポンス
 - **`no-opfs` 不足の検出条件変更**: OPFS 未利用時全般 → fallback 使用中のみ報告（IDB 動作中は誤検出しない）
 
-### Tests / テスト追加
+### テスト追加
 
 - **diagnoseDeficiencies 単体テスト 15件**: 全不足パターンのカバレッジ
 - **diagnosticsPanel BDD テスト 8件**: 不足診断表示、デバッグモード切替、乖離検出の統合テスト
 - **diagnosticsPanel テスト既存28件の復旧**: chrome mock 修正で全件パス回復
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.5 → 5.9.6**
 
-
 ## [5.9.5] - 2026-06-15
 
-### Fixed / 修正
+### 修正
 
 - **記録履歴がダッシュボードに表示されない問題を修正**: `saveSqliteStep` が RecordingPipeline に接続されていなかった。`saveObsidian` と `saveMetadata` の間に `saveSqlite` ステップを追加
 - **レガシー記録履歴パネルの表示を復旧**: `saveMetadataStep` が `savedUrlsWithTimestamps` にエントリを追加していなかった問題を修正
@@ -5614,23 +5541,23 @@ This release incorporates the PBI implemented on the same day.
 - **OPFS Worker が初期化に失敗する問題を修正**: VFS 名が `'opfs-pool'` ではなく `'AccessHandlePool'` であることを修正
 - **OPFS Worker が `exec` の代わりに `run`/`execWithParams` を使用するよう修正**: wa-sqlite v1.0.0 の `exec()` は bindings をサポートしていない
 
-### Added / 追加
+### 追加
 
 - **OPFS Worker ベースの VFS を実装（PBI-12）**: `offscreen` 内 Worker + npm 同期 WASM + `AccessHandlePoolVFS`。全 13 CRUD 操作に対応。FTS5 非対応のため LIKE フォールバック
 - **レガシー記録→SQLite 変換機能（PBI-11）**: `mapLegacyEntryToRecord` マッピング（7 tests）、診断パネルの変換ボタン、英日 i18n キー
 
-### Changed / 変更
+### 変更
 
 - **RecordingPipeline に `SqliteClient` を注入**: 自動記録・手動記録・確認保存の全経路で SQLite 保存が有効化
 - **service-worker.ts の宣言順序を修正**: `sqliteClient` を `recordingLogic` より先に宣言
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.4 → 5.9.5**
 
 ## [5.9.4] - 2026-06-12
 
-### Tests / テスト追加
+### テスト追加
 
 - **新規テストファイル 4 件（合計 66 テスト追加）**:
   - `rateLimiter.test.ts` (8 tests): レート制限の許可・ブロック・タブ削除・リセット動作
@@ -5641,11 +5568,11 @@ This release incorporates the PBI implemented on the same day.
   - `offscreen-sqlite.test.ts` ― SQLITE_INSERT_BATCH の空配列・フィールドなし・content script拒否テストを追加
   - `fetch.test.ts` ― `defaultShouldRetry`: 429 リトライなし・タイムアウト 1 回制限の動作テストを追加
 
-### Fixed / 修正
+### 修正
 
 - **`sqlite-security-integrity.test.ts` のリグレッション修正**: PBI-104 で `handleDashboardSqlite` を `dashboardSqliteHandlers.ts` に抽出したことで壊れた 3 件のソースコード解析テストを、正しいファイルを参照するよう修正（7/7 パスに回復）
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **`docs/SETUP_GUIDE.md` 更新**:
   - 保持ポリシーを 7日/10,000件 → 90日/1,000件 に修正（日英）
@@ -5656,20 +5583,20 @@ This release incorporates the PBI implemented on the same day.
   - プライバシー同意フロー（3回拒否・制限モード・GDPR物理削除）を特徴一覧に追記（日英）
   - モバイルChrome / OPFSフォールバック機能を特徴一覧に追記（日英）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.3 → 5.9.4**
 
 ## [5.9.3] - 2026-06-11
 
-### Security / セキュリティ修正
+### セキュリティ修正
 
 - **Offscreen SQLITE_* ハンドラの脆弱性修正**: 外部拡張からの不正な SQLite 操作を `sender.id === chrome.runtime.id` チェックでブロック（Red Team）
 - **FTS5 検索サニタイズ強化**: 英数字/CJK のみ許可するホワイトリスト方式に変更。ダブルクォートで phrase 検索に強制（Red Team）
 - **ペイロードサイズ制限**: SQLITE_INSERT ハンドラに 1MB 上限チェックを追加（Blue Team）
 - **DASHBOARD_SQLITE.update の allowlist 検証**: Service Worker 側でも変更可能フィールドを 10 項目に制限（Blue Team）
 
-### Fixed / 修正
+### 修正
 
 - **Migration Service の競合解決**: `UNIQUE(url, created_at)` 制約 + `INSERT OR IGNORE` で chrome.storage.local の live writer との競合を防止（Legacy Bridge）
 - **マイグレーション高速化**: 100 件/バッチの `insertBatch()` を実装。メッセージング回数を N から N/100 に削減（Tuning Expert）
@@ -5677,7 +5604,7 @@ This release incorporates the PBI implemented on the same day.
 - **SQLite スキーマの UNIQUE 制約不足**: `UNIQUE(url, created_at)` 制約を追加し重複レコードを防止（Data Integrity）
 - **recordingTriggerManager の Validate 実装**: `saveTriggers()` 内で `validate()` を呼び全トリガー OFF の silent failure を防止（Domain Logic）
 
-### Privacy / プライバシー・GDPR
+### プライバシー・GDPR
 
 - **物理削除（hardDelete）**: `softDelete`（is_deleted=1）から `DELETE FROM browsing_logs` による物理削除に変更（Compliance）
 - **WAL checkpoint 追加**: `clearAll()` 実行後に `PRAGMA wal_checkpoint(TRUNCATE)` で WAL ファイルを解放（Compliance）
@@ -5685,33 +5612,33 @@ This release incorporates the PBI implemented on the same day.
 - **同意ダークパターン修正**: プライバシー同意拒否時のループ再表示を解消。3回拒否で永久非表示、制限モードで起動（Ethics & Bias）
 - **API キー検証強化**: `obsidianSyncService.isConfigured()` で 16 文字以上のキー長を検証（Blue Team）
 
-### Documentation / ドキュメント
+### ドキュメント
 
 - **README.md に SQLite 機能の特徴を追加**: 「ローカルSQLite永続化（OPFS + wa-sqlite + FTS5全文検索、Obsidian不要でも動作）」を日英で記載（Documentation）
 - **CONTRIBUTING.md 全面更新**: プロジェクト名を "Yasumaro" に更新、WXT/SQLite 移行後のプロジェクト構造に対応（Documentation）
 - **SETUP_GUIDE.md 更新**: エクスポートファイル名を `yasumaro-settings-*` に更新（Documentation）
 
-### i18n / 国際化
+### 国際化
 
 - **新規 UI 文字列の i18n 対応**: 12 の data-i18n キーを messages.json に追加。sqliteHistoryPanel の 11 のハードコード文字列（Today, Yesterday, Loading... 等）を `getMessage()` に置換（i18n Expert）
 - **日付フォーマットのタイムゾーン修正**: `toISOString().split('T')[0]` を `toLocaleDateString()` に変更し JST ユーザーの深夜エントリが「前日」になる問題を修正（i18n Expert）
 
-### Refactoring / リファクタリング
+### リファクタリング
 
 - **service-worker.ts のモジュール分割**: 1473 行 → 1181 行（-292 行）。HMAC/Base64 ロジックを `urlNotificationHandlers.ts` に、レート制限を `rateLimiter.ts`（新規）に、手動記録コンテンツ抽出を `manualContentFetcher.ts`（新規）に分割（Maintainability）
 - **SqliteClient の DRY 違反解消**: 11 メソッドの重複 try-catch を `call<T>()` ジェネリックヘルパーに統一。90 行削減（Maintainability, Refactoring）
 - **設定ファイル名更新**: `obsidian-weave-settings-*` → `yasumaro-settings-*`（Refactoring）
 
-### Platform / プラットフォーム対応
+### プラットフォーム対応
 
 - **モバイル Chrome OPFS フォールバック**: OPFS 利用不可時に chrome.storage.local ベースの `FallbackStorage` に自動フォールバック。OPFS 復旧時はデータを自動マイグレーション（Edge & Mobile）
 - **favicon 権限を optional_permissions に移動**: モバイル Chrome のインストール警告を回避（Edge & Mobile）
 
-### Performance / パフォーマンス
+### パフォーマンス
 
 - **AI API リトライ制限**: タイムアウトは 1 回、429 (Rate Limit) は 0 回に制限。トークン二重消費リスクを低減（FinOps）
 
-### Chores / その他
+### その他
 
 - **バージョン 5.9.2 → 5.9.3**
 - **manifest.json 削除**: WXT 移行に伴いソースオブトゥルースを `wxt.config.ts` に統一（System Architect）
@@ -5722,7 +5649,7 @@ This release incorporates the PBI implemented on the same day.
 
 ## [5.9.2] - 2026-06-10
 
-### Changed / 変更
+### 変更
 
 - **ルートディレクトリ整理**: プロジェクトルートのファイルをカテゴリ別に再配置
   - `docs/` を GitHub Pages 公開ドキュメント専用にし、開発者内部ドキュメントは `dev-docs/` に分離
@@ -5732,7 +5659,7 @@ This release incorporates the PBI implemented on the same day.
 
 - **Typedoc API ドキュメントの CI 自動化**: GitHub Actions (`pages.yml`) で push 時に自動ビルド・公開。生成物は git 追跡から除外
 
-### Added / 追加
+### 追加
 
 - **テストカバレッジ改善**: 4 ファイルに 58 のテストを追加
   - `dashboardSqliteService.test.ts` (18 tests): CRUD・検索・カウントの全API
@@ -5740,7 +5667,7 @@ This release incorporates the PBI implemented on the same day.
   - `exportLogsService.test.ts` (17 tests): Markdown/CSV/JSONエクスポート・ダウンロード
   - `privacySettings.test.ts` (10 tests): プライバシーモード・PII確認・自動保存動作
 
-### Removed / 削除
+### 削除
 
 - 未使用ファイル・重複ファイルを整理
   - `build-scripts/`（未使用データ生成スクリプト）
@@ -5752,33 +5679,33 @@ This release incorporates the PBI implemented on the same day.
 
 ## [5.2.3] - 2026-06-08
 
-### Fixed / 修正
+### 修正
 
 - **インストール時の「理解しました」ボタンが押せない問題を修正**（#3）: ダッシュボードのブレークチェンジ通知モーダル（`#breakingChangesModal`）の「理解しました」ボタン（`#dismissBreakingChangesModalBtn`）と「×」ボタン（`#closeBreakingChangesModalBtn`）にクリックイベントリスナーが設定されていなかった問題を修正。モーダル表示時に両ボタンの `addEventListener('click', closeBreakingChangesModal)` を追加
 
 ## [5.2.2] - 2026-05-10
 
-### Added / 追加
+### 追加
 
 - **GitHub Pages ランディングページ**: 日英バイリンガル対応のランディングページを追加。拡張機能の紹介・導入手順・ドキュメントへのリンクを提供
 
-### Fixed / 修正
+### 修正
 
 - **`package-lock.json` に不足していた `@emnapi/core`・`@emnapi/runtime` を追加**: Linux CI 環境で `npm ci` が `Missing: @emnapi/core@1.10.0 from lock file` で失敗する問題を修正
 - **CI カバレッジレポートの `json-summary` reporter を明示的に追加**: vitest coverage report action がカバレッジサマリーを正しく読み取れるよう修正
 
-### Changed / 変更
+### 変更
 
 - **`.nojekyll` ファイルを追加**: GitHub Pages で `_` で始まるディレクトリ（`_locales` など）が正しく配信されるよう設定
 
 ## [5.2.1] - 2026-05-09
 
-### Fixed / 修正
+### 修正
 
 - **CI: Node.js を 24 にアップグレード**（全ワークフロー）: `engines: >=24.0.0` に合わせて `ci.yml`・`coverage.yml`・`release.yml` の `node-version` を 20/22 → 24 に統一
 - **`package-lock.json` に `ts-node` を追加**: lock ファイルと `package.json` の不一致による `npm ci` 失敗を修正
 
-### Changed / 変更
+### 変更
 
 - **CI 環境でのタイムアウト・性能閾値を緩和**（テスト 3 件）: linux/amd64 エミュレーション環境での実行速度差を考慮
   - `contentCleaner`: パフォーマンス閾値 200ms → 1000ms
@@ -5791,7 +5718,7 @@ This release incorporates the PBI implemented on the same day.
 
 v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テストカバレッジ大幅向上・TypeScript strict 化・SessionStore 信頼性強化・Service Worker 状態永続化・セキュリティ修正・CI/CD 整備など、品質基盤を全面的に強化。
 
-### Added / 追加
+### 追加
 
 - **Service Worker 状態永続化**（v5.1.29）
   - `SessionStore` クラス（`src/background/sessionStore.ts`）: `chrome.storage.session` ラッパー。SW 再起動後もレート制限・タブキャッシュ・設定キャッシュを維持
@@ -5809,7 +5736,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 - **プライバシーポリシー更新時の再同意フロー**（v5.1.29）
 
-### Fixed / 修正
+### 修正
 
 - **SessionStore フラッシュ信頼性改善**（v5.1.30）: `queueMicrotask` → `setTimeout(50ms)` に変更。フラッシュ失敗時のキュー復元＋リトライ機構を追加
 
@@ -5827,7 +5754,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 - **スキップテスト 10 件を修正・削除**（v5.1.30）
 
-### Changed / 変更
+### 変更
 
 - **service-worker.ts リファクタリング**（v5.1.23）: 9 個のインラインハンドラをエクスポート可能関数に抽出（テスト可能な設計に）
 
@@ -5839,7 +5766,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.30] - 2026-05-08
 
-### Fixed / 修正
+### 修正
 
 - **SessionStore フラッシュ信頼性を改善（SW 終了時のデータ損失リスク低減）**
   - `queueMicrotask` ベースのフラッシュを `setTimeout(50ms)` に変更。サービスワーカーの突然終了時もデータが保存される可能性が向上
@@ -5854,13 +5781,13 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - `piiSanitizer.test.ts`: 64KB 境界値テストを有効化（正常に PASS することを確認）
   - `models-dev-dialog-event-handlers.test.ts`: `vi.spyOn` を用いてモック構成を修正、全 7 テストを有効化
 
-### Changed / 変更
+### 変更
 
 - `plans/2026-05-08-sessionstore.md`: 実装後の振り返りセクションを追加（計画差異・設計判断・テスト結果）
 
 ## [5.1.29] - 2026-05-08
 
-### Added / 追加
+### 追加
 
 - **SW state persistence: Service Worker 再起動間での状態維持**
   - `SessionStore` クラスを新設（`src/background/sessionStore.ts`）: `chrome.storage.session` をラップし、`queueMicrotask` による debounced 書き込みと Map シリアライズを提供
@@ -5876,7 +5803,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - `privacyConsent.ts` の `getPrivacyConsent()` で保存済み `consentVersion` と `PRIVACY_POLICY_VERSION` を比較
   - バージョン不一致時は `hasConsented: false` を返し、再同意ダイアログを表示
 
-### Fixed / 修正
+### 修正
 
 - **E2Eテスト属性によるドメインフィルタバイパスを修正**
   - `src/content/loader.ts`: `data-ow-e2e-test` 属性による完全バイパスをキャッシュベースのドメインチェックに変更。
@@ -5919,7 +5846,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 - **PII 統合正規表現を関数呼び出しごとに再コンパイルしていた問題を修正**
   - `piiSanitizer.ts`: `COMBINED_PII_REGEX` 定数をモジュールスコープに hoist し、関数呼び出しごとの `new RegExp(...)` を排除
 
-### Changed / 変更
+### 変更
 
 - **ハードコードされた英語 UI 文字列を i18n 対応**
   - `dashboard.ts`: LM Studio / Ollama プリセット適用メッセージを `getMessage()` に置き換え
@@ -5927,7 +5854,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.28] - 2026-05-07
 
-### Fixed / 修正
+### 修正
 
 - **Makefile**: `make test` / `make test-e2e` が E2E テスト実行前に `npm run build` を実行しない問題を修正
   - `test` ターゲットに `build` 依存関係を追加。従来は `npm run validate && npm run test:e2e` のみ実行しており、`dist/chromium-mv3/popup.html` が存在せず 70 件の E2E テストが `ERR_FILE_NOT_FOUND` で失敗していた
@@ -5936,13 +5863,13 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.27] - 2026-05-06
 
-### Changed / 変更
+### 変更
 
 - バージョン番号を更新：5.1.26 → 5.1.27
 
 ## [5.1.26] - 2026-05-06
 
-### Changed / 変更
+### 変更
 
 - **コード簡素化 (Code Simplifier)**
   - `privacyPipeline.ts`: `process()` メソッドを小さな関数に分割（`_buildSanitizedSettings`, `_performLocalSummarization`, `_processCloudResult`）、可読性向上
@@ -5950,13 +5877,13 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - `historyBadges.ts`: `makeCleansedBadge()` の switch 文をルックアップオブジェクトに置き換え
   - `historyEntryRow.ts`: コンテンツトグルUIを `createContentToggle()` ヘルパー関数に抽出、重複コード削除
 
-### Fixed / 修正
+### 修正
 
 - バージョン番号を更新：5.1.25 → 5.1.26
 
 ## [5.1.25] - 2026-05-05
 
-### Fixed / 修正
+### 修正
 
 - Local AI（ローカルAI）処理時のプロンプトインジェクション（Prompt Injection）脆弱性を修正
   - ローカルAIにコンテンツを送信する前に `sanitizePromptContent()` によるサニタイズ処理を実行
@@ -5964,37 +5891,37 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - 高リスクコンテンツを検出した場合、処理を直ちに遮断しエラー情報を返却
   - 修正前の脆弱性：攻撃コンテンツ（例：「Ignore all previous instructions...」）がサニタイズを回避してローカルAIに直接送信される可能性があった
 
-### Added / 追加
+### 追加
 
 - テストカバレッジの拡充
   - `privacyPipeline.test.ts` に `should block high danger content in local_only mode` テストを追加
   - 新しいサニタイズフローに対応するため既存テストを更新
 
-### Changed / 変更
+### 変更
 
 - バージョン番号を更新：5.1.24 → 5.1.25
 
 ## [5.1.24] - 2026-05-05
 
-### Added
+### 追加
 
 - **バージョン不整合を自動検出するテストを追加**
   - `src/utils/__tests__/versionConsistency.test.ts`: `package.json`, `manifest.json`, `wxt.config.ts` のバージョンが一致することを確認
   - `scripts/check-version-consistency.js` をリファクタリングして `readVersions()` / `VERSION_FILES` をexport
   - `make test` / `npm test` / `npm run validate` で常にチェックされる
 
-### Fixed
+### 修正
 
 - `wxt.config.ts` のバージョンが 5.1.22 のままだった問題を修正（→ 5.1.24）
 
-### Changed
+### 変更
 
 - `plans/00-index.md`: 全完了計画ファイルを `plans/archive-old/` に移動し簡素化
 - `plans/` 配下の完了済みファイルをすべて `archive-old/` に移動
 
 ## [5.1.23] - 2026-05-05
 
-### Added
+### 追加
 
 - **テストカバレッジ大幅向上: Statements 91.47% / Lines 92.98%（5/4 現在）**
   - 前回比: Statements +12.73%, Lines +12.36% の大幅改善
@@ -6023,7 +5950,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - `handleContentCleansingExecuted`, `handleCheckDomain`, `handleTestConnections`, `handleTestObsidian`, `handleTestAi`, `handleGetPrivacyCache`, `handleActivityUpdate`, `handleSessionLockRequest`, `handlePing`
   - 27 の新規ユニットテスト追加（service-worker.test.ts: 133 tests）
 
-### Fixed
+### 修正
 
 - **失敗テスト 5 件をすべて修正・0 failures 達成**
   - `obsidianClient.test.ts`: fetch モックを `AbortController` の signal に連動
@@ -6042,11 +5969,11 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - `contentCleaner.ts`: `Array` → `Set` に変更し重複排除を最適化
   - `vitest.setup.ts`: 明示的な `vi` import 追加
 
-### Changed
+### 変更
 
 - `.gitignore` に `!/.github/workflows/*.yml` を追加（CI/CD ファイルを追跡可能に）
 
-### Documents
+### ドキュメント
 
 - `plans/00-index.md`: 全ファイルステータスを最新に更新
 - `plans/2026-04-19-tobe-ow6.md`: カバレッジ 91.47% 達成を追記、次へを再整理
@@ -6054,7 +5981,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.22] - 2026-04-29
 
-### Added
+### 追加
 
 - **テストカバレッジ 80% 達成！ 🎉**
   - Line カバレッジ：78.08% → 80.62% (+2.54%)
@@ -6068,18 +5995,18 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - extractor.ts: dialog 関連テスト追加 ― CSSStyleSheet, setText, overlay click, cleanup
   - settingsSaver.ts + types.ts: エッジケーステスト追加
 
-### Changed
+### 変更
 
 - **テストの取舍選択**: 複雑な DOM セットアップが必要なテストは削除し、他でカバー
   - statusPanel.test.ts: 5 テスト削除（`statusAddDomain`, `statusAddPath`, `chrome.tabs.sendMessage`）
   - 理由：`privacy.isPrivate === true` 条件や複数条件が必要なモック設定が困難
 
-### Documents
+### ドキュメント
 
 - `plans/2026-04-29-memo-01.md`: Phase 4 の詳細な進捗記録
 - `plans/2026-04-23-coverage80.md`: 80% 達成の記録と教訓を追加
 
-### Technical Notes
+### 技術上の注意
 
 - **サブエージェント駆動開発の有效性**: 並列処理で効率的にカバレッジ向上
 - **Chrome API モックの限界**: 複雑なモックが必要なテストはコスト対効果を考慮
@@ -6087,7 +6014,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.21] - 2026-04-28
 
-### Added
+### 追加
 
 - **テストカバレッジ大幅改善（75.37% → 78.02%）**
   - dashboard.ts: 44.01% → 71.19% (+27%) ― DOMハンドラ、保存/テスト接続、サイドバーナビゲーション
@@ -6099,12 +6026,11 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - settingsSaver.ts: 53.94% → 100% (+46%) ― 接続テスト、保存エッジケース
   - messaging/types.ts: 17.39% → 100% (+83%) ― タイプガード、メッセージバリデーション
 
-### Fixed
+### 修正
 
 - AIクレンジングcount-onlyパスのテスト期待値を実装に合わせて修正
 
-
-### Added
+### 追加
 
 - **Readabilityスコアによる本文保護（Body Protection）**
   - Mozilla Readability アルゴリズムをベースに、本文らしさスコアで要素を判定
@@ -6112,7 +6038,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - ダッシュボードとポップアップ双方に ON/OFF トグルと閾値スライダー（50-500）を追加
   - デフォルト: 有効、閾値 200
 
-### Fixed
+### 修正
 
 - **E2Eテストのフレーキー改善**: `does NOT fire when stay < 5 seconds` で `maxScrollPercentage` が `0` になる flaky テストを修正
   - 原因: `window.scrollTo()` 後、content script 側の RAF + 100ms throttle スクロールリスナーが次の `readTestState` 呼び出し前に処理されないケースがあった
@@ -6120,7 +6046,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.19] - 2026-04-27
 
-### Added
+### 追加
 
 - **AI要約クレンジング フォールバック改善**
   - フォールバック判定条件の緩和: 10% → 20% 閾値、2000B → 300B 閾値、AND → OR条件
@@ -6129,7 +6055,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - AIクレンジング理由のカウント: 27種類のクレンジング対象を記録
   - `fallbackTriggered` と `fallbackReason` を `ExtractResult` に追加
 
-### Fixed
+### 修正
 
 - **AI要約クレンジング フォールバック時の状態保持**: `over_cleansed` 時にクレンジング結果を破棄しないよう修正
 - **E2Eテストの設定保存フローを修正**: `settings_migrated` フラグがテスト環境で設定されていなかったため `getSettings()` が保存済み設定を読み飛ばす問題を修正
@@ -6145,7 +6071,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.18] - 2026-04-27
 
-### Added
+### 追加
 
 - **AI要約クレンジング フォールバック改善**
   - フォールバック判定条件の緩和: 10% → 20% 閾値、2000B → 500B 閾値、AND → OR条件
@@ -6156,7 +6082,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.17] - 2026-04-26
 
-### Refactored
+### リファクタリング
 
 - **planファイルの整理**: 完了・不要になったplanファイルを削除し、新方式の運用で管理
   - `plans/2026-04-18-wtx.md`、`plans/2026-04-18-1115-review-vite-migration.md` を削除
@@ -6166,7 +6092,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.16] - 2026-04-23
 
-### Fixed
+### 修正
 
 - **service-worker.ts リスナー登録の復元**: モジュールレベルのChromeイベントリスナー登録を直接記述に修正
   - Chrome拡張機能がcontent scriptからのメッセージに正常応答しない問題を修正
@@ -6174,32 +6100,32 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.15] - 2026-04-23
 
-### Added
+### 追加
 
 - **バージョン整合性チェック**: `npm run build` で version ファイル（package.json, manifest.json, wxt.config.ts）の一貫性を自動検証
   - バージョン不一致時はビルドが失敗し、エラーメッセージで対応ファイルを明示
   - 継続的インテグレーションでバージョンミスを防止
 
-### Fixed
+### 修正
 
 - **wxt.config.ts バージョンのビルド同期**: ソース manifest.json と wxt.config.ts のバージョンを自動同期
   - ビルド前に整合性チェックを実行し、不一致を検知した場合は即座に失敗
   - ビルド出力の manifest.json に正しいバージョン（5.1.15）が反映されるように修正
 
-### Documentation
+### ドキュメント
 
 - **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
   - カバレッジ実測値の反映（62.73%）
   - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
   - 次フェーズ戦略の策定
 
-### Test Results
+### テスト結果
 
 - テストファイル: 198 passed（1 skipped）
 - テストケース: 3,835 passed（21 skipped）
 - **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
 
-### Development Status
+### 開発状況
 
 - v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
 - 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
@@ -6207,7 +6133,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.14] - 2026-04-23
 
-### Added
+### 追加
 
 - **テストカバレッジ大幅改善（第二段階）**:
   - カバレッジ 45.38% → **62.73%** (+17.35%) 達成
@@ -6215,26 +6141,26 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - jsdom環境対応によりpopup/dashboardテストの大半を有効化
   - テスト品質向上: 残存テスト失敗を1件解消
 
-### Fixed
+### 修正
 
 - **storage.test.ts**: `getDomainFilterCacheSync` テストのモック設定を修正
   - Chrome Storage APIのキー構造に合わせた適切なモック実装
   - テスト期待値の型安全性を向上
 
-### Documentation
+### ドキュメント
 
 - **ロードマップ更新**: `plans/2026-04-19-tobe-ow6.md` の進捗状況を更新
   - カバレッジ実測値の反映（62.73%）
   - 残課題の明確化（service-worker.ts, extractor.ts等の大型ファイルテスト）
   - 次フェーズ戦略の策定
 
-### Test Results
+### テスト結果
 
 - テストファイル: 198 passed（1 skipped）
 - テストケース: 3,835 passed（21 skipped）
 - **カバレッジ改善**: Statements 45.38% → **62.73%** (+17.35%) / Functions 66.63% → 68.99%
 
-### Development Status
+### 開発状況
 
 - v6ロードマップ #2 TypeScript厳格化: カバレッジ62.73%達成（目標80%まであと17.27%）
 - 残り大型ファイル: `service-worker.ts`, `content/extractor.ts`, `content/loader.ts` 等
@@ -6242,7 +6168,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.13] - 2026-04-23
 
-### Added
+### 追加
 
 - **テストカバレッジ大幅改善（除外リスト解除＋新規テスト追加）**:
   - `vitest.config.ts` から30ファイル以上の `exclude` を解除し、除外されていたテストを全て有効化
@@ -6258,7 +6184,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
     - `background/handlers/urlNotificationHandlers.test.ts` ― URLエンコード/デコード・HMAC署名
     - `storage.test.ts` に `getDomainFilterCacheSync`, `isDomainFilterCacheValid`, `matchesWildcardPattern`, `normalizeDomainUrl` のテストを追加
 
-### Test Results
+### テスト結果
 
 - テストファイル: 187 passed（1 skipped）
 - テストケース: 3,854 passed（16 skipped）
@@ -6267,7 +6193,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.12] - 2026-04-23
 
-### Fixed
+### 修正
 
 - **promptSanitizer-refined.ts**: `isMaliciousUsage` の `commandSuffixes` 正規表現に先頭アンカー (`^`) を追加し、安全な文脈での誤検知を修正
   - 原因: `the` が `then` に部分マッチしていた（例: `"Do it now, then wait."` で `" the"` に誤判定）
@@ -6277,7 +6203,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
 
 ## [5.1.11] - 2026-04-23
 
-### Added
+### 追加
 
 - **TypeScript厳格化（第一段階）完了**: `strict: true` 完全適用、`tsc --noEmit` ゼロエラー達成
   - `any` 型74箇所 → 0箇所（`unknown`変換）
@@ -6293,7 +6219,7 @@ v5.1.23 〜 v5.1.30 の改善を集約したマイナーリリース。テスト
   - settingsExportImport.test.ts
   - ublockImport-sourceManager.test.ts
 
-### Fixed ( Bugs found during test writing )
+### 修正（テスト作成中に見つかったバグ）
 
 - **promptSanitizer-refined.ts**: ダブルエスケープ問題（`\\s` → `\s`）
 - **classifier.ts**: `TRS_Editor`大文字不一致（`trs_editor`に修正）
