@@ -14,11 +14,11 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了。jsdom → wasm-quickjs-dom を 422 ファイルへ導入(退避 14 ファイルは根拠つき jsdom 維持)。フルスイート 1336/18835 全パス、environment フェーズ 49s→25.3s、A/B で DOM ファイル 1.76 倍速。ゲートを domFileCount(426)へ再定義。ADR 追記・validate 緑・供給網審査通過・ui-ux 根因 (document.body 更新漏れ) 確定。CI: validate 緑・license 866・test:perf within budget・wall 159.8s(4vCPU)。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録に留める。マージはレビュー待ち |
+| ~~01~~ | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](../dev-docs/archived/pbi/2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了（2026-11-20 アーカイブ済み）。jsdom → wasm-quickjs-dom を 422 ファイルへ導入、フルスイート全パス、environment フェーズ半減、domFileCount(426)へ再定義。PR #212 でマージ済み |
 
 ### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
 
@@ -816,6 +816,10 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-20 テスト DOM 環境の wasm-quickjs-dom 移行 ― 1件
+
+- **2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom**: jsdom → wasm-quickjs-dom を 422 ファイルへ導入（退避 14 ファイルは根拠つき jsdom 維持）。フルスイート 1336 ファイル / 18835 テスト全パス、environment フェーズ約 49 秒から約 25.3 秒に半減。ゲートを `domFileCount`（426）へ再定義。`npm run validate` 緑、test:perf within budget、CI validate 緑。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録。PR #212 でマージ済み。
 
 ### 2026-11-19 ミューテーションスコア残ディレクトリ アーカイブ ― 1件
 
