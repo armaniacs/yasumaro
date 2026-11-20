@@ -4,6 +4,7 @@ import { getPermissionManager } from '../utils/permissionManager.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logError } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
+import { withRuntimeTimeout } from '../messaging/withRuntimeTimeout.js';
 
 /**
  * ContentFetchGateway (PBI 2026-09-11-04) — the single seam for "popup asks a
@@ -31,6 +32,35 @@ const defaultTabTransport: TabSendTransport = (tabId, message) =>
   chrome.tabs.sendMessage(tabId, message) as Promise<unknown>;
 
 /**
+ * Shared tab ask (PBI 2026-11-20-01) — the single seam for "popup asks a tab
+ * and waits with a timeout". Delegates the race to withRuntimeTimeout (timer
+ * cleanup plus late-rejection suppression) and keeps the passive null
+ * contract: timeout and transport failure both resolve null, never prompt for
+ * permissions. The only per-caller difference is the message type.
+ */
+export async function askTab<T>(
+  tabId: number,
+  type: string,
+  opts?: { timeoutMs?: number; transport?: TabSendTransport },
+): Promise<T | null> {
+  const timeoutMs = opts?.timeoutMs ?? CONTENT_FETCH_TIMEOUT_MS;
+  const send = opts?.transport ?? defaultTabTransport;
+  try {
+    const response = await withRuntimeTimeout(
+      send(tabId, { type }) as Promise<T | null>,
+      timeoutMs,
+      new Error('Content script response timeout'),
+    );
+    return response ?? null;
+  } catch {
+    // Promise-style sendMessage rejects on failure (callback-era
+    // chrome.runtime.lastError is never set on this path), and the timeout
+    // sentinel rejects as well — both stay silent null by contract.
+    return null;
+  }
+}
+
+/**
  * Ask a tab's content script for page content. Resolves null when the content
  * script does not answer within the timeout (or the send rejects) — callers
  * decide whether that is fatal. Never prompts for permissions.
@@ -39,18 +69,7 @@ export async function requestContentFromTab(
   tabId: number,
   opts?: { timeoutMs?: number; transport?: TabSendTransport },
 ): Promise<ContentResponse | null> {
-  const timeoutMs = opts?.timeoutMs ?? CONTENT_FETCH_TIMEOUT_MS;
-  const send = opts?.transport ?? defaultTabTransport;
-  try {
-    return await Promise.race([
-      send(tabId, { type: 'GET_CONTENT' }) as Promise<ContentResponse>,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
-    ]) ?? null;
-  } catch {
-    // Promise-style sendMessage rejects on failure (callback-era
-    // chrome.runtime.lastError is never set on this path).
-    return null;
-  }
+  return askTab<ContentResponse>(tabId, 'GET_CONTENT', opts);
 }
 
 /**
@@ -66,18 +85,7 @@ export async function requestSelectionFromTab(
   tabId: number,
   opts?: { timeoutMs?: number; transport?: TabSendTransport },
 ): Promise<SelectionResponse | null> {
-  const timeoutMs = opts?.timeoutMs ?? CONTENT_FETCH_TIMEOUT_MS;
-  const send = opts?.transport ?? defaultTabTransport;
-  try {
-    return await Promise.race([
-      send(tabId, { type: 'GET_SELECTION' }) as Promise<SelectionResponse>,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs)),
-    ]) ?? null;
-  } catch {
-    // Same rejection shape as requestContentFromTab — a content script that
-    // is not injected rejects instead of answering.
-    return null;
-  }
+  return askTab<SelectionResponse>(tabId, 'GET_SELECTION', opts);
 }
 
 /** Last-resort extraction shared by both ladder levels (PBI 2026-09-11-04:
