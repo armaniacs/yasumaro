@@ -21,7 +21,9 @@ const LICENSE_CORRECTIONS = {
   'wa-sqlite': 'MIT',
 };
 
-execFileSync('npx', ['cyclonedx-npm', '--output-file', 'sbom.json'], {
+// cyclonedx-npm 7 defaults to spec 1.7, but validate-json.mjs pins the SBOM
+// contract to 1.6. Keep 1.6 explicitly until the 1.7 migration is scheduled.
+execFileSync('npx', ['cyclonedx-npm', '--spec-version', '1.6', '--output-file', 'sbom.json'], {
   stdio: 'inherit',
   shell: process.platform === 'win32',
 });

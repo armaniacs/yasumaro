@@ -23,10 +23,10 @@
 
 | グループ | パッケージ（インストール済みバージョン） |
 |---|---|
-| ビルド | `wxt` (0.21.5), `vite` (8.3.6), `esbuild` (0.28.2), `typescript` (6.0.3) |
-| テスト | `vitest` (5.1.0), `@playwright/test` (1.65.0), `happy-dom` (20.14.5), `jsdom` (31.0.0), `@stryker-mutator/core` / `vitest-runner` (10.0.0), `better-sqlite3` (13.0.3) |
-| 静的解析・文書 | `eslint` (10.14.0), `@typescript-eslint/eslint-plugin` / `parser` (8.72.1), `knip` (6.38.0), `typedoc` (0.28.20) |
-| コンプライアンス | `license-checker` (25.0.1), `@cyclonedx/cyclonedx-npm` (6.0.1) |
+| ビルド | `wxt` (0.21.5), `vite` (8.3.8), `esbuild` (0.28.2), `typescript` (6.0.3) |
+| テスト | `vitest` (5.1.1), `@playwright/test` (1.65.1), `happy-dom` (20.14.5), `jsdom` (31.0.1), `@stryker-mutator/core` / `vitest-runner` (10.0.0), `better-sqlite3` (13.2.0) |
+| 静的解析・文書 | `eslint` (10.15.0), `@typescript-eslint/eslint-plugin` / `parser` (8.73.0), `knip` (6.47.0), `typedoc` (0.28.20) |
+| コンプライアンス | `license-checker` (25.0.1), `@cyclonedx/cyclonedx-npm` (7.0.1) |
 
 ### overrides（ピン留め）
 
@@ -105,7 +105,7 @@
 
 - 判定: ライセンスポリシー上の問題なし。全 868 パッケージが許容ライセンスに適合（2026-10-25 実測）。prod スコープの脆弱性 critical / high は 0 件。フル監査の dev-only HIGH 4 件（node-forge 系、同一原因の重複検出）は §6.1 の受容記録に基づき warn として出荷を継続する
 - `THIRD_PARTY_NOTICES.md` が 622 パッケージ時点で停止しており現状と乖離している。`npm run generate-notices` の再実行を推奨
-- 未反映の更新は 1 件。`typescript` 7 は計画的な移行判断が必要
+- 未反映の更新は 2 件。`typescript` 7 は計画的な移行判断が必要（typescript-eslint の peer が `<6.1.0` のため時期待ち）。`@peculiar/webcrypto` 2.0.0 は webcrypto-core 2 系の parity 未実測のため保留（1.7.2 の JWK `alg` 修正は範囲内 patch として適用済み）
 
 ## 6. リスク受容記録
 
