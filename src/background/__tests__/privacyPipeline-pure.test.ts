@@ -25,7 +25,7 @@ const URL = 'https://example.com/page';
 function cloudInput(overrides: Partial<CloudFormatInput> = {}): CloudFormatInput {
   return {
     sanitizedSummary: 'Cloud summary',
-    aiResult: { summary: 'Cloud summary' },
+    aiResult: { summary: 'Cloud summary', success: false },
     maskedCount: 1,
     originalTokens: 10,
     cleansedTokens: 8,
@@ -99,10 +99,10 @@ describe('applyMaskResult (pure mask combination)', () => {
   it('maps the sanitizer result to text, items, and count', () => {
     const applied = applyMaskResult('raw', {
       text: 'masked',
-      maskedItems: ['email', { type: 'phone', value: 'x' }],
+      maskedItems: ['email', { type: 'phone', original: 'x' }],
     });
     expect(applied.processingText).toBe('masked');
-    expect(applied.maskedItems).toEqual(['email', { type: 'phone', value: 'x' }]);
+    expect(applied.maskedItems).toEqual(['email', { type: 'phone', original: 'x' }]);
     expect(applied.maskedCount).toBe(2);
   });
 
@@ -145,7 +145,7 @@ describe('formatCloudResult (pure cloud formatting)', () => {
     const out = formatCloudResult(
       cloudInput({
         sanitizedSummary: 'one line  with  spaces',
-        aiResult: { summary: 'one line  with  spaces' },
+        aiResult: { summary: 'one line  with  spaces', success: false },
       }),
     );
     expect(out.result.summary).toBe('one line with spaces');
@@ -155,7 +155,7 @@ describe('formatCloudResult (pure cloud formatting)', () => {
   it('extracts tags from the tagged format', () => {
     const tagged = '#tech #news | A calm summary sentence about the event details here';
     const out = formatCloudResult(
-      cloudInput({ sanitizedSummary: tagged, aiResult: { summary: tagged } }),
+        cloudInput({ sanitizedSummary: tagged, aiResult: { summary: tagged, success: false } }),
     );
     expect(out.result.tags).toContain('tech');
     expect(out.result.tags).toContain('news');
@@ -167,7 +167,7 @@ describe('formatCloudResult (pure cloud formatting)', () => {
     const out = formatCloudResult(
       cloudInput({
         sanitizedSummary: spam,
-        aiResult: { summary: spam, providerName: 'p' },
+        aiResult: { summary: spam, providerName: 'p', success: false },
       }),
     );
     expect(out.result.summary).toBe(DEGENERATE_SUMMARY_FALLBACK);
@@ -178,7 +178,7 @@ describe('formatCloudResult (pure cloud formatting)', () => {
   it('rides degradedSummary through only when the provider reported degraded', () => {
     const degraded = formatCloudResult(
       cloudInput({
-        aiResult: { summary: 's', degraded: true, degradedSummary: 'opening slice' },
+        aiResult: { summary: 's', degraded: true, degradedSummary: 'opening slice', success: false },
       }),
     );
     expect(degraded.result.degradedSummary).toBe('opening slice');
@@ -192,7 +192,7 @@ describe('formatCloudResult (pure cloud formatting)', () => {
   });
 
   it('handles an empty body without tags or guard verdict', () => {
-    const out = formatCloudResult(cloudInput({ sanitizedSummary: '', aiResult: {} }));
+    const out = formatCloudResult(cloudInput({ sanitizedSummary: '', aiResult: { summary: '', success: false } }));
     expect(out.result.summary).toBe('');
     expect(out.result.tags).toBeUndefined();
     expect(out.degenerate).toBeNull();
