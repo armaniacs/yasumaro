@@ -18,9 +18,16 @@
  * finishes on its own (same contract as before; this file only moves it).
  */
 
+import { backoffDelayMs } from '../utils/backoff.js';
 import { asSuccessResponse } from './normalizeGatewayResponse.js';
 import {
   AI_GATEWAY_TIMEOUT_MS,
+  DASHBOARD_GATEWAY_RETRY_ATTEMPTS,
+  DASHBOARD_GATEWAY_RETRY_DELAY_MS,
+  DASHBOARD_GATEWAY_RETRY_MULTIPLIER,
+  DASHBOARD_INNER_TRANSPORT_RETRIES,
+  DASHBOARD_SQLITE_TIMEOUT_MESSAGE,
+  DASHBOARD_SQLITE_TIMEOUT_MS,
   RECORD_GATEWAY_TIMEOUT_MS,
 } from './sendRetryDefaults.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
@@ -33,14 +40,76 @@ export type { OutgoingMessage, WithoutProtocolVersion } from './messageTransport
  * the 20s/60s budgets were defined here beside the other send/retry
  * numbers). Re-exported under the historic names so gateway modules keep
  * their existing imports and externally visible values never change.
+ * PBI 2026-11-20-04: the dashboard hop budgets join this table so every
+ * gateway budget is declared in one place; the values are unchanged.
  */
-export { AI_GATEWAY_TIMEOUT_MS, RECORD_GATEWAY_TIMEOUT_MS };
+export {
+  AI_GATEWAY_TIMEOUT_MS,
+  RECORD_GATEWAY_TIMEOUT_MS,
+  DASHBOARD_GATEWAY_RETRY_ATTEMPTS,
+  DASHBOARD_GATEWAY_RETRY_DELAY_MS,
+  DASHBOARD_GATEWAY_RETRY_MULTIPLIER,
+  DASHBOARD_INNER_TRANSPORT_RETRIES,
+  DASHBOARD_SQLITE_TIMEOUT_MESSAGE,
+  DASHBOARD_SQLITE_TIMEOUT_MS,
+};
+
+/**
+ * Pre-send hook: transforms the payload right before it crosses the seam
+ * (PBI 2026-11-20-04). The dashboard hop attaches its confirmToken this way
+ * instead of wrapping the send in gateway-specific code.
+ */
+export type PreSendHook<P> = (payload: P) => Promise<P>;
+
+/**
+ * Retry policy passed to the shared runner (PBI 2026-11-20-04). Gateways
+ * declare attempts/delay here instead of owning a private retry loop; the
+ * runner below owns the loop and the inter-attempt wait.
+ */
+export interface GatewayRetryPolicy {
+  attempts: number;
+  delayMs: number;
+  multiplier: number;
+  sleep: (ms: number) => Promise<void>;
+}
+
+export type RetryAttemptOutcome<R> =
+  | { action: 'return'; result: R }
+  | { action: 'retry' };
+
+/**
+ * Run one policy-driven retry series. The attempt callback decides per
+ * attempt whether its result is final or deserves another try (seeing
+ * `isLast` so the final attempt always produces a result); this runner
+ * owns the loop and the backoff wait between attempts. Decode-style
+ * failures stay non-retriable by returning instead of retrying.
+ */
+export async function runWithRetryPolicy<R>(
+  policy: GatewayRetryPolicy,
+  attempt: (isLast: boolean) => Promise<RetryAttemptOutcome<R>>,
+  onExhausted: () => R,
+): Promise<R> {
+  for (let index = 0; index < policy.attempts; index++) {
+    const isLast = index + 1 >= policy.attempts;
+    const outcome = await attempt(isLast);
+    if (outcome.action === 'return') return outcome.result;
+    if (!isLast) {
+      await policy.sleep(backoffDelayMs(index, { baseMs: policy.delayMs, multiplier: policy.multiplier }));
+    }
+  }
+  return onExhausted();
+}
 
 export interface GatewayConfig<TType extends OutgoingMessage['type']> {
   type: TType;
   timeoutMs: number;
   timeoutError: string;
   invalidMessage: string;
+  /**
+   * Optional pre-send hook (PBI 2026-11-20-04). Absent by default, so
+   * gateways that declare no hook keep their exact current behavior.
+   */
+  preSend?: PreSendHook<GatewayPayload<TType>>;
 }
 
 /**
@@ -59,14 +128,16 @@ export interface Gateway<P, R extends { success: boolean }> {
   readonly timeoutMs: number;
   readonly timeoutError: string;
   readonly invalidMessage: string;
+  readonly preSend?: PreSendHook<P>;
   send(payload: P, opts?: { timeoutMs?: number }): Promise<R | SendFailure>;
 }
 
 /**
- * Declare a gateway. The returned `send` stamps the envelope, races it
- * against the budget (per-call `opts.timeoutMs` overrides the default, so
- * recordPendingPage's override keeps working), and normalizes via
- * `asSuccessResponse` with the gateway's invalid-message sentence.
+ * Declare a gateway. The returned `send` runs the optional `preSend` hook,
+ * stamps the envelope, races it against the budget (per-call
+ * `opts.timeoutMs` overrides the default, so recordPendingPage's override
+ * keeps working), and normalizes via `asSuccessResponse` with the gateway's
+ * invalid-message sentence.
  * Retries stay off: extra attempts would extend past the documented timeout
  * contract (and stall under fake timers, which the timeout tests install).
  *
@@ -81,15 +152,26 @@ export function defineGateway<
   P extends GatewayPayload<TType>,
   R extends { success: boolean },
 >(config: GatewayConfig<TType>): Gateway<P, R> {
-  const { type, timeoutMs: defaultTimeoutMs, timeoutError, invalidMessage } = config;
+  const { type, timeoutMs: defaultTimeoutMs, timeoutError, invalidMessage, preSend } = config;
+  // Bridge the config hook (wide wire payload) to this gateway's payload.
+  // The hook transforms and returns the same payload object, so the result
+  // cast is overlap-justified by the P-extends-wire-payload constraint; the
+  // wrapper itself needs no cast. Omit the key entirely when no hook is
+  // given, so the gateway shape is identical to the pre-hook era
+  // (exactOptionalPropertyTypes forbids an explicit undefined here).
+  const asPreSend = preSend
+    ? async (payload: P): Promise<P> => preSend(payload) as Promise<P>
+    : undefined;
   return {
     type,
     timeoutMs: defaultTimeoutMs,
     timeoutError,
     invalidMessage,
-    send(payload: P, opts: { timeoutMs?: number } = {}): Promise<R | SendFailure> {
+    ...(asPreSend ? { preSend: asPreSend } : {}),
+    async send(payload: P, opts: { timeoutMs?: number } = {}): Promise<R | SendFailure> {
+      const effective = preSend ? await preSend(payload as GatewayPayload<TType>) : payload;
       const timeoutMs = opts.timeoutMs ?? defaultTimeoutMs;
-      const message = { type, payload } as Extract<OutgoingMessage, { type: TType }>;
+      const message = { type, payload: effective } as Extract<OutgoingMessage, { type: TType }>;
       return sendWithPolicy(message, {
         timeoutMs,
         timeoutError: new Error(timeoutError),
