@@ -21,7 +21,7 @@ holistic-code-review の改善テーマ TOP 4 を RICE 降順で実装。01 tab�
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
 | ~~01~~ | [2026-11-20-01-refactor-tab-fetch-unify.md](../dev-docs/archived/pbi/2026-11-20-01-refactor-tab-fetch-unify.md) | 🔧非機能追加 | 16.0 | S | ✅ 完了。askTab への統一、null契約・権限 ladder 不変。parity12件・タイマ残留0 |
-| 02 | [2026-11-20-02-refactor-sanitize-ownership.md](2026-11-20-02-refactor-sanitize-ownership.md) | 🔧非機能追加 | 4.8 | M | ⬜ 未着手。prompt 直接置換の除去と適用順序の固定 + 順序回帰試験。XSS 系緑維持 |
+| ~~02~~ | [2026-11-20-02-refactor-sanitize-ownership.md](../dev-docs/archived/pbi/2026-11-20-02-refactor-sanitize-ownership.md) | 🔧非機能追加 | 4.8 | M | ✅ 完了。prompt 直接置換の除去と適用順序の固定 + 順序回帰試験20件。XSS 系緑維持 |
 | 03 | [2026-11-20-03-refactor-privacy-pipeline-split.md](2026-11-20-03-refactor-privacy-pipeline-split.md) | 🔧非機能追加 | 4.3 | M | ⬜ 未着手。buildPlan/applyMaskResult/formatCloudResult の純粋化、executor は薄く |
 | 04 | [2026-11-20-04-refactor-dashboard-gateway-seam.md](2026-11-20-04-refactor-dashboard-gateway-seam.md) | 🔧非機能追加 | 2.0 | M | ⬜ 未着手。confirmToken を pre-send hook、再試行を policy 引数に。外部契約不変 |
 
