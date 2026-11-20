@@ -19,7 +19,9 @@
  */
 
 import { backoffDelayMs } from '../utils/backoff.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { asSuccessResponse } from './normalizeGatewayResponse.js';
+import { withRuntimeTimeout } from './withRuntimeTimeout.js';
 import {
   AI_GATEWAY_TIMEOUT_MS,
   DASHBOARD_GATEWAY_RETRY_ATTEMPTS,
@@ -169,8 +171,19 @@ export function defineGateway<
     invalidMessage,
     ...(asPreSend ? { preSend: asPreSend } : {}),
     async send(payload: P, opts: { timeoutMs?: number } = {}): Promise<R | SendFailure> {
-      const effective = preSend ? await preSend(payload as GatewayPayload<TType>) : payload;
       const timeoutMs = opts.timeoutMs ?? defaultTimeoutMs;
+      let effective = payload;
+      if (preSend) {
+        try {
+          effective = (await withRuntimeTimeout(
+            preSend(payload as GatewayPayload<TType>),
+            timeoutMs,
+            new Error(timeoutError),
+          )) as unknown as P;
+        } catch (error) {
+          return { success: false, error: errorMessage(error) };
+        }
+      }
       const message = { type, payload: effective } as Extract<OutgoingMessage, { type: TType }>;
       return sendWithPolicy(message, {
         timeoutMs,

@@ -12,6 +12,7 @@
  */
 import { isSecureUrl } from '../../utils/urlUtils.js';
 import { getMessageOr } from '../../utils/i18n.js';
+import { errorMessage } from '../../utils/errorUtils.js';
 import { logWarn } from '../../utils/logger/api.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
 import { NotificationHelper } from '../notificationHelper.js';
@@ -32,7 +33,7 @@ export interface EntryFrictionDeps {
    * silent (the keyboard-command default). The omnibox entry point injects
    * its user-visible fallback here.
    */
-  notifyNoUrl?: () => void;
+  notifyNoUrl?: () => void | Promise<void>;
 }
 
 /**
@@ -53,7 +54,11 @@ function createActiveTabRunner(deps: EntryFrictionDeps, entryLabel: string): () 
   return async () => {
     const tab = await queryActiveTab();
     if (!tab?.id || !tab.url) {
-      await deps.notifyNoUrl?.();
+      try {
+        await deps.notifyNoUrl?.();
+      } catch (error) {
+        await logWarn('No-URL notifier failed', { error: errorMessage(error) }, undefined, 'service-worker');
+      }
       return;
     }
     // Capture the narrowed values in consts: the SingleFlight closure below
@@ -142,19 +147,31 @@ export function createOmniboxInputHandler(deps: EntryFrictionDeps): (text: strin
 }
 
 /**
+ * Fixed card ID for the omnibox no-URL fallback. Reusing one ID turns
+ * repeat triggers (e.g. rapid Enter on a chrome:// tab) into a single-card
+ * update instead of a growing stack of identical cards. Unique: no other
+ * notifier uses this ID ('privacy-confirm-*' and 'session-reminder-*' are
+ * the only other ID-carrying paths).
+ */
+const OMNIBOX_NO_URL_NOTIFICATION_ID = 'omnibox-no-url';
+
+/**
  * Default no-URL fallback for the omnibox entry point. Points at the
  * context-menu entry, which receives the tab directly and does not need
  * the unreadable URL.
  */
 function notifyNoUrlDefault(): void {
   NotificationHelper.show(
+    // WHY successOptions: an unreadable URL is an everyday condition
+    // (chrome://, new tabs), not an error — no error sound/color.
     successOptions({
       title: getMessageOr('omniboxNoUrlTitle', 'Cannot read the page URL'),
       message: getMessageOr(
         'omniboxNoUrlBody',
-        'Nothing was recorded. Right-click the page and record from the context menu instead.',
+        'Nothing was recorded. Use the context menu on the page to record instead.',
       ),
       iconUrl: NotificationHelper.getIconUrl(),
     }),
+    OMNIBOX_NO_URL_NOTIFICATION_ID,
   );
 }

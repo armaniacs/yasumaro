@@ -22,6 +22,9 @@ import { withRuntimeTimeout } from '../messaging/withRuntimeTimeout.js';
 
 export const CONTENT_FETCH_TIMEOUT_MS = 5000;
 
+/** Tab-bound fetch message types understood by the content script. */
+export type TabFetchType = 'GET_CONTENT' | 'GET_SELECTION';
+
 /** Injectable transport for tests: how one message reaches a tab. */
 export type TabSendTransport = (
   tabId: number,
@@ -40,7 +43,7 @@ const defaultTabTransport: TabSendTransport = (tabId, message) =>
  */
 export async function askTab<T>(
   tabId: number,
-  type: string,
+  type: TabFetchType,
   opts?: { timeoutMs?: number; transport?: TabSendTransport },
 ): Promise<T | null> {
   const timeoutMs = opts?.timeoutMs ?? CONTENT_FETCH_TIMEOUT_MS;

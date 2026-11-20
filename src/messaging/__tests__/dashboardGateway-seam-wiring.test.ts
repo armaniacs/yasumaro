@@ -151,6 +151,30 @@ describe('defineGateway hook acceptance', () => {
     });
   });
 
+  it('returns SendFailure when the preSend hook hangs past the timeout (no real-time wait)', async () => {
+    const { useTimerClock } = await import('../../../testDir/waitPolicy.js');
+    useTimerClock();
+    try {
+      const sendMessage = vi.fn().mockResolvedValue({ success: true, answer: 'a' });
+      stubSendMessage(sendMessage);
+
+      const gateway = defineGateway<'ASK_HISTORY', { question: string; collectionId?: string | null }, { success: boolean }>({
+        type: 'ASK_HISTORY',
+        timeoutMs: 100,
+        timeoutError: 'timed out',
+        invalidMessage: 'Invalid ASK_HISTORY response',
+        preSend: () => new Promise<never>(() => undefined),
+      });
+      const pending = gateway.send({ question: 'q', collectionId: null });
+      await vi.advanceTimersByTimeAsync(100);
+
+      await expect(pending).resolves.toEqual({ success: false, error: 'timed out' });
+      expect(sendMessage).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('sends the payload untouched when no hook is declared', async () => {
     const sendMessage = vi.fn().mockResolvedValue({ success: true, answer: 'a' });
     stubSendMessage(sendMessage);

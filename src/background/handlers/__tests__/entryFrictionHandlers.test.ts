@@ -33,7 +33,7 @@ function makeDeps(overrides: {
   handleManualRecord?: ManualRecordFn;
   queryActiveTab?: () => Promise<chrome.tabs.Tab | null>;
   notifyRecorded?: (title: string) => void;
-  notifyNoUrl?: () => void;
+  notifyNoUrl?: () => void | Promise<void>;
   executeScript?: unknown;
 } = {}) {
   const handleManualRecord: ManualRecordFn =
@@ -187,6 +187,51 @@ describe('omnibox unreadable-URL fallback (PBI 2026-11-16-02)', () => {
 
     expect(chrome.notifications.create).toHaveBeenCalledTimes(1);
     expect(handleManualRecord).not.toHaveBeenCalled();
+  });
+
+  it('reuses one notification card across repeat no-URL triggers (fixed ID update)', async () => {
+    const { deps, handleManualRecord } = makeDeps({
+      queryActiveTab: vi.fn().mockResolvedValue({ id: 3 } as chrome.tabs.Tab),
+    });
+    const handler = createOmniboxInputHandler(deps);
+    await handler('');
+    await handler('');
+
+    const create = chrome.notifications.create as unknown as ReturnType<typeof vi.fn>;
+    expect(create).toHaveBeenCalledTimes(2);
+    for (const call of create.mock.calls) {
+      expect(call[0]).toBe('omnibox-no-url');
+    }
+    expect(handleManualRecord).not.toHaveBeenCalled();
+  });
+
+  it('stays silent-safe when the injected no-URL notifier throws', async () => {
+    const { deps, handleManualRecord } = makeDeps({
+      queryActiveTab: vi.fn().mockResolvedValue({ id: 3 } as chrome.tabs.Tab),
+      notifyNoUrl: vi.fn().mockRejectedValue(new Error('notifier down')),
+    });
+    const handler = createOmniboxInputHandler(deps);
+
+    await expect(handler('')).resolves.toBeUndefined();
+    expect(handleManualRecord).not.toHaveBeenCalled();
+    expect(logWarn).toHaveBeenCalledWith(
+      'No-URL notifier failed',
+      expect.objectContaining({ error: 'notifier down' }),
+      undefined,
+      'service-worker',
+    );
+  });
+
+  it('stays silent-safe when the injected no-URL notifier throws synchronously', async () => {
+    const { deps } = makeDeps({
+      queryActiveTab: vi.fn().mockResolvedValue({ id: 3 } as chrome.tabs.Tab),
+      notifyNoUrl: vi.fn(() => {
+        throw new Error('sync boom');
+      }),
+    });
+    const handler = createOmniboxInputHandler(deps);
+
+    await expect(handler('')).resolves.toBeUndefined();
   });
 
   it('keyboard command stays silent when tab.url is missing (no hook, unchanged)', async () => {
