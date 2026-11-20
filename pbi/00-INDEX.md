@@ -14,9 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
 
-holistic-code-review の改善テーマ TOP 4 を RICE 降順で実装。01 tab問い合わせ複製の解消とタイマ一元化(Quick Win) / 02 符号化所有の固定と順序回帰試験 / 03 PrivacyPipeline の純粋部切り出し / 04 dashboard gateway の共通 seam 利用者化。依存なし・ファイル排他で全件並列可。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
+RICE降順で実装。01 tab問い合わせ複製の解消とタイマ一元化 (Quick Win・parity12件・タイマ残留0) / 02 符号化所有の固定と順序回帰試験 (順序回帰20件・XSS系緑維持) / 03 PrivacyPipeline の純粋部切り出し (mock-free19件・parity14件) / 04 dashboard gateway の共通 seam 利用者化 (parity5件・wiring6件)。バッチ境界: 型検査緑・lint エラー0・軽量65ファイル1352件緑。最終ゲート: フル1342ファイル18911件緑・ビルド緑。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
@@ -827,6 +827,13 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-20 大局的改善ラウンド holistic-1120 ― 4件
+
+- **2026-11-20-01-refactor-tab-fetch-unify**: popup の tab問い合わせ複製を `withRuntimeTimeout` 利用の共有 helper `askTab` に統一。null契約・権限 ladder 不変。parity12件・タイマ残留0。`npm run validate` 緑（最終ゲート1342ファイル18911件）。
+- **2026-11-20-02-refactor-sanitize-ownership**: prompt直接置換を除去し共有 seam `encodePromptMarkup` 呼びに。適用順序を一箇所に固定＋順序回帰20件。XSS系緑維持、出力差分なし。
+- **2026-11-20-03-refactor-privacy-pipeline-split**: `buildPlan` / `applyMaskResult` / `formatCloudResult` を純粋化し mock-free 19件を追加。executor は薄く、throw+save 契約を明示。parity14件。
+- **2026-11-20-04-refactor-dashboard-gateway-seam**: confirmToken を pre-send hook、再試行を policy 引数に。外部契約不変。parity5件・wiring6件。
 
 ### 2026-11-20 テスト DOM 環境の wasm-quickjs-dom 移行 ― 1件
 
