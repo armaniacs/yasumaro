@@ -88,6 +88,9 @@ export interface MaskApplication {
 /**
  * Pure mask application. No storage or logging access. A null result means
  * masking was skipped: the content passes through untouched with zero counts.
+ * Null is a caller-asserted skip only — a sanitizer contract violation must
+ * never flow here. Callers with masking enabled fail closed on an absent
+ * result instead (see process()).
  */
 export function applyMaskResult(
   content: string,
@@ -316,6 +319,14 @@ export class PrivacyPipeline {
     // on-device local AI also receives masked content when masking is enabled.
     if (plan.useMasking) {
       const sanitizeResult = await this.sanitizers.sanitizeRegex(content);
+      if (sanitizeResult == null) {
+        // Fail closed: masking is enabled, so an absent result must never
+        // flow unsanitized into an AI call. sanitizeRegex is typed
+        // non-nullable; this guards the runtime contract independently of
+        // the logging flag below (_logMasking would also throw, but only
+        // when logging is on).
+        throw new Error('PII sanitizer returned no result; refusing to proceed unmasked');
+      }
       const applied = applyMaskResult(content, sanitizeResult);
       processingText = applied.processingText;
       maskedItems = applied.maskedItems;

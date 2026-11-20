@@ -343,3 +343,18 @@ describe('PrivacyPipeline parity anchor (pre-split behavior)', () => {
 });
 
 const MASKED_PII_CONTENT = PII_CONTENT.replace(RAW_PII, MASKED_PII);
+
+describe('fail-closed masking guard (review follow-up)', () => {
+  it('throws instead of sending unmasked content to AI when the sanitizer resolves null', async () => {
+    const sanitizers = { sanitizeRegex: vi.fn().mockResolvedValue(null) };
+    const generateSummary = vi.fn();
+    const ai = {
+      getSupportedModes: vi.fn().mockReturnValue(['local_only', 'full_pipeline']),
+      generateSummary,
+    };
+    const pipeline = new PrivacyPipeline(settingsFor('full_pipeline'), asAIService(ai), asSanitizers(sanitizers));
+
+    await expect(pipeline.process(PII_CONTENT, { url: URL })).rejects.toThrow(/no result/);
+    expect(generateSummary).not.toHaveBeenCalled();
+  });
+});
