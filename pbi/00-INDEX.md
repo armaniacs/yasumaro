@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ⬜ 未着手 🔧非機能追加
+
+holistic-code-review の改善テーマ TOP 4 を RICE 降順で実装。01 tab問い合わせ複製の解消とタイマ一元化(Quick Win) / 02 符号化所有の固定と順序回帰試験 / 03 PrivacyPipeline の純粋部切り出し / 04 dashboard gateway の共通 seam 利用者化。依存なし・ファイル排他で全件並列可。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-20-01-refactor-tab-fetch-unify.md](../dev-docs/archived/pbi/2026-11-20-01-refactor-tab-fetch-unify.md) | 🔧非機能追加 | 16.0 | S | ✅ 完了。askTab への統一、null契約・権限 ladder 不変。parity12件・タイマ残留0 |
+| 02 | [2026-11-20-02-refactor-sanitize-ownership.md](2026-11-20-02-refactor-sanitize-ownership.md) | 🔧非機能追加 | 4.8 | M | ⬜ 未着手。prompt 直接置換の除去と適用順序の固定 + 順序回帰試験。XSS 系緑維持 |
+| 03 | [2026-11-20-03-refactor-privacy-pipeline-split.md](2026-11-20-03-refactor-privacy-pipeline-split.md) | 🔧非機能追加 | 4.3 | M | ⬜ 未着手。buildPlan/applyMaskResult/formatCloudResult の純粋化、executor は薄く |
+| 04 | [2026-11-20-04-refactor-dashboard-gateway-seam.md](2026-11-20-04-refactor-dashboard-gateway-seam.md) | 🔧非機能追加 | 2.0 | M | ⬜ 未着手。confirmToken を pre-send hook、再試行を policy 引数に。外部契約不変 |
+
 ### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
