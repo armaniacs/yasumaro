@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractMainContent, extractMainContentWithInfo, isExcludedElement, isAsianContentElement, calculateTextScore } from '../index.js';
 

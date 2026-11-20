@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for the A/B layout state machine module (PBI 2026-10-03-29):
  * the controller mounts independently of the panel — prepare() resolves the

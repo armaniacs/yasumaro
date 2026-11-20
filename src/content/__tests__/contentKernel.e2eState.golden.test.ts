@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Golden pin for the E2E test-state publication (PBI 2026-10-09-08).
  *

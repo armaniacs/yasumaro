@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: aria-label applied via data-i18n-aria-label does not take effect under the wasm fixture round-trip (title does); root cause not fully pinned.
 /**
  * ui-ux-improvements.test.js
  * UI/UX改善点のテストスイート

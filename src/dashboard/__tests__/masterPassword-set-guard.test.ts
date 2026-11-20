@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * When a master password already exists (per storage, not per checkbox), the
  * dashboard must route "enable" actions to the change flow (old password

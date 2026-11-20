@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * asyncDataPanelLifecycle unit tests (PBI 2026-09-28-09). The ring owns four
  * duties — filter-host resolution, filter mount, the loadSeq-guarded reload,

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Masked Information Visualization Test
  * UF-401: マスク情報の可視化機能

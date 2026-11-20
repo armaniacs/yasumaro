@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * staticPanels.test.ts
  * PBI 2026-08-09-22: 宣言表のidが実際のHTMLと対応していることを固定する

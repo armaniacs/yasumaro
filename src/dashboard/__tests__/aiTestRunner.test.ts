@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * aiTestRunner.test.ts
  * AI 接続テスト runner の単体テスト。

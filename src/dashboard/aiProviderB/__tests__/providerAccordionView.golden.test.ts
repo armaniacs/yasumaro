@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  * providerAccordionView.golden.test.ts (PBI 2026-09-21-14)
  * DOM pins of the CURRENT accordion rendering: gemini open, the rest closed.
  */

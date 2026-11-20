@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * The popup failure-display contract: every failure path derives the
  * user-visible sentence from the failure payload (errorUtils) instead of a

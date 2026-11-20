@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi } from 'vitest';
 import { resolveBackend } from '../backendResolver.js';
 

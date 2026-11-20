@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { FallbackStorage } from '../storageFallback.js';
 import type { BrowsingLogRecord } from '../../utils/sqlite-types.js';

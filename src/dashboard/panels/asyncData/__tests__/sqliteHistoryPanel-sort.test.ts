@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-sort.test.ts
  * Verifies the sort <select> renders, is wired to the reducer, hides the

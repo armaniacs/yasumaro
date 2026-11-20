@@ -2,7 +2,7 @@
  * localMarkdownExportTimingUi.test.ts
  * Radio-group read/write helpers for LOCAL_MARKDOWN_EXPORT_TIMING.
  */
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { extractLocalMarkdownExportTiming, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
 

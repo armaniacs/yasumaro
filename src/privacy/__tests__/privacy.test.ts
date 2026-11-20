@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * privacy.test.ts
  * privacy.ts のユニットテスト

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-bulkConfirm.test.ts — review fixes: bulk toasts must
  * account for every target.

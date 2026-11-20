@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * historyPanelRegionActions.test.ts
  * Region-owned action bundles (PBI 2026-10-24-05): each region module owns

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagsPanel-r2.test.ts
  * R2: Cover remaining branches — normalization dictionary add/remove,

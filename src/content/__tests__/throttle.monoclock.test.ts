@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * throttle.monoclock.test.ts (review No.12)
  * Pins the single-source clock: a mid-life loss of performance.now() must

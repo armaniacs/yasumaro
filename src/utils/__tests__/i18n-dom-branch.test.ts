@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { applyI18n, translatePageTitle, setHtmlLangAndDir, parseI18nArgs } from '../i18n-dom.js';
 

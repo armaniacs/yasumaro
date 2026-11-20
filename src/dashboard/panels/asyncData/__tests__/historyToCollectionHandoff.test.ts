@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * historyToCollectionHandoff.test.ts (PBI 2026-11-02-03)
  * Panel-level integration: the history "send to collection" affordance

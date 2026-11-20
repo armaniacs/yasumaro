@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * privacyConsent-version.test.ts
  * Tests for PBI-23: Privacy Consent Version Migration

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * extractor-r2.test.ts — covers further branches in extractor.ts:
  * reportValidVisit error paths (PRIVATE_PAGE_DETECTED, force re-send,

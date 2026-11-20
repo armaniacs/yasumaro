@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * onboardingBanner.test.ts
  * PBI 2026-10-22-02 ― 初見軽量化 (onboarding light).

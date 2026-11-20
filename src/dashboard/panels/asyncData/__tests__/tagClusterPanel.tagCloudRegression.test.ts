@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Regression for 6.8.12 hotfix: tagCluster plain cap 1000 → 10000.
  * The panel requests 10000 rows. When the DB only returned the first 1000,

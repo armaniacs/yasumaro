@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * generalSettingsPanel-bLayout.test.ts
  * Regression for the B-layout provider-settings bug (2026-09-02):

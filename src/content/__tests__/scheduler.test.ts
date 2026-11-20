@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * scheduler.test.ts (PBI 2026-09-23-08)
  * Pins the IdleScheduler move: the implementation lives in scheduler.js

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect } from 'vitest';
 import { toTsvString } from '../utils/auditLogTsv.js';
 

@@ -4,7 +4,7 @@
  * seam, labels from i18n with the pure module's English fallbacks, and the
  * open-record hook reaching the history panel (the registry owner's route).
  */
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('../../fetchPeriodRows.js', async (importOriginal) => {

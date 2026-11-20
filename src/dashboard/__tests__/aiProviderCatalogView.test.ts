@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  * aiProviderCatalogView.test.ts — catalog-driven provider UI builders.
  */
 import { describe, it, expect, beforeEach } from 'vitest';

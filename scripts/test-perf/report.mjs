@@ -106,10 +106,14 @@ const failures = (payload.numFailedTests ?? 0) + (payload.numFailedTestSuites ??
 // a file jsdom; the config default is node) and is deliberately over-inclusive
 // in the same way: any jsdom docblock anywhere in the file counts.
 const JSDOM_DOCBLOCK = /@(?:vitest|jest)-environment\s+jsdom/;
+// Since the 2026-11-19 wasm-quickjs-dom migration (ADR 2026-09-26 entry), the
+// per-file fixed-cost driver is ANY per-file DOM environment, so the gate
+// counts both jsdom and wasm-quickjs-dom docblocks as DOM env files.
+const WASM_DOCBLOCK = /@(?:vitest|jest)-environment[ \t]+wasm-quickjs-dom/;
 
-function isJsdomFile(absPath) {
+function readEnvSource(absPath) {
   try {
-    return JSDOM_DOCBLOCK.test(readFileSync(absPath, 'utf8'));
+    return readFileSync(absPath, 'utf8');
   } catch (e) {
     // Every classified file just ran, so an unreadable one means the workspace
     // changed under the run. Failing loudly beats silently under-counting the
@@ -119,11 +123,19 @@ function isJsdomFile(absPath) {
   }
 }
 
-const jsdomFiles = files.filter((f) => isJsdomFile(f.abs)).length;
+let jsdomFiles = 0;
+let domFiles = 0;
+for (const f of files) {
+  const src = readEnvSource(f.abs);
+  const isJsdom = JSDOM_DOCBLOCK.test(src);
+  if (isJsdom) jsdomFiles += 1;
+  if (isJsdom || WASM_DOCBLOCK.test(src)) domFiles += 1;
+}
 
 const measured = {
   files: files.length,
   jsdomFiles,
+  domFiles,
   tests: files.reduce((s, f) => s + f.tests, 0),
   totalMs: Math.round(totalMs),
   assertionTotalMs: Math.round(assertionTotalMs),
@@ -154,6 +166,7 @@ const report = [
   '## Totals',
   '',
   `- files: ${measured.files}`,
+  `- DOM env files (jsdom + wasm-quickjs-dom): ${measured.domFiles}`,
   `- jsdom files: ${measured.jsdomFiles}`,
   `- tests: ${measured.tests}`,
   `- wall: ${(measured.wallMs / 1000).toFixed(2)}s (advisory; includes fixed cost, but is machine-dependent)`,
@@ -182,13 +195,18 @@ if (failures > 0) {
 
 const budget = JSON.parse(readFileSync(BUDGET_PATH, 'utf8')).budget;
 
-// ADR R4 (2026-10-18): only `jsdom files` gates. A total price would charge a
+// ADR R4 (2026-10-18): only a count gates. A total price would charge a
 // 40ms isolated/node file the same as a 147ms isolated/jsdom file, and under the
 // one-assertion-per-file rule the total only grows, so the gate ratcheted
 // continuously (930 -> 1060 -> 1062 -> 1093). The total is still measured and
 // printed as an advisory, so growth stays visible without stopping cheap tests.
+//
+// Since the 2026-11-19 wasm-quickjs-dom migration the fixed-cost driver is any
+// per-file DOM environment, so the gate counts DOM env files (jsdom or
+// wasm-quickjs-dom docblocks): adding a DOM file is a deliberate decision
+// whichever implementation it uses (ADR 2026-09-26, 2026-11-19 entry).
 const loadIndependentGates = [
-  ['jsdom files', measured.jsdomFiles, budget.gates.jsdomFileCount],
+  ['DOM env files', measured.domFiles, budget.gates.domFileCount],
 ];
 
 // ADR R4: refuse to judge on a busy machine. The per-file times inflate 3-5x
@@ -232,9 +250,11 @@ if (contendedBefore) {
 // `build` declares `needs: validate` it would block the build artifact too.
 //
 // `file count` alone prices every file the same, but the ADR measures isolated
-// /node at 40ms and isolated/jsdom at 147ms per file. `jsdom files` puts the
-// ratchet on that difference so adding cheap node/shared tests stays free while
-// adding a DOM file is a deliberate decision.
+// /node at 40ms and isolated/jsdom at 147ms per file, with the wasm-quickjs-dom
+// environment measured between the two. Counting DOM env files (jsdom or
+// wasm-quickjs-dom) puts the ratchet on that difference: adding cheap
+// node/shared tests stays free while adding a DOM file is a deliberate
+// decision. See ADR 2026-09-26 (R4 and the 2026-11-19 entry).
 const gates = loadIndependentGates;
 const advisories = [
   ['file count', measured.files, budget.reference.fileCount],

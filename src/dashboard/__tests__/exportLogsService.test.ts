@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportLogsService.test.ts
  * Tests for browsing log export functionality.

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * ublockImport-fileReader.test.js
  * uBlock Import - FileReaderモジュールのユニットテスト

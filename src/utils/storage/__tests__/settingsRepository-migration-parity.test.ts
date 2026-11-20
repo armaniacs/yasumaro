@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { installTestSecretKek } from '../../crypto/__tests__/secretKekHelper.js';
 import { InMemoryStorageAdapter, SettingsRepository } from '../SettingsRepository.js';

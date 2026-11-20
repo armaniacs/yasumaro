@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * askHistoryPanel.test.ts (PBI 2026-11-01-02)
  * New sibling panel `panel-ask-history`: owns the question + target

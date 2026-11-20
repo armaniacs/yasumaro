@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.lateRescan.test.ts
  * PBI 2026-10-22-06 slice 2 (SPA late-content re-scan): the kernel re-opens

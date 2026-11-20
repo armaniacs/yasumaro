@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveHandler.test.ts
  * SW-side archive subtype group (4th partition) — payload validation and

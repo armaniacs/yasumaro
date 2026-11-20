@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * markdownTemplateSave.test.ts
  * PBI 03: the markdown template save path must never fail silently and never

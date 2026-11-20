@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Keyboard/AT access for the tag-cluster graph (ux-frontend High).
  * Rendered nodes must be focusable, operable by keyboard, and named;

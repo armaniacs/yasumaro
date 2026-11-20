@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * helpers.deep-shortcircuit.test.ts — PBI 05 fix-qsa-deep-shortcircuit
  *

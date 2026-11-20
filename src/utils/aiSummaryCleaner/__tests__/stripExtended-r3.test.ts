@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 /**
  * stripExtended-r3.test.ts — branch coverage for uncovered lines 589-690 and 869-870

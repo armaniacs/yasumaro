@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * privacy-r2.test.ts
  * PBI 2026-11-08-15 の回帰テスト: 見出しh6・重複id・括弧含みURL・

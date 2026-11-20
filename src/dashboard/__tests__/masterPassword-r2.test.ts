@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * masterPassword-r2.test.ts
  * R2: Cover remaining branches — change mode confirmPasswordGroup visibility,

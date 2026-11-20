@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Isolation pin for the E2E probe (PBI 2026-10-11-08 NN08, relay follow-up).
  *

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * masterPassword-branches.test.ts
  * Covers remaining uncovered branches in masterPassword.ts using

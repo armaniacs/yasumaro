@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * extractor-comprehensive.test.ts
  * content 90%達成用: extractor の未カバー 94 stmts を直接叩く
@@ -281,13 +281,11 @@ describe('extractor-comprehensive: throttle / updateMaxScroll / checkVisitCondit
     ps.minVisitDuration = 5;
     ps.minScrollDepth = 50;
     sendMessageWithRetryMock.mockResolvedValue({ success: true });
-    // mock rAF synchronous
-    if (!globalThis.requestAnimationFrame) {
-      (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 1; };
-    }
-    if (!globalThis.cancelAnimationFrame) {
-      (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = () => {};
-    }
+    // rAF must stay synchronous for the throttle timing assertions: jsdom has
+    // no rAF and wasm-quickjs-dom's native rAF is asynchronous, so install the
+    // sync stub unconditionally to keep the timing shape environment-agnostic.
+    (globalThis as unknown as Record<string, unknown>).requestAnimationFrame = (cb: FrameRequestCallback) => { cb(0); return 1; };
+    (globalThis as unknown as Record<string, unknown>).cancelAnimationFrame = () => {};
   });
   afterEach(() => {
     vi.useRealTimers();

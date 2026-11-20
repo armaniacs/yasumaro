@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * visitGate-comprehensive.test.ts
  * 8パターン + clock注入 + PageState 連携 + NTP補正 clamp をカバーし visitGate 90%+ を達成

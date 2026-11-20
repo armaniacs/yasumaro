@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dualPayload.test.ts — 30-11 二重ペイロード
  */

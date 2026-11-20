@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * auditLogRetention.test.ts — PBI 2026-09-29-31
  *

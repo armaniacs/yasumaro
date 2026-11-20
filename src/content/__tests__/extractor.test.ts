@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Comprehensive tests for extractor.ts
  * Covers error handling paths, edge cases, and fallback logic

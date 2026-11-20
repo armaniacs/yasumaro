@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * diagnosticUtils.test.ts
  * Branch-coverage tests for diagnostic panel utilities.

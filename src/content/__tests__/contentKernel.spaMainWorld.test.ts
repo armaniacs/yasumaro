@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.spaMainWorld.test.ts (review No.1/No.2)
  * - No.2: same-URL (shallow) pushState/replaceState never resets the visit.

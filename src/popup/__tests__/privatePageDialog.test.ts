@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { drainMacrotask } from '../../../testDir/waitPolicy.js';
 import { setupPopupDom } from './helpers/popupDom.js';

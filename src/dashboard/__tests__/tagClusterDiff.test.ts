@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagClusterDiff unit tests (PBI 2026-09-24-08): the four diff categories,
  * delta values, deterministic ordering (delta desc then name asc for

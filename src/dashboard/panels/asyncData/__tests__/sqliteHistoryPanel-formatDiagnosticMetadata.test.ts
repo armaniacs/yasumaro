@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-formatDiagnosticMetadata.test.ts
  * VULN-001 回帰テスト: formatDiagnosticMetadataHtml() が AI プロバイダー名と

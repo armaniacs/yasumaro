@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * The dialog buttons are wired at module load, so the DOM has to exist before
  * the import — and the record seam is mocked here because its contract is to

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * periodFilter unit tests: preset math (injectable now), custom-range
  * inclusivity, DOM behavior (aria-pressed, labels, onChange payloads).

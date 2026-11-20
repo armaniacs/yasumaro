@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Parity for the general settings panel's priority-slot select wiring
  * (PBI 2026-10-03-23): option rendering (slot 1 required without the None

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagClusterColor unit tests (PBI 2026-09-24-08): same tag → same hue, hue
  * spread over a small realistic set, fixed saturation/lightness constants,

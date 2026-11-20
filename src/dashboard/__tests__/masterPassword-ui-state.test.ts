@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * The checkbox and the confirm field must reflect storage, not the optimistic
  * DOM state left behind by a failed save or a cancelled modal.

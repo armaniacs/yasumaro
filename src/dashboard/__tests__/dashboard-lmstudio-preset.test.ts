@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dashboard-lmstudio-preset.test.ts
  * Tests for the LM Studio / Ollama preset buttons (dashboard general panel)

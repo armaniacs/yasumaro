@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * similarityClusterPanel.test.ts
  * PBI 2026-10-22-03: cluster display wiring (non-destructive, cancellable).

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * When an interrupted KEK rotation exists and the user retries with a
  * different password, the dashboard shows the localized pending-rotation

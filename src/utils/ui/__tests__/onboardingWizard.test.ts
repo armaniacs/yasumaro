@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { shouldShowWizard, completeWizard, initOnboardingWizard } from '../onboardingWizard.js';
 import { settingsRepository } from '../../storage/SettingsRepository.js';

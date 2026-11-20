@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for migrationBackup.ts (PBI-01 extraction).
  * Covers extractDomain, runMigrationRestore's count-comparison branch, and

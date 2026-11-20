@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportImport-migration.test.ts
  * PBI 2026-11-06-03: dashboard 配線。移行ボタンがファイル選択を開き、

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * proposalRowWiring.test.ts
  * Unit tests for the shared proposal row seam (PBI 2026-10-23-08):

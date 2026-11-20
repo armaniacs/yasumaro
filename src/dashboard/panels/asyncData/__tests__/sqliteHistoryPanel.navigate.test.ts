@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel.navigate.test.ts
  * Panel+Model navigation order contract (PBI-14): the registry calls

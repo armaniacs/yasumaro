@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveStaging.test.ts
  * Unit tests for the staging registry (offscreen-issued names, sweep, release).

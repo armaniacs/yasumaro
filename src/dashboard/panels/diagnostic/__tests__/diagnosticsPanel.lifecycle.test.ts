@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * diagnosticsPanel.lifecycle.test.ts
  * Verification of PanelLifecycle interface implementation for diagnosticsPanel.

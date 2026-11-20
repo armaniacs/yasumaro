@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: EventTarget.prototype spies do not observe bridge-routed addEventListener calls.
 /**
  * dashboardLegacyPanelFactories.test.ts
  * PBI 2026-09-29-40: the four legacy dashboard modules that carried

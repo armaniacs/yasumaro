@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * researchReportPanel.test.ts (PBI 2026-11-01-03)
  * New sibling panel `panel-research-report`: owns the target collection

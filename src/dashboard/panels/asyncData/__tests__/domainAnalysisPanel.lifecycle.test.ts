@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * domainAnalysisPanel lifecycle tests: ranked tables, empty state, notices,
  * pagination caps, since/until/tagFilter/offset propagation, and the

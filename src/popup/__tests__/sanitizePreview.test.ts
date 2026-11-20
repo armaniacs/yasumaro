@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sanitizePreview.test.ts
  * PII Sanitization Preview UI Logic の単体テスト

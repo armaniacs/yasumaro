@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 /**
  * stripExtended-r2.test.ts — additional branch coverage for stripExtended.ts.

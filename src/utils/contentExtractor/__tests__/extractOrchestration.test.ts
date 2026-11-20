@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach } from 'vitest';
 import { extractMainContentWithInfo } from '../index.js';
 import { resolveCleanseReason } from '../cleansedReason.js';

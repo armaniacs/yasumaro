@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * settingsExportImportUiCore-migration.test.ts
  * PBI 2026-11-06-03: 移行確認ゲート。確認なしでは何も適用されないこと。

@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  *
  * overcutFixtures.test.ts — PBI 05 DoD ゲートの fixture 自動検証 (Ask N2-A)
  *

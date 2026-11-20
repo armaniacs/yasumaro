@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * errorUtils.test.js
  * エラーハンドリング共通モジュールのテスト

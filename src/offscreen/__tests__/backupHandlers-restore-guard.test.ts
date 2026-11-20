@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * backupHandlers-restore-guard.test.ts
  * PBI 2026-09-06-01: the existing full restore (restore_db) must reject an

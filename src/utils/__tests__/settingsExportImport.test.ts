@@ -2,7 +2,7 @@
  * settingsExportImport.test.ts
  * settingsExportImport.ts の単体テスト
  *
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 import { Crypto } from '@peculiar/webcrypto';

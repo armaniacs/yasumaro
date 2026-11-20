@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ContentKernel } from '../contentKernel.js';
 import { FakeScheduler } from './helpers/fakeScheduler.js';

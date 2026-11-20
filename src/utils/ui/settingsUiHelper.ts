@@ -133,8 +133,15 @@ export function showStatus(
   const timeout = options.durationMs ?? DEFAULT_CLEAR_DELAY_MS[type];
   pendingClearTimers.set(el, setTimeout(() => {
     pendingClearTimers.delete(el);
-    el.textContent = '';
-    el.className = STATUS_BASE_CLASS;
+    // Best-effort cleanup: the host document can be torn down before the timer
+    // fires (page navigation, test-environment teardown), and touching a node
+    // on a closed document must never surface as an unhandled error.
+    try {
+      el.textContent = '';
+      el.className = STATUS_BASE_CLASS;
+    } catch {
+      // The element's document is gone; nothing to clear.
+    }
   }, timeout));
 }
 

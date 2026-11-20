@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dashboard.test.ts
  * Unit tests for dashboard.ts and panel modules

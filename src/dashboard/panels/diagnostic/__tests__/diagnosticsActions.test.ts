@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createDiagnosticActions } from '../diagnosticsActions.js';
 import type { DiagnosticActionElements } from '../diagnosticsActions.js';

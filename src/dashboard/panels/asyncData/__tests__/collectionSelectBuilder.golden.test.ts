@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * collectionSelectBuilder.golden.test.ts (PBI 2026-11-11-04)
  * Golden: 3箇所の collection/sort select 描画が共通ビルダー委譲の前後で

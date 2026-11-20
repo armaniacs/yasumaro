@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.cleansing.test.ts — PBI-12: CONTENT_CLEANSING_EXECUTED 通知の kernel 移行
  * utils/contentExtractor は chrome-free に戻り、通知は注入済み MessageSender seam

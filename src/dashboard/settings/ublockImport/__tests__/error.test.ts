@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * ublockImport-error.test.js
  * Error handling tests for fetchFromUrl function

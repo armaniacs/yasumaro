@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.halfInit.test.ts (review S6)
  * Fail-closed init: a settings-load failure rejects init() with NO

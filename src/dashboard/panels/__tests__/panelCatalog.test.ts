@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * panelCatalog.test.ts (PBI 2026-09-07-25)
  * カタログがパネル存在の単一の真実の源であることを固定する:

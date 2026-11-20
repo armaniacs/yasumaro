@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: wasm-quickjs-dom :checked selector does not reflect host-side .checked writes (probe-confirmed); the wiring under test reads :checked.
 /**
  * domainFilter.test.ts
  * Tests for src/popup/domainFilter.ts

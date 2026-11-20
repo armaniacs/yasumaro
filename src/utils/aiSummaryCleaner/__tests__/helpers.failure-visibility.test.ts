@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * helpers.failure-visibility.test.ts — PBI 2026-11-08-09 (1)(2)(3)
  *

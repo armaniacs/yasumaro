@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * regionAction.parity.test.ts (PBI 2026-11-11-06)
  * Parity pins for the ask/report region skeleton unification.
