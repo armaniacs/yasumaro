@@ -15,6 +15,7 @@ import { getMessageOr } from '../../utils/i18n.js';
 import { logWarn } from '../../utils/logger/api.js';
 import { SingleFlight } from '../../utils/singleFlight.js';
 import { NotificationHelper } from '../notificationHelper.js';
+import { successOptions } from '../notificationPolicy.js';
 import { recordTabContent, type RecordTabContentDeps } from './activeTabRecorder.js';
 
 /** The keyboard command this module owns (manifest `commands` key). */
@@ -26,6 +27,12 @@ export interface EntryFrictionDeps {
   queryActiveTab?: () => Promise<chrome.tabs.Tab | null>;
   /** Injectable success notifier (NotificationHelper by default). */
   notifyRecorded?: (pageTitle: string) => void;
+  /**
+   * Called when the active tab has no usable URL. Absent means staying
+   * silent (the keyboard-command default). The omnibox entry point injects
+   * its user-visible fallback here.
+   */
+  notifyNoUrl?: () => void;
 }
 
 /**
@@ -45,7 +52,10 @@ function createActiveTabRunner(deps: EntryFrictionDeps, entryLabel: string): () 
     });
   return async () => {
     const tab = await queryActiveTab();
-    if (!tab?.id || !tab.url) return;
+    if (!tab?.id || !tab.url) {
+      await deps.notifyNoUrl?.();
+      return;
+    }
     // Capture the narrowed values in consts: the SingleFlight closure below
     // would otherwise lose the undefined narrowing on tab.id / tab.url.
     const tabId = tab.id;
@@ -116,8 +126,35 @@ export function createKeyboardCommandHandler(deps: EntryFrictionDeps): (command:
  * records the active tab — the typed text is how the user reaches keyword
  * mode, not a search term. The dashboard search hand-off needs the ?q=
  * deep link and stays in the M1/M3 input-selection wave.
+ *
+ * Unlike the keyboard command, the omnibox entry point never receives
+ * activeTab, so an unreadable URL is the common case rather than an edge.
+ * The default no-URL notifier surfaces that instead of staying silent; a
+ * setDefaultSuggestion here would be invisible because the dropdown is
+ * already closed on Enter, so the existing notification seam is used.
  */
 export function createOmniboxInputHandler(deps: EntryFrictionDeps): (text: string) => Promise<void> {
-  const runner = createActiveTabRunner(deps, 'Omnibox');
+  const runner = createActiveTabRunner(
+    { ...deps, notifyNoUrl: deps.notifyNoUrl ?? notifyNoUrlDefault },
+    'Omnibox',
+  );
   return (_text: string) => runner();
+}
+
+/**
+ * Default no-URL fallback for the omnibox entry point. Points at the
+ * context-menu entry, which receives the tab directly and does not need
+ * the unreadable URL.
+ */
+function notifyNoUrlDefault(): void {
+  NotificationHelper.show(
+    successOptions({
+      title: getMessageOr('omniboxNoUrlTitle', 'Cannot read the page URL'),
+      message: getMessageOr(
+        'omniboxNoUrlBody',
+        'Nothing was recorded. Right-click the page and record from the context menu instead.',
+      ),
+      iconUrl: NotificationHelper.getIconUrl(),
+    }),
+  );
 }
