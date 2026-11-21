@@ -110,6 +110,15 @@ export interface GatewayConfig<TType extends OutgoingMessage['type']> {
   /**
    * Optional pre-send hook (PBI 2026-11-20-04). Absent by default, so
    * gateways that declare no hook keep their exact current behavior.
+   *
+   * Budget contract: the hook runs inside its own timeout budget (same
+   * `timeoutMs` value as the send), and a hook failure returns a
+   * SendFailure instead of throwing. Worst case a hooked send waits up to
+   * about 2x `timeoutMs` (hook budget + send budget, sequential). This
+   * split keeps failures attributable (hook vs transport stay
+   * distinguishable); if preSend adopters appear, consider a dedicated
+   * hook budget measured from real hook durations instead of reusing
+   * the send budget.
    */
   preSend?: PreSendHook<GatewayPayload<TType>>;
 }
@@ -135,11 +144,14 @@ export interface Gateway<P, R extends { success: boolean }> {
 }
 
 /**
- * Declare a gateway. The returned `send` runs the optional `preSend` hook,
- * stamps the envelope, races it against the budget (per-call
- * `opts.timeoutMs` overrides the default, so recordPendingPage's override
- * keeps working), and normalizes via `asSuccessResponse` with the gateway's
- * invalid-message sentence.
+ * Declare a gateway. The returned `send` runs the optional `preSend` hook
+ * inside its own timeout budget, stamps the envelope, races the send
+ * against the budget (per-call `opts.timeoutMs` overrides the default, so
+ * recordPendingPage's override keeps working), and normalizes via
+ * `asSuccessResponse` with the gateway's invalid-message sentence.
+ * A hooked send therefore waits up to about 2x `timeoutMs` in the worst
+ * case (hook budget + send budget, sequential by design for failure
+ * attribution) — see the `preSend` field contract.
  * Retries stay off: extra attempts would extend past the documented timeout
  * contract (and stall under fake timers, which the timeout tests install).
  *
