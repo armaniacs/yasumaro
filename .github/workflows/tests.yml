@@ -151,6 +151,11 @@ jobs:
 
       - name: Build extension
         run: npm run build
+        env:
+          # E2E probe stays in CI builds (opt-in since PBI 2026-11-08-13).
+          # NOTE: omitting this dead-code-eliminates the probe and fails all
+          # probe-gated @extension specs with uniform startup timeouts.
+          OW_E2E_PROBE: '1'
 
       - name: Generate dev-server TLS certificate (gitignored fixture)
         run: openssl req -x509 -newkey rsa:2048 -keyout testDir/e2e/fixtures/dev-server-key.pem -out testDir/e2e/fixtures/dev-server-cert.pem -days 3650 -nodes -subj "/CN=localhost"
