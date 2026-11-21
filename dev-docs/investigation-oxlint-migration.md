@@ -80,10 +80,47 @@
   Group B の複雑な層/シームルールだけ ESLint に残す案Bと、案Cの「12個完全移植」の中間案も存在する。
   ただしユーザー方針は案C（実装変更可）。
 
+## 検証 PoC 結果（実測・2026-11-22）
+
+`npx` で oxlint 1.94.0 / `@oxlint/migrate` を一時実行し、依存を入れずに以下を確認した。
+
+### @oxlint/migrate の機械差分
+- `npx @oxlint/migrate eslint.config.js --details` → コアルール **6個のみ** 変換。
+  **自作12個 + `no-restricted-syntax` = 13個すべて "Not Implemented"**（予想どり、ネイティブ等価物なし）。
+- 変換済み6個: `no-restricted-imports`（layer制限の patterns）、`no-unused-vars`、
+  `typescript/no-explicit-any`、`vitest/expect-expect`、`vitest/valid-expect`、`no-self-compare`。
+  → layer制限のうち「素の import 禁止」は oxlint ネイティブの `no-restricted-imports` で表現可能。
+
+### JS プラグイン API 再現度（最小プラグインで実測）
+`jsPlugins` に最小プラグインを読み込ませ、自作ルールが依存する API を1つずつ probe:
+
+| API | 結果 |
+|---|---|
+| `context.sourceCode.getScope(node)` + scope 連鎖 | OK（depth 取得可） |
+| `context.sourceCode.getAncestors(node)` | OK（Program>Function>... 取得可） |
+| `context.sourceCode.getText(node)` | OK |
+| `node.parent` | OK（親ノード型取得可） |
+| `context.options` | OK（配列で取得可） |
+| `context.filename` | OK |
+
+→ **自作ルールが使う SourceCode/スコープ API はすべて oxlint JS プラグインで動作**。
+api oxc.rs の「Scope analysis サポート」と一致。
+
+### AST 差異（要書き換えの確定）
+- optional chain（`a?.b?.c`）は oxlint では **`ChainExpression` + `optional` フラグ**（ESTree準拠）。
+  旧 typescript-eslint の `OptionalMemberExpression` は出ない（実測 CHAIN=true OPTMEMBER=false）。
+  → `no-raw-storage` / `no-direct-console-log` の2個は `ChainExpression` 判定へ書き換え必須。
+
+### 結論（PoC）
+- 案C（12個完全移植）は**技術的に可行**。スコープ/文脈 API の再現度が最大リスクだったが、
+  実測で全て動作。書き換えは (1) プラグイン形式化（`meta.name` 必須）、
+  (2) 2個の `OptionalMemberExpression`→`ChainExpression`、
+  (3) allowlist を `.oxlintrc.json` の options へ載せ替え、の3点に限定される。
+- oxlint の type-aware（tsrs, 2026-11-17〜）は別途、typescript-eslint 不要で TS7 の型解析が可能。
+
 ## 次の具体ステップ（未着手・要承認）
 
-1. `npx oxlint` を dev 依存に入れず、現行設定を `@oxlint/migrate` で `.oxlintrc.json` に変換して
-   「12個中どこまでクレート/プラグインでカバーできるか」を機械的に差分。特に getScope/getAncestors の再現度。
+1. ~~`@oxlint/migrate` で機械差分~~ → **完了（上記）**。13個 Not Implemented、6個変換可。
 2. 再現度の結果で Group A（スコープ非依存寄り）から移植 PoC。
 3. 移植したルールを oxlint の RuleTester 相当（または vitest 上で oxlint JS プラグインを直接呼ぶ）で検証。
 4. `eslint`, `@typescript-eslint/*`, `eslint-plugin-*` を撤去し、`typescript` を 7 に。

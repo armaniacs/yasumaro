@@ -73,20 +73,23 @@ Scenario: TypeScript 7 が install できる
 
 ## 見積もり
 
-未確定（要チーム見積もり）。暫定 13 SP 相当（🔴高）:
-- 検証 PoC（@oxlint/migrate 差分）: 2
+暫定 **11 SP**（🔴高。PoC 実測で Group B のスコープ再現リスクが解消し 13→11 に下方修正）:
+- 検証 PoC（@oxlint/migrate 差分 + API probe）: 0（完了）
 - Group A 移植（スコープ非依存寄り・6個）: 3
-- Group B 移植（層/seam・スコープ/allow依存・3個）: 4
+- Group B 移植（層/seam・スコープ/allow依存・3個）: 3
 - Group C 移植（3個）＋ ChainExpression 正規化: 2
-- typescript-eslint 撤去 + TS7 + tsgo 切替: 2
+- typescript-eslint 撤去 + TS7 + tsgo 切替: 3
+
+前提: PoC で `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename` の
+全動作を確認済み。残コストは「プラグイン形式化（`meta.name`）」「2個の ChainExpression 正規化」
+「allowlist を `.oxlintrc.json` options へ載せ替え」「テストハーネス切替」が中心。
 
 ## 技術的考慮事項
 
 - 依存: oxlint（本体）、必要なら `oxlint-plugin-eslint`（`no-restricted-syntax` 相当）。
   `eslint-plugin-oxlint` は中間案（ESLint残置）選択時のみ。
-- 最大リスク: oxlint の JS プラグイン（alpha, 2026-03〜）が `context.sourceCode.getScope` /
-  `getAncestors` / `getText` / `context.options` / `context.filename` をどこまで再現するか。
-  再現度が低いと12個中9個（スコープ/文脈依存）の書き換えが必要になり工数増。
+- 最大リスク: ~~oxlint JS プラグインが getScope 等を再現するか~~ → **PoC で全動作確認済み（解消）**。
+  残るのは alpha 機能（2026-11 alpha）への依存リスクと、プラグイン形式化（`meta.name`）の手間。
 - AST差異: `OptionalMemberExpression`（非標準）は ESTree 準拠の oxlint で `ChainExpression`
   （`optional: true`）へ正規化が必要（no-raw-storage / no-direct-console-log の2個）。
 - SSOT: `utils-layer-boundary` の file lists は `scripts/lint-layers-docs.mjs` が SSOT 参照。
@@ -110,9 +113,12 @@ grep -rn "OptionalMemberExpression" eslint/rules/
 ```
 
 ### 段階的実装手順（案C: 全面移行）
-1. **検証 PoC**: `npx @oxlint/migrate eslint.config.js` で `.oxlintrc.json` を生成（依存は入れず）。
-   12個のカスタムルールがクレート/プラグインでカバーされるか、`getScope`/`getAncestors` の
-   再現度を機械的に差分。この結果で工数見積もりを確定し、本 PBI の SP を更新する。
+1. **検証 PoC**: ~~`npx @oxlint/migrate eslint.config.js` で `.oxlintrc.json` を生成~~ → **完了（2026-11-22 実測）**。
+   結果: コアルール6個のみ変換、自作12個 + `no-restricted-syntax` = 13個は "Not Implemented"（ネイティブ等価物なし）。
+   JSプラグイン最小 probe で `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename` の
+   全てが動作することを確認。optional chain は `ChainExpression`（ESTree準拠）で `OptionalMemberExpression` は出ない。
+   詳細は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md) の「検証 PoC 結果」。
+   → 案C は技術的に可行。SP を 13→**11** に下方修正（Group B のスコープ再現リスクが実測で解消）。
 2. **Group A 移植**（スコープ非依存寄り）: no-tautology-expect / no-fixed-wait / no-greedy-fake-timers /
    no-manual-protocol-version / require-sanitized-markdown / require-response-size-limit。
 3. **Group C**: no-dead-test-skip。＋ ChainExpression 正規化（no-raw-storage / no-direct-console-log）。
