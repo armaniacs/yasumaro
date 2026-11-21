@@ -51,8 +51,15 @@ export async function readE2EProbeState(context: BrowserContext): Promise<E2EPro
   return state ?? null;
 }
 
-/** Wait until the probe published its initial state (content script init). */
-export async function waitForE2EProbeInit(context: BrowserContext, timeout = 10000): Promise<E2EProbeState> {
+/**
+ * Wait until the probe published its initial state (content script init).
+ *
+ * The ceiling is generous on purpose: CI runners are shared 4-vCPU boxes
+ * with cold caches, and locally measured init ranges from 1.8s (warm) to
+ * 5.7s (cold) for the same page. This is a condition wait, not a fixed
+ * sleep, so fast machines resolve early and never pay the ceiling.
+ */
+export async function waitForE2EProbeInit(context: BrowserContext, timeout = 30000): Promise<E2EProbeState> {
   // Poll purely as a wait: its result cannot narrow the closure variable.
   await expect
     .poll(async () => readE2EProbeState(context), { timeout, intervals: [200] })

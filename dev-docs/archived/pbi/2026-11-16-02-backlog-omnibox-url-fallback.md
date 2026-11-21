@@ -1,6 +1,6 @@
 # PBI: omnibox経路で tab.url が読めない場合の明示的フォールバック
 
-- 状態: 未着手
+- 状態: ✅ 完了 (2026-11-20。runner に任意の `notifyNoUrl` hook を追加し、omnibox ハンドラだけが通知する。keyboard は無変更の無言。`setDefaultSuggestion` は Enter 時点で dropdown が閉じていて見えないため不採用)
 - 種別: 非機能追加 (UX の沈黙失敗の解消)
 - 見積もり: 1 SP
 - 起票日: 2026-11-16
@@ -30,5 +30,5 @@ Then 無言 return ではなく、利用者に分かる形 (通知または omni
 
 ## 完了条件
 
-- [ ] `tab.url` 空の場合に利用者可視のフィードバックがある
-- [ ] 既存テストが緑 (`npm run validate` の該当部分)
+- [x] `tab.url` 空の場合に利用者可視のフィードバックがある
+- [x] 既存テストが緑 (`npm run validate` の該当部分)

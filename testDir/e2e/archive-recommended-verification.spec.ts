@@ -318,7 +318,9 @@ test.describe('Archive recommended verifications (Y3/Y4/Y6/G3/G4/G5) @extension'
     await expect(async () => {
       const state = await readE2EProbeState(context);
       if (!state) throw new Error('extractor not ready');
-    }).toPass({ timeout: 10_000, intervals: [200] });
+      // Startup-only ceiling: shared CI runners boot the extension slowly
+      // (cold caches), while fast machines resolve this poll in ~2s.
+    }).toPass({ timeout: 30_000, intervals: [200] });
 
     // Trigger the engagement while archive_create is in flight: the worker
     // serial-queues both, so neither may block or fail the other. The cutoff

@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+### 修正
+
+- omnibox 起動でタブ URL が読めない場合、無言で終わらず通知で理由を返す（keyboard コマンドは従来どおり無言。`tabs` 権限の追加はしない）
+
+### 依存更新
+
+- 開発依存のminor/patch更新（`eslint` 10.14→10.15、`@typescript-eslint/*` 8.72.1→8.73.0、`vite` 8.3.6→8.3.8、`vitest` 5.1.0→5.1.1、`@vitest/coverage-v8` 5.1.0→5.1.1、`@playwright/test` 1.65.0→1.65.1、`jsdom` 31.0.0→31.0.1、`better-sqlite3` 13.0.3→13.2.0、`knip` 6.43.0→6.47.0、`@types/chrome` 0.3.6→0.3.7、`@subframe7536/sqlite-wasm` 1.4.0→1.4.1、`@peculiar/webcrypto` 1.7.1→1.7.2）。フルスイート・型・lint・ライセンス・ビルド緑で回帰なし。`@cyclonedx/cyclonedx-npm` 6.0.1→7.0.1（SBOM の CycloneDX 1.6 契約を `--spec-version 1.6` 明示で維持）。`typescript` 7 と `@peculiar/webcrypto` 2.0.0 は上流・実測待ちのため保留
+
 ### テスト
 
 - テストのDOM環境をjsdomからwasm-quickjs-domへ移行（422ファイルを機械置換、14ファイルは根拠つきでjsdomに退避。environmentフェーズを約49秒から約25.3秒に半減。`jsdomFileCount`ゲートをDOM環境ファイル数 `domFileCount`（426）に再定義）

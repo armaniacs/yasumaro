@@ -11,7 +11,7 @@ function readTestState(context: import('@playwright/test').BrowserContext) {
 }
 
 /** extractor 初期化（プローブ初回 publish）を待機 */
-function waitForExtractorInit(context: import('@playwright/test').BrowserContext, timeout = 10000) {
+function waitForExtractorInit(context: import('@playwright/test').BrowserContext, timeout = 30000) {
   return waitForE2EProbeInit(context, timeout);
 }
 

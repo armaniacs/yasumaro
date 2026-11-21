@@ -302,6 +302,27 @@ export interface SanitizeResult {
 }
 
 /**
+ * Prompt-markup encoding seam (ownership: prompt pipeline only).
+ *
+ * Display escaping is owned by escapeHtml (src/utils/htmlEscape.ts) and
+ * Obsidian note encoding by sanitizeForObsidian (src/utils/markdownSanitizer.ts);
+ * neither is reused here on purpose. Both encode a wider charset (`&`, `"`, ...),
+ * so routing this step through them would newly encode bare `&`/`"` and
+ * double-encode pre-encoded input (`&lt;` to `&amp;lt;`). That charset change is
+ * out of scope: this refactor is a pure move keeping the historic `<`/`>`-only
+ * behavior byte-identical. This seam pins the charset AND the application order
+ * in one place: it runs after injection filtering (so safe-context tag detection
+ * sees raw markup) and before whitespace normalization.
+ *
+ * Single-pass replace keeps byte output identical to the previous
+ * `<`-then-`>` chain: replacements are drawn from the original string, so the
+ * emitted `&` sequences are never rescanned.
+ */
+export function encodePromptMarkup(value: string): string {
+  return value.replace(/[<>]/g, (ch) => (ch === '<' ? '&lt;' : '&gt;'));
+}
+
+/**
  * コンテンツをサニタイズしてプロンプトインジェクションを防止する
  * @param {string} content - サニタイズするコンテンツ
  * @returns {SanitizeResult} サニタイズ結果
@@ -418,8 +439,10 @@ export function sanitizePromptContent(content: string): SanitizeResult {
     }
   );
 
-  // 3. HTMLエンティティ・タグのエスケープ（XSS一環）
-  sanitized = sanitized.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // 3. Prompt-markup encoding via the single pinned seam (ownership: prompt
+  // pipeline only, see encodePromptMarkup). Must stay after injection
+  // filtering so safe-context tag detection sees raw markup.
+  sanitized = encodePromptMarkup(sanitized);
 
   // 4. 過度な連続空白・改行の正規化
   sanitized = sanitized.replace(/\n\s*\n\s*\n/g, '\n\n').replace(/ {3,}/g, '  ');

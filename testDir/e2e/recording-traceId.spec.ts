@@ -120,9 +120,11 @@ test.describe('Recording traceId correlation @extension', () => {
     });
 
     await test.step('Wait for content script extractor initialization', async () => {
+      // Startup-only ceiling: shared CI runners boot the extension slowly
+      // (cold caches), while fast machines resolve this poll in ~2s.
       await expect.poll(
         async () => readE2EProbeState(context),
-        { timeout: 10000, intervals: [200] },
+        { timeout: 30000, intervals: [200] },
       ).toHaveProperty('minVisitDuration');
     });
 

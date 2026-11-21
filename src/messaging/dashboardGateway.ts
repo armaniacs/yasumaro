@@ -6,7 +6,6 @@
 import { errorMessage } from '../utils/errorUtils.js';
 import { logError, logWarn } from '../utils/logger/api.js';
 import { ErrorCode } from '../utils/logger/types.js';
-import { backoffDelayMs } from '../utils/backoff.js';
 import type { SleepFn } from '../utils/retryPredicate.js';
 import { categorizeError } from './sqliteRpcClient.js';
 import { sendWithPolicy } from './sendWithPolicy.js';
@@ -17,7 +16,9 @@ import {
   DASHBOARD_INNER_TRANSPORT_RETRIES,
   DASHBOARD_SQLITE_TIMEOUT_MESSAGE,
   DASHBOARD_SQLITE_TIMEOUT_MS,
-} from './sendRetryDefaults.js';
+  runWithRetryPolicy,
+} from './gatewayFactory.js';
+import type { GatewayRetryPolicy, RetryAttemptOutcome } from './gatewayFactory.js';
 import type { SqliteResult } from '../background/sqlite/offscreenGateway.js';
 export type { SqliteResult };
 import { MessageTransport, type TransportPort } from './messageTransport.js';
@@ -105,14 +106,14 @@ async function sendDashboardRaw<T extends DashboardSqliteRequest>(payload: T): P
 }
 
 /**
- * Attach a freshly issued confirmToken to the payload.
+ * Pre-send hook: attach a freshly issued confirmToken to the payload.
  *
  * The scope is re-derived from the payload on every call, so a token obtained
  * here always binds the parameters actually being sent — this is what keeps a
  * re-issue from widening the operation (a token for "archive before Sept 1"
  * can never authorize "archive everything").
  */
-async function withConfirmToken<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken: string }> {
+export async function dashboardPreSendHook<T extends DashboardSqliteRequest>(payload: T): Promise<T & { confirmToken: string }> {
   const action = payload.subtype;
   const id = (payload as unknown as { id?: number }).id;
   const scopeHash = await deriveScopeHash(payload.subtype, payload as Record<string, unknown>);
@@ -149,7 +150,7 @@ async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Prom
     return sendDashboardRaw(payload as T & { confirmToken?: string });
   }
 
-  const response = await sendDashboardRaw(await withConfirmToken(payload));
+  const response = await sendDashboardRaw(await dashboardPreSendHook(payload));
   if (!isConfirmTokenMismatch(response)) return response;
 
   // The token went missing between issuance and verification. The common cause
@@ -162,7 +163,7 @@ async function sendDashboard<T extends DashboardSqliteRequest>(payload: T): Prom
   // from the same payload, so the retry cannot authorize anything the first
   // attempt could not. One retry only — a second mismatch is a real rejection
   // and is surfaced to the caller.
-  return sendDashboardRaw(await withConfirmToken(payload));
+  return sendDashboardRaw(await dashboardPreSendHook(payload));
 }
 
 export class DashboardGateway {
@@ -179,46 +180,47 @@ export class DashboardGateway {
    * when a third retrying op appears.
    */
   async callDashboard<T extends DashboardSqliteRequest, R>(payload: T, decode: (response: Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) => R, defaultErrorMessage: string, retry?: DashboardRetryOptions): Promise<SqliteResult<R>> {
-    const attempts = Math.max(1, retry?.retryAttempts ?? DASHBOARD_GATEWAY_RETRY_ATTEMPTS);
-    const delayMs = retry?.retryDelayMs ?? DASHBOARD_GATEWAY_RETRY_DELAY_MS;
-    const sleep = retry?.sleep ?? defaultSleep;
-    const waitBetweenAttempts = (attempt: number): Promise<void> =>
-      sleep(backoffDelayMs(attempt, { baseMs: delayMs, multiplier: DASHBOARD_GATEWAY_RETRY_MULTIPLIER }));
-    for (let attempt = 0; attempt < attempts; attempt++) {
-      const last = attempt + 1 >= attempts;
-      let response: DashboardSqliteResponseFor<T['subtype']>;
-      try {
-        response = await sendDashboard(payload);
-      } catch (error) {
-        if (!last) {
-          // Constant inter-attempt delay via DASHBOARD_GATEWAY_RETRY_MULTIPLIER.
-          await waitBetweenAttempts(attempt);
-          continue;
+    // The retry series is a policy argument, not a private loop: the shared
+    // runner owns the loop and the constant inter-attempt delay via
+    // DASHBOARD_GATEWAY_RETRY_MULTIPLIER, while this method only decides per
+    // attempt whether the outcome is final. Defaults keep the long-standing
+    // single-attempt values, so omitting the argument changes nothing.
+    const policy: GatewayRetryPolicy = {
+      attempts: Math.max(1, retry?.retryAttempts ?? DASHBOARD_GATEWAY_RETRY_ATTEMPTS),
+      delayMs: retry?.retryDelayMs ?? DASHBOARD_GATEWAY_RETRY_DELAY_MS,
+      multiplier: DASHBOARD_GATEWAY_RETRY_MULTIPLIER,
+      sleep: retry?.sleep ?? defaultSleep,
+    };
+    return runWithRetryPolicy<SqliteResult<R>>(
+      policy,
+      async (isLast): Promise<RetryAttemptOutcome<SqliteResult<R>>> => {
+        let response: DashboardSqliteResponseFor<T['subtype']>;
+        try {
+          response = await sendDashboard(payload);
+        } catch (error) {
+          if (!isLast) return { action: 'retry' };
+          const classified = categorizeError(errorMessage(error));
+          // PBI 2026-09-18-06: logger seam (was console.error).
+          await logError(`${payload.subtype} failed`, { error: classified.message }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
+          return { action: 'return', result: { success: false, error: classified } };
         }
-        const classified = categorizeError(errorMessage(error));
-        // PBI 2026-09-18-06: logger seam (was console.error).
-        await logError(`${payload.subtype} failed`, { error: classified.message }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
-        return { success: false, error: classified };
-      }
-      if (!response.success) {
-        const retriable = (response as { retriable?: boolean }).retriable ?? false;
-        if (retriable && !last) {
-          await waitBetweenAttempts(attempt);
-          continue;
+        if (!response.success) {
+          const retriable = (response as { retriable?: boolean }).retriable ?? false;
+          if (retriable && !isLast) return { action: 'retry' };
+          const msg = String((response as { error?: string }).error || defaultErrorMessage);
+          // PBI 2026-09-18-06: logger seam (was console.warn).
+          await logWarn(`${payload.subtype} failed`, { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
+          return { action: 'return', result: { success: false, error: { kind: 'unknown', message: msg, retriable } } };
         }
-        const msg = String((response as { error?: string }).error || defaultErrorMessage);
-        // PBI 2026-09-18-06: logger seam (was console.warn).
-        await logWarn(`${payload.subtype} failed`, { error: msg }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
-        return { success: false, error: { kind: 'unknown', message: msg, retriable } };
-      }
-      try { return { success: true, data: decode(response as Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) }; } catch (error) {
-        const raw = errorMessage(error);
-        // PBI 2026-09-18-06: logger seam (was console.warn).
-        await logWarn(`${payload.subtype} decode failed`, { error: raw }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
-        return { success: false, error: { kind: 'unknown', message: raw, retriable: false } };
-      }
-    }
-    return { success: false, error: { kind: 'unknown', message: defaultErrorMessage, retriable: false } };
+        try { return { action: 'return', result: { success: true, data: decode(response as Extract<DashboardSqliteResponseFor<T['subtype']>, { success: true }>) } }; } catch (error) {
+          const raw = errorMessage(error);
+          // PBI 2026-09-18-06: logger seam (was console.warn).
+          await logWarn(`${payload.subtype} decode failed`, { error: raw }, ErrorCode.API_REQUEST_FAILURE, 'dashboardGateway');
+          return { action: 'return', result: { success: false, error: { kind: 'unknown', message: raw, retriable: false } } };
+        }
+      },
+      () => ({ success: false, error: { kind: 'unknown', message: defaultErrorMessage, retriable: false } }),
+    );
   }
 }
 

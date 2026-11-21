@@ -2388,6 +2388,12 @@
   "commandRecordPage": {
     "message": "Record the current page"
   },
+  "omniboxNoUrlBody": {
+    "message": "Nothing was recorded. Use the context menu on the page to record instead."
+  },
+  "omniboxNoUrlTitle": {
+    "message": "Cannot read the page URL"
+  },
   "omniboxRecordDefault": {
     "message": "Record this page"
   },

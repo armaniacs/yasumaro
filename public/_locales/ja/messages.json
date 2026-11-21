@@ -2325,6 +2325,12 @@
   "commandRecordPage": {
     "message": "現在のページを記録"
   },
+  "omniboxNoUrlBody": {
+    "message": "記録しませんでした。ページのコンテキストメニューから記録してください。"
+  },
+  "omniboxNoUrlTitle": {
+    "message": "ページのURLを読み取れませんでした"
+  },
   "omniboxRecordDefault": {
     "message": "このページを記録"
   },

@@ -14,17 +14,28 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
+
+RICE降順で実装。01 tab問い合わせ複製の解消とタイマ一元化 (Quick Win・parity12件・タイマ残留0) / 02 符号化所有の固定と順序回帰試験 (順序回帰20件・XSS系緑維持) / 03 PrivacyPipeline の純粋部切り出し (mock-free19件・parity14件) / 04 dashboard gateway の共通 seam 利用者化 (parity5件・wiring6件)。バッチ境界: 型検査緑・lint エラー0・軽量65ファイル1352件緑。最終ゲート: フル1342ファイル18911件緑・ビルド緑。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了。jsdom → wasm-quickjs-dom を 422 ファイルへ導入(退避 14 ファイルは根拠つき jsdom 維持)。フルスイート 1336/18835 全パス、environment フェーズ 49s→25.3s、A/B で DOM ファイル 1.76 倍速。ゲートを domFileCount(426)へ再定義。ADR 追記・validate 緑・供給網審査通過・ui-ux 根因 (document.body 更新漏れ) 確定。CI: validate 緑・license 866・test:perf within budget・wall 159.8s(4vCPU)。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録に留める。マージはレビュー待ち |
+| ~~01~~ | [2026-11-20-01-refactor-tab-fetch-unify.md](../dev-docs/archived/pbi/2026-11-20-01-refactor-tab-fetch-unify.md) | 🔧非機能追加 | 16.0 | S | ✅ 完了。askTab への統一、null契約・権限 ladder 不変。parity12件・タイマ残留0 |
+| ~~02~~ | [2026-11-20-02-refactor-sanitize-ownership.md](../dev-docs/archived/pbi/2026-11-20-02-refactor-sanitize-ownership.md) | 🔧非機能追加 | 4.8 | M | ✅ 完了。prompt 直接置換の除去と適用順序の固定 + 順序回帰試験20件。XSS 系緑維持 |
+| ~~03~~ | [2026-11-20-03-refactor-privacy-pipeline-split.md](../dev-docs/archived/pbi/2026-11-20-03-refactor-privacy-pipeline-split.md) | 🔧非機能追加 | 4.3 | M | ✅ 完了。buildPlan/applyMaskResult/formatCloudResult の純粋化 + mock-free 19件。executor は薄く |
+| ~~04~~ | [2026-11-20-04-refactor-dashboard-gateway-seam.md](../dev-docs/archived/pbi/2026-11-20-04-refactor-dashboard-gateway-seam.md) | 🔧非機能追加 | 2.0 | M | ✅ 完了。confirmToken を pre-send hook、再試行を policy 引数に。parity5件+wiring6件 |
 
-### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 02 | [2026-11-16-02-backlog-omnibox-url-fallback.md](2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ⬜ 未着手。omnibox経路の tab.url 空で無言 return。tabs 権限は ADR 却下のため、通知/サジェストでの可視化に限定 |
+| ~~01~~ | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](../dev-docs/archived/pbi/2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了（2026-11-20 アーカイブ済み）。jsdom → wasm-quickjs-dom を 422 ファイルへ導入、フルスイート全パス、environment フェーズ半減、domFileCount(426)へ再定義。PR #212 でマージ済み |
+
+### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~02~~ | [2026-11-16-02-backlog-omnibox-url-fallback.md](../dev-docs/archived/pbi/2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ✅ 完了。runner に任意 notifyNoUrl hook、omnibox のみ通知。keyboard 無言維持、tabs 権限追加なし |
 
 ### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
 
@@ -816,6 +827,21 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-20 omnibox fallback 01 アーカイブ ― 1件
+
+- **2026-11-16-02-backlog-omnibox-url-fallback**: omnibox 起動で tab.url が読めない場合に通知で理由を返す。runner に任意の `notifyNoUrl` hook を追加し、omnibox ハンドラだけが既存の通知 seam で可視化。keyboard は無言のまま。`setDefaultSuggestion` は Enter 時点で見えないため不採用。`tabs` 権限の追加なし。`npm run validate` の該当部分緑。
+
+### 2026-11-20 大局的改善ラウンド holistic-1120 ― 4件
+
+- **2026-11-20-01-refactor-tab-fetch-unify**: popup の tab問い合わせ複製を `withRuntimeTimeout` 利用の共有 helper `askTab` に統一。null契約・権限 ladder 不変。parity12件・タイマ残留0。`npm run validate` 緑（最終ゲート1342ファイル18911件）。
+- **2026-11-20-02-refactor-sanitize-ownership**: prompt直接置換を除去し共有 seam `encodePromptMarkup` 呼びに。適用順序を一箇所に固定＋順序回帰20件。XSS系緑維持、出力差分なし。
+- **2026-11-20-03-refactor-privacy-pipeline-split**: `buildPlan` / `applyMaskResult` / `formatCloudResult` を純粋化し mock-free 19件を追加。executor は薄く、throw+save 契約を明示。parity14件。
+- **2026-11-20-04-refactor-dashboard-gateway-seam**: confirmToken を pre-send hook、再試行を policy 引数に。外部契約不変。parity5件・wiring6件。
+
+### 2026-11-20 テスト DOM 環境の wasm-quickjs-dom 移行 ― 1件
+
+- **2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom**: jsdom → wasm-quickjs-dom を 422 ファイルへ導入（退避 14 ファイルは根拠つき jsdom 維持）。フルスイート 1336 ファイル / 18835 テスト全パス、environment フェーズ約 49 秒から約 25.3 秒に半減。ゲートを `domFileCount`（426）へ再定義。`npm run validate` 緑、test:perf within budget、CI validate 緑。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録。PR #212 でマージ済み。
 
 ### 2026-11-19 ミューテーションスコア残ディレクトリ アーカイブ ― 1件
 
