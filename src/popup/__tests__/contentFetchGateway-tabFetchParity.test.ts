@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 
