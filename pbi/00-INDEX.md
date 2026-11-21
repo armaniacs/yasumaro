@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-22 oxlint 全面移行 + TypeScript 7 同時移行の検討（1件・草案） ― ⬜ 未着手 🔧非機能追加
+
+typescript-eslint の peer 制約（`typescript <6.1.0`）が TS7 の install を ERESOLVE で止める現状を、lint を oxlint（型ベース lint の backend に tsgo = TS7 native を内蔵）へ全面移行し自作12ルールを移植することで根本解消する。前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---:|---|---|
+| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 13(暫定) | 草案。自作12ルール（テスト品質6/層seam3/セキュリティ3）を oxlint JS プラグインへ移植。最大リスクは getScope/getAncestors の再現度。要 @oxlint/migrate PoC。typescript-eslint を撤去して TS7 を実現するルート（ typescript-eslint 残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・13SPは旧2SPを包含・typedoc は共通ブロッカー） |
+
 ### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
 
 コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。`listen` 関数の 6 重定義、`parseIntOr` の単一ファイルローカル定義、`webhookExportSettings.ts` の save/load 重複要素取得、`aiSummaryCleansingSettingsV2.ts` の threshold 反復パターン、`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの 5 件。

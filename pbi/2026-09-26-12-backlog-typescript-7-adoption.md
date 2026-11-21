@@ -1,6 +1,15 @@
-# PBI: TypeScript 7 への移行（typescript-eslint 対応待ち）
+# PBI: TypeScript 7 への移行（typescript-eslint 残置ルート・上流対応待ち）
 
 **状態: 着手トリガー待ち。上流の対応リリースまで実装しない。**
+
+> **別ルートとの関係（2026-11-22）**: TS7 への到達手段は2ルートに分かれる。本 PBI は
+> **typescript-eslint を残したまま**上流対応を待つルート。これに対し
+> [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md)
+> は **typescript-eslint を oxlint へ撤去して TS7 の install ブロッカー自体を消す**ルート（案C）。
+> 後述のとおり `--legacy-peer-deps` 等の強行移行は typescript-eslint の CJS 依存クラッシュで
+> 不可能なため、「typescript-eslint を抜く」ことが TS7 の現実的な近道になり得る。
+> 本 PBI のトリガー②が発火した場合の中止は「TS7断念」ではなく「案C への切替」を指す（下記トリガー節参照）。
+> 両ルートに共通する残ブロッカーは `typedoc` の TS7 未対応（後述）。
 
 ## ユーザーストーリー
 
@@ -27,7 +36,7 @@
 いずれかが成立したら着手する:
 
 1. **上流リリース**: npm の `@typescript-eslint/eslint-plugin` で、peer 範囲に TypeScript 7.x を含む版がリリースされた
-2. **フォールバック裁定**: `--legacy-peer-deps` 運用や typescript-eslint の更新断念をユーザーが明示的に裁定した（その場合は移行を中止し、判断を記録してクローズする）
+2. **フォールバック裁定**: `--legacy-peer-deps` 運用や typescript-eslint の更新断念をユーザーが明示的に裁定した。かつては「移行を中止しクローズ」だったが、2026-11-22 以降は **案C（oxlint 移行、[2026-11-22-01](2026-11-22-01-chore-oxlint-migration-typescript7.md)）への切替**を意味する。「typescript-eslint 断念＝TS7 断念」ではない点に注意
 
 監視方法（発火判断の手順）:
 
