@@ -1,30 +1,35 @@
 # PBI: 2026-11-22-01-chore-oxlint-migration-typescript7
 
-> 状態: 草案（未着手・要見積もり）。本 PBI は oxlint 全面移行と TypeScript 7 同時移行を
-> 一体で扱う。前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)
-> に実読ベースで記録済み。着手前に「実装者向け注記」の検証手順を必ず実行すること。
+> 状態: Goal A 実装中（`refactor/oxlint-migration-impl` ブランチ）。本 PBI は当初 oxlint 全面移行と
+> TS7 同時移行を一体で扱ったが、なぜなぜ分析（[dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）
+> で **2つの独立した目的に分離** できると判明したため再構成した:
+> - **Goal A（本 PBI の主軸）**: TS7 アンブロック。ブロッカーは `@typescript-eslint/*`（peer `<6.1.0`）と
+>   `typedoc`（peer `6.0.x`）だけ。eslint コア(peer は jiti のみ)は無関係。RuleTester の parser を oxc アダプタへ
+>   差し替え、lint を oxlint へ寄せて typescript-eslint を外し、TS7 + tsgo へ。
+> - **Goal B（別 PBI に切り出し）**: eslint 完全撤去（RuleTester を自前ハーネス化、`eslint` コアも依存から削除）。
+>   TS7 には不要で、高速化/依存削減の副次目的。本 PBI では扱わない。
+>
+> 前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)（実読・PoC）、
+> 意思決定は [dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)。
 >
 > **旧PBI（typescript-eslint 残置ルート）との関係**: [2026-09-26-12-backlog-typescript-7-adoption.md](2026-09-26-12-backlog-typescript-7-adoption.md)
-> は typescript-eslint を残したまま上流対応を待つ別ルートで、本 PBI と併存する。同 PBI の実測
-> （TS7 は CJS exports 削除で `--legacy-peer-deps` でも typescript-estree がクラッシュ）が、
-> 「typescript-eslint を抜く」本ルートの根拠になっている。本 PBI の 13 SP は旧 PBI の 2 SP
-> （typescript/typescript-eslint/typedoc 同時更新のみ）を包含する。共通の残ブロッカーは
-> `typedoc`（TS7 peer 未対応）で、typescript-eslint を撤去しても docs ビルド経路の解決が別途必要。
+> は typescript-eslint を残したまま上流対応を待つ別ルート。同 PBI の実測（TS7 は CJS exports 削除で
+> `--legacy-peer-deps` でも typescript-estree がクラッシュ）が、本ルート（typescript-eslint を抜く）の根拠。
 
 ## ユーザーストーリー
 
-開発者として、lint を oxlint へ全面移行し typescript-eslint を撤去したい。なぜなら、
-typescript-eslint が `typescript <6.1.0` に peer 依存するため TypeScript 7 への install が
-ERESOLVE で失敗し、上流対応を待つ間ずっとツールチェーンが 6.0.x に固定されるから。
-oxlint は型ベース lint のバックエンドに tsgo（TypeScript 7 native）を内蔵するため、
-自作ルールを移植できれば TS7 の install ブロッカーを根本から除ける。
+開発者として、TypeScript 7 への install ブロッカー（`@typescript-eslint/*` と `typedoc` の peer 制約）を
+取り除きたい。なぜなら、これらが `typescript <6.1.0` / `6.0.x` に縛るため TS7 への install が ERESOLVE で
+失敗し、上流対応を待つ間ずっとツールチェーンが 6.0.x に固定されるから。lint を oxlint へ寄せ、
+RuleTester の parser を oxc アダプタへ差し替えれば、typescript-eslint を外して TS7 + tsgo にできる
+（eslint 完全撤去=Goal B は別 PBI）。
 
 ## ビジネス価値
 
-- TypeScript 7 の install ブロッカー（typescript-eslint の peer 制約）を解消し、将来の TS7 移行を即応化
+- TypeScript 7 の install ブロッカー（typescript-eslint + typedoc の peer 制約）を解消
 - lint を Rust ネイティブの oxlint に寄せ、`eslint .`（実測 ~17s）から高速化
-- ESLint + typescript-eslint + 各種 eslint-plugin の依存ツリーを撤去し、サプライチェーン面を縮小
 - 層/シーム強制（LAYERS.md）を単一の lint 設定（`.oxlintrc.json`）に集約し、二重管理を解消
+- （Goal B で eslint コアも外せばサプライチェーン面も縮小。本 PBI の範囲外）
 
 ## BDD 受け入れシナリオ
 
@@ -34,10 +39,11 @@ Scenario: oxlint が自作12ルール相当のゲートを維持する
   When   oxlint を lint スクリプトで実行する
   Then   層違反・seam迂回・テスト品質違反が従来どおり検出される
 
-Scenario: ESLint と typescript-eslint が依存から消える
+Scenario: TypeScript 7 のブロッカーだけが依存から消える
   Given package.json の devDependencies
-  When   npm ls eslint @typescript-eslint/parser を実行する
-  Then   いずれも解決されない（撤去完了）
+  When   npm ls @typescript-eslint/parser typedoc を実行する
+  Then   いずれも解決されない（TS7 ブロッカー撤去）
+  And    eslint コアは RuleTester 用に残ってよい（Goal B の対象）
 
 Scenario: TypeScript 7 が install できる
   Given typescript ^7 を devDependencies に指定した状態
@@ -48,12 +54,13 @@ Scenario: TypeScript 7 が install できる
 ## 受け入れ基準
 
 - [ ] 自作12ルール（A: テスト品質6 / B: 層・seam3 / C: セキュリティ3）が oxlint（JSプラグイン含む）で等価に動作する
-- [ ] `eslint` / `@typescript-eslint/*` / `eslint-plugin-*`（vitest含む）を devDependencies から撤去
-- [ ] `eslint.config.js` と `eslint/rules/**` を `.oxlintrc.json`（＋移植版プラグイン）へ置き換え
-- [ ] `lint` スクリプトが `oxlint` 単独（または oxlint + 最小限の ESLint 残置: 中間案選択時）になる
+- [ ] `lint` スクリプトが `oxlint` 主軸になる（`eslint.config.js` のロジックを `.oxlintrc.json` + 生成器へ）
+- [ ] `@typescript-eslint/parser` を RuleTester から oxc アダプタ（`eslint/oxc-parser-adapter.mjs`）へ差し替え、
+      `@typescript-eslint/eslint-plugin` を依存から撤去
 - [ ] `typescript` を ^7 に更新し、`type-check` が通る（tsc → tsgo 切替を含む）
+- [ ] `typedoc` の TS7 peer 未対応を解決（TS7 対応版 or docs 経路の分離）
 - [ ] `npm run validate` が green（type-check/test/lint/check-docs-chars 等すべて）
-- [ ] `typedoc` の TS7 peer 未対応を解決済み、または docs ビルド経路から除外
+- [ ] `eslint` コアの完全撤去は Goal B（別 PBI）。本 PBI では eslint コアを RuleTester 用に残してよい
 
 ## テスト戦略（t_wada スタイル）
 
@@ -73,19 +80,17 @@ Scenario: TypeScript 7 が install できる
 
 ## 見積もり
 
-暫定 **10 SP**（🔴高。Group A 移植 PoC で実コード・パリティ一致を確認し 11→10 に下方修正）:
-- 検証 PoC（@oxlint/migrate 差分 + API probe）: 0（完了）
-- Group A 移植（スコープ非依存寄り・6個）: 2（**PoC完了**: 12ルール無改造で oxlint 動作・実コードでパリティ一致）
-- Group B 移植（層/seam・スコープ/allow依存・3個）: 3
-- Group C 移植（3個）＋ ChainExpression 正規化: 2（**ChainExpression 正規化は未了**）
-- typescript-eslint 撤去 + TS7 + tsgo 切替 + .js fixture parser差異(TS8016)対処: 3
+暫定 **8 SP**（🔴高。Goal A に再構成し eslint 完全撤去=Goal B を切り出したため 10→8）:
+- lint 実装 PoC（oxlint-plugin + gen-oxlintrc + 実コードパリティ）: 0（完了）
+- RuleTester を oxc アダプタへ（`eslint/oxc-parser-adapter.mjs`）: 2（`import type` ケース PASS 実測済み）
+- lint を oxlint へ切替 + .js fixture parser差異(TS8016)対処: 2
+- `@typescript-eslint/eslint-plugin` 撤去（parser は oxc アダプタへ）: 1
+- typescript ^7 + type-check を tsgo へ + typedoc peer 解決: 3
 
-前提: `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename`/
-`messageId`+`meta.messages`+`data` の全動作を実測確認済み。**実コードで ESLint と local ルールの
-パリティ一致（両者1件）を確認済み**。足場は `eslint/oxlint-plugin.mjs` + `scripts/gen-oxlintrc.mjs`
-（`eslint.config.js` を SSOT に `.oxlintrc.json` を生成）。
-残コストは「2個の ChainExpression 正規化」「テストハーネス（RuleTester）を oxlint 互換へ」
-「.js fixture の parser 差異(TS8016)」「eslint 依存撤去 + tsgo 切替」が中心。
+前提（すべて実測確認済み）: oxlint JS プラグイン API 全動作、実コードで ESLint と local パリティ一致、
+oxc-parser を `range:true` + loc 復元 + tokens/comments 空付与で ESLint parser 化可能（RuleTester 動作）。
+残コストは「RuleTester の oxc アダプタ化」「lint を oxlint へ」「TS7+tsgo+typedoc」が中心。
+Goal B（eslint 完全撤去・自前テストハーネス化）は別 PBI で別途見積もり。
 
 ## 技術的考慮事項
 
@@ -115,38 +120,31 @@ grep -rln "getScope\|getAncestors\|context.filename\|context.options" eslint/rul
 grep -rn "OptionalMemberExpression" eslint/rules/
 ```
 
-### 段階的実装手順（案C: 全面移行）
-1. **検証 PoC**: ~~`npx @oxlint/migrate eslint.config.js` で `.oxlintrc.json` を生成~~ → **完了（2026-11-22 実測）**。
-   結果: コアルール6個のみ変換、自作12個 + `no-restricted-syntax` = 13個は "Not Implemented"（ネイティブ等価物なし）。
-   JSプラグイン最小 probe で `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename` の
-   全てが動作することを確認。optional chain は `ChainExpression`（ESTree準拠）で `OptionalMemberExpression` は出ない。
-   詳細は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md) の「検証 PoC 結果」。
-    → 案C は技術的に可行。SP を 13→**11** に下方修正（Group B のスコープ再現リスクが実測で解消）。
-2. **Group A 移植**（スコープ非依存寄り）: no-tautology-expect / no-fixed-wait / no-greedy-fake-timers /
-   no-manual-protocol-version / require-sanitized-markdown / require-response-size-limit。
-   → **PoC完了（2026-11-22）**: `eslint/oxlint-plugin.mjs` で12ルールを無改造ロード、
-   `scripts/gen-oxlintrc.mjs` で `eslint.config.js`→`.oxlintrc.json` を生成し、実コードで
-   ESLint と local ルールのパリティ一致（両者1件）を確認。SP 11→10。
-   残: テストハーネス（RuleTester）を oxlint 互換へ切替。
-3. **Group C**: no-dead-test-skip。＋ ChainExpression 正規化（no-raw-storage / no-direct-console-log）。
-   ※ 現状 2個は `OptionalMemberExpression` 判定のままだが、現コードに optional chain 違反が無く
-   パリティは成立。正式移植で `ChainExpression`（optional フラグ）判定へ改める。
-4. **Group B**（最難関）: utils-layer-boundary / no-raw-storage / no-direct-console-log。
-   スコープ解析（isLocalChrome/isLocalConsole）と allow（file/reason）を移植。
-   （allow は既に gen-oxlintrc が eslint.config.js から転記済み。）
-5. **撤去**: `eslint` / `@typescript-eslint/*` / `eslint-plugin-*` を devDependencies から削除、
-   `eslint.config.js`・`eslint/rules/**`・`eslint/__tests__/**` を削除または移植版へ置換。
-   `lint` スクリプトを oxlint へ。`gen-oxlintrc.mjs` の SSOT を eslint.config.js から
-   移植後の設定へ向け先変更。`.js` fixture（test-pages）の parser 差異(TS8016)を解消。
-6. **TS7**: `typescript` を ^7 に、`type-check` を tsgo へ切替。`typedoc` の TS7 peer を解決
-   （tsgo 対応版 or docs 経路の分離）。
+### 段階的実装手順（Goal A: TS7 アンブロック）
+1. **検証 PoC**: ~~`npx @oxlint/migrate` で機械差分~~ → **完了（2026-11-22 実測）**。
+   コアルール6個のみ変換、自作13個は Not Implemented。JSプラグイン API（getScope/getAncestors/
+   getText/node.parent/context.options/context.filename/messageId）の全動作を確認。
+   optional chain は `ChainExpression`（ESTree準拠）。詳細は investigation-oxlint-migration.md。
+2. **lint の実装 PoC**: ~~12ルールを oxlint JS プラグイン経由で実コードパリティ~~ → **完了（2026-11-22）**。
+   `eslint/oxlint-plugin.mjs`（12ルール無改造ロード）+ `scripts/gen-oxlintrc.mjs`（eslint.config.js→
+   .oxlintrc.json 生成、allow/ignores 転記）で ESLint と local パリティ一致（両者1件）。
+3. **RuleTester の parser を oxc 化**: `eslint/oxc-parser-adapter.mjs` を新設（oxc-parser を
+   `range:true` + ソースから loc 復元 + tokens/comments 空付与で ESLint parser 化）。
+   `utils-layer-boundary.test.ts` の `@typescript-eslint/parser` をこれへ差替。
+   残り13テストは JS スニペットで espree のままでよい。`import type` ケースが PASS することを実測済み。
+4. **lint 切替**: `lint` スクリプトを `oxlint` へ。`eslint.config.js` は lint 用途を卒業
+   （RuleTester 用に eslint コアは残す）。`gen-oxlintrc.mjs` の SSOT を段階的に移譲。
+   `.js` fixture（test-pages）の parser 差異(TS8016)を解消。
+5. **typescript-eslint 撤去**: `@typescript-eslint/eslint-plugin` を依存から削除（parser は 3 で
+   oxc アダプタへ置換済み）。`@typescript-eslint/*` が二度と install を止めないことを確認。
+6. **TS7 + tsgo**: `typescript` を ^7 に、`type-check` を tsgo へ切替。`typedoc` の TS7 peer を解決
+   （TS7 対応版 or docs 経路の分離）。
 7. `npm run validate` を green にし、lint before/after 時間を PR に添付。
+   `eslint` コアの完全撤去（Goal B）は本 PBI の範囲外。
 
-### 中間案（案B）との分岐
-- 検証 PoC で `getScope`/`getAncestors` の再現度が低く Group B 移植が過大と判断された場合、
-  Group A/C のみ oxlint へ逃がし Group B を ESLint 残置する中間案に切替える。
-  その場合 typescript-eslint が残るため TS7 の install ブロッカーは残る（TS7 は別 PBI 送り）。
-  この分岐はユーザーが明示的に裁定する。
+### Goal B（別 PBI・本 PBI 範囲外）
+- eslint コアの依存撤去、RuleTester を自前ハーネス（vitest で oxc アダプタ直接呼び）へ、
+  `eslint.config.js`/`eslint/rules/**`/`eslint/__tests__/**` の整理。TS7 には不要な高速化/依存削減。
 
 ### 落とし穴
 - `context.filename` による seam/test 除外ゲートは、oxlint でファイル文脈の取得方法が

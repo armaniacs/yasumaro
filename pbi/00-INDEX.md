@@ -14,13 +14,13 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-22 oxlint 全面移行 + TypeScript 7 同時移行の検討（1件・草案） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-22 oxlint 移行 + TypeScript 7 アンブロック（1件） ― 🔶 部分実装（PoC完了・Goal A実装中） 🔧非機能追加
 
-typescript-eslint の peer 制約（`typescript <6.1.0`）が TS7 の install を ERESOLVE で止める現状を、lint を oxlint（型ベース lint の backend に tsgo = TS7 native を内蔵）へ全面移行し自作12ルールを移植することで根本解消する。前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)。
+typescript-eslint（peer `typescript <6.1.0`）+ typedoc（peer `6.0.x`）が TS7 の install を ERESOLVE で止める現状を、lint を oxlint へ寄せ RuleTester の parser を oxc アダプタへ差替えて typescript-eslint を外し TS7 を実現する（Goal A）。なぜなぜ分析（[dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）で eslint 完全撤去=Goal B と分離。前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---|---|
-| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 10(PoC済) | oxlint移植。12ルール無改造で oxlint JSプラグイン経由動作、実コードでESLintとlocal パリティ一致(両者1件)。eslint.config.js→.oxlintrc.json生成器+プラグイン足場あり。残: ChainExpression正規化/テストハーネス/eslint撤去+TS7(tsgo)。typescript-eslint撤去ルート(残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・typedoc共通) |
+| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 8(Goal A) | TS7アンブロック(Goal A)。lint→oxlint、RuleTesterのparserをoxcアダプタへ差替えtypescript-eslint撤去、TS7+tsgo。oxcアダプタでRuleTester動作を実測確認済み。eslint完全撤去=Goal Bは別PBI。 typescript-eslint撤去ルート(残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・typedoc共通) |
 
 ### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
 
