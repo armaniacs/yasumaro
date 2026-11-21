@@ -20,7 +20,7 @@ typescript-eslint の peer 制約（`typescript <6.1.0`）が TS7 の install �
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---|---|
-| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 11(PoC済) | 草案。自作12ルールを oxlint JS プラグインへ移植。@oxlint/migrate PoC 済: コア6個のみ変換・自作13個 Not Implemented、getScope/getAncestors/getText/parent/options/filename 全動作確認、optional chain は ChainExpression。typescript-eslint 撤去で TS7 実現（残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・typedoc は共通ブロッカー） |
+| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 10(PoC済) | oxlint移植。12ルール無改造で oxlint JSプラグイン経由動作、実コードでESLintとlocal パリティ一致(両者1件)。eslint.config.js→.oxlintrc.json生成器+プラグイン足場あり。残: ChainExpression正規化/テストハーネス/eslint撤去+TS7(tsgo)。typescript-eslint撤去ルート(残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・typedoc共通) |
 
 ### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
 

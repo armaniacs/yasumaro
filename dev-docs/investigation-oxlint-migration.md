@@ -118,10 +118,37 @@ api oxc.rs の「Scope analysis サポート」と一致。
   (3) allowlist を `.oxlintrc.json` の options へ載せ替え、の3点に限定される。
 - oxlint の type-aware（tsrs, 2026-11-17〜）は別途、typescript-eslint 不要で TS7 の型解析が可能。
 
+## 実装 PoC 結果: 実コードで ESLint と local ルールのパリティ一致（2026-11-22）
+
+`refactor/oxlint-migration-impl` ブランチで、既存12ルールを**無改造**で oxlint JS プラグイン
+（`eslint/oxlint-plugin.mjs`, `meta.name='local'`）経由でロードし、実コードで ESLint と比較した。
+
+- **成果物（このブランチの足場）**:
+  - `eslint/oxlint-plugin.mjs` ― 既存12ルールをそのまま re-export する oxlint プラグイン。
+    `messageId` + `meta.messages` + `data` が oxlint で動作することを実測済み（probe）。
+  - `scripts/gen-oxlintrc.mjs` ― `eslint.config.js`（SSOT）から `.oxlintrc.json` を生成。
+    local/* ブロックの `files`・`excludeFiles`（=ESLintの`ignores`）・`rules` 設定（allow含む）を
+    そのまま転記。allow 追加が ESLint 変更に追従する構造で、パリティが手コピーでなく構造的に保証される。
+  - `.oxlintrc.json` ― 生成物（5 override ブロック・14 local ルールエントリ）。
+- **パリティ結果**: 実コード全体で **ESLint local 違反 1件 / oxlint local 違反 1件で完全一致**
+  （いずれも `local/no-greedy-fake-timers: 1`。他11ルールは両者とも 0）。
+  → ファイルスコープ・テスト除外・allowlist を含め、12ルールが oxlint で ESLint と同結果。
+- **既知の差異（local ルール無関係・ESLint撤去フェーズで対処）**:
+  - `TS(8016)`: `testDir/e2e/test-pages/**/*.js` は .js 拡張子のまま TS 構文を持つ fixture。
+    ESLint は当該ブロックに TS parser を割り当ててパースするが、oxlint は .js として厳格パースし
+    `Type assertion expressions can only be used in TypeScript files` を出す。parser 設定の差異であり、
+    自作ルールの移植とは独立。
+- **ChainExpression 未書き換えの含意**: `no-raw-storage`/`no-direct-console-log` は現状
+  `OptionalMemberExpression` 判定のまま。現コードベースでは optional chain 経由の違反が無いため
+  パリティは成立しているが、将来 `chrome.storage.local?.get()` のような optional chain 付き
+  直接呼び出しが混入すると見逃す。正式移植時に `ChainExpression`（`optional` フラグ）判定へ改める。
+
 ## 次の具体ステップ（未着手・要承認）
 
-1. ~~`@oxlint/migrate` で機械差分~~ → **完了（上記）**。13個 Not Implemented、6個変換可。
-2. 再現度の結果で Group A（スコープ非依存寄り）から移植 PoC。
+1. ~~`@oxlint/migrate` で機械差分~~ → **完了**。13個 Not Implemented、6個変換可。
+2. ~~Group A 移植 PoC~~ → **完了**。12ルール無改造で oxlint 動作・実コードでパリティ一致を確認。
+   残作業は「2個の ChainExpression 正規化」と「テストハーネス（RuleTester）を oxlint 互換へ」。
 3. 移植したルールを oxlint の RuleTester 相当（または vitest 上で oxlint JS プラグインを直接呼ぶ）で検証。
 4. `eslint`, `@typescript-eslint/*`, `eslint-plugin-*` を撤去し、`typescript` を 7 に。
    `type-check` は tsc ではなく tsgo（TS7 native）へ。`typedoc` の TS7 peer 未対応は別途評価。
+   撤去時に `.js` fixture の parser 差異（TS8016）と `eslint.config.js` SSOT の移譲先を決定する。

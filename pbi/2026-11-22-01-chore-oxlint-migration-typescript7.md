@@ -73,16 +73,19 @@ Scenario: TypeScript 7 が install できる
 
 ## 見積もり
 
-暫定 **11 SP**（🔴高。PoC 実測で Group B のスコープ再現リスクが解消し 13→11 に下方修正）:
+暫定 **10 SP**（🔴高。Group A 移植 PoC で実コード・パリティ一致を確認し 11→10 に下方修正）:
 - 検証 PoC（@oxlint/migrate 差分 + API probe）: 0（完了）
-- Group A 移植（スコープ非依存寄り・6個）: 3
+- Group A 移植（スコープ非依存寄り・6個）: 2（**PoC完了**: 12ルール無改造で oxlint 動作・実コードでパリティ一致）
 - Group B 移植（層/seam・スコープ/allow依存・3個）: 3
-- Group C 移植（3個）＋ ChainExpression 正規化: 2
-- typescript-eslint 撤去 + TS7 + tsgo 切替: 3
+- Group C 移植（3個）＋ ChainExpression 正規化: 2（**ChainExpression 正規化は未了**）
+- typescript-eslint 撤去 + TS7 + tsgo 切替 + .js fixture parser差異(TS8016)対処: 3
 
-前提: PoC で `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename` の
-全動作を確認済み。残コストは「プラグイン形式化（`meta.name`）」「2個の ChainExpression 正規化」
-「allowlist を `.oxlintrc.json` options へ載せ替え」「テストハーネス切替」が中心。
+前提: `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename`/
+`messageId`+`meta.messages`+`data` の全動作を実測確認済み。**実コードで ESLint と local ルールの
+パリティ一致（両者1件）を確認済み**。足場は `eslint/oxlint-plugin.mjs` + `scripts/gen-oxlintrc.mjs`
+（`eslint.config.js` を SSOT に `.oxlintrc.json` を生成）。
+残コストは「2個の ChainExpression 正規化」「テストハーネス（RuleTester）を oxlint 互換へ」
+「.js fixture の parser 差異(TS8016)」「eslint 依存撤去 + tsgo 切替」が中心。
 
 ## 技術的考慮事項
 
@@ -118,15 +121,23 @@ grep -rn "OptionalMemberExpression" eslint/rules/
    JSプラグイン最小 probe で `getScope`/`getAncestors`/`getText`/`node.parent`/`context.options`/`context.filename` の
    全てが動作することを確認。optional chain は `ChainExpression`（ESTree準拠）で `OptionalMemberExpression` は出ない。
    詳細は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md) の「検証 PoC 結果」。
-   → 案C は技術的に可行。SP を 13→**11** に下方修正（Group B のスコープ再現リスクが実測で解消）。
+    → 案C は技術的に可行。SP を 13→**11** に下方修正（Group B のスコープ再現リスクが実測で解消）。
 2. **Group A 移植**（スコープ非依存寄り）: no-tautology-expect / no-fixed-wait / no-greedy-fake-timers /
    no-manual-protocol-version / require-sanitized-markdown / require-response-size-limit。
+   → **PoC完了（2026-11-22）**: `eslint/oxlint-plugin.mjs` で12ルールを無改造ロード、
+   `scripts/gen-oxlintrc.mjs` で `eslint.config.js`→`.oxlintrc.json` を生成し、実コードで
+   ESLint と local ルールのパリティ一致（両者1件）を確認。SP 11→10。
+   残: テストハーネス（RuleTester）を oxlint 互換へ切替。
 3. **Group C**: no-dead-test-skip。＋ ChainExpression 正規化（no-raw-storage / no-direct-console-log）。
+   ※ 現状 2個は `OptionalMemberExpression` 判定のままだが、現コードに optional chain 違反が無く
+   パリティは成立。正式移植で `ChainExpression`（optional フラグ）判定へ改める。
 4. **Group B**（最難関）: utils-layer-boundary / no-raw-storage / no-direct-console-log。
    スコープ解析（isLocalChrome/isLocalConsole）と allow（file/reason）を移植。
+   （allow は既に gen-oxlintrc が eslint.config.js から転記済み。）
 5. **撤去**: `eslint` / `@typescript-eslint/*` / `eslint-plugin-*` を devDependencies から削除、
    `eslint.config.js`・`eslint/rules/**`・`eslint/__tests__/**` を削除または移植版へ置換。
-   `lint` スクリプトを oxlint へ。
+   `lint` スクリプトを oxlint へ。`gen-oxlintrc.mjs` の SSOT を eslint.config.js から
+   移植後の設定へ向け先変更。`.js` fixture（test-pages）の parser 差異(TS8016)を解消。
 6. **TS7**: `typescript` を ^7 に、`type-check` を tsgo へ切替。`typedoc` の TS7 peer を解決
    （tsgo 対応版 or docs 経路の分離）。
 7. `npm run validate` を green にし、lint before/after 時間を PR に添付。
