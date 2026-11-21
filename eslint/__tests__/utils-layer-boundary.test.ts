@@ -7,13 +7,14 @@
  * mentions of chrome.*).
  */
 import { createRepeatSafeRuleTester } from './repeatSafeRuleTester.js';
-import tsParser from '@typescript-eslint/parser';
+import oxcParser from '../oxc-parser-adapter.mjs';
 import utilsLayerBoundary from '../rules/utils-layer-boundary.mjs';
 
 const ruleTester = createRepeatSafeRuleTester({
   languageOptions: {
-    // TS parser: the `import type` allowance case needs TS syntax.
-    parser: tsParser,
+    // oxc parser: the `import type` allowance case needs TS syntax, and oxc
+    // parses TS natively without the typescript-eslint peer that pins TS <6.1.0.
+    parser: oxcParser,
   },
 });
 

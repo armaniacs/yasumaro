@@ -103,6 +103,7 @@
     "jsdom": "^31.0.1",
     "knip": "^6.47.0",
     "license-checker": "^25.0.1",
+    "oxc-parser": "0.156.0",
     "ts-node": "^10.9.2",
     "typedoc": "^0.28.20",
     "typescript": "^6.0.3",
