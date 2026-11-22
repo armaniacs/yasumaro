@@ -10,6 +10,7 @@ import { archivePreview, archiveCreate, archiveCleanup, archiveExportChunk, arch
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { downloadBlob } from '../../exportLogsService.js';
 import { abortPanelAction, runPanelAction, unwrapServiceResult } from '../panelAction.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { cutoffMsFromLocalDate, assertCutoffPair } from '../../../utils/archiveGuards.js';
 import { tOrKey as localized } from '../../../utils/i18n.js';
@@ -69,7 +70,7 @@ export function mountArchiveLifecycle(deps: ArchiveLifecycleDeps): void {
       onBusy: setAriaBusy,
       onStart: () => showStatus(statusTarget(statusEl), localized('archiveStatusWorking'), 'success'),
       run: async () => {
-        const cutoffDate = dateInput?.value ?? '';
+        const cutoffDate = getValue(dateInput);
         const cutoffMs = cutoffMsFromInput();
         return unwrapServiceResult(await archivePreview(cutoffDate, cutoffMs, includeDeletedInput?.checked === true));
       },
@@ -86,7 +87,7 @@ export function mountArchiveLifecycle(deps: ArchiveLifecycleDeps): void {
   });
 
   createBtn?.addEventListener('click', () => {
-    const cutoffDate = dateInput?.value ?? '';
+    const cutoffDate = getValue(dateInput);
     void runPanelAction({
       buttons: controls,
       onBusy: setAriaBusy,
@@ -132,7 +133,7 @@ export function mountArchiveLifecycle(deps: ArchiveLifecycleDeps): void {
       onBusy: setAriaBusy,
       run: async () => {
         if (!staging.lastStagingName) throw new Error(localized('archiveDateRequired'));
-        const cutoffDate = dateInput?.value ?? '';
+        const cutoffDate = getValue(dateInput);
         const confirmed = await showConfirmDialog({
           title: localized('archivePurgeConfirmTitle'),
           message: localized('archivePurgeConfirmMessage', {

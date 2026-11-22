@@ -35,8 +35,9 @@ Scenario: テキスト入力が存在しない場合は空文字列を返す
 ## 受け入れ基準
 - [x] `src/utils/settingsFormBinding.ts` に `getChecked(element, fallback?)` と `getValue(element, fallback?)` の最小ヘルパーを追加（要素参照型。ID ベースではなく既存の要素参照に適合。スキーマ駆動への全面移行ではなく最小ヘルパー方式を採用）
 - [x] 分散していた `?.checked ?? false` / `?.value ?? ''` パターンのうち PBI 指定の 16 件（`gistSettings.ts` 2、`webhookExportSettings.ts` 1、`trustSettings.ts` 3、`contentSettings.ts` 3、`privacyConsentController.ts` 1、`aiSummaryCleansingSettingsV2.ts` 6）をヘルパーに置換（`.trim()` 連鎖や `parseIntOr` 引数の `?.value` は対象外。`parseIntOr` 呼出側は PBI 02 の範囲）
+- [x] 残存の等価形 18 件を追加移行（`masterPassword.ts` 1、`priorityListView.ts` 4、`markdownTemplateManager.ts` 2、`settingsForm.ts` 1、`generalSettingsPanel.ts` 1、`generalSettingsLayout.ts` 1、`archiveSessionPanel.ts` 1、`archiveLifecyclePanel.ts` 3、`askHistoryPanelView.ts` 1、`tagCooccurrenceTablePanel.ts` 1、`savedCollectionsPanelView.ts` 1、`sqliteHistoryPanelView.ts` 1）。非文字列 fallback（数値既定）と `=== ''` 比較式の非 `??` 部は対象外として記録
 - [x] `npm run type-check` が pass する
-- [x] 対象ファイルに関連する既存テストがすべて pass する（10ファイル195件）＋新規ヘルパー単体 4 件
+- [x] 対象ファイルに関連する既存テストがすべて pass する（15ファイル224件）＋新規ヘルパー単体 4 件。なお移行直後のフル検証で settingsPipeline.test.ts の vi.mock が getValue 未定義で3件失敗したため、mock に実等価の getChecked/getValue を追加して 26/26 緑を確認（/tmp/whywhy-mock-gap.md。今後は module への新規 import 追加時に `grep vi.mock <module>` を必須化）
 
 ## テスト戦略（t_wada スタイル）
 

@@ -13,7 +13,6 @@ export function escapeRegExp(str: string): string {
 /**
  * `parseInt` with NaN fallback. Invalid input yields `fallback`
  * instead of NaN propagating into settings/storage.
- * (Moved from aiSummaryCleansingSettingsV2.ts during DRY 02.)
  */
 export function parseIntOr(value: string | null | undefined, fallback: number): number {
   const parsed = parseInt(value ?? '', 10);

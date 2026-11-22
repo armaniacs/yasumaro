@@ -11,15 +11,16 @@
  * tsc-ran sanity: a crashed or failed tsc must not read as a 0-count pass.
  * Measured tsc 7.0.2 (tsgo, native) semantics invert the 6.x convention: type
  * errors exit 1, a no-inputs/config break (TS18002/TS18003/TS6053) exits 2, a
- * spawn failure leaves no exit status. The "Found N errors" summary line is
- * only emitted in pretty mode (where ANSI wrapping breaks the error-line
- * regex), so the summary cannot be the sanity signal. The gate therefore
- * refuses to evaluate when tsc did not run to completion, when it exited
- * non-zero without reporting any TS error, or when TS errors were counted
- * with an exit code other than 1 (a config break also counts its TS line but
- * exits 2, so the code distinguishes it). Residual hole: a crash that exits
- * exactly 1 after emitting a partial error list is indistinguishable from a
- * complete run and still passes.
+ * spawn failure leaves no exit status. tsc runs with --pretty so a countable
+ * "Found N errors" summary line is always emitted; ANSI codes are stripped
+ * before matching, so pretty formatting does not break the error-line regex.
+ * The gate therefore refuses to evaluate when tsc did not run to completion,
+ * when it exited non-zero without reporting any TS error, when TS errors were
+ * counted with an exit code other than 1 (a config break also counts its TS
+ * line but exits 2, so the code distinguishes it), or when the error count
+ * does not match the summary (a crash that exits 1 after a partial list
+ * either omits the summary or reports a different total, so the mismatch
+ * refuses evaluation).
  *
  * Total-count limitation (evaluateBaseline): the comparison is count-only, so
  * an offsetting change (remove one old error, add one new) and a count drop
@@ -44,9 +45,18 @@ import { readFileSync } from 'node:fs';
 const ROOT = new URL('..', import.meta.url).pathname;
 const DEFAULT_BASELINE = new URL('../testDir/type-check-baseline.json', import.meta.url).pathname;
 
+export function stripAnsi(output) {
+    return output.replace(/\[[0-9;]*m/g, '');
+}
+
 export function countTypeErrors(output) {
-    const lines = output.match(/^.+error TS\d+.+$/gm);
+    const lines = stripAnsi(output).match(/^.+error TS\d+.+$/gm);
     return lines === null ? 0 : lines.length;
+}
+
+export function countSummaryErrors(output) {
+    const summary = stripAnsi(output).match(/^Found (\d+) errors?\b/m);
+    return summary === null ? null : Number(summary[1]);
 }
 
 export function evaluateBaseline(actual, maxErrors) {
@@ -76,7 +86,7 @@ export function runTsc() {
     }
     try {
         return {
-            output: execFileSync('npx', ['tsc', '--project', 'testDir/tsconfig.json', '--noEmit'], {
+            output: execFileSync('npx', ['tsc', '--project', 'testDir/tsconfig.json', '--noEmit', '--pretty'], {
                 cwd: ROOT,
                 encoding: 'utf8',
                 stdio: ['ignore', 'pipe', 'pipe'],
@@ -110,6 +120,15 @@ export function assertTscRan(run, counted) {
             ok: false,
             message: `tsc exited with code ${run.exitCode} while ${counted} TS error lines were counted — expected exit 1 for a completed type check under tsc 7 (config breaks exit 2), refusing to evaluate`,
         };
+    }
+    if (counted > 0) {
+        const summary = countSummaryErrors(run.output);
+        if (summary === null || summary !== counted) {
+            return {
+                ok: false,
+                message: `tsc output looks truncated: counted ${counted} TS error lines but the summary reports ${summary === null ? 'no total' : summary} — refusing to evaluate`,
+            };
+        }
     }
     return { ok: true, message: '' };
 }

@@ -1,5 +1,5 @@
 import { type PanelLifecycle } from '../types.js';
-import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
+import { loadSettingsToInputs, getValue } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
 import { type Settings } from '../../../utils/storage/types.js';
@@ -97,7 +97,7 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
         undefined,
         undefined,
         undefined,
-        () => aiProviderSelect?.value ?? '',
+        () => getValue(aiProviderSelect),
       );
       setupObsidianHostValidation(container.querySelector('#obsidianHost') as HTMLInputElement | null);
       setupGeminiApiVersionValidation(container.querySelector('#geminiApiVersion') as HTMLInputElement | null);

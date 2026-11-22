@@ -9,7 +9,7 @@
 
 import { type Settings, StorageKeys } from '../../../utils/storage/types.js';
 import { settingsRepository } from '../../../utils/storage/SettingsRepository.js';
-import { loadSettingsToInputs } from '../../../utils/settingsFormBinding.js';
+import { loadSettingsToInputs, getValue } from '../../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../../utils/settingsSchemas.js';
 import { updateProviderSettingsLayout, hideAllProviderSettings, restoreOriginalProviderSettingsLayout } from '../../aiProviderLayoutManager.js';
 import { getAiProviderElements, setupAIProviderChangeListener, updateAIProviderVisibilityMulti } from '../../settings/aiProvider.js';
@@ -99,7 +99,7 @@ export function createAiProviderLayoutController(deps: AiProviderLayoutDeps): Ai
     // A-layout only: B owns its accordion DOM and never reparents #*Settings.
     if (currentLayout === 'b') return;
     const selected = PRIORITY_SELECT_IDS.map(
-      (id) => (document.getElementById(id) as HTMLSelectElement | null)?.value ?? '',
+      (id) => getValue(document.getElementById(id) as HTMLSelectElement | null),
     );
     updateAIProviderVisibilityMulti(getAiProviderElements(), selected);
     updateProviderSettingsLayout(selected);

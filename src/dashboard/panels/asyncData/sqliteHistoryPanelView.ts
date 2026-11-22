@@ -1,4 +1,5 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import {
   formatLocalDate,
 } from '../../../utils/localDate.js';
@@ -612,7 +613,7 @@ export function wireEntryList(
     if (!Number.isInteger(entryId)) return;
     el.addEventListener('click', () => {
       const select = entryEl?.querySelector('.regenerate-mode-select') as HTMLSelectElement | null;
-      const raw = select?.value ?? 'current';
+      const raw = getValue(select, 'current');
       // Single source of truth for the mode vocabulary (same list the
       // validator checks) — a future fourth mode cannot be dropped here only.
       const mode: RegenerateCleanseMode = (REGENERATE_CLEANSE_MODES as readonly string[]).includes(raw)

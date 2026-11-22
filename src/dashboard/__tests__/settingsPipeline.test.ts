@@ -42,6 +42,11 @@ vi.mock('../../utils/settingsFormBinding.js', () => ({
   extractSettingsFromInputs: vi.fn(),
   extractLocalMarkdownExportTiming: vi.fn(),
   isProviderConnectionField: (key: string) => /_(base_url|model|api_key)$/i.test(key),
+  // Shared null-safe readers (real behavior — keep in sync with the module).
+  getChecked: (element: { checked?: boolean } | null | undefined, fallback = false) =>
+    element?.checked ?? fallback,
+  getValue: (element: { value?: string } | null | undefined, fallback = '') =>
+    element?.value ?? fallback,
 }));
 
 vi.mock('../../utils/settingsSchemas.js', () => ({

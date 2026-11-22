@@ -14,6 +14,7 @@
  */
 
 import { tOrKey as t } from '../../../utils/i18n.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
@@ -517,7 +518,7 @@ export function renderSavedCollectionsRegion(
         const input = row?.querySelector<HTMLInputElement>('.saved-collection-rename-input');
         const error = row?.querySelector<HTMLElement>('.saved-collection-rename-error');
         void (async () => {
-          const result = await actions.onRename(id, input?.value ?? '');
+          const result = await actions.onRename(id, getValue(input));
           if (!result.ok && error) error.textContent = result.error ?? t('savedCollectionSaveError');
         })();
         return;

@@ -285,8 +285,11 @@ describe('piiSanitizer', () => {
       const elapsedTime = Date.now() - startTime;
 
       // 事前フィルタにより中間の49800文字がスキャン対象から除外されるため、
-      // 対策前（同サイズで数秒〜十数秒）と比べ大幅に高速に完了する
-      expect(elapsedTime).toBeLessThan(500);
+      // 対策前（同サイズで数秒〜十数秒）と比べ大幅に高速に完了する。
+      // 閾値根拠（2026-11-22 実測）: 正常系は単独約110ms・フルスイート負荷時でも
+      // 最大518ms。保護無効の劣化版は約4000msで赤になることを確認済みのため、
+      // 2000ms は両者の中間に位置し、検出力を保ったまま負荷変動を吸収する。
+      expect(elapsedTime).toBeLessThan(2000);
     });
 
     test('still detects legitimate PII around an extra-long chunk', async () => {

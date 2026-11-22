@@ -15,10 +15,16 @@
  *  - loc: oxc emits start/end offsets only. ESLint rules and SourceCode need
  *    `node.loc` (line/column) and `node.range`, so loc is reconstructed from a
  *    line-offset table.
- *  - tokens/comments: ESLint's SourceCode expects `ast.tokens` / `ast.comments`.
- *    The 12 local rules query scope, text, ancestors, parent, options and filename
- *    only — none call the token APIs — so empty tokens are sufficient. A rule that
- *    starts using sourceCode.getTokens* would need a real tokenizer here.
+ *  - scope/tokens: the oxc-parser JS binding exposes no scope analysis, so
+ *    scopeManager is null; tokens are an empty array. Measured reachability
+ *    (2026-11-22 spike): the only adapter consumer,
+ *    utils-layer-boundary.test.ts, never invokes getScope (its chrome.*
+ *    fixtures do not reach isLocalChrome), and no local rule calls getTokens*
+ *    (getText uses range, which is provided). A future test that reaches
+ *    getScope fails loudly with TypeError (fail-closed); only token APIs
+ *    would silently pass on empty arrays, so a rule starting to use
+ *    sourceCode.getTokens* needs a real tokenizer or an explicit
+ *    unsupported error here first.
  */
 import { parseSync, visitorKeys } from 'oxc-parser';
 
@@ -86,7 +92,8 @@ export function parseForESLint(code, options = {}) {
   const lineMap = buildLineMap(code);
   const program = result.program;
   decorate(program, lineMap);
-  // ESLint SourceCode reads these unconditionally; the 12 rules need no tokens.
+  // ESLint SourceCode reads these unconditionally; no current local rule
+  // calls the token APIs, so empty tokens are sufficient (see header).
   program.tokens = program.tokens || [];
   program.comments = (result.comments || []).map((c) => {
     decorate(c, lineMap);

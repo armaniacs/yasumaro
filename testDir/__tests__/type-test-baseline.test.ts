@@ -20,12 +20,13 @@ const SCRIPT = resolve(__dirname, '../../scripts/check-type-test-baseline.mjs');
 
 let dir: string;
 
-function stubOutput(name: string, errorLines: number): string {
+function stubOutput(name: string, errorLines: number, summary?: number | null): string {
     const lines: string[] = [];
     for (let i = 0; i < errorLines; i++) {
         lines.push(`src/example${i}.test.ts(1,1): error TS2532: Object is possibly 'undefined'.`);
     }
     lines.push('non-error summary line without a code');
+    if (summary !== null) lines.push(`Found ${summary ?? errorLines} errors in 1 file.`);
     const path = join(dir, name);
     writeFileSync(path, lines.join('\n'), 'utf-8');
     return path;
@@ -101,6 +102,20 @@ describe('type-test baseline gate', () => {
         const { exit, output } = runChecker(489, stubOutput('cfg-break.txt', 1), '2');
         expect(exit).toBe(1);
         expect(output).toContain('expected exit 1');
+    });
+
+    it('fails when the summary line is missing (truncated output)', () => {
+        // A crash that exits 1 after a partial list omits the summary —
+        // without the completeness check it would evaluate below the pin.
+        const { exit, output } = runChecker(489, stubOutput('partial.txt', 1, null), '1');
+        expect(exit).toBe(1);
+        expect(output).toContain('looks truncated');
+    });
+
+    it('fails when the error count disagrees with the summary total', () => {
+        const { exit, output } = runChecker(489, stubOutput('mismatch.txt', 2, 5), '1');
+        expect(exit).toBe(1);
+        expect(output).toContain('looks truncated');
     });
 
     it('pins a finite non-negative number', () => {

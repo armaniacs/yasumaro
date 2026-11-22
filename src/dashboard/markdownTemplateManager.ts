@@ -24,6 +24,7 @@ import {
 } from '../utils/markdownTemplateUtils.js';
 import type { MarkdownExportTemplate, MarkdownTemplateEntryData } from '../utils/types.js';
 import { getMessageOr } from '../utils/i18n.js';
+import { getValue } from '../utils/settingsFormBinding.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { buildPromptItemRow } from './settings/customPromptManager.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
@@ -323,8 +324,8 @@ export function createMarkdownTemplateManager(): MarkdownTemplateManager {
     return {
       id,
       name,
-      fileTemplate: dom?.fileInput?.value ?? '',
-      entryTemplate: dom?.entryInput?.value ?? '',
+      fileTemplate: getValue(dom?.fileInput),
+      entryTemplate: getValue(dom?.entryInput),
       isDefault: false,
       createdAt: 0,
       updatedAt: 0,

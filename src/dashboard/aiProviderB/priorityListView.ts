@@ -1,6 +1,7 @@
 import type { ProviderSlot } from '../../utils/storage/types.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { clearElement } from '../../utils/domClear.js';
+import { getValue } from '../../utils/settingsFormBinding.js';
 import { getRegistryEntry } from '../../background/ai/providerCatalog.js';
 import { renderProviderOptions } from '../aiProviderCatalogView.js';
 
@@ -42,9 +43,9 @@ export function collectBProviderPrioritySlots(container: HTMLElement): ProviderS
   rows.forEach(row => {
     const select = row.querySelector<HTMLSelectElement>('select');
     const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
-    const provider = (select?.value ?? '').trim();
+    const provider = getValue(select).trim();
     if (!provider) return;
-    const modelRaw = (input?.value ?? '').trim();
+    const modelRaw = getValue(input).trim();
     // Auto-resolved display values (storage setting / catalog default) must NOT
     // be persisted as explicit models — omit them so the default keeps applying.
     const autoResolved = input?.dataset.resolved === 'true';
@@ -64,10 +65,10 @@ export function validateBContainer(container: HTMLElement): { valid: boolean; du
   const dupSet = new Set<number>();
   rows.forEach((row, rowIdx) => {
     const select = row.querySelector<HTMLSelectElement>('select');
-    const provider = (select?.value ?? '').trim();
+    const provider = getValue(select).trim();
     if (!provider) return;
     const input = row.querySelector<HTMLInputElement>('input.b-priority-model-input');
-    const model = (input?.value ?? '').trim();
+    const model = getValue(input).trim();
     const key = `${provider}::${model ?? ''}`;
     if (seen.has(key)) {
       dupSet.add(rowIdx);

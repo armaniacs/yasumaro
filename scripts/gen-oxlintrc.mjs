@@ -90,7 +90,6 @@ for (const block of flatConfig) {
 
   const rules = {};
   const plugins = new Set();
-  let hasJsPluginRule = false;
   for (const [id, config] of Object.entries(block.rules)) {
     const t = translateRule(id, config);
     if (!t) {
@@ -99,7 +98,6 @@ for (const block of flatConfig) {
     }
     rules[t.id] = t.config;
     if (t.plugin) plugins.add(t.plugin);
-    if (t.id.startsWith('local/')) hasJsPluginRule = true;
   }
   if (Object.keys(rules).length === 0) continue;
 
@@ -109,7 +107,6 @@ for (const block of flatConfig) {
   if (excludes.length > 0) override.excludeFiles = excludes;
   if (plugins.size > 0) override.plugins = [...plugins];
   overrides.push(override);
-  void hasJsPluginRule;
 }
 
 // --- oxlint-specific overrides (intentionally NOT in eslint.config.js) ---
@@ -162,5 +159,8 @@ if (process.argv.includes('--stdout')) {
   );
   if (unmigratable.size > 0) {
     process.stderr.write(`WARNING unmigrated rules: ${[...unmigratable].join(', ')}\n`);
+    // Fail closed: a silently dropped rule would leave oxlint greener than the
+    // SSOT intent. Intentional exclusions must be handled in translateRule.
+    process.exitCode = 1;
   }
 }

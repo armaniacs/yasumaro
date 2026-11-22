@@ -33,6 +33,7 @@ import {
   MAX_TAG_CLUSTER_TAGS,
 } from '../../../utils/computeLimits.js';
 import { parseTagsForDisplay } from '../../../utils/tagUtils.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { fetchPeriodRows } from '../fetchPeriodRows.js';
 import { PanelNotices } from '../PanelNotices.js';
@@ -193,7 +194,7 @@ export function createTagCooccurrenceTablePanel(): PanelLifecycle {
   function renderFromCache(): void {
     if (!cachedGraph) return;
     notices.resetForReaggregate();
-    renderTable(cachedGraph, tagSelect?.value ?? '');
+      renderTable(cachedGraph, getValue(tagSelect));
   }
 
   const lifecycle = createAsyncDataPanelLifecycle({

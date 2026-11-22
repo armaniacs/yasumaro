@@ -11,6 +11,7 @@ import { archiveQuery, archiveUpdate, archiveSave, archiveClose, archiveStatus, 
 import { showConfirmDialog } from '../../utils/confirmDialog.js';
 import { abortPanelAction, runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { focusTrapManager } from '../../../utils/ui/focusTrap.js';
 import { tOrKey as localized } from '../../../utils/i18n.js';
@@ -55,7 +56,7 @@ export function mountArchiveSessionViewer(deps: ArchiveSessionViewerDeps): Archi
   const renderSessionList = async (): Promise<void> => {
     const staging = sessionStore.getSessionName();
     if (!staging || !sessionListEl) return;
-    const { rows } = unwrapServiceResult(await archiveQuery(staging, sessionQueryInput?.value ?? '', 100, 0));
+    const { rows } = unwrapServiceResult(await archiveQuery(staging, getValue(sessionQueryInput), 100, 0));
     if (!rows.length) {
       sessionListEl.textContent = localized('archiveSessionEmpty');
       return;

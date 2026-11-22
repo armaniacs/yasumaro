@@ -10,7 +10,7 @@
 
 import { StorageKeys, ProviderSlot, type Settings } from '../../utils/storage/types.js';
 import { settingsRepository, type SettingsReader } from '../../utils/storage/SettingsRepository.js';
-import { loadSettingsToInputs, loadLocalMarkdownExportTiming } from '../../utils/settingsFormBinding.js';
+import { loadSettingsToInputs, loadLocalMarkdownExportTiming, getValue } from '../../utils/settingsFormBinding.js';
 import { GENERAL_SETTINGS_SCHEMA } from '../../utils/settingsSchemas.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
@@ -210,7 +210,7 @@ export function updateRetentionUnlimitedWarning(): void {
   // `?? '365'` on daysEl was dead: a null element read as '365', which never
   // equals the Unlimited value ''. The `?? ''` on maxEl is load-bearing — a
   // missing max-records select reads as Unlimited (''), so keep it.
-  const unlimited = daysEl?.value === '' && (maxEl?.value ?? '') === '';
+  const unlimited = daysEl?.value === '' && getValue(maxEl) === '';
   warning.hidden = !unlimited;
 }
 

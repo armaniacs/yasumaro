@@ -14,13 +14,24 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-22 oxlint 移行 + TypeScript 7 アンブロック（1件） ― 🔶 部分実装（PoC完了・Goal A実装中） 🔧非機能追加
+### 2026-11-22 oxlint 移行 + TypeScript 7 アンブロック（1件） ― 🔶 実装済み・レビュー待ち（Goal A 完了） 🔧非機能追加
 
 typescript-eslint（peer `typescript <6.1.0`）+ typedoc（peer `6.0.x`）が TS7 の install を ERESOLVE で止める現状を、lint を oxlint へ寄せ RuleTester の parser を oxc アダプタへ差替えて typescript-eslint を外し TS7 を実現する（Goal A）。なぜなぜ分析（[dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）で eslint 完全撤去=Goal B と分離。前提調査は [dev-docs/investigation-oxlint-migration.md](../dev-docs/investigation-oxlint-migration.md)。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---|---|
 | 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 8(Goal A) | TS7アンブロック(Goal A)。lint→oxlint、RuleTesterのparserをoxcアダプタへ差替えtypescript-eslint撤去、TS7+tsgo。oxcアダプタでRuleTester動作を実測確認済み。eslint完全撤去=Goal Bは別PBI。 typescript-eslint撤去ルートで旧残置ルート [2026-09-26-12](../dev-docs/archived/pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を解消済み（アーカイブ）・typedoc共通 |
+
+### 2026-11-22 レビュー指摘フォロー＋残存適用拡大（5件） ― 🔶 実装済み・レビュー待ち 🔧非機能追加
+
+checking-team レビューと自律クローズで出たフォロー項目。残存 `?.checked`/`?.value` の適用拡大、タイミング flake の閾値見直し、baseline 部分出力検出、oxc-adapter の到達範囲文書化。優先順位の全体像は [2026-11-22-00-backlog-leftover-reprioritize.md](2026-11-22-00-backlog-leftover-reprioritize.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 02 | [2026-11-22-02-fix-pii-sanitizer-timing-flake.md](2026-11-22-02-fix-pii-sanitizer-timing-flake.md) | 🔧非機能追加 | - | 1 | タイミング assertion を 500ms→2000ms（分布実測＋劣化版で赤確認）。実装済み・レビュー待ち |
+| 03 | [2026-11-22-03-backlog-oxc-adapter-scope-support.md](2026-11-22-03-backlog-oxc-adapter-scope-support.md) | 🔧非機能追加 | - | 3 | spike で方針確定（文書化のみ。実スコープは oxc JS 非公開のため見送り）。実装済み・レビュー待ち |
+| 04 | [2026-11-22-04-backlog-baseline-gate-partial-output.md](2026-11-22-04-backlog-baseline-gate-partial-output.md) | 🔧非機能追加 | - | 2 | --pretty＋集約照合で部分出力を拒否。stub 行列11件緑。実装済み・レビュー待ち |
+| 05 | [2026-11-22-05-refactor-trim-idiom-unification.md](2026-11-22-05-refactor-trim-idiom-unification.md) | 🔧非機能追加 | - | 1 | trim 連鎖の getValue 統一＋残存18件の適用拡大。実装済み・レビュー待ち |
 
 ### 2026-11-21 DRY/KISS 重複コード解消（5件） ― 🔶 実装済み・レビュー待ち 🔧非機能追加
 

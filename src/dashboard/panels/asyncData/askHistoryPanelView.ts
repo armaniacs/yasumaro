@@ -13,6 +13,7 @@
  */
 
 import { tOrKey as t } from '../../../utils/i18n.js';
+import { getValue } from '../../../utils/settingsFormBinding.js';
 import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
@@ -115,7 +116,7 @@ export function renderAskHistoryRegion(
     void (async () => {
       const question = questionInput.value.trim();
       if (question === '') return;
-      const collectionId = targetSelect?.value ?? '';
+      const collectionId = getValue(targetSelect);
       await runRegionAction(
         askButton,
         (message) => showAskStatus(region, message),

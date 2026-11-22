@@ -9,6 +9,7 @@
 import { getMessage, getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { errorMessage } from '../utils/errorUtils.js';
+import { getChecked } from '../utils/settingsFormBinding.js';
 import {
   calculatePasswordStrength
 } from '../utils/masterPassword.js';
@@ -472,7 +473,7 @@ export class MasterPasswordController {
     }
 
     dom.setMasterPasswordNowBtn?.addEventListener('click', async () => {
-      this.preToggleChecked = dom.masterPasswordEnabled?.checked ?? false;
+      this.preToggleChecked = getChecked(dom.masterPasswordEnabled);
       if (dom.masterPasswordEnabled) dom.masterPasswordEnabled.checked = true;
       await this.beginSetOrChange();
     });
