@@ -1,7 +1,20 @@
-import tsParser from '@typescript-eslint/parser';
-import tsPlugin from '@typescript-eslint/eslint-plugin';
-import vitestPlugin from '@vitest/eslint-plugin';
-import localPlugin from './eslint/plugin.mjs';
+
+/**
+ * Lint rule manifest (SSOT) consumed by scripts/gen-oxlintrc.mjs.
+ *
+ * This file is no longer executed by ESLint: `npm run lint` runs oxlint against
+ * the generated .oxlintrc.json. It is kept as the single source of lint intent
+ * because the local/* rules and their allowlists (no-raw-storage,
+ * no-direct-console-log, utils-layer-boundary) are large data that must not be
+ * hand-copied into .oxlintrc.json. gen-oxlintrc reads only `files`, `ignores`
+ * (-> excludeFiles) and `rules`; the eslint-execution concerns (languageOptions
+ * parser, plugins) were removed with @typescript-eslint (Goal A) and are
+ * re-supplied by the generator (typescript/vitest plugins, oxc parsing).
+ *
+ * Rule ids are expressed in the executor's vocabulary where they differ:
+ * `typescript/no-explicit-any` (oxlint native), `no-unused-vars` /
+ * `no-restricted-imports` (shared core ids), `vitest/*`, and `local/*`.
+ */
 
 export default [
   {
@@ -22,20 +35,9 @@ export default [
   {
     files: ['src/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-      },
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-      local: localPlugin,
-    },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': [
+      'typescript/no-explicit-any': 'error',
+      'no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
@@ -90,9 +92,6 @@ export default [
       // DI composition root: the factory that builds the singleton once.
       'src/background/compositionManifest.ts',
     ],
-    languageOptions: {
-      parser: tsParser,
-    },
     rules: {
       'no-restricted-syntax': [
         'error',
@@ -114,12 +113,6 @@ export default [
     // (migration, session, queue, crypto, engine, diagnostics) stay direct.
     files: ['src/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsParser,
-    },
-    plugins: {
-      local: localPlugin,
-    },
     rules: {
       'local/no-raw-storage': [
         'error',
@@ -272,12 +265,6 @@ export default [
     // logInfo/logWarn/logError/logDebug/logCritical from src/utils/logger/api.js.
     files: ['src/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsParser,
-    },
-    plugins: {
-      local: localPlugin,
-    },
     rules: {
       'local/no-direct-console-log': [
         'error',
@@ -333,13 +320,6 @@ export default [
     // 同意ロジックは src/utils/storage/privacyConsent.ts の中立層に配置済み。
     files: ['src/background/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-      },
-    },
     rules: {
       'no-restricted-imports': [
         'warn',
@@ -369,10 +349,8 @@ export default [
     // scoped to content without sharing its warn severity with the UI ban.
     files: ['src/background/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: { parser: tsParser },
-    plugins: { '@typescript-eslint': tsPlugin },
     rules: {
-      '@typescript-eslint/no-restricted-imports': ['error', {
+      'no-restricted-imports': ['error', {
         patterns: [{
           group: ['**/content/*', '**/content/**', '**/content.js'],
           message: 'background 層から content 層への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md.',
@@ -398,13 +376,6 @@ export default [
     // 別セグメント名には誤検出しないことを matcher で確認済み。
     files: ['src/wasm/**/*.ts', 'src/offscreen/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: {
-      parser: tsParser,
-      parserOptions: {
-        project: './tsconfig.json',
-        tsconfigRootDir: process.cwd(),
-      },
-    },
     rules: {
       'no-restricted-imports': ['error', {
         patterns: [{
@@ -417,12 +388,9 @@ export default [
   {
     files: ['src/messaging/**/*.ts'],
     ignores: ['src/**/__tests__/**'],
-    languageOptions: { parser: tsParser },
-    plugins: { '@typescript-eslint': tsPlugin },
     rules: {
       // Core rule cannot exempt `import type`; the TS variant can.
-      'no-restricted-imports': 'off',
-      '@typescript-eslint/no-restricted-imports': ['error', {
+      'no-restricted-imports': ['error', {
         patterns: [{
           group: ['**/background/**'],
           allowTypeImports: true,
@@ -434,14 +402,8 @@ export default [
   {
     files: ['**/*.ts'],
     ignores: ['src/**/*.ts'],
-    languageOptions: {
-      parser: tsParser,
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-    },
     rules: {
-      '@typescript-eslint/no-unused-vars': [
+      'no-unused-vars': [
         'error',
         { argsIgnorePattern: '^_', varsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' },
       ],
@@ -452,14 +414,6 @@ export default [
     // PBI 2026-10-05-03: vitest hygiene rules also cover the vitest suites
     // outside src/** so fixed sleeps cannot accumulate unwatched there.
     files: ['src/**/__tests__/**/*.test.ts', 'testDir/__tests__/**/*.test.ts', 'eslint/__tests__/**/*.test.ts'],
-    languageOptions: {
-      parser: tsParser,
-    },
-    plugins: {
-      '@typescript-eslint': tsPlugin,
-      vitest: vitestPlugin,
-      local: localPlugin,
-    },
     rules: {
       // testPiiDetection (piiSanitizer-optimization.test.ts) and expectParity
       // (extended-patterns-parity.test.ts) wrap the real expect() calls, so
@@ -509,9 +463,6 @@ export default [
     // half-configured type-aware project ― that would break src/**'s
     // `project: './tsconfig.json'` resolution in the same flat config.
     files: ['testDir/**/*.{ts,js,mjs}', 'bench/**/*.{ts,js,mjs}'],
-    plugins: {
-      local: localPlugin,
-    },
     rules: {
       'local/no-fixed-wait': 'error',
       // PBI 2026-10-05-03: no-fixed-wait covers member calls only
@@ -530,8 +481,5 @@ export default [
     // the page (never bundled), so they keep a .js extension while carrying
     // TypeScript syntax. Without the TS parser they fail to parse at all.
     files: ['testDir/e2e/test-pages/**/*.js'],
-    languageOptions: {
-      parser: tsParser,
-    },
   },
 ];

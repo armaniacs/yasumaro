@@ -8,14 +8,14 @@
  * two can be compared for parity before eslint is removed.
  *
  * Translation map (eslint.config.js id -> oxlint id):
- *   @typescript-eslint/no-explicit-any       -> typescript/no-explicit-any  (+plugin typescript)
- *   @typescript-eslint/no-unused-vars        -> no-unused-vars
- *   @typescript-eslint/no-restricted-imports -> no-restricted-imports (allowTypeImports kept)
- *   no-restricted-imports                     -> no-restricted-imports
- *   no-self-compare                           -> no-self-compare
- *   vitest/expect-expect / valid-expect       -> same (+plugin vitest)
- *   no-restricted-syntax (SettingsRepository) -> local/no-settings-repository-direct
- *   local/*                                    -> local/*
+ *   typescript/no-explicit-any                -> typescript/no-explicit-any (+plugin typescript)
+ *   @typescript-eslint/no-explicit-any         -> typescript/no-explicit-any (legacy alias)
+ *   no-unused-vars                             -> no-unused-vars
+ *   no-restricted-imports                       -> no-restricted-imports (allowTypeImports kept)
+ *   no-self-compare                             -> no-self-compare
+ *   vitest/expect-expect / valid-expect         -> same (+plugin vitest)
+ *   no-restricted-syntax (SettingsRepository)   -> local/no-settings-repository-direct
+ *   local/*                                      -> local/*
  *
  * `files` and `ignores` (-> excludeFiles) are copied verbatim, so the parity is
  * structural, not hand-copied: a change in eslint.config.js flows through on the
@@ -51,7 +51,7 @@ function severity(level) {
 function translateRule(id, config) {
   // Returns { id, config, plugin } or null when a rule has no oxlint equivalent
   // and is not the one no-restricted-syntax selector this repo uses.
-  if (id === '@typescript-eslint/no-explicit-any') {
+  if (id === 'typescript/no-explicit-any' || id === '@typescript-eslint/no-explicit-any') {
     return { id: 'typescript/no-explicit-any', config: severity(config), plugin: 'typescript' };
   }
   if (id === '@typescript-eslint/no-unused-vars' || id === 'no-unused-vars') {
