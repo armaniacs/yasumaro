@@ -9,15 +9,17 @@
  * raising it or adding tsconfig excludes to hide errors is not.
  *
  * tsc-ran sanity: a crashed or failed tsc must not read as a 0-count pass.
- * Measured tsc 6.0.3 semantics: type errors exit 2, a no-inputs config break
- * exits 1, a spawn failure leaves no exit status, and the "Found N errors"
- * summary line is only emitted in pretty mode (where ANSI wrapping breaks
- * the error-line regex), so the summary cannot be the sanity signal. The
- * gate therefore refuses to evaluate when tsc did not run to completion,
- * when it exited non-zero without reporting any TS error, or when TS errors
- * were counted with an exit code other than 2. Residual hole: a crash that
- * exits exactly 2 after emitting a partial error list is indistinguishable
- * from a complete run and still passes.
+ * Measured tsc 7.0.2 (tsgo, native) semantics invert the 6.x convention: type
+ * errors exit 1, a no-inputs/config break (TS18002/TS18003/TS6053) exits 2, a
+ * spawn failure leaves no exit status. The "Found N errors" summary line is
+ * only emitted in pretty mode (where ANSI wrapping breaks the error-line
+ * regex), so the summary cannot be the sanity signal. The gate therefore
+ * refuses to evaluate when tsc did not run to completion, when it exited
+ * non-zero without reporting any TS error, or when TS errors were counted
+ * with an exit code other than 1 (a config break also counts its TS line but
+ * exits 2, so the code distinguishes it). Residual hole: a crash that exits
+ * exactly 1 after emitting a partial error list is indistinguishable from a
+ * complete run and still passes.
  *
  * Total-count limitation (evaluateBaseline): the comparison is count-only, so
  * an offsetting change (remove one old error, add one new) and a count drop
@@ -103,10 +105,10 @@ export function assertTscRan(run, counted) {
             message: `tsc exited with code ${run.exitCode} but reported no TS errors — treating this as a crash, not a pass`,
         };
     }
-    if (counted > 0 && run.exitCode !== 2) {
+    if (counted > 0 && run.exitCode !== 1) {
         return {
             ok: false,
-            message: `tsc exited with code ${run.exitCode} while ${counted} TS error lines were counted — expected exit 2 for a completed type check, refusing to evaluate`,
+            message: `tsc exited with code ${run.exitCode} while ${counted} TS error lines were counted — expected exit 1 for a completed type check under tsc 7 (config breaks exit 2), refusing to evaluate`,
         };
     }
     return { ok: true, message: '' };

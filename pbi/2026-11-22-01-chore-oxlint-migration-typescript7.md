@@ -1,6 +1,6 @@
 # PBI: 2026-11-22-01-chore-oxlint-migration-typescript7
 
-> 状態: Goal A 実装中（`refactor/oxlint-migration-impl` ブランチ）。本 PBI は当初 oxlint 全面移行と
+> 状態: Goal A 完了（`refactor/oxlint-migration-impl` ブランチ、`npm run validate` green）。本 PBI は当初 oxlint 全面移行と
 > TS7 同時移行を一体で扱ったが、なぜなぜ分析（[dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）
 > で **2つの独立した目的に分離** できると判明したため再構成した:
 > - **Goal A（本 PBI の主軸）**: TS7 アンブロック。ブロッカーは `@typescript-eslint/*`（peer `<6.1.0`）と
@@ -53,13 +53,14 @@ Scenario: TypeScript 7 が install できる
 
 ## 受け入れ基準
 
-- [ ] 自作12ルール（A: テスト品質6 / B: 層・seam3 / C: セキュリティ3）が oxlint（JSプラグイン含む）で等価に動作する
-- [ ] `lint` スクリプトが `oxlint` 主軸になる（`eslint.config.js` のロジックを `.oxlintrc.json` + 生成器へ）
-- [ ] `@typescript-eslint/parser` を RuleTester から oxc アダプタ（`eslint/oxc-parser-adapter.mjs`）へ差し替え、
+- [x] 自作12ルール（A: テスト品質6 / B: 層・seam3 / C: セキュリティ3）が oxlint（JSプラグイン含む）で等価に動作する
+- [x] `lint` スクリプトが `oxlint` 主軸になる（`eslint.config.js` のロジックを `.oxlintrc.json` + 生成器へ）
+- [x] `@typescript-eslint/parser` を RuleTester から oxc アダプタ（`eslint/oxc-parser-adapter.mjs`）へ差し替え、
       `@typescript-eslint/eslint-plugin` を依存から撤去
-- [ ] `typescript` を ^7 に更新し、`type-check` が通る（tsc → tsgo 切替を含む）
-- [ ] `typedoc` の TS7 peer 未対応を解決（TS7 対応版 or docs 経路の分離）
-- [ ] `npm run validate` が green（type-check/test/lint/check-docs-chars 等すべて）
+- [x] `typescript` を ^7 に更新し、`type-check` が通る（tsc → tsgo 切替を含む）
+- [x] `typedoc` の TS7 peer 未対応を解決（Option B: typedoc を撤去し docs 生成経路を廃止。why-why の根拠は
+      [dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）
+- [x] `npm run validate` が green（type-check/test/lint/check-docs-chars 等すべて）
 - [ ] `eslint` コアの完全撤去は Goal B（別 PBI）。本 PBI では eslint コアを RuleTester 用に残してよい
 
 ## テスト戦略（t_wada スタイル）
@@ -137,9 +138,18 @@ grep -rn "OptionalMemberExpression" eslint/rules/
    `.js` fixture（test-pages）の parser 差異(TS8016)を解消。
 5. **typescript-eslint 撤去**: `@typescript-eslint/eslint-plugin` を依存から削除（parser は 3 で
    oxc アダプタへ置換済み）。`@typescript-eslint/*` が二度と install を止めないことを確認。
-6. **TS7 + tsgo**: `typescript` を ^7 に、`type-check` を tsgo へ切替。`typedoc` の TS7 peer を解決
-   （TS7 対応版 or docs 経路の分離）。
-7. `npm run validate` を green にし、lint before/after 時間を PR に添付。
+6. ~~**TS7 + tsgo**: `typescript` を ^7 に、`type-check` を tsgo へ切替。~~ → **完了（2026-11-22）**。
+   `typescript` を ^7.0.2 へ。**typedoc は Option B で撤去**（TS7 peer `6.0.x` と共存不可、Chrome 拡張で
+   API doc 需要ゼロ）。`tsc --version`=7.0.2、`type-check`（src）は 0 errors。
+   **副作用（tsgo の exit-code 逆転）**: TS6 は type error→exit 2 / config break→exit 1。TS7 は
+   type error→**exit 1** / config break(TS18002/18003/6053)→**exit 2** へ逆転。`type-check:test` の
+   ベースラインゲート（`scripts/check-type-test-baseline.mjs`）の sanity check を TS7 規約へ更新
+   （`expected exit 1`）。加えて tsgo は declaration nameability(TS4023)を `noEmit` 下でも検査し、
+   `seeded-history-panel.fixture.ts` の export `test` が非公開 `ExtensionFixtureOptions` を参照して
+   1件顕在化 → インタフェースを export して負債1件返済（baseline 439 維持、つり上げ禁止の原則どおり）。
+7. ~~`npm run validate` を green にし、lint before/after 時間を PR に添付。~~ → **完了（2026-11-22）**。
+   `validate` green（1343 files / 18929 tests、lint + type-check + type-check:test:baseline + check-docs-chars）。
+   lint before/after: `eslint .` 実測 ~17s(cold)/3.1s(warm) → `oxlint` 0.52〜0.69s(binary) / 0.7s(`npm run lint`)。
    `eslint` コアの完全撤去（Goal B）は本 PBI の範囲外。
 
 ### Goal B（別 PBI・本 PBI 範囲外）
@@ -156,11 +166,11 @@ grep -rn "OptionalMemberExpression" eslint/rules/
 
 ## Definition of Done
 
-- [ ] 全BDDシナリオが自動テスト（validate の lint + type-check）でパスする
-- [ ] 既存 `eslint/__tests__`（14ファイル）相当の valid/invalid ケースが移植版で同結果
-- [ ] `npm run validate` が green（type-check/test/lint/check-docs-chars 等）
-- [ ] lint before/after の実行時間を計測し PR に添付
+- [x] 全BDDシナリオが自動テスト（validate の lint + type-check）でパスする
+- [x] 既存 `eslint/__tests__`（14ファイル）相当の valid/invalid ケースが移植版で同結果
+- [x] `npm run validate` が green（type-check/test/lint/check-docs-chars 等）
+- [x] lint before/after の実行時間を計測し PR に添付（eslint ~17s → oxlint ~0.7s）
 - [ ] コードレビュー完了（GitHub PR approve 必須）
-- [ ] ロールバック手段（eslint.config.js 復元 / typescript 再 pin）を本項に記載済み
+- [x] ロールバック手段（eslint.config.js 復元 / typescript 再 pin）を本項に記載済み
 - [ ] ドキュメント更新: AGENTS.md の lint 手順・dev-docs/investigation-oxlint-migration.md を最終形へ
 - [ ] CHANGELOG.md に依存更新（oxlint 導入 / eslint 撤去 / TS7）を追記
