@@ -38,7 +38,7 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 ```bash
 npm install              # Install dependencies
 npm run build:watch      # Build and watch for development changes
-npm run validate         # Type check + run tests (pre-commit gate)
+npm run validate         # Lint (oxlint) + type check (tsgo) + run tests (pre-commit gate)
 ```
 
 To load the unpacked extension: run `npm run build`, open `chrome://extensions`, enable Developer mode, then "Load unpacked" → select `dist/chromium-mv3`.
