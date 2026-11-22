@@ -8,7 +8,7 @@
  * the rule ids.
  *
  * While the ESLint config is still the source of truth, this wrapper exists so
- * `oxlint` can run the same 12 rules as a parity check. Once the migration
+ * `oxlint` can run the same 13 rules as a parity check. Once the migration
  * lands, eslint/rules/ is removed and the rules move under an oxlint-owned
  * directory; this file is the seam that makes that move a path change.
  */
@@ -24,6 +24,7 @@ import utilsLayerBoundary from './rules/utils-layer-boundary.mjs';
 import noDeadTestSkip from './rules/no-dead-test-skip.mjs';
 import noRawStorage from './rules/no-raw-storage.mjs';
 import noDirectConsoleLog from './rules/no-direct-console-log.mjs';
+import noSettingsRepositoryDirect from './rules/no-settings-repository-direct.mjs';
 
 export const meta = { name: 'local' };
 
@@ -40,6 +41,8 @@ export const rules = {
   'no-dead-test-skip': noDeadTestSkip,
   'no-raw-storage': noRawStorage,
   'no-direct-console-log': noDirectConsoleLog,
+  // Port of the eslint.config.js no-restricted-syntax SettingsRepository ban.
+  'no-settings-repository-direct': noSettingsRepositoryDirect,
 };
 
 export default { meta, rules };

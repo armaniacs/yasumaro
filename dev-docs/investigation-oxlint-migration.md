@@ -143,6 +143,53 @@ api oxc.rs の「Scope analysis サポート」と一致。
   パリティは成立しているが、将来 `chrome.storage.local?.get()` のような optional chain 付き
   直接呼び出しが混入すると見逃す。正式移植時に `ChainExpression`（`optional` フラグ）判定へ改める。
 
+## 完全版 .oxlintrc.json と全ルールパリティ完了（2026-11-22）
+
+`scripts/gen-oxlintrc.mjs` を **全ルール機械翻訳版** に拡張した。`eslint.config.js`（SSOT）の
+全ブロックを oxlint の各ルールへ写像し、`.oxlintrc.json` を生成する（13 override ブロック・28 ルールエントリ）。
+
+### 翻訳マップ（eslint.config.js id -> oxlint id）
+- `@typescript-eslint/no-explicit-any` -> `typescript/no-explicit-any`（plugin typescript）
+- `@typescript-eslint/no-unused-vars` / `no-unused-vars` -> `no-unused-vars`
+- `@typescript-eslint/no-restricted-imports` / `no-restricted-imports` -> `no-restricted-imports`（allowTypeImports 保持）
+- `no-self-compare` -> `no-self-compare`
+- `vitest/expect-expect` / `vitest/valid-expect` -> 同名（plugin vitest）
+- `no-restricted-syntax`（SettingsRepository禁止） -> `local/no-settings-repository-direct`（第13ルール）
+- `local/*` -> `local/*`
+
+`files` と `ignores`（-> `excludeFiles`）は eslint.config.js からそのまま転記するため、
+パリティは手コピーでなく構造的に保証される（設定変更が次回生成に流れる）。
+
+### 第13ルール `no-settings-repository-direct`
+oxlint にネイティブの `no-restricted-syntax` が無いため、本repoが唯一使っていたセレクタ
+`NewExpression[callee.name='SettingsRepository']` を純粋な local ルールへ移植
+（`eslint/rules/no-settings-repository-direct.mjs`）。seam/test/DI の除外は override の
+`excludeFiles` 側で表現（eslint ブロックの `ignores` 相当）。RuleTester テスト
+（`eslint/__tests__/no-settings-repository-direct.test.ts`）を追加、10ケース green。
+
+### 全ルールパリティ結果
+実コード全体（2328ファイル・19ルール）で **oxlint 違反 1件 / ESLint 違反 1件で完全一致**
+（いずれも `local/no-greedy-fake-timers: 1`）。local 13ルールは完全に一致。
+
+### oxlint コアルールが ESLint と異なる2箇所（既知・文書化済み）
+local ルールは完全一致だが、oxlint 内蔵コアルールが ESLint と実装差を持つ箇所が2つあり、
+計5件の差分が出た。いずれも翻訳ミスでなくエンジン差のため、`gen-oxlintrc.mjs` 内の
+**oxlint専用 override**（eslint.config.js には置かない。SSOT はツール中立に保つ）で吸収した。
+
+1. `no-restricted-imports`（`src/messaging/auditLogGateway.ts`）: 同ファイルの
+   `await import('../background/...')` は**動的 import**。ESLint の同ルールは動的 import を
+   見ないが、oxlint は見る。コード冒頭コメント（22-26行）が「静的辺を作らない lazy解決」と
+   意図を明記しているため、当該ファイルで `no-restricted-imports: off` をscopedに適用。
+2. `vitest/expect-expect` ×4（`providerCatalog.test.ts` 等）: テストの `expect()` が
+   `for`/`if` ブロック内にある。oxlint は反復・条件内のアサーションをカウントせず
+   "Test has no assertions" を出す（eslint-plugin-vitest はカウントする）。
+   該当4ファイルで `vitest/expect-expect: off` をscopedに適用。
+
+### ESLint のみの8件（非差異）
+ESLint は `wasm/*/pkg/*.d.ts`（wasm-bindgen 生成物）で `Unused eslint-disable directive` を
+8件出す。`wasm/*/pkg/` は `.gitignore`（25行）対象の再生成可能な build 中間物であり、
+oxlint は正しく走査対象外にしている。ESLint 側の既存ノイズであり、リグレッションではない。
+
 ## 次の具体ステップ（未着手・要承認）
 
 1. ~~`@oxlint/migrate` で機械差分~~ → **完了**。13個 Not Implemented、6個変換可。
