@@ -28,11 +28,11 @@ Scenario: 要素が存在しない場合も例外が発生しない
 ```
 
 ## 受け入れ基準
-- [ ] `src/dashboard/webhookExportSettings.ts` で save/load 間の 5 要素取得（`webhookExportEnabled` / `webhookExportUrl` / `webhookExportTag` / `webhookExportMinScroll` / `webhookExportMinDuration`）を共通ヘルパー関数に集約
-- [ ] save と load で同じ要素参照を再利用
-- [ ] 各要素の null ガードが共通化され、重複なし
-- [ ] `npm run type-check` が pass する
-- [ ] `webhookExportSettings` に関連する既存テストがすべて pass する
+- [x] `src/dashboard/webhookExportSettings.ts` で save/load 間の 5 要素取得を共通 `getWebhookExportElements()` ヘルパーに集約（`WebhookExportElements` 型つき。save/load の各5行を1行の分割代入に置換）
+- [x] save と load で同じ要素参照を再利用（両者ともヘルパー経由。ID の知識はヘルパー内のみ）
+- [x] 各要素の null ガードが共通化され、重複なし（ヘルパーが null を返し、呼び出し側の既存ガードを維持）
+- [x] `npm run type-check` が pass する
+- [x] `webhookExportSettings` に関連する既存テストがすべて pass する（seam 4件：既存3＋新規「5要素解決・欠落DOM許容」1）
 
 ## テスト戦略（t_wada スタイル）
 
@@ -81,9 +81,9 @@ grep -n "document.getElementById" src/dashboard/webhookExportSettings.ts
 - 要素が null の場合の扱い：save では `?? false` / `?? ''` でフォールバック、load では `if (el !== null)` でガード、この挙動を維持する
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（save/load 既存＋欠落DOM 許容の新規1件）
+- [x] テストカバレッジが基準を満たす（ヘルパーは save/load 経路で毎回実行され、欠落分岐も新規テストでカバー）
 - [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（挙動変更・性能変更・フィルタロジック変更・閾値変更等の場合、本番投入後に問題が発覚した場合の切り戻し手段を技術的考慮事項または本項に記載）
-- [ ] ドキュメント更新済み
+- [x] リファクタリング完了（グリーン後。振る舞い不変のため追加の磨き込みなし）
+- [x] ロールバック手段の検討（振る舞い不変の置換のため切り戻しは revert のみで足りる）
+- [x] ドキュメント更新済み（公開 API・仕様の変更なし。PBI 自体に方式と証跡を記録）

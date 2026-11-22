@@ -11,6 +11,7 @@ import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
 import { importSettings } from '../utils/settingsExportImport.js';
+import { makeListener } from '../utils/domListen.js';
 import type { SettingsExportData } from '../utils/settingsExportImport.js';
 import {
   handleExport,
@@ -108,12 +109,8 @@ export function createExportImport(): ExportImportController {
     if (!dom) resolveDom();
   }
 
-  /** Attach a listener and record how to undo it, so destroy() is complete. */
-  function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-    if (!target) return;
-    target.addEventListener(type, handler);
-    teardown.push(() => target.removeEventListener(type, handler));
-  }
+  /** Shared null-safe binder bound to this file teardown array. */
+  const listen = makeListener(teardown);
 
   function closeImportModal(): void {
     ensureDom();

@@ -28,11 +28,11 @@ Scenario: destroy で登録済みイベントが削除される
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/` に共通 `listen(target, type, handler)` ユーティリティを新設
-- [ ] 6 ファイル（`recordingConditionsSettings.ts`、`webhookExportSettings.ts`、`exportImport.ts`、`settings/domainFilter.ts`、`settings/privacySettings.ts`、`settings/aiDomainPolicySettings.ts`）からローカル定義の `listen` を削除し、共通ユーティリティを import する
-- [ ] 既存のイベント登録・ティーダウン動作がすべて保持される
-- [ ] `npm run type-check` が pass する
-- [ ] 対象ファイルに関連する既存テストがすべて pass する
+- [x] `src/utils/` に共通 `listen(target, type, handler)` ユーティリティを新設（`src/utils/domListen.ts`：`listen` 本体＋`makeListener(teardown)` バインダ。既存3引数呼出を無変更で移行するためバインダ方式を採用）
+- [x] 7 ファイル（`recordingConditionsSettings.ts`、`webhookExportSettings.ts`、`exportImport.ts`、`settings/domainFilter.ts`、`settings/privacySettings.ts`、`settings/aiDomainPolicySettings.ts`、および同型 drift のあった `settings/trustSettings.ts`）からローカル定義の `listen` を削除し、共通ユーティリティを import する（呼出43件は無変更）
+- [x] 既存のイベント登録・ティーダウン動作がすべて保持される（関連13ファイル240テスト緑）
+- [x] `npm run type-check` が pass する
+- [x] 対象ファイルに関連する既存テストがすべて pass する（240件）＋新規 `domListen.test.ts` 4件
 
 ## テスト戦略（t_wada スタイル）
 
@@ -86,9 +86,9 @@ grep -rn "function listen\|const listen" src/dashboard/ src/dashboard/settings/
 - ティーダウン配列の管理：各ファイルが独自に `teardown` 配列を持っているため、共通 `listen` は登録のみを行い、削除は呼び出し側の既存パターンを維持する（または `remove` 関数も共通化する）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（`domListen.test.ts` 4件：null skip・登録発火・teardown 削除・binder）
+- [x] テストカバレッジが基準を満たす（新規 `domListen.ts` は Statements/Branches/Functions/Lines すべて 100%。既存ファイルは振る舞い不変のため既存スイートで担保）
 - [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（挙動変更・性能変更・フィルタロジック変更・閾値変更等の場合、本番投入後に問題が発覚した場合の切り戻し手段を技術的考慮事項または本項に記載）
-- [ ] ドキュメント更新済み
+- [x] リファクタリング完了（グリーン後。振る舞い不変・呼出無変更のため追加の磨き込みなし）
+- [x] ロールバック手段の検討（振る舞い不変の置換のため切り戻しは revert のみで足りる）
+- [x] ドキュメント更新済み（公開 API・仕様の変更なし。PBI 自体に方式と証跡を記録）

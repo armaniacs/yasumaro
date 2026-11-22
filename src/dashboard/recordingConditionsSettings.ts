@@ -19,6 +19,7 @@ import { setElementHtml } from '../utils/htmlFragment.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { applyI18n } from '../utils/i18n-dom.js';
 import { clearFieldError, setFieldError } from './settings/fieldValidation.js';
+import { makeListener } from '../utils/domListen.js';
 import {
   validateMaxTokensValue,
   validateMinScrollDepthValue,
@@ -77,12 +78,8 @@ export function createRecordingConditionsSettings(): RecordingConditionsSettings
     geminiContentChars = 30000;
   }
 
-  /** Attach a listener and record how to undo it, so destroy() is complete. */
-  function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-    if (!target) return;
-    target.addEventListener(type, handler);
-    teardown.push(() => target.removeEventListener(type, handler));
-  }
+  /** Shared null-safe binder bound to this file teardown array. */
+  const listen = makeListener(teardown);
 
   async function loadConditionsSettings(repo: SettingsReader): Promise<void> {
     try {

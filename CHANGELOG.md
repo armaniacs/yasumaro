@@ -16,6 +16,10 @@
 - 保留（いずれも製品ランタイム・audit 上のリスクは無し）:
   - `@peculiar/webcrypto` 2.0.0（現 1.7.2）: テスト専用の WebCrypto polyfill。2.0.0 はメジャーで依存が `@peculiar/utils` ^4.1.0 に刷新されるが、セキュリティ修正は含まれない（`npm audit` で当該なし）。解除条件は crypto テスト群の再実測。専用 PBI は未起票
 
+### リファクタリング
+
+- dashboard設定群の重複コードを共通ユーティリティへ集約（振る舞い不変）。7ファイルの `listen` 重複定義を `src/utils/domListen.ts` の `makeListener` に一本化（呼出43件は無変更）、`?.checked ?? false` / `?.value ?? ''` の16件を `settingsFormBinding.ts` の `getChecked`/`getValue` に置換、webhook save/load の5要素取得を `getWebhookExportElements()` に集約、`parseIntOr` を `src/utils/string.ts` へ移動、threshold 8件の表示反映を単一ループ化（遅延評価を維持）。型検査・lint緑、関連既存テスト全緑（新規単体テスト13件を含む）
+
 ### テスト
 
 - テストのDOM環境をjsdomからwasm-quickjs-domへ移行（422ファイルを機械置換、14ファイルは根拠つきでjsdomに退避。environmentフェーズを約49秒から約25.3秒に半減。`jsdomFileCount`ゲートをDOM環境ファイル数 `domFileCount`（426）に再定義）

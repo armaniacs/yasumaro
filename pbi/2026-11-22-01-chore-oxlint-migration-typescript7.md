@@ -61,7 +61,7 @@ Scenario: TypeScript 7 が install できる
 - [x] `typedoc` の TS7 peer 未対応を解決（Option B: typedoc を撤去し docs 生成経路を廃止。why-why の根拠は
       [dev-docs/why-oxlint-typescript7.md](../dev-docs/why-oxlint-typescript7.md)）
 - [x] `npm run validate` が green（type-check/test/lint/check-docs-chars 等すべて）
-- [ ] `eslint` コアの完全撤去は Goal B（別 PBI）。本 PBI では eslint コアを RuleTester 用に残してよい
+- [x] `eslint` コアの完全撤去は Goal B（別 PBI）。本 PBI では eslint コアを RuleTester 用に残す（`eslint@10.15.0` と `eslint/oxc-parser-adapter.mjs` で維持確認済み）
 
 ## テスト戦略（t_wada スタイル）
 
@@ -172,5 +172,5 @@ grep -rn "OptionalMemberExpression" eslint/rules/
 - [x] lint before/after の実行時間を計測し PR に添付（eslint ~17s → oxlint ~0.7s）
 - [ ] コードレビュー完了（GitHub PR approve 必須）
 - [x] ロールバック手段（eslint.config.js 復元 / typescript 再 pin）を本項に記載済み
-- [ ] ドキュメント更新: AGENTS.md の lint 手順・dev-docs/investigation-oxlint-migration.md を最終形へ
-- [ ] CHANGELOG.md に依存更新（oxlint 導入 / eslint 撤去 / TS7）を追記
+- [x] ドキュメント更新: AGENTS.md の lint 手順・dev-docs/investigation-oxlint-migration.md を最終形へ（AGENTS.md:41 と investigation 最終結果セクションで確認）
+- [x] CHANGELOG.md に依存更新（oxlint 導入 / eslint 撤去 / TS7）を追記（Unreleased 依存更新に記載済み）

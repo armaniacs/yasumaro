@@ -18,6 +18,8 @@ import { getTrustDbAdmin } from '../../utils/trustDb/TrustDbAdmin.js';
 import { getTrancoUpdater } from '../../utils/trustDb/trancoUpdater.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logInfo, logError } from '../../utils/logger/api.js';
+import { makeListener } from '../../utils/domListen.js';
+import { getChecked } from '../../utils/settingsFormBinding.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../utils/i18n.js';
 import { getPluralKey } from '../../utils/i18nPlural.js';
 import { formatLocalDateString, parseLocalDateStart } from '../../utils/localDate.js';
@@ -154,16 +156,8 @@ export function createTrustSettings(): TrustSettingsController {
         };
     }
 
-    /** Attach a listener and record how to undo it, so destroy() is complete. */
-    function listen<T extends EventTarget>(
-        target: T | null | undefined,
-        type: string,
-        handler: EventListenerOrEventListenerObject,
-    ): void {
-        if (!target) return;
-        target.addEventListener(type, handler);
-        teardown.push(() => target.removeEventListener(type, handler));
-    }
+    /** Shared null-safe binder bound to this file teardown array. */
+    const listen = makeListener(teardown);
 
     /** Status helper that tolerates a missing status element (pre-init calls). */
     function trustStatus(message: string, type: 'success' | 'error'): void {
@@ -467,9 +461,9 @@ export function createTrustSettings(): TrustSettingsController {
         const checker = getTrustChecker();
         try {
             await checker.saveAlertSettings({
-                alertFinance: alertFinanceCheckbox?.checked ?? false,
-                alertSensitive: alertSensitiveCheckbox?.checked ?? false,
-                alertUnverified: alertUnverifiedCheckbox?.checked ?? false
+                alertFinance: getChecked(alertFinanceCheckbox),
+                alertSensitive: getChecked(alertSensitiveCheckbox),
+                alertUnverified: getChecked(alertUnverifiedCheckbox)
             });
 
             // Note: Trust Database changes are already saved immediately when modified

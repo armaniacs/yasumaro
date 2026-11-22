@@ -1,6 +1,6 @@
 // @vitest-environment wasm-quickjs-dom
 
-import { loadSettingsToInputs, extractSettingsFromInputs } from '../settingsFormBinding.js';
+import { loadSettingsToInputs, extractSettingsFromInputs, getChecked, getValue } from '../settingsFormBinding.js';
 
 function setupDOM(): void {
   document.body.innerHTML = `
@@ -152,6 +152,30 @@ describe('settingsFormBinding', () => {
       expect(settings.obsidian_protocol).toBe('https');
       expect(settings.ublock_format_enabled).toBe(true);
       expect(settings.ai_provider).toBe('gemini');
+    });
+  });
+
+  describe('getChecked / getValue (PBI 05 minimal helpers)', () => {
+    test('returns checked state for a present checkbox', () => {
+      (document.getElementById('ublock_format_enabled') as HTMLInputElement).checked = true;
+      expect(getChecked(document.getElementById('ublock_format_enabled') as HTMLInputElement | null)).toBe(true);
+    });
+
+    test('returns fallback for a missing checkbox', () => {
+      expect(getChecked(null)).toBe(false);
+      expect(getChecked(undefined)).toBe(false);
+      expect(getChecked(null, true)).toBe(true);
+    });
+
+    test('returns input value for a present field', () => {
+      (document.getElementById('obsidian_port') as HTMLInputElement).value = '27123';
+      expect(getValue(document.getElementById('obsidian_port') as HTMLInputElement | null)).toBe('27123');
+    });
+
+    test('returns fallback for a missing field', () => {
+      expect(getValue(null)).toBe('');
+      expect(getValue(undefined)).toBe('');
+      expect(getValue(null, '0.7')).toBe('0.7');
     });
   });
 });

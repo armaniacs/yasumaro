@@ -20,9 +20,9 @@ typescript-eslint（peer `typescript <6.1.0`）+ typedoc（peer `6.0.x`）が TS
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---:|---|---|
-| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 8(Goal A) | TS7アンブロック(Goal A)。lint→oxlint、RuleTesterのparserをoxcアダプタへ差替えtypescript-eslint撤去、TS7+tsgo。oxcアダプタでRuleTester動作を実測確認済み。eslint完全撤去=Goal Bは別PBI。 typescript-eslint撤去ルート(残置ルート [2026-09-26-12](2026-09-26-12-backlog-typescript-7-adoption.md) と併存・typedoc共通) |
+| 01 | [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md) | 🔧非機能追加 | - | 8(Goal A) | TS7アンブロック(Goal A)。lint→oxlint、RuleTesterのparserをoxcアダプタへ差替えtypescript-eslint撤去、TS7+tsgo。oxcアダプタでRuleTester動作を実測確認済み。eslint完全撤去=Goal Bは別PBI。 typescript-eslint撤去ルートで旧残置ルート [2026-09-26-12](../dev-docs/archived/pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を解消済み（アーカイブ）・typedoc共通 |
 
-### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-21 DRY/KISS 重複コード解消（5件） ― 🔶 実装済み・レビュー待ち 🔧非機能追加
 
 コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。`listen` 関数の 6 重定義、`parseIntOr` の単一ファイルローカル定義、`webhookExportSettings.ts` の save/load 重複要素取得、`aiSummaryCleansingSettingsV2.ts` の threshold 反復パターン、`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの 5 件。
 
@@ -398,7 +398,7 @@ TODO（起票済み 2026-10-20）: **fan-out 宛先修正**は [2026-10-20-feat-
 
 ### 2026-10-20 トリガー検証（外部ブロッカー再確認） ― 🔵 監視継続
 
-- **TypeScript 7 移行**（2026-09-26-12）: typescript-eslint 最新は v8.72.0（2026-10-19 リリース）で TS7（tsgo）対応のリリースは未発行。トリガー未発火を再確認。
+- **TypeScript 7 移行**（2026-09-26-12）: 2026-11-22 に撤去ルートで解消済み（`@typescript-eslint/*` と `typedoc` を依存から撤去し `typescript@7.0.2` へ。validate green）。上流待ちの前提は解消したため監視を終了しアーカイブ。
 - **Stryker Vitest 5 runner**（2026-09-27-02）: [stryker-js#6210](https://github.com/stryker-mutator/stryker-js/issues/6210) は open のまま（2026-10-14 更新）。名前フィルタ問題の修正リリースは未発行。トリガー未発火を再確認。
 
 ### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） ― ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
@@ -748,7 +748,7 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 | NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
 |---|---|---|---:|---:|---|
-| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 ― typescript-eslint の TS 7 対応リリース待ち（2026-09-27 再調査でトリガー未発火を再確認。TS 7 強行移行は上流でクラッシュ実証済み。typedoc も同時更新対象に追加） |
+| ~~12~~ | [backlog-typescript-7-adoption](../dev-docs/archived/pbi/2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | ✅ 解消済み（2026-11-22 アーカイブ） ― 上流待ちではなく撤去ルートで解決（`@typescript-eslint/*`・`typedoc` 撤去、`typescript@7.0.2`、validate green） |
 
 ### 2026-09-25 ラウンドの着手トリガー待ち 2 件 ― 🔵 監視 2件 🔧非機能追加
 

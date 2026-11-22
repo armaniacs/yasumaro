@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
-import { createWebhookExportSettingsUi } from '../webhookExportSettings.js';
+import { createWebhookExportSettingsUi, getWebhookExportElements } from '../webhookExportSettings.js';
 import type { WebhookExportHistoryStore } from '../../background/webhookExport/webhookExportHistory.js';
 import type { WebhookExportStore } from '../../background/webhookExport/webhookExportSettings.js';
 
@@ -155,5 +155,20 @@ describe('webhookExportSettings dashboard seam', () => {
     if (!resendCall) throw new Error('expected one resend call');
     expect(resendCall[2]).toBe(true);
     await drainMacrotask();
+  });
+
+  it('resolves the shared 5 elements and tolerates a missing DOM', async () => {
+    const els = getWebhookExportElements();
+    expect(els.enabled).not.toBeNull();
+    expect(els.url).not.toBeNull();
+    expect(els.tag).not.toBeNull();
+    expect(els.minScroll).not.toBeNull();
+    expect(els.minDuration).not.toBeNull();
+    document.body.innerHTML = '';
+    const missing = getWebhookExportElements();
+    expect(missing.enabled).toBeNull();
+    const controller = createWebhookExportSettingsUi({ settingsStore: memorySettingsStore() });
+    controller.init();
+    await expect(controller.load()).resolves.toBeUndefined();
   });
 });

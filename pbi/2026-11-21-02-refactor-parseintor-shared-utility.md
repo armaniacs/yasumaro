@@ -33,11 +33,11 @@ Scenario: 非数値文字列をパースする
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/string.ts` に `parseIntOr(value: string | null | undefined, fallback: number): number` を追加 export
-- [ ] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` からローカル定義の `parseIntOr` を削除し、`src/utils/string.js` から import する
-- [ ] 既存の 8 箇所の使用箇所がすべて import 版に置換される
-- [ ] `npm run type-check` が pass する
-- [ ] `aiSummaryCleansingSettingsV2.test.ts` がすべて pass する
+- [x] `src/utils/string.ts` に `parseIntOr(value: string | null | undefined, fallback: number): number` を追加 export（`aiSummaryCleansingSettingsV2.ts` から移植。挙動同一）
+- [x] `src/dashboard/settings/aiSummaryCleansingSettingsV2.ts` からローカル定義の `parseIntOr` を削除し、`src/utils/string.js` から import する（外部 import 者は存在しないことを grep で確認）
+- [x] 既存の 8 箇所の使用箇所がすべて import 版に置換される（呼出側は無変更。定義のみ移動）
+- [x] `npm run type-check` が pass する
+- [x] `aiSummaryCleansingSettingsV2.test.ts` がすべて pass する（関連4ファイル85件：新規 parseIntOr 5件を含む）
 
 ## テスト戦略（t_wada スタイル）
 
@@ -90,9 +90,9 @@ grep -n "parseIntOr" src/dashboard/settings/aiSummaryCleansingSettingsV2.ts
 - ESM インポート：`.js` 拡張子を使用する（プロジェクトの ESM imports 規則）
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] 全BDDシナリオが自動テストとして実装されパスする（有効値・空文字・null/undefined・非数値・負数/小数 5件）
+- [x] テストカバレッジが基準を満たす（純粋関数2分岐を全カバー。呼出側8件は既存スイートで担保）
 - [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（挙動変更・性能変更・フィルタロジック変更・閾値変更等の場合、本番投入後に問題が発覚した場合の切り戻し手段を技術的考慮事項または本項に記載）
-- [ ] ドキュメント更新済み
+- [x] リファクタリング完了（グリーン後。定義移動のみのため追加の磨き込みなし）
+- [x] ロールバック手段の検討（定義移動のみのため切り戻しは revert のみで足りる）
+- [x] ドキュメント更新済み（公開 API・仕様の変更なし。PBI 自体に方式と証跡を記録）

@@ -31,6 +31,8 @@ import type { WebhookExportRecord } from '../background/webhookExport/webhookExp
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { clearElement } from '../utils/domClear.js';
+import { makeListener } from '../utils/domListen.js';
+import { getChecked } from '../utils/settingsFormBinding.js';
 
 export interface WebhookExportResendResult {
   ok: boolean;
@@ -105,14 +107,31 @@ function readNumberOrUndefined(input: HTMLInputElement | null): number | undefin
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
+/** The 5 form elements save() and load() share. Null when absent from the DOM. */
+export interface WebhookExportElements {
+  enabled: HTMLInputElement | null;
+  url: HTMLInputElement | null;
+  tag: HTMLInputElement | null;
+  minScroll: HTMLInputElement | null;
+  minDuration: HTMLInputElement | null;
+}
+
+/** Single place that knows the 5 element IDs, so save/load cannot drift. */
+export function getWebhookExportElements(): WebhookExportElements {
+  return {
+    enabled: document.getElementById('webhookExportEnabled') as HTMLInputElement | null,
+    url: document.getElementById('webhookExportUrl') as HTMLInputElement | null,
+    tag: document.getElementById('webhookExportTag') as HTMLInputElement | null,
+    minScroll: document.getElementById('webhookExportMinScroll') as HTMLInputElement | null,
+    minDuration: document.getElementById('webhookExportMinDuration') as HTMLInputElement | null,
+  };
+}
+
 export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}): WebhookExportUiController {
   const teardown: Array<() => void> = [];
 
-  function listen(target: EventTarget | null, type: string, handler: EventListener): void {
-    if (target === null) return;
-    target.addEventListener(type, handler);
-    teardown.push(() => target.removeEventListener(type, handler));
-  }
+  /** Shared null-safe binder bound to this file teardown array. */
+  const listen = makeListener(teardown);
 
   function setStatus(message: string, isError: boolean): void {
     const status = document.getElementById('webhookExportStatus');
@@ -195,13 +214,9 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
   }
 
   async function save(): Promise<void> {
-    const enabled = document.getElementById('webhookExportEnabled') as HTMLInputElement | null;
-    const url = document.getElementById('webhookExportUrl') as HTMLInputElement | null;
-    const tag = document.getElementById('webhookExportTag') as HTMLInputElement | null;
-    const minScroll = document.getElementById('webhookExportMinScroll') as HTMLInputElement | null;
-    const minDuration = document.getElementById('webhookExportMinDuration') as HTMLInputElement | null;
+    const { enabled, url, tag, minScroll, minDuration } = getWebhookExportElements();
     const settings: WebhookExportSettings = {
-      enabled: enabled?.checked ?? false,
+      enabled: getChecked(enabled),
       url: url?.value.trim() ?? '',
       condition: {
         tag: tag !== null && tag.value.trim() !== '' ? tag.value.trim() : undefined,
@@ -223,11 +238,7 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
 
   async function load(): Promise<void> {
     const settings: WebhookExportSettings = await currentSettings();
-    const enabled = document.getElementById('webhookExportEnabled') as HTMLInputElement | null;
-    const url = document.getElementById('webhookExportUrl') as HTMLInputElement | null;
-    const tag = document.getElementById('webhookExportTag') as HTMLInputElement | null;
-    const minScroll = document.getElementById('webhookExportMinScroll') as HTMLInputElement | null;
-    const minDuration = document.getElementById('webhookExportMinDuration') as HTMLInputElement | null;
+    const { enabled, url, tag, minScroll, minDuration } = getWebhookExportElements();
     if (enabled !== null) enabled.checked = settings.enabled;
     if (url !== null) url.value = settings.url;
     if (tag !== null) tag.value = settings.condition.tag ?? '';

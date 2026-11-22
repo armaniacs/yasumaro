@@ -93,9 +93,9 @@ Scenario: トリガー未発火時は現状を維持する
 ## 受け入れ基準
 
 - [x] トリガー待ちである旨と、上流対応まで実装しない旨が本 PBI に明記されている（起票済み）
-- [ ] （トリガー発火後）`package.json` の `typescript` を `^7.0.2` に更新し、TypeScript 7 対応の `@typescript-eslint/*` と `typedoc` を同時に `package-lock.json` へ同期している
-- [ ] （トリガー発火後）`npm run validate` が PASS する
-- [ ] （トリガー発火後）`docs/DEPENDINGS.md` を更新している
+- [x] （トリガー発火後）`package.json` の `typescript` を `^7.0.2` に更新し、TS7 ブロッカーの `@typescript-eslint/*` と `typedoc` を依存から撤去して `package-lock.json` へ同期している（撤去ルートで解消。`npm ls` で両者とも空を確認）
+- [x] （トリガー発火後）`npm run validate` が PASS する（1343 files / 18929 tests green）
+- [x] （トリガー発火後）`docs/DEPENDINGS.md` を更新している（typescript 7.0.2 と oxlint/eslint 行を記載）
 
 ## テスト戦略
 
@@ -110,7 +110,7 @@ Scenario: トリガー未発火時は現状を維持する
 ## DoD
 
 - [x] 起票済み（トリガー・監視方法・移行手順の記載）
-- [ ] （トリガー発火後）上記受け入れ基準を満たし、`docs/DEPENDINGS.md` を更新する
+- [x] （トリガー発火後）上記受け入れ基準を満たし、`docs/DEPENDINGS.md` を更新する（撤去ルートで全基準充足）
 
 ## 参考
 

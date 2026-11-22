@@ -11,6 +11,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { DomainFilter } from '../../utils/domainFilter/DomainFilter.js';
 import { parseDomainList } from '../../utils/domainUtils.js';
 import { init as initUblockImport, handleSaveUblockSettings } from './ublockImport/index.js';
+import { makeListener } from '../../utils/domListen.js';
 import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
@@ -82,12 +83,8 @@ export function createDomainFilter(): DomainFilterController {
         if (!dom) resolveDom();
     }
 
-    /** Attach a listener and record how to undo it, so destroy() is complete. */
-    function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-        if (!target) return;
-        target.addEventListener(type, handler);
-        teardown.push(() => target.removeEventListener(type, handler));
-    }
+    /** Shared null-safe binder bound to this file teardown array. */
+    const listen = makeListener(teardown);
 
     function updateDomainListVisibility(): void {
         ensureDom();

@@ -55,6 +55,28 @@ function getInputValue(element: Element): unknown {
   return (element as HTMLInputElement).value;
 }
 
+/**
+ * Minimal null-safe extractors for hand-written form reads.
+ *
+ * Six-plus files hand-roll `?.checked ?? false` / `?.value ?? ''` with
+ * varying fallbacks (`true`, `'0.7'`). Centralizing keeps fallback semantics
+ * consistent and gives the pattern one tested home. For schema-driven
+ * forms prefer extractSettingsFromInputs; these cover ad-hoc reads.
+ */
+export function getChecked(
+    element: { checked?: boolean } | null | undefined,
+    fallback = false,
+): boolean {
+    return element?.checked ?? fallback;
+}
+
+export function getValue(
+    element: { value?: string } | null | undefined,
+    fallback = '',
+): string {
+    return element?.value ?? fallback;
+}
+
 function isApiKeyField(key: string): boolean {
   return API_KEY_PATTERN.test(key);
 }
