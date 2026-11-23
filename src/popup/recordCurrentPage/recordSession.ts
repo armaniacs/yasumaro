@@ -6,6 +6,7 @@ import { formatSuccessMessage } from '../errorUtils.js';
 import { clearElement } from '../domUtils.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 import { messageTransport } from '../../messaging/messageTransport.js';
+import { isLocked as isSessionLocked } from '../../utils/storage/authGuard.js';
 import { logWarn } from '../../utils/logger/api.js';
 import { errorMessage, toError } from '../../utils/errorUtils.js';
 import { getSavedUrlEntries } from '../../utils/storageUrls.js';
@@ -30,6 +31,34 @@ export type RecordSessionState = 'idle' | 'running' | 'awaiting-force' | 'showin
 
 /** How long the result state stays on the button before it resets. */
 export const RESULT_STATE_MS = 2000;
+
+/**
+ * 記録停止の文言 (PBI 2026-11-23-03、3点統一の3点目)。
+ * 新規ロケールキーは作らず、既存 `encryptionLockedApiKeys` を
+ * getMessageOr のフォールバック付きで使う (locales は他PBIと並列のため不触)。
+ */
+export const SESSION_LOCKED_RECORD_FALLBACK =
+  'Locked: recording is paused while the master password session is locked. Open the dashboard and unlock to record.';
+/** ロック中の dashboard 導線ボタンの DOM id (テスト観測点)。 */
+export const SESSION_LOCK_OPEN_DASHBOARD_BUTTON_ID = 'recordLockOpenDashboardBtn';
+
+/** authGuard 読みの安全版: 読み失敗時は未ロック扱い (未設定利用者を止めない)。 */
+async function isSessionLockedSafe(): Promise<boolean> {
+  try {
+    return await isSessionLocked();
+  } catch {
+    return false;
+  }
+}
+
+/** dashboard を新しいタブで開く。失敗は best-effort (導線は残る)。 */
+async function openDashboardFromPopup(): Promise<void> {
+  try {
+    await chrome.tabs.create({ url: chrome.runtime.getURL('options.html') });
+  } catch {
+    // タブが開けなくても案内自体は残す。
+  }
+}
 
 /**
  * Settlement outcome. private-page / cancelled are fully settled inside
@@ -58,6 +87,13 @@ type Settlement =
 export class RecordSession {
   private sessionState: RecordSessionState = 'idle';
   private resultTimer: ReturnType<typeof setTimeout> | null = null;
+  /**
+   * PBI 2026-11-23-03: 最新のロック状態の表示用キャッシュ。loadCurrentTab が
+   * 非同期に更新し、開封時のボタン表示を決める。start() は押下時に読直す
+   * (pendingPages.saveSelectedPages と同じ押下時判定) ため、この値は抑止の
+   * 真値ではない。null = 未読 (SW 側 fail-closed が最終防衛)。
+   */
+  private sessionLockedCache: boolean | null = null;
 
   constructor(
     private readonly tabContentFetcher: ContentFetchGateway = new ContentFetchGateway(),
@@ -75,6 +111,40 @@ export class RecordSession {
     return this.sessionState;
   }
 
+  /**
+   * PBI 2026-11-23-03: ロック中の記録抑止表示。ボタンを無効化し、
+   * dashboard への導線ボタン付きで案内を出す。記録処理は行わない。
+   */
+  private showSessionLockedNotice(): void {
+    const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement | null;
+    if (recordBtn) {
+      recordBtn.disabled = true;
+      recordBtn.textContent = getMessageOr('statusTrustLocked', 'LOCKED');
+      // 記録ハンドラを外す (sole-writer 契約: このモジュールのみが書く)。
+      recordBtn.onclick = null;
+    }
+    const statusDiv = document.getElementById('mainStatus');
+    if (statusDiv) {
+      statusChannel.report(
+        statusDiv,
+        getMessageOr('encryptionLockedApiKeys', SESSION_LOCKED_RECORD_FALLBACK),
+        'error',
+        { autoClear: false },
+      );
+      if (!document.getElementById(SESSION_LOCK_OPEN_DASHBOARD_BUTTON_ID)) {
+        const openBtn = document.createElement('button');
+        openBtn.id = SESSION_LOCK_OPEN_DASHBOARD_BUTTON_ID;
+        openBtn.type = 'button';
+        openBtn.className = 'secondary-btn btn-sm';
+        openBtn.textContent = getMessageOr('openSettings', 'Settings');
+        openBtn.addEventListener('click', () => {
+          void openDashboardFromPopup();
+        });
+        statusDiv.appendChild(openBtn);
+      }
+    }
+  }
+
   async loadCurrentTab(): Promise<void> {
     // PBI 24: tab acquisition, page-info rendering, and the recordability
     // check live in currentTabPage.ts — this method only wires the result to
@@ -85,8 +155,13 @@ export class RecordSession {
     renderCurrentTabPage(tab);
 
     const recordBtn = document.getElementById('recordBtn') as HTMLButtonElement;
+    // PBI 2026-11-23-03: 非同期読みはここに集約し、start() 側は同期判定する。
+    this.sessionLockedCache = await isSessionLockedSafe();
     if (recordBtn) {
-      if (!isTabRecordable(tab)) {
+      if (this.sessionLockedCache) {
+        // PBI 2026-11-23-03: ロック中は記録追加を抑止し dashboard 誘導を出す。
+        this.showSessionLockedNotice();
+      } else if (!isTabRecordable(tab)) {
         recordBtn.disabled = true;
         recordBtn.textContent = getMessage('cannotRecordPage');
       } else {
@@ -164,8 +239,29 @@ export class RecordSession {
    */
   async start(force: boolean = false, tab?: chrome.tabs.Tab, content?: string, contentOrigin?: string | undefined): Promise<void> {
     if (this.sessionState === 'running') return;
+    // PBI 2026-11-23-03 レビュー指摘10: ロック中はいかなる経路の記録開始も
+    // 抑止する。開封時のキャッシュではなく押下時に読直す (pendingPages と同
+    // 判定)。start() は非同期なので await できる。running の確保だけは await
+    // の前に同期で行い、並行 start の無視タイミングを変えない。読み失敗・未読
+    // (null) は抑止せず SW 側 fail-closed に任せる。抑止時は idle に戻すので
+    // finishToIdle は何も戻さない。
     this.sessionState = 'running';
     try {
+      let locked: boolean | null = null;
+      try {
+        locked = await isSessionLocked();
+      } catch {
+        locked = null;
+      }
+      if (locked === true) {
+        this.sessionLockedCache = true;
+        this.sessionState = 'idle';
+        this.showSessionLockedNotice();
+        return;
+      }
+      if (locked === false) {
+        this.sessionLockedCache = false;
+      }
       if (force && tab && content !== undefined) {
         await this.runForceBranch(tab, content, contentOrigin);
       } else {
@@ -189,6 +285,11 @@ export class RecordSession {
       this.resultTimer = null;
     }
     this.sessionState = 'idle';
+    // PBI 2026-11-23-03: 解除中にロックされた場合はボタンを戻さない。
+    if (this.sessionLockedCache === true) {
+      this.showSessionLockedNotice();
+      return true;
+    }
     const btn = document.getElementById('recordBtn') as HTMLButtonElement | null;
     const currentTab = await getCurrentTab();
     if (btn && currentTab && isTabRecordable(currentTab)) {

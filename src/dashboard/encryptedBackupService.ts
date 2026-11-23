@@ -8,6 +8,14 @@ import { exportDb } from './exportLogsService.js';
 import { restoreDb, isServiceError } from './dashboardSqliteService.js';
 import { encryptEnvelope, decryptBackupEnvelope, isEncryptionEnvelope } from '../utils/crypto/index.js';
 import type { EncryptionEnvelope } from '../utils/crypto/index.js';
+import {
+  createSplitBackup,
+  parseSplitBackup,
+  isSplitBackupContainer,
+  type SplitBackupContainer,
+  type SplitBackupInput,
+  type CreateSplitBackupOptions,
+} from './encryptedBackupSplitCodec.js';
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { validateRestorableSettings } from '../utils/storage/restorableSettings.js';
@@ -65,6 +73,56 @@ export async function exportEncryptedBackup(
 }
 
 /**
+ * 履歴+設定を分割暗号化バックアップとしてエクスポートする。
+ * 単一エンベロープでは汎用上限に収まらない大容量 DB 向け。各パートは
+ * 汎用上限内に収まる。@throws exportDb() が失敗した場合
+ */
+export async function exportEncryptedSplitBackup(
+  password: string,
+  onStage?: (s: 'readingDb' | 'encrypting') => void,
+  options?: CreateSplitBackupOptions,
+): Promise<SplitBackupContainer> {
+  onStage?.('readingDb');
+  const payload = await buildBackupPayload();
+  onStage?.('encrypting');
+  return createSplitBackup(
+    {
+      version: payload.version,
+      exportedAt: payload.exportedAt,
+      settings: payload.settings,
+      historyDbBase64: payload.historyDbBase64,
+    },
+    password,
+    options,
+  );
+}
+
+/**
+ * 分割暗号化バックアップをインポートし、設定と DB を復元する。
+ * 単一形式と同じく、失敗時は既存データを一切変更せず失敗を返す。
+ */
+export async function importEncryptedSplitBackup(
+  container: SplitBackupContainer,
+  password: string,
+  onStage?: (s: 'decrypting' | 'restoringDb' | 'restoringSettings') => void,
+): Promise<{ success: boolean; error?: string; skippedKeys?: string[] }> {
+  let payload: SplitBackupInput;
+  try {
+    onStage?.('decrypting');
+    payload = await parseSplitBackup(container, password, { expectedVersion: BACKUP_PAYLOAD_VERSION });
+  } catch (error) {
+    return { success: false, error: `Decryption failed: ${errorMessage(error)}` };
+  }
+  return restorePayloadObject(payload, password, onStage);
+}
+
+export function isEncryptedSplitBackupFile(data: unknown): data is SplitBackupContainer {
+  return isSplitBackupContainer(data);
+}
+
+type RestoreStage = 'decrypting' | 'restoringDb' | 'restoringSettings';
+
+/**
  * 暗号化バックアップをインポートし、設定とDBを復元する。
  * パスフレーズ誤り・データ破損・バージョン不一致の場合は既存データを一切変更せず失敗を返す。
  */
@@ -93,6 +151,18 @@ export async function importEncryptedBackup(
     return { success: false, error: `Invalid backup content: ${errorMessage(error)}` };
   }
 
+  return restorePayloadObject(payload, password, onStage);
+}
+
+/**
+ * 復号済みペイロードの検証と復元。単一形式と分割形式で共有し、
+ * バージョン確認、セッション確立、DB 復元、設定復元の順序を統一する。
+ */
+async function restorePayloadObject(
+  payload: unknown,
+  password: string,
+  onStage?: (s: RestoreStage) => void,
+): Promise<{ success: boolean; error?: string; skippedKeys?: string[] }> {
   if (!isBackupPayload(payload)) {
     return { success: false, error: 'Invalid backup payload structure' };
   }

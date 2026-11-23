@@ -291,6 +291,14 @@ ollama list
 - パスワードの設定・変更・解除を行っても、保存済みの API キーは再暗号化されて引き継がれるため、入力し直す必要はありません。復号できない項目が1つでもあると処理を中止し、既存のデータと画面の状態はそのまま残ります
 - パスワード設定中に拡張機能がロックされていると、バックグラウンドの要約などは「ロック中」のエラーで失敗します。ダッシュボードでパスワードを入力して解除してください
 - パスワード変更が中断した場合は、中断時と同じパスワードで再試行してください
+- パスワードを忘れた場合の削除復旧: 旧パスなしでの維持はできません。ダッシュボード → Privacy → 「パスワードを忘れた場合」を押し、二重確認を通すと保護が無効化されAPIキーが削除されます。他の設定は残るため、削除後にAPIキーを再入力すれば復旧できます。削除済み鍵の復元はできません
+
+**設定順序のおすすめ**: 保護の有効化は最後に行います。1. APIキー登録、2. 「Test Obsidian」「Test AI」で疎通確認、3. マスターパスワード保護の有効化、の順です。先に保護を有効にするとロック中の操作制限に当たり、疎通確認ができません。
+
+**ロック中の制限**: マスターパスワード有効時は、設定直後からセッションがロックされます。ロック中は次の操作が抑止されます。
+- 初期設定画面: APIキー欄と保存ボタンが無効化されます。画面上部の案内から Privacy パネルへ移動し、アンロックしてください
+- AIテスト: 保存も送信も行わず、ロック中の案内が表示されます。既存の設定は変更されません
+- 記録: ポップアップの「今すぐ記録」や保留分の一括保存は止まり、ダッシュボードへの導線が表示されます。バックグラウンドの要約も「ロック中」のエラーで失敗します
 
 #### 6. AI要約クレンジング設定
 `Dashboard → AI Summary Cleansing` で、AIに本文を送る前のノイズ除去を設定します。
@@ -592,9 +600,17 @@ In the "Privacy" tab, you can configure detailed privacy behavior.
 - Once configured, settings exports/imports are automatically encrypted with AES-GCM
 - Use this when migrating or backing up settings that include API keys and other sensitive data
 - Password strength is shown in real time during setup (Weak / Medium / Strong)
-- Setting, changing, or removing the password re-encrypts and keeps your stored API keys, so you do not need to enter them again. If even one item cannot be decrypted, the operation is aborted and existing data and the screen state are left unchanged
+- Setting, changing, or removing the master password re-encrypts and keeps your stored API keys, so you do not need to enter them again. If even one item cannot be decrypted, the operation is aborted and existing data and the screen state are left unchanged
 - While the extension is locked with a master password, background operations such as summarization fail with a "locked" error. Enter the password in the dashboard to unlock
 - If a password change is interrupted, retry it with the same password you used originally
+- Forgot-password recovery by deletion: keeping protection without the old password is not possible. Press the forgot entry under Dashboard → Privacy and confirm twice to disable protection and delete the API keys. Other settings are kept, so re-enter the API keys afterwards to recover. Deleted keys cannot be restored
+
+**Recommended setup order**: Enable protection last. 1. Register the API key, 2. verify with "Test Obsidian" and "Test AI", 3. enable master password protection. Enabling protection first blocks the connection checks behind the locked-state restrictions.
+
+**Locked-state restrictions**: With a master password set, the session starts locked. While locked, the following operations are held back.
+- Initial Setup screen: API key fields and Save buttons are disabled. Follow the on-screen notice to the Privacy panel and unlock
+- AI test: Nothing is saved or sent; a locked-state notice is shown instead. Existing settings are left unchanged
+- Recording: The popup "Record Now" button and bulk pending saves are held back with a dashboard guide. Background summarization also fails with a "locked" error
 
 #### 6. AI Summary Cleansing Settings
 In `Dashboard → AI Summary Cleansing`, configure the noise removal applied before page text is sent to the AI.

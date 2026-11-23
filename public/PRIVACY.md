@@ -129,6 +129,18 @@ Yasumaro（以下「本拡張機能」）は、ユーザーのプライバシー
 - **暗号化方式**: AES-GCM（業界標準）+ PBKDF2による鍵導出（100,000回反復）
 - **適用範囲**: エクスポートされたJSONファイルに含まれるすべての設定（APIキーを含む）
   - **注意**: パスワードを忘れた場合、暗号化されたエクスポートファイルを復号することはできません
+- **パスワードを忘れた場合**: 旧パスなしでの維持（再設定・変更）はできません。その代わり、ダッシュボード → Privacy タブ → 「パスワードを忘れた場合」から二重確認を経て削除復旧できます
+  - **削除範囲**: 保護の認証記録とAPIキーのみ。他の設定（Obsidian接続先・ドメイン除外・プロンプト等）は残ります
+  - **復旧後**: 削除したAPIキーを再入力してください。削除済み鍵の復元はできません
+
+#### ロック中の動作
+
+マスターパスワード有効時は、設定直後からセッションがロックされます。ロック中の扱いは次の通りです。
+
+- 初期設定画面では API キー欄と保存ボタンが無効化され、Privacy パネルへのアンロック導線が表示されます
+- AI テストは保存も送信も行わず、ロック中の案内を表示します。既存の設定は変更されません
+- ポップアップの記録追加（「今すぐ記録」や保留分の一括保存）は抑止され、ダッシュボードへの導線が表示されます
+- 保存は成功するのに AI テストが失敗する分離は、この仕組みによる仕様通りの動作です。アンロック後は同じ設定のまま AI テストが通ります
 
 ### ログエクスポートの改竄検知
 
@@ -305,6 +317,18 @@ You can encrypt exported settings files with a **master password**.
 - **Encryption**: AES-GCM (industry standard) + PBKDF2 key derivation (100,000 iterations)
 - **Scope**: All settings in the exported JSON file, including API keys
 - **Note**: If you forget your password, encrypted export files cannot be decrypted
+- **If you forget your password**: keeping protection without the old password (reset/change) is not possible. Instead, use Dashboard → Privacy tab → the forgot entry and confirm twice to recover by deletion
+  - **Deletion scope**: protection auth records and API keys only. Other settings (Obsidian host, domain filters, prompts, etc.) are kept
+  - **After recovery**: re-enter the deleted API keys. Deleted keys cannot be restored
+
+#### Locked-State Behavior
+
+With a master password set, the session starts locked. While locked:
+
+- On the Initial Setup screen, API key fields and Save buttons are disabled and a guide to the Privacy panel is shown for unlocking
+- The AI test neither saves nor sends anything; it shows a locked-state notice instead. Existing settings are left unchanged
+- Popup recording ("Record Now" and bulk pending saves) is held back with a dashboard guide
+- Save succeeding while the AI test fails is the intended behavior of this design. After unlocking, the same settings pass the AI test
 
 ### Log Export Tamper Detection
 

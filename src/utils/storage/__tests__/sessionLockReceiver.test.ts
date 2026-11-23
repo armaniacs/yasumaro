@@ -311,6 +311,7 @@ function createAlarmPortStub(): AlarmPort {
   return {
     create: async () => undefined,
     clear: async () => undefined,
+    get: async () => undefined,
     onAlarm: () => undefined,
   };
 }

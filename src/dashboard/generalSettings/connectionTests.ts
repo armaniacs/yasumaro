@@ -31,6 +31,7 @@ import { syncStatusToTop } from '../statusView.js';
 import { runPanelAction } from '../panels/panelAction.js';
 import { showStatus, clearStatus } from '../../utils/ui/settingsUiHelper.js';
 import { runAiConnectionTest } from '../aiTestRunner.js';
+import { LOCK_AI_FALLBACK, LOCK_SAVE_FALLBACK, readSessionLockSafe } from './sessionLockGuard.js';
 import { resolveSafeExportDir } from '../../utils/pathSanitizer.js';
 import { getLocalDateString } from '../markdownExport.js';
 
@@ -269,6 +270,13 @@ export async function testAiConnection(runId?: string): Promise<MultiProviderTes
 export async function handleSaveOnly(): Promise<void> {
   const statusDiv = document.getElementById('status') as HTMLElement | null;
   if (!statusDiv) return;
+  // PBI 2026-11-23-03: ロック中は保存要求自体を実行しない (見た目の
+  // 無効化だけにしない)。復号できない状態での保存は既存設定を壊す
+  // 恐れがあるため、案内を出して終了する。
+  if (await readSessionLockSafe()) {
+    showStatus(statusDiv, getMessageOr('encryptionLockedApiKeys', LOCK_SAVE_FALLBACK), 'error', { autoClear: false });
+    return;
+  }
   const [saveTop, saveBtn] = resolveButtonPair(CONNECTION_TEST_BUTTON_PAIRS.save);
   await runPanelAction({
     buttons: [saveTop, saveBtn],
@@ -381,6 +389,13 @@ export async function handleTestAi(): Promise<void> {
   if (!statusDiv) return;
   const [testAiTop, testAiBtn] = resolveButtonPair(CONNECTION_TEST_BUTTON_PAIRS.ai);
   if (!testAiTop && !testAiBtn) return;
+
+  // PBI 2026-11-23-03: 復号処理 (保存 + TEST_AI 送信) に入る前に
+  // ロック中の案内を出す。既存設定は変更しない。
+  if (await readSessionLockSafe()) {
+    showStatus(statusDiv, getMessageOr('encryptionLockedApiKeys', LOCK_AI_FALLBACK), 'error', { autoClear: false });
+    return;
+  }
 
   // The re-entrancy guard lives in the shared runner plus the outer panel
   // guard: the top/bottom pair stays disabled for the whole run, and the

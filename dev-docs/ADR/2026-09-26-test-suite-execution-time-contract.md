@@ -468,6 +468,22 @@ rev `20778134` からの差分を `git grep` で特定した（推測なし）�
 **決定**: `gates.jsdomFileCount` を 403 → 426 に改定する。増加分は DOM を
 直接使う content・popup・配線経路の検証が中心で、suite の成長は正当なため、
 欠陥や追加ゲートの必要はない。
+#### `domFileCount` 426 → 436 の内訳（2026-11-23 追記）
+
+2026-11-23 の PR #216 CI が `OVER DOM env files: 436 / 426` で赤だった。
+`validate` 以外のジョブは緑で、失敗は新機能の試験追加のみが原因。増加
+10 件、削除 0 件。すべて `wasm-quickjs-dom` 環境で、DOM を直接使う
+画面と取込経路の検証である。
+
+| 増減 | 領域 | なぜ DOM なのか |
+|---|---|---|
+| +1 | `src/dashboard/__tests__` | 分割バックアップ画面の DOM 検証（split panel round-trip） |
+| +3 | `src/dashboard/__tests__` | 寛容取込と AI 修復の DOM 検証（tolerant import、repair 本体と UI） |
+| +3 | `src/dashboard` | 保護 UX の DOM 検証（forgot-recovery、sessionLock guard と connection gate） |
+| +3 | `src/popup/__tests__` | popup の DOM 検証（appVersion、pendingPages-lock、recordSession-lock） |
+
+**決定**: `gates.domFileCount` を 426 → 436 に改定する。増加分は新機能の
+画面検証が中心で、suite の成長は正当なため、欠陥や追加ゲートの必要はない。
 
 ---
 

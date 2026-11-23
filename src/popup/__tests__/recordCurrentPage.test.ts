@@ -1,6 +1,6 @@
 // @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { useTimerClock } from '../../../testDir/waitPolicy.js';
+import { useTimerClock, waitForMock } from '../../../testDir/waitPolicy.js';
 
 // chrome.runtime.lastError is readonly in @types/chrome; tests need to simulate it.
 type MutableLastError = { lastError: chrome.runtime.LastError | null };
@@ -444,10 +444,20 @@ describe('recordCurrentPage', () => {
         });
         const btn = document.getElementById('recordBtn') as HTMLButtonElement;
 
+        // 指摘10の修正で施錠読直しが非同期化されたため、取得を待たせて
+        // 記録中の表示を観測する。固定待ちは使わない。
+        let failFetch!: (reason?: unknown) => void;
+        const fetchGate = new Promise<never>((_resolve, reject) => {
+            failFetch = reject;
+        });
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockResolvedValueOnce(null);
+        vi.mocked(chrome.tabs.sendMessage as unknown as (...a: unknown[]) => Promise<unknown>).mockReturnValueOnce(fetchGate);
+
         const promise = recordCurrentPage();
-        expect(btn.textContent).toBe('recordNowProgress');
+        await waitForMock(() => expect(btn.textContent).toBe('recordNowProgress'));
         expect(btn.disabled).toBe(true);
 
+        failFetch(new Error('Send failed'));
         await promise;
     });
 

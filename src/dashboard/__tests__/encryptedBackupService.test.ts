@@ -62,9 +62,14 @@ import { exportDb } from '../exportLogsService.js';
 import { restoreDb } from '../dashboardSqliteService.js';
 import { isMasterPasswordEnabled, unlockWithPassword } from '../../utils/storage/encryptionSession.js';
 import { isLocked } from '../../utils/storage/authGuard.js';
+import { MAX_ENVELOPE_BASE64_LENGTH } from '../../utils/limits.js';
+import type { SplitBackupContainer } from '../encryptedBackupSplitCodec.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
+  exportEncryptedSplitBackup,
+  importEncryptedSplitBackup,
+  isEncryptedSplitBackupFile,
   BACKUP_PAYLOAD_VERSION,
 } from '../encryptedBackupService.js';
 
@@ -327,5 +332,191 @@ describe('exportEncryptedBackup / importEncryptedBackup', () => {
     expect((result as { error: string }).error).toContain('master password');
     expect(restoreDb).not.toHaveBeenCalled();
     expect(settingsRepository.setAll).not.toHaveBeenCalled();
+  });
+});
+
+describe('encrypted split backup service (PBI01)', () => {
+  const FAKE_SETTINGS = { obsidian_protocol: 'https', obsidian_port: '27124' } as never;
+  const FAKE_DB_BYTES = new Uint8Array([1, 2, 3, 4, 5]);
+
+  function randomBytes(size: number): Uint8Array<ArrayBuffer> {
+    const out = new Uint8Array(size);
+    global.crypto.getRandomValues(out);
+    return out;
+  }
+
+  function compressibleBytes(size: number): Uint8Array<ArrayBuffer> {
+    const sentence = 'History log entry for https://example.com/articles/12345 with AI summary text. ';
+    const bytes = new TextEncoder().encode(sentence);
+    const out = new Uint8Array(size);
+    for (let i = 0; i < size; i++) out[i] = bytes[i % bytes.length]!;
+    return out;
+  }
+
+  async function sha256Hex(bytes: Uint8Array<ArrayBuffer>): Promise<string> {
+    const digest = await global.crypto.subtle.digest('SHA-256', bytes);
+    return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  it('split round-trips settings and history with multiple parts', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([compressibleBytes(2000)]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const container = await exportEncryptedSplitBackup('correct-password', undefined, {
+      chunkChars: 64,
+    });
+    expect(container.parts.length).toBeGreaterThan(1);
+    for (const part of container.parts) {
+      expect(part.data.length).toBeLessThanOrEqual(MAX_ENVELOPE_BASE64_LENGTH);
+    }
+
+    const result = await importEncryptedSplitBackup(container, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(settingsRepository.setAll).toHaveBeenCalledWith(expect.objectContaining(FAKE_SETTINGS));
+    expect(restoreDb).toHaveBeenCalledTimes(1);
+    const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array;
+    expect(Array.from(restoredBytes)).toEqual(Array.from(compressibleBytes(2000)));
+  });
+
+  it('split round-trips a 30MB-class history db within per-part caps', async () => {
+    const dbBytes = randomBytes(30_000_000);
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([dbBytes]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const container = await exportEncryptedSplitBackup('correct-password');
+    expect(container.parts.length).toBeGreaterThan(1);
+    for (const part of container.parts) {
+      expect(part.data.length).toBeLessThanOrEqual(MAX_ENVELOPE_BASE64_LENGTH);
+    }
+
+    const result = await importEncryptedSplitBackup(container, 'correct-password');
+
+    expect(result.success).toBe(true);
+    const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array<ArrayBuffer>;
+    expect(restoredBytes.length).toBe(dbBytes.length);
+    await expect(sha256Hex(restoredBytes)).resolves.toBe(await sha256Hex(dbBytes));
+  });
+
+  it('reports split export/import stages in order', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS as any);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const exportStages: string[] = [];
+    const container = await exportEncryptedSplitBackup('correct-password', (s) => {
+      exportStages.push(s);
+    });
+    expect(exportStages).toEqual(['readingDb', 'encrypting']);
+
+    const importStages: string[] = [];
+    const result = await importEncryptedSplitBackup(container, 'correct-password', (s) => {
+      importStages.push(s);
+    });
+    expect(result.success).toBe(true);
+    expect(importStages).toEqual(['decrypting', 'restoringDb', 'restoringSettings']);
+  });
+
+  it('split import rejects a missing part naming the part number', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([compressibleBytes(2000)]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const container = await exportEncryptedSplitBackup('correct-password', undefined, {
+      chunkChars: 64,
+    });
+    expect(container.parts.length).toBeGreaterThan(2);
+    const dropped: SplitBackupContainer = {
+      ...container,
+      parts: container.parts.filter((_, i) => i !== 1),
+    };
+
+    const result = await importEncryptedSplitBackup(dropped, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect((result as { error: string }).error).toContain('1');
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
+  });
+
+  it('split import rejects a tampered part without touching db or settings', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([compressibleBytes(2000)]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const container = await exportEncryptedSplitBackup('correct-password', undefined, {
+      chunkChars: 64,
+    });
+    const tampered = structuredClone(container);
+    const data = tampered.parts[0]!.data;
+    tampered.parts[0]!.data = `${data.slice(0, -1)}${data.at(-1) === 'A' ? 'B' : 'A'}`;
+
+    const result = await importEncryptedSplitBackup(tampered, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
+  });
+
+  it('single-format importer rejects a split container without touching db or settings', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const container = await exportEncryptedSplitBackup('correct-password');
+
+    const result = await importEncryptedBackup(container as never, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
+  });
+
+  it('split importer rejects a single-format envelope', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+
+    const envelope = await exportEncryptedBackup('correct-password');
+
+    const result = await importEncryptedSplitBackup(envelope as never, 'correct-password');
+
+    expect(result.success).toBe(false);
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
+  });
+
+  it('legacy single-format envelope still restores (backward compat)', async () => {
+    vi.mocked(restoreDb).mockResolvedValue({ data: undefined });
+    let binary = '';
+    for (const b of FAKE_DB_BYTES) binary += String.fromCharCode(b);
+    const legacyPayload = {
+      version: BACKUP_PAYLOAD_VERSION,
+      exportedAt: new Date().toISOString(),
+      settings: FAKE_SETTINGS,
+      historyDbBase64: btoa(binary),
+    };
+    const legacyEnvelope = await encryptEnvelope(JSON.stringify(legacyPayload), 'correct-password');
+
+    const result = await importEncryptedBackup(legacyEnvelope, 'correct-password');
+
+    expect(result.success).toBe(true);
+    expect(restoreDb).toHaveBeenCalledTimes(1);
+    const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array;
+    expect(Array.from(restoredBytes)).toEqual(Array.from(FAKE_DB_BYTES));
+  });
+
+  it('isEncryptedSplitBackupFile discriminates containers from single envelopes', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    vi.mocked(exportDb).mockResolvedValue(new Blob([FAKE_DB_BYTES]));
+
+    const container = await exportEncryptedSplitBackup('correct-password');
+    const single = await exportEncryptedBackup('correct-password');
+
+    expect(isEncryptedSplitBackupFile(container)).toBe(true);
+    expect(isEncryptedSplitBackupFile(single)).toBe(false);
+    expect(isEncryptedSplitBackupFile(null)).toBe(false);
   });
 });

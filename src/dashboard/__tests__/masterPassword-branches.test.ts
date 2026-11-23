@@ -99,6 +99,7 @@ function emptyDomRefs(): MasterPasswordDomRefs {
     masterPasswordWarning: null,
     setMasterPasswordNowBtn: null,
     changeMasterPasswordBtn: null,
+    forgotMasterPasswordBtn: null,
     passwordModal: null,
     passwordModalTitle: null,
     passwordModalDesc: null,

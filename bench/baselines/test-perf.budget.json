@@ -2,7 +2,7 @@
   "_comment": "Budget for `npm run test:perf`. `gates` fails the build; `reference` is printed for a human and does not. Since 2026-11-19 the gated metric is `domFileCount`: the number of suite files carrying a per-file DOM environment docblock (jsdom or wasm-quickjs-dom). It is a count, so machine-independent (ADR R4). The wasm-quickjs-dom migration (PBI 2026-11-19-01) replaced jsdom with the wasm environment for 422 DOM files and halved the environment phase (ADR 2026-09-26 measured isolated/jsdom at 147ms per file, environment ~106ms of it; the migration A/B on 24 identical DOM-heavy files measured the wasm side 1.76x faster in wall time). The old `gates.jsdomFileCount` priced only the jsdom subset; after the migration its premise (jsdom is the expensive DOM implementation to gate) no longer describes the driver, so the gate was redefined to all DOM env files and re-pinned at the measured count. `fileCount` stays in `reference`: a total prices every file the same and ratcheted continuously (930 -> 1060 -> 1062 -> 1093) before its 2026-10-18 demotion. The JSON reporter cannot measure fixed cost, so wall is the sole figure that includes it and is machine- and worker-count-dependent (76.9s at 6 workers, 184s at 3, 303s at 2 on one 8-core box). Raising a gate requires an ADR note recording the trajectory and the cause, because a bare raise only resets the clock. Full trajectory of the former jsdomFileCount (introduced 360, raised 362, 374, 398, 403, 426) and of this redefinition: dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md (R4 and the 2026-11-19 entry).",
   "budget": {
     "gates": {
-      "domFileCount": 426
+      "domFileCount": 436
     },
     "reference": {
       "fileCount": 1093,

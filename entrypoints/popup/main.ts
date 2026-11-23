@@ -7,6 +7,7 @@ import './styles.css';
 import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../../src/utils/i18n-dom.js';
 import { getMessage } from '../../src/utils/i18n.js';
 import { initMainScreen } from '../../src/popup/main.js';
+import { initAppVersion } from '../../src/popup/appVersion.js';
 import { initPopup } from '../../src/popup/popup.js';
 
 // PBI 2026-09-11-04 (round 7): single entry point — applyI18n first, then the
@@ -16,6 +17,7 @@ import { initPopup } from '../../src/popup/popup.js';
 async function bootstrap(): Promise<void> {
   setHtmlLangAndDir();
   applyI18n();
+  initAppVersion();
   const historyButton = document.getElementById('historyBtn');
   if (historyButton) {
     historyButton.title = getMessage('openHistory');

@@ -26,6 +26,7 @@ import { loadContentSettings } from './settings/contentSettings.js';
 import { loadTrustSettings } from './settings/trustSettings.js';
 import { importFromJson, importFromJsonForMigration, isImportError } from './importLogsService.js';
 import type { ImportLogsResult } from './importLogsService.js';
+import { createAiRepairUi } from './importLogsAiRepairUi.js';
 
 interface ExportImportDom {
   exportSettingsBtn: HTMLButtonElement | null;
@@ -77,6 +78,32 @@ export function createExportImport(): ExportImportController {
   let importTrapId: string | null = null;
   let _pendingImportData: Settings | null = null;
   let pendingImportJson: string | null = null;
+  /** 取込ファイルの原文。AI修復の収集は入口ボタン押下時にここから解析する。 */
+  let lastImportJsonText: string | null = null;
+  /** AI修復入口のホスト。取込結果の直後に置き、結果表示と共に更新する。 */
+  let aiRepairHost: HTMLElement | null = null;
+  const aiRepairUi = createAiRepairUi({
+    getParsed: () => {
+      if (lastImportJsonText === null) return null;
+      try {
+        return JSON.parse(lastImportJsonText) as unknown;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  /** 修復ホストを進捗表示の直後に用意する (なければ作る)。 */
+  function ensureAiRepairHost(): HTMLElement | null {
+    ensureDom();
+    if (aiRepairHost && aiRepairHost.isConnected) return aiRepairHost;
+    if (!dom?.importLogsProgress?.parentElement) return null;
+    aiRepairHost = document.createElement('div');
+    aiRepairHost.id = 'importLogsAiRepair';
+    dom.importLogsProgress.after(aiRepairHost);
+    aiRepairUi.mount(aiRepairHost);
+    return aiRepairHost;
+  }
 
   /**
    * Resolve all DOM references. Called at the top of initExportImport() and
@@ -251,13 +278,25 @@ export function createExportImport(): ExportImportController {
       if (isImportError(result)) {
         dom.importLogsProgress.textContent = formatImportLogsError(result.error);
         dom.importLogsProgress.className = 'diag-result error';
+        aiRepairHost?.replaceChildren();
       } else {
-        const msg = (getMessageOr('importLogsComplete', 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)'))
+        let msg = (getMessageOr('importLogsComplete', 'Import complete: %{inserted} inserted, %{skipped} skipped (of %{total} total)'))
           .replace('%{inserted}', String(result.inserted))
           .replace('%{skipped}', String(result.skipped))
           .replace('%{total}', String(result.total));
+        if (result.invalid) {
+          const reasons = Object.entries(result.invalidReasons ?? {})
+            .map(([reason, count]) => `${reason} x${count}`)
+            .join('; ');
+          msg += ` (${result.invalid} invalid${reasons ? `: ${reasons}` : ''})`;
+          msg += ` ${getMessageOr('aiRepairAvailable', 'AI repair is available (%{invalid} rows)').replace('%{invalid}', String(result.invalid))}`;
+        }
         dom.importLogsProgress.textContent = `✓ ${msg}`;
         dom.importLogsProgress.className = 'diag-result success';
+        // 取込結果表示の拡張: 却下行がある場合だけ修復入口を出す。
+        // 収集・送信・取込はいずれも入口ボタン以降の明示操作で行う。
+        const host = ensureAiRepairHost();
+        if (host) aiRepairUi.showForResult(result);
       }
     }
 
@@ -273,9 +312,11 @@ export function createExportImport(): ExportImportController {
       if (!file) return;
 
       showLogsProgress();
+      aiRepairHost?.replaceChildren();
 
       try {
         const text = await file.text();
+        lastImportJsonText = text;
         const result = await importFromJson(text, (current, total) => {
           showLogsProgress(current, total);
         });
@@ -328,6 +369,8 @@ export function createExportImport(): ExportImportController {
           return;
         }
         showLogsProgress();
+        aiRepairHost?.replaceChildren();
+        lastImportJsonText = text;
         const result = await importFromJsonForMigration(text, (current, total) => {
           showLogsProgress(current, total);
         });
@@ -343,6 +386,9 @@ export function createExportImport(): ExportImportController {
 
   function destroy(): void {
     for (const off of teardown.splice(0)) off();
+    aiRepairUi.destroy();
+    aiRepairHost = null;
+    lastImportJsonText = null;
     dom = null;
   }
 

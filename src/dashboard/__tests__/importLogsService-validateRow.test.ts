@@ -102,3 +102,86 @@ describe('validateRow (via importFromJson)', () => {
     expect(res).toMatchObject({ error: expect.stringContaining('row limit') });
   });
 });
+
+describe('validateImportRowWithOptions (strict canonical / lenient background parity)', () => {
+  it('exposes a shared validator with a strict option (canonical)', async () => {
+    const mod = await import('../importLogsService.js');
+    expect(typeof (mod as Record<string, unknown>).validateImportRowWithOptions).toBe('function');
+  });
+
+  it('strict wrapper delegates to the canonical strict call', async () => {
+    const { validateImportRowReason, validateImportRowWithOptions } = await import(
+      '../importLogsService.js'
+    );
+    const cases: unknown[] = [
+      { url: 'https://a.test', created_at: NOW },
+      { url: 'https://a.test', created_at: Date.now() + 5 * 24 * 3600 * 1000 },
+      { url: 'https://a.test/' + 'x'.repeat(3000), created_at: NOW },
+      { url: 'https://a.test', created_at: NOW, title: 'x'.repeat(3000) },
+      { url: 'https://a.test', created_at: 0 },
+      { url: 'https://a.test', created_at: NOW, visit_duration: null },
+    ];
+    for (const row of cases) {
+      expect(validateImportRowReason(row as never)).toBe(
+        validateImportRowWithOptions(row, { strict: true })
+      );
+    }
+  });
+
+  it('strict rejects future/over-long rows while lenient accepts them (background parity)', async () => {
+    const { validateImportRowWithOptions } = await import('../importLogsService.js');
+    const { validateImportRow } = await import('../../messaging/validators.js');
+    const future = Date.now() + 5 * 24 * 3600 * 1000;
+    const divergent: unknown[] = [
+      { url: 'https://a.test', created_at: future },
+      { url: 'https://a.test/' + 'x'.repeat(3000), created_at: NOW },
+      { url: 'https://a.test', created_at: NOW, title: 'x'.repeat(3000) },
+      { url: 'https://a.test', created_at: NOW, summary: 'y'.repeat(100_001) },
+      { url: 'https://a.test', created_at: NOW, visit_duration: 10 * 24 * 3600 * 1000 },
+    ];
+    for (const row of divergent) {
+      expect(validateImportRowWithOptions(row, { strict: true })).not.toBeNull();
+      expect(validateImportRowWithOptions(row, { strict: false })).toBeNull();
+      expect(validateImportRow(row)).toBeNull();
+    }
+  });
+
+  it('lenient matches validateImportRow on null-tolerant optional fields', async () => {
+    const { validateImportRowWithOptions } = await import('../importLogsService.js');
+    const { validateImportRow } = await import('../../messaging/validators.js');
+    const rows: unknown[] = [
+      { url: 'https://a.test', created_at: NOW, visit_duration: null },
+      { url: 'https://a.test', created_at: NOW, scroll_ratio: null },
+      { url: 'https://a.test', created_at: NOW, is_starred: null },
+      { url: 'https://a.test', created_at: NOW, title: null },
+    ];
+    for (const row of rows) {
+      expect(validateImportRowWithOptions(row, { strict: false })).toBe(
+        validateImportRow(row)
+      );
+    }
+    // Strict keeps rejecting null numerics/flags (no cap relaxation).
+    expect(
+      validateImportRowWithOptions(
+        { url: 'https://a.test', created_at: NOW, visit_duration: null },
+        { strict: true }
+      )
+    ).not.toBeNull();
+  });
+
+  it('strict stays byte-identical on the shared rejection messages', async () => {
+    const { validateImportRowWithOptions } = await import('../importLogsService.js');
+    expect(
+      validateImportRowWithOptions({ url: '', created_at: NOW }, { strict: true })
+    ).toBe('url must be a non-empty string');
+    expect(
+      validateImportRowWithOptions({ url: 'https://a.test' }, { strict: true })
+    ).toBe('created_at must be a finite number');
+    expect(
+      validateImportRowWithOptions(
+        { url: 'https://a.test', created_at: NOW, scroll_ratio: 5 },
+        { strict: true }
+      )
+    ).toBe('scroll_ratio must be between 0 and 1');
+  });
+});

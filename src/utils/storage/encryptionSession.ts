@@ -900,6 +900,65 @@ async function removeMasterPasswordUnlocked(password?: string): Promise<void> {
     });
 }
 
+// Keys wiped by forgot recovery: the same 4-key disable contract as
+// removeMasterPassword, plus the remaining protection auth records (KDF
+// iteration count and pending rotation anchors). API keys are deleted
+// separately in both placements. Everything else (hosts, ports, filters,
+// prompts, history prefs, ...) is untouched.
+const FORGOT_RECOVERY_REMOVED_KEYS = [
+  ...DISABLE_REMOVED_KEYS,
+  StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
+  StorageKeys.MASTER_PASSWORD_PENDING_SALT,
+  StorageKeys.MASTER_PASSWORD_PENDING_HASH,
+] as const;
+
+/**
+ * 忘れ復旧: 旧パスなしで保護を無効化しAPIキーを削除する (PBI 2026-11-23-04)。
+ *
+ * 通常の removeMasterPassword とは別経路で、旧パスもセッション文脈も要求
+ * しない。旧パスなしでの維持 (再設定・変更) は不可とし、削除だけを許可する。
+ * 削除対象は保護の認証記録と API キーのみ。他設定は残す。
+ * 保護が無効の場合は何もせず 'Master password not enabled' を投げる。
+ * NOTE: 既存の removeMasterPassword 等の挙動は変えないこと。
+ */
+export async function recoverForgotMasterPassword(): Promise<void> {
+    return withRotationLock(async () => {
+        if (!(await isMasterPasswordEnabled())) {
+            throw new Error('Master password not enabled');
+        }
+        const port = new ChromeStoragePort();
+        const { nested, scattered } = await readApiKeyPlacements(port);
+        if (nested !== undefined && API_KEY_FIELD_NAMES.some((f) => f in nested)) {
+            // Delta-only write through the transaction (persistReEncrypted
+            // precedent): never spread a cached snapshot for the write.
+            const tx = new StorageTransaction(port);
+            await tx.withLock<Record<string, unknown>>('settings', (current) => {
+                const next: Record<string, unknown> = { ...(current ?? {}) };
+                for (const field of API_KEY_FIELD_NAMES) delete next[field];
+                return next;
+            });
+        }
+        const scatteredToRemove = API_KEY_FIELD_NAMES.filter((f) =>
+            Object.prototype.hasOwnProperty.call(scattered, f)
+        );
+        if (scatteredToRemove.length > 0) {
+            // Single remove without per-field withLock: field-level locks
+            // would write `<field>_version` CAS records into user storage.
+            await chrome.storage.local.remove(scatteredToRemove);
+        }
+        await chrome.storage.local.remove([...FORGOT_RECOVERY_REMOVED_KEYS]);
+
+        cachedMasterPassword = null;
+        isMasterPasswordRequired = false;
+        cachedEncryptionKey = null;
+        await logInfo(
+            'Master password forgot recovery: protection disabled and API keys removed',
+            {},
+            'storage/encryptionSession.ts'
+        );
+    });
+}
+
 /**
  * 暗号化キーのキャッシュをクリアする（テスト用）
  */

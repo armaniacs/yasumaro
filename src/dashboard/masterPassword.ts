@@ -16,6 +16,7 @@ import {
   setMasterPassword as setMasterPasswordService,
   changeMasterPassword as changeMasterPasswordService,
   removeMasterPassword as removeMasterPasswordService,
+  recoverForgotMasterPassword as recoverForgotMasterPasswordService,
   verifyMasterPasswordWithRehash,
   isMasterPasswordEnabled,
   ReencryptionAbortedError,
@@ -30,6 +31,7 @@ import {
 } from '../utils/masterPasswordUiCore.js';
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
+import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
 
 /**
  * DOM要素の参照を保持するインターフェース。
@@ -41,6 +43,7 @@ export interface MasterPasswordDomRefs {
   masterPasswordWarning: HTMLElement | null;
   setMasterPasswordNowBtn: HTMLButtonElement | null;
   changeMasterPasswordBtn: HTMLButtonElement | null;
+  forgotMasterPasswordBtn: HTMLButtonElement | null;
   passwordModal: HTMLElement | null;
   passwordModalTitle: HTMLElement | null;
   passwordModalDesc: HTMLElement | null;
@@ -73,6 +76,7 @@ function resolveDefaultDomRefs(): MasterPasswordDomRefs {
     masterPasswordWarning: document.getElementById('masterPasswordWarning') as HTMLElement | null,
     setMasterPasswordNowBtn: document.getElementById('setMasterPasswordNowBtn') as HTMLButtonElement | null,
     changeMasterPasswordBtn: document.getElementById('changeMasterPassword') as HTMLButtonElement | null,
+    forgotMasterPasswordBtn: document.getElementById('forgotMasterPasswordBtn') as HTMLButtonElement | null,
     passwordModal: document.getElementById('passwordModal') as HTMLElement | null,
     passwordModalTitle: document.getElementById('passwordModalTitle') as HTMLElement | null,
     passwordModalDesc: document.getElementById('passwordModalDesc') as HTMLElement | null,
@@ -111,6 +115,9 @@ export class MasterPasswordController {
   // here. Cleared on modal close and after a successful save — never on
   // failure, so the open change modal stays retryable. Never persisted.
   private pendingOldPassword: string | null = null;
+  // Two-step confirm state for the forgot entry (PBI 2026-11-23-04): the
+  // first click only arms, the second click runs the deletion. Never persisted.
+  private forgotArmed = false;
   private saveInFlight = false;
   // initEventListeners() is called from every panel that hosts a password
   // modal user (currently panel-privacy and panel-export-import, while the
@@ -411,6 +418,79 @@ export class MasterPasswordController {
     }
   }
 
+  // PBI 2026-11-23-04: forgot entry. Plain literals on purpose — locales are
+  // frozen for a parallel PBI (no new keys), so no getMessageOr/data-i18n here.
+  private forgotButtonLabel(): string {
+    return 'パスワードを忘れた場合（保護とAPIキーを削除）';
+  }
+
+  private forgotConfirmLabel(): string {
+    return '本当に削除しますか? もう一度押すと保護とAPIキーを削除します';
+  }
+
+  private forgotDoneMessage(): string {
+    return '保護を無効化しAPIキーを削除しました。APIキーを再入力してください。旧パスなしでの維持はできません。';
+  }
+
+  private forgotConfirmDialogMessage(): string {
+    return '保護とAPIキーを削除します。この操作は元に戻せません。APIキーは再入力が必要です。実行しますか?';
+  }
+
+  private disarmForgot(): void {
+    if (!this.forgotArmed) return;
+    this.forgotArmed = false;
+    const btn = this.dom.forgotMasterPasswordBtn;
+    if (btn) {
+      const label = btn.dataset.label;
+      if (label !== undefined && label !== '') {
+        btn.textContent = label;
+        delete btn.dataset.label;
+      } else {
+        btn.textContent = this.forgotButtonLabel();
+      }
+    }
+  }
+
+  private async handleForgotClick(): Promise<void> {
+    const btn = this.dom.forgotMasterPasswordBtn;
+    if (!btn || btn.disabled) return;
+    if (!this.forgotArmed) {
+      this.forgotArmed = true;
+      btn.dataset.label = btn.textContent ?? '';
+      btn.textContent = this.forgotConfirmLabel();
+      return;
+    }
+    // Second click never deletes by itself: an explicit confirmation dialog
+    // gates the destructive recovery (cspSettings.ts follows the same seam).
+    btn.disabled = true;
+    let confirmed = false;
+    try {
+      confirmed = await showConfirmDialog({
+        message: this.forgotConfirmDialogMessage(),
+        dangerous: true,
+      });
+    } catch {
+      confirmed = false;
+    }
+    if (!confirmed) {
+      this.disarmForgot();
+      btn.disabled = false;
+      return;
+    }
+    this.disarmForgot();
+    try {
+      await recoverForgotMasterPasswordService();
+      if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = false;
+      if (this.dom.masterPasswordOptions) this.dom.masterPasswordOptions.classList.add('hidden');
+      this.updateMasterPasswordWarningVisibility(false);
+      showStatus('status', this.forgotDoneMessage(), 'success');
+    } catch (e) {
+      showStatus('status', errorMessage(e), 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
   private beginChange(): void {
     this.showPasswordAuthModal('export', async (password) => {
       // The change modal only collects the new password; carry the old one
@@ -479,6 +559,11 @@ export class MasterPasswordController {
 
     dom.changeMasterPasswordBtn?.addEventListener('click', () => this.beginChange());
 
+    if (dom.forgotMasterPasswordBtn && !dom.forgotMasterPasswordBtn.textContent) {
+      dom.forgotMasterPasswordBtn.textContent = this.forgotButtonLabel();
+    }
+    dom.forgotMasterPasswordBtn?.addEventListener('click', () => this.handleForgotClick());
+
     dom.masterPasswordInput?.addEventListener('input', () => {
       if (dom.masterPasswordInput) this.updatePasswordStrength(dom.masterPasswordInput.value);
     });
@@ -505,6 +590,9 @@ export class MasterPasswordController {
    * 設定をロードする。
    */
   async loadSettings(): Promise<void> {
+    // Reloading re-reads storage: drop the armed confirm so a stale first
+    // click can never turn the next click into a deletion.
+    this.disarmForgot();
     const isSet = await isMasterPasswordEnabled();
     if (this.dom.masterPasswordEnabled) this.dom.masterPasswordEnabled.checked = isSet;
     if (this.dom.masterPasswordOptions) {

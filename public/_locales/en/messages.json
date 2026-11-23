@@ -905,6 +905,39 @@
   "importLogsError": {
     "message": "Import error: %{error}"
   },
+  "aiRepairAvailable": {
+    "message": "AI repair is available (%{invalid} rows). See the reasons in the import result"
+  },
+  "aiRepairEntry": {
+    "message": "Propose AI repairs (%{invalid} rows)"
+  },
+  "aiRepairCollecting": {
+    "message": "Collecting rejected rows..."
+  },
+  "aiRepairNoTargets": {
+    "message": "No rejected rows to repair."
+  },
+  "aiRepairNoClient": {
+    "message": "AI repair client is not configured."
+  },
+  "aiRepairRequesting": {
+    "message": "Requesting AI proposals..."
+  },
+  "aiRepairNoProposals": {
+    "message": "No AI proposals were returned."
+  },
+  "aiRepairReview": {
+    "message": "Review the proposals and import the selected rows."
+  },
+  "aiRepairApplied": {
+    "message": "AI repair applied: %{applied} rows."
+  },
+  "aiRepairApplySelected": {
+    "message": "Import selected repairs"
+  },
+  "aiRepairLocked": {
+    "message": "AI repair is unavailable while the session is locked. Unlock first."
+  },
   "settingsExported": {
     "message": "Settings exported successfully"
   },
@@ -5875,6 +5908,18 @@
   },
   "encryptedBackupInvalidFile": {
     "message": "Invalid backup file"
+  },
+  "encryptedBackupSplitManifestMissing": {
+    "message": "Select the manifest file together with all part files to restore the split backup"
+  },
+  "encryptedBackupSplitInvalidManifest": {
+    "message": "The split backup manifest is invalid"
+  },
+  "encryptedBackupSplitOrderError": {
+    "message": "Split backup parts are inconsistent: {detail}. Re-select the manifest and all part files."
+  },
+  "encryptedBackupSplitTooLarge": {
+    "message": "Split backup exceeds the size limit: {detail}"
   },
   "encryptedBackupRestoredSkipped": {
     "message": "Restored from backup ({skipped} invalid settings items were skipped)"
