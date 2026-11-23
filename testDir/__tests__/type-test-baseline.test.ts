@@ -2,8 +2,9 @@
  * The type-test baseline gate must fail when test type errors grow past the
  * pinned number, and pass at or below it. Spawning the checker with stubbed
  * tsc output keeps this fast — running real tsc here would blow the 30s
- * per-test budget under suite load. The stub exit code simulates tsc's
- * measured semantics (errors → 2, clean → 0, spawn failure → "spawn").
+ * per-test budget under suite load. The stub exit code simulates tsc 7's
+ * measured semantics (type errors → 1, clean → 0, config break → 2, spawn
+ * failure → "spawn").
  *
  * The include/exclude pin at the bottom bounds the count-only baseline's
  * coverage-shrink hole: shrinking testDir/tsconfig.json would drop the count
@@ -58,19 +59,19 @@ afterAll(() => {
 
 describe('type-test baseline gate', () => {
     it('fails when errors exceed the pinned number', () => {
-        const { exit, output } = runChecker(2, stubOutput('over.txt', 3), '2');
+        const { exit, output } = runChecker(2, stubOutput('over.txt', 3), '1');
         expect(exit).toBe(1);
         expect(output).toContain('3 > pinned 2');
     });
 
     it('passes when errors equal the pinned number', () => {
-        const { exit, output } = runChecker(2, stubOutput('equal.txt', 2), '2');
+        const { exit, output } = runChecker(2, stubOutput('equal.txt', 2), '1');
         expect(exit).toBe(0);
         expect(output).toContain('pinned 2');
     });
 
     it('passes below the pin and asks to lock the gain', () => {
-        const { exit, output } = runChecker(2, stubOutput('under.txt', 1), '2');
+        const { exit, output } = runChecker(2, stubOutput('under.txt', 1), '1');
         expect(exit).toBe(0);
         expect(output).toContain('lower testDir/type-check-baseline.json');
     });
@@ -95,11 +96,11 @@ describe('type-test baseline gate', () => {
     });
 
     it('fails when TS errors are counted with a non-diagnostics exit code', () => {
-        // A no-inputs config break fires TS18003 (countable) and exits 1 —
-        // without the sanity check it would pass below the pin.
-        const { exit, output } = runChecker(489, stubOutput('cfg-break.txt', 1), '1');
+        // A config break fires a countable TS line (TS18002/TS18003) and exits
+        // 2 under tsc 7 — without the sanity check it would pass below the pin.
+        const { exit, output } = runChecker(489, stubOutput('cfg-break.txt', 1), '2');
         expect(exit).toBe(1);
-        expect(output).toContain('expected exit 2');
+        expect(output).toContain('expected exit 1');
     });
 
     it('pins a finite non-negative number', () => {
