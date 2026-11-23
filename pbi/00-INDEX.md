@@ -14,6 +14,18 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
+
+コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。`listen` 関数の 6 重定義、`parseIntOr` の単一ファイルローカル定義、`webhookExportSettings.ts` の save/load 重複要素取得、`aiSummaryCleansingSettingsV2.ts` の threshold 反復パターン、`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの 5 件。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 01 | [2026-11-21-01-refactor-listen-shared-utility.md](2026-11-21-01-refactor-listen-shared-utility.md) | 🔧非機能追加 | - | 3 | `listen` 関数を `src/utils/domListen.ts` に共通化、6ファイルから削除 |
+| 02 | [2026-11-21-02-refactor-parseintor-shared-utility.md](2026-11-21-02-refactor-parseintor-shared-utility.md) | 🔧非機能追加 | - | 2 | `parseIntOr` を `src/utils/string.ts` に移動、`aiSummaryCleansingSettingsV2.ts` から削除 |
+| 03 | [2026-11-21-03-refactor-webhook-export-element-consolidation.md](2026-11-21-03-refactor-webhook-export-element-consolidation.md) | 🔧非機能追加 | - | 3 | `webhookExportSettings.ts` の save/load 5要素取得を共通ヘルパーに集約 |
+| 04 | [2026-11-21-04-refactor-ai-cleansing-threshold-loop.md](2026-11-21-04-refactor-ai-cleansing-threshold-loop.md) | 🔧非機能追加 | - | 2 | `aiSummaryCleansingSettingsV2.ts` の threshold 反復を for ループ化 |
+| 05 | [2026-11-21-05-refactor-settings-form-binding-adoption.md](2026-11-21-05-refactor-settings-form-binding-adoption.md) | 🔧非機能追加 | - | 5 | `?.checked ?? false` / `?.value ?? ''` を `settingsFormBinding.ts` ヘルパーに移行 |
+
 ### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
 
 RICE降順で実装。01 tab問い合わせ複製の解消とタイマ一元化 (Quick Win・parity12件・タイマ残留0) / 02 符号化所有の固定と順序回帰試験 (順序回帰20件・XSS系緑維持) / 03 PrivacyPipeline の純粋部切り出し (mock-free19件・parity14件) / 04 dashboard gateway の共通 seam 利用者化 (parity5件・wiring6件)。バッチ境界: 型検査緑・lint エラー0・軽量65ファイル1352件緑。最終ゲート: フル1342ファイル18911件緑・ビルド緑。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
