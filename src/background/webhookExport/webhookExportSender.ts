@@ -18,24 +18,29 @@
  * Masking is therefore enforced at the last gate before egress, regardless
  * of how the stored summary was produced.
  *
- * Declaration pattern (PBI 01): the destination must be https
- * (isWebhookUrlAllowed) AND declared in the manifest's host_permissions
- * (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()). An
- * undeclared origin is blocked without touching the network and the reason
- * surfaces in history + notification. The browser's extension_pages document
- * CSP is the second layer (pinned by testDir/e2e/webhook-egress.spec.ts).
- * The AI-provider-scoped CSPValidator gate is deliberately NOT consulted —
- * it allowlists provider domains only and would fail every webhook closed
- * without a verdict this feature can explain.
+ * Declaration pattern: the destination must be https (isWebhookUrlAllowed)
+ * AND in the webhook-specific destination allowlist
+ * (WEBHOOK_EXPORT_DESTINATION_PATTERNS via judgeWebhookDestination in
+ * webhookExportDestinations.ts). The allowlist is the SINGLE judgment source
+ * the save-time pre-flight shares, so a save-permitted destination is never
+ * send-blocked. Its initial set equals the declared manifest host_permissions
+ * and is pinned to that set by webhookExportDestinations.test.ts: a manifest
+ * addition for another feature does NOT widen the webhook gate, and a
+ * manifest removal does not invalidate existing destinations. An
+ * out-of-allowlist origin is blocked without touching the network and the
+ * reason surfaces in history + notification. The browser's extension_pages
+ * document CSP is the second layer (pinned by
+ * testDir/e2e/webhook-egress.spec.ts). The AI-provider-scoped CSPValidator
+ * gate is deliberately NOT consulted — it allowlists provider domains only
+ * and would fail every webhook closed without a verdict this feature can
+ * explain.
  *
- * Why the gate reads the manifest instead of chrome.permissions.contains
- * (granted permissions): the content script declares `<all_urls>`, and
- * Chromium grants that match at install time in every real install
- * (unpacked and store alike), so the granted set covers every origin and a
- * granted-based check can never block an undeclared destination. Proven by
- * the E2E permission probe (webhook-egress.spec.ts pin 2: contains() returns
- * true for example.com while the manifest does not declare it) and pinned by
- * unit test.
+ * Why the gate does not read chrome.permissions.contains (granted
+ * permissions): the content script declares `<all_urls>`, and Chromium grants
+ * that match at install time in every real install (unpacked and store
+ * alike), so the granted set covers every origin and a granted-based check
+ * can never block an out-of-list destination (E2E permission probe,
+ * webhook-egress.spec.ts pin 2).
  *
  * The fetch itself runs `redirect: 'error'`: a 30x must never forward the
  * JSON body to a Location no gate checked (same policy as the Gist target).
@@ -48,7 +53,7 @@ import {
   webhookUrlOrigin,
   type WebhookExportRecord,
 } from './webhookExportPayload.js';
-import { escapeRegExp } from '../../utils/string.js';
+import { judgeWebhookDestination } from './webhookExportDestinations.js';
 import { sanitizeRegex } from '../../utils/piiSanitizer.js';
 import {
   deriveWebhookIdempotencyKey,
@@ -142,90 +147,20 @@ export async function defaultWebhookFetch(
 }
 
 /**
- * Match-pattern check for one manifest host_permissions entry. Implements the
- * Chrome match-pattern semantics the declared entries use: `<all_urls>`
- * (match-pattern schemes only, noted inline), a `*` scheme (http|https only),
- * a `*` / `*.host` / exact host, and a path glob — with one fail-closed path
- * deviation noted inline. An exact host that carries an explicit port (the
- * declared loopback entries) matches the URL's host+port; a portless host
- * keeps the any-port hostname comparison. Exported pure so the unit tests
- * can pin the semantics without a manifest.
+ * The matcher lives in webhookExportDestinations.ts so the save-time
+ * pre-flight and this gate share one implementation without an import
+ * cycle; re-exported for existing importers.
  */
-export function isUrlCoveredByHostPattern(url: string, pattern: string): boolean {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    return false;
-  }
-  const protocol = parsed.protocol.replace(/:$/, '');
-  if (pattern === '<all_urls>') {
-    // The URL is parsed BEFORE the shortcut: Chrome's <all_urls> covers the
-    // match-pattern schemes only, so a chrome-internal, data, or unknown
-    // scheme never passes an all-urls declaration.
-    return ['http', 'https', 'file', 'ftp', 'ws', 'wss'].includes(protocol);
-  }
-  const schemeSeparator = pattern.indexOf('://');
-  if (schemeSeparator < 0) return false;
-  const scheme = pattern.slice(0, schemeSeparator);
-  const rest = pattern.slice(schemeSeparator + 3);
-  const slash = rest.indexOf('/');
-  const host = slash < 0 ? rest : rest.slice(0, slash);
-  const pathGlob = slash < 0 ? '/' : rest.slice(slash);
-  if (scheme === '*') {
-    // In Chrome match patterns a `*` scheme matches http and https only.
-    if (protocol !== 'http' && protocol !== 'https') return false;
-  } else if (scheme !== protocol) {
-    return false;
-  }
-  const hostname = parsed.hostname;
-  // PBI 2026-10-31-10: a pattern host that carries an explicit port (the
-  // declared loopback entries, e.g. 127.0.0.1:27123) is compared against the
-  // URL's host+port — parsed.host keeps an explicit port and drops the
-  // scheme default — because parsed.hostname is portless and never matched a
-  // ported declaration. A portless pattern keeps the hostname comparison
-  // (any port matches), and the `*` / `*.host` wildcard branches below are
-  // NOT widened to port matching. The lastIndexOf guard keeps a portless
-  // IPv6 pattern host (`[::1]`) on the hostname path.
-  const patternHostHasPort = host.lastIndexOf(':') > host.lastIndexOf(']');
-  const urlHost = patternHostHasPort ? parsed.host : hostname;
-  if (host === '*') {
-    // Any host.
-  } else if (host.startsWith('*.')) {
-    const base = host.slice(2);
-    if (hostname !== base && !hostname.endsWith(`.${base}`)) return false;
-  } else if (host !== urlHost) {
-    return false;
-  }
-  const path = `${parsed.pathname}${parsed.search}`;
-  // Path glob: each `*` matches any run of characters (ReDoS-safe: the
-  // pattern comes from the extension's own manifest, not user input).
-  // Deviation from Chrome, kept deliberately fail-closed: Chrome mandates a
-  // path segment in every pattern and would reject a pathless one at
-  // install; this matcher treats a pathless pattern as `/` (root only), so
-  // it never widens a match beyond what Chrome would grant.
-  const regex = new RegExp(`^${pathGlob.split('*').map(escapeRegExp).join('.*')}$`);
-  return regex.test(path);
-}
+export { isUrlCoveredByHostPattern } from './webhookExportDestinations.js';
 
 /**
- * Production permission check: the manifest's DECLARED host_permissions.
- *
- * Why not permissionManager.isHostPermitted (chrome.permissions.contains):
- * that primitive answers from the GRANTED set, and the content script's
- * `<all_urls>` match is granted at install time in every real install, so a
- * granted-based check passes for every origin and can never implement the
- * "undeclared origins are blocked" contract (see the module header). Fail
- * closed: an unreadable manifest means no egress.
+ * Production permission check: the webhook destination allowlist, via the
+ * same judgeWebhookDestination the save-time pre-flight calls (see the module
+ * header for why neither the granted set nor the live manifest is read).
+ * Fail closed: an unparseable destination is non-permitted.
  */
 export async function defaultIsWebhookHostPermitted(url: string): Promise<boolean> {
-  let declared: readonly string[];
-  try {
-    declared = chrome.runtime.getManifest().host_permissions ?? [];
-  } catch {
-    return false;
-  }
-  return declared.some((pattern) => isUrlCoveredByHostPattern(url, pattern));
+  return judgeWebhookDestination(url).permitted;
 }
 
 /** Production mask: the privacy pipeline's regex pass, applied at send time. */

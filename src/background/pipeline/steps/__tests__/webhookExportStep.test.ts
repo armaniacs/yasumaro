@@ -7,7 +7,7 @@
  * past the recording. The record identity is the page URL — no per-run
  * traceId in the idempotency key.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('../../../../utils/logger/core.js', async () =>
   (await import('../../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
@@ -111,35 +111,10 @@ describe('webhookExportStep — disabled by default (no network)', () => {
 });
 
 describe('webhookExportStep — production seams on an enabled destination', () => {
-  const realGetManifest = (globalThis as { chrome?: { runtime?: { getManifest?: () => unknown } } }).chrome
-    ?.runtime?.getManifest;
-
-  // The production gate reads the manifest's declared host_permissions
-  // (declared semantics — the granted set covers every origin because the
-  // content script's <all_urls> match is granted at install time), so the
-  // enabled-path tests stub the manifest to declare the destination origin.
-  function stubWebhookManifest(): void {
-    const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
-    if (!runtime) throw new Error('chrome.runtime mock missing');
-    runtime.getManifest = () => ({
-      manifest_version: 3,
-      name: 'test',
-      version: '0',
-      host_permissions: ['https://hooks.example.com/*'],
-    });
-  }
-
-  afterEach(() => {
-    const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
-    if (runtime) {
-      if (realGetManifest) runtime.getManifest = realGetManifest;
-      else delete runtime.getManifest;
-    }
-  });
-
+  // The production gate judges against the webhook destination allowlist, so
+  // the enabled-path tests use an origin the initial set carries.
   it('POSTs the minimal payload with the real sanitizer re-mask and notifies', async () => {
-    stubWebhookManifest();
-    await setWebhookSettings({ enabled: true, url: 'https://hooks.example.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -154,7 +129,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
     expect(result).toBe(context);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
-    expect(url).toBe('https://hooks.example.com/hook');
+    expect(url).toBe('https://api.github.com/hook');
     expect(init?.method).toBe('POST');
     const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, string>;
     expect(body.content).toBeUndefined();
@@ -169,8 +144,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('never sends when the privacy verdict is absent and records the reason', async () => {
-    stubWebhookManifest();
-    await setWebhookSettings({ enabled: true, url: 'https://hooks.example.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     // No privacyReader: the verdict is unknown — egress fails closed.
@@ -191,8 +165,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('suppresses a same-content re-record across runs (stable page-URL identity)', async () => {
-    stubWebhookManifest();
-    await setWebhookSettings({ enabled: true, url: 'https://hooks.example.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -213,8 +186,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('POSTs again when the content changes for the same page', async () => {
-    stubWebhookManifest();
-    await setWebhookSettings({ enabled: true, url: 'https://hooks.example.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -234,7 +206,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('skips the send when the real privacy verdict marks the page private', async () => {
-    setWebhookSettings({ enabled: true, url: 'https://hooks.example.com/hook', condition: {} });
+    setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const privateInfo: PrivacyInfo = {
       isPrivate: true,
@@ -252,7 +224,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   it('excludes records that miss the engagement threshold', async () => {
     setWebhookSettings({
       enabled: true,
-      url: 'https://hooks.example.com/hook',
+      url: 'https://api.github.com/hook',
       condition: { minScrollDepth: 50, minVisitDuration: 60 },
     });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');

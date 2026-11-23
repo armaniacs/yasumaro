@@ -6010,6 +6010,50 @@
   "webhookExportSaved": {
     "message": "Webhook エクスポート設定を保存しました。"
   },
+  "webhookExportLegacyOrigins": {
+    "message": "既存の宛先 origin（宣言 31 パターン: ローカル宛 16・AI プロバイダ宛 14・Gist 宛 1）は Webhook 専用許可リストの初期集合に含まれるため、アップデート後も現状維持されます。新規保存のみ https 専用が適用されます。",
+    "description": "Webhook 送信先 URL 入力下の移行説明（既存宛先は初期集合に含まれる旨）"
+  },
+  "webhookExportDestinationPermitted": {
+    "message": "保存しました。宛先 $ORIGIN$ は許可されています。",
+    "description": "Webhook 送信先の保存時判定（許可）",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "https://api.github.com"
+      }
+    }
+  },
+  "webhookExportDestinationGrandfathered": {
+    "message": "保存しました。既存宛先 $ORIGIN$ は現状維持されますが、https 以外のため送信ゲートは拒否します。",
+    "description": "Webhook 既存宛先の保存時判定（祖父条項・現状維持だが送信は非 https で拒否）",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "http://127.0.0.1:27123"
+      }
+    }
+  },
+  "webhookExportDestinationNonHttps": {
+    "message": "保存を拒否しました: 宛先は https 専用です（$ORIGIN$）。",
+    "description": "Webhook 送信先の保存時拒否（https 以外）",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "http://127.0.0.1:27123"
+      }
+    }
+  },
+  "webhookExportDestinationNotInAllowlist": {
+    "message": "保存を拒否しました: 宛先 origin $ORIGIN$ は Webhook 宛先許可リストに含まれていません。",
+    "description": "Webhook 送信先の保存時拒否（許可リスト外 origin）",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "https://hooks.example.com"
+      }
+    }
+  },
   "webhookExportTab": {
     "message": "Webhook エクスポート",
     "description": "Webhook エクスポートパネルのサイドバーラベルとタイトル"

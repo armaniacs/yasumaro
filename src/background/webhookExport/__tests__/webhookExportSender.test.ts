@@ -193,7 +193,7 @@ describe('declared loopback destinations (PBI 2026-10-31-10 port fix)', () => {
   });
 });
 
-describe('production gate reads the manifest, not the granted set', () => {
+describe('production gate uses the webhook destination allowlist, not the manifest or the granted set', () => {
   const realGetManifest = (globalThis as { chrome?: { runtime?: { getManifest?: () => unknown } } }).chrome
     ?.runtime?.getManifest;
 
@@ -227,13 +227,22 @@ describe('production gate reads the manifest, not the granted set', () => {
     expect(isUrlCoveredByHostPattern('::::', 'https://example.com/*')).toBe(false);
   });
 
-  it('permits only destinations covered by the declared host_permissions', async () => {
-    stubManifest(['https://api.github.com/*', 'https://localhost:27123/*']);
+  it('permits only destinations in the webhook destination allowlist', async () => {
     await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(true);
-    // An undeclared origin is blocked even though the browser's granted set
+    // An out-of-list origin is blocked even though the browser's granted set
     // covers every origin (the content script's <all_urls> match is granted
     // at install time — proven by the E2E permission probe).
     await expect(defaultIsWebhookHostPermitted('https://hooks.example.com/hook')).resolves.toBe(false);
+  });
+
+  it('a manifest addition for another feature does not widen the webhook gate', async () => {
+    stubManifest([...buildLocalHostPermissions(), 'https://api.github.com/*', 'https://tracker.example/*']);
+    await expect(defaultIsWebhookHostPermitted('https://tracker.example/hook')).resolves.toBe(false);
+  });
+
+  it('a manifest removal does not narrow the webhook gate (grandfathered destinations)', async () => {
+    stubManifest([]);
+    await expect(defaultIsWebhookHostPermitted('https://127.0.0.1:27123/hook')).resolves.toBe(true);
   });
 
   it('matches a declared loopback pattern by host+port (PBI 2026-10-31-10)', () => {
@@ -254,10 +263,9 @@ describe('production gate reads the manifest, not the granted set', () => {
     expect(isUrlCoveredByHostPattern('https://api.github.com:8443/x', 'https://api.github.com/*')).toBe(true);
   });
 
-  it('permits a declared loopback destination through the manifest gate', async () => {
-    stubManifest(buildLocalHostPermissions());
+  it('permits a declared loopback destination through the list gate', async () => {
     await expect(defaultIsWebhookHostPermitted('https://127.0.0.1:27123/hook')).resolves.toBe(true);
-    // An undeclared public origin stays fail-closed with the same declared set.
+    // An out-of-list public origin stays fail-closed.
     await expect(defaultIsWebhookHostPermitted('https://example.com/hook')).resolves.toBe(false);
   });
 
@@ -274,13 +282,14 @@ describe('production gate reads the manifest, not the granted set', () => {
     expect(isUrlCoveredByHostPattern('ftp://example.com/x', '<all_urls>')).toBe(true);
   });
 
-  it('fails closed when the manifest is unreadable', async () => {
+  it('fails closed on an unparseable destination without reading the manifest', async () => {
     const runtime = (globalThis as { chrome?: { runtime?: Record<string, unknown> } }).chrome?.runtime;
     if (!runtime) throw new Error('chrome.runtime mock missing');
     runtime.getManifest = () => {
       throw new Error('manifest unavailable');
     };
-    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(false);
+    await expect(defaultIsWebhookHostPermitted('::::')).resolves.toBe(false);
+    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(true);
   });
 });
 

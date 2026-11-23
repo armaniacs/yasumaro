@@ -6028,6 +6028,50 @@
   "webhookExportSaved": {
     "message": "Webhook export settings saved."
   },
+  "webhookExportLegacyOrigins": {
+    "message": "Existing destination origins (the 31 declared patterns: 16 local, 14 AI-provider, 1 Gist) are part of the webhook destination allowlist's initial set and keep working after the update. The https-only rule applies to newly saved destinations only.",
+    "description": "Migration wording under the webhook destination URL input (existing destinations are part of the initial set)"
+  },
+  "webhookExportDestinationPermitted": {
+    "message": "Saved. Destination $ORIGIN$ is permitted.",
+    "description": "Save-time destination verdict (permitted)",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "https://api.github.com"
+      }
+    }
+  },
+  "webhookExportDestinationGrandfathered": {
+    "message": "Saved. Existing destination $ORIGIN$ is preserved, but the send gate rejects it because it is not https.",
+    "description": "Save-time verdict for an existing destination (grandfather clause: preserved, but non-https sends are rejected)",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "http://127.0.0.1:27123"
+      }
+    }
+  },
+  "webhookExportDestinationNonHttps": {
+    "message": "Save rejected: the destination must be https ($ORIGIN$).",
+    "description": "Save-time rejection (non-https destination)",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "http://127.0.0.1:27123"
+      }
+    }
+  },
+  "webhookExportDestinationNotInAllowlist": {
+    "message": "Save rejected: destination origin $ORIGIN$ is not in the webhook destination allowlist.",
+    "description": "Save-time rejection (origin outside the destination allowlist)",
+    "placeholders": {
+      "origin": {
+        "content": "$1",
+        "example": "https://hooks.example.com"
+      }
+    }
+  },
   "webhookExportTab": {
     "message": "Webhook Export",
     "description": "Sidebar label and panel title for the webhook export panel"

@@ -12,16 +12,22 @@
  * Security notes (from the Topic-3 attacker 5-whys): every row renders via
  * textContent only (history rows carry page-derived URLs), and only the
  * origin is ever displayed — the full webhook URL may carry a secret token.
- * No locale keys are added: all wording resolves through getMessageOr with a
- * literal fallback, so _locales/ stays untouched.
+ * All wording resolves through getMessageOr with a literal fallback; the
+ * save-time destination verdict keys are declared in both locales and the
+ * verdict text carries the origin only.
  */
 
 import {
   loadWebhookExportSettings,
   saveWebhookExportSettings,
+  WebhookDestinationBlockedError,
   type WebhookExportSettings,
   type WebhookExportStore,
 } from '../background/webhookExport/webhookExportSettings.js';
+import type {
+  WebhookDestinationReason,
+  WebhookDestinationVerdict,
+} from '../background/webhookExport/webhookExportDestinations.js';
 import {
   WebhookExportHistory,
   type WebhookExportHistoryEntry,
@@ -103,6 +109,32 @@ function readNumberOrUndefined(input: HTMLInputElement | null): number | undefin
   if (input === null || input.value.trim() === '') return undefined;
   const parsed: number = Number(input.value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+/**
+ * Save-time verdict wording. The origin rides the positional substitution
+ * only: the full (possibly token-bearing) URL never composes the status line.
+ */
+const DESTINATION_REASON_TEXT: Record<WebhookDestinationReason, { key: string; fallback: string }> = {
+  permitted: { key: 'webhookExportDestinationPermitted', fallback: 'Saved. The destination is permitted.' },
+  'non-https-or-empty-destination': {
+    key: 'webhookExportDestinationNonHttps',
+    fallback: 'Save rejected: the destination must be https.',
+  },
+  'destination-not-in-allowlist': {
+    key: 'webhookExportDestinationNotInAllowlist',
+    fallback: 'Save rejected: the destination origin is not in the webhook destination allowlist.',
+  },
+};
+
+const GRANDFATHERED_TEXT = {
+  key: 'webhookExportDestinationGrandfathered',
+  fallback: 'Saved. The existing destination is preserved, but the send gate rejects non-https destinations.',
+};
+
+function destinationStatusText(verdict: WebhookDestinationVerdict, grandfathered: boolean): string {
+  const text = grandfathered ? GRANDFATHERED_TEXT : DESTINATION_REASON_TEXT[verdict.reason];
+  return getMessageOr(text.key, text.fallback, [verdict.origin]);
 }
 
 export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}): WebhookExportUiController {
@@ -210,14 +242,23 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
       },
     };
     try {
-      if (seams.settingsStore !== undefined) {
-        await saveWebhookExportSettings(settings, seams.settingsStore);
+      const verdict: WebhookDestinationVerdict | null =
+        seams.settingsStore !== undefined
+          ? await saveWebhookExportSettings(settings, seams.settingsStore)
+          : await saveWebhookExportSettings(settings);
+      if (verdict === null) {
+        setStatus(getMessageOr('webhookExportSaved', 'Webhook export settings saved.'), false);
       } else {
-        await saveWebhookExportSettings(settings);
+        // A saved-but-non-permitted verdict is the grandfathered destination:
+        // preserved, yet the send gate still rejects it, so it shows as an error.
+        setStatus(destinationStatusText(verdict, !verdict.permitted), !verdict.permitted);
       }
-      setStatus(getMessageOr('webhookExportSaved', 'Webhook export settings saved.'), false);
     } catch (error) {
-      setStatus(errorMessage(error), true);
+      if (error instanceof WebhookDestinationBlockedError) {
+        setStatus(destinationStatusText(error.verdict, false), true);
+      } else {
+        setStatus(errorMessage(error), true);
+      }
     }
   }
 

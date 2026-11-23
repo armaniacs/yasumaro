@@ -95,7 +95,7 @@ describe('webhookExportSettings dashboard seam', () => {
     const controller = createWebhookExportSettingsUi({ settingsStore, historyStore: memoryHistoryStore() });
     controller.init();
     (document.getElementById('webhookExportEnabled') as HTMLInputElement).checked = true;
-    (document.getElementById('webhookExportUrl') as HTMLInputElement).value = 'https://hooks.example.com/h';
+    (document.getElementById('webhookExportUrl') as HTMLInputElement).value = 'https://api.github.com/h';
     (document.getElementById('webhookExportTag') as HTMLInputElement).value = '#obsidian';
     (document.getElementById('webhookExportMinScroll') as HTMLInputElement).value = '50';
     document.getElementById('webhookExportSaveBtn')?.click();
@@ -108,9 +108,29 @@ describe('webhookExportSettings dashboard seam', () => {
       condition: { tag?: string; minScrollDepth?: number };
     };
     expect(saved.enabled).toBe(true);
-    expect(saved.url).toBe('https://hooks.example.com/h');
+    expect(saved.url).toBe('https://api.github.com/h');
     expect(saved.condition.tag).toBe('#obsidian');
     expect(saved.condition.minScrollDepth).toBe(50);
+    await waitForMock(() => {
+      expect(document.getElementById('webhookExportStatus')?.textContent).toContain('https://api.github.com');
+    });
+    expect(document.getElementById('webhookExportStatus')?.className).toBe('success');
+  });
+
+  it('rejects an out-of-list destination at save time with an origin-only reason', async () => {
+    const settingsStore = memorySettingsStore();
+    const controller = createWebhookExportSettingsUi({ settingsStore, historyStore: memoryHistoryStore() });
+    controller.init();
+    (document.getElementById('webhookExportUrl') as HTMLInputElement).value =
+      'https://hooks.example.com/h?token=secret';
+    document.getElementById('webhookExportSaveBtn')?.click();
+    await waitForMock(() => {
+      expect(document.getElementById('webhookExportStatus')?.className).toBe('error');
+    });
+    const text = document.getElementById('webhookExportStatus')?.textContent ?? '';
+    expect(text).toContain('https://hooks.example.com');
+    expect(text).not.toContain('secret');
+    expect(settingsStore.saved).toHaveLength(0);
   });
 
   it('resends through the injected seams and refreshes history', async () => {

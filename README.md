@@ -538,6 +538,7 @@ Yasumaro は、閲覧履歴を AI に送信する前にプライバシーを保�
 - **監査ログ**: いつ、どの AI プロバイダーに、どの URL の要約を送信したかを記録します（7日間保持）。
 - **プライバシー同意フロー**: 初回起動時に同意を取得。3 回拒否すると制限モードで動作します。
 - **GDPR 対応**: データ削除は物理削除（`DELETE FROM`）で実行します。
+- **Webhook 宛先許可リスト**: Webhook エクスポートの送信先は https かつ Webhook 専用許可リスト内の origin のみ保存・送信できます。既存の宛先 origin（宣言 31 パターン: ローカル宛 16・AI プロバイダ宛 14・Gist 宛 1）は許可リストの初期集合に含まれるため、アップデート後も現状維持されます。新規保存のみ https 専用が適用され、許可リスト外の origin は保存時に理由付きで拒否されます。
 
 詳細は [PRIVACY.md](docs/PRIVACY.md) と [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) を参照してください。
 
@@ -550,6 +551,7 @@ Yasumaro は、閲覧履歴を AI に送信する前にプライバシーを保�
 - **Audit Log**: Records when, which AI provider, and which URL summary was sent (retained for 7 days).
 - **Privacy Consent Flow**: Requests consent on first launch. After 3 declines, the extension runs in restricted mode.
 - **GDPR Compliance**: Data deletion is performed via physical deletion (`DELETE FROM`).
+- **Webhook Destination Allowlist**: Webhook export destinations can be saved and used only when they are https and their origin is in the webhook-specific allowlist. Existing destination origins (the 31 declared patterns: 16 local, 14 AI-provider, 1 Gist) are part of the allowlist's initial set and keep working after the update. The https-only rule applies to newly saved destinations, and an origin outside the allowlist is rejected at save time with a reason.
 
 See [PRIVACY.md](docs/PRIVACY.md) and [PII_FEATURE_GUIDE.md](docs/PII_FEATURE_GUIDE.md) for details.
 

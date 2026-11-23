@@ -241,7 +241,7 @@ v4.2.1以降、以下の機能が追加されました：
     - **含まれない内容**: API キー、base URL、Obsidian の日次メモの保存先、記録の文面は含みません
     - **確認手順**: 新しい GitHub のタブが開く前に全文を確認できます。表示を閉じた場合は何も送信されません
 5. **GitHub Gist 同期 (オプトイン)**: Gist 同期を有効にし、個人用トークンを設定した利用者のみが対象です。同期対象に選んだ記録の本文とトークンのみが `https://api.github.com` に送られ、Gist の作成・更新と接続テストに使われます。
-6. **最小 Webhook 書き出し (オプトイン・既定は無効)**: 利用者が設定した https の URL に、マスク済みのタイトル・マスク済みの要約・タグ・URL のみを送ります。送信先が宣言済みの許可先に含まれない場合は送信せず、理由を履歴と通知に残します。プライバシー判定のない記録とページ本文は送りません。
+6. **最小 Webhook 書き出し (オプトイン・既定は無効)**: 利用者が設定した https の URL に、マスク済みのタイトル・マスク済みの要約・タグ・URL のみを送ります。送信先は Webhook 専用許可リスト内の origin のみ保存でき、リスト外の origin は保存時に理由付きで拒否されます。既存の宛先 origin（宣言 31 パターン: ローカル宛 16・AI プロバイダ宛 14・Gist 宛 1）は許可リストの初期集合に含まれるため、アップデート後も現状維持されます。新規保存のみ https 専用が適用されます。許可リスト外の宛先は送信せず、理由を履歴と通知に残します。プライバシー判定のない記録とページ本文は送りません。
 
 ### 拡張機能の権限について
 本拡張機能は以下の権限を必要とします：
@@ -423,7 +423,7 @@ An optional feature behind the "Research Sessions" panel, which shows which page
    - **Data Excluded**: API keys, base URLs, your Obsidian daily note path, and log message contents are never included
    - **Confirmation Step**: You can review the exact text before a new GitHub tab opens; closing the preview sends nothing
 5. **GitHub Gist Sync (Opt-In)**: Only for users who enable Gist sync and set a personal token. Only the token and the body of the records selected for sync are sent to `https://api.github.com`, to create and update gists and to test the connection.
-6. **Minimal Webhook Export (Opt-In, Off by Default)**: Sends only the masked title, masked summary, tags, and URL to the https URL you configure. If the destination origin is not a declared host permission, nothing is sent and the reason is kept in the history and a notification. Records without a privacy verdict and page body text are never sent.
+6. **Minimal Webhook Export (Opt-In, Off by Default)**: Sends only the masked title, masked summary, tags, and URL to the https URL you configure. A destination can be saved only when its origin is in the webhook-specific allowlist; an origin outside it is rejected at save time with a reason. Existing destination origins (the 31 declared patterns: 16 local, 14 AI-provider, 1 Gist) are part of the allowlist's initial set and keep working after the update, and the https-only rule applies to newly saved destinations. If the destination origin is not in the allowlist, nothing is sent and the reason is kept in the history and a notification. Records without a privacy verdict and page body text are never sent.
 
 ### Private Page Protection
 
