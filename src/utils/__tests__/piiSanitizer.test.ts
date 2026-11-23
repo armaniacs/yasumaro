@@ -286,7 +286,9 @@ describe('piiSanitizer', () => {
 
       // 事前フィルタにより中間の49800文字がスキャン対象から除外されるため、
       // 対策前（同サイズで数秒〜十数秒）と比べ大幅に高速に完了する
-      expect(elapsedTime).toBeLessThan(500);
+      // Threshold sits between healthy and degraded runs: measured ~110ms alone,
+      // up to ~518ms under full-suite load, ~4000ms with the prefilter disabled.
+      expect(elapsedTime).toBeLessThan(2000);
     });
 
     test('still detects legitimate PII around an extra-long chunk', async () => {
