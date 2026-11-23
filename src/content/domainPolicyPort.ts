@@ -6,6 +6,7 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
+import { readBlobFirst, withBlobTierKeys } from '../utils/storage/blobTierRead.js';
 import type { StoragePort } from '../utils/storage/storagePort.js';
 import { extractDomain, shouldSkipUrl } from './urlSkipper.js';
 import { evaluateDomainPolicy } from './visitAdmission.js';
@@ -48,32 +49,39 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
         // reads let a settings change land between them, mixing the mode of
         // one generation with the flags of the next — every field below now
         // comes from the same snapshot.
-        const result = await this.storage.get([
-            StorageKeys.DOMAIN_FILTER_CACHE,
-            StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
-            StorageKeys.DOMAIN_FILTER_MODE,
-            StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
-            StorageKeys.DOMAIN_BLACKLIST,
-            StorageKeys.SIMPLE_FORMAT_ENABLED,
-            StorageKeys.UBLOCK_FORMAT_ENABLED,
-        ]);
+        // The four policy keys are written into the settings blob and are
+        // TOP_LEVEL_ONLY (never folded away), so the blob is read first and
+        // the top-level copy is only the legacy fallback (blobTierRead.ts).
+        // The mirror keys have no blob tier: domainFilterCache.ts writes them
+        // top-level only.
+        const result = await this.storage.get(
+            withBlobTierKeys([
+                StorageKeys.DOMAIN_FILTER_CACHE,
+                StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
+                StorageKeys.DOMAIN_FILTER_MODE,
+                StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+                StorageKeys.DOMAIN_BLACKLIST,
+                StorageKeys.SIMPLE_FORMAT_ENABLED,
+                StorageKeys.UBLOCK_FORMAT_ENABLED,
+            ]),
+        );
 
         const cachedWhitelist = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
-        const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
+        const matchSubdomains = readBlobFirst(result, StorageKeys.DOMAIN_SUBDOMAIN_MATCHING) === true;
 
         const blacklist =
             mode === 'blacklist' || mode === 'whitelist'
-                ? ((result[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [])
+                ? ((readBlobFirst(result, StorageKeys.DOMAIN_BLACKLIST) as string[] | undefined) || [])
                 : [];
         const simpleEnabled =
             mode === 'blacklist' || mode === 'whitelist'
-                ? result[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false
+                ? readBlobFirst(result, StorageKeys.SIMPLE_FORMAT_ENABLED) !== false
                 : true;
         const ublockEnabled =
             mode === 'blacklist' || mode === 'whitelist'
-                ? result[StorageKeys.UBLOCK_FORMAT_ENABLED] === true
+                ? readBlobFirst(result, StorageKeys.UBLOCK_FORMAT_ENABLED) === true
                 : false;
 
         return evaluateDomainPolicy(

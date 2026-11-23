@@ -121,7 +121,84 @@ const RAW_OWNED_KEYS = {
     HISTORY_SORT_PREFERENCE: 'dashboard/panels/asyncData/sqliteHistoryModel.ts — panel sort preference read/written straight from top-level storage',
     CLEANSING_FEEDBACK_QUEUE: 'utils/aiSummaryCleaner/feedbackQueue.ts — queue read straight from top-level storage; the lock persists at the same key',
     RECORDING_PAUSED_UNTIL: 'background/recordingPause.ts — pause deadline read/written/removed straight from top-level storage',
+    // Domain policy: content/domainPolicyPort.ts reads these through StoragePort, blob first with a top-level fallback.
+    DOMAIN_SUBDOMAIN_MATCHING: 'content/domainPolicyPort.ts — port read, blob first then top-level fallback (blobTierRead.ts)',
+    DOMAIN_BLACKLIST: 'content/domainPolicyPort.ts — port read, blob first then top-level fallback (blobTierRead.ts)',
+    SIMPLE_FORMAT_ENABLED: 'content/domainPolicyPort.ts — port read, blob first then top-level fallback (blobTierRead.ts)',
+    UBLOCK_FORMAT_ENABLED: 'content/domainPolicyPort.ts — port read, blob first then top-level fallback (blobTierRead.ts)',
 } satisfies Record<string, string>;
+
+/**
+ * Raw readers (direct chrome.storage.local or StoragePort `.get`) of keys the
+ * settings writers persist in the `settings` blob. Each must resolve through
+ * `readBlobFirst` (blob first, top-level fallback), so a fold can never make
+ * the reader see a stale or missing copy. A reader not declared here fails the
+ * pin: that is how an undeclared port read is surfaced instead of silently
+ * returning defaults after the fold.
+ */
+const BLOB_TIER_READERS: ReadonlyArray<{ file: string; keys: readonly string[] }> = [
+    {
+        file: 'src/content/domainPolicyPort.ts',
+        keys: [
+            StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+            StorageKeys.DOMAIN_BLACKLIST,
+            StorageKeys.SIMPLE_FORMAT_ENABLED,
+            StorageKeys.UBLOCK_FORMAT_ENABLED,
+        ],
+    },
+    {
+        file: 'src/content/cleansingOffscreenDelegate.ts',
+        keys: [StorageKeys.CLEANSING_OFFSCREEN_ENABLED],
+    },
+];
+
+/** Keys whose raw reads must be declared in BLOB_TIER_READERS. */
+const BLOB_TIER_WATCHED_KEYS: ReadonlySet<string> = new Set<string>(BLOB_TIER_READERS.flatMap((r) => r.keys));
+
+/** `.get(` on a storage-like receiver: chrome.storage.local, a StoragePort or a *Storage / *Port field. */
+const STORAGE_READ_CALL_RE = /(?:\b(?:local|storage|port)|[\w$]*(?:Storage|Port))\??\.get\s*\(/g;
+
+/** @returns watched StorageKeys values referenced in the arguments of every storage-like `.get(` call. */
+function scanBlobTierReadsInSource(source: string): Set<string> {
+    const clean = stripComments(source);
+    const found = new Set<string>();
+    STORAGE_READ_CALL_RE.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = STORAGE_READ_CALL_RE.exec(clean)) !== null) {
+        let depth = 1;
+        let i = m.index + m[0].length;
+        const start = i;
+        for (; i < clean.length && depth > 0; i++) {
+            if (clean[i] === '(') depth++;
+            else if (clean[i] === ')') depth--;
+        }
+        for (const ref of clean.slice(start, i).matchAll(/StorageKeys\.([A-Z0-9_]+)/g)) {
+            const value = ref[1] === undefined ? undefined : StorageKeys[ref[1] as keyof typeof StorageKeys];
+            if (value !== undefined && BLOB_TIER_WATCHED_KEYS.has(value)) found.add(value);
+        }
+    }
+    return found;
+}
+
+/** The pin's blob-tier invariant: every watched read site is declared, and every declared site reads blob first. */
+function assertBlobTierReadsDeclared(
+    sites: ReadonlyMap<string, ReadonlySet<string>>,
+    declared: ReadonlyArray<{ file: string; keys: readonly string[] }>,
+): void {
+    const problems: string[] = [];
+    for (const [file, keys] of sites) {
+        const entry = declared.find((d) => d.file === file);
+        for (const key of keys) {
+            if (!entry?.keys.includes(key)) problems.push(`${file} reads ${key} without a BLOB_TIER_READERS declaration`);
+        }
+    }
+    for (const d of declared) {
+        for (const key of d.keys) {
+            if (!sites.get(d.file)?.has(key)) problems.push(`${d.file} declares ${key} but no longer reads it`);
+        }
+    }
+    if (problems.length > 0) throw new Error(`blob-tier reader audit failed: ${problems.join('; ')}`);
+}
 
 /**
  * Keys read raw but owned by the settings blob, so folding them is by design.
@@ -139,7 +216,7 @@ const DECLARED_MIGRATABLE_RAW_READS = [
     },
     {
         key: StorageKeys.CLEANSING_OFFSCREEN_ENABLED,
-        reason: 'read raw as the actual gate decision (isCleansingOffscreenEnabled in content/cleansingOffscreenDelegate.ts: the top-level read picks offscreen delegation vs the sync fallback, cached once and invalidated by storage.onChanged on the same top-level key); the owner is the settings blob (DEFAULT_SETTINGS) and the tree has no top-level writer, so folding is by design — but the gate has no blob-tier reader, so a legacy profile whose top-level copy folds on the next migration silently loses an enabled flag and falls back to sync cleansing (follow-up PBI candidate)',
+        reason: 'read raw as the actual gate decision (isCleansingOffscreenEnabled in content/cleansingOffscreenDelegate.ts: the top-level read picks offscreen delegation vs the sync fallback, cached once and invalidated by storage.onChanged on the same top-level key); the owner is the settings blob (DEFAULT_SETTINGS) and the tree has no top-level writer, so folding is by design — the gate reads blob first with a top-level fallback (blobTierRead.ts), so a fold keeps the flag visible and a blob write re-reads it',
     },
 ] as const;
 
@@ -208,6 +285,11 @@ const KEY_PARAMETERIZED_HELPERS = [
         file: 'src/background/recordingTriggerManager.ts',
         reason: 'readTopLevelOrBlob takes a key parameter — the auto-save trigger settings',
         tracedMembers: [StorageKeys.RECORDING_TRIGGERS, StorageKeys.SNAPSHOT_INTERVAL_MINUTES],
+    },
+    {
+        file: 'src/content/cleansingOffscreenDelegate.ts',
+        reason: 'the flag read wraps its key in withBlobTierKeys(), which the static resolver cannot follow — the key is CLEANSING_OFFSCREEN_ENABLED, declared in BLOB_TIER_READERS',
+        tracedMembers: [],
     },
     {
         file: 'src/utils/RateLimitService.ts',
@@ -822,6 +904,54 @@ describe('raw-owned storage-key audit pin', () => {
         expect(isMigratableStorageKey('settings_version')).toBe(false);
         expect(isMigratableStorageKey('legacy_settings_backup_1750000000000')).toBe(false);
         expect(isMigratableStorageKey('settings_migrated')).toBe(false);
+    });
+
+    describe('blob-tier reader audit', () => {
+        const productionSites = (): Map<string, Set<string>> => {
+            const sites = new Map<string, Set<string>>();
+            for (const file of AUDIT.scannedFiles) {
+                const found = scanBlobTierReadsInSource(readFileSync(join(CWD_ROOT, file), 'utf8'));
+                if (found.size > 0) sites.set(file, found);
+            }
+            return sites;
+        };
+
+        it('every declared reader of a blob-tier key matches the tree and resolves through readBlobFirst', () => {
+            expect(() => assertBlobTierReadsDeclared(productionSites(), BLOB_TIER_READERS)).not.toThrow();
+            for (const { file } of BLOB_TIER_READERS) {
+                expect(readFileSync(join(CWD_ROOT, file), 'utf8'), `${file} must read through readBlobFirst`).toContain(
+                    'readBlobFirst(',
+                );
+            }
+        });
+
+        it('fails when an undeclared port read of a watched key is added', () => {
+            const sites = productionSites();
+            sites.set('src/content/rogue.ts', new Set<string>([StorageKeys.DOMAIN_BLACKLIST]));
+            expect(() => assertBlobTierReadsDeclared(sites, BLOB_TIER_READERS)).toThrow(
+                /src\/content\/rogue\.ts reads domain_blacklist without a BLOB_TIER_READERS declaration/,
+            );
+        });
+
+        it('fails when a declared reader stops reading its key', () => {
+            const sites = productionSites();
+            sites.delete('src/content/cleansingOffscreenDelegate.ts');
+            expect(() => assertBlobTierReadsDeclared(sites, BLOB_TIER_READERS)).toThrow(/no longer reads/);
+        });
+
+        it.each([
+            ['StoragePort field', 'await this.storage.get([StorageKeys.DOMAIN_BLACKLIST]);'],
+            ['port variable', 'const r = await port.get(StorageKeys.SIMPLE_FORMAT_ENABLED);'],
+            ['chrome local', 'g?.storage?.local?.get(StorageKeys.UBLOCK_FORMAT_ENABLED);'],
+            ['wrapped key list', 'await storagePort.get(withBlobTierKeys([StorageKeys.DOMAIN_SUBDOMAIN_MATCHING]));'],
+        ])('detects a watched read: %s', (_label, source) => {
+            expect(scanBlobTierReadsInSource(source).size).toBe(1);
+        });
+
+        it('ignores comment mentions and repository reads', () => {
+            expect(scanBlobTierReadsInSource('// port.get(StorageKeys.DOMAIN_BLACKLIST)')).toEqual(new Set());
+            expect(scanBlobTierReadsInSource('await repo.get(StorageKeys.DOMAIN_BLACKLIST);')).toEqual(new Set());
+        });
     });
 
     it('keeps the newly classified raw-owned keys readable after migrating', async () => {

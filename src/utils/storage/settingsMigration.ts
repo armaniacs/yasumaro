@@ -266,6 +266,15 @@ const TOP_LEVEL_ONLY_KEYS: ReadonlySet<string> = new Set<string>([
     // reads, writes and removes it straight from top-level storage, so a
     // migrated copy would resume the recording immediately.
     StorageKeys.RECORDING_PAUSED_UNTIL,
+    // Domain policy (content/domainPolicyPort.ts): the content script reads
+    // these through StoragePort with blob-first / top-level-fallback order
+    // (blobTierRead.ts). Keeping the top-level copy means a legacy profile
+    // that has not written the blob yet still blocks its blacklisted domains
+    // instead of silently recording them after the fold.
+    StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+    StorageKeys.DOMAIN_BLACKLIST,
+    StorageKeys.SIMPLE_FORMAT_ENABLED,
+    StorageKeys.UBLOCK_FORMAT_ENABLED,
 ]);
 
 /**
@@ -459,6 +468,10 @@ export async function migrateToSingleSettingsObject(
     for (const key of legacyKeys) assignSettingValue(collected, key as StorageKey, all[key]);
     if (Object.keys(collected).length === 0 && !hasNestedSettings) {
         for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
+            // A top-level-only key that already has a real copy must not get a
+            // default in the blob: readers resolve blob first, so the default
+            // would shadow the user's value (an emptied blacklist stops blocking).
+            if (hasOwn(all, key) && !isMigratableStorageKey(key)) continue;
             assignSettingValue(collected, key as StorageKey, value);
         }
     }

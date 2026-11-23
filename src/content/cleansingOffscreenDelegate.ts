@@ -14,6 +14,7 @@ import {
 } from '../offscreen/cleansingOffscreen.js';
 import type { CleansingOffscreenResponse } from '../offscreen/cleansingOffscreen.js';
 import { StorageKeys } from '../utils/storage/types.js';
+import { readBlobFirst, withBlobTierKeys, SETTINGS_BLOB_STORAGE_KEY } from '../utils/storage/blobTierRead.js';
 
 /** Chrome global accessor — typed once so the delegate does not repeat the cast. */
 function getChrome(): typeof chrome | undefined {
@@ -37,13 +38,18 @@ async function isCleansingOffscreenEnabled(): Promise<boolean> {
     try {
         const g = getChrome();
         if (g?.storage?.local?.get) {
-            const result = await g.storage.local.get(StorageKeys.CLEANSING_OFFSCREEN_ENABLED);
-            const v = (result as Record<string, unknown>)[StorageKeys.CLEANSING_OFFSCREEN_ENABLED];
+            const result = await g.storage.local.get(withBlobTierKeys([StorageKeys.CLEANSING_OFFSCREEN_ENABLED]));
+            const v = readBlobFirst(result as Record<string, unknown>, StorageKeys.CLEANSING_OFFSCREEN_ENABLED);
             cachedFlag = v === true;
             if (g.storage.onChanged?.addListener && !storageListenerWired) {
                 storageListenerWired = true;
                 g.storage.onChanged.addListener((changes: Record<string, unknown>, area: string) => {
-                    if (area === 'local' && changes[StorageKeys.CLEANSING_OFFSCREEN_ENABLED]) {
+                    // Settings writers persist into the blob, so a blob write
+                    // is the change event for the flag, not the top-level key.
+                    if (
+                        area === 'local' &&
+                        (changes[StorageKeys.CLEANSING_OFFSCREEN_ENABLED] || changes[SETTINGS_BLOB_STORAGE_KEY])
+                    ) {
                         cachedFlag = null;
                     }
                 });
