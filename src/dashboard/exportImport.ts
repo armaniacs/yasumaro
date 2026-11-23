@@ -8,6 +8,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
 import { formatLocaleDateTime } from '../utils/localeUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
+import { createListen } from '../utils/domListen.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
 import { importSettings } from '../utils/settingsExportImport.js';
@@ -135,12 +136,7 @@ export function createExportImport(): ExportImportController {
     if (!dom) resolveDom();
   }
 
-  /** Attach a listener and record how to undo it, so destroy() is complete. */
-  function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-    if (!target) return;
-    target.addEventListener(type, handler);
-    teardown.push(() => target.removeEventListener(type, handler));
-  }
+  const listen = createListen(teardown);
 
   function closeImportModal(): void {
     ensureDom();

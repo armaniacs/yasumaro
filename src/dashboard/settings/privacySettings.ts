@@ -13,6 +13,7 @@ import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage } from '../../utils/i18n.js';
 import { sanitizeRegex } from '../../utils/piiSanitizer.js';
+import { createListen } from '../../utils/domListen.js';
 
 /** Fixed dummy text used to preview PII masking behavior (M4). Never sent anywhere. */
 const PII_SAMPLE_TEXT = 'Contact John Smith at john.smith@example.com or 090-1234-5678.';
@@ -55,12 +56,7 @@ export function createPrivacySettings(): PrivacySettingsController {
         if (!dom) resolveDom();
     }
 
-    /** Attach a listener and record how to undo it, so destroy() is complete. */
-    function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-        if (!target) return;
-        target.addEventListener(type, handler);
-        teardown.push(() => target.removeEventListener(type, handler));
-    }
+    const listen = createListen(teardown);
 
     /**
      * Toggle cloud provider settings disabled state based on privacy mode.

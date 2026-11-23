@@ -37,6 +37,7 @@ import type { WebhookExportRecord } from '../background/webhookExport/webhookExp
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { clearElement } from '../utils/domClear.js';
+import { createListen } from '../utils/domListen.js';
 
 export interface WebhookExportResendResult {
   ok: boolean;
@@ -140,11 +141,7 @@ function destinationStatusText(verdict: WebhookDestinationVerdict, grandfathered
 export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}): WebhookExportUiController {
   const teardown: Array<() => void> = [];
 
-  function listen(target: EventTarget | null, type: string, handler: EventListener): void {
-    if (target === null) return;
-    target.addEventListener(type, handler);
-    teardown.push(() => target.removeEventListener(type, handler));
-  }
+  const listen = createListen(teardown);
 
   function setStatus(message: string, isError: boolean): void {
     const status = document.getElementById('webhookExportStatus');

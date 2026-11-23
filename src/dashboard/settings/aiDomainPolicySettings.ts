@@ -16,6 +16,7 @@ import { errorMessage } from '../../utils/errorUtils.js';
 import { isValidDomainPattern } from '../../utils/domainValidator.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { clearElement } from '../../utils/domClear.js';
+import { createListen } from '../../utils/domListen.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
 
 interface AiDomainPolicyDom {
@@ -55,11 +56,7 @@ export function createAiDomainPolicySettings(): AiDomainPolicyController {
         if (!dom) resolveDom();
     }
 
-    function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-        if (!target) return;
-        target.addEventListener(type, handler);
-        teardown.push(() => target.removeEventListener(type, handler));
-    }
+    const listen = createListen(teardown);
 
     /** Populate the policy select from the AI_DOMAIN_POLICIES set (SSOT). */
     function fillPolicySelect(): void {

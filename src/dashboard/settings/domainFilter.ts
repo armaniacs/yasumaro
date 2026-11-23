@@ -15,6 +15,7 @@ import { LogType } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { getMessage, getMessageOr } from '../../utils/i18n.js';
+import { createListen } from '../../utils/domListen.js';
 
 interface DomainFilterDom {
     filterDisabledRadio: HTMLInputElement | null;
@@ -82,12 +83,7 @@ export function createDomainFilter(): DomainFilterController {
         if (!dom) resolveDom();
     }
 
-    /** Attach a listener and record how to undo it, so destroy() is complete. */
-    function listen(target: EventTarget | null | undefined, type: string, handler: EventListenerOrEventListenerObject): void {
-        if (!target) return;
-        target.addEventListener(type, handler);
-        teardown.push(() => target.removeEventListener(type, handler));
-    }
+    const listen = createListen(teardown);
 
     function updateDomainListVisibility(): void {
         ensureDom();
