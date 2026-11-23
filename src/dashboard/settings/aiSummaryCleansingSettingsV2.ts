@@ -13,6 +13,7 @@ import { type RuleKey } from '../../utils/aiSummaryCleaner/types.js';
 import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
 import { createCleansingPresetStore, type CleansingPresetStore } from './cleansingPresetStore.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { parseIntOr } from '../../utils/string.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
 // busy windows) that used to leak into this file's module state. migrateTo
@@ -76,15 +77,6 @@ function ruleOptionKey(rule: CleansingRule): string {
 export function getRuleFlag(settings: Record<string, unknown>, key: string): boolean {
     const value = settings[key];
     return typeof value === 'boolean' ? value : false;
-}
-
-/**
- * `parseInt` with NaN fallback. Invalid input yields `fallback`
- * instead of NaN propagating into settings/storage.
- */
-export function parseIntOr(value: string | null | undefined, fallback: number): number {
-    const parsed = parseInt(value ?? '', 10);
-    return Number.isNaN(parsed) ? fallback : parsed;
 }
 
 // ---------------------------------------------------------------------------
