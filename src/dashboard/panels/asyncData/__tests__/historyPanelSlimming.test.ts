@@ -57,9 +57,9 @@ describe('catalog order after the split (PBI 2026-11-01-04)', () => {
     const report = ids.indexOf('panel-research-report');
     expect(history).toBeGreaterThanOrEqual(0);
     expect(archive).toBe(history + 1);
-    expect(saved).toBe(ids.length - 3);
-    expect(ask).toBe(ids.length - 2);
-    expect(report).toBe(ids.length - 1);
+    expect(saved).toBe(ids.length - 4);
+    expect(ask).toBe(ids.length - 3);
+    expect(report).toBe(ids.length - 2);
   });
 });
 

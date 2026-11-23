@@ -54,9 +54,6 @@ export const CATALOG_ROWS = [
   { id: 'panel-csp', sidebarSection: 'settings', sidebarI18nKey: 'cspTab', deepLinkSections: [] },
   { id: 'panel-tags', sidebarSection: 'settings', sidebarI18nKey: 'tagsTab', deepLinkSections: [] },
   { id: 'panel-recording-conditions', sidebarSection: 'settings', sidebarI18nKey: 'recordingConditionsTab', deepLinkSections: [] },
-  // PBI 2026-10-22-05: the webhook export rides next to the recording
-  // conditions because both are transfer-condition decisions.
-  { id: 'panel-webhook-export', sidebarSection: 'settings', sidebarI18nKey: 'webhookExportTab', deepLinkSections: [] },
   { id: 'panel-diagnostics', sidebarSection: 'settings', sidebarI18nKey: 'diagnosticsTab', deepLinkSections: [] },
   { id: 'panel-tag-cluster', sidebarSection: 'data', sidebarI18nKey: 'tagClusterTab', deepLinkSections: [] },
   { id: 'panel-sqlite-history', sidebarSection: 'data', sidebarI18nKey: 'sqliteHistoryTab', deepLinkSections: [], tabParam: 'history' },
@@ -83,6 +80,9 @@ export const CATALOG_ROWS = [
   // PBI 2026-11-01-03: research report (target collection + one-shot generate)
   // grouped in 'experimental' at the bottom.
   { id: 'panel-research-report', sidebarSection: 'experimental', sidebarI18nKey: 'researchReportTab', deepLinkSections: [], tabParam: 'research-report' },
+  // The webhook export is still in development, so it is grouped in
+  // 'experimental'. It had no deep link before the move, hence no tabParam.
+  { id: 'panel-webhook-export', sidebarSection: 'experimental', sidebarI18nKey: 'webhookExportTab', deepLinkSections: [] },
 ] as const satisfies readonly PanelCatalogEntry[];
 
 export const PANEL_CATALOG: readonly PanelCatalogEntry[] = CATALOG_ROWS;

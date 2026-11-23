@@ -111,8 +111,6 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-csp',
       'panel-tags',
       'panel-recording-conditions',
-      // PBI 2026-10-22-05: the webhook export settings panel.
-      'panel-webhook-export',
       'panel-diagnostics',
       'panel-tag-cluster',
       'panel-sqlite-history',
@@ -133,6 +131,7 @@ describe('panelCatalog — 単一ソース', () => {
       'panel-saved-collections',
       'panel-ask-history',
       'panel-research-report',
+      'panel-webhook-export',
     ]);
   });
 
