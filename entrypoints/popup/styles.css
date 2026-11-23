@@ -194,6 +194,16 @@ h4 {
   gap: var(--space-3);
 }
 
+/* PBI 2026-11-23-05: running version under the logo. Decorative, so it
+   stays small and muted and never wraps the narrow popup. */
+.app-version {
+  font-size: 11px;
+  line-height: 1.2;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .icon-btn {
   width: 36px;
   height: 36px;

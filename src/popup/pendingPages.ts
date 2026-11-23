@@ -1,4 +1,5 @@
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { isLocked as isSessionLocked } from '../utils/storage/authGuard.js';
 import { getPendingPages, removePendingPages } from '../utils/pendingStorage.js';
 import { ErrorCode, type ErrorCodeValues } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
@@ -121,6 +122,23 @@ export async function saveSelectedPages(whitelistType?: 'domain' | 'path'): Prom
   const urls = Array.from(checkboxes).map(cb => cb.value);
 
   if (urls.length === 0) return;
+
+  // PBI 2026-11-23-03: ロック中は保留分を含め記録追加を抑止する。
+  // 読み失敗時は未ロック扱い (未設定利用者を止めない)。
+  try {
+    if (await isSessionLocked()) {
+      const statusDiv = document.getElementById('mainStatus');
+      if (statusDiv) {
+        showError(statusDiv, new Error(getMessageOr(
+          'encryptionLockedApiKeys',
+          'Locked: recording is paused while the master password session is locked. Open the dashboard and unlock to record.',
+        )));
+      }
+      return;
+    }
+  } catch {
+    // 読み失敗は未ロック扱いで従来通り続行する。
+  }
 
   try {
     if (whitelistType) {

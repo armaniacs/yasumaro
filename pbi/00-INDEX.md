@@ -840,6 +840,26 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
 
+### 2026-11-23 レビュー指摘14件の対応 ― 1件
+
+- **2026-11-23-07-fix-review-findings**: レビュー14件を7並列で対応。共有鍵方式への切替え、数え上げ修正、AI修復の本番配線、確認対話の追加等を実施。フル1356ファイル19094件緑。試験基準値を437に固定。
+
+### 2026-11-23 popup版表示 ― 1件
+
+- **2026-11-23-05-feat-popup-version-display**: popupロゴ直下の動作中版表示。注入可能な取得関数と代替表示、控えめな装飾のみ追加。フル1355ファイル19069件緑。
+
+### 2026-11-23 暗号化バックアップ分割 + 保護UX ― 4件
+
+- **2026-11-23-01-feat-encrypted-backup-split-codec**: 履歴DBの暗号化バックアップ分割。マニフェストと独立パートの往復、単一形式の後方互換、改ざん拒否を実装。gzip併用で30MB級を少数パートに収める。`npm run validate` 緑。
+- **2026-11-23-02-feat-encrypted-backup-split-panel**: 分割形式の画面入出力。マニフェスト先行読と復号前案内、命名統一の複数ダウンロードを実装。単一形式の動作は不変。`npm run validate` 緑。
+- **2026-11-23-03-feat-master-password-lock-ux**: ロック中の案内と操作制限。APIキー欄と保存の無効化、記録抑止と誘導、設定順序の文書化を実施。SW無改修。`npm run validate` 緑。
+- **2026-11-23-04-feat-master-password-forgot-recovery**: 忘れ時の削除復旧。旧パスなしの維持不可とし、保護とAPIキーのみ削除する入口を追加。通常解除は旧パス必須のまま。`npm run validate` 緑。
+
+### 2026-11-23 閲覧ログ寛容インポート + AI修復 ― 2件
+
+- **2026-11-23-05-fix-log-import-tolerant**: 旧形ファイルの寛容取込。旧キー形式と単独配列の受入れ、別名読替え、件数と理由内訳の報告、既存優先の冪等を実装。関連6ファイル104件緑。`npm run validate` 緑（1346ファイル18995件）。
+- **2026-11-23-06-feat-log-import-ai-repair**: 失敗行のAI修復提案。項目単位除去の送信、差分確認と選択取込、施錠中案内を実装。新規13件緑。実プロバイダ配線は残作業。
+
 ### 2026-11-20 omnibox fallback 01 アーカイブ ― 1件
 
 - **2026-11-16-02-backlog-omnibox-url-fallback**: omnibox 起動で tab.url が読めない場合に通知で理由を返す。runner に任意の `notifyNoUrl` hook を追加し、omnibox ハンドラだけが既存の通知 seam で可視化。keyboard は無言のまま。`setDefaultSuggestion` は Enter 時点で見えないため不採用。`tabs` 権限の追加なし。`npm run validate` の該当部分緑。

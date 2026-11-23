@@ -84,7 +84,12 @@ describe('importFromJson', () => {
     const { importFromJson } = await import('../importLogsService.js');
     const json = await signedExport([{ title: 'no url' }, { url: '', created_at: 100 }]);
     const result = await importFromJson(json);
-    expect(result).toEqual({ error: 'No valid records found (url and created_at required)' });
+    expect(result).toEqual({
+      error:
+        'No valid records found (url and created_at required). ' +
+        'Invalid rows: 2 (url must be a non-empty string x2). ' +
+        'First invalid row at index 0: url must be a non-empty string.',
+    });
     expect(mockSqliteCall).not.toHaveBeenCalled();
   });
 
@@ -97,7 +102,14 @@ describe('importFromJson', () => {
       { title: 'no url' },
     ]);
     const result = await importFromJson(json);
-    expect(result).toEqual({ inserted: 2, skipped: 0, total: 2 });
+    expect(result).toEqual({
+      inserted: 2,
+      skipped: 0,
+      total: 2,
+      invalid: 1,
+      invalidReasons: { 'url must be a non-empty string': 1 },
+      invalidSamples: [{ index: 2, reason: 'url must be a non-empty string' }],
+    });
     expect(mockSqliteCall).toHaveBeenCalledWith('import', {
       subtype: 'import',
       rows: [

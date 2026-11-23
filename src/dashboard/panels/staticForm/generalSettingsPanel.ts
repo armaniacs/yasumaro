@@ -19,6 +19,7 @@ import { setupAllFieldValidations, setupObsidianHostValidation, setupGeminiApiVe
 import { createAiProviderLayoutController } from './generalSettingsLayout.js';
 import { mountWizardReopen } from './generalSettingsWizard.js';
 import { mountModelsDevDialog } from './generalSettingsModelsDev.js';
+import { refreshSessionLockState } from '../../generalSettings/sessionLockGuard.js';
 import { logError } from '../../../utils/logger/api.js';
 import { ErrorCode } from '../../../utils/logger/types.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
@@ -55,6 +56,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
     currentSettings = await settingsRepository.getAll();
     loadSettingsToInputs(container, currentSettings, GENERAL_SETTINGS_SCHEMA);
     await loadGeneralSettings(currentSettings);
+    // PBI 2026-11-23-03: 設定の再読み込み (import/restore 完了時を含む) でも
+    // ロック表示を追従させる。refreshSessionLockState は失敗時に未ロック扱い
+    // へ倒す全域関数のため、ここでの例外処理は不要。
+    await refreshSessionLockState(container);
   };
   return {
     id: 'panel-general',
@@ -68,6 +73,8 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       });
       await layout.prepare();
 
+      // PBI 2026-11-23-03 のロック表示は reloadFromRepository の末尾で
+      // 追従する (mount / refresh / import-restore の全経路)。
       await reloadFromRepository();
 
       setupVisibilityToggles(container);
@@ -77,6 +84,10 @@ export function createGeneralSettingsPanel(): PanelLifecycle & { refresh?: () =>
       }
 
       layout.wire();
+
+      // E2E検出の修正: プロバイダ欄は layout.wire() で後から描画されるため、
+      // reload直後の抑止では間に合わない。描画後に抑止を追従させる。
+      await refreshSessionLockState(container);
 
       mountWizardReopen(container);
 

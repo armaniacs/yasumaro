@@ -222,6 +222,9 @@ describe('RecordSession selection capture (PBI 2026-10-31-03)', () => {
     const btn = document.getElementById('recordBtn') as HTMLButtonElement;
     expect(btn.textContent).toBe('forceRecordAnyway');
     await (btn.onclick as unknown as (e: Event) => Promise<void>)(new Event('click'));
+    // The retry re-arms through start(), which re-reads the session lock
+    // before reaching preview — wait for the retry itself, not a single tick.
+    await vi.waitFor(() => expect(h.previewFlow.run).toHaveBeenCalledTimes(2));
 
     const retryOptions = h.previewFlow.run.mock.calls[1]![0] as Record<string, unknown>;
     expect(retryOptions.content).toBe('selected paragraph');

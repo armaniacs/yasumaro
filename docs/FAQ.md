@@ -161,6 +161,14 @@ Groq も Ollama も独立した入力があるので、シンプルに OpenAI �
 
 マスターパスワードを設定している場合は、API キーは AES-GCM（PBKDF2 鍵導出）で暗号化されて Chrome のローカルストレージに保存されます。マスターパスワードが未設定の場合も、API キーは拡張機能が自動生成した鍵で AES-GCM により暗号化されて保存されます。マスターパスワードを設定すると、これに加えてパスワードから導出した鍵で保護されるため、設定を推奨します。マスターパスワードの設定・変更・解除では、保存済みの API キーは再暗号化されて引き継がれるため、入力し直す必要はありません。ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。なお、設定のエクスポートファイルの暗号化も同様にオプトインです（デフォルトでは暗号化されません）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
+**Q23a. 保存は成功するのに AI テストだけが失敗します。なぜですか？**
+
+マスターパスワードのロック中は、保存と AI テストで結果が分かれるのが仕様です。保存は暗号化前の設定値をそのまま書き込むため成功しますが、AI テストは保存済みの API キーを復号する必要があり、ロック中は復号できないため失敗します。ダッシュボードの Privacy パネルでパスワードを入力してアンロックすると、同じ設定のまま AI テストが通ります。ロック中は初期設定画面の API キー欄と保存ボタンが無効化され、ポップアップの記録も止まるため、設定を繰り返し入力し直す必要はありません。
+
+**Q23b. マスターパスワードを忘れました。どうすればいいですか？**
+
+旧パスなしでの維持（再設定・変更）はできません。ダッシュボードの Privacy パネルにある「パスワードを忘れた場合」から二重確認を通すと、保護が無効化されAPIキーが削除されます。他の設定は残るため、APIキーを再入力すれば復旧できます。削除した鍵の復元はできないため、実行前に内容を確認してください。
+
 **Q24. 設定をエクスポートしたファイルには API キーが含まれますか？**
 
 含まれません。セキュリティ上の理由から、API キーはエクスポートから除外されています。別のデバイスに設定を移行する際は、インポート後に API キーを手動で再入力してください。マスターパスワードを設定している場合は、エクスポートファイル全体が AES-GCM で暗号化されます。
@@ -462,6 +470,14 @@ The text content of the page is sent to the API of your chosen provider to gener
 **Q23. Are my API keys stored securely?**
 
 When a master password is configured, API keys are encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage. Without a master password, API keys are still encrypted with AES-GCM using a key the extension generates automatically. Setting a master password adds protection with a key derived from the password, so it is recommended. Setting, changing, or removing the master password re-encrypts and keeps your stored API keys, so you do not need to enter them again: enable "Master Password Protection" in the Privacy tab of the dashboard. Encryption of settings-export files is likewise opt-in (exports are unencrypted by default). See [PRIVACY.md](PRIVACY.md) for details.
+
+**Q23a. Saving succeeds but only the AI test fails. Why?**
+
+While the master password session is locked, save and AI test diverge by design. Saving writes the settings values as entered, so it succeeds, but the AI test must decrypt the stored API key, which is impossible while locked, so it fails. Unlock with the password in the dashboard's Privacy panel and the same settings pass the AI test. While locked, the API key fields and Save buttons on the Initial Setup screen are disabled and popup recording is held back, so there is no need to re-enter the settings.
+
+**Q23b. I forgot my master password. What should I do?**
+
+Keeping protection without the old password (reset/change) is not possible. Use the forgot entry in the dashboard Privacy panel and confirm twice to disable protection and delete the API keys. Other settings are kept, so re-enter the API keys to recover. Deleted keys cannot be restored, so review before confirming.
 
 **Q24. Does the exported settings file include API keys?**
 

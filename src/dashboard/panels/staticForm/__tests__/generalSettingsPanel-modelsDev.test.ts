@@ -59,7 +59,9 @@ beforeEach(async () => {
 function lastDialogOptions(): { onSave: (...args: unknown[]) => Promise<void>; onCancel: () => void } {
   const calls = vi.mocked(ModelsDevDialog).mock.calls;
   expect(calls.length).toBeGreaterThan(0);
-  return calls[calls.length - 1]![0];
+  const last = calls[calls.length - 1]?.[0];
+  expect(last).toBeDefined();
+  return last as { onSave: (...args: unknown[]) => Promise<void>; onCancel: () => void };
 }
 
 describe('generalSettingsPanel — models.dev dialog wiring parity', () => {

@@ -129,3 +129,37 @@ describe('generalSettingsPanel — reload-general-settings wiring', () => {
     expect(protocol.value).toBe('http');
   });
 });
+
+describe('generalSettingsPanel — session lock (PBI 2026-11-23-03)', () => {
+  const LOCK_MARKUP = `
+    <div id="panel-general">
+      <input data-storage-key="obsidian_protocol" />
+      <input type="password" data-storage-key="gemini_api_key" />
+      <button id="save">Save</button>
+      <div id="status"></div>
+    </div>`;
+
+  it('disables API key fields and save buttons on mount while locked', async () => {
+    document.body.innerHTML = LOCK_MARKUP;
+    await chrome.storage.local.set({
+      [StorageKeys.MASTER_PASSWORD_ENABLED]: true,
+      [StorageKeys.IS_LOCKED]: true,
+    });
+
+    await mountPanel();
+
+    expect((document.querySelector('[data-storage-key="gemini_api_key"]') as HTMLInputElement).disabled).toBe(true);
+    expect((document.querySelector('[data-storage-key="obsidian_protocol"]') as HTMLInputElement).disabled).toBe(false);
+    expect((document.getElementById('save') as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById('sessionLockNotice')).not.toBeNull();
+  });
+
+  it('leaves fields enabled when unlocked', async () => {
+    document.body.innerHTML = LOCK_MARKUP;
+
+    await mountPanel();
+
+    expect((document.querySelector('[data-storage-key="gemini_api_key"]') as HTMLInputElement).disabled).toBe(false);
+    expect((document.getElementById('save') as HTMLButtonElement).disabled).toBe(false);
+  });
+});

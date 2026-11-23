@@ -39,6 +39,8 @@ JSON の各レコードは閲覧履歴の全項目を持ち、HMAC-SHA256 署名
 
 - インポート時に **HMAC 署名が検証されます**。署名が一致しないファイル（改竄されたファイル）は拒否されます
 - **旧バージョン（v6.7.98 以前）でエクスポートした署名なしの JSON は再インポートできません。** 必要な場合は、最新バージョンでデータを保持している間に再エクスポートしてください
+- 形式の異なる行があっても有効な行は取り込まれます。取り込めない行は理由と件数で報告されます。同じファイルの再取込は重複しません（同一 URL・同一訪問時刻は既存優先）
+- 取り込めない行がある場合は AI 修復の案内が表示されます。修正案を確認して選んだ行だけ取り込めます
 - `.db` 形式のエクスポートは署名の対象外です
 
 ### 暗号化バックアップ
@@ -100,6 +102,8 @@ Use the "Import Logs from JSON" button to import a previously exported JSON file
 
 - The **HMAC signature is verified on import**. Files whose signature does not match (tampered files) are rejected
 - **Unsigned JSON exported by older versions (≦ v6.7.98) can no longer be re-imported.** If needed, re-export while your data is still present in the latest version
+- Rows with a different shape do not block the import. Valid rows are imported and rejected rows are reported with reasons and counts. Re-importing the same file creates no duplicates (same URL and visit timestamp keeps the existing record)
+- When rows cannot be imported, AI repair guidance is shown. Review the proposals and import only the rows you select
 - `.db` exports are not affected by signing
 
 ### Encrypted Backup

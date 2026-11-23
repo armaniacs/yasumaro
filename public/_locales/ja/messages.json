@@ -851,6 +851,39 @@
   "importLogsError": {
     "message": "インポートエラー: %{error}"
   },
+  "aiRepairAvailable": {
+    "message": "AI修復が利用できます（%{invalid} 件）。詳細は取込結果の理由を確認してください"
+  },
+  "aiRepairEntry": {
+    "message": "AI修正を提案する（%{invalid} 件）"
+  },
+  "aiRepairCollecting": {
+    "message": "却下行を集めています"
+  },
+  "aiRepairNoTargets": {
+    "message": "修復対象の行がありません"
+  },
+  "aiRepairNoClient": {
+    "message": "AI修復の利用先が未設定です"
+  },
+  "aiRepairRequesting": {
+    "message": "AI提案を求めています"
+  },
+  "aiRepairNoProposals": {
+    "message": "AI提案が返りませんでした"
+  },
+  "aiRepairReview": {
+    "message": "提案を確認し選んだ行を取込んでください"
+  },
+  "aiRepairApplied": {
+    "message": "AI修復を適用しました（%{applied} 行）"
+  },
+  "aiRepairApplySelected": {
+    "message": "選択した修正を取込む"
+  },
+  "aiRepairLocked": {
+    "message": "施錠中はAI修復を使えません。先に解除してください"
+  },
   "settingsExported": {
     "message": "設定をエクスポートしました"
   },
@@ -5857,6 +5890,18 @@
   },
   "encryptedBackupInvalidFile": {
     "message": "不正なバックアップファイルです"
+  },
+  "encryptedBackupSplitManifestMissing": {
+    "message": "分割バックアップを復元するにはマニフェストと全パートを選択してください"
+  },
+  "encryptedBackupSplitInvalidManifest": {
+    "message": "分割バックアップのマニフェストが不正です"
+  },
+  "encryptedBackupSplitOrderError": {
+    "message": "分割バックアップのパートに不整合があります: {detail}。マニフェストと全パートを選び直してください"
+  },
+  "encryptedBackupSplitTooLarge": {
+    "message": "分割バックアップが上限を超えています: {detail}"
   },
   "encryptedBackupRestoredSkipped": {
     "message": "バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）"
