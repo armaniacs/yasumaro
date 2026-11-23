@@ -106,6 +106,14 @@ export interface WebhookExportUiController {
   destroy(): void;
 }
 
+interface WebhookExportFormElements {
+  enabled: HTMLInputElement | null;
+  url: HTMLInputElement | null;
+  tag: HTMLInputElement | null;
+  minScroll: HTMLInputElement | null;
+  minDuration: HTMLInputElement | null;
+}
+
 function readNumberOrUndefined(input: HTMLInputElement | null): number | undefined {
   if (input === null || input.value.trim() === '') return undefined;
   const parsed: number = Number(input.value);
@@ -223,12 +231,20 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
     }
   }
 
+  /** Looked up on every call: the panel may be re-rendered between save and load. */
+  function getFormElements(): WebhookExportFormElements {
+    const input = (id: string): HTMLInputElement | null => document.getElementById(id) as HTMLInputElement | null;
+    return {
+      enabled: input('webhookExportEnabled'),
+      url: input('webhookExportUrl'),
+      tag: input('webhookExportTag'),
+      minScroll: input('webhookExportMinScroll'),
+      minDuration: input('webhookExportMinDuration'),
+    };
+  }
+
   async function save(): Promise<void> {
-    const enabled = document.getElementById('webhookExportEnabled') as HTMLInputElement | null;
-    const url = document.getElementById('webhookExportUrl') as HTMLInputElement | null;
-    const tag = document.getElementById('webhookExportTag') as HTMLInputElement | null;
-    const minScroll = document.getElementById('webhookExportMinScroll') as HTMLInputElement | null;
-    const minDuration = document.getElementById('webhookExportMinDuration') as HTMLInputElement | null;
+    const { enabled, url, tag, minScroll, minDuration } = getFormElements();
     const settings: WebhookExportSettings = {
       enabled: enabled?.checked ?? false,
       url: url?.value.trim() ?? '',
@@ -261,11 +277,7 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
 
   async function load(): Promise<void> {
     const settings: WebhookExportSettings = await currentSettings();
-    const enabled = document.getElementById('webhookExportEnabled') as HTMLInputElement | null;
-    const url = document.getElementById('webhookExportUrl') as HTMLInputElement | null;
-    const tag = document.getElementById('webhookExportTag') as HTMLInputElement | null;
-    const minScroll = document.getElementById('webhookExportMinScroll') as HTMLInputElement | null;
-    const minDuration = document.getElementById('webhookExportMinDuration') as HTMLInputElement | null;
+    const { enabled, url, tag, minScroll, minDuration } = getFormElements();
     if (enabled !== null) enabled.checked = settings.enabled;
     if (url !== null) url.value = settings.url;
     if (tag !== null) tag.value = settings.condition.tag ?? '';
