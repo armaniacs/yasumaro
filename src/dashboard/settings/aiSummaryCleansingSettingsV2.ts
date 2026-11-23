@@ -236,16 +236,6 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     const enabledCheckbox = document.getElementById('ai-summary-cleansing-enabled') as HTMLInputElement;
     const whitelistExtractionCheckbox = document.getElementById('whitelist-extraction-enabled') as HTMLInputElement;
     const bodyProtectionEnabledCheckbox = document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement;
-    const bodyProtectionThresholdSlider = document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement;
-    const bodyProtectionThresholdValue = document.getElementById('ai-summary-cleansing-body-protection-threshold-value') as HTMLSpanElement;
-    // Over-cleansed fallback UI elements
-    const fallbackRatioSlider = document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement;
-    const fallbackRatioValue = document.getElementById('ai-summary-cleansing-fallback-ratio-value') as HTMLSpanElement;
-    const fallbackMinBytesSlider = document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement;
-    const fallbackMinBytesValue = document.getElementById('ai-summary-cleansing-fallback-min-bytes-value') as HTMLSpanElement;
-    // PBI 05 overcut guard UI elements
-    const fallbackMinCharsSlider = document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement;
-    const fallbackMinCharsValue = document.getElementById('ai-summary-cleansing-fallback-min-chars-value') as HTMLSpanElement;
     const guardCandidateCheckbox = document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement;
     const guardCleanseCheckbox = document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement;
 
@@ -261,51 +251,24 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
     if (whitelistExtractionCheckbox) whitelistExtractionCheckbox.checked = settings.whitelistExtractionEnabled;
     // Body protection (dashboard)
     if (bodyProtectionEnabledCheckbox) bodyProtectionEnabledCheckbox.checked = settings.bodyProtectionEnabled;
-    if (bodyProtectionThresholdSlider) {
-        bodyProtectionThresholdSlider.value = settings.bodyProtectionThreshold.toString();
-        if (bodyProtectionThresholdValue) bodyProtectionThresholdValue.textContent = settings.bodyProtectionThreshold.toString();
-    }
 
-    const linkRatioThresholdInput = document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement;
-    const shortTextThresholdInput = document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement;
-    const shortSeqCountInput = document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement;
-    const linkParaThresholdInput = document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement;
-
-    if (linkRatioThresholdInput) {
-        linkRatioThresholdInput.value = settings.linkRatioThreshold.toString();
-        const valElem = document.getElementById('link-ratio-threshold-value');
-        if (valElem) valElem.textContent = settings.linkRatioThreshold.toString();
-    }
-    if (shortTextThresholdInput) {
-        shortTextThresholdInput.value = settings.shortTextThreshold.toString();
-        const valElem = document.getElementById('short-text-threshold-value');
-        if (valElem) valElem.textContent = settings.shortTextThreshold.toString();
-    }
-    if (shortSeqCountInput) {
-        shortSeqCountInput.value = settings.shortSeqCount.toString();
-        const valElem = document.getElementById('short-seq-count-value');
-        if (valElem) valElem.textContent = settings.shortSeqCount.toString();
-    }
-    if (linkParaThresholdInput) {
-        linkParaThresholdInput.value = settings.linkParaThreshold.toString();
-        const valElem = document.getElementById('link-para-threshold-value');
-        if (valElem) valElem.textContent = settings.linkParaThreshold.toString();
-    }
-
-    // Over-cleansed fallback thresholds
-    if (fallbackRatioSlider) {
-        const ratioPercent = Math.round(settings.fallbackRatio * 100);
-        fallbackRatioSlider.value = ratioPercent.toString();
-        if (fallbackRatioValue) fallbackRatioValue.textContent = ratioPercent.toString();
-    }
-    if (fallbackMinBytesSlider) {
-        fallbackMinBytesSlider.value = settings.fallbackMinBytes.toString();
-        if (fallbackMinBytesValue) fallbackMinBytesValue.textContent = settings.fallbackMinBytes.toString();
-    }
-    // PBI 05 overcut guards
-    if (fallbackMinCharsSlider) {
-        fallbackMinCharsSlider.value = settings.fallbackMinChars.toString();
-        if (fallbackMinCharsValue) fallbackMinCharsValue.textContent = settings.fallbackMinChars.toString();
+    // WHY percent: the fallback-ratio slider is 5..50 while the setting is a 0..1 fraction.
+    const thresholdDisplays: ReadonlyArray<{ inputId: string; valueId: string; value: number }> = [
+        { inputId: 'ai-summary-cleansing-body-protection-threshold', valueId: 'ai-summary-cleansing-body-protection-threshold-value', value: settings.bodyProtectionThreshold },
+        { inputId: 'ai-summary-cleansing-link-ratio-threshold', valueId: 'link-ratio-threshold-value', value: settings.linkRatioThreshold },
+        { inputId: 'ai-summary-cleansing-short-text-threshold', valueId: 'short-text-threshold-value', value: settings.shortTextThreshold },
+        { inputId: 'ai-summary-cleansing-short-seq-count', valueId: 'short-seq-count-value', value: settings.shortSeqCount },
+        { inputId: 'ai-summary-cleansing-link-para-threshold', valueId: 'link-para-threshold-value', value: settings.linkParaThreshold },
+        { inputId: 'ai-summary-cleansing-fallback-ratio', valueId: 'ai-summary-cleansing-fallback-ratio-value', value: Math.round(settings.fallbackRatio * 100) },
+        { inputId: 'ai-summary-cleansing-fallback-min-bytes', valueId: 'ai-summary-cleansing-fallback-min-bytes-value', value: settings.fallbackMinBytes },
+        { inputId: 'ai-summary-cleansing-fallback-min-chars', valueId: 'ai-summary-cleansing-fallback-min-chars-value', value: settings.fallbackMinChars },
+    ];
+    for (const { inputId, valueId, value } of thresholdDisplays) {
+        const input = document.getElementById(inputId) as HTMLInputElement | null;
+        if (!input) continue;
+        input.value = value.toString();
+        const valueElem = document.getElementById(valueId);
+        if (valueElem) valueElem.textContent = value.toString();
     }
     if (guardCandidateCheckbox) guardCandidateCheckbox.checked = settings.candidateGuardEnabled;
     if (guardCleanseCheckbox) guardCleanseCheckbox.checked = settings.cleanseGuardEnabled;
