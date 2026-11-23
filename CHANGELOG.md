@@ -19,10 +19,10 @@
 
 ### 依存更新
 
-- 開発依存のminor/patch更新（`eslint` 10.14→10.15、`@typescript-eslint/*` 8.72.1→8.73.0、`vite` 8.3.6→8.3.8、`vitest` 5.1.0→5.1.1、`@vitest/coverage-v8` 5.1.0→5.1.1、`@playwright/test` 1.65.0→1.65.1、`jsdom` 31.0.0→31.0.1、`better-sqlite3` 13.0.3→13.2.0、`knip` 6.43.0→6.47.0、`@types/chrome` 0.3.6→0.3.7、`@subframe7536/sqlite-wasm` 1.4.0→1.4.1、`@peculiar/webcrypto` 1.7.1→1.7.2）。`better-sqlite3` はネイティブビルドを伴うため engines（node >=24）の CI で ABI 回帰がないことを実測。`knip` は 6.43→6.47 の複数マイナスを跨ぐが、既定ルールの挙動変更は lint 緑で確認済み。フルスイート・型・lint・ライセンス・ビルド緑で回帰なし
+- 開発依存のminor/patch更新（`eslint` 10.14→10.15、`vite` 8.3.6→8.3.8、`vitest` 5.1.0→5.1.1、`@vitest/coverage-v8` 5.1.0→5.1.1、`@playwright/test` 1.65.0→1.65.1、`jsdom` 31.0.0→31.0.1、`better-sqlite3` 13.0.3→13.2.0、`knip` 6.43.0→6.47.0、`@types/chrome` 0.3.6→0.3.7、`@subframe7536/sqlite-wasm` 1.4.0→1.4.1、`@peculiar/webcrypto` 1.7.1→1.7.2）。`better-sqlite3` はネイティブビルドを伴うため engines（node >=24）の CI で ABI 回帰がないことを実測。`knip` は 6.43→6.47 の複数マイナスを跨ぐが、既定ルールの挙動変更は lint 緑で確認済み。フルスイート・型・lint・ライセンス・ビルド緑で回帰なし
 - `@cyclonedx/cyclonedx-npm` 6.0.1→7.0.1（major）。SBOM 生成専用で製品ランタイムに載らない。CycloneDX 1.6 契約を `--spec-version 1.6` 明示で維持（`scripts/generate-sbom.mjs`）
+- TypeScript を 6.0.3→7.0.2（native tsgo）へ更新。TS7 の install ブロッカーだった `@typescript-eslint/*`（peer `<6.1.0`）と `typedoc` を依存から撤去し、`type-check` を tsgo で green 化。lint は ESLint から Rust ネイティブの `oxlint` へ切替（自作ルールを JS プラグインへ移植、`eslint.config.js` を SSOT に `.oxlintrc.json` を生成）。`typedoc` は HTML API doc 生成を廃止（Chrome 拡張で外部 API 利用者はおらず冗長。利用者向けドキュメントは `docs/*.md`）。詳細は [PBI: TypeScript 7 への移行](pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を参照
 - 保留（いずれも製品ランタイム・audit 上のリスクは無し）:
-  - `typescript` 7（現 6.0.3）: 上流未対応のため保留。`@typescript-eslint/*` 8.73.0 の peer は `typescript <6.1.0`、`typedoc` は `6.0.x` までで、TS7 を入れると `npm install` が ERESOLVE で失敗する。解除条件は typescript-eslint が peer に TS7.x を含む版をリリースすること。監視・移行手順は [PBI: TypeScript 7 への移行](pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を参照
   - `@peculiar/webcrypto` 2.0.0（現 1.7.2）: テスト専用の WebCrypto polyfill。2.0.0 はメジャーで依存が `@peculiar/utils` ^4.1.0 に刷新されるが、セキュリティ修正は含まれない（`npm audit` で当該なし）。解除条件は crypto テスト群の再実測。専用 PBI は未起票
 
 

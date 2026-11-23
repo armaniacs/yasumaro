@@ -10,7 +10,7 @@ type ExtensionFixtures = {
   extensionId: string;
 };
 
-interface ExtensionFixtureOptions {
+export interface ExtensionFixtureOptions {
   /**
    * Fixed browser UI locale (--lang + Playwright locale option). Omitted by
    * default, so specs without a locale pin launch exactly as before; a spec

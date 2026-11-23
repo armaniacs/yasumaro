@@ -23,9 +23,9 @@
 
 | グループ | パッケージ（インストール済みバージョン） |
 |---|---|
-| ビルド | `wxt` (0.21.5), `vite` (8.3.8), `esbuild` (0.28.2), `typescript` (6.0.3) |
+| ビルド | `wxt` (0.21.5), `vite` (8.3.8), `esbuild` (0.28.2), `typescript` (7.0.2) |
 | テスト | `vitest` (5.1.1), `@playwright/test` (1.65.1), `happy-dom` (20.14.5), `jsdom` (31.0.1), `@stryker-mutator/core` / `vitest-runner` (10.0.0), `better-sqlite3` (13.2.0) |
-| 静的解析・文書 | `eslint` (10.15.0), `@typescript-eslint/eslint-plugin` / `parser` (8.73.0), `knip` (6.47.0), `typedoc` (0.28.20) |
+| 静的解析 | `oxlint` (1.94.0), `eslint` (10.15.0), `knip` (6.47.0) |
 | コンプライアンス | `license-checker` (25.0.1), `@cyclonedx/cyclonedx-npm` (7.0.1) |
 
 ### overrides（ピン留め）
