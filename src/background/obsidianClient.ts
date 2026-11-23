@@ -40,6 +40,7 @@ import {
 import { readBodyCapped } from '../utils/readBodyCapped.js';
 import { isEncryptionLockedError } from '../utils/storage/encryptionLockedError.js';
 import { truncateForLog } from '../utils/logTruncate.js';
+import { detectStrongEtag, withIfMatch } from '../utils/obsidianConditionalWrite.js';
 
 /**
  * Problem #1: Fetchタイムアウト設定
@@ -261,7 +262,10 @@ export class ObsidianClient {
             const targetUrl = ENDPOINTS.dailyNote(baseUrl, dailyPath);
 
             try {
-                const existingContent = await this._fetchExistingContent(targetUrl, headers, traceId);
+                let etag: string | null = null;
+                const existingContent = await this._fetchExistingContent(targetUrl, headers, traceId, (detected) => {
+                    etag = detected;
+                });
                 const newContent = NoteSectionEditor.insertIntoSection(
                     existingContent,
                     NoteSectionEditor.DEFAULT_SECTION_HEADER,
@@ -269,7 +273,7 @@ export class ObsidianClient {
                     options
                 );
 
-                await this._writeContent(targetUrl, headers, newContent, traceId);
+                await this._writeContent(targetUrl, withIfMatch(headers, etag), newContent, traceId);
             } catch (error: unknown) {
                 throw this._handleError(toError(error), targetUrl, traceId);
             }
@@ -279,7 +283,12 @@ export class ObsidianClient {
         }
     }
 
-    async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
+    async _fetchExistingContent(
+        url: string,
+        headers: HeadersInit,
+        traceId: string = '',
+        onEtag?: (etag: string | null) => void
+    ): Promise<string> {
         // Obsidian Local REST はloopback正規用途のため blockLocalhost: false を明示
         // (fetchWithTimeout 既定trueの例外。SSRF面は設定値の事前検証が担う)
         const response = await fetchWithTimeout(url, noRedirectInit({
@@ -299,6 +308,9 @@ export class ObsidianClient {
         }
 
         if (response.ok) {
+            // Detected per response, never assumed from a version: a server that
+            // omits (or only weakly issues) the ETag keeps the unconditional PUT.
+            onEtag?.(detectStrongEtag(response.headers));
             return await this._readBodyWithTimeout(response);
         } else if (response.status === 404) {
             return '';

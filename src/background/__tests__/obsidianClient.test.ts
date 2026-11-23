@@ -975,7 +975,7 @@ describe('ObsidianClient: connection check retry policy', () => {
 
       await obsidianClient.appendToDailyNote('content', 'trace-obsidian-123');
 
-      expect(fetchSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 'trace-obsidian-123');
+      expect(fetchSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Object), 'trace-obsidian-123', expect.any(Function));
       expect(writeSpy).toHaveBeenCalledWith(expect.any(String), expect.any(Object), expect.any(String), 'trace-obsidian-123');
 
       fetchSpy.mockRestore();

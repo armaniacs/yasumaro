@@ -7,6 +7,8 @@ import { LogType } from '../../../utils/logger/types.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { errorMessage, toError } from '../../../utils/errorUtils.js';
 import { StorageKeys } from '../../../utils/storage/types.js';
+import { resolveFailure } from '../../../utils/failureTaxonomy.js';
+import { decideConflictRewrite } from '../../../utils/obsidianConditionalWrite.js';
 import { decideSaveSkip } from '../recordingDecision.js';
 import type { RecordingContext, StepDeps } from '../types.js';
 
@@ -59,10 +61,30 @@ export const saveToObsidianStep = async (
     // Write-visibility policy home: a replay write carries dedupe so the
     // section editor skips already-saved content; every other write (first
     // pipeline run, user-invoked append) stays unconditional.
-    if (context.replayWrite === true) {
-      await obsidianClient!.appendToDailyNote(markdown, context.traceId, { dedupe: true });
-    } else {
-      await obsidianClient!.appendToDailyNote(markdown, context.traceId);
+    const append = (): Promise<void> => context.replayWrite === true
+      ? obsidianClient!.appendToDailyNote(markdown, context.traceId, { dedupe: true })
+      : obsidianClient!.appendToDailyNote(markdown, context.traceId);
+
+    // The rewrite lives here (not in the client) so the client's PUT resend
+    // contract stays untouched: each attempt is a fresh GET + If-Match PUT.
+    let rewritesDone = 0;
+    for (;;) {
+      try {
+        await append();
+        break;
+      } catch (writeError: unknown) {
+        const decision = decideConflictRewrite(resolveFailure(writeError), rewritesDone);
+        if (decision === 'not-conflict') throw writeError;
+        addLog(
+          LogType.WARN,
+          decision === 'rewrite'
+            ? 'Obsidian write conflict (412); re-reading and rewriting once'
+            : 'Obsidian write conflict (412) persisted after the single rewrite',
+          { url, traceId: context.traceId }
+        );
+        if (decision === 'exhausted') throw writeError;
+        rewritesDone += 1;
+      }
     }
     const obsidianDuration = Date.now() - obsidianStart;
     addLog(LogType.INFO, 'Saved to Obsidian', { title, url, traceId: context.traceId });

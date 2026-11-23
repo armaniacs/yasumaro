@@ -23,6 +23,12 @@ New message types must set `protocolVersion: CURRENT_PROTOCOL_VERSION` in their 
 | `PUT` | `{baseUrl}/vault/{dailyPath}/{dailyNoteFileName}.md` | Write the full updated daily note content back (read-modify-write; the plugin doesn't support partial appends at a path). | `ObsidianClient._writeContent()` |
 | `GET` | `{baseUrl}/` | Health check for the connection test button in settings. Also used to validate protocol/host/port/API key without performing a write. | `ObsidianClient.testConnection()` |
 
+### Conditional write (If-Match)
+
+- The GET response is inspected at runtime: a non-empty strong `ETag` is echoed as `If-Match` on the following PUT. A missing or weak (`W/`) ETag, or a 404 on GET, keeps the unconditional PUT (no version is assumed).
+- A 412 on the PUT is classified as `http` / status 412 / method PUT (`isPreconditionConflict`). `saveToObsidianStep` logs the conflict, re-runs the whole read-modify-write once, and rethrows if the second attempt also returns 412. The client itself never re-sends a PUT (`canResendSameRequest` is unchanged).
+- Real-Obsidian verification (whether the plugin returns ETag and honours If-Match) is a manual item.
+
 ### Request details
 
 - **Auth**: All requests send `Authorization: Bearer {apiKey}` where `apiKey` comes from `StorageKeys.OBSIDIAN_API_KEY` (decrypted via `getSettings()`).
