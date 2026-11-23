@@ -390,7 +390,7 @@ TODO（起票済み 2026-10-20）: **fan-out 宛先修正**は [2026-10-20-feat-
 
 ### 2026-10-20 トリガー検証（外部ブロッカー再確認） ― 🔵 監視継続
 
-- **TypeScript 7 移行**（2026-09-26-12）: typescript-eslint 最新は v8.72.0（2026-10-19 リリース）で TS7（tsgo）対応のリリースは未発行。トリガー未発火を再確認。
+- **TypeScript 7 移行**（2026-09-26-12）: PR #217 で oxlint 経路により TypeScript 7.0.2 へ移行完了（[アーカイブ済み](../dev-docs/archived/pbi/2026-09-26-12-backlog-typescript-7-adoption.md)）。残置ルートの監視は終了。
 - **Stryker Vitest 5 runner**（2026-09-27-02）: [stryker-js#6210](https://github.com/stryker-mutator/stryker-js/issues/6210) は open のまま（2026-10-14 更新）。名前フィルタ問題の修正リリースは未発行。トリガー未発火を再確認。
 
 ### 2026-10-17 壁打ち（セッション一括削除＋自動保存の一時停止） ― ✅ 2件完了・アーカイブ済み ✨機能追加 RICE順: 01 → 02
@@ -730,17 +730,14 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 
 - [2026-11-13-01-backlog-mutation-score-remaining-dirs.md](../dev-docs/archived/pbi/2026-11-13-01-backlog-mutation-score-remaining-dirs.md)（✅ 完了 ― dashboard / background / utils の全チャンク測定・生残3分類・テスト補強を完了。RICE 2.0・3 SP・副作用🟢。詳細はアーカイブ履歴）
 
-### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）― ✅ 2件完了・アーカイブ済み / 🔵 監視 1件 🔧非機能追加
+### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）― ✅ 3件完了・アーカイブ済み 🔧非機能追加
 
 **統合 PBI**: [2026-09-26-00-backlog-dependency-updates.md](2026-09-26-00-backlog-dependency-updates.md)
 - Vision: 依存棚卸しで検出した未反映 3 件（範囲外メジャー 2 件・テスト基盤破壊 1 件）を PBI 化し着手順を確定
 - 採点: RICE 4.0 / 1.6 / 0.8 の順。3 候補間の依存なし、TypeScript 7 のみ外部トリガー（typescript-eslint 対応待ち）
 - 根拠の実測: `@types/chrome` 0.3.0 はドロップイン互換を実証 / `jsdom` 30.1.1 は dom-selector 9.x のセレクタ長上限 2048 文字に抵触（deep 4191・jpLayout 4714 文字）/ `typescript` 7 は typescript-eslint 8.70.1 の peer <6.1.0 で npm install が失敗
 - 10・11 は 2026-09-27 に実装・アーカイブ済み（アーカイブ履歴参照）
-
-| NN | PBI | 種別 | RICE | SP | 依存 / トリガー |
-|---|---|---|---:|---:|---|
-| 12 | [backlog-typescript-7-adoption](2026-09-26-12-backlog-typescript-7-adoption.md) | backlog | 0.8 | 2 | 🔵 監視中 ― typescript-eslint の TS 7 対応リリース待ち（2026-09-27 再調査でトリガー未発火を再確認。TS 7 強行移行は上流でクラッシュ実証済み。typedoc も同時更新対象に追加） |
+- 12 は PR #217 で oxlint 経路（案C）により TypeScript 7.0.2 へ移行完了として 2026-11-23 にアーカイブ（アーカイブ履歴参照）
 
 ### 2026-09-25 ラウンドの着手トリガー待ち 2 件 ― 🔵 監視 2件 🔧非機能追加
 
@@ -839,6 +836,11 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-23 oxlint 移行と TypeScript 7 移行完了 ― 2件
+
+- **2026-09-26-12-backlog-typescript-7-adoption**: typescript-eslint 残置ルートは不採用。上流対応待ちを打切り、PR #217 の oxlint 経路（案C）で TypeScript 7.0.2 へ移行完了。`typescript` ^7.0.2 更新、`@typescript-eslint/*` と `typedoc` 撤去、`lint` の oxlint 化。DEPENDINGS.md の更新は未実施で該当項目は未達のまま残す。
+- **2026-11-22-01-chore-oxlint-migration-typescript7**: oxlint 全面移行と TypeScript 7 同時移行を PR #217 で実行。前提調査は `dev-docs/investigation-oxlint-migration.md`。`typescript` ^7.0.2、`type-check` の tsgo 化、`typedoc` 撤去、`lint` の oxlint 化を実施。コードレビュー・lint 計測添付・移植版同結果検証は未達のまま残す。`eslint` 本体と `eslint.config.js` は SSOT 生成のため残置。
 
 ### 2026-11-23 生成側例外のSSOT集約 ― 1件
 

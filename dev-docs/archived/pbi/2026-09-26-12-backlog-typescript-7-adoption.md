@@ -1,6 +1,21 @@
-# PBI: TypeScript 7 への移行（typescript-eslint 対応待ち）
+# PBI: TypeScript 7 への移行（typescript-eslint 残置ルート・上流対応待ち）
 
-**状態: 着手トリガー待ち。上流の対応リリースまで実装しない。**
+**状態: 完了。PR #217 で oxlint 経路（案C）により TypeScript 7.0.2 へ移行済みのため、本ルート（typescript-eslint 残置）は不採用としてアーカイブ。**
+
+> **移行完了の注記（2026-11-23）**: TypeScript 7 への移行は PR #217 のマージで完了した。
+> `typescript` は `^7.0.2` に更新され、`@typescript-eslint/*` と `typedoc` は依存から撤去、
+> `lint` は oxlint へ切替済み。詳細は CHANGELOG の Unreleased「依存更新」の TypeScript 項目を参照。
+> 本 PBI の受け入れ基準のうち実施分を [x] に更新した。`docs/DEPENDINGS.md` の更新は未実施のため
+> 該当項目は [ ] のまま残す。
+
+> **別ルートとの関係（2026-11-22）**: TS7 への到達手段は2ルートに分かれる。本 PBI は
+> **typescript-eslint を残したまま**上流対応を待つルート。これに対し
+> [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md)
+> は **typescript-eslint を oxlint へ撤去して TS7 の install ブロッカー自体を消す**ルート（案C）。
+> 後述のとおり `--legacy-peer-deps` 等の強行移行は typescript-eslint の CJS 依存クラッシュで
+> 不可能なため、「typescript-eslint を抜く」ことが TS7 の現実的な近道になり得る。
+> 本 PBI のトリガー②が発火した場合の中止は「TS7断念」ではなく「案C への切替」を指す（下記トリガー節参照）。
+> 両ルートに共通する残ブロッカーは `typedoc` の TS7 未対応（後述）。
 
 ## ユーザーストーリー
 
@@ -27,7 +42,7 @@
 いずれかが成立したら着手する:
 
 1. **上流リリース**: npm の `@typescript-eslint/eslint-plugin` で、peer 範囲に TypeScript 7.x を含む版がリリースされた
-2. **フォールバック裁定**: `--legacy-peer-deps` 運用や typescript-eslint の更新断念をユーザーが明示的に裁定した（その場合は移行を中止し、判断を記録してクローズする）
+2. **フォールバック裁定**: `--legacy-peer-deps` 運用や typescript-eslint の更新断念をユーザーが明示的に裁定した。かつては「移行を中止しクローズ」だったが、2026-11-22 以降は **案C（oxlint 移行、[2026-11-22-01](2026-11-22-01-chore-oxlint-migration-typescript7.md)）への切替**を意味する。「typescript-eslint 断念＝TS7 断念」ではない点に注意
 
 監視方法（発火判断の手順）:
 
@@ -84,9 +99,9 @@ Scenario: トリガー未発火時は現状を維持する
 ## 受け入れ基準
 
 - [x] トリガー待ちである旨と、上流対応まで実装しない旨が本 PBI に明記されている（起票済み）
-- [ ] （トリガー発火後）`package.json` の `typescript` を `^7.0.2` に更新し、TypeScript 7 対応の `@typescript-eslint/*` と `typedoc` を同時に `package-lock.json` へ同期している
-- [ ] （トリガー発火後）`npm run validate` が PASS する
-- [ ] （トリガー発火後）`docs/DEPENDINGS.md` を更新している
+- [x] （トリガー発火後）`package.json` の `typescript` を `^7.0.2` に更新し、TypeScript 7 対応の `@typescript-eslint/*` と `typedoc` を同時に `package-lock.json` へ同期している（PR #217 で案Cの撤去ルートとして実施。上流対応待ちではなく typescript-eslint 撤去で解決）
+- [x] （トリガー発火後）`npm run validate` が PASS する（PR #217 マージ済み）
+- [ ] （トリガー発火後）`docs/DEPENDINGS.md` を更新している（未実施。該当表は更新されていないため未達のまま残す）
 
 ## テスト戦略
 
@@ -101,9 +116,10 @@ Scenario: トリガー未発火時は現状を維持する
 ## DoD
 
 - [x] 起票済み（トリガー・監視方法・移行手順の記載）
-- [ ] （トリガー発火後）上記受け入れ基準を満たし、`docs/DEPENDINGS.md` を更新する
+- [ ] （トリガー発火後）上記受け入れ基準を満たし、`docs/DEPENDINGS.md` を更新する（DEPENDINGS.md 未更新のため未達のまま残す）
 
 ## 参考
 
 - `docs/DEPENDINGS.md` ― 依存棚卸しと未反映理由の記録
 - 同型の監視 PBI: [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（上流リリース待ちのトリガー型 PBI の先行例。2026-11-13 に採用完了・アーカイブ済み）
+- 移行を実施した案Cの PBI: [2026-11-22-01-chore-oxlint-migration-typescript7.md](2026-11-22-01-chore-oxlint-migration-typescript7.md)（本ファイルと同じ場所にアーカイブ）

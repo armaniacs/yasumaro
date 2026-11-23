@@ -16,12 +16,13 @@
 - omnibox 起動でタブ URL が読めない場合、無言で終わらず通知で理由を返す（keyboard コマンドは従来どおり無言。`tabs` 権限の追加はしない）
 - レビュー指摘14件の対応（分割の共有鍵化、AI修復の数え上げ修正、忘れ復旧の確認対話追加、取込検証の一元化、施錠状態の読直し。フル1356ファイル19094件緑、試験基準値は437に固定）
 - 施錠中にプロバイダ欄だけ無効化が間に合わない不具合を修正（E2Eで検出。プロバイダ欄は後から描画されるため描画後に抑止を追従させる）
+- 生成側直書きの例外を定義書側に集約（oxlint用の例外2件を `eslint.config.js` の資料項目へ移動し、生成側は参照のみに変更。照合試験5件を追加し生成物の同一を確認）
 
 ### 依存更新
 
 - 開発依存のminor/patch更新（`eslint` 10.14→10.15、`vite` 8.3.6→8.3.8、`vitest` 5.1.0→5.1.1、`@vitest/coverage-v8` 5.1.0→5.1.1、`@playwright/test` 1.65.0→1.65.1、`jsdom` 31.0.0→31.0.1、`better-sqlite3` 13.0.3→13.2.0、`knip` 6.43.0→6.47.0、`@types/chrome` 0.3.6→0.3.7、`@subframe7536/sqlite-wasm` 1.4.0→1.4.1、`@peculiar/webcrypto` 1.7.1→1.7.2）。`better-sqlite3` はネイティブビルドを伴うため engines（node >=24）の CI で ABI 回帰がないことを実測。`knip` は 6.43→6.47 の複数マイナスを跨ぐが、既定ルールの挙動変更は lint 緑で確認済み。フルスイート・型・lint・ライセンス・ビルド緑で回帰なし
 - `@cyclonedx/cyclonedx-npm` 6.0.1→7.0.1（major）。SBOM 生成専用で製品ランタイムに載らない。CycloneDX 1.6 契約を `--spec-version 1.6` 明示で維持（`scripts/generate-sbom.mjs`）
-- TypeScript を 6.0.3→7.0.2（native tsgo）へ更新。TS7 の install ブロッカーだった `@typescript-eslint/*`（peer `<6.1.0`）と `typedoc` を依存から撤去し、`type-check` を tsgo で green 化。lint は ESLint から Rust ネイティブの `oxlint` へ切替（自作ルールを JS プラグインへ移植、`eslint.config.js` を SSOT に `.oxlintrc.json` を生成）。`typedoc` は HTML API doc 生成を廃止（Chrome 拡張で外部 API 利用者はおらず冗長。利用者向けドキュメントは `docs/*.md`）。詳細は [PBI: TypeScript 7 への移行](pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を参照
+- TypeScript を 6.0.3→7.0.2（native tsgo）へ更新。TS7 の install ブロッカーだった `@typescript-eslint/*`（peer `<6.1.0`）と `typedoc` を依存から撤去し、`type-check` を tsgo で green 化。lint は ESLint から Rust ネイティブの `oxlint` へ切替（自作ルールを JS プラグインへ移植、`eslint.config.js` を SSOT に `.oxlintrc.json` を生成）。`typedoc` は HTML API doc 生成を廃止（Chrome 拡張で外部 API 利用者はおらず冗長。利用者向けドキュメントは `docs/*.md`）。詳細は [PBI: TypeScript 7 への移行](dev-docs/archived/pbi/2026-09-26-12-backlog-typescript-7-adoption.md) を参照
 - 保留（いずれも製品ランタイム・audit 上のリスクは無し）:
   - `@peculiar/webcrypto` 2.0.0（現 1.7.2）: テスト専用の WebCrypto polyfill。2.0.0 はメジャーで依存が `@peculiar/utils` ^4.1.0 に刷新されるが、セキュリティ修正は含まれない（`npm audit` で当該なし）。解除条件は crypto テスト群の再実測。専用 PBI は未起票
 
@@ -29,7 +30,7 @@
 ### テスト
 
 - テストのDOM環境をjsdomからwasm-quickjs-domへ移行（422ファイルを機械置換、14ファイルは根拠つきでjsdomに退避。environmentフェーズを約49秒から約25.3秒に半減。`jsdomFileCount`ゲートをDOM環境ファイル数 `domFileCount`（426）に再定義）
-- 新機能のE2E仕様を6件14テスト追加し全て緑（分割往復、寛容取込、AI修復入口、施錠案内、忘れ復旧、版表示。実ブラウザの拡張機能として実行）
+- 新機能のE2E仕様を6件14テスト追加し全て緑（分割往復、寛容取込、AI修復入口、施錠案内、忘れ復旧、版表示。実ブラウザの拡張機能として実行）。DOM環境ファイル数の予算を426から436に改定し、内訳をADRに記録
 
 ## [6.9.76] - 2026-11-19
 
