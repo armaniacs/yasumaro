@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * navTrailToggle tests: the checkbox may only turn ON through the consent
  * dialog, and a cancel or a save failure must leave the stored state — and the

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * timeHeatmapPanel lifecycle tests: grid rendering, empty state,
  * limit notice, and the shared period-filter wiring (default 'last90',

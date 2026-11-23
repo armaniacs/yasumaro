@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { createClauseEditor } from '../collectionClauseEditor.js';
 import { renderClauseEditorView } from '../collectionClauseEditorView.js';

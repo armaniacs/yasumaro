@@ -184,8 +184,31 @@ export class SessionAlarmService {
         }
       }
       if (!confirmed) {
+        // PBI 2026-11-08-07(5): storage already claims "locked" here while no
+        // context confirmed the lock — every context still acts unlocked, so
+        // the flag and reality diverge. Revert to unlocked so the next
+        // timeout cycle re-locks and re-notifies instead of leaving a lock
+        // nobody applied. The revert itself is best-effort and never masks
+        // the unconfirmed-delivery error below.
+        //
+        // No explicit timeout re-arm is needed after this revert: the
+        // periodic `check_session_timeout` alarm keeps firing (armed once via
+        // alarmRegistry.installAll() and owned there, never here), so the
+        // next firing re-evaluates the reverted unlocked state and retries
+        // the lock. This method must not clear/re-create the alarm — arming
+        // it in two places would double-fire checkTimeout.
+        try {
+          await this.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
+        } catch (revertError) {
+          logWarn(
+            'Failed to revert lock flag after unconfirmed lock notification',
+            { error: errorMessage(revertError) },
+            undefined,
+            'SessionAlarmService.ts'
+          );
+        }
         logError(
-          'Lock notification was never confirmed: no context with a SESSION_LOCK_REQUEST handler responded. Session will be locked via IS_LOCKED flag check in getOrCreateEncryptionKey.',
+          'Lock notification was never confirmed: no context with a SESSION_LOCK_REQUEST handler responded. IS_LOCKED was reverted to false and the next timeout check will retry the lock.',
           { retries, confirmed: false },
           ErrorCode.INTERNAL_ERROR,
           'SessionAlarmService.ts'

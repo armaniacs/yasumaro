@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfsWorker-transactionIntegrity.test.ts
  * Tests for OPFS SQLite transaction integrity (WAL, BEGIN IMMEDIATE, changes(),

@@ -8,6 +8,7 @@
  */
 
 import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
+import { formatLocaleDateTime } from '../../../utils/localeUtils.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { makeStatRow, getSeverityLabel } from '../../diagnosticUtils.js';
 import type { BuiltInAIAvailability } from '../../../background/builtInAIClient.js';
@@ -247,7 +248,7 @@ function renderCaptureSection(el: HTMLElement | null, snap: DiagnosticsSnapshot)
     el.appendChild(makeStatRow(getMessageOr('diagCaptureScope', 'Scope'), summarizeScope()));
     return;
   }
-  const when = new Date(last.at).toLocaleString();
+  const when = formatLocaleDateTime(last.at);
   if (last.code === RECORDED_OUTCOME_CODE) {
     el.appendChild(makeStatRow(
       getMessageOr('diagCaptureLast', 'Last capture'),

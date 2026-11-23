@@ -14,6 +14,9 @@
 
 import type { ExtractResult } from '../utils/contentExtractor/types.js';
 import type { CleansingConfig, PageState } from './pageState.js';
+import { errorMessage } from '../utils/errorUtils.js';
+import { logWarn } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 import { toGetContentReply } from './visitPayload.js';
 import {
     resolveRegenerateCleansingConfig,
@@ -36,22 +39,38 @@ export interface GetContentHandlerDeps {
      * PBI 2026-09-21-30: the ONLY extraction route. The handler delegates
      * extract+commit atomically — the extract/apply pair fallback was
      * retired, so ordering knowledge lives in the kernel alone.
+     * PBI 1116b: async — the candidate scan yields to the renderer.
      */
-    extractAndCommit: (config?: CleansingConfig) => ExtractResult;
+    extractAndCommit: (config?: CleansingConfig) => Promise<ExtractResult>;
     pageState: PageState;
     runtimeId: string | undefined;
 }
 
-export function handleGetContentMessage(
+/**
+ * Synchronous gate for the chrome message listener: only when this returns
+ * true does the listener take the message (and keep the port open for the
+ * async reply). Keeps the type/sender guard in one place so the async
+ * handler below never duplicates it.
+ */
+export function shouldHandleGetContentMessage(
+    message: unknown,
+    sender: GetContentSender,
+    deps: GetContentHandlerDeps,
+): boolean {
+    if (typeof message !== 'object' || message === null || !('type' in message)) return false;
+    const msg = message as GetContentMessage;
+    if (msg.type !== 'GET_CONTENT') return false;
+    return sender.id === deps.runtimeId;
+}
+
+export async function handleGetContentMessage(
     message: unknown,
     sender: GetContentSender,
     sendResponse: (response?: unknown) => void,
     deps: GetContentHandlerDeps,
-): void {
-    if (typeof message !== 'object' || message === null || !('type' in message)) return;
+): Promise<void> {
+    if (!shouldHandleGetContentMessage(message, sender, deps)) return;
     const msg = message as GetContentMessage;
-    if (msg.type !== 'GET_CONTENT') return;
-    if (sender.id !== deps.runtimeId) return;
     // PBI 2026-09-21-30: single route — no fallback branch.
     // PBI 04: cleanseMode resolves against the live pageState config
     // (utils ladder, one-shot, never persisted). 'current' → no override.
@@ -62,8 +81,51 @@ export function handleGetContentMessage(
         (REGENERATE_CLEANSE_MODES as readonly string[]).includes(mode)
             ? resolveRegenerateCleansingConfig(deps.pageState.cleansingConfig, mode)
             : undefined;
-    const extractResult = deps.extractAndCommit(config);
-    // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
-    // via the single visitPayload module — one builder, no per-path drift.
-    sendResponse(toGetContentReply(deps.pageState, extractResult.content));
+    const extractResult = await tryExtractAndCommit(deps, config);
+    if (extractResult.ok) {
+        // PBI 2026-09-15-14: field selection shared with the VALID_VISIT payload
+        // via the single visitPayload module — one builder, no per-path drift.
+        sendResponse(toGetContentReply(deps.pageState, extractResult.content));
+        return;
+    }
+    // PBI 2026-11-08-05: extraction threw — still answer so the popup never
+    // hangs. The fallback channel (popup/regenerate already understand it)
+    // carries the failure signal with empty content.
+    // Review S1: the wire code is a fixed code only ('extract-failed') — the
+    // raw error text never leaves the content script and lives in the log
+    // side, so popup/regenerate can branch on a stable value and no error
+    // internals (paths, selectors, DOM excerpts) leak over the message port.
+    try {
+        void logWarn(
+            'GET_CONTENT extract failed',
+            { error: extractResult.error },
+            ErrorCode.INTERNAL_ERROR,
+            'getContentHandler',
+        ).catch(() => {
+            // Logging must never cost the caller its answer.
+        });
+        sendResponse({
+            ...toGetContentReply(deps.pageState, ''),
+            fallbackTriggered: true,
+            fallbackReason: 'extract-failed',
+        });
+    } catch {
+        // The reply builder itself must never cost the caller its answer.
+        sendResponse({ content: '' });
+    }
+}
+
+/**
+ * PBI 2026-11-08-05: extract+commit never throws to the caller — a failure
+ * becomes a value so handleGetContentMessage always reaches sendResponse.
+ */
+async function tryExtractAndCommit(
+    deps: GetContentHandlerDeps,
+    config: CleansingConfig | undefined,
+): Promise<{ ok: true; content: string } | { ok: false; error: string }> {
+    try {
+        return { ok: true, content: (await deps.extractAndCommit(config)).content };
+    } catch (e: unknown) {
+        return { ok: false, error: errorMessage(e) };
+    }
 }

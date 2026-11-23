@@ -86,10 +86,19 @@ function mirrorStatusToTop(el: HTMLElement): void {
   if (el.id !== 'status') return;
   try {
     syncStatusToTop();
-    // WHY (intentional silence, PBI 2026-09-22-01裁定): the mirror is
-    // cosmetic best-effort — a missed mirror self-heals on the next
-    // showStatus/clearStatus, and logging every DOM mismatch would spam per status.
-  } catch {}
+    // S27: a past mirror failure must not stick once the mirror succeeds —
+    // clear the flag so it always reflects the latest write, not history.
+    delete el.dataset.statusMirrorFailed;
+  } catch {
+    // WHY (visible failure, PBI 2026-11-08-09 (4)): the mirror is cosmetic,
+    // but a DOM inconsistency (e.g. a detached #statusTop breaking
+    // setElementHtml) must not vanish silently — a missed mirror used to
+    // self-heal opaquely, hiding real DOM bugs. The warn surfaces it in
+    // diagnostics and the dataset flag makes it observable (and styleable)
+    // while the source #status message itself stays intact.
+    console.warn('[settingsUiHelper] mirrorStatusToTop: #status -> #statusTop mirror failed');
+    el.dataset.statusMirrorFailed = '1';
+  }
 }
 
 /**
@@ -124,8 +133,15 @@ export function showStatus(
   const timeout = options.durationMs ?? DEFAULT_CLEAR_DELAY_MS[type];
   pendingClearTimers.set(el, setTimeout(() => {
     pendingClearTimers.delete(el);
-    el.textContent = '';
-    el.className = STATUS_BASE_CLASS;
+    // Best-effort cleanup: the host document can be torn down before the timer
+    // fires (page navigation, test-environment teardown), and touching a node
+    // on a closed document must never surface as an unhandled error.
+    try {
+      el.textContent = '';
+      el.className = STATUS_BASE_CLASS;
+    } catch {
+      // The element's document is gone; nothing to clear.
+    }
   }, timeout));
 }
 

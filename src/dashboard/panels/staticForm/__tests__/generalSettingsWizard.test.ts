@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for the wizard reopen module (PBI 2026-10-03-29): the module
  * mounts independently of the panel and keeps the class observer as a

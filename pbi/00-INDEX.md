@@ -14,6 +14,113 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
+
+コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。`listen` 関数の 6 重定義、`parseIntOr` の単一ファイルローカル定義、`webhookExportSettings.ts` の save/load 重複要素取得、`aiSummaryCleansingSettingsV2.ts` の threshold 反復パターン、`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの 5 件。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---|---:|---|
+| 01 | [2026-11-21-01-refactor-listen-shared-utility.md](2026-11-21-01-refactor-listen-shared-utility.md) | 🔧非機能追加 | - | 3 | `listen` 関数を `src/utils/domListen.ts` に共通化、6ファイルから削除 |
+| 02 | [2026-11-21-02-refactor-parseintor-shared-utility.md](2026-11-21-02-refactor-parseintor-shared-utility.md) | 🔧非機能追加 | - | 2 | `parseIntOr` を `src/utils/string.ts` に移動、`aiSummaryCleansingSettingsV2.ts` から削除 |
+| 03 | [2026-11-21-03-refactor-webhook-export-element-consolidation.md](2026-11-21-03-refactor-webhook-export-element-consolidation.md) | 🔧非機能追加 | - | 3 | `webhookExportSettings.ts` の save/load 5要素取得を共通ヘルパーに集約 |
+| 04 | [2026-11-21-04-refactor-ai-cleansing-threshold-loop.md](2026-11-21-04-refactor-ai-cleansing-threshold-loop.md) | 🔧非機能追加 | - | 2 | `aiSummaryCleansingSettingsV2.ts` の threshold 反復を for ループ化 |
+| 05 | [2026-11-21-05-refactor-settings-form-binding-adoption.md](2026-11-21-05-refactor-settings-form-binding-adoption.md) | 🔧非機能追加 | - | 5 | `?.checked ?? false` / `?.value ?? ''` を `settingsFormBinding.ts` ヘルパーに移行 |
+
+### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
+
+RICE降順で実装。01 tab問い合わせ複製の解消とタイマ一元化 (Quick Win・parity12件・タイマ残留0) / 02 符号化所有の固定と順序回帰試験 (順序回帰20件・XSS系緑維持) / 03 PrivacyPipeline の純粋部切り出し (mock-free19件・parity14件) / 04 dashboard gateway の共通 seam 利用者化 (parity5件・wiring6件)。バッチ境界: 型検査緑・lint エラー0・軽量65ファイル1352件緑。最終ゲート: フル1342ファイル18911件緑・ビルド緑。台帳は [2026-11-20-00-backlog-holistic-1120.md](2026-11-20-00-backlog-holistic-1120.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-20-01-refactor-tab-fetch-unify.md](../dev-docs/archived/pbi/2026-11-20-01-refactor-tab-fetch-unify.md) | 🔧非機能追加 | 16.0 | S | ✅ 完了。askTab への統一、null契約・権限 ladder 不変。parity12件・タイマ残留0 |
+| ~~02~~ | [2026-11-20-02-refactor-sanitize-ownership.md](../dev-docs/archived/pbi/2026-11-20-02-refactor-sanitize-ownership.md) | 🔧非機能追加 | 4.8 | M | ✅ 完了。prompt 直接置換の除去と適用順序の固定 + 順序回帰試験20件。XSS 系緑維持 |
+| ~~03~~ | [2026-11-20-03-refactor-privacy-pipeline-split.md](../dev-docs/archived/pbi/2026-11-20-03-refactor-privacy-pipeline-split.md) | 🔧非機能追加 | 4.3 | M | ✅ 完了。buildPlan/applyMaskResult/formatCloudResult の純粋化 + mock-free 19件。executor は薄く |
+| ~~04~~ | [2026-11-20-04-refactor-dashboard-gateway-seam.md](../dev-docs/archived/pbi/2026-11-20-04-refactor-dashboard-gateway-seam.md) | 🔧非機能追加 | 2.0 | M | ✅ 完了。confirmToken を pre-send hook、再試行を policy 引数に。parity5件+wiring6件 |
+
+### 2026-11-19 テスト DOM 環境の wasm-quickjs-dom 移行評価（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md](../dev-docs/archived/pbi/2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom.md) | 🔧非機能追加 | 1.1 | 3 | ✅ 完了（2026-11-20 アーカイブ済み）。jsdom → wasm-quickjs-dom を 422 ファイルへ導入、フルスイート全パス、environment フェーズ半減、domFileCount(426)へ再定義。PR #212 でマージ済み |
+
+### 2026-11-16 chrome-extensions 監査 1116b の積み残し（1件） ― ✅ 1件完了・アーカイブ済み 🔧非機能追加
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~02~~ | [2026-11-16-02-backlog-omnibox-url-fallback.md](../dev-docs/archived/pbi/2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ✅ 完了。runner に任意 notifyNoUrl hook、omnibox のみ通知。keyboard 無言維持、tabs 権限追加なし |
+
+### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
+
+Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。コードは正常版と同一でスクリプトのテストも緑のため、認証情報またはストア側検証が原因と推定。所有者による secrets / ストア側の確認待ち。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| 01 | [2026-11-16-01-release-store-upload-failure.md](2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | 🔶 部分実装。CIログで確定: Chromeは同版再アップロード拒否、EdgeはInProgressSubmission (いずれも再実行の冪等性欠如)。両スクリプトに再実行耐性を実装・テスト49件緑。次回リリースで緑確認 |
+
+### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― ✅ 1件完了・アーカイブ済み
+
+監査 run-1 の needs_validation (同意TOCTOU) はダミー実験で firing 確定 (6/6) 後、mutex直後の同意再読ゲートで修正 (record/preview/retryObsidianWrite の全経路)。発火デモ probe は実execute経路の回帰ガードへ昇格 (5テスト)。バッチ境界: 型検査緑・lint エラー0・background 3766件緑。台帳は [2026-11-12-00-backlog-security-audit-run1.md](2026-11-12-00-backlog-security-audit-run1.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-12-01-fix-recording-consent-reread.md](../dev-docs/archived/pbi/2026-11-12-01-fix-recording-consent-reread.md) | 🔧非機能追加 | 8.0 | S | ✅ 完了。撤回時拒否・sink沈黙・回帰5テスト |
+
+### 2026-11-11 大局的改善 Round 1 holistic-1111（3件） ― ✅ 3件完了・アーカイブ済み
+
+SoC系3件をRICE降順で実装。01 AI要約カスケード (dedupeキーにcontent hash・fallback診断・監査可視化) / 02 View⇔配線循環解消 (共有SSOT+parity) / 03 ログ経路一本化 (seam委譲+console直書きlint)。バッチ境界: 型検査緑・lint エラー0・軽量1133件緑。台帳は [2026-11-11-00-backlog-holistic-1111.md](2026-11-11-00-backlog-holistic-1111.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-11-01-fix-ai-cascade-misrouting.md](../dev-docs/archived/pbi/2026-11-11-01-fix-ai-cascade-misrouting.md) | 🔧非機能追加 | 3.2 | M | ✅ 完了。内容違い分離+同一共有維持・Red4失敗→全緑 |
+| ~~02~~ | [2026-11-11-02-refactor-view-wiring-cycle.md](../dev-docs/archived/pbi/2026-11-11-02-refactor-view-wiring-cycle.md) | 🔧非機能追加 | 3.0 | S | ✅ 完了。共有SSOT・循環ゼロ・832件緑 |
+| ~~03~~ | [2026-11-11-03-refactor-log-path-unify.md](../dev-docs/archived/pbi/2026-11-11-03-refactor-log-path-unify.md) | 🔧非機能追加 | 2.0 | S | ✅ 完了。seam一本化+lint新設・625件緑 |
+
+### 2026-11-11 大局的改善 Round 2 holistic-1111b（3件） ― ✅ 3件完了・アーカイブ済み
+
+DRY系3件。04 selectビルダー集約 / 05 日時seam集約 (UTC表示1箇所は仕様変更のため送り) / 06 region骨格共通化 (04と同一viewに積み重ねて統合)。バッチ境界: 型検査緑・lint エラー0・軽量909件緑。台帳は [2026-11-11-00-backlog-holistic-1111b.md](2026-11-11-00-backlog-holistic-1111b.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~04~~ | [2026-11-11-04-refactor-collection-select-builder.md](../dev-docs/archived/pbi/2026-11-11-04-refactor-collection-select-builder.md) | 🔧非機能追加 | 2.0 | S | ✅ 完了。3箇所委譲・golden無修正緑 (view2件は06に同梱) |
+| ~~05~~ | [2026-11-11-05-refactor-datetime-unify.md](../dev-docs/archived/pbi/2026-11-11-05-refactor-datetime-unify.md) | 🔧非機能追加 | 1.28 | M | ✅ 完了。seam集約・契約維持・426件緑 (UTC 1箇所送り) |
+| ~~06~~ | [2026-11-11-06-refactor-region-action.md](../dev-docs/archived/pbi/2026-11-11-06-refactor-region-action.md) | 🔧非機能追加 | 0.8 | S | ✅ 完了。遷移一元化・856件緑 (tagsPanel不存在のため対象外) |
+
+### 2026-11-11 大局的改善 Round 3 holistic-1111c（1件） ― ✅ 1件完了・アーカイブ済み
+
+Model肥大テーマの段階着手 (ガード注入のみ・全面分割は送り)。台帳は [2026-11-11-00-backlog-holistic-1111c.md](2026-11-11-00-backlog-holistic-1111c.md) を参照。本ラウンド終了直前に最終ゲート (フルテスト+ビルド) を実施。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~07~~ | [2026-11-11-07-refactor-model-guard-inject.md](../dev-docs/archived/pbi/2026-11-11-07-refactor-model-guard-inject.md) | 🔧非機能追加 | 1.2 | S | ✅ 完了。注入化・既定不変・Red2失敗→全緑 |
+
+### 2026-11-08 既定DoH配線 backlog-1108-18（1件） ― ⛔ 着手条件付き駐留
+
+- [2026-11-08-18-backlog-default-doh.md](2026-11-08-18-backlog-default-doh.md)（⛔ **明示的な着手宣言があるまで実装しない**: PBI 2026-11-08-01でseam+opt-in配線まで実施済み。残りは既定DoH解決器の選定・配線とmanifest `host_permissions` 追加で、権限設計の判断と一体で着手する。M）
+
+### 2026-11-08 adversarial-code-review adversarial-1108（17件） ― ✅ 17件完了・アーカイブ済み
+
+レビュー所見171件を全件反証(74件却下)し生き残り97件を17候補へ集約・RICE降順でPBI化・実装。01 SSRFピン留め / 02 gating正確性 / 03 通知無害化 / 04 sessionStore耐久性 / 05 content連携 / 06 sqlite検証 / 07 pipeline回復 / 08 popup可視化 / 09 cleaner正確性 / 10 migration / 11 Mutex(07より先行) / 12 messaging seam / 13 配線起動(+tests.yml E2Eプローブenv・e2eTestState注記追補) / 14 i18n信頼性 / 15 privacy描画 / 16 定数集約 / 17 検証境界。4バッチ(6並列・5並列・3並列・単独)でworktree実装→mainへマージ。台帳は [2026-11-08-00-backlog-adversarial-1108.md](../dev-docs/archived/pbi/2026-11-08-00-backlog-adversarial-1108.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 根拠の要点 |
+|---|---|---|---|---:|---|
+| ~~01~~ | [2026-11-08-01-fix-ssrf-dns-pinning.md](../dev-docs/archived/pbi/2026-11-08-01-fix-ssrf-dns-pinning.md) | 🔧非機能追加 | 240 | M | ✅ 完了。DNSピン留め+localhost既定拒否(既定DoH未配線はseam+opt-out方式で留保) |
+| ~~02~~ | [2026-11-08-02-fix-visit-gating-correctness.md](../dev-docs/archived/pbi/2026-11-08-02-fix-visit-gating-correctness.md) | 🔧非機能追加 | 240 | M | ✅ 完了。SPA・しきい値・NaN・performance(共有setup revert+局所stubの回帰修正を含む) |
+| ~~03~~ | [2026-11-08-03-fix-notification-title-sanitize.md](../dev-docs/archived/pbi/2026-11-08-03-fix-notification-title-sanitize.md) | 🔧非機能追加 | 240 | S | ✅ 完了。信頼UIへの文言注入を無害化 |
+| ~~04~~ | [2026-11-08-04-fix-sessionstore-durability.md](../dev-docs/archived/pbi/2026-11-08-04-fix-sessionstore-durability.md) | 🔧非機能追加 | 160 | L | ✅ 完了。消失7件のfail-visible化 |
+| ~~05~~ | [2026-11-08-05-fix-content-messaging-robustness.md](../dev-docs/archived/pbi/2026-11-08-05-fix-content-messaging-robustness.md) | 🔧非機能追加 | 120 | M | ✅ 完了。ハング・世代ずれ・無音失敗 |
+| ~~06~~ | [2026-11-08-06-fix-dashboard-sqlite-validation.md](../dev-docs/archived/pbi/2026-11-08-06-fix-dashboard-sqlite-validation.md) | 🔧非機能追加 | 107 | M | ✅ 完了。行・値の検証追加 |
+| ~~07~~ | [2026-11-08-07-fix-recording-pipeline.md](../dev-docs/archived/pbi/2026-11-08-07-fix-recording-pipeline.md) | 🔧非機能追加 | 107 | L | ✅ 完了。重複・回復漏れ防止 |
+| ~~08~~ | [2026-11-08-08-fix-popup-error-handling.md](../dev-docs/archived/pbi/2026-11-08-08-fix-popup-error-handling.md) | 🔧非機能追加 | 107 | M | ✅ 完了。失敗可視化・二重実行防止 |
+| ~~09~~ | [2026-11-08-09-fix-cleaner-privacy-accuracy.md](../dev-docs/archived/pbi/2026-11-08-09-fix-cleaner-privacy-accuracy.md) | 🔧非機能追加 | 80 | M | ✅ 完了。除去漏れ・誤判定の是正 |
+| ~~10~~ | [2026-11-08-10-fix-migration-robustness.md](../dev-docs/archived/pbi/2026-11-08-10-fix-migration-robustness.md) | 🔧非機能追加 | 50 | M | ✅ 完了。再試行・状態検証 |
+| ~~11~~ | [2026-11-08-11-fix-mutex-ownership.md](../dev-docs/archived/pbi/2026-11-08-11-fix-mutex-ownership.md) | 🔧非機能追加 | 40 | S | ✅ 完了。所有権・watchdog |
+| ~~12~~ | [2026-11-08-12-fix-messaging-seam.md](../dev-docs/archived/pbi/2026-11-08-12-fix-messaging-seam.md) | 🔧非機能追加 | 32 | M | ✅ 完了。型境界・検証漏れ |
+| ~~13~~ | [2026-11-08-13-fix-wiring-startup.md](../dev-docs/archived/pbi/2026-11-08-13-fix-wiring-startup.md) | 🔧非機能追加 | 32 | M | ✅ 完了。配線・起動の可視化 |
+| ~~14~~ | [2026-11-08-14-fix-popup-dashboard-i18n-reliability.md](../dev-docs/archived/pbi/2026-11-08-14-fix-popup-dashboard-i18n-reliability.md) | 🔧非機能追加 | 30 | M | ✅ 完了。i18n漏れ・誤timeout等 |
+| ~~15~~ | [2026-11-08-15-fix-privacy-renderer.md](../dev-docs/archived/pbi/2026-11-08-15-fix-privacy-renderer.md) | 🔧非機能追加 | 24 | S | ✅ 完了。構文対応・表示崩れ |
+| ~~16~~ | [2026-11-08-16-refactor-config-consolidation.md](../dev-docs/archived/pbi/2026-11-08-16-refactor-config-consolidation.md) | 🔧非機能追加 | 16 | S | ✅ 完了。定数集約 |
+| ~~17~~ | [2026-11-08-17-fix-validation-limits.md](../dev-docs/archived/pbi/2026-11-08-17-fix-validation-limits.md) | 🔧非機能追加 | 13 | S | ✅ 完了。境界・文言依存の是正 |
+
 ### 2026-11-08 arch-delivery-loop archloop-1108（9件） ― ✅ 9件完了・アーカイブ済み
 
 診断ドメイン: messaging seam・offscreen query・MV3乖離。01 SW-let永続化 / 02 micro fold+dead削除 / 03 alias集約 / 04 innerHTML往復除去 / 05 backend parity+pin / 06 facade段階削除(02後) / 07 twin traversal統合 / 08 registry複製解消(03後) / 09 E2E肯定条件化。最終ゲート: make clean test。台帳は [2026-11-08-00-backlog-archloop-1108.md](2026-11-08-00-backlog-archloop-1108.md) を参照。
@@ -615,9 +722,13 @@ investigate 3 件（15・18・13）の裁定報告書に基づく後続 PBI。po
 | [27-04](../dev-docs/archived/pbi/2026-09-27-04-refactor-settings-key-single-writer.md) | refactor | 1.5 | 1 | ✅ 完了（2026-09-27 アーカイブ済み）。threshold を SettingsRepository に統一 |
 | [27-03](../dev-docs/archived/pbi/2026-09-27-03-fix-ai-provider-circuit-breaker.md) | fix | 1.5 | 3 | ✅ 完了（2026-09-27 アーカイブ済み）。circuit breaker 実装（lazy half-open・session スコープ） |
 
-### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 ― 🔵 監視 1件 🔧非機能追加
+### 2026-09-27 Stryker vitest-runner Vitest 5 対応版採用 ― ✅ 完了・アーカイブ済み 🔧非機能追加
 
-- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（🔵 監視中 ― RICE 0.2・1 SP・副作用🟢。`@stryker-mutator/vitest-runner` 10.0.0 が Vitest 5 でスコア 0.00% になる既知制約（上流 #6210、修正 PR #6220 未マージ）の採用待ち。トリガー: #6210 修正を含む vitest-runner 新版の npm リリース、または Vitest 4.x へのダウングレード裁定。トリガーまで Red/Green 手動検証を継続）
+- [2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md](../dev-docs/archived/pbi/2026-09-27-02-backlog-stryker-vitest5-runner-adoption.md)（✅ 完了 ― 10.1.1 で実効スコア化。測定済み5チャンク合算 67.92%。残ディレクトリは [2026-11-13-01](../dev-docs/archived/pbi/2026-11-13-01-backlog-mutation-score-remaining-dirs.md) へ切り出し。全21チャンク合算 64.61% で完走・アーカイブ済み）
+
+### 2026-11-13 ミューテーションスコア残ディレクトリ ― ✅ 完了・アーカイブ済み 🔧非機能追加
+
+- [2026-11-13-01-backlog-mutation-score-remaining-dirs.md](../dev-docs/archived/pbi/2026-11-13-01-backlog-mutation-score-remaining-dirs.md)（✅ 完了 ― dashboard / background / utils の全チャンク測定・生残3分類・テスト補強を完了。RICE 2.0・3 SP・副作用🟢。詳細はアーカイブ履歴）
 
 ### 2026-09-26 依存更新ラウンド（未反映 3 件の PBI 化）― ✅ 2件完了・アーカイブ済み / 🔵 監視 1件 🔧非機能追加
 
@@ -728,6 +839,29 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-20 omnibox fallback 01 アーカイブ ― 1件
+
+- **2026-11-16-02-backlog-omnibox-url-fallback**: omnibox 起動で tab.url が読めない場合に通知で理由を返す。runner に任意の `notifyNoUrl` hook を追加し、omnibox ハンドラだけが既存の通知 seam で可視化。keyboard は無言のまま。`setDefaultSuggestion` は Enter 時点で見えないため不採用。`tabs` 権限の追加なし。`npm run validate` の該当部分緑。
+
+### 2026-11-20 大局的改善ラウンド holistic-1120 ― 4件
+
+- **2026-11-20-01-refactor-tab-fetch-unify**: popup の tab問い合わせ複製を `withRuntimeTimeout` 利用の共有 helper `askTab` に統一。null契約・権限 ladder 不変。parity12件・タイマ残留0。`npm run validate` 緑（最終ゲート1342ファイル18911件）。
+- **2026-11-20-02-refactor-sanitize-ownership**: prompt直接置換を除去し共有 seam `encodePromptMarkup` 呼びに。適用順序を一箇所に固定＋順序回帰20件。XSS系緑維持、出力差分なし。
+- **2026-11-20-03-refactor-privacy-pipeline-split**: `buildPlan` / `applyMaskResult` / `formatCloudResult` を純粋化し mock-free 19件を追加。executor は薄く、throw+save 契約を明示。parity14件。
+- **2026-11-20-04-refactor-dashboard-gateway-seam**: confirmToken を pre-send hook、再試行を policy 引数に。外部契約不変。parity5件・wiring6件。
+
+### 2026-11-20 テスト DOM 環境の wasm-quickjs-dom 移行 ― 1件
+
+- **2026-11-19-01-fix-vitest-dom-env-wasm-quickjs-dom**: jsdom → wasm-quickjs-dom を 422 ファイルへ導入（退避 14 ファイルは根拠つき jsdom 維持）。フルスイート 1336 ファイル / 18835 テスト全パス、environment フェーズ約 49 秒から約 25.3 秒に半減。ゲートを `domFileCount`（426）へ再定義。`npm run validate` 緑、test:perf within budget、CI validate 緑。E2E `test` ジョブの約 10.6 秒一律タイムアウトはランナー負荷と判断し記録。PR #212 でマージ済み。
+
+### 2026-11-19 ミューテーションスコア残ディレクトリ アーカイブ ― 1件
+
+- **2026-11-13-01-backlog-mutation-score-remaining-dirs**: 最終チャンク 08e-utils-root-n-z を含む全21チャンクが完走。合算スコア (重複排除後) **64.61%** (killed 47,607 / tested 73,685、break 50 超過)。テスト補強4ファイル59テスト (statusChecker・summaryNormalizer・retryPredicate・selectionText) を追加し、対象チャンク (02-popup・08e) を incremental resume で再測定して killed +50 (64.54% から 64.61%)。生残は等価 / 対象外 / テスト缺口の3分類を PBI に記録 (等価の代表例は到達性解析で実証)。`npm run validate` 緑。
+
+### 2026-11-13 Stryker Vitest 5 runner採用 ― 1件
+
+- **2026-09-27-02-backlog-stryker-vitest5-runner-adoption**: `@stryker-mutator/vitest-runner` 10.1.1 でミュータント毎のテスト実行が復活（部分実行で Ran 64.27/mutant、killed 実績あり）。全量単一実行は75,296件・10時間超で中断するため9分割のランナー `scripts/mutation-chunks.mjs` を用意し、測定済み5チャンクの合算 **67.92%**（killed 9,364 / tested 13,787、break 50 超過）を実効スコアとして確定。生残は4群に分類（メッセージ文字列1,100 / 未到達の負の分岐919 / 条件分岐887 / その他1,517）。dry-run阻害要因（sandbox走査テスト・実時間待ち・V8 OOM・静的ミュータント）を解消。`npm run validate` 緑（1,336ファイル / 18,765テスト）。
 
 ### 2026-11-06 logger flush合流01 アーカイブ ― 1件
 

@@ -24,13 +24,166 @@ export interface ValidateUrlOptions {
 }
 
 /**
+ * DNS解決の差し替え口。検証時と接続時で同じ名前解決を使う (pin留め) ための
+ * seam であり、本番では DoH 等の解決器を、テストでは決定論的なモックを渡す。
+ * IPリテラルは解決不要のためこの関数は呼ばれない。
+ *
+ * 正規化の責任は呼び出し側ヘルパー (resolveAndGuardHostname・fetchWithTimeout)
+ * が内製する: resolver実装には常に正規化済みホスト名 (小文字・末尾ドット除去)
+ * が渡される。resolver側で生の入力を想定する必要はない。
+ *
+ * @param hostname - 正規化済みホスト名 (小文字・末尾ドット除去)
+ * @returns 解決されたIPアドレスの一覧
+ */
+export type DnsResolveFn = (hostname: string) => Promise<string[]>;
+
+/**
+ * 検証に使った名前解決そのもの。検証と接続で同一の解決器・同一ホスト名・
+ * 同一IP一覧を使うための受渡し単位 (No.3/No.4/No.5)。
+ *
+ * hostname は正規化済み、ips は検証済み (全件public)、resolveHostname は
+ * 検証に使ったのと同一のresolverインスタンスであることが不変条件。
+ */
+export interface DnsPin {
+  readonly hostname: string;
+  readonly ips: string[];
+  readonly resolveHostname: DnsResolveFn;
+}
+
+export interface DnsPinOptions {
+  resolveHostname?: DnsResolveFn;
+}
+
+/**
+ * ホスト名がIPリテラル相当かどうか判定する。ドット区切りIPv4・全数字
+ * (WHATWGパーサがIPv4へ正規化する `2130706433` 形式)・単一16進
+ * (`0x7f000001` 形式)・コロン含み (IPv6) をリテラル扱いし、それ以外の
+ * ドメイン名はDNS解決が必要とみなす。
+ *
+ * raw入力可: 内部で正規化 (小文字化・末尾ドット除去) してから判定する。
+ * 呼び出し側が事前正規化する必要はない (S8)。単一ラベルの数値が表す
+ * アドレス値への展開は isPrivateIpAddress / resolveAndGuardHostname が
+ * 内製する。
+ */
+export function isIpLiteral(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  if (normalized.includes(':')) {
+    return true;
+  }
+  if (/^\d+$/.test(normalized)) {
+    return true;
+  }
+  if (/^0x[0-9a-f]+$/i.test(normalized)) {
+    return true;
+  }
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(normalized);
+}
+
+/**
+ * 単一ラベルの数値IPv4リテラルをドット区切りへ展開する (S8の正規化の内製)。
+ * WHATWG URLパーサは `2130706433` (10進32bit) や `0x7f000001` (16進) を
+ * IPv4アドレスとして正規化するが、URLを経由しない生ホスト名入力では
+ * その正規化が働かない。ここで同一の値解釈を内製し、分類の素通しを防ぐ。
+ *
+ * 前提条件: 入力はURLパーサ済みhostname (`new URL(url).hostname` 由来の
+ * 正規化済み文字列) であること。ドット区切りの10/8進・16進混在表記
+ * (`0177.0.0.1` / `0x7f.0.0.1` 等) の正規化はURLパーサ側に委ね、
+ * この関数の対象外とする。生ホスト名を直接渡す呼び出し側は、先にURL
+ * パーサを通すか、混在表記を正規化してから渡すこと。
+ *
+ * @returns ドット区切りIPv4。数値として不正 (32bit超過) なら null (fail-closed)
+ */
+function expandSingleLabelNumericLiteral(normalized: string): string | null {
+  let value: number;
+  if (/^\d+$/.test(normalized)) {
+    value = Number(normalized);
+  } else if (/^0x[0-9a-f]+$/i.test(normalized)) {
+    value = Number.parseInt(normalized, 16);
+  } else {
+    return null;
+  }
+  if (!Number.isSafeInteger(value) || value < 0 || value > 0xffffffff) {
+    return null;
+  }
+  const unsigned = value >>> 0;
+  return `${(unsigned >>> 24) & 0xff}.${(unsigned >>> 16) & 0xff}.${(unsigned >>> 8) & 0xff}.${unsigned & 0xff}`;
+}
+
+/**
+ * 解決済みIPの一覧を検証する。一つでもプライベート/ループバックなら拒否し、
+ * 空の一覧は fail-closed (未解決の接続先へは出さない) で拒否する。
+ */
+export function assertResolvedIpsPublic(ips: string[], hostnameForError: string): void {
+  if (ips.length === 0) {
+    throw new Error(`DNS resolution failed for ${hostnameForError}: no addresses resolved`);
+  }
+  for (const ip of ips) {
+    if (isPrivateIpAddress(ip)) {
+      throw new Error(`Blocked hostname: ${hostnameForError}. Resolved address ${ip} is private or loopback.`);
+    }
+  }
+}
+
+/**
+ * ホスト名を解決して接続先IPを確定する (pin留めの前半)。
+ * IPリテラルは直接分類し、ドメイン名は resolveHostname で解決して全件検証する。
+ *
+ * 前提条件: hostnameはURLパーサ済み (`new URL(url).hostname` 由来) の
+ * こと。ドット区切りの8進/16進混在表記の正規化はURLパーサに委ね、
+ * ここでは単一ラベル数値と素朴なドット区切り10進のみをリテラル展開する。
+ *
+ * @returns 検証済みの解決IP一覧 (接続後に突き合わせるpin)
+ */
+export async function resolveAndGuardHostname(
+  hostname: string,
+  resolveHostname: DnsResolveFn,
+): Promise<string[]> {
+  const normalized = normalizeHostname(hostname);
+  if (isIpLiteral(normalized)) {
+    // 単一ラベル数値はここでドット区切りへ展開して分類する (S8)。
+    // 範囲外の数値は正規のIPでもドメイン名でもないため fail-closed で拒否する。
+    const canonical = expandSingleLabelNumericLiteral(normalized) ?? normalized;
+    if (canonical === normalized && (/^\d+$/.test(normalized) || /^0x[0-9a-f]+$/i.test(normalized))) {
+      throw new Error(`Blocked hostname: ${hostname}. Invalid numeric IP literal.`);
+    }
+    if (isPrivateIpAddress(canonical)) {
+      throw new Error(`Blocked hostname: ${hostname}. Access to private network is not allowed.`);
+    }
+    return [canonical];
+  }
+  const ips = await resolveHostname(normalized);
+  assertResolvedIpsPublic(ips, hostname);
+  return ips;
+}
+
+/**
+ * 接続後の再解決結果がpinと一致することを検証する (pin留めの後半)。
+ * 検証時と接続時でDNS応答が変わった (TOCTOU) 場合は拒否する。
+ */
+export function assertDnsPinStable(
+  pinnedIps: string[],
+  freshIps: string[],
+  hostnameForError: string,
+): void {
+  assertResolvedIpsPublic(freshIps, hostnameForError);
+  const pinned = [...pinnedIps].sort().join(',');
+  const fresh = [...freshIps].sort().join(',');
+  if (pinned !== fresh) {
+    throw new Error(`Blocked hostname: ${hostnameForError}. DNS re-resolution mismatch (possible rebinding).`);
+  }
+}
+
+/**
  * URLを検証（オプション）
  * @param {string} url - 検証するURL
  * @param {ValidateUrlOptions} options - 検証オプション
+ *   (blockLocalhost 既定true: localhostを許す用途は false を明示すること)
  * @throws {Error} URLが無効またはブロックされている場合
  */
 export function validateUrl(url: string, options: ValidateUrlOptions = {}): void {
-  const { requireValidProtocol = true, blockLocalhost = false } = options;
+  // S7: 既定はfail-closed (true)。Obsidian Local REST・ローカルAI等の正規用途は
+  // 呼び出し側で blockLocalhost: false を明示すること。
+  const { requireValidProtocol = true, blockLocalhost = true } = options;
 
   let parsedUrl: URL;
   try {
@@ -44,8 +197,7 @@ export function validateUrl(url: string, options: ValidateUrlOptions = {}): void
     throw new Error(`Unsupported protocol: ${parsedUrl.protocol}. Only http:// and https:// are allowed.`);
   }
 
-  // localhostブロック（オプション）
-  // Obsidian APIでlocalhostを使用するためデフォルトではブロックしない
+  // localhostブロック（オプション、既定で有効）
   if (blockLocalhost) {
     // 127.0.0.1 / ::1 等のループバックは isPrivateIpAddress で検出する。
     // isPrivateIpAddress('localhost') は false を返すため、localhost は明示的に判定が必要。
@@ -144,14 +296,24 @@ function classifyEmbeddedIpv4(embedded: string): boolean {
 
 /**
  * プライベートIPアドレスかどうか判定
- * @param {string} hostname - チェックするホスト名
+ *
+ * 単一ラベルの数値 (`2130706433` / `0x7f000001`) はここでドット区切りへ
+ * 展開してから分類する (S8の正規化の内製)。URLパーサを経由しない生ホスト名
+ * 入力でも、パーサ経由時と同一の値で判定される。
+ *
+ * 内部正規化: 小文字化・末尾ドット除去・ブラケット除去を内製するため、
+ * `10.0.0.1.` のような末尾ドット付き入力も素通ししない。ドット区切りの
+ * 8進/16進混在表記は対象外とし、URLパーサ済みhostnameを前提とする。
+ *
+ * @param {string} hostname - チェックするホスト名 (生入力可)
  * @returns {boolean} プライベートIPの場合true
  */
 export function isPrivateIpAddress(hostname: string): boolean {
-  const normalized = normalizeIpHostname(hostname);
+  const normalized = normalizeIpHostname(normalizeHostname(hostname));
+  const target = expandSingleLabelNumericLiteral(normalized) ?? normalized;
 
   // IPv4形式（xxx.xxx.xxx.xxx）
-  const ipv4Match = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  const ipv4Match = target.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4Match) {
     const [, aStr, bStr, cStr, dStr] = ipv4Match;
     const a = Number(aStr);
@@ -187,7 +349,7 @@ export function isPrivateIpAddress(hostname: string): boolean {
   }
 
   // IPv6形式のプライベートアドレスの完全なチェック
-  const ipv6Lower = normalized.toLowerCase();
+  const ipv6Lower = target.toLowerCase();
 
   // ::1 - ループバックアドレス
   if (ipv6Lower === '::1') {
@@ -266,6 +428,33 @@ export function validateUrlForFilterImport(url: string): void {
   if (isLocalhostHostname(hostname)) {
     throw new Error(`Access to localhost is not allowed for filter imports`);
   }
+}
+
+/**
+ * uBlockインポート用URLの非同期検証 (DNSピン留め付き)。
+ * 同期版の文字列検査に加え、resolveHostname があれば解決IPを全件検証して
+ * pin ({@link DnsPin}: 正規化ホスト名+検証済みIP+同一resolver) を返す。
+ * 呼び出し側はこのpinを接続層へ受渡し、接続後は同一resolverで再解決して
+ * {@link assertDnsPinStable} で突き合わせる (No.3/No.4/No.5)。
+ * resolver未指定時は従来どおり文字列検査のみ (後方互換) で null を返す。
+ *
+ * @returns 検証済みのpin。resolver未指定時はnull。
+ */
+export async function validateUrlForFilterImportAsync(
+  url: string,
+  options: DnsPinOptions = {},
+): Promise<DnsPin | null> {
+  validateUrlForFilterImport(url);
+  if (!options.resolveHostname) {
+    return null;
+  }
+  const parsedUrl = new URL(url);
+  const ips = await resolveAndGuardHostname(parsedUrl.hostname, options.resolveHostname);
+  return {
+    hostname: normalizeHostname(parsedUrl.hostname),
+    ips,
+    resolveHostname: options.resolveHostname,
+  };
 }
 
 /**

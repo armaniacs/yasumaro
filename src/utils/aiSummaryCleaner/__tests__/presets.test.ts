@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * presets.test.ts — プリセット定義とマイグレーションの単体テスト
  *

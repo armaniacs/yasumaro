@@ -50,6 +50,8 @@ function makeOrchestrator(): RecordingOrchestrator {
   return new RecordingOrchestrator({
     getPrivacyInfoWithCache: async () => null,
     getSettingsWithCache: async () => ({}) as never,
+    // PBI 2026-11-12-01: granted; this suite pins the completion flush.
+    isConsentGranted: async () => true,
     obsidian: {
       appendToDailyNote: vi.fn(async () => undefined),
     } as never,
@@ -117,6 +119,8 @@ function makeCoalescingOrchestrator(secondProcessGate: Promise<void>): Recording
   return new RecordingOrchestrator({
     getPrivacyInfoWithCache: async () => null,
     getSettingsWithCache: async () => ({}) as never,
+    // PBI 2026-11-12-01: granted; this suite pins the completion flush.
+    isConsentGranted: async () => true,
     obsidian: {
       appendToDailyNote: vi.fn(async () => undefined),
     } as never,

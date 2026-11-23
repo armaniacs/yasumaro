@@ -18,13 +18,14 @@ import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
 import { localDayRangeFromDateString } from '../../../utils/localDate.js';
-import { withBusyButton } from './busyButton.js';
+import { buildStatusDivHtml, runRegionAction } from './regionAction.js';
 import { exportResearchReport } from '../../../messaging/researchReportGateway.js';
 import { toReportRunResult, type ReportRunResult } from '../../../messaging/responseRepack.js';
 import type { ResearchReportClause, ResearchReportScope } from '../../../messaging/responseCanonical.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 import { parseCollectionQueryV2 } from './savedCollectionQuery.js';
 import { resolveCollectionQueries, type ClauseStorageQuery } from './collectionScopeResolver.js';
+import { buildCollectionOptionsHtml, buildSelectHtml } from './collectionSelectBuilder.js';
 
 export type { ReportRunResult } from '../../../messaging/responseRepack.js';
 
@@ -194,7 +195,7 @@ function buildRegionInnerHtml(): string {
       </label>
       <button type="button" class="secondary-btn" data-report-action="generate">${escapeHtml(t('researchReportGenerateBtn'))}</button>
     </div>
-    <div class="research-report-status" role="status" aria-live="polite"></div>
+    ${buildStatusDivHtml('research-report-status')}
   </div>`;
 }
 
@@ -221,45 +222,41 @@ export function renderResearchReportRegion(
 
   generateButton.addEventListener('click', () => {
     void (async () => {
-      await withBusyButton(generateButton, async () => {
-        if (statusEl) statusEl.textContent = t('researchReportBusy');
-        try {
-          const result = await actions.onGenerate(obsidianCheck?.checked === true);
-          if (!result.ok) {
-            if (statusEl) statusEl.textContent = result.error ?? t('researchReportFailed');
-            return;
-          }
+      await runRegionAction(
+        generateButton,
+        (message) => {
+          if (statusEl) statusEl.textContent = message;
+        },
+        { busy: t('researchReportBusy'), failed: t('researchReportFailed') },
+        () => actions.onGenerate(obsidianCheck?.checked === true),
+        (result) => {
           if (statusEl) {
             const count = result.recordCount ?? 0;
             statusEl.textContent = t('researchReportDone', [String(count)]);
           }
-        } catch (error) {
-          if (statusEl) {
-            statusEl.textContent = error instanceof Error ? error.message : t('researchReportFailed');
-          }
-        }
-      });
+        },
+      );
     })();
   });
 }
 
 function buildPanelRegionInnerHtml(collections: Record<string, SavedCollection>): string {
-  const entries = Object.values(collections).sort((a, b) => b.updatedAt - a.updatedAt);
-  const options = [`<option value="">${escapeHtml(t('researchReportTargetAll'))}</option>`]
-    .concat(entries.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`))
-    .join('');
+  const select = buildSelectHtml(buildCollectionOptionsHtml(collections, t('researchReportTargetAll')), {
+    cssClass: 'research-report-target',
+    ariaLabel: t('researchReportTargetLabel'),
+  });
   return `<div class="research-report-section">
     <h4 data-i18n="researchReportLabel">${escapeHtml(t('researchReportLabel'))}</h4>
     <p class="research-report-help" data-i18n="researchReportPanelHelp">${escapeHtml(t('researchReportPanelHelp'))}</p>
     <div class="research-report-input">
-      <select class="research-report-target" aria-label="${escapeHtml(t('researchReportTargetLabel'))}">${options}</select>
+      ${select}
       <label class="research-report-obsidian">
         <input type="checkbox" class="research-report-obsidian-check" />
         <span data-i18n="researchReportObsidianOption">${escapeHtml(t('researchReportObsidianOption'))}</span>
       </label>
       <button type="button" class="secondary-btn" data-report-action="generate">${escapeHtml(t('researchReportGenerateBtn'))}</button>
     </div>
-    <div class="research-report-status" role="status" aria-live="polite"></div>
+    ${buildStatusDivHtml('research-report-status')}
   </div>`;
 }
 
@@ -291,28 +288,26 @@ export function renderResearchReportPanelRegion(
 
   generateButton.addEventListener('click', () => {
     void (async () => {
-      await withBusyButton(generateButton, async () => {
-        if (statusEl) statusEl.textContent = t('researchReportBusy');
-        try {
+      await runRegionAction(
+        generateButton,
+        (message) => {
+          if (statusEl) statusEl.textContent = message;
+        },
+        { busy: t('researchReportBusy'), failed: t('researchReportFailed') },
+        () => {
           const selected = targetSelect?.value ?? '';
-          const result = await actions.onGenerate(
+          return actions.onGenerate(
             selected === '' ? null : selected,
             obsidianCheck?.checked === true,
           );
-          if (!result.ok) {
-            if (statusEl) statusEl.textContent = result.error ?? t('researchReportFailed');
-            return;
-          }
+        },
+        (result) => {
           if (statusEl) {
             const count = result.recordCount ?? 0;
             statusEl.textContent = t('researchReportDone', [String(count)]);
           }
-        } catch (error) {
-          if (statusEl) {
-            statusEl.textContent = error instanceof Error ? error.message : t('researchReportFailed');
-          }
-        }
-      });
+        },
+      );
     })();
   });
 }

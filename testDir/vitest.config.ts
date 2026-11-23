@@ -33,6 +33,7 @@ const exclude = [
   '**/.kilo/**',
   '**/.claude/**',
   '**/.worktrees/**', // Worktree checkouts must not be collected as test files.
+  '**/.stryker-tmp/**', // Aborted stryker runs must not be collected as test files.
   '**/video-*/**',
   '**/.vulnhunter-fix/**',
   '**/obsidian-smart-history_VULNHUNT_RESULTS*/**',
@@ -43,6 +44,15 @@ export default defineConfig({
   test: {
     root: projectRoot,
     environment: 'node',
+    // wasm-quickjs-dom: match jsdom's default viewport (1024x768) so tests that
+    // assume that viewport behave identically across the two DOM environments.
+    environmentOptions: {
+      wasmQuickjsDom: {
+        url: 'http://localhost:3000',
+        width: 1024,
+        height: 768,
+      },
+    },
     setupFiles: ['./testDir/vitest.setup'],
     globals: true,
     // include/exclude live only on the projects: `extends: true` concatenates

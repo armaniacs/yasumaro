@@ -74,3 +74,67 @@ describe('isRetryableNetworkError — shared compat markers', () => {
     expect(isRetryableNetworkError(new Error(message))).toBe(false);
   });
 });
+
+describe('isRetryableNetworkError — non-object errors return false', () => {
+  it.each([
+    null,
+    undefined,
+    'connection refused',
+    42,
+  ])('returns false for a non-object error: %s', (error) => {
+    expect(isRetryableNetworkError(error)).toBe(false);
+  });
+});
+
+describe('isRetryableNetworkError — kind gate covers every failure kind', () => {
+  it.each([
+    [FailureKind.NETWORK, true],
+    [FailureKind.TIMEOUT, true],
+    [FailureKind.HTTP, true],
+    [FailureKind.AUTH, false],
+    [FailureKind.RATE_LIMIT, false],
+    [FailureKind.CONFIGURATION, false],
+    [FailureKind.CSP, false],
+  ])('decides kind %s as %p', (kind, retryable) => {
+    const error = tagFailure(new Error('boom'), createFailure(kind));
+    expect(isRetryableNetworkError(error)).toBe(retryable);
+  });
+});
+
+describe('isRetryableNetworkError — opaque error properties', () => {
+  it('reads a transport marker from a string cause', () => {
+    const error = new Error('send failed', { cause: 'connection reset by peer' });
+    expect(isRetryableNetworkError(error)).toBe(true);
+  });
+
+  it('reads the code from an object cause', () => {
+    const error = { name: 'Error', message: 'oops', cause: { code: 'ECONNRESET' } };
+    expect(isRetryableNetworkError(error)).toBe(true);
+  });
+
+  it('ignores a null cause', () => {
+    const error = { name: 'Error', message: 'mystery failure', cause: null };
+    expect(isRetryableNetworkError(error)).toBe(false);
+  });
+
+  it('ignores a non-string non-object cause', () => {
+    const error = { name: 'Error', message: 'mystery failure', cause: 42 };
+    expect(isRetryableNetworkError(error)).toBe(false);
+  });
+
+  it('ignores a non-string code property when scanning markers', () => {
+    const error = { name: 'Error', message: 'read failed', code: ['ECONNRESET'] };
+    expect(isRetryableNetworkError(error)).toBe(false);
+  });
+});
+
+describe('isRetryableNetworkError — TERMINAL exclusion beats later signals', () => {
+  it('keeps a single terminal marker terminal when transport markers also match', () => {
+    expect(isRetryableNetworkError(new Error('Connection refused: invalid API key supplied'))).toBe(false);
+  });
+
+  it('keeps a single terminal marker terminal when it arrives via the cause', () => {
+    const error = { name: 'Error', message: 'connection lost', cause: 'api key required' };
+    expect(isRetryableNetworkError(error)).toBe(false);
+  });
+});

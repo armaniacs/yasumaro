@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: wasm-quickjs-dom reflects tabIndex as a string, breaking the IDL-number a11y pin (probe-confirmed).
 /**
  * tagCooccurrenceTablePanel lifecycle tests (PBI 2026-09-24-06):
  * since/until + limit propagation on the explicit Run trigger ('all'

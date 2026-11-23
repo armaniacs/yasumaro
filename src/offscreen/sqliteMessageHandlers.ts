@@ -37,7 +37,7 @@ import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
 import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
 import { UPDATABLE_FIELDS } from './schema.js';
-import { buildRecordFromPayload } from './browsingLogCodec.js';
+import { buildRecordFromPayload, validateRecordForInsert } from './browsingLogCodec.js';
 import { collectMigrationExtras } from './sqliteStatus.js';
 import type { SqliteMessage, SqliteMessageType } from '../messaging/sqliteMessages.js';
 
@@ -79,10 +79,34 @@ type _TableRepoMethodsLive = SqliteWireDescriptor['repoMethod'] extends SqliteRe
 const _checkTableRepoMethods: _TableRepoMethodsLive = true;
 
 const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unknown>) => Promise<unknown>> = {
-  insert: (payload) => sqliteInsert(buildRecordFromPayload(payload)),
-  insertBatch: (payload) => sqliteInsertBatch(
-    (((payload.records as Record<string, unknown>[] | undefined) || []) as Record<string, unknown>[]).map((r) => buildRecordFromPayload(r)),
-  ),
+  // PBI 2026-11-08-06: final defense — CHECK-violating finite numbers
+  // (negative visit_duration, out-of-range scroll_ratio, non-0/1 flags)
+  // are rejected with the field named instead of failing the backend write.
+  insert: (payload) => {
+    const invalid = validateRecordForInsert(payload);
+    if (invalid !== null) {
+      return Promise.resolve({ success: false, error: `Invalid record: ${invalid}` });
+    }
+    return sqliteInsert(buildRecordFromPayload(payload));
+  },
+  insertBatch: (payload) => {
+    // A non-array records value used to throw inside .map and leave the
+    // caller hanging — fail closed with a named error instead.
+    const raw: unknown = payload.records;
+    if (raw !== undefined && !Array.isArray(raw)) {
+      return Promise.resolve({ success: false, error: 'Invalid records: must be an array' });
+    }
+    const rows: unknown[] = raw === undefined ? [] : raw;
+    for (let i = 0; i < rows.length; i++) {
+      const invalid = validateRecordForInsert(rows[i]);
+      if (invalid !== null) {
+        return Promise.resolve({ success: false, error: `Invalid record ${i}: ${invalid}` });
+      }
+    }
+    return sqliteInsertBatch(
+      (rows as Record<string, unknown>[]).map((r) => buildRecordFromPayload(r)),
+    );
+  },
   query: (payload) => {
     // Route decision lives in queryPlanner.planQueryOrSearch (Checking Team
     // 2026-09-22: Legacy Bridge Medium) — the gateway folds search into
@@ -92,7 +116,14 @@ const SQLITE_REPO_RUNNERS: Record<SqliteRepoMethod, (payload: Record<string, unk
   search: (payload) => sqliteQuery(planSearch(payload)),
   count: () => sqliteGetCount(),
   update: (payload) => {
+    // PBI 2026-11-08-06: final defense — a non-positive or non-integer id
+    // can never match a row, so reject it instead of issuing a no-op write.
+    // (Value shapes stay verbatim: the key allowlist is this loop and the
+    // value contract lives in the dashboard/wire gates above.)
     const id = Number(payload.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return Promise.resolve({ success: false, error: 'update requires a positive integer id' });
+    }
     const changes: Record<string, unknown> = {};
     for (const key of UPDATABLE_FIELDS) {
       if (key in payload) {

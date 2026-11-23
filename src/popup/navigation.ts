@@ -3,6 +3,10 @@
 import { setScreenState, SCREEN_STATES } from './screenState.js';
 import { clearAutoCloseTimer } from './autoClose.js';
 import { setHtmlLangAndDir } from '../utils/i18n-dom.js';
+import { statusChannel } from '../utils/ui/statusChannel.js';
+import { getUserErrorMessage } from './errorUtils.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 /**
  * 【機能概要】: メイン画面を表示し、設定画面を非表示にする
@@ -45,24 +49,50 @@ export function showMainScreen(): void {
  * 🟡 設定上の妥当な推測: カウントダウン完了前の画面遷移に対してタイマーを停止することは合理的
  */
 /**
+ * Failure path shared by the tab-opening navigations. A rejected
+ * chrome.tabs.create used to vanish silently while the popup still closed,
+ * so the user lost both the page and the reason. The failure is now
+ * detectable before any close: it is shown on the shared status seam and
+ * logged, and the popup stays open so the user can retry.
+ */
+function reportTabOpenError(error: unknown): void {
+  statusChannel.report('mainStatus', getUserErrorMessage(error), 'error');
+  logError('[navigation] Failed to open a page in a new tab', { cause: error }, ErrorCode.INTERNAL_ERROR);
+}
+
+/**
  * Open the SQLite history dashboard in a new tab.
  */
-function openHistory(): void {
+async function openHistory(): Promise<void> {
   clearAutoCloseTimer();
 
   const historyUrl = chrome.runtime.getURL('options.html?tab=history');
-  chrome.tabs.create({ url: historyUrl });
+  try {
+    await chrome.tabs.create({ url: historyUrl });
+  } catch (error) {
+    // The tab never opened: keep the popup open and surface the failure
+    // instead of closing over it.
+    reportTabOpenError(error);
+    return;
+  }
 
   window.close();
 }
 
-export function showSettingsScreen(): void {
+export async function showSettingsScreen(): Promise<void> {
   // 【タイマークリア】: ダッシュボードを開く前に自動クローズタイマーを解放
   clearAutoCloseTimer();
 
   // 【ダッシュボード遷移】: 設定を新しいタブのダッシュボードページで開く
   const dashboardUrl = chrome.runtime.getURL('options.html');
-  chrome.tabs.create({ url: dashboardUrl });
+  try {
+    await chrome.tabs.create({ url: dashboardUrl });
+  } catch (error) {
+    // The tab never opened: keep the popup open and surface the failure
+    // instead of closing over it.
+    reportTabOpenError(error);
+    return;
+  }
 
   // ポップアップを閉じる
   window.close();

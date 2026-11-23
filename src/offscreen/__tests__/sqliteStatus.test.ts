@@ -95,14 +95,17 @@ describe('legacy path SSOT drift guard (PBI 2026-09-11-06)', () => {
   it('literal legacy paths are declared only in sqliteMessages.ts', async () => {
     const { readFileSync, readdirSync, statSync } = await import('node:fs');
     const { join, relative } = await import('node:path');
+    const { resolveRepoRoot } = await import('../../../testDir/repoRoot.js');
 
-    const root = join(__dirname, '..', '..', '..');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = resolveRepoRoot(process.cwd());
     const offenders: string[] = [];
     // Match value assignments only — doc comments may mention the names.
     const literals = [/=\s*['"]yasumaro-opfs['"]/, /=\s*['"]idb-batch-atomic['"]/];
     const walk = (dir: string): void => {
       for (const name of readdirSync(dir)) {
-        if (name === '__tests__' || name === 'node_modules' || name === 'dist') continue;
+        if (name === '__tests__' || name === 'node_modules' || name === 'dist' || name === '.stryker-tmp') continue;
         const full = join(dir, name);
         if (statSync(full).isDirectory()) {
           walk(full);

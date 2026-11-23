@@ -1,8 +1,13 @@
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
+import { validateImportRow } from '../../../messaging/validators.js';
 import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
+import { logWarn } from '../../../utils/logger/api.js';
 import type { DepsResult, MaintenanceBatchDeps } from './deps.js';
 import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
+
+/** How many per-row rejection reasons ride the exclusion WARN log at most. */
+const MAX_EXCLUSION_REASONS = 5;
 
 /**
  * Subtypes this handler owns. The router derives its dispatch from this set
@@ -135,7 +140,37 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
         // per row (MAX_IMPORT_ROWS round trips over SW→offscreen→backend).
         // Duplicates surface as `skipped` from the backend's INSERT OR IGNORE
         // instead of per-row errors that only kept the last reason.
-        const result = await deps.insertBatch(rows.map(row => ({
+        // PBI 2026-11-08-06: per-row validation (same contract as the
+        // envelope import guard). A single mistyped row used to fail the
+        // whole insertBatch; invalid rows are filtered here so valid rows
+        // still import. `total` stays the original count, so the rejected
+        // count is derivable as total - inserted - skipped.
+        const invalidReasons: string[] = [];
+        const validRows = rows.filter((row) => {
+          const reason = validateImportRow(row);
+          if (reason === null) return true;
+          if (invalidReasons.length < MAX_EXCLUSION_REASONS) invalidReasons.push(reason);
+          return false;
+        });
+        if (validRows.length === 0) {
+          return { success: false, error: 'No valid rows provided' };
+        }
+        // validRows.length !== rows.length already implies invalidReasons is
+        // non-empty: the first invalid row always pushes a reason (the cap only
+        // limits how many are kept), so no separate length check is needed.
+        if (validRows.length !== rows.length) {
+          // Best-effort diagnostic: the import result must not depend on
+          // telemetry delivery. If logging fails, the rejection counts and
+          // the valid rows are still imported — hence fire-and-forget (void)
+          // instead of awaiting. A missing WARN line never changes the
+          // response; the excluded/total counts stay derivable by the caller.
+          void logWarn('maintenanceBatchHandler: import excluded invalid rows', {
+            excluded: rows.length - validRows.length,
+            total: rows.length,
+            reasons: invalidReasons,
+          });
+        }
+        const result = await deps.insertBatch(validRows.map(row => ({
           url: row.url,
           title: row.title ?? null,
           summary: row.summary ?? null,

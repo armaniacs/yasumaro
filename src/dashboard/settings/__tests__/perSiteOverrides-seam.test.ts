@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * perSiteOverrides-seam.test.ts (PBI 2026-09-23-15)
  * Pins the targeted-read migration: every load path (refresh, domain change,

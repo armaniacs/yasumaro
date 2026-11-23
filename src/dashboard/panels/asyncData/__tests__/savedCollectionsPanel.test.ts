@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * savedCollectionsPanel.test.ts (PBI 2026-11-01-01)
  * New sibling panel `panel-saved-collections`: owns saved collections CRUD

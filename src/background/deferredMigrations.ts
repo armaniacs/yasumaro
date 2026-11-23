@@ -53,6 +53,8 @@ export function createDeferredMigrationRunner(sqliteClient: SqliteClient): () =>
     if (ran) return;
     ran = true;
     try {
+      // NOTE: `ran` is reset on failure so a transient error does not
+      // permanently block retries within the same service worker generation.
       await runMigration();
       SessionStore.migrateFromLocalStorage().catch((err) => {
         logError('SessionStore migration failed', { error: errorMessage(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
@@ -70,6 +72,7 @@ export function createDeferredMigrationRunner(sqliteClient: SqliteClient): () =>
         }
       }
     } catch (err) {
+      ran = false;
       logError('Deferred startup migration failed', { error: errorMessage(err) }, ErrorCode.STORAGE_MIGRATION_FAILURE, 'service-worker');
     }
   };

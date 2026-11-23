@@ -8,7 +8,7 @@
  * drifted static copy whose a11y attributes the implementation did not fully
  * meet — the parity gaps were closed in the same change).
  */
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';

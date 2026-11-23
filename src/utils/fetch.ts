@@ -18,7 +18,8 @@ import { settingsRepository } from './storage/SettingsRepository.js';
 import type { Settings } from './storage/types.js';
 import { StorageKeys } from './storage/types.js';
 import { logDebug, logWarn } from './logger/api.js';
-import { validateUrl, validateUrlForFilterImport } from './ssrfGuard.js';
+import { validateUrl, validateUrlForFilterImport, resolveAndGuardHostname, assertDnsPinStable, isIpLiteral, normalizeHostname } from './ssrfGuard.js';
+import type { DnsResolveFn, DnsPin } from './ssrfGuard.js';
 import { backoffDelayMs } from './backoff.js';
 import {
   FailureKind,
@@ -33,11 +34,18 @@ export {
   normalizeIpHostname,
   isPrivateIpAddress,
   validateUrlForFilterImport,
+  validateUrlForFilterImportAsync,
+  resolveAndGuardHostname,
+  assertDnsPinStable,
+  isIpLiteral,
   ALLOWED_LOCALHOST_PORTS,
   isLocalhostAddress,
   validateUrlForAIRequests,
   validateUrl,
   type ValidateUrlOptions,
+  type DnsResolveFn,
+  type DnsPin,
+  type DnsPinOptions,
 } from './ssrfGuard.js';
 
 const MIN_TIMEOUT_MS = 100;      // 最小100ms
@@ -101,6 +109,25 @@ export function noRedirectInit(options: NoRedirectFetchInit = {}): RequestInit {
 interface FetchOptions extends RequestInit {
   requireValidProtocol?: boolean;
   blockLocalhost?: boolean;
+  /** DNSピン留め用resolver。指定時は検証と接続で同一解決IPを使う。 */
+  resolveHostname?: DnsResolveFn;
+  /**
+   * 呼び出し側で検証済みのpin (No.3/No.4/No.5)。
+   * 指定時は接続前の再解決を行わずこのpinを使い回し、接続後の再解決にも
+   * 同一pin・同一resolverを使う。
+   *
+   * 自動追従時 (platform既定 `redirect: 'follow'`) の次hopは検証しない:
+   * この関数は初期URLのhostnameしか見ず、追従先Locationはplatformが
+   * 素通しするためである。dnsPin併用時は `redirect: 'error'`
+   * (NO_REDIRECT_FETCH_POLICY / noRedirectInit) か
+   * fetchWithRedirectGuardを使うこと。
+   *
+   * ブラウザfetchにはDNS指定口がないため、pinはTCP層の固定ではなく
+   * 「接続前ゲート+接続後突き合わせによる応答破棄」の検出型制御である。
+   * IPリテラルへのURL書換えは採らない: Hostヘッダは禁制ヘッダで保持
+   * できず、httpsでは証明書・SNI不一致で接続自体が壊れるため。
+   */
+  dnsPin?: DnsPin;
   allowedUrls?: Set<string> | null;
   skipCspValidation?: boolean; // P1: CSP検証をスキップするフラグ
   timeoutMs?: number; // リクエストタイムアウト時間（ミリ秒）
@@ -139,10 +166,13 @@ function validateTimeout(timeoutMs: number): void {
  * @throws {Error} 無効なURL、タイムアウト、またはネットワークエラー
  */
 export async function fetchWithTimeout(url: string, options: FetchOptions = {}, timeoutMs: number = DEFAULT_TIMEOUT_MS): Promise<Response> {
-  // URL検証（オプション - デフォルトではlocalhostを許可）
+  // URL検証（オプション - 既定ではlocalhostを拒否。Obsidian Local REST・
+  // ローカルAI等の正規用途は呼び出し側で blockLocalhost: false を明示する）
   const {
     requireValidProtocol = true,
-    blockLocalhost = false,
+    blockLocalhost = true,
+    resolveHostname,
+    dnsPin,
     allowedUrls = null, // 動的URL検証用オプション
     skipCspValidation = false, // CSP検証をスキップするフラグ（テスト等で使用）
     timeoutMs: optionTimeoutMs,
@@ -150,6 +180,31 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
     ...fetchOptions
   } = options;
   validateUrl(url, { requireValidProtocol, blockLocalhost });
+
+  // DNSピン留めの前半 (No.3/No.4/No.5): 検証に使ったpinと接続を同一にする。
+  // 呼び出し側のpinがあれば接続前の再解決は行わない (解決回数の最小化)。
+  // なければ同一resolverで接続直前に1回だけ解決し、そのpinを後半に使い回す。
+  // IPリテラルは上記の validateUrl で分類済みのため解決しない。
+  // resolverに渡すホスト名は常に正規化済み (S8: 前半と後半の同一性)。
+  const parsedHostname = new URL(url).hostname;
+  const normalizedHostname = normalizeHostname(parsedHostname);
+  let activePin: DnsPin | null = null;
+  if (dnsPin && dnsPin.hostname === normalizedHostname) {
+    // No.8: DnsPinの不変条件「同一resolver」を強制する。両方あり・
+    // hostname一致でもresolverインスタンスが異なれば異系統pinの混入の
+    // ためfail-closedでthrowする。dnsPinのみの現行prod callerは
+    // resolveHostnameがundefinedのため従来どおりpinを採用する。
+    if (resolveHostname !== undefined && resolveHostname !== dnsPin.resolveHostname) {
+      throw new Error(`DnsPin resolver mismatch for ${normalizedHostname}: pin and option resolvers differ.`);
+    }
+    activePin = dnsPin;
+  } else {
+    const resolver = resolveHostname ?? dnsPin?.resolveHostname;
+    if (resolver !== undefined && !isIpLiteral(normalizedHostname)) {
+      const ips = await resolveAndGuardHostname(normalizedHostname, resolver);
+      activePin = { hostname: normalizedHostname, ips, resolveHostname: resolver };
+    }
+  }
 
   // options.timeoutMs が指定された場合は最優先で使用する
   const effectiveTimeout = optionTimeoutMs ?? timeoutMs;
@@ -194,6 +249,14 @@ export async function fetchWithTimeout(url: string, options: FetchOptions = {}, 
   try {
     const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
     clearTimeout(timeoutId);
+    // DNSピン留めの後半: 接続後に同一resolverで再解決し、前半のpinと突き合わせる。
+    // 検査時と接続時でDNS応答が変わった (rebinding) 場合は応答を破棄する。
+    // ブラウザ制約上、到達自体ではなく応答の返却を止める検出型制御である
+    // (接続前ゲートで既知の切替えは接続前に拒否する)。
+    if (activePin) {
+      const freshIps = await activePin.resolveHostname(activePin.hostname);
+      assertDnsPinStable(activePin.ips, freshIps, activePin.hostname);
+    }
     return response;
   } catch (error: unknown) {
     clearTimeout(timeoutId);

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * cleansedReason.test.ts
  *
@@ -132,7 +132,7 @@ describe('recordRemoval (30-14 funnel)', () => {
     const { extractMainContentWithInfo } = await import('../index.js');
     // jsdom で最低限のDOMを用意
     document.body.innerHTML = `<article><p>${'a'.repeat(200)}</p></article>`;
-    const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as unknown as import('../types.js').ExtractResult;
+    const result = await extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as unknown as import('../types.js').ExtractResult;
     expect(result.funnel).toBeDefined();
     expect(typeof result.funnel?.pageBytes).toBe('number');
     expect(typeof result.funnel?.candidateBytes).toBe('number');

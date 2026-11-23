@@ -31,6 +31,13 @@ interface OfflineNetworkQueueLike {
         handler: (job: OfflineJob) => Promise<boolean>,
         onDropped?: (job: OfflineJob, reason: 'max-retries' | 'ttl') => Promise<void> | void
     ): Promise<void>;
+    /**
+     * Offset the retry increment the queue applies to a `false` handler
+     * result when that `false` was not a send failure. The queue owns the
+     * increment, so the compensation lives there too — never as a raw
+     * `retryCount -= 1` at the call site.
+     */
+    offsetNonFailureResult(job: OfflineJob): void;
 }
 
 interface RecordingPipelineLike {
@@ -120,6 +127,17 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
             // same recording twice. Failed claim = someone else owns it now.
             if (!(await claimRecoveryOwner(payload.url, 'offline-queue'))) {
                 logWarn('Offline retry skipped: recovery claim held by another owner', { url: payload.url }, undefined, 'service-worker');
+                // PBI 2026-11-08-07(4): a contested claim is not a send
+                // failure — the other owner is running the same recording
+                // right now. The queue counts every `false` handler result as
+                // a failure and burns a retry, so returning `false` as-is
+                // would drive a merely contended job to max-retries
+                // exhaustion and a spurious terminal handover ("retries
+                // exhausted" notice for a job that was never attempted).
+                // Offset that increment through the queue-owned API, keeping
+                // the job for the next cycle without spending budget (the net
+                // effect is zero; only the post-increment value is persisted).
+                deps.offlineNetworkQueue.offsetNonFailureResult(job);
                 return false;
             }
             try {

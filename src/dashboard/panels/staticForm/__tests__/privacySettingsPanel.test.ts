@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * privacySettingsPanel.test.ts
  * 同意撤回時にデータ削除の確認ダイアログ→SQLite削除→同意撤回の順で

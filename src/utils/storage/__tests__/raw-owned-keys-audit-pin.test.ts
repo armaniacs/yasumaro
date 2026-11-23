@@ -50,6 +50,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync, existsSync, type Stats } from 'node:fs';
 import { join, extname, sep } from 'node:path';
+import { resolveRepoRoot } from '../../../../testDir/repoRoot.js';
 import { StorageKeys } from '../types.js';
 import { STORAGE_KEY_VALUES } from '../settingsBackup.js';
 import { isMigratableStorageKey, migrateToSingleSettingsObject } from '../settingsMigration.js';
@@ -233,8 +234,10 @@ const KEY_PARAMETERIZED_HELPERS = [
 const DIRECT_STORAGE_CALL_RE =
     /\b[A-Za-z_$][\w$]*(?:\(\))?\??\.storage\??\.local\??\.(get|set|remove|getBytesInUse|clear)\s*\(/g;
 
+/** Repo root, mapped out of a Stryker sandbox copy when present: source-scanning gates must read the real tree. */
+const CWD_ROOT = resolveRepoRoot(process.cwd());
 const PRODUCTION_ROOTS = ['src', 'entrypoints'] as const;
-const SKIP_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.wxt', 'coverage']);
+const SKIP_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.wxt', 'coverage', '.stryker-tmp']);
 
 /** @returns repo-relative POSIX paths of every non-test .ts source under `dir`. */
 function collectProductionFiles(dir: string, acc: string[] = []): string[] {
@@ -263,7 +266,7 @@ function collectProductionFiles(dir: string, acc: string[] = []): string[] {
         ) {
             // Repo-relative POSIX paths so the declarations below and the
             // reported paths read the same on every platform.
-            acc.push(full.split(sep).join('/').replace(`${process.cwd().split(sep).join('/')}/`, ''));
+            acc.push(full.split(sep).join('/').replace(`${CWD_ROOT.split(sep).join('/')}/`, ''));
         }
     }
     return acc;
@@ -538,12 +541,14 @@ interface RawAccessScan {
 }
 
 function scanRawAccess(): RawAccessScan {
-    const scannedFiles = PRODUCTION_ROOTS.flatMap((root) => collectProductionFiles(join(process.cwd(), root)));
+    const scannedFiles = PRODUCTION_ROOTS.flatMap((root) => collectProductionFiles(join(CWD_ROOT, root)));
     const memberHits = new Map<string, string[]>();
     const nonMemberKeys = new Map<string, string[]>();
     const unresolvedSites: string[] = [];
     for (const file of scannedFiles) {
-        const raw = readFileSync(file, 'utf8');
+        // Absolute read: `file` is repo-relative, and the process cwd is the
+        // Stryker sandbox root when running under mutation testing.
+        const raw = readFileSync(join(CWD_ROOT, file), 'utf8');
         const clean = stripComments(raw);
         if (!DIRECT_STORAGE_CALL_RE.test(clean)) continue;
         DIRECT_STORAGE_CALL_RE.lastIndex = 0;
@@ -632,7 +637,7 @@ function rawOwnedMemberKeys(): ReadonlySet<string> {
  * keeps the audit honest about the implementation it guards.
  */
 function parseTopLevelOnlyKeys(): ReadonlySet<string> {
-    const raw = readFileSync(join(process.cwd(), 'src/utils/storage/settingsMigration.ts'), 'utf8');
+    const raw = readFileSync(join(CWD_ROOT, 'src/utils/storage/settingsMigration.ts'), 'utf8');
     // Comments first: a `StorageKeys.X` mention inside a comment would
     // otherwise be parsed as a member of the allowlist.
     const source = stripComments(raw);
@@ -747,7 +752,7 @@ describe('raw-owned storage-key audit pin', () => {
             expect(helperFiles.has(file), `undeclared key-parameterized helper: ${site}`).toBe(true);
         }
         for (const helper of KEY_PARAMETERIZED_HELPERS) {
-            expect(existsSync(join(process.cwd(), helper.file)), `declared helper no longer exists: ${helper.file}`).toBe(true);
+            expect(existsSync(join(CWD_ROOT, helper.file)), `declared helper no longer exists: ${helper.file}`).toBe(true);
             for (const key of helper.tracedMembers) {
                 expect(MEMBER_VALUES.has(key), `traced key is not a StorageKeys value: ${key}`).toBe(true);
                 expect(RAW_OWNED_MEMBER_KEYS.has(key), `traced key is missing from the audit table: ${key}`).toBe(true);

@@ -12,7 +12,8 @@
  * 型レベルの網羅性チェック（never 判定）で担保する。手書きリストは持たない。
  */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import type { ExtensionMessage } from '../messageTypes.js';
 import { VALID_MESSAGE_TYPES, CONTENT_SCRIPT_ALLOWED_TYPES, NO_PAYLOAD_TYPES } from '../messageTypes.js';
 
@@ -33,7 +34,10 @@ type Extra = Exclude<(typeof VALID_MESSAGE_TYPES)[number], ValidType>;
 const _noExtraTypes: Extra extends never ? true : never = true;
 
 const messageTypesSource = readFileSync(
-    fileURLToPath(new URL('../messageTypes.ts', import.meta.url)),
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy (instrumentation
+    // embeds mutant-altered literals that would poison the pin).
+    join(repoRootFromUrl(import.meta.url), 'src/background/messageTypes.ts'),
     'utf-8',
 );
 
@@ -108,7 +112,7 @@ describe('Message Type Consistency', () => {
         // PBI 2026-09-28-26: the contract tables and the handler table drifted
         // apart before (a type could exist with no handler and no test noticing).
         const routerSource = readFileSync(
-            fileURLToPath(new URL('../handlers/MessageRouter.ts', import.meta.url)),
+            join(repoRootFromUrl(import.meta.url), 'src/background/handlers/MessageRouter.ts'),
             'utf-8',
         );
         const recordBlock = routerSource.match(
@@ -129,7 +133,7 @@ describe('Message Type Consistency', () => {
 
     test('every registered router handler is a VALID_MESSAGE_TYPES entry', () => {
         const routerSource = readFileSync(
-            fileURLToPath(new URL('../handlers/MessageRouter.ts', import.meta.url)),
+            join(repoRootFromUrl(import.meta.url), 'src/background/handlers/MessageRouter.ts'),
             'utf-8',
         );
         const recordBlock = routerSource.match(

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentSettings.test.ts
  * Tests for content cleansing settings UI

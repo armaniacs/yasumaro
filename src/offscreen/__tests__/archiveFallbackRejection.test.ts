@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveFallbackRejection.test.ts
  * PBI 2026-09-07-02 (Y2), narrowed by PBI 2026-09-11-06: the non-OPFS

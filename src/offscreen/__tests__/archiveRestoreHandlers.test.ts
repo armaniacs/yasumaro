@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveRestoreHandlers.test.ts
  * OPFS-worker handlers for restoring an archive-format .db (PBI 2026-09-06-03).

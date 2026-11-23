@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveCreateHandlers.test.ts
  * OPFS-worker handlers for archive preview / create / cleanup / export.

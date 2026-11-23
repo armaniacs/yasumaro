@@ -29,8 +29,9 @@ import type { MessageRouter, MessageHandler } from './handlers/MessageRouter.js'
 import type { RecordingAdmission } from './recordingAdmission.js';
 import type { SessionAlarmService } from './SessionAlarmService.js';
 import type { AlarmRegistry } from './alarmRegistry.js';
-import { ServiceContainer } from './serviceContainer.js';
+import { ServiceContainer, type ServiceKey } from './serviceContainer.js';
 import { compositionManifest } from './compositionManifest.js';
+import { errorMessage } from '../utils/errorUtils.js';
 
 export interface BackgroundServices {
   obsidian: ObsidianClient;
@@ -82,7 +83,50 @@ export interface BackgroundServicesComposition extends BackgroundServices {
   deferredMigrationRunner: () => Promise<void>;
 }
 
-export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+/**
+ * One isolated service-initialization failure. A throwing factory is recorded
+ * here instead of aborting the remaining initializations, so every failure is
+ * still detected when the composition below throws (PBI 2026-11-08-13).
+ */
+export interface ServiceInitFailure {
+  readonly key: ServiceKey;
+  readonly message: string;
+}
+
+/**
+ * Thrown by createBackgroundServices when one or more service factories (or
+ * onReady wirings) failed. Carries every failure so a partial outage is never
+ * mistaken for a healthy composition: the return type stays honest (every
+ * member defined) because this function either returns fully or throws.
+ *
+ * Fail-open is deliberately not an option here: resolving a failed slot as
+ * `undefined` would satisfy the type while handing every consumer a value
+ * that crashes on first use, far from the cause. Fail fast at startup
+ * instead — the Service Worker restart that follows re-runs the factories.
+ */
+export class ServiceInitError extends Error {
+  readonly failures: readonly ServiceInitFailure[];
+
+  constructor(failures: readonly ServiceInitFailure[]) {
+    super(
+      `createBackgroundServices: ${failures.length} service(s) failed to initialize: ` +
+        failures.map((f) => `${f.key} (${f.message})`).join('; '),
+    );
+    this.name = 'ServiceInitError';
+    this.failures = failures;
+  }
+}
+
+/**
+ * Shared container initialization: register the manifest entries the container
+ * does not already have, resolve every entry while isolating one service's
+ * factory exception from the rest, then run onReady wiring for the healthy
+ * ones. Returns every failure instead of throwing, so the fail-fast
+ * composition (createBackgroundServices) and the degraded composition
+ * (toDegradedServices, consumed by service-worker.ts) observe the same
+ * isolation with no duplicated loops.
+ */
+function initializeContainer(container: ServiceContainer): ServiceInitFailure[] {
   // Register every manifest entry the container does not already have, so a
   // test that called container.override(key, fake) keeps its fake.
   for (const entry of compositionManifest) {
@@ -91,14 +135,40 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
     }
   }
 
-  // Resolve everything, then run onReady side effects once (the manifest's
-  // pendingWriteQueue entry installs the facade's queue instance — the
-  // utils↔background boundary wiring).
+  // Resolve everything, isolating one service's factory exception from the
+  // rest: a failure is recorded so the remaining services still initialize
+  // and every failure is reported together. Nothing degraded is returned —
+  // the composition below throws a ServiceInitError when any failure was
+  // recorded, so no consumer ever observes an undefined slot through a
+  // success-typed member (fail-open). Detection rides on the thrown error's
+  // `failures`, which names every failed key instead of just the first.
+  const failures: ServiceInitFailure[] = [];
+  const failedKeys = new Set<ServiceKey>();
   for (const entry of compositionManifest) {
-    container.resolve(entry.key);
+    try {
+      container.resolve(entry.key);
+    } catch (error) {
+      failures.push({ key: entry.key, message: errorMessage(error) });
+      failedKeys.add(entry.key);
+    }
   }
   for (const entry of compositionManifest) {
-    entry.onReady?.(container);
+    if (failedKeys.has(entry.key)) continue;
+    try {
+      entry.onReady?.(container);
+    } catch (error) {
+      failures.push({ key: entry.key, message: errorMessage(error) });
+      failedKeys.add(entry.key);
+    }
+  }
+  return failures;
+}
+
+export function createBackgroundServices(container = new ServiceContainer()): BackgroundServicesComposition {
+  const failures = initializeContainer(container);
+
+  if (failures.length > 0) {
+    throw new ServiceInitError(failures);
   }
 
   return {
@@ -124,3 +194,59 @@ export function createBackgroundServices(container = new ServiceContainer()): Ba
 
 // Re-exported so existing test imports (`import { MessageHandler }`) keep working.
 export type { MessageHandler };
+
+/**
+ * Degraded composition view: the same members as BackgroundServicesComposition
+ * but each honestly typed as possibly undefined. A failed factory resolves its
+ * slot to undefined here instead of aborting the whole startup, so the
+ * service worker can keep the healthy services and degrade only the paths
+ * that need the missing ones.
+ */
+export type DegradedBackgroundServices = {
+  [K in keyof BackgroundServicesComposition]: BackgroundServicesComposition[K] | undefined;
+};
+
+/**
+ * Resolve one service without throwing: returns undefined when the factory
+ * (or a dependency it needs) failed, so the degraded startup keeps the
+ * healthy services. Callers must existence-check the result — a missing slot
+ * must never flow silently into a consumer that assumes it is defined.
+ * The ServiceContainer resolve/override contract is untouched: this only
+ * catches the throw at the composition boundary.
+ */
+function resolveServiceOrUndefined<T>(container: ServiceContainer, key: ServiceKey): T | undefined {
+  try {
+    return container.resolve<T>(key);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Build the degraded view over an already-initialized container (one that ran
+ * through initializeContainer via createBackgroundServices, healthy or not).
+ * Never throws for factory failures: failed slots resolve to undefined while
+ * healthy singletons resolve to the same instances the fail-fast composition
+ * would have returned.
+ */
+export function toDegradedServices(container: ServiceContainer): DegradedBackgroundServices {
+  return {
+    obsidian: resolveServiceOrUndefined<ObsidianClient>(container, 'obsidian'),
+    sqliteClient: resolveServiceOrUndefined<SqliteClient>(container, 'sqliteClient'),
+    tabCache: resolveServiceOrUndefined<TabCache>(container, 'tabCache'),
+    rateLimiter: resolveServiceOrUndefined<RateLimiter>(container, 'rateLimiter'),
+    manualContentFetcher: resolveServiceOrUndefined<ManualContentFetcher>(container, 'manualContentFetcher'),
+    aiService: resolveServiceOrUndefined<AIService>(container, 'aiService'),
+    reviewSummaryGenerator: resolveServiceOrUndefined<ReviewSummaryGenerator>(container, 'reviewSummaryGenerator'),
+    sessionStore: resolveServiceOrUndefined<SessionStore>(container, 'sessionStore'),
+    headerDetector: resolveServiceOrUndefined<HeaderDetector>(container, 'headerDetector'),
+    recordingCache: resolveServiceOrUndefined<RecordingCacheInstance>(container, 'recordingCache'),
+    recordingPipeline: resolveServiceOrUndefined<RecordingOrchestrator>(container, 'recordingPipeline'),
+    recordingAdmission: resolveServiceOrUndefined<RecordingAdmission>(container, 'recordingAdmission'),
+    messageRouter: resolveServiceOrUndefined<MessageRouter>(container, 'messageRouter'),
+    autoSavedBadgeTabs: resolveServiceOrUndefined<AutoSavedBadgeTabs>(container, 'autoSavedBadgeTabs'),
+    sessionAlarmService: resolveServiceOrUndefined<SessionAlarmService>(container, 'sessionAlarmService'),
+    alarmRegistry: resolveServiceOrUndefined<AlarmRegistry>(container, 'alarmRegistry'),
+    deferredMigrationRunner: resolveServiceOrUndefined<() => Promise<void>>(container, 'deferredMigrationRunner'),
+  };
+}

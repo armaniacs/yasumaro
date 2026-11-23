@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * researchSessionsPanel lifecycle tests: the default 7-day fetch, session
  * rendering, and the deliberate split between the two re-render paths — a

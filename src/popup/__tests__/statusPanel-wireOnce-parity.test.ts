@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: same prototype-spy blindness as dashboardLegacyPanelFactories; observeClickAttaches sees 0 attaches.
 // Parity pin — re-init must not stack duplicate statusAddDomain handlers
 // (wireOnce discipline, same as the toggle /
 // permission / feedback buttons). Pinned at runtime, not by source regex:

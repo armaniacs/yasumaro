@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel-generation.test.ts
  * Race-guard regression tests for the SQLite history panel's

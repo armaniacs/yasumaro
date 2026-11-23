@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * stripCore-r3.test.ts — branch-coverage filler for stripCore.ts
  * Targets uncovered branches identified via v8 coverage:

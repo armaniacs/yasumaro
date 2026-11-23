@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * savedCollectionsRegionRender.test.ts
  * PBI 2026-10-23-06 — region render pins.

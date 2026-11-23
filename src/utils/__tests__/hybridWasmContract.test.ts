@@ -27,6 +27,11 @@ import {
     MAX_OUTPUT_SIZE,
 } from '../piiSanitizer.js';
 
+vi.mock('../logger/api.js', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('../logger/api.js')>();
+    return { ...actual, logWarn: vi.fn().mockResolvedValue(undefined) };
+});
+
 vi.mock('../../wasm/textrank/index.js', () => ({
     initTextrankWasm: vi.fn().mockRejectedValue(new Error('fetch not implemented in this environment')),
     extractTopIndicesWithWasm: vi.fn(),
@@ -90,7 +95,16 @@ describe('hybrid WASM contract: split-count mismatch falls back to TS', () => {
 
         const result = await extractSentencesHybrid(TEXTRANK_TEXT, { topK: 2 });
         expect(result).toEqual(extractSentences(TEXTRANK_TEXT, { topK: 2 }));
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        // PBI 2026-11-11-03: single seam line (was console.warn direct call).
+        const { logWarn } = await import('../logger/api.js');
+        expect(vi.mocked(logWarn)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(logWarn)).toHaveBeenCalledWith(
+            'TextRank WASM extraction failed, falling back to TS for this input',
+            { error: expect.any(String) },
+            undefined,
+            'wasmHybridRuntime'
+        );
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('dedup: disagreeing wasm split -> TS result + single warn', async () => {
@@ -104,7 +118,16 @@ describe('hybrid WASM contract: split-count mismatch falls back to TS', () => {
 
         const result = await deduplicateContentHybrid(DEDUP_BIG_TEXT);
         expect(result).toBe(deduplicateContent(DEDUP_BIG_TEXT));
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        // PBI 2026-11-11-03: single seam line (was console.warn direct call).
+        const { logWarn } = await import('../logger/api.js');
+        expect(vi.mocked(logWarn)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(logWarn)).toHaveBeenCalledWith(
+            'Sentence-dedup WASM call failed, falling back to TS for this input',
+            { error: expect.any(String) },
+            undefined,
+            'wasmHybridRuntime'
+        );
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('textrank: out-of-range wasm indices -> TS result + single warn', async () => {
@@ -119,7 +142,16 @@ describe('hybrid WASM contract: split-count mismatch falls back to TS', () => {
 
         const result = await extractSentencesHybrid(TEXTRANK_TEXT, { topK: 2 });
         expect(result).toEqual(extractSentences(TEXTRANK_TEXT, { topK: 2 }));
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        // PBI 2026-11-11-03: single seam line (was console.warn direct call).
+        const { logWarn } = await import('../logger/api.js');
+        expect(vi.mocked(logWarn)).toHaveBeenCalledTimes(1);
+        expect(vi.mocked(logWarn)).toHaveBeenCalledWith(
+            'TextRank WASM extraction failed, falling back to TS for this input',
+            { error: expect.any(String) },
+            undefined,
+            'wasmHybridRuntime'
+        );
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 });
 

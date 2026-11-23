@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * pausePanel.test.ts
  * PBI 2026-10-17-01 Task 6: popup pause controls with presets and resume.

@@ -254,12 +254,16 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
       // No `shouldRetry`: the transport's own predicate is the single
       // implementation, so the summary flow cannot drift from the connection
       // test. It reads the structured kind only.
+      // ローカルAI (127.0.0.1/localhost) は正規用途のため blockLocalhost: false
+      // を明示 (fetchWithTimeout 既定trueの例外。入口は validateUrlForAIRequests
+      // のポート許可リストが担う)。
       const response = await fetchWithRetry(prepared.url, noRedirectInit({
         method: 'POST',
         headers: prepared.headers,
         body: prepared.body,
         allowedUrls,
         timeoutMs: hooks.timeoutMs,
+        blockLocalhost: false,
       }), {
         maxRetryCount: 3,
         initialDelayMs: 1000,
@@ -322,12 +326,14 @@ export abstract class HttpProviderStrategy extends AIProviderStrategy {
     try {
       const allowedUrls = await this.getAllowedUrlsForRequests();
 
+      // ローカルAIは正規用途のため blockLocalhost: false を明示 (同上)。
       const response = await fetchWithRetry(built.url, noRedirectInit({
         method: 'POST',
         headers: built.headers,
         body: built.body,
         allowedUrls,
         timeoutMs: hooks.timeoutMs,
+        blockLocalhost: false,
       }), {
         maxRetryCount: 1,
         initialDelayMs: 500,

@@ -17,10 +17,13 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { repoRootFromUrl } from '../repoRoot.js';
 import { E2E_PROBE_ENABLE_KEY, E2E_PROBE_STATE_KEY } from '../../src/utils/e2eTestState.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = join(here, '..', '..');
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const repoRoot = repoRootFromUrl(import.meta.url);
 const srcRoot = join(repoRoot, 'src');
 const fixtureText = readFileSync(join(here, '..', 'e2e', 'fixtures', 'e2eProbe.ts'), 'utf-8');
 
@@ -115,7 +118,9 @@ describe('e2eProbe window-global ownership (double-owner pin)', () => {
 describe('markE2eVisitReported dead export (legacy-path pin)', () => {
     it('has no callers anywhere in src/ or testDir/ outside its defining module', () => {
         const definingModule = join(srcRoot, 'utils', 'e2eTestState.ts');
-        const selfFile = fileURLToPath(import.meta.url);
+        // Repo-relative identity: under a Stryker sandbox the running file
+        // lives in the sandbox copy while scanned files are real-tree paths.
+        const selfFile = join(repoRoot, 'testDir/__tests__/e2eProbeContract.test.ts');
         const strayReferences: string[] = [];
         for (const root of [srcRoot, join(repoRoot, 'testDir')]) {
             const stack = [root];

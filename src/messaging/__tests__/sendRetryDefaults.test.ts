@@ -9,12 +9,14 @@
  */
 import { describe, it, expect } from 'vitest';
 import {
+  AI_GATEWAY_TIMEOUT_MS,
   DASHBOARD_GATEWAY_RETRY_ATTEMPTS,
   DASHBOARD_GATEWAY_RETRY_DELAY_MS,
   DASHBOARD_GATEWAY_RETRY_MULTIPLIER,
   DASHBOARD_INNER_TRANSPORT_RETRIES,
   DASHBOARD_SQLITE_TIMEOUT_MESSAGE,
   DASHBOARD_SQLITE_TIMEOUT_MS,
+  RECORD_GATEWAY_TIMEOUT_MS,
   SEND_POLICY_DEFAULT_RETRIES,
   SEND_RETRY_DEFAULTS,
   TRANSPORT_DEFAULT_RETRIES,
@@ -41,6 +43,11 @@ describe('sendRetryDefaults — single retry table (PBI 2026-10-24-06)', () => {
     expect(TRANSPORT_RETRY_MAX_MS).toBe(1000);
   });
 
+  it('keeps the gateway timeout budgets moved from gatewayFactory (PBI 2026-11-08-12: values unchanged)', () => {
+    expect(RECORD_GATEWAY_TIMEOUT_MS).toBe(20000);
+    expect(AI_GATEWAY_TIMEOUT_MS).toBe(60000);
+  });
+
   it('exposes every default through one table object', () => {
     expect(SEND_RETRY_DEFAULTS).toEqual({
       dashboardTimeoutMs: DASHBOARD_SQLITE_TIMEOUT_MS,
@@ -53,6 +60,8 @@ describe('sendRetryDefaults — single retry table (PBI 2026-10-24-06)', () => {
       transportBackoffBaseMs: TRANSPORT_RETRY_BASE_MS,
       transportBackoffMultiplier: TRANSPORT_RETRY_MULTIPLIER,
       transportBackoffMaxMs: TRANSPORT_RETRY_MAX_MS,
+      recordGatewayTimeoutMs: RECORD_GATEWAY_TIMEOUT_MS,
+      aiGatewayTimeoutMs: AI_GATEWAY_TIMEOUT_MS,
     });
   });
 });

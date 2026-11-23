@@ -12,6 +12,16 @@ vi.mock('../../utils/storage/SettingsRepository.js', async (importOriginal) => {
   return { ...actual, settingsRepository: { getAll: mockGetAll, setAll: mockSetAll, getMany: mockGetMany, clearCache: vi.fn() }, SettingsRepository: class { getAll = mockGetAll; setAll = mockSetAll; getMany = mockGetMany; clearCache = vi.fn() } };
 });
 
+// Mock the logger so the privacy-cache post-processing tests can observe
+// warn emissions (the inner try/catch swallows TypeErrors into logWarn).
+const mockLogDebug = vi.hoisted(() => vi.fn());
+const mockLogWarn = vi.hoisted(() => vi.fn());
+const mockLogError = vi.hoisted(() => vi.fn());
+vi.mock('../../utils/logger/api.js', async (importOriginal) => {
+  const actual = await importOriginal() as any;
+  return { ...actual, logDebug: mockLogDebug, logWarn: mockLogWarn, logError: mockLogError };
+});
+
 // Mock chrome runtime for privacy cache
 const mockChromeRuntime = {
   sendMessage: vi.fn()
@@ -395,5 +405,272 @@ describe('checkPageStatus', () => {
     expect(result).not.toBeNull();
     expect(result.domainFilter.allowed).toBe(true);
     expect(result.domainFilter.mode).toBe('disabled');
+  });
+
+  it('falls back to disabled mode when the persisted filter mode is unknown', async () => {
+    const url = 'https://example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'unknown-mode',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.mode).toBe('disabled');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('does not match a whitelisted domain while the filter mode is disabled', async () => {
+    const url = 'https://example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'disabled',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.mode).toBe('disabled');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('does not match a blacklisted-only domain while the filter mode is whitelist', async () => {
+    const url = 'https://blocked.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: ['blocked.com'],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.mode).toBe('whitelist');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('does not match a whitelisted-only domain while the filter mode is blacklist', async () => {
+    const url = 'https://example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'blacklist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: ['blocked.com'],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.mode).toBe('blacklist');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('matches subdomains when domain_subdomain_matching is true', async () => {
+    const url = 'https://sub.example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      domain_subdomain_matching: true,
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.matched).toBe(true);
+    // findMatchedPattern uses the 2-arg matcher without the subdomain flag,
+    // so a subdomain-only match reports no pattern.
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('does not match subdomains when domain_subdomain_matching is false', async () => {
+    const url = 'https://sub.example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      domain_subdomain_matching: false,
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.allowed).toBe(false);
+    expect(result.domainFilter.matched).toBe(false);
+  });
+
+  it('treats an empty domain_whitelist as no matches', async () => {
+    const url = 'https://example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: [],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.mode).toBe('whitelist');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('treats a missing domain_whitelist setting as an empty list', async () => {
+    const url = 'https://example.com/page';
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.mode).toBe('whitelist');
+    expect(result.domainFilter.matched).toBe(false);
+    expect(result.domainFilter.matchedPattern).toBeUndefined();
+  });
+
+  it('ignores privacy cache entries when the response reports success false', async () => {
+    const url = 'https://example.com/page';
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'cache-control' as const,
+      timestamp: Date.now(),
+      headers: {
+        cacheControl: 'private',
+        hasCookie: true,
+        hasAuth: false
+      }
+    };
+    mockChromeRuntime.sendMessage.mockResolvedValue({
+      success: false,
+      cache: [[url, privacyInfo]]
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.privacy.isPrivate).toBe(false);
+    expect(result.privacy.hasCache).toBe(false);
+    expect(result.cache.hasCookie).toBe(false);
+    expect(result.cache.cacheControl).toBeUndefined();
+  });
+
+  it('treats a successful response with a cache miss as no privacy info', async () => {
+    const url = 'https://example.com/page';
+    mockChromeRuntime.sendMessage.mockResolvedValue({
+      success: true,
+      cache: []
+    });
+    (mockGetAll as Mock).mockResolvedValue({
+      domain_filter_mode: 'whitelist',
+      domain_whitelist: ['example.com'],
+      domain_blacklist: [],
+      ublock_sources: []
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.domainFilter.allowed).toBe(true);
+    expect(result.domainFilter.mode).toBe('whitelist');
+    expect(result.domainFilter.matched).toBe(true);
+    expect(result.domainFilter.matchedPattern).toBe('example.com');
+    expect(result.privacy.isPrivate).toBe(false);
+    expect(result.cache.hasCache).toBe(false);
+    expect(result.cache.hasCookie).toBe(false);
+    expect(result.cache.hasAuth).toBe(false);
+    // The privacy-cache try/catch swallows inner failures into logWarn, so a
+    // healthy cache miss must not emit one.
+    expect(mockLogWarn).not.toHaveBeenCalled();
+  });
+
+  it('handles an undefined privacy cache response without warning', async () => {
+    const url = 'https://example.com/page';
+    mockChromeRuntime.sendMessage.mockResolvedValue(undefined);
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.privacy.isPrivate).toBe(false);
+    expect(result.cache.hasCookie).toBe(false);
+    expect(mockLogWarn).not.toHaveBeenCalled();
+  });
+
+  it('reports hasAuth true from privacy cache headers', async () => {
+    const url = 'https://example.com/page';
+    const privacyInfo = {
+      isPrivate: true,
+      reason: 'authorization' as const,
+      timestamp: Date.now(),
+      headers: {
+        hasCookie: false,
+        hasAuth: true
+      }
+    };
+    mockChromeRuntime.sendMessage.mockResolvedValue({
+      success: true,
+      cache: [[url, privacyInfo]]
+    });
+
+    const result = await checkPageStatus(url);
+    if (!result) throw new Error("checkPageStatus returned null");
+
+    expect(result.privacy.isPrivate).toBe(true);
+    expect(result.privacy.reason).toBe('authorization');
+    expect(result.cache.hasAuth).toBe(true);
+    expect(result.cache.hasCookie).toBe(false);
+    expect(result.cache.hasCache).toBe(false);
+  });
+});
+
+describe('checkPageStatus special URLs (PBI 2026-11-08-14)', () => {
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it.each([
+    'chrome://extensions',
+    'edge://settings',
+    'about:blank',
+    'chrome-extension://abcdef/popup.html',
+    'moz-extension://abcdef/options.html',
+    'file:///home/user/notes.txt',
+    'data:text/html,<h1>hi</h1>',
+    'view-source:https://example.com/',
+    'CHROME://extensions',
+    'View-Source:https://example.com/',
+  ])('returns null for %s without a service-worker round trip', async (url) => {
+    mockChromeRuntime.sendMessage.mockClear();
+
+    const result = await checkPageStatus(url);
+
+    expect(result).toBeNull();
+    expect(mockChromeRuntime.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('returns null for non-string input instead of throwing outside try', async () => {
+    mockChromeRuntime.sendMessage.mockClear();
+
+    await expect(checkPageStatus(undefined as unknown as string)).resolves.toBeNull();
+    await expect(checkPageStatus(null as unknown as string)).resolves.toBeNull();
+
+    expect(mockChromeRuntime.sendMessage).not.toHaveBeenCalled();
   });
 });

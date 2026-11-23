@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dashboard-handlers.test.ts
  * Tests for dashboard.ts handler functions.

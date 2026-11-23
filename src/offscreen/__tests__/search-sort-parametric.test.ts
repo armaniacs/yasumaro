@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * search-sort-parametric.test.ts
  * PBI-34: the three search-sort suites (IdbVfsBackend-search-sort,

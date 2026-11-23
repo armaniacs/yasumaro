@@ -17,7 +17,8 @@ import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { escapeCssSelector } from '../../../utils/cssUtils.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
 import { errorMessage } from '../../../utils/errorUtils.js';
-import { withBusyButton } from './busyButton.js';
+import { buildCollectionOptionsHtml, buildSelectHtml } from './collectionSelectBuilder.js';
+import { buildStatusDivHtml, runRegionAction } from './regionAction.js';
 import type { SavedCollection } from '../../../utils/storage/savedCollections.js';
 import type { AskHistoryCitation } from '../../../messaging/responseCanonical.js';
 import { askHistory } from '../../../messaging/askHistoryGateway.js';
@@ -68,21 +69,21 @@ export function createAskHistoryActions(
 }
 
 function buildRegionInnerHtml(collections: Record<string, SavedCollection>): string {
-  const entries = Object.values(collections).sort((a, b) => b.updatedAt - a.updatedAt);
-  const options = [`<option value="">${escapeHtml(t('askHistoryTargetAll'))}</option>`]
-    .concat(entries.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`))
-    .join('');
+  const select = buildSelectHtml(buildCollectionOptionsHtml(collections, t('askHistoryTargetAll')), {
+    cssClass: 'ask-history-target',
+    ariaLabel: t('askHistoryTargetLabel'),
+  });
   return `<div class="ask-history-section">
     <h4 data-i18n="askHistoryLabel">${escapeHtml(t('askHistoryLabel'))}</h4>
     <p class="ask-history-help" data-i18n="askHistoryHelp">${escapeHtml(t('askHistoryHelp'))}</p>
     <div class="ask-history-input">
-      <select class="ask-history-target" aria-label="${escapeHtml(t('askHistoryTargetLabel'))}">${options}</select>
+      ${select}
       <input type="text" class="ask-history-question"
         placeholder="${escapeHtml(t('askHistoryQuestionPlaceholder'))}"
         aria-label="${escapeHtml(t('askHistoryQuestionPlaceholder'))}" />
       <button type="button" class="secondary-btn" data-ask-action="ask">${escapeHtml(t('askHistoryAskBtn'))}</button>
     </div>
-    <div class="ask-history-status" role="status" aria-live="polite"></div>
+    ${buildStatusDivHtml('ask-history-status')}
     <div class="ask-history-answer" role="region" aria-live="polite"></div>
   </div>`;
 }
@@ -115,16 +116,12 @@ export function renderAskHistoryRegion(
       const question = questionInput.value.trim();
       if (question === '') return;
       const collectionId = targetSelect?.value ?? '';
-      await withBusyButton(askButton, async () => {
-        clearAskAnswer(region);
-        showAskStatus(region, t('askHistoryBusy'));
-        try {
-          const result = await actions.onAsk(question, collectionId === '' ? null : collectionId);
-          if (!result.ok) {
-            clearAskAnswer(region);
-            showAskStatus(region, result.error ?? t('askHistoryFailed'));
-            return;
-          }
+      await runRegionAction(
+        askButton,
+        (message) => showAskStatus(region, message),
+        { busy: t('askHistoryBusy'), failed: t('askHistoryFailed') },
+        () => actions.onAsk(question, collectionId === '' ? null : collectionId),
+        (result) => {
           if (result.status === 'no_evidence') {
             clearAskAnswer(region);
             showAskStatus(region, result.suggestion ?? t('askHistoryNoEvidence'));
@@ -132,11 +129,9 @@ export function renderAskHistoryRegion(
           }
           clearAskStatus(region);
           showAskAnswer(region, result.answer ?? '', result.citations ?? []);
-        } catch (error) {
-          clearAskAnswer(region);
-          showAskStatus(region, error instanceof Error ? error.message : t('askHistoryFailed'));
-        }
-      });
+        },
+        () => clearAskAnswer(region),
+      );
     })();
   });
 }

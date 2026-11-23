@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: TextEncoder.prototype spy counts differ under the bridge; the encode-dedup pins are not environment-agnostic.
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { extractMainContent, extractMainContentWithInfo } from '../index.js';
 import { cleanseAISummaryContent } from '../../aiSummaryCleaner/index.js';
@@ -28,28 +29,28 @@ afterEach(() => {
 });
 
 describe('bytesize-lazy: string path skips diagnostic measurement', () => {
-    it('never encodes the body textContent string (pageBytes skipped)', () => {
+    it('never encodes the body textContent string (pageBytes skipped)', async () => {
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
         const bodyText = document.body.textContent || '';
         expect(bodyText.length).toBeGreaterThan(0);
 
-        const result = extractMainContent(10000, {});
+        const result = await extractMainContent(10000, {});
 
         expect(typeof result).toBe('string');
         const encodedArgs = encodeSpy.mock.calls.map((call) => call[0] as unknown);
         expect(encodedArgs).not.toContain(bodyText);
     });
 
-    it('performs no diagnostic encodes on the default path (only fallback-critical _contentBytes)', () => {
+    it('performs no diagnostic encodes on the default path (only fallback-critical _contentBytes)', async () => {
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
 
-        extractMainContent(10000, {});
+        await extractMainContent(10000, {});
 
         // Fallback-critical _contentBytes (extracted string) is the only encode allowed.
         expect(encodeSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('does not read document.body.textContent for pageBytes when string path', () => {
+    it('does not read document.body.textContent for pageBytes when string path', async () => {
         const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent');
         expect(descriptor?.get).toBeDefined();
         const originalGet = descriptor!.get!;
@@ -60,17 +61,17 @@ describe('bytesize-lazy: string path skips diagnostic measurement', () => {
             return originalGet.call(this);
         });
 
-        extractMainContent(10000, {});
+        await extractMainContent(10000, {});
 
         expect(seenThis).not.toContain(document.body);
         getSpy.mockRestore();
     });
 
-    it('string path with aiSummary enabled encodes only fallback-critical strings', () => {
+    it('string path with aiSummary enabled encodes only fallback-critical strings', async () => {
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
         const bodyText = document.body.textContent || '';
 
-        const result = extractMainContent(
+        const result = await extractMainContent(
             10000,
             {},
             { aiSummaryCleanseEnabled: true, altEnabled: true }
@@ -86,14 +87,14 @@ describe('bytesize-lazy: string path skips diagnostic measurement', () => {
 });
 
 describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
-    it('pageBytes/candidateBytes/originalBytes/cleansedBytes equal the Blob-based oracle', () => {
+    it('pageBytes/candidateBytes/originalBytes/cleansedBytes equal the Blob-based oracle', async () => {
         setupFixture();
         const bodyText = document.body.textContent || '';
         const candidateText = document.querySelector('article')!.textContent || '';
         const expectedPage = new Blob([bodyText]).size;
         const expectedCandidate = new Blob([candidateText]).size;
 
-        const result = extractMainContentWithInfo(10000, {}) as unknown as Record<string, unknown>;
+        const result = await extractMainContentWithInfo(10000, {}) as unknown as Record<string, unknown>;
 
         expect(result.pageBytes).toBe(expectedPage);
         expect(result.candidateBytes).toBe(expectedCandidate);
@@ -102,11 +103,11 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
         expect(result.cleansedBytes).toBe(expectedCandidate);
     });
 
-    it('cleansedBytes reflects cleansing and funnel is fully populated', () => {
+    it('cleansedBytes reflects cleansing and funnel is fully populated', async () => {
         document.body.innerHTML = `<article><p>${'Byte funnel content. '.repeat(20)}</p><script>alert('remove me')</script></article>`;
         const bodyText = document.body.textContent || '';
 
-        const result = extractMainContentWithInfo(
+        const result = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true }
         ) as unknown as Record<string, unknown>;
@@ -120,9 +121,9 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
         expect(funnel.cleansedBytes).toBe(result.cleansedBytes);
     });
 
-    it('aiSummaryOriginalBytes is carried from cleansedBytes (no extra encode)', () => {
+    it('aiSummaryOriginalBytes is carried from cleansedBytes (no extra encode)', async () => {
         setupFixture();
-        const result = extractMainContentWithInfo(
+        const result = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: false },
             { aiSummaryCleanseEnabled: true, altEnabled: true }
@@ -133,16 +134,16 @@ describe('bytesize-lazy: WithInfo matches the legacy computation', () => {
 });
 
 describe('bytesize-lazy: no duplicate encode of the same string in one pass', () => {
-    it('encodes each distinct string at most once (no cleansing)', () => {
+    it('encodes each distinct string at most once (no cleansing)', async () => {
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
 
-        extractMainContentWithInfo(10000, {});
+        await extractMainContentWithInfo(10000, {});
 
         const args = encodeSpy.mock.calls.map((call) => String(call[0]));
         expect(new Set(args).size).toBe(args.length);
     });
 
-    it('encodes each distinct string at most once (cleanse + aiSummary enabled)', () => {
+    it('encodes each distinct string at most once (cleanse + aiSummary enabled)', async () => {
         // Fixture with actually-removed nodes so every stage string differs:
         // hardStrip removes <script>, ads rule removes the promo div text.
         document.body.innerHTML = `
@@ -158,7 +159,7 @@ describe('bytesize-lazy: no duplicate encode of the same string in one pass', ()
         `;
         const encodeSpy = vi.spyOn(TextEncoder.prototype, 'encode');
 
-        const result = extractMainContentWithInfo(
+        const result = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }
@@ -249,11 +250,11 @@ describe('bytesize-lazy: extractor path never constructs Blob', () => {
         `;
     }
 
-    it('string path with cleanse + aiSummary enabled performs zero Blob calls', () => {
+    it('string path with cleanse + aiSummary enabled performs zero Blob calls', async () => {
         setupCleansingFixture();
         const blobSpy = spyBlob();
 
-        const result = extractMainContent(
+        const result = await extractMainContent(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }
@@ -264,11 +265,11 @@ describe('bytesize-lazy: extractor path never constructs Blob', () => {
         expect(result.length).toBeGreaterThan(100);
     });
 
-    it('WithInfo path with cleanse + aiSummary enabled performs zero Blob calls and fallback is unchanged', () => {
+    it('WithInfo path with cleanse + aiSummary enabled performs zero Blob calls and fallback is unchanged', async () => {
         setupCleansingFixture();
         const blobSpy = spyBlob();
 
-        const result = extractMainContentWithInfo(
+        const result = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }
@@ -285,7 +286,7 @@ describe('bytesize-lazy: extractor path never constructs Blob', () => {
         expect(result.aiSummaryCleansedElements).toBeGreaterThan(0);
 
         setupCleansingFixture();
-        const str = extractMainContent(
+        const str = await extractMainContent(
             10000,
             { cleanseEnabled: true, hardStripEnabled: true },
             { aiSummaryCleanseEnabled: true, altEnabled: true, adsEnabled: true }

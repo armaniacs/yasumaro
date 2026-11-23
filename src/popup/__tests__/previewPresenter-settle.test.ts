@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, test, expect, vi, afterEach } from 'vitest';
 
 /**

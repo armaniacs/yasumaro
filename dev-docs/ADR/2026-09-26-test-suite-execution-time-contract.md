@@ -449,3 +449,148 @@ rev `d0ab5499` からの差分を `git grep` で特定した（推測なし）�
 **決定**: `gates.jsdomFileCount` を 398 → 403 に改定する。増加分は DOM を
 直接使う UI・移行経路の検証が中心で、suite の成長は正当なため、欠陥や
 追加ゲートの必要はない。
+#### `jsdomFileCount` 403 → 426 の内訳（2026-11-19 追記）
+
+2026-11-19 の main CI（1116b マージ後の初回 push）が `OVER jsdom files: 426 / 403` で赤だった。
+`validate` 以外のジョブは緑で、失敗は suite の成長のみが原因。前回改定
+rev `20778134` からの差分を `git grep` で特定した（推測なし）。増加 23 件、
+削除 0 件。この期間のローカル main には 75 コミット分が未 push のまま積み上がっており（大局的改善 3 ラウンド、chrome-extensions 監査 1116b 対応、ミューテーション測定とテスト補強）、CI には初めて現れる成長である。
+
+| 増減 | 領域 | なぜ jsdom なのか |
+|---|---|---|
+| +6 | `src/content/__tests__` | content 経路の DOM 検証（contentKernel halfInit / spaMainWorld、scrollMonitor safeSide、throttle monoclock、visitGating overridesMemo / Correctness） |
+| +5 | `src/popup/__tests__` | ポップアップ UI の DOM 検証（contentFetchGateway / pausePanel / privatePageDialog / skipReasonPanel / trustPanel の r2 追試） |
+| +5 | `src/dashboard` | 配線・golden・parity ピン（connectionTests-innerhtml、collectionSelectBuilder.golden、regionAction.parity、sqliteHistoryViewWiringCycle、issueReportLink.logSeam） |
+| +2 | `src/offscreen/__tests__` | 検証追加（cleansingOffscreen.estimate、search-backend-parity-pin） |
+| +4 | `src/utils` | golden・失敗可視化・切り出し系の DOM 検証（datetimeUnify.golden、helpers.failure-visibility、contentExtractor index-batch-d、settingsUiHelper.mirror-failure） |
+| +1 | `src/privacy/__tests__` | privacy-r2 追試 |
+
+**決定**: `gates.jsdomFileCount` を 403 → 426 に改定する。増加分は DOM を
+直接使う content・popup・配線経路の検証が中心で、suite の成長は正当なため、
+欠陥や追加ゲートの必要はない。
+
+---
+
+## 追記(2026-11-19): wasm-quickjs-dom 導入とゲートの DOM 環境ファイル数への再定義
+
+### 何が起きたか
+
+PBI 2026-11-19-01 で、jsdom の代替 `wasm-quickjs-dom`(C 実装 DOM を WebAssembly
+内に持つ jsdom 互換実装)を Vitest 環境として導入した。422 ファイルを
+`@vitest-environment wasm-quickjs-dom` に機械置換し、14 ファイルは根拠つきで
+jsdom に退避させた(内訳は後述)。深掘りの決定規則に従い、`gates.jsdomFileCount`
+を `gates.domFileCount`(jsdom と wasm-quickjs-dom の両 docblock を数える)へ
+再定義し、実測 426 に pin した。
+
+### 計測(R5 プロトコル)
+
+**スパイク(自明テスト 20 ファイル × 3 環境、worker 4)**。計測中の load が
+7〜15 と変動したため絶対値は参考値で、比率のみを使った:
+
+| 環境 | 内部 Duration | environment 内訳 |
+|---|---|---|
+| node | 2.37s | (項目なし) |
+| jsdom | 11.01s | 95% |
+| wasm-quickjs-dom | 6.18s | 90% |
+
+wasm 環境のオーバーヘッドは jsdom の約 4〜5 割。記事(zenn: wasm-quickjs-dom-bench)
+の「6.8 倍」は本リポジトリでは再現されないが、有意な削減ではある。
+
+**A/B(静かなマシン、同一 24 DOM テストファイル、worker 4、jsdom は HEAD の
+worktree)**:
+
+| 側 | 2 回の壁時間 | 中央値 |
+|---|---|---|
+| jsdom | 9.18s / 9.78s | 9.48s |
+| wasm | 5.13s / 5.64s | 5.39s |
+
+**1.76 倍高速**。負荷下でのフルスイートは wall が 3〜5 倍に膨らむ(R5 の実測どおり)
+ため、wall の判断は必ず load 事前確認の下で行うこと。静かなマシンでのフルスイートは
+1336 ファイル / 18835 テスト 全パスで 84.33s(environment フェーズは旧 jsdom 構成の
+約 49s から 25.3s へ半減)。
+
+### 環境差異(プローブで確定したもの)
+
+全スイートを実行した結果、19 テスト / 10 ファイルが環境差異で失敗した(失敗率は
+移行対象 422 ファイルの 2.4%)。空テストによるプローブで以下を確定した:
+
+| 差異 | 影響 | 確定方法 |
+|---|---|---|
+| `:checked` セレクタがホスト側の `.checked` プロパティ書き込みを反映しない | production が `querySelector(':checked')` で読む経路が既定値に戻る | プローブ: property 書き込み→再読取は正常、セレクタのみ不反映 |
+| `tabIndex` が IDL 数値でなく文字列を返す | `toBe(0)` 型の a11y pin が壊れる | プローブ |
+| dispatchEvent でリスナが受けるイベントがブリッジプロキシで、`instanceof` や `objectContaining` が成立しない | イベント配線テストのアサーション機構が壊れる(イベント自体は正しく飛ぶ) | プローブ |
+| `EventTarget.prototype` 等への `vi.spyOn` がブリッジ経由のメソッド呼び出しを観測できない | リスナ登録の観測系テストが 0 件を数える | 失敗ログ + テスト読解 |
+| CSSOM が悪意ある style 値を jsdom と異なるパースをする | CSS injection 検証の基盤が変わる | プローブ + 失敗ログ |
+| `TextEncoder.prototype` spy の計数が変わる | encode 回数の pin が環境依存になる | 失敗ログ |
+| ページ閉鎖後の production タイマーが bridge 例外で未処理エラーになる | jsdom は document をプロセス終了まで保持するが、wasm 環境は即座に解放する | 失敗ログ(settingsUiHelper に防御を追加) |
+
+### 退避(14 ファイル、根拠つき)
+
+| ファイル | なぜ jsdom のままか |
+|---|---|
+| `src/popup/__tests__/popup-xss.test.ts` | XSS サニタイザ検証。パーサー意味論の変更を避ける(導入前から退避) |
+| `src/popup/__tests__/trustSettings-xss.test.ts` | 同上 |
+| `src/dashboard/generalSettings/__tests__/connectionTests-innerhtml.test.ts` | innerHTML エスケープ検証。同上 |
+| `src/utils/ui/__tests__/focusTrap.test.ts` | jsdom の「offsetParent 常時 null」前提と display:none focus() 挙動を pin(導入前から退避) |
+| `src/dashboard/__tests__/cspStyleUtils.test.ts` | CSS injection 検証が wasm CSSOM の上では本番 Chromium の近似でなくなる |
+| `src/dashboard/settings/__tests__/domainFilter.test.ts` | production が `:checked` で読む配線検証 |
+| `src/dashboard/settings/__tests__/privacySettings.test.ts` | 同上 |
+| `src/popup/__tests__/pendingPages-errorBoundary.test.ts` | 同上 |
+| `src/dashboard/panels/asyncData/__tests__/tagCooccurrenceTablePanel.lifecycle.test.ts` | tabIndex IDL 数値の a11y pin |
+| `src/dashboard/__tests__/tagsPanel.dom-integration.test.ts` | イベントオブジェクトの同一性・instanceof に依存するアサーション |
+| `src/dashboard/__tests__/dashboardLegacyPanelFactories.test.ts` | EventTarget.prototype spy によるリスナ観測 |
+| `src/popup/__tests__/statusPanel-wireOnce-parity.test.ts` | 同上 |
+| `src/utils/contentExtractor/__tests__/bytesize-lazy.test.ts` | TextEncoder spy の encode 計数 pin |
+| `src/popup/__tests__/ui-ux-improvements.test.ts` | `document.body` 更新漏れ(全面置換後も旧い空 body を指す。applyI18n は body 起点のため無更新、getElementById での title 設定は反映)。Chromium/jsdom では body が追従する |
+
+退避ファイルには docblock の直後に 1 行の根拠コメントを残している。
+
+### ゲート再定義
+
+深掘りで決めた決定規則: 新環境の per-file コスト C が node の N×1.5 以下なら
+`fileCount` をゲートへ復帰、超過なら jsdomFileCount を「DOM 環境ファイル数」へ
+再定義。スパイク実測は C ≒ N の 2.6 倍(190〜309ms 対 40〜118ms、負荷下の参考値)
+で超過側だったため、**後者**を採用した:
+
+- `gates.jsdomFileCount` を廃止し、`gates.domFileCount`(jsdom と
+  wasm-quickjs-dom の両 docblock を数える)を 426 で新設
+- 理由は R4 と同型: 固定コストの支配要因は「ファイルごとの DOM 環境構築」であり、
+  実装が jsdom か wasm かは価格の差でしかない。安い node / shared の追加は自由、
+  DOM ファイルの追加だけを意図的判断にする
+- `scripts/test-perf/report.mjs` の分類器に wasm docblock 判定を追加
+
+### この再定義で得られた結果
+
+| 指標 | 変更前(jsdom) | 変更後(wasm 主体) |
+|---|---|---|
+| environment フェーズ(フルスイート) | 約 49s | 約 25.3s |
+| A/B 24 ファイル壁時間(静かなマシン) | 9.48s | 5.39s |
+| スイート(静かなマシン・load 参考値付き) | 69.8〜91.1s | 84.33s(当日の機械は常時 load 5 以上) |
+
+wall の絶対値はマシン依存のため、最終確認は CI(4 vCPU)で行う。
+
+**CI 実測(PR #212、4 vCPU / ubuntu / worker 3)**: validate ジョブ PASS。
+フルユニットスイート緑、license 866 パッケージ合格、test:perf within budget
+(DOM env files 426/426)。wall 参考値 159.8s。E2E `test` ジョブは 2 回とも
+同一 11 件が約 10.6 秒の一律タイムアウトで失敗(`extractor not ready` 等の
+起動系 predicate)。`usability` は再実行で PASS(3m6s)。変更がビルド成果物に
+影響しないこと(生産コード変更は settingsUiHelper の防御のみ、E2E は実 Chrome
+で実行)から、ランナー負荷によるものと判断し再実行は行わない。
+
+### 未解決
+
+- `ui-ux-improvements.test.ts`: **根因確定済み(2026-11-19 再チャレンジ)**。
+  wasm 環境で `document.documentElement.innerHTML` を全面置換すると、新ツリーは
+  documentElement 直下に作られるが `document.body` は旧い空 body を指し続ける。
+  `applyI18n` は `document.body` 起点でクエリするため何も更新せず、document
+  レベルの `getElementById` で設定する title だけが反映される。上流報告用の
+  最小再現は PBI 2026-11-19-01 の実装結果節を参照
+- wasm 環境は shadow DOM を含むページで「serialised に含まれない」警告を出す
+  (動作には影響しないがログが騒がしい)
+
+### 却下案テーブルへの追記
+
+| 案 | 実測 | 判断 |
+|---|---|---|
+| wasm-quickjs-dom への全面移行(退避なし) | 10 ファイルが環境差異で失敗(2.4%) | 部分採用。退避 14 ファイルは jsdom 維持 |
+| happy-dom への一括移行 | (2026-09-26 の実測のまま) | 引き続き却下 |

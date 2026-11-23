@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Golden DOM pins for the asyncData rank/heatmap table builders.
  *

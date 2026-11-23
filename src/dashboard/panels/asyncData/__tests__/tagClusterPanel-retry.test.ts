@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Guards the retry behaviour of the Tag Cluster panel's data load.
  *

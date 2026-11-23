@@ -13,12 +13,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 
 const RULE_OWNER = 'src/utils/storage/trancoConsent.ts';
 const CALLERS = ['src/popup/trancoNotification.ts', 'src/dashboard/trancoConsent.ts'];
 
-const projectRoot = resolve(import.meta.dirname, '../../../..');
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const projectRoot = repoRootFromUrl(import.meta.url);
 
 function readRepoSource(rel: string): string {
   return readFileSync(join(projectRoot, ...rel.split('/')), 'utf8');

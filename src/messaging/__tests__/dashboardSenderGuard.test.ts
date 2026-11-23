@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { resolve, dirname, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve, join, sep } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
-const SRC_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const SRC_ROOT = join(repoRootFromUrl(import.meta.url), 'src');
 
 /**
  * Collect production .ts files: skip test doubles (__tests__ dirs, *.test.ts,

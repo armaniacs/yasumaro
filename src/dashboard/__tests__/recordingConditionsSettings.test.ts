@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * recordingConditionsSettings.test.ts
  * Tests for dashboard recording conditions settings panel.

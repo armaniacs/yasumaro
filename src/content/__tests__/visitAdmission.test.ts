@@ -213,3 +213,37 @@ describe('resolveVisitAdmission', () => {
     expect(deps.warns[0]?.[0]).toBe('[OWeave] Dynamic import blocked (e2e)');
   });
 });
+
+describe('resolveVisitAdmission - cache read failure (PBI 2026-11-08-05)', () => {
+  it('records the failure and defers to the background verdict instead of rejecting', async () => {
+    const deps = admissionDeps({
+      checkCache: async () => {
+        throw new Error('storage gone');
+      },
+    });
+
+    await expect(resolveVisitAdmission(deps)).resolves.toBe('injected');
+    expect(deps.injected.count).toBe(1);
+    expect(deps.sendCheckDomain).toHaveBeenCalled();
+    expect(deps.warns).toHaveLength(1);
+    expect(deps.warns[0]?.[0]).toBe('[OWeave] Domain cache read failed');
+    expect(deps.warns[0]?.[1]).toBe('https://example.com/page');
+    expect(deps.warns[0]?.[2]).toContain('storage gone');
+  });
+
+  it('skips with a record when both the cache read and the background verdict fail', async () => {
+    const deps = admissionDeps({
+      checkCache: async () => {
+        throw new Error('storage gone');
+      },
+      sendCheckDomain: async () => undefined,
+    });
+
+    await expect(resolveVisitAdmission(deps)).resolves.toBe('skipped');
+    expect(deps.injected.count).toBe(0);
+    expect(deps.warns.map((w) => w[0])).toContain('[OWeave] Domain cache read failed');
+    expect(deps.warns.map((w) => w[0])).toContain(
+      '[OWeave] Domain check failed: no response from service worker',
+    );
+  });
+});

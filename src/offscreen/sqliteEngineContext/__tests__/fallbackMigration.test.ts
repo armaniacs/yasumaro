@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Unit tests for fallbackMigration.ts (PBI-01 extraction).
  * Covers FallbackStorage -> IDB migration and the OPFS_FALLBACK_MODE flag

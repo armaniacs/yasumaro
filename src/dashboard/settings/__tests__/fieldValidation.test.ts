@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * fieldValidation.test.ts
  * fieldValidation.ts の単体テスト

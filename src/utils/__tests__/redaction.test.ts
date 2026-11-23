@@ -2,7 +2,15 @@
  * redaction.ts のテスト
  */
 
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { maskSensitiveData, redactHeaderValue, consoleSecureError, SENSITIVE_HEADER_REASONS } from '../sensitiveDataMask.js';
+// Side-effect import: consoleSecureError reaches the logger seam via a
+// dynamic import, which only settles once the seam module is in the graph
+// (production callers always load the logger; tests must do the same).
+import '../logger/api.js';
+import { initLogger, resetLoggerWiring, getLogs } from '../logger/core.js';
+import { InMemoryLogAdapter } from '../logger/storageAdapter.js';
+import { ImmediateFlushScheduler } from '../logger/flushScheduler.js';
 
 describe('redactHeaderValue', () => {
   describe('authorization reason', () => {
@@ -130,45 +138,62 @@ describe('redactSensitiveData', () => {
 });
 
 describe('consoleSecureError', () => {
-  const originalConsoleError = console.error;
+  // PBI 2026-11-11-03: thin seam-delegation wrapper. The redacted payload
+  // travels the logger seam; no direct console.error leaves this module on
+  // the primary path (a last-resort console remains only when the seam
+  // module itself cannot load).
+  beforeEach(() => {
+    initLogger({
+      storage: new InMemoryLogAdapter(),
+      scheduler: new ImmediateFlushScheduler(),
+    });
+  });
 
   afterEach(() => {
-    console.error = originalConsoleError;
+    resetLoggerWiring();
+    vi.restoreAllMocks();
   });
 
-  it('redacts data before logging a console error', () => {
-    const errors: unknown[] = [];
-    console.error = (...args: unknown[]) => {
-      errors.push(args);
-    };
+  async function flushAsyncChain(): Promise<void> {
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    for (let i = 0; i < 50; i++) await Promise.resolve();
+  }
+
+  it('redacts data and routes it through the logger seam', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     consoleSecureError('Test error', { obsidian_api_key: 'secret', name: 'test' });
+    await flushAsyncChain();
 
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toEqual(['Test error', { obsidian_api_key: '[REDACTED]', name: 'test' }]);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const logs = await getLogs();
+    const entry = logs[logs.length - 1];
+    expect(entry).toBeDefined();
+    expect(entry!.message).toBe('Test error');
+    expect(JSON.stringify(entry)).not.toContain('secret');
+    expect(JSON.stringify(entry)).toContain('test');
   });
 
-  it('logs only the message when data is undefined', () => {
-    const errors: unknown[] = [];
-    console.error = (...args: unknown[]) => {
-      errors.push(args);
-    };
+  it('routes only the message through the seam when data is undefined', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     consoleSecureError('Error without data', undefined);
+    await flushAsyncChain();
 
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toEqual(['Error without data']);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const logs = await getLogs();
+    expect(logs[logs.length - 1]!.message).toBe('Error without data');
   });
 
-  it('logs only the message when data is null', () => {
-    const errors: unknown[] = [];
-    console.error = (...args: unknown[]) => {
-      errors.push(args);
-    };
+  it('routes only the message through the seam when data is null', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     consoleSecureError('Error with null', null);
+    await flushAsyncChain();
 
-    expect(errors).toHaveLength(1);
-    expect(errors[0]).toEqual(['Error with null']);
+    expect(errorSpy).not.toHaveBeenCalled();
+    const logs = await getLogs();
+    expect(logs[logs.length - 1]!.message).toBe('Error with null');
   });
 });

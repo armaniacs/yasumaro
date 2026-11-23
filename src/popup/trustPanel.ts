@@ -103,8 +103,12 @@ export async function updateTrustStatus(url: string): Promise<void> {
 
     // PBI 2026-09-12-41: string building moved to the statusRenderers seam.
     setElementHtml(trustContent, renderTrustHtml(display, checkResult, { t: getMessage, esc: escapeHtml }));
-  } catch {
+  } catch (updateError) {
     setElementHtml(trustContent, renderTrustFallbackHtml({ t: getMessage, esc: escapeHtml }));
+    // The fallback alone made an outage look like "no info yet" — report the
+    // failure on the shared status seam so it is visible as an error and
+    // logged instead of absorbed.
+    reportHandlerError('Failed to update trust status', updateError);
   }
 }
 

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Extra tests for extractor.ts — covers module-level guard, i18n fallback paths,
  * reportValidVisit error branches, and exported state from extractPageContent.
@@ -102,48 +102,50 @@ describe('extractPageContent — state tracking', () => {
     );
   });
 
-  it('updates getPageStateForTesting().lastCleanseStats when extractMainContent returns object', () => {
+  it('updates getPageStateForTesting().lastCleanseStats when extractMainContent returns object', async () => {
     document.body.innerHTML = `<article><p>Some content here with enough text for extraction.</p></article>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(result.totalRemoved ?? 0).toBeGreaterThanOrEqual(0);
     expect(result.hardStripRemoved ?? 0).toBeGreaterThanOrEqual(0);
     expect(result.keywordStripRemoved ?? 0).toBeGreaterThanOrEqual(0);
   });
 
-  it('updates getPageStateForTesting().lastByteStats after extraction', () => {
+  it('updates getPageStateForTesting().lastByteStats after extraction', async () => {
     document.body.innerHTML = `<article><p>Content bytes tracking test with enough text.</p></article>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(result.pageBytes ?? 0).toBeGreaterThan(0);
     expect(result.originalBytes ?? 0).toBeGreaterThan(0);
   });
 
-  it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
+  it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', async () => {
     document.body.innerHTML = `<article><p>AI summary cleansing stats test with enough text here.</p></article>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(result.aiSummaryOriginalBytes ?? 0).toBeGreaterThanOrEqual(0);
     expect(result.aiSummaryCleansedReason).toBeDefined();
   });
 
-  it('tracks fallback triggered state', () => {
+  it('tracks fallback triggered state', async () => {
     document.body.innerHTML = `<p>Minimal content.</p>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
   });
 
-  it('does not throw when document.body is minimal', () => {
+  it('does not throw when document.body is minimal', async () => {
     document.body.innerHTML = `<span>tiny</span>`;
-    expect(() => extractPageContent()).not.toThrow();
-  });
-
-  it('returns string even when no main article candidate is found', () => {
-    document.body.innerHTML = `<header><nav><a href="/">link</a></nav></header>`;
-    const result = extractPageContent();
+    // PBI 1116b: async seam — resolves instead of rejecting; a rejection fails the test.
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
-  it('extracts from <section> when <article>/<main> are absent', () => {
+  it('returns string even when no main article candidate is found', async () => {
+    document.body.innerHTML = `<header><nav><a href="/">link</a></nav></header>`;
+    const result = await extractPageContent();
+    expect(typeof result.content).toBe('string');
+  });
+
+  it('extracts from <section> when <article>/<main> are absent', async () => {
     document.body.innerHTML = `<section><h2>Section heading</h2><p>Section content here.</p></section>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 });
@@ -219,7 +221,7 @@ describe('extractPageContent — cleansing options via loadSettings', () => {
     );
     await init();
     document.body.innerHTML = `<article><p>Dedup test content with sufficient text length here.</p></article>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 
@@ -240,7 +242,7 @@ describe('extractPageContent — cleansing options via loadSettings', () => {
     );
     await init();
     document.body.innerHTML = `<article><p>All toggles off content with enough text here.</p></article>`;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 });
@@ -262,8 +264,8 @@ describe('reportValidVisit error path simulation', () => {
     expect(typeof init).toBe('function');
   });
 
-  it('extractPageContent produces a string', () => {
-    const result = extractPageContent();
+  it('extractPageContent produces a string', async () => {
+    const result = await extractPageContent();
     expect(typeof result.content).toBe('string');
   });
 });
@@ -280,7 +282,7 @@ describe('extractPageContent — with cleansedReason tracking', () => {
     );
   });
 
-  it('tracks aiSummaryCleansedReasons when available', () => {
+  it('tracks aiSummaryCleansedReasons when available', async () => {
     document.body.innerHTML = `
       <article>
         <p>Some article text with enough content for extraction and ai summary tracking.</p>
@@ -288,7 +290,7 @@ describe('extractPageContent — with cleansedReason tracking', () => {
         <nav><a href="/">nav link</a></nav>
       </article>
     `;
-    const result = extractPageContent();
+    const result = await extractPageContent();
     expect(Array.isArray(result.aiSummaryCleansedReasons) || result.aiSummaryCleansedReasons === undefined).toBe(true);
   });
 });

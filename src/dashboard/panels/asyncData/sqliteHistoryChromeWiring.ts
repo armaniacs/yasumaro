@@ -1,11 +1,12 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
 import {
   endOfLocalDayMs,
+  formatLocalDate,
   parseLocalDateStart,
 } from '../../../utils/localDate.js';
-import { escapeHtml } from '../../../utils/htmlEscape.js';
 import { setElementHtml } from '../../../utils/htmlFragment.js';
-import { formatDate, SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
+import { buildSelectOptionsHtml } from './collectionSelectBuilder.js';
+import { SQLITE_HISTORY_IDS } from './sqliteHistoryIds.js';
 import type { SqliteHistoryState } from './sqliteHistoryPanelState.js';
 import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 
@@ -13,8 +14,10 @@ import type { SqliteHistoryViewCallbacks } from './sqliteHistoryPanelView.js';
 // Chrome wiring (PBI 2026-11-07-13) — calendar/sort build + wire, moved
 // verbatim from sqliteHistoryPanelView.ts. The View re-exports every name
 // below so existing importers keep working; new code should import from this
-// module directly. `formatDate` and `SQLITE_HISTORY_IDS` stay owned by the
-// View and are imported from it (deferred use only, no top-level reads).
+// module directly. `formatDate` stays owned by the View as a compat
+// wrapper over `formatLocalDate`; this module uses the utils SSOT directly.
+// `SQLITE_HISTORY_IDS` is owned by `./sqliteHistoryIds.js`, so this module
+// never value-imports the View (PBI 2026-11-11-02).
 // ---------------------------------------------------------------------------
 
 function queryById<T extends Element>(root: ParentNode, id: string): T | null {
@@ -53,10 +56,14 @@ export function buildSortControlHtml(
   // a matching selected option.
   const safeValue = options.some(o => o.value === currentValue) ? currentValue : sortSelectValue('created_at', 'DESC');
 
+  const selectOptions = buildSelectOptionsHtml(
+    options.map((o) => ({ value: o.value, label: o.label, selected: o.value === safeValue })),
+  );
+
   return `
     <label class="sqlite-sort-label" for="sqlite-sort-select">${t('historySortLabel') || '並び替え'}</label>
     <select id="${SQLITE_HISTORY_IDS.sortSelect}" aria-label="${t('historySortLabel') || '並び替え'}">
-      ${options.map(o => `<option value="${o.value}"${o.value === safeValue ? ' selected' : ''}>${escapeHtml(o.label)}</option>`).join('')}
+      ${selectOptions}
     </select>
   `;
 }
@@ -84,10 +91,10 @@ export function buildCalendarNavHtml(
 
   const html = `
     <div class="sqlite-calendar-quick">
-      <button data-date="${formatDate(now)}">${t('historyToday')}</button>
-      <button data-date="${formatDate(new Date(now.getTime() - 86400000))}">${t('historyYesterday')}</button>
-      <button data-date="${formatDate(now)}" data-range="7">${t('historyLast7Days')}</button>
-      <button data-date="${formatDate(now)}" data-range="30">${t('historyLast30Days')}</button>
+      <button data-date="${formatLocalDate(now)}">${t('historyToday')}</button>
+      <button data-date="${formatLocalDate(new Date(now.getTime() - 86400000))}">${t('historyYesterday')}</button>
+      <button data-date="${formatLocalDate(now)}" data-range="7">${t('historyLast7Days')}</button>
+      <button data-date="${formatLocalDate(now)}" data-range="30">${t('historyLast30Days')}</button>
       ${hasActiveFilters ? `<button type="button" id="${SQLITE_HISTORY_IDS.clearAllFilters}" class="sqlite-clear-filters-btn" aria-label="${t('clearAllFilters') || 'Clear all filters'}">${t('clearAllFilters') || '条件をクリア'}</button>` : ''}
       <button type="button" id="${SQLITE_HISTORY_IDS.sendToCollection}" class="sqlite-send-to-collection-btn">${t('historySendToCollection')}</button>
     </div>
@@ -116,7 +123,7 @@ export function buildCalendarDaysHtml(year: number, month: number, selectedDate:
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isSelected = dateStr === selectedDate;
-    const isToday = dateStr === formatDate(now);
+    const isToday = dateStr === formatLocalDate(now);
     const dateLabel = `${year}${t('historyDateYear')}${month + 1}${t('historyDateMonth')}${d}${t('historyDateDay')}`;
     daysHtml += `<button type="button" class="day${isSelected ? ' selected' : ''}${isToday ? ' today' : ''}"
       data-date="${dateStr}" aria-pressed="${isSelected}" aria-label="${dateLabel}">${d}</button>`;
@@ -177,11 +184,11 @@ export function wireCalendarNav(
 
   region.querySelector('[data-month-prev]')?.addEventListener('click', () => {
     const d = new Date(year, month - 1, 1);
-    callbacks.onDateSelect(formatDate(d));
+    callbacks.onDateSelect(formatLocalDate(d));
   });
   region.querySelector('[data-month-next]')?.addEventListener('click', () => {
     const d = new Date(year, month + 1, 1);
-    callbacks.onDateSelect(formatDate(d));
+    callbacks.onDateSelect(formatLocalDate(d));
   });
 
   region.querySelector(`#${SQLITE_HISTORY_IDS.clearAllFilters}`)?.addEventListener('click', () => {

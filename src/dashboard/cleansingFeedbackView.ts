@@ -4,6 +4,7 @@ import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { readRemovedCounts } from '../utils/commonTypes.js';
 import type { AiSummaryRemovedStats } from '../utils/commonTypes.js';
 import { ruleLabelFallback, ruleMessageKey } from '../utils/aiSummaryCleaner/ruleLabels.js';
+import { formatLocaleDateTime } from '../utils/localeUtils.js';
 import { formatBytes } from './byteFormat.js';
 
 /** Reason label for a cleansing rule key, falling back to the raw key. */
@@ -133,7 +134,7 @@ export async function renderCleansingFeedback(container: HTMLElement): Promise<v
     const tdReason = document.createElement('td');
     renderReasonCell(tdReason, e.removedByReason, e.aiSummary);
     const tdDate = document.createElement('td');
-    tdDate.textContent = new Date(e.createdAt).toLocaleString();
+    tdDate.textContent = formatLocaleDateTime(e.createdAt);
     const tdAction = document.createElement('td');
     const delBtn = document.createElement('button');
     delBtn.textContent = getMessageOr('cleansingFeedbackDelete', '削除');

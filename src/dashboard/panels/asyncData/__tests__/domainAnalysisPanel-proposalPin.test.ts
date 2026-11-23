@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * domainAnalysisPanel-proposalPin.test.ts
  * Behavior pin for a single domain-intel proposal (PBI 2026-10-23-08):

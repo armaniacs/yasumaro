@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Golden parity test for the two settings-purge subtypes (purge_now /
  * content_purge_now). It pins the shared flow the refactor extracts into

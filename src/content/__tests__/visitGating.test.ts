@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * visitGating.test.ts (PBI 2026-09-23-08)
  * Pins the VisitGating single-owner seam: evaluate(state, now) verdict
@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import { ContentKernel } from '../contentKernel.js';
 import { VisitGating, applySettingsTable } from '../visitGating.js';
 import { VisitGate } from '../visitGate.js';
@@ -190,8 +191,11 @@ describe('applySettingsTable — the moved loadSettings mapping', () => {
 });
 
 describe('kernel seam pins (PBI 2026-09-23-08 DoD)', () => {
-    const kernelSrc = readFileSync(join(process.cwd(), 'src/content/contentKernel.ts'), 'utf8');
-    const timerSrc = readFileSync(join(process.cwd(), 'src/content/deadlineTimer.ts'), 'utf8');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const repoRoot = repoRootFromUrl(import.meta.url);
+    const kernelSrc = readFileSync(join(repoRoot, 'src/content/contentKernel.ts'), 'utf8');
+    const timerSrc = readFileSync(join(repoRoot, 'src/content/deadlineTimer.ts'), 'utf8');
 
     it('gate construction lives only in the gating module', () => {
         expect(kernelSrc).not.toMatch(/new\s+VisitGate/);

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * accordionValueBinding.test.ts
  * Regression for the B-layout bug where the "OpenAI互換 (Groq)" accordion body

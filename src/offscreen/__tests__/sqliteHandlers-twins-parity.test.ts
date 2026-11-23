@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHandlers-twins-parity.test.ts
  * PBI 2026-09-18-08: pins byte-identical fail-closed behavior of the purge

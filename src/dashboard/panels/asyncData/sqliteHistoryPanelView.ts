@@ -26,6 +26,7 @@ import {
 // Page size — SSOT via the model so the query limit and the pagination
 // control share one definition (PBI 04).
 import { SQLITE_HISTORY_PAGE_SIZE } from './sqliteHistoryModel.js';
+import { SQLITE_HISTORY_IDS } from './sqliteHistoryIds.js';
 // Confirm dialogs + calendar/sort chrome (PBI 2026-11-07-13): owned by the
 // sibling modules below, re-exported here so existing importers keep working.
 import {
@@ -256,42 +257,12 @@ export function buildPanelShellHtml(state: SqliteHistoryState, translateHistoryE
  * ask-history / research-report regions moved to their standalone panels
  * (PBI 2026-11-01-01..03); their placeholder ids are owned by the region
  * modules and this shell no longer renders them (PBI 2026-11-01-04).
+ *
+ * SSOT lives in `./sqliteHistoryIds.js` (PBI 2026-11-11-02) so the
+ * chrome wiring / confirm dialogs no longer value-import this View;
+ * re-exported here so existing importers keep working.
  */
-export const SQLITE_HISTORY_IDS = {
-  searchInput: 'sqlite-search-input',
-  sortControl: 'sqlite-sort-control',
-  sortSelect: 'sqlite-sort-select',
-  calendarNav: 'sqlite-calendar-nav',
-  calendarDays: 'sqlite-calendar-days',
-  clearAllFilters: 'sqlite-clear-all-filters',
-  pendingRegion: 'sqlite-pending-region',
-  entryList: 'sqlite-entry-list',
-  pagination: 'sqlite-pagination',
-  error: 'sqlite-error',
-  bulkBar: 'sqlite-bulk-bar',
-  selectAll: 'sqlite-select-all',
-  clearSelection: 'sqlite-clear-selection',
-  selectionCount: 'sqlite-selection-count',
-  appendObsidian: 'sqlite-append-obsidian',
-  regenerateSelected: 'sqlite-regenerate-selected',
-  deleteSelected: 'sqlite-delete-selected',
-  // Bulk star (PBI 2026-10-23-07): two-step confirm with a private-judged
-  // exclusion branch, then an inline undo for the applied batch.
-  starSelected: 'sqlite-star-selected',
-  starConfirm: 'sqlite-star-confirm',
-  starConfirmAll: 'sqlite-star-confirm-all',
-  starConfirmExclude: 'sqlite-star-confirm-exclude',
-  starConfirmCancel: 'sqlite-star-confirm-cancel',
-  starUndo: 'sqlite-star-undo',
-  starUndoBtn: 'sqlite-star-undo-btn',
-  deleteConfirm: 'sqlite-delete-confirm',
-  deleteConfirmYes: 'sqlite-delete-confirm-yes',
-  deleteConfirmNo: 'sqlite-delete-confirm-no',
-  tagFilterBar: 'sqlite-tag-filter-bar',
-  tagFilterClear: 'sqlite-tag-filter-clear',
-  sendToCollection: 'sqlite-send-to-collection',
-  handoffReason: 'sqlite-handoff-reason',
-} as const;
+export { SQLITE_HISTORY_IDS } from './sqliteHistoryIds.js';
 
 /** Event + dependency bundle the Panel builds once and hands to `render()`. */
 export interface SqliteHistoryViewCallbacks {

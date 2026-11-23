@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import type { AuditLogEntry, AuditLogRecord } from '../../utils/sqlite-types.js';
 

@@ -31,6 +31,74 @@ function toFiniteNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Final-defense validation for the SQLite write path (PBI 2026-11-08-06).
+ *
+ * buildRecordFromPayload below stays a lenient coercer (dashboard and
+ * migration senders rely on its numeric-string/boolean coercion), so it can
+ * still turn a finite out-of-range number into a stored value that violates
+ * the schema CHECKs (visit_duration < 0, scroll_ratio outside 0..1, flags
+ * outside 0/1) and fails the whole write at the backend. This validator
+ * rejects exactly those values — plus non-object rows and a
+ * missing/empty/non-string url (which buildRecordFromPayload would otherwise
+ * coerce to ''), which String() would mangle — so the offscreen runners
+ * fail closed with the field named. Everything else keeps the legacy coercion:
+ * absent/nullable fields, numeric strings, booleans for flags, and
+ * non-finite numbers (which the codec already neutralizes to null/0/now).
+ *
+ * Returns the rejection reason, or null when the payload may proceed.
+ */
+const CODEC_TEXT_FIELDS: ReadonlySet<string> = new Set([
+  'title', 'summary', 'tags', 'domain', 'content', 'cleansed_reason',
+  'ai_provider', 'ai_model', 'fallback_reason', 'nav_source_url', 'search_query',
+]);
+
+const CODEC_FLAG_FIELDS: ReadonlySet<string> = new Set([
+  'is_starred', 'is_deleted', 'obsidian_synced', 'gist_synced', 'fallback_triggered',
+]);
+
+export function validateRecordForInsert(payload: unknown): string | null {
+  if (payload === null || typeof payload !== 'object' || Array.isArray(payload)) {
+    return 'must be an object';
+  }
+  const r = payload as Record<string, unknown>;
+  // url is required and must be a non-empty string. An absent url used to
+  // pass here and reach the backend as '' (see buildRecordFromPayload's ''
+  // coercion below), which is indistinguishable from a real value: it
+  // pollutes the url column and the (url, created_at) uniqueness with empty
+  // rows. A whitespace-only url is rejected for the same reason — it carries
+  // no address information and would pollute the column with blank rows that
+  // are just as indistinguishable from each other as empty ones.
+  // buildRecordFromPayload keeps its '' coercion for legacy callers, but
+  // the validated write path (the offscreen insert runners above it)
+  // never lets a url-less payload get that far.
+  const url = r.url;
+  if (typeof url !== 'string' || url.length === 0 || url.trim().length === 0) {
+    return 'url must be a non-empty string';
+  }
+  for (const field of CODEC_TEXT_FIELDS) {
+    const v = r[field];
+    if (v !== undefined && v !== null && (typeof v === 'object' || typeof v === 'function' || typeof v === 'symbol')) {
+      return `${field} must be a string`;
+    }
+  }
+  const visitDuration = r.visit_duration;
+  if (typeof visitDuration === 'number' && visitDuration < 0) {
+    return 'visit_duration must be >= 0';
+  }
+  const scrollRatio = r.scroll_ratio;
+  if (typeof scrollRatio === 'number' && (scrollRatio < 0 || scrollRatio > 1)) {
+    return 'scroll_ratio must be between 0 and 1';
+  }
+  for (const field of CODEC_FLAG_FIELDS) {
+    const v = r[field];
+    if (typeof v === 'number' && Number.isFinite(v) && v !== 0 && v !== 1) {
+      return `${field} must be 0 or 1`;
+    }
+  }
+  return null;
+}
+
 export function buildRecordFromPayload(payload: Record<string, unknown>): BrowsingLogRecord {
   return {
     url: payload.url != null ? String(payload.url) : '',

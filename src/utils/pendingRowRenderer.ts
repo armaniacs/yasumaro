@@ -12,6 +12,7 @@
 import { tOrKey as t } from './i18n.js';
 import { escapeHtml } from './htmlEscape.js';
 import { isSecureUrl } from './urlUtils.js';
+import { formatTimestamp as formatTimestampSeam } from './localeUtils.js';
 import { renderPendingReason } from './pendingStorage.js';
 import type { PendingPage } from './pendingStorage.js';
 
@@ -23,15 +24,15 @@ import type { PendingPage } from './pendingStorage.js';
  */
 export type PendingRowVariant = { readonly mode: 'checkbox' } | { readonly mode: 'actions' };
 
-/** Thin `Date` wrapper — moved from `sqliteHistoryPanelView` with the row that needs it. */
+/**
+ * 短い月日+時刻表示 (PBI 2026-11-11-05)。
+ *
+ * 正規の実装は `localeUtils.formatTimestamp` に集約。この関数は公開名維持の
+ * ための薄い委譲ラッパーであり、表示文字列は従来と同一。
+ * (旧: sqliteHistoryPanelView から row と共に移ってきた Thin `Date` wrapper)
+ */
 export function formatTimestamp(ts: number): string {
-  const d = new Date(ts);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
+  return formatTimestampSeam(ts);
 }
 
 /**

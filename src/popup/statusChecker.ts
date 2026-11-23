@@ -1,5 +1,3 @@
-import { getMessage, getMessageOr } from '../utils/i18n.js';
-import { getPluralKey } from '../utils/i18nPlural.js';
 import { getSavedUrlsWithTimestamps } from '../utils/storage/savedUrlRepository.js';
 import { settingsRepository } from '../utils/storage/SettingsRepository.js';
 import { isDomainAllowed, extractDomain, isDomainInList } from '../utils/domainUtils.js';
@@ -11,6 +9,7 @@ import { hashUrl } from '../utils/urlHash.js';
 import { matchesDomainPattern } from '../utils/wildcardToRegex.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import { normalizeUrlSafe } from '../utils/urlUtils.js';
+import { formatTimeAgo } from '../utils/localeUtils.js';
 import type { PrivacyInfo } from '../utils/privacyChecker.js';
 
 /** Boundary guard for the persisted domain_filter_mode (PBI 20). */
@@ -45,57 +44,13 @@ export interface StatusInfo {
   };
 }
 
-interface TimeFormat {
-  timeAgo: string;
-  formatted: string;
-}
-
-export function formatTimeAgo(timestamp: number): TimeFormat {
-  const now = Date.now();
-  const diff = now - timestamp;
-  const date = new Date(timestamp);
-
-  // 相対時間
-  let timeAgo: string;
-  if (diff < 60 * 1000) {
-    timeAgo = getMessageOr('timeJustNow', 'たった今');
-  } else if (diff < 60 * 60 * 1000) {
-    const minutes = Math.floor(diff / (60 * 1000));
-    const msg = getMessage(getPluralKey('timeMinutesAgo', minutes), { count: minutes });
-    timeAgo = msg || `${minutes}分前`;
-  } else if (diff < 24 * 60 * 60 * 1000) {
-    const hours = Math.floor(diff / (60 * 60 * 1000));
-    const msg = getMessage(getPluralKey('timeHoursAgo', hours), { count: hours });
-    timeAgo = msg || `${hours}時間前`;
-  } else if (diff < 48 * 60 * 60 * 1000) {
-    timeAgo = getMessageOr('timeYesterday', '昨日');
-  } else {
-    const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-    const msg = getMessage(getPluralKey('timeDaysAgo', days), { count: days });
-    timeAgo = msg || `${days}日前`;
-  }
-
-  // 絶対時間
-  const today = new Date(now);
-  const isToday =
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  let formatted: string;
-
-  if (isToday) {
-    formatted = `${hours}:${minutes}`;
-  } else {
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    formatted = `${month}/${day} ${hours}:${minutes}`;
-  }
-
-  return { timeAgo, formatted };
-}
+/**
+ * 相対時刻表示の正規の置き場所は `utils/localeUtils.ts` (PBI 2026-11-11-05)。
+ * この再exportは公開名維持の互換ラッパーであり、既存 importer
+ * (popup・そのテスト) は変更なしに動き続ける。
+ */
+export { formatTimeAgo };
+export type { TimeFormat } from '../utils/localeUtils.js';
 
 /**
  * Find matching pattern from domain list
@@ -117,11 +72,19 @@ function findMatchedPattern(domain: string, domainList: string[] | undefined): s
 }
 
 export async function checkPageStatus(url: string): Promise<StatusInfo | null> {
-  // Special URLs. This popup-side list is a deliberate subset of the
-  // content-script SSOT SKIPPED_PROTOCOLS (src/content/urlSkipper.ts):
-  // 'about:' as a prefix covers the SSOT's about:blank/about:srcdoc rows,
-  // and data:/file:// URLs never reach the popup status check.
-  if (url.startsWith('chrome://') || url.startsWith('about:') || url.startsWith('edge://')) {
+  // Non-string inputs (e.g. a tab URL that is still undefined) cannot be
+  // checked; treat them like any other non-page URL instead of throwing.
+  if (typeof url !== 'string') return null;
+  // Special URLs. This popup-side list is the content-script SSOT
+  // SKIPPED_PROTOCOLS (src/content/urlSkipper.ts) subset plus a
+  // view-source: extension: 'about:' as a prefix covers the SSOT's
+  // about:blank/about:srcdoc rows.
+  // Scheme comparison is case-insensitive (URL schemes are ASCII
+  // case-insensitive, so 'CHROME://' must hit the same guard).
+  const loweredUrl = url.toLowerCase();
+  if (loweredUrl.startsWith('chrome://') || loweredUrl.startsWith('about:') || loweredUrl.startsWith('edge://')
+    || loweredUrl.startsWith('chrome-extension://') || loweredUrl.startsWith('moz-extension://')
+    || loweredUrl.startsWith('file://') || loweredUrl.startsWith('data:') || loweredUrl.startsWith('view-source:')) {
     return null;
   }
 

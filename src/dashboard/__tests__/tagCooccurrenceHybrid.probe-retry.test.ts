@@ -88,7 +88,8 @@ describe('computeTagCooccurrenceHybrid probe retry (PBI 2026-09-21-09)', () => {
         }
 
         expect(mockInit).toHaveBeenCalledTimes(3);
-        expect(warnSpy).toHaveBeenCalledTimes(1);
+        // PBI 2026-11-11-03: single seam line per burst (was console.warn + addLog double-fire).
+        expect(warnSpy).not.toHaveBeenCalled();
         expect(mockAddLog).toHaveBeenCalledTimes(1);
     });
 });

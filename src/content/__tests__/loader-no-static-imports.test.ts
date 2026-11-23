@@ -23,8 +23,11 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
-const LOADER_PATH = path.resolve(__dirname, '..', 'loader.ts');
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const LOADER_PATH = path.join(repoRootFromUrl(import.meta.url), 'src/content/loader.ts');
 
 describe('loader.ts - Content Script 静的インポート方針', () => {
     let source: string;

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * navigateToHistoryWithTag unit tests: registry-backed navigation on the
  * happy path and the legacy 'navigate-to-tag' CustomEvent fallback

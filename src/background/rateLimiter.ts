@@ -1,7 +1,9 @@
-import { SessionStore, SESSION_KEYS, type SessionStorePort } from './sessionStore.js';
+import { SessionStore, SESSION_KEYS, SessionStoreReadError, type SessionStorePort } from './sessionStore.js';
 import { RATE_LIMITS } from '../constants/appConstants.js';
 import { StorageKeys } from '../utils/storage/types.js';
 import { logWarn } from '../utils/logger/api.js';
+import { errorMessage } from '../utils/errorUtils.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 interface RateLimitEntry {
   count: number;
@@ -52,7 +54,19 @@ export class RateLimiter {
    * drift between the two.
    */
   private async loadState(clearExisting: boolean): Promise<void> {
-    const entries = await this.sessionStore.get<[string, RateLimitEntry][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
+    let entries: [string, RateLimitEntry][] | null;
+    try {
+      entries = await this.sessionStore.get<[string, RateLimitEntry][]>(SESSION_KEYS.SKIP_AI_RATE_LIMITER);
+    } catch (error) {
+      // Fail-visible degradation: keep the current in-memory state instead of
+      // hydrating, and say so. A SessionStoreReadError means "could not read",
+      // never "no entries".
+      if (error instanceof SessionStoreReadError) {
+        void logWarn('[RateLimiter] Failed to load state from session storage, keeping current state', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'rateLimiter');
+        return;
+      }
+      throw error;
+    }
     if (entries) {
       const now = Date.now();
       if (clearExisting) {

@@ -18,7 +18,38 @@ import { errorMessage } from '../../utils/errorUtils.js';
  * no structured kind to read. No current boundary may produce one of these
  * strings on purpose.
  */
-const LEGACY_NETWORK_MARKERS: readonly string[] = LEGACY_TRANSPORT_MARKERS_FULL;
+
+/**
+ * PBI 2026-11-08-07(3): the same markers as word/phrase patterns. A plain
+ * lowercase substring scan matches unrelated sentences ("prefetch failed
+ * gracefully" contains "fetch failed"; "networked cache" contains
+ * "network"), routing them to the offline queue. Word boundaries keep the
+ * ADR 2026-08-27 breadth (every enumerated word still matches) while
+ * refusing embeddings inside longer words.
+ *
+ * The boundary is alphanumeric-only on purpose (`\b` is wrong here):
+ * transport errors surface as snake_case tokens (`request_timeout`,
+ * `connection_reset`, `fetch_failed`) where the marker sits between
+ * underscores, and `\b` treats `_` as a word character so it never matches
+ * there. Only `[A-Za-z0-9]` counts as "inside a word": a marker flanked by
+ * underscores still matches, while one embedded in a longer alphanumeric
+ * run (`networked`, `prefetch`) does not.
+ *
+ * Runtime floor pin: the negative lookbehind `(?<![A-Za-z0-9])` below needs
+ * ES2018 regex support (Chrome 62+, Safari 16.4+, Node 10+). This repository
+ * targets ESNext with engines Node >= 24, so the syntax is always available;
+ * do not lower the tsconfig target below ES2018 without rewriting these
+ * patterns into lookbehind-free equivalents first.
+ */
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+const LEGACY_NETWORK_MARKER_PATTERNS: readonly RegExp[] = LEGACY_TRANSPORT_MARKERS_FULL.map(
+  // Plain concatenation (not a template literal): the `(?<!` lookbehind
+  // fragment would otherwise trip local/require-sanitized-markdown's `![` heuristic.
+  (marker) => new RegExp('(?<!' + '[A-Za-z0-9])' + escapeRegExp(marker) + '(?![A-Za-z0-9])', 'i'),
+);
 
 /**
  * RetryPolicy — owns offline-enqueue eligibility.
@@ -51,13 +82,18 @@ export class RetryPolicy {
     return this.isNetworkError(error);
   }
 
-  private matchesLegacyNetworkMarker(error: unknown): boolean {
-    const lower = errorMessage(error).toLowerCase();
-    if (LEGACY_NETWORK_MARKERS.some((marker) => lower.includes(marker))) {
+  private matchesLegacyNetworkMarker(error: unknown, seen: Set<unknown> = new Set()): boolean {
+    // A cyclic `cause` chain would recurse forever; each object is visited once.
+    if (typeof error === 'object' && error !== null) {
+      if (seen.has(error)) return false;
+      seen.add(error);
+    }
+    const text = errorMessage(error);
+    if (LEGACY_NETWORK_MARKER_PATTERNS.some((pattern) => pattern.test(text))) {
       return true;
     }
-    if (error instanceof Error && error.cause) {
-      return this.matchesLegacyNetworkMarker(error.cause);
+    if (error instanceof Error && error.cause !== undefined && error.cause !== null) {
+      return this.matchesLegacyNetworkMarker(error.cause, seen);
     }
     return false;
   }

@@ -67,15 +67,17 @@ export { escapeHtml } from '../utils/htmlEscape.js';
 /**
  * 内部キーワード定数（モジュールスコープでキャッシュ）
  * Problem #4: 関数呼び出しごとに配列が作成されるのを防ぐためにモジュールレベル定数として定義
+ *
+ * PBI 2026-11-08-14: 'at ' / '.js:' / '.ts:' は行丸ごと削除の対象にしない。
+ * 通常の英文（例: "Failed at step 3"）まで空行化され UNKNOWN 扱いで情報が
+ * 失われていた。スタック由来の除去は STACK_FRAME_LINE（行頭 at）と
+ * STACK_FRAME_REF（at file.js:10:5 形）に限定し、ここには実装語彙だけを残す。
  */
 const INTERNAL_KEYWORDS = [
   'Internal',
   'implementation',
   'function',
   'module',
-  'at ',
-  '.js:',
-  '.ts:',
   '0x',
   '堆疊',
   'スタック',
@@ -83,6 +85,12 @@ const INTERNAL_KEYWORDS = [
   'Address:',
   'Segfault'
 ];
+
+/** V8 形式のスタックフレーム行（例: "    at foo (file.js:10:5)"）。 */
+const STACK_FRAME_LINE = /^\s*at\b/;
+
+/** 行内に埋め込まれた "at file.js:10:5" 形式の参照。 */
+const STACK_FRAME_REF = /\bat\s+\S+\.[jt]s(?::\d+)+/g;
 
 interface MessagesCache {
   connectionError: string;
@@ -190,15 +198,19 @@ export function getErrorType(error: unknown): ErrorTypeValues {
 export function sanitizeErrorMessage(message: string): string {
   if (!message) return '';
 
-  let sanitized = message;
+  // スタックフレーム由来の断片だけを除去し、正規の英文行は残す。
+  // 行頭 at / at file.js:10:5 形だけが対象で、"Failed at step 3" のような
+  // 通常文は INTERNAL_KEYWORDS に触れない限りそのまま残る。
+  const kept: string[] = [];
+  for (const line of message.split('\n')) {
+    const withoutRef = line.replace(STACK_FRAME_REF, '').trim();
+    if (!withoutRef) continue;
+    if (STACK_FRAME_LINE.test(withoutRef)) continue;
+    if (INTERNAL_KEYWORDS.some(keyword => withoutRef.includes(keyword))) continue;
+    kept.push(withoutRef);
+  }
 
-  // 内部キーワードを含む行を削除
-  const lines = sanitized.split('\n');
-  sanitized = lines.filter(line => {
-    return !INTERNAL_KEYWORDS.some(keyword => line.includes(keyword));
-  }).join(' ');
-
-  return sanitized.trim();
+  return kept.join(' ');
 }
 
 /**

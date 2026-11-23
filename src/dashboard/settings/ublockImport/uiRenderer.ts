@@ -7,6 +7,7 @@ import { isValidUrl } from './validation.js';
 import { getMessage } from '../../../utils/i18n.js';
 import { clearElement } from '../../../utils/domClear.js';
 import { getPluralKey } from '../../../utils/i18nPlural.js';
+import { formatLocaleDateTime } from '../../../utils/localeUtils.js';
 
 interface Source {
   url: string;
@@ -92,7 +93,7 @@ function createSourceItem(source: Source, index: number): HTMLElement {
   }
 
   const date = new Date(source.importedAt);
-  const dateStr = date.toLocaleString(navigator.language || 'en-US');
+  const dateStr = formatLocaleDateTime(date);
 
   const metaDiv = document.createElement('div');
   metaDiv.className = 'source-meta';

@@ -4,9 +4,8 @@
  * chrome global mock なしに NTP skew / 二重ロック挙動を純粋テストする。
  */
 
-import { useTimerClock } from '../../../testDir/waitPolicy.js';
-import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { RateLimitService, RATE_LIMIT_WRITE_COALESCE_MS } from '../RateLimitService.js';
+import { describe, test, expect, beforeEach } from 'vitest';
+import { RateLimitService } from '../RateLimitService.js';
 import type { Clock, StoragePort, StorageArea } from '../ports.js';
 
 class InMemoryStorageArea implements StorageArea {
@@ -204,58 +203,66 @@ describe('RateLimitService', () => {
   });
 });
 
-describe('RateLimitService 書き込み合体 (PBI-17)', () => {
+describe('RateLimitService immediate persistence (PBI 2026-11-08-09)', () => {
   let clock: FakeClock;
   let session: CountingStorageArea;
   let local: CountingStorageArea;
   let service: RateLimitService;
 
   beforeEach(() => {
-    useTimerClock();
     clock = new FakeClock(1_000_000);
     session = new CountingStorageArea();
     local = new CountingStorageArea();
     service = new RateLimitService(clock, { session, local });
   });
 
-  afterEach(async () => {
-    await service.flushPendingWrites();
-    vi.useRealTimers();
-  });
-
-  test('coalesces writes from consecutive failed attempts', async () => {
-    await service.recordFailedAttempt();
-    await service.recordFailedAttempt();
+  test('persists a single sub-threshold failure to both stores immediately', async () => {
     await service.recordFailedAttempt();
 
-    // 合体ウィンドウ内はストレージ書き込みが発生しない
-    expect(session.setCalls).toBe(0);
-    expect(local.setCalls).toBe(0);
-
-    await vi.advanceTimersByTimeAsync(RATE_LIMIT_WRITE_COALESCE_MS);
-
-    // 最終値のみ1回ずつ書き込まれる
+    // No timer, no explicit flush: the count is already durable.
     expect(session.setCalls).toBe(1);
     expect(local.setCalls).toBe(1);
     const sessionData = await session.get<{ passwordFailedAttempts: number; firstFailedAttemptTime: number }>([
       'passwordFailedAttempts',
       'firstFailedAttemptTime',
     ]);
-    expect(sessionData.passwordFailedAttempts).toBe(3);
+    expect(sessionData.passwordFailedAttempts).toBe(1);
     expect(sessionData.firstFailedAttemptTime).toBe(1_000_000);
   });
 
-  test('flushes both stores immediately on lockout without delay', async () => {
-    for (let i = 0; i < 4; i++) {
-      await service.recordFailedAttempt();
-    }
-    expect(session.setCalls).toBe(0);
-
+  test('accumulates consecutive failures without any timer', async () => {
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
     await service.recordFailedAttempt();
 
-    // タイマーを進めなくても5回目で即時書き込まれる
-    expect(session.setCalls).toBe(1);
-    expect(local.setCalls).toBe(1);
+    expect(session.setCalls).toBe(3);
+    expect(local.setCalls).toBe(3);
+    const localData = await local.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(localData.passwordFailedAttempts).toBe(3);
+  });
+
+  test('keeps the count across a service restart with no flush in between', async () => {
+    await service.recordFailedAttempt();
+    await service.recordFailedAttempt();
+
+    // Simulate an SW restart: a fresh instance with no in-memory state shares
+    // the same durable storage. Nothing was flushed — writes were immediate.
+    const restarted = new RateLimitService(clock, { session, local });
+    await restarted.recordFailedAttempt();
+    await restarted.recordFailedAttempt();
+    await restarted.recordFailedAttempt();
+
+    const localData = await local.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(localData.passwordFailedAttempts).toBe(5);
+
+    const result = await restarted.checkRateLimit();
+    expect(result.success).toBe(false);
+  });
+
+  test('locks out with timestamps in both stores after 5 failures', async () => {
+    for (let i = 0; i < 5; i++) {
+      await service.recordFailedAttempt();
+    }
 
     const result = await service.checkRateLimit();
     expect(result.success).toBe(false);
@@ -265,30 +272,25 @@ describe('RateLimitService 書き込み合体 (PBI-17)', () => {
     expect(localLock.lockedUntil).toBe(1_000_000 + 30 * 60 * 1000);
   });
 
-  test('reads the latest in-memory value in checkRateLimit during debounce', async () => {
-    await session.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
-    await local.set({ passwordFailedAttempts: 4, firstFailedAttemptTime: clock.now() });
-    session.setCalls = 0;
-    local.setCalls = 0;
-
-    // 5回目: 閾値到達で即時フラッシュされるが、check がタイマー待ちなくロックアウトする
-    await service.recordFailedAttempt();
-    const result = await service.checkRateLimit();
-
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('30 minutes');
-  });
-
-  test('discards pending writes in resetFailedAttempts without resurrecting them', async () => {
+  test('resetFailedAttempts clears both stores and stays cleared', async () => {
     await service.recordFailedAttempt();
     await service.recordFailedAttempt();
     await service.resetFailedAttempts();
 
-    await vi.advanceTimersByTimeAsync(RATE_LIMIT_WRITE_COALESCE_MS);
-
-    expect(session.setCalls).toBe(0);
-    expect(local.setCalls).toBe(0);
     const result = await service.checkRateLimit();
     expect(result.success).toBe(true);
+    const sessionData = await session.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    const localData = await local.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(sessionData.passwordFailedAttempts).toBeUndefined();
+    expect(localData.passwordFailedAttempts).toBeUndefined();
+  });
+
+  test('flushPendingWrites stays a harmless no-op for compatibility', async () => {
+    await service.recordFailedAttempt();
+    await service.flushPendingWrites();
+
+    const sessionData = await session.get<{ passwordFailedAttempts: number }>(['passwordFailedAttempts']);
+    expect(sessionData.passwordFailedAttempts).toBe(1);
+    expect(session.setCalls).toBe(1);
   });
 });

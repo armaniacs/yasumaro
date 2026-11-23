@@ -239,4 +239,49 @@ describe('OfflineNetworkQueue', () => {
     expect(deferred).toHaveLength(1);
     expect((deferred[0]!.payload as { index: number }).index).toBe(20);
   });
+
+  describe('offsetNonFailureResult guards', () => {
+    function makeJob(retryCount: number): OfflineJob {
+      return { id: 'job-1', type: 'ai_summary', payload: {}, createdAt: Date.now(), retryCount };
+    }
+
+    it('lends back exactly one retry', () => {
+      const job = makeJob(2);
+
+      queue.offsetNonFailureResult(job);
+
+      expect(job.retryCount).toBe(1);
+    });
+
+    it('lends below zero so the paired flush increment nets exactly zero', () => {
+      const job = makeJob(0);
+
+      queue.offsetNonFailureResult(job);
+
+      // The lend pairs with flush()'s +1 on the same object (-1 + 1 = 0).
+      // Flooring here would land the persisted budget at 1 and burn a retry
+      // on a job that was never attempted (claimRetry regression test pins
+      // the end-to-end zero).
+      expect(job.retryCount).toBe(-1);
+    });
+
+    it('is idempotent for the same job object', () => {
+      const job = makeJob(2);
+
+      queue.offsetNonFailureResult(job);
+      queue.offsetNonFailureResult(job);
+
+      // One flush increment follows, so a second lend would overshoot the
+      // pre-handler budget.
+      expect(job.retryCount).toBe(1);
+    });
+
+    it('leaves a non-finite budget untouched', () => {
+      const job = makeJob(Number.NaN);
+
+      queue.offsetNonFailureResult(job);
+
+      expect(job.retryCount).toBeNaN();
+    });
+  });
 });

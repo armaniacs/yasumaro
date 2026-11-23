@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { PreviewViewImpl, DOM_IDS } from '../previewView.js';
 import { focusTrapManager } from '../../utils/ui/focusTrap.js';

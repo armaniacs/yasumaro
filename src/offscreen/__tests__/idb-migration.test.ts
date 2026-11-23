@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Tests for the wa-sqlite IDBBatchAtomicVFS -> @subframe7536/sqlite-wasm IDB
  * VFS migration path (PBI: 2026-07-16-06). Covers migrateIdbIfNeeded (backup

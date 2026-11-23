@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 import { calculateTextScore, findMainContentCandidates, scoreAndSort } from '../scoring.js';
@@ -113,7 +113,7 @@ describe('scoring precompute', () => {
     });
 
     describe('candidate order/count regression (explicit expected order)', () => {
-        it('article/main path returns top 1 sorted desc (long before short)', () => {
+        it('article/main path returns top 1 sorted desc (long before short)', async () => {
             document.body.innerHTML = `
                 <article class="short">Short.</article>
                 <article class="long">
@@ -123,7 +123,7 @@ describe('scoring precompute', () => {
                     <p>Paragraph three with even more content.</p>
                 </article>
             `;
-            const candidates = findMainContentCandidates();
+            const candidates = await findMainContentCandidates();
             // article path: only top 1
             expect(candidates.length).toBe(1);
             expect(candidates[0]!.className).toBe('long');
@@ -133,14 +133,14 @@ describe('scoring precompute', () => {
             expect(calculateTextScore(longEl)).toBeGreaterThan(calculateTextScore(shortEl));
         });
 
-        it('asian path returns up to 3 sorted desc', () => {
+        it('asian path returns up to 3 sorted desc', async () => {
             document.body.innerHTML = `
                 <div class="main-content"><p>${'A '.repeat(80)}</p><h2>title</h2></div>
                 <div class="content-article"><p>${'B '.repeat(40)}</p></div>
                 <div class="post-content"><p>${'C '.repeat(10)}</p></div>
                 <section class="article-body"><p>${'D '.repeat(5)}</p></section>
             `;
-            const candidates = findMainContentCandidates();
+            const candidates = await findMainContentCandidates();
             // asian detection picks div, section with asian classnames
             expect(candidates.length).toBeGreaterThan(0);
             expect(candidates.length).toBeLessThanOrEqual(3);
@@ -153,13 +153,13 @@ describe('scoring precompute', () => {
             expect(candidates[0]!.className).toBe('main-content');
         });
 
-        it('hierarchical fallback returns up to 3 sorted desc (body children)', () => {
+        it('hierarchical fallback returns up to 3 sorted desc (body children)', async () => {
             document.body.innerHTML = `
                 <div class="section-a"><p>First section with some text.</p></div>
                 <div class="section-b"><p>Second section with even more text content.</p><p>Extra paragraph to increase score.</p><h2>Heading</h2></div>
                 <div class="section-c"><p>Third</p></div>
             `;
-            const candidates = findMainContentCandidates();
+            const candidates = await findMainContentCandidates();
             expect(candidates.length).toBe(3);
             // explicit order: section-b should be first (most paragraphs/headings)
             expect(candidates[0]!.className).toBe('section-b');

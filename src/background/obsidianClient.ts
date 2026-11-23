@@ -280,9 +280,12 @@ export class ObsidianClient {
     }
 
     async _fetchExistingContent(url: string, headers: HeadersInit, traceId: string = ''): Promise<string> {
+        // Obsidian Local REST はloopback正規用途のため blockLocalhost: false を明示
+        // (fetchWithTimeout 既定trueの例外。SSRF面は設定値の事前検証が担う)
         const response = await fetchWithTimeout(url, noRedirectInit({
             method: 'GET',
-            headers
+            headers,
+            blockLocalhost: false
         }), FETCH_TIMEOUT_MS);
 
         if (response.redirected) {
@@ -321,10 +324,12 @@ export class ObsidianClient {
     }
 
     async _writeContent(url: string, headers: HeadersInit, content: string, traceId: string = ''): Promise<void> {
+        // Obsidian Local REST はloopback正規用途のため blockLocalhost: false を明示
         const response = await fetchWithTimeout(url, noRedirectInit({
             method: 'PUT',
             headers,
-            body: content
+            body: content,
+            blockLocalhost: false
         }), FETCH_TIMEOUT_MS);
 
         if (response.redirected) {
@@ -375,10 +380,12 @@ export class ObsidianClient {
         // `noRedirectInit` keeps the redirect policy un-overridable here: the
         // wide `RequestInit` annotation this used to carry was the one spot where
         // a trailing `redirect:` would have compiled silently (PBI 2026-10-19-05).
+        // Obsidian Local REST はloopback正規用途のため blockLocalhost: false を明示。
         const requestOptions: RequestInit = noRedirectInit({
             method: 'GET',
             headers,
-            cache: CONNECTION_TEST_CACHE_MODE
+            cache: CONNECTION_TEST_CACHE_MODE,
+            blockLocalhost: false
         });
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {

@@ -16,10 +16,15 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, resolve } from 'node:path';
+import { join, relative } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 
 const SOURCE_ROOTS = ['src', 'entrypoints'];
-const SKIPPED_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.kilo', '.claude', 'bench']);
+const SKIPPED_DIRS = new Set(['__tests__', 'node_modules', 'dist', '.kilo', '.claude', 'bench', '.stryker-tmp']);
+
+// Source-scanning gate: always read the real repo tree, even when this test
+// itself runs from inside a Stryker sandbox copy.
+const projectRoot = repoRootFromUrl(import.meta.url);
 
 const SEAM_FILE = 'src/utils/storage/domainFilterCache.ts';
 const SEAM_EXPORT = 'saveSettingsAndRefreshDomainFilterCache';
@@ -65,8 +70,6 @@ const PASTED_SAVE_IIFE =
 
 /** The call head of a seam invocation; the payload is what follows it. */
 const SEAM_CALL_OPEN = new RegExp(`${SEAM_EXPORT}\\s*\\(`, 'g');
-
-const projectRoot = resolve(import.meta.dirname, '../../../..');
 
 function collectSourceFiles(dir: string, out: string[]): void {
   for (const name of readdirSync(dir)) {

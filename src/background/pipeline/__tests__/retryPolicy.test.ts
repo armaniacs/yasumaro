@@ -91,3 +91,28 @@ describe('RetryPolicy — structured failure kinds are the contract (PBI 2026-09
     expect(policy.shouldEnqueueForOffline(new Error('connect ENETUNREACH 1.2.3.4'))).toBe(true);
   });
 });
+
+describe('RetryPolicy — snake_case marker boundary', () => {
+  const policy = new RetryPolicy();
+
+  it.each([
+    // The plain includes() scan caught all of these; the \b boundary missed
+    // every one (underscore is a word character), dropping offline jobs.
+    'request_timeout after 30000ms',
+    'connection_reset by peer',
+    'fetch_failed: TypeError',
+    'NETWORK_ERROR: failed to fetch',
+    'socket hang up: ECONNREFUSED',
+  ])('matches the snake_case carrier %s', (message) => {
+    expect(policy.shouldEnqueueForOffline(new Error(message))).toBe(true);
+  });
+
+  it.each([
+    // Still refused: the marker is embedded in a longer alphanumeric run.
+    'networked cache hit',
+    'prefetch failed gracefully',
+    'timeouts are rare',
+  ])('refuses the longer-word carrier %s', (message) => {
+    expect(policy.shouldEnqueueForOffline(new Error(message))).toBe(false);
+  });
+});

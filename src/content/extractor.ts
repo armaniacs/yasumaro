@@ -17,7 +17,7 @@ import type { Clock } from './domainPolicyPort.js';
 import { ChromeStoragePort } from '../utils/storage/storagePort.js';
 import { ChromeDomainPolicyPort } from './domainPolicyPort.js';
 import { ContentKernel, IdleScheduler } from './contentKernel.js';
-import { handleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
+import { handleGetContentMessage, shouldHandleGetContentMessage, type GetContentHandlerDeps } from './getContentHandler.js';
 import { handleGetSelectionMessage, type SelectionCaptureDeps } from './selectionCapture.js';
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars -- graphify edge: keep type link between content script and visitGate
@@ -54,7 +54,7 @@ const kernel = new ContentKernel(storagePort, domainPolicyPort, () => Date.now()
  * Single external extraction seam chain: kernel.extractPageContent →
  * pageContentPipeline.preparePageContent → extractMainContentWithInfo (internal).
  */
-export function extractPageContent(config?: CleansingConfig): ExtractResult {
+export async function extractPageContent(config?: CleansingConfig): Promise<ExtractResult> {
     return kernel.extractPageContent(config);
 }
 
@@ -115,6 +115,46 @@ export async function reportValidVisit(): Promise<void> {
 }
 
 /**
+ * PBI 2026-11-08-02: SPA navigation seam. The module singleton pageState is
+ * created once at import, but history navigation never reloads the content
+ * script — this resets the visit state (startTime/scroll/report flags) so
+ * the new page is gated on fresh criteria. ContentKernel.init subscribes
+ * the history wiring automatically; this stays as the explicit entry point
+ * for tests and manual driving.
+ */
+export function resetForSpaNavigation(now?: number): void {
+    return kernel.resetForNavigation(now);
+}
+
+/**
+ * PBI 2026-11-08-02: history subscription behind resetForSpaNavigation.
+ * Returns the unsubscribe function. Single delegation — the implementation
+ * lives in ContentKernel.
+ */
+export function subscribeSpaNavigation(): () => void {
+    return kernel.subscribeSpaNavigation();
+}
+
+/**
+ * Review No.1: MAIN-world backing for SPA detection. Content scripts cannot
+ * use chrome.webNavigation (background-only), so the permission-safe backing
+ * is polling location.href — see ContentKernel.startSpaUrlPolling. Driven by
+ * entrypoints/content-extractor.ts after a successful init (fail-closed:
+ * a failed init never arms the poll).
+ */
+export function startSpaUrlPolling(intervalMs?: number): () => void {
+    return kernel.startSpaUrlPolling(intervalMs);
+}
+
+/**
+ * Review No.1/No.2: single-shot SPA URL check (no timers). Returns true
+ * only on a true URL change.
+ */
+export function pollSpaUrlOnce(): boolean {
+    return kernel.pollSpaUrlOnce();
+}
+
+/**
  * Schedule the next periodic check using injected Scheduler (IdleScheduler → requestIdleCallback fallback)
  */
 export function scheduleNextCheck(): void {
@@ -165,7 +205,15 @@ export function registerGetContentListener(): void {
         // 【ポップアップからのメッセージハンドラ】: 手動コンテンツ取得要求に応答
         const deps = buildGetContentDeps();
         chrome.runtime.onMessage.addListener((message: unknown, sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void) => {
-            handleGetContentMessage(message, sender, sendResponse, deps);
+            // PBI 1116b: extraction is async (batched candidate scan), so a
+            // taken message must keep the port open (return true) and answer
+            // from the settled promise. Untaken messages return undefined so
+            // other listeners (e.g. GET_SELECTION) are unaffected.
+            if (shouldHandleGetContentMessage(message, sender, deps)) {
+                void handleGetContentMessage(message, sender, sendResponse, deps);
+                return true;
+            }
+            return undefined;
         });
     }
 }

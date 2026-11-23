@@ -44,11 +44,18 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
             return { allowed: false, useCache: true };
         }
 
+        // PBI 2026-11-08-05: single atomic read. The previous two-stage
+        // reads let a settings change land between them, mixing the mode of
+        // one generation with the flags of the next — every field below now
+        // comes from the same snapshot.
         const result = await this.storage.get([
             StorageKeys.DOMAIN_FILTER_CACHE,
             StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP,
             StorageKeys.DOMAIN_FILTER_MODE,
             StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+            StorageKeys.DOMAIN_BLACKLIST,
+            StorageKeys.SIMPLE_FORMAT_ENABLED,
+            StorageKeys.UBLOCK_FORMAT_ENABLED,
         ]);
 
         const cachedWhitelist = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
@@ -56,24 +63,18 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
         const matchSubdomains = result[StorageKeys.DOMAIN_SUBDOMAIN_MATCHING] === true;
 
-        // Second-stage read in blacklist/whitelist modes (same two-stage
-        // pattern and keys; the whitelist branch needs the flags to defer
-        // to SW when simple is off or ublock is on). Branching itself lives
-        // in the shared pure policy.
-        let blacklist: string[] = [];
-        let simpleEnabled = true;
-        let ublockEnabled = false;
-        if (mode === 'blacklist' || mode === 'whitelist') {
-            const result2 = await this.storage.get([
-                StorageKeys.DOMAIN_BLACKLIST,
-                StorageKeys.SIMPLE_FORMAT_ENABLED,
-                StorageKeys.UBLOCK_FORMAT_ENABLED,
-            ]);
-
-            blacklist = (result2[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [];
-            simpleEnabled = result2[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false;
-            ublockEnabled = result2[StorageKeys.UBLOCK_FORMAT_ENABLED] === true;
-        }
+        const blacklist =
+            mode === 'blacklist' || mode === 'whitelist'
+                ? ((result[StorageKeys.DOMAIN_BLACKLIST] as string[]) || [])
+                : [];
+        const simpleEnabled =
+            mode === 'blacklist' || mode === 'whitelist'
+                ? result[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false
+                : true;
+        const ublockEnabled =
+            mode === 'blacklist' || mode === 'whitelist'
+                ? result[StorageKeys.UBLOCK_FORMAT_ENABLED] === true
+                : false;
 
         return evaluateDomainPolicy(
             domain,

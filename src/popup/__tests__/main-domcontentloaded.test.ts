@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * main-domcontentloaded.test.ts
  * Tests for main.ts DOMContentLoaded handler and error paths.

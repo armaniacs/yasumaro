@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Comprehensive tests for extractor.ts
  * Covers error handling paths, edge cases, and fallback logic
@@ -186,14 +186,14 @@ describe('extractPageContent - edge cases', () => {
         document.body.innerHTML = '';
     });
 
-    it('returns empty string for empty document', () => {
+    it('returns empty string for empty document', async () => {
         document.body.innerHTML = '';
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.content).toBe('');
     });
 
-    it('extracts text from article element', () => {
+    it('extracts text from article element', async () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -201,67 +201,67 @@ describe('extractPageContent - edge cases', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content).toContain('Test Article');
         expect(result.content).toContain('main content');
     });
 
-    it('returns a string for document with main element', () => {
+    it('returns a string for document with main element', async () => {
         document.body.innerHTML = `
             <main>
                 <h2>Main Content</h2>
                 <p>This is main content with sufficient length for extraction.</p>
             </main>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('returns a string even when body has only nav elements', () => {
+    it('returns a string even when body has only nav elements', async () => {
         document.body.innerHTML = `
             <nav><a href="/">Home</a><a href="/about">About</a></nav>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('respects maxChars limit (default 10000)', () => {
+    it('respects maxChars limit (default 10000)', async () => {
         const longText = 'a'.repeat(15000);
         document.body.innerHTML = `<article><p>${longText}</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
-    it('handles very long content without crashing', () => {
+    it('handles very long content without crashing', async () => {
         const veryLongText = 'x'.repeat(50000);
         document.body.innerHTML = `<article><p>${veryLongText}</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
-    it('handles content with many nested elements', () => {
+    it('handles content with many nested elements', async () => {
         document.body.innerHTML = `
             <article>
                 ${Array(100).fill('<div><p>Nested paragraph content here.</p></div>').join('')}
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.content.length).toBeGreaterThan(0);
     });
 
-    it('handles content with special characters', () => {
+    it('handles content with special characters', async () => {
         document.body.innerHTML = `
             <article>
                 <p>Special chars: <>&"' and unicode: 日本語 中文 한국어</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('handles content with scripts and styles', () => {
+    it('handles content with scripts and styles', async () => {
         // Use a div wrapper since jsdom may not fully parse article into main content candidates
         document.body.innerHTML = `
             <div>
@@ -269,20 +269,20 @@ describe('extractPageContent - edge cases', () => {
                 <p>Another paragraph of actual content here.</p>
             </div>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         // Should still extract text content successfully
     });
 
-    it('handles single character content', () => {
+    it('handles single character content', async () => {
         document.body.innerHTML = `<article><p>x</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('handles whitespace-only content gracefully', () => {
+    it('handles whitespace-only content gracefully', async () => {
         document.body.innerHTML = `<article><p>   \n\t  \n   </p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
@@ -292,15 +292,15 @@ describe('extractPageContent - fallback logic', () => {
         document.body.innerHTML = '';
     });
 
-    it('sets getPageStateForTesting().lastFallbackTriggered when content is too short', () => {
+    it('sets getPageStateForTesting().lastFallbackTriggered when content is too short', async () => {
         // Create a minimal page that triggers fallback
         document.body.innerHTML = `<p>Short</p>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         // Fallback may or may not trigger depending on extraction logic
         expect(typeof (result.fallbackTriggered ?? false)).toBe('boolean');
     });
 
-    it('updates getPageStateForTesting().lastByteStats after extraction', () => {
+    it('updates getPageStateForTesting().lastByteStats after extraction', async () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -308,12 +308,12 @@ describe('extractPageContent - fallback logic', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         // Stats should be present on the result after extraction
         expect(result.pageBytes).toBeDefined();
     });
 
-    it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', () => {
+    it('updates getPageStateForTesting().lastAiSummaryCleansedStats after extraction', async () => {
         document.body.innerHTML = `
             <article>
                 <h1>Test Article</h1>
@@ -321,7 +321,7 @@ describe('extractPageContent - fallback logic', () => {
                 <p>Another paragraph with more meaningful content here.</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.aiSummaryOriginalBytes).toBeDefined();
     });
 });
@@ -543,18 +543,18 @@ describe('message handler - GET_CONTENT', () => {
         );
     });
 
-    it('handler returns early for non-object messages', () => {
-        const result = extractPageContent();
+    it('handler returns early for non-object messages', async () => {
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('handler returns early for null messages', () => {
-        const result = extractPageContent();
+    it('handler returns early for null messages', async () => {
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('extracts content with all stats fields populated', () => {
-        const result = extractPageContent();
+    it('extracts content with all stats fields populated', async () => {
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.cleansedReason).toBeDefined();
         expect(result.pageBytes).toBeDefined();
@@ -790,7 +790,7 @@ describe('message handler - chrome.runtime.onMessage registration', () => {
         await init();
         // Unknown types return early without answering
         const sendResponse = vi.fn();
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'UNKNOWN_MESSAGE_TYPE' },
             {},
             sendResponse,
@@ -807,7 +807,7 @@ describe('message handler - chrome.runtime.onMessage registration', () => {
         await init();
         // Messages without a type property return early without answering
         const sendResponse = vi.fn();
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { noType: true },
             {},
             sendResponse,
@@ -973,7 +973,7 @@ describe('Content extraction with cleansing enabled', () => {
             </article>
         `;
         await init();
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.totalRemoved).toBeDefined();
     });
@@ -987,7 +987,7 @@ describe('Content extraction with cleansing enabled', () => {
             </article>
         `;
         await init();
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.aiSummaryOriginalBytes).toBeDefined();
     });
 });
@@ -1071,17 +1071,17 @@ describe('Visibility change handling', () => {
 });
 
 describe('Edge case: document.body is null', () => {
-    it('handles missing body gracefully', () => {
+    it('handles missing body gracefully', async () => {
         // In jsdom, document.body always exists
         // But we can test the fallback behavior
         document.body.innerHTML = '';
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
 
 describe('Edge case: Very large DOM tree', () => {
-    it('handles large DOM without hanging', () => {
+    it('handles large DOM without hanging', async () => {
         // Create a large but manageable DOM
         let html = '<article>';
         for (let i = 0; i < 50; i++) {
@@ -1099,7 +1099,7 @@ describe('Edge case: Very large DOM tree', () => {
         document.body.innerHTML = html;
 
         const startTime = Date.now();
-        const result = extractPageContent();
+        const result = await extractPageContent();
         const duration = Date.now() - startTime;
 
         expect(typeof result.content).toBe('string');
@@ -1108,7 +1108,7 @@ describe('Edge case: Very large DOM tree', () => {
 });
 
 describe('Edge case: Malformed HTML', () => {
-    it('handles malformed HTML gracefully', () => {
+    it('handles malformed HTML gracefully', async () => {
         document.body.innerHTML = `
             <article>
                 <p>Unclosed paragraph
@@ -1117,19 +1117,19 @@ describe('Edge case: Malformed HTML', () => {
                 <p>Missing closing tags everywhere
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 
-    it('handles nested elements without crashing', () => {
+    it('handles nested elements without crashing', async () => {
         document.body.innerHTML = `<article><div><p><div><p>Deeply nested content</p></div></p></div></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
 
 describe('Edge case: Empty elements', () => {
-    it('handles empty elements in DOM', () => {
+    it('handles empty elements in DOM', async () => {
         document.body.innerHTML = `
             <article>
                 <p></p>
@@ -1138,26 +1138,26 @@ describe('Edge case: Empty elements', () => {
                 <p>Actual content here</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         // Content extraction may or may not find content depending on the algorithm
         expect(result.content.length).toBeGreaterThanOrEqual(0);
     });
 
-    it('handles elements with only whitespace', () => {
+    it('handles elements with only whitespace', async () => {
         document.body.innerHTML = `
             <article>
                 <p>   \n\t   </p>
                 <p>Real content</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
 
 describe('Edge case: Unicode content', () => {
-    it('handles various unicode scripts', () => {
+    it('handles various unicode scripts', async () => {
         document.body.innerHTML = `
             <article>
                 <p>English content</p>
@@ -1170,37 +1170,37 @@ describe('Edge case: Unicode content', () => {
                 <p>🎉 emoji content 📝</p>
             </article>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
         expect(result.content).toContain('English');
         expect(result.content).toContain('日本語');
     });
 
-    it('handles emoji-only content', () => {
+    it('handles emoji-only content', async () => {
         document.body.innerHTML = `<article><p>🎉🎊🎁🎄🎯</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
 
 describe('Edge case: Memory/performance limits', () => {
-    it('handles content near memory limits', () => {
+    it('handles content near memory limits', async () => {
         const largeText = 'x'.repeat(9000);
         document.body.innerHTML = `<article><p>${largeText}</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 
-    it('handles content exceeding memory limits', () => {
+    it('handles content exceeding memory limits', async () => {
         const veryLargeText = 'y'.repeat(20000);
         document.body.innerHTML = `<article><p>${veryLargeText}</p></article>`;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(result.content.length).toBeLessThanOrEqual(10000);
     });
 });
 
 describe('Edge case: Network content types', () => {
-    it('handles meta refresh redirects', () => {
+    it('handles meta refresh redirects', async () => {
         document.body.innerHTML = `
             <html>
                 <head>
@@ -1211,7 +1211,7 @@ describe('Edge case: Network content types', () => {
                 </body>
             </html>
         `;
-        const result = extractPageContent();
+        const result = await extractPageContent();
         expect(typeof result.content).toBe('string');
     });
 });
@@ -1651,7 +1651,7 @@ describe('message handler - GET_CONTENT message type', () => {
         await init();
         // Unknown types return early without answering
         const sendResponse = vi.fn();
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'UNKNOWN_MESSAGE_TYPE' },
             {},
             sendResponse,
@@ -1668,7 +1668,7 @@ describe('message handler - GET_CONTENT message type', () => {
         await init();
         // Messages without a type property return early without answering
         const sendResponse = vi.fn();
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { noType: true },
             {},
             sendResponse,
@@ -2099,10 +2099,10 @@ describe('message handler - GET_CONTENT response building', () => {
         );
     });
 
-    it('returns all required fields in GET_CONTENT response', () => {
+    it('returns all required fields in GET_CONTENT response', async () => {
         // The message handler builds a response object with these fields
         const response = {
-            content: extractPageContent().content,
+            content: (await extractPageContent()).content,
             cleansedReason: getPageStateForTesting().lastCleansedReason,
             cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {
@@ -2177,10 +2177,10 @@ describe('message handler - GET_CONTENT sender validation', () => {
         };
     }
 
-    it('rejects GET_CONTENT messages from external senders', () => {
+    it('rejects GET_CONTENT messages from external senders', async () => {
         const sendResponse = vi.fn();
 
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'GET_CONTENT' },
             { id: 'external-extension-id' },
             sendResponse,
@@ -2190,10 +2190,10 @@ describe('message handler - GET_CONTENT sender validation', () => {
         expect(sendResponse).not.toHaveBeenCalled();
     });
 
-    it('processes GET_CONTENT messages from the same extension', () => {
+    it('processes GET_CONTENT messages from the same extension', async () => {
         const sendResponse = vi.fn();
 
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'GET_CONTENT' },
             { id: 'test-extension-id' },
             sendResponse,
@@ -2203,7 +2203,7 @@ describe('message handler - GET_CONTENT sender validation', () => {
         expect(sendResponse).toHaveBeenCalled();
     });
 
-    it('returns early (void, no sendResponse) for non-GET_CONTENT broadcasts such as AI_TEST_PROGRESS', () => {
+    it('returns early (no sendResponse) for non-GET_CONTENT broadcasts such as AI_TEST_PROGRESS', async () => {
         const sendResponse = vi.fn();
 
         // AI_TEST_PROGRESS is a Service Worker → all-tab broadcast that this
@@ -2217,10 +2217,10 @@ describe('message handler - GET_CONTENT sender validation', () => {
         );
 
         expect(sendResponse).not.toHaveBeenCalled();
-        expect(result).toBeUndefined();
+        expect(await result).toBeUndefined();
     });
 
-    it('answers same-extension GET_CONTENT through registerGetContentListener wiring', () => {
+    it('answers same-extension GET_CONTENT through registerGetContentListener wiring', async () => {
         (globalThis as any).chrome.runtime.id = 'test-extension-id';
         try {
             registerGetContentListener();
@@ -2229,11 +2229,17 @@ describe('message handler - GET_CONTENT sender validation', () => {
             const listener = calls[calls.length - 1]![0];
             const sendResponse = vi.fn();
 
-            listener(
+            // PBI 1116b: extraction is async — the listener keeps the port
+            // open (returns true) and answers from the settled promise.
+            const handled = listener(
                 { type: 'GET_CONTENT' },
                 { id: 'test-extension-id' },
                 sendResponse
             );
+            expect(handled).toBe(true);
+            await vi.waitFor(() => {
+                expect(sendResponse).toHaveBeenCalled();
+            });
 
             expect(sendResponse).toHaveBeenCalled();
         } finally {
@@ -2333,10 +2339,10 @@ describe('message handler - GET_CONTENT response building', () => {
         );
     });
 
-    it('returns all required fields in GET_CONTENT response', () => {
+    it('returns all required fields in GET_CONTENT response', async () => {
         // The message handler builds a response object with these fields
         const response = {
-            content: extractPageContent().content,
+            content: (await extractPageContent()).content,
             cleansedReason: getPageStateForTesting().lastCleansedReason,
             cleanseStats: getPageStateForTesting().lastCleanseStats,
             byteStats: {

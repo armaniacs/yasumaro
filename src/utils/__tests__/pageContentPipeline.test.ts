@@ -17,7 +17,7 @@ describe('PageContentPipeline — deep module interface', () => {
     global.chrome = undefined;
   });
 
-  it('Scenario: prepares page content via a single seam — returns PageContent with content', () => {
+  it('Scenario: prepares page content via a single seam — returns PageContent with content', async () => {
     dom.window.document.body.innerHTML = `
       <article>
         <h1>Hello Yasumaro</h1>
@@ -26,7 +26,7 @@ describe('PageContentPipeline — deep module interface', () => {
       </article>
     `;
     const config = new PageState().cleansingConfig;
-    const result = preparePageContent(config);
+    const result = await preparePageContent(config);
     expect(result).toBeDefined();
     expect(typeof result.content).toBe('string');
     expect(result.content.length).toBeGreaterThan(0);
@@ -34,7 +34,7 @@ describe('PageContentPipeline — deep module interface', () => {
     expect(result.content).toContain('Hello Yasumaro');
   });
 
-  it('Scenario: handles site-specific patterns internally — cleansing runs without error', () => {
+  it('Scenario: handles site-specific patterns internally — cleansing runs without error', async () => {
     dom.window.document.body.innerHTML = `
       <article>
         <h1>Main Article</h1>
@@ -46,65 +46,63 @@ describe('PageContentPipeline — deep module interface', () => {
     `;
     const config = new PageState().cleansingConfig;
     config.aiSummaryCleansingEnabled = true;
-    const result = preparePageContent(config);
+    const result = await preparePageContent(config);
     // main content should remain; pipeline runs without throwing
     expect(result.content).toContain('Main content paragraph');
     expect(result.content).toContain('Another main content paragraph');
     expect(typeof result.content).toBe('string');
   });
 
-  it('Scenario: guarantees purity — same input yields same output', () => {
+  it('Scenario: guarantees purity — same input yields same output', async () => {
     dom.window.document.body.innerHTML = `
       <article><p>Deterministic content paragraph with enough length to avoid fallback logic and ensure stable extraction.</p></article>
     `;
     const config = new PageState().cleansingConfig;
-    const a = preparePageContent(config);
+    const a = await preparePageContent(config);
     // Reset DOM to same content and call again
     dom.window.document.body.innerHTML = `
       <article><p>Deterministic content paragraph with enough length to avoid fallback logic and ensure stable extraction.</p></article>
     `;
-    const b = preparePageContent(config);
+    const b = await preparePageContent(config);
     expect(a.content).toBe(b.content);
     expect(a.cleansedReason).toBe(b.cleansedReason);
   });
 
-  it('Scenario: does not crash on invalid HTML — empty / malformed', () => {
-    // Empty body
+  it('Scenario: does not crash on invalid HTML — empty / malformed', async () => {
+    // Empty body (PBI 1116b: the seam is async now — "does not crash" means
+    // the promise resolves instead of rejecting; a rejection fails the test)
     dom.window.document.body.innerHTML = '';
     const config = new PageState().cleansingConfig;
-    expect(() => preparePageContent(config)).not.toThrow();
-    const emptyResult = preparePageContent(config);
+    const emptyResult = await preparePageContent(config);
     expect(typeof emptyResult.content).toBe('string');
 
     // Malformed HTML (unclosed tags)
     dom.window.document.body.innerHTML = '<div><p>Unclosed div and paragraph';
-    expect(() => preparePageContent(config)).not.toThrow();
-    const malformed = preparePageContent(config);
+    const malformed = await preparePageContent(config);
     expect(typeof malformed.content).toBe('string');
 
     // Huge HTML (1k paragraphs — simulates ~1MB)
     const huge = '<p>' + 'x'.repeat(100) + '</p>';
     dom.window.document.body.innerHTML = huge.repeat(200);
-    expect(() => preparePageContent(config, 5000)).not.toThrow();
-    const hugeResult = preparePageContent(config, 5000);
+    const hugeResult = await preparePageContent(config, 5000);
     expect(hugeResult.content.length).toBeLessThanOrEqual(5000);
   });
 
-  it('hides optionBuilder — caller does not construct cleanseOptions manually', () => {
+  it('hides optionBuilder — caller does not construct cleanseOptions manually', async () => {
     const config = new PageState().cleansingConfig;
     config.contentStripHardEnabled = true;
     config.contentStripKeywordEnabled = false;
     // The old call required: buildExtractionOptions(config) → extractMainContent(...)
     // New call is one seam:
-    const result = preparePageContent(config);
+    const result = await preparePageContent(config);
     expect(result).toBeDefined();
     expect(typeof result.content).toBe('string');
   });
 
-  it('respects maxChars truncation', () => {
+  it('respects maxChars truncation', async () => {
     dom.window.document.body.innerHTML = `<article><p>${'a'.repeat(20000)}</p></article>`;
     const config = new PageState().cleansingConfig;
-    const result = preparePageContent(config, 100);
+    const result = await preparePageContent(config, 100);
     expect(result.content.length).toBeLessThanOrEqual(100);
   });
 });

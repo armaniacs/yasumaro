@@ -15,7 +15,7 @@
  */
 
 import { SqliteClient } from './sqlite/offscreenGateway.js';
-import { ChromeMigrationStateAdapter } from './migration/migrationState.js';
+import { ChromeMigrationStateAdapter, type MigrationStatePort } from './migration/migrationState.js';
 import { LegacyMigrationService } from './migration/legacyMigration.js';
 import { OpfsRecoveryService } from './migration/opfsRecovery.js';
 import {
@@ -44,8 +44,7 @@ export class MigrationService {
   private readonly opfs: OpfsRecoveryService;
   private readonly sqliteClient: SqliteClient;
 
-  constructor(sqliteClient: SqliteClient) {
-    const state = new ChromeMigrationStateAdapter();
+  constructor(sqliteClient: SqliteClient, state: MigrationStatePort = new ChromeMigrationStateAdapter()) {
     this.sqliteClient = sqliteClient;
     this.legacy = new LegacyMigrationService(sqliteClient, state);
     this.opfs = new OpfsRecoveryService(sqliteClient);

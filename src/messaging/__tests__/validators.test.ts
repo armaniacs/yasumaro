@@ -70,6 +70,27 @@ describe('ValidVisitValidator', () => {
   it('accepts optional force boolean', () => {
     expect(() => v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', force: true } })).not.toThrow();
   });
+
+  // Mutation testing found these two branches unreachable by any test: the
+  // fallback outcome fields are optional, so nothing exercised the wrong-type
+  // path and a mutant that deleted the check survived.
+  it('rejects a non-boolean fallbackTriggered', () => {
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackTriggered: 'yes' } as unknown as { content: string } }),
+    ).toThrow(/fallbackTriggered must be boolean/);
+  });
+
+  it('rejects a non-string fallbackReason', () => {
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackReason: 5 } as unknown as { content: string } }),
+    ).toThrow(/fallbackReason must be a string/);
+  });
+
+  it('accepts well-typed fallback outcome fields', () => {
+    expect(() =>
+      v.validate({ type: 'VALID_VISIT', payload: { content: 'hi', fallbackTriggered: true, fallbackReason: 'timeout' } }),
+    ).not.toThrow();
+  });
 });
 
 describe('DashboardSqliteValidator', () => {

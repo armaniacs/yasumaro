@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * recordingConditionsSettings.branches.test.ts
  * Focused branch-coverage tests for src/dashboard/recordingConditionsSettings.ts

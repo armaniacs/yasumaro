@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * tagClusterPanel period-filter wiring (PBI 2026-09-24-04; default preset
  * changed to 'last7' by user decision 2026-09-24):

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { createTagClusterPanel } from '../tagClusterPanel.js';
 import type { PanelLifecycle } from '../../types.js';

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Parity for the general settings panel's provider preset button wiring
  * (PBI 2026-10-03-23): in layout A the panel mount builds the per-provider

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect } from 'vitest';
 import {
     applyFallback,
@@ -338,31 +338,31 @@ describe('extractPipeline: applyFallback ② content_overcut arm (PBI 05 A2)', (
 });
 
 describe('extractor entries: string / WithInfo split', () => {
-    it('extractMainContent returns a string without diagnostics', () => {
+    it('extractMainContent returns a string without diagnostics', async () => {
         document.body.innerHTML = `<article><p>${'Entry split content. '.repeat(20)}</p></article>`;
-        const result = extractMainContent(10000, {}, { aiSummaryCleanseEnabled: true });
+        const result = await extractMainContent(10000, {}, { aiSummaryCleanseEnabled: true });
         expect(typeof result).toBe('string');
         expect((result as string).length).toBeGreaterThan(100);
     });
 
-    it('extractMainContentWithInfo returns full diagnostics without the flag', () => {
+    it('extractMainContentWithInfo returns full diagnostics without the flag', async () => {
         document.body.innerHTML = `<article><p>${'Entry split diagnostics. '.repeat(20)}</p></article>`;
-        const result = extractMainContentWithInfo(10000, {}, { aiSummaryCleanseEnabled: true });
+        const result = await extractMainContentWithInfo(10000, {}, { aiSummaryCleanseEnabled: true });
         expect(typeof result.content).toBe('string');
         expect(result.pageBytes).toBeGreaterThan(0);
         expect(result.candidateBytes).toBeGreaterThan(0);
         expect(result.fallbackTriggered).toBe(false);
     });
 
-    it('both entries produce identical cleansing results', () => {
+    it('both entries produce identical cleansing results', async () => {
         document.body.innerHTML = `<article><h1>Same</h1><p>${'Identical cleansing check. '.repeat(20)}</p><script>rm</script></article>`;
-        const str = extractMainContent(
+        const str = await extractMainContent(
             10000,
             { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true }
         );
         document.body.innerHTML = `<article><h1>Same</h1><p>${'Identical cleansing check. '.repeat(20)}</p><script>rm</script></article>`;
-        const info = extractMainContentWithInfo(
+        const info = await extractMainContentWithInfo(
             10000,
             { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true }
@@ -370,9 +370,9 @@ describe('extractor entries: string / WithInfo split', () => {
         expect(info.content).toBe(str);
     });
 
-    it('extractMainContentWithInfo returns diagnostics with no flag (shim removed)', () => {
+    it('extractMainContentWithInfo returns diagnostics with no flag (shim removed)', async () => {
         document.body.innerHTML = `<article><p>${'WithInfo diagnostics content. '.repeat(20)}</p></article>`;
-        const result = extractMainContentWithInfo(10000, {});
+        const result = await extractMainContentWithInfo(10000, {});
         expect(typeof result).not.toBe('string');
         expect(typeof result.content).toBe('string');
     });

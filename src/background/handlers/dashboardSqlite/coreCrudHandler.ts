@@ -6,6 +6,7 @@ import type { BrowsingLogEntry } from '../../../utils/sqlite-types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import type { CoreCrudDeps, DepsResult } from './deps.js';
 import { runTableDriven, toFailure, DASHBOARD_MUTABLE_SUBSET, MAX_APPEND_IDS } from './deps.js';
+import { validateUpdateChanges } from '../../../messaging/validators.js';
 import { SQLITE_WIRE_DESCRIPTORS, type SqliteWireDescriptor, type SqliteDashboardHop } from '../../../messaging/sqliteWireTable.js';
 
 /**
@@ -62,6 +63,13 @@ export function createCoreCrudHandler(deps: CoreCrudDeps) {
         const invalidKeys = Object.keys(changes).filter((k) => !DASHBOARD_MUTABLE_SUBSET.includes(k));
         if (invalidKeys.length > 0) {
           return { success: false, error: `Invalid update fields: ${invalidKeys.join(', ')}` };
+        }
+        // PBI 2026-11-08-06: values are checked too — the key subset alone let
+        // mistyped values (scroll_ratio: 5, title: 123) through to the SQL
+        // CHECK. The wire row re-checks the same contract before delegating.
+        const invalidValue = validateUpdateChanges(changes);
+        if (invalidValue !== null) {
+          return { success: false, error: `Invalid update value: ${invalidValue}` };
         }
         return runCoreCrud(CORE_CRUD_WIRE.update, payload, deps);
       }

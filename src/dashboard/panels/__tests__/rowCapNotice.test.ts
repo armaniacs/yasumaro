@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * rowCapNotice: the one fetch-cap notice publisher, moved out of the SVG
  * cluster renderer (PBI 2026-10-20-17). One pin per behavior the panels rely

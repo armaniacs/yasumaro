@@ -9,6 +9,7 @@ import noManualProtocolVersion from './rules/no-manual-protocol-version.mjs';
 import utilsLayerBoundary from './rules/utils-layer-boundary.mjs';
 import noDeadTestSkip from './rules/no-dead-test-skip.mjs';
 import noRawStorage from './rules/no-raw-storage.mjs';
+import noDirectConsoleLog from './rules/no-direct-console-log.mjs';
 
 export default {
   rules: {
@@ -23,5 +24,6 @@ export default {
     'utils-layer-boundary': utilsLayerBoundary,
     'no-dead-test-skip': noDeadTestSkip,
     'no-raw-storage': noRawStorage,
+    'no-direct-console-log': noDirectConsoleLog,
   },
 };

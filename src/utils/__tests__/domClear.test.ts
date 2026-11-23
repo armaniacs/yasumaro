@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * domClear.test.ts — canonical element-clearing seam (AGENTS.md: clearElement
  * from src/utils/domClear.ts is the canonical way to empty an element; popup

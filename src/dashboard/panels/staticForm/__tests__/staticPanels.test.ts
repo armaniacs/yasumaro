@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * staticPanels.test.ts
  * PBI 2026-08-09-22: 宣言表のidが実際のHTMLと対応していることを固定する
@@ -16,10 +16,13 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { repoRootFromUrl } from '../../../../../testDir/repoRoot.js';
 import { STATIC_FORM_PANELS } from '../staticPanels.js';
 
+// See generalSettingsPanel-priorityIds.test.ts: read the real repo tree even
+// inside a Stryker sandbox copy.
 const html = readFileSync(
-  resolve(process.cwd(), 'entrypoints/options/index.html'),
+  resolve(repoRootFromUrl(import.meta.url), 'entrypoints/options/index.html'),
   'utf-8',
 );
 

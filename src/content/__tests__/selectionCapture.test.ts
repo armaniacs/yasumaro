@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * selectionCapture.test.ts (PBI 2026-10-31-03)
  * handleGetSelectionMessage is chrome-free: no chrome global is stubbed in
@@ -81,5 +81,21 @@ describe('handleGetSelectionMessage - chrome-free direct calls', () => {
   it('returns undefined (no value) — a sync handler, response goes through sendResponse only', () => {
     const { deps } = makeDeps();
     expect(handleGetSelectionMessage({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, vi.fn(), deps)).toBeUndefined();
+  });
+});
+
+describe('handleGetSelectionMessage - reader failure (PBI 2026-11-08-05)', () => {
+  it('still answers with the empty-selection contract when readSelection throws', () => {
+    const throwing = (): string => {
+      throw new Error('detached window');
+    };
+    const deps: SelectionCaptureDeps = { runtimeId: 'test-extension-id', readSelection: throwing };
+    const sendResponse = vi.fn();
+
+    expect(() =>
+      handleGetSelectionMessage({ type: 'GET_SELECTION' }, { id: 'test-extension-id' }, sendResponse, deps),
+    ).not.toThrow();
+    expect(sendResponse).toHaveBeenCalledTimes(1);
+    expect(sendResponse).toHaveBeenCalledWith({ selection: '' });
   });
 });

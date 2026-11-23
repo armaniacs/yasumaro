@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * readPathErrorPropagation.test.ts
  *
@@ -113,13 +113,23 @@ describe('retry follows the retriable flag, not the message text', () => {
   });
 
   it('retries a transient search failure', async () => {
-    givenResponses(
-      { success: false, error: TIMEOUT, retriable: true },
-      { success: true, rows: [], total: 0 },
-    );
+    // The gateway backs off in real time between attempts; a wall-clock wait
+    // flakes under Stryker-sandbox load and violates the wait policy, so the
+    // clock is driven instead. One backoff step is base 1 s x multiplier 1.
+    vi.useFakeTimers();
+    try {
+      givenResponses(
+        { success: false, error: TIMEOUT, retriable: true },
+        { success: true, rows: [], total: 0 },
+      );
 
-    await searchLogs('x');
+      const pending = searchLogs('x');
+      await vi.advanceTimersByTimeAsync(1500);
+      await pending;
 
-    expect(sendMessage).toHaveBeenCalledTimes(2);
+      expect(sendMessage).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

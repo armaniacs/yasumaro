@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * backendResolver-coverage.test.ts
  * PBI 10: backendResolver の 4パターン (OPFS/IDB/Fallback/None) を

@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * query-backends-parametric.test.ts
  * PBI-34: backend-parameterized difference-revealing test for the query path.

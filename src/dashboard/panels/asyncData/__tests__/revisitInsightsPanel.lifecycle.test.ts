@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * revisitInsightsPanel lifecycle tests: the four sections render, the empty
  * and error surfaces are distinct, the row cap surfaces, the copy button

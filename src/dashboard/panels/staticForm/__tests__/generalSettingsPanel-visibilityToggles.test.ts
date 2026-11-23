@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Parity for the general settings panel's visibility toggles and review
  * summary button wiring (PBI 2026-10-03-29): the three change-listener

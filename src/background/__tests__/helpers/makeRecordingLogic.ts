@@ -23,6 +23,9 @@ export function makeRecordingLogic(
   return createRecordingOrchestrator({
     getPrivacyInfoWithCache: (url: string) => RecordingCache.getPrivacyInfoWithCache(url),
     getSettingsWithCache: () => RecordingCache.getSettingsWithCache(),
+    // PBI 2026-11-12-01: these suites pin step behaviour under granted
+    // consent; the withdrawal half lives in the consentToctou guard.
+    isConsentGranted: async () => true,
     obsidian: obsidian as never,
     aiService: aiService as never,
     sqliteClient: (sqliteClient ?? null) as never,
@@ -46,6 +49,8 @@ export function makeOrchestrator(
   return createRecordingOrchestrator({
     getPrivacyInfoWithCache,
     getSettingsWithCache,
+    // PBI 2026-11-12-01: granted here; withdrawal is the consentToctou guard.
+    isConsentGranted: async () => true,
     obsidian: obsidian as never,
     aiService: aiService as never,
     sqliteClient: sqliteClient as never,

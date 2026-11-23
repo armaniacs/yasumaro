@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * dualPayload.test.ts — 30-11 二重ペイロード
  */
@@ -11,9 +11,9 @@ describe('dualPayload (30-11)', () => {
     document.body.innerHTML = '';
   });
 
-  it('attaches originalContent and dualPayloadEnabled when cleansing', () => {
+  it('attaches originalContent and dualPayloadEnabled when cleansing', async () => {
     document.body.innerHTML = `<article><p>${'本文 '.repeat(50)}</p><div class="ad-banner">広告</div></article>`;
-    const result = extractMainContentWithInfo(
+    const result = await extractMainContentWithInfo(
       10000,
       { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: true },
@@ -24,9 +24,9 @@ describe('dualPayload (30-11)', () => {
     expect(result.dualPayloadEnabled).toBe(true);
   });
 
-  it('originalContent is longer than or equal to cleansed content', () => {
+  it('originalContent is longer than or equal to cleansed content', async () => {
     document.body.innerHTML = `<article><p>${'本文 '.repeat(100)}</p><nav>ナビ</nav><div class="social-share">share</div></article>`;
-    const result = extractMainContentWithInfo(
+    const result = await extractMainContentWithInfo(
       10000,
       { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: true },
@@ -34,9 +34,9 @@ describe('dualPayload (30-11)', () => {
     expect(result.originalContent!.length).toBeGreaterThanOrEqual(result.content.length);
   });
 
-  it('generates a funnel even when dualPayload is disabled', () => {
+  it('generates a funnel even when dualPayload is disabled', async () => {
     document.body.innerHTML = `<article><p>${'a'.repeat(500)}</p></article>`;
-    const result = extractMainContentWithInfo(
+    const result = await extractMainContentWithInfo(
       10000,
       { cleanseEnabled: false },
       { aiSummaryCleanseEnabled: false },
@@ -46,9 +46,9 @@ describe('dualPayload (30-11)', () => {
     expect(result.funnel).toBeDefined();
   });
 
-  it('retrieves originalContent even for a short page', () => {
+  it('retrieves originalContent even for a short page', async () => {
     document.body.innerHTML = `<article><p>短い本文テストコンテンツです。十分な長さを確保します。${'x'.repeat(200)}</p></article>`;
-    const result = extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as ExtractResult;
+    const result = await extractMainContentWithInfo(10000, { cleanseEnabled: false }, { aiSummaryCleanseEnabled: true }) as ExtractResult;
     expect(result.originalContent).toBeTruthy();
   });
 

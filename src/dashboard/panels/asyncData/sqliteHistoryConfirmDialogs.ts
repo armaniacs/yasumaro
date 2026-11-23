@@ -1,5 +1,5 @@
 import { tOrKey as t } from '../../../utils/i18n.js';
-import { SQLITE_HISTORY_IDS } from './sqliteHistoryPanelView.js';
+import { SQLITE_HISTORY_IDS } from './sqliteHistoryIds.js';
 
 // ---------------------------------------------------------------------------
 // Confirm dialogs (PBI 2026-11-07-13) — function-moved verbatim from

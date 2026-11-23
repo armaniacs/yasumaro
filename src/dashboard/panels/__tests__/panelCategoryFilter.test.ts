@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * panelCategoryFilter.test.ts (PBI 2026-10-31-08)
  * 分類 UI の可視性制御を固定する:

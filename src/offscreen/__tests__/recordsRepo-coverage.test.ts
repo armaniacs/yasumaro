@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * recordsRepo-coverage.test.ts
  * PBI 10: offscreen coverage 90% — recordsRepo.query の分岐網羅

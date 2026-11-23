@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archivePanel.test.ts
  * Unit tests for the archive panel mount behavior (PBI 2026-09-06-02).

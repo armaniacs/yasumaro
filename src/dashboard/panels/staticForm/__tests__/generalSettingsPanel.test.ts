@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * generalSettingsPanel.test.ts
  * PBI 2026-08-09-24: panel 層から dashboard.ts への逆依存解消
@@ -16,12 +16,15 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { repoRootFromUrl } from '../../../../../testDir/repoRoot.js';
 import { installTestSecretKek } from '../../../../utils/crypto/__tests__/secretKekHelper.js';
 
 import { createGeneralSettingsPanel } from '../generalSettingsPanel.js';
 
+// See generalSettingsPanel-priorityIds.test.ts: read the real repo tree even
+// inside a Stryker sandbox copy.
 const panelSource = readFileSync(
-  resolve(process.cwd(), 'src/dashboard/panels/staticForm/generalSettingsPanel.ts'),
+  resolve(repoRootFromUrl(import.meta.url), 'src/dashboard/panels/staticForm/generalSettingsPanel.ts'),
   'utf-8',
 );
 

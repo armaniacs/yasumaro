@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfsWorker-loadShedRetry.test.ts
  * PBI 2026-10-16-05: a full request queue waits with a bounded retry budget

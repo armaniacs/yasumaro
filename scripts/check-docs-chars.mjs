@@ -54,6 +54,7 @@ const SKIP_DIRS = new Set([
   '.superpowers',
   '.kilo',
   '.checking-team-tmp',
+  '.stryker-tmp',
   'plans',
   'bench',
 ]);
@@ -117,7 +118,15 @@ function walk(dir, out) {
   for (const name of readdirSync(dir)) {
     const abs = join(dir, name);
     const rel = abs.replace(/^\.\//, '');
-    if (statSync(abs).isDirectory()) {
+    let isDir = false;
+    try {
+      isDir = statSync(abs).isDirectory();
+    } catch {
+      // A dangling symlink (e.g., a leftover Stryker sandbox pointing at a
+      // removed worktree) has nothing to scan; statSync throws ENOENT on it.
+      continue;
+    }
+    if (isDir) {
       if (!SKIP_DIRS.has(name)) walk(abs, out);
       continue;
     }

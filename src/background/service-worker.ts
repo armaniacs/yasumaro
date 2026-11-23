@@ -9,7 +9,16 @@ import { logError, logWarn } from '../utils/logger/api.js';
 import { createNotificationHandlers } from './handlers/notificationHandlers.js';
 import { createSessionReminderClickHandlers } from './sessionReminderClick.js';
 import { createCacheInitializedFlag } from './swStatePersistence.js';
-import { createBackgroundServices } from './createBackgroundServices.js';
+import {
+  createBackgroundServices,
+  toDegradedServices,
+  ServiceInitError,
+  type BackgroundServicesComposition,
+  type DegradedBackgroundServices,
+  type ServiceInitFailure,
+} from './createBackgroundServices.js';
+import { ServiceContainer } from './serviceContainer.js';
+import { BADGE_COLORS } from '../constants/appConstants.js';
 import { createMessageHandler as _createMessageHandler } from './messageHandler.js';
 import { hasPrivacyConsent } from '../utils/storage/privacyConsent.js';
 export { retryPendingChromeStorageWrite } from './retryPendingWrites.js';
@@ -37,11 +46,13 @@ export function guard<Args extends unknown[]>(
   tag: string,
 ): (...args: Args) => void {
   return (...args: Args) => {
-    void Promise.resolve()
-      .then(() => fn(...args))
-      .catch((error: unknown) => {
+    void (async (): Promise<void> => {
+      try {
+        await fn(...args);
+      } catch (error: unknown) {
         void logError(`Listener failed: ${tag}`, { error: errorMessage(error) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
-      });
+      }
+    })();
   };
 }
 
@@ -53,29 +64,61 @@ export function guard<Args extends unknown[]>(
  * Initialize Service Worker with all Chrome event listeners.
  * Extracted for testability - call this function instead of relying on
  * module-level side effects.
+ *
+ * Observable startup (PBI 2026-11-08-13): every phase fires exactly as
+ * before (same calls, same initiation order, same per-phase error handling),
+ * but each phase's completion is tracked and the returned promise resolves
+ * with the per-phase results in startup-sequence order. A phase failure is
+ * recorded as `{ ok: false }` instead of an unhandled rejection, so callers
+ * (and tests) can observe completion and order without changing behavior.
+ *
+ * Phase-name lookup: each StartupPhase string is unique to one wiring site
+ * in this file — search for the phase name (e.g. 'alarm-registry') to jump
+ * from the phase list in init() below straight to the code that implements
+ * it, and keep the name stable when renaming the underlying wiring.
  */
-export function init(): void {
+export type StartupPhase = 'allowed-urls-sync' | 'alarm-registry' | 'export-scheduler' | 'offscreen-host';
+
+export type StartupPhaseResult =
+  | { readonly phase: StartupPhase; readonly ok: true }
+  | { readonly phase: StartupPhase; readonly ok: false; readonly message: string };
+
+async function trackStartupPhase(phase: StartupPhase, task: Promise<void>): Promise<StartupPhaseResult> {
+  try {
+    await task;
+    return { phase, ok: true as const };
+  } catch (error) {
+    return { phase, ok: false as const, message: errorMessage(error) };
+  }
+}
+
+export function init(): Promise<readonly StartupPhaseResult[]> {
+    const pending: Array<Promise<StartupPhaseResult>> = [];
     // Seed + live-sync the persisted FETCH_URL/provider allowlist from
     // settings. Runs before any request can read the key, so existing users
     // are migrated ahead of the fail-closed reader.
-    void initAllowedUrlsSync();
+    pending.push(trackStartupPhase('allowed-urls-sync', initAllowedUrlsSync()));
 
     // All timed jobs (daily purge, local-md, offline retry, review-summary,
     // session-timeout) are unified under the registry's installAll() — static
     // schedules + conditional install hooks + uniform failure policy live in
     // alarmRegistry.ts's table. The session-timeout alarm is armed here and
     // nowhere else; arming it in two places would clear+create it twice.
-    void alarmRegistry.installAll();
+    // Degraded: without the registry the phase is recorded as failed instead
+    // of throwing — init() stays observable and the worker keeps running.
+    pending.push(trackStartupPhase('alarm-registry', alarmRegistry !== undefined
+      ? alarmRegistry.installAll()
+      : Promise.reject(new Error('alarmRegistry unavailable (degraded startup; see startupFailures)'))));
 
     // PBI 2026-07-09-03 / 2026-07-10: schedule local Markdown export per LOCAL_MARKDOWN_EXPORT_TIMING
-    (async () => {
+    pending.push(trackStartupPhase('export-scheduler', (async () => {
       try {
         const { initExportScheduler } = await import('./localMarkdownIdleFlusher.js');
         await initExportScheduler();
       } catch (err) {
         logError('Failed to init export scheduler', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
       }
-    })();
+    })()));
 
     // Firefox has no offscreen API: the background event page hosts the
     // storage engine itself and answers target:'offscreen' messages in-page.
@@ -83,7 +126,7 @@ export function init(): void {
     // the offscreen host module (whose import registers the runtime listener
     // and keeps the engine resident). Build-time constant — dead on Chromium.
     if (import.meta.env.FIREFOX) {
-      (async () => {
+      pending.push(trackStartupPhase('offscreen-host', (async () => {
         try {
           const { setOpfsWorkerFactory } = await import('../offscreen/sqliteEngineContext/opfsWorkerProxy.js');
           setOpfsWorkerFactory(() => new Worker(chrome.runtime.getURL('opfs-worker.js'), { type: 'module' }));
@@ -99,14 +142,79 @@ export function init(): void {
         } catch (err) {
           logError('Failed to start in-page offscreen host', { error: errorMessage(err) }, ErrorCode.INTERNAL_ERROR, 'service-worker');
         }
-      })();
+      })()));
     }
+    return Promise.all(pending);
 }
 
 // ============================================================================
-// Production composition root
+// Production composition root (degraded startup)
 // ============================================================================
-const services = createBackgroundServices();
+// A single throwing factory used to reject the whole composition here, failing
+// the module load and crash-looping the Service Worker (Chrome re-runs the
+// same deterministic factories on every restart). Startup is now degraded:
+// this caller try/catches the aggregate throw, keeps the healthy services,
+// and continues with an honestly-typed partial composition — every failed
+// slot is `T | undefined` and each consumer below existence-checks it, so a
+// missing service degrades its own path instead of crashing the worker (a
+// silent undefined flow into an assuming consumer stays prohibited). Failures
+// stay visible through one aggregate ERROR log plus a best-effort global
+// badge (flagDegradedStartup).
+export interface BackgroundStartup {
+  readonly services: BackgroundServicesComposition | DegradedBackgroundServices;
+  readonly failures: readonly ServiceInitFailure[];
+  readonly unexpectedError: Error | undefined;
+}
+
+export function startBackgroundServices(container = new ServiceContainer()): BackgroundStartup {
+  try {
+    return { services: createBackgroundServices(container), failures: [], unexpectedError: undefined };
+  } catch (error) {
+    if (error instanceof ServiceInitError) {
+      return { services: toDegradedServices(container), failures: error.failures, unexpectedError: undefined };
+    }
+    return {
+      services: toDegradedServices(container),
+      failures: [],
+      unexpectedError: error instanceof Error ? error : new Error(errorMessage(error)),
+    };
+  }
+}
+
+const startup = startBackgroundServices();
+const services = startup.services;
+/** Aggregate factory failures of this startup (empty when healthy). */
+export const startupFailures: readonly ServiceInitFailure[] = startup.failures;
+/** Non-factory composition error, when the aggregate throw was not a ServiceInitError. */
+export const startupUnexpectedError: Error | undefined = startup.unexpectedError;
+export function isStartupDegraded(): boolean {
+  return startupFailures.length > 0 || startupUnexpectedError !== undefined;
+}
+
+if (isStartupDegraded()) {
+  void logError('Service worker starting in degraded mode: some background services failed to initialize', {
+    failures: startupFailures.map((failure) => `${failure.key}: ${failure.message}`),
+    ...(startupUnexpectedError !== undefined ? { unexpected: errorMessage(startupUnexpectedError) } : {}),
+  }, ErrorCode.INTERNAL_ERROR, 'service-worker');
+  void flagDegradedStartup();
+}
+
+/**
+ * Best-effort degraded-mode badge: a global '!' marks the toolbar while any
+ * service is missing. Diagnostic only — the failures are already in the
+ * aggregate log above, so a badge write that itself fails (or an action API
+ * without a badge surface, as in tests) is swallowed and startup continues.
+ */
+async function flagDegradedStartup(): Promise<void> {
+  try {
+    if (typeof globalThis.chrome === 'undefined' || chrome.action?.setBadgeText === undefined) return;
+    await chrome.action.setBadgeText({ text: '!' });
+    await chrome.action.setBadgeBackgroundColor?.({ color: BADGE_COLORS.ORANGE as string });
+  } catch {
+    // Diagnostic-only: ignore badge failures in degraded mode.
+  }
+}
+
 const {
     sqliteClient,
     recordingPipeline,
@@ -120,48 +228,72 @@ const {
     alarmRegistry,
     deferredMigrationRunner,
 } = services;
+const recordingAdmission = services.recordingAdmission;
 export const rateLimiterForTest = rateLimiter;
 
 // Session store for cross-SW-restart persistence
-SessionStore.registerSuspendHandler(sessionStore);
+// Idempotent per store (the constructor already registers); skipped when the
+// session store itself is the failed slot.
+if (sessionStore !== undefined) {
+  SessionStore.registerSuspendHandler(sessionStore);
+}
 
 // Initialize clients
-void headerDetector.initialize().catch((error: unknown) => {
-  void logError('HeaderDetector initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
-});
-void rateLimiter.initialize().catch((error: unknown) => {
-  void logError('RateLimiter initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
-});
+if (headerDetector !== undefined) {
+  void headerDetector.initialize().catch((error: unknown) => {
+    void logError('HeaderDetector initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+  });
+} else {
+  void logWarn('HeaderDetector initialization skipped: service unavailable (degraded startup)', {}, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+}
+if (rateLimiter !== undefined) {
+  void rateLimiter.initialize().catch((error: unknown) => {
+    void logError('RateLimiter initialization failed', { error: errorMessage(error) }, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+  });
+} else {
+  void logWarn('RateLimiter initialization skipped: service unavailable (degraded startup)', {}, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+}
 const isCacheInitialized = createCacheInitializedFlag();
 
 export function resetManualRecordCache(): void {
-    manualContentFetcher.clear();
+    // No cache exists when the fetcher slot failed; the degraded startup log
+    // already names it, so there is nothing to clear here.
+    if (manualContentFetcher !== undefined) {
+      manualContentFetcher.clear();
+    }
 }
 
 // Extracted modules (PBI 2026-09-15-17: resolved via the manifest)
-const runDeferredStartupMigrations = deferredMigrationRunner;
+// Degraded: without the runner there is no deferred migration to run —
+// checkEnvelope tolerates a no-op runner, so message flow keeps working.
+const runDeferredStartupMigrations: () => Promise<void> = deferredMigrationRunner ?? (async (): Promise<void> => {
+  await logWarn('Deferred startup migrations skipped: service unavailable (degraded startup)', {}, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+});
 
 // Individual handlers are exposed via the router's observable accessor —
 // no cast into private state. Used by tests and the context-menu path.
-export const handleValidVisit = messageRouter.getHandler('VALID_VISIT');
-export const handleFetchUrl = messageRouter.getHandler('FETCH_URL');
-export const handleManualRecord = messageRouter.getHandler('MANUAL_RECORD');
-export const handlePreviewRecord = messageRouter.getHandler('PREVIEW_RECORD');
-export const handleSaveRecord = messageRouter.getHandler('SAVE_RECORD');
-export const handleContentCleansingExecuted = messageRouter.getHandler('CONTENT_CLEANSING_EXECUTED');
-export const handleCheckDomain = messageRouter.getHandler('CHECK_DOMAIN');
-export const handleTestConnections = messageRouter.getHandler('TEST_CONNECTIONS');
-export const handleTestObsidian = messageRouter.getHandler('TEST_OBSIDIAN');
-export const handleTestAi = messageRouter.getHandler('TEST_AI');
-export const handleGetPrivacyCache = messageRouter.getHandler('GET_PRIVACY_CACHE');
-export const handleActivityUpdate = messageRouter.getHandler('ACTIVITY_UPDATE');
-export const handleSessionLockRequest = messageRouter.getHandler('SESSION_LOCK_REQUEST');
-export const handlePing = messageRouter.getHandler('PING');
-export const handleRefreshLocalMarkdownScheduler = messageRouter.getHandler('REFRESH_LOCAL_MARKDOWN_SCHEDULER');
-export const handleConsentStateChanged = messageRouter.getHandler('CONSENT_STATE_CHANGED');
-export const handleGenerateReviewSummary = messageRouter.getHandler('GENERATE_REVIEW_SUMMARY');
-export const handleLogForward = messageRouter.getHandler('LOG_FORWARD');
-export const handleDashboardSqlite = messageRouter.getHandler('DASHBOARD_SQLITE');
+// Degraded: without the router every handler is undefined and its callers
+// existence-check it (the context-menu wrapper returns early; the message
+// handler answers with an explicit degraded error below).
+export const handleValidVisit = messageRouter?.getHandler('VALID_VISIT');
+export const handleFetchUrl = messageRouter?.getHandler('FETCH_URL');
+export const handleManualRecord = messageRouter?.getHandler('MANUAL_RECORD');
+export const handlePreviewRecord = messageRouter?.getHandler('PREVIEW_RECORD');
+export const handleSaveRecord = messageRouter?.getHandler('SAVE_RECORD');
+export const handleContentCleansingExecuted = messageRouter?.getHandler('CONTENT_CLEANSING_EXECUTED');
+export const handleCheckDomain = messageRouter?.getHandler('CHECK_DOMAIN');
+export const handleTestConnections = messageRouter?.getHandler('TEST_CONNECTIONS');
+export const handleTestObsidian = messageRouter?.getHandler('TEST_OBSIDIAN');
+export const handleTestAi = messageRouter?.getHandler('TEST_AI');
+export const handleGetPrivacyCache = messageRouter?.getHandler('GET_PRIVACY_CACHE');
+export const handleActivityUpdate = messageRouter?.getHandler('ACTIVITY_UPDATE');
+export const handleSessionLockRequest = messageRouter?.getHandler('SESSION_LOCK_REQUEST');
+export const handlePing = messageRouter?.getHandler('PING');
+export const handleRefreshLocalMarkdownScheduler = messageRouter?.getHandler('REFRESH_LOCAL_MARKDOWN_SCHEDULER');
+export const handleConsentStateChanged = messageRouter?.getHandler('CONSENT_STATE_CHANGED');
+export const handleGenerateReviewSummary = messageRouter?.getHandler('GENERATE_REVIEW_SUMMARY');
+export const handleLogForward = messageRouter?.getHandler('LOG_FORWARD');
+export const handleDashboardSqlite = messageRouter?.getHandler('DASHBOARD_SQLITE');
 
 const handleManualRecordForContextMenu = async (
   message: Parameters<NonNullable<typeof handleManualRecord>>[0],
@@ -175,22 +307,32 @@ const handleManualRecordForContextMenu = async (
 // ============================================================================
 // Tab Event Handlers
 // ============================================================================
-const _tabHandlers = createTabEventHandlers({
-  tabCache,
-  autoSavedBadgeTabs,
-  getPrivacyCache: () => services.recordingCache.getPrivacyCache(),
-  isRecordingAllowed: () => hasPrivacyConsent(),
-});
-export const handleTabRemoved = _tabHandlers.handleTabRemoved;
-export const handleTabActivated = _tabHandlers.handleTabActivated;
-export const handleTabUpdated = _tabHandlers.handleTabUpdated;
+// Degraded: without the tab cache (or its badge-tab restore collaborator) no
+// tab wiring can run — the exports fall back to no-ops so listener
+// registration below never receives undefined, and tab events are dropped
+// silently (the degraded startup log already names the missing service).
+const _tabHandlers = tabCache !== undefined && autoSavedBadgeTabs !== undefined
+  ? createTabEventHandlers({
+    tabCache,
+    autoSavedBadgeTabs,
+    getPrivacyCache: () => services.recordingCache?.getPrivacyCache() ?? null,
+    isRecordingAllowed: () => hasPrivacyConsent(),
+  })
+  : undefined;
+export const handleTabRemoved: (tabId: number) => Promise<void> = _tabHandlers?.handleTabRemoved ?? (async (): Promise<void> => {});
+export const handleTabActivated: (activeInfo: { tabId: number }) => Promise<void> = _tabHandlers?.handleTabActivated ?? (async (): Promise<void> => {});
+export const handleTabUpdated: (tabId: number, changeInfo: { status?: string }, tab: { url?: string }) => Promise<void> = _tabHandlers?.handleTabUpdated ?? (async (): Promise<void> => {});
 
 // ============================================================================
 // Lifecycle Handlers
 // ============================================================================
-const _lifecycleHandlers = createLifecycleHandlers({ isCacheInitialized, rateLimiter, sqliteClient, recordingCache: services.recordingCache });
-export const handleInstalled = _lifecycleHandlers.handleInstalled;
-export const handleStartup = _lifecycleHandlers.handleStartup;
+// Degraded: without the rate limiter or the sqlite client no lifecycle wiring
+// can run — same no-op fallback discipline as the tab handlers above.
+const _lifecycleHandlers = rateLimiter !== undefined && sqliteClient !== undefined
+  ? createLifecycleHandlers({ isCacheInitialized, rateLimiter, sqliteClient, recordingCache: services.recordingCache ?? null })
+  : undefined;
+export const handleInstalled: (details: chrome.runtime.InstalledDetails) => Promise<void> = _lifecycleHandlers?.handleInstalled ?? (async (): Promise<void> => {});
+export const handleStartup: () => Promise<void> = _lifecycleHandlers?.handleStartup ?? (async (): Promise<void> => {});
 
 // ============================================================================
 // Notification Handlers
@@ -200,16 +342,18 @@ export { isValidNotificationUrl } from './handlers/notificationHandlers.js';
 // the sender inside its rate branch, and kind 'save' is not counter-limited
 // (KIND_RATE_BUCKET.save === null), so the empty sender is never read.
 const NOTIFICATION_SENDER: chrome.runtime.MessageSender = {};
-const _notificationHandlers = createNotificationHandlers({
-  record: (data) => recordingPipeline.record(data),
-  // PBI 2026-10-18-04: the notification Save path runs the same
-  // RecordingAdmission singleton as the registry routes (messageRouter
-  // resolves the same manifest entry). A withdrawn consent is refused with
-  // privacy_consent_required before any record, like every other path.
-  admit: (kind) => services.recordingAdmission.admit(kind, NOTIFICATION_SENDER),
-});
-export const handleNotificationButtonClicked = _notificationHandlers.onButtonClicked;
-export const handleNotificationClicked = _notificationHandlers.onClicked;
+const _notificationHandlers = recordingPipeline !== undefined && recordingAdmission !== undefined
+  ? createNotificationHandlers({
+    record: (data) => recordingPipeline.record(data),
+    // PBI 2026-10-18-04: the notification Save path runs the same
+    // RecordingAdmission singleton as the registry routes (messageRouter
+    // resolves the same manifest entry). A withdrawn consent is refused with
+    // privacy_consent_required before any record, like every other path.
+    admit: (kind) => recordingAdmission.admit(kind, NOTIFICATION_SENDER),
+  })
+  : undefined;
+export const handleNotificationButtonClicked: (notificationId: string, buttonIndex: number) => Promise<void> = _notificationHandlers?.onButtonClicked ?? (async (): Promise<void> => {});
+export const handleNotificationClicked: (notificationId: string) => void = _notificationHandlers?.onClicked ?? ((): void => {});
 
 // ============================================================================
 // Session Reminder Notification Handlers (PBI 2026-10-22-04 O2/O4)
@@ -221,6 +365,9 @@ export const handleNotificationClicked = _notificationHandlers.onClicked;
 // guards its own prefix.
 const _sessionReminderClickHandlers = createSessionReminderClickHandlers({
   queryRecordById: async (recordId) => {
+    // Degraded: without sqlite there is no record to open; the click handler
+    // already tolerates null (nothing visible happens).
+    if (sqliteClient === undefined) return null;
     const result = await sqliteClient.query({ ids: [recordId], limit: 1 });
     if (!result.success) return null;
     const row = result.data.rows[0];
@@ -241,7 +388,16 @@ const _sessionReminderClickHandlers = createSessionReminderClickHandlers({
   // The noteSectionEditor seam: appendToDailyNote runs
   // NoteSectionEditor.insertIntoSection under the shared write mutex, so the
   // TODO line joins the existing section instead of stacking a copy.
-  appendTodoToDailyNote: (todoLine) => services.obsidian.appendToDailyNote(todoLine, 'session-reminder-todo'),
+  // Degraded: without obsidian the TODO has nowhere to go — log and skip
+  // (the degraded startup log already names the missing service).
+  appendTodoToDailyNote: (todoLine) => {
+    if (services.obsidian === undefined) {
+      return (async (): Promise<void> => {
+        await logWarn('Skipping reminder TODO append: obsidian service unavailable (degraded startup)', {}, ErrorCode.UNKNOWN_ERROR, 'service-worker');
+      })();
+    }
+    return services.obsidian.appendToDailyNote(todoLine, 'session-reminder-todo');
+  },
 });
 export const handleReminderNotificationClicked = _sessionReminderClickHandlers.onClicked;
 export const handleReminderNotificationButtonClicked = _sessionReminderClickHandlers.onButtonClicked;
@@ -264,7 +420,7 @@ const _keyboardCommandHandler = createKeyboardCommandHandler(_entryFrictionDeps)
 const _omniboxInputHandler = createOmniboxInputHandler(_entryFrictionDeps);
 export { _keyboardCommandHandler, _omniboxInputHandler };
 
-const handleAlarm = alarmRegistry.handleAlarm;
+const handleAlarm = alarmRegistry?.handleAlarm;
 
 // Re-export createMessageHandler for backward compatibility with tests
 // that call it without arguments.
@@ -273,6 +429,15 @@ export function createMessageHandler(): (
     sender: chrome.runtime.MessageSender,
     sendResponse: (response?: unknown) => void
 ) => boolean {
+    // Degraded: without the router (or its cache/restore collaborators) no
+    // message can be dispatched — answer with an explicit error instead of
+    // crashing the listener, so senders observe the outage.
+    if (messageRouter === undefined || tabCache === undefined || autoSavedBadgeTabs === undefined) {
+      return (_rawMessage: unknown, _sender: chrome.runtime.MessageSender, sendResponse: (response?: unknown) => void): boolean => {
+        sendResponse({ success: false, error: 'Service worker is running in degraded mode: message router unavailable' });
+        return false;
+      };
+    }
     return _createMessageHandler({
       router: messageRouter,
       tabCache,
@@ -344,5 +509,8 @@ if (typeof globalThis.chrome !== 'undefined' && chrome.tabs?.onRemoved) {
       void handleReminderNotificationClicked(notificationId);
     }, 'notificationClicked'));
 
-    chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'));
+    // Degraded: without the registry there is no alarm dispatch to wire.
+    if (handleAlarm !== undefined) {
+      chrome.alarms.onAlarm.addListener(guard(handleAlarm, 'handleAlarm'));
+    }
 }

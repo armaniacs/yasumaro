@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 import { RECORDING_GATE_TABLE } from '../../../utils/recordingGateTable.js';
 import { RecordingOrchestrator } from '../RecordingOrchestrator.js';
 
@@ -29,8 +29,9 @@ describe('RecordingOrchestrator public surface', () => {
   });
 
   it('contains no removed spellings in its own source', () => {
+    // Source-scanning gate: read the real repo tree even inside a Stryker sandbox copy.
     const source = readFileSync(
-      join(dirname(fileURLToPath(import.meta.url)), '..', 'RecordingOrchestrator.ts'),
+      join(repoRootFromUrl(import.meta.url), 'src/background/pipeline/RecordingOrchestrator.ts'),
       'utf-8',
     );
     for (const banned of ['retryObsidianWriteOnly', 'RecordMode', 'recordFull', 'record(mode']) {

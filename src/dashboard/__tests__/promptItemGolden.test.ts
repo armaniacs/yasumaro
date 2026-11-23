@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * promptItemGolden.test.ts
  * PBI NN19: .prompt-item 行 HTML の byte-identical golden pin.
@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 import type { CustomPrompt } from '../../utils/types.js';
 import type { Settings } from '../../utils/storage/types.js';
 
@@ -435,7 +436,9 @@ describe('single prompt-item row builder (PBI NN19)', () => {
   });
 
   it('locale detection is delegated to the shared localeUtils helper', () => {
-    const source = readFileSync(path.join(process.cwd(), 'src/dashboard/settings/customPromptManager.ts'), 'utf8');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const source = readFileSync(path.join(repoRootFromUrl(import.meta.url), 'src/dashboard/settings/customPromptManager.ts'), 'utf8');
     // PBI 2026-10-11-04: the ja/en decision moved to localeUtils.getUiLanguage()
     // so prompt defaults can never disagree with chrome.i18n, which owns every
     // label in the UI. No navigator-based locale expression may come back.

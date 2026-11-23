@@ -115,6 +115,7 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
             },
           } as never);
         },
+        offsetNonFailureResult: () => undefined,
       },
       recordingPipeline: { record, retryObsidianWrite },
     });
@@ -203,6 +204,7 @@ describe('offline retry preserves enqueued diagnostics (PBI 2026-09-12-04)', () 
             payload: { title: 'T', url: 'https://example.com', content: 'body' },
           } as never);
         },
+        offsetNonFailureResult: () => undefined,
       },
       recordingPipeline: {
         record: vi.fn().mockRejectedValue(new Error('poison job')),

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: dispatched events arrive as bridge proxies; instanceof/objectContaining matchers do not hold (probe-confirmed).
 /**
  * tagsPanel.dom-integration.test.ts
  * DOM integration tests for tagsPanel.ts

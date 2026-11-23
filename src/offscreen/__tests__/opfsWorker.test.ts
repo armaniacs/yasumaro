@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * opfsWorker.test.ts
  * Tests for opfsWorker.ts — handleRestore with temp file validation

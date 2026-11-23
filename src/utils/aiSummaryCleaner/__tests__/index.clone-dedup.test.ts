@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 /**
@@ -51,11 +51,11 @@ afterEach(() => {
 });
 
 describe('PBI 06 clone dedup', () => {
-    it('full extractMainContent path (cleanseEnabled + aiSummary) calls cloneNode exactly once', () => {
+    it('full extractMainContent path (cleanseEnabled + aiSummary) calls cloneNode exactly once', async () => {
         document.body.innerHTML = `<article>${FIXTURE_HTML}</article>`;
 
         const spy = vi.spyOn(Element.prototype, 'cloneNode');
-        const result = extractMainContent(
+        const result = await extractMainContent(
             10000,
             { cleanseEnabled: true },
             { aiSummaryCleanseEnabled: true, ...CLEANSE_OPTS },

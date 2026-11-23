@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * Pins the import/restore reload seam: exportImport.ts and
  * encryptedBackupPanel.ts announce completion by dispatching the

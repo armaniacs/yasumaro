@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * consentBadge.test.ts
  * Tests for the toolbar badge indicator that reflects privacy consent state (M3)

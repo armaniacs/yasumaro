@@ -91,6 +91,16 @@ export class OfflineNetworkQueue {
   constructor(private readonly port: QueuePort<OfflineJob> = queue) {}
 
   /**
+   * Job objects already compensated by offsetNonFailureResult in this queue
+   * instance (idempotency guard). Per-object identity is the right key: every
+   * flush load materializes fresh job objects from storage, so each cycle may
+   * lend once, while a duplicated call on the same reference lends nothing
+   * more. Entries vanish with their job objects (WeakSet holds no strong
+   * reference), so no cleanup pass is needed.
+   */
+  private readonly offsetApplied = new WeakSet<OfflineJob>();
+
+  /**
    * Enqueue a job. Returns true when durably queued, false when the job was
    * dropped or could not be persisted (logged, never thrown — PBI 2026-09-17-15).
    */
@@ -136,6 +146,34 @@ export class OfflineNetworkQueue {
     onDropped?: (job: OfflineJob, reason: 'max-retries' | 'ttl') => Promise<void> | void
   ): Promise<void> {
     await this.port.flush(handler, onDropped);
+  }
+
+  /**
+   * Offset the retry increment flush() applies to every `false` handler
+   * result when that `false` was NOT a send failure (e.g. the recovery claim
+   * is held by another owner). flush() adds exactly one retry per `false`
+   * before persisting, so pre-lending one here nets zero and the job is kept
+   * without spending budget. Must be called on the same job reference flush
+   * handed to the handler, immediately before returning `false` — the
+   * increment lands on that same object.
+   */
+  offsetNonFailureResult(job: OfflineJob): void {
+    // Guard non-finite budgets (e.g. a corrupted NaN from storage): lending
+    // against them would spread the corruption instead of compensating a
+    // flush increment, so they are left untouched.
+    if (typeof job.retryCount !== 'number' || !Number.isFinite(job.retryCount)) return;
+    // Idempotency: at most one lend per job object. A duplicated contention
+    // branch calling this twice must not spend the budget twice for the single
+    // increment flush() is about to apply.
+    if (this.offsetApplied.has(job)) return;
+    this.offsetApplied.add(job);
+    // No lower bound here: the lend is always paired with flush()'s +1 on
+    // the same object (see the contract above), so -1 + 1 nets exactly zero
+    // even from a fresh budget of 0. Flooring at 0 would break the pairing
+    // (0 -> 0 -> +1 lands at 1 and burns a retry on a job that was never
+    // attempted). Unpaired lends cannot occur: this runs only on the false
+    // path that flush() always follows with exactly one increment.
+    job.retryCount = job.retryCount - 1;
   }
 
   async getQueueSize(): Promise<number> {

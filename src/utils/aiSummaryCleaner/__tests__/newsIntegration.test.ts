@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * 実際のニュースサイト HTML サンプルを使った integration test
  * 各種ニュースサイトの実際の HTML 構造を使って、本文保護機能が正しく動作するかを検証

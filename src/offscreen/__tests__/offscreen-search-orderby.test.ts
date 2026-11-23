@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 //
 // Verify that SQLITE_SEARCH dispatches through the unified recordsRepo.query()
 // with a StorageQuery containing text, and SQLITE_QUERY passes through

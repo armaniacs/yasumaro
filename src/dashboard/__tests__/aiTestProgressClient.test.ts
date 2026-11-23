@@ -143,4 +143,25 @@ describe('aiTestProgressClient', () => {
     unsubscribe();
     expect(listeners.size).toBe(0);
   });
+
+  it('resets the timeout on every progress event instead of firing mid-run', () => {
+    const onProgress = vi.fn();
+    const onTimeout = vi.fn();
+    subscribeAiTestProgress('run-1', onProgress, { timeoutMs: 5000, onTimeout });
+
+    const message = {
+      type: AI_TEST_PROGRESS_MESSAGE_TYPE,
+      progress: { runId: 'run-1', provider: 'openai', index: 0, total: 2 },
+    };
+    broadcast(listeners, message, { id: extensionId });
+    vi.advanceTimersByTime(4000);
+    broadcast(listeners, message, { id: extensionId });
+    vi.advanceTimersByTime(4000);
+
+    expect(onProgress).toHaveBeenCalledTimes(2);
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(1000);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+  });
 });

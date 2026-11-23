@@ -55,6 +55,11 @@ export function generateAiTestRunId(): string {
  * runId). Progress from other runs (e.g. a concurrent Dashboard tab) and
  * messages from other extensions are discarded. Call the returned function
  * to stop listening and clear the timeout.
+ *
+ * Timeout cleanup on terminal states is caller-owned: the AiTestProgress
+ * shape carries no status field, so this client cannot tell completion from
+ * silence. The caller clears the timer by calling the returned unsubscribe
+ * when its run finishes (success, failure, or UI teardown).
  */
 export function subscribeAiTestProgress(
   runId: string,
@@ -63,20 +68,27 @@ export function subscribeAiTestProgress(
 ): () => void {
   const { timeoutMs, onTimeout } = options;
 
+  // 一発タイマーではなく進捗のたびに組み直す: テスト進行中はタイムアウト
+  // しない。解除は unsubscribe 側の clearTimeout に一本化する。
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const armTimeout = (): void => {
+    if (timeoutMs === undefined) return;
+    if (timer !== undefined) clearTimeout(timer);
+    timer = setTimeout(() => onTimeout?.(), timeoutMs);
+  };
+
   const listener = (message: unknown, sender: chrome.runtime.MessageSender): void => {
     // Accept only messages originating from this extension AND from this
     // run (guards against concurrent Dashboard tabs overwriting state).
     if (sender?.id !== chrome.runtime.id) return;
     if (isAiTestProgressMessage(message) && message.progress.runId === runId) {
       onProgress(message.progress);
+      armTimeout();
     }
   };
 
   chrome.runtime.onMessage.addListener(listener);
-
-  const timer = timeoutMs !== undefined
-    ? setTimeout(() => onTimeout?.(), timeoutMs)
-    : undefined;
+  armTimeout();
 
   return () => {
     chrome.runtime.onMessage.removeListener(listener);

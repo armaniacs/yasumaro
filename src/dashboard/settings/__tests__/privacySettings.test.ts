@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+// Stays on jsdom: same :checked selector gap as domainFilter (probe-confirmed).
 /**
  * privacySettings.test.ts
  * Tests for popup privacy settings module.

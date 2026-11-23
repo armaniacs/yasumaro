@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * The two purge buttons are wired to async handlers from this panel, so a
  * rejected gateway call used to leave the status span blank and the rejection

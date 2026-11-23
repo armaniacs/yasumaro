@@ -125,6 +125,9 @@ graphify-out/
 .vulnhunter-fix/
 docs/superpowers
 
+# security-audit skill runs (tracked via pbi/ ledger only; see security-audit-yasumaro-run-1/REPORT.md)
+security-audit-yasumaro-run-*/
+
 dev-docs/whitelist-adapter-draft.json
 dev-docs/whitelist-adapter-prompt.md
 

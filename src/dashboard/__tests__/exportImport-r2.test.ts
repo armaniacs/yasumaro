@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * exportImport-r2.test.ts
  * R2: Cover remaining branches — import logs, showImportPreview edge cases,

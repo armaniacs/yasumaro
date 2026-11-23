@@ -198,12 +198,31 @@ export function redactHeaderValue(headerValue: string, reason: string): string {
 
 /**
  * セキュアなエラーログ出力（redaction.ts 互換）。
+ *
+ * PBI 2026-11-11-03: logger seam への薄い委譲ラッパー（公開名・同期 void
+ * シグネチャは維持）。マスキング済みデータを seam に渡す。静的 import は
+ * logger/api → logger/sanitize → 当モジュールの循環を組むため、動的
+ * import で遅延委譲する（utils-layer-boundary の sanctioned 手法）。
  */
 export function consoleSecureError(message: string, data?: unknown): void {
-  if (data !== undefined && data !== null) {
-    const dataRedacted = maskSensitiveData(data, 'full');
-    console.error(message, dataRedacted);
-  } else {
-    console.error(message);
-  }
+  const dataRedacted =
+    data !== undefined && data !== null ? maskSensitiveData(data, 'full') : undefined;
+  void import('./logger/api.js')
+    .then(({ logError }) =>
+      logError(
+        message,
+        dataRedacted === undefined ? {} : { data: dataRedacted },
+        undefined,
+        'sensitiveDataMask'
+      )
+    )
+    .catch(() => {
+      // 最終手段: seam 自体が読めない場合のみ console 直書き
+      // (local/no-direct-console-log の grandfather 対象)。
+      if (dataRedacted !== undefined) {
+        console.error(message, dataRedacted);
+      } else {
+        console.error(message);
+      }
+    });
 }

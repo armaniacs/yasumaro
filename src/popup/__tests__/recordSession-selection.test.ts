@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // --- hoisted mocks (mirrors recordOrchestrator.test.ts harness) ---
@@ -227,5 +227,31 @@ describe('RecordSession selection capture (PBI 2026-10-31-03)', () => {
     expect(retryOptions.content).toBe('selected paragraph');
     expect(retryOptions.contentOrigin).toBe('selection');
     expect(h.tabContentFetcher.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('RecordSession failure display (PBI 2026-11-08-14)', () => {
+  it('reports an i18n key (not raw English) when the force branch has no error detail', async () => {
+    const h = createSession({ selection: '' });
+    h.previewFlow.run.mockResolvedValue({ success: false });
+    const tab = { id: 1, url: 'https://example.com', title: 'Example' } as chrome.tabs.Tab;
+
+    await h.session.start(true, tab, 'page content');
+
+    const statusDiv = document.getElementById('mainStatus') as HTMLElement;
+    expect(statusDiv.textContent).toBe('saveError: unknownError');
+    expect(statusDiv.textContent).not.toContain('Unknown error');
+  });
+
+  it('throws an i18n key (not raw English) when the normal branch has no error detail', async () => {
+    const h = createSession({ selection: '' });
+    h.previewFlow.run.mockResolvedValue({ success: false });
+
+    await h.session.recordCurrentPage();
+
+    expect(mockShowError).toHaveBeenCalledTimes(1);
+    const thrown = mockShowError.mock.calls[0]![1] as Error;
+    expect(thrown).toBeInstanceOf(Error);
+    expect(thrown.message).toBe('recordSaveFailed');
   });
 });

@@ -94,6 +94,15 @@ export const MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
 export const MAX_ERROR_BODY_SIZE = 1024 * 1024;
 
 /**
+ * Privacy policy fetch cap (privacy/loadPrivacyPolicy, PBI 2026-11-08-15).
+ * Same 1MB value as MAX_ERROR_BODY_SIZE / MAX_PAYLOAD_STRING_BYTES but a
+ * separate concern: response-header gating for a fetched Markdown document.
+ * Lives here (not as a privacy.ts literal) so the drift guard sees it
+ * alongside the other size caps.
+ */
+export const MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
+
+/**
  * Round 5 drift-guard follow-up — caps the first guard pass itself found:
  */
 /** Pre-parse import text cap (dashboard importLogsService). */
@@ -146,6 +155,15 @@ export const MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 50 * 1024 * 1024;
 
 /** AI provider HTTP JSON response cap (summary + testConnection). */
 export const MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * uBlock filter-list paste caps (PBI 2026-11-08-16, moved unchanged from
+ * utils/ublockParser/index.ts so all size caps are greppable from here).
+ * A paste above either cap is rejected before parsing: unbounded text would
+ * let one dashboard paste exhaust memory (bytes) or stall the tab (lines).
+ */
+export const MAX_UBLOCK_FILTER_BYTES = 10 * 1024 * 1024;
+export const MAX_UBLOCK_FILTER_LINES = 500_000;
 
 /** chrome.storage.local quota (storage/quota helpers). */
 export const STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;

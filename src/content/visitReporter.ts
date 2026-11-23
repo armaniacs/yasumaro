@@ -69,6 +69,13 @@ export function isServiceWorkerResponse(value: unknown): value is ServiceWorkerR
 
 export interface MessageSender {
     sendMessageWithRetry(message: Message): Promise<ServiceWorkerResponse | undefined>;
+    /**
+     * PBI 2026-11-08-05: unload-path single-shot send. The retrying send
+     * waits out backoff sleeps that a tearing-down page never survives, so
+     * beforeunload traffic prefers this when present and falls back to
+     * sendMessageWithRetry otherwise. Optional so test fakes keep working.
+     */
+    sendMessageWithoutRetry?(message: Message): Promise<ServiceWorkerResponse | undefined>;
 }
 
 export interface VisitReporterDeps {
@@ -79,7 +86,7 @@ export interface VisitReporterDeps {
      * extract/apply pair fallback was retired, so there is no second path
      * to choose and no commit to forget.
      */
-    extractAndCommit: (config?: CleansingConfig) => ExtractResult;
+    extractAndCommit: (config?: CleansingConfig) => Promise<ExtractResult>;
     sender: MessageSender;
     /** Injected for tests; defaults to real privacyDialog */
     confirmDialog?: (statusCode: string, reasonLabel: string) => Promise<boolean>;
@@ -111,6 +118,50 @@ export interface VisitReporterDeps {
 
 /** Default retry wait: the real setTimeout wrapper every retry loop uses. */
 const defaultSleep: SleepFn = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * PBI 2026-11-08-02: invalid-context phrase match. Case-insensitive so
+ * capitalization drift does not flip the branch; the structural
+ * isRuntimeIdMissing() check below is the primary signal and does not
+ * depend on wording at all.
+ */
+const CONTEXT_INVALIDATED_PATTERN = /extension context invalidated/i;
+
+/**
+ * Pure wording check, exported for regression tests. True only for the
+ * context-invalidated family — deliberately NOT for bare "sendMessage"
+ * mentions, which also appear in transient transport errors that must stay
+ * on the retry path.
+ */
+export function isContextInvalidatedMessage(message: string): boolean {
+    return CONTEXT_INVALIDATED_PATTERN.test(message);
+}
+
+/**
+ * Structural invalid-context signal: the extension globals are alive but
+ * chrome.runtime.id is gone (the observable state after an extension
+ * reload). Needs no message text, so a reworded error still exits
+ * immediately.
+ *
+ * Review S4 — chrome-absent contract (fail-open to retry): returns false
+ * where chrome is absent entirely or chrome.runtime is missing (unit tests
+ * with injected fakes, non-extension pages). Rationale: in production the
+ * content script always runs with chrome.runtime present, so "absent" is
+ * not an observable production state — treating it as invalidated would
+ * stop the periodic check in exactly the environments (tests, hosted
+ * previews) where retrying is the safe default. Only a present-but-idless
+ * runtime (the real post-reload shape) is terminal. Pinned by
+ * visitReporter.chromeAbsent.test.ts: absent chrome retries, idless chrome
+ * stops.
+ */
+function isRuntimeIdMissing(): boolean {
+    try {
+        if (typeof chrome === 'undefined' || chrome.runtime === undefined || chrome.runtime === null) return false;
+        return typeof chrome.runtime.id === 'undefined';
+    } catch {
+        return false;
+    }
+}
 
 /** Default reason-label lookup (chrome.i18n with graceful fallbacks). */
 function defaultGetReasonLabel(messageKey: string, fallbackKey: string, fallback: string): string {
@@ -187,7 +238,7 @@ export class VisitReporter {
         benchMark('ow-extract-start');
         // PBI 2026-09-21-30: single route — extract+commit is atomic inside
         // the kernel, so no fallback branch and no sequencing knowledge here.
-        const extractResult = this.deps.extractAndCommit();
+        const extractResult = await this.deps.extractAndCommit();
         const content = extractResult.content;
         benchMark('ow-send-ready');
 
@@ -284,7 +335,7 @@ export class VisitReporter {
             // Transient transport failure: leave the flag false so the gate
             // stays open, and schedule one bounded retry.
             const msg = errorMessage(error);
-            if (msg && (msg.includes('Extension context invalidated') || msg.includes('sendMessage'))) {
+            if (msg && (isContextInvalidatedMessage(msg) || isRuntimeIdMissing())) {
                 this.deps.stopPeriodicCheck?.();
                 await logInfo('Extension reloaded - page refresh needed', {}, 'visitReporter');
                 return;

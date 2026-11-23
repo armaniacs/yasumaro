@@ -9,7 +9,7 @@
  * when `crypto.subtle` is unavailable rather than degrading to a weaker hash.
  */
 export async function computeScopeHash(
-  parts: (string | number | undefined | null)[],
+  parts: (string | number | boolean | undefined | null)[],
 ): Promise<string> {
   const joined = parts
     .map((p) => (p === undefined || p === null ? '' : String(p)))

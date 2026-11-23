@@ -2,7 +2,7 @@
  * ublockImport-sourceManager.test.js
  * uBlock Import - SourceManagerモジュールのユニットテスト
  *
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 
 import { StorageKeys } from '../../../../utils/storage/types.js';

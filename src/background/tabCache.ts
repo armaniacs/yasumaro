@@ -1,5 +1,8 @@
-import { SessionStore, SESSION_KEYS, type SessionStorePort } from './sessionStore.js';
+import { SessionStore, SESSION_KEYS, SessionStoreReadError, type SessionStorePort } from './sessionStore.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { logWarn } from '../utils/logger/api.js';
+import { errorMessage } from '../utils/errorUtils.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 export interface TabData {
     title?: string;
@@ -70,7 +73,19 @@ export class TabCache {
      * Session storage から以前のキャッシュエントリを復元
      */
     private async loadFromSession(): Promise<void> {
-        const entries = await this.sessionStore.get<[number, TabData][]>(SESSION_KEYS.TAB_CACHE);
+        let entries: [number, TabData][] | null;
+        try {
+            entries = await this.sessionStore.get<[number, TabData][]>(SESSION_KEYS.TAB_CACHE);
+        } catch (error) {
+            // Fail-visible degradation: a dead session read starts empty
+            // instead of hanging init, but it must not pass silently. A
+            // SessionStoreReadError means "could not read", never "no value".
+            if (error instanceof SessionStoreReadError) {
+                void logWarn('[TabCache] Failed to restore tabs from session storage, starting empty', { error: errorMessage(error) }, ErrorCode.STORAGE_READ_FAILURE, 'tabCache');
+                return;
+            }
+            throw error;
+        }
         if (entries) {
             for (const [tabId, data] of entries) {
                 if (!this.cache.has(tabId)) {

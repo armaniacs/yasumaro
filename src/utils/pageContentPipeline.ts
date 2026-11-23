@@ -19,7 +19,7 @@
  * contentCleaner → aiSummaryCleaner) across every caller.
  */
 
-import { extractMainContentWithInfo } from './contentExtractor/index.js';
+import { extractMainContentWithInfo, DEFAULT_EXTRACT_MAX_CHARS } from './contentExtractor/index.js';
 import { buildExtractionOptions } from './contentExtractor/optionBuilder.js';
 import type { ExtractResult } from './contentExtractor/types.js';
 // PBI 2026-09-21-16 (Option A): CleansingConfig type + default live in utils
@@ -59,16 +59,17 @@ export type { ExtractResult } from './contentExtractor/types.js';
  * - Read source is the live `document.body`. A missing body yields empty
  *   content without throwing.
  * - `window.location.hostname` is read for the whitelist-adapter lookup.
- * - Extraction is synchronous; on unexpected failure the pipeline falls back
- *   to `document.body.innerText` and truncates the result to maxChars.
+ * - Extraction is asynchronous (PBI 1116b: batched candidate scan yields to
+ *   the renderer); on unexpected failure the pipeline falls back to
+ *   `document.body.innerText` and truncates the result to maxChars.
  *
  * @param config - CleansingConfig, defaults to a fresh utils-owned default when omitted
- * @param maxChars - maximum characters, defaults to 10000 (same as extractMainContentWithInfo)
+ * @param maxChars - maximum characters, defaults to DEFAULT_EXTRACT_MAX_CHARS (same as extractMainContentWithInfo)
  */
-export function preparePageContent(
+export async function preparePageContent(
   config?: CleansingConfig,
-  maxChars: number = 10000,
-): ExtractResult {
+  maxChars: number = DEFAULT_EXTRACT_MAX_CHARS,
+): Promise<ExtractResult> {
   // When no config is supplied, use a fresh utils-owned default. This keeps the
   // module free of content-layer coupling — the content script's
   // extractPageContent() wrapper still owns pageState, but direct callers

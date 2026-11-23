@@ -2,7 +2,7 @@
  * tagClusterLoading.test.ts
  * PBI 2026-07-09-01: Tag Cluster ローディングラベルの i18n 化
  */
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { TagClusterLoadingManager } from '../tagClusterLoading.js';
 

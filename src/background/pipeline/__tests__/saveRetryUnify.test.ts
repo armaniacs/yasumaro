@@ -9,6 +9,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 
 vi.mock('../../../utils/logger/core.js', async () =>
   (await import('../../../../testDir/mocks/logger.js')).createLoggerModuleMock({
@@ -185,7 +187,8 @@ describe('saveRetry runs the retry subset through the SavePhase seam (BDD Scenar
 
 describe('retry path references the bundle, not individual flags (BDD Scenario 2)', () => {
   it('RecordingOrchestrator.retryObsidianWrite reads no individual retry flag', () => {
-    const source = readFileSync(new URL('../RecordingOrchestrator.ts', import.meta.url), 'utf8');
+    // Source-scanning gate: read the real repo tree even inside a Stryker sandbox copy.
+    const source = readFileSync(join(repoRootFromUrl(import.meta.url), 'src/background/pipeline/RecordingOrchestrator.ts'), 'utf8');
     for (const flag of ['replayWrite', 'dedupe', 'obsidianDuration', 'executeRetrySubset', 'retrySteps']) {
       expect(source, `orchestrator must not reference ${flag}`).not.toContain(flag);
     }

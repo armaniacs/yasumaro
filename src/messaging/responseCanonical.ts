@@ -263,8 +263,20 @@ export function normalizeCollectionScope(raw: Record<string, unknown> | null): A
  * report-side absorption, unlike save path B); `op` keeps 'and'/'or';
  * `clauses` keeps per-clause trimmed-string / finite-number conditions and
  * drops fully-empty clauses.
+ *
+ * Truncation notice (PBI 2026-11-08-17): the ids slice used to drop
+ * entries silently. It still truncates (absorption is the contract), but
+ * when `onTruncated` is given it is called with `{ requested, kept }` so
+ * callers can surface the cut (log, panel warning) instead of losing rows
+ * invisibly. Omitting the callback keeps the old silent behavior — no
+ * existing caller changes meaning.
  */
-export function normalizeReportScope(raw: unknown): ResearchReportScope {
+export interface ReportScopeTruncation {
+  requested: number;
+  kept: number;
+}
+
+export function normalizeReportScope(raw: unknown, onTruncated?: (info: ReportScopeTruncation) => void): ResearchReportScope {
   if (typeof raw !== 'object' || raw === null) return {};
   const source = raw as Record<string, unknown>;
   const scope: ResearchReportScope = {};
@@ -284,7 +296,12 @@ export function normalizeReportScope(raw: unknown): ResearchReportScope {
       // C-#8: rowids are non-negative integers - floats/negatives degrade
       // to absent, matching the validator's rejection and the parse-side cap.
       const ids = isReportScopeIdListValue(value) ? value.filter(isReportScopeIdValue) : [];
-      if (ids.length > 0) scope[field as (typeof REPORT_SCOPE_ARRAY_FIELDS)[number]] = ids.slice(0, MAX_QUERY_IDS);
+      if (ids.length > MAX_QUERY_IDS) {
+        onTruncated?.({ requested: ids.length, kept: MAX_QUERY_IDS });
+        scope[field as (typeof REPORT_SCOPE_ARRAY_FIELDS)[number]] = ids.slice(0, MAX_QUERY_IDS);
+      } else if (ids.length > 0) {
+        scope[field as (typeof REPORT_SCOPE_ARRAY_FIELDS)[number]] = ids;
+      }
     }
   });
   const op = source['op'];

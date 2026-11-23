@@ -8,6 +8,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 
 vi.mock('../../crypto/cryptoParams.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../crypto/cryptoParams.js')>();
@@ -223,7 +225,9 @@ describe('secret envelope (PBI 25-25)', () => {
     // opens first creates its object store at version 1 and the second opener
     // never gets an upgrade — its transaction then throws forever, which the
     // fail-closed contract turns into a permanent ENCRYPTION_UNAVAILABLE.
-    const read = (file: string): string => readFileSync(`src/utils/crypto/${file}`, 'utf-8');
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const read = (file: string): string => readFileSync(join(repoRootFromUrl(import.meta.url), 'src/utils/crypto', file), 'utf-8');
     const dbNameOf = (source: string): string => {
       const name = /const DB_NAME = '([^']+)'/.exec(source)?.[1];
       expect(name, 'DB_NAME literal not found').toBeDefined();

@@ -59,6 +59,7 @@ import {
   buildSessionToCollectionQuery,
 } from './sessionToCollection.js';
 import { requestHistoryHandoff } from './historyHandoff.js';
+import { formatLocaleDateTime, formatMediumDateTime } from '../../../utils/localeUtils.js';
 
 /** Toggle hooks for the selection checkboxes (PBI-02). Task 3 wires the
  *  panel-local selection state below. */
@@ -187,7 +188,7 @@ function renderSession(
   const summary = document.createElement('summary');
 
   const parts: string[] = [
-    new Date(session.startAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    formatMediumDateTime(session.startAt),
     msg('researchSessions_pages', { n: session.records.length }, '{n} pages'),
     msg(
       'researchSessions_minutes',
@@ -327,7 +328,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       .join(', ');
     const range =
       summary.earliest !== null && summary.latest !== null
-        ? `${new Date(summary.earliest).toLocaleString()} – ${new Date(summary.latest).toLocaleString()}`
+        ? `${formatLocaleDateTime(summary.earliest)} – ${formatLocaleDateTime(summary.latest)}`
         : '';
     return msg(
       'researchSessions_deleteDetail',
@@ -448,7 +449,7 @@ export function createResearchSessionsPanel(): PanelLifecycle {
       return;
     }
     const where = requestHistoryHandoff(result.query);
-    const range = `${new Date(result.earliest).toLocaleString()} – ${new Date(result.latest).toLocaleString()}`;
+    const range = `${formatLocaleDateTime(result.earliest)} – ${formatLocaleDateTime(result.latest)}`;
     const parts: string[] = [
       msg(
         'researchSessions_handoffSent',

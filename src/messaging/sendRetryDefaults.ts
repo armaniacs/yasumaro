@@ -34,6 +34,23 @@ export const TRANSPORT_RETRY_MULTIPLIER = 2;
 export const TRANSPORT_RETRY_MAX_MS = 1000;
 
 /**
+ * Gateway timeout budgets (PBI 2026-11-08-12: moved here from
+ * gatewayFactory.ts so the two budgets live with the other send/retry
+ * numbers instead of beside them).
+ *
+ * Record-path budget: pendingRecordGateway's 20s timeout contract. The value
+ * is unchanged — the gateway re-exports it under its historic name.
+ */
+export const RECORD_GATEWAY_TIMEOUT_MS = 20_000;
+
+/**
+ * AI round-trip budget shared by askHistory + regenerateSummary (60s): the
+ * evidence search / tab load + extraction + model pass. Unchanged value,
+ * re-exported by gatewayFactory under its historic name.
+ */
+export const AI_GATEWAY_TIMEOUT_MS = 60_000;
+
+/**
  * Retry defaults table (PBI 2026-10-24-06): one row per seam so a policy
  * change touches exactly this module. Gateway behavior stays single-attempt
  * by default with a constant delay; the seam keeps inner retries off; the
@@ -50,4 +67,6 @@ export const SEND_RETRY_DEFAULTS = {
   transportBackoffBaseMs: TRANSPORT_RETRY_BASE_MS,
   transportBackoffMultiplier: TRANSPORT_RETRY_MULTIPLIER,
   transportBackoffMaxMs: TRANSPORT_RETRY_MAX_MS,
+  recordGatewayTimeoutMs: RECORD_GATEWAY_TIMEOUT_MS,
+  aiGatewayTimeoutMs: AI_GATEWAY_TIMEOUT_MS,
 } as const;

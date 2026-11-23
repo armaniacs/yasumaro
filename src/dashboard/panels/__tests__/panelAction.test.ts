@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * panelAction.test.ts
  * The scaffold's contract, independent of any panel: whatever the operation

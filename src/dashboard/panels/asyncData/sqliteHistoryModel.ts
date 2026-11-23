@@ -443,6 +443,13 @@ export interface SqliteHistoryModelDeps {
   pendingPages?: PendingPagesSource;
   /** @deprecated Prefer subscribe(); kept for Controller shim compatibility. */
   onStateChange?: () => void;
+  /**
+   * PBI 2026-11-11-07: shared generation guard. Defaults to a private
+   * instance (previous behavior); tests and the future lifecycle ring
+   * converge by injecting one guard here so "which load wins" has a
+   * single home.
+   */
+  reloadGuard?: ReloadGuard;
 }
 
 /**
@@ -605,7 +612,7 @@ export function createSqliteHistoryModel(deps: SqliteHistoryModelDeps = {}): Sql
   const runGetSqliteStatus = deps.getSqliteStatus ?? getSqliteStatus;
 
   let state = createInitialHistoryState();
-  const guard = new ReloadGuard();
+  const guard = deps.reloadGuard ?? new ReloadGuard();
   let pendingInit: Record<string, unknown> | null = null;
   const listeners = new Set<() => void>();
   if (deps.onStateChange) listeners.add(deps.onStateChange);

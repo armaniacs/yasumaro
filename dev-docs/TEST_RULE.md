@@ -33,7 +33,7 @@ describe('sessionAlarmsManager', () => {
 
 ## 実時間待ちの禁止と代替手段
 
-固定時間の待機は失敗しえないので、回帰を何も検出しない。実行時間を消費するだけで、負荷の高いマシンでは不安定の原因になる。待つのは条件の成立だけにする。方針の根拠と実測値は [ADR: ユニットテストの実行時間を契約として管理する](ADR/2026-09-26-test-suite-execution-time-contract.md)（R1・R2）を参照。テストが落ちたときの手順と完了判定は [AGENTS.md の Async / Timing Failures](../AGENTS.md#async--timing-failures) に従う。
+固定時間の待機は失敗しえないので、回帰を何も検出しない。実行時間を消費するだけで、負荷の高いマシンでは不安定の原因になる。待つのは条件の成立だけにする。方針の根拠と実測値は [ADR: ユニットテストの実行時間を契約として管理する](ADR/2026-09-26-test-suite-execution-time-contract.md)（R1・R2）を参照。テストが落ちたときの手順と完了判定は、以下の「失敗がタイミング関連に見えるとき」「完了判定」のとおり。
 
 ### 待っているものごとの代替手段
 
@@ -73,6 +73,33 @@ expect(mockGenerate).toHaveBeenCalledTimes(1);
 first.resolve('summary');
 await Promise.all([p1, p2]);
 ```
+
+### 失敗がタイミング関連に見えるとき
+
+1. 原因を分類し、根拠を書き留める:
+   - `await` 漏れ（テストが非同期処理の完了を待っていない）
+   - 初期化順序の誤り
+   - 外部プロセスの起動待ち（dev server、offscreen document、worker）
+   - 書き込みが落ち着く前の読み込み
+   - テスト間の状態リーク
+2. 上の「待っているものごとの代替手段」表から一致する手法で直す: 完了を告げる Promise やイベントを待つ、`waitForMock()`（E2E では `expect.poll`）で条件成立を待つ、注入した sleep や `useTimerClock()` で本番タイマーを進める、setup/teardown をテストごとに隔離する。既定設定の `vi.useFakeTimers()` は使わない（`queueMicrotask` まで偽装され、動的 import が止まる）。
+3. 原因を特定できないなら、待ちで回避せずそこで止まる。観測した事実と仮説を報告する。
+
+### シェルでの待ち合わせ
+
+`cmd & sleep N` と書かない。コマンドの完了を待つならフォアグラウンドで実行するか、PID に `wait` する。長時間プロセスの準備完了は、上限付きで準備条件をポーリングする。例: `for i in $(seq 1 120); do curl -sf http://localhost:PORT/ && break; sleep 0.5; done`（macOS に `timeout` コマンドはないため使わない）
+
+ポーリング間隔は 10 秒以下に保つ。規則の本文と根拠は [AGENTS.md の Async / Timing Failures](../AGENTS.md#async--timing-failures) にあり（`src/__tests__/agent-poll-interval.test.ts` が本文の存在を保証する）、ここでは繰り返さない。
+
+### 完了判定
+
+タイミング関連の修正は、1 回の green では完了ではない。retry を無効にした反復実行で、すべての実行が通るまで確認する:
+
+- ユニット: `npx vitest run <file> --repeats=20`
+- E2E: `npx playwright test <file> --repeat-each=10 --retries=0 --workers=4`
+- ESLint ルールテスト: `npx vitest run eslint/__tests__ --repeats=20`（素の `RuleTester` ではなく `createRepeatSafeRuleTester` 経由。理由は[ローカルルールのテスト](#ローカルルールのテスト)）
+
+報告には原因カテゴリ、修正内容、反復コマンドとその結果を含める。
 
 ### 本番コード側の書き方
 
@@ -175,7 +202,7 @@ npm run test:mutate
 
 設定は `stryker.config.json` にあり、`mutate` 対象は `src/**/*.ts`（テストファイルは除外）。`thresholds.break`（50%）を下回るとビルドが失敗する。CIへの統合は各ワークフローの設定に従う。
 
-> **既知の制約**: `@stryker-mutator/vitest-runner` 10.0.0 は Vitest 5 に未対応で、ミュータントごとのテスト実行が 0 件のまま完走し、スコアが常に 0.00% になる。ランナーが Vitest 5 対応版（core と runner を同梱の新バージョン）をリリースされるまで `npm run test:mutate` のスコアは信頼できない。 代わりに「ローカル検証手順」の Red/Green 確認でテストの実効性を担保する。
+> **既知の制約(解消済み)**: `@stryker-mutator/vitest-runner` 10.0.0 は Vitest 5 に未対応で、ミュータントごとのテスト実行が 0 件のまま完走し、スコアが常に 0.00% になった。10.1.1 で Vitest 5 対応が回復し、部分実行で実効スコアを確認済みのため、この制約は解消した。部分実行の実測は `src/utils/htmlEscape.ts` が 84.62%、`src/utils/domClear.ts` が 100.00%、Ran が 64.27/49.29 per mutant。全量実行のスコアは未測定のため、必要に応じて再測定する。
 
 対象範囲を絞って実行する場合は Stryker CLI の `--mutate` オプションで対象ファイルを指定する。
 

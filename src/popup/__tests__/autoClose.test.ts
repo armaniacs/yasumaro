@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * UF-404 記録成功後のポップアップ自動クローズ機能のテスト
  *
@@ -296,8 +296,8 @@ describe('画面遷移時のタイマーキャンセル (Integration)', () => {
     const { setScreenState } = await import('../screenState.js');
     setScreenState('main');
 
-    // 【画面表示遷移】: showSettingsScreen() を呼び出す
-    navigation.showSettingsScreen();
+    // 【画面表示遷移】: showSettingsScreen() を呼び出す（非同期化後は完了を待つ）
+    await navigation.showSettingsScreen();
 
     // 【結果検証】: showSettingsScreen() から window.close() が1回呼ばれたことを確認
     expect(mockWindowClose).toHaveBeenCalledTimes(1); // 【確認内容】: showSettingsScreen() によりポップアップが閉じられること

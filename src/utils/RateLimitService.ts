@@ -18,16 +18,19 @@ const STORAGE_KEYS = {
 } as const;
 
 /**
- * 連続した recordFailedAttempt の永続化書き込みを束ねる合体ウィンドウ。
- * Service Worker はエフェメラルでタイマー発火が保証されないため best-effort とし、
- * ロックアウト到達などの critical な遷移は待たずに同期フラッシュする。
+ * Former coalescing window for recordFailedAttempt writes (PBI-17).
+ *
+ * Kept as a deprecated export for compatibility: writes are now persisted
+ * immediately (PBI 2026-11-08-09 (6)) because the Service Worker is ephemeral
+ * and a deferred timer write is never guaranteed to fire — sub-threshold
+ * failures kept only behind this timer vanished on SW shutdown and were
+ * undercounted, letting an attacker stretch the brute-force budget.
+ * Batching saved at most a handful of writes per 5-minute window, which is
+ * negligible next to a lockout bypass.
+ *
+ * @deprecated Writes are immediate; the value is unused by the service.
  */
 export const RATE_LIMIT_WRITE_COALESCE_MS = 300;
-
-interface PendingCounters {
-  attempts: number;
-  firstAttempt: number;
-}
 
 export interface RateLimitResult {
   success: boolean;
@@ -40,49 +43,13 @@ export class RateLimitService {
     private readonly storage: StoragePort = CHROME_STORAGE_PORT
   ) {}
 
-  private pendingCounters: PendingCounters | null = null;
-  private coalesceTimer: ReturnType<typeof setTimeout> | null = null;
-
-  private scheduleCoalescedWrite(): void {
-    if (this.coalesceTimer !== null) {
-      clearTimeout(this.coalesceTimer);
-    }
-    this.coalesceTimer = setTimeout(() => {
-      this.coalesceTimer = null;
-      void this.flushPendingWrites();
-    }, RATE_LIMIT_WRITE_COALESCE_MS);
-  }
-
-  private cancelPendingWrites(): void {
-    if (this.coalesceTimer !== null) {
-      clearTimeout(this.coalesceTimer);
-      this.coalesceTimer = null;
-    }
-    this.pendingCounters = null;
-  }
-
   /**
    * 保留中のカウンタ書き込みを両ストアへ即時反映する。
-   * ロックアウト到達・明示フラッシュ用。保留がなければ何もしない。
+   * 書き込みは recordFailedAttempt で即時永続化されるため通常は保留がなく
+   * 何もしない。rateLimiter.flushRateLimitWrites との互換のために残す。
    */
   async flushPendingWrites(): Promise<void> {
-    if (this.coalesceTimer !== null) {
-      clearTimeout(this.coalesceTimer);
-      this.coalesceTimer = null;
-    }
-    const pending = this.pendingCounters;
-    this.pendingCounters = null;
-    if (pending === null) {
-      return;
-    }
-    await this.storage.session.set({
-      [STORAGE_KEYS.FAILED_ATTEMPTS]: pending.attempts,
-      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: pending.firstAttempt,
-    });
-    await this.storage.local.set({
-      [STORAGE_KEYS.FAILED_ATTEMPTS]: pending.attempts,
-      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: pending.firstAttempt,
-    });
+    return;
   }
 
   private async readCounters(
@@ -102,19 +69,13 @@ export class RateLimitService {
     localData: Record<string, number>,
     fallbackFirstAttempt: number
   ): { attempts: number; effectiveFirstAttempt: number } {
-    let attempts = Math.max(
+    const attempts = Math.max(
       sessionData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0,
       localData[STORAGE_KEYS.FAILED_ATTEMPTS] || 0
     );
     const sessionFirst = sessionData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
     const localFirst = localData[STORAGE_KEYS.FIRST_ATTEMPT_TIME] || 0;
     const firstAttemptCandidates = [sessionFirst, localFirst].filter(v => v > 0);
-    if (this.pendingCounters !== null) {
-      attempts = Math.max(attempts, this.pendingCounters.attempts);
-      if (this.pendingCounters.firstAttempt > 0) {
-        firstAttemptCandidates.push(this.pendingCounters.firstAttempt);
-      }
-    }
     const effectiveFirstAttempt =
       firstAttemptCandidates.length > 0 ? Math.min(...firstAttemptCandidates) : fallbackFirstAttempt;
     return { attempts, effectiveFirstAttempt };
@@ -172,18 +133,22 @@ export class RateLimitService {
     );
 
     const nextAttempts = attempts + 1;
-    this.pendingCounters = { attempts: nextAttempts, firstAttempt };
-    if (nextAttempts >= RATE_LIMIT_ATTEMPTS) {
-      // ロックアウト到達は遅延させない: session クリアで消される前に両ストアへ即時反映する。
-      await this.flushPendingWrites();
-    } else {
-      this.scheduleCoalescedWrite();
-    }
+    // SW-ephemerality fix (PBI 2026-11-08-09 (6)): persist every failure to
+    // both stores immediately. A coalesced timer write is never guaranteed to
+    // fire before SW shutdown, so sub-threshold failures lived only in memory
+    // and vanished on restart (undercount -> lockout bypass). Every failure
+    // is security-relevant; the batching saved only a few writes per window.
+    await this.storage.session.set({
+      [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
+      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
+    });
+    await this.storage.local.set({
+      [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
+      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
+    });
   }
 
   async resetFailedAttempts(): Promise<void> {
-    // 保留中の合体タイマーを先に破棄する (リセット後に古い値が復活しないように)。
-    this.cancelPendingWrites();
     await this.storage.session.remove([
       STORAGE_KEYS.FAILED_ATTEMPTS,
       STORAGE_KEYS.FIRST_ATTEMPT_TIME,

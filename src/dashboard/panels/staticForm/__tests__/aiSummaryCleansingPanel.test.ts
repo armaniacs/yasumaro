@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * aiSummaryCleansingPanel.test.ts — the threshold sliders own a single-key delta.
  *

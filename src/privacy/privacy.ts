@@ -8,15 +8,19 @@ import { applyI18n, setHtmlLangAndDir, translatePageTitle } from '../utils/i18n-
 
 import { escapeHtml } from '../utils/htmlEscape.js';
 import { setElementHtml } from '../utils/htmlFragment.js';
+import { MAX_PRIVACY_POLICY_BYTES } from '../utils/limits.js';
+import { logError } from '../utils/logger/api.js';
+import { ErrorCode } from '../utils/logger/types.js';
 
 export { escapeHtml };
 
 /**
  * MarkdownテキストをHTMLに変換する
  * @param md Markdownテキスト
+ * @param seen 見出しidの重複検出用レジストリ（blockquote再帰で共有する）
  * @returns HTML文字列
  */
-export function renderMarkdown(md: string): string {
+export function renderMarkdown(md: string, seen: Map<string, number> = new Map<string, number>()): string {
     const lines = md.split('\n');
     const out: string[] = [];
     let i = 0;
@@ -33,13 +37,18 @@ export function renderMarkdown(md: string): string {
             continue;
         }
 
-        // Headings
-        const hMatch = line.match(/^(#{1,5})\s+(.*)/);
+        // Headings (h1-h6, PBI 2026-11-08-15: h6まで見出し化)
+        const hMatch = line.match(/^(#{1,6})\s+(.*)/);
         if (hMatch) {
             const level = (hMatch[1] ?? '').length;
             const headingText = hMatch[2] ?? '';
             const text = renderInline(headingText);
-            const id = escapeHtml(headingText.replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-'));
+            // 同文見出しでidが重複しないよう2回目以降に -1, -2 ... を付与する
+            const base = headingText.replace(/[^\p{L}\p{N}\s-]/gu, '').trim().toLowerCase().replace(/\s+/g, '-') || 'heading';
+            const count = seen.get(base) ?? 0;
+            seen.set(base, count + 1);
+            const slug = count === 0 ? base : `${base}-${count}`;
+            const id = escapeHtml(slug);
             out.push(`<h${level} id="${id}">${text}</h${level}>`);
             i++;
             continue;
@@ -55,7 +64,7 @@ export function renderMarkdown(md: string): string {
                 bqLines.push(bqLine.replace(/^>\s?/, ''));
                 i++;
             }
-            const inner = renderMarkdown(bqLines.join('\n')).replace(/^\[!NOTE\]\s*/i, '');
+            const inner = renderMarkdown(bqLines.join('\n'), seen).replace(/^\[!NOTE\]\s*/i, '');
             out.push(`<blockquote>${inner}</blockquote>`);
             continue;
         }
@@ -141,8 +150,19 @@ export function renderMarkdown(md: string): string {
  * @returns HTML文字列
  */
 export function renderInline(text: string): string {
-    // Links [text](url) - only allow HTTPS and anchor links
-    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_, t, u) => {
+    // PBI 2026-11-08-15: コードを先に退避する。太字置換が先だと `**` 内の
+    // バッククォートが二重解釈され (`**not bold**` が strong 化後に code 化で
+    // 二重エスケープされる)、逆に太字内の正規コードまで潰さないよう
+    // プレースホルダーで保護して最後に戻す。
+    const codeSpans: string[] = [];
+    text = text.replace(/`([^`]+)`/g, (_m, t: string) => {
+        const idx = codeSpans.length;
+        codeSpans.push(`<code>${escapeHtml(t)}</code>`);
+        return `\uE000${idx}\uE001`;
+    });
+    // Links [text](url) - only allow HTTPS and anchor links.
+    // URL内の括弧を1段階まで許容し、末尾の ) での誤切断を防ぐ。
+    text = text.replace(/\[([^\]]+)\]\(((?:[^()\s]|\([^()]*\))+)(?:\s+[^)]*)?\)/g, (_, t: string, u: string) => {
         let safeUrl = u;
         if (u.startsWith('#')) {
             safeUrl = u;
@@ -159,9 +179,9 @@ export function renderInline(text: string): string {
         return `<a href="${escapeHtml(safeUrl)}">${escapeHtml(t)}</a>`;
     });
     // Bold
-    text = text.replace(/\*\*(.+?)\*\*/g, (_, t) => `<strong>${escapeHtml(t)}</strong>`);
-    // Code
-    text = text.replace(/`([^`]+)`/g, (_, t) => `<code>${escapeHtml(t)}</code>`);
+    text = text.replace(/\*\*(.+?)\*\*/g, (_m, t: string) => `<strong>${escapeHtml(t)}</strong>`);
+    // 退避したコードを戻す (escapeHtml が触れない私用面コード点を使用)
+    text = text.replace(/\uE000(\d+)\uE001/g, (_m, n: string) => codeSpans[Number(n)] ?? '');
     return text;
 }
 
@@ -180,11 +200,20 @@ export async function loadPrivacyPolicy(containerId: string = 'content'): Promis
         const res = await fetch(chrome.runtime.getURL('PRIVACY.md'));
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const contentLength = res.headers.get('content-length');
-        const maxSize = 1024 * 1024; // 1MB limit for privacy policy
-        if (contentLength && parseInt(contentLength, 10) > maxSize) {
+        // PBI 2026-11-08-15: 上限は limits.ts の共有定数を参照する (式内リテラル禁止)
+        if (contentLength && parseInt(contentLength, 10) > MAX_PRIVACY_POLICY_BYTES) {
             throw new Error('Privacy policy file exceeds size limit');
         }
         const md = await res.text();
+        // 事前検査のヘッダは欠落・偽装しうるため、読み取り後の実バイト長でも
+        // 上限を実効化する (TextEncoder換算のUTF-8バイト長で判定)。
+        // 将来の遠隔化メモ: res.text() は全文をメモリに載せる。遠隔取得に
+        // 切り替える場合は Reader で逐次読みし、累積バイトが上限を超えた
+        // 時点で打切るストリーミングcapに変えること。現状は同梱資産のみで
+        // 上限内が保証されるため全文読みで十分であり動作変更は不要。
+        if (new TextEncoder().encode(md).byteLength > MAX_PRIVACY_POLICY_BYTES) {
+            throw new Error('Privacy policy file exceeds size limit');
+        }
         setElementHtml(content, renderMarkdown(md));
     } catch (_e) {
         setElementHtml(content, `<p class="error">${getMessageOr('privacyPolicyLoadError', 'Failed to load the privacy policy.')}</p>`);
@@ -201,6 +230,14 @@ export function initPrivacyPage(): void {
         setHtmlLangAndDir();
         applyI18n();
         translatePageTitle('privacyPolicyTitle');
-        loadPrivacyPolicy().catch(console.error);
+        // PBI 2026-11-11-03: seam-routed (was .catch(console.error)).
+        loadPrivacyPolicy().catch((error: unknown) => {
+            void logError(
+                'Failed to load the privacy policy',
+                { error: error instanceof Error ? error.message : String(error) },
+                ErrorCode.STORAGE_READ_FAILURE,
+                'privacy'
+            );
+        });
     });
 }

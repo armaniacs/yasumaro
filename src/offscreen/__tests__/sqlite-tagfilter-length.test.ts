@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 
 const FTS_QUERY_MAX_LENGTH = 200;
 

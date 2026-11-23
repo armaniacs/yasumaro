@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteBackendUnification.test.ts
  *
@@ -19,6 +19,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { extname, join } from 'node:path';
+import { resolveRepoRoot } from '../../../testDir/repoRoot.js';
 
 /**
  * One recorder per VES, shared by the module mock and the test bodies, so a
@@ -151,7 +152,7 @@ const SEARCH_ROW = {
 // ---------------------------------------------------------------------------
 
 describe('database file name: one declaration', () => {
-  const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'graphify-out']);
+  const SKIP_DIRS = new Set(['node_modules', 'dist', '.git', 'coverage', 'graphify-out', '.stryker-tmp']);
 
   function sourceFiles(dir: string, acc: string[] = []): string[] {
     for (const entry of readdirSync(dir)) {
@@ -166,12 +167,15 @@ describe('database file name: one declaration', () => {
 
   /** Every `const <name> = 'yasumaro.db'` in shipped source, by file. */
   function declarations(): { file: string; name: string }[] {
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const root = resolveRepoRoot(process.cwd());
     const found: { file: string; name: string }[] = [];
-    for (const file of sourceFiles(join(process.cwd(), 'src')).sort()) {
+    for (const file of sourceFiles(join(root, 'src')).sort()) {
       const text = readFileSync(file, 'utf-8');
       const re = /^\s*(?:export\s+)?const\s+(\w*DB_FILENAME\w*)\s*=\s*'yasumaro\.db'\s*;/gm;
       for (const m of text.matchAll(re)) {
-        found.push({ file: file.slice(process.cwd().length + 1), name: m[1] });
+        found.push({ file: file.slice(root.length + 1), name: m[1] });
       }
     }
     return found;

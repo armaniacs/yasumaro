@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * domainAnalysisPanel-intelBranches.test.ts
  * PBI 2026-10-23-10 — 情報源の偏りと見直し提案の分岐ピン.

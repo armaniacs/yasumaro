@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * privacyConsentController.test.ts
  * Tests for the privacy policy consent modal UI controller

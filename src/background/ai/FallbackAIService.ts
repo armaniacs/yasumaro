@@ -7,6 +7,8 @@ import {
   type AiConnectionTestResult,
 } from './AIService.js';
 import { errorMessage } from '../../utils/errorUtils.js';
+import { addLog } from '../../utils/logger/core.js';
+import { LogType } from '../../utils/logger/types.js';
 
 interface FallbackConfig {
   local: AIService;
@@ -35,14 +37,24 @@ export class FallbackAIService implements AIService {
       return this.config.remote.generateSummary(content, options);
     }
 
-    // mode === 'auto': try local, fall back to remote on failure
+    // mode === 'auto': try local, fall back to remote on failure.
+    // PBI 2026-11-11-01: both fallback paths leave a WARN so the local cause
+    // stays diagnosable; the remote result is still returned unchanged.
     try {
       const localResult = await this.config.local.generateSummary(content, options);
       if (localResult.success === false) {
+        addLog(LogType.WARN, 'Local AI summary failed, falling back to remote', {
+          error: localResult.error ?? localResult.summary,
+          ...(options?.traceId ? { traceId: options.traceId } : {}),
+        });
         return this.config.remote.generateSummary(content, options);
       }
       return localResult;
-    } catch {
+    } catch (error: unknown) {
+      addLog(LogType.WARN, 'Local AI summary failed, falling back to remote', {
+        error: errorMessage(error),
+        ...(options?.traceId ? { traceId: options.traceId } : {}),
+      });
       return this.config.remote.generateSummary(content, options);
     }
   }

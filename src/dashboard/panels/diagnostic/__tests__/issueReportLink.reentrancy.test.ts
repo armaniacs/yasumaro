@@ -1,9 +1,10 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createIssueReportModalController } from '../issueReportLink.js';
 import type { DiagnosticsSnapshot } from '../DiagnosticsCollector.js';
 
-vi.mock('../../../../utils/logger/core.js', () => ({
+vi.mock('../../../../utils/logger/core.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../../../../utils/logger/core.js')>()),
   getLogs: vi.fn().mockResolvedValue([]),
 }));
 

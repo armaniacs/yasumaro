@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * registryContext.test.ts
  * PBI 2026-08-08-09 Phase 3

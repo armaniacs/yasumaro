@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * contentKernel.extractCommit.parity.test.ts (PBI 2026-09-21-25)
  * Pins the CURRENT extract -> apply pair behavior BEFORE the
@@ -81,10 +81,10 @@ describe('pair pin: applyExtractResultToPageState maps all 5 stat blocks', () =>
 describe('pair pin: extract default config reads pageState.cleansingConfig', () => {
     const DOM = `<article><p>${'Pin default config body text. '.repeat(10)}</p><script>alert('strip me')</script></article>`;
 
-    it('default (no-arg) extract tracks pageState.cleansingConfig', () => {
+    it('default (no-arg) extract tracks pageState.cleansingConfig', async () => {
         document.body.innerHTML = DOM;
         const kernel = makeKernel();
-        const withStrip = kernel.extractPageContent();
+        const withStrip = await kernel.extractPageContent();
         // Disable cleansing via pageState, re-extract with the default (no arg).
         kernel.pageState.cleansingConfig = {
             ...kernel.pageState.cleansingConfig,
@@ -95,7 +95,7 @@ describe('pair pin: extract default config reads pageState.cleansingConfig', () 
             contentDedupEnabled: false,
         };
         document.body.innerHTML = DOM;
-        const withoutStrip = kernel.extractPageContent();
+        const withoutStrip = await kernel.extractPageContent();
         // The default read must follow pageState: different configs, different outcomes.
         expect(withStrip.totalRemoved ?? 0).not.toBe(withoutStrip.totalRemoved ?? 0);
     });
@@ -114,16 +114,16 @@ describe('extractAndCommit: deep call equals the pair (field-equivalence)', () =
         };
     }
 
-    it('returns the same ExtractResult and commits identical stats as the pair', () => {
+    it('returns the same ExtractResult and commits identical stats as the pair', async () => {
         document.body.innerHTML = DOM;
         const viaPair = makeKernel();
-        const pairResult = viaPair.extractPageContent();
+        const pairResult = await viaPair.extractPageContent();
         viaPair.applyExtractResultToPageState(pairResult);
 
         document.body.innerHTML = DOM;
         const viaDeep = makeKernel();
         // Same default config: fresh kernels share the same default cleansing config.
-        const deepResult = viaDeep.extractAndCommit();
+        const deepResult = await viaDeep.extractAndCommit();
 
         expect(deepResult).toEqual(pairResult);
         expect(snapshot(viaDeep.pageState)).toEqual(snapshot(viaPair.pageState));
@@ -133,27 +133,27 @@ describe('extractAndCommit: deep call equals the pair (field-equivalence)', () =
         expect(viaDeep.pageState.lastFallbackTriggered).toBe(pairResult.fallbackTriggered ?? false);
     });
 
-    it('honours an explicit config identically to the pair', () => {
+    it('honours an explicit config identically to the pair', async () => {
         document.body.innerHTML = DOM;
         const config = { ...makeKernel().pageState.cleansingConfig, contentStripHardEnabled: false };
         const viaPair = makeKernel();
         document.body.innerHTML = DOM;
-        const pairResult = viaPair.extractPageContent(config);
+        const pairResult = await viaPair.extractPageContent(config);
         viaPair.applyExtractResultToPageState(pairResult);
 
         document.body.innerHTML = DOM;
         const viaDeep = makeKernel();
-        const deepResult = viaDeep.extractAndCommit(config);
+        const deepResult = await viaDeep.extractAndCommit(config);
 
         expect(deepResult).toEqual(pairResult);
         expect(snapshot(viaDeep.pageState)).toEqual(snapshot(viaPair.pageState));
     });
 
-    it('resolves the default config once at entry: no re-read after pageState changes', () => {
+    it('resolves the default config once at entry: no re-read after pageState changes', async () => {
         document.body.innerHTML = DOM;
         const kernel = makeKernel();
         const before = kernel.pageState.cleansingConfig;
-        const result = kernel.extractAndCommit();
+        const result = await kernel.extractAndCommit();
         // The entry snapshot is the object read before extraction.
         expect(result).toBeDefined();
         expect(kernel.pageState.cleansingConfig).toBe(before);
@@ -176,13 +176,13 @@ describe('extractAndCommit: deep call equals the pair (field-equivalence)', () =
         expect(sent.payload.content).toBeDefined();
     });
 
-    it('getContentHandler commits via extractAndCommit alone', () => {
+    it('getContentHandler commits via extractAndCommit alone', async () => {
         document.body.innerHTML = DOM;
         const kernel = makeKernel();
         const sendResponse = (_r?: unknown): void => undefined;
         const calls: unknown[] = [];
         const extractAndCommit = vi.fn((c?: Parameters<typeof kernel.extractAndCommit>[0]) => kernel.extractAndCommit(c));
-        handleGetContentMessage(
+        await handleGetContentMessage(
             { type: 'GET_CONTENT' },
             { id: 'test-extension-id' },
             (r?: unknown) => { calls.push(r); },
@@ -202,7 +202,7 @@ describe('extractAndCommit: deep call equals the pair (field-equivalence)', () =
 describe('pair pin: explicit config override', () => {
     const DOM = `<article><p>${'Pin explicit config body text. '.repeat(10)}</p><script>alert('strip me')</script></article>`;
 
-    it('explicit config overrides the pageState default', () => {
+    it('explicit config overrides the pageState default', async () => {
         document.body.innerHTML = DOM;
         const kernel = makeKernel();
         kernel.pageState.cleansingConfig = {
@@ -214,12 +214,12 @@ describe('pair pin: explicit config override', () => {
             contentDedupEnabled: false,
         };
         document.body.innerHTML = DOM;
-        const explicit = kernel.extractPageContent({
+        const explicit = await kernel.extractPageContent({
             ...kernel.pageState.cleansingConfig,
             contentStripHardEnabled: true,
         });
         document.body.innerHTML = DOM;
-        const implicit = kernel.extractPageContent();
+        const implicit = await kernel.extractPageContent();
         expect(explicit.totalRemoved ?? 0).not.toBe(implicit.totalRemoved ?? 0);
     });
 });

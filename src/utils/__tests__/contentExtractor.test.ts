@@ -13,13 +13,13 @@ describe('contentExtractor', () => {
     global.document = document;
   });
 
-  it('handles empty document body', () => {
+  it('handles empty document body', async () => {
     document.body.innerHTML = '';
-    const result = extractMainContent();
+    const result = await extractMainContent();
     expect(result).toBeDefined();
   });
 
-  it('extracts content from article element', () => {
+  it('extracts content from article element', async () => {
     document.body.innerHTML = `
       <article>
         <h1>Test Article</h1>
@@ -28,7 +28,7 @@ describe('contentExtractor', () => {
         <p>Another paragraph with meaningful content.</p>
       </article>
     `;
-    const result = extractMainContent();
+    const result = await extractMainContent();
     expect(result).toBeDefined();
   });
 });

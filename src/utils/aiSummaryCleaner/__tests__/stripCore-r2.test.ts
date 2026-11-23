@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * stripCore-r2.test.ts — covers core strip functions not yet tested:
  * stripAltAttributes, stripMetadataElements, stripAdElements,

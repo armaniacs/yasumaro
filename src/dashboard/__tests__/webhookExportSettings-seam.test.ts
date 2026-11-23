@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * webhookExportSettings-seam.test.ts
  * PBI 2026-10-22-05 boxes (a)(b) ― dashboard controller seam test: the

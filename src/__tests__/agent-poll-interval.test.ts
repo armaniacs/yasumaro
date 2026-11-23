@@ -25,6 +25,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, extname } from 'node:path';
+import { resolveRepoRoot } from '../../testDir/repoRoot.js';
 
 const CAP_SECONDS = 10;
 
@@ -68,6 +69,11 @@ const SKIP_DIRS = new Set([
   'test-results',
   'playwright-report',
   'testDir/test-results',
+  '.stryker-tmp',
+  // Generated Stryker reports embed mutated source text (including the rule's
+  // own "--interval 30" example), so scanning them reports the rule as a
+  // violation of itself.
+  'reports',
 ]);
 
 const TEXT_EXTENSIONS = new Set([
@@ -108,18 +114,21 @@ function collectFiles(dir: string, acc: string[] = []): string[] {
 describe('agent polling interval rule', () => {
   it('keeps the rule of record in a tracked file', () => {
     // A rule that only lives in a gitignored dotfile does not exist for CI or
-    // for the next person who clones the repository.
-    const tracked = execFileSync('git', ['ls-files', RULE_OF_RECORD], {
+    // for the next person who clones the repository. Run git against the real
+    // repo: a Stryker sandbox copy has no .git of its own.
+    const tracked = execFileSync('git', ['-C', resolveRepoRoot(process.cwd()), 'ls-files', RULE_OF_RECORD], {
       encoding: 'utf-8',
     }).trim();
     expect(tracked, `${RULE_OF_RECORD} must be tracked`).toBe(RULE_OF_RECORD);
   });
 
   it('does not let a local mirror become the rule of record', () => {
+    const repoRoot = resolveRepoRoot(process.cwd());
     for (const mirror of LOCAL_MIRRORS) {
-      if (!existsSync(mirror)) continue;
-      // `git check-ignore` exits 0 when the path is ignored.
-      const { status } = spawnSync('git', ['check-ignore', '-q', mirror]);
+      if (!existsSync(join(repoRoot, mirror))) continue;
+      // `git check-ignore` exits 0 when the path is ignored. Run git against
+      // the real repo: a Stryker sandbox copy has no .git of its own.
+      const { status } = spawnSync('git', ['-C', repoRoot, 'check-ignore', '-q', mirror]);
       expect(
         status,
         `${mirror} exists but is not gitignored — either track it and make it a rule file, or delete it`,
@@ -150,7 +159,9 @@ describe('agent polling interval rule', () => {
   });
 
   it('keeps every interval flag in the repository at or below the cap', () => {
-    const files = collectFiles(process.cwd());
+    // Source-scanning gate: always read the real repo tree, even when this
+    // test itself runs from inside a Stryker sandbox copy.
+    const files = collectFiles(resolveRepoRoot(process.cwd()));
     const violations: string[] = [];
 
     for (const file of files) {
@@ -182,7 +193,7 @@ describe('agent polling interval rule', () => {
   });
 
   it('scans a non-trivial number of files, so a broken collector cannot pass silently', () => {
-    const files = collectFiles(process.cwd());
+    const files = collectFiles(resolveRepoRoot(process.cwd()));
     expect(files.length).toBeGreaterThan(50);
     expect(files.some((f) => f.endsWith('ci.yml'))).toBe(true);
   });

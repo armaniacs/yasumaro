@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * historyEntryDiagnostics-characterization.test.ts (PBI 2026-09-23-01)
  *

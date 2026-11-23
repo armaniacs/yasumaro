@@ -1,5 +1,5 @@
 /**
- * @vitest-environment jsdom
+ * @vitest-environment wasm-quickjs-dom
  */
 /**
  * stripExtended-r4.test.ts — cover remaining uncovered statements 147-149,193-194,201-202,243-244,317-318,359-360,366,379-385,416-417,689-690

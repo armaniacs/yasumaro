@@ -83,6 +83,16 @@ Scenario: 初回分の置換が両言語で一致する
 4. **なぜ `gpt-4o-mini` を残すのか**: OpenAI 公式 API の現行モデル例であり、Groq 退役の影響を受けないため。
 5. **なぜ root CHANGELOG.md なのか**: `docs/CHANGELOG.md` は存在しないため、四半期記録先は root の `CHANGELOG.md` とする。
 
+## 四半期レビュー記録
+
+### 2026-11-08 (Q4点検、変更なし)
+
+- 既定モデルID: `openai/gpt-oss-20b`・`gemini-3.1-flash-lite`・`llama3`・`gpt-6-luna` に死んだIDなし。Groq退役表(2026-11-08取得)で新規退役は `groq/compound`・`groq/compound-mini`(2026-09-21停止)、`qwen/qwen3.6-27b`(2026-09-14停止、後継 `qwen/qwen3.8-27b`)、`qwen/qwen3-32b`・`meta-llama/llama-4-scout-17b-16e-instruct`(2026-07-17停止)。いずれも既定値・文書例に含まれない。
+- 文書突合: `docs/`・`_locales/` に退役IDの記載なし。
+- 対応表sanity: 既定表と文書例の対応にずれなし(目視)。
+- 上限・プロバイダー数: 変更なし。
+- 変更が発生しなかったためCHANGELOG追記なし(本PBIの運用通り)。
+
 ## Definition of Done
 
 - [x] 初回分の docs 置換 (4 箇所) が適用されている

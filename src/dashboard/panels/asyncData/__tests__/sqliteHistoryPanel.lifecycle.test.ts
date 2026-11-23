@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanel.lifecycle.test.ts
  * Verification of PanelLifecycle interface implementation for sqliteHistoryPanel.

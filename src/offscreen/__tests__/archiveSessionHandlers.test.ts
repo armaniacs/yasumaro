@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveSessionHandlers.test.ts
  * OPFS-worker handlers for the temp-open session (PBI 2026-09-06-05):

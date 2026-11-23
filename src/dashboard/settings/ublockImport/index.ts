@@ -23,6 +23,35 @@ let dropZoneActive = false;
 let currentSourceUrl: string | null = null;
 
 /**
+ * 進行中のファイル読み取りの中断口。ファイル選択・ドロップのたびに前回分を
+ * abort して最新の読み取りだけを生かす (fileReader.ts の signal 対応の
+ * production 配線。連続操作で古い読み取りが遅れて上書きする競合を防ぐ)。
+ */
+let currentFileRead: AbortController | null = null;
+
+function readFileCancellable(file: File): Promise<string> {
+  currentFileRead?.abort();
+  const controller = new AbortController();
+  currentFileRead = controller;
+  return readFile(file, { signal: controller.signal }).finally(() => {
+    if (currentFileRead === controller) currentFileRead = null;
+  });
+}
+
+/**
+ * ファイル読み取りの中断による失敗かどうかを判定する。
+ * 継続操作で旧読取を abort した際の reject は正常系の中断であり、
+ * 新読取の success と競合してエラー表示で上書きしてはならない。
+ * DOMException の AbortError 名、または fileReader が返す中断文言
+ * (getMessage('ublockFileAborted')) のいずれかに一致したら中断扱いとする。
+ */
+function isFileReadAbort(error: Error | DOMException): boolean {
+  if (error.name === 'AbortError') return true;
+  const abortedMessage = getMessage('ublockFileAborted');
+  return abortedMessage !== '' && error.message.includes(abortedMessage);
+}
+
+/**
  * uBlockインポートUIを初期化
  */
 export async function init(): Promise<void> {
@@ -95,13 +124,16 @@ async function handleFileSelect(event: Event): Promise<void> {
   if (!file) return;
 
   try {
-    const text = await readFile(file);
+    const text = await readFileCancellable(file);
     const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
     if (textarea) textarea.value = text;
     currentSourceUrl = null;
     handleTextInputPreview();
     showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
+    // 旧読取の中断は正常系のためエラー表示せず静かに抜ける。
+    // DOMException は Error のサブクラスではないため両方で狭める。
+    if ((error instanceof Error || error instanceof DOMException) && isFileReadAbort(error)) return;
     showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }
@@ -392,13 +424,16 @@ function handleDrop(event: DragEvent): void {
  */
 async function processFile(file: File): Promise<void> {
   try {
-    const text = await readFile(file);
+    const text = await readFileCancellable(file);
     const textarea = document.getElementById('uBlockFilterInput') as HTMLTextAreaElement | null;
     if (textarea) textarea.value = text;
     currentSourceUrl = null;
     handleTextInputPreview();
     showStatus(UBLOCK_STATUS_ID, getMessage('fileLoaded', { filename: file.name }), 'success');
   } catch (error: unknown) {
+    // ドロップ直後の再ドロップで旧読取が abort された場合も同様に沈黙させる。
+    // DOMException は Error のサブクラスではないため両方で狭める。
+    if ((error instanceof Error || error instanceof DOMException) && isFileReadAbort(error)) return;
     showStatus(UBLOCK_STATUS_ID, `${getMessage('fileReadError')}: ${errorMessage(error)}`, 'error');
   }
 }

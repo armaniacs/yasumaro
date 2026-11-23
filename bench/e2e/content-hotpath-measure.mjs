@@ -134,17 +134,18 @@ async function measurePage(browser, bundlePath, page, scale, throttle) {
     if (!canExtract) throw new Error('bundle did not expose the extractor');
     const yieldKind = await pg.evaluate(() => (window.__hasYield ? 'scheduler.yield' : 'setTimeout(0)'));
 
-    // A: single-run walls ×5 (each run = one main-thread task).
-    const runs = await pg.evaluate(() => {
+    // A: single-run walls ×5 (PBI 1116b: the extractor is async now, so each
+    // run spans frames — walls measure the full async extraction).
+    const runs = await pg.evaluate(async () => {
       const walls = [];
       let chars = 0;
       for (let i = 0; i < 5; i++) {
         const t0 = performance.now();
-        chars = window.__EXT.extractMainContentWithInfo(
+        chars = (await window.__EXT.extractMainContentWithInfo(
           10000,
           { cleanseEnabled: true },
           { aiSummaryCleanseEnabled: false },
-        ).content.length;
+        )).content.length;
         walls.push(performance.now() - t0);
       }
       return { walls, chars };
@@ -171,7 +172,7 @@ async function measurePage(browser, bundlePath, page, scale, throttle) {
         }
         const tc = performance.now();
         try {
-          window.__EXT.extractMainContentWithInfo(10000, { cleanseEnabled: true }, {});
+          await window.__EXT.extractMainContentWithInfo(10000, { cleanseEnabled: true }, {});
         } finally {
           for (const [el, d] of hidden) el.style.display = d;
         }
@@ -198,7 +199,7 @@ async function measurePage(browser, bundlePath, page, scale, throttle) {
       holder.innerHTML = doc.body.innerHTML;
       document.body.appendChild(holder);
       try {
-        window.__EXT.extractMainContentWithInfo(10000, { cleanseEnabled: true }, {});
+        await window.__EXT.extractMainContentWithInfo(10000, { cleanseEnabled: true }, {});
       } finally {
         holder.remove();
       }

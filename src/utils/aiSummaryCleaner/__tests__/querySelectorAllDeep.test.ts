@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * querySelectorAllDeep.test.ts — 30-03 Shadow DOM / iframe 走査
  */

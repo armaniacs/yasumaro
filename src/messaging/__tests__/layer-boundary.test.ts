@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
 const STATIC_RUNTIME_EDGE = /^(?:import|export)\s+(?:\{|\*)[^;]*?from\s+'\.\.\/background[^']*'/m;
 
@@ -22,8 +23,10 @@ function collectMessagingSources(root: string): string[] {
 
 describe('messaging layer boundary', () => {
     it('has no static runtime import from background', () => {
-        const root = new URL('..', import.meta.url);
-        const files = collectMessagingSources(root.pathname);
+        // Source-scanning gate: always read the real repo tree, even when
+        // this test itself runs from inside a Stryker sandbox copy.
+        const root = join(repoRootFromUrl(import.meta.url), 'src/messaging');
+        const files = collectMessagingSources(root);
         expect(files.length).toBeGreaterThan(0);
         const violations = files.filter((file) => STATIC_RUNTIME_EDGE.test(readFileSync(file, 'utf8')));
         expect(violations).toEqual([]);

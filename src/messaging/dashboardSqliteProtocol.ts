@@ -20,7 +20,7 @@ export { MODAL_REQUIRED_SUBTYPES } from './sqliteOperationSecurity.js';
 
 // ============================================================================
 // Requests (subtype -> payload shape, excluding confirmToken which is
-// injected by sendDashboardMessage/withConfirmToken)
+// injected by dashboardPreSendHook)
 // ============================================================================
 
 export type DashboardSqliteRequest =

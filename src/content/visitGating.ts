@@ -28,8 +28,43 @@ import { CLEANSING_RULES, THRESHOLD_RULES } from '../utils/aiSummaryCleaner/rule
 import { cleansingFlagProp } from '../utils/cleansingConfig.js';
 import { getCleansingConfigForDomain } from '../utils/aiSummaryCleaner/perSiteOverride.js';
 
-export interface VisitEvaluation {
-    reportable: boolean;
+/**
+ * Review S3: cheap content equality for the overrides memo. Compares the
+ * effective snapshot content (finite-number leaves only, matching the
+ * key-sorted stringify). Builds small transient key arrays per kind
+ * (Object.keys + filter) — cheap next to the stringify it replaces, which
+ * now runs only on an actual content change (a storage write). Non-object
+ * leaves count as absent on both sides so corruption neither pins nor
+ * churns the key.
+ */
+function areOverridesEqual(
+    a: Record<string, Record<string, number>>,
+    b: Record<string, Record<string, number>>,
+): boolean {
+    const aKinds = Object.keys(a).filter((k) => {
+        const inner: Record<string, number> | undefined = a[k];
+        return inner !== null && typeof inner === 'object';
+    });
+    const bKinds = Object.keys(b).filter((k) => {
+        const inner: Record<string, number> | undefined = b[k];
+        return inner !== null && typeof inner === 'object';
+    });
+    if (aKinds.length !== bKinds.length) return false;
+    for (const kind of aKinds) {
+        const ai = a[kind];
+        const bi = b[kind];
+        if (ai === undefined || bi === undefined) return false;
+        const aKeys = Object.keys(ai).filter((k) => typeof ai[k] === 'number' && Number.isFinite(ai[k]));
+        const bKeys = Object.keys(bi).filter((k) => typeof bi[k] === 'number' && Number.isFinite(bi[k]));
+        if (aKeys.length !== bKeys.length) return false;
+        for (const key of aKeys) {
+            if (ai[key] !== bi[key]) return false;
+        }
+    }
+    return true;
+}
+
+export interface VisitEvaluation {    reportable: boolean;
     duration: number;
     thresholds: VisitGateThresholds;
     gate: VisitGate;
@@ -55,6 +90,21 @@ export class VisitGating {
     private cachedGate: VisitGate | null = null;
     private isE2ECached: boolean | null = null;
     private cachedStartTime: number | null = null;
+    /**
+     * PBI 2026-11-08-02: the resolved thresholds are a pure function of
+     * (pageState pair, media kind, persisted overrides). The kind + a stable
+     * overrides snapshot ride beside the caches so a mediaKind transition or
+     * an override-only change rebuilds the gate even when the pageState
+     * primitives did not move.
+     */
+    private cachedMediaKind: string | null = null;
+    private cachedOverridesKey: string | null = null;
+    /**
+     * Review S3: memoization anchor for the overrides snapshot. The raw
+     * provider value rides here so refreshCachesIfStale() can reuse the
+     * cached key without stringify when the content is unchanged.
+     */
+    private lastOverridesRaw: Record<string, Record<string, number>> | null = null;
 
     constructor(private readonly deps: VisitGatingDeps) {}
 
@@ -65,6 +115,8 @@ export class VisitGating {
         this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
         this.isE2ECached = this.deps.isE2ETest();
         this.cachedStartTime = pageState.startTime;
+        this.cachedMediaKind = this.currentMediaKind();
+        this.cachedOverridesKey = this.snapshotOverrides();
     }
 
     /**
@@ -76,29 +128,83 @@ export class VisitGating {
      * of the base when the reader can supply them.
      */
     private resolveThresholds(pageState: PageState): VisitGateThresholds {
-        const kind = this.deps.detectMediaKind?.() ?? 'article';
+        const kind = this.currentMediaKind();
         if (kind === 'article') return pageState.toVisitGateThresholds();
         return mediaThresholdsFor(kind, this.deps.getMediaThresholdOverrides?.() ?? {});
+    }
+
+    private currentMediaKind(): string {
+        return this.deps.detectMediaKind?.() ?? 'article';
+    }
+
+    /**
+     * Stable snapshot of the persisted per-media overrides. Key-sorted so
+     * the same content always serializes identically; non-finite leaves are
+     * dropped so a corrupt entry cannot pin the key forever.
+     */
+    private snapshotOverrides(): string {
+        const raw: Record<string, Record<string, number>> = this.deps.getMediaThresholdOverrides?.() ?? {};
+        // Review S3: memoized — reuse the cached key when the raw content
+        // is unchanged so the per-evaluation stringify disappears. The
+        // shallow walk below is O(kinds * keys); stringify runs only on an
+        // actual content change (a storage write). Callers holding a stable
+        // reference skip even the walk via the identity fast path.
+        if (this.lastOverridesRaw !== null && this.lastOverridesRaw === raw) {
+            return this.cachedOverridesKey ?? '{}';
+        }
+        if (this.lastOverridesRaw !== null && areOverridesEqual(this.lastOverridesRaw, raw)) {
+            this.lastOverridesRaw = raw;
+            return this.cachedOverridesKey ?? '{}';
+        }
+        const sorted: Record<string, Record<string, number>> = {};
+        for (const kind of Object.keys(raw).sort()) {
+            const inner = raw[kind];
+            if (inner === null || typeof inner !== 'object') continue;
+            const sortedInner: Record<string, number> = {};
+            for (const key of Object.keys(inner).sort()) {
+                const value = inner[key];
+                if (typeof value === 'number' && Number.isFinite(value)) sortedInner[key] = value;
+            }
+            sorted[kind] = sortedInner;
+        }
+        const key = JSON.stringify(sorted);
+        // NOTE: the anchor moves here, but cachedOverridesKey is written
+        // only by initialize()/refreshCachesIfStale() AFTER comparing —
+        // writing it here would make the staleness check compare the new
+        // key against itself and never rebuild on overrides changes.
+        this.lastOverridesRaw = raw;
+        return key;
     }
 
     /**
      * Rebuild the cached gate/thresholds when pageState values drift
      * (settings reload or startTime reset after init). Compares the source
-     * primitives directly so a fresh-path call never projects thresholds.
+     * primitives directly so a fresh-path call never projects thresholds —
+     * the resolve stays behind the cheap key checks (PBI 2026-09-23-08
+     * single-gate-lifetime pin). The pageState pair only feeds the article
+     * path, so it is compared for article pages only; media pages resolve
+     * from kind + overrides, which are compared as their own keys.
      * Returns true when a rebuild happened (lets the timer drop its
      * deadline, which was computed from the old thresholds).
      */
     refreshCachesIfStale(): boolean {
         const pageState = this.deps.getPageState();
-        const stale =
+        const mediaKind = this.currentMediaKind();
+        const overridesKey = this.snapshotOverrides();
+        const primitivesStale =
             !this.cachedThresholds ||
-            this.cachedThresholds.minDuration !== pageState.minVisitDuration ||
-            this.cachedThresholds.minScroll !== pageState.minScrollDepth ||
+            (mediaKind === 'article' &&
+                (this.cachedThresholds.minDuration !== pageState.minVisitDuration ||
+                    this.cachedThresholds.minScroll !== pageState.minScrollDepth)) ||
             this.cachedStartTime !== pageState.startTime;
+        const stale =
+            primitivesStale || this.cachedMediaKind !== mediaKind || this.cachedOverridesKey !== overridesKey;
         if (stale) {
             this.cachedThresholds = this.resolveThresholds(pageState);
             this.cachedGate = new VisitGate(this.cachedThresholds, this.deps.clock);
             this.cachedStartTime = pageState.startTime;
+            this.cachedMediaKind = mediaKind;
+            this.cachedOverridesKey = overridesKey;
         }
         if (this.isE2ECached === null) this.isE2ECached = this.deps.isE2ETest();
         return stale;
@@ -173,6 +279,25 @@ export class VisitGating {
 }
 
 /**
+ * PBI 2026-11-08-02: visit-threshold range policy. 0/negative durations
+ * would fire instantly and huge ones never; both are clamped into a sane
+ * window instead. minScroll 0 keeps its "scroll gate disabled" meaning, so
+ * its floor stays 0 — the duration floor (>= 1s) still prevents instant
+ * firing.
+ */
+export const MIN_VISIT_DURATION_FLOOR = 1;
+export const MIN_VISIT_DURATION_CEIL = 3600;
+export const MIN_SCROLL_DEPTH_FLOOR = 0;
+export const MIN_SCROLL_DEPTH_CEIL = 100;
+
+export function sanitizeVisitThreshold(parsed: number, min: number, max: number, fallback: number): number {
+    if (!Number.isFinite(parsed)) return fallback;
+    if (parsed < min) return min;
+    if (parsed > max) return max;
+    return parsed;
+}
+
+/**
  * Table-driven settings mapping (SSOT: CLEANSING_RULES + THRESHOLD_RULES +
  * DEFAULT_KEYWORDS via PageState). Single implementation called by
  * ContentKernel.loadSettings — the only writer of these PageState fields
@@ -181,11 +306,21 @@ export class VisitGating {
 export function applySettingsTable(pageState: PageState, s: Record<string, unknown>): void {
     if (s[StorageKeys.MIN_VISIT_DURATION] !== undefined) {
         const parsedDuration = parseInt(String(s[StorageKeys.MIN_VISIT_DURATION]), 10);
-        pageState.minVisitDuration = Number.isNaN(parsedDuration) ? DEFAULT_MIN_VISIT_DURATION : parsedDuration;
+        pageState.minVisitDuration = sanitizeVisitThreshold(
+            parsedDuration,
+            MIN_VISIT_DURATION_FLOOR,
+            MIN_VISIT_DURATION_CEIL,
+            DEFAULT_MIN_VISIT_DURATION,
+        );
     }
     if (s[StorageKeys.MIN_SCROLL_DEPTH] !== undefined) {
         const parsedDepth = parseInt(String(s[StorageKeys.MIN_SCROLL_DEPTH]), 10);
-        pageState.minScrollDepth = Number.isNaN(parsedDepth) ? DEFAULT_MIN_SCROLL_DEPTH : parsedDepth;
+        pageState.minScrollDepth = sanitizeVisitThreshold(
+            parsedDepth,
+            MIN_SCROLL_DEPTH_FLOOR,
+            MIN_SCROLL_DEPTH_CEIL,
+            DEFAULT_MIN_SCROLL_DEPTH,
+        );
     }
 
     type BooleanCleansingKey = {

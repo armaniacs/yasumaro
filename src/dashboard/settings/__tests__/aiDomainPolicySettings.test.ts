@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * aiDomainPolicySettings.test.ts
  * Controller tests for the per-domain AI egress policy editor (PBI 2026-10-23-01).

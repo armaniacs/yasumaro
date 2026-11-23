@@ -5,7 +5,7 @@
  * render reaching both the original URL (anchor) and the original record
  * (button via onOpenRecord).
  */
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 import { describe, it, expect, vi } from 'vitest';
 import {
   buildPlaybackModel,

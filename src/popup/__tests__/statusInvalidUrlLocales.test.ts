@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 // Locale pin for statusInvalidUrl: the no-domain writer result still has a
 // user-facing message in both locales (the wireWhitelistButton result branch).
 // The historical statusAddPath button was removed by the 2026-10-31

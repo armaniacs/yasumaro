@@ -6,6 +6,7 @@
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessage, getMessageOr } from '../utils/i18n.js';
+import { formatLocaleDateTime } from '../utils/localeUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showPasswordAuthModal } from './masterPassword.js';
@@ -146,7 +147,7 @@ export function createExportImport(): ExportImportController {
     }
     const summary: ImportPreviewSummary = {
       version: data.version,
-      exportedAt: new Date(data.exportedAt).toLocaleString(),
+      exportedAt: formatLocaleDateTime(data.exportedAt),
     };
     const s = data.settings;
     // Typed Settings access: every field below is already string-typed, so no

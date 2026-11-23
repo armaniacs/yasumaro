@@ -10,7 +10,7 @@
  * and only a successful recording updates the late-rescan baseline (P2-3) —
  * a settled refusal recorded nothing, so it must not arm the re-send.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { VisitReporter } from '../visitReporter.js';
 import type { LastCaptureOutcome } from '../../utils/captureOutcome.js';
 
@@ -95,6 +95,14 @@ function makeHarness(
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Live extension context for the retry path (see isRuntimeIdMissing in
+  // visitReporter.ts). Scoped here instead of the shared setup.
+  (globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id =
+    'test-extension-id';
+});
+
+afterEach(() => {
+  delete (globalThis as unknown as { chrome: { runtime: { id?: string } } }).chrome.runtime.id;
 });
 
 describe('VisitReporter settled-visit commit (flag + baseline + outcome)', () => {

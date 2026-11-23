@@ -50,5 +50,14 @@ export function handleGetSelectionMessage(
     if (msg.type !== GET_SELECTION_MESSAGE_TYPE) return;
     // Extension-origin only — the same guard the GET_CONTENT handler applies.
     if (sender.id !== deps.runtimeId) return;
-    sendResponse({ selection: deps.readSelection() });
+    // PBI 2026-11-08-05: the DOM read can throw (detached window after a
+    // navigation) — still answer with the empty-selection contract so the
+    // popup falls back to the page record instead of waiting.
+    let selection = '';
+    try {
+        selection = deps.readSelection();
+    } catch {
+        selection = '';
+    }
+    sendResponse({ selection });
 }

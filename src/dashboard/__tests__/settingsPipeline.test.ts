@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * settingsPipeline.test.ts
  * Branch-coverage tests for saveDashboardSettings and GENERAL_SETTINGS_VALIDATION_FIELDS.

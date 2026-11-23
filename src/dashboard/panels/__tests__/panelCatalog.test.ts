@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * panelCatalog.test.ts (PBI 2026-09-07-25)
  * カタログがパネル存在の単一の真実の源であることを固定する:
@@ -14,6 +14,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import { repoRootFromUrl } from '../../../../testDir/repoRoot.js';
 import {
   PANEL_CATALOG,
   CATALOG_ROWS,
@@ -25,8 +26,11 @@ import {
 import { createAllPanelsInCatalogOrder, createPanelById } from '../panelFactories.js';
 import { STATIC_FORM_SPECS } from '../staticForm/staticPanels.js';
 
+// Source-scanning reads below always target the real repo tree, even when
+// this test itself runs from inside a Stryker sandbox copy (instrumented
+// sources would poison the pins).
 const html = readFileSync(
-  resolve(process.cwd(), 'entrypoints/options/index.html'),
+  resolve(repoRootFromUrl(import.meta.url), 'entrypoints/options/index.html'),
   'utf-8',
 );
 const sidebarNav = html.slice(html.indexOf('<nav id="sidebar"'), html.indexOf('</nav>'));

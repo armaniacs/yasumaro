@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archiveWording.test.ts
  * PBI 2026-09-06-06: the archive panel description must describe phase A as

@@ -12,12 +12,16 @@ This file provides topic-based guidance for agents working on the Yasumaro Chrom
 |------|-----------|
 | Adding a feature | [Architecture Map](dev-docs/ARCHITECTURE_MAP.md) + [Development Patterns](#development-patterns) |
 | Fixing a bug | [Debugging Guide](dev-docs/DEBUGGING_GUIDE.md) |
-| Reviewing code or security | [Security Review Guide](dev-docs/SECURITY_REVIEW_GUIDE.md) |
-| Writing or updating docs | [Documentation Guide](dev-docs/DOCUMENTATION_GUIDE.md) |
+| Reviewing code or security | [Security Review Guide](dev-docs/SECURITY_REVIEW_GUIDE.md) + [Error Codes](dev-docs/ERROR_CODES.md) |
+| Writing or updating docs | [Documentation Guide](dev-docs/DOCUMENTATION_GUIDE.md) + [Naming Guidelines](dev-docs/NAMING_GUIDELINES.md) |
 | Testing | [Test Rule](dev-docs/TEST_RULE.md) + [Testing Guide](dev-docs/TESTING_GUIDE.md) |
-| A test fails intermittently or only under load | [Async / Timing Failures](#async--timing-failures) |
-| Optimizing performance | [Performance Guide](dev-docs/PERFORMANCE_GUIDE.md) |
+| A test fails intermittently or only under load | [Test Rule: 実時間待ちの禁止と代替手段](dev-docs/TEST_RULE.md#実時間待ちの禁止と代替手段) |
+| Optimizing performance | [Performance Guide](dev-docs/PERFORMANCE_GUIDE.md) + [Performance Testing](docs/PERFORMANCE_TEST.md) |
 | Preparing a release | [Release](#release) |
+| Design specs & architecture decisions | [Design Specifications](dev-docs/DESIGN_SPECIFICATIONS.md) + [ADR](dev-docs/ADR/) |
+| API endpoints / design tokens | [API Endpoints](dev-docs/API_ENDPOINTS.md) + [Design Tokens](dev-docs/DESIGN_TOKENS.md) |
+| i18n / accessibility | [i18n Guide](docs/i18n-guide.md) + [Accessibility Guide](docs/ACCESSIBILITY.md) |
+| Contribution workflow | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ---
 
@@ -28,25 +32,6 @@ This is a **Manifest V3 Chrome extension** with a modular architecture:
 - Content script tracks user engagement on web pages
 - Popup UI provides configuration and testing interface
 - Modular client classes handle AI providers and Obsidian integration
-
-### Quick References
-
-| For Documentation | See |
-|------------------|-----|
-| Project Architecture | [dev-docs/DESIGN_SPECIFICATIONS.md](dev-docs/DESIGN_SPECIFICATIONS.md) |
-| Architecture Decisions | [dev-docs/ADR/](dev-docs/ADR/) |
-| Architecture Map (components & feature locations) | [dev-docs/ARCHITECTURE_MAP.md](dev-docs/ARCHITECTURE_MAP.md) |
-| Error Codes | [dev-docs/ERROR_CODES.md](dev-docs/ERROR_CODES.md) |
-| API Endpoints | [dev-docs/API_ENDPOINTS.md](dev-docs/API_ENDPOINTS.md) |
-| Design Tokens | [dev-docs/DESIGN_TOKENS.md](dev-docs/DESIGN_TOKENS.md) |
-| Naming Guidelines | [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md) |
-| Performance Guide | [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md) |
-| Test Rules (required reading before writing tests) | [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) |
-| Testing / Debugging / Security / Docs | [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md) ・ [DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md) ・ [SECURITY_REVIEW_GUIDE.md](dev-docs/SECURITY_REVIEW_GUIDE.md) ・ [DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md) |
-| Contribution Guide | [CONTRIBUTING.md](CONTRIBUTING.md) |
-| Accessibility Guide | [docs/ACCESSIBILITY.md](docs/ACCESSIBILITY.md) |
-| Performance Testing (benchmark harness) | [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md) |
-| i18n Guide | [docs/i18n-guide.md](docs/i18n-guide.md) |
 
 ## Quick Start
 
@@ -119,36 +104,18 @@ Full component/file tree and the feature-location table: [dev-docs/ARCHITECTURE_
 
 ## Testing
 
-> Test commands (`npm test`, `test:watch`, `test:coverage`, `test:e2e`, `type-check`, `validate`) are documented in [CONTRIBUTING.md](CONTRIBUTING.md). After code changes, run `npm run build` before testing in Chrome Extension.
-
-Manual testing requirements, environment setup, key scenarios, and limitations: [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md).
-
-Read [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) before writing or changing tests.
+Test commands: [CONTRIBUTING.md](CONTRIBUTING.md). After code changes, run `npm run build` before testing in Chrome Extension. Manual testing: [dev-docs/TESTING_GUIDE.md](dev-docs/TESTING_GUIDE.md). Read [dev-docs/TEST_RULE.md](dev-docs/TEST_RULE.md) before writing or changing tests.
 
 ---
 
 ## Async / Timing Failures
 
-### Principle
-
-- Never make a test pass by adding a fixed-time wait: `await new Promise(r => setTimeout(r, N))`, `page.waitForTimeout(N)`, or `sleep N` in the shell. Raising `retry` / `retries` counts falls under the same rule.
-- Why: a fixed wait hides the race instead of removing it. The test fails again when load or parallelism changes, and a real bug in production code (a missing `await`, wrong initialization order) goes unnoticed.
-- Production code may wait on purpose (retry backoff in `src/utils/fetch.ts`, `src/utils/storage/storageTransaction.ts`). Such waits must be injectable (`SleepFn`, `StepDelayFn`, a `sleep` option) so that tests never wait in real time.
-
-### When a failure looks timing-related
-
-1. Classify the cause and write down the evidence:
-   - missing `await` (the test does not wait for an async operation to finish)
-   - wrong initialization order
-   - waiting for an external process to start (dev server, offscreen document, worker)
-   - reading right after a write that has not settled yet
-   - state leaking between tests
-2. Fix it with the matching technique from [TEST_RULE.md § 実時間待ちの禁止と代替手段](dev-docs/TEST_RULE.md#実時間待ちの禁止と代替手段), using the helpers in `testDir/waitPolicy.ts`: await the Promise or event that signals completion, wait for a condition with `waitForMock()` (or `expect.poll` in E2E), drive production timers with an injected sleep or `useTimerClock()`, or isolate setup and teardown per test. Do not call `vi.useFakeTimers()` with default options; it also fakes `queueMicrotask` and hangs dynamic imports.
-3. If you cannot identify the cause, stop. Do not work around it with a wait. Report what you observed and your hypotheses.
+Full workflow for a timing-related test failure (cause classification, matching fixes,
+definition of done, exceptions): [dev-docs/TEST_RULE.md § 実時間待ちの禁止と代替手段](dev-docs/TEST_RULE.md#実時間待ちの禁止と代替手段).
 
 ### Waiting for processes in the shell
 
-Do not write `cmd & sleep N`. To wait for a command to finish, block on it (run it in the foreground, or `wait` on its PID). To wait for a long-running process to become ready, poll a readiness condition with an upper bound, e.g. `timeout 60 bash -c 'until curl -sf http://localhost:PORT/; do sleep 0.5; done'`.
+Do not write `cmd & sleep N`. To wait for a command to finish, block on it (run it in the foreground, or `wait` on its PID). To wait for a long-running process to become ready, poll a readiness condition with an upper bound, e.g. `for i in $(seq 1 120); do curl -sf http://localhost:PORT/ && break; sleep 0.5; done`. macOS has no `timeout` command (exit 127); use a bounded loop or `gtimeout`.
 
 **Keep every polling interval at 10 seconds or less.** This applies to `gh run watch --interval`, `playwright --repeat-each` pacing, readiness polling, and any `sleep N` used to wait on something:
 
@@ -161,31 +128,11 @@ The default of 3 seconds is fine. Raising it above 10 is not: the interval is th
 
 `src/__tests__/agent-poll-interval.test.ts` fails if this rule's text disappears from `AGENTS.md` or `.kilorules`, or if a file in the repository passes an interval above 10 to a watch/poll flag.
 
-### Definition of done
-
-A timing-related fix is not done after one green run. Run it repeatedly with retries disabled; every run must pass:
-
-- Unit: `npx vitest run <file> --repeats=20`
-- E2E: `npx playwright test <file> --repeat-each=10 --retries=0 --workers=4`
-- ESLint rule tests: `npx vitest run eslint/__tests__ --repeats=20`
-
-Rule tests reach the same gate through `createRepeatSafeRuleTester` in `eslint/__tests__/repeatSafeRuleTester.ts`; plain `new RuleTester` cannot, because ESLint allocates its duplicate-case registry inside the `describe` body and `--repeats` re-runs only the `it` body. See [ADR: ESLint rule tests and `vitest --repeats`](dev-docs/ADR/2026-09-26-eslint-ruletester-vitest-repeats.md).
-
-The report must include the cause category, the fix, and the repeat commands with their results.
-
-### Exceptions
-
-A real-time wait is acceptable only when real time is what the code is about: tests that measure timing (crypto timing resistance, `bench/`), or deliberate spacing for a rate-limited external API. Put the reason on the line (`// eslint-disable-next-line local/no-test-sleep -- <reason>`) and mention it in the report.
-
-Background and measurements: [ADR: test suite execution time contract](dev-docs/ADR/2026-09-26-test-suite-execution-time-contract.md).
-
 ---
 
 ## Bug Fixing
 
-Issue areas, debugging workflow, and common fixes: [dev-docs/DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md).
-
-**High-risk areas for breaking changes:** manifest permissions, storage key structure, API endpoints.
+Issue areas, debugging workflow, common fixes: [dev-docs/DEBUGGING_GUIDE.md](dev-docs/DEBUGGING_GUIDE.md). **High-risk areas for breaking changes:** manifest permissions, storage key structure, API endpoints.
 
 ---
 
@@ -203,67 +150,41 @@ Full checklist, threat model, security controls, and privacy features: [dev-docs
 
 ## Documentation & i18n
 
-Documentation inventory, i18n formatting rules, and the documentation update checklist: [dev-docs/DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md). Naming rules: [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md).
-
-**PRIVACY.md sync (critical):** `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file.
+Docs inventory, i18n rules, update checklist: [dev-docs/DOCUMENTATION_GUIDE.md](dev-docs/DOCUMENTATION_GUIDE.md). Naming rules: [dev-docs/NAMING_GUIDELINES.md](dev-docs/NAMING_GUIDELINES.md). **PRIVACY.md sync (critical):** `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical; whichever you edit, copy the same changes to the other file.
 
 ---
 
 ## Documentation Characters (Shift-JIS + enumerated emoji)
 
-Documents must survive a Shift-JIS round trip. Scope: `pbi/`, `dev-docs/`, `docs/`, `public/`, and root `*.md`.
-Out of scope: generated files (`THIRD_PARTY_NOTICES.md`, `graphify-out/`, `bench/reports/`), agent
-scratch directories (`.superpowers/`, `.kilo/`, `.checking-team-tmp/`, `plans/`, `bench/`), and these
-rule files themselves (`AGENTS.md` / `CLAUDE.md` symlink / `CLAUDE.local.md`) because they quote the
-forbidden characters.
+Documents in `pbi/`, `dev-docs/`, `docs/`, `public/`, and root `*.md` must survive a Shift-JIS
+(JIS X 0208 / CP932) round trip; rule files themselves are out of scope (they quote the
+forbidden characters). Never use `—` (EM DASH, U+2014); use `―` (U+2015).
 
-- Use only characters representable in **JIS X 0208 / CP932**.
-- Never use `—` (EM DASH, U+2014); use `―` (U+2015). The whole tree was converted on 2026-10-20.
-- Substitute out-of-range symbols: `≤`→`≦`, `≥`→`≧`, `≈`→`≒`, `↔`/`↕`/`⇄`/`⟺`→`⇔`, `↳`→`└`,
-  `•`→`・`, `–`→`-`, `²`→`^2`, `µ`→`μ`, `©`→`(c)`, `█`/`░`→`#`/`-`, `⎯`→`-`, `›`→`>`, `⊊`→`⊂`.
-- Accented Latin letters (`Ō`, `ç`, `ó`, `á`) become the basic Latin letter (`Ō`→`O`, `ç`→`c`).
-- **Mojibake is never an exception.** Hangul, Simplified Chinese, `U+FFFD`, and Arabic text are
-  corruption: rewrite the sentence instead of exempting it (tracked as PBI `2026-10-19-13`).
-- **Emoji: only the enumerated set below** (68 + any national flag + presentation modifiers `U+FE0F` / `U+20E3`):
-
-  ```
-  ✅ 🟡 🟢 🎯 🔴 ✓ 🔧 ⬜ ❌ ⚙ 🔒 📝 ✗ ⚠ 📋 🔵 🔶 🤖 ♻ 🧹 📊 🏷 🌐 ✨
-  🛡 🚧 🖱 🗄 💡 🐛 📱 🚫 ☁ 📌 📦 🔐 🔍 ❓ ⛅ 🌨 ✕ ☰ 🎉 📂 ✏ 🔔 🙏
-  🚀 ⛔ 📈 🕸 📉 🖥 🗑 🦋 📜 🟣 🗂 📖 💎 🔗 🔓 😀 🧪 ⏳ ⏸ ▶ 🦄
-  ```
-
-  Any national flag is allowed (two regional indicators, `U+1F1E6`-`U+1F1FF`: 🇯🇵 🇺🇸 🇫🇷).
-  Adding an emoji means updating this list first. It is enumerated, not a range, so the set cannot
-  grow without a deliberate edit.
-- **Product glyphs are quoted on purpose:** `∉` (toolbar badge) and `⏎` (log line-break separator)
-  are what the extension actually renders; replacing them would make the document wrong.
-- Check with `node scripts/check-docs-chars.mjs` (`--list` prints every offending character).
-  It exits 1 on a violation. The emoji list and the product-glyph allowlist live in that script —
-  keep it and this section in step.
+- Substitute out-of-range symbols and accents with their JIS equivalents: `≤`→`≦`, `≥`→`≧`,
+  `≈`→`≒`, `↔`/`↕`/`⇄`/`⟺`→`⇔`, `↳`→`└`, `•`→`・`, `–`→`-`, `²`→`^2`, `µ`→`μ`, `©`→`(c)`,
+  `█`/`░`→`#`/`-`, `⎯`→`-`, `›`→`>`, `⊊`→`⊂`; accents lose the diacritic (`Ō`→`O`, `ç`→`c`).
+- Emoji: only the `EMOJI` Set in `scripts/check-docs-chars.mjs` (add new glyphs there first).
+  Mojibake (Hangul, Simplified Chinese, `U+FFFD`, Arabic) is never exempted: rewrite the
+  sentence (PBI `2026-10-19-13`). Product glyphs `∉` and `⏎` are quoted on purpose.
+- Enforced by `npm run validate` via `node scripts/check-docs-chars.mjs`
+  (`--list` prints every offending character; exits 1 on a violation).
 
 ---
 
 ## Performance
 
-Performance metrics, optimization targets, and browser compatibility notes live in [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md). When optimizing, verify against the key metrics defined there.
-
-Benchmark harness (micro + e2e + CI regression check): [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md) for usage, [bench/README.md](bench/README.md) for implementation. Run `npm run bench:micro` before/after an optimization and attach the diff to the PR.
+Metrics, optimization targets, browser compatibility: [dev-docs/PERFORMANCE_GUIDE.md](dev-docs/PERFORMANCE_GUIDE.md) (verify against its key metrics when optimizing). Benchmark harness: [docs/PERFORMANCE_TEST.md](docs/PERFORMANCE_TEST.md), [bench/README.md](bench/README.md). Run `npm run bench:micro` before/after an optimization and attach the diff to the PR.
 
 ---
 
 ## Editing Notes
 
 - `recordingPipeline-full.test.ts` and other large test files are edited repeatedly: Read the file again right before each Edit (formatter hooks and subagents rewrite it), and give `old_string` enough context to be unique.
-- Do not chain `cd`, `rm -rf`, `git add -A` or `~/Secrets` access into one Bash command; a deny rule on any part rejects the whole command. Use `git -C <abs>` and run cleanup as its own command.
-
-### Tool availability (Kilo Code)
-
-- In-place edits use `apply_diff`; new files and full rewrites use `write_to_file`.
-- `search_and_replace` and `insert_content` are rejected in code mode, and `edit` does not
-  exist in Kilo Code. Calling them costs a full round trip with no effect.
-- Architect mode is plan-only: `execute_command` and file edits are rejected there. Switch to
-  code mode before running commands or editing.
-- Multi-line source edits must not use `sed -i`; use `apply_diff`.
+- Do not chain `cd`, `rm -rf`, `git add -A` or `~/Secrets` access into one Bash command (`;`, `&&`, heredoc included); a deny rule on any part rejects the whole command. Instead:
+  - Stage with `git -C <abs> add <file...>` (explicit files), then run `git -C <abs> commit` as a separate command.
+  - Run deletion as its own `rm -rf <abs path>` command.
+  - For multi-step or heredoc work, Write a script to the scratchpad and run it as a single command.
+- Several changes to one file go into one Edit or one Write. If an Edit fails with "modified since read", Read again and retry once with all changes combined.
 
 ### Batch edits to one file
 
@@ -275,16 +196,11 @@ Benchmark harness (micro + e2e + CI regression check): [docs/PERFORMANCE_TEST.md
 
 ## Release
 
-Before releasing, verify:
-1. [ ] All tests pass
-2. [ ] Manual testing checklist complete
-3. [ ] i18n coverage (both languages)
-4. [ ] Accessibility audit (Lighthouse score)
-5. [ ] Security review completed
-6. [ ] CHANGELOG.md updated
-7. [ ] Version number bumped in `manifest.json` and `package.json`
-
-The release flow itself is documented in [CONTRIBUTING.md](CONTRIBUTING.md) (リリースフロー / Release Process).
+The pre-release checklist and the release flow live in [CONTRIBUTING.md](CONTRIBUTING.md):
+the code-review checklist (tests via `npm run validate`, security / i18n / accessibility /
+manual checks) covers verification, and リリースフロー / Release Process covers the
+`CHANGELOG.md` release notes and the version bump in `manifest.json` and `package.json`
+(`cli/Cargo.toml` kept in sync).
 
 ---
 

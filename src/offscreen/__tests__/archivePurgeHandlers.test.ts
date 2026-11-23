@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * archivePurgeHandlers.test.ts
  * OPFS-worker handler for phase B (delete main-DB rows covered by a verified

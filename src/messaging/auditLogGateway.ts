@@ -23,8 +23,9 @@ export type { AuditLogEntry };
 // the module resolution is memoized here — instance identity belongs to
 // getSharedSqliteClient, so this is the single client-promise cache on the path
 // and utils/ keeps no copy of the pattern.
-function loadSharedClient() {
-  return import('../background/sqlite/offscreenGateway.js').then((gateway) => gateway.getSharedSqliteClient());
+async function loadSharedClient() {
+  const gateway = await import('../background/sqlite/offscreenGateway.js');
+  return gateway.getSharedSqliteClient();
 }
 
 let sharedClientPromise: ReturnType<typeof loadSharedClient> | null = null;

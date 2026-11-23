@@ -23,8 +23,7 @@
  */
 
 import { errorMessage } from './errorUtils.js';
-import { addLog } from './logger/core.js';
-import { LogType } from './logger/types.js';
+import { logWarn } from './logger/api.js';
 
 /**
  * Max u32 value. Integers in [0, U32_MAX] pass through the JS->wasm u32
@@ -89,13 +88,12 @@ export function createHybridProbe(
             if (!probeFailureLogged) {
                 probeFailureLogged = true;
                 const message = errorMessage(error);
-                // addLog() persists to chrome.storage asynchronously and is
-                // not readable from outside the service worker without a
-                // dedicated message handler. A plain console.warn is also
-                // emitted so the failure is visible in chrome://extensions'
-                // "service worker" devtools console during manual debugging.
-                console.warn(unavailableMessage, message);
-                addLog(LogType.WARN, unavailableMessage, { error: message });
+                // PBI 2026-11-11-03: single seam line (was console.warn +
+                // addLog double-fire). Persistence runs inside logWarn; the
+                // development console mirror lives in the seam, so manual
+                // debugging in chrome://extensions' "service worker" devtools
+                // console keeps working without a second emission.
+                void logWarn(unavailableMessage, { error: message }, undefined, 'wasmHybridRuntime');
             }
         }
         return available === true;
@@ -105,14 +103,14 @@ export function createHybridProbe(
 }
 
 /**
- * Logs a WASM runtime-call failure (console.warn + persisted addLog, every
- * call — unlike the probe burst guard, each failed input is worth one line)
- * so the fallback to the TS path stays visible.
+ * Logs a WASM runtime-call failure via the logger seam (every call — unlike
+ * the probe burst guard, each failed input is worth one line) so the
+ * fallback to the TS path stays visible. PBI 2026-11-11-03: single seam
+ * line (was console.warn + persisted addLog double-fire).
  */
 export function logWasmFallback(fallbackMessage: string, error: unknown): void {
     const message = errorMessage(error);
-    console.warn(fallbackMessage, message);
-    addLog(LogType.WARN, fallbackMessage, { error: message });
+    void logWarn(fallbackMessage, { error: message }, undefined, 'wasmHybridRuntime');
 }
 
 /**
@@ -137,7 +135,7 @@ export async function withWasmFallback<T>(
 export interface RunHybridPolicy<Merged, Result> {
     /** Availability probe owned by the calling hybrid (module scope). */
     probe: HybridProbe;
-    /** console.warn + addLog message when the WASM call throws (TS fallback). */
+    /** Logger-seam WARN message when the WASM call throws (TS fallback). */
     fallbackMessage: string;
     /**
      * Merges caller options with the TS reference defaults. Pure: must not

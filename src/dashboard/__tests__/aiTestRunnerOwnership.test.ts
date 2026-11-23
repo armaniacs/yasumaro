@@ -13,7 +13,8 @@
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { join } from 'node:path';
+import { repoRootFromUrl } from '../../../testDir/repoRoot.js';
 
 const RUNNER = 'src/dashboard/aiTestRunner.ts';
 const CALLERS = [
@@ -21,7 +22,7 @@ const CALLERS = [
   'src/dashboard/panels/diagnostic/diagnosticsActions.ts',
 ];
 
-const projectRoot = resolve(import.meta.dirname, '../../..');
+const projectRoot = repoRootFromUrl(import.meta.url);
 
 function readRepoSource(rel: string): string {
   return readFileSync(join(projectRoot, ...rel.split('/')), 'utf8');

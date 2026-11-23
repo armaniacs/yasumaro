@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * importLogsService-migration.test.ts
  * PBI 2026-11-06-03: 閲覧ログのプロファイル間移行モード。

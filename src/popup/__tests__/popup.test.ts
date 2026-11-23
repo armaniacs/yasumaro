@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * popup.test.ts
  * Unit tests for popup.ts after PBI-27 (settings UI moved to dashboard)

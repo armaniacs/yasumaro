@@ -1,4 +1,4 @@
-// @vitest-environment jsdom
+// @vitest-environment wasm-quickjs-dom
 /**
  * sqliteHistoryPanelViewRegenerate.test.ts — header controls + wiring +
  * busy/error helpers (PBI 2026-09-22-04).

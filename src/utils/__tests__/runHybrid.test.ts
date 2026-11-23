@@ -8,11 +8,17 @@
  */
 
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { logWarn } from '../logger/api.js';
 import { runHybrid, type HybridProbe, type RunHybridPolicy } from '../wasmHybridRuntime.js';
+
+vi.mock('../logger/api.js', () => ({
+    logWarn: vi.fn().mockResolvedValue(undefined),
+}));
 
 let warnSpy: ReturnType<typeof vi.spyOn>;
 
 beforeEach(() => {
+    vi.mocked(logWarn).mockClear();
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 });
 
@@ -106,8 +112,15 @@ describe('runHybrid step order', () => {
             })
         );
         expect(result).toBe('ts');
-        expect(warnSpy).toHaveBeenCalledTimes(1);
-        expect(warnSpy.mock.calls[0]?.[0]).toBe('policy fallback msg');
+        // PBI 2026-11-11-03: single seam line (was console.warn + addLog).
+        expect(logWarn).toHaveBeenCalledTimes(1);
+        expect(logWarn).toHaveBeenCalledWith(
+            'policy fallback msg',
+            { error: 'wasm boom' },
+            undefined,
+            'wasmHybridRuntime'
+        );
+        expect(warnSpy).not.toHaveBeenCalled();
     });
 
     test('throwing TS fallback propagates (fail-closed)', async () => {
