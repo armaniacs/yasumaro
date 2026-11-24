@@ -1,7 +1,7 @@
 # Yasumaro - Chrome Web Store Listing
 
 Source of truth for the Chrome Web Store submission of the Yasumaro extension.
-Target version: 6.9.75 (`package.json`).
+Target version: 6.9.76 (`package.json`). The GA version number itself is still pending the owner's decision (after the audit run-3 fixes and the real-device smoke test).
 
 ## Store identity
 
@@ -34,7 +34,7 @@ When you record a page, the page text is sent to the AI service you chose so it 
 - Keeps everything in a local SQLite history on your device
 - Optional daily notes in Obsidian, local Markdown files, and archive files you can import back later
 - Cleans personal details out of saved text, spots private pages on its own, and lets you filter domains and set per-site AI rules
-- Keeps an on-device log of every AI send, backs up to Gist only if you switch it on, and offers a minimal webhook export that stays off until you set it up
+- Keeps an on-device log of every AI send, backs up to Gist only if you switch it on, and offers a minimal webhook export (experimental) that stays off until you set it up
 - Built-in browser AI option summarizes without sending page text anywhere
 
 Your data stays yours: there is no developer server, ever. Optional extras (Obsidian sync, Gist backup, webhooks, bug reports) run only when you turn them on.
@@ -55,7 +55,7 @@ Your data stays yours: there is no developer server, ever. Optional extras (Obsi
 - Per-domain AI policy (send as-is, record without summary, or always mask)
 - AI audit log (when, where, and how much was sent, kept on-device only)
 - Optional Gist sync backup
-- Optional minimal webhook export
+- Optional minimal webhook export (experimental, https loopback destinations only)
 - Built-in browser AI option (on-device summarization)
 
 ## Permissions justification
@@ -109,7 +109,7 @@ Every entry below is one specific reason. Nothing here is requested "to make the
 - The built-in browser AI option summarizes with no sending at all.
 - Obsidian sync, Gist sync, and webhook export are optional and off by default.
 - Gist sync sends only your token and the records you select to `api.github.com`.
-- Webhook export sends only the masked title, masked summary, tags, and URL to the address you enter. Destinations that are not declared are blocked, and page text is never included.
+- Webhook export sends only the masked title, masked summary, tags, and URL to the address you enter. Only https loopback destinations in the dedicated allowlist are saved and sent; anything else is rejected at save time and blocked before any network access. Page text is never included.
 - The Report a Bug button only opens a GitHub issue tab with a preview you can review. Closing the preview sends nothing.
 - Full text: https://armaniacs.github.io/yasumaro/PRIVACY.md
 

@@ -375,15 +375,34 @@ The following features were added exclusively in Yasumaro from version 2 onwards
 - 🛡️ **Privacy Consent Flow**: Consent prompt on first launch. After 3 declines, permanently dismissed and the extension runs in restricted mode (no recording). GDPR-compliant physical deletion (DELETE FROM).
 - 📱 **Mobile Chrome / OPFS Fallback**: On devices without OPFS, automatically falls back to `chrome.storage.local`. Data is auto-migrated when OPFS becomes available (see [STORAGE_MODES.md](docs/STORAGE_MODES.md)).
 - 📊 **Data Analytics Panels**: Analyze your recorded history in the dashboard ― a day×hour heatmap, domain/URL top-N tables, tag timelines, a tag co-occurrence pair table, keyword clusters (no tagging required), side-by-side tag cluster comparison, a revisits & time capsule view that groups what you keep re-researching, and research sessions that group records close together in time. All computed locally against the on-device SQLite database. See [Data Analytics Guide](docs/DATA_ANALYTICS_GUIDE.md).
-- 🗂️ **Saved Collections** (standalone panel right after history): Name a search condition (terms, tags, period) and recall it into the panel-local draft from a list.
-- 💡 **Ask Your History** (standalone panel): Ask a question about a collection and an on-device model answers from excerpts of your records. Links to the three supporting records open the originals. Nothing is sent externally.
-- 📜 **One-Shot Research Report** (standalone panel): Pick a target collection and generate a Markdown report with four sections (summary, timeline, citations, unread gaps). Sending it to Obsidian is optional.
+- 🗂️ **Saved Collections** (in development): Name a search condition (terms, tags, period) and recall it into the panel-local draft from a list.
+- 💡 **Ask Your History** (in development): Ask a question about a collection and an on-device model answers from excerpts of your records. Links to the three supporting records open the originals. Nothing is sent externally.
+- 📜 **One-Shot Research Report** (in development): Pick a target collection and generate a Markdown report with four sections (summary, timeline, citations, unread gaps). Sending it to Obsidian is optional.
 - 🎯 **Source Bias View**: Detects skew toward a single domain and suggests adding noisy sources to the blacklist (never applied automatically, reversible).
 - 🛡️ **Per-Domain AI Send Policy**: Choose "allow sending", "record without summary", or "mask required" for each domain.
 - 🏷️ **Tag Normalization Proposals**: Proposes merges for similar tags; apply and undo them.
 - ✨ **Bulk Star for History**: Star the selected history rows at once and undo it. You can apply it while excluding pages judged private.
 - 🖱️ **Record from the Address Bar and Keyboard**: Type `y` then Enter in the address bar, or press `Alt+Shift+Y`, to record the current page.
 - 🚀 **First-Run 3-Choice Banner**: On first launch, choose how to start: try first, Obsidian integration, or AI summary. Recording and search work without any setup.
+
+### How Obsidian appends work (`src/background/obsidianClient.ts`)
+
+**Method: Read-Modify-Write (read → modify → write)**
+
+1. **Locate the target**
+   Determine the file path from the configured "Daily Note Path" and the current date (e.g. `092.Daily/2026-01-15.md`).
+2. **Read the existing note (GET)**
+   Fetch the current file content as text through the Obsidian Local REST API. Keep a strong ETag (a non-empty value not starting with `W/`) if the response carries one. Treat a missing file (404) as an empty note.
+3. **Append the content**
+   Look for the `# 🌐 Browser History` heading in the file.
+   - **Heading present**: insert the new summary at the end of that section (before the next heading).
+   - **Heading absent**: create the heading at the end of the file and append there.
+4. **Update the note (PUT)**
+   Save the whole modified content. When step 2 produced a strong ETag, attach it as `If-Match` so the write only lands when the file is unchanged since the read.
+5. **One retry on conflict**
+   When the PUT is rejected with 412 (Precondition Failed), redo read-to-save once against the latest content. A retry that succeeds counts as a normal save with no notice and no pending entry. A second 412 counts as a conflict with concurrent Obsidian edits: the user gets one notice and one pending entry with the reason for the Obsidian write conflict (other destinations such as SQLite still save normally). Non-412 write failures keep the existing pending entry for the Obsidian write failure with no conflict notice. The extension never silently overwrites Obsidian-side changes in any case.
+
+> **Note**: without an ETag, with a weak ETag, or for a new note (GET 404), the save stays the conventional unconditional overwrite. On an Obsidian Local REST API that returns no ETag, a small conflict risk remains when the same file is edited in Obsidian at exactly the same moment (rare in normal use). See the Conditional write (If-Match) section of [dev-docs/API_ENDPOINTS.md](dev-docs/API_ENDPOINTS.md).
 
 ### Requirements
 - [Obsidian](https://obsidian.md/) with [Local REST API plugin](https://github.com/coddingtonbear/obsidian-local-rest-api) (see the [Obsidian Integration Guide](docs/OBSIDIAN_SETUP_GUIDE.md) for setup instructions)

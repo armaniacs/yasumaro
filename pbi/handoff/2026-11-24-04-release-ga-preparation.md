@@ -1,6 +1,6 @@
 # 引き継ぎ: 2026-11-24-04 正式版リリース準備
 
-- 状態: 一部着手(README の Obsidian 競合記述のみ完了)
+- 状態: 文書の更新まで完了。採番待ち(07・08 の完了後)
 - 最終更新: 2026-11-24
 - 対象 PBI: [../2026-11-24-04-release-ga-preparation.md](../2026-11-24-04-release-ga-preparation.md)
 
@@ -13,13 +13,27 @@
   - ETag が無い・弱い・新規ノートのときは従来どおりで、小さな競合リスクが残る
   - dev-docs/API_ENDPOINTS.md の If-Match 節へリンク
 
+## 済んだこと(追加)
+
+ブランチ `1124a` で実施。
+
+- README English 側に「How Obsidian appends work」節を新設し、日英で内容を揃えた(競合通知の表面化を含む最新仕様)
+- README の機能一覧を裁定(4 機能とも開発中のまま)に合わせた。English 側の 3 機能に「in development」を付け、日英で対称にした。webhook export は機能一覧に載せないまま
+- `CHROMEWEBSTORE.md` を更新: Target version を 6.9.76 に同期、webhook を experimental と明記(機能一覧と説明文)、Privacy summary の旧方式の説明を許可リスト方式に更新
+- `AGENTS.md` の Release 節の `manifest.json` bump の記述を実際の版管理(package.json が SSOT)に修正
+
 ## 残りの手順
 
-1. README の English 側には、この節に当たる見出しが無い。日英で揃えるなら English 節を新設する
-2. 2026-11-24-02(開発中機能の判定)の結果を README の機能一覧と、ストア掲載文に反映する
-3. SECURITY.md の Supported Versions 表を、正式版の版番号に合わせて更新する
-4. CHANGELOG に正式版のエントリを書く
-5. 採番(7.0.0 案)は、2026-11-24-07(監査 run-3)と 2026-11-24-08(実機スモーク)の完了後にのみ行う。同期対象は CONTRIBUTING.md のリリースフローに従う
+1. SECURITY.md の Supported Versions 表を、正式版の版番号に合わせて更新する(採番時に実施)
+2. CHANGELOG に正式版のエントリを書く(採番時に実施。`[Unreleased]` は蓄積中)
+3. `docs/RELEASE_POLICY.md` に v7 系の方針の節を追加する(内容は owner が決める)
+4. 採番(7.0.0 案)は、2026-11-24-07(監査 run-3)と 2026-11-24-08(実機スモーク)の完了後にのみ行う。同期対象は CONTRIBUTING.md のリリースフローに従う
+
+## owner への確認事項
+
+- 正式版の版番号(案: 7.0.0)と v7 系のバージョニング方針の内容
+- SECURITY.md の 6.x の扱い(サポート終了日または期間)
+- Edge / AMO の掲載文の管理場所(リポジトリ内で見つからず。ローカル専用ファイルを除く)
 
 ## 注意
 

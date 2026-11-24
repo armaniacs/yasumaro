@@ -199,8 +199,10 @@ Metrics, optimization targets, browser compatibility: [dev-docs/PERFORMANCE_GUID
 The pre-release checklist and the release flow live in [CONTRIBUTING.md](CONTRIBUTING.md):
 the code-review checklist (tests via `npm run validate`, security / i18n / accessibility /
 manual checks) covers verification, and リリースフロー / Release Process covers the
-`CHANGELOG.md` release notes and the version bump in `manifest.json` and `package.json`
-(`cli/Cargo.toml` kept in sync).
+`CHANGELOG.md` release notes and the version bump in `package.json` as the SSOT
+(`docs/version.json` and `package-lock.json` synced via `scripts/sync-version.mjs`,
+`cli/Cargo.toml` kept in sync manually; there is no repo-root `manifest.json` ―
+the version reaches `dist/chromium-mv3/manifest.json` through the build reading `pkg.version`).
 
 ---
 

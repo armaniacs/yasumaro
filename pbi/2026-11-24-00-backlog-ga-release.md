@@ -72,7 +72,7 @@ handoff ファイルが無い PBI は未着手。引き継ぐモデルは、ま�
 |---|---|---|---|
 | 02 開発中機能の判定 | 完了(裁定済み) | 4088edea4 | [あり](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) |
 | 03 SHA256 と provenance | 実装済み・実リリースでの確認待ち | 1a9a52c27 | [あり](handoff/2026-11-24-03-release-artifact-provenance.md) |
-| 04 リリース準備 | 一部着手(README の Obsidian 競合記述のみ) | 6d39eb66e | [あり](handoff/2026-11-24-04-release-ga-preparation.md) |
+| 04 リリース準備 | 文書まで完了(採番待ち) | ― | [あり](handoff/2026-11-24-04-release-ga-preparation.md) |
 | 05 412 競合の利用者通知 | 実装済み | f3b8df983 | [あり](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |
 | 06 webhook E2E | 完了(実 UI 経由まで) | a24be47be | [あり](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
 | 07 監査 run-3 | 監査完走・修正 15〜19 実装済み | ca6023508 | [あり](handoff/2026-11-24-07-release-ga-security-audit-run3.md) |
