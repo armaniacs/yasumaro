@@ -70,7 +70,7 @@ handoff ファイルが無い PBI は未着手。引き継ぐモデルは、ま�
 
 | PBI | 状態 | コミット(ブランチ 1124a) | handoff |
 |---|---|---|---|
-| 02 開発中機能の判定 | 材料収集中(裁定待ち) | ― | [あり](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) |
+| 02 開発中機能の判定 | 完了(裁定済み) | 4088edea4 | [あり](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) |
 | 03 SHA256 と provenance | 実装済み・実リリースでの確認待ち | 1a9a52c27 | [あり](handoff/2026-11-24-03-release-artifact-provenance.md) |
 | 04 リリース準備 | 一部着手(README の Obsidian 競合記述のみ) | 6d39eb66e | [あり](handoff/2026-11-24-04-release-ga-preparation.md) |
 | 05 412 競合の利用者通知 | 実装済み | f3b8df983 | [あり](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |

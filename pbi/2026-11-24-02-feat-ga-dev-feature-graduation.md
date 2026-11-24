@@ -142,4 +142,4 @@ gh issue list --repo armaniacs/yasumaro --state open --limit 100
 - [ ] コードレビュー(文書レビュー)完了
 
 ## 引き継ぎ
-状態: 材料収集中(裁定待ち)。進捗と引き継ぎ情報は [handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) に記録した。ADR は提案中で作成・一覧登録済み。owner の裁定後にステータスを更新する。
+状態: 完了。owner の裁定済み(4 機能とも開発中のまま、09 は見送り)。進捗と引き継ぎ情報は [handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) に記録した。ADR は採用済みに更新した。

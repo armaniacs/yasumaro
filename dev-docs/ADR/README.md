@@ -54,7 +54,7 @@ YasumaroプロジェクトのArchitecture Decision Record（ADR）一覧です�
 | - | [ESLint ルールテストの `vitest --repeats` 対応は `RuleTester` の describe/it 注入点で行う](./2026-09-26-eslint-ruletester-vitest-repeats.md) | 2026-09-26 | 採用 |
 | - | [tabs 権限なしで参照される tab.url の制約 ― manifest 変更なしで nav trail を記録由来に再配線する裁定](./2026-10-07-tab-url-permission-decision.md) | 2026-10-07 | 採用 |
 | - | [クロスコンテキスト storage CAS の verify→write 突き合わせは Port 層の書き込み時フェンス（compareAndSet）で縮小する](./2026-10-20-storage-cross-context-cas-write-fence.md) | 2026-10-20 | 採用 |
-| - | [開発中 4 機能の正式版での扱いの判定材料と裁定](./2026-11-24-ga-dev-feature-graduation.md) | 2026-11-24 | 提案中 |
+| - | [開発中 4 機能の正式版での扱いの判定材料と裁定](./2026-11-24-ga-dev-feature-graduation.md) | 2026-11-24 | 採用済み |
 
 ---
 
