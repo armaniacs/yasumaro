@@ -131,4 +131,4 @@ rtk grep -n "Failed to write to daily note" /Users/yaar/Playground/yasumaro/src/
 - [ ] CHANGELOG の `[Unreleased]` に利用者向けの変更として記載
 
 ## 引き継ぎ
-状態: 未着手。進捗と引き継ぎ情報は [handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) に記録する(ファイルが無ければ未着手)。
+状態: 実装済み。進捗と引き継ぎ情報は [handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) に記録した。`1124a` の `f3b8df983` に取り込み済み。残りは 08 の実機スモークでの確認のみ。
