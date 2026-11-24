@@ -75,7 +75,8 @@ handoff ファイルが無い PBI は未着手。引き継ぐモデルは、ま�
 | 04 リリース準備 | 一部着手(README の Obsidian 競合記述のみ) | 6d39eb66e | [あり](handoff/2026-11-24-04-release-ga-preparation.md) |
 | 05 412 競合の利用者通知 | 実装済み | f3b8df983 | [あり](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |
 | 06 webhook E2E | 完了(実 UI 経由まで) | a24be47be | [あり](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
-| 07〜13 | 未着手 | ― | なし |
+| 07 監査 run-3 | 監査完走(修正は未着手) | ― | [あり](handoff/2026-11-24-07-release-ga-security-audit-run3.md) |
+| 08〜13 | 未着手 | ― | なし |
 
 ### 引き継ぐモデルへの注意
 

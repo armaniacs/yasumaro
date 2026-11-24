@@ -185,4 +185,4 @@ git -C /Users/yaar/Playground/yasumaro diff --shortstat a1e3ffb23 HEAD -- src en
 - [ ] ドキュメント更新済み(SECURITY_REVIEW_GUIDE、必要なら PERMISSIONS / PRIVACY)
 
 ## 引き継ぎ
-状態: 未着手。進捗と引き継ぎ情報は [handoff/2026-11-24-07-release-ga-security-audit-run3.md](handoff/2026-11-24-07-release-ga-security-audit-run3.md) に記録する(ファイルが無ければ未着手)
+状態: 監査完走。修正 PBI 15〜17 を起票済み。owner の製品判断 3 件が残っている。進捗と引き継ぎ情報は [handoff/2026-11-24-07-release-ga-security-audit-run3.md](handoff/2026-11-24-07-release-ga-security-audit-run3.md) に記録した。成果物は `./security-audit-yasumaro-run-3/`(追跡外)。

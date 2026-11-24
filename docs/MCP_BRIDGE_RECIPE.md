@@ -30,7 +30,7 @@
 - **送信直前 PII マスキング**: タイトルと要約の両方を、送信の直前にプライバシー処理のマスクを通します。マスクできない記録は送りません
 - **プライバシー判定ゲート**: 判定が取得できない記録（「それでも記録」での強制保存、ホワイトリスト回避、判定キャッシュの失効など）と、非公開判定の記録は送りません（fail-closed）
 - **URL ゲート**: https の宛先のみ。http や空の URL はネットワークに出す前で遮断されます
-- **宣言済み host_permissions ゲート**: マニフェストに宣言されていない origin はネットワークに出さず遮断します（fail-closed）。宣言済みの宛先は、AI プロバイダー、api.github.com、および 4 つのループバックポートです
+- **宛先許可リストゲート**: https かつ Webhook 専用許可リスト(31 件固定: https ループバック 8・AI プロバイダ 14・Gist 1。残りの http 8 件は送信時の https 要件で拒否)内の origin のみ送信します（fail-closed）。保存時と送信時は同一判定関数を使います。manifest の変更はリストを自動で広げません
 - **再送制御**: ヘッダ `Idempotency-Key`（`yasumaro-<記録のURL>-<ペイロードのFNV-1aハッシュ>`）付きで POST されます。同じ内容の再記録は重複抑制され、ダッシュボードの「再送」ボタンで明示的に再送できます
 - **リダイレクト追従なし**: 30x 応答は転送失敗扱いです（ゲートで確認していない Location への本文転送を防ぐため）
 - **履歴と通知**: 送信結果は転送履歴と OS 通知に残ります。表示は origin のみで、トークンを含みうる URL 全体は表示しません
@@ -66,7 +66,7 @@
 - **送信直前 PII マスキング**: タイトルと要約は、保存時の状態を信用せず、送信直前にもう一度マスクされます。マスクに失敗した記録は送られません
 - **ペイロードは 4 項目のみ**: マスク済みタイトル・マスク済み要約・タグ・URL。ページ本文は送られません
 - **プライバシー判定のない記録は送らない**: 判定が取得できない記録（強制保存・ホワイトリスト回避・キャッシュ失効）と非公開判定の記録は対象外です
-- **https 宛先のみ・未宣言 origin は遮断**: 宣言済み 4 ポートの外の宛先や http は、ネットワークに出す前で遮断され、転送履歴に `blocked` が残ります
+- **https かつ許可リスト内のみ**: 許可リスト外の宛先や http は、ネットワークに出す前で遮断され、転送履歴に `blocked` が残ります
 - **マスク必須の per-domain 送信政策との組み合わせ（推奨）**: ダッシュボードの「AI送信政策（ドメイン別）」は、要約を生成するための本文送信の扱いをドメインごとに決めます（送信を許可 / 要約なしで記録 / マスク必須）。外部 AI に本文を送るドメインでは「**マスク必須**」を選ぶことを推奨します。ブリッジ（Webhook エクスポート）には、政策の判定結果に関係なく、送信直前にマスクを適用したタイトルと要約のみが流れます
 - **監査**: 送信時刻・送信先 origin・文字数・状態が端末内の転送履歴に残ります
 
@@ -75,14 +75,14 @@
 1. ブリッジのログで POST の到達を確認します
 2. 転送履歴パネルで `sent` と文字数を確認します。OS 通知にも「転送しました <origin> (<理由>)」が表示されます
 3. MCP クライアントからブリッジの MCP サーバーに問い合わせし、記録が返ることを確認します
-4. fail-closed の確認: 宣言されていないポート（例: `https://127.0.0.1:8787/`）や `http://` を設定した場合、転送は行われず、転送履歴に `blocked`（未宣言 origin / https 以外の宛先）が残ることを確認します
+4. fail-closed の確認: 許可リスト外のポート（例: `https://127.0.0.1:8787/`）や `http://` を設定した場合、転送は行われず、転送履歴に `blocked`（許可リスト外 / https 以外の宛先）が残ることを確認します
 
 ### トラブルシューティング
 
 - **転送されない**: 転送条件（タグ・スクロール深度・滞在秒）が記録と一致しているか確認してください。記録が非公開判定の場合や、プライバシー判定が存在しない場合（「それでも記録」での保存など）は対象外です
 - **証明書エラーで失敗する**: `mkcert -install` のローカル CA が OS 信頼ストアに入っているか確認してください。自己署名のみでは Chrome の fetch が失敗します
 - **ポートが競合する**: Obsidian Local REST API（27123/27124）、Ollama（11434）、LM Studio（1234）が稼働中の場合、空いている宣言済みポートを選んでください
-- **転送履歴に `blocked (undeclared-origin)` が出る**: 宣言済み 4 ポート以外の URL に設定していないか確認してください。宣言済みループバック宛先のポート照合修正（PBI 2026-10-31-10）を含まない古いビルドでも同じ表示になります。その場合は修正を含むビルドに更新してください
+- **転送履歴に `blocked (undeclared-origin)` が出る**: 許可リスト外の URL(AI プロバイダ・api.github.com・https ループバック以外は停止対象)に設定していないか確認してください。宣言済みループバック宛先のポート照合修正（PBI 2026-10-31-10）を含まない古いビルドでも同じ表示になります。その場合は修正を含むビルドに更新してください
 - **同じ記録が転送されない**: 同じ URL で同じ内容の再記録は重複抑制されます。転送し直す場合は転送履歴の「再送」ボタンを使ってください
 
 ## English
@@ -111,7 +111,7 @@ When a record is saved, records that match the transfer condition and are not pr
 - **PII masking right before send**: both the title and the summary pass the privacy masking pass immediately before the send. Records that cannot be masked are not sent
 - **Privacy verdict gate**: records without a verdict (forced saves via "Record Anyway", whitelist bypass, expired verdict cache) and records judged private are not sent (fail-closed)
 - **URL gate**: https destinations only. http and empty URLs are blocked before any network access
-- **Declared host_permissions gate**: origins not declared in the manifest are blocked before any network access (fail-closed). Declared destinations are the AI providers, api.github.com, and the four loopback ports
+- **Destination allowlist gate**: only https destinations whose origin is in the dedicated webhook allowlist (31 fixed entries: 8 https loopback, 14 AI-provider, 1 Gist; 8 http entries are send-rejected by the https rule) are sent (fail-closed). Save-time and send-time share one verdict function. Manifest changes do not widen the list
 - **Resend control**: the POST carries an `Idempotency-Key` header (`yasumaro-<record URL>-<FNV-1a hash of the payload>`). Re-recording the same content is duplicate-suppressed, and the dashboard "Resend" button re-POSTs explicitly
 - **No redirect following**: a 30x response is treated as a transfer failure (so the body is never forwarded to a Location no gate checked)
 - **History and notification**: outcomes are recorded in the transfer history and the OS notification. Only the origin is displayed; the full URL (which may carry a token) is never shown
@@ -147,7 +147,7 @@ When a record is saved, records that match the transfer condition and are not pr
 - **PII masking right before send**: the title and the summary are masked again at send time, without trusting storage state. Records that cannot be masked are not sent
 - **Four fields only**: masked title, masked summary, tags, URL. Page bodies are never transmitted
 - **No record without a privacy verdict**: records without a verdict (forced saves, whitelist bypass, cache expiry) and private records are excluded
-- **https only, undeclared origins blocked**: destinations outside the four declared loopback ports and http URLs are blocked before any network access and leave `blocked` in the transfer history
+- **https plus allowlist only**: destinations outside the webhook allowlist and http URLs are blocked before any network access and leave `blocked` in the transfer history
 - **Combination with the mask-required per-domain send policy (recommended)**: the dashboard's per-domain AI send policy decides how page bodies are treated when generating summaries (allow sending / record without summary / mask required). For domains whose bodies go to an external AI, prefer "**Mask required**". The bridge (Webhook Export) receives only the title and the summary, masked immediately before the send, regardless of the policy verdict
 - **Audit**: the send time, the destination origin, the character count, and the state are recorded in the on-device transfer history
 
@@ -156,12 +156,12 @@ When a record is saved, records that match the transfer condition and are not pr
 1. Confirm the POST arrives in the bridge's log
 2. Confirm `sent` and the character count in the Transfer History panel; the OS notification shows "Transferred to <origin> (<reason>)" as well
 3. Query the bridge's MCP server from an MCP client and confirm records come back
-4. Fail-closed check: with an undeclared port (for example `https://127.0.0.1:8787/`) or `http://`, no transfer happens and the history shows `blocked` (undeclared origin / non-https destination)
+4. Fail-closed check: with an off-allowlist port (for example `https://127.0.0.1:8787/`) or `http://`, no transfer happens and the history shows `blocked` (off-allowlist origin / non-https destination)
 
 ### Troubleshooting
 
 - **Nothing is forwarded**: check that the transfer condition (tag, scroll depth, stay seconds) matches the record. Private records and records without a privacy verdict (for example forced saves) are excluded
 - **Certificate errors**: confirm the `mkcert -install` local CA is in the OS trust store. A self-signed-only certificate fails Chrome's fetch
 - **Port conflicts**: when Obsidian Local REST API (27123/27124), Ollama (11434), or LM Studio (1234) is running, pick a free declared port
-- **`blocked (undeclared-origin)` in the history**: check that the URL uses one of the four declared loopback ports. The same message appears on builds that predate the port-matching fix for declared loopback destinations (PBI 2026-10-31-10); update to a build that includes the fix in that case
+- **`blocked (undeclared-origin)` in the history**: check that the URL uses an allowlisted destination (AI providers, api.github.com, https loopback). The same message appears on builds that predate the port-matching fix for declared loopback destinations (PBI 2026-10-31-10); update to a build that includes the fix in that case
 - **The same record is not forwarded**: re-recording the same URL with the same content is duplicate-suppressed. Use the "Resend" button in the transfer history to forward it again

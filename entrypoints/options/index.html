@@ -1975,7 +1975,7 @@
       <section id="panel-webhook-export" class="panel" role="tabpanel" aria-labelledby="panel-webhook-export-title">
         <h2 id="panel-webhook-export-title" class="panel-title" data-i18n="webhookExportTab">Webhook Export</h2>
         <p class="panel-description" data-i18n="webhookExportDescription">
-          Forward records that match the transfer condition to a user-configured webhook (https only). Undeclared destinations are blocked before any network access.
+          Forward records that match the transfer condition to a user-configured webhook (https only, and only when its origin is in the dedicated 31-entry webhook allowlist). Destinations outside the list are rejected at save time and blocked before any network access. Manifest changes do not widen the list.
         </p>
 
         <div class="settings-section">
