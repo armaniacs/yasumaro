@@ -12,6 +12,7 @@ Automated tests have limitations due to Chrome Extension architecture. Manual ve
 - Obsidian Local REST API integration
 - Content script injection on real websites
 - Notification consent withdrawal: consent → a privacy-confirm notification Save → withdraw consent → click the same notification's Save again → the record count must not increase and `privacy_consent_required` appears in the service worker log (handler-level behavior is pinned by `src/background/handlers/__tests__/notificationHandlers.test.ts`; the deployed click path is manual, PBI 2026-10-18-04)
+- GA release smoke: the 3-browser checklist is [manual-tests/release-ga-smoke.md](manual-tests/release-ga-smoke.md) (10 flows, auto-test mapping, per-version run log)
 
 ## Test Environment Setup
 

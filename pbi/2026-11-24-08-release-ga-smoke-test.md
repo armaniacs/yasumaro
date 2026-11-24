@@ -161,4 +161,4 @@ rtk proxy grep -n -e "wxt zip" -e "OW_E2E_PROBE" /Users/yaar/Playground/yasumaro
 - [ ] ドキュメント更新済み
 
 ## 引き継ぎ
-状態: 未着手。進捗と引き継ぎ情報は [handoff/2026-11-24-08-release-ga-smoke-test.md](handoff/2026-11-24-08-release-ga-smoke-test.md) に記録する(ファイルが無ければ未着手)
+状態: チェックリスト作成済み。実機の実施は未着手(owner が実施する)。進捗と引き継ぎ情報は [handoff/2026-11-24-08-release-ga-smoke-test.md](handoff/2026-11-24-08-release-ga-smoke-test.md) に記録した。
