@@ -127,7 +127,7 @@ export function createAiDomainPolicySettings(): AiDomainPolicyController {
             return;
         }
         const policyValue = dom.select.value;
-        const policy: AiDomainPolicy = isAiDomainPolicy(policyValue) ? policyValue : 'allowed';
+        const policy: AiDomainPolicy = isAiDomainPolicy(policyValue) ? policyValue : 'no-summary';
         try {
             const map = normalizeAiDomainPolicyMap((await settingsRepository.getAll())[StorageKeys.AI_DOMAIN_POLICY]);
             map[domain] = policy;

@@ -18,12 +18,18 @@ import { extractDomain } from '../domainUtils.js';
 
 /**
  * Resolve a persisted or imported per-domain policy value defensively.
- * An unknown/corrupted value fails closed to the default (`allowed`): a
- * garbage row must not silently stop a send (fail-open in the other
- * direction would silently disable the user's no-summary choice).
+ * An unknown/corrupted value fails closed to `no-summary` (no-send side):
+ * a garbage row must never widen egress to unrestricted send. `no-summary`
+ * records the visit without any AI, so nothing leaves the device, while
+ * `mask-required` would still send masked content to cloud AI. This mirrors
+ * `normalizePrivacyMode`, which fails closed to `masked_cloud` so unknown
+ * values never silently disable PII masking. Normalization happens at read
+ * time (`normalizeAiDomainPolicyMap` / `resolveAiDomainPolicy`), so corrupt
+ * values arriving via settings import or backup restore are contained
+ * without a migration.
  */
 export function normalizeAiDomainPolicy(value: unknown): AiDomainPolicy {
-    return isAiDomainPolicy(value) ? value : 'allowed';
+    return isAiDomainPolicy(value) ? value : 'no-summary';
 }
 
 /**
@@ -41,13 +47,19 @@ export function normalizeAiDomainPolicyMap(value: unknown): Record<string, AiDom
 }
 
 /**
- * Single owner of the per-domain egress policy decision (PBI 2026-10-23-01).
+ * Single owner of the per-domain egress policy decision (PBI 2026-10-23-01,
+ * fail-closed per PBI 2026-11-24-19).
  * Resolves the policy for a page URL from the saved map; a URL without a
- * domain and a domain without a row both resolve to `allowed`.
+ * domain and a domain without a row both resolve to `allowed` (the map is
+ * an opt-in restriction, so a missing row must not deny a send). A present
+ * row with an unknown value resolves to `no-summary` via
+ * `normalizeAiDomainPolicy`.
  */
 export function resolveAiDomainPolicy(settings: Settings, url: string): AiDomainPolicy {
     const domain = extractDomain(url);
     if (!domain) return 'allowed';
     const map = normalizeAiDomainPolicyMap(settings[StorageKeys.AI_DOMAIN_POLICY]);
-    return normalizeAiDomainPolicy(map[domain]);
+    const policy = map[domain];
+    if (policy === undefined) return 'allowed';
+    return normalizeAiDomainPolicy(policy);
 }

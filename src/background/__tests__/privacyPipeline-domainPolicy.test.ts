@@ -155,6 +155,27 @@ describe('PrivacyPipeline — per-domain egress policy (PBI 2026-10-23-01)', () 
   });
 
   it.each([
+    ['trailing space', { 'example.com': 'mask-required ' }],
+    ['uppercase', { 'example.com': 'NO-SUMMARY' }],
+    ['null', { 'example.com': null }],
+    ['garbage', { 'example.com': 'corrupt_value' }],
+  ])('fails closed to no-summary on a corrupt row %s (no AI at all)', async (_label, map) => {
+    const sanitizers = makeSanitizers();
+    const cloud = makeCloudService();
+    const pipeline = new PrivacyPipeline(
+      withPolicy(map),
+      asAIService(cloud),
+      asSanitizers(sanitizers),
+    );
+
+    const result = await pipeline.process(PII_CONTENT, { url: URL });
+
+    expect(cloud.generateSummary).not.toHaveBeenCalled();
+    expect(result.aiSucceeded).toBe(false);
+    expect(result.domainPolicy).toBe('no-summary');
+  });
+
+  it.each([
     ['an allowed row', { 'example.com': 'allowed' }],
     ['a domain without a row', { 'other.com': 'mask-required' }],
   ])('sends as configured on %s (policy rides as allowed)', async (_label, map) => {

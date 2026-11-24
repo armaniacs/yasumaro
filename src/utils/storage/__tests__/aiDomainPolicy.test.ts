@@ -1,11 +1,13 @@
 /**
  * aiDomainPolicy.test.ts
  *
- * Table test for the per-domain egress policy resolver (PBI 2026-10-23-01).
- * The resolver is the single owner of the domain → policy decision, so a
- * missing row, a URL without a domain, and a corrupted map all resolve to
- * `allowed` (the map is an opt-in restriction, so garbage must not expand
- * it into "every domain denied").
+ * Table test for the per-domain egress policy resolver (PBI 2026-10-23-01,
+ * fail-closed to `no-summary` per PBI 2026-11-24-19).
+ * A missing row, a URL without a domain, and a corrupted *map* still resolve
+ * to `allowed` (the map is an opt-in restriction, so garbage must not expand
+ * it into "every domain denied"). A present row with an unknown/corrupt
+ * *value* fails closed to `no-summary` (no-send side), so a broken value can
+ * never widen egress to unrestricted send.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -37,8 +39,11 @@ describe('normalizeAiDomainPolicy', () => {
     ['number 1', 1],
     ['undefined', undefined],
     ['null', null],
-  ])('fails closed to allowed for %s', (_label, value) => {
-    expect(normalizeAiDomainPolicy(value)).toBe('allowed');
+    ['trailing space', 'mask-required '],
+    ['uppercase', 'NO-SUMMARY'],
+    ['empty string', ''],
+  ])('fails closed to no-summary for %s', (_label, value) => {
+    expect(normalizeAiDomainPolicy(value)).toBe('no-summary');
   });
 });
 
@@ -48,7 +53,7 @@ describe('normalizeAiDomainPolicyMap', () => {
       'example.com': 'mask-required',
       'other.com': 'corrupt_value',
     });
-    expect(map).toEqual({ 'example.com': 'mask-required', 'other.com': 'allowed' });
+    expect(map).toEqual({ 'example.com': 'mask-required', 'other.com': 'no-summary' });
   });
 
   it.each([
@@ -82,6 +87,17 @@ describe('resolveAiDomainPolicy', () => {
 
   it('resolves a corrupted map to allowed (opt-in restriction, garbage must not expand it)', () => {
     expect(resolveAiDomainPolicy(SETTINGS('corrupt'), 'https://example.com/page')).toBe('allowed');
+  });
+
+  it.each([
+    ['trailing space', 'mask-required '],
+    ['uppercase', 'NO-SUMMARY'],
+    ['null', null],
+    ['garbage', 'corrupt_value'],
+  ])('resolves a present but corrupt row to no-summary for %s', (_label, value) => {
+    expect(
+      resolveAiDomainPolicy(SETTINGS({ 'example.com': value }), 'https://example.com/page'),
+    ).toBe('no-summary');
   });
 
   it('resolves a missing map to allowed', () => {

@@ -93,6 +93,18 @@ describe('buildPlan (pure branching decision)', () => {
     expect(plan.domainPolicy).toBe('allowed');
     expect(plan.useMasking).toBe(false);
   });
+
+  it.each([
+    ['trailing space', 'mask-required '],
+    ['uppercase', 'NO-SUMMARY'],
+    ['null', null],
+  ])('fails closed to no-summary for a corrupt row %s', (_label, value) => {
+    const plan = buildPlan(
+      settingsFor('cloud_only', { ai_domain_policy: { 'example.com': value } }),
+      URL,
+    );
+    expect(plan.domainPolicy).toBe('no-summary');
+  });
 });
 
 describe('applyMaskResult (pure mask combination)', () => {
