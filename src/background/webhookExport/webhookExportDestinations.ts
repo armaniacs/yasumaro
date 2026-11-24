@@ -1,5 +1,5 @@
 /**
- * webhookExportDestinations.ts (PBI 2026-10-31-12)
+ * webhookExportDestinations.ts (PBI 2026-10-31-12, narrowed PBI 2026-11-24-18)
  *
  * The webhook-specific destination allowlist and the SINGLE judgment source
  * shared by the save-time pre-flight (webhookExportSettings.ts) and the
@@ -11,26 +11,40 @@
  * diverge from the send verdict because there is only one verdict function
  * (pinned by webhookExportDestinations.test.ts).
  *
- * Initial set = the declared manifest origin set as of 2026-10-31 (31
- * patterns, dist/chromium-mv3/manifest.json measured): 8 http loopback + 8
- * https loopback + 14 AI-provider patterns (including the *.openai.com
- * wildcard) + 1 Gist egress (api.github.com). The set is a VERBATIM
- * snapshot, not a derivation from the manifest SSOT: a derivation would let
- * a manifest addition for another feature widen the webhook allowlist
- * automatically (PBI AC). The pin test compares the snapshot against the
- * declared manifest host_permissions, so:
+ * Kept set (PBI 2026-11-24-18, owner裁定 run-3 NV-1): 16 loopback patterns —
+ * 8 https loopback (functional webhook hosts) + 8 http loopback (DEAD entries
+ * at the send gate, kept for the save-time grandfather clause). Removed: 14
+ * AI-provider patterns (including the *.openai.com wildcard) and 1 Gist
+ * egress (api.github.com). WHY: the audit flagged third-party endpoints as a
+ * webhook egress path; AI providers and api.github.com are not
+ * webhook-dedicated hosts. Gist sync keeps its own egress path
+ * (GIST_EGRESS_HOST_PERMISSIONS, declared mandatorily in the manifest) and a
+ * generic webhook POST to api.github.com is not a supported webhook use, so
+ * Gist does not stay in this list.
+ *
+ * The set is a DELIBERATE snapshot, not a derivation from the manifest SSOT:
+ * the manifest still declares AI-provider and Gist hosts for their own
+ * features, and a derivation would let a manifest addition for another
+ * feature widen the webhook allowlist automatically (PBI AC). The pin test
+ * no longer asserts equality with the declared manifest host_permissions —
+ * the divergence is intentional — so:
  *   - a manifest addition for ANOTHER feature does not widen the webhook
- *     allowlist (the pin fails and forces a conscious list update);
+ *     allowlist (the pin fails on any unreviewed list change instead);
  *   - a manifest removal does not invalidate already-saved webhook
- *     destinations — the grandfather clause (ユーザー裁定 2026-10-31: the
- *     existing loopback / AI-provider / Gist origins stay in the initial
- *     set) is carried by this list, never by the live manifest.
+ *     destinations — the loopback grandfather clause is carried by this
+ *     list, never by the live manifest.
  *
  * The 8 http loopback entries are DEAD entries at the send gate: the https
  * requirement (isWebhookUrlAllowed) always rejects them. They stay in the
- * list because the pin source is the declared origin set and the
- * save-time grandfather clause (an unchanged stored http loopback
- * destination is preserved, not rejected) reads this list.
+ * list because the save-time grandfather clause (an unchanged stored http
+ * loopback destination is preserved, not rejected) reads this list.
+ *
+ * Grandfather policy (silent-disable-free): already-saved AI-provider / Gist
+ * destinations are NOT wiped, migrated, or disabled silently. They stay in
+ * storage as-is; the next save with the same URL is rejected
+ * (destination-not-in-allowlist) and the send gate blocks the egress, so the
+ * user sees the reason and picks a loopback destination. No storage-schema
+ * migration is needed.
  *
  * The matcher isUrlCoveredByHostPattern moved here from webhookExportSender.ts
  * (re-exported there for compatibility) so the judgment source has no import
@@ -41,15 +55,14 @@ import { isWebhookUrlAllowed, webhookUrlOrigin } from './webhookExportPayload.js
 import { escapeRegExp } from '../../utils/string.js';
 
 /**
- * The webhook-specific destination allowlist. Initial set = the declared
- * manifest origin set (31 patterns) so existing destinations keep working
- * (現状動作の維持). Update this list ONLY deliberately, together with the
- * manifest pin in webhookExportDestinations.test.ts.
+ * The webhook-specific destination allowlist. Narrowed set (PBI
+ * 2026-11-24-18) = 16 loopback patterns only: 8 https functional + 8 http
+ * dead grandfather entries. Update this list ONLY deliberately, together
+ * with the pin in webhookExportDestinations.test.ts.
  */
 export const WEBHOOK_EXPORT_DESTINATION_PATTERNS: readonly string[] = [
   // 8 http loopback (grandfathered; always rejected by the send gate's https
-  // requirement — dead entries, kept for the origin-set pin and the
-  // save-time grandfather clause).
+  // requirement — dead entries, kept for the save-time grandfather clause).
   'http://127.0.0.1:27123/*',
   'http://127.0.0.1:27124/*',
   'http://127.0.0.1:11434/*',
@@ -58,7 +71,7 @@ export const WEBHOOK_EXPORT_DESTINATION_PATTERNS: readonly string[] = [
   'http://localhost:27124/*',
   'http://localhost:11434/*',
   'http://localhost:1234/*',
-  // 8 https loopback
+  // 8 https loopback (the only functional webhook hosts)
   'https://127.0.0.1:27123/*',
   'https://127.0.0.1:27124/*',
   'https://127.0.0.1:11434/*',
@@ -67,23 +80,6 @@ export const WEBHOOK_EXPORT_DESTINATION_PATTERNS: readonly string[] = [
   'https://localhost:27124/*',
   'https://localhost:11434/*',
   'https://localhost:1234/*',
-  // 14 AI-provider patterns (manifest host_permissions order)
-  'https://generativelanguage.googleapis.com/*',
-  'https://api.openai.com/*',
-  'https://*.openai.com/*',
-  'https://api.anthropic.com/*',
-  'https://api.groq.com/*',
-  'https://mistral.ai/*',
-  'https://api.mistral.ai/*',
-  'https://deepseek.com/*',
-  'https://api.deepseek.com/*',
-  'https://voyageai.com/*',
-  'https://volcengine.com/*',
-  'https://z.ai/*',
-  'https://wandb.ai/*',
-  'https://api.ai.sakura.ad.jp/*',
-  // 1 Gist egress
-  'https://api.github.com/*',
 ];
 
 /** Machine-readable save/send verdict reasons; user text resolves at the UI. */

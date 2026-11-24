@@ -1,12 +1,15 @@
 /**
- * webhookExportDestinations.test.ts (PBI 2026-10-31-12)
+ * webhookExportDestinations.test.ts (PBI 2026-10-31-12, narrowed PBI 2026-11-24-18)
  *
  * The webhook-specific destination allowlist and the single judgment source
  * shared by the save-time pre-flight and the send-time gate. Pins:
  *
- *   - the initial set equals the declared manifest host_permissions
- *     (31 patterns, dist/chromium-mv3/manifest.json measured: 8 http loopback
- *     + 8 https loopback + 14 AI-provider + 1 Gist);
+ *   - the narrowed set is loopback-only (16 patterns: 8 http dead
+ *     grandfather + 8 https functional); AI-provider patterns and the Gist
+ *     egress are gone on purpose (owner裁定 run-3 NV-1);
+ *   - the narrowed list is intentionally DIVERGED from the declared manifest
+ *     host_permissions (the manifest keeps AI/Gist hosts for their own
+ *     features; the webhook gate must not follow it);
  *   - save judgment === send judgment for every URL (same judgment source —
  *     a save-permitted destination is never send-blocked);
  *   - BDD scenario 4: the migration wording (existing destinations are part
@@ -52,33 +55,39 @@ function readFromRoot(path: string): string {
   return readFileSync(join(process.cwd(), path), 'utf-8');
 }
 
-describe('webhook 宛先許可リストの pin（PBI 2026-10-31-12）', () => {
-  it('初期集合が宣言 host_permissions 集合（31 パターン）と一致する', () => {
-    const declared = declaredHostPermissions();
-    expect(declared).toHaveLength(31);
-    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).toEqual(declared);
-  });
-
-  it('初期集合の構成: http loopback 8 + https loopback 8 + AI プロバイダ 14 + Gist 1', () => {
+describe('webhook 宛先許可リストの pin（PBI 2026-11-24-18 narrow）', () => {
+  it('narrowed 集合は loopback 16 パターン（http 8 + https 8）である', () => {
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).toHaveLength(16);
     const http = WEBHOOK_EXPORT_DESTINATION_PATTERNS.filter((pattern) => pattern.startsWith('http://'));
     const https = WEBHOOK_EXPORT_DESTINATION_PATTERNS.filter((pattern) => pattern.startsWith('https://'));
     expect(http).toHaveLength(8);
-    expect(https).toHaveLength(23);
+    expect(https).toHaveLength(8);
     const loopbackHttps = https.filter((pattern) => /^https:\/\/(127\.0\.0\.1|localhost):\d+\//.test(pattern));
     expect(loopbackHttps).toHaveLength(8);
-    const gist = https.filter((pattern) => pattern === 'https://api.github.com/*');
-    expect(gist).toHaveLength(1);
-    // 14 AI-provider patterns include the *.openai.com wildcard.
-    const aiProviders = https.filter(
-      (pattern) => !/^https:\/\/(127\.0\.0\.1|localhost):/.test(pattern) && pattern !== 'https://api.github.com/*',
-    );
-    expect(aiProviders).toHaveLength(14);
-    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).toContain('https://*.openai.com/*');
+  });
+
+  it('第三者エンドポイント（AI プロバイダ・Gist）を含まない', () => {
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).not.toContain('https://api.openai.com/*');
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).not.toContain('https://*.openai.com/*');
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).not.toContain('https://api.github.com/*');
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS.some((pattern) => pattern.includes('openai'))).toBe(false);
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS.some((pattern) => pattern.includes('github'))).toBe(false);
+  });
+
+  it('宣言 manifest（AI/Gist を残す 31）から意図的に乖離し、loopback 部分集合である', () => {
+    const declared = declaredHostPermissions();
+    expect(declared).toHaveLength(31);
+    // The webhook gate no longer follows the manifest: AI/Gist hosts stay
+    // declared for their own features, but the webhook list must not widen.
+    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS).not.toEqual(declared);
+    for (const pattern of WEBHOOK_EXPORT_DESTINATION_PATTERNS) {
+      expect(declared).toContain(pattern);
+    }
   });
 });
 
 describe('保存/送信が同一判定源を共有する pin（保存 OK ⇒ 送信 NG が再現しない）', () => {
-  /** Every judgment class: permitted, unlisted, non-https, empty/invalid, ported loopback. */
+  /** Every judgment class: permitted, unlisted (incl. removed AI/Gist), non-https, empty/invalid, ported loopback. */
   const judgedUrls: readonly string[] = [
     'https://127.0.0.1:27123/hook',
     'https://localhost:11434/hook',
@@ -126,15 +135,10 @@ describe('保存/送信が同一判定源を共有する pin（保存 OK ⇒ 送
 });
 
 describe('judgeWebhookDestination（表駆動）', () => {
-  it('許可 origin（宣言集合）は permitted', () => {
+  it('許可 origin（loopback のみ）は permitted', () => {
     const permitted = [
       'https://127.0.0.1:27123/hook',
       'https://localhost:27124/x',
-      'https://api.github.com/x',
-      'https://api.openai.com/v1',
-      'https://sub.openai.com/v1',
-      'https://mistral.ai/x',
-      'https://api.ai.sakura.ad.jp/v1',
     ];
     for (const url of permitted) {
       // The URL rides the compared object (vitest/valid-expect takes at most
@@ -143,6 +147,24 @@ describe('judgeWebhookDestination（表駆動）', () => {
         url,
         permitted: true,
         reason: 'permitted',
+        origin: new URL(url).origin,
+      });
+    }
+  });
+
+  it('狭めで外れた第三者 origin（AI プロバイダ・Gist）は理由付きで非許可（発火デモの緑）', () => {
+    const removed = [
+      'https://api.openai.com/v1',
+      'https://sub.openai.com/v1',
+      'https://api.ai.sakura.ad.jp/v1',
+      'https://mistral.ai/x',
+      'https://api.github.com/x',
+    ];
+    for (const url of removed) {
+      expect({ url, ...judgeWebhookDestination(url) }).toEqual({
+        url,
+        permitted: false,
+        reason: 'destination-not-in-allowlist',
         origin: new URL(url).origin,
       });
     }
