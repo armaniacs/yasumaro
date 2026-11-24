@@ -4,6 +4,8 @@ import {
     type OfflineQueueProcessorDeps,
 } from '../offlineQueueProcessor.js';
 import type { OfflineJob } from '../offlineNetworkQueue.js';
+import { getPendingPages, PENDING_PAGES_KEY } from '../../utils/pendingStorage.js';
+import { FailureKind, createFailure, tagFailure } from '../../utils/failureTaxonomy.js';
 
 /**
  * PBI 2026-10-19-10: the processor re-reads consent before every replay cycle.
@@ -546,6 +548,78 @@ describe('createOfflineQueueProcessor', () => {
 
             expect(retryAll).toHaveBeenCalledTimes(1);
             expect(retryObsidianWrite).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('terminal handover conflict preservation (PBI 2026-11-24-16)', () => {
+        function obsidianError(status: number): Error {
+            return tagFailure(
+                new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+                createFailure(FailureKind.HTTP, { status, method: 'PUT' }),
+            );
+        }
+
+        beforeEach(async () => {
+            await global.chrome.storage.local.remove(PENDING_PAGES_KEY);
+        });
+
+        it('hands an exhausted obsidian_sync conflict over as obsidian-write-conflict', async () => {
+            const retryObsidianWrite = vi.fn().mockRejectedValue(obsidianError(412));
+            const record = vi.fn();
+            const job: OfflineJob = {
+                id: 'conflict-job',
+                type: 'obsidian_sync',
+                payload: { title: 't', url: 'https://example.com/conflict', content: 'c', summary: 's' },
+                createdAt: Date.now(),
+                retryCount: 0,
+            };
+            const { retryAll } = retryAllFeeding(job, false, true);
+            const notifyError = vi.fn();
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: fakeQueue(retryAll),
+                recordingPipeline: { record, retryObsidianWrite },
+                notifyError,
+            });
+
+            await processQueue();
+
+            expect(retryObsidianWrite).toHaveBeenCalledTimes(1);
+            expect(notifyError).toHaveBeenCalledTimes(1);
+            const pages = await getPendingPages();
+            expect(pages).toHaveLength(1);
+            expect(pages[0]).toMatchObject({
+                url: 'https://example.com/conflict',
+                reason: 'obsidian-write-conflict',
+            });
+        });
+
+        it('keeps handing an exhausted non-412 obsidian_sync failure over as obsidian-write-failed', async () => {
+            const retryObsidianWrite = vi.fn().mockRejectedValue(obsidianError(500));
+            const record = vi.fn();
+            const job: OfflineJob = {
+                id: 'failed-job',
+                type: 'obsidian_sync',
+                payload: { title: 't', url: 'https://example.com/failed', content: 'c', summary: 's' },
+                createdAt: Date.now(),
+                retryCount: 0,
+            };
+            const { retryAll } = retryAllFeeding(job, false, true);
+            const notifyError = vi.fn();
+            const processQueue = createOfflineQueueProcessor({
+                offlineNetworkQueue: fakeQueue(retryAll),
+                recordingPipeline: { record, retryObsidianWrite },
+                notifyError,
+            });
+
+            await processQueue();
+
+            expect(notifyError).toHaveBeenCalledTimes(1);
+            const pages = await getPendingPages();
+            expect(pages).toHaveLength(1);
+            expect(pages[0]).toMatchObject({
+                url: 'https://example.com/failed',
+                reason: 'obsidian-write-failed',
+            });
         });
     });
 });

@@ -13,6 +13,7 @@ import {
   NOTIFICATION_PAGE_TITLE_MAX_LENGTH,
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX,
   obsidianConflictOptions,
+  obsidianConflictRegenerateOptions,
   obsidianSaveOptions,
   privacyConfirmOptions,
   recordSuccessOptions,
@@ -352,6 +353,67 @@ describe('notificationPolicy', () => {
         iconUrl: 'icon-url',
       });
 
+      expect(payload.message).not.toContain('接続');
+      expect(payload.message).not.toContain('connection');
+    });
+  });
+
+  describe('obsidianConflictRegenerateOptions (PBI 2026-11-24-16)', () => {
+    it('falls back to the conflict title and a body without the pending-list wording', () => {
+      const payload = obsidianConflictRegenerateOptions({
+        pageTitle: 'Example',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload).toEqual({
+        type: 'basic',
+        iconUrl: 'icon-url',
+        title: 'Obsidian Save Conflict',
+        message: '“Example” was not saved because it conflicted with an edit in Obsidian. Check Obsidian and regenerate again.',
+      });
+      expect(payload.message).not.toContain('pending');
+    });
+
+    it('resolves the regenerate title and body through i18n with the sanitized title substitution', () => {
+      const seen: Array<{ key: string; fallback: string; substitutions?: unknown }> = [];
+      const resolve = makeTranslatedResolver(
+        { notifyObsidianConflictRegenerateTitle: '競合', notifyObsidianConflictRegenerateBody: '本文' },
+        seen,
+      );
+
+      const payload = obsidianConflictRegenerateOptions({
+        pageTitle: 'Line1\nLine2',
+        resolve,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.title).toBe('競合');
+      expect(payload.message).toBe('本文');
+      const bodyCall = seen.find((call) => call.key === 'notifyObsidianConflictRegenerateBody');
+      expect(bodyCall?.substitutions).toEqual(['Line1 Line2']);
+    });
+
+    it('never interpolates a raw title with control characters', () => {
+      const payload = obsidianConflictRegenerateOptions({
+        pageTitle: 'a\x00b\nc',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.message).not.toMatch(/[\x00-\x1F\x7F]/);
+      expect(payload.message).toContain('a b c');
+    });
+
+    it('mentions neither the pending list, the connection settings nor secrets', () => {
+      const payload = obsidianConflictRegenerateOptions({
+        pageTitle: 'Example',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.message).not.toContain('pending');
+      expect(payload.message).not.toContain('保留');
       expect(payload.message).not.toContain('接続');
       expect(payload.message).not.toContain('connection');
     });

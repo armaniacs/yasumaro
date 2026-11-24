@@ -55,18 +55,21 @@ function makeFakes(): OutcomeAdapters & {
   notifiedErrors: Array<{ title: string; message: string }>;
   notifiedSaves: string[];
   notifiedConflicts: string[];
+  notifiedRegenerateConflicts: string[];
   pendings: unknown[];
   skips: string[];
 } {
   const notifiedErrors: Array<{ title: string; message: string }> = [];
   const notifiedSaves: string[] = [];
   const notifiedConflicts: string[] = [];
+  const notifiedRegenerateConflicts: string[] = [];
   const pendings: unknown[] = [];
   const skips: string[] = [];
   return {
     notifiedErrors,
     notifiedSaves,
     notifiedConflicts,
+    notifiedRegenerateConflicts,
     pendings,
     skips,
     notifier: {
@@ -76,8 +79,12 @@ function makeFakes(): OutcomeAdapters & {
       notifySaveSuccess: (title) => {
         notifiedSaves.push(title);
       },
-      notifyObsidianConflict: (title) => {
-        notifiedConflicts.push(title);
+      notifyObsidianConflict: (title, options?: { regenerate?: boolean }) => {
+        if (options?.regenerate === true) {
+          notifiedRegenerateConflicts.push(title);
+        } else {
+          notifiedConflicts.push(title);
+        }
       },
     },
     pending: {
@@ -281,6 +288,8 @@ describe('finalizeSuccess', () => {
     });
 
     it('notifies a regenerate record without registering a pending page', () => {
+      // PBI 2026-11-24-16: the regenerate variant never points at the pending
+      // list, because no pending entry exists for it.
       const fakes = makeFakes();
       const result = finalizeSuccess(
         makeContext({
@@ -299,7 +308,8 @@ describe('finalizeSuccess', () => {
 
       expect(result.success).toBe(true);
       expect(fakes.pendings).toHaveLength(0);
-      expect(fakes.notifiedConflicts).toEqual(['Test Page']);
+      expect(fakes.notifiedRegenerateConflicts).toEqual(['Test Page']);
+      expect(fakes.notifiedConflicts).toHaveLength(0);
     });
   });
 
@@ -497,5 +507,74 @@ describe('settleOutcomeWrite (PBI 2026-11-07-10)', () => {
   it('does nothing for sync void writes', () => {
     settleOutcomeWrite(undefined, 'skip', 'trace-2');
     expect(vi.mocked(addLog)).not.toHaveBeenCalled();
+  });
+});
+
+describe('regenerate Obsidian failure surfacing (PBI 2026-11-24-16)', () => {
+  function httpError(status: number): Error {
+    return tagFailure(
+      new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+      createFailure(FailureKind.HTTP, { status, method: 'PUT' }),
+    );
+  }
+
+  function regenerateContext(error: Error): RecordingContext {
+    return makeContext({
+      data: { title: 'Test Page', url: 'https://example.com', content: 'content', targetEntryId: 7 } as never,
+      errors: [{
+        step: 'saveObsidian',
+        error,
+        strategy: ErrorStrategy.BEST_EFFORT,
+        timestamp: Date.now(),
+        recoveryKind: 'obsidian_sync',
+        context: { url: 'https://example.com' },
+      }],
+    });
+  }
+
+  it('surfaces a regenerate non-412 failure with an error notice instead of silent success', () => {
+    const fakes = makeFakes();
+    const result = finalizeSuccess(regenerateContext(httpError(500)), fakes);
+
+    expect(result.success).toBe(true);
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(1);
+    expect(fakes.notifiedErrors[0]).toMatchObject({ title: 'Test Page' });
+    expect(fakes.notifiedConflicts).toHaveLength(0);
+    expect(fakes.notifiedRegenerateConflicts).toHaveLength(0);
+  });
+
+  it('notifies a regenerate conflict through the regenerate variant, never the pending-list wording', () => {
+    const fakes = makeFakes();
+    const result = finalizeSuccess(regenerateContext(httpError(412)), fakes);
+
+    expect(result.success).toBe(true);
+    expect(fakes.pendings).toHaveLength(0);
+    expect(fakes.notifiedRegenerateConflicts).toEqual(['Test Page']);
+    expect(fakes.notifiedConflicts).toHaveLength(0);
+    expect(fakes.notifiedErrors).toHaveLength(0);
+  });
+
+  it('leaves a non-regenerate non-412 failure notice-free with a pending entry', () => {
+    const fakes = makeFakes();
+    const result = finalizeSuccess(
+      makeContext({
+        errors: [{
+          step: 'saveObsidian',
+          error: httpError(500),
+          strategy: ErrorStrategy.BEST_EFFORT,
+          timestamp: Date.now(),
+          recoveryKind: 'obsidian_sync',
+          context: { url: 'https://example.com' },
+        }],
+      }),
+      fakes,
+    );
+
+    expect(result.success).toBe(true);
+    expect(fakes.pendings).toHaveLength(1);
+    expect(fakes.pendings[0]).toMatchObject({ reason: 'obsidian-write-failed' });
+    expect(fakes.notifiedErrors).toHaveLength(0);
+    expect(fakes.notifiedRegenerateConflicts).toHaveLength(0);
   });
 });

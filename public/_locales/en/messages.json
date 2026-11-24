@@ -670,6 +670,17 @@
       }
     }
   },
+  "notifyObsidianConflictRegenerateTitle": {
+    "message": "Obsidian Save Conflict"
+  },
+  "notifyObsidianConflictRegenerateBody": {
+    "message": "\"$TITLE$\" was not saved because it conflicted with an edit in Obsidian. Check Obsidian and regenerate again.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
   "saveToObsidian": {
     "message": "Saved to Obsidian"
   },

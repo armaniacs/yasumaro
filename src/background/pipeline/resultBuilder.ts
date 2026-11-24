@@ -8,7 +8,7 @@
 
 import { NotificationHelper } from '../notificationHelper.js';
 import { getMessageOr } from '../../utils/i18n.js';
-import { obsidianConflictOptions, obsidianSaveOptions, recordingErrorOptions } from '../notificationPolicy.js';
+import { obsidianConflictOptions, obsidianConflictRegenerateOptions, obsidianSaveOptions, recordingErrorOptions } from '../notificationPolicy.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import type { RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
@@ -113,13 +113,22 @@ export function notifyObsidianSaveSuccess(title: string): void {
  * rewrite (PBI 2026-11-24-05). Wired as the default `notifyObsidianConflict`
  * adapter in `recordingOutcome.defaultOutcomeAdapters`. The title is
  * sanitized inside the policy row; no note body, ETag, or API key travels.
+ *
+ * PBI 2026-11-24-16: a regenerate record registers no pending page, so its
+ * notice uses the regenerate body that never points at the pending list.
  */
-export function notifyObsidianConflict(title: string): void {
+export function notifyObsidianConflict(title: string, options?: { regenerate?: boolean }): void {
   NotificationHelper.show(
-    obsidianConflictOptions({
-      pageTitle: title,
-      resolve: getMessageOr,
-      iconUrl: NotificationHelper.getIconUrl(),
-    }),
+    options?.regenerate === true
+      ? obsidianConflictRegenerateOptions({
+        pageTitle: title,
+        resolve: getMessageOr,
+        iconUrl: NotificationHelper.getIconUrl(),
+      })
+      : obsidianConflictOptions({
+        pageTitle: title,
+        resolve: getMessageOr,
+        iconUrl: NotificationHelper.getIconUrl(),
+      }),
   );
 }

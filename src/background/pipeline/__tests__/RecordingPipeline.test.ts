@@ -927,4 +927,127 @@ describe('RecordingPipeline', () => {
       expect(fakes.notifiedConflicts).toHaveLength(0);
     });
   });
+
+  describe('regenerate Obsidian failure surfacing (PBI 2026-11-24-16)', () => {
+    // A regenerate record (targetEntryId set) whose Obsidian write is
+    // attempted pins the outcome policy through the real pipeline. The
+    // SQLite-only regenerate path (skipObsidianAppend) is unchanged and
+    // never reaches the Obsidian sink.
+    function regenConflictError(): Error {
+      return Object.assign(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        { failure: { kind: 'http', status: 412, method: 'PUT' } },
+      );
+    }
+
+    function regenServerError(): Error {
+      return Object.assign(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        { failure: { kind: 'http', status: 500, method: 'PUT' } },
+      );
+    }
+
+    function makeRegenFakes(): {
+      notifiedErrors: Array<{ title: string; message: string }>;
+      notifiedConflicts: string[];
+      notifiedRegenerateConflicts: string[];
+      pendings: unknown[];
+      notifier: {
+        notifyError: (title: string, message: string) => void;
+        notifySaveSuccess: (title: string) => void;
+        notifyObsidianConflict: (title: string, options?: { regenerate?: boolean }) => void;
+      };
+      pending: { addPending: (entry: unknown) => void };
+      skipRecorder: { recordSkip: (reason: string) => void };
+    } {
+      const notifiedErrors: Array<{ title: string; message: string }> = [];
+      const notifiedConflicts: string[] = [];
+      const notifiedRegenerateConflicts: string[] = [];
+      const pendings: unknown[] = [];
+      return {
+        notifiedErrors,
+        notifiedConflicts,
+        notifiedRegenerateConflicts,
+        pendings,
+        notifier: {
+          notifyError: (title, message) => {
+            notifiedErrors.push({ title, message });
+          },
+          notifySaveSuccess: () => {},
+          notifyObsidianConflict: (title, options) => {
+            if (options?.regenerate === true) {
+              notifiedRegenerateConflicts.push(title);
+            } else {
+              notifiedConflicts.push(title);
+            }
+          },
+        },
+        pending: {
+          addPending: (entry) => {
+            pendings.push(entry);
+          },
+        },
+        skipRecorder: {
+          recordSkip: () => {},
+        },
+      };
+    }
+
+    function makeRegenPipeline(append: ReturnType<typeof vi.fn>, fakes: ReturnType<typeof makeRegenFakes>) {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+      return createRecordingOrchestrator({
+        getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        getSettingsWithCache: async () => mockSettings,
+        isConsentGranted: async () => true,
+        obsidian: { appendToDailyNote: append } as never,
+        aiService: makeAiClient() as never,
+        sqliteClient: null,
+        outcomeAdapters: fakes as never,
+      });
+    }
+
+    it('surfaces a regenerate non-412 failure with an error notice and no pending entry', async () => {
+      const append = vi.fn<() => Promise<void>>().mockRejectedValue(regenServerError());
+      const fakes = makeRegenFakes();
+      const pipeline = makeRegenPipeline(append, fakes);
+
+      const result = await pipeline.record({
+        title: 'Regen Page',
+        url: 'https://example.com/regen-500',
+        content: 'Content',
+        targetEntryId: 7,
+      }, { settings: mockSettings });
+
+      expect(append).toHaveBeenCalledTimes(1);
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(0);
+      expect(fakes.notifiedErrors).toHaveLength(1);
+      expect(fakes.notifiedErrors[0]).toMatchObject({ title: 'Regen Page' });
+      expect(fakes.notifiedConflicts).toHaveLength(0);
+      expect(fakes.notifiedRegenerateConflicts).toHaveLength(0);
+    });
+
+    it('notifies a regenerate conflict through the regenerate variant with no pending entry', async () => {
+      const append = vi.fn<() => Promise<void>>().mockRejectedValue(regenConflictError());
+      const fakes = makeRegenFakes();
+      const pipeline = makeRegenPipeline(append, fakes);
+
+      const result = await pipeline.record({
+        title: 'Regen Page',
+        url: 'https://example.com/regen-conflict',
+        content: 'Content',
+        targetEntryId: 7,
+      }, { settings: mockSettings });
+
+      expect(append).toHaveBeenCalledTimes(2);
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(0);
+      expect(fakes.notifiedRegenerateConflicts).toEqual(['Regen Page']);
+      expect(fakes.notifiedConflicts).toHaveLength(0);
+      expect(fakes.notifiedErrors).toHaveLength(0);
+    });
+  });
 });

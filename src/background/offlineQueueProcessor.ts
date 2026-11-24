@@ -16,6 +16,8 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logError, logWarn } from '../utils/logger/api.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
+import { resolveFailure } from '../utils/failureTaxonomy.js';
+import { isPreconditionConflict } from '../utils/obsidianConditionalWrite.js';
 import { addPendingPage, PENDING_MAX_TTL_MS } from '../utils/pendingStorage.js';
 import { claimRecoveryOwner, releaseRecoveryOwner } from '../utils/recoveryClaimStore.js';
 import { notifyRecordingError } from './pipeline/resultBuilder.js';
@@ -54,6 +56,25 @@ export interface TerminalFailureHandler {
     handOver(job: OfflineJob): Promise<void>;
 }
 
+/**
+ * Conflict marker (PBI 2026-11-24-16): set when an obsidian_sync retry fails
+ * with a 412 that persisted after the single rewrite. Stored on the job
+ * itself so it survives the queue persistence between the failing cycle and
+ * the terminal-handover cycle.
+ */
+interface ConflictMarkedJob {
+    obsidianConflict?: boolean | undefined;
+}
+
+function markObsidianConflict(job: OfflineJob, error: unknown): void {
+    if (!isPreconditionConflict(resolveFailure(error))) return;
+    (job as OfflineJob & ConflictMarkedJob).obsidianConflict = true;
+}
+
+function isConflictHandover(job: OfflineJob): boolean {
+    return (job as OfflineJob & ConflictMarkedJob).obsidianConflict === true;
+}
+
 function createProdTerminalFailureHandler(
     notifyError: (title: string, message: string) => void,
 ): TerminalFailureHandler {
@@ -69,7 +90,9 @@ function createProdTerminalFailureHandler(
             url: payload.url,
             title: payload.title,
             timestamp: Date.now(),
-            reason: job.type === 'obsidian_sync' ? 'obsidian-write-failed' : 'pipeline-error',
+            reason: job.type === 'obsidian_sync'
+                ? (isConflictHandover(job) ? 'obsidian-write-conflict' : 'obsidian-write-failed')
+                : 'pipeline-error',
             errorMessage: 'Offline retry exhausted (max 3 attempts)',
             expiry: Date.now() + HANDOVER_PENDING_TTL_MS,
         });
@@ -166,6 +189,11 @@ export function createOfflineQueueProcessor(deps: OfflineQueueProcessorDeps): ()
                     ...pickDefined({ tags: payload.tags }),
                 });
             } catch (error) {
+                // PBI 2026-11-24-16: remember a persisted 412 so the terminal
+                // handover keeps the conflict reason instead of forcing the
+                // generic write-failed reason. Only the marker travels — no
+                // note body, ETag, or API key.
+                markObsidianConflict(job, error);
                 // Poison jobs must be distinguishable from transient
                 // failures in telemetry (PBI 2026-09-12-04).
                 logWarn('Offline obsidian_sync retry failed', { url: payload.url, error: errorMessage(error) }, undefined, 'service-worker');

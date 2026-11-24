@@ -192,3 +192,25 @@ export function obsidianConflictOptions(
     ),
   };
 }
+
+/**
+ * Regenerate write-conflict notice (PBI 2026-11-24-16). A regenerate record
+ * registers no pending page (UPDATE-only: the pending replay would INSERT a
+ * duplicate row), so the body must not point at the pending list. Carries the
+ * sanitized page title only: no note body, no ETag, no API key.
+ */
+export function obsidianConflictRegenerateOptions(
+  input: IconPayloadInput & { pageTitle: string; resolve: NotificationTextResolver },
+): NotificationPayload {
+  const safePageTitle = sanitizePageTitleForNotification(input.pageTitle);
+  return {
+    type: 'basic',
+    iconUrl: input.iconUrl,
+    title: input.resolve('notifyObsidianConflictRegenerateTitle', 'Obsidian Save Conflict'),
+    message: input.resolve(
+      'notifyObsidianConflictRegenerateBody',
+      `“${safePageTitle}” was not saved because it conflicted with an edit in Obsidian. Check Obsidian and regenerate again.`,
+      [safePageTitle],
+    ),
+  };
+}

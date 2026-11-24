@@ -628,6 +628,17 @@
       }
     }
   },
+  "notifyObsidianConflictRegenerateTitle": {
+    "message": "Obsidian保存の競合"
+  },
+  "notifyObsidianConflictRegenerateBody": {
+    "message": "「$TITLE$」はObsidian側の編集と競合したため保存できませんでした。Obsidian側を確認してから再生成してください。",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
   "saveToObsidian": {
     "message": "Obsidianに保存"
   },

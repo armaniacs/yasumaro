@@ -41,7 +41,7 @@ import {
   notifyObsidianSaveSuccess,
 } from './resultBuilder.js';
 import { PrivatePageError, DuplicateError, RegenerateUpdateError } from './steps/index.js';
-import { ErrorStrategy, decideRecoveryOwner, unwrapStepFailure, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
+import { ErrorStrategy, decideRecoveryOwner, isRegenerateRecord, unwrapStepFailure, type OfflineJobKind, type PipelineError, type RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
 
 /**
@@ -51,7 +51,7 @@ import type { RecordingResult } from '../../messaging/types.js';
 export interface OutcomeNotifier {
   notifyError(title: string, message: string): void;
   notifySaveSuccess(title: string): void;
-  notifyObsidianConflict(title: string): void;
+  notifyObsidianConflict(title: string, options?: { regenerate?: boolean }): void;
 }
 
 /**
@@ -81,7 +81,7 @@ export interface OutcomeAdapters {
 const prodNotifier: OutcomeNotifier = {
   notifyError: (title, message) => notifyRecordingError(title, message),
   notifySaveSuccess: (title) => notifyObsidianSaveSuccess(title),
-  notifyObsidianConflict: (title) => notifyObsidianConflict(title),
+  notifyObsidianConflict: (title, options) => notifyObsidianConflict(title, options),
 };
 
 /**
@@ -339,9 +339,15 @@ export function finalizeSuccess(
   }
   // The conflict notice rides outside the owner branch: a regenerate record
   // registers no pending (UPDATE-only) but still tells the user the save was
-  // lost to a concurrent edit.
+  // lost to a concurrent edit. Its body never points at the pending list
+  // (PBI 2026-11-24-16). A regenerate non-412 failure has no pending owner
+  // either, so it surfaces as an error notice instead of a silent success;
+  // non-regenerate keeps the legacy no-notice pending-only behavior.
+  const isRegenerate = isRegenerateRecord(context.data);
   if (obsidianConflict) {
-    adapters.notifier.notifyObsidianConflict(data.title);
+    adapters.notifier.notifyObsidianConflict(data.title, isRegenerate ? { regenerate: true } : undefined);
+  } else if (obsidianError !== undefined && isRegenerate) {
+    adapters.notifier.notifyError(data.title, obsidianError.error.message);
   }
 
   const result = buildResult(context);
