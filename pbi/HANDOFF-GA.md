@@ -55,15 +55,9 @@ npm --prefix /Users/yaar/Playground/yasumaro run build      # dist/chromium-mv3 
 | 6d39eb66e | README の Obsidian 競合の記述を If-Match に合わせた | 11-24-04 の一部 |
 | 545b6be50 | webhook egress E2E を許可リストに追従 | 11-24-06 の一部 |
 
-### 4.2 コミットされていないファイル
+### 4.2 PBI 群と引き継ぎ文書
 
-次はまだ git に入れていない(`git status` で `??`)。最初にコミットする。
-
-- `pbi/2026-11-24-00-backlog-ga-release.md`(台帳)と `pbi/2026-11-24-01` 〜 `13` の PBI 14 本
-- `pbi/handoff/`(個別の引き継ぎ 3 件)
-- このファイル `pbi/HANDOFF-GA.md`
-
-コミットメッセージの例: `docs: 正式版リリース準備の PBI 群と引き継ぎ文書を追加`。対象ファイルは個別に add する。
+台帳、PBI 14 本、`pbi/handoff/` の 3 件、このファイルは、コミット 0103629d5 で `1124a` に入っている。未コミットのものは無い。
 
 ### 4.3 PBI の一覧と状態
 
@@ -83,7 +77,7 @@ PBI 11-24-01(webhook のサイドバー区分)は完了済み。以前の 11-21 
 
 ## 5. 推奨する次の手順
 
-1. 4.2 のファイルをコミットする
+1. (済)PBI 群と引き継ぎ文書のコミット(0103629d5)
 2. 順位 04: PBI 11-24-05(412 競合の利用者通知)を実装する。小さく、他に依存しない
 3. 順位 05: PBI 11-24-06 の残り(実 UI 経由の E2E)を片付ける
 4. 順位 01: PBI 11-24-02 の判定材料を集めて owner に渡す(判定そのものは owner)
@@ -97,7 +91,8 @@ PBI 11-24-01(webhook のサイドバー区分)は完了済み。以前の 11-21 
 - **サブエージェントの worktree は `main` から分岐する。** `1124a` にしかない実装(If-Match、webhook 許可リスト、blob-tier reader など)は入っていない。worktree で作業させるときは、プロンプトで `1124a` のコミットを cherry-pick させるか、`1124a` から分岐させる。結果は `git -C /Users/yaar/Playground/yasumaro cherry-pick <hash>` で `1124a` に取り込み、統合後に `validate` を通す
 - **worktree にはコミットされていないファイルが入らない。** PBI ファイルは `1124a` 側にしか無いので、エージェントには絶対パスで読ませる
 - **worktree では `npm run validate` が `sbom.json` の不足で `validate:json` で止まる。** 個別のコマンド(lint、type-check、type-check:test:baseline、check-i18n、check:docs-chars、全テスト)を実行させる。`.oxlintrc.json` は `npm run lint` が生成するので、先に lint を実行する
-- **`.claude/worktrees/` に使い終わった worktree が 9 つ残っている。** 内容は `1124a` に取り込み済みなので、`git worktree remove` で片付けてよい(ユーザーに確認してから)
+- **使い終わった worktree は、取り込み後すぐに片付ける。** 消す前に `git -C /Users/yaar/Playground/yasumaro cherry 1124a <ブランチ>` で、全コミットが `1124a` に取り込み済み(出力が `-` だけ)か確認する。`node_modules` はメインへのシンボリックリンクなので、`git worktree remove --force` で消してよい。作業用ブランチは `git branch -D` で消す
+- 残してよい別件の worktree: `.worktrees/yasumaro-cli`(ブランチ `feature/yasumaro-cli`、owner の別作業)と、`~/.local/share/kilo/worktree-pool/` 配下(別ツールの管理)。触らない
 - Edit のたびにフォーマッタ hook が走る。サブエージェントが触ったファイルは、Edit の前に再 Read する
 
 ## 7. owner の判断待ち(自分で決めない)
@@ -131,6 +126,6 @@ PBI 11-24-01(webhook のサイドバー区分)は完了済み。以前の 11-21 
 
 ## 10. 引き継ぎ時の最初の 3 手
 
-1. `git -C /Users/yaar/Playground/yasumaro status --short` で、4.2 の未コミットファイルを確認する
-2. 4.2 をコミットする
+1. `git -C /Users/yaar/Playground/yasumaro status --short` と `git -C /Users/yaar/Playground/yasumaro log --oneline -n 3` で、作業ツリーがきれいで、先頭が 0103629d5 以降であることを確認する
+2. 台帳 `pbi/2026-11-24-00-backlog-ga-release.md` を読む
 3. 5 の手順 2 から着手する(PBI 11-24-05 を読み、サブエージェントに実装させる。worktree の基点の罠に注意)
