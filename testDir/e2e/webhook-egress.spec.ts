@@ -1,38 +1,32 @@
-import { expect } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { createDashboardFixture } from './fixtures/dashboard-shared.fixture.js';
-import {
-  WEBHOOK_EXPORT_DESTINATION_PATTERNS,
-  judgeWebhookDestination,
-} from '../../src/background/webhookExport/webhookExportDestinations.js';
-import {
-  WEBHOOK_EXPORT_SETTINGS_KEY,
-  WebhookDestinationBlockedError,
-  saveWebhookExportSettings,
-  type WebhookExportStore,
-} from '../../src/background/webhookExport/webhookExportSettings.js';
 
 /**
  * Webhook egress pins @extension.
  *
- * Unit tests mock global.fetch and jsdom enforces no CSP, so only a real
- * Chromium extension page can prove the browser-level egress chain.
+ * Browser-level chain unit tests cannot exercise (they mock fetch and jsdom
+ * enforces no CSP):
  *
- * 1. An origin outside the webhook allowlist (example.com, mapped to the dead
- *    port 127.0.0.1:9 in launchExtensionContext.ts so a gate regression never
- *    touches the real network) is blocked by the extension_pages document CSP.
- *    This is the second layer behind the send gate.
+ * 1. Document CSP, the second layer behind the send gate: an origin outside
+ *    both the allowlist and the extension_pages CSP (example.com, mapped to
+ *    the dead port 127.0.0.1:9 in launchExtensionContext.ts so a gate
+ *    regression never touches the real network) is blocked with
+ *    connect-src (or default-src fallback).
  *
- * 2. The send/save judgment source is the dedicated allowlist
+ * 2. Send-gate judgment source: the dedicated webhook destination allowlist
  *    (WEBHOOK_EXPORT_DESTINATION_PATTERNS via judgeWebhookDestination), not
- *    the live manifest and not chrome.permissions.contains. The real
- *    extension grants example.com (the content script's <all_urls> match is
- *    granted at install time), so a granted-based check could never block it;
- *    the allowlist does.
+ *    the live manifest and not chrome.permissions.contains. The real install
+ *    grants example.com, so a granted-set check could never block it; the
+ *    allowlist does. Pinned through the real settings UI: an allowlisted
+ *    https loopback saves with the permitted status and persists to
+ *    webhook_export_settings_v1.
  *
- * 3. The save-time pre-flight runs against the same judgment: an allowlisted
- *    https destination saves, a new off-list or new non-https destination
- *    throws WebhookDestinationBlockedError without writing, an unchanged stored
- *    allowlisted destination is grandfathered, and an empty URL is not judged.
+ * 3. Save-time pre-flight through the same UI and the same storage key: a
+ *    new off-list or new non-https destination is rejected without writing,
+ *    an unchanged stored http loopback destination is grandfathered
+ *    (preserved, but the verdict still reports what the send gate does),
+ *    and an empty URL saves without judgment. Rejection status lines carry
+ *    the origin only, never the path or token.
  */
 
 export const test = createDashboardFixture({
@@ -44,25 +38,41 @@ export const test = createDashboardFixture({
 });
 export { expect };
 
-const OFF_LIST_URL = 'https://example.com/webhook-hook';
+// Pin the locale for determinism, but keep wording assertions locale-agnostic:
+// headed Chromium inherits the OS UI language (ja on this machine), so
+// chrome.i18n resolves the ja bundle here and the en bundle elsewhere.
+test.use({ locale: 'en-US' });
+
+const WEBHOOK_SETTINGS_KEY = 'webhook_export_settings_v1';
+const OFF_LIST_URL = 'https://example.com/webhook-hook?token=secret';
 const ALLOWED_URL = 'https://127.0.0.1:27123/hook';
 const GRANDFATHERED_HTTP_URL = 'http://127.0.0.1:27123/hook';
+const NEW_NON_HTTPS_URL = 'http://127.0.0.1:27124/hook';
 
-function memoryStore(initial: string | null): WebhookExportStore & { writes: number; value: string | null } {
-  const store = {
-    value: initial,
-    writes: 0,
-    get: async (): Promise<string | null> => store.value,
-    set: async (_key: string, value: string): Promise<void> => {
-      store.value = value;
-      store.writes += 1;
-    },
-  };
-  return store;
+interface StoredWebhookSettings {
+  enabled: boolean;
+  url: string;
 }
 
-function storedJson(url: string): string {
-  return JSON.stringify({ enabled: true, url, condition: {} });
+async function openWebhookPanel(page: Page): Promise<void> {
+  await page.locator('[data-panel="panel-webhook-export"]').click();
+  await expect(page.locator('#panel-webhook-export')).toBeVisible();
+  await expect(page.locator('#webhookExportUrl')).toBeVisible();
+}
+
+async function readStoredSettings(page: Page): Promise<StoredWebhookSettings | null> {
+  const raw = await page.evaluate(async (key: string): Promise<string | null> => {
+    const got = await chrome.storage.local.get(key);
+    const value: unknown = got[key];
+    return typeof value === 'string' ? value : null;
+  }, WEBHOOK_SETTINGS_KEY);
+  if (raw === null) return null;
+  return JSON.parse(raw) as StoredWebhookSettings;
+}
+
+async function saveUrlThroughUi(page: Page, url: string): Promise<void> {
+  await page.locator('#webhookExportUrl').fill(url);
+  await page.locator('#webhookExportSaveBtn').click();
 }
 
 test.describe('Webhook egress @extension', () => {
@@ -120,56 +130,92 @@ test.describe('Webhook egress @extension', () => {
     // reject it.
     expect(grantedContains).toBe(true);
 
-    expect(WEBHOOK_EXPORT_DESTINATION_PATTERNS.length).toBeGreaterThan(0);
-    expect(judgeWebhookDestination(OFF_LIST_URL)).toEqual({
-      permitted: false,
-      reason: 'destination-not-in-allowlist',
-      origin: 'https://example.com',
-    });
-    expect(judgeWebhookDestination(ALLOWED_URL)).toMatchObject({ permitted: true, reason: 'permitted' });
-    // The http loopback entry is in the list but the https requirement wins.
-    expect(judgeWebhookDestination(GRANDFATHERED_HTTP_URL)).toMatchObject({
-      permitted: false,
-      reason: 'non-https-or-empty-destination',
+    await test.step('allowlisted https loopback saves through the real UI', async () => {
+      await page.evaluate(async (key: string): Promise<void> => {
+        await chrome.storage.local.remove(key);
+      }, WEBHOOK_SETTINGS_KEY);
+      await openWebhookPanel(page);
+      await saveUrlThroughUi(page, ALLOWED_URL);
+
+      const status = page.locator('#webhookExportStatus');
+      // Locale-agnostic: en "Saved. Destination <origin> is permitted." /
+      // ja "保存しました。宛先 <origin> は許可されています。"
+      await expect(status).toContainText('https://127.0.0.1:27123');
+      await expect(status).toContainText(/is permitted|は許可されています/);
+      await expect(status).toHaveClass(/success/);
+
+      const stored = await readStoredSettings(page);
+      expect(stored?.url).toBe(ALLOWED_URL);
     });
   });
 
-  test('the save pre-flight permits allowlisted, rejects new off-list or non-https, grandfathers stored', async () => {
-    const allowedStore = memoryStore(null);
-    const allowedVerdict = await saveWebhookExportSettings(
-      { enabled: true, url: ALLOWED_URL, condition: {} },
-      allowedStore,
+  test('the save pre-flight permits allowlisted, rejects new off-list or non-https, grandfathers stored', async ({
+    dashboardPage: page,
+  }) => {
+    // Grandfather first: seed BEFORE opening the panel so load() reads the
+    // stored destination into the form.
+    await page.evaluate(
+      async (args: { key: string; url: string }): Promise<void> => {
+        await chrome.storage.local.set({
+          [args.key]: JSON.stringify({ enabled: true, url: args.url, condition: {} }),
+        });
+      },
+      { key: WEBHOOK_SETTINGS_KEY, url: GRANDFATHERED_HTTP_URL },
     );
-    expect(allowedVerdict).toMatchObject({ permitted: true });
-    expect(allowedStore.writes).toBe(1);
+    await openWebhookPanel(page);
+    const urlInput = page.locator('#webhookExportUrl');
+    await expect(urlInput).toHaveValue(GRANDFATHERED_HTTP_URL);
 
-    for (const url of [OFF_LIST_URL, GRANDFATHERED_HTTP_URL]) {
-      const store = memoryStore(null);
-      await expect(saveWebhookExportSettings({ enabled: true, url, condition: {} }, store)).rejects.toBeInstanceOf(
-        WebhookDestinationBlockedError,
-      );
-      expect(store.writes).toBe(0);
-    }
+    await test.step('unchanged stored http loopback is preserved with an error status', async () => {
+      await page.locator('#webhookExportSaveBtn').click();
+      const status = page.locator('#webhookExportStatus');
+      // Locale-agnostic: en "Saved. Existing destination <origin> is
+      // preserved, but the send gate rejects it ..." / ja "保存しました。
+      // 既存宛先 <origin> は現状維持されますが ...".
+      await expect(status).toContainText(/preserved, but the send gate rejects it|現状維持/);
+      await expect(status).toContainText('http://127.0.0.1:27123');
+      await expect(status).toHaveClass(/error/);
+      const stored = await readStoredSettings(page);
+      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+    });
 
-    // Unchanged stored off-list destination: still rejected (the clause covers
-    // the initial allowlist only).
-    const storedOffList = memoryStore(storedJson(OFF_LIST_URL));
-    await expect(
-      saveWebhookExportSettings({ enabled: true, url: OFF_LIST_URL, condition: {} }, storedOffList),
-    ).rejects.toBeInstanceOf(WebhookDestinationBlockedError);
+    await test.step('a new non-https destination is rejected without writing', async () => {
+      await saveUrlThroughUi(page, NEW_NON_HTTPS_URL);
+      const status = page.locator('#webhookExportStatus');
+      // Locale-agnostic: en "Save rejected: the destination must be https
+      // (<origin>)." / ja "保存を拒否しました: 宛先は https 専用です（<origin>）。"
+      await expect(status).toContainText(/must be https|https 専用/);
+      await expect(status).toContainText('http://127.0.0.1:27124');
+      await expect(status).toHaveClass(/error/);
+      const stored = await readStoredSettings(page);
+      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+    });
 
-    const storedHttp = memoryStore(storedJson(GRANDFATHERED_HTTP_URL));
-    const grandfatheredVerdict = await saveWebhookExportSettings(
-      { enabled: false, url: GRANDFATHERED_HTTP_URL, condition: {} },
-      storedHttp,
-    );
-    // Saved, but the verdict still reports what the send gate will do.
-    expect(grandfatheredVerdict).toMatchObject({ permitted: false, reason: 'non-https-or-empty-destination' });
-    expect(storedHttp.writes).toBe(1);
+    await test.step('an off-list destination with a token is rejected without leaking the secret', async () => {
+      await saveUrlThroughUi(page, OFF_LIST_URL);
+      const status = page.locator('#webhookExportStatus');
+      // Locale-agnostic: en "Save rejected: destination origin <origin> is
+      // not in the webhook destination allowlist." / ja "保存を拒否しました:
+      // 宛先 origin <origin> は Webhook 宛先許可リストに含まれていません。"
+      await expect(status).toContainText(/not in the webhook destination allowlist|許可リストに含まれていません/);
+      await expect(status).toHaveClass(/error/);
+      const text = (await status.textContent()) ?? '';
+      expect(text).toContain('https://example.com');
+      expect(text).not.toContain('secret');
+      expect(text).not.toContain('/webhook-hook');
+      const stored = await readStoredSettings(page);
+      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+    });
 
-    const emptyStore = memoryStore(storedJson(OFF_LIST_URL));
-    await expect(saveWebhookExportSettings({ enabled: false, url: '', condition: {} }, emptyStore)).resolves.toBeNull();
-    expect(JSON.parse(emptyStore.value ?? '{}')).toMatchObject({ url: '' });
-    expect(WEBHOOK_EXPORT_SETTINGS_KEY).toBe('webhook_export_settings_v1');
+    await test.step('an empty URL saves without judgment', async () => {
+      await saveUrlThroughUi(page, '');
+      const status = page.locator('#webhookExportStatus');
+      // Locale-agnostic: en "Webhook export settings saved." /
+      // ja "Webhook エクスポート設定を保存しました。"
+      await expect(status).toContainText(/Webhook export settings saved|エクスポート設定を保存しました/);
+      await expect(status).toHaveClass(/success/);
+      const stored = await readStoredSettings(page);
+      expect(stored?.url).toBe('');
+    });
   });
 });

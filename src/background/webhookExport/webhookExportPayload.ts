@@ -80,9 +80,9 @@ export function matchesWebhookExportCondition(
 
 /**
  * The destination gate (縮退の出口): https only, fail-closed on anything else.
- * The origin-permission check (未宣言originは遮断) rides the manifest's
- * DECLARED host_permissions in the send path
- * (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()); this pure
+ * The origin-allowlist check (許可リスト外originは遮断) rides the dedicated
+ * webhook destination allowlist in the send path
+ * (defaultIsWebhookHostPermitted → judgeWebhookDestination); this pure
  * gate never allows a non-https or empty destination.
  */
 export function isWebhookUrlAllowed(url: string): boolean {

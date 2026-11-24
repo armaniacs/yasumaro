@@ -77,11 +77,11 @@ async function defaultResend(
         globalThis
           .fetch(url, { method: init.method, headers: init.headers, body: init.body, redirect: 'error' })
           .then((response: Response) => ({ ok: response.ok, status: response.status })),
-      // Same declared host_permissions matcher the SW send path uses
-      // (defaultIsWebhookHostPermitted → chrome.runtime.getManifest()) —
+      // Same allowlist verdict the SW send path uses
+      // (defaultIsWebhookHostPermitted → judgeWebhookDestination) —
       // NOT permissionManager.isHostPermitted, whose granted-set answer
       // (chrome.permissions.contains) covers every origin in a real install
-      // and would bypass the undeclared-origin gate.
+      // and would bypass the allowlist gate.
       isHostPermitted: defaultIsWebhookHostPermitted,
       maskText: (text: string) => sanitizeRegex(text).then((masked) => masked.text),
       notify: () => {},
