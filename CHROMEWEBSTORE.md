@@ -2,7 +2,7 @@
 
 Source of truth for the store submissions of the Yasumaro extension.
 For GA, the same text is shared across Chrome / Edge / AMO (owner decision 2026-11-24; no per-store listing files exist in the repo).
-Target version: 6.9.76 (`package.json`). The GA version number itself is still pending the owner's decision (after the audit run-3 fixes and the real-device smoke test).
+Target version: 6.9.77 (`package.json`). Version decided by the owner on 2026-11-24 (6.9.77, not 7.0.0). Tag push and store submission are the owner's actions.
 
 ## Store identity
 
