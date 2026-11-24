@@ -92,4 +92,4 @@ git -C /Users/yaar/Playground/yasumaro grep -rn "setAccessLevel" src/ --include=
 - [ ] CHANGELOG の `[Unreleased]` に利用者向けの変更として記載
 
 ## 引き継ぎ
-状態: 未着手。run-3 の C-1 に対応する修正 PBI。
+状態: 実装済み。`1124a` に取込済み。進捗は [handoff/2026-11-24-07-release-ga-security-audit-run3.md](handoff/2026-11-24-07-release-ga-security-audit-run3.md) に記録した。
