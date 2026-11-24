@@ -82,10 +82,11 @@ test.describe('similarity cluster @extension', () => {
 
     // 鮮度 (最終更新) と多角的差分 (媒体一覧) が見出しに見える: 件数 + 両媒体 +
     // 最も新しい訪問の日付 (年は全 locale で 4 桁)。見出しは i18n 鍵化 (en:
-    // "{count} articles - {domains} - {date}") なので en-US pin 下で英語見出し
-    // を表明する。toContainText に配列を渡すと「要素ごとに1文ずつ」の意味に
+    // "{count} articles - {domains} - {date}") だが、chrome.i18n はブラウザ UI
+    // 言語に固定されるため en-US pin が効かない環境がある。日英どちらでも
+    // 通る正規表現で表明する。toContainText に配列を渡すと「要素ごとに1文ずつ」の意味に
     // なるため、1 セクションに対しては個別に表明する。
-    await expect(cluster).toContainText('2 articles');
+    await expect(cluster).toContainText(/2 articles|2 件の記事/);
     await expect(cluster).toContainText('a.example');
     await expect(cluster).toContainText('b.example');
     await expect(cluster).toContainText('2025');
