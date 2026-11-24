@@ -36,6 +36,7 @@
 - `node scripts/check-version-consistency.js` 緑。`npm run validate` 緑(1364 ファイル、19210 テスト)。`npm run release:check:fast` 緑(8/8。coverage は `npm run test:coverage` を先に実行)
 - CHANGELOG に `## [6.9.77] - 2026-11-24` を書いた。リリース日がずれたら日付を直すこと
 - popup の版表示 E2E(`popup-version-display.spec.ts`)は validate の全量に含まれ緑
+- Chrome E2E 全量の結果は 08 の handoff に記録した(製品の赤なし)。PBI 20(probe 切り分けと重い spec 分離)は実装済み
 
 ## owner への確認事項(回答済み)
 

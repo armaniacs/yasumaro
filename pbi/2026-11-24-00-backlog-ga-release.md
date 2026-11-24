@@ -76,7 +76,7 @@ handoff ファイルが無い PBI は未着手。引き継ぐモデルは、ま�
 | 05 412 競合の利用者通知 | 実装済み | f3b8df983 | [あり](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |
 | 06 webhook E2E | 完了(実 UI 経由まで) | a24be47be | [あり](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
 | 07 監査 run-3 | 監査完走・修正 15〜19 実装済み | ca6023508 | [あり](handoff/2026-11-24-07-release-ga-security-audit-run3.md) |
-| 08 実機スモーク | チェックリスト作成済み(実施は owner) | ― | [あり](handoff/2026-11-24-08-release-ga-smoke-test.md) |
+| 08 実機スモーク | チェックリスト作成済み。Chrome E2E 全量は実施済み(製品の赤なし)。実機は owner が実施中(Firefox から) | ― | [あり](handoff/2026-11-24-08-release-ga-smoke-test.md) |
 | 09〜13 | 未着手(09 は見送り裁定済み) | ― | なし |
 
 ### 引き継ぐモデルへの注意

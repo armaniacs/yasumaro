@@ -161,4 +161,4 @@ rtk proxy grep -n -e "wxt zip" -e "OW_E2E_PROBE" /Users/yaar/Playground/yasumaro
 - [ ] ドキュメント更新済み
 
 ## 引き継ぎ
-状態: チェックリスト作成済み。実機の実施は未着手(owner が実施する)。進捗と引き継ぎ情報は [handoff/2026-11-24-08-release-ga-smoke-test.md](handoff/2026-11-24-08-release-ga-smoke-test.md) に記録した。
+状態: チェックリスト作成済み。Chrome E2E 全量は実施済み(製品の赤なし)。実機は owner が実施中(Firefox から)。進捗と引き継ぎ情報は [handoff/2026-11-24-08-release-ga-smoke-test.md](handoff/2026-11-24-08-release-ga-smoke-test.md) に記録した。
