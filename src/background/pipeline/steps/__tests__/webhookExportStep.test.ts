@@ -114,7 +114,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   // The production gate judges against the webhook destination allowlist, so
   // the enabled-path tests use an origin the initial set carries.
   it('POSTs the minimal payload with the real sanitizer re-mask and notifies', async () => {
-    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -129,7 +129,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
     expect(result).toBe(context);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
     const [url, init] = fetchSpy.mock.calls[0] ?? [];
-    expect(url).toBe('https://api.github.com/hook');
+    expect(url).toBe('https://127.0.0.1:27123/hook');
     expect(init?.method).toBe('POST');
     const body = JSON.parse(String(init?.body ?? '{}')) as Record<string, string>;
     expect(body.content).toBeUndefined();
@@ -144,7 +144,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('never sends when the privacy verdict is absent and records the reason', async () => {
-    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
 
     // No privacyReader: the verdict is unknown — egress fails closed.
@@ -165,7 +165,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('suppresses a same-content re-record across runs (stable page-URL identity)', async () => {
-    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -186,7 +186,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('POSTs again when the content changes for the same page', async () => {
-    await setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
+    await setWebhookSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} });
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(new Response('{}', { status: 200 }));
@@ -206,7 +206,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   });
 
   it('skips the send when the real privacy verdict marks the page private', async () => {
-    setWebhookSettings({ enabled: true, url: 'https://api.github.com/hook', condition: {} });
+    setWebhookSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');
     const privateInfo: PrivacyInfo = {
       isPrivate: true,
@@ -224,7 +224,7 @@ describe('webhookExportStep — production seams on an enabled destination', () 
   it('excludes records that miss the engagement threshold', async () => {
     setWebhookSettings({
       enabled: true,
-      url: 'https://api.github.com/hook',
+      url: 'https://127.0.0.1:27123/hook',
       condition: { minScrollDepth: 50, minVisitDuration: 60 },
     });
     const fetchSpy = vi.spyOn(globalThis, 'fetch');

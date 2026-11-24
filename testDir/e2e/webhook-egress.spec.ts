@@ -49,25 +49,27 @@ const ALLOWED_URL = 'https://127.0.0.1:27123/hook';
 const GRANDFATHERED_HTTP_URL = 'http://127.0.0.1:27123/hook';
 const NEW_NON_HTTPS_URL = 'http://127.0.0.1:27124/hook';
 
-interface StoredWebhookSettings {
-  enabled: boolean;
-  url: string;
-}
-
 async function openWebhookPanel(page: Page): Promise<void> {
   await page.locator('[data-panel="panel-webhook-export"]').click();
   await expect(page.locator('#panel-webhook-export')).toBeVisible();
   await expect(page.locator('#webhookExportUrl')).toBeVisible();
 }
 
-async function readStoredSettings(page: Page): Promise<StoredWebhookSettings | null> {
-  const raw = await page.evaluate(async (key: string): Promise<string | null> => {
+async function readRawSettings(page: Page): Promise<string | null> {
+  return page.evaluate(async (key: string): Promise<string | null> => {
     const got = await chrome.storage.local.get(key);
     const value: unknown = got[key];
     return typeof value === 'string' ? value : null;
   }, WEBHOOK_SETTINGS_KEY);
-  if (raw === null) return null;
-  return JSON.parse(raw) as StoredWebhookSettings;
+}
+
+async function expectUrlRoundTrip(page: Page, url: string): Promise<void> {
+  // The stored URL is an encrypted envelope since PBI 2026-11-24-15, so
+  // persistence is proven through the real UI: reload, reopen the panel,
+  // and confirm load() decrypts the stored value back into the form.
+  await page.reload();
+  await openWebhookPanel(page);
+  await expect(page.locator('#webhookExportUrl')).toHaveValue(url);
 }
 
 async function saveUrlThroughUi(page: Page, url: string): Promise<void> {
@@ -144,8 +146,11 @@ test.describe('Webhook egress @extension', () => {
       await expect(status).toContainText(/is permitted|は許可されています/);
       await expect(status).toHaveClass(/success/);
 
-      const stored = await readStoredSettings(page);
-      expect(stored?.url).toBe(ALLOWED_URL);
+      // No plaintext URL in storage (PBI 2026-11-24-15), then UI round-trip.
+      const raw = await readRawSettings(page);
+      expect(raw).not.toBeNull();
+      expect(raw).not.toContain(ALLOWED_URL);
+      await expectUrlRoundTrip(page, ALLOWED_URL);
     });
   });
 
@@ -175,11 +180,13 @@ test.describe('Webhook egress @extension', () => {
       await expect(status).toContainText(/preserved, but the send gate rejects it|現状維持/);
       await expect(status).toContainText('http://127.0.0.1:27123');
       await expect(status).toHaveClass(/error/);
-      const stored = await readStoredSettings(page);
-      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+      // The unchanged save re-encrypts the seeded plaintext (PBI 2026-11-24-15):
+      // prove preservation through the UI round-trip instead of raw bytes.
+      await expectUrlRoundTrip(page, GRANDFATHERED_HTTP_URL);
     });
 
     await test.step('a new non-https destination is rejected without writing', async () => {
+      const before = await readRawSettings(page);
       await saveUrlThroughUi(page, NEW_NON_HTTPS_URL);
       const status = page.locator('#webhookExportStatus');
       // Locale-agnostic: en "Save rejected: the destination must be https
@@ -187,11 +194,11 @@ test.describe('Webhook egress @extension', () => {
       await expect(status).toContainText(/must be https|https 専用/);
       await expect(status).toContainText('http://127.0.0.1:27124');
       await expect(status).toHaveClass(/error/);
-      const stored = await readStoredSettings(page);
-      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+      expect(await readRawSettings(page)).toBe(before);
     });
 
     await test.step('an off-list destination with a token is rejected without leaking the secret', async () => {
+      const beforeOffList = await readRawSettings(page);
       await saveUrlThroughUi(page, OFF_LIST_URL);
       const status = page.locator('#webhookExportStatus');
       // Locale-agnostic: en "Save rejected: destination origin <origin> is
@@ -203,8 +210,7 @@ test.describe('Webhook egress @extension', () => {
       expect(text).toContain('https://example.com');
       expect(text).not.toContain('secret');
       expect(text).not.toContain('/webhook-hook');
-      const stored = await readStoredSettings(page);
-      expect(stored?.url).toBe(GRANDFATHERED_HTTP_URL);
+      expect(await readRawSettings(page)).toBe(beforeOffList);
     });
 
     await test.step('an empty URL saves without judgment', async () => {
@@ -214,8 +220,7 @@ test.describe('Webhook egress @extension', () => {
       // ja "Webhook エクスポート設定を保存しました。"
       await expect(status).toContainText(/Webhook export settings saved|エクスポート設定を保存しました/);
       await expect(status).toHaveClass(/success/);
-      const stored = await readStoredSettings(page);
-      expect(stored?.url).toBe('');
+      await expectUrlRoundTrip(page, '');
     });
   });
 });

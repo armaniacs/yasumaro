@@ -228,7 +228,9 @@ describe('production gate uses the webhook destination allowlist, not the manife
   });
 
   it('permits only destinations in the webhook destination allowlist', async () => {
-    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(true);
+    // PBI 2026-11-24-18 narrowed the list to webhook-dedicated loopback
+    // hosts: api.github.com is no longer a destination.
+    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(false);
     // An out-of-list origin is blocked even though the browser's granted set
     // covers every origin (the content script's <all_urls> match is granted
     // at install time — proven by the E2E permission probe).
@@ -289,7 +291,7 @@ describe('production gate uses the webhook destination allowlist, not the manife
       throw new Error('manifest unavailable');
     };
     await expect(defaultIsWebhookHostPermitted('::::')).resolves.toBe(false);
-    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(true);
+    await expect(defaultIsWebhookHostPermitted('https://api.github.com/x')).resolves.toBe(false);
   });
 });
 

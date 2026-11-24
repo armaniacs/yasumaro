@@ -114,7 +114,7 @@ describe('webhookExportSettings dashboard seam', () => {
     const controller = createWebhookExportSettingsUi({ settingsStore, historyStore: memoryHistoryStore() });
     controller.init();
     (document.getElementById('webhookExportEnabled') as HTMLInputElement).checked = true;
-    (document.getElementById('webhookExportUrl') as HTMLInputElement).value = 'https://api.github.com/h';
+    (document.getElementById('webhookExportUrl') as HTMLInputElement).value = 'https://127.0.0.1:27123/h';
     (document.getElementById('webhookExportTag') as HTMLInputElement).value = '#obsidian';
     (document.getElementById('webhookExportMinScroll') as HTMLInputElement).value = '50';
     document.getElementById('webhookExportSaveBtn')?.click();
@@ -122,17 +122,17 @@ describe('webhookExportSettings dashboard seam', () => {
       expect(settingsStore.saved).toHaveLength(1);
     });
     const savedRaw: string = settingsStore.saved[0] as string;
-    expect(savedRaw).not.toContain('https://api.github.com/h');
+    expect(savedRaw).not.toContain('https://127.0.0.1:27123/h');
     const reloaded = await loadWebhookExportSettings({
       get: async (): Promise<string | null> => savedRaw,
       set: async (): Promise<void> => {},
     });
     expect(reloaded.enabled).toBe(true);
-    expect(reloaded.url).toBe('https://api.github.com/h');
+    expect(reloaded.url).toBe('https://127.0.0.1:27123/h');
     expect(reloaded.condition.tag).toBe('#obsidian');
     expect(reloaded.condition.minScrollDepth).toBe(50);
     await waitForMock(() => {
-      expect(document.getElementById('webhookExportStatus')?.textContent).toContain('https://api.github.com');
+      expect(document.getElementById('webhookExportStatus')?.textContent).toContain('https://127.0.0.1:27123');
     });
     expect(document.getElementById('webhookExportStatus')?.className).toBe('success');
   });

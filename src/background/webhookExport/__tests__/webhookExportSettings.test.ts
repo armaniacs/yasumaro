@@ -94,14 +94,14 @@ describe('load/save round-trip', () => {
   it('persists under the owned key and reloads the normalized shape', async () => {
     const store = memoryStore();
     await saveWebhookExportSettings(
-      { enabled: true, url: 'https://api.github.com/x', condition: { tag: '#web', minScrollDepth: 50 } },
+      { enabled: true, url: 'https://127.0.0.1:27123/hook', condition: { tag: '#web', minScrollDepth: 50 } },
       store,
     );
     expect(typeof store.data[WEBHOOK_EXPORT_SETTINGS_KEY]).toBe('string');
     const loaded = await loadWebhookExportSettings(store);
     expect(loaded).toEqual({
       enabled: true,
-      url: 'https://api.github.com/x',
+      url: 'https://127.0.0.1:27123/hook',
       condition: { tag: '#web', minScrollDepth: 50 },
     });
   });
@@ -113,7 +113,7 @@ describe('load/save round-trip', () => {
 
   it('returns the disabled default when the URL envelope no longer decrypts', async () => {
     const store = memoryStore();
-    await saveWebhookExportSettings({ enabled: true, url: 'https://api.github.com/x', condition: {} }, store);
+    await saveWebhookExportSettings({ enabled: true, url: 'https://127.0.0.1:27123/hook', condition: {} }, store);
     const tampered: Record<string, string> = {};
     for (const [key, value] of Object.entries(store.data)) {
       tampered[key] = typeof value === 'string'
@@ -128,7 +128,7 @@ describe('load/save round-trip', () => {
 describe('webhook URL encryption (PBI 2026-11-24-15, C-1 firing demo)', () => {
   it('leaves no plaintext URL in the storage dump after save', async () => {
     const store = memoryStore();
-    const tokenUrl = 'https://api.github.com/hook?token=secret-token-123';
+    const tokenUrl = 'https://127.0.0.1:27123/hook?token=secret-token-123';
     await saveWebhookExportSettings({ enabled: true, url: tokenUrl, condition: {} }, store);
     const dump: string = store.data[WEBHOOK_EXPORT_SETTINGS_KEY] ?? '';
     expect(dump).not.toContain(tokenUrl);
@@ -137,7 +137,7 @@ describe('webhook URL encryption (PBI 2026-11-24-15, C-1 firing demo)', () => {
   });
 
   it('migrates a legacy plaintext record: loads it and re-encrypts on save', async () => {
-    const legacyUrl = 'https://api.github.com/legacy?token=legacy-secret';
+    const legacyUrl = 'https://127.0.0.1:27123/legacy?token=legacy-secret';
     const legacy = { enabled: true, url: legacyUrl, condition: {} };
     const store = memoryStore({ [WEBHOOK_EXPORT_SETTINGS_KEY]: JSON.stringify(legacy) });
     expect(await loadWebhookExportSettings(store)).toEqual(legacy);
@@ -154,8 +154,8 @@ describe('save-time pre-flight', () => {
 
   it('permits an allowlisted https origin and returns the verdict', async () => {
     const store = memoryStore();
-    const verdict = await saveWebhookExportSettings(settingsFor('https://api.github.com/x'), store);
-    expect(verdict).toEqual({ permitted: true, reason: 'permitted', origin: 'https://api.github.com' });
+    const verdict = await saveWebhookExportSettings(settingsFor('https://127.0.0.1:27123/hook'), store);
+    expect(verdict).toEqual({ permitted: true, reason: 'permitted', origin: 'https://127.0.0.1:27123' });
     expect(typeof store.data[WEBHOOK_EXPORT_SETTINGS_KEY]).toBe('string');
   });
 

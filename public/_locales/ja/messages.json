@@ -6084,7 +6084,7 @@
     "description": "Webhook エクスポートパネルのサイドバーラベルとタイトル"
   },
   "webhookExportDescription": {
-    "message": "転送条件に合う記録を、利用者が設定した Webhook（https かつ Webhook 専用 31 件許可リスト内の origin のみ）へ転送します。リスト外は保存時に拒否し、ネットワークに出す前に遮断します。manifest の変更でリストは自動で広がりません。",
+    "message": "転送条件に合う記録を、利用者が設定した Webhook（https ループバックのみ。専用許可リストは 16 件の固定ループバック）へ転送します。リスト外は保存時に拒否し、ネットワークに出す前に遮断します。manifest の変更でリストは自動で広がりません。",
     "description": "Webhook エクスポートパネルの説明"
   },
   "webhookExportConditionTitle": {

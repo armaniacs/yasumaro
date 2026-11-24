@@ -6102,7 +6102,7 @@
     "description": "Sidebar label and panel title for the webhook export panel"
   },
   "webhookExportDescription": {
-    "message": "Forward records that match the transfer condition to a user-configured webhook (https only, and only when its origin is in the dedicated 31-entry webhook allowlist). Destinations outside the list are rejected at save time and blocked before any network access. Manifest changes do not widen the list.",
+    "message": "Forward records that match the transfer condition to a user-configured webhook (https loopback only: the dedicated allowlist holds 16 fixed loopback entries). Destinations outside the list are rejected at save time and blocked before any network access. Manifest changes do not widen the list.",
     "description": "Description of the webhook export panel"
   },
   "webhookExportConditionTitle": {

@@ -29,7 +29,7 @@
 | Content Script Injection | Runs on all web pages with user consent |
 | PKI/Certificate | HTTPS with protocol/port validation |
 | SSRF via user-supplied URL | Per-entry-point URL guard (`src/utils/ssrfGuard.ts`); **DNS rebinding remains** ― see below |
-| Webhook export to a user URL | Single verdict function (`judgeWebhookDestination`: https AND dedicated 31-entry allowlist); **third-party endpoints inside the list and plaintext token storage remain** ― see below |
+| Webhook export to a user URL | Single verdict function (`judgeWebhookDestination`: https loopback AND dedicated 16-entry allowlist); **plaintext token storage remains** ― see below |
 | Forged extension messages | No `externally_connectable`; `sender.id` match; `extension-only` registration |
 | Forged Markdown links in note writes | Entry-markdown SSOT escapes link syntax before the note write (`src/utils/markdownSanitizer.ts`): `sanitizeAllMarkdownLinks` blocks `[text](url)` **and** the whitespace-separated `[text] (url)` spelling (CommonMark / GFM / Obsidian render the latter as literal text, so the target is the fake-link notation itself) |
 
@@ -160,7 +160,7 @@ part of that model, not an open bug. Latest-spec snapshot only.
   reaches UI, history, notifications, or errors: save errors, status lines,
   and history rows carry the origin only.
 
-#### The destination gate: https AND the dedicated 31-entry allowlist
+#### The destination gate: https loopback AND the dedicated 16-entry allowlist
 
 - The verdict is `https AND in-allowlist`, computed by the SINGLE function
   `judgeWebhookDestination`. The save-time pre-flight and the send-time
@@ -168,14 +168,15 @@ part of that model, not an open bug. Latest-spec snapshot only.
   destination can never diverge from the send verdict (pinned by the
   full-URL parity test in `webhookExportDestinations.test.ts`).
 - The allowlist (`WEBHOOK_EXPORT_DESTINATION_PATTERNS`) is a verbatim
-  snapshot of 31 fixed entries: 8 http loopback (grandfathered DEAD
-  entries, always send-rejected by the https rule), 8 https loopback,
-  14 AI-provider patterns (including the `*.openai.com` wildcard), 1 Gist
-  egress (`api.github.com`). A manifest addition for another feature does
-  NOT widen the webhook gate (the pin test fails and forces a conscious
-  list update). The extension-pages CSP `connect-src` (required 31 plus
-  optional 32, 63 origins total) is WIDER than the allowlist, so the
-  allowlist is the binding gate and CSP is the second layer (pinned by
+  snapshot of 16 fixed loopback entries: 8 https loopback (the only
+  functional destinations) and 8 http loopback (grandfathered DEAD
+  entries, always send-rejected by the https rule). AI-provider patterns
+  and the Gist egress were removed from the list (owner decision, run-3
+  NV-1). A manifest addition for another feature does NOT widen the
+  webhook gate (the pin test fails and forces a conscious list update).
+  The extension-pages CSP `connect-src` (required 31 plus optional 32,
+  63 origins total) is WIDER than the allowlist, so the allowlist is the
+  binding gate and CSP is the second layer (pinned by
   `testDir/e2e/webhook-egress.spec.ts`). The granted-permission set
   (`chrome.permissions.contains`) is deliberately NOT read: the content
   script's `<all_urls>` match grants every origin in a real install, so a
@@ -183,6 +184,9 @@ part of that model, not an open bug. Latest-spec snapshot only.
 - Grandfather clause: an unchanged stored destination the initial list
   covers is preserved, never rejected. A grandfathered non-https
   destination still reports non-permitted and the send gate rejects it.
+  Destinations saved before the narrowing (AI providers, Gist) keep their
+  stored values but are rejected on the next save and blocked at the send
+  gate.
 
 #### Token assumption, display, and storage
 
@@ -202,11 +206,6 @@ part of that model, not an open bug. Latest-spec snapshot only.
 
 #### What the gate does NOT cover ― residual risk
 
-- Endpoints INSIDE the allowlist are a send path by design. The 14
-  AI-provider origins and `api.github.com` double as webhook destinations,
-  so pointing the webhook at a third-party URL in the list sends masked
-  records to that third party. The gate answers "is this origin in the
-  list", not "should this third party receive these records".
 - Plaintext storage. Anyone who can read `chrome.storage.local` (or a
   backup/export that includes it) sees the full token-bearing URL.
 - URL-string check only. Like the SSRF guard, the allowlist validates the
@@ -220,7 +219,7 @@ part of that model, not an open bug. Latest-spec snapshot only.
 **Residual-risk owner: the security reviewer.** When reviewing, do not
 accept "https only" or "declared in the manifest" as the argument that a
 webhook destination is safe. Ask which verdict function ran
-(`judgeWebhookDestination`), whether the origin is in the 31-entry
+(`judgeWebhookDestination`), whether the origin is in the loopback-only
 snapshot, what the redirect policy was (`redirect: 'error'`), and whether
 the record carried a privacy verdict; record the acceptance decision here.
 
