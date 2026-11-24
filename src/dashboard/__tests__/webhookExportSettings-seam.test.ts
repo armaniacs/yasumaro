@@ -5,12 +5,29 @@
  * condition form persists through the injected store, history renders
  * textContent-only with origins (never full URLs), and resend flows through
  * the injected seams.
+ * PBI 2026-11-24-15 (C-1) ― the injected store holds the URL encrypted;
+ * the form still shows the plaintext round-trip.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { installTestSecretKek } from '../../utils/crypto/__tests__/secretKekHelper.js';
+import { clearEncryptionKeyCache } from '../../utils/storage/encryptionSession.js';
 import { drainMacrotask, waitForMock } from '../../../testDir/waitPolicy.js';
 import { createWebhookExportSettingsUi } from '../webhookExportSettings.js';
+import { loadWebhookExportSettings } from '../../background/webhookExport/webhookExportSettings.js';
 import type { WebhookExportHistoryStore } from '../../background/webhookExport/webhookExportHistory.js';
 import type { WebhookExportStore } from '../../background/webhookExport/webhookExportSettings.js';
+
+vi.mock('../../utils/crypto/cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../utils/crypto/cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
 
 function setupDOM(): void {
   document.body.innerHTML = `
@@ -50,7 +67,9 @@ function memoryHistoryStore(seed = ''): WebhookExportHistoryStore {
 }
 
 describe('webhookExportSettings dashboard seam', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    clearEncryptionKeyCache();
+    await installTestSecretKek();
     setupDOM();
   });
 
@@ -90,7 +109,7 @@ describe('webhookExportSettings dashboard seam', () => {
     expect(document.querySelectorAll('#webhookExportHistoryList .webhook-export-resend')).toHaveLength(0);
   });
 
-  it('saves the transfer condition through the injected store', async () => {
+  it('saves the transfer condition through the injected store without plaintext URL in storage', async () => {
     const settingsStore = memorySettingsStore();
     const controller = createWebhookExportSettingsUi({ settingsStore, historyStore: memoryHistoryStore() });
     controller.init();
@@ -102,15 +121,16 @@ describe('webhookExportSettings dashboard seam', () => {
     await waitForMock(() => {
       expect(settingsStore.saved).toHaveLength(1);
     });
-    const saved = JSON.parse(settingsStore.saved[0] as string) as {
-      enabled: boolean;
-      url: string;
-      condition: { tag?: string; minScrollDepth?: number };
-    };
-    expect(saved.enabled).toBe(true);
-    expect(saved.url).toBe('https://api.github.com/h');
-    expect(saved.condition.tag).toBe('#obsidian');
-    expect(saved.condition.minScrollDepth).toBe(50);
+    const savedRaw: string = settingsStore.saved[0] as string;
+    expect(savedRaw).not.toContain('https://api.github.com/h');
+    const reloaded = await loadWebhookExportSettings({
+      get: async (): Promise<string | null> => savedRaw,
+      set: async (): Promise<void> => {},
+    });
+    expect(reloaded.enabled).toBe(true);
+    expect(reloaded.url).toBe('https://api.github.com/h');
+    expect(reloaded.condition.tag).toBe('#obsidian');
+    expect(reloaded.condition.minScrollDepth).toBe(50);
     await waitForMock(() => {
       expect(document.getElementById('webhookExportStatus')?.textContent).toContain('https://api.github.com');
     });

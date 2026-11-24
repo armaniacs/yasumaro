@@ -10,8 +10,12 @@
  * shared registry. The value is one JSON string, so the module never touches
  * `any`/`unknown` shapes from chrome.storage typings.
  *
- * Fail-closed: anything unparsable normalizes to disabled with an empty
- * destination, which the send path refuses before any network happens.
+ * Fail-closed: anything unparsable (including a URL envelope that no
+ * longer decrypts) normalizes to disabled with an empty destination, which
+ * the send path refuses before any network happens. The URL itself is
+ * stored encrypted (API-key grade via webhookExportCrypto.ts); plaintext
+ * records written before the fix keep loading and are re-encrypted on the
+ * next save.
  *
  * Save-time pre-flight: saveWebhookExportSettings judges the destination with
  * the SAME judgment source the send gate uses (judgeWebhookDestination), so a
@@ -27,6 +31,12 @@ import {
   type WebhookDestinationVerdict,
 } from './webhookExportDestinations.js';
 import { ChromeStoragePort, type StoragePort } from '../../utils/storage/storagePort.js';
+import type { EncryptedData } from '../../utils/crypto/types.js';
+import { isEncrypted } from '../../utils/crypto/index.js';
+import {
+  createDefaultWebhookUrlCrypto,
+  type WebhookUrlCrypto,
+} from './webhookExportCrypto.js';
 
 /** Persisted transfer settings: destination + transfer conditions. */
 export interface WebhookExportSettings {
@@ -82,6 +92,16 @@ interface RawSettingsShape {
   condition?: RawConditionShape | null | undefined;
 }
 
+interface RawStoredSettingsShape {
+  enabled?: boolean | undefined;
+  url?: string | EncryptedData | undefined;
+  condition?: RawConditionShape | null | undefined;
+}
+
+function isEncryptedUrlRecord(value: string | EncryptedData | undefined): value is EncryptedData {
+  return isEncrypted(value);
+}
+
 function isSettingsRecord(value: RawSettingsShape | null | undefined): value is RawSettingsShape {
   return typeof value === 'object' && value !== null;
 }
@@ -121,20 +141,51 @@ export function normalizeWebhookExportSettings(raw: RawSettingsShape | null | un
   };
 }
 
-function parseStored(raw: string | null): RawSettingsShape | null {
+function parseStored(raw: string | null): RawStoredSettingsShape | null {
   if (raw === null) return null;
   try {
-    const parsed: RawSettingsShape = JSON.parse(raw) as RawSettingsShape;
+    const parsed: RawStoredSettingsShape = JSON.parse(raw) as RawStoredSettingsShape;
     return parsed;
   } catch {
     return null;
   }
 }
 
+function normalizeStoredShape(
+  stored: RawStoredSettingsShape | null | undefined,
+  plainUrl: string,
+): RawSettingsShape | null {
+  if (stored === null || stored === undefined) return null;
+  if (typeof stored !== 'object') return null;
+  return {
+    enabled: stored.enabled,
+    url: plainUrl,
+    condition: stored.condition === null ? undefined : stored.condition,
+  };
+}
+
 export async function loadWebhookExportSettings(
   store: WebhookExportStore = chromeLocalWebhookExportStore(),
+  crypto: WebhookUrlCrypto = createDefaultWebhookUrlCrypto(),
 ): Promise<WebhookExportSettings> {
-  return normalizeWebhookExportSettings(parseStored(await store.get(WEBHOOK_EXPORT_SETTINGS_KEY)));
+  const stored: RawStoredSettingsShape | null = parseStored(await store.get(WEBHOOK_EXPORT_SETTINGS_KEY));
+  if (stored === null) return defaultWebhookExportSettings();
+  const storedUrl: string | EncryptedData | undefined = stored.url;
+  if (storedUrl === undefined || storedUrl === '') {
+    return normalizeWebhookExportSettings(normalizeStoredShape(stored, ''));
+  }
+  if (typeof storedUrl === 'string') {
+    return normalizeWebhookExportSettings(normalizeStoredShape(stored, storedUrl));
+  }
+  if (isEncryptedUrlRecord(storedUrl)) {
+    try {
+      const plainUrl: string = await crypto.decryptUrl(storedUrl);
+      return normalizeWebhookExportSettings(normalizeStoredShape(stored, plainUrl));
+    } catch {
+      return defaultWebhookExportSettings();
+    }
+  }
+  return defaultWebhookExportSettings();
 }
 
 /**
@@ -190,13 +241,25 @@ export function evaluateWebhookExportSave(
 export async function saveWebhookExportSettings(
   settings: WebhookExportSettings,
   store: WebhookExportStore = chromeLocalWebhookExportStore(),
+  crypto: WebhookUrlCrypto = createDefaultWebhookUrlCrypto(),
 ): Promise<WebhookDestinationVerdict | null> {
   const normalized: WebhookExportSettings = normalizeWebhookExportSettings(settings);
-  const existing: WebhookExportSettings = await loadWebhookExportSettings(store);
+  const existing: WebhookExportSettings = await loadWebhookExportSettings(store, crypto);
   const preflight = evaluateWebhookExportSave(normalized, existing);
   if (preflight.verdict !== null && !preflight.verdict.permitted && !preflight.grandfathered) {
     throw new WebhookDestinationBlockedError(preflight.verdict);
   }
-  await store.set(WEBHOOK_EXPORT_SETTINGS_KEY, JSON.stringify(normalized));
+  if (normalized.url === '') {
+    await store.set(
+      WEBHOOK_EXPORT_SETTINGS_KEY,
+      JSON.stringify({ enabled: normalized.enabled, url: '', condition: normalized.condition }),
+    );
+    return preflight.verdict;
+  }
+  const encryptedUrl: EncryptedData = await crypto.encryptUrl(normalized.url);
+  await store.set(
+    WEBHOOK_EXPORT_SETTINGS_KEY,
+    JSON.stringify({ enabled: normalized.enabled, url: encryptedUrl, condition: normalized.condition }),
+  );
   return preflight.verdict;
 }

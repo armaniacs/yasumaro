@@ -1,8 +1,12 @@
 /**
  * webhookExportSettings.test.ts
  * PBI 2026-10-22-05 box (a) ― transfer-condition settings normalize + round-trip.
+ * PBI 2026-11-24-15 (C-1) ― destination URL is stored encrypted; legacy
+ * plaintext records keep loading and are re-encrypted on the next save.
  */
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { installTestSecretKek } from '../../../utils/crypto/__tests__/secretKekHelper.js';
+import { clearEncryptionKeyCache } from '../../../utils/storage/encryptionSession.js';
 import {
   defaultWebhookExportSettings,
   loadWebhookExportSettings,
@@ -12,6 +16,18 @@ import {
   WebhookDestinationBlockedError,
   type WebhookExportStore,
 } from '../webhookExportSettings.js';
+
+vi.mock('../../../utils/crypto/cryptoParams.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../../utils/crypto/cryptoParams.js')>();
+  return {
+    ...actual,
+    CRYPTO_PARAMS: {
+      ...actual.CRYPTO_PARAMS,
+      PBKDF2_ITERATIONS: 1000,
+      LEGACY_PBKDF2_ITERATIONS: 100,
+    },
+  };
+});
 
 function memoryStore(seed: Record<string, string> = {}): WebhookExportStore & { data: Record<string, string> } {
   const data: Record<string, string> = { ...seed };
@@ -23,6 +39,11 @@ function memoryStore(seed: Record<string, string> = {}): WebhookExportStore & { 
     },
   };
 }
+
+beforeEach(async () => {
+  clearEncryptionKeyCache();
+  await installTestSecretKek();
+});
 
 describe('normalizeWebhookExportSettings (fail-closed)', () => {
   it('disables export on null / garbage shapes', () => {
@@ -88,6 +109,43 @@ describe('load/save round-trip', () => {
   it('loads the disabled default on corrupt JSON', async () => {
     const store = memoryStore({ [WEBHOOK_EXPORT_SETTINGS_KEY]: '{not json' });
     expect(await loadWebhookExportSettings(store)).toEqual(defaultWebhookExportSettings());
+  });
+
+  it('returns the disabled default when the URL envelope no longer decrypts', async () => {
+    const store = memoryStore();
+    await saveWebhookExportSettings({ enabled: true, url: 'https://api.github.com/x', condition: {} }, store);
+    const tampered: Record<string, string> = {};
+    for (const [key, value] of Object.entries(store.data)) {
+      tampered[key] = typeof value === 'string'
+        ? value.replace(/"ciphertext":"[^"]+"/, '"ciphertext":"AAAAAAAAAAAAAAAAAAAAAA"')
+        : value;
+    }
+    const tamperedStore = memoryStore(tampered);
+    expect(await loadWebhookExportSettings(tamperedStore)).toEqual(defaultWebhookExportSettings());
+  });
+});
+
+describe('webhook URL encryption (PBI 2026-11-24-15, C-1 firing demo)', () => {
+  it('leaves no plaintext URL in the storage dump after save', async () => {
+    const store = memoryStore();
+    const tokenUrl = 'https://api.github.com/hook?token=secret-token-123';
+    await saveWebhookExportSettings({ enabled: true, url: tokenUrl, condition: {} }, store);
+    const dump: string = store.data[WEBHOOK_EXPORT_SETTINGS_KEY] ?? '';
+    expect(dump).not.toContain(tokenUrl);
+    expect(dump).not.toContain('secret-token-123');
+    expect(await loadWebhookExportSettings(store)).toEqual({ enabled: true, url: tokenUrl, condition: {} });
+  });
+
+  it('migrates a legacy plaintext record: loads it and re-encrypts on save', async () => {
+    const legacyUrl = 'https://api.github.com/legacy?token=legacy-secret';
+    const legacy = { enabled: true, url: legacyUrl, condition: {} };
+    const store = memoryStore({ [WEBHOOK_EXPORT_SETTINGS_KEY]: JSON.stringify(legacy) });
+    expect(await loadWebhookExportSettings(store)).toEqual(legacy);
+    await saveWebhookExportSettings(legacy, store);
+    const dump: string = store.data[WEBHOOK_EXPORT_SETTINGS_KEY] ?? '';
+    expect(dump).not.toContain(legacyUrl);
+    expect(dump).not.toContain('legacy-secret');
+    expect(await loadWebhookExportSettings(store)).toEqual(legacy);
   });
 });
 
