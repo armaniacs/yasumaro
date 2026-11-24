@@ -141,4 +141,4 @@ rtk grep -n "manifest.json" /Users/yaar/Playground/yasumaro/AGENTS.md
 - [ ] 採番は 07・08 の完了後に行われ、その旨が handoff に記録されている
 
 ## 引き継ぎ
-状態: 文書の更新まで完了。採番待ち(07・08 の完了後)。進捗と引き継ぎ情報は [handoff/2026-11-24-04-release-ga-preparation.md](handoff/2026-11-24-04-release-ga-preparation.md) に記録した。
+状態: 6.9.77 に採番済み(owner 指定で先行実施)。残りは 08 の実機実施とタグ・提出。進捗と引き継ぎ情報は [handoff/2026-11-24-04-release-ga-preparation.md](handoff/2026-11-24-04-release-ga-preparation.md) に記録した。

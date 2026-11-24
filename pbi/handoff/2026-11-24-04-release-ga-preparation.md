@@ -24,16 +24,23 @@
 
 ## 残りの手順
 
-1. SECURITY.md の Supported Versions 表を、正式版の版番号に合わせて更新する(採番時に実施)
-2. CHANGELOG に正式版のエントリを書く(採番時に実施。`[Unreleased]` は蓄積中)
-3. `docs/RELEASE_POLICY.md` に v7 系の方針の節を追加する(内容は owner が決める)
-4. 採番(7.0.0 案)は、2026-11-24-07(監査 run-3)と 2026-11-24-08(実機スモーク)の完了後にのみ行う。同期対象は CONTRIBUTING.md のリリースフローに従う
+1. 08(実機スモーク)の実施と完了(owner が実施)
+2. タグ push とストア提出(owner が実行)
+3. `docs/RELEASE_POLICY.md` の扱いは保留(owner 指示。v7 方針の節は追加しない)
+4. SECURITY.md の 6.x の扱いは保留(owner 指示。6.9 系のため現行の 6.x Supported のまま変更なし)
 
-## owner への確認事項
+## 採番の記録(2026-11-24)
 
-- 正式版の版番号(案: 7.0.0)と v7 系のバージョニング方針の内容
-- SECURITY.md の 6.x の扱い(サポート終了日または期間)
-- Edge / AMO の掲載文の管理場所(リポジトリ内で見つからず。ローカル専用ファイルを除く)
+- owner が 6.9.77 を指定した(7.0.0 にはしない)。PBI の「07・08 の完了後にのみ採番」は、owner の明示の指示で先行実施した。08 で修正が入った場合は 6.9.78 以降に再度採番する
+- `package.json` → `node scripts/sync-version.mjs`(docs/version.json と package-lock.json)→ `cli/Cargo.toml` 手動の順に 6.9.77 にした
+- `node scripts/check-version-consistency.js` 緑。`npm run validate` 緑(1364 ファイル、19210 テスト)。`npm run release:check:fast` 緑(8/8。coverage は `npm run test:coverage` を先に実行)
+- CHANGELOG に `## [6.9.77] - 2026-11-24` を書いた。リリース日がずれたら日付を直すこと
+- popup の版表示 E2E(`popup-version-display.spec.ts`)は validate の全量に含まれ緑
+
+## owner への確認事項(回答済み)
+
+- 版番号: 6.9.77(決定)。v7 方針と 6.x の扱い: 一旦保留
+- Edge / AMO の掲載文: CHROMEWEBSTORE.md を 3 ストア共用(決定。CHROMEWEBSTORE.md に明記済み)
 
 ## 注意
 
