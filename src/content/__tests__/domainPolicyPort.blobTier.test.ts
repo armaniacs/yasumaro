@@ -65,7 +65,7 @@ describe('domain policy blob-tier reader (blob first, top-level fallback)', () =
     expect(content.allowed).toBe(false);
   });
 
-  it('blob wins over a stale top-level copy once the blob is written', async () => {
+  it('fails closed when blob and top-level copies disagree (PBI 2026-11-24-17)', async () => {
     const storage = new InMemoryStoragePort();
     storage.seed({
       ...legacyProfile(),
@@ -74,11 +74,11 @@ describe('domain policy blob-tier reader (blob first, top-level fallback)', () =
       settings: { [StorageKeys.DOMAIN_BLACKLIST]: ['blocked.com'] },
     });
     const port = new ChromeDomainPolicyPort(storage, () => now);
-    expect((await port.checkDomainAllowedFromCache('https://blocked.com/')).allowed).toBe(false);
-    expect((await port.checkDomainAllowedFromCache('https://stale.com/')).allowed).toBe(true);
+    expect(await port.checkDomainAllowedFromCache('https://blocked.com/')).toEqual({ allowed: false, useCache: false });
+    expect(await port.checkDomainAllowedFromCache('https://stale.com/')).toEqual({ allowed: false, useCache: false });
   });
 
-  it('blob flag value false is honored over a top-level true (no truthiness fallback)', async () => {
+  it('fails closed on a skewed flag instead of trusting the permissive side (PBI 2026-11-24-17)', async () => {
     const storage = new InMemoryStoragePort();
     storage.seed({
       ...legacyProfile(),
@@ -87,7 +87,7 @@ describe('domain policy blob-tier reader (blob first, top-level fallback)', () =
       settings: { [StorageKeys.SIMPLE_FORMAT_ENABLED]: false },
     });
     const port = new ChromeDomainPolicyPort(storage, () => now);
-    expect(await port.checkDomainAllowedFromCache('https://blocked.com/')).toEqual({ allowed: true, useCache: true });
+    expect(await port.checkDomainAllowedFromCache('https://blocked.com/')).toEqual({ allowed: false, useCache: false });
   });
 
   it('falls back to the top-level copy when the blob does not hold the key', async () => {

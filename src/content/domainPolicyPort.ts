@@ -6,7 +6,7 @@
  */
 
 import { StorageKeys } from '../utils/storage/types.js';
-import { readBlobFirst, withBlobTierKeys } from '../utils/storage/blobTierRead.js';
+import { hasBlobTopLevelSkew, readBlobFirst, resolveBlobFirstAll, withBlobTierKeys } from '../utils/storage/blobTierRead.js';
 import type { StoragePort } from '../utils/storage/storagePort.js';
 import { extractDomain, shouldSkipUrl } from './urlSkipper.js';
 import { evaluateDomainPolicy } from './visitAdmission.js';
@@ -69,24 +69,43 @@ export class ChromeDomainPolicyPort implements DomainPolicyPort {
         const cachedWhitelist = (result[StorageKeys.DOMAIN_FILTER_CACHE] as string[]) || [];
         const cachedAt = (result[StorageKeys.DOMAIN_FILTER_CACHE_TIMESTAMP] as number) || 0;
         const mode = (result[StorageKeys.DOMAIN_FILTER_MODE] as string) || 'disabled';
+        // Scoped projection: only the four policy inputs leave the storage
+        // seam. The fetched blob may carry encrypted API keys and sync
+        // destinations, but they never enter the verdict inputs and are never
+        // forwarded to a page-facing bridge.
+        const policy = resolveBlobFirstAll(result, [
+            StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+            StorageKeys.DOMAIN_BLACKLIST,
+            StorageKeys.SIMPLE_FORMAT_ENABLED,
+            StorageKeys.UBLOCK_FORMAT_ENABLED,
+        ]);
         const matchSubdomains = readBlobFirst(result, StorageKeys.DOMAIN_SUBDOMAIN_MATCHING) === true;
 
         const blacklist =
             mode === 'blacklist' || mode === 'whitelist'
-                ? ((readBlobFirst(result, StorageKeys.DOMAIN_BLACKLIST) as string[] | undefined) || [])
+                ? ((policy[StorageKeys.DOMAIN_BLACKLIST] as string[] | undefined) || [])
                 : [];
         const simpleEnabled =
             mode === 'blacklist' || mode === 'whitelist'
-                ? readBlobFirst(result, StorageKeys.SIMPLE_FORMAT_ENABLED) !== false
+                ? policy[StorageKeys.SIMPLE_FORMAT_ENABLED] !== false
                 : true;
         const ublockEnabled =
             mode === 'blacklist' || mode === 'whitelist'
-                ? readBlobFirst(result, StorageKeys.UBLOCK_FORMAT_ENABLED) === true
+                ? policy[StorageKeys.UBLOCK_FORMAT_ENABLED] === true
                 : false;
+        // Fail-closed tie-break (PBI 2026-11-24-17): a blob copy next to a
+        // different top-level copy means the two-stage cache write straddled
+        // generations. Never trust the permissive side; defer to background.
+        const generationSkewed = hasBlobTopLevelSkew(result, [
+            StorageKeys.DOMAIN_SUBDOMAIN_MATCHING,
+            StorageKeys.DOMAIN_BLACKLIST,
+            StorageKeys.SIMPLE_FORMAT_ENABLED,
+            StorageKeys.UBLOCK_FORMAT_ENABLED,
+        ]);
 
         return evaluateDomainPolicy(
             domain,
-            { cachedWhitelist, cachedAt, mode, blacklist, simpleEnabled, ublockEnabled, matchSubdomains },
+            { cachedWhitelist, cachedAt, mode, blacklist, simpleEnabled, ublockEnabled, matchSubdomains, generationSkewed },
             this.clock(),
         );
     }

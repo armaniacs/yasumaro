@@ -36,6 +36,14 @@ export interface DomainPolicySnapshot {
    * 2-arg isDomainInList wrappers silently dropped it on the content path.
    */
   matchSubdomains: boolean;
+  /**
+   * Generation-skew flag (PBI 2026-11-24-17): the blob copy and the top-level
+   * copy of a policy key disagree, so they come from different setting
+   * generations. The pure policy fails closed (useCache:false) instead of
+   * trusting the permissive side; the caller defers to the authoritative
+   * background verdict.
+   */
+  generationSkewed?: boolean;
 }
 
 /**
@@ -53,6 +61,10 @@ export function evaluateDomainPolicy(
 
   const isCacheValid = snapshot.cachedAt > 0 && nowMs - snapshot.cachedAt < CACHE_TTL;
   if (!isCacheValid) {
+    return { allowed: false, useCache: false };
+  }
+
+  if (snapshot.generationSkewed === true) {
     return { allowed: false, useCache: false };
   }
 
