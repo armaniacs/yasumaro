@@ -97,4 +97,4 @@ git -C /Users/yaar/Playground/yasumaro grep -n "OW_PROBE_QUERY\|OW_PROBE_STATE" 
 - [ ] CHANGELOG への記載は不要(利用者向けの変更ではない)
 
 ## 引き継ぎ
-状態: 未着手。E2E 基盤の改善 PBI。
+状態: 実装済み。`1124a` に取込済み(`42fd9774f`)。`waitForE2EProbeInit` を 3 段階化し、実時間系 5 ファイルを `extension-heavy` に分離した。CI の `--grep @extension` 形状は維持され両 project が走る。
