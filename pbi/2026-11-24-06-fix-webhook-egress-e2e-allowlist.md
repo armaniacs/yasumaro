@@ -151,4 +151,4 @@ npx --prefix /Users/yaar/Playground/yasumaro playwright test --config /Users/yaa
 - [ ] ドキュメント更新済み(コメント修正を範囲に入れた場合はその箇所)
 
 ## 引き継ぎ
-状態: 未着手。進捗と引き継ぎ情報は [handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) に記録する(ファイルが無ければ未着手)
+状態: 完了。進捗と引き継ぎ情報は [handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) に記録した。`1124a` の `a24be47be` に取り込み済み。残りの見送り文言は監査 run-3 の確認項目に回す。

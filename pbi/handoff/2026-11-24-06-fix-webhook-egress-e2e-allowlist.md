@@ -1,6 +1,6 @@
 # 引き継ぎ: 2026-11-24-06 webhook E2E の許可リスト方式への追従
 
-- 状態: 一部完了。判定ロジックの E2E は済み・緑。実 UI 経由の確認(PBI の受け入れ基準)は未着手
+- 状態: 完了。実 UI 経由の確認まで済み・緑
 - 最終更新: 2026-11-24
 - 対象 PBI: [../2026-11-24-06-fix-webhook-egress-e2e-allowlist.md](../2026-11-24-06-fix-webhook-egress-e2e-allowlist.md)
 
@@ -25,8 +25,16 @@ npx --prefix /Users/yaar/Playground/yasumaro playwright test --config /Users/yaa
 
 ## 残り
 
-- 2 本目と 3 本目は、src のモジュールを Playwright の Node 側で import して判定関数を呼んでいるだけで、拡張ページ内では動いていない(3 本目は `dashboardPage` を使っていない)。PBI の受け入れ基準どおり、実 UI(`#webhookExportUrl` → `#webhookExportSaveBtn` → `#webhookExportStatus`)と `chrome.storage.local` を通す形に直す
-- PBI に書いたビルドの前提(`OW_E2E_PROBE=1`、`extension` プロジェクト、TLS 証明書の pem)を確認し、上の実行方法を合わせる
+- なし。2 本目と 3 本目は実 UI(`#webhookExportUrl` → `#webhookExportSaveBtn` → `#webhookExportStatus`)と `chrome.storage.local` を通す形に直し、コミット `a24be47be` で `1124a` に取り込み済み
 - webhook パネルの開き方は、2026-11-24-02(開発中機能の判定)の結果で変わる可能性がある
-- 3 本目の最後の `WEBHOOK_EXPORT_SETTINGS_KEY` の値チェックは厳密には不要。消すかは任意
 - oxlint は testDir を対象外にしている(No files found)
+
+## 作業記録(2026-11-24)
+
+- `impl-webhook-e2e-ui` ブランチの worktree(`/tmp/yasu-webhook-e2e`、`1124a` 基点)でサブエージェントが実装。コミット `b5c15497b` を `1124a` に cherry-pick して取り込み
+- `OW_E2E_PROBE=1` ビルド + `--project=extension` で `webhook-egress.spec.ts` 3 passed。固定 sleep なし。CSP pin と `chrome.permissions.contains` pin は維持
+- 本番コードの変更は stale コメント 2 件のみ(`src/dashboard/webhookExportSettings.ts` の `defaultResend` 内、`src/background/webhookExport/webhookExportPayload.ts`)。判定ロジックは不変
+- 見送り: `entrypoints/options/index.html` の `webhookExportDescription` 既定文と `messages.json`(en/ja)の文言変更は他テストへの影響を避けるため対象外(監査 run-3 の確認項目に回す)
+- 文言照合は en/ja 両対応の正規表現で固定(headed Chromium が OS 言語を継承し当機では `chrome.i18n` が ja 解決のため)。`test.use({ locale: 'en-US' })` は将来の en 環境用に付与
+- `npm run validate` は緑。初回はマシン負荷で 2 ファイルが forks worker 起動タイムアウトになったが、再実行で 13 件とも緑(引き継ぎ書の既知の現象)
+- worktree と作業ブランチは片付け済み(`git cherry 1124a` で `-` のみを確認してから削除)
