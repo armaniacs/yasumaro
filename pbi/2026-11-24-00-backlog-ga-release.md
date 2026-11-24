@@ -64,15 +64,17 @@ Confidence は 1.0=コードで確定 / 0.8=設計判断が残る / 0.5=要調�
 各 PBI の末尾「引き継ぎ」節と、[handoff/](handoff/) 配下の同名ファイルに、進捗・作業ブランチ・残りの手順を記録する。
 handoff ファイルが無い PBI は未着手。引き継ぐモデルは、まずこの台帳と handoff ファイルを読むこと。
 
+判定材料の ADR: [dev-docs/ADR/2026-11-24-ga-dev-feature-graduation.md](../dev-docs/ADR/2026-11-24-ga-dev-feature-graduation.md)(提案中、owner の裁定待ち)。04 と 08 はこの ADR を参照すること。
+
 ### 状況(2026-11-24 09:39 開始の 15 分実装枠の後)
 
 | PBI | 状態 | コミット(ブランチ 1124a) | handoff |
 |---|---|---|---|
-| 02 開発中機能の判定 | 未着手 | ― | なし |
+| 02 開発中機能の判定 | 材料収集中(裁定待ち) | ― | [あり](handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) |
 | 03 SHA256 と provenance | 実装済み・実リリースでの確認待ち | 1a9a52c27 | [あり](handoff/2026-11-24-03-release-artifact-provenance.md) |
 | 04 リリース準備 | 一部着手(README の Obsidian 競合記述のみ) | 6d39eb66e | [あり](handoff/2026-11-24-04-release-ga-preparation.md) |
-| 05 412 競合の利用者通知 | 未着手 | ― | なし |
-| 06 webhook E2E | 一部完了(判定ロジックのみ、実 UI 経由は未) | 545b6be50 | [あり](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
+| 05 412 競合の利用者通知 | 実装済み | f3b8df983 | [あり](handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |
+| 06 webhook E2E | 完了(実 UI 経由まで) | a24be47be | [あり](handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
 | 07〜13 | 未着手 | ― | なし |
 
 ### 引き継ぐモデルへの注意
