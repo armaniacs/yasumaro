@@ -34,6 +34,9 @@ vi.mock('../../../utils/logger/api.js', async () =>
 import { decideStepOutcome, finalizeSuccess, settleOutcomeWrite, type OutcomeAdapters } from '../recordingOutcome.js';
 import { addLog } from '../../../utils/logger/core.js';
 import { StepFailureError, ErrorStrategy, type RecordingContext } from '../types.js';
+import { FailureKind, createFailure, resolveFailure, tagFailure } from '../../../utils/failureTaxonomy.js';
+import { toError } from '../../../utils/errorUtils.js';
+import { isPreconditionConflict } from '../../../utils/obsidianConditionalWrite.js';
 import { PrivatePageError } from '../steps/checkPrivacyHeadersStep.js';
 import { DuplicateError } from '../steps/checkDuplicateStep.js';
 import { RegenerateUpdateError } from '../steps/saveSqliteStep.js';
@@ -51,16 +54,19 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
 function makeFakes(): OutcomeAdapters & {
   notifiedErrors: Array<{ title: string; message: string }>;
   notifiedSaves: string[];
+  notifiedConflicts: string[];
   pendings: unknown[];
   skips: string[];
 } {
   const notifiedErrors: Array<{ title: string; message: string }> = [];
   const notifiedSaves: string[] = [];
+  const notifiedConflicts: string[] = [];
   const pendings: unknown[] = [];
   const skips: string[] = [];
   return {
     notifiedErrors,
     notifiedSaves,
+    notifiedConflicts,
     pendings,
     skips,
     notifier: {
@@ -69,6 +75,9 @@ function makeFakes(): OutcomeAdapters & {
       },
       notifySaveSuccess: (title) => {
         notifiedSaves.push(title);
+      },
+      notifyObsidianConflict: (title) => {
+        notifiedConflicts.push(title);
       },
     },
     pending: {
@@ -205,6 +214,93 @@ describe('finalizeSuccess', () => {
     expect(result.success).toBe(true);
     expect(fakes.pendings).toHaveLength(1);
     expect(fakes.pendings[0]).toMatchObject({ reason: 'obsidian-write-failed', errorMessage: 'obsidian unreachable' });
+    expect(fakes.notifiedConflicts).toHaveLength(0);
+  });
+
+  describe('obsidian write conflict (PBI 2026-11-24-05)', () => {
+    function conflictError(): Error {
+      return tagFailure(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        createFailure(FailureKind.HTTP, { status: 412, method: 'PUT' }),
+      );
+    }
+
+    function httpError(status: number): Error {
+      return tagFailure(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        createFailure(FailureKind.HTTP, { status, method: 'PUT' }),
+      );
+    }
+
+    it('registers an obsidian-write-conflict pending and notifies once', () => {
+      const fakes = makeFakes();
+      const result = finalizeSuccess(
+        makeContext({
+          errors: [{
+            step: 'saveObsidian',
+            error: conflictError(),
+            strategy: ErrorStrategy.BEST_EFFORT,
+            timestamp: Date.now(),
+            recoveryKind: 'obsidian_sync',
+            context: { url: 'https://example.com' },
+          }],
+        }),
+        fakes,
+      );
+
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(1);
+      expect(fakes.pendings[0]).toMatchObject({ reason: 'obsidian-write-conflict' });
+      expect(fakes.notifiedConflicts).toEqual(['Test Page']);
+    });
+
+    it('still classifies the conflict after the toError re-wrap in the step catch', () => {
+      expect(isPreconditionConflict(resolveFailure(toError(conflictError())))).toBe(true);
+    });
+
+    it('keeps a non-412 http failure on the legacy reason with no conflict notice', () => {
+      const fakes = makeFakes();
+      const result = finalizeSuccess(
+        makeContext({
+          errors: [{
+            step: 'saveObsidian',
+            error: httpError(500),
+            strategy: ErrorStrategy.BEST_EFFORT,
+            timestamp: Date.now(),
+            recoveryKind: 'obsidian_sync',
+            context: { url: 'https://example.com' },
+          }],
+        }),
+        fakes,
+      );
+
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(1);
+      expect(fakes.pendings[0]).toMatchObject({ reason: 'obsidian-write-failed' });
+      expect(fakes.notifiedConflicts).toHaveLength(0);
+    });
+
+    it('notifies a regenerate record without registering a pending page', () => {
+      const fakes = makeFakes();
+      const result = finalizeSuccess(
+        makeContext({
+          data: { title: 'Test Page', url: 'https://example.com', content: 'content', targetEntryId: 7 } as never,
+          errors: [{
+            step: 'saveObsidian',
+            error: conflictError(),
+            strategy: ErrorStrategy.BEST_EFFORT,
+            timestamp: Date.now(),
+            recoveryKind: 'obsidian_sync',
+            context: { url: 'https://example.com' },
+          }],
+        }),
+        fakes,
+      );
+
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(0);
+      expect(fakes.notifiedConflicts).toEqual(['Test Page']);
+    });
   });
 
   it('notifies save success only when obsidianDuration is present', () => {

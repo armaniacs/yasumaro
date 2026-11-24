@@ -18,7 +18,7 @@ export type PrivacyPendingReason = 'cache-control' | 'set-cookie' | 'authorizati
  * These are faults, not user decisions: retrying is the only meaningful action,
  * and whitelisting the domain would not help.
  */
-export type ErrorPendingReason = 'pipeline-error' | 'obsidian-write-failed' | 'local-ai-unavailable';
+export type ErrorPendingReason = 'pipeline-error' | 'obsidian-write-failed' | 'obsidian-write-conflict' | 'local-ai-unavailable';
 
 export type PendingReason = PrivacyPendingReason | ErrorPendingReason;
 
@@ -42,6 +42,7 @@ const PENDING_REASON_MESSAGE_KEYS: Readonly<Record<PendingReason, string>> = {
   'authorization': 'pendingReasonAuth',
   'pipeline-error': 'pendingReasonPipelineError',
   'obsidian-write-failed': 'pendingReasonObsidianWriteFailed',
+  'obsidian-write-conflict': 'pendingReasonObsidianWriteConflict',
   'local-ai-unavailable': 'pendingReasonLocalAiUnavailable'
 };
 

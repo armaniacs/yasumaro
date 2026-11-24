@@ -78,9 +78,9 @@ function makeContext(overrides: Partial<RecordingContext> = {}): RecordingContex
   } as RecordingContext;
 }
 
-function makeEnv(): { env: SavePhaseEnv; adapters: { notifier: { notifyError: ReturnType<typeof vi.fn>; notifySaveSuccess: ReturnType<typeof vi.fn> }; pending: { addPending: ReturnType<typeof vi.fn> }; skipRecorder: { recordSkip: ReturnType<typeof vi.fn> } } } {
+function makeEnv(): { env: SavePhaseEnv; adapters: { notifier: { notifyError: ReturnType<typeof vi.fn>; notifySaveSuccess: ReturnType<typeof vi.fn>; notifyObsidianConflict: ReturnType<typeof vi.fn> }; pending: { addPending: ReturnType<typeof vi.fn> }; skipRecorder: { recordSkip: ReturnType<typeof vi.fn> } } } {
   const adapters = {
-    notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn() },
+    notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn(), notifyObsidianConflict: vi.fn() },
     pending: { addPending: vi.fn() },
     // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter seam.
     skipRecorder: { recordSkip: vi.fn() },

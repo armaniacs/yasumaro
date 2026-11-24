@@ -55,7 +55,7 @@ function makeEnv(): SavePhaseEnv {
     // Unified driver: the same StepExecutor seam the normal save() path uses.
     executor: new StepExecutor(null, undefined, noStepDelay),
     outcomeAdapters: {
-      notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn() },
+      notifier: { notifyError: vi.fn(), notifySaveSuccess: vi.fn(), notifyObsidianConflict: vi.fn() },
       pending: { addPending: vi.fn() },
       // PBI 2026-10-31-01: the skip-reason recorder rides the same adapter
       // seam (the Obsidian-failure parity test drives the FATAL/RETRY branch).

@@ -27,6 +27,7 @@ New message types must set `protocolVersion: CURRENT_PROTOCOL_VERSION` in their 
 
 - The GET response is inspected at runtime: a non-empty strong `ETag` is echoed as `If-Match` on the following PUT. A missing or weak (`W/`) ETag, or a 404 on GET, keeps the unconditional PUT (no version is assumed).
 - A 412 on the PUT is classified as `http` / status 412 / method PUT (`isPreconditionConflict`). `saveToObsidianStep` logs the conflict, re-runs the whole read-modify-write once, and rethrows if the second attempt also returns 412. The client itself never re-sends a PUT (`canResendSameRequest` is unchanged).
+- A 412 that persists after the single rewrite surfaces in `finalizeSuccess` as the pending reason `obsidian-write-conflict` plus a one-shot user notice (`notifyObsidianConflictTitle` / `notifyObsidianConflictBody`, page title sanitized via `sanitizePageTitleForNotification`, no note body / ETag / API key). Any other `obsidian_sync` failure keeps the legacy `obsidian-write-failed` reason with no conflict notice; a regenerate record (`targetEntryId` set) notifies but registers no pending page.
 - Real-Obsidian verification (whether the plugin returns ETag and honours If-Match) is a manual item.
 
 ### Request details

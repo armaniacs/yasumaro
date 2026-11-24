@@ -169,3 +169,26 @@ export function recordSuccessOptions(
     ]),
   };
 }
+
+/**
+ * Obsidian write-conflict notice (PBI 2026-11-24-05). Shown only when a 412
+ * persists after the single rewrite — never for a resolved conflict or a
+ * non-412 failure. Carries the sanitized page title only: no note body, no
+ * ETag, no API key. Re-running from the pending list resolves it, so the
+ * body points there instead of at the connection settings.
+ */
+export function obsidianConflictOptions(
+  input: IconPayloadInput & { pageTitle: string; resolve: NotificationTextResolver },
+): NotificationPayload {
+  const safePageTitle = sanitizePageTitleForNotification(input.pageTitle);
+  return {
+    type: 'basic',
+    iconUrl: input.iconUrl,
+    title: input.resolve('notifyObsidianConflictTitle', 'Obsidian Save Conflict'),
+    message: input.resolve(
+      'notifyObsidianConflictBody',
+      `“${safePageTitle}” was not saved because it conflicted with an edit in Obsidian. Re-run it from the pending list.`,
+      [safePageTitle],
+    ),
+  };
+}

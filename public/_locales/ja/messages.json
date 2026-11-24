@@ -617,6 +617,17 @@
   "obsidianSyncFailed": {
     "message": "Obsidian同期に失敗しました"
   },
+  "notifyObsidianConflictTitle": {
+    "message": "Obsidian保存の競合"
+  },
+  "notifyObsidianConflictBody": {
+    "message": "「$TITLE$」はObsidian側の編集と競合したため保存できませんでした。保留一覧から再実行してください。",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
   "saveToObsidian": {
     "message": "Obsidianに保存"
   },
@@ -1562,6 +1573,9 @@
   },
   "pendingReasonObsidianWriteFailed": {
     "message": "Obsidian書き込み失敗"
+  },
+  "pendingReasonObsidianWriteConflict": {
+    "message": "Obsidian書き込み競合"
   },
   "pendingReasonLocalAiUnavailable": {
     "message": "ローカルAI利用不可"

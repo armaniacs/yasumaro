@@ -28,6 +28,8 @@ import { LogType, ErrorCode } from '../../utils/logger/types.js';
 import { addLog } from '../../utils/logger/core.js';
 import { logError } from '../../utils/logger/api.js';
 import { addPendingPage, PENDING_MAX_TTL_MS } from '../../utils/pendingStorage.js';
+import { resolveFailure } from '../../utils/failureTaxonomy.js';
+import { isPreconditionConflict } from '../../utils/obsidianConditionalWrite.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import { recordSkipReason, type SkipReasonCode } from '../../utils/skipReason.js';
 import {
@@ -35,6 +37,7 @@ import {
   buildPrivatePageResult,
   buildResult,
   notifyRecordingError,
+  notifyObsidianConflict,
   notifyObsidianSaveSuccess,
 } from './resultBuilder.js';
 import { PrivatePageError, DuplicateError, RegenerateUpdateError } from './steps/index.js';
@@ -48,6 +51,7 @@ import type { RecordingResult } from '../../messaging/types.js';
 export interface OutcomeNotifier {
   notifyError(title: string, message: string): void;
   notifySaveSuccess(title: string): void;
+  notifyObsidianConflict(title: string): void;
 }
 
 /**
@@ -77,6 +81,7 @@ export interface OutcomeAdapters {
 const prodNotifier: OutcomeNotifier = {
   notifyError: (title, message) => notifyRecordingError(title, message),
   notifySaveSuccess: (title) => notifyObsidianSaveSuccess(title),
+  notifyObsidianConflict: (title) => notifyObsidianConflict(title),
 };
 
 /**
@@ -142,7 +147,7 @@ const PENDING_TTL_MS = PENDING_MAX_TTL_MS;
 
 function pendingEntry(
   context: RecordingContext,
-  reason: 'pipeline-error' | 'obsidian-write-failed',
+  reason: 'pipeline-error' | 'obsidian-write-failed' | 'obsidian-write-conflict',
   errorMessage: string,
 ): Parameters<typeof addPendingPage>[0] {
   return {
@@ -302,6 +307,14 @@ export function finalizeSuccess(
   }
 
   const obsidianError = errors.find((e) => e.recoveryKind === 'obsidian_sync');
+  // PBI 2026-11-24-05: a 412 that persists after the single rewrite is a
+  // conflict, not a connection failure. The pending reason and the notice
+  // carry that distinction; every other obsidian_sync error keeps the legacy
+  // 'obsidian-write-failed' reason with no conflict notice. The failure
+  // metadata survives `toError()` re-wrapping in saveToObsidianStep's catch,
+  // so `resolveFailure` still sees the original 412 here.
+  const obsidianConflict =
+    obsidianError !== undefined && isPreconditionConflict(resolveFailure(obsidianError.error));
   // PBI 2026-09-25-12: BEST_EFFORT saveObsidian follows the same owner rule —
   // when the offline enqueue succeeded the queued obsidian_sync job is the
   // only recovery owner and no pending page is registered for the recording.
@@ -313,10 +326,22 @@ export function finalizeSuccess(
   });
   if (obsidianError && obsidianOwner === 'pending') {
     settleOutcomeWrite(
-      adapters.pending.addPending(pendingEntry(context, 'obsidian-write-failed', obsidianError.error.message)),
+      adapters.pending.addPending(
+        pendingEntry(
+          context,
+          obsidianConflict ? 'obsidian-write-conflict' : 'obsidian-write-failed',
+          obsidianError.error.message,
+        ),
+      ),
       'pending',
       context.traceId,
     );
+  }
+  // The conflict notice rides outside the owner branch: a regenerate record
+  // registers no pending (UPDATE-only) but still tells the user the save was
+  // lost to a concurrent edit.
+  if (obsidianConflict) {
+    adapters.notifier.notifyObsidianConflict(data.title);
   }
 
   const result = buildResult(context);

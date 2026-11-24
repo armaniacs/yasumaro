@@ -659,6 +659,17 @@
   "obsidianSyncFailed": {
     "message": "Obsidian Sync Failed"
   },
+  "notifyObsidianConflictTitle": {
+    "message": "Obsidian Save Conflict"
+  },
+  "notifyObsidianConflictBody": {
+    "message": "\"$TITLE$\" was not saved because it conflicted with an edit in Obsidian. Re-run it from the pending list.",
+    "placeholders": {
+      "title": {
+        "content": "$1"
+      }
+    }
+  },
   "saveToObsidian": {
     "message": "Saved to Obsidian"
   },
@@ -1616,6 +1627,9 @@
   },
   "pendingReasonObsidianWriteFailed": {
     "message": "Obsidian write failed"
+  },
+  "pendingReasonObsidianWriteConflict": {
+    "message": "Obsidian write conflict"
   },
   "pendingReasonLocalAiUnavailable": {
     "message": "Local AI unavailable"

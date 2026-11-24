@@ -38,6 +38,12 @@ describe('classifyCaptureFailure (対象外の理由表示: 沈黙の失敗に�
     expect(classifyCaptureFailure('rate_limited').category).toBe('consent');
     expect(classifyCaptureFailure('paused').category).toBe('consent');
     expect(classifyCaptureFailure('sqlite-client-absent').category).toBe('storage');
+    expect(classifyCaptureFailure('obsidian-write-failed').category).toBe('storage');
+    expect(classifyCaptureFailure('obsidian-write-conflict')).toEqual({
+      code: 'obsidian-write-conflict',
+      category: 'storage',
+      known: true,
+    });
     expect(classifyCaptureFailure('pipeline-error').category).toBe('storage');
     expect(classifyCaptureFailure('same_day').category).toBe('duplicate');
   });

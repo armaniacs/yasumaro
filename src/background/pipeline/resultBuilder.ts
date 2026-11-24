@@ -8,7 +8,7 @@
 
 import { NotificationHelper } from '../notificationHelper.js';
 import { getMessageOr } from '../../utils/i18n.js';
-import { obsidianSaveOptions, recordingErrorOptions } from '../notificationPolicy.js';
+import { obsidianConflictOptions, obsidianSaveOptions, recordingErrorOptions } from '../notificationPolicy.js';
 import { pickDefined } from '../../utils/objectUtils.js';
 import type { RecordingContext } from './types.js';
 import type { RecordingResult } from '../../messaging/types.js';
@@ -102,6 +102,22 @@ export function notifyObsidianSaveSuccess(title: string): void {
   NotificationHelper.show(
     obsidianSaveOptions({
       title,
+      resolve: getMessageOr,
+      iconUrl: NotificationHelper.getIconUrl(),
+    }),
+  );
+}
+
+/**
+ * Send the conflict notice when an Obsidian 412 persists after the single
+ * rewrite (PBI 2026-11-24-05). Wired as the default `notifyObsidianConflict`
+ * adapter in `recordingOutcome.defaultOutcomeAdapters`. The title is
+ * sanitized inside the policy row; no note body, ETag, or API key travels.
+ */
+export function notifyObsidianConflict(title: string): void {
+  NotificationHelper.show(
+    obsidianConflictOptions({
+      pageTitle: title,
       resolve: getMessageOr,
       iconUrl: NotificationHelper.getIconUrl(),
     }),

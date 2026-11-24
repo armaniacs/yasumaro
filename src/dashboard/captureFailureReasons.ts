@@ -61,6 +61,7 @@ export const CAPTURE_FAILURE_REASONS: readonly CaptureFailureReason[] = [
   { code: 'no-write', category: 'storage', i18nKey: 'captureFailure_noWrite' },
   { code: 'obsidian-disabled', category: 'storage', i18nKey: 'captureFailure_obsidianDisabled' },
   { code: 'obsidian-write-failed', category: 'storage', i18nKey: 'captureFailure_obsidianWriteFailed' },
+  { code: 'obsidian-write-conflict', category: 'storage', i18nKey: 'captureFailure_obsidianWriteConflict' },
   { code: 'pipeline-error', category: 'storage', i18nKey: 'captureFailure_pipelineError' },
   { code: 'same_day', category: 'duplicate', i18nKey: 'captureFailure_sameDay' },
 ];

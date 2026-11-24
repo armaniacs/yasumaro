@@ -133,6 +133,7 @@ function makeCoalescingOrchestrator(secondProcessGate: Promise<void>): Recording
       notifier: {
         notifyError: () => undefined,
         notifySaveSuccess: () => undefined,
+        notifyObsidianConflict: () => undefined,
       },
     },
   });

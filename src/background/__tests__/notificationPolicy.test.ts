@@ -12,6 +12,7 @@ import {
   NOTIFICATION_ICON_48_PATH,
   NOTIFICATION_PAGE_TITLE_MAX_LENGTH,
   PRIVACY_CONFIRM_NOTIFICATION_PREFIX,
+  obsidianConflictOptions,
   obsidianSaveOptions,
   privacyConfirmOptions,
   recordSuccessOptions,
@@ -295,6 +296,64 @@ describe('notificationPolicy', () => {
       expect(seen).toEqual([
         { key: 'saveToObsidian', fallback: 'Saved to Obsidian', substitutions: undefined },
       ]);
+    });
+  });
+
+  describe('obsidianConflictOptions', () => {
+    it('falls back to the conflict title and body with the sanitized title', () => {
+      const payload = obsidianConflictOptions({
+        pageTitle: 'Example',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload).toEqual({
+        type: 'basic',
+        iconUrl: 'icon-url',
+        title: 'Obsidian Save Conflict',
+        message: '“Example” was not saved because it conflicted with an edit in Obsidian. Re-run it from the pending list.',
+      });
+    });
+
+    it('resolves the title and body through i18n with the sanitized title substitution', () => {
+      const seen: Array<{ key: string; fallback: string; substitutions?: unknown }> = [];
+      const resolve = makeTranslatedResolver(
+        { notifyObsidianConflictTitle: '競合', notifyObsidianConflictBody: '本文' },
+        seen,
+      );
+
+      const payload = obsidianConflictOptions({
+        pageTitle: 'Line1\nLine2',
+        resolve,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.title).toBe('競合');
+      expect(payload.message).toBe('本文');
+      const bodyCall = seen.find((call) => call.key === 'notifyObsidianConflictBody');
+      expect(bodyCall?.substitutions).toEqual(['Line1 Line2']);
+    });
+
+    it('never interpolates a raw title with control characters', () => {
+      const payload = obsidianConflictOptions({
+        pageTitle: 'a\x00b\nc',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.message).not.toMatch(/[\x00-\x1F\x7F]/);
+      expect(payload.message).toContain('a b c');
+    });
+
+    it('mentions neither the connection settings nor secrets', () => {
+      const payload = obsidianConflictOptions({
+        pageTitle: 'Example',
+        resolve: fallbackResolver,
+        iconUrl: 'icon-url',
+      });
+
+      expect(payload.message).not.toContain('接続');
+      expect(payload.message).not.toContain('connection');
     });
   });
 

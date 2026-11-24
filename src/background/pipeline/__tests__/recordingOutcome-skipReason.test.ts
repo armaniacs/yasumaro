@@ -59,6 +59,7 @@ function makeFakes(): OutcomeAdapters & { skips: string[] } {
     notifier: {
       notifyError: () => undefined,
       notifySaveSuccess: () => undefined,
+      notifyObsidianConflict: () => undefined,
     },
     pending: {
       addPending: () => undefined,

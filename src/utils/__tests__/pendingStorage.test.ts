@@ -96,6 +96,7 @@ describe('pending reason classification', () => {
     it.each([
         'pipeline-error',
         'obsidian-write-failed',
+        'obsidian-write-conflict',
         'local-ai-unavailable'
     ])('treats %s as a failure, not a privacy detection', (reason) => {
         expect(isPrivacyPendingReason(reason)).toBe(false);
@@ -113,6 +114,7 @@ describe('renderPendingReason', () => {
         ['authorization', 'i18n_pendingReasonAuth'],
         ['pipeline-error', 'i18n_pendingReasonPipelineError'],
         ['obsidian-write-failed', 'i18n_pendingReasonObsidianWriteFailed'],
+        ['obsidian-write-conflict', 'i18n_pendingReasonObsidianWriteConflict'],
         ['local-ai-unavailable', 'i18n_pendingReasonLocalAiUnavailable']
     ])('localizes %s', (reason, expected) => {
         expect(renderPendingReason(reason)).toBe(expected);
@@ -178,6 +180,23 @@ describe('pendingStorage', () => {
                 timestamp: now,
                 reason: 'obsidian-write-failed' as const,
                 errorMessage: 'Network timeout',
+                expiry: now + 24 * 60 * 60 * 1000
+            };
+
+            await addPendingPage(pendingPage);
+
+            const result = mockStorage['pending_pages'] as unknown[];
+            expect(result).toEqual([pendingPage]);
+        });
+
+        it('should add a pending page with obsidian-write-conflict reason and errorMessage', async () => {
+            const now = Date.now();
+            const pendingPage = {
+                url: 'https://example.com/obsidian-conflict',
+                title: 'Obsidian Conflict Page',
+                timestamp: now,
+                reason: 'obsidian-write-conflict' as const,
+                errorMessage: 'Obsidian write conflict persisted after the single rewrite',
                 expiry: now + 24 * 60 * 60 * 1000
             };
 

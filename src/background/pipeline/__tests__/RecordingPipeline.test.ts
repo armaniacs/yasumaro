@@ -792,4 +792,139 @@ describe('RecordingPipeline', () => {
       expect(result.success).toBe(false);
     });
   });
+
+  describe('Obsidian write conflict user notice (PBI 2026-11-24-05)', () => {
+    function conflictError(): Error {
+      return Object.assign(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        { failure: { kind: 'http', status: 412, method: 'PUT' } },
+      );
+    }
+
+    function serverError(): Error {
+      return Object.assign(
+        new Error('Failed to write to daily note. Please check your Obsidian connection.'),
+        { failure: { kind: 'http', status: 500, method: 'PUT' } },
+      );
+    }
+
+    function makeConflictFakes(): {
+      notifiedErrors: Array<{ title: string; message: string }>;
+      notifiedSaves: string[];
+      notifiedConflicts: string[];
+      pendings: unknown[];
+      skips: string[];
+      notifier: { notifyError: (title: string, message: string) => void; notifySaveSuccess: (title: string) => void; notifyObsidianConflict: (title: string) => void };
+      pending: { addPending: (entry: unknown) => void };
+      skipRecorder: { recordSkip: (reason: string) => void };
+    } {
+      const notifiedErrors: Array<{ title: string; message: string }> = [];
+      const notifiedSaves: string[] = [];
+      const notifiedConflicts: string[] = [];
+      const pendings: unknown[] = [];
+      const skips: string[] = [];
+      return {
+        notifiedErrors,
+        notifiedSaves,
+        notifiedConflicts,
+        pendings,
+        skips,
+        notifier: {
+          notifyError: (title, message) => {
+            notifiedErrors.push({ title, message });
+          },
+          notifySaveSuccess: (title) => {
+            notifiedSaves.push(title);
+          },
+          notifyObsidianConflict: (title) => {
+            notifiedConflicts.push(title);
+          },
+        },
+        pending: {
+          addPending: (entry) => {
+            pendings.push(entry);
+          },
+        },
+        skipRecorder: {
+          recordSkip: (reason) => {
+            skips.push(reason);
+          },
+        },
+      };
+    }
+
+    function makeConflictPipeline(append: ReturnType<typeof vi.fn>, fakes: ReturnType<typeof makeConflictFakes>) {
+      mockProcess.mockResolvedValue({
+        summary: 'AI summary',
+        maskedCount: 0,
+      });
+      return createRecordingOrchestrator({
+        getPrivacyInfoWithCache: makeGetPrivacyInfo(),
+        getSettingsWithCache: async () => mockSettings,
+        isConsentGranted: async () => true,
+        obsidian: { appendToDailyNote: append } as any,
+        aiService: makeAiClient() as any,
+        sqliteClient: null,
+        outcomeAdapters: fakes as any,
+      });
+    }
+
+    it('registers a conflict pending and notifies once when 412 persists after the single rewrite', async () => {
+      const append = vi.fn<() => Promise<void>>().mockRejectedValue(conflictError());
+      const fakes = makeConflictFakes();
+      const pipeline = makeConflictPipeline(append, fakes);
+
+      const result = await pipeline.record({
+        title: 'Conflict Page',
+        url: 'https://example.com/conflict-persist',
+        content: 'Content',
+      }, { settings: mockSettings });
+
+      expect(result.success).toBe(true);
+      expect(append).toHaveBeenCalledTimes(2);
+      expect(fakes.pendings).toHaveLength(1);
+      expect(fakes.pendings[0]).toMatchObject({
+        url: 'https://example.com/conflict-persist',
+        reason: 'obsidian-write-conflict',
+      });
+      expect(fakes.notifiedConflicts).toEqual(['Conflict Page']);
+    });
+
+    it('succeeds with no pending and no conflict notice when the rewrite resolves the 412', async () => {
+      const append = vi.fn<() => Promise<void>>().mockRejectedValueOnce(conflictError()).mockResolvedValueOnce(undefined);
+      const fakes = makeConflictFakes();
+      const pipeline = makeConflictPipeline(append, fakes);
+
+      const result = await pipeline.record({
+        title: 'Conflict Page',
+        url: 'https://example.com/conflict-resolved',
+        content: 'Content',
+      }, { settings: mockSettings });
+
+      expect(result.success).toBe(true);
+      expect(append).toHaveBeenCalledTimes(2);
+      expect(fakes.pendings).toHaveLength(0);
+      expect(fakes.notifiedConflicts).toHaveLength(0);
+    });
+
+    it('keeps the legacy obsidian-write-failed pending with no conflict notice on a 500', async () => {
+      const append = vi.fn<() => Promise<void>>().mockRejectedValue(serverError());
+      const fakes = makeConflictFakes();
+      const pipeline = makeConflictPipeline(append, fakes);
+
+      const result = await pipeline.record({
+        title: 'Server Error Page',
+        url: 'https://example.com/obsidian-500',
+        content: 'Content',
+      }, { settings: mockSettings });
+
+      expect(result.success).toBe(true);
+      expect(fakes.pendings).toHaveLength(1);
+      expect(fakes.pendings[0]).toMatchObject({
+        url: 'https://example.com/obsidian-500',
+        reason: 'obsidian-write-failed',
+      });
+      expect(fakes.notifiedConflicts).toHaveLength(0);
+    });
+  });
 });
