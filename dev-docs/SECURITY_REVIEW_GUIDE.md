@@ -212,6 +212,10 @@ part of that model, not an open bug. Latest-spec snapshot only.
 - URL-string check only. Like the SSRF guard, the allowlist validates the
   URL string, not the IP the browser connects to; DNS-time changes are
   outside what the extension can observe.
+- Payload URL query sent intact (accepted 2026-11-24, owner). Title and
+  summary are masked at send time, but the record URL keeps its query
+  string, which may carry PII or session tokens. Stripping it would change
+  what receivers see, so it ships as-is by decision, not by oversight.
 
 **Residual-risk owner: the security reviewer.** When reviewing, do not
 accept "https only" or "declared in the manifest" as the argument that a

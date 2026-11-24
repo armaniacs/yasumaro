@@ -35,9 +35,17 @@ source ref `d3eea2533`(1124a 先頭)。差分の起点は `a1e3ffb23`(run-1 台�
 
 ## 次のアクション
 
-- [ ] owner の製品判断 3 件(C-2、NV-1、NV-2)に回答する
-- [ ] 判断に応じて修正 PBI 15〜17 を実装する(発火デモ必須)
+- [x] owner の製品判断 3 件に回答した(2026-11-24): C-2 は受容して文書化(脅威モデルに追記済み)、NV-1 は狭める、NV-2 は fail-closed 化
+- [ ] 修正 PBI 15〜19 を実装する(発火デモ必須)
 - [ ] 修正完了後に 2026-11-24-08(実機スモーク)へ進む。2026-11-24-04 の採番は修正完了の後に限る
+
+## 対応表(製品判断の反映)
+
+| 項目 | owner の回答 | 対応 |
+|---|---|---|
+| C-2 payload URL の query | 受容して文書化 | 脅威モデルの残余リスクに追記済み。修正 PBI なし |
+| NV-1 第三者送信路 | 狭める | 修正 PBI [18](2026-11-24-18-fix-webhook-allowlist-narrowing.md) |
+| NV-2 ai 不明値 | fail-closed 化 | 修正 PBI [19](2026-11-24-19-fix-ai-policy-fail-closed.md) |
 
 ## 引き継ぎ
 状態: 監査完走。修正 PBI は未着手。owner の製品判断 3 件が残っている。進捗と引き継ぎ情報は [handoff/2026-11-24-07-release-ga-security-audit-run3.md](handoff/2026-11-24-07-release-ga-security-audit-run3.md) に記録する。
