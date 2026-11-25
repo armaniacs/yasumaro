@@ -14,9 +14,9 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-26 ログ移行の大容量対応（3件） ― 🔶 進行中 ✨機能追加
+### 2026-11-26 ログ移行の大容量対応（3件） ― ✅ 3件実装完了（検証緑・アーカイブはマージ後） ✨機能追加
 
-LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和するラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin する。なぜなぜ分析 30 回 x 3 済み。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
+LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和したラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin した。なぜなぜ分析 30 回 x 3 済み。`npm run validate` 全緑 (19,360 件)。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|

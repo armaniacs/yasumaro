@@ -41,9 +41,16 @@ LOG_EXPORT_IMPORT_GUIDE.md に記載の上限 (エクスポート 10,000 件、�
 
 | NN | PBI | 種別 | RICE | SP | 状態 |
 |---|---|---|---:|---:|---|
-| 04 | [2026-11-26-04-feat-log-export-100k-paging.md](2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | ⬜ |
-| 05 | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | ⬜ |
-| 06 | [2026-11-26-06-doc-log-export-import-guide-limits.md](2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ⬜ |
+| 04 | [2026-11-26-04-feat-log-export-100k-paging.md](2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | ✅ 実装完了 (keyset ページング、MAX_EXPORT_ROWS SSOT 化、100k 往復 pin) |
+| 05 | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | ✅ 実装完了 (30 MiB 緩和、上限値入り文言、フルフィデリティ往復 pin 27.8MB / 5万件) |
+| 06 | [2026-11-26-06-doc-log-export-import-guide-limits.md](2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 実装完了 (ガイド ja/en 上限表と往復の説明、FAQ Q54 同期) |
+
+## 検証記録
+
+- PBI 04 完了時: 関連 17 ファイル 288 件緑 (type-check / lint 通過)、100k 往復実測 (ファイル 8.0MB、export 80ms / import 97ms、RSS 増分 ~170MB)
+- PBI 05 完了時: 関連 16 ファイル 300 件緑、フルフィデリティ往復 27.8MB / 50,000 行 / バッチ 250 回
+- PBI 06 完了後の最終統合: `npm run validate` 全緑 (1,375 ファイル / 19,360 件、check-privacy 含む全静的ゲート)
+- 往復 pin の注意: 軽量 100,000 行 (8.0MB) とフルフィデリティ 50,000 行 (27.8MB) の 2 系統。実データ行で 100,000 行往復は 30 MiB を超える可能性がある (title/summary/content の長さ次第)。その帯域は .db / 暗号化バックアップが担う
 
 ## 後続候補 (本ラウンドの範囲外)
 
