@@ -1,0 +1,451 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "jsPlugins": [
+    "./eslint/oxlint-plugin.mjs"
+  ],
+  "categories": {
+    "correctness": "off"
+  },
+  "env": {
+    "builtin": true
+  },
+  "ignorePatterns": [
+    "node_modules/",
+    "dist/",
+    "coverage/",
+    ".vulnhunter-fix/",
+    "graphify-out/",
+    "obsidian-smart-history_VULNHUNT_RESULTS*/",
+    ".kilo/",
+    ".claude/",
+    ".worktrees/",
+    ".stryker-tmp/",
+    "testDir/e2e/test-pages/**"
+  ],
+  "overrides": [
+    {
+      "rules": {
+        "typescript/no-explicit-any": "error",
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ],
+        "local/require-sanitized-markdown": "error",
+        "local/require-response-size-limit": "error",
+        "local/utils-layer-boundary": [
+          "error",
+          {
+            "allow": [
+              {
+                "from": "src/utils/storage/defaults.ts",
+                "to": "src/utils/aiSummaryCleaner/rules",
+                "reason": "PROVISIONAL (PBI 05): DEFAULT_SETTINGS bundles cleansing thresholds from the SSOT rule table. Duplicating the table would reintroduce drift; follow-up ADR needed (extract pure constants or reclassify)."
+              }
+            ]
+          }
+        ],
+        "no-restricted-imports": [
+          "warn",
+          {
+            "patterns": [],
+            "paths": []
+          }
+        ]
+      },
+      "files": [
+        "src/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ],
+      "plugins": [
+        "typescript"
+      ]
+    },
+    {
+      "rules": {
+        "local/no-settings-repository-direct": "error"
+      },
+      "files": [
+        "src/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/utils/storage/**/*.ts",
+        "src/**/__tests__/**/*.ts",
+        "src/background/compositionManifest.ts",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "local/no-raw-storage": [
+          "error",
+          {
+            "allow": [
+              {
+                "file": "src/background/migration/legacyMigration.ts",
+                "reason": "One-shot legacy browsing-data migration: reads/removes legacy keys once, never a settings round-trip."
+              },
+              {
+                "file": "src/background/migration/opfsRecovery.ts",
+                "reason": "OPFS fallback recovery owns its fallback-mode/data keys; storage-engine repair, not settings."
+              },
+              {
+                "file": "src/background/recordingTriggerManager.ts",
+                "reason": "Migration-compat read of pre-blob top-level trigger keys with blob-snapshot fallback; legacy read path."
+              },
+              {
+                "file": "src/background/allowedUrlsSync.ts",
+                "reason": "Derived allowlist cache synced from the settings blob on every settings write plus startup seed (fail-closed reader); write-through cache, not a settings source."
+              },
+              {
+                "file": "src/background/dailyPurgeHandler.ts",
+                "reason": "Export bookkeeping sweep: enumerates the whole store and removes expired export keys; maintenance, not settings."
+              },
+              {
+                "file": "src/background/dashboardSqliteWiring.ts",
+                "reason": "One-shot cleanup remove of legacy keys during dashboard/SQLite wiring."
+              },
+              {
+                "file": "src/background/localMarkdownExportCore.ts",
+                "reason": "Export file payload store (get-all plus remove of flushed keys); content data, not settings."
+              },
+              {
+                "file": "src/background/localMarkdownExportRetention.ts",
+                "reason": "Export retention bookkeeping read (download IDs / erase queue); content data, not settings."
+              },
+              {
+                "file": "src/background/webhookExport/webhookExportHistory.ts",
+                "reason": "Feature event log behind an injectable WebhookExportStore seam; history data, not settings."
+              },
+              {
+                "file": "src/offscreen/opfsWorker/migrationV2.ts",
+                "reason": "One-shot OPFS migration marker keys; migration infra, not settings."
+              },
+              {
+                "file": "src/offscreen/sqliteEngineContext/fallbackMigration.ts",
+                "reason": "Fallback-mode flag cleanup during engine migration; migration infra, not settings."
+              },
+              {
+                "file": "src/offscreen/sqliteEngineContext/migrationBackup.ts",
+                "reason": "Pre-migration backup payload store; storage-engine safety copy, not settings."
+              },
+              {
+                "file": "src/offscreen/sqliteEngineHost.ts",
+                "reason": "OPFS fallback-mode flag owned by the storage engine itself; engine-internal state."
+              },
+              {
+                "file": "src/offscreen/sqliteStatus.ts",
+                "reason": "Engine status probe read; diagnostics, not settings."
+              },
+              {
+                "file": "src/offscreen/storageFallback.ts",
+                "reason": "OPFS-unavailable fallback key-value/audit store plus quota reads; implements a storage engine, not a settings client."
+              },
+              {
+                "file": "src/dashboard/panels/asyncData/sqliteHistoryModel.ts",
+                "reason": "Migration candidate: sort preference behind an injectable SortPreferencePersistence seam; UI-only preference."
+              },
+              {
+                "file": "src/dashboard/panels/diagnostic/debugModeStore.ts",
+                "reason": "Migration candidate: debugMode flag port centralizing the key; diagnostic flag."
+              },
+              {
+                "file": "src/dashboard/panels/diagnostic/DiagnosticsCollector.ts",
+                "reason": "Quota diagnostic read (getBytesInUse, injectable via deps); diagnostics, not settings."
+              },
+              {
+                "file": "src/popup/contentFetchGateway.ts",
+                "reason": "Reader-only opt-in flag read on the migration-allowlisted top-level key; the one-click flow must stay writer-free."
+              },
+              {
+                "file": "src/utils/aiSummaryCleaner/feedbackQueue.ts",
+                "reason": "Cleansing feedback queue under withOptimisticLock; telemetry queue, not settings."
+              },
+              {
+                "file": "src/utils/aiUsageTracker.ts",
+                "reason": "Usage metering counters plus migration-compat blob/top-level settings reads; metering, not a settings writer."
+              },
+              {
+                "file": "src/utils/crypto/hmacKeyStore.ts",
+                "reason": "HMAC key envelopes plus quarantine writes must bypass settings encryption (storing keys inside the encrypted blob is circular)."
+              },
+              {
+                "file": "src/utils/crypto/kdfNegotiator.ts",
+                "reason": "Legacy KDF salt/secret bootstrap read for key derivation; crypto setup precedes settings decryption."
+              },
+              {
+                "file": "src/utils/logger/storageAdapter.ts",
+                "reason": "Log ring-buffer store behind an injectable, serialized LogStorageAdapter; the logger must stay independent of the settings seam to avoid import cycles."
+              },
+              {
+                "file": "src/utils/pendingStorage.ts",
+                "reason": "Pending-pages queue plus one-shot legacy-key migration; queue infra, not settings."
+              },
+              {
+                "file": "src/utils/trustDb/TrustDbKernel.ts",
+                "reason": "Trust database blob load; security dataset, not user settings."
+              }
+            ]
+          }
+        ]
+      },
+      "files": [
+        "src/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "local/no-direct-console-log": [
+          "error",
+          {
+            "allow": [
+              {
+                "file": "src/wasm/textrank/bench.ts",
+                "reason": "Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging."
+              },
+              {
+                "file": "src/wasm/pii-sanitizer/bench.ts",
+                "reason": "Grandfathered: CLI bench tooling stdout reporting plus a bench-failure dump, not product logging."
+              },
+              {
+                "file": "src/wasm/sentence-dedup/bench.ts",
+                "reason": "Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging."
+              },
+              {
+                "file": "src/wasm/tag-cooccur/bench.ts",
+                "reason": "Grandfathered: CLI bench tooling stdout reporting (ms/op, parity, speedup), not product logging."
+              },
+              {
+                "file": "src/utils/aiSummaryCleaner/helpers.ts",
+                "reason": "Grandfathered (PBI 2026-11-11-03): pre-existing querySelectorAllDeep diagnostics; seam routing is a follow-up."
+              },
+              {
+                "file": "src/utils/ui/settingsUiHelper.ts",
+                "reason": "Grandfathered (PBI 2026-11-11-03): pre-existing status-mirror failure diagnostic; seam routing is a follow-up."
+              },
+              {
+                "file": "src/utils/wildcardToRegex.ts",
+                "reason": "Grandfathered (PBI 2026-11-11-03): pre-existing pattern diagnostic; seam routing is a follow-up."
+              },
+              {
+                "file": "src/utils/sensitiveDataMask.ts",
+                "reason": "Last-resort fallback only: the primary path delegates to the logger seam via dynamic import; this line runs solely when the seam module itself cannot load."
+              }
+            ]
+          }
+        ]
+      },
+      "files": [
+        "src/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "no-restricted-imports": [
+          "warn",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/popup/*",
+                  "**/popup.js",
+                  "**/dashboard/*",
+                  "**/dashboard.js"
+                ],
+                "message": "background 層から UI 層 (popup/dashboard) への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md."
+              }
+            ],
+            "paths": []
+          }
+        ]
+      },
+      "files": [
+        "src/background/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/content/*",
+                  "**/content/**",
+                  "**/content.js"
+                ],
+                "message": "background 層から content 層への import は禁止。共有ロジックは src/utils/ の中立層に配置すること。See dev-docs/LAYERS.md."
+              }
+            ]
+          }
+        ]
+      },
+      "files": [
+        "src/background/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/dashboard/**",
+                  "**/dashboard.js",
+                  "**/dashboard"
+                ],
+                "message": "wasm/offscreen 層から dashboard への上向き import は禁止。共有語彙は src/utils/ に配置すること。See dev-docs/LAYERS.md."
+              }
+            ]
+          }
+        ]
+      },
+      "files": [
+        "src/wasm/**/*.ts",
+        "src/offscreen/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "**/background/**"
+                ],
+                "allowTypeImports": true,
+                "message": "messaging is the neutral wire layer: no runtime import from background (import type is allowed). See dev-docs/LAYERS.md."
+              }
+            ]
+          }
+        ]
+      },
+      "files": [
+        "src/messaging/**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/__tests__/**",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "no-unused-vars": [
+          "error",
+          {
+            "argsIgnorePattern": "^_",
+            "varsIgnorePattern": "^_",
+            "caughtErrorsIgnorePattern": "^_"
+          }
+        ]
+      },
+      "files": [
+        "**/*.ts"
+      ],
+      "excludeFiles": [
+        "src/**/*.ts",
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "rules": {
+        "vitest/expect-expect": [
+          "error",
+          {
+            "assertFunctionNames": [
+              "expect",
+              "testPiiDetection",
+              "expectParity"
+            ]
+          }
+        ],
+        "vitest/valid-expect": "error",
+        "no-self-compare": "error",
+        "local/no-tautology-expect": "error",
+        "local/no-test-sleep": "error",
+        "local/no-vacuous-negative-wait": "error",
+        "local/no-manual-protocol-version": "error",
+        "local/no-greedy-fake-timers": "warn",
+        "local/no-dead-test-skip": "error"
+      },
+      "files": [
+        "src/**/__tests__/**/*.test.ts",
+        "testDir/__tests__/**/*.test.ts",
+        "eslint/__tests__/**/*.test.ts"
+      ],
+      "excludeFiles": [
+        "testDir/e2e/test-pages/**"
+      ],
+      "plugins": [
+        "vitest"
+      ]
+    },
+    {
+      "rules": {
+        "local/no-fixed-wait": "error",
+        "local/no-test-sleep": "error",
+        "local/no-dead-test-skip": "error"
+      },
+      "files": [
+        "testDir/**/*.{ts,js,mjs}",
+        "bench/**/*.{ts,js,mjs}"
+      ],
+      "excludeFiles": [
+        "testDir/e2e/test-pages/**"
+      ]
+    },
+    {
+      "files": [
+        "src/messaging/auditLogGateway.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": "off"
+      }
+    },
+    {
+      "files": [
+        "src/background/ai/__tests__/providerCatalog.test.ts",
+        "src/background/ai/__tests__/provider-catalog-derivation.test.ts",
+        "src/utils/storage/__tests__/provider-domain-ssot.derivation.test.ts",
+        "src/utils/storage/__tests__/providerAllowlist.test.ts"
+      ],
+      "plugins": [
+        "vitest"
+      ],
+      "rules": {
+        "vitest/expect-expect": "off"
+      }
+    }
+  ]
+}

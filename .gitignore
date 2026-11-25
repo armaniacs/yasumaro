@@ -73,6 +73,9 @@ plans/
 # Track the token-free registry pin (PBI 2026-10-18-03): every clone must
 # resolve from the official registry regardless of user-level ~/.npmrc.
 !.npmrc
+# Track generated oxlint config verified by scripts/__tests__/gen-oxlintrc-ssot.test.ts
+# so fresh checkouts (e.g. Coverage CI without prior `npm run lint`) pass.
+!.oxlintrc.json
 
 # Allow GitHub Actions workflow files (not matched by .* above)
 !/.github/
