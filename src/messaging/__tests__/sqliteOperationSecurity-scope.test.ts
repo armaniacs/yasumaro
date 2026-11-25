@@ -24,6 +24,13 @@ const UNBOUND_ARCHIVE_SUBTYPES: ReadonlySet<string> = new Set([
   'archive_cleanup',
 ]);
 
+/** Restore-session subtypes intentionally unbound — no staging name yet. */
+const UNBOUND_RESTORE_SUBTYPES: ReadonlySet<string> = new Set([
+  // The worker issues the staging name in the response; the request carries
+  // only the declared sizes.
+  'restore_begin',
+]);
+
 /** Archive subtypes that are token-exempt (read-only) need no binding. */
 const tokenExempt = new Set<string>(TOKEN_EXEMPT_OPS);
 
@@ -41,6 +48,25 @@ describe('archive token scope binding drift guard (PBI 2026-09-11-01)', () => {
         ARCHIVE_SCOPE_BY_SUBTYPE[subtype],
         `${subtype} is token-required and not explicitly unbound — add a scope binding or justify it in UNBOUND_ARCHIVE_SUBTYPES`,
       ).toBeDefined();
+    }
+  });
+
+  it('binds every token-required restore-session subtype that is not explicitly unbound', () => {
+    // Same drift discipline as the archive group above: chunk/commit/abort
+    // are destructive through stagingName, so each must carry the 'staging'
+    // binding or a documented justification.
+    const restoreSubtypes = ALL_DASHBOARD_SQLITE_SUBTYPES.filter((s) =>
+      s.startsWith('restore_'),
+    );
+    expect(restoreSubtypes.length).toBe(4);
+    for (const subtype of restoreSubtypes) {
+      if (tokenExempt.has(subtype) || UNBOUND_RESTORE_SUBTYPES.has(subtype)) {
+        continue;
+      }
+      expect(
+        ARCHIVE_SCOPE_BY_SUBTYPE[subtype],
+        `${subtype} is token-required and not explicitly unbound — add a scope binding or justify it in UNBOUND_RESTORE_SUBTYPES`,
+      ).toBe('staging');
     }
   });
 
@@ -62,6 +88,15 @@ describe('archive token scope binding drift guard (PBI 2026-09-11-01)', () => {
     const hashA = await deriveScopeHash('archive_open', { stagingName: 'staging-a.db' });
     const hashB = await deriveScopeHash('archive_open', { stagingName: 'staging-b.db' });
     expect(hashA).not.toBe(hashB);
+  });
+
+  it('derives a hash for the restore chunk/commit/abort subtypes and leaves restore_begin unbound', async () => {
+    const stagingName = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    for (const subtype of ['restore_chunk', 'restore_commit', 'restore_abort']) {
+      const hash = await deriveScopeHash(subtype, { stagingName });
+      expect(hash, `${subtype} must derive a scope hash`).toMatch(/^[0-9a-f]{64}$/);
+    }
+    expect(await deriveScopeHash('restore_begin', { totalBytes: 1, totalChunks: 1 })).toBeUndefined();
   });
 
   it('leaves prepare_incoming / cleanup unbound (no destructive parameters)', async () => {

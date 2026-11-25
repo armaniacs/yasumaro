@@ -17,7 +17,7 @@ import {
   MAX_VISIT_DURATION_SECONDS,
   VALIDATOR_LIMITS,
 } from '../utils/limits.js';
-import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName } from '../utils/archiveGuards.js';
+import { isHttpScheme, assertCutoffPair, CutoffMismatchError, decodeStagingName, decodeRestoreStagingName } from '../utils/archiveGuards.js';
 import { isSkipReasonCode } from '../utils/skipReason.js';
 import type {
   ExtensionMessage,
@@ -314,6 +314,12 @@ const nonNegativeInteger = (field: string): DashboardSqliteFieldSpec => ({
   message: (s) => `${s}: ${field} must be a non-negative integer`,
 });
 
+const positiveInteger = (field: string): DashboardSqliteFieldSpec => ({
+  field,
+  test: isPositiveInteger,
+  message: (s) => `${s}: ${field} must be a positive integer`,
+});
+
 const nonEmptyString = (field: string): DashboardSqliteFieldSpec => ({
   field,
   test: isNonEmptyString,
@@ -356,6 +362,21 @@ function stagingNameGuard(p: Record<string, unknown>, subtype: string): void {
     decodeStagingName(p.stagingName);
   } catch (error) {
     const failure = new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid staging name`, 'stagingName');
+    failure.cause = error;
+    throw failure;
+  }
+}
+
+/** Restore-session staging-name boundary decode — the twin of
+ *  `stagingNameGuard` for the chunked restore transport: the staging name
+ *  carries the `restore_incoming_` prefix, which the
+ *  archive regex rejects, so the two guards must stay separate. Same
+ *  cause-preserving throw shape as the archive guard. */
+function restoreStagingNameGuard(p: Record<string, unknown>, subtype: string): void {
+  try {
+    decodeRestoreStagingName(p.stagingName);
+  } catch (error) {
+    const failure = new ValidationError('DashboardSqliteValidator', `${subtype}: stagingName must be a valid restore staging name`, 'stagingName');
     failure.cause = error;
     throw failure;
   }
@@ -621,12 +642,33 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
     ],
     guardLast: importPayloadGuard,
   },
-  restore_db: {
+  // Chunked restore session. restore_chunk.data is the
+  // one message-size-capped field: each chunk is bounded by
+  // MAX_RESTORE_CHUNK_BASE64 (4M base64 chars ≒ 3MiB of DB bytes), far below
+  // MAX_RESTORE_DB_BYTES, so the VULN-008 per-message amplification budget
+  // holds even for a 30MB-class DB. offset is the accumulated BYTE offset in
+  // the staging file — base64 chars and bytes are different layers.
+  restore_begin: {
     fields: [
-      stringField('data'),
-      stringLengthCap('data', VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES),
+      positiveInteger('totalBytes'),
+      positiveInteger('totalChunks'),
     ],
   },
+  restore_chunk: {
+    guardFirst: restoreStagingNameGuard,
+    fields: [
+      nonNegativeInteger('offset'),
+      stringField('data'),
+      stringLengthCap('data', VALIDATOR_LIMITS.MAX_RESTORE_CHUNK_BASE64),
+    ],
+  },
+  restore_commit: {
+    guardFirst: restoreStagingNameGuard,
+    fields: [
+      positiveInteger('totalBytes'),
+    ],
+  },
+  restore_abort: { guardFirst: restoreStagingNameGuard },
   append_to_obsidian: {
     fields: [
       arrayField('ids'),

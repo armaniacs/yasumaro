@@ -1,10 +1,10 @@
 import { StorageKeys } from '../../../utils/storage/types.js';
 import type { DashboardSqliteRequest, DashboardSqliteSubtype } from '../../../messaging/dashboardSqliteProtocol.js';
 import { validateImportRow } from '../../../messaging/validators.js';
-import { bytesToBase64, base64ToBytes } from '../../../utils/crypto/index.js';
+import { bytesToBase64 } from '../../../utils/crypto/index.js';
 import { logWarn } from '../../../utils/logger/api.js';
 import type { DepsResult, MaintenanceBatchDeps } from './deps.js';
-import { toFailure, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from './deps.js';
+import { toFailure, MAX_IMPORT_ROWS } from './deps.js';
 
 /** How many per-row rejection reasons ride the exclusion WARN log at most. */
 const MAX_EXCLUSION_REASONS = 5;
@@ -15,7 +15,7 @@ const MAX_EXCLUSION_REASONS = 5;
  * here via the router's fallthrough and is reported by the `default` case).
  */
 export const MAINTENANCE_BATCH_SUBTYPES: ReadonlySet<DashboardSqliteSubtype> = new Set([
-  'migrate', 'import', 'restore_db', 'backup_db', 'backfill_metadata', 'resync_legacy', 'cleanup_legacy', 'purge_now', 'content_purge_now',
+  'migrate', 'import', 'backup_db', 'backfill_metadata', 'resync_legacy', 'cleanup_legacy', 'purge_now', 'content_purge_now',
 ]);
 
 /**
@@ -193,22 +193,6 @@ export function createMaintenanceBatchHandler(deps: MaintenanceBatchDeps) {
           return { success: false, error: result.error.message };
         }
         return { success: true, inserted: result.data.count, skipped: result.data.skipped, total: rows.length };
-      }
-      case 'restore_db': {
-        const data = payload.data;
-        if (typeof data !== 'string' || data.length === 0) {
-          return { success: false, error: 'No data provided' };
-        }
-        // VULN-008 fix: reject oversized base64 payload before decoding
-        // 100MB raw → ~134MB base64; use 150MB base64 as safe ceiling
-        if (data.length > MAX_RESTORE_BASE64_BYTES) {
-          return { success: false, error: `Restore data exceeds maximum size (${Math.round(data.length / 1024 / 1024)}MB > ${Math.round(MAX_RESTORE_BASE64_BYTES / 1024 / 1024)}MB)` };
-        }
-        const result = await deps.restoreDb(base64ToBytes(data));
-        if (!result.success) {
-          return toFailure(result);
-        }
-        return { success: true };
       }
       case 'purge_now':
         return runSettingsPurge(

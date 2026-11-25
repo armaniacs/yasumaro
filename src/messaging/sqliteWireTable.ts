@@ -532,7 +532,8 @@ export function isSqliteWireOp(op: string): op is SqliteWireOp {
 // Deliberately tabled here and nowhere else:
 // - backupDb decodes to the base64 string, not bytes: the bytes/base64 codec
 //   lives in utils/crypto and stays with the dashboard-tier alias (one line).
-// - restoreDb encodes from bytes the same way (alias converts, row validates).
+// - the restore session rows decode the wire shapes only; bytes/base64
+//   chunking policy stays with the dashboard-tier alias (dashboardSqliteService).
 // ============================================================================
 
 /** Codec carried by one dashboard-service row (dashboard hop only). */
@@ -624,10 +625,31 @@ export const DASHBOARD_SERVICE_TABLE = [
       return requiredString(response.data, 'data');
     },
   }),
+  // Chunked restore session rows: the public restoreDb
+  // (dashboardSqliteService) drives begin -> chunk* -> commit and aborts the
+  // staging on failure, so there is no single-shot restore row here anymore.
   defineDashboardServiceOp({
-    op: 'restoreDb',
-    subtype: 'restore_db',
+    op: 'restoreBegin',
+    subtype: 'restore_begin',
+    defaultError: 'Restore preparation failed',
+    serviceDecode: (response) => requiredString(response.stagingName, 'stagingName'),
+  }),
+  defineDashboardServiceOp({
+    op: 'restoreChunk',
+    subtype: 'restore_chunk',
+    defaultError: 'Restore transfer failed',
+    serviceDecode: (response) => requiredNonNegativeNumber(response.written, 'written'),
+  }),
+  defineDashboardServiceOp({
+    op: 'restoreCommit',
+    subtype: 'restore_commit',
     defaultError: 'Restore failed',
+    serviceDecode: voidDecode,
+  }),
+  defineDashboardServiceOp({
+    op: 'restoreAbort',
+    subtype: 'restore_abort',
+    defaultError: 'Restore cleanup failed',
     serviceDecode: voidDecode,
   }),
   defineDashboardServiceOp({
@@ -785,6 +807,51 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     family: 'maintain',
     messageType: 'SQLITE_RESTORE',
     encodePayload: (op) => ({ data: Array.from((op as Extract<MaintainOp, { type: 'restore' }>).data) }),
+    decodeGateway: voidDecode,
+  }),
+  // Chunked restore staging transport: the dashboard
+  // uploads the incoming DB in capped chunks (base64 stays end-to-end until
+  // the offscreen document decodes it once before the worker write). The
+  // single-shot 'restore' row above stays for now — see the PBI report for
+  // the keep-vs-remove decision.
+  defineSqliteMaintainWireOp({
+    op: 'restorePrepareIncoming',
+    family: 'maintain',
+    messageType: 'SQLITE_RESTORE_BEGIN',
+    encodePayload: (op) => {
+      const o = op as Extract<MaintainOp, { type: 'restorePrepareIncoming' }>;
+      return { totalBytes: o.totalBytes, totalChunks: o.totalChunks };
+    },
+    decodeGateway: (response) => response.stagingName as string,
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'restoreAppend',
+    family: 'maintain',
+    messageType: 'SQLITE_RESTORE_APPEND',
+    // `data` rides as base64 text (the DASHBOARD_SQLITE chunk payload shape),
+    // not a number[]: chrome.runtime messaging JSON-serializes, so a decoded
+    // Uint8Array would re-inflate into a ~4x larger array for no benefit.
+    encodePayload: (op) => {
+      const o = op as Extract<MaintainOp, { type: 'restoreAppend' }>;
+      return { stagingName: o.stagingName, offset: o.offset, data: o.dataBase64 };
+    },
+    decodeGateway: (response) => ({ written: response.written as number }),
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'restoreCommit',
+    family: 'maintain',
+    messageType: 'SQLITE_RESTORE_COMMIT',
+    encodePayload: (op) => {
+      const o = op as Extract<MaintainOp, { type: 'restoreCommit' }>;
+      return { stagingName: o.stagingName, totalBytes: o.totalBytes };
+    },
+    decodeGateway: voidDecode,
+  }),
+  defineSqliteMaintainWireOp({
+    op: 'restoreAbort',
+    family: 'maintain',
+    messageType: 'SQLITE_RESTORE_ABORT',
+    encodePayload: (op) => ({ stagingName: (op as Extract<MaintainOp, { type: 'restoreAbort' }>).stagingName }),
     decodeGateway: voidDecode,
   }),
   defineSqliteMaintainWireOp({

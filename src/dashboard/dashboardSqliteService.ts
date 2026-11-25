@@ -23,6 +23,7 @@ import {
 // in src/messaging/dashboardGateway.ts; this service owns only conversion.
 import { dashboardGateway, type SqliteResult } from '../messaging/dashboardGateway.js';
 import { bytesToBase64, base64ToBytes } from '../utils/crypto/index.js';
+import { MAX_RESTORE_CHUNK_BASE64 } from '../utils/limits.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { pickDefined } from '../utils/objectUtils.js';
 import type { SqliteStatusResult } from '../messaging/sqliteMessages.js';
@@ -340,11 +341,68 @@ export async function backupDb(): Promise<ServiceResult<Uint8Array>> {
 }
 
 /**
+ * Max DB bytes one restore_chunk carries. base64 inflates by 4/3, so the
+ * byte budget is the base64 cap scaled back down (floor keeps the encoded
+ * chunk at or under MAX_RESTORE_CHUNK_BASE64 chars).
+ */
+export const RESTORE_CHUNK_BYTES = Math.floor(MAX_RESTORE_CHUNK_BASE64 / 4) * 3;
+
+/**
  * Restore the entire history database from a binary snapshot.
  * Requires a confirmation token (destructive operation).
+ *
+ * Transport is the staging chunk session: begin issues the staging name,
+ * the DB bytes go out in capped chunks (offset = accumulated BYTES, not
+ * base64 chars), commit validates and swaps the file in. A failed chunk or
+ * commit aborts the session once (fire-and-forget cleanup) and surfaces the
+ * original failure — the live DB stays untouched until a successful commit.
  */
-export function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
-  return sqliteClient.call('restoreDb', { subtype: 'restore_db', data: bytesToBase64(data) });
+export async function restoreDb(data: Uint8Array): Promise<ServiceResult<void>> {
+  const totalBytes = data.byteLength;
+  if (totalBytes < 1) {
+    return { error: 'Restore requires a non-empty database snapshot' };
+  }
+
+  const totalChunks = Math.ceil(totalBytes / RESTORE_CHUNK_BYTES);
+  const begin = await sqliteClient.call('restoreBegin', { subtype: 'restore_begin', totalBytes, totalChunks });
+  if (isServiceError(begin)) return begin;
+  const stagingName = begin.data;
+
+  for (let offset = 0; offset < totalBytes; offset += RESTORE_CHUNK_BYTES) {
+    const chunk = data.subarray(offset, Math.min(offset + RESTORE_CHUNK_BYTES, totalBytes));
+    const sent = await sqliteClient.call('restoreChunk', {
+      subtype: 'restore_chunk',
+      stagingName,
+      offset,
+      data: bytesToBase64(chunk),
+    });
+    if (isServiceError(sent)) {
+      await abortRestoreSession(stagingName);
+      return sent;
+    }
+    // Fail closed on a short/long write: continuing would commit a DB whose
+    // bytes differ from the snapshot.
+    if (sent.data !== chunk.byteLength) {
+      await abortRestoreSession(stagingName);
+      return { error: `Restore chunk write mismatch at offset ${offset}: wrote ${sent.data} of ${chunk.byteLength} bytes` };
+    }
+  }
+
+  const commit = await sqliteClient.call('restoreCommit', { subtype: 'restore_commit', stagingName, totalBytes });
+  if (isServiceError(commit)) {
+    await abortRestoreSession(stagingName);
+    return commit;
+  }
+  return { data: undefined };
+}
+
+/** One best-effort cleanup attempt; the outcome never masks the caller's error. */
+async function abortRestoreSession(stagingName: string): Promise<void> {
+  try {
+    await sqliteClient.call('restoreAbort', { subtype: 'restore_abort', stagingName });
+  } catch {
+    // Cleanup is best-effort; the next restore_begin sweeps leftovers anyway.
+  }
 }
 
 // ============================================================================

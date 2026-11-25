@@ -21,6 +21,10 @@ import {
   sqliteHealthCheck,
   backupDb as sqliteBackupDb,
   restoreDb as sqliteRestoreDb,
+  restorePrepareIncoming as sqliteRestorePrepareIncoming,
+  restoreAppend as sqliteRestoreAppend,
+  restoreCommit as sqliteRestoreCommit,
+  restoreAbort as sqliteRestoreAbort,
   purgeOldRecords as sqlitePurgeOldRecords,
   purgeContent as sqlitePurgeContent,
 } from './dbMaintenance.js';
@@ -33,6 +37,8 @@ import {
   purgeAuditLog as sqlitePurgeAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { base64ToBytes } from '../utils/crypto/index.js';
+import { errorMessage } from '../utils/errorUtils.js';
 import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
 import { supportsArchive, type ArchiveStaging } from './archiveStaging.js';
@@ -203,6 +209,41 @@ async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => v
   const data = new Uint8Array(rawData);
   const result = await sqliteRestoreDb(data);
   sendResponse(result.success ? { success: true } : { success: false, error: result.error });
+}
+
+// Chunked restore staging handlers (dashboard restoreDb session). The base64
+// chunk stays text through the SW hop and is decoded once here — the worker
+// receives a real Uint8Array over structured clone and writes it at the
+// declared byte offset.
+async function handleRestoreBegin(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_BEGIN' }>).payload;
+  const result = await sqliteRestorePrepareIncoming(Number(payload.totalBytes), Number(payload.totalChunks));
+  sendResponse(result);
+}
+
+async function handleRestoreAppend(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_APPEND' }>).payload;
+  let data: Uint8Array;
+  try {
+    data = base64ToBytes(String(payload.data ?? ''));
+  } catch (error) {
+    sendResponse({ success: false, error: `Restore chunk is not valid base64: ${errorMessage(error)}` });
+    return;
+  }
+  const result = await sqliteRestoreAppend(String(payload.stagingName), Number(payload.offset), data);
+  sendResponse(result);
+}
+
+async function handleRestoreCommit(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_COMMIT' }>).payload;
+  const result = await sqliteRestoreCommit(String(payload.stagingName), Number(payload.totalBytes));
+  sendResponse(result);
+}
+
+async function handleRestoreAbort(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
+  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_ABORT' }>).payload;
+  const result = await sqliteRestoreAbort(String(payload.stagingName));
+  sendResponse(result);
 }
 
 /**
@@ -475,6 +516,10 @@ const handlerRecord = {
   SQLITE_CLEAR_ALL: handleClearAll,
   SQLITE_BACKUP: handleBackup,
   SQLITE_RESTORE: handleRestore,
+  SQLITE_RESTORE_BEGIN: handleRestoreBegin,
+  SQLITE_RESTORE_APPEND: handleRestoreAppend,
+  SQLITE_RESTORE_COMMIT: handleRestoreCommit,
+  SQLITE_RESTORE_ABORT: handleRestoreAbort,
   SQLITE_PURGE: handlePurge,
   CONTENT_PURGE: handleContentPurge,
   ...archiveMessageHandlers,

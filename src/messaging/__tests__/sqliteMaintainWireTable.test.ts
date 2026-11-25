@@ -19,19 +19,23 @@ import {
 import { SQLITE_MESSAGE_TYPES } from '../sqliteMessages.js';
 
 describe('messaging/sqliteMaintainWireTable: shape', () => {
-  it('has exactly the 8 non-archive maintain ops', () => {
-    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(8);
+  it('has exactly the 12 non-archive maintain ops', () => {
+    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(12);
     expect(SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op).sort()).toEqual(
-      ['backup', 'clearAll', 'healthCheck', 'init', 'purgeAuditLog', 'purgeContent', 'purgeOldRecords', 'restore'].sort(),
+      [
+        'backup', 'clearAll', 'healthCheck', 'init',
+        'restore', 'restoreAbort', 'restoreAppend', 'restoreCommit', 'restorePrepareIncoming',
+        'purgeAuditLog', 'purgeContent', 'purgeOldRecords',
+      ].sort(),
     );
     for (const entry of SQLITE_MAINTAIN_WIRE_TABLE) expect(entry.family).toBe('maintain');
   });
 
   it('ops and messages are unique; the purge split stays three distinct messages', () => {
     const ops = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op);
-    expect(new Set(ops).size).toBe(8);
+    expect(new Set(ops).size).toBe(12);
     const messages = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.messageType);
-    expect(new Set(messages).size).toBe(8);
+    expect(new Set(messages).size).toBe(12);
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeOldRecords.messageType).toBe('SQLITE_PURGE');
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeContent.messageType).toBe('CONTENT_PURGE');
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeAuditLog.messageType).toBe('SQLITE_AUDIT_LOG_PURGE');
@@ -74,6 +78,39 @@ describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the 
     expect(row.messageType).toBe('SQLITE_RESTORE');
     expect(row.encodePayload({ type: 'restore', data: new Uint8Array([1, 2, 3]) })).toEqual({ data: [1, 2, 3] });
     expect(row.decodeGateway({ success: true })).toBeUndefined();
+  });
+
+  it('restorePrepareIncoming sends SQLITE_RESTORE_BEGIN with the session declaration and decodes the staging name', () => {
+    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.restorePrepareIncoming;
+    expect(row.messageType).toBe('SQLITE_RESTORE_BEGIN');
+    expect(row.encodePayload({ type: 'restorePrepareIncoming', totalBytes: 7, totalChunks: 2 }))
+      .toEqual({ totalBytes: 7, totalChunks: 2 });
+    expect(row.decodeGateway({ success: true, stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' }))
+      .toBe('restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db');
+  });
+
+  it('restoreAppend sends SQLITE_RESTORE_APPEND with base64 passthrough and decodes the written count', () => {
+    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.restoreAppend;
+    expect(row.messageType).toBe('SQLITE_RESTORE_APPEND');
+    // The base64 string rides untouched (single decode happens offscreen).
+    expect(row.encodePayload({ type: 'restoreAppend', stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 4096, dataBase64: 'ChQ=' }))
+      .toEqual({ stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 4096, data: 'ChQ=' });
+    expect(row.decodeGateway({ success: true, written: 2 })).toEqual({ written: 2 });
+  });
+
+  it('restoreCommit sends SQLITE_RESTORE_COMMIT and decodes to undefined', () => {
+    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.restoreCommit;
+    expect(row.messageType).toBe('SQLITE_RESTORE_COMMIT');
+    expect(row.encodePayload({ type: 'restoreCommit', stagingName: 's.db', totalBytes: 8 }))
+      .toEqual({ stagingName: 's.db', totalBytes: 8 });
+    expect(row.decodeGateway()).toBeUndefined();
+  });
+
+  it('restoreAbort sends SQLITE_RESTORE_ABORT and decodes to undefined', () => {
+    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.restoreAbort;
+    expect(row.messageType).toBe('SQLITE_RESTORE_ABORT');
+    expect(row.encodePayload({ type: 'restoreAbort', stagingName: 's.db' })).toEqual({ stagingName: 's.db' });
+    expect(row.decodeGateway()).toBeUndefined();
   });
 
   it('clearAll sends SQLITE_CLEAR_ALL with an empty payload and decodes to undefined', () => {

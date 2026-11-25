@@ -82,6 +82,49 @@ export async function handleBackup(ctx: HandlerContext): Promise<Uint8Array> {
 }
 
 /**
+ * Validate an OPFS file as a genuine full-backup SQLite DB (not an archive
+ * container): openable, has a sqlite_master, carries no yasumaro_archive_meta
+ * (that means "use the archive restore panel"), and every trigger matches the
+ * schema's own sync triggers byte-for-byte (modulo whitespace). Shared by the
+ * single-shot restore (temp file) and the chunked restore commit (staging
+ * file) so the two paths cannot drift on what "a valid backup" is.
+ * Throws on the first failure; the caller owns cleanup of the file.
+ */
+export async function validateFullBackupFile(fileName: string): Promise<void> {
+  const tmpEngine = await createEngine(fileName, WASM_ASSET_URLS.opfsEngineWasm);
+  try {
+    await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
+    // An archive-format .db carries yasumaro_archive_meta and must NOT be
+    // accepted by the full restore (it would overwrite the main DB with an
+    // FTS-less copy). Direct users to the archive restore UI.
+    const archiveRows = await tmpEngine.query(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'yasumaro_archive_meta'",
+    );
+    if (archiveRows.length > 0) {
+      throw new Error(
+        'Archive database detected: use the archive restore panel (archive_restore) instead of full restore_db',
+      );
+    }
+    const triggerRows = await tmpEngine.query(
+      "SELECT name, sql FROM sqlite_master WHERE type = 'trigger'",
+    );
+    // WHY allowlist by exact SQL, not just name: a crafted backup file could
+    // reuse a trusted trigger name with hostile SQL. Only byte-identical
+    // (modulo whitespace) copies of the schema's own sync triggers pass.
+    const expected = expectedTriggerSql();
+    for (const row of triggerRows) {
+      const name = String(row.name ?? '');
+      const sql = normalizeTriggerSql(String(row.sql ?? ''));
+      if (expected.get(name) !== sql) {
+        throw new Error(`Restore validation failed: unexpected trigger '${name}'`);
+      }
+    }
+  } finally {
+    await tmpEngine.close();
+  }
+}
+
+/**
  * Restore a binary .db file: write to temp file → validate as SQLite →
  * replace production file. On validation failure, temp file is discarded
  * and the production file is untouched.
@@ -103,36 +146,7 @@ export async function handleRestore(
 
   // 2. Validate as SQLite
   try {
-    const tmpEngine = await createEngine(RESTORE_TMP_FILENAME, WASM_ASSET_URLS.opfsEngineWasm);
-    await tmpEngine.exec('SELECT count(*) FROM sqlite_master');
-    // PBI 2026-09-06-01: an archive-format .db carries yasumaro_archive_meta
-    // and must NOT be accepted by the full restore (it would overwrite the
-    // main DB with an FTS-less copy). Direct users to the archive restore UI.
-    const archiveRows = await tmpEngine.query(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'yasumaro_archive_meta'",
-    );
-    if (archiveRows.length > 0) {
-      await tmpEngine.close();
-      throw new Error(
-        'Archive database detected: use the archive restore panel (archive_restore) instead of full restore_db',
-      );
-    }
-    const triggerRows = await tmpEngine.query(
-      "SELECT name, sql FROM sqlite_master WHERE type = 'trigger'",
-    );
-    // WHY allowlist by exact SQL, not just name: a crafted backup file could
-    // reuse a trusted trigger name with hostile SQL. Only byte-identical
-    // (modulo whitespace) copies of the schema's own sync triggers pass.
-    const expected = expectedTriggerSql();
-    for (const row of triggerRows) {
-      const name = String(row.name ?? '');
-      const sql = normalizeTriggerSql(String(row.sql ?? ''));
-      if (expected.get(name) !== sql) {
-        await tmpEngine.close();
-        throw new Error(`Restore validation failed: unexpected trigger '${name}'`);
-      }
-    }
-    await tmpEngine.close();
+    await validateFullBackupFile(RESTORE_TMP_FILENAME);
   } catch (validationError) {
     await root.removeEntry(RESTORE_TMP_FILENAME).catch(() => {});
     throw new Error(`Restore validation failed: ${errorMessage(validationError)}`);

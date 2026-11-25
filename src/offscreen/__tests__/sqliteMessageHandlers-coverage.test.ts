@@ -29,6 +29,10 @@ const dbMaintenanceMock = vi.hoisted(() => ({
   sqliteHealthCheck: vi.fn().mockResolvedValue(true),
   backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([9, 9]) }),
   restoreDb: vi.fn().mockResolvedValue({ success: true }),
+  restorePrepareIncoming: vi.fn().mockResolvedValue({ success: true, stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' }),
+  restoreAppend: vi.fn().mockResolvedValue({ success: true, written: 2 }),
+  restoreCommit: vi.fn().mockResolvedValue({ success: true }),
+  restoreAbort: vi.fn().mockResolvedValue({ success: true }),
   purgeOldRecords: vi.fn().mockResolvedValue({ success: true, purged: 3 }),
   purgeContent: vi.fn().mockResolvedValue({ success: true, purged: 2 }),
 }));
@@ -59,6 +63,10 @@ vi.mock('../dbMaintenance.js', () => ({
   sqliteHealthCheck: dbMaintenanceMock.sqliteHealthCheck,
   backupDb: dbMaintenanceMock.backupDb,
   restoreDb: dbMaintenanceMock.restoreDb,
+  restorePrepareIncoming: dbMaintenanceMock.restorePrepareIncoming,
+  restoreAppend: dbMaintenanceMock.restoreAppend,
+  restoreCommit: dbMaintenanceMock.restoreCommit,
+  restoreAbort: dbMaintenanceMock.restoreAbort,
   purgeOldRecords: dbMaintenanceMock.purgeOldRecords,
   purgeContent: dbMaintenanceMock.purgeContent,
 }));
@@ -83,15 +91,17 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 33 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(33);
+  it('Map contains all 37 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(37);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
       'SQLITE_AUDIT_LOG_PURGE',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
       'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL',
-      'SQLITE_BACKUP', 'SQLITE_RESTORE', 'SQLITE_PURGE', 'CONTENT_PURGE',
+      'SQLITE_BACKUP', 'SQLITE_RESTORE',
+      'SQLITE_RESTORE_BEGIN', 'SQLITE_RESTORE_APPEND', 'SQLITE_RESTORE_COMMIT', 'SQLITE_RESTORE_ABORT',
+      'SQLITE_PURGE', 'CONTENT_PURGE',
       'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
       'SQLITE_ARCHIVE_CLEANUP', 'SQLITE_ARCHIVE_EXPORT',
       'SQLITE_ARCHIVE_PREPARE_INCOMING', 'SQLITE_ARCHIVE_RESTORE_PREVIEW', 'SQLITE_ARCHIVE_RESTORE',
@@ -612,6 +622,41 @@ describe('sqliteMessageHandlers — handleRestore branching', () => {
     await callHandler('SQLITE_RESTORE', { data: null } as never);
     const arg = dbMaintenanceMock.restoreDb.mock.calls[0]![0] as Uint8Array;
     expect(arg.length).toBe(0);
+  });
+});
+
+// ── chunked restore staging handlers ───────────────────────────────────────
+describe('sqliteMessageHandlers — restore staging handlers', () => {
+  const STAGING = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+
+  beforeEach(() => vi.clearAllMocks());
+
+  it('SQLITE_RESTORE_BEGIN forwards the session declaration to the repo', async () => {
+    const res = await callHandler('SQLITE_RESTORE_BEGIN', { totalBytes: 8, totalChunks: 1 }) as { success: boolean; stagingName: string };
+    expect(dbMaintenanceMock.restorePrepareIncoming).toHaveBeenCalledWith(8, 1);
+    expect(res).toEqual({ success: true, stagingName: STAGING });
+  });
+
+  it('SQLITE_RESTORE_APPEND decodes base64 once and forwards bytes with the offset', async () => {
+    await callHandler('SQLITE_RESTORE_APPEND', { stagingName: STAGING, offset: 128, data: 'ChQ=' });
+    expect(dbMaintenanceMock.restoreAppend).toHaveBeenCalledWith(STAGING, 128, new Uint8Array([10, 20]));
+  });
+
+  it('SQLITE_RESTORE_APPEND rejects a non-base64 chunk instead of writing garbage', async () => {
+    const res = await callHandler('SQLITE_RESTORE_APPEND', { stagingName: STAGING, offset: 0, data: '!!!not-base64!!!' }) as { success: boolean; error: string };
+    expect(dbMaintenanceMock.restoreAppend).not.toHaveBeenCalled();
+    expect(res.success).toBe(false);
+    expect(res.error).toContain('base64');
+  });
+
+  it('SQLITE_RESTORE_COMMIT forwards the staging name and declared size', async () => {
+    await callHandler('SQLITE_RESTORE_COMMIT', { stagingName: STAGING, totalBytes: 8 });
+    expect(dbMaintenanceMock.restoreCommit).toHaveBeenCalledWith(STAGING, 8);
+  });
+
+  it('SQLITE_RESTORE_ABORT forwards the staging name', async () => {
+    await callHandler('SQLITE_RESTORE_ABORT', { stagingName: STAGING });
+    expect(dbMaintenanceMock.restoreAbort).toHaveBeenCalledWith(STAGING);
   });
 });
 

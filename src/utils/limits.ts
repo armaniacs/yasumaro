@@ -24,8 +24,29 @@ export const MAX_IMPORT_ROWS = 1_000;
 /** Import payload size estimate (JSON length), enforced by the validator. */
 export const MAX_IMPORT_BYTES = 2_000_000;
 
-/** restore_db base64 string length, enforced by the validator. */
+/**
+ * Per-message cap for the restore transport (enforced by the validator).
+ * Since this round the restore travels as staging chunks
+ * (restore_begin -> restore_chunk* -> restore_commit); each chunk is
+ * additionally bounded by MAX_RESTORE_CHUNK_BASE64, far below this ceiling,
+ * so no single restore message may approach this value.
+ */
 export const MAX_RESTORE_DB_BYTES = 10_000_000;
+
+/**
+ * restore_chunk.data base64 length cap. Each chunk decodes to at most
+ * 3 MiB of DB bytes (base64 inflates by 4/3), so the wire message stays
+ * far below MAX_RESTORE_DB_BYTES and the VULN-008 memory-amplification
+ * budget holds per message instead of per whole DB.
+ */
+export const MAX_RESTORE_CHUNK_BASE64 = 4 * 1024 * 1024;
+
+/**
+ * Prefix of restore-session staging file names, issued by the OPFS worker
+ * at restore_begin. Naming and validation follow the archive_incoming_
+ * precedent (utils/archiveGuards.ts builds its regex from this prefix).
+ */
+export const RESTORE_STAGING_NAME_PREFIX = 'restore_incoming_';
 
 /** archive_export chunk length; base64 hops stay under the 10MB message ceiling. */
 export const MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
@@ -36,13 +57,6 @@ export const MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
  * by the handler, so 100 was the effective bound and is kept.
  */
 export const MAX_APPEND_IDS = 100;
-
-/**
- * Pre-decode ceiling for restore_db in the maintenance handler. A separate
- * layer from MAX_RESTORE_DB_BYTES (validator string cap): this one guards
- * the base64 decode itself, so it stays larger by design.
- */
-export const MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
 
 /**
  * INTENTIONAL divergence, documented but not unified: the OPFS worker caps
@@ -263,8 +277,10 @@ export const VALIDATOR_LIMITS = {
   MAX_IMPORT_ROWS,
   /** DASHBOARD_SQLITE import payload (JSON estimate) */
   MAX_IMPORT_BYTES,
-  /** DASHBOARD_SQLITE restore_db payload */
+  /** DASHBOARD_SQLITE restore transport per-message cap (restore_chunk.data stays far below via MAX_RESTORE_CHUNK_BASE64) */
   MAX_RESTORE_DB_BYTES,
+  /** DASHBOARD_SQLITE restore_chunk.data base64 cap (one staging chunk) */
+  MAX_RESTORE_CHUNK_BASE64,
   /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */

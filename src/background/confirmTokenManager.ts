@@ -59,7 +59,7 @@ type TokenMap = Record<string, ConfirmTokenRecord>;
 
 /**
  * Fail-closed token generation: this token is the sole authorization gate
- * for destructive operations (delete/clear_all/restore_db), so issuance
+ * for destructive operations (delete/clear_all/restore_commit), so issuance
  * fails outright when no cryptographically secure RNG is available.
  * No Math.random-based predictable fallback is kept. The randomUUID/hex
  * branches are shared with utils/generateId; hasSecureRandom() gates the

@@ -20,7 +20,7 @@
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 01 | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | 復元ホップの staging チャンク化。旧 restore_db 削除を含む |
+| ~~01~~ | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ✅ 実装完了。staging チャンク転送 (begin/chunk/commit/abort)、旧 restore_db 削除。validate 全緑 (19,339 件) |
 | ⬜ 02 | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | createSplitBackup に結合長ゲート追加。01 と直列 |
 | ⬜ 03 | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ユーザーガイドの分割形式対応。01 完了後 |
 

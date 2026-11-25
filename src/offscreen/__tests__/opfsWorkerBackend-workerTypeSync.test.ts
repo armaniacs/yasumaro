@@ -36,6 +36,8 @@ const OK_RESULT = {
   restored: true,
   dirty: true,
   data: new Uint8Array([1]),
+  stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db',
+  written: 1,
 };
 
 const record: BrowsingLogRecord = { url: 'https://example.com/', created_at: 1 };
@@ -66,6 +68,10 @@ const backendCalls: Array<[name: string, call: (b: OpfsWorkerBackend) => Promise
   ['getFtsIndexSize', (b) => b.getFtsIndexSize()],
   ['backupDb', (b) => b.backupDb()],
   ['restoreDb', (b) => b.restoreDb(new Uint8Array([1]))],
+  ['restorePrepareIncoming', (b) => b.restorePrepareIncoming(8, 1)],
+  ['restoreAppend', (b) => b.restoreAppend(OK_RESULT.stagingName, 0, new Uint8Array([1]))],
+  ['restoreCommit', (b) => b.restoreCommit(OK_RESULT.stagingName, 8)],
+  ['restoreAbort', (b) => b.restoreAbort(OK_RESULT.stagingName)],
   ['healthCheck', (b) => b.healthCheck()],
   ['getStatus', (b) => b.getStatus()],
   ['insertAuditLog', (b) => b.insertAuditLog({ provider: 'openai', url: 'https://example.com/', created_at: 1 })],

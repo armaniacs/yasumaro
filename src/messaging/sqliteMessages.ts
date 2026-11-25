@@ -28,6 +28,10 @@ export type SqliteMessage =
   | { type: 'SQLITE_CLEAR_ALL'; payload?: never; traceId?: string }
   | { type: 'SQLITE_BACKUP'; payload?: never; traceId?: string }
   | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
+  | { type: 'SQLITE_RESTORE_BEGIN'; payload: { totalBytes: number; totalChunks: number }; traceId?: string }
+  | { type: 'SQLITE_RESTORE_APPEND'; payload: { stagingName: string; offset: number; data: string }; traceId?: string }
+  | { type: 'SQLITE_RESTORE_COMMIT'; payload: { stagingName: string; totalBytes: number }; traceId?: string }
+  | { type: 'SQLITE_RESTORE_ABORT'; payload: { stagingName: string }; traceId?: string }
   | { type: 'SQLITE_PURGE'; payload?: { retentionDays?: number; maxRecords?: number }; traceId?: string }
   | { type: 'CONTENT_PURGE'; payload?: { retentionDays?: number; maxRecords?: number; includeStarred?: boolean }; traceId?: string }
   | { type: 'SQLITE_ARCHIVE_PREVIEW'; payload: { cutoffDate: string; cutoffMs: number; includeDeleted: boolean }; traceId?: string }
@@ -71,6 +75,10 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_CLEAR_ALL',
   'SQLITE_BACKUP',
   'SQLITE_RESTORE',
+  'SQLITE_RESTORE_BEGIN',
+  'SQLITE_RESTORE_APPEND',
+  'SQLITE_RESTORE_COMMIT',
+  'SQLITE_RESTORE_ABORT',
   'SQLITE_PURGE',
   'CONTENT_PURGE',
   'SQLITE_ARCHIVE_PREVIEW',
@@ -144,6 +152,15 @@ export type OffscreenQueryResponse = {
 
 /** UPDATE / DELETE / CLEAR_ALL / RESTORE: success with no payload. */
 export type OffscreenWriteResponse = { success: true } | OffscreenFailure;
+
+/** RESTORE_BEGIN: the worker-issued staging name for the incoming DB. */
+export type OffscreenRestoreBeginResponse = { success: true; stagingName: string } | OffscreenFailure;
+
+/** RESTORE_APPEND: bytes actually written at the offset. */
+export type OffscreenRestoreAppendResponse = { success: true; written: number } | OffscreenFailure;
+
+/** RESTORE_ABORT: cleanup acknowledged. */
+export type OffscreenRestoreAbortResponse = { success: true } | OffscreenFailure;
 
 /** TOGGLE_STAR: returns the new star state. */
 export type OffscreenToggleStarResponse = { success: true; is_starred: number } | OffscreenFailure;
@@ -350,6 +367,10 @@ export type OffscreenResponse =
   | OffscreenToggleStarResponse
   | OffscreenStatusResponse
   | OffscreenBinaryResponse
+  | OffscreenWriteResponse
+  | OffscreenRestoreBeginResponse
+  | OffscreenRestoreAppendResponse
+  | OffscreenRestoreAbortResponse
   | OffscreenPurgeResponse
   | OffscreenContentPurgeResponse
   | OffscreenArchivePreviewResponse

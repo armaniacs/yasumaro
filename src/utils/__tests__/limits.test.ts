@@ -4,11 +4,12 @@ import {
   MAX_IMPORT_ROWS,
   MAX_IMPORT_BYTES,
   MAX_RESTORE_DB_BYTES,
+  MAX_RESTORE_CHUNK_BASE64,
+  RESTORE_STAGING_NAME_PREFIX,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   MAX_CONTENT_LENGTH,
   MAX_TITLE_LENGTH,
   MAX_SEARCH_QUERY_LENGTH,
-  MAX_RESTORE_BASE64_BYTES,
   AUDIT_CAP_OPFS,
   AUDIT_CAP_IDB,
   VALIDATOR_LIMITS,
@@ -16,7 +17,6 @@ import {
 import {
   MAX_APPEND_IDS as DEPS_MAX_APPEND_IDS,
   MAX_IMPORT_ROWS as DEPS_MAX_IMPORT_ROWS,
-  MAX_RESTORE_BASE64_BYTES as DEPS_MAX_RESTORE_BASE64_BYTES,
 } from '../../background/handlers/dashboardSqlite/deps.js';
 
 /**
@@ -28,7 +28,14 @@ describe('utils/limits — single source of truth', () => {
   it('pins the effective bounds (strictest value previously enforced)', () => {
     expect(MAX_IMPORT_ROWS).toBe(1_000);
     expect(MAX_APPEND_IDS).toBe(100);
-    expect(MAX_RESTORE_BASE64_BYTES).toBe(150 * 1024 * 1024);
+  });
+
+  it('restore transport caps keep the VULN-008 budget (per message, not per DB)', () => {
+    expect(MAX_RESTORE_DB_BYTES).toBe(10_000_000);
+    expect(MAX_RESTORE_CHUNK_BASE64).toBe(4 * 1024 * 1024);
+    // Each chunk must stay far below the per-message ceiling.
+    expect(MAX_RESTORE_CHUNK_BASE64).toBeLessThan(MAX_RESTORE_DB_BYTES);
+    expect(RESTORE_STAGING_NAME_PREFIX).toBe('restore_incoming_');
   });
 
   it('validator limits reference the registry (no second literal)', () => {
@@ -38,6 +45,7 @@ describe('utils/limits — single source of truth', () => {
     expect(VALIDATOR_LIMITS.MAX_IMPORT_ROWS).toBe(MAX_IMPORT_ROWS);
     expect(VALIDATOR_LIMITS.MAX_IMPORT_BYTES).toBe(MAX_IMPORT_BYTES);
     expect(VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES).toBe(MAX_RESTORE_DB_BYTES);
+    expect(VALIDATOR_LIMITS.MAX_RESTORE_CHUNK_BASE64).toBe(MAX_RESTORE_CHUNK_BASE64);
     expect(VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES).toBe(MAX_ARCHIVE_EXPORT_CHUNK_BYTES);
     expect(VALIDATOR_LIMITS.MAX_APPEND_IDS).toBe(MAX_APPEND_IDS);
   });
@@ -45,7 +53,6 @@ describe('utils/limits — single source of truth', () => {
   it('handler constants re-export the registry binding', () => {
     expect(DEPS_MAX_APPEND_IDS).toBe(MAX_APPEND_IDS);
     expect(DEPS_MAX_IMPORT_ROWS).toBe(MAX_IMPORT_ROWS);
-    expect(DEPS_MAX_RESTORE_BASE64_BYTES).toBe(MAX_RESTORE_BASE64_BYTES);
   });
 
   it('keeps the intentional audit divergence named and distinct', () => {

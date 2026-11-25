@@ -10,6 +10,7 @@
  */
 
 import { DAY_MS } from './localDate.js';
+import { RESTORE_STAGING_NAME_PREFIX } from './limits.js';
 
 /** Hard cap for a single archive/staging .db file (200 MiB). */
 export const MAX_ARCHIVE_FILE_BYTES = 200 * 1024 * 1024;
@@ -51,6 +52,34 @@ export function decodeStagingName(name: unknown): StagingName {
     throw new Error(`Invalid staging name: ${String(name)}`);
   }
   return name as StagingName;
+}
+
+// ---------------------------------------------------------------------------
+// Restore-session staging names
+//
+// The chunked restore transport stages the incoming DB as
+// `restore_incoming_<uuid>.db` — the same shape discipline as the archive
+// staging names above, with its own prefix so the two families can be
+// swept/validated independently. The prefix literal lives in the limits
+// registry so the regex cannot drift from the sweeper that matches it.
+// ---------------------------------------------------------------------------
+
+export const RESTORE_STAGING_NAME_RE = new RegExp(
+  `^${RESTORE_STAGING_NAME_PREFIX}[A-Za-z0-9-]{36}\\.db$`,
+);
+
+export function isValidRestoreStagingName(name: unknown): boolean {
+  return typeof name === 'string' && RESTORE_STAGING_NAME_RE.test(name);
+}
+
+/** Branded restore staging name — crossed the shape boundary above. */
+export type RestoreStagingName = string & { readonly __restoreStagingNameBrand: unique symbol };
+
+export function decodeRestoreStagingName(name: unknown): RestoreStagingName {
+  if (!isValidRestoreStagingName(name)) {
+    throw new Error(`Invalid restore staging name: ${String(name)}`);
+  }
+  return name as RestoreStagingName;
 }
 
 /**

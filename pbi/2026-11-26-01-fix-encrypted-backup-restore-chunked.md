@@ -29,13 +29,13 @@ Scenario: 改変したセッションは拒否される
 ```
 
 ## 受け入れ基準
-- [ ] 30MB 級 DB を含む分割バックアップの作成と復元が実ワイヤ経路で成功する (統合試験で裏取り)
-- [ ] 復元経路の各メッセージが既存 cap 内 (restore_chunk.data は MAX_RESTORE_CHUNK_BASE64 以下)
-- [ ] SW が staging 状態をメモリに持たない (stagingName を各メッセージで運ぶ、MV3 エフェメラル規則)
-- [ ] confirm token (create_confirm_token + scopeHash) が新 3 subtype に適用される
-- [ ] 旧 `restore_db` 単発経路が dashboard 側から除去され、呼び出し元が無いことを確認の上で削除する
-- [ ] エラー文言が原因特定できる形でユーザーに届く
-- [ ] `npm run validate` が通る
+- [x] 30MB 級 DB を含む分割バックアップの作成と復元が実ワイヤ経路で成功する (統合試験で裏取り。旧失敗境界 7,500,001 バイトの往復を pin、容量境界は cap 織り込み方式)
+- [x] 復元経路の各メッセージが既存 cap 内 (restore_chunk.data は MAX_RESTORE_CHUNK_BASE64 以下)
+- [x] SW が staging 状態をメモリに持たない (stagingName を各メッセージで運ぶ、MV3 エフェメラル規則)
+- [x] confirm token (create_confirm_token + scopeHash) が新 4 subtype に適用される
+- [x] 旧 `restore_db` 単発経路が dashboard 側から除去され、呼び出し元が無いことを確認の上で削除する (DASHBOARD_SQLITE subtype として削除。offscreen maintain op 'restore' は波過大のため残留、後続候補に記録)
+- [x] エラー文言が原因特定できる形でユーザーに届く (チャンク単位の失敗理由と offset が伝播)
+- [x] `npm run validate` が通る (19,339 テスト緑、type-check 緑、baseline 437 pin 維持)
 
 ## テスト戦略（t_wadaスタイル）
 

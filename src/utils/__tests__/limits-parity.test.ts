@@ -10,9 +10,9 @@ const EXPECTED: Record<string, number> = {
   MAX_IMPORT_ROWS: 1000,
   MAX_IMPORT_BYTES: 2000000,
   MAX_RESTORE_DB_BYTES: 10000000,
+  MAX_RESTORE_CHUNK_BASE64: 4194304,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8388608,
   MAX_APPEND_IDS: 100,
-  MAX_RESTORE_BASE64_BYTES: 157286400,
   AUDIT_CAP_OPFS: 1000,
   AUDIT_CAP_IDB: 100000,
   AUDIT_CAP_FALLBACK: 1000,
@@ -65,7 +65,7 @@ const EXPECTED: Record<string, number> = {
   MAX_UBLOCK_FILTER_LINES: 500000,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 53;
+const EXPECTED_LIMITS_EXPORT_COUNT = 54;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',
@@ -78,13 +78,15 @@ const VALIDATOR_LIMIT_KEYS = [
   'MAX_CONTENT_LENGTH',
   'MAX_IMPORT_BYTES',
   'MAX_IMPORT_ROWS',
+  'MAX_RESTORE_CHUNK_BASE64',
   'MAX_RESTORE_DB_BYTES',
   'MAX_SEARCH_QUERY_LENGTH',
   'MAX_TITLE_LENGTH',
 ].sort();
 
 describe('cap parity guard', () => {
-  const surface = { ...limitsModule } as Record<string, object | number>;
+  // RESTORE_STAGING_NAME_PREFIX is a string cap input, hence the string arm.
+  const surface = { ...limitsModule } as Record<string, object | number | string>;
 
   it.each(Object.entries(EXPECTED))('%s keeps its value', (name, value) => {
     expect(surface[name]).toBe(value);

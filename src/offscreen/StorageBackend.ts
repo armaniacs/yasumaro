@@ -51,6 +51,8 @@ export interface SerializeResult { success: true; data: Uint8Array }
 export interface CountResult { success: true; count: number }
 export interface HealthResult { success: true } // healthCheck — success means alive, failure means error
 export interface AuditLogQueryResult { success: true; rows: AuditLogEntry[]; total: number }
+export interface RestorePrepareResult { success: true; stagingName: string }
+export interface RestoreAppendResult { success: true; written: number }
 export type BackendOrError<T> = T | { success: false; error: string };
 
 import type { SqliteStatusExtras } from '../messaging/sqliteMessages.js';
@@ -121,6 +123,17 @@ export interface Mutable {
   purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
+  /**
+   * Chunked restore staging session. begin issues a
+   * registered `restore_incoming_` staging name, append writes one chunk at
+   * its byte offset, commit validates the assembled staging and swaps it in
+   * for the live DB, abort discards the staging. The staging name travels
+   * with every call — no session state lives in callers or the backend.
+   */
+  restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<BackendOrError<RestorePrepareResult>>;
+  restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<BackendOrError<RestoreAppendResult>>;
+  restoreCommit(stagingName: string, totalBytes: number): Promise<BackendOrError<MutationResult>>;
+  restoreAbort(stagingName: string): Promise<BackendOrError<MutationResult>>;
   // Archive operations are NOT part of this interface — see ArchiveStaging
   // (archiveStaging.ts), implemented only by OpfsWorkerBackend. The
   // ARCHIVE_DISPATCH layer narrows via supportsArchive() and fails closed.
@@ -145,6 +158,7 @@ const NOT_INITIALIZED = 'Database not initialized';
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
 export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
 export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
+export const RESTORE_STAGING_UNSUPPORTED_ERROR = 'Chunked restore staging requires OPFS storage.';
 
 // ============================================================================
 // Backup shape query (PBI 2026-10-24-06): the single interface that maps
@@ -315,6 +329,14 @@ export class NoopBackend implements StorageBackend {
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }
+  async restorePrepareIncoming(): Promise<BackendOrError<RestorePrepareResult>> {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
+  async restoreAppend(): Promise<BackendOrError<RestoreAppendResult>> {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
+  async restoreCommit() { return this.err(); }
+  async restoreAbort() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

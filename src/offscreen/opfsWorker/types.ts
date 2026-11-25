@@ -27,6 +27,10 @@ export const WORKER_MESSAGE_TYPES = [
   'SERIALIZE',
   'BACKUP',
   'RESTORE',
+  'STAGE_RESTORE_BEGIN',
+  'STAGE_RESTORE_APPEND',
+  'STAGE_RESTORE_COMMIT',
+  'STAGE_RESTORE_ABORT',
   'FTS_INDEX_SIZE',
   'INSERT_BATCH',
   'HEALTH_CHECK',
@@ -92,6 +96,26 @@ export interface DeletePayload {
 
 export interface RestorePayload {
   data: number[] | Uint8Array;
+}
+
+export interface StageRestoreBeginPayload {
+  totalBytes: number;
+  totalChunks: number;
+}
+
+export interface StageRestoreAppendPayload {
+  stagingName: string;
+  offset: number;
+  data: Uint8Array;
+}
+
+export interface StageRestoreCommitPayload {
+  stagingName: string;
+  totalBytes: number;
+}
+
+export interface StageRestoreAbortPayload {
+  stagingName: string;
 }
 
 export interface AuditLogInsertPayload {
