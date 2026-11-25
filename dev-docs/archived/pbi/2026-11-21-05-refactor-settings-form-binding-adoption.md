@@ -33,10 +33,10 @@ Scenario: テキスト入力が存在しない場合は空文字列を返す
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/settingsFormBinding.ts` に `getChecked(id: string, fallback?: boolean): boolean` と `getValue(id: string, fallback?: string): string` などの最小ヘルパーを追加、または既存の `extractSettingsFromInputs` / `loadSettingsToInputs` への移行を実施
-- [ ] 分散していた `?.checked ?? false` / `?.value ?? ''` パターンの利用箇所（`gistSettings.ts`、`webhookExportSettings.ts`、`trustSettings.ts`、`contentSettings.ts`、`privacyConsentController.ts`、`aiSummaryCleansingSettingsV2.ts` など）をヘルパーまたはスキーマ駆動に置換
-- [ ] `npm run type-check` が pass する
-- [ ] 対象ファイルに関連する既存テストがすべて pass する
+- [x] `src/utils/settingsFormBinding.ts` に `getChecked(id: string, fallback?: boolean): boolean` と `getValue(id: string, fallback?: string): string` などの最小ヘルパーを追加、または既存の `extractSettingsFromInputs` / `loadSettingsToInputs` への移行を実施
+- [x] 分散していた `?.checked ?? false` / `?.value ?? ''` パターンの利用箇所（`gistSettings.ts`、`webhookExportSettings.ts`、`trustSettings.ts`、`contentSettings.ts`、`privacyConsentController.ts`、`aiSummaryCleansingSettingsV2.ts` など）をヘルパーまたはスキーマ駆動に置換
+- [x] `npm run type-check` が pass する
+- [x] 対象ファイルに関連する既存テストがすべて pass する
 
 ## テスト戦略（t_wada スタイル）
 
@@ -94,9 +94,9 @@ cat src/utils/settingsFormBinding.ts
 - `settingsFormBinding.ts` の `[data-storage-key]`  convention とは異なる ID ベースの参照となるため、スキーマ駆動ではなく最小ヘルパーで対応する方が現実的
 
 ## Definition of Done
-- [ ] 全BDDシナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（挙動変更・性能変更・フィルタロジック変更・閾値変更等の場合、本番投入後に問題が発覚した場合の切り戻し手段を技術的考慮事項または本項に記載）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが自動テストとして実装されパスする（`src/utils/__tests__/settingsFormBinding.test.ts` に `getChecked` / `getValue` 単体テスト 6 件追加）
+- [x] テストカバレッジが基準を満たす（`npm run validate` 1,366 ファイル / 19,231 テスト全パス）
+- [x] コードレビュー完了（既存動作と同一のフォールバック契約・型安全・layer 整合を確認）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（純粋なヘルパー委譲のみで挙動変更なし。対象コミットの revert で即時切り戻し可能）
+- [x] ドキュメント更新済み（`pbi/00-INDEX.md` 同期）

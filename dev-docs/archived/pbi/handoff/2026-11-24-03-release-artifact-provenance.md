@@ -1,7 +1,7 @@
 # 引き継ぎ: 2026-11-24-03 リリース成果物の SHA256 と provenance
 
-- 状態: 実装済み・実リリースでの確認待ち
-- 最終更新: 2026-11-24
+- 状態: 完了（2026-11-26: v6.9.78 実地検証・README/docs 目次配線完了）
+- 最終更新: 2026-11-26
 - 対象 PBI: [../2026-11-24-03-release-artifact-provenance.md](../2026-11-24-03-release-artifact-provenance.md)
 
 ## 済んだこと
@@ -17,13 +17,17 @@
 
 確認済み: YAML パース、ステップ順、docs の文字種、release.yml を参照する既存テスト 59 件。
 
+## 実リリース検証記録(2026-11-26: v6.9.78)
+
+1. GitHub Release `v6.9.78` に `SHA256SUMS` と chrome / firefox / edge の 3 zip が添付されていることを確認
+2. `gh release download v6.9.78` で取得し、`shasum -a 256 -c SHA256SUMS` を実行: 3 行すべて `OK` を確認
+3. `gh attestation verify` を chrome / firefox / edge の 3 zip に対して実行: 3 本すべて `Verification succeeded!`（`.github/workflows/release.yml@refs/tags/v6.9.78`、SLSA provenance v1）を確認
+4. `docs/RELEASE_VERIFICATION.md` を日英バイリンガル化し、`README.md`（方法4 / Option 4 / 文書一覧 / Documentation）、`docs/guides.html`、`dev-docs/DOCUMENTATION_GUIDE.md` へリンクを追加
+5. `.crx` と `SHA256SUMS` 自体は attestation 対象外である旨を `docs/RELEASE_VERIFICATION.md`（日英）に明記済み
+
 ## 残りの手順
 
-1. 次のリリースで、Release の添付物に `SHA256SUMS` が並ぶことを確認する
-2. ダウンロードした zip で、macOS の `shasum -a 256 -c SHA256SUMS` が OK になることを確認する
-3. attestation ステップが成功し、`gh attestation verify` が通ることを確認する。失敗したら、リポジトリで attestation が使えるか(公開リポジトリかどうか)を先に確認する
-4. `docs/RELEASE_VERIFICATION.md` を docs の目次と README のインストール方法4(GitHub Releases の zip)から参照する。DOCUMENTATION_GUIDE の目次登録ルールを確認すること
-5. `.crx` を対象に含めるかを決める(現状は zip のみ。docs にもそう明記)
+- なし（完了・アーカイブ対象）
 
 ## 未確認・注意
 

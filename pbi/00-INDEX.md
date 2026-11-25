@@ -14,26 +14,26 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（残 1 件 + 保留/将来 5 件） ― 🔶 仕上げ待ち 🔧非機能追加
+### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（GA 必須全件完了・アーカイブ済み / 保留・将来 5 件） ― ✅ 完了 🔧非機能追加
 
-GA リリース準備の 11-24 / 11-25 系 PBI 群は `v6.9.78` 公開・3 ストア提出まで完了しアーカイブ済み。残件は 03 のドキュメント配線・検証のみ。09 は見送り裁定済み、10〜13 は GA 後の将来候補。台帳は [2026-11-24-00-backlog-ga-release.md](2026-11-24-00-backlog-ga-release.md) および [2026-11-24-14-backlog-security-audit-run3.md](2026-11-24-14-backlog-security-audit-run3.md) を参照。
+GA リリース準備の 11-24 / 11-25 系 PBI 群は `v6.9.78` 公開・3 ストア提出・成果物検証確認まで全件完了しアーカイブ済み。09 は見送り裁定済み、10〜13 は GA 後の将来候補。台帳は [2026-11-24-00-backlog-ga-release.md](2026-11-24-00-backlog-ga-release.md) および [2026-11-24-14-backlog-security-audit-run3.md](2026-11-24-14-backlog-security-audit-run3.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| 🔶 03 | [2026-11-24-03-release-artifact-provenance.md](2026-11-24-03-release-artifact-provenance.md) | 🔧非機能追加 | 6.4 | 1 | 実装・v6.9.78 稼働済み。残件: `docs/RELEASE_VERIFICATION.md` へのリンク追加とローカル検証確認 |
+| ~~03~~ | [2026-11-24-03-release-artifact-provenance.md](../dev-docs/archived/pbi/2026-11-24-03-release-artifact-provenance.md) | 🔧非機能追加 | 6.4 | 1 | ✅ 完了（2026-11-26 アーカイブ済み）。v6.9.78 の 3 zip で `shasum`・`gh attestation verify` 通過、README/guides/DOCUMENTATION_GUIDE 配線済み |
 | ⛔ 09 | [2026-11-24-09-fix-host-permissions-minimization.md](2026-11-24-09-fix-host-permissions-minimization.md) | 🔧非機能追加 | 1.6 | 5 | 2026-11-24 見送り裁定済み |
 | ⬜ 10 | [2026-11-24-10-backlog-e2e-encrypted-device-sync.md](2026-11-24-10-backlog-e2e-encrypted-device-sync.md) | ✨機能追加 | 0.3 | 13 | 将来候補（GA 後に再検討） |
 | ⬜ 11 | [2026-11-24-11-backlog-resummarize-past-records.md](2026-11-24-11-backlog-resummarize-past-records.md) | ✨機能追加 | 0.8 | 5 | 将来候補（GA 後に再検討） |
 | ⬜ 12 | [2026-11-24-12-backlog-opt-in-anonymous-metrics.md](2026-11-24-12-backlog-opt-in-anonymous-metrics.md) | ✨機能追加 | 0.6 | 8 | 将来候補（GA 後に再検討） |
 | ⬜ 13 | [2026-11-24-13-backlog-other-note-app-export.md](2026-11-24-13-backlog-other-note-app-export.md) | ✨機能追加 | 0.2 | 8 | 将来候補（GA 後に再検討） |
 
-### 2026-11-21 DRY/KISS 重複コード解消（残 1 件 / 4 件完了・アーカイブ済み） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-21 DRY/KISS 重複コード解消（5 件） ― ✅ 5 件完了・アーカイブ済み 🔧非機能追加
 
-コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。01〜04 は完了・アーカイブ済み。残りは 05（`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの移行）の 1 件。
+コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し 5 件すべて完了・アーカイブ済み。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 05 | [2026-11-21-05-refactor-settings-form-binding-adoption.md](2026-11-21-05-refactor-settings-form-binding-adoption.md) | 🔧非機能追加 | - | 5 | `?.checked ?? false` / `?.value ?? ''` を `settingsFormBinding.ts` ヘルパーに移行 |
+| ~~05~~ | [2026-11-21-05-refactor-settings-form-binding-adoption.md](../dev-docs/archived/pbi/2026-11-21-05-refactor-settings-form-binding-adoption.md) | 🔧非機能追加 | - | 5 | ✅ 完了（2026-11-26 アーカイブ済み）。`getChecked` / `getValue` を `settingsFormBinding.ts` に追加し対象 6 ファイルを移行、`npm run validate` 1,366 ファイル / 19,231 テスト緑 |
 
 ### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
 
@@ -845,6 +845,11 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-26 残件 PBI 2 件（成果物検証仕上げ + フォーム抽出共通化）完了 ― 2件
+
+- **2026-11-24-03-release-artifact-provenance**: `v6.9.78` の chrome / firefox / edge 3 zip について `shasum -a 256 -c SHA256SUMS`（3/3 OK）と `gh attestation verify`（3/3 成功）をローカルで実測確認。`docs/RELEASE_VERIFICATION.md` を日英バイリンガル化し、`README.md`（方法4 / Option 4 / 文書一覧 / Documentation）、`docs/guides.html`、`dev-docs/DOCUMENTATION_GUIDE.md` へリンクを配線。`HANDOFF-GA.md` と `handoff/03` もアーカイブ。
+- **2026-11-21-05-refactor-settings-form-binding-adoption**: `src/utils/settingsFormBinding.ts` に `getChecked` / `getValue` と単体テスト 6 件を追加し、`gistSettings.ts`・`webhookExportSettings.ts`・`trustSettings.ts`・`contentSettings.ts`・`privacyConsentController.ts`・`aiSummaryCleansingSettingsV2.ts` の 6 ファイルを移行。`npm run validate` 1,366 ファイル / 19,231 テスト全パス。
 
 ### 2026-11-26 GA リリース準備・監査 run-3・実機スモーク・DRY/KISS 一括整理 ― 24件
 
@@ -3162,10 +3167,10 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手・仕上げ待ち | 2（`2026-11-21-05` 未着手 / `2026-11-24-03` ドキュメント配線・ローカル検証待ち） |
+| ⬜ 未着手・仕上げ待ち | 0（全アクティブ PBI 完了・アーカイブ済み） |
 | ⛔ 見送り・将来候補・条件待ち | 12（見送り 1: `2026-11-24-09` / 将来候補 4: `2026-11-24-10〜13` / トリガー・ゲート待ち・継続運用 7: `09-05-32`, `09-22-11`, `09-25-26`, `09-25-29`, `09-25-30`, `11-07-backlog`, `11-08-18`） |
-| **`pbi/` 残存ファイル合計** | **49 ファイル（INDEX 1 / HANDOFF-GA 1 / 個別 PBI 14 / backlog・監査台帳 33。2026-11-26 実測: `ls pbi/*.md` = 49）** |
-| アーカイブ済みPBI | 1684（`dev-docs/archived/pbi/*.md`、2026-11-26 実測。別途 `handoff/` に 6 ファイル） |
+| **`pbi/` 残存ファイル合計** | **46 ファイル（INDEX 1 / 保留・将来・監視 PBI 12 / backlog・監査台帳 33。2026-11-26 実測: `ls pbi/*.md` = 46）** |
+| アーカイブ済みPBI | 1687（`dev-docs/archived/pbi/*.md`、2026-11-26 実測。`HANDOFF-GA.md` 含む、別途 `handoff/` に 7 ファイル） |
 | アーカイブ済み実装計画 | 189（`dev-docs/archived/plans/*.md`、2026-11-26 実測） |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。

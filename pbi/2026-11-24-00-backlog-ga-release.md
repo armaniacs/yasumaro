@@ -66,12 +66,12 @@ handoff ファイルが無い PBI は未着手。引き継ぐモデルは、ま�
 
 判定材料の ADR: [dev-docs/ADR/2026-11-24-ga-dev-feature-graduation.md](../dev-docs/ADR/2026-11-24-ga-dev-feature-graduation.md)(提案中、owner の裁定待ち)。04 と 08 はこの ADR を参照すること。
 
-### 状況(2026-11-26: v6.9.78 公開・3 ストア提出完了、完了分 24 件アーカイブ済み)
+### 状況(2026-11-26: v6.9.78 公開・3 ストア提出完了、GA 系全件完了・アーカイブ済み)
 
 | PBI | 状態 | コミット | handoff |
 |---|---|---|---|
 | 02 開発中機能の判定 | ✅ 完了・アーカイブ済み | 4088edea4 / d3eea2533 | [アーカイブ](../dev-docs/archived/pbi/handoff/2026-11-24-02-feat-ga-dev-feature-graduation.md) |
-| 03 SHA256 と provenance | 🔶 実装済み・v6.9.78 で稼働済み（残件: README/docs 目次リンクとローカル検証） | 1a9a52c27 | [あり](handoff/2026-11-24-03-release-artifact-provenance.md) |
+| 03 SHA256 と provenance | ✅ 完了・アーカイブ済み（v6.9.78 で 3 zip の shasum・attestation 実測通過、README/guides/DOCUMENTATION_GUIDE 配線済み） | 1a9a52c27 | [アーカイブ](../dev-docs/archived/pbi/handoff/2026-11-24-03-release-artifact-provenance.md) |
 | 04 リリース準備 | ✅ 完了・アーカイブ済み（6.9.78 採番・公開・Chrome/Edge/AMO 提出済み） | 5d2955aab / 0811787e8 / 90d6c2c8c | [アーカイブ](../dev-docs/archived/pbi/handoff/2026-11-24-04-release-ga-preparation.md) |
 | 05 412 競合の利用者通知 | ✅ 完了・アーカイブ済み | f3b8df983 | [アーカイブ](../dev-docs/archived/pbi/handoff/2026-11-24-05-feat-obsidian-conflict-user-notice.md) |
 | 06 webhook E2E | ✅ 完了・アーカイブ済み | 545b6be50 / a24be47be | [アーカイブ](../dev-docs/archived/pbi/handoff/2026-11-24-06-fix-webhook-egress-e2e-allowlist.md) |
