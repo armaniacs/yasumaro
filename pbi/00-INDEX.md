@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-26 暗号化バックアップ大容量対応（3件） ― 🔶 進行中 🔧非機能追加
+
+復元ホップの隠れた実効上限 (restore_db 10M 文字 cap ≒ DB 実体 7.5MB) を分割輸送 (staging チャンク方式) で解消し、作成/復元のゲート整合とユーザーガイドの分割形式対応を閉じるラウンド。なぜなぜ分析 30 回 x 3 済み。RICE 降順 (依存尊重) で 01 → 02 → 03 の順に実装。台帳は [2026-11-26-00-backlog-encrypted-backup-capacity.md](2026-11-26-00-backlog-encrypted-backup-capacity.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | 復元ホップの staging チャンク化。旧 restore_db 削除を含む |
+| ⬜ 02 | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | createSplitBackup に結合長ゲート追加。01 と直列 |
+| ⬜ 03 | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ユーザーガイドの分割形式対応。01 完了後 |
+
 ### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（GA 必須全件完了・アーカイブ済み / 保留・将来 5 件） ― ✅ 完了 🔧非機能追加
 
 GA リリース準備の 11-24 / 11-25 系 PBI 群は `v6.9.78` 公開・3 ストア提出・成果物検証確認まで全件完了しアーカイブ済み。09 は見送り裁定済み、10〜13 は GA 後の将来候補。台帳は [2026-11-24-00-backlog-ga-release.md](2026-11-24-00-backlog-ga-release.md) および [2026-11-24-14-backlog-security-audit-run3.md](2026-11-24-14-backlog-security-audit-run3.md) を参照。
