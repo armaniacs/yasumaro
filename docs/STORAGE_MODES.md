@@ -45,9 +45,9 @@ Yasumaroはパフォーマンスの高い順に3つのバックエンドを試�
 
 A. 基本的な記録・閲覧・検索機能は使えます。ただし、以下の制限があります。
 
-- 保存件数が制限されることと、全文検索の速度が通常モードより遅くなります
+- 一覧取得は最大10,000件で打ち切られ、全文検索の速度も通常モードより遅くなります
 - FTS5は常に無効であり、検索はLIKE検索のみになります
-- 監査ログの記録・参照は利用できません（監査ログ機能はフォールバックモードでは未対応です）
+- 監査ログの記録・参照は利用できますが、上限1,000件で保持されます（通常モードより少ない）
 - バイナリ形式の `.db` バックアップ・復元は利用できません
 
 **Q. データが失われることはありますか？**
@@ -99,9 +99,9 @@ When a higher-priority backend becomes available (e.g., after a browser update),
 
 A. Basic recording, viewing, and search features work. However, the following limitations apply.
 
-- Record counts are limited and full-text search is slower than in Normal Mode
+- List queries are capped at 10,000 rows, and full-text search is slower than in Normal Mode
 - FTS5 is always disabled; search is LIKE-only
-- Audit log recording and querying are unavailable (the audit log feature is unsupported in Fallback Mode)
+- Audit log recording and querying work, but are capped at 1,000 rows (fewer than Normal Mode)
 - Binary `.db` backup and restore are unavailable
 
 **Q. Will my data be lost?**

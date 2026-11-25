@@ -87,7 +87,7 @@ E-mail1件、クレジットカード番号2件をマスクしました
 | 1 | コンテンツ切り詰め | 64KB（65,536バイト・UTF-8）超過時、先頭に切り詰め |
 | 2 | プライバシーヘッダーチェック | `Cache-Control` などのHTTPヘッダー確認 |
 | 3 | PrivacyPipeline処理 | PIIマスキング、プロンプトインジェクション対策 |
-| 4 | AI API送信 | さらにプロバイダ別の送信上限を適用して送信（OpenAI互換: 既定1万文字、Gemini: 3万文字、ローカルLLM: 4,000文字、内蔵AI: 約1.6万文字） |
+| 4 | AI API送信 | さらにプロバイダ別の送信上限を適用して送信（OpenAI互換: 既定1万文字、Gemini: 3万文字、ローカルLLM: 4,000文字、内蔵AI: 最大16,384文字。ただし内蔵AIは端末の contextWindow が狭い場合は `contextWindow × 2 × 0.8` の動的上限でさらに縮小される） |
 | 5 | Obsidian保存 | AI要約結果を保存 |
 
 **重要なポイント：**
@@ -105,15 +105,15 @@ E-mail1件、クレジットカード番号2件をマスクしました
 
 | ガード | 値 | 超過時の動作 |
 |--------|-----|--------------|
-| 入力上限 | 64KB（65,536文字） | マスク実行＋エラー付与 |
-| 入力上限（サイズ制限スキップ時） | 512KB | マスク実行＋エラー付与 |
+| 入力上限 | 64KB（65,536 UTF-16 コード単位） | 本番経路（`sanitizePiiHybrid()`）ではマスク実行＋エラー付与。TS リファレンス（`sanitizeRegex()`）ではマスクせず原文を返しエラー付与 |
+| 入力上限（サイズ制限スキップ時） | 512KB | 同上（本番経路はマスク実行＋エラー、TS 単体はマスクなし＋エラー） |
 | 出力上限 | 128KB | 出力切り詰め＋エラー付与 |
 | タイムアウト | 5秒 | 処理中断（エラー） |
-| マッチ件数上限 | 1000件 | 処理中断（エラー） |
+| マッチ件数上限 | 1000件を超過した場合 | 処理中断（エラー。ちょうど1000件は成功） |
 | ReDoS 長トークンガード | WASM コアの重なり付きチャンク走査（チャンク 400 バイト・重複 200 バイト） | 検出精度を保ったまま正規表現エンジンの暴走を防止。200 バイト超の極端な長トークンは残存リスク |
 
 #### PII検出（WASM-first ハイブリッド）
-実際に試すには [PII Sandbox](pii-sandbox.html) を開いてください。
+実際に試すには [PII Sandbox](pii-sandbox.html) を開いてください。サンドボックスは TS リファレンス実装（`sanitizeRegex()`）で動作し、WASM コアとはパリティテストで同等性が担保されています。
 
 本番経路は WASM-first のハイブリッド方式 `sanitizePiiHybrid()` です。Rust 実装（`wasm/pii-sanitizer/`）の WASM コアが全21パターンを検出・マスクします。TypeScript の `sanitizeRegex()` は、WASM 初期化失敗時または WASM 呼び出しの実行時例外時のフォールバックとしてのみ使用されます。
 
@@ -146,8 +146,8 @@ E-mail1件、クレジットカード番号2件をマスクしました
 #### プロンプトインジェクション対策
 AI要約時のセキュリティ保護機能：
 - **検出パターン**: `ignore above`、`SYSTEM`、`PASSWORD`、`execute()` 等の危険パターンを検出
-- **リスク評価**: HIGH / MEDIUM / LOW の3段階で評価し、HIGH 部分は `[FILTERED]` に置き換え。LOW（`password`、`execute` などの一般語）は文脈分析で評価
-- **ブロック判定**: コンテキストごとのポリシーに従う。ローカル入力・プロバイダー入力・内蔵AI入力で HIGH を検出した場合のみブロックし、要約文コンテキストでは警告ログを残してサニタイズ継続する。MEDIUM はすべてのコンテキストで通過する
+- **リスク評価**: HIGH / MEDIUM / LOW の3段階で評価し、HIGH 部分は `[FILTERED]` に置き換え。LOW（`password`、`execute` などの一般語）は文脈分析で評価。なお MEDIUM は型として定義されているが、現行の検出器は HIGH または LOW のみを返し、MEDIUM が実際に付与されることはない
+- **ブロック判定**: コンテキストごとのポリシーに従う。ローカル入力・プロバイダー入力・内蔵AI入力・カスタム入力で HIGH を検出した場合にブロックし、要約文コンテキスト（ローカル要約・クラウド要約）では警告ログを残してサニタイズ継続する。MEDIUM はすべてのコンテキストで通過する（現行は付与されないため実質的に到達しない）
 - **ログ記録**: 検出されたパターンとブロック原因をログに記録
 
 #### ログ確認
@@ -300,7 +300,7 @@ Large page content is truncated to 64KB (65,536 bytes, UTF-8) at the first stage
 | 1 | Content Truncation | If over 64KB (65,536 bytes, UTF-8), truncate to the leading part |
 | 2 | Privacy Header Check | Check HTTP headers like `Cache-Control` |
 | 3 | PrivacyPipeline Processing | PII masking, prompt injection protection |
-| 4 | Send to AI API | Apply the per-provider send cap and send (OpenAI-compatible: 10,000 chars by default, Gemini: 30,000, local LLM: 4,000, Built-in AI: ~16,384) |
+| 4 | Send to AI API | Apply the per-provider send cap and send (OpenAI-compatible: 10,000 chars by default, Gemini: 30,000, local LLM: 4,000, Built-in AI: up to 16,384 chars, further narrowed by a dynamic `contextWindow x 2 x 0.8` cap on devices with a small context window) |
 | 5 | Save to Obsidian | Save AI summary result |
 
 **Key Points:**
@@ -318,15 +318,15 @@ In addition to the 64KB truncation, the following guards apply:
 
 | Guard | Value | Behavior on exceed |
 |-------|-------|--------------------|
-| Input limit | 64KB (65,536 characters) | Masking still runs, error attached |
-| Input limit (size limit skipped) | 512KB | Masking still runs, error attached |
+| Input limit | 64KB (65,536 UTF-16 code units) | Production path (`sanitizePiiHybrid()`): masking still runs, error attached. TS reference (`sanitizeRegex()`) returns the original text unmasked with an error |
+| Input limit (size limit skipped) | 512KB | Same as above (production masks + errors; TS-only returns unmasked + errors) |
 | Output limit | 128KB | Output truncated, error attached |
 | Timeout | 5 seconds | Processing aborted (error) |
-| Match count limit | 1000 matches | Processing aborted (error) |
-| ReDoS long-token guard | Non-whitespace runs over 100 chars are sampled for scanning | Prevents regex engine blowup while preserving detection |
+| Match count limit | Over 1000 matches | Processing aborted (error; exactly 1000 succeeds) |
+| ReDoS long-token guard | WASM-core chunked scan with overlap (400-byte chunks, 200-byte overlap) | Prevents regex engine blowup while preserving detection; extremely long tokens over 200 bytes remain a residual risk |
 
 #### PII Detection (WASM-First Hybrid)
-Try it at [PII Sandbox](pii-sandbox.html).
+Try it at [PII Sandbox](pii-sandbox.html). The sandbox runs the TS reference implementation (`sanitizeRegex()`), whose equivalence with the WASM core is pinned by parity tests.
 
 The production path is the WASM-first hybrid `sanitizePiiHybrid()`. The Rust-based (`wasm/pii-sanitizer/`) WASM core detects and masks all 21 patterns. The TypeScript `sanitizeRegex()` is used only as a fallback when WASM initialization fails or a WASM call throws at runtime.
 
@@ -359,8 +359,8 @@ The following 21 patterns (type name + target) are detected and masked automatic
 #### Prompt Injection Protection
 Security protection feature during AI summarization:
 - **Detection Patterns**: Detects dangerous patterns like `ignore above`, `SYSTEM`, `PASSWORD`, `execute()`
-- **Risk Assessment**: Evaluates content as HIGH / MEDIUM / LOW and replaces HIGH-risk parts with `[FILTERED]`; LOW-risk generic words (like `password`, `execute`) are evaluated via context analysis
-- **Blocking Policy**: Follows a per-context policy. HIGH-risk content blocks only in local-input, provider-input, and built-in-AI-input contexts; summary contexts log a warning and continue with the sanitized content. MEDIUM passes through in every context
+- **Risk Assessment**: Evaluates content as HIGH / MEDIUM / LOW and replaces HIGH-risk parts with `[FILTERED]`; LOW-risk generic words (like `password`, `execute`) are evaluated via context analysis. Note: MEDIUM is defined as a level but the current detector only ever emits HIGH or LOW, so MEDIUM is never assigned in production
+- **Blocking Policy**: Follows a per-context policy. HIGH-risk content blocks in local-input, provider-input, built-in-AI-input, and custom-input contexts; summary contexts (local-summary, cloud-summary) log a warning and continue with the sanitized content. MEDIUM passes through in every context (unreachable in practice since it is never emitted)
 - **Logging**: Records detected patterns and block reasons in logs
 
 #### Log Viewing

@@ -103,6 +103,7 @@
 
 **Data セクション**
 - **Tag Cluster**: タグの関連性をグラフで可視化
+- **Tag Cluster Time Slider**: 期間スライダーでタグ関連の推移を比較表示
 - **SQLite History**: 記録済みURLの一覧確認・全文検索・管理（旧称「履歴」に相当）
 - **Domain Search**: ドメイン単位での履歴検索
 
@@ -175,20 +176,20 @@
 | **OpenAI (公式)** | `api.openai.com` |
 | **Anthropic (Claude)** | `api.anthropic.com` |
 | **Groq** | `api.groq.com` |
-| **Mistral AI** | `api.mistral.ai` |
+| **Mistral AI** | `mistral.ai`（`api.mistral.ai` は後方互換の別枠） |
 | **OpenRouter** | `api.openrouter.ai`（オプトイン: CSPパネルでの権限許可が必要） |
 | **Hugging Face** | `api-inference.huggingface.co`（オプトイン: CSPパネルでの権限許可が必要） |
-| **DeepSeek** | `api.deepseek.com` |
+| **DeepSeek** | `deepseek.com`（`api.deepseek.com` は後方互換の別枠） |
 | **Perplexity AI** | `perplexity.ai`（オプトイン: CSPパネルでの権限許可が必要） |
-| **Sakuraクラウド (AI API)** | `api.ai.sakura.ad.jp` |
-| **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` 等 |
-| **クラウドネイティブAI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
-| **埋め込みAI** | `jina.ai`, `voyageai.com` |
-| **その他** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
+| **Sakuraクラウド (AI API)** | `api.ai.sakura.ad.jp`（オプトイン: CSPパネルでの権限許可が必要） |
+| **その他 (LiteLLM対応)** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` 等（いずれもオプトイン） |
+| **クラウドネイティブAI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai`（いずれもオプトイン） |
+| **埋め込みAI** | `jina.ai`, `voyageai.com`（いずれもオプトイン） |
+| **その他** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai`（いずれもオプトイン） |
 | **ローカル環境** | `localhost`, `127.0.0.1` |
 | **Built-in AI** | ブラウザ内部 API のため CSP 対象外。API キー不要・オフライン動作 |
 
-> **注意**: manifest の host_permissions はサブドメインに展開されないため、API への接続には上表の API ホスト（例: `api.mistral.ai`、`api.deepseek.com`）を使用してください。apex ドメインのみでは API エンドポイントへの接続は許可されません。
+> **注意**: manifest の host_permissions はサブドメインに展開されないため、API への接続には上表のホストを使用してください。Mistral / DeepSeek は apex ドメイン（`mistral.ai` / `deepseek.com`）が許可対象であり、`api.*` は後方互換枠です。
 
 #### オプトインプロバイダーの利用時の権限許可
 
@@ -437,6 +438,7 @@ Click the "⚙" icon in the top right to open the Dashboard in a new tab. For th
 
 **Data section**
 - **Tag Cluster**: Visualize tag relationships as a graph
+- **Tag Cluster Time Slider**: Compare tag relationship changes over a period slider
 - **SQLite History**: View, full-text search, and manage recorded URL history (formerly labeled "History")
 - **Domain Search**: Search history by domain
 
@@ -519,20 +521,20 @@ For security reasons, only the following domains are officially supported. Conne
 | **OpenAI (Official)** | `api.openai.com` |
 | **Anthropic (Claude)** | `api.anthropic.com` |
 | **Groq** | `api.groq.com` |
-| **Mistral AI** | `api.mistral.ai` |
+| **Mistral AI** | `mistral.ai` (`api.mistral.ai` is a legacy-compat separate entry) |
 | **OpenRouter** | `api.openrouter.ai` (opt-in: permission grant in the CSP panel required) |
 | **Hugging Face** | `api-inference.huggingface.co` (opt-in: permission grant in the CSP panel required) |
-| **DeepSeek** | `api.deepseek.com` |
+| **DeepSeek** | `deepseek.com` (`api.deepseek.com` is a legacy-compat separate entry) |
 | **Perplexity AI** | `perplexity.ai` (opt-in: permission grant in the CSP panel required) |
-| **Sakura Cloud (AI API)** | `api.ai.sakura.ad.jp` |
-| **LiteLLM Providers** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` |
-| **Cloud Native AI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` |
-| **Embedding AI** | `jina.ai`, `voyageai.com` |
-| **Other** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` |
+| **Sakura Cloud (AI API)** | `api.ai.sakura.ad.jp` (opt-in: permission grant in the CSP panel required) |
+| **LiteLLM Providers** | `deepinfra.com`, `cerebras.ai`, `sambanova.ai`, `api.publicai.co`, `api.venice.ai`, `api.scaleway.ai`, `api.synthetic.new`, `api.stima.tech`, `nano-gpt.com`, `api.poe.com`, `llm.chutes.ai`, `api.abliteration.ai`, `api.llamagate.dev`, `api.gmi-serving.com`, `api.sarvam.ai`, `xiaomimimo.com` (all opt-in) |
+| **Cloud Native AI** | `nebius.com`, `nscale.com`, `featherless.ai`, `galadriel.com`, `recraft.ai` (all opt-in) |
+| **Embedding AI** | `jina.ai`, `voyageai.com` (all opt-in) |
+| **Other** | `volcengine.com`, `z.ai`, `wandb.ai`, `ai-gateway.helicone.ai` (all opt-in) |
 | **Local Environments** | `localhost`, `127.0.0.1` |
 | **Built-in AI** | Browser-internal API, not subject to CSP. No API key required, works offline |
 
-> **Note**: Manifest host_permissions do not expand to subdomains, so use the API hosts in the table above (e.g. `api.mistral.ai`, `api.deepseek.com`) for API connections. Apex domains alone do not cover the API endpoints.
+> **Note**: Manifest host_permissions do not expand to subdomains, so use the hosts in the table above for API connections. For Mistral / DeepSeek the apex domains (`mistral.ai` / `deepseek.com`) are the allowlisted ones; `api.*` is a legacy-compat entry.
 
 #### Granting permission for opt-in providers
 

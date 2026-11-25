@@ -26,7 +26,7 @@
 | 操作 | 動作 |
 |------|------|
 | **ノードをクリック** | そのタグで履歴を絞り込み、SQLite Historyパネルに自動遷移します |
-| **マウスホイール** | カーソル位置を中心にズームイン/アウト（0.3倍〜3倍） |
+| **マウスホイール** | カーソル位置を中心にズームイン/アウト（0.3倍〜12倍） |
 | **ドラッグ** | グラフ全体をパン（移動） |
 | **ピンチ操作**（タッチ対応端末） | 2本指でズーム、1本指でパン |
 | **+/− ボタン** | 中央基準でズームイン/アウト |
@@ -73,7 +73,7 @@ The period filter at the top of the panel limits which records are aggregated. I
 | Action | Behavior |
 |--------|----------|
 | **Click a node** | Filters history by that tag and automatically navigates to the SQLite History panel |
-| **Mouse wheel** | Zoom in/out centered on the cursor (0.3x-3x) |
+| **Mouse wheel** | Zoom in/out centered on the cursor (0.3x-12x) |
 | **Drag** | Pan the graph |
 | **Pinch** (touch devices) | Two fingers to zoom, one finger to pan |
 | **+/− buttons** | Zoom in/out centered on the canvas |
