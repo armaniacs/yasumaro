@@ -172,7 +172,7 @@ Priority（Failover Order）で優先度 1～3 位を設定し、複数プロバ
 
 **Q28. 設定をエクスポートしたファイルには API キーが含まれますか？**
 
-含まれません。セキュリティ上の理由から、API キーは設定エクスポートから除外されています。別のデバイスに設定を移行する際は、インポート後に API キーを手動で再入力してください。マスターパスワードを設定している場合は、エクスポートファイル全体が AES-GCM で暗号化されます。パスワード付きの履歴バックアップは別機能の「暗号化バックアップ」を使います（復元できるファイルサイズの上限は 50MB です）。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) をご覧ください。
+含まれません。セキュリティ上の理由から、API キーは設定エクスポートから除外されています。別のデバイスに設定を移行する際は、インポート後に API キーを手動で再入力してください。マスターパスワードを設定している場合は、エクスポートファイル全体が AES-GCM で暗号化されます。パスワード付きの履歴バックアップは別機能の「暗号化バックアップ」を使います（バックアップファイル 1 件の上限は 50MB で、超える場合は作成時に自動で分割形式になります）。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) をご覧ください。
 
 **Q29. PII マスキングとは何ですか？**
 
@@ -323,7 +323,7 @@ popup の「Cleansing」セクションにある「誤削除を報告」ボタ�
 
 **Q62. 設定エクスポート・暗号化バックアップ・ログエクスポート・アーカイブの違いは何ですか？**
 
-用途で使い分けます。設定の移行は「設定のエクスポート」（API キーは含まない）、パスワード付きの履歴バックアップは「暗号化バックアップ」（マスターパスワードが必要、上限 50MB）、他ツールでの分析や移行は「ログをエクスポート」の JSON / CSV / Markdown / .db、古い履歴の退避と復元は「Dashboard → Archive」です。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) と [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
+用途で使い分けます。設定の移行は「設定のエクスポート」（API キーは含まない）、パスワード付きの履歴バックアップは「暗号化バックアップ」（マスターパスワードが必要、バックアップファイル 1 件の上限は 50MB、超えると分割形式）、他ツールでの分析や移行は「ログをエクスポート」の JSON / CSV / Markdown / .db、古い履歴の退避と復元は「Dashboard → Archive」です。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) と [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
 
 **Q63. ツールバーのバッジは何を表していますか？**
 
@@ -658,7 +658,7 @@ Yes. Turn on "GitHub Gist Sync" in the dashboard under "Tools → Export / Impor
 
 **Q62. What is the difference between settings export, encrypted backup, log export, and archive?**
 
-Use each for its purpose. Migrate settings with "Export Settings" (API keys excluded), password-protected history backup with "Encrypted Backup" (master password required, 50 MB limit), analysis and migration with "Export Logs" JSON / CSV / Markdown / .db, and retiring plus restoring old history with "Dashboard → Archive". See the [Encrypted Backup Guide](ENCRYPTED_BACKUP_USER_GUIDE.md) and the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md).
+Use each for its purpose. Migrate settings with "Export Settings" (API keys excluded), password-protected history backup with "Encrypted Backup" (master password required, 50 MB limit per file, split format above that), analysis and migration with "Export Logs" JSON / CSV / Markdown / .db, and retiring plus restoring old history with "Dashboard → Archive". See the [Encrypted Backup Guide](ENCRYPTED_BACKUP_USER_GUIDE.md) and the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md).
 
 **Q63. What do the toolbar badges mean?**
 

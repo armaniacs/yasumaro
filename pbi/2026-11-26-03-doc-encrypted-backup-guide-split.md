@@ -23,10 +23,11 @@ Scenario: 上限表が SSOT と一致する
 ```
 
 ## 受け入れ基準
-- [ ] docs/ENCRYPTED_BACKUP_USER_GUIDE.md に分割形式の説明 (自動分割の条件、復元時の複数ファイル選択、不足パート時の案内) が追加されている
-- [ ] 上限の整理 (単一 50MB / 分割の結合後上限 / gzip 効果 / 復元の実効上限) が limits.ts の SSOT と一致する
-- [ ] トラブルシューティングの 50MB 行が現行挙動に更新されている
-- [ ] `npm run validate` (check-docs-chars を含む) が通る
+- [x] docs/ENCRYPTED_BACKUP_USER_GUIDE.md に分割形式の説明 (自動分割の条件、復元時の複数ファイル選択、不足パート時の案内) が追加されている (ja/en 両節)
+- [x] 上限の整理 (単一 50MB / 分割の結合後上限 / gzip 効果 / 復元の実効上限) が limits.ts の SSOT と一致する (MAX_BACKUP_FILE_BYTES = 52,428,800、MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 52,428,800、MAX_SPLIT_PART_COUNT = 16 と突合済み。結合長ゲートは PBI 02 実装 encryptedBackupSplitCodec.ts:448)
+- [x] トラブルシューティングの 50MB 行が現行挙動に更新されている (自動分割、結合上限超過の作成時案内、欠落パートの復元時案内)
+- [x] docs/FAQ.md の該当文言 (Q28/Q62) も現行実装と整合
+- [x] `npm run validate` (check-docs-chars を含む) が通る (check:docs-chars: 2,027 ファイル 0 違反、EM DASH 混入 0 件。フル validate は統合側で最終実行)
 
 ## テスト戦略（t_wadaスタイル）
 
