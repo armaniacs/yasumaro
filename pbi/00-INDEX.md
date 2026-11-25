@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-26 ログ移行の大容量対応（3件） ― 🔶 進行中 ✨機能追加
+
+LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和するラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin する。なぜなぜ分析 30 回 x 3 済み。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ⬜ 04 | [2026-11-26-04-feat-log-export-100k-paging.md](2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | keyset ページングで 100,000 件。QUERY_CAPS.plain 据え置き |
+| ⬜ 05 | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | 30 MiB 緩和。VULN-023 の多層 cap 維持 |
+| ⬜ 06 | [2026-11-26-06-doc-log-export-import-guide-limits.md](2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ガイド/FAQ を新上限に。04/05 完了後 |
+
 ### 2026-11-26 暗号化バックアップ大容量対応（3件） ― ✅ 3件実装完了（検証緑・アーカイブはマージ後） 🔧非機能追加
 
 復元ホップの隠れた実効上限 (restore_db 10M 文字 cap ≒ DB 実体 7.5MB) を分割輸送 (staging チャンク方式) で解消し、作成/復元のゲート整合とユーザーガイドの分割形式対応を閉じたラウンド。なぜなぜ分析 30 回 x 3 済み。RICE 降順 (依存尊重) で 01 → 02 → 03 の順に実装し、`npm run validate` 全緑 (19,346 件)。台帳は [2026-11-26-00-backlog-encrypted-backup-capacity.md](2026-11-26-00-backlog-encrypted-backup-capacity.md) を参照。
