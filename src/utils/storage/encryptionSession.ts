@@ -960,13 +960,68 @@ export async function recoverForgotMasterPassword(): Promise<void> {
 }
 
 /**
- * 暗号化キーのキャッシュをクリアする（テスト用）
+ * 暗号化キーのキャッシュをクリアする（テストおよび全データ削除用）
  */
 export function clearEncryptionKeyCache(): void {
     cachedEncryptionKey = null;
     cachedMasterPassword = null;
+    isMasterPasswordRequired = false;
     cachedHmacSecret = null;
 }
+
+/** Storage keys whose mutation or removal invalidates the in-memory KEK cache. */
+export const ENCRYPTION_KEY_MATERIAL_STORAGE_KEYS = [
+    StorageKeys.ENCRYPTION_SALT,
+    StorageKeys.ENCRYPTION_SECRET,
+    StorageKeys.MASTER_PASSWORD_ENABLED,
+    StorageKeys.MASTER_PASSWORD_SALT,
+    StorageKeys.MASTER_PASSWORD_HASH,
+    StorageKeys.MASTER_PASSWORD_KDF_ITERATIONS,
+] as const;
+
+/**
+ * Cross-context cache invalidation (PBI 2026-11-25-02):
+ * Drops the in-memory KEK / HMAC caches whenever another context (e.g.
+ * dashboard Delete All or master-password disable) mutates or removes key
+ * material in `chrome.storage.local`, so the service worker never keeps
+ * serving a stale pre-delete key while it remains alive.
+ */
+export function handleEncryptionStorageChange(
+    changes: Record<string, chrome.storage.StorageChange>,
+    areaName: string,
+): void {
+    if (areaName !== 'local') return;
+
+    const keyMaterialChanged = ENCRYPTION_KEY_MATERIAL_STORAGE_KEYS.some((key) =>
+        Object.prototype.hasOwnProperty.call(changes, key),
+    );
+    if (keyMaterialChanged) {
+        cachedEncryptionKey = null;
+        const mpChange = changes[StorageKeys.MASTER_PASSWORD_ENABLED];
+        if (mpChange && !mpChange.newValue) {
+            cachedMasterPassword = null;
+            isMasterPasswordRequired = false;
+        }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(changes, StorageKeys.HMAC_SECRET)) {
+        cachedHmacSecret = null;
+    }
+}
+
+let encryptionStorageChangeSubscribed = false;
+
+/** Subscribe once to chrome.storage.onChanged for cross-context key cache invalidation. */
+export function ensureEncryptionStorageInvalidationListener(): void {
+    if (encryptionStorageChangeSubscribed) return;
+    if (typeof chrome === 'undefined' || typeof chrome.storage?.onChanged?.addListener !== 'function') {
+        return;
+    }
+    chrome.storage.onChanged.addListener(handleEncryptionStorageChange);
+    encryptionStorageChangeSubscribed = true;
+}
+
+ensureEncryptionStorageInvalidationListener();
 
 /** 32バイトのランダムシークレットを生成し、ラップして local に保存して返す。 */
 async function generateAndStoreHmacSecret(): Promise<string> {

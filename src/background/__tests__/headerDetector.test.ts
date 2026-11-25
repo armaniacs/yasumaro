@@ -402,6 +402,7 @@ describe('HeaderDetector', () => {
     });
 
     test('logs an error when listener registration fails', async () => {
+      vi.mocked(logError).mockClear();
       chrome.webRequest = {
         onHeadersReceived: {
           addListener: vi.fn(() => { throw new Error('Permission denied'); }),
@@ -414,6 +415,63 @@ describe('HeaderDetector', () => {
       await detector.initialize();
 
       expect(logError).toHaveBeenCalled();
+    });
+
+    test('registers with responseHeaders and extraHeaders on Chromium environments (single call)', async () => {
+      vi.mocked(logError).mockClear();
+      const addListener = vi.fn();
+      chrome.webRequest = {
+        onHeadersReceived: {
+          addListener,
+          removeListener: vi.fn(),
+          hasListener: vi.fn(),
+          hasListeners: vi.fn(),
+        }
+      } as any;
+
+      await detector.initialize();
+
+      expect(addListener).toHaveBeenCalledTimes(1);
+      expect(addListener).toHaveBeenCalledWith(
+        expect.any(Function),
+        { urls: ['<all_urls>'], types: ['main_frame'] },
+        ['responseHeaders', 'extraHeaders'],
+      );
+      expect(logError).not.toHaveBeenCalled();
+    });
+
+    test('falls back to responseHeaders only when extraHeaders is rejected (Firefox, PBI 2026-11-25-01)', async () => {
+      vi.mocked(logError).mockClear();
+      const addListener = vi.fn((_cb: unknown, _filter: unknown, extraInfoSpec?: string[]) => {
+        if (extraInfoSpec?.includes('extraHeaders')) {
+          throw new TypeError('Invalid enumeration value "extraHeaders"');
+        }
+      });
+      chrome.webRequest = {
+        onHeadersReceived: {
+          addListener,
+          removeListener: vi.fn(),
+          hasListener: vi.fn(),
+          hasListeners: vi.fn(),
+        }
+      } as any;
+
+      await detector.initialize();
+
+      expect(addListener).toHaveBeenCalledTimes(2);
+      expect(addListener).toHaveBeenNthCalledWith(
+        1,
+        expect.any(Function),
+        { urls: ['<all_urls>'], types: ['main_frame'] },
+        ['responseHeaders', 'extraHeaders'],
+      );
+      expect(addListener).toHaveBeenNthCalledWith(
+        2,
+        expect.any(Function),
+        { urls: ['<all_urls>'], types: ['main_frame'] },
+        ['responseHeaders'],
+      );
+      expect(logError).not.toHaveBeenCalled();
     });
   });
 });

@@ -54,17 +54,34 @@ export class HeaderDetector {
       return;
     }
 
-    try {
-      chrome.webRequest.onHeadersReceived.addListener(
-        this.onHeadersReceived,
-        {
-          urls: ['<all_urls>'],
-          types: ['main_frame']
-        },
-        ['responseHeaders', 'extraHeaders']
-      );
+    const filter: chrome.webRequest.RequestFilter = {
+      urls: ['<all_urls>'],
+      types: ['main_frame'],
+    };
 
-      await logInfo('Successfully initialized webRequest listener', { source: 'headerDetector' });
+    try {
+      try {
+        chrome.webRequest.onHeadersReceived.addListener(
+          this.onHeadersReceived,
+          filter,
+          ['responseHeaders', 'extraHeaders']
+        );
+        await logInfo('Successfully initialized webRequest listener', { source: 'headerDetector', extraHeaders: true });
+      } catch {
+        // Firefox rejects the Chromium-only 'extraHeaders' option with a
+        // synchronous TypeError (PBI 2026-11-25-01). Fall back to standard
+        // 'responseHeaders' so Cache-Control: private detection and webhook
+        // privacy verdicts remain active on Firefox.
+        chrome.webRequest.onHeadersReceived.addListener(
+          this.onHeadersReceived,
+          filter,
+          ['responseHeaders']
+        );
+        await logInfo('Successfully initialized webRequest listener (without extraHeaders)', {
+          source: 'headerDetector',
+          extraHeaders: false,
+        });
+      }
     } catch (error: unknown) {
       await logError('HeaderDetector initialization failed', { error: errorMessage(error), source: 'headerDetector' }, ErrorCode.UNKNOWN_ERROR);
     }

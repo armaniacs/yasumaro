@@ -29,6 +29,11 @@
 3. `docs/RELEASE_POLICY.md` の扱いは保留(owner 指示。v7 方針の節は追加しない)
 4. SECURITY.md の 6.x の扱いは保留(owner 指示。6.9 系のため現行の 6.x Supported のまま変更なし)
 
+## 採番の記録(2026-11-25: 6.9.78 再採番)
+
+- 08(実機スモーク)で検出された 2 件の不具合修正(PBI 2026-11-25-01 / 2026-11-25-02)を取り込んだため、PBI 08 の手順に従い 6.9.77 から 6.9.78 へ再採番した
+- `package.json` → `node scripts/sync-version.mjs`(docs/version.json と package-lock.json)→ `cli/Cargo.toml` 手動の順に 6.9.78 へ同期し、`CHANGELOG.md` と `CHROMEWEBSTORE.md` を更新した
+
 ## 採番の記録(2026-11-24)
 
 - owner が 6.9.77 を指定した(7.0.0 にはしない)。PBI の「07・08 の完了後にのみ採番」は、owner の明示の指示で先行実施した。08 で修正が入った場合は 6.9.78 以降に再度採番する

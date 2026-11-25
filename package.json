@@ -1,6 +1,6 @@
 {
   "name": "yasumaro",
-  "version": "6.9.77",
+  "version": "6.9.78",
   "description": "Log your browsing history with AI summaries into local SQLite storage. Optional Obsidian integration.",
   "type": "module",
   "scripts": {
@@ -67,6 +67,8 @@
     "release:check": "node scripts/release-checks/index.mjs",
     "release:check:fast": "node scripts/release-checks/index.mjs --skip-e2e",
     "release:check:deps": "node scripts/release-checks/index.mjs --category=deps",
+    "smoke:ga": "node scripts/ga-smoke/index.mjs",
+    "smoke:ga:live": "node scripts/ga-smoke/index.mjs --live",
     "check:deps:audit-warn": "node scripts/release-checks/check-deps.mjs --audit-warn",
     "build:firefox": "node scripts/sync-version.mjs && node scripts/check-version-consistency.js && wxt build -b firefox"
   },
@@ -100,6 +102,7 @@
     "license-checker": "^25.0.1",
     "oxc-parser": "0.156.0",
     "oxlint": "^1.94.0",
+    "puppeteer-core": "^25.18.1",
     "ts-node": "^10.9.2",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",

@@ -264,6 +264,58 @@ export async function exportDateRange(
   return { totalRows: result.data.rows.length, totalFiles };
 }
 
+const DOWNLOAD_REVOKE_SETTLE_TIMEOUT_MS = 10_000;
+
+/**
+ * Wait until a browser download reaches a terminal state (`complete` or
+ * `interrupted`) before revoking its blob URL. Firefox's `downloads.download`
+ * resolves before the download manager opens the blob URL, so revoking
+ * immediately in `finally` races with the fetch and aborts larger exports.
+ * Falls back cleanly when `chrome.downloads.onChanged` is unavailable (mocks).
+ */
+async function waitForDownloadTerminalState(downloadId: number): Promise<void> {
+  const onChanged = chrome.downloads?.onChanged;
+  if (!onChanged?.addListener || !onChanged?.removeListener) return;
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const finish = (): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      onChanged.removeListener(listener);
+      resolve();
+    };
+    const listener = (delta: chrome.downloads.DownloadDelta): void => {
+      if (delta.id !== downloadId) return;
+      const state = delta.state?.current;
+      if (state === 'complete' || state === 'interrupted') {
+        finish();
+      }
+    };
+    const timer = setTimeout(finish, DOWNLOAD_REVOKE_SETTLE_TIMEOUT_MS);
+    onChanged.addListener(listener);
+
+    // Handle downloads that already settled before the listener was attached.
+    if (typeof chrome.downloads?.search === 'function') {
+      const checkExisting = (items: chrome.downloads.DownloadItem[] | undefined): void => {
+        const item = items?.[0];
+        if (item && (item.state === 'complete' || item.state === 'interrupted')) {
+          finish();
+        }
+      };
+      try {
+        const maybePromise = chrome.downloads.search({ id: downloadId }, checkExisting) as unknown;
+        if (maybePromise && typeof (maybePromise as Promise<unknown>).then === 'function') {
+          (maybePromise as Promise<chrome.downloads.DownloadItem[]>).then(checkExisting, () => undefined);
+        }
+      } catch {
+        // Ignore search errors; listener + bounded timeout still settle.
+      }
+    }
+  });
+}
+
 /**
  * The production DownloadPort: hands the rendered file to chrome.downloads via
  * a blob URL.
@@ -273,7 +325,7 @@ export const chromeDownloadPort: DownloadPort = async (filename, content) => {
   const blobUrl = URL.createObjectURL(blob);
 
   try {
-    await chrome.downloads.download({
+    const downloadId = await chrome.downloads.download({
       url: blobUrl,
       filename,
       saveAs: false,
@@ -282,15 +334,16 @@ export const chromeDownloadPort: DownloadPort = async (filename, content) => {
       // 明示 'overwrite' で無警告の黙示上書きにはしない（全 4 箇所で統一）。
       conflictAction: 'overwrite',
     });
+    if (typeof downloadId === 'number') {
+      await waitForDownloadTerminalState(downloadId);
+    }
   } finally {
-    // WHY settle-driven instead of a fixed timer: chrome.downloads.download
-    // resolves once Chromium has started the blob fetch, and the File API
-    // keeps the blob alive for fetches in progress — revoke only blocks
-    // later fetches. A timer either revokes too early (large/slow
-    // downloads) or leaks on the failure path. Same pattern as
-    // connectionTests handleTestLocalMarkdown. exportLogsService keeps a
-    // 60s timer only because its anchor-click path has no completion
-    // signal to await.
+    // WHY settle-driven instead of a fixed timer: we wait on downloads.download
+    // plus downloads.onChanged terminal state (Firefox's download manager opens
+    // the blob URL asynchronously after download() resolves), then revoke
+    // deterministically with no leak on failure paths. exportLogsService keeps
+    // a 60s timer only because its anchor-click path has no completion signal
+    // to await.
     URL.revokeObjectURL(blobUrl);
   }
 };

@@ -2,6 +2,25 @@
 
 正式版の配布物(ストアに上げるのと同じビルド)で主要 10 フローを 3 ブラウザで確認する。自動テストで覆えない層だけを手動で見る。版固有の記録は末尾の実施ログにだけ書く。
 
+## 自動スモークランナー (`npm run smoke:ga`)
+
+配布用 ZIP(`OW_E2E_PROBE=0`)のビルド・展開・probe 不在検査・3 実機ブラウザ(Chrome / Edge / Firefox Developer Edition)での主要 10 フロー実行・日英 UI 確認・実施ログ生成を自動化したランナーが `scripts/ga-smoke/` にある。
+
+```bash
+# 標準実行(配布用 ZIP 3 つを OW_E2E_PROBE=0 でビルドし、決定論的ローカルモックで 3 ブラウザを検証)
+npm run smoke:ga
+
+# 実 Obsidian / 実 Ollama が起動している環境でライブ疎通も追加検証する場合
+npm run smoke:ga:live
+
+# 非対話実行(ブラウザ Chrome UI のガイド監視を省略) / 特定ブラウザのみ / 実施ログ自動追記
+npm run smoke:ga -- --no-assisted --browsers=chrome,edge
+npm run smoke:ga -- --skip-build --write-log
+```
+
+- 結果レポートは `reports/ga-smoke/<版>-<日付>/report.md` と `report.json` に出力される(API キーや token 混入時は書き出し前に自動停止する)。
+- ブラウザ外枠 UI(項目 3 のアドレスバー `y`・`Alt+Shift+Y`・右クリック)と OS ネイティブ通知クリック(項目 7)のみ、`--assisted` ガイドまたは手動確認で補完する。
+
 ## 準備
 
 - 配布用ビルドを作る(`OW_E2E_PROBE` が 0 か未設定であることを先に確認する。`OW_E2E_PROBE=1` が残っていると probe 入りになる)
@@ -70,3 +89,14 @@
 - Firefox の版 / 結果:
 - 日本語 UI / 英語 UI の確認(どちらで何を見たか):
 - 不合格と修正 PBI へのリンク:
+
+### 自動実行記録 (2026-11-25)
+
+- 実施日: 2026-11-25
+- 拡張の版: 6.9.78 (manifest: 6.9.78, git: 382fcf64d)
+- OS: macOS 27.2.1 (26B131)
+- Chrome の版 / 結果: 158.0.8127.38 / 合格 9・一部自動 1・不合格 0
+- Edge の版 / 結果: 158.0.4370.33 / 合格 9・一部自動 1・不合格 0
+- Firefox の版 / 結果: firefox/159.0 / 合格 9・一部自動 1・不合格 0
+- 日本語 UI / 英語 UI の確認: ja: 合格 (rawMsg=false), en-US: 合格 (rawMsg=false)
+- 不合格と修正 PBI へのリンク: なし

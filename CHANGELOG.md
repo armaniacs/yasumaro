@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+## [6.9.78] - 2026-11-25
+
+このリリースは正式版前の 3 ブラウザ実機スモークテスト(Chrome / Edge / Firefox)で検出された不具合 2 件の修正と、実機スモーク自動検証ランナーの追加です。
+
+### 修正
+
+- Firefox で `HeaderDetector` の初期化が `'extraHeaders'` 指定の例外で失敗していた不具合を修正(`['responseHeaders']` へフォールバック登録することで、Firefox でも `Cache-Control: private` 等のヘッダー検出と Webhook エクスポートのプライバシー判定が正常に機能するようになった。Chromium 系は従来どおり `'extraHeaders'` 付きで登録)
+- 全データ削除(`clearAllLocalData`)やマスターパスワード解除の直後に他コンテキスト(Service Worker 等)の暗号化キーキャッシュが残留していた不具合を修正(`chrome.storage.onChanged` による鍵素材変更検知でキャッシュを即時破棄し、削除直後に再保存した Webhook URL や API キーが SW 再起動なしで復号できるようになった)
+- ローカル Markdown 書き出し(`chromeDownloadPort`)で `downloads.download` 完了直後に Blob URL を即失効していたため Firefox で書き出しが中断されるレース条件を修正(`downloads.onChanged` の完了通知を待ってから失効するよう変更)
+
+### テスト
+
+- 配布用 ZIP(`OW_E2E_PROBE=0`)を実機 Chrome / Edge / Firefox Developer Edition の新規プロファイルで検証する GA スモーク自動ランナー(`npm run smoke:ga`)を追加
+
 ## [6.9.77] - 2026-11-24
 
 このリリースは正式版前の監査 run-3 の修正が中心です。webhook 宛先 URL の暗号化保存、許可リストのループバック専用化、ai 政策の不明値の fail-closed 化、regenerate の Obsidian 書き込み失敗の表面化、blob-tier の信頼境界の強化に加え、Obsidian の競合通知、暗号化バックアップの分割形式、寛容インポートなどの追加を含みます。

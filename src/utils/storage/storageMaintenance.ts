@@ -6,6 +6,7 @@
 
 import { getStorageUsage, estimateDataSize, STORAGE_QUOTA_BYTES, hasUnlimitedStorage } from './quota.js';
 import { purgeLegacyStorage } from './savedUrlRepository.js';
+import { clearEncryptionKeyCache } from './encryptionSession.js';
 import { ErrorCode } from '../logger/types.js';
 import { logInfo, logError } from '../logger/api.js';
 import type { SqliteHealthCheck } from './types.js';
@@ -75,4 +76,8 @@ export async function ensureStorageQuota(
  */
 export async function clearAllLocalData(): Promise<void> {
     await chrome.storage.local.clear();
+    // Drop the calling context's in-memory KEK cache immediately; other live
+    // extension contexts (e.g. Service Worker) invalidate via storage.onChanged
+    // (PBI 2026-11-25-02).
+    clearEncryptionKeyCache();
 }

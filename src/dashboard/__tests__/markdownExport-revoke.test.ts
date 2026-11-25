@@ -55,5 +55,34 @@ describe('markdownExport', () => {
       expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
       expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith(BLOB_URL);
     });
+
+    it('waits for downloads.onChanged terminal state before revoking when downloadId is numeric (Firefox blob race fix)', async () => {
+      let registeredListener: ((delta: chrome.downloads.DownloadDelta) => void) | null = null;
+      const addListener = vi.fn((fn: (delta: chrome.downloads.DownloadDelta) => void) => {
+        registeredListener = fn;
+      });
+      const removeListener = vi.fn();
+      (globalThis as any).chrome = {
+        downloads: {
+          download: vi.fn().mockResolvedValue(42),
+          onChanged: {
+            addListener,
+            removeListener,
+          },
+        },
+      };
+
+      const pending = chromeDownloadPort('Yasumaro/2026-11-25.md', '# Export\n');
+      await waitForMock(() => expect(addListener).toHaveBeenCalledTimes(1));
+      // Download started but not yet complete: blob URL must remain live for Firefox's async fetch.
+      expect((globalThis.URL as any).revokeObjectURL).not.toHaveBeenCalled();
+
+      registeredListener!({ id: 42, state: { current: 'complete' } } as chrome.downloads.DownloadDelta);
+      await pending;
+
+      expect(removeListener).toHaveBeenCalledTimes(1);
+      expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledTimes(1);
+      expect((globalThis.URL as any).revokeObjectURL).toHaveBeenCalledWith(BLOB_URL);
+    });
   });
 });
