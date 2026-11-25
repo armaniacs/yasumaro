@@ -123,6 +123,7 @@ export type SplitBackupFailureCode =
   | 'invalid-option'
   | 'too-large'
   | 'too-many-parts'
+  | 'split-backup-too-large'
   | 'decrypt-failed'
   | 'invalid-manifest'
   | 'version-mismatch'
@@ -438,6 +439,18 @@ export async function createSplitBackup(
   // raw form stays available and the manifest records which one was stored.
   const useGzip = compressedBase64.length < input.historyDbBase64.length;
   const body = useGzip ? compressedBase64 : input.historyDbBase64;
+
+  // WHY the create-side twin of parseSplitBackup's joined-length gate: a
+  // container whose joined body exceeds MAX_BACKUP_FILE_BYTES could never be
+  // restored (parse rejects manifest.totalPlaintextLength over the same
+  // budget), so accepting it would break "a created backup always restores".
+  // The cap measures the post-compression base64 body, not the raw DB size.
+  if (body.length > MAX_BACKUP_FILE_BYTES) {
+    throw new SplitBackupError(
+      'split-backup-too-large',
+      `Split backup joined body exceeds the backup file budget (${body.length} chars)`,
+    );
+  }
 
   const chunks = splitString(body, chunkChars);
   if (chunks.length > MAX_SPLIT_PART_COUNT) {

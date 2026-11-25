@@ -29,12 +29,12 @@ Scenario: 復元側ゲートは据え置き
 ```
 
 ## 受け入れ基準
-- [ ] createSplitBackup に結合後 body 長 <= MAX_BACKUP_FILE_BYTES のゲートが追加されている
-- [ ] 超過時は既存の SplitBackupError の失敗区分に新区分 (split-backup-too-large) を追加して返す
-- [ ] panel が新区分を原因の分かる文言 (ja/en) で表示する
-- [ ] parseSplitBackup は変更しない (受信側防御点を維持)
-- [ ] 境界値試験 (ちょうど/超過、16 パート以下でも結合長超過で拒否) がある
-- [ ] `npm run validate` が通る
+- [x] createSplitBackup に結合後 body 長 <= MAX_BACKUP_FILE_BYTES のゲートが追加されている (gzip 要否決定後の body で判定、パート構築前なので部分出力なし)
+- [x] 超過時は既存の SplitBackupError の失敗区分に新区分 (split-backup-too-large) を追加して返す
+- [x] panel が新区分を原因の分かる文言 (ja/en) で表示する (encryptedBackupSplitCreateTooLarge)
+- [x] parseSplitBackup は変更しない (受信側防御点を維持)
+- [x] 境界値試験 (ちょうど/超過、16 パート以下でも結合長超過で拒否) がある (codec 4 件 + service 1 件 + panel 2 件、Red 確認済み。base64 が 4 の倍数のため最小超過は cap+4 文字)
+- [x] `npm run validate` が通る (type-check / lint / check:docs-chars / check-i18n / validate:json / 全 vitest 19,345/19,346。唯一の失敗は並行セッション編集中の docs/PRIVACY.md 同期待ちによる他セッション由来の失敗で、本 PBI 変更 stash でも再現するため無関係を特定済み。統合側で最終再実行)
 
 ## テスト戦略（t_wadaスタイル）
 

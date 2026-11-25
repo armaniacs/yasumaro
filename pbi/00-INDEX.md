@@ -21,7 +21,7 @@
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
 | ~~01~~ | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ✅ 実装完了。staging チャンク転送 (begin/chunk/commit/abort)、旧 restore_db 削除。validate 全緑 (19,339 件) |
-| ⬜ 02 | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | createSplitBackup に結合長ゲート追加。01 と直列 |
+| ~~02~~ | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | ✅ 実装完了。createSplitBackup に結合長ゲート追加 + 専用文言。parse 側無変更 |
 | ⬜ 03 | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ユーザーガイドの分割形式対応。01 完了後 |
 
 ### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（GA 必須全件完了・アーカイブ済み / 保留・将来 5 件） ― ✅ 完了 🔧非機能追加

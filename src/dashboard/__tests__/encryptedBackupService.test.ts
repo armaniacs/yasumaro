@@ -62,8 +62,8 @@ import { exportDb } from '../exportLogsService.js';
 import { restoreDb } from '../dashboardSqliteService.js';
 import { isMasterPasswordEnabled, unlockWithPassword } from '../../utils/storage/encryptionSession.js';
 import { isLocked } from '../../utils/storage/authGuard.js';
-import { MAX_ENVELOPE_BASE64_LENGTH } from '../../utils/limits.js';
-import type { SplitBackupContainer } from '../encryptedBackupSplitCodec.js';
+import { MAX_ENVELOPE_BASE64_LENGTH, MAX_BACKUP_FILE_BYTES } from '../../utils/limits.js';
+import { SplitBackupError, type SplitBackupContainer } from '../encryptedBackupSplitCodec.js';
 import {
   exportEncryptedBackup,
   importEncryptedBackup,
@@ -398,6 +398,26 @@ describe('encrypted split backup service (PBI01)', () => {
     const restoredBytes = vi.mocked(restoreDb).mock.calls[0]![0] as Uint8Array<ArrayBuffer>;
     expect(restoredBytes.length).toBe(dbBytes.length);
     await expect(sha256Hex(restoredBytes)).resolves.toBe(await sha256Hex(dbBytes));
+  });
+
+  it('split export rejects an over-budget joined body with split-backup-too-large', async () => {
+    vi.mocked(settingsRepository.getAll).mockResolvedValue(FAKE_SETTINGS);
+    // Incompressible bytes: gzip cannot shrink them, so the joined body is the
+    // raw base64 and one byte over the cap boundary is the smallest overshoot
+    // base64 can represent (4 chars).
+    vi.mocked(exportDb).mockResolvedValue(
+      new Blob([randomBytes((MAX_BACKUP_FILE_BYTES * 3) / 4 + 1)]),
+    );
+
+    const error = await exportEncryptedSplitBackup('correct-password').then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(SplitBackupError);
+    expect((error as SplitBackupError).code).toBe('split-backup-too-large');
+    expect(restoreDb).not.toHaveBeenCalled();
+    expect(settingsRepository.setAll).not.toHaveBeenCalled();
   });
 
   it('reports split export/import stages in order', async () => {

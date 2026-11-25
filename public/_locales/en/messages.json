@@ -5946,6 +5946,9 @@
   "encryptedBackupSplitTooLarge": {
     "message": "Split backup exceeds the size limit: {detail}"
   },
+  "encryptedBackupSplitCreateTooLarge": {
+    "message": "This history DB exceeds the restorable limit even in split form. Organize your history and try again."
+  },
   "encryptedBackupRestoredSkipped": {
     "message": "Restored from backup ({skipped} invalid settings items were skipped)"
   },

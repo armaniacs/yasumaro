@@ -5928,6 +5928,9 @@
   "encryptedBackupSplitTooLarge": {
     "message": "分割バックアップが上限を超えています: {detail}"
   },
+  "encryptedBackupSplitCreateTooLarge": {
+    "message": "この履歴 DB は分割形式でも復元可能な上限を超えています。履歴を整理してから再試行してください。"
+  },
   "encryptedBackupRestoredSkipped": {
     "message": "バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）"
   },
