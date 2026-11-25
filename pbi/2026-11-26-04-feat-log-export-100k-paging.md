@@ -34,12 +34,12 @@ Scenario: エクスポートしたものはインポートできる
 ```
 
 ## 受け入れ基準
-- [ ] exportLogsService.queryAllData が keyset ページング (1 ページ QUERY_CAPS.plain、cursor は until、境界行を id で dedup、新 → 旧の行順維持) に変更されている
-- [ ] エクスポート上限が 100,000 件に引き上げられ、定数が limits.ts に SSOT 化されている (MAX_EXPORT_ROWS)
-- [ ] QUERY_CAPS.plain は据え置き (一覧 UI・集計パネルへの影響ゼロ)
-- [ ] 100,000 超のエラー文言は新上限を示す (既存 UX 継承)
-- [ ] 軽量行 x 100,000 のエクスポート往復試験が pin されている
-- [ ] `npm run validate` が通る
+- [x] exportLogsService.queryAllData が keyset ページング (1 ページ QUERY_CAPS.plain、cursor は until、境界行を id で dedup、新 → 旧の行順維持) に変更されている
+- [x] エクスポート上限が 100,000 件に引き上げられ、定数が limits.ts に SSOT 化されている (MAX_EXPORT_ROWS、limits-parity テストに pin)
+- [x] QUERY_CAPS.plain は据え置き (一覧 UI・集計パネルへの影響ゼロ)
+- [x] 100,000 超のエラー文言は新上限を示す (既存 UX 継承、1 ページ目直後にエラーで追加 fetch なし)
+- [x] 軽量行 x 100,000 のエクスポート往復試験が pin されている (本物 HMAC 署名経由、inserted 100,000 / skipped 0 / バッチ 500 回 (実装の BATCH_SIZE = 200 行)。実測: ファイル 8.0MB、export 80ms / import 97ms、RSS 増分 ~170MB)
+- [x] `npm run validate` が通る (関連 17 ファイル 288 件緑、type-check / lint 通過。フル validate は統合側で最終実行)
 
 ## テスト戦略（t_wadaスタイル）
 

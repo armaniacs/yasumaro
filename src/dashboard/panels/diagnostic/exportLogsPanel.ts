@@ -99,7 +99,8 @@ export function createExportLogsPanel(): PanelLifecycle {
               // PBI 2026-09-12-17: a backend audit cap (e.g. OPFS 1000) can make
               // `rows` shorter than `total` — reporting success while silently
               // distributing a partial log is worse than stating the limit
-              // (mirrors exportLogsService.queryAllData's guard).
+              // (the log export pages past this class of cap; the audit path
+              // reports it instead).
               if (total > rows.length) {
                 if (auditStatusEl) {
                   auditStatusEl.textContent = getMessageWithSubstitutions(

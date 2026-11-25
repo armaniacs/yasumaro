@@ -6,6 +6,7 @@
 
 import { useTimerClock } from '../../../testDir/waitPolicy.js';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { QUERY_CAPS } from '../../utils/limits.js';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -325,10 +326,16 @@ describe('exportLogsService', () => {
     });
 
     it('rejects rather than silently truncating when the history exceeds the limit', async () => {
-      // total far exceeds the rows actually returned: the file would have been
-      // written with only the first page and reported as a complete export.
-      mockQueryLogs.mockResolvedValue({ data: { rows: SAMPLE_ROWS, total: 25000 } });
-      await expect(exportJson()).rejects.toThrow(/25000/);
+      // PBI 2026-11-26-04: the single-query guard (total > rows.length) became
+      // a keyset-paging cap at MAX_EXPORT_ROWS, so a faithful mock returns a
+      // full first page and the total above the ceiling fires the error.
+      const fullPage = Array.from({ length: QUERY_CAPS.plain }, (_, i) => ({
+        id: i + 1,
+        url: 'u',
+        created_at: 1_700_000_000_000 - i,
+      }));
+      mockQueryLogs.mockResolvedValue({ data: { rows: fullPage, total: 150000 } });
+      await expect(exportJson()).rejects.toThrow(/150000/);
     });
 
     it('still exports normally when the row count matches the total', async () => {

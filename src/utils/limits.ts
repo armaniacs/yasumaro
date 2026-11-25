@@ -86,6 +86,16 @@ export const QUERY_CAPS = {
   plain: 10000,
 } as const;
 
+/**
+ * Whole-export row ceiling (exportLogsService, PBI 2026-11-26-04). The
+ * export pages with a keyset cursor at QUERY_CAPS.plain rows per page and
+ * stops here; the value matches the retention policy maximum
+ * (sqliteMaxRecords 100_000) so everything storable is exportable.
+ * Deliberately separate from the listing cap: QUERY_CAPS.plain bounds one
+ * page for the history UI, this bounds the entire export.
+ */
+export const MAX_EXPORT_ROWS = 100_000;
+
 /** Log-forward: forwarded log message chars, detail keys, serialized size (systemHandlers, VULN-004). */
 export const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
 export const MAX_LOG_FORWARD_DETAILS_KEYS = 64;

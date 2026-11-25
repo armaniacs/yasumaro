@@ -17,6 +17,9 @@ const EXPECTED: Record<string, number> = {
   AUDIT_CAP_IDB: 100000,
   AUDIT_CAP_FALLBACK: 1000,
   MAX_QUERY_LIMIT: 100000,
+  // PBI 2026-11-26-04: whole-export ceiling, keyset-paged at QUERY_CAPS.plain
+  // per page; matches the retention policy maximum (100,000).
+  MAX_EXPORT_ROWS: 100000,
   MAX_LOG_FORWARD_MESSAGE_CHARS: 65536,
   MAX_LOG_FORWARD_DETAILS_KEYS: 64,
   MAX_LOG_FORWARD_SERIALIZED_CHARS: 262144,
@@ -65,7 +68,7 @@ const EXPECTED: Record<string, number> = {
   MAX_UBLOCK_FILTER_LINES: 500000,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 54;
+const EXPECTED_LIMITS_EXPORT_COUNT = 55;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',
