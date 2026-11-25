@@ -37,9 +37,15 @@
 
 | NN | PBI | 種別 | RICE | SP | 状態 |
 |---|---|---|---:|---:|---|
-| 01 | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ⬜ |
-| 02 | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | ⬜ |
-| 03 | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ⬜ |
+| 01 | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ✅ 実装完了 (staging チャンク転送、旧 restore_db 削除) |
+| 02 | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | ✅ 実装完了 (createSplitBackup 結合長ゲート + 専用文言) |
+| 03 | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 実装完了 (ガイド ja/en 分割形式対応、FAQ 同期) |
+
+## 検証記録
+
+- PBI 01 完了時: `npm run validate` 全緑 (19,339 件、type-check / lint / 全静的ゲート)
+- PBI 02/03 完了後の最終統合: `npm run validate` 全緑 (19,346 件、check-privacy 含む全静的ゲート)
+- 副産物: PBI 01 の offscreen maintain op 'restore' (単発 Uint8Array) は波及過大のため残留、削除は後続候補
 
 ## 再発防止の運用メモ (なぜなぜ分析 3 より)
 
