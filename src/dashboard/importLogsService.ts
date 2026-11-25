@@ -36,9 +36,15 @@ interface ExportedData {
  */
 import { IMPORT_TOTAL_ROW_CAP, MAX_SUMMARY_LENGTH } from '../utils/limits.js';
 export { IMPORT_TOTAL_ROW_CAP };
-/** Upper bound on the raw import text, mirroring the settings 10 MiB cap. */
+/** Pre-parse import text cap; the sizing rationale lives with the constant. */
 import { MAX_IMPORT_TEXT_BYTES } from '../utils/limits.js';
 export { MAX_IMPORT_TEXT_BYTES };
+
+/**
+ * User-facing rendering of the pre-parse cap, derived from the constant so
+ * the message cannot drift when the value changes again.
+ */
+const IMPORT_SIZE_ERROR = `Import file is too large (limit: ${MAX_IMPORT_TEXT_BYTES / (1024 * 1024)} MiB)`;
 
 const MAX_URL_LENGTH = 2048;
 const MAX_TITLE_LENGTH = 2048;
@@ -369,7 +375,7 @@ export async function importFromJson(
 ): Promise<ImportLogsResult> {
   // Size cap before parse (VULN-023): reject an oversized file up front.
   if (typeof jsonText === 'string' && jsonText.length > MAX_IMPORT_TEXT_BYTES) {
-    return { error: 'Import file is too large' };
+    return { error: IMPORT_SIZE_ERROR };
   }
 
   let parsed: ExportedData;
@@ -410,7 +416,7 @@ export async function importFromJsonForMigration(
 ): Promise<ImportLogsResult> {
   // Size cap before parse (VULN-023), same as the normal path.
   if (typeof jsonText === 'string' && jsonText.length > MAX_IMPORT_TEXT_BYTES) {
-    return { error: 'Import file is too large' };
+    return { error: IMPORT_SIZE_ERROR };
   }
 
   let parsed: ExportedData;

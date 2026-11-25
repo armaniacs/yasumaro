@@ -29,6 +29,10 @@ const CAPS: Array<{ name: string; pattern: RegExp }> = [
   { name: 'MAX_QUERY_LIMIT', pattern: /=\s*100000\b|=\s*100_000\b/ },
   // 10 MiB family (round 6, PBI 2026-09-11-08)
   { name: '10MB family', pattern: /=\s*10\s*\*\s*1024\s*\*\s*1024\b/ },
+  // The log-import text gate left the 10 MiB family for 30 MiB (the
+  // MAX_EXPORT_ROWS round-trip scale); the guard follows the value so a
+  // re-localized 30 MiB literal cannot bypass the registry either.
+  { name: '30MB family', pattern: /=\s*30\s*\*\s*1024\s*\*\s*1024\b/ },
 ];
 
 /** Files allowed to carry their own cap literals (different concern, same value). */

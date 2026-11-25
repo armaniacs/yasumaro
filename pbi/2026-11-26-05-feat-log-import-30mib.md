@@ -33,12 +33,12 @@ Scenario: 行 cap は据え置き
 ```
 
 ## 受け入れ基準
-- [ ] MAX_IMPORT_TEXT_BYTES が 10 MiB → 30 MiB に引き上げられている (limits.ts)
-- [ ] importLogsService の事前チェックとエラー文言が新上限を示す (上限値を含む文言)
-- [ ] IMPORT_TOTAL_ROW_CAP (100,000) と MAX_IMPORT_ROWS (1,000/メッセージ) は据え置き (VULN-023/006 の多層防御を維持)
-- [ ] 上限境界試験 (ちょうど/1 バイト超過) と行 cap 試験がある
-- [ ] 往復不変条件の試験 (エクスポート出力 → インポート入力) がある (PBI 04 と連携)
-- [ ] `npm run validate` が通る
+- [x] MAX_IMPORT_TEXT_BYTES が 10 MiB → 30 MiB に引き上げられている (limits.ts、WHY コメントに根拠を記録)
+- [x] importLogsService の事前チェックとエラー文言が新上限を示す (IMPORT_SIZE_ERROR 定数、`Import file is too large (limit: 30 MiB)`)。service 返却の英語固定文字列 + panel の formatImportLogsError 補間という既存流儀のため i18n キー追加は不要
+- [x] IMPORT_TOTAL_ROW_CAP (100,000) と MAX_IMPORT_ROWS (1,000/メッセージ、実バッチ 200 行) は据え置き (VULN-023/006 の多層防御を維持)
+- [x] 上限境界試験 (30 MiB ちょうどでパースに進む、+1 バイトで上限値入り文言、通常/移行パス両方) と行 cap 試験 (100,001 行で拒否) がある
+- [x] 往復不変条件の試験 (フルフィデリティ 50,000 行、27.8MB、本物 HMAC、バッチ 250 回、inserted 50,000 / skipped 0) がある
+- [x] `npm run validate` が通る (関連 16 ファイル 300 件緑、type-check / lint 通過。limits-drift に「30MB family」パターンを新設し新値の再局所化を監視。フル validate は統合側で最終実行)
 
 ## テスト戦略（t_wadaスタイル）
 

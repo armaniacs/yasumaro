@@ -21,7 +21,7 @@ LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、イ�
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
 | ~~04~~ | [2026-11-26-04-feat-log-export-100k-paging.md](2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | ✅ 実装完了。keyset ページングで 100,000 件、MAX_EXPORT_ROWS SSOT 化。100k 往復 pin |
-| ⬜ 05 | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | 30 MiB 緩和。VULN-023 の多層 cap 維持 |
+| ~~05~~ | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | ✅ 実装完了。30 MiB 緩和、上限値入り文言、フルフィデリティ往復 pin (27.8MB / 5万件) |
 | ⬜ 06 | [2026-11-26-06-doc-log-export-import-guide-limits.md](2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ガイド/FAQ を新上限に。04/05 完了後 |
 
 ### 2026-11-26 暗号化バックアップ大容量対応（3件） ― ✅ 3件実装完了（検証緑・アーカイブはマージ後） 🔧非機能追加

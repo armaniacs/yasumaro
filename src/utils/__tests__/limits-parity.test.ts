@@ -32,7 +32,10 @@ const EXPECTED: Record<string, number> = {
   // Registered late (PBI 2026-11-08-16 cleanup): added by PBI 2026-11-08-15
   // without updating this guard, which is why the export count drifted.
   MAX_PRIVACY_POLICY_BYTES: 1048576,
-  MAX_IMPORT_TEXT_BYTES: 10485760,
+  // PBI 2026-11-26-05: sized for the round-trip invariant against
+  // MAX_EXPORT_ROWS (100,000 x ~300 B standard record); the cap itself stays
+  // (VULN-023) and stays deliberately separate from the settings-import cap.
+  MAX_IMPORT_TEXT_BYTES: 31457280,
   MAX_PAYLOAD_STRING_BYTES: 1048576,
   MAX_BATCH_TOTAL_BYTES: 20971520,
   MAX_PAYLOAD_TOTAL_BYTES: 20971520,

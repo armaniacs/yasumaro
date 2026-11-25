@@ -1,14 +1,15 @@
 // @vitest-environment wasm-quickjs-dom
 /**
  * logExportImportRoundtrip100k.test.ts
- * Round-trip pin at the new export ceiling (PBI 2026-11-26-04): 100,000
+ * Round-trip pin at the export ceiling (PBI 2026-11-26-04): 100,000
  * lightweight rows exported through the real exportJson (real HMAC signer)
  * re-import through importFromJson with zero duplicates skipped.
  *
  * The rows are lightweight (the schema's optional columns are absent, as in
  * real rows that only carry url + created_at) so the pretty-printed file
- * stays under the current 10 MiB import text gate; PBI 2026-11-26-05 widens
- * that gate to 30 MiB for full-fidelity exports.
+ * stays near 8 MB, well inside the 30 MiB import text gate. The full-fidelity
+ * counterpart at real-data row lengths lives in
+ * logExportImportRoundtripFullFidelity.test.ts (PBI 2026-11-26-05).
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QUERY_CAPS, MAX_EXPORT_ROWS, MAX_IMPORT_TEXT_BYTES, IMPORT_TOTAL_ROW_CAP } from '../../utils/limits.js';
@@ -56,8 +57,8 @@ describe('log export/import round-trip at 100,000 rows (PBI 2026-11-26-04)', () 
     const blob = await exportJson();
     const text = await blob.text();
 
-    // The file must fit the CURRENT import byte gate for this round-trip to
-    // be reachable today; the pin documents the coupling PBI 05 widens.
+    // The lightweight file sits comfortably inside the import text gate, so
+    // the round-trip stays reachable at the exact row-cap boundary.
     expect(text.length).toBeLessThanOrEqual(MAX_IMPORT_TEXT_BYTES);
 
     const result = await importFromJson(text);

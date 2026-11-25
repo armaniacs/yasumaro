@@ -129,8 +129,17 @@ export const MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
 /**
  * Round 5 drift-guard follow-up — caps the first guard pass itself found:
  */
-/** Pre-parse import text cap (dashboard importLogsService). */
-export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+/**
+ * Pre-parse import text cap (dashboard importLogsService, VULN-023). The cap
+ * itself stays — it is what bounds unbounded parse/accumulate — but the value
+ * is sized for the round-trip invariant "what exportJson produces,
+ * importFromJson accepts": MAX_EXPORT_ROWS (100,000) x a standard ~300-byte
+ * record is ~30 MiB, so the row cap becomes the effective first gate instead
+ * of a byte gate tuned for settings files. Deliberately larger than the
+ * settings-import cap (DEFAULT_IMPORT_SIZE_CAP_BYTES, 10 MiB): a settings
+ * file is a handful of KB-MB, a log export is a record collection.
+ */
+export const MAX_IMPORT_TEXT_BYTES = 30 * 1024 * 1024;
 
 /** Offscreen payloadGuard per-field text cap. */
 export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
