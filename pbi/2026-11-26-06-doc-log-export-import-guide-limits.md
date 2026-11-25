@@ -23,12 +23,12 @@ Scenario: 往復の説明がある
 ```
 
 ## 受け入れ基準
-- [ ] docs/LOG_EXPORT_IMPORT_GUIDE.md (ja/en) の 10,000 件 / 10 MiB 記述が新上限に更新されている
-- [ ] 上限表 (エクスポート件数、インポートバイト/行数) が limits.ts の定数と一致する
-- [ ] 往復の説明と .db / 暗号化バックアップとの役割分担が追加されている
-- [ ] トラブルシューティング (「10,000 件の上限」「インポートファイルが大きすぎます」) が新上限と行動指針を含む文言に更新されている
-- [ ] docs/FAQ.md の Q54 (ja/en) が同期されている
-- [ ] `npm run check:docs-chars` が通る
+- [x] docs/LOG_EXPORT_IMPORT_GUIDE.md (ja/en) の 10,000 件 / 10 MiB 記述が新上限に更新されている (旧上限の残存 0 件を確認。FAQ 495 行の 10,000 は AI プロバイダの文字数上限で別機能)
+- [x] 上限表 (エクスポート件数、インポートバイト/行数) が limits.ts の定数と一致する (MAX_EXPORT_ROWS 100_000 / MAX_IMPORT_TEXT_BYTES 30MiB / IMPORT_TOTAL_ROW_CAP 100_000、SSOT 注記付き)
+- [x] 往復の説明と .db / 暗号化バックアップとの役割分担が追加されている (ja/en)
+- [x] トラブルシューティング (「エクスポートが100,000件の上限」「Import file is too large (limit: 30 MiB)」) が新上限と行動指針を含む文言に更新されている
+- [x] docs/FAQ.md の Q54 (ja/en) が同期されている (最小修正、各 1 文)
+- [x] `npm run check:docs-chars` が通る (2,031 ファイル走査、違反 0、EM DASH 混入 0)
 
 ## テスト戦略（t_wadaスタイル）
 

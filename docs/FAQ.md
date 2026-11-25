@@ -288,7 +288,7 @@ SQLite に組み込まれている全文検索エンジンです。従来の LIK
 
 **Q54. 閲覧履歴をバックアップしたり、他の環境に移行したりできますか？**
 
-できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。JSON・CSV・Markdown は最大 10,000 件、インポートはファイル全体で 10 MiB かつ合計 100,000 行が上限です。上限を超える場合は `.db` エクスポート（OPFS 使用時）を使ってください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
+できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。JSON・CSV・Markdown は最大 100,000 件、インポートはファイル全体で 30 MiB かつ合計 100,000 行が上限です。上限を超える場合は `.db` エクスポート（OPFS 使用時）を使ってください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
 
 また、`Dashboard → Archive` パネルでは、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップし、必要になったら本体DBへマージ復元できます。バックアップと本体からの削除は分離されており、削除はバックアップファイルの内容と突合せてから実行されます。詳細は [セットアップガイド](SETUP_GUIDE.md) の「閲覧履歴アーカイブ」セクションをご覧ください。
 
@@ -624,7 +624,7 @@ You can hide it in your browser settings. In Chrome, open `chrome://settings/dow
 
 **Q54. Can I back up my browsing history or migrate it to another environment?**
 
-Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** ― re-export it with the latest version if needed. JSON, CSV, and Markdown exports are limited to 10,000 records; import is limited to 10 MiB per file and 100,000 rows in total. Use the `.db` export (OPFS only) when you exceed these limits. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
+Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** ― re-export it with the latest version if needed. JSON, CSV, and Markdown exports are limited to 100,000 records; import is limited to 30 MiB per file and 100,000 rows in total. Use the `.db` export (OPFS only) when you exceed these limits. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
 
 The `Dashboard → Archive` panel can also export browsing history up to a chosen date as a standard SQLite file and merge it back into the main database when needed. Export and deletion are separate phases; deletion is cross-checked against the exported file's contents. See the "History Archive" section in the [Setup Guide](SETUP_GUIDE.md).
 
