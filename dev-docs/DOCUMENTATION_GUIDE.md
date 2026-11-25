@@ -12,6 +12,7 @@
 | docs/PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
 | docs/USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
 | docs/PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |
+| docs/RELEASE_VERIFICATION.md | Bilingual (JP/EN) | Release zip SHA256SUMS & build provenance verification |
 | CHANGELOG.md | Mixed | Version history |
 
 ## Developer Documentation

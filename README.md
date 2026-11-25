@@ -163,7 +163,7 @@ Firefox 版は審査を通過した署名済みビルドのため、通常の Fi
 
 #### 方法4: GitHub Releases の zip を読み込む（Chrome / Brave など）
 
-1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します。
+1. [最新リリース](https://github.com/armaniacs/yasumaro/releases/latest) から `yasumaro-<version>-chrome.zip` をダウンロードして展開します（改ざん検知・出所確認の手順は [リリース成果物の検証](docs/RELEASE_VERIFICATION.md) を参照）。
 2. Chrome を開き、`chrome://extensions` にアクセスします。
 3. 右上の「デベロッパーモード」を有効にします。
 4. 「パッケージ化されていない拡張機能を読み込む」をクリックし、展開したフォルダを選択します。
@@ -443,7 +443,7 @@ The Firefox build is reviewed and signed, so it installs into regular Firefox wi
 
 #### Option 4: Load the GitHub Releases zip (Chrome / Brave, etc.)
 
-1. Download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it.
+1. Download `yasumaro-<version>-chrome.zip` from the [latest release](https://github.com/armaniacs/yasumaro/releases/latest) and unzip it (see [Release Artifact Verification](docs/RELEASE_VERIFICATION.md) to verify checksums and build provenance).
 2. Open Chrome and navigate to `chrome://extensions`.
 3. Enable "Developer mode" in the top right.
 4. Click "Load unpacked" and select the unzipped folder.
@@ -612,6 +612,7 @@ MIT License
 - [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - データ分析ガイド（ヒートマップ・ドメイン分析・タグ推移・共起ペア表）
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - ツールバーバッジガイド
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - 記録条件ガイド
+- [RELEASE_VERIFICATION.md](docs/RELEASE_VERIFICATION.md) - リリース成果物の検証ガイド（SHA256SUMS・build provenance attestation）
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - 旧データベースからの移行ガイド
 - [LICENSE.md](LICENSE.md) - ライセンス詳細
 
@@ -645,6 +646,7 @@ MIT License
 - [DATA_ANALYTICS_GUIDE.md](docs/DATA_ANALYTICS_GUIDE.md) - Data Analytics Guide (heatmap, domain analysis, tag timeline, pair table)
 - [TOOLBAR_BADGE_GUIDE.md](docs/TOOLBAR_BADGE_GUIDE.md) - Toolbar Badge Guide
 - [RECORDING_CONDITIONS.md](docs/RECORDING_CONDITIONS.md) - Recording Conditions Guide
+- [RELEASE_VERIFICATION.md](docs/RELEASE_VERIFICATION.md) - Release Artifact Verification Guide (SHA256SUMS & build provenance attestation)
 - [MIGRATION_GUIDE.md](docs/MIGRATION_GUIDE.md) - Legacy Database Migration Guide
 - [LICENSE.md](LICENSE.md) - License Details
 
