@@ -1,6 +1,6 @@
 // @vitest-environment wasm-quickjs-dom
 
-import { loadSettingsToInputs, extractSettingsFromInputs } from '../settingsFormBinding.js';
+import { loadSettingsToInputs, extractSettingsFromInputs, getChecked, getValue } from '../settingsFormBinding.js';
 
 function setupDOM(): void {
   document.body.innerHTML = `
@@ -152,6 +152,54 @@ describe('settingsFormBinding', () => {
       expect(settings.obsidian_protocol).toBe('https');
       expect(settings.ublock_format_enabled).toBe(true);
       expect(settings.ai_provider).toBe('gemini');
+    });
+  });
+
+  describe('getChecked', () => {
+    test('returns checked state by element ID', () => {
+      const cb = document.getElementById('ublock_format_enabled') as HTMLInputElement;
+      cb.checked = true;
+      expect(getChecked('ublock_format_enabled')).toBe(true);
+      cb.checked = false;
+      expect(getChecked('ublock_format_enabled', true)).toBe(false);
+    });
+
+    test('returns checked state from element reference', () => {
+      const cb = document.getElementById('simple_format_enabled') as HTMLInputElement;
+      cb.checked = true;
+      expect(getChecked(cb)).toBe(true);
+    });
+
+    test('returns fallback when element is missing or nullish', () => {
+      expect(getChecked('non-existent-checkbox')).toBe(false);
+      expect(getChecked('non-existent-checkbox', true)).toBe(true);
+      expect(getChecked(null)).toBe(false);
+      expect(getChecked(undefined, true)).toBe(true);
+    });
+  });
+
+  describe('getValue', () => {
+    test('returns value by element ID for input, textarea, and select', () => {
+      (document.getElementById('obsidian_port') as HTMLInputElement).value = '27123';
+      (document.getElementById('obsidian_daily_path') as HTMLTextAreaElement).value = 'Daily/Note';
+      (document.getElementById('ai_provider') as HTMLSelectElement).value = 'openai';
+
+      expect(getValue('obsidian_port')).toBe('27123');
+      expect(getValue('obsidian_daily_path')).toBe('Daily/Note');
+      expect(getValue('ai_provider')).toBe('openai');
+    });
+
+    test('returns value from element reference', () => {
+      const input = document.getElementById('obsidian_protocol') as HTMLInputElement;
+      input.value = 'https';
+      expect(getValue(input)).toBe('https');
+    });
+
+    test('returns fallback when element is missing or nullish', () => {
+      expect(getValue('non-existent-input')).toBe('');
+      expect(getValue('non-existent-input', '0.7')).toBe('0.7');
+      expect(getValue(null)).toBe('');
+      expect(getValue(undefined, 'default')).toBe('default');
     });
   });
 });

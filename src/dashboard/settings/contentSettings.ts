@@ -7,6 +7,7 @@ import { settingsRepository } from '../../utils/storage/SettingsRepository.js';
 import { StorageKeys } from '../../utils/storage/types.js';
 import { errorMessage } from '../../utils/errorUtils.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { getChecked, getValue } from '../../utils/settingsFormBinding.js';
 import { getMessageOr } from '../../utils/i18n.js';
 import { ErrorCode } from '../../utils/logger/types.js';
 import { logError } from '../../utils/logger/api.js';
@@ -98,9 +99,9 @@ async function saveContentSettings(): Promise<void> {
         }
 
         // テキスト品質設定
-        delta[StorageKeys.CONTENT_DEDUP_ENABLED] = getDedupEnabledCheckbox()?.checked ?? true;
-        delta[StorageKeys.CONTENT_DEDUP_THRESHOLD] = parseFloat(getDedupThresholdSlider()?.value ?? '0.7');
-        delta[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getNormalizeEnabledCheckbox()?.checked ?? true;
+        delta[StorageKeys.CONTENT_DEDUP_ENABLED] = getChecked(getDedupEnabledCheckbox(), true);
+        delta[StorageKeys.CONTENT_DEDUP_THRESHOLD] = parseFloat(getValue(getDedupThresholdSlider(), '0.7'));
+        delta[StorageKeys.SUMMARY_NORMALIZE_ENABLED] = getChecked(getNormalizeEnabledCheckbox(), true);
 
         // 設定を保存
         await settingsRepository.setAll(delta);

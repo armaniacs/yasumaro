@@ -20,6 +20,7 @@ import type { EncryptedData } from '../utils/crypto/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
+import { getChecked, getValue } from '../utils/settingsFormBinding.js';
 
 export interface GistConnectionTestResult {
   success: boolean;
@@ -78,8 +79,8 @@ export async function initGistSettings(
   saveBtn?.addEventListener('click', async () => {
     try {
       await settingsRepository.setAll({
-        [StorageKeys.GIST_ENABLED]: gistEnabled?.checked ?? false,
-        [StorageKeys.GITHUB_PAT]: githubPat?.value ?? '',
+        [StorageKeys.GIST_ENABLED]: getChecked(gistEnabled),
+        [StorageKeys.GITHUB_PAT]: getValue(githubPat),
       } as Settings);
       setStatus(getMessageOr('gistSettingsSaved', 'Gist settings saved'), false);
     } catch (error) {

@@ -13,6 +13,7 @@ import { ErrorCode } from '../utils/logger/types.js';
 import { logError } from '../utils/logger/api.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showAlertDialog } from '../utils/ui/confirmDialog.js';
+import { getChecked } from '../utils/settingsFormBinding.js';
 
 // DOM Elements (lazily resolved so they work in tests with dynamic imports)
 function getModalEl(): HTMLDialogElement | null {
@@ -146,7 +147,7 @@ async function handleAcceptConsent(): Promise<void> {
         // 同意レコード（署名付き）+ 本文保存フラグ + ack の3点セットと状態変更
         // 通知は privacyConsent.ts（深い module）が所有 — PBI 2026-09-15-08。
         const contentCb = getContentStorageCheckboxEl();
-        await acceptConsent({ contentStorageEnabled: contentCb?.checked ?? false });
+        await acceptConsent({ contentStorageEnabled: getChecked(contentCb) });
         hidePrivacyConsentModal();
     } catch (error) {
         logError('[PrivacyConsent] Failed to save consent', { cause: error }, ErrorCode.INTERNAL_ERROR);
