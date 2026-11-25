@@ -14,16 +14,25 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-21 DRY/KISS 重複コード解消（5件） ― ⬜ 未着手 🔧非機能追加
+### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（残 1 件 + 保留/将来 5 件） ― 🔶 仕上げ待ち 🔧非機能追加
 
-コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。`listen` 関数の 6 重定義、`parseIntOr` の単一ファイルローカル定義、`webhookExportSettings.ts` の save/load 重複要素取得、`aiSummaryCleansingSettingsV2.ts` の threshold 反復パターン、`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの 5 件。
+GA リリース準備の 11-24 / 11-25 系 PBI 群は `v6.9.78` 公開・3 ストア提出まで完了しアーカイブ済み。残件は 03 のドキュメント配線・検証のみ。09 は見送り裁定済み、10〜13 は GA 後の将来候補。台帳は [2026-11-24-00-backlog-ga-release.md](2026-11-24-00-backlog-ga-release.md) および [2026-11-24-14-backlog-security-audit-run3.md](2026-11-24-14-backlog-security-audit-run3.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 🔶 03 | [2026-11-24-03-release-artifact-provenance.md](2026-11-24-03-release-artifact-provenance.md) | 🔧非機能追加 | 6.4 | 1 | 実装・v6.9.78 稼働済み。残件: `docs/RELEASE_VERIFICATION.md` へのリンク追加とローカル検証確認 |
+| ⛔ 09 | [2026-11-24-09-fix-host-permissions-minimization.md](2026-11-24-09-fix-host-permissions-minimization.md) | 🔧非機能追加 | 1.6 | 5 | 2026-11-24 見送り裁定済み |
+| ⬜ 10 | [2026-11-24-10-backlog-e2e-encrypted-device-sync.md](2026-11-24-10-backlog-e2e-encrypted-device-sync.md) | ✨機能追加 | 0.3 | 13 | 将来候補（GA 後に再検討） |
+| ⬜ 11 | [2026-11-24-11-backlog-resummarize-past-records.md](2026-11-24-11-backlog-resummarize-past-records.md) | ✨機能追加 | 0.8 | 5 | 将来候補（GA 後に再検討） |
+| ⬜ 12 | [2026-11-24-12-backlog-opt-in-anonymous-metrics.md](2026-11-24-12-backlog-opt-in-anonymous-metrics.md) | ✨機能追加 | 0.6 | 8 | 将来候補（GA 後に再検討） |
+| ⬜ 13 | [2026-11-24-13-backlog-other-note-app-export.md](2026-11-24-13-backlog-other-note-app-export.md) | ✨機能追加 | 0.2 | 8 | 将来候補（GA 後に再検討） |
+
+### 2026-11-21 DRY/KISS 重複コード解消（残 1 件 / 4 件完了・アーカイブ済み） ― ⬜ 未着手 🔧非機能追加
+
+コードベース全体の DRY/KISS 違反を共通ユーティリティへ集約し重複を解消する。01〜04 は完了・アーカイブ済み。残りは 05（`?.checked ?? false` / `?.value ?? ''` の分散手書きパターンの移行）の 1 件。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-21-01-refactor-listen-shared-utility.md](2026-11-21-01-refactor-listen-shared-utility.md) | 🔧非機能追加 | - | 3 | `listen` 関数を `src/utils/domListen.ts` に共通化、6ファイルから削除 |
-| 02 | [2026-11-21-02-refactor-parseintor-shared-utility.md](2026-11-21-02-refactor-parseintor-shared-utility.md) | 🔧非機能追加 | - | 2 | `parseIntOr` を `src/utils/string.ts` に移動、`aiSummaryCleansingSettingsV2.ts` から削除 |
-| 03 | [2026-11-21-03-refactor-webhook-export-element-consolidation.md](2026-11-21-03-refactor-webhook-export-element-consolidation.md) | 🔧非機能追加 | - | 3 | `webhookExportSettings.ts` の save/load 5要素取得を共通ヘルパーに集約 |
-| 04 | [2026-11-21-04-refactor-ai-cleansing-threshold-loop.md](2026-11-21-04-refactor-ai-cleansing-threshold-loop.md) | 🔧非機能追加 | - | 2 | `aiSummaryCleansingSettingsV2.ts` の threshold 反復を for ループ化 |
 | 05 | [2026-11-21-05-refactor-settings-form-binding-adoption.md](2026-11-21-05-refactor-settings-form-binding-adoption.md) | 🔧非機能追加 | - | 5 | `?.checked ?? false` / `?.value ?? ''` を `settingsFormBinding.ts` ヘルパーに移行 |
 
 ### 2026-11-20 大局的改善ラウンド holistic-1120（4件） ― ✅ 4件完了・アーカイブ済み 🔧非機能追加
@@ -49,13 +58,13 @@ RICE降順で実装。01 tab問い合わせ複製の解消とタイマ一元化 
 |---|---|---|---|---:|---|
 | ~~02~~ | [2026-11-16-02-backlog-omnibox-url-fallback.md](../dev-docs/archived/pbi/2026-11-16-02-backlog-omnibox-url-fallback.md) | 🔧非機能追加 | - | 1 | ✅ 完了。runner に任意 notifyNoUrl hook、omnibox のみ通知。keyboard 無言維持、tabs 権限追加なし |
 
-### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ⬜ 未着手
+### 2026-11-16 Release ストアアップロード失敗の復旧（1件） ― ✅ 1件完了・アーカイブ済み
 
-Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。コードは正常版と同一でスクリプトのテストも緑のため、認証情報またはストア側検証が原因と推定。所有者による secrets / ストア側の確認待ち。
+Release 42908187378 (v6.9.75) の Chrome Web Store / Edge Add-ons アップロード失敗。再実行時の冪等性を両スクリプトに実装（テスト 49 件緑）し、v6.9.78 リリースで Chrome / Edge とも緑、再実行時の Chrome 冪等性も実機 CI で確認済み。
 
 | NN | PBI | 種別 | RICE | SP | 根拠の要点 |
 |---|---|---|---|---:|---|
-| 01 | [2026-11-16-01-release-store-upload-failure.md](2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | 🔶 部分実装。CIログで確定: Chromeは同版再アップロード拒否、EdgeはInProgressSubmission (いずれも再実行の冪等性欠如)。両スクリプトに再実行耐性を実装・テスト49件緑。次回リリースで緑確認 |
+| ~~01~~ | [2026-11-16-01-release-store-upload-failure.md](../dev-docs/archived/pbi/2026-11-16-01-release-store-upload-failure.md) | 🔧非機能追加 | - | 1 | ✅ 完了（2026-11-26 アーカイブ済み）。Chrome 同版再アップロード成功扱い・Edge `InProgressSubmission` 再試行を実装し v6.9.78 で緑確認 |
 
 ### 2026-11-12 セキュリティ監査 NV-1 対応（1件） ― ✅ 1件完了・アーカイブ済み
 
@@ -836,6 +845,33 @@ holistic-0921 の台帳送り2件と、2026-09-22 の差分再レビューで台
 
 完了済みPBIは [dev-docs/archived/pbi/](../dev-docs/archived/pbi/)、
 その実装計画は [dev-docs/archived/plans/](../dev-docs/archived/plans/) にある。
+
+### 2026-11-26 GA リリース準備・監査 run-3・実機スモーク・DRY/KISS 一括整理 ― 24件
+
+- **2026-11-25-02-fix-post-delete-all-encryption-key-cache**: 全データ削除・鍵変更後に他コンテキストの暗号化キーキャッシュが残留する不具合を `chrome.storage.onChanged` 購読と `clearAllLocalData()` 即時破棄で修正（`0811787e8`、`v6.9.78`）。
+- **2026-11-25-01-fix-firefox-header-detector-extraheaders**: Firefox の `HeaderDetector` が `'extraHeaders'` 指定で初期化失敗する不具合を `['responseHeaders']` フォールバックで修正、Firefox 159 実機 Webhook PASS 確認済み（`0811787e8`、`v6.9.78`）。
+- **2026-11-24-20-test-e2e-probe-diagnosis**: `waitForE2EProbeInit` の 3 段階化と実時間系 5 ファイルの `extension-heavy` 分離を実装（`42fd9774f`）。
+- **2026-11-24-19-fix-ai-policy-fail-closed**: `ai_domain_policy` の不明値を `no-summary` へ fail-closed 化（`7f6487a0d`、監査 run-3 NV-2）。
+- **2026-11-24-18-fix-webhook-allowlist-narrowing**: webhook 許可リストをループバック専用 16 件へ縮小し関連文書を更新（`5e1089f59` / `6083a8d9a`、監査 run-3 NV-1）。
+- **2026-11-24-17-fix-blob-tier-trust**: content script の設定読みを政策キーへ限定し世代ずれを fail-closed 化（`f82f12f92`、監査 run-3 C-5/C-6）。
+- **2026-11-24-16-fix-obsidian-failure-surfacing**: regenerate の Obsidian 書き込み失敗の通知表面化と 412 競合の誤分類を修正（`0e93b0ff8`、監査 run-3 C-3/C-4）。
+- **2026-11-24-15-fix-webhook-token-plaintext-storage**: webhook 宛先 URL の平文保存を暗号化し content script から不可読化（`928cc8a03`、監査 run-3 C-1）。
+- **2026-11-24-08-release-ga-smoke-test**: GA スモーク自動ランナー `npm run smoke:ga` 実装と Chrome 158 / Edge 158 / Firefox 159 実機 `6.9.78` 全項目通過を完了（`909ae194c` / `0811787e8`）。
+- **2026-11-24-07-release-ga-security-audit-run3**: セキュリティ監査 run-3 完走、owner 製品判断 3 件反映、修正 PBI 15〜19 と関連文書更新を完了（`ca6023508` / `6083a8d9a`）。
+- **2026-11-24-06-fix-webhook-egress-e2e-allowlist**: `webhook-egress.spec.ts` を専用許可リストと実 UI 経由の保存確認に追従（`545b6be50` / `a24be47be`）。
+- **2026-11-24-05-feat-obsidian-conflict-user-notice**: 412 競合の再試行後失敗時に専用通知と保留理由 `obsidian-write-conflict` を記録（`f3b8df983`）。
+- **2026-11-24-04-release-ga-preparation**: README 日英対称化、`CHROMEWEBSTORE.md` 3 ストア共用化、`v6.9.78` 採番・GitHub Release・crates.io・Chrome/Edge/AMO 全ストア提出まで完了（`5d2955aab` / `0811787e8` / `90d6c2c8c`）。
+- **2026-11-24-02-feat-ga-dev-feature-graduation**: 開発中 4 機能の判定材料を整理し owner 裁定（4 機能とも開発中維持、09 見送り）を ADR 採用済みとして確定（`4088edea4` / `d3eea2533`）。
+- **2026-11-24-01-feat-webhook-sidebar-experimental-section**: webhook export をサイドバーの In Development 区分へ移動（`6f12ae7fb`）。
+- **2026-11-23-04-feat-obsidian-if-match-412**: Obsidian 書き込みに `If-Match` 競合検出と 412 の 1 回再書き込みを実装（`1265d3f72`）。
+- **2026-11-23-03-feat-webhook-destination-preflight**: webhook 送信先の専用許可リストと保存時 pre-flight 検証を実装（`b76c618d0`）。
+- **2026-11-23-02-fix-domain-policy-blob-tier-reader**: ドメインポリシーと委譲フラグの読み手を blob 優先・top-level フォールバックへ変更（`64354e9b6`）。
+- **2026-11-23-01-fix-pii-sanitizer-timing-threshold**: `piiSanitizer` 性能回帰テスト閾値を 500ms から 2000ms へ緩和（`9a4590e4c`）。
+- **2026-11-21-04-refactor-ai-cleansing-threshold-loop**: `aiSummaryCleansingSettingsV2.ts` の threshold 値反映をループへ集約（`3e24592bb`）。
+- **2026-11-21-03-refactor-webhook-export-element-consolidation**: `webhookExportSettings.ts` の save/load 5 要素取得を `getFormElements` に集約（`3070cef04`）。
+- **2026-11-21-02-refactor-parseintor-shared-utility**: `parseIntOr` を `src/utils/string.ts` へ移動し単体テストを追加（`e38df18f9`）。
+- **2026-11-21-01-refactor-listen-shared-utility**: 重複していた `listen` を `src/utils/domListen.ts` の `createListen` に共通化（`d0478f5ae`）。
+- **2026-11-16-01-release-store-upload-failure**: CWS 同版再アップロードの成功扱いと Edge `InProgressSubmission` 再試行を実装し、`v6.9.78` リリース CI で緑および再実行時の CWS 冪等性を確認済み。
 
 ### 2026-11-23 oxlint 移行と TypeScript 7 移行完了 ― 2件
 
@@ -3126,12 +3162,11 @@ backlog: [2026-09-05-00-backlog-arch5.md](../dev-docs/archived/pbi/2026-09-05-00
 
 | 状態 | 件数 |
 |---|---|
-| ⬜ 未着手・保留 | 5（トリガー待ち 3 / 着手ゲート待ち 2。review-followup2 7 件は 2026-10-13 ラウンド3 で全件実装・アーカイブ済み） |
-| 審査待ち | 0（AMO 公開 01 は 2026-09-23 通過・2026-09-26 実機 smoke 完了でアーカイブ済み） |
-| 🔵 監視 | 5（VulnHunt 11 defense-in-depth / wasm-binary-reproducibility-watch / offscreen-gateway-archive-split / typescript-7-adoption / stryker-vitest5-runner-adoption = いずれも発火条件監視。defense-in-depth 11 の項目1 と wasm-watch の gate 入力変更は 2026-10-12 に発火し対応済み） |
-| **`pbi/` 残存 PBI 合計** | **28 ファイル（INDEX 1 / 00-backlog 台帳・監視・保留分 27。2026-10-31 の 10 件はすべて完了・アーカイブ済み。2026-10-31 実測: `ls pbi/*.md` = 28）** |
-| アーカイブ済みPBI | 1568（`00-backlog` 台帳を含む。2026-10-31 実測） |
-| アーカイブ済み実装計画 | 187 |
+| ⬜ 未着手・仕上げ待ち | 2（`2026-11-21-05` 未着手 / `2026-11-24-03` ドキュメント配線・ローカル検証待ち） |
+| ⛔ 見送り・将来候補・条件待ち | 12（見送り 1: `2026-11-24-09` / 将来候補 4: `2026-11-24-10〜13` / トリガー・ゲート待ち・継続運用 7: `09-05-32`, `09-22-11`, `09-25-26`, `09-25-29`, `09-25-30`, `11-07-backlog`, `11-08-18`） |
+| **`pbi/` 残存ファイル合計** | **49 ファイル（INDEX 1 / HANDOFF-GA 1 / 個別 PBI 14 / backlog・監査台帳 33。2026-11-26 実測: `ls pbi/*.md` = 49）** |
+| アーカイブ済みPBI | 1684（`dev-docs/archived/pbi/*.md`、2026-11-26 実測。別途 `handoff/` に 6 ファイル） |
+| アーカイブ済み実装計画 | 189（`dev-docs/archived/plans/*.md`、2026-11-26 実測） |
 
 ※ 数算（2026-10-13 再測）: アーカイブ済みPBI = `ls dev-docs/archived/pbi/*.md | wc -l`、アーカイブ済み実装計画 = `ls dev-docs/archived/plans/*.md | wc -l`、pbi/ 残存 = `ls pbi/*.md | wc -l`。旧 1166 / 153 は実ファイル数と乖離していたため実数へ再同期した。数値は ls 実行時点の実数。
 
