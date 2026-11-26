@@ -9,14 +9,20 @@ const EXPECTED: Record<string, number> = {
   MAX_SEARCH_QUERY_LENGTH: 1000,
   MAX_IMPORT_ROWS: 1000,
   MAX_IMPORT_BYTES: 2000000,
-  MAX_RESTORE_DB_BYTES: 10000000,
+  MAX_RESTORE_CHUNK_BASE64: 4194304,
+  // Phase 5 hardening (checking-team review 2026-11-26): whole-session byte
+  // ceiling of the chunked restore staging session, symmetric with
+  // MAX_BACKUP_FILE_BYTES. Replaced the dead MAX_RESTORE_DB_BYTES pin.
+  MAX_RESTORE_SESSION_BYTES: 52428800,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8388608,
   MAX_APPEND_IDS: 100,
-  MAX_RESTORE_BASE64_BYTES: 157286400,
   AUDIT_CAP_OPFS: 1000,
   AUDIT_CAP_IDB: 100000,
   AUDIT_CAP_FALLBACK: 1000,
   MAX_QUERY_LIMIT: 100000,
+  // PBI 2026-11-26-04: whole-export ceiling, keyset-paged at QUERY_CAPS.plain
+  // per page; matches the retention policy maximum (100,000).
+  MAX_EXPORT_ROWS: 100000,
   MAX_LOG_FORWARD_MESSAGE_CHARS: 65536,
   MAX_LOG_FORWARD_DETAILS_KEYS: 64,
   MAX_LOG_FORWARD_SERIALIZED_CHARS: 262144,
@@ -29,7 +35,10 @@ const EXPECTED: Record<string, number> = {
   // Registered late (PBI 2026-11-08-16 cleanup): added by PBI 2026-11-08-15
   // without updating this guard, which is why the export count drifted.
   MAX_PRIVACY_POLICY_BYTES: 1048576,
-  MAX_IMPORT_TEXT_BYTES: 10485760,
+  // PBI 2026-11-26-05: sized for the round-trip invariant against
+  // MAX_EXPORT_ROWS (100,000 x ~300 B standard record); the cap itself stays
+  // (VULN-023) and stays deliberately separate from the settings-import cap.
+  MAX_IMPORT_TEXT_BYTES: 31457280,
   MAX_PAYLOAD_STRING_BYTES: 1048576,
   MAX_BATCH_TOTAL_BYTES: 20971520,
   MAX_PAYLOAD_TOTAL_BYTES: 20971520,
@@ -65,7 +74,7 @@ const EXPECTED: Record<string, number> = {
   MAX_UBLOCK_FILTER_LINES: 500000,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 53;
+const EXPECTED_LIMITS_EXPORT_COUNT = 55;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',
@@ -78,13 +87,15 @@ const VALIDATOR_LIMIT_KEYS = [
   'MAX_CONTENT_LENGTH',
   'MAX_IMPORT_BYTES',
   'MAX_IMPORT_ROWS',
-  'MAX_RESTORE_DB_BYTES',
+  'MAX_RESTORE_CHUNK_BASE64',
+  'MAX_RESTORE_SESSION_BYTES',
   'MAX_SEARCH_QUERY_LENGTH',
   'MAX_TITLE_LENGTH',
 ].sort();
 
 describe('cap parity guard', () => {
-  const surface = { ...limitsModule } as Record<string, object | number>;
+  // RESTORE_STAGING_NAME_PREFIX is a string cap input, hence the string arm.
+  const surface = { ...limitsModule } as Record<string, object | number | string>;
 
   it.each(Object.entries(EXPECTED))('%s keeps its value', (name, value) => {
     expect(surface[name]).toBe(value);

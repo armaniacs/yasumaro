@@ -98,10 +98,20 @@ describe('Message payload size limits', () => {
     expect(() => v.validate({ subtype: 'import', rows: [] })).not.toThrow();
   });
 
-  it('DashboardSqliteValidator rejects oversized restore_db payload', () => {
+  it('restore_chunk.data is capped per chunk, not per DB (staging chunked transport)', () => {
+    // The old single-shot restore_db carried the whole DB in one message and
+    // hit the 10M-char wire cap around 7.5MB of DB — large encrypted backups
+    // failed at restore time. The transport is now begin -> chunk* -> commit;
+    // each chunk is bounded by MAX_RESTORE_CHUNK_BASE64 (4M chars ≒ 3MB of
+    // DB bytes), far below the per-message ceiling.
     const v = new DashboardSqliteValidator();
+    const stagingName = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    const atCap = 'd'.repeat(VALIDATOR_LIMITS.MAX_RESTORE_CHUNK_BASE64);
     expect(() =>
-      v.validate({ subtype: 'restore_db', data: 'd'.repeat(VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES + 1) }),
+      v.validate({ subtype: 'restore_chunk', stagingName, offset: 0, data: atCap }),
+    ).not.toThrow();
+    expect(() =>
+      v.validate({ subtype: 'restore_chunk', stagingName, offset: 0, data: atCap + 'd' }),
     ).toThrow(ValidationError);
   });
 

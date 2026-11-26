@@ -46,8 +46,20 @@ describe('messaging/sqliteMessages: the union and the array agree', () => {
      * do is pin the array so an entry cannot be dropped unnoticed.
      */
     it('covers every message the SW can send to offscreen', () => {
-        expect(SQLITE_MESSAGE_TYPES).toHaveLength(33);
+        expect(SQLITE_MESSAGE_TYPES).toHaveLength(37);
         expect(new Set(SQLITE_MESSAGE_TYPES).size).toBe(SQLITE_MESSAGE_TYPES.length);
+    });
+
+    it('lists the chunked restore staging messages (session transport)', () => {
+        // The four staging messages are reached only from the restore session
+        // deps, so a dropped array entry would fail the offscreen runtime
+        // check for exactly that hop.
+        expect(SQLITE_MESSAGE_TYPES).toEqual(expect.arrayContaining([
+            'SQLITE_RESTORE_BEGIN',
+            'SQLITE_RESTORE_APPEND',
+            'SQLITE_RESTORE_COMMIT',
+            'SQLITE_RESTORE_ABORT',
+        ]));
     });
 
     it('lists the messages that have no other caller to notice their absence', () => {

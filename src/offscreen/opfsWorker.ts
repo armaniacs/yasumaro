@@ -27,6 +27,12 @@ import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggle
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
 import { handleBackup, handleSerialize, handleRestore as handleRestoreImpl } from './opfsWorker/backupHandlers.js';
 import {
+  handleStageRestoreBegin,
+  handleStageRestoreAppend,
+  handleStageRestoreCommit as handleStageRestoreCommitImpl,
+  handleStageRestoreAbort,
+} from './opfsWorker/restoreStagingHandlers.js';
+import {
   handleArchivePreview,
   handleArchiveCreate,
   handleArchiveCleanup,
@@ -91,6 +97,17 @@ export async function handleSearchLike(
  */
 export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
   return handleRestoreImpl(data, () => engine, (e) => { engine = e; }, initSqlite);
+}
+
+/**
+ * Thin wrapper around restoreStagingHandlers.handleStageRestoreCommit that
+ * closes over the module-level engine/initSqlite state (same seam as the
+ * handleRestore adapter above) so the commit can swap the live engine.
+ */
+export async function handleStageRestoreCommit(
+  payload: import('./opfsWorker/types.js').StageRestoreCommitPayload
+): Promise<{ committed: true }> {
+  return handleStageRestoreCommitImpl(handlerCtx, payload, () => engine, (e) => { engine = e; }, initSqlite);
 }
 
 // ---------------------------------------------------------------------------
@@ -274,6 +291,22 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
           ? restorePayload.data
           : new Uint8Array(restorePayload.data);
         result = await handleRestore(bytes);
+        break;
+      }
+      case 'STAGE_RESTORE_BEGIN': {
+        result = await handleStageRestoreBegin(handlerCtx, payload as import('./opfsWorker/types.js').StageRestoreBeginPayload);
+        break;
+      }
+      case 'STAGE_RESTORE_APPEND': {
+        result = await handleStageRestoreAppend(handlerCtx, payload as import('./opfsWorker/types.js').StageRestoreAppendPayload);
+        break;
+      }
+      case 'STAGE_RESTORE_COMMIT': {
+        result = await handleStageRestoreCommit(payload as import('./opfsWorker/types.js').StageRestoreCommitPayload);
+        break;
+      }
+      case 'STAGE_RESTORE_ABORT': {
+        result = await handleStageRestoreAbort(handlerCtx, payload as import('./opfsWorker/types.js').StageRestoreAbortPayload);
         break;
       }
       case 'ARCHIVE_PREVIEW': {

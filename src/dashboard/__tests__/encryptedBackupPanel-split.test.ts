@@ -56,6 +56,7 @@ import {
   buildSplitDownloadNames,
   MAX_SPLIT_PART_COUNT_FOR_PANEL,
 } from '../encryptedBackupPanel.js';
+import { SplitBackupError } from '../encryptedBackupSplitCodec.js';
 import { waitForMock, drainMacrotask } from '../../../testDir/waitPolicy.js';
 
 function setDom(): void {
@@ -381,6 +382,71 @@ describe('encryptedBackupPanel split export', () => {
     } finally {
       vi.restoreAllMocks();
     }
+  });
+
+  it('shows the restorable-limit guidance when split export hits the joined-length gate', async () => {
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      action('my-password').then(
+        () => {},
+        () => {},
+      );
+    });
+    // Mocked backup cap is 100 chars; 101 forces the split export.
+    vi.mocked(exportEncryptedBackup).mockResolvedValue(fakeEnvelope('x'.repeat(101)) as never);
+    // The gate error carries the budget detail so the panel can render the
+    // oversize amount and the limit (Phase 5 integration: the localized
+    // template takes {size}/{limit}).
+    vi.mocked(exportEncryptedSplitBackup).mockRejectedValue(
+      new SplitBackupError(
+        'split-backup-too-large',
+        'Split backup joined body exceeds the backup file budget (60000000 chars)',
+        undefined,
+        { joinedBodyChars: 60_000_000, capChars: 52_428_800 },
+      ),
+    );
+    const downloaded: string[] = [];
+    vi.spyOn(document.body, 'appendChild').mockImplementation((node) => {
+      if (node instanceof HTMLAnchorElement) downloaded.push(node.download);
+      return node;
+    });
+    vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node);
+
+    try {
+      initEncryptedBackupPanel();
+      document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+
+      await waitForMock(() =>
+        expect(statusText()).toBe(
+          'This history DB exceeds the restorable limit even in split form (joined size ~43 MB, limit 38 MB). Organize your history and try again.',
+        ),
+      );
+      // A rejected creation must not download any manifest or part file.
+      expect(downloaded).toHaveLength(0);
+    } finally {
+      vi.restoreAllMocks();
+    }
+  });
+
+  it('keeps the generic create-failed message for other split export errors', async () => {
+    vi.mocked(showPasswordAuthModal).mockImplementation((_type, action) => {
+      action('my-password').then(
+        () => {},
+        () => {},
+      );
+    });
+    vi.mocked(exportEncryptedBackup).mockResolvedValue(fakeEnvelope('x'.repeat(101)) as never);
+    vi.mocked(exportEncryptedSplitBackup).mockRejectedValue(
+      new SplitBackupError('too-many-parts', 'Split backup needs 17 parts, above the cap of 16'),
+    );
+
+    initEncryptedBackupPanel();
+    document.getElementById('exportEncryptedBackupBtn')!.dispatchEvent(new Event('click'));
+
+    await waitForMock(() =>
+      expect(statusText()).toBe(
+        'Failed to create backup: Split backup needs 17 parts, above the cap of 16',
+      ),
+    );
   });
 
   it('keeps a within-cap export as a single download', async () => {

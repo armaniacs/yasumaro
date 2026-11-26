@@ -12,6 +12,7 @@
 | docs/PRIVACY.md | Bilingual (JP/EN) | Data handling transparency |
 | docs/USER-GUIDE-UBLOCK-IMPORT.md | Bilingual (JP/EN) | uBlock filter features |
 | docs/PII_FEATURE_GUIDE.md | Bilingual (JP/EN) | PII masking features |
+| docs/RELEASE_VERIFICATION.md | Bilingual (JP/EN) | Release zip SHA256SUMS & build provenance verification |
 | CHANGELOG.md | Mixed | Version history |
 
 ## Developer Documentation
@@ -57,4 +58,5 @@ When making architectural changes that affect documentation (e.g., TypeScript mi
 - [ ] **README.md**: Any file references or technical explanations
 - [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
 - [ ] **User documentation** (Setup guides, feature guides)
+- [ ] **DEPENDINGS.md**: Run `npm run generate:dependings` after any `package.json` / `package-lock.json` change, then confirm `npm run check:dependings` passes before release. Edit §5 / §6 by hand; never overwrite the risk-acceptance records with the generator
 - [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (Chrome Web Store reviews `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).

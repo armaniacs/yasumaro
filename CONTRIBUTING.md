@@ -474,6 +474,8 @@ GitHub Release を作成する際は、`CHANGELOG.md` の該当セクション�
 
 タグ push(`v*`)を起点とするリリースでは、拡張機能アーカイブと並行して Rust 製 CLI(`cli/`)が crates.io へ公開されます(`scripts/publish/cargo.mjs`)。事前にリポジトリの secrets へ `CARGO_REGISTRY_TOKEN`(crates.io の publish 権限付きトークン)の登録が必要です。`cli/Cargo.toml` の版は `package.json` と一致させてください(不一致時は公開前に失敗します)。再実行時は公開済み版の再公開を成功扱いにします。
 
+依存更新を含むリリースでは、事前に `npm run generate:dependings` で `docs/DEPENDINGS.md` の数値を更新し、`npm run check:dependings`(または `npm run release:check -- --category=dependings`)が通過することを確認してください。§5 の判定文と §6 の受容記録は手書きで更新します。
+
 ---
 
 ## English
@@ -941,3 +943,5 @@ Include for bug reports:
 When creating a GitHub Release, use the corresponding section in `CHANGELOG.md` as the release notes and include the Yasumaro brand notice from `docs/RELEASE_POLICY.md` at the top.
 
 A tag push (`v*`) also publishes the Rust CLI (`cli/`) to crates.io (`scripts/publish/cargo.mjs`) alongside the extension archives. Register `CARGO_REGISTRY_TOKEN` (a crates.io token with publish scope) in the repository secrets beforehand. Keep `cli/Cargo.toml` in sync with `package.json` (a mismatch fails the step before publishing). Re-runs treat an already-published version as success.
+
+For releases containing dependency updates, refresh the figures in `docs/DEPENDINGS.md` with `npm run generate:dependings` beforehand and confirm `npm run check:dependings` (or `npm run release:check -- --category=dependings`) passes. Update the §5 verdict and §6 acceptance records by hand.

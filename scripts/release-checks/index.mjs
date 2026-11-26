@@ -32,6 +32,7 @@ const ROOT_DIR = join(__dirname, '..', '..');
 const CHECK_SCRIPTS = {
   build: 'scripts/release-checks/check-build.mjs',
   deps: 'scripts/release-checks/check-deps.mjs',
+  dependings: 'scripts/release-checks/check-dependings.mjs',
   docs: 'scripts/release-checks/check-docs.mjs',
   tests: 'scripts/release-checks/check-tests.mjs',
   e2e: 'scripts/release-checks/check-e2e.mjs',

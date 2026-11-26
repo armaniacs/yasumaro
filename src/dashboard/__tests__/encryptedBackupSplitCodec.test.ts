@@ -535,3 +535,76 @@ describe('split backup review fixes (Outside-In)', () => {
     expect(parsed).toEqual({ ...input, historyDbBase64: body });
   });
 });
+
+describe('create-side joined-length gate (PBI 2026-11-26-02)', () => {
+  // The joined body is base64 text, so its length moves in quanta of 4 chars:
+  // the values adjacent to MAX_BACKUP_FILE_BYTES are the cap itself
+  // (39,321,600 raw bytes) and cap+4 (39,321,601 raw bytes, one byte over).
+  const CAP_BOUNDARY_BYTES = (MAX_BACKUP_FILE_BYTES * 3) / 4;
+
+  // The over-cap input is read-only for createSplitBackup, so the reject tests
+  // share one construction instead of re-encoding ~37MB per test.
+  let overBudgetInput: SplitBackupInput | undefined;
+  function getOverBudgetInput(): SplitBackupInput {
+    overBudgetInput ??= makeInput(randomBytes(CAP_BOUNDARY_BYTES + 1));
+    return overBudgetInput;
+  }
+
+  it('accepts a joined body exactly at the backup file budget and restores it', async () => {
+    const input = makeInput(randomBytes(CAP_BOUNDARY_BYTES));
+    const container = await createSplitBackup(input, PASSWORD);
+
+    const manifest = JSON.parse(await decryptEnvelope(container.manifest, PASSWORD)) as {
+      totalPlaintextLength: number;
+      compression: string;
+    };
+    expect(manifest.totalPlaintextLength).toBe(MAX_BACKUP_FILE_BYTES);
+    expect(manifest.compression).toBe('none');
+
+    // The invariant under repair: a backup that creation accepted must restore.
+    const parsed = await parseSplitBackup(container, PASSWORD, { expectedVersion: 1 });
+    expect(parsed.historyDbBase64).toBe(input.historyDbBase64);
+  });
+
+  it('rejects the smallest over-budget incompressible body with split-backup-too-large', async () => {
+    const error = await createSplitBackup(getOverBudgetInput(), PASSWORD).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(SplitBackupError);
+    expect((error as SplitBackupError).code).toBe('split-backup-too-large');
+  });
+
+  it('rejects an over-budget body even when it needs no more than 16 parts', async () => {
+    const error = await createSplitBackup(getOverBudgetInput(), PASSWORD, { chunkChars: 20_000_000 }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+    expect(error).toBeInstanceOf(SplitBackupError);
+    expect((error as SplitBackupError).code).toBe('split-backup-too-large');
+  });
+
+  it('fails before building any part: no KDF work and no container on gate violation', async () => {
+    const subtle = (globalThis.crypto as unknown as Crypto).subtle;
+    const orig = subtle.deriveKey.bind(subtle);
+    let kdfCount = 0;
+    (subtle as unknown as Record<string, unknown>)['deriveKey'] = (async (...args: unknown[]) => {
+      const alg = args[0] as { name?: string } | undefined;
+      if (alg?.name === 'PBKDF2') kdfCount++;
+      return (orig as (...a: never[]) => Promise<CryptoKey>)(...(args as never[]));
+    }) as typeof subtle.deriveKey;
+    try {
+      const outcome = await createSplitBackup(getOverBudgetInput(), PASSWORD).then(
+        (container) => container,
+        (e: unknown) => e,
+      );
+      expect(outcome).toBeInstanceOf(SplitBackupError);
+      expect((outcome as SplitBackupError).code).toBe('split-backup-too-large');
+    } finally {
+      (subtle as unknown as Record<string, unknown>)['deriveKey'] = orig;
+    }
+    // Parts are built after the shared part-key KDF, so zero KDF calls prove
+    // the gate fired before any part (and manifest) existed.
+    expect(kdfCount).toBe(0);
+  });
+});

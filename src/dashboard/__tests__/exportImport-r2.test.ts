@@ -75,6 +75,10 @@ const mockImportFromJson = vi.fn();
 vi.mock('../importLogsService.js', () => ({
   importFromJson: (...args: unknown[]) => mockImportFromJson(...args),
   isImportError: (result: object) => 'error' in result,
+  // The error formatter swaps this exact string for the localized template,
+  // so the mock must carry the constant even though these tests never hit
+  // the size gate.
+  IMPORT_SIZE_ERROR: 'Import file is too large (limit: 30 MiB)',
 }));
 
 // Helper to get fresh module instance with current DOM

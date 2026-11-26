@@ -16,6 +16,7 @@ import {
   MAX_PAYLOAD_STRING_BYTES,
   MAX_BATCH_TOTAL_BYTES,
   MAX_PAYLOAD_TOTAL_BYTES,
+  MAX_RESTORE_CHUNK_BASE64,
 } from '../utils/limits.js';
 
 /** Per-field cap for large text fields (PBI 2026-09-11-08: value lives in limits.ts). */
@@ -32,6 +33,9 @@ export { MAX_PAYLOAD_TOTAL_BYTES };
 
 /** Maximum bytes for RESTORE binary payload. */
 export const MAX_RESTORE_BYTES = 100 * 1024 * 1024; // 100 MB
+
+/** Maximum base64 chars for one restore_chunk data payload (value lives in limits.ts). */
+export { MAX_RESTORE_CHUNK_BASE64 };
 
 /**
  * TEXT columns from schema.ts — parsed from the CREATE TABLE DDL so it stays
@@ -60,6 +64,7 @@ export interface PayloadLimits {
   maxBatchTotalBytes: number;
   maxPayloadTotalBytes: number;
   maxRestoreBytes: number;
+  maxRestoreChunkBase64: number;
 }
 
 export const DEFAULT_PAYLOAD_LIMITS: PayloadLimits = {
@@ -68,6 +73,7 @@ export const DEFAULT_PAYLOAD_LIMITS: PayloadLimits = {
   maxBatchTotalBytes: MAX_BATCH_TOTAL_BYTES,
   maxPayloadTotalBytes: MAX_PAYLOAD_TOTAL_BYTES,
   maxRestoreBytes: MAX_RESTORE_BYTES,
+  maxRestoreChunkBase64: MAX_RESTORE_CHUNK_BASE64,
 };
 
 function getByteLength(value: string): number {
@@ -171,6 +177,16 @@ export function assertPayloadSize(
       const rawData = (msg.payload as { data?: unknown }).data;
       if (Array.isArray(rawData) && rawData.length > limits.maxRestoreBytes) {
         return 'Restore data exceeds maximum size of 100MB';
+      }
+      return null;
+    }
+    case 'SQLITE_RESTORE_APPEND': {
+      // One staging chunk: base64 string bounded to the same cap the
+      // DASHBOARD_SQLITE validator enforces, so the SW↔offscreen hop cannot
+      // smuggle in an oversized decode amplification either.
+      const rawData = (msg.payload as { data?: unknown }).data;
+      if (typeof rawData === 'string' && rawData.length > limits.maxRestoreChunkBase64) {
+        return `Restore chunk exceeds maximum size of ${limits.maxRestoreChunkBase64} base64 chars`;
       }
       return null;
     }

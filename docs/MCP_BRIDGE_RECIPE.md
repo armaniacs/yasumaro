@@ -31,7 +31,7 @@
 - **プライバシー判定ゲート**: 判定が取得できない記録（「それでも記録」での強制保存、ホワイトリスト回避、判定キャッシュの失効など）と、非公開判定の記録は送りません（fail-closed）
 - **URL ゲート**: https の宛先のみ。http や空の URL はネットワークに出す前で遮断されます
 - **宛先許可リストゲート**: https ループバックのみ。Webhook 専用許可リスト(16 件固定: https ループバック 8 と http ループバック 8。http は送信時の https 要件で拒否)内の origin のみ送信します（fail-closed）。保存時と送信時は同一判定関数を使います。manifest の変更はリストを自動で広げません
-- **再送制御**: ヘッダ `Idempotency-Key`（`yasumaro-<記録のURL>-<ペイロードのFNV-1aハッシュ>`）付きで POST されます。同じ内容の再記録は重複抑制され、ダッシュボードの「再送」ボタンで明示的に再送できます
+- **再送制御**: ヘッダ `Idempotency-Key`（`yasumaro-<記録ID>-<ペイロードのFNV-1aハッシュ>`）付きで POST されます。同じ内容の再記録は重複抑制され、ダッシュボードの「再送」ボタンで明示的に再送できます
 - **リダイレクト追従なし**: 30x 応答は転送失敗扱いです（ゲートで確認していない Location への本文転送を防ぐため）
 - **履歴と通知**: 送信結果は転送履歴と OS 通知に残ります。表示は origin のみで、トークンを含みうる URL 全体は表示しません
 
@@ -112,7 +112,7 @@ When a record is saved, records that match the transfer condition and are not pr
 - **Privacy verdict gate**: records without a verdict (forced saves via "Record Anyway", whitelist bypass, expired verdict cache) and records judged private are not sent (fail-closed)
 - **URL gate**: https destinations only. http and empty URLs are blocked before any network access
 - **Destination allowlist gate**: https loopback only. Only destinations whose origin is in the dedicated webhook allowlist (16 fixed loopback entries: 8 https plus 8 http send-rejected by the https rule) are sent (fail-closed). Save-time and send-time share one verdict function. Manifest changes do not widen the list
-- **Resend control**: the POST carries an `Idempotency-Key` header (`yasumaro-<record URL>-<FNV-1a hash of the payload>`). Re-recording the same content is duplicate-suppressed, and the dashboard "Resend" button re-POSTs explicitly
+- **Resend control**: the POST carries an `Idempotency-Key` header (`yasumaro-<record ID>-<FNV-1a hash of the payload>`). Re-recording the same content is duplicate-suppressed, and the dashboard "Resend" button re-POSTs explicitly
 - **No redirect following**: a 30x response is treated as a transfer failure (so the body is never forwarded to a Location no gate checked)
 - **History and notification**: outcomes are recorded in the transfer history and the OS notification. Only the origin is displayed; the full URL (which may carry a token) is never shown
 

@@ -5928,6 +5928,15 @@
   "encryptedBackupSplitTooLarge": {
     "message": "分割バックアップが上限を超えています: {detail}"
   },
+  "importLogsFileTooLarge": {
+    "message": "インポートファイルが大きすぎます（上限: {limit}）。ファイルを分割して取り込んでください。"
+  },
+  "exportLogsRowLimitExceeded": {
+    "message": "エクスポートは最大 {rows} 件までです（保存済み {stored} 件）。全件は .db エクスポート（OPFS 使用時）をご利用ください。"
+  },
+  "encryptedBackupSplitCreateTooLarge": {
+    "message": "この履歴 DB は分割形式でも復元可能な上限を超えています（結合後 約{size}、上限 {limit}）。履歴を整理してから再試行してください。"
+  },
   "encryptedBackupRestoredSkipped": {
     "message": "バックアップから復元しました（{skipped}件の設定項目は無効なためスキップされました）"
   },

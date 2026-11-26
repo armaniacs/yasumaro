@@ -18,7 +18,6 @@ function makeDeps(overrides: Partial<MaintenanceBatchDeps> = {}): MaintenanceBat
     insert: vi.fn(),
     insertBatch: vi.fn(async (): Promise<BatchResult> => ({ success: true, data: { count: 1, skipped: 0 } })),
     getSettings: vi.fn(async () => ({})),
-    restoreDb: vi.fn(),
     purgeOldRecords: vi.fn(),
     purgeContent: vi.fn(),
     backupDb: vi.fn(),

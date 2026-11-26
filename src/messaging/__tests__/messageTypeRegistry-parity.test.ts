@@ -135,7 +135,7 @@ describe('messaging parity: message type registry', () => {
 
     it('pins TOKEN_REQUIRED_SUBTYPES snapshot', () => {
         expect(TOKEN_REQUIRED_SUBTYPES).toBeInstanceOf(Set);
-        expect(TOKEN_REQUIRED_SUBTYPES.size).toBe(24);
+        expect(TOKEN_REQUIRED_SUBTYPES.size).toBe(27);
         expect([...TOKEN_REQUIRED_SUBTYPES].sort()).toEqual([
             'append_to_obsidian',
             'archive_cleanup',
@@ -157,7 +157,10 @@ describe('messaging parity: message type registry', () => {
             'import',
             'migrate',
             'purge_now',
-            'restore_db',
+            'restore_abort',
+            'restore_begin',
+            'restore_chunk',
+            'restore_commit',
             'resync_legacy',
             'toggle_star',
             'update',

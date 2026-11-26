@@ -2646,8 +2646,8 @@
           <p class="help-text" data-i18n="encryptedBackupSectionDesc">Create or restore a backup of history and settings encrypted with a passphrase.</p>
           <button id="exportEncryptedBackupBtn" class="secondary-btn" data-i18n="exportEncryptedBackupBtn">Create Encrypted Backup</button>
           <button id="importEncryptedBackupBtn" class="secondary-btn" data-i18n="importEncryptedBackupBtn">Restore from Encrypted Backup</button>
-          <input type="file" id="importEncryptedBackupFileInput" accept=".json" class="hidden" aria-hidden="true">
-          <div id="encryptedBackupStatus" class="status-message"></div>
+          <input type="file" id="importEncryptedBackupFileInput" accept=".json" class="hidden" aria-hidden="true" multiple>
+          <div id="encryptedBackupStatus" class="status-message" role="status" aria-live="polite"></div>
         </div>
 
         <hr class="settings-hr">

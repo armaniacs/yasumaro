@@ -24,8 +24,21 @@ export const MAX_IMPORT_ROWS = 1_000;
 /** Import payload size estimate (JSON length), enforced by the validator. */
 export const MAX_IMPORT_BYTES = 2_000_000;
 
-/** restore_db base64 string length, enforced by the validator. */
-export const MAX_RESTORE_DB_BYTES = 10_000_000;
+/**
+ * restore_chunk.data base64 length cap. Each chunk decodes to at most
+ * 3 MiB of DB bytes (base64 inflates by 4/3). This is the ONLY per-message
+ * enforcement point of the restore transport: the single-shot restore_db
+ * subtype (and its whole-DB string cap) was removed in favor of the staging
+ * chunk session, whose whole-session budget is MAX_RESTORE_SESSION_BYTES.
+ */
+export const MAX_RESTORE_CHUNK_BASE64 = 4 * 1024 * 1024;
+
+/**
+ * Prefix of restore-session staging file names, issued by the OPFS worker
+ * at restore_begin. Naming and validation follow the archive_incoming_
+ * precedent (utils/archiveGuards.ts builds its regex from this prefix).
+ */
+export const RESTORE_STAGING_NAME_PREFIX = 'restore_incoming_';
 
 /** archive_export chunk length; base64 hops stay under the 10MB message ceiling. */
 export const MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
@@ -36,13 +49,6 @@ export const MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
  * by the handler, so 100 was the effective bound and is kept.
  */
 export const MAX_APPEND_IDS = 100;
-
-/**
- * Pre-decode ceiling for restore_db in the maintenance handler. A separate
- * layer from MAX_RESTORE_DB_BYTES (validator string cap): this one guards
- * the base64 decode itself, so it stays larger by design.
- */
-export const MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
 
 /**
  * INTENTIONAL divergence, documented but not unified: the OPFS worker caps
@@ -71,6 +77,16 @@ export const QUERY_CAPS = {
   fts: 100000,
   plain: 10000,
 } as const;
+
+/**
+ * Whole-export row ceiling (exportLogsService, PBI 2026-11-26-04). The
+ * export pages with a keyset cursor at QUERY_CAPS.plain rows per page and
+ * stops here; the value matches the retention policy maximum
+ * (sqliteMaxRecords 100_000) so everything storable is exportable.
+ * Deliberately separate from the listing cap: QUERY_CAPS.plain bounds one
+ * page for the history UI, this bounds the entire export.
+ */
+export const MAX_EXPORT_ROWS = 100_000;
 
 /** Log-forward: forwarded log message chars, detail keys, serialized size (systemHandlers, VULN-004). */
 export const MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
@@ -105,8 +121,21 @@ export const MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
 /**
  * Round 5 drift-guard follow-up — caps the first guard pass itself found:
  */
-/** Pre-parse import text cap (dashboard importLogsService). */
-export const MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+/**
+ * Pre-parse import text cap (dashboard importLogsService, VULN-023). The cap
+ * itself stays — it is what bounds unbounded parse/accumulate — but the value
+ * is sized for the round-trip invariant "what exportJson produces,
+ * importFromJson accepts" for LEAN rows: MAX_EXPORT_ROWS (100,000) x ~300 B
+ * is ~30 MiB. Full-fidelity rows measured ~550 B/row in the pinned 50,000-row
+ * round trip (27.8 MB), so a 100,000-row full-fidelity export (~55 MB)
+ * deliberately EXCEEDS this cap — that band is the .db export / encrypted
+ * backup's job (role split documented in docs/LOG_EXPORT_IMPORT_GUIDE.md).
+ * Note the gate compares String.length (UTF-16 code units), not bytes: CJK
+ * text inflates the byte budget relative to the label. Deliberately larger
+ * than the settings-import cap (DEFAULT_IMPORT_SIZE_CAP_BYTES, 10 MiB): a
+ * settings file is a handful of KB-MB, a log export is a record collection.
+ */
+export const MAX_IMPORT_TEXT_BYTES = 30 * 1024 * 1024;
 
 /** Offscreen payloadGuard per-field text cap. */
 export const MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
@@ -139,6 +168,16 @@ export const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
  * local) so the file gate and the envelope gate below cannot drift apart.
  */
 export const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Whole-session byte ceiling for the chunked restore staging session
+ * (restore_begin/restore_commit totalBytes + the OPFS worker's append guard),
+ * symmetric with the create-side backup budget: a backup the create path can
+ * produce is the largest file the restore path will stage. Checked before any
+ * staging file is created, so a compromised sender cannot grow the OPFS file
+ * past this budget (the disk-amplification counterpart of VULN-008).
+ */
+export const MAX_RESTORE_SESSION_BYTES = MAX_BACKUP_FILE_BYTES;
 
 /**
  * Encrypted-backup envelope PRE-DECODE base64 length cap (PBI 2026-11-06-02).
@@ -263,8 +302,10 @@ export const VALIDATOR_LIMITS = {
   MAX_IMPORT_ROWS,
   /** DASHBOARD_SQLITE import payload (JSON estimate) */
   MAX_IMPORT_BYTES,
-  /** DASHBOARD_SQLITE restore_db payload */
-  MAX_RESTORE_DB_BYTES,
+  /** DASHBOARD_SQLITE restore_chunk.data base64 cap (one staging chunk; the only per-message restore enforcement point) */
+  MAX_RESTORE_CHUNK_BASE64,
+  /** DASHBOARD_SQLITE restore staging session whole-DB byte ceiling (restore_begin/commit + worker append guard) */
+  MAX_RESTORE_SESSION_BYTES,
   /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */

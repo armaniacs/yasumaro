@@ -31,6 +31,8 @@ const EXPECTED_RETRY_SAFE = [
   'SQLITE_BACKUP',
   'SQLITE_CLEAR_ALL',
   'SQLITE_HEALTH_CHECK',
+  'SQLITE_RESTORE_APPEND',
+  'SQLITE_RESTORE_ABORT',
   'SQLITE_ARCHIVE_PREVIEW',
   'SQLITE_ARCHIVE_CLEANUP',
   'SQLITE_ARCHIVE_EXPORT',
@@ -46,6 +48,8 @@ const EXPECTED_RETRY_UNSAFE = [
   'SQLITE_TOGGLE_STAR',
   'SQLITE_AUDIT_LOG_INSERT',
   'SQLITE_RESTORE',
+  'SQLITE_RESTORE_BEGIN',
+  'SQLITE_RESTORE_COMMIT',
   'SQLITE_PURGE',
   'CONTENT_PURGE',
   'SQLITE_AUDIT_LOG_PURGE',
@@ -59,10 +63,10 @@ const EXPECTED_RETRY_UNSAFE = [
 ] as const;
 
 describe('messaging transport retry policy', () => {
-  it('classifies all 33 wire operations without an unconfigured policy', () => {
-    expect(routes).toHaveLength(33);
-    expect(routes.filter((route) => route.retryPolicy === RETRY_SAFE)).toHaveLength(18);
-    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(15);
+  it('classifies all 37 wire operations without an unconfigured policy', () => {
+    expect(routes).toHaveLength(37);
+    expect(routes.filter((route) => route.retryPolicy === RETRY_SAFE)).toHaveLength(20);
+    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(17);
     expect(routes.every((route) => route.retryPolicy !== RETRY_UNCONFIGURED)).toBe(true);
     for (const route of routes) {
       expect(route.retryPolicy).toBe(getTransportRetryPolicy(route.messageType));
@@ -70,8 +74,8 @@ describe('messaging transport retry policy', () => {
   });
 
   it('matches the explicit safe and unsafe message contract', () => {
-    expect(EXPECTED_RETRY_SAFE).toHaveLength(17);
-    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(15);
+    expect(EXPECTED_RETRY_SAFE).toHaveLength(19);
+    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(17);
     for (const type of EXPECTED_RETRY_SAFE) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_SAFE);
     }
@@ -104,6 +108,10 @@ describe('messaging transport retry policy', () => {
     expect(getTransportRetryPolicy('CONTENT_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_AUDIT_LOG_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_ARCHIVE_PREPARE_INCOMING')).toBe(RETRY_UNSAFE);
+    // BEGIN issues a fresh staging name (a retry orphans the first staging);
+    // COMMIT swaps the live DB (a lost response must not re-swap).
+    expect(getTransportRetryPolicy('SQLITE_RESTORE_BEGIN')).toBe(RETRY_UNSAFE);
+    expect(getTransportRetryPolicy('SQLITE_RESTORE_COMMIT')).toBe(RETRY_UNSAFE);
   });
 
   it('keeps read and explicitly idempotent maintenance operations retry-safe', () => {
@@ -116,6 +124,10 @@ describe('messaging transport retry policy', () => {
       'SQLITE_BACKUP',
       'SQLITE_CLEAR_ALL',
       'SQLITE_HEALTH_CHECK',
+      // APPEND re-writes the same bytes at the same declared offset;
+      // ABORT is an idempotent removal.
+      'SQLITE_RESTORE_APPEND',
+      'SQLITE_RESTORE_ABORT',
     ]) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_SAFE);
     }

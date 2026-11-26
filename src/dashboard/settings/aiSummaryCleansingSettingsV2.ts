@@ -14,6 +14,7 @@ import { type PresetId } from '../../utils/aiSummaryCleaner/presets.js';
 import { createCleansingPresetStore, type CleansingPresetStore } from './cleansingPresetStore.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
 import { parseIntOr } from '../../utils/string.js';
+import { getChecked, getValue } from '../../utils/settingsFormBinding.js';
 
 // The preset store owns the ordering constraints (apply epoch, dual write,
 // busy windows) that used to leak into this file's module state. migrateTo
@@ -285,34 +286,32 @@ export function applyAiSummaryCleansingSettingsToUI(settings: AiSummaryCleansing
  * @returns AI要約クレンジング設定
  */
 export function getAiSummaryCleansingSettingsFromUI(): AiSummaryCleansingSettings {
-    const enabledCheckbox = document.getElementById('ai-summary-cleansing-enabled') as HTMLInputElement;
-
     // The 32 rule flags: a missing checkbox falls back to newUserDefault, not
     // defaultEnabled — this mirrors getAiSummaryCleansingSettings(), which
     // reads storage the same way. Both describe "no value present yet".
     const ruleFlags: Record<string, boolean> = Object.fromEntries(
         CLEANSING_RULES.map(rule => [
             ruleOptionKey(rule),
-            (document.getElementById(ruleHtmlId(rule)) as HTMLInputElement | null)?.checked ?? rule.newUserDefault,
+            getChecked(ruleHtmlId(rule), rule.newUserDefault),
         ]),
     );
 
     return {
-        enabled: enabledCheckbox?.checked ?? true,
+        enabled: getChecked('ai-summary-cleansing-enabled', true),
         ...ruleFlags,
-        linkRatioThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-link-ratio-threshold') as HTMLInputElement)?.value, 70),
-        shortTextThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-short-text-threshold') as HTMLInputElement)?.value, 30),
-        shortSeqCount: parseIntOr((document.getElementById('ai-summary-cleansing-short-seq-count') as HTMLInputElement)?.value, 5),
-        linkParaThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-link-para-threshold') as HTMLInputElement)?.value, 50),
-        whitelistExtractionEnabled: (document.getElementById('whitelist-extraction-enabled') as HTMLInputElement)?.checked ?? true,
-        bodyProtectionEnabled: (document.getElementById('ai-summary-cleansing-body-protection-enabled') as HTMLInputElement)?.checked ?? true,
-        bodyProtectionThreshold: parseIntOr((document.getElementById('ai-summary-cleansing-body-protection-threshold') as HTMLInputElement)?.value, 200),
-        fallbackRatio: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-ratio') as HTMLInputElement)?.value, 20) / 100,
-        fallbackMinBytes: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-min-bytes') as HTMLInputElement)?.value, 300),
+        linkRatioThreshold: parseIntOr(getValue('ai-summary-cleansing-link-ratio-threshold'), 70),
+        shortTextThreshold: parseIntOr(getValue('ai-summary-cleansing-short-text-threshold'), 30),
+        shortSeqCount: parseIntOr(getValue('ai-summary-cleansing-short-seq-count'), 5),
+        linkParaThreshold: parseIntOr(getValue('ai-summary-cleansing-link-para-threshold'), 50),
+        whitelistExtractionEnabled: getChecked('whitelist-extraction-enabled', true),
+        bodyProtectionEnabled: getChecked('ai-summary-cleansing-body-protection-enabled', true),
+        bodyProtectionThreshold: parseIntOr(getValue('ai-summary-cleansing-body-protection-threshold'), 200),
+        fallbackRatio: parseIntOr(getValue('ai-summary-cleansing-fallback-ratio'), 20) / 100,
+        fallbackMinBytes: parseIntOr(getValue('ai-summary-cleansing-fallback-min-bytes'), 300),
         // PBI 05 overcut guards
-        fallbackMinChars: parseIntOr((document.getElementById('ai-summary-cleansing-fallback-min-chars') as HTMLInputElement)?.value, 100),
-        candidateGuardEnabled: (document.getElementById('extraction-guard-candidate-enabled') as HTMLInputElement)?.checked ?? true,
-        cleanseGuardEnabled: (document.getElementById('extraction-guard-content-cleanse-enabled') as HTMLInputElement)?.checked ?? true
+        fallbackMinChars: parseIntOr(getValue('ai-summary-cleansing-fallback-min-chars'), 100),
+        candidateGuardEnabled: getChecked('extraction-guard-candidate-enabled', true),
+        cleanseGuardEnabled: getChecked('extraction-guard-content-cleanse-enabled', true)
     } as AiSummaryCleansingSettings;
 }
 

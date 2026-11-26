@@ -17,7 +17,7 @@ export const DASHBOARD_MUTABLE_SUBSET = ['url', 'title', 'summary', 'tags', 'dom
 // VULN-006: cap bulk import rows to prevent SW/offscreen queue saturation
 // (the append path already caps at MAX_APPEND_IDS). Values live in the
 // messaging limits registry so validators and handlers cannot drift apart.
-export { MAX_APPEND_IDS, MAX_IMPORT_ROWS, MAX_RESTORE_BASE64_BYTES } from '../../../utils/limits.js';
+export { MAX_APPEND_IDS, MAX_IMPORT_ROWS } from '../../../utils/limits.js';
 
 /**
  * Every result the SqliteClient-backed deps return carries its own failure
@@ -101,7 +101,6 @@ export interface MaintenanceBatchDeps {
    * of one per row. `count` = inserted rows, `skipped` = UNIQUE duplicates. */
   insertBatch: (records: Record<string, unknown>[]) => Promise<DepsResult<{ count: number; skipped: number }>>;
   getSettings: () => Promise<Record<string, unknown>>;
-  restoreDb: (data: Uint8Array) => Promise<DepsResult<void>>;
   purgeOldRecords: (days?: number, max?: number) => Promise<DepsResult<{ purged: number }>>;
   purgeContent: (days?: number, max?: number, includeStarred?: boolean) => Promise<DepsResult<{ purged: number }>>;
   backupDb: () => Promise<DepsResult<Uint8Array>>;
@@ -112,6 +111,22 @@ export interface MaintenanceBatchDeps {
   runBackfill: () => Promise<{ updated: number; total: number }>;
   runCleanup: () => Promise<{ removed: string[]; totalBytes: number }>;
   runLegacyResync: (options?: { maxRecords?: number }) => Promise<{ examined: number; written: number; skipped: number; total: number }>;
+}
+
+/**
+ * Deps consumed by the chunked restore session group. The staging name is
+ * issued by restore_begin and carried on every later call, so the SW never
+ * holds session state (MV3 ephemeral rule).
+ */
+export interface RestoreSessionDeps {
+  /** Issues the staging name; resolves to `restore_incoming_<uuid>.db`. */
+  restoreBegin: (totalBytes: number, totalChunks: number) => Promise<DepsResult<string>>;
+  /** Writes one base64 chunk at its byte offset; resolves to bytes written. */
+  restoreAppendChunk: (stagingName: string, offset: number, dataBase64: string) => Promise<DepsResult<number>>;
+  /** Validates the staged file and swaps it in for the live DB. */
+  restoreCommit: (stagingName: string, totalBytes: number) => Promise<DepsResult<void>>;
+  /** Removes the staging file (failure cleanup; best-effort). */
+  restoreAbort: (stagingName: string) => Promise<DepsResult<void>>;
 }
 
 /**
@@ -176,7 +191,7 @@ const _checkTableDepsMethods: _TableDepsMethodsLive = true;
 export type DashboardArchiveHandlerDeps = ArchiveDeps;
 
 /** Union of the four groups — what createDashboardSqliteHandler needs as a whole. Unchanged external shape. */
-export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps & ArchiveDeps;
+export type DashboardSqliteHandlerDeps = ReadOnlyDeps & CoreCrudDeps & MaintenanceBatchDeps & RestoreSessionDeps & ArchiveDeps;
 
 /**
  * Every query/mutate descriptor's deps method must name a real handler deps
@@ -243,7 +258,12 @@ export function createSqliteClientDeps(
     insert: (record) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.insert.encodeOp(record as unknown as BrowsingLogRecord)),
     // PBI 2026-09-11-07: batched import — one offscreen round trip per import.
     insertBatch: (records) => sqliteClient.mutate(SQLITE_WIRE_DESCRIPTORS.insertBatch.encodeOp(records as unknown as BrowsingLogRecord[])),
-    restoreDb: (data) => sqliteClient.maintain({ type: 'restore', data }),
+    // Chunked restore session (staging transport): the base64 chunk passes
+    // through untouched — decoding happens once in the offscreen document.
+    restoreBegin: (totalBytes, totalChunks) => sqliteClient.maintain({ type: 'restorePrepareIncoming', totalBytes, totalChunks }),
+    restoreAppendChunk: (stagingName, offset, dataBase64) => sqliteClient.maintain({ type: 'restoreAppend', stagingName, offset, dataBase64 }),
+    restoreCommit: (stagingName, totalBytes) => sqliteClient.maintain({ type: 'restoreCommit', stagingName, totalBytes }),
+    restoreAbort: (stagingName) => sqliteClient.maintain({ type: 'restoreAbort', stagingName }),
     // Deliberately not a result union: getStatus() reports initialization failure
     // inside its success value so the diagnostics panel can display it.
     getStatus: () => sqliteClient.getStatus(),

@@ -12,6 +12,7 @@ import {
   MAX_BATCH_RECORDS,
   MAX_BATCH_TOTAL_BYTES,
   MAX_RESTORE_BYTES,
+  MAX_RESTORE_CHUNK_BASE64,
   DEFAULT_PAYLOAD_LIMITS,
 } from '../payloadGuard.js';
 import type { SqliteMessage } from '../../messaging/sqliteMessages.js';
@@ -279,6 +280,45 @@ describe('SQLITE_RESTORE', () => {
   it('returns null for empty data array', () => {
     const result = assertPayloadSize(restoreMsg([]));
     expect(result).toBeNull();
+  });
+});
+
+// ── SQLITE_RESTORE_APPEND (chunked staging transport) ──────────────────
+
+describe('SQLITE_RESTORE_APPEND', () => {
+  function appendMsg(data: unknown): SqliteMessage {
+    return {
+      type: 'SQLITE_RESTORE_APPEND',
+      payload: { stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 0, data },
+    } as unknown as SqliteMessage;
+  }
+
+  it('returns null for a chunk at the exact base64 cap', () => {
+    const result = assertPayloadSize(appendMsg('d'.repeat(MAX_RESTORE_CHUNK_BASE64)));
+    expect(result).toBeNull();
+  });
+
+  it('rejects a chunk one char over the base64 cap', () => {
+    const result = assertPayloadSize(appendMsg('d'.repeat(MAX_RESTORE_CHUNK_BASE64 + 1)));
+    expect(result).toContain('Restore chunk exceeds');
+  });
+
+  it('rejects via a custom limit (boundary wiring stays adjustable)', () => {
+    const limits = { ...DEFAULT_PAYLOAD_LIMITS, maxRestoreChunkBase64: 4 };
+    const result = assertPayloadSize(appendMsg('ddddd'), limits);
+    expect(result).toContain('Restore chunk exceeds');
+  });
+
+  it('returns null when data is absent or not a string (type, not size)', () => {
+    expect(assertPayloadSize(appendMsg(undefined))).toBeNull();
+    expect(assertPayloadSize(appendMsg(12345))).toBeNull();
+  });
+
+  it('begin/commit/abort carry no sizeable field', () => {
+    const staging = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    expect(assertPayloadSize({ type: 'SQLITE_RESTORE_BEGIN', payload: { totalBytes: 8, totalChunks: 1 } } as unknown as SqliteMessage)).toBeNull();
+    expect(assertPayloadSize({ type: 'SQLITE_RESTORE_COMMIT', payload: { stagingName: staging, totalBytes: 8 } } as unknown as SqliteMessage)).toBeNull();
+    expect(assertPayloadSize({ type: 'SQLITE_RESTORE_ABORT', payload: { stagingName: staging } } as unknown as SqliteMessage)).toBeNull();
   });
 });
 

@@ -38,6 +38,16 @@ const RETRY_POLICY_TABLE: Record<TransportMessageType, TransportRetryPolicy> = {
   SQLITE_INIT: RETRY_SAFE,
   SQLITE_BACKUP: RETRY_SAFE,
   SQLITE_RESTORE: RETRY_UNSAFE,
+  // Staging session transport. BEGIN issues a fresh staging name, so a
+  // retried begin would orphan the first staging file — same rule as the
+  // archive prepare-incoming row. COMMIT swaps the live DB: a lost response
+  // must not trigger a second replacement. APPEND re-writes the same bytes
+  // at the same declared offset (idempotent), and ABORT is an idempotent
+  // removal, so both tolerate a transport retry.
+  SQLITE_RESTORE_BEGIN: RETRY_UNSAFE,
+  SQLITE_RESTORE_APPEND: RETRY_SAFE,
+  SQLITE_RESTORE_COMMIT: RETRY_UNSAFE,
+  SQLITE_RESTORE_ABORT: RETRY_SAFE,
   SQLITE_CLEAR_ALL: RETRY_SAFE,
   SQLITE_PURGE: RETRY_UNSAFE,
   CONTENT_PURGE: RETRY_UNSAFE,

@@ -212,6 +212,35 @@ export async function restoreDb(data: Uint8Array): Promise<{ success: true } | {
   return backend.restoreDb(data);
 }
 
+// ── Chunked restore staging session ───────────────────
+// begin -> append* -> commit replaces the single-shot restore for the
+// dashboard path. The staging name is issued by the OPFS worker and carried
+// back on every call, so nothing session-shaped lives in this module.
+
+/** Issue (and sweep leftovers of) a registered restore staging name. */
+export async function restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<{ success: true; stagingName: string } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.restorePrepareIncoming(totalBytes, totalChunks);
+}
+
+/** Write one chunk of DB bytes at its byte offset in the staging file. */
+export async function restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<{ success: true; written: number } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.restoreAppend(stagingName, offset, data);
+}
+
+/** Validate the assembled staging file and swap it in for the live DB. */
+export async function restoreCommit(stagingName: string, totalBytes: number): Promise<{ success: true } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.restoreCommit(stagingName, totalBytes);
+}
+
+/** Discard a failed restore session's staging file. */
+export async function restoreAbort(stagingName: string): Promise<{ success: true } | { success: false; error: string }> {
+  const backend = await engine.getBackend();
+  return backend.restoreAbort(stagingName);
+}
+
 /**
  * Lightweight health check — verifies the SQLite database is reachable.
  * Returns true if a SELECT 1 succeeds on any available backend.

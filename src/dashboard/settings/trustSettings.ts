@@ -23,6 +23,7 @@ import { getPluralKey } from '../../utils/i18nPlural.js';
 import { formatLocalDateString, parseLocalDateStart } from '../../utils/localDate.js';
 import { getTrustChecker } from '../../utils/trustChecker.js';
 import { showStatus } from '../../utils/ui/settingsUiHelper.js';
+import { getChecked } from '../../utils/settingsFormBinding.js';
 import { createTagChip } from '../tagChip.js';
 
 export type TrustCategory = 'finance' | 'gaming' | 'sns';
@@ -467,9 +468,9 @@ export function createTrustSettings(): TrustSettingsController {
         const checker = getTrustChecker();
         try {
             await checker.saveAlertSettings({
-                alertFinance: alertFinanceCheckbox?.checked ?? false,
-                alertSensitive: alertSensitiveCheckbox?.checked ?? false,
-                alertUnverified: alertUnverifiedCheckbox?.checked ?? false
+                alertFinance: getChecked(alertFinanceCheckbox),
+                alertSensitive: getChecked(alertSensitiveCheckbox),
+                alertUnverified: getChecked(alertUnverifiedCheckbox)
             });
 
             // Note: Trust Database changes are already saved immediately when modified

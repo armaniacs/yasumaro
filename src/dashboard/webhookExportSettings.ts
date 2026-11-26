@@ -38,6 +38,7 @@ import { errorMessage } from '../utils/errorUtils.js';
 import { getMessageOr } from '../utils/i18n.js';
 import { clearElement } from '../utils/domClear.js';
 import { createListen } from '../utils/domListen.js';
+import { getChecked, getValue } from '../utils/settingsFormBinding.js';
 
 export interface WebhookExportResendResult {
   ok: boolean;
@@ -246,8 +247,8 @@ export function createWebhookExportSettingsUi(seams: WebhookExportUiSeams = {}):
   async function save(): Promise<void> {
     const { enabled, url, tag, minScroll, minDuration } = getFormElements();
     const settings: WebhookExportSettings = {
-      enabled: enabled?.checked ?? false,
-      url: url?.value.trim() ?? '',
+      enabled: getChecked(enabled),
+      url: getValue(url).trim(),
       condition: {
         tag: tag !== null && tag.value.trim() !== '' ? tag.value.trim() : undefined,
         minScrollDepth: readNumberOrUndefined(minScroll),

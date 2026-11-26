@@ -154,8 +154,8 @@ describe('DashboardSqliteValidator', () => {
     expect(() => v.validate({ subtype: 'import' })).toThrow(ValidationError);
   });
 
-  it('rejects restore_db without data', () => {
-    expect(() => v.validate({ subtype: 'restore_db' })).toThrow(ValidationError);
+  it('rejects restore_chunk without stagingName/offset/data', () => {
+    expect(() => v.validate({ subtype: 'restore_chunk' })).toThrow(ValidationError);
   });
 
   it('rejects append_to_obsidian without ids', () => {
@@ -167,7 +167,8 @@ describe('DashboardSqliteValidator', () => {
     expect(() => v.validate({ subtype: 'get_count' })).not.toThrow();
   });
 
-  it('accepts all 20 subtypes without throwing for minimal valid shape', () => {
+  it('accepts all 23 subtypes without throwing for minimal valid shape', () => {
+    const staging = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
     const validSamples: Array<Record<string, unknown>> = [
       { subtype: 'create_confirm_token', action: 'delete', id: 1 },
       { subtype: 'query' },
@@ -183,7 +184,10 @@ describe('DashboardSqliteValidator', () => {
       { subtype: 'backfill_metadata' },
       { subtype: 'resync_legacy' },
       { subtype: 'backup_db' },
-      { subtype: 'restore_db', data: 'base64' },
+      { subtype: 'restore_begin', totalBytes: 1, totalChunks: 1 },
+      { subtype: 'restore_chunk', stagingName: staging, offset: 0, data: 'base64' },
+      { subtype: 'restore_commit', stagingName: staging, totalBytes: 6 },
+      { subtype: 'restore_abort', stagingName: staging },
       { subtype: 'import', rows: [] },
       { subtype: 'append_to_obsidian', ids: [1] },
       { subtype: 'purge_now' },

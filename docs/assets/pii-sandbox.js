@@ -26,8 +26,8 @@ var PiiSandbox = (() => {
   });
 
   // src/utils/limits.ts
+  var MAX_RESTORE_CHUNK_BASE64 = 4 * 1024 * 1024;
   var MAX_ARCHIVE_EXPORT_CHUNK_BYTES = 8 * 1024 * 1024;
-  var MAX_RESTORE_BASE64_BYTES = 150 * 1024 * 1024;
   var MAX_LOG_FORWARD_MESSAGE_CHARS = 64 * 1024;
   var MAX_LOG_FORWARD_SERIALIZED_CHARS = 256 * 1024;
   var MAX_RECORD_SIZE = 64 * 1024;
@@ -35,7 +35,8 @@ var PiiSandbox = (() => {
   var MAX_PII_OUTPUT_SIZE = 128 * 1024;
   var MAX_ENVELOPE_CIPHERTEXT_LENGTH = 64 * 1024 * 1024;
   var MAX_ERROR_BODY_SIZE = 1024 * 1024;
-  var MAX_IMPORT_TEXT_BYTES = 10 * 1024 * 1024;
+  var MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
+  var MAX_IMPORT_TEXT_BYTES = 30 * 1024 * 1024;
   var MAX_PAYLOAD_STRING_BYTES = 1024 * 1024;
   var MAX_BATCH_TOTAL_BYTES = 20 * 1024 * 1024;
   var MAX_PAYLOAD_TOTAL_BYTES = 20 * 1024 * 1024;
@@ -43,7 +44,10 @@ var PiiSandbox = (() => {
   var MAX_BODY_SIZE = 10 * 1024 * 1024;
   var DEFAULT_IMPORT_SIZE_CAP_BYTES = 10 * 1024 * 1024;
   var MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
+  var MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+  var MAX_BACKUP_ENVELOPE_BASE64_LENGTH = 50 * 1024 * 1024;
   var MAX_AI_HTTP_RESPONSE_BYTES = 10 * 1024 * 1024;
+  var MAX_UBLOCK_FILTER_BYTES = 10 * 1024 * 1024;
   var STORAGE_QUOTA_BYTES = 10 * 1024 * 1024;
   var MAX_BYTE_STAT_BYTES = 16 * 1024 * 1024;
 
@@ -72,6 +76,9 @@ var PiiSandbox = (() => {
   // src/utils/errorUtils.ts
   function errorMessage(error) {
     return error instanceof Error ? error.message : String(error);
+  }
+  function toError(error) {
+    return error instanceof Error ? error : new Error(errorMessage(error));
   }
 
   // src/utils/objectUtils.ts
@@ -228,8 +235,7 @@ var PiiSandbox = (() => {
     }
     return { valid: true };
   }
-  async function sanitizeRegex(text, options = {}) {
-    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false, includeIndices = false } = options;
+  function validateInput(text, skipSizeLimit) {
     if (!text || typeof text !== "string") {
       return { text: "", maskedItems: [] };
     }
@@ -251,114 +257,129 @@ var PiiSandbox = (() => {
         };
       }
     }
-    const startTime = Date.now();
-    try {
-      const _maskedItems = [];
-      const replacements = [];
-      const typeGroups = [];
-      const seenTypes = /* @__PURE__ */ new Set();
-      for (const { type } of PII_PATTERNS) {
-        if (seenTypes.has(type)) continue;
-        seenTypes.add(type);
-        const patternsForType = PII_PATTERNS.filter((p) => p.type === type).map((p) => `(?:${p.pattern.source})`);
-        typeGroups.push(`(?<${type}>${patternsForType.join("|")})`);
-      }
-      const combinedSource = typeGroups.join("|");
-      const combinedRegex = new RegExp(combinedSource, "g");
-      const probeRegex = new RegExp(`(?:${combinedSource})`, "y");
-      let match;
-      let matchCount = 0;
-      const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
-      for (let offset = 0; offset < text.length; offset += step) {
-        const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
-        combinedRegex.lastIndex = 0;
-        while ((match = combinedRegex.exec(chunk)) !== null) {
-          if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
-            continue;
-          }
-          if (offset > 0 && match.index === 0 && match[0].length <= SCAN_CHUNK_OVERLAP) {
-            continue;
-          }
-          probeRegex.lastIndex = offset + match.index;
-          const fullProbe = probeRegex.exec(text);
-          if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
-            continue;
-          }
-          if (!fullProbe) {
-            continue;
-          }
-          matchCount++;
-          if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
-            throw new Error(`Operation timed out after ${timeout}ms`);
-          }
-          if (matchCount > MAX_MATCH_COUNT) {
-            throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
-          }
-          const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
-          const startIndex = offset + match.index;
-          let matchedType = "unknown";
-          if (match.groups) {
-            for (const type of Object.keys(match.groups)) {
-              if (match.groups[type]) {
-                matchedType = type;
-                break;
-              }
+    return null;
+  }
+  function detectPii(text, startTime, timeout) {
+    const replacements = [];
+    const typeGroups = [];
+    const seenTypes = /* @__PURE__ */ new Set();
+    for (const { type } of PII_PATTERNS) {
+      if (seenTypes.has(type)) continue;
+      seenTypes.add(type);
+      const patternsForType = PII_PATTERNS.filter((p) => p.type === type).map((p) => `(?:${p.pattern.source})`);
+      typeGroups.push(`(?<${type}>${patternsForType.join("|")})`);
+    }
+    const combinedSource = typeGroups.join("|");
+    const combinedRegex = new RegExp(combinedSource, "g");
+    const probeRegex = new RegExp(`(?:${combinedSource})`, "y");
+    let match;
+    let matchCount = 0;
+    const step = SCAN_CHUNK_SIZE - SCAN_CHUNK_OVERLAP;
+    for (let offset = 0; offset < text.length; offset += step) {
+      const chunk = text.slice(offset, offset + SCAN_CHUNK_SIZE);
+      combinedRegex.lastIndex = 0;
+      while ((match = combinedRegex.exec(chunk)) !== null) {
+        if (offset > 0 && match.index + match[0].length <= SCAN_CHUNK_OVERLAP) {
+          continue;
+        }
+        probeRegex.lastIndex = offset + match.index;
+        const fullProbe = probeRegex.exec(text);
+        if (fullProbe && fullProbe[0].length > match[0].length && fullProbe[0].length <= SCAN_CHUNK_OVERLAP) {
+          continue;
+        }
+        if (!fullProbe) {
+          continue;
+        }
+        matchCount++;
+        if (matchCount % TIMEOUT_CHECK_INTERVAL === 0 && Date.now() - startTime > timeout) {
+          throw new Error(`Operation timed out after ${timeout}ms`);
+        }
+        if (matchCount > MAX_MATCH_COUNT) {
+          throw new Error(`Operation exceeded maximum match count of ${MAX_MATCH_COUNT}`);
+        }
+        const matchedValue = text.substring(offset + match.index, offset + match.index + match[0].length);
+        const startIndex = offset + match.index;
+        let matchedType = "unknown";
+        if (match.groups) {
+          for (const type of Object.keys(match.groups)) {
+            if (match.groups[type]) {
+              matchedType = type;
+              break;
             }
           }
-          if (matchedType === "creditCard" && !validateLuhn(matchedValue)) {
-            continue;
-          }
-          replacements.push({
-            index: startIndex,
-            length: matchedValue.length,
-            mask: `[MASKED:${matchedType}]`,
-            type: matchedType,
-            original: matchedValue
-          });
         }
-      }
-      replacements.sort((a, b) => b.length - a.length);
-      const resolvedReplacements = [];
-      const usedRanges = [];
-      for (const r of replacements) {
-        const rStart = r.index;
-        const rEnd = r.index + r.length;
-        const overlaps = usedRanges.some((range) => !(rEnd <= range.start || rStart >= range.end));
-        if (!overlaps) {
-          resolvedReplacements.push(r);
-          usedRanges.push({ start: rStart, end: rEnd });
+        if (matchedType === "creditCard" && !validateLuhn(matchedValue)) {
+          continue;
         }
+        replacements.push({
+          index: startIndex,
+          length: matchedValue.length,
+          mask: `[MASKED:${matchedType}]`,
+          type: matchedType,
+          original: matchedValue
+        });
       }
-      resolvedReplacements.sort((a, b) => b.index - a.index);
-      let processedText = text;
-      const finalMaskedItems = [];
-      resolvedReplacements.sort((a, b) => b.index - a.index);
-      for (const r of resolvedReplacements) {
-        processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
-        finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
+    }
+    return replacements;
+  }
+  function replacePii(text, replacements) {
+    replacements.sort((a, b) => b.length - a.length);
+    const resolvedReplacements = [];
+    const usedRanges = [];
+    for (const r of replacements) {
+      const rStart = r.index;
+      const rEnd = r.index + r.length;
+      const overlaps = usedRanges.some((range) => !(rEnd <= range.start || rStart >= range.end));
+      if (!overlaps) {
+        resolvedReplacements.push(r);
+        usedRanges.push({ start: rStart, end: rEnd });
       }
-      finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
-      finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
-      const resultItems = finalMaskedItems.map(
-        (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
+    }
+    resolvedReplacements.sort((a, b) => b.index - a.index);
+    let processedText = text;
+    const finalMaskedItems = [];
+    resolvedReplacements.sort((a, b) => b.index - a.index);
+    for (const r of resolvedReplacements) {
+      processedText = processedText.substring(0, r.index) + r.mask + processedText.substring(r.index + r.length);
+      finalMaskedItems.push({ type: r.type, original: r.original, index: r.index });
+    }
+    finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+    finalMaskedItems.sort((a, b) => (a.index || 0) - (b.index || 0));
+    return { processedText, maskedItems: finalMaskedItems };
+  }
+  function reportResult(processedText, maskedItems, includeIndices) {
+    const outputSize = processedText.length;
+    if (outputSize > MAX_OUTPUT_SIZE) {
+      const trimmedText = processedText.substring(0, MAX_OUTPUT_SIZE);
+      const trimmedMaskedItems = maskedItems.filter(
+        (item) => (item.index || 0) < MAX_OUTPUT_SIZE
       );
-      const outputSize = processedText.length;
-      if (outputSize > MAX_OUTPUT_SIZE) {
-        processedText = processedText.substring(0, MAX_OUTPUT_SIZE);
-        const trimmedMaskedItems = finalMaskedItems.filter(
-          (item) => (item.index || 0) < MAX_OUTPUT_SIZE
-        );
-        return {
-          text: processedText,
-          maskedItems: trimmedMaskedItems.map(
-            (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
-          ),
-          error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
-        };
-      }
-      return { text: processedText, maskedItems: resultItems };
+      return {
+        text: trimmedText,
+        maskedItems: trimmedMaskedItems.map(
+          (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
+        ),
+        error: `Output truncated to ${MAX_OUTPUT_SIZE} characters`
+      };
+    }
+    return {
+      text: processedText,
+      maskedItems: maskedItems.map(
+        (item) => includeIndices ? { type: item.type, original: item.original, ...pickDefined({ index: item.index }) } : { type: item.type, original: item.original }
+      )
+    };
+  }
+  async function sanitizeRegex(text, options = {}) {
+    const { timeout = DEFAULT_TIMEOUT, skipSizeLimit = false, includeIndices = false } = options;
+    const rejection = validateInput(text, skipSizeLimit);
+    if (rejection) return rejection;
+    const startTime = Date.now();
+    try {
+      const replacements = detectPii(text, startTime, timeout);
+      const { processedText, maskedItems } = replacePii(text, replacements);
+      return reportResult(processedText, maskedItems, includeIndices);
     } catch (error) {
-      throw error instanceof Error ? error : new Error(errorMessage(error));
+      throw toError(error);
     }
   }
 

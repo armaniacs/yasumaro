@@ -91,7 +91,10 @@ export const ALL_DASHBOARD_SQLITE_SUBTYPES = [
   'backfill_metadata',
   'resync_legacy',
   'backup_db',
-  'restore_db',
+  'restore_begin',
+  'restore_chunk',
+  'restore_commit',
+  'restore_abort',
   'import',
   'append_to_obsidian',
   'purge_now',
@@ -198,6 +201,14 @@ export const ARCHIVE_SCOPE_BY_SUBTYPE: Record<string, 'cutoff' | 'staging'> = {
   // archive_prepare_incoming / archive_cleanup carry no destructive parameters
   // (the server generates the staging name; cleanup sweeps orphans), so they
   // stay unbound — deriving a scope over nothing would be a no-op anyway.
+  // Chunked restore session: chunk/commit/abort are
+  // destructive through stagingName (append/replace/remove the staging file),
+  // so a token issued for one session must not verify for another.
+  // restore_begin carries no stagingName (the worker issues it) — unbound,
+  // same rule as archive_prepare_incoming.
+  restore_chunk: 'staging',
+  restore_commit: 'staging',
+  restore_abort: 'staging',
 };
 
 /**

@@ -118,7 +118,7 @@ Safety Mode を変更すると、対応する Tranco Tier も連動して変更�
 | 設定項目 | 初期値 | 動作 |
 |----------|--------|------|
 | **金融サイトの警告** | ON | `SENSITIVE` かつ `finance` カテゴリのドメインで警告を表示 |
-| **警戒ドメインの警告** | ON | `SENSITIVE` かつ `gaming` / `sns` カテゴリのドメインで警告を表示 |
+| **警戒ドメインの警告** | ON | `SENSITIVE` かつ `finance` 以外のカテゴリ（`gaming` / `sns` / ユーザー追加分を含む）のドメインで警告を表示 |
 | **未検証サイトの警告** | OFF | `UNVERIFIED` のドメインで警告を表示 |
 
 > [!TIP]
@@ -180,14 +180,9 @@ Tranco List の更新には、外部 API（`tranco-list.eu`）へのアクセス
 
 同意拒否中、または更新を実行するまでは Tranco リストが空のため、Step 3 の Tranco 判定は機能しません。JP-Anchor TLD 判定と Sensitive List 判定は引き続き動作します。
 
-#### 変更通知
+#### 更新結果の表示
 
-Tranco List が更新された際、以下の条件を満たすと通知が表示されます。
-
-- 今まで訪問していた Tranco ドメインが新しいリストから除外された
-- 前回の通知から 7 日以上経過している
-
-通知には除外されたドメインが一覧表示されます。
+Tranco List の更新が完了すると、ダッシュボードの Trust パネルに成功・失敗のステータスが表示されます（取得件数・Tier を含む）。除外ドメインの一覧通知や7日間隔の再通知機能はありません。
 
 ---
 
@@ -353,7 +348,7 @@ You can configure when warnings are shown in the popup. These settings are avail
 | Setting | Default | Behavior |
 |---------|---------|----------|
 | **Financial site warning** | ON | Shows a warning for `SENSITIVE` domains in the `finance` category |
-| **Sensitive site warning** | ON | Shows a warning for `SENSITIVE` domains in the `gaming` or `sns` categories |
+| **Sensitive site warning** | ON | Shows a warning for `SENSITIVE` domains in any non-finance category (including `gaming` / `sns` and user-added domains) |
 | **Unverified site warning** | OFF | Shows a warning for `UNVERIFIED` domains |
 
 > [!TIP]
@@ -415,14 +410,9 @@ Updating the Tranco List requires accessing the external API at `tranco-list.eu`
 
 While consent is denied, or until you run the update, the Tranco list remains empty and Step 3 (Tranco check) does not run. The JP-Anchor TLD check and Sensitive List check continue to work.
 
-#### Change Notifications
+#### Update Result
 
-When the Tranco List is updated, a notification is shown if all of the following are true:
-
-- A previously visited Tranco domain has been removed from the new list
-- At least 7 days have passed since the last notification
-
-The notification lists the removed domains.
+When the Tranco List update finishes, the dashboard Trust panel shows a success/failure status (including the fetched count and tier). There is no removed-domain list notification or 7-day re-notification feature.
 
 ---
 

@@ -46,7 +46,7 @@ Yasumaro は [Chrome Web Store](https://chromewebstore.google.com/detail/yasumar
 2.「Firefox をダウンロードして拡張機能を入手する」をクリックして追加
 3. 追加後、同意画面から記録を開始してください
 
-GitHub Releases の zip や手動ビルドも従来どおり利用できます。最新のソースからビルドする場合は `make build` または `npm run build:firefox` を実行します:
+GitHub Releases の zip や手動ビルドも従来どおり利用できます。`make build` は Chromium と Firefox の両方をビルドします。Chromium のみは `npm run build`、Firefox のみは `npm run build:firefox` です:
 
 1. GitHub Releases から `yasumaro-*-firefox.zip` をダウンロードして展開するか、`npm run build:firefox` でビルドする
 2. Firefox で `about:debugging#/runtime/this-firefox` を開く
@@ -104,84 +104,85 @@ Obsidian への書き込みは Obsidian が起動している必要がありま�
 | カテゴリ | プロバイダー例 |
 |---------|--------------|
 | ブラウザ内蔵 AI | Chrome の Gemini Nano / Edge の Phi-mini（API キー不要・オフライン動作） |
-| クラウド（OpenAI互換） | OpenAI、Anthropic（Claude）、Groq、Mistral AI、OpenRouter、DeepSeek など |
+| OpenAI 公式 | OpenAI（接続先固定、Base URL の入力不要） |
+| クラウド（OpenAI互換） | OpenAI Compatible / OpenAI Compatible 2 に Groq、Mistral AI、DeepSeek などを設定 |
 | クラウド（Models.dev 経由） | Models.dev のカタログから OpenRouter、DeepSeek、Hugging Face など 70 以上の OpenAI 互換プロバイダーを選択 |
 | Google | Gemini |
-| ローカル | Ollama、LM Studio |
+| ローカル | Ollama 専用スロット、LM Studio 専用スロット（OpenAI Compatible 2 でも利用可能） |
 
-「クラウド（Models.dev 経由）」は、AI Provider で「OpenAI Compatible」を選んだときに使える選択方式です。「プロバイダー選択」ボタンでカタログからプロバイダーとモデルを選ぶと、Base URL・API Key・Model Name が自動入力されます。
+「クラウド（Models.dev 経由）」は、AI Provider で「OpenAI Compatible」を選んだときに使える選択方式です。「プロバイダー選択」ボタンでカタログからプロバイダーとモデルを選ぶと、Base URL と Model Name が自動入力されます（API キーは手入力です）。Anthropic のネイティブ API（`https://api.anthropic.com/v1`）は OpenAI 互換ではないため、互換スロットでは利用できません。Anthropic 系を使う場合は OpenAI 互換のゲートウェイを経由してください。OpenRouter、Hugging Face、Perplexity AI などのオプトインプロバイダーは、初回にダッシュボードの CSP パネルで権限許可が必要です。
 
 完全なリストは [完全セットアップガイド](SETUP_GUIDE.md) の「サポートされている AI プロバイダー」テーブルをご覧ください。Built-in AI のセットアップ手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) を参照してください。
 
-**Q14a. ブラウザ内蔵 AI とは何ですか？API キーは必要ですか？**
+**Q15. ブラウザ内蔵 AI とは何ですか？API キーは必要ですか？**
 
 Chrome の Gemini Nano、Microsoft Edge の Phi-mini を要約に使う仕組みです。API キーは不要で、料金もかかりません。モデルはブラウザがデバイス内に持つため、要約時にページの内容が外部へ送信されません。初回のみモデルのダウンロード（数 GB）が必要で、その後はオフラインでも動作します。対応ブラウザで一度だけフラグの有効化が必要です。手順は [Built-in AI 設定ガイド](BUILT_IN_AI_SETUP_GUIDE.md) をご覧ください。
 
-**Q14b. 内蔵 AI の診断で「downloadable」と表示されます。どうすればいいですか？**
+**Q16. 内蔵 AI の診断で「downloadable」と表示されます。どうすればいいですか？**
 
 `downloadable` はモデルがまだ端末に取得されていない状態です。ダッシュボードの診断パネルにある内蔵 AI セクションから、進捗表示つきでダウンロードを開始できます。あるいは要約や「AI テスト」を実行すると自動でダウンロードが始まります。ダウンロード中は `downloading`、完了すると `available` に変わります。`unavailable` の場合は、対応ブラウザかどうかとフラグの有効化を確認してください。
 
-**Q15. Groq を使うにはどう設定しますか？**
+**Q17. Groq を使うにはどう設定しますか？**
 
-ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `openai/gpt-oss-20b` などを入力し、最後に「Test AI」をクリックしてください。
+ダッシュボードの「AI Provider」で「OpenAI Compatible」を選択します。Base URL に `https://api.groq.com/openai/v1`、API Key に [Groq Console](https://console.groq.com/keys) で取得したキー、Model Name に `openai/gpt-oss-120b` などを入力し、最後に「Test AI」をクリックしてください。モデル名は提供側の変更が速いため、Groq Console と Models.dev カタログで最新の名称を確認してください。
 
-**Q16. Gemini を使うにはどう設定しますか？**
+**Q18. Gemini を使うにはどう設定しますか？**
 
-ダッシュボードの「AI Provider」で「Google Gemini」を選択し、[Google AI Studio](https://aistudio.google.com/) で取得した API キーと、モデル名（例: `gemini-3.1-flash-lite`）を入力します。
+ダッシュボードの「AI Provider」で「Google Gemini」を選択し、[Google AI Studio](https://aistudio.google.com/) で取得した API キーと、モデル名（例: `gemini-3.1-flash-lite`）を入力します。モデル名は変更されるため、最新の名称を確認してください。
 
-**Q17. Ollama などのローカル LLM を使えますか？**
+**Q19. Ollama などのローカル LLM を使えますか？**
 
-使えます。「AI Provider」で「OpenAI Compatible 2」を選択し、Base URL に `http://localhost:11434/v1`（Ollama の場合）、API Key は空欄、Model Name に `ollama list` で確認したモデル名を入力します。ダッシュボードに「Ollama」プリセットボタンがあり、クリックすると自動入力されます。LM Studio の場合は Base URL を `http://127.0.0.1:1234/v1` にします。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
+使えます。Ollama / LM Studio 専用スロットか「OpenAI Compatible 2」のどちらでも使えます。ダッシュボードの「Ollama」「LM Studio」プリセットボタンを押すと Base URL が自動入力されます。Ollama の場合は Base URL に `http://localhost:11434/v1`、API Key は空欄、Model Name に `ollama list` で確認した名称（例: `llama3.2`）を入力します。LM Studio の場合は Base URL を `http://127.0.0.1:1234/v1`、Model Name は Models タブで確認します。詳細は [完全セットアップガイド](SETUP_GUIDE.md) をご覧ください。
 
-**Q18. AI 要約のプロンプトをカスタマイズできますか？**
+**Q20. AI 要約のプロンプトをカスタマイズできますか？**
 
 できます。ダッシュボードの「AIプロンプト」タブでシステムプロンプトとユーザープロンプトを自由に編集できます。複数のプロンプトを保存して切り替えることも可能です。ユーザープロンプトには必ず `{{content}}` プレースホルダーを含めてください。詳細は [AIプロンプトカスタマイズガイド](USER-GUIDE-AI-PROMPT.md) をご覧ください。
 
-**Q19. 登録していない AI プロバイダーの URL を設定したら接続がブロックされました。**
+**Q21. 登録していない AI プロバイダーの URL を設定したら接続がブロックされました。**
 
 セキュリティ上の理由から、Yasumaro は公式にサポートしているドメインへの接続のみを許可しています。サポートされていないドメインへの接続は CSP によってブロックされます。サポート対象のドメイン一覧は [完全セットアップガイド](SETUP_GUIDE.md) を確認してください。
 
-**Q20. AI が「2プロバイダー」設定できますが、何が違いますか？**
+**Q22. 複数の AI プロバイダーを切り替え・フォールバックできますか？**
 
-Groq も Ollama も独立した入力があるので、シンプルに OpenAI 互換の LLM サービスを複数比較、切り替えながら使えます。
+Priority（Failover Order）で優先度 1～3 位を設定し、複数プロバイダーのフォールバック構成にできます。内部的には最大 10 スロットまで保持でき、画面には 3 行表示されます。優先度リストのモデル名欄は空のままでも実際に使われる名称（プロバイダーの設定値、未設定ならカタログの既定値）が表示されます。空欄のまま保存すると明示的な指定として記録されず、常に最新の既定値が適用されます。
 
 ---
 
 ### プライバシーとデータ
 
-**Q21. 閲覧データはどこに保存されますか？開発者のサーバーに送られますか？**
+**Q23. 閲覧データはどこに保存されますか？開発者のサーバーに送られますか？**
 
 すべてのデータはあなたのデバイス上にのみ保存されます。開発者はサーバーを一切運営していないため、データが開発者の手に渡ることはありません。閲覧履歴はデバイス上の OPFS（SQLite DB）に、設定情報は Chrome のローカルストレージに保存されます。ページ本文（content）をローカル保存するかは、ダッシュボードの「設定 → コンテンツ保持設定」でいつでも切り替えられます（デフォルト: オフ）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
-**Q22. AI プロバイダーにはどんなデータが送られますか？**
+**Q24. AI プロバイダーにはどんなデータが送られますか？**
 
 ページのテキスト内容が AI 要約のために選択したプロバイダーの API に送信されます。テキストはまず記録パイプラインで 64KB（65,536バイト・UTF-8）に切り詰められ、さらにプロバイダ別の送信上限（OpenAI 互換: 既定 1 万文字、Gemini: 3 万文字など）が適用されます。PII マスキング（Masked Cloud モード）を有効にしている場合、クレジットカード番号・電話番号・メールアドレスなどは送信前に `[MASKED:email]` のような型付きトークンに置換されます。URL・タイトル・滞在時間は AI には送られません。
 
-**Q23. API キーは安全に保管されますか？**
+**Q25. API キーは安全に保管されますか？**
 
 マスターパスワードを設定している場合は、API キーは AES-GCM（PBKDF2 鍵導出）で暗号化されて Chrome のローカルストレージに保存されます。マスターパスワードが未設定の場合も、API キーは拡張機能が自動生成した鍵で AES-GCM により暗号化されて保存されます。マスターパスワードを設定すると、これに加えてパスワードから導出した鍵で保護されるため、設定を推奨します。マスターパスワードの設定・変更・解除では、保存済みの API キーは再暗号化されて引き継がれるため、入力し直す必要はありません。ダッシュボードの「プライバシー」タブで「マスターパスワード保護」を有効にしてください。なお、設定のエクスポートファイルの暗号化も同様にオプトインです（デフォルトでは暗号化されません）。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
-**Q23a. 保存は成功するのに AI テストだけが失敗します。なぜですか？**
+**Q26. 保存は成功するのに AI テストだけが失敗します。なぜですか？**
 
 マスターパスワードのロック中は、保存と AI テストで結果が分かれるのが仕様です。保存は暗号化前の設定値をそのまま書き込むため成功しますが、AI テストは保存済みの API キーを復号する必要があり、ロック中は復号できないため失敗します。ダッシュボードの Privacy パネルでパスワードを入力してアンロックすると、同じ設定のまま AI テストが通ります。ロック中は初期設定画面の API キー欄と保存ボタンが無効化され、ポップアップの記録も止まるため、設定を繰り返し入力し直す必要はありません。
 
-**Q23b. マスターパスワードを忘れました。どうすればいいですか？**
+**Q27. マスターパスワードを忘れました。どうすればいいですか？**
 
 旧パスなしでの維持（再設定・変更）はできません。ダッシュボードの Privacy パネルにある「パスワードを忘れた場合」から二重確認を通すと、保護が無効化されAPIキーが削除されます。他の設定は残るため、APIキーを再入力すれば復旧できます。削除した鍵の復元はできないため、実行前に内容を確認してください。
 
-**Q24. 設定をエクスポートしたファイルには API キーが含まれますか？**
+**Q28. 設定をエクスポートしたファイルには API キーが含まれますか？**
 
-含まれません。セキュリティ上の理由から、API キーはエクスポートから除外されています。別のデバイスに設定を移行する際は、インポート後に API キーを手動で再入力してください。マスターパスワードを設定している場合は、エクスポートファイル全体が AES-GCM で暗号化されます。
+含まれません。セキュリティ上の理由から、API キーは設定エクスポートから除外されています。別のデバイスに設定を移行する際は、インポート後に API キーを手動で再入力してください。マスターパスワードを設定している場合は、エクスポートファイル全体が AES-GCM で暗号化されます。パスワード付きの履歴バックアップは別機能の「暗号化バックアップ」を使います（バックアップファイル 1 件の上限は 50MB で、超える場合は作成時に自動で分割形式になります）。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) をご覧ください。
 
-**Q25. PII マスキングとは何ですか？**
+**Q29. PII マスキングとは何ですか？**
 
 ページのテキスト内にある個人情報（クレジットカード番号・マイナンバー・電話番号・メールアドレスなど）を WASM-first のハイブリッド検出（Rust 実装 21 パターン）で検出し、AI に送信する前に `[MASKED:creditCard]` のように自動で置き換える機能です。ダッシュボードの「プライバシー」タブで「Masked Cloud」を選択すると有効になります。詳細は [PII 機能ガイド](PII_FEATURE_GUIDE.md) をご覧ください。
 
-**Q26. プライベートページ（ネットバンキングなど）は自動記録されますか？**
+**Q30. プライベートページ（ネットバンキングなど）は自動記録されますか？**
 
 HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` など）を解析し、プライベートページを自動検出します。ダッシュボードの「プライバシー」→「Confirmation Settings」で動作を設定できます。`save`（デフォルト）では通常通り保存、`skip` では保存せず履歴に「スキップ済み」として残す、`confirm` では Chrome 通知で毎回確認を求めます。
 
-**Q27. 記録した履歴を削除できますか？**
+**Q31. 記録した履歴を削除できますか？**
 
 できます。ダッシュボードの SQLite History パネルで個別エントリを削除できます（GDPR 第17条に準拠した物理削除）。「すべてのデータを削除」ボタンで全件一括削除も可能です。保持ポリシーを設定すれば、一定期間・件数を超えたエントリを自動的に削除することもできます。
 
@@ -189,27 +190,27 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 ### 記録の動作
 
-**Q28. どんな条件で自動記録されますか？**
+**Q32. どんな条件で自動記録されますか？**
 
 ページへの滞在時間とスクロール深度が設定した閾値を超えると自動記録されます。また、ドメインフィルターの設定（ホワイトリスト・ブラックリスト）で記録対象を絞れます。デフォルトはブラックリストモードで、Amazon・Google・Facebook などの一般的なサイトがあらかじめ除外されています。
 
-**Q29. 手動で記録するにはどうしますか？**
+**Q33. 手動で記録するにはどうしますか？**
 
 拡張機能のアイコンをクリックしてポップアップを開き、「📝 今すぐ記録」ボタンをクリックします。自動記録の条件を満たしていないページでも記録でき、同じページを何度でも記録できます。
 
-**Q30. 特定のサイトを記録したくない（または記録したい）場合は？**
+**Q34. 特定のサイトを記録したくない（または記録したい）場合は？**
 
 ダッシュボードの「ドメインフィルター」タブで設定します。ブラックリストモードで除外したいドメインを追加するか、ホワイトリストモードで記録したいドメインだけを登録してください。現在開いているページのドメインを追加するには、ステータスパネル内のボタンまたはタグ入力欄を使用します。「サブドメインもマッチさせる」トグルをONにすると、`example.com` の登録が `sub.example.com` 等のサブドメインにも一致します（デフォルトOFF）。uBlock Origin 形式のフィルターリストをインポートすることも可能です。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
-**Q31. スキップされたページはどこで確認できますか？**
+**Q35. スキップされたページはどこで確認できますか？**
 
 ダッシュボードの SQLite History パネルにある保留セクションで、プライバシー検出によりスキップされたページの一覧が表示されます。各エントリの「今すぐ記録」「AI要約なしで記録」ボタンからその場で手動保存することも、「完全に削除」で削除することもできます。スキップされたページは 24 時間後に自動削除されます。
 
-**Q32. 同じページが何度も記録されてしまいます。**
+**Q36. 同じページが何度も記録されてしまいます。**
 
 自動記録は滞在時間・スクロール深度の条件を満たすたびに実行されます。重複を避けたい場合は、ドメインフィルターでそのサイトをブラックリストに追加するか、保持ポリシーで古い記録を定期削除する設定をご検討ください。
 
-**Q33. 記録完了メッセージの「(6.0秒 / AI: 2.2秒)」は何を表していますか？**
+**Q37. 記録完了メッセージの「(6.0秒 / AI: 2.2秒)」は何を表していますか？**
 
 最初の秒数（6.0秒）は、記録開始から完了までの合計処理時間です。記録完了までの一連の処理（ページ本文の取得 → PIIマスキング → AI要約 → Obsidian/ローカルへの保存）全体にかかった時間を表します。「AI: 」に続く秒数（2.2秒）は、そのうちAIプロバイダーへの要約リクエスト1回分にかかった時間です。クラウドAI（Masked Cloud / Full Pipelineモード）を使う設定の場合のみ表示され、ローカルAIのみを使う設定（Local Onlyモード）では表示されません。
 
@@ -217,39 +218,39 @@ HTTP レスポンスヘッダー（`Cache-Control: private`、`Set-Cookie` な�
 
 ### トラブルシューティング
 
-**Q34. 接続テストで「接続エラー」が出ます。**
+**Q38. 接続テストで「接続エラー」が出ます。**
 
 以下を順に確認してください。(1) Obsidian が起動しているか。(2) Local REST API プラグインが有効化されているか（Obsidian 設定 → コミュニティプラグイン）。(3) URL とポートが正しいか（デフォルト: `https://127.0.0.1:27124`）。(4) 証明書エラーが出ていないか（Q11 を参照）。詳細は [Obsidian 連携ガイド](OBSIDIAN_SETUP_GUIDE.md) のトラブルシューティングをご覧ください。
 
-**Q35. AI 要約が返ってきません。**
+**Q39. AI 要約が返ってきません。**
 
-以下を確認してください。(1) API キーが正しく入力されているか。(2) 選択したモデル名がプロバイダーで使用可能か。(3) Base URL のドメインが Yasumaro のサポートリストに含まれているか（Q19 参照）。Groq などの無料枠は利用制限があるため、リクエスト数の上限に達している可能性もあります。
+以下を確認してください。(1) API キーが正しく入力されているか。(2) 選択したモデル名がプロバイダーで使用可能か。(3) Base URL のドメインが Yasumaro のサポートリストに含まれているか（Q21 参照）。Groq などの無料枠は利用制限があるため、リクエスト数の上限に達している可能性もあります。
 
-**Q35a. AI テストの結果に出る prompt / response / error / hasContent は何を意味しますか？**
+**Q40. AI テストの結果に出る prompt / response / error / hasContent は何を意味しますか？**
 
 Yasumaro の接続テストは、実際に AI へ短いプロンプトを1往復させます。`prompt` は送信した文章、`response` は返ってきた文章、`error` は失敗時のメッセージ、`hasContent` は本文が返ったかどうかです。テストが「通った」のに `hasContent` が false の場合は、AI からの応答が空だったことを意味します。よくある原因は、Gemini の思考トークンが出力枠を使い切ったケースや、`maxOutputTokens` が小さすぎるケースです。`error` に 401 / 403 が出ていれば API キー、404 ならモデル名を確認してください。
 
-**Q36. Obsidian にページが記録されているのに、AI 要約がありません。**
+**Q41. Obsidian にページが記録されているのに、AI 要約がありません。**
 
 AI 要約なしで記録する設定（「Record without AI」）を使用しているか、AI プロバイダーの設定が未完了の場合に発生します。ダッシュボードで AI プロバイダーを設定し、「Test AI」で接続を確認してください。
 
-**Q37. HTTP への切り替え後、Obsidian への接続が失敗します。**
+**Q42. HTTP への切り替え後、Obsidian への接続が失敗します。**
 
 HTTP に切り替えた場合、ポートも `27124` から `27123` に変更する必要があります。Yasumaro ダッシュボードの「Protocol」を `http`、「Port」を `27123` に設定してください。また、Obsidian の Local REST API プラグイン設定でも HTTP ポートが `27123` に設定されていることを確認してください。
 
-**Q38. ダッシュボードに「簡易ストレージモードで動作中です」という黄色いバナーが表示されています。**
+**Q43. ダッシュボードに「簡易ストレージモードで動作中です」という黄色いバナーが表示されています。**
 
 お使いの環境で OPFS（SQLite の保存先）が使用できないため、フォールバックストレージが有効になっています。表示されるメッセージは「簡易ストレージモードで動作中です。お使いの環境ではOPFSが利用できないため、chrome.storage.localを使用しています。検索機能が制限されます。」です。フォールバックモードでは `unlimitedStorage` 権限により実質無制限の保存が可能ですが、権限が付与されない環境では `chrome.storage.local` の上限（約10MB）に制限されます。OPFS が使えるようになると、自動的にデータが移行されます。詳細は [ストレージモードについて](STORAGE_MODES.md) をご覧ください。
 
-**Q39. ページを開いても自動記録が全く実行されません。**
+**Q44. ページを開いても自動記録が全く実行されません。**
 
 以下を確認してください。(1) ドメインフィルターでそのドメインがブラックリストに入っていないか。(2) 滞在時間やスクロール深度の閾値を満たしているか（ページをある程度スクロールして数秒待つ）。(3) プライベートページ検出でスキップされていないか（SQLite History パネルの保留セクションで確認）。
 
-**Q40. 設定をエクスポート・インポートしたら API キーが消えました。**
+**Q45. 設定をエクスポート・インポートしたら API キーが消えました。**
 
-仕様です（Q24 参照）。API キーはセキュリティ上の理由からエクスポートに含まれないため、インポート後に各 API キーを手動で再入力する必要があります。
+仕様です（Q28 参照）。API キーはセキュリティ上の理由からエクスポートに含まれないため、インポート後に各 API キーを手動で再入力する必要があります。
 
-**Q41. 「スキップ済み」のページが意図せず消えてしまいました。**
+**Q46. 「スキップ済み」のページが意図せず消えてしまいました。**
 
 スキップされたページは保留状態から 24 時間後に自動削除されます。これは意図的な仕様です。重要なページはスキップされる前に「今すぐ記録」で手動保存してください。
 
@@ -257,63 +258,88 @@ HTTP に切り替えた場合、ポートも `27124` から `27123` に変更す
 
 ### その他の機能
 
-**Q42. 履歴の全文検索はどう使いますか？**
+**Q47. 履歴の全文検索はどう使いますか？**
 
 ダッシュボードの SQLite History パネルの検索ボックスにキーワードを入力すると、URL・タイトル・AI 要約の全体を SQLite FTS5 で高速検索できます。日本語にも対応しています。
 
-**Q43. FTS5 とは何ですか？**
+**Q48. FTS5 とは何ですか？**
 
 SQLite に組み込まれている全文検索エンジンです。従来の LIKE 検索は、URL やタイトルを1文字ずつ比較していきます。FTS5 は、あらかじめ単語の出現位置を索引化しておく方式です。そのため、記録件数が増えても検索速度が落ちにくくなっています。Yasumaro では履歴のURL・タイトル・AI要約をこのFTS5用のテーブルに登録しており、日本語を含むキーワード検索を高速に行えます。
 
-**Q44. スター機能は何のためにありますか？**
+**Q49. スター機能は何のためにありますか？**
 
 よく参照するページにスターを付けておくと、後から素早く見つけられます。また、スター付きのエントリは保持ポリシーによる自動削除の対象外になります。
 
-**Q45. 保持ポリシーを設定するとどうなりますか？**
+**Q50. 保持ポリシーを設定するとどうなりますか？**
 
 設定した保持期間（30〜365日）または最大件数（1,000〜100,000件）を超えたエントリが、24時間ごとに自動的に物理削除されます。スター付きエントリは削除されません。デフォルトは無制限（自動削除なし）です。詳細は [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
-**Q46. uBlock Origin のフィルターリストをインポートできると聞きましたが、何のためにありますか？**
+**Q51. uBlock Origin のフィルターリストをインポートできると聞きましたが、何のためにありますか？**
 
 大量のドメインをブラックリストに一括登録するためです。既存の uBlock Origin フィルターや Steven Black の hosts リストをそのままインポートでき、記録したくないサイトを効率よく管理できます。詳細は [uBlock フィルターガイド](USER-GUIDE-UBLOCK-IMPORT.md) をご覧ください。
 
-**Q47. Obsidian なしで Markdown に書き出せますか？**
+**Q52. Obsidian なしで Markdown に書き出せますか？**
 
 できます。ダッシュボードの「初期設定」→「ローカル Markdown 書き出し」を ON にすると、`~/Downloads/Yasumaro/YYYY-MM-DD.md` に日次ファイルが書き出されます。書き出しタイミングは「手動のみ / 即時 / アイドル時・30分ごと（デフォルト） / 日付が変わったとき」の4つから選べます。開始日・終了日を指定した手動エクスポートも別途いつでも可能です。詳細は [ローカル Markdown 書き出しガイド](MARKDOWN_DOWNLOAD.md) をご覧ください。
 
-**Q48. 書き出しのたびにダウンロード通知が表示されるのが気になります。**
+**Q53. 書き出しのたびにダウンロード通知が表示されるのが気になります。**
 
 ブラウザの設定で非表示にできます。Chrome の場合は `chrome://settings/downloads` を開き、「ダウンロードが完了したとき、ダウンロード一覧を表示する」のトグルを OFF にしてください。Edge の場合は `edge://settings/downloads` で同様の設定があります。ダウンロード自体は正常に行われます。
 
-**Q49. 閲覧履歴をバックアップしたり、他の環境に移行したりできますか？**
+**Q54. 閲覧履歴をバックアップしたり、他の環境に移行したりできますか？**
 
-できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
+できます。ダッシュボードの「ログをエクスポート」パネルから、JSON（バックアップ・移行用）/ CSV / Markdown / SQLite データベース（.db）の各形式でエクスポートできます。v6.7.99 以降、JSON エクスポートには改竄検出用の HMAC 署名が付き、インポート時に検証されます。**v6.7.98 以前でエクスポートした署名なしの JSON は再インポートできない**ため、必要なら最新バージョンで再エクスポートしてください。JSON・CSV・Markdown は最大 100,000 件、インポートはファイル全体で 30 MiB かつ合計 100,000 行が上限です。上限を超える場合は `.db` エクスポート（OPFS 使用時）を使ってください。パスワード保護が必要な場合は「暗号化バックアップ」も利用できます。詳細は [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
 
 また、`Dashboard → Archive` パネルでは、指定日までの閲覧履歴を標準SQLiteファイルとしてバックアップし、必要になったら本体DBへマージ復元できます。バックアップと本体からの削除は分離されており、削除はバックアップファイルの内容と突合せてから実行されます。詳細は [セットアップガイド](SETUP_GUIDE.md) の「閲覧履歴アーカイブ」セクションをご覧ください。
 
-**Q49a. アーカイブで古い履歴を安全に減らせますか？**
+**Q55. アーカイブで古い履歴を安全に減らせますか？**
 
 減らせます。`Dashboard → Archive` の操作は2段階です。まず指定日までの履歴をファイル（`.db`）に書き出してダウンロードします（この時点で本体は変更されません）。ダウンロードを確認してから、本体の該当レコードを削除します。削除はフェーズ1で作ったファイルと突合せてから実行され、フェーズ1以降に追加された分は保護されます。削除したぶんは、あとからファイルを選んで本体へマージ復元できます。
 
-**Q49b. アーカイブファイルは暗号化されますか？**
+**Q56. アーカイブファイルは暗号化されますか？**
 
 されません。アーカイブファイルは平文・非署名の標準 SQLite ファイルで、DB Browser for SQLite などの汎用ツールでそのまま開けます。中身は閲覧履歴そのものなので、書き出したあとの保管・移動・削除はご自身で管理してください。データの取り扱いについては [プライバシーポリシー](PRIVACY.md) をご覧ください。
 
-**Q50. AI 要約のクレンジングで重要な部分が誤って削除された場合は？**
+**Q57. AI 要約のクレンジングで重要な部分が誤って削除された場合は？**
 
 popup の「Cleansing」セクションにある「誤削除を報告」ボタンで報告を記録できます（端末内にのみ保存され、外部送信はありません）。報告はダッシュボードの「AI 要約クレンジング」パネルの「Cleansing Feedback」で確認できます。同じドメインで繰り返し発生する場合は、そのドメインだけクレンジング設定を上書きする「ドメイン別上書き」も利用できます。詳細は [クレンジングのカスタマイズガイド](CLEANSING_CUSTOMIZATION_GUIDE.md) をご覧ください。
 
-**Q51. クレンジングのキーワード設定を初期化すると、どのキーワードが入りますか？**
+**Q58. クレンジングのキーワード設定を初期化すると、どのキーワードが入りますか？**
 
 実際のクレンジングで使う全キーワード（50語超、日本語・英語両方のパターン）が入ります。`balance`・`login`・`password`・`mynumber`・`credit-card`・`seed-phrase` などが含まれます。設定画面の表示と実際の動作は常に一致します。詳細は [クレンジングの順番](CLEANSING_ORDER.md) をご覧ください。
 
-**Q52. 記録済みのAI要約が薄すぎる・一文に潰れていたら、作り直せますか？**
+**Q59. 記録済みのAI要約が薄すぎる・一文に潰れていたら、作り直せますか？**
 
 できます。`Dashboard → SQLite History` で対象エントリを開き、ヘッダーのクレンジング選択で「やや緩い」または「最も緩い」を選んで「AI要約を作り直す」を押してください。同じ行が上書きされ、新規行は増えません。緩和はその1回のみで設定は保存されません。複数件をまとめて作り直したい場合は、チェックボックスで選択して選択バーの「AI要約を作り直し」を押してください（この一括操作は現在の設定で実行され、緩和3択はありません）。詳細は [AIによる自動要約ガイド](AI_SUMMARY_GUIDE.md) をご覧ください。
 
-**Q53. 複数の履歴をまとめて削除できますか？**
+**Q60. 複数の履歴をまとめて削除できますか？**
 
 できます。`Dashboard → SQLite History` で各エントリのチェックボックスを複数選択し、選択バーの「選択した記事を削除」を押すと、その場に件数付きの確認（「本当に削除する」／キャンセル）が表示されます。「本当に削除する」で物理削除されます（GDPR Art.17準拠）。途中で失敗した場合はそこで中断し、削除済み件数・残件数・理由をトースト表示します。全件削除は従来どおり設定画面の「すべてのデータを削除」も利用できます。
+
+
+**Q61. GitHub Gist に同期できますか？**
+
+できます。ダッシュボードの「Tools → Export / Import」パネルにある「GitHub Gist Sync」を ON にし、`gist` スコープ付きの Personal Access Token を登録します。履歴は非公開の Secret Gist 内の `yasumaro-history.md` に同期されます。Obsidian 連携とは独立した同期先として並行動作するため、両方を同時に有効にできます。詳細は [GitHub Gist 連携ガイド](GITHUB_GIST_SYNC_GUIDE.md) をご覧ください。
+
+**Q62. 設定エクスポート・暗号化バックアップ・ログエクスポート・アーカイブの違いは何ですか？**
+
+用途で使い分けます。設定の移行は「設定のエクスポート」（API キーは含まない）、パスワード付きの履歴バックアップは「暗号化バックアップ」（マスターパスワードが必要、バックアップファイル 1 件の上限は 50MB、超えると分割形式）、他ツールでの分析や移行は「ログをエクスポート」の JSON / CSV / Markdown / .db、古い履歴の退避と復元は「Dashboard → Archive」です。詳細は [暗号化バックアップガイド](ENCRYPTED_BACKUP_USER_GUIDE.md) と [ログのエクスポート・インポートガイド](LOG_EXPORT_IMPORT_GUIDE.md) をご覧ください。
+
+**Q63. ツールバーのバッジは何を表していますか？**
+
+拡張機能アイコンのバッジで状態が分かります。青の「◎」は自動保存済み、緑の「C{件数}」はクレンジング件数、緑の「●」は記録可能・監視中、オレンジの「!」はプライベートページ検出または同意未取得、緑の「∉」はドメインフィルターによる対象外、赤の「{分数}」は自動保存の一時停止中の残り分数です。詳細は [ツールバーバッジガイド](TOOLBAR_BADGE_GUIDE.md) をご覧ください。
+
+**Q64. タグの関連を可視化できますか？**
+
+できます。ダッシュボードの「Tag Cluster」パネルで、タグ同士の共起関係をグラフ表示します。円が大きいほど使用件数が多く、線が太いほど同じ記録での共起が多いことを示します。出現上位 50 件が対象で、ノードをクリックするとそのタグで履歴を絞り込みます。詳細は [タグクラスタガイド](TAG_CLUSTER_GUIDE.md) をご覧ください。
+
+**Q65. Obsidian への書き込みで競合が起きたらどうなりますか？**
+
+Obsidian 側でファイルが更新されていた場合は If-Match による競合検出が働き、最大 1 回の再書き込みを行います。再書き込み後も競合が続く場合は専用の通知を 1 回出し、保留一覧に理由つきで登録します。本文や API キーが通知やログに含まれることはありません。
+
+**Q66. AI に送信した記録を確認できますか？**
+
+できます。AI 要約の生成時に「いつ・どのプロバイダーに・どのページの URL を送ったか」を監査ログとして記録しています。本文や要約の内容自体は記録しません。ダッシュボードの「ログをエクスポート」パネルから TSV でダウンロードできます。7 日を超えたエントリは自動削除されます。詳細は [監査ログガイド](AUDIT_LOG_GUIDE.md) をご覧ください。
 
 ---
 
@@ -359,7 +385,7 @@ A **Firefox build** is published on [addons.mozilla.org](https://addons.mozilla.
 2. Click "Get the extension for Firefox" to add it
 3. Grant consent in the popup to start recording
 
-The GitHub Releases zip and manual builds still work as before. To build from the latest source, run `npm run build:firefox`:
+The GitHub Releases zip and manual builds still work as before. `make build` builds both Chromium and Firefox. Use `npm run build` for Chromium only and `npm run build:firefox` for Firefox only:
 
 1. Open `about:debugging#/runtime/this-firefox` in Firefox
 2. Click "Load Temporary Add-on…" and select the `manifest.json` inside the unzipped folder (temporary installs disappear when Firefox restarts)
@@ -414,84 +440,85 @@ For writing to Obsidian, yes. However, history data is saved to the SQLite DB on
 | Category | Examples |
 |----------|---------|
 | Built-in AI | Chrome's Gemini Nano / Edge's Phi-mini (no API key, works offline) |
-| Cloud (OpenAI-compatible) | OpenAI, Anthropic (Claude), Groq, Mistral AI, OpenRouter, DeepSeek, etc. |
+| OpenAI (official) | OpenAI (fixed endpoint, no Base URL needed) |
+| Cloud (OpenAI-compatible) | Set Groq, Mistral AI, DeepSeek, etc. in OpenAI Compatible / OpenAI Compatible 2 |
 | Cloud (via Models.dev) | Choose from 70+ OpenAI-compatible providers such as OpenRouter, DeepSeek, and Hugging Face in the Models.dev catalog |
 | Google | Gemini |
-| Local | Ollama, LM Studio |
+| Local | Dedicated Ollama slot, dedicated LM Studio slot (also usable via OpenAI Compatible 2) |
 
-"Cloud (via Models.dev)" is a selection mode available when "OpenAI Compatible" is selected as the AI Provider. Click "Select Provider" to choose a provider and model from the catalog, and Base URL, API Key, and Model Name are filled in automatically.
+"Cloud (via Models.dev)" is a selection mode available when "OpenAI Compatible" is selected as the AI Provider. Click "Select Provider" to choose a provider and model from the catalog, and Base URL and Model Name are filled in automatically (enter the API key manually). The Anthropic native API (`https://api.anthropic.com/v1`) is not OpenAI-compatible, so it cannot be used in the compatible slots; use an OpenAI-compatible gateway instead. Opt-in providers (OpenRouter, Hugging Face, Perplexity AI, etc.) need a one-time permission grant in the dashboard CSP panel.
 
 See the full provider table in the [Complete Setup Guide](SETUP_GUIDE.md). For Built-in AI setup steps, see the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md).
 
-**Q14a. What is browser Built-in AI? Do I need an API key?**
+**Q15. What is browser Built-in AI? Do I need an API key?**
 
 It uses Chrome's Gemini Nano or Microsoft Edge's Phi-mini for summarization. No API key is required and there is no cost. The model runs on-device, so page content is not sent externally during summarization. A one-time model download (several GB) is needed on first use; after that it works offline. You also need to enable a browser flag once. See the [Built-in AI Setup Guide](BUILT_IN_AI_SETUP_GUIDE.md).
 
-**Q14b. The Built-in AI diagnostics show "downloadable". What should I do?**
+**Q16. The Built-in AI diagnostics show "downloadable". What should I do?**
 
 `downloadable` means the model has not been fetched to your device yet. You can start the download, with a progress indicator, from the Built-in AI section of the dashboard's diagnostics panel. Running a summary or the "AI test" also starts the download automatically. The state changes to `downloading`, then `available` when finished. If it shows `unavailable`, check that you are on a supported browser and that the flag is enabled.
 
-**Q15. How do I set up Groq?**
+**Q17. How do I set up Groq?**
 
-In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `openai/gpt-oss-20b`, and click "Test AI".
+In the dashboard, select "OpenAI Compatible" as the AI Provider. Set Base URL to `https://api.groq.com/openai/v1`, enter your API key from [Groq Console](https://console.groq.com/keys), set a Model Name such as `openai/gpt-oss-120b`, and click "Test AI". Model names change quickly, so check the latest name in the Groq Console and the Models.dev catalog.
 
-**Q16. How do I set up Gemini?**
+**Q18. How do I set up Gemini?**
 
-Select "Google Gemini" as the AI Provider, enter the API key from [Google AI Studio](https://aistudio.google.com/), and set a Model Name such as `gemini-3.1-flash-lite`.
+Select "Google Gemini" as the AI Provider, enter the API key from [Google AI Studio](https://aistudio.google.com/), and set a Model Name such as `gemini-3.1-flash-lite`. Model names change over time, so check the latest name.
 
-**Q17. Can I use a local LLM like Ollama?**
+**Q19. Can I use a local LLM like Ollama?**
 
-Yes. Select "OpenAI Compatible 2" as the AI Provider, set Base URL to `http://localhost:11434/v1` for Ollama (or `http://127.0.0.1:1234/v1` for LM Studio), leave API Key empty, and enter the model name shown by `ollama list`. The dashboard has preset buttons for Ollama and LM Studio that fill in the values automatically. See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
+Yes. Use the dedicated Ollama / LM Studio slots or "OpenAI Compatible 2". The dashboard has "Ollama" and "LM Studio" preset buttons that fill in the Base URL automatically. For Ollama, set Base URL to `http://localhost:11434/v1`, leave API Key empty, and enter the name shown by `ollama list` (e.g. `llama3.2`). For LM Studio, set Base URL to `http://127.0.0.1:1234/v1` and check the model name in the Models tab. See the [Complete Setup Guide](SETUP_GUIDE.md) for details.
 
-**Q18. Can I customize the AI summarization prompt?**
+**Q20. Can I customize the AI summarization prompt?**
 
 Yes. The "AI Prompt" tab in the dashboard lets you edit the system and user prompts freely. You can save multiple prompts and switch between them. Always include the `{{content}}` placeholder in the user prompt. See the [AI Prompt Customization Guide](USER-GUIDE-AI-PROMPT.md) for examples.
 
-**Q19. Connections to my AI provider's URL are being blocked.**
+**Q21. Connections to my AI provider's URL are being blocked.**
 
 For security reasons, Yasumaro only allows connections to officially supported domains. Connections to unsupported domains are blocked by CSP. Check the supported domain list in the [Complete Setup Guide](SETUP_GUIDE.md).
 
-**Q20. There are two "OpenAI Compatible" slots―what's the difference?**
+**Q22. Can I use multiple AI providers with fallback?**
 
-You can enter multiple OpenAI-compatible LLM services independently―for example, Groq and Ollama―and compare or switch between them as needed.
+Use Priority (Failover Order) to set providers ranked 1-3 as a fallback chain. Up to 10 slots are kept internally, with 3 rows shown on screen. A priority row with an empty model field still shows the name that will actually be used (the provider setting, or the catalog default when unset). Saving it empty keeps it non-explicit, so the latest default always applies.
 
 ---
 
 ### Privacy & Data
 
-**Q21. Where is my browsing data stored? Is it sent to the developer?**
+**Q23. Where is my browsing data stored? Is it sent to the developer?**
 
 All data is stored only on your device. The developer does not operate any server, so your data never reaches the developer. Browsing history is stored in OPFS (SQLite DB) on your device; settings are stored in Chrome's local storage. Whether the page body (content) is stored locally can be toggled at any time under Dashboard → Settings → Content Retention Settings (default: off). See [PRIVACY.md](PRIVACY.md) for details.
 
-**Q22. What data is sent to the AI provider?**
+**Q24. What data is sent to the AI provider?**
 
 The text content of the page is sent to the API of your chosen provider to generate a summary. It is first truncated to 64KB (65,536 bytes, UTF-8) by the recording pipeline, and then the per-provider send cap applies (OpenAI-compatible: 10,000 characters by default, Gemini: 30,000, etc.). With PII masking (Masked Cloud mode) enabled, credit card numbers, phone numbers, and email addresses are replaced with typed tokens like `[MASKED:email]` before transmission. URLs, titles, and time-on-page are not sent to the AI.
 
-**Q23. Are my API keys stored securely?**
+**Q25. Are my API keys stored securely?**
 
 When a master password is configured, API keys are encrypted with AES-GCM (PBKDF2 key derivation) before being stored in Chrome's local storage. Without a master password, API keys are still encrypted with AES-GCM using a key the extension generates automatically. Setting a master password adds protection with a key derived from the password, so it is recommended. Setting, changing, or removing the master password re-encrypts and keeps your stored API keys, so you do not need to enter them again: enable "Master Password Protection" in the Privacy tab of the dashboard. Encryption of settings-export files is likewise opt-in (exports are unencrypted by default). See [PRIVACY.md](PRIVACY.md) for details.
 
-**Q23a. Saving succeeds but only the AI test fails. Why?**
+**Q26. Saving succeeds but only the AI test fails. Why?**
 
 While the master password session is locked, save and AI test diverge by design. Saving writes the settings values as entered, so it succeeds, but the AI test must decrypt the stored API key, which is impossible while locked, so it fails. Unlock with the password in the dashboard's Privacy panel and the same settings pass the AI test. While locked, the API key fields and Save buttons on the Initial Setup screen are disabled and popup recording is held back, so there is no need to re-enter the settings.
 
-**Q23b. I forgot my master password. What should I do?**
+**Q27. I forgot my master password. What should I do?**
 
 Keeping protection without the old password (reset/change) is not possible. Use the forgot entry in the dashboard Privacy panel and confirm twice to disable protection and delete the API keys. Other settings are kept, so re-enter the API keys to recover. Deleted keys cannot be restored, so review before confirming.
 
-**Q24. Does the exported settings file include API keys?**
+**Q28. Does the exported settings file include API keys?**
 
 No. API keys are excluded from exports for security reasons. When migrating to another device, re-enter the API keys manually after importing. If a master password is set, the entire export file is encrypted with AES-GCM.
 
-**Q25. What is PII masking?**
+**Q29. What is PII masking?**
 
 PII masking detects personal information in page text―such as credit card numbers, My Number, phone numbers, and email addresses―using the WASM-first hybrid detector (21 patterns implemented in Rust), and automatically replaces them with tokens like `[MASKED:creditCard]` before sending content to the AI. Select "Masked Cloud" in the Privacy tab of the dashboard to enable it. See the [PII Feature Guide](PII_FEATURE_GUIDE.md) for details.
 
-**Q26. Are private pages like online banking automatically recorded?**
+**Q30. Are private pages like online banking automatically recorded?**
 
 Yasumaro analyzes HTTP response headers (`Cache-Control: private`, `Set-Cookie`, etc.) to detect private pages automatically. You can configure the behavior under Dashboard → Privacy → Confirmation Settings: `save` (default) saves as normal, `skip` stores the page as "Skipped" in history for optional later save, `confirm` shows a Chrome notification asking you each time.
 
-**Q27. Can I delete recorded history?**
+**Q31. Can I delete recorded history?**
 
 Yes. Individual entries can be deleted from the Dashboard's SQLite History panel (physical deletion compliant with GDPR Art. 17). The "Delete All Data" button removes all records at once. You can also configure a retention policy to automatically purge entries older than a set period or beyond a maximum count.
 
@@ -499,27 +526,27 @@ Yes. Individual entries can be deleted from the Dashboard's SQLite History panel
 
 ### Recording Behavior
 
-**Q28. What triggers automatic recording?**
+**Q32. What triggers automatic recording?**
 
 A page is automatically recorded when both the time spent on it and the scroll depth exceed your configured thresholds. Domain filter rules (whitelist or blacklist) further control which pages are eligible. The default is blacklist mode with common sites such as Amazon, Google, and Facebook pre-excluded.
 
-**Q29. How do I record a page manually?**
+**Q33. How do I record a page manually?**
 
 Click the extension icon to open the popup and click the "📝 Record Now" button. This works regardless of whether automatic recording conditions are met, and you can record the same page multiple times.
 
-**Q30. How do I stop a specific site from being recorded (or ensure it is)?**
+**Q34. How do I stop a specific site from being recorded (or ensure it is)?**
 
 Use the "Domain Filter" tab in the dashboard. In blacklist mode, add the domains you want to exclude; in whitelist mode, add only the domains you want to record. To add the current page's domain, use the buttons in the status panel or the tag input field. With the "Match subdomains too" toggle ON, an `example.com` entry also matches subdomains like `sub.example.com` (default OFF). You can also import uBlock Origin format filter lists. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
-**Q31. Where can I find pages that were skipped?**
+**Q35. Where can I find pages that were skipped?**
 
 In the pending section of the Dashboard's SQLite History panel you can see all pages skipped by private page detection. Each entry can be saved on the spot with "Record Now" or "Record without AI", or removed with "Delete Forever". Skipped pages are automatically deleted after 24 hours.
 
-**Q32. The same page keeps getting recorded repeatedly.**
+**Q36. The same page keeps getting recorded repeatedly.**
 
 Automatic recording fires each time the time and scroll thresholds are met. To prevent this, add the domain to your blacklist, or configure a retention policy to periodically remove older entries.
 
-**Q33. What does "(6.0s / AI: 2.2s)" in the completion message mean?**
+**Q37. What does "(6.0s / AI: 2.2s)" in the completion message mean?**
 
 The first number (6.0s) is the total processing time from starting the recording to completion ― covering content extraction, PII masking, AI summarization, and saving to Obsidian/local storage. The number after "AI: " (2.2s) is the time spent on a single summarization request to the AI provider. It only appears when a cloud AI mode is configured (Masked Cloud / Full Pipeline); it does not appear in Local Only mode, which uses no cloud AI.
 
@@ -527,39 +554,39 @@ The first number (6.0s) is the total processing time from starting the recording
 
 ### Troubleshooting
 
-**Q34. The connection test shows a connection error.**
+**Q38. The connection test shows a connection error.**
 
 Check in order: (1) Is Obsidian running? (2) Is the Local REST API plugin enabled (Obsidian Settings → Community Plugins)? (3) Is the URL and port correct (default: `https://127.0.0.1:27124`)? (4) Is there a certificate error? (See Q11.) See the troubleshooting section of the [Obsidian Integration Guide](OBSIDIAN_SETUP_GUIDE.md) for details.
 
-**Q35. AI summaries are not being returned.**
+**Q39. AI summaries are not being returned.**
 
-Check: (1) Is the API key entered correctly? (2) Is the model name valid for your provider? (3) Is the Base URL domain on Yasumaro's supported list? (See Q19.) Free-tier providers like Groq have rate limits that may be reached.
+Check: (1) Is the API key entered correctly? (2) Is the model name valid for your provider? (3) Is the Base URL domain on Yasumaro's supported list? (See Q21.) Free-tier providers like Groq have rate limits that may be reached.
 
-**Q35a. What do prompt / response / error / hasContent in the AI test result mean?**
+**Q40. What do prompt / response / error / hasContent in the AI test result mean?**
 
 Yasumaro's connection test sends a short prompt to the AI and waits for one round-trip. `prompt` is what was sent, `response` is what came back, `error` is the failure message, and `hasContent` is whether any body text was returned. If the test "passed" but `hasContent` is false, the AI returned an empty response. Common causes are Gemini's thinking tokens using up the output budget, or `maxOutputTokens` set too low. If `error` shows 401 / 403, check the API key; 404 means the model name is wrong.
 
-**Q36. Pages are recorded in Obsidian but with no AI summary.**
+**Q41. Pages are recorded in Obsidian but with no AI summary.**
 
 This happens when using "Record without AI" or when the AI provider is not configured. Set up an AI provider in the dashboard and confirm the connection with "Test AI".
 
-**Q37. After switching to HTTP, the connection to Obsidian fails.**
+**Q42. After switching to HTTP, the connection to Obsidian fails.**
 
 When switching to HTTP, you must also change the port from `27124` to `27123`. Set Protocol to `http` and Port to `27123` in the Yasumaro dashboard. Also verify that the HTTP port in Obsidian's Local REST API plugin settings is set to `27123`.
 
-**Q38. A yellow banner says "Running in fallback storage mode".**
+**Q43. A yellow banner says "Running in fallback storage mode".**
 
 OPFS (the SQLite storage backend) is unavailable in your environment, so the extension has fallen back to a simplified storage mode. The banner reads "Running in fallback storage mode. OPFS is not available in your environment, using chrome.storage.local. Search functionality is limited." With the `unlimitedStorage` permission, storage is effectively unlimited; in environments where that permission is not granted, it is limited to the `chrome.storage.local` quota (about 10 MB). When OPFS becomes available, data will be migrated automatically. See [STORAGE_MODES.md](STORAGE_MODES.md) for details.
 
-**Q39. Automatic recording never runs on any page.**
+**Q44. Automatic recording never runs on any page.**
 
 Check: (1) Is the domain on the blacklist? (2) Are the time and scroll thresholds being met (try staying on the page and scrolling for a few seconds)? (3) Is the page being skipped by private page detection (check the pending section of the SQLite History panel)?
 
-**Q40. My API keys were gone after importing settings.**
+**Q45. My API keys were gone after importing settings.**
 
-This is by design (see Q24). API keys are excluded from exports for security reasons; you need to re-enter them manually after importing.
+This is by design (see Q28). API keys are excluded from exports for security reasons; you need to re-enter them manually after importing.
 
-**Q41. Skipped pages disappeared unexpectedly.**
+**Q46. Skipped pages disappeared unexpectedly.**
 
 Skipped (pending) pages are automatically deleted after 24 hours―this is intentional. Use "Record Now" to manually save important pages before they are skipped.
 
@@ -567,60 +594,85 @@ Skipped (pending) pages are automatically deleted after 24 hours―this is inten
 
 ### Other Features
 
-**Q42. How do I use the full-text search in history?**
+**Q47. How do I use the full-text search in history?**
 
 In the Dashboard's SQLite History panel, type a keyword in the search box to search across URLs, titles, and AI summaries using SQLite FTS5. Japanese text is supported.
 
-**Q43. What is FTS5?**
+**Q48. What is FTS5?**
 
 FTS5 is the full-text search engine built into SQLite. Unlike naively comparing text character by character (a LIKE-based search), it pre-builds an index of where words appear, so search speed stays fast even as your history grows. Yasumaro registers each record's URL, title, and AI summary in an FTS5-backed table, enabling fast keyword search ― including Japanese text.
 
-**Q44. What is the star feature for?**
+**Q49. What is the star feature for?**
 
 Starring a page lets you find it quickly later. Starred entries are also exempt from automatic deletion by the retention policy.
 
-**Q45. What happens when I set a retention policy?**
+**Q50. What happens when I set a retention policy?**
 
 Entries older than the configured period (30-365 days) or beyond the maximum count (1,000-100,000) are physically deleted every 24 hours. Starred entries are never deleted automatically. The default is unlimited (no auto-deletion). See [PRIVACY.md](PRIVACY.md) for details.
 
-**Q46. I heard I can import uBlock Origin filter lists―what is that for?**
+**Q51. I heard I can import uBlock Origin filter lists―what is that for?**
 
 It lets you bulk-register large numbers of domains into the blacklist. You can import existing uBlock Origin filter lists or Steven Black's hosts-format lists directly, making it easy to manage sites you don't want recorded. See the [uBlock Filter Guide](USER-GUIDE-UBLOCK-IMPORT.md) for details.
 
-**Q47. Can I export to Markdown without Obsidian?**
+**Q52. Can I export to Markdown without Obsidian?**
 
 Yes. Toggle "Export to Local Markdown" ON in the dashboard under "Initial Setup" → "Local Markdown Export". A daily file (`~/Downloads/Yasumaro/YYYY-MM-DD.md`) is written according to one of four timing modes: "Manual only", "Immediate", "Idle / every 30 min" (default), or "On date change". Manual export with a date range is also available at any time. See the [Local Markdown Export Guide](MARKDOWN_DOWNLOAD.md) for details.
 
-**Q48. The download notification appears every time export fires―it's annoying.**
+**Q53. The download notification appears every time export fires―it's annoying.**
 
 You can hide it in your browser settings. In Chrome, open `chrome://settings/downloads` and toggle off "Show downloads when they're done". In Edge, open `edge://settings/downloads` for a similar setting. Downloads will still work normally.
 
-**Q49. Can I back up my browsing history or migrate it to another environment?**
+**Q54. Can I back up my browsing history or migrate it to another environment?**
 
-Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** ― re-export it with the latest version if needed. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
+Yes. The **Export Logs** panel in the dashboard exports your history as JSON (backup & migration), CSV, Markdown, or a SQLite database (.db). Since v6.7.99, JSON exports carry an HMAC signature for tamper detection, verified on import. **Unsigned JSON exported by v6.7.98 or earlier can no longer be re-imported** ― re-export it with the latest version if needed. JSON, CSV, and Markdown exports are limited to 100,000 records; import is limited to 30 MiB per file and 100,000 rows in total. Use the `.db` export (OPFS only) when you exceed these limits. For password protection, use the Encrypted Backup feature. See the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md) for details.
 
 The `Dashboard → Archive` panel can also export browsing history up to a chosen date as a standard SQLite file and merge it back into the main database when needed. Export and deletion are separate phases; deletion is cross-checked against the exported file's contents. See the "History Archive" section in the [Setup Guide](SETUP_GUIDE.md).
 
-**Q49a. Can I safely reduce old history with the archive feature?**
+**Q55. Can I safely reduce old history with the archive feature?**
 
 Yes. The `Dashboard → Archive` flow has two phases. First, export history up to a chosen date to a file (`.db`) and download it ― the main database is not changed at this point. After confirming the download, delete the corresponding records from the main database. Deletion is cross-checked against the file created in phase 1, and records added after phase 1 are protected. Deleted records can be merged back later by selecting the file.
 
-**Q49b. Is the archive file encrypted?**
+**Q56. Is the archive file encrypted?**
 
 No. The archive file is a plain, unsigned standard SQLite file that opens in generic tools like DB Browser for SQLite. Its contents are your browsing history, so managing the file after export ― storage, moving, deletion ― is your responsibility. See the [Privacy Policy](PRIVACY.md) for how data is handled.
 
-**Q50. The AI summary cleansing accidentally removed something important. What can I do?**
+**Q57. The AI summary cleansing accidentally removed something important. What can I do?**
 
 Use the "Report Cleansing Feedback" button in the popup's Cleansing section to record a report (stored only on your device; never sent anywhere). Reports are listed in the dashboard under AI Summary Cleansing → "Cleansing Feedback". If mis-deletions keep happening on the same domain, use per-site overrides to change cleansing settings for that domain only. See the [Cleansing Customization Guide](CLEANSING_CUSTOMIZATION_GUIDE.md) for details.
 
-**Q51. Which keywords are restored when I reset the cleansing keyword settings?**
+**Q58. Which keywords are restored when I reset the cleansing keyword settings?**
 
 The full keyword list used by the actual cleansing logic (50+ words, covering both Japanese and English patterns) ― including `balance`, `login`, `password`, `mynumber`, `credit-card`, `seed-phrase`, and more. The settings UI always matches the actual behavior. See [Cleansing Order](CLEANSING_ORDER.md) for details.
 
-**Q52. The recorded AI summary is too thin / collapsed to one sentence. Can I rebuild it?**
+**Q59. The recorded AI summary is too thin / collapsed to one sentence. Can I rebuild it?**
 
 Yes. Open the entry in `Dashboard → SQLite History`, select "Looser" or "Loosest" in the header's cleansing selector, and press "Regenerate AI summary". The same row is overwritten (no new row is created). The loosening applies only to that one regeneration and is never saved to settings. To rebuild several records at once, check multiple entries and press "Regenerate AI summaries" in the selection bar (that bulk run uses current settings and has no loosening choices). See the [AI Summarization Guide](AI_SUMMARY_GUIDE.md) for details.
 
-**Q53. Can I delete several history entries at once?**
+**Q60. Can I delete several history entries at once?**
 
 Yes. In `Dashboard → SQLite History`, check the boxes on multiple entries and press "Delete selected articles" in the selection bar. An inline confirmation with the count ("Delete now" / Cancel) appears right there in the bar, and "Delete now" physically deletes the entries (GDPR Art.17 compliant). If a delete fails mid-run it stops there and toasts how many were removed, how many remain, and why. For wiping everything at once, "Delete All Data" in settings still works as before.
+
+**Q61. Can I sync to GitHub Gist?**
+
+Yes. Turn on "GitHub Gist Sync" in the dashboard under "Tools → Export / Import" and register a Personal Access Token with the `gist` scope. History is synced to `yasumaro-history.md` inside a private Secret Gist. It works independently from Obsidian sync, so both can be enabled at the same time. See the [GitHub Gist Sync Guide](GITHUB_GIST_SYNC_GUIDE.md).
+
+**Q62. What is the difference between settings export, encrypted backup, log export, and archive?**
+
+Use each for its purpose. Migrate settings with "Export Settings" (API keys excluded), password-protected history backup with "Encrypted Backup" (master password required, 50 MB limit per file, split format above that), analysis and migration with "Export Logs" JSON / CSV / Markdown / .db, and retiring plus restoring old history with "Dashboard → Archive". See the [Encrypted Backup Guide](ENCRYPTED_BACKUP_USER_GUIDE.md) and the [Log Export & Import Guide](LOG_EXPORT_IMPORT_GUIDE.md).
+
+**Q63. What do the toolbar badges mean?**
+
+The extension icon badge shows the state. Blue "◎" means auto-saved, green "C{count}" is the cleansing count, green "●" means recordable and watching, orange "!" means a private page was detected or consent is missing, green "∉" means excluded by the domain filter, and red "{minutes}" is the remaining pause time. See the [Toolbar Badge Guide](TOOLBAR_BADGE_GUIDE.md).
+
+**Q64. Can I visualize tag relationships?**
+
+Yes. The dashboard "Tag Cluster" panel graphs tag co-occurrence. Larger nodes mean more records, thicker edges mean more co-occurrence in the same record. The top 50 tags are shown; clicking a node filters history by that tag. See the [Tag Cluster Guide](TAG_CLUSTER_GUIDE.md).
+
+**Q65. What happens on an Obsidian write conflict?**
+
+When the Obsidian file was updated elsewhere, If-Match conflict detection triggers up to one rewrite. If the conflict persists after the rewrite, one dedicated notification is shown and the entry is kept in the pending list with a reason. Page bodies and API keys are never included in notifications or logs.
+
+**Q66. Can I check what was sent to the AI?**
+
+Yes. Each summary generation records when, to which provider, and for which page URL as an audit log. Bodies and summaries are never recorded. Download it as TSV from the dashboard "Export Logs" panel. Entries older than 7 days are auto-deleted. See the [Audit Log Guide](AUDIT_LOG_GUIDE.md).
+

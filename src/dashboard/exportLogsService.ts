@@ -4,11 +4,31 @@
  * Uses the DASHBOARD_SQLITE service worker messaging for data access.
  */
 
-import { isServiceError, sqliteClient, backupDb } from './dashboardSqliteService.js';
+import { isServiceError, sqliteClient, backupDb, type BrowsingLogEntry } from './dashboardSqliteService.js';
 import { getLocalDateString, parseJsonTagsArray } from './markdownExport.js';
 import { sanitizeForObsidian } from '../utils/markdownSanitizer.js';
 import { yamlQuote, yamlQuoteList } from '../utils/yamlFrontmatter.js';
 import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
+import { MAX_EXPORT_ROWS, QUERY_CAPS } from '../utils/limits.js';
+
+/**
+ * Thrown when the stored history exceeds the export ceiling. The panel
+ * swaps the message for the localized template (exportLogsRowLimitExceeded)
+ * via instanceof — matching on the English sentence would drift when the
+ * wording changes.
+ */
+export class ExportRowLimitError extends Error {
+  readonly storedTotal: number;
+
+  constructor(storedTotal: number) {
+    super(
+      `This export is limited to ${MAX_EXPORT_ROWS} records, but ${storedTotal} are stored. ` +
+      'Use the .db export to capture the full history.',
+    );
+    this.name = 'ExportRowLimitError';
+    this.storedTotal = storedTotal;
+  }
+}
 
 /**
  * Log JSON export format version. v2 adds an HMAC `signature` over the
@@ -22,13 +42,7 @@ export const LOG_EXPORT_VERSION = 2;
 // ============================================================================
 
 /**
- * Upper bound on rows pulled into a single export. Exceeding it is reported
- * rather than silently truncating the file.
- */
-const EXPORT_ROW_LIMIT = 10000;
-
-/**
- * Loads every row for an export.
+ * Loads every row for an export with a keyset cursor.
  *
  * Throws instead of returning `[]` on failure: the three exporters below turn
  * their result straight into a downloaded file, so collapsing an error into an
@@ -36,22 +50,60 @@ const EXPORT_ROW_LIMIT = 10000;
  * user got an empty file and an "export completed" message. The callers in
  * exportLogsPanel.ts already wrap these in try/catch, which this makes
  * reachable.
+ *
+ * WHY keyset paging: one plain query caps at QUERY_CAPS.plain (the history
+ * listing cap), so exports beyond one page continue with `until` = the
+ * previous page's oldest created_at — inclusive, so boundary ties are
+ * re-read — and merge by unique id. An offset window over a live table
+ * double-counts or skips rows while the recorder keeps inserting
+ * (fetchAllPeriodRows precedent). Map preserves first-insertion order, so
+ * re-read boundary rows stay in place and the pages compose newest-first.
+ *
+ * @internal exported for testing — the three exporters call this with no
+ * arguments and their call signature is unchanged.
  */
-async function queryAllData() {
-  // PBI 2026-09-23-02: generic seam call — retry lives in the records row.
-  const result = await sqliteClient.call('records', { subtype: 'query', limit: EXPORT_ROW_LIMIT, orderBy: 'created_at', orderDir: 'DESC' });
+export async function queryAllData(): Promise<BrowsingLogEntry[]> {
+  const byId = new Map<number, BrowsingLogEntry>();
+  // Frozen from the first page (POSITIVE_INFINITY until then). Rows recorded
+  // while this export pages carry newer timestamps and are excluded by the
+  // cursor anyway, so the first page's total is the set this export is
+  // pinned to; live growth beyond it is a .db-export concern, not chased here.
+  let frozenTotal = Number.POSITIVE_INFINITY;
+  let cursor: number | undefined;
+  while (byId.size < MAX_EXPORT_ROWS && byId.size < frozenTotal) {
+    // PBI 2026-09-23-02: generic seam call — retry lives in the records row.
+    const result = await sqliteClient.call('records', {
+      subtype: 'query',
+      limit: QUERY_CAPS.plain,
+      orderBy: 'created_at',
+      orderDir: 'DESC',
+      ...(cursor === undefined ? {} : { until: cursor }),
+    });
 
-  if (isServiceError(result)) {
-    throw new Error(result.error);
+    if (isServiceError(result)) {
+      throw new Error(result.error);
+    }
+    if (frozenTotal === Number.POSITIVE_INFINITY) {
+      frozenTotal = result.data.total;
+      if (frozenTotal > MAX_EXPORT_ROWS) {
+        throw new ExportRowLimitError(frozenTotal);
+      }
+    }
+    const batch = result.data.rows;
+    if (batch.length === 0) break;
+    const sizeBefore = byId.size;
+    for (const row of batch) {
+      byId.set(row.id, row);
+    }
+    if (batch.length < QUERY_CAPS.plain) break;
+    const oldest = batch[batch.length - 1]!.created_at;
+    // WHY: an entire page of boundary-tie rows (no new id merged) means more
+    // than a page shares one created_at; step back 1ms so the loop cannot
+    // stall. Rows beyond a full page sharing that exact millisecond are not
+    // fetched (pathological: >10k records with identical created_at).
+    cursor = byId.size === sizeBefore ? oldest - 1 : oldest;
   }
-  if (result.data.total > result.data.rows.length) {
-    throw new Error(
-      `This export is limited to ${EXPORT_ROW_LIMIT} records, but ${result.data.total} are stored. ` +
-      'Use the .db export to capture the full history.'
-    );
-  }
-
-  return result.data.rows;
+  return Array.from(byId.values());
 }
 
 export async function exportMarkdown(ids?: number[]): Promise<string> {

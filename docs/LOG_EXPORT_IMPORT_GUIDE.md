@@ -8,9 +8,20 @@
 
 ### 概要
 
-ダッシュボードの **「ログをエクスポート」** パネルから、蓄積した閲覧履歴を複数の形式でエクスポート・インポートできます。バックアップや他の環境への移行、他ツールでの分析に使えます。
+ダッシュボードの **「ログをエクスポート」パネル** から、蓄積した閲覧履歴を複数の形式でエクスポート・インポートできます。バックアップや他の環境への移行、他ツールでの分析に使えます。（「初期設定」のローカル Markdown 書き出しは日次ファイルを自動生成する別機能で、本ガイドの上限の対象外です。）
 
 > 本ガイドは閲覧履歴データのエクスポート/インポートについて説明します。設定（APIキー等）の移行はダッシュボードの「設定のエクスポート/インポート」機能を使用してください。API キーは設定エクスポートに含まれません。
+
+### 上限の整理
+
+| 項目 | 上限 |
+|---|---|
+| エクスポートできる件数（JSON・CSV・Markdown） | 最大 100,000 件（超えると案内が出て、`.db` エクスポート（OPFSストレージ使用時）で全件を取得） |
+| インポートできるファイルの大きさ | 30 MiB まで（超えると案内が出る） |
+| インポートできる行数 | 合計 100,000 行まで |
+
+- JSON・CSV・Markdown は 100,000 件までを扱える可搬形式、`.db` エクスポート（OPFSストレージ使用時のみ）と暗号化バックアップは全件を保存する完全スナップショット、という役割分担です
+- 上限値は実装の `src/utils/limits.ts`（`MAX_EXPORT_ROWS` / `MAX_IMPORT_TEXT_BYTES` / `IMPORT_TOTAL_ROW_CAP`）が源泉です
 
 ### エクスポート形式
 
@@ -23,7 +34,7 @@
 
 JSON エクスポートには v6.7.99 以降、改竄検出のための **HMAC-SHA256 署名** が付与されます。署名鍵は拡張機能内で自動生成され、ユーザーが管理する必要はありません。
 
-> JSON・CSV・Markdown のエクスポートは最大 **10,000件** までに制限されています。保存件数が10,000件を超える場合、エクスポートはエラーとなり、`.db` エクスポート（OPFSストレージ使用時）で全件を取得するよう案内されます。
+> JSON・CSV・Markdown のエクスポートは最大 **100,000件** までに制限されています。保存件数が100,000件を超える場合、エクスポートはエラーとなり、`.db` エクスポート（OPFSストレージ使用時）で全件を取得するよう案内されます。
 
 ### エクスポート列定義
 
@@ -35,7 +46,7 @@ JSON の各レコードは閲覧履歴の全項目を持ち、HMAC-SHA256 署名
 
 ### インポート
 
-「JSON からログをインポート」ボタンから、エクスポートした JSON ファイルを取り込みます。
+「JSON からログをインポート」ボタンから、エクスポートした JSON ファイルを取り込みます。エクスポートしたものはインポートできます（往復）。上限の小さい方に揃え、**100,000 件以内**ならエクスポート → インポートの往復ができます。
 
 - インポート時に **HMAC 署名が検証されます**。署名が一致しないファイル（改竄されたファイル）は拒否されます
 - **旧バージョン（v6.7.98 以前）でエクスポートした署名なしの JSON は再インポートできません。** 必要な場合は、最新バージョンでデータを保持している間に再エクスポートしてください
@@ -53,13 +64,13 @@ JSON の各レコードは閲覧履歴の全項目を持ち、HMAC-SHA256 署名
 
 v6.7.98 以前でエクスポートした署名なしの JSON です。旧ファイルのデータがまだ拡張機能内に残っている場合は、最新バージョンで再エクスポートしてからインポートしてください。`.db` エクスポートからの復元も可能です（OPFSストレージ使用時のみ）。
 
-**「エクスポートが10,000件の上限を超えています」と表示される**
+**「エクスポートが100,000件の上限を超えています」と表示される**
 
-JSON・CSV・Markdown のエクスポートは最大10,000件までです。`.db` エクスポート（OPFSストレージ使用時のみ）で全件を取得してください。
+JSON・CSV・Markdown のエクスポートは最大100,000件までです。`.db` エクスポート（OPFSストレージ使用時のみ）で全件を取得してください。
 
-**「インポートファイルが大きすぎます」と表示される / 大量のレコードが取り込めない**
+**「Import file is too large (limit: 30 MiB)」と表示される / 大量のレコードが取り込めない**
 
-インポートにはファイル全体で **10 MiB** の上限と、合計 **100,000行** の上限があります。これらを超えるファイルは受け付けられません。分割して取り込むか、`.db` 形式での移行を検討してください。
+インポートにはファイル全体で **30 MiB** の上限と、合計 **100,000行** の上限があります。これらを超えるファイルは受け付けられません。分割して取り込むか、`.db` 形式での移行を検討してください。
 
 **インポートしたレコードが重複する**
 
@@ -71,9 +82,20 @@ JSON・CSV・Markdown のエクスポートは最大10,000件までです。`.db
 
 ### Overview
 
-The **Export Logs** panel in the dashboard lets you export and import your accumulated browsing history in multiple formats ― for backups, migration to another environment, or analysis in other tools.
+The **Export Logs** panel in the dashboard lets you export and import your accumulated browsing history in multiple formats ― for backups, migration to another environment, or analysis in other tools. (Local Markdown Export under "Initial Setup" is a separate feature that writes daily files automatically and is outside the scope of the limits in this guide.)
 
 > This guide covers browsing-history data. To migrate settings (API keys, etc.), use the dashboard's **Export/Import Settings** feature instead. API keys are never included in settings exports.
+
+### Limits at a Glance
+
+| Item | Limit |
+|---|---|
+| Records per export (JSON, CSV, Markdown) | Up to 100,000 (a message guides you to the `.db` export (OPFS storage) to capture everything beyond it) |
+| Import file size | Up to 30 MiB (a message appears when exceeded) |
+| Import row count | Up to 100,000 rows in total |
+
+- JSON, CSV, and Markdown are portable formats for up to 100,000 records; the `.db` export (OPFS storage only) and Encrypted Backup are full snapshots of everything
+- These values mirror the implementation constants in `src/utils/limits.ts` (`MAX_EXPORT_ROWS` / `MAX_IMPORT_TEXT_BYTES` / `IMPORT_TOTAL_ROW_CAP`)
 
 ### Export Formats
 
@@ -86,7 +108,7 @@ The **Export Logs** panel in the dashboard lets you export and import your accum
 
 Since v6.7.99, JSON exports carry an **HMAC-SHA256 signature** for tamper detection. The signing key is generated automatically inside the extension and requires no user management.
 
-> JSON, CSV, and Markdown exports are limited to a maximum of **10,000 records**. If more than 10,000 records are stored, the export fails with an error directing you to the `.db` export (OPFS storage only) to capture the full history.
+> JSON, CSV, and Markdown exports are limited to a maximum of **100,000 records**. If more than 100,000 records are stored, the export fails with an error directing you to the `.db` export (OPFS storage only) to capture the full history.
 
 ### Export column definitions
 
@@ -98,7 +120,7 @@ Each JSON record carries the full browsing-log fields inside an HMAC-SHA256-sign
 
 ### Import
 
-Use the "Import Logs from JSON" button to import a previously exported JSON file.
+Use the "Import Logs from JSON" button to import a previously exported JSON file. What you export can be imported (round trip). The smaller cap applies, so anything within **100,000 records** can round-trip via JSON.
 
 - The **HMAC signature is verified on import**. Files whose signature does not match (tampered files) are rejected
 - **Unsigned JSON exported by older versions (≦ v6.7.98) can no longer be re-imported.** If needed, re-export while your data is still present in the latest version
@@ -116,13 +138,13 @@ For password-protected backups, use "Create Encrypted Backup". The file is encry
 
 The JSON was exported by v6.7.98 or earlier without a signature. If the old data is still in the extension, re-export it from the latest version and import that file instead. Restoring from a `.db` export also works (OPFS storage only).
 
-**"Export exceeds the 10,000-record limit" is shown**
+**"Export exceeds the 100,000-record limit" is shown**
 
-JSON, CSV, and Markdown exports support at most 10,000 records. Use the `.db` export (OPFS storage only) to capture the full history.
+JSON, CSV, and Markdown exports support at most 100,000 records. Use the `.db` export (OPFS storage only) to capture the full history.
 
-**"Import file is too large" is shown / a large import is rejected**
+**"Import file is too large (limit: 30 MiB)" is shown / a large import is rejected**
 
-Imports are capped at **10 MiB** for the whole file and **100,000 rows** in total. Files exceeding either cap are rejected. Split the file or consider migrating via the `.db` format instead.
+Imports are capped at **30 MiB** for the whole file and **100,000 rows** in total. Files exceeding either cap are rejected. Split the file or consider migrating via the `.db` format instead.
 
 **Imported records appear duplicated**
 

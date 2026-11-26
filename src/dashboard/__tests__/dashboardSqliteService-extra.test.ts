@@ -29,10 +29,12 @@ import {
   resyncLegacyStorage,
   backupDb,
   restoreDb,
+  RESTORE_CHUNK_BYTES,
   importLogs,
   appendToLogs,
   queryAuditLogs,
 } from '../dashboardSqliteService.js';
+import { base64ToBytes } from '../../utils/crypto/index.js';
 
 describe('dashboardSqliteService — additional exports', () => {
   beforeEach(() => {
@@ -356,33 +358,133 @@ describe('dashboardSqliteService — additional exports', () => {
     });
   });
 
-  describe('restoreDb', () => {
-    it('returns the success side on success', async () => {
-      givenResponse({ success: true });
-      const result = await restoreDb(new Uint8Array([1, 2, 3]));
+  describe('restoreDb (chunked staging session)', () => {
+    const STAGING = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
+    const TOKEN = 'test-confirm-token';
+
+    /** Install a sendMessage mock scripted per subtype (independent of call order).
+     *  A script value may be a function receiving the payload for per-call answers. */
+    function givenScript(script: Record<string, unknown>): { opCalls: Array<Record<string, unknown>> } {
+      const opCalls: Array<Record<string, unknown>> = [];
+      (globalThis as any).chrome.runtime.sendMessage = vi.fn((message: any) => {
+        const subtype = message?.payload?.subtype;
+        if (subtype === 'create_confirm_token') {
+          return Promise.resolve({ success: true, confirmToken: TOKEN });
+        }
+        opCalls.push(message.payload);
+        const scripted = script[subtype as string];
+        const response = typeof scripted === 'function' ? (scripted as (p: unknown) => unknown)(message.payload) : scripted;
+        if (response instanceof Error) return Promise.reject(response);
+        return Promise.resolve(response);
+      });
+      return { opCalls };
+    }
+
+    it('sends begin -> chunk -> commit and resolves on success', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        restore_chunk: { success: true, written: 2 },
+        restore_commit: { success: true },
+      });
+      const result = await restoreDb(new Uint8Array([10, 20]));
       expect(result).toEqual({ data: undefined });
+      expect(opCalls.map((c) => c.subtype)).toEqual(['restore_begin', 'restore_chunk', 'restore_commit']);
+      expect(opCalls[0]).toMatchObject({ subtype: 'restore_begin', totalBytes: 2, totalChunks: 1 });
+      expect(opCalls[1]).toMatchObject({ subtype: 'restore_chunk', stagingName: STAGING, offset: 0, data: 'ChQ=' });
+      expect(opCalls[2]).toMatchObject({ subtype: 'restore_commit', stagingName: STAGING, totalBytes: 2 });
     });
 
-    it('sends data as base64 in payload', async () => {
-      givenResponse({ success: true });
-      await restoreDb(new Uint8Array([10, 20]));
-      expect((globalThis as any).chrome.runtime.sendMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          payload: expect.objectContaining({ subtype: 'restore_db', data: 'ChQ=' }),
+    it('splits larger data into byte-offset chunks of at most RESTORE_CHUNK_BYTES', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        // Echo the chunk's real byte length so the write-verification passes.
+        restore_chunk: (payload: unknown) => ({
+          success: true,
+          written: base64ToBytes((payload as { data: string }).data).byteLength,
         }),
-      );
+        restore_commit: { success: true },
+      });
+      const size = RESTORE_CHUNK_BYTES * 2 + 1;
+      const data = new Uint8Array(size);
+      for (let i = 0; i < size; i++) data[i] = i % 251;
+      const result = await restoreDb(data);
+      expect(result).toEqual({ data: undefined });
+
+      const chunks = opCalls.filter((c) => c.subtype === 'restore_chunk');
+      expect(opCalls[0]).toMatchObject({ totalBytes: size, totalChunks: 3 });
+      expect(chunks.map((c) => c.offset)).toEqual([0, RESTORE_CHUNK_BYTES, RESTORE_CHUNK_BYTES * 2]);
+      // Every chunk stays within the wire cap; the last chunk carries the tail byte.
+      for (const chunk of chunks) {
+        const bytes = base64ToBytes(chunk.data as string);
+        expect(bytes.byteLength).toBeLessThanOrEqual(RESTORE_CHUNK_BYTES);
+      }
+      expect(base64ToBytes(chunks[2]!.data as string).byteLength).toBe(1);
+      // Round-trip: concatenating the chunks reproduces the snapshot exactly.
+      const reassembled = chunks.flatMap((c) => Array.from(base64ToBytes(c.data as string)));
+      expect(reassembled).toEqual(Array.from(data));
+      expect(opCalls[opCalls.length - 1]).toMatchObject({ subtype: 'restore_commit', stagingName: STAGING, totalBytes: size });
     });
 
-    it('carries the reason from a failed response', async () => {
-      givenResponse({ success: false, error: 'Corrupt backup file' });
-      const result = await restoreDb(new Uint8Array([]));
-      expect(result).toEqual({ error: 'Corrupt backup file' });
+    it('aborts the staging once and surfaces the reason when a chunk fails', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        restore_chunk: { success: false, error: 'staging file disappeared' },
+        restore_abort: { success: true },
+      });
+      const result = await restoreDb(new Uint8Array([1, 2, 3]));
+      expect(result).toEqual({ error: 'staging file disappeared' });
+      expect(opCalls.map((c) => c.subtype)).toEqual(['restore_begin', 'restore_chunk', 'restore_abort']);
     });
 
-    it('carries the reason on rejection', async () => {
-      givenLastError('Failed');
+    it('aborts the staging once and surfaces the reason when commit fails', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        restore_chunk: { success: true, written: 1 },
+        restore_commit: { success: false, error: 'staged size mismatch' },
+        restore_abort: { success: true },
+      });
+      const result = await restoreDb(new Uint8Array([1]));
+      expect(result).toEqual({ error: 'staged size mismatch' });
+      expect(opCalls.map((c) => c.subtype)).toEqual(['restore_begin', 'restore_chunk', 'restore_commit', 'restore_abort']);
+    });
+
+    it('fails closed on a short write instead of committing truncated bytes', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        restore_chunk: { success: true, written: 0 },
+        restore_abort: { success: true },
+      });
+      const result = await restoreDb(new Uint8Array([1, 2, 3]));
+      expect(result).toEqual({ error: expect.stringContaining('write mismatch at offset 0') });
+      expect(opCalls.map((c) => c.subtype)).toEqual(['restore_begin', 'restore_chunk', 'restore_abort']);
+    });
+
+    it('ignores an abort failure and keeps the original error', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: { success: true, stagingName: STAGING },
+        restore_chunk: { success: false, error: 'transfer broken' },
+        restore_abort: { success: false, error: 'cleanup unavailable' },
+      });
+      const result = await restoreDb(new Uint8Array([1]));
+      expect(result).toEqual({ error: 'transfer broken' });
+      expect(opCalls.filter((c) => c.subtype === 'restore_abort')).toHaveLength(1);
+    });
+
+    it('carries the reason on rejection without an abort when begin itself failed', async () => {
+      const { opCalls } = givenScript({
+        restore_begin: new Error('Connection failed'),
+      });
+      const result = await restoreDb(new Uint8Array([1]));
+      expect(result).toEqual({ error: expect.stringContaining('Connection failed') });
+      // No staging name was ever issued, so no cleanup may be attempted.
+      expect(opCalls.filter((c) => c.subtype === 'restore_abort')).toHaveLength(0);
+    });
+
+    it('rejects an empty snapshot without sending any message', async () => {
+      const { opCalls } = givenScript({});
       const result = await restoreDb(new Uint8Array([]));
-      expect(result).toEqual({ error: expect.stringContaining('Failed') });
+      expect(result).toEqual({ error: expect.stringContaining('non-empty') });
+      expect(opCalls).toEqual([]);
     });
   });
 

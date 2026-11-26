@@ -1,6 +1,6 @@
 // src/offscreen/OpfsWorkerBackend.ts
 import type { SqliteEngineHost } from './sqliteEngineHost.js';
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, RestorePrepareResult, RestoreAppendResult, ArchivePreviewResult, ArchiveCreateResult, ArchiveCleanupResult, ArchiveExportChunkResult, ArchiveCreateParams, ArchivePrepareIncomingResult, ArchiveRestorePreviewResult, ArchiveRestoreResult, ArchiveDeleteByStagingResult, ArchiveOpenResult, ArchiveQueryResult, ArchiveUpdateResult, ArchiveSaveResult, ArchiveCloseResult, ArchiveStatusResult } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import type { ArchiveStaging } from './archiveStaging.js';
 import { ARCHIVE_DESCRIPTORS, type ArchiveDescriptor, type ArchiveOpType, type DescriptorResponse } from '../messaging/archiveWireTable.js';
@@ -304,6 +304,30 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     const result = await this.callWorker<{ restored: boolean }>('RESTORE', { data });
     if (result && result.restored) return { success: true };
     return { success: false, error: 'Binary restore failed' };
+  }
+
+  async restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<BackendOrError<RestorePrepareResult>> {
+    return this.callWorkerOk<{ stagingName: string }, RestorePrepareResult>(
+      'STAGE_RESTORE_BEGIN',
+      { totalBytes, totalChunks },
+      (result) => ({ success: true, stagingName: result.stagingName }),
+    );
+  }
+
+  async restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<BackendOrError<RestoreAppendResult>> {
+    return this.callWorkerOk<{ written: number }, RestoreAppendResult>(
+      'STAGE_RESTORE_APPEND',
+      { stagingName, offset, data },
+      (result) => ({ success: true, written: result.written }),
+    );
+  }
+
+  async restoreCommit(stagingName: string, totalBytes: number): Promise<BackendOrError<MutationResult>> {
+    return this.callWorkerOk<unknown, MutationResult>('STAGE_RESTORE_COMMIT', { stagingName, totalBytes }, () => ({ success: true }));
+  }
+
+  async restoreAbort(stagingName: string): Promise<BackendOrError<MutationResult>> {
+    return this.callWorkerOk<unknown, MutationResult>('STAGE_RESTORE_ABORT', { stagingName }, () => ({ success: true }));
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {

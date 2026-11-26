@@ -40,13 +40,13 @@ Scenario: 一部の zip だけをダウンロードした場合も手順どお�
 ```
 
 ## 受け入れ基準
-- [ ] release ジョブが chrome / firefox / edge の 3 つの zip から `SHA256SUMS` を生成し、Release に添付する
-- [ ] `SHA256SUMS` のファイル名欄は Release の添付名と一致する(`dist/` 接頭辞なし)
-- [ ] 同じ 3 つの zip に build provenance の attestation が付与される
-- [ ] 新規 action は commit SHA で固定し、行末コメントにタグ名を書く(既存の運用と同じ)
-- [ ] `id-token: write` と `attestations: write` は release ジョブだけに付与し、`record-metrics` ジョブには付与しない。トップレベルの `permissions` は広げない
-- [ ] 利用者向けの検証手順(`shasum -a 256 -c SHA256SUMS`、`gh attestation verify <zip> --repo armaniacs/yasumaro`)が `docs/RELEASE_VERIFICATION.md` にあり、README の「方法4: GitHub Releases の zip を読み込む」から参照される
-- [ ] `.crx` を attestation の対象に含めるかが決まり、文書に明記されている
+- [x] release ジョブが chrome / firefox / edge の 3 つの zip から `SHA256SUMS` を生成し、Release に添付する
+- [x] `SHA256SUMS` のファイル名欄は Release の添付名と一致する(`dist/` 接頭辞なし)
+- [x] 同じ 3 つの zip に build provenance の attestation が付与される
+- [x] 新規 action は commit SHA で固定し、行末コメントにタグ名を書く(既存の運用と同じ)
+- [x] `id-token: write` と `attestations: write` は release ジョブだけに付与し、`record-metrics` ジョブには付与しない。トップレベルの `permissions` は広げない
+- [x] 利用者向けの検証手順(`shasum -a 256 -c SHA256SUMS`、`gh attestation verify <zip> --repo armaniacs/yasumaro`)が `docs/RELEASE_VERIFICATION.md` にあり、README の「方法4: GitHub Releases の zip を読み込む」から参照される
+- [x] `.crx` を attestation の対象に含めるかが決まり、文書に明記されている
 
 ## テスト戦略(t_wadaスタイル)
 
@@ -108,10 +108,10 @@ rtk grep -rn "RELEASE_VERIFICATION" /Users/yaar/Playground/yasumaro/README.md /U
 - action の SHA は `gh api repos/<owner>/<repo>/git/ref/tags/<tag>` で取得し、注釈付きタグの場合は tag object ではなく commit の SHA を使う
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが、実リリースでの手動確認で検証されている(結果は handoff に記録)
-- [ ] `npm run validate` が緑
-- [ ] コードレビュー完了(SHA 固定と permissions の範囲を確認)
-- [ ] ドキュメント更新済み(`docs/RELEASE_VERIFICATION.md`、README の方法4 からのリンク)
+- [x] 全 BDD シナリオが、実リリースでの手動確認で検証されている(結果は handoff に記録)
+- [x] `npm run validate` が緑
+- [x] コードレビュー完了(SHA 固定と permissions の範囲を確認)
+- [x] ドキュメント更新済み(`docs/RELEASE_VERIFICATION.md`、README の方法4 からのリンク)
 
 ## 引き継ぎ
-状態: 着手済み(handoff 記載: 実装済み・実リリースでの確認待ち)。進捗と引き継ぎ情報は [handoff/2026-11-24-03-release-artifact-provenance.md](handoff/2026-11-24-03-release-artifact-provenance.md) に記録する(ファイルが無ければ未着手)。
+状態: 完了(2026-11-26)。v6.9.78 の 3 zip に対する `shasum -a 256 -c SHA256SUMS`(3/3 OK)と `gh attestation verify`(3/3 成功)を確認済み。`docs/RELEASE_VERIFICATION.md` の日英化および `README.md` / `docs/guides.html` / `dev-docs/DOCUMENTATION_GUIDE.md` からのリンク配線完了。詳細は [handoff/2026-11-24-03-release-artifact-provenance.md](handoff/2026-11-24-03-release-artifact-provenance.md) を参照。

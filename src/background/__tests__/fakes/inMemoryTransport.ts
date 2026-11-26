@@ -142,6 +142,18 @@ export class InMemoryTransport implements OffscreenTransport {
         return { success: true };
       case 'SQLITE_RESTORE':
         return { success: true };
+      // Chunked restore staging session: the fake has no OPFS staging, so
+      // begin answers a well-formed name and append reports the decoded byte
+      // count — enough for the transport-level consumers of this fake.
+      case 'SQLITE_RESTORE_BEGIN':
+        return { success: true, stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' };
+      case 'SQLITE_RESTORE_APPEND': {
+        const data = payload.data as string | undefined;
+        return { success: true, written: data ? Math.floor(data.length * 3 / 4) : 0 };
+      }
+      case 'SQLITE_RESTORE_COMMIT':
+      case 'SQLITE_RESTORE_ABORT':
+        return { success: true };
 
       case 'SQLITE_STATUS':
         return {

@@ -23,7 +23,7 @@ Yasumaro は、ページを開いただけでは記録しません。**実際に
 
 タブを開いたままバックグラウンドに置いているだけのページや、目次だけ見てすぐ離脱したページを記録から除外するためです。滞在時間だけを見ると、「開きっぱなしで放置していたタブ」を誤検出します。スクロール深度だけを見ても、「一瞬でページ最下部までスクロールして離脱した」ケースを誤検出します。つまり、どちらか一方だけでは不十分です。両方を組み合わせることで、実際に内容を読んだと考えられるページに絞り込みます。
 
-> **注意**: 滞在時間はページを開いてからの経過時間で判定されるため、バックグラウンドに置いていた時間も含まれます。
+> **注意**: 滞在時間はページを開いてからの経過時間で判定されるため、バックグラウンドに置いていた時間も含まれます。ただし非表示タブでは定期判定が止まるため、バックグラウンド放置だけでは記録されません（閲覧中に条件を満たす必要があります）。
 
 ### 設定方法
 
@@ -169,7 +169,7 @@ The most recent reason a recording was skipped appears in the popup's "Why the l
 
 This combination excludes tabs left open in the background and pages where you scrolled straight to the bottom and left without reading. Looking at visit duration alone would misclassify tabs left open and forgotten as "read." Looking at scroll depth alone would misclassify a quick scroll-to-bottom-and-leave as "read." Combining both narrows detection down to pages you likely actually read.
 
-> **Note**: Visit duration is measured as elapsed time since the page was opened, so time spent in the background counts toward it.
+> **Note**: Visit duration is measured as elapsed time since the page was opened, so time spent in the background counts toward it. However, periodic checks stop in hidden tabs, so background-idle time alone does not record a page (the conditions must be met while reading).
 
 ### Configuration
 

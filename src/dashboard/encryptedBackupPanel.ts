@@ -24,6 +24,8 @@ import {
   MAX_SPLIT_PART_COUNT,
   SPLIT_BACKUP_FORMAT_VERSION,
   SPLIT_BACKUP_KIND,
+  SplitBackupError,
+  splitTooLargeBudgetFields,
   type SplitBackupContainer,
 } from './encryptedBackupSplitCodec.js';
 import type { EncryptionEnvelope } from '../utils/crypto/index.js';
@@ -269,7 +271,27 @@ export function initEncryptedBackupPanel(): void {
           );
         });
       } catch (error) {
-        setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
+        if (error instanceof SplitBackupError && error.code === 'split-backup-too-large') {
+          // 作成側の結合長ゲート: 復元できないコンテナを作らせないため、
+          // 汎用の作成失敗文言の代わりに原因と行動指針を示す。超過量と上限
+          // も出す（履歴整理の目安）。
+          const budgetFields = splitTooLargeBudgetFields(error);
+          setStatus(
+            budgetFields
+              ? getMessageWithSubstitutions(
+                  'encryptedBackupSplitCreateTooLarge',
+                  budgetFields,
+                  'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
+                )
+              : getMessageOr(
+                  'encryptedBackupSplitCreateTooLarge',
+                  'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
+                ),
+            true,
+          );
+        } else {
+          setStatus(getMessageWithSubstitutions('encryptedBackupCreateFailed', { error: errorMessage(error) }, 'バックアップ作成に失敗しました: {error}'), true);
+        }
         throw error instanceof Error ? error : new Error(String(errorMessage(error)));
       } finally {
         exportInFlight = false;

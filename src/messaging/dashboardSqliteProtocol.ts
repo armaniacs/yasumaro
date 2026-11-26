@@ -51,7 +51,10 @@ export type DashboardSqliteRequest =
   | { subtype: 'backfill_metadata'; confirmToken?: string }
   | { subtype: 'resync_legacy'; maxRecords?: number; confirmToken?: string }
   | { subtype: 'backup_db'; confirmToken?: string }
-  | { subtype: 'restore_db'; data: string; confirmToken?: string }
+  | { subtype: 'restore_begin'; totalBytes: number; totalChunks: number; confirmToken?: string }
+  | { subtype: 'restore_chunk'; stagingName: string; offset: number; data: string; confirmToken?: string }
+  | { subtype: 'restore_commit'; stagingName: string; totalBytes: number; confirmToken?: string }
+  | { subtype: 'restore_abort'; stagingName: string; confirmToken?: string }
   | {
       subtype: 'import';
       rows: Array<{
@@ -153,7 +156,10 @@ export type DashboardSqliteResponseFor<S extends DashboardSqliteSubtype> =
       S extends 'backfill_metadata' ? { success: true; updated: number; total: number } :
       S extends 'resync_legacy' ? { success: true; examined: number; written: number; skipped: number; total: number } :
       S extends 'backup_db' ? { success: true; data: string } :
-      S extends 'restore_db' ? { success: true } :
+      S extends 'restore_begin' ? { success: true; stagingName: string } :
+      S extends 'restore_chunk' ? { success: true; written: number } :
+      S extends 'restore_commit' ? { success: true } :
+      S extends 'restore_abort' ? { success: true } :
       S extends 'import' ? { success: true; inserted: number; skipped: number; total: number } :
       S extends 'append_to_obsidian' ? { success: true; appended: number } :
       S extends 'purge_now' ? { success: true; purged: number; skipped: boolean } :

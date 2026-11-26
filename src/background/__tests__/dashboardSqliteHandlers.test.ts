@@ -21,7 +21,10 @@ function makeBaseDeps(overrides: Partial<DashboardSqliteHandlerDeps> = {}): Dash
     isConsentGranted: async () => true,
     formatEntriesToMarkdown: () => null,
     appendToDailyNote: async () => {},
-    restoreDb: async () => ({ success: true, data: undefined }),
+    restoreBegin: async () => ({ success: true, data: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' }),
+    restoreAppendChunk: async () => ({ success: true, data: 1 }),
+    restoreCommit: async () => ({ success: true, data: undefined }),
+    restoreAbort: async () => ({ success: true, data: undefined }),
     getStatus: async () => null,
     purgeOldRecords: async () => ({ success: true, data: { purged: 0 } }),
     purgeContent: async () => ({ success: true, data: { purged: 0 } }),
@@ -169,9 +172,10 @@ describe('dashboardSqliteHandlers — confirmation token (H2)', () => {
   });
 });
 
-describe('restore_db subtype', () => {
+describe('restore session subtypes (chunked staging transport)', () => {
   let sqliteClient: Record<string, unknown>;
   const VALID_TOKEN = 'test-valid-token-12345';
+  const STAGING = 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db';
 
   beforeEach(() => {
     sqliteClient = {
@@ -182,9 +186,9 @@ describe('restore_db subtype', () => {
     };
   });
 
-  it('rejects without a valid confirmToken', async () => {
+  it('rejects restore_commit without a valid confirmToken and never reaches the staging', async () => {
     const result = await dispatchDashboardSqlite(
-      { subtype: 'restore_db', data: 'AQID' },
+      { subtype: 'restore_commit', stagingName: STAGING, totalBytes: 10 },
       sqliteClient,
       { getConfirmToken: async () => VALID_TOKEN }
     );
@@ -193,27 +197,56 @@ describe('restore_db subtype', () => {
     expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).not.toHaveBeenCalled();
   });
 
-  it('calls sqliteClient.maintain restore with the provided bytes when token matches', async () => {
+  it('routes restore_begin to the maintain gateway with the session declaration', async () => {
+    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
+      vi.fn().mockResolvedValue({ success: true, data: STAGING });
     const result = await dispatchDashboardSqlite(
-      { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
+      { subtype: 'restore_begin', totalBytes: 8, totalChunks: 1, confirmToken: VALID_TOKEN },
+      sqliteClient,
+      { getConfirmToken: async () => VALID_TOKEN }
+    );
+
+    expect(result).toEqual({ success: true, stagingName: STAGING });
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain)
+      .toHaveBeenCalledWith({ type: 'restorePrepareIncoming', totalBytes: 8, totalChunks: 1 });
+  });
+
+  it('routes restore_chunk to the maintain gateway with base64 passthrough', async () => {
+    (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
+      vi.fn().mockResolvedValue({ success: true, data: 2 });
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'restore_chunk', stagingName: STAGING, offset: 3, data: 'ChQ=', confirmToken: VALID_TOKEN },
+      sqliteClient,
+      { getConfirmToken: async () => VALID_TOKEN }
+    );
+
+    expect(result).toEqual({ success: true, written: 2 });
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain)
+      .toHaveBeenCalledWith({ type: 'restoreAppend', stagingName: STAGING, offset: 3, dataBase64: 'ChQ=' });
+  });
+
+  it('routes restore_abort to the maintain gateway (cleanup path)', async () => {
+    const result = await dispatchDashboardSqlite(
+      { subtype: 'restore_abort', stagingName: STAGING, confirmToken: VALID_TOKEN },
       sqliteClient,
       { getConfirmToken: async () => VALID_TOKEN }
     );
 
     expect(result).toEqual({ success: true });
-    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain).toHaveBeenCalledWith({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
+    expect((sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain)
+      .toHaveBeenCalledWith({ type: 'restoreAbort', stagingName: STAGING });
   });
 
-  it('returns failure when restoreDb resolves false', async () => {
+  it('forwards the failure reason from a failed restore_commit', async () => {
     (sqliteClient as unknown as { maintain: ReturnType<typeof vi.fn> }).maintain =
-      vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'Restore failed', retriable: false } });
+      vi.fn().mockResolvedValue({ success: false, error: { kind: 'unknown', message: 'staged size mismatch', retriable: false } });
 
     const result = await dispatchDashboardSqlite(
-      { subtype: 'restore_db', data: 'AQID', confirmToken: VALID_TOKEN },
+      { subtype: 'restore_commit', stagingName: STAGING, totalBytes: 8, confirmToken: VALID_TOKEN },
       sqliteClient,
       { getConfirmToken: async () => VALID_TOKEN }
     );
 
-    expect(result).toEqual({ success: false, error: 'Restore failed', retriable: false });
+    expect(result).toEqual({ success: false, error: 'staged size mismatch', retriable: false });
   });
 });

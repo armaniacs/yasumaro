@@ -214,3 +214,35 @@ export function loadLocalMarkdownExportTiming(timing: string | undefined): void 
     radio.checked = radio.value === timing;
   }
 }
+
+export type FormValueElement = HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+
+/**
+ * Read a checkbox's `checked` state from an element ID or element reference,
+ * returning `fallback` when the element is absent.
+ */
+export function getChecked(
+  target: string | HTMLInputElement | null | undefined,
+  fallback = false,
+): boolean {
+  const element =
+    typeof target === 'string'
+      ? (document.getElementById(target) as HTMLInputElement | null)
+      : target;
+  return element?.checked ?? fallback;
+}
+
+/**
+ * Read a form control's `value` from an element ID or element reference,
+ * returning `fallback` when the element is absent.
+ */
+export function getValue(
+  target: string | FormValueElement | null | undefined,
+  fallback = '',
+): string {
+  const element =
+    typeof target === 'string'
+      ? (document.getElementById(target) as FormValueElement | null)
+      : target;
+  return element?.value ?? fallback;
+}
