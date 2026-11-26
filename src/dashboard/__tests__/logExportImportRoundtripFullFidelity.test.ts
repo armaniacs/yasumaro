@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * logExportImportRoundtripFullFidelity.test.ts
  * Full-fidelity round-trip pin (PBI 2026-11-26-05): 50,000 realistic rows

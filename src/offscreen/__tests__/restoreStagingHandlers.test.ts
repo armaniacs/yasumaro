@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * restoreStagingHandlers.test.ts
  * Offscreen worker integration for the chunked restore staging session:

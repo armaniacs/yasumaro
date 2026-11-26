@@ -835,7 +835,12 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
       const o = op as Extract<MaintainOp, { type: 'restoreAppend' }>;
       return { stagingName: o.stagingName, offset: o.offset, data: o.dataBase64 };
     },
-    decodeGateway: (response) => ({ written: response.written as number }),
+    // The offscreen response carries the scalar written count; keep the
+    // gateway projection scalar so the dashboard serviceDecode's
+    // requiredNonNegativeNumber(response.written) sees a number. Wrapping it
+    // in an object here would nest { written } into the SW reply and fail
+    // that validation (E2E: encrypted-backup-split restore).
+    decodeGateway: (response) => response.written as number,
   }),
   defineSqliteMaintainWireOp({
     op: 'restoreCommit',

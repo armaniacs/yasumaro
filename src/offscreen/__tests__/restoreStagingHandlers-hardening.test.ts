@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * restoreStagingHandlers-hardening.test.ts
  * Phase 5 hardening expectations from the 2026-11-26 checking-team review of

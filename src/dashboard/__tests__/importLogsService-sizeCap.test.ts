@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * importLogsService-sizeCap.test.ts
  * Boundary pins for the pre-parse import text gate (MAX_IMPORT_TEXT_BYTES)
