@@ -5946,8 +5946,14 @@
   "encryptedBackupSplitTooLarge": {
     "message": "Split backup exceeds the size limit: {detail}"
   },
+  "importLogsFileTooLarge": {
+    "message": "The import file is too large (limit: {limit}). Split the file and import in parts."
+  },
+  "exportLogsRowLimitExceeded": {
+    "message": "This export is limited to {rows} records, but {stored} are stored. Use the .db export (OPFS storage) to capture the full history."
+  },
   "encryptedBackupSplitCreateTooLarge": {
-    "message": "This history DB exceeds the restorable limit even in split form. Organize your history and try again."
+    "message": "This history DB exceeds the restorable limit even in split form (joined size ~{size}, limit {limit}). Organize your history and try again."
   },
   "encryptedBackupRestoredSkipped": {
     "message": "Restored from backup ({skipped} invalid settings items were skipped)"

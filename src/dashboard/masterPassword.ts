@@ -32,6 +32,7 @@ import {
 import { checkRateLimit, recordFailedAttempt, resetFailedAttempts } from '../utils/rateLimiter.js';
 import { focusTrapManager } from '../utils/ui/focusTrap.js';
 import { showConfirmDialog } from '../utils/ui/confirmDialog.js';
+import { SplitBackupError, splitTooLargeBudgetFields } from './encryptedBackupSplitCodec.js';
 
 /**
  * DOM要素の参照を保持するインターフェース。
@@ -396,12 +397,25 @@ export class MasterPasswordController {
           this.closePasswordAuthModal();
         }
       } catch (e) {
+        // Clear the in-progress line first: leaving "Verifying..." beside the
+        // error made it ambiguous whether the action was still running.
+        this.setPasswordAuthProgress(null);
         if (this.dom.passwordAuthError) {
-          this.dom.passwordAuthError.textContent = e instanceof ReencryptionAbortedError
-            ? this.abortMessage(e)
-            : e instanceof RotationInProgressError
-              ? getMessage('masterPasswordRotationInProgress')
-              : errorMessage(e);
+          this.dom.passwordAuthError.textContent =
+            e instanceof ReencryptionAbortedError
+              ? this.abortMessage(e)
+              : e instanceof SplitBackupError && e.code === 'split-backup-too-large'
+                ? // The create-side budget gate: show the localized guidance in
+                  // the modal where the user looks first, not the codec's
+                  // internal English message (the panel mirrors it on status).
+                  getMessageWithSubstitutions(
+                    'encryptedBackupSplitCreateTooLarge',
+                    splitTooLargeBudgetFields(e) ?? {},
+                    'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
+                  )
+                : e instanceof RotationInProgressError
+                  ? getMessage('masterPasswordRotationInProgress')
+                  : errorMessage(e);
           this.dom.passwordAuthError.classList.add('visible');
         }
       } finally {

@@ -12,6 +12,25 @@ import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 import { MAX_EXPORT_ROWS, QUERY_CAPS } from '../utils/limits.js';
 
 /**
+ * Thrown when the stored history exceeds the export ceiling. The panel
+ * swaps the message for the localized template (exportLogsRowLimitExceeded)
+ * via instanceof — matching on the English sentence would drift when the
+ * wording changes.
+ */
+export class ExportRowLimitError extends Error {
+  readonly storedTotal: number;
+
+  constructor(storedTotal: number) {
+    super(
+      `This export is limited to ${MAX_EXPORT_ROWS} records, but ${storedTotal} are stored. ` +
+      'Use the .db export to capture the full history.',
+    );
+    this.name = 'ExportRowLimitError';
+    this.storedTotal = storedTotal;
+  }
+}
+
+/**
  * Log JSON export format version. v2 adds an HMAC `signature` over the
  * signature-stripped body (VULN-035), mirroring settingsExportImport's
  * unencrypted export. v1 files (no signature) are rejected on import.
@@ -67,10 +86,7 @@ export async function queryAllData(): Promise<BrowsingLogEntry[]> {
     if (frozenTotal === Number.POSITIVE_INFINITY) {
       frozenTotal = result.data.total;
       if (frozenTotal > MAX_EXPORT_ROWS) {
-        throw new Error(
-          `This export is limited to ${MAX_EXPORT_ROWS} records, but ${frozenTotal} are stored. ` +
-          'Use the .db export to capture the full history.'
-        );
+        throw new ExportRowLimitError(frozenTotal);
       }
     }
     const batch = result.data.rows;

@@ -393,10 +393,15 @@ describe('encryptedBackupPanel split export', () => {
     });
     // Mocked backup cap is 100 chars; 101 forces the split export.
     vi.mocked(exportEncryptedBackup).mockResolvedValue(fakeEnvelope('x'.repeat(101)) as never);
+    // The gate error carries the budget detail so the panel can render the
+    // oversize amount and the limit (Phase 5 integration: the localized
+    // template takes {size}/{limit}).
     vi.mocked(exportEncryptedSplitBackup).mockRejectedValue(
       new SplitBackupError(
         'split-backup-too-large',
-        'Split backup joined body exceeds the backup file budget (52428804 chars)',
+        'Split backup joined body exceeds the backup file budget (60000000 chars)',
+        undefined,
+        { joinedBodyChars: 60_000_000, capChars: 52_428_800 },
       ),
     );
     const downloaded: string[] = [];
@@ -412,7 +417,7 @@ describe('encryptedBackupPanel split export', () => {
 
       await waitForMock(() =>
         expect(statusText()).toBe(
-          'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
+          'This history DB exceeds the restorable limit even in split form (joined size ~43 MB, limit 38 MB). Organize your history and try again.',
         ),
       );
       // A rejected creation must not download any manifest or part file.

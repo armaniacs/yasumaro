@@ -136,17 +136,44 @@ export type SplitBackupFailureCode =
 export class SplitBackupError extends Error {
   readonly code: SplitBackupFailureCode;
   readonly partIndex: number | undefined;
+  /** Present only for split-backup-too-large: lets the UI show how far over the budget the container is. */
+  readonly detail: { joinedBodyChars: number; capChars: number } | undefined;
 
-  constructor(code: SplitBackupFailureCode, message: string, partIndex?: number) {
+  constructor(
+    code: SplitBackupFailureCode,
+    message: string,
+    partIndex?: number,
+    detail?: { joinedBodyChars: number; capChars: number },
+  ) {
     super(message);
     this.name = 'SplitBackupError';
     this.code = code;
     this.partIndex = partIndex;
+    this.detail = detail;
   }
 }
 
 function isRecord(data: unknown): data is Record<string, unknown> {
   return typeof data === 'object' && data !== null;
+}
+
+/**
+ * Display fields for the split-backup-too-large gate. Chars are the
+ * post-compression base64 body, so the byte-equivalent label scales them
+ * back by 3/4 and rounds up — an approximate size is enough for the user to
+ * decide "organize the history", and the raw char count would be misleading.
+ * Returns null for other failures or when no budget detail was attached, so
+ * callers fall back to the generic message.
+ */
+export function splitTooLargeBudgetFields(error: unknown): { size: string; limit: string } | null {
+  if (!(error instanceof SplitBackupError) || error.code !== 'split-backup-too-large' || !error.detail) {
+    return null;
+  }
+  const toMbLabel = (chars: number) => `${Math.ceil((chars * 3) / 4 / (1024 * 1024))} MB`;
+  return {
+    size: toMbLabel(error.detail.joinedBodyChars),
+    limit: toMbLabel(error.detail.capChars),
+  };
 }
 
 export function isSplitBackupContainer(data: unknown): data is SplitBackupContainer {
@@ -449,6 +476,8 @@ export async function createSplitBackup(
     throw new SplitBackupError(
       'split-backup-too-large',
       `Split backup joined body exceeds the backup file budget (${body.length} chars)`,
+      undefined,
+      { joinedBodyChars: body.length, capChars: MAX_BACKUP_FILE_BYTES },
     );
   }
 

@@ -42,9 +42,11 @@ export { MAX_IMPORT_TEXT_BYTES };
 
 /**
  * User-facing rendering of the pre-parse cap, derived from the constant so
- * the message cannot drift when the value changes again.
+ * the message cannot drift when the value changes again. Exported so the
+ * display layer can swap this exact string for the localized template
+ * (importLogsFileTooLarge) without matching on a copy of the text.
  */
-const IMPORT_SIZE_ERROR = `Import file is too large (limit: ${MAX_IMPORT_TEXT_BYTES / (1024 * 1024)} MiB)`;
+export const IMPORT_SIZE_ERROR = `Import file is too large (limit: ${MAX_IMPORT_TEXT_BYTES / (1024 * 1024)} MiB)`;
 
 const MAX_URL_LENGTH = 2048;
 const MAX_TITLE_LENGTH = 2048;

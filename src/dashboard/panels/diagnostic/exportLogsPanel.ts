@@ -1,11 +1,11 @@
-import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob } from '../../exportLogsService.js';
+import { exportJson, exportCsv, exportMarkdown, exportDb, downloadText, downloadBlob, ExportRowLimitError } from '../../exportLogsService.js';
 import { runPanelAction, unwrapServiceResult } from '../panelAction.js';
 import { type PanelLifecycle } from '../types.js';
 import { queryAuditLogs } from '../../dashboardSqliteService.js';
 import { toTsvString } from '../../utils/auditLogTsv.js';
 import { showStatus } from '../../../utils/ui/settingsUiHelper.js';
 import { getMessageOr, getMessageWithSubstitutions } from '../../../utils/i18n.js';
-import { AUDIT_CAP_IDB } from '../../../utils/limits.js';
+import { AUDIT_CAP_IDB, MAX_EXPORT_ROWS } from '../../../utils/limits.js';
 import { formatLocalDateString } from '../../../utils/localDate.js';
 
 export function createExportLogsPanel(): PanelLifecycle {
@@ -27,13 +27,33 @@ export function createExportLogsPanel(): PanelLifecycle {
       // UTC date is the previous day, so the filename said "yesterday".
       const exportToday = (ext: string): string => `yasumaro_export_${formatLocalDateString(Date.now())}.${ext}`;
 
+      // The row-ceiling failure is the one export error with a localized
+      // template (the ceiling is a designed boundary, not a bug); every other
+      // failure keeps the generic {message} line. Cause-based: runPanelAction
+      // passes the thrown error through.
+      const exportOnError = (statusTarget: string | HTMLElement | null) => (message: string, kind: string, cause: unknown): void => {
+        if (kind === 'thrown' && cause instanceof ExportRowLimitError) {
+          showStatus(
+            statusTarget,
+            getMessageWithSubstitutions(
+              'exportLogsRowLimitExceeded',
+              { rows: MAX_EXPORT_ROWS, stored: cause.storedTotal },
+              cause.message,
+            ),
+            'error',
+          );
+          return;
+        }
+        showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error');
+      };
+
       jsonBtn?.addEventListener('click', () => {
         void runPanelAction({
           buttons: [jsonBtn],
           onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingJson', 'Exporting JSON…'), 'updating'),
           run: async () => downloadBlob(await exportJson(), exportToday('json')),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsJsonCompleted', 'JSON export completed.'), 'success'),
-          onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
+          onError: exportOnError(statusTarget),
         });
       });
 
@@ -43,7 +63,7 @@ export function createExportLogsPanel(): PanelLifecycle {
           onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingMarkdown', 'Exporting Markdown…'), 'updating'),
           run: async () => downloadText(await exportMarkdown(), exportToday('md'), 'text/markdown'),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsMarkdownCompleted', 'Markdown export completed.'), 'success'),
-          onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
+          onError: exportOnError(statusTarget),
         });
       });
 
@@ -53,7 +73,7 @@ export function createExportLogsPanel(): PanelLifecycle {
           onStart: () => showStatus(statusTarget, getMessageOr('exportLogsExportingCsv', 'Exporting CSV…'), 'updating'),
           run: async () => downloadBlob(await exportCsv(), exportToday('csv')),
           onSuccess: () => showStatus(statusTarget, getMessageOr('exportLogsCsvCompleted', 'CSV export completed.'), 'success'),
-          onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
+          onError: exportOnError(statusTarget),
         });
       });
 
@@ -75,7 +95,7 @@ export function createExportLogsPanel(): PanelLifecycle {
               blob ? 'success' : 'error',
             );
           },
-          onError: (message) => showStatus(statusTarget, getMessageWithSubstitutions('exportLogsExportFailed', { message }, 'Export failed: {message}'), 'error'),
+          onError: exportOnError(statusTarget),
         });
       });
 

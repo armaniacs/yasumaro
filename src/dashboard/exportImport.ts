@@ -5,7 +5,7 @@
 
 import type { Settings } from '../utils/storage/types.js';
 import { errorMessage } from '../utils/errorUtils.js';
-import { getMessage, getMessageOr } from '../utils/i18n.js';
+import { getMessage, getMessageOr, getMessageWithSubstitutions } from '../utils/i18n.js';
 import { formatLocaleDateTime } from '../utils/localeUtils.js';
 import { showStatus } from '../utils/ui/settingsUiHelper.js';
 import { createListen } from '../utils/domListen.js';
@@ -25,8 +25,9 @@ import { loadDomainSettings } from './settings/domainFilter.js';
 import { loadPrivacySettings } from './settings/privacySettings.js';
 import { loadContentSettings } from './settings/contentSettings.js';
 import { loadTrustSettings } from './settings/trustSettings.js';
-import { importFromJson, importFromJsonForMigration, isImportError } from './importLogsService.js';
+import { importFromJson, importFromJsonForMigration, isImportError, IMPORT_SIZE_ERROR } from './importLogsService.js';
 import type { ImportLogsResult } from './importLogsService.js';
+import { MAX_IMPORT_TEXT_BYTES } from '../utils/limits.js';
 import { createAiRepairUi } from './importLogsAiRepairUi.js';
 
 interface ExportImportDom {
@@ -52,8 +53,21 @@ interface ExportImportDom {
  * `%{error}` placeholder (same convention as `importLogsComplete`); when
  * the resolved template lacks it (missing key, test stub), the detail is
  * appended instead of dropping it.
+ *
+ * The size-cap error is the one case the service returns as a fixed English
+ * string (so the wire result stays a plain string): when the exact constant
+ * arrives, swap in the localized template instead of leaking the English
+ * line into the ja locale. The limit label is re-derived from the constant,
+ * not copied, so a future cap change cannot drift the displayed value.
  */
 function formatImportLogsError(error: string): string {
+  if (error === IMPORT_SIZE_ERROR) {
+    return getMessageWithSubstitutions(
+      'importLogsFileTooLarge',
+      { limit: `${MAX_IMPORT_TEXT_BYTES / (1024 * 1024)} MiB` },
+      IMPORT_SIZE_ERROR,
+    );
+  }
   const template = getMessageOr('importLogsError', 'Import error: %{error}');
   return template.includes('%{error}') ? template.replace('%{error}', error) : `${template}: ${error}`;
 }
