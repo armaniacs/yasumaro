@@ -14,6 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-26 holistic 改善ラウンド holistic-1126（6件） ― ⬜ 未着手 🔧非機能追加
+
+PR #218 (fix/encrypted-backup-large-capacity) の大局的コードレビュー (plans/2026-11-26-1113-holistic-review-...md、4 観点: DRY/SoC/拡張性/堅牢性) から得た改善テーマ 5 件と既知 (b) の実装ラウンド。RICE 降順で 09 → 10 → 11 を本ラウンドで実装し、12/13 は 14 (単発 restore 削除) を先行させる構成で次ラウンドへ。台帳は [2026-11-26-08-backlog-holistic-1126.md](2026-11-26-08-backlog-holistic-1126.md) を参照。ブランチ: refactor/holistic-1126。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ⬜ 09 | [2026-11-26-09-refactor-import-row-contract-layer0.md](2026-11-26-09-refactor-import-row-contract-layer0.md) | 🔧非機能追加 | 6.0 | 2 | validateImportRow を utils/logImportContract.ts に移動し二重実装解消 |
+| ⬜ 10 | [2026-11-26-10-refactor-restore-staging-transport.md](2026-11-26-10-refactor-restore-staging-transport.md) | 🔧非機能追加 | 5.0 | 3 | Quick Win。archive 前例 (分離インターフェース + narrowing) の踏襲 |
+| ⬜ 11 | [2026-11-26-11-refactor-split-shape-check.md](2026-11-26-11-refactor-split-shape-check.md) | 🔧非機能追加 | 1.5 | 3 | checkSplitBackupShape 集約 (panel 4 箇所 + codec 1 箇所のルール統一) |
+| ⬜ 14 | [2026-11-26-14-chore-remove-single-shot-restore.md](2026-11-26-14-chore-remove-single-shot-restore.md) | 🔧非機能追加 | 4.0 | 5 | 既知 (b)。単発 restore 7 層削除。12/13 の前提として次ラウンド先行 |
+| ⬜ 12 | [2026-11-26-12-refactor-restore-swap-extraction.md](2026-11-26-12-refactor-restore-swap-extraction.md) | 🔧非機能追加 | 4.0 | 2 | swap 手続きの純粋切り出し。14 の後 |
+| ⬜ 13 | [2026-11-26-13-refactor-maintain-handler-table.md](2026-11-26-13-refactor-maintain-handler-table.md) | 🔧非機能追加 | 3.2 | 5 | maintain ハンドラの wire-table 派生化。14 の後 |
+
 ### 2026-11-26 ログ移行の大容量対応（3件） ― ✅ 3件完了・アーカイブ済み ✨機能追加
 
 LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和したラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin した。なぜなぜ分析 30 回 x 3 済み。最終ゲート: `npm run validate` 全緑 (19,371 件) + ビルド緑 + Playwright E2E 305 件緑。checking-team レビュー (9 観点) の指摘は Phase 5 で修正済み。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
