@@ -14,15 +14,15 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-26 後続候補ラウンド followup-1126（3件） ― ⬜ 未着手 ✨機能追加 🧪テスト 🔧非機能追加
+### 2026-11-26 後続候補ラウンド followup-1126（3件） ― ✅ 3件完了・アーカイブ済み ✨機能追加 🧪テスト 🔧非機能追加
 
-holistic-1126 ラウンドで台帳送りした後続候補 3 件 (既知 a-d のうち着手可能なもの) の実装ラウンド。RICE 採点済み、相互依存なし (ファイル排他) で並列バッチ 1 組。台帳は [2026-11-26-15-backlog-followup-1126.md](2026-11-26-15-backlog-followup-1126.md) を参照。ブランチ: chore/holistic-followup-1126。
+holistic-1126 ラウンドで台帳送りした後続候補 3 件 (既知 a-d のうち着手可能なもの) を実装したラウンド。バッチ 1 (3 件並列、ファイル排他)。最終ゲート: test:perf 全緑 (json reporter)、check-docs-chars 0 違反、build 緑。台帳は [2026-11-26-15-backlog-followup-1126.md](2026-11-26-15-backlog-followup-1126.md) を参照。ブランチ: chore/holistic-followup-1126。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 16 | [2026-11-26-16-feat-local-markdown-100k.md](2026-11-26-16-feat-local-markdown-100k.md) | ✨機能追加 | 3.0 | 3 | ローカル Markdown 書き出しを keyset ページングで 100k 件に (PBI 04 パターン踏襲) |
-| ⬜ 17 | [2026-11-26-17-test-log-export-bench.md](2026-11-26-17-test-log-export-bench.md) | 🧪テスト | 3.2 | 3 | export/import 往復計測を bench:micro に追加 (時間 + peak RSS) |
-| ⬜ 18 | [2026-11-26-18-refactor-dependings-common.md](2026-11-26-18-refactor-dependings-common.md) | 🔧非機能追加 | 1.2 | 3 | dependings 共通化 + generate の「最終確認日」再スタンプ制御 |
+| ~~16~~ | [2026-11-26-16-feat-local-markdown-100k.md](../dev-docs/archived/pbi/2026-11-26-16-feat-local-markdown-100k.md) | ✨機能追加 | 3.0 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。keyset ページングで 100k 件 (PBI 04 パターン踏襲、ASC cursor + dedup + 1ms stall 回避)。34/34 緑 |
+| ~~17~~ | [2026-11-26-17-test-log-export-bench.md](../dev-docs/archived/pbi/2026-11-26-17-test-log-export-bench.md) | 🧪テスト | 3.2 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。f4-log-export bench (軽量 100k 往復 130ms / 8.0MB、フルフィデリティ 50k 往復 200ms / 27.8MB、peak RSS advisory 出力)。次回上限引き上げの前提条件を常設化 |
+| ~~18~~ | [2026-11-26-18-refactor-dependings-common.md](../dev-docs/archived/pbi/2026-11-26-18-refactor-dependings-common.md) | 🔧非機能追加 | 1.2 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。dependingsCommon.mjs に共通知識集約、generate の「最終確認日」は --confirm-date でのみ更新 (再スタンプ停止)。byte-identical pin、isDirectInvocation 堅牢化 |
 
 ### 2026-11-26 holistic 改善ラウンド holistic-1126（6件） ― ✅ 6件完了・アーカイブ済み 🔧非機能追加
 
