@@ -7,84 +7,78 @@
  * the §6 risk-acceptance records are manual and are never touched, so audit
  * history cannot be overwritten by a generator run.
  *
- * Usage: node scripts/generate-dependings.mjs
+ * The `- 最終確認日:` line attests that a human re-checked the document, so it
+ * is preserved as-is by default. Advance it to today only after an actual
+ * review, by passing --confirm-date:
+ *
+ *   node scripts/generate-dependings.mjs                # numbers only, date kept
+ *   node scripts/generate-dependings.mjs --confirm-date # date moved to today
  */
 
 import { readFileSync, writeFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT_DIR = join(__dirname, '..');
-
-const DEPENDINGS_PATH = join(ROOT_DIR, 'docs', 'DEPENDINGS.md');
-const PKG_PATH = join(ROOT_DIR, 'package.json');
-const LOCK_PATH = join(ROOT_DIR, 'package-lock.json');
-const NOTICES_PATH = join(ROOT_DIR, 'THIRD_PARTY_NOTICES.md');
-
-function today() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function lockVersion(packages, name) {
-  return packages[`node_modules/${name}`]?.version ?? null;
-}
-
-function parseNoticesCount(text) {
-  const m = text.match(/automatically generated for (\d+) package\(s\)/);
-  return m ? Number(m[1]) : null;
-}
+import {
+  DEPENDINGS_PATH,
+  DEV_DEPS_PATTERN,
+  DOC_TO_LOCK_ALIAS,
+  FINAL_CHECK_DATE_PATTERN,
+  LOCK_COUNTS_LINE_PATTERN,
+  LOCK_PATH,
+  NOTICES_PATH,
+  PKG_PATH,
+  RUNTIME_COUNT_PATTERN,
+  countLockPackages,
+  createDevVersionsPattern,
+  isDirectInvocation,
+  lockVersion,
+  parseNoticesCount,
+  today,
+} from './dependingsCommon.mjs';
 
 function replaceOrThrow(text, pattern, replacement, label) {
   if (!pattern.test(text)) throw new Error(`pattern not found: ${label}`);
   return text.replace(pattern, replacement);
 }
 
-function main() {
-  const pkg = JSON.parse(readFileSync(PKG_PATH, 'utf-8'));
-  const lock = JSON.parse(readFileSync(LOCK_PATH, 'utf-8'));
+/**
+ * Rewrites the machine-derived numbers in the DEPENDINGS.md text and returns
+ * the new text. Pure: no I/O, and the review date moves only when confirmDate
+ * is set.
+ */
+export function applyDependencyNumbers(doc, { pkg, lock, notices, date, confirmDate = false }) {
   const packages = lock.packages ?? {};
-  const doc = readFileSync(DEPENDINGS_PATH, 'utf-8');
-  const notices = readFileSync(NOTICES_PATH, 'utf-8');
-
-  const date = today();
   const runtimeNames = Object.keys(pkg.dependencies ?? {});
   const devDepsCount = Object.keys(pkg.devDependencies ?? {}).length;
-  const lockTotal = Object.keys(packages).filter((k) => k !== '').length;
+  const lockTotal = countLockPackages(packages);
   const noticesCount = parseNoticesCount(notices);
   if (noticesCount === null) throw new Error('could not parse THIRD_PARTY_NOTICES.md count');
 
   let out = doc;
 
-  out = replaceOrThrow(
-    out,
-    /^- 最終確認日: \d{4}-\d{2}-\d{2}/m,
-    `- 最終確認日: ${date}`,
-    'header date'
-  );
+  // WHY: this line records when a human last verified the document; stamping
+  // it on every run let the freshness gate pass without any real re-check.
+  if (confirmDate) {
+    out = replaceOrThrow(out, FINAL_CHECK_DATE_PATTERN, `- 最終確認日: ${date}`, 'header date');
+  } else if (!FINAL_CHECK_DATE_PATTERN.test(out)) {
+    throw new Error('pattern not found: header date');
+  }
 
   out = replaceOrThrow(
     out,
-    /^- ランタイム依存（配布物に同梱）: \d+ 件のみ/m,
+    RUNTIME_COUNT_PATTERN,
     `- ランタイム依存（配布物に同梱）: ${runtimeNames.length} 件のみ`,
     'runtime count'
   );
 
   out = replaceOrThrow(
     out,
-    /^- 開発依存: \d+ 件/m,
+    DEV_DEPS_PATTERN,
     `- 開発依存: ${devDepsCount} 件`,
     'devDeps count'
   );
 
   out = replaceOrThrow(
     out,
-    /^- lockfile 上のパッケージ総数: \d+（うち `node_modules` に実インストールされてライセンス走査の対象になるのは \d+）/m,
+    LOCK_COUNTS_LINE_PATTERN,
     `- lockfile 上のパッケージ総数: ${lockTotal}（うち \`node_modules\` に実インストールされてライセンス走査の対象になるのは ${noticesCount}）`,
     'lockfile counts'
   );
@@ -120,14 +114,13 @@ function main() {
   for (const [name, version] of Object.entries(devVersions)) {
     if (!version) throw new Error(`lockfile has no entry for ${name}`);
   }
-  // The dev-group table abbreviates the stryker runner as `vitest-runner`
-  // and pairs it with `@stryker-mutator/core` sharing one version.
-  const docToLock = { 'vitest-runner': '@stryker-mutator/vitest-runner' };
+  // The dev-group table pairs `@stryker-mutator/core` with `vitest-runner`
+  // sharing one version; a divergence means the lockfile pair was broken.
   const strykerCore = lockVersion(packages, '@stryker-mutator/core');
   const strykerRunner = lockVersion(packages, '@stryker-mutator/vitest-runner');
   if (strykerCore !== strykerRunner) throw new Error('stryker core/runner versions diverged');
-  out = out.replace(/`([^`]+)` \((\d+\.\d+\.\d+[^)]*)\)/g, (m, name) => {
-    const lockName = docToLock[name] ?? name;
+  out = out.replace(createDevVersionsPattern(), (m, name) => {
+    const lockName = DOC_TO_LOCK_ALIAS[name] ?? name;
     if (lockName in devVersions) return `\`${name}\` (${devVersions[lockName]})`;
     return m;
   });
@@ -139,6 +132,19 @@ function main() {
     'notices line'
   );
 
+  return out;
+}
+
+function main() {
+  const confirmDate = process.argv.includes('--confirm-date');
+  const pkg = JSON.parse(readFileSync(PKG_PATH, 'utf-8'));
+  const lock = JSON.parse(readFileSync(LOCK_PATH, 'utf-8'));
+  const doc = readFileSync(DEPENDINGS_PATH, 'utf-8');
+  const notices = readFileSync(NOTICES_PATH, 'utf-8');
+  const date = today();
+
+  const out = applyDependencyNumbers(doc, { pkg, lock, notices, date, confirmDate });
+
   if (out === doc) {
     console.log('docs/DEPENDINGS.md is already up to date');
     return;
@@ -147,9 +153,11 @@ function main() {
   console.log(`docs/DEPENDINGS.md refreshed for ${date}`);
 }
 
-try {
-  main();
-} catch (e) {
-  console.error(`generate-dependings failed: ${e.message}`);
-  process.exit(1);
+if (isDirectInvocation(import.meta.url)) {
+  try {
+    main();
+  } catch (e) {
+    console.error(`generate-dependings failed: ${e.message}`);
+    process.exit(1);
+  }
 }

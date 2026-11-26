@@ -11,23 +11,33 @@
  * `check-deps.mjs`.
  *
  * Pure helpers are exported for unit tests. I/O lives in main() only.
+ * Document paths, line formats and lockfile counting live in
+ * `../dependingsCommon.mjs`, shared with the generator.
  */
 
 import { readFileSync } from 'node:fs';
 import { execSync } from 'node:child_process';
-import { join, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import {
+  DEPENDINGS_PATH,
+  DEV_DEPS_PATTERN,
+  DOC_TO_LOCK_ALIAS,
+  FINAL_CHECK_DATE_PATTERN,
+  LOCK_COUNTS_TOLERANT_PATTERN,
+  LOCK_PATH,
+  NOTICES_PATH,
+  PKG_PATH,
+  RUNTIME_COUNT_PATTERN,
+  countLockPackages,
+  createDevVersionsPattern,
+  daysSince,
+  isDirectInvocation,
+  lockVersion,
+  parseNoticesCount,
+} from '../dependingsCommon.mjs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const ROOT_DIR = join(__dirname, '..', '..');
+export { parseNoticesCount };
 
 const { header, pass, fail, warn, info, sectionBreak, summary } = await import('./utils/reporter.mjs');
-
-const DEPENDINGS_PATH = join(ROOT_DIR, 'docs', 'DEPENDINGS.md');
-const PKG_PATH = join(ROOT_DIR, 'package.json');
-const LOCK_PATH = join(ROOT_DIR, 'package-lock.json');
-const NOTICES_PATH = join(ROOT_DIR, 'THIRD_PARTY_NOTICES.md');
 
 const STALE_WARN_DAYS = 7;
 const STALE_FAIL_DAYS = 30;
@@ -46,16 +56,16 @@ export function parseRuntimeTable(text) {
 
 export function parseDevGroupVersions(text) {
   const versions = new Map();
-  const pattern = /`([^`]+)` \((\d+\.\d+\.\d+[^)]*)\)/g;
+  const pattern = createDevVersionsPattern();
   let m;
   while ((m = pattern.exec(text)) !== null) versions.set(m[1], m[2]);
   return versions;
 }
 
 export function parseCounts(text) {
-  const dev = text.match(/^- 開発依存: (\d+) 件/m);
-  const lock = text.match(/^- lockfile 上のパッケージ総数: (\d+)（うち `node_modules`[^0-9]*?(\d+)）/m);
-  const runtime = text.match(/^- ランタイム依存（配布物に同梱）: (\d+) 件のみ/m);
+  const dev = text.match(DEV_DEPS_PATTERN);
+  const lock = text.match(LOCK_COUNTS_TOLERANT_PATTERN);
+  const runtime = text.match(RUNTIME_COUNT_PATTERN);
   return {
     devDeps: dev ? Number(dev[1]) : null,
     lockTotal: lock ? Number(lock[1]) : null,
@@ -65,13 +75,8 @@ export function parseCounts(text) {
 }
 
 export function parseFinalCheckDate(text) {
-  const m = text.match(/^- 最終確認日: (\d{4}-\d{2}-\d{2})/m);
+  const m = text.match(FINAL_CHECK_DATE_PATTERN);
   return m ? m[1] : null;
-}
-
-export function parseNoticesCount(text) {
-  const m = text.match(/automatically generated for (\d+) package\(s\)/);
-  return m ? Number(m[1]) : null;
 }
 
 export function parseDocNoticesCount(text) {
@@ -83,7 +88,7 @@ export function compareRuntime(docRows, pkgDeps, lockPackages) {
   const mismatches = [];
   for (const [name, required] of Object.entries(pkgDeps)) {
     const row = docRows.get(name);
-    const installed = lockPackages[`node_modules/${name}`]?.version ?? null;
+    const installed = lockVersion(lockPackages, name);
     if (!row) {
       mismatches.push(`${name}: missing row in DEPENDINGS.md runtime table`);
       continue;
@@ -137,7 +142,7 @@ export function decideDateFreshness(docDate, nowDate, docCommittedAtMs, lockComm
   if (lockCommittedAtMs !== null && docCommittedAtMs !== null && lockCommittedAtMs > docCommittedAtMs) {
     return { status: 'stale', reason: 'package-lock.json is newer than docs/DEPENDINGS.md' };
   }
-  const days = Math.floor((nowDate.getTime() - new Date(`${docDate}T00:00:00`).getTime()) / 86400000);
+  const days = daysSince(docDate, nowDate);
   if (days < 0) return { status: 'stale', reason: 'final check date is in the future' };
   if (days > STALE_FAIL_DAYS) return { status: 'stale', reason: `final check date is ${days} days old` };
   if (days > STALE_WARN_DAYS) return { status: 'warn', reason: `final check date is ${days} days old` };
@@ -185,16 +190,14 @@ function main() {
   const pkgDeps = pkg.dependencies ?? {};
   const actual = {
     devDeps: Object.keys(pkg.devDependencies ?? {}).length,
-    lockTotal: Object.keys(lockPackages).filter((k) => k !== '').length,
+    lockTotal: countLockPackages(lockPackages),
     noticesCount: parseNoticesCount(notices),
     docNoticesCount: parseDocNoticesCount(doc),
     runtimeCount: Object.keys(pkgDeps).length,
   };
 
   const runtimeMismatches = compareRuntime(parseRuntimeTable(doc), pkgDeps, lockPackages);
-  const devMismatches = compareDevVersions(parseDevGroupVersions(doc), lockPackages, {
-    'vitest-runner': '@stryker-mutator/vitest-runner',
-  });
+  const devMismatches = compareDevVersions(parseDevGroupVersions(doc), lockPackages, DOC_TO_LOCK_ALIAS);
   const countMismatches = compareCounts(parseCounts(doc), actual);
   const freshness = decideDateFreshness(parseFinalCheckDate(doc), new Date(), docCommittedAtMs, lockCommittedAtMs);
 
@@ -222,13 +225,13 @@ function main() {
   sectionBreak();
   if (freshness.status === 'fresh') pass('Final check date is fresh');
   else if (freshness.status === 'warn') warn(`DEPENDINGS.md is getting old: ${freshness.reason}`);
-  else fail(`DEPENDINGS.md is stale: ${freshness.reason ?? 'missing date'} — run \`npm run generate:dependings\``);
+  else fail(`DEPENDINGS.md is stale: ${freshness.reason ?? 'missing date'} — run \`npm run generate:dependings -- --confirm-date\``);
 
   sectionBreak();
   process.exit(summary() ? 0 : 1);
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (isDirectInvocation(import.meta.url)) {
   try {
     main();
   } catch (e) {

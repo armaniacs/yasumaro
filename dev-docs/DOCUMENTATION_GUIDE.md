@@ -58,5 +58,5 @@ When making architectural changes that affect documentation (e.g., TypeScript mi
 - [ ] **README.md**: Any file references or technical explanations
 - [ ] **Developer docs** (DESIGN_SPECIFICATIONS.md, ERROR_CODES.md, ADR/)
 - [ ] **User documentation** (Setup guides, feature guides)
-- [ ] **DEPENDINGS.md**: Run `npm run generate:dependings` after any `package.json` / `package-lock.json` change, then confirm `npm run check:dependings` passes before release. Edit §5 / §6 by hand; never overwrite the risk-acceptance records with the generator
+- [ ] **DEPENDINGS.md**: Run `npm run generate:dependings` after any `package.json` / `package-lock.json` change, then confirm `npm run check:dependings` passes before release. The generator keeps the existing 「最終確認日」 line (it no longer re-stamps it); pass `--confirm-date` only when you have actually verified the dependencies on that day. Edit §5 / §6 by hand; never overwrite the risk-acceptance records with the generator
 - [ ] **PRIVACY.md sync**: `public/PRIVACY.md` and `docs/PRIVACY.md` must stay identical. Whichever you edit, copy the same changes to the other file (Chrome Web Store reviews `public/PRIVACY.md`; a stale copy risks being flagged as inaccurate).
