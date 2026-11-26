@@ -95,7 +95,10 @@ describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the 
     // The base64 string rides untouched (single decode happens offscreen).
     expect(row.encodePayload({ type: 'restoreAppend', stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 4096, dataBase64: 'ChQ=' }))
       .toEqual({ stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db', offset: 4096, data: 'ChQ=' });
-    expect(row.decodeGateway({ success: true, written: 2 })).toEqual({ written: 2 });
+    // Scalar projection: the gateway's data IS the written count. Wrapping it
+    // in an object here would nest { written } into the SW reply and break
+    // the dashboard serviceDecode's requiredNonNegativeNumber(response.written).
+    expect(row.decodeGateway({ success: true, written: 2 })).toBe(2);
   });
 
   it('restoreCommit sends SQLITE_RESTORE_COMMIT and decodes to undefined', () => {
