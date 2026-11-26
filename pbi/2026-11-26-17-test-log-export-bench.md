@@ -75,7 +75,7 @@ grep -n "MAX_IMPORT_TEXT_BYTES\|MAX_EXPORT_ROWS" src/utils/limits.ts | head -3
 
 ### 落とし穴
 - exportJson は HMAC 署名 (crypto.subtle) を含む。Node 環境の webcrypto で動くことを確認 (f3 は sqlite-wasm が必要だが本 bench は不要の可能性が高い)
-- importFromJson はバッチ (200 行/メッセージ) で DB に書く — 本 bench では DB 依存を外し、検証 (validateImportRow) までを計測する等、測定対象を明示的に定義する (sqlite まで入れると wasm セットアップが必要になる。f3 パターンで可能だが重量)
+- importFromJson はバッチ (200 行/メッセージ) で DB に書く ― 本 bench では DB 依存を外し、検証 (validateImportRow) までを計測する等、測定対象を明示的に定義する (sqlite まで入れると wasm セットアップが必要になる。f3 パターンで可能だが重量)
 - 計測対象の定義が曖昧なまま実装しない (どの層まで測るかを bench 冒頭のコメントで明記し、報告にも記録)
 - git 操作禁止。実時間待ち禁止
 
