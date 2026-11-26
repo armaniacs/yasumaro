@@ -37,4 +37,12 @@ describe('micro bench definitions', () => {
       expect(ids.has(id)).toBe(true);
     }
   });
+
+  it('discovers the log export/import roundtrip benches (PBI 2026-11-26-17)', async () => {
+    const defs = await loadDefs();
+    const ids = new Set(defs.map((d) => d.def.id));
+    for (const id of ['f4', 'f4-ff']) {
+      expect(ids.has(id)).toBe(true);
+    }
+  });
 });

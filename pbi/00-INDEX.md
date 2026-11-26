@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-26 後続候補ラウンド followup-1126（3件） ― ✅ 3件完了・アーカイブ済み ✨機能追加 🧪テスト 🔧非機能追加
+
+holistic-1126 ラウンドで台帳送りした後続候補 3 件 (既知 a-d のうち着手可能なもの) を実装したラウンド。バッチ 1 (3 件並列、ファイル排他)。最終ゲート: test:perf 全緑 (json reporter)、check-docs-chars 0 違反、build 緑。台帳は [2026-11-26-15-backlog-followup-1126.md](2026-11-26-15-backlog-followup-1126.md) を参照。ブランチ: chore/holistic-followup-1126。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ~~16~~ | [2026-11-26-16-feat-local-markdown-100k.md](../dev-docs/archived/pbi/2026-11-26-16-feat-local-markdown-100k.md) | ✨機能追加 | 3.0 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。keyset ページングで 100k 件 (PBI 04 パターン踏襲、ASC cursor + dedup + 1ms stall 回避)。34/34 緑 |
+| ~~17~~ | [2026-11-26-17-test-log-export-bench.md](../dev-docs/archived/pbi/2026-11-26-17-test-log-export-bench.md) | 🧪テスト | 3.2 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。f4-log-export bench (軽量 100k 往復 130ms / 8.0MB、フルフィデリティ 50k 往復 200ms / 27.8MB、peak RSS advisory 出力)。次回上限引き上げの前提条件を常設化 |
+| ~~18~~ | [2026-11-26-18-refactor-dependings-common.md](../dev-docs/archived/pbi/2026-11-26-18-refactor-dependings-common.md) | 🔧非機能追加 | 1.2 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。dependingsCommon.mjs に共通知識集約、generate の「最終確認日」は --confirm-date でのみ更新 (再スタンプ停止)。byte-identical pin、isDirectInvocation 堅牢化 |
+
 ### 2026-11-26 holistic 改善ラウンド holistic-1126（6件） ― ✅ 6件完了・アーカイブ済み 🔧非機能追加
 
 PR #218 (fix/encrypted-backup-large-capacity) の大局的コードレビュー (plans/2026-11-26-1113-holistic-review-...md、4 観点: DRY/SoC/拡張性/堅牢性) から得た改善テーマ 5 件と既知 (b) の実装ラウンド。RICE 降順で 09 → 10 → 11 を実装後、12/13 は 14 (単発 restore 削除) を先行させて実装。バッチ境界: 型検査 / lint 緑、担当テスト緑。最終ゲート: `npm run validate` 全緑 (1,377 ファイル / 19,371 件) + ビルド緑。台帳は [2026-11-26-08-backlog-holistic-1126.md](2026-11-26-08-backlog-holistic-1126.md) を参照。ブランチ: refactor/holistic-1126。
