@@ -27,13 +27,13 @@ Scenario: payload coercion は runner 側の層ポリシーのまま
 ```
 
 ## 受け入れ基準
-- [ ] `SQLITE_MAINTAIN_WIRE_TABLE` の row に `offscreenRunner` 名が追加されている (層ポリシーは runner 側に残す)
-- [ ] `sqliteMessageHandlers.ts` に `MAINTAIN_RUNNERS` (record 形式) と `maintainMessageHandlers` (wire-table 派生 registry) が実装されている
-- [ ] `handlerRecord` から handleRestoreBegin/Append/Commit/Abort の手書き 4 連と登録 4 行が削除され、派生 registry が spread されている
-- [ ] `satisfies Record<SqliteMessageType, SqliteHandler>` の網羅 assert が維持されている
-- [ ] 各ハンドラの try/catch (handleRestoreAppend の base64 検査 `sqliteMessageHandlers.ts:227-232` など) は runner 内にそのまま移設されている (エラーハンドリングの維持)
-- [ ] 既存 restore staging テスト群が緑 (外部挙動不変)
-- [ ] `npm run validate` が通る
+- [x] `SQLITE_MAINTAIN_WIRE_TABLE` の row に `offscreenRunner` 名が追加されている (層ポリシーは runner 側に残す)
+- [x] `sqliteMessageHandlers.ts` に `MAINTAIN_RUNNERS` (record 形式) と `maintainMessageHandlers` (wire-table 派生 registry) が実装されている
+- [x] `handlerRecord` から handleRestoreBegin/Append/Commit/Abort の手書き 4 連と登録 4 行が削除され、派生 registry が spread されている
+- [x] `satisfies Record<SqliteMessageType, SqliteHandler>` の網羅 assert が維持されている
+- [x] 各ハンドラの try/catch (handleRestoreAppend の base64 検査 `sqliteMessageHandlers.ts:227-232` など) は runner 内にそのまま移設されている (エラーハンドリングの維持)
+- [x] 既存 restore staging テスト群が緑 (外部挙動不変)
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -77,8 +77,8 @@ grep -n "SQLITE_REPO_RUNNERS\|wireMessageHandlers\|archiveMessageHandlers" src/o
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要

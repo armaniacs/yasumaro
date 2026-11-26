@@ -29,12 +29,12 @@ Scenario: commit ハンドラは呼び出し順だけを保持する
 ```
 
 ## 受け入れ基準
-- [ ] `swapVerifiedStagingIntoLive` (engine に依存しない純粋 OPFS 手続き、restoreStaging.ts または新規 restoreSwap.ts) が切り出されている
-- [ ] handleStageRestoreCommit は validateFullBackupFile → swap → initSqlite の呼び出し順を保持し、swap コード本体がハンドラから消えている
-- [ ] WHY コメント (非アトミック性説明、restoreStagingHandlers.ts:152-156) は切り出し先に移設されている
-- [ ] hardening テストの swap 系 4 件 (非アトミック swap ロールバック等) が切り出し先の単体テストとして移設され、緑である
-- [ ] 既存 restoreStagingHandlers.test.ts 系が緑 (外部挙動不変)
-- [ ] `npm run validate` が通る
+- [x] `swapVerifiedStagingIntoLive` (engine に依存しない純粋 OPFS 手続き、restoreStaging.ts または新規 restoreSwap.ts) が切り出されている
+- [x] handleStageRestoreCommit は validateFullBackupFile → swap → initSqlite の呼び出し順を保持し、swap コード本体がハンドラから消えている
+- [x] WHY コメント (非アトミック性説明、restoreStagingHandlers.ts:152-156) は切り出し先に移設されている
+- [x] hardening テストの swap 系 4 件 (非アトミック swap ロールバック等) が切り出し先の単体テストとして移設され、緑である
+- [x] 既存 restoreStagingHandlers.test.ts 系が緑 (外部挙動不変)
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -78,8 +78,8 @@ grep -n "getEngine\|setEngine\|initSqlite" src/offscreen/opfsWorker.ts | head -8
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要

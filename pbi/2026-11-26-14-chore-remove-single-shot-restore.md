@@ -34,11 +34,11 @@ Scenario: 大文字小文字の wire 整合 assert は維持される
 ```
 
 ## 受け入れ基準
-- [ ] 削除範囲 (7 層) がすべて削除されている: sqliteWireTable 'restore' row、sqliteMessageHandlers handleRestore、opfsWorker RESTORE case、backupHandlers handleRestore 本体 (旧式 swap 含む)、payloadGuard SQLITE_RESTORE case (MAX_RESTORE_BYTES 100MB 定数も対象)、offscreenGateway maintain 転送行
-- [ ] grep で handleRestore / SQLITE_RESTORE の参照がテスト・ドキュメントを除きゼロ
-- [ ] offscreenGateway の two-way sync assert が通る
-- [ ] restore staging 系テスト (restoreStagingHandlers、restoreChunkedTransport、payloadGuard coverage) が緑
-- [ ] `npm run validate` が通る
+- [x] 削除範囲 (7 層) がすべて削除されている: sqliteWireTable 'restore' row、sqliteMessageHandlers handleRestore、opfsWorker RESTORE case、backupHandlers handleRestore 本体 (旧式 swap 含む)、payloadGuard SQLITE_RESTORE case (MAX_RESTORE_BYTES 100MB 定数も対象)、offscreenGateway maintain 転送行
+- [x] grep で handleRestore / SQLITE_RESTORE の参照がテスト・ドキュメントを除きゼロ
+- [x] offscreenGateway の two-way sync assert が通る
+- [x] restore staging 系テスト (restoreStagingHandlers、restoreChunkedTransport、payloadGuard coverage) が緑
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -85,8 +85,8 @@ grep -rn "'restore'" src/messaging/sqliteWireTable.ts src/offscreen/payloadGuard
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
