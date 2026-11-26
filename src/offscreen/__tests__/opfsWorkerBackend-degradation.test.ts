@@ -128,14 +128,14 @@ describe('OpfsWorkerBackend — consecutive-failure counter', () => {
     });
   });
 
-  it('counts the restore and health misses too, though they report another reason', async () => {
+  it('counts the health miss toward the streak too, though it reports another reason', async () => {
     const onDegraded = vi.fn();
     const { backend } = makeBackend(() => null, onDegraded);
 
-    // Their own wording must not also exempt them from the streak: a worker
+    // Its own wording must not exempt it from the streak: a worker
     // that cannot answer a health probe is the same dead worker.
     await backend.healthCheck();
-    await backend.restoreDb(new Uint8Array([1]));
+    await backend.healthCheck();
     await backend.healthCheck();
 
     expect(onDegraded).toHaveBeenCalledOnce();
@@ -202,15 +202,11 @@ describe('OpfsWorkerBackend — one unavailable-reason constant', () => {
     });
   });
 
-  // These two answer with a different reason on purpose — a failed restore and a
-  // failed health probe are their own diagnoses, not "the worker is gone".
-  it('keeps the restore and health reasons separate', async () => {
+  // The health probe answers with its own reason on purpose — a failed
+  // health probe is its own diagnosis, not "the worker is gone".
+  it('keeps the health reason separate', async () => {
     const { backend } = makeBackend(() => null);
 
-    await expect(backend.restoreDb(new Uint8Array([1]))).resolves.toEqual({
-      success: false,
-      error: 'Binary restore failed',
-    });
     await expect(backend.healthCheck()).resolves.toEqual({
       success: false,
       error: 'Health check failed',

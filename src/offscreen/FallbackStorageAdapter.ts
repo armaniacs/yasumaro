@@ -1,6 +1,6 @@
 // src/offscreen/FallbackStorageAdapter.ts
-import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError, RestorePrepareResult, RestoreAppendResult } from './StorageBackend.js';
-import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR, RESTORE_STAGING_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
 import { buildExportEnvelope } from './exportEnvelope.js';
 import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
@@ -70,26 +70,6 @@ export class FallbackStorageAdapter implements StorageBackend {
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
     return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
-  }
-
-  async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
-  }
-
-  async restorePrepareIncoming(): Promise<BackendOrError<RestorePrepareResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreAppend(): Promise<BackendOrError<RestoreAppendResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreCommit(): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreAbort(): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {

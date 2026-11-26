@@ -27,7 +27,6 @@ export type SqliteMessage =
   | { type: 'SQLITE_STATUS'; payload?: never; traceId?: string }
   | { type: 'SQLITE_CLEAR_ALL'; payload?: never; traceId?: string }
   | { type: 'SQLITE_BACKUP'; payload?: never; traceId?: string }
-  | { type: 'SQLITE_RESTORE'; payload: { data: number[] }; traceId?: string }
   | { type: 'SQLITE_RESTORE_BEGIN'; payload: { totalBytes: number; totalChunks: number }; traceId?: string }
   | { type: 'SQLITE_RESTORE_APPEND'; payload: { stagingName: string; offset: number; data: string }; traceId?: string }
   | { type: 'SQLITE_RESTORE_COMMIT'; payload: { stagingName: string; totalBytes: number }; traceId?: string }
@@ -74,7 +73,6 @@ export const SQLITE_MESSAGE_TYPES = [
   'SQLITE_STATUS',
   'SQLITE_CLEAR_ALL',
   'SQLITE_BACKUP',
-  'SQLITE_RESTORE',
   'SQLITE_RESTORE_BEGIN',
   'SQLITE_RESTORE_APPEND',
   'SQLITE_RESTORE_COMMIT',
@@ -150,7 +148,7 @@ export type OffscreenQueryResponse = {
   total: number;
 } | OffscreenFailure;
 
-/** UPDATE / DELETE / CLEAR_ALL / RESTORE: success with no payload. */
+/** UPDATE / DELETE / CLEAR_ALL: success with no payload. */
 export type OffscreenWriteResponse = { success: true } | OffscreenFailure;
 
 /** RESTORE_BEGIN: the worker-issued staging name for the incoming DB. */

@@ -54,7 +54,6 @@ vi.mock('../auditLogRepo.js', () => ({
 vi.mock('../dbMaintenance.js', () => ({
   sqliteHealthCheck: vi.fn(),
   backupDb: vi.fn(),
-  restoreDb: vi.fn(),
   purgeOldRecords: vi.fn(),
   purgeContent: vi.fn(),
 }));

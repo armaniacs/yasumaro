@@ -35,7 +35,6 @@ vi.mock('../recordsRepo.js', () => ({
 vi.mock('../dbMaintenance.js', () => ({
   sqliteHealthCheck: vi.fn().mockResolvedValue(true),
   backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([9]) }),
-  restoreDb: vi.fn().mockResolvedValue({ success: true }),
   purgeOldRecords: dbMaintenanceMock.purgeOldRecords,
   purgeContent: dbMaintenanceMock.purgeContent,
 }));

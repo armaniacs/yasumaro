@@ -41,7 +41,6 @@ vi.mock('../storageFallback.js', () => ({
     async purgeContent() { return {}; }
     async serialize() { return { success: false, error: 'no serialization' }; }
     async backupDb() { return { success: false, error: 'no backup' }; }
-    async restoreDb() { return { success: false, error: 'no restore' }; }
     async insertAuditLog() { return { success: true, id: 1 }; }
     async queryAuditLog() { return { rows: [], total: 0 }; }
   },

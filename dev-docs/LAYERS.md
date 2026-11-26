@@ -40,6 +40,7 @@ src/utils/urlHash.ts
 src/utils/backoff.ts
 src/utils/httpFailureMessages.ts
 src/utils/summaryFallback.ts
+src/utils/logImportContract.ts ― import行契約の単一実装 (PBI 2026-11-26-09)。messaging と dashboard が同一関数を参照
 src/utils/degradedSummary.ts ― コストawareカスケードの縮退要約生成（PBI 2026-10-23-03）。純粋フォーマッタとして Layer 0
 src/utils/failureTaxonomy.ts
 src/utils/vfsCapabilities.ts

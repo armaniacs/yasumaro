@@ -25,6 +25,7 @@ import {
   SPLIT_BACKUP_FORMAT_VERSION,
   SPLIT_BACKUP_KIND,
   SplitBackupError,
+  checkSplitBackupShape,
   splitTooLargeBudgetFields,
   type SplitBackupContainer,
 } from './encryptedBackupSplitCodec.js';
@@ -92,14 +93,19 @@ export function isSplitPartFile(data: unknown): data is SplitPartFile {
 /**
  * 期待パート番号 0..total-1 のうち存在しない番号を昇順で返す。
  * 重複や範囲外はここでは無視する（順序誤りとして別途報告する）。
+ * 形状ルール本体は codec の checkSplitBackupShape に集約（本 PBI）。本関数は
+ * 「無視」の旧契約を保つため、範囲外と重複を除いてから集約関数に委譲する。
  */
 export function findMissingPartIndices(presentIndices: number[], total: number): number[] {
-  const present = new Set(presentIndices.filter((i) => Number.isInteger(i) && i >= 0 && i < total));
-  const missing: number[] = [];
-  for (let i = 0; i < total; i++) {
-    if (!present.has(i)) missing.push(i);
-  }
-  return missing;
+  const inRangeUnique = [
+    ...new Set(presentIndices.filter((i) => Number.isInteger(i) && i >= 0 && i < total)),
+  ];
+  const shape = checkSplitBackupShape({ declaredPartCount: total, partIndices: inRangeUnique });
+  if (shape?.problem !== 'missing-parts') return [];
+  return shape.detail
+    .split(', ')
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value));
 }
 
 export interface SplitDownloadNames {
@@ -342,11 +348,14 @@ export function initEncryptedBackupPanel(): void {
         parsed.push(JSON.parse(await file.text()) as unknown);
         const item = parsed[position]!;
         if (isSplitManifestFile(item)) {
-          if (item.total > MAX_SPLIT_PART_COUNT) {
+          // 形状ルールは codec の checkSplitBackupShape に集約 (本 PBI): ここ
+          // では文言写像だけを行う。envelope 長検査は別レイヤーのため現状維持。
+          const shapeProblem = checkSplitBackupShape({ declaredPartCount: item.total });
+          if (shapeProblem) {
             setStatus(
               getMessageWithSubstitutions(
                 'encryptedBackupSplitTooLarge',
-                { detail: `declares ${item.total} parts, above the cap of ${MAX_SPLIT_PART_COUNT}` },
+                { detail: shapeProblem.detail },
                 'Split backup exceeds the size limit: {detail}',
               ),
               true,
@@ -383,11 +392,12 @@ export function initEncryptedBackupPanel(): void {
             break;
           }
           partFilesSeen += 1;
-          if (partFilesSeen > MAX_SPLIT_PART_COUNT) {
+          const shapeProblem = checkSplitBackupShape({ selectedPartCount: partFilesSeen });
+          if (shapeProblem) {
             setStatus(
               getMessageWithSubstitutions(
                 'encryptedBackupSplitTooLarge',
-                { detail: `selects more part files than the cap of ${MAX_SPLIT_PART_COUNT}` },
+                { detail: shapeProblem.detail },
                 'Split backup exceeds the size limit: {detail}',
               ),
               true,
@@ -439,11 +449,12 @@ export function initEncryptedBackupPanel(): void {
       // 単一ファイルの分割コンテナ（PBI01 形式そのまま）を直接受ける退路。
       if (parsed.length === 1 && isEncryptedSplitBackupFile(parsed[0])) {
         const container = parsed[0];
-        if (container.parts.length > MAX_SPLIT_PART_COUNT) {
+        const shapeProblem = checkSplitBackupShape({ declaredPartCount: container.parts.length });
+        if (shapeProblem) {
           setStatus(
             getMessageWithSubstitutions(
               'encryptedBackupSplitTooLarge',
-              { detail: `declares ${container.parts.length} parts, above the cap of ${MAX_SPLIT_PART_COUNT}` },
+              { detail: shapeProblem.detail },
               'Split backup exceeds the size limit: {detail}',
             ),
             true,
@@ -505,96 +516,48 @@ export function initEncryptedBackupPanel(): void {
         resetInput();
         return;
       }
-      if (manifestFile.total > MAX_SPLIT_PART_COUNT) {
-        setStatus(
-          getMessageWithSubstitutions(
-            'encryptedBackupSplitTooLarge',
-            { detail: `declares ${manifestFile.total} parts, above the cap of ${MAX_SPLIT_PART_COUNT}` },
-            'Split backup exceeds the size limit: {detail}',
-          ),
-          true,
-        );
-        resetInput();
-        return;
-      }
-      if (!isEnvelopeWithinGenericCap(manifestFile.manifest)) {
-        setStatus(
-          getMessageWithSubstitutions(
-            'encryptedBackupSplitTooLarge',
-            { detail: 'manifest envelope exceeds the generic length limit' },
-            'Split backup exceeds the size limit: {detail}',
-          ),
-          true,
-        );
-        resetInput();
-        return;
-      }
-      // 順序誤り（total 不一致・範囲外・重複）は不足より先に報告し、
-      // 原因特定できる文言に分ける。
-      for (const [position, partFile] of parts.entries()) {
-        if (partFile.total !== manifestFile.total) {
+      // 形状ルール (cap、total 整合、範囲外、重複、不足、envelope cap) は
+      // codec の checkSplitBackupShape に集約 (本 PBI)。判定順序と文言 detail
+      // は現行どおり。順序誤り（total 不一致・範囲外・重複）は不足より先に
+      // 報告され、原因特定できる文言に分かれる。
+      const shapeProblem = checkSplitBackupShape({
+        declaredPartCount: manifestFile.total,
+        partTotals: parts.map((p) => p.total),
+        partIndices: parts.map((p) => p.index),
+        envelopesWithinGenericCap: [
+          isEnvelopeWithinGenericCap(manifestFile.manifest),
+          ...parts.map((p) => isEnvelopeWithinGenericCap(p.part)),
+        ],
+      });
+      if (shapeProblem) {
+        if (shapeProblem.problem === 'missing-parts') {
+          setStatus(
+            getMessageWithSubstitutions(
+              'encryptedBackupSplitMissingParts',
+              { missing: shapeProblem.detail, have: parts.length, total: manifestFile.total },
+              'Split backup is missing part(s) {missing} ({have} of {total} selected). Select all part files before retrying.',
+            ),
+            true,
+          );
+        } else if (shapeProblem.problem === 'total-mismatch' || shapeProblem.problem === 'out-of-range-index' || shapeProblem.problem === 'duplicate-index') {
           setStatus(
             getMessageWithSubstitutions(
               'encryptedBackupSplitOrderError',
-              { detail: `part file at position ${position} declares total ${partFile.total}, manifest declares ${manifestFile.total}` },
+              { detail: shapeProblem.detail },
               'Split backup parts are inconsistent: {detail}. Re-select the manifest and all part files.',
             ),
             true,
           );
-          resetInput();
-          return;
-        }
-        if (partFile.index < 0 || partFile.index >= manifestFile.total) {
-          setStatus(
-            getMessageWithSubstitutions(
-              'encryptedBackupSplitOrderError',
-              { detail: `part file at position ${position} names out-of-range index ${partFile.index}` },
-              'Split backup parts are inconsistent: {detail}. Re-select the manifest and all part files.',
-            ),
-            true,
-          );
-          resetInput();
-          return;
-        }
-        if (!isEnvelopeWithinGenericCap(partFile.part)) {
+        } else {
           setStatus(
             getMessageWithSubstitutions(
               'encryptedBackupSplitTooLarge',
-              { detail: `part file at position ${position} exceeds the generic length limit` },
+              { detail: shapeProblem.detail },
               'Split backup exceeds the size limit: {detail}',
             ),
             true,
           );
-          resetInput();
-          return;
         }
-      }
-      const seen = new Set<number>();
-      for (const partFile of parts) {
-        if (seen.has(partFile.index)) {
-          setStatus(
-            getMessageWithSubstitutions(
-              'encryptedBackupSplitOrderError',
-              { detail: `part index ${partFile.index} appears more than once` },
-              'Split backup parts are inconsistent: {detail}. Re-select the manifest and all part files.',
-            ),
-            true,
-          );
-          resetInput();
-          return;
-        }
-        seen.add(partFile.index);
-      }
-      const missing = findMissingPartIndices(parts.map((p) => p.index), manifestFile.total);
-      if (missing.length > 0) {
-        setStatus(
-          getMessageWithSubstitutions(
-            'encryptedBackupSplitMissingParts',
-            { missing: missing.join(', '), have: parts.length, total: manifestFile.total },
-            'Split backup is missing part(s) {missing} ({have} of {total} selected). Select all part files before retrying.',
-          ),
-          true,
-        );
         resetInput();
         return;
       }

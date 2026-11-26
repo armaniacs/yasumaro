@@ -47,7 +47,6 @@ const EXPECTED_RETRY_UNSAFE = [
   'SQLITE_INSERT_BATCH',
   'SQLITE_TOGGLE_STAR',
   'SQLITE_AUDIT_LOG_INSERT',
-  'SQLITE_RESTORE',
   'SQLITE_RESTORE_BEGIN',
   'SQLITE_RESTORE_COMMIT',
   'SQLITE_PURGE',
@@ -63,10 +62,10 @@ const EXPECTED_RETRY_UNSAFE = [
 ] as const;
 
 describe('messaging transport retry policy', () => {
-  it('classifies all 37 wire operations without an unconfigured policy', () => {
-    expect(routes).toHaveLength(37);
+  it('classifies all 36 wire operations without an unconfigured policy', () => {
+    expect(routes).toHaveLength(36);
     expect(routes.filter((route) => route.retryPolicy === RETRY_SAFE)).toHaveLength(20);
-    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(17);
+    expect(routes.filter((route) => route.retryPolicy === RETRY_UNSAFE)).toHaveLength(16);
     expect(routes.every((route) => route.retryPolicy !== RETRY_UNCONFIGURED)).toBe(true);
     for (const route of routes) {
       expect(route.retryPolicy).toBe(getTransportRetryPolicy(route.messageType));
@@ -75,7 +74,7 @@ describe('messaging transport retry policy', () => {
 
   it('matches the explicit safe and unsafe message contract', () => {
     expect(EXPECTED_RETRY_SAFE).toHaveLength(19);
-    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(17);
+    expect(EXPECTED_RETRY_UNSAFE).toHaveLength(16);
     for (const type of EXPECTED_RETRY_SAFE) {
       expect(getTransportRetryPolicy(type)).toBe(RETRY_SAFE);
     }
@@ -103,7 +102,6 @@ describe('messaging transport retry policy', () => {
   it('marks audit log insertion and non-idempotent lifecycle operations retry-unsafe', () => {
     expect(getTransportRetryPolicy('SQLITE_AUDIT_LOG_INSERT')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_TOGGLE_STAR')).toBe(RETRY_UNSAFE);
-    expect(getTransportRetryPolicy('SQLITE_RESTORE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('CONTENT_PURGE')).toBe(RETRY_UNSAFE);
     expect(getTransportRetryPolicy('SQLITE_AUDIT_LOG_PURGE')).toBe(RETRY_UNSAFE);

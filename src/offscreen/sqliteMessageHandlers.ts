@@ -20,7 +20,6 @@ import {
 import {
   sqliteHealthCheck,
   backupDb as sqliteBackupDb,
-  restoreDb as sqliteRestoreDb,
   restorePrepareIncoming as sqliteRestorePrepareIncoming,
   restoreAppend as sqliteRestoreAppend,
   restoreCommit as sqliteRestoreCommit,
@@ -30,7 +29,14 @@ import {
 } from './dbMaintenance.js';
 import type { ArchiveDescriptor, ArchiveOpType } from '../messaging/archiveWireTable.js';
 import { ARCHIVE_DESCRIPTORS, ARCHIVE_WIRE_TABLE, pickProjectedFields } from '../messaging/archiveWireTable.js';
-import { SQLITE_WIRE_TABLE, type SqliteWireDescriptor, type SqliteWireOp } from '../messaging/sqliteWireTable.js';
+import {
+  SQLITE_MAINTAIN_WIRE_TABLE,
+  SQLITE_WIRE_TABLE,
+  type SqliteMaintainWireDescriptor,
+  type SqliteMaintainWireMessageType,
+  type SqliteWireDescriptor,
+  type SqliteWireOp,
+} from '../messaging/sqliteWireTable.js';
 import {
   insertAuditLog as sqliteInsertAuditLog,
   queryAuditLog as sqliteQueryAuditLog,
@@ -202,48 +208,6 @@ async function handleBackup(_msg: SqliteMessage, sendResponse: (r: unknown) => v
   } else {
     sendResponse(result);
   }
-}
-
-async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const rawData = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE' }>).payload.data || [];
-  const data = new Uint8Array(rawData);
-  const result = await sqliteRestoreDb(data);
-  sendResponse(result.success ? { success: true } : { success: false, error: result.error });
-}
-
-// Chunked restore staging handlers (dashboard restoreDb session). The base64
-// chunk stays text through the SW hop and is decoded once here — the worker
-// receives a real Uint8Array over structured clone and writes it at the
-// declared byte offset.
-async function handleRestoreBegin(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_BEGIN' }>).payload;
-  const result = await sqliteRestorePrepareIncoming(Number(payload.totalBytes), Number(payload.totalChunks));
-  sendResponse(result);
-}
-
-async function handleRestoreAppend(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_APPEND' }>).payload;
-  let data: Uint8Array;
-  try {
-    data = base64ToBytes(String(payload.data ?? ''));
-  } catch (error) {
-    sendResponse({ success: false, error: `Restore chunk is not valid base64: ${errorMessage(error)}` });
-    return;
-  }
-  const result = await sqliteRestoreAppend(String(payload.stagingName), Number(payload.offset), data);
-  sendResponse(result);
-}
-
-async function handleRestoreCommit(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_COMMIT' }>).payload;
-  const result = await sqliteRestoreCommit(String(payload.stagingName), Number(payload.totalBytes));
-  sendResponse(result);
-}
-
-async function handleRestoreAbort(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_ABORT' }>).payload;
-  const result = await sqliteRestoreAbort(String(payload.stagingName));
-  sendResponse(result);
 }
 
 /**
@@ -493,6 +457,72 @@ export const archiveMessageHandlers = Object.fromEntries(
 ) as Record<(typeof ARCHIVE_WIRE_TABLE)[number]['messageType'], SqliteHandler>;
 
 /**
+ * Wire-table-derived maintain registry (PBI 2026-11-26-13).
+ *
+ * The 11 maintain handlers used to be hand-written in handlerRecord below,
+ * duplicating SQLITE_MAINTAIN_WIRE_TABLE's messageType⇔op pairing op-for-op —
+ * the same drift class wireMessageHandlers and archiveMessageHandlers already
+ * folded for their groups. Each entry is now built from its table row: the
+ * row owns the message type and names its runner, and MAINTAIN_RUNNERS
+ * resolves the names. Adding a maintain op is one wire-table row plus one
+ * runner entry — the runner record's key union comes from the rows, so a
+ * runner-less row or a stale runner fails to compile.
+ */
+type SqliteMaintainRunnerName = SqliteMaintainWireDescriptor['offscreenRunner'];
+
+/**
+ * The layer policy the neutral wire table must not import: numeric payload
+ * coercion, purge planning, and the restore chunk's base64 decode. The wire
+ * row's decodeGateway only sees already-decoded gateway values, so the
+ * invalid-base64 fail-closed response stays runner-side.
+ *
+ * Chunked restore staging runners (dashboard restoreDb session): the base64
+ * chunk stays text through the SW hop and is decoded once here — the worker
+ * receives a real Uint8Array over structured clone and writes it at the
+ * declared byte offset.
+ */
+export const MAINTAIN_RUNNERS: Record<SqliteMaintainRunnerName, SqliteHandler> = {
+  init: handleInit,
+  backup: handleBackup,
+  restorePrepareIncoming: async (msg, sendResponse) => {
+    const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_BEGIN' }>).payload;
+    const result = await sqliteRestorePrepareIncoming(Number(payload.totalBytes), Number(payload.totalChunks));
+    sendResponse(result);
+  },
+  restoreAppend: async (msg, sendResponse) => {
+    const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_APPEND' }>).payload;
+    let data: Uint8Array;
+    try {
+      data = base64ToBytes(String(payload.data ?? ''));
+    } catch (error) {
+      sendResponse({ success: false, error: `Restore chunk is not valid base64: ${errorMessage(error)}` });
+      return;
+    }
+    const result = await sqliteRestoreAppend(String(payload.stagingName), Number(payload.offset), data);
+    sendResponse(result);
+  },
+  restoreCommit: async (msg, sendResponse) => {
+    const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_COMMIT' }>).payload;
+    const result = await sqliteRestoreCommit(String(payload.stagingName), Number(payload.totalBytes));
+    sendResponse(result);
+  },
+  restoreAbort: async (msg, sendResponse) => {
+    const payload = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE_ABORT' }>).payload;
+    const result = await sqliteRestoreAbort(String(payload.stagingName));
+    sendResponse(result);
+  },
+  clearAll: handleClearAll,
+  purgeOldRecords: handlePurge,
+  purgeContent: handleContentPurge,
+  purgeAuditLog: handleAuditLogPurge,
+  healthCheck: handleHealthCheck,
+};
+
+export const maintainMessageHandlers = Object.fromEntries(
+  SQLITE_MAINTAIN_WIRE_TABLE.map((row) => [row.messageType, MAINTAIN_RUNNERS[row.offscreenRunner]]),
+) as Record<SqliteMaintainWireMessageType, SqliteHandler>;
+
+/**
  * Static registry object — `satisfies` guarantees exhaustiveness at compile time.
  * Adding a new SqliteMessage variant without a handler is a type error.
  *
@@ -501,27 +531,21 @@ export const archiveMessageHandlers = Object.fromEntries(
  * are now spread from the BY_MESSAGE-derived map — adding an op is one wire
  * row, and a stale hand entry cannot shadow the table.
  *
- * Archive entries come from `archiveMessageHandlers` below (PBI 2026-10-16-08):
+ * Maintain entries come from `maintainMessageHandlers` (PBI 2026-11-26-13):
+ * the 11 hand-written lambdas duplicated the maintain wire table op-for-op,
+ * so they are now spread from the BY_MESSAGE-derived map — adding an op is
+ * one wire row plus one runner, and a stale hand entry cannot shadow the table.
+ *
+ * Archive entries come from `archiveMessageHandlers` (PBI 2026-10-16-08):
  * the 14 hand-written lambdas duplicated the wire table op-for-op, so they
  * are now spread from the BY_MESSAGE-derived map — adding an op is one table
  * row, and a stale hand entry cannot shadow the table.
  */
 const handlerRecord = {
-  SQLITE_HEALTH_CHECK: handleHealthCheck,
-  SQLITE_INIT: handleInit,
-  ...wireMessageHandlers,
-  SQLITE_AUDIT_LOG_PURGE: handleAuditLogPurge,
   SQLITE_SEARCH: handleSearch,
   SQLITE_STATUS: handleStatus,
-  SQLITE_CLEAR_ALL: handleClearAll,
-  SQLITE_BACKUP: handleBackup,
-  SQLITE_RESTORE: handleRestore,
-  SQLITE_RESTORE_BEGIN: handleRestoreBegin,
-  SQLITE_RESTORE_APPEND: handleRestoreAppend,
-  SQLITE_RESTORE_COMMIT: handleRestoreCommit,
-  SQLITE_RESTORE_ABORT: handleRestoreAbort,
-  SQLITE_PURGE: handlePurge,
-  CONTENT_PURGE: handleContentPurge,
+  ...maintainMessageHandlers,
+  ...wireMessageHandlers,
   ...archiveMessageHandlers,
 } satisfies Record<SqliteMessageType, SqliteHandler>;
 

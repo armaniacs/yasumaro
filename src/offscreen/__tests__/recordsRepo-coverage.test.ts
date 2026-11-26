@@ -28,7 +28,6 @@ const mockBackend = vi.hoisted(() => ({
   purgeOldRecords: vi.fn().mockResolvedValue({ success: true, purged: 0 }),
   purgeContent: vi.fn().mockResolvedValue({ success: true, purged: 0 }),
   backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array() }),
-  restoreDb: vi.fn().mockResolvedValue({ success: true }),
   healthCheck: vi.fn().mockResolvedValue({ success: true }),
 }));
 
@@ -74,7 +73,7 @@ vi.mock('../../utils/logger/api.js', async () =>
   }),
 );
 
-import { query, insert, insertBatch, update, hardDelete, toggleStar, getCount, getStatus, clearAll, serialize, insertAuditLog, queryAuditLog, purgeAuditLog, purgeOldRecords, purgeContent, backupDb, restoreDb, sqliteHealthCheck } from '../recordsRepo.js';
+import { query, insert, insertBatch, update, hardDelete, toggleStar, getCount, getStatus, clearAll, serialize, insertAuditLog, queryAuditLog, purgeAuditLog, purgeOldRecords, purgeContent, backupDb, sqliteHealthCheck } from '../recordsRepo.js';
 import { FTS_QUERY_MAX_LENGTH } from '../schema.js';
 
 describe('recordsRepo — coverage 90% (PBI 10)', () => {
@@ -87,7 +86,6 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
     mockBackend.purgeOldRecords.mockResolvedValue({ success: true, purged: 0 });
     mockBackend.purgeContent.mockResolvedValue({ success: true, purged: 0 });
     mockBackend.backupDb.mockResolvedValue({ success: true, data: new Uint8Array() });
-    mockBackend.restoreDb.mockResolvedValue({ success: true });
     mockBackend.healthCheck.mockResolvedValue({ success: true });
     engineMock.getBackend.mockResolvedValue(mockBackend as never);
     engineMock.tryOpfsProxy.mockResolvedValue(null);
@@ -376,13 +374,6 @@ describe('recordsRepo — coverage 90% (PBI 10)', () => {
       const result = await backupDb();
       expect(mockBackend.backupDb).toHaveBeenCalled();
       expect(result).toEqual({ success: true, data });
-    });
-
-    it('delegates restoreDb with the payload', async () => {
-      const data = new Uint8Array([9]);
-      const result = await restoreDb(data);
-      expect(mockBackend.restoreDb).toHaveBeenCalledWith(data);
-      expect(result).toEqual({ success: true });
     });
 
     it('sqliteHealthCheck maps backend success to boolean', async () => {

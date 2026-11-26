@@ -67,7 +67,10 @@ describe('messaging/wireLambdaFactories: shared references', () => {
     expect(maintain.get('init')?.encodePayload).toBe(emptyPayload);
     expect(maintain.get('init')?.decodeGateway).toBe(trueDecode);
     expect(maintain.get('healthCheck')?.decodeGateway).toBe(trueDecode);
-    expect(maintain.get('restore')?.decodeGateway).toBe(voidDecode);
+    // The single-shot 'restore' row is gone (PBI 2026-11-26-14); the staging
+    // session's void rows keep sharing the same decoder reference.
+    expect(maintain.get('restoreCommit')?.decodeGateway).toBe(voidDecode);
+    expect(maintain.get('restoreAbort')?.decodeGateway).toBe(voidDecode);
   });
 
   it('archive rows carry no validate column (PBI 2026-10-16-02: spec table is the only truth)', () => {

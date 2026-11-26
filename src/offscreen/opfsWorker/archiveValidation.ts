@@ -6,9 +6,6 @@
  * Threat model: the archive file is untrusted user input — an attacker can
  * craft any SQLite file. Validation is therefore an ALLOWLIST over
  * `sqlite_master` (fail-closed on unknown object types), not a blocklist.
- *
- * NOTE: `handleRestore`'s trigger-count check (backupHandlers.ts) is NOT a
- * sufficient validation — it only counts triggers. Do not copy it as-is.
  */
 
 import type { SqliteEngine, SqliteRow, SqliteValue } from '../sqliteEngine.js';

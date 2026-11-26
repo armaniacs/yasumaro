@@ -25,7 +25,7 @@ import { pickDefined } from '../utils/objectUtils.js';
 import type { BrowsingLogRecord } from '../utils/sqlite-types.js';
 import { handleInsert, handleQuery, handleUpdate, handleHardDelete, handleToggleStar, handleGetCount, handleCountAllRows, handleInsertBatch } from './opfsWorker/crudHandlers.js';
 import { handleSearch as handleSearchImpl, handleSearchFts as handleSearchFtsImpl, handleSearchLike as handleSearchLikeImpl } from './opfsWorker/searchHandlers.js';
-import { handleBackup, handleSerialize, handleRestore as handleRestoreImpl } from './opfsWorker/backupHandlers.js';
+import { handleBackup, handleSerialize } from './opfsWorker/backupHandlers.js';
 import {
   handleStageRestoreBegin,
   handleStageRestoreAppend,
@@ -90,19 +90,9 @@ export async function handleSearchLike(
 }
 
 /**
- * Thin wrapper around backupHandlers.handleRestore that closes over the
- * module-level engine/initSqlite state. Tests import this function with the
- * single-argument signature (data only), so we keep this adapter here rather
- * than re-exporting the 4-argument version.
- */
-export async function handleRestore(data: Uint8Array): Promise<{ restored: true }> {
-  return handleRestoreImpl(data, () => engine, (e) => { engine = e; }, initSqlite);
-}
-
-/**
  * Thin wrapper around restoreStagingHandlers.handleStageRestoreCommit that
- * closes over the module-level engine/initSqlite state (same seam as the
- * handleRestore adapter above) so the commit can swap the live engine.
+ * closes over the module-level engine/initSqlite state so the commit can
+ * swap the live engine.
  */
 export async function handleStageRestoreCommit(
   payload: import('./opfsWorker/types.js').StageRestoreCommitPayload
@@ -283,14 +273,6 @@ export async function handleRequest(req: WorkerRequestMessage): Promise<WorkerRe
       }
       case 'BACKUP': {
         result = await handleBackup(handlerCtx);
-        break;
-      }
-      case 'RESTORE': {
-        const restorePayload = payload as { data: number[] | Uint8Array };
-        const bytes = restorePayload.data instanceof Uint8Array
-          ? restorePayload.data
-          : new Uint8Array(restorePayload.data);
-        result = await handleRestore(bytes);
         break;
       }
       case 'STAGE_RESTORE_BEGIN': {

@@ -142,7 +142,6 @@ export type QueryOp =
 export type MaintainOp =
   | { type: 'init' }
   | { type: 'backup' }
-  | { type: 'restore'; data: Uint8Array }
   | { type: 'clearAll' }
   | { type: 'restorePrepareIncoming'; totalBytes: number; totalChunks: number }
   | { type: 'restoreAppend'; stagingName: string; offset: number; dataBase64: string }
@@ -184,7 +183,7 @@ export interface SqliteRpcClient {
 
   maintain(op: Extract<MaintainOp, { type: 'init' }>): Promise<SqliteRpcResult<boolean>>;
   maintain(op: Extract<MaintainOp, { type: 'backup' }>): Promise<SqliteRpcResult<Uint8Array>>;
-  maintain(op: Extract<MaintainOp, { type: 'restore' } | Extract<MaintainOp, { type: 'clearAll' }>>): Promise<SqliteRpcResult<void>>;
+  maintain(op: Extract<MaintainOp, { type: 'clearAll' }>): Promise<SqliteRpcResult<void>>;
   maintain(op: Extract<MaintainOp, { type: 'restorePrepareIncoming' }>): Promise<SqliteRpcResult<string>>;
   maintain(op: Extract<MaintainOp, { type: 'restoreAppend' }>): Promise<SqliteRpcResult<number>>;
   maintain(op: Extract<MaintainOp, { type: 'restoreCommit' }> | Extract<MaintainOp, { type: 'restoreAbort' }>): Promise<SqliteRpcResult<void>>;

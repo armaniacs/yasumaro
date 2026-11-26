@@ -103,7 +103,7 @@ describe('validateRow (via importFromJson)', () => {
   });
 });
 
-describe('validateImportRowWithOptions (strict canonical / lenient background parity)', () => {
+describe('validateImportRowWithOptions (strict dashboard gate / lenient = layer-0 contract)', () => {
   it('exposes a shared validator with a strict option (canonical)', async () => {
     const mod = await import('../importLogsService.js');
     expect(typeof (mod as Record<string, unknown>).validateImportRowWithOptions).toBe('function');
@@ -128,9 +128,9 @@ describe('validateImportRowWithOptions (strict canonical / lenient background pa
     }
   });
 
-  it('strict rejects future/over-long rows while lenient accepts them (background parity)', async () => {
+  it('strict rejects future/over-long rows while the layer-0 lenient path accepts them', async () => {
     const { validateImportRowWithOptions } = await import('../importLogsService.js');
-    const { validateImportRow } = await import('../../messaging/validators.js');
+    const { validateImportRow } = await import('../../utils/logImportContract.js');
     const future = Date.now() + 5 * 24 * 3600 * 1000;
     const divergent: unknown[] = [
       { url: 'https://a.test', created_at: future },
@@ -141,14 +141,14 @@ describe('validateImportRowWithOptions (strict canonical / lenient background pa
     ];
     for (const row of divergent) {
       expect(validateImportRowWithOptions(row, { strict: true })).not.toBeNull();
-      expect(validateImportRowWithOptions(row, { strict: false })).toBeNull();
+      expect(validateImportRowWithOptions(row, { strict: false })).toBe(validateImportRow(row));
       expect(validateImportRow(row)).toBeNull();
     }
   });
 
-  it('lenient matches validateImportRow on null-tolerant optional fields', async () => {
+  it('lenient path is the single layer-0 implementation (null-tolerant optional fields)', async () => {
     const { validateImportRowWithOptions } = await import('../importLogsService.js');
-    const { validateImportRow } = await import('../../messaging/validators.js');
+    const { validateImportRow } = await import('../../utils/logImportContract.js');
     const rows: unknown[] = [
       { url: 'https://a.test', created_at: NOW, visit_duration: null },
       { url: 'https://a.test', created_at: NOW, scroll_ratio: null },
@@ -183,5 +183,74 @@ describe('validateImportRowWithOptions (strict canonical / lenient background pa
         { strict: true }
       )
     ).toBe('scroll_ratio must be between 0 and 1');
+  });
+});
+
+describe('strict gate golden (PBI 2026-11-26-09)', () => {
+  const NOW = 1_700_000_000_000;
+  const row = (patch: Record<string, unknown> = {}): Record<string, unknown> => ({
+    url: 'https://a.test',
+    created_at: NOW,
+    ...patch,
+  });
+
+  async function strict(patch: Record<string, unknown> = {}, options?: { now?: number }) {
+    const { validateImportRowWithOptions } = await import('../importLogsService.js');
+    return validateImportRowWithOptions(row(patch), { strict: true, ...options });
+  }
+
+  it('pins the dashboard-only length caps byte-identically', async () => {
+    expect(await strict({ url: 'https://a.test/' + 'x'.repeat(3000) })).toBe(
+      'url must be at most 2048 characters'
+    );
+    expect(await strict({ title: 'x'.repeat(2049) })).toBe('title must be at most 2048 characters');
+    expect(await strict({ summary: 'y'.repeat(100_001) })).toBe(
+      'summary must be at most 100000 characters'
+    );
+    expect(await strict({ tags: 't'.repeat(8193) })).toBe('tags must be at most 8192 characters');
+    expect(await strict({ domain: 'd'.repeat(257) })).toBe('domain must be at most 256 characters');
+  });
+
+  it('pins the created_at floor, future bound, and clock-skew boundary', async () => {
+    expect(await strict({ created_at: 0 })).toBe('created_at must be a finite number');
+    expect(await strict({ created_at: -5 })).toBe('created_at must be a finite number');
+    expect(await strict({ created_at: NOW + 5 * 24 * 3600 * 1000 }, { now: NOW })).toBe(
+      'created_at must not be in the future'
+    );
+    expect(await strict({ created_at: NOW + 25 * 3600 * 1000 }, { now: NOW })).toBe(
+      'created_at must not be in the future'
+    );
+    expect(await strict({ created_at: NOW + 24 * 3600 * 1000 }, { now: NOW })).toBeNull();
+  });
+
+  it('pins strict non-null numerics/flags and the metric ceilings', async () => {
+    expect(await strict({ visit_duration: null })).toBe('visit_duration must be a finite number');
+    expect(await strict({ scroll_ratio: null })).toBe('scroll_ratio must be a finite number');
+    expect(await strict({ is_starred: null })).toBe('is_starred must be 0 or 1');
+    expect(await strict({ is_deleted: null })).toBe('is_deleted must be 0 or 1');
+    expect(await strict({ visit_duration: 10 * 24 * 3600 * 1000 })).toBe(
+      'visit_duration must be >= 0'
+    );
+    expect(await strict({ visit_duration: 24 * 3600 * 1000 })).toBeNull();
+    expect(await strict({ scroll_ratio: 1 })).toBeNull();
+  });
+
+  it('pins the strict first-fail order (url cap before created_at floor before text caps)', async () => {
+    expect(await strict({ url: 'https://a.test/' + 'x'.repeat(3000), created_at: 0 })).toBe(
+      'url must be at most 2048 characters'
+    );
+    expect(await strict({ created_at: 0, title: 123 })).toBe(
+      'created_at must be a finite number'
+    );
+    expect(await strict({ title: 'x'.repeat(2049), summary: 'y'.repeat(100_001) })).toBe(
+      'title must be at most 2048 characters'
+    );
+  });
+
+  it('defaults to strict when no options are given', async () => {
+    const { validateImportRowWithOptions } = await import('../importLogsService.js');
+    expect(validateImportRowWithOptions(row({ title: 'x'.repeat(2049) }))).toBe(
+      'title must be at most 2048 characters'
+    );
   });
 });

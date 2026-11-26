@@ -1,22 +1,22 @@
 /**
  * restoreStagingHandlers-hardening.test.ts
  * Phase 5 hardening expectations from the 2026-11-26 checking-team review of
- * the chunked restore session. These tests pin the behavior the production
- * fix must deliver and are RED until that fix lands:
- *   1. commit's live-DB swap is atomic: the old DB survives a move failure
- *      (backup before removal, rollback on failure) — SRE High + Red Team.
- *   2. the session declares a total-size ceiling (symmetric with the
+ * the chunked restore session, pinned at the handler level:
+ *   1. the session declares a total-size ceiling (symmetric with the
  *      encrypted-backup file budget) and append stays inside it —
  *      Red Team / Blue Team / System Architect / SRE / API Contract.
- *   3. commit cross-checks the received chunk count against the declared
+ *   2. commit cross-checks the received chunk count against the declared
  *      totalChunks — Red Team / Legacy Bridge / Domain Logic.
  *
- * DO NOT expect this file green before the production fix. Commit it in the
- * same change as the fix (never on its own), so the full vitest run is green
- * at every commit. The boundary constant used here is MAX_BACKUP_FILE_BYTES
- * (50 MiB, the create-side gate); if the fix introduces its own SSOT constant
- * (e.g. MAX_RESTORE_SESSION_BYTES), swap the import — the semantic boundary
- * being pinned is "the encrypted-backup budget".
+ * The guarded live-DB swap (backup the live DB, move the staging file in,
+ * roll back on failure, clean up the backup after success) is unit-tested in
+ * restoreSwap.test.ts against the extracted engine-independent
+ * swapVerifiedStagingIntoLive procedure.
+ *
+ * The boundary constant used here is MAX_BACKUP_FILE_BYTES (50 MiB, the
+ * create-side gate); if a dedicated SSOT constant replaces it, swap the
+ * import — the semantic boundary being pinned is "the encrypted-backup
+ * budget".
  *
  * Fakes mirror restoreStagingHandlers.test.ts; no real OPFS is touched.
  */
@@ -155,40 +155,6 @@ beforeEach(async () => {
     get: () => ({ getDirectory: async () => fakeRoot }),
   });
   await loadModules();
-});
-
-describe('restore_commit swap atomicity (Phase 5 hardening expectation — RED until the fix lands)', () => {
-  it('keeps the old live DB in place when the staging move fails after the removal', async () => {
-    const stagingName = await beginAndFill(4);
-    fakeRoot.files.set(DB_FILENAME, 999);
-    moveFailTarget = stagingName;
-
-    await expect(
-      handlers.handleStageRestoreCommit(CTX, { stagingName, totalBytes: 4 }, getEngine, setEngine, initSqlite),
-    ).rejects.toThrow();
-
-    // The old history DB must survive the failed swap (backed up before the
-    // removal and rolled back on failure), and re-init must not run against
-    // a half-swapped state.
-    expect(fakeRoot.files.get(DB_FILENAME)).toBe(999);
-    expect(initSqliteCalls).toBe(0);
-  });
-
-  it('leaves no swap-auxiliary files behind after a successful commit', async () => {
-    const stagingName = await beginAndFill(4);
-    fakeRoot.files.set(DB_FILENAME, 999);
-
-    const result = await handlers.handleStageRestoreCommit(
-      CTX, { stagingName, totalBytes: 4 }, getEngine, setEngine, initSqlite,
-    );
-
-    expect(result).toEqual({ committed: true });
-    expect(fakeRoot.files.get(DB_FILENAME)).toBe(4);
-    // The pre-swap backup of the old DB is cleaned up once the swap succeeds,
-    // so a crash cannot leave the history DB plus a stale backup pair behind.
-    expect([...fakeRoot.files.keys()]).toEqual([DB_FILENAME]);
-    expect(initSqliteCalls).toBe(1);
-  });
 });
 
 describe('restore session size ceiling (Phase 5 hardening expectation — RED until the fix lands)', () => {

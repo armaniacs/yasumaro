@@ -19,12 +19,12 @@ import {
 import { SQLITE_MESSAGE_TYPES } from '../sqliteMessages.js';
 
 describe('messaging/sqliteMaintainWireTable: shape', () => {
-  it('has exactly the 12 non-archive maintain ops', () => {
-    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(12);
+  it('has exactly the 11 non-archive maintain ops', () => {
+    expect(SQLITE_MAINTAIN_WIRE_TABLE).toHaveLength(11);
     expect(SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op).sort()).toEqual(
       [
         'backup', 'clearAll', 'healthCheck', 'init',
-        'restore', 'restoreAbort', 'restoreAppend', 'restoreCommit', 'restorePrepareIncoming',
+        'restoreAbort', 'restoreAppend', 'restoreCommit', 'restorePrepareIncoming',
         'purgeAuditLog', 'purgeContent', 'purgeOldRecords',
       ].sort(),
     );
@@ -33,9 +33,9 @@ describe('messaging/sqliteMaintainWireTable: shape', () => {
 
   it('ops and messages are unique; the purge split stays three distinct messages', () => {
     const ops = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.op);
-    expect(new Set(ops).size).toBe(12);
+    expect(new Set(ops).size).toBe(11);
     const messages = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.messageType);
-    expect(new Set(messages).size).toBe(12);
+    expect(new Set(messages).size).toBe(11);
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeOldRecords.messageType).toBe('SQLITE_PURGE');
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeContent.messageType).toBe('CONTENT_PURGE');
     expect(SQLITE_MAINTAIN_WIRE_DESCRIPTORS.purgeAuditLog.messageType).toBe('SQLITE_AUDIT_LOG_PURGE');
@@ -54,6 +54,17 @@ describe('messaging/sqliteMaintainWireTable: shape', () => {
     expect(sqliteMaintainWireFor('archivePreview')).toBeUndefined();
     expect(sqliteMaintainWireFor('nope')).toBeUndefined();
   });
+
+  it('every row names a unique offscreen runner (the MAINTAIN_RUNNERS key)', () => {
+    // PBI 2026-11-26-13: the row owns the messageType AND the offscreen
+    // runner name, so adding a maintain op is one row plus one runner. The
+    // names must be unique — a shared name would silently drop a row from
+    // the runner record's key union. Offscreen-side resolution is pinned by
+    // wireOpEnumerationDerived.test.ts (this layer must not import it).
+    const names = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.offscreenRunner);
+    for (const name of names) expect(name.length).toBeGreaterThan(0);
+    expect(new Set(names).size).toBe(names.length);
+  });
 });
 
 describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the former gateway branches)', () => {
@@ -71,13 +82,6 @@ describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the 
     const decoded = row.decodeGateway({ success: true, data: [83, 81, 76, 105, 116, 101] });
     expect(decoded).toBeInstanceOf(Uint8Array);
     expect(Array.from(decoded)).toEqual([83, 81, 76, 105, 116, 101]);
-  });
-
-  it('restore sends SQLITE_RESTORE with the bytes as a number[] and decodes to undefined', () => {
-    const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.restore;
-    expect(row.messageType).toBe('SQLITE_RESTORE');
-    expect(row.encodePayload({ type: 'restore', data: new Uint8Array([1, 2, 3]) })).toEqual({ data: [1, 2, 3] });
-    expect(row.decodeGateway({ success: true })).toBeUndefined();
   });
 
   it('restorePrepareIncoming sends SQLITE_RESTORE_BEGIN with the session declaration and decodes the staging name', () => {

@@ -300,12 +300,6 @@ export class OpfsWorkerBackend implements StorageBackend, ArchiveStaging {
     }
   }
 
-  async restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    const result = await this.callWorker<{ restored: boolean }>('RESTORE', { data });
-    if (result && result.restored) return { success: true };
-    return { success: false, error: 'Binary restore failed' };
-  }
-
   async restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<BackendOrError<RestorePrepareResult>> {
     return this.callWorkerOk<{ stagingName: string }, RestorePrepareResult>(
       'STAGE_RESTORE_BEGIN',

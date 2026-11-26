@@ -5,7 +5,7 @@
  * Owns every operation callers need against the secondary store: browsing-log
  * record CRUD, FTS5 search, and JSON export (folded in from the former thin
  * recordsRepo split), the audit_log trail (folded in from auditLogRepo), and
- * retention purging, binary backup/restore, and health check (folded in from
+ * retention purging, binary backup, and health check (folded in from
  * dbMaintenance). The former per-table modules now re-export from here so a
  * delegation-target change lands in exactly one place.
  *
@@ -21,6 +21,8 @@ import { applyReadPolicy } from './queryPlanner.js';
 // cannot leave a destructive purge purging on a different default. Pinned by
 // purgeDefaultsParity.test.ts.
 import { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } from './queryPlanner.js';
+import { supportsRestoreStaging } from './restoreStagingTransport.js';
+import { RESTORE_STAGING_UNSUPPORTED_ERROR } from './StorageBackend.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 import type { AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
@@ -163,7 +165,7 @@ export async function purgeAuditLog(retentionDays?: number): Promise<{ success: 
 }
 
 // ── Maintenance (folded in from dbMaintenance) ────────────────────────────
-// Retention purging, binary backup/restore, and a lightweight health check.
+// Retention purging, binary backup, and a lightweight health check.
 
 /**
  * Purge old browsing log records based on retention policy.
@@ -203,41 +205,49 @@ export async function backupDb(): Promise<{ success: true; data: Uint8Array } | 
   return backend.backupDb();
 }
 
-/**
- * Restore the history DB from a binary .db payload.
- * OPFS path only. Temporary-file validation lives on the opfsWorker side.
- */
-export async function restoreDb(data: Uint8Array): Promise<{ success: true } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.restoreDb(data);
-}
-
 // ── Chunked restore staging session ───────────────────
-// begin -> append* -> commit replaces the single-shot restore for the
-// dashboard path. The staging name is issued by the OPFS worker and carried
+// The only restore path (PBI 2026-11-26-14 removed the single-shot
+// restoreDb). The staging name is issued by the OPFS worker and carried
 // back on every call, so nothing session-shaped lives in this module.
+//
+// These are OPFS-exclusive (RestoreStagingTransport, implemented only by
+// OpfsWorkerBackend): non-OPFS backends fail closed here with the same
+// error the former per-adapter stubs returned. The commit-time destructive
+// swap and its containment live on the narrowed OPFS path only.
 
 /** Issue (and sweep leftovers of) a registered restore staging name. */
 export async function restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<{ success: true; stagingName: string } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restorePrepareIncoming(totalBytes, totalChunks);
 }
 
 /** Write one chunk of DB bytes at its byte offset in the staging file. */
 export async function restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<{ success: true; written: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreAppend(stagingName, offset, data);
 }
 
 /** Validate the assembled staging file and swap it in for the live DB. */
 export async function restoreCommit(stagingName: string, totalBytes: number): Promise<{ success: true } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreCommit(stagingName, totalBytes);
 }
 
 /** Discard a failed restore session's staging file. */
 export async function restoreAbort(stagingName: string): Promise<{ success: true } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreAbort(stagingName);
 }
 
