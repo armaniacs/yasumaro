@@ -14,25 +14,25 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-26 ログ移行の大容量対応（3件） ― ✅ 3件実装完了（検証緑・アーカイブはマージ後） ✨機能追加
+### 2026-11-26 ログ移行の大容量対応（3件） ― ✅ 3件完了・アーカイブ済み ✨機能追加
 
-LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和したラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin した。なぜなぜ分析 30 回 x 3 済み。`npm run validate` 全緑 (19,360 件)。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
-
-| NN | PBI | 種別 | RICE | SP | 備考 |
-|---|---|---|---:|---:|---|
-| ~~04~~ | [2026-11-26-04-feat-log-export-100k-paging.md](2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | ✅ 実装完了。keyset ページングで 100,000 件、MAX_EXPORT_ROWS SSOT 化。100k 往復 pin |
-| ~~05~~ | [2026-11-26-05-feat-log-import-30mib.md](2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | ✅ 実装完了。30 MiB 緩和、上限値入り文言、フルフィデリティ往復 pin (27.8MB / 5万件) |
-| ~~06~~ | [2026-11-26-06-doc-log-export-import-guide-limits.md](2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 実装完了。ガイド (ja/en) 上限表と往復の説明、FAQ Q54 同期。check-docs-chars 緑 |
-
-### 2026-11-26 暗号化バックアップ大容量対応（3件） ― ✅ 3件実装完了（検証緑・アーカイブはマージ後） 🔧非機能追加
-
-復元ホップの隠れた実効上限 (restore_db 10M 文字 cap ≒ DB 実体 7.5MB) を分割輸送 (staging チャンク方式) で解消し、作成/復元のゲート整合とユーザーガイドの分割形式対応を閉じたラウンド。なぜなぜ分析 30 回 x 3 済み。RICE 降順 (依存尊重) で 01 → 02 → 03 の順に実装し、`npm run validate` 全緑 (19,346 件)。台帳は [2026-11-26-00-backlog-encrypted-backup-capacity.md](2026-11-26-00-backlog-encrypted-backup-capacity.md) を参照。
+LOG_EXPORT_IMPORT_GUIDE.md 記載の上限 (エクスポート 10,000 件、インポート 10 MiB / 100,000 行) を緩和したラウンド。エクスポートは keyset ページング (QUERY_CAPS.plain 据え置き) で 100,000 件に、インポートは 30 MiB に緩和し、「エクスポートしたものはインポートできる」往復不変条件を pin した。なぜなぜ分析 30 回 x 3 済み。最終ゲート: `npm run validate` 全緑 (19,371 件) + ビルド緑 + Playwright E2E 305 件緑。checking-team レビュー (9 観点) の指摘は Phase 5 で修正済み。台帳は [2026-11-26-07-backlog-log-migration-capacity.md](2026-11-26-07-backlog-log-migration-capacity.md) を参照。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ~~01~~ | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ✅ 実装完了。staging チャンク転送 (begin/chunk/commit/abort)、旧 restore_db 削除。validate 全緑 (19,339 件) |
-| ~~02~~ | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | ✅ 実装完了。createSplitBackup に結合長ゲート追加 + 専用文言。parse 側無変更 |
-| ~~03~~ | [2026-11-26-03-doc-encrypted-backup-guide-split.md](2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 実装完了。ガイド (ja/en) に分割形式と上限表、FAQ の 50MB 記述を現行に同期。check-docs-chars 緑 |
+| ~~04~~ | [2026-11-26-04-feat-log-export-100k-paging.md](../dev-docs/archived/pbi/2026-11-26-04-feat-log-export-100k-paging.md) | ✨機能追加 | 8.0 | 5 | ✅ 完了（2026-11-26 アーカイブ済み）。keyset ページングで 100,000 件、MAX_EXPORT_ROWS SSOT 化。100k 往復 pin |
+| ~~05~~ | [2026-11-26-05-feat-log-import-30mib.md](../dev-docs/archived/pbi/2026-11-26-05-feat-log-import-30mib.md) | ✨機能追加 | 10.0 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。30 MiB 緩和、上限値入り文言、フルフィデリティ往復 pin (27.8MB / 5万件) |
+| ~~06~~ | [2026-11-26-06-doc-log-export-import-guide-limits.md](../dev-docs/archived/pbi/2026-11-26-06-doc-log-export-import-guide-limits.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 完了（2026-11-26 アーカイブ済み）。ガイド (ja/en) 上限表と往復の説明、FAQ Q54 同期。check-docs-chars 緑 |
+
+### 2026-11-26 暗号化バックアップ大容量対応（3件） ― ✅ 3件完了・アーカイブ済み 🔧非機能追加
+
+復元ホップの隠れた実効上限 (restore_db 10M 文字 cap ≒ DB 実体 7.5MB) を分割輸送 (staging チャンク方式) で解消し、作成/復元のゲート整合とユーザーガイドの分割形式対応を閉じたラウンド。なぜなぜ分析 30 回 x 3 済み。RICE 降順 (依存尊重) で 01 → 02 → 03 の順に実装。checking-team レビュー (9 観点) の指摘は Phase 5 で修正済み (swap 退避/ロールバック、セッション全体上限、offset 進行検証、totalChunks 照合、multiple 属性)。台帳は [2026-11-26-00-backlog-encrypted-backup-capacity.md](2026-11-26-00-backlog-encrypted-backup-capacity.md) を参照。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ~~01~~ | [2026-11-26-01-fix-encrypted-backup-restore-chunked.md](../dev-docs/archived/pbi/2026-11-26-01-fix-encrypted-backup-restore-chunked.md) | 🔧非機能追加 | 14.4 | 8 | ✅ 完了（2026-11-26 アーカイブ済み）。staging チャンク転送 (begin/chunk/commit/abort)、旧 restore_db 削除 |
+| ~~02~~ | [2026-11-26-02-fix-encrypted-backup-split-gate-parity.md](../dev-docs/archived/pbi/2026-11-26-02-fix-encrypted-backup-split-gate-parity.md) | 🔧非機能追加 | 5.0 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。createSplitBackup に結合長ゲート追加 + 専用文言。parse 側無変更 |
+| ~~03~~ | [2026-11-26-03-doc-encrypted-backup-guide-split.md](../dev-docs/archived/pbi/2026-11-26-03-doc-encrypted-backup-guide-split.md) | 🔧非機能追加 (docs) | 4.0 | 1 | ✅ 完了（2026-11-26 アーカイブ済み）。ガイド (ja/en) に分割形式と上限表、FAQ の 50MB 記述を現行に同期。check-docs-chars 緑 |
 
 ### 2026-11-24 正式版(GA)リリース準備・監査 run-3・実機スモーク（GA 必須全件完了・アーカイブ済み / 保留・将来 5 件） ― ✅ 完了 🔧非機能追加
 
