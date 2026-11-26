@@ -79,12 +79,13 @@ export const QUERY_CAPS = {
 } as const;
 
 /**
- * Whole-export row ceiling (exportLogsService, PBI 2026-11-26-04). The
- * export pages with a keyset cursor at QUERY_CAPS.plain rows per page and
- * stops here; the value matches the retention policy maximum
- * (sqliteMaxRecords 100_000) so everything storable is exportable.
- * Deliberately separate from the listing cap: QUERY_CAPS.plain bounds one
- * page for the history UI, this bounds the entire export.
+ * Whole-export row ceiling (PBI 2026-11-26-04). Consumers page with a keyset
+ * cursor at QUERY_CAPS.plain rows per page and stop here: exportLogsService
+ * (queryAllData, DESC) and markdownExport (exportDateRange, ASC). The value
+ * matches the retention policy maximum (sqliteMaxRecords 100_000) so
+ * everything storable is exportable. Deliberately separate from the listing
+ * cap: QUERY_CAPS.plain bounds one page for the history UI, this bounds an
+ * entire export.
  */
 export const MAX_EXPORT_ROWS = 100_000;
 

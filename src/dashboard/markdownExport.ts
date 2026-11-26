@@ -21,6 +21,7 @@ import { buildTemplateEntryData } from '../utils/markdownFormatter.js';
 import { getPlatformOs } from '../utils/deviceUtils.js';
 import { resolveSafeExportDir } from '../utils/pathSanitizer.js';
 import { formatLocalDateString, parseLocalDateStart } from '../utils/localDate.js';
+import { MAX_EXPORT_ROWS, QUERY_CAPS } from '../utils/limits.js';
 
 /** Batch size for paginated full-history export (desktop). */
 export const EXPORT_BATCH_SIZE_DESKTOP = 1000;
@@ -30,8 +31,13 @@ export const EXPORT_BATCH_SIZE_MOBILE = 500;
 /** Default folder used when no export path is configured. */
 export const DEFAULT_EXPORT_PATH = 'Yasumaro';
 
-/** Upper bound on rows fetched for a date-range export. */
-export const DATE_RANGE_QUERY_LIMIT = 10000;
+/**
+ * Page size for the date-range export's keyset paging — the per-query cap,
+ * NOT the export ceiling. Same value as QUERY_CAPS.plain because one plain
+ * listing query cannot return more; the whole-export ceiling is
+ * MAX_EXPORT_ROWS (limits.ts SSOT, shared with exportLogsService).
+ */
+export const DATE_RANGE_QUERY_LIMIT = QUERY_CAPS.plain;
 
 export function getExportBatchSize(): number {
   const os = getPlatformOs();
@@ -225,7 +231,17 @@ export function dateRangeToTimestamps(startDate: string, endDate: string): { sin
   };
 }
 
-/** Export every entry within the given local date range. */
+/**
+ * Export every entry within the given local date range.
+ *
+ * WHY keyset paging: one query caps at DATE_RANGE_QUERY_LIMIT (QUERY_CAPS.plain),
+ * so ranges beyond one page continue with `since` = the previous page's newest
+ * created_at — inclusive, so boundary ties are re-read — and merge by unique id
+ * (queryAllData precedent with the cursor direction reversed for ASC). An
+ * offset window over a live table double-counts or skips rows while the
+ * recorder keeps inserting. All pages are collected before grouping:
+ * flushing per page would split one date's rows across several downloads.
+ */
 export async function exportDateRange(
   config: ExportConfig,
   startDate: string,
@@ -233,25 +249,54 @@ export async function exportDateRange(
   download: DownloadPort,
 ): Promise<ExportResult> {
   const { since, until } = dateRangeToTimestamps(startDate, endDate);
-  const result = await queryLogs({
-    since,
-    until,
-    limit: DATE_RANGE_QUERY_LIMIT,
-    orderBy: 'created_at',
-    orderDir: 'ASC',
-  });
+  const byId = new Map<number, BrowsingLogEntry>();
+  // Frozen from the first page: the range-filtered row count this export is
+  // pinned to (queryAllData precedent).
+  let frozenTotal = Number.POSITIVE_INFINITY;
+  let cursor = since;
+  while (byId.size < MAX_EXPORT_ROWS && byId.size < frozenTotal) {
+    const result = await queryLogs({
+      since: cursor,
+      until,
+      limit: DATE_RANGE_QUERY_LIMIT,
+      orderBy: 'created_at',
+      orderDir: 'ASC',
+    });
 
-  // Distinguish a failure from a genuinely empty range: both used to return
-  // zero rows, so a database error was reported to the user as "no records in
-  // this period".
-  if (isServiceError(result)) {
-    throw new Error(result.error);
+    // Distinguish a failure from a genuinely empty range: both used to return
+    // zero rows, so a database error was reported to the user as "no records
+    // in this period".
+    if (isServiceError(result)) {
+      throw new Error(result.error);
+    }
+    if (frozenTotal === Number.POSITIVE_INFINITY) {
+      frozenTotal = result.data.total;
+    }
+    const batch = result.data.rows;
+    if (batch.length === 0) break;
+    const sizeBefore = byId.size;
+    for (const row of batch) {
+      byId.set(row.id, row);
+    }
+    if (byId.size >= MAX_EXPORT_ROWS) break;
+    if (batch.length < DATE_RANGE_QUERY_LIMIT) break;
+    const newest = batch[batch.length - 1]!.created_at;
+    // WHY: an entire page of boundary-tie rows (no new id merged) means more
+    // than a page shares one created_at; step forward 1ms so the ASC loop
+    // cannot stall. Rows beyond a full page sharing that exact millisecond are
+    // not fetched (queryAllData precedent, direction reversed).
+    cursor = byId.size === sizeBefore ? newest + 1 : newest;
   }
-  if (result.data.rows.length === 0) {
+
+  // Map insertion order is ASC (pages arrive ascending), so the slice keeps
+  // the oldest MAX_EXPORT_ROWS rows; a page can push the merge past the cap,
+  // and rows beyond it are not exported.
+  const rows = Array.from(byId.values()).slice(0, MAX_EXPORT_ROWS);
+  if (rows.length === 0) {
     return { totalRows: 0, totalFiles: 0 };
   }
 
-  const entriesByDate = groupEntriesByLocalDate(result.data.rows);
+  const entriesByDate = groupEntriesByLocalDate(rows);
   let totalFiles = 0;
   for (const [date, entries] of entriesByDate) {
     await download(
@@ -261,7 +306,7 @@ export async function exportDateRange(
     totalFiles++;
   }
 
-  return { totalRows: result.data.rows.length, totalFiles };
+  return { totalRows: rows.length, totalFiles };
 }
 
 const DOWNLOAD_REVOKE_SETTLE_TIMEOUT_MS = 10_000;
