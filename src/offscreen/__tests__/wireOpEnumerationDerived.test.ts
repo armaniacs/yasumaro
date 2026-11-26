@@ -1,10 +1,12 @@
 /**
- * wireOpEnumerationDerived.test.ts (PBI 2026-10-20-23)
+ * wireOpEnumerationDerived.test.ts (PBI 2026-10-20-23; maintain fold by
+ * PBI 2026-11-26-13)
  *
- * Table-driven pinning tests for the query/mutate registry fold: every
- * SQLITE_WIRE_TABLE row (except the gateway-folded search row) reaches its
- * offscreen registry entry and dispatches to its own repo runner WITHOUT
- * naming any message type, op, or count in the assertions.
+ * Table-driven pinning tests for the query/mutate and maintain registry
+ * folds: every SQLITE_WIRE_TABLE row (except the gateway-folded search row)
+ * and every SQLITE_MAINTAIN_WIRE_TABLE row reaches its offscreen registry
+ * entry and dispatches to its own runner WITHOUT naming any message type,
+ * op, or count in the assertions.
  *
  * Adding a wire-table row extends these loops automatically; a row missing
  * its registry entry, or an entry routing to another row's runner, fails
@@ -13,7 +15,7 @@
  * this file pins derivation, not shapes.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SQLITE_WIRE_TABLE } from '../../messaging/sqliteWireTable.js';
+import { SQLITE_MAINTAIN_WIRE_TABLE, SQLITE_WIRE_TABLE } from '../../messaging/sqliteWireTable.js';
 import { ARCHIVE_WIRE_TABLE } from '../../messaging/archiveWireTable.js';
 import { SQLITE_MESSAGE_TYPES } from '../../messaging/sqliteMessages.js';
 import type { SqliteMessage } from '../../messaging/sqliteMessages.js';
@@ -77,7 +79,12 @@ vi.mock('../auditLogRepo.js', () => ({
   purgeAuditLog: auditLogRepoMock.purgeAuditLog,
 }));
 
-import { sqliteMessageHandlers, type SqliteRepoMethod } from '../sqliteMessageHandlers.js';
+import {
+  MAINTAIN_RUNNERS,
+  maintainMessageHandlers,
+  sqliteMessageHandlers,
+  type SqliteRepoMethod,
+} from '../sqliteMessageHandlers.js';
 
 // repoMethod -> the repo mock the offscreen runner for that method drives.
 // Record<> over SqliteRepoMethod: a new runner key fails to compile here too.
@@ -122,11 +129,13 @@ describe('derived wire registry: one entry per gateway wire-table row', () => {
   });
 
   it('registry = table-derived messages + exactly the hand-written remainder', () => {
-    // Everything derived from a table (query/mutate gateway rows + archive
-    // rows) plus the deliberate hand-written handlers must cover the message
-    // union exactly once — no stale hand entry can shadow a derived one.
+    // Everything derived from a table (query/mutate gateway rows + maintain
+    // rows + archive rows) plus the deliberate hand-written handlers must
+    // cover the message union exactly once — no stale hand entry can shadow
+    // a derived one.
     const tableDerived = new Set<string>([
       ...gatewayRows.map((row) => row.messageType),
+      ...SQLITE_MAINTAIN_WIRE_TABLE.map((row) => row.messageType),
       ...ARCHIVE_WIRE_TABLE.map((row) => row.messageType),
     ]);
     const handWritten = SQLITE_MESSAGE_TYPES.filter((t) => !tableDerived.has(t));
@@ -171,5 +180,20 @@ describe('derived wire registry: one entry per gateway wire-table row', () => {
     await callHandler('SQLITE_QUERY', {});
     const opts = recordsRepoMock.query.mock.calls[0]![0] as Record<string, unknown>;
     expect(opts.limit).toBe(100);
+  });
+});
+
+describe('derived maintain registry: one named runner per SQLITE_MAINTAIN_WIRE_TABLE row (PBI 2026-11-26-13)', () => {
+  it('resolves every maintain row message type to the runner its row names', () => {
+    const keys = new Set<string>([...sqliteMessageHandlers.keys()]);
+    for (const row of SQLITE_MAINTAIN_WIRE_TABLE) {
+      expect(maintainMessageHandlers[row.messageType]).toBe(MAINTAIN_RUNNERS[row.offscreenRunner]);
+      expect(keys.has(row.messageType)).toBe(true);
+    }
+  });
+
+  it('maintain registry is exactly table-sized — a stale hand entry cannot hide in it', () => {
+    expect(Object.keys(maintainMessageHandlers)).toHaveLength(SQLITE_MAINTAIN_WIRE_TABLE.length);
+    expect(Object.keys(MAINTAIN_RUNNERS)).toHaveLength(SQLITE_MAINTAIN_WIRE_TABLE.length);
   });
 });

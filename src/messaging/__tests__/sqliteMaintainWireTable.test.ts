@@ -54,6 +54,17 @@ describe('messaging/sqliteMaintainWireTable: shape', () => {
     expect(sqliteMaintainWireFor('archivePreview')).toBeUndefined();
     expect(sqliteMaintainWireFor('nope')).toBeUndefined();
   });
+
+  it('every row names a unique offscreen runner (the MAINTAIN_RUNNERS key)', () => {
+    // PBI 2026-11-26-13: the row owns the messageType AND the offscreen
+    // runner name, so adding a maintain op is one row plus one runner. The
+    // names must be unique — a shared name would silently drop a row from
+    // the runner record's key union. Offscreen-side resolution is pinned by
+    // wireOpEnumerationDerived.test.ts (this layer must not import it).
+    const names = SQLITE_MAINTAIN_WIRE_TABLE.map((e) => e.offscreenRunner);
+    for (const name of names) expect(name.length).toBeGreaterThan(0);
+    expect(new Set(names).size).toBe(names.length);
+  });
 });
 
 describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the former gateway branches)', () => {

@@ -770,6 +770,16 @@ export interface SqliteMaintainWireOpDescriptor<O extends string = string, G = u
   family: 'maintain';
   /** background -> offscreen message type. */
   messageType: SqliteMessageType;
+  /**
+   * Offscreen runner name - the MAINTAIN_RUNNERS key in the offscreen
+   * document that this row dispatches to (PBI 2026-11-26-13, the same
+   * row-owns-the-runner discipline as repoMethod / backendMethod). A name,
+   * not a function: this table is layer-neutral and must not import the
+   * offscreen coercion code, so the runner keeps the layer policy (base64
+   * chunk decode, numeric coercion, purge planning) and the offscreen
+   * registry is derived from these rows.
+   */
+  offscreenRunner: string;
   retryPolicy: TransportRetryPolicy;
   /** Builds the wire payload the gateway sends offscreen. */
   encodePayload: (op: MaintainOp) => Record<string, unknown>;
@@ -792,6 +802,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'init',
     family: 'maintain',
     messageType: 'SQLITE_INIT',
+    offscreenRunner: 'init',
     encodePayload: emptyPayload,
     decodeGateway: trueDecode,
   }),
@@ -799,6 +810,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'backup',
     family: 'maintain',
     messageType: 'SQLITE_BACKUP',
+    offscreenRunner: 'backup',
     encodePayload: emptyPayload,
     decodeGateway: (response) => new Uint8Array(response.data as number[]),
   }),
@@ -811,6 +823,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'restorePrepareIncoming',
     family: 'maintain',
     messageType: 'SQLITE_RESTORE_BEGIN',
+    offscreenRunner: 'restorePrepareIncoming',
     encodePayload: (op) => {
       const o = op as Extract<MaintainOp, { type: 'restorePrepareIncoming' }>;
       return { totalBytes: o.totalBytes, totalChunks: o.totalChunks };
@@ -824,6 +837,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     // `data` rides as base64 text (the DASHBOARD_SQLITE chunk payload shape),
     // not a number[]: chrome.runtime messaging JSON-serializes, so a decoded
     // Uint8Array would re-inflate into a ~4x larger array for no benefit.
+    offscreenRunner: 'restoreAppend',
     encodePayload: (op) => {
       const o = op as Extract<MaintainOp, { type: 'restoreAppend' }>;
       return { stagingName: o.stagingName, offset: o.offset, data: o.dataBase64 };
@@ -839,6 +853,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'restoreCommit',
     family: 'maintain',
     messageType: 'SQLITE_RESTORE_COMMIT',
+    offscreenRunner: 'restoreCommit',
     encodePayload: (op) => {
       const o = op as Extract<MaintainOp, { type: 'restoreCommit' }>;
       return { stagingName: o.stagingName, totalBytes: o.totalBytes };
@@ -849,6 +864,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'restoreAbort',
     family: 'maintain',
     messageType: 'SQLITE_RESTORE_ABORT',
+    offscreenRunner: 'restoreAbort',
     encodePayload: (op) => ({ stagingName: (op as Extract<MaintainOp, { type: 'restoreAbort' }>).stagingName }),
     decodeGateway: voidDecode,
   }),
@@ -856,6 +872,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'clearAll',
     family: 'maintain',
     messageType: 'SQLITE_CLEAR_ALL',
+    offscreenRunner: 'clearAll',
     encodePayload: emptyPayload,
     decodeGateway: voidDecode,
   }),
@@ -863,6 +880,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'purgeOldRecords',
     family: 'maintain',
     messageType: 'SQLITE_PURGE',
+    offscreenRunner: 'purgeOldRecords',
     // Literal keys (undefined rides along): matches the former
     // `{ retentionDays: rest.retentionDays, maxRecords: rest.maxRecords }`.
     encodePayload: (op) => {
@@ -875,6 +893,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'purgeContent',
     family: 'maintain',
     messageType: 'CONTENT_PURGE',
+    offscreenRunner: 'purgeContent',
     encodePayload: (op) => {
       const o = op as Extract<MaintainOp, { type: 'purgeContent' }>;
       return { retentionDays: o.retentionDays, maxRecords: o.maxRecords, includeStarred: o.includeStarred };
@@ -885,6 +904,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'purgeAuditLog',
     family: 'maintain',
     messageType: 'SQLITE_AUDIT_LOG_PURGE',
+    offscreenRunner: 'purgeAuditLog',
     // Literal key (undefined rides along), same rule as the two purges above:
     // the handler distinguishes "no window" from a window of 0 by arity, not
     // by a missing key.
@@ -895,6 +915,7 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     op: 'healthCheck',
     family: 'maintain',
     messageType: 'SQLITE_HEALTH_CHECK',
+    offscreenRunner: 'healthCheck',
     encodePayload: emptyPayload,
     decodeGateway: trueDecode,
   }),
