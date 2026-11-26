@@ -27,12 +27,12 @@ Scenario: 確認フラグで日付が進む
 ```
 
 ## 受け入れ基準
-- [ ] scripts/lib に dependingsCommon.mjs (または dependingsCommon.js) を新設し、generate と check が重複していた共通知識 (DEPENDINGS_PATH 等のパス、セクション判定正規表現、パッケージ数カウント、日付ユーティリティ) を抽出している
-- [ ] generate-dependings.mjs が「最終確認日」行を既存値に保持し、`--confirm-date` (明示フラグ) のときだけ今日に更新する
-- [ ] check-dependings.mjs の鮮度判定は無変更 (git コミット日時ベースの現状を維持)
-- [ ] scripts/__tests__/ の既存 dependings 試験が緑、generate の新挙動試験 (フラグなし= 保持、フラグ付き= 進む) が追加されている
-- [ ] gen-oxlintrc-ssot.test.ts 等の他スクリプト試験が壊れない
-- [ ] `npm run validate` が通る
+- [x] scripts/lib に dependingsCommon.mjs (または dependingsCommon.js) を新設し、generate と check が重複していた共通知識 (DEPENDINGS_PATH 等のパス、セクション判定正規表現、パッケージ数カウント、日付ユーティリティ) を抽出している
+- [x] generate-dependings.mjs が「最終確認日」行を既存値に保持し、`--confirm-date` (明示フラグ) のときだけ今日に更新する
+- [x] check-dependings.mjs の鮮度判定は無変更 (git コミット日時ベースの現状を維持)
+- [x] scripts/__tests__/ の既存 dependings 試験が緑、generate の新挙動試験 (フラグなし= 保持、フラグ付き= 進む) が追加されている
+- [x] gen-oxlintrc-ssot.test.ts 等の他スクリプト試験が壊れない
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -77,8 +77,8 @@ ls scripts/lib 2>/dev/null || echo "no scripts/lib"
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 使用方法の変化 (--confirm-date) があるため、該当 docs があれば更新 (なければ本 PBI 内で使用方法をスクリプトヘッダに記載)
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 使用方法の変化 (--confirm-date) があるため、該当 docs があれば更新 (なければ本 PBI 内で使用方法をスクリプトヘッダに記載)

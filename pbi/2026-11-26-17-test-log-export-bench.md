@@ -29,12 +29,12 @@ Scenario: 上限定数の変化が計測に反映される
 ```
 
 ## 受け入れ基準
-- [ ] `bench/micro/f4-log-export.bench.mjs` (新規、次の連番) が追加されている: 軽量 100k 行往復 (exportJson → importFromJson) とフルフィデリティ 50k 行往復を計測する
-- [ ] 時間 + peak RSS (process.memoryUsage().rss 差分、advisory) を出力する
-- [ ] 上限定数は limits.ts / SSOT から harness 経由で取り込む (f3-archive の ARCHIVE_INSERT_BATCH 前例に倣い、ハードコードしない)
-- [ ] bench smoke 試験 (bench/__tests__/smoke.test.ts、bench/harness/__tests__/domEnv.test.ts 等) が緑である (新 bench ファイルの登録漏れ検出)
-- [ ] `npm run bench:micro` が通る
-- [ ] `npm run validate` が通る
+- [x] `bench/micro/f4-log-export.bench.mjs` (新規、次の連番) が追加されている: 軽量 100k 行往復 (exportJson → importFromJson) とフルフィデリティ 50k 行往復を計測する
+- [x] 時間 + peak RSS (process.memoryUsage().rss 差分、advisory) を出力する
+- [x] 上限定数は limits.ts / SSOT から harness 経由で取り込む (f3-archive の ARCHIVE_INSERT_BATCH 前例に倣い、ハードコードしない)
+- [x] bench smoke 試験 (bench/__tests__/smoke.test.ts、bench/harness/__tests__/domEnv.test.ts 等) が緑である (新 bench ファイルの登録漏れ検出)
+- [x] `npm run bench:micro` が通る
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -80,8 +80,8 @@ grep -n "MAX_IMPORT_TEXT_BYTES\|MAX_EXPORT_ROWS" src/utils/limits.ts | head -3
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: bench の追加でユーザーに見える挙動は不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: bench の追加でユーザーに見える挙動は不変のため、docs 更新は不要

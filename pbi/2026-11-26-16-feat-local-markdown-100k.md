@@ -27,12 +27,12 @@ Scenario: 上限ちょうどは成功する
 ```
 
 ## 受け入れ基準
-- [ ] exportDateRange が keyset ページング (ASC 順、cursor は最終 created_at を since に包含再読、id dedup) に変更されている
-- [ ] 上限が MAX_EXPORT_ROWS (limits.ts SSOT) に統一され、DATE_RANGE_QUERY_LIMIT はページサイズとして維持される
-- [ ] 上限到達時は「部分出力で終わる」のではなく、到達した件数を返す (現行 totalRows 契約維持、上限超過の分は出力しない)
-- [ ] markdownExport.test.ts にページング境界試験 (10,000+ 件、dedup、上限) がある
-- [ ] MARKDOWN_DOWNLOAD 関連ドキュメント (docs/markdown-download.md など上限記載があれば) を更新する
-- [ ] `npm run validate` が通る
+- [x] exportDateRange が keyset ページング (ASC 順、cursor は最終 created_at を since に包含再読、id dedup) に変更されている
+- [x] 上限が MAX_EXPORT_ROWS (limits.ts SSOT) に統一され、DATE_RANGE_QUERY_LIMIT はページサイズとして維持される
+- [x] 上限到達時は「部分出力で終わる」のではなく、到達した件数を返す (現行 totalRows 契約維持、上限超過の分は出力しない)
+- [x] markdownExport.test.ts にページング境界試験 (10,000+ 件、dedup、上限) がある
+- [x] MARKDOWN_DOWNLOAD 関連ドキュメント (docs/markdown-download.md など上限記載があれば) を更新する
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -77,8 +77,8 @@ grep -n "until\|since" src/messaging/sqliteWireTable.ts | head -8
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: ユーザーに見える上限が変わるため docs 更新が必須 (本 PBI 内で対応)
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: ユーザーに見える上限が変わるため docs 更新が必須 (本 PBI 内で対応)
