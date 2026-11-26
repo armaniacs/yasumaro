@@ -25,6 +25,12 @@ export interface RestoreStagingRecord {
   totalBytes: number;
   totalChunks: number;
   createdAt: number;
+  /** Bytes accepted so far — the next non-retry append must start here. */
+  expectedOffset: number;
+  /** Appends accepted so far; commit cross-checks it against totalChunks. */
+  appendedChunks: number;
+  /** Start offset of the most recent accepted append (retry-resend marker). */
+  lastAppendOffset: number | null;
 }
 
 const registry = new Map<string, RestoreStagingRecord>();
@@ -131,7 +137,14 @@ export async function prepareRestoreIncoming(
 ): Promise<string> {
   await sweepOrphanRestoreStagings();
   const name = issueName();
-  registry.set(name, { totalBytes, totalChunks, createdAt: Date.now() });
+  registry.set(name, {
+    totalBytes,
+    totalChunks,
+    createdAt: Date.now(),
+    expectedOffset: 0,
+    appendedChunks: 0,
+    lastAppendOffset: null,
+  });
 
   const root = await getRoot();
   const handle = await root.getFileHandle(name, { create: true });
@@ -158,4 +171,39 @@ export async function prepareRestoreIncoming(
 export function releaseRestoreStaging(name: string): void {
   assertRegisteredRestoreStagingName(name);
   registry.delete(name);
+}
+
+/**
+ * Validate and account one append against the session's offset progression
+ * before the caller touches OPFS. A retry (RETRY_SAFE transport) re-sends the
+ * same chunk, so an append starting at the previous append's start offset is
+ * an idempotent resend; any other offset that is not exactly the expected
+ * progression point would leave a gap or overwrite already-accepted bytes
+ * behind a size check that cannot detect it, so it fails closed.
+ */
+export function recordRestoreAppendChunk(
+  name: string,
+  offset: number,
+  byteLength: number,
+): void {
+  const record = registry.get(name);
+  if (!record) {
+    throw new Error(`Unknown restore staging file: ${String(name)}`);
+  }
+  if (offset + byteLength > record.totalBytes) {
+    throw new Error(
+      `restore_append: offset ${offset} + ${byteLength} bytes would exceed the session's declared totalBytes (${record.totalBytes})`,
+    );
+  }
+  const isResend = record.lastAppendOffset !== null && offset === record.lastAppendOffset;
+  if (!isResend && offset !== record.expectedOffset) {
+    throw new Error(
+      `restore_append: offset ${offset} does not match the expected session offset ${record.expectedOffset}`,
+    );
+  }
+  if (!isResend) {
+    record.expectedOffset = offset + byteLength;
+    record.appendedChunks += 1;
+    record.lastAppendOffset = offset;
+  }
 }

@@ -157,16 +157,38 @@ describe('STAGE_RESTORE_BEGIN', () => {
 
 describe('STAGE_RESTORE_APPEND', () => {
   it('writes the chunk at its byte offset and reports the written count', async () => {
-    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 6, totalChunks: 1 });
-    const result = await handlers.handleStageRestoreAppend(CTX, {
+    // Adjusted in the Phase 5 integration: appends must follow the session's
+    // offset progression (review hardening — a gap or overwrite behind the
+    // size check can no longer be committed), so the write runs from 0 and a
+    // second chunk continues at the expected offset.
+    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 6, totalChunks: 2 });
+    const first = await handlers.handleStageRestoreAppend(CTX, {
+      stagingName,
+      offset: 0,
+      data: new Uint8Array([10, 20]),
+    });
+    expect(first).toEqual({ written: 2 });
+    const second = await handlers.handleStageRestoreAppend(CTX, {
       stagingName,
       offset: 2,
-      data: new Uint8Array([10, 20, 30, 40]),
+      data: new Uint8Array([30, 40]),
     });
-    expect(result).toEqual({ written: 4 });
-    // accesses[0] is begin's truncate handle; the append write is the last one.
-    expect(fakeRoot.accesses.at(-1)!.writes).toEqual([{ at: 2, length: 4 }]);
-    expect(fakeRoot.files.get(stagingName)).toBe(6);
+    expect(second).toEqual({ written: 2 });
+    // accesses[0] is begin's truncate handle; the append writes are the last two.
+    expect(fakeRoot.accesses.at(-2)!.writes).toEqual([{ at: 0, length: 2 }]);
+    expect(fakeRoot.accesses.at(-1)!.writes).toEqual([{ at: 2, length: 2 }]);
+    expect(fakeRoot.files.get(stagingName)).toBe(4);
+  });
+
+  it('fail-closes on an append that skips ahead of the offset progression', async () => {
+    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 8, totalChunks: 2 });
+    await handlers.handleStageRestoreAppend(CTX, { stagingName, offset: 0, data: new Uint8Array([1]) });
+    await expect(
+      handlers.handleStageRestoreAppend(CTX, { stagingName, offset: 4, data: new Uint8Array([1]) }),
+    ).rejects.toThrow(/does not match the expected session offset/);
+    // accesses[0] is begin's truncate handle; the rejected append never
+    // opened a second handle. The accepted append is accesses[1].
+    expect(fakeRoot.accesses).toHaveLength(2);
   });
 
   it('fail-closes on a name that was never issued', async () => {
@@ -212,7 +234,11 @@ describe('STAGE_RESTORE_COMMIT', () => {
     );
 
     expect(result).toEqual({ committed: true });
-    expect(REMOVED).toContain('yasumaro.db');
+    // Adjusted in the Phase 5 integration: the live DB is moved to a backup
+    // name during the swap and the backup is removed after the swap succeeds,
+    // so a failed move can no longer lose the live DB.
+    expect(REMOVED).toContain('yasumaro.db.pre-restore');
+    expect(REMOVED).not.toContain('yasumaro.db');
     expect(fakeRoot.files.has(stagingName)).toBe(false);
     expect(fakeRoot.files.get('yasumaro.db')).toBe(4);
     expect(initSqliteCalls).toBe(1);
@@ -225,8 +251,11 @@ describe('STAGE_RESTORE_COMMIT', () => {
   it('rejects a staged size that does not match the declared totalBytes and keeps the live DB', async () => {
     // Declared size matches the session record, but only part of the bytes
     // arrived (a lost chunk) — the size check is what refuses the swap.
+    // Adjusted in the Phase 5 integration: begin declares totalChunks: 1 so
+    // the run reaches the size check (the chunk-count cross-check fires
+    // first when the counts disagree — see the hardening tests).
     fakeRoot.files.set('yasumaro.db', 999);
-    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 4, totalChunks: 2 });
+    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 4, totalChunks: 1 });
     await handlers.handleStageRestoreAppend(CTX, {
       stagingName,
       offset: 0,
@@ -247,6 +276,21 @@ describe('STAGE_RESTORE_COMMIT', () => {
     await expect(
       handlers.handleStageRestoreCommit(CTX, { stagingName, totalBytes: 40 }, getEngine, setEngine, initSqlite),
     ).rejects.toThrow(/does not match the session's begin totalBytes/);
+  });
+
+  it('accepts an idempotent resend of the previous chunk without double-counting it', async () => {
+    // A retry (RETRY_SAFE transport) re-sends the previous chunk; the
+    // progression ledger must not inflate the chunk count, or the commit
+    // would fail the totalChunks cross-check for a transport retry.
+    const { stagingName } = await handlers.handleStageRestoreBegin(CTX, { totalBytes: 4, totalChunks: 2 });
+    await handlers.handleStageRestoreAppend(CTX, { stagingName, offset: 0, data: new Uint8Array([1, 2]) });
+    await handlers.handleStageRestoreAppend(CTX, { stagingName, offset: 0, data: new Uint8Array([1, 2]) });
+    await handlers.handleStageRestoreAppend(CTX, { stagingName, offset: 2, data: new Uint8Array([3, 4]) });
+
+    const result = await handlers.handleStageRestoreCommit(
+      CTX, { stagingName, totalBytes: 4 }, getEngine, setEngine, initSqlite,
+    );
+    expect(result).toEqual({ committed: true });
   });
 
   it('rejects an archive-format staging file and keeps the live DB untouched', async () => {

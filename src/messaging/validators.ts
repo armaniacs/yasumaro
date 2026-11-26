@@ -644,13 +644,20 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   },
   // Chunked restore session. restore_chunk.data is the
   // one message-size-capped field: each chunk is bounded by
-  // MAX_RESTORE_CHUNK_BASE64 (4M base64 chars ≒ 3MiB of DB bytes), far below
-  // MAX_RESTORE_DB_BYTES, so the VULN-008 per-message amplification budget
-  // holds even for a 30MB-class DB. offset is the accumulated BYTE offset in
-  // the staging file — base64 chars and bytes are different layers.
+  // MAX_RESTORE_CHUNK_BASE64 (4M base64 chars ≒ 3MiB of DB bytes), so the
+  // VULN-008 per-message amplification budget holds even for a 30MB-class
+  // DB. The session itself is bounded by MAX_RESTORE_SESSION_BYTES
+  // (symmetric with the create-side backup budget) on begin and commit, and
+  // the OPFS worker re-checks both before touching staging files. offset is
+  // the accumulated BYTE offset in the staging file — base64 chars and
+  // bytes are different layers.
   restore_begin: {
     fields: [
-      positiveInteger('totalBytes'),
+      {
+        field: 'totalBytes',
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_RESTORE_SESSION_BYTES,
+        message: (s) => `${s}: totalBytes must be a positive integer up to ${VALIDATOR_LIMITS.MAX_RESTORE_SESSION_BYTES}`,
+      },
       positiveInteger('totalChunks'),
     ],
   },
@@ -665,7 +672,11 @@ export const DASHBOARD_SQLITE_SUBTYPE_SPECS: Readonly<Record<string, DashboardSq
   restore_commit: {
     guardFirst: restoreStagingNameGuard,
     fields: [
-      positiveInteger('totalBytes'),
+      {
+        field: 'totalBytes',
+        test: (v) => isPositiveInteger(v) && v <= VALIDATOR_LIMITS.MAX_RESTORE_SESSION_BYTES,
+        message: (s) => `${s}: totalBytes must be a positive integer up to ${VALIDATOR_LIMITS.MAX_RESTORE_SESSION_BYTES}`,
+      },
     ],
   },
   restore_abort: { guardFirst: restoreStagingNameGuard },

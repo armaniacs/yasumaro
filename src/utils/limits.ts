@@ -25,19 +25,11 @@ export const MAX_IMPORT_ROWS = 1_000;
 export const MAX_IMPORT_BYTES = 2_000_000;
 
 /**
- * Per-message cap for the restore transport (enforced by the validator).
- * Since this round the restore travels as staging chunks
- * (restore_begin -> restore_chunk* -> restore_commit); each chunk is
- * additionally bounded by MAX_RESTORE_CHUNK_BASE64, far below this ceiling,
- * so no single restore message may approach this value.
- */
-export const MAX_RESTORE_DB_BYTES = 10_000_000;
-
-/**
  * restore_chunk.data base64 length cap. Each chunk decodes to at most
- * 3 MiB of DB bytes (base64 inflates by 4/3), so the wire message stays
- * far below MAX_RESTORE_DB_BYTES and the VULN-008 memory-amplification
- * budget holds per message instead of per whole DB.
+ * 3 MiB of DB bytes (base64 inflates by 4/3). This is the ONLY per-message
+ * enforcement point of the restore transport: the single-shot restore_db
+ * subtype (and its whole-DB string cap) was removed in favor of the staging
+ * chunk session, whose whole-session budget is MAX_RESTORE_SESSION_BYTES.
  */
 export const MAX_RESTORE_CHUNK_BASE64 = 4 * 1024 * 1024;
 
@@ -133,11 +125,15 @@ export const MAX_PRIVACY_POLICY_BYTES = 1024 * 1024;
  * Pre-parse import text cap (dashboard importLogsService, VULN-023). The cap
  * itself stays — it is what bounds unbounded parse/accumulate — but the value
  * is sized for the round-trip invariant "what exportJson produces,
- * importFromJson accepts": MAX_EXPORT_ROWS (100,000) x a standard ~300-byte
- * record is ~30 MiB, so the row cap becomes the effective first gate instead
- * of a byte gate tuned for settings files. Deliberately larger than the
- * settings-import cap (DEFAULT_IMPORT_SIZE_CAP_BYTES, 10 MiB): a settings
- * file is a handful of KB-MB, a log export is a record collection.
+ * importFromJson accepts" for LEAN rows: MAX_EXPORT_ROWS (100,000) x ~300 B
+ * is ~30 MiB. Full-fidelity rows measured ~550 B/row in the pinned 50,000-row
+ * round trip (27.8 MB), so a 100,000-row full-fidelity export (~55 MB)
+ * deliberately EXCEEDS this cap — that band is the .db export / encrypted
+ * backup's job (role split documented in docs/LOG_EXPORT_IMPORT_GUIDE.md).
+ * Note the gate compares String.length (UTF-16 code units), not bytes: CJK
+ * text inflates the byte budget relative to the label. Deliberately larger
+ * than the settings-import cap (DEFAULT_IMPORT_SIZE_CAP_BYTES, 10 MiB): a
+ * settings file is a handful of KB-MB, a log export is a record collection.
  */
 export const MAX_IMPORT_TEXT_BYTES = 30 * 1024 * 1024;
 
@@ -172,6 +168,16 @@ export const MAX_ENVELOPE_BASE64_LENGTH = 10 * 1024 * 1024;
  * local) so the file gate and the envelope gate below cannot drift apart.
  */
 export const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
+
+/**
+ * Whole-session byte ceiling for the chunked restore staging session
+ * (restore_begin/restore_commit totalBytes + the OPFS worker's append guard),
+ * symmetric with the create-side backup budget: a backup the create path can
+ * produce is the largest file the restore path will stage. Checked before any
+ * staging file is created, so a compromised sender cannot grow the OPFS file
+ * past this budget (the disk-amplification counterpart of VULN-008).
+ */
+export const MAX_RESTORE_SESSION_BYTES = MAX_BACKUP_FILE_BYTES;
 
 /**
  * Encrypted-backup envelope PRE-DECODE base64 length cap (PBI 2026-11-06-02).
@@ -296,10 +302,10 @@ export const VALIDATOR_LIMITS = {
   MAX_IMPORT_ROWS,
   /** DASHBOARD_SQLITE import payload (JSON estimate) */
   MAX_IMPORT_BYTES,
-  /** DASHBOARD_SQLITE restore transport per-message cap (restore_chunk.data stays far below via MAX_RESTORE_CHUNK_BASE64) */
-  MAX_RESTORE_DB_BYTES,
-  /** DASHBOARD_SQLITE restore_chunk.data base64 cap (one staging chunk) */
+  /** DASHBOARD_SQLITE restore_chunk.data base64 cap (one staging chunk; the only per-message restore enforcement point) */
   MAX_RESTORE_CHUNK_BASE64,
+  /** DASHBOARD_SQLITE restore staging session whole-DB byte ceiling (restore_begin/commit + worker append guard) */
+  MAX_RESTORE_SESSION_BYTES,
   /** DASHBOARD_SQLITE archive_export chunk size (base64 hops stay under 10MB) */
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
   /** DASHBOARD_SQLITE append_to_obsidian ids per request */

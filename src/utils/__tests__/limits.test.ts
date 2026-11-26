@@ -3,7 +3,8 @@ import {
   MAX_APPEND_IDS,
   MAX_IMPORT_ROWS,
   MAX_IMPORT_BYTES,
-  MAX_RESTORE_DB_BYTES,
+  MAX_RESTORE_SESSION_BYTES,
+  MAX_BACKUP_FILE_BYTES,
   MAX_RESTORE_CHUNK_BASE64,
   RESTORE_STAGING_NAME_PREFIX,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES,
@@ -30,11 +31,13 @@ describe('utils/limits — single source of truth', () => {
     expect(MAX_APPEND_IDS).toBe(100);
   });
 
-  it('restore transport caps keep the VULN-008 budget (per message, not per DB)', () => {
-    expect(MAX_RESTORE_DB_BYTES).toBe(10_000_000);
+  it('restore transport caps keep the VULN-008 budget (per message + whole session)', () => {
+    // Per-message budget: the chunk cap is the only per-message enforcement
+    // point since the single-shot restore_db subtype was removed.
     expect(MAX_RESTORE_CHUNK_BASE64).toBe(4 * 1024 * 1024);
-    // Each chunk must stay far below the per-message ceiling.
-    expect(MAX_RESTORE_CHUNK_BASE64).toBeLessThan(MAX_RESTORE_DB_BYTES);
+    // Whole-session budget: symmetric with the create-side backup gate, so a
+    // backup the create path can produce is the largest file restore stages.
+    expect(MAX_RESTORE_SESSION_BYTES).toBe(MAX_BACKUP_FILE_BYTES);
     expect(RESTORE_STAGING_NAME_PREFIX).toBe('restore_incoming_');
   });
 
@@ -44,7 +47,7 @@ describe('utils/limits — single source of truth', () => {
     expect(VALIDATOR_LIMITS.MAX_SEARCH_QUERY_LENGTH).toBe(MAX_SEARCH_QUERY_LENGTH);
     expect(VALIDATOR_LIMITS.MAX_IMPORT_ROWS).toBe(MAX_IMPORT_ROWS);
     expect(VALIDATOR_LIMITS.MAX_IMPORT_BYTES).toBe(MAX_IMPORT_BYTES);
-    expect(VALIDATOR_LIMITS.MAX_RESTORE_DB_BYTES).toBe(MAX_RESTORE_DB_BYTES);
+    expect(VALIDATOR_LIMITS.MAX_RESTORE_SESSION_BYTES).toBe(MAX_RESTORE_SESSION_BYTES);
     expect(VALIDATOR_LIMITS.MAX_RESTORE_CHUNK_BASE64).toBe(MAX_RESTORE_CHUNK_BASE64);
     expect(VALIDATOR_LIMITS.MAX_ARCHIVE_EXPORT_CHUNK_BYTES).toBe(MAX_ARCHIVE_EXPORT_CHUNK_BYTES);
     expect(VALIDATOR_LIMITS.MAX_APPEND_IDS).toBe(MAX_APPEND_IDS);
