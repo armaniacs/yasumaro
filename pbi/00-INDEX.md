@@ -14,6 +14,16 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-26 後続候補ラウンド followup-1126（3件） ― ⬜ 未着手 ✨機能追加 🧪テスト 🔧非機能追加
+
+holistic-1126 ラウンドで台帳送りした後続候補 3 件 (既知 a-d のうち着手可能なもの) の実装ラウンド。RICE 採点済み、相互依存なし (ファイル排他) で並列バッチ 1 組。台帳は [2026-11-26-15-backlog-followup-1126.md](2026-11-26-15-backlog-followup-1126.md) を参照。ブランチ: chore/holistic-followup-1126。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ⬜ 16 | [2026-11-26-16-feat-local-markdown-100k.md](2026-11-26-16-feat-local-markdown-100k.md) | ✨機能追加 | 3.0 | 3 | ローカル Markdown 書き出しを keyset ページングで 100k 件に (PBI 04 パターン踏襲) |
+| ⬜ 17 | [2026-11-26-17-test-log-export-bench.md](2026-11-26-17-test-log-export-bench.md) | 🧪テスト | 3.2 | 3 | export/import 往復計測を bench:micro に追加 (時間 + peak RSS) |
+| ⬜ 18 | [2026-11-26-18-refactor-dependings-common.md](2026-11-26-18-refactor-dependings-common.md) | 🔧非機能追加 | 1.2 | 3 | dependings 共通化 + generate の「最終確認日」再スタンプ制御 |
+
 ### 2026-11-26 holistic 改善ラウンド holistic-1126（6件） ― ✅ 6件完了・アーカイブ済み 🔧非機能追加
 
 PR #218 (fix/encrypted-backup-large-capacity) の大局的コードレビュー (plans/2026-11-26-1113-holistic-review-...md、4 観点: DRY/SoC/拡張性/堅牢性) から得た改善テーマ 5 件と既知 (b) の実装ラウンド。RICE 降順で 09 → 10 → 11 を実装後、12/13 は 14 (単発 restore 削除) を先行させて実装。バッチ境界: 型検査 / lint 緑、担当テスト緑。最終ゲート: `npm run validate` 全緑 (1,377 ファイル / 19,371 件) + ビルド緑。台帳は [2026-11-26-08-backlog-holistic-1126.md](2026-11-26-08-backlog-holistic-1126.md) を参照。ブランチ: refactor/holistic-1126。
