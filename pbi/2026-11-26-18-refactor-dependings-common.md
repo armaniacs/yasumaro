@@ -73,7 +73,7 @@ ls scripts/lib 2>/dev/null || echo "no scripts/lib"
 ### 落とし穴
 - generate の出力は byte-identical pin されている場合がある (scripts/__tests__/ 内の dependings 試験を先に確認する)
 - `--confirm-date` の挙動変更はドキュメント (CONTRIBUTING.md / docs/DEPENDINGS.md 冒頭) に使われ方が書かれていないか確認して整合させる
-- 鮮度ゲート (check) を壊さない (generate 直後に check を回して fresh であること。日付を保持すれば stale は出ない — ただし元々 stale の場合はそのまま)
+- 鮮度ゲート (check) を壊さない (generate 直後に check を回して fresh であること。日付を保持すれば stale は出ない ― ただし元々 stale の場合はそのまま)
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
