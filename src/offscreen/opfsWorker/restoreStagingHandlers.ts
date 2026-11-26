@@ -14,9 +14,9 @@
  *   then reuses the single-shot restore's validation (SQLite openable, no
  *   archive meta, own-trigger allowlist) before the staging file replaces
  *   the live DB. A mismatch or invalid file leaves the existing DB
- *   untouched — and the swap itself is guarded: the live DB moves to a
- *   backup name first, a failed staging move rolls it back, and the backup
- *   is only deleted after the swap succeeds.
+ *   untouched; the replacement itself is the guarded swap procedure in
+ *   restoreSwap.ts (backup the live DB, move the staging file in, roll back
+ *   on failure, clean up the backup only after success).
  * - BEGIN sweeps leftovers of earlier sessions before issuing the name, so
  *   a crashed session cannot leak staging files forever.
  */
@@ -28,7 +28,6 @@ import type {
   StageRestoreCommitPayload,
   StageRestoreAbortPayload,
 } from './types.js';
-import { DB_FILENAME } from '../dbFilename.js';
 import { MAX_RESTORE_SESSION_BYTES } from '../../utils/limits.js';
 import {
   assertRegisteredRestoreStagingName,
@@ -39,10 +38,8 @@ import {
   removeRestoreStagingFile,
 } from './restoreStaging.js';
 import { validateFullBackupFile } from './backupHandlers.js';
+import { swapVerifiedStagingIntoLive } from './restoreSwap.js';
 import { errorMessage } from '../../utils/errorUtils.js';
-
-/** Where the live DB hides during the swap, so a failed staging move can be rolled back. */
-const PRE_RESTORE_BACKUP_SUFFIX = '.pre-restore';
 
 export async function handleStageRestoreBegin(
   _ctx: HandlerContext,
@@ -141,40 +138,17 @@ export async function handleStageRestoreCommit(
   // replaced; the live DB stays untouched on failure.
   await validateFullBackupFile(payload.stagingName);
 
-  // Close the live engine before the file swap, the same replacement
-  // sequence the single-shot restore uses.
+  // Close the live engine before the file swap. The swap procedure is
+  // engine-independent, so the engine lifecycle stays with the caller (the
+  // opfsWorker adapter supplies getEngine/setEngine/initSqlite).
   const currentEngine = getEngine();
   if (currentEngine) {
     await currentEngine.close();
     setEngine(null);
   }
 
-  // WHY: the swap below is not atomic in OPFS (removeEntry then move leaves
-  // a window where the live DB is gone but the staging move has not
-  // landed). The live DB is moved to a backup name first and only deleted
-  // after the staging file is in place, so a transient move failure rolls
-  // the live DB back instead of losing the user's history.
-  const backupName = `${DB_FILENAME}${PRE_RESTORE_BACKUP_SUFFIX}`;
-  const dbHandle = await root
-    .getFileHandle(DB_FILENAME, { create: false })
-    .catch(() => null);
-  if (dbHandle) {
-    await (dbHandle as unknown as { move: (name: string) => Promise<void> }).move(backupName);
-  }
-  try {
-    // WHY: Chromium's FileSystemFileHandle.move() exists at runtime but not in TS types
-    await (stagingHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
-  } catch (error) {
-    const backupHandle = await root
-      .getFileHandle(backupName, { create: false })
-      .catch(() => null);
-    if (backupHandle) {
-      await (backupHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
-    }
-    throw error;
-  }
+  await swapVerifiedStagingIntoLive(root, stagingHandle);
   releaseRestoreStaging(payload.stagingName);
-  await root.removeEntry(backupName).catch(() => {});
 
   try {
     await initSqlite();
