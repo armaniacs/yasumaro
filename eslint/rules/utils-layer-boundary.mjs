@@ -58,6 +58,8 @@ const LAYER0_FILES = [
   'src/utils/degradedSummary.ts',
   'src/utils/failureTaxonomy.ts',
   'src/utils/vfsCapabilities.ts',
+  // PBI 2026-11-26-09: single import-row contract shared by messaging and dashboard.
+  'src/utils/logImportContract.ts',
   'src/utils/storage/apiKeyTransition.ts',
   // Canonical API-key field list: dependency-free by design (PBI 2026-09-27).
   'src/utils/storage/apiKeyFields.ts',
