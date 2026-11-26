@@ -157,6 +157,112 @@ function isRecord(data: unknown): data is Record<string, unknown> {
   return typeof data === 'object' && data !== null;
 }
 
+// ============================================================================
+// Split shape validation (pure, pre-decrypt)
+//
+// The shape rules (part cap, index/total consistency, duplicates, missing
+// parts) are declared once here. The panel runs them BEFORE the password
+// prompt (fail-fast guidance, VULN-036 order) and parseSplitBackup re-runs
+// them AFTER decryption (authoritative check) — same function, two call
+// sites. Envelope-length checks stay at the call sites: they are a separate
+// layer (MAX_ENVELOPE_BASE64_LENGTH) whose per-position rejection order is
+// caller-specific.
+// ============================================================================
+
+export type SplitShapeProblem =
+  | { problem: 'too-many-parts'; detail: string }
+  | { problem: 'total-mismatch'; detail: string }
+  | { problem: 'out-of-range-index'; detail: string }
+  | { problem: 'envelope-too-long'; detail: string }
+  | { problem: 'duplicate-index'; detail: string }
+  | { problem: 'missing-parts'; detail: string };
+
+export interface SplitShapeCheckInput {
+  /** Declared part total (manifest.total, or container.parts.length in the single-container fallback). */
+  declaredPartCount?: number;
+  /** Number of selected part files (panel streaming loop / selected set). */
+  selectedPartCount?: number;
+  /** Per-part declared totals, position-aligned with partIndices. */
+  partTotals?: readonly number[];
+  /** Part indices in selection order (position-aligned with partTotals). */
+  partIndices?: readonly number[];
+  /** Pre-checked envelope cap results, position-aligned as [manifest, part0, part1, ...]. */
+  envelopesWithinGenericCap?: readonly boolean[];
+  /** Part cap; defaults to MAX_SPLIT_PART_COUNT. */
+  cap?: number;
+}
+
+/**
+ * Evaluate the split-backup shape rules against the given input and return
+ * the FIRST violation, or null when the shape is acceptable. The detail
+ * strings are user-displayable (the panel interpolates them into its i18n
+ * templates verbatim, so wording must stay stable).
+ */
+export function checkSplitBackupShape(input: SplitShapeCheckInput): SplitShapeProblem | null {
+  const cap = input.cap ?? MAX_SPLIT_PART_COUNT;
+  if (input.declaredPartCount !== undefined && input.declaredPartCount > cap) {
+    return {
+      problem: 'too-many-parts',
+      detail: `declares ${input.declaredPartCount} parts, above the cap of ${cap}`,
+    };
+  }
+  if (input.selectedPartCount !== undefined && input.selectedPartCount > cap) {
+    return {
+      problem: 'too-many-parts',
+      detail: `selects more part files than the cap of ${cap}`,
+    };
+  }
+  if (
+    input.envelopesWithinGenericCap?.[0] === false
+  ) {
+    return {
+      problem: 'envelope-too-long',
+      detail: 'manifest envelope exceeds the generic length limit',
+    };
+  }
+  if (input.partIndices !== undefined && input.declaredPartCount !== undefined) {
+    for (const [position, index] of input.partIndices.entries()) {
+      const declaredTotal = input.partTotals?.[position];
+      if (declaredTotal !== undefined && declaredTotal !== input.declaredPartCount) {
+        return {
+          problem: 'total-mismatch',
+          detail: `part file at position ${position} declares total ${declaredTotal}, manifest declares ${input.declaredPartCount}`,
+        };
+      }
+      if (index < 0 || index >= input.declaredPartCount) {
+        return {
+          problem: 'out-of-range-index',
+          detail: `part file at position ${position} names out-of-range index ${index}`,
+        };
+      }
+      if (input.envelopesWithinGenericCap?.[position + 1] === false) {
+        return {
+          problem: 'envelope-too-long',
+          detail: `part file at position ${position} exceeds the generic length limit`,
+        };
+      }
+    }
+    const seen = new Set<number>();
+    for (const index of input.partIndices) {
+      if (seen.has(index)) {
+        return {
+          problem: 'duplicate-index',
+          detail: `part index ${index} appears more than once`,
+        };
+      }
+      seen.add(index);
+    }
+    const missing: number[] = [];
+    for (let index = 0; index < input.declaredPartCount; index++) {
+      if (!input.partIndices.includes(index)) missing.push(index);
+    }
+    if (missing.length > 0) {
+      return { problem: 'missing-parts', detail: missing.join(', ') };
+    }
+  }
+  return null;
+}
+
 /**
  * Display fields for the split-backup-too-large gate. Chars are the
  * post-compression base64 body, so the byte-equivalent label scales them
@@ -571,10 +677,11 @@ export async function parseSplitBackup(
   if (container.parts.length < 1) {
     throw new SplitBackupError('invalid-shape', 'Split backup has no parts');
   }
-  if (container.parts.length > MAX_SPLIT_PART_COUNT) {
+  const shapeProblem = checkSplitBackupShape({ declaredPartCount: container.parts.length });
+  if (shapeProblem) {
     throw new SplitBackupError(
       'too-many-parts',
-      `Split backup declares ${container.parts.length} parts, above the cap of ${MAX_SPLIT_PART_COUNT}`,
+      `Split backup ${shapeProblem.detail}`,
     );
   }
 
@@ -703,14 +810,17 @@ export async function parseSplitBackup(
     // WHY identify from authenticated inner indices: with a dropped part the
     // position binding no longer locates it, but each surviving part still
     // names its own index, so the complement is exactly the missing set.
-    const missing: number[] = [];
-    for (let index = 0; index < manifest.total; index++) {
-      if (chunks[index] === undefined) missing.push(index);
+    const presentIndices = chunks.flatMap((chunk, index) => (chunk === undefined ? [] : [index]));
+    const missingShape = checkSplitBackupShape({
+      declaredPartCount: manifest.total,
+      partIndices: presentIndices,
+    });
+    if (missingShape?.problem === 'missing-parts') {
+      throw new SplitBackupError(
+        'part-count-mismatch',
+        `Split backup is missing part(s) ${missingShape.detail} (manifest claims ${manifest.total} parts but the container holds ${container.parts.length})`,
+      );
     }
-    throw new SplitBackupError(
-      'part-count-mismatch',
-      `Split backup is missing part(s) ${missing.join(', ')} (manifest claims ${manifest.total} parts but the container holds ${container.parts.length})`,
-    );
   }
 
   const joined = chunks.join('');
