@@ -1,6 +1,6 @@
 // src/offscreen/FallbackStorageAdapter.ts
 import type { StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult, MutationResult, StarResult, PurgeResult, FtsSizeResult, BackupResult, SerializeResult, CountResult, HealthResult, AuditLogQueryResult, StatusResult, BackendOrError } from './StorageBackend.js';
-import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import { FallbackStorage } from './storageFallback.js';
 import { buildExportEnvelope } from './exportEnvelope.js';
 import type { BrowsingLogRecord, StorageQuery, AuditLogRecord } from '../utils/sqlite-types.js';
@@ -70,10 +70,6 @@ export class FallbackStorageAdapter implements StorageBackend {
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
     return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
-  }
-
-  async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {

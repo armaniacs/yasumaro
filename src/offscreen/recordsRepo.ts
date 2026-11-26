@@ -5,7 +5,7 @@
  * Owns every operation callers need against the secondary store: browsing-log
  * record CRUD, FTS5 search, and JSON export (folded in from the former thin
  * recordsRepo split), the audit_log trail (folded in from auditLogRepo), and
- * retention purging, binary backup/restore, and health check (folded in from
+ * retention purging, binary backup, and health check (folded in from
  * dbMaintenance). The former per-table modules now re-export from here so a
  * delegation-target change lands in exactly one place.
  *
@@ -165,7 +165,7 @@ export async function purgeAuditLog(retentionDays?: number): Promise<{ success: 
 }
 
 // ── Maintenance (folded in from dbMaintenance) ────────────────────────────
-// Retention purging, binary backup/restore, and a lightweight health check.
+// Retention purging, binary backup, and a lightweight health check.
 
 /**
  * Purge old browsing log records based on retention policy.
@@ -205,18 +205,9 @@ export async function backupDb(): Promise<{ success: true; data: Uint8Array } | 
   return backend.backupDb();
 }
 
-/**
- * Restore the history DB from a binary .db payload.
- * OPFS path only. Temporary-file validation lives on the opfsWorker side.
- */
-export async function restoreDb(data: Uint8Array): Promise<{ success: true } | { success: false; error: string }> {
-  const backend = await engine.getBackend();
-  return backend.restoreDb(data);
-}
-
 // ── Chunked restore staging session ───────────────────
-// begin -> append* -> commit replaces the single-shot restore for the
-// dashboard path. The staging name is issued by the OPFS worker and carried
+// The only restore path (PBI 2026-11-26-14 removed the single-shot
+// restoreDb). The staging name is issued by the OPFS worker and carried
 // back on every call, so nothing session-shaped lives in this module.
 //
 // These are OPFS-exclusive (RestoreStagingTransport, implemented only by

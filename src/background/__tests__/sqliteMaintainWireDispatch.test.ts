@@ -52,17 +52,6 @@ describe('background/sqliteMaintainWireDispatch: table-driven maintain routing',
     expect(transport.calls).toEqual([{ type: 'SQLITE_BACKUP', payload: {} }]);
   });
 
-  it('restore sends SQLITE_RESTORE with bytes as number[] and decodes to undefined', async () => {
-    const transport = recordingTransport({ success: true } as OffscreenResponse);
-    const client = new SqliteClient(transport);
-
-    expect(await client.maintain({ type: 'restore', data: new Uint8Array([4, 5]) })).toEqual({
-      success: true,
-      data: undefined,
-    });
-    expect(transport.calls).toEqual([{ type: 'SQLITE_RESTORE', payload: { data: [4, 5] } }]);
-  });
-
   it('clearAll sends SQLITE_CLEAR_ALL with {} and decodes to undefined', async () => {
     const transport = recordingTransport({ success: true } as OffscreenResponse);
     const client = new SqliteClient(transport);

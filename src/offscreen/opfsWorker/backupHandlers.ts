@@ -1,9 +1,10 @@
 /**
  * backupHandlers.ts
- * Backup, restore, and serialize operations.
+ * Backup and serialize operations. The former single-shot binary restore
+ * lived here too and was removed (PBI 2026-11-26-14) — the chunked restore
+ * staging session (restoreStagingHandlers.ts) is the only restore path.
  */
 
-import { errorMessage } from '../../utils/errorUtils.js';
 import { sqlQuery, type HandlerContext } from './handlers.js';
 import { buildExportEnvelope, EXPORT_COLUMNS } from '../exportEnvelope.js';
 import { DB_FILENAME } from '../dbFilename.js';
@@ -11,8 +12,6 @@ import { createEngine } from '../sqliteBoot.js';
 import { FTS5_STATEMENTS } from '../schema.js';
 import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { NamedRow } from '../rowCodec.js';
-
-const RESTORE_TMP_FILENAME = `${DB_FILENAME}.restore-tmp`;
 
 /**
  * Whitespace-normalized form for trigger SQL comparison. sqlite_master
@@ -85,9 +84,8 @@ export async function handleBackup(ctx: HandlerContext): Promise<Uint8Array> {
  * Validate an OPFS file as a genuine full-backup SQLite DB (not an archive
  * container): openable, has a sqlite_master, carries no yasumaro_archive_meta
  * (that means "use the archive restore panel"), and every trigger matches the
- * schema's own sync triggers byte-for-byte (modulo whitespace). Shared by the
- * single-shot restore (temp file) and the chunked restore commit (staging
- * file) so the two paths cannot drift on what "a valid backup" is.
+ * schema's own sync triggers byte-for-byte (modulo whitespace). Used by the
+ * chunked restore commit (staging file) before the destructive swap.
  * Throws on the first failure; the caller owns cleanup of the file.
  */
 export async function validateFullBackupFile(fileName: string): Promise<void> {
@@ -122,47 +120,4 @@ export async function validateFullBackupFile(fileName: string): Promise<void> {
   } finally {
     await tmpEngine.close();
   }
-}
-
-/**
- * Restore a binary .db file: write to temp file → validate as SQLite →
- * replace production file. On validation failure, temp file is discarded
- * and the production file is untouched.
- */
-export async function handleRestore(
-  data: Uint8Array,
-  getEngine: () => import('../sqliteEngine.js').SqliteEngine | null,
-  setEngine: (e: import('../sqliteEngine.js').SqliteEngine | null) => void,
-  initSqlite: () => Promise<void>,
-): Promise<{ restored: true }> {
-  const root = await navigator.storage.getDirectory();
-
-  // 1. Write to temp file
-  const tmpHandle = await root.getFileHandle(RESTORE_TMP_FILENAME, { create: true });
-  const writable = await tmpHandle.createWritable();
-  // WHY: `data.slice()` returns `Uint8Array` but `FileSystemWritableFileStream.write()` accepts `ArrayBuffer` at runtime
-  await writable.write(data.slice() as unknown as ArrayBuffer);
-  await writable.close();
-
-  // 2. Validate as SQLite
-  try {
-    await validateFullBackupFile(RESTORE_TMP_FILENAME);
-  } catch (validationError) {
-    await root.removeEntry(RESTORE_TMP_FILENAME).catch(() => {});
-    throw new Error(`Restore validation failed: ${errorMessage(validationError)}`);
-  }
-
-  // 3. Close existing engine, replace file, re-init
-  const currentEngine = getEngine();
-  if (currentEngine) {
-    await currentEngine.close();
-    setEngine(null);
-  }
-  await root.removeEntry(DB_FILENAME).catch(() => {});
-  // WHY: OPFS `FileSystemFileHandle` lacks `move()` in TypeScript types but it exists in Chromium
-  await (tmpHandle as unknown as { move: (name: string) => Promise<void> }).move(DB_FILENAME);
-
-  await initSqlite();
-
-  return { restored: true };
 }

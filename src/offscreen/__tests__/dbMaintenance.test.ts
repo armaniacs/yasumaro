@@ -11,13 +11,12 @@
  */
 
 import { vi } from 'vitest';
-import { purgeOldRecords, purgeContent, backupDb, restoreDb, sqliteHealthCheck } from '../recordsRepo.js';
+import { purgeOldRecords, purgeContent, backupDb, sqliteHealthCheck } from '../recordsRepo.js';
 
 const backend = vi.hoisted(() => ({
   purgeOldRecords: vi.fn(),
   purgeContent: vi.fn(),
   backupDb: vi.fn(),
-  restoreDb: vi.fn(),
   healthCheck: vi.fn(),
   getFtsIndexSize: vi.fn(),
 }));
@@ -87,14 +86,6 @@ describe('dbMaintenance — wrapper delegation (re-audit 2026-08-02)', () => {
     backend.backupDb.mockResolvedValue({ success: false, error: 'OPFS only' });
     const result = await backupDb();
     expect(result).toEqual({ success: false, error: 'OPFS only' });
-  });
-
-  it('restoreDb forwards the payload to the backend', async () => {
-    backend.restoreDb.mockResolvedValue({ success: true });
-    const data = new Uint8Array([9]);
-    const result = await restoreDb(data);
-    expect(backend.restoreDb).toHaveBeenCalledWith(data);
-    expect(result).toEqual({ success: true });
   });
 
   it('sqliteHealthCheck returns true when the backend health check succeeds', async () => {

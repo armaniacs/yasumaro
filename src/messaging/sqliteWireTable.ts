@@ -802,18 +802,11 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     encodePayload: emptyPayload,
     decodeGateway: (response) => new Uint8Array(response.data as number[]),
   }),
-  defineSqliteMaintainWireOp({
-    op: 'restore',
-    family: 'maintain',
-    messageType: 'SQLITE_RESTORE',
-    encodePayload: (op) => ({ data: Array.from((op as Extract<MaintainOp, { type: 'restore' }>).data) }),
-    decodeGateway: voidDecode,
-  }),
   // Chunked restore staging transport: the dashboard
   // uploads the incoming DB in capped chunks (base64 stays end-to-end until
   // the offscreen document decodes it once before the worker write). The
-  // single-shot 'restore' row above stays for now — see the PBI report for
-  // the keep-vs-remove decision.
+  // former single-shot 'restore' row is gone — the staging session is the
+  // only restore path (PBI 2026-11-26-14).
   defineSqliteMaintainWireOp({
     op: 'restorePrepareIncoming',
     family: 'maintain',

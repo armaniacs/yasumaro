@@ -37,7 +37,6 @@ const RETRY_POLICY_TABLE: Record<TransportMessageType, TransportRetryPolicy> = {
   SQLITE_STATUS: RETRY_SAFE,
   SQLITE_INIT: RETRY_SAFE,
   SQLITE_BACKUP: RETRY_SAFE,
-  SQLITE_RESTORE: RETRY_UNSAFE,
   // Staging session transport. BEGIN issues a fresh staging name, so a
   // retried begin would orphan the first staging file — same rule as the
   // archive prepare-incoming row. COMMIT swaps the live DB: a lost response

@@ -28,7 +28,6 @@ const recordsRepoMock = vi.hoisted(() => ({
 const dbMaintenanceMock = vi.hoisted(() => ({
   sqliteHealthCheck: vi.fn().mockResolvedValue(true),
   backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([9, 9]) }),
-  restoreDb: vi.fn().mockResolvedValue({ success: true }),
   restorePrepareIncoming: vi.fn().mockResolvedValue({ success: true, stagingName: 'restore_incoming_3f2504e0-4f89-41d3-9a0c-0305e82c3301.db' }),
   restoreAppend: vi.fn().mockResolvedValue({ success: true, written: 2 }),
   restoreCommit: vi.fn().mockResolvedValue({ success: true }),
@@ -62,7 +61,6 @@ vi.mock('../recordsRepo.js', () => ({
 vi.mock('../dbMaintenance.js', () => ({
   sqliteHealthCheck: dbMaintenanceMock.sqliteHealthCheck,
   backupDb: dbMaintenanceMock.backupDb,
-  restoreDb: dbMaintenanceMock.restoreDb,
   restorePrepareIncoming: dbMaintenanceMock.restorePrepareIncoming,
   restoreAppend: dbMaintenanceMock.restoreAppend,
   restoreCommit: dbMaintenanceMock.restoreCommit,
@@ -91,15 +89,15 @@ async function callHandler(type: string, payload?: unknown): Promise<unknown> {
 }
 
 describe('sqliteMessageHandlers — registry completeness', () => {
-  it('Map contains all 37 SqliteMessageTypes', () => {
-    expect(sqliteMessageHandlers.size).toBe(37);
+  it('Map contains all 36 SqliteMessageTypes', () => {
+    expect(sqliteMessageHandlers.size).toBe(36);
     const expected = [
       'SQLITE_HEALTH_CHECK', 'SQLITE_INIT', 'SQLITE_INSERT', 'SQLITE_INSERT_BATCH',
       'SQLITE_QUERY', 'SQLITE_AUDIT_LOG_INSERT', 'SQLITE_AUDIT_LOG_QUERY',
       'SQLITE_AUDIT_LOG_PURGE',
       'SQLITE_SEARCH', 'SQLITE_UPDATE', 'SQLITE_DELETE', 'SQLITE_TOGGLE_STAR',
       'SQLITE_COUNT', 'SQLITE_STATUS', 'SQLITE_CLEAR_ALL',
-      'SQLITE_BACKUP', 'SQLITE_RESTORE',
+      'SQLITE_BACKUP',
       'SQLITE_RESTORE_BEGIN', 'SQLITE_RESTORE_APPEND', 'SQLITE_RESTORE_COMMIT', 'SQLITE_RESTORE_ABORT',
       'SQLITE_PURGE', 'CONTENT_PURGE',
       'SQLITE_ARCHIVE_PREVIEW', 'SQLITE_ARCHIVE_CREATE',
@@ -587,41 +585,6 @@ describe('sqliteMessageHandlers — handleBackup branching', () => {
     dbMaintenanceMock.backupDb.mockResolvedValue({ success: true } as never);
     const res = await callHandler('SQLITE_BACKUP') as { success: boolean };
     expect(res).toEqual({ success: true });
-  });
-});
-
-// ── handleRestore — Branches 35-36 ─────────────────────────────────────────
-describe('sqliteMessageHandlers — handleRestore branching', () => {
-  beforeEach(() => vi.clearAllMocks());
-
-  it('converts number[] to Uint8Array and returns success true path', async () => {
-    dbMaintenanceMock.restoreDb.mockResolvedValue({ success: true });
-    const res = await callHandler('SQLITE_RESTORE', { data: [1, 2, 3] }) as { success: boolean };
-    expect(dbMaintenanceMock.restoreDb).toHaveBeenCalledWith(expect.any(Uint8Array));
-    expect(res).toEqual({ success: true });
-  });
-
-  it('falls back to [] when data missing (|| branch) -> empty Uint8Array', async () => {
-    dbMaintenanceMock.restoreDb.mockResolvedValue({ success: true });
-    const res = await callHandler('SQLITE_RESTORE', {} as never) as { success: boolean };
-    expect(dbMaintenanceMock.restoreDb).toHaveBeenCalledWith(expect.any(Uint8Array));
-    const arg = dbMaintenanceMock.restoreDb.mock.calls[0]![0] as Uint8Array;
-    expect(arg.length).toBe(0);
-    expect(res.success).toBe(true);
-  });
-
-  it('returns error branch when restore fails', async () => {
-    dbMaintenanceMock.restoreDb.mockResolvedValue({ success: false, error: 'bad data' });
-    const res = await callHandler('SQLITE_RESTORE', { data: [9] }) as { success: boolean; error: string };
-    expect(res.success).toBe(false);
-    expect(res.error).toBe('bad data');
-  });
-
-  it('handles null data via || []', async () => {
-    dbMaintenanceMock.restoreDb.mockResolvedValue({ success: true });
-    await callHandler('SQLITE_RESTORE', { data: null } as never);
-    const arg = dbMaintenanceMock.restoreDb.mock.calls[0]![0] as Uint8Array;
-    expect(arg.length).toBe(0);
   });
 });
 

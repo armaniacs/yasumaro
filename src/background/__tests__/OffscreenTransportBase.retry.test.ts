@@ -75,7 +75,6 @@ describe('BaseOffscreenTransport retry policy', () => {
       'SQLITE_INSERT_BATCH',
       'SQLITE_AUDIT_LOG_INSERT',
       'SQLITE_TOGGLE_STAR',
-      'SQLITE_RESTORE',
       'SQLITE_PURGE',
       'CONTENT_PURGE',
       'SQLITE_ARCHIVE_PREPARE_INCOMING',

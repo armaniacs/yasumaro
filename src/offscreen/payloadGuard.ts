@@ -1,8 +1,8 @@
 /**
  * payloadGuard.ts
  * Common payload size guard for offscreen SQLite messages.
- * Centralizes the 1 MB field cap, batch limits, and restore size cap
- * that were previously scattered across individual switch cases.
+ * Centralizes the 1 MB field cap, batch limits, and the restore staging
+ * chunk cap that were previously scattered across individual switch cases.
  *
  * The per-column caps are schema-driven: every TEXT column declared in
  * schema.ts is capped, so a new TEXT column is guarded automatically
@@ -31,12 +31,8 @@ export { MAX_BATCH_TOTAL_BYTES };
 /** Total bytes of text across a single write payload (all TEXT columns summed). */
 export { MAX_PAYLOAD_TOTAL_BYTES };
 
-/** Maximum bytes for RESTORE binary payload. */
-export const MAX_RESTORE_BYTES = 100 * 1024 * 1024; // 100 MB
-
 /** Maximum base64 chars for one restore_chunk data payload (value lives in limits.ts). */
 export { MAX_RESTORE_CHUNK_BASE64 };
-
 /**
  * TEXT columns from schema.ts — parsed from the CREATE TABLE DDL so it stays
  * in lockstep with the schema. Any column declared `<name> TEXT` is included.
@@ -63,7 +59,6 @@ export interface PayloadLimits {
   maxBatchRecords: number;
   maxBatchTotalBytes: number;
   maxPayloadTotalBytes: number;
-  maxRestoreBytes: number;
   maxRestoreChunkBase64: number;
 }
 
@@ -72,7 +67,6 @@ export const DEFAULT_PAYLOAD_LIMITS: PayloadLimits = {
   maxBatchRecords: MAX_BATCH_RECORDS,
   maxBatchTotalBytes: MAX_BATCH_TOTAL_BYTES,
   maxPayloadTotalBytes: MAX_PAYLOAD_TOTAL_BYTES,
-  maxRestoreBytes: MAX_RESTORE_BYTES,
   maxRestoreChunkBase64: MAX_RESTORE_CHUNK_BASE64,
 };
 
@@ -172,13 +166,6 @@ export function assertPayloadSize(
     case 'SQLITE_UPDATE': {
       const payload = msg.payload as Record<string, unknown>;
       return checkUnknownFields(payload) ?? checkTextColumns(payload, limits);
-    }
-    case 'SQLITE_RESTORE': {
-      const rawData = (msg.payload as { data?: unknown }).data;
-      if (Array.isArray(rawData) && rawData.length > limits.maxRestoreBytes) {
-        return 'Restore data exceeds maximum size of 100MB';
-      }
-      return null;
     }
     case 'SQLITE_RESTORE_APPEND': {
       // One staging chunk: base64 string bounded to the same cap the

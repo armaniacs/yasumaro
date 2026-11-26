@@ -207,34 +207,6 @@ describe('SqliteClient', () => {
     });
   });
 
-  describe('maintain restore', () => {
-    it('sends SQLITE_RESTORE with data array and returns success result on success', async () => {
-      mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));
-      client = new SqliteClient(mockTransport);
-
-      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
-      expect(result).toEqual({ success: true, data: undefined });
-    });
-
-    it('returns failure result when offscreen reports failure', async () => {
-      mockTransport = createMockTransport(async () => ({
-        success: false, error: 'restore failed',
-      } as OffscreenResponse));
-      client = new SqliteClient(mockTransport);
-
-      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
-      expect(result.success).toBe(false);
-    });
-
-    it('returns failure result when transport throws', async () => {
-      mockTransport = createMockTransport(new Error('timeout'));
-      client = new SqliteClient(mockTransport);
-
-      const result = await client.maintain({ type: 'restore', data: new Uint8Array([1, 2, 3]) });
-      expect(result.success).toBe(false);
-    });
-  });
-
   describe('maintain healthCheck', () => {
     it('sends SQLITE_HEALTH_CHECK and returns true on success', async () => {
       mockTransport = createMockTransport(async () => ({ success: true } as OffscreenResponse));

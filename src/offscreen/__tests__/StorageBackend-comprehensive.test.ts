@@ -31,7 +31,6 @@ describe('NoopBackend', () => {
     { name: 'purgeContent', args: [] },
     { name: 'getFtsIndexSize', args: [] },
     { name: 'backupDb', args: [] },
-    { name: 'restoreDb', args: [new Uint8Array()] },
     { name: 'healthCheck', args: [] },
     { name: 'getStatus', args: [] },
     { name: 'insertAuditLog', args: [{ provider: 'test', url: 'https://test.com', created_at: 1000 }] },
@@ -63,7 +62,7 @@ describe('NoopBackend', () => {
     const requiredMethods = [
       'insert', 'insertBatch', 'query', 'update', 'delete',
       'toggleStar', 'purgeOldRecords', 'purgeContent', 'getFtsIndexSize',
-      'backupDb', 'restoreDb', 'healthCheck', 'getStatus',
+      'backupDb', 'healthCheck', 'getStatus',
       'insertAuditLog', 'queryAuditLog', 'getCount', 'clearAll',
     ];
     for (const method of requiredMethods) {

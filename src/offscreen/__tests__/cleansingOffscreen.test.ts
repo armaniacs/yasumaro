@@ -16,7 +16,7 @@ vi.mock('../recordsRepo.js', () => ({
     getStatus: vi.fn(), serialize: vi.fn(), clearAll: vi.fn(),
 }));
 vi.mock('../dbMaintenance.js', () => ({
-    backupDb: vi.fn(), restoreDb: vi.fn(), purgeOldRecords: vi.fn(), purgeContent: vi.fn(), sqliteHealthCheck: vi.fn(),
+    backupDb: vi.fn(), purgeOldRecords: vi.fn(), purgeContent: vi.fn(), sqliteHealthCheck: vi.fn(),
 }));
 vi.mock('../auditLogRepo.js', () => ({
     insertAuditLog: vi.fn(), queryAuditLog: vi.fn(),

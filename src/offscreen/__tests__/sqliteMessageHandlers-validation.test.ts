@@ -26,7 +26,6 @@ const recordsRepoMock = vi.hoisted(() => ({
 const dbMaintenanceMock = vi.hoisted(() => ({
   sqliteHealthCheck: vi.fn().mockResolvedValue(true),
   backupDb: vi.fn().mockResolvedValue({ success: true, data: new Uint8Array([9, 9]) }),
-  restoreDb: vi.fn().mockResolvedValue({ success: true }),
   purgeOldRecords: vi.fn().mockResolvedValue({ success: true, purged: 3 }),
   purgeContent: vi.fn().mockResolvedValue({ success: true, purged: 2 }),
 }));
@@ -56,7 +55,6 @@ vi.mock('../recordsRepo.js', () => ({
 vi.mock('../dbMaintenance.js', () => ({
   sqliteHealthCheck: dbMaintenanceMock.sqliteHealthCheck,
   backupDb: dbMaintenanceMock.backupDb,
-  restoreDb: dbMaintenanceMock.restoreDb,
   purgeOldRecords: dbMaintenanceMock.purgeOldRecords,
   purgeContent: dbMaintenanceMock.purgeContent,
 }));

@@ -20,7 +20,6 @@ import {
 import {
   sqliteHealthCheck,
   backupDb as sqliteBackupDb,
-  restoreDb as sqliteRestoreDb,
   restorePrepareIncoming as sqliteRestorePrepareIncoming,
   restoreAppend as sqliteRestoreAppend,
   restoreCommit as sqliteRestoreCommit,
@@ -202,13 +201,6 @@ async function handleBackup(_msg: SqliteMessage, sendResponse: (r: unknown) => v
   } else {
     sendResponse(result);
   }
-}
-
-async function handleRestore(msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
-  const rawData = (msg as Extract<SqliteMessage, { type: 'SQLITE_RESTORE' }>).payload.data || [];
-  const data = new Uint8Array(rawData);
-  const result = await sqliteRestoreDb(data);
-  sendResponse(result.success ? { success: true } : { success: false, error: result.error });
 }
 
 // Chunked restore staging handlers (dashboard restoreDb session). The base64
@@ -515,7 +507,6 @@ const handlerRecord = {
   SQLITE_STATUS: handleStatus,
   SQLITE_CLEAR_ALL: handleClearAll,
   SQLITE_BACKUP: handleBackup,
-  SQLITE_RESTORE: handleRestore,
   SQLITE_RESTORE_BEGIN: handleRestoreBegin,
   SQLITE_RESTORE_APPEND: handleRestoreAppend,
   SQLITE_RESTORE_COMMIT: handleRestoreCommit,

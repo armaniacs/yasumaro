@@ -28,7 +28,6 @@ vi.mock('../recordsRepo.js', () => ({
 
 vi.mock('../dbMaintenance.js', () => ({
     backupDb: vi.fn(),
-    restoreDb: vi.fn(),
     purgeOldRecords: vi.fn(),
     purgeContent: vi.fn(),
     sqliteHealthCheck: vi.fn(),
@@ -215,55 +214,4 @@ describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
         expect(resp.success).toBe(false);
         expect(resp.error).toBe('OPFS unavailable');
     });
-});
-
-describe('handleOffscreenMessage - SQLITE_RESTORE', () => {
-    beforeEach(() => {
-        (globalThis as unknown as Record<string, unknown>).chrome = {
-            runtime: { id: 'test-extension-id' },
-        };
-    });
-
-    afterEach(() => {
-        delete (globalThis as unknown as Record<string, unknown>).chrome;
-    });
-
-    it('converts number[] back to Uint8Array and calls restoreDb', async () => {
-        const { restoreDb } = await import('../dbMaintenance.js');
-        vi.mocked(restoreDb).mockResolvedValue({ success: true });
-
-        const responses: unknown[] = [];
-        handleOffscreenMessage(
-            makeMessage('SQLITE_RESTORE', { data: [1, 2, 3] }),
-            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
-            (r) => responses.push(r)
-        );
-        await vi.waitFor(() => expect(responses.length).toBe(1));
-
-        const resp = responses[0] as { success: boolean };
-        expect(resp.success).toBe(true);
-        // Verify restoreDb was called with Uint8Array (not number[])
-        expect(restoreDb).toHaveBeenCalledWith(expect.any(Uint8Array));
-    });
-
-    it('passes through failure response unchanged', async () => {
-        const { restoreDb } = await import('../dbMaintenance.js');
-        vi.mocked(restoreDb).mockResolvedValue({ success: false, error: 'restore failed' });
-
-        const responses: unknown[] = [];
-        handleOffscreenMessage(
-            makeMessage('SQLITE_RESTORE', { data: [9, 8, 7] }),
-            { id: 'test-extension-id' } as chrome.runtime.MessageSender,
-            (r) => responses.push(r)
-        );
-        await vi.waitFor(() => expect(responses.length).toBe(1));
-
-        const resp = responses[0] as { success: boolean; error: string };
-        expect(resp.success).toBe(false);
-        expect(resp.error).toBe('restore failed');
-    });
-
-    // Note: restoreDb size cap (100MB) cannot be verified with real allocations in unit tests
-    // (100M-element array would exceed Node.js memory). The guard is a simple length check
-    // at offscreen.ts:SQLITE_RESTORE handler — verified by code review of the diff.
 });

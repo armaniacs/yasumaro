@@ -96,7 +96,8 @@ export interface Queryable {
 
 /**
  * Mutable — write facet of storage.
- * Covers insert/update/delete/purge/backup/restore operations.
+ * Covers insert/update/delete/purge/backup operations (restore has no
+ * single-shot method: the chunked staging session owns it).
  */
 export interface Mutable {
   insert(record: BrowsingLogRecord): Promise<BackendOrError<InsertResult>>;
@@ -122,13 +123,15 @@ export interface Mutable {
    */
   purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
-  restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
   // OPFS-exclusive capability groups are NOT part of this interface — they
   // live in their own seams implemented only by OpfsWorkerBackend, and the
   // delegation/dispatch layer narrows via supports*() and fails closed:
   // - archive: ArchiveStaging (archiveStaging.ts) / supportsArchive()
   // - chunked restore staging: RestoreStagingTransport
   //   (restoreStagingTransport.ts) / supportsRestoreStaging()
+  // Binary restore has no Mutable method at all: the single-shot transport
+  // was removed (PBI 2026-11-26-14) and the staging session above is the
+  // only restore path.
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -139,8 +142,8 @@ const NOT_INITIALIZED = 'Database not initialized';
 
 // ============================================================================
 // Capability policy (PBI 2026-09-11-08, narrowed by 2026-09-11-06): archive /
-// binary backup-restore need the OPFS backend; the audit log needs the OPFS
-// or IDB engine. Archive rejection now happens in the ARCHIVE_DISPATCH layer
+// binary backup need the OPFS backend; the audit log needs the OPFS or IDB
+// engine. Archive rejection now happens in the ARCHIVE_DISPATCH layer
 // (sqliteMessageHandlers narrows via supportsArchive() and fails closed with
 // ARCHIVE_UNSUPPORTED_ERROR) — adapters carry no archive stubs. The pinned
 // acceptance test (archiveFallbackRejection.test.ts) asserts the constant,
@@ -152,7 +155,6 @@ const NOT_INITIALIZED = 'Database not initialized';
 
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
 export const BINARY_BACKUP_UNSUPPORTED_ERROR = 'Binary backup requires OPFS storage.';
-export const BINARY_RESTORE_UNSUPPORTED_ERROR = 'Binary restore requires OPFS storage.';
 export const RESTORE_STAGING_UNSUPPORTED_ERROR = 'Chunked restore staging requires OPFS storage.';
 
 // ============================================================================
@@ -323,7 +325,6 @@ export class NoopBackend implements StorageBackend {
   async purgeAuditLog() { return this.err(); }
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
-  async restoreDb() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }

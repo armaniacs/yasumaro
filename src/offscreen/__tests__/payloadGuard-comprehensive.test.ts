@@ -1,7 +1,7 @@
 /**
  * payloadGuard-comprehensive.test.ts
  * Comprehensive tests for assertPayloadSize — covers all message types
- * (SQLITE_INSERT, SQLITE_INSERT_BATCH, SQLITE_UPDATE, SQLITE_RESTORE),
+ * (SQLITE_INSERT, SQLITE_INSERT_BATCH, SQLITE_UPDATE, SQLITE_RESTORE_APPEND),
  * boundary values, edge cases, and custom limits.
  */
 
@@ -11,7 +11,6 @@ import {
   MAX_PAYLOAD_STRING_BYTES,
   MAX_BATCH_RECORDS,
   MAX_BATCH_TOTAL_BYTES,
-  MAX_RESTORE_BYTES,
   MAX_RESTORE_CHUNK_BASE64,
   DEFAULT_PAYLOAD_LIMITS,
 } from '../payloadGuard.js';
@@ -30,10 +29,6 @@ function updateMsg(payload: Record<string, unknown>): SqliteMessage {
   return { type: 'SQLITE_UPDATE', payload } as unknown as SqliteMessage;
 }
 
-function restoreMsg(data: unknown): SqliteMessage {
-  return { type: 'SQLITE_RESTORE', payload: { data } } as unknown as SqliteMessage;
-}
-
 // ── Constants verification ─────────────────────────────────────────────
 
 describe('payload limit constants', () => {
@@ -49,15 +44,11 @@ describe('payload limit constants', () => {
     expect(MAX_BATCH_TOTAL_BYTES).toBe(20 * 1024 * 1024);
   });
 
-  it('MAX_RESTORE_BYTES is 100MB', () => {
-    expect(MAX_RESTORE_BYTES).toBe(100 * 1024 * 1024);
-  });
-
   it('DEFAULT_PAYLOAD_LIMITS matches the constants', () => {
     expect(DEFAULT_PAYLOAD_LIMITS.maxStringBytes).toBe(MAX_PAYLOAD_STRING_BYTES);
     expect(DEFAULT_PAYLOAD_LIMITS.maxBatchRecords).toBe(MAX_BATCH_RECORDS);
     expect(DEFAULT_PAYLOAD_LIMITS.maxBatchTotalBytes).toBe(MAX_BATCH_TOTAL_BYTES);
-    expect(DEFAULT_PAYLOAD_LIMITS.maxRestoreBytes).toBe(MAX_RESTORE_BYTES);
+    expect(DEFAULT_PAYLOAD_LIMITS.maxRestoreChunkBase64).toBe(MAX_RESTORE_CHUNK_BASE64);
   });
 });
 
@@ -257,32 +248,6 @@ describe('SQLITE_UPDATE', () => {
   });
 });
 
-// ── SQLITE_RESTORE ─────────────────────────────────────────────────────
-
-describe('SQLITE_RESTORE', () => {
-  it('returns null for normal restore data', () => {
-    const data = Array.from({ length: 100 }, (_, i) => i);
-    const result = assertPayloadSize(restoreMsg(data));
-    expect(result).toBeNull();
-  });
-
-  it('rejects when data array exceeds max restore bytes', () => {
-    const limits = { ...DEFAULT_PAYLOAD_LIMITS, maxRestoreBytes: 10 };
-    const result = assertPayloadSize(restoreMsg(Array.from({ length: 11 })), limits);
-    expect(result).toContain('Restore');
-  });
-
-  it('returns null when data is not an array', () => {
-    const result = assertPayloadSize(restoreMsg('not an array'));
-    expect(result).toBeNull();
-  });
-
-  it('returns null for empty data array', () => {
-    const result = assertPayloadSize(restoreMsg([]));
-    expect(result).toBeNull();
-  });
-});
-
 // ── SQLITE_RESTORE_APPEND (chunked staging transport) ──────────────────
 
 describe('SQLITE_RESTORE_APPEND', () => {
@@ -348,11 +313,5 @@ describe('custom limits', () => {
     const records = Array.from({ length: 3 }, (_, i) => ({ url: `https://e.com/${i}` }));
     const result = assertPayloadSize(batchMsg(records), limits);
     expect(result).toContain('maximum');
-  });
-
-  it('respects custom maxRestoreBytes limit', () => {
-    const limits = { ...DEFAULT_PAYLOAD_LIMITS, maxRestoreBytes: 10 };
-    const result = assertPayloadSize(restoreMsg(Array.from({ length: 11 })), limits);
-    expect(result).toContain('Restore');
   });
 });

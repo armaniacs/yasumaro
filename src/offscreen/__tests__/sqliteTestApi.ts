@@ -31,7 +31,6 @@ export {
   purgeOldRecords,
   purgeContent,
   backupDb,
-  restoreDb,
   sqliteHealthCheck,
 } from '../dbMaintenance.js';
 

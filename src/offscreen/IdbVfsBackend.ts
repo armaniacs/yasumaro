@@ -6,7 +6,7 @@ import type {
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
   StatusResult, BackendOrError,
 } from './StorageBackend.js';
-import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_RETURNING_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
@@ -283,10 +283,6 @@ export class IdbVfsBackend implements StorageBackend {
 
   async backupDb(): Promise<BackendOrError<BackupResult>> {
     return { success: false, error: BINARY_BACKUP_UNSUPPORTED_ERROR };
-  }
-
-  async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {

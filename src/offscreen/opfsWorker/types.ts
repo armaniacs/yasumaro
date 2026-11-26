@@ -26,7 +26,6 @@ export const WORKER_MESSAGE_TYPES = [
   'CLEAR_ALL',
   'SERIALIZE',
   'BACKUP',
-  'RESTORE',
   'STAGE_RESTORE_BEGIN',
   'STAGE_RESTORE_APPEND',
   'STAGE_RESTORE_COMMIT',
@@ -92,10 +91,6 @@ export interface UpdatePayload {
 
 export interface DeletePayload {
   id: number;
-}
-
-export interface RestorePayload {
-  data: number[] | Uint8Array;
 }
 
 export interface StageRestoreBeginPayload {
