@@ -82,8 +82,8 @@ grep -rn "SplitBackupError\|splitBackup" src/dashboard/encryptedBackupPanel.ts |
 - check-docs-chars 対象外のソースだが、i18n メッセージ (ja/en) は Shift-JIS 安全文字で書く
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (E2E/統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新済み (ユーザーガイドの上限表は PBI 2026-11-26-03 に含める)
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (E2E/統合/単体)
+- [x] コードレビュー完了 (checking-team 2026-11-26: 9 観点、High 2/Medium 12 指摘は Phase 5 で修正済み)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新済み (ユーザーガイドの上限表は PBI 2026-11-26-03 に含める)

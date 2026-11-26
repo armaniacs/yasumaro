@@ -72,7 +72,7 @@ grep -n "MAX_BACKUP\|MAX_ENVELOPE\|MAX_RESTORE\|MAX_SPLIT" src/utils/limits.ts
 - 復元の実効上限は PBI 2026-11-26-01 の実装結果に合わせる (実装前に仮数字を書かない)
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが手動確認手順として実行され、確認済みである
-- [ ] check-docs-chars が通る (npm run validate)
-- [ ] コードレビュー完了 (数値の SSOT 突合を含む)
-- [ ] ドキュメント更新済み (本 PBI 自体が docs 更新)
+- [x] 全 BDD シナリオが手動確認手順として実行され、確認済みである
+- [x] check-docs-chars が通る (npm run validate)
+- [x] コードレビュー完了 (数値の SSOT 突合を含む、checking-team 2026-11-26)
+- [x] ドキュメント更新済み (本 PBI 自体が docs 更新)

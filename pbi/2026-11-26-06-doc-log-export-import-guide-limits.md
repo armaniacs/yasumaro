@@ -76,7 +76,7 @@ grep -n "Q54" docs/FAQ.md | head -5
 - git 操作は一切しない (統合側が行う)
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが手動確認手順として実行され、確認済みである
-- [ ] check-docs-chars が通る
-- [ ] コードレビュー完了 (数値の SSOT 突合を含む)
-- [ ] ドキュメント更新済み (本 PBI 自体が docs 更新)
+- [x] 全 BDD シナリオが手動確認手順として実行され、確認済みである
+- [x] check-docs-chars が通る
+- [x] コードレビュー完了 (数値の SSOT 突合を含む、checking-team 2026-11-26)
+- [x] ドキュメント更新済み (本 PBI 自体が docs 更新)
