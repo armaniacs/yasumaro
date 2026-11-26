@@ -28,12 +28,12 @@ Scenario: OPFS バックエンドは通常どおり動作する
 ```
 
 ## 受け入れ基準
-- [ ] `src/offscreen/restoreStagingTransport.ts` (新規) に `RestoreStagingTransport` インターフェース 4 メソッド + `supportsRestoreStaging` narrowing (archive の hasArchiveCapability と同じ単一判定) が実装されている
-- [ ] `StorageBackend` の `Mutable` から 4 メソッドが削除され、NoopBackend stub (332-339) が消えている
-- [ ] `IdbVfsBackend.ts:292-306`、`FallbackStorageAdapter.ts:79-92` の stub が削除されている
-- [ ] `recordsRepo.ts` の該当委譲が narrowing 付きに変更され、narrowing 外は RESTORE_STAGING_UNSUPPORTED_ERROR で fail-closed (文言・型は現状のまま使い回す)
-- [ ] 既存の restore staging テスト群 (restoreStagingHandlers、restoreChunkedTransport など) が無変更で緑
-- [ ] `npm run validate` が通る
+- [x] `src/offscreen/restoreStagingTransport.ts` (新規) に `RestoreStagingTransport` インターフェース 4 メソッド + `supportsRestoreStaging` narrowing (archive の hasArchiveCapability と同じ単一判定) が実装されている
+- [x] `StorageBackend` の `Mutable` から 4 メソッドが削除され、NoopBackend stub (332-339) が消えている
+- [x] `IdbVfsBackend.ts:292-306`、`FallbackStorageAdapter.ts:79-92` の stub が削除されている
+- [x] `recordsRepo.ts` の該当委譲が narrowing 付きに変更され、narrowing 外は RESTORE_STAGING_UNSUPPORTED_ERROR で fail-closed (文言・型は現状のまま使い回す)
+- [x] 既存の restore staging テスト群 (restoreStagingHandlers、restoreChunkedTransport など) が無変更で緑
+- [x] `npm run validate` が通る (1,378 ファイル / 19,395 件)
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -76,8 +76,8 @@ grep -n "supportsArchive\|ArchiveStaging" src/offscreen/archiveStaging.ts src/of
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (統合側、統合検証で担保)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要

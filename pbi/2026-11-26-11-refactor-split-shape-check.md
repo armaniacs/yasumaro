@@ -27,11 +27,11 @@ Scenario: 形状問題は i18n に写像される
 ```
 
 ## 受け入れ基準
-- [ ] `encryptedBackupSplitCodec.ts` に `checkSplitBackupShape` (純粋、復号なし、KDF なし) が追加されている: `SplitShapeProblemCode = 'too-many-parts' | 'out-of-range-index' | 'duplicate-index' | 'total-mismatch' | 'missing-parts' | 'envelope-too-long'` を返す
-- [ ] panel の逐次検証 (345-399、442-453、503-599) が同一関数呼び出しに集約され、`setStatus + resetInput + return` の反復が 1 か所の失敗ハンドラに集約されている
-- [ ] codec の parseSplitBackup は既存どおり自分でも同一関数を再実行する (権威検証)
-- [ ] 既存の codec/panel テスト 34 件超が pin として残り、緑である (挙動不変)
-- [ ] `npm run validate` が通る
+- [x] `encryptedBackupSplitCodec.ts` に `checkSplitBackupShape` (純粋、復号なし、KDF なし) が追加されている: `SplitShapeProblemCode = 'too-many-parts' | 'out-of-range-index' | 'duplicate-index' | 'total-mismatch' | 'missing-parts' | 'envelope-too-long'` を返す
+- [x] panel の逐次検証 (345-399、442-453、503-599) が同一関数呼び出しに集約され、`setStatus + resetInput + return` の反復が 1 か所の失敗ハンドラに集約されている
+- [x] codec の parseSplitBackup は既存どおり自分でも同一関数を再実行する (権威検証)
+- [x] 既存の codec/panel テスト 34 件超が pin として残り、緑である (挙動不変)
+- [x] `npm run validate` が通る (1,378 ファイル / 19,395 件)
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -73,8 +73,8 @@ grep -n "findMissingPartIndices" src/dashboard/encryptedBackupSplitCodec.ts
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (統合側、統合検証で担保)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要

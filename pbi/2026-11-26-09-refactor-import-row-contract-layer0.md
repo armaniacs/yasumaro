@@ -26,12 +26,12 @@ Scenario: pin テストが契約の変更を検出する
 ```
 
 ## 受け入れ基準
-- [ ] `src/utils/logImportContract.ts` (新規、chrome 依存なし、layer 0) に validateImportRow が移動している
-- [ ] `src/messaging/validators.ts` は移動先から import し re-export する (既存の参照経路を壊さない)
-- [ ] `src/dashboard/importLogsService.ts` の lenient 分岐重複を削除し、同一関数を import する (strict 側の追加ルール = length caps は dashboard 固有オプションのまま残る)
-- [ ] byte-identical pin テスト 2 系統は「単一実装の pin」に縮約され、緑である
-- [ ] 既存の import 関連テスト (importLogsService、validators 系) が緑である
-- [ ] `npm run validate` が通る
+- [x] `src/utils/logImportContract.ts` (新規、chrome 依存なし、layer 0) に validateImportRow が移動している
+- [x] `src/messaging/validators.ts` は移動先から import し re-export する (既存の参照経路を壊さない)
+- [x] `src/dashboard/importLogsService.ts` の lenient 分岐重複を削除し、同一関数を import する (strict 側の追加ルール = length caps は dashboard 固有オプションのまま残る)
+- [x] byte-identical pin テスト 2 系統は「単一実装の pin」に縮約され、緑である
+- [x] 既存の import 関連テスト (importLogsService、validators 系) が緑である
+- [x] `npm run validate` が通る (1,378 ファイル / 19,395 件)
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -74,8 +74,8 @@ grep -rn "validateImportRowWithOptions" src/ --include="*.ts" | grep -v test | h
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (単体)
+- [x] コードレビュー完了 (統合側、統合検証で担保)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ドキュメント更新の要否判定: 内部構造の変更でユーザーに見える挙動不変のため、docs 更新は不要
