@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * exportLogsService-paging.test.ts
  * Keyset-paging unit tests for queryAllData (PBI 2026-11-26-04): the export

@@ -1,4 +1,3 @@
-// @vitest-environment wasm-quickjs-dom
 /**
  * logExportImportRoundtrip100k.test.ts
  * Round-trip pin at the export ceiling (PBI 2026-11-26-04): 100,000
