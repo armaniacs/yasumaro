@@ -13,7 +13,8 @@
  * Pure helpers are exported for unit tests. I/O lives in main() only.
  */
 
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -126,9 +127,14 @@ export function compareCounts(docCounts, actual) {
   return mismatches;
 }
 
-export function decideDateFreshness(docDate, nowDate, docMtimeMs, lockMtimeMs) {
+export function decideDateFreshness(docDate, nowDate, docCommittedAtMs, lockCommittedAtMs) {
   if (!docDate) return { status: 'missing' };
-  if (lockMtimeMs > docMtimeMs) {
+  // WHY: filesystem mtime is checkout-order dependent — a fresh clone writes
+  // files in tree order, so the lockfile always "looks newer" and the gate
+  // would flake across machines. The comparison uses git commit times
+  // instead; when history is unavailable (null from lastCommitTimeMs) the
+  // freshness degrades to the date-age check only.
+  if (lockCommittedAtMs !== null && docCommittedAtMs !== null && lockCommittedAtMs > docCommittedAtMs) {
     return { status: 'stale', reason: 'package-lock.json is newer than docs/DEPENDINGS.md' };
   }
   const days = Math.floor((nowDate.getTime() - new Date(`${docDate}T00:00:00`).getTime()) / 86400000);
@@ -138,14 +144,29 @@ export function decideDateFreshness(docDate, nowDate, docMtimeMs, lockMtimeMs) {
   return { status: 'fresh' };
 }
 
+/**
+ * Last commit time (unix ms) for a path, or null when git history is
+ * unavailable. Deliberately NOT filesystem mtime: mtime follows checkout
+ * order, not real review recency, which made this gate environment-dependent.
+ */
+export function lastCommitTimeMs(path) {
+  try {
+    const out = execSync(`git log -1 --format=%ct -- ${path}`, { encoding: 'utf-8' }).trim();
+    const seconds = Number(out);
+    return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 function collectInputs() {
   const doc = readFileSync(DEPENDINGS_PATH, 'utf-8');
   const pkg = JSON.parse(readFileSync(PKG_PATH, 'utf-8'));
   const lock = JSON.parse(readFileSync(LOCK_PATH, 'utf-8'));
   const notices = readFileSync(NOTICES_PATH, 'utf-8');
-  const docMtimeMs = statSync(DEPENDINGS_PATH).mtimeMs;
-  const lockMtimeMs = statSync(LOCK_PATH).mtimeMs;
-  return { doc, pkg, lock, notices, docMtimeMs, lockMtimeMs };
+  const docCommittedAtMs = lastCommitTimeMs(DEPENDINGS_PATH);
+  const lockCommittedAtMs = lastCommitTimeMs(LOCK_PATH);
+  return { doc, pkg, lock, notices, docCommittedAtMs, lockCommittedAtMs };
 }
 
 function main() {
@@ -159,7 +180,7 @@ function main() {
     process.exit(summary() ? 0 : 1);
   }
 
-  const { doc, pkg, lock, notices, docMtimeMs, lockMtimeMs } = inputs;
+  const { doc, pkg, lock, notices, docCommittedAtMs, lockCommittedAtMs } = inputs;
   const lockPackages = lock.packages ?? {};
   const pkgDeps = pkg.dependencies ?? {};
   const actual = {
@@ -175,7 +196,7 @@ function main() {
     'vitest-runner': '@stryker-mutator/vitest-runner',
   });
   const countMismatches = compareCounts(parseCounts(doc), actual);
-  const freshness = decideDateFreshness(parseFinalCheckDate(doc), new Date(), docMtimeMs, lockMtimeMs);
+  const freshness = decideDateFreshness(parseFinalCheckDate(doc), new Date(), docCommittedAtMs, lockCommittedAtMs);
 
   if (runtimeMismatches.length === 0) pass('Runtime table matches package.json and lockfile');
   else {

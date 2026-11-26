@@ -57,7 +57,17 @@ LOG_EXPORT_IMPORT_GUIDE.md に記載の上限 (エクスポート 10,000 件、�
 - ローカル Markdown 書き出しの DATE_RANGE_QUERY_LIMIT = 10,000
   (markdownExport.ts:34、別機能 MARKDOWN_DOWNLOAD)
 - JSON エクスポートの stringify 最適化 (署名用と出力用の 2 回呼び出し) は
-  メモリ特性の実測後に判断
+  メモリ特性の実測後に判断。レビューラウンド (plans/2026-11-26-0757-review-...)
+  で Tuning Expert が「ゲート規模 (30 MiB 級) の peak RSS / 所要時間を
+  bench:micro に追加し、次回上限引き上げ前の前提条件にする」旨を起案
+- DEPENDINGS.md 書式知識の共通化: generate-dependings.mjs と
+  check-dependings.mjs が行テンプレート/parse 正規表現/エイリアス map を
+  それぞれ独立に保持 (Maintainability 指摘)。dependings ラウンド
+  (2026-11-26-04-chore-dependings-freshness-gate、並行セッション) 管轄の
+  ファイルのため本ラウンドでは着手しない
+- generate-dependings.mjs の日付再スタンプ制御: 確認なしで「最終確認日」を
+  当日に書き換えられる現状は鮮度ゲートの信頼性を損なう (Supply Chain 指摘、
+  同じく dependings ラウンド管轄)
 
 ## 再発防止の運用メモ (なぜなぜ分析より)
 

@@ -45,7 +45,30 @@
 
 - PBI 01 完了時: `npm run validate` 全緑 (19,339 件、type-check / lint / 全静的ゲート)
 - PBI 02/03 完了後の最終統合: `npm run validate` 全緑 (19,346 件、check-privacy 含む全静的ゲート)
-- 副産物: PBI 01 の offscreen maintain op 'restore' (単発 Uint8Array) は波及過大のため残留、削除は後続候補
+- レビューラウンド (checking-team 2026-11-26、レポート plans/2026-11-26-0757-review-fix-encrypted-backup-large-capacity.md) 後の Phase 5 修正:
+  restore_commit の退避/ロールバック付き swap (SRE High)、restore_begin/commit に
+  セッション全体上限 MAX_RESTORE_SESSION_BYTES (API Contract ほか 5 観点)、
+  append の offset 進行検証と totalChunks 照合 (Data Integrity ほか)、
+  構造化ログ (SRE)、multiple 属性追加 (UI/Docs High)
+
+## 後続候補 (レビューで起案、未着手)
+
+- staging レジストリ共通化: src/offscreen/opfsWorker/restoreStaging.ts が
+  archiveStaging.ts のレジストリ機構 (状態 Map、名前発行、fail-closed 検証、
+  sweep、テストシーム) を ~100 行複製。opfsWorker/stagingRegistry.ts に
+  パラメータ化して共通化する (名前生成方式とレコード型を注入、archive 側は
+  複数プレフィックス、restore 側は単一)。Maintainability 指摘
+- 単発 restore 輸送の 7 層削除: dashboard 側呼び出し元消失後も残留する実装。
+  削除範囲: sqliteWireTable.ts の 'restore' 行、sqliteMessages.ts の
+  SQLITE_RESTORE、transportRetryPolicy.ts の対応行、payloadGuard.ts の
+  SQLITE_RESTORE case (MAX_RESTORE_BYTES 100MB)、sqliteMessageHandlers.ts の
+  handleRestore、recordsRepo.ts + dbMaintenance.ts、backend 実装 x3
+  (OpfsWorkerBackend / IdbVfsBackend / FallbackStorageAdapter) +
+  MAX_RESTORE_BYTES。System Architect 指摘
+- JSON エクスポートの stringify 2 回最適化: exportJson (署名用 + 出力用) と
+  importLogsService の検証用再シリアライズ。ゲート規模 (30 MiB 級) の
+  peak RSS / 所要時間を bench:micro に追加し、次回上限引き上げの前提条件に
+  する。Tuning Expert + Edge & Mobile 指摘
 
 ## 再発防止の運用メモ (なぜなぜ分析 3 より)
 
