@@ -7,6 +7,7 @@ import { sqliteClient } from './dashboardSqliteService.js';
 import { exportHmacSigner } from '../utils/storage/encryptionSession.js';
 import type { HmacSigner } from '../utils/crypto/hmacSigner.js';
 import { logWarn } from '../utils/logger/api.js';
+import { validateImportRow } from '../utils/logImportContract.js';
 
 interface ExportedRow {
   url: string;
@@ -197,11 +198,11 @@ async function verifyExportSignature(
  *
  * `strict: true` (default) is the dashboard file-import gate: length caps,
  * the `created_at` floor, the future bound, and non-null numerics/flags.
- * `strict: false` reproduces the background envelope gate
- * (`validateImportRow` in messaging/validators.ts) exactly: no length caps,
- * no `created_at` floor or future bound, no `visit_duration` ceiling, and
- * `null` counts as absent for optional fields. `now` injects the clock for
- * the future bound so tests stay deterministic without real-time waits.
+ * `strict: false` is the background envelope gate verbatim: the layer-0
+ * `validateImportRow` (utils/logImportContract.ts) runs unchanged — no length
+ * caps, no `created_at` floor or future bound, no `visit_duration` ceiling,
+ * and `null` counts as absent for optional fields. `now` injects the clock
+ * for the future bound so tests stay deterministic without real-time waits.
  */
 export interface ImportRowValidationOptions {
   strict?: boolean | undefined;
@@ -211,15 +212,13 @@ export interface ImportRowValidationOptions {
 /**
  * Canonical per-row rejection reason, or `null` when the row may proceed.
  *
- * Single definition behind both the boolean gate and the tolerant report,
- * with a strict/lenient switch: the dashboard calls with `strict: true`
- * (via `validateImportRowReason` below), while `strict: false` is the
- * background envelope parity shape. The lenient branch intentionally
- * duplicates `validateImportRow` instead of importing it (dashboard must not
- * depend on the messaging layer); parity is pinned by
- * importLogsService-validateRow.test.ts, so the background path decision
- * never changes here. Messages stay byte-identical to both gates where the
- * checks overlap.
+ * Strict mode is the dashboard gate on top of the shared layer-0 contract;
+ * lenient mode delegates to it directly, so the two can only differ by the
+ * dashboard-specific extras (length caps, created_at floor/future bound,
+ * metric ceilings, non-null numerics/flags) and never on the shared checks.
+ * The former hand-rolled lenient branch duplicated the contract function
+ * byte-for-byte; importing the layer-0 implementation is what the layer-0
+ * rule exists for (chrome-free modules are importable from every layer).
  *
  * @internal exported for testing
  */
@@ -229,26 +228,29 @@ export function validateImportRowWithOptions(
 ): string | null {
   const strict = options?.strict ?? true;
   const now = options?.now ?? Date.now();
+
+  if (!strict) {
+    return validateImportRow(row);
+  }
+
   if (row === null || typeof row !== 'object' || Array.isArray(row)) {
     return 'must be an object';
   }
   const r = row as unknown as Record<string, unknown>;
 
   if (typeof r.url !== 'string' || r.url.length === 0) return 'url must be a non-empty string';
-  if (strict && r.url.length > MAX_URL_LENGTH) {
+  if (r.url.length > MAX_URL_LENGTH) {
     return `url must be at most ${MAX_URL_LENGTH} characters`;
   }
 
   if (typeof r.created_at !== 'number' || !Number.isFinite(r.created_at)) {
     return 'created_at must be a finite number';
   }
-  if (strict) {
-    if (r.created_at < MIN_CREATED_AT) {
-      return 'created_at must be a finite number';
-    }
-    if (r.created_at > now + CLOCK_SKEW_MS) {
-      return 'created_at must not be in the future';
-    }
+  if (r.created_at < MIN_CREATED_AT) {
+    return 'created_at must be a finite number';
+  }
+  if (r.created_at > now + CLOCK_SKEW_MS) {
+    return 'created_at must not be in the future';
   }
 
   const textFields: Array<[string, number]> = [
@@ -262,60 +264,32 @@ export function validateImportRowWithOptions(
     if (value !== undefined && value !== null && typeof value !== 'string') {
       return `${field} must be a string`;
     }
-    if (strict && typeof value === 'string' && value.length > maxLen) {
+    if (typeof value === 'string' && value.length > maxLen) {
       return `${field} must be at most ${maxLen} characters`;
     }
   }
-  // String-only envelope columns with no cap on either path (mirrors the
-  // background gate; the strict dashboard gate enforces the type too so a
-  // strict-accepted row always passes the background gate as well).
+  // String-only envelope columns with no cap (the layer-0 contract enforces
+  // the type too, so a strict-accepted row always passes it as well).
   for (const field of ['nav_source_url', 'search_query'] as const) {
     const value = r[field];
     if (value !== undefined && value !== null && typeof value !== 'string') {
       return `${field} must be a string`;
     }
   }
-  if (strict) {
-    if (!isOptionalFiniteInRange(r.visit_duration, 0, MAX_VISIT_DURATION_MS)) {
-      if (typeof r.visit_duration !== 'number' || !Number.isFinite(r.visit_duration)) {
-        return 'visit_duration must be a finite number';
-      }
-      return 'visit_duration must be >= 0';
+  if (!isOptionalFiniteInRange(r.visit_duration, 0, MAX_VISIT_DURATION_MS)) {
+    if (typeof r.visit_duration !== 'number' || !Number.isFinite(r.visit_duration)) {
+      return 'visit_duration must be a finite number';
     }
-    if (!isOptionalFiniteInRange(r.scroll_ratio, 0, 1)) {
-      if (typeof r.scroll_ratio !== 'number' || !Number.isFinite(r.scroll_ratio)) {
-        return 'scroll_ratio must be a finite number';
-      }
-      return 'scroll_ratio must be between 0 and 1';
-    }
-    if (!isOptionalFlag(r.is_starred)) return 'is_starred must be 0 or 1';
-    if (!isOptionalFlag(r.is_deleted)) return 'is_deleted must be 0 or 1';
-  } else {
-    const visitDuration = r.visit_duration;
-    if (visitDuration !== undefined && visitDuration !== null) {
-      if (typeof visitDuration !== 'number' || !Number.isFinite(visitDuration)) {
-        return 'visit_duration must be a finite number';
-      }
-      if (visitDuration < 0) {
-        return 'visit_duration must be >= 0';
-      }
-    }
-    const scrollRatio = r.scroll_ratio;
-    if (scrollRatio !== undefined && scrollRatio !== null) {
-      if (typeof scrollRatio !== 'number' || !Number.isFinite(scrollRatio)) {
-        return 'scroll_ratio must be a finite number';
-      }
-      if (scrollRatio < 0 || scrollRatio > 1) {
-        return 'scroll_ratio must be between 0 and 1';
-      }
-    }
-    for (const field of ['is_starred', 'is_deleted'] as const) {
-      const value = r[field];
-      if (value !== undefined && value !== null && value !== 0 && value !== 1) {
-        return `${field} must be 0 or 1`;
-      }
-    }
+    return 'visit_duration must be >= 0';
   }
+  if (!isOptionalFiniteInRange(r.scroll_ratio, 0, 1)) {
+    if (typeof r.scroll_ratio !== 'number' || !Number.isFinite(r.scroll_ratio)) {
+      return 'scroll_ratio must be a finite number';
+    }
+    return 'scroll_ratio must be between 0 and 1';
+  }
+  if (!isOptionalFlag(r.is_starred)) return 'is_starred must be 0 or 1';
+  if (!isOptionalFlag(r.is_deleted)) return 'is_deleted must be 0 or 1';
 
   return null;
 }
@@ -325,11 +299,9 @@ export function validateImportRowWithOptions(
  *
  * Thin strict wrapper over the canonical `validateImportRowWithOptions`:
  * the dashboard file-import gate always calls with `strict: true`, so the
- * two can never contradict each other. Messages mirror `validateImportRow`
- * in messaging/validators.ts where the checks overlap (a normalized row
- * that passes here also passes there — this gate is the stricter one:
- * length caps and the future bound exist only here); the length/future
- * extras keep the same "`field` must ..." vocabulary.
+ * two can never contradict each other. Shared rejection messages come from
+ * the layer-0 contract (`validateImportRow` in utils/logImportContract.ts);
+ * the length/future extras keep the same "`field` must ..." vocabulary.
  *
  * @internal exported for testing
  */
