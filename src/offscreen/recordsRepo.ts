@@ -21,6 +21,8 @@ import { applyReadPolicy } from './queryPlanner.js';
 // cannot leave a destructive purge purging on a different default. Pinned by
 // purgeDefaultsParity.test.ts.
 import { DEFAULT_RETENTION_DAYS, DEFAULT_MAX_RECORDS } from './queryPlanner.js';
+import { supportsRestoreStaging } from './restoreStagingTransport.js';
+import { RESTORE_STAGING_UNSUPPORTED_ERROR } from './StorageBackend.js';
 
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery } from '../utils/sqlite-types.js';
 import type { AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
@@ -216,28 +218,45 @@ export async function restoreDb(data: Uint8Array): Promise<{ success: true } | {
 // begin -> append* -> commit replaces the single-shot restore for the
 // dashboard path. The staging name is issued by the OPFS worker and carried
 // back on every call, so nothing session-shaped lives in this module.
+//
+// These are OPFS-exclusive (RestoreStagingTransport, implemented only by
+// OpfsWorkerBackend): non-OPFS backends fail closed here with the same
+// error the former per-adapter stubs returned. The commit-time destructive
+// swap and its containment live on the narrowed OPFS path only.
 
 /** Issue (and sweep leftovers of) a registered restore staging name. */
 export async function restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<{ success: true; stagingName: string } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restorePrepareIncoming(totalBytes, totalChunks);
 }
 
 /** Write one chunk of DB bytes at its byte offset in the staging file. */
 export async function restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<{ success: true; written: number } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreAppend(stagingName, offset, data);
 }
 
 /** Validate the assembled staging file and swap it in for the live DB. */
 export async function restoreCommit(stagingName: string, totalBytes: number): Promise<{ success: true } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreCommit(stagingName, totalBytes);
 }
 
 /** Discard a failed restore session's staging file. */
 export async function restoreAbort(stagingName: string): Promise<{ success: true } | { success: false; error: string }> {
   const backend = await engine.getBackend();
+  if (!supportsRestoreStaging(backend)) {
+    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
+  }
   return backend.restoreAbort(stagingName);
 }
 

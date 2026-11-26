@@ -4,9 +4,9 @@ import type {
   StorageBackend, InsertResult, InsertBatchResult, QuerySearchResult,
   MutationResult, StarResult, PurgeResult, FtsSizeResult,
   BackupResult, CountResult, HealthResult, AuditLogQueryResult,
-  StatusResult, BackendOrError, RestorePrepareResult, RestoreAppendResult,
+  StatusResult, BackendOrError,
 } from './StorageBackend.js';
-import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR, RESTORE_STAGING_UNSUPPORTED_ERROR } from './StorageBackend.js';
+import { BINARY_BACKUP_UNSUPPORTED_ERROR, BINARY_RESTORE_UNSUPPORTED_ERROR } from './StorageBackend.js';
 import type { BrowsingLogRecord, BrowsingLogEntry, StorageQuery, AuditLogRecord, AuditLogEntry } from '../utils/sqlite-types.js';
 import { INSERT_RETURNING_SQL, INSERT_IGNORE_SQL, buildInsertParams } from './schema.js';
 import { extractDomain, DB_FILENAME } from './sqliteEngineHost.js';
@@ -287,22 +287,6 @@ export class IdbVfsBackend implements StorageBackend {
 
   async restoreDb(_data: Uint8Array): Promise<BackendOrError<MutationResult>> {
     return { success: false, error: BINARY_RESTORE_UNSUPPORTED_ERROR };
-  }
-
-  async restorePrepareIncoming(): Promise<BackendOrError<RestorePrepareResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreAppend(): Promise<BackendOrError<RestoreAppendResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreCommit(): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-
-  async restoreAbort(): Promise<BackendOrError<MutationResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
   }
 
   async healthCheck(): Promise<BackendOrError<HealthResult>> {

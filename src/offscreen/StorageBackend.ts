@@ -123,20 +123,12 @@ export interface Mutable {
   purgeAuditLog(retentionDays?: number | undefined): Promise<BackendOrError<PurgeResult>>;
   backupDb(): Promise<BackendOrError<BackupResult>>;
   restoreDb(data: Uint8Array): Promise<BackendOrError<MutationResult>>;
-  /**
-   * Chunked restore staging session. begin issues a
-   * registered `restore_incoming_` staging name, append writes one chunk at
-   * its byte offset, commit validates the assembled staging and swaps it in
-   * for the live DB, abort discards the staging. The staging name travels
-   * with every call — no session state lives in callers or the backend.
-   */
-  restorePrepareIncoming(totalBytes: number, totalChunks: number): Promise<BackendOrError<RestorePrepareResult>>;
-  restoreAppend(stagingName: string, offset: number, data: Uint8Array): Promise<BackendOrError<RestoreAppendResult>>;
-  restoreCommit(stagingName: string, totalBytes: number): Promise<BackendOrError<MutationResult>>;
-  restoreAbort(stagingName: string): Promise<BackendOrError<MutationResult>>;
-  // Archive operations are NOT part of this interface — see ArchiveStaging
-  // (archiveStaging.ts), implemented only by OpfsWorkerBackend. The
-  // ARCHIVE_DISPATCH layer narrows via supportsArchive() and fails closed.
+  // OPFS-exclusive capability groups are NOT part of this interface — they
+  // live in their own seams implemented only by OpfsWorkerBackend, and the
+  // delegation/dispatch layer narrows via supports*() and fails closed:
+  // - archive: ArchiveStaging (archiveStaging.ts) / supportsArchive()
+  // - chunked restore staging: RestoreStagingTransport
+  //   (restoreStagingTransport.ts) / supportsRestoreStaging()
   insertAuditLog(record: AuditLogRecord): Promise<BackendOrError<InsertResult>>;
   clearAll(): Promise<BackendOrError<MutationResult>>;
 }
@@ -152,7 +144,10 @@ const NOT_INITIALIZED = 'Database not initialized';
 // (sqliteMessageHandlers narrows via supportsArchive() and fails closed with
 // ARCHIVE_UNSUPPORTED_ERROR) — adapters carry no archive stubs. The pinned
 // acceptance test (archiveFallbackRejection.test.ts) asserts the constant,
-// so a wording change is a one-place edit.
+// so a wording change is a one-place edit. Chunked restore staging follows
+// the same pattern: RESTORE_STAGING_UNSUPPORTED_ERROR below is returned by
+// the recordsRepo delegation after supportsRestoreStaging() narrowing —
+// no adapter carries restore staging stubs either.
 // ============================================================================
 
 export const ARCHIVE_UNSUPPORTED_ERROR = 'Archive requires OPFS storage.';
@@ -329,14 +324,6 @@ export class NoopBackend implements StorageBackend {
   async getFtsIndexSize() { return this.err(); }
   async backupDb() { return this.err(); }
   async restoreDb() { return this.err(); }
-  async restorePrepareIncoming(): Promise<BackendOrError<RestorePrepareResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-  async restoreAppend(): Promise<BackendOrError<RestoreAppendResult>> {
-    return { success: false, error: RESTORE_STAGING_UNSUPPORTED_ERROR };
-  }
-  async restoreCommit() { return this.err(); }
-  async restoreAbort() { return this.err(); }
   async healthCheck() { return this.err(); }
   async getStatus() { return this.err(); }
   async insertAuditLog() { return this.err(); }
