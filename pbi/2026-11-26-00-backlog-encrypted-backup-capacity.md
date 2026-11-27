@@ -58,9 +58,15 @@
   sweep、テストシーム) を ~100 行複製。opfsWorker/stagingRegistry.ts に
   パラメータ化して共通化する (名前生成方式とレコード型を注入、archive 側は
   複数プレフィックス、restore 側は単一)。Maintainability 指摘
-- JSON エクスポートの stringify 2 回最適化: **PBI 2026-11-27-01 として起案済み**
-  (調査タスク、トリガー未達のため着手はせず計測と実現可能性を固める)。
-  [../2026-11-27-01-investigate-stringify-optimization.md](../2026-11-27-01-investigate-stringify-optimization.md) を参照
+- JSON エクスポートの stringify 2 回最適化: **調査完了 (2026-11-27)**
+  (PBI 2026-11-27-01、調査報告書 plans/2026-11-27-1330-stringify-investigation-report.md)。
+  **裁定: 現状維持 (着手しない)** ― 時間削減効果は ② 削除で 12-18ms (エクスポート全体の
+  10% 未満) と小さく、③ (インポート検証用) はエクスポート側 1 回化では削減できず、
+  手法 B (envelope 構造変更) は互換性バージョン昇格 (M 級) が前提で効果に見合わない。
+  手法 A (signature 後挿入) の安全性は実証済み (エスケープ影響なし・byte-match 検証、
+  軽量 100k で 3.6ms / ff 50k で 12.6ms)。**再検討トリガー (上限引き上げ、30 MiB →
+  50 MiB 等) 達成時に、手法 A (エクスポート側 ② 削除) を着手する PBI を起案する**
+  (効果はサイズ比例で ~2 倍に増大)。インポート側 ③ は着手しない
 - 単発 restore 輸送の 7 層削除: **PBI 2026-11-26-14 として実装済み**
   (2026-11-26 アーカイブ済み、grep 参照ゼロ)。System Architect 指摘は解消済み
 
