@@ -21,29 +21,8 @@ const LRU_TRACKER = new Set<string>();
 let lastCleanupTime = Date.now();
 
 // ============================================================================
-// PERF-019修正: ハッシュ関数によるキャッシュキー衝突防止
+// VULN-003 fix: cache keys are the full filter text (see generateCacheKey)
 // ============================================================================
-
-/**
- * 高速ハッシュ関数 - FNV-1a 32bit
- * 小さな差異でも異なるハッシュ値を生成し、キャッシュキー衝突を防止
- * @param {string} str - ハッシュ対象の文字列
- * @returns {string} - 32bitハッシュ値（正整数に変換して文字列化）
- */
-function hashString(str: string): string {
-  // FNV-1aハッシュ定数（32bit）
-  const FNV_OFFSET_BASIS = 0x811c9dc5;
-  const FNV_PRIME = 0x01000193;
-
-  let hash = FNV_OFFSET_BASIS;
-  for (let i = 0; i < str.length; i++) {
-    hash ^= str.charCodeAt(i);
-    hash = Math.imul(hash, FNV_PRIME);
-  }
-
-  // 正整数に変換して返す（安全性のため32bitにマスク）
-  return (hash >>> 0).toString(36);
-}
 
 /**
  * LRUキャッシュから最も古いエントリを削除
@@ -87,17 +66,21 @@ export function cleanupCache() {
 /**
  * キャッシュキーを生成
  *
- * 【PERF-019修正】ハッシュベースのキー生成による衝突防止:
- * - 元の実践は先頭100文字と長さのみを使用しており、衝突リスクがあった
- * - FNV-1aハッシュ関数を使用して、テキスト全体を考慮した一意なキーを生成
- * - 長さも含めることで、追加の安全性を確保
+ * The key is the full filter text, so the key equivalence class is exactly
+ * string equality. The previous PERF-019 key (FNV-1a 32-bit + length) kept a
+ * (hash, length) equivalence class: FNV-1a is non-cryptographic 32-bit, so
+ * equal-length collisions are craftable (~2^16 candidates) and the length
+ * suffix cannot separate them - a victim parse could be served an attacker's
+ * cached ruleset (VULN-003, CWE-349 family). PERF-019's collision-prevention
+ * claim only holds with this key: distinct texts can never share an entry.
+ * Memory cost stays bounded: one string reference per entry under
+ * LRU_MAX_ENTRIES, and the parser never caches inputs above MAX_INPUT_SIZE.
  *
  * @param {string} text - キャッシュキーの元となるテキスト
- * @returns {string} - キャッシュキー（ハッシュ値と長さの組み合わせ）
+ * @returns {string} - テキストそのもの（等価クラスは文字列一致のみ）
  */
 export function generateCacheKey(text: string): string {
-  const hash = hashString(text);
-  return `${hash}_${text.length}`;
+  return text;
 }
 
 /**
