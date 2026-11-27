@@ -178,7 +178,7 @@ describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
         delete (globalThis as unknown as Record<string, unknown>).chrome;
     });
 
-    it('converts Uint8Array to number[] so Chrome message passing serializes it correctly', async () => {
+    it('sends the backup bytes as base64 so Chrome message passing serializes them correctly', async () => {
         const { backupDb } = await import('../dbMaintenance.js');
         const mockData = new Uint8Array([83, 81, 76, 105, 116, 101]); // "SQLite" bytes
         vi.mocked(backupDb).mockResolvedValue({ success: true, data: mockData });
@@ -191,11 +191,12 @@ describe('handleOffscreenMessage - SQLITE_BACKUP', () => {
         );
         await vi.waitFor(() => expect(responses.length).toBe(1));
 
-        const resp = responses[0] as { success: boolean; data: number[] };
+        const resp = responses[0] as { success: boolean; data: string };
         expect(resp.success).toBe(true);
-        // Must be a plain Array, not Uint8Array — Chrome sendResponse cannot serialize TypedArrays
-        expect(Array.isArray(resp.data)).toBe(true);
-        expect(resp.data).toEqual([83, 81, 76, 105, 116, 101]);
+        // PBI 2026-11-27-04 (VULN-002): the bytes ride as a base64 string —
+        // a plain number[] used to re-materialize every byte (~8x on this hop).
+        expect(typeof resp.data).toBe('string');
+        expect(resp.data).toBe('U1FMaXRl');
     });
 
     it('passes through failure response unchanged', async () => {

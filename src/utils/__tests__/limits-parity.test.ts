@@ -14,6 +14,12 @@ const EXPECTED: Record<string, number> = {
   // ceiling of the chunked restore staging session, symmetric with
   // MAX_BACKUP_FILE_BYTES. Replaced the dead MAX_RESTORE_DB_BYTES pin.
   MAX_RESTORE_SESSION_BYTES: 52428800,
+  // PBI 2026-11-27-03 (VULN-001, CWE-400): staging-session registry caps and
+  // TTL. Archive and restore own separate caps so one path's create-spam
+  // cannot starve the other.
+  MAX_ARCHIVE_STAGING_SESSIONS: 16,
+  MAX_RESTORE_STAGING_SESSIONS: 4,
+  STAGING_SESSION_TTL: 300000,
   MAX_ARCHIVE_EXPORT_CHUNK_BYTES: 8388608,
   MAX_APPEND_IDS: 100,
   AUDIT_CAP_OPFS: 1000,
@@ -74,7 +80,7 @@ const EXPECTED: Record<string, number> = {
   MAX_UBLOCK_FILTER_LINES: 500000,
 };
 
-const EXPECTED_LIMITS_EXPORT_COUNT = 55;
+const EXPECTED_LIMITS_EXPORT_COUNT = 58;
 
 const VALIDATOR_LIMIT_KEYS = [
   'MAX_APPEND_IDS',

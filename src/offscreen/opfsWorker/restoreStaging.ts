@@ -12,7 +12,9 @@
  */
 
 import {
+  MAX_RESTORE_STAGING_SESSIONS,
   RESTORE_STAGING_NAME_PREFIX,
+  STAGING_SESSION_TTL,
 } from '../../utils/limits.js';
 import {
   RESTORE_STAGING_NAME_RE,
@@ -127,6 +129,22 @@ export async function sweepOrphanRestoreStagings(): Promise<string[]> {
 }
 
 /**
+ * VULN-001 (CWE-400): create-spam guard. Drop TTL-expired sessions before the
+ * sweep below: removing an entry from the registry strips its sweep
+ * protection, so the existing orphan sweep removes the evicted session's
+ * OPFS file without re-implementing file deletion. Runs only on the at-cap
+ * path so the normal flow keeps its current shape.
+ */
+function evictExpiredRestoreStagings(): void {
+  const now = Date.now();
+  for (const [name, record] of registry) {
+    if (now - record.createdAt >= STAGING_SESSION_TTL) {
+      registry.delete(name);
+    }
+  }
+}
+
+/**
  * Issue and register a fresh restore staging name after sweeping leftovers
  * of earlier sessions. The staging file itself is created (truncated to 0)
  * so append never races a missing handle.
@@ -135,7 +153,15 @@ export async function prepareRestoreIncoming(
   totalBytes: number,
   totalChunks: number,
 ): Promise<string> {
+  if (registry.size >= MAX_RESTORE_STAGING_SESSIONS) {
+    evictExpiredRestoreStagings();
+  }
   await sweepOrphanRestoreStagings();
+  if (registry.size >= MAX_RESTORE_STAGING_SESSIONS) {
+    throw new Error(
+      `restore staging registry is full (${MAX_RESTORE_STAGING_SESSIONS} live sessions); refusing to begin another restore session`,
+    );
+  }
   const name = issueName();
   registry.set(name, {
     totalBytes,

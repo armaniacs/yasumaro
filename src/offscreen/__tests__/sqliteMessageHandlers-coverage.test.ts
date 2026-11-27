@@ -77,6 +77,7 @@ vi.mock('../auditLogRepo.js', () => ({
 
 import { sqliteMessageHandlers } from '../sqliteMessageHandlers.js';
 import { StorageKeys } from '../../utils/storage/types.js';
+import { base64ToBytes } from '../../utils/crypto/index.js';
 
 // helper — call handler via Map and collect response
 async function callHandler(type: string, payload?: unknown): Promise<unknown> {
@@ -558,13 +559,15 @@ describe('sqliteMessageHandlers — handleUpdate branching', () => {
 describe('sqliteMessageHandlers — handleBackup branching', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('converts Uint8Array to Array when success and instanceof', async () => {
+  it('converts Uint8Array to base64 when success and instanceof', async () => {
     const data = new Uint8Array([1, 2, 3]);
     dbMaintenanceMock.backupDb.mockResolvedValue({ success: true, data });
-    const res = await callHandler('SQLITE_BACKUP') as { success: boolean; data: number[] };
+    const res = await callHandler('SQLITE_BACKUP') as { success: boolean; data: string };
     expect(res.success).toBe(true);
-    expect(res.data).toEqual([1, 2, 3]);
-    expect(Array.isArray(res.data)).toBe(true);
+    // PBI 2026-11-27-04 (VULN-002): base64, not a number[] (~8x amplification).
+    expect(typeof res.data).toBe('string');
+    expect(Array.isArray(res.data)).toBe(false);
+    expect(Array.from(base64ToBytes(res.data))).toEqual([1, 2, 3]);
   });
 
   it('passes through failure when success false (short-circuit)', async () => {
