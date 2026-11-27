@@ -25,7 +25,11 @@ import type { SqliteClient } from './sqlite/offscreenGateway.js';
 import type { ObsidianClient } from './obsidianClient.js';
 import { Mutex } from '../utils/Mutex.js';
 import { formatLocalDateString } from '../utils/localDate.js';
-import { sanitizeForObsidian, sanitizeUrlForMarkdownTarget } from '../utils/markdownSanitizer.js';
+import {
+  sanitizeForMarkdownLinkText,
+  sanitizeForObsidian,
+  sanitizeUrlForMarkdownTarget,
+} from '../utils/markdownSanitizer.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { MAX_AND_CLAUSE_WINDOW, MAX_BATCH_READ_RECORDS } from '../utils/limits.js';
 import { mergeClauseResults } from '../utils/collectionQueryV2.js';
@@ -117,10 +121,16 @@ function buildTimelineSection(records: ResearchReportRecord[]): string {
     .join('\n');
 }
 
-/** 引用 section: numbered links back to the original records (元記録に飛べる). */
+/**
+ * 引用 section: numbered links back to the original records (元記録に飛べる).
+ * The title is attacker-controlled and sits inside the `[...]` wrapper, so it
+ * needs the wrapper-aware sanitizer: sanitizeForObsidian passes a bare `](`
+ * suffix byte-identical, which would close the wrapper early onto an
+ * attacker-chosen destination. Plain-text positions keep sanitizeForObsidian.
+ */
 function buildCitationsSection(records: ResearchReportRecord[]): string {
   return records
-    .map((r, i) => `${i + 1}. [${sanitizeForObsidian(r.title || r.url)}](${sanitizeUrlForMarkdownTarget(r.url)})`)
+    .map((r, i) => `${i + 1}. [${sanitizeForMarkdownLinkText(r.title || r.url)}](${sanitizeUrlForMarkdownTarget(r.url)})`)
     .join('\n');
 }
 
