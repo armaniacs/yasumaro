@@ -60,7 +60,7 @@ sed -n '82,92p' src/dashboard/webhookExportSettings.ts
 3. webhookExportSettings.ts:87 の mirror 判断 (未配線ならコメントのみ)
 
 ### 落とし穴
-- throw 経路の mask-error history 記録 (sender.ts:295-307) は既存 — 新 throw も同じ catch に落ちる
+- throw 経路の mask-error history 記録 (sender.ts:295-307) は既存 ― 新 throw も同じ catch に落ちる
 - throw 文言は既存 maskError 文言の流儀に合わせる (大文字小文字・文言の pin テストがあれば更新)
 - git 操作禁止。実時間待ち禁止
 
@@ -70,4 +70,4 @@ sed -n '82,92p' src/dashboard/webhookExportSettings.ts
 - [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
 - [ ] リファクタリング完了 (グリーン後)
 - [ ] ロールバック手段: throw を外し旧挙動に戻す (1 コミット、脆弱状態に戻る)
-- [ ] ドキュメント更新の要否判定: fail-closed 挙動の文書化 — webhookExportSender.ts ヘッダコメント (295-307) で契約が既に記載済みのため docs 更新は不要
+- [ ] ドキュメント更新の要否判定: fail-closed 挙動の文書化 ― webhookExportSender.ts ヘッダコメント (295-307) で契約が既に記載済みのため docs 更新は不要

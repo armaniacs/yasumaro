@@ -4,9 +4,9 @@
 保守担当者として、VulnHunter が Code Quality (脆弱性ではない) と降格した 3 件の defense-in-depth 課題を hardening したい、なぜなら修正 idioms が in-repo に存在し (storageTransaction CAS、fallback window bound、consent モデル改訂)、条件が変わった場合に脆弱化するから。
 
 ## ユーザーへの背景 (VulnHunter 報告書 §Code Quality)
-- (1) CWE-312 plaintext-secret fallback — encryptionSession.ts:277-280 (KEK store 不可能時に legacy 平文を chrome.storage に書く。in-scope attacker は鍵有無に関わらず storage を直接読めるため脆弱性ではないが、fallback window の存在は defense-in-depth ギャップ)
-- (2) CWE-367 lost-update race — RateLimitService.ts:127-149 (unlock flow のみに到達可能。extension-page tier は既に offline brute-force 可能のため脆弱性ではないが、CAS を通せば race は消える)
-- (3) CWE-862 consent re-read asymmetry — privacyConsent.ts:439 vs coreCrudHandler.ts:98-105 (consent モデル改訂時の課題。現行脅威モデルでは elimination 確認済み)
+- (1) CWE-312 plaintext-secret fallback ― encryptionSession.ts:277-280 (KEK store 不可能時に legacy 平文を chrome.storage に書く。in-scope attacker は鍵有無に関わらず storage を直接読めるため脆弱性ではないが、fallback window の存在は defense-in-depth ギャップ)
+- (2) CWE-367 lost-update race ― RateLimitService.ts:127-149 (unlock flow のみに到達可能。extension-page tier は既に offline brute-force 可能のため脆弱性ではないが、CAS を通せば race は消える)
+- (3) CWE-862 consent re-read asymmetry ― privacyConsent.ts:439 vs coreCrudHandler.ts:98-105 (consent モデル改訂時の課題。現行脅威モデルでは elimination 確認済み)
 
 ## ビジネス価値
 - 条件変化時の脆弱化リスクを事前に消す (hardening)

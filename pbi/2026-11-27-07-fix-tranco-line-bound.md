@@ -58,7 +58,7 @@ grep -n "TRANCO_TIER_COUNT" src/utils/trustDb/trancoUpdater.ts src/utils/limits.
 3. exploit test 060 を新契約 pin に更新
 
 ### 落とし穴
-- CSV の行は CRLF / LF 混在の可能性 (現行の split('\n') は trailing \r を残す — 現行パースが \r を想定しているか確認してから置換しないと挙動が変わる)
+- CSV の行は CRLF / LF 混在の可能性 (現行の split('\n') は trailing \r を残す ― 現行パースが \r を想定しているか確認してから置換しないと挙動が変わる)
 - retry ループ (最大 3 回) の各回で cap が効くことを確認 (重複 fetch+parse を繰り返さない)
 - tier limit 定数が limits.ts に無い場合、現行のハードコード (100k) を SSOT 化するか現状維持かを判断して報告
 - git 操作禁止。実時間待ち禁止

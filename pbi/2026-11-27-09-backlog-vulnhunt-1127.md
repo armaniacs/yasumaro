@@ -9,7 +9,7 @@ GLM-5.3-Flash、ユーザー指定による現モデル継続) の発見 9 件 (
 
 - ブランチ: 1128a (main 先端 157669727 から作成、PR #218-220 分は含まない)
 - 出所: yasumaro_VULNHUNT_RESULTS_2026-11-27-190000/{report.md, phase2b_output.md,
-  phase3_output.md, phase3d_output.md} — file:line と fix strategies は実測済み
+  phase3_output.md, phase3d_output.md} ― file:line と fix strategies は実測済み
 - PoC 6 件 + exploit tests 6 ファイル (16 tests) は VULNHUNT_DIR 配下に保存済み
 
 ## RICE 採点 (降順が実行順)
@@ -22,7 +22,7 @@ GLM-5.3-Flash、ユーザー指定による現モデル継続) の発見 9 件 (
 | 04 VULN-002 backup 予算 | 2 | 1 | 1.0 | 2.0 | 2 | なし |
 | 05 VULN-003 キー衝突解消 | 2 | 1 | 1.0 | 2.0 | 2 | なし |
 | 07 VULN-060 tranco 行数バウンド | 2 | 1 | 1.0 | 2.0 | 2 | なし |
-| 08 defense-in-depth hardening | 2 | 0.5 | 0.8 | 0.8 | 3 | Code Quality (脆弱性でない) — オプション性を明記 |
+| 08 defense-in-depth hardening | 2 | 0.5 | 0.8 | 0.8 | 3 | Code Quality (脆弱性でない) ― オプション性を明記 |
 
 実行順: 02 → 03/04/05/06/07 → 08。ファイル排他でバッチ並列 (02/05/06/08、03/04/07)。
 

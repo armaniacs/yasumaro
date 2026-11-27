@@ -41,7 +41,7 @@ S (2 SP、要チームでの見積もり)
 - 出所: yasumaro_VULNHUNT_RESULTS_2026-11-27-190000/phase2b_output.md VULN-003 (CONFIRMED Low)、phase3_output.md fix strategy
 - 外部挙動: 不変 (キャッシュヒット/ミスのタイミングのみ変化、出力は同一解析結果)
 - 依存関係: なし (1 モジュール)
-- 選択肢: (a) フルテキストキー (メモリ +8-20MB/エントリだが LRU-50 上限あり、最小差分)、(b) SHA-256 async 化 (cache get/set が sync のため呼び出し側の async 化が必要 — 波及)。実装は (a) を第一候補とし、(b) を選ぶ場合の波及を報告に記録
+- 選択肢: (a) フルテキストキー (メモリ +8-20MB/エントリだが LRU-50 上限あり、最小差分)、(b) SHA-256 async 化 (cache get/set が sync のため呼び出し側の async 化が必要 ― 波及)。実装は (a) を第一候補とし、(b) を選ぶ場合の波及を報告に記録
 
 ## 実装者向け注記
 

@@ -46,7 +46,7 @@ S (2 SP、要チームでの見積もり)
 
 ## 技術的考慮事項
 - 出所: yasumaro_VULNHUNT_RESULTS_2026-11-27-190000/phase2b_output.md VULN-004 (CONFIRMED Medium)、phase3_output.md fix strategy
-- 外部挙動: fix により生成 markdown の citation が変わる (脆弱挙動の解消) — 既存バックアップ互換性は無関係 (生成物)
+- 外部挙動: fix により生成 markdown の citation が変わる (脆弱挙動の解消) ― 既存バックアップ互換性は無関係 (生成物)
 - 依存関係: なし (1 行修正 + import)
 - ロールバック: 1 行リバートで戻る (挙動は元の脆弱状態に戻るが破壊的でない)
 
@@ -65,7 +65,7 @@ grep -n "sanitizeForMarkdownLinkText" src/utils/markdownSanitizer.ts
 3. 境界試験追加
 
 ### 落とし穴
-- sanitizeForObsidian を他の位置 (digest/timeline/holes — :116,159,166,178) で差し替えない (plain-text 位置では正しい)
+- sanitizeForObsidian を他の位置 (digest/timeline/holes ― :116,159,166,178) で差し替えない (plain-text 位置では正しい)
 - import が :28 の既存 markdownSanitizer import に統合される (重複 import しない)
 - git 操作禁止。実時間待ち禁止
 

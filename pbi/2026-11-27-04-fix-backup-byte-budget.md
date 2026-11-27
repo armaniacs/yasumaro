@@ -45,7 +45,7 @@ S (2 SP、要チームでの見積もり)
 ## 技術的考慮事項
 - 出所: yasumaro_VULNHUNT_RESULTS_2026-11-27-190000/phase2b_output.md VULN-002 (CONFIRMED Low)、phase3_output.md fix strategy
 - 外部挙動: over-budget backup が拒否される新挙動 (限界容量到達時のみ、現行も部分的取得に相当)。in-budget backup は現行どおり
-- 依存関係: MAX_BACKUP_FILE_BYTES は既存 (limits.ts:171、restore/panel 側で使用) — 新定数は不要
+- 依存関係: MAX_BACKUP_FILE_BYTES は既存 (limits.ts:171、restore/panel 側で使用) ― 新定数は不要
 - ロールバック: Array.from 形式に戻す (1 コミット)
 
 ## 実装者向け注記
@@ -65,7 +65,7 @@ grep -n "MAX_BACKUP_FILE_BYTES" src/utils/limits.ts src/dashboard/encryptedBacku
 
 ### 落とし穴
 - 旧形式 (Array.from) を期待する応答コードがあるか確認 (backupDb の呼び出し元 encryptedBackupService/exportLogsService が data: number[] を期待していないか)
-- base64 化は ~1.33x 増幅 (Array.from は ~8x) — wire validator の cap (MAX_RESTORE_BYTES 系が削除済みなら要確認) に抵触しないか
+- base64 化は ~1.33x 増幅 (Array.from は ~8x) ― wire validator の cap (MAX_RESTORE_BYTES 系が削除済みなら要確認) に抵触しないか
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
