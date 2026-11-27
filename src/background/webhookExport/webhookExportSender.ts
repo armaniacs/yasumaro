@@ -163,9 +163,19 @@ export async function defaultIsWebhookHostPermitted(url: string): Promise<boolea
   return judgeWebhookDestination(url).permitted;
 }
 
-/** Production mask: the privacy pipeline's regex pass, applied at send time. */
+/**
+ * Production mask: the privacy pipeline's regex pass, applied at send time.
+ * Fail closed (VULN-401): sanitizeRegex reports size-rejection by RETURNING
+ * the original text with an `error` flag, not by throwing, so returning
+ * `result.text` unconditionally shipped raw PII past this seam. Any error
+ * result means the text is unmaskable — re-raise it to reach the fail-closed
+ * catch in sendWebhookExport (mask-error history row, no POST).
+ */
 export async function defaultWebhookMaskText(text: string): Promise<string> {
   const result = await sanitizeRegex(text);
+  if (result.error !== undefined) {
+    throw new Error(`mask-error: ${result.error}`);
+  }
   return result.text;
 }
 
