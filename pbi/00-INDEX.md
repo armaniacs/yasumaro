@@ -14,19 +14,19 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
-### 2026-11-27 VulnHunter セキュリティ監査ラウンド vulnhunt-1127 (7件) ― ⬜ 未着手 fix ✨chore
+### 2026-11-27 VulnHunter セキュリティ監査ラウンド vulnhunt-1127 (7件) ― ✅ 7件完了・アーカイブ済み fix ✨chore
 
-VulnHunter セキュリティ監査 (yasumaro_VULNHUNT_RESULTS_2026-11-27-190000、GLM-5.3-Flash ユーザー指定継続) の発見 9 件 (CONFIRMED 脆弱性 6 + Code Quality 3) に対応する修正ラウンド。exploit tests 16/16 PASS が脆弱挙動を現行コードで再現済み (フェーズ0 再確認済み)。RICE 降順で 02 → 03/04/05/06/07 → 08。ファイル排他でバッチ並列 (02/05/06/08、03/04/07)。台帳は [2026-11-27-09-backlog-vulnhunt-1127.md](2026-11-27-09-backlog-vulnhunt-1127.md) を参照。ブランチ: 1128a。
+VulnHunter セキュリティ監査 (yasumaro_VULNHUNT_RESULTS_2026-11-27-190000、GLM-5.3-Flash ユーザー指定継続) の発見 9 件 (CONFIRMED 脆弱性 6 + Code Quality 3) に対応する修正ラウンド。exploit tests 16/16 PASS が脆弱挙動を現行コードで再現済み (フェーズ0 再確認済み)。RICE 降順で 02 → 03/04/05/06/07 → 08。バッチ 1 (02/05/06/08 並列) → バッチ 2 (03/04/07 並列)。最終ゲート: `npm run validate` 全緑 (19,388 件) + build 緑。台帳は [2026-11-27-09-backlog-vulnhunt-1127.md](2026-11-27-09-backlog-vulnhunt-1127.md) を参照。ブランチ: 1128a。
 
 | NN | PBI | 種別 | RICE | SP | 備考 |
 |---|---|---|---:|---:|---|
-| ⬜ 02 | [2026-11-27-02-fix-research-report-link-injection.md](2026-11-27-02-fix-research-report-link-injection.md) | fix | 12.0 | 2 | VULN-004 (CWE-79 Medium)。1 行修正 (sanitizeForMarkdownLinkText) |
-| ⬜ 03 | [2026-11-27-03-fix-staging-registry-cap.md](2026-11-27-03-fix-staging-registry-cap.md) | fix | 6.0 | 2 | VULN-001。staging registry に cap/TTL (MAX_CONFIRM_TOKENS 前例) |
-| ⬜ 04 | [2026-11-27-04-fix-backup-byte-budget.md](2026-11-27-04-fix-backup-byte-budget.md) | fix | 2.0 | 2 | VULN-002。backup 経路の byte 予算 + Array.from 廃止 |
-| ⬜ 05 | [2026-11-27-05-fix-ublock-cache-digest.md](2026-11-27-05-fix-ublock-cache-digest.md) | fix | 2.0 | 2 | VULN-003。FNV-1a キーを衝突耐性キーに |
-| ⬜ 06 | [2026-11-27-06-fix-webhook-mask-fail-closed.md](2026-11-27-06-fix-webhook-mask-fail-closed.md) | fix | 4.0 | 2 | VULN-401。mask seam の size-rejection fail-closed 化 (挙動変更) |
-| ⬜ 07 | [2026-11-27-07-fix-tranco-line-bound.md](2026-11-27-07-fix-tranco-line-bound.md) | fix | 2.0 | 2 | VULN-060。split 先行実体化を tier limit 以前で止める |
-| ⬜ 08 | [2026-11-27-08-chore-defense-in-depth-hardening.md](2026-11-27-08-chore-defense-in-depth-hardening.md) | chore | 0.8 | 3 | Code Quality 3 件の hardening (オプション、脆弱性でない) |
+| ~~02~~ | [2026-11-27-02-fix-research-report-link-injection.md](../dev-docs/archived/pbi/2026-11-27-02-fix-research-report-link-injection.md) | fix | 12.0 | 2 | ✅ 完了（2026-11-27 アーカイブ済み）。VULN-004 (CWE-79 Medium)。1 行修正 (sanitizeForMarkdownLinkText) |
+| ~~03~~ | [2026-11-27-03-fix-staging-registry-cap.md](../dev-docs/archived/pbi/2026-11-27-03-fix-staging-registry-cap.md) | fix | 6.0 | 2 | ✅ 完了（2026-11-27 アーカイブ済み）。VULN-001。staging registry に cap/TTL (MAX_CONFIRM_TOKENS 前例)。SSOT: MAX_ARCHIVE_STAGING_SESSIONS=16 / MAX_RESTORE=4 / TTL=300s |
+| ~~04~~ | [2026-11-27-04-fix-backup-byte-budget.md](../dev-docs/archived/pbi/2026-11-27-04-fix-backup-byte-budget.md) | fix | 2.0 | 2 | ✅ 完了（2026-11-27 アーカイブ済み）。VULN-002。backup 経路の byte 予算 + Array.from 廃止 (base64 転送、~8x → ~1.33x) |
+| ~~05~~ | [2026-11-27-05-fix-ublock-cache-digest.md](../dev-docs/archived/pbi/2026-11-27-05-fix-ublock-cache-digest.md) | fix | 2.0 | 2 | ✅ 完了（2026-11-26 アーカイブ済み）。VULN-003。FNV-1a キーを衝突耐性のあるフルテキストキーに (SHA-256 async 化は波及過大で不採用) |
+| ~~06~~ | [2026-11-27-06-fix-webhook-mask-fail-closed.md](../dev-docs/archived/pbi/2026-11-27-06-fix-webhook-mask-fail-closed.md) | fix | 4.0 | 2 | ✅ 完了（2026-11-26 アーカイブ済み）。VULN-401。mask seam の size-rejection fail-closed 化 (意図的挙動変更) |
+| ~~07~~ | [2026-11-27-07-fix-tranco-line-bound.md](../dev-docs/archived/pbi/2026-11-27-07-fix-tranco-line-bound.md) | fix | 2.0 | 2 | ✅ 完了（2026-11-26 アーカイブ済み）。VULN-060。split 先行実体化を tier limit 以前で止める (RSS 増幅 9.5x → 1.63x) |
+| ~~08~~ | [2026-11-27-08-chore-defense-in-depth-hardening.md](../dev-docs/archived/pbi/2026-11-27-08-chore-defense-in-depth-hardening.md) | chore | 0.8 | 3 | ✅ 完了（2026-11-26 アーカイブ済み）。Code Quality 3 件の hardening (CWE-367 CAS 化、CWE-312 fallback window bound、CWE-862 は台帳記録のみ) |
 
 ### 2026-11-27 調査ラウンド (1件) ― ✅ 1件完了・アーカイブ済み 🔍調査
 
