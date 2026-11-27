@@ -401,21 +401,24 @@ export class MasterPasswordController {
         // error made it ambiguous whether the action was still running.
         this.setPasswordAuthProgress(null);
         if (this.dom.passwordAuthError) {
-          this.dom.passwordAuthError.textContent =
-            e instanceof ReencryptionAbortedError
-              ? this.abortMessage(e)
-              : e instanceof SplitBackupError && e.code === 'split-backup-too-large'
-                ? // The create-side budget gate: show the localized guidance in
-                  // the modal where the user looks first, not the codec's
-                  // internal English message (the panel mirrors it on status).
-                  getMessageWithSubstitutions(
-                    'encryptedBackupSplitCreateTooLarge',
-                    splitTooLargeBudgetFields(e) ?? {},
-                    'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
-                  )
-                : e instanceof RotationInProgressError
-                  ? getMessage('masterPasswordRotationInProgress')
-                  : errorMessage(e);
+          let authErrorMessage: string;
+          if (e instanceof ReencryptionAbortedError) {
+            authErrorMessage = this.abortMessage(e);
+          } else if (e instanceof SplitBackupError && e.code === 'split-backup-too-large') {
+            // The create-side budget gate: show the localized guidance in
+            // the modal where the user looks first, not the codec's
+            // internal English message (the panel mirrors it on status).
+            authErrorMessage = getMessageWithSubstitutions(
+              'encryptedBackupSplitCreateTooLarge',
+              splitTooLargeBudgetFields(e) ?? {},
+              'This history DB exceeds the restorable limit even in split form. Organize your history and try again.',
+            );
+          } else if (e instanceof RotationInProgressError) {
+            authErrorMessage = getMessage('masterPasswordRotationInProgress');
+          } else {
+            authErrorMessage = errorMessage(e);
+          }
+          this.dom.passwordAuthError.textContent = authErrorMessage;
           this.dom.passwordAuthError.classList.add('visible');
         }
       } finally {
