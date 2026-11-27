@@ -9,7 +9,7 @@
   - `src/dashboard/exportLogsService.ts:171` 出力用 stringify (signature 付き body、ダウンロードされるファイル)
   - `src/dashboard/importLogsService.ts:190` インポート検証用 stringify (再構築した body を HMAC 検証に使用)
 - 計測 (PBI 17 bench): 軽量 100k 行 130ms/8.0MB (RSS +171.6MB)、フルフィデリティ 50k 行 200ms/27.8MB (peak 565-620MB)
-- トリガー未達のため着手不要と裁定済み (2026-11-27) — 本 PBI は「トリガー達成時にすぐ動ける状態」を作る調査タスク
+- トリガー未達のため着手不要と裁定済み (2026-11-27) ― 本 PBI は「トリガー達成時にすぐ動ける状態」を作る調査タスク
 
 ## ビジネス価値
 - 次回上限引き上げ PBI が計測ベースの裁定で開始できる (技術的リスクが前倒しで判明する)
@@ -83,9 +83,9 @@ grep -n "exportHmacSigner\|verifier.verify" src/dashboard/exportLogsService.ts s
 4. 裁定を台帳に記録し、調査報告書を plans/ 配下に作成
 
 ### 落とし穴
-- 手法 A の末尾置換は「pretty-print 固定フォーマット」が前提。`JSON.stringify(x, null, 2)` の出力末尾は `\n}` で決定論的だが、将来の stringify オプション変更で壊れる — 調査報告書にこの前提を明記する
+- 手法 A の末尾置換は「pretty-print 固定フォーマット」が前提。`JSON.stringify(x, null, 2)` の出力末尾は `\n}` で決定論的だが、将来の stringify オプション変更で壊れる ― 調査報告書にこの前提を明記する
 - インポート側検証 (③) は body 再構築の stringify であり、エクスポート側の 1 回化では削減できない (両側で 1 回化するには手法 B が必要)
-- RSS 計測は f3 の sqlite-wasm 残留に影響される (PBI 17 bench 冒頭の注意) — `--filter f4` でクリーン計測する
+- RSS 計測は f3 の sqlite-wasm 残留に影響される (PBI 17 bench 冒頭の注意) ― `--filter f4` でクリーン計測する
 - 本 PBI はコード変更を伴わない (着手 PBI が別途起案される)。調査用コードをコミットしない
 - git 操作禁止。実時間待ち禁止
 
