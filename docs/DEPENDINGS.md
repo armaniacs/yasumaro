@@ -104,7 +104,7 @@
 ## 4. 現在の扱い
 
 - ランタイム依存は配布物に同梱される。Firefox ビルドでは `wasm/wa-sqlite-async.wasm` を同一オリジンからロードする
-- `THIRD_PARTY_NOTICES.md`: `npm run generate-notices` で手動生成する。CI での自動検証は生成結果が macOS / Linux で差異を出すため 2026-07-19 に削除済み。最終生成は 2026-11-27（744 パッケージ分）で、現在の 744 パッケージと一致
+- `THIRD_PARTY_NOTICES.md`: `npm run generate-notices` で手動生成する。CI での自動検証は生成結果が macOS / Linux で差異を出すため 2026-07-19 に削除済み。最終生成は 2026-11-28（744 パッケージ分）で、現在の 744 パッケージと一致
 - `sbom.json`: CycloneDX 形式。`.gitignore` 対象でコミットしない。CI が生成し、90 日間アーティファクトとして保管する
 - 更新運用: lockfile を事実源とし、バージョン範囲内の更新は lockfile の更新で取り込む。脆弱性は CI（prod スコープ）+ 日常 gate（`validate` 内 audit warn）+ 週次監査（フル）+ リリースゲート（二層判定）+ 文書鮮度検査（`check:dependings`）の 5 層で検出する。各層のスコープ定義は §3 の表を正とし、CI と release で「監査」の意味がずれないようにする。文書数値の更新は `npm run generate:dependings` で行い、§5 の判定文と §6 の受容記録は手書きのままとする
 
