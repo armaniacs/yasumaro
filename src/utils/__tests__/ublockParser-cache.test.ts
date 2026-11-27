@@ -30,9 +30,11 @@ describe('ublockParser - Cache Module', () => {
   // ============================================================================
 
   describe('generateCacheKey', () => {
+    // VULN-003 fix: the key is the full text, so the equivalence class is
+    // exactly string equality (the old FNV-1a-32+length key is gone).
     test('generates a basic key', () => {
       const key = generateCacheKey('||example.com^');
-      expect(key).toMatch(/^[a-z0-9]+_\d+$/);
+      expect(key).toBe('||example.com^');
     });
 
     test('generates different keys from different texts', () => {
@@ -50,12 +52,12 @@ describe('ublockParser - Cache Module', () => {
     test('generates a key from a long text', () => {
       const longText = 'a'.repeat(150);
       const key = generateCacheKey(longText);
-      expect(key).toMatch(/^[a-z0-9]+_150$/);
+      expect(key).toBe(longText);
     });
 
     test('generates a key from an empty string', () => {
       const key = generateCacheKey('');
-      expect(key).toMatch(/^[a-z0-9]+_0$/);
+      expect(key).toBe('');
     });
 
     // PERF-019テスト: 類似した異なるテキストから異なるキーを生成
@@ -76,7 +78,7 @@ describe('ublockParser - Cache Module', () => {
       expect(key1).not.toBe(key2);
     });
 
-    // PERF-019テスト: ハッシュベースのキー生成による衝突防止
+    // PERF-019テスト: 異なるテキストは常に別エントリ (フルテキストキー)
     test('PERF-019: avoids collisions for texts differing at the 100-char boundary', () => {
       // 先頭100文字が同じで、101文字目以降が異なる2つのテキスト
       const baseText = 'a'.repeat(100);

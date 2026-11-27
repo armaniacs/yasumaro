@@ -111,6 +111,31 @@ describe('buildReportFilename', () => {
   });
 });
 
+describe('buildCitationsSection — link-text boundaries (title is attacker-controlled)', () => {
+  function citationsOf(records: ResearchReportRecord[]): string {
+    const markdown = buildResearchReportMarkdown(records, { title: 't', now: 1 });
+    expect(markdown).not.toBeNull();
+    return markdown!.split('## 引用')[1]?.split('## 未読穴')[0] ?? '';
+  }
+
+  it('escapes brackets and parens in a title so it renders literally (no early close)', () => {
+    const citations = citationsOf([
+      makeRecord(1, { title: 'Note (2024) [rev.2]', url: 'https://example.com/a' }),
+    ]);
+    expect(citations).toContain('1. [Note \\(2024\\) \\[rev.2\\]](https://example.com/a)');
+    // The wrapper's link target stays the record's URL.
+    expect(citations.match(/\]\([^)]*\)/g)).toEqual(['](https://example.com/a)']);
+  });
+
+  it('escapes a leading-bracket title so it cannot absorb the wrapper', () => {
+    const citations = citationsOf([
+      makeRecord(1, { title: '[Hook] Page', url: 'https://example.com/b' }),
+    ]);
+    expect(citations).toContain('1. [\\[Hook\\] Page](https://example.com/b)');
+    expect(citations.match(/\]\([^)]*\)/g)).toEqual(['](https://example.com/b)']);
+  });
+});
+
 describe('createResearchReportGenerator — BDD (レポートが生成される / 送り先に届く)', () => {
   beforeEach(() => {
     vi.clearAllMocks();

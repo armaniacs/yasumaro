@@ -46,9 +46,26 @@ vi.mock('../../utils/storage/encryptionSession.js', () => ({
   RotationInProgressError: class RotationInProgressError extends Error {},
 }));
 
-const mockChromeGet = vi.fn();
-const mockChromeSet = vi.fn();
-const mockChromeRemove = vi.fn();
+const lockStore = new Map<string, unknown>();
+const mockChromeGet = vi.fn(async (keys: string | string[] | null) => {
+  if (keys === null) return Object.fromEntries(lockStore);
+  if (Array.isArray(keys)) {
+    const acc: Record<string, unknown> = {};
+    for (const k of keys) {
+      if (lockStore.has(k)) acc[k] = lockStore.get(k);
+    }
+    return acc;
+  }
+  const v = lockStore.get(keys);
+  return v === undefined ? {} : { [keys]: v };
+});
+const mockChromeSet = vi.fn(async (items: Record<string, unknown>) => {
+  for (const [k, v] of Object.entries(items)) lockStore.set(k, v);
+});
+const mockChromeRemove = vi.fn(async (keys: string | string[]) => {
+  const list = Array.isArray(keys) ? keys : [keys];
+  for (const k of list) lockStore.delete(k);
+});
 vi.stubGlobal('chrome', {
   storage: {
     local: {

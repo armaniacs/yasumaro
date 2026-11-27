@@ -75,11 +75,13 @@ describe('messaging/sqliteMaintainWireTable: parity pins (byte-identical to the 
     expect(row.decodeGateway({ success: true })).toBe(true);
   });
 
-  it('backup sends SQLITE_BACKUP with an empty payload and decodes number[] to Uint8Array bytes', () => {
+  it('backup sends SQLITE_BACKUP with an empty payload and decodes the base64 bytes', () => {
     const row = SQLITE_MAINTAIN_WIRE_DESCRIPTORS.backup;
     expect(row.messageType).toBe('SQLITE_BACKUP');
     expect(row.encodePayload({ type: 'backup' })).toEqual({});
-    const decoded = row.decodeGateway({ success: true, data: [83, 81, 76, 105, 116, 101] });
+    // PBI 2026-11-27-04: the offscreen runner ships the backup as base64 —
+    // the gateway decodes it to bytes without materializing a number[] array.
+    const decoded = row.decodeGateway({ success: true, data: 'U1FMaXRl' });
     expect(decoded).toBeInstanceOf(Uint8Array);
     expect(Array.from(decoded)).toEqual([83, 81, 76, 105, 116, 101]);
   });

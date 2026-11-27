@@ -43,8 +43,9 @@ describe('background/sqliteMaintainWireDispatch: table-driven maintain routing',
     ]);
   });
 
-  it('backup sends SQLITE_BACKUP with {} and decodes number[] to Uint8Array', async () => {
-    const transport = recordingTransport({ success: true, data: [1, 2, 3] } as OffscreenResponse);
+  it('backup sends SQLITE_BACKUP with {} and decodes base64 to Uint8Array', async () => {
+    // PBI 2026-11-27-04: the offscreen runner ships the backup as base64.
+    const transport = recordingTransport({ success: true, data: 'AQID' } as OffscreenResponse);
     const client = new SqliteClient(transport);
 
     const result = await client.maintain({ type: 'backup' });

@@ -181,6 +181,30 @@ export const MAX_BACKUP_FILE_BYTES = 50 * 1024 * 1024;
 export const MAX_RESTORE_SESSION_BYTES = MAX_BACKUP_FILE_BYTES;
 
 /**
+ * Concurrency caps for the OPFS worker staging-session registries (VULN-001,
+ * CWE-400): the registries are worker-memory Maps that grow by one entry per
+ * prepare call, so a compromised extension page can spam legitimate-shaped
+ * prepare requests and bloat worker memory plus the OPFS root (0-byte
+ * staging files) until the offscreen document restarts. At cap, the next
+ * prepare call first evicts TTL-expired sessions, then fails closed if the
+ * registry is still full. Archive and restore own SEPARATE caps so spamming
+ * one path cannot starve the other (different message routes). Follows the
+ * MAX_CONFIRM_TOKENS precedent (background/confirmTokenManager.ts).
+ */
+export const MAX_ARCHIVE_STAGING_SESSIONS = 16;
+export const MAX_RESTORE_STAGING_SESSIONS = 4;
+
+/**
+ * Time-to-live for a staging-session registry entry, in milliseconds: an
+ * entry older than this is evicted by the next prepare call at cap, and its
+ * OPFS file is removed by the registry's own orphan sweep (the file loses
+ * its registry protection at eviction). Sized well beyond a full 50 MiB
+ * chunked transfer over slow storage — a live session is only ever evicted
+ * under create-spam pressure, never in the normal single-session flow.
+ */
+export const STAGING_SESSION_TTL = 300_000;
+
+/**
  * Encrypted-backup envelope PRE-DECODE base64 length cap (PBI 2026-11-06-02).
  * Deliberately separate from the generic MAX_ENVELOPE_BASE64_LENGTH (10 MiB):
  * raising the generic cap would widen the pre-auth allocation budget on every

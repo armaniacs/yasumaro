@@ -84,6 +84,13 @@ async function defaultResend(
       // (chrome.permissions.contains) covers every origin in a real install
       // and would bypass the allowlist gate.
       isHostPermitted: defaultIsWebhookHostPermitted,
+      // Mirror contract warning (VULN-401): this inline lambda has the same
+      // fail-open trap defaultWebhookMaskText fixed — sanitizeRegex reports
+      // size-rejection by RETURNING the original text with an `error` flag,
+      // so `.text` alone can ship raw PII. Dormant today: defaultResend only
+      // runs when seams.resolveRecord is provided and no production caller
+      // wires it. Reuse defaultWebhookMaskText (it throws on error results)
+      // in the same commit that wires resolveRecord.
       maskText: (text: string) => sanitizeRegex(text).then((masked) => masked.text),
       notify: () => {},
       now: () => Date.now(),

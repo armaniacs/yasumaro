@@ -43,7 +43,7 @@ import {
   purgeAuditLog as sqlitePurgeAuditLog,
 } from './auditLogRepo.js';
 import { pickDefined } from '../utils/objectUtils.js';
-import { base64ToBytes } from '../utils/crypto/index.js';
+import { base64ToBytes, bytesToBase64 } from '../utils/crypto/index.js';
 import { errorMessage } from '../utils/errorUtils.js';
 import { planPurge, planQueryOrSearch, planSearch } from './queryPlanner.js';
 import { ARCHIVE_UNSUPPORTED_ERROR, type StorageBackend } from './StorageBackend.js';
@@ -204,7 +204,13 @@ async function handleClearAll(_msg: SqliteMessage, sendResponse: (r: unknown) =>
 async function handleBackup(_msg: SqliteMessage, sendResponse: (r: unknown) => void): Promise<void> {
   const result = await sqliteBackupDb();
   if (result.success && result.data instanceof Uint8Array) {
-    sendResponse({ success: true, data: Array.from(result.data) });
+    // VULN-002 (PBI 2026-11-27-04): bytes ride as base64, not Array.from —
+    // a plain number[] re-materialized every DB byte as a boxed JS number
+    // (~8x amplification) on this JSON-serialized hop. The byte budget is
+    // enforced at the OPFS read (backupHandlers.handleBackup), so anything
+    // reaching here is already within MAX_BACKUP_FILE_BYTES. The SW-side
+    // decode that consumes this field lives in the wire table's backup row.
+    sendResponse({ success: true, data: bytesToBase64(result.data) });
   } else {
     sendResponse(result);
   }

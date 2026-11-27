@@ -12,6 +12,7 @@ import { createEngine } from '../sqliteBoot.js';
 import { FTS5_STATEMENTS } from '../schema.js';
 import { WASM_ASSET_URLS } from '../wasmAssets.js';
 import type { NamedRow } from '../rowCodec.js';
+import { MAX_BACKUP_FILE_BYTES } from '../../utils/limits.js';
 
 /**
  * Whitespace-normalized form for trigger SQL comparison. sqlite_master
@@ -76,6 +77,16 @@ export async function handleBackup(ctx: HandlerContext): Promise<Uint8Array> {
   const root = await navigator.storage.getDirectory();
   const fileHandle = await root.getFileHandle(DB_FILENAME, { create: false });
   const file = await fileHandle.getFile();
+  // VULN-002 (PBI 2026-11-27-04): the create-side byte budget, checked BEFORE
+  // arrayBuffer() so an over-budget DB is never fully materialized. Same
+  // constant governs both directions (restore/panel file gate), and the
+  // caller's response re-encodes the bytes, so the check must run here where
+  // the size is known for free.
+  if (file.size > MAX_BACKUP_FILE_BYTES) {
+    throw new Error(
+      `backup: database file size (${file.size}) exceeds the backup budget (${MAX_BACKUP_FILE_BYTES})`,
+    );
+  }
   const buffer = await file.arrayBuffer();
   return new Uint8Array(buffer);
 }

@@ -15,6 +15,7 @@ import {
   isValidStagingName,
   type StagingName,
 } from '../../utils/archiveGuards.js';
+import { MAX_ARCHIVE_STAGING_SESSIONS, STAGING_SESSION_TTL } from '../../utils/limits.js';
 
 export type ArchiveStagingKind = 'incoming' | 'outgoing';
 
@@ -68,8 +69,39 @@ function issueName(kind: ArchiveStagingKind): StagingName {
   return name as StagingName;
 }
 
+/**
+ * VULN-001 (CWE-400): create-spam guard shared by both prepare entry points.
+ * At cap, drop TTL-expired sessions first: removing an entry from the
+ * registry strips its sweep protection, so the existing orphan sweep removes
+ * the evicted session's OPFS file without re-implementing file deletion.
+ * Runs only on the at-cap path so the normal flow gains zero OPFS work.
+ */
+async function evictExpiredStagings(): Promise<void> {
+  const now = Date.now();
+  let evicted = false;
+  for (const [name, record] of registry) {
+    if (now - record.createdAt >= STAGING_SESSION_TTL) {
+      registry.delete(name);
+      evicted = true;
+    }
+  }
+  if (evicted) await sweepOrphanStagings();
+}
+
+function assertRegistryHasRoom(): void {
+  if (registry.size >= MAX_ARCHIVE_STAGING_SESSIONS) {
+    throw new Error(
+      `archive staging registry is full (${MAX_ARCHIVE_STAGING_SESSIONS} live sessions); refusing to issue another staging file`,
+    );
+  }
+}
+
 /** Issue and register an incoming staging name (dashboard writes the bytes). */
 export async function prepareIncoming(): Promise<StagingName> {
+  if (registry.size >= MAX_ARCHIVE_STAGING_SESSIONS) {
+    await evictExpiredStagings();
+    assertRegistryHasRoom();
+  }
   const name = issueName('incoming');
   registry.set(name, { kind: 'incoming', createdAt: Date.now() });
   return name;
@@ -77,6 +109,10 @@ export async function prepareIncoming(): Promise<StagingName> {
 
 /** Issue and register an outgoing staging name (offscreen writes the bytes). */
 export async function prepareOutgoing(): Promise<StagingName> {
+  if (registry.size >= MAX_ARCHIVE_STAGING_SESSIONS) {
+    await evictExpiredStagings();
+    assertRegistryHasRoom();
+  }
   const name = issueName('outgoing');
   registry.set(name, { kind: 'outgoing', createdAt: Date.now() });
   return name;

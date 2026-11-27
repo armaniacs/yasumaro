@@ -168,7 +168,9 @@ export class InMemoryTransport implements OffscreenTransport {
         return { success: true, purged: 0 };
 
       case 'SQLITE_BACKUP':
-        return { success: true, data: [] };
+        // The wire contract changed to base64 (PBI 2026-11-27-04); an empty
+        // string keeps this fake zero-cost for callers that only check success.
+        return { success: true, data: '' };
 
       case 'SQLITE_ARCHIVE_EXPORT':
         return { success: true, chunk: [], nextOffset: 0, total: 0, done: true };

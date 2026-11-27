@@ -174,7 +174,7 @@ export class TrancoUpdater {
   }
 
   private parseTrancoCSV(csvText: string, tier: TrancoTier): string[] {
-    const lines = csvText.trim().split('\n');
+    const lines = this.splitToTierLineBound(csvText, TRANCO_TIER_COUNT[tier]);
     const domains: string[] = [];
 
     // tier に基づいて制限を設定
@@ -196,6 +196,26 @@ export class TrancoUpdater {
     }
 
     return domains;
+  }
+
+  // VULN-060 (CWE-400): a whole-text split('\n') materialized one string per
+  // line BEFORE the per-line tier limit could fire — a 12MB newline-dense body
+  // grew ~6M array entries (>6x RSS) and the retry loop repeated that up to 3x.
+  // Walking the first maxLines newline offsets in place bounds the derived
+  // array to the tier size. Deliberately no whole-text trim(): empty/whitespace
+  // lines never yield a domain (falsy second field), and the per-domain trim
+  // below strips the trailing '\r' a CRLF body leaves on each line, so the
+  // parsed domain output is identical to the legacy trim+split contract.
+  private splitToTierLineBound(csvText: string, maxLines: number): string[] {
+    let lineEnd = -1;
+    for (let i = 0; i < maxLines; i++) {
+      lineEnd = csvText.indexOf('\n', lineEnd + 1);
+      if (lineEnd === -1) {
+        // Fewer lines than the tier bound: the whole text is already bounded.
+        return csvText.split('\n');
+      }
+    }
+    return csvText.slice(0, lineEnd).split('\n');
   }
   /**
    * 更新中か確認

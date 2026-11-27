@@ -231,6 +231,36 @@ async function migrateLegacySecretToEnvelope(legacySecret: string): Promise<void
 }
 
 /**
+ * Bound the CWE-312 plaintext fallback window (PBI 2026-11-27-08): when the
+ * session-rescue path had to persist the secret as legacy plaintext because
+ * the KEK store was unreachable, the anonymous read path that normally
+ * migrates it never runs while a master password is enabled, so the plaintext
+ * could outlive the session that created it. A successful unlock is the
+ * guaranteed retry point — re-wrap then, best-effort. A failed wrap keeps the
+ * plaintext working (fail-open preserved) and defers to the next unlock, so
+ * the window stays bounded by retry rather than being closed by force.
+ */
+async function wrapPlaintextSecretAfterUnlock(): Promise<void> {
+    try {
+        const stored = (await chrome.storage.local.get(StorageKeys.ENCRYPTION_SECRET))[
+            StorageKeys.ENCRYPTION_SECRET
+        ];
+        // Envelopes are objects; a bare non-empty string is always the
+        // legacy plaintext shape.
+        if (typeof stored === 'string' && stored.length > 0) {
+            await migrateLegacySecretToEnvelope(stored);
+        }
+    } catch (e) {
+        logWarn(
+            'Post-unlock secret wrap deferred; plaintext fallback window remains open',
+            { error: errorMessage(e as Error) },
+            undefined,
+            'storage/encryptionSession.ts'
+        );
+    }
+}
+
+/**
  * マスターパスワード未設定時のキー取得（従来方式、マイグレーション準備）。
  *
  * 【重要】ENCRYPTION_SECRET は chrome.storage.local に保存する。
@@ -740,6 +770,7 @@ export async function unlockWithPassword(password: string): Promise<boolean> {
         cachedMasterPassword = password;
         cachedEncryptionKey = null; // 新しいキーを生成するためにキャッシュをクリア
         await chrome.storage.local.set({ [StorageKeys.IS_LOCKED]: false });
+        await wrapPlaintextSecretAfterUnlock();
         return true;
     }
 

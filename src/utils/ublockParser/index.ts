@@ -129,7 +129,7 @@ export function parseUblockFilterListWithErrors(text: string): ParseResultWithEr
     }
 
     // 【キャッシュチェック】: キャッシュに存在する場合はキャッシュを返す 🟢
-    // 【キャッシュキー生成】: 最初の100文字と長さでキャッシュキーを生成
+    // 【キャッシュキー生成】: 入力テキストそのものをキーにする (衝突耐性。cache.ts の generateCacheKey 参照)
     const cacheKey = generateCacheKey(text);
     const cached = getFromCache(cacheKey) as ParseResultWithErrors | null;
     if (cached) {
