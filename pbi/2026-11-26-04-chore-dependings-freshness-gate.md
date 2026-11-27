@@ -27,13 +27,13 @@ Scenario: 免責記録は上書きされない
 ```
 
 ## 受け入れ基準
-- [ ] ランタイム表の版が `package.json` と lockfile の実効版と一致しない場合に検査が失敗する
-- [ ] 開発依存件数と lockfile 総数が文書と一致しない場合に検査が失敗する
-- [ ] `THIRD_PARTY_NOTICES.md` 件数と文書の記述が一致しない場合に検査が失敗する
-- [ ] `package-lock.json` が文書より新しい場合に再生成を促して失敗する
-- [ ] `npm run generate:dependings` 実行後に検査が通過する
-- [ ] 第6章の受容記録に影響しない
-- [ ] `npm run release:check` の通常経路に組み込まれる
+- [x] ランタイム表の版が `package.json` と lockfile の実効版と一致しない場合に検査が失敗する
+- [x] 開発依存件数と lockfile 総数が文書と一致しない場合に検査が失敗する
+- [x] `THIRD_PARTY_NOTICES.md` 件数と文書の記述が一致しない場合に検査が失敗する
+- [x] `package-lock.json` が文書より新しい場合に再生成を促して失敗する
+- [x] `npm run generate:dependings` 実行後に検査が通過する
+- [x] 第6章の受容記録に影響しない
+- [x] `npm run release:check` の通常経路に組み込まれる
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -89,9 +89,9 @@ grep -rn "generate-dependings\|check-dependings\|generate:dependings" scripts/ p
 - 日付比較は実時間待ちにしない。mtime の大小比較だけにする
 
 ## Definition of Done
-- [ ] 全BDDシナリオが手動または自動で確認されパスする
-- [ ] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
-- [ ] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
-- [ ] リファクタリング完了（グリーン後）
-- [ ] ロールバック手段の検討（本変更はゲート追加のため、誤検出時は当該検査の一時除外で出荷継続できる点を技術的考慮事項または本項に記載。誤検出時の回避手順: `RELEASE_CHECKS_NO_CACHE` とは無関係のため、`--category` 指定で当該分類を外すか、文書を再生成する）
-- [ ] ドキュメント更新済み
+- [x] 全BDDシナリオが手動または自動で確認されパスする
+- [x] テストカバレッジが基準を満たす（E2E/統合/単体すべて）
+- [x] コードレビュー完了（GitHub PR での approve を必須とする。セキュリティに関わる変更は CLAUDE.md「For Security Review Agents」節の観点確認をPR説明に明記）
+- [x] リファクタリング完了（グリーン後）
+- [x] ロールバック手段の検討（本変更はゲート追加のため、誤検出時は当該検査の一時除外で出荷継続できる点を技術的考慮事項または本項に記載。誤検出時の回避手順: `RELEASE_CHECKS_NO_CACHE` とは無関係のため、`--category` 指定で当該分類を外すか、文書を再生成する）
+- [x] ドキュメント更新済み
