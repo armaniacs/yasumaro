@@ -58,17 +58,11 @@
   sweep、テストシーム) を ~100 行複製。opfsWorker/stagingRegistry.ts に
   パラメータ化して共通化する (名前生成方式とレコード型を注入、archive 側は
   複数プレフィックス、restore 側は単一)。Maintainability 指摘
-- 単発 restore 輸送の 7 層削除: dashboard 側呼び出し元消失後も残留する実装。
-  削除範囲: sqliteWireTable.ts の 'restore' 行、sqliteMessages.ts の
-  SQLITE_RESTORE、transportRetryPolicy.ts の対応行、payloadGuard.ts の
-  SQLITE_RESTORE case (MAX_RESTORE_BYTES 100MB)、sqliteMessageHandlers.ts の
-  handleRestore、recordsRepo.ts + dbMaintenance.ts、backend 実装 x3
-  (OpfsWorkerBackend / IdbVfsBackend / FallbackStorageAdapter) +
-  MAX_RESTORE_BYTES。System Architect 指摘
-- JSON エクスポートの stringify 2 回最適化: exportJson (署名用 + 出力用) と
-  importLogsService の検証用再シリアライズ。ゲート規模 (30 MiB 級) の
-  peak RSS / 所要時間を bench:micro に追加し、次回上限引き上げの前提条件に
-  する。Tuning Expert + Edge & Mobile 指摘
+- JSON エクスポートの stringify 2 回最適化: **PBI 2026-11-27-01 として起案済み**
+  (調査タスク、トリガー未達のため着手はせず計測と実現可能性を固める)。
+  [../2026-11-27-01-investigate-stringify-optimization.md](../2026-11-27-01-investigate-stringify-optimization.md) を参照
+- 単発 restore 輸送の 7 層削除: **PBI 2026-11-26-14 として実装済み**
+  (2026-11-26 アーカイブ済み、grep 参照ゼロ)。System Architect 指摘は解消済み
 
 ## 再発防止の運用メモ (なぜなぜ分析 3 より)
 

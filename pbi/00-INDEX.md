@@ -14,6 +14,14 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-27 調査ラウンド (1件) ― ⬜ 未着手 🔍調査
+
+台帳送りした「stringify 最適化」を調査タスクとして PBI 化 (トリガー未達のため着手はせず、次回上限引き上げの前提条件を固める調査)。タグの確認日を進める際の鮮度ゲート整合は --confirm-date 制御 (PBI 18) で担保済み。出所: pbi/2026-11-26-00 の後続候補 + Ops/Tuning レビュー指摘。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| ⬜ 01 | [2026-11-27-01-investigate-stringify-optimization.md](2026-11-27-01-investigate-stringify-optimization.md) | 🔍調査 | 3.2 | 2 | stringify 3 箇所の削減可能性調査 (計測、手法 A/B 検証、裁定記録)。着手 PBI が別途起案される |
+
 ### 2026-11-26 後続候補ラウンド followup-1126（3件） ― ✅ 3件完了・アーカイブ済み ✨機能追加 🧪テスト 🔧非機能追加
 
 holistic-1126 ラウンドで台帳送りした後続候補 3 件 (既知 a-d のうち着手可能なもの) を実装したラウンド。バッチ 1 (3 件並列、ファイル排他)。最終ゲート: test:perf 全緑 (json reporter)、check-docs-chars 0 違反、build 緑。台帳は [2026-11-26-15-backlog-followup-1126.md](2026-11-26-15-backlog-followup-1126.md) を参照。ブランチ: chore/holistic-followup-1126。
