@@ -18,11 +18,11 @@ Scenario: >64KB テキストはマスク失敗として抑制される
 ```
 
 ## 受け入れ基準
-- [ ] defaultWebhookMaskText (webhookExportSender.ts:167-170) が result.error (またはテキスト長超過) を検出して throw する
-- [ ] 既存 fail-closed catch (webhookExportSender.ts:295-307) が処理する経路になる (mask-error history 行も記録)
-- [ ] exploit test 401 を新契約 pin に更新
-- [ ] 2 番目の seam caller (src/dashboard/webhookExportSettings.ts:87、unwired) を mirror するか、未配線である旨をコメントで明記
-- [ ] `npm run validate` が通る
+- [x] defaultWebhookMaskText (webhookExportSender.ts:167-170) が result.error (またはテキスト長超過) を検出して throw する
+- [x] 既存 fail-closed catch (webhookExportSender.ts:295-307) が処理する経路になる (mask-error history 行も記録)
+- [x] exploit test 401 を新契約 pin に更新
+- [x] 2 番目の seam caller (src/dashboard/webhookExportSettings.ts:87、unwired) を mirror するか、未配線である旨をコメントで明記
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -65,9 +65,9 @@ sed -n '82,92p' src/dashboard/webhookExportSettings.ts
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: throw を外し旧挙動に戻す (1 コミット、脆弱状態に戻る)
-- [ ] ドキュメント更新の要否判定: fail-closed 挙動の文書化 ― webhookExportSender.ts ヘッダコメント (295-307) で契約が既に記載済みのため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: throw を外し旧挙動に戻す (1 コミット、脆弱状態に戻る)
+- [x] ドキュメント更新の要否判定: fail-closed 挙動の文書化 ― webhookExportSender.ts ヘッダコメント (295-307) で契約が既に記載済みのため docs 更新は不要

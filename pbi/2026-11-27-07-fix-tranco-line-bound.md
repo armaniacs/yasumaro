@@ -18,10 +18,10 @@ Scenario: 12MB body は RSS を ~2x 以内に収める
 ```
 
 ## 受け入れ基準
-- [ ] trancoUpdater.ts:177 の `split('\n')` が、tier limit (100k 行) を超える materialization をしない実装 (行数インデックススキャン、またはバッチ分割 parse) に変更されている
-- [ ] exploit test 060 を新契約 pin に更新 (RSS 増幅 <2x、tier limit で停止)
-- [ ] 既存 tranco / trustDb テスト群が緑
-- [ ] `npm run validate` が通る
+- [x] trancoUpdater.ts:177 の `split('\n')` が、tier limit (100k 行) を超える materialization をしない実装 (行数インデックススキャン、またはバッチ分割 parse) に変更されている
+- [x] exploit test 060 を新契約 pin に更新 (RSS 増幅 <2x、tier limit で停止)
+- [x] 既存 tranco / trustDb テスト群が緑
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -64,9 +64,9 @@ grep -n "TRANCO_TIER_COUNT" src/utils/trustDb/trancoUpdater.ts src/utils/limits.
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: split('\n') に戻す (1 コミット、脆弱状態に戻る)
-- [ ] ドキュメント更新の要否判定: 内部実装のため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: split('\n') に戻す (1 コミット、脆弱状態に戻る)
+- [x] ドキュメント更新の要否判定: 内部実装のため docs 更新は不要

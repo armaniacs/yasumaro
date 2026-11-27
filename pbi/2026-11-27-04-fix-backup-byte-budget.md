@@ -22,11 +22,11 @@ Scenario: in-budget backup は期待形式で届く
 ```
 
 ## 受け入れ基準
-- [ ] handleBackup (backupHandlers.ts:76-80) が file.arrayBuffer() 前にバイト予算 (MAX_BACKUP_FILE_BYTES) を強制し、over-budget は fail-closed で拒否する
-- [ ] sqliteMessageHandlers.ts:204-211 の Array.from を予算チェック後の base64 (または直接転送) に置換している
-- [ ] exploit test 002 を新契約 pin に更新
-- [ ] 既存 backup 経路テスト (restore/panel 側) が緑
-- [ ] `npm run validate` が通る
+- [x] handleBackup (backupHandlers.ts:76-80) が file.arrayBuffer() 前にバイト予算 (MAX_BACKUP_FILE_BYTES) を強制し、over-budget は fail-closed で拒否する
+- [x] sqliteMessageHandlers.ts:204-211 の Array.from を予算チェック後の base64 (または直接転送) に置換している
+- [x] exploit test 002 を新契約 pin に更新
+- [x] 既存 backup 経路テスト (restore/panel 側) が緑
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -69,9 +69,9 @@ grep -n "MAX_BACKUP_FILE_BYTES" src/utils/limits.ts src/dashboard/encryptedBacku
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: Array.from 形式に戻す (1 コミット)
-- [ ] ドキュメント更新の要否判定: 内部転送形式のため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: Array.from 形式に戻す (1 コミット)
+- [x] ドキュメント更新の要否判定: 内部転送形式のため docs 更新は不要

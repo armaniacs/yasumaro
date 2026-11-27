@@ -48,6 +48,7 @@ import type { ArchiveOpType } from './archiveWireTable.js';
 import { getTransportRetryPolicy, type TransportRetryPolicy } from './transportRetryPolicy.js';
 import type { BrowsingLogEntry, BrowsingLogRecord, StorageQuery } from '../utils/sqlite-types.js';
 import { pickDefined } from '../utils/objectUtils.js';
+import { base64ToBytes } from '../utils/crypto/index.js';
 import {
   emptyPayload,
   emptyProject,
@@ -812,7 +813,10 @@ export const SQLITE_MAINTAIN_WIRE_TABLE = [
     messageType: 'SQLITE_BACKUP',
     offscreenRunner: 'backup',
     encodePayload: emptyPayload,
-    decodeGateway: (response) => new Uint8Array(response.data as number[]),
+    // The offscreen runner ships the backup as base64 (PBI 2026-11-27-04:
+    // the former number[] array re-materialized the whole DB at ~8x and had
+    // no create-side byte budget — the budget now lives in handleBackup).
+    decodeGateway: (response) => base64ToBytes(response.data as string),
   }),
   // Chunked restore staging transport: the dashboard
   // uploads the incoming DB in capped chunks (base64 stays end-to-end until

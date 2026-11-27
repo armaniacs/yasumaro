@@ -22,12 +22,12 @@ Scenario: TTL 経過後は eviction で回復する
 ```
 
 ## 受け入れ基準
-- [ ] archiveStaging.ts と restoreStaging.ts に cap 到達後の fail-closed 拒否 + TTL eviction が実装されている
-- [ ] cap / TTL は src/utils/limits.ts に SSOT 定数として追加 (例: MAX_ARCHIVE_STAGING_SESSIONS / MAX_RESTORE_STAGING_SESSIONS + STAGING_SESSION_TTL)
-- [ ] eviction 時は OPFS ファイルを既存 orphan-sweep helpers で削除する
-- [ ] exploit test 001 を新契約 (cap 到達 fail-closed + eviction 回復) pin に更新
-- [ ] 既存 restore staging テスト群 (ハードニング含む) が緑
-- [ ] `npm run validate` が通る
+- [x] archiveStaging.ts と restoreStaging.ts に cap 到達後の fail-closed 拒否 + TTL eviction が実装されている
+- [x] cap / TTL は src/utils/limits.ts に SSOT 定数として追加 (例: MAX_ARCHIVE_STAGING_SESSIONS / MAX_RESTORE_STAGING_SESSIONS + STAGING_SESSION_TTL)
+- [x] eviction 時は OPFS ファイルを既存 orphan-sweep helpers で削除する
+- [x] exploit test 001 を新契約 (cap 到達 fail-closed + eviction 回復) pin に更新
+- [x] 既存 restore staging テスト群 (ハードニング含む) が緑
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -70,9 +70,9 @@ sed -n '20,30p' src/background/confirmTokenManager.ts
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: cap/TTL 定数削除で旧挙動に戻る (1 コミット)
-- [ ] ドキュメント更新の要否判定: 内部上限のため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: cap/TTL 定数削除で旧挙動に戻る (1 コミット)
+- [x] ドキュメント更新の要否判定: 内部上限のため docs 更新は不要

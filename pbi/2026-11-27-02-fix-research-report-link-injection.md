@@ -24,11 +24,11 @@ Scenario: 正常なタイトルは従来どおり表示される
 ```
 
 ## 受け入れ基準
-- [ ] buildCitationsSection (researchReportGenerator.ts:123) の link-text 位置で sanitizeForMarkdownLinkText を使用している (markdownSanitizer.ts:116-141 契約、sibling callers と同一)
-- [ ] 既存の exploit test 004 (注入ペイロード) が fix 後の挙動 pin に更新され、エスケープを確認する
-- [ ] digest / timeline / holes セクション (sanitizeForObsidian が正しい位置) は無変更
-- [ ] `npm run validate` が通る
-- [ ] `npm run generate-notices` / export 系の byte-identical pin が壊れない
+- [x] buildCitationsSection (researchReportGenerator.ts:123) の link-text 位置で sanitizeForMarkdownLinkText を使用している (markdownSanitizer.ts:116-141 契約、sibling callers と同一)
+- [x] 既存の exploit test 004 (注入ペイロード) が fix 後の挙動 pin に更新され、エスケープを確認する
+- [x] digest / timeline / holes セクション (sanitizeForObsidian が正しい位置) は無変更
+- [x] `npm run validate` が通る
+- [x] `npm run generate-notices` / export 系の byte-identical pin が壊れない
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -70,9 +70,9 @@ grep -n "sanitizeForMarkdownLinkText" src/utils/markdownSanitizer.ts
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: 1 行リバート (破壊的でない)
-- [ ] ドキュメント更新の要否判定: 生成物の変化は脆弱挙動の解消のみ、docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: 1 行リバート (破壊的でない)
+- [x] ドキュメント更新の要否判定: 生成物の変化は脆弱挙動の解消のみ、docs 更新は不要

@@ -17,11 +17,11 @@ Scenario: 等長衝突テキストは別エントリになる
 ```
 
 ## 受け入れ基準
-- [ ] キー生成 (generateCacheKey) が FNV-1a-32 + length から衝突耐性キー (フルテキスト、または SHA-256 digest + length) に変更されている
-- [ ] exploit test 003 を新契約 pin に更新 (衝突ペアが別エントリになること)
-- [ ] 既存キャッシュ試験 (LRU-50、5-min cleanup) が緑
-- [ ] 3 呼び出し箇所 (rulesBuilder.ts:67、sourceManager.ts:103、151) の API は無変更
-- [ ] `npm run validate` が通る
+- [x] キー生成 (generateCacheKey) が FNV-1a-32 + length から衝突耐性キー (フルテキスト、または SHA-256 digest + length) に変更されている
+- [x] exploit test 003 を新契約 pin に更新 (衝突ペアが別エントリになること)
+- [x] 既存キャッシュ試験 (LRU-50、5-min cleanup) が緑
+- [x] 3 呼び出し箇所 (rulesBuilder.ts:67、sourceManager.ts:103、151) の API は無変更
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -64,9 +64,9 @@ grep -n "getFromCache\|setCache" src/utils/ublockParser/index.ts | head -4
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: FNV-1a キーに戻す (1 コミット、ただし脆弱状態に戻る)
-- [ ] ドキュメント更新の要否判定: 内部実装のため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了 (セキュリティ変更のため For Security Review Agents 観点を PR 説明に明記)
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: FNV-1a キーに戻す (1 コミット、ただし脆弱状態に戻る)
+- [x] ドキュメント更新の要否判定: 内部実装のため docs 更新は不要

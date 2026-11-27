@@ -185,15 +185,16 @@ describe('SqliteClient', () => {
   });
 
   describe('maintain backup', () => {
-    it('reconstructs Uint8Array from number[] returned by offscreen', async () => {
-      const bytes = [83, 81, 76, 105, 116, 101]; // "SQLite"
+    it('reconstructs Uint8Array from the base64 bytes returned by offscreen', async () => {
+      // PBI 2026-11-27-04: the offscreen runner ships the backup as base64 —
+      // the gateway decodes it without materializing a number[] array.
       mockTransport = createMockTransport(async () => ({
-        success: true, data: bytes,
+        success: true, data: 'U1FMaXRl', // "SQLite"
       } as OffscreenResponse));
       client = new SqliteClient(mockTransport);
 
       const result = await client.maintain({ type: 'backup' });
-      expect(result).toEqual({ success: true, data: new Uint8Array(bytes) });
+      expect(result).toEqual({ success: true, data: new Uint8Array([83, 81, 76, 105, 116, 101]) });
     });
 
     it('returns failure result when backup fails', async () => {

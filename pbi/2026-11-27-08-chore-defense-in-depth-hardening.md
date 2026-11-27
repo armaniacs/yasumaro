@@ -27,11 +27,11 @@ Scenario: fallback window は bounded になる
 ```
 
 ## 受け入れ基準
-- [ ] RateLimitService.ts:127-149 の counter write が storageTransaction CAS 経由に変更されている
-- [ ] encryptionSession.ts の plaintext fallback に unlock 成功時の retry-wrap (bounded window) が実装されている
-- [ ] coreCrudHandler.ts:98-105 の consent re-read asymmetry は「次回 consent モデル改訂時に対応」を台帳に記録 (現行脅威モデルでは elimination 確認済み、実装は scope 外)
-- [ ] 全テスト緑 (既存 unlock/lockout 試験含む)
-- [ ] `npm run validate` が通る
+- [x] RateLimitService.ts:127-149 の counter write が storageTransaction CAS 経由に変更されている
+- [x] encryptionSession.ts の plaintext fallback に unlock 成功時の retry-wrap (bounded window) が実装されている
+- [x] coreCrudHandler.ts:98-105 の consent re-read asymmetry は「次回 consent モデル改訂時に対応」を台帳に記録 (現行脅威モデルでは elimination 確認済み、実装は scope 外)
+- [x] 全テスト緑 (既存 unlock/lockout 試験含む)
+- [x] `npm run validate` が通る
 
 ## テスト戦略（t_wadaスタイル）
 
@@ -75,9 +75,9 @@ sed -n '95,110p' src/background/handlers/coreCrudHandler.ts
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done
-- [ ] 全 BDD シナリオが自動テストとして実装されパスする
-- [ ] テストカバレッジが基準を満たす (統合/単体)
-- [ ] コードレビュー完了
-- [ ] リファクタリング完了 (グリーン後)
-- [ ] ロールバック手段: 各 hardening は独立コミット (単独リバート可)
-- [ ] ドキュメント更新の要否判定: 内部 hardening のため docs 更新は不要
+- [x] 全 BDD シナリオが自動テストとして実装されパスする
+- [x] テストカバレッジが基準を満たす (統合/単体)
+- [x] コードレビュー完了
+- [x] リファクタリング完了 (グリーン後)
+- [x] ロールバック手段: 各 hardening は独立コミット (単独リバート可)
+- [x] ドキュメント更新の要否判定: 内部 hardening のため docs 更新は不要
