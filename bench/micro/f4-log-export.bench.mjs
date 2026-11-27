@@ -192,28 +192,32 @@ async function roundtrip(ctx) {
     if (rss > rssPeak) rssPeak = rss;
   }, RSS_SAMPLE_INTERVAL_MS);
 
-  const blob = await services.exportJson();
-  const text = await blob.text();
-  if (text.length > MAX_IMPORT_TEXT_BYTES) {
-    clearInterval(sampler);
-    throw new Error(
-      `f4: export file (${text.length} chars) exceeds MAX_IMPORT_TEXT_BYTES (${MAX_IMPORT_TEXT_BYTES}) — ` +
-      'the gate moved below the measured scale; re-derive the bench size',
-    );
-  }
-  const result = await services.importFromJson(text);
-  clearInterval(sampler);
+  try {
+    const blob = await services.exportJson();
+    const text = await blob.text();
+    if (text.length > MAX_IMPORT_TEXT_BYTES) {
+      throw new Error(
+        `f4: export file (${text.length} chars) exceeds MAX_IMPORT_TEXT_BYTES (${MAX_IMPORT_TEXT_BYTES}) — ` +
+        'the gate moved below the measured scale; re-derive the bench size',
+      );
+    }
+    const result = await services.importFromJson(text);
 
-  if ('error' in result) {
-    throw new Error(`f4: importFromJson rejected the file: ${result.error}`);
+    if ('error' in result) {
+      throw new Error(`f4: importFromJson rejected the file: ${result.error}`);
+    }
+    if (result.inserted !== ctx.rowCount || result.skipped !== 0) {
+      throw new Error(
+        `f4: roundtrip mismatch: inserted=${result.inserted} skipped=${result.skipped} expected=${ctx.rowCount}`,
+      );
+    }
+    ctx.rss = { before: rssBefore, peak: rssPeak, after: process.memoryUsage().rss };
+    return text.length;
+  } finally {
+    // Every failure path throws through here: without the finally, a rejected
+    // gate check leaves the sampler ticking for the rest of the bench run.
+    clearInterval(sampler);
   }
-  if (result.inserted !== ctx.rowCount || result.skipped !== 0) {
-    throw new Error(
-      `f4: roundtrip mismatch: inserted=${result.inserted} skipped=${result.skipped} expected=${ctx.rowCount}`,
-    );
-  }
-  ctx.rss = { before: rssBefore, peak: rssPeak, after: process.memoryUsage().rss };
-  return text.length;
 }
 
 const MB = 1024 * 1024;

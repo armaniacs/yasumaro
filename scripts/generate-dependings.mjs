@@ -93,31 +93,36 @@ export function applyDependencyNumbers(doc, { pkg, lock, notices, date, confirmD
     out = out.replace(row, `$1 ${required} | ${installed} $2`);
   }
 
-  const devVersions = {
-    wxt: lockVersion(packages, 'wxt'),
-    vite: lockVersion(packages, 'vite'),
-    esbuild: lockVersion(packages, 'esbuild'),
-    typescript: lockVersion(packages, 'typescript'),
-    vitest: lockVersion(packages, 'vitest'),
-    '@playwright/test': lockVersion(packages, '@playwright/test'),
-    'happy-dom': lockVersion(packages, 'happy-dom'),
-    jsdom: lockVersion(packages, 'jsdom'),
-    '@stryker-mutator/core': lockVersion(packages, '@stryker-mutator/core'),
-    '@stryker-mutator/vitest-runner': lockVersion(packages, '@stryker-mutator/vitest-runner'),
-    'better-sqlite3': lockVersion(packages, 'better-sqlite3'),
-    oxlint: lockVersion(packages, 'oxlint'),
-    eslint: lockVersion(packages, 'eslint'),
-    knip: lockVersion(packages, 'knip'),
-    'license-checker': lockVersion(packages, 'license-checker'),
-    '@cyclonedx/cyclonedx-npm': lockVersion(packages, '@cyclonedx/cyclonedx-npm'),
-  };
+  // The dev-group table lists exactly these names; a doc-side rename must be
+  // paired here and (when the lockfile uses a scoped name) in DOC_TO_LOCK_ALIAS.
+  const devVersionNames = [
+    'wxt',
+    'vite',
+    'esbuild',
+    'typescript',
+    'vitest',
+    '@playwright/test',
+    'happy-dom',
+    'jsdom',
+    '@stryker-mutator/core',
+    '@stryker-mutator/vitest-runner',
+    'better-sqlite3',
+    'oxlint',
+    'eslint',
+    'knip',
+    'license-checker',
+    '@cyclonedx/cyclonedx-npm',
+  ];
+  const devVersions = Object.fromEntries(
+    devVersionNames.map((name) => [name, lockVersion(packages, name)]),
+  );
   for (const [name, version] of Object.entries(devVersions)) {
     if (!version) throw new Error(`lockfile has no entry for ${name}`);
   }
   // The dev-group table pairs `@stryker-mutator/core` with `vitest-runner`
   // sharing one version; a divergence means the lockfile pair was broken.
-  const strykerCore = lockVersion(packages, '@stryker-mutator/core');
-  const strykerRunner = lockVersion(packages, '@stryker-mutator/vitest-runner');
+  const strykerCore = devVersions['@stryker-mutator/core'];
+  const strykerRunner = devVersions['@stryker-mutator/vitest-runner'];
   if (strykerCore !== strykerRunner) throw new Error('stryker core/runner versions diverged');
   out = out.replace(createDevVersionsPattern(), (m, name) => {
     const lockName = DOC_TO_LOCK_ALIAS[name] ?? name;
