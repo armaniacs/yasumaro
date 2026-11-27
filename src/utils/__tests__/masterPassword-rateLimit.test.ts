@@ -13,14 +13,31 @@ import type { Mock } from 'vitest';
  * 【テスト前準備】session storageの初期化
  * 各テスト実行前にモックされたsession storageをクリア
  */
+const localStore = new Map<string, unknown>();
+
 beforeEach(() => {
+    localStore.clear();
     // chrome.storage.sessionをクリアしてテスト分離を確保
+    // local は実ストア相当の Map 裏付けを持つ: recordFailedAttempt の CAS 経由化
+    // (PBI 2026-11-27-08) 以降、counter write は version つきの read-modify-write
+    // で、post-write 検証が set の内容を再読みするためステートレスモックでは
+    // 常に衝突扱いになる。
     Object.defineProperty(chrome, 'storage', {
         value: {
             local: {
-                get: vi.fn(),
-                set: vi.fn(),
-                remove: vi.fn(),
+                get: vi.fn(async (keys: string | string[] | null) => {
+                    if (keys === null) return Object.fromEntries(localStore);
+                    const list = Array.isArray(keys) ? keys : [keys];
+                    const out: Record<string, unknown> = {};
+                    for (const k of list) if (localStore.has(k)) out[k] = localStore.get(k);
+                    return out;
+                }),
+                set: vi.fn(async (items: Record<string, unknown>) => {
+                    for (const [k, v] of Object.entries(items)) localStore.set(k, v);
+                }),
+                remove: vi.fn(async (keys: string | string[]) => {
+                    for (const k of Array.isArray(keys) ? keys : [keys]) localStore.delete(k);
+                }),
                 clear: vi.fn(),
             },
             session: {
@@ -84,10 +101,13 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
         await resetFailedAttempts();
 
         // 【確認】: removeが全てのキーで呼ばれたことを確認
+        // (PBI 2026-11-27-08: CAS 導入で <key>_version が加わり、reset はそれも消す)
         expect(chrome.storage.session.remove).toHaveBeenCalledWith([
             'passwordFailedAttempts',
             'firstFailedAttemptTime',
             'lockedUntil',
+            'passwordFailedAttempts_version',
+            'firstFailedAttemptTime_version',
         ]);
 
         // 【リセット後の確認】: session storageが空の場合に許可される
@@ -244,6 +264,8 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
             'passwordFailedAttempts',
             'firstFailedAttemptTime',
             'lockedUntil',
+            'passwordFailedAttempts_version',
+            'firstFailedAttemptTime_version',
         ]); // 【確認内容】: 古い記録がリセットされたこと 🟢
     });
 
@@ -353,7 +375,9 @@ describe('マスターパスワードレート制限（Refactorフェーズ）',
                 passwordFailedAttempts: 4,
                 firstFailedAttemptTime: now - 2 * 60 * 1000,
             });
-            (chrome.storage.local.get as Mock).mockResolvedValue({});
+            // local.get は beforeEach の実ストア相当モックを使う
+            // (ステートレスな mockResolvedValue({}) だと CAS の post-write 検証が
+            // 常に衝突扱いになり recordFailedAttempt が失敗する)
 
             await recordFailedAttempt();
 

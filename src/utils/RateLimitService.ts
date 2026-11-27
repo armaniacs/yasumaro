@@ -4,7 +4,9 @@
  * Clock / StoragePort を注入することで chrome global mock なしに単体テスト可能にする。
  */
 
-import { SYSTEM_CLOCK, CHROME_STORAGE_PORT, type Clock, type StoragePort } from './ports.js';
+import { SYSTEM_CLOCK, CHROME_STORAGE_PORT, type Clock, type StoragePort, type StorageArea } from './ports.js';
+import { StorageTransaction, type CasRetryOptions } from './storage/storageTransaction.js';
+import type { StoragePort as TransactionStoragePort } from './storage/storagePort.js';
 
 const RATE_LIMIT_ATTEMPTS = 5; // 5分以内の最大試行回数
 const RATE_LIMIT_WINDOW_MS = 5 * 60 * 1000; // 評価ウインドウ: 5分
@@ -16,6 +18,39 @@ const STORAGE_KEYS = {
   FIRST_ATTEMPT_TIME: 'firstFailedAttemptTime',
   LOCKED_UNTIL: 'lockedUntil',
 } as const;
+
+/**
+ * Presents one chrome.storage area as the port shape the CAS helpers expect
+ * (get/set plus the write-time fence). The fence mirrors storagePort.ts's
+ * compareAndSetViaGetSet so the verify->write window is as narrow here as it
+ * is for the production ChromeStoragePort.
+ */
+function transactionPortOverArea(area: StorageArea): TransactionStoragePort {
+  return {
+    get: async (keys) => {
+      const list = keys === null ? [] : Array.isArray(keys) ? keys : [keys];
+      return area.get(list) as Promise<Record<string, unknown>>;
+    },
+    set: (items) => area.set(items),
+    compareAndSet: async (items, expectedVersions) => {
+      const current = await area.get(Object.keys(expectedVersions));
+      for (const [versionKey, expected] of Object.entries(expectedVersions)) {
+        const observed = current[versionKey];
+        if ((typeof observed === 'number' ? observed : 0) !== expected) return false;
+      }
+      await area.set(items);
+      return true;
+    },
+  };
+}
+
+/**
+ * CAS conflicts here resolve in microtasks (the only writers are concurrent
+ * calls inside the same service worker), so backoff would only delay the
+ * user-facing unlock-flow error return without preventing anything — and
+ * tests must never spend wall time on the retry path.
+ */
+const CAS_RETRY_OPTIONS: CasRetryOptions = { sleep: () => Promise.resolve() };
 
 /**
  * Former coalescing window for recordFailedAttempt writes (PBI-17).
@@ -132,32 +167,44 @@ export class RateLimitService {
       this.clock.now()
     );
 
-    const nextAttempts = attempts + 1;
-    // SW-ephemerality fix (PBI 2026-11-08-09 (6)): persist every failure to
-    // both stores immediately. A coalesced timer write is never guaranteed to
-    // fire before SW shutdown, so sub-threshold failures lived only in memory
-    // and vanished on restart (undercount -> lockout bypass). Every failure
-    // is security-relevant; the batching saved only a few writes per window.
+    // CWE-367 hardening (PBI 2026-11-27-08): the increment derives from the
+    // value re-read under the CAS lock, so a concurrent recordFailedAttempt
+    // can no longer be lost — an undercount would stretch the brute-force
+    // budget. The Math.max baseline only covers a pre-existing session>local
+    // divergence left by an older crash mid-write; in steady state it equals
+    // the stored value. Both writes below still land immediately (no timer):
+    // the service worker is ephemeral and a deferred write is never
+    // guaranteed to fire (PBI 2026-11-08-09 (6)).
+    const tx = new StorageTransaction(transactionPortOverArea(this.storage.local));
+    const [nextAttempts, nextFirstAttempt] = await tx.withAtomic<[number, number]>(
+      [STORAGE_KEYS.FAILED_ATTEMPTS, STORAGE_KEYS.FIRST_ATTEMPT_TIME],
+      ([storedAttempts]) => [Math.max(storedAttempts || 0, attempts) + 1, firstAttempt],
+      CAS_RETRY_OPTIONS
+    );
+
+    // The session store is a mirror of the CAS-committed local values, not a
+    // second CAS writer: checkRateLimit merges the two stores with max(), so
+    // a mirror write racing another writer can only read lower and never
+    // regress the effective count, while CASing both stores would double-apply
+    // an increment whenever one store commits and the other conflicts.
     await this.storage.session.set({
       [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
-      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
-    });
-    await this.storage.local.set({
-      [STORAGE_KEYS.FAILED_ATTEMPTS]: nextAttempts,
-      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: firstAttempt,
+      [STORAGE_KEYS.FIRST_ATTEMPT_TIME]: nextFirstAttempt,
     });
   }
 
   async resetFailedAttempts(): Promise<void> {
-    await this.storage.session.remove([
+    // The CAS keeps `<key>_version` siblings next to the counters; removing
+    // them too gives the next window a clean slate instead of resuming a
+    // pre-reset version generation.
+    const keys = [
       STORAGE_KEYS.FAILED_ATTEMPTS,
       STORAGE_KEYS.FIRST_ATTEMPT_TIME,
       STORAGE_KEYS.LOCKED_UNTIL,
-    ]);
-    await this.storage.local.remove([
-      STORAGE_KEYS.FAILED_ATTEMPTS,
-      STORAGE_KEYS.FIRST_ATTEMPT_TIME,
-      STORAGE_KEYS.LOCKED_UNTIL,
-    ]);
+      `${STORAGE_KEYS.FAILED_ATTEMPTS}_version`,
+      `${STORAGE_KEYS.FIRST_ATTEMPT_TIME}_version`,
+    ];
+    await this.storage.session.remove(keys);
+    await this.storage.local.remove(keys);
   }
 }
