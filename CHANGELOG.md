@@ -4,6 +4,22 @@
 
 ## [Unreleased]
 
+### 修正
+
+- 研究レポートの引用リンクのリンクテキストに、plain-text 用のサニタイザ(`sanitizeForObsidian`)が誤って使用されていた問題を修正(リンクテキスト用の `sanitizeForMarkdownLinkText` に差し替え。攻撃者ページのタイトルに `x](javascript:alert(1))` 等が含まれる場合、引用リンクのラッパーが早期に閉じられ、攻撃者が選択したリンク先をユーザーの Obsidian ノートとローカル .md に注入できていた)
+
+### リファクタリング
+
+- uBlock パーサーキャッシュのキーを FNV-1a-32 ハッシュ + 長さから入力テキストそのものに変更(同一ハッシュ・同一長の攻撃者テキストが先に parse されると、victim テキストの解析結果として攻撃者のルールセットが返されるキー衝突を解消)
+- content script の contentKernel から SPA ナビゲーション検出 (~250 行) を SpaNavigationMonitor 協調クラスに切り出し(SPA 検出方式の変更が 797 行の kernel 全体の編集を要求する構造を解消。init 成功経路の全 teardown 資産を disposers 配列に保持し dispose() を提供)
+- encryptionSession.ts (1,128 行、3 責務) を Core + masterPasswordLifecycle / anonymousSecretEnvelope / apiKeyReencryption の 4 ファイルに分割(byte-identical 移設、golden pin 先行、cycle なし一方向依存)
+- src/background/ 直下の 67 ファイルのうち 26 ファイルを recording/ / scheduling/ / queue/ サブディレクトリに再編(git mv + import 更新のみ、外部挙動は不変)
+- byteStats フィールド集合の 2 定義(messaging/types.ts と background/messageTypes.ts)を中立層 ByteStatsFields に統一(cleansedReason に 2 型系が存在する混同も発見・修正: クレンジング実行理由は CleansedReason、AI 要約除去理由は AiSummaryCleansedReason)
+
+### テスト
+
+- VulnHunter 監査ラウンドの exploit tests 6 件 (16 tests PASS) をリポジトリテストに移植(VULN-001 staging registry cap、VULN-002 backup byte 予算、VULN-003 キャッシュキー衝突、VULN-004 リンク注入、VULN-401 mask fail-closed、VULN-060 tranco 行数バウンド)
+
 ## [6.9.80] - 2026-11-27
 
 このリリースは内部構造の整理(モーダルエラー文言選択の可読性改善)のみを含み、ユーザーに見える挙動の変化はありません。
