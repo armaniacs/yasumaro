@@ -232,7 +232,7 @@ export type SqliteStatusResult = {
 
 
 /** EXPORT / BACKUP: binary data as a JSON-safe number array. */
-export type OffscreenBinaryResponse = { success: true; data: number[] } | OffscreenFailure;
+export type OffscreenBinaryResponse = { success: true; data: string } | OffscreenFailure;
 
 /** PURGE: number of records removed. */
 export type OffscreenPurgeResponse = { success: true; purged: number } | OffscreenFailure;

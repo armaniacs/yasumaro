@@ -43,20 +43,42 @@ export type StrippedMaskedItem = Omit<MaskedItem, 'original'>;
  * type-only 再エクスポートのみを残す（PBI 2026-09-21-11: popup と
  * messaging の型循環を解消するため本体をこちらへ移動）。
  */
+/**
+ * Byte-accounting fields shared by the recording pipeline diagnostics.
+ * Defined once in the neutral messaging layer; background/messageTypes.ts
+ * extends this with its transport-only fallback fields (PBI 2026-11-28-01).
+ *
+ * Two reason families ride this payload and they are NOT interchangeable:
+ * - `cleansedReason` is the cleansing-execution reason (utils/urlEntry.ts
+ *   CleansedReason union: hard/keyword/both/none) — what the content
+ *   cleansing actually did.
+ * - `aiSummaryCleansedReason` is the AI-summary element-removal reason
+ *   (utils/commonTypes.ts AiSummaryCleansedReason, 30+ values) — why the
+ *   AI summary shrank. The holistic review's draft merged these; the
+ *   wire data keeps them separate (report §2, technique-correction note).
+ */
+export interface ByteStatsFields {
+  pageBytes?: number;
+  candidateBytes?: number;
+  originalBytes?: number;
+  cleansedBytes?: number;
+  aiSummaryOriginalBytes?: number;
+  aiSummaryCleansedBytes?: number;
+  aiSummaryCleansedElements?: number;
+  aiSummaryCleansedReason?: AiSummaryCleansedReason;
+  aiSummaryCleansedReasons?: string[];
+  cleansedReason?: CleansedReason;
+}
+
 export interface ContentResponse {
   content: string;
-  cleansedReason?: 'hard' | 'keyword' | 'both' | 'none';
+  cleansedReason?: CleansedReason;
   cleanseStats?: {
     hardStripRemoved: number;
     keywordStripRemoved: number;
     totalRemoved: number;
   };
-  byteStats?: {
-    pageBytes: number;
-    candidateBytes: number;
-    originalBytes: number;
-    cleansedBytes: number;
-  };
+  byteStats?: ByteStatsFields;
   aiSummaryCleansedStats?: {
     aiSummaryOriginalBytes: number;
     aiSummaryCleansedBytes: number;
@@ -143,6 +165,7 @@ export interface RecordingResult {
 }
 
 import type { RecordType, AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { CleansedReason } from '../utils/urlEntry.js';
 // protocolVersion stamping lives in MessageTransport.send (Checking Team
 // 2026-09-22: System Architect Medium — single owner for version stamping).
 import { isValidEnvelopeShape } from './envelopeShape.js';

@@ -38,27 +38,8 @@ import { queryProbeArmed, relayProbeState, markProbeVisitReported, buildProbeSta
 // scheduler.js; existing import paths keep working unmodified.
 export type { Scheduler } from './scheduler.js';
 export { IdleScheduler } from './scheduler.js';
+import { SpaNavigationMonitor, defaultSpaPollTimer, type SpaPollTimer } from './spaNavigationMonitor.js';
 
-export interface SpaPollTimer {
-    setInterval: (callback: () => void, ms: number) => ReturnType<typeof setInterval>;
-    clearInterval: (id: ReturnType<typeof setInterval>) => void;
-}
-
-const defaultSpaPollTimer: SpaPollTimer = {
-    setInterval: (callback, ms) => setInterval(callback, ms),
-    clearInterval: (id) => clearInterval(id),
-};
-
-/**
- * Review No.2: fragment-stripped comparison for SPA navigation. A hash-only
- * change (same document, e.g. an in-page anchor hop) keeps the stripped
- * form identical, so it never resets the visit — only a true path/query
- * change does.
- */
-function stripUrlFragment(url: string): string {
-    const hashIndex = url.indexOf('#');
-    return hashIndex === -1 ? url : url.slice(0, hashIndex);
-}
 
 export interface ContentKernelOptions {    pageState?: PageState;
     sender?: MessageSender;
@@ -101,6 +82,14 @@ export class ContentKernel {
      */
     private pausedCache = false;
 
+    /**
+     * PBI 2026-11-28-02 (teardown symmetry): init-success teardown assets —
+     * the pause subscription, the SPA navigation subscription and the
+     * window/document listeners. Filled by init(), drained by dispose().
+     */
+    private disposers: Array<() => void> = [];
+    private readonly spaMonitor: SpaNavigationMonitor;
+
     constructor(
         private readonly storage: StoragePort,
         private readonly domainPolicy: DomainPolicyPort,
@@ -138,6 +127,33 @@ export class ContentKernel {
             // PBI 2026-10-23-02: classify the page once at load for adaptive
             // recording; an unknown page still resolves to the article pair.
             detectMediaKind: () => detectMediaKind(document),
+        });
+        // PBI 2026-11-28-02: SPA detection moves to its coordination class.
+        // The monitor owns detection; the kernel owns the reset side
+        // (resetForNavigation + best-effort settings reload, deliberately
+        // silent per Review S4).
+        this.spaMonitor = new SpaNavigationMonitor({
+            readUrl: () => {
+                try {
+                    if (typeof window !== 'undefined' && typeof window.location?.href === 'string') {
+                        return window.location.href;
+                    }
+                } catch {
+                    // Location unreadable (non-browser test double) — treated as unknown.
+                }
+                return null;
+            },
+            onNavigation: () => {
+                this.resetForNavigation();
+                void this.loadSettings().catch(() => {
+                    // Best-effort reload: the reset above already moved the
+                    // startTime, so gating rebuilds with cached thresholds until
+                    // the next successful settings read lands. Deliberately
+                    // silent (Review S4): warning here would repeat on every
+                    // SPA navigation; cached thresholds keep gating and the
+                    // next navigation retries.
+                });
+            },
         });
         this.deadlineTimer = new DeadlineTimer({
             scheduler: this.scheduler,
@@ -436,125 +452,26 @@ export class ContentKernel {
      * resetForNavigation/loadSettings and only a true URL change resets.
      */
     subscribeSpaNavigation(): () => void {
-        const noop = (): void => {};
-        if (typeof window === 'undefined' || typeof history === 'undefined') return noop;
-        if (this.spaSubscribed) return noop;
-        this.spaSubscribed = true;
-        this.lastSpaUrl = this.readSpaUrl();
-        const target = window.history;
-        const originalPush = target.pushState.bind(target);
-        const originalReplace = target.replaceState.bind(target);
-        const onNavigate = (): void => {
-            this.maybeResetForSpaUrl();
-        };
-        const wrappedPush = (...args: Parameters<History['pushState']>): void => {
-            originalPush(...args);
-            onNavigate();
-        };
-        const wrappedReplace = (...args: Parameters<History['replaceState']>): void => {
-            originalReplace(...args);
-            onNavigate();
-        };
-        target.pushState = wrappedPush;
-        target.replaceState = wrappedReplace;
-        window.addEventListener('popstate', onNavigate);
-        return () => {
-            target.pushState = originalPush as History['pushState'];
-            target.replaceState = originalReplace as History['replaceState'];
-            window.removeEventListener('popstate', onNavigate);
-            this.spaSubscribed = false;
-        };
+        return this.spaMonitor.subscribeHistory();
     }
 
     /**
-     * Review No.1: MAIN-world backing for SPA detection. Content scripts
-     * cannot use chrome.webNavigation (background-only permission), so the
-     * permission-safe backing is polling location.href on an interval.
-     * Each tick delegates to pollSpaUrlOnce(); a detected change runs the
-     * same guarded reset path as the isolated-world wrappers. The timer
+     * Review No.1: MAIN-world backing for SPA detection (delegates to the
+     * SpaNavigationMonitor coordination class, PBI 2026-11-28-02). The timer
      * seam is injectable so tests never wait in real time.
      */
     startSpaUrlPolling(intervalMs = 2000, timer: SpaPollTimer = defaultSpaPollTimer): () => void {
-        // Review S3: idempotent second call — returns the active stopper so
-        // a repeated arm (entrypoint re-run, double init) never stacks a
-        // second interval behind the first. The first arm's interval/timer
-        // win; late callers share them.
-        if (this.spaPollStop !== null) return this.spaPollStop;
-        // Review No.1: remember the arm config so startPeriodicCheck() can
-        // re-arm the same poll after a stop (symmetric restart) without the
-        // caller re-supplying interval/timer.
-        this.spaPollConfig = { intervalMs, timer };
-        if (this.lastSpaUrl === null) this.lastSpaUrl = this.readSpaUrl();
-        const id = timer.setInterval(() => {
-            this.pollSpaUrlOnce();
-        }, intervalMs);
-        this.spaPollStop = () => {
-            timer.clearInterval(id);
-            this.spaPollStop = null;
-        };
-        return this.spaPollStop;
+        return this.spaMonitor.startPolling(intervalMs, timer);
     }
 
-    /**
-     * Review No.1/No.2: single-shot URL check behind both the isolated
-     * wrappers and the MAIN-world poll. Returns true only on a true URL
-     * change (which also performs the reset + settings reload); records
-     * the URL and returns false on first observation or when unchanged.
-     */
+    /** Review No.1/No.2: single-shot URL check (delegates to the monitor). */
     pollSpaUrlOnce(): boolean {
-        return this.maybeResetForSpaUrl();
+        return this.spaMonitor.pollOnce();
     }
 
     /** Last URL observed by the SPA navigation seam (null before subscribe/poll). */
     getLastSpaUrl(): string | null {
-        return this.lastSpaUrl;
-    }
-
-    /** Current location.href, or null outside a window context. */
-    private readSpaUrl(): string | null {
-        try {
-            if (typeof window !== 'undefined' && typeof window.location?.href === 'string') {
-                return window.location.href;
-            }
-        } catch {
-            // Location unreadable (non-browser test double) — treated as unknown.
-        }
-        return null;
-    }
-
-    /**
-     * Review No.2: guarded navigation reset. Same-URL (shallow) and
-     * hash-only (same-document anchor) updates return false without
-     * touching visit state; only a true fragment-stripped URL change
-     * resets the visit and reloads settings. A null current URL (no
-     * window) never resets.
-     */
-    private maybeResetForSpaUrl(): boolean {
-        const current = this.readSpaUrl();
-        if (current === null) return false;
-        if (this.lastSpaUrl === null) {
-            this.lastSpaUrl = current;
-            return false;
-        }
-        if (stripUrlFragment(current) === stripUrlFragment(this.lastSpaUrl)) {
-            // Same document (shallow state update or anchor hop) — record
-            // the latest URL but leave the visit state untouched.
-            this.lastSpaUrl = current;
-            return false;
-        }
-        this.lastSpaUrl = current;
-        this.resetForNavigation();
-        void this.loadSettings().catch(() => {
-            // Best-effort reload: the reset above already moved the
-            // startTime, so gating rebuilds with cached thresholds until
-            // the next successful settings read lands.
-            // Review S4: deliberately silent, unlike the entrypoint init
-            // warn. The entrypoint warns once for a terminal init failure;
-            // this path runs on every SPA navigation, so warning here
-            // would repeat for the same persistent failure. The cached
-            // thresholds keep gating, and the next navigation retries.
-        });
-        return true;
+        return this.spaMonitor.getLastUrl();
     }
 
     async reportValidVisit(): Promise<void> {
@@ -623,44 +540,19 @@ export class ContentKernel {
         this.deadlineTimer.start();
         // Review No.1: symmetric restart of the MAIN-world poll stopped by
         // stopPeriodicCheck(). Re-arms only when a poll was configured via
-        // startSpaUrlPolling() and none is running — the null-stopper check
-        // here plus the non-null-stopper guard inside startSpaUrlPolling()
-        // keep repeated starts to a single interval.
-        if (this.spaPollConfig !== null && this.spaPollStop === null) {
-            const { intervalMs, timer } = this.spaPollConfig;
-            this.startSpaUrlPolling(intervalMs, timer);
-        }
+        // startSpaUrlPolling() and none is running — the config memory and
+        // idempotence live inside SpaNavigationMonitor (PBI 2026-11-28-02).
+        this.spaMonitor.rearmPolling();
     }
 
     private scrollThrottles: Array<{ dispose: () => void }> = [];
-    /** PBI 2026-11-08-02: history wrapping must happen at most once per kernel. */
-    private spaSubscribed = false;
-    /**
-     * Review No.1/No.2: last URL observed by the SPA seam. All navigation
-     * entries (isolated wrappers, popstate, MAIN-world poll) compare
-     * fragment-stripped URLs against it so shallow same-URL and hash-only
-     * updates never reset.
-     */
-    private lastSpaUrl: string | null = null;
-    /** Review No.1: active MAIN-world poll stopper (null when not polling). */
-    private spaPollStop: (() => void) | null = null;
-    /**
-     * Review No.1: last MAIN-world poll arm config (null until the first
-     * startSpaUrlPolling). Lets startPeriodicCheck() re-arm the same poll
-     * after a stop without the caller re-supplying interval/timer.
-     */
-    private spaPollConfig: { intervalMs: number; timer: SpaPollTimer } | null = null;
 
     stopPeriodicCheck(): void {
         this.deadlineTimer.stop();
         // Review No.1: the MAIN-world URL poll is visit-pipeline traffic —
         // it stops with the periodic check (visibility hide, beforeunload,
         // successful report) and restarts with startPeriodicCheck callers.
-        if (this.spaPollStop !== null) {
-            const stop = this.spaPollStop;
-            this.spaPollStop = null;
-            stop();
-        }
+        this.spaMonitor.stopPolling();
         // PBI 2026-09-11-07: dispose throttles (cancel pending trailing call
         // + drop from the beforeunload flush registry).
         for (const t of this.scrollThrottles) t.dispose();
@@ -722,44 +614,59 @@ export class ContentKernel {
         // restoration) events still reflect real position changes — arm a
         // single deferred evaluation so post-deadline crossings are reported,
         // while synthetic event storms stay bounded to one check per second.
+        // PBI 2026-11-28-02 (teardown symmetry): every teardown asset the
+        // init success path creates is recorded in the disposers list so
+        // dispose() can release them all (tests that re-run init stay safe).
         const throttled = this.throttle(() => this.updateMaxScroll());
         let deferredCheckArmed = false;
         if (typeof window !== 'undefined') {
             // PBI 2026-11-08-02: SPA navigation never reloads the content
             // script — without this the previous page's startTime and
             // thresholds gate the new page.
-            this.subscribeSpaNavigation();
-            window.addEventListener(
-                'scroll',
-                (event: Event) => {
-                    if (event.isTrusted) {
-                        throttled();
-                        return;
-                    }
-                    if (deferredCheckArmed || this.pageState.isValidVisitReported) return;
-                    deferredCheckArmed = true;
-                    this.scheduler.schedule(() => {
-                        deferredCheckArmed = false;
-                        if (!this.pageState.isValidVisitReported) this.updateMaxScroll();
-                    }, 1000);
-                },
-                { passive: true },
-            );
-            window.addEventListener('beforeunload', () => {
+            const unsubscribeSpa = this.subscribeSpaNavigation();
+            const onScroll = (event: Event): void => {
+                if (event.isTrusted) {
+                    throttled();
+                    return;
+                }
+                if (deferredCheckArmed || this.pageState.isValidVisitReported) return;
+                deferredCheckArmed = true;
+                this.scheduler.schedule(() => {
+                    deferredCheckArmed = false;
+                    if (!this.pageState.isValidVisitReported) this.updateMaxScroll();
+                }, 1000);
+            };
+            const onUnload = (): void => {
                 this.stopPeriodicCheck();
                 // PBI 2026-10-31-01: the page view is ending — record the
                 // skip reason when the visit never settled.
                 this.recordSkipIfUnreported();
-            });
+            };
+            // PBI 2026-11-28-02 (teardown symmetry): the named handlers feed
+            // both the registration and the disposers, so removeEventListener
+            // receives the exact same reference addEventListener registered.
+            // The test tsconfig types window as DedicatedWorkerGlobalScope
+            // (which lacks scroll/beforeunload removeEventListener overloads);
+            // the actual runtime is a browser tab — type it as Window.
+            const w = window as unknown as Window;
+            w.addEventListener('scroll', onScroll, { passive: true });
+            w.addEventListener('beforeunload', onUnload);
+            this.disposers.push(
+                unsubscribeSpa,
+                () => w.removeEventListener('scroll', onScroll),
+                () => w.removeEventListener('beforeunload', onUnload),
+            );
         }
         if (typeof document !== 'undefined') {
-            document.addEventListener('visibilitychange', () => {
+            const onVisibilityChange = (): void => {
                 if (document.hidden) {
                     this.stopPeriodicCheck();
                 } else if (!this.pageState.isValidVisitReported) {
                     this.startPeriodicCheck();
                 }
-            });
+            };
+            document.addEventListener('visibilitychange', onVisibilityChange);
+            this.disposers.push(() => document.removeEventListener('visibilitychange', onVisibilityChange));
         }
 
         this.startPeriodicCheck();
@@ -770,6 +677,18 @@ export class ContentKernel {
                 buildProbeState(this.pageState.toVisitState(), this.pageState.toVisitGateThresholds(), 0),
             );
         }
+    }
+
+    /**
+     * PBI 2026-11-28-02 (teardown symmetry): releases every init-success
+     * teardown asset — the pause subscription, the SPA navigation
+     * subscription, the scroll/beforeunload listeners and the
+     * visibilitychange listener. Idempotent (the list drains itself).
+     */
+    dispose(): void {
+        this.stopPeriodicCheck();
+        for (const d of this.disposers) d();
+        this.disposers = [];
     }
 
     /**

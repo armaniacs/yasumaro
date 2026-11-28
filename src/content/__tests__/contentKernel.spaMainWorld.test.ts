@@ -8,7 +8,7 @@
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { ContentKernel } from '../contentKernel.js';
-import type { SpaPollTimer } from '../contentKernel.js';
+import type { SpaPollTimer } from '../spaNavigationMonitor.js';
 import { FakeScheduler } from './helpers/fakeScheduler.js';
 import { InMemoryStoragePort } from '../../utils/storage/storagePort.js';
 import { InMemoryDomainPolicyPort } from './helpers/inMemoryDomainPolicyPort.js';
