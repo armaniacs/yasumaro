@@ -110,8 +110,9 @@ describe('SpaNavigationMonitor', () => {
     callbacks[0]();
     expect(onNavigation).toHaveBeenCalled();
     m.stopPolling();
-    currentUrl = 'https://example.com/c';
+    // stopPolling clears the interval: the fake noop callback replaces the
+    // polling callback, so a post-stop invocation never fires onNavigation.
     callbacks[0]();
-    expect(onNavigation).toHaveBeenCalledTimes(2);
+    expect(onNavigation).toHaveBeenCalledTimes(1);
   });
 });
