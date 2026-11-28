@@ -12,8 +12,12 @@ Service Worker (entrypoints/background/ + src/background/)
   ├── ObsidianClient → Obsidian Local REST API
   ├── AIService family → AI providers (AIProviderStrategy base + HttpProviderStrategy templates + per-provider strategies)
   ├── localAiClient → Local AI provider (Ollama, etc.)
-  ├── sessionAlarmsManager → Session timeout management
+  ├── sessionAlarmsManager → Session timeout management (scheduling/)
   ├── Mutex / ServiceWorkerContext → Concurrency management
+  ├── pipeline/ → Recording gate table, RecordingOrchestrator, recovery-claim
+  ├── recording/ → Recording admission / cache / pause / validator (PBI 2026-11-28-03)
+  ├── scheduling/ → Session alarms, digest batch, session reminders, daily purge (PBI 2026-11-28-03)
+  ├── queue/ → Persistent retry queue, offline queues, payload (PBI 2026-11-28-03)
   └── recordingLogic / RecordingOrchestrator → Core recording orchestration
 
 Popup UI (entrypoints/popup/ + src/popup/)
