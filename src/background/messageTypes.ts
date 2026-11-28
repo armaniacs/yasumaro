@@ -6,6 +6,7 @@
  */
 
 import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
+import type { ByteStatsFields } from '../messaging/types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { SkipReasonCode } from '../utils/skipReason.js';
 // Imported from ai/AIService.js rather than aiClient.js: this module is pulled
@@ -23,21 +24,17 @@ import type { FailureMetadata } from '../utils/failureTaxonomy.js';
  * Byte tracking fields used across multiple message payloads
  * for content size analytics.
  */
-interface ByteStatsPayload {
-    pageBytes?: number;
-    candidateBytes?: number;
-    originalBytes?: number;
-    cleansedBytes?: number;
-    aiSummaryOriginalBytes?: number;
-    aiSummaryCleansedBytes?: number;
-    aiSummaryCleansedElements?: number;
-    aiSummaryCleansedReason?: AiSummaryCleansedReason;
-    aiSummaryCleansedReasons?: string[];
+/**
+ * Transport-side byte statistics for SQLITE_* and CONTENT_* hops. The field
+ * set itself is owned by the neutral messaging layer (ByteStatsFields, PBI
+ * 2026-11-28-01); this payload extends it with the transport-only fallback
+ * fields and keeps cleansedReason strict (the wire layer was drifting to
+ * string).
+ */
+interface ByteStatsPayload extends ByteStatsFields {
     /** PBI 05: extraction fallback outcome (VALID_VISIT carries it end-to-end). */
     fallbackTriggered?: boolean;
     fallbackReason?: string;
-    /** Cleansing reason travels with diagnostics (PBI 2026-09-23-12 convergence). */
-    cleansedReason?: string;
 }
 
 /**
