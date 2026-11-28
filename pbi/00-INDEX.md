@@ -14,6 +14,17 @@
 
 ## 進行中 ⬜ 未着手 / 🔶 部分実装
 
+### 2026-11-28 holistic 改善ラウンド holistic-1128a (4件) ― 🔶 部分実装 (バッチ 1: 01/02 並列実行中) 🔧非機能追加
+
+holistic-code-review (plans/2026-11-28-0145-holistic-review-1128a.md、未レビュー領域重点: pipeline / content / utils 粒度 / cli Rust / entrypoints 配線) の改善テーマ TOP 5 から得た 4 候補 (テーマ 5+2 を同一変更セットで統合) を PBI 化したラウンド。全 4 件実装 (ユーザー裁定)。バッチ 1 (01+02 並列) → バッチ 2 (03、独立 PR 推奨) → バッチ 3 (04、暗号領域・golden pin 先行)。台帳は [2026-11-28-00-backlog-holistic-1128a.md](2026-11-28-00-backlog-holistic-1128a.md) を参照。ブランチ: 1128a。
+
+| NN | PBI | 種別 | RICE | SP | 備考 |
+|---|---|---|---:|---:|---|
+| 🔶 01 | [2026-11-28-01-refactor-byte-stats-fields-unification.md](2026-11-28-01-refactor-byte-stats-fields-unification.md) | 🔧非機能追加 | 5.0 | 2 | Quick Win。ByteStatsFields を messaging 中立層に統一 (cleansedReason ユニオン化) |
+| 🔶 02 | [2026-11-28-02-refactor-content-kernel-disposers.md](2026-11-28-02-refactor-content-kernel-disposers.md) | 🔧非機能追加 | 4.0 | 3 | contentKernel teardown 対称化 + SpaNavigationMonitor 切り出し (テーマ 5+2 統合) |
+| ⬜ 03 | [2026-11-28-03-refactor-background-cluster-reorg.md](2026-11-28-03-refactor-background-cluster-reorg.md) | 🔧非機能追加 | 2.0 | 5 | background/ フラット 67 ファイルのクラスタ再編 (recording/scheduling/queue)。独立 PR 推奨 |
+| ⬜ 04 | [2026-11-28-04-refactor-encryption-session-split.md](2026-11-28-04-refactor-encryption-session-split.md) | 🔧非機能追加 | 2.4 | 8 | encryptionSession 1,128 行の 3 責務分割 (golden pin 先行、暗号領域) |
+
 ### 2026-11-27 VulnHunter セキュリティ監査ラウンド vulnhunt-1127 (7件) ― ✅ 7件完了・アーカイブ済み fix ✨chore
 
 VulnHunter セキュリティ監査 (yasumaro_VULNHUNT_RESULTS_2026-11-27-190000、GLM-5.3-Flash ユーザー指定継続) の発見 9 件 (CONFIRMED 脆弱性 6 + Code Quality 3) に対応する修正ラウンド。exploit tests 16/16 PASS が脆弱挙動を現行コードで再現済み (フェーズ0 再確認済み)。RICE 降順で 02 → 03/04/05/06/07 → 08。バッチ 1 (02/05/06/08 並列) → バッチ 2 (03/04/07 並列)。最終ゲート: `npm run validate` 全緑 (19,388 件) + build 緑。台帳は [2026-11-27-09-backlog-vulnhunt-1127.md](2026-11-27-09-backlog-vulnhunt-1127.md) を参照。ブランチ: 1128a。
