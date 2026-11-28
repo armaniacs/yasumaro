@@ -8,18 +8,19 @@ import {
   SpaNavigationMonitor,
   stripUrlFragment,
   shouldResetForUrlChange,
+  type SpaPollTimer,
 } from '../spaNavigationMonitor.js';
 
 function makeMonitor(opts?: {
   readUrl?: () => string | null;
   onNavigation?: () => void;
-  timer?: { setInterval: (cb: () => void, ms: number) => ReturnType<typeof setInterval>; clearInterval: (id: ReturnType<typeof setInterval>) => void };
-}): { monitor: SpaNavigationMonitor; onNavigation: ReturnType<typeof vi.fn> } {
-  const onNavigation = vi.fn();
+  timer?: SpaPollTimer;
+}): { monitor: SpaNavigationMonitor; onNavigation: ReturnType<typeof vi.fn<() => void>> } {
+  const onNavigation = vi.fn<() => void>();
   const monitor = new SpaNavigationMonitor({
     readUrl: opts?.readUrl ?? (() => null),
     onNavigation: opts?.onNavigation ?? onNavigation,
-    timer: opts?.timer ?? { setInterval: () => 0 as ReturnType<typeof setInterval>, clearInterval: () => {} },
+    timer: opts?.timer ?? { setInterval: () => 0 as unknown as SpaPollTimer['setInterval'] extends (...args: infer A) => infer R ? R : never, clearInterval: () => {} } as unknown as SpaPollTimer,
   });
   return { monitor, onNavigation };
 }
@@ -50,7 +51,7 @@ describe('shouldResetForUrlChange (pure function)', () => {
 
 describe('SpaNavigationMonitor', () => {
   let monitor: SpaNavigationMonitor;
-  let onNavigation: ReturnType<typeof vi.fn>;
+  let onNavigation: ReturnType<typeof vi.fn<() => void>>;
   let currentUrl: string | null;
 
   beforeEach(() => {
@@ -94,9 +95,10 @@ describe('SpaNavigationMonitor', () => {
 
   it('startPolling polls on the interval and stopPolling stops it', () => {
     const callbacks: Array<() => void> = [];
-    const timer = {
-      setInterval: (cb: () => void, _ms: number) => { callbacks.push(cb); return callbacks.length as ReturnType<typeof setInterval>; },
-      clearInterval: (id: ReturnType<typeof setInterval>) => { callbacks[Number(id) - 1] = () => {}; },
+
+    const timer: SpaPollTimer = {
+      setInterval: (cb: () => void, _ms: number) => { callbacks.push(cb); return callbacks.length as unknown as ReturnType<typeof setInterval>; },
+      clearInterval: (id: unknown) => { callbacks[Number(id) - 1] = () => {}; },
     };
     const m = new SpaNavigationMonitor({
       readUrl: () => currentUrl,
@@ -107,12 +109,12 @@ describe('SpaNavigationMonitor', () => {
     m.pollOnce();
     currentUrl = 'https://example.com/b';
     m.startPolling(2000, timer);
-    callbacks[0]();
+    (callbacks[0] as () => void)();
     expect(onNavigation).toHaveBeenCalled();
     m.stopPolling();
     // stopPolling clears the interval: the fake noop callback replaces the
     // polling callback, so a post-stop invocation never fires onNavigation.
-    callbacks[0]();
+    (callbacks[0] as () => void)();
     expect(onNavigation).toHaveBeenCalledTimes(1);
   });
 });
