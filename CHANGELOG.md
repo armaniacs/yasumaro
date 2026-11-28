@@ -7,6 +7,10 @@
 ### 修正
 
 - 研究レポートの引用リンクのリンクテキストに、plain-text 用のサニタイザ(`sanitizeForObsidian`)が誤って使用されていた問題を修正(リンクテキスト用の `sanitizeForMarkdownLinkText` に差し替え。攻撃者ページのタイトルに `x](javascript:alert(1))` 等が含まれる場合、引用リンクのラッパーが早期に閉じられ、攻撃者が選択したリンク先をユーザーの Obsidian ノートとローカル .md に注入できていた)
+- Webhook 書き出しで 64KB を超えるタイトル・要約がマスクされずに素のまま送信される問題を修正(64KB 超の入力に対する PII サニタイザーが拒否ではなく元テキストを返すため、マスクをバイパスした送信が発生していた。拒否時に throw して既存の fail-closed catch に流すことで、文書どおり「マスク済みのみ送信」を強制)
+- OPFS worker の staging セッション registry に並行セッション上限と TTL を追加(上限なしの Map で create-spam が worker メモリと OPFS root を肥大させる問題を解消。`MAX_CONFIRM_TOKENS=100` 前例に倣い、archive/restore で別定数を設定)
+- `backup_db` の応答で DB 全体のバイトを JS number array に変換する増幅を廃止(50MB DB で ~8x のメモリ増幅が発生。`MAX_BACKUP_FILE_BYTES` による事前チェックを arrayBuffer() の前に配置し、応答は base64 に変更)
+- tranco リストの CSV 解析で行数上限より先に derived 配列が materialize される問題を修正(12MB body で RSS が ~9.5x 増幅。先頭 tier 行数分の newline offset を in-place で特定する方式に変更し、RSS 増幅を 1.63x に低減)
 
 ### リファクタリング
 
@@ -15,6 +19,8 @@
 - encryptionSession.ts (1,128 行、3 責務) を Core + masterPasswordLifecycle / anonymousSecretEnvelope / apiKeyReencryption の 4 ファイルに分割(byte-identical 移設、golden pin 先行、cycle なし一方向依存)
 - src/background/ 直下の 67 ファイルのうち 26 ファイルを recording/ / scheduling/ / queue/ サブディレクトリに再編(git mv + import 更新のみ、外部挙動は不変)
 - byteStats フィールド集合の 2 定義(messaging/types.ts と background/messageTypes.ts)を中立層 ByteStatsFields に統一(cleansedReason に 2 型系が存在する混同も発見・修正: クレンジング実行理由は CleansedReason、AI 要約除去理由は AiSummaryCleansedReason)
+- レート制限の失敗回数カウンタの書き込みを storageTransaction CAS 経由に変更(読み書き間の await でカウンタが失われる lost-update race を解消。unlock flow 専用のため脆弱性ではないが defense-in-depth hardening)
+- encryptionSession の平文 secret fallback に unlock 成功後の retry-wrap を追加(KEK store 不可能時に平文値が chrome.storage に残留する window を bounded にする hardening)
 
 ### テスト
 
