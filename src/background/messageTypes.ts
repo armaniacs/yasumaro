@@ -5,7 +5,6 @@
  * does NOT trigger Chrome API side effects.
  */
 
-import type { AiSummaryCleansedReason } from '../utils/commonTypes.js';
 import type { ByteStatsFields } from '../messaging/types.js';
 import type { RegenerateCleanseMode } from '../utils/aiSummaryCleaner/cleanseModeLadder.js';
 import type { SkipReasonCode } from '../utils/skipReason.js';
