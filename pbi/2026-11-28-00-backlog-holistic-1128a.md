@@ -34,7 +34,7 @@ TOP 5 から得た 4 候補 (テーマ 5+2 を同一変更セットとして統�
 ## 積み残しと判断事項
 
 - テーマ 1 のシム Sunset: SessionAlarmService.ts / sessionAlarmsManager.ts シムと
-  rateLimiter.ts シムの移行完了定義が未定義 — PBI 03 (クラスタ再編) 内で判断
+  rateLimiter.ts シムの移行完了定義が未定義 ― PBI 03 (クラスタ再編) 内で判断
 - レビュー報告書 §4 (積み残し) なし: 全テーマが外部挙動を変えないリファクタリング
   に収まった。cleansedReason ユニオン化 (PBI 01) は実行時検証 (validators 層) の
   確認を PBI 内で pin する

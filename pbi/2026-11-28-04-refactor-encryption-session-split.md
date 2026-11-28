@@ -1,7 +1,7 @@
-# PBI: encryptionSession.ts (1,128 行) の 3 責務分割 — golden pin 先行・暗号領域
+# PBI: encryptionSession.ts (1,128 行) の 3 責務分割 ― golden pin 先行・暗号領域
 
 ## ユーザーストーリー
-保守担当者として、encryptionSession.ts (1,128 行) の 3 責務 (マスターパスワードライフサイクル・anonymous secret envelope・API キー KEK 再暗号化) を単一セッション核 + 3 モジュールに分割したい、なぜならモジュール可変状態 4 つ (cachedEncryptionKey、cachedMasterPassword、isMasterPasswordRequired、cachedHmacSecret) が「鍵のキャッシュ」と「secret のキャッシュ」で混在し、HMAC secret の envelope 形式変更とマスターパスワードのポリシー変更という別理由の変更が常に 1,128 行のファイルを全面編集するから (holistic レビュー テーマ 3、影響度: 中 | 难易度: 高、ロードマップ最終位)。
+保守担当者として、encryptionSession.ts (1,128 行) の 3 責務 (マスターパスワードライフサイクル・anonymous secret envelope・API キー KEK 再暗号化) を単一セッション核 + 3 モジュールに分割したい、なぜならモジュール可変状態 4 つ (cachedEncryptionKey、cachedMasterPassword、isMasterPasswordRequired、cachedHmacSecret) が「鍵のキャッシュ」と「secret のキャッシュ」で混在し、HMAC secret の envelope 形式変更とマスターパスワードのポリシー変更という別理由の変更が常に 1,128 行のファイルを全面編集するから (holistic レビュー テーマ 3、影響度: 中 | 難易度: 高、ロードマップ最終位)。
 
 ## ユーザーへの背景 (レビュー報告書: テーマ 3、file:line 実測)
 - 3 責務宣言: encryptionSession.ts:1-6
@@ -50,7 +50,7 @@ Scenario: 依存は一方向 (cycle なし)
 M (8 SP、要チームでの見積もり)
 
 ## 技術的考慮事項
-- 出所: plans/2026-11-28-0145-holistic-review-1128a.md テーマ 3 [影響度: 中 | 难易度: 高]、ロードマップ最終位 (暗号領域のため最後)
+- 出所: plans/2026-11-28-0145-holistic-review-1128a.md テーマ 3 [影響度: 中 | 難易度: 高]、ロードマップ最終位 (暗号領域のため最後)
 - 外部挙動: 完全に不変 (byte-identical 移設、golden pin 先行)
 - 依存関係: なし (encryptionSession.ts 自身)
 - golden pin の手法: PBI 2026-11-26-09 (logImportContract.ts 移設) で採った「移設前 pin → 移動 → 同一 pin」手法

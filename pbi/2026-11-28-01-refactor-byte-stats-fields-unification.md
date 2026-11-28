@@ -46,7 +46,7 @@ S (2 SP、要チームでの見積もり)
 - 出所: plans/2026-11-28-0145-holistic-review-1128a.md テーマ 4、改善案スケッチ (types.ts:91-104、messageTypes.ts:107-112)
 - 外部挙動: 完全に不変 (型の統合のみ。実行時の形状変更はしない)
 - 依存関係: なし (2 ファイル + テスト)
-- byte-identical 規律: ランタイム形状 (JSON 応答のフラット/ネスト) は現行どおり — 型定義の統合のみで、実行時構造を変更しない
+- byte-identical 規律: ランタイム形状 (JSON 応答のフラット/ネスト) は現行どおり ― 型定義の統合のみで、実行時構造を変更しない
 
 ## 実装者向け注記
 
@@ -65,8 +65,8 @@ grep -rn "ByteStatsPayload\|byteStats" src/background/pipeline src/background/ha
 4. type-check 確認 + messaging/pipeline 系テスト実行
 
 ### 落とし穴
-- ContentResponse.byteStats はネスト形状、ByteStatsPayload はフラット形状 — ランタイムの JSON 形状を変えない (型の統合のみ)
-- cleansedReason の値は validators 層経由で入る — ユニオン外の値が実行時に流入しないことを pin (テストで許容値を pin)
+- ContentResponse.byteStats はネスト形状、ByteStatsPayload はフラット形状 ― ランタイムの JSON 形状を変えない (型の統合のみ)
+- cleansedReason の値は validators 層経由で入る ― ユニオン外の値が実行時に流入しないことを pin (テストで許容値を pin)
 - git 操作禁止。実時間待ち禁止
 
 ## Definition of Done

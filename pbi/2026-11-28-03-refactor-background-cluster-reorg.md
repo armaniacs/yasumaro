@@ -7,7 +7,7 @@
 - 録画機能 3 分散: `pipeline/` (2,439 行、RecordingOrchestrator.ts 424 行)、`handlers/recordingHandlers.ts` (418 行)、フラット (recordingAdmission.ts 117 行、recordingCache.ts 304 行、recordingPause.ts 185 行、recordingPauseGate.ts 19 行、recordingTriggerManager.ts 174 行、recordingValidator.ts 97 行)
 - セッション/アラーム 12 ファイル全フラット: SessionAlarmService.ts (226)、sessionAlarmsManager.ts (28 シム)、sessionStore.ts (752)、alarmRegistry.ts (300)、standingAlarmGuard.ts (25)、dailyPurgeHandler.ts (179)、digestBatchAlarm.ts (248)、digestBatchCheckpointStore.ts (172)、digestBatchJob.ts、sessionReminderAlarms.ts (186)、sessionReminderClick.ts (216)、sessionReminderCandidates.ts (125)
 - キュー混在: `queue/payload.ts` 1 ファイルのみ sub-dir、persistentRetryQueue.ts (506)、pendingChromeStorageQueue.ts (195)、pendingSqliteQueue.ts (184)、pendingPatchPolicy.ts (141)、queueStorageAdapter.ts (58)、retryPendingWrites.ts (53)、offlineNetworkQueue.ts (274)、offlineQueueProcessor.ts (214) はフラット
-- 命名スタイル不統一: SessionAlarmService.ts (PascalCase 本体) + sessionAlarmsManager.ts (シム) — rateLimiter.ts → utils/RateLimitService.ts と同型シムパターン
+- 命名スタイル不統一: SessionAlarmService.ts (PascalCase 本体) + sessionAlarmsManager.ts (シム) ― rateLimiter.ts → utils/RateLimitService.ts と同型シムパターン
 
 ## ビジネス価値
 - 新規モジュールの置き場所判断を規約化し、機能横断変更の影響範囲特定コストを下げる
